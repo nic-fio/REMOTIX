@@ -435,7 +435,7 @@ in `STUDI.md` §gnome §3 and they all hold at the first start, not later: `SHEL
 `src/sessione.c` · `scrivi_dropin()`.
 > ⛔⛔ **REVERSED on 14 Aug 2026, phase 4 · A1** *(realigned to the code on the 28th)*. Today the
 > product **does NOT ask for** `--virtual-monitor`, and indeed **refuses** an `ExecStart` that still asks
-> for it: if it finds one, it writes to the log *«c'è un drop-in che vince sul mio»* and returns `FALSE`.
+> for it: if it finds one, it writes to the log *«there is a drop-in that wins over mine»* and returns `FALSE`.
 > ⭐ The reason is measured (`[M]` 14 Aug, bench `04-b20`): with the monitor requested, `RecordVirtual`
 > mounted a **second** one and recorded that — GNOME left bar, dock and windows on the first,
 > and **the user was looking at an empty screen**. Without it, `RecordVirtual` mounts **the only** monitor and the
@@ -522,7 +522,7 @@ someone else's.
 >
 > **`?video=worker` does not paint on Firefox**, and the cause is in hand: the streams transferred to the worker
 > are never read, so they are not closed, and the **1024** unidirectional streams
-> of credit run out («il client ne concede ancora 0 … il delta che veniva dopo il 1023»). ⛔ And
+> of credit run out («the client still grants 0 … the delta that came after 1023»). ⛔ And
 > `postMessage` **does not throw**: the premise of the comment in `pagina.html` is false, so the
 > fallback never triggers. ⇒ The cure is a **check**: if within N ms the worker has not read the
 > first byte, it is declared and one falls back.
@@ -669,8 +669,8 @@ someone else's.
 > > disprove», and the first gave **M3 as closed**. **Both false**, and corrected on the evening of
 > > 13 Aug 2026 (finding of the phase 3 coordinator, verified on the outcome files): the file
 > > `banchi/03-b14-esiti-griglia.jsonl` carries **only two cells**, both with
-> > `scena_sul_mio_monitor: **false**` ⇒ rejected by the bench itself, which prints «⛔ la legge NON
-> > regge su **0 punti su 0**». ⇒ **The renegotiated full cadence remains an `[M]` fact; the why goes back to `[R]`; M3 remains
+> > `scena_sul_mio_monitor: **false**` ⇒ rejected by the bench itself, which prints «⛔ the law does NOT
+> > hold on **0 points out of 0**». ⇒ **The renegotiated full cadence remains an `[M]` fact; the why goes back to `[R]`; M3 remains
 > > half closed.** ⭐ And the reason for the rejection is trap no. 1 of `LEZIONI.md` §1.1 — the scene was not
 > > on the monitor being captured — **come back to bite the result that cited it**: §1.1-bis.*
 
@@ -798,7 +798,7 @@ devices — and the pointer to the old device stops working **without error** `[
 > | ⭐ **the three clocks** | silence counted **the user instead of the client** (a second device entered the desktop of whoever was reading: **I2 broken**) ⇒ fixed on packets · inactivity (`0x02`) **did not exist** ⇒ done · the 6 hours become **60 minutes**, by the user's decision on a memory measurement |
 > | ⭐ **`0x0F`** | the second device is rejected, tested **from a real phone** — it had never come out before on a real connection |
 > | ⭐ **the session with nobody watching** | stays alive, costs very little and the memory does not grow. In v1 `libmutter` hit a failed assertion |
-> | ⛔ **and three log lines were lying** | `RILASCIO AL DISTACCO: 0` which could not say anything else · the page's `0x02` text that named the wrong clock · *«l'utente ha chiesto di uscire»* said by a clock. ⇒ `LEZIONI.md` §1.9 has its **fifth rule** |
+> | ⛔ **and three log lines were lying** | `RILASCIO AL DISTACCO: 0` which could not say anything else · the page's `0x02` text that named the wrong clock · *«the user asked to leave»* said by a clock. ⇒ `LEZIONI.md` §1.9 has its **fifth rule** |
 > | ⛔ **and the login form was under the desktop** | from the beginning: the «desktop costume» was hiding nothing. Found by the user, in three reports |
 >
 > ⇒ ⭐ **Only two things remain**, and the list was **cut** with the user's criterion — *«se i
@@ -883,7 +883,7 @@ logind), `uscita.c` (384), `energia.c` (149), `compositore.c` (229).
 > ⛔ **And it is not a numbering error**: the phase's number is given by **why** the
 > work was done, not by the list of things produced. `DECISIONI.md` §5.0-sexies had made the canvas **the cure
 > for four symptoms of the mouse and the video** — black bands, interpolated text, reattach, and the 4
-> seconds between login and desktop — that is the piece phase 4 was missing. All the reports of that
+> seconds between login and desktop — that is the piece **phase 4** was missing. All the reports of that
 > night are called `F4-IN-*`. ⇒ The document is in `FASI.md` §04-si-comanda, §«the tail of phase
 > 4»; the technical report is `fasi/rapporti/F4-IN-13-la-tela-che-cambia.md`.
 >
@@ -904,7 +904,7 @@ logind), `uscita.c` (384), `energia.c` (149), `compositore.c` (229).
 > - the **fallback on KWin ≤ 6.7.4 declared in the log**, which is the bench named below;
 > - ⛔ **the reattach bench that presses a key and moves the pointer AFTERWARDS** — the line below
 >   that talks about the recreated devices. `[M]` on 15 Aug it was seen in the log that on a geometry
->   change `libei` **really recreates** the absolute devices («regione del puntatore per chiave»,
+>   change `libei` **really recreates** the absolute devices («pointer region by key»,
 >   four times in a row), and that `input.c` reattaches them — ⚠ but pressing a key after the
 >   reattach **nobody has tried yet**;
 > - **multi-monitor** and all the rest of `SPECIFICHE.md` §6.5.
@@ -1245,11 +1245,11 @@ door.
 > is declared **dead** — 10 s without packets, or a copious loss within 1-2 s — and ✅ **the user
 > comes back in by hand**. It is born from the choice between two measured evils: `[M]` without cures the screen freezes
 > for many seconds, with the cures it moves with seconds of delay. ⇒ Neither should be served.
-> ⛔ Prerequisite: **`DECISIONI.md` §3.1-quinquies**, the *ghost* — coming back in, the user finds his own place
+> ⛔ Prerequisite: **`DECISIONI.md` §3.1-quinquies**, the *ghost* — coming back in, the user finds his own slot
 > occupied by himself for 30.5 s, and with a message that for him is **false**.
 >
 > ⛔ And `netem` on `lo` becomes a **single resource with a lock** (`banchi/09-lucchetto.py`): the
-> discipline is put on the interface's root, so two benches that break things together do not
+> discipline is put on the interface's root, so two benches that inject faults together do not
 > share the work — the second **deletes the first's fault**, and the first keeps measuring
 > believing it has it. ⚠ It would not give red: it would give a plausible number.
 
@@ -1848,8 +1848,8 @@ milliseconds already perfect** · and the **product's stopwatch that measured th
 
 ## ⛔⛔ The three new lessons — `LEZIONI.md` §1.26 · §1.27 · §1.28
 
-1. **Two benches on the same MACHINE falsify each other silently.** §1.24 talked about what
-   *kills*; this one about what does **not** kill — and it does not give a red, it gives **a plausible number**;
+1. **Two benches on the same MACHINE falsify each other silently.** §1.24 talked about what gets
+   *killed*; this one about what does **not** get killed — and it does not give a red, it gives **a plausible number**;
 2. **The average colour is blind**: an image wrong on every row has **the same statistics** as
    the right one. *A check must read something that can be wrong, not something that can be averaged*;
 3. ⭐⭐ **Two benches that disagree can both be right**: they measure two different
@@ -1899,7 +1899,7 @@ judged).
 > ✅ **CLOSED on 23 Aug 2026**: after the reboot and the re-provisioning the machine had **a single
 > 7xxx port open, 7900** — verified with `ss -tuln` **before** measuring.
 > ⚠ And the rule that came out of it, paid for twice in the day (`fasi/09` `fasi/09-la-qualita-e-la-degradazione.md` §3.17): between two benches
-> on the same user **one verifies that the place is free** — no live client **and** no
+> on the same user **one verifies that the slot is free** — no live client **and** no
 > stage — ⛔ **one does not count time**. An orphan stage does not give a red: it gives **a plausible number**,
 > and that day it was about to have three innocent cures accused.
 
@@ -1917,5 +1917,5 @@ python3 banchi/08-b67-elastico.py --certifica      # 13 injected faults out of 1
 python3 banchi/04-b30-anello-input.py --certifica  # 57 out of 57, 18 faults out of 18
 ```
 
-⚠ **Two traps that bit today**: the session's place is **one** and the previous one stays
+⚠ **Two traps that bit today**: the session's slot is **one** and the previous one stays
 attached for about twenty seconds · and ⛔ **two do not measure on the same machine** (`LEZIONI.md` §1.26).
