@@ -1,10 +1,10 @@
-from build import arrow, box, c, code, fig, note, p, rif, steps, table, text, tip, warn, zone
+from build import arrow, box, c, code, fig, note, p, rif, steps, sysf, table, text, tip, warn, zone
 
 # ── 13.1 The log module ─────────────────────────────────────────────
 FUNCTIONS = table(["Function / macro", "Writes", "Used by"], [
     [c("registro_dice(area, fmt, …)") + " (the log says)", "An event line, always", "Every module; the parent for "
      "lines that belong to no tenant"],
-    [c("log_detail(area, fmt, …)") + " (detail)", "A detail line, only when " + c("--verbose")
+    [c("log_detail(area, fmt, …)"), "A detail line, only when " + c("--verbose")
      + " (chatter) is on", "Transport, capture, input, clipboard, the child's frame loop: lines that are many and "
      "useful only while hunting a defect"],
     [c("log_says_of(area, who, fmt, …)"), "An event line that carries the identity of one tenant",
@@ -19,7 +19,7 @@ FUNCTIONS = table(["Function / macro", "Writes", "Used by"], [
      "level", c("main.c") + " and " + c("figlio.c") + " (option " + c("--verbose") + ")"],
     [c("log_journal(on)") + " / " + c("log_to_journal()"), "Nothing: opens the journal socket",
      c("main.c") + " and " + c("figlio.c") + " (option " + c("--journal") + ")"],
-    [c("log_speakable_key(code)") + " (speakable key)", "Nothing: says whether a key code may be written", c("input.c")
+    [c("log_speakable_key(code)"), "Nothing: says whether a key code may be written", c("input.c")
      + " before naming a key"],
     [c("log_now_ms()"), "Nothing: monotonic milliseconds", "RCP clocks, ban, tenant clocks"],
 ], "«TAB» — The interface of " + c("src/registro.h"))
@@ -39,9 +39,12 @@ S1 = p("Every line the server writes goes through one module, " + c("src/registr
     note("a few places do not use the module and write straight to " + c("stderr") + ": " + c("autenticazione.c")
          + " (PAM authentication; it is also compiled into a test host, " + c("banchi/01-b3-rcp-innesta.py")
          + ", which has no " + c("log") + "), the child between " + c("fork") + " and " + c("exec") + " ("
-         + c("become_and_exec()") + ", «become and execute», lines prefixed " + c("child:") + "), the usage text of "
-         + c("aiuto()") + " (help), and the refusals of the command line in " + c("main()") + " (a removed option, a "
-         "missing " + c("--name") + ", a wrong " + c("--encoding-route") + "). These lines have no timestamp and never "
+         + c("become_and_exec()") + ", lines prefixed " + c("child:") + "), the usage text of "
+         + c("help()") + ", the refusals of the command line in " + c("main()") + " (an unknown option, a "
+         "missing " + c("--name") + ", a wrong " + c("--encoding-route") + "), and the KDE start-line helper "
+         + c("remotix --kwin-nested") + " (" + c("kwin_nested_alive()") + ", lines prefixed "
+         + c("remotix --kwin-nested:") + "), which runs as the user inside KWin's unit and writes to that "
+         "unit's output, that is to the user's journal. These lines have no timestamp and never "
          "reach the journal through " + c("--journal") + ".", "Outside the funnel.")
 
 # ── 13.2 Anatomy of a log line ───────────────────────────────────────────
@@ -90,7 +93,7 @@ S2 = p("A line is " + c("HH:MM:SS.mmm area [identity] body") + ": local wall-clo
 S3 = p("The area is the second column of every line and the " + c("REMOTIX_AREA") + " field in the journal. It exists "
        "to read the log by column when transport, protocol and session speak at the same time.", lead=True) + \
     table(["Area", "Constant", "Defined in", "Who writes it"], [
-        [c("startup") + " (startup)", c("LOG_STARTUP"), c("registro.h"), "Startup and shutdown of the parent (" + c("main.c")
+        [c("startup"), c("LOG_STARTUP"), c("registro.h"), "Startup and shutdown of the parent (" + c("main.c")
          + ")"],
         [c("quic"), c("REG_QUIC"), c("registro.h"), "QUIC and TLS: " + c("trasporto.c") + ", " + c("tls.c")],
         [c("wt"), c("REG_WT"), c("registro.h"), "HTTP/3 and WebTransport, the parent's half of every session ("
@@ -98,10 +101,10 @@ S3 = p("The area is the second column of every line and the " + c("REMOTIX_AREA"
         [c("rcp"), c("REG_RCP"), c("registro.h"), "The RCP state machine (through " + c("hook_log()")
          + "), the parent's side of the PAM helper (" + c("aiutante.c") + "), the unlock socket (" + c("comando.c")
          + ")"],
-        [c("page") + " (page)", c("LOG_PAGE"), c("registro.h"), "The TCP page server, including the " + c("/diary")
+        [c("page"), c("LOG_PAGE"), c("registro.h"), "The TCP page server, including the " + c("/diary")
          + " endpoint (" + c("pagina.c") + ")"],
         [c("cert"), c("REG_CERT"), c("registro.h"), "Certificate generation and rotation (" + c("certificati.c") + ")"],
-        [c("session") + " (session)", c("LOG_SESSION"), c("registro.h"), "Birth and care of the desktop session ("
+        [c("session"), c("LOG_SESSION"), c("registro.h"), "Birth and care of the desktop session ("
          + c("sessione.c") + "), the local-session guardian (" + c("sentinella.c") + " and its lines in " + c("main.c")
          + ")"],
         [c("video"), c("REG_VIDEO") + ", " + c("LOG_ENCODING"), c("registro.h") + "; " + c("codificatore.c") + ", "
@@ -110,20 +113,20 @@ S3 = p("The area is the second column of every line and the " + c("REMOTIX_AREA"
         [c("budget"), c("REG_BUDGET"), c("registro.h"), "The composition budget: the value in force, the verdict on "
          "who knocks, the refusal (" + c("budget.c") + "). It has its own area so that «why was that user refused» "
          "is one column, not a sieve over " + c("wt") + " and " + c("child") + "."],
-        [c("child") + " (child)", c("LOG_CHILD"), c("child.h"), "The per-user child, and the parent's side of the child table "
+        [c("child"), c("LOG_CHILD"), c("figlio.h"), "The per-user child, and the parent's side of the child table "
          "(" + c("figlio.c") + ")"],
         [c("audio"), c("REG_AUDIO"), c("audio.c"), "The Opus encoder"],
-        [c("sound") + " (sound)", c("LOG_SOUND"), c("sound.c"), "The PipeWire sink of the session"],
-        [c("clipboard") + " (clipboard)", c("LOG_CLIPBOARD"), c("clipboard.h"), "Clipboard (" + c("clipboard.c") + ", " + c("appunti_kde.c")
+        [c("sound"), c("LOG_SOUND"), c("suono.c"), "The PipeWire sink of the session"],
+        [c("clipboard"), c("LOG_CLIPBOARD"), c("appunti.h"), "Clipboard (" + c("appunti.c") + ", " + c("appunti_kde.c")
          + ")"],
-        [c("keyboard") + " (keyboard)", c("LOG_KEYBOARD"), c("keyboard.c"), "Keyboard layouts and keymaps"],
-        [c("capture") + " (capture)", c("AREA"), c("capture.c") + ", " + c("mutter.c") + ", " + c("kwin.c") + ", " + c("wlroots.c"),
-         "Screen capture on every compositor"],
+        [c("keyboard"), c("LOG_KEYBOARD"), c("tastiera.c"), "Keyboard layouts and keymaps"],
+        [c("capture"), c("AREA"), c("cattura.c") + ", " + c("mutter.c") + ", " + c("kwin.c") + ", " + c("wlroots.c"),
+         "Screen capture on every compositor; on KDE also the resize of KWin's labwc at a reattach"],
         [c("input"), c("AREA"), c("input.c") + ", " + c("wlr_input.c"), "Pointer and keyboard injection"],
-        [c("cursor") + " (cursor)", c("AREA"), c("cursor.c"), "The cursor shape sent to the page"],
-        [c("shape") + " (shape)", c("AREA"), c("shape.c"), "The colour-coded cursor theme REMOTIX writes for the "
+        [c("cursor"), c("AREA"), c("cursore.c"), "The cursor shape sent to the page"],
+        [c("shape"), c("AREA"), c("forma.c"), "The colour-coded cursor theme REMOTIX writes for the "
          "session and the dictionary that maps each colour back to a real cursor image"],
-    ], "«TAB» — The areas, as of commit " + c("3ad3d28")) + \
+    ], "«TAB» — The areas, as of commit " + c("d0181ae")) + \
     note("the area is padded to seven characters (" + c("%-7s") + "); " + c("session") + " and " + c("keyboard")
          + " are longer and simply push the body one or two columns to the right. Tools that parse the log split on "
          "whitespace, not on column positions.")
@@ -152,7 +155,7 @@ S4 = p("With ten tenants on one machine a line that does not say whose it is sen
       "<b>copy</b> in a static buffer, not a pointer, since callers often pass an " + c("argv") + " element; and it "
       "does not cross " + c("exec") + ", which is why the child sets it again from its own command line.") + \
     warn("lines of " + c("rcp") + " in the parent carry the user name the client <b>claimed</b> in "
-         + c("CREDENTIALS") + " (credentials; " + c("rcp_user()") + "), also before PAM has answered. A line of a refused attempt "
+         + c("CREDENTIALS") + " (" + c("rcp_user()") + "), also before PAM has answered. A line of a refused attempt "
          "therefore names a user who may not exist; read the outcome line, not the bracket, to know who got in.",
          "A claimed name is not an authenticated name.")
 
@@ -270,13 +273,13 @@ S7 = p("Three things never enter any log at any level: passwords, what the user 
     table(["What", "Rule in the code", "Where"], [
         ["The password", "Never formatted into a line — not even its exact length, removed from the arrival line "
          "because the log is a file that is kept (R9.8); the local copy is zeroed as soon as PAM answers; the copies "
-         "in the receive buffer are zeroed when consumed (" + c("drena()") + ", drain) and when the session is freed "
+         "in the receive buffer are zeroed when consumed (" + c("drain()") + ") and when the session is freed "
          "(" + c("rcp_free()") + "); the two copies in the PAM helper's socket buffers are zeroed after use",
          c("rcp.c") + ", " + c("aiutante.c")],
         ["The PAM conversation copy", "Duplicated with " + c("strdup") + " for libpam, which owns and frees it. "
          "Linux-PAM overwrites it in " + c("_pam_drop_reply()") + " before " + c("free()") + " (measured 10 Aug "
          "2026). A port to another PAM library must re-check this line.", c("autenticazione.c") + ", "
-         + c("conversazione()") + " (the PAM conversation function)"],
+         + c("conversation()")],
         ["Typed characters", "Written as «a character», «key pressed/released»; never " + c("U+XXXX")
          + " nor the character; a character that cannot be produced is declared as an event, not which one",
          c("rcp.c") + ", " + c("tastiera.c") + ", " + c("input.c")],
@@ -335,8 +338,7 @@ S8 = p("At startup the parent writes the value <b>in force</b> of every mechanis
          c("certificates_prepare()")],
         ["21", "TLS contexts: QUIC (ALPN h3, TLS 1.3, 0-RTT off) and page", c("tls.c")],
         ["22", "Local-session guardian connected or not (" + c("session") + ")", c("main.c")],
-        ["23", "Desktops found alive from a previous server (reattach pending)", c("found_again_at_startup()")
-         + " (found again at startup)"],
+        ["23", "Desktops found alive from a previous server (reattach pending)", c("found_again_at_startup()")],
         ["24", c("⭐ ready: https://<name>:<port>"), c("main.c")],
     ], "«TAB» — What the parent declares before serving, in order") + \
     p("While running, the parent adds one line per minute with the guardian's count (" + c("guardian: calls=… "
@@ -344,63 +346,63 @@ S8 = p("At startup the parent writes the value <b>in force</b> of every mechanis
       "times the parent's loop fell behind, worst gap; constant " + c("GUARDIAN_COUNT_MS") + " = 60,000): a cumulative count, written once a minute instead of at every 2-second pass, which would be "
       "43,200 nearly identical lines a day. Every rotation of the session certificate is declared in " + c("cert")
       + ". At shutdown the parent writes how many QUIC connections were alive and whether the farewell "
-      + c("0x0C SERVER_CLOSING") + " (server shutting down) left on the wire within 4 s.")
+      + c("0x0C SERVER_CLOSING") + " left on the wire within 4 s.")
 
 # ── 13.9 Command-line options of the server ──────────────────────────────
 OPT = table(["Option", "Default", "Lives in", "Meaning"], [
     "Network and files",
-    [c("--address IND") + " (address)", c("0.0.0.0"), "parent", "Address to listen on (UDP for QUIC, TCP for the page, same "
+    [c("--address ADDR"), c("0.0.0.0"), "parent", "Address to listen on (UDP for QUIC, TCP for the page, same "
      "port)."],
-    [c("--name NOME") + " (name)", "the value of " + c("--address"), "parent", "Name or address written into the "
+    [c("--name NAME"), "the value of " + c("--address"), "parent", "Name or address written into the "
      "certificate's " + c("subjectAltName") + ". Mandatory when listening on " + c("0.0.0.0") + " or " + c("::")
      + ": a SAN that matches nothing gives a <i>different</i> browser warning, and some browsers offer no click "
      "to proceed. Exit 2 if missing."],
-    [c("--port N") + " (port)", c("7447"), "parent", "UDP and TCP port (" + c("RCP.md") + " §2.4)."],
-    [c("--certificates DIR") + " (certificates)", c("/var/lib/remotix/certificates"), "parent", "Directory of the two certificates, "
+    [c("--port N"), c("7447"), "parent", "UDP and TCP port (" + c("RCP.md") + " §2.4)."],
+    [c("--certificates DIR"), c("/var/lib/remotix/certificates"), "parent", "Directory of the two certificates, "
      "created 0700 if missing."],
-    [c("--page FILE") + " (page)", c("pagina.html") + " (relative)", "parent", "The page served over TCP."],
-    [c("--ban-file FILE") + " (ban file)", c("/var/lib/remotix/ban"), "parent", "Where the address "
+    [c("--page FILE"), c("pagina.html") + " (relative)", "parent", "The page served over TCP."],
+    [c("--ban-file FILE"), c("/var/lib/remotix/ban"), "parent", "Where the address "
      "ban survives restarts."],
-    [c("--command-socket PATH") + " (command socket)", "none", "parent", "Unix socket 0600 of the unlock command ("
+    [c("--command-socket PATH"), "none", "parent", "Unix socket 0600 of the unlock command ("
      + rif("The unlock command socket") + "). Without it a ban ends only after 12 hours."],
     "Diagnostics",
-    [c("--verbose") + " (chatter)", "off", "parent and child", "Detail lines (" + c("log_detail") + ")."],
+    [c("--verbose"), "off", "parent and child", "Detail lines (" + c("log_detail") + ")."],
     [c("--journal"), "off (on in the packaged deb and rpm units)", "parent and child", "Events also to the journal "
      "(" + rif("The systemd journal output") + ")."],
-    [c("--survey DIR") + " (survey)", "none", "parent and child", "Writes the captured frame (" + c("cattura.bgrx") + ") and the "
+    [c("--survey DIR"), "none", "parent and child", "Writes the captured frame (" + c("cattura.bgrx") + ") and the "
      "two encoded streams, for the pixel comparison of F2.6. Without it, not a byte more is written."],
-    [c("--audio-test HZ") + " (audio test)", "0 (off)", "parent", "Bench function: a test tone instead of the session's audio, "
+    [c("--audio-test HZ"), "0 (off)", "parent", "Bench function: a test tone instead of the session's audio, "
      "declared in the log at every session."],
-    [c("--encoding-route card|vulkan|vaapi") + " (encoding)", c("card"), "parent and child", "Which card path encodes: "
-     + c("card") + " (card) chooses by capability (Vulkan Video if offered for the codec, else VA-API); the other two "
+    [c("--encoding-route card|vulkan|vaapi"), c("card"), "parent and child", "Which card path encodes: "
+     + c("card") + " chooses by capability (Vulkan Video if offered for the codec, else VA-API); the other two "
      "force a path for tests and diagnosis and fail saying so (no fallback). Any other value: exit 2."],
     "Clocks of RCP.md §5.3",
-    [c("--inactivity-s N") + " (inactivity)", "1800 (30 min)", "parent", "User inactivity clock, in seconds so that the mechanism "
+    [c("--inactivity-s N"), "1800 (30 min)", "parent", "User inactivity clock, in seconds so that the mechanism "
      "can be exercised in ten; 0 = off."],
-    [c("--abandon-s N") + " (abandonment)", "3600 (60 min)", "parent", "Without input for that long, the graphical session is "
+    [c("--abandon-s N"), "3600 (60 min)", "parent", "Without input for that long, the graphical session is "
      "closed with the programs inside; 0 = off."],
     "Phase 9 (the five cures — queue threshold, rhythm regulator, dead line, ghost eviction, audio silence — are on "
     "since 24 Aug 2026, each with exactly one way to switch it off; quality climb and bandwidth floor stay off)",
-    [c("--clear-threshold-ms N") + " (clearing threshold)", "100", "parent", "A stale delta in the video queue is dropped only if the queue "
+    [c("--clear-threshold-ms N"), "100", "parent", "A stale delta in the video queue is dropped only if the queue "
      "does not drain within N ms; 0 = drop at every newer frame."],
-    [c("--no-adaptive-rate") + " (no adaptive rhythm)", "regulator on", "parent", "Switches off the frame-rhythm regulator."],
-    [c("--no-dead-line") + " (no dead line)", "dead line on", "parent", "Switches off the dead-line closure."],
-    [c("--dead-line-stall-ms N") + " (dead-line stall)", "5000", "parent", "Stall cause: ms without a frame going out while there is "
+    [c("--no-adaptive-rate"), "regulator on", "parent", "Switches off the frame-rhythm regulator."],
+    [c("--no-dead-line"), "dead line on", "parent", "Switches off the dead-line closure."],
+    [c("--dead-line-stall-ms N"), "5000", "parent", "Stall cause: ms without a frame going out while there is "
      "one to send; 0 = silence only."],
-    [c("--dead-line-silence-s N") + " (dead-line silence)", "10", "parent", "Silence cause: s without a packet from the client; also "
+    [c("--dead-line-silence-s N"), "10", "parent", "Silence cause: s without a packet from the client; also "
      "turns on transport PINGs at half this value; 0 = stall only."],
-    [c("--eviction-ms N") + " (eviction)", "15000", "parent", "Ghost eviction: a seat held by a client silent for longer goes to a "
+    [c("--eviction-ms N"), "15000", "parent", "Ghost eviction: a seat held by a client silent for longer goes to a "
      "client of the <b>same</b> user who asks for it; 0 = off."],
-    [c("--no-audio-silence") + " (no audio silence)", "audio silence on", "parent and child", "Stops suppressing audio blocks that "
+    [c("--no-audio-silence"), "audio silence on", "parent and child", "Stops suppressing audio blocks that "
      "are all exactly zero."],
-    [c("--quality-recovery") + " (quality climbs back)", "off", "child", "Quality climbs back one step after enough comfortable frames."],
-    [c("--bandwidth-cap-mbit N") + " (bandwidth cap)", "0 (off)", "child", "The bandwidth <b>floor</b> in Mbit/s from which wire, working "
+    [c("--quality-recovery"), "off", "child", "Quality climbs back one step after enough comfortable frames."],
+    [c("--bandwidth-cap-mbit N"), "0 (off)", "child", "The bandwidth <b>floor</b> in Mbit/s from which wire, working "
      "point and reservoir derive; hardware only."],
     "Phase 10: capacity",
     [c("--budget-mpixel-s N"), "0 (off)", "parent", "Composition Mpixel/s this machine sustains. Off by default: "
      "the administrator declares a measured value; it never self-calibrates."],
-    [c("--reserve F") + " (reserve)", "0.5", "parent", "Share of a still tenant's worst case held in reserve (0 … 1)."],
-    [c("--session-cap N") + " (session cap)", "10", "parent", "Administrative cap on served users; refusals get " + c("0x0E")
+    [c("--reserve F"), "0.5", "parent", "Share of a still tenant's worst case held in reserve (0 … 1)."],
+    [c("--session-cap N"), "10", "parent", "Administrative cap on served users; refusals get " + c("0x0E")
      + ". Values below 1 are rejected with a line."],
     "Separate modes (first argument)",
     [c("--encoding-test [h264|hevc] [--node /dev/dri/renderDN] [--encoding-route …]") + " (encoding test; "
@@ -408,12 +410,17 @@ OPT = table(["Option", "Default", "Lives in", "Meaning"], [
      "synthetic 256×256 frame on the card with the same choice as a real session and prints one JSON line. "
      "No network, no sessions, root not needed (the card groups are). Exit 0 card encodes · 1 card opens but no "
      "frame · 2 usage error · 3 no card can encode."],
-    [c("--internal-child …") + " (internal child)", "—", "internal", "The command line with which the binary re-executes itself as a "
+    [c("--kwin-nested W H NODE -- <kwin_wayland_wrapper> …"), "—", "internal, KDE",
+     "The start line of KWin on Plasma, written by REMOTIX into the drop-in of "
+     + sysf("plasma-kwin_wayland.service") + ": starts a labwc without a screen at W×H and becomes KWin nested "
+     "in it (" + rif("KDE Plasma sessions") + "). Runs as the user; opens nothing of the server. Never typed "
+     "by hand. Exit 2 on a malformed line."],
+    [c("--internal-child …"), "—", "internal", "The command line with which the binary re-executes itself as a "
      "per-user child. Never typed by hand; in " + c("ps") + " it marks a child, not a second server."],
-], "«TAB» — Every option of " + c("src/main.c") + " (commit " + c("3ad3d28") + ")")
+], "«TAB» — Every option of " + c("src/main.c") + " (commit " + c("d0181ae") + ")")
 
 S9 = p("The server is configured only by its command line. Every option is parsed in the single loop of "
-       + c("main()") + "; an unknown option prints the usage text (" + c("aiuto()") + ") and exits 2.", lead=True) + \
+       + c("main()") + "; an unknown option prints the usage text (" + c("help()") + ") and exits 2.", lead=True) + \
     OPT + \
     p("The column «lives in» matters because the child is an " + c("execve") + " with an environment built from "
       "scratch: a setting that the encoder or the audio encoder needs must be repeated on the child's command line, "
@@ -439,26 +446,28 @@ S10 = p("REMOTIX reads almost nothing from the environment, on purpose: a cure t
         + " and " + c("packaging/") + ", leaving out the include guards of the headers (" + c("REMOTIX_*_H") + "):",
         lead=True) + \
     table(["Name", "Kind", "Read by", "Effect"], [
-        [c("REMOTIX_PORT") + " (port)", "Unit environment", c("remotix.service") + " (all three families)", "Expanded into "
+        [c("REMOTIX_PORT"), "Unit environment", c("remotix.service") + " (all three families)", "Expanded into "
          + c("--port") + ". Default 7447 in " + c("/usr/share/remotix/remotix.conf") + ". The installer writes " + c("REMOTIX_PORT=N") + " to " + c("/etc/remotix/remotix.conf.d/port.conf")
          + " only when the port is not 7447."],
-        [c("REMOTIX_OPTIONS") + " (options)", "Unit environment", c("remotix.service") + " (all three families)", "Extra options appended to the command line, "
+        [c("REMOTIX_OPTIONS"), "Unit environment", c("remotix.service") + " (all three families)", "Extra options appended to the command line, "
          "e.g. " + c("--name 192.168.1.10") + " for users who connect by address (the last " + c("--name") + " wins). "
          "Empty by default."],
-        [c("REMOTIX_VULKAN_CONVERSION") + " (conversion)", "Process environment, bench only", c("vulkanvideo.c"),
+        [c("REMOTIX_VULKAN_CONVERSION"), "Process environment, bench only", c("vulkanvideo.c"),
          "Value " + c("copy") + " forces the copy path of the RGB→NV12 conversion even where the card accepts the shader "
          "writing the encoder input directly; used to measure it and to exercise the branch other cards take."],
-        [c("REMOTIX_TEST_CHILD") + " (test child)", "Process environment, tests only", c("installatore/motore/ripresa_test.go"),
+        [c("REMOTIX_TEST_CHILD"), "Process environment, tests only", c("installatore/motore/ripresa_test.go"),
          "Value " + c("1") + " makes the Go test binary act as the installer engine that the test kills with "
          "SIGKILL at every checkpoint and state transition, to prove resumption (R30)."],
+        [c("REMOTIX_LABWC"), "Compile-time macro, not a variable", c("kwin.c"), "The exact path of the labwc "
+         "that hosts KWin, set by " + c("make LABWC=…") + "; only the RHEL / Alma 10 package sets it ("
+         + c("/usr/lib/remotix/labwc") + "). Without it, " + c("labwc") + " from " + c("PATH") + "."],
         [c("REMOTIX_SGOMBRA_SOGLIA_MS") + " (clearing threshold)", "Removed 23 Aug 2026", "nobody", "Temporary bridge for the video queue "
          "threshold, removed when " + c("--clear-threshold-ms") + " arrived."],
         [c("REMOTIX_AREA") + ", " + c("REMOTIX_TENANT"), "Journal fields, not variables", "—", "See "
          + rif("The systemd journal output") + "."],
         [c("REMOTIX_INPUT") + ", " + c("REMOTIX_POINTER") + ", " + c("REMOTIX_CLASSIC") + ", "
          + c("REMOTIX_SHORTCUTS"), "JavaScript globals of the page, not variables", c("pagina.html"),
-         "The seams between the page's input, pointer (" + c("POINTER") + "), classic mode (" + c("CLASSICO")
-         + ") and shortcut (" + c("SCORCIATOIE") + ") modules."],
+         "The seams between the page's input, pointer, classic mode and shortcut modules."],
     ], "«TAB» — Every " + c("REMOTIX_*") + " name in the product") + \
     warn(c("REMOTIX_VULKAN_CONVERSION") + " is read with " + c("getenv") + " inside the encoder, but sessions encode "
          "in the per-user child, whose environment is composed from scratch by " + c("become_and_exec()") + " ("
@@ -477,22 +486,23 @@ S10 = p("REMOTIX reads almost nothing from the environment, on purpose: a cure t
 S11 = p("Besides the log, the product carries a few instruments for diagnosis. None of them is on in the packaged "
         "units except " + c("--journal") + ": bench options are kept off the shipped command line (review rule "
         "R13), and the build refuses to package a binary with the bench function compiled in ("
-        + c("BANCO_ACCESO") + " must be 0 in " + c("rcp.c") + ").", lead=True) + \
+        + c("BENCH_ON") + " must be 0 in " + c("rcp.c") + ").", lead=True) + \
     table(["Instrument", "What it answers", "How"], [
         [c("--verbose"), "What the transport, capture and encoder are doing frame by frame",
          "Add to the command line (" + c("REMOTIX_OPTIONS") + " on deb/rpm). Detail lines never go to the journal."],
         [c("remotix --encoding-test"), "Can this card encode, by which path, which codecs?", "One JSON line: "
-         + c('{"outcome":"hardware"|"none","codificatore":…,"route":…,"nodo":…,"reason":…,"codec":…,"offerti":…,'
+         + c('{"outcome":"hardware"|"nessuno","encoder":…,"strada":…,"nodo":…,"motivo":…,"codec":…,"offerti":…,'
              '"hevc":…,"h264":…,"hevc_strada":…,"h264_strada":…}')
-         + " (outcome hardware or none, encoder, card path, render node, reason, codec tried, codecs offered, and "
-         "per codec the outcome and the path). The installer runs it at the end of an installation."],
+         + " (outcome, encoder, card path, render node, reason, codec tried, codecs offered, and per codec the "
+         "outcome and the path; several keys and the value " + c("nessuno") + ", none, are still Italian on "
+         "this wire, which the installer reads). The installer runs it at the end of an installation."],
         [c("--survey DIR"), "Is the picture the page paints the picture that was captured?", "Writes the captured "
          "frame and the encoded streams for the pixel comparison benches."],
-        [c("GET /diary?…") + " (diary)", "What does the page see (frames decoded, audio blocks played, gaps)?", "The page sends "
+        [c("GET /diary?…"), "What does the page see (frames decoded, audio blocks played, gaps)?", "The page sends "
          "its counters as a query string; the server writes them as a " + c("page") + " line. Born 17 Aug 2026 "
          "after four audio cures chased with three of the four rings measured; the page's own panel is unreachable "
          "when the desktop is full screen."],
-        [c("GET /fingerprint") + " (fingerprint)", "Which session certificate is in force now?", "JSON "
+        [c("GET /fingerprint"), "Which session certificate is in force now?", "JSON "
          + c('{"algorithm":"sha-256","fingerprint":…,"hex":…,"rotations":N}') + " (algorithm, fingerprint, the "
          "same in hexadecimal, number of rotations)."],
         [c("PING") + " on the unlock socket", "Is the unlock command alive?", "Answers " + c("PONG")
@@ -514,10 +524,15 @@ S11 = p("Besides the log, the product carries a few instruments for diagnosis. N
         "For a desktop that is born and shows nothing, look for the line of " + c("child") + " about the card groups (the groups that own the nodes in "
         + c("/dev/dri") + ")"
         + " and for " + c("session.log") + " in the user's home.",
+        "On KDE, for a desktop that keeps its birth size at a reattach, look for "
+        + c("⚠ §7.1 KDE: this Plasma session has no host for KWin") + " in " + c("child") + ", and for the "
+        "start-line helper's lines in the user's journal ("
+        + c("journalctl --user -u plasma-kwin_wayland") + ", as the user" + "): " + c("⛔ labwc is not installed")
+        + " names the cause.",
         "Only then switch on " + c("--verbose") + ", for the shortest time that reproduces the defect.",
     ]) + \
     tip("a session that disappears always leaves a line with the numbers it was closed on: the dead line writes "
-        + c("dead-line") + " (dead line) with its stall or silence values, the clocks write the clock that expired, and the "
+        + c("dead-line") + " with its stall or silence values, the clocks write the clock that expired, and the "
         "farewell code reaches the page. A disappearance without such a line is a defect of REMOTIX, by definition "
         "of invariant I1.", "No silent exits.")
 
