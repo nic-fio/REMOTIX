@@ -7044,11 +7044,16 @@ labwc che ce lo analizziamo e compiliamo da soli»*.
   a gnome-session on private buses that say «yes» and refuse the acts): **red** on 5b4165d
   (`[true,true,true,true]`), **green** with the fix (`[false,false,false,true]`).
 - **KDE** — `[R]` plasma-workspace 6.3.6 `libkworkspace/sessionmanagement.cpp:86-105`: shutdown and reboot are
-  `canLogout() && logind`, suspend is logind alone; KIOSK has no key for them that spares «Log Out». ⛔ **Not
-  hidden yet**: no session-only lever found; to be decided.
+  `canLogout() && logind`, suspend is logind alone; KIOSK has no key for them that spares «Log Out» (the whole 6.3.6 tree authorizes only `logout`, and
+  `offerShutdown` no longer exists); the menus (`kicker/plugin/systementry.cpp:108-124`) and the log-out screen
+  (`logout-greeter/shutdowndlg.cpp:116-129`) read the same answers. ⛔ **Not hidden**: no session-only lever
+  exists; to be decided.
 - **XFCE** — the panel's action button loses them (`-shutdown`, `-restart`, `-suspend`…, independent of logind);
-  the log-out dialog loses Suspend/Hibernate (`ShowSuspend`…); ⛔ its Restart and Shut Down have no key and
-  **stay** where logind allows.
+  the log-out dialog loses Suspend/Hibernate (`ShowSuspend`…); ⛔ its Restart and Shut Down **stay**: `[R]`
+  xfce4-session 4.20.2 `xfsm-logout-dialog.c:263-288` always shows them (no `Show…` key), only greyed when
+  not allowed, and the only key that greys them, the kiosk `Shutdown` capability, is read from the compiled-in
+  `/etc/xdg/xfce4/kiosk/kioskrc` (libxfce4util 4.20.1 `xfce-kiosk.c:65`, `meson.build:85`), not from
+  `XDG_CONFIG_DIRS` — a system file, excluded by §10.36.
 - **LXQt** — the menu entries are hidden by session `.desktop` files and the fancymenu's «Leave» button is gone
   with the switch to mainmenu, independent of logind; `lxqt-leave` (which follows logind) is reachable only by hand.
 - **The net**: C25 is GNOME only and runs as a user, outside the boxes (they need root); the boxes still put the
