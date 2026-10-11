@@ -17,7 +17,7 @@
 #                     in the REMOTIX archive (signed with OUR key, as if we had
 #                     published it by mistake or someone else had put it there): from the VM it must not be
 #                     installable (apt: pin -1 on the host; dnf: includepkgs);
-#   <output>/estranea.gpg/  the keyring of the foreign key (for R17: a wrong signature).
+#   <output>/foreign_family.gpg/  the keyring of the foreign key (for R17: a wrong signature).
 set -euo pipefail
 U=$(realpath -m "${1:?output}")
 mkdir -p "$U/terzi/deb/pool" "$U/terzi/rpm" "$U/intrusi" "$U/lavoro"

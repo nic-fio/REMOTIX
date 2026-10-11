@@ -15,7 +15,7 @@ policy_module(remotix, 1.0.0)
 # ⭐ The types:
 #    remotix_t            the service (the parent, the PAM helper, the child up to its `execve`)
 #    remotix_exec_t       /usr/libexec/remotix/remotix
-#    remotix_port_t       port 7447, TCP (the page) and UDP (QUIC): `remotix_porta.cil`
+#    remotix_port_t       port 7447, TCP (the page) and UDP (QUIC): `remotix_portcon.cil`
 #    remotix_var_lib_t    /var/lib/remotix (certificates, bans, engine log)
 #    remotix_var_run_t    /run/remotix
 #

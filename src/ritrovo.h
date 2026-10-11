@@ -6,9 +6,9 @@
  *
  * `[M]` T2, 29 Sep 2026 (`fasi/17-l-installatore.md` §5.2): stopping the service
  * **does not kill the desktops**.  Parent, PAM helper and child die; the stage,
- * born with `setsid --fork` (`sessione.c`, `avvia()`), lives outside the unit and
+ * born with `setsid --fork` (`sessione.c`, `start()`), lives outside the unit and
  * survives with its programs.  ⛔ But the new parent restarted with
- * «inquilini=0»: nobody counted those desktops — neither the session cap,
+ * «tenants=0»: nobody counted those desktops — neither the session cap,
  * nor the budget, nor the abandonment clock — and the first new user
  * without the card groups could have had them knocked down by
  * `loginctl terminate-user`.  It is the xrdp case: live sessions nobody finds again.
@@ -34,8 +34,8 @@
  *   child used: desktops born with the PREVIOUS binary (the upgrade) would not
  *   have them.  Every version has logind and `/proc`.
  */
-#ifndef REMOTIX_RITROVO_H
-#define REMOTIX_RITROVO_H
+#ifndef REMOTIX_FINDING_AGAIN_H
+#define REMOTIX_FINDING_AGAIN_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -45,27 +45,27 @@
 #define FOUND_AGAIN_PAM_SERVICE "remotix"
 
 typedef struct {
-	char utente[257];
+	char user[257];
 	uid_t uid;
-	char sessione[32]; /* the logind id of the session that contains the stage */
-	pid_t palco;       /* the leader of the stage (pid = sid) */
+	char session[32]; /* the logind id of the session that contains the stage */
+	pid_t stage;       /* the leader of the stage (pid = sid) */
 	char comm[20];     /* its name, for the log */
-	unsigned sessioni; /* how many `remotix` logind sessions the user has */
-} RitrovoDesktop;
+	unsigned sessions; /* how many `remotix` logind sessions the user has */
+} FindingAgainDesktop;
 
 /*
  * Looks for live REMOTIX desktops: at most `cap`, ONE per user.  Returns how many
- * it wrote, or -1 if logind did not answer (the reason in `perche`).
+ * it wrote, or -1 if logind did not answer (the reason in `why`).
  * ⚠ Synchronous calls to logind (300 ms ceiling each) and a read of
  *   `/proc`: it is called at startup and now and then, not at every loop turn.
  */
-int ritrovo_cerca(RitrovoDesktop *v, int cap, char *perche, size_t quanto);
+int finding_again_search(FindingAgainDesktop *v, int cap, char *why, size_t how_much);
 
 /*
  * Does user `uid` have a live REMOTIX desktop?  1 yes (and `d`, if not NULL,
  * describes it) · 0 no · -1 unknown (logind silent).  ⛔ Whoever must decide whether
  * to knock something down treats -1 as «yes».
  */
-int ritrovo_vivo(uid_t uid, RitrovoDesktop *d);
+int finding_again_alive(uid_t uid, FindingAgainDesktop *d);
 
 #endif

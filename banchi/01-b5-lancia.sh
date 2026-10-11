@@ -2,11 +2,11 @@
 #
 # 01-b5-lancia.sh — runs ON THE SERVER.  B5: the violation tests.
 #
-#   BERSAGLIO=innesto  bash /media/REMOTIX/src/01-b5-lancia.sh            everything
-#   BERSAGLIO=prodotto bash /media/REMOTIX/src/01-b5-lancia.sh solo tela  one piece only
-#   BERSAGLIO=innesto  bash /media/REMOTIX/src/01-b5-lancia.sh elenco     the predictions
+#   TARGET=graft  bash /media/REMOTIX/src/01-b5-lancia.sh            everything
+#   TARGET=product bash /media/REMOTIX/src/01-b5-lancia.sh only canvas  one piece only
+#   TARGET=graft  bash /media/REMOTIX/src/01-b5-lancia.sh list     the predictions
 #
-# ⛔ `BERSAGLIO` IS MANDATORY — see `01-b0-bersaglio.sh`, which is the only
+# ⛔ `TARGET` IS MANDATORY — see `01-b0-bersaglio.sh`, which is the only
 #    place where the two servers are described.
 #
 # ---------------------------------------------------------------------------
@@ -14,7 +14,7 @@
 #
 # | what | graft | product | why |
 # |---|---|---|---|
-# | the reasons on the wire (`ERRORE_PROTOCOLLO`, `NIENTE_IN_COMUNE`, …) | same | same | ⭐ they are decided by `rcp.c`, which is **identical byte for byte** in the two servers (md5 `cb7af778…`) |
+# | the reasons on the wire (`PROTOCOL_ERROR`, `NOTHING_IN_COMMON`, …) | same | same | ⭐ they are decided by `rcp.c`, which is **identical byte for byte** in the two servers (md5 `cb7af778…`) |
 # | the codec choice and the discard in the log (§4.3) | present | present | same lines, same `rcp.c` |
 # | `0x01` input and `0x02` clipboard on a unidirectional stream | «violation» | ⭐ **lawful**, the session stays alive | `src/webtransport.c` `dispatch_uni()`: *«in the graft both were marked as violations, and a compliant client that opened the input channel saw EVERY byte discarded forever»*.  ⚠ B5 today **does not test them**: it is a hole, not an expected difference |
 # | the **echo** on the streams opened by the bench | present (30 bytes, it is B2's «byte that comes back») | ⛔ **NOT present** | `src/webtransport.c` `discard_extra_stream()`: *«the bytes are thrown away, and NOT sent back»*.  ⚠ No tool must **wait** for it: whoever does stays hanging, and it is the red that on 10 August was diagnosed for hours as a certificate defect |
@@ -51,9 +51,9 @@
 # ---------------------------------------------------------------------------
 set -uo pipefail
 
-ENTRA=/media/REMOTIX/enter.sh
-FUORI=/media/REMOTIX/src
-DENTRO=/srv/src
+ENTER=/media/REMOTIX/enter.sh
+OUT=/media/REMOTIX/src
+INSIDE=/srv/src
 
 log()  { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 ok()   { printf '    \033[1;32mOK\033[0m  %s\n' "$*"; }
@@ -61,21 +61,21 @@ ko()   { printf '    \033[1;31mNO\033[0m  %s\n' "$*"; }
 inf()  { printf '    --  %s\n' "$*"; }
 
 # ⛔ The target: a single shape for the four benches, in a single file.
-SIGLA=b5
+TAG=b5
 # shellcheck source=01-b0-bersaglio.sh
-. "$FUORI/01-b0-bersaglio.sh"
-IND=$B_IND
-PORTA=$B_PORTA
+. "$OUT/01-b0-bersaglio.sh"
+ADDR=$B_ADDR
+PORT=$B_PORT
 
-AZIONE=${1:-tutto}
-FILTRO=${2:-}
+ACTION=${1:-all}
+FILTER=${2:-}
 
 log "Credentials for the container"
-bash "$ENTRA" --root "true" || { ko "cannot enter the container"; exit 2; }
+bash "$ENTER" --root "true" || { ko "cannot enter the container"; exit 2; }
 ok "sudo validated"
 
-if [ "$AZIONE" = elenco ]; then
-	bash "$ENTRA" --root "python3 $DENTRO/01-b5-violazioni.py --bersaglio $B_NOME --elenco"
+if [ "$ACTION" = list ]; then
+	bash "$ENTER" --root "python3 $INSIDE/01-b5-violazioni.py --target $B_NAME --list"
 	exit 0
 fi
 
@@ -86,7 +86,7 @@ target_declare
 #
 #   innesto   the grafts are removed and put back, the mark is counted in the
 #             sources and it is compiled looking at the builder's outcome;
-#   prodotto  ⛔ it is NOT recompiled: `src/` does not belong to this bench, and a
+#   product  ⛔ it is NOT recompiled: `src/` does not belong to this bench, and a
 #             bench that recompiles what it measures removes its own independent
 #             witness.  It is only verified that the binary is there and is newer
 #             than every source — `[M]` 11 Aug 2026, the product binary was an
@@ -102,25 +102,25 @@ target_declare
 #    sees.  It happened again on 10 Aug 2026 on THIS file, four runs after the
 #    lesson had been written.  The redirections go inside the quotes of the
 #    remote command (see `01-b0-bersaglio.sh`).
-bersaglio_pronto || exit 3
+target_ready || exit 3
 
 # ---------------------------------------------------------------------------
 # ⛔ 2. THE INITIAL STATE OF THE BAN — B0.1 and B0.2.
 #
-# B5 does **seven failed authentications in a row** (`limitatore()`), so it
+# B5 does **seven failed authentications in a row** (`limiter()`), so it
 # bans itself: it is intended, and it is what the per-address counter tests.
 # ⛔ But the product's ban is on FILE, and a ban from yesterday would turn red
 #    everything that follows with the red on the wrong defendant.  The file
 #    belongs to this bench only — `01-b0-bersaglio.sh` gives one per bench and
 #    per target — and it is thrown away here.
 log "2. The initial state of the ban (B0.1, B0.2)"
-bersaglio_butta_il_ban
+target_drop_ban
 inf "⚠ and this bench does 7 FAILED authentications in a row: it bans itself,"
 inf "  and it is the thing it tests.  The unblock is at the end, declared (B0.3)"
 
 # ---------------------------------------------------------------------------
 log "3. The server starts"
-inf "⚠ the inactivity cap is \$B_IDLE_LUNGO = $B_IDLE_LUNGO ms: some cases"
+inf "⚠ the inactivity cap is \$B_IDLE_LONG = $B_IDLE_LONG ms: some cases"
 inf "  wait up to twelve seconds to be sure that the farewell does NOT"
 inf "  arrive, and a shorter cap would close the connection on its own —"
 inf "  the bench would read «it dropped» where nothing dropped (R3.19)"
@@ -128,7 +128,7 @@ if [ "$B_IDLE_CHOICE" = no ]; then
 	inf "⛔ and on this target we do NOT choose that number: it is IDLE_MS"
 	inf "   in src/trasporto.c.  The margin above the 12 s goes from 108 s to 18 s"
 fi
-bersaglio_accendi filo "$B_IDLE_LUNGO" || exit 4
+target_turn_on filo "$B_IDLE_LONG" || exit 4
 PID=$B_PID
 
 # ⛔ AND THE UNBLOCK COMMAND MUST BE ALIVE **BEFORE**, not at the end: the `PING`
@@ -139,30 +139,30 @@ inf "does the unblock command answer? (PING — the denominator of B0.3)"
 target_ping || { ko "⛔ the unblock command does not answer: at the end I could not"
                     ko "   put the machine back in order, and I would notice"
                     ko "   with the measurements done.  I stop now."
-                    bersaglio_spegni; exit 4; }
+                    target_turn_off; exit 4; }
 
-fermare() { bersaglio_spegni; }
+stop() { target_turn_off; }
 
 # ---------------------------------------------------------------------------
 # ⛔ 3-bis. DID I MEASURE THE SERVER I DECLARED? — and the server log is asked,
 #    not the command line I wrote myself.
 log "3-bis. The target's fingerprint (LEZIONI.md §1.9, corollary 5)"
-bersaglio_impronta
+target_fingerprint
 case $? in
 0) : ;;
-1) ko "⛔ I stop: the numbers would end up on the wrong target"; fermare; exit 6 ;;
-*) ko "⛔ I stop: I do not know what I am about to measure"; fermare; exit 6 ;;
+1) ko "⛔ I stop: the numbers would end up on the wrong target"; stop; exit 6 ;;
+*) ko "⛔ I stop: I do not know what I am about to measure"; stop; exit 6 ;;
 esac
 
 # ---------------------------------------------------------------------------
 log "4. The violations"
-OPT=$(bersaglio_opzioni_python)
-if [ -n "$FILTRO" ]; then
-	bash "$ENTRA" --root "python3 -u $DENTRO/01-b5-violazioni.py --indirizzo $IND $OPT --solo $FILTRO"
+OPT=$(target_options_python)
+if [ -n "$FILTER" ]; then
+	bash "$ENTER" --root "python3 -u $INSIDE/01-b5-violazioni.py --address $ADDR $OPT --only $FILTER"
 else
-	bash "$ENTRA" --root "python3 -u $DENTRO/01-b5-violazioni.py --indirizzo $IND $OPT"
+	bash "$ENTER" --root "python3 -u $INSIDE/01-b5-violazioni.py --address $ADDR $OPT"
 fi
-ESITO=$?
+OUTCOME=$?
 
 # ---------------------------------------------------------------------------
 log "5. ⛔ Is the server still alive? — B0.5, from outside"
@@ -172,7 +172,7 @@ if [ -d "/proc/$PID" ]; then
 	ok "process $PID is still there"
 else
 	ko "⛔ THE SERVER DIED during the bench"
-	ESITO=1
+	OUTCOME=1
 fi
 
 # ---------------------------------------------------------------------------
@@ -183,7 +183,7 @@ inf "the CHOICE of the codec, and the DISCARD of the unknown entries"
 #    HAD ASKED THE SERVER TO APPLY.
 #
 #    The discard of `vp9` is triggered by two cases only — `hevc-e-vp9` and
-#    `capacita-sconosciuta`.  With `01-b5-lancia.sh solo tela` those cases do
+#    `capacita-sconosciuta`.  With `01-b5-lancia.sh only canvas` those cases do
 #    not run, the `grep` finds nothing, and the bench accused the server of not
 #    having written a line that nobody had given it the chance to write.
 #    It is exactly the defect this same script declares it fears for the
@@ -194,24 +194,24 @@ inf "the CHOICE of the codec, and the DISCARD of the unknown entries"
 #    that is form E8.  The file is looked at first, and it is said which of the
 #    two things happened.
 line_in_log() {   # $1 = searched pattern, $2 = sentence if absent
-	if [ ! -f "$B_LOG_FUORI" ]; then
-		ko "⛔ THE LOG CANNOT BE READ: $B_LOG_FUORI does not exist"
+	if [ ! -f "$B_LOG_OUT" ]; then
+		ko "⛔ THE LOG CANNOT BE READ: $B_LOG_OUT does not exist"
 		ko "   it is not the server that did not write — it is that it cannot be read."
 		ko "   (volume not mapped? server never started? name changed?)"
-		ESITO=1
+		OUTCOME=1
 		return
 	fi
-	if grep -q "$1" "$B_LOG_FUORI"; then
+	if grep -q "$1" "$B_LOG_OUT"; then
 		ok "present:"
-		grep -m2 "$1" "$B_LOG_FUORI" | sed 's/^/        /'
+		grep -m2 "$1" "$B_LOG_OUT" | sed 's/^/        /'
 	else
 		ko "$2"
-		ESITO=1
+		OUTCOME=1
 	fi
 }
 
-if [ -n "$FILTRO" ]; then
-	inf "⚠ SKIPPED: filter «$FILTRO» active.  These two lines are produced by"
+if [ -n "$FILTER" ]; then
+	inf "⚠ SKIPPED: filter «$FILTER» active.  These two lines are produced by"
 	inf "  the cases hevc-e-vp9 and capacita-sconosciuta, which may not"
 	inf "  have been selected: a red here would be a red on a"
 	inf "  rule the server never had the chance to apply"
@@ -223,13 +223,13 @@ else
 fi
 
 log "7. And what the server wrote, in short"
-if [ -f "$B_LOG_FUORI" ]; then
+if [ -f "$B_LOG_OUT" ]; then
 	# ⛔ The TARGET's fingerprint is counted, not the graft's: the
 	#    product does not write «REMOTIX B3» on any line, and a count of
 	#    zero would be read as «the server wrote nothing».
-	grep -cE "$B_IMPRONTA" "$B_LOG_FUORI" \
+	grep -cE "$B_FINGERPRINT" "$B_LOG_OUT" \
 		| sed 's/^/        log lines (target fingerprint): /'
-	grep "congedo motivo" "$B_LOG_FUORI" | tail -5 | sed 's/^/        /'
+	grep "farewell motivo" "$B_LOG_OUT" | tail -5 | sed 's/^/        /'
 else
 	inf "⛔ no log to summarise: the file is not there"
 fi
@@ -241,45 +241,45 @@ fi
 #    limiter pass by construction — «an unblock called inside the run makes
 #    everything else pass» — and B5 tests the limiter.
 #
-# ⚠ And it is declared which of the THREE outcomes arrived.  `TOLTO` means the
+# ⚠ And it is declared which of the THREE outcomes arrived.  `REMOVED` means the
 #   ban really was there, that is the limiter worked: it is an independent
 #   confirmation, read from the HOST's side instead of from the wire.
-#   `NON-BANNATO` after seven failures would be news, not a clean-up.
+#   `NOT-BANNED` after seven failures would be news, not a clean-up.
 #   «I talked to nobody» is neither one nor the other.
 log "8. The final unblock, declared (B0.3)"
 inf "⛔ never before: inside the run it would make the limiter pass by construction"
-inf "⚠ expected «TOLTO» on the bench's address: after seven failures the ban"
-inf "  is there, and a «NON-BANNATO» here would be news about the limiter, not a"
+inf "⚠ expected «REMOVED» on the bench's address: after seven failures the ban"
+inf "  is there, and a «NOT-BANNED» here would be news about the limiter, not a"
 inf "  successful clean-up"
-target_unblock dopo-b5 "$IND" || {
+target_unblock dopo-b5 "$ADDR" || {
 	ko "⚠ the final unblock did not go through: the address may stay out"
 	ko "  for twelve hours on the ban file of THIS bench ($B_BAN)"
 	ko "  — not on the others', which have one each"
 }
 
-fermare
+stop
 
 log "Outcome"
 # ⛔ THREE OUTCOMES, NOT TWO.  `01-b5-violazioni.py` exits 2 when the filter
 #    selected no case: «I have nothing to measure» is not «passes», and a typo
 #    in the filter must not have the colour of green.
-if [ "$ESITO" -eq 2 ]; then
-	ko "⛔ B5: there was nothing to measure (filter «$FILTRO»)"
-elif [ "$ESITO" -eq 0 ]; then
-	if [ -n "$FILTRO" ]; then
-		ok "⭐ the cases «$FILTRO» pass against «$B_NOME»"
+if [ "$OUTCOME" -eq 2 ]; then
+	ko "⛔ B5: there was nothing to measure (filter «$FILTER»)"
+elif [ "$OUTCOME" -eq 0 ]; then
+	if [ -n "$FILTER" ]; then
+		ok "⭐ the cases «$FILTER» pass against «$B_NAME»"
 		inf "⚠ and this is NOT «B5 passes»: the run was partial"
 	else
-		ok "⭐ B5 passes against «$B_NOME»"
-		inf "⚠ and it is not «B5 passes»: it is «B5 passes against $B_NOME».  The other"
+		ok "⭐ B5 passes against «$B_NAME»"
+		inf "⚠ and it is not «B5 passes»: it is «B5 passes against $B_NAME».  The other"
 		inf "  target is another program, and this run says nothing about it"
 	fi
-elif [ "$ESITO" -eq 6 ]; then
+elif [ "$OUTCOME" -eq 6 ]; then
 	ko "⛔ B5: I DID NOT MEASURE — the target is not the declared one"
 	ko "   ⚠ this is not a red of the server: it is the bench that stopped"
 	ko "     before attributing numbers to the wrong program"
 else
-	ko "⛔ B5: something does not pass against «$B_NOME»"
+	ko "⛔ B5: something does not pass against «$B_NAME»"
 fi
-inf "the full log stays in $B_LOG_FUORI"
-exit "$ESITO"
+inf "the full log stays in $B_LOG_OUT"
+exit "$OUTCOME"

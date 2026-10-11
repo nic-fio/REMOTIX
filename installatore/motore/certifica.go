@@ -1,4 +1,4 @@
-package motore
+package engine
 
 import (
 	"os"
@@ -9,7 +9,7 @@ import (
 
 // The platform certification (phase 7, §6.0; R29: on a machine broken on purpose it must
 // never say green). Beyond the «controlla» of every step of the plan:
-//   - codifica-h264: done by REMOTIX (`remotix --prova-codifica`, operazione.go);
+//   - codifica-h264: done by REMOTIX (`remotix --encoding-test`, operazione.go);
 //   - pam-risolta: REMOTIX's login stack resolves — the file is there, every module and every included
 //     file exist. ⚠ It is not «the stack refuses a non-existent user» (that would need loading PAM,
 //     that is cgo or a new request to REMOTIX, §6.5-bis): it is the static part, and the name says so;
@@ -17,24 +17,24 @@ import (
 //     does not cancel the installation (opening it is the administrator's decision D6) but is never
 //     green: non-required FAIL + C-AMMINISTRATORE; a firewall that cannot be read ⇒ UNKNOWN.
 
-// ControlliPiattaforma: the checks beyond the steps. fallito = a REQUIRED check in FAIL.
-func ControlliPiattaforma(a *Ambiente, porta int) (k []Controllo, cond []Condizione, fallito bool) {
-	c, cd := provaCodifica(a)
+// PlatformChecks: the checks beyond the steps. has_failed = a REQUIRED check in FAIL.
+func PlatformChecks(a *Environment, port int) (k []CheckReport, cond []Condition, has_failed bool) {
+	c, cd := encodingTest(a)
 	k = append(k, c)
 	if cd != nil {
 		cond = append(cond, *cd)
 	}
-	if c.Esito == "FAIL" {
-		fallito = true
+	if c.Outcome == "FAIL" {
+		has_failed = true
 	}
 	p := checkPAM(a)
 	k = append(k, p)
-	if p.Esito == "FAIL" {
-		fallito = true
-	} else if p.Esito == "UNKNOWN" {
-		cond = append(cond, Condizione{Codice: "C-LIMITE", Testo: T("cond.pam_ignota", p.Dettaglio)})
+	if p.Outcome == "FAIL" {
+		has_failed = true
+	} else if p.Outcome == "UNKNOWN" {
+		cond = append(cond, Condition{Codice: "C-LIMITE", Testo: T("cond.pam_ignota", p.Detail)})
 	}
-	f, fc := checkPort(a, porta)
+	f, fc := checkPort(a, port)
 	k = append(k, f)
 	if fc != nil {
 		cond = append(cond, *fc)
@@ -46,87 +46,87 @@ var pamModuleDirs = []string{"/usr/lib/security", "/usr/lib64/security", "/lib/s
 	"/usr/lib/x86_64-linux-gnu/security", "/lib/x86_64-linux-gnu/security", "/usr/lib/aarch64-linux-gnu/security"}
 
 // checkPAM follows the stack from /etc/pam.d/remotix (or /usr/lib/pam.d/remotix).
-func checkPAM(a *Ambiente) Controllo {
-	k := Controllo{ID: "pam-resolved", Cosa: T("ver.pam"), Richiesto: true}
+func checkPAM(a *Environment) CheckReport {
+	k := CheckReport{ID: "pam-resolved", What: T("ver.pam"), Requested: true}
 	f := findPam(a, "remotix")
 	if f == "" {
-		k.Esito, k.Dettaglio = "FAIL", "the remotix file is missing in /etc/pam.d and /usr/lib/pam.d"
+		k.Outcome, k.Detail = "FAIL", "the remotix file is missing in /etc/pam.d and /usr/lib/pam.d"
 		return k
 	}
-	moduli := 0
-	visti := map[string]bool{}
-	var guasto string
-	var segui func(file string, profondita int)
-	segui = func(file string, profondita int) {
-		if guasto != "" || visti[file] || profondita > 8 {
+	modules := 0
+	seen_items := map[string]bool{}
+	var fault string
+	var segui func(file string, depth int)
+	segui = func(file string, depth int) {
+		if fault != "" || seen_items[file] || depth > 8 {
 			return
 		}
-		visti[file] = true
-		t, ok := leggi(a, file)
+		seen_items[file] = true
+		t, ok := load(a, file)
 		if !ok {
-			guasto = file + " cannot be read"
+			fault = file + " cannot be read"
 			return
 		}
-		for _, riga := range strings.Split(t, "\n") {
-			riga = strings.TrimSpace(riga)
-			if riga == "" || strings.HasPrefix(riga, "#") {
+		for _, line := range strings.Split(t, "\n") {
+			line = strings.TrimSpace(line)
+			if line == "" || strings.HasPrefix(line, "#") {
 				continue
 			}
-			c := strings.Fields(riga)
+			c := strings.Fields(line)
 			if c[0] == "@include" && len(c) > 1 {
 				g := findPam(a, c[1])
 				if g == "" {
-					guasto = file + ": @include " + c[1] + " is missing"
+					fault = file + ": @include " + c[1] + " is missing"
 					return
 				}
-				segui(g, profondita+1)
+				segui(g, depth+1)
 				continue
 			}
 			if len(c) < 3 {
 				continue
 			}
-			tipo := strings.TrimPrefix(c[0], "-")
-			if tipo != "auth" && tipo != "account" && tipo != "session" && tipo != "password" {
+			kind := strings.TrimPrefix(c[0], "-")
+			if kind != "auth" && kind != "account" && kind != "session" && kind != "password" {
 				continue
 			}
-			controllo, resto := c[1], c[2:]
-			if strings.HasPrefix(controllo, "[") { // [success=1 default=ignore]
-				for len(resto) > 0 && !strings.HasSuffix(controllo, "]") {
-					controllo += " " + resto[0]
-					resto = resto[1:]
+			check, rest := c[1], c[2:]
+			if strings.HasPrefix(check, "[") { // [success=1 default=ignore]
+				for len(rest) > 0 && !strings.HasSuffix(check, "]") {
+					check += " " + rest[0]
+					rest = rest[1:]
 				}
 			}
-			if len(resto) == 0 {
+			if len(rest) == 0 {
 				continue
 			}
-			if controllo == "include" || controllo == "substack" {
-				g := findPam(a, resto[0])
+			if check == "include" || check == "substack" {
+				g := findPam(a, rest[0])
 				if g == "" {
-					guasto = file + ": " + controllo + " " + resto[0] + " is missing"
+					fault = file + ": " + check + " " + rest[0] + " is missing"
 					return
 				}
-				segui(g, profondita+1)
+				segui(g, depth+1)
 				continue
 			}
-			mod := resto[0]
-			facoltativo := strings.HasPrefix(c[0], "-") // «-session»: the module may be missing
-			if !pamModule(a, mod) && !facoltativo {
-				guasto = file + ": the module " + mod + " is missing"
+			mod := rest[0]
+			optional := strings.HasPrefix(c[0], "-") // «-session»: the module may be missing
+			if !pamModule(a, mod) && !optional {
+				fault = file + ": the module " + mod + " is missing"
 				return
 			}
-			moduli++
+			modules++
 		}
 	}
 	segui(f, 0)
-	if guasto != "" {
-		k.Esito, k.Dettaglio = "FAIL", guasto
+	if fault != "" {
+		k.Outcome, k.Detail = "FAIL", fault
 		return k
 	}
-	k.Esito, k.Dettaglio = "PASS", f+": "+strconv.Itoa(moduli)+" modules, all present"
+	k.Outcome, k.Detail = "PASS", f+": "+strconv.Itoa(modules)+" modules, all present"
 	return k
 }
 
-func pamModule(a *Ambiente, m string) bool {
+func pamModule(a *Environment, m string) bool {
 	if filepath.IsAbs(m) {
 		_, err := os.Stat(a.P(m))
 		return err == nil
@@ -139,126 +139,126 @@ func pamModule(a *Ambiente, m string) bool {
 	return false
 }
 
-func checkPort(a *Ambiente, porta int) (Controllo, *Condizione) {
-	ps := strconv.Itoa(porta)
-	k := Controllo{ID: "firewall-port", Cosa: T("ver.porta", ps), Richiesto: false}
+func checkPort(a *Environment, port int) (CheckReport, *Condition) {
+	ps := strconv.Itoa(port)
+	k := CheckReport{ID: "firewall-port", What: T("ver.porta", ps), Requested: false}
 	if a.Firewall == nil {
-		k.Esito, k.Dettaglio = "UNKNOWN", "firewall not read"
-		return k, &Condizione{Codice: "C-AMMINISTRATORE", Testo: T("cond.porta_ignota", ps)}
+		k.Outcome, k.Detail = "UNKNOWN", "firewall not read"
+		return k, &Condition{Codice: "C-AMMINISTRATORE", Testo: T("cond.porta_ignota", ps)}
 	}
 	switch g := a.Firewall.Nome(); g {
 	case "none":
-		k.Esito, k.Dettaglio = "PASS", T("ver.porta_nessuno")
+		k.Outcome, k.Detail = "PASS", T("ver.porta_nessuno")
 		return k, nil
 	case "firewalld":
-		zona, err := a.Firewall.DefaultZone()
+		zone, err := a.Firewall.DefaultZone()
 		if err != nil {
-			k.Esito, k.Dettaglio = "UNKNOWN", err.Error()
-			return k, &Condizione{Codice: "C-AMMINISTRATORE", Testo: T("cond.porta_ignota", ps)}
+			k.Outcome, k.Detail = "UNKNOWN", err.Error()
+			return k, &Condition{Codice: "C-AMMINISTRATORE", Testo: T("cond.porta_ignota", ps)}
 		}
-		var chiuse []string
+		var closed []string
 		for _, proto := range []string{"tcp", "udp"} {
-			ok, err := a.Firewall.HasPort(zona, ps+"/"+proto, false)
+			ok, err := a.Firewall.HasPort(zone, ps+"/"+proto, false)
 			if err != nil {
-				k.Esito, k.Dettaglio = "UNKNOWN", err.Error()
-				return k, &Condizione{Codice: "C-AMMINISTRATORE", Testo: T("cond.porta_ignota", ps)}
+				k.Outcome, k.Detail = "UNKNOWN", err.Error()
+				return k, &Condition{Codice: "C-AMMINISTRATORE", Testo: T("cond.porta_ignota", ps)}
 			}
 			if !ok {
 				if fw, isD := a.Firewall.(*firewalldDBus); isD {
-					if porte, err := fw.LivePorts(zona); err == nil && portInRanges(porte, porta, proto) {
+					if ports, err := fw.LivePorts(zone); err == nil && portInRanges(ports, port, proto) {
 						continue
 					}
 				}
-				chiuse = append(chiuse, ps+"/"+proto)
+				closed = append(closed, ps+"/"+proto)
 			}
 		}
-		if len(chiuse) == 0 {
-			k.Esito, k.Dettaglio = "PASS", "firewalld, zone "+zona+": open TCP and UDP"
+		if len(closed) == 0 {
+			k.Outcome, k.Detail = "PASS", "firewalld, zone "+zone+": open TCP and UDP"
 			return k, nil
 		}
-		k.Esito, k.Dettaglio = "FAIL", "firewalld, zone "+zona+": closed "+strings.Join(chiuse, " ")
-		return k, &Condizione{Codice: "C-AMMINISTRATORE", Testo: T("cond.porta_chiusa", strings.Join(chiuse, " "))}
+		k.Outcome, k.Detail = "FAIL", "firewalld, zone "+zone+": closed "+strings.Join(closed, " ")
+		return k, &Condition{Codice: "C-AMMINISTRATORE", Testo: T("cond.porta_chiusa", strings.Join(closed, " "))}
 	default:
-		k.Esito, k.Dettaglio = "UNKNOWN", g+": its rules are not evaluated yet"
-		return k, &Condizione{Codice: "C-AMMINISTRATORE", Testo: T("cond.porta_ignota", ps)}
+		k.Outcome, k.Detail = "UNKNOWN", g+": its rules are not evaluated yet"
+		return k, &Condition{Codice: "C-AMMINISTRATORE", Testo: T("cond.porta_ignota", ps)}
 	}
 }
 
-// Certificazione: the report of `remotix-install certifica` (§6.6.11: the checks are redone
+// Certification: the report of `remotix-install certify` (§6.6.11: the checks are redone
 // on the confirmed installation, and it says what is still as it was then).
-type Certificazione struct {
-	Formato       string       `json:"format"`
+type Certification struct {
+	Schema       string       `json:"format"`
 	Obj           string       `json:"object"` // "certification"
-	Operazione    string       `json:"operation"`
-	Verifications []Controllo  `json:"checks"`
-	Condizioni    []Condizione `json:"conditions"`
-	Esito         string       `json:"result"` // VERDE · A_CONDIZIONI · ROSSO
+	Operation    string       `json:"operation"`
+	Verifications []CheckReport  `json:"checks"`
+	Condizioni    []Condition `json:"conditions"`
+	Outcome         string       `json:"result"` // GREEN · A_CONDIZIONI · RED
 }
 
-// Certifica redoes, read-only, the checks of the confirmed installation.
-func (m *Motore) Certifica() (*Certificazione, error) {
+// Certify redoes, read-only, the checks of the confirmed installation.
+func (m *Engine) Certify() (*Certification, error) {
 	in, err := m.CheckInstallation()
 	if err != nil {
 		return nil, err
 	}
-	dir := filepath.Join(m.Cartella, in.Operazione)
+	dir := filepath.Join(m.Folder, in.Operation)
 	var pn Piano
-	if err := LeggiJSON(filepath.Join(dir, "plan.json"), &pn); err != nil {
+	if err := ReadJSON(filepath.Join(dir, "plan.json"), &pn); err != nil {
 		return nil, err
 	}
 	ev, err := ReadLog(filepath.Join(dir, "log.jsonl"))
 	if err != nil {
 		return nil, err
 	}
-	r := &Certificazione{Formato: Formato, Obj: "certification", Operazione: in.Operazione, Condizioni: []Condizione{}}
-	rosso := false
+	r := &Certification{Schema: Schema, Obj: "certification", Operation: in.Operation, Condizioni: []Condition{}}
+	red := false
 	for _, ap := range pn.Azioni {
-		var intz *Evento
+		var intent *Event
 		for i := range ev {
-			if ev[i].Azione == ap.ID && ev[i].Tipo == EvIntent {
-				intz = &ev[i]
+			if ev[i].Action == ap.ID && ev[i].Type == EvIntent {
+				intent = &ev[i]
 				break
 			}
 		}
-		k := Controllo{ID: ap.ID, Cosa: ap.HowToVerify, Richiesto: true}
+		k := CheckReport{ID: ap.ID, What: ap.HowToVerify, Requested: true}
 		a, err := NewAction(ap)
 		switch {
-		case err != nil || intz == nil:
-			k.Esito, k.Dettaglio = "UNKNOWN", "no intention in the log"
+		case err != nil || intent == nil:
+			k.Outcome, k.Detail = "UNKNOWN", "no intention in the log"
 		default:
-			e, det, err := a.Controlla(&Contesto{Amb: m.Amb, Cartella: dir, P: ap}, intz.Prima)
+			e, det, err := a.Check(&Context{Env: m.Env, Folder: dir, P: ap}, intent.Before)
 			switch {
 			case err != nil:
-				k.Esito, k.Dettaglio = "UNKNOWN", err.Error()
-			case e == COMPLETO:
-				k.Esito, k.Dettaglio = "PASS", det
+				k.Outcome, k.Detail = "UNKNOWN", err.Error()
+			case e == COMPLETE:
+				k.Outcome, k.Detail = "PASS", det
 			default:
-				k.Esito, k.Dettaglio = "FAIL", string(e)+": "+det
-				rosso = true
+				k.Outcome, k.Detail = "FAIL", string(e)+": "+det
+				red = true
 			}
 		}
 		r.Verifications = append(r.Verifications, k)
 	}
-	porta := m.Porta
-	if porta == 0 {
-		porta = 7447
+	port := m.Porta
+	if port == 0 {
+		port = 7447
 	}
-	k, cond, fallito := ControlliPiattaforma(m.Amb, porta)
+	k, cond, has_failed := PlatformChecks(m.Env, port)
 	r.Verifications = append(r.Verifications, k...)
 	r.Condizioni = append(r.Condizioni, cond...)
 	allPass := true
 	for _, x := range r.Verifications {
-		if x.Esito != "PASS" {
+		if x.Outcome != "PASS" {
 			allPass = false
 		}
 	}
 	switch {
-	case rosso || fallito:
-		r.Esito = "RED"
+	case red || has_failed:
+		r.Outcome = "RED"
 	case allPass && len(r.Condizioni) == 0:
-		r.Esito = "GREEN"
+		r.Outcome = "GREEN"
 	default:
-		r.Esito = "CONDITIONAL" // ⛔ UNKNOWN is never PASS, a condition is never green (R29, R32)
+		r.Outcome = "CONDITIONAL" // ⛔ UNKNOWN is never PASS, a condition is never green (R29, R32)
 	}
 	return r, nil
 }

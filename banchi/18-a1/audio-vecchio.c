@@ -44,7 +44,7 @@
  * video.
  *
  * ⭐ And there is nothing to invent to remove it.  `RCP.md` §6.3 puts the
- *    `istante` inside every datagram and the receiver puts the blocks back in
+ *    `instant` inside every datagram and the receiver puts the blocks back in
  *    their ABSOLUTE place.  ⇒ **A block not sent is a gap, and a gap is
  *    silence** — which is exactly what that block contained.  Nothing is
  *    approximated: we stop sending the zero.
@@ -62,7 +62,7 @@
  *        encoder state left BEFORE the stretch (here the `pts` does not
  *        advance, on purpose, or libavcodec would see a jump).  It is what
  *        Opus's DTX has always done; `[?]` inaudible, and from here NOT measured;
- *     2. the receiver sees a jump in `istante` and its counters count it
+ *     2. the receiver sees a jump in `instant` and its counters count it
  *        as **`mancato`** — that is, a number that today means "lost"
  *        would start to also mean "there was nothing to send".
  *        ⛔ The bench measures it paired on purpose, and declares it.
@@ -76,34 +76,34 @@
  *      not even leave a line saying it did not arrive.  The only channel
  *      that crosses the `exec` is the tail of `argv`.
  *
- *      ⇒ Now the way exists, and it is that of `--parlantina`:
- *        · `main.c`   recognises `--niente-audio-silenzio` and keeps a `bool`;
- *        · `figlio.c` puts it at the end of `argv` (`diventa_ed_esegui()`) and
- *                     reads it back **by name** in `figlio_vive()`, calling
+ *      ⇒ Now the way exists, and it is that of `--verbose`:
+ *        · `main.c`   recognises `--no-audio-silence` and keeps a `bool`;
+ *        · `figlio.c` puts it at the end of `argv` (`become_and_exec()`) and
+ *                     reads it back **by name** in `child_alive()`, calling
  *                     `audio_silenzio_taci()`;
  *        · here       nothing changes: `audio_silenzio_taci()` was already there.
  *
  * ⛔⛔ AND THE `-D` WAS REMOVED, not left beside it: two ways to switch on
  *      the same cure are two numbers that can diverge — the same reason
- *      the environment bridge of `wt_sgombra_soglia()` was removed on
+ *      the environment bridge of `wt_clear_threshold()` was removed on
  *      23 August.  ⚠ Whoever rebuilds `09-b84-audio-silenzio.py` must know
  *      that its arm B is no longer made with a `-D`, but with the command
- *      line: the OFF arm is now `--niente-audio-silenzio`.
+ *      line: the OFF arm is now `--no-audio-silence`.
  *
  * ⭐⭐⭐ AND IT IS BORN ON since 24 August 2026 — the user's decision, after having
  *      looked (§19.6, §20.3).  ⚠ `[M]` 24 Aug 2026, bench `09-b84`: **102.1
  *      times** less traffic with the screen still (557.6 → 5.5 kbit/s), pure test
  *      tone **1.000**, coverage **0.9996**, **1 248 blocks muted of 1 248**.
- *      ⚠ The price, declared: the client's `mancati` rise by **2 in
- *      5 000** — a WANTED gap leaves the same jump in `istante` as a lost
+ *      ⚠ The price, declared: the client's `missed` rise by **2 in
+ *      5 000** — a WANTED gap leaves the same jump in `instant` as a lost
  *      one, and a number that meant "lost" starts to also mean
  *      "there was nothing to send".
  */
 static bool audio_hush_silence = true;
 
-void audio_silenzio_taci(bool si)
+void audio_silenzio_taci(bool yes)
 {
-	audio_hush_silence = si;
+	audio_hush_silence = yes;
 }
 
 bool audio_silenzio_acceso(void)
@@ -113,9 +113,9 @@ bool audio_silenzio_acceso(void)
 
 struct audio_cod {
 	uint8_t codec; /* 1 = Opus, 2 = PCM */
-	uint32_t blocco;
-	uint64_t entrati, usciti;
-	uint64_t taciuti; /* blocks of digital silence NOT sent */
+	uint32_t block;
+	uint64_t entered, exited;
+	uint64_t silenced; /* blocks of digital silence NOT sent */
 
 	/* Opus only */
 	AVCodecContext *ctx;
@@ -125,7 +125,7 @@ struct audio_cod {
 	bool logged_eagain;
 };
 
-static bool opus_apri(audio_cod *c)
+static bool opus_open(audio_cod *c)
 {
 	const AVCodec *cod;
 	int e;
@@ -150,10 +150,10 @@ static bool opus_apri(audio_cod *c)
 	if (!c->ctx)
 		return false;
 
-	c->ctx->sample_rate = AUDIO_FREQUENZA;
+	c->ctx->sample_rate = AUDIO_FREQUENCY;
 	c->ctx->sample_fmt = AV_SAMPLE_FMT_S16;
 	c->ctx->bit_rate = AUDIO_OPUS_BITRATE;
-	av_channel_layout_default(&c->ctx->ch_layout, AUDIO_CANALI);
+	av_channel_layout_default(&c->ctx->ch_layout, AUDIO_CHANNELS);
 	/* 20 ms per packet, which is what §5.3 imposes and not what
 	 * the encoder would choose if nobody told it. */
 	av_opt_set(c->ctx->priv_data, "frame_duration", "20", 0);
@@ -171,11 +171,11 @@ static bool opus_apri(audio_cod *c)
 	 *    chose a `frame_size` different from the 960 of §5.3, the blocks we
 	 *    give it would be the wrong size and the sound would come out crooked
 	 *    **without an error anywhere**. */
-	if (c->ctx->frame_size != AUDIO_BLOCCO_OPUS) {
+	if (c->ctx->frame_size != AUDIO_BLOCK_OPUS) {
 		registro_dice(REG_AUDIO,
 		              "⛔ libopus chose blocks of %d frames, and §5.3 "
 		              "wants %d (20 ms).  It does not adapt silently: it is declared",
-		              c->ctx->frame_size, AUDIO_BLOCCO_OPUS);
+		              c->ctx->frame_size, AUDIO_BLOCK_OPUS);
 		return false;
 	}
 
@@ -184,9 +184,9 @@ static bool opus_apri(audio_cod *c)
 	if (!c->frame || !c->pkt)
 		return false;
 	c->frame->format = AV_SAMPLE_FMT_S16;
-	c->frame->sample_rate = AUDIO_FREQUENZA;
-	c->frame->nb_samples = AUDIO_BLOCCO_OPUS;
-	av_channel_layout_default(&c->frame->ch_layout, AUDIO_CANALI);
+	c->frame->sample_rate = AUDIO_FREQUENCY;
+	c->frame->nb_samples = AUDIO_BLOCK_OPUS;
+	av_channel_layout_default(&c->frame->ch_layout, AUDIO_CHANNELS);
 	if (av_frame_get_buffer(c->frame, 0) < 0)
 		return false;
 
@@ -216,23 +216,23 @@ audio_cod *audio_cod_apri(uint8_t codec)
 	                    "decision).  `[M]` 09-b84: 102.1 times less traffic with "
 	                    "the screen still (557.6 → 5.5 kbit/s), 1 248 blocks muted "
 	                    "of 1 248.  ⚠ The price: the client's «mancati» rise "
-	                    "by 2 in 5 000.  ⛔ Switched off with `--niente-audio-silenzio`"
-	                  : "⛔ OFF by hand (`--niente-audio-silenzio`) — "
+	                    "by 2 in 5 000.  ⛔ Switched off with `--no-audio-silence`"
+	                  : "⛔ OFF by hand (`--no-audio-silence`) — "
 	                    "silence is sent too, that is the product until 23 "
 	                    "August 2026.  ⚠ And it is NOT the default: since 24 August "
 	                    "it is born ON");
 
 	if (codec == 2) {
-		c->blocco = AUDIO_BLOCCO_PCM;
+		c->block = AUDIO_BLOCK_PCM;
 		registro_dice(REG_AUDIO,
 		              "⭐ PCM opened: 48 000 Hz, 2 channels, s16 little-endian, "
 		              "blocks of %u frames (5 ms) = %u bytes (§5.3)",
-		              c->blocco, c->blocco * AUDIO_CANALI * 2u);
+		              c->block, c->block * AUDIO_CHANNELS * 2u);
 		return c;
 	}
 	if (codec == 1) {
-		c->blocco = AUDIO_BLOCCO_OPUS;
-		if (!opus_apri(c)) {
+		c->block = AUDIO_BLOCK_OPUS;
+		if (!opus_open(c)) {
 			audio_cod_chiudi(c);
 			return NULL;
 		}
@@ -264,10 +264,10 @@ void audio_cod_chiudi(audio_cod *c)
 	              "of %llu in, %llu out on the wire — codec %u",
 	              audio_hush_silence
 	                  ? "ON, and it is the default since 24 Aug 2026"
-	                  : "OFF by hand, --niente-audio-silenzio",
-	              (unsigned long long)c->taciuti,
-	              (unsigned long long)c->entrati,
-	              (unsigned long long)c->usciti, c->codec);
+	                  : "OFF by hand, --no-audio-silence",
+	              (unsigned long long)c->silenced,
+	              (unsigned long long)c->entered,
+	              (unsigned long long)c->exited, c->codec);
 	if (c->pkt)
 		av_packet_free(&c->pkt);
 	if (c->frame)
@@ -279,7 +279,7 @@ void audio_cod_chiudi(audio_cod *c)
 
 uint32_t audio_cod_blocco(const audio_cod *c)
 {
-	return c ? c->blocco : 0;
+	return c ? c->block : 0;
 }
 
 /* ⛔ PCM is written LITTLE-endian by hand, not with a `memcpy`.
@@ -288,82 +288,82 @@ uint32_t audio_cod_blocco(const audio_cod *c)
  *    wrong on a big-endian ARM — and the symptom is not an error, it is
  *    full-scale noise.  ⚠ It costs two lines and removes a defect that would
  *    show only on the one machine where nobody tests it. */
-static void pcm_write(const int16_t *campioni, uint32_t fotogrammi, uint8_t *fuori)
+static void pcm_write(const int16_t *samples, uint32_t frames, uint8_t *report)
 {
-	uint32_t n = fotogrammi * AUDIO_CANALI;
+	uint32_t n = frames * AUDIO_CHANNELS;
 	for (uint32_t i = 0; i < n; i++) {
-		uint16_t v = (uint16_t)campioni[i];
-		fuori[i * 2] = (uint8_t)(v & 0xFF);
-		fuori[i * 2 + 1] = (uint8_t)(v >> 8);
+		uint16_t v = (uint16_t)samples[i];
+		report[i * 2] = (uint8_t)(v & 0xFF);
+		report[i * 2 + 1] = (uint8_t)(v >> 8);
 	}
 }
 
 /* ⛔ DIGITAL silence: all samples exactly zero, no thresholds.  ⚠ The
- *    loop costs `blocco * 2` integer comparisons — 480 for a PCM block, 1920
+ *    loop costs `block * 2` integer comparisons — 480 for a PCM block, 1920
  *    for an Opus one, fifty times a second — and it is less work than the
  *    `memcpy` the encoder does right after.  ⭐ And it exits at the FIRST
  *    non-zero sample: on real sound the cost is one read. */
-static bool everything_zero(const int16_t *campioni, uint32_t fotogrammi)
+static bool everything_zero(const int16_t *samples, uint32_t frames)
 {
-	uint32_t n = fotogrammi * AUDIO_CANALI;
+	uint32_t n = frames * AUDIO_CHANNELS;
 	for (uint32_t i = 0; i < n; i++)
-		if (campioni[i] != 0)
+		if (samples[i] != 0)
 			return false;
 	return true;
 }
 
-bool audio_cod_passa(audio_cod *c, const int16_t *campioni, uint8_t *fuori,
-                     size_t *quanti)
+bool audio_cod_passa(audio_cod *c, const int16_t *samples, uint8_t *report,
+                     size_t *amount)
 {
 	int e;
 
-	if (!c || !campioni || !fuori || !quanti)
+	if (!c || !samples || !report || !amount)
 		return false;
-	c->entrati++;
+	c->entered++;
 
 	/* ⛔⭐ THE SILENCE CURE — off by itself, and the box is at the top.
 	 *
 	 * ⚠ It returns `false` **before** the encoder, and that is what
 	 *   `audio.h` already promises: *"Returns `false` when there is nothing to
 	 *   send.  The caller sends nothing and goes on"*.  ⇒ No
-	 *   caller changes, and the `istante` of §6.3 keeps advancing by itself
+	 *   caller changes, and the `instant` of §6.3 keeps advancing by itself
 	 *   in `figlio.c` — which is what makes the gap a silence in the right
 	 *   place instead of a shift of everything that follows.
 	 *
 	 * ⛔ And the Opus `pts` does NOT move: libavcodec would see a jump, and a
 	 *    jump is something we have not measured.  Here the encoder
 	 *    simply does not see those blocks. */
-	if (audio_hush_silence && everything_zero(campioni, c->blocco)) {
-		c->taciuti++;
+	if (audio_hush_silence && everything_zero(samples, c->block)) {
+		c->silenced++;
 		/* ⚠ With a floor, or a mute desktop would fill the log instead of
 		 *   telling about it: the first and then one every thousand (20 s of Opus, 5 of PCM). */
-		if (c->taciuti == 1 || c->taciuti % 1000 == 0)
+		if (c->silenced == 1 || c->silenced % 1000 == 0)
 			registro_dice(REG_AUDIO,
 			              "⭐ DIGITAL silence: %llu blocks not sent of "
 			              "%llu in (I6, cure on).  ⚠ The receiver will see "
-			              "a jump in `istante` and will count it among the «mancati»: "
+			              "a jump in `instant` and will count it among the «mancati»: "
 			              "it is a WANTED gap, not a loss",
-			              (unsigned long long)c->taciuti,
-			              (unsigned long long)c->entrati);
+			              (unsigned long long)c->silenced,
+			              (unsigned long long)c->entered);
 		return false;
 	}
 
 	if (c->codec == 2) {
-		size_t n = (size_t)c->blocco * AUDIO_CANALI * 2;
-		if (n > AUDIO_FUORI_MAX)
+		size_t n = (size_t)c->block * AUDIO_CHANNELS * 2;
+		if (n > AUDIO_OUT_MAX)
 			return false;
-		pcm_write(campioni, c->blocco, fuori);
-		*quanti = n;
-		c->usciti++;
+		pcm_write(samples, c->block, report);
+		*amount = n;
+		c->exited++;
 		return true;
 	}
 
 	if (av_frame_make_writable(c->frame) < 0)
 		return false;
-	memcpy(c->frame->data[0], campioni,
-	       (size_t)AUDIO_BLOCCO_OPUS * AUDIO_CANALI * sizeof(int16_t));
+	memcpy(c->frame->data[0], samples,
+	       (size_t)AUDIO_BLOCK_OPUS * AUDIO_CHANNELS * sizeof(int16_t));
 	c->frame->pts = c->pts;
-	c->pts += AUDIO_BLOCCO_OPUS;
+	c->pts += AUDIO_BLOCK_OPUS;
 
 	e = avcodec_send_frame(c->ctx, c->frame);
 	if (e < 0) {
@@ -380,14 +380,14 @@ bool audio_cod_passa(audio_cod *c, const int16_t *campioni, uint8_t *fuori,
 		 *    EAGAIN.  ⚠ It stays because the API allows it, ⭐ but now IT SHOWS
 		 *    if it is taken: before, it returned `false` silently, and then
 		 *    "Opus is accumulating" would have been indistinguishable from "the block
-		 *    did not arrive".  And if one day it were taken, the `istante` of §6.3
+		 *    did not arrive".  And if one day it were taken, the `instant` of §6.3
 		 *    would no longer belong to the block that leaves. */
 		if (!c->logged_eagain) {
 			c->logged_eagain = true;
 			registro_dice(REG_AUDIO,
 			              "⛔ libopus held back a block (EAGAIN) — and "
 			              "`banchi/07-b44` says it never happens.  ⚠ From here "
-			              "on the `istante` of §6.3 may not be that "
+			              "on the `instant` of §6.3 may not be that "
 			              "of the block sent");
 		}
 		return false;
@@ -399,29 +399,29 @@ bool audio_cod_passa(audio_cod *c, const int16_t *campioni, uint8_t *fuori,
 		return false;
 	}
 
-	if ((size_t)c->pkt->size > AUDIO_FUORI_MAX) {
+	if ((size_t)c->pkt->size > AUDIO_OUT_MAX) {
 		/* ⛔ An Opus packet is not truncated: a maimed packet is not a worse
 		 *    sound, it is a packet the decoder refuses. */
 		registro_dice(REG_AUDIO,
 		              "⛔ Opus packet of %d bytes, over the ceiling of %d — "
 		              "dropped instead of truncated",
-		              c->pkt->size, AUDIO_FUORI_MAX);
+		              c->pkt->size, AUDIO_OUT_MAX);
 		av_packet_unref(c->pkt);
 		return false;
 	}
-	memcpy(fuori, c->pkt->data, (size_t)c->pkt->size);
-	*quanti = (size_t)c->pkt->size;
+	memcpy(report, c->pkt->data, (size_t)c->pkt->size);
+	*amount = (size_t)c->pkt->size;
 	av_packet_unref(c->pkt);
-	c->usciti++;
+	c->exited++;
 	return true;
 }
 
-void audio_cod_conti(const audio_cod *c, uint64_t *entrati, uint64_t *usciti)
+void audio_cod_conti(const audio_cod *c, uint64_t *entered, uint64_t *exited)
 {
-	if (entrati)
-		*entrati = c ? c->entrati : 0;
-	if (usciti)
-		*usciti = c ? c->usciti : 0;
+	if (entered)
+		*entered = c ? c->entered : 0;
+	if (exited)
+		*exited = c ? c->exited : 0;
 }
 
 /* ⛔ The third number is kept apart and NOT inside `audio_cod_conti()`: that
@@ -429,5 +429,5 @@ void audio_cod_conti(const audio_cod *c, uint64_t *entrati, uint64_t *usciti)
  *    signature would mean touching a file that is not this module's. */
 uint64_t audio_cod_taciuti(const audio_cod *c)
 {
-	return c ? c->taciuti : 0;
+	return c ? c->silenced : 0;
 }

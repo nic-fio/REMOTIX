@@ -3,47 +3,47 @@
 """
 16-classifica — THE JUDGEMENT OF A LEVEL, WITH THE THRESHOLDS OF §9 (phase 16)
 
-    python3 16-classifica.py --livello-dir DIR/livello-NN [--fps-video 30]
-                             [--finestra-s 120] [--registro banchi/16-stress/registro.jsonl]
-                             [--campagna intel-4k-kde] [--livello N] [--secco]
-    python3 16-classifica.py --certifica
+    python3 16-classifica.py --level-dir DIR/level-NN [--fps-video 30]
+                             [--window-s 120] [--log banchi/16-stress/registro.jsonl]
+                             [--campaign intel-4k-kde] [--level N] [--dry-run]
+    python3 16-classifica.py --certify
 
 ⛔ The thresholds are those of `fasi/16-stress-e-capacita.md` §9, APPROVED
-   by the user on 25 Sep 2026 and FROZEN: they live in the SOGLIE table below,
+   by the user on 25 Sep 2026 and FROZEN: they live in the THRESHOLDS table below,
    one row per row of §9, and no parameter changes them.  Only `f` (the
    frame rate of the chosen video, --fps-video) and the check window
-   (--finestra-s, the last 2 minutes of the level) are parameters.
+   (--window-s, the last 2 minutes of the level) are parameters.
 
 Writes at the end of the log (appends only) ONE row for the level and ONE for
-each session (§10), and prints the readable judgement.  --secco: does not write.
+each session (§10), and prints the readable judgement.  --dry-run: does not write.
 
 WHAT IT READS, in the level folder
 ----------------------------------------------------------------------------
-  livello.json        (optional, written by whoever runs the climb) the fields
+  level.json        (optional, written by whoever runs the climb) the fields
                       of §10 that are not measured: campagna, livello, desktop,
                       scheda, driver, misura, commit, binario, pagina, nucleo,
                       inizio, durata_s, fps_video, tetto_sessioni,
                       utenti:[{utente, profilo, browser, versione, nuovo}]
-  risorse.jsonl       from 16-risorse.py (one row per second)
-  utente-NN/stato.jsonl   one row every 5 s, written by the actor:
-      {"t": <epoch s>, "utente": 3, "profilo": "C", "browser": "firefox",
-       "versione": "Firefox 140…", "inquilino": "c16u03",
-       "conti": {"consegnati","dipinti","salt","buchi","tard",
-                 "ricevuti","suonati","BUCHI","mancati"}   ← CUMULATIVE, from the
-                 page (or "diario": the page's «audio: ricevuti … dipinti …
-                 video X→Y … salt … buchi …» line, and it is read from here)
-       "giro": {"visti": n, "campioni": [ms, …]}   ← the page's `window.REMOTIX.giro`
+  resources.jsonl       from 16-risorse.py (one row per second)
+  user-NN/state.jsonl   one row every 5 s, written by the actor:
+      {"t": <epoch s>, "user": 3, "profile": "C", "browser": "firefox",
+       "version": "Firefox 140…", "tenant": "c16u03",
+       "counts": {"delivered","painted","skip","holes","overtaken",
+                 "received","played","HOLES","missed"}   ← CUMULATIVE, from the
+                 page (or "diary": the page's «audio: received … painted …
+                 video X→Y … skip … holes …» line, and it is read from here)
+       "round_trip": {"seen": n, "samples": [ms, …]}   ← the page's `window.REMOTIX.round_trip`
                  (the last 200 command → frame delays);
                  or "giro_ms": [only the NEW samples since the last row]
-       "input": [{"ok": true, "latenza_ms": 180, "azione": "cartella"}, …]
+       "input": [{"ok": true, "latency_ms": 180, "action": "cartella"}, …]
                  the actions of the interval, with the effect VERIFIED (photo)
-       "blocco_max_ms": 420   ← the longest freeze of the image in the 5 s
+       "block_max_ms": 420   ← the longest freeze of the image in the 5 s
                  with work in progress (the actor watches the canvas: from here a
                  5 s granularity cannot see below 5 s)
-       "lavoro": true,  "caduta": false,  "errori": ["…"]}
-  utente-NN/nascita.json  {"accesso_ms": <epoch ms>, "primo_fotogramma_ms":
-                      <epoch ms>, "esito": "ok"|"rifiuto"|"…"} (or "nascita_ms")
-  controllo-corto.json    {"utente": N, "esiti": {"F-004": "PASS", …}}
+       "work": true,  "drop": false,  "errors": ["…"]}
+  user-NN/birth.json  {"access_ms": <epoch ms>, "first_frame_ms":
+                      <epoch ms>, "outcome": "ok"|"refusal"|"…"} (or "birth_ms")
+  short-check.json    {"user": N, "outcomes": {"F-004": "PASS", …}}
   server.log          the extract of the server log cut on the level
 
 THE MEASURES, and where they come from (§7 → §9)
@@ -62,8 +62,8 @@ THE MEASURES, and where they come from (§7 → §9)
             The page's ROUND (below) is recorded as EXPERIENCE: `giro_eco`
             (typing only) and the whole `giro`, which do not classify.
             The ROUND is the measure
-            the PRODUCT takes (`pagina.html`, `GIRO.parte` on the input,
-            `GIRO.torna` when the frame that carries that input arrives in the
+            the PRODUCT takes (`pagina.html`, `ROUND.depart` on the input,
+            `ROUND.arrive` when the frame that carries that input arrives in the
             28 bytes of RCP §6.2; the server stamps the id in the child, at the instant
             of capture).  ⚠ It does not include decoding and drawing: it is a LOWER
             bound of what the eye sees (the page itself says so).  The
@@ -90,12 +90,12 @@ THE MEASURES, and where they come from (§7 → §9)
   audio     (profile D) Δsuonati / (Δricevuti + Δmancati): what the server
             sent and was heard.  No block while the video plays ⇒ 0 %.
   birth     primo_fotogramma_ms − accesso_ms; «rifiuto» ⇒ FAIL.  Only for the
-            users born in the level: `nuovo` in livello.json (its absence is
+            users born in the level: `nuovo` in level.json (its absence is
             «not measured»); if the list is not there, only if `accesso_ms` falls
-            inside the level.  The other nascita.json are from an earlier
+            inside the level.  The other birth.json are from an earlier
             rung (the actor's folder carries over): they are RECORDED
             (`nascita_precedente`) and do not classify.
-  short     controllo-corto.json: a FAIL ⇒ FAIL; a BLOCKED ⇒ not measured.
+  short     short-check.json: a FAIL ⇒ FAIL; a BLOCKED ⇒ not measured.
   drop      `caduta` in the state, page counters restarted from zero
             (page reloaded or reattached), and in the server log for
             that tenant: «the session is over», «the stage … has
@@ -103,12 +103,12 @@ THE MEASURES, and where they come from (§7 → §9)
             forms of the same lines) — ⚠ in the WHOLE
             level, not only in the window: a drop at minute 3 is a
             drop.  The server restart (an «avvio REMOTIX» row, or the pid
-            of the parent changing in risorse.jsonl) ⇒ FAIL for all.
+            of the parent changing in resources.jsonl) ⇒ FAIL for all.
   memory    (level) PSS of the `remotix` and `sessioni` enclosures over ALL the work
             of the level, not over the window (§6: the last rung lasts 30 min
             precisely to see leaks): from start of work + 60 s of
             settling (start of work = end − durata_lavoro_s of
-            livello.json; otherwise inizio_t; otherwise the first row; and anyway after
+            level.json; otherwise inizio_t; otherwise the first row; and anyway after
             the last birth of a new user that is known) to the start of the
             short check (end − controllo_min: session 99 is born there and
             weighs on the `sessioni` enclosure), otherwise to the end.
@@ -127,7 +127,7 @@ An entry that applies and has no data is DEGRADED with the `non_misurato` mark,
 and counts as SIGNIFICANT DEGRADED (nobody knows by how much): the climb stops
 and the setup is looked at, instead of climbing on a number that is not there.
 
---sistema xrdp (fasi/20 §7.3, 9 Oct 2026): the series of 16-attore-rdp.py.  Same thresholds, and
+--system xrdp (fasi/20 §7.3, 9 Oct 2026): the series of 16-attore-rdp.py.  Same thresholds, and
             the entries are read like this:
   delay     p95 of the rows' `ritardi_ms` (impulse → first XDamage draw after it, from the
             VIEWER'S SIDE: key, click, notch), over the window; with fewer than 5
@@ -140,16 +140,16 @@ and the setup is looked at, instead of climbing on a number that is not there.
             played.  They do not enter the class (they are in `misure.non_misurati_per_costruzione`).
   drop      from the actor (xfreerdp exited, the window gone); the xrdp log
             does not have the time in the form of ours and is not read for drops.
-  log       the rows go into registro-xrdp.jsonl, with the `sistema` field.
+  log       the rows go into register-xrdp.jsonl, with the `sistema` field.
 
 THE LEVEL (§9): GREEN if all the sessions (and the level entries) are
 GREEN; DEGRADED if at least one is DEGRADED and none FAIL; FAIL if at least one is
 FAIL.  SIGNIFICANT DEGRADED = more than a quarter of the ACTORS' sessions
 DEGRADED (the check, user 99, does not count; k·4 > n, exact), or a measure
-beyond HALF of the DEGRADED band (column `meta` of SOGLIE).
-⛔ ENTERED: if the actors present (utente-NN folders, and those of the
-`utenti` list of livello.json without a folder count as absent) are fewer than the
-declared level (--livello, otherwise livello.json) ⇒ level entry
+beyond HALF of the DEGRADED band (column `meta` of THRESHOLDS).
+⛔ ENTERED: if the actors present (user-NN folders, and those of the
+`utenti` list of level.json without a folder count as absent) are fewer than the
+declared level (--level, otherwise level.json) ⇒ level entry
 `entrati` FAIL «entered K of N»: a rung not reached is not a rung passed.
 """
 import argparse
@@ -163,18 +163,18 @@ import shutil
 import sys
 import tempfile
 
-QUI = os.path.dirname(os.path.abspath(__file__))
+HERE = os.path.dirname(os.path.abspath(__file__))
 CHOSEN_VIDEO_FPS = 30          # the video of profile D (from the coordinator, 26 Sep 2026)
-REGISTRO = os.path.join(QUI, "registro.jsonl")
-ORDINE = {"GREEN": 0, "DEGRADED": 1, "FAIL": 2}
+LOG = os.path.join(HERE, "registro.jsonl")
+ORDER = {"GREEN": 0, "DEGRADED": 1, "FAIL": 2}
 
 # ── the levels of the campaigns before the English rename (DECISIONI §10.38) keep the Italian
 #    words: misure/ is never rewritten (16-riclassifica.py re-judges them with this classifier).
 #    The first tuple is protected (english-migration/protetti.tsv), the second is renamed with
 #    the code: after the rename OLD_SPELLING maps every old word to the code's own, before it
 #    is empty.  Same order in both, one word per position.  They are the keys and the values
-#    read from livello.json, utente-NN/stato.jsonl, nascita.json, controllo-corto.json,
-#    risorse.jsonl, journal-err.jsonl and the `rete-quic` rows of server.log.
+#    read from level.json, user-NN/state.jsonl, birth.json, short-check.json,
+#    resources.jsonl, journal-err.jsonl and the `quic-net` rows of server.log.
 _OLD_WORDS = (
     "utenti", "utente", "nuovo", "controllo_min", "livello", "campagna", "scheda", "misura", "binario",
     "pagina", "nucleo", "tetto_sessioni", "inizio", "durata_s", "profilo", "versione", "inquilino",
@@ -184,18 +184,18 @@ _OLD_WORDS = (
     "tipo", "campione", "macchina", "carico", "sessioni", "altro_scatola", "labwc_cliente", "processi",
     "per_inquilino", "avvisi", "disegno", "REMOTIX_INQUILINO",
     "persi", "byte_persi", "spediti", "byte_spediti", "scartati", "dgram_persi", "dgram_falsi",
-    "utente-",
+    "user-",
 )  # end of the old words
 _WORDS_NOW = (
-    "utenti", "utente", "nuovo", "controllo_min", "livello", "campagna", "scheda", "misura", "binario",
-    "pagina", "nucleo", "tetto_sessioni", "inizio", "durata_s", "profilo", "versione", "inquilino",
-    "conti", "consegnati", "dipinti", "buchi", "ricevuti", "suonati", "BUCHI", "mancati", "diario",
-    "giro", "visti", "campioni", "azione", "video_avanza", "lavoro", "caduta", "errori",
-    "accesso_ms", "esito", "rifiuto", "nascita", "ragione", "esiti", "funzione",
-    "tipo", "campione", "macchina", "carico", "sessioni", "altro_scatola", "labwc_cliente", "processi",
-    "per_inquilino", "avvisi", "disegno", "REMOTIX_INQUILINO",
-    "persi", "byte_persi", "spediti", "byte_spediti", "scartati", "dgram_persi", "dgram_falsi",
-    "utente-",
+    "users", "user", "new", "check_min", "level", "campaign", "card", "size", "binary",
+    "page", "kernel", "session_cap", "started", "duration_s", "profile", "version", "tenant",
+    "counts", "delivered", "painted", "holes", "received", "played", "HOLES", "missed", "diary",
+    "round_trip", "seen", "samples", "action", "video_advances", "work", "drop", "errors",
+    "access_ms", "outcome", "refusal", "birth", "rationale", "outcomes", "function",
+    "type", "sample", "machine", "load", "sessions", "other_box", "labwc_client", "processes",
+    "per_tenant", "warnings", "draw", "REMOTIX_TENANT",
+    "lost", "bytes_lost", "sent", "bytes_sent", "discarded", "dgram_lost", "dgram_spurious",
+    "user-",
 )
 OLD_SPELLING = {a: b for a, b in zip(_OLD_WORDS, _WORDS_NOW) if a != b}
 
@@ -215,101 +215,101 @@ def spellings(word):
 
 
 def dirs_users(cart):
-    """The utente-NN folders of a level, in the code's spelling and in the old one."""
-    return sorted(p for w in spellings("utente-") for p in glob.glob(os.path.join(cart, w + "*")))
+    """The user-NN folders of a level, in the code's spelling and in the old one."""
+    return sorted(p for w in spellings("user-") for p in glob.glob(os.path.join(cart, w + "*")))
 
 # ⛔ §9, FROZEN.  (direction, green, degraded, half, unit).
 #   direction "su": the good value is low (GREEN if <= green; DEGRADED if <= degraded)
-#   direction "giu": the good value is high (GREEN if >= green; DEGRADED if >= degraded)
+#   direction "down": the good value is high (GREEN if >= green; DEGRADED if >= degraded)
 #   The video bands are in fractions of f.
-SOGLIE = {
-    "ritardo_p95_ms":  ("su", 50.0, 150.0, 100.0, "ms"),
-    "saltati_pct":     ("su", 2.0, 10.0, 6.0, "%"),
-    "blocco_max_s":    ("su", 1.0, 3.0, 2.0, "s"),
-    "buchi_al_min":    ("su", 0.0, 1.0, 0.5, "/min"),
-    "video_frazione_f": ("giu", 0.8, 0.4, 0.6, "·f"),
-    "audio_udibile_pct": ("giu", 99.0, 95.0, 97.0, "%"),
-    "nascita_s":       ("su", 5.0, 15.0, 10.0, "s"),
+THRESHOLDS = {
+    "delay_p95_ms":  ("su", 50.0, 150.0, 100.0, "ms"),
+    "skipped_pct":     ("su", 2.0, 10.0, 6.0, "%"),
+    "block_max_s":    ("su", 1.0, 3.0, 2.0, "s"),
+    "holes_per_min":    ("su", 0.0, 1.0, 0.5, "/min"),
+    "video_fraction_f": ("giu", 0.8, 0.4, 0.6, "·f"),
+    "audio_audible_pct": ("giu", 99.0, 95.0, 97.0, "%"),
+    "birth_s":       ("su", 5.0, 15.0, 10.0, "s"),
     "memoria_crescita_pct": ("su", 5.0, 15.0, 10.0, "%"),
 }
 ENTRY_NAMES = {
-    "ritardo_p95_ms": "input → frame delay (p95)",
-    "saltati_pct": "skipped frames",
-    "blocco_max_s": "longest freeze of the image",
-    "buchi_al_min": "holes in the video chain",
-    "video_frazione_f": "video: painted per second",
-    "audio_udibile_pct": "audible audio",
-    "nascita_s": "birth (access → first frame)",
-    "controllo_corto": "short functional check",
-    "caduta": "drop, restart, error that disconnects",
+    "delay_p95_ms": "input → frame delay (p95)",
+    "skipped_pct": "skipped frames",
+    "block_max_s": "longest freeze of the image",
+    "holes_per_min": "holes in the video chain",
+    "video_fraction_f": "video: painted per second",
+    "audio_audible_pct": "audible audio",
+    "birth_s": "birth (access → first frame)",
+    "short_check": "short functional check",
+    "drop": "drop, restart, error that disconnects",
     "memoria_crescita_pct": "memory growth",
 }
 
 # the server log rows that say «this session has dropped»
 # ⚠ BOTH forms: the logs of the running campaign are written by the OLD (Italian)
 #   binary, the new binary writes them in English (english-migration/strings).
-CADUTE = [
+DROPS = [
     (re.compile(r"\[(c[0-9a-z]+)\].*la sessione e' finita"), "the session is over (§4.2)"),
     (re.compile(r"\[(c[0-9a-z]+)\].*the session is over"), "the session is over (§4.2)"),
     (re.compile(r"il palco di «(c[0-9a-z]+)».*se n'e' andato"), "the stage has gone"),
     (re.compile(r"the stage of «(c[0-9a-z]+)».*has gone"), "the stage has gone"),
     (re.compile(r"il figlio di «(c[0-9a-z]+)».*se ne va"), "the child is leaving"),
     (re.compile(r"the child of «(c[0-9a-z]+)».*is leaving"), "the child is leaving"),
-    (re.compile(r"\[(c[0-9a-z]+)\].*(?:ERRORE_PROTOCOLLO|errore di protocollo|protocol error)", re.I),
+    (re.compile(r"\[(c[0-9a-z]+)\].*(?:PROTOCOL_ERROR|errore di protocollo|protocol error)", re.I),
      "protocol error"),
     (re.compile(r"\[(c[0-9a-z]+)\].*(?:SFRATTO per silenzio|EVICTION for silence)"), "eviction for silence (§5.3)"),
 ]
-RIAVVIO = re.compile(r"^\d\d:\d\d:\d\d(?:\.\d+)?\s+(?:avvio|startup)\s+REMOTIX\b")  # old and new area name
+RESTART = re.compile(r"^\d\d:\d\d:\d\d(?:\.\d+)?\s+(?:avvio|startup)\s+REMOTIX\b")  # old and new area name
 # ⚠ not just «rifiut»: `[M]` 25 Sep the child writes «FIFO NON OTTENUTO … rifiut…» at
 #   every birth, and it is not a refusal of access.  They are the three doors of rcp.c/webtransport.c
 #   (old Italian form and new English form).
-RIFIUTO = re.compile(r"(?:\[(c[0-9a-z]+)\]|«(c[0-9a-z]+)»).*(?:posto NEGATO|attacco NEGATO|"
+REFUSAL = re.compile(r"(?:\[(c[0-9a-z]+)\]|«(c[0-9a-z]+)»).*(?:posto NEGATO|attacco NEGATO|"
                      r"sessione WebTransport RIFIUTATA|slot DENIED|attach DENIED|WebTransport session REFUSED)")
-NOSTRO = re.compile(r"\[(c[0-9a-z]+)\] ⭐ (?:NOSTRO nel secondo|OURS in the second) \([^)]*\): p95 ([\d.]+) ms · "
+OURS = re.compile(r"\[(c[0-9a-z]+)\] ⭐ (?:OURS nel secondo|OURS in the second) \([^)]*\): p95 ([\d.]+) ms · "
                     r"max ([\d.]+) · (?:mediana|median) ([\d.]+) · (\d+) (?:fotogrammi|frames)")
 PRODUCER = re.compile(r"(?:produttore|producer) ([\d.]+) \(max ([\d.]+)\)")
-RETE = re.compile(r"\[(c[0-9a-z]+)\] (?:rete-quic|network-quic) (\S+) (.*)$")   # old and new binary
-TRATTO = re.compile(r"\[(c[0-9a-z]+)\] ⭐ (?:TRATTO cattura → byte fuori|STRETCH capture → byte out): "
+NETWORK = re.compile(r"\[(c[0-9a-z]+)\] (?:rete-quic|network-quic) (\S+) (.*)$")   # old and new binary
+STRETCH = re.compile(r"\[(c[0-9a-z]+)\] ⭐ (?:STRETCH cattura → byte fuori|STRETCH capture → byte out): "
                     r"(?:mediana|median) ([\d.]+) ms \(max ([\d.]+)\)")
 
 
 # ─────────────────────────────── judgement of an entry ─────────────────────
-def giudica(voce, valore, f=None):
-    """→ (class, significant).  `valore` None does not get here."""
-    verso, g, d, meta, _ = SOGLIE[voce]
-    if voce == "video_frazione_f":
-        valore = valore                        # already in fractions of f
-    if verso == "su":
-        if valore <= g:
+def judge(entry, value, f=None):
+    """→ (class, significant).  `value` None does not get here."""
+    which_way, g, d, meta, _ = THRESHOLDS[entry]
+    if entry == "video_fraction_f":
+        value = value                        # already in fractions of f
+    if which_way == "su":
+        if value <= g:
             return "GREEN", False
-        if valore <= d:
-            return "DEGRADED", valore > meta
+        if value <= d:
+            return "DEGRADED", value > meta
         return "FAIL", True
-    if valore >= g:
+    if value >= g:
         return "GREEN", False
-    if valore >= d:
-        return "DEGRADED", valore < meta
+    if value >= d:
+        return "DEGRADED", value < meta
     return "FAIL", True
 
 
-def measured_entry(voce, valore, nota="", extra=None):
-    c, s = giudica(voce, valore)
-    v = {"valore": _round(valore), "classe": c, "significativo": s, "nota": nota}
+def measured_entry(entry, value, note="", extra=None):
+    c, s = judge(entry, value)
+    v = {"value": _round(value), "class": c, "significant": s, "note": note}
     v.update(extra or {})
     return v
 
 
-def non_misurato(perche):
-    return {"valore": None, "classe": "DEGRADED", "significativo": True,
-            "non_misurato": True, "nota": "NOT MEASURED: " + perche}
+def not_measured(why):
+    return {"value": None, "class": "DEGRADED", "significant": True,
+            "not_measured": True, "note": "NOT MEASURED: " + why}
 
 
-def fallita(valore, perche):
-    return {"valore": valore, "classe": "FAIL", "significativo": True, "nota": perche}
+def failed(value, why):
+    return {"value": value, "class": "FAIL", "significant": True, "note": why}
 
 
-def verde(valore, nota):
-    return {"valore": valore, "classe": "GREEN", "significativo": False, "nota": nota}
+def green(value, note):
+    return {"value": value, "class": "GREEN", "significant": False, "note": note}
 
 
 def _round(x):
@@ -347,556 +347,556 @@ def jfile(p):
 
 
 # the page's diary line: ⚠ BOTH forms, the old (Italian) page of the recorded campaigns and the new one
-_DIARIO_RX = (
+_DIARY_RX = (
     r"audio: (?:ricevuti|got_n) (\d+)", r"\b(?:suonati|played) (\d+)", r"\b(?:BUCHI|HOLES) (\d+)",
     r"\b(?:mancati|missed) (\d+)", r"\b(?:dipinti|painted) (\d+)", r"\bsalt (\d+)",
     r"\b(?:buchi|holes) (\d+)", r"\btard (\d+)",
 )  # end of the diary forms
-DIARIO = dict(zip(("ricevuti", "suonati", "BUCHI", "mancati", "dipinti", "salt", "buchi", "tard"), _DIARIO_RX))
+DIARY = dict(zip(("received", "played", "HOLES", "missed", "painted", "skip", "holes", "overtaken"), _DIARY_RX))
 
 
-def counts_of(riga):
-    c = dict(riga.get("conti") or {})
-    d = riga.get("diario")
+def counts_of(line):
+    c = dict(line.get("counts") or {})
+    d = line.get("diary")
     if d:
-        for k, rx in DIARIO.items():
+        for k, rx in DIARY.items():
             if k not in c:
                 m = re.search(rx, d)
                 if m:
                     c[k] = int(m.group(1))
         m = re.search(r"\bvideo (\d+)→(\d+)", d)
-        if m and "consegnati" not in c:
-            c["consegnati"] = int(m.group(1))
-            c.setdefault("dipinti", int(m.group(2)))
+        if m and "delivered" not in c:
+            c["delivered"] = int(m.group(1))
+            c.setdefault("painted", int(m.group(2)))
     return c
 
 
-def round_samples(fin, chiave, chiave_lista):
-    """The NEW samples in the window: `chiave` = {visti, campioni} (the last
+def round_samples(fin, key, key_list):
+    """The NEW samples in the window: `key` = {visti, campioni} (the last
     200 of the page: the new ones are the last `visti − visti_prima`), or
-    `chiave_lista` = [only the new samples since the last row]."""
+    `key_list` = [only the new samples since the last row]."""
     camp, pv = [], None
     for r in fin:
-        g = r.get(chiave)
-        if isinstance(g, dict) and g.get("campioni") is not None:
-            vi = g.get("visti", 0)
+        g = r.get(key)
+        if isinstance(g, dict) and g.get("samples") is not None:
+            vi = g.get("seen", 0)
             if pv is not None and r is not fin[0]:
-                nuovi = max(0, vi - pv)
-                camp += list(g["campioni"])[-nuovi:] if nuovi else []
+                newcomers = max(0, vi - pv)
+                camp += list(g["samples"])[-newcomers:] if newcomers else []
             pv = vi
         elif isinstance(g, list) and r is not fin[0]:
             camp += list(g)
-        elif r.get(chiave_lista) is not None and r is not fin[0]:
-            camp += list(r[chiave_lista])
+        elif r.get(key_list) is not None and r is not fin[0]:
+            camp += list(r[key_list])
     return camp
 
 
-def delta(righe, chiave):
+def delta(lines, key):
     """Growth of a cumulative counter along the rows; those restarted from zero
     are summed piecewise and COUNTED (restarts)."""
-    tot, ripartenze, prima, visto = 0, 0, None, False
-    for r in righe:
-        v = r["_c"].get(chiave)
+    tot, restarts, before, observed = 0, 0, None, False
+    for r in lines:
+        v = r["_c"].get(key)
         if v is None:
             continue
-        visto = True
-        if prima is not None:
-            if v >= prima:
-                tot += v - prima
+        observed = True
+        if before is not None:
+            if v >= before:
+                tot += v - before
             else:
-                ripartenze += 1
+                restarts += 1
                 tot += v
-        prima = v
-    return (tot if visto else None), ripartenze
+        before = v
+    return (tot if observed else None), restarts
 
 
 # ─────────────────────────────── one session ───────────────────────────────
-NOT_MEASURED_XRDP = ("saltati_pct", "buchi_al_min", "audio_udibile_pct")
+NOT_MEASURED_XRDP = ("skipped_pct", "holes_per_min", "audio_audible_pct")
 
 
-def xrdp_delay_entry(dentro, righe, prof, misure, t_liv=None):
+def xrdp_delay_entry(inside, lines, prof, measures, t_liv=None):
     """xrdp: the delay from the viewer's side (impulse → first XDamage draw).
     → entry, or None if the entry does not apply (profile D without impulses)."""
-    camp = [x for r in dentro for x in (r.get("ritardi_ms") or [])]
-    eco = [x for r in dentro for x in (r.get("ritardi_eco_ms") or [])]
+    camp = [x for r in inside for x in (r.get("delays_ms") or [])]
+    echo = [x for r in inside for x in (r.get("echo_delays_ms") or [])]
     dove = "window"
     if len(camp) < 5:
-        tutte = [r for r in righe if t_liv is None or t_liv[0] - 1 <= r.get("t", 0) <= t_liv[1] + 1]
-        camp2 = [x for r in tutte for x in (r.get("ritardi_ms") or [])]
+        all_of = [r for r in lines if t_liv is None or t_liv[0] - 1 <= r.get("t", 0) <= t_liv[1] + 1]
+        camp2 = [x for r in all_of for x in (r.get("delays_ms") or [])]
         if len(camp2) > len(camp):
             camp, dove = camp2, "the whole level (%d samples in the window)" % len(camp)
-            eco = [x for r in tutte for x in (r.get("ritardi_eco_ms") or [])]
-    misure["xrdp_ritardi"] = {"campioni": len(camp), "p95_ms": _round(p95(camp)) if camp else None,
-                              "mediana_ms": _round(sorted(camp)[len(camp) // 2]) if camp else None,
-                              "eco_campioni": len(eco), "eco_p95_ms": _round(p95(eco)) if eco else None,
+            echo = [x for r in all_of for x in (r.get("echo_delays_ms") or [])]
+    measures["xrdp_ritardi"] = {"samples": len(camp), "p95_ms": _round(p95(camp)) if camp else None,
+                              "median_ms": _round(sorted(camp)[len(camp) // 2]) if camp else None,
+                              "eco_campioni": len(echo), "eco_p95_ms": _round(p95(echo)) if echo else None,
                               "su": dove}
     if not camp:
         if prof == "D":
-            misure["ritardo_non_si_applica"] = "profile D: no impulse"
+            measures["ritardo_non_si_applica"] = "profile D: no impulse"
             return None
-        return non_misurato("no impulse closed by an XDamage draw (empty `ritardi_ms` rows)")
+        return not_measured("no impulse closed by an XDamage draw (empty `ritardi_ms` rows)")
     v = p95(camp)
-    misure["ritardo_p95_ms"] = _round(v)
-    return measured_entry("ritardo_p95_ms", v, "xrdp, VIEWER'S SIDE: p95 of %d waits impulse → first "
+    measures["delay_p95_ms"] = _round(v)
+    return measured_entry("delay_p95_ms", v, "xrdp, VIEWER'S SIDE: p95 of %d waits impulse → first "
                          "XDamage draw (%s); echo %s ms over %d" % (
-                             len(camp), dove, _round(p95(eco)) if eco else "—", len(eco)))
+                             len(camp), dove, _round(p95(echo)) if echo else "—", len(echo)))
 
 
-def sessione(dir_u, w0, w1, f_video, meta_u, nuovo, corto, log_events, tratto, rete=None, tratti=None,
-             desktop=None, t_liv=None, sistema=None):
-    """`nuovo`: True/False from the list of livello.json; None if the list is not
-    there (then the birth is judged only if `accesso_ms` falls in `t_liv`)."""
-    righe = jsonl(os.path.join(dir_u, "stato.jsonl"))
-    for r in righe:
+def session(dir_u, w0, w1, f_video, meta_u, new, corto, log_events, tratto, network=None, stretches=None,
+             desktop=None, t_liv=None, system=None):
+    """`new`: True/False from the list of level.json; None if the list is not
+    there (then the birth is judged only if `access_ms` falls in `t_liv`)."""
+    lines = jsonl(os.path.join(dir_u, "state.jsonl"))
+    for r in lines:
         r["_c"] = counts_of(r)
     num = int(re.sub(r"\D", "", os.path.basename(dir_u)) or 0)
-    prof = (meta_u or {}).get("profilo") or next((r.get("profilo") for r in righe if r.get("profilo")), None)
-    info = {"utente": num, "profilo": prof,
-            "browser": (meta_u or {}).get("browser") or next((r.get("browser") for r in righe if r.get("browser")), None),
-            "versione": (meta_u or {}).get("versione") or next((r.get("versione") for r in righe if r.get("versione")), None),
-            "inquilino": next((r.get("inquilino") for r in righe if r.get("inquilino")), (meta_u or {}).get("inquilino"))}
-    voci, misure = {}, {}
+    prof = (meta_u or {}).get("profile") or next((r.get("profile") for r in lines if r.get("profile")), None)
+    info = {"user": num, "profile": prof,
+            "browser": (meta_u or {}).get("browser") or next((r.get("browser") for r in lines if r.get("browser")), None),
+            "version": (meta_u or {}).get("version") or next((r.get("version") for r in lines if r.get("version")), None),
+            "tenant": next((r.get("tenant") for r in lines if r.get("tenant")), (meta_u or {}).get("tenant"))}
+    entries, measures = {}, {}
     # the window: the base row is the last one before w0 (the counters are cumulative)
-    prima = [r for r in righe if r.get("t", 0) <= w0]
-    dentro = [r for r in righe if w0 < r.get("t", 0) <= w1]
-    fin = ([prima[-1]] if prima else []) + dentro
+    before = [r for r in lines if r.get("t", 0) <= w0]
+    inside = [r for r in lines if w0 < r.get("t", 0) <= w1]
+    fin = ([before[-1]] if before else []) + inside
     d_video = prof == "D"
     if len(fin) < 2:
-        perche = "no state row in the window (the actor does not write, or is dead)"
-        for v in ("ritardo_p95_ms", "saltati_pct", "blocco_max_s", "buchi_al_min"):
-            voci[v] = non_misurato(perche)
+        why = "no state row in the window (the actor does not write, or is dead)"
+        for v in ("delay_p95_ms", "skipped_pct", "block_max_s", "holes_per_min"):
+            entries[v] = not_measured(why)
         if d_video:
-            voci["video_frazione_f"] = non_misurato(perche)
-            voci["audio_udibile_pct"] = non_misurato(perche)
-        if sistema == "xrdp" and prof == "D":
-            voci.pop("ritardo_p95_ms", None)
+            entries["video_fraction_f"] = not_measured(why)
+            entries["audio_audible_pct"] = not_measured(why)
+        if system == "xrdp" and prof == "D":
+            entries.pop("delay_p95_ms", None)
     else:
         dt = fin[-1]["t"] - fin[0]["t"]
-        misure["finestra_s"] = round(dt, 1)
-        cons, r1 = delta(fin, "consegnati")
-        dip, r2 = delta(fin, "dipinti")
-        ripartenze = max(r1, r2)
+        measures["window_s"] = round(dt, 1)
+        cons, r1 = delta(fin, "delivered")
+        dip, r2 = delta(fin, "painted")
+        restarts = max(r1, r2)
         # ── input → frame delay: the PRODUCT's piece ──
         # ⛔ 26 Sep 2026, from the coordinator, on a measured diagnosis (fase16/
         #   diagnosi-eco): giro_eco = ours (input ~5–9 ms + frame in
         #   hand → page ~14 ms) + NOT ours (the app that draws the echo, the
         #   compositor).  §9 classifies «(product, p95)», §7 «what the
         #   product measures from its side» ⇒ CLASSIFIES: p95 of the `max` of the child's
-        #   TRATTO rows in the window + 9 ms (the constructive cap of the
-        #   input stretch).  giro_eco and the whole giro are recorded as
+        #   STRETCH rows in the window + 9 ms (the constructive cap of the
+        #   input stretch).  giro_eco and the whole round_trip are recorded as
         #   EXPERIENCE and do not classify.
-        tutti = round_samples(fin, "giro", "giro_ms")
-        eco = round_samples(fin, "giro_eco", "giro_eco_ms")
-        misure["esperienza"] = {
-            "giro_eco_p95_ms": _round(p95(eco)) if eco else None, "giro_eco_campioni": len(eco),
-            "giro_tutti_p95_ms": _round(p95(tutti)) if tutti else None, "giro_tutti_campioni": len(tutti)}
-        all_ver = [x for r in dentro for x in (r.get("input") or [])]
+        all_items = round_samples(fin, "round_trip", "giro_ms")
+        echo = round_samples(fin, "echo_round", "giro_eco_ms")
+        measures["esperienza"] = {
+            "echo_round_p95_ms": _round(p95(echo)) if echo else None, "echo_round_samples": len(echo),
+            "all_round_p95_ms": _round(p95(all_items)) if all_items else None, "all_round_samples": len(all_items)}
+        all_ver = [x for r in inside for x in (r.get("input") or [])]
         # ⚠ «video_avanza» (profile D) is not an input: the video in the scene
         #   stuck goes to the video entry, not to the delay
-        vid_stopped = [x for x in all_ver if x.get("azione") == "video_avanza" and x.get("ok") is False]
-        inp = [x for x in all_ver if x.get("azione") != "video_avanza"]
-        persi = [x for x in inp if x.get("ok") is False]
-        misure["video_non_avanza"] = len(vid_stopped)
-        lat = [x["latenza_ms"] for x in inp if x.get("ok") and x.get("latenza_ms") is not None]
-        misure["input_azioni"] = len(inp)
-        misure["input_persi"] = len(persi)
-        misure["input_latenza_p95_ms"] = _round(p95(lat)) if lat else None
-        if sistema == "xrdp":
-            vr = xrdp_delay_entry(dentro, righe, prof, misure, t_liv)
+        vid_stopped = [x for x in all_ver if x.get("action") == "video_advances" and x.get("ok") is False]
+        inp = [x for x in all_ver if x.get("action") != "video_advances"]
+        lost = [x for x in inp if x.get("ok") is False]
+        measures["video_not_advancing"] = len(vid_stopped)
+        lat = [x["latency_ms"] for x in inp if x.get("ok") and x.get("latency_ms") is not None]
+        measures["input_actions"] = len(inp)
+        measures["input_lost"] = len(lost)
+        measures["input_latency_p95_ms"] = _round(p95(lat)) if lat else None
+        if system == "xrdp":
+            vr = xrdp_delay_entry(inside, lines, prof, measures, t_liv)
         else:
-            vr = delay_entry(info["inquilino"], tratti, desktop, misure)
-        rit = vr["valore"] if vr else None
-        if persi:
-            voci["ritardo_p95_ms"] = fallita(_round(rit), "input LOST: %d actions of %d without effect (%s)"
-                                             % (len(persi), len(inp),
-                                                ", ".join(str(x.get("azione")) for x in persi[:3])))
+            vr = delay_entry(info["tenant"], stretches, desktop, measures)
+        delay = vr["value"] if vr else None
+        if lost:
+            entries["delay_p95_ms"] = failed(_round(delay), "input LOST: %d actions of %d without effect (%s)"
+                                             % (len(lost), len(inp),
+                                                ", ".join(str(x.get("action")) for x in lost[:3])))
         elif vr:
-            voci["ritardo_p95_ms"] = vr
-        elif sistema == "xrdp":
+            entries["delay_p95_ms"] = vr
+        elif system == "xrdp":
             pass                               # profile D without impulses: does not apply
         else:
-            voci["ritardo_p95_ms"] = non_misurato("no «OURS in the second» row of the child for %s in the "
-                                                  "window (binary before ebc9dcd? the TRATTO rows are "
+            entries["delay_p95_ms"] = not_measured("no «OURS in the second» row of the child for %s in the "
+                                                  "window (binary before ebc9dcd? the STRETCH rows are "
                                                   "recorded and do not classify)"
-                                                  % (info["inquilino"] or "the unknown tenant"))
+                                                  % (info["tenant"] or "the unknown tenant"))
         # ── skipped ──
         if cons is None or dip is None:
-            voci["saltati_pct"] = non_misurato("the page did not give `video X→Y`")
+            entries["skipped_pct"] = not_measured("the page did not give `video X→Y`")
         elif cons == 0:
-            voci["saltati_pct"] = non_misurato("no frame delivered in the window")
+            entries["skipped_pct"] = not_measured("no frame delivered in the window")
         else:
             v = max(0.0, 100.0 * (cons - dip) / cons)
-            sa, _ = delta(fin, "salt")
-            misure.update(consegnati=cons, dipinti=dip, salt=sa, saltati_pct=_round(v))
-            voci["saltati_pct"] = measured_entry("saltati_pct", v, "%d delivered, %d painted (salt %s)"
+            sa, _ = delta(fin, "skip")
+            measures.update(delivered=cons, painted=dip, salt=sa, skipped_pct=_round(v))
+            entries["skipped_pct"] = measured_entry("skipped_pct", v, "%d delivered, %d painted (salt %s)"
                                                 % (cons, dip, sa))
         # ── freeze ──
-        # ⚠ `lavoro: false` (for D: before the video starts) does NOT count, neither here
+        # ⚠ `work: false` (for D: before the video starts) does NOT count, neither here
         #   nor for the painted per second: only the work intervals are looked at.
-        bm = [r["blocco_max_ms"] for r in dentro
-              if r.get("blocco_max_ms") is not None and r.get("lavoro", True) is not False]
-        fermi, dip_lav, dt_lav = 0, 0, 0.0
+        bm = [r["block_max_ms"] for r in inside
+              if r.get("block_max_ms") is not None and r.get("work", True) is not False]
+        stills, dip_lav, dt_lav = 0, 0, 0.0
         for a, b in zip(fin, fin[1:]):
-            da, db = a["_c"].get("dipinti"), b["_c"].get("dipinti")
-            lav = b.get("lavoro", True) is not False
+            da, db = a["_c"].get("painted"), b["_c"].get("painted")
+            lav = b.get("work", True) is not False
             if da is not None and db is not None and lav:
                 dip_lav += max(0, db - da) if db >= da else db
                 dt_lav += b["t"] - a["t"]
                 if db == da:
-                    fermi += 1
-        misure["lavoro_s"] = round(dt_lav, 1)
+                    stills += 1
+        measures["work_s"] = round(dt_lav, 1)
         if dip_lav == 0 and dt_lav > 0 and dip is not None:
-            voci["blocco_max_s"] = fallita(round(dt_lav, 1), "STILL IMAGE: no frame painted "
+            entries["block_max_s"] = failed(round(dt_lav, 1), "STILL IMAGE: no frame painted "
                                            "in %.0f s of work" % dt_lav)
         elif bm:
             v = max(bm) / 1000.0
-            misure["blocco_max_s"] = _round(v)
-            voci["blocco_max_s"] = measured_entry("blocco_max_s", v, "from the actor (%d rows)" % len(bm))
-            if fermi:
-                voci["blocco_max_s"] = fallita(max(v, 5.0), "%d intervals of 5 s without frames "
-                                               "with work in progress" % fermi)
-        elif fermi:
-            voci["blocco_max_s"] = fallita(5.0, "%d intervals of 5 s without any frame "
-                                           "painted with work in progress ⇒ freeze >= 5 s" % fermi)
+            measures["block_max_s"] = _round(v)
+            entries["block_max_s"] = measured_entry("block_max_s", v, "from the actor (%d rows)" % len(bm))
+            if stills:
+                entries["block_max_s"] = failed(max(v, 5.0), "%d intervals of 5 s without frames "
+                                               "with work in progress" % stills)
+        elif stills:
+            entries["block_max_s"] = failed(5.0, "%d intervals of 5 s without any frame "
+                                           "painted with work in progress ⇒ freeze >= 5 s" % stills)
         else:
-            voci["blocco_max_s"] = non_misurato("`blocco_max_ms` is missing and the 5 s counters do not "
+            entries["block_max_s"] = not_measured("`blocco_max_ms` is missing and the 5 s counters do not "
                                                 "see below 5 s")
         # ── holes ──
-        bu, _ = delta(fin, "buchi")
+        bu, _ = delta(fin, "holes")
         if bu is None:
-            voci["buchi_al_min"] = non_misurato("the page did not give `buchi`")
+            entries["holes_per_min"] = not_measured("the page did not give `holes`")
         else:
             v = bu / (dt / 60.0) if dt > 0 else 0.0
-            misure["buchi"] = bu
-            voci["buchi_al_min"] = measured_entry("buchi_al_min", v, "%d holes in %.0f s" % (bu, dt))
+            measures["holes"] = bu
+            entries["holes_per_min"] = measured_entry("holes_per_min", v, "%d holes in %.0f s" % (bu, dt))
         # ── video and audio (profile D) ──
         if d_video:
             if dip is None:
-                voci["video_frazione_f"] = non_misurato("the page did not give `dipinti`")
+                entries["video_fraction_f"] = not_measured("the page did not give `painted`")
             elif not f_video:
-                voci["video_frazione_f"] = non_misurato("f, the frame rate of the video, is missing (--fps-video)")
+                entries["video_fraction_f"] = not_measured("f, the frame rate of the video, is missing (--fps-video)")
             elif dt_lav <= 0:
-                voci["video_frazione_f"] = non_misurato("no work interval in the window "
+                entries["video_fraction_f"] = not_measured("no work interval in the window "
                                                         "(did the video not start?)")
             else:
                 fps = dip_lav / dt_lav
-                misure["video_fps"] = _round(fps)
-                voci["video_frazione_f"] = measured_entry("video_frazione_f", fps / f_video,
+                measures["video_fps"] = _round(fps)
+                entries["video_fraction_f"] = measured_entry("video_fraction_f", fps / f_video,
                                                          "%.1f painted/s in %.0f s of video, f = %s"
                                                          % (fps, dt_lav, f_video))
-            su, _ = delta(fin, "suonati")
-            ri, _ = delta(fin, "ricevuti")
-            ma, _ = delta(fin, "mancati")
+            su, _ = delta(fin, "played")
+            ri, _ = delta(fin, "received")
+            ma, _ = delta(fin, "missed")
             if su is None or ri is None:
-                voci["audio_udibile_pct"] = non_misurato("the page did not give `suonati`/`ricevuti`")
+                entries["audio_audible_pct"] = not_measured("the page did not give `played`/`received`")
             else:
                 den = ri + (ma or 0)
                 v = 100.0 * su / den if den else 0.0
-                misure["audio_udibile_pct"] = _round(v)
-                voci["audio_udibile_pct"] = measured_entry(
-                    "audio_udibile_pct", min(v, 100.0),
+                measures["audio_audible_pct"] = _round(v)
+                entries["audio_audible_pct"] = measured_entry(
+                    "audio_audible_pct", min(v, 100.0),
                     "%d played of %d sent (%d received + %d missed)" % (su, den, ri, ma or 0)
                     if den else "NO audio block in the window while the video plays")
             if vid_stopped:
-                vv = voci.get("video_frazione_f")
-                if not vv or vv["classe"] == "GREEN":
-                    voci["video_frazione_f"] = {
-                        "valore": (vv or {}).get("valore"), "classe": "DEGRADED", "significativo": True,
-                        "nota": "the VIDEO IN THE SCENE does not advance in %d checks of %d (%s): stuck or paused, "
+                vv = entries.get("video_fraction_f")
+                if not vv or vv["class"] == "GREEN":
+                    entries["video_fraction_f"] = {
+                        "value": (vv or {}).get("value"), "class": "DEGRADED", "significant": True,
+                        "note": "the VIDEO IN THE SCENE does not advance in %d checks of %d (%s): stuck or paused, "
                                 "cause to look at%s" % (
-                                    len(vid_stopped), sum(1 for x in all_ver if x.get("azione") == "video_avanza"),
+                                    len(vid_stopped), sum(1 for x in all_ver if x.get("action") == "video_advances"),
                                     (vid_stopped[0].get("det") or "")[:80],
-                                    (" · " + vv["nota"]) if vv else "")}
+                                    (" · " + vv["note"]) if vv else "")}
                 else:
-                    vv["nota"] += " · the video in the scene does not advance in %d checks" % len(vid_stopped)
+                    vv["note"] += " · the video in the scene does not advance in %d checks" % len(vid_stopped)
         # ── drop: the state ──
-        cad = [r for r in righe if r.get("caduta")]
+        cad = [r for r in lines if r.get("drop")]
         if cad:
-            voci["caduta"] = fallita(True, "the actor says DROP at %s: %s" % (
-                _now(cad[0]["t"]), "; ".join(cad[0].get("errori") or [])[:200]))
-        elif ripartenze:
-            voci["caduta"] = fallita(True, "the page counters restarted from zero %d times: "
-                                     "page reloaded or session reattached" % ripartenze)
+            entries["drop"] = failed(True, "the actor says DROP at %s: %s" % (
+                _now(cad[0]["t"]), "; ".join(cad[0].get("errors") or [])[:200]))
+        elif restarts:
+            entries["drop"] = failed(True, "the page counters restarted from zero %d times: "
+                                     "page reloaded or session reattached" % restarts)
     # the product's delay does not need the actor: without state rows
-    #   it is taken anyway from the child's TRATTO rows
-    if len(fin) < 2 and sistema != "xrdp":
-        vr = delay_entry(info["inquilino"], tratti, desktop, misure)
+    #   it is taken anyway from the child's STRETCH rows
+    if len(fin) < 2 and system != "xrdp":
+        vr = delay_entry(info["tenant"], stretches, desktop, measures)
         if vr:
-            voci["ritardo_p95_ms"] = vr
-    if sistema == "xrdp":
-        tolte = [v for v in NOT_MEASURED_XRDP if v in voci]
-        for v in tolte:
-            voci.pop(v)
-        misure["non_misurati_per_costruzione"] = tolte
+            entries["delay_p95_ms"] = vr
+    if system == "xrdp":
+        removed = [v for v in NOT_MEASURED_XRDP if v in entries]
+        for v in removed:
+            entries.pop(v)
+        measures["non_misurati_per_costruzione"] = removed
     # ── drop: the server log (the whole level) ──
-    tnt = info["inquilino"]
-    ev = [e for e in log_events if e["inquilino"] == tnt or e["inquilino"] == "*"] if tnt else \
-        [e for e in log_events if e["inquilino"] == "*"]
-    if ev and voci.get("caduta", {}).get("classe") != "FAIL":
-        voci["caduta"] = fallita(True, "server log: " + "; ".join(
-            "%s %s" % (e["ora"], e["cosa"]) for e in ev[:3]))
-    elif "caduta" not in voci:
-        voci["caduta"] = verde(False, "no drop, restart or error that disconnects"
+    tnt = info["tenant"]
+    ev = [e for e in log_events if e["tenant"] == tnt or e["tenant"] == "*"] if tnt else \
+        [e for e in log_events if e["tenant"] == "*"]
+    if ev and entries.get("drop", {}).get("class") != "FAIL":
+        entries["drop"] = failed(True, "server log: " + "; ".join(
+            "%s %s" % (e["time"], e["what"]) for e in ev[:3]))
+    elif "drop" not in entries:
+        entries["drop"] = green(False, "no drop, restart or error that disconnects"
                                + ("" if tnt else " (⚠ unknown tenant: only the restart is looked at)"))
     # the network (§7), from the server log: RECORDED, does not classify
-    misure["rete"] = (rete or {}).get(tnt) if tnt else None
+    measures["network"] = (network or {}).get(tnt) if tnt else None
     if tnt and tratto.get(tnt):
-        misure["tratto_server_ms"] = tratto[tnt]
+        measures["stretch_server_ms"] = tratto[tnt]
     # ── birth ──
-    na = jfile(os.path.join(dir_u, "nascita.json"))
-    if na is not None and nuovo is not True:
-        # ⛔ born in this level?  With the list: only if `nuovo`.  Without:
+    na = jfile(os.path.join(dir_u, "birth.json"))
+    if na is not None and new is not True:
+        # ⛔ born in this level?  With the list: only if `new`.  Without:
         #   only if the access falls inside the level.
-        acc = na.get("accesso_ms")
-        inside_level = (nuovo is None and acc is not None and t_liv is not None
+        acc = na.get("access_ms")
+        inside_level = (new is None and acc is not None and t_liv is not None
                       and t_liv[0] - 1 <= acc / 1000.0 <= t_liv[1])
         if not inside_level:
-            misure["nascita_precedente"] = {
-                "nascita_s": round(na["nascita_ms"] / 1000.0, 2) if na.get("nascita_ms") is not None else
-                (round((na["primo_fotogramma_ms"] - acc) / 1000.0, 2)
-                 if acc is not None and na.get("primo_fotogramma_ms") is not None else None),
-                "esito": na.get("esito"),
-                "nota": "birth from an earlier rung: recorded, does not classify"}
+            measures["nascita_precedente"] = {
+                "birth_s": round(na["birth_ms"] / 1000.0, 2) if na.get("birth_ms") is not None else
+                (round((na["first_frame_ms"] - acc) / 1000.0, 2)
+                 if acc is not None and na.get("first_frame_ms") is not None else None),
+                "outcome": na.get("outcome"),
+                "note": "birth from an earlier rung: recorded, does not classify"}
             na = None
     if na is not None:
-        es = str(na.get("esito", "ok")).lower()
-        ms = na.get("nascita_ms")
-        if ms is None and na.get("accesso_ms") is not None and na.get("primo_fotogramma_ms") is not None:
-            ms = na["primo_fotogramma_ms"] - na["accesso_ms"]
-        if "rifiut" in es or "refus" in es:     # the old outcome «rifiuto», and the new one
-            voci["nascita_s"] = fallita(None, "REFUSAL at access")
+        es = str(na.get("outcome", "ok")).lower()
+        ms = na.get("birth_ms")
+        if ms is None and na.get("access_ms") is not None and na.get("first_frame_ms") is not None:
+            ms = na["first_frame_ms"] - na["access_ms"]
+        if "rifiut" in es or "refus" in es:     # the old outcome «refusal», and the new one
+            entries["birth_s"] = failed(None, "REFUSAL at access")
         elif ms is None:
-            voci["nascita_s"] = fallita(None, "no first frame (outcome %s)" % es) if es != "ok" \
-                else non_misurato("nascita.json without times")
+            entries["birth_s"] = failed(None, "no first frame (outcome %s)" % es) if es != "ok" \
+                else not_measured("birth.json without times")
         else:
-            misure["nascita_s"] = round(ms / 1000.0, 2)
-            voci["nascita_s"] = measured_entry("nascita_s", ms / 1000.0, "access → first frame")
+            measures["birth_s"] = round(ms / 1000.0, 2)
+            entries["birth_s"] = measured_entry("birth_s", ms / 1000.0, "access → first frame")
             if es not in ("ok", "pass"):
-                voci["nascita_s"] = fallita(misure["nascita_s"], "outcome %s" % es)
-    elif nuovo:
-        voci["nascita_s"] = non_misurato("user born in the level without nascita.json")
-    rif = [e for e in log_events if e.get("rifiuto") and e["inquilino"] == tnt] if tnt else []
-    if rif:
-        voci["nascita_s"] = fallita(None, "refusal in the server log: " + rif[0]["riga"][:160])
+                entries["birth_s"] = failed(measures["birth_s"], "outcome %s" % es)
+    elif new:
+        entries["birth_s"] = not_measured("user born in the level without birth.json")
+    ref = [e for e in log_events if e.get("refusal") and e["tenant"] == tnt] if tnt else []
+    if ref:
+        entries["birth_s"] = failed(None, "refusal in the server log: " + ref[0]["line"][:160])
     # ── short check ──
-    if corto and int(corto.get("utente", -1)) == num:
-        voci["controllo_corto"] = entry_short(corto)
-    return info, misure, voci
+    if corto and int(corto.get("user", -1)) == num:
+        entries["short_check"] = entry_short(corto)
+    return info, measures, entries
 
 
 def entry_birth_check(na):
-    """`nascita` of controllo-corto.json: {pagina_s, ammissione_s, nascita_s
+    """`birth` of short-check.json: {pagina_s, ammissione_s, nascita_s
     (access → first frame painted), primo_non_degenere_s, rifiuto, esito,
     ragione}.  §9: <= 5 s GREEN, 5–15 DEGRADED, > 15 or refusal FAIL."""
     if not na:
-        return non_misurato("controllo-corto.json without `nascita`")
-    if na.get("rifiuto"):
-        return fallita(None, "REFUSAL at access: %s" % (na.get("ragione") or "")[:160])
-    if na.get("nascita_s") is None:
-        if str(na.get("esito", "")).upper() == "FAIL":
-            return fallita(None, "the check session was not born: %s" % (na.get("ragione") or "")[:160])
-        return non_misurato("`nascita` without nascita_s")
-    v = measured_entry("nascita_s", float(na["nascita_s"]), "access → first frame painted, at full load"
-                      + (" (not degenerate at %s s)" % na["primo_non_degenere_s"]
-                         if na.get("primo_non_degenere_s") is not None else ""))
-    if str(na.get("esito", "PASS")).upper() == "FAIL":
-        v = fallita(v["valore"], "the first frame: %s" % (na.get("ragione") or "")[:160])
+        return not_measured("short-check.json without `birth`")
+    if na.get("refusal"):
+        return failed(None, "REFUSAL at access: %s" % (na.get("rationale") or "")[:160])
+    if na.get("birth_s") is None:
+        if str(na.get("outcome", "")).upper() == "FAIL":
+            return failed(None, "the check session was not born: %s" % (na.get("rationale") or "")[:160])
+        return not_measured("`birth` without nascita_s")
+    v = measured_entry("birth_s", float(na["birth_s"]), "access → first frame painted, at full load"
+                      + (" (not degenerate at %s s)" % na["first_non_degenerate_s"]
+                         if na.get("first_non_degenerate_s") is not None else ""))
+    if str(na.get("outcome", "PASS")).upper() == "FAIL":
+        v = failed(v["value"], "the first frame: %s" % (na.get("rationale") or "")[:160])
     return v
 
 
 def session_check(cart, corto, log_events):
-    tnt = corto.get("inquilino")
-    info = {"utente": int(corto.get("utente", 99)), "profilo": "controllo", "browser": corto.get("browser"),
-            "versione": corto.get("versione"), "inquilino": tnt}
-    na = corto.get("nascita") or {}
-    misure = {"nascita_s": na.get("nascita_s"), "ammissione_s": na.get("ammissione_s"),
-              "primo_non_degenere_s": na.get("primo_non_degenere_s"),
-              "sessioni_durante": corto.get("sessioni_durante")}
-    voci = {"nascita_s": entry_birth_check(na), "controllo_corto": entry_short(corto)}
-    rif = [e for e in log_events if e.get("rifiuto") and tnt and e["inquilino"] == tnt]
-    if rif:
-        voci["nascita_s"] = fallita(None, "refusal in the server log: " + rif[0]["riga"][:160])
-    return (os.path.join(cart, "controllo-corto"), info, misure, voci)
+    tnt = corto.get("tenant")
+    info = {"user": int(corto.get("user", 99)), "profile": "check", "browser": corto.get("browser"),
+            "version": corto.get("version"), "tenant": tnt}
+    na = corto.get("birth") or {}
+    measures = {"birth_s": na.get("birth_s"), "admission_s": na.get("admission_s"),
+              "first_non_degenerate_s": na.get("first_non_degenerate_s"),
+              "sessions_during": corto.get("sessions_during")}
+    entries = {"birth_s": entry_birth_check(na), "short_check": entry_short(corto)}
+    ref = [e for e in log_events if e.get("refusal") and tnt and e["tenant"] == tnt]
+    if ref:
+        entries["birth_s"] = failed(None, "refusal in the server log: " + ref[0]["line"][:160])
+    return (os.path.join(cart, "short-check"), info, measures, entries)
 
 
 def entry_short(corto):
-    es = corto.get("esiti") or {}
+    es = corto.get("outcomes") or {}
     if isinstance(es, list):
-        es = {x.get("funzione"): x.get("esito") for x in es}
+        es = {x.get("function"): x.get("outcome") for x in es}
     if not es:
-        return non_misurato("controllo-corto.json without outcomes")
+        return not_measured("short-check.json without outcomes")
     f = [k for k, v in es.items() if v == "FAIL"]
     b = [k for k, v in es.items() if v not in ("PASS", "FAIL")]
     if f:
-        return fallita(es, "FAIL: " + ", ".join(f))
+        return failed(es, "FAIL: " + ", ".join(f))
     if b:
-        r = non_misurato("not looked at: " + ", ".join(b))
-        r["valore"] = es
+        r = not_measured("not looked at: " + ", ".join(b))
+        r["value"] = es
         return r
-    return verde(es, "all PASS (%s)" % ", ".join(sorted(es)))
+    return green(es, "all PASS (%s)" % ", ".join(sorted(es)))
 
 
 def _now(t):
     return _dt.datetime.fromtimestamp(t).strftime("%H:%M:%S")
 
 
-def class_of(voci):
+def class_of(entries):
     c = "GREEN"
-    for v in voci.values():
-        if ORDINE[v["classe"]] > ORDINE[c]:
-            c = v["classe"]
+    for v in entries.values():
+        if ORDER[v["class"]] > ORDER[c]:
+            c = v["class"]
     return c
 
 
-def reason_of(voci):
-    brutte = sorted(((k, v) for k, v in voci.items() if v["classe"] != "GREEN"),
-                    key=lambda kv: -ORDINE[kv[1]["classe"]])
-    if not brutte:
+def reason_of(entries):
+    ugly = sorted(((k, v) for k, v in entries.items() if v["class"] != "GREEN"),
+                    key=lambda kv: -ORDER[kv[1]["class"]])
+    if not ugly:
         return "all entries GREEN"
-    return " · ".join("%s %s: %s%s" % (v["classe"], ENTRY_NAMES.get(k, k),
-                                        "" if v.get("valore") is None or isinstance(v["valore"], (dict, bool))
-                                        else "%s — " % v["valore"], v.get("nota", ""))
-                      for k, v in brutte)
+    return " · ".join("%s %s: %s%s" % (v["class"], ENTRY_NAMES.get(k, k),
+                                        "" if v.get("value") is None or isinstance(v["value"], (dict, bool))
+                                        else "%s — " % v["value"], v.get("note", ""))
+                      for k, v in ugly)
 
 
 # ─────────────────────────────── the server log ────────────────────────────
-def epoch_log(ora, t_rif, fuso):
-    """«HH:MM:SS.mmm» of the log (server time, `fuso` hours from UTC; the
-    box is in UTC) → epoch, with the day nearest to `t_rif`."""
-    m = re.match(r"(\d\d):(\d\d):(\d\d(?:\.\d+)?)", ora)
-    if not m or not t_rif:
+def epoch_log(time, t_ref, merged):
+    """«HH:MM:SS.mmm» of the log (server time, `merged` hours from UTC; the
+    box is in UTC) → epoch, with the day nearest to `t_ref`."""
+    m = re.match(r"(\d\d):(\d\d):(\d\d(?:\.\d+)?)", time)
+    if not m or not t_ref:
         return None
-    base = _dt.datetime.fromtimestamp(t_rif, _dt.timezone.utc) + _dt.timedelta(hours=fuso)
+    base = _dt.datetime.fromtimestamp(t_ref, _dt.timezone.utc) + _dt.timedelta(hours=merged)
     t = base.replace(hour=int(m.group(1)), minute=int(m.group(2)), second=0, microsecond=0)
-    t = t.timestamp() - fuso * 3600 + float(m.group(3))
+    t = t.timestamp() - merged * 3600 + float(m.group(3))
     for g in (-86400, 86400):
-        if abs(t + g - t_rif) < abs(t - t_rif):
+        if abs(t + g - t_ref) < abs(t - t_ref):
             t += g
     return t
 
 
-def events_log(p, t_rif, fuso=0.0):
+def events_log(p, t_ref, merged=0.0):
     """The rows that matter, with the time.  ⚠ Those AFTER the end of the level
-    (`t_rif`) do not count: the end-of-level clean-up closes the sessions, and
+    (`t_ref`) do not count: the end-of-level clean-up closes the sessions, and
     «the session is over» there is the farewell, not a drop."""
     ev, tratto = [], {}
     if not p or not os.path.exists(p):
         return ev, tratto, False
-    for riga in open(p, encoding="utf-8", errors="replace"):
-        riga = riga.rstrip("\n")
-        ora = riga[:12]
-        te = epoch_log(ora, t_rif, fuso)
-        if te is not None and te > t_rif + 2:
+    for line in open(p, encoding="utf-8", errors="replace"):
+        line = line.rstrip("\n")
+        time = line[:12]
+        te = epoch_log(time, t_ref, merged)
+        if te is not None and te > t_ref + 2:
             continue
-        if RIAVVIO.search(riga):
-            ev.append({"inquilino": "*", "ora": ora, "cosa": "server RESTART (avvio REMOTIX)", "riga": riga})
+        if RESTART.search(line):
+            ev.append({"tenant": "*", "time": time, "what": "server RESTART (avvio REMOTIX)", "line": line})
             continue
-        for rx, cosa in CADUTE:
-            m = rx.search(riga)
+        for rx, what in DROPS:
+            m = rx.search(line)
             if m:
-                ev.append({"inquilino": m.group(1), "ora": ora, "cosa": cosa, "riga": riga})
+                ev.append({"tenant": m.group(1), "time": time, "what": what, "line": line})
                 break
-        m = RIFIUTO.search(riga)
-        if m and "rifiuto" not in (e.get("cosa") for e in ev[-1:]):
-            ev.append({"inquilino": m.group(1) or m.group(2), "ora": ora, "cosa": "rifiuto",
-                       "rifiuto": True, "riga": riga})
-        m = TRATTO.search(riga)
+        m = REFUSAL.search(line)
+        if m and "refusal" not in (e.get("what") for e in ev[-1:]):
+            ev.append({"tenant": m.group(1) or m.group(2), "time": time, "what": "refusal",
+                       "refusal": True, "line": line})
+        m = STRETCH.search(line)
         if m:
-            tratto[m.group(1)] = {"mediana": float(m.group(2)), "max": float(m.group(3)), "ora": ora}
+            tratto[m.group(1)] = {"median": float(m.group(2)), "max": float(m.group(3)), "time": time}
     return ev, tratto, True
 
 
 CAP_INGRESS_MS = 9.0   # the input stretch: the child's 8 ms poll (figlio.c:3794) + 1
 
 
-def stretches_log(p, w0, w1, fuso=0.0):
+def stretches_log(p, w0, w1, merged=0.0):
     """Two series of the child in the window, per tenant:
-    `nostro`  «⭐ OURS in the second (copy → byte out, §3.2): p95 X ms · max Y ·
+    `our`  «⭐ OURS in the second (copy → byte out, §3.2): p95 X ms · max Y ·
               median Z · N frames» (commit ebc9dcd; old form «⭐ NOSTRO nel secondo …»):
               ONLY the frames of that second, WITHOUT the compositor's «producer» ⇒ CLASSIFIES;
     `tratto`  «⭐ STRETCH capture → byte out: median X (max Y) …» (old form «⭐ TRATTO
               cattura → byte fuori …»): ⚠ the `max`
               is from the ROLLING SAMPLE of 512 frames (not of the second) and the
               producer is inside it ⇒ only RECORDED (it serves to explain)."""
-    out = {"nostro": {}, "tratto": {}}
+    out = {"ours": {}, "stretch": {}}
     if not p or not os.path.exists(p):
         return out
-    for riga in open(p, encoding="utf-8", errors="replace"):
-        if ("NOSTRO nel secondo" not in riga and "TRATTO cattura" not in riga
-                and "OURS in the second" not in riga and "STRETCH capture" not in riga):
+    for line in open(p, encoding="utf-8", errors="replace"):
+        if ("NOSTRO nel secondo" not in line and "TRATTO cattura" not in line
+                and "OURS in the second" not in line and "STRETCH capture" not in line):
             continue
-        te = epoch_log(riga[:12], w1, fuso)
+        te = epoch_log(line[:12], w1, merged)
         if te is None or te <= w0 or te > w1 + 2:
             continue
-        m = NOSTRO.search(riga)
+        m = OURS.search(line)
         if m:
-            out["nostro"].setdefault(m.group(1), []).append(
+            out["ours"].setdefault(m.group(1), []).append(
                 (te, float(m.group(2)), float(m.group(3)), float(m.group(4)), int(m.group(5))))
             continue
-        m = TRATTO.search(riga)
+        m = STRETCH.search(line)
         if m:
-            pr = PRODUCER.search(riga)
-            out["tratto"].setdefault(m.group(1), []).append(
+            pr = PRODUCER.search(line)
+            out["stretch"].setdefault(m.group(1), []).append(
                 (te, float(m.group(2)), float(m.group(3)), float(pr.group(1)) if pr else None))
     return out
 
 
-def delay_entry(tnt, tratti, desktop, misure):
+def delay_entry(tnt, stretches, desktop, measures):
     """The entry of the PRODUCT's delay and the recorded measures.  → entry or None."""
-    tratti = tratti or {"nostro": {}, "tratto": {}}
-    no = tratti["nostro"].get(tnt) or [] if tnt else []
-    tr = tratti["tratto"].get(tnt) or [] if tnt else []
+    stretches = stretches or {"ours": {}, "stretch": {}}
+    no = stretches["ours"].get(tnt) or [] if tnt else []
+    tr = stretches["stretch"].get(tnt) or [] if tnt else []
     if tr:
         pm = [x[3] for x in tr if x[3] is not None]
-        misure["tratto"] = {"righe": len(tr), "mediana_p95_ms": _round(p95([x[1] for x in tr])),
-                            "max_campione_p95_ms": _round(p95([x[2] for x in tr])),
-                            "produttore_mediana_ms": _round(sorted(pm)[len(pm) // 2]) if pm else None}
+        measures["stretch"] = {"lines": len(tr), "median_p95_ms": _round(p95([x[1] for x in tr])),
+                            "max_sample_p95_ms": _round(p95([x[2] for x in tr])),
+                            "producer_median_ms": _round(sorted(pm)[len(pm) // 2]) if pm else None}
     if not no:
         return None
     p95s = [x[1] for x in no]
-    rit = p95(p95s) + CAP_INGRESS_MS
-    misure["ritardo_p95_ms"] = _round(rit)
-    misure["nostro"] = {"righe": len(no), "p95_dei_p95_ms": _round(p95(p95s)),
-                        "max_al_secondo_max_ms": _round(max(x[2] for x in no)),
-                        "max_al_secondo_p95_ms": _round(p95([x[2] for x in no])),
-                        "mediana_ms": _round(sorted(x[3] for x in no)[len(no) // 2]),
-                        "fotogrammi": sum(x[4] for x in no)}
-    nota = ("p95 of the per-second p95s of «OURS» (copy → byte out, %d rows of the child) %.1f ms + %.0f ms "
+    delay = p95(p95s) + CAP_INGRESS_MS
+    measures["delay_p95_ms"] = _round(delay)
+    measures["ours"] = {"lines": len(no), "p95_of_p95_ms": _round(p95(p95s)),
+                        "max_per_second_max_ms": _round(max(x[2] for x in no)),
+                        "max_per_second_p95_ms": _round(p95([x[2] for x in no])),
+                        "median_ms": _round(sorted(x[3] for x in no)[len(no) // 2]),
+                        "frames": sum(x[4] for x in no)}
+    note = ("p95 of the per-second p95s of «OURS» (copy → byte out, %d rows of the child) %.1f ms + %.0f ms "
             "of input (constructive cap: 8 ms poll)" % (len(no), p95(p95s), CAP_INGRESS_MS))
     if (desktop or "").lower() in ("xfce", "lxqt"):
-        nota += (" · ⚠ wlroots path: the «copy» is counted twice (~4 ms more, cattura.c:2309 / "
+        note += (" · ⚠ wlroots path: the «copy» is counted twice (~4 ms more, cattura.c:2309 / "
                  "figlio.c:5191) — NOT corrected, it is on the cautious side")
-    return measured_entry("ritardo_p95_ms", rit, nota)
+    return measured_entry("delay_p95_ms", delay, note)
 
 
-NETWORK_CUM = ("persi", "byte_persi", "spediti", "byte_spediti", "ricevuti", "scartati",
-            "dgram_persi", "dgram_ok", "dgram_falsi")
+NETWORK_CUM = ("lost", "bytes_lost", "sent", "bytes_sent", "received", "discarded",
+            "dgram_lost", "dgram_ok", "dgram_spurious")
 
 
-def network_log(p, w0, w1, fuso=0.0):
-    """§7, the network per session: the server's `rete-quic` rows (one per second per
+def network_log(p, w0, w1, merged=0.0):
+    """§7, the network per session: the server's `quic-net` rows (one per second per
     connection, CUMULATIVE counters of the connection) in the window ⇒ per
     tenant the Δs (summed over the connections: a re-entry opens a new
     connection and the counters restart), the loss %, the rate, and srtt/pto.
     ⚠ QUIC does not write a «retransmissions» counter: the `persi` packets are
     those that ngtcp2 declared lost, and their content is retransmitted ⇒
-    `persi`/`byte_persi` ARE the measure of retransmissions.  Recorded, does not
+    `persi`/`bytes_lost` ARE the measure of retransmissions.  Recorded, does not
     classify."""
     if not p or not os.path.exists(p):
         return {}
     conn = {}                                  # (inq, address) → [first, last, srtt[], pto[]]
-    for riga in open(p, encoding="utf-8", errors="replace"):
-        if "rete-quic" not in riga and "network-quic" not in riga:      # old and new binary
+    for line in open(p, encoding="utf-8", errors="replace"):
+        if "rete-quic" not in line and "network-quic" not in line:      # old and new binary
             continue
-        m = RETE.search(riga.rstrip("\n"))
+        m = NETWORK.search(line.rstrip("\n"))
         if not m:
             continue
-        te = epoch_log(riga[:12], w1, fuso)
+        te = epoch_log(line[:12], w1, merged)
         if te is None or te <= w0 or te > w1 + 2:
             continue
         kv = {}
         for k, v in re.findall(r"(\w+)=(-?\d+)", m.group(3)):
-            # the old binary's counters in the code's spelling (`persi_d`: the stem, then `_d`)
+            # the old binary's counters in the code's spelling (`lost_d`: the stem, then `_d`)
             k = current_spelling(k[:-2]) + "_d" if k.endswith("_d") else current_spelling(k)
             kv[k] = int(v)
         c = conn.setdefault((m.group(1), m.group(2)), [kv, kv, [], [], te, te])
@@ -909,57 +909,57 @@ def network_log(p, w0, w1, fuso=0.0):
     out = {}
     for (tnt, _), (a, b, srtt, pto, t0, t1) in conn.items():
         r = out.setdefault(tnt, {k: 0 for k in NETWORK_CUM})
-        r.setdefault("connessioni", 0)
-        r["connessioni"] += 1
+        r.setdefault("connections", 0)
+        r["connections"] += 1
         r.setdefault("_srtt", []).extend(srtt)
         r.setdefault("_pto", []).extend(pto)
-        r["_s"] = r.get("_s", 0) + max(0.0, t1 - t0) + 1.0   # the first row already covers da_ms
+        r["_s"] = r.get("_s", 0) + max(0.0, t1 - t0) + 1.0   # the first row already covers since_ms
         for k in NETWORK_CUM:
             # the first row of the window is the base, but its `_d` are inside
             base = a.get(k, 0) - a.get(k + "_d", 0) if (k + "_d") in a else a.get(k, 0)
             r[k] += max(0, b.get(k, 0) - base)
     for tnt, r in out.items():
         sr, pt, dur = r.pop("_srtt"), r.pop("_pto"), r.pop("_s")
-        r["perdita_pct"] = round(100.0 * r["persi"] / r["spediti"], 3) if r["spediti"] else None
-        r["mbit_s"] = round(r["byte_spediti"] * 8 / 1e6 / dur, 2) if dur else None
-        r["srtt_ms"] = {"mediana": round(sorted(sr)[len(sr) // 2], 2), "max": round(max(sr), 2)} if sr else None
+        r["loss_pct"] = round(100.0 * r["lost"] / r["sent"], 3) if r["sent"] else None
+        r["mbit_s"] = round(r["bytes_sent"] * 8 / 1e6 / dur, 2) if dur else None
+        r["srtt_ms"] = {"median": round(sorted(sr)[len(sr) // 2], 2), "max": round(max(sr), 2)} if sr else None
         r["pto_ms_max"] = round(max(pt), 1) if pt else None
-        r["secondi"] = round(dur)
+        r["seconds"] = round(dur)
     return out
 
 
-def journal_err(cart, t0, t1, scatola=None):
+def journal_err(cart, t0, t1, box=None):
     """The rows at priority <= 3 (err) of the box's journal in the level — since
     `--journal` exists (26 Sep 2026) the product sends the EVENTS there, with
-    REMOTIX_INQUILINO.  Source: `journal-err.jsonl` in the level folder
-    (the output of `journalctl -t remotix -p err -o json`), or, with --journal-scatola,
+    REMOTIX_TENANT.  Source: `journal-err.jsonl` in the level folder
+    (the output of `journalctl -t remotix -p err -o json`), or, with --box-journal,
     it is asked of the box now (needs root).  RECORDED, does not classify.
     ⚠ The complete log stays registro.log: it is the source of the classifier."""
     p = os.path.join(cart, "journal-err.jsonl")
-    righe, fonte = None, None
+    lines, source = None, None
     if os.path.exists(p):
-        righe, fonte = open(p, encoding="utf-8", errors="replace").read().splitlines(), p
-    elif scatola:
+        lines, source = open(p, encoding="utf-8", errors="replace").read().splitlines(), p
+    elif box:
         import subprocess
-        cmd = ["podman", "exec", "rete11-" + scatola, "journalctl", "-t", "remotix", "-p", "err",
+        cmd = ["podman", "exec", "rete11-" + box, "journalctl", "-t", "remotix", "-p", "err",
                "--since", "@%d" % int(t0), "--until", "@%d" % int(t1 + 1), "-o", "json", "--no-pager"]
         try:
             o = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
-            righe, fonte = o.stdout.splitlines(), " ".join(cmd)
+            lines, source = o.stdout.splitlines(), " ".join(cmd)
             with open(p, "w", encoding="utf-8") as f:      # the evidence stays in the level
                 f.write(o.stdout)
         except (OSError, subprocess.SubprocessError) as e:
-            return {"righe": None, "nota": "journal not read: %s" % e}
-    if righe is None:
+            return {"lines": None, "note": "journal not read: %s" % e}
+    if lines is None:
         return None
-    per, esempi, n = {}, [], 0
-    for x in righe:
+    per, examples, n = {}, [], 0
+    for x in lines:
         x = x.strip()
         if not x:
             continue
         try:
             j = current_spelling(json.loads(x))
-            msg, tnt, pr = j.get("MESSAGE"), j.get("REMOTIX_INQUILINO"), j.get("PRIORITY")
+            msg, tnt, pr = j.get("MESSAGE"), j.get("REMOTIX_TENANT"), j.get("PRIORITY")
             if pr is not None and int(pr) > 3:
                 continue
             if isinstance(msg, list):                       # journalctl: non-UTF-8 bytes
@@ -971,20 +971,20 @@ def journal_err(cart, t0, t1, scatola=None):
         n += 1
         if tnt:
             per[tnt] = per.get(tnt, 0) + 1
-        if len(esempi) < 5:
-            esempi.append(str(msg)[:200])
-    return {"righe": n, "per_inquilino": per, "esempi": esempi, "fonte": fonte}
+        if len(examples) < 5:
+            examples.append(str(msg)[:200])
+    return {"lines": n, "per_tenant": per, "examples": examples, "source": source}
 
 
 # ─────────────────────────────── the resources ─────────────────────────────
-def risorse(p, w0, w1):
-    righe = [r for r in jsonl(p) if r.get("tipo") == "campione"]
-    tutte = righe
-    fin = [r for r in righe if w0 < r.get("t", 0) <= w1]
+def resources(p, w0, w1):
+    lines = [r for r in jsonl(p) if r.get("type") == "sample"]
+    all_of = lines
+    fin = [r for r in lines if w0 < r.get("t", 0) <= w1]
     if not fin:
-        return None, tutte
+        return None, all_of
 
-    def serie(f):
+    def serial(f):
         out = []
         for r in fin:
             try:
@@ -998,46 +998,46 @@ def risorse(p, w0, w1):
     def sum_of(v):
         if not v:
             return None
-        return {"media": round(sum(v) / len(v), 2), "p95": round(p95(v), 2), "max": round(max(v), 2)}
-    s = {"campioni": len(fin),
-         "cpu_macchina_pct": sum_of(serie(lambda r: r["macchina"]["cpu_pct"])),
-         "carico_1m": sum_of(serie(lambda r: r["macchina"]["carico"][0])),
-         "mem_usata_mb": sum_of(serie(lambda r: r["macchina"]["mem_usata_mb"])),
-         "mem_totale_mb": fin[-1]["macchina"].get("mem_totale_mb"),
-         "thread": sum_of(serie(lambda r: r["macchina"]["thread"])),
-         "misuratore_cpu_s": sum_of(serie(lambda r: r["misuratore"]["cpu_s"])),
-         "recinti": {}, "gpu": {}}
-    for rc in ("remotix", "sessioni", "browser", "altro_scatola", "labwc_cliente"):
-        s["recinti"][rc] = {
-            "cpu_core": sum_of(serie(lambda r: r["recinti"][rc]["cpu_core"])),
-            "pss_mb": sum_of(serie(lambda r: r["recinti"][rc]["pss_mb"])),
-            "processi": sum_of(serie(lambda r: r["recinti"][rc]["processi"])),
-            "gpu": {c: sum_of(serie(lambda r: r["recinti"][rc]["gpu"].get(c)))
-                    for c in sorted({c for r in fin for c in r["recinti"][rc].get("gpu", {})})},
+        return {"mean": round(sum(v) / len(v), 2), "p95": round(p95(v), 2), "max": round(max(v), 2)}
+    s = {"samples": len(fin),
+         "cpu_machine_pct": sum_of(serial(lambda r: r["machine"]["cpu_pct"])),
+         "load_1m": sum_of(serial(lambda r: r["machine"]["load"][0])),
+         "mem_used_mb": sum_of(serial(lambda r: r["machine"]["mem_used_mb"])),
+         "mem_total_mb": fin[-1]["machine"].get("mem_total_mb"),
+         "thread": sum_of(serial(lambda r: r["machine"]["thread"])),
+         "misuratore_cpu_s": sum_of(serial(lambda r: r["misuratore"]["cpu_s"])),
+         "enclosures": {}, "gpu": {}}
+    for rc in ("remotix", "sessions", "browser", "other_box", "labwc_client"):
+        s["enclosures"][rc] = {
+            "cpu_core": sum_of(serial(lambda r: r["enclosures"][rc]["cpu_core"])),
+            "pss_mb": sum_of(serial(lambda r: r["enclosures"][rc]["pss_mb"])),
+            "processes": sum_of(serial(lambda r: r["enclosures"][rc]["processes"])),
+            "gpu": {c: sum_of(serial(lambda r: r["enclosures"][rc]["gpu"].get(c)))
+                    for c in sorted({c for r in fin for c in r["enclosures"][rc].get("gpu", {})})},
         }
     for pdev in sorted({p for r in fin for p in r.get("gpu", {})}):
-        gg = {"scheda": fin[-1]["gpu"].get(pdev, {}).get("scheda"),
+        gg = {"card": fin[-1]["gpu"].get(pdev, {}).get("card"),
               "driver": fin[-1]["gpu"].get(pdev, {}).get("driver")}
-        for c in sorted({c for r in fin for c in r["gpu"].get(pdev, {}).get("categorie", {})}):
-            gg[c] = sum_of(serie(lambda r: r["gpu"][pdev]["categorie"].get(c)))
-        for k in ("freq_att_mhz", "freq_mhz", "temp_c", "potenza_w", "vram_usata_mb", "occupata_pct"):
-            gg[k] = sum_of(serie(lambda r: r["gpu"][pdev].get(k)))
-        stroz = {}
+        for c in sorted({c for r in fin for c in r["gpu"].get(pdev, {}).get("categories", {})}):
+            gg[c] = sum_of(serial(lambda r: r["gpu"][pdev]["categories"].get(c)))
+        for k in ("freq_cur_mhz", "freq_mhz", "temp_c", "power_w", "vram_used_mb", "busy_pct"):
+            gg[k] = sum_of(serial(lambda r: r["gpu"][pdev].get(k)))
+        throttle = {}
         for r in fin:
             for x in r["gpu"].get(pdev, {}).get("strozzatura") or []:
-                stroz[x] = stroz.get(x, 0) + 1
-        gg["strozzatura_frazione"] = {k: round(v / len(fin), 2) for k, v in stroz.items()}
+                throttle[x] = throttle.get(x, 0) + 1
+        gg["throttling_fraction"] = {k: round(v / len(fin), 2) for k, v in throttle.items()}
         s["gpu"][pdev] = gg
-    s["avvisi"] = sorted({a for r in fin for a in r.get("avvisi") or []})[:10]
-    return s, tutte
+    s["warnings"] = sorted({a for r in fin for a in r.get("warnings") or []})[:10]
+    return s, all_of
 
 
 SETTLING_S = 60.0     # after the start of work, before measuring the memory
-CONTINUA_PCT_ORA = 2.0    # «and keeps going»: slope of the second half beyond 2 %/hour of the mean...
+CONTINUE_PCT_HOUR = 2.0    # «and keeps going»: slope of the second half beyond 2 %/hour of the mean...
 CONTINUE_FRAC = 1.0 / 3   # ...and growth along the second half beyond 1/3 of the total
 
 
-def pendenza(pts):
+def slope(pts):
     """The least-squares slope of [(t, v)], per second."""
     n = len(pts)
     mt = sum(t for t, _ in pts) / n
@@ -1046,55 +1046,55 @@ def pendenza(pts):
     return sum((t - mt) * (v - mv) for t, v in pts) / den if den else 0.0
 
 
-def voci_livello(all_results, w0, w1, m0=None, m1=None):
+def level_entries(all_results, w0, w1, m0=None, m1=None):
     """`m0`–`m1`: the memory stretch (the work of the level, see above);
     None ⇒ from the first row of resources to the last."""
-    voci = {}
+    entries = {}
     fin = [r for r in all_results if (m0 is None or r.get("t", 0) >= m0) and (m1 is None or r.get("t", 0) <= m1)]
     if not fin:
-        return {"memoria_remotix": non_misurato("no risorse.jsonl row in the work of the level"),
-                "memoria_sessioni": non_misurato("no risorse.jsonl row in the work of the level")}
-    for rc in ("remotix", "sessioni"):
-        pts = [(r["t"], r["recinti"][rc]["pss_mb"]) for r in fin
-               if r.get("recinti", {}).get(rc, {}).get("processi")]
+        return {"remotix_memory": not_measured("no resources.jsonl row in the work of the level"),
+                "sessions_memory": not_measured("no resources.jsonl row in the work of the level")}
+    for rc in ("remotix", "sessions"):
+        pts = [(r["t"], r["enclosures"][rc]["pss_mb"]) for r in fin
+               if r.get("enclosures", {}).get(rc, {}).get("processes")]
         if len(pts) < 20 or pts[-1][0] - pts[0][0] < 60:
-            voci["memoria_" + rc] = non_misurato("memory series of %s too short (%d points)"
+            entries["memoria_" + rc] = not_measured("memory series of %s too short (%d points)"
                                                  % (rc, len(pts)))
             continue
         t0, t1 = pts[0][0], pts[-1][0]
         a = [v for t, v in pts if t <= t0 + 30]
         b = [v for t, v in pts if t >= t1 - 30]
         ma, mb = sum(a) / len(a), sum(b) / len(b)
-        cresc = 100.0 * (mb - ma) / ma if ma > 0 else 0.0
+        growth = 100.0 * (mb - ma) / ma if ma > 0 else 0.0
         tm = (t0 + t1) / 2.0
-        seconda = [(t, v) for t, v in pts if t >= tm]
+        second = [(t, v) for t, v in pts if t >= tm]
         media = sum(v for _, v in pts) / len(pts)
-        k = pendenza(seconda) if len(seconda) >= 10 else 0.0
+        k = slope(second) if len(second) >= 10 else 0.0
         k_now = 100.0 * k * 3600.0 / media if media > 0 else 0.0
         su_meta = k * (t1 - tm)
-        continua = k_now > CONTINUA_PCT_ORA and (mb - ma) > 0 and su_meta > CONTINUE_FRAC * (mb - ma)
-        nota = ("PSS %.0f → %.0f MB in %.0f s of work (%s–%s); second half %+.1f %%/hour, %+.0f MB of "
+        ongoing = k_now > CONTINUE_PCT_HOUR and (mb - ma) > 0 and su_meta > CONTINUE_FRAC * (mb - ma)
+        note = ("PSS %.0f → %.0f MB in %.0f s of work (%s–%s); second half %+.1f %%/hour, %+.0f MB of "
                 "%+.0f%s" % (ma, mb, t1 - t0, _now(t0), _now(t1), k_now, su_meta, mb - ma,
-                             " and KEEPS rising" if continua else ""))
-        v = measured_entry("memoria_crescita_pct", cresc, nota,
-                          {"continua": continua, "pendenza_pct_ora": _round(k_now), "tratto_s": round(t1 - t0)})
-        if v["classe"] == "FAIL" and not continua:
+                             " and KEEPS rising" if ongoing else ""))
+        v = measured_entry("memoria_crescita_pct", growth, note,
+                          {"ongoing": ongoing, "slope_pct_per_hour": _round(k_now), "stretch_s": round(t1 - t0)})
+        if v["class"] == "FAIL" and not ongoing:
             # §9: FAIL is «> 15 % AND keeps going»; beyond 15 % but stopped: it is reported
-            v.update(classe="DEGRADED", significativo=True,
-                     nota=nota + " — beyond 15 % but STOPPED: reported (§9)")
-        voci["memoria_" + rc] = v
+            v.update(classe="DEGRADED", significant=True,
+                     note=note + " — beyond 15 % but STOPPED: reported (§9)")
+        entries["memoria_" + rc] = v
     # the restart seen from the resources: the parent's pid changes (in the WHOLE level)
     pids = [r.get("remotix_pid") for r in all_results if r.get("remotix_pid")]
-    vuoti = [r for r in all_results if r.get("recinti", {}).get("remotix", {}).get("processi") == 0]
+    empty = [r for r in all_results if r.get("enclosures", {}).get("remotix", {}).get("processes") == 0]
     if len(set(pids)) > 1:
-        voci["riavvio_server"] = fallita(sorted(set(pids)), "the pid of the remotix parent CHANGED in the "
+        entries["server_restart"] = failed(sorted(set(pids)), "the pid of the remotix parent CHANGED in the "
                                          "level: %s" % " → ".join(str(p) for p in _without_repeats(pids)))
-    elif vuoti:
-        voci["riavvio_server"] = fallita(len(vuoti), "remotix enclosure EMPTY in %d samples" % len(vuoti))
+    elif empty:
+        entries["server_restart"] = failed(len(empty), "remotix enclosure EMPTY in %d samples" % len(empty))
     else:
-        voci["riavvio_server"] = verde(pids[0] if pids else None, "the remotix parent is the same for "
+        entries["server_restart"] = green(pids[0] if pids else None, "the remotix parent is the same for "
                                        "the whole level")
-    return voci
+    return entries
 
 
 def _without_repeats(v):
@@ -1106,266 +1106,266 @@ def _without_repeats(v):
 
 
 # ─────────────────────────────── the level ─────────────────────────────────
-def classifica(cart, fps_video=None, finestra_s=120.0, campagna=None, livello=None, fuso_log=0.0,
-               journal_scatola=None, sistema=None):
-    meta = jfile(os.path.join(cart, "livello.json")) or {}
-    # f: --fps-video, then livello.json, then the video chosen in the plan (30 frames/s)
+def ranking(cart, fps_video=None, window_s=120.0, campaign=None, level=None, merged_log=0.0,
+               box_journal=None, system=None):
+    meta = jfile(os.path.join(cart, "level.json")) or {}
+    # f: --fps-video, then level.json, then the video chosen in the plan (30 frames/s)
     fps_video = fps_video or meta.get("fps_video") or CHOSEN_VIDEO_FPS
-    users_meta = {int(u["utente"]): u for u in meta.get("utenti") or [] if "utente" in u}
+    users_meta = {int(u["user"]): u for u in meta.get("users") or [] if "user" in u}
     dirs = dirs_users(cart)
     # the end of the level: the last row of any series
     ts = []
     for d in dirs:
-        ts += [r.get("t", 0) for r in jsonl(os.path.join(d, "stato.jsonl"))]
-    result_p = os.path.join(cart, "risorse.jsonl")
-    ts_r = [r.get("t", 0) for r in jsonl(result_p) if r.get("tipo") == "campione"]
-    w1 = meta.get("fine") or max(ts + ts_r or [0])
-    w0 = w1 - finestra_s
-    ris, all_results = risorse(result_p, w0, w1)
-    ev, tratto, c_log = events_log(os.path.join(cart, "server.log"), w1, fuso_log)
-    tratti = stretches_log(os.path.join(cart, "server.log"), w0, w1, fuso_log)
-    rete = network_log(os.path.join(cart, "server.log"), w0, w1, fuso_log)
-    t_inizio = meta.get("inizio_t") or min(ts + ts_r or [w0])
-    journal = journal_err(cart, t_inizio, w1, journal_scatola)
-    corto = jfile(os.path.join(cart, "controllo-corto.json"))
+        ts += [r.get("t", 0) for r in jsonl(os.path.join(d, "state.jsonl"))]
+    result_p = os.path.join(cart, "resources.jsonl")
+    ts_r = [r.get("t", 0) for r in jsonl(result_p) if r.get("type") == "sample"]
+    w1 = meta.get("end") or max(ts + ts_r or [0])
+    w0 = w1 - window_s
+    result, all_results = resources(result_p, w0, w1)
+    ev, tratto, c_log = events_log(os.path.join(cart, "server.log"), w1, merged_log)
+    stretches = stretches_log(os.path.join(cart, "server.log"), w0, w1, merged_log)
+    network = network_log(os.path.join(cart, "server.log"), w0, w1, merged_log)
+    t_start = meta.get("start_t") or min(ts + ts_r or [w0])
+    journal = journal_err(cart, t_start, w1, box_journal)
+    corto = jfile(os.path.join(cart, "short-check.json"))
     has_list = bool(users_meta)
     sess = []
     for d in dirs:
         n = int(re.sub(r"\D", "", os.path.basename(d)) or 0)
         mu = users_meta.get(n)
-        nuovo = bool(mu.get("nuovo")) if mu else (False if has_list else None)
-        info, misure, voci = sessione(d, w0, w1, fps_video, mu, nuovo,
-                                      corto, ev, tratto, rete, tratti, meta.get("desktop"), (t_inizio, w1),
-                                      sistema)
-        if journal and info.get("inquilino"):
-            misure["journal_err"] = journal["per_inquilino"].get(info["inquilino"], 0)
-        sess.append((d, info, misure, voci))
+        new = bool(mu.get("new")) if mu else (False if has_list else None)
+        info, measures, entries = session(d, w0, w1, fps_video, mu, new,
+                                      corto, ev, tratto, network, stretches, meta.get("desktop"), (t_start, w1),
+                                      system)
+        if journal and info.get("tenant"):
+            measures["journal_err"] = journal["per_tenant"].get(info["tenant"], 0)
+        sess.append((d, info, measures, entries))
     # the memory stretch: the WORK of the level (+ settling), up to the short check
-    if meta.get("durata_lavoro_s") is not None and meta.get("fine"):
-        m0, da = meta["fine"] - meta["durata_lavoro_s"], "start of work"
-    elif meta.get("inizio_t"):
-        m0, da = meta["inizio_t"], "start of the level"
+    if meta.get("work_duration_s") is not None and meta.get("end"):
+        m0, da = meta["end"] - meta["work_duration_s"], "start of work"
+    elif meta.get("start_t"):
+        m0, da = meta["start_t"], "start of the level"
     else:
-        m0, da = min(ts_r or [t_inizio]), "first row of resources"
-    nate = []
+        m0, da = min(ts_r or [t_start]), "first row of resources"
+    born = []
     for d in dirs:
         n = int(re.sub(r"\D", "", os.path.basename(d)) or 0)
-        if (users_meta.get(n) or {}).get("nuovo"):
-            na = jfile(os.path.join(d, "nascita.json")) or {}
-            if na.get("primo_fotogramma_ms") is not None and na["primo_fotogramma_ms"] / 1000.0 <= w1:
-                nate.append(na["primo_fotogramma_ms"] / 1000.0)
-    if nate and max(nate) > m0:
-        m0, da = max(nate), "last birth"
+        if (users_meta.get(n) or {}).get("new"):
+            na = jfile(os.path.join(d, "birth.json")) or {}
+            if na.get("first_frame_ms") is not None and na["first_frame_ms"] / 1000.0 <= w1:
+                born.append(na["first_frame_ms"] / 1000.0)
+    if born and max(born) > m0:
+        m0, da = max(born), "last birth"
     m0 += SETTLING_S
     m1 = w1
-    if corto is not None and meta.get("controllo_min") and meta.get("fine"):
-        m1 = min(w1, meta["fine"] - float(meta["controllo_min"]) * 60.0)
-    # ⛔ [M] 26 Sep 00:56 (intel-4k-xfce livello-01): the short check lasted 156 s and not
+    if corto is not None and meta.get("check_min") and meta.get("end"):
+        m1 = min(w1, meta["end"] - float(meta["check_min"]) * 60.0)
+    # ⛔ [M] 26 Sep 00:56 (intel-4k-xfce level-01): the short check lasted 156 s and not
     #    120, the «end − controllo_min» fell 28 s AFTER the birth of session u99 ⇒
     #    +25 MB of a new tenant read as a leak (false FAIL).  The memory
     #    stretch ends before the check appears in the resources, whatever the
     #    duration of the check; and never after the start of the window declared by the climb.
-    if meta.get("inizio_finestra_t"):
-        m1 = min(m1, float(meta["inizio_finestra_t"]))
+    if meta.get("window_start_t"):
+        m1 = min(m1, float(meta["window_start_t"]))
     for r in all_results:
         t_r = r.get("t")
         if t_r is None or t_r < m0:
             continue
         chi = set()
-        for rec in (r.get("recinti") or {}).values():
+        for rec in (r.get("enclosures") or {}).values():
             if isinstance(rec, dict):
-                chi.update((rec.get("per_inquilino") or {}).keys())
+                chi.update((rec.get("per_tenant") or {}).keys())
         if any(str(c).endswith("u99") for c in chi):
             m1 = min(m1, t_r - 5.0)
             break
-    lv = voci_livello(all_results, w0, w1, m0, m1)
-    for k in ("memoria_remotix", "memoria_sessioni"):
-        if not lv[k].get("non_misurato"):
-            lv[k]["nota"] += " · from: %s + %.0f s" % (da, SETTLING_S)
+    lv = level_entries(all_results, w0, w1, m0, m1)
+    for k in ("remotix_memory", "sessions_memory"):
+        if not lv[k].get("not_measured"):
+            lv[k]["note"] += " · from: %s + %.0f s" % (da, SETTLING_S)
     # ⛔ a rung not reached is not a rung passed
-    n_declared = livello if livello is not None else meta.get("livello")
-    presenti = {int(re.sub(r"\D", "", os.path.basename(d)) or 0) for d in dirs}
-    without_dir = sorted(set(users_meta) - presenti)
+    n_declared = level if level is not None else meta.get("level")
+    present = {int(re.sub(r"\D", "", os.path.basename(d)) or 0) for d in dirs}
+    without_dir = sorted(set(users_meta) - present)
     if n_declared is not None:
-        k_ent = len(presenti)
+        k_ent = len(present)
         if k_ent < int(n_declared):
-            lv["entrati"] = fallita(k_ent, "entered %d of %d%s" % (
+            lv["entered"] = failed(k_ent, "entered %d of %d%s" % (
                 k_ent, int(n_declared), (" (in the list without a folder: %s)" % without_dir) if without_dir else ""))
         else:
-            lv["entrati"] = verde(k_ent, "entered %d of %d" % (k_ent, int(n_declared)))
+            lv["entered"] = green(k_ent, "entered %d of %d" % (k_ent, int(n_declared)))
     if not c_log:
-        lv["registro_server"] = non_misurato("server.log is missing: server drops and errors not looked at")
+        lv["server_log"] = not_measured("server.log is missing: server drops and errors not looked at")
     if corto is None:
-        lv["controllo_corto"] = non_misurato("controllo-corto.json is missing")
-    elif not any("controllo_corto" in s[3] for s in sess):
+        lv["short_check"] = not_measured("short-check.json is missing")
+    elif not any("short_check" in s[3] for s in sess):
         # ⭐ the short check is a NEW SESSION of its own (16-controllo-corto.py,
-        #   user 99): it is classified as a separate session, profile «controllo»,
+        #   user 99): it is classified as a separate session, profile «check»,
         #   with its birth at full load (§9 «birth of a new user»)
         sess.append(session_check(cart, corto, ev))
     if not sess:
-        lv["sessioni"] = non_misurato("no utente-NN folder")
-    classi = [class_of(v) for _, _, _, v in sess]
+        lv["sessions"] = not_measured("no user-NN folder")
+    classes = [class_of(v) for _, _, _, v in sess]
     c_liv = class_of(lv)
-    for c in classi:
-        if ORDINE[c] > ORDINE[c_liv]:
+    for c in classes:
+        if ORDER[c] > ORDER[c_liv]:
             c_liv = c
     # ⚠ the quarter is counted on the ACTORS: the check (user 99) has nothing to do with it
-    att = [class_of(v) for _, i, _, v in sess if i.get("profilo") != "controllo"]
-    n_expected = len(att)
-    n_deg = sum(1 for c in att if c == "DEGRADED")
-    sig_voci = [(os.path.basename(d), k) for d, _, _, v in sess for k, x in v.items()
-                if x["classe"] == "DEGRADED" and x.get("significativo")]
-    sig_voci += [("livello", k) for k, x in lv.items() if x["classe"] == "DEGRADED" and x.get("significativo")]
-    significativo = c_liv == "FAIL" or (c_liv == "DEGRADED" and (
-        (n_expected and n_deg * 4 > n_expected) or bool(sig_voci)))
-    return {"meta": meta, "w0": w0, "w1": w1, "fps_video": fps_video, "sessioni": sess, "journal": journal,
-            "voci_livello": lv, "risorse": ris, "classe": c_liv, "significativo": significativo,
-            "n_degradate": n_deg, "n_attori": n_expected, "sig_voci": sig_voci, "campagna": campagna or meta.get("campagna"),
-            "livello": livello if livello is not None else meta.get("livello", len(sess)),
-            "cart": cart, "sistema": sistema or "remotix"}
+    expect = [class_of(v) for _, i, _, v in sess if i.get("profile") != "check"]
+    n_expected = len(expect)
+    n_deg = sum(1 for c in expect if c == "DEGRADED")
+    sig_entries = [(os.path.basename(d), k) for d, _, _, v in sess for k, x in v.items()
+                if x["class"] == "DEGRADED" and x.get("significant")]
+    sig_entries += [("level", k) for k, x in lv.items() if x["class"] == "DEGRADED" and x.get("significant")]
+    significant = c_liv == "FAIL" or (c_liv == "DEGRADED" and (
+        (n_expected and n_deg * 4 > n_expected) or bool(sig_entries)))
+    return {"meta": meta, "w0": w0, "w1": w1, "fps_video": fps_video, "sessions": sess, "journal": journal,
+            "voci_livello": lv, "resources": result, "class": c_liv, "significant": significant,
+            "n_degradate": n_deg, "n_attori": n_expected, "sig_entries": sig_entries, "campaign": campaign or meta.get("campaign"),
+            "level": level if level is not None else meta.get("level", len(sess)),
+            "cart": cart, "system": system or "remotix"}
 
 
-BASE = ("desktop", "scheda", "driver", "misura", "commit", "binario", "pagina", "nucleo",
-        "tetto_sessioni", "inizio", "durata_s")
+BASE = ("desktop", "card", "driver", "size", "commit", "binary", "page", "kernel",
+        "session_cap", "started", "duration_s")
 
 
-def righe_registro(g):
+def log_line_list(g):
     m = g["meta"]
-    base = {"campagna": g["campagna"], "livello": g["livello"], "sistema": g.get("sistema", "remotix")}
+    base = {"campaign": g["campaign"], "level": g["level"], "system": g.get("system", "remotix")}
     for k in BASE:
         base[k] = m.get(k)
-    base["finestra"] = [_now(g["w0"]), _now(g["w1"])] if g["w1"] else None
+    base["window"] = [_now(g["w0"]), _now(g["w1"])] if g["w1"] else None
     base["fps_video"] = g["fps_video"]
     out = []
-    conti = {"GREEN": 0, "DEGRADED": 0, "FAIL": 0}
-    for d, info, misure, voci in g["sessioni"]:
-        c = class_of(voci)
-        conti[c] += 1
-        r = dict(base, tipo="sessione", **info)
-        r.update(misure=misure, voci=voci, classe=c, ragione=reason_of(voci),
-                 non_misurate=sorted(k for k, v in voci.items() if v.get("non_misurato")),
-                 evidenze=[d])
+    counts = {"GREEN": 0, "DEGRADED": 0, "FAIL": 0}
+    for d, info, measures, entries in g["sessions"]:
+        c = class_of(entries)
+        counts[c] += 1
+        r = dict(base, type="session", **info)
+        r.update(measures=measures, entries=entries, classe=c, rationale=reason_of(entries),
+                 unmeasured=sorted(k for k, v in entries.items() if v.get("not_measured")),
+                 evidence=[d])
         out.append(r)
-    lvr = dict(base, tipo="livello", utenti=len(g["sessioni"]), sessioni=conti,
+    lvr = dict(base, type="level", users=len(g["sessions"]), sessions=counts,
                journal_err=g.get("journal"),
-               voci=g["voci_livello"], risorse=g["risorse"], classe=g["classe"],
-               significativo=g["significativo"],
-               ragione=_level_reason(g, conti), evidenze=[g["cart"]])
+               entries=g["voci_livello"], resources=g["resources"], classe=g["classe"],
+               significant=g["significant"],
+               rationale=_level_reason(g, counts), evidence=[g["cart"]])
     return [lvr] + out
 
 
-def _level_reason(g, conti):
-    p = ["%d GREEN · %d DEGRADED · %d FAIL" % (conti["GREEN"], conti["DEGRADED"], conti["FAIL"])]
-    brutte = [k for k, v in g["voci_livello"].items() if v["classe"] != "GREEN"]
-    if brutte:
-        p.append("level: " + reason_of({k: g["voci_livello"][k] for k in brutte}))
-    if g["classe"] == "DEGRADED":
-        if g["significativo"]:
-            perche = []
+def _level_reason(g, counts):
+    p = ["%d GREEN · %d DEGRADED · %d FAIL" % (counts["GREEN"], counts["DEGRADED"], counts["FAIL"])]
+    ugly = [k for k, v in g["voci_livello"].items() if v["class"] != "GREEN"]
+    if ugly:
+        p.append("level: " + reason_of({k: g["voci_livello"][k] for k in ugly}))
+    if g["class"] == "DEGRADED":
+        if g["significant"]:
+            why = []
             if g["n_attori"] and g["n_degradate"] * 4 > g["n_attori"]:
-                perche.append("more than a quarter of the actors DEGRADED (%d of %d)"
+                why.append("more than a quarter of the actors DEGRADED (%d of %d)"
                               % (g["n_degradate"], g["n_attori"]))
-            if g["sig_voci"]:
-                perche.append("beyond half band or not measured: " + ", ".join(
-                    "%s/%s" % x for x in g["sig_voci"][:6]))
-            p.append("⛔ SIGNIFICANT DEGRADED (" + "; ".join(perche) + "): no climbing")
+            if g["sig_entries"]:
+                why.append("beyond half band or not measured: " + ", ".join(
+                    "%s/%s" % x for x in g["sig_entries"][:6]))
+            p.append("⛔ SIGNIFICANT DEGRADED (" + "; ".join(why) + "): no climbing")
         else:
             p.append("DEGRADED not significant")
     return " · ".join(p)
 
 
-def stampa(g):
+def show(g):
     print("LEVEL %s · %s · window %s–%s · %s%s" % (
-        g["livello"], g["campagna"] or "?", _now(g["w0"]), _now(g["w1"]), g["classe"],
-        " (SIGNIFICANT)" if g["classe"] == "DEGRADED" and g["significativo"] else ""))
-    for d, info, misure, voci in g["sessioni"]:
-        print("  user %-3s %-2s %-8s %-14s %s" % (info["utente"], info["profilo"] or "?",
-                                                 info["browser"] or "?", info["inquilino"] or "?",
-                                                 class_of(voci)))
-        for k, v in voci.items():
-            val = v.get("valore")
-            print("      %-8s %-40s %s%s" % (v["classe"], ENTRY_NAMES.get(k, k),
+        g["level"], g["campaign"] or "?", _now(g["w0"]), _now(g["w1"]), g["class"],
+        " (SIGNIFICANT)" if g["class"] == "DEGRADED" and g["significant"] else ""))
+    for d, info, measures, entries in g["sessions"]:
+        print("  user %-3s %-2s %-8s %-14s %s" % (info["user"], info["profile"] or "?",
+                                                 info["browser"] or "?", info["tenant"] or "?",
+                                                 class_of(entries)))
+        for k, v in entries.items():
+            val = v.get("value")
+            print("      %-8s %-40s %s%s" % (v["class"], ENTRY_NAMES.get(k, k),
                                             "" if val is None or isinstance(val, (dict, bool)) else "%s — " % val,
-                                            v.get("nota", "")))
+                                            v.get("note", "")))
     for k, v in g["voci_livello"].items():
-        print("  level    %-8s %-30s %s" % (v["classe"], k, v.get("nota", "")))
-    r = g["risorse"]
+        print("  level    %-8s %-30s %s" % (v["class"], k, v.get("note", "")))
+    r = g["resources"]
     if r:
         print("  resources: machine cpu %s %% (mean) · mem used %s MB · %s" % (
-            (r["cpu_macchina_pct"] or {}).get("media"), (r["mem_usata_mb"] or {}).get("max"),
-            " · ".join("%s %s" % (g2.get("scheda"), ", ".join("%s %s%%" % (c, (g2[c] or {}).get("media"))
-                                                               for c in ("disegno", "video", "video_enhance")
+            (r["cpu_machine_pct"] or {}).get("mean"), (r["mem_used_mb"] or {}).get("max"),
+            " · ".join("%s %s" % (g2.get("card"), ", ".join("%s %s%%" % (c, (g2[c] or {}).get("mean"))
+                                                               for c in ("draw", "video", "video_enhance")
                                                                if g2.get(c)))
                        for g2 in r["gpu"].values())))
 
 
 # ─────────────────────────────── certify ───────────────────────────────────
-def certifica():
-    esiti = []
+def certify():
+    outcomes = []
 
-    def guarda(nome, ok, dettaglio=""):
-        esiti.append(ok)
-        print("  %s %s%s" % ("PASS" if ok else "FAIL", nome, (" — " + dettaglio) if dettaglio else ""))
+    def look(name, ok, detail=""):
+        outcomes.append(ok)
+        print("  %s %s%s" % ("PASS" if ok else "FAIL", name, (" — " + detail) if detail else ""))
 
-    print("16-classifica --certifica")
+    print("16-classifica --certify")
     print(" 1. every row of §9 at the edges")
-    casi = [
-        ("ritardo_p95_ms", 50.0, "GREEN"), ("ritardo_p95_ms", 50.1, "DEGRADED"),
-        ("ritardo_p95_ms", 150.0, "DEGRADED"), ("ritardo_p95_ms", 150.1, "FAIL"),
-        ("saltati_pct", 2.0, "GREEN"), ("saltati_pct", 2.01, "DEGRADED"),
-        ("saltati_pct", 10.0, "DEGRADED"), ("saltati_pct", 10.01, "FAIL"),
-        ("blocco_max_s", 1.0, "GREEN"), ("blocco_max_s", 1.01, "DEGRADED"),
-        ("blocco_max_s", 3.0, "DEGRADED"), ("blocco_max_s", 3.01, "FAIL"),
-        ("buchi_al_min", 0.0, "GREEN"), ("buchi_al_min", 0.2, "DEGRADED"),
-        ("buchi_al_min", 1.0, "DEGRADED"), ("buchi_al_min", 1.05, "FAIL"),
-        ("video_frazione_f", 0.8, "GREEN"), ("video_frazione_f", 0.79, "DEGRADED"),
-        ("video_frazione_f", 0.4, "DEGRADED"), ("video_frazione_f", 0.39, "FAIL"),
-        ("audio_udibile_pct", 99.0, "GREEN"), ("audio_udibile_pct", 98.9, "DEGRADED"),
-        ("audio_udibile_pct", 95.0, "DEGRADED"), ("audio_udibile_pct", 94.9, "FAIL"),
-        ("nascita_s", 5.0, "GREEN"), ("nascita_s", 5.01, "DEGRADED"),
-        ("nascita_s", 15.0, "DEGRADED"), ("nascita_s", 15.01, "FAIL"),
+    cases = [
+        ("delay_p95_ms", 50.0, "GREEN"), ("delay_p95_ms", 50.1, "DEGRADED"),
+        ("delay_p95_ms", 150.0, "DEGRADED"), ("delay_p95_ms", 150.1, "FAIL"),
+        ("skipped_pct", 2.0, "GREEN"), ("skipped_pct", 2.01, "DEGRADED"),
+        ("skipped_pct", 10.0, "DEGRADED"), ("skipped_pct", 10.01, "FAIL"),
+        ("block_max_s", 1.0, "GREEN"), ("block_max_s", 1.01, "DEGRADED"),
+        ("block_max_s", 3.0, "DEGRADED"), ("block_max_s", 3.01, "FAIL"),
+        ("holes_per_min", 0.0, "GREEN"), ("holes_per_min", 0.2, "DEGRADED"),
+        ("holes_per_min", 1.0, "DEGRADED"), ("holes_per_min", 1.05, "FAIL"),
+        ("video_fraction_f", 0.8, "GREEN"), ("video_fraction_f", 0.79, "DEGRADED"),
+        ("video_fraction_f", 0.4, "DEGRADED"), ("video_fraction_f", 0.39, "FAIL"),
+        ("audio_audible_pct", 99.0, "GREEN"), ("audio_audible_pct", 98.9, "DEGRADED"),
+        ("audio_audible_pct", 95.0, "DEGRADED"), ("audio_audible_pct", 94.9, "FAIL"),
+        ("birth_s", 5.0, "GREEN"), ("birth_s", 5.01, "DEGRADED"),
+        ("birth_s", 15.0, "DEGRADED"), ("birth_s", 15.01, "FAIL"),
         ("memoria_crescita_pct", 5.0, "GREEN"), ("memoria_crescita_pct", 5.1, "DEGRADED"),
         ("memoria_crescita_pct", 15.0, "DEGRADED"), ("memoria_crescita_pct", 15.1, "FAIL"),
     ]
-    sbagliati = [(v, x, a, giudica(v, x)[0]) for v, x, a in casi if giudica(v, x)[0] != a]
-    guarda("%d cases at the edges" % len(casi), not sbagliati, "; ".join("%s %s: expected %s, given %s" % s
-                                                                         for s in sbagliati))
-    meta = [("ritardo_p95_ms", 100.0, False), ("ritardo_p95_ms", 100.5, True),
-            ("video_frazione_f", 0.6, False), ("video_frazione_f", 0.59, True),
-            ("audio_udibile_pct", 97.0, False), ("audio_udibile_pct", 96.9, True)]
-    sb = [m for m in meta if giudica(m[0], m[1])[1] != m[2]]
-    guarda("beyond half of the DEGRADED band ⇒ significant", not sb, str(sb))
+    wrong = [(v, x, a, judge(v, x)[0]) for v, x, a in cases if judge(v, x)[0] != a]
+    look("%d cases at the edges" % len(cases), not wrong, "; ".join("%s %s: expected %s, given %s" % s
+                                                                         for s in wrong))
+    meta = [("delay_p95_ms", 100.0, False), ("delay_p95_ms", 100.5, True),
+            ("video_fraction_f", 0.6, False), ("video_fraction_f", 0.59, True),
+            ("audio_audible_pct", 97.0, False), ("audio_audible_pct", 96.9, True)]
+    sb = [m for m in meta if judge(m[0], m[1])[1] != m[2]]
+    look("beyond half of the DEGRADED band ⇒ significant", not sb, str(sb))
 
     print(" 2. synthetic levels, from the folders")
     tmp = tempfile.mkdtemp(prefix="16-classifica-cert-")
     T0 = 1_790_000_000.0
     try:
-        def livello(nome, utenti, log="", ris=True, mem=lambda t: 1000.0, corto=None, pid=lambda t: 111,
-                    fps=30, tratto=None, elenco=True):
-            c = os.path.join(tmp, nome)
+        def level(name, users, log="", result=True, mem=lambda t: 1000.0, corto=None, pid=lambda t: 111,
+                    fps=30, tratto=None, listing=True):
+            c = os.path.join(tmp, name)
             os.makedirs(c)
-            lj = {"campagna": "cert", "livello": len(utenti), "desktop": "kde", "scheda": "intel",
+            lj = {"campaign": "cert", "level": len(users), "desktop": "kde", "card": "intel",
                   "fps_video": fps,
-                  "utenti": [{"utente": i + 1, "profilo": u["profilo"], "browser": "firefox",
-                              "nuovo": u.get("nuovo", False)} for i, u in enumerate(utenti)]}
-            if not elenco:
-                del lj["utenti"]
-            json.dump(lj, open(os.path.join(c, "livello.json"), "w"))
-            for i, u in enumerate(utenti):
-                d = os.path.join(c, "utente-%02d" % (i + 1))
+                  "users": [{"user": i + 1, "profile": u["profile"], "browser": "firefox",
+                              "new": u.get("new", False)} for i, u in enumerate(users)]}
+            if not listing:
+                del lj["users"]
+            json.dump(lj, open(os.path.join(c, "level.json"), "w"))
+            for i, u in enumerate(users):
+                d = os.path.join(c, "user-%02d" % (i + 1))
                 os.makedirs(d)
-                with open(os.path.join(d, "stato.jsonl"), "w") as f:
+                with open(os.path.join(d, "state.jsonl"), "w") as f:
                     for k in range(0, 601, 5):
-                        f.write(json.dumps(u["riga"](T0 + k, k)) + "\n")
-                if u.get("nascita") is not None:
-                    json.dump(u["nascita"], open(os.path.join(d, "nascita.json"), "w"))
+                        f.write(json.dumps(u["line"](T0 + k, k)) + "\n")
+                if u.get("birth") is not None:
+                    json.dump(u["birth"], open(os.path.join(d, "birth.json"), "w"))
             with open(os.path.join(c, "server.log"), "w") as f:
                 f.write(log)
-                # the child's TRATTO rows, one per second per tenant: max 30 ms
+                # the child's STRETCH rows, one per second per tenant: max 30 ms
                 #   unless `tratto` = {tenant: max, or None for NO row}
                 #   (BOTH forms: odd tenants in the OLD Italian form of the logs of the
                 #   running campaign, even tenants in the new English form)
-                for i, u in enumerate(utenti):
+                for i, u in enumerate(users):
                     tnt = "c16u%02d" % (i + 1)
                     mx = (tratto or {}).get(tnt, 30.0)
                     if mx is None:
@@ -1377,7 +1377,7 @@ def certifica():
                                     "512 fotogrammi del campione, 9000 in tutto — produttore 24.00 (max 60.00)\n"
                                     % (o, tnt, 43.0, 6339.0))
                         else:
-                            f.write("%s figlio  [%s] ⭐ STRETCH capture → byte out: median %.2f ms (max %.2f) over "
+                            f.write("%s child  [%s] ⭐ STRETCH capture → byte out: median %.2f ms (max %.2f) over "
                                     "512 frames of the sample, 9000 in all — producer 24.00 (max 60.00)\n"
                                     % (o, tnt, 43.0, 6339.0))
                         if mx != "solo-tratto" and i % 2 == 0:
@@ -1385,182 +1385,182 @@ def certifica():
                                     "ms · max %.2f · mediana %.2f · 30 fotogrammi\n" % (o, tnt, mx, mx * 1.5,
                                                                                          mx * 0.6))
                         elif mx != "solo-tratto":
-                            f.write("%s figlio  [%s] ⭐ OURS in the second (copy → byte out, §3.2): p95 %.2f "
+                            f.write("%s child  [%s] ⭐ OURS in the second (copy → byte out, §3.2): p95 %.2f "
                                     "ms · max %.2f · median %.2f · 30 frames\n" % (o, tnt, mx, mx * 1.5,
                                                                                     mx * 0.6))
-            json.dump(corto or {"utente": 1, "esiti": {"F-003": "PASS", "F-004": "PASS",
+            json.dump(corto or {"user": 1, "outcomes": {"F-003": "PASS", "F-004": "PASS",
                                                        "F-007": "PASS", "F-014": "PASS"}},
-                      open(os.path.join(c, "controllo-corto.json"), "w"))
-            if ris:
-                with open(os.path.join(c, "risorse.jsonl"), "w") as f:
+                      open(os.path.join(c, "short-check.json"), "w"))
+            if result:
+                with open(os.path.join(c, "resources.jsonl"), "w") as f:
                     for k in range(0, 601):
                         t = T0 + k
-                        f.write(json.dumps({"tipo": "campione", "t": t, "remotix_pid": pid(k),
-                                            "macchina": {"cpu_pct": 30, "carico": [2, 2, 2],
-                                                         "mem_usata_mb": 9000, "mem_totale_mb": 32000,
+                        f.write(json.dumps({"type": "sample", "t": t, "remotix_pid": pid(k),
+                                            "machine": {"cpu_pct": 30, "load": [2, 2, 2],
+                                                         "mem_used_mb": 9000, "mem_total_mb": 32000,
                                                          "thread": 900},
                                             "misuratore": {"cpu_s": 0.01},
-                                            "recinti": {rc: {"cpu_core": 1, "pss_mb": mem(k) if rc != "browser"
-                                                             else 500 + k, "processi": 5, "gpu": {}}
-                                                        for rc in ("remotix", "sessioni", "browser",
-                                                                   "altro_scatola", "labwc_cliente")},
+                                            "enclosures": {rc: {"cpu_core": 1, "pss_mb": mem(k) if rc != "browser"
+                                                             else 500 + k, "processes": 5, "gpu": {}}
+                                                        for rc in ("remotix", "sessions", "browser",
+                                                                   "other_box", "labwc_client")},
                                             "gpu": {}}) + "\n")
             return c
 
-        def sano(prof, tnt, page_fps=30.0, stalled_for=None, salt_pct=0.0, holes_min=0.0, giro=20.0,
-                 blocco=300, audio_pct=100.0, persi=False, drop_at=None, diario=False, eco=True,
+        def healthy(prof, tnt, page_fps=30.0, stalled_for=None, salt_pct=0.0, holes_min=0.0, round_trip=20.0,
+                 block=300, audio_pct=100.0, lost=False, drop_at=None, diary=False, echo=True,
                  slow_round=None, video_da=None, video_stopped=False):
-            def riga(t, k):
+            def line(t, k):
                 n = k * page_fps
                 if stalled_for is not None and k > stalled_for:
                     n = stalled_for * page_fps
                 cons = int(k * page_fps / (1 - salt_pct / 100.0)) if salt_pct else int(n)
-                r = {"t": t, "utente": int(tnt[-2:]), "profilo": prof, "browser": "firefox",
-                     "inquilino": tnt, "lavoro": True, "blocco_max_ms": blocco,
-                     "giro": {"visti": k, "campioni": [slow_round or giro] * min(200, k)}}
-                if eco:
-                    r["giro_eco"] = {"visti": k, "campioni": [giro] * min(200, k)}
+                r = {"t": t, "user": int(tnt[-2:]), "profile": prof, "browser": "firefox",
+                     "tenant": tnt, "work": True, "block_max_ms": block,
+                     "round_trip": {"seen": k, "samples": [slow_round or round_trip] * min(200, k)}}
+                if echo:
+                    r["echo_round"] = {"seen": k, "samples": [round_trip] * min(200, k)}
                 if video_da is not None:
-                    r["lavoro"] = k > video_da
+                    r["work"] = k > video_da
                     n = max(0, k - video_da) * page_fps
-                conti = {"consegnati": cons, "dipinti": int(n), "salt": 0,
-                         "buchi": int(k / 60.0 * holes_min),
-                         "ricevuti": k * 50, "suonati": int(k * 50 * audio_pct / 100.0), "mancati": 0}
-                if diario:
-                    r["diario"] = ("audio: ricevuti %(ricevuti)d suonati %(suonati)d BUCHI 0 vecchi 0 "
-                                   "mancati %(mancati)d volte 0 | tasti 3 dipinti %(dipinti)d video "
-                                   "%(consegnati)d→%(dipinti)d fuori 1 dentro 0 coda_dec 0 bmp 0 salt "
-                                   "%(salt)d buchi %(buchi)d ord 0" % conti)
+                counts = {"delivered": cons, "painted": int(n), "skip": 0,
+                         "holes": int(k / 60.0 * holes_min),
+                         "received": k * 50, "played": int(k * 50 * audio_pct / 100.0), "missed": 0}
+                if diary:
+                    r["diary"] = ("audio: received %(received)d played %(played)d HOLES 0 stale 0 "
+                                   "missed %(missed)d times 0 | keys 3 painted %(painted)d video "
+                                   "%(delivered)d→%(painted)d out 1 inside 0 dec_queue 0 bmp 0 skip "
+                                   "%(skip)d holes %(holes)d ord 0" % counts)
                 else:
-                    r["conti"] = conti
+                    r["counts"] = counts
                 if prof != "D":
-                    r["input"] = [{"ok": not persi or k < 550, "latenza_ms": 150, "azione": "clic"}]
+                    r["input"] = [{"ok": not lost or k < 550, "latency_ms": 150, "action": "click"}]
                 elif video_stopped:
-                    r["input"] = [{"ok": k < 550, "latenza_ms": None, "azione": "video_avanza",
+                    r["input"] = [{"ok": k < 550, "latency_ms": None, "action": "video_advances",
                                    "det": "t 12.0→12.0"}]
                 if drop_at is not None and k >= drop_at:
-                    r["caduta"] = True
-                    r["errori"] = ["the canvas is black"]
+                    r["drop"] = True
+                    r["errors"] = ["the canvas is black"]
                 return r
-            return {"profilo": prof, "riga": riga}
+            return {"profile": prof, "line": line}
 
-        quattro = [sano("A", "c16u01"), sano("B", "c16u02", diario=True), sano("C", "c16u03"),
-                   sano("D", "c16u04")]
-        g = classifica(livello("verde", quattro))
-        guarda("healthy level ⇒ GREEN", g["classe"] == "GREEN", _level_reason(g, _conti(g)))
+        four = [healthy("A", "c16u01"), healthy("B", "c16u02", diary=True), healthy("C", "c16u03"),
+                   healthy("D", "c16u04")]
+        g = ranking(level("green", four))
+        look("healthy level ⇒ GREEN", g["class"] == "GREEN", _level_reason(g, _counts(g)))
 
-        u = list(quattro)
-        u[1] = sano("B", "c16u02", stalled_for=400)
-        g = classifica(livello("fermo", u))
-        s2 = g["sessioni"][1][3]
-        guarda("⛔ FAULT: a stuck session ⇒ level FAIL",
-               g["classe"] == "FAIL" and s2["blocco_max_s"]["classe"] == "FAIL",
-               s2["blocco_max_s"]["nota"])
+        u = list(four)
+        u[1] = healthy("B", "c16u02", stalled_for=400)
+        g = ranking(level("still", u))
+        s2 = g["sessions"][1][3]
+        look("⛔ FAULT: a stuck session ⇒ level FAIL",
+               g["class"] == "FAIL" and s2["block_max_s"]["class"] == "FAIL",
+               s2["block_max_s"]["note"])
 
-        u = list(quattro)
-        u[3] = sano("D", "c16u04", page_fps=20.0)       # 20/30 = 0.67 f: DEGRADED, below half band
-        g = classifica(livello("video-deg", u))
-        guarda("video at 0.67·f ⇒ DEGRADED, not significant (1 of 4)",
-               g["classe"] == "DEGRADED" and not g["significativo"], g["sessioni"][3][3]["video_frazione_f"]["nota"])
-        u[3] = sano("D", "c16u04", page_fps=15.0)       # 0.5 f: beyond half band
-        g = classifica(livello("video-sig", u))
-        guarda("video at 0.5·f ⇒ SIGNIFICANT DEGRADED", g["classe"] == "DEGRADED" and g["significativo"])
-        g = classifica(livello("due-deg", quattro, tratto={"c16u01": 60.0, "c16u02": 60.0}))
-        guarda("2 sessions of 4 DEGRADED (delay 60 ms) ⇒ significant (> a quarter)",
-               g["classe"] == "DEGRADED" and g["significativo"], _level_reason(g, _conti(g)))
-        u = [sano("A", "c16u01", salt_pct=5.0), sano("B", "c16u02"), sano("C", "c16u03"),
-             sano("D", "c16u04", audio_pct=96.0)]
-        g = classifica(livello("salt-audio", u))
-        s1, s4 = g["sessioni"][0][3], g["sessioni"][3][3]
-        guarda("skipped 5 % ⇒ DEGRADED; audio 96 % ⇒ DEGRADED beyond half band",
-               s1["saltati_pct"]["classe"] == "DEGRADED" and s4["audio_udibile_pct"]["classe"] == "DEGRADED"
-               and s4["audio_udibile_pct"]["significativo"],
-               "%s · %s" % (s1["saltati_pct"]["valore"], s4["audio_udibile_pct"]["valore"]))
-        u = [sano("A", "c16u01", holes_min=2.0), sano("B", "c16u02", persi=True), sano("C", "c16u03"),
-             sano("D", "c16u04")]
-        g = classifica(livello("buchi-persi", u))
-        guarda("2 holes per minute ⇒ FAIL; input lost ⇒ FAIL",
-               g["sessioni"][0][3]["buchi_al_min"]["classe"] == "FAIL"
-               and g["sessioni"][1][3]["ritardo_p95_ms"]["classe"] == "FAIL")
-        u = list(quattro)
-        u[2] = sano("C", "c16u03", blocco=None)
-        u[2]["nascita"] = None
-        g = classifica(livello("non-misurato", u))
-        s3 = g["sessioni"][2][3]
-        guarda("⛔ MISSING measure ⇒ never GREEN: «not measured», significant",
-               s3["blocco_max_s"].get("non_misurato") and g["classe"] == "DEGRADED" and g["significativo"],
-               s3["blocco_max_s"]["nota"])
-        u = [dict(sano("A", "c16u01"), nascita={"accesso_ms": 0, "primo_fotogramma_ms": 4800}, nuovo=True),
-             dict(sano("B", "c16u02"), nascita={"accesso_ms": 0, "primo_fotogramma_ms": 16000}, nuovo=True),
-             dict(sano("C", "c16u03"), nascita={"esito": "rifiuto"}, nuovo=True),
-             dict(sano("D", "c16u04"), nuovo=True)]
-        g = classifica(livello("nascite", u))
-        cl = [g["sessioni"][i][3].get("nascita_s", {}).get("classe") for i in range(4)]
-        guarda("births 4.8 s / 16 s / refusal / absent ⇒ GREEN, FAIL, FAIL, not measured",
-               cl == ["GREEN", "FAIL", "FAIL", "DEGRADED"] and g["sessioni"][3][3]["nascita_s"].get("non_misurato"),
+        u = list(four)
+        u[3] = healthy("D", "c16u04", page_fps=20.0)       # 20/30 = 0.67 f: DEGRADED, below half band
+        g = ranking(level("video-deg", u))
+        look("video at 0.67·f ⇒ DEGRADED, not significant (1 of 4)",
+               g["class"] == "DEGRADED" and not g["significant"], g["sessions"][3][3]["video_fraction_f"]["note"])
+        u[3] = healthy("D", "c16u04", page_fps=15.0)       # 0.5 f: beyond half band
+        g = ranking(level("video-sig", u))
+        look("video at 0.5·f ⇒ SIGNIFICANT DEGRADED", g["class"] == "DEGRADED" and g["significant"])
+        g = ranking(level("due-deg", four, tratto={"c16u01": 60.0, "c16u02": 60.0}))
+        look("2 sessions of 4 DEGRADED (delay 60 ms) ⇒ significant (> a quarter)",
+               g["class"] == "DEGRADED" and g["significant"], _level_reason(g, _counts(g)))
+        u = [healthy("A", "c16u01", salt_pct=5.0), healthy("B", "c16u02"), healthy("C", "c16u03"),
+             healthy("D", "c16u04", audio_pct=96.0)]
+        g = ranking(level("salt-audio", u))
+        s1, s4 = g["sessions"][0][3], g["sessions"][3][3]
+        look("skipped 5 % ⇒ DEGRADED; audio 96 % ⇒ DEGRADED beyond half band",
+               s1["skipped_pct"]["class"] == "DEGRADED" and s4["audio_audible_pct"]["class"] == "DEGRADED"
+               and s4["audio_audible_pct"]["significant"],
+               "%s · %s" % (s1["skipped_pct"]["value"], s4["audio_audible_pct"]["value"]))
+        u = [healthy("A", "c16u01", holes_min=2.0), healthy("B", "c16u02", lost=True), healthy("C", "c16u03"),
+             healthy("D", "c16u04")]
+        g = ranking(level("buchi-persi", u))
+        look("2 holes per minute ⇒ FAIL; input lost ⇒ FAIL",
+               g["sessions"][0][3]["holes_per_min"]["class"] == "FAIL"
+               and g["sessions"][1][3]["delay_p95_ms"]["class"] == "FAIL")
+        u = list(four)
+        u[2] = healthy("C", "c16u03", block=None)
+        u[2]["birth"] = None
+        g = ranking(level("non-misurato", u))
+        s3 = g["sessions"][2][3]
+        look("⛔ MISSING measure ⇒ never GREEN: «not measured», significant",
+               s3["block_max_s"].get("not_measured") and g["class"] == "DEGRADED" and g["significant"],
+               s3["block_max_s"]["note"])
+        u = [dict(healthy("A", "c16u01"), birth={"access_ms": 0, "first_frame_ms": 4800}, new=True),
+             dict(healthy("B", "c16u02"), birth={"access_ms": 0, "first_frame_ms": 16000}, new=True),
+             dict(healthy("C", "c16u03"), birth={"outcome": "refusal"}, new=True),
+             dict(healthy("D", "c16u04"), new=True)]
+        g = ranking(level("nascite", u))
+        cl = [g["sessions"][i][3].get("birth_s", {}).get("class") for i in range(4)]
+        look("births 4.8 s / 16 s / refusal / absent ⇒ GREEN, FAIL, FAIL, not measured",
+               cl == ["GREEN", "FAIL", "FAIL", "DEGRADED"] and g["sessions"][3][3]["birth_s"].get("not_measured"),
                str(cl))
-        # ⛔ FAULT (review 26 Sep): the nascita.json of an earlier rung
+        # ⛔ FAULT (review 26 Sep): the birth.json of an earlier rung
         #   (the actor's folder stays) was re-judged at every level
-        u = list(quattro)
-        u[1] = dict(sano("B", "c16u02"), nascita={"accesso_ms": 0, "primo_fotogramma_ms": 7000})
-        g = classifica(livello("nascita-vecchia", u))
-        s2 = g["sessioni"][1]
+        u = list(four)
+        u[1] = dict(healthy("B", "c16u02"), birth={"access_ms": 0, "first_frame_ms": 7000})
+        g = ranking(level("nascita-vecchia", u))
+        s2 = g["sessions"][1]
         nsa = (T0 + 100) * 1000
-        u2 = [dict(sano("A", "c16u01"), nascita={"accesso_ms": 0, "primo_fotogramma_ms": 7000}),
-              dict(sano("B", "c16u02"), nascita={"accesso_ms": nsa, "primo_fotogramma_ms": nsa + 7000}),
-              sano("C", "c16u03"), sano("D", "c16u04")]
-        g2 = classifica(livello("nascita-senza-elenco", u2, elenco=False))
-        guarda("⛔ FAULT: birth from an earlier rung (not `nuovo`, or access outside the level) ⇒ "
+        u2 = [dict(healthy("A", "c16u01"), birth={"access_ms": 0, "first_frame_ms": 7000}),
+              dict(healthy("B", "c16u02"), birth={"access_ms": nsa, "first_frame_ms": nsa + 7000}),
+              healthy("C", "c16u03"), healthy("D", "c16u04")]
+        g2 = ranking(level("nascita-senza-elenco", u2, listing=False))
+        look("⛔ FAULT: birth from an earlier rung (not `new`, or access outside the level) ⇒ "
                "recorded, does NOT classify; access inside the level ⇒ classifies",
-               "nascita_s" not in s2[3] and s2[2].get("nascita_precedente", {}).get("nascita_s") == 7.0
-               and g["classe"] == "GREEN"
-               and "nascita_s" not in g2["sessioni"][0][3]
-               and g2["sessioni"][1][3].get("nascita_s", {}).get("classe") == "DEGRADED",
+               "birth_s" not in s2[3] and s2[2].get("nascita_precedente", {}).get("birth_s") == 7.0
+               and g["class"] == "GREEN"
+               and "birth_s" not in g2["sessions"][0][3]
+               and g2["sessions"][1][3].get("birth_s", {}).get("class") == "DEGRADED",
                json.dumps(s2[2].get("nascita_precedente"), ensure_ascii=False))
         hh = _dt.datetime.fromtimestamp(T0 + 300, _dt.timezone.utc).strftime("%H:%M:%S.000")
-        dopo = _dt.datetime.fromtimestamp(T0 + 900, _dt.timezone.utc).strftime("%H:%M:%S.000")
+        after = _dt.datetime.fromtimestamp(T0 + 900, _dt.timezone.utc).strftime("%H:%M:%S.000")
         log = ("%s rcp     [c16u03] ⛔ FIN del CLIENT sul canale di controllo (stream 4): §4.2, "
                "la sessione e' finita\n" % hh)
         log += ("%s rcp     [c16u01] ⛔ FIN del CLIENT sul canale di controllo (stream 4): §4.2, "
-                "la sessione e' finita\n" % dopo)
+                "la sessione e' finita\n" % after)
         log += ("%s figlio  [c16u02] ⛔⛔ FIFO **NON** OTTENUTO: politica NORMALE, rifiutato\n" % hh)
-        g = classifica(livello("caduta-log", quattro, log=log))
-        guarda("log: the session is over ⇒ FAIL; after the end of the level and any «rifiut» ⇒ no",
-               [class_of(s[3]) for s in g["sessioni"]] == ["GREEN", "GREEN", "FAIL", "GREEN"])
+        g = ranking(level("caduta-log", four, log=log))
+        look("log: the session is over ⇒ FAIL; after the end of the level and any «rifiut» ⇒ no",
+               [class_of(s[3]) for s in g["sessions"]] == ["GREEN", "GREEN", "FAIL", "GREEN"])
         # the same in the new English form of the product (english-migration/strings)
         log = ("%s rcp     [c16u03] ⛔ CLIENT FIN on the control channel (stream 4): §4.2, "
                "the session is over\n" % hh)
         log += ("%s rcp     [c16u01] ⛔ CLIENT FIN on the control channel (stream 4): §4.2, "
-                "the session is over\n" % dopo)
+                "the session is over\n" % after)
         log += ("%s main    ⛔ the stage of «c16u02» (uid 4002) has gone: from now on their sessions "
                 "no longer receive frames\n" % hh)
-        g = classifica(livello("caduta-log-en", quattro, log=log))
-        guarda("log, English form: the session is over / the stage has gone ⇒ FAIL; after the end ⇒ no",
-               [class_of(s[3]) for s in g["sessioni"]] == ["GREEN", "FAIL", "FAIL", "GREEN"])
+        g = ranking(level("caduta-log-en", four, log=log))
+        look("log, English form: the session is over / the stage has gone ⇒ FAIL; after the end ⇒ no",
+               [class_of(s[3]) for s in g["sessions"]] == ["GREEN", "FAIL", "FAIL", "GREEN"])
         # the network and the journal: recorded, they do not classify
         rq = ""
         for k in range(0, 31):
             o = _dt.datetime.fromtimestamp(T0 + 540 + k, _dt.timezone.utc).strftime("%H:%M:%S.000")
-            rq += ("%s wt      [c16u01] rete-quic [192.168.0.2]:4000 da_ms=1000 persi=%d persi_d=1 "
-                   "byte_persi=%d byte_persi_d=1200 spediti=%d spediti_d=100 byte_spediti=%d "
-                   "ricevuti=%d ricevuti_d=50 srtt_us=%d pto_us=20000 giudizio=--\n"
+            rq += ("%s wt      [c16u01] quic-net [192.168.0.2]:4000 since_ms=1000 lost=%d lost_d=1 "
+                   "bytes_lost=%d bytes_lost_d=1200 sent=%d sent_d=100 bytes_sent=%d "
+                   "received=%d received_d=50 srtt_us=%d pto_us=20000 judgement=--\n"
                    % (o, 10 + k, 12000 + 1200 * k, 1000 + 100 * k, 125000 * (10 + k), 500 + 50 * k,
                       1000 + 100 * k))
-        cr = livello("rete", quattro, log=rq)
+        cr = level("network", four, log=rq)
         with open(os.path.join(cr, "journal-err.jsonl"), "w") as f:
-            f.write(json.dumps({"MESSAGE": "⛔ something", "PRIORITY": "3", "REMOTIX_INQUILINO": "c16u01"}) + "\n")
-            f.write(json.dumps({"MESSAGE": "⚠ warning", "PRIORITY": "4", "REMOTIX_INQUILINO": "c16u01"}) + "\n")
-        g = classifica(cr)
-        rt = g["sessioni"][0][2].get("rete") or {}
-        guarda("network per session from the log: 31 rows ⇒ lost 31, sent 3100, 1 % (does not classify)",
-               rt.get("persi") == 31 and rt.get("spediti") == 3100 and rt.get("perdita_pct") == 1.0
-               and g["classe"] == "GREEN" and g["sessioni"][1][2].get("rete") is None,
+            f.write(json.dumps({"MESSAGE": "⛔ something", "PRIORITY": "3", "REMOTIX_TENANT": "c16u01"}) + "\n")
+            f.write(json.dumps({"MESSAGE": "⚠ warning", "PRIORITY": "4", "REMOTIX_TENANT": "c16u01"}) + "\n")
+        g = ranking(cr)
+        rt = g["sessions"][0][2].get("network") or {}
+        look("network per session from the log: 31 rows ⇒ lost 31, sent 3100, 1 % (does not classify)",
+               rt.get("lost") == 31 and rt.get("sent") == 3100 and rt.get("loss_pct") == 1.0
+               and g["class"] == "GREEN" and g["sessions"][1][2].get("network") is None,
                json.dumps(rt))
-        guarda("journal: 1 row at priority <= 3 (the 4 does not), per tenant, does not classify",
-               g["journal"]["righe"] == 1 and g["sessioni"][0][2].get("journal_err") == 1
-               and g["classe"] == "GREEN", json.dumps(g["journal"], ensure_ascii=False)[:160])
+        look("journal: 1 row at priority <= 3 (the 4 does not), per tenant, does not classify",
+               g["journal"]["lines"] == 1 and g["sessions"][0][2].get("journal_err") == 1
+               and g["class"] == "GREEN", json.dumps(g["journal"], ensure_ascii=False)[:160])
         # ⭐ a level of a campaign BEFORE the English rename (misure/ is never rewritten): Italian keys
-        #   and values, utente-NN folders, the old page's diary, the old binary's rete-quic rows ⇒ the
+        #   and values, user-NN folders, the old page's diary, the old binary's rete-quic rows ⇒ the
         #   same judgement as the same level written today (before the rename the two are the same)
         NETWORK_OLD = ("%s wt      [c16u01] rete-quic [192.168.0.2]:4000 da_ms=1000 persi=%d persi_d=1 "
                         "byte_persi=%d byte_persi_d=1200 spediti=%d spediti_d=100 byte_spediti=%d "
@@ -1578,209 +1578,209 @@ def certifica():
                 return [all_antica(v) for v in x]
             return antica.get(x, x) if isinstance(x, str) else x
 
-        def vecchio(c):
+        def old(c):
             """The level `c` as a campaign before the rename wrote it."""
-            for radice, _, file in os.walk(c):
-                for nome in file:
-                    p = os.path.join(radice, nome)
-                    if nome.endswith(".jsonl"):
-                        righe = [json.loads(x) for x in open(p) if x.strip()]
+            for root, _, file in os.walk(c):
+                for name in file:
+                    p = os.path.join(root, name)
+                    if name.endswith(".jsonl"):
+                        lines = [json.loads(x) for x in open(p) if x.strip()]
                         with open(p, "w") as h:
-                            for r in righe:
-                                if "conti" in r and r.get("utente") == 2:       # user 2: the old page's diary
-                                    r["diario"] = DIARY_OLD % all_antica(r.pop("conti"))
+                            for r in lines:
+                                if "counts" in r and r.get("user") == 2:       # user 2: the old page's diary
+                                    r["diary"] = DIARY_OLD % all_antica(r.pop("counts"))
                                 h.write(json.dumps(all_antica(r), ensure_ascii=False) + "\n")
-                    elif nome.endswith(".json"):
+                    elif name.endswith(".json"):
                         d = all_antica(json.load(open(p)))
                         json.dump(d, open(p, "w"), ensure_ascii=False)
             for d in os.listdir(c):
-                if d.startswith("utente-"):
-                    os.rename(os.path.join(c, d), os.path.join(c, spellings("utente-")[-1] + d.split("-", 1)[1]))
+                if d.startswith("user-"):
+                    os.rename(os.path.join(c, d), os.path.join(c, spellings("user-")[-1] + d.split("-", 1)[1]))
             return c
 
-        def gemello(nome, log):
-            u = [dict(sano("A", "c16u01"), nascita={"accesso_ms": nsa, "primo_fotogramma_ms": nsa + 4800},
-                      nuovo=True),
-                 sano("B", "c16u02"), dict(sano("C", "c16u03"), nascita={"esito": "rifiuto"}, nuovo=True),
-                 sano("D", "c16u04")]
-            c = livello(nome, u, log=log, corto={"utente": 4, "esiti": [{"funzione": "F-003", "esito": "PASS"},
-                                                                         {"funzione": "F-014", "esito": "PASS"}]})
+        def twin(name, log):
+            u = [dict(healthy("A", "c16u01"), birth={"access_ms": nsa, "first_frame_ms": nsa + 4800},
+                      new=True),
+                 healthy("B", "c16u02"), dict(healthy("C", "c16u03"), birth={"outcome": "refusal"}, new=True),
+                 healthy("D", "c16u04")]
+            c = level(name, u, log=log, corto={"user": 4, "outcomes": [{"function": "F-003", "outcome": "PASS"},
+                                                                         {"function": "F-014", "outcome": "PASS"}]})
             with open(os.path.join(c, "journal-err.jsonl"), "w") as f:
-                f.write(json.dumps({"MESSAGE": "⛔ something", "PRIORITY": "3", "REMOTIX_INQUILINO": "c16u01"}) + "\n")
+                f.write(json.dumps({"MESSAGE": "⛔ something", "PRIORITY": "3", "REMOTIX_TENANT": "c16u01"}) + "\n")
             return c
 
-        def sunto(g):
-            return ([(class_of(s[3]), s[2].get("consegnati"), s[2].get("dipinti"), s[2].get("nascita_s"),
-                      (s[2].get("rete") or {}).get("persi"), s[2].get("journal_err"),
-                      (s[3].get("controllo_corto") or {}).get("classe")) for s in g["sessioni"]],
-                    sorted((k, v["classe"]) for k, v in g["voci_livello"].items()), g["classe"])
+        def digest(g):
+            return ([(class_of(s[3]), s[2].get("delivered"), s[2].get("painted"), s[2].get("birth_s"),
+                      (s[2].get("network") or {}).get("lost"), s[2].get("journal_err"),
+                      (s[3].get("short_check") or {}).get("class")) for s in g["sessions"]],
+                    sorted((k, v["class"]) for k, v in g["voci_livello"].items()), g["class"])
         rq_old = ""
         for k in range(0, 31):
             o = _dt.datetime.fromtimestamp(T0 + 540 + k, _dt.timezone.utc).strftime("%H:%M:%S.000")
             rq_old += NETWORK_OLD % (o, 10 + k, 12000 + 1200 * k, 1000 + 100 * k, 125000 * (10 + k),
                                           500 + 50 * k, 1000 + 100 * k)
-        g_today = classifica(gemello("oggi", rq))
-        g_ieri = classifica(vecchio(gemello("ieri", rq_old)))
-        so, si = sunto(g_today), sunto(g_ieri)
-        guarda("an OLD level (Italian keys, utente-NN, old diary and rete-quic rows) ⇒ the same judgement as today's",
-               si == so and [x[0] for x in si[0]] == ["GREEN", "GREEN", "FAIL", "GREEN"]
-               and si[0][0][3] == 4.8 and si[0][0][4] == 31 and si[0][0][5] == 1 and si[0][1][1]
-               and si[0][3][6] == "GREEN" and len(si[0]) == 4,
-               "old %s · today %s" % (json.dumps(si)[:300], json.dumps(so)[:300]) if si != so else "")
-        g = classifica(livello("riavvio-log", quattro, log="%s avvio   REMOTIX — fase 1\n" % hh))
-        guarda("restart in the log ⇒ all FAIL", all(class_of(s[3]) == "FAIL" for s in g["sessioni"]))
-        g = classifica(livello("rifiuto-log", quattro, log="%s rcp     [c16u04] ⛔ posto NEGATO a c16u04 da "
+        g_today = ranking(twin("oggi", rq))
+        g_ieri = ranking(old(twin("ieri", rq_old)))
+        so, yes = digest(g_today), digest(g_ieri)
+        look("an OLD level (Italian keys, user-NN, old diary and quic-net rows) ⇒ the same judgement as today's",
+               yes == so and [x[0] for x in yes[0]] == ["GREEN", "GREEN", "FAIL", "GREEN"]
+               and yes[0][0][3] == 4.8 and yes[0][0][4] == 31 and yes[0][0][5] == 1 and yes[0][1][1]
+               and yes[0][3][6] == "GREEN" and len(yes[0]) == 4,
+               "old %s · today %s" % (json.dumps(yes)[:300], json.dumps(so)[:300]) if yes != so else "")
+        g = ranking(level("riavvio-log", four, log="%s avvio   REMOTIX — fase 1\n" % hh))
+        look("restart in the log ⇒ all FAIL", all(class_of(s[3]) == "FAIL" for s in g["sessions"]))
+        g = ranking(level("rifiuto-log", four, log="%s rcp     [c16u04] ⛔ posto NEGATO a c16u04 da "
                                                            "x: il registro delle sessioni e' PIENO\n" % hh))
-        guarda("posto NEGATO in the log ⇒ birth FAIL",
-               g["sessioni"][3][3].get("nascita_s", {}).get("classe") == "FAIL")
-        g = classifica(livello("rifiuto-log-en", quattro, log="%s rcp     [c16u04] ⛔ slot DENIED to c16u04 from "
+        look("posto NEGATO in the log ⇒ birth FAIL",
+               g["sessions"][3][3].get("birth_s", {}).get("class") == "FAIL")
+        g = ranking(level("rifiuto-log-en", four, log="%s rcp     [c16u04] ⛔ slot DENIED to c16u04 from "
                                                               "x: the session registry of this server is FULL\n" % hh))
-        guarda("slot DENIED (English form) in the log ⇒ birth FAIL",
-               g["sessioni"][3][3].get("nascita_s", {}).get("classe") == "FAIL")
-        g = classifica(livello("riavvio-pid", quattro, pid=lambda k: 111 if k < 300 else 222))
-        guarda("parent's pid changed in resources ⇒ level FAIL",
-               g["classe"] == "FAIL" and g["voci_livello"]["riavvio_server"]["classe"] == "FAIL")
-        u = list(quattro)
-        u[0] = sano("A", "c16u01", drop_at=590)
-        g = classifica(livello("caduta-stato", u))
-        guarda("the actor says drop ⇒ FAIL", class_of(g["sessioni"][0][3]) == "FAIL")
-        g = classifica(livello("corto-fail", quattro, corto={"utente": 2, "esiti": {"F-003": "PASS",
+        look("slot DENIED (English form) in the log ⇒ birth FAIL",
+               g["sessions"][3][3].get("birth_s", {}).get("class") == "FAIL")
+        g = ranking(level("riavvio-pid", four, pid=lambda k: 111 if k < 300 else 222))
+        look("parent's pid changed in resources ⇒ level FAIL",
+               g["class"] == "FAIL" and g["voci_livello"]["server_restart"]["class"] == "FAIL")
+        u = list(four)
+        u[0] = healthy("A", "c16u01", drop_at=590)
+        g = ranking(level("caduta-stato", u))
+        look("the actor says drop ⇒ FAIL", class_of(g["sessions"][0][3]) == "FAIL")
+        g = ranking(level("corto-fail", four, corto={"user": 2, "outcomes": {"F-003": "PASS",
                                                                                    "F-014": "FAIL"}}))
-        guarda("short check with a FAIL ⇒ its session FAIL",
-               class_of(g["sessioni"][1][3]) == "FAIL" and class_of(g["sessioni"][0][3]) == "GREEN")
-        cc = {"utente": 99, "inquilino": "c1604u99", "browser": "chrome",
-              "esiti": {"F-003": "PASS", "F-004": "PASS", "F-007": "PASS", "F-014": "PASS"},
-              "nascita": {"pagina_s": 0.8, "ammissione_s": 0.4, "nascita_s": 7.2,
-                          "primo_non_degenere_s": 7.9, "esito": "PASS", "ragione": "ok"}}
-        g = classifica(livello("corto-99", quattro, corto=cc))
-        s99 = [x for x in g["sessioni"] if x[1]["utente"] == 99]
-        v = s99[0][3]["nascita_s"] if s99 else {}
-        guarda("short check = session 99 «controllo»: birth 7.2 s at full load ⇒ DEGRADED",
-               len(g["sessioni"]) == 5 and s99 and s99[0][1]["profilo"] == "controllo"
-               and v.get("classe") == "DEGRADED" and g["classe"] == "DEGRADED"
-               and "controllo_corto" not in g["voci_livello"], v.get("nota", ""))
-        cc["nascita"] = {"ammissione_s": 1.0, "rifiuto": True, "esito": "FAIL", "ragione": "the access: refused"}
-        g = classifica(livello("corto-rifiuto", quattro, corto=cc))
-        guarda("short check refused ⇒ FAIL", g["classe"] == "FAIL")
+        look("short check with a FAIL ⇒ its session FAIL",
+               class_of(g["sessions"][1][3]) == "FAIL" and class_of(g["sessions"][0][3]) == "GREEN")
+        cc = {"user": 99, "tenant": "c1604u99", "browser": "chrome",
+              "outcomes": {"F-003": "PASS", "F-004": "PASS", "F-007": "PASS", "F-014": "PASS"},
+              "birth": {"page_s": 0.8, "admission_s": 0.4, "birth_s": 7.2,
+                          "first_non_degenerate_s": 7.9, "outcome": "PASS", "rationale": "ok"}}
+        g = ranking(level("corto-99", four, corto=cc))
+        s99 = [x for x in g["sessions"] if x[1]["user"] == 99]
+        v = s99[0][3]["birth_s"] if s99 else {}
+        look("short check = session 99 «controllo»: birth 7.2 s at full load ⇒ DEGRADED",
+               len(g["sessions"]) == 5 and s99 and s99[0][1]["profile"] == "check"
+               and v.get("class") == "DEGRADED" and g["class"] == "DEGRADED"
+               and "short_check" not in g["voci_livello"], v.get("note", ""))
+        cc["birth"] = {"admission_s": 1.0, "refusal": True, "outcome": "FAIL", "rationale": "the access: refused"}
+        g = ranking(level("corto-rifiuto", four, corto=cc))
+        look("short check refused ⇒ FAIL", g["class"] == "FAIL")
         # ⛔ FAULT (review 26 Sep): the quarter also counted the check
-        cc["nascita"] = {"nascita_s": 7.2, "esito": "PASS"}
-        g = classifica(livello("quarto-attori", quattro, corto=cc, tratto={"c16u01": 60.0}))
-        guarda("⛔ FAULT: 1 actor of 4 DEGRADED + the check DEGRADED ⇒ NOT significant "
+        cc["birth"] = {"birth_s": 7.2, "outcome": "PASS"}
+        g = ranking(level("quarto-attori", four, corto=cc, tratto={"c16u01": 60.0}))
+        look("⛔ FAULT: 1 actor of 4 DEGRADED + the check DEGRADED ⇒ NOT significant "
                "(the quarter is of the actors, 1·4 > 4 is false)",
-               g["classe"] == "DEGRADED" and not g["significativo"],
-               _level_reason(g, _conti(g)))
-        u = list(quattro)
-        u[0] = sano("A", "c16u01", giro=200, slow_round=900)
-        g = classifica(livello("tratto-30", u))
-        v30 = g["sessioni"][0][3]["ritardo_p95_ms"]
-        es = g["sessioni"][0][2]["esperienza"]
-        g2 = classifica(livello("tratto-60", u, tratto={"c16u01": 60.0}))
-        v60 = g2["sessioni"][0][3]["ritardo_p95_ms"]
-        guarda("delay of the PRODUCT: OURS p95 30 ⇒ 39 ms GREEN, 60 ⇒ 69 ms DEGRADED (the TRATTO rows with "
+               g["class"] == "DEGRADED" and not g["significant"],
+               _level_reason(g, _counts(g)))
+        u = list(four)
+        u[0] = healthy("A", "c16u01", round_trip=200, slow_round=900)
+        g = ranking(level("tratto-30", u))
+        v30 = g["sessions"][0][3]["delay_p95_ms"]
+        es = g["sessions"][0][2]["esperienza"]
+        g2 = ranking(level("tratto-60", u, tratto={"c16u01": 60.0}))
+        v60 = g2["sessions"][0][3]["delay_p95_ms"]
+        look("delay of the PRODUCT: OURS p95 30 ⇒ 39 ms GREEN, 60 ⇒ 69 ms DEGRADED (the STRETCH rows with "
                "max 6339 do NOT count); giro_eco (200) and whole giro (900) only EXPERIENCE",
-               v30["classe"] == "GREEN" and abs(v30["valore"] - 39.0) < 1e-6
-               and v60["classe"] == "DEGRADED" and abs(v60["valore"] - 69.0) < 1e-6
-               and es["giro_eco_p95_ms"] == 200 and es["giro_tutti_p95_ms"] == 900, v30["nota"])
-        g3 = classifica(livello("solo-tratto", u, tratto={"c16u01": "solo-tratto"}))
-        v = g3["sessioni"][0][3]["ritardo_p95_ms"]
-        guarda("⛔ FAULT: only TRATTO rows (no OURS) ⇒ not measured, and the TRATTO recorded",
-               v.get("non_misurato") and g3["classe"] == "DEGRADED"
-               and g3["sessioni"][0][2]["tratto"]["produttore_mediana_ms"] == 24.0, v["nota"])
-        u = list(quattro)
-        u[3] = sano("D", "c16u04", video_da=540)       # the video starts at 540 s: 60 s of work out of 120
-        g = classifica(livello("d-lavoro", u))
-        s4 = g["sessioni"][3]
-        guarda("profile D: `lavoro: false` before the video does not count (fps 30 over 60 s, no freeze)",
-               s4[3]["video_frazione_f"]["classe"] == "GREEN" and s4[3]["blocco_max_s"]["classe"] == "GREEN"
-               and abs(s4[2]["video_fps"] - 30.0) < 0.6, s4[3]["video_frazione_f"]["nota"])
-        g = classifica(livello("mem-perdita", quattro, mem=lambda k: 1000.0 * (1 + 0.004 * max(0, k - 480))))
-        v = g["voci_livello"]["memoria_sessioni"]
-        guarda("memory +48 % and keeps going ⇒ FAIL", v["classe"] == "FAIL", v["nota"])
-        g = classifica(livello("mem-scalino", quattro,
+               v30["class"] == "GREEN" and abs(v30["value"] - 39.0) < 1e-6
+               and v60["class"] == "DEGRADED" and abs(v60["value"] - 69.0) < 1e-6
+               and es["echo_round_p95_ms"] == 200 and es["all_round_p95_ms"] == 900, v30["note"])
+        g3 = ranking(level("solo-tratto", u, tratto={"c16u01": "solo-tratto"}))
+        v = g3["sessions"][0][3]["delay_p95_ms"]
+        look("⛔ FAULT: only STRETCH rows (no OURS) ⇒ not measured, and the STRETCH recorded",
+               v.get("not_measured") and g3["class"] == "DEGRADED"
+               and g3["sessions"][0][2]["stretch"]["producer_median_ms"] == 24.0, v["note"])
+        u = list(four)
+        u[3] = healthy("D", "c16u04", video_da=540)       # the video starts at 540 s: 60 s of work out of 120
+        g = ranking(level("d-lavoro", u))
+        s4 = g["sessions"][3]
+        look("profile D: `lavoro: false` before the video does not count (fps 30 over 60 s, no freeze)",
+               s4[3]["video_fraction_f"]["class"] == "GREEN" and s4[3]["block_max_s"]["class"] == "GREEN"
+               and abs(s4[2]["video_fps"] - 30.0) < 0.6, s4[3]["video_fraction_f"]["note"])
+        g = ranking(level("mem-perdita", four, mem=lambda k: 1000.0 * (1 + 0.004 * max(0, k - 480))))
+        v = g["voci_livello"]["sessions_memory"]
+        look("memory +48 % and keeps going ⇒ FAIL", v["class"] == "FAIL", v["note"])
+        g = ranking(level("mem-scalino", four,
                                mem=lambda k: 1000.0 if k < 200 else 1200.0))
-        v = g["voci_livello"]["memoria_sessioni"]
-        guarda("memory +20 % but STOPPED ⇒ significant DEGRADED (not FAIL)",
-               v["classe"] == "DEGRADED" and v["significativo"], v["nota"])
+        v = g["voci_livello"]["sessions_memory"]
+        look("memory +20 % but STOPPED ⇒ significant DEGRADED (not FAIL)",
+               v["class"] == "DEGRADED" and v["significant"], v["note"])
         # ⛔ FAULT (review 26 Sep): a slow and steady leak (+20 % over the
         #   level) in the 120 s window makes +3 %: it was green
-        g = classifica(livello("mem-lenta", quattro, mem=lambda k: 1000.0 * (1 + 0.20 * k / 600.0)))
-        v = g["voci_livello"]["memoria_sessioni"]
-        guarda("⛔ FAULT: memory +20 % linear over the whole level ⇒ FAIL (growth from the start of work, "
-               "slope of the second half)", v["classe"] == "FAIL" and v["continua"], v["nota"])
+        g = ranking(level("mem-lenta", four, mem=lambda k: 1000.0 * (1 + 0.20 * k / 600.0)))
+        v = g["voci_livello"]["sessions_memory"]
+        look("⛔ FAULT: memory +20 % linear over the whole level ⇒ FAIL (growth from the start of work, "
+               "slope of the second half)", v["class"] == "FAIL" and v["ongoing"], v["note"])
         # ⛔ FAULT (review 26 Sep): with fewer actors than the level only those present were judged
-        g = classifica(livello("pochi", quattro), livello=6)
-        v = g["voci_livello"].get("entrati", {})
-        guarda("⛔ FAULT: level 6 declared with 4 actors ⇒ FAIL «entered 4 of 6»",
-               g["classe"] == "FAIL" and v.get("classe") == "FAIL" and v.get("valore") == 4, v.get("nota", ""))
+        g = ranking(level("pochi", four), level=6)
+        v = g["voci_livello"].get("entered", {})
+        look("⛔ FAULT: level 6 declared with 4 actors ⇒ FAIL «entered 4 of 6»",
+               g["class"] == "FAIL" and v.get("class") == "FAIL" and v.get("value") == 4, v.get("note", ""))
         # ⛔ FAULT (review 26 Sep): a false «video_avanza» counted as input LOST
-        u = list(quattro)
-        u[3] = sano("D", "c16u04", video_stopped=True)
-        g = classifica(livello("video-avanza", u))
-        s4 = g["sessioni"][3][3]
-        guarda("⛔ FAULT: the video in the scene does not advance (profile D) ⇒ video entry significant "
+        u = list(four)
+        u[3] = healthy("D", "c16u04", video_stopped=True)
+        g = ranking(level("video-avanza", u))
+        s4 = g["sessions"][3][3]
+        look("⛔ FAULT: the video in the scene does not advance (profile D) ⇒ video entry significant "
                "DEGRADED, NOT «input lost» on the delay",
-               s4["ritardo_p95_ms"]["classe"] == "GREEN" and s4["video_frazione_f"]["classe"] == "DEGRADED"
-               and s4["video_frazione_f"]["significativo"], s4["video_frazione_f"]["nota"])
-        g = classifica(livello("mem-browser", quattro, mem=lambda k: 1000.0))
-        guarda("the growing browser enclosure does NOT classify", g["classe"] == "GREEN")
-        g = classifica(livello("senza-risorse", quattro, ris=False))
-        guarda("without risorse.jsonl ⇒ memory not measured", g["voci_livello"]["memoria_remotix"].get("non_misurato")
-               and g["classe"] == "DEGRADED")
+               s4["delay_p95_ms"]["class"] == "GREEN" and s4["video_fraction_f"]["class"] == "DEGRADED"
+               and s4["video_fraction_f"]["significant"], s4["video_fraction_f"]["note"])
+        g = ranking(level("mem-browser", four, mem=lambda k: 1000.0))
+        look("the growing browser enclosure does NOT classify", g["class"] == "GREEN")
+        g = ranking(level("senza-risorse", four, result=False))
+        look("without resources.jsonl ⇒ memory not measured", g["voci_livello"]["remotix_memory"].get("not_measured")
+               and g["class"] == "DEGRADED")
         # the log: one row per level and one per session, at the end
         reg = os.path.join(tmp, "registro.jsonl")
-        g = classifica(livello("registro", quattro))
-        righe = righe_registro(g)
+        g = ranking(level("log", four))
+        lines = log_line_list(g)
         with open(reg, "a") as f:
-            for r in righe:
+            for r in lines:
                 f.write(json.dumps(r, ensure_ascii=False) + "\n")
         rr = jsonl(reg)
-        guarda("log: 1 level + 4 sessions, with the fields of §10",
-               len(rr) == 5 and rr[0]["tipo"] == "livello" and all(
-                   k in rr[1] for k in ("campagna", "livello", "utente", "profilo", "browser", "desktop",
-                                        "scheda", "misura", "commit", "classe", "ragione", "evidenze")))
+        look("log: 1 level + 4 sessions, with the fields of §10",
+               len(rr) == 5 and rr[0]["type"] == "level" and all(
+                   k in rr[1] for k in ("campaign", "level", "user", "profile", "browser", "desktop",
+                                        "card", "size", "commit", "class", "rationale", "evidence")))
 
-        print(" 3. --sistema xrdp (fasi/20 §7.3)")
+        print(" 3. --system xrdp (fasi/20 §7.3)")
 
-        def rdp(prof, tnt, rit=30.0, persi=False):
-            def riga(t, k):
-                r = {"t": t, "utente": int(tnt[-2:]), "profilo": prof, "browser": "freerdp",
-                     "inquilino": tnt, "sistema": "xrdp", "conti": {"dipinti": int(k * 30)},
-                     "lavoro": True, "blocco_max_ms": int(rit) if prof != "D" else 40}
+        def rdp(prof, tnt, delay=30.0, lost=False):
+            def line(t, k):
+                r = {"t": t, "user": int(tnt[-2:]), "profile": prof, "browser": "freerdp",
+                     "tenant": tnt, "system": "xrdp", "counts": {"painted": int(k * 30)},
+                     "work": True, "block_max_ms": int(delay) if prof != "D" else 40}
                 if prof != "D":
-                    r["ritardi_ms"] = [rit, rit]
-                    r["input"] = [{"ok": not persi or k < 550, "latenza_ms": 150, "azione": "tasti"}]
+                    r["delays_ms"] = [delay, delay]
+                    r["input"] = [{"ok": not lost or k < 550, "latency_ms": 150, "action": "keys"}]
                 return r
-            return {"profilo": prof, "riga": riga}
+            return {"profile": prof, "line": line}
         xq = [rdp("A", "c16u01"), rdp("B", "c16u02"), rdp("C", "c16u03"), rdp("D", "c16u04")]
-        g = classifica(livello("xrdp-verde", xq), sistema="xrdp")
-        s1, s4 = g["sessioni"][0][3], g["sessioni"][3][3]
-        guarda("healthy xrdp ⇒ GREEN, without skipped/holes/audio, delay from the viewer's side",
-               g["classe"] == "GREEN" and "saltati_pct" not in s1 and "audio_udibile_pct" not in s4
-               and s1["ritardo_p95_ms"]["valore"] == 30.0 and "ritardo_p95_ms" not in s4,
-               _level_reason(g, _conti(g)))
-        # ⛔ FAULT: the same level read as REMOTIX (without --sistema) is NOT MEASURED
-        g = classifica(livello("xrdp-come-remotix", xq))
-        guarda("⛔ FAULT: the xrdp series read without --sistema xrdp ⇒ not measured (DEGRADED)",
-               g["classe"] == "DEGRADED" and g["significativo"])
+        g = ranking(level("xrdp-verde", xq), system="xrdp")
+        s1, s4 = g["sessions"][0][3], g["sessions"][3][3]
+        look("healthy xrdp ⇒ GREEN, without skipped/holes/audio, delay from the viewer's side",
+               g["class"] == "GREEN" and "skipped_pct" not in s1 and "audio_audible_pct" not in s4
+               and s1["delay_p95_ms"]["value"] == 30.0 and "delay_p95_ms" not in s4,
+               _level_reason(g, _counts(g)))
+        # ⛔ FAULT: the same level read as REMOTIX (without --system) is NOT MEASURED
+        g = ranking(level("xrdp-come-remotix", xq))
+        look("⛔ FAULT: the xrdp series read without --system xrdp ⇒ not measured (DEGRADED)",
+               g["class"] == "DEGRADED" and g["significant"])
         u = list(xq)
-        u[2] = rdp("C", "c16u03", rit=200.0)
-        g = classifica(livello("xrdp-lento", u), sistema="xrdp")
-        guarda("⛔ FAULT: xrdp with 200 ms impulse → draw ⇒ FAIL", g["classe"] == "FAIL"
-               and g["sessioni"][2][3]["ritardo_p95_ms"]["classe"] == "FAIL")
+        u[2] = rdp("C", "c16u03", delay=200.0)
+        g = ranking(level("xrdp-lento", u), system="xrdp")
+        look("⛔ FAULT: xrdp with 200 ms impulse → draw ⇒ FAIL", g["class"] == "FAIL"
+               and g["sessions"][2][3]["delay_p95_ms"]["class"] == "FAIL")
         u = list(xq)
-        u[1] = rdp("B", "c16u02", persi=True)
-        g = classifica(livello("xrdp-perso", u), sistema="xrdp")
-        guarda("⛔ FAULT: xrdp with input lost ⇒ FAIL", g["classe"] == "FAIL")
+        u[1] = rdp("B", "c16u02", lost=True)
+        g = ranking(level("xrdp-perso", u), system="xrdp")
+        look("⛔ FAULT: xrdp with input lost ⇒ FAIL", g["class"] == "FAIL")
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
-    n, ok = len(esiti), sum(esiti)
+    n, ok = len(outcomes), sum(outcomes)
     print("CERTIFICA %s — %d of %d" % ("PASS" if ok == n else "FAIL", ok, n))
     return 0 if ok == n else 1
 
 
-def _conti(g):
+def _counts(g):
     c = {"GREEN": 0, "DEGRADED": 0, "FAIL": 0}
-    for s in g["sessioni"]:
+    for s in g["sessions"]:
         c[class_of(s[3])] += 1
     return c
 
@@ -1788,41 +1788,41 @@ def _conti(g):
 def main():
     a = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
-    a.add_argument("--livello-dir")
+    a.add_argument("--level-dir")
     a.add_argument("--fps-video", type=float, default=None)
-    a.add_argument("--finestra-s", type=float, default=120.0)
-    a.add_argument("--registro", default=REGISTRO)
-    a.add_argument("--campagna", default=None)
-    a.add_argument("--livello", type=int, default=None)
-    a.add_argument("--fuso-log", type=float, default=0.0,
+    a.add_argument("--window-s", type=float, default=120.0)
+    a.add_argument("--log", default=LOG)
+    a.add_argument("--campaign", default=None)
+    a.add_argument("--level", type=int, default=None)
+    a.add_argument("--log-tz", type=float, default=0.0,
                    help="hours from UTC of the server log's clock (the box: UTC)")
-    a.add_argument("--journal-scatola", choices=("gnome", "kde", "xfce", "lxqt"), default=None,
+    a.add_argument("--box-journal", choices=("gnome", "kde", "xfce", "lxqt"), default=None,
                    help="if journal-err.jsonl is missing in the level, asks the box for it (root)")
-    a.add_argument("--secco", action="store_true", help="does not write to the log")
-    a.add_argument("--sistema", choices=("remotix", "xrdp"), default="remotix",
-                   help="xrdp: the series of 16-attore-rdp.py (fasi/20 §7.3); registro-xrdp.jsonl")
+    a.add_argument("--dry-run", action="store_true", help="does not write to the log")
+    a.add_argument("--system", choices=("remotix", "xrdp"), default="remotix",
+                   help="xrdp: the series of 16-attore-rdp.py (fasi/20 §7.3); register-xrdp.jsonl")
     a.add_argument("--json", action="store_true", help="also prints the log rows")
-    a.add_argument("--certifica", action="store_true")
+    a.add_argument("--certify", action="store_true")
     o = a.parse_args()
-    if o.certifica:
-        return certifica()
-    if not o.livello_dir:
-        a.error("--livello-dir is needed (or --certifica)")
-    if o.sistema == "xrdp" and o.registro == REGISTRO:
-        o.registro = os.path.join(QUI, "registro-xrdp.jsonl")
-    g = classifica(o.livello_dir, o.fps_video, o.finestra_s, o.campagna, o.livello, o.fuso_log,
-                   o.journal_scatola, o.sistema)
-    stampa(g)
-    righe = righe_registro(g)
+    if o.certify:
+        return certify()
+    if not o.level_dir:
+        a.error("--level-dir is needed (or --certify)")
+    if o.system == "xrdp" and o.log == LOG:
+        o.log = os.path.join(HERE, "register-xrdp.jsonl")
+    g = ranking(o.level_dir, o.fps_video, o.window_s, o.campaign, o.level, o.log_tz,
+                   o.box_journal, o.system)
+    show(g)
+    lines = log_line_list(g)
     if o.json:
-        for r in righe:
+        for r in lines:
             print(json.dumps(r, ensure_ascii=False))
-    if not o.secco:
-        with open(o.registro, "a", encoding="utf-8") as f:
-            for r in righe:
+    if not o.dry_run:
+        with open(o.log, "a", encoding="utf-8") as f:
+            for r in lines:
                 f.write(json.dumps(r, ensure_ascii=False) + "\n")
-        print("→ %d rows in %s" % (len(righe), o.registro))
-    return {"GREEN": 0, "DEGRADED": 3, "FAIL": 1}[g["classe"]]
+        print("→ %d rows in %s" % (len(lines), o.log))
+    return {"GREEN": 0, "DEGRADED": 3, "FAIL": 1}[g["class"]]
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 # REMOTIX phase 17 — AlmaLinux 10 from the boot ISO, kickstart, "Server with GUI".
-# SELinux and firewalld stay as default. The only additions of the bench are marked with [banco].
-# Placeholders filled in by 17-vm.sh: @UTENTE@ @HASH@ @CHIAVE@ @NOME@
+# SELinux and firewalld stay as default. The only additions of the bench are marked with [bench].
+# Placeholders filled in by 17-vm.sh: @UTENTE@ @HASH@ @CHIAVE@ @NAME@
 lang it_IT.UTF-8
 keyboard --xlayouts=it
 timezone Europe/Rome --utc
@@ -16,7 +16,7 @@ bootloader
 
 rootpw --lock
 user --name=@UTENTE@ --groups=wheel --password=@HASH@ --iscrypted
-# [banco] the bench key
+# [bench] the bench key
 sshkey --username=@UTENTE@ "@CHIAVE@"
 
 %packages
@@ -24,7 +24,7 @@ sshkey --username=@UTENTE@ "@CHIAVE@"
 %end
 
 %post
-# [banco] passwordless sudo
+# [bench] passwordless sudo
 echo '@UTENTE@ ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/90-banco
 chmod 440 /etc/sudoers.d/90-banco
 %end

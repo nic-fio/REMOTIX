@@ -2,10 +2,10 @@
 """01-b8-sblocca.py — ⛔ THE UNBLOCK COMMAND of `RCP.md` §4.4-bis, from the side of
 whoever commands.
 
-    python3 01-b8-sblocca.py --socket /srv/src/remotix-comando.sock 192.168.0.2
-    python3 01-b8-sblocca.py --socket /srv/src/b8-comando.sock --ping
-    python3 01-b8-sblocca.py --socket ... --pretendi TOLTO 127.0.0.1
-    python3 01-b8-sblocca.py --socket ... --pretendi-chi remotix \\
+    python3 01-b8-sblocca.py --socket /srv/src/remotix-command.sock 192.168.0.2
+    python3 01-b8-sblocca.py --socket /srv/src/b8-command.sock --ping
+    python3 01-b8-sblocca.py --socket ... --expect REMOVED 127.0.0.1
+    python3 01-b8-sblocca.py --socket ... --expect-name remotix \\
                              --ban-file /srv/src/remotix-ban 192.168.0.2
 
 ===========================================================================
@@ -28,8 +28,8 @@ for twelve hours — including B10, B11 and whoever is developing»*.
 ===========================================================================
 ⛔ THREE OUTCOMES, NOT TWO
 
-    TOLTO         the ban was there, and now it is no longer
-    NON-BANNATO   there was nothing to remove
+    REMOVED         the ban was there, and now it is no longer
+    NOT-BANNED   there was nothing to remove
     (none)        ⛔ I could not talk to the command
 
 ⛔ The third is the one that counts most, and it is the one a program written in
@@ -42,13 +42,13 @@ for twelve hours — including B10, B11 and whoever is developing»*.
      insidious, because it is the only one that answers:
 
     **I talked to a server, but not to THAT one** — that is the ban is still alive
-    in the process that serves, and I have just received a «NON-BANNATO» from another.
+    in the process that serves, and I have just received a «NOT-BANNED» from another.
 
 ⚠ It is not a textbook case: on this machine the **two** servers exist together
   — the graft `bsslserver` on 7447 and the product `remotix` on 7448 — and until
   today the default of `--socket` was the **graft's** socket.  Whoever unblocked
   «for the product» without writing the path talked to the other one, received
-  `PONG` and `NON-BANNATO`, and exited **0** declaring clean a machine that was
+  `PONG` and `NOT-BANNED`, and exited **0** declaring clean a machine that was
   still out for twelve hours.  ⛔ The `PING` does not see it: it says *«someone
   answers»*, not *«the right one answers»*.
 
@@ -80,12 +80,12 @@ The three cures, and they are independent of each other:
 
 *«The expected is compared by the bench, not by whoever reads»*: it is printed **and** compared.
 
-    --pretendi TOLTO|NON-BANNATO   the outcome of the unblock
-    --pretendi-chi NOME            the name of the process that answered
+    --expect REMOVED|NOT-BANNED   the outcome of the unblock
+    --expect-name NOME            the name of the process that answered
                                    (`remotix` for the product, `bsslserver` for
                                    the graft): substring of `/proc/<pid>/comm`
                                    or of the command line
-    --pretendi-pid N               the exact pid — ⭐ it is the hardest form, and
+    --expect-pid N               the exact pid — ⭐ it is the hardest form, and
                                    it is the one used when the server was started
                                    by the script that calls this command and the
                                    pid was noted down
@@ -120,29 +120,29 @@ The three cures, and they are independent of each other:
 `[M]` **11 Aug 2026, on CHUWI** — ⛔ **not** against the running product, which is
 the run still to be done.  The bench was `src/comando.c` **really compiled**
 (`gcc -std=gnu11 -D_GNU_SOURCE -Wall -Wextra`) and linked to a fake `rcp` of
-forty lines, in which `rcp_chiave_indirizzo()` is the **exact copy** of that
-of `src/rcp.c` and `rcp_sblocca()` removes from a list and rewrites a file in the
+forty lines, in which `rcp_key_address()` is the **exact copy** of that
+of `src/rcp.c` and `rcp_unblock()` removes from a list and rewrites a file in the
 same format.  ⚠ What that bench does NOT prove is the real ban: that the one
-banning is `segna_fallito()` and that the table is that of the process that serves.
+banning is `mark_failed()` and that the table is that of the process that serves.
 
 Seventeen cases, each with its expected outcome:
 
-    PING → PONG · SBLOCCA → TOLTO · again → NON-BANNATO · `--pretendi` that
-    says NO (exits 4) · `--pretendi-chi` on the right server and on the wrong
-    server (0 and 4) · `--pretendi-pid` (0 and 4) · missing socket · abandoned
+    PING → PONG · UNBLOCK → REMOVED · again → NOT-BANNED · `--expect` that
+    says NO (exits 4) · `--expect-name` on the right server and on the wrong
+    server (0 and 4) · `--expect-pid` (0 and 4) · missing socket · abandoned
     socket (nobody listening) · file that is not a socket · ⭐ **folder that
     cannot be traversed** · server answering in another language · server that
-    accepts and keeps quiet · empty line · `SBLOCCA` without address · `SBLOCCA`
+    accepts and keeps quiet · empty line · `UNBLOCK` without address · `UNBLOCK`
     with only spaces · `\r\n` instead of `\n` · `[192.168.0.2]` instead of
     `192.168.0.2`
 
 ⭐ And the two checks that say **no**, because a list of green cases is not a
    proof: *(1)* the unblock given to the **wrong** server — two processes running
    together, the ban on one and the command to the other — is the only case that
-   without `--ban-file` and without `--pretendi-chi` exits **0** saying «it was
+   without `--ban-file` and without `--expect-name` exits **0** saying «it was
    not banned»; with the first it exits **5**, with the second **4**.  *(2)* The
    key typed in two forms (`192.168.0.2` and `[192.168.0.2]`) reaches the **same**
-   entry: the first command answers `TOLTO`, the second `NON-BANNATO`.
+   entry: the first command answers `REMOVED`, the second `NOT-BANNED`.
 
 ===========================================================================
 ⚠ WHERE IT IS CALLED FROM, AND WHAT KEY IT ASKS FOR
@@ -158,12 +158,12 @@ In practice:
 
     the product, from   bash /media/REMOTIX/enter.sh --root \\
     the container         "python3 /srv/src/01-b8-sblocca.py \\
-                           --socket /srv/src/remotix-comando.sock \\
-                           --pretendi-chi remotix \\
+                           --socket /srv/src/remotix-command.sock \\
+                           --expect-name remotix \\
                            --ban-file /srv/src/remotix-ban 192.168.0.2"
 
-    the graft           as above, but --socket /srv/src/b8-comando.sock and
-                        --pretendi-chi bsslserver
+    the graft           as above, but --socket /srv/src/b8-command.sock and
+                        --expect-name bsslserver
 
     from the server,    the same paths are seen as
     outside             /media/REMOTIX/src/…, ⚠ but sudo is needed: as a normal
@@ -174,13 +174,13 @@ In practice:
 
 ⚠ And the address is typed **as a person types it** (`192.168.0.2`): the real key
   carries square brackets — `[192.168.0.2]`, because that is how the host's
-  `util::straddr()` writes it — and the one putting them is `rcp_chiave_indirizzo()`
+  `util::straddr()` writes it — and the one putting them is `rcp_key_address()`
   inside the server.  Here no key is built: if this file built one too, the day
   the two forms diverged the command would answer «it was not banned» to every
   address, silently and forever.
 
 ⭐ And the key needed to look at the ban file **is taken from the answer**, not
-   built: the server answers `TOLTO [192.168.0.2]`, and that is its key,
+   built: the server answers `REMOVED [192.168.0.2]`, and that is its key,
    pronounced by it.  ⛔ If one day it answered without a key, this program says
    that it could not do the check on file (exits 6) instead of inventing one.
 """
@@ -191,21 +191,21 @@ import stat as statmod
 import struct
 import sys
 
-VERDE, ROSSO, GIALLO, GRIGIO = "\033[1;32m", "\033[1;31m", "\033[1;33m", "\033[0m"
+GREEN, RED, YELLOW, GRAY = "\033[1;32m", "\033[1;31m", "\033[1;33m", "\033[0m"
 
-# The two sockets that exist on this machine, and they serve only to write them in
+# The two sockets that exist on this machine, and they needs only to write them in
 # the error message for whoever forgot `--socket`.  ⛔ They are not defaults:
 # see the box «the third outcome has a fourth face».
-SOCKET_NOTI = (
-    ("the product  (src/, port 7448)", "/srv/src/remotix-comando.sock", "remotix"),
-    ("the graft    (bsslserver, 7447)", "/srv/src/b8-comando.sock", "bsslserver"),
+KNOWN_SOCKETS = (
+    ("the product  (src/, port 7448)", "/srv/src/remotix-command.sock", "remotix"),
+    ("the graft    (bsslserver, 7447)", "/srv/src/b8-command.sock", "bsslserver"),
 )
 
 
 # ===========================================================================
 # ⛔ Who is at the other end — and the KERNEL says it, not the server
 # ===========================================================================
-def chi_ascolta(s):
+def who_listens(s):
     """The credentials of the process at the other end of the socket, from `SO_PEERCRED`.
 
     ⭐ `CODER.md` §3.7: *«the sender is not deduced: it is asked of the kernel»*.
@@ -218,60 +218,60 @@ def chi_ascolta(s):
     ⛔ «I could not read it» and «it is not there» are two different facts
     (`LEZIONI.md` §1.9 rule 1), and this is exactly the point where the previous
     version of this file confused them."""
-    chi = {"pid": None, "uid": None, "gid": None, "nome": None,
-           "riga": None, "guasto": None}
+    chi = {"pid": None, "uid": None, "gid": None, "name": None,
+           "line": None, "fault": None}
     try:
-        grezzo = s.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED,
+        raw = s.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED,
                               struct.calcsize("3i"))
-        chi["pid"], chi["uid"], chi["gid"] = struct.unpack("3i", grezzo)
+        chi["pid"], chi["uid"], chi["gid"] = struct.unpack("3i", raw)
     except (OSError, AttributeError, struct.error) as e:
-        chi["guasto"] = (f"I could not ask the kernel who is listening "
+        chi["fault"] = (f"I could not ask the kernel who is listening "
                          f"(SO_PEERCRED): {type(e).__name__}: {e}")
         return chi
     if not chi["pid"]:
-        chi["guasto"] = ("the kernel gave pid 0: the process that was listening is "
+        chi["fault"] = ("the kernel gave pid 0: the process that was listening is "
                          "no longer reachable from this pid namespace")
         return chi
     proc = f"/proc/{chi['pid']}"
     if not os.path.isdir(proc):
         # ⛔ The process died between the `connect` and this line: it is a fact, and
         #    it is not «I could not read it».
-        chi["guasto"] = (f"{proc} is not there: process {chi['pid']} that "
+        chi["fault"] = (f"{proc} is not there: process {chi['pid']} that "
                          f"answered is already dead")
         return chi
-    for campo, dove, ripulisci in (("nome", "comm", lambda t: t.strip()),
-                                   ("riga", "cmdline",
+    for field, dove, clean_up in (("name", "comm", lambda t: t.strip()),
+                                   ("line", "cmdline",
                                     lambda t: " ".join(t.split("\0")).strip())):
         try:
             with open(f"{proc}/{dove}", "r", errors="replace") as f:
-                chi[campo] = ripulisci(f.read()) or None
+                chi[field] = clean_up(f.read()) or None
         except OSError as e:
             # ⛔ `/proc/<pid>/cmdline` of a binary with file capabilities is
             #    unreadable even for whoever started it (`LEZIONI.md` §1.9): an
             #    empty field here does NOT mean «process without a name».
-            chi["guasto"] = (f"I could not read {proc}/{dove}: "
+            chi["fault"] = (f"I could not read {proc}/{dove}: "
                              f"{type(e).__name__}: {e}")
     return chi
 
 
-def descrivi_chi(chi):
+def describe_who(chi):
     """The line that is always printed, even when it could not be known."""
     if chi is None:
         return "⚠ I did not ask who is listening"
-    pezzi = []
+    pieces = []
     if chi["pid"]:
-        pezzi.append(f"pid {chi['pid']}")
-    if chi["nome"]:
-        pezzi.append(f"«{chi['nome']}»")
+        pieces.append(f"pid {chi['pid']}")
+    if chi["name"]:
+        pieces.append(f"«{chi['name']}»")
     if chi["uid"] is not None:
-        pezzi.append(f"uid {chi['uid']}")
-    if not pezzi:
-        return f"⚠ who answered: UNKNOWN — {chi['guasto']}"
-    coda = f" — ⚠ {chi['guasto']}" if chi["guasto"] else ""
-    return "answered by " + " ".join(pezzi) + coda
+        pieces.append(f"uid {chi['uid']}")
+    if not pieces:
+        return f"⚠ who answered: UNKNOWN — {chi['fault']}"
+    queue = f" — ⚠ {chi['fault']}" if chi["fault"] else ""
+    return "answered by " + " ".join(pieces) + queue
 
 
-def chi_combacia(chi, atteso):
+def who_matches(chi, expected):
     """`(true, detail)`.  ⛔ A comparison that could not look is NOT a
     successful comparison: it returns false and says why.
 
@@ -279,7 +279,7 @@ def chi_combacia(chi, atteso):
        generous to look for the word in both, and instead it was a measurable
        trap: the **graft's** command line names the product —
        `bsslserver … --ban-file /srv/src/remotix-ban` contains «remotix» — and
-       `--pretendi-chi remotix` would have been **green on the wrong server**,
+       `--expect-name remotix` would have been **green on the wrong server**,
        that is the check that exists to find that case would have covered it.
        ⚠ `/proc/<pid>/comm` is the program's name, it fits in 15 characters, and
        `remotix` and `bsslserver` both fit.
@@ -288,33 +288,33 @@ def chi_combacia(chi, atteso):
       weaker (`CODER.md` §4.2: the fallback is declared)."""
     if chi is None:
         return False, "I did not ask who answered"
-    if chi["nome"]:
-        if chi["nome"] == atteso:
-            return True, f"/proc/{chi['pid']}/comm says exactly «{atteso}»"
-        return False, (f"/proc/{chi['pid']}/comm says «{chi['nome']}», not "
-                       f"«{atteso}»")
-    if chi["riga"]:
-        if atteso in chi["riga"]:
+    if chi["name"]:
+        if chi["name"] == expected:
+            return True, f"/proc/{chi['pid']}/comm says exactly «{expected}»"
+        return False, (f"/proc/{chi['pid']}/comm says «{chi['name']}», not "
+                       f"«{expected}»")
+    if chi["line"]:
+        if expected in chi["line"]:
             return True, (f"⚠ WEAK comparison (comm unreadable: "
-                          f"{chi['guasto']}): «{atteso}» appears in the command "
-                          f"line «{chi['riga']}» — but it would also appear in "
+                          f"{chi['fault']}): «{expected}» appears in the command "
+                          f"line «{chi['line']}» — but it would also appear in "
                           f"another program that names that path")
-        return False, f"«{atteso}» is not in the command line «{chi['riga']}»"
+        return False, f"«{expected}» is not in the command line «{chi['line']}»"
     return False, ("I do not know who answered, so I cannot say it is "
-                   f"«{atteso}»: {chi['guasto']}")
+                   f"«{expected}»: {chi['fault']}")
 
 
 # ===========================================================================
 # The socket, the line, the answer
 # ===========================================================================
-def guarda_il_socket(percorso):
+def look_socket(fpath):
     """`(ok, detail)` on the socket file alone, before talking to it.
 
     ⛔⭐ HERE LAY A DEFECT OF THIS VERY FILE, and it is the one the file
          preaches not to commit — found on 11 Aug 2026.  The line was
          `if not os.path.exists(percorso)` with the message *«the socket does
          not exist: either the server is not running, or it was started without
-         --comando-socket»*.  ⚠ But `os.path.exists()` **swallows the error**: on
+         --command-socket»*.  ⚠ But `os.path.exists()` **swallows the error**: on
          `PermissionError` — that is when the folder containing the socket
          cannot be traversed by the caller, which is the NORMAL case for a root
          socket looked at by an ordinary user — it returns `False` exactly as
@@ -322,87 +322,87 @@ def guarda_il_socket(percorso):
          inside the program whose header says they must not have it:
          `LEZIONI.md` §1.9, first rule.  Here `errno` is looked at."""
     try:
-        st = os.stat(percorso)
+        st = os.stat(fpath)
     except FileNotFoundError:
-        if os.path.lexists(percorso):
-            return False, (f"«{percorso}» is a link pointing to nothing: "
+        if os.path.lexists(fpath):
+            return False, (f"«{fpath}» is a link pointing to nothing: "
                            f"the socket it refers to is not there")
-        return False, (f"the socket «{percorso}» does not exist: either the server is not "
-                       f"running, or it was started without --comando-socket — and in "
+        return False, (f"the socket «{fpath}» does not exist: either the server is not "
+                       f"running, or it was started without --command-socket — and in "
                        f"both cases the ban CANNOT be removed")
     except PermissionError as e:
-        return False, (f"⛔ I do not have permission to LOOK at «{percorso}» ({e}): "
+        return False, (f"⛔ I do not have permission to LOOK at «{fpath}» ({e}): "
                        f"this is NOT «the socket is not there».  The socket is 0600 "
                        f"of whoever started the server (usually root in the "
                        f"container): call it again with sudo, or from inside the "
                        f"container with --root")
     except OSError as e:
-        return False, (f"I could not look at «{percorso}»: "
+        return False, (f"I could not look at «{fpath}»: "
                        f"{type(e).__name__}: {e}")
     if not statmod.S_ISSOCK(st.st_mode):
-        return False, (f"«{percorso}» is there but is NOT a socket "
+        return False, (f"«{fpath}» is there but is NOT a socket "
                        f"(mode {statmod.filemode(st.st_mode)}): I am looking at the "
                        f"wrong file")
-    modo = st.st_mode & 0o777
-    if modo != 0o600:
+    mode = st.st_mode & 0o777
+    if mode != 0o600:
         # ⚠ It is not a fault: one talks anyway, but §4.4-bis says the key of
         #   this command is «access to the machine», and with a wider socket the
         #   key is another.  It is declared.
-        return True, (f"⚠ the socket is {modo:04o} and not 0600: §4.4-bis assumes "
+        return True, (f"⚠ the socket is {mode:04o} and not 0600: §4.4-bis assumes "
                       f"«access to the machine», and this is access for more "
                       f"people than that")
     return True, None
 
 
-def scambia(percorso, riga, attesa=5.0):
+def swap(fpath, line, wait=5.0):
     """One line to the control socket, and everything that is known about it.
 
-    Returns a dictionary with `risposta` **or** `guasto` (never both), plus
+    Returns a dictionary with `response` **or** `fault` (never both), plus
     `chi` — who answered according to the kernel — and `avviso`.
     ⛔ A fault is NOT an answer: the caller must not be able to confuse them, and
        that is why there is no fallback value."""
-    r = {"risposta": None, "guasto": None, "chi": None, "avviso": None}
-    if not percorso:
-        r["guasto"] = "no socket path: I talked to nobody"
+    r = {"risposta": None, "fault": None, "who": None, "warning": None}
+    if not fpath:
+        r["fault"] = "no socket path: I talked to nobody"
         return r
-    va, dettaglio = guarda_il_socket(percorso)
+    va, detail = look_socket(fpath)
     if not va:
-        r["guasto"] = dettaglio
+        r["fault"] = detail
         return r
-    r["avviso"] = dettaglio
+    r["warning"] = detail
     s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    s.settimeout(attesa)
+    s.settimeout(wait)
     try:
-        s.connect(percorso)
+        s.connect(fpath)
         # ⭐ Who is listening is asked BEFORE sending the line: if the server
         #    then dies, one still knows whom one was talking to.
-        r["chi"] = chi_ascolta(s)
-        s.sendall((riga + "\n").encode())
+        r["who"] = who_listens(s)
+        s.sendall((line + "\n").encode())
         # ⚠ A single read is enough: the answer is a short line and the server
         #   closes right away.  If one day it became longer, this is the point
         #   to change — and it would show, because the answer would arrive
         #   truncated instead of absent.
-        dati = s.recv(4096)
+        data = s.recv(4096)
     except OSError as e:
-        r["guasto"] = f"I could not talk to the command: {type(e).__name__}: {e}"
+        r["fault"] = f"I could not talk to the command: {type(e).__name__}: {e}"
         return r
     finally:
         s.close()
-    if not dati:
-        r["guasto"] = "the command closed without answering anything"
+    if not data:
+        r["fault"] = "the command closed without answering anything"
         return r
-    r["risposta"] = dati.decode(errors="replace").strip()
+    r["risposta"] = data.decode(errors="replace").strip()
     return r
 
 
-def parla(percorso, riga, attesa=5.0):
+def speaks(fpath, line, wait=5.0):
     """⚠ The old form, `(answer, fault)` — one of the two is always `None`.
-    It stays because `01-b8-cronometro.py` imports it; the rest uses `scambia()`."""
-    r = scambia(percorso, riga, attesa)
-    return r["risposta"], r["guasto"]
+    It stays because `01-b8-cronometro.py` imports it; the rest uses `swap()`."""
+    r = swap(fpath, line, wait)
+    return r["risposta"], r["fault"]
 
 
-def ping_esteso(percorso, attesa=5.0):
+def extended_ping(fpath, wait=5.0):
     """⭐ «Is the command there and does it answer?» — and it touches no ban.
 
     It is the denominator of B0.3: a bench that unblocks between one test and the
@@ -411,48 +411,48 @@ def ping_esteso(percorso, attesa=5.0):
 
     ⛔ And it says **with whom**: `PONG` alone proves that someone answers, not
        that the server whose ban is being measured answers."""
-    r = scambia(percorso, "PING", attesa)
+    r = swap(fpath, "PING", wait)
     r["vivo"] = (r["risposta"] == "PONG")
     return r
 
 
-def ping(percorso, attesa=5.0):
+def ping(fpath, wait=5.0):
     """⚠ The old form, `(alive, what)`, for `01-b8-cronometro.py`."""
-    r = ping_esteso(percorso, attesa)
-    return r["vivo"], (r["risposta"] or r["guasto"])
+    r = extended_ping(fpath, wait)
+    return r["vivo"], (r["risposta"] or r["fault"])
 
 
-def sblocca_esteso(percorso, indirizzo, attesa=5.0):
-    """Adds to `scambia()` the `esito` in TOLTO · NON-BANNATO · None, and the
-    `chiave` **as the server pronounced it**."""
-    r = scambia(percorso, f"SBLOCCA {indirizzo}", attesa)
-    r["esito"] = None
-    r["chiave"] = None
+def unblock_extended(fpath, address, wait=5.0):
+    """Adds to `swap()` the `outcome` in REMOVED · NOT-BANNED · None, and the
+    `key` **as the server pronounced it**."""
+    r = swap(fpath, f"UNBLOCK {address}", wait)
+    r["outcome"] = None
+    r["key"] = None
     if r["risposta"] is None:
         return r
-    pezzi = r["risposta"].split(" ", 1)
-    if pezzi[0] not in ("TOLTO", "NON-BANNATO"):
-        r["guasto"] = f"an answer I do not know: «{r['risposta']}»"
+    pieces = r["risposta"].split(" ", 1)
+    if pieces[0] not in ("REMOVED", "NOT-BANNED"):
+        r["fault"] = f"an answer I do not know: «{r['risposta']}»"
         r["risposta"] = None
         return r
-    r["esito"] = pezzi[0]
-    if len(pezzi) > 1 and pezzi[1].strip():
-        r["chiave"] = pezzi[1].strip()
+    r["outcome"] = pieces[0]
+    if len(pieces) > 1 and pieces[1].strip():
+        r["key"] = pieces[1].strip()
     return r
 
 
-def sblocca(percorso, indirizzo, attesa=5.0):
+def unblock(fpath, address, wait=5.0):
     """⚠ The old form, `(outcome, detail)`, for `01-b8-cronometro.py`."""
-    r = sblocca_esteso(percorso, indirizzo, attesa)
-    if r["esito"] is None:
-        return None, r["guasto"]
-    return r["esito"], (r["risposta"] or r["esito"])
+    r = unblock_extended(fpath, address, wait)
+    if r["outcome"] is None:
+        return None, r["fault"]
+    return r["outcome"], (r["risposta"] or r["outcome"])
 
 
 # ===========================================================================
 # ⛔ THE OTHER HALF OF §4.4-bis: the file, which survives the restart
 # ===========================================================================
-def leggi_file_ban(percorso):
+def read_ban_file(fpath):
     """`(lines, fault)` — one of the two is always `None`.
 
     ⛔ The WHOLE file is read and nothing is searched yet: the key is pronounced
@@ -468,77 +468,77 @@ def leggi_file_ban(percorso):
        running without `--ban-file`, that is that NO ban survives the restart —
        invariant **I7**, and §4.4-bis forbids it."""
     try:
-        with open(percorso, "r", errors="replace") as f:
+        with open(fpath, "r", errors="replace") as f:
             return [r for r in f.read().splitlines() if r.strip()], None
     except FileNotFoundError:
         return None, (
-            f"the ban file «{percorso}» does not exist: ⛔ it is not «no ban», it is "
+            f"the ban file «{fpath}» does not exist: ⛔ it is not «no ban», it is "
             f"that the server is running without --ban-file and no ban survives "
             f"the restart (§4.4-bis, invariant I7)")
     except PermissionError as e:
         return None, (f"⛔ I do not have permission to read the ban file "
-                      f"«{percorso}» ({e}): it is not «the ban is not there»")
+                      f"«{fpath}» ({e}): it is not «the ban is not there»")
     except OSError as e:
-        return None, (f"I could not read the ban file «{percorso}»: "
+        return None, (f"I could not read the ban file «{fpath}»: "
                       f"{type(e).__name__}: {e}")
 
 
-def dentro(righe, chiave):
+def inside(lines, key):
     """⚠ The FIRST field of the line is compared, not `chiave in riga`: the file
     carries «[192.168.0.2] 1786000000», and a substring would say yes also
     for «[192.168.0.20]»."""
-    return any(r.split(" ", 1)[0] == chiave for r in righe)
+    return any(r.split(" ", 1)[0] == key for r in lines)
 
 
 # ===========================================================================
-def principale():
+def main():
     p = argparse.ArgumentParser(
         description="The unblock command of RCP.md §4.4-bis (fasi/01-filo-nudo.md B0.3)")
-    p.add_argument("indirizzo", nargs="?", default=None,
+    p.add_argument("address", nargs="?", default=None,
                    help="the address to unblock, as a person types it")
     # ⛔ NO DEFAULT, and the reason is in the box «the third outcome has a
     #    fourth face»: the previous default was the graft's socket, and whoever
-    #    used it against the product received PONG and NON-BANNATO from the wrong
+    #    used it against the product received PONG and NOT-BANNED from the wrong
     #    server, exiting 0.
     p.add_argument("--socket", default=None,
                    help="⛔ mandatory: the command's 0600 Unix socket")
     p.add_argument("--ping", action="store_true",
                    help="only asks whether the command exists, and touches nothing")
-    p.add_argument("--pretendi", choices=("TOLTO", "NON-BANNATO"), default=None,
+    p.add_argument("--expect", choices=("REMOVED", "NOT-BANNED"), default=None,
                    help="⛔ and the bench COMPARES (B0.4): exits 4 if the outcome is another")
-    p.add_argument("--pretendi-chi", default=None, metavar="NOME",
+    p.add_argument("--expect-name", default=None, metavar="NAME",
                    help="the name of the process that MUST answer "
                         "(«remotix» the product, «bsslserver» the graft): exits 4")
-    p.add_argument("--pretendi-pid", type=int, default=None, metavar="N",
+    p.add_argument("--expect-pid", type=int, default=None, metavar="N",
                    help="the exact pid that MUST answer: exits 4")
     p.add_argument("--ban-file", default=None, metavar="PATH",
                    help="also look at the ban file, before and after")
-    p.add_argument("--attesa", type=float, default=5.0)
+    p.add_argument("--wait", type=float, default=5.0)
     a = p.parse_args()
 
     if not a.socket:
-        print(f"    {ROSSO}NO{GRIGIO}  ⛔ --socket is missing, and there is no longer a "
+        print(f"    {RED}NO{GRAY}  ⛔ --socket is missing, and there is no longer a "
               f"default: on this machine the servers are TWO, and unblocking "
               f"the wrong one exits 0 saying the machine is clean")
-        for chi, dove, nome in SOCKET_NOTI:
-            print(f"        {chi}  --socket {dove} --pretendi-chi {nome}")
+        for chi, dove, name in KNOWN_SOCKETS:
+            print(f"        {chi}  --socket {dove} --expect-name {name}")
         return 2
 
     if a.ping:
-        r = ping_esteso(a.socket, a.attesa)
-        if r["avviso"]:
-            print(f"        {r['avviso']}")
+        r = extended_ping(a.socket, a.wait)
+        if r["warning"]:
+            print(f"        {r['warning']}")
         if not r["vivo"]:
-            print(f"    {ROSSO}NO{GRIGIO}  ⛔ the unblock command does NOT answer: "
-                  f"{r['risposta'] or r['guasto']}")
+            print(f"    {RED}NO{GRAY}  ⛔ the unblock command does NOT answer: "
+                  f"{r['risposta'] or r['fault']}")
             return 3
-        print(f"    {VERDE}OK{GRIGIO}  the unblock command answers («PONG») on "
+        print(f"    {GREEN}OK{GRAY}  the unblock command answers («PONG») on "
               f"«{a.socket}» — and it touched no ban")
-        print(f"        ⭐ {descrivi_chi(r['chi'])}")
-        return giudica_chi(a, r["chi"])
+        print(f"        ⭐ {describe_who(r['who'])}")
+        return judge_who(a, r["who"])
 
-    if not a.indirizzo:
-        print(f"    {ROSSO}NO{GRIGIO}  ⛔ the address to unblock is missing "
+    if not a.address:
+        print(f"    {RED}NO{GRAY}  ⛔ the address to unblock is missing "
               f"(or --ping)")
         return 2
 
@@ -547,24 +547,24 @@ def principale():
     #    sentence «after, the key is not there» has no positive control — a reader
     #    that cannot find ANYTHING would say exactly the same thing
     #    (`LEZIONI.md` §1.9 rule 2).
-    prima, before_fault = (None, None)
+    before, before_fault = (None, None)
     if a.ban_file:
-        prima, before_fault = leggi_file_ban(a.ban_file)
+        before, before_fault = read_ban_file(a.ban_file)
 
-    r = sblocca_esteso(a.socket, a.indirizzo, a.attesa)
-    if r["avviso"]:
-        print(f"        {r['avviso']}")
-    if r["esito"] is None:
-        print(f"    {ROSSO}NO{GRIGIO}  ⛔ I removed nothing, and not because it was "
-              f"not there: {r['guasto']}")
+    r = unblock_extended(a.socket, a.address, a.wait)
+    if r["warning"]:
+        print(f"        {r['warning']}")
+    if r["outcome"] is None:
+        print(f"    {RED}NO{GRAY}  ⛔ I removed nothing, and not because it was "
+              f"not there: {r['fault']}")
         return 3
 
-    print(f"        ⭐ {descrivi_chi(r['chi'])}")
-    if r["esito"] == "TOLTO":
-        print(f"    {VERDE}OK{GRIGIO}  ⛔ UNBLOCKED «{a.indirizzo}» — the ban was there "
+    print(f"        ⭐ {describe_who(r['who'])}")
+    if r["outcome"] == "REMOVED":
+        print(f"    {GREEN}OK{GRAY}  ⛔ UNBLOCKED «{a.address}» — the ban was there "
               f"and it has been removed  ({r['risposta']})")
     else:
-        print(f"    {GIALLO}--{GRIGIO}  «{a.indirizzo}» was NOT banned: I removed "
+        print(f"    {YELLOW}--{GRAY}  «{a.address}» was NOT banned: I removed "
               f"nothing  ({r['risposta']})")
         # ⛔ This line was a BELIEF until 11 Aug 2026 (finding A22): nobody
         #    verified it, and the whole sampling strategy of B8 («unblocking
@@ -577,106 +577,106 @@ def principale():
               f"answers «it was not banned», two more failures, and the ban does "
               f"NOT trigger")
 
-    codice = giudica_chi(a, r["chi"])
-    if a.pretendi and r["esito"] != a.pretendi:
-        print(f"    {ROSSO}NO{GRIGIO}  ⛔ expected «{a.pretendi}», arrived "
-              f"«{r['esito']}»: they are two different facts and this bench tells them apart")
-        codice = codice or 4
+    code = judge_who(a, r["who"])
+    if a.expect and r["outcome"] != a.expect:
+        print(f"    {RED}NO{GRAY}  ⛔ expected «{a.expect}», arrived "
+              f"«{r['outcome']}»: they are two different facts and this bench tells them apart")
+        code = code or 4
 
     if a.ban_file:
         # ⚠ And the ban file WINS over the comparison with the expected: 4 says
         #   «it is not the outcome I expected», 5 says «the ban is still there».
         #   The lines on screen all stay; the exit status carries the most serious fact.
-        codice = guarda_le_due_meta(a, r, prima, before_fault) or codice
-    return codice
+        code = look_two_halves(a, r, before, before_fault) or code
+    return code
 
 
-def giudica_chi(a, chi):
+def judge_who(a, chi):
     """B0.4 applied to *who answered*: it is printed and compared."""
-    codice = 0
-    if a.pretendi_pid is not None:
-        if chi is None or chi["pid"] != a.pretendi_pid:
-            vero = chi["pid"] if chi else None
-            print(f"    {ROSSO}NO{GRIGIO}  ⛔ expected pid {a.pretendi_pid}, "
-                  f"{vero} answered: I talked to a server, but not to THAT one "
+    code = 0
+    if a.expect_pid is not None:
+        if chi is None or chi["pid"] != a.expect_pid:
+            real = chi["pid"] if chi else None
+            print(f"    {RED}NO{GRAY}  ⛔ expected pid {a.expect_pid}, "
+                  f"{real} answered: I talked to a server, but not to THAT one "
                   f"— the ban I wanted to remove is still where it was")
-            codice = 4
-    if a.pretendi_chi:
-        va, dettaglio = chi_combacia(chi, a.pretendi_chi)
+            code = 4
+    if a.expect_name:
+        va, detail = who_matches(chi, a.expect_name)
         if not va:
-            print(f"    {ROSSO}NO{GRIGIO}  ⛔ expected «{a.pretendi_chi}» at the other "
-                  f"end: {dettaglio}.  On this machine the servers are two, and "
+            print(f"    {RED}NO{GRAY}  ⛔ expected «{a.expect_name}» at the other "
+                  f"end: {detail}.  On this machine the servers are two, and "
                   f"an unblock given to the wrong one answers perfectly well")
-            codice = 4
+            code = 4
         else:
-            print(f"        {VERDE}OK{GRIGIO}  and it is the right server: {dettaglio}")
-    return codice
+            print(f"        {GREEN}OK{GRAY}  and it is the right server: {detail}")
+    return code
 
 
-def guarda_le_due_meta(a, r, prima, before_fault):
+def look_two_halves(a, r, before, before_fault):
     """⛔ §4.4-bis lives in TWO places — the memory of the process that serves and
     the file that survives the restart — and an unblock that convinces only one
     of them is not an unblock: at the restart the ban comes back, and whoever gave
     the command saw it exit with zero (finding R12.1, and it is the defect
     `src/comando.c` exists to remove).  Here the two halves are compared instead
     of taking one as good."""
-    if not r["chiave"]:
-        print(f"    {GIALLO}??{GRIGIO}  ⚠ the server answered without the key "
+    if not r["key"]:
+        print(f"    {YELLOW}??{GRAY}  ⚠ the server answered without the key "
               f"(«{r['risposta']}»): I cannot look at the ban file without "
               f"building a key myself, and building it is precisely what "
               f"§4.4-bis forbids to whoever commands")
         return 6
-    chiave = r["chiave"]
-    dopo, after_fault = leggi_file_ban(a.ban_file)
+    key = r["key"]
+    after, after_fault = read_ban_file(a.ban_file)
 
     # ⛔ The denominator, always (`LEZIONI.md` §1.9 rule 4): «absent» is not a
     #    datum until one knows on how many lines one looked.
-    for etichetta, righe, guasto in (("before", prima, before_fault),
-                                     ("after ", dopo, after_fault)):
-        if guasto:
-            print(f"        {GIALLO}??{GRIGIO}  ban file {etichetta}: {guasto}")
+    for label, lines, fault in (("before", before, before_fault),
+                                     ("after ", after, after_fault)):
+        if fault:
+            print(f"        {YELLOW}??{GRAY}  ban file {label}: {fault}")
         else:
-            print(f"        --  ban file {etichetta}: «{chiave}» "
-                  f"{'PRESENT' if dentro(righe, chiave) else 'absent'} "
-                  f"({len(righe)} lines in «{a.ban_file}»)")
+            print(f"        --  ban file {label}: «{key}» "
+                  f"{'PRESENT' if inside(lines, key) else 'absent'} "
+                  f"({len(lines)} lines in «{a.ban_file}»)")
 
     if after_fault:
-        print(f"    {GIALLO}??{GRIGIO}  ⚠ the check on FILE was not done: "
-              f"I only know that the process memory says «{r['esito']}».  ⛔ It is not "
+        print(f"    {YELLOW}??{GRAY}  ⚠ the check on FILE was not done: "
+              f"I only know that the process memory says «{r['outcome']}».  ⛔ It is not "
               f"a «clean»")
         return 6
 
-    c_after = dentro(dopo, chiave)
-    c_prima = dentro(prima, chiave) if prima is not None else None
+    c_after = inside(after, key)
+    c_before = inside(before, key) if before is not None else None
 
-    if r["esito"] == "TOLTO" and c_after:
-        print(f"    {ROSSO}NO{GRIGIO}  ⛔ the process says TOLTO and the ban file "
-              f"still contains «{chiave}»: the unblock did NOT reach the disk, "
+    if r["outcome"] == "REMOVED" and c_after:
+        print(f"    {RED}NO{GRAY}  ⛔ the process says REMOVED and the ban file "
+              f"still contains «{key}»: the unblock did NOT reach the disk, "
               f"and at the first restart the ban comes back (§4.4-bis, invariant I7)")
         return 5
-    if r["esito"] == "NON-BANNATO" and c_after:
-        print(f"    {ROSSO}NO{GRIGIO}  ⛔ the process says NON-BANNATO and the ban "
-              f"file contains «{chiave}»: the two halves of §4.4-bis do not "
+    if r["outcome"] == "NOT-BANNED" and c_after:
+        print(f"    {RED}NO{GRAY}  ⛔ the process says NOT-BANNED and the ban "
+              f"file contains «{key}»: the two halves of §4.4-bis do not "
               f"agree, and the possible readings are two — ⛔ either I talked to "
               f"a server DIFFERENT from the one that writes «{a.ban_file}» (and then "
               f"the ban I wanted to remove is still alive), or that server "
               f"started without rereading the file")
         return 5
-    if r["esito"] == "TOLTO":
-        print(f"    {VERDE}OK{GRIGIO}  ⭐ memory and file agree: the process "
-              f"removed «{chiave}», and it is no longer in the file")
+    if r["outcome"] == "REMOVED":
+        print(f"    {GREEN}OK{GRAY}  ⭐ memory and file agree: the process "
+              f"removed «{key}», and it is no longer in the file")
         # ⛔ And the check that says NO is declared: if the key was not in the
         #    file even BEFORE, «now it is not there» would be said identically by
         #    a reader that cannot find anything.
-        if c_prima:
-            print(f"        {VERDE}OK{GRIGIO}  ⭐ and the positive control of the "
-                  f"reader is there: before, I found «{chiave}» in that file")
+        if c_before:
+            print(f"        {GREEN}OK{GRAY}  ⭐ and the positive control of the "
+                  f"reader is there: before, I found «{key}» in that file")
         elif before_fault:
             print(f"        ⚠ positive control ABSENT: I could not read the «before», "
                   f"so I do not know whether this reader can "
                   f"find a key that is there (`LEZIONI.md` §1.9 rule 2)")
         else:
-            print(f"        ⚠ positive control ABSENT: «{chiave}» was not in the file "
+            print(f"        ⚠ positive control ABSENT: «{key}» was not in the file "
                   f"EVEN BEFORE, while the process says the ban in "
                   f"memory was there.  ⛔ The two halves of §4.4-bis do not agree "
                   f"in the other direction: that ban would not have survived the "
@@ -686,4 +686,4 @@ def guarda_le_due_meta(a, r, prima, before_fault):
 
 
 if __name__ == "__main__":
-    sys.exit(principale())
+    sys.exit(main())

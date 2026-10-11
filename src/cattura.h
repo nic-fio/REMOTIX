@@ -1,5 +1,5 @@
 /*
- * cattura — the pixels, read from the PipeWire node Mutter opened.
+ * capture — the pixels, read from the PipeWire node Mutter opened.
  *
  * ⛔ THE MANDATE OF THIS FILE, IN ONE LINE: **a frame delivered in
  *    memory with the buffer type DECLARED, not deduced.**
@@ -41,7 +41,7 @@
  *      "it opened a render node ⇒ renders on the GPU"   ⛔ FALSE
  *
  *    The type that arrives is the answer to what **we asked for**, not
- *    a discovery about the compositor.  That is why `CatturaConsegna` carries the
+ *    a discovery about the compositor.  That is why `CaptureDelivery` carries the
  *    **requested** type and the **declared** type in two different fields, and next to them who
  *    says so: they are three facts, not one.
  *
@@ -52,7 +52,7 @@
  * something changes, not at a fixed rate" — which is the behaviour a
  * remote desktop needs.  ⛔ It follows that **on a still desktop nothing arrives**:
  * it is wanted behaviour, not a fault (`LEZIONI.md` §4 trap 8), and it is
- * the reason why `cattura_prendi` tells **zero from failure** apart with
+ * the reason why `capture_take` tells **zero from failure** apart with
  * two different return values (`CODER.md` §3.10).
  *
  * ===========================================================================
@@ -92,21 +92,21 @@
  * ⚠ THE PIPEWIRE LOOP LIVES ON A THREAD OF ITS OWN (`pw_thread_loop`).  The
  *   callbacks below are called FROM THAT THREAD, which is real-time:
  *   whoever writes them must not wait for anything inside them, and in particular must not
- *   call `cattura_ferma` from inside `CaptureEnd`.
+ *   call `capture_stop` from inside `CaptureEnd`.
  *
  *   ⛔ And the pixels live ONLY for the duration of the call: as soon as it returns, the
  *      buffer goes back to PipeWire.  Whoever wants them copies them — or uses
- *      `cattura_prendi`, which makes the copy itself.
+ *      `capture_take`, which makes the copy itself.
  */
-#ifndef REMOTIX_CATTURA_H
-#define REMOTIX_CATTURA_H
+#ifndef REMOTIX_CAPTURE_H
+#define REMOTIX_CAPTURE_H
 
 #include <glib.h>
 #include <stdint.h>
 
 #include "cursore.h"
 
-typedef struct Cattura Cattura;
+typedef struct Capture Capture;
 
 /* ------------------------------------------------------------------ *
  *  The buffer type — requested and declared
@@ -123,12 +123,12 @@ typedef enum
 
 /* The road that is REQUESTED.  ⛔ It is not the same thing as the type that arrives, and the
  * two are in two different fields on purpose: if the card is requested and memory
- * arrives, `cattura_avvia` FAILS declaring it instead of falling back
+ * arrives, `capture_start` FAILS declaring it instead of falling back
  * silently (`LEZIONI.md` §1.8, corollary). */
 typedef enum
 {
-	CATTURA_STRADA_MEMORIA = 0, /* MemFd/MemPtr: the pixels can be read        */
-	CATTURA_STRADA_SCHEDA       /* DMA-BUF: the pixels are NOT here, an fd is  */
+	CAPTURE_ROUTE_MEMORY = 0, /* MemFd/MemPtr: the pixels can be read        */
+	CAPTURE_ROUTE_CARD       /* DMA-BUF: the pixels are NOT here, an fd is  */
 } CaptureRoute;
 
 /*
@@ -146,7 +146,7 @@ typedef enum
  */
 typedef enum
 {
-	CATTURA_COLORE_BGRX = 0,
+	CAPTURE_COLOR_BGRX = 0,
 	CAPTURE_COLOR_BGRA,
 	CAPTURE_COLOR_10BIT
 } CaptureColor;
@@ -188,37 +188,37 @@ typedef enum
  */
 typedef struct
 {
-	gboolean noto; /* FALSE until the format has been negotiated */
+	gboolean known; /* FALSE until the format has been negotiated */
 
 	/* --- 1. the buffer type --------------------------------------------- */
-	CaptureRoute strada_chiesta;
-	CaptureBuffer buffer_chiesto;
-	CaptureBuffer buffer_dichiarato; /* CAPTURE_BUFFER_UNKNOWN until the 1st frame */
+	CaptureRoute requested_route;
+	CaptureBuffer buffer_requested;
+	CaptureBuffer buffer_declared; /* CAPTURE_BUFFER_UNKNOWN until the 1st frame */
 	uint32_t buffer_declared_raw;
-	guint buffer_distinti; /* how many different buffers the producer recycles */
+	guint distinct_buffers; /* how many different buffers the producer recycles */
 
 	/* --- 2. the format and the bits ------------------------------------- */
 	uint32_t raw_format;
-	const char *formato; /* "BGRx", "BGRA", … — never an invented word */
-	int bit_per_canale;  /* 8; ⛔ 0 = unknown format, and 0 is written    */
+	const char *fmt; /* "BGRx", "BGRA", … — never an invented word */
+	int bit_per_channel;  /* 8; ⛔ 0 = unknown format, and 0 is written    */
 	CaptureSource source_bit;
 
 	/* --- 3. the geometry ------------------------------------------------ */
-	uint32_t larghezza, altezza;
+	uint32_t width, height;
 	uint32_t stride;         /* ⛔ READ from the chunk. 0 = no frame yet         */
-	gboolean stride_letto;   /* FALSE ⇒ `stride` is not a fact, it is a blank   */
+	gboolean stride_read;   /* FALSE ⇒ `stride` is not a fact, it is a blank   */
 	guint64 byte;            /* stride × height                                 */
-	uint64_t modificatore;
+	uint64_t modifier;
 
 	/* --- 4. the colour, as the producer declares it --------------------- */
 	uint32_t raw_range, raw_matrix, raw_transfer, raw_primaries;
 	CaptureSource source_range, source_matrix;
 
 	/* --- and the measurement WE make, because the producer is silent ---- */
-	uint8_t minimo[3], massimo[3]; /* R, G, B */
-	CaptureRangeMeasured range_misurato;
+	uint8_t minimum[3], maximum[3]; /* R, G, B */
+	CaptureRangeMeasured measured_range;
 	gboolean nero;    /* ⛔ all pixels at zero: the worst fault of F2.2      */
-	gboolean uniforme; /* all pixels equal to each other (black included)    */
+	gboolean uniform; /* all pixels equal to each other (black included)    */
 	/* ⛔⛔ AND THIS FIELD IS THE REASON WHY THE THREE ABOVE CAN
 	 *     STILL BE READ — `LEZIONI.md` §1.9, "empty" and "forbidden" look
 	 *     the same.
@@ -227,16 +227,16 @@ typedef struct
 	 * it cost **5.34 ms** within a span of **21.6**, that is **25 %**, to
 	 * fill a log line that is written **only once**
 	 * (`figlio.c`, the mounting of the stage).  ⇒ Now it is done on the FIRST frame
-	 * and then at most once every `MISURA_PIXEL_OGNI_MS`.
+	 * and then at most once every `PIXEL_SCAN_EVERY_MS`.
 	 *
-	 * ⛔ On an unmeasured frame `nero` and `uniforme` are `FALSE` — and
+	 * ⛔ On an unmeasured frame `nero` and `uniform` are `FALSE` — and
 	 *    `FALSE` here would mean **"it is not black"**, which is a LIE: it means
 	 *    "I did not look".  Whoever reads those three fields **must** look at this one
-	 *    first, exactly as `stride_letto` sits next to `stride`.
-	 * ⚠ `range_misurato` can already say so by itself (`CAPTURE_RANGE_UNMEASURED`);
-	 *   `nero` and `uniforme` cannot, and this field exists for them. */
-	gboolean pixel_misurati;
-} CatturaConsegna;
+	 *    first, exactly as `stride_read` sits next to `stride`.
+	 * ⚠ `measured_range` can already say so by itself (`CAPTURE_RANGE_UNMEASURED`);
+	 *   `nero` and `uniform` cannot, and this field exists for them. */
+	gboolean measured_pixels;
+} CaptureDelivery;
 
 /* ------------------------------------------------------------------ *
  *  The frame
@@ -246,7 +246,7 @@ typedef struct
  * condition: see the box at the top. */
 typedef struct
 {
-	uint32_t x, y, larghezza, altezza;
+	uint32_t x, y, width, height;
 } CaptureRegion;
 
 typedef struct
@@ -263,22 +263,22 @@ typedef struct
 
 	uint64_t seq;
 	int64_t pts;
-	gboolean seq_nota;
+	gboolean seq_known;
 
-	const CaptureRegion *danno;
+	const CaptureRegion *damage;
 	guint how_many_regions;
 	gboolean declared_damage;
 	gboolean damage_covers_all;
 
-	guint64 indice; /* which frame it was, counted from the first that arrived */
-	const CatturaConsegna *consegna;
-} CatturaFotogrammaInfo;
+	guint64 idx; /* which frame it was, counted from the first that arrived */
+	const CaptureDelivery *delivery;
+} CaptureFrameInfo;
 
-typedef void (*CaptureFrame)(const CatturaFotogrammaInfo *fotogramma, gpointer dati);
+typedef void (*CaptureFrame)(const CaptureFrameInfo *frame, gpointer data);
 
 /* The stream has come off: either the graphical session is over, or Mutter
  * stopped it on its own. */
-typedef void (*CaptureEnd)(gpointer dati);
+typedef void (*CaptureEnd)(gpointer data);
 
 /* ------------------------------------------------------------------ *
  *  The STILL frame — the deliverable of phase 2
@@ -295,10 +295,10 @@ typedef struct
 {
 	uint8_t *pixel;
 	guint64 byte;
-	uint32_t stride, larghezza, altezza;
+	uint32_t stride, width, height;
 	uint64_t seq;
 	int64_t pts;
-	gboolean seq_nota;
+	gboolean seq_known;
 
 	/* ------------------------------------------------------------------ *
 	 * ⭐⭐ ZERO COPY — the frame that was NOT copied
@@ -312,8 +312,8 @@ typedef struct
 	 *    tests).
 	 *
 	 * ⛔⛔ AND THE BUFFER IS **HELD** UNTIL
-	 *      `cattura_fermo_libera()` IS CALLED — see the HOLD box in
-	 *      `cattura.c`.  Whoever keeps this `CatturaFermo` longer than
+	 *      `capture_stopped_free()` IS CALLED — see the HOLD box in
+	 *      `cattura.c`.  Whoever keeps this `CaptureStopped` longer than
 	 *      necessary takes a buffer away from the producer; whoever frees it before
 	 *      finishing reading gets the image rewritten under their eyes
 	 *      (`LEZIONI.md` §8: the two alternating screens were not an
@@ -323,7 +323,7 @@ typedef struct
 	int fd;              /* ⛔ NOT ours: PipeWire owns it, do not close        */
 	uint32_t offset;
 	uint32_t formato_drm; /* `DRM_FORMAT_XRGB8888` … — what VA-API wants      */
-	uint64_t modificatore;
+	uint64_t modifier;
 	/* ⛔ The GENERATION of the producer's buffers: it changes every time
 	 *    PipeWire reallocates them (a renegotiation, a wake-up).  ⚠ It serves
 	 *    whoever caches the import of an `fd`: **descriptor numbers
@@ -331,16 +331,16 @@ typedef struct
 	 *    would give VA-API a surface pointing to a freed buffer — that is
 	 *    an earlier image, or worse.  Two measurements under the same label,
 	 *    in the form that gives no error. */
-	uint64_t generazione;
+	uint64_t generation;
 	/* ⛔ Opaque: the held `pw_buffer` and whoever will give it back.  They are not
-	 *    read from outside — they exist so that `cattura_fermo_libera()` knows to
+	 *    read from outside — they exist so that `capture_stopped_free()` knows to
 	 *    whom to give the buffer back without the caller having to keep the
-	 *    `Cattura` next to the frame. */
-	void *ritenuta;
-	void *padrone;
+	 *    `Capture` next to the frame. */
+	void *held_buffer;
+	void *owner;
 	gboolean declared_damage, damage_covers_all;
-	guint64 indice;          /* which frame it was among those arrived */
-	CatturaConsegna consegna; /* the four facts, frozen with it        */
+	guint64 idx;          /* which frame it was among those arrived */
+	CaptureDelivery delivery; /* the four facts, frozen with it        */
 
 	/* ------------------------------------------------------------------ *
 	 * ⭐⭐ THE SPANS OF THE GRAB — the phase 8 instrumentation
@@ -356,35 +356,35 @@ typedef struct
 	 *    ENCODER, that is the only one nobody looked at.  They are microseconds, and
 	 *    they are four because they answer four different questions:
 	 *
-	 *      `us_arrivo`      the instant (CLOCK_MONOTONIC) at which the frame was
+	 *      `arrival_us`      the instant (CLOCK_MONOTONIC) at which the frame was
 	 *                       put in the slot.  ⛔ It is not a cost: it is the
 	 *                       reference the others are subtracted from, and
 	 *                       next to Mutter's `pts` it says how long the
 	 *                       producer takes to get to us;
-	 *      `us_copia`       the `memcpy` inside the real-time callback;
-	 *      `us_allocazione` the `g_malloc` of the slot — ⛔ **0 when the buffer
+	 *      `copy_us`       the `memcpy` inside the real-time callback;
+	 *      `alloc_us` the `g_malloc` of the slot — ⛔ **0 when the buffer
 	 *                       was reused**, and it is precisely the number that says
 	 *                       whether the reuse of `slot_capacity` is working or whether
 	 *                       it reallocates at every turn;
-	 *      `us_nel_posto`   ⭐ **how long the frame stayed STILL in the slot**
+	 *      `in_slot_us`   ⭐ **how long the frame stayed STILL in the slot**
 	 *                       before someone took it.  ⛔ It is time in which
 	 *                       nobody works and the frame ages: it is not
 	 *                       work to optimise, it is **waiting**, and it is the only
 	 *                       item of the span that drops if the loop gets shorter;
-	 *      `us_misura`      the pass of `misura_i_pixel()` — ⛔ DIAGNOSTIC
+	 *      `measure_us`      the pass of `measure_pixels()` — ⛔ DIAGNOSTIC
 	 *                       work, not product work: it reads every pixel of the
 	 *                       frame on the caller's thread.
 	 *
-	 * ⚠ `us_nel_posto` and `us_misura` are filled in `cattura_prendi()`; the
+	 * ⚠ `in_slot_us` and `measure_us` are filled in `capture_take()`; the
 	 *   other two in the real-time callback.  ⛔ A frame delivered
 	 *   to `on_frame` (the copy-less road) does NOT carry them: there is
 	 *   no slot and no copy there. */
-	uint64_t us_arrivo;
-	uint64_t us_copia;
-	uint64_t us_allocazione;
-	uint64_t us_nel_posto;
-	uint64_t us_misura;
-} CatturaFermo;
+	uint64_t arrival_us;
+	uint64_t copy_us;
+	uint64_t alloc_us;
+	uint64_t in_slot_us;
+	uint64_t measure_us;
+} CaptureStopped;
 
 /*
  * ⛔ ZERO AND FAILURE ARE TWO DIFFERENT THINGS, and here they are four.
@@ -392,25 +392,25 @@ typedef struct
  */
 typedef enum
 {
-	CATTURA_PRESA_FATTA = 0,
+	CAPTURE_TAKE_DONE = 0,
 	/* ⭐ LEGITIMATE zero: the stream was active for the whole wait and nothing
 	 *    arrived.  On Mutter it is the still desktop, and it is a result. */
-	CATTURA_PRESA_ZERO,
+	CAPTURE_TAKE_ZERO,
 	/* ⛔ The stream was never active, or it dropped: there is no number
 	 *    to read, and no zero to write in a table. */
-	CATTURA_PRESA_GUASTO,
+	CAPTURE_TAKE_FAULT,
 	/* ⛔ Card road: the buffer type is DECLARED, but the pixels are not
 	 *    here.  It is not a fault and it is not a zero.
 	 *
 	 * ⭐⭐ AND SINCE 22 AUGUST 2026 THIS IS **A DELIVERED FRAME**, not a
-	 *     nothing-done: inside `CatturaFermo` are `fd`, `offset`,
-	 *     `stride`, `modificatore` and `formato_drm`, and the `pw_buffer` is
-	 *     HELD until `cattura_fermo_libera()`.  ⇒ The caller treats it
-	 *     like `FATTA` **switching read road**, and does not throw it away.
-	 * ⚠ And it remained a separate outcome instead of becoming `FATTA` precisely
+	 *     nothing-done: inside `CaptureStopped` are `fd`, `offset`,
+	 *     `stride`, `modifier` and `formato_drm`, and the `pw_buffer` is
+	 *     HELD until `capture_stopped_free()`.  ⇒ The caller treats it
+	 *     like `DONE` **switching read road**, and does not throw it away.
+	 * ⚠ And it remained a separate outcome instead of becoming `DONE` precisely
 	 *   because the read road IS different: a caller that does not know about the
 	 *   card must trip here, not read a NULL `pixel`. */
-	CATTURA_PRESA_PIXEL_ALTROVE
+	CAPTURE_TAKE_PIXEL_ELSEWHERE
 } CaptureTake;
 
 /* ------------------------------------------------------------------ *
@@ -426,7 +426,7 @@ typedef enum
  * open range would let Mutter choose, and it chooses 1280×720.
  *
  * `on_frame` can be NULL: then frames are only counted, and
- * are taken with `cattura_prendi`.
+ * are taken with `capture_take`.
  *
  * ⛔ It fails — declaring it — if the compositor refuses the requested format.
  *    It is the only point where a refusal is seen at once instead of becoming a
@@ -442,26 +442,26 @@ typedef enum
  * ⛔ Only there: where linear succeeds (Intel, Radeon) the offer stays the one
  *    of always — with more modifiers Mutter would pick a tiling of its own.
  */
-void cattura_modificatori_scheda(const uint64_t *modificatori, int quanti);
+void capture_modifiers_card(const uint64_t *modifiers, int amount);
 
-Cattura *cattura_avvia(uint32_t nodo, uint32_t larghezza, uint32_t altezza,
-                       uint32_t fotogrammi_al_secondo, CaptureRoute strada, CaptureColor colore,
-                       CaptureFrame on_frame, CaptureEnd su_fine, gpointer dati,
-                       GError **sbaglio);
+Capture *capture_start(uint32_t node, uint32_t width, uint32_t height,
+                       uint32_t fotogrammi_al_secondo, CaptureRoute route, CaptureColor color,
+                       CaptureFrame on_frame, CaptureEnd su_fine, gpointer data,
+                       GError **mistake);
 
 /*
  * ⭐⭐ PHASE 13 — THE SECOND SOURCE: wlroots, that is XFCE and LXQt.
  *
- * ⛔⛔ AND IT IS NOT A SECOND `cattura_avvia` WITH ONE MORE PARAMETER: it is the other
+ * ⛔⛔ AND IT IS NOT A SECOND `capture_start` WITH ONE MORE PARAMETER: it is the other
  *     DIRECTION.  From PipeWire frames **arrive**; from `zwlr_screencopy` they are
  *     **asked for**, one by one.  Everything downstream of this door —
- *     `cattura_prendi`, `cattura_consegna`, the counts — does not see the
+ *     `capture_take`, `capture_delivery`, the counts — does not see the
  *     difference, and that is exactly the point: `figlio.c` uses this interface
  *     in **thirty-five places**, and redoing them two-way would mean putting
- *     GNOME and KDE at risk to serve the new desktop.
+ *     GNOME and KDE at risk to needs the new desktop.
  *
  * ⭐ The form has a precedent in the house, and it is copied from there: the **clipboard** has
- *   two constructors (`appunti_apri()` and `appunti_apri_kde()`) and the public
+ *   two constructors (`clipboard_open()` and `clipboard_open_kde()`) and the public
  *   functions hand over at the top.  Same here.
  *
  * ⚠ Two things do NOT map onto the other direction, and they are not faked:
@@ -471,16 +471,16 @@ Cattura *cattura_avvia(uint32_t nodo, uint32_t larghezza, uint32_t altezza,
  *   · **resizing**: here one does not renegotiate a stream, one changes the
  *     size of the **output** — another protocol, and another increment.
  *
- * ⛔ `nodo` is absent because it does not exist: on this family there is no PipeWire
+ * ⛔ `node` is absent because it does not exist: on this family there is no PipeWire
  *    node anywhere.
  */
-Cattura *cattura_avvia_wlr(uint32_t larghezza, uint32_t altezza,
-                           uint32_t fotogrammi_al_secondo, CaptureRoute strada,
-                           CaptureColor colore, GError **sbaglio);
+Capture *capture_start_wlr(uint32_t width, uint32_t height,
+                           uint32_t fotogrammi_al_secondo, CaptureRoute route,
+                           CaptureColor color, GError **mistake);
 
 /* The name of the output being watched, or NULL if this source has none
  * to tell (on PipeWire the name is known by the producer, not by us). */
-const char *capture_output_name(Cattura *cattura);
+const char *capture_output_name(Capture *capture);
 
 /* ------------------------------------------------------------------ *
  *  ⭐⭐ THE HOT SIZE CHANGE — `DECISIONI.md` §5.0-sexies
@@ -497,23 +497,23 @@ const char *capture_output_name(Cattura *cattura);
  *     *cancelled* in the same branch — not to be copied.
  *
  * ⇒ Here we only say whether the REQUEST left.  That the compositor
- *   obeyed will be told by the negotiated format (`cattura_consegna`) and, even
+ *   obeyed will be told by the negotiated format (`capture_delivery`) and, even
  *   before, by the first frame at the new size.
  *
  * ---------------------------------------------------------------------------
  * ⛔⛔ AND "LEFT" INCLUDES "AND MAY HAVE KILLED THE STREAM" — `[M]` 22 August
  *      2026, bench `banchi/06-b5-esiti-cattura.c` case 2, PipeWire 1.4.2
  *
- * Asking for a size the producer cannot handle, `cattura_ridimensiona()`
+ * Asking for a size the producer cannot handle, `capture_resize()`
  * returns `CHIESTA` and **two milliseconds later** the stream goes to
  * `paused → error — no more input formats`: the failed negotiation does not leave the
  * stream "stuck at the old size", it **kills** it.
  *
  * ⭐ AND NO NEW OUTCOME IS NEEDED TO KNOW IT, because the road is already there and it is
- *    the one the caller walks anyway: `cattura_prendi()` looks at the
- *    state **before** waiting, so it returns `CATTURA_PRESA_GUASTO` **without
+ *    the one the caller walks anyway: `capture_take()` looks at the
+ *    state **before** waiting, so it returns `CAPTURE_TAKE_FAULT` **without
  *    spending the wait**, and the `GError` names the state and the producer's
- *    fault.  `[M]` with the child's loop (`MOVIMENTO_ATTESA_S 0.008`) the
+ *    fault.  `[M]` with the child's loop (`MOTION_WAIT_S 0.008`) the
  *    fault arrives at **8.1 ms**, in **one** single turn and with **zero** ZEROs in
  *    between — that is one turn of the loop, not a timeout.
  *
@@ -524,18 +524,18 @@ const char *capture_output_name(Cattura *cattura);
  *
  * ⚠ `[?]` And this scene, on the real product, is not measured: `[M]`
  *   (§5.0-sexies) Mutter granted 30 requests out of 30 from 1x1 to 7680x4320, and
- *   `rcp_misura_ammessa()` cut exactly at 7680x4320 (since 1 October 2026 it
+ *   `rcp_size_allowed()` cut exactly at 7680x4320 (since 1 October 2026 it
  *   cuts at 4096x2304).  ⇒ Here we declare what
  *   happens IF it happens, not how often it happens.
  */
 typedef enum
 {
-	CATTURA_RITELA_CHIESTA = 0, /* the request left: wait for the frame */
+	CAPTURE_RECANVAS_REQUESTED = 0, /* the request left: wait for the frame */
 	/* ⭐ The requested size is already the one in force: NO renegotiation.
 	 * ⛔ The guard is mandatory — `STUDI.md` §kde §8.2-bis: without it,
 	 *    "the renegotiation bites its own tail". */
-	CATTURA_RITELA_GIA_COSI,
-	CATTURA_RITELA_GUASTO /* no stream, dead stream, or empty size */
+	CAPTURE_RECANVAS_UNCHANGED,
+	CAPTURE_RECANVAS_FAULT /* no stream, dead stream, or empty size */
 } CaptureRecanvas;
 
 /*
@@ -565,12 +565,12 @@ typedef enum
  *   which is the only one it has (`CODER.md` §4.4).
  *
  * ⛔ AND THE ALLOWED SIZE IS NOT CHECKED HERE: the rule ("200..8192, and
- *    both EVEN") lives in `rcp_misura_ammessa()` and is applied by whoever reads
- *    `ADATTA_TELA` from the wire — see the box at the bottom of this file.  Here only
+ *    both EVEN") lives in `rcp_size_allowed()` and is applied by whoever reads
+ *    `FIT_CANVAS` from the wire — see the box at the bottom of this file.  Here only
  *    ZERO is refused, which is a different fact: an empty size is not
  *    "out of bounds", it is a request with no content.
  */
-CaptureRecanvas cattura_ridimensiona(Cattura *cattura, uint32_t larghezza, uint32_t altezza);
+CaptureRecanvas capture_resize(Capture *capture, uint32_t width, uint32_t height);
 
 /*
  * ⭐⭐ "DELIVER ME A FRAME NOW" — and on Wayland it cannot be asked.
@@ -607,7 +607,7 @@ CaptureRecanvas cattura_ridimensiona(Cattura *cattura, uint32_t larghezza, uint3
  * small side effect: it is the **second door** of the *dying click*
  * (`fasi/06-la-tela-e-la-vista.md` §4.6 and §7.1).
  *
- * `[M]` Three wake-ups on a still scene, **zero** `ADATTA_TELA`: three pointer
+ * `[M]` Three wake-ups on a still scene, **zero** `FIT_CANVAS`: three pointer
  * replacements (delta 1, 1, 1, read from `input_count()`).
  *
  * `[R]` The chain, all inside Mutter 48.7:
@@ -626,14 +626,14 @@ CaptureRecanvas cattura_ridimensiona(Cattura *cattura, uint32_t larghezza, uint3
  *
  * ⇒ The caller must **check whether anything is pressed** before
  *   waking up.  ⛔ The cure of `figlio.c:3964` — releasing before
- *   `cattura_ridimensiona()` — **does not cover this road**.
+ *   `capture_resize()` — **does not cover this road**.
  *
  * `FALSE` = it could not be asked (no stream, or stream not active).
  */
-gboolean cattura_risveglia(Cattura *cattura);
+gboolean capture_wake(Capture *capture);
 
 /* The size REQUESTED from the producer now — ⛔ not the granted one: that is in
- * `CatturaConsegna.larghezza/altezza` and holds only after negotiation.  ⚠ The two
+ * `CaptureDelivery.width/height` and holds only after negotiation.  ⚠ The two
  * are compared, and whoever confuses them rewrites the defect that the "requested
  * versus granted" guard exists to see.
  *
@@ -645,7 +645,7 @@ gboolean cattura_risveglia(Cattura *cattura);
  *     turns itself off; and `[M]` (case 6) the real divergence is rebuilt from
  *     these two accessors, which also tell "not yet negotiated" apart —
  *     something a `gboolean` could not do (`CODER.md` §3.10). */
-void capture_measure_requested(Cattura *cattura, uint32_t *larghezza, uint32_t *altezza);
+void capture_measure_requested(Capture *capture, uint32_t *width, uint32_t *height);
 
 /* The NEGOTIATED size, that is the one the pixels really have.  ⛔ `FALSE` = the
  * format has not been negotiated yet, which is NOT "it is 0x0" (`CODER.md` §3.10).
@@ -654,7 +654,7 @@ void capture_measure_requested(Cattura *cattura, uint32_t *larghezza, uint32_t *
  *   frame that would not arrive: it is the only case in which the request can be
  *   closed without seeing the pixels, because the viewer already has the pixels of that size
  *   in front of them. */
-gboolean cattura_misura_negoziata(Cattura *cattura, uint32_t *larghezza, uint32_t *altezza);
+gboolean capture_negotiated_size(Capture *capture, uint32_t *width, uint32_t *height);
 
 /*
  * Waits for the NEXT frame and delivers a copy of it.
@@ -667,8 +667,8 @@ gboolean cattura_misura_negoziata(Cattura *cattura, uint32_t *larghezza, uint32_
  * ⚠ Frames that arrive when nobody is waiting are only counted:
  *   no 8 MB copies that nobody asked for are piled up.
  */
-CaptureTake cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuori,
-                            GError **sbaglio);
+CaptureTake capture_take(Capture *capture, double wait_s, CaptureStopped *report,
+                            GError **mistake);
 
 /*
  * Gives the frame back.
@@ -681,41 +681,41 @@ CaptureTake cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuor
  * ⚠ Calling it twice is harmless (the still frame is zeroed); not calling it at all
  *   takes a buffer away from the producer forever.
  */
-void cattura_fermo_libera(CatturaFermo *fermo);
+void capture_stopped_free(CaptureStopped *stopped);
 
 /* The four facts, when they are known.  FALSE ⇒ the format has not been
  * negotiated yet, and there is nothing to declare (not "it is all zero"). */
-gboolean cattura_consegna(Cattura *cattura, CatturaConsegna *fuori);
+gboolean capture_delivery(Capture *capture, CaptureDelivery *report);
 
-/* The counts of the run.  They serve whoever writes a manifest or a log
+/* The counts of the run.  They needs whoever writes a manifest or a log
  * line, and they are separate from the facts on purpose: a count is not a
  * declaration about the format. */
 typedef struct
 {
-	guint64 arrivati;
-	guint64 danno_pieno, danno_parziale, danno_assente;
+	guint64 incoming;
+	guint64 full_damage, partial_damage, missing_damage;
 	guint64 without_header;
-	guint64 solo_cursore;   /* buffers marked CORRUPTED: stale pixels  */
+	guint64 cursor_only;   /* buffers marked CORRUPTED: stale pixels  */
 	guint64 stride_zero;    /* ⛔ discarded instead of computed        */
 	guint64 without_pixel;    /* mapping absent or empty chunk           */
 	/* ⛔⭐ The geometry declared by the FORMAT does not fit in the bytes of the CHUNK:
 	 *     discarded, because whoever consumes them would read past the copy.  ⚠ It is the
 	 *     window between a renegotiation and the new buffers, and before
-	 *     `cattura_ridimensiona()` it could not exist. */
+	 *     `capture_resize()` it could not exist. */
 	guint64 inconsistent_geometry;
 	/* ⭐ The cursor channel.  ⛔ The first two are TWO and not one, and it is the
 	 *    same rule as zero and failure: "the metadata was not there" and
 	 *    "the metadata was there" are the two facts that tell an absent
 	 *    pointer from a channel without a source (`STUDI.md` §gnome §1.1 point 6). */
-	guint64 cursore_assente;
+	guint64 cursor_absent;
 	guint64 cursor_meta_seen;
 	guint64 malformed_cursors;
-	guint buffer_distinti;
-	CaptureBuffer tipi_visti[4]; /* ⛔ ALL the types seen, not only the last */
+	guint distinct_buffers;
+	CaptureBuffer seen_types[4]; /* ⛔ ALL the types seen, not only the last */
 	guint how_many_types;
-} CatturaConteggi;
+} CaptureCounts;
 
-void cattura_conteggi(Cattura *cattura, CatturaConteggi *fuori);
+void capture_counts(Capture *capture, CaptureCounts *report);
 
 /*
  * ⭐⭐ THE CURSOR SEAM — whoever wants the pointer SHAPE registers here.
@@ -724,7 +724,7 @@ void cattura_conteggi(Cattura *cattura, CatturaConteggi *fuori);
  *    interface, and it is here for a precise reason: `cattura.c` reads
  *    PipeWire's raw metadata but **does not know the wire**, and `cursore.h` wants
  *    the recipient at opening time — which happens inside
- *    `cattura_avvia`, that is before anyone can register.
+ *    `capture_start`, that is before anyone can register.
  *
  * ⚠ `when_changes` is called FROM PipeWire's REAL-TIME THREAD, and the
  *   box at the top of this file applies: nothing is waited on in there, and
@@ -738,26 +738,26 @@ void cattura_conteggi(Cattura *cattura, CatturaConteggi *fuori);
  * ⛔ And the cut at 256, the "hidden" and the "has not changed" are NOT here: they are
  *    in `cursore.c`, which is the place `cursore.h` assigns them.
  */
-void cattura_cursore(Cattura *cattura, CursorArrived when_changes, void *chi);
+void capture_cursor(Capture *capture, CursorArrived when_changes, void *chi);
 
 /*
  * ⭐ THE POINTER PROBE — only on the wlroots family (labwc), and elsewhere
  *    it does nothing.  The child calls it AFTER every injected pointer
  *    gesture, with the coordinates of its canvas (those given to
  *    `input_pointer`; for a button, the last ones); the shape, if it has changed,
- *    comes back through `when_changes` of `cattura_cursore` inside a
- *    later `cattura_prendi`, on the thread of whoever calls it.  The why in
+ *    comes back through `when_changes` of `capture_cursor` inside a
+ *    later `capture_take`, on the thread of whoever calls it.  The why in
  *    `wlroots.h`.
  */
-void cattura_sonda_puntatore(Cattura *cattura, uint32_t x, uint32_t y);
+void capture_probe_pointer(Capture *capture, uint32_t x, uint32_t y);
 
 /* Is the stream active NOW?  ⛔ "It WAS active" is not "it still is": a
  * death halfway through a measurement has already produced a table row with five
  * seconds inside under the label of twenty. */
-gboolean capture_active(Cattura *cattura);
+gboolean capture_active(Capture *capture);
 
 /* The fault declared by the producer, or NULL. */
-const char *capture_fault(Cattura *cattura);
+const char *capture_fault(Capture *capture);
 
 /*
  * ⭐ PHASE 17 — negotiation FAILED: the stream is in error and no
@@ -768,29 +768,29 @@ const char *capture_fault(Cattura *cattura);
  *    of the offers is empty.
  *
  * ⛔ It does not look at the TEXT of the fault: it looks at the two facts that produce it.  And
- *    `cattura_avvia()`, if the refusal arrives before it returns, says so with the
+ *    `capture_start()`, if the refusal arrives before it returns, says so with the
  *    code `G_IO_ERROR_NOT_SUPPORTED` instead of `G_IO_ERROR_FAILED`.
  *
- * ⚠ What to do with it is decided by the caller (`figlio.c`, `ripiega_se_rifiutata`):
+ * ⚠ What to do with it is decided by the caller (`figlio.c`, `falls_back_if_refused`):
  *   here we only answer the question.
  */
-gboolean cattura_formato_rifiutato(Cattura *cattura);
+gboolean capture_format_refused(Capture *capture);
 
-/* ⭐ Flips the `cursore_mai_nascondere()` switch on this capture's
+/* ⭐ Flips the `cursor_never_hide()` switch on this capture's
  *    cursor: the child asks for it on Plasma, where the theme is invisible. */
-void cattura_cursore_mai_nascondere(Cattura *cattura, const char *perche);
+void capture_cursor_never_hide(Capture *capture, const char *why);
 
-void cattura_ferma(Cattura *cattura);
+void capture_stop(Capture *capture);
 
 /* --- the allowed size: it is NOT here, and the reason must be told ---- *
  *
  * ⛔ The rule ("200..8192, and width and height EVEN") lives in `rcp.h`, as
- *    `rcp_misura_ammessa()`, and NOT here — even though the reason the ceiling
+ *    `rcp_size_allowed()`, and NOT here — even though the reason the ceiling
  *    exists belongs wholly to this level: `[M]` 14 August 2026, beyond **16384**
  *    per side `gnome-shell` dies, and on labwc `32768x32768` kills the
  *    compositor **with zero log lines**.
  *
- * ⚠ It is over there because whoever must apply it is whoever reads `ADATTA_TELA` from the wire,
+ * ⚠ It is over there because whoever must apply it is whoever reads `FIT_CANVAS` from the wire,
  *   and `rcp.h` is **deliberately self-sufficient** — it includes only `stdbool`,
  *   `stddef` and `stdint` — so that its twin copy compiles inside
  *   `bsslserver` without the rest of the tree.  ⇒ Putting the rule here
@@ -803,11 +803,11 @@ void cattura_ferma(Cattura *cattura);
 /* --- the names, so that whoever writes a manifest does not reinvent them --- */
 const char *capture_buffer_name(CaptureBuffer buffer);
 const char *capture_color_name(uint32_t raw_format);
-const char *capture_source_name(CaptureSource fonte);
-const char *capture_range_name(uint32_t grezzo);
-const char *capture_matrix_name(uint32_t grezzo);
-const char *capture_transfer_name(uint32_t grezzo);
-const char *capture_primaries_name(uint32_t grezzo);
-const char *capture_range_measured_name(CaptureRangeMeasured misurato);
+const char *capture_source_name(CaptureSource source);
+const char *capture_range_name(uint32_t raw);
+const char *capture_matrix_name(uint32_t raw);
+const char *capture_transfer_name(uint32_t raw);
+const char *capture_primaries_name(uint32_t raw);
+const char *capture_range_measured_name(CaptureRangeMeasured measured);
 
 #endif

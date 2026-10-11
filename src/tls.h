@@ -28,9 +28,9 @@
 #include <stdbool.h>
 
 /* The QUIC context: ALPN `h3`, 0-RTT OFF, session certificate. */
-SSL_CTX *tls_contesto_quic(const char *pem, const char *key);
+SSL_CTX *tls_quic_context(const char *pem, const char *key);
 
 /* The context for the page over TCP: ALPN `http/1.1`, long-lived certificate. */
-SSL_CTX *tls_contesto_pagina(const char *pem, const char *key);
+SSL_CTX *tls_page_context(const char *pem, const char *key);
 
 #endif

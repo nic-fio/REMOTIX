@@ -4,10 +4,10 @@
 # The bench of sub-phase F2.2: ONE frame taken from the GNOME session,
 # with the buffer type declared and the PIXELS looked at.
 #
-#   bash /media/REMOTIX/src/02-cattura-lancia.sh compila     once (in the container)
-#   bash /media/REMOTIX/src/02-cattura-lancia.sh scena       generates the declared scene
-#   bash /media/REMOTIX/src/02-cattura-lancia.sh misura      one round
-#   bash /media/REMOTIX/src/02-cattura-lancia.sh elenco      the expectations, without measuring
+#   bash /media/REMOTIX/src/02-cattura-lancia.sh compile     once (in the container)
+#   bash /media/REMOTIX/src/02-cattura-lancia.sh scene       generates the declared scene
+#   bash /media/REMOTIX/src/02-cattura-lancia.sh measure      one round
+#   bash /media/REMOTIX/src/02-cattura-lancia.sh list      the expectations, without measuring
 #
 # ===========================================================================
 # ⛔ WHY THIS BENCH EXISTS, GIVEN THAT PHASE 0 ALREADY MEASURES CAPTURE
@@ -63,7 +63,7 @@
 #   the block sits   so the signature does not depend on the INSTANT at which the
 #   in a corner      frame was taken
 #
-# ⚠ And the phase 0 scene stays available (`SCENA=tetto`), because it is the
+# ⚠ And the phase 0 scene stays available (`SCENE=cap`), because it is the
 #   link with the historical positive control: on it the pixel judgement
 #   reduces to «it is not black and it is not uniform», and it says so.
 #
@@ -76,7 +76,7 @@
 # frames arrived before the scene and which after — it is the separation
 # between the start-up frame and the steady-state one (`CODER.md` §3.5, form E9).
 #
-# Therefore:  the producer writes `pronto` when the stream is ACTIVE
+# Therefore:  the producer writes `ready` when the stream is ACTIVE
 #          →  this script switches the scene on and checks it is alive
 #          →  this script writes `scena-accesa`
 #          →  only then does the producer start counting the steady state
@@ -89,13 +89,13 @@
 #   `libei` virtual pointer exists receives nothing — `PIANO.md`, box
 #   «A question phase 1 found and that bites HERE», `[M]` 10 Aug 2026.
 #   Here no device is created (it is not F2.2's area), but whoever mounts
-#   input will have to slip it between `pronto` and the scene, not before.
+#   input will have to slip it between `ready` and the scene, not before.
 #
 # ===========================================================================
 # ⛔ ZERO AND FAILURE ARE TWO DIFFERENT THINGS — and here there are FOUR
 #
-#   0  ⭐ VERDE: a frame is there, it is of the requested size, and it contains the scene
-#   1  ROSSO: there is a frame and something does not add up. The mark says what —
+#   0  ⭐ GREEN: a frame is there, it is of the requested size, and it contains the scene
+#   1  RED: there is a frame and something does not add up. The mark says what —
 #      BLACK FRAME · UNIFORM FRAME · SCENE NOT RECOGNISED ·
 #      BYTES DO NOT ADD UP · SIZE DIFFERENT FROM THE ONE REQUESTED ·
 #      THE BUFFER DID NOT CHANGE
@@ -135,42 +135,42 @@
 # ===========================================================================
 set -uo pipefail
 
-QUI=${QUI:-/media/REMOTIX/tmp/02-cattura}
+HERE=${HERE:-/media/REMOTIX/tmp/02-cattura}
 SRC=${SRC:-/media/REMOTIX/src}
 # ⭐ THE PRODUCER IS DECLARED, AND THERE ARE TWO — added on 12 Aug 2026 with the
 #    product (P2.2).  The bench was born before the product and certified the
 #    producer written INSIDE itself: that green said nothing about the
 #    product, because the product did not exist yet (`LEZIONI.md` §1.3).
 #
-#      PROG=$QUI/02-cattura-fotogramma  FONTE=$SRC/02-cattura-fotogramma.c
+#      PROG=$HERE/02-cattura-fotogramma  SOURCE=$SRC/02-cattura-fotogramma.c
 #          the bench's producer, the one certified on 12 Aug
-#      PROG=$QUI/02-cattura-prodotto    FONTE=$SRC/02-cattura-prodotto.c
+#      PROG=$HERE/02-cattura-prodotto    SOURCE=$SRC/02-cattura-prodotto.c
 #          ⭐ THE PRODUCT: src/cattura.c + src/mutter.c, behind the same command
 #          line and with the same manifest
 #
 # ⛔ And the judge does not change: it judges the PIXELS, and does not know who made them.  Two
 #    independent producers under the same judge are a positive control
 #    that neither of the two would be on its own.
-PROG=${PROG:-$QUI/02-cattura-fotogramma}
-FONTE=${FONTE:-$SRC/02-cattura-fotogramma.c}
-GIUDICE=$SRC/02-cattura-giudica.py
-ESITI=${ESITI:-$SRC/02-cattura-esiti.jsonl}
+PROG=${PROG:-$HERE/02-cattura-fotogramma}
+SOURCE=${SOURCE:-$SRC/02-cattura-fotogramma.c}
+JUDGE=$SRC/02-cattura-giudica.py
+OUTCOMES=${OUTCOMES:-$SRC/02-cattura-esiti.jsonl}
 
 # ⛔ THIS AGENT'S PORT IS 7512, and no port is opened here.
 #    The line exists anyway because the mandate assigns it and because a bench
 #    that does not name its own port is a bench that one day takes someone
 #    else's: on 7448 and on 7501 two wanted servers run (§4 of the mandate).
-PORTA_DI_QUESTO_BANCO=7512
+THIS_BENCH_PORT=7512
 
-SCENA=${SCENA:-bandiera}
-LARGHEZZA=${LARGHEZZA:-1920}
-ALTEZZA=${ALTEZZA:-1080}
+SCENE=${SCENE:-flag}
+WIDTH=${WIDTH:-1920}
+HEIGHT=${HEIGHT:-1080}
 FPS=${FPS:-60}
-DOPO_SCENA=${DOPO_SCENA:-3}
-SCARTA=${SCARTA:-10}
-DURATA=${DURATA:-12}
-STRADA=${STRADA:-memoria}
-ETICHETTA=${ETICHETTA:-F2.2-$SCENA-${LARGHEZZA}x${ALTEZZA}-$STRADA}
+POST_SCENE=${POST_SCENE:-3}
+DISCARD=${DISCARD:-10}
+DURATION=${DURATION:-12}
+ROUTE=${ROUTE:-memoria}
+RUN_LABEL=${RUN_LABEL:-F2.2-$SCENE-${WIDTH}x${HEIGHT}-$ROUTE}
 
 # The session environment, built from scratch: whoever inherits their own environment
 # gives a graphical process also the variables that have nothing to do with it
@@ -191,7 +191,7 @@ log() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 # ⛔ THE EXPECTATIONS ARE WRITTEN BEFORE THE ROUND — B0.4, and the rule born on 11
 #    Aug applies: whoever writes a bench certifies it in the same round.
 # ---------------------------------------------------------------------------
-elenco()
+list()
 {
 	cat <<'FINE'
 
@@ -260,27 +260,27 @@ FINE
 # would have brought back defects the documents declare closed, without a line
 # telling them.
 # ---------------------------------------------------------------------------
-controlla_binario()
+check_binary()
 {
 	if [ ! -x "$PROG" ]; then
 		ko "⛔ $PROG is missing"
-		inf "compile it:  bash $0 compila"
+		inf "compile it:  bash $0 compile"
 		return 1
 	fi
-	if [ "$FONTE" -nt "$PROG" ]; then
-		ko "⛔ $PROG is OLDER than its source $FONTE."
+	if [ "$SOURCE" -nt "$PROG" ]; then
+		ko "⛔ $PROG is OLDER than its source $SOURCE."
 		inf "Measuring now would mean running code different from the code read."
-		inf "Recompile:  bash $0 compila"
+		inf "Recompile:  bash $0 compile"
 		return 1
 	fi
 	ok "the binary is newer than the source"
 	return 0
 }
 
-compila()
+compile()
 {
 	log "compiling inside the container"
-	mkdir -p "$QUI" || return 1
+	mkdir -p "$HERE" || return 1
 	# ⛔ NEVER A REDIRECTION AROUND `enter.sh`: `sudo`'s password
 	#    prompt goes to stderr, and a redirection swallows it — the
 	#    command hangs forever, silently.  Inside the quotes
@@ -288,9 +288,9 @@ compila()
 	bash /media/REMOTIX/enter.sh "cd /srv/remotix/tmp/02-cattura && \
 	    gcc -O2 -Wall -o 02-cattura-fotogramma /srv/src/02-cattura-fotogramma.c \
 	        \$(pkg-config --cflags --libs libpipewire-0.3 gio-2.0 libdrm)"
-	local esito=$?
-	if [ $esito -ne 0 ]; then
-		ko "⛔ compilation failed (exit $esito)"
+	local outcome=$?
+	if [ $outcome -ne 0 ]; then
+		ko "⛔ compilation failed (exit $outcome)"
 		return 1
 	fi
 	ok "compiled: $PROG"
@@ -301,18 +301,18 @@ compila()
 # ---------------------------------------------------------------------------
 #  The declared scene
 # ---------------------------------------------------------------------------
-file_scena() { echo "$QUI/bandiera-${LARGHEZZA}x${ALTEZZA}.mp4"; }
+scene_file() { echo "$HERE/bandiera-${WIDTH}x${HEIGHT}.mp4"; }
 
-genera_scena()
+generate_scene()
 {
 	local f
-	f=$(file_scena)
-	mkdir -p "$QUI" || return 1
+	f=$(scene_file)
+	mkdir -p "$HERE" || return 1
 	if [ -s "$f" ]; then
 		ok "the scene is already there: $f"
 		return 0
 	fi
-	log "generating the declared scene «bandiera» ${LARGHEZZA}x${ALTEZZA}"
+	log "generating the declared scene «bandiera» ${WIDTH}x${HEIGHT}"
 	inf "seven still SMPTE bars (the signature) + a 256-level gradient (the real bits)"
 	inf "+ a sliding white block (the movement, without which Mutter does not deliver)"
 	# ⛔ `-qp 0`: the signature lives in the pixels, and a quantiser that dirties the bands
@@ -322,7 +322,7 @@ genera_scena()
 	#    absolute RGB values.
 	# ⛔ TWO THINGS LEARNED HERE ON 12 AUG 2026, AND BOTH COST A ROUND:
 	#
-	#  1. the modulo is written WITHOUT `mod(a,b)`.  The comma is ffmpeg's
+	#  1. the module is written WITHOUT `mod(a,b)`.  The comma is ffmpeg's
 	#     filter separator and must be protected with a backslash — which however
 	#     crosses `bash`, `ssh` and the remote shell, and gets lost in one of the three.
 	#     Symptom: «Undefined constant or missing '('».
@@ -356,16 +356,16 @@ genera_scena()
 	#       frame is there (the movement), it is the DESKTOP (the bars), how many bits are
 	#       real (the gradient) — and F2.3 can redo the same count on the same
 	#       frame instead of on another.
-	local corsa=$((LARGHEZZA - 160))
-	local y_gradient=$((ALTEZZA - 240))
+	local run=$((WIDTH - 160))
+	local y_gradient=$((HEIGHT - 240))
 	ffmpeg -nostdin -loglevel error -y \
-	       -f lavfi -i "smptebars=size=${LARGHEZZA}x${ALTEZZA}:rate=60" \
-	       -f lavfi -i "color=black:size=${LARGHEZZA}x100:rate=60,geq=r='floor(X*256/W)':g='floor(X*256/W)':b='floor(X*256/W)'" \
-	       -filter_complex "[0][1]overlay=0:${y_gradient},drawbox=x='t*720-${corsa}*floor(t*720/${corsa})':y=$((ALTEZZA - 120)):w=160:h=100:color=white:t=fill" \
+	       -f lavfi -i "smptebars=size=${WIDTH}x${HEIGHT}:rate=60" \
+	       -f lavfi -i "color=black:size=${WIDTH}x100:rate=60,geq=r='floor(X*256/W)':g='floor(X*256/W)':b='floor(X*256/W)'" \
+	       -filter_complex "[0][1]overlay=0:${y_gradient},drawbox=x='t*720-${run}*floor(t*720/${run})':y=$((HEIGHT - 120)):w=160:h=100:color=white:t=fill" \
 	       -t 30 -c:v libx264 -preset ultrafast -qp 0 -pix_fmt yuv420p "$f"
-	local esito=$?
-	if [ $esito -ne 0 ] || [ ! -s "$f" ]; then
-		ko "⛔ ffmpeg did not produce the scene (exit $esito)"
+	local outcome=$?
+	if [ $outcome -ne 0 ] || [ ! -s "$f" ]; then
+		ko "⛔ ffmpeg did not produce the scene (exit $outcome)"
 		return 1
 	fi
 	ok "scene generated: $(ls -la "$f")"
@@ -376,7 +376,7 @@ genera_scena()
 # ⛔ THE SCREEN IS DECLARED TO THE SCENE, AND THEN IT IS CHECKED THAT IT OBEYED
 #
 # Found on 12 Aug 2026, at the FIRST real round of this bench — and found
-# because the bench came out **VERDE** while the defect was alive.
+# because the bench came out **GREEN** while the defect was alive.
 #
 # The GNOME session already had a virtual monitor (`Meta-0`, from another round);
 # our `RecordVirtual` added a second one (`Meta-1`); and `mpv --fs`
@@ -398,19 +398,19 @@ genera_scena()
 # the new one is ours.  ⛔ And if not exactly one appears, there is no
 # guessing: the failure is declared.
 # ---------------------------------------------------------------------------
-elenco_monitor()
+monitor_list()
 {
 	gdbus call --session --dest org.gnome.Mutter.DisplayConfig \
 	           --object-path /org/gnome/Mutter/DisplayConfig \
 	           --method org.gnome.Mutter.DisplayConfig.GetCurrentState \
-	  > "$QUI/monitor-$1.txt"
-	local esito=$?
-	if [ $esito -ne 0 ]; then
+	  > "$HERE/monitor-$1.txt"
+	local outcome=$?
+	if [ $outcome -ne 0 ]; then
 		# ⛔ A DENIED read is not a read that says «no monitor».
 		echo "GUASTO-DBUS"
 		return 1
 	fi
-	grep -o "'Meta-[0-9]*'" "$QUI/monitor-$1.txt" | tr -d "'" | sort -u
+	grep -o "'Meta-[0-9]*'" "$HERE/monitor-$1.txt" | tr -d "'" | sort -u
 	return 0
 }
 
@@ -426,9 +426,9 @@ elenco_monitor()
 #   things under the same label.  Here the name is taken from the before/after diff
 #   AND it is checked that the product matches: two independent roads that
 #   must say the same thing, or nothing is measured.
-prodotto_di()
+product_of()
 {
-	python3 - "$QUI/monitor-dopo.txt" "$1" <<'FINE'
+	python3 - "$HERE/monitor-dopo.txt" "$1" <<'FINE'
 import re, sys
 testo = open(sys.argv[1]).read()
 # ('Meta-1', 'MetaVendor', 'Virtual remote monitor', '0x00')
@@ -442,40 +442,40 @@ else:
 FINE
 }
 
-SCHERMO=
+SCREEN=
 
-PRODOTTO_SCHERMO=
+SCREEN_PRODUCT=
 
-trova_il_nostro_schermo()
+find_our_screen()
 {
-	local prima=$1 dopo nuovi
-	dopo=$(elenco_monitor dopo) || { ko "⛔ DisplayConfig does not answer: I do not know which screen we are on"; return 1; }
-	nuovi=$(comm -13 <(echo "$prima") <(echo "$dopo"))
-	local quanti
-	quanti=$(echo "$nuovi" | grep -c '^Meta-')
-	inf "monitors before: $(echo "$prima" | tr '\n' ' ')"
-	inf "monitors after:  $(echo "$dopo" | tr '\n' ' ')"
-	if [ "$quanti" != 1 ]; then
-		ko "⛔ after mounting $quanti new monitors appeared, not 1."
+	local before=$1 after newcomers
+	after=$(monitor_list after) || { ko "⛔ DisplayConfig does not answer: I do not know which screen we are on"; return 1; }
+	newcomers=$(comm -13 <(echo "$before") <(echo "$after"))
+	local amount
+	amount=$(echo "$newcomers" | grep -c '^Meta-')
+	inf "monitors before: $(echo "$before" | tr '\n' ' ')"
+	inf "monitors after:  $(echo "$after" | tr '\n' ' ')"
+	if [ "$amount" != 1 ]; then
+		ko "⛔ after mounting $amount new monitors appeared, not 1."
 		inf "I do not guess which one is ours: without knowing, the scene"
 		inf "would go to a screen we are not capturing, and the bench"
 		inf "would measure darkness while declaring the scene (12 Aug 2026)."
 		return 1
 	fi
-	SCHERMO=$(echo "$nuovi" | grep '^Meta-')
-	PRODOTTO_SCHERMO=$(prodotto_di "$SCHERMO")
-	inf "the product name of $SCHERMO is: «$PRODOTTO_SCHERMO»"
+	SCREEN=$(echo "$newcomers" | grep '^Meta-')
+	SCREEN_PRODUCT=$(product_of "$SCREEN")
+	inf "the product name of $SCREEN is: «$SCREEN_PRODUCT»"
 	# ⛔ AND THE SECOND ROAD MUST CONFIRM THE FIRST.  Our monitor is
 	#    mounted by `RecordVirtual`, and Mutter calls it «Virtual remote monitor»;
 	#    the session's one is called «MetaVirtualMonitor».  If the diff
 	#    said one and the product name the other, the more convenient one is not
 	#    chosen: we stop.
-	case "$PRODOTTO_SCHERMO" in
+	case "$SCREEN_PRODUCT" in
 	*"remote"*|*"Remote"*)
-		ok "the two roads agree: $SCHERMO is the monitor we mounted"
+		ok "the two roads agree: $SCREEN is the monitor we mounted"
 		;;
 	*)
-		ko "⛔ the monitor that appeared ($SCHERMO) is called «$PRODOTTO_SCHERMO», and it is not"
+		ko "⛔ the monitor that appeared ($SCREEN) is called «$SCREEN_PRODUCT», and it is not"
 		inf "the name Mutter gives a RecordVirtual monitor («Virtual remote"
 		inf "monitor»).  The two roads do not agree: I stop instead of choosing."
 		inf "⚠ On this server there are two virtual monitors BOTH 1920×1080@60:"
@@ -499,34 +499,34 @@ trova_il_nostro_schermo()
 # ⚠ And if the F2.1 tool is not on the server yet, it is DECLARED: a
 #   check skipped silently and a check passed look the same,
 #   and it is form E8.
-STATO_SESSIONE=
-guarda_la_sessione()
+SESSION_STATE=
+look_session()
 {
 	local s=$SRC/02-sessione-stato.py
 	if [ ! -r "$s" ]; then
-		STATO_SESSIONE="not available (missing $s, of F2.1)"
-		inf "⚠ $STATO_SESSIONE — this round has no witness of the session"
+		SESSION_STATE="not available (missing $s, of F2.1)"
+		inf "⚠ $SESSION_STATE — this round has no witness of the session"
 		return 0
 	fi
-	python3 -u "$s" > "$QUI/sessione.txt" 2>&1
-	local esito=$?
-	STATO_SESSIONE="02-sessione-stato.py exit $esito"
-	sed 's/^/       /' "$QUI/sessione.txt"
-	if [ $esito -ne 0 ]; then
-		ko "⛔ the session is not healthy ($STATO_SESSIONE)"
-		inf "⚠ It is set right with: bash $SRC/02-sessione-lancia.sh sano — and nothing is measured before."
+	python3 -u "$s" > "$HERE/sessione.txt" 2>&1
+	local outcome=$?
+	SESSION_STATE="02-sessione-stato.py exit $outcome"
+	sed 's/^/       /' "$HERE/sessione.txt"
+	if [ $outcome -ne 0 ]; then
+		ko "⛔ the session is not healthy ($SESSION_STATE)"
+		inf "⚠ It is set right with: bash $SRC/02-sessione-lancia.sh healthy — and nothing is measured before."
 		return 1
 	fi
-	ok "the session is healthy ($STATO_SESSIONE)"
+	ok "the session is healthy ($SESSION_STATE)"
 	return 0
 }
 
-avvia_scena()
+start_scene()
 {
 	local f
-	case $SCENA in
-	bandiera)
-		f=$(file_scena)
+	case $SCENE in
+	flag)
+		f=$(scene_file)
 		if [ ! -s "$f" ]; then echo IGNOTA; return; fi
 		# ⛔ `stdbuf -oL`: towards a file the output is block-buffered, and
 		#    when the scene closes its log stays in the buffer.  The
@@ -534,13 +534,13 @@ avvia_scena()
 		#    item 12 of `FASI.md` §00-ambiente.
 		# ⛔ `--fs-screen-name` is NOT a detail: it is the difference between
 		#    measuring the scene and measuring darkness (see the box above).
-		stdbuf -oL mpv --no-config --fs --fs-screen-name="$SCHERMO" \
+		stdbuf -oL mpv --no-config --fs --fs-screen-name="$SCREEN" \
 		    --loop=inf --no-audio --no-osc \
 		    --no-input-default-bindings --profile=low-latency \
-		    "$f" >"$QUI/scena.log" 2>&1 &
+		    "$f" >"$HERE/scena.log" 2>&1 &
 		echo $!
 		;;
-	tetto)
+	cap)
 		# The phase 0 scene, kept for the link with the historical positive
 		# control.  ⛔ And it is launched with `pgrep -f`, never `pgrep -x`: `comm` is
 		# truncated to 15 characters and `weston-simple-egl` has 17 — a bench
@@ -551,10 +551,10 @@ avvia_scena()
 		#   one monitor this scene is unreliable, and it is not a defect of the
 		#   bench: it is a limit of the client, declared here instead of discovered
 		#   by looking at a zero.
-		stdbuf -oL weston-simple-egl -f -o >"$QUI/scena.log" 2>&1 &
+		stdbuf -oL weston-simple-egl -f -o >"$HERE/scena.log" 2>&1 &
 		echo $!
 		;;
-	fermo)
+	still)
 		# ⭐ The opposite case, as a scene: nobody paints.  The expectation is exit 3
 		#    (ZERO FRAMES), not a red and not a green.
 		echo 0
@@ -571,214 +571,214 @@ avvia_scena()
 # ---------------------------------------------------------------------------
 #  The round
 # ---------------------------------------------------------------------------
-misura()
+measure()
 {
-	local pronto=$QUI/pronto accesa=$QUI/scena-accesa
-	local prefisso=$QUI/giro-$(date -u +%Y%m%d-%H%M%S)
-	local pid_prod pid_scena stato uscita_prod uscita_giud i morta=
+	local ready=$HERE/ready enabled=$HERE/scena-accesa
+	local prefix=$HERE/giro-$(date -u +%Y%m%d-%H%M%S)
+	local pid_prod scene_pid state producer_exit judge_exit i dead_run=
 
-	mkdir -p "$QUI" || return 2
-	rm -f "$pronto" "$accesa" "$QUI/scena.log"
+	mkdir -p "$HERE" || return 2
+	rm -f "$ready" "$enabled" "$HERE/scena.log"
 
 	log "0. the initial state is declared AND checked"
-	controlla_binario || return 2
-	if [ ! -r "$GIUDICE" ]; then ko "⛔ the judge is missing: $GIUDICE"; return 2; fi
-	ok "the judge can be read: $GIUDICE"
+	check_binary || return 2
+	if [ ! -r "$JUDGE" ]; then ko "⛔ the judge is missing: $JUDGE"; return 2; fi
+	ok "the judge can be read: $JUDGE"
 	if ! pgrep -f 'gnome-shell' >/dev/null; then
 		ko "⛔ there is no live gnome-shell: there is nothing to capture"
 		inf "⚠ and this is NOT a zero: it is the absence of the defendant. The session belongs to F2.1."
 		return 2
 	fi
 	ok "gnome-shell is alive (pid $(pgrep -f 'gnome-shell' | head -1))"
-	guarda_la_sessione || return 2
-	if [ "$SCENA" = bandiera ]; then genera_scena || return 2; fi
+	look_session || return 2
+	if [ "$SCENE" = flag ]; then generate_scene || return 2; fi
 
 	log "1. the expectations, written before the round"
-	elenco
+	list
 
 	log "2. the producer: mounts the virtual monitor and waits for the scene"
 	# ⛔ The monitors are counted BEFORE: ours will be the one that appears after.
-	local monitor_prima
-	monitor_prima=$(elenco_monitor prima)
-	if [ "$monitor_prima" = GUASTO-DBUS ]; then
+	local monitor_before
+	monitor_before=$(monitor_list prima)
+	if [ "$monitor_before" = GUASTO-DBUS ]; then
 		ko "⛔ DisplayConfig does not answer: the session cannot be queried"
 		return 2
 	fi
-	# ⚠ The «fermo» scene declares it wants to measure the legitimate zero: there the
+	# ⚠ The «stopped» scene declares it wants to measure the legitimate zero: there the
 	#   required minimum is 0, and it is said instead of obtained by chance.
-	local minimo=1
-	[ "$SCENA" = fermo ] && minimo=0
-	local opzioni=(--uscita "$prefisso" --pronto "$pronto" --segnale-scena "$accesa"
-	               --larghezza "$LARGHEZZA" --altezza "$ALTEZZA" --fps "$FPS"
-	               --dopo-scena "$DOPO_SCENA" --scarta "$SCARTA" --durata "$DURATA"
-	               --minimo-dopo-scena "$minimo" --etichetta "$ETICHETTA")
-	[ "$STRADA" = dmabuf ] && opzioni+=(--dmabuf)
+	local minimum=1
+	[ "$SCENE" = still ] && minimum=0
+	local options=(--output "$prefix" --ready "$ready" --scene-signal "$enabled"
+	               --width "$WIDTH" --height "$HEIGHT" --fps "$FPS"
+	               --post-scene "$POST_SCENE" --discard "$DISCARD" --duration "$DURATION"
+	               --min-after-scene "$minimum" --label "$RUN_LABEL")
+	[ "$ROUTE" = dmabuf ] && options+=(--dmabuf)
 
-	"$PROG" "${opzioni[@]}" >"$QUI/produttore.txt" 2>"$QUI/produttore.log" &
+	"$PROG" "${options[@]}" >"$HERE/produttore.txt" 2>"$HERE/produttore.log" &
 	pid_prod=$!
 
-	# ⛔ The EVENT is waited for, not a time: the `pronto` file is written by the
+	# ⛔ The EVENT is waited for, not a time: the `ready` file is written by the
 	#    producer when the stream is really ACTIVE.
 	for i in $(seq 1 300); do
-		[ -f "$pronto" ] && break
+		[ -f "$ready" ] && break
 		if ! kill -0 $pid_prod 2>/dev/null; then break; fi
 		sleep 0.1
 	done
-	if [ ! -f "$pronto" ]; then
-		wait $pid_prod; uscita_prod=$?
-		ko "⛔ the producer never declared the stream active (exit $uscita_prod)"
-		sed 's/^/       /' "$QUI/produttore.log"
+	if [ ! -f "$ready" ]; then
+		wait $pid_prod; producer_exit=$?
+		ko "⛔ the producer never declared the stream active (exit $producer_exit)"
+		sed 's/^/       /' "$HERE/produttore.log"
 		return 2
 	fi
 	ok "stream active: the virtual monitor is there and the scene can be switched on"
 
 	log "2-bis. which screen we are on — looked at, not assumed"
-	if ! trova_il_nostro_schermo "$monitor_prima"; then
+	if ! find_our_screen "$monitor_before"; then
 		kill $pid_prod 2>/dev/null; wait $pid_prod 2>/dev/null
 		return 2
 	fi
 
-	log "3. the scene «$SCENA», switched on AFTER the monitor and ON THE DECLARED SCREEN"
-	pid_scena=$(avvia_scena)
-	if [ "$pid_scena" = IGNOTA ]; then
+	log "3. the scene «$SCENE», switched on AFTER the monitor and ON THE DECLARED SCREEN"
+	scene_pid=$(start_scene)
+	if [ "$scene_pid" = IGNOTA ]; then
 		kill $pid_prod 2>/dev/null; wait $pid_prod 2>/dev/null
-		ko "⛔ '$SCENA' is not a scene of this bench. They are: bandiera, tetto, fermo."
+		ko "⛔ '$SCENE' is not a scene of this bench. They are: bandiera, tetto, fermo."
 		return 2
 	fi
-	if [ "$pid_scena" != 0 ]; then
+	if [ "$scene_pid" != 0 ]; then
 		sleep 1.5
 		# ⛔ AND NOT with `kill -0`, which SUCCEEDS on zombies: a child that died at once
 		#    stays in the process table until someone reaps it, and
 		#    «the pid exists» is not «the process is alive».  The STATE is read in
 		#    `ps`, which says `Z`.  A bench defect already paid for — item 8 of
 		#    `FASI.md` §00-ambiente.
-		stato=$(ps -o stat= -p "$pid_scena" | tr -d ' ')
-		if [ -z "$stato" ] || [ "${stato#Z}" != "$stato" ]; then
+		state=$(ps -o stat= -p "$scene_pid" | tr -d ' ')
+		if [ -z "$state" ] || [ "${state#Z}" != "$state" ]; then
 			kill $pid_prod 2>/dev/null; wait $pid_prod 2>/dev/null
-			ko "⛔ the scene died at once (state '$stato'). The log says:"
-			sed 's/^/       /' "$QUI/scena.log"
+			ko "⛔ the scene died at once (state '$state'). The log says:"
+			sed 's/^/       /' "$HERE/scena.log"
 			inf "⚠ It is not a zero of the compositor: it is the absence of something to capture."
 			return 2
 		fi
-		ok "the scene is alive (pid $pid_scena, state $stato)"
+		ok "the scene is alive (pid $scene_pid, state $state)"
 	else
 		ok "«fermo» scene: nobody paints, and the expectation is exit 3"
 	fi
-	echo accesa > "$accesa"
+	echo enabled > "$enabled"
 
 	log "4. the take"
 	# ⛔ AND THE SCENE IS WATCHED FOR THE WHOLE TAKE, not only for the first second.
 	while kill -0 $pid_prod 2>/dev/null; do
-		if [ "$pid_scena" != 0 ]; then
-			stato=$(ps -o stat= -p "$pid_scena" | tr -d ' ')
-			if [ -z "$stato" ] || [ "${stato#Z}" != "$stato" ]; then morta=si; break; fi
+		if [ "$scene_pid" != 0 ]; then
+			state=$(ps -o stat= -p "$scene_pid" | tr -d ' ')
+			if [ -z "$state" ] || [ "${state#Z}" != "$state" ]; then dead_run=si; break; fi
 		fi
 		sleep 0.5
 	done
-	if [ -n "$morta" ]; then
+	if [ -n "$dead_run" ]; then
 		kill $pid_prod 2>/dev/null; wait $pid_prod 2>/dev/null
-		[ "$pid_scena" != 0 ] && kill "$pid_scena" 2>/dev/null
+		[ "$scene_pid" != 0 ] && kill "$scene_pid" 2>/dev/null
 		ko "⛔ the scene died during the take. The log says:"
-		sed 's/^/       /' "$QUI/scena.log"
+		sed 's/^/       /' "$HERE/scena.log"
 		return 2
 	fi
-	wait $pid_prod; uscita_prod=$?
-	[ "$pid_scena" != 0 ] && kill "$pid_scena" 2>/dev/null
+	wait $pid_prod; producer_exit=$?
+	[ "$scene_pid" != 0 ] && kill "$scene_pid" 2>/dev/null
 	sleep 0.5
 
-	sed 's/^/       /' "$QUI/produttore.log"
-	cat "$QUI/produttore.txt"
-	inf "the producer exited with $uscita_prod"
-	if [ $uscita_prod -eq 2 ]; then
+	sed 's/^/       /' "$HERE/produttore.log"
+	cat "$HERE/produttore.txt"
+	inf "the producer exited with $producer_exit"
+	if [ $producer_exit -eq 2 ]; then
 		ko "⛔ I FAILED: there is no frame to judge"
-		registra "$prefisso" "$uscita_prod" 2 "I FAILED" ""
+		record "$prefix" "$producer_exit" 2 "I FAILED" ""
 		return 2
 	fi
-	if [ $uscita_prod -eq 1 ]; then
+	if [ $producer_exit -eq 1 ]; then
 		ko "⛔ the environment: monitor not mounted or file not written"
-		registra "$prefisso" "$uscita_prod" 2 "ENVIRONMENT" ""
+		record "$prefix" "$producer_exit" 2 "ENVIRONMENT" ""
 		return 2
 	fi
 
 	log "5. the judgement of the pixels"
-	python3 -u "$GIUDICE" --manifesto "$prefisso.json" --scena "$SCENA" \
-	        --json "$prefisso-verdetto.json"
-	uscita_giud=$?
+	python3 -u "$JUDGE" --manifest "$prefix.json" --scene "$SCENE" \
+	        --json "$prefix-verdetto.json"
+	judge_exit=$?
 
-	registra "$prefisso" "$uscita_prod" "$uscita_giud" \
+	record "$prefix" "$producer_exit" "$judge_exit" \
 	         "$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("verdetto",""))' \
-	            "$prefisso-verdetto.json")" "$prefisso-verdetto.json"
+	            "$prefix-verdetto.json")" "$prefix-verdetto.json"
 
 	log "6. the verdict"
-	case $uscita_giud in
+	case $judge_exit in
 	0) ok  "⭐ VERDE: a frame is there, it is the one requested, and it contains the scene" ;;
 	1) ko  "ROSSO: the frame is there and something does not add up (the marks above)" ;;
 	3) inf "⚠ NOTHING TO JUDGE: zero frames, or DMA-BUF road. It is not a red." ;;
 	2) ko  "⛔ I FAILED: the judge is not certified, or the files cannot be read" ;;
 	esac
-	inf "the outcomes are in $ESITI"
-	return $uscita_giud
+	inf "the outcomes are in $OUTCOMES"
+	return $judge_exit
 }
 
 # ---------------------------------------------------------------------------
 #  The outcomes — one line per round, with the time and the SCENE
 # ---------------------------------------------------------------------------
-registra()
+record()
 {
-	local prefisso=$1 up=$2 ug=$3 verdetto=$4 vfile=$5
-	python3 - "$prefisso" "$up" "$ug" "$verdetto" "$vfile" "$SCENA" "$ETICHETTA" \
-	         "$LARGHEZZA" "$ALTEZZA" "$STRADA" "$ESITI" \
-	         "${SCHERMO:-ignoto}" "${PRODOTTO_SCHERMO:-ignoto}" "${STATO_SESSIONE:-non guardato}" <<'FINE'
+	local prefix=$1 up=$2 ug=$3 verdict=$4 vfile=$5
+	python3 - "$prefix" "$up" "$ug" "$verdict" "$vfile" "$SCENE" "$RUN_LABEL" \
+	         "$WIDTH" "$HEIGHT" "$ROUTE" "$OUTCOMES" \
+	         "${SCREEN:-ignoto}" "${SCREEN_PRODUCT:-ignoto}" "${SESSION_STATE:-non guardato}" <<'FINE'
 import json, os, sys, time
 (prefisso, up, ug, verdetto, vfile, scena, etichetta,
  larghezza, altezza, strada, esiti, schermo, prodotto, stato_sessione) = sys.argv[1:15]
 riga = {
-    "banco": "F2.2 — la cattura",
-    "quando_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-    "macchina": "NIC-OS (192.168.0.2), sessione GNOME headless",
-    "scena": scena,
-    "etichetta": etichetta,
-    "chiesto": {"larghezza": int(larghezza), "altezza": int(altezza), "strada": strada},
-    "uscita_produttore": int(up),
-    "uscita_giudice": int(ug),
-    "verdetto": verdetto,
-    "prefisso": prefisso,
+    "bench": "F2.2 — la cattura",
+    "when_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    "machine": "NIC-OS (192.168.0.2), sessione GNOME headless",
+    "scene": scene,
+    "label": label,
+    "requested": {"width": int(width), "height": int(height), "route": route},
+    "output_producer": int(up),
+    "output_judge": int(ug),
+    "verdict": verdict,
+    "prefix": prefix,
     # ⛔ The monitor is declared BY NAME and with the PRODUCT name: on the server there
     #    are two, both 1920×1080@60, and only that tells them apart.
-    "schermo": {"connettore": schermo, "prodotto": prodotto},
+    "screen": {"connector": screen, "product": product},
     # ⛔ And the session state sits in the line: without it, a zero has no defendant.
-    "stato_sessione": stato_sessione,
+    "session_state": session_state,
 }
 man = prefisso + ".json"
 if os.path.exists(man):
     m = json.load(open(man))
-    riga["negoziato"] = m.get("negoziato")
+    riga["negotiated"] = m.get("negotiated")
     riga["buffer"] = m.get("buffer")
-    riga["fotogrammi"] = m.get("fotogrammi")
-    riga["esito_produttore"] = m.get("esito")
+    riga["frames"] = m.get("frames")
+    riga["producer_outcome"] = m.get("outcome")
     # ⛔ The three things F2.3 asks to be DECLARED travel in the outcome line,
     #    not only in the manifest: it is the line the coordinator will read.
-    riga["consegna_a_F2_3"] = m.get("consegna_a_F2_3")
-    for q in ("primo", "regime"):
+    riga["delivery_to_F2_3"] = m.get("delivery_to_F2_3")
+    for q in ("first", "steady"):
         if m.get(q):
-            riga[q] = {k: m[q][k] for k in ("byte", "stride", "danno", "seq",
-                                            "tipo_dichiarato")}
+            riga[q] = {k: m[q][k] for k in ("byte", "stride", "damage", "seq",
+                                            "type_declared")}
 if vfile and os.path.exists(vfile):
     v = json.load(open(vfile))
-    riga["controllo_positivo_passato"] = v.get("controllo_positivo", {}).get("passato")
-    riga["danno_parziale_ma_intero"] = v.get("danno_parziale_ma_intero")
-    reg = v.get("fotogrammi", {}).get("regime", {}).get("misure", {})
-    riga["profondita_misurata"] = reg.get("profondita")
-    riga["profondita_sfumatura"] = reg.get("profondita_sfumatura")
+    riga["positive_control_passed"] = v.get("positive_control", {}).get("passato")
+    riga["partial_damage_but_whole"] = v.get("partial_damage_but_whole")
+    reg = v.get("frames", {}).get("steady", {}).get("measurements", {})
+    riga["measured_depth"] = reg.get("profondita")
+    riga["gradient_depth"] = reg.get("gradient_depth")
     # ⛔ Reds and warnings in two different fields: putting them together would be two outcomes
     #    under the same label (form E2), and in the log one could no longer tell
     #    a bench that saw a defect from one that saw a background.
-    riga["rilievi"] = [r["marca"] for f in v.get("fotogrammi", {}).values()
-                       for r in f.get("rilievi", []) if r.get("rosso", True)]
-    riga["avvisi"] = [r["marca"] for f in v.get("fotogrammi", {}).values()
-                      for r in f.get("rilievi", []) if not r.get("rosso", True)]
-    riga["rilievi"] += [r["marca"]
-                        for r in v.get("confronto_primo_regime", {}).get("rilievi", [])]
+    riga["findings"] = [r["mark"] for f in v.get("frames", {}).values()
+                       for r in f.get("findings", []) if r.get("red", True)]
+    riga["warnings"] = [r["mark"] for f in v.get("frames", {}).values()
+                      for r in f.get("findings", []) if not r.get("red", True)]
+    riga["findings"] += [r["mark"]
+                        for r in v.get("confronto_primo_regime", {}).get("findings", [])]
 with open(esiti, "a") as f:
     f.write(json.dumps(riga, ensure_ascii=False) + "\n")
 print("    --  recorded in", esiti)
@@ -786,18 +786,18 @@ FINE
 }
 
 # ---------------------------------------------------------------------------
-case "${1:-misura}" in
-compila) compila ;;
-scena)   genera_scena ;;
-elenco)  elenco ;;
-misura)  misura ;;
+case "${1:-measure}" in
+compile) compile ;;
+scene)   generate_scene ;;
+list)  list ;;
+measure)  measure ;;
 *)
-	echo "usage: $0 [compila|scena|misura|elenco]" >&2
-	echo "     SCENA=bandiera|tetto|fermo  STRADA=memoria|dmabuf  LARGHEZZA= ALTEZZA=" >&2
+	echo "usage: $0 [compile|scene|measure|list]" >&2
+	echo "     SCENE=flag|tetto|fermo  ROUTE=memoria|dmabuf  WIDTH= HEIGHT=" >&2
 	exit 2
 	;;
 esac
-uscita=$?
+output=$?
 
 # ===========================================================================
 # ⛔ THE POSITIVE CONTROL AT THE END OF EVERY EXECUTION — like the diagnosis of
@@ -806,11 +806,11 @@ uscita=$?
 #    anything is not clean: it is uncertified.
 # ===========================================================================
 printf '\n\033[1m== positive control at the end ==\033[0m\n'
-if [ -r "$GIUDICE" ]; then
-	python3 -u "$GIUDICE" --solo-controllo-positivo
-	cp_esito=$?
-	if [ $cp_esito -ne 0 ]; then
-		ko "⛔ THE JUDGE IS NOT CERTIFIED (exit $cp_esito): the green above does not count."
+if [ -r "$JUDGE" ]; then
+	python3 -u "$JUDGE" --positive-check-only
+	cp_outcome=$?
+	if [ $cp_outcome -ne 0 ]; then
+		ko "⛔ THE JUDGE IS NOT CERTIFIED (exit $cp_outcome): the green above does not count."
 		exit 2
 	fi
 	ok "the judge finds the flag, calls black the black, and does NOT call black the grey"
@@ -823,11 +823,11 @@ fi
 # does the phase 0 meter exist and is it executable?  If one day it disappeared,
 # this bench would stay green and the project would lose its own historical
 # positive control without anybody noticing.
-STORICO=/media/REMOTIX/tmp/banco-compositori/misura-cattura
-if [ -x "$STORICO" ]; then
-	ok "the HISTORICAL positive control is in its place: $STORICO (36 ± 2 fps [M] 9 Aug)"
+HISTORICAL=/media/REMOTIX/tmp/banco-compositori/misura-cattura
+if [ -x "$HISTORICAL" ]; then
+	ok "the HISTORICAL positive control is in its place: $HISTORICAL (36 ± 2 fps [M] 9 Aug)"
 else
-	ko "⚠ $STORICO is missing: the project's historical positive control is not executable"
+	ko "⚠ $HISTORICAL is missing: the project's historical positive control is not executable"
 fi
 
-exit $uscita
+exit $output

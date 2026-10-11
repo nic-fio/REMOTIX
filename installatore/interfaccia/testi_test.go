@@ -11,7 +11,7 @@ import (
 )
 
 // Every key used by the screens (view and TUI) is there, in both languages (DECISIONI §10.15, R42).
-func TestTestiInterfaccia(t *testing.T) {
+func TestInterfaceTexts(t *testing.T) {
 	re := regexp.MustCompile(`\bT\("([a-z0-9_.]+)"`)
 	var file []string
 	for _, g := range []string{"*.go", "tui/*.go"} {
@@ -33,7 +33,7 @@ func TestTestiInterfaccia(t *testing.T) {
 				continue
 			}
 			used_count++
-			x, ok := testi[k]
+			x, ok := texts[k]
 			if !ok {
 				t.Errorf("%s: the key %q is missing", f, k)
 				continue
@@ -50,20 +50,20 @@ func TestTestiInterfaccia(t *testing.T) {
 
 // The check in plain words: no names of drivers or buses outside the technical details; the
 // labels in English (DECISIONI §10.35).
-func TestVistaControlloParoleComuni(t *testing.T) {
-	prof := motore.NewProfile(7447)
+func TestCheckViewCommonWords(t *testing.T) {
+	prof := engine.NewProfile(7447)
 	for k, v := range map[string]string{"distro.id": "fedora", "distro.version": "44", "distro.name": "Fedora Linux 44 (Workstation Edition)",
 		"distro.variant": "workstation", "gpu.nodes": "renderD128", "gpu.renderD128.vendor": "virtio",
 		"gpu.renderD128.driver": "virtio-pci", "selinux": "enforcing"} {
-		prof.Rilevato(k, v, "prova")
+		prof.Detected(k, v, "prova")
 	}
-	rap := &motore.Rapporto{Recognized: motore.T("comp.nella_matrice", "Fedora 44"),
-		Desktop: []motore.DesktopOutcome{{Desktop: "gnome", Installato: "50.5", Lvl: motore.COMPATIBILE}}}
-	dom := &motore.Domande{Porta: 7447, Firewall: "firewalld"}
+	rap := &engine.Report{Recognized: engine.T("comp.nella_matrice", "Fedora 44"),
+		Desktop: []engine.DesktopOutcome{{Desktop: "gnome", Installed: "50.5", Lvl: engine.COMPATIBLE}}}
+	dom := &engine.Questions{Porta: 7447, Firewall: "firewalld"}
 	for _, l := range []string{"en"} {
-		v := NewCheckView(&Controllo{ProfileV: prof, Rapporto: rap, Domande: dom})
-		if v.Esito != CONDS {
-			t.Errorf("%s: outcome %v, expected conditional", l, v.Esito)
+		v := NewCheckView(&CheckReport{ProfileV: prof, Report: rap, Questions: dom})
+		if v.Outcome != CONDS {
+			t.Errorf("%s: outcome %v, expected conditional", l, v.Outcome)
 		}
 		for _, r := range v.Righe {
 			if strings.Contains(r.Testo, "virtio") || strings.Contains(r.Testo, "renderD") || strings.Contains(r.Testo, "RX-") {
@@ -73,18 +73,18 @@ func TestVistaControlloParoleComuni(t *testing.T) {
 		if !strings.Contains(v.Dettagli, "virtio-pci") {
 			t.Errorf("%s: the driver is not in the details: %q", l, v.Dettagli)
 		}
-		if v.Intestazione != "Fedora Linux 44 · Workstation · GNOME 50" {
-			t.Errorf("%s: header %q", l, v.Intestazione)
+		if v.Header != "Fedora Linux 44 · Workstation · GNOME 50" {
+			t.Errorf("%s: header %q", l, v.Header)
 		}
 	}
-	s := NewChoicesView(&Controllo{ProfileV: prof, Rapporto: rap, Domande: dom})
-	if s.Titolo != T("sc.titolo.1") || s.PortaVerde {
-		t.Errorf("choices: %q, green port %v (with the firewall on, opening it is the administrator's job)", s.Titolo, s.PortaVerde)
+	s := NewChoicesView(&CheckReport{ProfileV: prof, Report: rap, Questions: dom})
+	if s.Titolo != T("sc.titolo.1") || s.PortGreen {
+		t.Errorf("choices: %q, green port %v (with the firewall on, opening it is the administrator's job)", s.Titolo, s.PortGreen)
 	}
 	// what is missing stops everything, and is stated without suggesting how to provide it (§10.36)
-	rap.Mancano = []motore.Messaggio{motore.Msg("RX-MANCA-003", "XFCE: labwc")}
-	v := NewCheckView(&Controllo{ProfileV: prof, Rapporto: rap, Domande: dom})
-	if v.Esito != BLOCCATA || v.Bloccata == nil || !strings.Contains(v.Bloccata.Perche, "labwc") {
-		t.Errorf("missing: outcome %v, %+v", v.Esito, v.Bloccata)
+	rap.Missing = []engine.Message{engine.Msg("RX-MANCA-003", "XFCE: labwc")}
+	v := NewCheckView(&CheckReport{ProfileV: prof, Report: rap, Questions: dom})
+	if v.Outcome != BLOCKED || v.Blocked == nil || !strings.Contains(v.Blocked.Why, "labwc") {
+		t.Errorf("missing: outcome %v, %+v", v.Outcome, v.Blocked)
 	}
 }

@@ -16,45 +16,45 @@
 #include <opus.h>
 
 #define FREQ 48000
-#define CANALI 2
+#define CHANNELS 2
 #define MAX_FRAMES 5760           /* 120 ms at 48 kHz: Opus's maximum */
 #define MAX_PACKET 4000            /* a datagram is well below */
 
-static unsigned char stato[64 * 1024] __attribute__((aligned(16)));
-static unsigned char pacchetto[MAX_PACKET];
-static float uscita[MAX_FRAMES * CANALI];
-static int pronto;
+static unsigned char state[64 * 1024] __attribute__((aligned(16)));
+static unsigned char packet[MAX_PACKET];
+static float output[MAX_FRAMES * CHANNELS];
+static int ready;
 
 /* 0 = ready; <0 = libopus error; -1000 = the state does not fit. */
 __attribute__((export_name("rx_apri")))
 int rx_apri(void)
 {
-	int n = opus_decoder_get_size(CANALI);
-	if (n <= 0 || n > (int)sizeof stato)
+	int n = opus_decoder_get_size(CHANNELS);
+	if (n <= 0 || n > (int)sizeof state)
 		return -1000;
-	int e = opus_decoder_init((OpusDecoder *)stato, FREQ, CANALI);
-	pronto = (e == OPUS_OK);
+	int e = opus_decoder_init((OpusDecoder *)state, FREQ, CHANNELS);
+	ready = (e == OPUS_OK);
 	return e;
 }
 
 __attribute__((export_name("rx_pacchetto")))
-unsigned char *rx_pacchetto(void) { return pacchetto; }
+unsigned char *rx_pacchetto(void) { return packet; }
 
 __attribute__((export_name("rx_pacchetto_max")))
 int rx_pacchetto_max(void) { return MAX_PACKET; }
 
 __attribute__((export_name("rx_uscita")))
-float *rx_uscita(void) { return uscita; }
+float *rx_uscita(void) { return output; }
 
-/* Decodes the `n` bytes already copied into `pacchetto`.  Returns the frames
- * (per channel) written into `uscita`, interleaved, or an error < 0. */
+/* Decodes the `n` bytes already copied into `packet`.  Returns the frames
+ * (per channel) written into `output`, interleaved, or an error < 0. */
 __attribute__((export_name("rx_decodifica")))
 int rx_decodifica(int n)
 {
-	if (!pronto)
+	if (!ready)
 		return OPUS_INVALID_STATE;
 	if (n <= 0 || n > MAX_PACKET)
 		return OPUS_BAD_ARG;
-	return opus_decode_float((OpusDecoder *)stato, pacchetto, n, uscita,
+	return opus_decode_float((OpusDecoder *)state, packet, n, output,
 	                         MAX_FRAMES, 0);
 }

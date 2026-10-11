@@ -1,4 +1,4 @@
-package motore
+package engine
 
 import (
 	"os"
@@ -24,18 +24,18 @@ import (
 // TrustSources: where the catalogue comes from.
 type TrustSources struct {
 	Incorporato []byte // the catalogue inside the engine
-	Esplicito   string // --catalogo FILE: given by hand by the administrator
-	Motore      string // the running binary ("" ⇒ /proc/self/exe): it says who delivered it
+	Explicit   string // --catalogo FILE: given by hand by the administrator
+	Engine      string // the running binary ("" ⇒ /proc/self/exe): it says who delivered it
 }
 
-// Fiducia is the outcome of phase 0 TRUST (object fiducia.json of the operation).
-type Fiducia struct {
-	Catalogo CatalogRef `json:"catalog"`
-	Sequenza int        `json:"sequence"`
-	// Fonte: where the catalogue comes from, and who guarantees its authenticity.
-	Fonte    string      `json:"source"`
-	Motore   EngineRef   `json:"engine"`
-	Messages []Messaggio `json:"messages"`
+// Trust is the outcome of phase 0 TRUST (object trust.json of the operation).
+type Trust struct {
+	Catalog CatalogRef `json:"catalog"`
+	Sequence int        `json:"sequence"`
+	// Source: where the catalogue comes from, and who guarantees its authenticity.
+	Source    string      `json:"source"`
+	Engine   EngineRef   `json:"engine"`
+	Messages []Message `json:"messages"`
 }
 
 // PackagedEngine: where the remotix-install package puts the engine.
@@ -43,7 +43,7 @@ const PackagedEngine = "/usr/bin/remotix-install"
 
 // whoDelivered: the sentence saying who guarantees the running engine (and the catalogue it carries).
 func (f *TrustSources) whoDelivered() string {
-	exe := f.Motore
+	exe := f.Engine
 	if exe == "" {
 		exe, _ = os.Readlink("/proc/self/exe")
 	}
@@ -53,42 +53,42 @@ func (f *TrustSources) whoDelivered() string {
 	return T("fid.scaricato", exe)
 }
 
-// Fidati: phase 0 TRUST. Returns the catalogue and the outcome (even on error, because
-// fiducia.json says what was looked at).
-func (f *TrustSources) Fidati(adesso time.Time) (*Catalogo, *Fiducia, error) {
-	fid := &Fiducia{Motore: EngineRef{VersioneMotore, EngineDigest()}, Messages: []Messaggio{}}
-	blocca := func(err error) (*Catalogo, *Fiducia, error) {
+// Trusted: phase 0 TRUST. Returns the catalogue and the outcome (even on error, because
+// trust.json says what was looked at).
+func (f *TrustSources) Trusted(t_now time.Time) (*Catalog, *Trust, error) {
+	fid := &Trust{Engine: EngineRef{EngineVersion, EngineDigest()}, Messages: []Message{}}
+	block := func(err error) (*Catalog, *Trust, error) {
 		if m, ok := err.(*ErrorRX); ok {
 			fid.Messages = append(fid.Messages, m.M)
 		}
 		return nil, fid, err
 	}
-	dati, fonte := f.Incorporato, f.whoDelivered()
-	if f.Esplicito != "" {
-		d, err := os.ReadFile(f.Esplicito)
+	data, source := f.Incorporato, f.whoDelivered()
+	if f.Explicit != "" {
+		d, err := os.ReadFile(f.Explicit)
 		if err != nil {
-			return blocca(Errore("RX-TRUST-004", err.Error()))
+			return block(Error("RX-TRUST-004", err.Error()))
 		}
-		dati, fonte = d, T("fid.a_mano", f.Esplicito)
+		data, source = d, T("fid.a_mano", f.Explicit)
 	}
-	cat, err := ReadCatalog(dati)
+	cat, err := ReadCatalog(data)
 	if err != nil {
-		fid.Fonte = fonte
-		return blocca(err)
+		fid.Source = source
+		return block(err)
 	}
-	cat.Provenienza = fonte
-	fid.Catalogo = CatalogRef{cat.Ver, cat.Digest}
-	fid.Sequenza, fid.Fonte = cat.Sequenza, fonte
+	cat.Provenance = source
+	fid.Catalog = CatalogRef{cat.Ver, cat.Digest}
+	fid.Sequence, fid.Source = cat.Sequence, source
 	if err := CheckMinEngine(cat); err != nil {
-		return blocca(err)
+		return block(err)
 	}
 	return cat, fid, nil
 }
 
 // CheckMinEngine: this engine understands the catalogue.
-func CheckMinEngine(c *Catalogo) error {
-	if CompareVersions(VersioneMotore, c.EngineMinimum) < 0 {
-		return Errore("RX-TRUST-003", "needs "+c.EngineMinimum+", this is "+VersioneMotore)
+func CheckMinEngine(c *Catalog) error {
+	if CompareVersions(EngineVersion, c.EngineMinimum) < 0 {
+		return Error("RX-TRUST-003", "needs "+c.EngineMinimum+", this is "+EngineVersion)
 	}
 	return nil
 }

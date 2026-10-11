@@ -30,7 +30,7 @@
 #    ⚠ which is **the opposite** of how the product starts it (`sessione.c:735`,
 #    where that line was REMOVED on 14 August 2026 with a measurement behind it).
 #    ⇒ Here it serves to ask *«can a Wayland compositor live in this
-#      box and serve a client?»*.  ⛔ **Not** to ask *«is the REMOTIX
+#      box and needs a client?»*.  ⛔ **Not** to ask *«is the REMOTIX
 #      session born with the monitor?»*, which is the question of acceptance test A and needs the
 #      product inside.  Confusing the two would mean answering the convenient one.
 #
@@ -46,17 +46,17 @@
 # ===========================================================================
 set -uo pipefail
 
-UTENTE=provanic
+ACCOUNT=provanic
 USER_UID=4011
-VERDE=0; ROSSO=0; NONSO=0
+GREEN=0; RED=0; UNKNOWN=0
 
-blu()  { printf '\n\033[1;34m=== %s\033[0m\n' "$*"; }
-si()   { printf '  \033[1;32mSI \033[0m %s\n' "$*"; VERDE=$((VERDE+1)); }
-no()   { printf '  \033[1;31mNO \033[0m %s\n' "$*"; ROSSO=$((ROSSO+1)); }
-boh()  { printf '  \033[1;33m?  \033[0m %s\n' "$*"; NONSO=$((NONSO+1)); }
-nota() { printf '       %s\n' "$*"; }
+blue()  { printf '\n\033[1;34m=== %s\033[0m\n' "$*"; }
+yes()   { printf '  \033[1;32mSI \033[0m %s\n' "$*"; GREEN=$((GREEN+1)); }
+no()   { printf '  \033[1;31mNO \033[0m %s\n' "$*"; RED=$((RED+1)); }
+dunno()  { printf '  \033[1;33m?  \033[0m %s\n' "$*"; UNKNOWN=$((UNKNOWN+1)); }
+note() { printf '       %s\n' "$*"; }
 
-as_him() { runuser -u "$UTENTE" -- "$@"; }
+as_him() { runuser -u "$ACCOUNT" -- "$@"; }
 
 # ---------------------------------------------------------------------------
 # ⭐⭐ THE ADAPTER — the answer to «how do we stay blind to the desktop»
@@ -65,12 +65,12 @@ as_him() { runuser -u "$UTENTE" -- "$@"; }
 # carries at the SAME path a file that says how its compositor is started.
 # ⇒ The list of tests stays ONE; the «how» lives below (`fasi/11…` §3.7).
 # ---------------------------------------------------------------------------
-ADATTATORE=/usr/local/lib/rete11/adattatore.sh
-if [ -r "$ADATTATORE" ]; then
-	. "$ADATTATORE"
-	DESK=$(adattatore_nome)
+ADAPTER=/usr/local/lib/rete11/adattatore.sh
+if [ -r "$ADAPTER" ]; then
+	. "$ADAPTER"
+	DESK=$(adapter_name)
 else
-	DESK="(no adapter: $ADATTATORE is not there)"
+	DESK="(no adapter: $ADAPTER is not there)"
 fi
 
 printf '\033[1m STEP 0 — does the box hold the system?\033[0m\n'
@@ -80,14 +80,14 @@ printf ' box: %s · kernel: %s · %s\n' \
        "$(uname -r)" "$(date -u '+%Y-%m-%d %H:%M:%S UTC')"
 
 # ---------------------------------------------------------------------------
-blu "0. Is the first process «systemd»?  (if not, the rest makes no sense)"
+blue "0. Is the first process «systemd»?  (if not, the rest makes no sense)"
 # ---------------------------------------------------------------------------
-PRIMO=$(ps -p 1 -o comm= 2>/dev/null || echo '')
-if [ "$PRIMO" = "systemd" ]; then
-	si "process 1 is systemd"
+FIRST=$(ps -p 1 -o comm= 2>/dev/null || echo '')
+if [ "$FIRST" = "systemd" ]; then
+	yes "process 1 is systemd"
 else
-	no "process 1 is «$PRIMO»: this box cannot answer the question"
-	nota "⇒ I stop: without systemd points 1-6 cannot even be asked"
+	no "process 1 is «$FIRST»: this box cannot answer the question"
+	note "⇒ I stop: without systemd points 1-6 cannot even be asked"
 	exit 1
 fi
 
@@ -98,28 +98,28 @@ fi
 SYS_STATE=$(systemctl is-system-running 2>&1 | head -1)
 case "$SYS_STATE" in
   running)
-	si "the system has started (running)" ;;
+	yes "the system has started (running)" ;;
   degraded)
-	si "the system has started, with failed units (degraded)"
-	nota "⚠ the failed units, which must be looked at one by one:"
+	yes "the system has started, with failed units (degraded)"
+	note "⚠ the failed units, which must be looked at one by one:"
 	systemctl --failed --no-legend --plain 2>/dev/null | head -8 | sed 's/^/       ⚠ /' ;;
   starting)
-	boh "the system is still starting: too early to judge" ;;
+	dunno "the system is still starting: too early to judge" ;;
   *)
-	boh "state not readable: $SYS_STATE" ;;
+	dunno "state not readable: $SYS_STATE" ;;
 esac
 
 # ---------------------------------------------------------------------------
-blu "1. Does the user session EXIST, and is it of a type the product recognises?"
+blue "1. Does the user session EXIST, and is it of a type the product recognises?"
 # ---------------------------------------------------------------------------
 if ! command -v loginctl >/dev/null 2>&1; then
-	boh "«loginctl» is not in the box: I cannot look"
+	dunno "«loginctl» is not in the box: I cannot look"
 elif ! systemctl is-active systemd-logind >/dev/null 2>&1; then
 	no "systemd-logind is NOT active: $(systemctl is-active systemd-logind 2>&1)"
-	nota "⇒ it is precisely the piece the product leans on"
+	note "⇒ it is precisely the piece the product leans on"
 	systemctl status systemd-logind --no-pager -l 2>&1 | tail -6 | sed 's/^/       /'
 else
-	si "systemd-logind is active"
+	yes "systemd-logind is active"
 	# ⛔⛔ AND HERE WE PREPARE BEFORE LOOKING, because it is what the PRODUCT does.
 	#     On the first run this point judged while the user manager was
 	#     still «activating», and gave a red that said «the box does not hold»
@@ -127,58 +127,58 @@ else
 	#     ⇒ `[M]` 25 August 2026, second defect of this bench.
 	#     ⚠ Preparing is not cheating: the product turns on linger and starts the
 	#       user manager by itself.  Cheating would be **skipping** the check.
-	loginctl enable-linger "$UTENTE" 2>/dev/null
+	loginctl enable-linger "$ACCOUNT" 2>/dev/null
 	systemctl start "user@${USER_UID}.service" 2>/dev/null
 	for _ in $(seq 1 30); do
-		loginctl show-user "$UTENTE" >/dev/null 2>&1 && break
+		loginctl show-user "$ACCOUNT" >/dev/null 2>&1 && break
 		sleep 0.5
 	done
 	# ⛔ It is not enough that the service runs: it must be able to OPEN a session.
 	#    We try to open a real one with a non-interactive login.
 	if as_him true 2>/dev/null; then
-		SES=$(loginctl list-sessions --no-legend 2>/dev/null | wc -l)
-		nota "sessions open now: $SES"
-		if loginctl show-user "$UTENTE" >/dev/null 2>&1; then
-			si "logind knows the user «$UTENTE»"
-			loginctl show-user "$UTENTE" -p State -p Linger -p RuntimePath 2>/dev/null \
+		SESS=$(loginctl list-sessions --no-legend 2>/dev/null | wc -l)
+		note "sessions open now: $SESS"
+		if loginctl show-user "$ACCOUNT" >/dev/null 2>&1; then
+			yes "logind knows the user «$ACCOUNT»"
+			loginctl show-user "$ACCOUNT" -p State -p Linger -p RuntimePath 2>/dev/null \
 				| sed 's/^/       /'
 		else
-			no "logind does NOT know the user «$UTENTE»: $(loginctl show-user "$UTENTE" 2>&1 | head -1)"
-			nota "⛔ this is the point where the box stops representing the product"
+			no "logind does NOT know the user «$ACCOUNT»: $(loginctl show-user "$ACCOUNT" 2>&1 | head -1)"
+			note "⛔ this is the point where the box stops representing the product"
 		fi
 	else
-		boh "I cannot even run a command as «$UTENTE»"
+		dunno "I cannot even run a command as «$ACCOUNT»"
 	fi
 fi
 
 # ---------------------------------------------------------------------------
-blu "2. LINGER: do the user's services live without anyone having logged in?"
+blue "2. LINGER: do the user's services live without anyone having logged in?"
 # ---------------------------------------------------------------------------
-if loginctl enable-linger "$UTENTE" 2>/dev/null; then
-	if [ "$(loginctl show-user "$UTENTE" -p Linger --value 2>/dev/null)" = "yes" ]; then
-		si "linger turns on and stays on"
+if loginctl enable-linger "$ACCOUNT" 2>/dev/null; then
+	if [ "$(loginctl show-user "$ACCOUNT" -p Linger --value 2>/dev/null)" = "yes" ]; then
+		yes "linger turns on and stays on"
 	else
 		no "the command passes but linger does NOT show as on"
 	fi
 else
-	no "linger cannot be turned on: $(loginctl enable-linger "$UTENTE" 2>&1 | head -1)"
-	nota "⛔ without linger the graphical session does not survive the client detaching"
+	no "linger cannot be turned on: $(loginctl enable-linger "$ACCOUNT" 2>&1 | head -1)"
+	note "⛔ without linger the graphical session does not survive the client detaching"
 fi
 
 if systemctl is-active "user@${USER_UID}.service" >/dev/null 2>&1; then
-	si "the user manager («user@${USER_UID}») is alive without any interactive login"
+	yes "the user manager («user@${USER_UID}») is alive without any interactive login"
 else
-	STATO=$(systemctl is-active "user@${USER_UID}.service" 2>&1)
+	STATE=$(systemctl is-active "user@${USER_UID}.service" 2>&1)
 	if systemctl start "user@${USER_UID}.service" 2>/dev/null; then
-		si "the user manager starts on request (it was «$STATO»)"
+		yes "the user manager starts on request (it was «$STATE»)"
 	else
-		no "the user manager does not start: it was «$STATO»"
+		no "the user manager does not start: it was «$STATE»"
 		systemctl status "user@${USER_UID}.service" --no-pager -l 2>&1 | tail -6 | sed 's/^/       /'
 	fi
 fi
 
 # ---------------------------------------------------------------------------
-blu "3. Can a service be started inside the user session?"
+blue "3. Can a service be started inside the user session?"
 # ---------------------------------------------------------------------------
 # ⚠ The product starts like this: a user unit, not a detached process.
 #   Here we test the MECHANISM with a fake unit, because the product is not
@@ -186,19 +186,19 @@ blu "3. Can a service be started inside the user session?"
 if as_him env XDG_RUNTIME_DIR="/run/user/$USER_UID" \
         systemd-run --user --quiet --unit=passo0-prova \
         --property=Type=oneshot /bin/true 2>/dev/null; then
-	si "a user unit starts from inside the session"
+	yes "a user unit starts from inside the session"
 	as_him env XDG_RUNTIME_DIR="/run/user/$USER_UID" \
 	        systemctl --user reset-failed passo0-prova 2>/dev/null || true
 else
 	no "a user unit cannot be started"
-	nota "⛔ it is the way the product starts the graphical session"
+	note "⛔ it is the way the product starts the graphical session"
 	as_him env XDG_RUNTIME_DIR="/run/user/$USER_UID" \
 	        systemd-run --user --unit=passo0-prova --property=Type=oneshot /bin/true 2>&1 \
 	        | tail -4 | sed 's/^/       /'
 fi
 
 # ---------------------------------------------------------------------------
-blu "4. When the session ends, do the processes really DIE?"
+blue "4. When the session ends, do the processes really DIE?"
 # ---------------------------------------------------------------------------
 # ⛔ The shape of the feared fault: a container in which processes stay
 #    alive after closing ⇒ test C7 («nothing remains») would be green here
@@ -206,24 +206,24 @@ blu "4. When the session ends, do the processes really DIE?"
 if as_him env XDG_RUNTIME_DIR="/run/user/$USER_UID" \
         systemd-run --user --quiet --unit=passo0-dorme sleep 300 2>/dev/null; then
 	sleep 1
-	PID=$(pgrep -u "$UTENTE" -f 'slee[p] 300' | head -1)
+	PID=$(pgrep -u "$ACCOUNT" -f 'slee[p] 300' | head -1)
 	if [ -n "$PID" ]; then
-		nota "the fake child is alive (pid $PID); now the user's session is closed"
-		loginctl terminate-user "$UTENTE" 2>/dev/null || \
+		note "the fake child is alive (pid $PID); now the user's session is closed"
+		loginctl terminate-user "$ACCOUNT" 2>/dev/null || \
 			as_him env XDG_RUNTIME_DIR="/run/user/$USER_UID" \
 			        systemctl --user stop passo0-dorme 2>/dev/null
 		sleep 2
-		if pgrep -u "$UTENTE" -f 'slee[p] 300' >/dev/null 2>&1; then
+		if pgrep -u "$ACCOUNT" -f 'slee[p] 300' >/dev/null 2>&1; then
 			no "the child SURVIVED the closing of the session"
-			nota "⛔ here the box behaves differently from the real machine"
+			note "⛔ here the box behaves differently from the real machine"
 		else
-			si "the child died with the session, and nothing remained"
+			yes "the child died with the session, and nothing remained"
 		fi
 	else
-		boh "I did not see the fake child being born: I cannot judge"
+		dunno "I did not see the fake child being born: I cannot judge"
 	fi
 else
-	boh "I could not start the fake child: I cannot judge"
+	dunno "I could not start the fake child: I cannot judge"
 fi
 
 # ---------------------------------------------------------------------------
@@ -242,30 +242,30 @@ fi
 # ⇒ Whoever tests the closing has the duty to REOPEN, and to check that the
 #   reopening succeeded before letting the others judge.
 # ---------------------------------------------------------------------------
-loginctl enable-linger "$UTENTE" 2>/dev/null
+loginctl enable-linger "$ACCOUNT" 2>/dev/null
 systemctl start "user@${USER_UID}.service" 2>/dev/null
-RIPRESO=0
+RESUMED=0
 for _ in $(seq 1 30); do
-	if [ -S "/run/user/$USER_UID/bus" ]; then RIPRESO=1; break; fi
+	if [ -S "/run/user/$USER_UID/bus" ]; then RESUMED=1; break; fi
 	sleep 0.5
 done
-if [ "$RIPRESO" = 1 ]; then
-	nota "⭐ session put back up after the closing test"
+if [ "$RESUMED" = 1 ]; then
+	note "⭐ session put back up after the closing test"
 else
-	boh "⛔ I could NOT put the session back up after point 4"
-	nota "⚠ points 5, 6 and 7 below would run on a cleared field: I do NOT judge them"
+	dunno "⛔ I could NOT put the session back up after point 4"
+	note "⚠ points 5, 6 and 7 below would run on a cleared field: I do NOT judge them"
 	printf '\n  \033[1;33mI stop here\033[0m — better «I do not know» than three false reds.\n'
 	exit 3
 fi
 
 # ---------------------------------------------------------------------------
-blu "5. Is the user's private directory there, is it THEIRS, and is it writable?"
+blue "5. Is the user's private directory there, is it THEIRS, and is it writable?"
 # ---------------------------------------------------------------------------
 RTD="/run/user/$USER_UID"
 if [ -d "$RTD" ]; then
 	PROP=$(stat -c '%U %a' "$RTD" 2>/dev/null)
 	if as_him test -w "$RTD"; then
-		si "$RTD exists, it is writable by the user ($PROP)"
+		yes "$RTD exists, it is writable by the user ($PROP)"
 	else
 		no "$RTD exists but the user can NOT write to it ($PROP)"
 	fi
@@ -276,42 +276,42 @@ if [ -d "$RTD" ]; then
 	#   the kernel for the TYPE, which always answers.  `[M]` 25 August 2026.
 	TYPE_RTD=$(stat -fc %T "$RTD" 2>/dev/null)
 	if [ "$TYPE_RTD" = tmpfs ]; then
-		si "and it is a directory of this box (tmpfs), not a piece of the host"
+		yes "and it is a directory of this box (tmpfs), not a piece of the host"
 	else
 		no "it is NOT a tmpfs of this box, it is «$TYPE_RTD»"
-		nota "⛔ two boxes sharing this directory would step on each other's toes"
+		note "⛔ two boxes sharing this directory would step on each other's toes"
 	fi
 else
 	no "$RTD does not exist: without it, no session socket is born"
 fi
 
 # ---------------------------------------------------------------------------
-blu "6. Is the session message bus there, and does the desktop see it?"
+blue "6. Is the session message bus there, and does the desktop see it?"
 # ---------------------------------------------------------------------------
 if [ -S "$RTD/bus" ]; then
-	si "the session bus is there ($RTD/bus)"
+	yes "the session bus is there ($RTD/bus)"
 	if as_him env XDG_RUNTIME_DIR="$RTD" \
 	        DBUS_SESSION_BUS_ADDRESS="unix:path=$RTD/bus" \
 	        busctl --user list --no-legend >/dev/null 2>&1; then
-		si "and it can be talked to"
+		yes "and it can be talked to"
 	else
 		no "the socket is there but does not answer"
 	fi
 else
 	no "the session bus is NOT there ($RTD/bus)"
-	nota "⛔ without it, gnome-session does not start and the product has nobody to talk to"
+	note "⛔ without it, gnome-session does not start and the product has nobody to talk to"
 fi
 
 # ---------------------------------------------------------------------------
-blu "7. Does a Wayland compositor live in here, and serve a client?"
+blue "7. Does a Wayland compositor live in here, and serve a client?"
 # ---------------------------------------------------------------------------
 # ⚠⚠ See the box at the top: here `--virtual-monitor` is used, which the product
 #    does NOT use.  The question is about the ENVIRONMENT, not the product.
 if ! command -v adattatore_avvia >/dev/null 2>&1 && ! type adattatore_avvia >/dev/null 2>&1; then
-	boh "this box has no adapter: I do not know how the compositor is started"
+	dunno "this box has no adapter: I do not know how the compositor is started"
 else
 	rm -f /tmp/passo0-shell.log
-	SHELLPID=$(adattatore_avvia "$RTD" /tmp/passo0-shell.log)
+	SHELLPID=$(adapter_start "$RTD" /tmp/passo0-shell.log)
 	# We wait for the socket, not a fixed time: a clock-based wait is a
 	# deadline that fires whenever it happens to (`LEZIONI.md`, the heartbeat rule).
 	SOCK=''
@@ -324,36 +324,36 @@ else
 		no "the compositor opened no socket in 20 s"
 		tail -12 /tmp/passo0-shell.log 2>/dev/null | sed 's/^/       /'
 	else
-		si "the compositor is alive and has opened $(basename "$SOCK")"
-		DISP=$(basename "$SOCK")
+		yes "the compositor is alive and has opened $(basename "$SOCK")"
+		AVAIL=$(basename "$SOCK")
 		# ⭐ THE YARDSTICK OF THE 25 AUGUST FAULT: how many outputs it ANNOUNCES.
 		if command -v wayland-info >/dev/null 2>&1; then
-			USCITE=$(as_him env XDG_RUNTIME_DIR="$RTD" WAYLAND_DISPLAY="$DISP" \
+			OUTPUTS=$(as_him env XDG_RUNTIME_DIR="$RTD" WAYLAND_DISPLAY="$AVAIL" \
 			        wayland-info 2>/dev/null | grep -c 'interface:.*wl_output' || echo 0)
-			if [ "${USCITE:-0}" -gt 0 ]; then
-				si "and it ANNOUNCES $USCITE output(s) — a client can open a window"
+			if [ "${OUTPUTS:-0}" -gt 0 ]; then
+				yes "and it ANNOUNCES $OUTPUTS output(s) — a client can open a window"
 			else
 				no "⛔ it ANNOUNCES ZERO outputs: it is the shape of the 25 August fault"
-				nota "⚠ here though I asked for the monitor myself: if it is zero, it is the box's"
+				note "⚠ here though I asked for the monitor myself: if it is zero, it is the box's"
 			fi
 		else
-			boh "«wayland-info» is not there: I cannot count the outputs"
+			dunno "«wayland-info» is not there: I cannot count the outputs"
 		fi
 		# A real client that draws.
 		if command -v weston-simple-shm >/dev/null 2>&1; then
-			as_him env XDG_RUNTIME_DIR="$RTD" WAYLAND_DISPLAY="$DISP" \
+			as_him env XDG_RUNTIME_DIR="$RTD" WAYLAND_DISPLAY="$AVAIL" \
 			        weston-simple-shm >/tmp/passo0-cliente.log 2>&1 &
 			CLPID=$!
 			sleep 3
 			if kill -0 "$CLPID" 2>/dev/null; then
-				si "a real Wayland client has attached and is drawing"
+				yes "a real Wayland client has attached and is drawing"
 				kill "$CLPID" 2>/dev/null
 			else
 				no "the Wayland client died immediately"
 				tail -6 /tmp/passo0-cliente.log 2>/dev/null | sed 's/^/       /'
 			fi
 		else
-			boh "I have no minimal Wayland client in the box"
+			dunno "I have no minimal Wayland client in the box"
 		fi
 	fi
 	kill "$SHELLPID" 2>/dev/null
@@ -361,41 +361,41 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-blu "8. Can the graphics card and the hardware encoder be reached?"
+blue "8. Can the graphics card and the hardware encoder be reached?"
 # ---------------------------------------------------------------------------
 if [ ! -e /dev/dri/renderD128 ]; then
 	no "/dev/dri/renderD128 is not in the box: the card did not get in"
 else
-	si "/dev/dri/renderD128 is there"
+	yes "/dev/dri/renderD128 is there"
 	if as_him test -r /dev/dri/renderD128 && as_him test -w /dev/dri/renderD128; then
-		si "and the user can read and write it"
+		yes "and the user can read and write it"
 	else
 		no "it is there but the user can NOT write to it ($(stat -c '%U:%G %a' /dev/dri/renderD128))"
-		nota "⛔ it is the «render» group: without it, encoding happens in software and the numbers change"
+		note "⛔ it is the «render» group: without it, encoding happens in software and the numbers change"
 	fi
 	if command -v vainfo >/dev/null 2>&1; then
 		VA=$(as_him env LIBVA_DRIVER_NAME=iHD vainfo --display drm --device /dev/dri/renderD128 2>&1)
 		if echo "$VA" | grep -q 'VAProfileH264'; then
-			si "the hardware encoder answers ($(echo "$VA" | grep -m1 'Driver version' | sed 's/^ *//'))"
-			nota "H.264 encoding profiles found: $(echo "$VA" | grep -c 'VAProfileH264.*Enc')"
+			yes "the hardware encoder answers ($(echo "$VA" | grep -m1 'Driver version' | sed 's/^ *//'))"
+			note "H.264 encoding profiles found: $(echo "$VA" | grep -c 'VAProfileH264.*Enc')"
 		else
 			no "the hardware encoder does not answer"
 			echo "$VA" | tail -6 | sed 's/^/       /'
 		fi
 	else
-		boh "«vainfo» is not in the box"
+		dunno "«vainfo» is not in the box"
 	fi
 fi
 
 # ---------------------------------------------------------------------------
 printf '\n\033[1m=========================  THE VERDICT  =========================\033[0m\n'
-printf '  holds: %d   does not hold: %d   could not look: %d\n' "$VERDE" "$ROSSO" "$NONSO"
-if [ "$ROSSO" -gt 0 ]; then
+printf '  holds: %d   does not hold: %d   could not look: %d\n' "$GREEN" "$RED" "$UNKNOWN"
+if [ "$RED" -gt 0 ]; then
 	printf '  \033[1;31m⛔ THE BOX DOES NOT HOLD\033[0m — the tests that depend on what\n'
 	printf '     does not hold stay on the real machine, and we write down which.\n'
 	exit 1
-elif [ "$NONSO" -gt 0 ]; then
-	printf '  \033[1;33m⚠ I DO NOT JUDGE\033[0m — %d things I could not look at.\n' "$NONSO"
+elif [ "$UNKNOWN" -gt 0 ]; then
+	printf '  \033[1;33m⚠ I DO NOT JUDGE\033[0m — %d things I could not look at.\n' "$UNKNOWN"
 	printf '     %s\n' "⛔ And this is NOT a green: it is an outcome of its own (§4.5)."
 	exit 3
 else

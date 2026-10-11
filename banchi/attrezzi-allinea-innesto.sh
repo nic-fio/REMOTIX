@@ -3,8 +3,8 @@
 # attrezzi-allinea-innesto.sh — ⛔ RUNS ON THE SERVER (outside the container).
 # Puts back into the graft the three files that B3 copies there, and REBUILDS.
 #
-#   bash /media/REMOTIX/src/attrezzi-allinea-innesto.sh guarda   just tells
-#   bash /media/REMOTIX/src/attrezzi-allinea-innesto.sh allinea  copy + ninja + terrain
+#   bash /media/REMOTIX/src/attrezzi-allinea-innesto.sh inspect   just tells
+#   bash /media/REMOTIX/src/attrezzi-allinea-innesto.sh align  copy + ninja + terrain
 #
 # ---------------------------------------------------------------------------
 # ⛔ WHY IT EXISTS — THE CHECK WAS THERE, THE CURE WAS NOT
@@ -42,11 +42,11 @@
 #    two hours earlier answers «I exist» just like one from now.
 set -uo pipefail
 
-E=${ENTRA:-/media/REMOTIX/enter.sh}
-FUORI=${FUORI:-/media/REMOTIX/src}
-DENTRO=${DENTRO:-/srv/src}
-EXAMPLES_OUT=$FUORI/b2/ngtcp2/examples
-ESEMPI_DENTRO=$DENTRO/b2/ngtcp2/examples
+E=${ENTER:-/media/REMOTIX/enter.sh}
+OUT=${OUT:-/media/REMOTIX/src}
+INSIDE=${INSIDE:-/srv/src}
+EXAMPLES_OUT=$OUT/b2/ngtcp2/examples
+EXAMPLES_INSIDE=$INSIDE/b2/ngtcp2/examples
 FILE="rcp.c rcp.h autenticazione.c"
 
 ok()  { printf '    \033[1;32mOK\033[0m  %s\n' "$*"; }
@@ -54,19 +54,19 @@ ko()  { printf '    \033[1;31mNO\033[0m  %s\n' "$*"; }
 inf() { printf '    --  %s\n' "$*"; }
 log() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 
-AZIONE=${1:-guarda}
-case "$AZIONE" in guarda|allinea) ;; *) echo "usage: $0 [guarda|allinea]"; exit 2 ;; esac
+ACTION=${1:-inspect}
+case "$ACTION" in inspect|align) ;; *) echo "usage: $0 [inspect|align]"; exit 2 ;; esac
 
 # ---------------------------------------------------------------------------
 log "1. The three files that B3 copies into the graft"
-DIVERSI=""
-MANCANTI=0
+DIFFERENT=""
+MISSING=0
 for f in $FILE; do
-	s=$FUORI/rcp/$f
+	s=$OUT/rcp/$f
 	d=$EXAMPLES_OUT/$f
 	if [ ! -f "$s" ] || [ ! -f "$d" ]; then
 		ko "⛔ cannot compare «$f»: missing $( [ -f "$s" ] || echo "rcp/$f" ) $( [ -f "$d" ] || echo "examples/$f" )"
-		MANCANTI=$((MANCANTI+1))
+		MISSING=$((MISSING+1))
 		continue
 	fi
 	a=$(md5sum "$s" | cut -d' ' -f1)
@@ -78,10 +78,10 @@ for f in $FILE; do
 		# ⭐ And we say HOW MANY lines differ, because «different» and «different by
 		#    a whole cure» send you to look in two different places.
 		inf "   lines that change: $(diff "$s" "$d" | grep -c '^[<>]')"
-		DIVERSI="$DIVERSI $f"
+		DIFFERENT="$DIFFERENT $f"
 	fi
 done
-[ "$MANCANTI" -gt 0 ] && { ko "⛔ with missing files I align nothing"; exit 2; }
+[ "$MISSING" -gt 0 ] && { ko "⛔ with missing files I align nothing"; exit 2; }
 
 # ⚠ And we declare what the terrain does NOT compare: today it looks only at rcp.c.
 # ⛔ And no backticks inside double quotes: the first time I
@@ -96,66 +96,66 @@ inf "⚠ 01-b0-terreno.sh compares only rcp.c; here all three are checked"
 # the copy the three files carry the DATE OF NOW, so a binary built
 # before is old even if the content is the same.  ⛔ If the round stops
 # between the copy and `ninja` — for me a `timeout` stopped it — what remains is a scene in
-# which the fingerprints match, `guarda` would say «aligned», and the terrain
+# which the fingerprints match, `inspect` would say «aligned», and the terrain
 # would still reject it with «the binary is older than a source it
 # declares».  ⇒ We look at the clock too, not only at the fingerprints.
-BINARIO=$FUORI/b2/ngtcp2/build/examples/bsslserver
-VECCHIO=""
-if [ -f "$BINARIO" ]; then
+BINARY=$OUT/b2/ngtcp2/build/examples/bsslserver
+OLD=""
+if [ -f "$BINARY" ]; then
 	for f in $FILE; do
-		[ "$EXAMPLES_OUT/$f" -nt "$BINARIO" ] && VECCHIO="$VECCHIO $f"
+		[ "$EXAMPLES_OUT/$f" -nt "$BINARY" ] && OLD="$OLD $f"
 	done
-	if [ -n "$VECCHIO" ]; then
-		ko "⛔ the binary is OLDER than:$VECCHIO"
-		inf "   bsslserver: $(stat -c %y "$BINARIO" | cut -c1-19)"
+	if [ -n "$OLD" ]; then
+		ko "⛔ the binary is OLDER than:$OLD"
+		inf "   bsslserver: $(stat -c %y "$BINARY" | cut -c1-19)"
 		inf "   ⇒ it must be rebuilt even if the fingerprints match"
 	else
-		ok "and the binary is newer than all three ($(stat -c %y "$BINARIO" | cut -c1-19))"
+		ok "and the binary is newer than all three ($(stat -c %y "$BINARY" | cut -c1-19))"
 	fi
 else
-	ko "⛔ $BINARIO is not there: the graft has never been built"
-	VECCHIO=" (binary missing)"
+	ko "⛔ $BINARY is not there: the graft has never been built"
+	OLD=" (binary missing)"
 fi
 
-if [ -z "$DIVERSI" ] && [ -z "$VECCHIO" ]; then
+if [ -z "$DIFFERENT" ] && [ -z "$OLD" ]; then
 	ok "⭐ the graft is already aligned with the sources, and the binary comes after"
-	[ "$AZIONE" = guarda ] && exit 0
+	[ "$ACTION" = inspect ] && exit 0
 	inf "nothing to copy and nothing to rebuild: straight to the terrain"
 fi
 
 # ---------------------------------------------------------------------------
 log "2. ⛔ Is there a grafted fault inside the graft?"
-TROVATI=0
+FOUND=0
 for m in "REMOTIX B12 GUASTO" "REMOTIX B11"; do
 	n=$(grep -ac "$m" "$EXAMPLES_OUT/rcp.c" 2>/dev/null)
 	if [ "${n:-0}" -gt 0 ]; then
 		ko "⛔ «$m» appears $n time(s) in examples/rcp.c"
-		TROVATI=$((TROVATI+1))
+		FOUND=$((FOUND+1))
 	else
 		ok "no trace of «$m»"
 	fi
 done
-if [ "$TROVATI" -gt 0 ]; then
+if [ "$FOUND" -gt 0 ]; then
 	ko "⛔ I TOUCH NOTHING: there is a grafted fault, and copying the"
 	ko "   source over it would remove it FROM UNDER whoever is measuring it — that round"
 	ko "   would write «the bench did not turn red» of a bench whose"
 	ko "   accused was taken out of its hands."
-	ko "   ⇒ Wait for the round to finish, or remove it with «--togli»."
+	ko "   ⇒ Wait for the round to finish, or remove it with «--remove»."
 	exit 3
 fi
 
-if [ "$AZIONE" = guarda ]; then
-	inf "«guarda» stops here: to copy and rebuild, «allinea»"
+if [ "$ACTION" = inspect ]; then
+	inf "«inspect» stops here: to copy and rebuild, «align»"
 	exit 1
 fi
 
 # ---------------------------------------------------------------------------
-if [ -n "$DIVERSI" ]; then
+if [ -n "$DIFFERENT" ]; then
 	log "3. Copying the source into the graft"
-	for f in $DIVERSI; do
-		bash "$E" --root "cp $DENTRO/rcp/$f $ESEMPI_DENTRO/$f" || {
+	for f in $DIFFERENT; do
+		bash "$E" --root "cp $INSIDE/rcp/$f $EXAMPLES_INSIDE/$f" || {
 			ko "⛔ copying «$f» failed"; exit 3; }
-		a=$(md5sum "$FUORI/rcp/$f" | cut -d' ' -f1)
+		a=$(md5sum "$OUT/rcp/$f" | cut -d' ' -f1)
 		b=$(md5sum "$EXAMPLES_OUT/$f" | cut -d' ' -f1)
 		[ "$a" = "$b" ] && ok "$f copied, and the fingerprints now match ($a)" \
 		                || { ko "⛔ $f copied but the fingerprints do NOT match"; exit 3; }
@@ -163,7 +163,7 @@ if [ -n "$DIVERSI" ]; then
 
 fi
 
-if [ -n "$DIVERSI" ] || [ -n "$VECCHIO" ]; then
+if [ -n "$DIFFERENT" ] || [ -n "$OLD" ]; then
 	log "4. Rebuilding — and looking at the OUTCOME, not at the binary"
 	# ⛔⭐ HERE THERE WAS `>/dev/null 2>&1` **AROUND** `enter.sh`, AND IT IS THE
 	#     TRAP THAT `FASI.md` §00-ambiente B3.3 DECLARES PAID FOR FOUR
@@ -185,19 +185,19 @@ if [ -n "$DIVERSI" ] || [ -n "$VECCHIO" ]; then
 	# ⭐ The cure is the house one (`01-b12-lancia.sh`, `01-p1-prodotto.sh`): we
 	#    redirect **inside** the quotes, to a file, and read the file
 	#    afterwards.  That way the outcome stays that of `ninja` and the error is not lost.
-	rm -f "$FUORI/attrezzi-allinea-ninja.log"
-	if bash "$E" --root "ninja -C $DENTRO/b2/ngtcp2/build bsslserver > $DENTRO/attrezzi-allinea-ninja.log 2>&1"; then
+	rm -f "$OUT/attrezzi-allinea-ninja.log"
+	if bash "$E" --root "ninja -C $INSIDE/b2/ngtcp2/build bsslserver > $INSIDE/attrezzi-allinea-ninja.log 2>&1"; then
 		ok "⭐ bsslserver rebuilt"
 		# ⚠ And we say how many rules it ran: «ninja had nothing to
 		#   do» and «ninja recompiled» both exit 0, and after a
 		#   copy of sources the two are not the same thing.
-		inf "   $(tail -1 "$FUORI/attrezzi-allinea-ninja.log" 2>/dev/null)"
+		inf "   $(tail -1 "$OUT/attrezzi-allinea-ninja.log" 2>/dev/null)"
 	else
 		ko "⛔ the build FAILED: the binary that is there is the"
 		ko "   old one, and now the source has changed under it — i.e."
 		ko "   the WORST scene.  The error:"
-		[ -f "$FUORI/attrezzi-allinea-ninja.log" ] \
-			&& tail -20 "$FUORI/attrezzi-allinea-ninja.log" | sed 's/^/        /' \
+		[ -f "$OUT/attrezzi-allinea-ninja.log" ] \
+			&& tail -20 "$OUT/attrezzi-allinea-ninja.log" | sed 's/^/        /' \
 			|| ko "   ⛔ and there is not even the ninja log: I read nothing"
 		exit 3
 	fi
@@ -205,7 +205,7 @@ fi
 
 # ---------------------------------------------------------------------------
 log "5. ⛔ And the terrain says it, not me"
-bash "$FUORI/01-b0-terreno.sh" innesto
+bash "$OUT/01-b0-terreno.sh" innesto
 T=$?
 if [ "$T" -eq 0 ]; then
 	printf '\n    \033[1;32m⭐ graft aligned, and the terrain holds\033[0m\n'

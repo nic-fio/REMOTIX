@@ -42,34 +42,34 @@ import signal
 import sys
 import time
 
-QUI = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, QUI)
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
 import suite as S                                                     # noqa: E402
 
 C21 = S.C21
 
 
-# ⚠ `dentro()` on the server without ssh and the real `~/.cache`: `suite.py` does them now.
+# ⚠ `inside()` on the server without ssh and the real `~/.cache`: `suite.py` does them now.
 
 # ⛔ CHROME IN THE COMMON LABWC: the window covered by those of the other agents
 #   receives no frames ⇒ `Page.captureScreenshot` stays hung (40 s, 17 min) and
 #   `Input.dispatchMouseEvent` answers «Internal error» (`[M]` 25 Sep 2026,
 #   kde/xfce/lxqt).  A real user has the browser IN FRONT: the throttling of
 #   covered windows is turned off (declared: BENCH flags).
-_OPT = os.environ.get("REMOTIX_CHROME_OPZIONI", "")
+_OPT = os.environ.get("REMOTIX_CHROME_OPTIONS", "")
 for _b in ("--disable-backgrounding-occluded-windows", "--disable-renderer-backgrounding",
            "--disable-background-timer-throttling"):
     if _b not in _OPT:
         _OPT += " " + _b
-os.environ["REMOTIX_CHROME_OPZIONI"] = _OPT.strip()
-BLU, GREEN_C, GIALLO, MAGENTA = (0, 0, 255), (0, 255, 0), (255, 255, 0), (255, 0, 255)
+os.environ["REMOTIX_CHROME_OPTIONS"] = _OPT.strip()
+BLUE, GREEN_C, YELLOW, MAGENTA = (0, 0, 255), (0, 255, 0), (255, 255, 0), (255, 0, 255)
 TOL_COLOR = 70
 WORDS = ("alfa", "beta", "gamma", "delta")
 
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE PAGE AND THE SERVER
 # ═══════════════════════════════════════════════════════════════════════════
-PAGINA = r"""<!doctype html><meta charset=utf-8><title>REMOTIX G2</title>
+PAGE = r"""<!doctype html><meta charset=utf-8><title>REMOTIX G2</title>
 <style>
  html,body{margin:0;height:100%;background:#202020;overflow:hidden;font-family:monospace}
  #pad{position:fixed;left:3vw;top:4vh;width:27vw;height:16vh;background:#0000ff}
@@ -97,7 +97,7 @@ function azzera(){ st={seq:(st?st.seq:0), pad:null, padn:0, clic:0, clicbtn:null
   menu:null, giu:[], box:[0,0], boxn:0, dbl:0, esc:0, tasti:[]}; }
 azzera();
 function manda(){ st.seq++; st.sel=String(getSelection()); st.a=$('a').value; st.b=$('b').value;
-  st.fuoco=document.activeElement?document.activeElement.id:''; post('S '+JSON.stringify(st)); }
+  st.focus=document.activeElement?document.activeElement.id:''; post('S '+JSON.stringify(st)); }
 function presto(){ if(!pend) pend=setTimeout(()=>{pend=null;manda();},80); }
 function rett(){ const r={W:innerWidth,H:innerHeight,dpr:devicePixelRatio};
   for(const i of ['pad','bot','box','par','a','b','w1','w2','w3','w4']){
@@ -137,7 +137,7 @@ addEventListener('resize',rett);
 rett(); $('a').focus(); manda(); post('caricata');
 </script>"""
 
-SERVITORE = r'''
+SERVER = r'''
 import http.server, sys
 PAG = open(sys.argv[2], "rb").read()
 LOG, CMD = sys.argv[3], sys.argv[4]
@@ -163,19 +163,19 @@ http.server.ThreadingHTTPServer(("127.0.0.1", int(sys.argv[1])), H).serve_foreve
 '''
 
 
-class Scena:
+class Scene:
     """The scene in the session of `s` (a `suite.Sessione`)."""
 
-    def __init__(self, s, porta):
-        self.s, self.sc, self.chi, self.porta = s, s.sc, s.chi, porta
+    def __init__(self, s, port):
+        self.s, self.sc, self.chi, self.port = s, s.sc, s.chi, port
         self.h = "/home/%s" % self.chi
         self.n_cmd = 0
-        self.rett = None
+        self.rect = None
 
-    def accendi(self):
+    def turn_on(self):
         """Server + `firefox-esr --kiosk` in the session; waits for «caricata»."""
         b = lambda x: base64.b64encode(x.encode()).decode()     # noqa: E731
-        c, t = self.sc.dentro(
+        c, t = self.sc.inside(
             "set -e; h={h}; mkdir -p $h/.g2-profilo; "
             "echo {srv} | base64 -d > $h/g2-servitore.py; echo {pag} | base64 -d > $h/g2.html; "
             "echo {pref} | base64 -d > $h/.g2-profilo/user.js; : > $h/g2.log; : > $h/g2.cmd; "
@@ -195,51 +195,51 @@ class Scena:
             "for i in $(seq 1 80); do grep -q caricata $h/g2.log && {{ echo accesa; exit 0; }}; "
             "sleep 0.5; done; echo 'the scene did not say «caricata»'; echo \"socket $d\"; tail -n 8 $h/.g2-firefox.log; "
             "tail -n 3 $h/.g2-servitore.log; tail -n 3 $h/g2.log; pgrep -u {c} -a firefox | head -3; exit 1".format(
-                h=self.h, c=self.chi, p=self.porta, srv=b(SERVITORE), pag=b(PAGINA),
-                pref=b(C21.PREFERENZE)), 90)
+                h=self.h, c=self.chi, p=self.port, srv=b(SERVER), page_map=b(PAGE),
+                pref=b(C21.PREFERENCES)), 90)
         return c == 0, t
 
     # -- the application's state ---------------------------------------------
-    def leggi(self):
+    def load(self):
         """(R, S, last FATTO) from the scene's notebook."""
-        _c, t = self.sc.dentro(
+        _c, t = self.sc.inside(
             "f=%s/g2.log; grep -a '^R ' $f | tail -n 1; echo @@; grep -a '^S ' $f | tail -n 1; "
             "echo @@; grep -a '^FATTO ' $f | tail -n 1" % self.h, 30)
-        parti = (t or "").split("@@")
-        while len(parti) < 3:
-            parti.append("")
-        r = _json(parti[0].strip()[2:]) if parti[0].strip().startswith("R ") else None
-        s = _json(parti[1].strip()[2:]) if parti[1].strip().startswith("S ") else None
-        f = parti[2].strip()[6:].strip() if parti[2].strip().startswith("FATTO") else ""
+        parts = (t or "").split("@@")
+        while len(parts) < 3:
+            parts.append("")
+        r = _json(parts[0].strip()[2:]) if parts[0].strip().startswith("R ") else None
+        s = _json(parts[1].strip()[2:]) if parts[1].strip().startswith("S ") else None
+        f = parts[2].strip()[6:].strip() if parts[2].strip().startswith("DONE") else ""
         if r:
-            self.rett = r
+            self.rect = r
         return r, s, f
 
-    def comanda(self, cmd, attesa=20.0):
-        """Writes the command and waits for `FATTO`.  Returns the state afterwards, or None."""
+    def in_charge(self, cmd, wait=20.0):
+        """Writes the command and waits for `DONE`.  Returns the state afterwards, or None."""
         self.n_cmd += 1
         ident = "%d-%d" % (int(time.time()), self.n_cmd)
-        self.sc.dentro("printf '%%s' '%s %s' > %s/g2.cmd" % (ident, cmd, self.h), 30)
-        fine = time.time() + attesa
+        self.sc.inside("printf '%%s' '%s %s' > %s/g2.cmd" % (ident, cmd, self.h), 30)
+        fine = time.time() + wait
         while time.time() < fine:
             time.sleep(0.5)
-            r, s, f = self.leggi()
+            r, s, f = self.load()
             if f == ident:
                 return s
         return None
 
-    def aspetta(self, giudice, attesa=5.0, ogni=0.7):
-        """Reads the state again until `giudice(stato)` says True or the wait ends.
+    def wait_until(self, referee, wait=5.0, every=0.7):
+        """Reads the state again until `referee(stato)` says True or the wait ends.
         Returns the last state read."""
-        fine = time.time() + attesa
+        fine = time.time() + wait
         s = None
         while True:
-            _r, s, _f = self.leggi()
-            if s is not None and giudice(s):
+            _r, s, _f = self.load()
+            if s is not None and referee(s):
                 return s
             if time.time() >= fine:
                 return s
-            time.sleep(ogni)
+            time.sleep(every)
 
 
 def _json(t):
@@ -252,17 +252,17 @@ def _json(t):
 # ═══════════════════════════════════════════════════════════════════════════
 #  WHERE THE SCENE IS IN THE DESKTOP — from the PHOTO
 # ═══════════════════════════════════════════════════════════════════════════
-def find_color(im, colore, passo=4, toll=TOL_COLOR):
-    """The box {x0,y0,x1,y1, n, pieno} of the pixels close to `colore` in
-    a PIL image, sampling every `passo` pixels; None if there are none.
-    `pieno` = fraction of the box covered (a real block is ~1)."""
+def find_color(im, color, step=4, toll=TOL_COLOR):
+    """The box {x0,y0,x1,y1, n, full} of the pixels close to `color` in
+    a PIL image, sampling every `step` pixels; None if there are none.
+    `full` = fraction of the box covered (a real block is ~1)."""
     w, h = im.size
-    pic = im.resize((max(1, w // passo), max(1, h // passo)))
+    pic = im.resize((max(1, w // step), max(1, h // step)))
     pw, ph = pic.size
-    dati = pic.getdata()
+    data = pic.getdata()
     xs, ys = [], []
-    for i, p in enumerate(dati):
-        if max(abs(p[0] - colore[0]), abs(p[1] - colore[1]), abs(p[2] - colore[2])) <= toll:
+    for i, p in enumerate(data):
+        if max(abs(p[0] - color[0]), abs(p[1] - color[1]), abs(p[2] - color[2])) <= toll:
             xs.append(i % pw)
             ys.append(i // pw)
     if len(xs) < 4:
@@ -274,13 +274,13 @@ def find_color(im, colore, passo=4, toll=TOL_COLOR):
             "n": len(xs), "pieno": len(xs) / float(area)}
 
 
-def adatta(coppie):
+def fit(pairs):
     """Least squares of y = a*x + b on the pairs [(x, y)]."""
-    n = float(len(coppie))
-    sx = sum(c[0] for c in coppie)
-    sy = sum(c[1] for c in coppie)
-    sxx = sum(c[0] * c[0] for c in coppie)
-    sxy = sum(c[0] * c[1] for c in coppie)
+    n = float(len(pairs))
+    sx = sum(c[0] for c in pairs)
+    sy = sum(c[1] for c in pairs)
+    sxx = sum(c[0] * c[0] for c in pairs)
+    sxy = sum(c[0] * c[1] for c in pairs)
     den = n * sxx - sx * sx
     if abs(den) < 1e-9:
         return None
@@ -288,7 +288,7 @@ def adatta(coppie):
     return a, (sy - a * sx) / n
 
 
-class Mappa:
+class Map:
     """CSS pixels of the remote page ⇒ pixels of the remote desktop ⇒ glass."""
 
     def __init__(self, ax, bx, ay, by, geo):
@@ -297,35 +297,35 @@ class Mappa:
     def desktop(self, cx, cy):
         return self.ax * cx + self.bx, self.ay * cy + self.by
 
-    def vetro(self, cx, cy):
+    def glass(self, cx, cy):
         X, Y = self.desktop(cx, cy)
         return C21.desktop_to_glass(self.geo, X, Y)
 
-    def descrivi(self):
+    def describe(self):
         return "desktop = %.3f·x%+.0f, %.3f·y%+.0f" % (self.ax, self.bx, self.ay, self.by)
 
 
-def calibra(im, geo, rett):
+def calibrate(im, geo, rect):
     """⭐ The Mappa, from the edges of BLUE (pad) and GREEN (bot) in the photo and from their
     rectangles declared by the page.  Returns (Mappa | None, why)."""
     pw, ph = im.size
-    trovati = {}
-    for nome, col in (("pad", BLU), ("bot", GREEN_C)):
-        t = find_color(im, col)
+    matches = {}
+    for name, clr in (("pad", BLUE), ("bot", GREEN_C)):
+        t = find_color(im, clr)
         if not t:
-            return None, "the %s block (%s) is not seen in the photo" % (nome, col)
+            return None, "the %s block (%s) is not seen in the photo" % (name, clr)
         if t["pieno"] < 0.8:
             return None, ("the colour of %s is scattered (pieno %.2f): the scene does not cover the "
-                          "desktop or there is something else of the same colour" % (nome, t["pieno"]))
+                          "desktop or there is something else of the same colour" % (name, t["pieno"]))
         X0, Y0 = C21.from_photo_to_desktop(geo, pw, ph, t["x0"], t["y0"])
         X1, Y1 = C21.from_photo_to_desktop(geo, pw, ph, t["x1"], t["y1"])
-        trovati[nome] = (X0, Y0, X1, Y1)
+        matches[name] = (X0, Y0, X1, Y1)
     cx, cy = [], []
-    for nome in ("pad", "bot"):
-        r, d = rett[nome], trovati[nome]
+    for name in ("pad", "bot"):
+        r, d = rect[name], matches[name]
         cx += [(r[0], d[0]), (r[2], d[2])]
         cy += [(r[1], d[1]), (r[3], d[3])]
-    fx, fy = adatta(cx), adatta(cy)
+    fx, fy = fit(cx), fit(cy)
     if not fx or not fy:
         return None, "the page⇒desktop correspondence cannot be computed"
     ax, bx = fx
@@ -333,18 +333,18 @@ def calibra(im, geo, rett):
     if not (0.3 < ax < 4 and 0.3 < ay < 4 and abs(ax - ay) / ax < 0.1):
         return None, "absurd correspondence: ax=%.3f ay=%.3f" % (ax, ay)
     # the deviation of the points from the line: if it is large, one of the blocks is cut
-    scarto = max([abs(ax * x + bx - X) for x, X in cx] + [abs(ay * y + by - Y) for y, Y in cy])
-    if scarto > 30:
-        return None, "the edges do not lie on a line (deviation %.0f desktop px)" % scarto
-    return Mappa(ax, bx, ay, by, geo), "deviation %.0f px" % scarto
+    gap = max([abs(ax * x + bx - X) for x, X in cx] + [abs(ay * y + by - Y) for y, Y in cy])
+    if gap > 30:
+        return None, "the edges do not lie on a line (deviation %.0f desktop px)" % gap
+    return Map(ax, bx, ay, by, geo), "deviation %.0f px" % gap
 
 
-class Tetto(Exception):
+class Cap(Exception):
     """The browser did not answer within the cap."""
 
 
 @contextlib.contextmanager
-def tetto(secondi, cosa):
+def cap(seconds, what):
     """⛔ A cap on a browser call.  `[M]` 25 Sep 2026, lxqt+Chrome
     with the server shared by ten agents: `Page.captureScreenshot` NEVER
     came back (17 minutes), and before that `Input.dispatchMouseEvent` gave «Internal
@@ -352,43 +352,43 @@ def tetto(secondi, cosa):
     others no longer receives frames.  The protocol reading does not time out because
     the EVENTS keep arriving ⇒ an alarm is needed."""
     def _on_alarm(_n, _f):
-        raise Tetto("%s: no answer from the browser in %d s" % (cosa, secondi))
-    vecchio = signal.signal(signal.SIGALRM, _on_alarm)
-    signal.alarm(int(secondi))
+        raise Cap("%s: no answer from the browser in %d s" % (what, seconds))
+    old = signal.signal(signal.SIGALRM, _on_alarm)
+    signal.alarm(int(seconds))
     try:
         yield
     finally:
         signal.alarm(0)
-        signal.signal(signal.SIGALRM, vecchio)
+        signal.signal(signal.SIGALRM, old)
 
 
-def davanti(g):
+def front(g):
     """Asks to bring the window to the front (Chrome only: `Page.bringToFront`)."""
     if hasattr(g, "cdp"):
         try:
-            with tetto(10, "Page.bringToFront"):
-                g.cdp.chiama("Page.bringToFront")
+            with cap(10, "Page.bringToFront"):
+                g.cdp.call("Page.bringToFront")
         except Exception:                        # noqa: BLE001
             pass
 
 
-def foto(s, nome):
+def photo(s, name):
     """`s.foto()` with front and cap: (png | None, path | reason)."""
-    perche = ""
+    why = ""
     for _i in range(3):
-        davanti(s.g)
+        front(s.g)
         try:
-            with tetto(25, "the photo"):
-                return s.foto(nome)
-        except Tetto as e:
-            perche = str(e)
-    return None, perche + " (three times)"
+            with cap(25, "the photo"):
+                return s.photo(name)
+        except Cap as e:
+            why = str(e)
+    return None, why + " (three times)"
 
 
-def foto_pil(s, nome):
+def photo_pil(s, name):
     """(PIL image | None, path | reason) — the full photo of the canvas."""
     from PIL import Image
-    png, dove = foto(s, nome)
+    png, dove = photo(s, name)
     if not png:
         return None, dove
     return Image.open(io.BytesIO(png)).convert("RGB"), dove
@@ -400,47 +400,47 @@ def foto_pil(s, nome):
 _CDP_BUTTONS = {0: ("left", 1), 1: ("middle", 4), 2: ("right", 2)}
 
 
-def mouse(g, passi):
-    """⭐ A chain of REAL browser events.  `passi`:
-         ("muovi", x, y)        glass coordinates (the browser's viewport)
+def mouse(g, steps):
+    """⭐ A chain of REAL browser events.  `steps`:
+         ("move_to", x, y)        glass coordinates (the browser's viewport)
          ("giu", bottone, n)    n = the click count (2 = second press)
          ("su", bottone, n)
          ("pausa", ms)"""
     if hasattr(g, "cdp"):
-        davanti(g)
-        with tetto(60, "the mouse events"):
-            _mouse_cdp(g, passi)
+        front(g)
+        with cap(60, "the mouse events"):
+            _mouse_cdp(g, steps)
         return
-    _mouse_wd(g, passi)
+    _mouse_wd(g, steps)
 
 
-def _mouse_cdp(g, passi):
+def _mouse_cdp(g, steps):
     if True:
-        c = g.cdp.chiama
+        c = g.cdp.call
         x = y = 0
         mask = 0
-        for p in passi:
-            if p[0] == "muovi":
+        for p in steps:
+            if p[0] == "move_to":
                 x, y = p[1], p[2]
                 k = dict(type="mouseMoved", x=x, y=y)
                 if mask:
-                    giu = [b for b, (_n, m) in _CDP_BUTTONS.items() if mask & m]
-                    k.update(button=_CDP_BUTTONS[giu[0]][0], buttons=mask)
+                    down = [b for b, (_n, m) in _CDP_BUTTONS.items() if mask & m]
+                    k.update(button=_CDP_BUTTONS[down[0]][0], buttons=mask)
                 c("Input.dispatchMouseEvent", **k)
             elif p[0] in ("giu", "su"):
-                nome, m = _CDP_BUTTONS[p[1]]
+                name, m = _CDP_BUTTONS[p[1]]
                 mask = (mask | m) if p[0] == "giu" else (mask & ~m)
                 c("Input.dispatchMouseEvent",
                   type="mousePressed" if p[0] == "giu" else "mouseReleased",
-                  x=x, y=y, button=nome, buttons=mask, clickCount=p[2])
+                  x=x, y=y, button=name, buttons=mask, clickCount=p[2])
             elif p[0] == "pausa":
                 time.sleep(p[1] / 1000.0)
 
 
-def _mouse_wd(g, passi):
+def _mouse_wd(g, steps):
     az = []
-    for p in passi:
-        if p[0] == "muovi":
+    for p in steps:
+        if p[0] == "move_to":
             az.append({"type": "pointerMove", "x": int(round(p[1])), "y": int(round(p[2])),
                        "origin": "viewport", "duration": 0})
         elif p[0] == "giu":
@@ -459,7 +459,7 @@ def _mouse_wd(g, passi):
 #  name: (key, code, vk, WebDriver code | None, CDP bit)
 #  ⚠ AltGraph and CapsLock have no WebDriver code: with Marionette they CANNOT
 #    be pressed (declared limit); with CDP they can.
-SPECIALI = {
+SPECIAL = {
     "Shift":      ("Shift", "ShiftLeft", 16, "", 8),
     "Control":    ("Control", "ControlLeft", 17, "", 2),
     "AltGraph":   ("AltGraph", "AltRight", 225, None, 0),
@@ -488,177 +488,177 @@ def code_of(c):
     return "", 0
 
 
-def tasti(g, passi, pause_ms=PAUSE_MS):
-    """⭐ REAL keys.  `passi` = [(«giu»|«su», name, code, vk)]; for the letters
-    `nome` is the character (the `key` the browser reports) and code/vk those
+def keys(g, steps, pause_ms=PAUSE_MS):
+    """⭐ REAL keys.  `steps` = [(«giu»|«su», name, code, vk)]; for the letters
+    `name` is the character (the `key` the browser reports) and code/vk those
     of the position (None ⇒ those of any keyboard).
     Returns the SKIPPED steps (those Marionette cannot press)."""
-    saltati = []
+    skipped = []
     if hasattr(g, "cdp"):
-        davanti(g)
-        with tetto(90, "the keys"):
-            _cdp_keys(g, passi, pause_ms)
-        return saltati
-    return _wd_keys(g, passi, pause_ms)
+        front(g)
+        with cap(90, "the keys"):
+            _cdp_keys(g, steps, pause_ms)
+        return skipped
+    return _wd_keys(g, steps, pause_ms)
 
 
-def _cdp_keys(g, passi, pause_ms):
+def _cdp_keys(g, steps, pause_ms):
     if True:
         mod = 0
-        for tipo, nome, code, vk in passi:
-            if nome in SPECIALI:
-                key, cd, v, _w, bit = SPECIALI[nome]
-                if tipo == "giu":
+        for kind, name, code, vk in steps:
+            if name in SPECIAL:
+                key, cd, v, _w, bit = SPECIAL[name]
+                if kind == "giu":
                     mod |= bit
-                g.cdp.chiama("Input.dispatchKeyEvent",
-                             type="rawKeyDown" if tipo == "giu" else "keyUp",
+                g.cdp.call("Input.dispatchKeyEvent",
+                             type="rawKeyDown" if kind == "giu" else "keyUp",
                              key=key, code=cd, windowsVirtualKeyCode=v, modifiers=mod)
-                if tipo == "su":
+                if kind == "su":
                     mod &= ~bit
             else:
-                cd, v = code_of(nome)
+                cd, v = code_of(name)
                 cd, v = code or cd, vk or v
-                p = dict(type="keyDown" if tipo == "giu" else "keyUp", key=nome, code=cd,
+                p = dict(type="keyDown" if kind == "giu" else "keyUp", key=name, code=cd,
                          windowsVirtualKeyCode=v, modifiers=mod)
-                if tipo == "giu" and not (mod & 2):
-                    p["text"] = p["unmodifiedText"] = nome
-                g.cdp.chiama("Input.dispatchKeyEvent", **p)
+                if kind == "giu" and not (mod & 2):
+                    p["text"] = p["unmodifiedText"] = name
+                g.cdp.call("Input.dispatchKeyEvent", **p)
             time.sleep(pause_ms / 1000.0)
 
 
-def _wd_keys(g, passi, pause_ms):
-    saltati = []
+def _wd_keys(g, steps, pause_ms):
+    skipped = []
     az = []
-    for tipo, nome, _code, _vk in passi:
-        v = SPECIALI[nome][3] if nome in SPECIALI else nome
+    for kind, name, _code, _vk in steps:
+        v = SPECIAL[name][3] if name in SPECIAL else name
         if v is None:
-            saltati.append((tipo, nome))
+            skipped.append((kind, name))
             continue
-        az.append({"type": "keyDown" if tipo == "giu" else "keyUp", "value": v})
+        az.append({"type": "keyDown" if kind == "giu" else "keyUp", "value": v})
         az.append({"type": "pause", "duration": pause_ms})
-    g.m.chiama("WebDriver:PerformActions",
+    g.m.call("WebDriver:PerformActions",
                {"actions": [{"type": "key", "id": "tastiera", "actions": az}]})
-    g.m.chiama("WebDriver:ReleaseActions")
-    return saltati
+    g.m.call("WebDriver:ReleaseActions")
+    return skipped
 
 
-def premi(nome, code=None, vk=None):
-    return [("giu", nome, code, vk), ("su", nome, code, vk)]
+def press(name, code=None, vk=None):
+    return [("giu", name, code, vk), ("su", name, code, vk)]
 
 
-def scrivi(testo):
+def write(text):
     p = []
-    for c in testo:
-        p += premi(c)
+    for c in text:
+        p += press(c)
     return p
 
 
-def col(mod, passi):
-    return [("giu", mod, None, None)] + passi + [("su", mod, None, None)]
+def clr(mod, steps):
+    return [("giu", mod, None, None)] + steps + [("su", mod, None, None)]
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  THE BROWSER'S LANGUAGE — from it the page declares the layout (ATTACCA)
+#  THE BROWSER'S LANGUAGE — from it the page declares the layout (ATTACH)
 # ═══════════════════════════════════════════════════════════════════════════
-def set_language(g, lingua):
+def set_language(g, language):
     """Makes the browser say `navigator.language == lingua` (for the documents that
     open AFTERWARDS).  Returns a sentence saying how."""
     if hasattr(g, "cdp"):
         ua = g.js("return navigator.userAgent")
-        g.cdp.chiama("Emulation.setUserAgentOverride", userAgent=ua, acceptLanguage=lingua)
+        g.cdp.call("Emulation.setUserAgentOverride", userAgent=ua, acceptLanguage=language)
         try:
-            g.cdp.chiama("Emulation.setLocaleOverride", locale=lingua)
+            g.cdp.call("Emulation.setLocaleOverride", local=language)
         except Exception:                        # noqa: BLE001
             try:
-                g.cdp.chiama("Emulation.setLocaleOverride")
-                g.cdp.chiama("Emulation.setLocaleOverride", locale=lingua)
+                g.cdp.call("Emulation.setLocaleOverride")
+                g.cdp.call("Emulation.setLocaleOverride", local=language)
             except Exception:                    # noqa: BLE001
                 pass
-        return "CDP Emulation (acceptLanguage=%s)" % lingua
-    g.m.chiama("Marionette:SetContext", {"value": "chrome"})
+        return "CDP Emulation (acceptLanguage=%s)" % language
+    g.m.call("Marionette:SetContext", {"value": "chrome"})
     try:
-        g.m.chiama("WebDriver:ExecuteScript", {
+        g.m.call("WebDriver:ExecuteScript", {
             "script": "Services.prefs.setStringPref('intl.accept_languages', arguments[0]);"
                       "return Services.prefs.getStringPref('intl.accept_languages');",
-            "args": [lingua + "," + lingua.split("-")[0]]})
+            "args": [language + "," + language.split("-")[0]]})
     finally:
-        g.m.chiama("Marionette:SetContext", {"value": "content"})
-    return "Firefox intl.accept_languages=%s" % lingua
+        g.m.call("Marionette:SetContext", {"value": "content"})
+    return "Firefox intl.accept_languages=%s" % language
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE COMMON START: login, wake-up, scene, calibration
 # ═══════════════════════════════════════════════════════════════════════════
-def prepara(s, porta_scena, lingua=None):
+def prepare(s, scene_port, language=None):
     """Logs in, wakes up, starts the scene, finds it in the photo.
     Returns (Scena, Mappa, geo, evidence_photo).  Raises `S.Bloccata`."""
-    if lingua:
-        print("   language: %s" % set_language(s.g, lingua), flush=True)
-    ok, m = s.entra()
+    if language:
+        print("   language: %s" % set_language(s.g, language), flush=True)
+    ok, m = s.enter()
     if not ok:
-        raise S.Bloccata(m)
-    if lingua:
+        raise S.Blocked(m)
+    if language:
         nl = s.g.js("return navigator.language")
         print("   navigator.language = %s" % nl, flush=True)
-        if (nl or "").lower() != lingua.lower():
-            raise S.Bloccata("the browser does not say the language %s (it says %s): the page would not "
-                             "declare the intended layout" % (lingua, nl))
-    geo = s.geometria()
+        if (nl or "").lower() != language.lower():
+            raise S.Blocked("the browser does not say the language %s (it says %s): the page would not "
+                             "declare the intended layout" % (language, nl))
+    geo = s.geometry()
     if not geo:
-        raise S.Bloccata("`REMOTIX_PUNTATORE.geometria` is not there")
+        raise S.Blocked("`REMOTIX_PUNTATORE.geometry` is not there")
     print("   canvas %sx%s · buffer %sx%s" % (geo["tl"], geo["ta"], geo["bw"], geo["bh"]),
           flush=True)
-    print("   wake-up: %s" % C21.sveglia(s.g, geo), flush=True)
-    sc = Scena(s, porta_scena)
-    ok, t = sc.accendi()
+    print("   wake-up: %s" % C21.wake(s.g, geo), flush=True)
+    sc = Scene(s, scene_port)
+    ok, t = sc.turn_on()
     print("   scene: %s" % ((t or "?").splitlines() or ["?"])[-1], flush=True)
     if not ok:
-        raise S.Bloccata("the scene does not start: %s" % " | ".join((t or "").splitlines())[-700:])
-    mp, perche, dove = None, "", ""
+        raise S.Blocked("the scene does not start: %s" % " | ".join((t or "").splitlines())[-700:])
+    mp, why, dove = None, "", ""
     fine = time.time() + 25
     while time.time() < fine:
         time.sleep(2.0)
-        sc.comanda("reset")
-        r, _s, _f = sc.leggi()
+        sc.in_charge("reset")
+        r, _s, _f = sc.load()
         if not r:
-            perche = "the page did not declare its rectangles"
+            why = "the page did not declare its rectangles"
             continue
-        im, dove = foto_pil(s, "scena")
+        im, dove = photo_pil(s, "scene")
         if im is None:
-            perche = dove
+            why = dove
             continue
-        mp, perche = calibra(im, geo, r)
+        mp, why = calibrate(im, geo, r)
         if mp:
             break
     if not mp:
-        raise S.Bloccata("the scene is not found in the photo: %s" % perche)
-    print("   scene found: %s (%s)" % (mp.descrivi(), perche), flush=True)
+        raise S.Blocked("the scene is not found in the photo: %s" % why)
+    print("   scene found: %s (%s)" % (mp.describe(), why), flush=True)
     return sc, mp, geo, dove
 
 
-def centro(r):
+def center(r):
     return (r[0] + r[2]) / 2.0, (r[1] + r[3]) / 2.0
 
 
-def batti(s, sc, mp, passi, nome, fatto, attesa=8.0, skippable=()):
+def beat(s, sc, mp, steps, name, completed, wait=8.0, skippable=()):
     """Clean scene, click in field «a», the REAL KEYS, the state read until
-    `fatto(stato)` or the wait ends.  Returns (state, photo, skipped, why):
+    `completed(stato)` or the wait ends.  Returns (state, photo, skipped, why):
     a non-empty `why` = it could not be looked at."""
-    if sc.comanda("reset") is None:
+    if sc.in_charge("reset") is None:
         return None, "", [], "the scene did not answer the reset"
-    R = sc.rett
+    R = sc.rect
     x, y = R["a"][0] + 0.5 * (R["a"][2] - R["a"][0]), R["a"][1] + 0.3 * (R["a"][3] - R["a"][1])
-    vx, vy = mp.vetro(x, y)
-    mouse(s.g, [("muovi", vx, vy), ("pausa", 150), ("giu", 0, 1), ("pausa", 60),
+    vx, vy = mp.glass(x, y)
+    mouse(s.g, [("move_to", vx, vy), ("pausa", 150), ("giu", 0, 1), ("pausa", 60),
                 ("su", 0, 1), ("pausa", 400)])
-    st = sc.comanda("fuoco-a")
-    if st is None or st.get("a") != "" or st.get("fuoco") != "a":
+    st = sc.in_charge("fuoco-a")
+    if st is None or st.get("a") != "" or st.get("focus") != "a":
         return None, "", [], "the scene is not ready: %s" % (st,)
-    saltati = tasti(s.g, passi)
-    fuori = [x for x in saltati if x[1] not in skippable]
-    if fuori:
-        return None, "", saltati, "keys this browser cannot press: %s" % fuori
-    st = sc.aspetta(fatto, attesa)
+    skipped = keys(s.g, steps)
+    report = [x for x in skipped if x[1] not in skippable]
+    if report:
+        return None, "", skipped, "keys this browser cannot press: %s" % report
+    st = sc.wait_until(completed, wait)
     time.sleep(0.5)
-    _png, dove = foto(s, nome)
-    return st, dove, saltati, ""
+    _png, dove = photo(s, name)
+    return st, dove, skipped, ""

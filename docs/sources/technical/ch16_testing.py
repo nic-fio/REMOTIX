@@ -6,7 +6,7 @@ LAYERS = fig(
     zone(20, 40, 860, 92, "On the laptop, at every build and before every push")
     + box(40, 70, 190, 48, "Twin check", "src/ vs banchi/rcp/, in make", "navy")
     + box(250, 70, 190, 48, "Installer tests", "go vet + go test", "navy")
-    + box(460, 70, 190, 48, "Manual check", "build.py --controlla", "navy")
+    + box(460, 70, 190, 48, "Manual check", "build.py --check", "navy")
     + box(670, 70, 190, 48, "C10 C12 C13 C15 C16", "the net that needs git", "navy")
     + arrow(450, 134, 450, 160)
     + zone(20, 162, 860, 92, "On the test machine, in containers with the real graphics card")
@@ -26,13 +26,13 @@ S1 = p("REMOTIX has no unit-test suite in the usual sense: the C server talks to
        + c("banchi/") + " — about 1,800 files kept by git — and three of them grown into permanent "
        "machinery: the safety net, the functional suite and the stress campaign.", lead=True) + LAYERS + \
     table(["Layer", "Where", "Runs", "What it proves"], [
-        ["Twin check", c("src/Makefile") + " target " + c("impronte"), "every " + c("make"),
+        ["Twin check", c("src/Makefile") + " target " + c("fingerprints"), "every " + c("make"),
          c("rcp.c") + ", " + c("rcp.h") + " and " + c("autenticazione.c") + " are byte-identical in "
          + c("src/") + " and " + c("banchi/rcp/") + "; otherwise the build stops"],
-        ["Installer tests", c("installatore/costruisci.sh prove"), "on demand, in the official Go container",
+        ["Installer tests", c("installatore/costruisci.sh test"), "on demand, in the official Go container",
          "the engine's state machine, register, resume, every " + c("RX-") + " code used exists, every "
          "administrator-facing text is English"],
-        ["Manual check", c("python3 docs/sources/build.py --controlla"), "before committing the manual",
+        ["Manual check", c("python3 docs/sources/build.py --check"), "before committing the manual",
          "cited files, functions, " + c("REMOTIX_*") + " variables and " + c("RX-") + " codes exist; no Italian left"],
         ["Safety net", c("banchi/11-scatole/"), c("pre-push") + " hook, or by name",
          "a session is born from scratch and is seen; input, sound, clipboard, detach, cleanup, logging"],
@@ -47,7 +47,7 @@ S1 = p("REMOTIX has no unit-test suite in the usual sense: the C server talks to
     p("Two convictions shape all of it, and both were paid for. First, <b>the bench is the first suspect</b> ("
       + c("REVIEWER.md") + " §1): the project never stalled on a hard problem, it stalled every time on a "
       "measurement that did not measure what everyone believed (" + c("LEZIONI.md") + " §10). Second, <b>a "
-      "check that has never been seen red is not a check</b>: every predicate carries, in " + c("--certifica")
+      "check that has never been seen red is not a check</b>: every predicate carries, in " + c("--certify")
       + ", the case that makes it fail, and that case is run, not imagined (" + c("CODER.md") + " §3.3-bis).") + \
     note("nothing in this chapter is a performance number. Capacity and speed results are tied to the "
          "hardware and date they were measured on and belong to " + rif("Performance and capacity") + ".", "Scope.")
@@ -113,7 +113,7 @@ S3 = p("Every bench and every mesh speaks the same small language. The rules are
       "functional suite maps the same three judgements onto PASS, FAIL and BLOCKED, and a BLOCKED always "
       "carries its reason.") + \
     table(["Rule", "Why (the defect it prevents)"], [
-        ["<b>Certify before believing.</b> " + c("--certifica") + " runs the pure judges on synthetic inputs, "
+        ["<b>Certify before believing.</b> " + c("--certify") + " runs the pure judges on synthetic inputs, "
          "including the cases that must give red and the ones that must <i>stay</i> green",
          "Phase 9: nine bench defects in a row, and none made a bench fail — all made it silent or green "
          "(" + c("LEZIONI.md") + " §1.29)"],
@@ -211,17 +211,17 @@ S4 = p("The safety net runs in four containers, one per desktop, on the test mac
       "Mutter wants " + c("--headless") + " and KWin " + c("--virtual") + ". The boundary is written in phase 11 "
       "§3.7: an adapter says how to start and look at a desktop, never how the product behaves; an adapter "
       "that starts containing product behaviour is a per-compositor exception in disguise.") + \
-    code("""bash 11-accendi.sh costruisci gnome     # rebuild the image from the recipe
-bash 11-accendi.sh accendi gnome        # throw the box away and start a fresh one
-bash 11-accendi.sh prodotto gnome       # copy binary and page in
+    code("""bash 11-accendi.sh build gnome     # rebuild the image from the recipe
+bash 11-accendi.sh start gnome        # throw the box away and start a fresh one
+bash 11-accendi.sh product gnome       # copy binary and page in
 bash 11-accendi.sh server gnome         # start the product server on the box's port
-bash 11-accendi.sh c4 kde --senza-tasto # one mesh, with its injected fault
-bash 11-accendi.sh impronta gnome       # the fingerprint (R3)
-bash 11-accendi.sh bilancio gnome       # server, tenants, /tmp: what is there now""",
+bash 11-accendi.sh c4 kde --no-key # one mesh, with its injected fault
+bash 11-accendi.sh fingerprint gnome       # the fingerprint (R3)
+bash 11-accendi.sh balance gnome       # server, tenants, /tmp: what is there now""",
          "bash", "The verbs of 11-accendi.sh (on the test machine, as root)")
 
 # ── 16.5 ─────────────────────────────────────────────────────────────────────
-S5 = p("The checks of the net are called meshes (" + c("maglie") + " in the code) and are numbered C1–C24. "
+S5 = p("The checks of the net are called meshes (" + c("meshes") + " in the code) and are numbered C1–C24. "
        "The columns that matter are the third and the fourth: <i>where it starts from</i> and <i>what it looks "
        "at</i>, because those were the two that explained the three failures that created the net.", lead=True) + \
     table(["Mesh", "What must be true", "Looks at", "How it knows it can say red"], [
@@ -230,42 +230,42 @@ S5 = p("The checks of the net are called meshes (" + c("maglie") + " in the code
          "the server's own report of the monitor, then the image: the mark present and the image not degenerate",
          "a session without a monitor ⇒ red; colours shifted on purpose ⇒ must stay green"],
         [c("C2"), "a window opens", "the pixel, never the process count",
-         c("--applicazione-che-muore") + " (the application dies); " + c("--finestra-che-non-si-apre") + " (alive, never paints)"],
+         c("--dying-app") + " (the application dies); " + c("--window-that-does-not-open") + " (alive, never paints)"],
         [c("C3"), "frames arrive and the scene changes", "consecutive frames differ; not collapsed",
-         c("--fotogramma-ripetuto") + " (repeated frame), " + c("--codificatore-fermo") + " (stopped encoder); "
-         + c("--scena-ferma") + " (still scene) is the negative control and must not be red"],
+         c("--repeated-frame") + " (repeated frame), " + c("--stopped-encoder") + " (stopped encoder); "
+         + c("--still-scene") + " (still scene) is the negative control and must not be red"],
         [c("C4"), "a key reaches the screen", "image · key · image, and only the expected zone changes",
-         c("--senza-tasto") + " (no key), " + c("--scena-sorda") + " (a scene that ignores keys)"],
+         c("--no-key") + " (no key), " + c("--deaf-scene") + " (a scene that ignores keys)"],
         [c("C5"), "sound is there and is not silence", "RMS of the samples reaching the client: threshold "
-         "328/32767 (−40 dBFS), at least 200 blocks, at least 50 % above threshold", c("--senza-sorgente") + " (no sound source)"],
+         "328/32767 (−40 dBFS), at least 200 blocks, at least 50 % above threshold", c("--no-source") + " (no sound source)"],
         [c("C6"), "detach and find it again", "the child's pid and the windows in the image after reattaching",
-         c("--uccidi-la-sessione") + " (kill the session)"],
+         c("--kill-session") + " (kill the session)"],
         [c("C7"), "everything closes and nothing remains", "fingerprint before and after: processes, sockets, "
-         "units, the card", c("--lascia-un-processo") + " (leave a process behind); " + c("--solo-distacco") + " (detach only) must stay green (I4)"],
+         "units, the card", c("--leave-a-process") + " (leave a process behind); " + c("--detach-only") + " (detach only) must stay green (I4)"],
         [c("C8"), "the second user opens the browser", "Firefox paints a full-screen " + c("#FF00FF")
-         + " page: ±48 per channel, at least 25 % of the image", c("--senza-cura") + " (without the cure): only the <i>second</i> "
+         + " page: ±48 per channel, at least 25 % of the image", c("--no-fix") + " (without the cure): only the <i>second</i> "
          "user must fail, or the test is void"],
         [c("C8b"), "and that page is seen from the client", "the difference between the first frame "
-         "(no page) and the last (page)", c("--senza-cura")],
+         "(no page) and the last (page)", c("--no-fix")],
         [c("C9"), "every log line says whose it is", "two tenants alive together; every mandatory line names one",
-         c("--togli-nome") + " (strip the name) on a copy of the log slice"],
+         c("--remove-name") + " (strip the name) on a copy of the log slice"],
         [c("C10"), "the twin copies of RCP match", "the files listed in " + c("src/Makefile") + ", byte by byte",
          "a copy with one byte changed"],
         [c("C17"), "the clipboard works both ways, also for whoever reattaches",
-         "A device→session, B session→device, R a reattaching client gets it", c("--senza-copia") + " (no copy)"],
+         "A device→session, B session→device, R a reattaching client gets it", c("--no-copy") + " (no copy)"],
         [c("C18"), "the product adds a new user to the card's groups", "groups before, the log during, groups after",
-         c("--senza-usermod") + " (no " + c("usermod") + ")"],
+         c("--no-usermod") + " (no " + c("usermod") + ")"],
         [c("C20"), "after «Log Out» and a new login the screen does not flicker",
-         "luminance of the second login's frames; the encoder discards the old ones", c("--scena-che-lampeggia") + " (a flashing scene)"],
+         "luminance of the second login's frames; the encoder discards the old ones", c("--flashing-scene") + " (a flashing scene)"],
         [c("C21"), "the real pointer shape reaches the browser", "the cursor image the page gives the browser",
-         c("--forma-sbagliata") + " (expectations shifted by one)"],
+         c("--wrong-shape") + " (expectations shifted by one)"],
         [c("C22"), "a window edge can be dragged", "the right edge in the canvas photograph, before and after",
-         c("--senza-pulsante") + " (no button press)"],
+         c("--no-button") + " (no button press)"],
         [c("C23"), "Shift+arrows select, and Shift does not stick", "the remote field read from the photograph",
-         c("--senza-maiusc") + " (no Shift)"],
+         c("--no-shift") + " (no Shift)"],
         [c("C24"), "«Log Out» ends the session every time, not 19 times out of 20",
          "the product's log and the client, for T seconds after the gesture, 10 rounds at varying times",
-         c("--rientra-subito") + " (log in again at once)"],
+         c("--reenter-at-once") + " (log in again at once)"],
         "The net itself",
         [c("C11"), "all boxes are aligned", "what is installed <i>inside</i> the running boxes: base, Mesa, libva, "
          "PipeWire, Firefox, libc… and the product's md5; only the desktop must differ",
@@ -275,14 +275,14 @@ S5 = p("The checks of the net are called meshes (" + c("maglie") + " in the code
         [c("C13"), "the certification is recent", "in the last rounds a fault was injected and seen",
          "red if the red came from another mesh, naming the mesh that missed the fault"],
         [c("C14"), "the boxes do not disturb each other", "the same probe alone and in parallel, same verdict",
-         c("--smentisci") + " (disprove) forces different fingerprints ⇒ 4 red out of 4"],
+         c("--refute") + " (disprove) forces different fingerprints ⇒ 4 red out of 4"],
         [c("C15"), "the remote half really runs", "the merged register: a mesh that needed a box reached a verdict",
          "with the test machine off for good, C12 and C13 stay green; C15 goes red"],
         [c("C16"), "the documents do not lie about the repository", "no line coordinates into our code; every "
          "cited path exists (or carries an external mark); no dead links; one single resume header",
          "exceptions only in " + c("11-c16-eccezioni.txt") + ", each with where the file really is"],
         [c("C19"), "nothing of the net survives in a box", "users, homes and processes in the net's name space",
-         c("--lascia-un-inquilino") + " (leave a tenant), " + c("--lascia-una-casa") + " (leave a home)"],
+         c("--leave-a-tenant") + " (leave a tenant), " + c("--leave-a-home") + " (leave a home)"],
     ], "«TAB» — The meshes of the safety net") + \
     p("Images are judged with three poor checks and no knowledge of what a desktop looks like: a mark with a "
       "declared tolerance (compositors apply colour profiles, and H.264 4:2:0 subsamples exactly the chroma); "
@@ -323,18 +323,18 @@ S6 = p("The net runs by itself: " + c("11-gancio.sh") + " is installed as a git 
        "the days things break.", lead=True) + HOOK + \
     table(["Family", "Triggered by", "What runs", "Cost"], [
         [c("desktop-nuovo") + " (new desktop)", "a new " + c("Contenitore.<name>") + " added (wins over everything)",
-         "everything on the new box, then C1×2 on the old ones, then " + c("rete-intera"), "hours"],
-        [c("funziona") + " (it works)", c("src/") + " or " + c("web/") + " changed", "C10 and its fault, C11, C1(gnome)×2 — under a "
+         "everything on the new box, then C1×2 on the old ones, then " + c("whole-net"), "hours"],
+        [c("works") + " (it works)", c("src/") + " or " + c("web/") + " changed", "C10 and its fault, C11, C1(gnome)×2 — under a "
          "180 s ceiling", "173 s measured on 26 Aug 2026"],
-        [c("rete-intera") + " (whole net)", c("11-accendi.sh") + ", a recipe, " + c("11-c8-*") + " or " + c("11-c14-*"),
-         c("rete") + " plus C14, which takes all four boxes", "about 800 s"],
-        [c("rete") + " (net)", "anything else under " + c("banchi/"), "C10 and its fault, C11, C12, C13, C15, C16",
+        [c("whole-net") + " (whole net)", c("11-accendi.sh") + ", a recipe, " + c("11-c8-*") + " or " + c("11-c14-*"),
+         c("network") + " plus C14, which takes all four boxes", "about 800 s"],
+        [c("network") + " (net)", "anything else under " + c("banchi/"), "C10 and its fault, C11, C12, C13, C15, C16",
          "about 11 s on the test machine, 1 s on the laptop"],
-        [c("carte") + " (papers)", c("*.md") + " files and nothing under " + c("src/") + ", " + c("web/") + " or " + c("banchi/"), "C16", "0.79 s"],
+        [c("papers") + " (papers)", c("*.md") + " files and nothing under " + c("src/") + ", " + c("web/") + " or " + c("banchi/"), "C16", "0.79 s"],
         [c("niente") + " (nothing)", "anything else (the installer, the manual sources…)", "nothing, and the hook says so", "—"],
-        [c("tutto") + " (everything)", "only by name (" + c("--famiglia tutto") + "), before closing a phase",
+        [c("all") + " (everything)", "only by name (" + c("--family all") + "), before closing a phase",
          "boxes rebuilt clean; per box: step 0, C1×10, C8, C5, C7, C9, C18 each with its fault, the product meshes, "
-         "C19; then " + c("rete-intera"), "hours (7,896 s on 27 Aug 2026)"],
+         "C19; then " + c("whole-net"), "hours (7,896 s on 27 Aug 2026)"],
         [c("suite"), "only by name", "the functional suite with its technical layer", "about 2 hours"],
     ], "«TAB» — The families of the hook") + \
     p("The fast family has a hard ceiling of <b>180 s</b>: above five minutes a hook starts being switched off, "
@@ -346,8 +346,8 @@ S6 = p("The net runs by itself: " + c("11-gancio.sh") + " is installed as a git 
     p("Each round appends one line to " + c("11-gancio-registro.jsonl") + ": where it ran, the trigger, the "
       "family, every mesh with exit code and seconds, whether a fault was injected and seen. The file is in git "
       "with " + c("merge=union") + " in " + c(".gitattributes") + ", because the two halves write it on two "
-      "machines and lines are only ever added. A dry run (" + c("--secco") + ") writes its line with "
-      + c("\"secco\": true") + " and C12/C13 ignore it — otherwise one dry run would let the net claim to be alive "
+      "machines and lines are only ever added. A dry run (" + c("--dry-run") + ") writes its line with "
+      + c("\"dry\": true") + " and C12/C13 ignore it — otherwise one dry run would let the net claim to be alive "
       "for a week.") + \
     table(["Desktop", "Capabilities opened"], [
         [c("gnome") + ", " + c("kde") + ", " + c("xfce") + ", " + c("lxqt"), c("immagine input appunti forma")],
@@ -366,12 +366,12 @@ S6 = p("The net runs by itself: " + c("11-gancio.sh") + " is installed as a git 
         ["false alarm", "may be declared only once understood, and is written down; a test with repeated false alarms is fixed or removed"],
         ["a test that catches nothing", "is removed, and the reason written; it is not left to die of disuse"],
     ], "«TAB» — The red policy (phase 11 §5.2)") + \
-    code("""bash banchi/11-scatole/11-gancio.sh decidi                     # what it would do, and why
-bash banchi/11-scatole/11-gancio.sh gira --famiglia rete
-bash banchi/11-scatole/11-gancio.sh gira --famiglia tutto --scatola gnome
-bash banchi/11-scatole/11-gancio.sh remoto                     # decide here, run there, report back
-bash banchi/11-scatole/11-gancio.sh installa pre-push
-bash banchi/11-scatole/11-gancio.sh registro 10                # the last 10 rounds""",
+    code("""bash banchi/11-scatole/11-gancio.sh decide                     # what it would do, and why
+bash banchi/11-scatole/11-gancio.sh run --family net
+bash banchi/11-scatole/11-gancio.sh run --family all --box gnome
+bash banchi/11-scatole/11-gancio.sh remote                     # decide here, run there, report back
+bash banchi/11-scatole/11-gancio.sh install pre-push
+bash banchi/11-scatole/11-gancio.sh log 10                # the last 10 rounds""",
          "bash", "Running the hook")
 
 # ── 16.7 ─────────────────────────────────────────────────────────────────────
@@ -439,12 +439,12 @@ S8 = p("On 24 Sep 2026 the user tried the product by hand and found six defects 
          c("15-f031-tocco.py") + ", " + c("15-f031b-impostazioni-intatte.py") + ", " + c("15-f032-la-shell-dell-utente.py")],
     ], "«TAB» — The suite's functions and the files that test them") + \
     p("Every test is a script " + c("15-fNNN-<name>.py") + " that declares, as plain text lines, what it "
-      "looks at: " + c("FUNZIONI = (…)") + ", and if needed " + c("PER_BROWSER = False") + " (runs once, with "
-      "Firefox), " + c("LUNGA = True") + " (runs in parallel with the others of its desktop) and "
+      "looks at: " + c("FUNCTIONS = (…)") + ", and if needed " + c("PER_BROWSER = False") + " (runs once, with "
+      "Firefox), " + c("LONG = True") + " (runs in parallel with the others of its desktop) and "
       + c("SERVER = \"15-g7-server.sh\"") + " (needs its own server). The common base " + c("suite.py")
-      + " gives them one language: " + c("--scatola") + ", " + c("--browser") + " (one only), " + c("--guasto")
+      + " gives them one language: " + c("--box") + ", " + c("--browser") + " (one only), " + c("--fault")
       + " (after the healthy pass, the pass with the injected fault in the same session), "
-      + c("--certifica") + ", " + c("--evidenze") + ", " + c("--porte-base") + "; 4K by default. Each judged "
+      + c("--certify") + ", " + c("--evidence") + ", " + c("--base-port") + "; 4K by default. Each judged "
       "function prints one " + c("SUITE {…}") + " line; the exit code is 0 all PASS, 1 a FAIL or a fault not "
       "seen, 3 a BLOCKED and no FAIL.") + \
     p("Groups G7 and G8 start a <b>second server</b> per box, on ports 8611–8614 and 8621–8624, with "
@@ -454,24 +454,24 @@ S8 = p("On 24 Sep 2026 the user tried the product by hand and found six defects 
     p(c("15-giro.py") + " runs a round on the server: it finds the " + c("15-f*.py") + " and " + c("15-n*.py")
       + " (negative) tests, runs the four desktops in parallel (one queue each, Firefox then Chrome, distinct debugging "
       "ports), kills any test after 10 minutes as BLOCKED, refuses to start if a person (anyone who is not a "
-      "bench tenant) has a session in a box, and with " + c("--strato-tecnico") + " (technical layer) adds C7, C9, C18, C19 per box "
+      "bench tenant) has a session in a box, and with " + c("--technical-layer") + " (technical layer) adds C7, C9, C18, C19 per box "
       "and C14 at the end. Each desktop has its own headless labwc at 3840×2160 (" + c("15-compositori.sh")
       + "): in a shared compositor Chrome windows covered each other, and a covered Chrome window does not "
       "repaint — one screenshot hung for 17 minutes.") + \
     table(["Field", "Example"], [
-        [c("giro") + " (round) · " + c("passata") + " (pass)", c("1") + ", " + c("2") + ", " + c("bonifica") + " (clean-up) · " + c("sana") + " (healthy) or " + c("guasto") + " (faulted)"],
-        [c("test") + " / " + c("funzione") + " (function)", c("T-018-kde-firefox") + " / " + c("F-018")],
-        [c("desktop") + " · " + c("browser") + " · " + c("versione"), c("kde") + " · " + c("firefox") + " · " + c("140.16.0")],
-        [c("binario") + " (binary) · " + c("pagina") + " (page) · " + c("commit"), "md5 prefixes of binary and page, the commit"],
-        [c("esito") + " (outcome) · " + c("ragione") + " (reason)", "PASS, FAIL or BLOCKED; one sentence, mandatory for FAIL and BLOCKED"],
-        [c("atteso") + " (expected) · " + c("osservato") + " (observed)", "the two sentences of the test case"],
-        [c("guasto_visto") + " (fault seen)", "true or false on the faulted pass"],
-        [c("evidenze") + " (evidence) · " + c("difetto") + " (defect)", "paths of photos, logs and console; " + c("D-007") + " if a defect was opened or touched"],
+        [c("round") + " (round) · " + c("pass") + " (pass)", c("1") + ", " + c("2") + ", " + c("bonifica") + " (clean-up) · " + c("healthy") + " (healthy) or " + c("fault") + " (faulted)"],
+        [c("test") + " / " + c("function") + " (function)", c("T-018-kde-firefox") + " / " + c("F-018")],
+        [c("desktop") + " · " + c("browser") + " · " + c("version"), c("kde") + " · " + c("firefox") + " · " + c("140.16.0")],
+        [c("binary") + " (binary) · " + c("page") + " (page) · " + c("commit"), "md5 prefixes of binary and page, the commit"],
+        [c("outcome") + " (outcome) · " + c("rationale") + " (reason)", "PASS, FAIL or BLOCKED; one sentence, mandatory for FAIL and BLOCKED"],
+        [c("expected") + " (expected) · " + c("observed") + " (observed)", "the two sentences of the test case"],
+        [c("fault_seen") + " (fault seen)", "true or false on the faulted pass"],
+        [c("evidence") + " (evidence) · " + c("defect") + " (defect)", "paths of photos, logs and console; " + c("D-007") + " if a defect was opened or touched"],
     ], "«TAB» — One line of the suite register (" + c("banchi/15-suite/registro.jsonl") + ", append-only)") + \
     p("Defects go to " + c("difetti.jsonl") + " (the defect list) with a class — <b>A</b> true regression, <b>B</b> one desktop's "
       "assumption in common code, <b>C</b> bench defect, <b>D</b> wrong invariant (never as a shortcut) — a "
       "state, the measured cause, the commit of the cure and the test that guards it from then on. The report "
-      "(" + c("15-rapporto.py") + ", " + c("--testo") + " or " + c("--html") + ") is generated from the register, "
+      "(" + c("15-rapporto.py") + ", " + c("--text") + " or " + c("--html") + ") is generated from the register, "
       "never written by hand: the function × desktop × browser matrix with the last verdict, the defects, and for "
       "every FAIL or BLOCKED the reason and its evidence.") + \
     table(["Round", "Executions", "Result"], [
@@ -503,12 +503,12 @@ S9 = p("Real browsers are driven without WebDriver servers: Firefox through <b>M
       "Chrome is photographed with " + c("Page.captureScreenshot") + ".") + \
     table(["Point", "What is checked", "Read from"], [
         ["a", "the page opens (certificate accepted) and the login form is there", "the DOM"],
-        ["b", "with user and password the page is admitted", c("REMOTIX.schermo.sessione") + " and " + c("#esito")],
+        ["b", "with user and password the page is admitted", c("REMOTIX.viewer.session") + " and " + c("#outcome")],
         ["c", "first frame: canvas pixels not degenerate within the ceiling", "a photograph of the canvas"],
-        ["d", "continuity: frames keep arriving with a declared scene", c("REMOTIX.schermo.conti.dipinti")],
+        ["d", "continuity: frames keep arriving with a declared scene", c("REMOTIX.viewer.counts.painted")],
         ["e", "input: a key and a move+click reach the server", "a wrapper around " + c("window.REMOTIX_INPUT")
-         + ", the server log, or " + c("REMOTIX.giro") + " (a frame that carries back input id N proves all inputs up to N were applied)"],
-        ["f", "JavaScript and network errors, and the page's own «⛔» lines", "console and " + c("#registro")],
+         + ", the server log, or " + c("REMOTIX.round_trip") + " (a frame that carries back input id N proves all inputs up to N were applied)"],
+        ["f", "JavaScript and network errors, and the page's own «⛔» lines", "console and " + c("#logbook")],
         ["g", "reconnection: reload, log in again, first frame again", "as a–c"],
     ], "«TAB» — The seven checks of " + c("12-client-veri.py")) + \
     p("Pixels are read from a <b>photograph</b> taken by the browser, never with " + c("getImageData")
@@ -516,7 +516,7 @@ S9 = p("Real browsers are driven without WebDriver servers: Firefox through <b>M
       "sees nothing — or, worse, the backing store instead of the screen (" + c("LEZIONI.md") + " §1.16). "
       "Headless runs are declared as such: without a GPU, decoding and painting are in software, so they judge "
       "behaviour, not numbers. Default ports: Marionette 2851, Chrome DevTools 9341, Android DevTools 9342 "
-      "(through " + c("adb forward") + "); " + c("--porte-base") + " moves them so that four desktops can run "
+      "(through " + c("adb forward") + "); " + c("--base-port") + " moves them so that four desktops can run "
       "in parallel. The certification proves that a port with no server is red, that a wrong password is red "
       "<i>by refusal</i> (consuming one login attempt, which counts for the ban), and that a black canvas is "
       "degenerate while a gradient is not.") + \
@@ -559,8 +559,8 @@ S10 = p("Phase 16 asks how much load REMOTIX carries while still working. Client
         ["birth of a new user (login → first frame)", "≤ 5 s", "5–15 s", "> 15 s, or refused"],
         ["short functional check", "all PASS", "—", "one FAIL"],
         ["dropped session, restart, RCP/QUIC error that detaches", "none", "—", "any"],
-        ["memory growth of the " + c("remotix") + " and " + c("sessioni") + " (sessions) process sets", "≤ 5 %", "5–15 %", "> 15 % and growing"],
-    ], "«TAB» — The thresholds, approved by the user on 25 Sep 2026 and frozen (" + c("SOGLIE") + " in " + c("16-classifica.py") + ")") + \
+        ["memory growth of the " + c("remotix") + " and " + c("sessions") + " (sessions) process sets", "≤ 5 %", "5–15 %", "> 15 % and growing"],
+    ], "«TAB» — The thresholds, approved by the user on 25 Sep 2026 and frozen (" + c("THRESHOLDS") + " in " + c("16-classifica.py") + ")") + \
     p("A level is GREEN if every session is GREEN, FAIL if one is FAIL; «significant DEGRADED» (more than a "
       "quarter of sessions, or one measure past the middle of its band) stops the climb for diagnosis and a "
       "repetition under the same conditions. A FAIL starts a bisection between the last good step and the "
@@ -570,7 +570,7 @@ S10 = p("Phase 16 asks how much load REMOTIX carries while still working. Client
       "plus 9 ms, the constructive ceiling of the input leg (the child's 8 ms poll); the child's «capture → bytes "
       "out» lines and the page's round trip are recorded, the latter as the experienced delay, but do not classify.") + \
     p("Resources are sampled once a second by " + c("16-risorse.py") + " (as root, or it declares what it could "
-      "not read) for three process sets — " + c("remotix") + ", " + c("sessioni") + ", " + c("browser") + " — with "
+      "not read) for three process sets — " + c("remotix") + ", " + c("sessions") + ", " + c("browser") + " — with "
       "PSS memory and per-process GPU engine use from " + c("/proc/<pid>/fdinfo") + ". A high resource "
       "alone is never a FAIL: classification comes from behaviour, and resources explain it. At every level "
       + c("16-controllo-corto.py") + " opens one extra session (the 17th at the top step, hence a session ceiling "
@@ -598,7 +598,7 @@ S11 = p("Phase 17 tests REMOTIX where an administrator would install it: on the 
         [c("17-vm.sh"), "QEMU directly, no libvirt, no root; user-mode network with port forwarding; the disk is an "
          "overlay on the untouched official cloud image. Machines are " + c("<distro>-<desktop>") + "; ssh on "
          + c("2300 + 10·N + k") + ", REMOTIX on " + c("7500 + 10·N + k") + " (k: bare 0, gnome 1, kde 2, xfce 3, lxqt 4). "
-         "Verbs: " + c("crea") + " (create), " + c("avvia") + " (start), " + c("vesti") + " (dress: installs the desktop group), " + c("ssh") + ", "
+         "Verbs: " + c("create") + " (create), " + c("avvia") + " (start), " + c("vesti") + " (dress: installs the desktop group), " + c("ssh") + ", "
          + c("ferma") + " (stop), " + c("riavvia") + " (a real reboot, checked through " + c("boot_id") + "), "
          + c("fotografa") + "/" + c("torna") + " (snapshot/restore), " + c("azzera") + " (reset to the base image)"],
         ["states", "<b>BASE</b> the cloud image after cloud-init · <b>DESKTOP</b> plus the distribution's official desktop "
@@ -658,7 +658,7 @@ S12 = p("When an encoder path changes, the old path stays alive as a term of com
     ], "«TAB» — Encoder and platform benches") + \
     p("Three small folders complete the picture. " + c("rcp/") + " holds the twin of the RCP module that phase 1 "
       "grafted into ngtcp2's example server; the build of the product refuses to compile if the two copies "
-      "differ, and " + c("GEMELLO=nessuno") + " (twin = none) must be declared to build without the comparison. "
+      "differ, and " + c("TWIN=none") + " (twin = none) must be declared to build without the comparison. "
       + c("prodotto/") + " has the smoke test of the server inside the build container (" + c("fumo.sh") + ", smoke) and "
       "its pages; " + c("sonda/") + " a real-browser probe that collects what the page saw.")
 
@@ -676,19 +676,19 @@ S13 = p("Benches are written and compiled on the laptop; they run on the test ma
     ], "«TAB» — Where benches live on the test machine") + \
     term("""
 # from the laptop: the safety net, decided here and run there
-$ bash banchi/11-scatole/11-gancio.sh remoto
+$ bash banchi/11-scatole/11-gancio.sh remote
 # from the laptop: copy the suite to the server
 $ bash banchi/15-suite/15-porta.sh
 # on the server, as the bench user: rebuild the boxes (only when nobody is testing by hand)
 $ bash /media/REMOTIX/src/controllo/banchi/15-suite/15-rifai-scatole.sh
-$ python3 /media/REMOTIX/src/controllo/banchi/15-suite/15-giro.py --elenco
-$ python3 /media/REMOTIX/src/controllo/banchi/15-suite/15-giro.py --giro 3 --strato-tecnico
+$ python3 /media/REMOTIX/src/controllo/banchi/15-suite/15-giro.py --list
+$ python3 /media/REMOTIX/src/controllo/banchi/15-suite/15-giro.py --round 3 --technical-layer
 # one test, with real browsers
-$ bash banchi/15-suite/15-una.sh --remoto 15-f001-accesso-e-prima-immagine.py --scatola gnome --browser firefox --guasto
+$ bash banchi/15-suite/15-una.sh --remote 15-f001-accesso-e-prima-immagine.py --box gnome --browser firefox --fault
 # the report, generated from the register
-$ python3 banchi/15-suite/15-rapporto.py --registro banchi/15-suite/registro.jsonl --difetti banchi/15-suite/difetti.jsonl --giro 2 --testo
+$ python3 banchi/15-suite/15-rapporto.py --log banchi/15-suite/registro.jsonl --defects banchi/15-suite/difetti.jsonl --round 2 --text
 # a stress climb, without doing anything (the plan)
-$ python3 16-salita.py --scatola gnome --campagna prova-4k-gnome --misura 4k --secco
+$ python3 16-salita.py --box gnome --campaign prova-4k-gnome --size 4k --dry-run
 """, "Typical commands") + \
     warn("rebuilding boxes kills every session inside them, including a person's. The suite refuses to start if "
          "anyone who is not a bench tenant is logged in; rebuilding needs the user's go-ahead. And never restart "

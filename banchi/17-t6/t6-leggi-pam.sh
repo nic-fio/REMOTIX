@@ -7,12 +7,12 @@
 #
 # Starts from the snapshot, reads, powers off and goes back to the snapshot. Output in /media/REMOTIX/vm17/t6/pam/<machine>.txt
 set -uo pipefail
-m=${1:?machine}; foto=${2:?photo}
+m=${1:?machine}; photo=${2:?photo}
 R=/media/REMOTIX/vm17; V="bash $R/17-vm.sh"; O=$R/t6/pam
 mkdir -p "$O"
 if pgrep -f "qemu-system.*-name rx-$m " >/dev/null; then echo "⛔ $m is already running"; exit 2; fi
 [ "$(pgrep -c '^qemu-system')" -lt 4 ] || { echo "⛔ 4 VMs already running"; exit 2; }
-$V torna "$m" "$foto" >/dev/null || exit 1
+$V torna "$m" "$photo" >/dev/null || exit 1
 $V avvia "$m" >"$O/$m-avvia.log" 2>&1 || { echo "⛔ avvia"; tail -3 "$O/$m-avvia.log"; $V ferma "$m" >/dev/null 2>&1; exit 1; }
 $V ssh "$m" 'sudo bash -s' >"$O/$m.txt" 2>&1 <<'DENTRO'
 grep ^PRETTY /etc/os-release
@@ -35,5 +35,5 @@ echo "=== faillock.conf:"; grep -E '^[[:space:]]*[a-z]' /etc/security/faillock.c
 echo "=== sshd_config:"; grep -rihE '^[[:space:]]*(PermitRootLogin|UsePAM|KbdInteractiveAuthentication|PasswordAuthentication)' /etc/ssh/sshd_config /etc/ssh/sshd_config.d/ /usr/etc/ssh/sshd_config /usr/etc/ssh/sshd_config.d/ /usr/lib/ssh/ 2>/dev/null
 echo "=== authselect: $(authselect current 2>/dev/null | tr '\n' ' ')"
 DENTRO
-$V ferma "$m" >/dev/null 2>&1; $V torna "$m" "$foto" >/dev/null 2>&1
-echo "$m ($foto): $(wc -l <"$O/$m.txt") lines"
+$V ferma "$m" >/dev/null 2>&1; $V torna "$m" "$photo" >/dev/null 2>&1
+echo "$m ($photo): $(wc -l <"$O/$m.txt") lines"

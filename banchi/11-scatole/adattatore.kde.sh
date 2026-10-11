@@ -18,9 +18,9 @@
 #    how it is watched**, NEVER the product's behaviour.
 # ===========================================================================
 
-adattatore_nome() { printf 'KDE (KWin)'; }
+adapter_name() { printf 'KDE (KWin)'; }
 
-adattatore_pacchetto() { printf 'kwin-wayland'; }
+adapter_package() { printf 'kwin-wayland'; }
 
 # ⚠ KWin without a physical monitor is started with `--virtual`, and the size is given
 #   on the command line.  ⭐ It is a REAL difference between the two compositors — the
@@ -28,7 +28,7 @@ adattatore_pacchetto() { printf 'kwin-wayland'; }
 #   here and never changes it again.
 #   ⇒ It is exactly the kind of thing that must live in an adapter instead
 #     of in an `if the desktop is KDE then` inside the list of tests.
-adattatore_avvia() {
+adapter_start() {
 	_rtd=$1; _log=$2
 	runuser -u provanic -- env \
 		XDG_RUNTIME_DIR="$_rtd" \

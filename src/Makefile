@@ -58,17 +58,17 @@
 # source, and that is what `banchi/01-b2-costruisci-ngtcp2.sh` does.
 #
 # -----------------------------------------------------------------------------
-#   make PREFISSO=/path/where/ngtcp2/and/nghttp3/are
+#   make DEPS_PREFIX=/path/where/ngtcp2/and/nghttp3/are
 #
-# If `pkg-config` finds them by itself, PREFISSO is not needed.
+# If `pkg-config` finds them by itself, DEPS_PREFIX is not needed.
 
 CC      ?= cc
-PREFISSO ?=
+DEPS_PREFIX ?=
 
 NOME    := remotix
 
-# ⭐ THE FOUR FILES OF PHASE 2 are at the end, and in chain order: sessione
-#    (the stage) → cattura+mutter (the pixels) → codificatore (the bytes).  ⚠ The
+# ⭐ THE FOUR FILES OF PHASE 2 are at the end, and in chain order: session
+#    (the stage) → capture+mutter (the pixels) → encoder (the bytes).  ⚠ The
 #    fifth link, the video channel, does NOT appear: it lives in `rcp.c`, which was
 #    already there — and it is why it is born already compared with `banchi/rcp/`.
 SORGENTI := main.c trasporto.c webtransport.c pagina.c comando.c certificati.c \
@@ -89,7 +89,7 @@ OGGETTI  := $(SORGENTI:.c=.o)
 # tonight they were identical **by luck, not by construction**: no file of the
 # repo compared the two copies.
 #
-# The concrete case nobody would have seen: `BAN_DURATA` is changed in
+# The concrete case nobody would have seen: `BAN_DURATION` is changed in
 # `src/rcp.c` from twelve hours to one.  The product bans for an hour; `01-b6-lancia.sh`
 # stays green because it compares `banchi/rcp/` with the copy compiled inside
 # `examples/`; B8 stays green because it starts `bsslserver`.  ⛔ The defect does not
@@ -103,13 +103,13 @@ OGGETTI  := $(SORGENTI:.c=.o)
 #      the copies match             it compiles
 #      the copies DIVERGE           ⛔ it does not compile, and the `diff` is printed
 #      the twin copy IS NOT THERE   ⛔ it does not compile, unless whoever builds
-#                                   DECLARES IT with GEMELLO=nessuno
+#                                   DECLARES IT with TWIN=none
 #
 #    ⚠ The third is the one a hastily written check confuses with the
 #      first: "I found no differences" and "I could not look" have the
 #      same face, and the second looking like the first is a check
 #      switched off that looks switched on.
-GEMELLO ?= ../banchi/rcp
+TWIN ?= ../banchi/rcp
 GEMELLATI := rcp.c rcp.h autenticazione.c
 
 # ⚠ `-std=gnu11` and not `c11`: `accept4`, `SOCK_NONBLOCK` and the ancillary
@@ -125,7 +125,7 @@ override CFLAGS += -D_GNU_SOURCE
 # ⭐ DECISIONI §10.43 — the labwc that hosts the nested KWin (`kwin.c`): empty = the
 #    distribution's, from PATH (six distributions); a path = OUR labwc at that exact path,
 #    for the distributions without one (RHEL/Alma 10: `packaging/rpm/remotix.spec`).
-#    A build-time choice of the package, never a runtime switch.  `make pulisci` first.
+#    A build-time choice of the package, never a runtime switch.  `make clean` first.
 LABWC ?=
 ifneq ($(LABWC),)
 override CFLAGS += -DREMOTIX_LABWC='"$(LABWC)"'
@@ -283,7 +283,7 @@ PROTOCOLLI := zkde-screencast-unstable-v1 wlr-data-control-unstable-v1 \
               wlr-layer-shell-unstable-v1 xdg-shell
 GENERATI   := $(PROTOCOLLI:%=%-client-protocol.h) $(PROTOCOLLI:%=%-protocol.c)
 
-# ⭐ PHASE 17 — the PREFISSO's library folder is not always `lib`:
+# ⭐ PHASE 17 — the DEPS_PREFIX's library folder is not always `lib`:
 #    cmake calls it `lib64` on Fedora and openSUSE and `lib/<multiarch>` on Debian
 #    (`fasi/17-l-installatore.md` §4.4).  ⇒ `pkg-config` is asked INSIDE the
 #    prefix (`PKG_CONFIG_LIBDIR`, which REPLACES the system folders, and
@@ -292,14 +292,14 @@ GENERATI   := $(PROTOCOLLI:%=%-client-protocol.h) $(PROTOCOLLI:%=%-protocol.c)
 #    it does not answer, the folders that exist.
 #    ⛔ With static ngtcp2/nghttp3 (§6.3) the rpath will no longer be needed: until
 #    then, let it at least point where they are.
-ifneq ($(PREFISSO),)
+ifneq ($(DEPS_PREFIX),)
 MULTIARCH   := $(shell $(CC) -print-multiarch 2>/dev/null)
-PC_PREFISSO := $(PREFISSO)/lib64/pkgconfig:$(PREFISSO)/lib/pkgconfig$(if $(MULTIARCH),:$(PREFISSO)/lib/$(MULTIARCH)/pkgconfig)
+PC_PREFISSO := $(DEPS_PREFIX)/lib64/pkgconfig:$(DEPS_PREFIX)/lib/pkgconfig$(if $(MULTIARCH),:$(DEPS_PREFIX)/lib/$(MULTIARCH)/pkgconfig)
 LIB_PREFISSO := $(sort $(shell env -u PKG_CONFIG_PATH PKG_CONFIG_LIBDIR='$(PC_PREFISSO)' pkg-config --variable=libdir libngtcp2 libnghttp3 2>/dev/null))
 ifeq ($(LIB_PREFISSO),)
-LIB_PREFISSO := $(wildcard $(PREFISSO)/lib64 $(if $(MULTIARCH),$(PREFISSO)/lib/$(MULTIARCH)) $(PREFISSO)/lib)
+LIB_PREFISSO := $(wildcard $(DEPS_PREFIX)/lib64 $(if $(MULTIARCH),$(DEPS_PREFIX)/lib/$(MULTIARCH)) $(DEPS_PREFIX)/lib)
 endif
-CFLAGS  += -I$(PREFISSO)/include
+CFLAGS  += -I$(DEPS_PREFIX)/include
 LDFLAGS += $(foreach d,$(LIB_PREFISSO),-L$(d) -Wl,-rpath,$(d))
 endif
 
@@ -313,39 +313,39 @@ LIBS := -lngtcp2_crypto_ossl -lngtcp2 -lnghttp3 -lssl -lcrypto -lpam \
 #   ⛔ but depending on that detail means breaking on a different libc
 #   with an error that does not name the phase that introduced it.
 
-.PHONY: tutto pulisci dipendenze impronte banco-w1
+.PHONY: all clean deps fingerprints bench-w1
 
-tutto: impronte $(NOME)
+all: impronte $(NOME)
 
 # ⛔ The comparison of the three copies: see the box at the top.  It always prints the
 #    fingerprints of what it compared, so that "compared" is a readable fact
 #    and not a green line.
-impronte:
-	@if [ "$(GEMELLO)" = "nessuno" ]; then \
-	  printf '  ⛔ GEMELLO=nessuno: I did NOT compare src/ with banchi/rcp/.\n'; \
+fingerprints:
+	@if [ "$(TWIN)" = "none" ]; then \
+	  printf '  ⛔ TWIN=none: I did NOT compare src/ with banchi/rcp/.\n'; \
 	  printf '     It is not «the copies match»: it is «I did not look», and whoever\n'; \
 	  printf '     builds has DECLARED it (finding R12.3).\n'; \
 	  exit 0; \
 	fi; \
-	if [ ! -d "$(GEMELLO)" ]; then \
-	  printf '  ⛔ the twin copy «%s» IS NOT THERE: I cannot prove that\n' "$(GEMELLO)"; \
+	if [ ! -d "$(TWIN)" ]; then \
+	  printf '  ⛔ the twin copy «%s» IS NOT THERE: I cannot prove that\n' "$(TWIN)"; \
 	  printf '     src/rcp.c and banchi/rcp/rcp.c are the same module — and they are\n'; \
 	  printf '     the same module mounted on two hosts (R12.3).\n'; \
-	  printf '     Pass GEMELLO=<path>, or GEMELLO=nessuno to\n'; \
+	  printf '     Pass TWIN=<path>, or TWIN=none to\n'; \
 	  printf '     DECLARE building without the comparison.\n'; \
 	  exit 2; \
 	fi; \
 	stato=0; \
 	for f in $(GEMELLATI); do \
-	  if [ ! -f "$(GEMELLO)/$$f" ]; then \
-	    printf '  ⛔ %s/%s does not exist\n' "$(GEMELLO)" "$$f"; stato=1; continue; \
+	  if [ ! -f "$(TWIN)/$$f" ]; then \
+	    printf '  ⛔ %s/%s does not exist\n' "$(TWIN)" "$$f"; stato=1; continue; \
 	  fi; \
-	  if cmp -s "$$f" "$(GEMELLO)/$$f"; then \
-	    printf '  OK  %-18s identical to %s  (%s)\n' "$$f" "$(GEMELLO)/$$f" \
+	  if cmp -s "$$f" "$(TWIN)/$$f"; then \
+	    printf '  OK  %-18s identical to %s  (%s)\n' "$$f" "$(TWIN)/$$f" \
 	      "$$(md5sum < $$f | cut -c1-32)"; \
 	  else \
-	    printf '  ⛔ %s DIVERGES from %s/%s:\n' "$$f" "$(GEMELLO)" "$$f"; \
-	    diff -u "$(GEMELLO)/$$f" "$$f" | head -40; \
+	    printf '  ⛔ %s DIVERGES from %s/%s:\n' "$$f" "$(TWIN)" "$$f"; \
+	    diff -u "$(TWIN)/$$f" "$$f" | head -40; \
 	    stato=1; \
 	  fi; \
 	done; \
@@ -367,7 +367,7 @@ kwin.o appunti_kde.o wlroots.o wlr_input.o: $(PROTOCOLLI:%=%-client-protocol.h)
 # -----------------------------------------------------------------------------
 # ⭐ THE CAPTURE BENCH ON WLROOTS — `banchi/13-w1-un-fotogramma.c`.
 #
-# ⛔ It links the SAME objects as the product (`wlroots.o`, `registro.o`), not a
+# ⛔ It links the SAME objects as the product (`wlroots.o`, `log.o`), not a
 #    copy: it is rule R12.3 applied to a new module — a bench that
 #    compiled a second `wlroots.c` would measure a code different from the one
 #    that runs, and it is the defect that rule exists to prevent.
@@ -383,7 +383,7 @@ $(BANCO_W1): ../banchi/13-w1-un-fotogramma.c wlroots.o registro.o \
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) -lglib-2.0 -lgobject-2.0 -lgio-2.0 -lwayland-client \
 	      $(F13_LIBS)
 
-banco-w1: $(BANCO_W1)
+bench-w1: $(BANCO_W1)
 
 
 %-client-protocol.h: protocolli/%.xml
@@ -392,7 +392,7 @@ banco-w1: $(BANCO_W1)
 %-protocol.c: protocolli/%.xml
 	$(SCANNER) private-code $< $@
 
-pulisci:
+clean:
 	rm -f $(OGGETTI) $(NOME) $(GENERATI) $(PROTOCOLLI:%=%-protocol.o)
 
 # ⛔ The dependency check SAYS what is missing, instead of making the
@@ -410,12 +410,12 @@ pulisci:
 #      libei-1.0 1.1.0        `ei_region_get_mapping_id` (`input.c`); `[R]` missing
 #                             in the 1.0.0 header, present in 1.1.0
 #      libpipewire-0.3 0.3.48 `PW_KEY_NODE_FORCE_QUANTUM`; `[M]` 29 Sep 2026:
-#                             cattura/cursore/suono compile with Ubuntu 22.04's
+#                             capture/cursor/sound compile with Ubuntu 22.04's
 #                             0.3.48; `[R]` the key is missing in 0.3.44
 #      gio-2.0 2.80           as it was declared; we would need 2.72
 #                             (`g_get_user_state_dir`, `sessione.c`)
 #    ⛔ Three outcomes and not two: "too old", "pkg-config does not know it" (which
-#       with PREFISSO may only mean that the `.pc` is not in the path) and
+#       with DEPS_PREFIX may only mean that the `.pc` is not in the path) and
 #       "fine".  The first two make it exit with an error, but they are SAID differently.
 #      vulkan 1.3.274         the final video encode extensions (phase 19,
 #                             `src/vulkanvideo.c`); `[?]` not tried below
@@ -424,9 +424,9 @@ MINIMI := openssl:3.5.0 libva-drm:0 \
           libei-1.0:1.1.0 libpipewire-0.3:0.3.48 gio-2.0:2.80 xkbcommon:0 \
           libva:0 libdrm:0 gbm:0 wayland-client:0 opus:1.3 vulkan:1.3.274
 
-dipendenze:
+deps:
 	@stato=0; \
-	if [ -n "$(PREFISSO)" ]; then \
+	if [ -n "$(DEPS_PREFIX)" ]; then \
 	  PKG_CONFIG_PATH="$(PC_PREFISSO)$${PKG_CONFIG_PATH:+:$$PKG_CONFIG_PATH}"; \
 	  export PKG_CONFIG_PATH; \
 	fi; \
@@ -542,7 +542,7 @@ suono.o:          suono.h registro.h audio.h
 #    program that links and misbehaves — the most expensive form of error
 #    of all, because nobody connects it to the change that produced it.
 #    `[M]` 14 August 2026: the defect was reported by the cursor
-#    link, which had noticed that `cattura.o` was not rebuilt.
+#    link, which had noticed that `capture.o` was not rebuilt.
 input.o:          input.h tastiera.h registro.h mutter.h sessione.h kwin.h
 tastiera.o:       tastiera.h registro.h
 cursore.o:        cursore.h registro.h

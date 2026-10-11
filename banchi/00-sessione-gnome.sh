@@ -3,9 +3,9 @@
 # 00-sessione-gnome.sh — starts a GNOME session with no monitor, and VERIFIES that
 # it is headless instead of hoping so.
 #
-#   bash 00-sessione-gnome.sh avvia    composes the environment and starts the session
-#   bash 00-sessione-gnome.sh stato    is it there? and is it headless?
-#   bash 00-sessione-gnome.sh ferma    closes it
+#   bash 00-sessione-gnome.sh start    composes the environment and starts the session
+#   bash 00-sessione-gnome.sh status    is it there? and is it headless?
+#   bash 00-sessione-gnome.sh stop    closes it
 #
 # ---------------------------------------------------------------------------
 # WHY IT EXISTS, GIVEN THAT THE PRODUCT WILL KNOW HOW TO DO IT ITSELF
@@ -39,9 +39,9 @@ set -uo pipefail
 
 USER_UID=$(id -u)
 RUNTIME=${XDG_RUNTIME_DIR:-/run/user/$USER_UID}
-REGISTRO=$RUNTIME/remotix-sessione.log
+LOG=$RUNTIME/remotix-session.log
 SHELL_LOG=$RUNTIME/mutter.log
-COMANDO="exec gnome-session --session=gnome"
+COMMAND="exec gnome-session --session=gnome"
 
 # ---------------------------------------------------------------------------
 # ⛔ WHERE WHAT MUTTER SAYS ENDS UP, AND WHY IT IS NOT WHERE IT SEEMS
@@ -62,10 +62,10 @@ COMANDO="exec gnome-session --session=gnome"
 # ---------------------------------------------------------------------------
 shell_log()
 {
-	local cartella=$HOME/.config/systemd/user/org.gnome.Shell@wayland.service.d
+	local folder=$HOME/.config/systemd/user/org.gnome.Shell@wayland.service.d
 
-	mkdir -p "$cartella"
-	cat >"$cartella/00-registro.conf" <<CONF
+	mkdir -p "$folder"
+	cat >"$folder/00-registro.conf" <<CONF
 [Service]
 StandardOutput=append:$SHELL_LOG
 StandardError=append:$SHELL_LOG
@@ -85,7 +85,7 @@ CONF
 #    `ConditionEnvironment=XDG_SESSION_TYPE=wayland`, and without it the compositor is
 #    not started at all — the session starts crippled and nobody explains why.
 # ---------------------------------------------------------------------------
-ambiente()
+environment()
 {
 	printf '%s\n' \
 	    "HOME=$HOME" \
@@ -128,14 +128,14 @@ viva()
 #    inhibitor, and in an unattended session nobody sees it.
 stop_and_wait()
 {
-	local scadenza=$((SECONDS + ${1:-45}))
-	local stato
+	local expiry=$((SECONDS + ${1:-45}))
+	local status
 
 	gdbus call --session -d org.gnome.SessionManager -o /org/gnome/SessionManager \
 	    -m org.gnome.SessionManager.Logout 2 >/dev/null 2>&1
 
-	while [ $SECONDS -lt $scadenza ]; do
-		stato=$(systemctl --user is-active gnome-session-manager@gnome.service)
+	while [ $SECONDS -lt $expiry ]; do
+		status=$(systemctl --user is-active gnome-session-manager@gnome.service)
 		# ⛔ WE WAIT FOR `inactive`, NOT «different from active».
 		#
 		#    `is-active` goes through `deactivating`, which is not `active` — and a
@@ -144,7 +144,7 @@ stop_and_wait()
 		#    function exists to remove.  Measured on 9 Aug: the wrong
 		#    condition unblocked after half a second, with systemd still at
 		#    work.
-		case "$stato" in
+		case "$status" in
 		inactive|failed|unknown)
 			if ! viva; then
 				# Failed units stay failed and block the next round.
@@ -159,11 +159,11 @@ stop_and_wait()
 }
 
 # ⛔ We do not wait for a silence: we wait for an EVENT, with a declared ceiling.
-attendi()
+should_wait()
 {
-	local scadenza=$((SECONDS + ${1:-40}))
+	local expiry=$((SECONDS + ${1:-40}))
 
-	while [ $SECONDS -lt $scadenza ]; do
+	while [ $SECONDS -lt $expiry ]; do
 		if viva && busctl --user list 2>/dev/null | grep -q org.gnome.Shell; then
 			return 0
 		fi
@@ -245,8 +245,8 @@ headless()
 	return 1
 }
 
-case "${1:-stato}" in
-avvia)
+case "${1:-status}" in
+start)
 	# ⛔ «There is no gnome-shell» does not mean «there is no session»: the
 	#    manager can be alive with the compositor dead, and then the command
 	#    below does nothing and nobody says so.  We start clean.
@@ -261,20 +261,20 @@ avvia)
 		echo "there is already a session: $(pgrep -u "$USER_UID" -x gnome-shell | tr '\n' ' ')"
 	else
 		shell_log
-		: >"$REGISTRO"; : >"$SHELL_LOG"
+		: >"$LOG"; : >"$SHELL_LOG"
 		# `setsid --fork` detaches it from our process group: closing
 		# the ssh does not take it away.
-		env -i $(ambiente) setsid --fork sh -c "exec >>'$REGISTRO' 2>&1; $COMANDO"
-		if ! attendi 40; then
+		env -i $(environment) setsid --fork sh -c "exec >>'$LOG' 2>&1; $COMMAND"
+		if ! should_wait 40; then
 			echo "⛔ the session did NOT start within 40 s.  Last lines:"
-			tail -n 25 "$REGISTRO" | sed 's/^/    /'
+			tail -n 25 "$LOG" | sed 's/^/    /'
 			exit 1
 		fi
 		echo "session started"
 	fi
 	echo -n "headless? "; headless
 	;;
-stato)
+status)
 	if viva; then
 		echo "gnome-shell:  $(pgrep -u "$USER_UID" -c -x gnome-shell) process(es)"
 	else
@@ -282,9 +282,9 @@ stato)
 	fi
 	echo -n "headless?     "; headless
 	;;
-ferma)
+stop)
 	stop_and_wait && echo "stopped" || { echo "⛔ it did not stop in time"; exit 1; }
 	;;
-registro) tail -n "${2:-40}" "$REGISTRO" ;;
-*) echo "usage: $0 {avvia|stato|ferma|registro [n]}" >&2; exit 2 ;;
+log) tail -n "${2:-40}" "$LOG" ;;
+*) echo "usage: $0 {avvia|status|stop|log [n]}" >&2; exit 2 ;;
 esac

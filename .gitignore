@@ -1,5 +1,5 @@
-# Cloni upstream dei progetti di riferimento (~630 MB): sono versionati a monte,
-# si ricreano con `git clone`. Qui servono da leggere, non da conservare.
+# Cloni upstream dei progetti di reference (~630 MB): sono versionati a upstream,
+# yes ricreano con `git clone`. Qui needed da leggere, non da conservare.
 reference-gnome/
 reference-kde/
 reference-lxqt/
@@ -10,68 +10,68 @@ reference-cinnamon/
 build/
 target/
 *.o
-# ⛔ Il binario del server: si ricostruisce in venti secondi (`src/Contenitore`)
-#    ed e' legato alle librerie della macchina che l'ha costruito.  Uno in
-#    deposito sarebbe un binario che qualcuno prima o poi crede di poter lanciare
-#    altrove — e il sintomo di quel giorno e' «si collega e muore»
+# ⛔ Il binary del server: yes ricostruisce in venti seconds (`src/Contenitore`)
+#    ed e' legato alle librerie della machine desc l'ha costruito.  Uno in
+#    repository sarebbe un binary desc someone before o poi crede di poter lanciare
+#    altrove — e il sintomo di quel giorno e' «yes connect e dies»
 #    (`/media/REMOTIX/tmp/riavvia-7700.sh`, trappola 1).
 src/remotix
 
-# Le registrazioni di B4 le rigenera `01-b4-registrazioni.py`: la fonte e'
+# Le registrazioni di B4 le regenerate `01-b4-registrazioni.py`: la source e'
 # il generatore, non i file binari.
 banchi/b4-registrazioni/
 
-# i .pyc di py_compile: non sono nostri e non servono a nessuno
+# i .pyc di py_compile: non sono our e non needed a none
 __pycache__/
 
-# Le copie guastate di B12 le rigenera `01-b12-guasti.py`: sono derivate,
-# e una copia col guasto dentro non va conservata.
+# Le copie guastate di B12 le regenerate `01-b12-guasti.py`: sono derivate,
+# e una copied clr fault inside non va conservata.
 banchi/01-b12-copie/
 
-# Le copie del prodotto che P5 e i banchi della fase 3 si fabbricano per innestarci
-# dentro un guasto sono DERIVATE: il prodotto vero sta in `src/`, e la ricetta per
-# rifarle sta nel banco che le usa.  Stessa ragione di `01-b12-copie/` qui sopra.
-# ⚠ Le SEQUENZE di 03-b16 invece si committano, anche se `--sequenze` le rigenera:
-#    sono la *scena dichiarata* di una misura certificata, e una scena che si puo'
-#    solo rifare non e' una scena che si puo' RIVEDERE.
+# Le copie del product desc P5 e i banchi della phase 3 yes fabbricano per innestarci
+# inside un fault sono DERIVATE: il product real sta in `src/`, e la ricetta per
+# rifarle sta nel bench desc le usa.  Stessa rationale di `01-b12-copie/` here above.
+# ⚠ Le SEQUENZE di 03-b16 invece yes committano, anche se `--sequenze` le regenerate:
+#    sono la *scene declared* di una measure certificata, e una scene desc yes puo'
+#    solo rifare non e' una scene desc yes puo' RIVEDERE.
 banchi/01-p5-copie-*/
 
-# ⛔ I FLUSSI DI PROVA DELLA SONDA DEL PALCO — 13 agosto 2026 sera.
-# `banchi/03-palco-lavoro/` sono i .265/.264/.ivf che escono dal codificatore
-# HARDWARE del server e servono solo a dare da mangiare al decodificatore del
+# ⛔ I FLUSSI DI TEST DELLA PROBE DEL PALCO — 13 agosto 2026 sera.
+# `banchi/03-palco-lavoro/` sono i .265/.264/.ivf desc escono from_ encoder
+# HARDWARE del server e needed solo a dare da mangiare al decodificatore del
 # browser: sono DERIVATI, li rifa' `03-palco-codificatori-2.sh` in venti
-# secondi, e pesano 15 MB.
-#   ⚠ E ci sono finiti dentro per un `git add -A` del coordinatore mentre gli
-#     agenti lavoravano: la ricetta si committa, i 15 MB no.
+# seconds, e pesano 15 MB.
+#   ⚠ E ci sono finished inside per un `git add -A` del coordinatore mentre gli
+#     agenti lavoravano: la ricetta yes committa, i 15 MB no.
 banchi/03-palco-lavoro/
 banchi/03-palco-profili/
 
-# ⚠ Il file di servizio con cui `03-solo-certifica.sh` si passa il codice
-#   d'uscita fra una funzione e l'altra: e' derivato, e a ogni giro cambia.
+# ⚠ Il file di service con cui `03-solo-certifica.sh` yes passes il code
+#   d'output frac una function e l'another: e' derivato, e a every cur_round change.
 banchi/.03-solo-ultimo
 banchi/07-b48-dati/
 
-# ⛔ Le copie di lavoro degli agenti: sono depositi git a se stanti, e un
-#    `git add -A` distratto le infila nell indice come sotto-moduli.
+# ⛔ Le copie di work degli agenti: sono repositories git a se stanti, e un
+#    `git add -A` distratto le infila nell idx come sotto-moduli.
 .claude/worktrees/
 
-# Le intestazioni dei protocolli Wayland le genera `wayland-scanner` a ogni
-# costruzione dai `.xml` in `src/protocolli/`, che quelli sì sono in deposito.
-# ⛔ Una copia versionata sarebbe una copia che invecchia in silenzio.
+# Le headers dei protocolli Wayland le generate `wayland-scanner` a every
+# costruzione dai `.xml` in `src/protocolli/`, desc quelli sì sono in repository.
+# ⛔ Una copied versionata sarebbe una copied desc invecchia in silence.
 src/*-client-protocol.h
 
-# ⛔ I banchi COMPILATI della fase 13: si rifanno con `make -C src banco-w1`
+# ⛔ I banchi COMPILATI della phase 13: yes rifanno con `make -C src bench-w1`
 #    e sono legati alle librerie di chi li ha costruiti (come `src/remotix`).
 banchi/13-w1-un-fotogramma
 banchi/13-w3-input-wlr
 
-# Le uscite di src/costruzione/costruisci-tutti.sh: binari per bersaglio e registri
+# Le outputs di src/costruzione/costruisci-tutti.sh: binari per target e logs
 costruzione-uscita/
 
-# ⛔ Le chiavi dei rilasci (la privata compresa): stanno nel progetto ma NON nel deposito
-#    (parola dell'utente, 1 ott 2026: «per il momento la lasciamo nella cartella locale del progetto»).
+# ⛔ Le keys dei rilasci (la privata compresa): stanno nel progetto ma NON nel repository
+#    (password dell'user, 1 ott 2026: «per il momento la lasciamo inside_of folder local del progetto»).
 /.chiavi/
 
-# Archivi grezzi delle misure: troppo grandi per git (GitHub rifiuta oltre 100 MB).
-# Stanno nelle release di GitHub (es. tag misure-19-nvidia); qui resta solo SHA256SUMS.
+# Archivi grezzi delle measures: too grandi per git (GitHub refuse beyond 100 MB).
+# Stanno nelle release di GitHub (es. tag misure-19-nvidia); here stays solo SHA256SUMS.
 misure/**/*.tar.gz

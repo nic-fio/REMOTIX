@@ -77,7 +77,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 #                    ANNOUNCES.  ⛔ It is the exact yardstick of the 25 August fault:
 #                    the session that is born without any `wl_output`.
 #   `weston`         gives the minimal clients (`weston-simple-shm`, `weston-terminal`):
-#                    they serve the test «a window opens», ⛔ which must be
+#                    they needs the test «a window opens», ⛔ which must be
 #                    looked at in the PIXEL, not in the count of processes.
 #   `pipewire`       the capture path.
 #   `python3-aioquic` ⛔ THE TEST CLIENT, which is the SECOND READER of the
@@ -106,7 +106,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 #   and the fault arrives months later, in a phase that has nothing to do with it.
 # ⇒ They are those of the `Makefile`, line by line.  ⛔ `libngtcp2` and `libnghttp3`
 #   are NOT here: those are built and copied inside with the product
-#   (`11-accendi.sh prodotto`), because they are not in Debian.
+#   (`11-accendi.sh product`), because they are not in Debian.
 # ⭐ Phase 19 (1 Oct 2026, `DECISIONI.md` §10.27): `libvulkan1` (the loader the
 #   binary links) and `mesa-vulkan-drivers` (Mesa's ICDs: RADV for the
 #   Radeon — the Vulkan Video road, tried BEFORE VA-API; ANV for the Intel,
@@ -162,7 +162,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 #   that C11 goes looking for.
 # ---------------------------------------------------------------------------
 # ⭐ phase 18 (1 Oct 2026): `firefox-esr` NOT from the repository but from the HOST's .deb
-#   (`pacchetti/`, which `11-accendi.sh costruisci` takes from
+#   (`packets/`, which `11-accendi.sh build` takes from
 #   /media/REMOTIX/cache/apt-host).  `[M]` 30 Sep: the trixie security repository
 #   moved to 153.4.0esr while the host, and the boxes of ALL the
 #   measurements of phases 15-18, have 140.16.0esr — it is rule R2 (§3): the
@@ -344,7 +344,7 @@ COPY adattatore.lxqt.sh /usr/local/lib/rete11/adattatore.sh
 #   bench», point 5).  ⚠ Put here even though the product does not yet
 #   recognise LXQt: the box is prepared
 #   BEFORE, like the real machine, not on the day it is needed.
-# ⭐ And C11 looks at them (`11-c11-allineamento.py`, `DEVE_COMBACIARE`): same
+# ⭐ And C11 looks at them (`11-c11-allineamento.py`, `MUST_MATCH`): same
 #   version in all four boxes.
 # ⚠ Last layer on purpose: the layers above stay as they were.
 # ---------------------------------------------------------------------------
@@ -425,7 +425,7 @@ RUN useradd -m -s /bin/bash nictest \
 
 # ---------------------------------------------------------------------------
 # ⭐ R4 — 24 Sep 2026, phase 14: born as a DIAGNOSTIC LAYER, and since increment 3
-#   ⛔ PRODUCT DEPENDENCY on LXQt: `avvia()` (src/sessione.c,
+#   ⛔ PRODUCT DEPENDENCY on LXQt: `start()` (src/sessione.c,
 #   `primario_lxqt()`) brings `lxqt-session` to life AFTER a `wlr-randr
 #   --custom-mode` at the client's size — without it, the pcmanfm-qt wallpaper
 #   can stay 1280x720 with the rest black (~1 birth in 13).  ⚠ If it is missing, the
@@ -436,7 +436,7 @@ RUN useradd -m -s /bin/bash nictest \
 #   ⚠ `wayland-utils` (`wayland-info`) is NOT repeated here: it is already in §4,
 #     in all four boxes.  ⚠ `lswt` does NOT exist in Debian
 #     (no version on qa.debian.org, 24 Sep 2026).
-# ⚠ C11 (`11-c11-allineamento.py`) compares only its DEVE_COMBACIARE list,
+# ⚠ C11 (`11-c11-allineamento.py`) compares only its MUST_MATCH list,
 #   and `wlr-randr` is not in it: one extra package only here does not turn it red.
 # ⚠ Last layer on purpose: the layers above stay as they were.
 # ---------------------------------------------------------------------------
@@ -471,7 +471,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 #   touching R2 would throw away the cache of R2, R3 and R4 (three layers, one with the
 #   whole desktop) for two packages that depend on none of them.
 #   Down here R1..R4 stay identical and only this one is rebuilt.
-# ⚠ C11 (`DEVE_COMBACIARE`) does not list them: one extra package only here
+# ⚠ C11 (`MUST_MATCH`) does not list them: one extra package only here
 #   does not turn it red.
 # ---------------------------------------------------------------------------
 RUN apt-get update && apt-get install -y --no-install-recommends \

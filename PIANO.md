@@ -514,7 +514,7 @@ someone else's.
 > | **where one works** | the `git` repository is on the **CHUWI** (`192.168.0.3`), which is also the machine from which the user **looks** |
 > | **where it runs** | `NIC-OS`, **192.168.0.2**: `remotix-7700.service` and `remotix-7730.service` **both alive**, and the machine **has not rebooted** |
 > | ⛔ **the repository has uncommitted work** | `figlio.c` (the **on-command snapshot**, `SIGUSR1`), `pagina.html` (the `MARCA` line that says **who is speaking**), and the benches `07-b48`/`b49`/`b50` |
-> | it is switched back on with | `ALBERO=/media/REMOTIX/src/07-appunti-src LAV=/media/REMOTIX/tmp/07-appunti bash banchi/07-b41-accendi.sh --porta 7730 --hz 0` |
+> | it is switched back on with | `TREE=/media/REMOTIX/src/07-appunti-src WORKDIR=/media/REMOTIX/tmp/07-appunti bash banchi/07-b41-accendi.sh --porta 7730 --hz 0` |
 > | ⛔ the ports in use | 7448 · 7700 · 7710 · 7720 · **7730** |
 > | ⚠ the browser caches | **`Ctrl+Shift+R`** is needed after every change of the page |
 >
@@ -1487,7 +1487,7 @@ scene**, and one looked at **the process instead of the pixel**.
 | **1** | ⭐ **A DELIVERY test that starts from zero**: clean machine → new user → new session → **an image of the desktop with a window inside** | ⛔ it is the only form that would have caught the blind session. A test that reuses a session **never catches it** |
 | **2** | ⭐ **Executable invariants**, few and true: the session has a monitor · a window opens · the frames arrive · **whoever is already there does not get worse** (I1) · the R12.3 twins match · the log says **whose** it speaks of | ⚠ Few. ⛔ A net with a hundred meshes nobody reads is ceremony |
 | **3** | ⛔ **That it runs BY ITSELF** after every change, without anyone having to remember | ⛔ the three times today nobody remembered — **and nobody was distracted**: there simply was no hook |
-| **4** | ⭐⭐ **That it is CERTIFIED itself** — `--certifica`, with injected faults | ⛔ `LEZIONI.md` §1.36: *the layer that coordinates the benches is a bench too, and nobody certifies it*. `[M]` **six defects** found in there in a single phase |
+| **4** | ⭐⭐ **That it is CERTIFIED itself** — `--certify`, with injected faults | ⛔ `LEZIONI.md` §1.36: *the layer that coordinates the benches is a bench too, and nobody certifies it*. `[M]` **six defects** found in there in a single phase |
 | **5** | ⭐⭐⭐ **That it is BLIND TO THE DESKTOP** — the same invariants pointed at GNOME, KDE, XFCE, LXQt without rewriting them | ⛔ it is the whole reason the phase comes **before** the new desktops: a net written to measure for GNOME must be rewritten four times |
 | **6** | ⚠ **That it looks at DELIVERY on the machine AS IT IS** | ⛔ the browser that does not start was not in our code: it was born from the meeting between **how the user configured his machine** — legitimately — and **the ten users we put there**. A net that compiles and tests only `src/` would never have caught it. ⚠ And it must not **judge** the configuration: it is none of its business |
 
@@ -1907,7 +1907,7 @@ judged).
 
 ```
 # the product with phase 8 inside
-ALBERO=/media/REMOTIX/src/08-prova-src LAV=/media/REMOTIX/tmp/08-prova \
+TREE=/media/REMOTIX/src/08-prova-src WORKDIR=/media/REMOTIX/tmp/08-prova \
   bash banchi/07-b41-accendi.sh --porta 7790 --hz 0
 
 # the user's yardstick: the arrow↔window gap, in title bars

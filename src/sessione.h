@@ -1,5 +1,5 @@
 /*
- * sessione — the GNOME graphical session: REMOTIX makes it BE BORN, and makes it
+ * session — the GNOME graphical session: REMOTIX makes it BE BORN, and makes it
  * be born WITH A MONITOR.  It does not merely find it, and it does not merely keep it alive.
  *
  * ---------------------------------------------------------------------------
@@ -7,10 +7,10 @@
  *
  * `fondamenta/remotix-c/src/sessione.c:671` is:
  *
- *     if (tipo == COMPOSITORE_KWIN && !scrivi_dropin(larghezza, altezza, sbaglio))
+ *     if (kind == COMPOSITORE_KWIN && !write_dropin(width, height, mistake))
  *
- * that is, the virtual monitor is written **only for KWin**.  `sessione_assicura()`
- * receives `larghezza` and `altezza` (lines 650-651) and on the GNOME branch **nobody
+ * that is, the virtual monitor is written **only for KWin**.  `session_ensure()`
+ * receives `width` and `height` (lines 650-651) and on the GNOME branch **nobody
  * reads them**: the desktop size enters the function and is silently lost.
  * It is error form **E3** — a function does LESS than its name
  * promises: it is called «ensure» and for GNOME it does not ensure the thing without which
@@ -47,8 +47,8 @@
  *     «is the session ALIVE?»   and   «does the session HAVE A MONITOR?»
  *
  * The defect stayed invisible for two days because **only one** was asked
- * — the one that answered yes.  Hence `sessione_stato()`, which has one number
- * per state, and `sessione_assicura()`, which waits for **the monitor** and not for
+ * — the one that answered yes.  Hence `session_state()`, which has one number
+ * per state, and `session_ensure()`, which waits for **the monitor** and not for
  * liveness.
  *
  * ---------------------------------------------------------------------------
@@ -61,25 +61,25 @@
  *     compositor.  An `LC_ALL=C` arriving by mistake from an SSH shell
  *     prevented ALL applications from opening, and the symptom did not say
  *     «a variable is missing»: it said «applications do not start».
- *   - LIVENESS IS ESTABLISHED WITHOUT INTERPRETING THE ANSWER.  `sessione_viva()`
+ *   - LIVENESS IS ESTABLISHED WITHOUT INTERPRETING THE ANSWER.  `session_alive()`
  *     only checks that the answer ARRIVES: declaring the return type of
  *     `GetCurrentState` would mean that the session's liveness depends
  *     on the exactness of that declaration, and the first draft in Rust
  *     failed that way — the session had started and REMOTIX took it for dead.
- *     ⭐ `sessione_stato()` instead READS the answer, and when it does not have the
+ *     ⭐ `session_state()` instead READS the answer, and when it does not have the
  *        shape it can read it says «could not read» (5) and **never** «zero
  *        monitors» (1): «empty» and «forbidden» look the same, and it is
  *        error form **E8**.
  */
-#ifndef REMOTIX_SESSIONE_H
-#define REMOTIX_SESSIONE_H
+#ifndef REMOTIX_SESSION_H
+#define REMOTIX_SESSION_H
 
 #include <gio/gio.h>
 #include <glib.h>
 #include <stdbool.h>
 #include <stdint.h>
 
-/* ⭐ `REG_SESSIONE` lives in `registro.h` next to the other areas, since 12 August
+/* ⭐ `LOG_SESSION` lives in `registro.h` next to the other areas, since 12 August
  *    2026: it is the only line the assembly removed from this file, and it is the
  *    line that §6.2 of `P2-1-sessione.md` asked to move there. */
 
@@ -95,7 +95,7 @@
 /* ⭐ PHASE 17, D8 (`DECISIONI.md` §10.20): the GNOME session is NO longer always
  *    `gnome`.  It is the distribution's default one (`ubuntu` on Ubuntu), read
  *    from the sessions the display manager offers: the criterion is on
- *    `sessione_gnome()` in `sessione.c`.  `gnome` remains only as a DECLARED
+ *    `gnome_session()` in `sessione.c`.  `gnome` remains only as a DECLARED
  *    FALLBACK, when no offered session launches gnome-session. */
 #define SESSION_GNOME_FALLBACK "gnome"
 /*
@@ -113,18 +113,18 @@
  *     `gnome-session@ubuntu.target.d/ubuntu.session.conf`,
  *     `Requires=org.gnome.Shell@ubuntu.service`) — and the instance is the Shell's
  *     MODE (`--mode=%i`): Ubuntu's dock and colours live there.
- *     ⇒ It is asked of the manager (`Requires` of `gnome-session@<sessione>.target`),
+ *     ⇒ It is asked of the manager (`Requires` of `gnome-session@<session>.target`),
  *     and the drop-in keeps `--mode=%i`.
  *
- * ⇒ The choice is made from what is INSTALLED (`unita_shell()` in `sessione.c`),
+ * ⇒ The choice is made from what is INSTALLED (`unit_shell()` in `sessione.c`),
  *   not from a version number.  ⛔ And the drop-in goes in the folder
  *   of the INSTANCE, never in that of the template (`org.gnome.Shell@.service.d/`):
  *   that one also applies to GDM's Shell.
  */
 #define SESSION_UNIT_SHELL_48 "org.gnome.Shell@wayland.service"
 #define SESSION_UNIT_SHELL_MODEL "org.gnome.Shell@.service"
-/* ⚠ The session manager unit is `gnome-session-manager@<sessione>.service`:
- *   the name is composed by `sessione_gnome()` (D8). */
+/* ⚠ The session manager unit is `gnome-session-manager@<session>.service`:
+ *   the name is composed by `gnome_session()` (D8). */
 /* ⛔ And the SECOND unit to wait for: when a GNOME session ends, GNOME
  * RESTARTS the session bus with this one.  A new session started while it runs
  * is born on a bus about to be replaced — and dies without writing anything
@@ -160,7 +160,7 @@
  *   1. ⛔ **There is no systemd user unit to override.**  On GNOME
  *      the `ExecStart` of `org.gnome.Shell@wayland.service` is rewritten, on KDE
  *      that of `plasma-kwin_wayland.service`; here the compositor is a
- *      process we start ourselves, and `scrivi_dropin()` **has no object**.
+ *      process we start ourselves, and `write_dropin()` **has no object**.
  *   2. ⛔ **The size does NOT enter the birth.**  `[M]` 20 Sep 2026, inside
  *      `rete11-xfce`: the output is born `HEADLESS-1 1280x720`, hardwired, and no
  *      protocol creates one of the wanted size.  The size is given **afterwards**,
@@ -180,18 +180,18 @@
  *    ALL the XDG folders (ours, with the «bring back inside» shortcut,
  *    and the user's, which stays theirs).  Without it, labwc takes ONLY the first
  *    `rc.xml` it finds, and the user's would hide ours.  See
- *    `SESSIONE_LABWC_TASTIERA` below.  ⚠ The line always contains `labwc`
+ *    `SESSION_LABWC_KEYBOARD` below.  ⚠ The line always contains `labwc`
  *    and `--session`: the logout belt stays as it was. */
-#define SESSIONE_TESTA_XFCE "labwc -m --session"
+#define SESSION_HEAD_XFCE "labwc -m --session"
 #define SESSION_PRIMARY_XFCE "xfce4-session"
-#define SESSIONE_RIGA_XFCE SESSIONE_TESTA_XFCE " " SESSION_PRIMARY_XFCE
+#define SESSION_LINE_XFCE SESSION_HEAD_XFCE " " SESSION_PRIMARY_XFCE
 /* ⭐ 5 Oct 2026: the COMMAND is no longer a constant — the primary client is born
- *    after the client's size (`primario_misurato()` in sessione.c), as
+ *    after the client's size (`measured_primary()` in sessione.c), as
  *    on LXQt.  ⚠ The head is the same macro: `labwc` and `--session` stay
  *    in the executed line AND in `XFCE4_SESSION_COMPOSITOR`, and the logout
  *    belt looks only at those two words (`STUDI.md` §xfce §9.2). */
 /* ⛔ The compositor process, by name: on XFCE the guard against the
- *    second session cannot ask systemd — see `unita_inattiva()`. */
+ *    second session cannot ask systemd — see `inactive_unit()`. */
 #define SESSION_PROCESS_XFCE "labwc"
 /* The session manager on the USER bus — `[M]` 20 Sep 2026: it appears there, not
  * on a private bus, because we start `labwc` ourselves without `dbus-run-session`.
@@ -226,7 +226,7 @@
  *   `loginctl terminate-session` (`STUDI.md` §lxqt §3.3, `[✗]`).
  *
  * ⚠ The whole line is not a constant, unlike XFCE: the `-C` folder
- *   is under `XDG_RUNTIME_DIR` and is composed in `avvia()`.  Here are
+ *   is under `XDG_RUNTIME_DIR` and is composed in `start()`.  Here are
  *   the two pieces that do not change.
  */
 #define SESSION_MARKER_LXQT "lxqt-session"
@@ -236,7 +236,7 @@
  *    `/LXQtSession`), `sessiondbusadaptor.h` (interface `org.lxqt.session`)
  *    — https://raw.githubusercontent.com/lxqt/lxqt-session/2.1.1/lxqt-session/src/sessiondbusadaptor.h
  * ⚠ The name appears in the CONSTRUCTOR: «the name is there» does not mean «desktop up»
- *   (`STUDI.md` §lxqt §3.4).  See `sessione_viva()`. */
+ *   (`STUDI.md` §lxqt §3.4).  See `session_alive()`. */
 #define SESSION_BUS_LXQT "org.lxqt.session"
 
 /*
@@ -272,10 +272,10 @@
  *     (`view_place_by_policy()` → `view_move_to_cursor()`, `view.c:1080`).
  *     Below, «MoveToCursor» is the name of the function, not of the action.
  *
- * ⭐ Hence: a labwc SHORTCUT nobody uses (`SESSIONE_LABWC_TASTO`),
+ * ⭐ Hence: a labwc SHORTCUT nobody uses (`SESSION_LABWC_KEY`),
  *    written in the labwc configuration the product already governs, and which
  *    the product TYPES with its virtual keyboard after changing the
- *    size (`input_riporta_dentro()`).  Four `ForEach` passes, flat
+ *    size (`input_bring_back_inside()`).  Four `ForEach` passes, flat
  *    because labwc 0.8.3 does not nest If/ForEach (`rcxml.c` «cannot be a child
  *    action»):
  *
@@ -302,13 +302,13 @@
  * ⚠ THE PRICES, declared (rare: they arise only from user actions inside
  *   labwc): a window the user had set to «border only» comes back without
  *   border; one they had SHADED comes back unshaded.  And the compositor's
- *   pointer stays on the last window touched: `input_riporta_dentro()`
+ *   pointer stays on the last window touched: `input_bring_back_inside()`
  *   puts it back where the user had it.
  * ⚠ All the passes run in ONE shortcut, within a single labwc turn:
  *   no frame falls in between, so the temporary decoration is not
  *   seen.
  */
-#define SESSIONE_LABWC_TASTO "W-C-A-S-F12"
+#define SESSION_LABWC_KEY "W-C-A-S-F12"
 #define SESSION_LABWC_EXCLUDED                                                  \
 	"<query maximized=\"both\"/><query maximized=\"horizontal\"/>"         \
 	"<query maximized=\"vertical\"/><query tiled=\"left\"/>"               \
@@ -318,10 +318,10 @@
 	"<action name=\"FitToOutput\"/>"                                         \
 	"<action name=\"WarpCursor\" to=\"window\" x=\"center\" y=\"center\"/>" \
 	"<action name=\"AutoPlace\" policy=\"cursor\"/>"
-#define SESSIONE_LABWC_TASTIERA                                                 \
+#define SESSION_LABWC_KEYBOARD                                                 \
 	"  <keyboard>\n"                                                        \
 	"    <default/>\n"                                                      \
-	"    <keybind key=\"" SESSIONE_LABWC_TASTO "\">\n"                      \
+	"    <keybind key=\"" SESSION_LABWC_KEY "\">\n"                      \
 	"      <action name=\"ForEach\">" SESSION_LABWC_EXCLUDED                \
 	"<query shaded=\"yes\"/><query decoration=\"full\"/>"                   \
 	"<query decoration=\"border\"/><else>"                                  \
@@ -353,7 +353,7 @@
  * Until phase 12 a machine that had neither GNOME nor KDE was
  * declared **GNOME as a fallback**, and the product tried to start
  * `gnome-session`, which does not exist there.  `[M]` 20 Sep 2026, `rete11-xfce`: the
- * fault did not show up where one would expect — `scrivi_dropin()` re-read
+ * fault did not show up where one would expect — `write_dropin()` re-read
  * the `ExecStart` of a non-existent unit, got nothing, and wrote
  * «**another drop-in wins over mine**»; then capture blamed «**Mutter does not
  * expose RemoteDesktop**».  ⇒ Two innocents accused, and the real cause —
@@ -365,17 +365,17 @@
  *   silently**.  ⇒ XFCE is not added to the list leaving it there: it is removed.
  *   Otherwise on LXQt's day the same thing happens again.
  *
- * ⚠ The numbers go AT THE END: `SessioneDesktop` travels as a `uint32_t` between the
+ * ⚠ The numbers go AT THE END: `DesktopSession` travels as a `uint32_t` between the
  *   parent and the child, and moving 0 or 1 would break that boundary.
  */
 typedef enum {
 	SESSION_DESKTOP_GNOME = 0,
 	SESSION_DESKTOP_KDE = 1,
-	SESSIONE_DESKTOP_XFCE = 2,
-	SESSIONE_DESKTOP_NESSUNO = 3,
+	SESSION_DESKTOP_XFCE = 2,
+	SESSION_DESKTOP_NONE = 3,
 	/* ⭐ PHASE 14 — AT THE END, per the rule above: 0..3 stay as they are. */
-	SESSIONE_DESKTOP_LXQT = 4,
-} SessioneDesktop;
+	SESSION_DESKTOP_LXQT = 4,
+} DesktopSession;
 
 /*
  * Which desktop this machine has — decided ONCE per process.
@@ -407,10 +407,10 @@ typedef enum {
  *    its absence is declared at birth instead of being discovered from a failed
  *    `exec`.  ⭐ Phase 14: for LXQt, identically, the marker is `lxqt-session`.
  */
-SessioneDesktop sessione_desktop(void);
+DesktopSession desktop_session(void);
 
 /* The choice in words, with the why — for the server's startup line. */
-const char *sessione_desktop_spiega(void);
+const char *session_desktop_explain(void);
 
 /*
  * ⭐ PHASE 14 — THE FAMILY, not the desktop: true on XFCE **and** on LXQt.
@@ -418,11 +418,11 @@ const char *sessione_desktop_spiega(void);
  * Capture, input, clipboard and remount do not talk to the desktop: they talk to the
  * COMPOSITOR, and for both it is labwc (`STUDI.md` §lxqt §5: «full
  * reuse»).  ⛔ Until phase 13 `figlio.c` wrote it as
- * `== SESSIONE_DESKTOP_XFCE` in five places: with a fifth enum value
+ * `== SESSION_DESKTOP_XFCE` in five places: with a fifth enum value
  * LXQt would have fallen, all at once and without a warning, into the GNOME/KDE branch.
  * ⇒ Whoever asks «wlroots?» asks this, and not a desktop.
  */
-bool sessione_su_wlroots(void);
+bool session_on_wlroots(void);
 
 /*
  * ⛔ THE MONITOR IS CHOSEN BY NAME, AND THIS IS THE NAME.
@@ -463,28 +463,28 @@ bool sessione_su_wlroots(void);
  *   of the duty to be able to see it: those two numbers remain its own.
  */
 typedef enum {
-	SESSIONE_SANA = 0,          /* one monitor only, of the requested name and size */
-	SESSIONE_NERA = 1,          /* alive, and ZERO monitors — fault M9 of STUDI.md §gnome §13 */
+	SESSION_HEALTHY = 0,          /* one monitor only, of the requested name and size */
+	SESSION_BLACK = 1,          /* alive, and ZERO monitors — fault M9 of STUDI.md §gnome §13 */
 	SESSION_WRONG_SIZE = 2,  /* one monitor, but not of the requested size */
 	SESSION_SELF_CHOSEN = 3,  /* product other than the requested one, or more than one ← E2 */
 	SESSION_DEAD = 4,         /* no compositor: the bus does not answer */
 	SESSION_NOT_READ = 5,     /* I COULD not read: denied or unreadable ← E8 */
-} SessioneStato;
+} SessionState;
 
 /* The mark in words, with the same words as the bench. */
-const char *session_mark(SessioneStato stato);
+const char *session_mark(SessionState state);
 
 /* The monitor as Mutter declares it, for whoever must capture it by NAME. */
 typedef struct {
-	char connettore[64]; /* «Meta-0» */
-	char fornitore[64];  /* «MetaVendor» */
-	char prodotto[64];   /* «MetaVirtualMonitor» — this is what is looked at */
-	char seriale[64];    /* «0x00» */
-	uint32_t larghezza;
-	uint32_t altezza;
+	char connector[64]; /* «Meta-0» */
+	char vendor[64];  /* «MetaVendor» */
+	char product[64];   /* «MetaVirtualMonitor» — this is what is looked at */
+	char serial_number[64];    /* «0x00» */
+	uint32_t width;
+	uint32_t height;
 	double refresh;
-	unsigned quanti; /* how many monitors there were in all: 2 is already a defect */
-} SessioneMonitor;
+	unsigned amount; /* how many monitors there were in all: 2 is already a defect */
+} SessionMonitor;
 
 /*
  * The ONLY lawful way to get the session bus.
@@ -499,28 +499,28 @@ typedef struct {
  * anyone else, but by itself.  The stack that proves it is from 4 August 2026.
  * For the SYSTEM bus the defect does not exist: that one stays.
  *
- * Returns a new reference, or NULL with `sbaglio` written.
+ * Returns a new reference, or NULL with `mistake` written.
  */
-GDBusConnection *sess_bus(GError **sbaglio);
+GDBusConnection *sess_bus(GError **mistake);
 
 /*
- * The configuration folder of the Plasma session we serve:
+ * The configuration folder of the Plasma session we needs:
  * `$XDG_RUNTIME_DIR/remotix/xdg`, put IN FRONT in `XDG_CONFIG_DIRS` when the
- * session is born (the menu rules, the border, `loginMode`).  ⭐ `kwin_disposizione()`
+ * session is born (the menu rules, the border, `loginMode`).  ⭐ `kwin_layout()`
  * writes there too (`kxkbrc`).  NULL without `XDG_RUNTIME_DIR`;
  * to be freed with `g_free`.
  */
-char *sessione_cartella_kde(void);
+char *session_folder_kde(void);
 
 /*
  * ⭐ PHASE 15, D-015 — the SESSION's dconf (GNOME only): writes the profile
- * `$XDG_RUNTIME_DIR/remotix/dconf/profilo` (an in-memory database on top,
+ * `$XDG_RUNTIME_DIR/remotix/dconf/profile` (an in-memory database on top,
  * the user's below, read-only) and sets `DCONF_PROFILE` in the
  * process.  ⛔ It must be called BEFORE any `GSettings`: the dconf engine
  * reads the variable only once.  False on another desktop, or if the cure
  * cannot hold (said in the log).
  */
-bool sessione_dconf_prepara(void);
+bool session_dconf_prepare(void);
 
 /*
  * Is the session's dconf in force in THIS process?  ⛔ If not, whoever
@@ -530,30 +530,30 @@ bool session_dconf_of_session(void);
 
 /*
  * ⭐ PHASE 15 (R1/R2) — systemd's USER MANAGER goes back to how it was after the
- * remote session: `sessione_fotografa_gestore()` at birth saves the
- * value our variables had before; `sessione_sgombera_gestore()` —
+ * remote session: `session_snapshot_handler()` at birth saves the
+ * value our variables had before; `session_clear_out_handler()` —
  * with the session DEAD, otherwise it does nothing — removes our drop-ins and
  * restores the variables.  The box is in `sessione.c`.
  */
-void sessione_fotografa_gestore(void);
+void session_snapshot_handler(void);
 /* Once the session has exited, closes what is left of the user in THEIR session-N.scope
  * (said in the log).  The why is above the definition, in sessione.c. */
-void sessione_sgombera_scope(void);
-void sessione_sgombera_gestore(const char *perche);
+void session_clear_out_scope(void);
+void session_clear_out_handler(const char *why);
 
 /*
  * Is there a compositor that answers?
  *
  * ⚠ It is the WEAK question, and it is here on purpose so that its weakness shows: a
  *   black session answers «yes».  Whoever needs to know whether there is something to
- *   capture calls `sessione_stato()`.
+ *   capture calls `session_state()`.
  */
-bool sessione_viva(void);
+bool session_alive(void);
 
 /*
  * What state the session is in, with the REQUESTED size next to it.
  *
- * `scelto` (optional) receives the monitor found — or the first of many,
+ * `chosen` (optional) receives the monitor found — or the first of many,
  * when there are many — so that whoever captures can name it instead of deducing it.
  *
  * ⛔ It touches nothing: it can be called at any moment, and harms
@@ -565,7 +565,7 @@ bool sessione_viva(void);
  *    check **destroys the thing it is checking**, and does so **only in the
  *    faulty case**: green when it is healthy, rubble when it is black.
  */
-SessioneStato sessione_stato(uint32_t larghezza, uint32_t altezza, SessioneMonitor *scelto);
+SessionState session_state(uint32_t width, uint32_t height, SessionMonitor *chosen);
 
 /*
  * Makes sure there is a graphical session WITH A MONITOR of the requested
@@ -573,11 +573,11 @@ SessioneStato sessione_stato(uint32_t larghezza, uint32_t altezza, SessioneMonit
  *
  * Returns **the state of the world when it has finished**, not a yes/no: 0 is
  * success, and every other number says in what way it is not.  ⛔ The why is
- * in the log, area «sessione»: there is no `GError` to propagate because there
+ * in the log, area «session»: there is no `GError` to propagate because there
  * is nobody to propagate it to — the caller can only declare it and carry on
  * with less (`CODER.md` §4.2), and that is what it must do.
  *
- * `avviata` (optional) says whether it had to make it be born.
+ * `was_started` (optional) says whether it had to make it be born.
  *
  * ⛔ WHAT IT DOES, CASE BY CASE — written here so that it is not discovered from the code:
  *
@@ -602,7 +602,7 @@ SessioneStato sessione_stato(uint32_t larghezza, uint32_t altezza, SessioneMonit
  * It starts only from `SESSION_DEAD`; whoever retries takes care of finding out that it is there.
  * ⛔ The CHILD uses it, which during a 40 s wait would stop answering the
  *    parent.  The full why is above the function in `sessione.c`. */
-bool sessione_fai_nascere(uint32_t larghezza, uint32_t altezza);
+bool session_spawn(uint32_t width, uint32_t height);
 
 /* ⭐ The settings the session must have BEFORE being born: the twelve
  * virtual console shortcuts (which headless Mutter swallows for
@@ -610,14 +610,14 @@ bool sessione_fai_nascere(uint32_t larghezza, uint32_t altezza);
  * desktop's screen locker off.  ⛔ The PRODUCT sets them and not a
  * provisioning file: invariant I7.  ⚠ Each schema is looked up first — `g_settings_new`
  * on a missing schema ABORTS the process. */
-void sessione_impostazioni(void);
+void session_settings(void);
 
 /* ⭐ Tells the session manager that someone is working: `SUSPEND|IDLE`,
  * ⛔ never `LOGOUT`.  Returns the cookie, 0 if it failed.  ⚠ It is not
  * released: it lasts as long as the session.  (`DECISIONI.md` §4.7, third belt.) */
-guint32 sessione_inibisci(void);
+guint32 session_inhibit(void);
 
-SessioneStato sessione_assicura(uint32_t larghezza, uint32_t altezza, bool *avviata);
+SessionState session_ensure(uint32_t width, uint32_t height, bool *was_started);
 
 /*
  * Terminates the graphical session.  True if it was there and now it is gone.
@@ -644,6 +644,6 @@ SessioneStato sessione_assicura(uint32_t larghezza, uint32_t altezza, bool *avvi
  *    `deactivating`, and restarting a session in there is another first
  *    run (`FASI.md` §00-ambiente, defect 4 of phase 0).
  */
-bool sessione_termina(void);
+bool session_terminate(void);
 
 #endif

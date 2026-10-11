@@ -1,4 +1,4 @@
-package motore
+package engine
 
 import (
 	"encoding/json"
@@ -12,67 +12,67 @@ import (
 // installa-pacchetti: the package manager's transaction (§6.0 rule 1, §6.6.6; since 10 Oct
 // 2026 without caches or sha256 of our own: «don't reinvent the wheel», DECISIONI §10.36).
 //
-//   - Fotografa (before the intention): the manager SIMULATES the transaction; the set (name, version,
-//     origin, new/upgraded) goes into the log's intention and into resolved-set-<passo>.json.
-//   - Fai: the manager installs — the files of the single package, with the dependencies from the
+//   - Snapshot (before the intention): the manager SIMULATES the transaction; the set (name, version,
+//     origin, new/upgraded) goes into the log's intention and into resolved-set-<step>.json.
+//   - Do: the manager installs — the files of the single package, with the dependencies from the
 //     machine's repositories, downloaded and verified by it.
-//   - Controlla: every package at the simulated version (or newer) ⇒ complete; none of the new ones ⇒
+//   - Check: every package at the simulated version (or newer) ⇒ complete; none of the new ones ⇒
 //     absent; otherwise (or the manager halfway through a transaction) ⇒ half-done.
-//   - Ripara: the manager's remedy (dpkg --configure -a…), needed before undoing.
-//   - Annulla: the NEW packages are removed, and only those (the manager simulates first: if it
+//   - Repair: the manager's remedy (dpkg --configure -a…), needed before undoing.
+//   - Rollback: the NEW packages are removed, and only those (the manager simulates first: if it
 //     would remove others, it holds them back); the UPGRADED ones stay upgraded and are declared
-//     (INDIRETTA, §6.6.4). Reversibility AL_MEGLIO.
+//     (INDIRECT, §6.6.4). Reversibility BEST_EFFORT.
 //
 // parameters: file (paths of the .run's packages, comma-separated: a single transaction),
 // names (comma-separated, from the machine's repositories).
 
-func init() { registraTipo("install-packages", newPackages) }
+func init() { registerType("install-packages", newPackages) }
 
 // PlanPackages prepares the plan's step.
-func PlanPackages(id, file, nomi string) AzionePiano {
-	var basi []string
+func PlanPackages(id, file, names string) PlanAction {
+	var bases []string
 	for _, f := range splitCommas(file) {
-		basi = append(basi, filepath.Base(f))
+		bases = append(bases, filepath.Base(f))
 	}
-	cosa := strings.TrimSpace(strings.Join(basi, " ") + " " + nomi)
-	return AzionePiano{
-		ID: id, Tipo: "install-packages",
-		Parametri:     map[string]string{"file": file, "names": nomi},
-		Descrizione:   T("az.pacchetti", cosa),
+	what := strings.TrimSpace(strings.Join(bases, " ") + " " + names)
+	return PlanAction{
+		ID: id, Type: "install-packages",
+		Parameters:     map[string]string{"file": file, "names": names},
+		Description:   T("az.pacchetti", what),
 		ComeSiFa:      T("az.pacchetti.fa"),
 		HowToVerify:   T("az.pacchetti.verifica"),
 		HowToUndo:     T("az.pacchetti.annulla"),
-		Reversibilita: AL_MEGLIO,
+		Reversibility: BEST_EFFORT,
 	}
 }
 
-type pacchetti struct {
-	file, nomi []string
+type packets struct {
+	file, names []string
 }
 
 type beforePackages struct {
 	Origine     Origine     `json:"origin"`
-	Gestore     string      `json:"manager"`
+	Manager     string      `json:"manager"`
 	File        []string    `json:"files,omitempty"`
-	Nomi        []string    `json:"names"`
-	ResolvedSet []Artefatto `json:"resolved_set"`
+	Names        []string    `json:"names"`
+	ResolvedSet []Artifact `json:"resolved_set"`
 }
 
-func newPackages(p AzionePiano) (Azione, error) {
-	return &pacchetti{file: splitCommas(p.Parametri["file"]), nomi: splitCommas(p.Parametri["names"])}, nil
+func newPackages(p PlanAction) (Action, error) {
+	return &packets{file: splitCommas(p.Parameters["file"]), names: splitCommas(p.Parameters["names"])}, nil
 }
 
-func (a *pacchetti) gestore(c *Contesto) (Gestore, error) {
-	if c.Amb.Pacchetti == nil {
-		return nil, Errore("RX-PACCHETTI-003", c.Amb.Famiglia)
+func (a *packets) handler(c *Context) (Manager, error) {
+	if c.Env.Pacchetti == nil {
+		return nil, Error("RX-PACCHETTI-003", c.Env.Famiglia)
 	}
-	return c.Amb.Pacchetti, nil
+	return c.Env.Pacchetti, nil
 }
 
-// Vincoli: the versions installed now of the named packages, and the files of the single package (by
+// Constraints: the versions installed now of the named packages, and the files of the single package (by
 // name: the .run is one, and its sha256 guarantees it whole).
-func (a *pacchetti) Vincoli(c *Contesto) ([]string, error) {
-	g, err := a.gestore(c)
+func (a *packets) Constraints(c *Context) ([]string, error) {
+	g, err := a.handler(c)
 	if err != nil {
 		return nil, err
 	}
@@ -80,21 +80,21 @@ func (a *pacchetti) Vincoli(c *Contesto) ([]string, error) {
 	for _, f := range a.file {
 		v = append(v, "package-file:"+filepath.Base(f))
 	}
-	ver, err := g.Vers(a.nomi)
+	ver, err := g.Vers(a.names)
 	if err != nil {
 		return nil, err
 	}
-	for _, n := range a.nomi {
+	for _, n := range a.names {
 		v = append(v, "package:"+n+"="+notEmpty(ver[n], "absent"))
 	}
 	return v, nil
 }
 
-// veri: the paths of the files on the machine (in the tests, under the fake root).
-func veri(c *Contesto, file []string) []string {
+// genuine: the paths of the files on the machine (in the tests, under the fake root).
+func genuine(c *Context, file []string) []string {
 	var r []string
 	for _, f := range file {
-		r = append(r, c.Amb.P(f))
+		r = append(r, c.Env.P(f))
 	}
 	return r
 }
@@ -110,33 +110,33 @@ func splitCommas(s string) []string {
 	return r
 }
 
-func (a *pacchetti) Fotografa(c *Contesto) (json.RawMessage, Origine, error) {
-	g, err := a.gestore(c)
+func (a *packets) Snapshot(c *Context) (json.RawMessage, Origine, error) {
+	g, err := a.handler(c)
 	if err != nil {
 		return nil, "", err
 	}
 	if ok, det, err := g.Intact(); err != nil {
 		return nil, "", err
 	} else if !ok {
-		return nil, "", Errore("RX-PACCHETTI-004", det)
+		return nil, "", Error("RX-PACCHETTI-004", det)
 	}
 	for _, f := range a.file {
-		if _, err := os.Stat(c.Amb.P(f)); err != nil {
-			return nil, "", Errore("RX-PACCHETTI-001", f+": "+err.Error())
+		if _, err := os.Stat(c.Env.P(f)); err != nil {
+			return nil, "", Error("RX-PACCHETTI-001", f+": "+err.Error())
 		}
 	}
-	ins, err := g.Simula(veri(c, a.file), a.nomi)
+	ins, err := g.Simulate(genuine(c, a.file), a.names)
 	if err != nil {
 		return nil, "", &ErrorRX{messageSimulate(err)}
 	}
-	p := beforePackages{Origine: PREESISTENTE, Gestore: g.Nome(), File: a.file, Nomi: a.nomi, ResolvedSet: ins}
+	p := beforePackages{Origine: PREEXISTING, Manager: g.Nome(), File: a.file, Names: a.names, ResolvedSet: ins}
 	for _, x := range ins {
-		if x.Esito != "present" {
-			p.Origine = DIRETTA
+		if x.Outcome != "present" {
+			p.Origine = DIRECT
 		}
 	}
-	if err := WriteJSON(filepath.Join(c.Cartella, "resolved-set-"+c.P.ID+".json"),
-		map[string]any{"format": Formato, "object": "resolved-set", "action": c.P.ID, "manager": g.Nome(), "artifacts": ins}); err != nil {
+	if err := WriteJSON(filepath.Join(c.Folder, "resolved-set-"+c.P.ID+".json"),
+		map[string]any{"format": Schema, "object": "resolved-set", "action": c.P.ID, "manager": g.Nome(), "artifacts": ins}); err != nil {
 		return nil, "", err
 	}
 	return jsonDi(p), p.Origine, nil
@@ -144,7 +144,7 @@ func (a *pacchetti) Fotografa(c *Contesto) (json.RawMessage, Origine, error) {
 
 // messageSimulate: the manager's simulation did not succeed — RX-PACCHETTI-005 with what it says, unless
 // the engine already has the reason (the manager stayed busy: RX-PACCHETTI-008).
-func messageSimulate(err error) Messaggio {
+func messageSimulate(err error) Message {
 	var e *ErrorRX
 	if errors.As(err, &e) {
 		return e.M
@@ -152,27 +152,27 @@ func messageSimulate(err error) Messaggio {
 	return Msg("RX-PACCHETTI-005", err.Error())
 }
 
-func readPackagesBefore(prima json.RawMessage) (beforePackages, error) {
+func readPackagesBefore(before json.RawMessage) (beforePackages, error) {
 	var p beforePackages
-	err := json.Unmarshal(prima, &p)
+	err := json.Unmarshal(before, &p)
 	return p, err
 }
 
-func (a *pacchetti) Fai(c *Contesto, prima json.RawMessage) error {
-	p, err := readPackagesBefore(prima)
-	if err != nil || p.Origine == PREESISTENTE {
+func (a *packets) Do(c *Context, before json.RawMessage) error {
+	p, err := readPackagesBefore(before)
+	if err != nil || p.Origine == PREEXISTING {
 		return err
 	}
-	g, err := a.gestore(c)
+	g, err := a.handler(c)
 	if err != nil {
 		return err
 	}
-	return g.Installa(veri(c, p.File), p.Nomi)
+	return g.Install(genuine(c, p.File), p.Names)
 }
 
 // state of the set's packages, now.
-func (a *pacchetti) conta(c *Contesto, p beforePackages) (completi, newPresent int, err error) {
-	g, err := a.gestore(c)
+func (a *packets) count(c *Context, p beforePackages) (completed, newPresent int, err error) {
+	g, err := a.handler(c)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -182,34 +182,34 @@ func (a *pacchetti) conta(c *Contesto, p beforePackages) (completi, newPresent i
 	}
 	// D14 (DECISIONI §10.23): REMOTIX and its dependencies are upgraded with the system. A package
 	// of the set is «complete» at the resolved version, at a NEWER one (a system upgrade
-	// brought it), or at the one recorded by the last `remotix-install aggiornato` (a rollback
+	// brought it), or at the one recorded by the last `remotix-install post-upgrade` (a rollback
 	// done with the manager's commands)
-	agg := updatedVersions(c.Cartella)
+	add := updatedVersions(c.Folder)
 	for _, x := range p.ResolvedSet {
 		v := ver[x.Nome]
-		if versioneUguale(v, x.Ver) || (agg[x.Nome] != "" && versioneUguale(v, agg[x.Nome])) ||
-			(v != "" && x.Ver != "" && ComparePackages(c.Amb.Famiglia, v, x.Ver) > 0) {
-			completi++
+		if versionEqual(v, x.Ver) || (add[x.Nome] != "" && versionEqual(v, add[x.Nome])) ||
+			(v != "" && x.Ver != "" && ComparePackages(c.Env.Famiglia, v, x.Ver) > 0) {
+			completed++
 		}
-		if x.Esito == "new" && v != "" {
+		if x.Outcome == "new" && v != "" {
 			newPresent++
 		}
 	}
-	return completi, newPresent, nil
+	return completed, newPresent, nil
 }
 
-// versioneUguale: the epoch «0:» does not count (dnf may write «0:2.3-1», rpm and dpkg «2.3-1»); any
+// versionEqual: the epoch «0:» does not count (dnf may write «0:2.3-1», rpm and dpkg «2.3-1»); any
 // other epoch does, and every manager reports it (dpkg, pacman, and rpm through rpmEVR).
-func versioneUguale(a, b string) bool {
+func versionEqual(a, b string) bool {
 	return strings.TrimPrefix(a, "0:") == strings.TrimPrefix(b, "0:")
 }
 
-func (a *pacchetti) Controlla(c *Contesto, prima json.RawMessage) (Esito, string, error) {
-	p, err := readPackagesBefore(prima)
+func (a *packets) Check(c *Context, before json.RawMessage) (Outcome, string, error) {
+	p, err := readPackagesBefore(before)
 	if err != nil {
 		return "", "", err
 	}
-	g, err := a.gestore(c)
+	g, err := a.handler(c)
 	if err != nil {
 		return "", "", err
 	}
@@ -218,43 +218,43 @@ func (a *pacchetti) Controlla(c *Contesto, prima json.RawMessage) (Esito, string
 	} else if !ok {
 		return A_META, "the package manager is half way: " + det, nil
 	}
-	completi, nuovi, err := a.conta(c, p)
+	completed, newcomers, err := a.count(c, p)
 	if err != nil {
 		return "", "", err
 	}
 	switch {
-	case completi == len(p.ResolvedSet):
-		return COMPLETO, fmt.Sprintf("%d packages at the resolved version", completi), nil
-	case nuovi == 0 && completi == 0:
-		return ASSENTE, "none of the new packages", nil
-	case nuovi == 0:
-		return ASSENTE, "none of the new packages (the upgraded ones stay)", nil
+	case completed == len(p.ResolvedSet):
+		return COMPLETE, fmt.Sprintf("%d packages at the resolved version", completed), nil
+	case newcomers == 0 && completed == 0:
+		return ABSENT, "none of the new packages", nil
+	case newcomers == 0:
+		return ABSENT, "none of the new packages (the upgraded ones stay)", nil
 	}
-	return A_META, fmt.Sprintf("%d of %d", completi, len(p.ResolvedSet)), nil
+	return A_META, fmt.Sprintf("%d of %d", completed, len(p.ResolvedSet)), nil
 }
 
-func (a *pacchetti) Ripara(c *Contesto, prima json.RawMessage) error {
-	g, err := a.gestore(c)
+func (a *packets) Repair(c *Context, before json.RawMessage) error {
+	g, err := a.handler(c)
 	if err != nil {
 		return err
 	}
 	if ok, _, err := g.Intact(); err == nil && ok {
 		return nil
 	}
-	return g.Ripara()
+	return g.Repair()
 }
 
-func (a *pacchetti) Annulla(c *Contesto, prima json.RawMessage) error {
-	p, err := readPackagesBefore(prima)
-	if err != nil || p.Origine == PREESISTENTE {
+func (a *packets) Rollback(c *Context, before json.RawMessage) error {
+	p, err := readPackagesBefore(before)
+	if err != nil || p.Origine == PREEXISTING {
 		return err
 	}
-	g, err := a.gestore(c)
+	g, err := a.handler(c)
 	if err != nil {
 		return err
 	}
 	if ok, _, err := g.Intact(); err == nil && !ok {
-		if err := g.Ripara(); err != nil {
+		if err := g.Repair(); err != nil {
 			return err
 		}
 	}
@@ -262,31 +262,31 @@ func (a *pacchetti) Annulla(c *Contesto, prima json.RawMessage) error {
 	if err != nil {
 		return err
 	}
-	var nuovi []string
+	var newcomers []string
 	for _, x := range p.ResolvedSet {
-		if x.Esito == "new" && ver[x.Nome] != "" {
-			nuovi = append(nuovi, x.Nome)
+		if x.Outcome == "new" && ver[x.Nome] != "" {
+			newcomers = append(newcomers, x.Nome)
 		}
 	}
-	togli, _, err := trattenuti(g, nuovi, nuovi, c.Purge)
+	remove, _, err := held(g, newcomers, newcomers, c.Purge)
 	if err != nil {
 		return err
 	}
-	if len(togli) > 0 {
-		return g.Togli(togli, c.Purge)
+	if len(remove) > 0 {
+		return g.Remove(remove, c.Purge)
 	}
 	return nil
 }
 
-func (a *pacchetti) Annullata(c *Contesto, prima json.RawMessage) (bool, string, error) {
-	p, err := readPackagesBefore(prima)
+func (a *packets) RolledBack(c *Context, before json.RawMessage) (bool, string, error) {
+	p, err := readPackagesBefore(before)
 	if err != nil {
 		return false, "", err
 	}
-	if p.Origine == PREESISTENTE {
+	if p.Origine == PREEXISTING {
 		return true, "already there: left untouched", nil
 	}
-	g, err := a.gestore(c)
+	g, err := a.handler(c)
 	if err != nil {
 		return false, "", err
 	}
@@ -294,29 +294,29 @@ func (a *pacchetti) Annullata(c *Contesto, prima json.RawMessage) (bool, string,
 	if err != nil {
 		return false, "", err
 	}
-	var tutti, ancora []string
+	var all_items, still []string
 	for _, x := range p.ResolvedSet {
-		if x.Esito == "new" {
-			tutti = append(tutti, x.Nome)
+		if x.Outcome == "new" {
+			all_items = append(all_items, x.Nome)
 			if ver[x.Nome] != "" {
-				ancora = append(ancora, x.Nome)
+				still = append(still, x.Nome)
 			}
 		}
 	}
-	via, resta, err := trattenuti(g, ancora, tutti, c.Purge)
+	via, stays, err := held(g, still, all_items, c.Purge)
 	if err != nil {
 		return false, "", err
 	}
 	if len(via) > 0 {
 		return false, fmt.Sprintf("%d new packages still installed", len(via)), nil
 	}
-	if len(resta) > 0 {
-		return true, "[RX-PACCHETTI-006] " + T("pacchetti.trattenuti", strings.Join(resta, ", ")), nil
+	if len(stays) > 0 {
+		return true, "[RX-PACCHETTI-006] " + T("pacchetti.trattenuti", strings.Join(stays, ", ")), nil
 	}
 	return true, "the new packages are gone", nil
 }
 
-// trattenuti: of the NEW packages to remove, those that can be removed and those that stay
+// held: of the NEW packages to remove, those that can be removed and those that stay
 // because something that stays requires them — a package UPGRADED by the same step, or a program
 // installed later.
 // Removing them would take that away too (`[M]` 30 Sep, leap16-kde: `zypper rm` of libx264 & co.
@@ -324,41 +324,41 @@ func (a *pacchetti) Annullata(c *Contesto, prima json.RawMessage) (bool, string,
 // remains indirectly is stated). A package is held back if removing it ALONE would remove something
 // outside «ours» (the new ones of the same step): whoever depends on it in turn holds it back
 // too, because the manager's simulation follows the whole chain.
-func trattenuti(g Gestore, candidati, nostri []string, purge bool) (via, resta []string, err error) {
-	if len(candidati) == 0 {
+func held(g Manager, candidates, our []string, purge bool) (via, stays []string, err error) {
+	if len(candidates) == 0 {
 		return nil, nil, nil
 	}
-	altri, err := g.SimulaTogli(candidati, purge)
+	others, err := g.SimulateRemove(candidates, purge)
 	if err != nil {
 		return nil, nil, err
 	}
-	if len(notIn(altri, nostri)) == 0 {
-		return candidati, nil, nil
+	if len(notIn(others, our)) == 0 {
+		return candidates, nil, nil
 	}
-	for _, n := range candidati {
-		a, err := g.SimulaTogli([]string{n}, purge)
+	for _, n := range candidates {
+		a, err := g.SimulateRemove([]string{n}, purge)
 		if err != nil {
 			return nil, nil, err
 		}
-		if len(notIn(a, nostri)) > 0 {
-			resta = append(resta, n+" ("+T("pacchetti.chiesto_da", strings.Join(notIn(a, nostri), ", "))+")")
+		if len(notIn(a, our)) > 0 {
+			stays = append(stays, n+" ("+T("pacchetti.chiesto_da", strings.Join(notIn(a, our), ", "))+")")
 		} else {
 			via = append(via, n)
 		}
 	}
-	return via, resta, nil
+	return via, stays, nil
 }
 
-// Indirette: the packages UPGRADED for us stay upgraded (§6.6.4): they are declared.
-func (a *pacchetti) Indirette(prima json.RawMessage) []string {
-	p, err := readPackagesBefore(prima)
+// Indirect: the packages UPGRADED for us stay upgraded (§6.6.4): they are declared.
+func (a *packets) Indirect(before json.RawMessage) []string {
+	p, err := readPackagesBefore(before)
 	if err != nil {
 		return nil
 	}
 	var r []string
 	for _, x := range p.ResolvedSet {
-		if x.Esito == "upgraded" {
-			r = append(r, x.Nome+" "+x.Prima+" → "+x.Ver)
+		if x.Outcome == "upgraded" {
+			r = append(r, x.Nome+" "+x.Before+" → "+x.Ver)
 		}
 	}
 	return r

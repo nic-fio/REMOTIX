@@ -15,7 +15,7 @@ def manuale():
     """The manual's sources: the generator, the style, the script and one file per chapter, with its title."""
     righe = [
         ("docs/sources/build.py", "Generates the manual: text, table and SVG figure helpers, numbering, the "
-         "file map and project figures, and the " + c("--controlla") + " checks (Italian left, cited files, "
+         "file map and project figures, and the " + c("--check") + " checks (Italian left, cited files, "
          "functions, variables and codes)"),
         ("docs/sources/manual.js", "The script embedded in the page: sidebar, search, figure zoom"),
         ("docs/sources/style.css", "The common style sheet every manual page starts with"),
@@ -77,8 +77,8 @@ GRUPPI = [
         (S + "cursore.h", "The cursor-shape seam, from PipeWire to the wire"),
         (S + "forma.c", t("shape") + "The encoded cursor theme and its dictionary, shared by server and child"),
         (S + "forma.h", "How the real pointer shape reaches the browser where the compositor does not send it"),
-        (S + "remotix-tasti.conf", t("keys") + "Second power belt: logind ignores the power, reboot, suspend and hibernate keys and the lid"),
-        (S + "remotix-niente-spegnimento.rules", t("no power-off") + "First power belt: polkit rule so that nobody shuts the "
+        (S + "remotix-power-keys.conf", t("keys") + "Second power belt: logind ignores the power, reboot, suspend and hibernate keys and the lid"),
+        (S + "remotix-no-poweroff.rules", t("no power-off") + "First power belt: polkit rule so that nobody shuts the "
          "server down"),
     ]),
     ("Encoding", [
@@ -258,7 +258,7 @@ GRUPPI = [
         ("installatore/prove/Contenitore.systemd", t("prove = tests; Contenitore = container") + "Fedora 44 with systemd running, for D-Bus actions"),
         ("installatore/prove/gruppi-desktop.sh", t("desktop groups") + "Asks each family's package manager whether the catalogue's "
          "desktop group names exist"),
-        ("installatore/prove/impronta/main.go", t("fingerprint") + "Fingerprint of a folder, independent of the engine (test R1)"),
+        ("installatore/prove/fingerprint/main.go", t("fingerprint") + "Fingerprint of a folder, independent of the engine (test R1)"),
         ("installatore/prove/r1-contenitori.sh", t("R1 containers") + "R1 in containers: the check leaves " + c("/etc") + " identical"),
         ("installatore/prove/sul-server.sh", t("on the server") + "History: an engine round in a VM with commands that no longer exist"),
         ("installatore/prove/systemd-giro.sh", t("systemd round") + "History: an engine round in the systemd container, same reason"),
@@ -276,7 +276,7 @@ GRUPPI = [
         ("packaging/debian/remotix.prerm", "Before removal: stops the service on remove only"),
         ("packaging/debian/remotix.postrm", "After removal: purge removes what the program created"),
         ("packaging/debian/remotix.ufw", "The ufw application profile, defined, not opened"),
-        ("packaging/debian/remotix-niente-sospensione.conf", t("no suspend") + "Third power belt, shipped inert"),
+        ("packaging/debian/remotix-no-suspend.conf", t("no suspend") + "Third power belt, shipped inert"),
         ("packaging/debian/remotix.lintian-overrides", "The page is the program, not documentation"),
         ("packaging/debian/org.kde.remotix.desktop", "Grants KWin's screencast interface to the binary"),
         ("packaging/debian/utenti-negati", t("denied users") + "Users that may never log in: root"),
@@ -288,12 +288,12 @@ GRUPPI = [
         ("packaging/rpm/remotix.conf", "Packaged defaults"),
         ("packaging/rpm/remotix.tmpfiles", "The state and runtime directories"),
         ("packaging/rpm/remotix-firewalld.xml", "The firewalld service, defined, not opened"),
-        ("packaging/rpm/remotix-niente-sospensione.conf", "Third power belt, shipped inert"),
+        ("packaging/rpm/remotix-no-suspend.conf", "Third power belt, shipped inert"),
         ("packaging/rpm/org.kde.remotix.desktop", "Grants KWin's screencast interface to the binary"),
         ("packaging/rpm/selinux/remotix.te", "The SELinux module: why it exists and the domain transition to the user"),
         ("packaging/rpm/selinux/remotix.fc", "SELinux file contexts"),
         ("packaging/rpm/selinux/remotix.if", "SELinux interface"),
-        ("packaging/rpm/selinux/remotix_porta.cil", t("port") + "The port type for 7447 TCP and UDP, in CIL"),
+        ("packaging/rpm/selinux/remotix_portcon.cil", t("port") + "The port type for 7447 TCP and UDP, in CIL"),
     ]),
     ("Packaging: Arch", [
         ("packaging/arch/PKGBUILD", "The Arch package, built from the repository in the Arch container"),
@@ -303,7 +303,7 @@ GRUPPI = [
         ("packaging/arch/remotix.conf", "Packaged defaults, as in the deb and rpm"),
         ("packaging/arch/remotix.tmpfiles", "The state directory"),
         ("packaging/arch/remotix.firewalld.xml", "The firewalld service, defined, not opened"),
-        ("packaging/arch/remotix-niente-sospensione.conf", "Third power belt, shipped inert"),
+        ("packaging/arch/remotix-no-suspend.conf", "Third power belt, shipped inert"),
         ("packaging/arch/org.kde.remotix.desktop", "Grants KWin's screencast interface to the binary"),
         ("packaging/arch/utenti-negati", "Users that may never log in: root"),
     ]),
@@ -324,12 +324,12 @@ S1 = p("Every product file with its line count, recounted each time the manual i
        "page, the installer and its interface, the packaging of each family and the sources of this manual. "
        "The files kept out are the installer's vendored modules, the protocol headers generated at build time "
        "and binary images. If a file is missing from the map, or the map lists a file that no longer exists, "
-       "generation stops — and so does " + c("build.py --controlla") + ". The role of each file is taken from "
+       "generation stops — and so does " + c("build.py --check") + ". The role of each file is taken from "
        "its own header comment; for C modules the " + c(".h") + " carries the why and the " + c(".c")
        + " the how.",
        lead=True) + file_map(GRUPPI, "«TAB» — The project's files")
 
-BANCHI = table(["Folder or prefix", "What it tests"], [
+BENCHES = table(["Folder or prefix", "What it tests"], [
     "Root of " + c("banchi/") + ": one file per bench, results next to it",
     [c("00-*"), "The environment of phase 0: anchors, the first KWin and wlroots probes, atomic log, the GNOME "
      "session"],
@@ -347,8 +347,8 @@ BANCHI = table(["Folder or prefix", "What it tests"], [
     [c("12-*") + ", " + c("13-*") + ", " + c("14-*"), "The KDE, XFCE and LXQt increments; the real-browser "
      "drivers " + c("12-client-veri.py") + " and " + c("12-c20-veri.py") + " (" + c("veri") + " = real)"],
     [c("attrezzi-*.sh") + " (tools)", "Shared helpers: tenants, card groups, re-grafting the product into a bench"],
-    [c("b*-esiti*.jsonl") + ", " + c("flusso-*.json") + ", " + c("pagina-*.rgb24"), "Results (" + c("esiti") + "), "
-     "streams (" + c("flusso") + ") and decoded page pixels (" + c("pagina") + ") kept from phases 1–2"],
+    [c("b*-outcomes*.jsonl") + ", " + c("flusso-*.json") + ", " + c("pagina-*.rgb24"), "Results (" + c("outcomes") + "), "
+     "streams (" + c("flusso") + ") and decoded page pixels (" + c("page") + ") kept from phases 1–2"],
     "Folders of evidence (results only)",
     [c("01-p5-copie*/") + " (" + c("copie") + " = copies)", "Browser screenshots of the phase 1 login runs: healthy, faulty, repaired"],
     [c("02-filo-prove/") + " (wire tests)", "RCP recordings, good and broken, for the wire validator"],
@@ -370,7 +370,7 @@ BANCHI = table(["Folder or prefix", "What it tests"], [
     [c("17-t2/") + ", " + c("17-t6/") + ", " + c("17-t7/") + ", " + c("17-t8/") + ", " + c("17-t9/"),
      "Installer stage benches: desktops surviving a stop (T2), PAM and SELinux (T6), upgrading without closing the desktops, which the new parent finds again (T7), "
      "faults and third-party repositories (T8), the interface (T9). T8 and T9 are history"],
-    [c("18-a1/") + ", " + c("18-scheda/") + ", " + c("18-software/"), "Old vs new when ffmpeg left (" + c("scheda") + " = card): Opus "
+    [c("18-a1/") + ", " + c("18-scheda/") + ", " + c("18-software/"), "Old vs new when ffmpeg left (" + c("card") + " = card): Opus "
      "without ffmpeg, libva direct vs ffmpeg on the card, the software path"],
     [c("19-vulkan/"), "Vulkan Video vs VA-API, the shader build, Chrome decoding of the result"],
     [c("19-nvidia/"), "The rented NVIDIA machine: container test and suite"],
@@ -385,7 +385,7 @@ BANCHI = table(["Folder or prefix", "What it tests"], [
 S2 = p(c("banchi/") + " holds about 1,800 files and is described by folder, not file by file. The prefix of a "
        "file at the root is the number of the phase that wrote it; the folders with a name are either evidence "
        "kept next to a result or machinery that is still run. How to run them is in "
-       + rif("Running the benches") + ".", lead=True) + BANCHI
+       + rif("Running the benches") + ".", lead=True) + BENCHES
 
 CHAPTER = ("Appendix B — File map", [
     ("The project's files", S1),

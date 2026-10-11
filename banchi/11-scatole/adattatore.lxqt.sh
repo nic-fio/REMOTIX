@@ -27,16 +27,16 @@
 #    it is watched**, NEVER the product's behaviour.
 # ===========================================================================
 
-adattatore_nome() { printf 'LXQt (labwc, wlroots family)'; }
+adapter_name() { printf 'LXQt (labwc, wlroots family)'; }
 
-adattatore_pacchetto() { printf 'labwc'; }
+adapter_package() { printf 'labwc'; }
 
 # ⚠ `WLR_BACKENDS=headless` is the way a wlroots compositor is born
 #   WITHOUT a physical screen — the equivalent of Mutter's `--headless` and of
 #   KWin's `--virtual`.  ⭐ Three different words for the same thing: it is
 #   precisely the kind of difference that must live down here and not inside
 #   the list of tests.
-adattatore_avvia() {
+adapter_start() {
 	_rtd=$1; _log=$2
 	runuser -u provanic -- env \
 		XDG_RUNTIME_DIR="$_rtd" \

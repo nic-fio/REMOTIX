@@ -25,13 +25,13 @@ import tempfile
 import threading
 import time
 
-DIR, PORTA = sys.argv[1], int(sys.argv[2])
-CASI = [a.split(":", 1) for a in sys.argv[3:]]
-QUI = os.path.dirname(os.path.abspath(__file__))
-esiti = {}
+DIR, PORT = sys.argv[1], int(sys.argv[2])
+CASES = [a.split(":", 1) for a in sys.argv[3:]]
+HERE = os.path.dirname(os.path.abspath(__file__))
+outcomes = {}
 
 
-class Servo(http.server.SimpleHTTPRequestHandler):
+class Serve(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *a, **k):
         super().__init__(*a, directory=DIR, **k)
 
@@ -40,66 +40,66 @@ class Servo(http.server.SimpleHTTPRequestHandler):
 
     def do_GET(self):
         if self.path.startswith("/pagina.html"):
-            corpo = open(os.path.join(QUI, "18-software-webcodecs.html"), "rb").read()
+            body = open(os.path.join(HERE, "18-software-webcodecs.html"), "rb").read()
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
-            self.send_header("Content-Length", str(len(corpo)))
+            self.send_header("Content-Length", str(len(body)))
             self.end_headers()
-            self.wfile.write(corpo)
+            self.wfile.write(body)
             return
         super().do_GET()
 
     def do_POST(self):
         from urllib.parse import parse_qs, urlparse
-        nome = parse_qs(urlparse(self.path).query).get("nome", ["?"])[0]
+        name = parse_qs(urlparse(self.path).query).get("name", ["?"])[0]
         n = int(self.headers.get("Content-Length", 0))
-        esiti[nome] = json.loads(self.rfile.read(n))
+        outcomes[name] = json.loads(self.rfile.read(n))
         self.send_response(204)
         self.end_headers()
 
 
 socketserver.TCPServer.allow_reuse_address = True
-srv = socketserver.ThreadingTCPServer(("127.0.0.1", PORTA), Servo)
+srv = socketserver.ThreadingTCPServer(("127.0.0.1", PORT), Serve)
 threading.Thread(target=srv.serve_forever, daemon=True).start()
-profilo = tempfile.mkdtemp(prefix="f18-chrome-", dir=DIR)
-versione = subprocess.run(["google-chrome", "--version"], capture_output=True, text=True).stdout.strip()
-print(f"browser: {versione} (headless)")
+profile = tempfile.mkdtemp(prefix="f18-chrome-", dir=DIR)
+version = subprocess.run(["google-chrome", "--version"], capture_output=True, text=True).stdout.strip()
+print(f"browser: {version} (headless)")
 
-for flusso, codec in CASI:
-    rif = json.load(open(os.path.join(DIR, flusso + ".ffmpeg.json")))
+for stream, codec in CASES:
+    ref = json.load(open(os.path.join(DIR, stream + ".ffmpeg.json")))
     for hw in ("prefer-software", "no-preference"):
-        chiave = f"{flusso}.{hw}"
-        url = f"http://127.0.0.1:{PORTA}/pagina.html?flusso={flusso}&codec={codec}&hw={hw}"
+        key = f"{stream}.{hw}"
+        url = f"http://127.0.0.1:{PORT}/pagina.html?stream={stream}&codec={codec}&hw={hw}"
         p = subprocess.Popen(["google-chrome", "--headless=new", "--no-first-run",
-                              "--no-default-browser-check", f"--user-data-dir={profilo}",
+                              "--no-default-browser-check", f"--user-data-dir={profile}",
                               "--enable-logging=stderr", "--v=0", url],
-                             stdout=subprocess.DEVNULL, stderr=open(os.path.join(profilo, "chrome.log"), "w"))
+                             stdout=subprocess.DEVNULL, stderr=open(os.path.join(profile, "chrome.log"), "w"))
         t0 = time.time()
-        registro = os.path.join(profilo, "chrome.log")
-        while chiave not in esiti and time.time() - t0 < 120:
+        log = os.path.join(profile, "chrome.log")
+        while key not in outcomes and time.time() - t0 < 120:
             time.sleep(0.5)
-            for r in open(registro, errors="replace"):
+            for r in open(log, errors="replace"):
                 if "F18ESITO " in r:
                     # the console line: "F18ESITO {json}", source: …
-                    corpo = r.split("F18ESITO ", 1)[1]
-                    corpo = corpo[:corpo.rindex("}") + 1].replace('\\"', '"')
-                    esiti[chiave] = json.loads(corpo)
+                    body = r.split("F18ESITO ", 1)[1]
+                    body = body[:body.rindex("}") + 1].replace('\\"', '"')
+                    outcomes[key] = json.loads(body)
         p.terminate()
         try:
             p.wait(10)
         except subprocess.TimeoutExpired:
             p.kill()
-        e = esiti.get(chiave)
+        e = outcomes.get(key)
         if not e:
-            righe = [r.strip()[-160:] for r in open(os.path.join(profilo, "chrome.log"), errors="replace")
+            lines = [r.strip()[-160:] for r in open(os.path.join(profile, "chrome.log"), errors="replace")
                      if "F18" in r or "CONSOLE" in r]
-            print(f"⛔ {flusso} [{codec}, {hw}]: no outcome in 120 s · console: {righe[-4:]}")
+            print(f"⛔ {stream} [{codec}, {hw}]: no outcome in 120 s · console: {lines[-4:]}")
             continue
-        imp = e.get("impronte", [])
-        uguali = sum(1 for a, b in zip(imp, rif) if a == b)
-        print(f"{flusso} [{codec}, {hw}]: supported {e['supportato']} · {e['uscite']} frames "
-              f"from {e.get('chunk')} chunks · {e.get('l')}x{e.get('a')} {e.get('formato')} · errors "
-              f"{e['errori'] or 'none'} · luma identical to ffmpeg in {uguali} out of {len(rif)}")
+        imp = e.get("fingerprints", [])
+        equal = sum(1 for a, b in zip(imp, ref) if a == b)
+        print(f"{stream} [{codec}, {hw}]: supported {e['supported']} · {e['outputs']} frames "
+              f"from {e.get('chunk')} chunks · {e.get('l')}x{e.get('a')} {e.get('format')} · errors "
+              f"{e['errors'] or 'none'} · luma identical to ffmpeg in {equal} out of {len(ref)}")
 
 srv.shutdown()
-shutil.rmtree(profilo, ignore_errors=True)
+shutil.rmtree(profile, ignore_errors=True)

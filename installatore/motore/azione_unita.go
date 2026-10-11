@@ -1,4 +1,4 @@
-package motore
+package engine
 
 import "encoding/json"
 
@@ -6,144 +6,144 @@ import "encoding/json"
 // GetUnitFileState: what systemctl enable and is-enabled do, without launching them, §10.14). EXACT reversibility; a unit already enabled is PRE-EXISTING and stays
 // enabled; a masked unit is not touched (the administrator turned it off on purpose).
 //
-// parameters: unita; avvia ("yes": also started at once; cancelling stops and disables it). ⚠ No
+// parameters: unit; start ("yes": also started at once; cancelling stops and disables it). ⚠ No
 // new plan uses it any more (it was the updates timer, removed with D14, DECISIONI §10.23): it stays
 // so that uninstalling an installation made earlier knows how to stop what it had started.
 
-func init() { registraTipo("enable-unit", newUnit) }
+func init() { registerType("enable-unit", newUnit) }
 
 // PlanUnit prepares the plan's step.
-func PlanUnit(id, unita string) AzionePiano {
-	return AzionePiano{
-		ID: id, Tipo: "enable-unit",
-		Parametri:     map[string]string{"unit": unita},
-		Descrizione:   T("az.unita", unita),
-		ComeSiFa:      T("az.unita.fa", unita),
-		HowToVerify:   T("az.unita.verifica", unita),
-		HowToUndo:     T("az.unita.annulla", unita),
-		Reversibilita: ESATTA,
+func PlanUnit(id, unit string) PlanAction {
+	return PlanAction{
+		ID: id, Type: "enable-unit",
+		Parameters:     map[string]string{"unit": unit},
+		Description:   T("az.unit", unit),
+		ComeSiFa:      T("az.unit.fa", unit),
+		HowToVerify:   T("az.unit.verifica", unit),
+		HowToUndo:     T("az.unit.annulla", unit),
+		Reversibility: EXACT,
 	}
 }
 
-type unita struct {
-	nome  string
-	avvia bool
+type unit struct {
+	name  string
+	start bool
 }
 
 type beforeUnit struct {
 	Origine Origine `json:"origin"`
-	Stato   string  `json:"state"` // what is-enabled said
+	State   string  `json:"state"` // what is-enabled said
 }
 
-func newUnit(p AzionePiano) (Azione, error) {
-	return &unita{p.Parametri["unit"], p.Parametri["start"] == "yes"}, nil
+func newUnit(p PlanAction) (Action, error) {
+	return &unit{p.Parameters["unit"], p.Parameters["start"] == "yes"}, nil
 }
 
-func (u *unita) attiva(c *Contesto) bool {
-	a, err := c.Amb.Unita.Attiva(u.nome)
+func (u *unit) active(c *Context) bool {
+	a, err := c.Env.Unita.Active(u.name)
 	return err == nil && a == "active"
 }
 
-func (u *unita) Vincoli(c *Contesto) ([]string, error) {
-	s, err := c.Amb.Unita.Stato(u.nome)
+func (u *unit) Constraints(c *Context) ([]string, error) {
+	s, err := c.Env.Unita.State(u.name)
 	if err != nil {
 		return nil, err
 	}
-	return []string{"unit:" + u.nome + "=" + s}, nil
+	return []string{"unit:" + u.name + "=" + s}, nil
 }
 
-func (u *unita) Fotografa(c *Contesto) (json.RawMessage, Origine, error) {
-	s, err := c.Amb.Unita.Stato(u.nome)
+func (u *unit) Snapshot(c *Context) (json.RawMessage, Origine, error) {
+	s, err := c.Env.Unita.State(u.name)
 	if err != nil {
 		return nil, "", err
 	}
 	switch s {
 	case "masked", "masked-runtime":
-		return nil, "", Errore("RX-SYSTEMD-002", u.nome)
+		return nil, "", Error("RX-SYSTEMD-002", u.name)
 	case "not-found":
-		return nil, "", Errore("RX-SYSTEMD-003", u.nome)
+		return nil, "", Error("RX-SYSTEMD-003", u.name)
 	}
-	p := beforeUnit{Origine: DIRETTA, Stato: s}
+	p := beforeUnit{Origine: DIRECT, State: s}
 	if s == "enabled" {
-		p.Origine = PREESISTENTE
+		p.Origine = PREEXISTING
 	}
 	return jsonDi(p), p.Origine, nil
 }
 
-func (u *unita) Fai(c *Contesto, prima json.RawMessage) error {
+func (u *unit) Do(c *Context, before json.RawMessage) error {
 	var p beforeUnit
-	if err := json.Unmarshal(prima, &p); err != nil {
+	if err := json.Unmarshal(before, &p); err != nil {
 		return err
 	}
-	if p.Origine == PREESISTENTE {
+	if p.Origine == PREEXISTING {
 		return nil
 	}
-	if err := c.Amb.Unita.Abilita(u.nome); err != nil {
+	if err := c.Env.Unita.Enable(u.name); err != nil {
 		return err
 	}
-	if u.avvia && !u.attiva(c) {
-		return c.Amb.Unita.Launch(u.nome)
+	if u.start && !u.active(c) {
+		return c.Env.Unita.Launch(u.name)
 	}
 	return nil
 }
 
-func (u *unita) Controlla(c *Contesto, prima json.RawMessage) (Esito, string, error) {
+func (u *unit) Check(c *Context, before json.RawMessage) (Outcome, string, error) {
 	var p beforeUnit
-	if err := json.Unmarshal(prima, &p); err != nil {
+	if err := json.Unmarshal(before, &p); err != nil {
 		return "", "", err
 	}
-	s, err := c.Amb.Unita.Stato(u.nome)
+	s, err := c.Env.Unita.State(u.name)
 	if err != nil {
 		return "", "", err
 	}
 	switch {
-	case s == "enabled" && u.avvia && !u.attiva(c):
+	case s == "enabled" && u.start && !u.active(c):
 		return A_META, "enabled but not running", nil
 	case s == "enabled":
-		return COMPLETO, "enabled", nil
-	case p.Origine == PREESISTENTE:
-		return ESTRANEO, "was enabled, now " + s, nil
-	case s == p.Stato:
-		return ASSENTE, s, nil
+		return COMPLETE, "enabled", nil
+	case p.Origine == PREEXISTING:
+		return FOREIGN, "was enabled, now " + s, nil
+	case s == p.State:
+		return ABSENT, s, nil
 	}
-	return ESTRANEO, "was " + p.Stato + ", now " + s, nil
+	return FOREIGN, "was " + p.State + ", now " + s, nil
 }
 
-func (u *unita) Annulla(c *Contesto, prima json.RawMessage) error {
+func (u *unit) Rollback(c *Context, before json.RawMessage) error {
 	var p beforeUnit
-	if err := json.Unmarshal(prima, &p); err != nil {
+	if err := json.Unmarshal(before, &p); err != nil {
 		return err
 	}
-	if p.Origine == PREESISTENTE {
+	if p.Origine == PREEXISTING {
 		return nil
 	}
-	s, err := c.Amb.Unita.Stato(u.nome)
+	s, err := c.Env.Unita.State(u.name)
 	if err != nil {
 		return err
 	}
-	if u.avvia && u.attiva(c) {
-		if err := c.Amb.Unita.Ferma(u.nome); err != nil {
+	if u.start && u.active(c) {
+		if err := c.Env.Unita.Stop(u.name); err != nil {
 			return err
 		}
 	}
-	if s == p.Stato {
+	if s == p.State {
 		return nil
 	}
 	if s != "enabled" {
-		return Errore("RX-RIPRESA-001", u.nome+" is "+s+": we did not set it that way")
+		return Error("RX-RIPRESA-001", u.name+" is "+s+": we did not set it that way")
 	}
-	return c.Amb.Unita.Disabilita(u.nome)
+	return c.Env.Unita.Disable(u.name)
 }
 
-func (u *unita) Annullata(c *Contesto, prima json.RawMessage) (bool, string, error) {
+func (u *unit) RolledBack(c *Context, before json.RawMessage) (bool, string, error) {
 	var p beforeUnit
-	if err := json.Unmarshal(prima, &p); err != nil {
+	if err := json.Unmarshal(before, &p); err != nil {
 		return false, "", err
 	}
-	if p.Origine == PREESISTENTE {
+	if p.Origine == PREEXISTING {
 		return true, "already enabled: left untouched", nil
 	}
-	s, err := c.Amb.Unita.Stato(u.nome)
+	s, err := c.Env.Unita.State(u.name)
 	if err != nil {
 		return false, "", err
 	}

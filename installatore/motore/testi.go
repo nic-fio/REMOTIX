@@ -1,8 +1,8 @@
-package motore
+package engine
 
-// testi: the catalogue of the texts of the engine and of the command line, in English (DECISIONI §10.35).
+// texts: the catalogue of the texts of the engine and of the command line, in English (DECISIONI §10.35).
 // The keys are stable; the %s and %d follow fmt.Sprintf.
-var testi = map[string]string{
+var texts = map[string]string{
 	// states (§6.6.2), as the progress reports them
 	"state.NEW":                       "new",
 	"state.TRUSTED":                   "trust checked",
@@ -87,10 +87,10 @@ var testi = map[string]string{
 	"az.iscrizione.verifica":  "no longer in the group",
 	"az.iscrizione.annulla":   "gpasswd -a (added back)",
 	"az.registri":             "remove the REMOTIX session log (%s) from every user's home — now: %s",
-	"az.registri.fa":          "only sessione.log is removed, and the %s folder if left empty; nothing else in the homes",
+	"az.registri.fa":          "only session.log is removed, and the %s folder if left empty; nothing else in the homes",
 	"az.registri.verifica":    "none of those files is left",
 	"az.registri.annulla":     "put back byte for byte, with permissions and owner (copies in the operation folder)",
-	"az.registri.dichiarata":  "uninstalling removes ~/.local/state/remotix/sessione.log from every home (and the folder if left empty) — %s",
+	"az.registri.dichiarata":  "uninstalling removes ~/.local/state/remotix/session.log from every home (and the folder if left empty) — %s",
 	"az.registri.nessuno":     "no session log in any home",
 	"az.registri.tolti":       "removed: %s",
 	"az.registri.ancora":      "still in the homes: %s",

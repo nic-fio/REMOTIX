@@ -3,7 +3,7 @@
 # 01-s7-rotella.sh — S7: which way the wheel turns.  `RCP.md` §7.3
 #
 #   bash 01-s7-rotella.sh            the whole measurement, and puts the machine back as it was
-#   bash 01-s7-rotella.sh --tieni    the same, but leaves the virtual monitor standing
+#   bash 01-s7-rotella.sh --keep    the same, but leaves the virtual monitor standing
 #
 # ⚠ IT RUNS ON THE SERVER (192.168.0.2), inside the user's session.  The browser
 #   of this measurement is NOT the laptop's: the page must be **inside** the
@@ -56,7 +56,7 @@
 # ---------------------------------------------------------------------------
 # ⛔ THE INITIAL STATE, DECLARED AND VERIFIED (B0.1)
 #
-#   - a live, headless GNOME session (`00-sessione-gnome.sh stato`);
+#   - a live, headless GNOME session (`00-sessione-gnome.sh status`);
 #   - ⛔ **a monitor**.  A `--headless` Shell without `--virtual-monitor` has
 #     ZERO logical monitors (`[M]` 10 Aug 2026: `GetCurrentState` answers
 #     `[]`), and without a monitor there is no window to send a click to.
@@ -74,10 +74,10 @@
 # ---------------------------------------------------------------------------
 set -uo pipefail
 
-QUI=$(cd "$(dirname "$0")" && pwd)
-PORTA=${PORTA:-8877}
-REGISTRO=$QUI/01-s7-esiti.jsonl
-SESSIONE_SH=${SESSIONE_SH:-/media/REMOTIX/tmp/00-sessione-gnome.sh}
+HERE=$(cd "$(dirname "$0")" && pwd)
+PORT=${PORT:-8877}
+LOG=$HERE/01-s7-esiti.jsonl
+SESSION_SH=${SESSION_SH:-/media/REMOTIX/tmp/00-sessione-gnome.sh}
 DROPIN_DIR=$HOME/.config/systemd/user/org.gnome.Shell@wayland.service.d
 # ⛔ `zz-`, and the name is NOT aesthetics: `[M]` 10 Aug 2026.  systemd orders the
 #    drop-ins **by file name**, mixing the folders — not by precedence of the
@@ -89,30 +89,30 @@ DROPIN_DIR=$HOME/.config/systemd/user/org.gnome.Shell@wayland.service.d
 #    process's command line, not on the file» — instead of measuring for
 #    half an hour a window that did not exist.
 DROPIN=$DROPIN_DIR/zz-s7-monitor-virtuale.conf
-TELA=${TELA:-1920x1080}
-PAROLA=${PAROLA:-nicfio}
-TIENI=0
-[ "${1:-}" = --tieni ] && TIENI=1
+CANVAS=${CANVAS:-1920x1080}
+PASSWORD=${PASSWORD:-nicfio}
+KEEP=0
+[ "${1:-}" = --keep ] && KEEP=1
 
 export XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
 export DBUS_SESSION_BUS_ADDRESS=${DBUS_SESSION_BUS_ADDRESS:-unix:path=$XDG_RUNTIME_DIR/bus}
 
 # ---------------------------------------------------------------------------
-# ⛔ `--pulisci`, and it serves to close a hole this bench opened by itself.
+# ⛔ `--clean`, and it serves to close a hole this bench opened by itself.
 #
-#    `[M]` 10 Aug 2026: with `--tieni` the drop-in stays.  The next run finds
+#    `[M]` 10 Aug 2026: with `--keep` the drop-in stays.  The next run finds
 #    the Shell **already** with `--virtual-monitor`, concludes «I did not put it» and
 #    does not remove it: the state stays on everyone's machine, and neither of the
 #    two runs did anything wrong.  It is rule B0.2 seen from the side of
 #    whoever leaves the state instead of finding it.
 # ---------------------------------------------------------------------------
-if [ "${1:-}" = --pulisci ]; then
+if [ "${1:-}" = --clean ]; then
 	if [ -f "$DROPIN" ]; then
 		rm -f "$DROPIN"
 		systemctl --user daemon-reload
 		printf 'removed %s: restarting the session\n' "$DROPIN"
-		bash "$SESSIONE_SH" ferma
-		bash "$SESSIONE_SH" avvia
+		bash "$SESSION_SH" stop
+		bash "$SESSION_SH" start
 		printf 'gnome-shell now: %s\n' \
 		    "$(tr '\0' ' ' < "/proc/$(pgrep -u "$(id -u)" -x gnome-shell | head -1)/cmdline")"
 	else
@@ -127,15 +127,15 @@ ok()   { printf '    \033[1;32mOK\033[0m  %s\n' "$*"; }
 ko()   { printf '    \033[1;31mNO\033[0m  %s\n' "$*"; }
 inf()  { printf '    --  %s\n' "$*"; }
 
-ESITO=0
-DROPIN_NOSTRO=0
-MOUSE_PRIMA=
-TOUCH_PRIMA=
+OUTCOME=0
+OUR_DROPIN=0
+MOUSE_BEFORE=
+TOUCH_BEFORE=
 PID_FF=
 PID_INI=
-PID_RACC=
+PID_COLL=
 
-ferma_iniettore()
+stop_injector()
 {
 	[ -z "$PID_INI" ] && return 0
 	exec 9>&- 2>/dev/null
@@ -144,24 +144,24 @@ ferma_iniettore()
 	PID_INI=
 }
 
-congedo()
+farewell()
 {
 	printf '\n\033[1m== The farewell\033[0m\n'
 	[ -n "$PID_FF" ]   && { kill "$PID_FF"   2>/dev/null; wait "$PID_FF"   2>/dev/null; }
-	ferma_iniettore
-	[ -n "$PID_RACC" ] && { kill "$PID_RACC" 2>/dev/null; wait "$PID_RACC" 2>/dev/null; }
-	if [ -n "$MOUSE_PRIMA" ]; then
-		gsettings set org.gnome.desktop.peripherals.mouse natural-scroll "$MOUSE_PRIMA"
-		gsettings set org.gnome.desktop.peripherals.touchpad natural-scroll "$TOUCH_PRIMA"
-		inf "natural-scroll put back: mouse=$MOUSE_PRIMA touchpad=$TOUCH_PRIMA"
+	stop_injector
+	[ -n "$PID_COLL" ] && { kill "$PID_COLL" 2>/dev/null; wait "$PID_COLL" 2>/dev/null; }
+	if [ -n "$MOUSE_BEFORE" ]; then
+		gsettings set org.gnome.desktop.peripherals.mouse natural-scroll "$MOUSE_BEFORE"
+		gsettings set org.gnome.desktop.peripherals.touchpad natural-scroll "$TOUCH_BEFORE"
+		inf "natural-scroll put back: mouse=$MOUSE_BEFORE touchpad=$TOUCH_BEFORE"
 	fi
-	if [ "$DROPIN_NOSTRO" = 1 ] && [ "$TIENI" = 0 ]; then
+	if [ "$OUR_DROPIN" = 1 ] && [ "$KEEP" = 0 ]; then
 		rm -f "$DROPIN"
 		systemctl --user daemon-reload
 		inf "removed the drop-in $DROPIN: the session goes back to how it was"
-		bash "$SESSIONE_SH" ferma
-		bash "$SESSIONE_SH" avvia
-	elif [ "$DROPIN_NOSTRO" = 1 ]; then
+		bash "$SESSION_SH" stop
+		bash "$SESSION_SH" start
+	elif [ "$OUR_DROPIN" = 1 ]; then
 		inf "⚠ THE DROP-IN STAYS ($DROPIN): the session still has a virtual monitor"
 	fi
 	rm -rf "$T"
@@ -171,17 +171,17 @@ trap congedo EXIT
 # ---------------------------------------------------------------------------
 log "1. The initial state (B0.1)"
 
-bash "$SESSIONE_SH" stato
+bash "$SESSION_SH" status
 if ! pgrep -u "$(id -u)" -x gnome-shell >/dev/null; then
 	inf "there is no session: I start it"
-	bash "$SESSIONE_SH" avvia || { ko "the session does not start: the measurement does not begin"; exit 2; }
+	bash "$SESSION_SH" start || { ko "the session does not start: the measurement does not begin"; exit 2; }
 fi
 
-riga_shell() { tr '\0' ' ' < "/proc/$(pgrep -u "$(id -u)" -x gnome-shell | head -1)/cmdline"; }
+shell_line() { tr '\0' ' ' < "/proc/$(pgrep -u "$(id -u)" -x gnome-shell | head -1)/cmdline"; }
 
-RIGA=$(riga_shell)
-inf "gnome-shell: $RIGA"
-case "$RIGA" in
+LINE=$(shell_line)
+inf "gnome-shell: $LINE"
+case "$LINE" in
 *--virtual-monitor*)
 	ok "the Shell already has a virtual monitor: I do not touch the unit"
 	;;
@@ -191,17 +191,17 @@ case "$RIGA" in
 	cat >"$DROPIN" <<CONF
 [Service]
 ExecStart=
-ExecStart=/usr/bin/gnome-shell --headless --no-x11 --virtual-monitor $TELA
+ExecStart=/usr/bin/gnome-shell --headless --no-x11 --virtual-monitor $CANVAS
 CONF
-	DROPIN_NOSTRO=1
+	OUR_DROPIN=1
 	systemctl --user daemon-reload
-	bash "$SESSIONE_SH" ferma || { ko "the session did not stop"; exit 2; }
-	bash "$SESSIONE_SH" avvia || { ko "the session did not start again"; exit 2; }
-	RIGA=$(riga_shell)
-	inf "gnome-shell now: $RIGA"
+	bash "$SESSION_SH" stop || { ko "the session did not stop"; exit 2; }
+	bash "$SESSION_SH" start || { ko "the session did not start again"; exit 2; }
+	LINE=$(shell_line)
+	inf "gnome-shell now: $LINE"
 	# ⛔ It is verified on the PROCESS'S COMMAND LINE, not on the file: that
 	#    the option is written is not that it is in force.
-	case "$RIGA" in
+	case "$LINE" in
 	*--virtual-monitor*) ok "the virtual monitor is in force" ;;
 	*)  ko "the drop-in had no effect: the Shell runs without --virtual-monitor"; exit 2 ;;
 	esac
@@ -213,16 +213,16 @@ gdbus call --session -d org.gnome.Mutter.DisplayConfig -o /org/gnome/Mutter/Disp
 inf "DisplayConfig says (first 300 characters):"
 printf '        %s\n' "$(cut -c1-300 "$T/monitor.txt")"
 
-MOUSE_PRIMA=$(gsettings get org.gnome.desktop.peripherals.mouse natural-scroll)
-TOUCH_PRIMA=$(gsettings get org.gnome.desktop.peripherals.touchpad natural-scroll)
-inf "starting natural-scroll: mouse=$MOUSE_PRIMA touchpad=$TOUCH_PRIMA (put back at the end)"
+MOUSE_BEFORE=$(gsettings get org.gnome.desktop.peripherals.mouse natural-scroll)
+TOUCH_BEFORE=$(gsettings get org.gnome.desktop.peripherals.touchpad natural-scroll)
+inf "starting natural-scroll: mouse=$MOUSE_BEFORE touchpad=$TOUCH_BEFORE (put back at the end)"
 
 # ---------------------------------------------------------------------------
 log "2. The injector"
 
 BIN=/media/REMOTIX/tmp/01-s7-rotella
 inf "compiling in the devroot (gcc and the libei headers live there, not on the system)"
-printf '%s\n' "$PAROLA" | bash /media/REMOTIX/enter.sh \
+printf '%s\n' "$PASSWORD" | bash /media/REMOTIX/enter.sh \
     "gcc -O1 -Wall -o /srv/src/01-s7-rotella-bin /srv/src/01-s7-rotella.c \
      \$(pkg-config --cflags --libs libei-1.0 gio-2.0 gio-unix-2.0)"
 if [ ! -x /media/REMOTIX/src/01-s7-rotella-bin ]; then
@@ -235,15 +235,15 @@ ok "injector compiled: $BIN"
 # ---------------------------------------------------------------------------
 log "3. The collector"
 
-python3 -u "$QUI/01-s7-raccogli.py" "$PORTA" >"$T/racc.log" 2>&1 &
-PID_RACC=$!
+python3 -u "$HERE/01-s7-raccogli.py" "$PORT" >"$T/racc.log" 2>&1 &
+PID_COLL=$!
 sleep 1
-if [ ! -d "/proc/$PID_RACC" ]; then
+if [ ! -d "/proc/$PID_COLL" ]; then
 	ko "the collector did not start:"
 	sed 's/^/        /' "$T/racc.log"
 	exit 4
 fi
-ok "collector on 127.0.0.1:$PORTA"
+ok "collector on 127.0.0.1:$PORT"
 
 systemctl --user show-environment >"$T/ambiente.txt" 2>&1
 WD=$(sed -n 's/^WAYLAND_DISPLAY=//p' "$T/ambiente.txt" | head -1)
@@ -252,7 +252,7 @@ if [ -z "$WD" ]; then
 	exit 4
 fi
 inf "WAYLAND_DISPLAY=$WD"
-URL="http://127.0.0.1:$PORTA/01-s7-pagina.html"
+URL="http://127.0.0.1:$PORT/01-s7-pagina.html"
 
 # ---------------------------------------------------------------------------
 # The log reader.
@@ -271,9 +271,9 @@ URL="http://127.0.0.1:$PORTA/01-s7-pagina.html"
 #    at every load.  They are the two halves of B2's finding R8.10 together.
 #
 # Prints: line<TAB>round<TAB>deltaY<TAB>scroll<TAB>start<TAB>screen<TAB>engine
-leggi_riga() # $1 = minimum line (exclusive), $2 = type, $3 = mark of the round (or empty)
+read_line() # $1 = minimum line (exclusive), $2 = type, $3 = mark of the round (or empty)
 {
-	python3 - "$REGISTRO" "$1" "$2" "${3:-}" <<'PY'
+	python3 - "$LOG" "$1" "$2" "${3:-}" <<'PY'
 import json, os, sys
 percorso, minimo, tipo, giro = sys.argv[1], int(sys.argv[2]), sys.argv[3], sys.argv[4]
 if not os.path.exists(percorso):
@@ -284,22 +284,22 @@ for i in range(minimo, len(righe)):
         d = json.loads(righe[i])
     except Exception:
         continue
-    if d.get("tipo") != tipo:
+    if d.get("type") != type:
         continue
-    if giro and d.get("giro") != giro:
+    if round and d.get("round") != round:
         continue
-    print(i + 1, d.get("giro"), d.get("deltaY"), d.get("scorrimento"), d.get("partenza"),
-          d.get("schermo"), (d.get("motore") or "")[:120], sep="\t")
+    print(i + 1, d.get("round"), d.get("deltaY"), d.get("scroll"), d.get("start_base"),
+          d.get("screen"), (d.get("engine") or "")[:120], sep="\t")
     sys.exit(0)
 sys.exit(1)
 PY
 }
 
-attendi_riga() # $1 = minimum line, $2 = type, $3 = seconds, $4 = round
+wait_line() # $1 = minimum line, $2 = type, $3 = seconds, $4 = round
 {
-	local i=0 trovata=""
+	local i=0 found_at=""
 	while [ "$i" -lt "${3:-20}" ]; do
-		trovata=$(leggi_riga "$1" "$2" "${4:-}") && { printf '%s\n' "$trovata"; return 0; }
+		found_at=$(read_line "$1" "$2" "${4:-}") && { printf '%s\n' "$found_at"; return 0; }
 		sleep 1
 		i=$((i + 1))
 	done
@@ -331,7 +331,7 @@ attendi_riga() # $1 = minimum line, $2 = type, $3 = seconds, $4 = round
 #    moves the mouse and that window does not answer.  It is a question for
 #    phases 2 and 6, and it must be asked there instead of being rediscovered by a user.
 # ---------------------------------------------------------------------------
-avvia_iniettore()
+start_injector()
 {
 	mkfifo "$T/comandi.$$"
 	"$BIN" <"$T/comandi.$$" >>"$T/iniettore.log" 2>&1 &
@@ -358,7 +358,7 @@ avvia_iniettore()
 	return 1
 }
 
-avvia_browser()
+start_browser()
 {
 	mkdir -p "$T/profilo"
 	cat >"$T/profilo/user.js" <<'PREF'
@@ -369,13 +369,13 @@ user_pref("toolkit.telemetry.reportingpolicy.firstRun", false);
 user_pref("browser.sessionstore.resume_from_crash", false);
 user_pref("general.smoothScroll", false);
 PREF
-	N=$(wc -l < "$REGISTRO" 2>/dev/null || echo 0)
+	N=$(wc -l < "$LOG" 2>/dev/null || echo 0)
 	MOZ_ENABLE_WAYLAND=1 WAYLAND_DISPLAY="$WD" \
 		firefox --kiosk --no-remote --profile "$T/profilo" "$URL" >"$T/firefox.log" 2>&1 &
 	PID_FF=$!
-	local pronta
-	pronta=$(attendi_riga "$N" PRONTA 45)
-	if [ -z "$pronta" ]; then
+	local ready
+	ready=$(wait_line "$N" PRONTA 45)
+	if [ -z "$ready" ]; then
 		ko "the page did not say PRONTA in 45 s."
 		# ⛔ THE DENOMINATOR: did the browser at least ASK for the page?
 		inf "requests that reached the collector: $(grep -c '^request: ' "$T/racc.log")"
@@ -383,28 +383,28 @@ PREF
 		tail -6 "$T/firefox.log" | sed 's/^/        /'
 		return 1
 	fi
-	local partenza schermo motore
-	IFS=$'\t' read -r N GIRO _ _ partenza schermo motore <<< "$pronta"
-	ok "page alive (round «$GIRO»).  engine: $motore"
+	local start_offset screen engine
+	IFS=$'\t' read -r N ROUND _ _ start_offset screen engine <<< "$ready"
+	ok "page alive (round «$ROUND»).  engine: $engine"
 	# ⛔ POSITIVE CONTROL 1 — does the document really scroll?
-	if [ "$partenza" = 8000 ]; then
-		ok "the document scrolls: the page placed itself $partenza px from the edge"
+	if [ "$start_offset" = 8000 ]; then
+		ok "the document scrolls: the page placed itself $start_offset px from the edge"
 	else
-		ko "the page placed itself at «$partenza» instead of 8000: the document does NOT scroll,"
+		ko "the page placed itself at «$start_offset» instead of 8000: the document does NOT scroll,"
 		ko "   and every «it did not move» that follows would mean nothing"
 		return 1
 	fi
 	# ⛔ POSITIVE CONTROL 2 — the screen the page sees is our monitor.
-	if [ "$schermo" = "$TELA" ]; then
-		ok "the page sees a $schermo screen, that is the virtual monitor asked for"
+	if [ "$screen" = "$CANVAS" ]; then
+		ok "the page sees a $screen screen, that is the virtual monitor asked for"
 	else
-		inf "⚠ the page sees a $schermo screen, asked for $TELA: the measurement of the sign"
+		inf "⚠ the page sees a $screen screen, asked for $CANVAS: the measurement of the sign"
 		inf "  holds anyway, but the scene is different from the declared one"
 	fi
 	return 0
 }
 
-ferma_browser()
+stop_browser()
 {
 	[ -z "$PID_FF" ] && return 0
 	kill "$PID_FF" 2>/dev/null
@@ -414,30 +414,30 @@ ferma_browser()
 }
 
 # ---------------------------------------------------------------------------
-ESITI=$T/esiti.tsv
-: >"$ESITI"
+OUTCOMES=$T/esiti.tsv
+: >"$OUTCOMES"
 
-giro() # $1 = label, $2... = command for the injector
+cur_round() # $1 = label, $2... = command for the injector
 {
-	local etichetta=$1; shift
-	local riga n delta scorrimento
+	local label=$1; shift
+	local line n delta scroll
 
 	printf 'centro\n' >&9
 	sleep 1
 	printf '%s\n' "$*" >&9
-	riga=$(attendi_riga "$N" SCATTO 15 "$GIRO")
-	if [ -z "$riga" ]; then
-		ko "$etichetta: the page recorded NOTHING"
+	line=$(wait_line "$N" SCATTO 15 "$ROUND")
+	if [ -z "$line" ]; then
+		ko "$label: the page recorded NOTHING"
 		inf "the injector says:"
 		tail -3 "$T/iniettore.log" | sed 's/^/        /'
-		printf '%s\tNIENTE\tNIENTE\n' "$etichetta" >>"$ESITI"
-		ESITO=1
+		printf '%s\tNIENTE\tNIENTE\n' "$label" >>"$OUTCOMES"
+		OUTCOME=1
 		return 1
 	fi
-	IFS=$'\t' read -r n _ delta scorrimento _ _ _ <<< "$riga"
+	IFS=$'\t' read -r n _ delta scroll _ _ _ <<< "$line"
 	N=$n
-	printf '%s\t%s\t%s\n' "$etichetta" "$delta" "$scorrimento" >>"$ESITI"
-	ok "$etichetta: deltaY=$delta  scorrimento=$scorrimento px"
+	printf '%s\t%s\t%s\n' "$label" "$delta" "$scroll" >>"$OUTCOMES"
+	ok "$label: deltaY=$delta  scroll=$scroll px"
 	sleep 1
 	return 0
 }
@@ -450,14 +450,14 @@ giro() # $1 = label, $2... = command for the injector
 #    ⚠ `org.gnome.Shell.Introspect.GetWindows` would be the short road to
 #      know whether there is a window, but it answers «GetWindows is not allowed»
 #      (`[M]` 10 Aug 2026): it is reserved to the Shell.
-il_puntatore_arriva()
+pointer_arrives()
 {
-	local prima
-	prima=$(wc -l < "$REGISTRO" 2>/dev/null || echo 0)
+	local before
+	before=$(wc -l < "$LOG" 2>/dev/null || echo 0)
 	printf 'muovi 400 300\n' >&9; sleep 1
 	printf 'muovi 960 540\n' >&9; sleep 1
 	printf 'muovi 500 700\n' >&9; sleep 1
-	if leggi_riga "$prima" PUNTATORE "$GIRO" >/dev/null; then
+	if read_line "$before" POINTER "$ROUND" >/dev/null; then
 		ok "the page SEES the pointer move: the road is open"
 		return 0
 	fi
@@ -466,58 +466,58 @@ il_puntatore_arriva()
 	return 1
 }
 
-for STATO in false true; do
-	log "4. The scene, with natural-scroll = $STATO"
-	gsettings set org.gnome.desktop.peripherals.mouse natural-scroll "$STATO"
-	gsettings set org.gnome.desktop.peripherals.touchpad natural-scroll "$STATO"
+for STATE in false true; do
+	log "4. The scene, with natural-scroll = $STATE"
+	gsettings set org.gnome.desktop.peripherals.mouse natural-scroll "$STATE"
+	gsettings set org.gnome.desktop.peripherals.touchpad natural-scroll "$STATE"
 	inf "read back: mouse=$(gsettings get org.gnome.desktop.peripherals.mouse natural-scroll) touchpad=$(gsettings get org.gnome.desktop.peripherals.touchpad natural-scroll)"
 	sleep 1
 	# ⛔ Order: FIRST the injector, THEN the browser.  And the scene is redone whole
 	#    at every state, so the device too is born with the gsetting already
 	#    changed — a compositor that reads the preferences at the birth of the
 	#    device would make blind a check done with the device alive.
-	printf '\n--- injector, natural-scroll=%s ---\n' "$STATO" >>"$T/iniettore.log"
-	if ! avvia_iniettore; then
+	printf '\n--- injector, natural-scroll=%s ---\n' "$STATE" >>"$T/iniettore.log"
+	if ! start_injector; then
 		ko "the injector did not get a device:"
 		sed 's/^/        /' "$T/iniettore.log"
 		exit 6
 	fi
-	sed -n '/^--- injector, natural-scroll='"$STATO"'/,$p' "$T/iniettore.log" | sed 's/^/        /'
-	if ! avvia_browser; then
-		ferma_iniettore
+	sed -n '/^--- injector, natural-scroll='"$STATE"'/,$p' "$T/iniettore.log" | sed 's/^/        /'
+	if ! start_browser; then
+		stop_injector
 		exit 5
 	fi
-	if ! il_puntatore_arriva; then
-		ESITO=1
+	if ! pointer_arrives; then
+		OUTCOME=1
 	fi
-	giro "scatto+120/$STATO" "scatto 0 120"
-	giro "scatto-120/$STATO" "scatto 0 -120"
-	if [ "$STATO" = false ]; then
+	cur_round "scatto+120/$STATE" "scatto 0 120"
+	cur_round "scatto-120/$STATE" "scatto 0 -120"
+	if [ "$STATE" = false ]; then
 		# On top: smooth scrolling.  The product uses the clicks, but if
 		# `ei_device_scroll_delta` had the opposite sign, the day
 		# someone used it the defect would be born mute.
-		giro "liscio+120/$STATO" "liscio 0 120"
+		cur_round "liscio+120/$STATE" "liscio 0 120"
 	fi
 	# ---------------------------------------------------------------------
-	log "4-bis. The silence check (natural-scroll = $STATO)"
+	log "4-bis. The silence check (natural-scroll = $STATE)"
 	inf "ten seconds without injecting anything: the page must NOT record clicks"
-	PRIMA_SILENZIO=$N
+	BEFORE_SILENCE=$N
 	sleep 10
-	if leggi_riga "$PRIMA_SILENZIO" SCATTO "$GIRO" >/dev/null; then
+	if read_line "$BEFORE_SILENCE" SCATTO "$ROUND" >/dev/null; then
 		ko "the page recorded a click that NOBODY sent:"
 		ko "   then «the page saw a click» does not prove that we sent it"
-		leggi_riga "$PRIMA_SILENZIO" SCATTO "$GIRO" | sed 's/^/        /'
-		ESITO=1
+		read_line "$BEFORE_SILENCE" SCATTO "$ROUND" | sed 's/^/        /'
+		OUTCOME=1
 	else
 		ok "silence: the recorded clicks are the injected ones"
 	fi
-	ferma_browser
-	ferma_iniettore
+	stop_browser
+	stop_injector
 done
 
 # ---------------------------------------------------------------------------
 log "5. The verdict — the bench computes it, not whoever reads (B0.4)"
-python3 - "$ESITI" <<'PY'
+python3 - "$OUTCOMES" <<'PY'
 import sys
 
 esiti = {}
@@ -536,7 +536,7 @@ def segno(x):
 for nome in ("scatto+120/false", "scatto-120/false", "liscio+120/false",
              "scatto+120/true", "scatto-120/true"):
     d, s = esiti.get(nome, ("NIENTE", "NIENTE"))
-    print(f"     {nome:20s} deltaY={d:>10}  scorrimento={s:>8}")
+    print(f"     {nome:20s} deltaY={d:>10}  scroll={s:>8}")
 
 guasti = 0
 
@@ -595,14 +595,14 @@ else:
 
 sys.exit(1 if guasti else 0)
 PY
-[ $? -ne 0 ] && ESITO=1
+[ $? -ne 0 ] && OUTCOME=1
 
 log "Outcome"
-if [ "$ESITO" -eq 0 ]; then
+if [ "$OUTCOME" -eq 0 ]; then
 	ok "S7 measured, with the checks"
 else
 	ko "S7: at least one check failed — see above.  ⛔ The number is NOT written"
 	ko "   in RCP.md §7.3 until the checks are green"
 fi
-inf "the line-by-line detail is in $REGISTRO"
-exit "$ESITO"
+inf "the line-by-line detail is in $LOG"
+exit "$OUTCOME"

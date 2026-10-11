@@ -6,8 +6,8 @@
 ===========================================================================
 
     python3 11-c12-il-gancio-e-vivo.py
-    python3 11-c12-il-gancio-e-vivo.py --certifica
-    python3 11-c12-il-gancio-e-vivo.py --giorni 3
+    python3 11-c12-il-gancio-e-vivo.py --certify
+    python3 11-c12-il-gancio-e-vivo.py --days 3
 
 ⛔ This mesh **does not test the product**.  It does not even test the net: it tests
    that the net **is still running**.
@@ -27,7 +27,7 @@ And it is worth saying how it really dies, because it does not die with an error
     installed file points to a path that no longer exists.
 
 ⇒ ⭐ In all three cases the net **looks exactly the same as before**:
-  the files are there, the meshes are written, `--certifica` passes.  ⛔ And nothing
+  the files are there, the meshes are written, `--certify` passes.  ⛔ And nothing
   runs any more.
 
 ---------------------------------------------------------------------------
@@ -42,11 +42,11 @@ And it is worth saying how it really dies, because it does not die with an error
   5  ⛔⛔ and the last run is **NOT a dry run**
 
 ⚠⚠ The fifth deserves two lines, because without it this mesh would be one
-   of those that never give red.  The hook can run `--secco`, that is say
+   of those that never give red.  The hook can run `--dry-run`, that is say
    what it would do without doing it.  ⛔ If a dry run counted as a trace,
-   **one `--secco` would be enough to make this mesh say «the hook is alive» for
-   a week** — while nothing runs.  ⇒ The lines with `"secco": true` are
-   thrown away, and ⭐ **that case is inside `--certifica`**: it is proven, not promised.
+   **one `--dry-run` would be enough to make this mesh say «the hook is alive» for
+   a week** — while nothing runs.  ⇒ The lines with `"dry": true` are
+   thrown away, and ⭐ **that case is inside `--certify`**: it is proven, not promised.
 
 ---------------------------------------------------------------------------
 ⚠ THE THRESHOLD, declared and printed in every outcome
@@ -77,13 +77,13 @@ import subprocess
 import sys
 import time
 
-QUI = os.path.dirname(os.path.abspath(__file__))
+HERE = os.path.dirname(os.path.abspath(__file__))
 
 # ⛔ The paths are DECLARED here: the hook is «defined by path, not
 #    by good will» (§5.1), and this mesh looks at exactly that
 #    path — not one it goes looking for.
-GANCIO = os.path.join(QUI, "11-gancio.sh")
-REGISTRO = os.path.join(QUI, "11-gancio-registro.jsonl")
+HOOK = os.path.join(HERE, "11-gancio.sh")
+LOG = os.path.join(HERE, "11-gancio-registro.jsonl")
 
 # ── the runs written before the English rename (DECISIONI §10.38) keep the Italian words, and
 #    11-gancio-registro.jsonl is append-only: old Italian rows, then new ones.  The first tuple
@@ -94,7 +94,7 @@ _OLD_WORDS = (
     "istante", "secco",
 )  # end of the old words
 _WORDS_NOW = (
-    "istante", "secco",
+    "instant", "dry",
 )
 OLD_SPELLING = {a: b for a, b in zip(_OLD_WORDS, _WORDS_NOW) if a != b}
 
@@ -108,10 +108,10 @@ def current_spelling(x):
     return OLD_SPELLING.get(x, x) if isinstance(x, str) else x
 
 
-GIORNI_PREDEFINITI = 7
+DEFAULT_DAYS = 7
 
 
-def read_log(percorso):
+def read_log(fpath):
     """Returns (giri, guaio).
 
     ⛔ And the cases are THREE, not two, and that is the whole difference:
@@ -119,35 +119,35 @@ def read_log(percorso):
        (None, "illeggibile") it is there and does not open ⇒ «I could not look»
        ([...], None)         the runs, in order of writing
     """
-    if not os.path.exists(percorso):
+    if not os.path.exists(fpath):
         return None, "assente"
     try:
-        with open(percorso, "r", errors="replace") as f:
-            righe = f.read().splitlines()
+        with open(fpath, "r", errors="replace") as f:
+            lines = f.read().splitlines()
     except OSError:
         return None, "illeggibile"
-    giri = []
-    storte = 0
-    for r in righe:
+    rounds = []
+    skewed = 0
+    for r in lines:
         r = r.strip()
         if not r:
             continue
         try:
-            giri.append(current_spelling(json.loads(r)))
+            rounds.append(current_spelling(json.loads(r)))
         except ValueError:
-            storte += 1
+            skewed += 1
     # ⚠ Some malformed line happens (a run interrupted half-way through writing) and it is not
     #   a fault.  ⛔ ALL malformed instead means I am not reading a
     #   log: it is «I could not look», not «it never ran».
-    if not giri and storte:
+    if not rounds and skewed:
         return None, "illeggibile"
-    return giri, None
+    return rounds, None
 
 
-def giudica(stato, giorni):
+def judge(state, days):
     """Given the state, says what does NOT hold.
 
-    `stato` is a dictionary:
+    `state` is a dictionary:
        c_e            the hook file exists
        eseguibile     it can be executed
        installato     the list of git hooks that NAME our hook
@@ -160,61 +160,61 @@ def giudica(stato, giorni):
        «I looked and everything is fine» are two different things, and this project has
        already paid for confusing them.
     """
-    if stato.get("guaio") == "illeggibile":
+    if state.get("trouble") == "illeggibile":
         return None
 
-    guai = []
-    if not stato.get("c_e"):
-        guai.append("the hook is not at the declared path")
+    troubles = []
+    if not state.get("c_e"):
+        troubles.append("the hook is not at the declared path")
         # ⛔ And we return at once: without the file, «not executable» and «not
         #    installed» are consequences, not extra faults.  A list that
         #    counts the same fault three times makes what is simple look serious,
         #    and vice versa.
-        return guai
-    if not stato.get("eseguibile"):
-        guai.append("the hook is there but cannot be executed")
-    if not stato.get("installato"):
-        guai.append("the hook is NOT installed among git's hooks: "
+        return troubles
+    if not state.get("executable"):
+        troubles.append("the hook is there but cannot be executed")
+    if not state.get("installed"):
+        troubles.append("the hook is NOT installed among git's hooks: "
                     "nobody will start it")
 
-    giri = stato.get("giri")
-    if giri is None or not giri:
-        guai.append("no trace: the hook has NEVER run")
-        return guai
+    rounds = state.get("rounds")
+    if rounds is None or not rounds:
+        troubles.append("no trace: the hook has NEVER run")
+        return troubles
 
-    # ⛔⛔ AND HERE THE DRY RUNS ARE THROWN AWAY.  A `--secco` is not a run: if it
+    # ⛔⛔ AND HERE THE DRY RUNS ARE THROWN AWAY.  A `--dry-run` is not a run: if it
     #    counted, this mesh would say «alive» while nothing runs.
-    veri = [g for g in giri if not g.get("secco")]
-    if not veri:
-        guai.append("there are %d runs, ⛔ but they are ALL dry (--secco): "
-                    "the hook has never measured anything" % len(giri))
-        return guai
+    genuine = [g for g in rounds if not g.get("dry")]
+    if not genuine:
+        troubles.append("there are %d runs, ⛔ but they are ALL dry (--dry-run): "
+                    "the hook has never measured anything" % len(rounds))
+        return troubles
 
-    ultimo = veri[-1]
-    quando = ultimo.get("istante")
-    eta = age_in_days(quando, stato.get("adesso"))
+    last = genuine[-1]
+    when = last.get("instant")
+    eta = age_in_days(when, state.get("t_now"))
     if eta is None:
         # ⚠ An instant that cannot be read is not «old»: it is «I do not
         #   know».  ⛔ And here we choose to say it as a fault of the LOG, not
         #   as a dead hook — because it is not the same thing.
-        guai.append("the last run does not carry a readable instant (%r): "
-                    "the log is malformed" % (quando,))
-    elif eta > giorni:
-        guai.append("the last real run is from %.1f days ago, and the declared "
-                    "threshold is %d" % (eta, giorni))
-    return guai
+        troubles.append("the last run does not carry a readable instant (%r): "
+                    "the log is malformed" % (when,))
+    elif eta > days:
+        troubles.append("the last real run is from %.1f days ago, and the declared "
+                    "threshold is %d" % (eta, days))
+    return troubles
 
 
-def age_in_days(istante, adesso):
+def age_in_days(instant, t_now):
     """⛔ Returns `None` if it cannot tell — never zero, never an invented number."""
-    if not istante or adesso is None:
+    if not instant or t_now is None:
         return None
     try:
         import datetime
-        t = datetime.datetime.fromisoformat(istante)
+        t = datetime.datetime.fromisoformat(instant)
         if t.tzinfo is None:
             t = t.astimezone()
-        return (adesso - t.timestamp()) / 86400.0
+        return (t_now - t.timestamp()) / 86400.0
     except (ValueError, TypeError, OverflowError):
         return None
 
@@ -227,7 +227,7 @@ def installed_hooks():
        while the net does not start.
     """
     try:
-        p = subprocess.run(["git", "-C", QUI, "rev-parse", "--git-path", "hooks"],
+        p = subprocess.run(["git", "-C", HERE, "rev-parse", "--git-path", "hooks"],
                            capture_output=True, text=True, timeout=30)
     # ⛔ `subprocess.TimeoutExpired` does NOT descend from `OSError`: without naming it,
     #    a `git` that hangs produced a traceback ⇒ Python exited **1** ⇒ the
@@ -237,7 +237,7 @@ def installed_hooks():
         return None
     if p.returncode != 0:
         return None
-    cartella = p.stdout.strip()
+    folder = p.stdout.strip()
     # ⛔⛔ AND HERE THERE WAS A DEFECT THAT WOULD HAVE MADE THIS MESH USELESS FOR
     #    EVER — `[M]` 26 August 2026, caught by the test bench.
     #
@@ -249,95 +249,95 @@ def installed_hooks():
     # ⇒ And a red that cannot be turned green is worse than no
     #   mesh: §1.3 — «a net that gives red for nothing gets switched off by whoever
     #   works».
-    if not os.path.isabs(cartella):
-        cartella = os.path.normpath(os.path.join(QUI, cartella))
-    trovati = []
-    for quale in ("pre-commit", "pre-push"):
-        d = os.path.join(cartella, quale)
+    if not os.path.isabs(folder):
+        folder = os.path.normpath(os.path.join(HERE, folder))
+    matches = []
+    for which in ("pre-commit", "pre-push"):
+        d = os.path.join(folder, which)
         if not os.path.isfile(d):
             continue
         try:
             with open(d, "r", errors="replace") as f:
-                testo = f.read()
+                text = f.read()
         except OSError:
             continue
-        if "11-gancio.sh" in testo:
-            trovati.append((quale, d, os.access(d, os.X_OK)))
-    return trovati
+        if "11-gancio.sh" in text:
+            matches.append((which, d, os.access(d, os.X_OK)))
+    return matches
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-def certifica():
+def certify():
     """⛔ We prove that the judge CAN give red, green, and «I do not know»."""
     import datetime
-    adesso = time.time()
+    t_now = time.time()
 
-    def istante(days_ago):
+    def instant(days_ago):
         t = datetime.datetime.now().astimezone() - datetime.timedelta(days=days_ago)
         return t.isoformat()
 
-    def sano(**cambia):
-        s = {"c_e": True, "eseguibile": True, "installato": [("pre-push", "/x", True)],
-             "giri": [{"istante": istante(0.5), "secco": False}],
-             "guaio": None, "adesso": adesso}
-        s.update(cambia)
+    def healthy(**change):
+        s = {"c_e": True, "executable": True, "installed": [("pre-push", "/x", True)],
+             "rounds": [{"instant": instant(0.5), "dry": False}],
+             "trouble": None, "t_now": t_now}
+        s.update(change)
         return s
 
-    casi = [
+    cases = [
         ("the hook is there, it is installed, and it ran yesterday",
-         sano(), 0),
+         healthy(), 0),
         ("⛔ the hook is not there",
-         sano(c_e=False, eseguibile=False, installato=[]), 1),
+         healthy(c_e=False, executable=False, installed=[]), 1),
         ("⛔ it is there but is not executable",
-         sano(eseguibile=False), 1),
+         healthy(executable=False), 1),
         ("⛔⛔ it is there and it ran, but it is NOT installed — the hook switched off silently",
-         sano(installato=[]), 1),
+         healthy(installed=[]), 1),
         ("⛔ no log: it has never run",
-         sano(giri=None, guaio="assente"), 1),
+         healthy(rounds=None, trouble="assente"), 1),
         ("⛔ empty log: it has never run",
-         sano(giri=[]), 1),
+         healthy(rounds=[]), 1),
         # ⭐⭐ THE CASE THAT MATTERS MOST: the trace is there but does not count.
-        ("⭐⭐ the only run is DRY (--secco) ⇒ it must give RED",
-         sano(giri=[{"istante": istante(0.1), "secco": True}]), 1),
+        ("⭐⭐ the only run is DRY (--dry-run) ⇒ it must give RED",
+         healthy(rounds=[{"instant": instant(0.1), "dry": True}]), 1),
         ("⭐ a dry run AFTER a real and recent one ⇒ stays GREEN",
-         sano(giri=[{"istante": istante(0.5), "secco": False},
-                    {"istante": istante(0.1), "secco": True}]), 0),
+         healthy(rounds=[{"instant": instant(0.5), "dry": False},
+                    {"instant": instant(0.1), "dry": True}]), 0),
         ("⛔ the last real run is from twenty days ago (threshold 7)",
-         sano(giri=[{"istante": istante(20), "secco": False}]), 1),
+         healthy(rounds=[{"instant": instant(20), "dry": False}]), 1),
         ("⚠ the instant cannot be read: it is the log that is malformed",
-         sano(giri=[{"istante": "yesterday morning", "secco": False}]), 1),
+         healthy(rounds=[{"instant": "yesterday morning", "dry": False}]), 1),
         # ⛔ And the third outcome, which is not a red.
         ("⛔ the log is there and cannot be read ⇒ «I do not know», not red",
-         sano(guaio="illeggibile"), None),
+         healthy(trouble="illeggibile"), None),
     ]
 
     print("== certification of the C12 judge ==")
     print("   threshold in force: %d days · and dry runs do NOT count"
-          % GIORNI_PREDEFINITI)
-    guai = 0
-    for nome, stato, atteso in casi:
-        r = giudica(stato, GIORNI_PREDEFINITI)
+          % DEFAULT_DAYS)
+    troubles = 0
+    for name, state, expected in cases:
+        r = judge(state, DEFAULT_DAYS)
         # expected: 0 = green · 1 = at least one fault · None = I do not know
-        if atteso is None:
-            ottenuto = None
+        if expected is None:
+            obtained = None
         else:
-            ottenuto = 0 if (r is not None and not r) else (1 if r else 0)
+            obtained = 0 if (r is not None and not r) else (1 if r else 0)
             if r is None:
-                ottenuto = None
-        ok = ottenuto == atteso
+                obtained = None
+        ok = obtained == expected
         print("  %s  %-62s  ⇒ %s (expected %s)"
-              % ("OK " if ok else "NO ", nome,
-                 "I do not know" if ottenuto is None
-                 else ("green" if ottenuto == 0 else "RED"),
-                 "I do not know" if atteso is None
-                 else ("green" if atteso == 0 else "RED")))
+              % ("OK " if ok else "NO ", name,
+                 "I do not know" if obtained is None
+                 else ("green" if obtained == 0 else "RED"),
+                 "I do not know" if expected is None
+                 else ("green" if expected == 0 else "RED")))
         if not ok:
-            guai += 1
+            troubles += 1
             print("        (the judge said: %r)" % (r,))
 
     print()
-    if guai:
-        print("⛔ the judge is NOT reliable: %d wrong cases" % guai)
+    if troubles:
+        print("⛔ the judge is NOT reliable: %d wrong cases" % troubles)
         return 1
     print("⭐ the judge sees the dead hook, sees the disconnected hook,")
     print("   ⭐⭐ and ⛔ is NOT fooled by a dry run")
@@ -349,67 +349,67 @@ def certifica():
 # ═══════════════════════════════════════════════════════════════════════════
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("--gancio", default=GANCIO)
-    p.add_argument("--registro", default=REGISTRO)
-    p.add_argument("--giorni", type=int, default=GIORNI_PREDEFINITI,
+    p.add_argument("--hook", default=HOOK)
+    p.add_argument("--log", default=LOG)
+    p.add_argument("--days", type=int, default=DEFAULT_DAYS,
                    help="for how many days at most the hook may not have "
                         "run. `[?]` chosen, not measured")
-    p.add_argument("--certifica", action="store_true")
+    p.add_argument("--certify", action="store_true")
     a = p.parse_args()
 
-    if a.certifica:
-        sys.exit(certifica())
+    if a.certify:
+        sys.exit(certify())
 
-    installati = installed_hooks()
-    if installati is None:
+    installs = installed_hooks()
+    if installs is None:
         print("⛔ I am not inside a git repository: I do not even know where")
         print("   to look for the hooks")
         print("   ⇒ the terrain does not hold")
         sys.exit(2)
 
-    giri, guaio = read_log(a.registro)
-    stato = {
-        "c_e": os.path.isfile(a.gancio),
+    rounds, trouble = read_log(a.log)
+    state = {
+        "c_e": os.path.isfile(a.hook),
         # ⚠ «executable» here means two things together: the bit on the file OR
         #   the possibility of reading it (the project calls it with `bash …`).
         #   ⛔ What MUST have the bit is the file installed inside `.git`,
         #   and that is looked at separately, below.
-        "eseguibile": os.access(a.gancio, os.X_OK) or os.access(a.gancio, os.R_OK),
-        "installato": installati,
-        "giri": giri,
-        "guaio": guaio,
-        "adesso": time.time(),
+        "executable": os.access(a.hook, os.X_OK) or os.access(a.hook, os.R_OK),
+        "installed": installs,
+        "rounds": rounds,
+        "trouble": trouble,
+        "t_now": time.time(),
     }
 
     print("== C12 — is the hook alive? ==")
     print("   ⛔ the fault it looks for: the hook switched off silently — the way")
     print("      these nets die (§4.2)")
-    print("   declared threshold: last run within %d days  `[?]`" % a.giorni)
-    print("   ⛔ and DRY runs (--secco) do not count as a trace\n")
+    print("   declared threshold: last run within %d days  `[?]`" % a.days)
+    print("   ⛔ and DRY runs (--dry-run) do not count as a trace\n")
 
-    print("   hook        : %s  %s" % (a.gancio, "is there" if stato["c_e"] else "⛔ IS NOT THERE"))
-    if installati:
-        for quale, dove, esec in installati:
+    print("   hook        : %s  %s" % (a.hook, "is there" if state["c_e"] else "⛔ IS NOT THERE"))
+    if installs:
+        for which, dove, exec_ctx in installs:
             print("   installed   : %-11s %s%s"
-                  % (quale, dove, "" if esec else "  ⛔ not executable"))
+                  % (which, dove, "" if exec_ctx else "  ⛔ not executable"))
     else:
         print("   installed   : ⛔ nowhere")
-    if guaio == "assente":
+    if trouble == "assente":
         print("   log         : ⛔ IS NOT THERE — the hook has never run")
-    elif guaio == "illeggibile":
+    elif trouble == "illeggibile":
         print("   log         : ⚠ it is there and cannot be read")
     else:
-        veri = [g for g in giri if not g.get("secco")]
+        genuine = [g for g in rounds if not g.get("dry")]
         print("   log         : %d runs (%d real, %d dry)"
-              % (len(giri), len(veri), len(giri) - len(veri)))
-        if veri:
-            eta = age_in_days(veri[-1].get("istante"), stato["adesso"])
+              % (len(rounds), len(genuine), len(rounds) - len(genuine)))
+        if genuine:
+            eta = age_in_days(genuine[-1].get("instant"), state["t_now"])
             print("   last run    : %s  (%s)"
-                  % (veri[-1].get("istante"),
+                  % (genuine[-1].get("instant"),
                      "age unknown" if eta is None else "%.1f days ago" % eta))
     print()
 
-    r = giudica(stato, a.giorni)
+    r = judge(state, a.days)
     if r is None:
         print("⛔ the log is there and cannot be read.")
         print("   ⇒ I could not look — ⛔ and it is NOT a red")
@@ -424,7 +424,7 @@ def main():
         print("     they catch nothing.")
         return 1
     print("⭐ the hook is there, it is installed, and it really ran within %d days"
-          % a.giorni)
+          % a.days)
     print("⚠ and this mesh says the hook RUNS, ⛔ not that the net can")
     print("  still give red: that is C13.")
     return 0

@@ -5,7 +5,7 @@
 <title>18 · WebCodecs on the fallback stream</title>
 </head>
 <body>
-<pre id="esito">running…</pre>
+<pre id="outcome">running…</pre>
 <script>
 /*
  * Phase 18, V-software line: the OpenH264 (or SVT-AV1) stream given to
@@ -13,70 +13,70 @@
  * string `avc1.640033` (High 5.1, `stringhe_codec()` of src/pagina.html) or
  * `av01.0.13M.08`, one chunk per frame ("key"/"delta" from the bench's .csv).
  *
- *   ?flusso=h264-nuova-1920x1080.h264&codec=avc1.640033&hw=prefer-software
+ *   ?stream=h264-nuova-1920x1080.h264&codec=avc1.640033&hw=prefer-software
  *
- * Writes into #esito one JSON line: configured, outputs, errors, and the fingerprint
+ * Writes into #outcome one JSON line: configured, outputs, errors, and the fingerprint
  * (sum of the Y bytes) of EVERY decoded frame, to compare with
  * the ffmpeg one on the same stream.
  */
 const q = new URLSearchParams(location.search);
-const flusso = q.get("flusso"), codec = q.get("codec") || "avc1.640033";
+const stream = q.get("stream"), codec = q.get("codec") || "avc1.640033";
 const hw = q.get("hw") || "no-preference";
-const esito = { flusso, codec, hw, supportato: null, uscite: 0, errori: [], impronte: [], l: 0, a: 0 };
+const outcome = { stream, codec, hw, supported: null, outputs: 0, errors: [], fingerprints: [], l: 0, a: 0 };
 const fine = () => {
-  const t = JSON.stringify(esito);
-  document.getElementById("esito").textContent = t;
+  const t = JSON.stringify(outcome);
+  document.getElementById("outcome").textContent = t;
   /* the bench reads the outcome from the Chrome console (`--enable-logging`) */
   console.log("F18ESITO " + t);
 };
 
 (async () => {
   try {
-    const dati = new Uint8Array(await (await fetch(flusso)).arrayBuffer());
-    const righe = (await (await fetch(flusso + ".csv")).text()).trim().split("\n").slice(1);
+    const data = new Uint8Array(await (await fetch(stream)).arrayBuffer());
+    const lines = (await (await fetch(stream + ".csv")).text()).trim().split("\n").slice(1);
     const s = await VideoDecoder.isConfigSupported({ codec, hardwareAcceleration: hw });
-    esito.supportato = s.supported;
-    console.log("F18 supported", s.supported, dati.length, righe.length);
-    let attese = [];
+    outcome.supported = s.supported;
+    console.log("F18 supported", s.supported, data.length, lines.length);
+    let waits = [];
     const dec = new VideoDecoder({
-      output: (f) => { if (!esito.uscite) console.log("F18 first frame"); attese.push(impronta(f)); },
-      error: (e) => { esito.errori.push(String(e)); },
+      output: (f) => { if (!outcome.outputs) console.log("F18 first frame"); waits.push(fingerprint(f)); },
+      error: (e) => { outcome.errors.push(String(e)); },
     });
-    async function impronta(f) {
+    async function fingerprint(f) {
         const idx = Math.round(f.timestamp / 16667);
-        esito.uscite++;
-        esito.l = f.displayWidth; esito.a = f.displayHeight;
+        outcome.outputs++;
+        outcome.l = f.displayWidth; outcome.a = f.displayHeight;
         const buf = new Uint8Array(f.allocationSize());
         let lay;
         try { lay = await f.copyTo(buf); } finally { if (!lay) f.close(); }
         /* fingerprint: the sum of the luma, line by line (the stride is in the layout) */
-        let somma = 0;
+        let sum = 0;
         const p = lay[0];
         for (let y = 0; y < f.codedHeight && y < f.displayHeight; y++)
-          for (let x = 0; x < f.displayWidth; x++) somma += buf[p.offset + y * p.stride + x];
-        esito.impronte[idx] = somma;
-        esito.formato = f.format;
+          for (let x = 0; x < f.displayWidth; x++) sum += buf[p.offset + y * p.stride + x];
+        outcome.fingerprints[idx] = sum;
+        outcome.format = f.format;
         f.close();
     }
     dec.configure({ codec, hardwareAcceleration: hw, optimizeForLatency: true });
     let at = 0;
-    for (let i = 0; i < righe.length; i++) {
-      const c = righe[i].split(",");
-      const byte = +c[1], chiave = c[2] === "1";
-      dec.decode(new EncodedVideoChunk({ type: chiave ? "key" : "delta", timestamp: i * 16667,
-                                         data: dati.subarray(at, at + byte) }));
+    for (let i = 0; i < lines.length; i++) {
+      const c = lines[i].split(",");
+      const byte = +c[1], key = c[2] === "1";
+      dec.decode(new EncodedVideoChunk({ type: key ? "key" : "delta", timestamp: i * 16667,
+                                         data: data.subarray(at, at + byte) }));
       at += byte;
     }
-    console.log("F18 sent", righe.length, "queue", dec.decodeQueueSize);
+    console.log("F18 sent", lines.length, "queue", dec.decodeQueueSize);
     await dec.flush();
-    console.log("F18 flushed, outputs", esito.uscite);
-    const r = await Promise.allSettled(attese);
+    console.log("F18 flushed, outputs", outcome.outputs);
+    const r = await Promise.allSettled(waits);
     const no = r.filter((x) => x.status !== "fulfilled");
-    if (no.length) esito.errori.push("copyTo failed: " + no.length + " — " + no[0].reason);
+    if (no.length) outcome.errors.push("copyTo failed: " + no.length + " — " + no[0].reason);
     console.log("F18 fingerprints done", r.length - no.length);
-    esito.chunk = righe.length;
+    outcome.chunk = lines.length;
   } catch (e) {
-    esito.errori.push("exception: " + e);
+    outcome.errors.push("exception: " + e);
   }
   fine();
 })();

@@ -14,8 +14,8 @@
 %global __os_install_post %{nil}
 
 Name:           remotix-install
-Version:        %{rx_versione}
-Release:        %{rx_rilascio}
+Version:        %{rx_version}
+Release:        %{rx_release}
 Summary:        The REMOTIX installation engine
 License:        LicenseRef-REMOTIX
 URL:            https://github.com/nic-fio/REMOTIX

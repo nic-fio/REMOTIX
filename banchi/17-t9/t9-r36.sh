@@ -4,26 +4,26 @@
 # tested R36/R37 on 30 Sep and no longer runs (remotix-install-gui is missing); it stays as a record of the test.
 #
 # t9-r36.sh — phase 17, T9, R36: the same installation driven by CLI, TUI and GUI on three copies of the
-# same machine (the "cliente" snapshot, prepared the same way by t9-gui.sh accendi) gives the same
+# same machine (the "client" snapshot, prepared the same way by t9-gui.sh start) gives the same
 # plan, the same resolved set, the same log (apart from the times) and the same certificate.
 #
 #   (on the server)   sg kvm -c 'bash t9-r36.sh <machine> <step>'
 #
-#   raccogli <which>   (which = cli · tui · gui) the objects of the VM's CONFIRMED operation in
+#   collect <which>   (which = cli · tui · gui) the objects of the VM's CONFIRMED operation in
 #                      /media/REMOTIX/vm17/t9-gui/r36/<machine>/<which>/
-#   cli                on the running VM (t9-gui.sh accendi): remotix-install installa, with the
-#                      "si" confirmation at the terminal (a real terminal, pty)
+#   cli                on the running VM (t9-gui.sh start): remotix-install install, with the
+#                      "yes" confirmation at the terminal (a real terminal, pty)
 #   tui [language]     on the running VM: remotix-install tui, driven with keys (Enter at each screen);
-#                      <output>.passi = where, in the terminal stream, each screen was (for the text
+#                      <output>.steps = where, in the terminal stream, each screen was (for the text
 #                      photos: a terminal emulator replays the stream up to there)
-#   tui-lingua <LANG>  only the first screen with that LANG, then "q" (R42)
-#   confronta          the three, normalised (identifiers, times, approval, engine digest)
+#   tui-language <LANG>  only the first screen with that LANG, then "q" (R42)
+#   compare          the three, normalised (identifiers, times, approval, engine digest)
 #
 # ⚠ The three copies use the SAME binary: the build with the window (motore/remotix-install-gui),
 # which also has CLI and TUI (DECISIONI §10.19). The static build has another digest, and the plan
-# carries it written (motore.digest): with two different binaries the comparison removes it and says so.
+# carries it written (engine.digest): with two different binaries the comparison removes it and says so.
 set -uo pipefail
-m=${1:?machine}; passo=${2:?step}
+m=${1:?machine}; step=${2:?step}
 R=/media/REMOTIX/vm17
 D=$R/t9-gui/r36/$m
 V="bash $R/17-vm.sh"
@@ -31,18 +31,18 @@ ARCH=http://10.0.2.2:8727
 mkdir -p "$D"
 vm() { $V ssh "$m" "$@"; }
 
-prendi_motore() {
+take_engine() {
 	vm "curl -s -o /tmp/remotix-install-gui $ARCH/motore/remotix-install-gui && curl -s -o /tmp/remotix-install-gui.sha256 $ARCH/motore/remotix-install-gui.sha256 && (cd /tmp && sha256sum -c remotix-install-gui.sha256) && mv /tmp/remotix-install-gui /tmp/remotix-install && chmod 755 /tmp/remotix-install"
 }
 
 # pty: a real terminal for the command in the VM (ssh -tt), and the keys sent when the screen
 # shows the expected text
-guida() { # guida <output-file> <remote command> <wait1> <keys1> [<wait2> <keys2> …]
+drive() { # drive <output-file> <remote command> <wait1> <keys1> [<wait2> <keys2> …]
 	python3 - "$@" <<'PY'
 import os, pty, sys, time, re, select
 uscita, comando, passi = sys.argv[1], sys.argv[2], sys.argv[3:]
 chiave = "/media/REMOTIX/vm17/ssh/id_ed25519"
-porta = os.environ["PORTA_SSH"]
+porta = os.environ["SSH_PORT"]
 pid, fd = pty.fork()
 if pid == 0:
     os.execvp("ssh", ["ssh", "-tt", "-i", chiave, "-p", porta, "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null",
@@ -83,40 +83,40 @@ case $m in
 debian13-*) n=1 ;; ubuntu2604-*) n=2 ;; fedora44-*) n=3 ;; arch-*) n=4 ;; *) echo "machine?"; exit 2 ;;
 esac
 k=0; case ${m#*-} in gnome) k=1 ;; kde) k=2 ;; xfce) k=3 ;; lxqt) k=4 ;; esac
-export PORTA_SSH=$((2300 + 10 * n + k))
+export SSH_PORT=$((2300 + 10 * n + k))
 
-case $passo in
-raccogli)
+case $step in
+collect)
 	q=${3:?cli · tui · gui}
 	rm -rf "${D:?}/$q"; mkdir -p "$D/$q"
-	vm "sudo sh -c 'cd /var/lib/remotix/operazioni && d=\$(ls -1 | tail -1) && tar -C \$d -cf - piano.json approvazione.json insieme-risolto.json insieme-risolto-pacchetti.json registro.jsonl certificato.json verifica.json stato'" | tar -C "$D/$q" -xf -
+	vm "sudo sh -c 'cd /var/lib/remotix/operations && d=\$(ls -1 | tail -1) && tar -C \$d -cf - plan.json approval.json resolved-set.json resolved-set-packages.json log.jsonl certificate.json check.json state'" | tar -C "$D/$q" -xf -
 	ls "$D/$q"; cat "$D/$q/stato"
 	;;
 cli)
-	prendi_motore
-	guida "$D/cli.txt" "sudo /tmp/remotix-install installa --archivio $ARCH --lingua it" "per confermare" 'si\r'
+	take_engine
+	drive "$D/cli.txt" "sudo /tmp/remotix-install installa --archivio $ARCH --lingua it" "per confermare" 'si\r'
 	tail -5 "$D/cli.txt"
 	;;
 tui)
-	prendi_motore
+	take_engine
 	rm -f "$D/tui.txt.passi"
 	# Check → Enter; Choices (the default port) → Enter; Plan → Enter; at the end Enter closes
-	guida "$D/tui.txt" "sudo /tmp/remotix-install tui --archivio $ARCH --lingua it" \
+	drive "$D/tui.txt" "sudo /tmp/remotix-install tui --archivio $ARCH --lingua it" \
 		"Ho controllato" '\r' "da decidere" '\r' "Ecco che cosa" '\r' "REMOTIX è pronto" '\r'
 	tail -3 "$D/tui.txt"
 	;;
-tui-lingua)
-	prendi_motore
+tui-language)
+	take_engine
 	L=${3:?LANG}
 	rm -f "$D/tui-$L.txt.passi"
 	# sudo cleans the environment: the language is passed by env, as someone setting it in the session would
-	guida "$D/tui-$L.txt" "sudo env LANG=$L LANGUAGE=${4:-} /tmp/remotix-install tui --archivio $ARCH" "7447" 'q'
+	drive "$D/tui-$L.txt" "sudo env LANG=$L LANGUAGE=${4:-} /tmp/remotix-install tui --archivio $ARCH" "7447" 'q'
 	;;
-confronta)
+compare)
 	python3 - "$D" <<'PY'
 import json, sys, os, re
 D = sys.argv[1]
-VIA = {"id", "creato", "ora", "approvazione", "operazione", "digest_piano", "n", "cartella"}
+VIA = {"id", "creato", "time", "approvazione", "operazione", "digest_piano", "n", "cartella"}
 def norm(x):
     if isinstance(x, dict):
         return {k: norm(v) for k, v in x.items() if k not in VIA}
@@ -135,7 +135,7 @@ def leggi(q, f):
         return [norm(json.loads(r)) for r in open(p) if r.strip()]
     return norm(json.load(open(p)))
 esito = 0
-for f in ["piano.json", "insieme-risolto.json", "insieme-risolto-pacchetti.json", "registro.jsonl", "certificato.json"]:
+for f in ["plan.json", "resolved-set.json", "resolved-set-packages.json", "log.jsonl", "certificate.json"]:
     vv = {q: leggi(q, f) for q in ("cli", "tui", "gui")}
     uguali = vv["cli"] == vv["tui"] == vv["gui"]
     print("%-32s %s" % (f, "SAME in all three" if uguali else "DIFFERENT"))
@@ -148,7 +148,7 @@ for f in ["piano.json", "insieme-risolto.json", "insieme-risolto-pacchetti.json"
             print("   cli ↔ %s: %d lines differ" % (q, len(d)))
             for l in d[:12]: print("     " + l[:160])
 for q in ("cli", "tui", "gui"):
-    a = json.load(open(os.path.join(D, q, "approvazione.json")))
+    a = json.load(open(os.path.join(D, q, "approval.json")))
     print("approval %-4s %s, by %s" % (q, a["modo"], a["da"]))
 sys.exit(esito)
 PY

@@ -1,10 +1,10 @@
-package motore
+package engine
 
 // R30 in small: the engine process really KILLED (SIGKILL, no defer, no cleanup)
 // at every point of the table of §6.6.3 and at every state transition; then a new engine
-// resumes and must reach CONFERMATA (or ANNULLATA, if cancelling) with the machine IDENTICAL to
+// resumes and must reach CONFIRMED (or ROLLED_BACK, if cancelling) with the machine IDENTICAL to
 // that of a run without interruptions (or to the one before). The killed process is this same
-// test binary, relaunched with REMOTIX_PROVA_FIGLIO=1: the PuntoDiProva hook exists only
+// test binary, relaunched with REMOTIX_TEST_CHILD=1: the TestPoint hook exists only
 // in the tests.
 
 import (
@@ -20,35 +20,35 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	if os.Getenv("REMOTIX_PROVA_FIGLIO") == "1" {
-		figlio()
+	if os.Getenv("REMOTIX_TEST_CHILD") == "1" {
+		child()
 		return
 	}
 	os.Exit(m.Run())
 }
 
-// figlio: the engine that will be killed. It exits 3 if the point was never reached.
-func figlio() {
-	radice, operazioni := os.Getenv("RADICE"), os.Getenv("OPERAZIONI")
-	bersaglio := os.Getenv("PUNTO")
-	PuntoDiProva = func(p, a string) {
-		if p+"@"+a == bersaglio {
+// child: the engine that will be killed. It exits 3 if the point was never reached.
+func child() {
+	root, operations := os.Getenv("ROOT"), os.Getenv("OPERATIONS")
+	target := os.Getenv("STOP_POINT")
+	TestPoint = func(p, a string) {
+		if p+"@"+a == target {
 			syscall.Kill(os.Getpid(), syscall.SIGKILL)
 			select {}
 		}
 	}
-	m := fakeEngine(&testing.T{}, radice, operazioni)
+	m := fakeEngine(&testing.T{}, root, operations)
 	if os.Getenv("FIREWALL") != "" {
-		os.WriteFile(filepath.Join(radice, "etc/finto-firewall"), []byte(os.Getenv("FIREWALL")), 0o644)
+		os.WriteFile(filepath.Join(root, "etc/finto-firewall"), []byte(os.Getenv("FIREWALL")), 0o644)
 	}
 	var err error
-	switch os.Getenv("COMANDO") {
+	switch os.Getenv("COMMAND") {
 	case "applica":
-		_, err = m.Applica(os.Getenv("PIANO"), false, "prova")
+		_, err = m.Apply(os.Getenv("PLAN"), false, "prova")
 	case "riprendi":
-		_, err = m.Riprendi()
+		_, err = m.Resume()
 	case "annulla":
-		_, err = m.Annulla()
+		_, err = m.Rollback()
 	}
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "figlio:", err)
@@ -57,66 +57,66 @@ func figlio() {
 }
 
 // killAt launches the child and checks it died of SIGKILL at the requested point.
-func killAt(t *testing.T, radice, operazioni, piano, comando, punto string) {
+func killAt(t *testing.T, root, operations, piano, command, spot string) {
 	t.Helper()
 	cmd := exec.Command(os.Args[0], "-test.run=^$")
-	cmd.Env = append(os.Environ(), "REMOTIX_PROVA_FIGLIO=1", "RADICE="+radice, "OPERAZIONI="+operazioni,
-		"PIANO="+piano, "COMANDO="+comando, "PUNTO="+punto)
+	cmd.Env = append(os.Environ(), "REMOTIX_TEST_CHILD=1", "ROOT="+root, "OPERATIONS="+operations,
+		"PLAN="+piano, "COMMAND="+command, "STOP_POINT="+spot)
 	var errOut bytes.Buffer
 	cmd.Stderr = &errOut
 	err := cmd.Run()
 	var ee *exec.ExitError
 	if !errors.As(err, &ee) {
-		t.Fatalf("%s %s: the child did not die (err=%v) %s", comando, punto, err, errOut.String())
+		t.Fatalf("%s %s: the child did not die (err=%v) %s", command, spot, err, errOut.String())
 	}
 	if ws, ok := ee.Sys().(syscall.WaitStatus); !ok || !ws.Signaled() || ws.Signal() != syscall.SIGKILL {
-		t.Fatalf("%s %s: the point was not reached (exit %v): %s", comando, punto, err, errOut.String())
+		t.Fatalf("%s %s: the point was not reached (exit %v): %s", command, spot, err, errOut.String())
 	}
 }
 
-type banco struct {
-	radice, operazioni, piano string
-	prima                     map[string]string
+type bench struct {
+	root, operations, piano string
+	before                     map[string]string
 }
 
-func newBench(t *testing.T) *banco {
+func newBench(t *testing.T) *bench {
 	d := t.TempDir()
-	b := &banco{radice: filepath.Join(d, "macchina"), operazioni: filepath.Join(d, "operations")}
-	os.MkdirAll(b.radice, 0o755)
-	prepareMachine(t, b.radice)
-	b.piano = testPlan(t, b.radice, d, true)
-	b.prima = foto(t, b.radice)
+	b := &bench{root: filepath.Join(d, "macchina"), operations: filepath.Join(d, "operations")}
+	os.MkdirAll(b.root, 0o755)
+	prepareMachine(t, b.root)
+	b.piano = testPlan(t, b.root, d, true)
+	b.before = photo(t, b.root)
 	return b
 }
 
-func (b *banco) motore(t *testing.T) *Motore { return fakeEngine(t, b.radice, b.operazioni) }
+func (b *bench) engine(t *testing.T) *Engine { return fakeEngine(t, b.root, b.operations) }
 
-// riferimento: the machine after a whole run without interruptions.
-var riferimento map[string]string
+// reference: the machine after a whole run without interruptions.
+var reference map[string]string
 
 func referencePhoto(t *testing.T) map[string]string {
-	if riferimento != nil {
-		return riferimento
+	if reference != nil {
+		return reference
 	}
 	b := newBench(t)
-	op, err := b.motore(t).Applica(b.piano, false, "prova")
-	if err != nil || op.Stato != CONFERMATA {
-		t.Fatalf("run without interruptions: %v, state %v", err, op.Stato)
+	op, err := b.engine(t).Apply(b.piano, false, "prova")
+	if err != nil || op.State != CONFIRMED {
+		t.Fatalf("run without interruptions: %v, state %v", err, op.State)
 	}
-	riferimento = foto(t, b.radice)
-	return riferimento
+	reference = photo(t, b.root)
+	return reference
 }
 
 // checkLog: no action DONE twice, no duplicate INTENTION (double effect).
-func checkLog(t *testing.T, op *Operazione) {
+func checkLog(t *testing.T, op *Operation) {
 	t.Helper()
 	if err := op.openLog(); err != nil {
 		t.Fatal(err)
 	}
 	n := map[string]int{}
-	for _, e := range op.Reg.Eventi {
-		if e.Tipo == EvDone || e.Tipo == EvIntent {
-			n[string(e.Tipo)+" "+e.Azione]++
+	for _, e := range op.Reg.Events {
+		if e.Type == EvDone || e.Type == EvIntent {
+			n[string(e.Type)+" "+e.Action]++
 		}
 	}
 	for k, v := range n {
@@ -132,34 +132,34 @@ func pointsApply() []string {
 		for _, p := range []string{"prima-intenzione", "dopo-intenzione", "dopo-effetto", "dopo-fatta"} {
 			pp = append(pp, p+"@"+a.ID)
 		}
-		if a.Tipo == "write-file" {
+		if a.Type == "write-file" {
 			pp = append(pp, "file-a-meta@"+a.ID)
 		}
 	}
-	for _, s := range []Stato{IN_ESECUZIONE, APPLICATA, IN_VERIFICA, VERIFICATA} {
+	for _, s := range []State{RUNNING, APPLIED, VERIFYING, VERIFIED} {
 		pp = append(pp, "stato:"+string(s)+"@")
 	}
 	return pp
 }
 
-// ⭐ Killed during application, resumed: CONFERMATA, and the machine as after a clean run.
+// ⭐ Killed during application, resumed: CONFIRMED, and the machine as after a clean run.
 func TestResumeAfterInterruption(t *testing.T) {
-	rif := referencePhoto(t)
-	for _, punto := range pointsApply() {
-		t.Run(punto, func(t *testing.T) {
+	ref := referencePhoto(t)
+	for _, spot := range pointsApply() {
+		t.Run(spot, func(t *testing.T) {
 			b := newBench(t)
-			killAt(t, b.radice, b.operazioni, b.piano, "applica", punto)
-			op, err := b.motore(t).Riprendi()
+			killAt(t, b.root, b.operations, b.piano, "applica", spot)
+			op, err := b.engine(t).Resume()
 			if err != nil {
 				t.Fatalf("resume: %v", err)
 			}
-			if op.Stato != CONFERMATA {
-				t.Fatalf("state %s, expected CONFIRMED", op.Stato)
+			if op.State != CONFIRMED {
+				t.Fatalf("state %s, expected CONFIRMED", op.State)
 			}
-			if d := differenze(rif, foto(t, b.radice)); len(d) > 0 {
+			if d := differences(ref, photo(t, b.root)); len(d) > 0 {
 				t.Fatalf("the machine is not that of the clean run:\n%s", strings.Join(d, "\n"))
 			}
-			if _, err := os.Stat(filepath.Join(op.Cartella, "certificate.json")); err != nil {
+			if _, err := os.Stat(filepath.Join(op.Folder, "certificate.json")); err != nil {
 				t.Errorf("the certificate is missing: %v", err)
 			}
 			checkLog(t, op)
@@ -167,21 +167,21 @@ func TestResumeAfterInterruption(t *testing.T) {
 	}
 }
 
-// ⭐ Killed during application, then cancelled: ANNULLATA, and the machine as it was before,
+// ⭐ Killed during application, then cancelled: ROLLED_BACK, and the machine as it was before,
 // byte by byte (the firewall rule and the member of «video» that were there stay).
-func TestAnnullaDopoInterruzione(t *testing.T) {
-	for _, punto := range pointsApply() {
-		t.Run(punto, func(t *testing.T) {
+func TestRollbackAfterInterruption(t *testing.T) {
+	for _, spot := range pointsApply() {
+		t.Run(spot, func(t *testing.T) {
 			b := newBench(t)
-			killAt(t, b.radice, b.operazioni, b.piano, "applica", punto)
-			op, err := b.motore(t).Annulla()
+			killAt(t, b.root, b.operations, b.piano, "applica", spot)
+			op, err := b.engine(t).Rollback()
 			if err != nil {
 				t.Fatalf("cancel: %v", err)
 			}
-			if op.Stato != ANNULLATA {
-				t.Fatalf("state %s, expected ROLLED_BACK", op.Stato)
+			if op.State != ROLLED_BACK {
+				t.Fatalf("state %s, expected ROLLED_BACK", op.State)
 			}
-			if d := differencesAfterUndo(t, b.prima, foto(t, b.radice)); len(d) > 0 {
+			if d := differencesAfterUndo(t, b.before, photo(t, b.root)); len(d) > 0 {
 				t.Fatalf("the machine did not go back to how it was:\n%s", strings.Join(d, "\n"))
 			}
 		})
@@ -190,54 +190,54 @@ func TestAnnullaDopoInterruzione(t *testing.T) {
 
 // ⭐ Killed DURING the rollback (R30, last point): resume finishes the cancellation.
 func TestInterruptionDuringRollback(t *testing.T) {
-	var punti []string
+	var points []string
 	for _, a := range testActions() {
-		punti = append(punti, "annulla-dopo-intenzione@"+a.ID, "annulla-dopo-effetto@"+a.ID)
+		points = append(points, "annulla-dopo-intenzione@"+a.ID, "annulla-dopo-effetto@"+a.ID)
 	}
-	punti = append(punti, "file-a-meta@overwritten-file", "stato:INTERRUPTED@", "stato:ROLLING_BACK@")
-	for _, punto := range punti {
-		if punto == "annulla-dopo-intenzione@group-preexisting" || punto == "annulla-dopo-effetto@group-preexisting" {
-			continue // PREESISTENTE: it has no undo, the point is not reached (tested below)
+	points = append(points, "file-a-meta@overwritten-file", "stato:INTERRUPTED@", "stato:ROLLING_BACK@")
+	for _, spot := range points {
+		if spot == "annulla-dopo-intenzione@group-preexisting" || spot == "annulla-dopo-effetto@group-preexisting" {
+			continue // PREEXISTING: it has no undo, the point is not reached (tested below)
 		}
-		t.Run(punto, func(t *testing.T) {
+		t.Run(spot, func(t *testing.T) {
 			b := newBench(t)
 			// first an application killed halfway, so there is something to cancel
-			killAt(t, b.radice, b.operazioni, b.piano, "applica", "dopo-fatta@service")
-			killAt(t, b.radice, b.operazioni, b.piano, "annulla", punto)
-			// resume: an IN_ANNULLAMENTO operation is resumed by cancelling; an INTERROTTA one
+			killAt(t, b.root, b.operations, b.piano, "applica", "dopo-fatta@service")
+			killAt(t, b.root, b.operations, b.piano, "annulla", spot)
+			// resume: an ROLLING_BACK operation is resumed by cancelling; an INTERRUPTED one
 			// is cancelled again
-			m := b.motore(t)
+			m := b.engine(t)
 			ap, _ := m.IsOpen()
-			var op *Operazione
+			var op *Operation
 			var err error
-			if ap.Stato == IN_ANNULLAMENTO {
-				op, err = m.Riprendi()
+			if ap.State == ROLLING_BACK {
+				op, err = m.Resume()
 			} else {
-				op, err = m.Annulla()
+				op, err = m.Rollback()
 			}
 			if err != nil {
 				t.Fatal(err)
 			}
-			if op.Stato != ANNULLATA {
-				t.Fatalf("state %s, expected ROLLED_BACK", op.Stato)
+			if op.State != ROLLED_BACK {
+				t.Fatalf("state %s, expected ROLLED_BACK", op.State)
 			}
-			if d := differencesAfterUndo(t, b.prima, foto(t, b.radice)); len(d) > 0 {
+			if d := differencesAfterUndo(t, b.before, photo(t, b.root)); len(d) > 0 {
 				t.Fatalf("the machine did not go back to how it was:\n%s", strings.Join(d, "\n"))
 			}
 		})
 	}
 	t.Run("the PREEXISTING point is not reached", func(t *testing.T) {
 		b := newBench(t)
-		killAt(t, b.radice, b.operazioni, b.piano, "applica", "dopo-fatta@service")
+		killAt(t, b.root, b.operations, b.piano, "applica", "dopo-fatta@service")
 		cmd := exec.Command(os.Args[0], "-test.run=^$")
-		cmd.Env = append(os.Environ(), "REMOTIX_PROVA_FIGLIO=1", "RADICE="+b.radice, "OPERAZIONI="+b.operazioni,
-			"COMANDO=annulla", "PUNTO=annulla-dopo-intenzione@group-preexisting")
+		cmd.Env = append(os.Environ(), "REMOTIX_TEST_CHILD=1", "ROOT="+b.root, "OPERATIONS="+b.operations,
+			"COMMAND=annulla", "STOP_POINT=annulla-dopo-intenzione@group-preexisting")
 		err := cmd.Run()
 		var ee *exec.ExitError
 		if !errors.As(err, &ee) || ee.ExitCode() != 3 {
 			t.Fatalf("expected: the child finishes without passing the point (exit 3), got %v", err)
 		}
-		if d := differencesAfterUndo(t, b.prima, foto(t, b.radice)); len(d) > 0 {
+		if d := differencesAfterUndo(t, b.before, photo(t, b.root)); len(d) > 0 {
 			t.Fatalf("%s", strings.Join(d, "\n"))
 		}
 	})
@@ -245,19 +245,19 @@ func TestInterruptionDuringRollback(t *testing.T) {
 
 // Interrupted before touching the machine: resume says so and touches nothing.
 func TestInterruptBeforeTouching(t *testing.T) {
-	for _, s := range []Stato{FIDATA, ESAMINATA, VALUTATA, PIANIFICATA, APPROVATA, ACQUISITA} {
+	for _, s := range []State{TRUSTED, EXAMINED, EVALUATED, PLANNED, APPROVED, ACQUIRED} {
 		t.Run(string(s), func(t *testing.T) {
 			b := newBench(t)
-			killAt(t, b.radice, b.operazioni, b.piano, "applica", "stato:"+string(s)+"@")
-			op, err := b.motore(t).Riprendi()
-			if err != nil || op.Stato != BLOCCATA {
-				t.Fatalf("state %v, err %v; expected BLOCKED (RX-RIPRESA-002)", op.Stato, err)
+			killAt(t, b.root, b.operations, b.piano, "applica", "stato:"+string(s)+"@")
+			op, err := b.engine(t).Resume()
+			if err != nil || op.State != BLOCKED {
+				t.Fatalf("state %v, err %v; expected BLOCKED (RX-RIPRESA-002)", op.State, err)
 			}
-			if d := differencesAfterUndo(t, b.prima, foto(t, b.radice)); len(d) > 0 {
+			if d := differencesAfterUndo(t, b.before, photo(t, b.root)); len(d) > 0 {
 				t.Fatalf("toccata: %s", strings.Join(d, "\n"))
 			}
 			// and it does not stay open: a new application starts
-			if op2, err := b.motore(t).Applica(b.piano, false, "prova"); err != nil || op2.Stato != CONFERMATA {
+			if op2, err := b.engine(t).Apply(b.piano, false, "prova"); err != nil || op2.State != CONFIRMED {
 				t.Fatalf("apply after: %v %v", op2, err)
 			}
 		})
@@ -267,60 +267,60 @@ func TestInterruptBeforeTouching(t *testing.T) {
 // A log line written halfway (process killed during the write): it is removed and resumed.
 func TestTruncatedLine(t *testing.T) {
 	b := newBench(t)
-	killAt(t, b.radice, b.operazioni, b.piano, "applica", "dopo-intenzione@unit")
-	ap, _ := b.motore(t).IsOpen()
-	f, _ := os.OpenFile(filepath.Join(ap.Cartella, "log.jsonl"), os.O_APPEND|os.O_WRONLY, 0)
+	killAt(t, b.root, b.operations, b.piano, "applica", "dopo-intenzione@unit")
+	ap, _ := b.engine(t).IsOpen()
+	f, _ := os.OpenFile(filepath.Join(ap.Folder, "log.jsonl"), os.O_APPEND|os.O_WRONLY, 0)
 	f.WriteString(`{"n":99,"type":"FAT`)
 	f.Close()
-	op, err := b.motore(t).Riprendi()
-	if err != nil || op.Stato != CONFERMATA {
-		t.Fatalf("%v %v", op.Stato, err)
+	op, err := b.engine(t).Resume()
+	if err != nil || op.State != CONFIRMED {
+		t.Fatalf("%v %v", op.State, err)
 	}
-	trovata := false
-	for _, e := range op.Reg.Eventi {
+	found_at := false
+	for _, e := range op.Reg.Events {
 		if e.Codice == "RX-RIPRESA-003" {
-			trovata = true
+			found_at = true
 		}
 	}
-	if !trovata {
+	if !found_at {
 		t.Error("the truncated line was not declared (RX-RIPRESA-003)")
 	}
 }
 
-// DONE but the effect is gone (last line of the table): INTERROTTA (RX-RIPRESA-001); then it is cancelled.
+// DONE but the effect is gone (last line of the table): INTERRUPTED (RX-RIPRESA-001); then it is cancelled.
 func TestConcurrentModification(t *testing.T) {
 	t.Run("group removed by others", func(t *testing.T) {
 		b := newBench(t)
-		killAt(t, b.radice, b.operazioni, b.piano, "applica", "dopo-fatta@group-video")
-		(&fakeGroups{b.radice}).Togli("prova", "video")
-		m := b.motore(t)
-		op, err := m.Riprendi()
-		if err != nil || op.Stato != INTERROTTA {
-			t.Fatalf("state %v err %v, expected INTERRUPTED (RX-RIPRESA-001)", op.Stato, err)
+		killAt(t, b.root, b.operations, b.piano, "applica", "dopo-fatta@group-video")
+		(&fakeGroups{b.root}).Remove("prova", "video")
+		m := b.engine(t)
+		op, err := m.Resume()
+		if err != nil || op.State != INTERRUPTED {
+			t.Fatalf("state %v err %v, expected INTERRUPTED (RX-RIPRESA-001)", op.State, err)
 		}
 		if ap, _ := m.IsOpen(); ap == nil {
 			t.Fatal("INTERRUPTED must stay open")
 		}
-		op, err = m.Annulla()
-		if err != nil || op.Stato != ANNULLATA {
-			t.Fatalf("cancel: %v %v", op.Stato, err)
+		op, err = m.Rollback()
+		if err != nil || op.State != ROLLED_BACK {
+			t.Fatalf("cancel: %v %v", op.State, err)
 		}
-		if d := differencesAfterUndo(t, b.prima, foto(t, b.radice)); len(d) > 0 {
+		if d := differencesAfterUndo(t, b.before, photo(t, b.root)); len(d) > 0 {
 			t.Fatalf("%s", strings.Join(d, "\n"))
 		}
 	})
 	t.Run("file changed by the administrator", func(t *testing.T) {
 		b := newBench(t)
-		killAt(t, b.radice, b.operazioni, b.piano, "applica", "dopo-fatta@unit")
-		conf := filepath.Join(b.radice, "etc/remotix/engine-test.conf")
+		killAt(t, b.root, b.operations, b.piano, "applica", "dopo-fatta@unit")
+		conf := filepath.Join(b.root, "etc/remotix/engine-test.conf")
 		os.WriteFile(conf, []byte("porta=9999 # messa a mano\n"), 0o644)
-		m := b.motore(t)
-		if op, _ := m.Riprendi(); op.Stato != INTERROTTA {
-			t.Fatalf("state %v, expected INTERRUPTED", op.Stato)
+		m := b.engine(t)
+		if op, _ := m.Resume(); op.State != INTERRUPTED {
+			t.Fatalf("state %v, expected INTERRUPTED", op.State)
 		}
-		op, err := m.Annulla()
-		if err != nil || op.Stato != ANNULLATA_IN_PARTE {
-			t.Fatalf("cancel: %v %v, expected PARTIALLY_ROLLED_BACK", op.Stato, err)
+		op, err := m.Rollback()
+		if err != nil || op.State != PARTIALLY_ROLLED_BACK {
+			t.Fatalf("cancel: %v %v, expected PARTIALLY_ROLLED_BACK", op.State, err)
 		}
 		if c, _ := os.ReadFile(conf); string(c) != "porta=9999 # messa a mano\n" {
 			t.Fatalf("the administrator's file was touched: %q", c)
@@ -333,17 +333,17 @@ func TestConcurrentModification(t *testing.T) {
 // the operation is cancelled entirely, and the machine is as it was.
 // failingPlan: the trial plan with a last step that cannot succeed (a person who does not
 // exist, RX-GRUPPI-003): everything done before is cancelled.
-func failingPlan(t *testing.T, b *banco) string {
-	p := testPlan(t, b.radice, filepath.Dir(b.radice), false)
+func failingPlan(t *testing.T, b *bench) string {
+	p := testPlan(t, b.root, filepath.Dir(b.root), false)
 	var pn Piano
-	LeggiJSON(p, &pn)
+	ReadJSON(p, &pn)
 	pn.Azioni = append(pn.Azioni, PlanGroup("ghost", "fantasma", "video"))
-	im, err := CalcolaImpronta(fakeProfile(), catalogTest(t), pn.Azioni, pn.Dipende, &Contesto{Amb: fakeEnvironment(b.radice)})
+	im, err := ComputeFingerprint(fakeProfile(), catalogTest(t), pn.Azioni, pn.Depends, &Context{Env: fakeEnvironment(b.root)})
 	if err != nil {
 		t.Fatal(err)
 	}
-	pn.Impronta = *im
-	pn.Approval = &Approval{Da: "prova", Ora: "2026-09-30T00:00:00Z", Modo: "da file", DigestPiano: pn.Digest()}
+	pn.Fingerprint = *im
+	pn.Approval = &Approval{Da: "prova", At: "2026-09-30T00:00:00Z", Modo: "da file", DigestPiano: pn.Digest()}
 	WriteJSON(p, &pn)
 	return p
 }
@@ -351,29 +351,29 @@ func failingPlan(t *testing.T, b *banco) string {
 func TestFailureRollsBackAll(t *testing.T) {
 	b := newBench(t)
 	b.piano = failingPlan(t, b)
-	b.prima = foto(t, b.radice)
-	op, err := b.motore(t).Applica(b.piano, false, "prova")
-	if err != nil || op.Stato != ANNULLATA {
-		t.Fatalf("state %v err %v, expected ROLLED_BACK", op.Stato, err)
+	b.before = photo(t, b.root)
+	op, err := b.engine(t).Apply(b.piano, false, "prova")
+	if err != nil || op.State != ROLLED_BACK {
+		t.Fatalf("state %v err %v, expected ROLLED_BACK", op.State, err)
 	}
-	if u := op.Reg.Ultimo("ghost", EvFailed); u == nil || u.Codice != "RX-GRUPPI-003" {
+	if u := op.Reg.Last("ghost", EvFailed); u == nil || u.Codice != "RX-GRUPPI-003" {
 		t.Fatalf("the failure does not carry RX-GRUPPI-003: %+v", u)
 	}
-	if d := differencesAfterUndo(t, b.prima, foto(t, b.radice)); len(d) > 0 {
+	if d := differencesAfterUndo(t, b.before, photo(t, b.root)); len(d) > 0 {
 		t.Fatalf("%s", strings.Join(d, "\n"))
 	}
 	// and killed during that cancellation, then resumed
-	for _, punto := range []string{"annulla-dopo-intenzione@unit", "annulla-dopo-effetto@overwritten-file", "stato:ROLLING_BACK@"} {
-		t.Run(punto, func(t *testing.T) {
+	for _, spot := range []string{"annulla-dopo-intenzione@unit", "annulla-dopo-effetto@overwritten-file", "stato:ROLLING_BACK@"} {
+		t.Run(spot, func(t *testing.T) {
 			b := newBench(t)
 			b.piano = failingPlan(t, b)
-			b.prima = foto(t, b.radice)
-			killAt(t, b.radice, b.operazioni, b.piano, "applica", punto)
-			op, err := b.motore(t).Riprendi()
-			if err != nil || op.Stato != ANNULLATA {
-				t.Fatalf("state %v err %v", op.Stato, err)
+			b.before = photo(t, b.root)
+			killAt(t, b.root, b.operations, b.piano, "applica", spot)
+			op, err := b.engine(t).Resume()
+			if err != nil || op.State != ROLLED_BACK {
+				t.Fatalf("state %v err %v", op.State, err)
 			}
-			if d := differencesAfterUndo(t, b.prima, foto(t, b.radice)); len(d) > 0 {
+			if d := differencesAfterUndo(t, b.before, photo(t, b.root)); len(d) > 0 {
 				t.Fatalf("%s", strings.Join(d, "\n"))
 			}
 		})

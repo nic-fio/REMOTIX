@@ -1,4 +1,4 @@
-package motore
+package engine
 
 import "encoding/json"
 
@@ -12,26 +12,26 @@ var notYetDoneWhy = map[string]string{}
 
 func init() {
 	for t := range notYetDoneWhy {
-		registraTipo(t, func(p AzionePiano) (Azione, error) { return notYetDone{p.Tipo}, nil })
+		registerType(t, func(p PlanAction) (Action, error) { return notYetDone{p.Type}, nil })
 	}
 }
 
-type notYetDone struct{ tipo string }
+type notYetDone struct{ kind string }
 
 func (n notYetDone) err() error {
-	return Errore("RX-AZIONE-004", n.tipo+": "+notYetDoneWhy[n.tipo])
+	return Error("RX-AZIONE-004", n.kind+": "+notYetDoneWhy[n.kind])
 }
 
-func (n notYetDone) Vincoli(*Contesto) ([]string, error) { return nil, nil }
-func (n notYetDone) Fotografa(*Contesto) (json.RawMessage, Origine, error) {
+func (n notYetDone) Constraints(*Context) ([]string, error) { return nil, nil }
+func (n notYetDone) Snapshot(*Context) (json.RawMessage, Origine, error) {
 	return nil, "", n.err()
 }
-func (n notYetDone) Fai(*Contesto, json.RawMessage) error { return n.err() }
-func (n notYetDone) Controlla(*Contesto, json.RawMessage) (Esito, string, error) {
+func (n notYetDone) Do(*Context, json.RawMessage) error { return n.err() }
+func (n notYetDone) Check(*Context, json.RawMessage) (Outcome, string, error) {
 	return "", "", n.err()
 }
-func (n notYetDone) Annulla(*Contesto, json.RawMessage) error { return n.err() }
-func (n notYetDone) Annullata(*Contesto, json.RawMessage) (bool, string, error) {
+func (n notYetDone) Rollback(*Context, json.RawMessage) error { return n.err() }
+func (n notYetDone) RolledBack(*Context, json.RawMessage) (bool, string, error) {
 	return false, "", n.err()
 }
 
@@ -39,8 +39,8 @@ func (n notYetDone) Annullata(*Contesto, json.RawMessage) (bool, string, error) 
 func UnimplementedSteps(p *Piano) []string {
 	var r []string
 	for _, a := range p.Azioni {
-		if m, ok := notYetDoneWhy[a.Tipo]; ok {
-			r = append(r, a.ID+" ("+a.Tipo+": "+m+")")
+		if m, ok := notYetDoneWhy[a.Type]; ok {
+			r = append(r, a.ID+" ("+a.Type+": "+m+")")
 		}
 	}
 	return r

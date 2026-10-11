@@ -111,7 +111,7 @@ optdepends=(
 	'nvidia-utils: Vulkan Video encoding on NVIDIA GPUs with the proprietary driver'
 )
 backup=(
-	etc/remotix/utenti-negati
+	etc/remotix/denied-users
 	etc/pam.d/remotix
 )
 install=remotix.install
@@ -138,13 +138,13 @@ build() {
 
 	# ── nghttp3 and ngtcp2: static ONLY, in a folder of our own
 	#    (the same recipe as src/costruzione/quic-statiche.sh)
-	local comune=(-GNinja -DCMAKE_BUILD_TYPE=Release
+	local common=(-GNinja -DCMAKE_BUILD_TYPE=Release
 		-DCMAKE_INSTALL_PREFIX="$srcdir/$_quic" -DCMAKE_INSTALL_LIBDIR=lib
 		-DCMAKE_POSITION_INDEPENDENT_CODE=ON -DENABLE_LIB_ONLY=ON
 		-DENABLE_SHARED_LIB=OFF -DENABLE_STATIC_LIB=ON)
-	cmake -B nghttp3-build -S "nghttp3-$_nghttp3" "${comune[@]}"
+	cmake -B nghttp3-build -S "nghttp3-$_nghttp3" "${common[@]}"
 	ninja -C nghttp3-build install
-	cmake -B ngtcp2-build -S "ngtcp2-$_ngtcp2" "${comune[@]}" -DENABLE_OPENSSL=ON
+	cmake -B ngtcp2-build -S "ngtcp2-$_ngtcp2" "${common[@]}" -DENABLE_OPENSSL=ON
 	ninja -C ngtcp2-build install
 	if ls "$srcdir/$_quic"/lib/lib{ngtcp2,nghttp3}*.so* 2>/dev/null; then
 		echo "⛔ there are ngtcp2/nghttp3 .so files: the binary would use them" >&2
@@ -163,9 +163,9 @@ build() {
 	#   and the warnings are added back.  ⛔ Not `make CFLAGS=…`:
 	#   from the command line the Makefile's `CFLAGS +=` would be ignored.
 	export CFLAGS="$CFLAGS -std=gnu11 -Wall -Wextra -Wno-unused-parameter"
-	make dipendenze
-	make pulisci
-	make tutto
+	make deps
+	make clean
+	make all
 }
 
 check() {
@@ -182,29 +182,29 @@ check() {
 package() {
 	local a="$srcdir/remotix-$pkgver/packaging/arch" s="$srcdir/remotix-$pkgver/src"
 	install -Dm755 "$s/remotix"          "$pkgdir/usr/lib/remotix/remotix"
-	install -Dm644 "$s/pagina.html"      "$pkgdir/usr/share/remotix/pagina.html"
+	install -Dm644 "$s/pagina.html"      "$pkgdir/usr/share/remotix/page.html"
 	install -Dm644 "$srcdir/remotix-$pkgver/LICENSE.md" "$pkgdir/usr/share/licenses/remotix/LICENSE.md"
 	install -Dm644 "$srcdir/remotix-$pkgver/THIRD-PARTY-LICENSES" \
 		"$pkgdir/usr/share/licenses/remotix/THIRD-PARTY-LICENSES"
 	# R24 (T8): the versions of the static libraries LINKED, from the pkg-config of
 	#    the folder where build() installed them — for the archive's SBOM.
-	printf '{"formato":"remotix-incorporate/1","ngtcp2":"%s","nghttp3":"%s","fonte":"pkg-config of the linked .a files"}\n' \
+	printf '{"format":"remotix-linked/1","ngtcp2":"%s","nghttp3":"%s","source":"pkg-config of the linked .a files"}\n' \
 		"$(PKG_CONFIG_PATH="$srcdir/$_quic/lib/pkgconfig" pkg-config --modversion libngtcp2)" \
 		"$(PKG_CONFIG_PATH="$srcdir/$_quic/lib/pkgconfig" pkg-config --modversion libnghttp3)" \
-		>"$pkgdir/usr/share/remotix/incorporate.json"
+		>"$pkgdir/usr/share/remotix/linked.json"
 	install -Dm644 "$a/remotix.service"  "$pkgdir/usr/lib/systemd/system/remotix.service"
 	# ⭐ Defaults in /usr, choices in /etc (§6.5 point 7), as in the .deb and the
-	#    .rpm: the engine writes the chosen port in remotix.conf.d/porta.conf.
+	#    .rpm: the engine writes the chosen port in remotix.conf.d/port.conf.
 	install -Dm644 "$a/remotix.conf"     "$pkgdir/usr/share/remotix/remotix.conf"
 	install -dm755                       "$pkgdir/etc/remotix/remotix.conf.d"
 	install -Dm644 "$a/remotix.tmpfiles" "$pkgdir/usr/lib/tmpfiles.d/remotix.conf"
 	# ⭐ D3 closed (DECISIONI §10.18): the file is Arch's /etc/pam.d/sshd (system-remote-login)
 	#   plus root excluded; pambase's pam_faillock applies as for ssh (§4.3).
 	install -Dm644 "$s/remotix.pam.arch" "$pkgdir/etc/pam.d/remotix"
-	install -Dm644 "$a/utenti-negati"    "$pkgdir/etc/remotix/utenti-negati"
+	install -Dm644 "$a/denied-users"    "$pkgdir/etc/remotix/denied-users"
 	# ⭐ the KWin capture permission, with Exec= on the binary in
 	#    /usr/lib/remotix/remotix: the package ships it and the program only
-	#    checks it at start-up (`kwin_verifica_permesso()`, kwin.c; codes
+	#    checks it at start-up (`kwin_check_permission()`, kwin.c; codes
 	#    RX-KDE-001..003) — no writing as root into /usr.
 	install -Dm644 "$a/org.kde.remotix.desktop" \
 		"$pkgdir/usr/share/applications/org.kde.remotix.desktop"
@@ -214,12 +214,12 @@ package() {
 	#    unmounts them from its log.
 	#    `[M]` polkit 127-3: /usr/share/polkit-1/rules.d is 0755 root:root,
 	#    /etc/polkit-1/rules.d 0750 root:polkitd — worth knowing for the engine.
-	install -Dm644 "$s/remotix-niente-spegnimento.rules" \
-		"$pkgdir/usr/share/remotix/cinture/50-remotix-niente-spegnimento.rules"
-	install -Dm644 "$s/remotix-tasti.conf" \
-		"$pkgdir/usr/share/remotix/cinture/remotix-tasti.conf"
-	install -Dm644 "$a/remotix-niente-sospensione.conf" \
-		"$pkgdir/usr/share/remotix/cinture/remotix-niente-sospensione.conf"
+	install -Dm644 "$s/remotix-no-poweroff.rules" \
+		"$pkgdir/usr/share/remotix/belts/50-remotix-no-poweroff.rules"
+	install -Dm644 "$s/remotix-power-keys.conf" \
+		"$pkgdir/usr/share/remotix/belts/remotix-power-keys.conf"
+	install -Dm644 "$a/remotix-no-suspend.conf" \
+		"$pkgdir/usr/share/remotix/belts/remotix-no-suspend.conf"
 	# the firewall: the service DEFINED (a description, not a rule: no
 	# port opens until the engine adds it to a zone, D6)
 	install -Dm644 "$a/remotix.firewalld.xml" "$pkgdir/usr/lib/firewalld/services/remotix.xml"

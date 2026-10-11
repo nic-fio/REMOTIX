@@ -4,7 +4,7 @@
  *
  * ⛔ It does not touch `src/`: it is a file of its own, it compiles by itself.
  *
- *   misura <L> <A> [<L2> <A2>] [secondi]
+ *   measure <L> <A> [<L2> <A2>] [seconds]
  *
  * Runs the sequence of `src/mutter.c` (RemoteDesktop + ScreenCast + RecordVirtual),
  * then opens a PipeWire stream asking for the EXACT size <L>x<A> (fixed
@@ -29,11 +29,11 @@
 #define REMOTE_NAME "org.gnome.Mutter.RemoteDesktop"
 #define REMOTE_PATH "/org/gnome/Mutter/RemoteDesktop"
 #define IFACE_REMOTE "org.gnome.Mutter.RemoteDesktop"
-#define IFACE_REMOTE_SESSIONE "org.gnome.Mutter.RemoteDesktop.Session"
+#define IFACE_REMOTE_SESSION "org.gnome.Mutter.RemoteDesktop.Session"
 #define SCREENCAST_NAME "org.gnome.Mutter.ScreenCast"
 #define SCREENCAST_PATH "/org/gnome/Mutter/ScreenCast"
 #define IFACE_SCREENCAST "org.gnome.Mutter.ScreenCast"
-#define IFACE_SC_SESSIONE "org.gnome.Mutter.ScreenCast.Session"
+#define IFACE_SC_SESSION "org.gnome.Mutter.ScreenCast.Session"
 #define IFACE_SC_STREAM "org.gnome.Mutter.ScreenCast.Stream"
 #define DISPLAY_NAME "org.gnome.Mutter.DisplayConfig"
 #define DISPLAY_PATH "/org/gnome/Mutter/DisplayConfig"
@@ -41,18 +41,18 @@
 
 static GDBusConnection *bus;
 static char *p_check, *p_capture, *p_stream;
-static uint32_t nodo;
+static uint32_t node;
 
-static gint64 ora(void) { return g_get_monotonic_time(); }
+static gint64 now(void) { return g_get_monotonic_time(); }
 
-static GVariant *chiama(const char *nome, const char *percorso, const char *iface,
-                        const char *metodo, GVariant *args, const GVariantType *ris)
+static GVariant *call(const char *name, const char *fpath, const char *iface,
+                        const char *method, GVariant *args, const GVariantType *result)
 {
 	GError *e = NULL;
-	GVariant *r = g_dbus_connection_call_sync(bus, nome, percorso, iface, metodo, args, ris,
+	GVariant *r = g_dbus_connection_call_sync(bus, name, fpath, iface, method, args, result,
 	                                          G_DBUS_CALL_FLAGS_NONE, 5000, NULL, &e);
 	if (!r) {
-		fprintf(stderr, "⛔ %s.%s: %s\n", iface, metodo, e->message);
+		fprintf(stderr, "⛔ %s.%s: %s\n", iface, method, e->message);
 		g_clear_error(&e);
 	}
 	return r;
@@ -64,18 +64,18 @@ static void on_node(GDBusConnection *b, const char *m, const char *p, const char
 	if (g_variant_is_of_type(par, G_VARIANT_TYPE("(u)")))
 		g_variant_get(par, "(u)", (uint32_t *) d);
 }
-static gboolean sveglia(gpointer d) { return G_SOURCE_CONTINUE; }
+static gboolean wake(gpointer d) { return G_SOURCE_CONTINUE; }
 
 /* ---- the state of the monitors according to Mutter ------------------- */
-static void print_state(const char *quando)
+static void print_state(const char *when)
 {
-	GVariant *r = chiama(DISPLAY_NAME, DISPLAY_PATH, IFACE_DISPLAY, "GetCurrentState",
+	GVariant *r = call(DISPLAY_NAME, DISPLAY_PATH, IFACE_DISPLAY, "GetCurrentState",
 	                     NULL, NULL);
 	GVariant *monitors, *logicals;
 	GVariantIter it;
 	if (!r) return;
 
-	printf("\n== monitor state (%s) ==\n", quando);
+	printf("\n== monitor state (%s) ==\n", when);
 	monitors = g_variant_get_child_value(r, 1);
 	logicals = g_variant_get_child_value(r, 2);
 
@@ -84,31 +84,31 @@ static void print_state(const char *quando)
 		g_variant_iter_init(&it, monitors);
 		while ((m = g_variant_iter_next_value(&it))) {
 			GVariant *spec = g_variant_get_child_value(m, 0);
-			GVariant *modi = g_variant_get_child_value(m, 1);
+			GVariant *modes = g_variant_get_child_value(m, 1);
 			const char *conn = NULL, *ven = NULL, *pro = NULL, *ser = NULL;
 			GVariantIter mi;
 			GVariant *mo;
 			g_variant_get(spec, "(&s&s&s&s)", &conn, &ven, &pro, &ser);
-			g_variant_iter_init(&mi, modi);
+			g_variant_iter_init(&mi, modes);
 			while ((mo = g_variant_iter_next_value(&mi))) {
 				const char *id;
 				int w, h;
 				double rr, pref;
 				GVariant *scale_supp, *props;
-				gboolean corrente = FALSE, preferito = FALSE;
+				gboolean current = FALSE, preferred = FALSE;
 				GVariant *v;
 				g_variant_get(mo, "(&siidd@ad@a{sv})", &id, &w, &h, &rr, &pref,
 				              &scale_supp, &props);
 				v = g_variant_lookup_value(props, "is-current", G_VARIANT_TYPE_BOOLEAN);
-				if (v) { corrente = g_variant_get_boolean(v); g_variant_unref(v); }
+				if (v) { current = g_variant_get_boolean(v); g_variant_unref(v); }
 				v = g_variant_lookup_value(props, "is-preferred", G_VARIANT_TYPE_BOOLEAN);
-				if (v) { preferito = g_variant_get_boolean(v); g_variant_unref(v); }
-				if (corrente) {
+				if (v) { preferred = g_variant_get_boolean(v); g_variant_unref(v); }
+				if (current) {
 					gsize n = 0;
 					const gdouble *ss = g_variant_get_fixed_array(scale_supp, &n,
 					                                              sizeof(gdouble));
 					printf("  monitor %-10s «%s» mode %s  %dx%d @%.2f  pref=%d  "
-					       "allowed scales:", conn, pro, id, w, h, rr, preferito);
+					       "allowed scales:", conn, pro, id, w, h, rr, preferred);
 					for (gsize k = 0; k < n; k++) printf(" %.4f", ss[k]);
 					printf("\n");
 				}
@@ -117,7 +117,7 @@ static void print_state(const char *quando)
 				g_variant_unref(mo);
 			}
 			g_variant_unref(spec);
-			g_variant_unref(modi);
+			g_variant_unref(modes);
 			g_variant_unref(m);
 		}
 	}
@@ -126,16 +126,16 @@ static void print_state(const char *quando)
 		g_variant_iter_init(&it, logicals);
 		while ((l = g_variant_iter_next_value(&it))) {
 			int x, y;
-			double scala;
+			double scale_factor;
 			guint xform;
-			gboolean primario;
+			gboolean primary;
 			GVariant *mons, *props;
 			GVariantIter mi;
 			GVariant *ms;
-			g_variant_get(l, "(iidub@a(ssss)@a{sv})", &x, &y, &scala, &xform, &primario,
+			g_variant_get(l, "(iidub@a(ssss)@a{sv})", &x, &y, &scale_factor, &xform, &primary,
 			              &mons, &props);
 			printf("  LOGICAL  at (%d,%d)  SCALE %.6f  transf %u  primary %d  ->", x, y,
-			       scala, xform, primario);
+			       scale_factor, xform, primary);
 			g_variant_iter_init(&mi, mons);
 			while ((ms = g_variant_iter_next_value(&mi))) {
 				const char *c, *v2, *p2, *s2;
@@ -156,26 +156,26 @@ static void print_state(const char *quando)
 }
 
 /* ---- the PipeWire stream ---------------------------------------------- */
-struct banco {
+struct bench {
 	struct pw_main_loop *loop;
-	struct pw_stream *flusso;
-	struct spa_hook ascolto;
-	struct spa_video_info_raw formato;
+	struct pw_stream *stream;
+	struct spa_hook listen;
+	struct spa_video_info_raw fmt;
 	uint32_t requested_w, requested_h;
 	uint32_t new_w, new_h;
 	gint64 t0;
 	gint64 t_request_2;   /* when I asked for the new size */
 	gint64 t_last_old;
-	int fotogrammi;
+	int frames;
 	int frames_after;
-	int fase;               /* 0 = first size, 1 = I asked for the second */
-	int secondi;
+	int phase;               /* 0 = first size, 1 = I asked for the second */
+	int seconds;
 };
-static struct banco B;
+static struct bench B;
 
-static const struct spa_pod *proposta(struct spa_pod_builder *b, uint32_t l, uint32_t a)
+static const struct spa_pod *proposal(struct spa_pod_builder *b, uint32_t l, uint32_t a)
 {
-	struct spa_rectangle misura = SPA_RECTANGLE(l, a);
+	struct spa_rectangle measure = SPA_RECTANGLE(l, a);
 	struct spa_fraction cad = SPA_FRACTION(0, 1);
 	struct spa_fraction cmin = SPA_FRACTION(1, 1);
 	struct spa_fraction cmax = SPA_FRACTION(60, 1);
@@ -183,30 +183,30 @@ static const struct spa_pod *proposta(struct spa_pod_builder *b, uint32_t l, uin
 	    b, SPA_TYPE_OBJECT_Format, SPA_PARAM_EnumFormat, SPA_FORMAT_mediaType,
 	    SPA_POD_Id(SPA_MEDIA_TYPE_video), SPA_FORMAT_mediaSubtype,
 	    SPA_POD_Id(SPA_MEDIA_SUBTYPE_raw), SPA_FORMAT_VIDEO_format,
-	    SPA_POD_Id(SPA_VIDEO_FORMAT_BGRx), SPA_FORMAT_VIDEO_size, SPA_POD_Rectangle(&misura),
+	    SPA_POD_Id(SPA_VIDEO_FORMAT_BGRx), SPA_FORMAT_VIDEO_size, SPA_POD_Rectangle(&measure),
 	    SPA_FORMAT_VIDEO_framerate, SPA_POD_Fraction(&cad), SPA_FORMAT_VIDEO_maxFramerate,
 	    SPA_POD_CHOICE_RANGE_Fraction(&cmax, &cmin, &cmax));
 }
 
 static int burst_count, bursts_done, bursts_matched;
 
-static void su_parametri(void *d, uint32_t id, const struct spa_pod *param)
+static void on_parameters(void *d, uint32_t id, const struct spa_pod *param)
 {
 	uint8_t sp[1024];
 	struct spa_pod_builder b = SPA_POD_BUILDER_INIT(sp, sizeof sp);
 	const struct spa_pod *par[2];
 
 	if (!param || id != SPA_PARAM_Format) return;
-	if (spa_format_video_raw_parse(param, &B.formato) < 0) return;
+	if (spa_format_video_raw_parse(param, &B.fmt) < 0) return;
 
 	printf("[%6.3f s] AGREED FORMAT: %ux%u  (asked %ux%u)  %s\n",
-	       (ora() - B.t0) / 1e6, B.formato.size.width, B.formato.size.height,
-	       B.fase == 0 ? B.requested_w : B.new_w, B.fase == 0 ? B.requested_h : B.new_h,
-	       (B.formato.size.width == (B.fase == 0 ? B.requested_w : B.new_w) &&
-	        B.formato.size.height == (B.fase == 0 ? B.requested_h : B.new_h))
+	       (now() - B.t0) / 1e6, B.fmt.size.width, B.fmt.size.height,
+	       B.phase == 0 ? B.requested_w : B.new_w, B.phase == 0 ? B.requested_h : B.new_h,
+	       (B.fmt.size.width == (B.phase == 0 ? B.requested_w : B.new_w) &&
+	        B.fmt.size.height == (B.phase == 0 ? B.requested_h : B.new_h))
 	           ? "⭐ EXACT"
 	           : "⛔ DIFFERENT — rounded silently");
-	if (B.fase == 1 && B.formato.size.width == B.new_w && B.formato.size.height == B.new_h)
+	if (B.phase == 1 && B.fmt.size.width == B.new_w && B.fmt.size.height == B.new_h)
 		bursts_matched++;
 	fflush(stdout);
 
@@ -218,17 +218,17 @@ static void su_parametri(void *d, uint32_t id, const struct spa_pod *param)
 	                                    SPA_PARAM_META_type, SPA_POD_Id(SPA_META_Header),
 	                                    SPA_PARAM_META_size,
 	                                    SPA_POD_Int(sizeof(struct spa_meta_header)));
-	pw_stream_update_params(B.flusso, par, 2);
+	pw_stream_update_params(B.stream, par, 2);
 }
 
-static void on_state(void *d, enum pw_stream_state vecchio, enum pw_stream_state nuovo,
-                     const char *errore)
+static void on_state(void *d, enum pw_stream_state old, enum pw_stream_state fresh,
+                     const char *error)
 {
-	printf("[%6.3f s] state: %s -> %s%s%s\n", (ora() - B.t0) / 1e6,
-	       pw_stream_state_as_string(vecchio), pw_stream_state_as_string(nuovo),
-	       errore ? "  error: " : "", errore ? errore : "");
+	printf("[%6.3f s] state: %s -> %s%s%s\n", (now() - B.t0) / 1e6,
+	       pw_stream_state_as_string(old), pw_stream_state_as_string(fresh),
+	       error ? "  error: " : "", error ? error : "");
 	fflush(stdout);
-	if (nuovo == PW_STREAM_STATE_ERROR) pw_main_loop_quit(B.loop);
+	if (fresh == PW_STREAM_STATE_ERROR) pw_main_loop_quit(B.loop);
 }
 
 /*
@@ -237,58 +237,58 @@ static void on_state(void *d, enum pw_stream_state vecchio, enum pw_stream_state
  *    mean luminance, plus the LAST column and the LAST row separately — which are
  *    the place where a black band would show.
  */
-static void griglia(const uint8_t *dati, uint32_t l, uint32_t a, int passo)
+static void grid(const uint8_t *data, uint32_t l, uint32_t a, int step)
 {
 	const int GX = 8, GY = 4;
-	uint64_t somma[4][8];
-	uint64_t conta[4][8];
-	uint64_t last_col = 0, last_row = 0, non_nero = 0, totale = 0;
+	uint64_t total_sum[4][8];
+	uint64_t count[4][8];
+	uint64_t last_col = 0, last_row = 0, non_black = 0, total = 0;
 	uint32_t x, y;
 	int i, j;
 
-	memset(somma, 0, sizeof somma);
-	memset(conta, 0, sizeof conta);
+	memset(total_sum, 0, sizeof total_sum);
+	memset(count, 0, sizeof count);
 	for (y = 0; y < a; y++) {
-		const uint8_t *r = dati + (size_t) y * passo;
+		const uint8_t *r = data + (size_t) y * step;
 		for (x = 0; x < l; x++) {
 			const uint8_t *p = r + (size_t) x * 4;
 			unsigned v = (p[0] + p[1] + p[2]) / 3;
 			int gy = (int) ((uint64_t) y * GY / a), gx = (int) ((uint64_t) x * GX / l);
-			somma[gy][gx] += v;
-			conta[gy][gx]++;
-			totale++;
-			if (v > 8) non_nero++;
+			total_sum[gy][gx] += v;
+			count[gy][gx]++;
+			total++;
+			if (v > 8) non_black++;
 			if (x >= l - 4) last_col += v;
 			if (y >= a - 4) last_row += v;
 		}
 	}
 	printf("  non-black pixels: %.2f%%   last 4 columns: mean luminance %.1f   "
 	       "last 4 rows: %.1f\n",
-	       100.0 * non_nero / (double) totale, last_col / (double) (4.0 * a),
+	       100.0 * non_black / (double) total, last_col / (double) (4.0 * a),
 	       last_row / (double) (4.0 * l));
 	for (i = 0; i < GY; i++) {
 		printf("  grid:");
 		for (j = 0; j < GX; j++)
-			printf(" %5.1f", conta[i][j] ? somma[i][j] / (double) conta[i][j] : -1.0);
+			printf(" %5.1f", count[i][j] ? total_sum[i][j] / (double) count[i][j] : -1.0);
 		printf("\n");
 	}
 }
 
-static void su_processo(void *d)
+static void on_process(void *d)
 {
-	struct pw_buffer *b = pw_stream_dequeue_buffer(B.flusso);
+	struct pw_buffer *b = pw_stream_dequeue_buffer(B.stream);
 	if (!b) return;
 	if (b->buffer->datas[0].chunk->size > 0 && b->buffer->datas[0].data &&
-	    ((B.fase == 0 && B.fotogrammi == 0) || (B.fase == 1 && B.frames_after == 0)))
-		griglia((const uint8_t *) b->buffer->datas[0].data, B.formato.size.width,
-		        B.formato.size.height, b->buffer->datas[0].chunk->stride);
+	    ((B.phase == 0 && B.frames == 0) || (B.phase == 1 && B.frames_after == 0)))
+		grid((const uint8_t *) b->buffer->datas[0].data, B.fmt.size.width,
+		        B.fmt.size.height, b->buffer->datas[0].chunk->stride);
 	if (b->buffer->datas[0].chunk->size > 0) {
-		if (B.fase == 0) {
-			B.fotogrammi++;
-			B.t_last_old = ora();
-			if (B.fotogrammi <= 3)
+		if (B.phase == 0) {
+			B.frames++;
+			B.t_last_old = now();
+			if (B.frames <= 3)
 				printf("[%6.3f s] frame %d: %u bytes, stride %d\n",
-				       (ora() - B.t0) / 1e6, B.fotogrammi,
+				       (now() - B.t0) / 1e6, B.frames,
 				       b->buffer->datas[0].chunk->size,
 				       b->buffer->datas[0].chunk->stride);
 		} else {
@@ -296,22 +296,22 @@ static void su_processo(void *d)
 			if (B.frames_after <= 3)
 				printf("[%6.3f s] NEW frame %d: %u bytes, stride %d  "
 				       "(hole since the request: %.1f ms; since the last old one: %.1f ms)\n",
-				       (ora() - B.t0) / 1e6, B.frames_after,
+				       (now() - B.t0) / 1e6, B.frames_after,
 				       b->buffer->datas[0].chunk->size,
 				       b->buffer->datas[0].chunk->stride,
-				       (ora() - B.t_request_2) / 1000.0,
-				       (ora() - B.t_last_old) / 1000.0);
+				       (now() - B.t_request_2) / 1000.0,
+				       (now() - B.t_last_old) / 1000.0);
 		}
 	}
-	pw_stream_queue_buffer(B.flusso, b);
+	pw_stream_queue_buffer(B.stream, b);
 	fflush(stdout);
 }
 
-static const struct pw_stream_events eventi = {
+static const struct pw_stream_events events = {
     PW_VERSION_STREAM_EVENTS,
     .state_changed = on_state,
-    .param_changed = su_parametri,
-    .process = su_processo,
+    .param_changed = on_parameters,
+    .process = on_process,
 };
 
 /* ⭐ THE BURST: twenty different sizes in two seconds, as a dragged browser
@@ -328,42 +328,42 @@ static void on_burst(void *d, uint64_t expirations)
 	a = 801 + (uint32_t) bursts_done * 13;
 	B.new_w = l;
 	B.new_h = a;
-	B.fase = 1;
+	B.phase = 1;
 	bursts_done++;
-	par[0] = proposta(&b, l, a);
-	pw_stream_update_params(B.flusso, par, 1);
+	par[0] = proposal(&b, l, a);
+	pw_stream_update_params(B.stream, par, 1);
 }
 
 static void on_timer(void *d, uint64_t expirations)
 {
-	static int passo = 0;
+	static int step = 0;
 	uint8_t sp[1024];
 	struct spa_pod_builder b = SPA_POD_BUILDER_INIT(sp, sizeof sp);
 	const struct spa_pod *par[1];
 
-	passo++;
-	if (passo == 1) {
+	step++;
+	if (step == 1) {
 		printf("\n[%6.3f s] === after %d s: %d frames at the first size ===\n",
-		       (ora() - B.t0) / 1e6, B.secondi, B.fotogrammi);
+		       (now() - B.t0) / 1e6, B.seconds, B.frames);
 		print_state("first size");
 		if (burst_count > 0) {
 			printf("[%6.3f s] burst: %d asked, %d agreed EXACT\n",
-			       (ora() - B.t0) / 1e6, bursts_done, bursts_matched);
+			       (now() - B.t0) / 1e6, bursts_done, bursts_matched);
 			return;
 		}
 		if (B.new_w == 0) { pw_main_loop_quit(B.loop); return; }
-		printf("\n[%6.3f s] === HOT CHANGE: asking %ux%u ===\n", (ora() - B.t0) / 1e6,
+		printf("\n[%6.3f s] === HOT CHANGE: asking %ux%u ===\n", (now() - B.t0) / 1e6,
 		       B.new_w, B.new_h);
-		B.fase = 1;
-		B.t_request_2 = ora();
-		par[0] = proposta(&b, B.new_w, B.new_h);
-		pw_stream_update_params(B.flusso, par, 1);
-	} else if (passo == 2) {
+		B.phase = 1;
+		B.t_request_2 = now();
+		par[0] = proposal(&b, B.new_w, B.new_h);
+		pw_stream_update_params(B.stream, par, 1);
+	} else if (step == 2) {
 		printf("\n[%6.3f s] === after the change: %d new frames ===\n",
-		       (ora() - B.t0) / 1e6, B.frames_after);
+		       (now() - B.t0) / 1e6, B.frames_after);
 		if (burst_count > 0)
 			printf("[%6.3f s] FINAL burst: %d asked, %d agreed EXACT\n",
-			       (ora() - B.t0) / 1e6, bursts_done, bursts_matched);
+			       (now() - B.t0) / 1e6, bursts_done, bursts_matched);
 		print_state("second size");
 		pw_main_loop_quit(B.loop);
 	}
@@ -380,8 +380,8 @@ int main(int argc, char **argv)
 	const struct spa_pod *par[1];
 	struct pw_context *ctx;
 	struct pw_core *core;
-	struct spa_source *tempo;
-	struct timespec quando, intervallo;
+	struct spa_source *time_limit;
+	struct timespec when, interval;
 	char node_s[32];
 
 	if (argc < 3) {
@@ -390,22 +390,22 @@ int main(int argc, char **argv)
 	}
 	B.requested_w = (uint32_t) atoi(argv[1]);
 	B.requested_h = (uint32_t) atoi(argv[2]);
-	if (argc >= 5 && strcmp(argv[3], "raffica") == 0) {
+	if (argc >= 5 && strcmp(argv[3], "burst") == 0) {
 		burst_count = atoi(argv[4]);
 	} else if (argc >= 5) {
 		B.new_w = (uint32_t) atoi(argv[3]);
 		B.new_h = (uint32_t) atoi(argv[4]);
 	}
-	B.secondi = (argc >= 6) ? atoi(argv[5]) : (argc == 4 ? atoi(argv[3]) : 4);
-	if (B.secondi <= 0) B.secondi = 4;
-	B.t0 = ora();
+	B.seconds = (argc >= 6) ? atoi(argv[5]) : (argc == 4 ? atoi(argv[3]) : 4);
+	if (B.seconds <= 0) B.seconds = 4;
+	B.t0 = now();
 
 	bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &e);
 	if (!bus) { fprintf(stderr, "⛔ bus: %s\n", e->message); return 3; }
 
 	print_state("BEFORE everything");
 
-	r = chiama(REMOTE_NAME, REMOTE_PATH, IFACE_REMOTE, "CreateSession", NULL,
+	r = call(REMOTE_NAME, REMOTE_PATH, IFACE_REMOTE, "CreateSession", NULL,
 	           G_VARIANT_TYPE("(o)"));
 	if (!r) return 4;
 	g_variant_get(r, "(o)", &p_check);
@@ -413,9 +413,9 @@ int main(int argc, char **argv)
 
 	g_variant_builder_init(&pr, G_VARIANT_TYPE("a{sv}"));
 	{
-		GVariant *idv = chiama(REMOTE_NAME, p_check, "org.freedesktop.DBus.Properties",
+		GVariant *idv = call(REMOTE_NAME, p_check, "org.freedesktop.DBus.Properties",
 		                       "Get",
-		                       g_variant_new("(ss)", IFACE_REMOTE_SESSIONE, "SessionId"),
+		                       g_variant_new("(ss)", IFACE_REMOTE_SESSION, "SessionId"),
 		                       G_VARIANT_TYPE("(v)"));
 		GVariant *inner = NULL;
 		const char *id = NULL;
@@ -428,20 +428,20 @@ int main(int argc, char **argv)
 		g_variant_unref(idv);
 	}
 	g_variant_builder_add(&pr, "{sv}", "disable-animations", g_variant_new_boolean(TRUE));
-	r = chiama(SCREENCAST_NAME, SCREENCAST_PATH, IFACE_SCREENCAST, "CreateSession",
+	r = call(SCREENCAST_NAME, SCREENCAST_PATH, IFACE_SCREENCAST, "CreateSession",
 	           g_variant_new("(a{sv})", &pr), G_VARIANT_TYPE("(o)"));
 	if (!r) return 6;
 	g_variant_get(r, "(o)", &p_capture);
 	g_variant_unref(r);
 
-	r = chiama(REMOTE_NAME, p_check, IFACE_REMOTE_SESSIONE, "Start", NULL, NULL);
+	r = call(REMOTE_NAME, p_check, IFACE_REMOTE_SESSION, "Start", NULL, NULL);
 	if (!r) return 7;
 	g_variant_unref(r);
 
 	g_variant_builder_init(&pr, G_VARIANT_TYPE("a{sv}"));
 	g_variant_builder_add(&pr, "{sv}", "cursor-mode", g_variant_new_uint32(2));
 	g_variant_builder_add(&pr, "{sv}", "is-platform", g_variant_new_boolean(TRUE));
-	r = chiama(SCREENCAST_NAME, p_capture, IFACE_SC_SESSIONE, "RecordVirtual",
+	r = call(SCREENCAST_NAME, p_capture, IFACE_SC_SESSION, "RecordVirtual",
 	           g_variant_new("(a{sv})", &pr), G_VARIANT_TYPE("(o)"));
 	if (!r) return 8;
 	g_variant_get(r, "(o)", &p_stream);
@@ -455,19 +455,19 @@ int main(int argc, char **argv)
 		g_main_context_push_thread_default(c);
 		g_dbus_connection_signal_subscribe(bus, NULL, IFACE_SC_STREAM,
 		                                   "PipeWireStreamAdded", p_stream, NULL,
-		                                   G_DBUS_SIGNAL_FLAGS_NONE, on_node, &nodo, NULL);
-		r = chiama(SCREENCAST_NAME, p_stream, IFACE_SC_STREAM, "Start", NULL, NULL);
+		                                   G_DBUS_SIGNAL_FLAGS_NONE, on_node, &node, NULL);
+		r = call(SCREENCAST_NAME, p_stream, IFACE_SC_STREAM, "Start", NULL, NULL);
 		if (!r) return 9;
 		g_variant_unref(r);
 		bat = g_timeout_source_new(50);
-		g_source_set_callback(bat, sveglia, NULL, NULL);
+		g_source_set_callback(bat, wake, NULL, NULL);
 		g_source_attach(bat, c);
-		sc = ora() + 5000000;
-		while (nodo == 0 && ora() < sc) g_main_context_iteration(c, TRUE);
+		sc = now() + 5000000;
+		while (node == 0 && now() < sc) g_main_context_iteration(c, TRUE);
 		g_main_context_pop_thread_default(c);
 	}
-	if (!nodo) { fprintf(stderr, "⛔ no node\n"); return 10; }
-	printf("PipeWire node: %u\n", nodo);
+	if (!node) { fprintf(stderr, "⛔ no node\n"); return 10; }
+	printf("PipeWire node: %u\n", node);
 	fflush(stdout);
 
 	pw_init(NULL, NULL);
@@ -476,13 +476,13 @@ int main(int argc, char **argv)
 	core = pw_context_connect(ctx, NULL, 0);
 	if (!core) { fprintf(stderr, "⛔ PipeWire does not answer\n"); return 11; }
 
-	snprintf(node_s, sizeof node_s, "%u", nodo);
-	B.flusso = pw_stream_new(core, "misura-f4in8",
+	snprintf(node_s, sizeof node_s, "%u", node);
+	B.stream = pw_stream_new(core, "misura-f4in8",
 	                         pw_properties_new(PW_KEY_MEDIA_TYPE, "Video", PW_KEY_MEDIA_CATEGORY,
 	                                           "Capture", PW_KEY_MEDIA_ROLE, "Screen", NULL));
-	pw_stream_add_listener(B.flusso, &B.ascolto, &eventi, NULL);
-	par[0] = proposta(&b, B.requested_w, B.requested_h);
-	if (pw_stream_connect(B.flusso, PW_DIRECTION_INPUT, nodo,
+	pw_stream_add_listener(B.stream, &B.listen, &events, NULL);
+	par[0] = proposal(&b, B.requested_w, B.requested_h);
+	if (pw_stream_connect(B.stream, PW_DIRECTION_INPUT, node,
 	                      PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_MAP_BUFFERS, par, 1) < 0) {
 		fprintf(stderr, "⛔ pw_stream_connect\n");
 		return 12;
@@ -494,25 +494,25 @@ int main(int argc, char **argv)
 		struct timespec q = {0, 300000000}, iv = {0, 100000000};
 		pw_loop_update_timer(pw_main_loop_get_loop(B.loop), t2, &q, &iv, false);
 	}
-	tempo = pw_loop_add_timer(pw_main_loop_get_loop(B.loop), on_timer, NULL);
-	quando.tv_sec = B.secondi;
-	quando.tv_nsec = 0;
-	intervallo.tv_sec = B.secondi;
-	intervallo.tv_nsec = 0;
-	pw_loop_update_timer(pw_main_loop_get_loop(B.loop), tempo, &quando, &intervallo, false);
+	time_limit = pw_loop_add_timer(pw_main_loop_get_loop(B.loop), on_timer, NULL);
+	when.tv_sec = B.seconds;
+	when.tv_nsec = 0;
+	interval.tv_sec = B.seconds;
+	interval.tv_nsec = 0;
+	pw_loop_update_timer(pw_main_loop_get_loop(B.loop), time_limit, &when, &interval, false);
 
 	pw_main_loop_run(B.loop);
 
 	printf("\n== summary ==\n  asked %ux%u -> got %ux%u, %d frames\n",
-	       B.requested_w, B.requested_h, B.formato.size.width, B.formato.size.height, B.fotogrammi);
+	       B.requested_w, B.requested_h, B.fmt.size.width, B.fmt.size.height, B.frames);
 	if (B.new_w)
 		printf("  then asked %ux%u -> %d new frames\n", B.new_w, B.new_h,
 		       B.frames_after);
-	pw_stream_destroy(B.flusso);
+	pw_stream_destroy(B.stream);
 	pw_context_destroy(ctx);
 	pw_main_loop_destroy(B.loop);
 
-	chiama(SCREENCAST_NAME, p_capture, IFACE_SC_SESSIONE, "Stop", NULL, NULL);
-	chiama(REMOTE_NAME, p_check, IFACE_REMOTE_SESSIONE, "Stop", NULL, NULL);
+	call(SCREENCAST_NAME, p_capture, IFACE_SC_SESSION, "Stop", NULL, NULL);
+	call(REMOTE_NAME, p_check, IFACE_REMOTE_SESSION, "Stop", NULL, NULL);
 	return 0;
 }

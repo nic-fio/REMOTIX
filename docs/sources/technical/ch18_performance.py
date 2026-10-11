@@ -55,7 +55,7 @@ S2 = p("The bench is the stress harness of " + c("banchi/16-stress/") + ", descr
         "(at most one session in four, inside the first half of its band) — the «holds up to»."]) + \
     p("A level is FAIL if one session is FAIL, which includes the short check. The thresholds (input → frame delay, "
       "frames skipped, longest freeze, video frames painted per second, audible sound, birth time, drops, memory "
-      "growth) are those of " + c("SOGLIE") + " in " + c("16-classifica.py") + ", approved on 25 Sep 2026 and "
+      "growth) are those of " + c("THRESHOLDS") + " in " + c("16-classifica.py") + ", approved on 25 Sep 2026 and "
       "frozen; the table is in " + rif("Stress and capacity benches") + ".") + \
     note("until 10 Oct 2026 the actor rebuilt the time of Firefox's keystrokes from the return of the Marionette "
          "chain; a held-back chain moved keys after their own echo and produced false freezes of ~1.1 s (the next "
@@ -120,9 +120,9 @@ S4 = p("At the first level that is not GREEN, " + c("16-rapporto.py") + " names 
       "integrated card the neck is <b>composition</b>, upstream of REMOTIX, and its currency is the composed pixel. "
       "That is why the admission budget of " + c("src/budget.c") + " (" + c("SPECIFICHE.md") + " §5.5; "
       + rif("The composition budget") + ") counts composed Mpixel/s and the delay of those already inside, and "
-      "refuses a newcomer with " + c("BUDGET_PIENO") + " rather than slowing everyone down. The campaigns ran with "
+      "refuses a newcomer with " + c("BUDGET_FULL") + " rather than slowing everyone down. The campaigns ran with "
       "the budget <i>off</i> on purpose, to find the cliff; the product's default ceiling is 10 sessions ("
-      + c("--tetto-sessioni") + ").") + \
+      + c("--session-cap") + ").") + \
     tip("to switch the budget on for a machine like this one, take the composed Mpixel/s of the last true GREEN "
         "level of the desktop and size you serve, and pass it to " + c("--budget-mpixel-s") + " as described in "
         + rif("Configuring quality and capacity") + ". On the Radeon the encoder, not composition, is what fills "
@@ -210,8 +210,8 @@ sudo systemd-run --unit=r20-campagna --uid=nicfio -E XDG_RUNTIME_DIR=/run/user/1
      -p TimeoutStopSec=1200 -p KillMode=mixed -p OOMPolicy=continue \\
      bash /media/REMOTIX/src/controllo/banchi/16-stress/16-campagna.sh intel-f20 amd-f20
 
-# the same for xrdp: every climb gets --sistema xrdp, and the queue must never be the OOM victim
-sudo systemd-run --unit=r20-xrdp --uid=nicfio -E XDG_RUNTIME_DIR=/run/user/1000 -E REMOTIX_16_SISTEMA=xrdp \\
+# the same for xrdp: every climb gets --system xrdp, and the queue must never be the OOM victim
+sudo systemd-run --unit=r20-xrdp --uid=nicfio -E XDG_RUNTIME_DIR=/run/user/1000 -E REMOTIX_16_SYSTEM=xrdp \\
      -p TimeoutStopSec=1200 -p KillMode=mixed -p OOMPolicy=continue -p OOMScoreAdjust=-900 \\
      bash /media/REMOTIX/src/controllo/banchi/16-stress/16-campagna.sh intel-x20 amd-x20
 
@@ -226,15 +226,15 @@ sudo systemctl stop r20-campagna
          "a climb reads the product's commit from there; a red suite means nothing is measured"],
         ["During", "Read " + c("coda-<label>.log") + ": one line per climb with «good», «break» and «true GREEN», "
          "and the estimate of the hours left", "a stalled machine loses its root in RAM and the ssh key"],
-        ["After", c("16-rapporto.py --registro <register> --campagne intel-f20 amd-f20 --testo"),
+        ["After", c("16-rapporto.py --log <register> --campaigns intel-f20 amd-f20 --text"),
          "the matrix, the curve of every climb and the bottleneck at the first non-GREEN level"],
-        ["After", c("16-riclassifica.py --salita <climb>") + " for every climb measured before the keystroke cure",
-         "writes " + c("riclassificata.json") + " next to the data and exits 2 if the re-judgement is not the climb's own"],
+        ["After", c("16-riclassifica.py --climb <climb>") + " for every climb measured before the keystroke cure",
+         "writes " + c("reclassified.json") + " next to the data and exits 2 if the re-judgement is not the climb's own"],
     ], "«TAB» — A campaign, before, during and after") + \
-    p("Results land in " + c("/media/REMOTIX/misure/fase16/<label>-<size>-<desktop>/") + ": " + c("salita.jsonl")
-      + " (one line per level), and per level " + c("classifica.log") + ", " + c("risorse.jsonl") + ", the server and "
-      "box journals and the actors' " + c("stato.jsonl") + ". The registers " + c("registro.jsonl") + " and "
-      + c("registro-xrdp.jsonl") + " in " + c("banchi/16-stress/") + " accumulate every classification; for a "
+    p("Results land in " + c("/media/REMOTIX/misure/fase16/<label>-<size>-<desktop>/") + ": " + c("climb.jsonl")
+      + " (one line per level), and per level " + c("ranking.log") + ", " + c("resources.jsonl") + ", the server and "
+      "box journals and the actors' " + c("state.jsonl") + ". The registers " + c("registro.jsonl") + " and "
+      + c("register-xrdp.jsonl") + " in " + c("banchi/16-stress/") + " accumulate every classification; for a "
       "repeated level the last one wins.") + \
     note("the measurement folders are treated as read-only evidence. When an analysis has to write beside the "
          "data without touching it, build a shadow tree — a real directory per climb and per level, with symbolic "
