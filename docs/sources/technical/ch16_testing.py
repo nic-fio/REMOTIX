@@ -23,7 +23,8 @@ LAYERS = fig(
 S1 = p("REMOTIX has no unit-test suite in the usual sense: the C server talks to compositors, the GPU, PAM, "
        "logind and real browsers, and almost every defect the project has paid for lived in that contact, "
        "not inside a pure function. What it has instead is a large body of <i>benches</i> in "
-       + c("banchi/") + " — about 1,800 files kept by git — and three of them grown into permanent "
+       + c("banchi/") + " — about 350 files kept by git since the benches that could no longer run were retired (§10.44) — and three "
+       "of them grown into permanent "
        "machinery: the safety net, the functional suite and the stress campaign.", lead=True) + LAYERS + \
     table(["Layer", "Where", "Runs", "What it proves"], [
         ["Twin check", c("src/Makefile") + " target " + c("fingerprints"), "every " + c("make"),
@@ -41,8 +42,8 @@ S1 = p("REMOTIX has no unit-test suite in the usual sense: the C server talks to
         ["Stress", c("banchi/16-stress/"), "overnight campaigns", "how many users stay GREEN, per desktop and card"],
         ["Distributions", c("banchi/17-distro/"), "before declaring a release ready",
          "install, reboot, update to the next release, uninstall on 26 distribution × desktop combinations"],
-        ["Encoders and devices", c("banchi/18-*") + ", " + c("banchi/19-*"), "when the encoder or a platform changes",
-         "old vs new encoder paths, Vulkan vs VA-API, NVIDIA, Android"],
+        ["Encoders and devices", c("banchi/19-*"), "when the encoder or a platform changes",
+         "Vulkan vs VA-API, NVIDIA, Android"],
     ], "«TAB» — What tests REMOTIX, and when") + \
     p("Two convictions shape all of it, and both were paid for. First, <b>the bench is the first suspect</b> ("
       + c("REVIEWER.md") + " §1): the project never stalled on a hard problem, it stalled every time on a "
@@ -59,41 +60,57 @@ S2 = p("The bench folder is a record, not a toolbox: most files were written for
     table(["Prefix or folder", "Phase", "What lives there"], [
         "Historical benches (one file per bench, results in *.jsonl next to them)",
         [c("00-") + ", " + c("01-"), "0 environment, 1 the bare wire",
-         "transport probes against ngtcp2, quiche and lsquic, the RCP validator (" + c("01-b4-validatore.py")
-         + "), the handshake, ban and farewell benches B1–B13, the browser probe pages"],
+         "the transport and WebTransport probes, the RCP validator (" + c("01-b4-validatore.py")
+         + "), the violation, ceiling, farewell, stopwatch and ban benches, the browser probe pages"],
         [c("02-"), "2 the first frame", "capture, encoding, the page decoder, PAM, the first pixel judges"],
-        [c("03-"), "3 motion", "cadence, declared scenes, the mark (" + c("03-marca.py") + ")"],
-        [c("04-"), "4 control", "input injection, keyboard, cursor, the first shortcuts"],
-        [c("05-") + ", " + c("06-"), "5 the session, 6 canvas and view", "the sentinel, detach and reattach, canvas geometry"],
-        [c("07-"), "7 audio and clipboard", "Opus, the clipboard in both directions, the Marionette client "
-         + c("07-b46-marionette.py")],
-        [c("08-") + ", " + c("09-") + ", " + c("10-"), "8 zero copy, 9 quality, 10 multi-tenant",
-         "bad networks, the " + c("netem") + " lock " + c("09-lucchetto.py") + ", the budget, the GPU lock"],
+        [c("03-"), "3 motion", "the mark of the declared scenes (" + c("03-marca.py") + ")"],
+        [c("04-"), "4 control", "keyboard injection, gestures, the canvas bench " + c("04-b31-tela.c")],
+        [c("06-"), "6 canvas and view", "the wake-up of a sleeping capture, capture outcomes"],
+        [c("07-"), "7 audio and clipboard", "a judge and the Marionette client " + c("07-b46-marionette.py")],
+        [c("09-") + ", " + c("10-"), "9 quality, 10 multi-tenant",
+         "the opening bench " + c("09-b78-apertura.py") + ", the " + c("netem") + " lock " + c("09-lucchetto.py")
+         + ", the image judge " + c("10-f1-testimone.py")],
         [c("12-") + ", " + c("13-") + ", " + c("14-"), "12 KDE, 13 XFCE, 14 LXQt",
          "the real-browser drivers " + c("12-client-veri.py") + " and " + c("12-c20-veri.py")
-         + ", the increment probes of each desktop"],
-        [c("attrezzi-*.sh"), "all", "shared helpers, e.g. " + c("attrezzi-gruppi-scheda.sh") + " (the "
-         + c("video") + "/" + c("render") + " groups every bench tenant needs)"],
+         + ", the one-frame wlroots capture bench, the pointer-shape bench"],
+        [c("attrezzi-*.sh"), "all", "shared helpers: " + c("attrezzi-gruppi-scheda.sh") + " (the "
+         + c("video") + "/" + c("render") + " groups every bench tenant needs) and " + c("attrezzi-utenti.sh")],
         "Machinery that is still run",
         [c("11-scatole/"), "11", "the safety net: four desktop boxes, the meshes, the hook " + c("11-gancio.sh")],
-        [c("14-stress/"), "14", "the first night-stress harness, run from the tablet; superseded by " + c("16-stress/")],
         [c("15-suite/"), "15", "the functional suite with real browsers, its register and defect list"],
         [c("16-stress/"), "16, 20", "the stress ramp, the actors, the classifier; the xrdp comparison twin"],
-        [c("17-distro/") + ", " + c("17-t2/") + " … " + c("17-t9/"), "17", "distribution VMs and boxes, the benches of "
-         "the installer's milestones T2–T9 (T4, T8 and T9 are kept as history and are not run, except "
+        [c("17-distro/") + ", " + c("17-t2/") + " … " + c("17-t8/"), "17", "distribution VMs and boxes, the benches of "
+         "the installer's milestones T2–T8 (T4 and T8 are kept as history and are not run, except "
          + c("t8-browser.py") + ", which T10 still uses)"],
-        [c("18-a1/") + ", " + c("18-scheda/") + ", " + c("18-software/"), "18", "old-vs-new comparisons when ffmpeg "
-         "left the product"],
+        [c("18-scheda/"), "18", "one file only, " + c("18-decodifica-chrome.html") + ": the Chrome decoding page that "
+         + c("19-vulkan/19-decodifica-chrome.sh") + " still uses"],
         [c("19-vulkan/") + ", " + c("19-nvidia/") + ", " + c("19-android/"), "19", "Vulkan Video vs VA-API, the NVIDIA "
          "rental bench, the Android phone bench"],
         [c("rcp/"), "1", "the twin copy of the RCP module, compiled into the ngtcp2 example server"],
         [c("prodotto/") + ", " + c("sonda/"), "1–2", "smoke test of the server inside the build container; a real "
          "browser probe against it"],
-        [c("ritrovati/"), "—", "five bench files found outside the repository on 28 Aug 2026 and saved, with a README"],
     ], "«TAB» — The bench folder") + \
     p("Historical benches are not maintained: they call helpers, paths and binaries of their time. They are kept "
       "because their results are cited by " + c("FASI.md") + " and " + c("DECISIONI.md") + ", and because a "
       "verdict must stay re-readable next to the code that produced it.") + \
+    p("A bench that <b>cannot run any more</b> leaves the repository (" + c("DECISIONI.md") + " §10.44, 11 Oct 2026); "
+      "its measurements do not: they stay written where they were recorded, and the files stay in git history at "
+      + c("d2f27b3") + ", the commit before the removal.") + \
+    table(["Retired", "Why it could no longer run"], [
+        [c("07-b64-*") + ", " + c("07-b65-datagram"), "the terrain built against a private ngtcp2 graft that is gone, "
+         "and the scene " + c("04-b30-scena") + ", removed"],
+        [c("09-b70-ritmo") + ", " + c("09-b76-rete-cattiva") + ", " + c("09-b79-*") + ", " + c("09-b81-*"),
+         "they need " + c("04-b30-scena") + ", or import a bench that does"],
+        [c("09-b77-audio-riordino") + ", " + c("09-b84-audio-silenzio"), "they import " + c("07-b64-rete")
+         + " and run on its terrain"],
+        [c("18-software/") + ", " + c("18-a1/") + ", " + c("18-scheda/") + " (all but the Chrome page)",
+         "they recompile code of commits " + c("6bacca7") + " and " + c("545ec55") + " against libraries that left "
+         "the product (the software fallback, libavcodec)"],
+        [c("17-t9/"), "it tests an installer that no longer exists (§10.31, §10.36)"],
+        [c("01-b0-terreno") + ", " + c("attrezzi-allinea-*.sh"), "they check and realign trees that are no longer on "
+         "the server"],
+    ], "«TAB» — The benches retired on 11 Oct 2026 (results: " + c("fasi/09-la-qualita-e-la-degradazione.md") + ", "
+       + c("fasi/18-senza-ffmpeg.md") + ", " + c("fasi/17-l-installatore.md") + ")") + \
     tip("to find the bench behind a number in a document, search for the bench identifier (B12, C8, F-018, "
         "R19…) in " + c("banchi/") + "; the file header says what it measures, from where it starts and how it "
         "knows it can say red.")
@@ -322,17 +339,17 @@ S6 = p("The net runs by itself: " + c("11-gancio.sh") + " is installed as a git 
        "A hook that asks «do you want to run the net?» does not run on the day one is in a hurry, and those are "
        "the days things break.", lead=True) + HOOK + \
     table(["Family", "Triggered by", "What runs", "Cost"], [
-        [c("desktop-nuovo") + " (new desktop)", "a new " + c("Contenitore.<name>") + " added (wins over everything)",
+        [c("new-desktop"), "a new " + c("Contenitore.<name>") + " added (wins over everything)",
          "everything on the new box, then C1×2 on the old ones, then " + c("whole-net"), "hours"],
-        [c("works") + " (it works)", c("src/") + " or " + c("web/") + " changed", "C10 and its fault, C11, C1(gnome)×2 — under a "
+        [c("works"), c("src/") + " or " + c("web/") + " changed", "C10 and its fault, C11, C1(gnome)×2 — under a "
          "180 s ceiling", "173 s measured on 26 Aug 2026"],
-        [c("whole-net") + " (whole net)", c("11-accendi.sh") + ", a recipe, " + c("11-c8-*") + " or " + c("11-c14-*"),
-         c("network") + " plus C14, which takes all four boxes", "about 800 s"],
-        [c("network") + " (net)", "anything else under " + c("banchi/"), "C10 and its fault, C11, C12, C13, C15, C16",
+        [c("whole-net"), c("11-accendi.sh") + ", a recipe, " + c("11-c8-*") + " or " + c("11-c14-*"),
+         c("net") + " plus C14, which takes all four boxes", "about 800 s"],
+        [c("net"), "anything else under " + c("banchi/"), "C10 and its fault, C11, C12, C13, C15, C16",
          "about 11 s on the test machine, 1 s on the laptop"],
-        [c("papers") + " (papers)", c("*.md") + " files and nothing under " + c("src/") + ", " + c("web/") + " or " + c("banchi/"), "C16", "0.79 s"],
-        [c("niente") + " (nothing)", "anything else (the installer, the manual sources…)", "nothing, and the hook says so", "—"],
-        [c("all") + " (everything)", "only by name (" + c("--family all") + "), before closing a phase",
+        [c("papers"), c("*.md") + " files and nothing under " + c("src/") + ", " + c("web/") + " or " + c("banchi/"), "C16", "0.79 s"],
+        [c("nothing"), "anything else (the installer, the manual sources…)", "nothing, and the hook says so", "—"],
+        [c("all"), "only by name (" + c("--family all") + "), before closing a phase",
          "boxes rebuilt clean; per box: step 0, C1×10, C8, C5, C7, C9, C18 each with its fault, the product meshes, "
          "C19; then " + c("whole-net"), "hours (7,896 s on 27 Aug 2026)"],
         [c("suite"), "only by name", "the functional suite with its technical layer", "about 2 hours"],
@@ -459,15 +476,18 @@ S8 = p("On 24 Sep 2026 the user tried the product by hand and found six defects 
       + "): in a shared compositor Chrome windows covered each other, and a covered Chrome window does not "
       "repaint — one screenshot hung for 17 minutes.") + \
     table(["Field", "Example"], [
-        [c("round") + " (round) · " + c("pass") + " (pass)", c("1") + ", " + c("2") + ", " + c("bonifica") + " (clean-up) · " + c("healthy") + " (healthy) or " + c("fault") + " (faulted)"],
-        [c("test") + " / " + c("function") + " (function)", c("T-018-kde-firefox") + " / " + c("F-018")],
+        [c("round") + " · " + c("pass"), "the round's name (" + c("1") + ", " + c("2") + ", a clean-up round) · "
+         + c("healthy") + " or " + c("fault")],
+        [c("test") + " / " + c("function"), c("T-018-kde-firefox") + " / " + c("F-018")],
         [c("desktop") + " · " + c("browser") + " · " + c("version"), c("kde") + " · " + c("firefox") + " · " + c("140.16.0")],
-        [c("binary") + " (binary) · " + c("page") + " (page) · " + c("commit"), "md5 prefixes of binary and page, the commit"],
-        [c("outcome") + " (outcome) · " + c("rationale") + " (reason)", "PASS, FAIL or BLOCKED; one sentence, mandatory for FAIL and BLOCKED"],
-        [c("expected") + " (expected) · " + c("observed") + " (observed)", "the two sentences of the test case"],
-        [c("fault_seen") + " (fault seen)", "true or false on the faulted pass"],
-        [c("evidence") + " (evidence) · " + c("defect") + " (defect)", "paths of photos, logs and console; " + c("D-007") + " if a defect was opened or touched"],
-    ], "«TAB» — One line of the suite register (" + c("banchi/15-suite/registro.jsonl") + ", append-only)") + \
+        [c("binary") + " · " + c("page") + " · " + c("commit"), "md5 prefixes of binary and page, the commit"],
+        [c("outcome") + " · " + c("rationale"), "PASS, FAIL or BLOCKED; one sentence, mandatory for FAIL and BLOCKED"],
+        [c("expected") + " · " + c("observed"), "the two sentences of the test case"],
+        [c("fault_seen"), "true or false on the faulted pass"],
+        [c("evidence") + " · " + c("defect"), "paths of photos, logs and console; " + c("D-007") + " if a defect was opened or touched"],
+    ], "«TAB» — One line of the suite register (" + c("banchi/15-suite/registro.jsonl") + ", append-only), as "
+       + c("suite.py") + " and " + c("15-giro.py") + " write it today; lines written before the rename of §10.38 "
+       "carry the same fields under their Italian names") + \
     p("Defects go to " + c("difetti.jsonl") + " (the defect list) with a class — <b>A</b> true regression, <b>B</b> one desktop's "
       "assumption in common code, <b>C</b> bench defect, <b>D</b> wrong invariant (never as a shortcut) — a "
       "state, the measured cause, the commit of the cure and the test that guards it from then on. The report "
@@ -586,9 +606,9 @@ S10 = p("Phase 16 asks how much load REMOTIX carries while still working. Client
       "the same four workloads with the same seeds through " + c("xfreerdp3") + " in a private Xvfb per user ("
       + c("16-compositori-rdp.sh") + "), with XTEST for input and XDamage for paint times, against the "
       + c("-xrdp") + " boxes, so that " + c("16-classifica.py") + " reads both with the same thresholds. "
-      + c("14-stress/") + " is the earlier, tablet-driven night harness of phase 14; its client that never stays "
-      "still (removed on 10 Oct 2026 with the other benches of closed phases) found that a server heartbeat was postponed by every "
-      "input message, freezing the screen for minutes under a moving mouse.")
+      + "The earlier, tablet-driven night harness of phase 14 (" + c("14-stress/") + ", removed on 10 Oct 2026 with the "
+      "other benches of closed phases) found with its client that never stays still that a server heartbeat was "
+      "postponed by every input message, freezing the screen for minutes under a moving mouse.")
 
 # ── 16.11 ────────────────────────────────────────────────────────────────────
 S11 = p("Phase 17 tests REMOTIX where an administrator would install it: on the official images of each "
@@ -598,11 +618,12 @@ S11 = p("Phase 17 tests REMOTIX where an administrator would install it: on the 
         [c("17-vm.sh"), "QEMU directly, no libvirt, no root; user-mode network with port forwarding; the disk is an "
          "overlay on the untouched official cloud image. Machines are " + c("<distro>-<desktop>") + "; ssh on "
          + c("2300 + 10·N + k") + ", REMOTIX on " + c("7500 + 10·N + k") + " (k: bare 0, gnome 1, kde 2, xfce 3, lxqt 4). "
-         "Verbs: " + c("create") + " (create), " + c("avvia") + " (start), " + c("vesti") + " (dress: installs the desktop group), " + c("ssh") + ", "
-         + c("ferma") + " (stop), " + c("riavvia") + " (a real reboot, checked through " + c("boot_id") + "), "
-         + c("fotografa") + "/" + c("torna") + " (snapshot/restore), " + c("azzera") + " (reset to the base image)"],
+         "Verbs: " + c("list") + ", " + c("create") + ", " + c("boot") + ", " + c("dress") + " (installs the desktop "
+         "group), " + c("ssh") + ", " + c("shutdown") + ", " + c("reboot") + " (a real reboot, checked through "
+         + c("boot_id") + "), " + c("snapshot") + "/" + c("revert") + ", " + c("reset") + " (back to the base image), "
+         + c("from-iso") + ", " + c("fingerprint") + ", " + c("screenshot")],
         ["states", "<b>BASE</b> the cloud image after cloud-init · <b>DESKTOP</b> plus the distribution's official desktop "
-         "group (snapshot " + c("cliente") + ", customer) · <b>ISO</b> installed from the official ISO with its automatic installer "
+         "group (snapshot " + c("client") + ") · <b>ISO</b> installed from the official ISO with its automatic installer "
          "(answers in " + c("iso-risposte/") + ", differences from DESKTOP in " + c("iso-differenze.md") + "). If a verdict differs "
          "between DESKTOP and ISO, ISO is the truth"],
         [c("17-t10.sh"), "the script of one machine: back to the snapshot, fingerprints of " + c("/etc") + ", " + c("/usr")
@@ -632,24 +653,23 @@ S11 = p("Phase 17 tests REMOTIX where an administrator would install it: on the 
          "Boxes for all combinations.") + \
     p(c("17-t2/") + " measured what kills desktops when the service stops (nothing does, 29 Sep 2026); "
       + c("17-t6/") + " PAM, SELinux and firewall per family; " + c("17-t7/") + " updating without closing "
-      "desktops on the four boxes. " + c("17-t4-motore.sh") + ", " + c("17-t8/") + " and " + c("17-t9/")
-      + " test an installer that no longer exists (separate plan and apply, signed archive, answer files) and are "
+      "desktops on the four boxes. " + c("17-t4-motore.sh") + " and " + c("17-t8/")
+      + " test an installer that no longer exists (separate plan and apply, signed archive) and are "
       "kept as history; their headers say so and they are not run — except " + c("t8-browser.py") + ", the browser "
-      "that stays attached during the update, which " + c("17-t10.sh") + " still uses.")
+      "that stays attached during the update, which " + c("17-t10.sh") + " still uses. " + c("17-t9/")
+      + " (answer files, the GUI) was retired on 11 Oct 2026 (§10.44).")
 
 # ── 16.12 ────────────────────────────────────────────────────────────────────
 S12 = p("When an encoder path changes, the old path stays alive as a term of comparison until the new one has "
-        "been measured against it on the same frames.", lead=True) + \
+        "been measured against it on the same frames. The comparisons of phase 18 (" + c("18-a1/") + ", the old "
+        + c("audio.c") + " against libopus; " + c("18-scheda/") + ", libavcodec's VA-API against " + c("vadiretta.c")
+        + "; " + c("18-software/") + ", the software fallback) did their job and were retired on 11 Oct 2026: they "
+        "rebuilt old commits against libraries that left the product. Their results are in "
+        + c("fasi/18-senza-ffmpeg.md") + ".", lead=True) + \
     table(["Folder", "Compares", "How it judges"], [
-        [c("18-a1/"), "the old " + c("audio.c") + " (through libavcodec, copied verbatim from the starting commit) and the new one (libopus directly)",
-         "same input, both outputs, plus decoding in Chrome"],
-        [c("18-scheda/"), "the old VA-API path through libavcodec and the new direct libva path (" + c("vadiretta.c") + ")",
-         "streams, logs and " + c("esiti.jsonl") + " per test, a table (" + c("18-tabella.py") + "), Chrome decoding"],
-        [c("18-software/"), "the old software fallback against OpenH264 and SVT-AV1 called directly",
-         "colours, encoding, events, refusals on the same desktop scene"],
         [c("19-vulkan/"), "Vulkan Video (" + c("vulkanvideo.c") + ") against VA-API on the same card, and the integrated "
          "engine that chooses by capability", c("ffmpeg") + "/" + c("ffprobe") + " only as measuring tools (PSNR, SSIM, "
-         "profile, level), plus a Chrome decoding test"],
+         "profile, level), plus a Chrome decoding test (the page is " + c("18-scheda/18-decodifica-chrome.html") + ")"],
         [c("19-nvidia/"), "REMOTIX on a rented NVIDIA machine", "one command prepares a bundle on the laptop; on the rental "
          "day it upgrades the OS if needed, installs the driver, XFCE, browsers and REMOTIX with its installer, proves "
          "H.264 and HEVC on the card, runs the encoder comparison and part of the suite, brings evidence home, then cleans up"],
