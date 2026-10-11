@@ -951,7 +951,7 @@ def certify():
           tenant_judgment("pulito", lowest - 0.001, lowest)[0])
 
     def E(chi, seen, after):
-        return {"who": who, "seen": seen, "after": after, "why": ""}
+        return {"who": chi, "seen": seen, "after": after, "why": ""}
 
     # ⛔⛔ AND FROM HERE ON **THE NUMBER AND THE REASON** ARE DEMANDED, not the number.
     #
@@ -1225,7 +1225,7 @@ def main():
         completed, why = c8a.create(chi, a.password)
         if not completed:
             print("  %-7s  ?   I could not create it: %s" % (chi, why))
-            outcomes.append({"who": who, "seen": None, "after": None,
+            outcomes.append({"who": chi, "seen": None, "after": None,
                           "why": "not created"})
             continue
         if not a.no_fix:
@@ -1255,7 +1255,7 @@ def main():
                 c8a, os.path.join(a.workdir, "%s.264" % chi), a.workdir, chi,
                 lowest))
 
-        outcomes.append({"who": who, "seen": seen, "after": r["after"],
+        outcomes.append({"who": chi, "seen": seen, "after": r["after"],
                       "before": r["before"],
                       "why": reason if seen is not None else said})
         c8a.sh("pkill -KILL -u %s 2>/dev/null; loginctl terminate-user %s "

@@ -296,7 +296,7 @@ def _try_position(y, geo, dx, dy):
         outcome["versione_marca"] = version
         return None, outcome
 
-    good = {"c_e": True, "version": version, "round_id": round_id,
+    good = {"c_e": True, "version": version, "round": round_id,
              "draw": draw, "istante_us": instant,
              "contrast": round(contrast, 4), "threshold": round(threshold, 4),
              "scorrimento_provato": [dx, dy]}

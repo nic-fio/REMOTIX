@@ -284,9 +284,9 @@ for i in range(minimo, len(righe)):
         d = json.loads(righe[i])
     except Exception:
         continue
-    if d.get("type") != type:
+    if d.get("type") != tipo:
         continue
-    if round and d.get("round") != round:
+    if giro and d.get("round") != giro:
         continue
     print(i + 1, d.get("round"), d.get("deltaY"), d.get("scroll"), d.get("start_base"),
           d.get("screen"), (d.get("engine") or "")[:120], sep="\t")

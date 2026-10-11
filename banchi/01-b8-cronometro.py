@@ -936,7 +936,7 @@ async def run(a, steps, kind, label, mode, compare_model=True):
         password = a.password if p["case"] == "correct" else a.wrong_password
         expected_msg, expected_reason, _why = outcomes[i - 1]
         rec = await attempt(p["address"], a.port, p["name"], password)
-        rec.update({"round": a.round, "kind": kind, "label": label,
+        rec.update({"round": a.round, "type": kind, "label": label,
                     "block": a.block, "order": i, "case": p["case"],
                     "warmup": p["warmup"],
                     "class": ranking(rec, p["case"]),
@@ -1692,7 +1692,7 @@ def verdict(a):
             faults += 1
     banned_pages = [r for r in pages if r["expected_banned"] and r["hours"] is not None]
     if banned_pages:
-        hours = banned_pages[0]["hours"]
+        ore = banned_pages[0]["hours"]
         # ⚠ The hours left must be PLAUSIBLE: 12 right after the ban.  A
         #   «0 hours left» or a «4 billion left» would say that the page's clock
         #   is not the session's — the easiest defect to make and the hardest

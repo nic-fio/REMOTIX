@@ -1113,7 +1113,7 @@ def main():
         expiry = time.time() + a.wait_stage
         while time.time() < expiry:
             chunk = (load(a.log) or "")[sign:]
-            if any(m.group("who") == who for m in CHILD_SIGNATURE.finditer(chunk)):
+            if any(m.group("who") == chi for m in CHILD_SIGNATURE.finditer(chunk)):
                 figlio_nato = True
                 break
             time.sleep(0.5)

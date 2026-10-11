@@ -1212,7 +1212,7 @@ def main():
         manifesto.append({
             "file": f"{name}.rcpreg",
             "what": what,
-            "exit_code": exit_code,
+            "exit": exit_code,
             "expected": ESITI[exit_code],
             "rule": None if expected is None else expected[0],
             "byte": None if expected is None else expected[1],
