@@ -1,5 +1,5 @@
-"""Chapter 15 — The installer (remotix-install). Sources: installatore/ (cmd, motore, interfaccia,
-catalogo, run.sh, costruisci.sh), DECISIONI §10.12-10.36, fasi/17-l-installatore.md §6.6.16.
+"""Chapter 15 — The installer (remotix-install). Sources: installer/ (cmd, engine, ui,
+catalogo, run.sh, build.sh), DECISIONI §10.12-10.36, phases/17-the-installer.md §6.6.16.
 The RX- code table and the supported-versions tables are generated from the sources at build time."""
 import html
 import json
@@ -8,7 +8,7 @@ import re
 from build import (ROOT, arrow, box, c, code, esc, fig, flow, note, p, path, pill, rif, seq, steps, table, text,
                    tip, tree, ui, ul, warn, zone)
 
-INST = ROOT / "installatore"
+INST = ROOT / "installer"
 
 
 # ── Generated from the sources ─────────────────────────────────────────────
@@ -33,7 +33,7 @@ AREAS = {
     "OPENSSL": "Phase 1 — OpenSSL",
     "DESKTOP": "Desktop (retired with the engine-installed desktop)",
     "COMPAT": "Phase 2 — compatibility",
-    "MISSING": "Phase 2 — what is missing (DECISIONI.md §10.36)",
+    "MISSING": "Phase 2 — what is missing (DECISIONS.md §10.36)",
     "PIANO": "Phases 3-4 — plan and consent",
     "RISPOSTE": "Answer file (retired with §10.36)",
     "OUT": "Offline bundle (retired with §10.36)",
@@ -50,11 +50,11 @@ AREAS = {
 
 
 def rx_codes():
-    """The code catalogue, read from installatore/motore/codici.go, with the files that raise each code."""
-    src = (INST / "motore" / "codici.go").read_text()
+    """The code catalogue, read from installer/engine/codes.go, with the files that raise each code."""
+    src = (INST / "engine" / "codes.go").read_text()
     rx = re.compile(r'"(RX-[A-Z0-9]+-\d{3})":\s*\{(\w+),\s*(\w+),\s*"((?:[^"\\]|\\.)*)",\s*"((?:[^"\\]|\\.)*)"\}')
     files = [f for f in sorted(INST.rglob("*.go")) if "vendor" not in f.parts and not f.name.endswith("_test.go")
-             and f.name != "codici.go"]
+             and f.name != "codes.go"]
     righe = {f: [r for r in f.read_text().splitlines() if not r.strip().startswith("//")] for f in files}
     out = []
     for cod, grav, nat, testo, rimedio in rx.findall(src):
@@ -86,17 +86,17 @@ def code_table():
         dove = ", ".join(c(w) for w in k["where"]) or "—"
         rows.append([c(k["code"]), stato, esc(k["nat"]), testo, dove])
     return table(["Code", "Severity", "Nature", "Text (as printed) and remedy", "Raised in"], rows,
-                 "«TAB» — Every " + c("RX-") + " code of the engine, generated from " + c("installatore/motore/codici.go")
+                 "«TAB» — Every " + c("RX-") + " code of the engine, generated from " + c("installer/engine/codes.go")
                  + f" ({len(CODE_LIST)} codes, {sum(not k['retired'] for k in CODE_LIST)} in force, "
                  + f"{sum(k['retired'] for k in CODE_LIST)} retired)")
 
 
-CAT = json.loads((INST / "catalogo" / "catalogo.json").read_text())
+CAT = json.loads((INST / "catalog" / "catalog.json").read_text())
 DESKTOP_NAMES = {"gnome": "GNOME", "kde": "KDE Plasma", "xfce": "XFCE", "lxqt": "LXQt"}
 
 
 def platform_table():
-    """The same logic as VersionTable() (motore/tabella.go), in HTML."""
+    """The same logic as VersionTable() (engine/version_table.go), in HTML."""
     rows = []
     for pl in CAT["platforms"]:
         cond, visti = [], set()
@@ -139,7 +139,7 @@ def platform_table():
                          esc(d.get("note", "—"))])
     return table(["Distribution", "Version", "Status", "Desktops", "Conditions"], rows,
                  "«TAB» — The platforms of the catalogue " + c(CAT["version"]) + " (sequence " + str(CAT["sequence"])
-                 + "), generated from " + c("installatore/catalogo/catalogo.json"))
+                 + "), generated from " + c("installer/catalog/catalog.json"))
 
 
 def excluded_table():
@@ -171,7 +171,7 @@ S_INTRO = p("REMOTIX is installed by one program, " + c("remotix-install") + ", 
         ["<b>REMOTIX does not modify the system</b>", "The engine never adds repositories, drivers, desktops, desktop "
          "components the distribution lacks, firewall rules or system guards. " + c("check") + " says what is missing "
          "(" + c("RX-MANCA-001…004") + " — " + c("MISSING") + " means “missing” — and " + c("RX-GPU-003…006") + ") without suggesting packages or "
-         "commands, and " + c("install") + " stops before touching anything.", c("DECISIONI.md") + " §10.36"],
+         "commands, and " + c("install") + " stops before touching anything.", c("DECISIONS.md") + " §10.36"],
         ["<b>One deliberate exception</b>", "People are added to the groups of the card nodes (" + c("/dev/dri/card*")
          + ", " + c("renderD*") + ") automatically, at installation and at the first connection: without them a remote "
          "desktop cannot use the card.", "§10.36, §7.21"],
@@ -187,8 +187,8 @@ S_INTRO = p("REMOTIX is installed by one program, " + c("remotix-install") + ", 
          "supported distribution; dependencies come from the repositories the machine already has. Upgrading = running "
          "the newer " + c(".run") + ".", "§10.36 (supersedes the signed archive of §10.21/§10.23)"],
         ["<b>English only</b>", "Every text the administrator reads is in English, and so are the Go identifiers and the catalogue's "
-         "keys (§10.38). Still Italian: the source file and folder names (" + c("motore/") + ", " + c("operazione.go")
-         + "…), the text keys of " + c("testi.go") + " and the area names of the " + c("RX-") + " codes.",
+         "keys (§10.38). Still Italian: the source file and folder names (" + c("engine/") + ", " + c("operation.go")
+         + "…), the text keys of " + c("texts.go") + " and the area names of the " + c("RX-") + " codes.",
          "§10.32, §10.35, §10.38"],
         ["<b>Two interfaces</b>", "The command line and a TUI on the same engine; the GUI was removed on 10 Oct 2026.",
          "§10.31"],
@@ -200,42 +200,42 @@ S_INTRO = p("REMOTIX is installed by one program, " + c("remotix-install") + ", 
          "History.")
 
 SOURCE_TREE = tree([
-    "installatore/",
-    "├── cmd/remotix-install/  # main.go: the commands; interfacce.go: tui",
-    "├── motore/               # the engine: the only place with installation logic",
-    "│   ├── operazione.go     # Engine, Apply/Resume/Rollback, the state walk, certificate",
-    "│   ├── stati.go          # the 19 states and their valid transitions",
-    "│   ├── registro.go       # the write-ahead log (log.jsonl)",
-    "│   ├── eventi.go         # events: text for the terminal, JSON lines for the TUI",
+    "installer/",
+    "├── cmd/remotix-install/  # main.go: the commands; tui.go: tui",
+    "├── engine/               # the engine: the only place with installation logic",
+    "│   ├── operation.go      # Engine, Apply/Resume/Rollback, the state walk, certificate",
+    "│   ├── states.go         # the 19 states and their valid transitions",
+    "│   ├── log.go            # the write-ahead log (log.jsonl)",
+    "│   ├── events.go         # events: text for the terminal, JSON lines for the TUI",
     "│   ├── preflight.go      # phase 1, read only: the machine profile",
-    "│   ├── strade.go         # the encoding routes (vulkan, vaapi) and the card verdict",
-    "│   ├── compatibilita.go  # the catalogue model and phase 2 (Evaluate)",
-    "│   ├── piano.go          # Piano, fingerprint, approval",
-    "│   ├── piano_installazione.go  # the installation / upgrade plan",
-    "│   ├── azione_*.go       # the step types (packages, groups, files, units, service…)",
-    "│   ├── disinstalla.go    # the uninstallation plan and the undo step",
-    "│   ├── gestore.go        # apt, dnf, zypper, pacman adapters",
-    "│   ├── certifica.go      # platform checks (PAM, firewall) and status",
-    "│   ├── ambiente.go       # the machine: closed program list, groups, units",
+    "│   ├── encoding_routes.go # the encoding routes (vulkan, vaapi) and the card verdict",
+    "│   ├── compatibility.go  # the catalogue model and phase 2 (Evaluate)",
+    "│   ├── plan.go           # Piano, fingerprint, approval",
+    "│   ├── install_plan.go         # the installation / upgrade plan",
+    "│   ├── action_*.go       # the step types (packages, groups, files, units, service…)",
+    "│   ├── uninstall.go      # the uninstallation plan and the undo step",
+    "│   ├── package_manager.go # apt, dnf, zypper, pacman adapters",
+    "│   ├── certify.go        # platform checks (PAM, firewall) and status",
+    "│   ├── environment.go    # the machine: closed program list, groups, units",
     "│   ├── dbus.go           # systemd, logind, firewalld over D-Bus",
-    "│   ├── codici.go         # the RX- code catalogue",
-    "│   └── testi.go          # the engine's English texts (looked up with T(key), lingua.go)",
-    "├── interfaccia/          # the view: Session (sessione.go), the *View types (vista.go), texts",
+    "│   ├── codes.go          # the RX- code catalogue",
+    "│   └── texts.go          # the engine's English texts (looked up with T(key), language.go)",
+    "├── ui/                   # the view: Session (session.go), the *View types (view.go), texts",
     "│   └── tui/              # Bubble Tea screens, --preview",
-    "├── catalogo/             # catalogo.json, embedded with go:embed",
-    "├── prove/                # R1 proof in containers, fingerprint tool, history",
+    "├── catalog/              # catalog.json, embedded with go:embed",
+    "├── tests/                # R1 proof in containers, fingerprint tool, history",
     "├── vendor/               # Go modules: the build is offline",
     "├── run.sh                # the header of the .run file",
-    "└── costruisci.sh         # build and tests in the golang:1.25 container",
+    "└── build.sh              # build and tests in the golang:1.25 container",
 ], "«FIG» — The installer source tree (" + c("vendor/") + " excluded from the line counts)")
 
 LAYERS = fig(
     zone(20, 14, 860, 92, "Interfaces — no installation logic (R36)")
     + box(40, 44, 250, 50, "Command line", "cmd/remotix-install/main.go", "navy")
-    + box(325, 44, 250, 50, "TUI", "interfaccia/tui (Bubble Tea)", "navy")
-    + box(610, 44, 250, 50, "Session and views", "interfaccia/sessione.go, vista.go", "blue")
+    + box(325, 44, 250, 50, "TUI", "ui/tui (Bubble Tea)", "navy")
+    + box(610, 44, 250, 50, "Session and views", "ui/session.go, view.go", "blue")
     + arrow(165, 96, 165, 132) + arrow(450, 96, 450, 132) + arrow(735, 96, 735, 132)
-    + zone(20, 134, 860, 92, "Engine — package installatore/motore")
+    + zone(20, 134, 860, 92, "Engine — package installer/engine")
     + box(40, 164, 190, 50, "Phases 0-2", "trust, preflight, compatibility", "blue")
     + box(250, 164, 190, 50, "Plan", "steps with do / check / undo", "blue")
     + box(460, 164, 190, 50, "Operation", "states, log, rollback", "blue")
@@ -248,15 +248,15 @@ LAYERS = fig(
     + box(670, 284, 190, 50, "remotix --encoding-test", "the product tests the card", "amber"),
     900, 352, "«FIG» — The installer's layers: interfaces show and ask, the engine decides, the environment layer touches the machine")
 
-S_LAYOUT = p("The installer is one Go module, " + c("remotix/installatore") + " (" + c("go.mod") + ": Go 1.25, Bubble Tea "
+S_LAYOUT = p("The installer is one Go module, " + c("remotix/installer") + " (" + c("go.mod") + ": Go 1.25, Bubble Tea "
              "1.3.10, lipgloss 1.1.0, godbus 5.2.2). Every dependency is vendored, and the build runs with "
              + c("GOFLAGS=-mod=vendor GOPROXY=off CGO_ENABLED=0") + ": it never touches the network and the result runs on "
              "every distribution before any package is installed.", lead=True) + SOURCE_TREE + LAYERS + \
     p("The engine is the only package with installation logic. The interfaces read the engine's objects and events and "
       "collect a single consent; they never choose packages, repositories or rollbacks. In tests the "
       + c("Environment") + " (files, D-Bus, programs) is a fake rooted in a temporary folder ("
-      + c("Root") + "), so the same engine code runs against a fake machine (" + c("finti_test.go")
-      + ", " + c("finti2_test.go") + ": the fakes).")
+      + c("Root") + "), so the same engine code runs against a fake machine (" + c("fakes_test.go")
+      + ", " + c("fakes2_test.go") + ": the fakes).")
 
 CMD_ROWS = [
     [c("check"), c("--port N") + ", " + c("--json"), "Phases 0-2, read only: trust, profile, compatibility report, what "
@@ -367,7 +367,7 @@ STATES = fig(
     + box(716, 284, 168, 34, "ROLLED_BACK", "", "dark", 11.5)
     + box(716, 324, 168, 34, "PARTIALLY_ROLLED_BACK", "", "dark", 10)
     + arrow(669, 314, 715, 302) + arrow(669, 328, 715, 340),
-    900, 370, "«FIG» — The operation states (stati.go): solid arrows are the only valid transitions; orange: the rollback")
+    900, 370, "«FIG» — The operation states (states.go): solid arrows are the only valid transitions; orange: the rollback")
 
 S_STATES = p("An operation (installation, upgrade, uninstallation) has an identifier — the UTC time plus 4 random bytes, "
              "e.g. " + c("20261010T081500Z-1a2b3c4d") + " (" + c("newID()") + ") — and one state, kept in "
@@ -402,7 +402,7 @@ S_STATES = p("An operation (installation, upgrade, uninstallation) has an identi
         [c("REFUSED"), "REFUSED: nothing was touched", pill("final", "off"), "No (valid) consent: " + c("RX-PIANO-003") + " or "
          + c("RX-PIANO-005") + "."],
     ], "«TAB» — States: name in the files, text printed by the progress (" + c("state.*") + " in "
-       + c("testi.go") + ")") + \
+       + c("texts.go") + ")") + \
     p("Only one engine runs at a time: " + c("Engine.Block()") + " takes an exclusive " + c("flock") + " on "
       + c("<state-dir>/.serratura") + " (the lock file; " + c("RX-STATO-003") + " if busy); the kernel releases it if the process dies, so a "
       "resume never finds an orphan lock. At most one operation is ever open, and " + c("Apply()") + " refuses to "
@@ -432,7 +432,7 @@ FILES_TREE = tree([
 ], "«FIG» — What the engine (and the product) keep under " + c("/var/lib/remotix"))
 
 S_OBJECTS = p("The engine produces and consumes seven JSON objects; all but the execution log (one event per line) carry "
-              + c('"format": "remotix-install/3"') + " (" + c("Schema") + " in " + c("formato.go") + ") and an "
+              + c('"format": "remotix-install/3"') + " (" + c("Schema") + " in " + c("format.go") + ") and an "
               + c("object") + " field. " + c("ReadJSON()") + " refuses an object of another format; every "
               "write goes through " + c("WriteAtomic()") + ": temporary name in the same folder, " + c("fsync") + ", rename, "
               + c("fsync") + " of the folder — a reader sees the old file or the new one, never half.", lead=True) + \
@@ -501,7 +501,7 @@ S_LOG = p("Every step runs in four beats, and the log records them before the en
       "is left and listed; otherwise ROLLBACK_INTENT, " + c("Rollback()") + ", " + c("RolledBack()") + ". Whatever could "
       "not be undone makes the final state PARTIALLY_ROLLED_BACK.") + \
     p("The engine tests kill the process at named points (" + c("TestPoint") + ", the test hook: before/after intent, after effect, "
-      "after done, during rollback) and resume (" + c("ripresa_test.go") + "). In the shipped binary the hook is always "
+      "after done, during rollback) and resume (" + c("resume_test.go") + "). In the shipped binary the hook is always "
       "nil: no variable or option can turn it on (R13).")
 
 S_ACTIONS = p("A plan step (" + c("PlanAction") + ") carries its id, type, parameters, a description, and three texts "
@@ -552,7 +552,7 @@ S_ACTIONS = p("A plan step (" + c("PlanAction") + ") carries its id, type, param
          "operation stops"],
     ], "«TAB» — The origin of a change decides how far rollback may go (§6.6.4)") + \
     p("The promise, as the code implements it: everything REMOTIX did directly is undone; what happened indirectly is "
-      "declared; what was there before is not touched. " + c("azioni_dichiarate.go") + " (declared steps) keeps a mechanism for step types "
+      "declared; what was there before is not touched. " + c("actions_declared.go") + " (declared steps) keeps a mechanism for step types "
       "the engine knows but cannot run yet (" + c("RX-AZIONE-004") + ", stopping before touching anything); its list is empty today.")
 
 S_FINGERPRINT = p("A plan is valid only on the machine it was made on. Before applying, " + c("ComputeFingerprint()")
@@ -567,7 +567,7 @@ S_FINGERPRINT = p("A plan is valid only on the machine it was made on. Before ap
          + " versions", ""],
         ["each step's " + c("Constraints()") + ": the version of every named dependency, the " + c(".run") + " file names, "
          "unit and service states, file sha256, group membership", ""],
-    ], "«TAB» — The machine fingerprint (" + c("piano.go") + ")") + \
+    ], "«TAB» — The machine fingerprint (" + c("plan.go") + ")") + \
     p("The digest is the sha256 of the sorted elements, one per line. With the " + c("install") + " flow the plan is made "
       "and applied seconds apart, so the check catches a machine changed between the question and the answer; it is "
       "also why the plan stays in the operation folder as a document of what was done.")
@@ -610,7 +610,7 @@ FACTS = [
 S_PREFLIGHT = p("Phase 1 builds the machine profile in <b>read-only</b> mode (R1): no function in "
                 + c("preflight.go") + " writes, creates, renames or changes permissions. It reads files, asks systemd, "
                 "logind and firewalld over D-Bus (properties and queries only), and runs one program, " + c("rpm -q")
-                + " on RPM families, recorded in the profile. The proof is " + c("installatore/prove/r1-contenitori.sh")
+                + " on RPM families, recorded in the profile. The proof is " + c("installer/tests/r1-containers.sh")
                 + ": a fingerprint of " + c("/etc") + " before and after " + c("check") + ", in one container per "
                 "family, must be identical.", lead=True) + \
     table(["Facts", "Source", "Codes it can raise"], FACTS, "«TAB» — The facts of the profile (" + c("Preflight()")
@@ -618,7 +618,7 @@ S_PREFLIGHT = p("Phase 1 builds the machine profile in <b>read-only</b> mode (R1
     p("Each fact has a state: <b>DETECTED</b> (seen: “PipeWire is installed”), <b>VERIFIED</b> (actually tested: “the "
       "card encoded a frame”) or <b>UNKNOWN</b> (the tool is missing, permission denied, time out). The rule the whole "
       "engine follows: a DETECTED fact never makes a PASS, and UNKNOWN is never “fine” — it is the lesson of GNOME 50's "
-      "false green (fasi/17 §5.1).") + \
+      "false green (phases/17 §5.1).") + \
     table(["Program", "Path(s)", "Why it is allowed"], [
         [c("apt-get") + ", " + c("dnf") + " (" + c("dnf5") + "), " + c("zypper") + ", " + c("pacman"), "absolute",
          "the package managers: rule 1 of the engine"],
@@ -630,7 +630,7 @@ S_PREFLIGHT = p("Phase 1 builds the machine profile in <b>read-only</b> mode (R1
          c("--encoding-test") + ", the encoding test of 7a"],
         [c("apt-cache") + ", " + c("pacman-key") + ", " + c("usermod"), "absolute", "still in the list, no longer called "
          "by any code path (leftovers of the signed archive and of T6)"],
-    ], "«TAB» — The closed list of programs (" + c("allowedPrograms") + " in " + c("ambiente.go") + ")") + \
+    ], "«TAB» — The closed list of programs (" + c("allowedPrograms") + " in " + c("environment.go") + ")") + \
     p("Every call goes through " + c("runReally()") + ": absolute path, fixed arguments, an environment of three "
       "variables (" + c("LC_ALL=C") + ", a fixed " + c("PATH") + ", " + c("DEBIAN_FRONTEND=noninteractive") + "), no "
       "stdin, a timeout (45 minutes for the package managers), and an annotation " + c("path args ⇒ exit") + " in the "
@@ -649,7 +649,7 @@ S_ROUTES = p("REMOTIX encodes only on the graphics card (§10.27: “no CPU with
         [c("vaapi") + " (VA-API, libva)", "Intel and AMD, unless the platform's Mesa has no VA-API "
          "(" + c("amd_without_vaapi") + ") or the installed driver is a build without H.264", "VA driver folders and the "
          "driver packages: " + c("driverFamily()") + " tells “with”, “without” or unknown"],
-    ], "«TAB» — The encoding routes (" + c("strade.go") + ")") + \
+    ], "«TAB» — The encoding routes (" + c("encoding_routes.go") + ")") + \
     table(["Verdict (" + c("VerdictCard()") + ")", "When"], [
         ["none (go on)", "an active route has a capable card — or the nodes could not be read (not a refusal)"],
         [c("RX-GPU-003"), "no render node at all"],
@@ -664,7 +664,7 @@ S_ROUTES = p("REMOTIX encodes only on the graphics card (§10.27: “no CPU with
       "Mesa with RADV encoding by default is not measured (Mesa 25.0.7 works, measured 1 Oct 2026 on the test server's "
       "Radeon RX 6800).") + \
     warn(c("codeH264()") + " in " + c("preflight.go") + " still raises " + c("RX-H264-003") + " (Fedora) and " + c("RX-H264-004") + " (openSUSE), "
-         "which " + c("codici.go") + " marks as retired by §10.36: where a driver warning was meant, the "
+         "which " + c("codes.go") + " marks as retired by §10.36: where a driver warning was meant, the "
          "administrator reads an INFO line with a “(retired…)” text. The verdict above is what blocks; these lines are "
          "cosmetic.", "Code defect.")
 
@@ -708,8 +708,8 @@ S_COMPAT = p("Phase 2 (" + c("Evaluate()") + ") judges the machine against the c
          "openSUSE rpm, as a plain depends on Arch; on Alma the package carries its own labwc (" + rif("The RPM package")
          + "). Without labwc KDE still starts, with KWin " + c("--virtual") + " and the size of its birth.", "KDE and labwc.")
 
-S_CATALOGUE = p("The catalogue is " + c("installatore/catalogo/catalogo.json") + ", embedded in the binary with "
-                + c("go:embed") + " (" + c("catalogo.go") + "). Its keys are English, and its format is "
+S_CATALOGUE = p("The catalogue is " + c("installer/catalog/catalog.json") + ", embedded in the binary with "
+                + c("go:embed") + " (" + c("catalog.go") + "). Its keys are English, and its format is "
                 + c(CAT["format"]) + "; its texts (reasons, notes, limits) are English. A new catalogue is a new release "
                 "with a higher " + c("sequence") + ".", lead=True) + \
     table(["Key", "Contents"], [
@@ -724,7 +724,7 @@ S_CATALOGUE = p("The catalogue is " + c("installatore/catalogo/catalogo.json") +
         [c("excluded") + ", " + c("always_out"), "excluded versions with the reason; what is always out"],
         [c("min_components"), "the table of minimum component versions for the manual"],
         [c("scalable_font"), "the font package per family"],
-    ], "«TAB» — The catalogue's keys (" + c("Catalog") + " in " + c("compatibilita.go") + ")") + \
+    ], "«TAB» — The catalogue's keys (" + c("Catalog") + " in " + c("compatibility.go") + ")") + \
     platform_table() + excluded_table() + min_table() + \
     warn("Linux Mint 23 is a compatible derivative in the catalogue, but " + c("Target()") + " maps its os-release to "
          + c("linuxmint23") + ", a folder the " + c(".run") + " does not have: the plan stops with " + c("RX-MANCA-004") + ". Fedora 43 "
@@ -766,7 +766,7 @@ S_PLAN = p(c("InstallPlan()") + " is the whole installation policy in one functi
       + c("/dev/fb*") + " and webcams (§10.36); until it is measured on the four desktops the engine enrols every "
       "non-root group it finds on " + c("/dev/dri/card*") + " and " + c("renderD*") + ".")
 
-S_MANAGERS = p("Each family has an adapter (" + c("Manager") + " in " + c("gestore.go") + ", chosen by "
+S_MANAGERS = p("Each family has an adapter (" + c("Manager") + " in " + c("package_manager.go") + ", chosen by "
                + c("ChooseHandler()") + "): versions, simulate, install, simulate-remove, remove only the named "
                "packages, integrity, and the manager's own repair. Files from the " + c(".run") + " carry no rpm "
                "signature (the " + c(".run") + " sha256 vouches for them); packages from the machine's repositories are "
@@ -801,7 +801,7 @@ S_MANAGERS = p("Each family has an adapter (" + c("Manager") + " in " + c("gesto
 
 S_VERIFY = p("Phase 7 re-runs every step's " + c("Check()") + " and, for an installation, the platform checks of "
              + c("PlatformChecks()") + ". It runs after <i>every</i> step, the service start included.", lead=True) + \
-    warn("§6.0 of fasi/17 designs the checks that do not need the service (7a: the encoding test, PAM) to run "
+    warn("§6.0 of phases/17 designs the checks that do not need the service (7a: the encoding test, PAM) to run "
          "<i>before</i> switching it on, and the live ones (7b) after, so that most errors appear while undoing is "
          "cheap and nobody is connected; the step texts still say “after the checks with the service stopped (7a)”, and "
          "the TUI's plan screen “started after the final check”. In the code " + c("start-service") + " is an "
@@ -843,7 +843,7 @@ S_UNINSTALL = p("Uninstalling is an operation like the others, with its plan, co
         + c("remotix") + " are terminated; a local or ssh session of the same person stays (§10.16). The administrator "
         "warns people beforehand with their own means; there is no extra question. It is IRREVERSIBLE.",
         "For each group enrolment the product recorded at first connection in " + c("/var/lib/remotix/group-enrollments.jsonl")
-        + " (format " + c("remotix-enrollments/1") + ", written by " + c("figlio.c") + ") that the engine did not do itself, "
+        + " (format " + c("remotix-enrollments/1") + ", written by " + c("child.c") + ") that the engine did not do itself, "
         "a " + c("remove-membership") + " step.",
         "Last, " + c("remove-user-logs") + ": " + c("~/.local/state/remotix/session.log") + " in every home, declared "
         "in the plan with the current list.",
@@ -882,7 +882,7 @@ S_UPGRADES = p("REMOTIX is upgraded by running the newer " + c(".run") + ": " + 
       "which records the installed versions of " + c("remotix") + ", " + c("remotix-install") + ", "
       + c("remotix-selinux") + " in " + c("recorded-versions.json") + ". The package step's " + c("Check()")
       + " accepts a package at the resolved version, at a <i>newer</i> one (compared with the dpkg or rpmvercmp "
-      "algorithm of " + c("versioni.go") + "), or at the recorded one — so " + c("status") + " stays GREEN after a "
+      "algorithm of " + c("versions.go") + "), or at the recorded one — so " + c("status") + " stays GREEN after a "
       "legitimate system update or a rollback with the manager.") + \
     table(["Package", "Hook", "What it does"], [
         [c("remotix") + " .deb", c("postinst configure") + " with an old version", c("try-restart") + " (debhelper), "
@@ -894,7 +894,7 @@ S_UPGRADES = p("REMOTIX is upgraded by running the newer " + c(".run") + ": " + 
     ], "«TAB» — Who calls " + c("post-upgrade") + "; it always exits 0") + \
     p("The service restart does not close the desktops: they live outside the unit (" + c("KillMode=mixed")
       + ", desktops started with " + c("setsid --fork") + "), and the new server finds them again (T2, measured 10 runs "
-      "out of 10 on 29 Sep 2026, fasi/17 §5.2).")
+      "out of 10 on 29 Sep 2026, phases/17 §5.2).")
 
 S_TRUST = p("Phase 0 answers one question: is the catalogue the right one, and does this engine understand it? After "
             "D11 was simplified (§10.21) and the signed archive was dropped (§10.36), there are no keys of our own.",
@@ -948,7 +948,7 @@ TUI_PLAN = """│ Port      [ 7447 ]   TCP and UDP                              
 
 S_TUI = p("The TUI (" + c("remotix-install tui") + ", or " + c("sudo sh remotix-X.Y.Z-R.run tui") + ") is the "
           "“professional” interface of §10.31, for administrators on ssh or the console. It is Bubble Tea and lipgloss, "
-          "drawn on the mockup the user approved on 10 Oct 2026 (" + c("grafica/tui-mockup/index.html") + "): a fixed "
+          "drawn on the mockup the user approved on 10 Oct 2026 (" + c("design/tui-mockup/index.html") + "): a fixed "
           "frame as wide as the terminal (at least 80 columns and 12 lines, else a line says so), four steps Check › "
           "Plan › Install › Ready, a body that scrolls inside the frame, the keys at the bottom.", lead=True) + \
     code(TUI_CHECK, "text", "remotix-install tui --preview 80 — the check screen (sample data, shortened)") + \
@@ -968,16 +968,16 @@ S_TUI = p("The TUI (" + c("remotix-install tui") + ", or " + c("sudo sh remotix-
          + ui("s") + " writes " + c("remotix-report.json")],
     ], "«TAB» — TUI screens and keys (" + c("tui.go") + "); arrows, " + ui("j") + "/" + ui("k") + ", PgUp/PgDn, "
        "Home/End scroll") + \
-    p("The TUI talks to the engine through " + c("interfaccia.Engine") + ", implemented by "
+    p("The TUI talks to the engine through " + c("ui.Engine") + ", implemented by "
       + c("Session") + " in the same root process: " + c("Check(port)") + " (phases "
       "0-2 and " + c("QuestionsToAsk()") + "), " + c("Piano(entries)") + " ("
       + c("InstallPlan()") + ", written to " + c("plans/") + "), " + c("Apply(digest, events)")
       + " — the approval is recorded only if the digest is the one shown — and "
       + c("Stop()") + ". Events reach the screen as the engine's JSON lines, parsed by " + c("eventLines")
-      + ". " + c("vista.go") + " (the view) turns engine objects into plain words (“Graphics card”, “Sign-in”), grouping steps "
+      + ". " + c("view.go") + " (the view) turns engine objects into plain words (“Graphics card”, “Sign-in”), grouping steps "
       "(the groups of one person = one row) with the real reversibility tag.") + \
     p("Every screen that ends the installation without “Ready” is one object, " + c("BlockedView") + " in "
-      + c("vista.go") + ": the same frame for a distribution that is not supported, a card that cannot encode, "
+      + c("view.go") + ": the same frame for a distribution that is not supported, a card that cannot encode, "
       "an installer that cannot be trusted, something missing, a refusal, a rollback. The " + ui("s") + " key "
       "saves it under " + c("\"end\"") + " in " + c("remotix-report.json") + ", with the field names below.") + \
     table(["Field", "JSON", "What it holds"], [
@@ -1002,16 +1002,16 @@ S_TUI = p("The TUI (" + c("remotix-install tui") + ", or " + c("sudo sh remotix-
       "basis of " + c("tui_test.go") + ". Not shown because the engine does not know them: the size of the packages "
       "(the simulations do not give it) and automatic suspend as a check row.")
 
-S_TEXTS = p("All texts live in catalogues, not in the code: " + c("motore/codici.go") + " (message and remedy of each "
-            "code), " + c("motore/testi.go") + " (states, steps, CLI, certificate; looked up with " + c("T(key, args…)")
-            + "), " + c("interfaccia/testi.go") + " (the TUI). A missing key prints " + c("⟨key⟩") + " and is found by "
-            + c("TestTexts") + ". " + c("inglese_test.go") + " fails on any Italian word or accented letter in the "
+S_TEXTS = p("All texts live in catalogues, not in the code: " + c("engine/codes.go") + " (message and remedy of each "
+            "code), " + c("engine/texts.go") + " (states, steps, CLI, certificate; looked up with " + c("T(key, args…)")
+            + "), " + c("ui/texts.go") + " (the TUI). A missing key prints " + c("⟨key⟩") + " and is found by "
+            + c("TestTexts") + ". " + c("english_test.go") + " fails on any Italian word or accented letter in the "
             "strings of the code and of the catalogue.", lead=True) + \
     table(["Rule", "Why"], [
         ["A code is never reused for another meaning; a wrong text is corrected, a new meaning takes a new number.",
          "The same code is in the CLI, the log, the certificate, this manual and support conversations."],
-        ["Retired codes stay in " + c("codici.go") + " with a “(retired …)” text.", "Old logs name them."],
-        [c("Msg()") + " panics on an unknown code; " + c("TestCodes") + " (" + c("motore_test.go") + ") finds it first.",
+        ["Retired codes stay in " + c("codes.go") + " with a “(retired …)” text.", "Old logs name them."],
+        [c("Msg()") + " panics on an unknown code; " + c("TestCodes") + " (" + c("engine_test.go") + ") finds it first.",
          "An unknown code is an engine defect."],
         ["Every message has a severity (INFO, WARNING, BLOCKING) and a nature (ACTION_NEEDED, RETRYABLE, RECOVERABLE, "
          "ROLLBACK_NEEDED, FATAL).", "The CLI sorts warnings by severity; BLOCKING items stop a plan."],
@@ -1020,30 +1020,30 @@ S_TEXTS = p("All texts live in catalogues, not in the code: " + c("motore/codici
          + "…): they are identifiers, decided in §10.35 not to change. So are the " + c("C-…") + " conditions; the "
          "catalogue keys, by contrast, are English since the rename of §10.38.", "Identifiers.")
 
-S_CODES = p("The table is generated from " + c("installatore/motore/codici.go") + " when the manual is built; the last "
+S_CODES = p("The table is generated from " + c("installer/engine/codes.go") + " when the manual is built; the last "
             "column lists the non-test files whose code mentions the code (comments excluded). A code in force with no "
             "file is defined but never raised; a retired code with a file is still raised somewhere.", lead=True) + \
     code_table()
 
-S_TESTS = p("The engine's tests run with " + c("installatore/costruisci.sh test") + ": " + c("gofmt -l") + ", "
+S_TESTS = p("The engine's tests run with " + c("installer/build.sh test") + ": " + c("gofmt -l") + ", "
             + c("go vet") + " and " + c("go test") + " in the " + c("golang:1.25") + " container, offline. The release "
             "refuses to continue on any " + c("FAIL") + " or " + c("gofmt:") + " line (" + rif("The release command")
             + ").", lead=True) + \
     table(["File", "What it proves"], [
-        [c("motore_test.go"), "states and transitions, the walk on a fake machine, certificate"],
-        [c("ripresa_test.go"), "interruptions at every named point and the resume / rollback (R30 in small)"],
+        [c("engine_test.go"), "states and transitions, the walk on a fake machine, certificate"],
+        [c("resume_test.go"), "interruptions at every named point and the resume / rollback (R30 in small)"],
         [c("preflight_test.go"), "facts on fake roots for each family; read-only behaviour"],
-        [c("disinstalla_test.go"), "uninstallation plan, enrolments, logs in homes"],
-        [c("certifica_test.go"), "PAM resolution and firewall checks never green on a broken machine (R29)"],
-        [c("fiducia_test.go"), "catalogue source and minimum engine"],
-        [c("interfaccia_test.go") + ", " + c("tui_test.go") + ", " + c("testi_test.go"), "what the interfaces show, the "
+        [c("uninstall_test.go"), "uninstallation plan, enrolments, logs in homes"],
+        [c("certify_test.go"), "PAM resolution and firewall checks never green on a broken machine (R29)"],
+        [c("trust_test.go"), "catalogue source and minimum engine"],
+        [c("questions_test.go") + ", " + c("tui_test.go") + ", " + c("texts_test.go"), "what the interfaces show, the "
          "frame at 80 and 120 columns, colours off"],
-        [c("inglese_test.go") + ", " + c("lingua_test.go"), "no Italian in texts, English only"],
+        [c("english_test.go") + ", " + c("language_test.go"), "no Italian in texts, English only"],
         [c("script_test.go"), "the " + c("run.sh") + " header"],
     ], "«TAB» — The engine's tests") + \
     p("What the containers cannot prove — real cards, systemd, firewalls, the four package managers on real "
-      "distributions — is the job of the distribution boxes and VMs of " + c("banchi/17-distro/") + " ("
-      + rif("Testing") + "). Not settled yet, from fasi/17 §6.6.16: the simulation and installation with the " + c(".run")
+      "distributions — is the job of the distribution boxes and VMs of " + c("benches/17-distro/") + " ("
+      + rif("Testing") + "). Not settled yet, from phases/17 §6.6.16: the simulation and installation with the " + c(".run")
       + " files on zypper and pacman have never run on a real machine; " + c("install") + " to the end on the 26 "
       "combinations, the upgrade with a browser connected, and the interrupted install/uninstall are still to be run "
       "on the hardware.")

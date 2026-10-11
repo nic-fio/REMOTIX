@@ -1,10 +1,10 @@
 # PKGBUILD — REMOTIX for Arch Linux (Manjaro, EndeavourOS: compatible, not
-# certified).  fasi/17-l-installatore.md §6.1-§6.4, step T3.
+# certified).  phases/17-the-installer.md §6.1-§6.4, step T3.
 #
 # ⭐ Built FROM THE REPOSITORY SOURCE, inside the Arch container
-#    (src/costruzione/Contenitore.arch):
-#       packaging/arch/costruisci.sh [commit]
-#    makes the tarball of the commit (src/, banchi/rcp/, packaging/arch/), then
+#    (src/build-targets/Containerfile.arch):
+#       packaging/arch/build.sh [commit]
+#    makes the tarball of the commit (src/, benches/rcp/, packaging/arch/), then
 #    makepkg and namcap.  Every file of the package comes from that tarball.
 #
 # ⭐ DEPENDENCIES AND THE ROLLING RELEASE (§4.6, §6.2) — the choice: the package
@@ -22,12 +22,12 @@
 #       rolling release that means a machine that no longer updates.
 #    ⇒ Our burden: rebuild at every soname change (OpenSSL, glib,
 #      libei, pipewire, rarely).
-#    ⛔ Phase 19 (1 Oct 2026, `DECISIONI.md` §10.27): openh264 and svt-av1, the
+#    ⛔ Phase 19 (1 Oct 2026, `DECISIONS.md` §10.27): openh264 and svt-av1, the
 #      software fallback, are OUT — svt-av1 was the one without «provides»
 #      that had to be rebuilt at every new version.
 #
 # ⭐ ngtcp2 and nghttp3 INSIDE, static, pinned version (§6.3) — D2 closed
-#    («yes», DECISIONI.md §10.6), security updates are our burden.
+#    («yes», DECISIONS.md §10.6), security updates are our burden.
 #    ⓘ By the rule of §10.6 («if the distribution has it right, use
 #    theirs») on Arch the system one COULD be used: `libngtcp2` is already
 #    1.25 with the crypto_ossl bridge, and `libnghttp3` is there — it would be
@@ -36,7 +36,7 @@
 #    families) until decided otherwise.
 #
 # ⛔ NOT in the package (§4.4, §6.4, R14): test users, bench sudoers,
-#    gpu-udev.sh, riavvia-*.sh, ld.so.conf.d, provisiona.sh.
+#    gpu-udev.sh, restart-*.sh, ld.so.conf.d, provision.sh.
 
 # Maintainer: nicfio <nicfio@gmail.com>
 #
@@ -58,15 +58,15 @@ depends=(
 	systemd                                   # logind, user manager, tmpfiles
 	pam libpam.so
 	openssl libssl.so libcrypto.so            # >= 3.5: TLS 1.3 with native QUIC
-	# ⭐ Phase 18 (`fasi/18-senza-ffmpeg.md`): no ffmpeg.  All from «extra»,
+	# ⭐ Phase 18 (`phases/18-without-ffmpeg.md`): no ffmpeg.  All from «extra»,
 	#    `[M]` 30 Sep: opus 1.6.1, libva 2.24.1 (also brings libva-drm.so).
 	#    ⛔ Phase 19: no openh264 and svt-av1 — encoding happens only on the GPU.
 	opus libopus.so                           # the audio
-	# ⛔ no libyuv: the colour conversion is ours (`src/colori709.c`, fasi/18 §1)
+	# ⛔ no libyuv: the colour conversion is ours (`src/colors709.c`, phases/18 §1)
 	glib2 libglib-2.0.so libgobject-2.0.so libgio-2.0.so
 	libpipewire libpipewire-0.3.so
 	libva libva.so libva-drm.so
-	# ⭐ Phase 19 (`fasi/19-nvidia.md`): Vulkan Video, tried BEFORE VA-API.
+	# ⭐ Phase 19 (`phases/19-nvidia.md`): Vulkan Video, tried BEFORE VA-API.
 	#    The loader is linked; the driver (ICD) belongs to the GPU: `vulkan-radeon`
 	#    for AMD (RADV), `nvidia-utils` for NVIDIA — `[M]` 1 Oct 2026 on Arch
 	#    vulkan-icd-loader 1.4.357, vulkan-radeon 26.2.3.  ⚠ `vulkan-driver` is
@@ -123,7 +123,7 @@ source=(
 	"https://github.com/ngtcp2/ngtcp2/releases/download/v$_ngtcp2/ngtcp2-$_ngtcp2.tar.xz"
 	"https://github.com/ngtcp2/nghttp3/releases/download/v$_nghttp3/nghttp3-$_nghttp3.tar.xz"
 )
-# ⚠ The repository tarball changes at every commit: costruisci.sh writes the
+# ⚠ The repository tarball changes at every commit: build.sh writes the
 #   commit and its sha256 next to the package (sorgente.txt).
 sha256sums=('SKIP'
             '2a34d2484ba17847a5d11965704e9dd0fac4c6d8efc75ffe1ec7de66d8c6b6fb'
@@ -137,7 +137,7 @@ build() {
 	export CFLAGS="$CFLAGS -ffile-prefix-map=$srcdir=/usr/src/remotix"
 
 	# ── nghttp3 and ngtcp2: static ONLY, in a folder of our own
-	#    (the same recipe as src/costruzione/quic-statiche.sh)
+	#    (the same recipe as src/build-targets/quic-static.sh)
 	local common=(-GNinja -DCMAKE_BUILD_TYPE=Release
 		-DCMAKE_INSTALL_PREFIX="$srcdir/$_quic" -DCMAKE_INSTALL_LIBDIR=lib
 		-DCMAKE_POSITION_INDEPENDENT_CODE=ON -DENABLE_LIB_ONLY=ON
@@ -182,7 +182,7 @@ check() {
 package() {
 	local a="$srcdir/remotix-$pkgver/packaging/arch" s="$srcdir/remotix-$pkgver/src"
 	install -Dm755 "$s/remotix"          "$pkgdir/usr/lib/remotix/remotix"
-	install -Dm644 "$s/pagina.html"      "$pkgdir/usr/share/remotix/page.html"
+	install -Dm644 "$s/page.html"      "$pkgdir/usr/share/remotix/page.html"
 	install -Dm644 "$srcdir/remotix-$pkgver/LICENSE.md" "$pkgdir/usr/share/licenses/remotix/LICENSE.md"
 	install -Dm644 "$srcdir/remotix-$pkgver/THIRD-PARTY-LICENSES" \
 		"$pkgdir/usr/share/licenses/remotix/THIRD-PARTY-LICENSES"
@@ -208,17 +208,17 @@ package() {
 	#    RX-KDE-001..003) — no writing as root into /usr.
 	install -Dm644 "$a/org.kde.remotix.desktop" \
 		"$pkgdir/usr/share/applications/org.kde.remotix.desktop"
-	# ⛔ DECISIONI.md §10.12 — the three belts are there but OFF: in a
+	# ⛔ DECISIONS.md §10.12 — the three belts are there but OFF: in a
 	#    folder nobody reads.  The engine mounts them with consent (D4) in the
 	#    active paths (polkit rules.d, logind.conf.d, sleep.conf.d) and
 	#    unmounts them from its log.
 	#    `[M]` polkit 127-3: /usr/share/polkit-1/rules.d is 0755 root:root,
 	#    /etc/polkit-1/rules.d 0750 root:polkitd — worth knowing for the engine.
-	install -Dm644 "$s/remotix-niente-spegnimento.rules" \
+	install -Dm644 "$s/remotix-no-poweroff.rules" \
 		"$pkgdir/usr/share/remotix/belts/50-remotix-no-poweroff.rules"
-	install -Dm644 "$s/remotix-tasti.conf" \
+	install -Dm644 "$s/remotix-power-keys.conf" \
 		"$pkgdir/usr/share/remotix/belts/remotix-tasti.conf"
-	install -Dm644 "$a/remotix-niente-sospensione.conf" \
+	install -Dm644 "$a/remotix-no-suspend.conf" \
 		"$pkgdir/usr/share/remotix/belts/remotix-niente-sospensione.conf"
 	# the firewall: the service DEFINED (a description, not a rule: no
 	# port opens until the engine adds it to a zone, D6)

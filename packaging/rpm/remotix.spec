@@ -3,19 +3,19 @@
 #   Fedora 44 · Alma 10 (Rocky/RHEL 10 compatibili) · openSUSE Tumbleweed · Leap 16
 #
 # ⭐ ONE spec with %%if branches, as Cockpit does (`tools/cockpit.spec`):
-#    0%%{?fedora} · 0%%{?rhel} · 0%%{?suse_version}.  `fasi/17-l-installatore.md`
+#    0%%{?fedora} · 0%%{?rhel} · 0%%{?suse_version}.  `phases/17-the-installer.md`
 #    §6.1-§6.4.  It is built INSIDE the container of each target
-#    (`src/costruzione/Contenitore.<target>`) with `packaging/rpm/costruisci-rpm.sh`.
+#    (`src/build-targets/Containerfile.<target>`) with `packaging/rpm/build-rpm.sh`.
 #
 # ⭐ The libraries are computed by rpmbuild reading the binary (the automatic «Requires»
 #    by soname: libva, libopus, libssl, libpam, libpipewire,
 #    libei, …): this is the
-#    cure of `LEZIONI.md` §2.5-bis.  Below, only what rpm CANNOT see is written
+#    cure of `LESSONS.md` §2.5-bis.  Below, only what rpm CANNOT see is written
 #    BY HAND, because it is loaded or executed at run time: the
 #    compositor for XFCE/LXQt, wlr-randr, Xwayland, the Plasma wallpaper, the
 #    VA-API drivers.  (OpenSSL >= 3.5 it sees on its own: `libssl.so.3(OPENSSL_3.5.0)`.)
 #
-# ⭐ `DECISIONI.md` §10.12 — the package ships only INERT pieces (program,
+# ⭐ `DECISIONS.md` §10.12 — the package ships only INERT pieces (program,
 #    page, disabled unit, PAM, /etc/remotix, the belts OFF in
 #    /usr/share/remotix/belts/, the firewalld definition).  It neither enables nor starts the service, and touches no groups, belts or
 #    firewall: the engine mounts them, with consent and in its log (R40).
@@ -25,8 +25,8 @@
 #    information, whether the installation is certified.
 #
 # ⛔ Never in the package (§6.4, R14): test users, the benches' `sudoers.d`,
-#    `gpu-udev.sh`, `riavvia-*.sh`, `ld.so.conf.d`, `provisiona.sh`.
-# ⛔ The package NEVER pulls in a desktop (`DECISIONI.md` §10.7: without a
+#    `gpu-udev.sh`, `restart-*.sh`, `ld.so.conf.d`, `provision.sh`.
+# ⛔ The package NEVER pulls in a desktop (`DECISIONS.md` §10.7: without a
 #    desktop the engine installs it): dependencies tied to a desktop are
 #    CONDITIONAL, `(X if <desktop session>)`.
 # ⛔ The package NEVER adds repositories (RPM Fusion, Packman, EPEL): §4.2
@@ -34,7 +34,7 @@
 
 %global ngtcp2_ver  1.25.0
 %global nghttp3_ver 1.18.0
-# ⭐ DECISIONI §10.43: our labwc, RHEL / Alma 10 only — the version of packaging/rpm/labwc/VERSIONI
+# ⭐ DECISIONI §10.43: our labwc, RHEL / Alma 10 only — the version of packaging/rpm/labwc/VERSIONS
 #   (%%build stops if they differ)
 %global labwc_ver   0.8.4
 
@@ -49,8 +49,8 @@
 %endif
 
 Name:           remotix
-# Version and release are given by the release command (packaging/rilascio.sh) through
-# costruisci-rpm.sh: RX_VERSION (--define "rx_version X.Y.Z") and RX_REVISION
+# Version and release are given by the release command (packaging/release.sh) through
+# build-rpm.sh: RX_VERSION (--define "rx_version X.Y.Z") and RX_REVISION
 # (--define "rx_release N"); defaults 0.17.0 and 1.
 Version:        %{?rx_version}%{!?rx_version:0.17.0}
 Release:        %{?rx_release}%{!?rx_release:1}%{?dist}
@@ -66,13 +66,13 @@ License:        LicenseRef-REMOTIX AND GPL-2.0-only AND LGPL-2.0-or-later
 License:        LicenseRef-REMOTIX
 %endif
 URL:            https://github.com/nic-fio/REMOTIX
-# An archive of src/, banchi/rcp/ (the twin copy that `make` compares) and
-# packaging/rpm/, made by `costruisci-rpm.sh`.
+# An archive of src/, benches/rcp/ (the twin copy that `make` compares) and
+# packaging/rpm/, made by `build-rpm.sh`.
 Source0:        %{name}-%{version}.tar.gz
 %if 0%{?rhel}
 # ⭐ DECISIONI §10.43: EPEL 10 has wlroots 0.18 but NO labwc ⇒ the Alma package builds labwc
 #   %%{labwc_ver} (the last release for wlroots 0.18), unmodified, from the upstream tarball
-#   pinned and verified by packaging/rpm/labwc/ (scarica.sh); the source rpm carries it.
+#   pinned and verified by packaging/rpm/labwc/ (fetch.sh); the source rpm carries it.
 Source1:        https://github.com/labwc/labwc/archive/refs/tags/%{labwc_ver}.tar.gz#/labwc-%{labwc_ver}.tar.gz
 %endif
 
@@ -89,11 +89,11 @@ BuildRequires:  pkgconfig(libpipewire-0.3) >= 0.3.48
 BuildRequires:  pkgconfig(libdrm)
 BuildRequires:  pkgconfig(libva)
 BuildRequires:  pkgconfig(libva-drm)
-# ⭐ Phase 18 (`fasi/18-senza-ffmpeg.md`): no ffmpeg; libopus (the audio).
-# ⛔ Phase 19 (1 Oct 2026, `DECISIONI.md` §10.27): OpenH264 and SVT-AV1, the software
+# ⭐ Phase 18 (`phases/18-without-ffmpeg.md`): no ffmpeg; libopus (the audio).
+# ⛔ Phase 19 (1 Oct 2026, `DECISIONS.md` §10.27): OpenH264 and SVT-AV1, the software
 #   fallback, are OUT — and with them the Cisco OpenH264 repository.
 BuildRequires:  pkgconfig(opus)
-# ⛔ no libyuv: the colour conversion is ours (`src/colori709.c`, fasi/18 §1);
+# ⛔ no libyuv: the colour conversion is ours (`src/colors709.c`, phases/18 §1);
 #   removed on 30 Sep (T10).
 BuildRequires:  pkgconfig(libei-1.0) >= 1.1.0
 BuildRequires:  pkgconfig(xkbcommon)
@@ -123,15 +123,15 @@ BuildRequires:  pkgconfig(libdrm)
 %endif
 # ⚠ ngtcp2 >= 1.25.0 and nghttp3: they are NOT a BuildRequires, because almost no
 #   distribution has them (§6.3).  The container builds them, STATIC ONLY, in
-#   /usr/local/lib (`src/costruzione/quic-statiche.sh`); %%build checks that they are
+#   /usr/local/lib (`src/build-targets/quic-static.sh`); %%build checks that they are
 #   there and that the version is the one declared below.
-# ⭐ D2 CLOSED (`DECISIONI.md` §10.6): ngtcp2 and nghttp3 INSIDE the binary, with the
+# ⭐ D2 CLOSED (`DECISIONS.md` §10.6): ngtcp2 and nghttp3 INSIDE the binary, with the
 #   security updates on us — whatever is missing or too
 #   old REMOTIX brings, except patented codecs and desktops.
 Provides:       bundled(ngtcp2) = %{ngtcp2_ver}
 Provides:       bundled(nghttp3) = %{nghttp3_ver}
 
-# ⭐ SELinux (T6, `DECISIONI.md` §10.18): the REMOTIX PAM is sshd's, with
+# ⭐ SELinux (T6, `DECISIONS.md` §10.18): the REMOTIX PAM is sshd's, with
 #    `pam_selinux`; the transition to the user's context is allowed by the REMOTIX
 #    module, in the remotix-selinux subpackage (like cockpit-ws-selinux).  The package
 #    manager pulls it in ONLY where the «targeted» policy exists: Fedora,
@@ -142,7 +142,7 @@ BuildRequires:  bzip2
 Requires:       (%{name}-selinux = %{version}-%{release} if selinux-policy-%{selinuxtype})
 
 # The PipeWire DAEMON + wireplumber: GNOME/KDE video capture goes through PipeWire
-# (mutter/kwin screencast) and so does the audio of EVERY desktop (suono.c); rpm sees the LIBRARY
+# (mutter/kwin screencast) and so does the audio of EVERY desktop (sound.c); rpm sees the LIBRARY
 # (libpipewire) but not the daemon.  The desktop groups bring it, but minimal installations
 # do not (T10, 30 Sep: openSUSE GNOME from the Minimal-VM image WITHOUT pipewire ⇒ mutter does not
 # reach the screencast, «Error connecting to the screencast service», and the desktop never arrives).
@@ -262,7 +262,7 @@ opens, as for sshd.
 #    a binary with an ngtcp2 different from the one in `Provides: bundled(...)`
 #    would be an SBOM that lies (R24).
 for l in libngtcp2 libngtcp2_crypto_ossl libnghttp3; do
-    pkg-config --exists $l || { echo "⛔ $l: missing (it is built in the containers of src/costruzione/)"; exit 1; }
+    pkg-config --exists $l || { echo "⛔ $l: missing (it is built in the containers of src/build-targets/)"; exit 1; }
 done
 test "$(pkg-config --modversion libngtcp2)"  = %{ngtcp2_ver}  || { echo "⛔ ngtcp2 $(pkg-config --modversion libngtcp2), declared %{ngtcp2_ver}"; exit 1; }
 test "$(pkg-config --modversion libnghttp3)" = %{nghttp3_ver} || { echo "⛔ nghttp3 $(pkg-config --modversion libnghttp3), declared %{nghttp3_ver}"; exit 1; }
@@ -288,9 +288,9 @@ cd ..
 %if 0%{?rhel}
 # ⭐ DECISIONI §10.43: OUR labwc, unmodified (no patches), from Source1; the options cut what a
 #    screenless host of KWin does not need.  Distribution flags, PIE.
-test "$(awk '$1 == "labwc" { print $2 }' packaging/rpm/labwc/VERSIONI)" = %{labwc_ver} || \
-    { echo "⛔ packaging/rpm/labwc/VERSIONI: labwc is not %{labwc_ver}"; exit 1; }
-echo "$(awk '$1 == "labwc" { print $4 }' packaging/rpm/labwc/VERSIONI)  %{SOURCE1}" | sha256sum -c -
+test "$(awk '$1 == "labwc" { print $2 }' packaging/rpm/labwc/VERSIONS)" = %{labwc_ver} || \
+    { echo "⛔ packaging/rpm/labwc/VERSIONS: labwc is not %{labwc_ver}"; exit 1; }
+echo "$(awk '$1 == "labwc" { print $4 }' packaging/rpm/labwc/VERSIONS)  %{SOURCE1}" | sha256sum -c -
 rm -rf labwc-build && mkdir labwc-build
 tar -C labwc-build -xzf %{SOURCE1}
 rm -f labwc-build/labwc-%{labwc_ver}/subprojects/*.wrap
@@ -303,7 +303,7 @@ labwc-build/b/labwc --version
 %endif
 
 # The SELinux module, with the policy interfaces of THIS distribution.
-# ⚠ `--define "rx_selinux_permissive 1"` (costruisci-rpm.sh: RX_SELINUX_PERMISSIVE=1)
+# ⚠ `--define "rx_selinux_permissive 1"` (build-rpm.sh: RX_SELINUX_PERMISSIVE=1)
 #   builds the module with the domain in «permissive»: to MEASURE the denials of a
 #   whole session in a single run.  ⛔ Never in a published package.
 cd packaging/rpm/selinux
@@ -318,7 +318,7 @@ install -D -m 0755 src/remotix %{buildroot}%{_libexecdir}/remotix/remotix
 # ⛔ our labwc, private: not on PATH, no clash with a future EPEL labwc (§10.43)
 install -D -m 0755 labwc-build/b/labwc %{buildroot}%{_prefix}/lib/remotix/labwc
 %endif
-install -D -m 0644 src/pagina.html %{buildroot}%{_datadir}/remotix/page.html
+install -D -m 0644 src/page.html %{buildroot}%{_datadir}/remotix/page.html
 # The DEFAULTS (port, options): owned by the package, an upgrade rewrites them.
 # The administrator's choices in /etc/remotix/remotix.conf.d/*.conf (they win).
 install -D -m 0644 packaging/rpm/remotix.conf %{buildroot}%{_datadir}/remotix/remotix.conf
@@ -344,16 +344,16 @@ chmod 0644 %{buildroot}%{_sysconfdir}/remotix/denied-users
 # The content is byte-for-byte identical to the .deb one (Arch's differs only in Exec=).
 install -D -m 0644 packaging/rpm/org.kde.remotix.desktop %{buildroot}%{_datadir}/applications/org.kde.remotix.desktop
 
-# ⭐ `DECISIONI.md` §10.12 — the installer is the only way: the three belts of
+# ⭐ `DECISIONS.md` §10.12 — the installer is the only way: the three belts of
 #   §4.7 (no power-off, no suspend, the keys do not power off) arrive
 #   OFF, outside the paths polkit and systemd read.  The engine mounts them,
 #   with consent (D4 open: always, or the administrator's choice?) and in its
 #   log; the paths they will go to are the VENDOR ones
 #   (/usr/share/polkit-1/rules.d/50-…, /usr/lib/systemd/{logind,sleep}.conf.d/),
 #   never /etc: an administrator's file with the same name in /etc wins (R34).
-install -D -m 0644 src/remotix-niente-spegnimento.rules %{buildroot}%{_datadir}/remotix/belts/50-remotix-no-poweroff.rules
-install -D -m 0644 src/remotix-tasti.conf %{buildroot}%{_datadir}/remotix/belts/remotix-tasti.conf
-install -D -m 0644 packaging/rpm/remotix-niente-sospensione.conf %{buildroot}%{_datadir}/remotix/belts/remotix-niente-sospensione.conf
+install -D -m 0644 src/remotix-no-poweroff.rules %{buildroot}%{_datadir}/remotix/belts/50-remotix-no-poweroff.rules
+install -D -m 0644 src/remotix-power-keys.conf %{buildroot}%{_datadir}/remotix/belts/remotix-tasti.conf
+install -D -m 0644 packaging/rpm/remotix-no-suspend.conf %{buildroot}%{_datadir}/remotix/belts/remotix-niente-sospensione.conf
 
 # firewalld: the «remotix» service DEFINED, not opened (D6, §10.12): the file
 # makes a name known to firewalld and changes no zone.  Opening it
@@ -362,11 +362,11 @@ install -D -m 0644 packaging/rpm/remotix-firewalld.xml %{buildroot}%{_prefix}/li
 
 # remotix-selinux: the module (the domain) and the port (portcon, in CIL)
 install -D -m 0644 packaging/rpm/selinux/remotix.pp.bz2 %{buildroot}%{_datadir}/selinux/packages/%{selinuxtype}/remotix.pp.bz2
-install -D -m 0644 packaging/rpm/selinux/remotix_porta.cil %{buildroot}%{_datadir}/selinux/packages/%{selinuxtype}/remotix_porta.cil
+install -D -m 0644 packaging/rpm/selinux/remotix_portcon.cil %{buildroot}%{_datadir}/selinux/packages/%{selinuxtype}/remotix_porta.cil
 
 # The files the service generates by itself: declared %%ghost, so rpm knows them
 # and uninstallation removes them (DIRECT origin, §6.6.4).  `[M]` T3 on
-# Tumbleweed: without the two `.ours` (the marks of `certificati.c:317,320`)
+# Tumbleweed: without the two `.ours` (the marks of `certificates.c:317,320`)
 # /var/lib/remotix remained after `zypper remove`.
 install -d -m 0700 %{buildroot}%{_sharedstatedir}/remotix/certificates
 for f in page.pem page.key page.ours session.pem session.key session.ours; do
@@ -374,7 +374,7 @@ for f in page.pem page.key page.ours session.pem session.key session.ours; do
 done
 touch %{buildroot}%{_sharedstatedir}/remotix/ban %{buildroot}%{_sharedstatedir}/remotix/ban.new
 
-# ⭐ `DECISIONI.md` §10.12 — the scriptlets switch NOTHING on (R40):
+# ⭐ `DECISIONS.md` §10.12 — the scriptlets switch NOTHING on (R40):
 #   · no %%systemd_post / %%service_add_post: they would apply the machine's
 #     «preset», and with an «enable *» preset the service would enable itself.
 #     Switching on (`systemctl enable --now`) belongs to the engine;

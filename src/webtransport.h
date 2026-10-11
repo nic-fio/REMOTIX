@@ -4,7 +4,7 @@
  * ---------------------------------------------------------------------------
  * ⛔ WHY THIS FILE EXISTS
  *
- * `DECISIONI.md` §6.4: of the four candidates `ngtcp2`+`nghttp3` remains, and
+ * `DECISIONS.md` §6.4: of the four candidates `ngtcp2`+`nghttp3` remains, and
  * ⛔ **neither of the two brings server-side WebTransport**.  They give the
  * foundations — RFC 9220's extended CONNECT, datagrams, the Capsule Protocol —
  * and not the layer above.  This file IS the layer above, and it is the glue
@@ -34,7 +34,7 @@
  * ⛔ THE DECLARED PRICE, AND IT MUST BE RE-TESTED AT EVERY NGHTTP3 UPDATE
  *
  * Point 1 depends on the SHAPE OF THE BYTES nghttp3 writes, not on an API
- * promise of its own.  `DECISIONI.md` §6.4 declares it: «must be re-tested at
+ * promise of its own.  `DECISIONS.md` §6.4 declares it: «must be re-tested at
  * every nghttp3 update».  The guard is in `rewrite_settings()`: if the
  * bytes are not the expected ones nothing is rewritten, the log says so, and
  * the server stays without WebTransport — a loud fault instead of a control
@@ -43,7 +43,7 @@
  * ---------------------------------------------------------------------------
  * ⭐ WHAT CHANGED GOING FROM THE GRAFT TO THE PRODUCT
  *
- * The graft (`banchi/01-b2-ngtcp2-wt-innesta.py`) moved RCP's time forward
+ * The graft (`benches/01-b2-graft-ngtcp2-wt.py`) moved RCP's time forward
  * with **QUIC keep-alive**, that is by putting bytes on the wire every 100 ms:
  * it was the only clock a host example offered it, and its comments declare
  * it — «a real server will arm its own timer and will put nothing on the
@@ -73,14 +73,14 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "aiutante.h"
+#include "helper.h"
 
 #include <nghttp3/nghttp3.h>
 #include <ngtcp2/ngtcp2.h>
 
 typedef struct wt wt;
 
-/* ⭐ `help` is the PAM helper (`DECISIONI.md` §1.10): a single one for the
+/* ⭐ `help` is the PAM helper (`DECISIONS.md` §1.10): a single one for the
  * whole server, and this layer receives it without owning it.  ⚠ NULL is
  * allowed and means «synchronous check», that is the declared fallback — the
  * server works all the same, with the wire stopping. */
@@ -110,7 +110,7 @@ int wt_ack_stream_data(wt *w, int64_t stream_id, uint64_t len);
 
 /* ⭐⭐ The outcome of a DATAGRAM, which until 23 Aug 2026 was mute.
  *
- *    `trasporto.c` calls them from ngtcp2's `lost_datagram` and
+ *    `transport.c` calls them from ngtcp2's `lost_datagram` and
  *    `ack_datagram` callbacks.  ⛔ And they are needed as a PAIR, not one
  *    alone: `ngtcp2.h:3442` warns that a datagram loss can be **spurious** —
  *    declared and then acknowledged.  ⇒ The same `id` seen first as lost and
@@ -146,7 +146,7 @@ ngtcp2_tstamp wt_heartbeat_ns(const wt *w);
  * when `wt_heartbeat_ns()` has passed. */
 void wt_beat(wt *w, ngtcp2_tstamp ts);
 
-/* ⛔⭐ §5.3 — «the client is still there».  `trasporto.c` calls it after every
+/* ⛔⭐ §5.3 — «the client is still there».  `transport.c` calls it after every
  *     packet ngtcp2 has ACCEPTED, and it is the only thing that moves when
  *     the user watches and touches nothing. */
 void wt_sign_of_life(wt *w, ngtcp2_tstamp ts);
@@ -176,7 +176,7 @@ const char *wt_pending_reason(const wt *w);
  *    and the `bool` stopped the loop at the first frame.
  *
  * ⇒ Now frames ARRIVE, one after the other, from the child of the user that
- *   captures and encodes them (`figlio.h`), and `main.c` forwards them here.
+ *   captures and encodes them (`child.h`), and `main.c` forwards them here.
  *
  * ⛔ `user` is NOT a label: it is invariant I3 on the wire.  The frame goes
  *    **only** to the sessions PAM admitted for that user, and the comparison
@@ -257,13 +257,13 @@ void wt_video_hook(wt_video_request f, void *ctx);
  *   the frame (§6.2, field `input`) — and it is the only place where that
  *   number is the truth instead of a promise.
  *
- * `action` are the `FIGLI_INPUT_*` of `figlio.h`. */
+ * `action` are the `FIGLI_INPUT_*` of `child.h`. */
 typedef bool (*wt_input_request)(void *ctx, const char *user, uint32_t id,
                                    uint8_t action, uint16_t code, int pressed,
                                    int32_t a, int32_t b);
 void wt_input_hook(wt_input_request f, void *ctx);
 
-/* ⭐⭐ THE CANVAS BRIDGE — `RCP.md` §7.1, `DECISIONI.md` §5.0-sexies.
+/* ⭐⭐ THE CANVAS BRIDGE — `RCP.md` §7.1, `DECISIONS.md` §5.0-sexies.
  *
  * ⛔ IT IS SEPARATE FROM THE INPUT ONE, and not for symmetry: an input is an
  *    already validated gesture that is injected and forgotten, and its
@@ -336,7 +336,7 @@ size_t wt_watch_locals(void);
 
 /* ⛔⭐ HOW MANY SERVED USERS THERE ARE NOW — 25 Aug 2026, finding R7 of §5.5.
  *
- *     `sentinella.h` promised, above `sentinel_counts()`, that `main.c`
+ *     `sentinel.h` promised, above `sentinel_counts()`, that `main.c`
  *     would write its two numbers *«next to the number of served
  *     tenants»*.  ⛔ That number **was not** in the line, and it is precisely
  *     the DENOMINATOR: without `N`, «one call per SWEEP and not per tenant»
@@ -409,7 +409,7 @@ bool wt_max_size_of(const char *user, uint32_t *l, uint32_t *a);
 /* ⭐ §7.1 — «the stage is not there YET»: postpones the three-second backstop
  * on that user's sessions that are waiting for exactly that size.  ⛔ It sends
  * nothing on the wire: it moves a deadline, and removes a deduction from the
- * parent (`LEZIONI.md` §7.5). */
+ * parent (`LESSONS.md` §7.5). */
 void wt_canvas_resend(const char *user, uint32_t intended_w, uint32_t intended_h);
 
 /* ⭐⭐ AND THE ANSWER COMES BACK THROUGH HERE — §7.1.  The child sends it
@@ -505,7 +505,7 @@ bool wt_clipboard_request(const char *user, uint32_t serial);
  *    «dropped» (dropped) = the queue was full or the block was too big, that
  *    is **we** did not make it; «refused» (refused) = ngtcp2 did not put it
  *    in the packet.  ⚠ A single counter for two causes is the error shape
- *    `LEZIONI.md` §2.2 describes: a number that never says where to look.
+ *    `LESSONS.md` §2.2 describes: a number that never says where to look.
  */
 void wt_audio_counts(const wt *w, uint64_t *shipped, uint64_t *dropped,
                     uint64_t *refused, size_t *queued);
@@ -589,7 +589,7 @@ uint64_t wt_clear_threshold_read(void);
  *
  * ⛔ AND THERE IS NO RISE TO REMEMBER — it is the merit, not a lack: the
  *    quantity is reread at every frame.  A link that keeps a state is a link
- *    that one day stays down, and it has already happened (`codificatore.c`,
+ *    that one day stays down, and it has already happened (`encoder.c`,
  *    `current_quality`, cured on 23 Aug 2026).
  *
  * ⛔⛔ AND IT DEPENDS ON THE THRESHOLD ABOVE — see `wt_adaptive_rate()` in
@@ -703,7 +703,7 @@ void wt_adaptive_rate(bool is_on);
 void wt_dead_line(bool enabled, uint64_t stall_ms, uint64_t silence_s);
 
 /*
- * ⛔ «This connection must be detached»: `trasporto.c` asks it at every pass
+ * ⛔ «This connection must be detached»: `transport.c` asks it at every pass
  *    over the expired timers.  ⚠ The decision is taken by `webtransport.c`,
  *    which has the counters; making it happen is the transport, which is the
  *    only one owning the QUIC connection — the WebTransport session has

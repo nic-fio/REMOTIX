@@ -8,7 +8,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "registro.h"
+#include "log.h"
 
 #define AREA "capture"
 
@@ -36,7 +36,7 @@
  *    xrdp's);
  *  - ⛔ and in phase 2 the cursor in the image would be a measurable defect:
  *    the phase 4 bench looks at a frame and demands that the desktop's pointer
- *    NOT be there (`SPECIFICHE.md` §7.1).  It is not read here yet.
+ *    NOT be there (`SPECS.md` §7.1).  It is not read here yet.
  */
 #define CURSOR_METADATA 2u
 
@@ -75,7 +75,7 @@ struct MutterSession
  * ⛔ NEVER `g_bus_get_sync` ON THE SESSION BUS: GIO keeps
  *    `exit-on-close` on there, and at logout the dropping connection takes the PROCESS
  *    away instead of giving us an error.  A server that disappears when the user leaves
- *    the graphical session is `LEZIONI.md` §5, and the symptom — "the server dies
+ *    the graphical session is `LESSONS.md` §5, and the symptom — "the server dies
  *    and nobody knows who killed it" — is form E6 (the sender inferred instead
  *    of asked).
  */
@@ -202,7 +202,7 @@ static int list_monitors(GDBusConnection *bus, char **names, char **products, gu
  *
  * ⚠ Here it is READ and SAID; nothing is switched off.  The caller decides
  *   what to do with it: with a fixed-size canvas the damage was theoretical, with the canvas at
- *   the client's size (`DECISIONI.md` §5.0-sexies) it is concrete.
+ *   the client's size (`DECISIONS.md` §5.0-sexies) it is concrete.
  *
  * Returns the worst scale found, or -1 if it could not be read. */
 static double logical_monitor_scale(GDBusConnection *bus)
@@ -358,7 +358,7 @@ gboolean mutter_find_monitor(MutterSession *session)
 	 *   monitor that was already there can be legitimate (a session with a
 	 *   real screen).  ⛔ But it is SAID, loudly, with the cure next to it — because the
 	 *   symptom it produces has no other way of being diagnosed
-	 *   (`CODER.md` §4.2, and `LEZIONI.md` §1.16: the instruments were all green).
+	 *   (`CODER.md` §4.2, and `LESSONS.md` §1.16: the instruments were all green).
 	 */
 	if (how_many_before > 0)
 	{
@@ -394,7 +394,7 @@ gboolean mutter_find_monitor(MutterSession *session)
 			              "does NOT match the stream's pixels, and the pointer "
 			              "will go elsewhere with nothing saying so.  Cure: "
 			              "`gsettings set org.gnome.desktop.interface scaling-factor 0` "
-			              "(`DECISIONI.md` §5.0-sexies, guard 2)",
+			              "(`DECISIONS.md` §5.0-sexies, guard 2)",
 			              scale_factor);
 	}
 
@@ -551,13 +551,13 @@ MutterSession *mutter_open(GError **mistake)
 	session->monitor_before = how_many_before > 0 ? (guint) how_many_before : 0;
 	if (how_many_before == 0)
 	{
-		/* ⛔ AND ZERO MONITORS IS THE BLACK SESSION, not a detail: `STUDI.md` §gnome
+		/* ⛔ AND ZERO MONITORS IS THE BLACK SESSION, not a detail: `STUDIES.md` §gnome
 		 *    §3.1 — in headless `needs_outputs=false`, and without monitors the
 		 *    session is alive, complete and black.  It does not fail (our
 		 *    `RecordVirtual` mounts one of its own), but it is DECLARED: whoever reads zero
 		 *    frames later must have this line in front of them. */
 		registro_dice(AREA, "⚠ the graphical session has NO monitor: it is the "
-		                    "\"alive, complete and black\" session of STUDI.md §gnome §3.1");
+		                    "\"alive, complete and black\" session of STUDIES.md §gnome §3.1");
 	}
 
 	/* --- 1. the control, created and NOT started -------------------------- */
@@ -753,7 +753,7 @@ int mutter_eis_fd(const MutterSession *session)
  *       Added on 21 August 2026, and the phase document calls it "C".
  *       🔸 DERIVED: the decision is the coordinator's, not the user's.
  *
- * THE DAMAGE IT CURES, `[M]` 21 August 2026 (`banchi/06-b33-risveglio.sh`): when
+ * THE DAMAGE IT CURES, `[M]` 21 August 2026 (`benches/06-b33-wakeup.sh`): when
  * Mutter recreates the absolute devices while a button is pressed, that
  * button stays down **in the seat** and from then on **the desktop no longer takes
  * a click** — forever, and without an error anywhere.
@@ -818,7 +818,7 @@ int mutter_eis_reattach(MutterSession *session, GError **mistake)
 	/*
 	 * ⛔⛔ AND HERE THERE WAS A WRONG EXPLANATION, REFUTED BY MEASUREMENT — 21
 	 *      August 2026, injected fault `RG3` of
-	 *      `banchi/06-b33-risveglio-guasti.py`.
+	 *      `benches/06-b33-wakeup-faults.py`.
 	 *
 	 * It said: *"close first and ask after, and the order IS the cure: as long as
 	 * this descriptor is open the socket stays connected and Mutter sees

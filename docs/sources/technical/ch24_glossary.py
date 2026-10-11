@@ -6,12 +6,12 @@ def v(*titoli):
 
 
 # ── The project's own words ─────────────────────────────────────────────────
-# Since the English rename (DECISIONI.md §10.38, §10.45) the identifiers are English; many source files still
-# carry their Italian names until the file-rename step (aiutante.c, figlio.c, sessione.c…), so a term is given
+# Since the English rename (DECISIONS.md §10.38, §10.45) the identifiers are English; many source files still
+# carry their Italian names until the file-rename step (helper.c, child.c, session.c…), so a term is given
 # with the file that holds it.
 NOMI = [
     ("actor", "One simulated user of the stress benches: its own process, browser, labwc and clock, no conductor ("
-     + c("16-attore.py") + ")." + v("Stress and capacity benches")),
+     + c("16-actor.py") + ")." + v("Stress and capacity benches")),
     ("attach slot", "A user's place in RCP's registry: one per user, freed on detach or after 30 s of silence. The "
      "logind and Mutter <i>seat</i> stays <i>seat</i>." + v("Detach and reattach")),
     ("backstop", "A time limit that ends a wait whatever happens (" + c("CLIPBOARD_BACKSTOP") + ")."),
@@ -19,7 +19,7 @@ NOMI = [
      "settings and sleep settings. The packages ship them inert in " + c("/usr/share/remotix/belts/") + "."
      + v("The power belts, shipped inert")),
     ("bench, benches", "A test or a measurement, with its scene, its verdict and its results kept next to it, in "
-     + c("banchi/") + ". " + c("BENCH_ON") + " is the build switch of the bench functions, 0 in the product."
+     + c("benches/") + ". " + c("BENCH_ON") + " is the build switch of the bench functions, 0 in the product."
      + v("The bench folder")),
     ("boxes", "The podman containers with systemd and the real graphics card in which the safety net runs, one per "
      "desktop (" + c("rete11-gnome") + " … " + c("rete11-lxqt") + ")." + v("The boxes of the safety net")),
@@ -33,28 +33,28 @@ NOMI = [
      + " (16 MiB per frame), the handshake ceilings."
      + v("Admission: the session cap and the budget", "Handshake deadlines and session states")),
     ("capture", "Reading the pixels of the session's virtual output from the compositor: a PipeWire node on GNOME "
-     "and KDE, screencopy on labwc (" + c("cattura.c") + ", " + c("wlroots.c") + ")." + v("Capture at a glance")),
-    ("catalogue", c("catalogo.json") + ", the supported distributions, desktops, minimum versions and rules, "
+     "and KDE, screencopy on labwc (" + c("capture.c") + ", " + c("wlroots.c") + ")." + v("Capture at a glance")),
+    ("catalogue", c("catalog.json") + ", the supported distributions, desktops, minimum versions and rules, "
      "compiled into the engine." + v("The catalogue of platforms")),
     ("certify", "In a bench, " + c("--certify") + " runs the pure judges on synthetic inputs that must give red and "
      "inputs that must stay green; in the installer, the platform certification after installing ("
-     + c("certifica.go") + ")." + v("Rules every bench follows", "Verification and the certificate")),
+     + c("certify.go") + ")." + v("Rules every bench follows", "Verification and the certificate")),
     ("chatter", c("--verbose") + ": frame-by-frame detail lines from transport, capture and encoder, never sent "
      "to the journal." + v("Diagnostic instruments")),
     ("child", "One process per admitted user, running as that user: it opens the logind session, starts the desktop "
-     "and holds the stage. In " + c("ps") + " it is " + c("remotix-child --internal-child") + " (" + c("figlio.c")
+     "and holds the stage. In " + c("ps") + " it is " + c("remotix-child --internal-child") + " (" + c("child.c")
      + ")." + v("The per-user child process")),
     ("clear (the video queue)", "The video queue threshold (" + c("--clear-threshold-ms") + "): an old delta is "
      "abandoned only if the queue cannot drain in time." + v("The video queue threshold")),
-    ("climb", "One ramp of the stress campaign, adding users level by level (" + c("16-salita.py") + ")."
+    ("climb", "One ramp of the stress campaign, adding users level by level (" + c("16-climb.py") + ")."
      + v("Stress and capacity benches")),
-    ("clipboard", "Plain text only, in both directions, announced first and pulled on demand (" + c("appunti.c")
-     + " on GNOME, " + c("appunti_kde.c") + " on KDE and labwc)." + v("Clipboard at a glance")),
+    ("clipboard", "Plain text only, in both directions, announced first and pulled on demand (" + c("clipboard.c")
+     + " on GNOME, " + c("clipboard_kde.c") + " on KDE and labwc)." + v("Clipboard at a glance")),
     ("confession", "What the encoder declares it really produced, read back from the bytes: codec string, depth, a "
      "promotion from 8 to 10 bits, the route used (" + c("EncoderConfession") + ")." + v("Bytes, levels and the confession")),
     ("cursor, shape", "The pointer is drawn by the page; only its shape travels (" + c("CURSOR_SHAPE") + "). Where "
      "the compositor does not send it, an encoded theme of 1×1 coloured images and a dictionary recover it ("
-     + c("cursore.c") + ", " + c("forma.c") + ")." + v("The cursor channel", "The encoded cursor theme")),
+     + c("cursor.c") + ", " + c("shape.c") + ")." + v("The cursor channel", "The encoded cursor theme")),
     ("dead line", "The detector that closes a connection which has stopped carrying anything: 5 s of stalled video "
      "output, or 10 s without a client packet. On by default; " + c("--no-dead-line") + " turns it off."
      + v("The dead line")),
@@ -65,7 +65,7 @@ NOMI = [
     ("diary", "The page's " + c("/diary") + " endpoint: the page writes its own lines into the server log."
      + v("The page server")),
     ("encoder", "The front of video encoding: picks Vulkan Video or VA-API by capability, checks the bytes, owes "
-     "keyframes, enforces the 16 MiB ceiling (" + c("Encoder") + ", " + c("codificatore.c") + ")."
+     "keyframes, enforces the 16 MiB ceiling (" + c("Encoder") + ", " + c("encoder.c") + ")."
      + v("Encoding at a glance")),
     ("engine", c("remotix-install") + ", the only place with installation logic; the TUI and the command line are "
      "its faces." + v("The installer at a glance")),
@@ -78,20 +78,20 @@ NOMI = [
      + " target of the Makefile (the twin check); the folder fingerprint of test R1."
      + v("serverCertificateHashes and the fingerprint", "The machine fingerprint")),
     ("finding again, found again", "Live REMOTIX desktops that no child holds, found at startup after a restart and "
-     "counted until their user returns (" + c("FindingAgainDesktop") + ", " + c("ritrovo.c") + ")."
+     "counted until their user returns (" + c("RediscoveredDesktop") + ", " + c("rediscover.c") + ")."
      + v("Desktops found again after a restart")),
     ("graft", "Code added on purpose to a copy of the product or of a third-party example, a fault grafted by a "
      "bench included. Never <i>inject</i>, which is only for input."),
     ("helper", "The PAM helper process: a dispatcher started once at boot that forks one short-lived grandchild per "
      "password check, so that PAM, which can take seconds, never blocks the server's single loop ("
-     + c("struct helper") + ", " + c("aiutante.c") + ")." + v("The PAM helper process")),
-    ("hook", c("11-gancio.sh") + ", the git " + c("pre-push") + " hook that runs the safety net chosen by the "
+     + c("struct helper") + ", " + c("helper.c") + ")." + v("The PAM helper process")),
+    ("hook", c("11-hook.sh") + ", the git " + c("pre-push") + " hook that runs the safety net chosen by the "
      "paths that changed." + v("When the net runs: the hook")),
     ("increment", "A new capability or desktop added while every certified one is kept, through the gates CP0 "
      "onwards." + v("The increment method")),
     ("key", "That is keyframe. " + c("REQUEST_KEY") + " asks for one; the child keeps a debt (" + c("key_debt")
      + ") until it has produced it." + v("Keyframes on demand")),
-    ("keyboard", c("tastiera.c") + ", from a character to the key positions that produce it."
+    ("keyboard", c("keyboard.c") + ", from a character to the key positions that produce it."
      + v("From a letter to key positions")),
     ("layout", "The keyboard layout. Proposed by the page in " + c("ATTACH") + "; the session's real keymap is "
      "always the one in force." + v("Keyboard layout negotiation")),
@@ -100,15 +100,15 @@ NOMI = [
     ("link, loop, ring", "Three senses, three words. <i>Link</i>: one link of the chain a phase builds — capture, "
      "encoding, wire, decoding, input; each link has its own bench. <i>Loop</i>: a delay loop or a closed loop, "
      "input to glass included. <i>Ring</i> only for the audio ring buffer."),
-    ("log", "In the server, the log module (" + c("registro.c") + "), the only place that writes lines. In the "
-     "installer, the write-ahead log of an operation (" + c("registro.go") + ")."
+    ("log", "In the server, the log module (" + c("log.c") + "), the only place that writes lines. In the "
+     "installer, the write-ahead log of an operation (" + c("log.go") + ")."
      + v("The log module", "The write-ahead log and resume")),
     ("mark", "The bench marker " + c("BENCH_MARK") + ", a coloured square painted after a known delay and refused "
-     "in the product; and the image mark read by " + c("03-marca.py") + "." + v("The bench marker: BENCH_MARK")),
+     "in the product; and the image mark read by " + c("03-mark.py") + "." + v("The bench marker: BENCH_MARK")),
     ("meshes", "The checks of the safety net, C1 to C24." + v("The meshes C1 to C24")),
     ("nested KWin", "On KDE, KWin runs inside a labwc without a screen that the server starts in "
      + c("--kwin-nested") + " mode; at a reattach of another size REMOTIX resizes labwc's output and KWin follows. "
-     "Without labwc, KWin " + c("--virtual") + " as before, declared (" + c("kwin.c") + ", DECISIONI.md §10.40)."
+     "Without labwc, KWin " + c("--virtual") + " as before, declared (" + c("kwin.c") + ", DECISIONS.md §10.40)."
      + v("KDE Plasma sessions")),
     ("operation", "One installation, upgrade or uninstallation of the engine, with its folder, state, plan and "
      "write-ahead log." + v("Operation states")),
@@ -126,17 +126,17 @@ NOMI = [
     ("routes", "The hardware encoding paths, " + c("vulkan") + " and " + c("vaapi") + " (" + c("--encoding-route")
      + "); the installer requires at least one with a capable card." + v("Encoding routes and the card verdict")),
     ("seam", "A header that joins two pieces and is owned by the coordinator, not by either piece: " + c("input.h")
-     + ", " + c("appunti.h") + ", " + c("cursore.h") + ", " + c("tastiera.h") + ". The defects of phase 3 lived "
+     + ", " + c("clipboard.h") + ", " + c("cursor.h") + ", " + c("keyboard.h") + ". The defects of phase 3 lived "
      "between pieces each correct on its own."),
     ("sentinel", "The code that asks logind whether a user has a local graphical session, and checks that the remote "
-     "one has no seat (" + c("sentinella.c") + ")." + v("The logind sentinel")),
+     "one has no seat (" + c("sentinel.c") + ")." + v("The logind sentinel")),
     ("session", "Two meanings: the RCP session of one connection, and the user's graphical session, started headless "
-     "by the child (" + c("sessione.c") + ")." + v("Birth of a session")),
+     "by the child (" + c("session.c") + ")." + v("Birth of a session")),
     ("single package", "The " + c("remotix-X.Y.Z-R.run") + " file: a shell header and a tar.gz with the engine and "
      "the REMOTIX packages of every target." + v("The .run file format")),
     ("slab", "On labwc, a GBM buffer REMOTIX owns on the compositor's render node, into which the compositor copies "
      "each frame (" + c("WlrSlab") + ")." + v("Slabs: zero copy on labwc")),
-    ("sound", "The session's virtual sink and the capture of its monitor (" + c("suono.c") + ")."
+    ("sound", "The session's virtual sink and the capture of its monitor (" + c("sound.c") + ")."
      + v("The session sink and its capture")),
     ("stage", "What the child mounts on the user's desktop: virtual monitor, capture, input, clipboard, cursor. It "
      "belongs to the session and outlives every client (invariant I4); the cap counts stages ("
@@ -147,8 +147,8 @@ NOMI = [
      + " so that cleanup never touches a person's account." + v("Rules every bench follows")),
     ("terrain", "What a bench needs before it can judge (users, boxes, server, scene); exit code 2 means the terrain "
      "does not hold." + v("Rules every bench follows")),
-    ("twin", "The copy of " + c("rcp.c") + ", " + c("rcp.h") + " and " + c("autenticazione.c") + " in "
-     + c("banchi/rcp/") + "; " + c("make") + " refuses to build if the two differ (" + c("TWIN")
+    ("twin", "The copy of " + c("rcp.c") + ", " + c("rcp.h") + " and " + c("authentication.c") + " in "
+     + c("benches/rcp/") + "; " + c("make") + " refuses to build if the two differ (" + c("TWIN")
      + " names the folder)." + v("The twin-copy check")),
     ("UNBLOCK", "The request on the unblock socket (" + c("--command-socket") + ") that lifts an address ban."
      + v("The unlock command socket")),
@@ -173,12 +173,12 @@ RETIRED = [
      + " is gone: the option is " + c("--ban-file") + ". The server refuses an unknown option."),
     ("Italian public names", "Options, environment variables, data keys, RCP and wire names, log areas and page "
      "names were renamed to English by hand-curated tables, with <b>no aliases and no upgrade migration</b>: "
-     "REMOTIX had never been released (DECISIONI.md §10.38, §10.45). The committed append-only registers of the "
+     "REMOTIX had never been released (DECISIONS.md §10.38, §10.45). The committed append-only registers of the "
      "benches keep their file names, and their readers accept both spellings of the keys."),
     ("Retired benches", "Benches that can no longer run left the repository on 11 Oct 2026 (" + c("07-b64-*")
      + ", " + c("07-b65") + ", " + c("09-b70") + ", " + c("09-b76") + ", " + c("09-b77") + ", " + c("09-b79")
      + ", " + c("09-b81") + ", " + c("09-b84") + " and others); their measurements stay in the phase documents "
-     "(DECISIONI.md §10.44)."),
+     "(DECISIONS.md §10.44)."),
     ("AV1", "A video codec offered until phase 18; its RCP number 2 is reserved forever and never reused."
      + v("Codecs and their negotiation")),
 ]
@@ -216,7 +216,7 @@ A_L = [
      "Used on GNOME and KDE; labwc has none." + v("Injection through libei")),
     ("Evidence marks", c("[M]") + " measured, " + c("[R]") + " read in reference code, " + c("[S]") + " read in a "
      "specification, " + c("[?]") + " assumed." + v("Evidence marks")),
-    ("Exp-Golomb", "The variable-length integer coding of H.264/HEVC headers, written by " + c("scrittore_bit.c")
+    ("Exp-Golomb", "The variable-length integer coding of H.264/HEVC headers, written by " + c("bit_writer.c")
      + "." + v("Writing the bitstream headers")),
     ("Extended CONNECT", "The HTTP/3 request (RFC 9220) that opens a WebTransport session, here on " + c("/rcp/1")
      + "." + v("The WebTransport layer")),
@@ -239,7 +239,7 @@ A_L = [
      + c("zkde_screencast_unstable_v1") + "." + v("KDE: the KWin screencast protocol")),
     ("labwc", "The wlroots compositor under which REMOTIX runs XFCE and LXQt, and the screenless host of the "
      "nested KWin on KDE. On Alma/RHEL 10, which has none, the package ships its own labwc 0.8.4 at "
-     + c("/usr/lib/remotix/labwc") + " (DECISIONI.md §10.43)." + v("XFCE sessions on labwc")),
+     + c("/usr/lib/remotix/labwc") + " (DECISIONS.md §10.43)." + v("XFCE sessions on labwc")),
     ("logind", "systemd's login manager: sessions, seats, local-session checks, and the termination of REMOTIX "
      "sessions at uninstall." + v("The logind sentinel")),
 ]
@@ -307,7 +307,7 @@ M_Z = [
      + c("webtransport.c") + "." + v("The WebTransport layer")),
     ("wlroots", "The compositor library labwc is built on; it has no PipeWire node and no libei."
      + v("XFCE and LXQt: wlroots screencopy", "Virtual keyboard and pointer on labwc")),
-    ("XKB, xkbcommon", "Keyboard layouts and keymaps; " + c("tastiera.c") + " reads the session's keymap with "
+    ("XKB, xkbcommon", "Keyboard layouts and keymaps; " + c("keyboard.c") + " reads the session's keymap with "
      "xkbcommon." + v("From a letter to key positions")),
     ("xrdp", "The X11 remote desktop server REMOTIX is compared against in the phase 20 campaign."
      + v("The boxes of the safety net", "Stress and capacity benches")),
@@ -316,7 +316,7 @@ M_Z = [
 CHAPTER = ("Glossary", [
     ("The project's own words", p("Words REMOTIX uses as terms, in the code and in this manual, with what they "
                                    "mean and the section that explains them. Since the English rename "
-                                   "(DECISIONI.md §10.38, §10.45) the identifiers are English; many source files "
+                                   "(DECISIONS.md §10.38, §10.45) the identifiers are English; many source files "
                                    "keep their Italian names until the file-rename step, so a term is given with "
                                    "the file that holds it.", lead=True) + dl(NOMI, "gloss")),
     ("Names that left the product", p("Names a maintainer may still meet in history, old measurements or commit "

@@ -3,13 +3,13 @@
 #
 #   installed in /etc/pam.d/remotix
 #
-# ⭐ `DECISIONI.md` §10.18 (D3 closed, 30 Sep 2026): REMOTIX MIRRORS
+# ⭐ `DECISIONS.md` §10.18 (D3 closed, 30 Sep 2026): REMOTIX MIRRORS
 #    the system's authentication.  This file is the distribution's /etc/pam.d/sshd,
 #    line by line, with ONE extra line at the top: root excluded
 #    (like stock ssh, which does not accept a password for root).
 #    `[M]` 30 Sep, comparison with /etc/pam.d/sshd on fedora44-gnome-iso and
 #    alma10-gnome-iso (identical to each other): 14 lines of 14 equal
-#    (`banchi/17-t6/t6-leggi-pam.sh`).
+#    (`benches/17-t6/t6-read-pam.sh`).
 #    ⇒ What the administrator configures for ssh with `authselect` (for
 #      example `with-faillock`: three errors and the account closes) holds here too,
 #      without touching this file.
@@ -34,14 +34,14 @@ auth       requisite    pam_listfile.so item=user sense=deny file=/etc/remotix/d
 auth       substack     password-auth
 auth       include      postlogin
 
-# ── account (`autenticazione.c` calls `pam_acct_mgmt` on purpose)
+# ── account (`authentication.c` calls `pam_acct_mgmt` on purpose)
 account    required     pam_sepermit.so
 account    required     pam_nologin.so
 account    include      password-auth
 
 password   include      password-auth
 
-# ── session: `figlio.c` calls `pam_open_session`, and it is that call that
+# ── session: `child.c` calls `pam_open_session`, and it is that call that
 #    makes the user's logind session be born.  `pam_systemd` comes from
 #    `password-auth` (`-session optional pam_systemd.so`), as for sshd.
 # ⚠ `pam_loginuid` `required` like sshd: the service starts from systemd, without

@@ -1,0 +1,517 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>B2 — the WebTransport session probe</title>
+<!--
+  01-b2-probe.html — the page of bench B2 of phase 1.
+
+  ⛔ IT IS SERVED FROM localhost, AND IT IS NOT A DETAIL OF CONVENIENCE.
+
+  A page that opens WebTransport must be in a "secure context".  The two
+  roads are `https://` with a certificate, or `http://localhost`, which
+  the specification considers secure by construction.
+
+  Serving it from localhost there is no certificate warning to grant
+  — and so what this bench measures is **the session**, not the user's
+  click.  The two things are kept separate on purpose: the exception on the
+  page certificate is another measurement (S1b), and mixing them would give two
+  causes for the same red.
+
+  ⚠ The SESSION certificate stays self-signed: it is made acceptable with
+    `serverCertificateHashes`, which is the normal road of the product
+    (`RCP.md` §4.1-bis) — not a bench shortcut.
+
+  ---------------------------------------------------------------------------
+  ⭐ THE CRITERION OF B2, REWRITTEN ON 10 AUG 2026 ON THE SERVER WE HAVE
+
+  "The session opens **AND** the server answers on the wire."
+
+  Until this morning the second half was an echo: the page opened a
+  stream, wrote the word `ciao` on it and waited for it to come back.
+  It was true when underneath there was only the WebTransport layer of B2, when the
+  server did not speak RCP yet.
+
+  ⛔ Today the server speaks RCP, and that first bidirectional stream **is the
+     control channel** (`RCP.md` §4.2).  `ciao` is not a valid
+     message: the server waits for the rest of it and never answers, the page
+     stays hung and the bench records nothing.  `[M]` 10 Aug 2026,
+     fifth round of B3: 200 in the collector's log and no outcome in
+     40 seconds, on both engines.
+
+  ⭐ So now the probe says a true sentence: a conforming `HELLO` (§4.3,
+     §6.1, §7.1) on the control channel, and waits for the `HERE_I_AM`.
+
+  ⚠ **And it stops there, on purpose.**  The whole handshake —
+    `CREDENTIALS`, `ADMITTED`, `ATTACH`, `SESSION` — is not needed for what
+    this bench tests, which is the **trust model**: the session
+    certificate, its fingerprint, its rotation (§4.1-bis).  The
+    PROTOCOL is tested by three other benches, which exist for that — B3 (the
+    whole wire), B5 (the violations towards the server), B11 (the violations
+    towards the page).  Redoing a fourth piece of it here would give two different
+    measurements under the same label, which is `CODER.md` §3.9.
+
+  ⚠ For the same reason the page does NOT judge the content of the `HERE_I_AM` —
+    version, capabilities, leftover bytes — and does not send `FAREWELL` at the end:
+    B11 does that, line by line.  Here the `HERE_I_AM` counts as **proof that the wire
+    carries in both directions**, and that is all.
+
+  ---------------------------------------------------------------------------
+  ⛔ AND THE PROBE ALWAYS RECORDS, EVEN WHEN NOTHING HAPPENS
+
+  This morning's defect was not only the echo: it was the **silence**.
+  Without a line in the log, the bench cannot tell "the browser did not
+  start" from "the session did not open" from "the server did not answer" —
+  three opposite causes with the same look (`CODER.md` §3.10).
+
+  Every wait now has a declared cap, and at every expiry the line
+  leaves all the same, with the cause written inside.
+-->
+<style>
+  :root { color-scheme: light dark; }
+  body { font: 15px/1.6 system-ui, sans-serif; max-width: 46rem; margin: 2rem auto; padding: 0 1rem; }
+  h1 { font-size: 1.3rem; }
+  label { display: block; margin: .8rem 0 .2rem; font-weight: 600; }
+  input { width: 100%; padding: .4rem; font: inherit; font-family: ui-monospace, monospace; }
+  button { margin-top: 1rem; padding: .5rem 1rem; font: inherit; font-weight: 600; }
+  #outcome { margin-top: 1.4rem; padding: 1rem; border-radius: .4rem; white-space: pre-wrap;
+           font-family: ui-monospace, monospace; font-size: 13px; background: #8881; }
+  .ok   { border-left: 4px solid #2a2; }
+  .no   { border-left: 4px solid #c33; }
+</style>
+
+<h1>B2 — does the WebTransport session open, and does the server answer?</h1>
+<p>Bench of phase 1. It measures <b>one thing only</b>: whether the engine of this browser
+establishes a WebTransport session with the given server, accepting its
+certificate through the fingerprint published here — and whether on that session
+the server <b>answers</b>, that is whether the <code>HELLO</code> on the control channel
+gets back an <code>HERE_I_AM</code> (<code>RCP.md</code> §4.2, §4.3). The rest of the
+handshake belongs to B3, B5 and B11: here the <b>trust model</b> is tested,
+not the protocol.</p>
+
+<label>Session address</label>
+<input id="url" value="https://192.168.0.2:7447/rcp/1">
+
+<label>SHA-256 fingerprint of the session certificate (base64)</label>
+<input id="fingerprint" value="">
+
+<button id="signin-button">Open the session</button>
+<div id="outcome">waiting.</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const outcome = $("outcome");
+
+// ⛔ THE WAIT CAPS — declared here, and repeated inside the outcome.
+//
+//    They are OURS, and it must be said: `RCP.md` §4.6 sets three caps on the
+//    handshake and they are all on the CLIENT ("`HELLO` received" within 5 s, and so on);
+//    on the server it imposes no response time.  So at expiry the
+//    page **does not accusations the server of violating anything**: it writes "within N
+//    seconds nothing arrived", which is a fact of the measurement.
+//
+// ⚠ The numbers are chosen on the conductor, not at random.  `01-b2-lancia-sonda.sh`
+//   waits for the line for **40 seconds**: 10 + 10 of waiting, plus the safety
+//   net at 25, fit inside that window with the POST included.  The
+//   32 s of B11 — chosen there to be just above the `max_idle_timeout` of
+//   §2.2, so that the transport is the first to speak — would not fit here
+//   twice, and the bench would go back to the silence this page cures.
+const CAP_OPENING = 10000;   // `wt.ready`: neither opened nor refused
+const CAP_HERE_I_AM   = 10000;   // from the `HELLO` sent to the complete `HERE_I_AM`
+const CAP_TOTAL   = 25000;   // the safety net: beyond this, it records anyway
+
+// ⛔ The version this page can speak, written once only: §2.2
+//    wants the one of the path `/rcp/<n>` and the one of the `HELLO` to match.
+// ⚠ Here they are NOT compared — the address comes from the query and the bench
+//   takes it as it is.  The comparison is a protocol check, and it is in
+//   `01-b11-page.html` (finding R6.19), not in a bench on the certificate.
+const VERSION = 1;
+
+const T = { HELLO: 0x0001, HERE_I_AM: 0x0002, CREDENTIALS: 0x0003, ADMITTED: 0x0004,
+            REJECTED: 0x0005, SESSION: 0x0007, FAREWELL: 0x000C };
+const TYPE_NAME = Object.fromEntries(Object.entries(T).map(([k, v]) => [v, k]));
+
+// ⛔ The names of the reasons of §8.2, because "reason 9" is not a diagnosis: if the
+//    server says farewell instead of answering, the outcome must say WHY.
+// ⚠ Here there are only the NAMES.  §8.2 also wants a sentence understandable to
+//   the user, built by the client: that table is in `01-b11-page.html`,
+//   and that is where its presence is measured.  This page writes into a log,
+//   it does not talk to anyone.
+const REASON_TEXT = { 0x01: "CLOSED_BY_USER", 0x02: "INACTIVITY",
+  0x03: "SESSION_ABANDONED", 0x04: "LOCAL_SESSION_PREVAILED",
+  0x05: "ALREADY_ACTIVE_LOCALLY", 0x06: "BUDGET_FULL", 0x07: "WRONG_CREDENTIALS",
+  0x08: "TOO_MANY_ATTEMPTS", 0x09: "NOTHING_IN_COMMON", 0x0A: "INCOMPATIBLE_VERSION",
+  0x0B: "PROTOCOL_ERROR", 0x0C: "SERVER_CLOSING", 0x0D: "TIMED_OUT",
+  0x0E: "SESSION_UNSERVABLE", 0x0F: "ALREADY_ACTIVE_REMOTELY" };
+
+// ⭐ The capabilities of this page.  ⛔ `pcm` in `audio.codec` and `8` in
+//    `video.depth` are not decorations: §4.3 imposes them on BOTH
+//    sides, and the server dismisses with `NOTHING_IN_COMMON` — not with a
+//    protocol error — whoever does not declare them.  A `HELLO` without them would give a
+//    farewell in place of the `HERE_I_AM`, and this bench would print red on a
+//    defect of its own.
+const OUR = [["video.codec", "hevc,av1"], ["video.depth", "8,10"],
+                ["audio.codec", "opus,pcm"], ["client.name", "probe-b2 0.1.0"]];
+
+// ── the bytes (§6.0, §6.1) ─────────────────────────────────────────────────
+function u16(n) { const a = new Uint8Array(2); new DataView(a.buffer).setUint16(0, n); return a; }
+function str(t) {
+  const b = new TextEncoder().encode(t);
+  const o = new Uint8Array(2 + b.length);
+  new DataView(o.buffer).setUint16(0, b.length);
+  o.set(b, 2);
+  return o;
+}
+function merge(pieces) {
+  const o = new Uint8Array(pieces.reduce((a, p) => a + p.length, 0));
+  let i = 0;
+  for (const p of pieces) { o.set(p, i); i += p.length; }
+  return o;
+}
+function envelope(type, body) {
+  const t = new Uint8Array(6);
+  const v = new DataView(t.buffer);
+  v.setUint16(0, type);
+  v.setUint32(2, body.length);   // ⛔ §6.1: the EXACT number of bytes of the body
+  return merge([t, body]);
+}
+function body_hello() {
+  return merge([u16(VERSION), u16(OUR.length),
+                 ...OUR.flatMap(([n, v]) => [str(n), str(v)])]);
+}
+
+// ── the wait with the cap ──────────────────────────────────────────────────
+// ⛔ A promise without a cap is the defect of 10 Aug 2026 in one line:
+//    `await r.read()` on a server that does not answer never returns, and from there
+//    on the page does nothing any more — not even say that it does nothing.
+class Expired extends Error {
+  constructor(what, ms) {
+    super(what + ": nothing within " + (ms / 1000).toFixed(0) + " s");
+    this.what = what; this.ms = ms;
+  }
+}
+// ⭐ The deadline is set ONCE for the whole wait, not at every piece.  A
+//    cap reset to zero at every piece received never expires in front of a
+//    server that sends one byte a second — that is, precisely the case in which it
+//    is needed.
+function wait(cap, what) {
+  const fine = performance.now() + cap;
+  return (promise) => Promise.race([
+    promise,
+    new Promise((_, refuse) =>
+      setTimeout(() => refuse(new Expired(what, cap)),
+                 Math.max(0, fine - performance.now()))),
+  ]);
+}
+
+// ⛔ Reads ONE framed message from the control channel (§6.1), within the
+//    deadline passed to it.  ⚠ A piece received is not a message: it
+//    accumulates until the 6 header bytes and the `length` body bytes
+//    are all there.
+async function read_message(r, within) {
+  let arrived = new Uint8Array(0);
+  for (;;) {
+    const { value, done } = await within(r.read());
+    if (done) return { end: true };
+    const n = new Uint8Array(arrived.length + value.length);
+    n.set(arrived); n.set(value, arrived.length);
+    arrived = n;
+    if (arrived.length < 6) continue;
+    const v = new DataView(arrived.buffer, arrived.byteOffset);
+    const type = v.getUint16(0), lung = v.getUint32(2);
+    // ⛔ §6.1: the cap is 1 MiB, "and the length is checked BEFORE
+    //    allocating".  Here nothing is allocated, but the line holds all the same:
+    //    without it, the page would wait forever for a body that will never arrive.
+    if (lung > 1024 * 1024) return { type, too_long: lung };
+    if (arrived.length < 6 + lung) continue;
+    return { type, body: arrived.slice(6, 6 + lung) };
+  }
+}
+
+// The fingerprint can arrive from the query: this way the bench is launched with a
+// single address and nothing is copied by hand — which is the rule of phase 0
+// ("command lines are copied from a bench that works, they are not
+// remembered").
+const q = new URLSearchParams(location.search);
+if (q.get("fingerprint")) $("fingerprint").value = q.get("fingerprint");
+if (q.get("url")) $("url").value = q.get("url");
+
+function write(text, good) {
+  outcome.textContent = text;
+  outcome.className = good === undefined ? "" : (good ? "ok" : "no");
+}
+
+// ⛔ The outcome is recorded by the bench, not by whoever watches.
+//
+//    Before, it ended up in the eyes of whoever pressed the button, who then
+//    copied it: it is what rule B0.4 forbids, and it is defect 11 of
+//    phase 0 (a number compared from memory against the wrong column).
+//    ⚠ And above all: the EXACT BROWSER VERSION is the field that a
+//      hand transcription always forgets, and without it "six months from now the
+//      result is worth nothing" (S1 §4.5).  Here it leaves on its own.
+//
+// ⛔ AND IT IS RECORDED ONCE ONLY.  The safety net below and the
+//    normal path can both reach the end; two lines for one
+//    run would put the conductor back to guessing which one is its own
+//    (finding R8.10, road (a)).
+let registered = false;
+async function log(state, detail) {
+  if (registered) return;
+  registered = true;
+  try {
+    const r = await fetch("/outcome", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        outcome: state,
+        engine: navigator.userAgent,
+        address: $("url").value.trim(),
+        fingerprint_present: !!$("fingerprint").value.trim(),
+        detail: detail,
+      }),
+    });
+    // ⚠ With a 404 or a 500 `fetch` does NOT reject: without this check the
+    //   page would take as delivered an outcome that nobody wrote
+    //   (finding R6.15, found on `01-b11-page.html`).
+    if (!r.ok) {
+      outcome.textContent += "\n\n⚠ outcome NOT recorded: the collector " +
+                           "answered " + r.status + " — what is seen here " +
+                           "above is not in b2-outcomes.jsonl";
+    }
+  } catch (e) {
+    // ⚠ If the collector is not there, the bench must NOT pretend: it says so.
+    outcome.textContent += "\n\n⚠ outcome NOT recorded (collector absent): " + e;
+  }
+}
+
+function base64ToBytes(b64) {
+  const bin = atob(b64.trim());
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+$("signin-button").onclick = async () => {
+  const url = $("url").value.trim();
+  const b64 = $("fingerprint").value.trim();
+  const lines = [];
+  const t0 = performance.now();
+
+  lines.push("engine:   " + navigator.userAgent);
+  lines.push("address:  " + url);
+  // ⛔ It is DECLARED in the outcome, not only in the code: a property
+  //    asserted by the source and not by the log is a property
+  //    that nobody has seen (LESSONS.md §1.9).
+  lines.push("allowPooling: false   (RCP.md §4.1-bis)");
+  lines.push("wait caps of THIS probe: opening " + CAP_OPENING / 1000 +
+             " s · HERE_I_AM " + CAP_HERE_I_AM / 1000 + " s · safety net " +
+             CAP_TOTAL / 1000 + " s   (⚠ ours, not RCP's: §4.6 gives " +
+             "no cap to the server)");
+
+  // ⛔ THE SAFETY NET, and it is armed BEFORE anything else.
+  //
+  //    The two caps below cover the waits we know.  This one covers
+  //    those we do not know: a `createBidirectionalStream()` that does not
+  //    return, a `write` that stays queued, an engine fault.  ⭐ The
+  //    property to keep is only one and admits no exceptions: **one
+  //    run, one line in the log**.  If the line is missing, the cause is
+  //    outside the page — the browser did not start, or did not even
+  //    request the file — and the conductor can tell that from the
+  //    collector's log.
+  setTimeout(() => {
+    if (registered) return;
+    lines.push("");
+    lines.push("⛔ SILENCE: the probe did not reach the end within " +
+               CAP_TOTAL / 1000 + " s, and none of the declared caps" +
+               " fired.  The wait stayed at a point this page" +
+               " does not foresee: the line leaves all the same, because \"no line\"" +
+               " is the only outcome that cannot be read.");
+    write(lines.join("\n"), false);
+    log("SILENCE", lines.join("\n"));
+  }, CAP_TOTAL);
+
+  if (!("WebTransport" in window)) {
+    lines.push("");
+    lines.push("⛔ this engine does not expose WebTransport at all.");
+    write(lines.join("\n"), false);
+    await log("NOTHING-WEBTRANSPORT", lines.join("\n"));
+    return;
+  }
+
+  // ⛔ `allowPooling: false` — RCP.md §4.1-bis puts it among the constraints, next
+  //    to the certificate of less than 14 days and the P-256 key.
+  //
+  //    With `serverCertificateHashes` the session verified the certificate
+  //    by FINGERPRINT, not by chain: reusing that connection for another
+  //    origin would mean extending to that origin a trust that
+  //    nobody gave it.  ⚠ Setting it to `true` would give no visible
+  //    symptom here — the session would open just the same — and that is why
+  //    the constraint must be WRITTEN and not left to the engine's default value.
+  //
+  // ⚠ It was missing until 10 Aug 2026: the page measured the session and not
+  //   this, and the two browsers had already given green without it.
+  let options = { allowPooling: false };
+  if (b64) {
+    try {
+      options = {
+        allowPooling: false,
+        serverCertificateHashes: [{ algorithm: "sha-256", value: base64ToBytes(b64) }],
+      };
+      lines.push("fingerprint: published (" + b64.slice(0, 12) + "…)");
+    } catch (e) {
+      // ⛔ AND HERE TOO IT IS RECORDED.  This branch exited silently: whoever
+      //    launched the bench saw "it recorded nothing in 40 seconds"
+      //    — the same sentence as the browser that does not start — for a fingerprint
+      //    written badly, that is a defect of the conductor, not of the server.
+      lines.push("");
+      lines.push("⛔ the fingerprint is not valid base64: " + e);
+      write(lines.join("\n"), false);
+      await log("FINGERPRINT-UNREADABLE", lines.join("\n"));
+      return;
+    }
+  } else {
+    lines.push("fingerprint: NONE — relying on the certificate exception");
+  }
+  write(lines.join("\n") + "\n\nopening…");
+
+  try {
+    // ── 1. the session ────────────────────────────────────────────────────
+    const wt = new WebTransport(url, options);
+    try {
+      await wait(CAP_OPENING, "opening of the session")(wt.ready);
+    } catch (e) {
+      lines.push("");
+      if (e instanceof Expired) {
+        // ⛔ "NEITHER OPENED NOR REFUSED" IS A THIRD OUTCOME, and carries a name
+        //    of its own.  Calling it `NOT-OPEN` would make it indistinguishable from the
+        //    certificate refusal — and the negative control of the fifth
+        //    round of B3, which demands `NOT-OPEN`, would pass with a hung
+        //    engine instead of with an engine that compares the fingerprint: the
+        //    exact false green that check exists not to produce.
+        lines.push("⛔ SILENCE at opening: " + e.message);
+        lines.push("   the session did not open and was not refused either.");
+        lines.push("   ⚠ it is the typical look of UDP thrown away without an answer:");
+        lines.push("      the packets leave, nothing comes back, and nobody says no.");
+        write(lines.join("\n"), false);
+        await log("SILENCE", lines.join("\n"));
+        return;
+      }
+      lines.push("⛔ does NOT open: " + e);
+      // The real reason is often in the closing, not in the exception.
+      lines.push("");
+      lines.push("⚠ three causes with the same look, and they must be told apart by hand:");
+      lines.push("   1. UDP filtered (TCP answers all the same)");
+      lines.push("   2. the fingerprint is not that of the certificate served");
+      lines.push("   3. the session certificate exceeds 14 days");
+      write(lines.join("\n"), false);
+      await log("NOT-OPEN", lines.join("\n"));
+      return;
+    }
+    const ms = (performance.now() - t0).toFixed(1);
+    lines.push("");
+    lines.push("⭐ SESSION OPEN in " + ms + " ms");
+    write(lines.join("\n") + "\n\nCIAO sent, waiting for HERE_I_AM…");
+
+    // ── 2. does the wire carry? ───────────────────────────────────────────
+    // ⛔ "ready" is not enough: a REAL message is sent and the
+    //    answer is awaited.  A session that opens and carries nothing is the
+    //    form of green this bench exists not to produce — and it is
+    //    exactly the defect that check P3 of S1a looks for on another
+    //    level.
+    try {
+      const s = await wt.createBidirectionalStream();
+      const w = s.writable.getWriter();
+      const r = s.readable.getReader();
+      await w.write(envelope(T.HELLO, body_hello()));
+      // ⛔ AND THE WRITER IS NOT CLOSED.  Here there was `await w.close()`, inherited
+      //    from when the stream was an echo: today that FIN on the first
+      //    bidirectional stream **is the end of the session** (§4.2, "a FIN on
+      //    that stream, from either side, closes the
+      //    session").  It would close the door at the exact second in which we
+      //    wait for someone to come out of it.
+      const m = await read_message(r, wait(CAP_HERE_I_AM, "answer from the server"));
+      if (m.end) {
+        lines.push("⛔ the control channel closed (FIN) without answering:");
+        lines.push("   §4.2 — that FIN IS the end of the session.");
+      } else if (m.too_long) {
+        lines.push("⛔ the server announces a message of " + m.too_long +
+                   " bytes: beyond the 1 MiB cap of §6.1");
+      } else if (m.type === T.HERE_I_AM) {
+        const v = new DataView(m.body.buffer, m.body.byteOffset);
+        const version = m.body.length >= 2 ? v.getUint16(0) : -1;
+        const tries   = m.body.length >= 4 ? v.getUint16(2) : -1;
+        // ⚠ Version and capabilities are REPORTED and not judged: §9 and §4.3
+        //   are protocol checks, and B11 does them line by line.  Here
+        //   they needs to make the outcome readable, not to give a verdict.
+        lines.push("answer on the control channel: HERE_I_AM (0x0002), " +
+                   m.body.length + " bytes — version " + version +
+                   ", declared capabilities " + tries);
+        // ⛔ THIS SENTENCE IS SEARCHED FOR BY THE CONDUCTOR, LITERALLY.
+        //
+        //    `01-b2-lancia-sonda.sh`, inside `cerca_riga`: it looks for "the bytes
+        //    come back identical" in the `detail` field, and it is the check of
+        //    finding R8.7 — "OPEN does not mean the bytes come back".  The two
+        //    halves of the check are in two files: changing the words in here
+        //    turns a bench red without anything having
+        //    got worse, and the conductor is not to be touched.
+        //
+        // ⚠ "Identical" today means "identical to what §7.1 prescribes" —
+        //   type 0x0002 — not "equal to what we sent": that
+        //   was the echo, and the echo no longer exists.  The fact proved is the
+        //   same as before, and stronger: the wire carries in both directions, and
+        //   on the other side there is someone who understands what is said to them.
+        lines.push("✅ the bytes come back identical to what §7.1 prescribes: " +
+                   "type 0x0002 = HERE_I_AM, in answer to our HELLO");
+      } else if (m.type === T.FAREWELL) {
+        const rsn = m.body.length >= 1 ? m.body[0] : -1;
+        lines.push("⛔ the server said FAREWELL instead of answering: reason " +
+                   rsn + " = " + (REASON_TEXT[rsn] || "outside §8.2"));
+        lines.push("   ⚠ it is an answer, so the wire carries — but it is not" +
+                   " the HERE_I_AM that B2 demands: the cause is in the HELLO of this" +
+                   " page or in the server, and the server log names it.");
+      } else {
+        lines.push("⛔ on the control channel came back " +
+                   (TYPE_NAME[m.type] || "type 0x" + m.type.toString(16).padStart(4, "0")) +
+                   " instead of HERE_I_AM");
+      }
+    } catch (e) {
+      if (e instanceof Expired) {
+        // ⛔ THE DEFECT OF 10 AUG, NOW SAID OUT LOUD.  The session
+        //    is open — and the outcome stays `OPEN`, because it is a fact — but
+        //    the sentence the conductor looks for is NOT written: the line will be
+        //    red for check R8.7, with this cause in plain sight.
+        lines.push("⛔ no HERE_I_AM: " + e.message);
+        lines.push("   the session IS open, the HELLO left, and the server is silent.");
+        lines.push("   ⚠ it is not a violation of RCP: §4.6 gives no" +
+                   " cap to the server's answer.  It is this bench's cap.");
+      } else {
+        lines.push("⚠ session open but the control channel did not work: " + e);
+      }
+    }
+
+    // ⚠ Here the probe stops: no `FAREWELL`, no orderly closing.
+    //   §3.1 and §8.1 are obligations of a real client, and B11 measures them; this
+    //   page stops before the credentials, so it has taken no
+    //   slot in the server's session register (§4.5) and leaves none
+    //   occupied for the engine that runs after it.
+    write(lines.join("\n"), true);
+    await log("OPEN", lines.join("\n"));
+  } catch (e) {
+    // ⛔ And if what breaks is the probe, the probe says so.  A fault of the
+    //    page that exited silently would go back to looking like "the browser
+    //    did not start", which is the confusion cured today.
+    lines.push("");
+    lines.push("⛔ FAULT OF THE PROBE (not of the server): " + e);
+    write(lines.join("\n"), false);
+    await log("FAULT-PROBE", lines.join("\n"));
+  }
+};
+
+// ⭐ The automatic start: `?launch=1` starts the test without anyone
+//    pressing anything.
+//
+// ⛔ It is not a convenience: a bench that needs a hand **cannot be
+//    redone the same**, and redoing it the same is the only way of knowing whether a
+//    measurement changed because the server changed.  On 9 Aug this
+//    page measured two browsers against `aioquic`; on the 10th it must measure them
+//    against `ngtcp2`, and the two measurements count only if the hand is the same.
+if (q.get("launch")) $("signin-button").click();
+</script>

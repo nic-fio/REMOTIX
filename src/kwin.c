@@ -1,7 +1,7 @@
 /*
  * kwin — see `kwin.h`.  Carried over from v1's `fondamenta/remotix-c/src/kwin.c`:
  * the comments citing `kde.md` refer to the study of KWin's code, today
- * in `STUDI.md` (from line ~1233, § numbering unchanged).
+ * in `STUDIES.md` (from line ~1233, § numbering unchanged).
  */
 #include "kwin.h"
 
@@ -25,8 +25,8 @@
 #include "wlr-layer-shell-unstable-v1-client-protocol.h"
 #include "zkde-screencast-unstable-v1-client-protocol.h"
 
-#include "registro.h"
-#include "sessione.h"
+#include "log.h"
+#include "session.h"
 #include "wlroots.h"
 
 #define AREA "capture"
@@ -42,9 +42,9 @@
  * ⛔ IT IS DECIDED ONCE ONLY and cannot be changed on a live stream
  *    (`screencaststream.cpp:915-918`).  METADATA as on Mutter (`cursor-mode=2`
  *    in `mutter.c`): the page draws the cursor.
- * ⛔ THE PRICE IS IN `cattura.c`: every pointer movement produces a
+ * ⛔ THE PRICE IS IN `capture.c`: every pointer movement produces a
  *    buffer with no new pixels marked `SPA_CHUNK_FLAG_CORRUPTED` (`kde.md`
- *    §4.7), and `cattura.c` already discards them. */
+ *    §4.7), and `capture.c` already discards them. */
 #define POINTER_METADATA 4
 
 #define MAX_OUTPUTS 8
@@ -828,7 +828,7 @@ fine:
  * ⭐ PHASE 15, D-008 — `[M]` round 1, 15-f009 on KDE: with the browser in Italian
  *    "è à ò ù é ç ° §" did not come out, the session stayed "English (US)".
  *    `input_layout()` had the GNOME road and the wlroots one, for
- *    KWin none (`STUDI.md` §kde §6.7 listed it, nobody had written it).
+ *    KWin none (`STUDIES.md` §kde §6.7 listed it, nobody had written it).
  *
  * `[R]` KWin 6.3.6 — road 3 of §6.7, the only one that REALLY changes the
  *    layout in a live session:

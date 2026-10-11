@@ -4,11 +4,11 @@
  * libva, without ffmpeg, without GStreamer.
  *
  * ---------------------------------------------------------------------------
- * ⭐⭐ PHASE 19 — WHY IT EXISTS (1 Oct 2026, `DECISIONI.md` §10.27)
+ * ⭐⭐ PHASE 19 — WHY IT EXISTS (1 Oct 2026, `DECISIONS.md` §10.27)
  *
  * The user's words: *«encoding must happen with standard tools, preferably
  * with Vulkan, which is common to all 4 architectures»*.  VA-API
- * (`src/vadiretta.c`, phase 18) talks to Intel and AMD, but the proprietary
+ * (`src/vadirect.c`, phase 18) talks to Intel and AMD, but the proprietary
  * NVIDIA driver does not encode via VA-API, and on a 5070 REMOTIX fell back
  * to the processor.  Vulkan Video is the API that ALL vendors expose (AMD
  * with RADV, NVIDIA with the proprietary driver, Intel with ANV — `[M]`
@@ -19,21 +19,21 @@
  * ⛔ Licences: the Vulkan loader and the headers are Apache-2.0, the drivers
  *    are in the system.  No third-party library in between.
  *
- * ⭐ WHAT IT DOES, in the same order as `vadiretta.h`:
+ * ⭐ WHAT IT DOES, in the same order as `vadirect.h`:
  *   1. DISCOVERY: for a DRM node, whether the card can encode H.264 and/or
  *      HEVC in Vulkan, with maximum size, bitrate modes, allowed QPs —
  *      `vulkanvideo_capabilities()`, to choose the route and for the installer's
  *      preliminary check;
  *   2. the SESSION: profile, formats, DPB, the parameters (SPS/PPS, and VPS
  *      for HEVC) written as `StdVideo*` with the SAME values that
- *      `vadiretta.c` puts in its headers — High at 8 bits, Main /
+ *      `vadirect.c` puts in its headers — High at 8 bits, Main /
  *      Main 10, no B, a single reference, BT.709 limited in the VUI, the
  *      level computed as ffmpeg did or imposed (`RCP.md` §4.3);
  *   3. the INPUT: zero copy from DMA-BUF (`VK_EXT_external_memory_dma_buf` +
  *      `VK_EXT_image_drm_format_modifier`) of BGRx/RGBx frames, and the
  *      RGB → NV12 (or P010) BT.709 limited conversion done by a compute
  *      shader ON THE CARD, with the same coefficients and the same chroma
- *      filter as `colori709.c` (bit for bit: the planes entering the
+ *      filter as `colors709.c` (bit for bit: the planes entering the
  *      encoder are those the route from memory produces today);
  *      and input from memory (pixels on the CPU), which goes up to the card
  *      in RGB and is converted with the same shader;
@@ -46,10 +46,10 @@
  *    that is written to the log.  The check that the stream is of the same
  *    kind as yesterday's (profile, level, size, colour) is done by the bench
  *    with ffprobe and with Chrome, and in the product `bitstream_ok()` in
- *    `codificatore.c` rereads the SPS at every keyframe, as for VA-API.
+ *    `encoder.c` rereads the SPS at every keyframe, as for VA-API.
  *
  * ⚠ What is NOT there, declared: the identifier SEI and the buffering SEIs
- *   (ffmpeg wrote them, `vadiretta.c` reproduces them for H.264):
+ *   (ffmpeg wrote them, `vadirect.c` reproduces them for H.264):
  *   `[M]` no browser reads them and the page's muxer picks only SPS/PPS.
  *   B frames: never (low latency).  A single slice per frame.
  * ---------------------------------------------------------------------------
@@ -71,7 +71,7 @@ typedef enum { VULKANVIDEO_H264 = 3, VULKANVIDEO_HEVC = 1 } VulkanVideoCodec; /*
 /* ═══════════════════════════════════════════════════════════════════════════
  * 1. DISCOVERY — for a DRM node, what the card can do in Vulkan.
  *
- * ⛔ Three outcomes and not two (`LEZIONI.md` §1.9): `vulkan_c_e` says whether
+ * ⛔ Three outcomes and not two (`LESSONS.md` §1.9): `vulkan_c_e` says whether
  *    the node has a Vulkan device with the encode queue; if it is false the
  *    codec fields mean nothing and `why` explains.  ⚠ A node without
  *    Vulkan does NOT mean «no card»: on Intel today the answer is «no» and
@@ -145,7 +145,7 @@ typedef struct {
 	int qp;                        /* 1..51: the fixed QP (CQP) or the quality floor (VBR) */
 	/* The bandwidth ceiling (phase 9): all zeros = CQP.  Otherwise VBR with
 	 * average = target, maximum = wire, buffer in bits — the same three
-	 * numbers that `codificatore.c` computes.  ⚠ Vulkan does not have VA-API's
+	 * numbers that `encoder.c` computes.  ⚠ Vulkan does not have VA-API's
 	 * QVBR: the requested QP becomes the regulator's MINIMUM QP (no more is
 	 * spent than the requested quality would cost), and the regulator raises
 	 * the QP only when the ceiling bites.  It is declared in the
@@ -205,7 +205,7 @@ bool vulkanvideo_encode_memory(VulkanVideo *v, const uint8_t *pixel, uint32_t st
                                   const uint8_t **data, size_t *byte, VulkanVideoTimings *t,
                                   char *error, size_t error_byte);
 
-/* The same DMA-BUF that `codificatore.h` describes (`EncoderSurface`):
+/* The same DMA-BUF that `encoder.h` describes (`EncoderSurface`):
  * the descriptor stays the producer's and is not closed; `generation` drops
  * the import cache when the producer's buffers change. */
 typedef struct {
@@ -231,7 +231,7 @@ bool vulkanvideo_encode_dmabuf(VulkanVideo *v, const VulkanVideoSurface *s, bool
 bool vulkanvideo_quality(VulkanVideo *v, int qp, char *error, size_t error_byte);
 
 /* The canvas change: it closes and reopens at the new size, and the first
- * frame afterwards is a keyframe (`codificatore.h`, `codificatore_ridimensiona`). */
+ * frame afterwards is a keyframe (`encoder.h`, `codificatore_ridimensiona`). */
 bool vulkanvideo_resize(VulkanVideo *v, uint32_t width, uint32_t height,
                               char *error, size_t error_byte);
 

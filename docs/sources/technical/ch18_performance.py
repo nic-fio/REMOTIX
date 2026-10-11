@@ -1,9 +1,9 @@
 from build import c, code, note, p, rif, table, tip, ul, warn
 
 # The capacity numbers come from the phase 20 campaigns (7–10 Oct 2026), read from the files of
-# /media/REMOTIX/misure/fase16 and from banchi/16-stress/16-rapporto.py; fasi/20-le-prestazioni.md §8 holds
-# the same tables with the details. The nested-KWin cost is DECISIONI.md §10.40 (11 Oct 2026); the KasmVNC
-# dry run is DECISIONI.md §10.47 and fasi/20 §9 (branch fix-kasmvnc).
+# /media/REMOTIX/misure/fase16 and from benches/16-stress/16-report.py; phases/20-performance.md §8 holds
+# the same tables with the details. The nested-KWin cost is DECISIONS.md §10.40 (11 Oct 2026); the KasmVNC
+# dry run is DECISIONS.md §10.47 and phases/20 §9 (branch fix-kasmvnc).
 
 
 def cell(remotix, xrdp):
@@ -33,11 +33,11 @@ S1 = p("This chapter answers one question for whoever maintains REMOTIX: <b>how 
          + c("amd-x20") + " (xrdp, 9 Oct 17:47 → 10 Oct 16:09 UTC) — 64 climbs in all"],
     ], "«TAB» — The hardware and the software under test") + \
     warn("these are the numbers of <i>this</i> machine, and the Intel card is an integrated one. They are design "
-         "evidence, not promises: " + c("DECISIONI.md") + " §10.26 keeps them out of " + c("SPECIFICHE.md")
+         "evidence, not promises: " + c("DECISIONS.md") + " §10.26 keeps them out of " + c("SPECS.md")
          + ", and nothing here should be read as the capacity of a different machine.", "Declare the hardware.")
 
 # ── 2. The bench, the scene, the classes ─────────────────────────────────
-S2 = p("The bench is the stress harness of " + c("banchi/16-stress/") + ", described in "
+S2 = p("The bench is the stress harness of " + c("benches/16-stress/") + ", described in "
        + rif("Stress and capacity benches") + ". In short: real browsers on the server, one per user, each in its "
        "own headless compositor, drive real desktops with input sent through the page; four fixed workloads rotate "
        "by user number; every session and every level is classified against frozen thresholds.", lead=True) + \
@@ -51,19 +51,19 @@ S2 = p("The bench is the stress harness of " + c("banchi/16-stress/") + ", descr
       "significant DEGRADED, and a bisection to one user between the last good step and the broken one. At every "
       "step one more session (user 99) logs in and runs the short functional check: a level where nobody else can "
       "get in is not a healthy level. If 4K breaks, the climb is redone at 3K, then 2K, then Full HD.") + \
-    p("<b>Two numbers per climb</b>, both written by " + c("16-coda.sh") + " in the queue log:") + \
+    p("<b>Two numbers per climb</b>, both written by " + c("16-queue.sh") + " in the queue log:") + \
     ul(["<b>true GREEN</b> (" + c("last true GREEN") + "): the highest level where <i>every</i> session is GREEN "
         "— the «optimal up to» of the public table;",
         "<b>good</b> (" + c("good") + "): the highest level the climb passed, admitting a non-significant DEGRADED "
         "(at most one session in four, inside the first half of its band) — the «holds up to»."]) + \
     p("A level is FAIL if one session is FAIL, which includes the short check. The thresholds (input → frame delay, "
       "frames skipped, longest freeze, video frames painted per second, audible sound, birth time, drops, memory "
-      "growth) are those of " + c("THRESHOLDS") + " in " + c("16-classifica.py") + ", approved on 25 Sep 2026 and "
+      "growth) are those of " + c("THRESHOLDS") + " in " + c("16-classify.py") + ", approved on 25 Sep 2026 and "
       "frozen; the table is in " + rif("Stress and capacity benches") + ".") + \
     note("until 10 Oct 2026 the actor rebuilt the time of Firefox's keystrokes from the return of the Marionette "
          "chain; a held-back chain moved keys after their own echo and produced false freezes of ~1.1 s (the next "
          "cursor blink). The probe the actor injects now stamps every " + c("keydown") + " in the page clock, and "
-         + c("16-riclassifica.py") + " re-judges finished climbs from their files. Run on all 32 REMOTIX climbs "
+         + c("16-reclassify.py") + " re-judges finished climbs from their files. Run on all 32 REMOTIX climbs "
          "(every one exited 0), it changed exactly three cells: Intel GNOME 3K 1 → 4, Intel XFCE 3K 4 → 8, Intel "
          "XFCE Full HD 1 → 12. The tables below are re-judged. Chrome, which types through CDP with real times, "
          "never had the defect, and neither does the xrdp actor (XTEST).", "The Firefox freeze, cured.")
@@ -92,7 +92,7 @@ S3 = p("Each cell gives REMOTIX first, in bold, then xrdp; «—» means not eve
         + " tuning that " + c("src/vulkanvideo.c") + " asks for but does not pass it to the firmware: frames come "
         "out in groups, and one user's delay is 51–56 ms against a 50 ms threshold. The Debian backport of Mesa "
         "26.1.6 brings GNOME 4K to 4 users (1 user: 21 ms); the product stays on the driver Debian 13 ships.",
-        "<b>The public table</b> (" + c("fasi/20-le-prestazioni.md") + " §5) is the range over the four desktops:"])
+        "<b>The public table</b> (" + c("phases/20-performance.md") + " §5) is the range over the four desktops:"])
 
 S3 += table(["Card and path", "Screen", "Optimal up to (true GREEN)", "Holds up to (good)"], [
     "i5-13500T, 31 GB · Intel UHD 770 (integrated) · VA-API",
@@ -108,7 +108,7 @@ S3 += table(["Card and path", "Screen", "Optimal up to (true GREEN)", "Holds up 
 ], "«TAB» — The public capacity table, worst to best desktop")
 
 # ── 4. What limits ───────────────────────────────────────────────────────
-S4 = p("At the first level that is not GREEN, " + c("16-rapporto.py") + " names the busiest resource and the "
+S4 = p("At the first level that is not GREEN, " + c("16-report.py") + " names the busiest resource and the "
        "process sets that consume it. The answer is almost never the " + c("remotix") + " process.", lead=True) + \
     table(["Where it gives way", "Cells", "What saturates"], [
         ["The GPU's <b>render engine</b> (composition)", "Intel: KDE at 4K, 3K and 2K; XFCE 4K",
@@ -119,9 +119,9 @@ S4 = p("At the first level that is not GREEN, " + c("16-rapporto.py") + " names 
          "about 100 % at 14–16 users, mostly " + c("remotix") + "'s own encoder"],
         ["The <b>driver</b>", "Radeon 4K GNOME and KDE", "RADV 25.0.7, see above"],
     ], "«TAB» — The bottlenecks of the REMOTIX climbs") + \
-    p("This is the physics of " + c("DECISIONI.md") + " §4.6-nonies, seen again on all four desktops: on the "
+    p("This is the physics of " + c("DECISIONS.md") + " §4.6-nonies, seen again on all four desktops: on the "
       "integrated card the neck is <b>composition</b>, upstream of REMOTIX, and its currency is the composed pixel. "
-      "That is why the admission budget of " + c("src/budget.c") + " (" + c("SPECIFICHE.md") + " §5.5; "
+      "That is why the admission budget of " + c("src/budget.c") + " (" + c("SPECS.md") + " §5.5; "
       + rif("The composition budget") + ") counts composed Mpixel/s and the delay of those already inside, and "
       "refuses a newcomer with " + c("BUDGET_FULL") + " rather than slowing everyone down. The campaigns ran with "
       "the budget <i>off</i> on purpose, to find the cliff; the product's default ceiling is 10 sessions ("
@@ -134,7 +134,7 @@ S4 = p("At the first level that is not GREEN, " + c("16-rapporto.py") + " names 
 
 # ── 4-bis. The cost of the nested KWin ───────────────────────────────────
 S4B = p("Since 11 Oct 2026 KWin runs nested inside a labwc without a screen, so that the KDE desktop can take the "
-        "window's size at every reattach (" + c("DECISIONI.md") + " §10.40; " + c("src/kwin.c") + "). labwc draws "
+        "window's size at every reattach (" + c("DECISIONS.md") + " §10.40; " + c("src/kwin.c") + "). labwc draws "
         "KWin's whole frame once more, and on an integrated card that is not free. It was measured against the KWin "
         + c("--virtual") + " of the campaigns above, on the same machine and the same card.", lead=True) + \
     table(["", "Value"], [
@@ -165,7 +165,7 @@ S4B = p("Since 11 Oct 2026 KWin runs nested inside a labwc without a screen, so 
 
 # ── 5. REMOTIX against xrdp ───────────────────────────────────────────────
 S5 = p("xrdp ran the same scene, the same steps and the same thresholds, in the same desktop boxes switched to X11 "
-       "(" + c("Contenitore.xrdp") + "), driven by " + c("16-attore-rdp.py") + ": FreeRDP in a private Xvfb per "
+       "(" + c("Containerfile.xrdp") + "), driven by " + c("16-actor-rdp.py") + ": FreeRDP in a private Xvfb per "
        "user, XTEST for input, XDamage for paint times. Three things cannot be compared by construction: skipped "
        "frames, holes in the video chain and audible sound do not exist on the xrdp side; the delay is compared only "
        "as seen by the viewer.", lead=True) + \
@@ -196,7 +196,7 @@ S5 = p("xrdp ran the same scene, the same steps and the same thresholds, in the 
       "<b>width × height × 4 bytes</b> (the " + c("rdpClientConAllocateSharedMemory") + " lines in "
       + c("journal-scatola.log") + "), and when " + c("/dev/shm") + " is full the new session's Xorg dies with "
       + c("Caught signal 7 (Bus error)") + " in " + c("rdpCapture") + " (" + c("diagnosi-sessione.txt") + " of the "
-      "short check). The boxes are started by " + c("11-accendi.sh") + " without " + c("--shm-size") + ", so they "
+      "short check). The boxes are started by " + c("11-start.sh") + " without " + c("--shm-size") + ", so they "
       "get podman's default of 64 MiB, and the arithmetic matches the climbs step by step:") + \
     table(["Screen", "Bytes per session (logged)", "Sessions that fit in 64 MiB", "Users + check", "xrdp measured on XFCE, LXQt"], [
         ["4K", "33,423,360", "1 (the second fits by a hair and fails)", "0 + 1", "—"],
@@ -221,7 +221,7 @@ S5 = p("xrdp ran the same scene, the same steps and the same thresholds, in the 
 # ── 5-bis. A first look at KasmVNC ───────────────────────────────────────
 S5B = p("KasmVNC is the strongest of the free alternatives that reach a Linux desktop from a browser (the others "
         "are noVNC and Guacamole), so it is the one REMOTIX is to be measured against next. The bench reruns the "
-        "same scene with REMOTIX as the twin, row by row (" + c("DECISIONI.md") + " §10.47; " + c("fasi/20-le-prestazioni.md")
+        "same scene with REMOTIX as the twin, row by row (" + c("DECISIONS.md") + " §10.47; " + c("phases/20-performance.md")
         + " §9). KasmVNC serves X11 sessions only, so GNOME, which REMOTIX serves on Wayland only, is outside the "
         "comparison; the sizes are 1080p, 2K and 3K.", lead=True) + \
     table(["At 1080p, one user", "KasmVNC", "REMOTIX"], [
@@ -261,12 +261,12 @@ S7 = p("A campaign is a queue of climbs that runs unattended on the test machine
 # on the test machine, as nicfio: the two REMOTIX campaigns, Intel then Radeon
 sudo systemd-run --unit=r20-campagna --uid=nicfio -E XDG_RUNTIME_DIR=/run/user/1000 \\
      -p TimeoutStopSec=1200 -p KillMode=mixed -p OOMPolicy=continue \\
-     bash /media/REMOTIX/src/controllo/banchi/16-stress/16-campagna.sh intel-f20 amd-f20
+     bash /media/REMOTIX/src/controllo/benches/16-stress/16-campaign.sh intel-f20 amd-f20
 
 # the same for xrdp: every climb gets --system xrdp, and the queue must never be the OOM victim
 sudo systemd-run --unit=r20-xrdp --uid=nicfio -E XDG_RUNTIME_DIR=/run/user/1000 -E REMOTIX_16_SYSTEM=xrdp \\
      -p TimeoutStopSec=1200 -p KillMode=mixed -p OOMPolicy=continue -p OOMScoreAdjust=-900 \\
-     bash /media/REMOTIX/src/controllo/banchi/16-stress/16-campagna.sh intel-x20 amd-x20
+     bash /media/REMOTIX/src/controllo/benches/16-stress/16-campaign.sh intel-x20 amd-x20
 
 # stop between two climbs, or now
 touch /media/REMOTIX/misure/fase16/FERMA
@@ -279,24 +279,24 @@ sudo systemctl stop r20-campagna
          "a climb reads the product's commit from there; a red suite means nothing is measured"],
         ["During", "Read " + c("coda-<label>.log") + ": one line per climb with «good», «break» and «true GREEN», "
          "and the estimate of the hours left", "a stalled machine loses its root in RAM and the ssh key"],
-        ["After", c("16-rapporto.py --log <register> --campaigns intel-f20 amd-f20 --text"),
+        ["After", c("16-report.py --log <register> --campaigns intel-f20 amd-f20 --text"),
          "the matrix, the curve of every climb and the bottleneck at the first non-GREEN level"],
-        ["After", c("16-riclassifica.py --climb <climb>") + " for every climb measured before the keystroke cure",
+        ["After", c("16-reclassify.py --climb <climb>") + " for every climb measured before the keystroke cure",
          "writes " + c("reclassified.json") + " next to the data and exits 2 if the re-judgement is not the climb's own"],
     ], "«TAB» — A campaign, before, during and after") + \
     p("Results land in " + c("/media/REMOTIX/misure/fase16/<label>-<size>-<desktop>/") + ": " + c("climb.jsonl")
       + " (one line per level), and per level " + c("ranking.log") + ", " + c("resources.jsonl") + ", the server and "
       "box journals and the actors' " + c("state.jsonl") + ". The registers " + c("registro.jsonl") + " and "
-      + c("register-xrdp.jsonl") + " in " + c("banchi/16-stress/") + " accumulate every classification; for a "
+      + c("register-xrdp.jsonl") + " in " + c("benches/16-stress/") + " accumulate every classification; for a "
       "repeated level the last one wins.") + \
     note("the measurement folders are treated as read-only evidence. When an analysis has to write beside the "
          "data without touching it, build a shadow tree — a real directory per climb and per level, with symbolic "
-         "links to every original file — and run " + c("16-riclassifica.py") + " on that: this is how the "
+         "links to every original file — and run " + c("16-reclassify.py") + " on that: this is how the "
          "re-judgement described in " + rif("The bench, the scene and the classes") + " was produced on 10 Oct 2026.",
          "Read-only data.") + \
     p("A full matrix costs about 22 hours of machine on the Intel and 28 on the Radeon for REMOTIX, about 11 and 11 "
-      "for xrdp (it breaks earlier). The phases that produced these figures are " + c("fasi/16-stress-e-capacita.md")
-      + " (method and thresholds) and " + c("fasi/20-le-prestazioni.md") + " (this campaign, its anomalies and the "
+      "for xrdp (it breaks earlier). The phases that produced these figures are " + c("phases/16-stress-and-capacity.md")
+      + " (method and thresholds) and " + c("phases/20-performance.md") + " (this campaign, its anomalies and the "
       "comparison).")
 
 CHAPTER = ("Performance and capacity", [

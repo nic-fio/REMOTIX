@@ -2,7 +2,7 @@
  * vulkanvideo.c — encoding on the card with Vulkan Video.  The why and the
  * rules are in `vulkanvideo.h`.
  *
- * The file follows the order of `vadiretta.c`:
+ * The file follows the order of `vadirect.c`:
  *   1. the tools (errors, time, memory);
  *   2. the level, as ffmpeg guessed it (the same tables as vadiretta);
  *   3. the device: instance, card chosen by DRM node, queues, extensions;
@@ -17,7 +17,7 @@
  *    the device (`f.`).  The rest is plain Vulkan 1.3.
  */
 #include "vulkanvideo.h"
-#include "registro.h"
+#include "log.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -138,8 +138,8 @@ static int log2_int(uint64_t x)
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * 2. THE LEVEL — as ffmpeg guessed it when nobody imposed one.
- *    ⚠ These are the tables of `vadiretta.c` (A-1 of H.264, A.4 of H.265), copied
- *      and not shared because `vadiretta.c` belongs to phase 18 and is not touched
+ *    ⚠ These are the tables of `vadirect.c` (A-1 of H.264, A.4 of H.265), copied
+ *      and not shared because `vadirect.c` belongs to phase 18 and is not touched
  *      from this line: at the merge the two copies join into a single file.
  * ═══════════════════════════════════════════════════════════════════════════ */
 
@@ -895,7 +895,7 @@ typedef struct {
 	VkImageLayout layout;
 } Bitmap;
 
-/* An imported DMA-BUF, cached: `codificatore.h` explains why the key
+/* An imported DMA-BUF, cached: `encoder.h` explains why the key
  * carries the generation (descriptor numbers are recycled). */
 typedef struct {
 	bool used;
@@ -1096,7 +1096,7 @@ static bool image_create(VulkanVideo *v, Bitmap *i, VkFormat f, uint32_t l, uint
 	return true;
 }
 
-/* ── the parameter sets, with the values of `vadiretta.c` ────────────────── */
+/* ── the parameter sets, with the values of `vadirect.c` ────────────────── */
 
 static void compose_h264(VulkanVideo *v)
 {
@@ -2829,7 +2829,7 @@ bool vulkanvideo_quality(VulkanVideo *v, int qp, char *error, size_t error_byte)
  *    moves the structure by copy: without this line those pointers would
  *    stay in the previous structure, which is FREED right after.
  *    ⚠ Today nobody follows them after opening (the product resizes by
- *    closing and reopening, `codificatore.c`), so it is not the cause of the
+ *    closing and reopening, `encoder.c`), so it is not the cause of the
  *    page fault; but it is a use-after-free ready to fire at the first
  *    `image_create(..., profile=true)` done after a move.
  */

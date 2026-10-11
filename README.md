@@ -1,4 +1,4 @@
-<p align="center"><img src="grafica/logo/remotix-logo.png" alt="REMOTIX" width="600"></p>
+<p align="center"><img src="design/logo/remotix-logo.png" alt="REMOTIX" width="600"></p>
 
 # REMOTIX
 
@@ -9,8 +9,8 @@
 > **Round 1**: 21 defects (14 of the product, 7 of the tests) ⇒ **clean-up** ⇒ **round 2 with the product
 > frozen: 329 PASS out of 329 and 328 faults seen out of 328** (binary `b1443a0b`, page `942f2873`).
 >
-> ⇒ Everything in `fasi/15-suite-funzionale.md`; the report in `banchi/15-suite/rapporto-giro2.html`;
-> the suite is rerun with `bash banchi/11-scatole/11-gancio.sh run --family suite`.
+> ⇒ Everything in `phases/15-functional-suite.md`; the report in `benches/15-suite/rapporto-giro2.html`;
+> the suite is rerun with `bash benches/11-boxes/11-hook.sh run --family suite`.
 > ⇒ The next is **phase 16** (stress and capacity).
 
 > # ⏸ THE PROJECT IS ON PAUSE — since 27 Aug 2026
@@ -28,18 +28,18 @@
 > ⭐ **49 grafted faults out of 49 caught**.
 >
 > ⛔ **The three reds are the same red**: `C1` on kde, xfce and lxqt — the product **can start only
-> GNOME** (`src/sessione.c` · `write_dropin()`). ⇒ **It is not a defect to repair: it is the mandate of phase 12.**
+> GNOME** (`src/session.c` · `write_dropin()`). ⇒ **It is not a defect to repair: it is the mandate of phase 12.**
 > The day `C1(kde)` turns green, KDE is really served.
 >
 > ## ⭐ The first thing to do when coming back
 >
 > ⚠ The test machine has its root **in RAM**: a restart takes everything away. ⇒ In this order:
 >
-> 1. put back the ssh key and **provision** the machine (`src/provisiona.sh`);
-> 2. switch the four boxes back on: `bash banchi/11-scatole/11-accendi.sh start <gnome|kde|xfce|lxqt>`,
+> 1. put back the ssh key and **provision** the machine (`src/provision.sh`);
+> 2. switch the four boxes back on: `bash benches/11-boxes/11-start.sh start <gnome|kde|xfce|lxqt>`,
 >    then `product` and `server` for each;
 > 3. ⭐ **run the net BEFORE touching anything**:
->    `bash banchi/11-scatole/11-gancio.sh run --family all`.
+>    `bash benches/11-boxes/11-hook.sh run --family all`.
 >    ⛔ If the result is not «58 green, 3 red, 49 faults out of 49», **something changed underneath**, and
 >    that is looked at before writing a line of KDE. It is exactly the net's job.
 >
@@ -47,9 +47,9 @@
 >
 > | | |
 > |---|---|
-> | ⭐ **a fault of its own** | `fasi/11-…` `fasi/11-la-rete-di-sicurezza.md` §3.6: *every new desktop comes in with at least one fault of its own, invented and run*. Today's acceptance tests are the ones GNOME taught us |
+> | ⭐ **a fault of its own** | `phases/11-…` `phases/11-the-safety-net.md` §3.6: *every new desktop comes in with at least one fault of its own, invented and run*. Today's acceptance tests are the ones GNOME taught us |
 > | ⛔ **KWin cannot be born blind** | `[M]` with `--output-count 0` it makes an output all the same ⇒ the «zero monitors of its own» design **does not carry over unchanged** |
-> | ⚠ **the stage dies with the client** | `[M]` the virtual monitor dies with the child's D-Bus connection. On GNOME `C6` measures **green** (the windows are found again); on another compositor it is not a given ⇒ `DECISIONI.md` §4.6-teretvicies |
+> | ⚠ **the stage dies with the client** | `[M]` the virtual monitor dies with the child's D-Bus connection. On GNOME `C6` measures **green** (the windows are found again); on another compositor it is not a given ⇒ `DECISIONS.md` §4.6-teretvicies |
 >
 > ## ❓ A question left open, and it is not urgent
 >
@@ -58,8 +58,8 @@
 > table, not decided: start **at every commit** only the fast part (C10, C12, C13, C15 —
 > `[M]` **one second**), leaving the heavy tests on the boxes on command.
 >
-> ⇒ Everything else is in `fasi/11-la-rete-di-sicurezza.md` §7-bis.19, and the lessons of the day in
-> `LEZIONI.md` §1.44–§1.57.
+> ⇒ Everything else is in `phases/11-the-safety-net.md` §7-bis.19, and the lessons of the day in
+> `LESSONS.md` §1.44–§1.57.
 
 Remote desktop for Linux: a **server**, **no client to install** — a modern browser
 is enough — and a protocol of ours called **RCP** — *Remotix Control Protocol*, which travels over
@@ -68,8 +68,8 @@ is enough — and a protocol of ours called **RCP** — *Remotix Control Protoco
 Video is encoded **on the graphics card** with direct libva (H.264, HEVC), with colours also converted
 on the card (VA-API VPP). ⛔ **No encoding on the processor**: without a card able to
 encode, REMOTIX does not install, and the server declares it at start-up (phase 19,
-[`fasi/19-nvidia.md`](fasi/19-nvidia.md), `DECISIONI.md` §10.27). Audio is Opus, with direct
-libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
+[`phases/19-nvidia.md`](phases/19-nvidia.md), `DECISIONS.md` §10.27). Audio is Opus, with direct
+libopus (phase 18, [`phases/18-without-ffmpeg.md`](phases/18-without-ffmpeg.md)).
 
 > # 📅 HOW IT WAS ON **25 Aug 2026** — *the restart of that time, superseded*
 >
@@ -79,7 +79,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 >
 > *«Prima è necessario mettere in sicurezza tutto quello che abbiamo sviluppato fino a oggi. Prima di
 > passare agli altri DE è necessaria una sessione dedicata per studiare una modalità che impedisca di
-> introdurre regressioni.»* — 25 Aug 2026, `DECISIONI.md` §4.6-duodecies.
+> introdurre regressioni.»* — 25 Aug 2026, `DECISIONS.md` §4.6-duodecies.
 >
 > ⚠ **KDE, XFCE and LXQt shift by one** (phases 12, 13, 14): the phases do not change by a line, their
 > place changes.
@@ -103,10 +103,10 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > ⚠ **And four faults came out of the work itself**, all written down: the graphics card group
 > that fell back **silently** to software · a library **with the same name and something else
 > inside** (the server started and died at the first client) · and **two bench defects**, one of
-> which gave **three false reds**. ⇒ `LEZIONI.md` **§1.41, §1.42, §1.43**.
+> which gave **three false reds**. ⇒ `LESSONS.md` **§1.41, §1.42, §1.43**.
 >
 > 📖 **The phase document has been open since 25 Aug 2026**:
-> **[`fasi/11-la-rete-di-sicurezza.md`](fasi/11-la-rete-di-sicurezza.md)** — the complete design,
+> **[`phases/11-the-safety-net.md`](phases/11-the-safety-net.md)** — the complete design,
 > ⭐ written **also for whoever does not know the project**: **§2** the constraints decided by the user, **§4** the
 > list of checks with *where it starts* and *what it looks at*, **§7** the work plan (⛔ **a single
 > box first, not four**), **§8** the open questions.
@@ -122,39 +122,39 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > **Closed on 25 Aug 2026, on the user's verdict**: *«sono soddisfatto — riprodotto audio e
 > video su una connessione del 1990; non credo che si possa chiedere di più»*. ⭐ A **4K video**
 > inside the remote desktop, with his tablet's bandwidth throttled to **10 Mbit/s**, that is **a third
-> of the declared floor**. ⇒ And the yardstick that came out of it is `DECISIONI.md` **§4.6-decies**: below the
+> of the declared floor**. ⇒ And the yardstick that came out of it is `DECISIONS.md` **§4.6-decies**: below the
 > specifications **sharpness** is lost, ⛔ **not smoothness and not synchronisation**.
 >
-> 📖 **[`fasi/10-multi-tenant-e-il-budget.md`](fasi/10-multi-tenant-e-il-budget.md)** — the **summary**
+> 📖 **[`phases/10-multi-tenant-and-the-budget.md`](phases/10-multi-tenant-and-the-budget.md)** — the **summary**
 > at the top, **§5** the cures, **§6** the measurements, **§8** the two decisions that remain.
 >
 > ### ⭐⭐⭐ What the phase found — **and it was not what was believed**
 >
 > ⇒ ⛔⛔ **The budget is not one of encoding: it is one of composition**, and what saturates it is the **desktop's
 > compositor**, not `remotix` — that is **something that is not ours**.
-> `DECISIONI.md` **§4.6-nonies** corrects §4.6. ⚠ The measurements of the time (and how many sessions the
-> test machine held, `DECISIONI.md` §4.6-septies) are in `fasi/10-multi-tenant-e-il-budget.md` §6:
+> `DECISIONS.md` **§4.6-nonies** corrects §4.6. ⚠ The measurements of the time (and how many sessions the
+> test machine held, `DECISIONS.md` §4.6-septies) are in `phases/10-multi-tenant-and-the-budget.md` §6:
 > they apply to that hardware and to the product from before phase 18, and they are not guarantees.
 >
 > ### ⭐⭐⭐⭐ AND THE MOST USEFUL THING OF THE DAY IS NOT A NUMBER
 >
 > ⛔ The director tried the product and said three times **«Firefox non funziona»**, until he
 > stopped. ⇒ **It was the browser's profile that was not being born**: on his machine `~/.cache` points to
-> `/tmp` — ⭐ **a deliberate choice of his**, not a fault (`DECISIONI.md` §4.6-undecies) — and the
+> `/tmp` — ⭐ **a deliberate choice of his**, not a fault (`DECISIONS.md` §4.6-undecies) — and the
 > **first** user who opens the browser takes `/tmp/mozilla` with mode `0700`.
 > ⭐⭐ *A configuration that on a machine with ONE user does no harm, and that on the **ten
 > users we create** blocks nine* — ⛔ **the defect is ours, not his**: it is our
 > `useradd -m` that makes them all be born in the same place. And it is exactly the theme of this phase.
-> Cured in `src/provisiona.sh`, ⭐ **without touching anything in the system**: a `.cache` of their own
+> Cured in `src/provision.sh`, ⭐ **without touching anything in the system**: a `.cache` of their own
 > only for the users we create.
 >
-> ⛔⛔ **And phase 9 had closed it with a wrong ✅** (`fasi/09-la-qualita-e-la-degradazione.md` §20.1-ter, now **refuted**): the check
+> ⛔⛔ **And phase 9 had closed it with a wrong ✅** (`phases/09-quality-and-degradation.md` §20.1-ter, now **refuted**): the check
 > that *«closed the question»* ran from a user **in the same condition**.
-> ⇒ `LEZIONI.md` **§1.38** — *a check that shares the factor it must exclude checks
+> ⇒ `LESSONS.md` **§1.38** — *a check that shares the factor it must exclude checks
 > nothing*.
 >
-> ⭐ **And now there is the witness that makes you SEE** — `banchi/10-f1-testimone.py`, a PNG of the remote
-> desktop, calibrated, with the third outcome **«I did not look»** distinct from «it was black» (`LEZIONI.md`
+> ⭐ **And now there is the witness that makes you SEE** — `benches/10-f1-witness.py`, a PNG of the remote
+> desktop, calibrated, with the third outcome **«I did not look»** distinct from «it was black» (`LESSONS.md`
 > §1.37).
 >
 > ### ⭐⭐ AND THE PRODUCT HALVED THE BANDWIDTH BY ITSELF
@@ -168,7 +168,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > `[M]` On a **newly born** session Mutter announces no `wl_output` ⇒ ⛔ **no
 > application can open a window**: Firefox stays alive and does not paint, the compositor is
 > **still**, the stage delivers **zero frames**. ⚠ It is **intermittent**: `provanic3` had the
-> monitor **2 times and then 6 times not**. ⇒ `fasi/10-multi-tenant-e-il-budget.md` **§7.4**.
+> monitor **2 times and then 6 times not**. ⇒ `phases/10-multi-tenant-and-the-budget.md` **§7.4**.
 >
 > ⭐ **It does not touch the capacity tests** — those were done on sessions that really drew.
 > ⛔ **It touches delivery**: today one new session in three or four is born blind.
@@ -186,7 +186,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 >
 > ## ✅⭐⭐⭐ PHASE 9 IS CLOSED — *quality and degradation*
 >
-> 📖 **[`fasi/09-la-qualita-e-la-degradazione.md`](fasi/09-la-qualita-e-la-degradazione.md)** — the
+> 📖 **[`phases/09-quality-and-degradation.md`](phases/09-quality-and-degradation.md)** — the
 > summary at the top, and **§17-§21** the part that counts.
 >
 > **Closed on the user's verdict**: *«il prodotto cambia in meglio; questa fase era per rendere
@@ -197,7 +197,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > ## ⭐⭐ HE CORRECTED THE TARGET HIMSELF, WITH THE PHASE OPEN
 >
 > *«30 mbps sono una connessione da metà anni 90. La vera sfida è misurare performance con reti che
-> perdono pacchetti o pacchetti fuori sequenza, o presentano fenomeni di jitter»* (`DECISIONI.md`
+> perdono pacchetti o pacchetti fuori sequenza, o presentano fenomeni di jitter»* (`DECISIONS.md`
 > §3.1-ter). ⇒ And it was the right quantity: **on bandwidth the product did not give way; on a dirty wire
 > it did.** ⛔ The bandwidth floor moved to **30 Mbit/s** (§3.1-sexies) and counts as a **premise**.
 >
@@ -210,7 +210,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > | **10 %** | ⛔ *«bloccato»* | ⛔ *«bloccato lo stesso»* |
 >
 > ⇒ **Above a certain loss the degradation ladder has nothing more to offer**, and the only
-> honest answer is **declaring the line dead** (`DECISIONI.md` §3.1-quater) — the decision the user took
+> honest answer is **declaring the line dead** (`DECISIONS.md` §3.1-quater) — the decision the user took
 > **before** having that number.
 >
 > ## ⭐ THE FIVE CURES ARE ON — and the healthy line pays nothing
@@ -251,16 +251,16 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > ## ⏳ WHAT REMAINS OPEN
 >
 > ⛔ ~~**Firefox does not start on the test machine** — `[M]` even outside REMOTIX, headless and
-> without Wayland: **it is not ours**, but it blocks the browser tests (`fasi/09-la-qualita-e-la-degradazione.md` §20.1-ter)~~
+> without Wayland: **it is not ours**, but it blocks the browser tests (`phases/09-quality-and-degradation.md` §20.1-ter)~~
 > ⭐⭐ **CLOSED on 25 Aug 2026, and the cause was another one**: on this machine `~/.cache` is a
-> **link to `/tmp`** — ⭐ **a deliberate choice of the user**, `DECISIONI.md` §4.6-undecies — and the
+> **link to `/tmp`** — ⭐ **a deliberate choice of the user**, `DECISIONS.md` §4.6-undecies — and the
 > **first** user who opens the browser takes `/tmp/mozilla` with mode `0700` ⇒ **for all the
-> others the profile is not born**. Cured in `src/provisiona.sh`, and `[M]` **Firefox renders a page
+> others the profile is not born**. Cured in `src/provision.sh`, and `[M]` **Firefox renders a page
 > in the remote desktop**.
 > ⚠ *And the conclusion «it is not ours» was wrong in the worst direction: the configuration is his and is
 > perfectly fine, ⛔ **the defect is ours** — it is our `useradd -m` that makes ten tenants be born
 > all in the same place.*
-> `fasi/10-multi-tenant-e-il-budget.md` §5.10 ·
+> `phases/10-multi-tenant-and-the-budget.md` §5.10 ·
 > ⭐ ~~the **`AV`** half of synchronisation is not re-measured (it needs that browser)~~ ⇒ **JUDGED on 25
 > Aug 2026**, on a **4K** video with bandwidth at **10 Mbit/s**: *«audio e video fluidi e in
 > sync»*. ⚠ The audio delay measured then stays `[?]` — that was a number, this is a judgement ·
@@ -272,7 +272,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 >
 > ⭐ And this phase left it two things: the **degradation ladder**, which is the way to fit
 > more people on the same machine (*«yes, smaller»* instead of *«no»*), and ⛔ the **network budget**
-> never measured — ten sessions × 30 Mbit/s are **300 Mbit/s on the server's wire** (`DECISIONI.md` §3.1-bis
+> never measured — ten sessions × 30 Mbit/s are **300 Mbit/s on the server's wire** (`DECISIONS.md` §3.1-bis
 > point 2).
 ---
 
@@ -285,12 +285,12 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > ⭐⭐ **And this time the verdict is not just a sentence: the pixels were measured.** The server
 > declares `vista=2545x927` at 08:45:44 UTC; the screenshot, eight seconds later, has the painted area
 > **927 px** high and **1648** wide — ratio **1.7778** against a 16:9 of **1.7778**. ⇒ The page rescales
-> to the view **without distorting by a pixel**: `SPECIFICHE.md` §6.1 measured on the glass.
+> to the view **without distorting by a pixel**: `SPECS.md` §6.1 measured on the glass.
 > ⭐ The provenance is in `fasi/rapporti/GIUDIZIO-13-agosto.md`.
 >
 > ⛔ **And it closes with SEVEN things declared open**, put in front of the user **before** he
 > decided — because a verdict given without knowing what is missing is an approval in the dark. They are
-> in [`FASI.md` §02-primo-fotogramma](FASI.md#02-primo-fotogramma). ⚠ *They were also in the box
+> in [`PHASES.md` §02-primo-fotogramma](PHASES.md#02-primo-fotogramma). ⚠ *They were also in the box
 > «RESUME FROM HERE — 13 Aug» of this file, pruned on 16 Aug 2026: see the note at the
 > bottom of this box.*
 >
@@ -306,7 +306,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > **Chrome**, and reading *«Ammesso, sessione nuova, tela 1920×1080, desktop sconosciuto»*.
 > ⭐ The measurement has a **provenance on disk**: `fasi/rapporti/GIUDIZIO-11-agosto.md`
 > — the scene, the fingerprints, the server's log verbatim. ⛔ And the phase closes **with some work
-> declared open**, which is the honest form: `PIANO.md` §0.2 has it close on *«a measurement judged
+> declared open**, which is the honest form: `PLAN.md` §0.2 has it close on *«a measurement judged
 > by the user, not a complete document»*.
 >
 > **The product exists**: `src/`, the server in C that a real browser opens. Bench
@@ -325,7 +325,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > on arriving until **00:36** — that is the page that said «start again from here» was already
 > false at the moment of delivery. This page was realigned on 11 Aug 2026, **with the code
 > still**.*
-> ⭐ **Bench B2 closed `DECISIONI.md` §6.4: the QUIC library is
+> ⭐ **Bench B2 closed `DECISIONS.md` §6.4: the QUIC library is
 > `ngtcp2`+`nghttp3`** — with a bench, not on paper, and with the other three each eliminated by a
 > measurement.
 >
@@ -338,7 +338,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > | ⭐ **the `lsquic` diagnosis closes** | without SNI: *«fail certificate lookup»*; **with** SNI: *«looked up cert for remotix.prova»*. ⛔ The defect is SNI and nothing else — **the elimination holds, now on a whole test**. And it stays at the end of every run as a **negative control**: it proves the probe can see a refusal |
 > | ⛔ **and `quiche` brings a cost that has nothing to do with QUIC** | **0.29.3 demands `rustc` 1.88** and Trixie has **1.85**: **0.28.0** is measured, chosen by the bench. Choosing it means staying there until Debian updates, **or** carrying a Rust toolchain outside the packages. `ngtcp2` does not raise the question |
 > | ⭐⭐ **the minimal server on `ngtcp2` exists, and a REAL BROWSER opens the session** | **Chrome 151** and **Firefox 140**, both `APERTA` on `https://192.168.0.2:7447/rcp/1`, fingerprint published, **no warning**, `"ciao"` coming back identical. ⛔ And `/rcp/9` **refused with 404**, as `RCP.md` §2.2 requires |
-> | ⭐ **and now «how much glue» has a number** | the WebTransport layer on `ngtcp2`+`nghttp3`, **alone**: **553 lines added — 373 of code, 134 of comment, 46 blank** `[M]` **10 Aug, 16:30**, with `git diff` on a clean tree and not estimated. ⚠ The succession of the day's measurements is in `DECISIONI.md` §6.4, box «How many lines are ours, and at what time» — it is not copied here |
+> | ⭐ **and now «how much glue» has a number** | the WebTransport layer on `ngtcp2`+`nghttp3`, **alone**: **553 lines added — 373 of code, 134 of comment, 46 blank** `[M]` **10 Aug, 16:30**, with `git diff` on a clean tree and not estimated. ⚠ The succession of the day's measurements is in `DECISIONS.md` §6.4, box «How many lines are ours, and at what time» — it is not copied here |
 > | ⭐ **the six properties of B2: 6 out of 6** | ceiling 30 s · datagram · credit of **16** uni streams · migration **not** disabled · **no 0-RTT** · `allowPooling: false`. ⛔ **Read from the peer**, not from the server's log — and precisely because of this they found **two defects without a symptom**: the server offered 0-RTT (which §2.3 forbids) and granted 3 unidirectional streams instead of 16 |
 > | ⭐ **and the ceiling can be changed** | with `--timeout=10s` the peer reads 10 000 ms: **B3** will be able to tell the protocol's ceiling from the transport's |
 > | ⛔⭐ **and `quiche` does not reach WebTransport from C** | it declares **4** settings on the wire and **neither of the two WebTransport ones**. `h3::Config::set_additional_settings` **exists in Rust and not in the FFI**, and the trick used on `ngtcp2` is not there: a C application never sees those bytes. ⇒ **§6.4 is closed** |
@@ -351,7 +351,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 >
 > | ⭐⭐ **B5: forty-four violations out of forty-four** | unknown type · length too long and too short · **4 GiB announced** · over 1 MiB · wrong state · version · capability names and values · credentials out of range · odd and out-of-limits canvas · malformed layout **against** unknown layout (`SESSION_UNSERVABLE`) · second bidirectional stream · three channels in the wrong direction on unidirectional streams. ⛔ The right reason every time, **for both roads of `RCP.md` §3.1**, and after **each** a new connection reaches `HERE_I_AM` |
 > | ⭐ **and the five cases that MUST pass** | `hevc,vp9` → `hevc` is chosen and **the discard is written** · **view 300×801** and **1×1** (`RCP.md` §7.1) · `BANCO_MARCA` with the feature off → `BANCO_ESITO(RIFIUTATA, FUNZIONE_SPENTA)` **without closing** · `ritardo_ms = 20000` → `RITARDO_FUORI_LIMITI`. ⛔ Without them, «the server closes on everything» would give **36 green out of 36**. ⚠ *The cases that MUST pass are **eight**, not five, and B5's 44 cases are **36 violations + 8 expected greens**: the final line said «44 out of 44», which is true by construction (finding **R7.14**)* |
-> | ⭐⭐ **B5 found a defect no other bench saw** | the **per-address** counter of §4.4-bis was keyed on the origin **with the port**, and with a single attempt per connection the port changes every time: that counter **was always 1**. Code that was there, looked right, and did nothing. Now at the **sixth** attempt `TOO_MANY_ATTEMPTS` triggers — even for the **right** password. ⚠ *The **sixth** was that day's rule: since the evening of 10 Aug the ban triggers at the **fourth** (`DECISIONI.md` §1.9), and the measurement stays written as it was because it carries the date of the rule it measured* |
+> | ⭐⭐ **B5 found a defect no other bench saw** | the **per-address** counter of §4.4-bis was keyed on the origin **with the port**, and with a single attempt per connection the port changes every time: that counter **was always 1**. Code that was there, looked right, and did nothing. Now at the **sixth** attempt `TOO_MANY_ATTEMPTS` triggers — even for the **right** password. ⚠ *The **sixth** was that day's rule: since the evening of 10 Aug the ban triggers at the **fourth** (`DECISIONS.md` §1.9), and the measurement stays written as it was because it carries the date of the rule it measured* |
 > | ⭐ **and a second contradiction in `RCP.md`** | §2.2 says that `HELLO(2)` on `/rcp/1` is `INCOMPATIBLE_VERSION`; §9 says to choose *«the highest that does not exceed the `HELLO`'s»*. **Different bytes for the same input.** §2.2 wins; §9 now names it. ⚠ *The cure of 10 Aug pointed to §2.4, which is «The port» and names neither paths nor versions: corrected the same day, finding **R11.2*** |
 >
 > ### ⭐⭐ THE CLOSING — the evening of 11 Aug 2026
@@ -429,7 +429,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > in the catalogue: with a red already present the fault can no longer change the outcome, and the bench
 > would become **uncertifiable by construction** — `[M]` healthy 1 · fault 1 · healed 1.*
 >
-> ⭐ **And the cause of the expiry is not an oversight: it is the farewell cure.** `DECISIONI.md` §1.12 — the out-of-phase
+> ⭐ **And the cause of the expiry is not an oversight: it is the farewell cure.** `DECISIONS.md` §1.12 — the out-of-phase
 > cure decided by the user — touched **`rcp.c`** and **`RCP.md`**, that is the files those
 > seven certifications rested on. ⇒ **Curing the product makes the certifications that
 > looked at it expire, and it is exactly what the register must say**: the line is valid for those bytes, not for
@@ -441,7 +441,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > its line **can be re-verified from CHUWI** — before, the file it names could not be read from here.
 >
 > ⛔ **And it must be said what counts as a guarantee, because it is not the same number.**
-> `banchi/01-b0-terreno.sh` — the check that looks **under** the benches, born today because **twice
+> `benches/01-b0-terreno.sh` — the check that looks **under** the benches, born today because **twice
 > in one day** a bench was green on a terrain that was not the one we believed — came
 > into the round at **14:14**. Eight of the first nine certifications are from the earlier hours.
 > ⇒ **As a count it is 12; as a guarantee «certified on a verified terrain» it is the evening's
@@ -460,7 +460,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > | ⛔ **never tested** | **B10** — the bench does not exist, but ⭐ **the second user is there now** |
 >
 > ⚠ **The number depends on where you ask for it**: the register lived in **two copies**, one per
-> machine. Merged in `banchi/01-b12-registro.jsonl` (the versioned one). ⛔ But the server says
+> machine. Merged in `benches/01-b12-registro.jsonl` (the versioned one). ⛔ But the server says
 > **8** and the laptop **9**, and both are right: on the server `RCP.md` is not there, so B9 cannot
 > be *re-verified* there — and the tool writes «non so» instead of rounding.
 >
@@ -469,18 +469,18 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > | # | | outcome |
 > |---|---|---|
 > | **1** | ⭐ **B8 — certified**, `[M]` 13:46 UTC, graft, port 7471: **`5 → 1 → 5`**. The round finally covers the **whole sequence** — two lives of the server (*«ban caricati: 1»* from disk, **I7**), the ban page (200, *«tentativi esauriti»*, 12h 0m), the unblock on **a real ban**. ⛔ **The healthy expected value is 5, not 0, and it is written in the catalogue before the round**: it is the outcome *«il ban passa, ma le mediane si separano»*, and it is granted only because the defendant is **measured** and it is **PAM** | ✅ done |
-> | **2** | ⭐ **B13 — certified**, and the fragment cure **holds**: new round of the probe, **zero logs with the password in them**; then **33 files** thrown away with the trace in `banchi/01-b13-buttati.jsonl`. ⭐ **`B13.4` closed against the product** (200, 31 083 bytes, current fingerprint). ⛔ `B13.3` and `B13.5` remain | ✅ done |
+> | **2** | ⭐ **B13 — certified**, and the fragment cure **holds**: new round of the probe, **zero logs with the password in them**; then **33 files** thrown away with the trace in `benches/01-b13-buttati.jsonl`. ⭐ **`B13.4` closed against the product** (200, 31 083 bytes, current fingerprint). ⛔ `B13.3` and `B13.5` remain | ✅ done |
 > | **3** | ⭐ **B10 — the bench exists, and it certified itself in the same round**: `prova2` reaches `SESSION` on the **product**. ⭐⭐ And **it closed the `[?]` R3.26 with a measurement**: the PAM stack judges another user **only if the process is privileged** | ✅ done |
-> | **4** | ⭐ **Done where it bit, and stopped on purpose**: `runs()` now **calls** `01-b8-lancia.sh` instead of rewriting its sequence (as it already did with C2). ⛔ Extending it to the others tonight would have **invalidated nine certifications** to redo them in a time that was not there | 🔸 half |
+> | **4** | ⭐ **Done where it bit, and stopped on purpose**: `runs()` now **calls** `01-b8-launch.sh` instead of rewriting its sequence (as it already did with C2). ⛔ Extending it to the others tonight would have **invalidated nine certifications** to redo them in a time that was not there | 🔸 half |
 > | **5** | ⭐ **P1 and P5 are in the catalogue**: 12 entries → **14**. **P1 certified**; ⛔ **P5 not** — and see the row below, which is the thing that counts | 🔸 P5 not |
 >
 > #### ⛔⛔ THE PRODUCT DEFECT FOUND AT THE END OF THE EVENING — and earlier it had been **acquitted by mistake**
 >
 > **The defect**: when the browser tab is closed, the page **sends no `FAREWELL`**, where
 > `RCP.md` §8.1 requires it unconditionally. The slot goes away after **30 seconds of silence**.
-> ⛔ **On both engines.** The cause has a name: `src/pagina.html` · `LAST_KEY()` resets
+> ⛔ **On both engines.** The cause has a name: `src/page.html` · `LAST_KEY()` resets
 > `dismiss_current` **one millisecond after `SESSION`**, and the `pagehide` handler (line 331) is
-> **dead code**. ⭐ **The cure is three lines and it is written** in `FASI.md` §01-filo-nudo, box
+> **dead code**. ⭐ **The cure is three lines and it is written** in `PHASES.md` §01-filo-nudo, box
 > P5.
 >
 > ⭐⭐ **And at the end of the same evening it was APPLIED and RE-MEASURED**, `[M]` **two rounds per
@@ -489,7 +489,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > the close with code `0x0` that `RCP.md` §3.1 forbids **no longer appears**. The anchor of `dismiss_current`
 > is no longer *«the attempt is over»* but ***«the session is over»***: it is reset by `wt.closed`, and only
 > if the reference is still its own. ✅ **And it is a product change after the closing of
-> phase 1, so it was put on record**: `DECISIONI.md` §1.12 — the cure is **out of phase**, ⛔
+> phase 1, so it was put on record**: `DECISIONS.md` §1.12 — the cure is **out of phase**, ⛔
 > **phase 1 does not reopen** and the certification stays **12 out of 14**, ⭐ and the cure **is not rolled back**,
 > because it is measured with the same rigour as the phase. Phase 2 inherits the **re-certification of P5**.
 >
@@ -517,7 +517,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > answers in clear**, and the cause was **the cure of the day before**, written for the product.
 >
 > ⇒ With B3, that makes **three times in this phase** that the red was pointed at the wrong defendant — and once,
-> tonight, that the **green** was. ⭐ *The form of `LEZIONI.md` §1.9 applies both ways, and the
+> tonight, that the **green** was. ⭐ *The form of `LESSONS.md` §1.9 applies both ways, and the
 > green is the one that does not come back to show itself.*
 >
 > ⭐ **And there is a new rule worth more than any single point**: *whoever writes a bench certifies it
@@ -525,12 +525,12 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 >
 > #### ⭐ THE NEW TOOLS, and they serve the next round
 >
-> - **`banchi/01-b0-terreno.sh`** — ⛔ *is the server the one I believe?* 14 checks, it runs **before**
+> - **`benches/01-b0-terreno.sh`** — ⛔ *is the server the one I believe?* 14 checks, it runs **before**
 >   every certification, and B12 refuses if it does not hold. ⭐ Born because **twice today** a bench
 >   was green on the wrong terrain, and once I caught it **by chance**.
-> - **`banchi/01-b0-chiamate.py`** — *does whoever calls a bench pass it what it demands?* Three times in
+> - **`benches/01-b0-chiamate.py`** — *does whoever calls a bench pass it what it demands?* Three times in
 >   two days a caller had stayed behind on a mandatory argument.
-> - **`banchi/attrezzi-misura-marca.sh`** — grafts a fault, captures **all** the output, and puts things
+> - **`benches/attrezzi-misura-marca.sh`** — grafts a fault, captures **all** the output, and puts things
 >   back **by rebuilding** even if the round dies. ⭐ It is what makes a certification take an hour
 >   instead of a morning.
 >
@@ -539,9 +539,9 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > - ⛔ ~~**On Firefox the farewell of `RCP.md` §8.1 does not go out**~~ — **separated, cured and re-measured the same
 >   night**. ⚠ *«The page does not send»* and *«Firefox throws away what the page sends inside
 >   `pagehide`»* arrived **identical** at the server's log, and what separated them was the log
->   **of the browser**: `banchi/01-p5-ff-*`, with a carrier that does not go through WebTransport. ⇒
+>   **of the browser**: `benches/01-p5-ff-*`, with a carrier that does not go through WebTransport. ⇒
 >   The defendant was **the page**, on both engines; ⭐ the cure is in the product and the two rounds per
->   engine confirm it. ✅ **And the declaration is there**: `DECISIONI.md` §1.12 — cure **out of phase**, the
+>   engine confirm it. ✅ **And the declaration is there**: `DECISIONS.md` §1.12 — cure **out of phase**, the
 >   phase 1 stays closed at **12 out of 14**, and the re-certification of P5 is phase 2's load.
 > - ⚠ **And that bench's tracer is BLIND on Chrome inside `pagehide`**: neither
 >   `sendBeacon` nor a **synchronous** XHR gets out. On Chrome the attribution rests only on the
@@ -549,7 +549,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 >   reused that tracer elsewhere must know it.
 > - ⛔ **P5 does not certify** for that single point — the rest of its healthy round is green on Chrome.
 >   ⭐ **And now the cause is gone**, but the new round **has not been done**: it is done in phase 2
->   (`DECISIONI.md` §1.12). ⛔ *«Cured»* does not mean *«certified»*: they are two different words, and
+>   (`DECISIONS.md` §1.12). ⛔ *«Cured»* does not mean *«certified»*: they are two different words, and
 >   this phase has already confused them once.
 >   ⭐ **P5's scene was cured the same night** — two tabs, so `ctrl+w` closes **the tab** and
 >   does not make Firefox quit — and with it the counter that would have made it useless: `01-p5-registro.py`
@@ -560,7 +560,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 >   ⭐⭐ **And while curing the scene a third defect popped up**: on the `FAREWELL` road the server
 >   freed the slot **without writing it in the log** (the only one of the four points not to do it). The
 >   slot really was freed — ⛔ but the invariant **`RCP.md` §8.2 `0x0F` was no longer observable**, and P5
->   would have given red to a healthy server. Cured and measured (`DECISIONI.md` §1.12): P5's
+>   would have given red to a healthy server. Cured and measured (`DECISIONS.md` §1.12): P5's
 >   judge goes from **1 false fault** to **0**, two rounds per engine.
 > - ⛔ ~~The password in the dirty logs~~ — **closed**: cure verified with a new round,
 >   **33 files** thrown away with the trace. ⛔ ~~And the password on the command line remains (so in
@@ -607,13 +607,13 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > ✅ **And the two fallbacks are decided too.** ⚠ *This line gave them as open, and it had expired:
 > the user decided them on the evening of 11 Aug. Corrected on 12 Aug 2026.*
 >
-> 1. **The single thread** ⇒ `DECISIONI.md` **§1.10**: the PAM check **leaves the single thread before
+> 1. **The single thread** ⇒ `DECISIONS.md` **§1.10**: the PAM check **leaves the single thread before
 >    phase 2 opens**, and ⭐ **with a helper process, not with a thread** — PAM is not reliably
 >    reentrant, and a thread would bring troubles of its own into the cure of a concurrency problem.
 >    ⛔ The reason is video: as long as there is no video the symptom is *«the last of the ten waits ten
 >    seconds»*, unpleasant and contained; from phase 2 on **the screen of everyone connected
 >    freezes every time someone else gets in**, and whoever sees it **will blame the video**.
-> 2. **The session ceiling** ⇒ `DECISIONI.md` **§1.11**: it stays **16, fixed at compile time, until
+> 2. **The session ceiling** ⇒ `DECISIONS.md` **§1.11**: it stays **16, fixed at compile time, until
 >    phase 3** — because *«the real limit is not a count: it is a budget of pixels per second, and it is
 >    set by the encoder»*, and any number put in today would be a placeholder to change twice.
 >    ⚠ And the price is declared: for two phases **the code says 16 and the specification says 10**.
@@ -634,7 +634,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > ```
 >
 > ⚠ **No measurement went away with them**: they were *resume* boxes, that is session state,
-> and the numbers they cited are in `FASI.md`. ⛔ If you find one that is not there, it is a defect —
+> and the numbers they cited are in `PHASES.md`. ⛔ If you find one that is not there, it is a defect —
 > and the line above says where to reread it.
 
 > ### 📅 HOW IT WAS ON **15 Aug 2026, morning** — *superseded; start again from the box at the top.* ⇒ **THE TAIL OF PHASE 4 IS CLOSED: THE CANVAS IS THE WINDOW**
@@ -653,8 +653,8 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > | ⭐ **the phase's number** | the canvas agreed at attach: `[M]` **1264×800** = the window, scale **1.000**, `pixelated` |
 > | ⭐ **login → desktop** | the cure is not resizing: it is that **restarting the stream delivers a buffer** when a keyframe is due and the scene is still |
 > | ⭐⭐ **click → frame sent** | the link on a STILL scene, which nobody had measured, gets shorter. ⚠ It is not the link of `CODER.md` §1-bis, which is on a moving scene |
-> | ⭐ **hot resizing** | ⚠ **since 17 Aug 2026 it is no longer a user feature**: the canvas adapts at attach and at **reattach**, and never with the session live (`DECISIONI.md` §5.1-bis) |
-> | ⛔ **and the build block** | untied **without asking the user**: `src/Contenitore` (rootless podman, on the laptop) and the path error in `enter.sh` |
+> | ⭐ **hot resizing** | ⚠ **since 17 Aug 2026 it is no longer a user feature**: the canvas adapts at attach and at **reattach**, and never with the session live (`DECISIONS.md` §5.1-bis) |
+> | ⛔ **and the build block** | untied **without asking the user**: `src/Containerfile` (rootless podman, on the laptop) and the path error in `enter.sh` |
 >
 > ⛔⛔ **TEN DEFECTS FOUND BY REFUTING** the cure just written (four agents, adversarial
 > mandate), and **eight had been born that night together with it**: a read beyond the copied
@@ -665,14 +665,14 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > Android il mouse non prende più i click»* was **two sessions of his fighting over the stage
 > seventeen times a second**, and every round recreated the `libei` devices (`[M]` 640 replacements).
 >
-> 📖 **The document**: [`FASI.md` §04-si-comanda](FASI.md#04-si-comanda), §«the tail of phase 4» ·
+> 📖 **The document**: [`PHASES.md` §04-si-comanda](PHASES.md#04-si-comanda), §«the tail of phase 4» ·
 > the technical report `fasi/rapporti/F4-IN-13-la-tela-che-cambia.md`.
 >
 > ⛔ **AND THIS IS PHASE 4, NOT 6** — corrected by the user on 15 Aug 2026, and his reason
 > holds: the phase number is given by **why** the work was done, not by the list of things
 > produced. Here it was done to cure **the mouse and the click delay**, that is to finish the mandate
 > of phase 4 — and all the night's reports are called `F4-IN-*`, the new one included.
-> ⇒ **Phase 6 stays OPEN** with three quarters of its content already done and measured (`PIANO.md` says
+> ⇒ **Phase 6 stays OPEN** with three quarters of its content already done and measured (`PLAN.md` says
 > which).
 >
 > ### ⭐⭐ AND THE NEXT IS **5 — THE SESSION**, in a NEW work session
@@ -682,7 +682,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > are the state of the machine, **the two roads for building**, what of phase 5 is already alive (and
 > must be **tested**, not rewritten), and the four pieces that are really missing.
 >
-> ⛔ **The first gesture is opening `FASI.md` §05-la-sessione**, before writing a line: the tail of
+> ⛔ **The first gesture is opening `PHASES.md` §05-la-sessione**, before writing a line: the tail of
 > phase 4 violated that rule, and carries the reservation at the top.
 >
 > ---
@@ -693,13 +693,13 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > > — the user, 14 Aug 2026, and **phase 3 closes here**
 >
 > ⛔⛔ **But the verdict produced TWO defects no bench had found, and they are the work that
-> comes now.** The detail is in [`FASI.md` §03-movimento](FASI.md#03-movimento) §0-ter and
+> comes now.** The detail is in [`PHASES.md` §03-movimento](PHASES.md#03-movimento) §0-ter and
 > §0-quater; the night's count in
 > `fasi/rapporti/F3-sessione-13-sera.md`.
 >
 > | | the work, in order | why first |
 > |---|---|---|
-> | **1** | ⛔⛔ **SHOW THE REAL DESKTOP.** The product **adds** a virtual monitor to the session (`Meta-2`, *«2 before and 3 after»*) and records that one: GNOME puts **the wallpaper** on it, but bar, dock and windows stay on the **primary**. ⇒ **The user sees an empty second screen, not their desktop** | ⭐ it is **the question the user asked** — *«se il server non mostra il desktop, a che serve REMOTIX?»* — and it is `SPECIFICHE.md` §5.1. ⛔ **It stayed hidden for two phases** behind phase 2's verdict, *«è lo sfondo GNOME, è OK»*: **an empty wallpaper taken for a success** |
+> | **1** | ⛔⛔ **SHOW THE REAL DESKTOP.** The product **adds** a virtual monitor to the session (`Meta-2`, *«2 before and 3 after»*) and records that one: GNOME puts **the wallpaper** on it, but bar, dock and windows stay on the **primary**. ⇒ **The user sees an empty second screen, not their desktop** | ⭐ it is **the question the user asked** — *«se il server non mostra il desktop, a che serve REMOTIX?»* — and it is `SPECS.md` §5.1. ⛔ **It stayed hidden for two phases** behind phase 2's verdict, *«è lo sfondo GNOME, è OK»*: **an empty wallpaper taken for a success** |
 > | **2** | ⛔⛔ **HEVC DOES NOT PAINT in the user's browser.** `[M]` 1 748 frames delivered, **0 painted**, and the client asks for a keyframe **1 659 times**. ⚠ **The benches said the opposite** (frames painted): that round had a **synthetic scene** and a **bench Chrome** | without it, **hardware encoding cannot be judged** — and the phase already has it inside |
 > | **3** | ⚠ ~~**DRAWING as the bottleneck**~~ ⇒ ⛔ **CORRECTED on 14 Aug 2026**: drawing costs little; that stretch was **the wait for the frame from the GPU** plus the drawing | the bottleneck is there, ⭐ but **it is not where it was written** |
 >
@@ -714,7 +714,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > ### ⭐⭐⭐⭐ The phase's number, and how it was taken — **13 Aug 2026, night**
 >
 > *Phase 3 has its number **with hardware encoding**, and hardware encoding is **in the
-> product**, not on a copy. The full count is in [`FASI.md` §03-movimento](FASI.md#03-movimento).*
+> product**, not on a copy. The full count is in [`PHASES.md` §03-movimento](PHASES.md#03-movimento).*
 >
 > ⭐⭐ **THE ARCHITECTURE IS ACQUITTED**: removing the cost of encoding with hardware, **the other
 > stretches of the link do not move**, and the keyframe stops being the frame that weighs.
@@ -732,7 +732,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 >
 > ⛔ **And something that looks bad, written so that it is not lost**: the **control cell of that round never existed** — the `con-gpu` round tested HEVC, VP9 and H.264, and **not AV1**. Without AV1 there was nothing to compare with.
 >
-> ⇒ ⭐ **Why it is corrected instead of annotated**: whoever reads «the bottleneck is drawing» starts optimising the wrong stretch. `LEZIONI.md` §7.2 — *optimising in the wrong direction is worse than not optimising*.
+> ⇒ ⭐ **Why it is corrected instead of annotated**: whoever reads «the bottleneck is drawing» starts optimising the wrong stretch. `LESSONS.md` §7.2 — *optimising in the wrong direction is worse than not optimising*.
 >
 > #### ⛔⛔ The three jobs, in this order and not another
 >
@@ -765,7 +765,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > product on 7448** (restarted tonight on the right binary) and **P5's target on 7501**.
 > Ports **7447** and **7481** are free. No round in progress, on either machine.
 >
-> ⏳ **The only thing with a deadline**: `bash banchi/01-s1b-eccezione.sh oggi`, **once a
+> ⏳ **The only thing with a deadline**: `bash benches/01-s1b-eccezione.sh oggi`, **once a
 > day until 18 Aug**. The 11th had been skipped and recovered at the last moment (day 1.00 of 7);
 > ⛔ `/media/REMOTIX/s1b-certificato/` is not regenerated and `~/.remotix-s1b/` is not deleted.
 >
@@ -776,11 +776,11 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > | **4** | `01-b12-lancia.sh` has `PORT=7447` and `bsslserver` hard-coded: it cannot be pointed at the product, and that is why B13 is certified **only** from its «evening» script, while P1 and P5 stay outside the orchestrator | ⏳ **open**, defect **D6** |
 > | **5** | P5's fault covers **less** than it promises: the page picks up `/fingerprint` before every attempt, so the false fingerprint does not kill the session. To really cover **R1.14** a fault that hits **the pick-up** is needed | ✅ **closed** on 12 Aug, defect **D11**: the new fault removes **the pick-up**, and the proof that it looks at something else is that with the fault inside **the old check stays green** |
 > | **6** | the **declared** holes: `B13.3` (the certificates are made by a bench, not by the code), `B13.5` (the transport grants all the streams requested), and the `[?]` of **B8** on `pam_faildelay` | ⏳ **open**, and declared as such |
-> | **7** | the two phase fallbacks: **a single thread** with the PAM check blocking it, and the ceiling of **16 sessions at compile time** where the rule wants ten configurable | ✅ **decided by the user** on 11 Aug — `DECISIONI.md` §1.10 and §1.11. ⚠ *This line gave them as undecided, and it had already expired when it was written* |
+> | **7** | the two phase fallbacks: **a single thread** with the PAM check blocking it, and the ceiling of **16 sessions at compile time** where the rule wants ten configurable | ✅ **decided by the user** on 11 Aug — `DECISIONS.md` §1.10 and §1.11. ⚠ *This line gave them as undecided, and it had already expired when it was written* |
 >
 > ⚠ **And one thing about method, from whoever held the keyboard**: the trap *«never a redirection
 > **around** `enter.sh`, or it eats `sudo`'s password prompt»* — already in the catalogue,
-> `FASI.md` §00-ambiente B3.3 — was repeated **twice in the same night**, and the second time
+> `PHASES.md` §00-ambiente B3.3 — was repeated **twice in the same night**, and the second time
 > cost twenty minutes of waiting on a build that was not building anything. ⇒ It is worth
 > making it impossible instead of remembering it.
 >
@@ -801,7 +801,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > ⛔ **And the fault proves less than its title says — it must be read before believing the
 > line above.** With the false fingerprint in the page, the `p-sessione` legs stay **CONFORMANT**: the
 > WebTransport session **opens all the same**. ⭐ The reason is the product's, and it is `RCP.md` §4.1-bis applied:
-> `pagina.html` **picks up `/fingerprint` before every attempt** and uses that, keeping the served
+> `page.html` **picks up `/fingerprint` before every attempt** and uses that, keeping the served
 > fingerprint only as a fallback — and when the two diverge **it says so**. ⇒ The fault proves that **P5 sees
 > the divergence**, which is what P5 exists for; it does **not** prove that the divergence kills the session,
 > because on this product it does not kill it.
@@ -810,7 +810,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > server's log had a hole of **37,120 NUL bytes** — `svuota-registro` called with the server
 > alive — and `grep`, gone blind, read «NON LETTO» where our address was, sending the
 > unblock of `RCP.md` §4.4-bis **onto the server itself**. Three cures, all re-measured; the lesson is in
-> `LEZIONI.md` §1.9 point 9.
+> `LESSONS.md` §1.9 point 9.
 >
 > **How to redo it**, if it needs to be re-run:
 >
@@ -822,10 +822,10 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > SSH_ROOT="python3 fondamenta/strumenti/sshpw.py" \
 >   ADDR=192.168.0.2 PORT=7501 SOCK=/srv/src/tmp/sera-p15.sock \
 >   LOG_SERVER=/media/REMOTIX/src/tmp/sera-p15-browser.log \
->   SCREEN=:79 PORTA_LOC=8859 bash banchi/01-p5-lancia.sh
+>   SCREEN=:79 PORTA_LOC=8859 bash benches/01-p5-lancia.sh
 > ```
 >
-> ⛔ **Between one step and the next TWO things are needed, not one**: `costruisci.sh` on the copy **and** the
+> ⛔ **Between one step and the next TWO things are needed, not one**: `build.sh` on the copy **and** the
 > server switched back on with that binary. P5 does not rebuild by itself — it finds a server on and queries it
 > — so skipping one would make it measure the previous binary **while looking as if it had grafted**.
 > ⚠ If the copy is missing, `01-p5-accendi.sh copia` redoes it and rebuilds it (`TWIN=/srv/src/rcp`);
@@ -848,23 +848,23 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > support three pieces of it: the browser was **on the same machine as the server**, the page **was not served
 > by the product** (`GET /` zero times in 48 lines), and the port was **7448** — 7447 belongs to
 > the graft. Corrected on 11 Aug 2026; the full count is in the table below.*
-> **The detail, file by file, is in `FASI.md` §01-filo-nudo §«What was developed».**
+> **The detail, file by file, is in `PHASES.md` §01-filo-nudo §«What was developed».**
 >
 > ⛔ **And what is NOT proven, which is the half that is not seen:**
 >
 > | | |
 > |---|---|
-> | ⛔ **A SINGLE ENGINE** | the only trace of a round with a real browser against this server is a comment inside `src/pagina.html` — `[M]` 10 Aug night, **Firefox** — and that round found a real defect (the page declared `disposizione = en`, which is not an XKB name). ⛔ **Of Chrome against this server there is no trace**, and B2's criterion wants **two engines out of two** |
-> | ⛔⛔ **and that round is LESS than what this page said** | `[M]` **11 Aug 2026**, read in `/media/REMOTIX/src/remotix-browser.log` (48 lines) and recounted by hand. ⭐ **What holds**: the handshake really gets as far as `SESSION` — `sessione aperta utente=prova … tela=1920x1080 vista=1152x836 disposizione=us`, and the odd view says that a real window was asking. ⛔ **What does NOT hold, and it is two things**: *(1)* all **19** connections come from `[192.168.0.2]`, that is **from the server itself** — the round **did not cross the network**, and this page told it as a browser opening an address from outside; *(2)* **`GET /` appears ZERO times** and `GET /impronta` once: ⛔ **the page was not served by the product**. The second job of the phase 1 server — *serving the page*, `PIANO.md` phase 1 — **is not measured anywhere** |
+> | ⛔ **A SINGLE ENGINE** | the only trace of a round with a real browser against this server is a comment inside `src/page.html` — `[M]` 10 Aug night, **Firefox** — and that round found a real defect (the page declared `disposizione = en`, which is not an XKB name). ⛔ **Of Chrome against this server there is no trace**, and B2's criterion wants **two engines out of two** |
+> | ⛔⛔ **and that round is LESS than what this page said** | `[M]` **11 Aug 2026**, read in `/media/REMOTIX/src/remotix-browser.log` (48 lines) and recounted by hand. ⭐ **What holds**: the handshake really gets as far as `SESSION` — `sessione aperta utente=prova … tela=1920x1080 vista=1152x836 disposizione=us`, and the odd view says that a real window was asking. ⛔ **What does NOT hold, and it is two things**: *(1)* all **19** connections come from `[192.168.0.2]`, that is **from the server itself** — the round **did not cross the network**, and this page told it as a browser opening an address from outside; *(2)* **`GET /` appears ZERO times** and `GET /impronta` once: ⛔ **the page was not served by the product**. The second job of the phase 1 server — *serving the page*, `PLAN.md` phase 1 — **is not measured anywhere** |
 > | ⚠ **and in that round the client did not say farewell** | the slot went away with `STACCATO per silenzio: 30269 ms … (posti occupati adesso: 0)`. ⛔ What freed it was **the clock**, not a farewell: a bench that waited five seconds would write «the slot was not freed» on a server that was about to free it |
 > | ⛔ **and that round cannot be re-verified** | `[M]` 11 Aug: in `src/` there is neither the binary nor a `.o`, no `.jsonl`, and `git status` gives it as **untracked**. ⛔ **None of the 14 launch scripts switches on the product**: `bsslserver` appears in **11** of them, the `remotix` binary in **zero** |
-> | ⛔ **no reviewer ran the whole server** | `ngtcp2`, `nghttp3`, `libssl-dev`, `libpam0g-dev` were missing: `trasporto.c`, `webtransport.c`, `pagina.c`, `certificati.c` are **read, not measured**. ⭐ The only execution is `rcp.c` **compiled in isolation**, `-Wall -Wextra`, **zero warnings**, six inputs byte for byte |
+> | ⛔ **no reviewer ran the whole server** | `ngtcp2`, `nghttp3`, `libssl-dev`, `libpam0g-dev` were missing: `transport.c`, `webtransport.c`, `page.c`, `certificates.c` are **read, not measured**. ⭐ The only execution is `rcp.c` **compiled in isolation**, `-Wall -Wextra`, **zero warnings**, six inputs byte for byte |
 > | ⛔ **the transport properties have not been re-measured on it** | B2's six are `[M]` **on the graft**. The product today declares **19** unidirectional streams where the measurement read 16 |
-> | ⛔ **two phase fallbacks, declared** | **a single thread**, and the PAM check **blocks** it: ten users signing in together make the last one wait ten seconds (`SPECIFICHE.md` §5.5 promises ten sessions). And **16 attached sessions at compile time**, where the ceiling is ten configurable |
+> | ⛔ **two phase fallbacks, declared** | **a single thread**, and the PAM check **blocks** it: ten users signing in together make the last one wait ten seconds (`SPECS.md` §5.5 promises ten sessions). And **16 attached sessions at compile time**, where the ceiling is ten configurable |
 >
 > #### The benches: **twelve written**, six green, ⛔ **and THREE certified**
 >
-> **Twelve benches written** — `[M]` 11 Aug 2026, counting the distinct prefixes in `banchi/`:
+> **Twelve benches written** — `[M]` 11 Aug 2026, counting the distinct prefixes in `benches/`:
 > `01-b2 · b3 · b4 · b5 · b6 · b7 · b8 · b9 · b11 · b12 · b13 · c2`. ⚠ *This line said «**eight**
 > benches written»: four had been born on the night of the 10th and nobody had added them — finding
 > **R12C.13**.*
@@ -885,7 +885,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > it** and it turned red on the right mark.
 >
 > ⚠ **And the two «twelves» are NOT the same twelve, or this line would be a count without a
-> denominator**: the twelve *written* are the prefixes in `banchi/`; the twelve of **B12's catalogue**
+> denominator**: the twelve *written* are the prefixes in `benches/`; the twelve of **B12's catalogue**
 > include **B10** — which has no script of its own — and exclude **B12**, which does not certify itself.
 > The count below is on B12's catalogue.
 >
@@ -896,7 +896,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > | ⚠ **certified and NOT re-verifiable** | **B7** — the mark required was the word `FAREWELL`, which the bench prints in the **healthy** round too: *«a mark that appears in both rounds is not a mark»* |
 > | ⛔ **never tested** | **B2 · B3 · B5 · B6 · B8 · B10 · B11** — seven |
 >
-> ⇒ The register is `banchi/01-b12-registro.jsonl`, and the full count is in `FASI.md` §01-filo-nudo.
+> ⇒ The register is `benches/01-b12-registro.jsonl`, and the full count is in `PHASES.md` §01-filo-nudo.
 >
 > #### ⭐ The access rule has changed, and the user decided it — 10 Aug 2026
 >
@@ -909,17 +909,17 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > «consecutive» was the user's **first** wording, and the five-minute window is a
 > **third** sentence of the same day that narrows it. ⛔ The two rules give **opposite outcomes on the
 > same input**: three failures at 0:00, 4:00 and 8:00 are consecutive ⇒ banned according to this
-> line, and **outside the window** ⇒ not banned according to the code. The window was in `DECISIONI.md`, in
-> `RCP.md` §4.4-bis, in `SPECIFICHE.md` §4.2 and in the code, and was missing **in the two documents the bench
+> line, and **outside the window** ⇒ not banned according to the code. The window was in `DECISIONS.md`, in
+> `RCP.md` §4.4-bis, in `SPECS.md` §4.2 and in the code, and was missing **in the two documents the bench
 > is written from**. Corrected on 11 Aug 2026, finding **R12C.5** — and it happened because the
 > decision was **copied** into four documents instead of referred to, which is exactly what the
 > conventions below forbid.*
-> ⇒ `DECISIONI.md` §1.9 — and with it `RCP.md` §4.4-bis (from 🔸 to ✅), `SPECIFICHE.md` §4.2,
-> `FASI.md` §01-filo-nudo B0.3 and B8.
+> ⇒ `DECISIONS.md` §1.9 — and with it `RCP.md` §4.4-bis (from 🔸 to ✅), `SPECS.md` §4.2,
+> `PHASES.md` §01-filo-nudo B0.3 and B8.
 >
 > ⭐ **It replaces the form I had written** — 5 in 5 minutes, a window doubling up to 15
 > minutes, two counters — and ⛔ **the wire does not gain a byte**: `TOO_MANY_ATTEMPTS` already existed.
-> ⚠ **The price is declared in `DECISIONI.md` §1.9** and it is not paid by whoever guesses: behind a NAT three mistakes by one
+> ⚠ **The price is declared in `DECISIONS.md` §1.9** and it is not paid by whoever guesses: behind a NAT three mistakes by one
 > person close the door to everyone for twelve hours, and the first to trip over it is whoever types a long
 > password on a phone keyboard.
 >
@@ -930,8 +930,8 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > That step is done; this is the next one.)*
 >
 > ⛔ **Today there are two servers, and the benches measure only one.** The product is `src/`; the graft is
-> `banchi/01-b3-rcp-innesta.py` inside `bsslserver`, and it is the one all the 14 launch scripts
-> switch on. ⛔ **The protocol is the same file** — `src/rcp.c` and `banchi/rcp/rcp.c` are identical
+> `benches/01-b3-graft-rcp.py` inside `bsslserver`, and it is the one all the 14 launch scripts
+> switch on. ⛔ **The protocol is the same file** — `src/rcp.c` and `benches/rcp/rcp.c` are identical
 > byte for byte — **but everything around it was written twice**, and at the points where
 > the two drafts diverged one carried written the proof that the other did not work.
 >
@@ -944,8 +944,8 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 >
 > | # | What | Why before or after |
 > |---|---|---|
-> | **1** | ~~switch on `src/` once~~ ✅ **done on 15 Aug 2026**, and several times: `src/costruisci.sh` inside `enter.sh` on the test machine, ten rounds | ⭐ And there is a **second** road, born that night: `src/Contenitore` + `src/costruisci-in-contenitore.sh` — **rootless** `podman`, on the laptop, without `sudo`. The two answer two different questions: *«does it compile?»* is asked of the laptop in twenty seconds, *«does it run?»* is asked only of the test machine. See `fasi/rapporti/F4-IN-13-la-tela-che-cambia.md` §1 |
-> | **2** | ⛔ **point `01-b8-sblocca.py` at the product**, with the `PING` | it is the tool of rule **B0.3**, that is the one on which the isolation of **all** the other benches depends. Today it talks with the graft's socket and has never talked with the product |
+> | **1** | ~~switch on `src/` once~~ ✅ **done on 15 Aug 2026**, and several times: `src/build.sh` inside `enter.sh` on the test machine, ten rounds | ⭐ And there is a **second** road, born that night: `src/Containerfile` + `src/build-in-container.sh` — **rootless** `podman`, on the laptop, without `sudo`. The two answer two different questions: *«does it compile?»* is asked of the laptop in twenty seconds, *«does it run?»* is asked only of the test machine. See `fasi/rapporti/F4-IN-13-la-tela-che-cambia.md` §1 |
+> | **2** | ⛔ **point `01-b8-unblock.py` at the product**, with the `PING` | it is the tool of rule **B0.3**, that is the one on which the isolation of **all** the other benches depends. Today it talks with the graft's socket and has never talked with the product |
 > | **3** | **B8, B6, B7 and B5 against `src/`** | they are the four that touch the ban, the ceilings, the farewell and the violations — that is the four points where the product has code no measurement has seen. ⚠ And there B7 finds **eight** provokable reasons instead of seven: the product has a shutdown path, the graft does not |
 > | **4** | ⛔ **B2's transport probe against `src/`** | the product declares **19** unidirectional streams where B2's measurement read 16, and the other five properties (0-RTT, migration, datagram, ceiling, `allowPooling`) **nobody has read** on it |
 > | **5** | ⭐ **A SECOND ENGINE** | the only round with a real browser against the product was with **Firefox**. ⛔ B2's criterion wants **two engines out of two**, and the most expensive defects of this phase — B11's three reds, the slot that was not freed — **lived in the difference between the two engines**. With a single engine that difference cannot be seen |
@@ -959,8 +959,8 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > | | |
 > |---|---|
 > | ⛔ **what governs the timings is not our fixed delay, it is PAM** | `[M]` on the refused attempts the delay is **well beyond** the second `RCP.md` §4.4-bis wants. The prediction (`pam_faildelay`) had been written **before** measuring. ⚠ It matters because that delay **is not constant**: if it varies, it puts back into circulation the information the fixed second serves to hide — that is **whether a user name exists** |
-> | ⚠ **B8's full round hangs at the ninth block out of ten** | it stays stuck on something nobody gives it. The short round (`… 01-b8-lancia.sh 2`) gets to the end. ⛔ It must be launched **detached** from the session of whoever commands it, not through it |
-> | ⭐ **B6 closed R3.27, and with TWO answers** | **the first**: the stopwatch starts from the **opening of the control channel**, not from the end of TLS ⇒ **`RCP.md` §4.6 line 1 changed by one word**, on 11 Aug 2026. ⛔ **The second, and it says that curing the word is not enough**: whoever opens a WebTransport session and **never opens the channel** has **no ceiling** on them and stays there — §4.6 had no line for that state, now it has one and it is ❓ (`DECISIONI.md` §7.17) |
+> | ⚠ **B8's full round hangs at the ninth block out of ten** | it stays stuck on something nobody gives it. The short round (`… 01-b8-launch.sh 2`) gets to the end. ⛔ It must be launched **detached** from the session of whoever commands it, not through it |
+> | ⭐ **B6 closed R3.27, and with TWO answers** | **the first**: the stopwatch starts from the **opening of the control channel**, not from the end of TLS ⇒ **`RCP.md` §4.6 line 1 changed by one word**, on 11 Aug 2026. ⛔ **The second, and it says that curing the word is not enough**: whoever opens a WebTransport session and **never opens the channel** has **no ceiling** on them and stays there — §4.6 had no line for that state, now it has one and it is ❓ (`DECISIONS.md` §7.17) |
 | ⚠ **B6's three ceilings have no log** | they trigger at **5.0 · 60.1 · 10.0 s** — ⛔ but **no `.jsonl` of B6 exists**, the scene of that round is declared nowhere, and these three numbers **cannot be re-verified**. ⚠ *They were here without a mark, without a date, without a scene and without a device, while `[M]` is defined further down as «measured by us, on the hardware, **with the date**» — finding **R12C.11**. They are redone with the log, or they stay three numbers of which only the order of magnitude is known.* |
 >
 > #### ⭐ The measurements of the night of 10 Aug, and where they live
@@ -974,12 +974,12 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 >
 > | | |
 > |---|---|
-> | ⭐⭐ **S7 — the sign of the wheel: MEASURED** | `[M]` 10 Aug, 20:59 UTC. `+120` from `libei` sends the page **towards the end of the document** ⇒ ⛔ **the RCP server must invert the vertical axis**. Full scene: headless GNOME on 192.168.0.2, **libmutter 48.7-0+deb13u1**, **libei 1.3.901**, **Firefox 140.13.0esr** in kiosk; log `banchi/01-s7-esiti.jsonl`. ⇒ **`RCP.md` §7.3 is closed** — ⛔ **on Mutter**: §7.3 binds five desktops, and for the other four it stays `[?]` |
-> | ⛔ **S5 — the declared canvas: A PRODUCT DEFECT** | `[M]` 10 Aug, 23:13-23:14. At 150 % zoom **Chrome 151** declares a canvas **50 % larger** (1920×1080 → **2880×1620**) because `screen.width` does not drop; **Firefox 140** does not. ⇒ the formula of `SPECIFICHE.md` §6.1-bis **does not hold on Chrome**, and there it still said *«it must be measured»*. ⚠ The half on **DeX** is missing: the device was not there |
+> | ⭐⭐ **S7 — the sign of the wheel: MEASURED** | `[M]` 10 Aug, 20:59 UTC. `+120` from `libei` sends the page **towards the end of the document** ⇒ ⛔ **the RCP server must invert the vertical axis**. Full scene: headless GNOME on 192.168.0.2, **libmutter 48.7-0+deb13u1**, **libei 1.3.901**, **Firefox 140.13.0esr** in kiosk; log `benches/01-s7-outcomes.jsonl`. ⇒ **`RCP.md` §7.3 is closed** — ⛔ **on Mutter**: §7.3 binds five desktops, and for the other four it stays `[?]` |
+> | ⛔ **S5 — the declared canvas: A PRODUCT DEFECT** | `[M]` 10 Aug, 23:13-23:14. At 150 % zoom **Chrome 151** declares a canvas **50 % larger** (1920×1080 → **2880×1620**) because `screen.width` does not drop; **Firefox 140** does not. ⇒ the formula of `SPECS.md` §6.1-bis **does not hold on Chrome**, and there it still said *«it must be measured»*. ⚠ The half on **DeX** is missing: the device was not there |
 > | ⭐⭐ **S1b — Chrome's exception: ANSWERED, and without waiting the seven days** | `[M]` 11 Aug, `01-s1b-eccezione.sh scavalca`, **6 checks out of 6**. Instead of waiting for the expiry **we brought it to us**, on a **copy** of the profile: Chrome records the click **+ 604 799.99997 s** (it writes both instants itself, in the same file), **honours** that instant — expiry rewritten to yesterday ⇒ the page no longer opens — and **does not renew it** when it is visited. ⛔ The check that says *no*: the **same** tampering with a date of **+30 days** leaves the page open, so above only the sign changed. ⇒ **The user is told «once a week»**. ⛔ The «13.111 s missing» were not Chrome's: they were the distance between **two clocks**. ⏳ 17-18 Aug remains as a passive confirmation, and the real clock is intact |
 > | ⛔ **S2 · S3a · S6 — not run** | missing are **the Android phone**, **DeX**, **a real LTE network**. ⭐ They were not deduced (it would be form **E5**): the benches are ready and run the day the hardware is there |
 >
-> ⚠ **And a discovery that does not belong to this phase**, carried into `PIANO.md` phases 2 and 6: in a GNOME
+> ⚠ **And a discovery that does not belong to this phase**, carried into `PLAN.md` phases 2 and 6: in a GNOME
 > session without physical input devices, a client started **before** `libei`'s virtual pointer
 > exists **receives nothing** — no wheel, no buttons, no movement. Mutter receives the injection
 > and does not deliver it to the window.
@@ -987,7 +987,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > ⚠ **And FOUR open decisions, and each one closes with one word**: the reading of `RCP.md` §4.2
 > on `FIN` · the condition of §8.1 · whether §7.5 was really its own (meanwhile it is 🔸) · ⭐ **and from today:
 > how long a WebTransport session that never opens the control channel can stay there**.
-> ⛔ **They are in `DECISIONI.md` §7.14, §7.15, §7.16 and §7.17** — with the two possible readings, **the
+> ⛔ **They are in `DECISIONS.md` §7.14, §7.15, §7.16 and §7.17** — with the two possible readings, **the
 > byte that changes on the wire** between one and the other, the concrete case in which the difference shows and
 > which one seems more defensible. ⚠ *The first three were named here and in
 > `fasi/rapporti/R11-documenti.md` (findings R11.22, R11.23, R11.15) and in no place where things are decided:
@@ -1005,7 +1005,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 >
 > ⚠ **And the check that says *no* runs on ONE ENGINE ONLY — Firefox** *(finding **R11.24**,
 > closed like this on the night of 10 Aug: the bench declared it by itself, this page did not)*. It is
-> `01-b11-lancia.sh`: the page against a **healthy** server must say NON-CONFORMANT, and it says
+> `01-b11-launch.sh`: the page against a **healthy** server must say NON-CONFORMANT, and it says
 > NON-CONFORMANT with **9 cases out of 13** failed. ⛔ **The line above listed it within «on both
 > engines»**, which is the natural reading and was not true. ⚠ And the difference bites exactly here:
 > tonight's three red cases **lived in the difference between the two engines**, that is at the point where
@@ -1058,20 +1058,20 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 >
 > ⭐ **And the aged number was re-measured, not rewritten by eye** — `[M]` **10 Aug,
 > 16:30**. The **reading of the close capsule** grew inside the WebTransport layer, and the
-> measurement is taken like this: on a clean tree, `01-b3-rcp-innesta.py --remove`, then
-> `01-b2-ngtcp2-wt-innesta.py --remove`, then **only** B2's graft is reapplied. Result:
+> measurement is taken like this: on a clean tree, `01-b3-graft-rcp.py --remove`, then
+> `01-b2-graft-ngtcp2-wt.py --remove`, then **only** B2's graft is reapplied. Result:
 > **553 lines added, 373 of code, 134 of comment, 46 blank**.
 > ⛔ **And the 972 / 618 are another thing**: they are the tree with **both** grafts, B2 plus
 > B3's threads. They are not lined up with the 553 and do not go where that number is — it is the reason
 > why the two grafts are separate (form **E2**).
 >
 > ⚠ *This paragraph said three false things, and it was rewritten on 10 Aug 2026 — finding
-> **R11.7**, with **R11.1**.* It said that `01-b3-rcp-innesta.py --remove` *«removed nothing, it
+> **R11.7**, with **R11.1**.* It said that `01-b3-graft-rcp.py --remove` *«removed nothing, it
 > said yes and left the graft where it was»*, that *«the measurement of B2 alone now cannot be
 > taken»*, and raised an alarm on `rebuild`. ⛔ **The command does a partial removal and
 > declares it on screen**: it removes our files, puts back `examples/CMakeLists.txt`, and prints *«i file
-> .cc/.h toccati da B3 vanno rimessi con `01-b2-ngtcp2-wt-innesta.py --remove` e riapplicati»*. ⛔ And
-> `rebuild()` in `01-b11-guasto.sh` runs **the two `--remove` in the prescribed order** and then
+> .cc/.h toccati da B3 vanno rimessi con `01-b2-graft-ngtcp2-wt.py --remove` e riapplicati»*. ⛔ And
+> `rebuild()` in `01-b11-faulty-server.sh` runs **the two `--remove` in the prescribed order** and then
 > reapplies: it does not rely on the first alone.
 >
 > ⚠ **What stays true, and stays open**: `--remove` **exits with 0 on a tree that in that state
@@ -1102,52 +1102,52 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 >
 > **B2 — the QUIC library and the trust model** *(from the server, except where said)*:
 >
-> `banchi/01-b2-costruisci.sh` (BoringSSL + lsquic) · `01-b2-costruisci-ngtcp2.sh` ·
+> `benches/01-b2-build.sh` (BoringSSL + lsquic) · `01-b2-build-ngtcp2.sh` ·
 > `01-b2-sni-ngtcp2.sh` (builds `bsslserver`) · `01-b2-sni-quiche.sh` (`load`, then
 > `build`) · `01-b2-lancia-sni.sh` (**the SNI test on the three targets**: `build`, then
 > `measure`) · `01-b2-lancia-impostazioni.sh` (**who declares WebTransport on the wire**) ·
-> ⭐ `01-b2-ngtcp2-wt-innesta.py` (**the WebTransport layer**) + `01-b2-lancia-wt.sh`
+> ⭐ `01-b2-graft-ngtcp2-wt.py` (**the WebTransport layer**) + `01-b2-launch-wt.sh`
 > (the test client, and the refusal of `/rcp/9`) + ⚠ `01-b2-lancia-sonda.sh` — **this last one is
 > launched from HERE, not from the server: the browsers are on this side** · `01-b2-certificati.sh` (⚠ **regenerates the fingerprint**: it must be put back in the
-> page) · `01-b2-controllo-aioquic.py` (the positive control) · `01-b2-cliente-aioquic.py` ·
-> `01-b2-raccogli.py` + `01-b2-sonda.html` (the page, from `localhost`).
+> page) · `01-b2-controllo-aioquic.py` (the positive control) · `01-b2-aioquic-client.py` ·
+> `01-b2-collect.py` + `01-b2-probe.html` (the page, from `localhost`).
 > **The wire — the benches that closed something:**
 >
-> ⭐ `01-b3-rcp-innesta.py` (**RCP on top of B2's WebTransport layer**; `--remove` does a **partial**
+> ⭐ `01-b3-graft-rcp.py` (**RCP on top of B2's WebTransport layer**; `--remove` does a **partial**
 > removal and declares it on screen) · `01-b3-lancia.sh` (**B3**, from the server: the first three rounds,
 > with `01-b3-terzo-giro.sh` running **inside** the container) · `01-b3-quarto-giro.sh`
 > (the silence clock, 35 s at `max_idle_timeout` 120) · ⚠ `01-b3-quinto-giro.sh` (**the
 > rotated certificate: launched from HERE, not from the server — the browsers are on this side**) ·
-> `01-b3-cliente.py` (**the second reader of `RCP.md`**, and the recorder of §11.1) ·
-> `01-b4-lancia.py` + `01-b4-validatore.py` + `01-b4-registrazioni.py` (**B4**: the validator
-> against recordings **regenerated now**) · `01-b5-lancia.sh` + `01-b5-violazioni.py` (**B5**,
-> from the server: the violations towards the server) · `01-b6-lancia.sh` + `01-b6-tetti.py` (**B6**, the three
-> ceilings) · `01-b7-lancia.sh` + `01-b7-congedo.py` (**B7**, the farewell **from the receiving side**) ·
-> `01-b8-lancia.sh` + `01-b8-cronometro.py` (**B8**, the fixed second and the ban — ⛔ **it is being rewritten**,
-> see above) · ⚠ `01-b11-lancia.sh` (**B11: from HERE**, with the two browsers) + `01-b11-pagina.html` +
-> `01-b11-guasto.sh` and `01-b11-guasto-innesta.py` (**the server faulty on purpose**, and
+> `01-b3-client.py` (**the second reader of `RCP.md`**, and the recorder of §11.1) ·
+> `01-b4-launch.py` + `01-b4-validator.py` + `01-b4-recordings.py` (**B4**: the validator
+> against recordings **regenerated now**) · `01-b5-launch.sh` + `01-b5-violations.py` (**B5**,
+> from the server: the violations towards the server) · `01-b6-launch.sh` + `01-b6-caps.py` (**B6**, the three
+> ceilings) · `01-b7-launch.sh` + `01-b7-farewell.py` (**B7**, the farewell **from the receiving side**) ·
+> `01-b8-launch.sh` + `01-b8-stopwatch.py` (**B8**, the fixed second and the ban — ⛔ **it is being rewritten**,
+> see above) · ⚠ `01-b11-launch.sh` (**B11: from HERE**, with the two browsers) + `01-b11-page.html` +
+> `01-b11-faulty-server.sh` and `01-b11-graft-faults.py` (**the server faulty on purpose**, and
 > `rebuild()` which puts back the healthy one with the two `--remove` in order).
 >
 > **And those born on the night of 10 Aug 2026:**
 >
-> ⭐ `01-b9-letture.py` (**B9**, the second reader against the arbiter: **twelve** points where
+> ⭐ `01-b9-readings.py` (**B9**, the second reader against the arbiter: **twelve** points where
 > `RCP.md` admits two readings, each one **with the bytes that change on the wire**) ·
 > `01-b12-guasti.py` + `01-b12-lancia.sh` + `01-b12-copie/` (**B12**, the certification — one fault
 > per bench, and the register `01-b12-registro.jsonl` with the date and the fingerprints) ·
 > `01-b13-lancia.sh` + `01-b13-proprieta.py` (**B13**, the six properties) ·
 > `01-c2-lancia.sh` + `01-c2-diagnosi.py` (**C2**, the three diagnoses of the faulty connection) ·
-> ⭐ `01-b8-sblocca.py` (⛔ **it is not a piece of B8**: it is **the tool of rule B0.3**, and it speaks the
-> command socket of `RCP.md` §4.4-bis with `SBLOCCA` and `PING`) · `01-b8-prova-ban.c`.
+> ⭐ `01-b8-unblock.py` (⛔ **it is not a piece of B8**: it is **the tool of rule B0.3**, and it speaks the
+> command socket of `RCP.md` §4.4-bis with `SBLOCCA` and `PING`) · `01-b8-ban-test.c`.
 >
 > **And the browser probe** — ⚠ **these run from HERE or from the server according to the line, and the line
 > says so**:
 >
 > ⏳ `01-s1b-eccezione.sh` + `01-s1b-pagina.html` + `01-s1b-sito.sh` + `01-s1b-servi.py` (**S1b**,
-> the seven-day clock — ⛔ **`bash banchi/01-s1b-eccezione.sh oggi` once a day until
+> the seven-day clock — ⛔ **`bash benches/01-s1b-eccezione.sh oggi` once a day until
 > 18 Aug**, and ⛔ **`/media/REMOTIX/s1b-certificato/` is not regenerated and
 > `~/.remotix-s1b/` is not deleted**, or the clock starts again from scratch without anyone noticing for a
 > week) · `01-s5-tela.sh` + `01-s5-pagina.html` + `01-s5-raccogli.py` (**S5**) ·
-> `01-s7-rotella.sh` + `01-s7-rotella.c` + `01-s7-pagina.html` + `01-s7-raccogli.py` (**S7** — ⚠ and it
+> `01-s7-wheel.sh` + `01-s7-wheel.c` + `01-s7-page.html` + `01-s7-collect.py` (**S7** — ⚠ and it
 > closes with `--clean`, or the drop-in stays and **the next round does not know it was ours**) ·
 > `01-s2-pagina.html` · `01-s3a-pagina.html` · `01-s6-pagina.html` · `01-s-telefono.sh` (the three that
 > wait for a device).
@@ -1156,7 +1156,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > ⛔ **and that is why the benches' servers survive too**: on 10 Aug two of them were holding
 > the ports eight hours later. The bench now checks it before starting.
 > ⛔ **And since 10 Aug the ban of `RCP.md` §4.4-bis survives too, because it is on file**: between one bench
-> and the next the unblock command is called, **never inside B8's round** (`FASI.md` §01-filo-nudo,
+> and the next the unblock command is called, **never inside B8's round** (`PHASES.md` §01-filo-nudo,
 > rule B0.3).
 >
 > ### ⛔ Thirteen traps in two days, and two redone the day after — fifteen occurrences
@@ -1167,7 +1167,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > evenings» on eight: the count did not add up even then — finding **R11.20**, closed on the night of 10
 > Aug 2026 by declaring what is counted and adding the **two** that were missing.* ⛔ *«A
 > count without a denominator is not a measurement: it is a hope with a number in front»*
-> (`LEZIONI.md` §1.9 point 4) — and here the number sums up **how much bench work was thrown away**.
+> (`LESSONS.md` §1.9 point 4) — and here the number sums up **how much bench work was thrown away**.
 >
 > `grep -q` with `pipefail` · `| tail` eating the exit status **(redone the day after)** ·
 > two paths passed as one string, with `2>/dev/null` hiding the error — **and that one
@@ -1183,11 +1183,11 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > ⛔ **This last one is the seventh guise, and it is the worst**: not a false red, but **a red
 > pointed at the wrong defendant**. The bench waited for a log line to know when the
 > first client was attached, and that line came out of the buffer only when the client **detached**
-> — that is it declared «attached» a truth that had just expired. `LEZIONI.md` §1.9 point 7:
+> — that is it declared «attached» a truth that had just expired. `LESSONS.md` §1.9 point 7:
 > *a file written and closed is a fact; a printed line is a hope about the moment
 > someone will see it.*
 >
-> ⭐ Hence the **fourth rule** of `LEZIONI.md` §1.9 — *a measurement must declare what it
+> ⭐ Hence the **fourth rule** of `LESSONS.md` §1.9 — *a measurement must declare what it
 > looked at* — and its **corollary of 10 Aug**, born from the most serious defect so far:
 > ⛔ **the probe declared a false denominator**, and its two legs measured the same thing
 > while it said they were opposite. *A denominator is read **where the thing happens** — on the wire,
@@ -1205,23 +1205,23 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 >
 > ## Previous state — the evening of 9 Aug 2026
 >
-> **Phase 0 closed**: the benches reproduce v1's numbers (`FASI.md` §00-ambiente).
+> **Phase 0 closed**: the benches reproduce v1's numbers (`PHASES.md` §00-ambiente).
 > **No line of product code written yet.**
 >
 > The day changed the product and then checked the change:
 >
 > | | |
 > |---|---|
-> | ⭐ **the client is the browser** | the two native clients and five phases of the plan fall — `DECISIONI.md` §1.6 |
+> | ⭐ **the client is the browser** | the two native clients and five phases of the plan fall — `DECISIONS.md` §1.6 |
 > | **security is at two levels** | TLS for the transport, address/port/user/password for access — §1.7 |
 > | **the second remote connection is refused** | `RCP.md` §8.2, reason `0x0F` |
-> | 📖 **the sixth study** | [`STUDI.md` §web](STUDI.md#web), with four reports in `web/rapporti/` |
+> | 📖 **the sixth study** | [`STUDIES.md` §web](STUDIES.md#web), with four reports in `web/rapporti/` |
 > | ⛔ **two adversarial reviews** | **46 numbered findings** — **29** in `web/rapporti/R1-revisione-rcp.md` and **17** in `R2-revisione-web.md` — **plus the 12 omissions** `O1`-`O12` of `R2` §2, and all **before the first byte**. ⚠ *It said «**51** contradictions», and that number cannot be found again with any written criterion: 29 + 17 = 46, and no sum declared anywhere gives 51 (finding **R11.20**, closed on the night of 10 Aug 2026 **by declaring what is counted**). The omissions are counted separately because they are not contradictions: they are lines that **were not there**, and by definition no check of the citations finds them* |
 >
 > ### The next step
 >
-> ⭐ **`FASI.md` §01-filo-nudo is open and already reviewed**, with the benches and **no line of
-> product written** — the document is opened *before* developing (`PIANO.md` §0.1).
+> ⭐ **`PHASES.md` §01-filo-nudo is open and already reviewed**, with the benches and **no line of
+> product written** — the document is opened *before* developing (`PLAN.md` §0.1).
 >
 > ⛔ **Two adversarial reviews on the bench, before the product: 44 findings — 38 `[R]`, 6 `[?]`.**
 > Neither of the two green, and the document was **rewritten**, not patched. The verdicts are
@@ -1230,19 +1230,19 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > written by whoever had been through it before.
 >
 > ⚠ **And the cure came out of that file**: `RCP.md` §4.1-bis still said that WebKit does not implement
-> `serverCertificateHashes` — and it is **the arbiter**; `STUDI.md` §web got back the negative controls the
-> reports prescribed; `PIANO.md` has the correct order and two benches relocated.
+> `serverCertificateHashes` — and it is **the arbiter**; `STUDIES.md` §web got back the negative controls the
+> reports prescribed; `PLAN.md` has the correct order and two benches relocated.
 >
 > ⭐ **And a decision of the user closed the count of devices**: **Apple is an extra, not a
-> goal** — `DECISIONI.md` §1.8. Phone and DeX are there, the Mac is not and will not be obtained: **S1a leaves
+> goal** — `DECISIONS.md` §1.8. Phone and DeX are there, the Mac is not and will not be obtained: **S1a leaves
 > the phase**, the QUIC library is chosen on **two engines out of three**, and the line is written beside
 > the choice. ⛔ Safari stays **served**, not **verified**: they are two different things, and the second
 > is not written in the documentation until someone has measured it.
 >
-> ⚠ **The QUIC library stays open** and it is closed by a bench, not by paper (`DECISIONI.md` §6.4) —
+> ⚠ **The QUIC library stays open** and it is closed by a bench, not by paper (`DECISIONS.md` §6.4) —
 > and it is the **first** bench to run, no longer the second.
 
-⭐ **The client is a web page** *(decided on 9 Aug 2026 — `DECISIONI.md` §1.6)*. The two
+⭐ **The client is a web page** *(decided on 9 Aug 2026 — `DECISIONS.md` §1.6)*. The two
 native clients fall and with them five phases of the plan; **Windows comes back in as a place one
 connects from**, without our writing a line for it and without submitting to its rules. It stays out
 as a **server**, which was the real lever.
@@ -1251,12 +1251,12 @@ as a **server**, which was the real lever.
 
 ## Licence
 
-REMOTIX is under its own licence, [`LICENSE.md`](LICENSE.md) (`DECISIONI.md` §10.39): free for personal use and for
+REMOTIX is under its own licence, [`LICENSE.md`](LICENSE.md) (`DECISIONS.md` §10.39): free for personal use and for
 non-profit organisations, source readable, no modifications and no redistribution. ⛔ **Those terms cover REMOTIX
 only.** The third-party components keep their own licences, with their full texts in
 [`THIRD-PARTY-LICENSES`](THIRD-PARTY-LICENSES) (`LICENSE.md` §8) — in particular **labwc** (GPL-2.0-only), which the
 RHEL / AlmaLinux 10 package carries, unmodified, as the separate program `/usr/lib/remotix/labwc` (the invisible host
-of KWin there, `DECISIONI.md` §10.43): anyone may use, modify and redistribute it under that licence. Its exact
+of KWin there, `DECISIONS.md` §10.43): anyone may use, modify and redistribute it under that licence. Its exact
 corresponding source (the upstream tarball and the recipe, [`packaging/rpm/labwc/`](packaging/rpm/labwc/)) is
 published with every release, inside the `.run` (`source/labwc/`) and next to it
 (`remotix-<version>-labwc-source.tar.gz`).
@@ -1267,17 +1267,17 @@ published with every release, inside the `.run` (`source/labwc/`) and next to it
 
 | # | Document | What it contains |
 |---|---|---|
-| **1** | [`LEZIONI.md`](LEZIONI.md) | **the foundation**: how to measure, how to test, how to learn. Inherited from v1, which got stuck every time on a measurement that did not measure what we believed |
-| **2** | [`SPECIFICHE.md`](SPECIFICHE.md) | **what** the product does, and what it does not do |
+| **1** | [`LESSONS.md`](LESSONS.md) | **the foundation**: how to measure, how to test, how to learn. Inherited from v1, which got stuck every time on a measurement that did not measure what we believed |
+| **2** | [`SPECS.md`](SPECS.md) | **what** the product does, and what it does not do |
 | **3** | [`RCP.md`](RCP.md) | **how** the two sides **talk**. It is the arbiter: in v1 it was `mstsc`, now it is this file |
-| **4** | [`PIANO.md`](PIANO.md) | **the phases**, in order, each with its bench and its closing criterion |
-| **5** | [`DECISIONI.md`](DECISIONI.md) | **why**: every decision with the date, who made it, and with what degree of certainty |
+| **4** | [`PLAN.md`](PLAN.md) | **the phases**, in order, each with its bench and its closing criterion |
+| **5** | [`DECISIONS.md`](DECISIONS.md) | **why**: every decision with the date, who made it, and with what degree of certainty |
 | **6** | [`MASTERPLAN.md`](MASTERPLAN.md) | ⭐ **what is done at the END**, and not before — decided by the user on 25 Aug 2026. ⛔ Every entry must say **what it costs never to do it, EVER**: an entry that costs nothing is deleted |
 
 And for whoever writes or reviews, before touching anything:
 [`CODER.md`](CODER.md) · [`REVIEWER.md`](REVIEWER.md)
 
-> ### ⭐⭐ And since 27 Aug 2026 there is a net underneath: **`banchi/11-scatole/`**
+> ### ⭐⭐ And since 27 Aug 2026 there is a net underneath: **`benches/11-boxes/`**
 >
 > **Sixteen checks** that run by themselves before every push, on **four desktops**. They say: the
 > session is born and **can be seen** · a window opens · the frames **change** · the key arrives
@@ -1288,31 +1288,31 @@ And for whoever writes or reviews, before touching anything:
 > ⭐⭐ **And each one can prove it can turn red**: `[M]` full round of 27 Aug,
 > **49 grafted faults and 49 caught**, 58 green verdicts, ⛔ no bench red.
 >
-> ⇒ It is read in [`fasi/11-la-rete-di-sicurezza.md`](fasi/11-la-rete-di-sicurezza.md), and launched with
-> `banchi/11-scatole/11-gancio.sh`.
+> ⇒ It is read in [`phases/11-the-safety-net.md`](phases/11-the-safety-net.md), and launched with
+> `benches/11-boxes/11-hook.sh`.
 
 ---
 
-## The studies — ⭐ **all in a single document**, [`STUDI.md`](STUDI.md), since 16 Aug 2026
+## The studies — ⭐ **all in a single document**, [`STUDIES.md`](STUDIES.md), since 16 Aug 2026
 
 *They were eight files in the root. They became **eight chapters** of a single document, by decision
 of the user. ⛔ **Not a summary**: the text is what it was, line by line, with the headings
-lowered by one level. ⇒ A reference that said `kde.md` §3.3-bis now says `STUDI.md` §kde
+lowered by one level. ⇒ A reference that said `kde.md` §3.3-bis now says `STUDIES.md` §kde
 3.3-bis, and **the chapter keys are the names the files had**.*
 
 Readings of the code, done before writing. The five on the desktops answer the **fifteen**
-questions of `LEZIONI.md` §3.
+questions of `LESSONS.md` §3.
 
-[`STUDI.md` §gnome](STUDI.md#gnome) · [`STUDI.md` §kde](STUDI.md#kde) · [`STUDI.md` §xfce](STUDI.md#xfce) · [`STUDI.md` §lxqt](STUDI.md#lxqt) ·
-[`STUDI.md` §cinnamon](STUDI.md#cinnamon)
+[`STUDIES.md` §gnome](STUDIES.md#gnome) · [`STUDIES.md` §kde](STUDIES.md#kde) · [`STUDIES.md` §xfce](STUDIES.md#xfce) · [`STUDIES.md` §lxqt](STUDIES.md#lxqt) ·
+[`STUDIES.md` §cinnamon](STUDIES.md#cinnamon)
 
-⭐ **And the sixth, which does not talk about a compositor**: [`STUDI.md` §web](STUDI.md#web) — the browser as a client,
+⭐ **And the sixth, which does not talk about a compositor**: [`STUDIES.md` §web](STUDIES.md#web) — the browser as a client,
 with the four detail reports in `web/rapporti/`. ⚠ **It is the one that ages fastest**:
 compositors are frozen by Debian, browsers update by themselves.
 
-⭐⭐ **And the seventh, which talks not about a technology but about a PRODUCT**: [`STUDI.md` §xpra](STUDI.md#xpra) — whoever
+⭐⭐ **And the seventh, which talks not about a technology but about a PRODUCT**: [`STUDIES.md` §xpra](STUDIES.md#xpra) — whoever
 already does this job, read in its code on 14 Aug 2026. ⛔ It should have been done **before**
-the page (`PIANO.md` §1.3) and it was done **after**, at the user's request: ⇒ in the meantime
+the page (`PLAN.md` §1.3) and it was done **after**, at the user's request: ⇒ in the meantime
 we had written a specification that contradicted itself, and he was the one who found it in thirty seconds
 of use.
 
@@ -1322,33 +1322,33 @@ probe (S7 · S1b · S5 · and the three that wait for a device), with the scene 
 number and the recount that says which numbers have a provenance on disk. ⚠ *The «four reports»
 above stay four: they are the reports of the **studies**, and it is a declared denominator.*
 
-⚠ **`STUDI.md` §gnome-remote-desktop is not one of these** *(clarified on 9 Aug 2026)*. It studies **GNOME's
+⚠ **`STUDIES.md` §gnome-remote-desktop is not one of these** *(clarified on 9 Aug 2026)*. It studies **GNOME's
 RDP server**, that is a competitor on the wire we threw away — not the desktop. With RDP
 dead it lapses almost entirely, and it is written on a version Trixie does not have (51.alpha against
-48.1). **On GNOME read [`STUDI.md` §gnome](STUDI.md#gnome)**, which talks about Mutter and stays valid.
+48.1). **On GNOME read [`STUDIES.md` §gnome](STUDIES.md#gnome)**, which talks about Mutter and stays valid.
 
 ---
 
 ## The folders
 
-⚠ *This table listed **three** entries — `fasi/`, `fondamenta/`, `reference-*/` — and had neither `src/` nor
-`banchi/` nor `web/`: **the folder that contains the product did not appear in the table that says what
+⚠ *This table listed **three** entries — `phases/`, `fondamenta/`, `reference-*/` — and had neither `src/` nor
+`benches/` nor `web/`: **the folder that contains the product did not appear in the table that says what
 the folders contain**. Completed on 11 Aug 2026, finding **R12C.1**.*
 
 | | |
 |---|---|
 | ⭐⭐ `src/` | **the product**: the phase 1 server in C — **22 files, 9,647 lines** `[M]` 11 Aug 2026. RCP/1 over WebTransport, the two certificates, the page served by the server, the ban and its unblock command. ⛔ **It is not in git**, and no bench switches it on yet |
-| ⭐ `banchi/` | **the phase 1 benches** and the browser probe, plus `banchi/rcp/` — the **twin** copy of `rcp.c`/`rcp.h`/`autenticazione.c`, today identical to the one in `src/` byte for byte. ⚠ Here the target is **the graft** inside `bsslserver`, not `src/` |
-| `fasi/` | ⚠ **it exists only while a phase is open**, and contains that phase's document only: at closing it becomes a chapter of [`FASI.md`](FASI.md) and the folder goes back to empty (`PIANO.md` §0.1) |
-| ⛔ ~~`web/rapporti/`, `fasi/rapporti/`~~ | **removed on 16 Aug 2026** by decision of the user — 94 files of agents' reports. ⭐ They remain whole in the history: how to reread or recover a report is in **`FASI.md`**, at the top |
-| `fondamenta/` | ⚠ **it is not only an archive, and this line said it badly**: REMOTIX v1's heritage — 17,481 lines of C, the benches, the documents, the calibration scenes — ⭐ **but inside there are two LIVE things**, `fondamenta/banco/enter.sh` (the way one enters the test machine, **193 citations**) and `fondamenta/strumenti/sshpw.py` (**81**, called by the V2 benches). The full map — live, archive, dead, with the citations counted — is in **`DECISIONI.md` §6.1** |
+| ⭐ `benches/` | **the phase 1 benches** and the browser probe, plus `benches/rcp/` — the **twin** copy of `rcp.c`/`rcp.h`/`authentication.c`, today identical to the one in `src/` byte for byte. ⚠ Here the target is **the graft** inside `bsslserver`, not `src/` |
+| `phases/` | ⚠ **it exists only while a phase is open**, and contains that phase's document only: at closing it becomes a chapter of [`PHASES.md`](PHASES.md) and the folder goes back to empty (`PLAN.md` §0.1) |
+| ⛔ ~~`web/rapporti/`, `fasi/rapporti/`~~ | **removed on 16 Aug 2026** by decision of the user — 94 files of agents' reports. ⭐ They remain whole in the history: how to reread or recover a report is in **`PHASES.md`**, at the top |
+| `fondamenta/` | ⚠ **it is not only an archive, and this line said it badly**: REMOTIX v1's heritage — 17,481 lines of C, the benches, the documents, the calibration scenes — ⭐ **but inside there are two LIVE things**, `fondamenta/banco/enter.sh` (the way one enters the test machine, **193 citations**) and `fondamenta/strumenti/sshpw.py` (**81**, called by the V2 benches). The full map — live, archive, dead, with the citations counted — is in **`DECISIONS.md` §6.1** |
 | `reference-*/` | clones of the reference projects — **not versioned**, they are redone with `git clone` |
 
 ---
 
 ## The conventions
 
-**Everything is in English** — code, documents, page, commits (`DECISIONI.md` §10.38, 10 Oct 2026). Some names
+**Everything is in English** — code, documents, page, commits (`DECISIONS.md` §10.38, 10 Oct 2026). Some names
 in the code are still Italian (`stage`, `capture`, `sentinel`, `clipboard`) until the mechanical rename.
 
 **The marks** say how much a statement is worth, and must always be put:
@@ -1361,9 +1361,9 @@ in the code are still Italian (`stage`, `capture`, `sentinel`, `clipboard`) unti
 | `[?]` | hypothesised, **not yet measured** |
 
 ⛔ **A decision that rests on a `[?]` must be written as provisional.** An unmeasured reason
-makes the decision half-taken (`LEZIONI.md` §2.3-quater).
+makes the decision half-taken (`LESSONS.md` §2.3-quater).
 
-**Decisions live in `DECISIONI.md`, only once.** The other documents refer, they do not
+**Decisions live in `DECISIONS.md`, only once.** The other documents refer, they do not
 copy — and the entries carry ✅ (decided by the user), 🔸 (derived, correctable without discussion)
 or ❓ (open).
 
@@ -1376,7 +1376,7 @@ and the source. A reference that ages silently is worse than no reference.
 
 Two kinds of agents — whoever writes and whoever looks for contradictions — and review steps in **three
 times** per phase: on the bench *before* the product exists, on the code before measuring it, on the
-document before closing (`PIANO.md` §0.4).
+document before closing (`PLAN.md` §0.4).
 
 ⭐ **Why review weighs more than usual here**: by throwing away RDP we lost the external arbiter —
 `mstsc` protested for free when we got it wrong. Now client and server are ours, and **two programs

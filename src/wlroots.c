@@ -19,7 +19,7 @@
  *      is the fourcc).  The first draft believed it could CHOOSE among
  *      several offered formats, and compared against the DRM fourccs: the
  *      branch could never fire, and labwc gives only `XBGR8888` — that is
- *      `R G B x`.  ⇒ Here we TRANSLATE (wl_shm → DRM) and deliver; `figlio.c`
+ *      `R G B x`.  ⇒ Here we TRANSLATE (wl_shm → DRM) and deliver; `child.c`
  *      reads the order and tells the encoder (`CODIFICATORE_PIXEL_RGBX`).
  *   2. ⛔ THE COPY THROWN AWAY AT EVERY TIMEOUT.  The child's loop waits 8 ms
  *      (`MOTION_WAIT_S`) and the whole round costs 9-15: almost every
@@ -29,7 +29,7 @@
  *   3. ⛔ THREE `wl_display_roundtrip` WITHOUT A CEILING: a stuck compositor
  *      stopped the child forever.  ⇒ `cur_round()`, with a deadline.
  *   4. ⛔ `failed` AND `cancelled` IN THE SAME BRANCH — the exact mistake that
- *      `DECISIONI.md` §5.0-sexies blames on wayvnc.  ⇒ Three separate outcomes.
+ *      `DECISIONS.md` §5.0-sexies blames on wayvnc.  ⇒ Three separate outcomes.
  *   5. the output's head was found only if the names arrived in a precise
  *      order ⇒ all are kept, and the choice is made at request time;
  *   6. the configuration enabled a single head: with two outputs the
@@ -64,7 +64,7 @@
  *     what it costs            a blit on the GPU (`wlr_screencopy_v1.c`
  *                              0.18.2, `frame_dma_copy`): one copy, but on
  *                              the card — no `glReadPixels`, which BLOCKS
- *                              the compositor's loop (`STUDI.md` §xfce §4.4)
+ *                              the compositor's loop (`STUDIES.md` §xfce §4.4)
  *     new dependencies         ⚠ `gbm` to allocate, and the `linux-dmabuf` XML
  *
  *   B · `zwlr_export_dmabuf_manager_v1`
@@ -91,7 +91,7 @@
  *      has FINISHED reading.  ⇒ «labwc copies into it again while the
  *      encoder reads it» is not avoided with a timing: it is impossible by
  *      construction.  If they are all in hand the frame stops, SAYING SO;
- *      none is recycled (`LEZIONI.md` §8).
+ *      none is recycled (`LESSONS.md` §8).
  *   2. ⛔ A SLAB ABANDONED AFTER `copy` WITHOUT DELIVERY (dropped wire,
  *      `failed`) IS DIRTY: it is thrown away and another one is made.
  *   3. ⛔ EVERY SLAB THAT IS BORN OR DIES CHANGES THE GENERATION.  The
@@ -117,7 +117,7 @@
  *     it has left again in the meantime) and does nothing; and
  *     `capture_stopped_free()` zeroes the hold after returning it.  ⚠ `[R]`
  *     The only uncovered case is a COPY of the hold kept by someone after
- *     the release: in `figlio.c` the hold is a local variable passed by
+ *     the release: in `child.c` the hold is a local variable passed by
  *     address, and nobody copies it.
  *   · «Does the encoder read a slab while labwc copies into it again?»  ⇒
  *     Rule 1: a slab in hand is never named in a `copy`.
@@ -163,8 +163,8 @@
 #include "wlroots.h"
 #include "vulkanvideo.h"
 
-#include "forma.h"
-#include "registro.h"
+#include "shape.h"
+#include "log.h"
 
 #include "linux-dmabuf-unstable-v1-client-protocol.h"
 #include "wlr-output-management-unstable-v1-client-protocol.h"
@@ -185,7 +185,7 @@
 #include <unistd.h>
 #include <wayland-client.h>
 
-/* ⚠ The same area as `cattura.c` and `kwin.c`: whoever reads the log looks for
+/* ⚠ The same area as `capture.c` and `kwin.c`: whoever reads the log looks for
  *   the pixels under a single word, not under the name of the module that took them. */
 #define AREA "capture"
 
@@ -253,7 +253,7 @@ static void widen_24(WlrStage *p, WlrFrame *report);
  *     change, 0 in 5 with the slabs kept (and 0 in 5 on the memory route).
  *   ⚠ The price: 3 x 4096x2304x4 = 113 MB of slabs per session, even at
  *     1080p (they were 3 x the canvas).  ⇒ ONLY when the child's encoding is
- *     Vulkan (`wlr_slabs_at_max_canvas()`, decided in `figlio.c` before
+ *     Vulkan (`wlr_slabs_at_max_canvas()`, decided in `child.c` before
  *     the stage): with VA-API the slabs of the right size stay.
  */
 #define WLR_SLAB_W 4096u
@@ -327,7 +327,7 @@ struct WlrStage {
 	 * ⛔⛔ THE DIRTY BUFFER.  If a frame is abandoned AFTER sending `copy`
 	 *     and without waiting for its outcome (dropped wire), the compositor
 	 *     may write into it later: reusing it would give an old frame among
-	 *     the new ones — not an error, a flicker (`LEZIONI.md` §8).
+	 *     the new ones — not an error, a flicker (`LESSONS.md` §8).
 	 *  ⚠ With the PENDING frame (defect 2) the timeout no longer dirties it:
 	 *    the copy stays ours and we wait.  It remains only for the dropped wire.
 	 */
@@ -1085,7 +1085,7 @@ static char *node_from_device(dev_t d)
 
 /*
  * ⚠ THE FALLBACK, when the compositor does not say its node (v < 4): the SAME
- *   rule with which `sessione.c` chooses `WLR_RENDER_DRM_DEVICE` — the first
+ *   rule with which `session.c` chooses `WLR_RENDER_DRM_DEVICE` — the first
  *   openable `renderD*`, in name order.  ⛔ A different rule here would mean
  *   allocating on the other card exactly on the day the nodes swap.
  */
@@ -1123,9 +1123,9 @@ static char *node_as_session(void)
  *      KDE the counter restarted from 0 with every new capture, and after
  *      «Log out» and a new login the encoder (which stays) found the surfaces
  *      of the dead session again in its cache: the screen flashed.  See
- *      `new_generation()` in `cattura.c`.  ⇒ The same here, because a new
+ *      `new_generation()` in `capture.c`.  ⇒ The same here, because a new
  *      stage is born at every rebirth of the XFCE session.
- * ⚠ It starts from 2^62, and not from 0: `cattura.c` has its own counter (this
+ * ⚠ It starts from 2^62, and not from 0: `capture.c` has its own counter (this
  *   file is also linked into bench 13-w1, without `capture.o`), and the two
  *   ranges never touch.
  */
@@ -1440,13 +1440,13 @@ static struct wl_buffer *card_destination(WlrStage *p, bool *broken, GError **mi
 	if (!p->card_offered) {
 		/* ⚠ `[R]` wlroots sends `linux_dmabuf` only if the output's allocator
 		 *   can do DMA-BUF: without it, the compositor is in SOFTWARE
-		 *   (pixman, `STUDI.md` §xfce §5.2).  It is a diagnosis, and it is written. */
+		 *   (pixman, `STUDIES.md` §xfce §5.2).  It is a diagnosis, and it is written. */
 		if (!p->logged_no_offer) {
 			p->logged_no_offer = true;
 			registro_dice(AREA,
 			              "⛔ wlroots: the compositor does NOT offer DMA-BUF for this "
 			              "frame — it usually means it draws in SOFTWARE "
-			              "(pixman, `STUDI.md` §xfce §5.2).  DECLARED FALLBACK: the "
+			              "(pixman, `STUDIES.md` §xfce §5.2).  DECLARED FALLBACK: the "
 			              "frame goes to MEMORY; the line is not repeated");
 		}
 		return NULL;
@@ -1636,7 +1636,7 @@ static void close_frame(WlrStage *p, bool copy_alive)
 /*
  * ⛔ THE FACT `[M]`: headless labwc has no cursor plane — it draws the pointer
  *    in software INSIDE the output buffer, and screencopy has no channel for
- *    its shape.  ⭐ But the encoded theme (`forma.h`) makes sure that under
+ *    its shape.  ⭐ But the encoded theme (`shape.h`) makes sure that under
  *    the hotspot there is ONE opaque pixel of a colour that belongs only to
  *    that shape.  ⇒ Looking at it is enough.
  *
@@ -2221,7 +2221,7 @@ WlrSizeOutcome wlr_ask_size_hz(WlrStage *stage, uint32_t width, uint32_t height,
 	/*
 	 * ⛔⛔ AND HERE `stage->width = width` IS NOT WRITTEN: the compositor
 	 *     said yes to the REQUEST, and that the output has changed will be said
-	 *     by the `mode` event of the `wl_output` (`DECISIONI.md` §5.0-sexies).
+	 *     by the `mode` event of the `wl_output` (`DECISIONS.md` §5.0-sexies).
 	 *     One round, with a ceiling, to let it arrive.
 	 */
 	(void)cur_round(stage, wait_s, NULL);
@@ -2286,7 +2286,7 @@ bool wlr_ask_card(WlrStage *p, GError **mistake)
 	}
 	if (!p->node) {
 		p->node = node_as_session();
-		come = "⚠ NOT stated by the compositor: taken with the rule of `sessione.c` "
+		come = "⚠ NOT stated by the compositor: taken with the rule of `session.c` "
 		       "(the first openable renderD*), the same as WLR_RENDER_DRM_DEVICE";
 	}
 	if (!p->node) {

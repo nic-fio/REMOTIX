@@ -3,18 +3,18 @@
 # -----------------------------------------------------------------------------
 # ⛔ THE DEPENDENCIES, DECLARED — not "the ones that were on the machine"
 #
-# `LEZIONI.md` §2.5-bis: "dependencies installed by hand become invisible
+# `LESSONS.md` §2.5-bis: "dependencies installed by hand become invisible
 # within a day, and the moment you notice is always the one in
 # which you need the machine to start again".  Hence this list, and the
 # `dipendenze` target that CHECKS them before compiling instead of letting them fail
 # twenty lines later with an error that does not name them.
 #
-#   ngtcp2 >= 1.25            QUIC                      (DECISIONI.md §6.4)
+#   ngtcp2 >= 1.25            QUIC                      (DECISIONS.md §6.4)
 #   ngtcp2_crypto_ossl        the bridge to OpenSSL     (see src/tls.h)
 #   nghttp3 >= 1.18           HTTP/3
 #   OpenSSL >= 3.5            TLS 1.3 with the native QUIC API, and X509 for the
-#                             two certificates (src/certificati.c)
-#   libpam                    authentication            (SPECIFICHE.md §4.2)
+#                             two certificates (src/certificates.c)
+#   libpam                    authentication            (SPECS.md §4.2)
 #
 # ⭐ AND THE FIVE OF PHASE 2, grafted on 12 August 2026 by the assembly
 #    (`fasi/rapporti/P2-6-montaggio.md`).  Each one names the link that
@@ -22,19 +22,19 @@
 #    the day one is missing:
 #
 #   gio-2.0 >= 2.80           the session bus: the virtual monitor
-#                             (`src/sessione.c`) AND Mutter's ScreenCast
+#                             (`src/session.c`) AND Mutter's ScreenCast
 #                             sequence (`src/mutter.c`).  ⛔ ONCE ONLY:
 #                             it serves two links, and two `pkg-config` calls that
 #                             name it twice put the same -l twice
 #                             without anyone noticing
-#   libpipewire-0.3           the frame stream          (`src/cattura.c`)
+#   libpipewire-0.3           the frame stream          (`src/capture.c`)
 #   libdrm                    the `DRM_FORMAT_MOD_*`: headers ONLY, no
-#                             library to link (`src/cattura.c`)
-#   ⭐ PHASE 18 (30 Sep 2026, `DECISIONI.md` §10.25): ffmpeg has LEFT the
+#                             library to link (`src/capture.c`)
+#   ⭐ PHASE 18 (30 Sep 2026, `DECISIONS.md` §10.25): ffmpeg has LEFT the
 #      product — no `-lavcodec`, `-lavutil`, `-lswscale`.  In its place:
-#   libva, libva-drm            encoding on the card (`src/vadiretta.c`)
-#   (the BT.709 colours are ours: `src/colori709.c`, no dependency)
-#   ⛔ PHASE 19 (1 Oct 2026, `DECISIONI.md` §10.27): OpenH264 and SvtAv1Enc, the
+#   libva, libva-drm            encoding on the card (`src/vadirect.c`)
+#   (the BT.709 colours are ours: `src/colors709.c`, no dependency)
+#   ⛔ PHASE 19 (1 Oct 2026, `DECISIONS.md` §10.27): OpenH264 and SvtAv1Enc, the
 #      software fallback of `src/ripiego.c`, LEFT with the fallback —
 #      *"no CPU without a card"*.
 #
@@ -46,7 +46,7 @@
 #                             `renderD*` node, and `gbm` is the only generic API
 #                             that does it.  ⛔ Without it, on XFCE the pixels go through
 #                             memory: `glReadPixels` in the compositor (which
-#                             BLOCKS its loop, `STUDI.md` §xfce §4.4) plus
+#                             BLOCKS its loop, `STUDIES.md` §xfce §4.4) plus
 #                             our `memcpy`.  ⚠ On Trixie `libgbm-dev`
 #                             to build; `libgbm1` to run, and it is already there
 #                             wherever labwc runs (wlroots wants it for itself).
@@ -55,7 +55,7 @@
 # `libpipewire-0.3-dev`, `libdrm-dev`, `libva-dev`, `libopus-dev`.
 # ⚠ `ngtcp2` and `nghttp3` are NOT
 # enough in the packaged version (1.11 / 1.8): they must be built from
-# source, and that is what `banchi/01-b2-costruisci-ngtcp2.sh` does.
+# source, and that is what `benches/01-b2-build-ngtcp2.sh` does.
 #
 # -----------------------------------------------------------------------------
 #   make DEPS_PREFIX=/path/where/ngtcp2/and/nghttp3/are
@@ -70,34 +70,34 @@ NOME    := remotix
 # ⭐ THE FOUR FILES OF PHASE 2 are at the end, and in chain order: session
 #    (the stage) → capture+mutter (the pixels) → encoder (the bytes).  ⚠ The
 #    fifth link, the video channel, does NOT appear: it lives in `rcp.c`, which was
-#    already there — and it is why it is born already compared with `banchi/rcp/`.
-SORGENTI := main.c trasporto.c webtransport.c pagina.c comando.c certificati.c \
+#    already there — and it is why it is born already compared with `benches/rcp/`.
+SORGENTI := main.c transport.c webtransport.c page.c command.c certificates.c \
             budget.c \
-            tls.c registro.c rcp.c autenticazione.c aiutante.c figlio.c \
-            sessione.c cattura.c mutter.c codificatore.c vadiretta.c \
-            vulkanvideo.c scrittore_bit.c colori709.c audio.c suono.c \
-            input.c tastiera.c cursore.c sentinella.c appunti.c kwin.c \
-            appunti_kde.c wlroots.c wlr_input.c forma.c ritrovo.c
+            tls.c log.c rcp.c authentication.c helper.c child.c \
+            session.c capture.c mutter.c encoder.c vadirect.c \
+            vulkanvideo.c bit_writer.c colors709.c audio.c sound.c \
+            input.c keyboard.c cursor.c sentinel.c clipboard.c kwin.c \
+            clipboard_kde.c wlroots.c wlr_input.c shape.c rediscover.c
 OGGETTI  := $(SORGENTI:.c=.o)
 
 # -----------------------------------------------------------------------------
 # ⛔⭐ THE THREE COPIES THAT MUST BE ONE — finding R12.3, night of 10 August 2026.
 #
-# `rcp.c`, `rcp.h` and `autenticazione.c` exist in TWO folders of this
-# repo — here and in `banchi/rcp/` — because they are the same module mounted on two
+# `rcp.c`, `rcp.h` and `authentication.c` exist in TWO folders of this
+# repo — here and in `benches/rcp/` — because they are the same module mounted on two
 # hosts: the product server and the graft into ngtcp2's example.  ⛔ Until
 # tonight they were identical **by luck, not by construction**: no file of the
 # repo compared the two copies.
 #
 # The concrete case nobody would have seen: `BAN_DURATION` is changed in
-# `src/rcp.c` from twelve hours to one.  The product bans for an hour; `01-b6-lancia.sh`
-# stays green because it compares `banchi/rcp/` with the copy compiled inside
+# `src/rcp.c` from twelve hours to one.  The product bans for an hour; `01-b6-launch.sh`
+# stays green because it compares `benches/rcp/` with the copy compiled inside
 # `examples/`; B8 stays green because it starts `bsslserver`.  ⛔ The defect does not
 # change the colour of anything.
 #
 # ⭐ Hence this check, which comes BEFORE compilation and stops it.
 #
-# ⛔ AND THE FACTS ARE THREE, not two — `LEZIONI.md` §1.9 rule 1, the common
+# ⛔ AND THE FACTS ARE THREE, not two — `LESSONS.md` §1.9 rule 1, the common
 #    face of "empty" and "forbidden":
 #
 #      the copies match             it compiles
@@ -109,8 +109,8 @@ OGGETTI  := $(SORGENTI:.c=.o)
 #      first: "I found no differences" and "I could not look" have the
 #      same face, and the second looking like the first is a check
 #      switched off that looks switched on.
-TWIN ?= ../banchi/rcp
-GEMELLATI := rcp.c rcp.h autenticazione.c
+TWIN ?= ../benches/rcp
+GEMELLATI := rcp.c rcp.h authentication.c
 
 # ⚠ `-std=gnu11` and not `c11`: `accept4`, `SOCK_NONBLOCK` and the ancillary
 #   messages are needed, which pure POSIX does not carry.
@@ -118,7 +118,7 @@ AVVERTIMENTI := -Wall -Wextra -Wno-unused-parameter
 CFLAGS   ?= -O2 -g -std=gnu11 $(AVVERTIMENTI)
 
 # ⛔ `override`, and not a plain `+=`: whoever passes `CFLAGS=` on the command line
-#    — as `costruisci.sh` does, adding the `-I`s — would erase this
+#    — as `build.sh` does, adding the `-I`s — would erase this
 #    line together with the rest, and `struct in6_pktinfo` would vanish with an error that
 #    names no option.
 override CFLAGS += -D_GNU_SOURCE
@@ -133,18 +133,18 @@ endif
 
 # ⛔⭐ THE LIBRARIES OF PHASE 2, ASKED OF `pkg-config` ONCE ONLY.
 #
-# ⚠ `gio-2.0` is wanted by TWO links — `sessione.c` (the drop-in of the Shell's
+# ⚠ `gio-2.0` is wanted by TWO links — `session.c` (the drop-in of the Shell's
 #   unit and the bus) and `mutter.c` (the ScreenCast sequence).  The two reports
 #   each ask for it for themselves: putting it twice is not a compilation
 #   error, it is a list nobody can read any more.  ⇒ Here it is named
 #   once, and the two lines below are the single place to look.
 #
-# ⚠ `libdrm` is only in the CFLAGS: `cattura.c` takes its `DRM_FORMAT_MOD_*`,
+# ⚠ `libdrm` is only in the CFLAGS: `capture.c` takes its `DRM_FORMAT_MOD_*`,
 #   which are macros in `drm_fourcc.h`.  ⛔ Putting it in the LIBS too would link
 #   a library of which no function is used — and the day someone
 #   removed the `#include` nobody would notice.
 #
-# ⛔ `override` for the same reason as the line above: `costruisci.sh`
+# ⛔ `override` for the same reason as the line above: `build.sh`
 #    passes `CFLAGS=` on the command line to add ngtcp2's `-I`s, and
 #    a plain `+=` would vanish together with the rest.  The symptom would be
 #    `gio/gio.h: No such file`, which names no option.
@@ -154,7 +154,7 @@ override CFLAGS += $(F2_CFLAGS)
 
 # ⭐⭐ THE SIXTH OF PHASE 3, grafted on 13 August 2026: **libva**.
 #
-#   libva >= 1.22            `src/codificatore.c` uses it for TWO things only, and
+#   libva >= 1.22            `src/encoder.c` uses it for TWO things only, and
 #                            neither of them is done by libavcodec:
 #                              · `vaQueryVendorString()` — WHO answered on
 #                                the node that was opened.  ⛔ `[M]` 13 August: the
@@ -176,7 +176,7 @@ override CFLAGS += $(F2_CFLAGS)
 #   because another one brought it along vanishes the day that other one
 #   changes its mind, and it is the defect this list exists not to have.
 # ⭐⭐ PHASE 18 (30 Sep 2026): libva has become THE card path —
-#    `src/vadiretta.c` uses it for everything (configuration, parameters, packed
+#    `src/vadirect.c` uses it for everything (configuration, parameters, packed
 #    headers, coded buffers), and `libva-drm` opens the node (`vaGetDisplayDRM`)
 #    in place of `av_hwdevice_ctx_create`.
 F3_CFLAGS := $(shell pkg-config --cflags libva libva-drm)
@@ -185,11 +185,11 @@ override CFLAGS += $(F3_CFLAGS)
 
 # ⛔ PHASE 19 (1 Oct 2026): here there were OpenH264 (only `--cflags`, opened with
 #    `dlopen`) and SVT-AV1, the software fallback of `src/ripiego.c` — gone
-#    with the fallback (`DECISIONI.md` §10.27).  ⚠ `-ldl` STAYS: `figlio.c` opens
+#    with the fallback (`DECISIONS.md` §10.27).  ⚠ `-ldl` STAYS: `child.c` opens
 #    libselinux with `dlopen` (Fedora, Alma), and with the old glibc it is needed.
 DL_LIBS := -ldl
 
-# ⭐⭐ PHASE 19 (1 Oct 2026, `DECISIONI.md` §10.27) — **Vulkan**: the card
+# ⭐⭐ PHASE 19 (1 Oct 2026, `DECISIONS.md` §10.27) — **Vulkan**: the card
 #     path tried BEFORE VA-API (`src/vulkanvideo.c`, Vulkan Video:
 #     `VK_KHR_video_encode_queue` + H.264/H.265).  ONLY the loader is linked
 #     (`libvulkan`, Apache-2.0); the drivers (ICD: RADV, NVIDIA, ANV) live in the
@@ -204,7 +204,7 @@ F19_LIBS   := $(shell pkg-config --libs   vulkan)
 override CFLAGS += $(F19_CFLAGS)
 
 # ⭐ PHASE 18, line A — `libopus` DIRECTLY for audio (`src/audio.c`), since 30
-#    September 2026: Opus no longer goes through libavcodec (`DECISIONI.md` §10.25).
+#    September 2026: Opus no longer goes through libavcodec (`DECISIONS.md` §10.25).
 #    `[M]` 30 Sep 2026: `opus.pc` 1.5.2 is in `remotix-costruzione` and in the
 #    server's `devroot`.  ⚠ On Debian Trixie: `apt install libopus-dev`.
 #    ⚠ The minimum 1.3 is for `OPUS_SET_PHASE_INVERSION_DISABLED`, which `audio.c`
@@ -224,7 +224,7 @@ override CFLAGS += $(F18A_CFLAGS)
 #                `[M]` 14 Aug 2026, in the test machine's container:
 #                **1.3.901**.
 #
-#   xkbcommon    `src/tastiera.c` — the only library that can answer the
+#   xkbcommon    `src/keyboard.c` — the only library that can answer the
 #                question "with this layout, which key produces this
 #                letter?".  `[M]` 14 Aug 2026: **1.7.0**.
 #
@@ -234,7 +234,7 @@ F4_LIBS   := $(shell pkg-config --libs   libei-1.0 xkbcommon)
 override CFLAGS += $(F4_CFLAGS)
 
 # ⭐ PHASE 12 — the stage on KDE (`kwin.c`): the Wayland protocol
-#    `zkde_screencast_unstable_v1`, whose XML is in `protocolli/` (taken from
+#    `zkde_screencast_unstable_v1`, whose XML is in `protocols/` (taken from
 #    v1's `fondamenta/remotix-c/src/protocolli/`, which had it from
 #    plasma-wayland-protocols).  The protocol code is generated by
 #    `wayland-scanner` at every build: only the XML is in the repository.
@@ -258,16 +258,16 @@ SCANNER    ?= wayland-scanner
 #     ⚠ *"This protocol is deprecated … ext-image-copy-capture-v1 should be
 #       used instead"*.  ⛔ But `[M]` 20 Sep 2026 labwc on Trixie **does not expose**
 #       `ext_image_copy_capture_manager_v1`: we write against screencopy, and
-#       we know it from day one instead of discovering it (`STUDI.md` §xfce §4.6).
+#       we know it from day one instead of discovering it (`STUDIES.md` §xfce §4.6).
 # ⭐ PHASE 13 — `wlr-output-management-unstable-v1`: the SIZE of the output.
 #    ⛔ On wlroots the canvas is not negotiated with the stream (there is no stream there): it is
 #    changed at the output, and this is the protocol that does it.  `[M]` v4 on labwc.
 # ⭐ PHASE 13, INCREMENT 3 — INPUT on wlroots: libei does not exist there (`[✗]`
-#    `STUDI.md` §xfce §7), and the way is two Wayland protocols, `[M]`
+#    `STUDIES.md` §xfce §7), and the way is two Wayland protocols, `[M]`
 #    announced by labwc: `zwp_virtual_keyboard_manager_v1` v1 (from Purism, and
 #    ⚠ despite the `zwp_` prefix it is NOT in wayland-protocols: it is in the
 #    wlroots source, `protocol/`) and `zwlr_virtual_pointer_manager_v1` v2
-#    (from wlr-protocols).  They are in `protocolli/` like the others.
+#    (from wlr-protocols).  They are in `protocols/` like the others.
 # ⭐ PHASE 13 — `linux-dmabuf-unstable-v1`: the CARD's `wl_buffer`.  It is in
 #    `wayland-protocols`, which the container does NOT have: the XML is in the repository like
 #    the others, copied from wayland-protocols 1.44.  ⚠ At most v4 is bound
@@ -285,7 +285,7 @@ GENERATI   := $(PROTOCOLLI:%=%-client-protocol.h) $(PROTOCOLLI:%=%-protocol.c)
 
 # ⭐ PHASE 17 — the DEPS_PREFIX's library folder is not always `lib`:
 #    cmake calls it `lib64` on Fedora and openSUSE and `lib/<multiarch>` on Debian
-#    (`fasi/17-l-installatore.md` §4.4).  ⇒ `pkg-config` is asked INSIDE the
+#    (`phases/17-the-installer.md` §4.4).  ⇒ `pkg-config` is asked INSIDE the
 #    prefix (`PKG_CONFIG_LIBDIR`, which REPLACES the system folders, and
 #    without `PKG_CONFIG_PATH`, which would be searched FIRST: `[M]` in the container
 #    the ngtcp2 of `/usr/local` answered instead of the prefix's); if
@@ -322,14 +322,14 @@ all: fingerprints $(NOME)
 #    and not a green line.
 fingerprints:
 	@if [ "$(TWIN)" = "none" ]; then \
-	  printf '  ⛔ TWIN=none: I did NOT compare src/ with banchi/rcp/.\n'; \
+	  printf '  ⛔ TWIN=none: I did NOT compare src/ with benches/rcp/.\n'; \
 	  printf '     It is not «the copies match»: it is «I did not look», and whoever\n'; \
 	  printf '     builds has DECLARED it (finding R12.3).\n'; \
 	  exit 0; \
 	fi; \
 	if [ ! -d "$(TWIN)" ]; then \
 	  printf '  ⛔ the twin copy «%s» IS NOT THERE: I cannot prove that\n' "$(TWIN)"; \
-	  printf '     src/rcp.c and banchi/rcp/rcp.c are the same module — and they are\n'; \
+	  printf '     src/rcp.c and benches/rcp/rcp.c are the same module — and they are\n'; \
 	  printf '     the same module mounted on two hosts (R12.3).\n'; \
 	  printf '     Pass TWIN=<path>, or TWIN=none to\n'; \
 	  printf '     DECLARE building without the comparison.\n'; \
@@ -365,18 +365,18 @@ $(NOME): $(OGGETTI) $(PROTOCOLLI:%=%-protocol.o)
 kwin.o appunti_kde.o wlroots.o wlr_input.o: $(PROTOCOLLI:%=%-client-protocol.h)
 
 # -----------------------------------------------------------------------------
-# ⭐ THE CAPTURE BENCH ON WLROOTS — `banchi/13-w1-un-fotogramma.c`.
+# ⭐ THE CAPTURE BENCH ON WLROOTS — `benches/13-w1-one-frame.c`.
 #
 # ⛔ It links the SAME objects as the product (`wlroots.o`, `log.o`), not a
 #    copy: it is rule R12.3 applied to a new module — a bench that
 #    compiled a second `wlroots.c` would measure a code different from the one
 #    that runs, and it is the defect that rule exists to prevent.
-# ⚠ It is here and not in `banchi/`: the product's Makefile is the only place that
+# ⚠ It is here and not in `benches/`: the product's Makefile is the only place that
 #   knows how the protocol headers are generated.
 # -----------------------------------------------------------------------------
-BANCO_W1 := ../banchi/13-w1-un-fotogramma
+BANCO_W1 := ../benches/13-w1-one-frame
 
-$(BANCO_W1): ../banchi/13-w1-un-fotogramma.c wlroots.o registro.o \
+$(BANCO_W1): ../benches/13-w1-one-frame.c wlroots.o registro.o \
              wlr-screencopy-unstable-v1-protocol.o \
              wlr-output-management-unstable-v1-protocol.o \
              linux-dmabuf-unstable-v1-protocol.o
@@ -386,10 +386,10 @@ $(BANCO_W1): ../banchi/13-w1-un-fotogramma.c wlroots.o registro.o \
 bench-w1: $(BANCO_W1)
 
 
-%-client-protocol.h: protocolli/%.xml
+%-client-protocol.h: protocols/%.xml
 	$(SCANNER) client-header $< $@
 
-%-protocol.c: protocolli/%.xml
+%-protocol.c: protocols/%.xml
 	$(SCANNER) private-code $< $@
 
 clean:
@@ -401,11 +401,11 @@ clean:
 # ⭐ PHASE 17 — and now it also looks at the MINIMUM VERSIONS, not only that the
 #    headers are there: an old header is there, and the compiler
 #    falls twenty lines later on a function that does not exist.
-#    The minimums, and where they come from (`fasi/17-l-installatore.md` §4.4):
+#    The minimums, and where they come from (`phases/17-the-installer.md` §4.4):
 #      (openh264 2.5 and SvtAv1Enc 2.3 left with the fallback, phase 19)
 #      openssl 3.5.0          the native QUIC API (`ngtcp2_crypto_ossl`)
-#      libngtcp2 1.25.0       the `NGTCP2_STREAM_CLOSE2_FLAG_*` of `trasporto.c`
-#      libnghttp3 1.18.0      the one it is built with (`src/Contenitore`);
+#      libngtcp2 1.25.0       the `NGTCP2_STREAM_CLOSE2_FLAG_*` of `transport.c`
+#      libnghttp3 1.18.0      the one it is built with (`src/Containerfile`);
 #                             `[?]` the real minimum was not looked for
 #      libei-1.0 1.1.0        `ei_region_get_mapping_id` (`input.c`); `[R]` missing
 #                             in the 1.0.0 header, present in 1.1.0
@@ -413,7 +413,7 @@ clean:
 #                             capture/cursor/sound compile with Ubuntu 22.04's
 #                             0.3.48; `[R]` the key is missing in 0.3.44
 #      gio-2.0 2.80           as it was declared; we would need 2.72
-#                             (`g_get_user_state_dir`, `sessione.c`)
+#                             (`g_get_user_state_dir`, `session.c`)
 #    ⛔ Three outcomes and not two: "too old", "pkg-config does not know it" (which
 #       with DEPS_PREFIX may only mean that the `.pc` is not in the path) and
 #       "fine".  The first two make it exit with an error, but they are SAID differently.
@@ -453,76 +453,76 @@ deps:
 	done; \
 	exit $$stato
 
-# ⛔ Phase 16 (25 Sep 2026): `registro.h` has become a file of MACROS
+# ⛔ Phase 16 (25 Sep 2026): `log.h` has become a file of MACROS
 #    (`registro_dice` & co. add __FILE__/__LINE__): an old object
 #    looks for the symbol that is no longer there and linking falls half way.  Every
 #    object goes through the log, so it depends on it — all of them, without a list.
-$(OGGETTI): registro.h
+$(OGGETTI): log.h
 
-# ⛔ `main.c` NO LONGER depends on `sessione.h`, `cattura.h`, `mutter.h` and
-#    `codificatore.h`, and the line that removes them is the same decision as
-#    `DECISIONI.md` §1.10-bis: those four links are opened by the CHILD, which runs
+# ⛔ `main.c` NO LONGER depends on `session.h`, `capture.h`, `mutter.h` and
+#    `encoder.h`, and the line that removes them is the same decision as
+#    `DECISIONS.md` §1.10-bis: those four links are opened by the CHILD, which runs
 #    as the user.  The parent is root, and root has nobody to talk to.
-main.o:           aiutante.h certificati.h comando.h figlio.h pagina.h rcp.h \
-                  registro.h tls.h trasporto.h ritrovo.h
-trasporto.o:      trasporto.h aiutante.h registro.h webtransport.h
-webtransport.o:   webtransport.h aiutante.h rcp.h registro.h figlio.h audio.h
-pagina.o:         pagina.h certificati.h rcp.h registro.h
-comando.o:        comando.h rcp.h registro.h
-certificati.o:    certificati.h registro.h
-tls.o:            tls.h registro.h
-registro.o:       registro.h
+main.o:           helper.h certificates.h command.h child.h page.h rcp.h \
+                  log.h tls.h transport.h rediscover.h
+trasporto.o:      transport.h helper.h log.h webtransport.h
+webtransport.o:   webtransport.h helper.h rcp.h log.h child.h audio.h
+pagina.o:         page.h certificates.h rcp.h log.h
+comando.o:        command.h rcp.h log.h
+certificati.o:    certificates.h log.h
+tls.o:            tls.h log.h
+registro.o:       log.h
 rcp.o:            rcp.h
-# ⚠ `autenticazione.c` includes no header of ours, so this
+# ⚠ `authentication.c` includes no header of ours, so this
 #   line has no prerequisites — but it is there, because it was the only one of the ten
 #   missing and a uniform omission reads better than a single exception.
 autenticazione.o:
-# ⭐ `aiutante.c` — the process that queries PAM in place of the single thread
-#    (`DECISIONI.md` §1.10).  ⚠ It is NOT among the `GEMELLATI`: it belongs to the PRODUCT
-#    only, because the graft of `banchi/rcp/` has no loop of its own to free.
-aiutante.o:       aiutante.h registro.h
-# ⭐ `figlio.c` — one process per user, running as them (`DECISIONI.md`
+# ⭐ `helper.c` — the process that queries PAM in place of the single thread
+#    (`DECISIONS.md` §1.10).  ⚠ It is NOT among the `GEMELLATI`: it belongs to the PRODUCT
+#    only, because the graft of `benches/rcp/` has no loop of its own to free.
+aiutante.o:       helper.h log.h
+# ⭐ `child.c` — one process per user, running as them (`DECISIONS.md`
 #    §1.10-bis).  ⚠ It is the ONLY file that sits on both sides of the
 #    privilege drop: the parent's half includes nothing of phase 2, the
 #    child's half includes all four.  ⚠ It is NOT among the `GEMELLATI`: it belongs to the
-#    product only, like `aiutante.c`.
-figlio.o:         figlio.h registro.h sessione.h cattura.h mutter.h codificatore.h \
-                  input.h sentinella.h audio.h suono.h appunti.h ritrovo.h
+#    product only, like `helper.c`.
+figlio.o:         child.h log.h session.h capture.h mutter.h encoder.h \
+                  input.h sentinel.h audio.h sound.h clipboard.h rediscover.h
 
 # ⭐ THE FOUR OF PHASE 2.  ⚠ NONE is among the `GEMELLATI`: they belong to the PRODUCT
-#    only — in `banchi/rcp/` they do not exist, because the graft into ngtcp2's
+#    only — in `benches/rcp/` they do not exist, because the graft into ngtcp2's
 #    example has neither a graphical session nor an encoder.
-sessione.o:       sessione.h registro.h
+sessione.o:       session.h log.h
 
 # ⭐ THE GUARDIAN OF PHASE 5 — the emitter that was missing for `0x04` and `0x05`.
 # ⚠ It is not among the `GEMELLATI` and cannot go there: `rcp.c` reaches it by
 #   HOOK, because the copy grafted into ngtcp2 has no system bus.
-sentinella.o:     sentinella.h registro.h
+sentinella.o:     sentinel.h log.h
 # ⭐ PHASE 17, T7 — the live desktops left by a previous parent (logind and /proc).
-ritrovo.o:        ritrovo.h
-cattura.o:        cattura.h registro.h cursore.h
-mutter.o:         mutter.h registro.h
-codificatore.o:   codificatore.h registro.h vadiretta.h vulkanvideo.h scrittore_bit.h colori709.h
+ritrovo.o:        rediscover.h
+cattura.o:        capture.h log.h cursor.h
+mutter.o:         mutter.h log.h
+codificatore.o:   encoder.h log.h vadirect.h vulkanvideo.h bit_writer.h colors709.h
 # ⭐ PHASE 18: the card with direct libva, and the bit writer of the headers;
 #    our BT.709 colours (the card's "from memory" path).  ⛔ The
 #    software fallback (`ripiego.c`: OpenH264, SVT-AV1) is gone, phase 19.
-vadiretta.o:      vadiretta.h registro.h scrittore_bit.h
+vadiretta.o:      vadirect.h log.h bit_writer.h
 # ⭐ PHASE 19: the card in Vulkan Video, with the embedded SPIR-V shader
-#    (`vulkanvideo_rgb_nv12_spv.h`, generated by `banchi/19-vulkan/19-shader.sh`
+#    (`vulkanvideo_rgb_nv12_spv.h`, generated by `benches/19-vulkan/19-shader.sh`
 #    from the `.comp` next to it: the shader compiler is NOT needed to build).
 #    ⚠ `-Wno-missing-field-initializers`: Vulkan structures have dozens
 #    of fields and are filled by name (`.sType = …`), and `-Wextra`'s warning
 #    on every `{ .sType }` would cover the real warnings.  Only on this object.
-vulkanvideo.o:    vulkanvideo.h registro.h vulkanvideo_rgb_nv12_spv.h
+vulkanvideo.o:    vulkanvideo.h log.h vulkanvideo_rgb_nv12_spv.h
 vulkanvideo.o:    CFLAGS += -Wno-missing-field-initializers
-scrittore_bit.o:  scrittore_bit.h
-colori709.o:      colori709.h
+scrittore_bit.o:  bit_writer.h
+colori709.o:      colors709.h
 
 # ⭐ THE SOUND ENCODER — phase 7.  ⚠ It is not among the `GEMELLATI`: it belongs to the
 #   product, and the graft into ngtcp2 has nothing to play.
 #   ⛔ Since 30 Sep 2026 (phase 18) it calls `libopus` directly: the dependency is
 #      `F18A_LIBS` above.  Until the 29th it went through `libavcodec`.
-audio.o:          audio.h registro.h
+audio.o:          audio.h log.h
 
 # ⭐ THE SESSION'S SOUND — phase 7: the virtual sink and the capture of its
 #   MONITOR.  ⛔ In the session there is nothing to capture and it must be CREATED: `[M]`
@@ -531,11 +531,11 @@ audio.o:          audio.h registro.h
 #   sound card.  ⚠ The reference (`gnome-remote-desktop`) opens the capture
 #   on the sinks it FINDS and never creates a sink: with its code, here, not a
 #   single sample would arrive — and without an error anywhere.
-suono.o:          suono.h registro.h audio.h
+suono.o:          sound.h log.h audio.h
 
 # ⭐⭐ THE THREE OF PHASE 4 — and their lines are not a formality.
 #
-# ⛔ `input.h`, `tastiera.h` and `cursore.h` are the SEAMS, and a seam is
+# ⛔ `input.h`, `keyboard.h` and `cursor.h` are the SEAMS, and a seam is
 #    changed by the coordinator while the links write the implementation: without
 #    these lines `make` would leave standing a `.o` compiled against the
 #    contract of half an hour ago.  ⚠ The symptom would not be an error: it would be a
@@ -543,12 +543,12 @@ suono.o:          suono.h registro.h audio.h
 #    of all, because nobody connects it to the change that produced it.
 #    `[M]` 14 August 2026: the defect was reported by the cursor
 #    link, which had noticed that `capture.o` was not rebuilt.
-input.o:          input.h tastiera.h registro.h mutter.h sessione.h kwin.h
-tastiera.o:       tastiera.h registro.h
-cursore.o:        cursore.h registro.h
+input.o:          input.h keyboard.h log.h mutter.h session.h kwin.h
+tastiera.o:       keyboard.h log.h
+cursore.o:        cursor.h log.h
 
 # ⭐ THE SESSION'S CLIPBOARD — phase 7.  ⚠ It is not among the `GEMELLATI` and cannot
 #    go there: it speaks D-Bus (`gio-2.0`), which is not inside ngtcp2's `examples/`.
 #    ⛔ It is the same reason why `rcp.c` reaches this module
 #    by HOOKS and not by `#include`.
-appunti.o:        appunti.h registro.h
+appunti.o:        clipboard.h log.h

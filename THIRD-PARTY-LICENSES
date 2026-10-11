@@ -484,7 +484,7 @@ obstacle to adoption, that text has been removed.
 == Wayland protocol zkde-screencast-unstable-v1
    Used for:  screen capture on KDE Plasma; the code generated from it by wayland-scanner is compiled into /usr/libexec/remotix/remotix
    Licence:   LGPL-2.1-or-later
-   Text from: the <copyright> element of src/protocolli/zkde-screencast-unstable-v1.xml (from plasma-wayland-protocols); the LGPL text from LICENSES/LGPL-2.1-or-later.txt of plasma-wayland-protocols
+   Text from: the <copyright> element of src/protocols/zkde-screencast-unstable-v1.xml (from plasma-wayland-protocols); the LGPL text from LICENSES/LGPL-2.1-or-later.txt of plasma-wayland-protocols
 ------------------------------------------------------------------------------
 
 SPDX-FileCopyrightText: 2020-2021 Aleix Pol Gonzalez <aleixpol@kde.org>
@@ -964,7 +964,7 @@ That's all there is to it!
 == Wayland protocol wlr-data-control-unstable-v1
    Used for:  clipboard on wlroots desktops; the code generated from it by wayland-scanner is compiled into /usr/libexec/remotix/remotix
    Licence:   HPND-style (permission notice below)
-   Text from: the <copyright> element of src/protocolli/wlr-data-control-unstable-v1.xml (from wlr-protocols)
+   Text from: the <copyright> element of src/protocols/wlr-data-control-unstable-v1.xml (from wlr-protocols)
 ------------------------------------------------------------------------------
 
 Copyright © 2018 Simon Ser
@@ -995,7 +995,7 @@ THIS SOFTWARE.
 == Wayland protocol wlr-screencopy-unstable-v1
    Used for:  screen capture on wlroots desktops; the code generated from it by wayland-scanner is compiled into /usr/libexec/remotix/remotix
    Licence:   MIT
-   Text from: the <copyright> element of src/protocolli/wlr-screencopy-unstable-v1.xml (from wlr-protocols)
+   Text from: the <copyright> element of src/protocols/wlr-screencopy-unstable-v1.xml (from wlr-protocols)
 ------------------------------------------------------------------------------
 
 Copyright © 2018 Simon Ser
@@ -1024,7 +1024,7 @@ DEALINGS IN THE SOFTWARE.
 == Wayland protocol wlr-output-management-unstable-v1
    Used for:  output size on wlroots desktops; the code generated from it by wayland-scanner is compiled into /usr/libexec/remotix/remotix
    Licence:   HPND-style (permission notice below)
-   Text from: the <copyright> element of src/protocolli/wlr-output-management-unstable-v1.xml (from wlr-protocols)
+   Text from: the <copyright> element of src/protocols/wlr-output-management-unstable-v1.xml (from wlr-protocols)
 ------------------------------------------------------------------------------
 
 Copyright © 2019 Purism SPC
@@ -1054,7 +1054,7 @@ THIS SOFTWARE.
 == Wayland protocol ext-data-control-v1
    Used for:  clipboard on Wayland desktops; the code generated from it by wayland-scanner is compiled into /usr/libexec/remotix/remotix
    Licence:   HPND-style (permission notice below)
-   Text from: the <copyright> element of src/protocolli/ext-data-control-v1.xml (from wayland-protocols)
+   Text from: the <copyright> element of src/protocols/ext-data-control-v1.xml (from wayland-protocols)
 ------------------------------------------------------------------------------
 
 Copyright © 2018 Simon Ser
@@ -1086,7 +1086,7 @@ THIS SOFTWARE.
 == Wayland protocol virtual-keyboard-unstable-v1
    Used for:  keyboard input on wlroots desktops; the code generated from it by wayland-scanner is compiled into /usr/libexec/remotix/remotix
    Licence:   MIT
-   Text from: the <copyright> element of src/protocolli/virtual-keyboard-unstable-v1.xml (from wlroots)
+   Text from: the <copyright> element of src/protocols/virtual-keyboard-unstable-v1.xml (from wlroots)
 ------------------------------------------------------------------------------
 
 Copyright © 2008-2011  Kristian Høgsberg
@@ -1117,7 +1117,7 @@ DEALINGS IN THE SOFTWARE.
 == Wayland protocol wlr-virtual-pointer-unstable-v1
    Used for:  mouse input on wlroots desktops; the code generated from it by wayland-scanner is compiled into /usr/libexec/remotix/remotix
    Licence:   MIT
-   Text from: the <copyright> element of src/protocolli/wlr-virtual-pointer-unstable-v1.xml (from wlr-protocols)
+   Text from: the <copyright> element of src/protocols/wlr-virtual-pointer-unstable-v1.xml (from wlr-protocols)
 ------------------------------------------------------------------------------
 
 Copyright © 2019 Josef Gajdusek
@@ -1145,7 +1145,7 @@ DEALINGS IN THE SOFTWARE.
 == Wayland protocol linux-dmabuf-unstable-v1
    Used for:  GPU buffer sharing on Wayland desktops; the code generated from it by wayland-scanner is compiled into /usr/libexec/remotix/remotix
    Licence:   MIT
-   Text from: the <copyright> element of src/protocolli/linux-dmabuf-unstable-v1.xml (from wayland-protocols 1.44)
+   Text from: the <copyright> element of src/protocols/linux-dmabuf-unstable-v1.xml (from wayland-protocols 1.44)
 ------------------------------------------------------------------------------
 
 Copyright © 2014, 2015 Collabora, Ltd.
@@ -1173,7 +1173,7 @@ DEALINGS IN THE SOFTWARE.
 == Wayland protocol wlr-layer-shell-unstable-v1
    Used for:  the 1x1 «ticker» surface on the labwc that hosts KWin; the code generated from it by wayland-scanner is compiled into /usr/libexec/remotix/remotix
    Licence:   HPND-style (permission notice below)
-   Text from: the <copyright> element of src/protocolli/wlr-layer-shell-unstable-v1.xml (from wlr-protocols)
+   Text from: the <copyright> element of src/protocols/wlr-layer-shell-unstable-v1.xml (from wlr-protocols)
 ------------------------------------------------------------------------------
 
 Copyright © 2017 Drew DeVault
@@ -1203,7 +1203,7 @@ THIS SOFTWARE.
 == Wayland protocol xdg-shell
    Used for:  named by wlr-layer-shell (xdg_popup); the code generated from it by wayland-scanner is compiled into /usr/libexec/remotix/remotix
    Licence:   MIT
-   Text from: the <copyright> element of src/protocolli/xdg-shell.xml (from wayland-protocols 1.44)
+   Text from: the <copyright> element of src/protocols/xdg-shell.xml (from wayland-protocols 1.44)
 ------------------------------------------------------------------------------
 
 Copyright © 2008-2013 Kristian Høgsberg
@@ -1241,7 +1241,7 @@ DEALINGS IN THE SOFTWARE.
 
 ONLY IN THE RHEL / ALMA 10 PACKAGE (EPEL 10 has no labwc; the other distributions use their own).
 labwc is a SEPARATE PROGRAM shipped there unmodified, at /usr/lib/remotix/labwc (the invisible
-compositor that hosts KWin, DECISIONI.md §10.43).  It is not linked with REMOTIX: REMOTIX only
+compositor that hosts KWin, DECISIONS.md §10.43).  It is not linked with REMOTIX: REMOTIX only
 starts it.  REMOTIX's licence (LICENSE.md) does NOT apply to it: you may use, study, modify and
 redistribute labwc under the terms of the GNU General Public License version 2 below.
 
@@ -1665,7 +1665,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 == github.com/aymanbagabas/go-osc52/v2 v2.0.1
    Used for:  Go module compiled into remotix-install: terminal clipboard escape sequences (via Lip Gloss/termenv)
    Licence:   MIT
-   Text from: installatore/vendor/github.com/aymanbagabas/go-osc52/v2/LICENSE (go mod vendor at that version)
+   Text from: installer/vendor/github.com/aymanbagabas/go-osc52/v2/LICENSE (go mod vendor at that version)
 ------------------------------------------------------------------------------
 
 MIT License
@@ -1694,7 +1694,7 @@ SOFTWARE.
 == github.com/charmbracelet/bubbletea v1.3.10
    Used for:  Go module compiled into remotix-install: the text interface (remotix-install tui)
    Licence:   MIT
-   Text from: installatore/vendor/github.com/charmbracelet/bubbletea/LICENSE (go mod vendor at that version)
+   Text from: installer/vendor/github.com/charmbracelet/bubbletea/LICENSE (go mod vendor at that version)
 ------------------------------------------------------------------------------
 
 MIT License
@@ -1723,7 +1723,7 @@ SOFTWARE.
 == github.com/charmbracelet/colorprofile v0.2.3-0.20250311203215-f60798e515dc
    Used for:  Go module compiled into remotix-install: terminal colour detection for the text interface
    Licence:   MIT
-   Text from: installatore/vendor/github.com/charmbracelet/colorprofile/LICENSE (go mod vendor at that version)
+   Text from: installer/vendor/github.com/charmbracelet/colorprofile/LICENSE (go mod vendor at that version)
 ------------------------------------------------------------------------------
 
 MIT License
@@ -1752,7 +1752,7 @@ SOFTWARE.
 == github.com/charmbracelet/lipgloss v1.1.0
    Used for:  Go module compiled into remotix-install: layout and styles of the text interface
    Licence:   MIT
-   Text from: installatore/vendor/github.com/charmbracelet/lipgloss/LICENSE (go mod vendor at that version)
+   Text from: installer/vendor/github.com/charmbracelet/lipgloss/LICENSE (go mod vendor at that version)
 ------------------------------------------------------------------------------
 
 MIT License
@@ -1781,7 +1781,7 @@ SOFTWARE.
 == github.com/charmbracelet/x/ansi v0.10.1
    Used for:  Go module compiled into remotix-install: terminal escape sequences for the text interface
    Licence:   MIT
-   Text from: installatore/vendor/github.com/charmbracelet/x/ansi/LICENSE (go mod vendor at that version)
+   Text from: installer/vendor/github.com/charmbracelet/x/ansi/LICENSE (go mod vendor at that version)
 ------------------------------------------------------------------------------
 
 MIT License
@@ -1810,7 +1810,7 @@ SOFTWARE.
 == github.com/charmbracelet/x/cellbuf v0.0.13-0.20250311204145-2c3ea96c31dd
    Used for:  Go module compiled into remotix-install: screen buffer of the text interface
    Licence:   MIT
-   Text from: installatore/vendor/github.com/charmbracelet/x/cellbuf/LICENSE (go mod vendor at that version)
+   Text from: installer/vendor/github.com/charmbracelet/x/cellbuf/LICENSE (go mod vendor at that version)
 ------------------------------------------------------------------------------
 
 MIT License
@@ -1839,7 +1839,7 @@ SOFTWARE.
 == github.com/charmbracelet/x/term v0.2.1
    Used for:  Go module compiled into remotix-install: terminal handling for the text interface
    Licence:   MIT
-   Text from: installatore/vendor/github.com/charmbracelet/x/term/LICENSE (go mod vendor at that version)
+   Text from: installer/vendor/github.com/charmbracelet/x/term/LICENSE (go mod vendor at that version)
 ------------------------------------------------------------------------------
 
 MIT License
@@ -1868,7 +1868,7 @@ SOFTWARE.
 == github.com/godbus/dbus/v5 v5.2.2
    Used for:  Go module compiled into remotix-install: D-Bus (systemd and the session) for the installation engine
    Licence:   BSD-2-Clause
-   Text from: installatore/vendor/github.com/godbus/dbus/v5/LICENSE (go mod vendor at that version)
+   Text from: installer/vendor/github.com/godbus/dbus/v5/LICENSE (go mod vendor at that version)
 ------------------------------------------------------------------------------
 
 Copyright (c) 2013, Georg Reinke (<guelfey at gmail dot com>), Google
@@ -1901,7 +1901,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 == github.com/lucasb-eyer/go-colorful v1.2.0
    Used for:  Go module compiled into remotix-install: colour handling for the text interface
    Licence:   MIT
-   Text from: installatore/vendor/github.com/lucasb-eyer/go-colorful/LICENSE (go mod vendor at that version)
+   Text from: installer/vendor/github.com/lucasb-eyer/go-colorful/LICENSE (go mod vendor at that version)
 ------------------------------------------------------------------------------
 
 Copyright (c) 2013 Lucas Beyer
@@ -1916,7 +1916,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 == github.com/mattn/go-isatty v0.0.20
    Used for:  Go module compiled into remotix-install: terminal detection
    Licence:   MIT
-   Text from: installatore/vendor/github.com/mattn/go-isatty/LICENSE (go mod vendor at that version)
+   Text from: installer/vendor/github.com/mattn/go-isatty/LICENSE (go mod vendor at that version)
 ------------------------------------------------------------------------------
 
 Copyright (c) Yasuhiro MATSUMOTO <mattn.jp@gmail.com>
@@ -1933,7 +1933,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 == github.com/mattn/go-runewidth v0.0.16
    Used for:  Go module compiled into remotix-install: character widths in the text interface
    Licence:   MIT
-   Text from: installatore/vendor/github.com/mattn/go-runewidth/LICENSE (go mod vendor at that version)
+   Text from: installer/vendor/github.com/mattn/go-runewidth/LICENSE (go mod vendor at that version)
 ------------------------------------------------------------------------------
 
 The MIT License (MIT)
@@ -1962,7 +1962,7 @@ SOFTWARE.
 == github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6
    Used for:  Go module compiled into remotix-install: ANSI-aware text measuring for the text interface
    Licence:   MIT
-   Text from: installatore/vendor/github.com/muesli/ansi/LICENSE (go mod vendor at that version)
+   Text from: installer/vendor/github.com/muesli/ansi/LICENSE (go mod vendor at that version)
 ------------------------------------------------------------------------------
 
 MIT License
@@ -1991,7 +1991,7 @@ SOFTWARE.
 == github.com/muesli/cancelreader v0.2.2
    Used for:  Go module compiled into remotix-install: cancellable terminal input for the text interface
    Licence:   MIT
-   Text from: installatore/vendor/github.com/muesli/cancelreader/LICENSE (go mod vendor at that version)
+   Text from: installer/vendor/github.com/muesli/cancelreader/LICENSE (go mod vendor at that version)
 ------------------------------------------------------------------------------
 
 MIT License
@@ -2020,7 +2020,7 @@ SOFTWARE.
 == github.com/muesli/termenv v0.16.0
    Used for:  Go module compiled into remotix-install: terminal capabilities for the text interface
    Licence:   MIT
-   Text from: installatore/vendor/github.com/muesli/termenv/LICENSE (go mod vendor at that version)
+   Text from: installer/vendor/github.com/muesli/termenv/LICENSE (go mod vendor at that version)
 ------------------------------------------------------------------------------
 
 MIT License
@@ -2049,7 +2049,7 @@ SOFTWARE.
 == github.com/rivo/uniseg v0.4.7
    Used for:  Go module compiled into remotix-install: Unicode text segmentation for the text interface
    Licence:   MIT
-   Text from: installatore/vendor/github.com/rivo/uniseg/LICENSE.txt (go mod vendor at that version)
+   Text from: installer/vendor/github.com/rivo/uniseg/LICENSE.txt (go mod vendor at that version)
 ------------------------------------------------------------------------------
 
 MIT License
@@ -2078,7 +2078,7 @@ SOFTWARE.
 == github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e
    Used for:  Go module compiled into remotix-install: terminfo database reading for the text interface
    Licence:   MIT
-   Text from: installatore/vendor/github.com/xo/terminfo/LICENSE (go mod vendor at that version)
+   Text from: installer/vendor/github.com/xo/terminfo/LICENSE (go mod vendor at that version)
 ------------------------------------------------------------------------------
 
 The MIT License (MIT)
@@ -2107,7 +2107,7 @@ SOFTWARE.
 == golang.org/x/sys v0.39.0
    Used for:  Go module compiled into remotix-install: system calls (Unix)
    Licence:   BSD-3-Clause
-   Text from: installatore/vendor/golang.org/x/sys/LICENSE (go mod vendor at that version)
+   Text from: installer/vendor/golang.org/x/sys/LICENSE (go mod vendor at that version)
 ------------------------------------------------------------------------------
 
 Copyright 2009 The Go Authors.

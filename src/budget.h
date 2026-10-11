@@ -5,13 +5,13 @@
  * ─────────────────────────────────────────────────────────────────────────────
  *
  * Until today the product **had no budget: it accepted everyone and starved
- * everyone together**.  `[M]` `fasi/10-…md` §S.2: on the saturated scene the
+ * everyone together**.  `[M]` `phases/10-…md` §S.2: on the saturated scene the
  * eleventh gets in with **`denied 0`**, and the first session goes from **39.60
  * to 0.96 fps** — **−97.6 %** — with **104 paired reds** against invariant
  * **I1** (*«the rate falls only on measure, and never disconnect»*) and against
- * `DECISIONI.md` §4.6-bis.
+ * `DECISIONS.md` §4.6-bis.
  *
- * ⭐ The yardstick of the phase was set by the director (`DECISIONI.md` §4.6-septies):
+ * ⭐ The yardstick of the phase was set by the director (`DECISIONS.md` §4.6-septies):
  *    *«six RDP on a modest integrated card is not a bad result»* ⇒ **the
  *    phase must not let ten in: it must STOP WHERE IT MUST, SAYING SO.**
  *
@@ -19,7 +19,7 @@
  * ⛔ 1 · THE QUANTITY IS **COMPOSITION**, NOT ENCODING
  * ─────────────────────────────────────────────────────────────────────────────
  *
- * `DECISIONI.md` §4.6 says *«the real limit is set by the encoder, and it is
+ * `DECISIONS.md` §4.6 says *«the real limit is set by the encoder, and it is
  * measured in pixels per second»*.  ⛔ `[M]` **On this hardware it is not true**
  * (§6.11, §6.15):
  *
@@ -65,7 +65,7 @@
  *   **≥ 39.9 ms**, ⭐ **no overlap** ⇒ the threshold is their **geometric
  *   mean**, **22.9 ms**.  A session that delivers little **with 600 ms of
  *   delay** is *throttled*, not *idle* — and they are two facts the delivered
- *   alone does not tell apart (`LEZIONI.md` §1.31, §1.34: the mechanism next to
+ *   alone does not tell apart (`LESSONS.md` §1.31, §1.34: the mechanism next to
  *   the symptom, and here the mechanism is the DELAY, not the keyframes, which
  *   `[M]` stay at **zero** even inside the collapse, 0 out of 8 741).
  *
@@ -78,7 +78,7 @@
  *     prudent in the right direction, but not the same thing.
  *   ⛔ And the second half of the yardstick **does not cross the process
  *     boundary**: the compositor's «runway» is `(distinct_buffers − 2) × 16.67
- *     ms`, and `distinct_buffers` (`cattura.h`) lives **in the child**.  §6.9
+ *     ms`, and `distinct_buffers` (`capture.h`) lives **in the child**.  §6.9
  *     keeps the more prudent of the measurement and the runway; here we have
  *     the measurement only, and it is declared instead of pretending they are
  *     the same thing.
@@ -109,7 +109,7 @@
  *   | ⭐ **`F = 0.5`** |  **0**   |   **0**   |     **6**     | ⭐ **10**    |
  *   | `F = 1`         |    1     |     0     |       5       |      6      |
  *
- * ⭐ **The TEN of `SPECIFICHE.md` §5.5 found again by MEASUREMENT instead of by
+ * ⭐ **The TEN of `SPECS.md` §5.5 found again by MEASUREMENT instead of by
  *    promise** — and the overshoot on wake-up goes from **1 640×** to **2×**.
  * ⭐ `F = 0` is the «delivered» rule, `F = 1` is the «worst» rule: **it is the
  *    same rule with the knob in the director's hand** (`--reserve`).
@@ -118,7 +118,7 @@
  * ⛔ 4 · THE MARGIN IS WRITTEN ON BOTH SIDES, AND THE TWO ERRORS DO NOT COST THE SAME
  * ─────────────────────────────────────────────────────────────────────────────
  *
- * `LEZIONI.md` §1.33:
+ * `LESSONS.md` §1.33:
  *
  *   **false NO**   says «it does not hold» and it did hold ⇒ **a user refused
  *                  for nothing**.  It costs **one user**.
@@ -269,7 +269,7 @@ void budget_deposit(const char *user, uint32_t width, uint32_t height,
 
 /* ⛔ The count is opened, filled with **whoever is inside**, and closed with the
  *    verdict on the newcomer.  ⚠ Three calls and not one because «whoever is
- *    inside» is known by the **stage** table (`figlio.c`), not by this module:
+ *    inside» is known by the **stage** table (`child.c`), not by this module:
  *    tying them together would mean the budget knows the children, and then
  *    one day it would decide something about them. */
 struct budget_count {

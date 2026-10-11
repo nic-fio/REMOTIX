@@ -17,19 +17,19 @@
  * ⛔ The 5 ms of PCM are not a choice of convenience: they are `RCP.md` §5.3
  *    after finding R1.1, "the most serious of the 9 August review".  At 20 ms
  *    PCM would make 3852 bytes, and a QUIC datagram cannot be fragmented.
- *    ⭐ `[M]` 17 August 2026 (`banchi/07-b40`): the real datagram is **1024
+ *    ⭐ `[M]` 17 August 2026 (`benches/07-b40`): the real datagram is **1024
  *    bytes on Chrome 151**, so the 972 of PCM fit by 52 bytes — and at
  *    20 ms they would not fit by a factor of four.
  *
  * ⛔ And PCM's little-endian is the only exception to the network order of §6,
  *    declared: it is a payload, like the HEVC bytes, not a protocol field.
  *    ⚠ A bench that read it big-endian sees no error: it sees FULL-SCALE
- *    NOISE, which is the defect of v1 (`LEZIONI.md` §2.2), and
- *    `banchi/07-b40` grafts it on purpose as a positive control.
+ *    NOISE, which is the defect of v1 (`LESSONS.md` §2.2), and
+ *    `benches/07-b40` grafts it on purpose as a positive control.
  *
  * ---------------------------------------------------------------------------
  * ⭐ OPUS GOES THROUGH `libopus` DIRECTLY — since 30 September 2026 (phase 18,
- *    `DECISIONI.md` §10.22 and §10.25: ffmpeg leaves the product for licensing).
+ *    `DECISIONS.md` §10.22 and §10.25: ffmpeg leaves the product for licensing).
  *
  * ⛔ Until 29 September it went through `libavcodec`, and the reason was written
  *    here: `[M]` 17 August 2026, `libavcodec` 61.19.101 was already linked to
@@ -42,7 +42,7 @@
  *    wrapper), and the parameters are those the wrapper dictated, all
  *    written in `audio.c` — ⚠ two do not match libopus's default
  *    (complexity 10, unconstrained VBR).  `[M]` 30 Sep 2026,
- *    `banchi/18-a1-opus-senza-ffmpeg.c`: packets **identical byte for byte**
+ *    `benches/18-a1-opus-senza-ffmpeg.c`: packets **identical byte for byte**
  *    to those of libavcodec.  And the per-block `AVPacket` is gone.
  */
 #pragma once
@@ -85,7 +85,7 @@ uint32_t audio_enc_block(const audio_cod *c);
  * `report`     at least `AUDIO_OUT_MAX` bytes.
  *
  * ⛔⛔ THIS PARAGRAPH WAS REWRITTEN ON A MEASUREMENT — 17 August 2026,
- *      finding 7 of the adversarial review, closed by `banchi/07-b44`.
+ *      finding 7 of the adversarial review, closed by `benches/07-b44`.
  *
  *      It said: *"Returns `false` when there is nothing to send, and it is NOT
  *      an error: Opus may not produce a packet for every block offered"*.
@@ -114,7 +114,7 @@ uint32_t audio_enc_block(const audio_cod *c);
  *     ⛔ But it must be written down: an implementation that one day used these
  *     instants to synchronise audio with video would find 6.5 ms that no
  *     document explains — and that is the form of error this project pays for
- *     most (`LEZIONI.md` §2.2).
+ *     most (`LESSONS.md` §2.2).
  *
  * ⛔ Returns `false` when there is nothing to send.  The caller sends
  *    nothing and goes on — an empty block sent is a block the client
@@ -137,7 +137,7 @@ void audio_enc_counts(const audio_cod *c, uint64_t *entered, uint64_t *exited);
  * (§6.3) — finds a gap.  ⭐ A gap is silence, that is what the block
  * contained: it is not an approximation, it is not sending the zero.
  *
- * `[M]` 24 August 2026, `banchi/09-b84`: with the desktop still and Opus
+ * `[M]` 24 August 2026, `benches/09-b84`: with the desktop still and Opus
  * negotiated there are **50 datagrams per second of 3 bytes** that take
  * **589 kbit/s** of padded packets, that is 99.8 % padding — and the same
  * congestion window as the video.
@@ -146,7 +146,7 @@ void audio_enc_counts(const audio_cod *c, uint64_t *entered, uint64_t *exited);
  *   `audio.c`.  ⛔⭐ And the switch is NO longer a build one: the `-D`
  *   `AUDIO_SILENZIO_PREDEFINITO` **was removed** on 24 August 2026, and the only
  *   way is `--no-audio-silence` on the server's command line, which
- *   `figlio.c` copies to the end of the child's `argv` (where the
+ *   `child.c` copies to the end of the child's `argv` (where the
  *   encoder lives) as it already does with `--verbose`.  ⚠ Two ways to the
  *   same cure are two numbers that diverge.
  *

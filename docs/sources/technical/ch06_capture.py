@@ -11,11 +11,11 @@ FAMILIES = fig(
     + box(610, 170, 250, 56, "wlroots.c", "frames pulled one by one", "blue")
     + box(40, 262, 535, 56, "PipeWire node", "frames are pushed: capture_start(node)", "dark")
     + box(610, 262, 250, 56, "No PipeWire", "capture_start_wlr()", "dark")
-    + box(160, 356, 580, 60, "cattura.c — one contract", "capture_take() · capture_stopped_free() · counters", "light")
+    + box(160, 356, 580, 60, "capture.c — one contract", "capture_take() · capture_stopped_free() · counters", "light")
     + arrow(165, 114, 165, 168) + arrow(450, 114, 450, 168) + arrow(735, 114, 735, 168)
     + arrow(165, 228, 165, 260) + arrow(450, 228, 450, 260) + arrow(735, 228, 735, 260)
     + arrow(307, 320, 380, 354) + arrow(735, 320, 640, 354)
-    + text(450, 448, "figlio.c reads the same interface on all four desktops", 11, "#475569"),
+    + text(450, 448, "child.c reads the same interface on all four desktops", 11, "#475569"),
     900, 460, "«FIG» — Three compositor families, two directions (push and pull), one capture contract")
 
 S1 = p("REMOTIX does not grab the physical screen: every session has its own virtual output, and the "
@@ -23,7 +23,7 @@ S1 = p("REMOTIX does not grab the physical screen: every session has its own vir
        "behind the four desktops, and they deliver frames in two opposite directions. GNOME and KDE "
        "<i>push</i> frames through a PipeWire node; labwc (the compositor REMOTIX runs under XFCE and LXQt) "
        "has no node at all, and frames are <i>pulled</i> one by one. All three end up behind one interface, "
-       + c("cattura.h") + ", which the per-user child process (" + c("figlio.c") + ") uses in the same way "
+       + c("capture.h") + ", which the per-user child process (" + c("child.c") + ") uses in the same way "
        "on every desktop.", lead=True) + FAMILIES + \
     table(["", "GNOME (Mutter)", "KDE Plasma (KWin)", "XFCE and LXQt (labwc)"], [
         ["Module that opens the source", c("mutter.c") + " — " + c("mutter_open()"),
@@ -54,7 +54,7 @@ S1 = p("REMOTIX does not grab the physical screen: every session has its own vir
       "session whose KWin was started with " + c("--virtual") + " because labwc is missing (" + rif("KDE: the KWin screencast protocol") + ").")
 
 # ── 6.2 ─────────────────────────────────────────────────────────────────────
-S2 = p("The capture has one job, written at the top of " + c("cattura.h") + ": deliver a frame with the "
+S2 = p("The capture has one job, written at the top of " + c("capture.h") + ": deliver a frame with the "
        "<i>declared</i> buffer type, never a deduced one. Three rules from REMOTIX v1 survived the rewrite, "
        "and each one exists because breaking it produces no error at all.", lead=True) + \
     table(["Rule", "What the code does", "Why"], [
@@ -104,8 +104,8 @@ S2 = p("The capture has one job, written at the top of " + c("cattura.h") + ": d
          "and frames that arrive while nobody is waiting are only counted, not copied.",
          "Real-time thread.") + \
     p(c("CaptureStopped") + " also carries the timing of the part of the path that precedes the encoder, in "
-      "microseconds of " + c("CLOCK_MONOTONIC") + " (the same clock as " + c("figlio.c") + " and "
-      + c("codificatore.c") + "): " + c("arrival_us") + " (when the frame was parked), " + c("copy_us")
+      "microseconds of " + c("CLOCK_MONOTONIC") + " (the same clock as " + c("child.c") + " and "
+      + c("encoder.c") + "): " + c("arrival_us") + " (when the frame was parked), " + c("copy_us")
       + " (the " + c("memcpy") + " in the callback), " + c("alloc_us") + " (0 when the buffer was reused), "
       + c("in_slot_us") + " (how long the frame waited for a taker) and " + c("measure_us") + ". They were "
       "added in phase 8 because about 16 ms of a 30.37 ms capture-to-first-byte path had no owner.") + \
@@ -210,7 +210,7 @@ S4 = p("On Plasma the capture is a Wayland request to KWin: the private protocol
     p("<b>The size: KWin nested in labwc.</b> KWin on a machine without a seat cannot use its DRM backend, and its "
       + c("--virtual") + " backend fixes the output at the start line: up to KWin 6.7 it can neither resize it nor "
       "create another one, and restarting KWin at a new size killed every program that is not Qt (measured 10 Oct "
-      "2026). Since 11 Oct 2026 (" + c("DECISIONI.md") + " §10.40) KWin is born <i>nested</i>: " + c("sessione.c")
+      "2026). Since 11 Oct 2026 (" + c("DECISIONS.md") + " §10.40) KWin is born <i>nested</i>: " + c("session.c")
       + " writes the " + c("ExecStart") + " of " + "Plasma's " + c("plasma-kwin_wayland") + " unit" + " as " + c("remotix --kwin-nested "
       "W H NODE -- kwin_wayland_wrapper --xwayland --width W --height H --no-lockscreen") + ". That mode of the same "
       "binary (" + c("kwin_nested_alive()") + ") starts a labwc without a screen (" + c("WLR_BACKENDS=headless")
@@ -234,7 +234,7 @@ S4 = p("On Plasma the capture is a Wayland request to KWin: the private protocol
          + "; " + c("LABWC_UPDATE_ACTIVATION_ENV=0"),
          "An " + c("rc.xml") + " without bindings makes labwc load its defaults, which start programs "
          "(Super+Return a terminal, the volume keys " + c("amixer") + "); a program of the same user could press "
-         "them through the virtual-keyboard protocol (" + c("DECISIONI.md") + " §10.43)."],
+         "them through the virtual-keyboard protocol (" + c("DECISIONS.md") + " §10.43)."],
         ["Output refresh 240 Hz (" + c("HOST_MHZ") + ")", "labwc presents on its own clock: at 60 Hz the two clocks "
          "drifted, 52–55 fps instead of 59 for a 60 fps animation at 3824×2064."],
         ["The ticker: a 1×1 transparent surface in labwc's overlay layer, damaged every " + c("TICKER_MS")
@@ -249,7 +249,7 @@ S4 = p("On Plasma the capture is a Wayland request to KWin: the private protocol
     p("<b>Which labwc.</b> The distribution's, from " + c("PATH") + ". RHEL and Alma 10 have no labwc in EPEL, so "
       "only the Alma package ships its own, labwc 0.8.4 built unmodified against EPEL's wlroots 0.18, at "
       + c("/usr/lib/remotix/labwc") + " (" + c("make LABWC=…") + " → " + c("REMOTIX_LABWC") + " in " + c("kwin.c")
-      + "; GPL-2.0, text in " + c("THIRD-PARTY-LICENSES") + ", source next to every release; " + c("DECISIONI.md")
+      + "; GPL-2.0, text in " + c("THIRD-PARTY-LICENSES") + ", source next to every release; " + c("DECISIONS.md")
       + " §10.43). labwc never listens on the network, has no screen and no input device, and the user never sees it. "
       "<b>Without labwc</b> the session still starts, with KWin " + c("--virtual") + " as before: the output keeps "
       "the size it was born with, " + c("stage_size()") + " captures the size KWin reports (" + c("kwin_measure()")
@@ -261,7 +261,7 @@ S4 = p("On Plasma the capture is a Wayland request to KWin: the private protocol
          "measured on the N100 tablet.", "The price of nesting.") + \
     p("<b>The cursor.</b> The mode is fixed for the life of the stream; REMOTIX asks for metadata (4), like "
       "Mutter. The price is that every pointer movement produces a buffer without new pixels marked "
-      + c("SPA_CHUNK_FLAG_CORRUPTED") + "; " + c("cattura.c") + " discards those and counts them as "
+      + c("SPA_CHUNK_FLAG_CORRUPTED") + "; " + c("capture.c") + " discards those and counts them as "
       + c("cursor_only") + ". KWin draws the pointer into the image (software cursor, nested or " + c("--virtual") + "), so the session "
       "runs with REMOTIX's encoded cursor theme (" + rif("The encoded cursor theme") + "), and the child calls "
       + c("capture_cursor_never_hide()") + ": an empty metadata image is never forwarded as “hidden”, "
@@ -293,7 +293,7 @@ S5 = p("On GNOME and KDE the capture is a PipeWire consumer created by " + c("ca
          "damaged regions (6)»: those “buffers” are region slots, and when they run out Mutter declares the "
          "whole frame damaged — exactly in the case where damage matters."],
         ["Cursor metadata", "Up to " + c("CURSOR_META_BYTE(384, 384)"), "Mutter allocates 384×384; the wire "
-         "limit of 256 is enforced in " + c("cursore.c") + "."],
+         "limit of 256 is enforced in " + c("cursor.c") + "."],
     ], "«TAB» — The PipeWire negotiation") + \
     note("NVIDIA with GNOME 50 (6 Oct 2026): the proposal LINEAR + INVALID ended in «no more input formats» — "
          "Mutter agreed on INVALID, could not allocate it and withdrew it — and the session was black. Now "
@@ -311,7 +311,7 @@ S5 = p("On GNOME and KDE the capture is a PipeWire consumer created by " + c("ca
     p("<b>Retention.</b> On the GPU path the " + c("pw_buffer") + " is kept until " + c("capture_stopped_free()")
       + ", which the child calls only after " + c("codificatore_comprimi_scheda()") + " has returned — after the "
       "GPU has <i>finished</i> reading, not after the work was queued. Releasing earlier is the defect recorded "
-      "in " + c("LEZIONI.md") + " §8: two screens alternating and no error. " + c("release_held_buffer()") + " gives "
+      "in " + c("LESSONS.md") + " §8: two screens alternating and no error. " + c("release_held_buffer()") + " gives "
       "the buffer back only if its generation is still current.") + \
     h4("Resizing a live stream") + \
     p(c("capture_resize()") + " rebuilds the proposal at the new size and calls "
@@ -319,7 +319,7 @@ S5 = p("On GNOME and KDE the capture is a PipeWire consumer created by " + c("ca
       "the virtual monitor. It returns " + c("CAPTURE_RECANVAS_REQUESTED") + ", " + c("CAPTURE_RECANVAS_UNCHANGED")
       + " (the size is already in force: renegotiating it would chase its own tail) or "
       + c("CAPTURE_RECANVAS_FAULT") + ". “Requested” is not “done”: the truth is told by the next frame at the new "
-      "size, a rule taken from neatvnc. Measured with " + c("banchi/04-in8-misura.c") + " on 14 Aug 2026: first "
+      "size, a rule taken from neatvnc. Measured with " + c("benches/04-in8-measure.c") + " on 14 Aug 2026: first "
       "new frame after 41.6 ms on Mutter, no black, 20 resizes in 2 s all exact; 5.1 ms and 0 lost frames out "
       "of 25 on labwc. A size the producer cannot hold kills the stream about 2 ms later («no more input "
       "formats», PipeWire 1.4.2); " + c("capture_take()") + " looks at the state before waiting, so the "
@@ -335,7 +335,7 @@ S5 = p("On GNOME and KDE the capture is a PipeWire consumer created by " + c("ca
       "owed and the capture returned zero, and at most every " + c("WAKEUP_MS") + " = 400 ms.") + \
     warn("on Mutter the renegotiation recreates the absolute input devices (" + c("viewports-changed") + " → "
          + c("remove_viewport_devices()") + ", which does not go through " + c("drop_device()") + "). Measured "
-         "with " + c("banchi/06-b33-risveglio.c") + ": three wake-ups, three device replacements. If a button is "
+         "with " + c("benches/06-b33-wakeup.c") + ": three wake-ups, three device replacements. If a button is "
          "held at that moment it stays pressed inside Mutter and the desktop never takes another click. The "
          "child therefore does not wake the stream while " + c("input_pressed()") + " reports a key or button "
          "held; the price, declared, is that a client just attached may see a blank page until the user lets "
@@ -356,11 +356,11 @@ S6 = p("labwc has no PipeWire node. It offers " + c("zwlr_screencopy_manager_v1"
        + c("ready") + ". The frame rate is therefore REMOTIX's loop, not a property of the compositor — the "
        "user's decision of 20 Sep 2026 (“we ask for them”), which also bought control of the pointer and of the "
        "output size.", lead=True) + \
-    p("<b>Why a separate module.</b> " + c("cattura.c") + " was built on the push direction and " + c("figlio.c")
+    p("<b>Why a separate module.</b> " + c("capture.c") + " was built on the push direction and " + c("child.c")
       + " uses it in dozens of places; rewriting them two ways would have put GNOME and KDE at risk to serve the new "
       "desktops. The shape copies the clipboard's precedent (" + c("clipboard_open()") + " / "
       + c("clipboard_open_kde()") + "): a second constructor, " + c("capture_start_wlr()") + ", and every public "
-      "function of " + c("cattura.c") + " hands over to " + c("wlroots.c") + " at the top when the capture is a "
+      "function of " + c("capture.c") + " hands over to " + c("wlroots.c") + " at the top when the capture is a "
       "wlroots one. Everything downstream (" + c("capture_take()") + ", " + c("capture_delivery()")
       + ", the counters) sees no difference.") + \
     table(["Topic", "What happens"], [
@@ -470,13 +470,13 @@ STRADE = fig(
     + zone(20, 140, 860, 112, "Memory path (declared fallback)")
     + box(40, 174, 190, 60, "Compositor", "MemFd / wl_shm", "dark")
     + box(265, 174, 190, 60, "memcpy", "in the RT callback", "grey")
-    + box(490, 174, 170, 60, "BT.709 in CPU", "colori709.c (VA-API)", "grey")
+    + box(490, 174, 170, 60, "BT.709 in CPU", "colors709.c (VA-API)", "grey")
     + box(690, 174, 170, 60, "Upload + encode", "planes to the GPU", "light")
     + arrow(232, 204, 263, 204) + arrow(457, 204, 488, 204) + arrow(662, 204, 688, 204),
     900, 264, "«FIG» — The two paths of a frame; on Vulkan the memory path uploads RGB and the same shader converts")
 
 S8 = p("“Zero copy” means the frame never leaves the GPU between the compositor and the encoder. It is the "
-       "default (" + c("ZERO_COPY") + " = 1 in " + c("figlio.c") + "; a build-time " + c("-DZERO_COPY=0")
+       "default (" + c("ZERO_COPY") + " = 1 in " + c("child.c") + "; a build-time " + c("-DZERO_COPY=0")
        + " exists only to rebuild the “before” for A/B benches, it is not a product switch). It is not zero "
        "work: the RGB→YUV conversion still happens, on the GPU.", lead=True) + STRADE + \
     p("Why it matters, measured inside the product on 22 Aug 2026 (test server, 1920×1080, 2,450 frames, HEVC on "
@@ -499,7 +499,7 @@ S8 = p("“Zero copy” means the frame never leaves the GPU between the composi
     p("<b>The 64-byte stride.</b> The Intel iHD driver, importing a DMA-BUF, does not honour a stride that is "
       "not a multiple of 64 bytes: it reads rows at its own pitch and the desktop comes out blurred and slanted "
       "while the milliseconds look perfect. Measured on 22 Aug 2026 with the certified mark reader "
-      "(" + c("banchi/03-marca.py") + "): 1920×1080 (stride 7680) and 1552×888 (6208) read with contrast 1.000; "
+      "(" + c("benches/03-mark.py") + "): 1920×1080 (stride 7680) and 1552×888 (6208) read with contrast 1.000; "
       "1544×888 (6176) and 1560×888 (6240) do not read (0.617 and 0.510). 1552 and 1544 are eight pixels apart "
       "with opposite verdicts. The colour statistics of the two streams matched within 0.17 levels out of 255 "
       "while the mark was readable on 0 frames out of 869: an instrument looking at averages says green on this "
@@ -521,9 +521,9 @@ S8 = p("“Zero copy” means the frame never leaves the GPU between the composi
 S9 = p("The pointer is drawn by the page, not baked into the video: the image stays clean (two pointers are "
        "worse than one) and the shape travels as a side channel, the " + c("CURSOR_SHAPE") + " message of RCP/1. "
        "The capture's only addition to its interface is " + c("capture_cursor()") + ", which registers the "
-       "receiver; " + c("cursore.c") + " sits between PipeWire and the wire.", lead=True) + \
+       "receiver; " + c("cursor.c") + " sits between PipeWire and the wire.", lead=True) + \
     table(["State", "Metadata", "What is sent"], [
-        ["Not received", "No cursor metadata in the buffer", "Nothing; " + c("cattura.c") + " counts it ("
+        ["Not received", "No cursor metadata in the buffer", "Nothing; " + c("capture.c") + " counts it ("
          + c("cursor_absent") + ") and the page keeps its own pointer"],
         ["Hidden", c("id = 0") + ", or a bitmap with no visible pixel (Mutter zeroes the bitmap it just wrote: the "
          "intention is “no image”)", c("CURSOR_SHAPE") + " 0×0 with hotspot 0,0 — unless "
@@ -532,8 +532,8 @@ S9 = p("The pointer is drawn by the page, not baked into the video: the image st
          "number grows only on a real change"],
         ["Changed", "A new bitmap", "The shape, converted from premultiplied RGBA to premultiplied BGRA, cropped to 256×256 "
          "(" + c("CURSOR_MAX_SIDE") + ") and the crop logged"],
-    ], "«TAB» — The four cursor states that cursore.c separates") + \
-    p("After a hidden period Mutter sends “unchanged” when the pointer comes back, so " + c("cursore.c")
+    ], "«TAB» — The four cursor states that cursor.c separates") + \
+    p("After a hidden period Mutter sends “unchanged” when the pointer comes back, so " + c("cursor.c")
       + " keeps the last visible shape and re-sends it; otherwise the pointer would stay invisible with no error. "
       "A cursor larger than 256 would make the receiver close the session with " + c("PROTOCOL_ERROR")
       + ", which is why the limit is enforced on this side. A malformed metadata block is declared in the log "
@@ -543,7 +543,7 @@ S9 = p("The pointer is drawn by the page, not baked into the video: the image st
          + c("XCURSOR_*") + " variable."],
         ["KDE Plasma", "KWin's metadata (mode 4). KWin also paints the pointer into the image (software cursor), "
          "so the session runs with REMOTIX's encoded theme: the metadata is a single opaque pixel whose colour "
-         "names the shape, and " + c("cursore.c") + " replaces it with the real image (" + c("shape_from_pixel()")
+         "names the shape, and " + c("cursor.c") + " replaces it with the real image (" + c("shape_from_pixel()")
          + ", " + c("shape_image()") + ")."],
         ["XFCE, LXQt", "No cursor channel in screencopy. After every injected pointer gesture the child calls "
          + c("capture_probe_pointer()") + "; a 3×3 region capture around the hotspot reads the encoded pixel, "
@@ -553,8 +553,8 @@ S9 = p("The pointer is drawn by the page, not baked into the video: the image st
 # ── 6.10 ────────────────────────────────────────────────────────────────────
 S10 = p("Until 24 Sep 2026 the real pointer shape (resize arrows on a border, the I-beam on text, the hand on "
         "links) reached the browser only on GNOME. The user decided it must reach it on all four desktops, and "
-        "the design approved was an <b>encoded theme plus a dictionary</b> (" + c("forma.h") + ", "
-        + c("forma.c") + ").", lead=True) + \
+        "the design approved was an <b>encoded theme plus a dictionary</b> (" + c("shape.h") + ", "
+        + c("shape.c") + ").", lead=True) + \
     p("KWin and labwc draw the pointer into the captured image, so their sessions already ran with an invisible "
       "cursor theme made of 1×1 transparent images. The compositor drew nothing, and the metadata carried the "
       "same nothing. In the encoded theme each shape is still a 1×1 image, but <b>opaque</b> and of a colour of "
@@ -594,15 +594,15 @@ S10 = p("Until 24 Sep 2026 the real pointer shape (resize arrows on a border, th
 # ── 6.11 ────────────────────────────────────────────────────────────────────
 S11 = p("The constants of the capture, where they live and what set them.", lead=True) + \
     table(["Constant", "Value", "File", "Reason"], [
-        [c("MOTION_FPS"), "60", c("figlio.c"), "Capture maximum and encoder rate; asking 30 gave 18, asking 60 "
-         "gave 37 (" + c("LEZIONI.md") + " §6.1)"],
-        [c("MOTION_WAIT_S"), "0.008 s", c("figlio.c"), "Wait per loop turn; 250 ms added up to a quarter "
+        [c("MOTION_FPS"), "60", c("child.c"), "Capture maximum and encoder rate; asking 30 gave 18, asking 60 "
+         "gave 37 (" + c("LESSONS.md") + " §6.1)"],
+        [c("MOTION_WAIT_S"), "0.008 s", c("child.c"), "Wait per loop turn; 250 ms added up to a quarter "
          "second to clicks"],
-        [c("WAKEUP_MS"), "400 ms", c("figlio.c"), "Minimum interval between stream wake-ups"],
-        [c("ZERO_COPY"), "1", c("figlio.c"), "GPU path by default; 0 only to rebuild A/B benches"],
-        [c("WAIT_LATCH_MS"), "10000 ms", c("cattura.c"), "Wait for the PipeWire stream to attach, per attempt"],
-        [c("PIXEL_SCAN_EVERY_MS"), "500 ms", c("cattura.c"), "Diagnostic pixel scan cadence (was every frame)"],
-        [c("MAX_REGIONS"), "16", c("cattura.c"), "Damage regions carried per frame; beyond, the frame counts as whole"],
+        [c("WAKEUP_MS"), "400 ms", c("child.c"), "Minimum interval between stream wake-ups"],
+        [c("ZERO_COPY"), "1", c("child.c"), "GPU path by default; 0 only to rebuild A/B benches"],
+        [c("WAIT_LATCH_MS"), "10000 ms", c("capture.c"), "Wait for the PipeWire stream to attach, per attempt"],
+        [c("PIXEL_SCAN_EVERY_MS"), "500 ms", c("capture.c"), "Diagnostic pixel scan cadence (was every frame)"],
+        [c("MAX_REGIONS"), "16", c("capture.c"), "Damage regions carried per frame; beyond, the frame counts as whole"],
         [c("WAIT_CALL_MS") + " / " + c("WAIT_NODE_MS"), "15000 / 10000 ms", c("mutter.c"),
          "D-Bus call and node announcement"],
         [c("WAIT_NODE_MS"), "5000 ms", c("kwin.c"), "Node announcement from KWin"],
@@ -616,17 +616,17 @@ S11 = p("The constants of the capture, where they live and what set them.", lead
         [c("WLR_SLAB_W") + " × " + c("WLR_SLAB_H"), "4096 × 2304", c("wlroots.c"),
          "Slab size with Vulkan encoding (= the largest canvas)"],
         [c("PROBE_TAIL_US"), "120 ms", c("wlroots.c"), "Tail probe after the last pointer gesture"],
-        [c("CURSOR_MAX_SIDE"), "256", c("cursore.h"), "Wire limit of " + c("CURSOR_SHAPE")],
-        [c("SHAPE_COUNT") + " / " + c("SHAPE_SIZE"), "78 / 24", c("forma.h"), "Encoded theme"],
+        [c("CURSOR_MAX_SIDE"), "256", c("cursor.h"), "Wire limit of " + c("CURSOR_SHAPE")],
+        [c("SHAPE_COUNT") + " / " + c("SHAPE_SIZE"), "78 / 24", c("shape.h"), "Encoded theme"],
     ], "«TAB» — Capture constants") + \
     p("Every capture line in the log carries the area " + c("capture") + " (also from " + c("kwin.c") + " and "
       + c("wlroots.c") + ": whoever reads the log looks for pixels under one word). The log line written when the stage is mounted says "
       "which path was mounted, because a “conversion 0.9 ms” on the GPU path and one on the memory path are not "
       "the same quantity; see " + rif("Logging and diagnostics") + ".") + \
-    tip("the benches that prove these rules are in " + c("banchi/") + ": " + c("06-b5-esiti-cattura.c")
-        + " (capture outcomes, resize failures), " + c("04-in8-misura.c") + " (live resize), "
-        + c("06-b33-risveglio.c") + " (wake-up and held buttons), " + c("14-f1-forma.c")
-        + " (every colour of the encoded theme), " + c("03-marca.py") + " (the mark reader used for the stride "
+    tip("the benches that prove these rules are in " + c("benches/") + ": " + c("06-b5-capture-outcomes.c")
+        + " (capture outcomes, resize failures), " + c("04-in8-measure.c") + " (live resize), "
+        + c("06-b33-wakeup.c") + " (wake-up and held buttons), " + c("14-f1-shape.c")
+        + " (every colour of the encoded theme), " + c("03-mark.py") + " (the mark reader used for the stride "
         "limit). See " + rif("Testing") + ".", "Benches.")
 
 

@@ -3,42 +3,42 @@ from build import arrow, box, c, code, fig, flow, h4, note, p, rif, table, text,
 # ── 7.1 ─────────────────────────────────────────────────────────────────────
 VIA = fig(
     box(20, 30, 160, 64, "Captured frame", "DMA-BUF or pixels", "navy")
-    + box(220, 30, 200, 64, "codificatore.c", "one front for two paths", "blue")
+    + box(220, 30, 200, 64, "encoder.c", "one front for two paths", "blue")
     + box(470, 8, 190, 56, "vulkanvideo.c", "Vulkan Video (AMD, NVIDIA)", "light")
-    + box(470, 74, 190, 56, "vadiretta.c", "VA-API via libva (Intel)", "light")
+    + box(470, 74, 190, 56, "vadirect.c", "VA-API via libva (Intel)", "light")
     + box(700, 30, 180, 64, "Annex-B bytes", "checked, then sent", "green")
     + arrow(182, 62, 218, 62) + arrow(422, 52, 468, 36) + arrow(422, 72, 468, 102)
     + arrow(662, 36, 698, 56) + arrow(662, 102, 698, 70)
-    + box(220, 150, 200, 50, "colori709.c", "BT.709 in CPU, memory path", "grey")
+    + box(220, 150, 200, 50, "colors709.c", "BT.709 in CPU, memory path", "grey")
     + box(470, 150, 190, 50, "shader .comp", "BT.709 on the GPU", "grey")
-    + box(700, 150, 180, 50, "scrittore_bit.c", "SPS/PPS/VPS bits", "grey")
+    + box(700, 150, 180, 50, "bit_writer.c", "SPS/PPS/VPS bits", "grey")
     + arrow(320, 148, 320, 96, "#475569", True) + arrow(565, 148, 565, 132, "#475569", True)
     + arrow(790, 148, 610, 116, "#475569", True)
     + text(450, 228, "No ffmpeg, no CPU encoder: without a capable GPU the server offers no codec", 11, "#475569"),
     900, 236, "«FIG» — The encoder: one front, two GPU paths chosen by capability, three helpers")
 
 S1 = p("REMOTIX encodes every frame on the GPU, in H.264 or HEVC, into Annex-B that the browser's WebCodecs "
-       + c("VideoDecoder") + " decodes. " + c("codificatore.c") + " is the front: it chooses the GPU path by "
+       + c("VideoDecoder") + " decodes. " + c("encoder.c") + " is the front: it chooses the GPU path by "
        "capability — Vulkan Video if the card encodes that codec through Vulkan, VA-API otherwise — and keeps "
        "everything that works on the bytes (shape checks, keyframes, the 16 MiB ceiling, quality steps, the "
        "level check) in one place for both paths. ffmpeg left the product in phase 18 and the software "
        "encoders in phase 19: a server without a capable GPU says so at startup and offers no video codec.",
        lead=True) + VIA + \
     table(["File", "Role"], [
-        [c("codificatore.c") + " / " + c("codificatore.h"), "Opens the encoder by name, chooses the path, "
+        [c("encoder.c") + " / " + c("encoder.h"), "Opens the encoder by name, chooses the path, "
          "converts or imports the input, checks the bytes, keeps the confession, keyframes, ceiling, resize"],
         [c("vulkanvideo.c") + " / " + c("vulkanvideo.h"), "Vulkan Video: discovery per DRM node, session, "
          "parameters, DMA-BUF import, colour conversion shader, the encode loop"],
         [c("vulkanvideo_rgb_nv12.comp"), "Compute shader RGB → NV12/P010, BT.709 limited; compiled into "
          + c("vulkanvideo_rgb_nv12_spv.h") + ", which is kept in the repository so the product needs no shader "
          "compiler"],
-        [c("vadiretta.c") + " / " + c("vadiretta.h"), "libva used directly: configuration, sequence/picture/slice "
+        [c("vadirect.c") + " / " + c("vadirect.h"), "libva used directly: configuration, sequence/picture/slice "
          "parameters, packed headers, begin/render/end, the coded buffer"],
-        [c("colori709.c") + " / " + c("colori709.h"), "BGRx/RGBx → YUV 4:2:0 BT.709 limited in CPU (SSE2), for "
+        [c("colors709.c") + " / " + c("colors709.h"), "BGRx/RGBx → YUV 4:2:0 BT.709 limited in CPU (SSE2), for "
          "the VA-API memory path"],
-        [c("scrittore_bit.c") + " / " + c("scrittore_bit.h"), "Bit writer: " + c("u(n)") + ", " + c("ue(v)")
+        [c("bit_writer.c") + " / " + c("bit_writer.h"), "Bit writer: " + c("u(n)") + ", " + c("ue(v)")
          + ", " + c("se(v)") + ", trailing bits, NAL units with emulation prevention"],
-        [c("figlio.c") + " (the per-user child)", "Asks for the encoder (" + c("encoder_of()") + "), feeds it, probes the GPU at "
+        [c("child.c") + " (the per-user child)", "Asks for the encoder (" + c("encoder_of()") + "), feeds it, probes the GPU at "
          "startup (" + c("child_video_capabilities()") + ") and for the installer (" + c("--encoding-test") + ")"],
     ], "«TAB» — The files of the encoder")
 
@@ -48,7 +48,7 @@ S2 = p("RCP/1 numbers the video codecs in the frame header: <b>1 = HEVC, 2 = AV1
        "negotiated, but its number is reserved forever: an old client hearing “2” and receiving H.264 would "
        "paint garbage without an error.", lead=True) + \
     table(["Date", "Decision", "What drove it"], [
-        ["12 Aug 2026", "HEVC first, AV1 as negotiated fallback (" + c("DECISIONI.md") + " §1.13)",
+        ["12 Aug 2026", "HEVC first, AV1 as negotiated fallback (" + c("DECISIONS.md") + " §1.13)",
          "Measured in browsers: HEVC Main10 painted only in Chrome with GPU decoding (8 cells of 8), never in "
          "Firefox or in Chrome without GPU; AV1 painted everywhere, even in software"],
         ["13 Aug 2026", "Encoding on the GPU brought forward to phase 3", "HEVC on VA-API cost 3.16–3.24 ms per "
@@ -72,7 +72,7 @@ S2 = p("RCP/1 numbers the video codecs in the frame header: <b>1 = HEVC, 2 = AV1
       + c("HELLO") + " ends in " + c("NOTHING_IN_COMMON") + " and the startup log says why, with the remedy. A "
       "browser must never be offered a codec the server cannot keep: negotiating HEVC and then failing to open "
       "it was a black screen with no line naming it.") + \
-    table(["Capability", "Page (" + c("pagina.html") + ")", "Server (" + c("rcp.c") + ")"], [
+    table(["Capability", "Page (" + c("page.html") + ")", "Server (" + c("rcp.c") + ")"], [
         [c("video.codec"), "Probed by decoding: " + c("PREFERENCE") + " = " + c("[\"hevc\", \"h264\"]")
          + ", filtered to the codecs that reach the pixel in this browser", "The measured list; the "
          "negotiated codec is the first entry of the <b>browser's</b> list that the server also offers ("
@@ -107,10 +107,10 @@ S3 = p("The encoder is asked for <b>by name</b>, and the name says how the path 
          + " says the card fits this request, otherwise VA-API (and the log says why)", "The product (default)"],
         [c("h264_vulkan") + ", " + c("hevc_vulkan"), "Vulkan only; failure if unavailable",
          c("--encoding-route vulkan") + ", benches, diagnosis"],
-        [c("h264_vaapi") + ", " + c("hevc_vaapi"), "VA-API only (" + c("vadiretta.c") + ")",
+        [c("h264_vaapi") + ", " + c("hevc_vaapi"), "VA-API only (" + c("vadirect.c") + ")",
          c("--encoding-route vaapi") + ", the phase 18/19 benches"],
     ], "«TAB» — The six component names") + \
-    p(c("figlio.c") + " builds the name from the codec and the path in force (" + c("component_of()")
+    p(c("child.c") + " builds the name from the codec and the path in force (" + c("component_of()")
       + "); the path is " + c("card") + " (by capability) unless the server was started with " + c("--encoding-route card|vulkan|vaapi")
       + ", which the parent repeats on every child's command line (the child is an " + c("exec") + ", a static "
       "of the parent would not reach it). The name actually opened — " + c("h264_vulkan") + " or "
@@ -126,7 +126,7 @@ S3 = p("The encoder is asked for <b>by name</b>, and the name says how the path 
         ["The current QP is within the card's QP range", "VA-API"],
     ], "«TAB» — When Vulkan Video is taken") + \
     p("<b>The node is declared, not guessed.</b> " + c("RENDER_NODE") + " is " + c("/dev/dri/renderD128")
-      + ", fixed in " + c("figlio.c") + "; no environment variable moves it (a node from a variable would vanish "
+      + ", fixed in " + c("child.c") + "; no environment variable moves it (a node from a variable would vanish "
       "the day someone started the service by hand, and the symptom would be a different encoder under the same "
       "label). Only " + c("--encoding-test --node …") + " uses another node, to test a second card. On the test "
       "server the two nodes are two vendors: " + c("renderD128") + " the Intel iGPU (iHD, "
@@ -162,8 +162,8 @@ S3 = p("The encoder is asked for <b>by name</b>, and the name says how the path 
       + "/" + c("h264_strada") + " give the same answer per codec. The installer reads " + c("outcome") + " and the "
       "exit code.") + \
     note("the keys and the value " + c("nessuno") + " are written as the binary prints them ("
-         + c("test_exits()") + " in " + c("figlio.c") + "); the comments of " + c("figlio.c") + ", " + c("figlio.h")
-         + " and the installer's " + c("operazione.go") + " already describe them as " + c("route") + ", "
+         + c("test_exits()") + " in " + c("child.c") + "); the comments of " + c("child.c") + ", " + c("child.h")
+         + " and the installer's " + c("operation.go") + " already describe them as " + c("route") + ", "
          + c("node") + ", " + c("reason") + ", " + c("offered") + " and " + c("none") + ". Not settled yet: which "
          "of the two the 0.19.0 binary speaks.", "Probe keys.") + \
     table(["Exit code", "Meaning"], [
@@ -179,7 +179,7 @@ S3 = p("The encoder is asked for <b>by name</b>, and the name says how the path 
 
 # ── 7.4 ─────────────────────────────────────────────────────────────────────
 S4 = p("Until phase 18 the VA-API path was libavcodec's " + c("h264_vaapi") + " and " + c("hevc_vaapi")
-       + ". " + c("vadiretta.c") + " talks to libva (MIT) directly and does the four things they did: "
+       + ". " + c("vadirect.c") + " talks to libva (MIT) directly and does the four things they did: "
        "configure the driver, fill the sequence/picture/slice parameters, write the stream headers, and run "
        "begin/render/end for each frame. Its governing rule is to reproduce exactly what ffmpeg 7.1 did, field "
        "by field, so that the browser receives the same kind of stream.", lead=True) + \
@@ -207,7 +207,7 @@ S4 = p("Until phase 18 the VA-API path was libavcodec's " + c("h264_vaapi") + " 
          + ")", "There is no " + c("async_depth") + " any more: libavcodec's default of 2 was never asked for"],
         ["SEI", "An identification SEI with REMOTIX's UUID on the first frame (ffmpeg wrote its own)",
          "The page reads only SPS and PPS"],
-    ], "«TAB» — The VA-API stream, as vadiretta.c writes it") + \
+    ], "«TAB» — The VA-API stream, as vadirect.c writes it") + \
     p("Headers are passed to the driver as <i>packed headers</i>; " + c("VaDirectDeclaration")
       + " records the mask the driver declares and the one in force, the surface alignment (16 for H.264, the "
       "CTB for HEVC), whether HEVC P frames are coded as generalised-B slices (" + c("p_come_b") + ", «P as B», iHD) and "
@@ -241,7 +241,7 @@ S5 = p("Vulkan Video is the path the user asked for first (1 Oct 2026: “with s
          "preflight uses the same discovery."],
         ["Latency", "Asks " + c("VK_VIDEO_ENCODE_TUNING_MODE_ULTRA_LOW_LATENCY_KHR") + "; if the driver refuses, "
          "retries with the default and records it (" + c("low_latency_requested") + ")."],
-        ["Parameters", c("StdVideo*") + " with the same values " + c("vadiretta.c") + " writes: High 8 bit or "
+        ["Parameters", c("StdVideo*") + " with the same values " + c("vadirect.c") + " writes: High 8 bit or "
          "Main/Main 10, no B, one reference, BT.709 limited in the VUI, level computed like ffmpeg or imposed. "
          + c("SLOT_DPB") + " = 2, " + c("INPUTS") + " = 2 input images in rotation, one slice per frame."],
         ["Headers", "Written by the driver from those parameters (" + c("vkGetEncodedVideoSessionParametersKHR")
@@ -277,12 +277,12 @@ S6 = p("The capture delivers RGB, the encoders want YUV 4:2:0. The conversion is
         ["VA-API, zero copy", "The GPU's video processor (VPP, " + c("VAEntrypointVideoProc") + "), "
          + c("convert_on_gpu()"), "Matrix imposed: source " + c("VAProcColorStandardNone") + " full range, "
          "output " + c("VAProcColorStandardBT709") + " reduced range; regions declared"],
-        ["VA-API, from memory", c("colori709.c") + " in CPU into NV12/P010, then " + c("vadirect_load_nv12()")
+        ["VA-API, from memory", c("colors709.c") + " in CPU into NV12/P010, then " + c("vadirect_load_nv12()")
          + " / " + c("vadirect_load_p010()"), "Uploading RGB for the VPP was measured worse"],
         ["Vulkan, both inputs", c("vulkanvideo_rgb_nv12.comp") + " on the compute queue", "Same integer "
-         "arithmetic as " + c("colori709.c") + ", same bytes (bench 19)"],
+         "arithmetic as " + c("colors709.c") + ", same bytes (bench 19)"],
     ], "«TAB» — Who converts the colours") + \
-    p("<b>The arithmetic</b> (" + c("colori709.c") + " and the shader): Kr = 0.2126, Kb = 0.0722; coefficients in "
+    p("<b>The arithmetic</b> (" + c("colors709.c") + " and the shader): Kr = 0.2126, Kb = 0.0722; coefficients in "
       "fixed point with 15 fractional bits so each fits an " + c("int16") + " for " + c("pmaddwd") + "; luma "
       "(5983, 20127, 2032) sums to 28142 = 219/255 · 32768, so white gives 235 and black 16; Cb (−3298, −11094, "
       "14392) and Cr (14392, −13072, −1320) each sum to 0 — the green coefficient of Cr is 13072, not the rounded "
@@ -306,21 +306,21 @@ S6 = p("The capture delivers RGB, the encoders want YUV 4:2:0. The conversion is
          "Radeon VPP.")
 
 # ── 7.7 ─────────────────────────────────────────────────────────────────────
-S7 = p("Since phase 18 REMOTIX writes H.264 and HEVC headers itself. " + c("scrittore_bit.c") + " knows no codec: "
+S7 = p("Since phase 18 REMOTIX writes H.264 and HEVC headers itself. " + c("bit_writer.c") + " knows no codec: "
        "it knows bits, Exp-Golomb and the " + c("00 00 03") + " rule. Which fields to write, and in which order, "
-       "is in " + c("vadiretta.c") + ", with the standard's clause beside each line. It is the mirror of the "
-       "reader " + c("BitReader") + " that " + c("codificatore.c") + " has had since 12 Aug 2026 to read back "
+       "is in " + c("vadirect.c") + ", with the standard's clause beside each line. It is the mirror of the "
+       "reader " + c("BitReader") + " that " + c("encoder.c") + " has had since 12 Aug 2026 to read back "
        "what was produced.", lead=True) + \
     table(["Function", "Writes"], [
-        [c("sb_u(s, n, v)"), "The " + c("n") + " low bits of " + c("v") + ", most significant first (n ≤ 32)"],
-        [c("sb_flag()"), "One bit"],
-        [c("sb_ue()") + " / " + c("sb_se()"), "Unsigned / signed Exp-Golomb (H.264 9.1, H.265 9.2); signed maps k "
+        [c("bw_u(s, n, v)"), "The " + c("n") + " low bits of " + c("v") + ", most significant first (n ≤ 32)"],
+        [c("bw_flag()"), "One bit"],
+        [c("bw_ue()") + " / " + c("bw_se()"), "Unsigned / signed Exp-Golomb (H.264 9.1, H.265 9.2); signed maps k "
          "to (−1)<sup>k+1</sup>·⌈k/2⌉"],
-        [c("sb_close_rbsp()"), c("rbsp_trailing_bits()") + ": a 1 then zeros to the byte (also H.265 "
+        [c("bw_close_rbsp()"), c("rbsp_trailing_bits()") + ": a 1 then zeros to the byte (also H.265 "
          + c("byte_alignment()") + ")"],
-        [c("sb_align_with_uni()"), c("cabac_alignment_one_bit") + ": <i>ones</i> to the byte, the tail of an "
+        [c("bw_align_with_uni()"), c("cabac_alignment_one_bit") + ": <i>ones</i> to the byte, the tail of an "
          "H.264 slice header under CABAC"],
-        [c("sb_copy_bit()"), "Copies a run of bits from a source: used to rewrite the head of an SPS and copy the "
+        [c("bw_copy_bit()"), "Copies a run of bits from a source: used to rewrite the head of an SPS and copy the "
          "tail as is"],
         [c("nal_annexb()"), c("00 00 00 01") + ", the NAL header unchanged (1 byte H.264, 2 bytes HEVC), then the "
          "RBSP with emulation prevention (" + c("00 00 0x") + " with x ≤ 3 → " + c("00 00 03 0x") + "); 0 if the "
@@ -408,7 +408,7 @@ S9 = p("The GOP is infinite (" + c("chiavi_ogni") + " = 0): periodic keyframes a
 S10 = p("RCP/1 forbids a video frame larger than 16 MiB: it must be re-encoded at lower quality and logged, "
         "never sent. " + c("FRAME_CAP") + " is 16 × 1024 × 1024 bytes.", lead=True) + \
     table(["Constant", "Value", "Meaning"], [
-        [c("QP_HARDWARE"), "26", "The constant QP the product asks (" + c("figlio.c") + "); a declared "
+        [c("QP_HARDWARE"), "26", "The constant QP the product asks (" + c("child.c") + "); a declared "
          "convenience value, the working point belongs to phase 9"],
         [c("EMERGENCY_CRF") + " / " + c("CRF_STEP"), "24 / 9", "Steps when the ceiling bites: from QP 26 the "
          "ladder is 35, 44, 51"],
@@ -449,11 +449,11 @@ S11 = p(c("codificatore_ridimensiona()") + " reopens the encoder at the new size
 S12 = p("Phase 18 (closed 30 Sep 2026) removed ffmpeg; phase 19 (closed 3 Oct 2026) removed the CPU encoders. "
         "Both were accepted only on measured equivalence.", lead=True) + \
     table(["Work", "Before", "Now", "Licence"], [
-        ["GPU encoding", c("h264_vaapi") + ", " + c("hevc_vaapi") + " in libavcodec", c("vadiretta.c")
+        ["GPU encoding", c("h264_vaapi") + ", " + c("hevc_vaapi") + " in libavcodec", c("vadirect.c")
          + " on libva; " + c("vulkanvideo.c") + " on Vulkan", "MIT / Apache-2.0"],
         ["CPU fallback", "libx264, libx265, libsvtav1; then OpenH264 and SVT-AV1 (phase 18)", "None (phase 19)", "—"],
         ["Audio", "Opus through libavcodec", "libopus directly (" + rif("Audio and clipboard") + ")", "BSD"],
-        ["Colour conversion", "libswscale", c("colori709.c") + ", the VPP, the shader", "REMOTIX"],
+        ["Colour conversion", "libswscale", c("colors709.c") + ", the VPP, the shader", "REMOTIX"],
     ], "«TAB» — What ffmpeg did, and what replaced it") + \
     p("The reason was licensing: REMOTIX must have no GPL dependency, and the distributions' libavcodec is GPL. "
       "The product binary no longer links libavcodec, libavutil or libswscale (verified with " + c("ldd")
@@ -461,8 +461,8 @@ S12 = p("Phase 18 (closed 30 Sep 2026) removed ffmpeg; phase 19 (closed 3 Oct 20
     table(["Measurement (test server: i5-13500T, Intel UHD 770 iHD 25.2.3, Radeon RX 6800 radeonsi 25.0.7)",
            "Result"], [
         ["Zero copy, old vs new, 120 frames, H.264 / HEVC 8 / HEVC 10, 1080p and 4K, both cards ("
-         + c("banchi/18-scheda/18-confronto.sh") + ", 30 Sep 2026; the bench was retired on 11 Oct 2026, "
-         + c("DECISIONI.md") + " §10.44, and stays in git history at " + c("d2f27b3") + ")", "Identical: PSNR/SSIM equal to the sixth "
+         + "«banchi/18-scheda/18-confronto.sh»" + ", 30 Sep 2026; the bench was retired on 11 Oct 2026, "
+         + c("DECISIONS.md") + " §10.44, and stays in git history at " + c("d2f27b3") + ")", "Identical: PSNR/SSIM equal to the sixth "
          "digit, bytes equal (±2 in H.264 = the SEI string), same profile and level, encode time equal (Intel "
          "H.264 1080p 2118 → 2113 µs; HEVC 4K 7368 → 7340 µs)"],
         ["Chrome 154 decoding the 28 H.264 streams with WebCodecs", "120/120 each, pixel fingerprints equal on zero "
@@ -485,7 +485,7 @@ S12 = p("Phase 18 (closed 30 Sep 2026) removed ffmpeg; phase 19 (closed 3 Oct 20
     note("on the Radeon RX 6800 (VCN 3.0, radeonsi 25.0.7) one frame in about 50 takes ~31 ms instead of 8.7: groups "
          "of exactly five slow frames every 12–40 s, p99 30.9 ms, identical with libavcodec and with libva direct "
          "(30 Sep 2026, KDE and GNOME 4K). It is inside the driver's encode call, outside REMOTIX's scope by the "
-         "user's decision, and documented for the Mesa developers in " + c("fasi/16-a3-radeon-vcn.md")
+         "user's decision, and documented for the Mesa developers in " + c("phases/16-a3-radeon-vcn.md")
          + ". Since phase 19 the Radeon encodes through Vulkan; whether the anomaly persists there is not settled "
          "yet.", "Radeon anomaly A3.")
 
@@ -494,7 +494,7 @@ S13 = p("Every encoded frame carries its costs separately, so that a drop in fra
         "They are logged for the first frame and summarised afterwards; performance figures with their hardware "
         "are in " + rif("Performance and capacity") + ".", lead=True) + \
     table(["Field of " + c("EncoderFrame"), "What it measures"], [
-        [c("us_conversione"), "RGB → YUV: the VPP or the shader on the GPU, or " + c("colori709.c") + " in CPU"],
+        [c("us_conversione"), "RGB → YUV: the VPP or the shader on the GPU, or " + c("colors709.c") + " in CPU"],
         [c("upload_us"), "Memory → GPU upload; <b>0 on zero copy</b>, where the stretch does not exist"],
         [c("us_codifica"), "From handing the input to the encoder to the bytes read back"],
         [c("reencodes"), "Re-encodings forced by the 16 MiB ceiling (> 0 means it bit)"],
@@ -502,25 +502,25 @@ S13 = p("Every encoded frame carries its costs separately, so that a drop in fra
         [c("key"), "Keyframe (RCP/1 type " + c("0x0301") + ") or delta (" + c("0x0302") + ")"],
     ], "«TAB» — The timings of one frame") + \
     table(["Constant", "Value", "File"], [
-        [c("RENDER_NODE"), c("/dev/dri/renderD128"), c("figlio.c")],
-        [c("RENDER_POWER"), c("ENCODER_POWER_DECLARED"), c("figlio.c")],
-        [c("QP_HARDWARE"), "26", c("figlio.c")],
-        [c("CODEC_MAX"), "4 (index by codec number)", c("figlio.c")],
-        [c("PROBE_SIDE") + " / " + c("PROBE_ROUNDS"), "256 px / 8 attempts", c("figlio.c")],
-        [c("FRAME_CAP"), "16 MiB", c("codificatore.c")],
-        [c("CARD_ALIGNMENT"), "64 bytes (DMA-BUF stride)", c("codificatore.c")],
-        [c("IMPORTED_MAX") + " / " + c("READY_SURFACES"), "8 / 4", c("codificatore.c")],
-        [c("BANDWIDTH_WINDOW_US"), "10 s", c("codificatore.c")],
-        [c("REBUILT") + " / " + c("CODED_MARGIN"), "3 / 64 KiB", c("vadiretta.c")],
+        [c("RENDER_NODE"), c("/dev/dri/renderD128"), c("child.c")],
+        [c("RENDER_POWER"), c("ENCODER_POWER_DECLARED"), c("child.c")],
+        [c("QP_HARDWARE"), "26", c("child.c")],
+        [c("CODEC_MAX"), "4 (index by codec number)", c("child.c")],
+        [c("PROBE_SIDE") + " / " + c("PROBE_ROUNDS"), "256 px / 8 attempts", c("child.c")],
+        [c("FRAME_CAP"), "16 MiB", c("encoder.c")],
+        [c("CARD_ALIGNMENT"), "64 bytes (DMA-BUF stride)", c("encoder.c")],
+        [c("IMPORTED_MAX") + " / " + c("READY_SURFACES"), "8 / 4", c("encoder.c")],
+        [c("BANDWIDTH_WINDOW_US"), "10 s", c("encoder.c")],
+        [c("REBUILT") + " / " + c("CODED_MARGIN"), "3 / 64 KiB", c("vadirect.c")],
         [c("SLOT_DPB") + " / " + c("INPUTS") + " / " + c("IMPORTS_MAX"), "2 / 2 / 8", c("vulkanvideo.c")],
     ], "«TAB» — Encoder constants") + \
     tip("the log area of the encoder is " + c("video") + "; the line that starts with " + c("opened:") + " names the codec, "
         "depth, component, node, vendor and (on VA-API) the entry point actually in force, and the line before it says "
         "which path was taken and whether it was asked by name or by capability. "
         + c("remotix --encoding-test") + " with " + c("--encoding-route vulkan") + " or " + c("--encoding-route vaapi")
-        + " reproduces one path in isolation; the comparison bench is " + c("banchi/19-vulkan/19-confronto.sh")
-        + " (its phase-18 twin " + c("18-scheda/18-confronto.sh") + " was retired with the closed-phase benches), and the shader is rebuilt with "
-        + c("banchi/19-vulkan/19-shader.sh") + ".", "Diagnosis.")
+        + " reproduces one path in isolation; the comparison bench is " + c("benches/19-vulkan/19-compare.sh")
+        + " (its phase-18 twin " + "«18-scheda/18-confronto.sh»" + " was retired with the closed-phase benches), and the shader is rebuilt with "
+        + c("benches/19-vulkan/19-shader.sh") + ".", "Diagnosis.")
 
 CHAPTER = ("Video encoding", [
     ("Encoding at a glance", S1),

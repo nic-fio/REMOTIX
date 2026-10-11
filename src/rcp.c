@@ -8,7 +8,7 @@
 
 #include <errno.h> /* §4.4-bis: «there is no file yet» and «I could not
                     * read it» are two different facts, and what tells them
-                    * apart is `errno` alone (`LEZIONI.md` §1.9 rule 1) */
+                    * apart is `errno` alone (`LESSONS.md` §1.9 rule 1) */
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,7 +28,7 @@ enum {
 	T_SESSION = 0x0007,
 	/* §7.2 — the cursor SHAPE, server → client, on the control channel
 	 * (§5).  ⚠ The POSITION never travels in this direction: it belongs to the
-	 * client, which draws the pointer itself (`SPECIFICHE.md` §7.1). */
+	 * client, which draws the pointer itself (`SPECS.md` §7.1). */
 	T_CURSOR_SHAPE = 0x000A,
 	T_FAREWELL = 0x000C,
 	/* ⭐ §5.2, §7.1: «the client asks for a keyframe».  Served since 12 Aug
@@ -45,7 +45,7 @@ enum {
 	 * `FIT_CANVAS` fell into the `default` and made a conforming client **lose
 	 * the session**, and `CANVAS` was sent **by no line at all** —
 	 * `rcp_canvas_adapted_now()` changed the state and wrote to the log, but
-	 * nothing went out on the wire.  It is the pair that `DECISIONI.md` §5.0-sexies
+	 * nothing went out on the wire.  It is the pair that `DECISIONS.md` §5.0-sexies
 	 * switches on. */
 	T_FIT_CANVAS = 0x000B,
 	T_CANVAS = 0x000E,
@@ -65,7 +65,7 @@ enum {
 	/* ⭐ §7.1 `0x0009` — «the keyboard layout has changed».  ⛔ Served
 	 *    since 16 Aug 2026: before, it fell into the `default` and CLOSED the
 	 *    session of a conforming client, which is the exact twin of the `VIEW`
-	 *    defect.  It carries out `DECISIONI.md` §5-bis.7, and it is the message
+	 *    defect.  It carries out `DECISIONS.md` §5-bis.7, and it is the message
 	 *    with which the keyboard is changed **without detaching**. */
 	T_LAYOUT = 0x0009,
 	T_BENCH_MARK = 0x000F,
@@ -202,13 +202,13 @@ enum {
  *   taken — was held SIX TIMES longer than the document allows.
  *
  * ⛔ And no bench saw it: B6 (the three ceilings) is not written yet, and in
- *    `01-b5-violazioni.py` there is no case on the ceilings.  The defect sat
+ *    `01-b5-violations.py` there is no case on the ceilings.  The defect sat
  *    exactly where the bench does not look. */
 #define CAP_ATTACH 10000
 /* §4.4-bis: the fixed delay, and it applies to ADMITTED TOO. */
 #define FIXED_DELAY 1000
 
-/* ⛔⭐ THE VERDICT CEILING — 12 Aug 2026, `DECISIONI.md` §1.10.
+/* ⛔⭐ THE VERDICT CEILING — 12 Aug 2026, `DECISIONS.md` §1.10.
  *
  * It is not a ceiling of `RCP.md` §4.6: those three measure the CLIENT, and this
  * one measures US.  ⛔ It exists because since 12 August the PAM answer comes
@@ -217,7 +217,7 @@ enum {
  * on a silence — precisely what §8.1 forbids.
  *
  * ⚠ It is the SECOND net, not the first: the helper already has its own
- *   deadline at 8 s (`aiutante.c`).  ⛔ There are two on purpose, and they live
+ *   deadline at 8 s (`helper.c`).  ⛔ There are two on purpose, and they live
  *   in two different processes: the first cannot fire if the one at fault is
  *   precisely the one holding it.  Twelve seconds, that is more than its own,
  *   so in the normal case the no comes from there — with its log line — and
@@ -227,7 +227,7 @@ enum {
  *    from false. */
 #define VERDICT_CAP 12000
 
-/* ⛔ THE SILENCE CLOCK — `SPECIFICHE.md` §5.3, `DECISIONI.md` §4.4.
+/* ⛔ THE SILENCE CLOCK — `SPECS.md` §5.3, `DECISIONS.md` §4.4.
  *
  * Thirty seconds without a byte FROM THE CLIENT and the client «is considered
  * detached»: it no longer holds the slot, and whoever arrives gets in.  It is
@@ -260,14 +260,14 @@ enum {
  * ⚠ And what happens to the connection of whoever is silent, the document does
  *   NOT say.  Here the choice is to **leave it open** and free only the slot:
  *   closing it would be a farewell, and §8.2 has no reason meaning «you have
- *   been quiet for a while».  The choice is declared in `FASI.md`
+ *   been quiet for a while».  The choice is declared in `PHASES.md`
  *   §01-filo-nudo, because it is a point where RCP.md allows two readings. */
 #define SILENCE 30000
 
 /* ⛔⛔⭐⭐ THE GHOST EVICTION — 23 Aug 2026, phase 9, and it is NOT a
  *        new clock of §5.3: it is a shortcut inside the first.
  *
- * ⛔ THE FACT, measured.  `[M]` 23 August (`banchi/09-b78-apertura.py`): the only
+ * ⛔ THE FACT, measured.  `[M]` 23 August (`benches/09-b78-opening.py`): the only
  *    way a session opening really fails under loss is
  *    `ATTACH` → `FAREWELL(0x0F)`.  With the client killed by `-9` — that is a
  *    goodbye NEVER SAID, which to the server is identical to a goodbye LOST —
@@ -324,7 +324,7 @@ enum {
  *    number, one meaning.
  *
  * ⭐ THE REAL CURE LIES ELSEWHERE, and it must be said: if the server sent PINGs
- *    even during an active session (`FASI.md` §05-la-sessione §6-bis,
+ *    even during an active session (`PHASES.md` §05-la-sessione §6-bis,
  *    `src/webtransport.c` — NOT this file), the `last_life` of an alive client
  *    would never again be older than a couple of seconds, and this threshold
  *    could go down to 3.  With that in place the ghost lasts a breath; without
@@ -334,7 +334,7 @@ enum {
  *    sentence (that one is always fixed, further below): it was for the
  *    EVICTION, which is a new way in which the server takes something away
  *    from a session, and
- *    `DECISIONI.md` §4.1-bis says the server does not throw out a healthy
+ *    `DECISIONS.md` §4.1-bis says the server does not throw out a healthy
  *    session.  If the threshold were badly tuned it would throw out a live one,
  *    which is much worse than a wrong message. ⇒ It is switched on by whoever
  *    has looked.
@@ -368,7 +368,7 @@ uint64_t rcp_eviction_recommended(void) { return DEFAULT_EVICTION; }
 /* ⛔⭐ THE SECOND CLOCK OF §5.3 — «user inactivity», and until 16
  *     Aug 2026 IT DID NOT EXIST.
  *
- *     `SPECIFICHE.md` §5.3: *«30 minutes without input ⇒ REMOTIX **detaches**
+ *     `SPECS.md` §5.3: *«30 minutes without input ⇒ REMOTIX **detaches**
  *     the client: getting back in takes user and password»*, and *«"input" is
  *     what the user sends, not what they watch: whoever spends half an hour
  *     watching a video without touching anything is detached.  The cost is
@@ -478,7 +478,7 @@ struct rcp_session {
 	char user[257];
 	/* ⭐ The layout the client DECLARED in `ATTACH` (§4.5),
 	 *    kept for two things: applying it when the session is open
-	 *    (`DECISIONI.md` §5-bis.7), and recognising at `LAYOUT` (0x0009)
+	 *    (`DECISIONS.md` §5-bis.7), and recognising at `LAYOUT` (0x0009)
 	 *    whether it has really changed.  ⚠ 64 bytes plus the NUL: it is the
 	 *    ceiling of §4.5. */
 	char layout[65];
@@ -486,7 +486,7 @@ struct rcp_session {
 	/* ⛔⛔⭐ TWO CLOCKS, NOT ONE — and until 16 Aug 2026 there was only one
 	 *      doing the job of both.
 	 *
-	 *      `SPECIFICHE.md` §5.3 keeps TWO, with two different meanings:
+	 *      `SPECS.md` §5.3 keeps TWO, with two different meanings:
 	 *
 	 *        · «CLIENT silence», 30 SECONDS — «a client that is silent is a
 	 *          client that has detached», and the paragraph says why: *«the 30
@@ -511,7 +511,7 @@ struct rcp_session {
 	uint64_t cred_arrival; /* when CREDENTIALS arrived */
 	bool cred_good;      /* the verdict, already computed but not yet told */
 	uint8_t cred_reason;  /* if not good */
-	/* ⭐ THE CHECK ASKED OF ANOTHER PROCESS — `DECISIONI.md` §1.10.
+	/* ⭐ THE CHECK ASKED OF ANOTHER PROCESS — `DECISIONS.md` §1.10.
 	 *
 	 * ⛔ `expected_verdict` is true between the question and the answer, and it
 	 *    is the reason why `cred_good` is no longer enough on its own: before
@@ -579,7 +579,7 @@ struct rcp_session {
 	 * ⛔ This flag is switched on IN THE SAME line that sends `SESSION`, and
 	 *    only if the message really went out (`if (!w.full)`).
 	 *
-	 * ⭐ `LEZIONI.md` §1.13, applied while writing: *«one names the real
+	 * ⭐ `LESSONS.md` §1.13, applied while writing: *«one names the real
 	 *    quantity of the phenomenon, and looks whether the protocol already
 	 *    carries it»*.  Here the phenomenon is «the client knows the canvas and
 	 *    the codec», and the fact that tells it is `SESSION` — not a server state. */
@@ -599,7 +599,7 @@ struct rcp_session {
 	 *     client will draw», it arrives with `ATTACH` (§4.5) and `VIEW`
 	 *     updates it (§7.1).  ⛔ It **MUST NOT** change the canvas, and in RCP/1
 	 *     it does not even change the size of what is encoded: the server sends
-	 *     the whole canvas and the client rescales (`SPECIFICHE.md` §6.1).
+	 *     the whole canvas and the client rescales (`SPECS.md` §6.1).
 	 *
 	 * ⚠ And the limits are OTHERS: §7.1, finding R1.17 — «any size from 1x1
 	 *   up is legal, odd included».  The canvas limits exist for the encoder's
@@ -652,7 +652,7 @@ struct rcp_session {
 	uint64_t video_open_ms; /* the session time when it was opened */
 	/* The count of abandonments, for the log: §5.1 wants every
 	 * abandonment to be visible, and a count without a denominator is not a
-	 * measurement (`LEZIONI.md` §1.9). */
+	 * measurement (`LESSONS.md` §1.9). */
 	uint32_t video_sent, video_abandoned;
 
 	/* ==================================================================== */
@@ -799,7 +799,7 @@ struct rcp_session {
 	 *   have» (finding R1.27).  It is here for the log and for diagnosis —
 	 *   «when the user moved their hand» instead of «when the byte arrived» —
 	 *   and ⛔ no measurement is built on it: the delay is measured by the closed
-	 *   loop of `DECISIONI.md` §2.6, and the frame carries back the `id`, not
+	 *   loop of `DECISIONS.md` §2.6, and the frame carries back the `id`, not
 	 *   the instant. */
 	uint64_t inp_last_instant_us;
 
@@ -823,7 +823,7 @@ struct rcp_session {
 
 	/* ⛔⭐⭐ THE `FIT_CANVAS` PASSED TO THE STAGE AND NOT YET ANSWERED — §7.1,
 	 *     and the chain `children_recanvas()` → `capture_resize()`
-	 *     (`DECISIONI.md` §5.0-sexies).
+	 *     (`DECISIONS.md` §5.0-sexies).
 	 *
 	 * ⛔ IT EXISTS BECAUSE THE ANSWER DOES NOT COME BACK FROM WHERE THE QUESTION
 	 *    LEAVES.  The stage lives in another process, and the only way of knowing
@@ -856,7 +856,7 @@ struct rcp_session {
 	 *    the stage to go back** to the canvas in force.  If after
 	 *    `RCP_CANVAS_WAIT_MS` it has not gone back, its size is adopted: a
 	 *    session with an unexpected canvas is worth more than a session that
-	 *    does not see a pixel (`SPECIFICHE.md` §8.3, and I1 — «an ugly session
+	 *    does not see a pixel (`SPECS.md` §8.3, and I1 — «an ugly session
 	 *    is worth more than a closed session»). */
 	uint64_t canvas_mismatch_since;
 	/* How long to wait before asking the stage again to go back: it doubles at
@@ -994,7 +994,7 @@ static rcp_session *slot_holder(const char *user)
  * The caller deduced only one of them, and sent the client away with
  * `ALREADY_ACTIVE_REMOTELY`.
  *
- * ⛔ The seventeenth user of a multi-tenant machine (`SPECIFICHE.md`
+ * ⛔ The seventeenth user of a multi-tenant machine (`SPECS.md`
  *    §5.5) — who never opened anything anywhere — received
  *    `FAREWELL(0x0F)`, and the client, as §8.2 requires, built from it the
  *    sentence «you already have an active session elsewhere».  **It is
@@ -1060,7 +1060,7 @@ static void slot_leave(const char *user)
 /* ------------------------------------------------------------------------ */
 /* ⛔⭐ THE ADDRESS BAN — §4.4-bis, rewritten on 10 Aug 2026
  *
- * `DECISIONI.md` §1.9, decided by the user: **three consecutive failed
+ * `DECISIONS.md` §1.9, decided by the user: **three consecutive failed
  * authentications from the same address, and that address is out for 12 hours.**
  *
  * ⛔ WHAT HAS DISAPPEARED, AND IT MUST BE KNOWN WHEN READING THIS FILE.  The
@@ -1094,7 +1094,7 @@ static void slot_leave(const char *user)
  *      stopped, and it is exactly the shape of defect that «the code was there
  *      and did nothing» has already produced once in this file.
  *
- * ⛔ THE BAN SURVIVES A RESTART (`DECISIONI.md` §1.9, invariant I7): a ban
+ * ⛔ THE BAN SURVIVES A RESTART (`DECISIONS.md` §1.9, invariant I7): a ban
  *    that resets on restart is a protection that loses itself, and whoever
  *    restarts for another reason does not know they removed it.  The file is
  *    written by `save_ban()`; `rcp_ban_load()` reads it back at startup.
@@ -1104,7 +1104,7 @@ static void slot_leave(const char *user)
  *      process, so writing it to disk would produce meaningless expiries after
  *      a restart.  The epoch in seconds is written and converted back at load.
  *
- * ⛔ AND THERE ARE TWO WAYS OUT (`DECISIONI.md` §1.9): the 12 hours passing, or
+ * ⛔ AND THERE ARE TWO WAYS OUT (`DECISIONS.md` §1.9): the 12 hours passing, or
  *    `rcp_unblock()` — which is the unblock command, and requires access to
  *    the machine.  ⭐ **It is also what makes B8 possible**: without it, a bench
  *    measuring the timing of authentication would have three samples and then
@@ -1195,7 +1195,7 @@ static char ban_path[512]; /* empty = not persisted (the bench, usually) */
  *     rcp_banned("[192.168.0.2]") = 1
  *
  * ⚠ And the form that answered **false** is exactly the one that
- *   `pagina.c` builds for IPv4 (`getnameinfo` + `"%s:%s"`).  Today it does no
+ *   `page.c` builds for IPv4 (`getnameinfo` + `"%s:%s"`).  Today it does no
  *   harm only because the caller normalises **first**, that is because the
  *   normalisation belonged to **the caller** — which is precisely what
  *   §4.4-bis forbids with a ⛔ and what `rcp.h` promises to do **in
@@ -1393,7 +1393,7 @@ static void mark_failed(rcp_session *s, const char *address, uint64_t now)
 	if (inside >= THRESHOLD) {
 		attempts[i].banned_until = now + BAN_DURATION;
 		reg(s, "⛔ BANNED address %s for %u hours: %d authentications "
-		       "failed within %u minutes (§4.4-bis, DECISIONI.md §1.9)",
+		       "failed within %u minutes (§4.4-bis, DECISIONS.md §1.9)",
 		    address, BAN_DURATION / 3600000u, inside, WINDOW / 60000u);
 		save_ban(s, now);
 	}
@@ -1417,7 +1417,7 @@ static void reset_failed(rcp_session *s, const char *address, uint64_t now)
 /* What the HOST calls: the page over TCP and the unblock command.
  *
  * ⛔ The page is served ALL THE SAME to a banned address, and says the attempts
- *    are used up (`DECISIONI.md` §1.9): whoever is banned by mistake is almost
+ *    are used up (`DECISIONS.md` §1.9): whoever is banned by mistake is almost
  *    always the owner, and a network error would tell them nothing.  Whoever
  *    serves the page calls `rcp_banned()` and writes the sentence.          */
 bool rcp_banned(const char *provenance, uint64_t now, uint64_t *remain_ms)
@@ -1456,7 +1456,7 @@ bool rcp_unblock(const char *address, uint64_t now)
  * survive a restart is a protection that gets lost (I7).  Returns how many it
  * loaded, or -1 if the file was there and could not be read —
  * ⚠ «zero bans» and «I could not look» are two different facts
- * (`LEZIONI.md` §1.9 rule 1), and the caller must print them differently. */
+ * (`LESSONS.md` §1.9 rule 1), and the caller must print them differently. */
 int rcp_ban_load(const char *fpath, uint64_t now)
 {
 	ban_path[0] = 0;
@@ -1471,7 +1471,7 @@ int rcp_ban_load(const char *fpath, uint64_t now)
 		 *    ANY failure of `fopen()`: a file without permissions, a path whose
 		 *    parent is not a directory, a disk that does not answer — all
 		 *    «zero bans», that is **the protection switched off with the air
-		 *    of having nothing to protect** (`LEZIONI.md` §1.9 rule 1, and I7).
+		 *    of having nothing to protect** (`LESSONS.md` §1.9 rule 1, and I7).
 		 *
 		 * ⭐ Only one datum tells the two facts apart, and it is `errno`:
 		 *    `ENOENT` means the file has not been born yet — no bans, and it is
@@ -1792,7 +1792,7 @@ static bool entry_present(const char *list, const char *entry)
  * ⛔ `discards` collects the entries thrown away because we do not know them.
  *    §4.3 says they are discarded; ⚠ but a discard that is not written is a
  *    successful negotiation with the opposite of what was wanted inside it —
- *    trap 4 of `LEZIONI.md` §4 — and the symptom arrives months later, in the
+ *    trap 4 of `LESSONS.md` §4 — and the symptom arrives months later, in the
  *    form of «it is slow and nobody understands why».
  *
  * ⛔⭐ AND THREE DISCARDS DID NOT GO THROUGH `discards` — finding R9.12, that is
@@ -1887,7 +1887,7 @@ static const char *first_in_common(const char *client_list, const char *our,
 }
 
 /* What this server declares. */
-/* ⛔⭐⭐ AV1 HAS GONE — 20 Aug 2026, `DECISIONI.md` §1.13-ter, decided
+/* ⛔⭐⭐ AV1 HAS GONE — 20 Aug 2026, `DECISIONS.md` §1.13-ter, decided
  *     by the user: «the choice is forced: we must abandon AV1».
  *
  * The three reasons, and the third arrived last:
@@ -1909,13 +1909,13 @@ static const char *first_in_common(const char *client_list, const char *our,
  *
  * The parent SETS it at startup after the probe of `child_video_capabilities()`:
  * «hevc» only if the card encodes HEVC, «h264» only if the card encodes
- * H.264, «» if nothing — ⛔ phase 19 (1 Oct 2026, `DECISIONI.md` §10.27): the
+ * H.264, «» if nothing — ⛔ phase 19 (1 Oct 2026, `DECISIONS.md` §10.27): the
  * software fallback (OpenH264) has gone, no processor without a card.
  * ⛔ The browser must not
  * receive an offer the server cannot keep: negotiating «hevc» and
  * then not opening it was a black screen without a line naming it.
  * ⚠ The default stays yesterday's for the bench harness
- *   (`banchi/rcp/`), which has no card to probe; the product ALWAYS writes it
+ *   (`benches/rcp/`), which has no card to probe; the product ALWAYS writes it
  *   (`main.c`), and with the list empty every HELLO ends in
  *   NOTHING_IN_COMMON — declared at startup and in the farewell. */
 static char our_codec[64] = OUR_DEFAULT_CODEC;
@@ -2092,7 +2092,7 @@ static bool handle_hello(rcp_session *s, reader *l)
 	 * ⭐ §2.4 wins, because it is the more specific and because it is the one
 	 *    written to resolve precisely this case (finding R1.24).  ⚠ The first
 	 *    round of this module had applied §9 to the letter and ACCEPTED a
-	 *    HELLO(2): B5 found it.  It is in `FASI.md` §01-filo-nudo.
+	 *    HELLO(2): B5 found it.  It is in `PHASES.md` §01-filo-nudo.
 	 *
 	 * ⚠ And the comparison is with the version of the PATH, which here is the
 	 *   only one the server serves.  A server that served `/rcp/1` and `/rcp/2`
@@ -2290,14 +2290,14 @@ static bool handle_hello(rcp_session *s, reader *l)
 	 *     `rcp_video_send()` receives opaque data, and §4.3 is the only
 	 *     document rcp.c knows (see the box of `rcp.h`).  ⇒ Here the requested
 	 *     number is read and HANDED OVER (`rcp_level_negotiated()`); the
-	 *     produced level is read from the SPS (`codificatore.c`,
+	 *     produced level is read from the SPS (`encoder.c`,
 	 *     `read_h264_sps`/`read_hevc_sps`) and the comparison is made by
 	 *     whoever has both numbers in hand, that is the child.
 	 *     ⛔ Until 23 Aug 2026 the chain was not there, and the defect was
 	 *       MEASURED: `video.level=5.1` requested, **5.2** produced at
 	 *       3840x2160.  The chain is `rcp.h` → `webtransport.c` (the hook
-	 *       `wt_video_request`) → `main.c` → `figlio.h` (`children_video`) →
-	 *       `figlio.c` (`struct body_video`, which kept its `fill` byte
+	 *       `wt_video_request`) → `main.c` → `child.h` (`children_video`) →
+	 *       `child.c` (`struct body_video`, which kept its `fill` byte
 	 *       free on purpose).  It is the same chain the negotiated DEPTH
 	 *       travelled on 17 Aug 2026 — and that day the defect was
 	 *       identical: two true numbers in two processes, and nobody putting
@@ -2483,7 +2483,7 @@ static bool handle_credentials(rcp_session *s, reader *l, uint64_t now)
 		       "queried (§4.4-bis)",
 		    s->address, (unsigned long long)(remain / 60000u));
 	} else if (s->g.ask_verify) {
-		/* ⭐⭐ THE GOOD ROAD — `DECISIONI.md` §1.10, 12 Aug 2026.
+		/* ⭐⭐ THE GOOD ROAD — `DECISIONS.md` §1.10, 12 Aug 2026.
 		 *
 		 * ⛔ Here one does NOT wait for PAM.  One asks a helper process and
 		 *    returns at once to the host, which returns to its `poll`: it is the
@@ -2496,7 +2496,7 @@ static bool handle_credentials(rcp_session *s, reader *l, uint64_t now)
 		if (s->g.ask_verify(s->g.ctx, user, password, &s->ticket)) {
 			s->expected_verdict = true;
 			reg(s, "PAM asked of the helper, request %llu: the thread stays "
-			       "free (DECISIONI.md §1.10)",
+			       "free (DECISIONS.md §1.10)",
 			    (unsigned long long)s->ticket);
 		} else {
 			/* ⛔ THE QUESTION DID NOT LEAVE ⇒ NO, at once.  It is I3 to the
@@ -2513,7 +2513,7 @@ static bool handle_credentials(rcp_session *s, reader *l, uint64_t now)
 	} else {
 		/* ⚠ THE DECLARED FALLBACK (`CODER.md` §4.2), and it blocks whoever
 		 *   calls it: it is the road of the in-process benches, where there is
-		 *   no loop to free — and the FAULT that `banchi/02-pam-*` injects to
+		 *   no loop to free — and the FAULT that `benches/02-pam-*` injects to
 		 *   certify itself, because it is exactly how the server was before. */
 		bool ok = s->g.verify && s->g.verify(s->g.ctx, user, password);
 		reg(s, "PAM answered: %s  ⚠ (SYNCHRONOUSLY: no asynchronous "
@@ -2522,7 +2522,7 @@ static bool handle_credentials(rcp_session *s, reader *l, uint64_t now)
 		s->cred_good = ok;
 		s->cred_reason = RCP_WRONG_CREDENTIALS;
 		/* ⛔ The count is on the ADDRESS alone: the user name does not count
-		 * (`DECISIONI.md` §1.9).  Three different names count three. */
+		 * (`DECISIONS.md` §1.9).  Three different names count three. */
 		if (ok)
 			reset_failed(s, s->address, now);
 		else
@@ -2552,12 +2552,12 @@ static bool handle_credentials(rcp_session *s, reader *l, uint64_t now)
  *
  *      On 16 August the fixed list of 20 layouts was removed and the
  *      question «does this machine have it?» went to XKB (the hook
- *      `layout_exists`, `webtransport.c:1626` → `tastiera.c`).  ⛔ But
+ *      `layout_exists`, `webtransport.c:1626` → `keyboard.c`).  ⛔ But
  *      IN FRONT OF that hook a SECOND hand-written list had remained, and
  *      nobody had looked at it: **which characters are allowed in the name**.
  *
  * `[M]` Measured by asking the system through the product itself
- *   (`06-b34-tabella.c list`, that is `src/tastiera.c`), on all the **590**
+ *   (`06-b34-table.c list`, that is `src/keyboard.c`), on all the **590**
  *   layout/variant pairs that `/usr/share/X11/xkb/rules/evdev.lst`
  *   declares on the test machine: **589 compile**, that is the machine
  *   has them.  ⛔ And **9 of those 589 have an uppercase letter in the name**:
@@ -2572,12 +2572,12 @@ static bool handle_credentials(rcp_session *s, reader *l, uint64_t now)
  *   people looking for the fault on the other side of the wire.
  *
  * ⛔ And the other direction, also measured: `it()` — EMPTY variant — was well
- *    formed for this function and malformed for `tastiera.c:valid_shape`,
+ *    formed for this function and malformed for `keyboard.c:valid_shape`,
  *    ⇒ `0x0e` went out on a **malformed** string.  §4.5 wants the two faults
  *    DISTINCT, and there they were merged.
  *
  * ⇒ ⭐ THE CURE IS THAT THE FORM BE ONE ONLY: here the same alphabet as
- *   `tastiera.c:allowed_char()` is used — `[A-Za-z0-9_-]` — and the same
+ *   `keyboard.c:allowed_char()` is used — `[A-Za-z0-9_-]` — and the same
  *   rule on the empty variant.  ⛔ Two form checks written twice give
  *   two answers under the same label, which is the **E2** error shape.
  *
@@ -2585,7 +2585,7 @@ static bool handle_credentials(rcp_session *s, reader *l, uint64_t now)
  *   and the comma stay out of the alphabet, so `../../etc/passwd` and `it,`
  *   are refused as before — and it is the only thing this function
  *   protects, because the string ends up inside the XKB `include`
- *   machinery, which opens files by name (`tastiera.c:172`).
+ *   machinery, which opens files by name (`keyboard.c:172`).
  *
  * ⚠ The declared price: `IT` passes the form and goes to the hook, which
  *   answers «I do not have it» ⇒ `0x0e` instead of `0x0b`.  XKB distinguishes
@@ -2669,9 +2669,9 @@ static bool layout_in_list(const char *d)
  *        get in».
  *
  * ⛔ THE THREE OUTCOMES STAY THREE, and the third is the one that costs: if the
- *    hook is not there (the twin of `banchi/rcp/`, the bare-QUIC harnesses)
+ *    hook is not there (the twin of `benches/rcp/`, the bare-QUIC harnesses)
  *    **it could not be asked**, and «I did not look» is not «it does not exist»
- *    (`LEZIONI.md` §1.9 rule 1).  ⇒ There one falls back on the phase 1 list
+ *    (`LESSONS.md` §1.9 rule 1).  ⇒ There one falls back on the phase 1 list
  *    **declaring it**, instead of accepting everything or refusing everything
  *    in silence.
  *
@@ -2904,7 +2904,7 @@ static bool handle_attach(rcp_session *s, reader *l, uint64_t now)
 	 *    changed the layout for a user who did not get in. */
 	snprintf(s->layout, sizeof s->layout, "%s", avail);
 
-	/* ⛔⭐ §5.1 of `SPECIFICHE.md`, reason `0x05 ALREADY_ACTIVE_LOCALLY` — and it comes
+	/* ⛔⭐ §5.1 of `SPECS.md`, reason `0x05 ALREADY_ACTIVE_LOCALLY` — and it comes
 	 *     BEFORE the slot, on purpose.
 	 *
 	 * ⛔ Asking for the slot and then releasing it would have the same outcome
@@ -2915,7 +2915,7 @@ static bool handle_attach(rcp_session *s, reader *l, uint64_t now)
 	 *
 	 * ⚠ And the hook is optional: if it is not there, the rule is NOT applied,
 	 *   and the log line says so.  «No local session» and «nobody
-	 *   looked» are two different facts (`LEZIONI.md` §1.9 rule 1). */
+	 *   looked» are two different facts (`LESSONS.md` §1.9 rule 1). */
 	if (s->g.session_local) {
 		char which[160];
 
@@ -2984,7 +2984,7 @@ static bool handle_attach(rcp_session *s, reader *l, uint64_t now)
 		 *    really is someone else, 4000 ms that it almost certainly was them.
 		 *
 		 * ⚠ The sentence the user SEES is not this one: the page does not read
-		 *   the detail, it has its own table (`src/pagina.html`, `REASON_TEXT[0x0F]`).
+		 *   the detail, it has its own table (`src/page.html`, `REASON_TEXT[0x0F]`).
 		 *   That line changes only if the director chooses the sentence — it is
 		 *   the only thing in this cure that is not decided alone. */
 		snprintf(details, sizeof details,
@@ -3074,7 +3074,7 @@ static bool handle_attach(rcp_session *s, reader *l, uint64_t now)
 	}
 
 	/* ⛔⭐⭐ AND BEFORE GRANTING, THE STAGE IS ASKED WHAT SIZE IT HAS — the cure
-	 *     for the RE-ATTACH, `DECISIONI.md` §5.0-sexies («⏳ for when the
+	 *     for the RE-ATTACH, `DECISIONS.md` §5.0-sexies («⏳ for when the
 	 *     re-attach is tackled: the solution is already measured»).
 	 *
 	 * ⛔ The case: the stage outlives the client (invariant I4), the canvas is born at
@@ -3179,7 +3179,7 @@ static bool handle_attach(rcp_session *s, reader *l, uint64_t now)
 	s->state = S_ACTIVE;
 	announce_kept(s);
 
-	/* ⛔⭐⭐ AND NOW THE LAYOUT IS APPLIED — `DECISIONI.md` §5-bis.7,
+	/* ⛔⭐⭐ AND NOW THE LAYOUT IS APPLIED — `DECISIONS.md` §5-bis.7,
 	 *      decided on 8 Aug 2026 and CONFIRMED by the user on the 16th.
 	 *
 	 * ⛔ Until tonight this line was not there, and the message above —
@@ -3393,7 +3393,7 @@ uint8_t rcp_depth_negotiated(const rcp_session *s)
 	 *   and dav1d trusts the string.  `[M]` first artefacts, then the
 	 *   decoder gets stuck and the desktop freezes.
 	 *
-	 * ⭐ And it is the same shape as `LEZIONI.md` §7.5: **two truths about the
+	 * ⭐ And it is the same shape as `LESSONS.md` §7.5: **two truths about the
 	 *    same fact, and no line binding them**.  The codec crossed the process
 	 *    boundary, the depth did not — and no bench could see it, because the
 	 *    two numbers live in two different processes.
@@ -3421,8 +3421,8 @@ uint8_t rcp_level_negotiated(const rcp_session *s)
 	 *
 	 * ⛔ Until tonight the REQUESTED number stopped in here: it was written
 	 *    to the log and nobody read it.  The PRODUCED number lives in the
-	 *    child (`codificatore.c`, from the SPS), which is another process — two
-	 *    truths about the same fact, `LEZIONI.md` §7.5, exactly the shape of
+	 *    child (`encoder.c`, from the SPS), which is another process — two
+	 *    truths about the same fact, `LESSONS.md` §7.5, exactly the shape of
 	 *    the depth of 17 August.  ⇒ Now it crosses the boundary by the same
 	 *    road as that one: `rcp.h` → `webtransport.c` → `main.c` →
 	 *    `children_video()` → `struct body_video`.
@@ -4154,8 +4154,8 @@ void rcp_video_no_credit(rcp_session *s, bool key, uint64_t remain)
 	 *        so in the numbers there remains **no gap** — and it is the only signal
 	 *        on which §5.2 has the client ask for a keyframe;
 	 *      · the encoder runs with an infinite GOP (`chiavi_ogni = 0`, in
-	 *        `encoder_of()` of `src/figlio.c` — line 4220 as of 23 Aug
-	 *        2026; ⚠ the reference said `src/figlio.c:1568`, which is a point
+	 *        `encoder_of()` of `src/child.c` — line 4220 as of 23 Aug
+	 *        2026; ⚠ the reference said `src/child.c:1568`, which is a point
 	 *        of the file that code has not lived in for a while: it is the same
 	 *        disease as the count of switch-ons below, and that is why here
 	 *        there is the NAME of the function, which does not drift with the
@@ -4243,7 +4243,7 @@ bool rcp_video_abandon(rcp_session *s, const char *why)
  *        in any way: the numbering that reaches it is CONTINUOUS, because the
  *        `nr` is born in `rcp_video_open()` and those frames never get
  *        there.  ⛔ And the encoder runs with an infinite GOP
- *        (`chiavi_ogni = 0`, `encoder_of()` in `src/figlio.c`): after
+ *        (`chiavi_ogni = 0`, `encoder_of()` in `src/child.c`): after
  *        keyframe 1 another keyframe **never again** arrives on its own.
  *      ⇒ The user saw the image IN TILES — the still areas (the icons)
  *        stayed the wrong mosaic, the moving ones were repainted
@@ -4463,7 +4463,7 @@ int rcp_video_open(rcp_session *s, bool key, size_t length,
 	 * `now_ms` the session clock in milliseconds.  That they are the same clock
 	 * is likely and is written nowhere — and deriving one from the other
 	 * would be indexing the 200 ms of §5.2 on a proxy quantity
-	 * (`LEZIONI.md` §1.13). */
+	 * (`LESSONS.md` §1.13). */
 	s->video_open_ms = now_ms;
 	return RCP_VIDEO_SENT;
 }
@@ -4586,7 +4586,7 @@ int rcp_video_send(rcp_session *s, bool key, const uint8_t *data,
  * ⚠ And the fallback is DECLARED (`CODER.md` §4.2): if the hook is not there,
  *   this function writes that it is not there instead of keeping quiet —
  *   because «no key was pressed» and «I could not release anything» look the
- *   same, and it is `LEZIONI.md` §1.9 rule 1 in the field where it costs most:
+ *   same, and it is `LESSONS.md` §1.9 rule 1 in the field where it costs most:
  *   the symptom of both is a desktop that does not respond on reattach. */
 static void release_on_detach(rcp_session *s, const char *why)
 {
@@ -4617,7 +4617,7 @@ static void release_on_detach(rcp_session *s, const char *why)
 	 *
 	 *      ⚠ An invented number is worse than no number, and here it was the
 	 *        worst possible: a ZERO on a rule whose only way of failing is
-	 *        releasing nothing.  `LEZIONI.md` §1.9 — «empty» and
+	 *        releasing nothing.  `LESSONS.md` §1.9 — «empty» and
 	 *        «right» with the same face. */
 	if (amount == RCP_RELEASE_IMPOSSIBLE) {
 		reg(s, "⛔ §7.3 — RELEASE ON DETACH (%s): the release could NOT be "
@@ -4651,8 +4651,8 @@ static void viola_input(rcp_session *s, const char *fmt, ...)
 
 /* ⭐ THE MODIFIERS, the only keys whose code goes into the log (phase 16
  *    §12): Ctrl 29/97, Shift 42/54, Alt 56/100, CapsLock 58, Meta 125/126.
- * ⚠ Twin of `log_speakable_key()` (`src/registro.c`): this module
- *   is also mounted without the server's log (`banchi/rcp/`), and so it
+ * ⚠ Twin of `log_speakable_key()` (`src/log.c`): this module
+ *   is also mounted without the server's log (`benches/rcp/`), and so it
  *   carries the list with it. */
 static bool speakable_key(unsigned c)
 {
@@ -4776,7 +4776,7 @@ static void mark_injection(rcp_session *s, uint16_t kind, uint32_t id,
  *    «a page that divides the mouse position by the scale factor and
  *    rounds up produces 1920 on a canvas of 1920: one reading
  *    injects it, the other CLOSES THE SESSION — and closing the session for a
- *    rounding is the thing `SPECIFICHE.md` §8.3 forbids».  ⇒ For one
+ *    rounding is the thing `SPECS.md` §8.3 forbids».  ⇒ For one
  *    second after a canvas change a coordinate valid on the PREVIOUS one is
  *    CLAMPED to the last valid pixel instead of killing the session.
  *
@@ -4962,7 +4962,7 @@ static bool handle_input(rcp_session *s, uint16_t kind, const uint8_t *body,
 		 *     box exists to avoid.
 		 *
 		 * ⚠ And half notches exist: 120 is one notch, **60 is half a notch and
-		 *   is NOT rounded to zero**.  `STUDI.md` §gnome §9 says that
+		 *   is NOT rounded to zero**.  `STUDIES.md` §gnome §9 says that
 		 *   `ei_device_scroll_discrete` does an integer division by 120 and
 		 *   eats them — but that is a choice of `input.c`, not of here: on this
 		 *   side the number passes whole, as it arrived. */
@@ -5057,7 +5057,7 @@ static bool handle_input(rcp_session *s, uint16_t kind, const uint8_t *body,
 /*                                                                           */
 /*    · the limits of **§5.5** — 256 per side, the hotspot inside             */
 /*      the image, `0×0` with `0,0` for the hidden one — are enforced by      */
-/*      `src/cursore.c` (A6), and HERE THEY ARE NOT CHECKED AGAIN.  Two checks */
+/*      `src/cursor.c` (A6), and HERE THEY ARE NOT CHECKED AGAIN.  Two checks */
 /*      on the same rule in two places become two different rules the        */
 /*      day one changes, and it is the shape of defect `RCP.md` §0            */
 /*      exists to prevent;                                                    */
@@ -5095,7 +5095,7 @@ int rcp_cursor_shape(rcp_session *s, uint16_t width, uint16_t height,
 	}
 
 	/* ⛔⭐ §5.5 — «ONLY ONE OF THE TWO AT ZERO IS `PROTOCOL_ERROR`», and this
-	 *     check sits HERE EVEN THOUGH IT IS ALREADY IN `cursore.c` — decided by the
+	 *     check sits HERE EVEN THOUGH IT IS ALREADY IN `cursor.c` — decided by the
 	 *     coordinator on 14 Aug 2026, after this report had
 	 *     flagged it as an open hole.
 	 *
@@ -5103,7 +5103,7 @@ int rcp_cursor_shape(rcp_session *s, uint16_t width, uint16_t height,
 	 *    another one, and it must be read because it is the reason this line does
 	 *    not contradict the box above —
 	 *
-	 *      `cursore.c` decides **what** that cursor is: how big it is,
+	 *      `cursor.c` decides **what** that cursor is: how big it is,
 	 *                  where the hotspot is, whether it is hidden or not received;
 	 *      `rcp.c`     ⛔ must not **EMIT** a message the specification
 	 *                  forbids, EVER, by any road.
@@ -5115,7 +5115,7 @@ int rcp_cursor_shape(rcp_session *s, uint16_t width, uint16_t height,
 	 *     none of the other lines of this function looks at it.
 	 *
 	 * ⚠ The price of not having it: if one day someone called this function
-	 *   from a road that does not pass through `cursore.c`, the client would receive a
+	 *   from a road that does not pass through `cursor.c`, the client would receive a
 	 *   message that §5.5 ORDERS it to refuse ⇒ **the session would drop
 	 *   through our fault**, and the server log would know nothing about it.
 	 *
@@ -5172,7 +5172,7 @@ int rcp_cursor_shape(rcp_session *s, uint16_t width, uint16_t height,
 	}
 
 	/* ⛔ §6.1 — «no message MUST exceed 1 MiB», framing included
-	 * (finding B-14).  ⭐ THIS rule belongs to this module, not to `cursore.c`:
+	 * (finding B-14).  ⭐ THIS rule belongs to this module, not to `cursor.c`:
 	 * there lives §5.5 (256 per side), here §6.1 — and they are two different
 	 * paragraphs with two different numbers.  ⚠ At the maximum §5.5 allows,
 	 * 256×256, the message weighs 262 158 bytes: **it passes**, and must pass.
@@ -5190,7 +5190,7 @@ int rcp_cursor_shape(rcp_session *s, uint16_t width, uint16_t height,
 	 *   0 width u16 · 2 height u16 · 4 hot_x i16 · 6 hot_y i16 · 8 …
 	 *
 	 * ⚠ `serial` of `CursorShape` does NOT travel: it is the number by which
-	 *   `cursore.c` recognises that the shape has not changed, and §7.2 does not
+	 *   `cursor.c` recognises that the shape has not changed, and §7.2 does not
 	 *   provide for it.  Putting it on the wire would be a field two implementations
 	 *   guess differently.
 	 * ⚠ And the POSITION is not there, because §7.2 says it «never travels in
@@ -5243,7 +5243,7 @@ int rcp_cursor_shape(rcp_session *s, uint16_t width, uint16_t height,
 
 	/* ⛔⭐ THE IMAGE IS COPIED IN HERE, AND THE CALL DOES NOT KEEP IT.
 	 *
-	 *     `src/cursore.h` says so: «it lives until the next callback: whoever
+	 *     `src/cursor.h` says so: «it lives until the next callback: whoever
 	 *     wants to keep it copies it».  ⇒ When this function returns, this module
 	 *     no longer has any pointer to those bytes.
 	 *
@@ -5253,7 +5253,7 @@ int rcp_cursor_shape(rcp_session *s, uint16_t width, uint16_t height,
 	 *   in ONE place only, and copying it here to save a `memcpy` would put
 	 *   two readers on the same field.  At the maximum of §5.5 it is 256 KiB on an
 	 *   event that happens when the SHAPE changes — not at every frame, because
-	 *   `cursore.c` removes the repeats. */
+	 *   `cursor.c` removes the repeats. */
 	send_message(s, T_CURSOR_SHAPE, body, n);
 	free(body);
 
@@ -5482,7 +5482,7 @@ bool rcp_receive_input(rcp_session *s, int64_t stream, const uint8_t *data,
 /* ⭐⭐ THE CLIPBOARD — §7.4, §5.4, §2.5                                      */
 /*                                                                            */
 /* ⛔ AND THE DIRECTION USED MOST IS THE ONE THAT COSTS MOST WORK: «I copy an */
-/*    address on the phone and paste it into the session» (`DECISIONI.md`    */
+/*    address on the phone and paste it into the session» (`DECISIONS.md`    */
 /*    §5-ter.1).  Over there we already have the text; over here it has to be */
 /*    asked for **while someone is waiting with a finger on Ctrl+V**.         */
 
@@ -5509,7 +5509,7 @@ static void clipboard_violation(rcp_session *s, const char *fmt, ...)
  *
  * ⛔⭐ ONE STREAM PER MESSAGE, AND NOT PER TRANSFER — and it is a point where
  *     §2.5 allows two readings, so the choice is written here instead of
- *     staying implicit (`PIANO.md` §0.4).
+ *     staying implicit (`PLAN.md` §0.4).
  *
  *     §2.5 says «one **per transfer**».  A transfer on our side is made of two
  *     messages far apart in time — `CLIPBOARD_ANNOUNCE` now, `CLIPBOARD_TEXT`
@@ -5584,7 +5584,7 @@ static bool send_clipboard(rcp_session *s, uint16_t kind, const uint8_t *body,
  * ⛔⭐ THE HELD TEXT IS ANNOUNCED WHEN THE SESSION OPENS — 19 Sep 2026.
  *
  * `[M]` phase 12, `kde` box: a client that REATTACHES to a live child makes
- * the desktop clipboard be reread (`figlio.c`, the reattach branch), and the
+ * the desktop clipboard be reread (`child.c`, the reattach branch), and the
  * read arrives while the RCP session is still in `wait-verdict`.  The
  * text was held — «for whoever will attach» — ⛔ but nobody ever announced it
  * afterwards: the client got in and did not know what was in the clipboard.
@@ -5633,7 +5633,7 @@ bool rcp_clipboard_from_session(rcp_session *s, const char *text, size_t byte)
 		/* ⚠ It is nobody's error: the graphical session outlives the
 		 *   client (I4), so one can copy when there is not yet — or no longer —
 		 *   anyone to announce it to.  ⛔ But the text is KEPT: whoever attaches
-		 *   later finds it again, and it is the case that `STUDI.md`
+		 *   later finds it again, and it is the case that `STUDIES.md`
 		 *   §gnome §10 calls «whoever reconnects». */
 		reg(s, "CLIPBOARD: the session copied %zu bytes and there is nobody to "
 		       "announce them to (state %s): the text is kept for whoever "
@@ -5727,7 +5727,7 @@ bool rcp_clipboard_ask(rcp_session *s, uint32_t serial, uint64_t now_ms)
 
 	/* ⛔⭐⭐ AND IF THE CLIENT HAS NOT YET ANNOUNCED ANYTHING, ONE WAITS — and
 	 *      this is the cure for the race between `Ctrl+V` and the reading of the
-	 *      clipboard, which `SPECIFICHE.md` §9 names and declares it does NOT
+	 *      clipboard, which `SPECS.md` §9 names and declares it does NOT
 	 *      want to solve like Xpra.
 	 *
 	 *      The race, in full: the user hits `Ctrl+V` in the browser.  The keys
@@ -5911,7 +5911,7 @@ static bool handle_clipboard(rcp_session *s, uint16_t kind, const uint8_t *body,
 		 *   ⛔ And offering means taking the selection, which is ONE: the
 		 *     desktop clipboard changes hands.
 		 * ⭐ It changes hands but is NOT lost: if the client has nothing to give,
-		 *   `appunti.c` gives back to the session the last text the session
+		 *   `clipboard.c` gives back to the session the last text the session
 		 *   itself had given us.  ⇒ The content is safe, and the road of
 		 *   pasting with the mouse stays open.
 		 * ⚠ Here there was a rule that did NOT offer on empty announcements: it
@@ -6070,9 +6070,9 @@ static bool handle_clipboard(rcp_session *s, uint16_t kind, const uint8_t *body,
 		/* ⛔⭐ AND NO ZEROS IN THE MIDDLE — finding R9.11 applied to this channel.
 		 *
 		 *     `valid_utf8()` accepts it (`c < 0x80`), ⛔ but from here on the
-		 *     text crosses a process boundary and reaches `appunti.c`, which
+		 *     text crosses a process boundary and reaches `clipboard.c`, which
 		 *     delivers it to the compositor.  ⚠ And the OPPOSITE direction
-		 *     already refuses it (`appunti.c`, `read_text`): accepting it
+		 *     already refuses it (`clipboard.c`, `read_text`): accepting it
 		 *     here would mean two different rules for the same quantity in the
 		 *     two directions, that is a text that can be pasted into the desktop
 		 *     and cannot be copied from inside.
@@ -6406,7 +6406,7 @@ static bool handle_key_request(rcp_session *s, reader *l, uint64_t now)
  *   parameter is checked FIRST, because it is the one the bench can correct:
  *   telling it «off» when it also got the number wrong makes it switch the
  *   function on and find the same refusal, with a different reason, at the
- *   second round.  The choice is declared in `FASI.md` §01-filo-nudo.
+ *   second round.  The choice is declared in `PHASES.md` §01-filo-nudo.
  *
  * ⛔ Rule 5: every `BENCH_MARK` is written to the log — refusals too.
  *    «A session that paints coloured squares on a person's desktop must be
@@ -6523,7 +6523,7 @@ void rcp_free(rcp_session *s)
 	 * away before consuming the message the password in clear is still there.
 	 * `free()` zeroes nothing: those bytes ended up in the freed heap,
 	 * available to any later allocation of a process that serves ALL the
-	 * users of the machine (`SPECIFICHE.md` §5.5). */
+	 * users of the machine (`SPECS.md` §5.5). */
 	if (s->acc) {
 		memset(s->acc, 0, s->acc_cap);
 		free(s->acc);
@@ -6535,7 +6535,7 @@ void rcp_free(rcp_session *s)
 	 *    want to leave lying around — a password pasted from a credential
 	 *    manager passes **whole** through this buffer.  ⚠ `free()` zeroes
 	 *    nothing, and this process serves ALL the users of the machine
-	 *    (`SPECIFICHE.md` §5.5). */
+	 *    (`SPECS.md` §5.5). */
 	if (s->app_text) {
 		memset(s->app_text, 0, s->app_text_n);
 		free(s->app_text);
@@ -6617,7 +6617,7 @@ bool rcp_max_size(const rcp_session *s, uint32_t *l, uint32_t *a)
 
 /* ⛔⭐ §5.3 — «THE CLIENT IS STILL THERE», and the TRANSPORT says so, not RCP.
  *
- *     `trasporto.c` calls it after every packet `ngtcp2_conn_read_pkt()`
+ *     `transport.c` calls it after every packet `ngtcp2_conn_read_pkt()`
  *     has accepted: that is **decrypted and authenticated**.  ⛔ It is not
  *     enough for a UDP datagram to arrive — anyone can send one with someone
  *     else's address, and would keep someone else's slot taken.
@@ -6662,8 +6662,8 @@ void rcp_sign_of_life(rcp_session *s, uint64_t now_ms)
 	 *      changing that number, and slots start dropping again.  ⛔ The real
 	 *      cure — sending PINGs even with the session active — is a DECISION,
 	 *      not a repair: it changes the meaning of the 30 s of §2.2 for the
-	 *      FROZEN tab, which `SPECIFICHE.md` §5.3 says must be detached.  It is
-	 *      written in `FASI.md` §05-la-sessione §6-bis and waits for the user. */
+	 *      FROZEN tab, which `SPECS.md` §5.3 says must be detached.  It is
+	 *      written in `PHASES.md` §05-la-sessione §6-bis and waits for the user. */
 	if (now_ms > s->last_life && now_ms - s->last_life > SILENCE / 2)
 		reg(s, "⚠ §5.3: between two packets from %s %llu ms have passed, and the "
 		       "silence ceiling is %u — the margin is getting thin",
@@ -6984,7 +6984,7 @@ static bool drain(rcp_session *s, uint64_t now)
 		case T_TERMINATE_SESSION:
 			/*
 			 * ⭐⭐ §7.6 — «I AM DONE», and it is the other exit of
-			 *     `DECISIONI.md` §4.1-ter.
+			 *     `DECISIONS.md` §4.1-ter.
 			 *
 			 * ⛔ ONLY WITH THE SESSION ATTACHED: before `ATTACH` there is no
 			 *    graphical session to end, and §3 makes no allowances.
@@ -7093,7 +7093,7 @@ static bool drain(rcp_session *s, uint64_t now)
 			 *   now», and on this road no line carried it. ⇒ The bench
 			 *   would have written «THE SLOT WAS NOT FREED» on a server that
 			 *   had done its job — a red to the wrong suspect,
-			 *   which is the seventh guise of `LEZIONI.md` §1.9.
+			 *   which is the seventh guise of `LESSONS.md` §1.9.
 			 *
 			 * ⛔ And before the cure of the farewell it was INVISIBLE: the client
 			 *    never took its farewell, so this line was never travelled and
@@ -7209,7 +7209,7 @@ static bool drain(rcp_session *s, uint64_t now)
 			 *     `SESSION_UNSERVABLE`); with the session open it does not.
 			 *
 			 *     ⇒ Here the CHOICE is **not to close**: the one in force is
-			 *       kept and the reason is written.  The reason is `SPECIFICHE.md`
+			 *       kept and the reason is written.  The reason is `SPECS.md`
 			 *       §8.3 — *«never detach»* — and I1: closing the session of whoever
 			 *       chose a keyboard this machine does not have means taking
 			 *       away their work for a fault that costs them nothing, since
@@ -7258,7 +7258,7 @@ static bool drain(rcp_session *s, uint64_t now)
 				/* ⚠ It is written all the same: a client that sends the same
 				 *   layout again is not a fault, but a keymap replacement
 				 *   costs Mutter the DESTRUCTION of the keyboard device
-				 *   (`STUDI.md` §gnome §9) — and not doing it for nothing is a
+				 *   (`STUDIES.md` §gnome §9) — and not doing it for nothing is a
 				 *   saving one sees. */
 				reg(s, "LAYOUT «%s»: it is already the one in force, I ask "
 				       "nothing of the stage (a useless replacement would cost the "
@@ -7402,7 +7402,7 @@ static bool drain(rcp_session *s, uint64_t now)
 			 *    of its window at every resize, and whoever drags an edge
 			 *    sends twenty per second.  Passing it to the stage would mean
 			 *    restarting the stream for nothing, that is **losing a frame at
-			 *    every useless request** (`STUDI.md` §kde §8.2-bis).
+			 *    every useless request** (`STUDIES.md` §kde §8.2-bis).
 			 *
 			 * ⚠ But only if there is no request already in flight: if there is one,
 			 *   the stage is going ELSEWHERE, and this is a change of mind that
@@ -7417,7 +7417,7 @@ static bool drain(rcp_session *s, uint64_t now)
 
 			/* ⛔ NO HOOK = COMPOSITOR_UNABLE, and it is the TRUE answer for
 			 *    whoever hosts us without a stage: the in-process benches of phase 1
-			 *    and the harness of `banchi/01-b3-rcp-innesta.py`.  §7.1: «if the
+			 *    and the harness of `benches/01-b3-graft-rcp.py`.  §7.1: «if the
 			 *    compositor cannot resize, the server MUST answer with
 			 *    `CANVAS(REFUSED, COMPOSITOR_UNABLE)`, and the client MUST
 			 *    show the entry as off.  It MUST NOT pretend it
@@ -7515,7 +7515,7 @@ static bool drain(rcp_session *s, uint64_t now)
 			 *
 			 * ⚠ And `0x0009 LAYOUT` stays out with a REAL price, not through
 			 *   forgetfulness: renegotiating a keymap destroys and recreates the
-			 *   `libei` keyboard device (`STUDI.md` §gnome §9), and that
+			 *   `libei` keyboard device (`STUDIES.md` §gnome §9), and that
 			 *   chain belongs to sub-phase 6.2.  ⛔ As long as it stays out, a
 			 *   conforming client that changes layout **loses the session**, and
 			 *   this line is what says so: whoever reads «not yet served in phase
@@ -7652,7 +7652,7 @@ bool rcp_receive(rcp_session *s, const uint8_t *data, size_t len, uint64_t now)
 		 *
 		 * ⛔⭐ BUT NOT EVERYTHING THAT ARRIVES AFTER THE END IS A VIOLATION, and
 		 *    counting it all together pointed a red at the wrong
-		 *    suspect — the seventh guise of `LEZIONI.md` §1.9.
+		 *    suspect — the seventh guise of `LESSONS.md` §1.9.
 		 *
 		 * §4.4 forbids the client ONE thing: **retrying**.  §8.1 imposes
 		 * another: whoever closes **MUST** send `FAREWELL` with the reason.  ⭐ The
@@ -7750,7 +7750,7 @@ bool rcp_receive(rcp_session *s, const uint8_t *data, size_t len, uint64_t now)
  *     at a `systemctl stop` with an active session the server freed everything
  *     and kept quiet.  The client stayed waiting for the 30 s of inactivity
  *     and showed «network error» — that is literally the defect of
- *     `LEZIONI.md` §1.7 that §3.1 exists to remove.
+ *     `LESSONS.md` §1.7 that §3.1 exists to remove.
  *
  * ⚠ Whoever closes MUST send `FAREWELL` with the reason **and** repeat the reason
  *   in the close code: both roads are travelled by `dismiss()`, and that is
@@ -7818,7 +7818,7 @@ void rcp_channel_closed(rcp_session *s)
 	s->state = S_FINISHED;
 }
 
-/* ⭐ THE OUTCOME OF THE ASYNCHRONOUS CHECK COMES BACK IN HERE — `DECISIONI.md` §1.10.
+/* ⭐ THE OUTCOME OF THE ASYNCHRONOUS CHECK COMES BACK IN HERE — `DECISIONS.md` §1.10.
  *
  * ⛔ AND THERE ARE FOUR WALLS BEFORE TOUCHING `cred_good`, one for each
  *    road by which a «yes» could get in where it must not (invariant I3):
@@ -7848,7 +7848,7 @@ bool rcp_verdict(rcp_session *s, uint64_t ticket, bool admitted,
 	s->cred_good = admitted;
 	s->cred_reason = RCP_WRONG_CREDENTIALS;
 	reg(s, "PAM answered (request %llu): %s  ⭐ and the thread never "
-	       "stopped (DECISIONI.md §1.10)",
+	       "stopped (DECISIONS.md §1.10)",
 	    (unsigned long long)ticket, admitted ? "admitted" : "refused");
 
 	/* ⛔ THE COUNT OF §4.4-bis MOVES HERE, and it is the only place where the
@@ -7901,7 +7901,7 @@ bool rcp_time(rcp_session *s, uint64_t now)
 	 * distinction §4.4 forbids writing in the reason would be read with a stopwatch. */
 	if (s->state == S_WAIT_VERDICT) {
 		/* ⛔⭐ NOW TWO THINGS ARE AWAITED, AND THE ORDER IS NOT GUARANTEED —
-		 *     `DECISIONI.md` §1.10, 12 Aug 2026.
+		 *     `DECISIONS.md` §1.10, 12 Aug 2026.
 		 *
 		 *     The fixed second of §4.4-bis and the helper's answer.  Until
 		 *     yesterday the second had already arrived when this state
@@ -7949,7 +7949,7 @@ bool rcp_time(rcp_session *s, uint64_t now)
 			return true;
 		}
 		/* ⛔⭐ AND ON THE WIRE THE REASON IS THE SAME, but not in the log — it is
-		 *     the same distinction `autenticazione.c` makes between «PAM
+		 *     the same distinction `authentication.c` makes between «PAM
 		 *     refused» and «PAM could not judge».  §4.4 forbids telling the
 		 *     client why, because it would be an oracle; ⛔ but whoever
 		 *     diagnoses must be able to tell a thousand wrong passwords from a

@@ -10,7 +10,7 @@
 #include <time.h>
 
 #include "budget.h"
-#include "registro.h"
+#include "log.h"
 
 /* ─────────────────────────────────────────────────────────────────────────────
  * ⭐ THE DELIVERED WINDOW — eight buckets of 250 ms, that is two seconds.
@@ -522,7 +522,7 @@ enum budget_outcome budget_count_verdict(struct budget_count *c,
 	 *      At this point the session's canvas **is not decided yet** (it is
 	 *      decided at `SESSION`), and the only canvas number at hand is
 	 *      `video.max_size` — which is the **DECODER**'s ceiling, not the
-	 *      size of the window: `src/pagina.html` spells it out, *«it does not
+	 *      size of the window: `src/page.html` spells it out, *«it does not
 	 *      change the canvas: it is a ceiling … because a phone's decoder has
 	 *      limits its screen does not declare»*, and the page measures it with
 	 *      a ladder of `VideoDecoder.isConfigSupported`.

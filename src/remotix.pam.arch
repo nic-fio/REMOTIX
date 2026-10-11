@@ -3,7 +3,7 @@
 #
 #   installed in /etc/pam.d/remotix
 #
-# ⭐ PHASE 17 (`fasi/17-l-installatore.md` §4.3): the same job as
+# ⭐ PHASE 17 (`phases/17-the-installer.md` §4.3): the same job as
 #    `remotix.pam` (Debian), written with `pambase`'s stacks.  ⛔ No
 #    `@include`: it is a Debian modification to Linux-PAM, and here the line would be
 #    "illegal module type".
@@ -25,7 +25,7 @@
 #    file lists one name per line and is installed with `root` in it.
 auth       requisite    pam_listfile.so item=user sense=deny file=/etc/remotix/denied-users onerr=fail
 #
-# ⭐ `DECISIONI.md` §10.18 (D3 closed, 30 Sep 2026): REMOTIX MIRRORS
+# ⭐ `DECISIONS.md` §10.18 (D3 closed, 30 Sep 2026): REMOTIX MIRRORS
 #    the system's authentication.  Arch's /etc/pam.d/sshd is four lines
 #    `include system-remote-login`: this file is that, with only the root
 #    line extra (`[M]` 30 Sep, arch-kde-iso: 4 lines of 4 equal).
@@ -34,11 +34,11 @@ auth       requisite    pam_listfile.so item=user sense=deny file=/etc/remotix/d
 #    /etc/security/faillock.conf.  `faillock --user <name> --reset` unlocks.
 auth       include      system-remote-login
 
-# ── account (`autenticazione.c` calls `pam_acct_mgmt` on purpose)
+# ── account (`authentication.c` calls `pam_acct_mgmt` on purpose)
 account    include      system-remote-login
 
 password   include      system-remote-login
 
-# ── session: `figlio.c` calls `pam_open_session`, and it is that call that
+# ── session: `child.c` calls `pam_open_session`, and it is that call that
 #    makes the user's logind session be born.
 session    include      system-remote-login

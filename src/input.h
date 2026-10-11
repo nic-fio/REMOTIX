@@ -11,7 +11,7 @@
  *   · `input.c` — implements these functions on `libei`, on the session of
  *                 `mutter.c`.  ⛔ It knows NEITHER QUIC nor the message
  *                 format;
- *   · `figlio.c`— ⭐ **stitches the two together**: it is the one that includes this file, writes the
+ *   · `child.c`— ⭐ **stitches the two together**: it is the one that includes this file, writes the
  *                 six adapters and hangs them on the hooks of `rcp_hooks`.
  *
  * ⛔⛔ AND HERE THERE WAS A WRONG LINE, corrected on 14 August 2026 on a finding
@@ -21,7 +21,7 @@
  * functions**"*.  ⛔ **The build makes it impossible**, and it is not a
  * matter of style: `rcp.c` lives in TWO folders that the `Makefile`
  * (`GEMELLATI`) requires identical byte for byte, and the second copy
- * `banchi/01-b3-rcp-innesta.py` slips into ngtcp2's `examples/`, where
+ * `benches/01-b3-graft-rcp.py` slips into ngtcp2's `examples/`, where
  * `input.h` **is not there**.  An `#include "input.h"` in `rcp.c` does not compile
  * the graft ⇒ **it switches off B3, B5, B6, B8 and B11 in one blow**.
  *
@@ -38,7 +38,7 @@
  *      called from the **same thread** that calls `input_run()`.  Two threads
  *      on one `struct ei` do not give an error: they give a program that at some
  *      point misbehaves, and nobody connects the two things.
- * ⚠ In the product it is the child's loop (`figlio.c`), which is single-threaded.
+ * ⚠ In the product it is the child's loop (`child.c`), which is single-threaded.
  *
  * ⛔ The rule governing the types below: the codes are those of **evdev**
  *    (`linux/input-event-codes.h`), because `libei` works in evdev and any
@@ -76,12 +76,12 @@ Input *input_open_kwin(struct KwinSession *kwin, uint32_t canvas_w, uint32_t can
 /*
  * ⭐ PHASE 13, INCREMENT 3 — the same contract on wlroots (labwc, XFCE).
  *
- * ⛔ Here `libei` does NOT exist (`STUDI.md` §xfce §7, `[✗]`): the transport is
+ * ⛔ Here `libei` does NOT exist (`STUDIES.md` §xfce §7, `[✗]`): the transport is
  *    Wayland's virtual keyboard and pointer (`wlr_input.h`).  No
  *    session is needed to ask the channel from: we connect to the user's
  *    compositor like any of its clients.
  *
- * ⭐ The other functions of this file do NOT change signature: the stitcher (`figlio.c`)
+ * ⭐ The other functions of this file do NOT change signature: the stitcher (`child.c`)
  *    changes in one place only, the constructor.  Inside, the public functions
  *    hand over at the top, as the clipboard does with `clipboard_open_kde()`.
  *
@@ -95,7 +95,7 @@ Input *input_open_kwin(struct KwinSession *kwin, uint32_t canvas_w, uint32_t can
 Input *input_open_wlr(uint32_t canvas_w, uint32_t canvas_h, char **error);
 
 /*
- * ⛔ The silent replacements of `libei`, which `STUDI.md` §gnome §9 measures: a keymap
+ * ⛔ The silent replacements of `libei`, which `STUDIES.md` §gnome §9 measures: a keymap
  *    change destroys and recreates the keyboard device, a geometry change
  *    all the absolute devices — and the pointer to the old device
  *    stops working WITHOUT AN ERROR.  ⇒ This must be called from the child's loop
@@ -153,7 +153,7 @@ int input_recanvas(Input *, uint32_t canvas_w, uint32_t canvas_h);
  * On GNOME and KDE the compositor does it by itself ⇒ here nothing is done, and
  * 0 is returned.  On labwc (XFCE, LXQt) we TYPE the shortcut
  * `SESSION_LABWC_KEY` that the session wrote into labwc's
- * configuration (`sessione.h`, the box of `SESSION_LABWC_KEYBOARD`), and then
+ * configuration (`session.h`, the box of `SESSION_LABWC_KEYBOARD`), and then
  * put the pointer back where the user had left it.
  * ⚠ Harmless if there is nothing to bring back: a window already inside stays
  *   where it is, to the pixel.
@@ -162,13 +162,13 @@ int input_recanvas(Input *, uint32_t canvas_w, uint32_t canvas_h);
 int input_bring_back_inside(Input *);
 
 /*
- * ⛔⭐⭐ THE NEGOTIATED LAYOUT ENTERS THE SESSION — `DECISIONI.md`
+ * ⛔⭐⭐ THE NEGOTIATED LAYOUT ENTERS THE SESSION — `DECISIONS.md`
  *      §5-bis.7, decided by the user on 8 August 2026 and CONFIRMED on the 16th.
  *
  * ⛔ And the direction is THIS one, not the other.  The short way would have been: keep
  *    the session as it is and translate the letter with a keymap of OURS, the one
- *    the client asked for.  ⛔ `tastiera.h` explains why it is wrong and
- *    `tastiera.c` measures it: with our keymap and their session
+ *    the client asked for.  ⛔ `keyboard.h` explains why it is wrong and
+ *    `keyboard.c` measures it: with our keymap and their session
  *    **different characters** come out — we send key 26 for the `[` of `us` and on
  *    screen, on an `it` session, an `è` appears.  That is exactly what
  *    `RCP.md` §7.3 forbids.
@@ -181,7 +181,7 @@ int input_bring_back_inside(Input *);
  *   receives the RIGHT character.
  *
  * ⛔⛔ AND THE DAMAGE THIS FUNCTION CURES IS NOT THE CONVENIENCE OF TWO ACCENTS.
- *     `SPECIFICHE.md` §7.3: letters travel as **letters**, but
+ *     `SPECS.md` §7.3: letters travel as **letters**, but
  *     shortcuts travel as **key positions** — and key positions match only
  *     if the two layouts are the same.  On a German keyboard `Z`
  *     is where on ours `Y` is (evdev 21 versus 44): without renegotiating,
@@ -206,21 +206,21 @@ int input_button(Input *, uint16_t code, int pressed);
  *    HERE — once only, in one place only.  It is `[M]` 10 August 2026
  *    (`RCP.md` §7.3, box «The sign of the wheel»): the client sends +120
  *    when the user turns up, and the two conventions are opposite.
- * ⚠ And half notches exist: 60 is NOT rounded to zero.  `STUDI.md` §gnome §9 says
+ * ⚠ And half notches exist: 60 is NOT rounded to zero.  `STUDIES.md` §gnome §9 says
  *   that `ei_device_scroll_discrete` does an integer division by 120 and
  *   eats them: the way is `scroll_delta`, where the real threshold is 60.
  */
 int input_wheel(Input *, int32_t axis_x, int32_t axis_y);
 
 /*
- * A letter, as a Unicode scalar value.  Goes through `tastiera.h`.
+ * A letter, as a Unicode scalar value.  Goes through `keyboard.h`.
  * ⛔ If the character is NOT producible in the session's layout:
  *    returns 1 (not 0 and not -1).  ⛔ NEVER a different letter, NEVER silence
- *    (`RCP.md` §7.3, `SPECIFICHE.md` §7.3).
+ *    (`RCP.md` §7.3, `SPECS.md` §7.3).
  *
  * ⚠ CORRECTED ON 14 AUGUST 2026 — here it said "and the caller writes it to the
  *   log", and it was the wrong half of the seam: **the line is already written
- *   by `tastiera.c`**, and it puts in it **which layout** — which is the
+ *   by `keyboard.c`**, and it puts in it **which layout** — which is the
  *   only thing useful to whoever reads the log six hours later, and which `rcp.c` does not
  *   know.  ⛔ Hence: **`rcp.c` MUST NOT duplicate it**, or the same characters
  *   are counted twice.
@@ -253,19 +253,19 @@ int input_release_all(Input *);
  * ⚠ It is NOT a statistic for the log: it is a **guard**, and the caller
  *   must know what it prevents.
  *
- * ⛔ THE FACT, `[M]` 21 August 2026 (bench `banchi/06-b33-risveglio.*`): every
+ * ⛔ THE FACT, `[M]` 21 August 2026 (bench `benches/06-b33-wakeup.*`): every
  *    `capture_wake()` makes Mutter recreate the absolute devices — **3
  *    wake-ups, 3 replacements, with ZERO canvas changes**.  And if at that moment a
  *    button is pressed, that button stays down **in the seat** and ⛔ **the
  *    desktop no longer takes a click for the whole session**.
  *
- * ⛔ And the moment `figlio.c` calls `capture_wake()` is *"the scene
+ * ⛔ And the moment `child.c` calls `capture_wake()` is *"the scene
  *    is still and a keyframe is owed"*, that is **exactly** the moment the
  *    user may hold the mouse down on a desktop that does not move.
  *
  * ⇒ Whoever is about to do something that recreates the devices looks here first.
  *
- * ⚠ And the cure of `figlio.c:3964` — releasing before `capture_resize()`
+ * ⚠ And the cure of `child.c:3964` — releasing before `capture_resize()`
  *   — **does not cover this path**: there the release can be done because it is the
  *   client that asked for the change; here not, because the user is
  *   dragging and nobody asked them anything.

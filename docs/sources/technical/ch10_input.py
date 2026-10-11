@@ -16,7 +16,7 @@ S1 = p("Input travels the opposite way to video: from the browser page to the de
         + box(36, 180, 168, 52, "REMOTIX_INPUT", "one id counter", "blue")
         + box(256, 112, 158, 52, "rcp.c", "decode + validate", "blue")
         + box(466, 44, 190, 52, "input.c", "count + release", "blue")
-        + box(466, 112, 190, 52, "tastiera.c", "keyboard: letter to keys", "light")
+        + box(466, 112, 190, 52, "keyboard.c", "keyboard: letter to keys", "light")
         + box(674, 44, 190, 52, "libei", "Mutter / KWin", "dark")
         + box(674, 112, 190, 52, "wlr_input.c", "labwc virtual devices", "dark")
         + box(674, 180, 190, 52, "Compositor", "GNOME, KDE, XFCE, LXQt", "green")
@@ -118,7 +118,7 @@ S3 = p("The page has two input layouts and chooses between them by itself, from 
       "click never travels with an old position. Measured from DeX on 14 Aug 2026: median input-to-frame "
       "loop 135 ms but worst case 2161 ms, which was a queue of stale pointer moves in front of a keystroke.")
 
-S4 = p("In the classic layout (" + c("cl_*") + " functions, for “classic”, in " + c("pagina.html") + ") the mouse is the "
+S4 = p("In the classic layout (" + c("cl_*") + " functions, for “classic”, in " + c("page.html") + ") the mouse is the "
        "primary path, including on DeX, which is the main Android use.", lead=True) + \
     table(["Topic", "What the page does", "Why"], [
         ["Events", "Moves and clicks come from " + c("pointermove") + ", " + c("pointerdown") + " and "
@@ -170,7 +170,7 @@ S4 = p("In the classic layout (" + c("cl_*") + " functions, for “classic”, i
          "clicking and dragging land correctly; what is missing is the preview: the resize arrow on window "
          "borders, buttons lighting up, tooltips. The automatic Pointer Lock above reduces it.",
          "A limit that is not ours.") + \
-    note(c("SPECIFICHE.md") + " §7.4 and a comment in " + c("cl_on_mousedown()") + " still say that the lock is "
+    note(c("SPECS.md") + " §7.4 and a comment in " + c("cl_on_mousedown()") + " still say that the lock is "
          "only manual through " + c("REMOTIX.classic_input.hook()") + ". The code requests it "
          "automatically (" + c("cl_hover_missing()") + ") and " + c("REMOTIX.classic_input") + " exposes "
          "no such function.", "Documents behind the code.")
@@ -242,10 +242,10 @@ S6 = p("The keyboard sends letters when the user writes text and positions when 
       + "). The Keyboard Lock switches itself off precisely when the page loses focus, which is when a "
       "modifier is likely to be held; the session does not detach in that case, so the server-side release at "
       "detach would not help.") + \
-    note("by decision of 26 Sep 2026 (" + c("DECISIONI.md") + " §9.2) the log never contains what the user types: neither "
+    note("by decision of 26 Sep 2026 (" + c("DECISIONS.md") + " §9.2) the log never contains what the user types: neither "
          "characters nor key codes. Lines say “a character” or “key pressed”; codes are "
          "written only for modifiers and mouse buttons (on the server, " + c("log_speakable_key()")
-         + " in " + c("registro.c") + ": whether a key code may be named in the log). It applies to "
+         + " in " + c("log.c") + ": whether a key code may be named in the log). It applies to "
          "unproducible characters too: the log says that one occurred, not which.", "Privacy of keystrokes.")
 
 S7 = p("Some combinations never reach the page, and some reach it while the browser also runs its own "
@@ -298,7 +298,7 @@ S8 = p("The touch layout turns the phone screen into a trackpad: the finger push
         ["Tap-and-a-half (tap, then press and drag)", "Left pressed at the second contact, released when it lifts"],
         ["Pinch", "Nothing: it zooms the page <b>view</b> with a CSS transform, up to 4×"],
         ["Four fingers", "Nothing, declared"],
-    ], "«TAB» — The gestures (" + c("SPECIFICHE.md") + " §7.2)") + \
+    ], "«TAB» — The gestures (" + c("SPECS.md") + " §7.2)") + \
     table(["Threshold", "Value", "Provenance"], [
         [c("T_TAP"), "180 ms per contact", "Android " + c("TAP_TIMEOUT") + " and the libinput default"],
         [c("D_TAP"), "9 CSS px", "Android touch slop, 8 dp"],
@@ -310,7 +310,7 @@ S8 = p("The touch layout turns the phone screen into a trackpad: the finger push
         [c("ZOOM_MAX"), "4.0", ""],
     ], "«TAB» — " + c("TOUCH_THRESHOLDS") + ", in CSS pixels because a finger is ten millimetres wide on any screen") + \
     p("The thresholds are a declared starting point, judged by using them. Four design points are not "
-      "thresholds, and each came from a failing bench run (" + c("04-b28-gesti.py") + ", gestures, 14 Aug 2026):") + \
+      "thresholds, and each came from a failing bench run (" + c("04-b28-gestures.py") + ", gestures, 14 Aug 2026):") + \
     ul([
         "<b>Tap-and-a-half and double click are the same gesture.</b> At the second contact the two have "
         "produced the same events, so the button is pressed at contact and released at lift: a quick lift is "
@@ -332,7 +332,7 @@ S8 = p("The touch layout turns the phone screen into a trackpad: the finger push
       + c("event.timeStamp") + " when plausible (within 5 s of " + c("performance.now()") + "), otherwise "
       "from the handler time, declared.")
 
-S9 = p("With the phone in hand the system keyboard opens only on request (" + c("DECISIONI.md") + " §10.28, 2 Oct 2026), "
+S9 = p("With the phone in hand the system keyboard opens only on request (" + c("DECISIONS.md") + " §10.28, 2 Oct 2026), "
        "through a small " + c("⌨") + " button at the top right that exists only in the touch layout.",
        lead=True) + \
     steps([
@@ -357,7 +357,7 @@ S9 = p("With the phone in hand the system keyboard opens only on request (" + c(
         "back above 85 % of the window height.",
     ])
 
-S10 = p(c("tastiera.c") + " (keyboard) solves the reverse problem of a keyboard: given a character, which keys must be "
+S10 = p(c("keyboard.c") + " (keyboard) solves the reverse problem of a keyboard: given a character, which keys must be "
         "pressed on the session's layout to make the compositor produce it. It works on the keymap the "
         "session itself handed over, compiled with xkbcommon.", lead=True) + \
     table(["Rule", "How", "Why"], [
@@ -411,7 +411,7 @@ S11 = p("The layout is negotiated at every attach, like the canvas, for two reas
         "<b>The keymap confirms.</b> The compositor recreates the keyboard device with the new keymap; "
         + c("read_keymap()") + " reads it, fingerprints it (size plus hash, since Mutter names every keymap "
         + c("(unnamed)") + ") and writes " + c("KEYMAP CHANGED") + ". If the session layout differs from the "
-        "requested one, " + c("tastiera.c") + " writes " + c("DECLARED FALLBACK") + " and uses the session's.",
+        "requested one, " + c("keyboard.c") + " writes " + c("DECLARED FALLBACK") + " and uses the session's.",
     ]) + \
     table(["Desktop", "How the layout is applied", "Notes"], [
         ["GNOME", c("org.gnome.desktop.input-sources") + " " + c("sources") + " = "
@@ -456,7 +456,7 @@ S12 = p("On GNOME and KDE the child is a " + c("libei") + " sender on a socket t
         + c("Start") + ", see " + c("mutter_open()") + ") or " + c("connectToEIS") + " on "
         + c("org.kde.KWin.EIS.RemoteDesktop") + " with the capability mask 7 (keyboard, pointer, touch) and a "
         "token. On KDE that KWin is the nested one: the labwc that hosts it is written by REMOTIX with no key or "
-        "mouse binding at all (" + c("DECISIONI.md") + " §10.43), so nothing typed into the session is taken by the "
+        "mouse binding at all (" + c("DECISIONS.md") + " §10.43), so nothing typed into the session is taken by the "
         "host.", lead=True) + LIBEI_SEQ + \
     table(["Rule", "Why"], [
         ["One thread: all of " + c("input.h") + " is called from the thread that calls " + c("input_run()")
@@ -494,11 +494,11 @@ S13 = p("Input keeps a ledger of everything pressed (RCP §11), because a modifi
          "writes a line, even with zero, so that “nothing was pressed” and “I did not look” "
          "differ. The child calls it on detach and on " + c("CHILDREN_INPUT_RELEASE_ALL") + ". "
          + c("input_close()") + " does it as a safety net and says the caller forgot"],
-        ["Release before resizing", c("figlio.c") + " (the per-user child), before " + c("capture_resize()") + " or, on KDE, before "
+        ["Release before resizing", c("child.c") + " (the per-user child), before " + c("capture_resize()") + " or, on KDE, before "
          + c("kwin_host_resize()") + " resizes the labwc that hosts KWin",
          "Everything is released while the old devices are still alive. The price, declared: a drag in "
          "progress is cut when the canvas changes"],
-        ["No wake-up while something is held (cure A)", c("figlio.c") + ", " + c("input_pressed()"), "On a still "
+        ["No wake-up while something is held (cure A)", c("child.c") + ", " + c("input_pressed()"), "On a still "
          "desktop the capture wake-up also recreates devices; with a key or button down the wake-up waits"],
         ["Orphans", c("mark_orphans()"), "What was down on a device that the compositor removed. Its release "
          "cannot reach anyone: it is not sent, " + c("−1") + " is returned (counted as refused), and the log "
@@ -539,9 +539,9 @@ S14 = p("labwc has no " + c("libei") + ". " + c("wlr_input.c") + " creates our o
          + " on the same keymap and sends " + c("modifiers") + " after every key that changes them"],
         ["5. Destruction", c("wlr_pointer_finish()") + " does not release buttons", "Releases held buttons, "
          "with a frame, and flushes before destroying"],
-    ], "«TAB» — The five traps of wlroots (" + c("STUDI.md") + " §xfce §7.2) and their cures") + \
+    ], "«TAB» — The five traps of wlroots (" + c("STUDIES.md") + " §xfce §7.2) and their cures") + \
     p("Measured on 21 Sep 2026 on the laptop, with a private headless labwc 0.8.3 (the Trixie version) and "
-      "the test client " + c("06-b33-testimone.c") + " (the “witness”), not on the test server nor in a full XFCE session: Shift "
+      "the test client " + c("06-b33-witness.c") + " (the “witness”), not on the test server nor in a full XFCE session: Shift "
       "arrives as a modifier before the letter; CapsLock pressed three times locks once; +120 from the client "
       "is one notch up and two halves of 60 are one notch; absolute positions are exact and saturated; a "
       "double press with one release gives one pair; switching to " + c("de") + " puts Z on key 21; closing "

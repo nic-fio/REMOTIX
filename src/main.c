@@ -4,7 +4,7 @@
  * ---------------------------------------------------------------------------
  * ⛔ WHAT THIS PROGRAM IS, AND WHAT IT IS NOT YET
  *
- * It is the server of `SPECIFICHE.md` §1 at PHASE 1: the RCP handshake over
+ * It is the server of `SPECS.md` §1 at PHASE 1: the RCP handshake over
  * WebTransport, from both sides, and the page served by the server itself.
  * ⛔ No video, no audio, no input: those are the phases from 2 onwards.
  *
@@ -19,14 +19,14 @@
  * `RCP.md` §2.4: **7447**, UDP for HTTP/3 and WebTransport, TCP for the first
  * load of the page.  ⚠ And the two things are INDEPENDENT: WebTransport does
  * not use `Alt-Svc`, it opens its connection on its own (measurement S1).
- * ⛔ The silent fallback to TCP declared as a danger in `PIANO.md` phase 1
+ * ⛔ The silent fallback to TCP declared as a danger in `PLAN.md` phase 1
  * cannot happen — that line predates the measurement.
  *
  * ---------------------------------------------------------------------------
  * ⛔ ONE SINGLE THREAD, AND NOW IT IS NO LONGER A PROBLEM — 12 Aug 2026
  *
  * Everything runs in a single `poll` loop, and stays that way.  ⛔ What has
- * changed is that **the loop no longer calls PAM**: `DECISIONI.md` §1.10, from
+ * changed is that **the loop no longer calls PAM**: `DECISIONS.md` §1.10, from
  * the user, at the close of phase 1.
  *
  * ⚠ What this box said until yesterday — «the PAM check BLOCKS that thread,
@@ -36,7 +36,7 @@
  *   the rejected against +84 ms on the admitted, the signature of
  *   `pam_faildelay`).
  *
- * ⭐ Now PAM is queried by a **helper process** (`aiutante.c`), and the shape
+ * ⭐ Now PAM is queried by a **helper process** (`helper.c`), and the shape
  *    is the one the user decided: a process, not a thread, because PAM is not
  *    reliably reentrant.  Three lines remain in here: the helper's descriptor
  *    enters the `poll` together with the others, the answers are delivered,
@@ -51,39 +51,39 @@
  * ---------------------------------------------------------------------------
  * ⛔⭐ AND SINCE 12 AUG 2026 THIS PROCESS NO LONGER CAPTURES ANYTHING — §1.10-bis
  *
- * `DECISIONI.md` §1.10-bis: the server stays **privileged**, and for every
+ * `DECISIONS.md` §1.10-bis: the server stays **privileged**, and for every
  * admitted user it spawns a **child that runs as that user**, which holds the
  * session bus, the capture and the devices.  ⛔ The reason is a measurement,
  * not a preference: `[M]` root does not connect to the user's session bus, and
  * `[M]` only root can check another user's password with PAM.
  *
  * ⇒ Out of here went `session_ensure()` and `first_frame()`, which
- *   until yesterday sat right in this file: now they live in `figlio.c`, on
+ *   until yesterday sat right in this file: now they live in `child.c`, on
  *   the other side of the privilege drop.  ⭐ And it is not only a matter of
  *   permissions: **this process no longer touches GLib, PipeWire or D-Bus**,
  *   so the `fork()` that spawns a child starts from a single-threaded process
  *   — which is the only condition in which a `fork` from a library with
  *   threads is not a gamble.
  */
-#include "aiutante.h"
+#include "helper.h"
 /* ⛔ For `audio_silence_hush()`: the test tone of `--audio-test` opens an
  *    audio encoder in THIS process, not only in the child.  ⚠ If only the
  *    child received the switch, the tone bench and the real-session bench
  *    would measure two different products. */
 #include "audio.h"
 #include "budget.h"
-#include "certificati.h"
-#include "comando.h"
-#include "figlio.h"
-#include "sentinella.h"
-#include "ritrovo.h"
-#include "pagina.h"
+#include "certificates.h"
+#include "command.h"
+#include "child.h"
+#include "sentinel.h"
+#include "rediscover.h"
+#include "page.h"
 #include "rcp.h"
-#include "registro.h"
+#include "log.h"
 #include "tls.h"
-#include "trasporto.h"
+#include "transport.h"
 #include "webtransport.h"
-#include "sessione.h"
+#include "session.h"
 #include "kwin.h"
 
 #include <errno.h>
@@ -102,7 +102,7 @@
 
 /* ⛔⭐ THE CANVAS, IN ONE PLACE ONLY — and until 12 Aug 2026 there were three.
  *
- *     `PIANO.md` phase 1 declares «canvas 1920×1080»; `src/pagina.html` asks
+ *     `PLAN.md` phase 1 declares «canvas 1920×1080»; `src/page.html` asks
  *     for it in the `HELLO` (line 1503); `P2-1-sessione.md` §6.3 wrote
  *     `1920, 1080` by hand inside `main.c` and declared it a debt: *«whoever
  *     grafts should tie them to a single constant, or in two weeks they will
@@ -131,7 +131,7 @@
  *   it is the maximum DELAY between «the user sat down in front of the
  *   machine» and «the remote session drops» — which nobody watches with a
  *   stopwatch — and it is also the COST, because every check is a synchronous
- *   call to logind inside the loop that delivers frames (`LEZIONI.md`
+ *   call to logind inside the loop that delivers frames (`LESSONS.md`
  *   §6.2-bis).
  *
  * ⭐ AND SINCE 25 AUG 2026 THE COST NO LONGER DEPENDS ON THE TENANTS: the
@@ -228,7 +228,7 @@ static void help(const char *name)
 	        "                    number of comfortable frames below the ceiling of\n"
 	        "                    §6.2.  Without it, once down it stays down for\n"
 	        "                    the whole session.  ⛔ It lives in the CHILD: the\n"
-	        "                    line is written by codificatore.c at opening\n"
+	        "                    line is written by encoder.c at opening\n"
 	        "  --bandwidth-cap-mbit N\n"
 	        "                    N is the FLOOR in Mbit/s (20, §3.1-bis),\n"
 	        "                    not the ceiling: wire, working point and\n"
@@ -297,7 +297,7 @@ static void help(const char *name)
 	        "  --session-cap N\n"
 	        "                    the ADMINISTRATIVE cap (§4.6): how many users\n"
 	        "                    served at most.  ⭐ DEFAULT 10\n"
-	        "                    (SPECIFICHE.md §5.5; it was 16 until 25 Aug\n"
+	        "                    (SPECS.md §5.5; it was 16 until 25 Aug\n"
 	        "                    2026, and nobody had chosen it).  From here the\n"
 	        "                    four tables that count a user are\n"
 	        "                    sized.  ⚠ Whoever does not fit receives 0x0E, which is\n"
@@ -339,14 +339,14 @@ static void help(const char *name)
 	        "\n"
 	        "  ⛔ `--internal-child` is NOT typed by hand: it is the line with which\n"
 	        "     this same binary restarts as the child of an admitted\n"
-	        "     user (DECISIONI.md §1.10-bis).  If you see it in `ps`, that\n"
+	        "     user (DECISIONS.md §1.10-bis).  If you see it in `ps`, that\n"
 	        "     is a child, not a second server.\n",
 	        name, name, DEFAULT_PORT);
 }
 
 /* ⛔⭐ THE PAM SERVICE FILE, CHECKED AT STARTUP — finding B-11.
  *
- *     `SPECIFICHE.md` §4.2 wants the `remotix` service.  If the file is not
+ *     `SPECS.md` §4.2 wants the `remotix` service.  If the file is not
  *     there, Linux-PAM falls back to the `other` service, and neither outcome
  *     is acceptable: on Fedora and Arch `other` is `pam_deny` (**every** right
  *     password refused, and the user reads «user or password not correct» — a
@@ -354,7 +354,7 @@ static void help(const char *name)
  *     on Debian it includes the common stacks, that is a stack that is not
  *     ours and without the exclusion of root (`src/remotix.pam`).
  *
- * ⭐ PHASE 17 (`fasi/17-l-installatore.md` §4.3-§4.4): the file is looked for
+ * ⭐ PHASE 17 (`phases/17-the-installer.md` §4.3-§4.4): the file is looked for
  *    where Linux-PAM looks for it — first `/etc/pam.d`, then `/usr/lib/pam.d`,
  *    where the openSUSE package puts it.
  *
@@ -370,7 +370,7 @@ static void look_pam_service(void)
 	for (size_t i = 0; i < sizeof dove / sizeof dove[0]; i++) {
 		if (stat(dove[i], &st) == 0) {
 			registro_dice(LOG_STARTUP,
-			              "PAM service «remotix»: %s is there (SPECIFICHE.md §4.2)",
+			              "PAM service «remotix»: %s is there (SPECS.md §4.2)",
 			              dove[i]);
 			return;
 		}
@@ -398,13 +398,13 @@ struct bridge {
 
 /* ⛔⭐⭐ PHASE 17, T7 — THE DESKTOPS FOUND AGAIN: live stages that no child holds.
  *
- *     `[M]` T2 (`fasi/17-l-installatore.md` §5.2): stopping the service does
+ *     `[M]` T2 (`phases/17-the-installer.md` §5.2): stopping the service does
  *     NOT kill the desktops — parent, helper and child die, the stage born
  *     with `setsid --fork` stays with its programs.  ⛔ And this parent
  *     restarted with an empty children table: nobody counted those desktops,
  *     neither the session cap, nor the budget, nor the abandonment clock.
  *
- * ⭐ At startup they are looked for (`ritrovo.h`: logind session `remotix` with
+ * ⭐ At startup they are looked for (`rediscover.h`: logind session `remotix` with
  *    the stage leader inside) and they sit HERE, «waiting for reattach»:
  *      · the CAP counts children + found again (`stage_count()`);
  *      · the BUDGET puts them in the count like the stages with children;
@@ -432,7 +432,7 @@ static void presence_forget(const char *user);
  *   down, with the third clock of §5.3. */
 static uint64_t abandon_ms;
 
-static FindingAgainDesktop *found_again;
+static RediscoveredDesktop *found_again;
 static int found_again_n;
 
 static int found_again_index(const char *user)
@@ -481,7 +481,7 @@ static void found_again_at_startup(uint64_t now_ms)
 		              "counted (cap, budget, abandonment)");
 		return;
 	}
-	n = finding_again_search(found_again, MAX_FOUND_AGAIN, why, sizeof why);
+	n = rediscover_search(found_again, MAX_FOUND_AGAIN, why, sizeof why);
 	if (n < 0) {
 		registro_dice(LOG_CHILD,
 		              "⛔ PHASE 17 T7: could not look for live REMOTIX desktops "
@@ -536,7 +536,7 @@ static void found_again_sweep(uint64_t now_ms)
 {
 	static uint64_t last;
 	static bool mute_logged;
-	FindingAgainDesktop *living;
+	RediscoveredDesktop *living;
 	char why[256] = "";
 	int n;
 
@@ -546,7 +546,7 @@ static void found_again_sweep(uint64_t now_ms)
 	living = calloc(MAX_FOUND_AGAIN, sizeof *living);
 	if (!living)
 		return;
-	n = finding_again_search(living, MAX_FOUND_AGAIN, why, sizeof why);
+	n = rediscover_search(living, MAX_FOUND_AGAIN, why, sizeof why);
 	if (n < 0) {
 		if (!mute_logged) {
 			mute_logged = true;
@@ -588,7 +588,7 @@ static void found_again_sweep(uint64_t now_ms)
  *     with `denied 0` and the first session went from **39.60 to 0.96 fps**
  *     (−97.6 %), with 104 paired reds against invariant **I1**.
  *
- * ⛔ AND THE QUANTITY IS **COMPOSITION**, not encoding.  `DECISIONI.md`
+ * ⛔ AND THE QUANTITY IS **COMPOSITION**, not encoding.  `DECISIONS.md`
  *    §4.6 says *«the real limit is set by the encoder»*: `[M]` on this
  *    hardware **it is not true** — the bare encoder holds 1.86 Gpixel/s,
  *    composition **0.97**, and what saturates `rcs0` is `gnome-shell` at
@@ -624,7 +624,7 @@ static bool has_capabilities(struct bridge *p, const char *user, char *why,
 	 *    `video.max_size`, and that number has already arrived.  ⇒ The
 	 *    **minimum of the stage canvas and the client's ceiling** is counted,
 	 *    that is an upper bound of the real cost: uncomfortable direction
-	 *    (`LEZIONI.md` §1.33).
+	 *    (`LESSONS.md` §1.33).
 	 * ⚠ If the client did not declare it the stage canvas stays, which is a
 	 *   good upper bound all the same — and NOT a zero. */
 	if (wt_max_size_of(user, &ml, &ma) && ml && ma) {
@@ -670,7 +670,7 @@ static bool has_capabilities(struct bridge *p, const char *user, char *why,
 
 /* ⛔⭐ THE BRIDGE BETWEEN THE HELPER, THE TRANSPORT AND THE CHILD.
  *
- *     `DECISIONI.md` §1.10-bis: the child is born **when PAM has said yes**,
+ *     `DECISIONS.md` §1.10-bis: the child is born **when PAM has said yes**,
  *     and this is the only line of the program where that fact exists with the
  *     user's NAME next to it.  ⛔ Not an instant before: a child spawned on
  *     `CREDENTIALS` would run as a user who has not yet proved to be who they
@@ -939,7 +939,7 @@ static void delivery_verdict(void *ctx, uint64_t ticket, bool admitted,
 	 *    left»*, that is a **physical** limit; here the limit is a `#define`
 	 *    — a table full of stages **nobody is watching** — that is an
 	 *    **administrative** limit, which is exactly what `0x0E` already says
-	 *    for the slot table.  ⭐ `fasi/10-…md` §8.1 D5: the two reasons are
+	 *    for the slot table.  ⭐ `phases/10-…md` §8.1 D5: the two reasons are
 	 *    ADDED, they do not replace each other, and `0x06` belongs to the
 	 *    budget's round. */
 	if (without_stage[0]) {
@@ -995,7 +995,7 @@ static void deposit_frame(void *ctx, const char *user, uid_t uid,
 	 *    stage; only the child knows what the compositor has **taken** and
 	 *    when it captured.  ⇒ Filling it here would say «the last input sent
 	 *    before the sending», a higher number: and the delay ring
-	 *    (`DECISIONI.md` §2.6) would measure a delay shorter than the truth, in
+	 *    (`DECISIONS.md` §2.6) would measure a delay shorter than the truth, in
 	 *    our favour.  `CODER.md` §1-bis: the boundary moves in the
 	 *    **uncomfortable** direction.
 	 * ⚠ And zero stays legitimate: §6.2 reserves it for «none», and it is what
@@ -1031,7 +1031,7 @@ static void deposit_frame(void *ctx, const char *user, uid_t uid,
  *    `CURSOR_SHAPE` channel (`RCP.md` §7.2) lives in the parent.  ⚠ And the
  *    POSITION does not travel: it belongs to the client, which draws the
  *    pointer itself — only the shape passes here, and the delay of one network
- *    round trip on the shape is the accepted compromise (`DECISIONI.md`
+ *    round trip on the shape is the accepted compromise (`DECISIONS.md`
  *    §5-bis.4). */
 static void cursor_from_stage(void *ctx, const char *user, uid_t uid,
                               uint16_t width, uint16_t height,
@@ -1109,7 +1109,7 @@ static void audio_block(void *ctx, const char *user, uid_t uid, uint8_t codec,
  *     Who knows a session has negotiated `clipboard.text`: `rcp.c` (§4.3).
  *     Who knows which session it belongs to: `webtransport.c`.
  *     ⛔ Who talks to the compositor: the CHILD — the clipboard is Mutter's
- *        (`STUDI.md` §gnome §10), and Mutter talks to the user's session.
+ *        (`STUDIES.md` §gnome §10), and Mutter talks to the user's session.
  *     ⇒ `main.c` is the only one that knows all three, and **decides nothing**.
  */
 static bool clipboard_offer_to_child(void *ctx, const char *user)
@@ -1186,7 +1186,7 @@ static void clipboard_request_from_session(void *ctx, const char *user,
  *       > *«no 6-hour timeout: if after 60 minutes there is no trace of
  *       > input the session gets killed»*
  *
- *     `SPECIFICHE.md` §5.3 said «6 hours without any attach ⇒ the session
+ *     `SPECS.md` §5.3 said «6 hours without any attach ⇒ the session
  *     closes».  ⚠ TWO things change, not one: the ceiling (6 hours → 60
  *     minutes) and **the criterion** — no longer «nobody has attached», but
  *     «nobody has touched anything».
@@ -1249,7 +1249,7 @@ static uint32_t audio_test_hz;
  *    another program, born with `execve` and an environment built from
  *    scratch.  ⇒ They are not passed with an environment variable (it would
  *    not arrive): they are passed on the child's command line, like
- *    `--verbose` (`figlio.c`, the box in `become_and_exec()`), and
+ *    `--verbose` (`child.c`, the box in `become_and_exec()`), and
  *    `children_phase9()` is the door. */
 /* ⭐ ON by default at 100 ms (⚠ the number is in `webtransport.h`, single copy).
  * ⚠ THE PRICE, `[M]` 09-b79 23-24 Aug 2026: together with the rate regulator,
@@ -1319,7 +1319,7 @@ static bool audio_silence = true;  /* ⭐ on; --no-audio-silence turns off */
  *                            ⛔ `0` = OFF, and it is the default (I6).
  *       `--session-cap`   the **ADMINISTRATIVE** cap of §4.6, and the four
  *                            tables are sized from it.  Default 10
- *                            (`SPECIFICHE.md` §5.5).
+ *                            (`SPECS.md` §5.5).
  *       `--reserve`          the rule's knob: how much of the worst case of an
  *                            **idle** tenant is kept aside.  Default 0.5,
  *                            `[M]` §6.9.
@@ -1470,7 +1470,7 @@ static bool input_to_child(void *ctx, const char *user, uint32_t id,
  *     ⛔ Who can really change it: the CHILD, which has the PipeWire stream.
  *     ⇒ `main.c` is the only one that knows all three, and **decides nothing**.
  *
- * ⛔ And this line is worth four symptoms, not one (`DECISIONI.md`
+ * ⛔ And this line is worth four symptoms, not one (`DECISIONS.md`
  *    §5.0-sexies): the black side bands, the interpolated text, the reattach
  *    at a different size, and ⭐ **the four seconds between login and
  *    desktop** — because `pw_stream_update_params()` is a restart of the
@@ -1671,7 +1671,7 @@ static bool recanvas_to_child(void *ctx, const char *user, uint32_t width,
 /* ⛔ The child has gone.  ⚠ There is no longer any depot to empty — it was
  * the cure of phase 2 — but the line stays because the fact is a fact: from
  * now on that user no longer has a stage, and their sessions will no longer
- * see frames arrive.  ⛔ And NOTHING is closed: `SPECIFICHE.md` §8.3, «never
+ * see frames arrive.  ⛔ And NOTHING is closed: `SPECS.md` §8.3, «never
  * disconnect» — a session without frames is worth more than a closed session. */
 static void dismiss_child(void *ctx, const char *user, uid_t uid)
 {
@@ -1679,7 +1679,7 @@ static void dismiss_child(void *ctx, const char *user, uid_t uid)
 	registro_dice(REG_VIDEO,
 	              "⛔ the stage of «%s» (uid %ld) has gone: from now on their "
 	              "sessions no longer receive frames.  ⚠ NOTHING is "
-	              "closed (I1, SPECIFICHE.md §8.3): a still session is worth more "
+	              "closed (I1, SPECS.md §8.3): a still session is worth more "
 	              "than a disconnected session, and the stage can be born again",
 	              user, (long)uid);
 	/* ⛔⭐ AND THE SIZE OF ITS STAGE IS FORGOTTEN — defect found while refuting,
@@ -1744,7 +1744,7 @@ static void dismiss_child(void *ctx, const char *user, uid_t uid)
  *    `0x0` = it did not make it).  ⚠ Without this, two chained `FIT_CANVAS` —
  *    a user dragging the border — made the frame of the first be taken for the
  *    answer to the second. */
-/* ⭐ §5.1 — the adapter between the hook of `webtransport.c` and `sentinella.c`.
+/* ⭐ §5.1 — the adapter between the hook of `webtransport.c` and `sentinel.c`.
  *
  * ⛔ It is here and not there because `webtransport.c` does not know logind and
  *    must not: that module knows **which sessions belong to that user**, this
@@ -1759,7 +1759,7 @@ static bool ask_local_session(void *ctx, const char *user, char *which,
 
 /* ⭐⭐ §5.1 — the adapter of the CHECK, and it asks for ALL tenants at once.
  *     The why — `[M]` §6.13, `N × D` that becomes `D` — is written out in full
- *     in `sentinella.h` above `sentinel_locals()`.
+ *     in `sentinel.h` above `sentinel_locals()`.
  *
  * ⛔ It is a second adapter and not one more parameter on the first because
  *    the two questions have two different jobs: the one above is asked by
@@ -1790,7 +1790,7 @@ int main(int argc, char **argv)
 	const char *name = NULL;
 	const char *port = DEFAULT_PORT;
 	const char *dir_cert = "/var/lib/remotix/certificates";
-	const char *file_html = "pagina.html";
+	const char *file_html = "page.html";
 	const char *file_ban = "/var/lib/remotix/ban";
 	const char *socket_command = NULL;
 	const char *dir_survey = NULL;
@@ -1813,7 +1813,7 @@ int main(int argc, char **argv)
 	 *     we are the child, we are not a server.
 	 *
 	 *     `children_ensure()` has already brought us down to the user's uid and
-	 *     has done `exec` of this same binary (`figlio.c`, box at the top:
+	 *     has done `exec` of this same binary (`child.c`, box at the top:
 	 *     without `exec` the child would have the server's private TLS key in
 	 *     memory, and a process's memory belongs to its owner).
 	 *     ⛔ Here nothing is opened, no certificate is read and the ban file is
@@ -1824,10 +1824,10 @@ int main(int argc, char **argv)
 	}
 	/* ⭐ PHASE 17 (§6.5-bis) — the encoding test of the certification: on its
 	 *    own, before everything else — no certificates, no network, no
-	 *    sessions.  The contract is in `figlio.h`. */
+	 *    sessions.  The contract is in `child.h`. */
 	if (argc >= 2 && strcmp(argv[1], "--encoding-test") == 0)
 		return child_test_encoding(argc - 2, argv + 2);
-	/* ⭐ 11 Oct 2026 (`DECISIONI.md` §10.40) — the start line of KWin on
+	/* ⭐ 11 Oct 2026 (`DECISIONS.md` §10.40) — the start line of KWin on
 	 *    Plasma: labwc without a screen, then KWin nested in it (`kwin.h`).
 	 *    It runs as the USER, inside `plasma-kwin_wayland.service`, and it
 	 *    becomes the KWin wrapper: nothing of the server is opened here. */
@@ -1864,7 +1864,7 @@ int main(int argc, char **argv)
 			dir_survey = argv[++i];
 		else if (strcmp(a, "--verbose") == 0)
 			log_chatter(true);
-		/* ⭐ Phase 16 §12 — the box is in `registro.h`.  ⚠ If the socket does
+		/* ⭐ Phase 16 §12 — the box is in `log.h`.  ⚠ If the socket does
 		 *   not open it is said at startup (below) and we go on: the log on
 		 *   `stderr` does not depend on the journal. */
 		else if (strcmp(a, "--journal") == 0)
@@ -1901,7 +1901,7 @@ int main(int argc, char **argv)
 		 *    option the behaviour is yesterday's byte for byte. */
 		else if (strcmp(a, "--eviction-ms") == 0 && v)
 			rcp_eviction_set((uint64_t)strtoull(argv[++i], NULL, 10));
-		/* ⭐ PHASE 19 — the card's route (`DECISIONI.md` §10.27).  It applies to
+		/* ⭐ PHASE 19 — the card's route (`DECISIONS.md` §10.27).  It applies to
 		 *    the test at startup (in the parent, a fork) and to every child (the
 		 *    parent repeats it on its command line).  ⛔ A name that is not one
 		 *    of the three is a usage error, not a silent «card». */
@@ -1935,13 +1935,13 @@ int main(int argc, char **argv)
 			clear_threshold_ms = (uint64_t)strtoull(argv[++i], NULL, 10);
 		/* ⛔ Without an argument, like `--verbose`: it is a yes/no, and a
 		 *    number next to it would suggest a calibration that does not exist
-		 *    (the three numbers of the rise are in `codificatore.c` and the
+		 *    (the three numbers of the rise are in `encoder.c` and the
 		 *    bench calibrates them). */
 		else if (strcmp(a, "--quality-recovery") == 0)
 			quality_recovery = true;
 		/* ⛔ The argument is the FLOOR in Mbit/s (20, the one of
-		 *    `DECISIONI.md` §3.1-bis), not the ceiling: wire, working point and
-		 *    reservoir are derived from it in one place only (`codificatore.c`).
+		 *    `DECISIONS.md` §3.1-bis), not the ceiling: wire, working point and
+		 *    reservoir are derived from it in one place only (`encoder.c`).
 		 *    ⚠ `0` = off, and then nobody says no to bandwidth. */
 		else if (strcmp(a, "--bandwidth-cap-mbit") == 0 && v)
 			bandwidth_cap_mbit = (uint32_t)strtoul(argv[++i], NULL, 10);
@@ -2047,7 +2047,7 @@ int main(int argc, char **argv)
 		 *              **unlimited** — that is, blind to WAKE-UP;
 		 *      `0.5`   ⭐ the default: `[M]` **0 false yes and 0 false no**,
 		 *              cap **6 saturated / 10 idle** — the ten of
-		 *              `SPECIFICHE.md` §5.5 found again by MEASUREMENT;
+		 *              `SPECS.md` §5.5 found again by MEASUREMENT;
 		 *      `1`     «worst» rule: everyone at the maximum. `[M]` 5 and 6,
 		 *              with **one false no** (it refuses the sixth, which held).
 		 *
@@ -2061,7 +2061,7 @@ int main(int argc, char **argv)
 			budget_reserve = strtod(argv[++i], NULL);
 		/* ⛔⭐ THE ADMINISTRATIVE CAP — §4.6: *«ten is not the limit: it is the
 		 *     administrative cap»*.  ⭐ The FOUR tables that count a served user
-		 *     are sized from it — `attached[]` (`rcp.c`), `v[]` (`figlio.c`),
+		 *     are sized from it — `attached[]` (`rcp.c`), `v[]` (`child.c`),
 		 *     `stages[]` (`webtransport.c`) and `present[]` (here): until this
 		 *     morning they were four `#define`s copied by hand, and `[M]` §6.4
 		 *     had seen them **diverge** (slot table at 2, children table left
@@ -2121,7 +2121,7 @@ int main(int argc, char **argv)
 	/* ⭐⭐ PHASE 18 — WHAT IS OFFERED TO THE BROWSER, MEASURED AT STARTUP.
 	 *     `video.codec` of the `HERE_I_AM` (§4.3) says only the codecs this
 	 *     machine can do: HEVC and H.264 if the CARD encodes them.  ⛔ Phase 19
-	 *     (1 Oct 2026, `DECISIONI.md` §10.27), the user's words: *«no cpu
+	 *     (1 Oct 2026, `DECISIONS.md` §10.27), the user's words: *«no cpu
 	 *     without a card»* — the software fallback (OpenH264) is out.  Without
 	 *     a capable card it is declared here, with the reason, and every HELLO
 	 *     ends in NOTHING_IN_COMMON. */
@@ -2150,7 +2150,7 @@ int main(int argc, char **argv)
 	/* ⭐ PHASE 12 — which desktop this server will start, said at startup: with
 	 *    GNOME and KDE together the choice is ambiguous, and it is read here
 	 *    instead of discovering it from a desktop that is not the expected one
-	 *    (`DECISIONI.md` §4.6-duodetricies). */
+	 *    (`DECISIONS.md` §4.6-duodetricies). */
 	registro_dice(LOG_STARTUP, "the desktop of this machine: %s", session_desktop_explain());
 	/* ⭐ D-001 — and the same fact, with the name of §4.5, goes into every
 	 *    client's `SESSION`: before it said «unknown» (then `sconosciuto`) to everyone, since
@@ -2280,9 +2280,9 @@ int main(int argc, char **argv)
 	}
 	registro_dice(LOG_STARTUP,
 	              "⭐ phase 10 — ADMINISTRATIVE session cap: **%d** "
-	              "(default %d, `SPECIFICHE.md` §5.5)%s.  ⭐ IT IS ONE "
+	              "(default %d, `SPECS.md` §5.5)%s.  ⭐ IT IS ONE "
 	              "NUMBER ONLY: from here are sized the slots of rcp.c, the stages of "
-	              "figlio.c, the canvases of webtransport.c and the presence of main.c "
+	              "child.c, the canvases of webtransport.c and the presence of main.c "
 	              "— `[M]` §6.4 had seen them diverge (slots 2, children 16). "
 	              " ⚠ Whoever does not fit receives 0x0E, which is an "
 	              "ADMINISTRATIVE limit: the PHYSICAL limit is `--budget-mpixel-s`, and "
@@ -2333,7 +2333,7 @@ int main(int argc, char **argv)
 		int n = rcp_ban_load(file_ban, log_now_ms());
 		if (n < 0) {
 			/* ⛔ «zero bans» and «I could not look» are two different facts
-			 *    (`rcp.h`, `LEZIONI.md` §1.9 rule 1): the second is the
+			 *    (`rcp.h`, `LESSONS.md` §1.9 rule 1): the second is the
 			 *    protection turned off with the air of having nothing to
 			 *    protect, that is invariant I7 broken silently.  Not
 			 *    starting. */
@@ -2349,9 +2349,9 @@ int main(int argc, char **argv)
 
 	/* ⭐ «How one gets out: the 12 hours passing, or an unblock command on the
 	 *    server — which asks for access to the machine, that is the only key
-	 *    that case admits» (`SPECIFICHE.md` §4.2, `RCP.md` §4.4-bis).  ⛔ And
+	 *    that case admits» (`SPECS.md` §4.2, `RCP.md` §4.4-bis).  ⛔ And
 	 *    the command talks to the LIVE process, which is the only one holding
-	 *    the ban table: see the box in `comando.h`, finding R12.1.
+	 *    the ban table: see the box in `command.h`, finding R12.1.
 	 *
 	 * ⚠ `command_open()` returns NULL also when the socket was not requested,
 	 *   and in both cases it writes WHY: the server goes on, because without
@@ -2383,7 +2383,7 @@ int main(int argc, char **argv)
 	 *     the stage belonged to the PROCESS, not to the user.
 	 *
 	 * ⇒ Now the stage belongs to the **child**, which is born when PAM says yes
-	 *   and runs as that user (`figlio.h`).  ⚠ The table is started here
+	 *   and runs as that user (`child.h`).  ⚠ The table is started here
 	 *   because `delivery_verdict()` wants it ready; the children are not:
 	 *   they are born one per admitted user.
 	 *
@@ -2395,7 +2395,7 @@ int main(int argc, char **argv)
 		registro_dice(LOG_STARTUP,
 		              "⛔ no PAM helper: falling back to the SYNCHRONOUS "
 		              "check, which stops the loop for 1-2 s at every attempt "
-		              "(DECISIONI.md §1.10).  The fallback is declared, not "
+		              "(DECISIONS.md §1.10).  The fallback is declared, not "
 		              "silent (CODER.md §4.2).");
 
 	offspring = children_turn_on(CANVAS_W, CANVAS_H, dir_survey, deposit_frame,
@@ -2414,7 +2414,7 @@ int main(int argc, char **argv)
 	 *      audio silence is a half exception: the encoder of the TEST TONE is
 	 *      opened here too, and that is why `audio_silence_hush()` above
 	 *      receives the SAME `bool`.  ⛔ And whoever declares the value in force
-	 *      will be `codificatore.c`, at the opening of every encoder: if the
+	 *      will be `encoder.c`, at the opening of every encoder: if the
 	 *      option got lost on the way, those lines would say «off» and the
 	 *      defect would show at once (form D5). */
 	children_phase9(offspring, quality_recovery, bandwidth_cap_mbit, audio_silence);
@@ -2429,7 +2429,7 @@ int main(int argc, char **argv)
 	              geteuid() == 0
 	                      ? "it can check anyone's password with PAM and "
 	                        "drop the children to the right user "
-	                        "(DECISIONI.md §1.10-bis)"
+	                        "(DECISIONS.md §1.10-bis)"
 	                      : "it is NOT root — PAM will be able to check only its own "
 	                        "user, and a child will be able to be born only for it");
 
@@ -2483,7 +2483,7 @@ int main(int argc, char **argv)
 	if (guardian) {
 		wt_local_hook(ask_local_session, guardian);
 		/* ⭐⭐ AND THE CHECK HAS ITS OWN HOOK, which asks for EVERYONE at once
-		 *     — the reason, with the numbers, is in `sentinella.h` above
+		 *     — the reason, with the numbers, is in `sentinel.h` above
 		 *     `sentinel_locals()`: `[M]` §6.13, the cost goes from `N × D` to
 		 *     `D` inside the loop that delivers frames.  ⛔ Both are connected
 		 *     or neither: they are the two halves of the same rule, and half a
@@ -2575,7 +2575,7 @@ int main(int argc, char **argv)
 
 		/* ⭐ The PAM helper enters the `poll` like all the others, and that is
 		 *    all that is needed for the loop to no longer wait for anyone
-		 *    (`DECISIONI.md` §1.10).  ⛔ At the end, after the page and the
+		 *    (`DECISIONS.md` §1.10).  ⛔ At the end, after the page and the
 		 *    command, because their counts are relative and slotting it in
 		 *    between would shift the indices of two calls. */
 		nhelp = 0;
@@ -2681,7 +2681,7 @@ int main(int argc, char **argv)
 		 *
 		 * ⚠ Two seconds and not every round: the question costs a synchronous
 		 *   call to logind, and this is the same loop that delivers frames
-		 *   (`LEZIONI.md` §6.2-bis).  ⚠ And two seconds are the maximum delay
+		 *   (`LESSONS.md` §6.2-bis).  ⚠ And two seconds are the maximum delay
 		 *   between «the user sat down in front of the machine» and «the remote
 		 *   session drops»: it is a wait nobody watches with a stopwatch. */
 		if (guardian && t_now - last_locals_sweep >= LOCAL_SWEEP_MS) {
@@ -2692,7 +2692,7 @@ int main(int argc, char **argv)
 		/* ⛔⭐⭐ THE FALLBACK'S COUNT, ONCE A MINUTE — and until 25 Aug 2026
 		 *      NOBODY emitted it.
 		 *
-		 * `sentinella.h` declares `sentinel_counts()` with written above it
+		 * `sentinel.h` declares `sentinel_counts()` with written above it
 		 * that it serves *«so that the synchronous choice can be MEASURED AGAIN
 		 * instead of believed»* — ⛔ and `sentinel_counts()` **had no caller in
 		 * the whole of `src/`**.  A counter nobody emits is worse than a counter
@@ -2713,7 +2713,7 @@ int main(int argc, char **argv)
 			wt_stalled_rounds(&stills, &worst_stall);
 			/* ⛔⛔ AND `tenants=` CAME IN ON 25 AUG 2026 — finding R7.
 			 *
-			 *      `sentinella.h` promised these two numbers *«next to the
+			 *      `sentinel.h` promised these two numbers *«next to the
 			 *      number of tenants served»* and ⛔ **it was not in the
 			 *      line**.  ⭐ It is the DENOMINATOR: without `N` the sentence at
 			 *      the end here — «one call per check, not per tenant» — cannot
@@ -2770,7 +2770,7 @@ int main(int argc, char **argv)
 	 *     Before tonight the loop exited here and `transport_close()` freed
 	 *     everything: no `FAREWELL`, no closing code, not even a
 	 *     `CONNECTION_CLOSE`.  Whoever was connected waited thirty seconds and
-	 *     read «network error» — the defect of `LEZIONI.md` §1.7 that §3.1
+	 *     read «network error» — the defect of `LESSONS.md` §1.7 that §3.1
 	 *     exists to remove, and here the server did not even write «farewell».
 	 *
 	 * ⛔ And we WAIT for the bytes to go out, instead of counting rounds: the
@@ -2843,7 +2843,7 @@ int main(int argc, char **argv)
 		 *    terminated with `code 0 · no reason`.  That is, the SECOND
 		 *    road of §3.1 was missing.
 		 *
-		 * ⚠ And the second road is the one that matters: `DECISIONI.md` §7.14
+		 * ⚠ And the second road is the one that matters: `DECISIONS.md` §7.14
 		 *   and §7.15, decided today, make it the only one that always arrives
 		 *   — on Firefox, which resets the channel and throws those bytes away,
 		 *   it was the ONLY one.  A Firefox user would have seen the service

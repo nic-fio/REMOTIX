@@ -1,6 +1,6 @@
 """User Manual, chapter 3 — looking after an installation: checking it, updating, uninstalling, the logs.
-Sources: installatore/cmd/remotix-install/main.go, installatore/motore/testi.go, disinstalla.go,
-packaging/debian/remotix.service and remotix.postrm, src/main.c (--journal), src/sessione.c (session.log)."""
+Sources: installer/cmd/remotix-install/main.go, installer/engine/texts.go, uninstall.go,
+packaging/debian/remotix.service and remotix.postrm, src/main.c (--journal), src/session.c (session.log)."""
 from build import c, p, steps, table, term, ul, warn
 
 RUN = "remotix-X.Y.Z-R.run"

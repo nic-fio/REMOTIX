@@ -1,6 +1,6 @@
-# remotix.install — the Arch package scripts (fasi/17 §6.4, §6.6.4).
+# remotix.install — the Arch package scripts (phases/17 §6.4, §6.6.4).
 #
-# ⛔ DECISIONI.md §10.12 — THE INSTALLER IS THE ONLY WAY.  The package ships
+# ⛔ DECISIONS.md §10.12 — THE INSTALLER IS THE ONLY WAY.  The package ships
 #    the pieces INERT and mounts nothing: it does not enable the service (on Arch the
 #    preset is already «disable *»), does NOT add anyone to the GPU groups,
 #    does not touch the firewall, and leaves the three belts OFF in
@@ -8,7 +8,7 @@
 #    and written in ITS log (R40).
 #
 # ⚠ The PRODUCT still enrols by itself whoever arrives at the first connection
-#   (`figlio.c`, enroll_in_card_groups, DECISIONI.md §7.21), and
+#   (`child.c`, enroll_in_card_groups, DECISIONS.md §7.21), and
 #   writes it only in the session log: with §10.12 that enrolment must be
 #   moved into the engine's log, or uninstallation does not know about it.
 
@@ -16,7 +16,7 @@ post_install() {
 	cat <<'FINE'
 :: REMOTIX: pieces installed, OFF.  The package alone switches on
    nothing: the service, the GPU groups, the three belts and the firewall
-   are set up by the REMOTIX installer (DECISIONI.md §10.12).
+   are set up by the REMOTIX installer (DECISIONS.md §10.12).
 FINE
 }
 

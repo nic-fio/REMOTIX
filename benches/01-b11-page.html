@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>B11 — the violations towards the page</title>
+<style>
+  body { font: 14px/1.5 system-ui, sans-serif; margin: 2rem; max-width: 60rem; }
+  pre  { background: #f4f4f4; padding: .6rem; overflow-x: auto; }
+  .si  { color: #0a0; font-weight: bold; }
+  .no  { color: #c00; font-weight: bold; }
+</style>
+<h1>B11 — the violation tests towards the <em>page</em></h1>
+<p>A server <strong>faulty on purpose</strong> sends the page wrong
+things — and a few right ones, to see that the page does <em>not</em> react.
+What is measured is not the server: it is whether <strong>the page applies
+§3</strong> — or swallows it silently.</p>
+<!-- ⛔ The count is written by the program, not by whoever wrote the sentence.  This
+     line said "twelve" while the cases were thirteen, and it is finding R1.29 of
+     `RCP.md` §0-bis done at home: that number is the only proof of completeness
+     the document carries, and whoever checked it by counting found more. -->
+<p id="refresh">waiting…</p>
+<pre id="output">waiting…</pre>
+
+<script>
+// ===========================================================================
+// ⛔ WHY THIS PAGE EXISTS — finding R4.1
+//
+// The first draft of the phase 1 bench had **twelve violations towards the
+// server and none towards the client**.  But `RCP.md` §3 is written about
+// "an RCP implementation", and §9 has an explicit MUST of the CLIENT.
+//
+// ⭐ In a project that lost `mstsc` and that writes `RCP.md` precisely so as not
+//    to trust two programs from the same hand, **a client never put to the
+//    test is the hole in place of the referee**.
+//
+// ---------------------------------------------------------------------------
+// ⛔ AND THE THREE NEGATIVE PROPERTIES, WHICH ARE THE HARDEST
+//
+// Three lines of the B11 table say that the page **must NOT** do
+// something, and a negative property is not measured by looking at the page:
+//
+//   after `REJECTED` no retry         → THE SERVER sees it, recording the bytes
+//                                       arrived after the end (§4.4)
+//   `desktop` changes nothing         → it is run TWICE, with `gnome` and with
+//                                       `kde`, and the bytes sent out are compared
+//   no application heartbeat          → we stay silent for eight seconds and look whether
+//                                       the page speaks on its own (§2.2)
+//
+// ⚠ The first two need a second witness, and the third needs to
+//   really wait.  A bench that took them as good "because in the code
+//   there is no setInterval" would prove today's code, not the protocol.
+// ===========================================================================
+
+const P = new URLSearchParams(location.search);
+const URL_SERVER = P.get("url") || "https://192.168.0.2:7447/rcp/1";
+const FINGERPRINT   = P.get("fingerprint") || "";
+const USERNAME     = P.get("username") || "prova";
+const PASSWORD     = P.get("password") || "word-of-test";
+
+// ⛔ The version this page can speak, and it is written ONCE only.
+//    §2.2: "and the two MUST match" — that of the path `/rcp/<n>` and
+//    that of the `HELLO`.  ⚠ They were two numbers that did not look at each other: the
+//    constant below and the string the operator types in the query, and a
+//    `HELLO(1)` on `/rcp/2` — the combination §2.2 declares illegal —
+//    left without a log line (finding R6.19).  The comparison is
+//    at startup, in `parts()`.
+const VERSION = 1;
+
+const T = { HELLO: 0x0001, HERE_I_AM: 0x0002, CREDENTIALS: 0x0003, ADMITTED: 0x0004,
+            REJECTED: 0x0005, ATTACH: 0x0006, SESSION: 0x0007,
+            FAREWELL: 0x000C };
+const TYPE_NAME = Object.fromEntries(Object.entries(T).map(([k, v]) => [v, k]));
+
+// ⛔ §8.2 IN FULL — fifteen reasons, and the page can name them all.
+//    ⚠ This table started from `0x07`: seven reasons out of fifteen were missing,
+//      among them the `0x01` the page sends itself — and its own
+//      log said "reason 1 = ?", that is it did not know the name of the reason
+//      it was sending (finding R6.9).
+//
+// ⛔ And the second column is §8.2 to the letter: "every reason MUST be
+//    showable to the user in an understandable sentence — `BUDGET_FULL` is not
+//    "error 6" — and **the sentence is built by the client, from the code**".  The
+//    `detail` field instead is NOT shown to the user: it is for the log.
+const REASON_TEXT = new Map([
+  [0x01, ["CLOSED_BY_USER",       "the client was closed"]],
+  [0x02, ["INACTIVITY",               "no input for thirty minutes"]],
+  [0x03, ["SESSION_ABANDONED",     "the session stayed six hours with nobody attached"]],
+  [0x04, ["LOCAL_SESSION_PREVAILED", "someone sat down in front of the machine"]],
+  [0x05, ["ALREADY_ACTIVE_LOCALLY",        "there is already a local graphical session on the machine"]],
+  [0x06, ["BUDGET_FULL",             "this machine has no encoding capacity left"]],
+  [0x07, ["WRONG_CREDENTIALS",       "wrong user or password"]],
+  [0x08, ["TOO_MANY_ATTEMPTS",         "too many attempts: try again in a few minutes"]],
+  [0x09, ["NOTHING_IN_COMMON",         "the server speaks none of the formats of this client"]],
+  [0x0A, ["INCOMPATIBLE_VERSION",   "the server speaks a protocol version this client does not know"]],
+  [0x0B, ["PROTOCOL_ERROR",        "the server sent something the protocol does not allow"]],
+  [0x0C, ["SERVER_CLOSING",       "the server is shutting down"]],
+  [0x0D, ["TIMED_OUT",            "the waiting time has expired"]],
+  [0x0E, ["SESSION_UNSERVABLE",   "the graphical session could not be started"]],
+  [0x0F, ["ALREADY_ACTIVE_REMOTELY",        "another client is already attached to this session"]],
+]);
+const reason_name  = (m) => (REASON_TEXT.get(m) || ["?"])[0];
+const reason_sentence = (m) => REASON_TEXT.has(m) ? REASON_TEXT.get(m)[1]
+  : `reason ${m} (0x${m.toString(16)}), which §8.2 does not define`;
+
+const PROTOCOL_ERROR = 0x0B, INCOMPATIBLE_VERSION = 0x0A,
+      NOTHING_IN_COMMON = 0x09, TIMED_OUT = 0x0D;
+
+// ⛔ The capability names RCP/1 declares as the CLIENT's (§4.3).  If one of
+//    these arrives in `HERE_I_AM`, it is the wrong side: the name is known,
+//    so the exception for unknown names does not cover it.
+const SOLO_DEL_CLIENT = new Set(["video.level", "video.max_size",
+                                 "input.touch", "client.name"]);
+// ⛔ The names RCP/1 defines and this page knows (§4.3).  ⚠ It was an
+//    object literal queried with `n in { … }`, and the `in` operator climbs
+//    `Object.prototype`: the capability `__proto__` — nine bytes of `a-z` and `_`,
+//    that is a PERFECTLY LEGAL name for §4.3 — came out as known, the
+//    mandatory log line was not written, and `cap["__proto__"]=…`
+//    stored nothing.  A `Set` has no chain, and `cap` is a `Map`
+//    (finding R6.10).
+const NAMES_KNOWN = new Set(["video.codec", "video.depth", "audio.codec",
+                           "clipboard.text", "bench.mark"]);
+
+// ⭐ The capabilities of THIS page, written once only: the `HELLO`
+//    being sent reads them and the §4.3 check on the `HERE_I_AM` coming
+//    back rereads them.  Two copies that do not look at each other are the exact form of finding
+//    R6.19, and §4.3 imposes `pcm` and `8` on BOTH sides.
+const OUR = new Map([["video.codec", "hevc,av1"],
+                        ["video.depth", "8,10"],
+                        ["audio.codec", "opus,pcm"],
+                        ["client.name", "page-b11 0.1.0"]]);
+
+// ⛔ §6.1: "a receiver that reads a length inconsistent with what the
+//    type foresees MUST close with PROTOCOL_ERROR".  §4.4 gives
+//    `ADMITTED` an EMPTY body and `REJECTED` a single `u8`.
+//    ⚠ No body was measured: an `ADMITTED` with 1024 bytes inside
+//      passed, and a `REJECTED` with an empty body gave `m.body[0] ===
+//      undefined` — that is an outcome the bench could not read instead of
+//      an `PROTOCOL_ERROR` (finding R6.7).
+const EXACT_BODY = new Map([[T.ADMITTED, 0], [T.REJECTED, 1]]);
+
+// ⛔ The cap on waiting for an answer from the server, and it is OURS: it must be said,
+//    because RCP gives none to the server.  §4.6 sets THREE caps and they are
+//    all on the CLIENT — "`HELLO` received", "`CREDENTIALS` received",
+//    "`ATTACH` received"; on the server §4.5 only imposes not to answer
+//    "ever with a silence".
+//
+// ⚠ The value was 12 s, and at expiry the page accused the server of a
+//   violation that does not exist: starting a compositor on a loaded
+//   machine exceeds twelve seconds without anyone having erred — §8.2
+//   has a reason for it, `SESSION_UNSERVABLE` = "a compositor that does not
+//   start" — and so does a PAM on LDAP with the fixed second of §4.4-bis
+//   (finding R6.4).
+//
+// ⭐ The only clock RCP puts on this wait is the TRANSPORT's:
+//    `max_idle_timeout` = 30 s (§2.2), "expired, the client is detached".  The
+//    cap is just above it, so the transport is the first to speak — and the
+//    page does not pronounce a verdict it has not observed.
+const CAP_RESPONSE = 32000;
+
+// ── the bytes ──────────────────────────────────────────────────────────────
+function str(t) {
+  const b = new TextEncoder().encode(t);
+  const o = new Uint8Array(2 + b.length);
+  new DataView(o.buffer).setUint16(0, b.length);
+  o.set(b, 2);
+  return o;
+}
+function merge(pieces) {
+  const n = pieces.reduce((a, p) => a + p.length, 0);
+  const o = new Uint8Array(n);
+  let i = 0;
+  for (const p of pieces) { o.set(p, i); i += p.length; }
+  return o;
+}
+function envelope(type, body) {
+  const t = new Uint8Array(6);
+  const v = new DataView(t.buffer);
+  v.setUint16(0, type);
+  v.setUint32(2, body.length);
+  return merge([t, body]);
+}
+function u16(n) { const a = new Uint8Array(2); new DataView(a.buffer).setUint16(0, n); return a; }
+function u32(n) { const a = new Uint8Array(4); new DataView(a.buffer).setUint32(0, n); return a; }
+
+// ⛔ The decoder is `fatal`, and it is not a detail: without
+//    `{ fatal: true }` `TextDecoder` does NOT raise on illegal UTF-8 —
+//    it replaces and returns `U+FFFD`.  §6.0 says "⛔ invalid UTF-8 is
+//    `PROTOCOL_ERROR`" and §3 "MUST NOT guess": two illegal bytes that
+//    become two legal characters are guessing **and** keeping quiet, and neither
+//    side can know any more what had been sent (finding R6.6).
+const DECODING = new TextDecoder("utf-8", { fatal: true });
+
+class Reader {
+  constructor(b) { this.b = b; this.i = 0; this.v = new DataView(b.buffer, b.byteOffset, b.length); this.short = false; }
+  u8()  { if (this.i + 1 > this.b.length) { this.short = true; return 0; } return this.b[this.i++]; }
+  u16() { if (this.i + 2 > this.b.length) { this.short = true; return 0; } const x = this.v.getUint16(this.i); this.i += 2; return x; }
+  u32() { if (this.i + 4 > this.b.length) { this.short = true; return 0; } const x = this.v.getUint32(this.i); this.i += 4; return x; }
+  str() {
+    const n = this.u16();
+    if (this.short || this.i + n > this.b.length) { this.short = true; return ""; }
+    const raw = this.b.subarray(this.i, this.i + n);
+    let s;
+    try { s = DECODING.decode(raw); }
+    catch (e) {
+      throw new Violation(PROTOCOL_ERROR,
+        `string of ${n} bytes that is not valid UTF-8, at offset ${this.i} of the body (§6.0)`);
+    }
+    this.i += n;
+    return s;
+  }
+  // ⛔ §6.1: "`length` MUST be the exact number of bytes of the body".
+  //    Whoever reads a body must be able to say whether some is left over: without it, an
+  //    `HERE_I_AM` with `tries = 0` and five hundred bytes of tail passes (R6.7).
+  advanced() { return this.b.length - this.i; }
+}
+
+// ⛔ The violation, on the page's side.  Closing it is §3.1 to the letter, and
+//    point 3 is the one an implementation leaves behind while staying
+//    conformant to the letter of an old version of the text.
+class Violation extends Error {
+  constructor(reason, detail) { super(detail); this.reason = reason; }
+}
+
+// ── the RCP client, page side ──────────────────────────────────────────────
+class Rcp {
+  constructor(wt, logbook) {
+    this.wt = wt;
+    this.reg = logbook;
+    this.arrived = new Uint8Array(0);
+    this.queue = [];
+    this.wait = null;
+    this.end = false;             // FIN on the control channel (§4.2)
+    // ⛔ And "broken" is NOT "finished", even if both stop the session.
+    //    §4.2 says "⛔ in bytes: **a FIN** on that stream": the FIN is a
+    //    precise fact, not "reading ended in whatever way".  ⚠ The
+    //    error branch set the SAME `fine = true` and wrote nothing:
+    //    a `RESET_STREAM` on the control channel produced `mute` and an
+    //    empty log, that is the `fin-on-check` case stayed green
+    //    without telling apart the fact it declares to measure — error form
+    //    E8 of `REVIEWER.md` §2 (finding R6.12).
+    this.broken = false;
+    // ⛔ §3.1 point 3: the reason travels ALSO in the application error code
+    //    with which the WebTransport session is closed.  ⭐ And it is not redundancy:
+    //    on 10 Aug 2026 this bench measured a case in which it is the ONLY
+    //    road by which the reason arrives — the `REJECTED` had been sent, and
+    //    the browser threw it away together with the session closing in the
+    //    same flight.  "If the farewell does not arrive, the reason travels anyway"
+    //    is written in §3.1, and it is true to the letter.
+    this.code_closing = null;
+    wt.closed.then((i) => { this.code_closing = i && i.closeCode; })
+             .catch(() => {});
+    this.exited = [];              // ⭐ the bytes THIS page has sent
+    this.dismissed = false;
+  }
+
+  async open() {
+    const s = await this.wt.createBidirectionalStream();
+    this.w = s.writable.getWriter();
+    this.r = s.readable.getReader();
+    this._read();
+    // ⛔ §2.5: "the server MUST NOT open bidirectional streams".  Whoever
+    //    receives one closes with PROTOCOL_ERROR — and the page notices
+    //    only if it IS WATCHING this flow.
+    this._watches();
+    // ⛔ AND THIS IS THE OTHER HALF OF §2.5, which was missing.
+    //
+    //    Of the five channels of §2.5 the page watched ONE.  Four
+    //    live on unidirectional streams and one on datagrams, and on those flows
+    //    there was no reader: a server that had opened a unidirectional
+    //    stream with `0x04` inside (audio, which §2.5 gives to datagrams
+    //    only) or `0x01` (input, which §2.5 gives to the CLIENT) would have
+    //    found nobody to notice — the stream stayed there, the case
+    //    reached the end and declared `prosegue`.  ⚠ And the comment just
+    //    above has always said it: "the page notices only if it IS
+    //    WATCHING this flow" (finding R6.3).
+    this._watches_uni();
+    this._watches_datagram();
+  }
+
+  async _watches_uni() {
+    try {
+      const rr = this.wt.incomingUnidirectionalStreams.getReader();
+      while (true) {
+        const { value, done } = await rr.read();
+        if (done) return;
+        // ⚠ Without `await`: a stream that opens and writes nothing must not
+        //   blind the watch on those that come after.
+        this._judge_uni(value).catch(() => {});
+      }
+    } catch (e) { /* the session is over: not a fact of this check */ }
+  }
+
+  // ⛔ §2.5: "the FIRST TWO BYTES of the stream are read, which are in any case
+  //    a `type` field.  The high byte says the channel".
+  async _judge_uni(s) {
+    let alto = null;
+    try {
+      const r = s.getReader();
+      const { value } = await r.read();
+      if (value && value.length >= 1) alto = value[0];
+      r.cancel().catch(() => {});
+    } catch (e) {
+      this.reg("⚠ unidirectional stream from the server, unreadable: " + e.message);
+      return;
+    }
+    if (alto === null) {
+      // ⛔ And every tolerance is written (§3, last line): a stream opened and
+      //    closed without a byte cannot be judged, and it must be said instead of
+      //    ignored.
+      this.reg("⚠ unidirectional stream from the server without even one byte: " +
+               "§2.5 wants a `type`, and here there is nothing to read");
+      return;
+    }
+    const NAMES = { 0x00: "control", 0x01: "input", 0x02: "clipboard",
+                   0x03: "video", 0x04: "audio" };
+    const why = {
+      // ⛔ "`0x00` control — on a unidirectional stream it is PROTOCOL_ERROR:
+      //    control lives only on stream 0"
+      0x00: "the control channel lives ONLY on stream 0 (§2.5)",
+      // ⛔ "a channel used in the wrong direction — a `0x01` arriving from the
+      //    server … is one in turn"
+      0x01: "the input channel is the CLIENT's: wrong direction (§2.5)",
+      // ⛔ "`0x04` audio — only on datagrams.  On a stream it is PROTOCOL_ERROR"
+      0x04: "audio travels ONLY on datagrams (§2.5, §6.3)",
+    };
+    if (why[alto] !== undefined) {
+      this.reg(`⛔ unidirectional stream from the server with high byte 0x` +
+               `${alto.toString(16).padStart(2, "0")} (${NAMES[alto]}): ${why[alto]}`);
+      this.queue.push({ fault: new Violation(PROTOCOL_ERROR,
+        `unidirectional stream with channel ${NAMES[alto]}: ${why[alto]}`) });
+      this._wake();
+      return;
+    }
+    if (alto === 0x02 || alto === 0x03) {
+      // ⚠ Right direction and legal channel, but the CONTENT belongs to a phase that
+      //   is not this one: the clipboard is §7.4 and the frames §6.2.  Here it is
+      //   recorded and not judged — it is an open point, not a silent
+      //   tolerance (§3, last line).
+      this.reg(`⚠ unidirectional stream from the server, channel ${NAMES[alto]} ` +
+               `(0x0${alto}): legal direction for §2.5, but its content ` +
+               `belongs to a later phase — recorded and not judged`);
+      return;
+    }
+    // ⛔ "A high byte other than these five is PROTOCOL_ERROR".
+    this.reg(`⛔ unidirectional stream with high byte 0x` +
+             `${alto.toString(16).padStart(2, "0")}: it is none of the five channels of §2.5`);
+    this.queue.push({ fault: new Violation(PROTOCOL_ERROR,
+      `unknown high byte 0x${alto.toString(16).padStart(2, "0")}: §2.5 defines five`) });
+    this._wake();
+  }
+
+  // ⛔ §6.3 and exception 2 of §3: a corrupt or too short datagram is
+  //    DISCARDED instead of closing — "discarding it **in the log**".  A
+  //    silent tolerance is indistinguishable from a defect.
+  // ⚠ In phase 1 none must arrive: audio belongs to a later
+  //   phase.  This watch serves to be able to SAY so.
+  async _watches_datagram() {
+    try {
+      const r = this.wt.datagrams.readable.getReader();
+      while (true) {
+        const { value, done } = await r.read();
+        if (done) return;
+        const type = value.length >= 2 ? (value[0] << 8) | value[1] : -1;
+        if (value.length < 12 || type !== 0x0401) {
+          this.reg(`⚠ datagram discarded: ${value.length} bytes, type 0x` +
+                   `${type < 0 ? "??" : type.toString(16)} — §6.3 discards it ` +
+                   `instead of closing (exception 2 of §3), AND WRITES IT DOWN`);
+        } else {
+          this.reg(`⚠ audio datagram (0x0401) of ${value.length} bytes in phase 1: ` +
+                   `the channel is legal for §2.5, its content belongs to a ` +
+                   `later phase — recorded and not judged`);
+        }
+      }
+    } catch (e) { /* the session is over */ }
+  }
+
+  async _watches() {
+    try {
+      const rr = this.wt.incomingBidirectionalStreams.getReader();
+      while (true) {
+        const { value, done } = await rr.read();
+        if (done) return;
+        this.bidi_from_server = true;
+        this.reg("⛔ the server opened a BIDIRECTIONAL stream (§2.5)");
+        this.queue.push({ fault: new Violation(PROTOCOL_ERROR,
+          "bidirectional stream opened by the server (§2.5)") });
+        this._wake();
+      }
+    } catch (e) { /* the session is over: not a fact of this check */ }
+  }
+
+  async _read() {
+    try {
+      while (true) {
+        const { value, done } = await this.r.read();
+        if (done) {
+          // ⛔ §4.2: a FIN on the control channel IS the end of the session.
+          this.end = true;
+          this.reg("the control channel closed (FIN)");
+          this._wake();
+          return;
+        }
+        const n = new Uint8Array(this.arrived.length + value.length);
+        n.set(this.arrived); n.set(value, this.arrived.length);
+        this.arrived = n;
+        this._browse();
+      }
+    } catch (e) {
+      // ⛔ AND HERE THERE IS NO FIN.  This branch fires on a
+      //    `RESET_STREAM`, on a `STOP_SENDING` or on the fall of the
+      //    session: facts different from that of §4.2, and the page must neither
+      //    confuse them nor keep quiet about them (§3, last line).
+      // ⚠ If we were the ones closing, the rejection of the read is expected and
+      //   not a fact of the server: it is not recorded and nobody is
+      //   accused.
+      if (!this.end && !this.dismissed && !this.closing) {
+        this.broken = true;
+        this.reg("⛔ the control channel BROKE — it is not the FIN of §4.2: " +
+                 e.name + ": " + e.message);
+      }
+      this.end = true;
+      this._wake();
+    }
+  }
+
+  _browse() {
+    while (this.arrived.length >= 6) {
+      const v = new DataView(this.arrived.buffer, this.arrived.byteOffset);
+      const type = v.getUint16(0), lung = v.getUint32(2);
+      // ⛔ §6.1: the cap is 1 MiB, and it holds for the receiver too.  A page
+      //    that trusted the declared length would use it to allocate.
+      if (lung > 1024 * 1024) {
+        this.queue.push({ fault: new Violation(PROTOCOL_ERROR,
+          `message of ${lung} bytes: beyond the 1 MiB cap (§6.1)`) });
+        this._wake();
+        return;
+      }
+      if (this.arrived.length < 6 + lung) return;
+      const body = this.arrived.slice(6, 6 + lung);
+      this.arrived = this.arrived.slice(6 + lung);
+      this.queue.push({ type, body });
+      this._wake();
+    }
+  }
+
+  _wake() { if (this.wait) { const a = this.wait; this.wait = null; a(); } }
+
+  // ⚠ `wait_ms` is "how long we stay listening", and it is NOT a cap imposed
+  //   on the server: whoever uses it as a cap declares it, and the declaration is in
+  //   `wait_for()` next to `CAP_RESPONSE` (finding R6.4).
+  async next(wait_ms = CAP_RESPONSE) {
+    while (this.queue.length === 0 && !this.end) {
+      let expired = false;
+      await new Promise((result) => {
+        this.wait = result;
+        setTimeout(() => { expired = true; this._wake(); }, wait_ms);
+      });
+      if (expired && this.queue.length === 0) return null;
+    }
+    if (this.queue.length === 0) return null;
+    const m = this.queue.shift();
+    if (m.fault) throw m.fault;
+    return m;
+  }
+
+  async send(type, body, obscure) {
+    // ⛔ §4.2: after the end of the session nothing more is sent.  And after
+    //    `REJECTED` there is no retry on the same connection (§4.4).  The two
+    //    rules are applied HERE, in a single point: scattered among the callers,
+    //    one of the two gets forgotten.
+    if (this.end || this.dismissed) {
+      this.reg("⛔ not sending: the session is over (§4.2)");
+      return false;
+    }
+    // ⛔ §4.4, the box of 10 Aug 2026: "after `REJECTED` the client has
+    //    ONE THING ONLY it can say: `FAREWELL`. … Any **other**
+    //    message, **and in particular** a second `CREDENTIALS`, is the
+    //    violation §4.4 forbids".
+    //
+    // ⚠ The guard was written as a list of one — it blocked only
+    //   `CREDENTIALS` — while "in particular" says `CREDENTIALS` is ONE
+    //   case, not THE case: an `ATTACH` or a `VIEW` sent after `REJECTED`
+    //   passed, and the server log would have counted them as bytes after
+    //   the end (finding R6.17).
+    //
+    // ⭐ And `FAREWELL` stays allowed, which is the point: a client that went
+    //    completely silent would lose point 2 of §3.1 precisely in the case in
+    //    which the server has just erred — and it is the
+    //    `rejected-then-farewell` case.
+    if (this.respinto && type !== T.FAREWELL) {
+      this.reg(`⛔ after REJECTED only FAREWELL may be sent: ` +
+               `${TYPE_NAME[type] || type} does not leave (§4.4)`);
+      return false;
+    }
+    const b = envelope(type, body);
+    // ⛔ §4.4: the password "must not appear in any log at any
+    //    level — not even in `trace`".  ⚠ And `exited` IS a log:
+    //    it ends up on screen, inside `detail`, and from there in
+    //    `b2-outcomes.jsonl` and on the terminal of whoever launches the bench.  With
+    //    `?password=segreta` that file showed `…0773656772657461…`
+    //    (finding R6.2).
+    //
+    // ⭐ The cure is that of §11.1, written **in full** for this identical
+    //    problem: the TRUE LENGTH is kept, ONLY the secret bytes are replaced
+    //    with as many filler bytes `0x2A` — not zeros, which
+    //    are a value the fields can really have — and the
+    //    masked range is declared.  This way the `desktop-non-cambia-niente`
+    //    comparison keeps comparing byte by byte, and
+    //    the password is not there.
+    const q = Array.from(b).map((x) => x.toString(16).padStart(2, "0"));
+    if (obscure) {
+      for (let i = obscure.start; i < obscure.start + obscure.how_many; i++) q[i] = "2a";
+      this.reg(`⭐ ${obscure.how_many} bytes masked in ${TYPE_NAME[type]} at ` +
+               `offset ${obscure.start}: the length is the true one, the ` +
+               `secret bytes are not (§4.4, §11.1)`);
+    }
+    this.exited.push(q.join(""));
+    await this.w.write(b);
+    return true;
+  }
+
+  /* ⛔ §3.1, in order, and there are THREE points — the third is the one that saves the
+   *    diagnoses: if the farewell does not arrive, the reason travels inside the
+   *    closing of the session. */
+  async close(reason, detail) {
+    // ⚠ From here on the reading channel may fall because WE are
+    //   closing it: it is not the channel breaking, and nobody is accused.
+    this.closing = true;
+    // ⛔ AND REASON 0 DOES NOT EXIST.  §3.1, last line: "⚠ code **0**
+    //    means "closing without a reason" and **MUST NOT** be used: every
+    //    closing has a reason from §8.2".  ⚠ The page sent it — ten
+    //    lines after declaring that same byte a violation of the
+    //    server — because the server's silence produced `Violation(0)`:
+    //    it was lenient with itself at the exact point where it was severe with
+    //    the other, that is `REVIEWER.md` §5 (finding R6.1).  Here it does not pass.
+    if (!REASON_TEXT.has(reason)) {
+      this.reg(`⛔ farewell reason 0x${reason.toString(16)} outside §8.2: ` +
+               `closing with PROTOCOL_ERROR, and this line is a defect ` +
+               `of this page, not of the server`);
+      reason = PROTOCOL_ERROR;
+    }
+    this.reg(`closing: reason ${reason.toString(16)} = ${reason_name(reason)} — ${detail}`);
+    // ⛔ §8.2: "every reason MUST be showable to the user in an
+    //    understandable sentence … and the sentence is built by the client, from the code".  The
+    //    `detail` above is the other thing: it stays in the log, and is not
+    //    shown to the user.
+    this.reg(`  and the user would be told: «${reason_sentence(reason)}»`);
+    if (!this.end) {
+      try {
+        if (await this.send(T.FAREWELL, merge([new Uint8Array([reason]), str(detail)])))
+          await this._empty();
+      } catch (e) { this.reg("the FAREWELL did not leave: " + e.message); }
+    }
+    this.dismissed = true;
+    try { this.wt.close({ closeCode: reason, reason: detail.slice(0, 100) }); }
+    catch (e) { this.reg("closing the session did not succeed: " + e.message); }
+  }
+
+  /* ⛔ AND THE TWO STEPS OF §3.1 ARE IN ORDER, not in the same flight.
+   *
+   *    §3.1 is a **numbered and ordered** list: "2. MUST send `FAREWELL`
+   *    … 3. MUST close the WebTransport session", and §8.1 says "**before**
+   *    closing".  ⚠ `await w.write(b)` resolves when the chunk is
+   *    QUEUED on the stream, not when it is on the wire: the next line tore
+   *    down the session — and with it the stream and the bytes not yet sent
+   *    (finding R6.11).
+   *
+   * ⭐ That the race exists is not a hypothesis, it is written in this file: on
+   *    10 Aug 2026 a "sent" `REJECTED` was "thrown away together with the
+   *    session closing in the same flight".  The page had
+   *    recognised the race in the server and left it in itself.
+   *
+   * ⚠ And the wait has a cap, because if the server has already gone
+   *   `close()` never resolves — and then it is SAID that it is not proved
+   *   that the farewell left, instead of taking it for granted.  §3.1 point 3 is
+   *   the second road, and it stays.
+   */
+  async _empty() {
+    let started = false;
+    try {
+      await Promise.race([
+        this.w.close().then(() => { started = true; }).catch(() => {}),
+        new Promise((r) => setTimeout(r, 1500)),
+      ]);
+    } catch (e) { /* the stream was already broken: the line below says so */ }
+    if (started) this.reg("⭐ the FAREWELL is on the wire: the control stream has closed");
+    else this.reg("⚠ it is not proved that the FAREWELL left: the stream " +
+                  "did not close within 1.5 s — the second road of §3.1 point 3 remains");
+  }
+
+  /* ⛔ When the one saying farewell is the SERVER, the session is over and the page
+   *    has nothing more to say.
+   *
+   * ⚠ Before, nobody called it: `dismissed` stayed false, `fine` too — the
+   *   server's `FAREWELL` carries no FIN — and at the end of the case the page
+   *   answered `FAREWELL(0x01 CLOSED_BY_USER)`, that is it sent **after the
+   *   end** (§4.2) and with a reason **it had not observed**: no user
+   *   had closed anything (finding R6.18).
+   *
+   * ⭐ The closing code is the one RECEIVED, and it must be said: it is not a
+   *    verdict of the page, it is the echo of the server's reason.
+   */
+  close_why_dismissed(reason) {
+    this.dismissed = true;
+    this.reg(`the session is over: the server said farewell with ` +
+             `${reason_name(reason)}.  ⛔ From here the page sends nothing ` +
+             `more (§4.2), and closes the session with the RECEIVED reason — ` +
+             `not with one of its own`);
+    try { this.wt.close({ closeCode: reason, reason: "farewell from the server" }); }
+    catch (e) { this.reg("closing the session did not succeed: " + e.message); }
+  }
+}
+
+// ── the handshake, with the rigour of §3 ───────────────────────────────────
+function body_hello(fault) {
+  const entries = [...OUR, ["bench.fault", fault]];
+  return merge([u16(VERSION), u16(entries.length),
+                 ...entries.flatMap(([n, v]) => [str(n), str(v)])]);
+}
+
+/* ⛔ `FAREWELL` and `REJECTED` can arrive at ANY moment, and they are read
+ *    the same way wherever they arrive: here, once only.
+ *
+ * ⚠ The check after `SESSION` did not read them at all — a `FAREWELL(0x00)`
+ *   ended up in "unrequested message after SESSION", that is the
+ *   `farewell-reason-zero` case passed **for a reason different from the one it
+ *   declares to measure**.
+ */
+function interpret(rcp, m) {
+  // ⛔ §6.1: the length of the body is measured against what the type foresees.
+  const exact = EXACT_BODY.get(m.type);
+  if (exact !== undefined && m.body.length !== exact) {
+    throw new Violation(PROTOCOL_ERROR,
+      `${TYPE_NAME[m.type]} with a body of ${m.body.length} bytes instead of ` +
+      `${exact} (§4.4, §6.1)`);
+  }
+  if (m.type === T.FAREWELL) {
+    const l = new Reader(m.body);
+    const rsn = l.u8();
+    const det = l.str();
+    if (l.short) {
+      throw new Violation(PROTOCOL_ERROR,
+        `truncated FAREWELL: ${m.body.length} bytes, and §8 wants a u8 plus a string`);
+    }
+    if (l.advanced() !== 0) {
+      throw new Violation(PROTOCOL_ERROR,
+        `FAREWELL with ${l.advanced()} bytes too many out of ${m.body.length} (§6.1)`);
+    }
+    // ⛔ §3.1: code 0 "must not be used", and whoever receives it does not
+    //    swallow it.
+    if (rsn === 0) {
+      throw new Violation(PROTOCOL_ERROR,
+        "FAREWELL with reason 0x00, which §3.1 forbids");
+    }
+    // ⛔ §3: "a field out of range" imposes closing, and §8.2 obliges the
+    //    client to build a SENTENCE from the code.  ⚠ A reason §8.2 does not
+    //    define was accepted as a legitimate farewell — `0x99` became
+    //    `congedato-dal-server:0x99` — and for that code there is no
+    //    sentence to show: an invented reason is not a reason
+    //    (finding R6.9).
+    if (!REASON_TEXT.has(rsn)) {
+      throw new Violation(PROTOCOL_ERROR,
+        `FAREWELL with reason 0x${rsn.toString(16).padStart(2, "0")}, which §8.2 does not define`);
+    }
+    const e = new Error(`FAREWELL ${rsn.toString(16)} = ${reason_name(rsn)} «${det}»`);
+    e.farewell = rsn;
+    throw e;
+  }
+  if (m.type === T.REJECTED) {
+    rcp.respinto = true;
+    const e = new Error(`REJECTED reason ${m.body[0]} = ${reason_name(m.body[0])}`);
+    e.respinto = m.body[0];
+    throw e;
+  }
+}
+
+async function wait_for(rcp, which) {
+  const m = await rcp.next(CAP_RESPONSE);
+  if (m === null) {
+    // ⛔ §4.2: if the control channel has closed, the session IS over.
+    //    It is not a silence of the server and it is a different fact: from here
+    //    nothing more is sent, not even a FAREWELL.
+    if (rcp.end) {
+      const e = new Error(rcp.broken
+        ? `the control channel broke before ${which}`
+        : `FIN on the control channel before ${which} (§4.2)`);
+      e.finished = true;
+      throw e;
+    }
+    // ⛔ Before saying "silence" the THIRD road of §3.1 is looked at.
+    await new Promise((r) => setTimeout(r, 600));
+    if (rcp.code_closing !== null && rcp.code_closing !== undefined &&
+        rcp.code_closing !== 0) {
+      const c = rcp.code_closing;
+      rcp.reg(`⚠ no FAREWELL on the control channel, but the session closed with ` +
+              `code ${c.toString(16)} = ${reason_name(c)} (§3.1 point 3)`);
+      if (!REASON_TEXT.has(c)) {
+        rcp.reg(`⛔ and §8.2 does not define that code: the session ` +
+                `closed with a reason that does not exist`);
+      }
+      const e = new Error(`closing of the session, code ${c.toString(16)}`);
+      e.farewell = c;
+      throw e;
+    }
+    // ⛔ AND HERE THE PAGE DOES NOT ACCUSE THE SERVER.  The cap is its own — RCP gives
+    //    none to the server (§4.6 gives them all to the client) — so what
+    //    expires is a wait of the bench, not a MUST of the server.  It closes
+    //    because a client cannot wait forever, with the §8.2 reason
+    //    that says what happened, and it writes whose cap it was.
+    rcp.reg(`⚠ ${which} did not arrive within ${CAP_RESPONSE / 1000} s.  ` +
+            `⛔ The cap is the BENCH's, not RCP's: §4.6 sets three caps and they are ` +
+            `all on the client, and no line imposes a response time on the ` +
+            `server.  This is not a violation of the server`);
+    throw new Violation(TIMED_OUT,
+      `nothing instead of ${which} within ${CAP_RESPONSE / 1000} s: the bench's cap, not §4.6's`);
+  }
+  interpret(rcp, m);
+  if (TYPE_NAME[m.type] !== which) {
+    // ⛔ An unknown type on the control channel is not ignored (§3).
+    throw new Violation(PROTOCOL_ERROR,
+      `type ${m.type.toString(16)} instead of ${which}`);
+  }
+  return m.body;
+}
+
+function read_here_i_am(body, reg) {
+  const l = new Reader(body);
+  const version = l.u16();
+  // ⛔ §9: "the client MUST check that the version of HERE_I_AM is one it can
+  //    speak, and dismiss with INCOMPATIBLE_VERSION if it is not — a
+  //    server that answers with a version higher than the one asked is
+  //    wrong, and accepting it silently is the leniency §3 forbids".
+  if (version !== VERSION) {
+    throw new Violation(INCOMPATIBLE_VERSION,
+      `HERE_I_AM declares version ${version}, the HELLO asked for ${VERSION}`);
+  }
+  const tries = l.u16();
+  // ⛔ A `Map`, not an object: `cap["__proto__"] = "abc"` stores
+  //    nothing — a silent no-op — and `__proto__` is a perfectly legal
+  //    capability name for §4.3 (finding R6.10).
+  const cap = new Map();
+  for (let i = 0; i < tries; i++) {
+    const n = l.str(), v = l.str();
+    if (l.short) {
+      throw new Violation(PROTOCOL_ERROR,
+        `HERE_I_AM truncated at capability ${i + 1} of ${tries}: ${body.length} bytes received`);
+    }
+    // ⛔ §4.3: "a **name** is made of `a-z`, `0-9`, `.` and `_`, from 1 to 64
+    //    bytes".  ⚠ Without this check `VIDEO.CODEC=hevc` was only
+    //    recorded as "unknown name", that is treated with the exception
+    //    §4.3 says not to extend to it (finding R6.8).
+    if (!/^[a-z0-9._]{1,64}$/.test(n)) {
+      throw new Violation(PROTOCOL_ERROR,
+        `capability name «${n}»: §4.3 wants 1 to 64 bytes among a-z, 0-9, «.» and «_»`);
+    }
+    // ⛔ §4.3: "a **value** is printable UTF-8 text, at most 256 bytes",
+    //    and "⛔ an **empty** value is PROTOCOL_ERROR: whoever has nothing to
+    //    say does not send the capability".
+    const byte_v = new TextEncoder().encode(v).length;
+    if (byte_v === 0) {
+      throw new Violation(PROTOCOL_ERROR,
+        `the capability «${n}» has an empty value, which §4.3 forbids`);
+    }
+    if (byte_v > 256) {
+      throw new Violation(PROTOCOL_ERROR,
+        `the value of «${n}» is ${byte_v} bytes: §4.3 allows at most 256`);
+    }
+    if ([...v].some((c) => c.codePointAt(0) < 0x20 || c.codePointAt(0) === 0x7F)) {
+      throw new Violation(PROTOCOL_ERROR,
+        `the value of «${n}» is not printable text (§4.3)`);
+    }
+    // ⛔ §4.3: "a name repeated twice is PROTOCOL_ERROR.  "The last one
+    //    wins" and "the first one wins" are two different implementations of the
+    //    same document, which is precisely what this document
+    //    exists to prevent".  ⚠ The line `cap[n] = v` had implemented
+    //    "the last one wins", that is ONE of the two readings §4.3 forbids
+    //    both of (finding R6.5).
+    if (cap.has(n)) {
+      throw new Violation(PROTOCOL_ERROR,
+        `the capability «${n}» arrives twice in HERE_I_AM, which §4.3 forbids`);
+    }
+    if (SOLO_DEL_CLIENT.has(n)) {
+      throw new Violation(PROTOCOL_ERROR,
+        `«${n}» arrives from the server: §4.3 declares it the client's, and the name is known`);
+    }
+    if (!NAMES_KNOWN.has(n)) {
+      // ⭐ Exception 1 of §3: an unknown name is ignored — AND WRITTEN DOWN.
+      reg(`⭐ unknown capability ignored: ${n}=${v} (§3, exception 1)`);
+    }
+    cap.set(n, v);
+  }
+  // ⛔ §6.1: "`length` MUST be the exact number of bytes of the body".
+  //    ⚠ With `tries = 0` and five hundred bytes of tail the loop did not run,
+  //      `l.short` stayed false and nobody compared what had been read
+  //      with what had arrived (finding R6.7).
+  if (l.advanced() !== 0) {
+    throw new Violation(PROTOCOL_ERROR,
+      `HERE_I_AM with ${l.advanced()} bytes too many out of ${body.length}: ` +
+      `${tries} capabilities declared, all read (§6.1)`);
+  }
+  // ⛔ AND HERE THE NEGOTIATION HAPPENS, which is the other half of §4.3 and lived only in the
+  //    table of reasons.  ⚠ Reason `0x09 NOTHING_IN_COMMON` was written
+  //    among the reasons and NO line of the file raised it: it was a reason
+  //    this page could not emit (finding R6.8).
+  for (const [name, our] of OUR) {
+    if (!NAMES_KNOWN.has(name)) continue;      // `client.name` is not negotiated
+    const its = cap.get(name);
+    if (its === undefined) {
+      // ⚠ §4.3: "whoever does not declare `pcm` or `8` … is dismissed with
+      //   NOTHING_IN_COMMON, not with PROTOCOL_ERROR: it did not write wrongly,
+      //   it has nothing to talk about".
+      throw new Violation(NOTHING_IN_COMMON,
+        `the server does not declare «${name}», which §4.3 imposes on both`);
+    }
+    // ⛔ "An unknown entry INSIDE a list is discarded": a `hevc,vp9` is
+    //    read as `hevc`.  ⚠ "But if after the discard the list is empty, the
+    //    farewell is NOTHING_IN_COMMON".
+    const my = our.split(",");
+    const common = its.split(",").filter((x) => my.includes(x));
+    if (common.length === 0) {
+      throw new Violation(NOTHING_IN_COMMON,
+        `«${name}»: the server offers ${its}, this page ${our}, and after the discard nothing is left`);
+    }
+    reg(`⭐ §4.3 ${name}: the server offers ${its}, in common ${common.join(",")}`);
+  }
+  // ⚠ §4.3: "`pcm` MUST be declared by both: it is the base always
+  //   available … in the same way `8` MUST appear in
+  //   `video.depth` of both".
+  for (const [name, entry] of [["audio.codec", "pcm"], ["video.depth", "8"]]) {
+    if (!cap.get(name).split(",").includes(entry)) {
+      throw new Violation(NOTHING_IN_COMMON,
+        `the server does not declare «${entry}» in «${name}», which §4.3 imposes on both`);
+    }
+  }
+  return { version, cap };
+}
+
+function read_session(body, reg) {
+  const l = new Reader(body);
+  const state = l.u8(), lar = l.u32(), height = l.u32(), desktop = l.str();
+  if (l.short) {
+    throw new Violation(PROTOCOL_ERROR,
+      `truncated SESSION: ${body.length} bytes, and §4.5 wants a u8, two u32 and a string`);
+  }
+  if (l.advanced() !== 0) {
+    throw new Violation(PROTOCOL_ERROR,
+      `SESSION with ${l.advanced()} bytes too many out of ${body.length} (§6.1)`);
+  }
+  // ⛔ §4.5: "`u8 state   1 = NEW, 2 = RESUMED`", and §3 closes on "a field
+  //    out of range".  ⚠ The `state` was read and never looked at again: a
+  //    nonexistent third state came in without anyone naming it, and it is
+  //    the exact twin of the `session-canvas-odd` case which the page instead
+  //    refuses — two fields of the same message, two different rigours
+  //    (finding R6.16).
+  if (state !== 1 && state !== 2) {
+    throw new Violation(PROTOCOL_ERROR,
+      `SESSION with state ${state}: §4.5 defines two, 1 = NEW and 2 = RESUMED`);
+  }
+  reg(`SESSION state ${state} = ${state === 1 ? "NEW" : "RESUMED"}`);
+  // ⛔ §4.5: the limits and the parity are normative, and hold on the GRANTED
+  //    canvas.  A page that adapted instead of refusing
+  //    would rescale from a size the encoder has already rounded.
+  if (lar < 320 || lar > 7680 || height < 240 || height > 4320 || lar % 2 || height % 2) {
+    throw new Violation(PROTOCOL_ERROR,
+      `granted canvas ${lar}x${height}: out of limits or odd (§4.5)`);
+  }
+  return { state, lar, height, desktop };
+}
+
+// ===========================================================================
+// THE CASES.  ⛔ Each declares its EXPECTATION before measuring, and ⛔ whoever is not
+// a violation of the server declares it with `compliant: true`.
+//
+// ⚠ The title said "THE TWELVE CASES" and the entries were thirteen; and the text
+//   the user reads said "twelve wrong things" while four of those
+//   thirteen are cases in which the server is CONFORMANT and we measure that the page
+//   does not react.  ⛔ It is not pedantry — it is finding R1.29 of `RCP.md`
+//   §0-bis: "that box is the only proof the document carries of being
+//   complete, and whoever checked it by counting found more" (R6.20).
+//   Now the count is done by `CASES.length`, and nobody can write it by
+//   hand wrong any more.
+//
+// ⚠ The count is repeated also in `01-b11-launch.sh` and in
+//   `01-b11-graft-faults.py`, which this page does not touch: there it still says
+//   "twelve".
+// ===========================================================================
+const CASES = [
+  { name: "here-i-am-version-2", expected: "farewell:0x0a",
+    that: "⛔ HERE_I_AM(version=2) to a HELLO(version=1): §9 imposes it on the CLIENT with a MUST, and accepting it silently is the leniency §3 forbids" },
+  { name: "capabilities-unknown", expected: "prosegue+registra", compliant: true,
+    that: "⭐ an UNKNOWN capability in HERE_I_AM: it is ignored and we go on (exception 1 of §3), and it is written in the log" },
+  { name: "max-size-in-here-i-am", expected: "farewell:0x0b",
+    that: "`video.max_size` in HERE_I_AM: wrong side, and the name is known" },
+  { name: "type-unknown", expected: "farewell:0x0b",
+    that: "a type that does not exist on the control channel" },
+  { name: "farewell-reason-zero", expected: "farewell:0x0b",
+    that: "a FAREWELL with reason 0x00: §3.1 forbids code zero" },
+  { name: "session-canvas-odd", expected: "farewell:0x0b",
+    that: "a SESSION with an odd canvas: the page REFUSES instead of adapting" },
+  { name: "bidi-from-server", expected: "farewell:0x0b",
+    that: "a bidirectional stream opened by the SERVER (§2.5)" },
+  { name: "fin-on-check", expected: "mute",
+    that: "⛔ a FIN on the control channel: the session IS over, and the page sends nothing more on any channel (§4.2)" },
+  { name: "rejected-then-farewell", expected: "farewell:0x0b", password: "wrong",
+    that: "REJECTED followed by FAREWELL: the second is a violation (§4.4)" },
+  { name: "rejected-not-retry", expected: "mute", password: "wrong",
+    // ⛔ AND THIS LINE IS HALF A VERDICT, and it must be said on the line itself.
+    //    What the page can observe is that it did not ASK to
+    //    send; that nothing passed on the wire is seen only by the
+    //    server log (§8.1: "it is verified on the side that receives it, never
+    //    from the log of whoever sends it").  ⚠ Before, the `ok` was computed from the
+    //    page's internal state alone, which declared green a property
+    //    it declares it cannot observe — form E7 of `REVIEWER.md`
+    //    §2 (finding R6.13).
+    witness: "the SERVER log (01-b11-launch.sh §5): §8.1 wants the side that RECEIVES",
+    that: "⛔ after REJECTED the page must NOT retry on the same connection (§4.4) — the SERVER log verifies it" },
+  { name: "session-desktop-kde", expected: "prosegue", compliant: true,
+    that: "a SESSION with desktop=kde while the hardware is not KDE: the page does NOT change behaviour (§4.5)" },
+  { name: "session-desktop-gnome", expected: "prosegue", compliant: true,
+    that: "⭐ the same case with desktop=gnome: the bytes sent by the page MUST be identical to those of the previous case" },
+  { name: "silence", expected: "prosegue", compliant: true,
+    that: "⛔ §2.2 forbids an application heartbeat: we stay silent eight seconds, and the page must neither send one nor wait for one" },
+];
+
+// ⛔ When the session does not open, the one in error is NOT the page.  The causes
+//    all look the same and must be listed, as `01-b2-probe.html` does
+//    in front of the same fault (finding R6.14).
+class EnvironmentFault extends Error {}
+const SESSION_NOT_OPENING_CAUSES = [
+  "1. UDP filtered (TCP answers all the same, and the page loads)",
+  "2. the fingerprint is not that of the certificate served, or is missing (§4.1-bis: the",
+  "   S1 measurement says the user's exception does NOT cover WebTransport on either",
+  "   Chrome or Firefox)",
+  "3. the session certificate exceeds 14 days (§4.1-bis)",
+  "4. the server is not there, or is not the one believed",
+];
+
+async function runs(test_case, reg, options) {
+  // ⛔ THE OPENING IS IN A TRY OF ITS OWN, and it is not a nicety of style.
+  //
+  //    If the session does not open, the page has violated nothing: it has
+  //    not even spoken.  ⚠ Before, every case ended in `error:…`, `faults`
+  //    was 15 and the field the bench reads was `outcome: "NOT-COMPLIANT"` —
+  //    ⛔ a line IDENTICAL to that of a page that really violated §3
+  //    thirteen times.  `01-b2-probe.html`, in front of the same input,
+  //    writes `NOT-OPEN` and lists the causes: here the distinction had been
+  //    lost (finding R6.14, `LESSONS.md` §1.9 — "a measurement that can say
+  //    "zero" must also be able to say "I failed"").
+  let wt;
+  try {
+    wt = new WebTransport(URL_SERVER, options);
+    await wt.ready;
+  } catch (e) {
+    throw new EnvironmentFault(e.name + ": " + e.message);
+  }
+  const rcp = new Rcp(wt, reg);
+  await rcp.open();
+  let done = "prosegue";
+  try {
+    await rcp.send(T.HELLO, body_hello(test_case.name));
+    const ec = await wait_for(rcp, "HERE_I_AM");
+    read_here_i_am(ec, reg);
+
+    // ⛔ The range of the secret bytes is computed here, where it is known where they are:
+    //    6 framing bytes, the `username` string, the 2 length bytes
+    //    of the `password`, and then the password.  §4.4 and §11.1.
+    const bu = str(USERNAME), bp = str(test_case.password || PASSWORD);
+    await rcp.send(T.CREDENTIALS, merge([bu, bp]),
+                    { start: 6 + bu.length + 2, how_many: bp.length - 2 });
+    await wait_for(rcp, "ADMITTED");
+
+    await rcp.send(T.ATTACH, merge([u32(1920), u32(1080), u32(1920), u32(1080), str("it")]));
+    const se = await wait_for(rcp, "SESSION");
+    const s = read_session(se, reg);
+    reg(`SESSION: canvas ${s.lar}x${s.height}, desktop=${s.desktop}`);
+
+    // ⛔ After SESSION we KEEP SILENT, and watch.  §2.2 forbids an application
+    //    heartbeat: if the page sent one, it would appear in `exited`.
+    const how_much = test_case.name === "silence" ? 8000 : 2500;
+    const m = await rcp.next(how_much);
+    if (m !== null) {
+      // ⛔ And a FAREWELL is read as a FAREWELL here too: it is the last word
+      //    of the server, not "an unrequested message".  ⚠ Without this
+      //    line the `farewell-reason-zero` case passed for the wrong reason.
+      interpret(rcp, m);
+      throw new Violation(PROTOCOL_ERROR,
+        `unrequested message after SESSION: type ${m.type.toString(16)}`);
+    }
+    // ⛔ "Mute" and "broken" are two different facts (§4.2): the FIN is a
+    //    precise fact, the fall of the stream another, and the `fin-on-check` case
+    //    exists to tell them apart.
+    if (rcp.broken) done = "channel-broken";
+    else if (rcp.end) done = "mute";
+  } catch (e) {
+    if (e instanceof Violation) {
+      await rcp.close(e.reason, e.message);
+      done = "farewell:0x" + e.reason.toString(16).padStart(2, "0");
+    } else if (e.farewell !== undefined) {
+      reg("the server said farewell: " + e.message);
+      reg(`⭐ and the sentence for the user is built by the client (§8.2): ` +
+          `«${reason_sentence(e.congedo)}»`);
+      // ⛔ From here the session is over: the page does not answer the server's
+      //    farewell with one of its own (finding R6.18).
+      rcp.close_why_dismissed(e.farewell);
+      done = "congedato-dal-server:0x" + e.farewell.toString(16).padStart(2, "0");
+    } else if (e.finished) {
+      reg("the session ended before the expected answer: " + e.message);
+      done = rcp.broken ? "channel-broken" : "mute";
+    } else if (e.respinto !== undefined) {
+      reg("REJECTED: " + e.message);
+      // ⛔ §4.4: after REJECTED there is no retry.  We wait anyway, because a
+      //    FAREWELL arriving AFTER would be a violation to detect.
+      try {
+        const m = await rcp.next(4000);
+        if (m !== null) {
+          const v = new Violation(PROTOCOL_ERROR,
+            `after REJECTED another message arrived (type ${m.type.toString(16)}): §4.4`);
+          await rcp.close(v.reason, v.message);
+          done = "farewell:0x0b";
+        } else {
+          done = "mute";
+        }
+      } catch (e2) {
+        if (e2 instanceof Violation) {
+          await rcp.close(e2.reason, e2.message);
+          done = "farewell:0x" + e2.reason.toString(16).padStart(2, "0");
+        } else { done = "mute"; }
+      }
+    } else {
+      reg("⚠ " + e.name + ": " + e.message);
+      done = "errore:" + e.name;
+    }
+  }
+  const exited = rcp.exited.join(" ");
+  // ⛔⭐ AND THE PAGE SAYS FAREWELL EVEN WHEN NOTHING HAPPENED.
+  //
+  //    §8.1: "whoever closes MUST send `FAREWELL` with a reason **before**
+  //    closing the connection", and §3.1 forbids code 0.  It holds for the
+  //    voluntary closing too: `CLOSED_BY_USER` (0x01).
+  //
+  // ⚠ Without it, the server does not know the session is over: it finds out from the
+  //   transport, when the browser deigns to close the streams.  ⛔ On 10
+  //   Aug 2026 with **Chrome** that moment did not arrive in time, and the cases
+  //   in a row received `ALREADY_ACTIVE_REMOTELY` — the slot (§8.2 reason 0x0F)
+  //   stayed with a session that no longer existed.  With Firefox not, and it is the
+  //   difference between the two engines that made the missing rule visible.
+  //
+  // ⭐ It is not a cure for Chrome: it is §8.1 applied. The page had not
+  //    noticed because nobody had asked it — and this bench exists
+  //    precisely to ask it.
+  //
+  // ⛔ BUT ONLY IF THE SESSION IS STILL ALIVE.  If the server has already
+  //    said farewell — or sent the FIN of §4.2 — answering it is sending after
+  //    the end, and the reason `CLOSED_BY_USER` would on top of that be false:
+  //    no user closed anything (finding R6.18).  `close()` does the three
+  //    points of §3.1 in order, and waits for the FAREWELL to have left before
+  //    tearing down the session (R6.11).
+  //
+  // ⚠ And `0x01` stays the reason, declaring what it is worth: §8.2 has no
+  //   code for "the bench finished the case", and whoever drives this client is
+  //   the bench.  It is the closest of the fifteen, not a measurement.
+  if (!rcp.dismissed && !rcp.end) {
+    try { await rcp.close(0x01, "end of the case: the bench closes, being this client's user"); }
+    catch (e) { reg("⚠ the end-of-case farewell did not leave: " + e.message); }
+  } else {
+    try { wt.close({ closeCode: 0x01, reason: "end of the case" }); } catch (e) {}
+  }
+  // ⛔ AND WE WAIT FOR THE SESSION TO BE REALLY CLOSED before the next case.
+  //
+  //    `close()` returns at once; the server notices one network round trip
+  //    later, and until that moment **the slot is still occupied** (§8.2
+  //    reason 0x0F).  ⚠ On 10 Aug 2026 the cases in a row stole the slot
+  //    from each other: `slot NEGATO` seven times out of nine, and the page
+  //    accused of a defect that was the bench's.
+  await Promise.race([wt.closed.catch(() => {}),
+                      new Promise((r) => setTimeout(r, 2000))]);
+  return { done, exited };
+}
+
+// ===========================================================================
+const out = document.getElementById("output");
+const lines = [];
+const write = (t) => { lines.push(t); out.textContent = lines.join("\n"); };
+
+/* ⛔ The outcome is sent, AND WE LOOK WHETHER IT ARRIVED.
+ *
+ *    `LESSONS.md` §1.9, fourth rule, quoted by `01-b2-collect.py`: "the
+ *    request IS the denominator of the outcome".  ⚠ This call had
+ *    neither `try` nor a status check:
+ *      · with the collector stopped, `fetch` was rejected, the promise died
+ *        as an *unhandled rejection*, the screen showed the complete verdict
+ *        and the file had nothing — indistinguishable, for
+ *        `01-b11-launch.sh`, from "the page got stuck halfway";
+ *      · with a 404 or a 500 `fetch` does NOT reject, and the page considered
+ *        delivered an outcome nobody had written (finding R6.15).
+ *
+ * ⭐ And if it did not arrive **it is said on screen**, as the B2 probe does:
+ *    "if the collector is not there, the bench must NOT pretend".
+ */
+async function deliver(data) {
+  try {
+    const r = await fetch("/outcome", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    if (!r.ok) {
+      write(`⛔ the outcome was NOT recorded: the collector answered ` +
+             `${r.status}.  What is seen above is not in b2-outcomes.jsonl`);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    write(`⛔ the outcome was NOT recorded (collector absent?): ${e}.  ` +
+           `What is seen above is not in b2-outcomes.jsonl`);
+    return false;
+  }
+}
+
+(async () => {
+  // ⛔ The summary is counted by the program (R6.20).
+  const wrong_count = CASES.filter((c) => !c.compliant).length;
+  document.getElementById("refresh").textContent =
+    `${CASES.length} cases in all: ${wrong_count} in which the server errs — and the page ` +
+    `must notice — and ${CASES.length - wrong_count} in which the server is conformant, ` +
+    `where we measure that the page does not react. Plus the two negative properties.`;
+
+  if (!("WebTransport" in window)) {
+    write("⛔ this engine has no WebTransport: there is nothing to measure");
+    await deliver({ bench: "B11", outcome: "WITHOUT-WEBTRANSPORT",
+                     engine: navigator.userAgent, detail: lines.join("\n") });
+    return;
+  }
+
+  write(`engine: ${navigator.userAgent}`);
+  write(`server: ${URL_SERVER}`);
+
+  // ⛔ §2.2: "and the two MUST match" — the version of the PATH and that
+  //    of the `HELLO`.  "A `HELLO(version=2)` on `/rcp/1` is INCOMPATIBLE_VERSION,
+  //    not a negotiation to resolve", and the reverse holds identically: this
+  //    page speaks RCP/1 and has nothing to say on `/rcp/2`.
+  // ⚠ It is the case B5 already found on the server side; on the
+  //   client side nobody looked at it (finding R6.19).
+  let path = null;
+  try { path = new URL(URL_SERVER, location.href).pathname.match(/^\/rcp\/(\d+)$/); }
+  catch (e) { path = null; }
+  if (!path) {
+    write(`⛔ «${URL_SERVER}» does not have the form «https://host:port/rcp/<version>» (§2.2): ` +
+           `nothing is opened`);
+    await deliver({ bench: "B11", outcome: "URL-NOT-VALID",
+                     engine: navigator.userAgent, detail: lines.join("\n") });
+    return;
+  }
+  if (Number(path[1]) !== VERSION) {
+    write(`⛔ the path says RCP/${path[1]} and this page speaks RCP/${VERSION}: ` +
+           `§2.2 wants the two to match, and a HELLO(${VERSION}) on ` +
+           `/rcp/${path[1]} is the combination it declares illegal — ` +
+           `not a negotiation to resolve.  Nothing is sent`);
+    await deliver({ bench: "B11", outcome: "VERSION-NOT-MATCHES",
+                     engine: navigator.userAgent, detail: lines.join("\n") });
+    return;
+  }
+  write(`version: RCP/${VERSION} in the path and in the HELLO, and §2.2 wants them to match`);
+
+  // ⛔ The fingerprint is validated FIRST, and outside the thirteen cases: `atob()` of a
+  //    string that is not base64 raises, and before it raised inside `runs()`
+  //    thirteen times, once per case, under the label "NOT-COMPLIANT"
+  //    (finding R6.14).
+  let options = { allowPooling: false };
+  if (FINGERPRINT) {
+    try {
+      options = { allowPooling: false, serverCertificateHashes: [{
+        algorithm: "sha-256",
+        value: Uint8Array.from(atob(FINGERPRINT), (c) => c.charCodeAt(0)) }] };
+      write(`fingerprint: published (${FINGERPRINT.slice(0, 12)}…), allowPooling: false (§4.1-bis)`);
+    } catch (e) {
+      write("⛔ the fingerprint is not valid base64: " + e);
+      await deliver({ bench: "B11", outcome: "FINGERPRINT-NOT-VALID",
+                       engine: navigator.userAgent, detail: lines.join("\n") });
+      return;
+    }
+  } else {
+    // ⚠ §4.1-bis and the S1 measurement: the user's exception does NOT cover
+    //   WebTransport on either Chrome or Firefox.  Without a fingerprint the session
+    //   will not open, and it is said FIRST instead of deducing it from thirteen
+    //   identical failures.
+    write("⚠ NO fingerprint: §4.1-bis and the S1 measurement say the user's exception " +
+           "does not cover WebTransport — on Chrome and Firefox the session " +
+           "will not open, and the outcome will be NOT-OPEN, not NOT-COMPLIANT");
+  }
+  write("");
+
+  const outcomes = [];
+  for (const test_case of CASES) {
+    const reg = [];
+    let r;
+    try {
+      r = await runs(test_case, (t) => reg.push("      " + t), options);
+    } catch (e) {
+      if (e instanceof EnvironmentFault) {
+        // ⛔ Here the page did not err: it did not get as far as speaking.
+        r = { done: "not-open", exited: "", is_open: false };
+        reg.push("      ⛔ the session did not open: " + e.message);
+        for (const c of SESSION_NOT_OPENING_CAUSES) reg.push("      " + c);
+      } else {
+        r = { done: "errore:" + e.name + ":" + e.message, exited: "" };
+      }
+    }
+    const ok = r.done === test_case.expected ||
+               (test_case.expected === "prosegue+registra" && r.done === "prosegue" &&
+                reg.some((x) => x.includes("unknown capability ignored")));
+    outcomes.push({ ...test_case, done: r.done, exited: r.exited, ok,
+                 is_open: r.is_open !== false, logbook: reg });
+    write(`${ok ? "OK " : "NO "} ${test_case.name.padEnd(26)} ${r.done}   (expected ${test_case.expected})`);
+    // ⛔ And an OK worth half a verdict declares it on the line itself (R6.13).
+    if (test_case.witness) {
+      write(`      ⚠ this is HALF a verdict: the page can only say it did not ` +
+             `ASK to send.  The other half is given by ${test_case.witness}`);
+    }
+    for (const x of reg) write(x);
+  }
+
+  // ⛔ THE COMPARISON THAT MEASURES A NEGATIVE PROPERTY: `desktop` must not
+  //    change ANYTHING, and "nothing" is proved only by putting in a column the bytes
+  //    sent out in the two rounds.
+  const kde = outcomes.find((e) => e.name === "session-desktop-kde");
+  const gnome = outcomes.find((e) => e.name === "session-desktop-gnome");
+  // ⛔ The comparison starts AFTER the `HELLO`, and it is not a detail: the `HELLO` carries
+  //    `bench.fault`, which in the two rounds is two strings of different
+  //    length — so the two `HELLO` are necessarily different, and a comparison
+  //    that included them would always say "DIFFERENT", even on a
+  //    perfect page.  ⚠ It is a bench defect seen at the first round of 10 Aug
+  //    2026: the denominator included the byte the bench itself had
+  //    changed.
+  const afterHello = (e) => e.exited.split(" ").slice(1).join(" ");
+  const equal = kde && gnome && afterHello(kde) === afterHello(gnome) &&
+                 afterHello(kde) !== "";
+  write("");
+  write(`${equal ? "OK " : "NO "} desktop-non-cambia-niente   the bytes sent in the two rounds are ${equal ? "IDENTICAL" : "DIFFERENT"}`);
+  if (!equal && kde && gnome) {
+    write("      kde  : " + kde.exited);
+    write("      gnome: " + gnome.exited);
+  }
+
+  // ⛔ And the heartbeat: after SESSION the page must have sent ZERO bytes.
+  const sil = outcomes.find((e) => e.name === "silence");
+  const beats = sil ? sil.exited.trim().split(/\s+/).length : -1;
+  const without_heartbeat = beats === 3;   // HELLO, CREDENTIALS, ATTACH and that is all
+  write(`${without_heartbeat ? "OK " : "NO "} nessun-battito-applicativo  messages sent in all: ${beats} (expected 3: HELLO, CREDENTIALS, ATTACH)`);
+
+  // ⛔⚠ AND HERE WE SAY FROM WHICH SIDE THE TWO LINES ABOVE ARE MEASURED.
+  //
+  //    `exited` is fed ONLY by `send()`, and it is written **before**
+  //    `await this.w.write(b)`: it is the log of what the page HAS
+  //    DECIDED to send — the SENDING side, that is error form **E7**
+  //    of `REVIEWER.md` §2, and §8.1 says "never from the log of whoever sends it".
+  //    A heartbeat written directly on `this.w`, or on a unidirectional
+  //    stream, would not appear here and these two lines would stay
+  //    green.  ⚠ The count `beats === 3` proves today's code, not §2.2
+  //    (finding R6.13).
+  write("      ⚠ the two lines above look at `exited`, that is the SENDING side (E7):");
+  write("        they prove the page did not ASK to send anything else.  That nothing");
+  write("        passed on the wire is seen by the SERVER log — 01-b11-launch.sh §5.");
+
+  // ⛔ And a case that did not open is not a case that said no: it is counted
+  //    apart, and it changes the NAME of the outcome (finding R6.14).
+  const not_open = outcomes.filter((e) => !e.is_open).length;
+  const faults = outcomes.filter((e) => !e.ok).length + (equal ? 0 : 1) + (without_heartbeat ? 0 : 1);
+  write("");
+  if (not_open) {
+    write(`⛔ ${not_open} cases out of ${outcomes.length} did not even OPEN the session: ` +
+           `those cases have no denominator, and this is not a measurement of the page`);
+  }
+  write(faults === 0
+    ? `⭐ B11: ${outcomes.length} cases of ${outcomes.length}, plus the two negative properties`
+    : `⛔ B11: ${faults} points do not pass`);
+
+  const outcome = not_open === outcomes.length ? "NOT-OPEN"
+              : not_open > 0 ? "NOT-OPEN-PARTIAL"
+              : faults === 0 ? "COMPLIANT" : "NOT-COMPLIANT";
+  await deliver({
+    bench: "B11",
+    outcome,
+    engine: navigator.userAgent,
+    faults,
+    not_open,
+    cases_totals: outcomes.length,
+    detail: lines.join("\n"),
+    cases: outcomes.map((e) => ({ name: e.name, expected: e.expected, done: e.done,
+                              ok: e.ok, is_open: e.is_open })),
+  });
+})();
+</script>

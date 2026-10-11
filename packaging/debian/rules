@@ -1,8 +1,8 @@
 #!/usr/bin/make -f
-# debian/rules — the REMOTIX .deb package (fasi/17-l-installatore.md §6.1-§6.4).
+# debian/rules — the REMOTIX .deb package (phases/17-the-installer.md §6.1-§6.4).
 #
-# ⚠ It is built INSIDE the target's container (src/costruzione/
-#   Contenitore.debian13 / .ubuntu2604) with `src/costruzione/costruisci-deb.sh`:
+# ⚠ It is built INSIDE the target's container (src/build-targets/
+#   Containerfile.debian13 / .ubuntu2604) with `src/build-targets/build-deb.sh`:
 #   static ngtcp2 1.25.0 and nghttp3 1.18.0 live there (LIBRARY_PATH,
 #   PKG_CONFIG_PATH), not in the Build-Depends (D2 closed: DECISIONI §10.6).
 # ⚠ packaging/debian/ becomes debian/ in the copy of the tree: in the repository
@@ -51,7 +51,7 @@ override_dh_auto_test:
 
 override_dh_auto_install:
 	install -D -m 0755 src/remotix             $(B)/usr/libexec/remotix/remotix
-	install -D -m 0644 src/pagina.html         $(B)/usr/share/remotix/page.html
+	install -D -m 0644 src/page.html         $(B)/usr/share/remotix/page.html
 	install -D -m 0644 debian/remotix.conf     $(B)/usr/share/remotix/remotix.conf
 	# LICENSE.md §8: the licences of the third-party components inside the package, with their texts
 	install -D -m 0644 THIRD-PARTY-LICENSES     $(B)/usr/share/doc/remotix/THIRD-PARTY-LICENSES
@@ -61,13 +61,13 @@ override_dh_auto_install:
 	  "$$(pkg-config --modversion libngtcp2)" "$$(pkg-config --modversion libnghttp3)" \
 	  >$(B)/usr/share/remotix/linked.json
 	install -d -m 0755                         $(B)/etc/remotix/remotix.conf.d
-	# Debian/Ubuntu PAM (common-*; fasi/17 §4.3) and who may not log in (root).
+	# Debian/Ubuntu PAM (common-*; phases/17 §4.3) and who may not log in (root).
 	# Both are conffiles: dpkg keeps them on remove and deletes them on purge.
 	install -D -m 0644 src/remotix.pam         $(B)/etc/pam.d/remotix
 	install -D -m 0644 debian/denied-users    $(B)/etc/remotix/denied-users
 	# ufw: the «REMOTIX» application profile (7447 TCP and UDP), DEFINED and not
 	#    opened (§10.12, like the firewalld service in the .rpm): `ufw allow REMOTIX`
-	#    is done by the engine, with consent (D6), if ufw is on (fasi/17 T6).
+	#    is done by the engine, with consent (D6), if ufw is on (phases/17 T6).
 	install -D -m 0644 debian/remotix.ufw      $(B)/etc/ufw/applications.d/remotix
 	# KWin's capture permission.  ⛔ BYTE FOR BYTE the .rpm one (Arch's differs only
 	# in Exec=), with Exec= on the binary in /usr/libexec/remotix:
@@ -79,11 +79,11 @@ override_dh_auto_install:
 	#    of §4.7 sit SWITCHED OFF in /usr/share/remotix/belts/ (nobody reads them
 	#    there); the ENGINE puts them into force, with consent (D4), and records them in
 	#    its log.
-	install -D -m 0644 src/remotix-niente-spegnimento.rules \
+	install -D -m 0644 src/remotix-no-poweroff.rules \
 	  $(B)/usr/share/remotix/belts/50-remotix-no-poweroff.rules
-	install -D -m 0644 src/remotix-tasti.conf \
+	install -D -m 0644 src/remotix-power-keys.conf \
 	  $(B)/usr/share/remotix/belts/remotix-tasti.conf
-	install -D -m 0644 debian/remotix-niente-sospensione.conf \
+	install -D -m 0644 debian/remotix-no-suspend.conf \
 	  $(B)/usr/share/remotix/belts/remotix-niente-sospensione.conf
 
 override_dh_installsystemd:

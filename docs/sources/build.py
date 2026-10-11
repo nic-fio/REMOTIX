@@ -31,7 +31,7 @@ import tempfile
 HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
 DATE = "October 2026"
-# REMOTIX's version: the same one goes to all packages (packaging/rilascio.sh); the default one lives in the rpm recipe.
+# REMOTIX's version: the same one goes to all packages (packaging/release.sh); the default one lives in the rpm recipe.
 VERSION = re.search(r"rx_version}%{!\?rx_version:([0-9.]+)}", (ROOT / "packaging" / "rpm" / "remotix.spec").read_text()).group(1)
 
 MANUALS = {
@@ -346,7 +346,7 @@ def sorgenti():
     installer vendor/, no headers generated from the Wayland protocols). Not the benches:
     they are almost two thousand files, and the manual describes them by folder."""
     import subprocess
-    elenco = subprocess.run(["git", "-C", str(ROOT), "ls-files", "src", "installatore", "packaging", "docs/sources"],
+    elenco = subprocess.run(["git", "-C", str(ROOT), "ls-files", "src", "installer", "packaging", "docs/sources"],
                             capture_output=True, text=True, check=True).stdout.split()
     tenuti = [f for f in elenco if "/vendor/" not in f and not f.endswith("-protocol.h")
               and not f.endswith((".wasm", ".png", ".svg"))]
@@ -400,12 +400,12 @@ def conta(estensione):
 
 # ── Cover ──────────────────────────────────────────────────────────────
 def logo():
-    """REMOTIX's logo (grafica/logo/remotix-logo.png, which is not touched), embedded in the page:
+    """REMOTIX's logo (design/logo/remotix-logo.png, which is not touched), embedded in the page:
     without the white margins, 700 px wide and in 256 colours, so it stays sharp and the file stays light."""
     import base64
     import io
     from PIL import Image, ImageChops
-    im = Image.open(ROOT / "grafica" / "logo" / "remotix-logo.png").convert("RGB")
+    im = Image.open(ROOT / "design" / "logo" / "remotix-logo.png").convert("RGB")
     fondo = Image.new("RGB", im.size, im.getpixel((0, 0)))
     im = im.crop(ImageChops.difference(im, fondo).point(lambda v: 255 if v > 12 else 0).getbbox())
     largo = 700
@@ -548,7 +548,7 @@ def italian_sentences(pagina):
     for svg in re.findall(r"<svg.*?</svg>", t, flags=re.S):
         for x in re.findall(r"<text[^>]*>(.*?)</text>", svg, flags=re.S):
             x = html.unescape(x)
-            # Options, paths and code names (--encoding-test, figlio.c, REMOTIX_AREA) are real names, not Italian.
+            # Options, paths and code names (--encoding-test, child.c, REMOTIX_AREA) are real names, not Italian.
             parole = re.sub(r"(?<!\w)(--?[\w-]+|[\w./-]*[_/.][\w./-]*)", " ", x)
             if ITALIAN_CHART_WORDS.search(parole):
                 frasi.append("diagram: " + x)
@@ -583,11 +583,11 @@ def controlla(kinds=tuple(MANUALS)):
     codici = [html.unescape(re.sub(r"<[^>]+>", "", x)) for x in re.findall(r"<code>(.*?)</code>", pagina, re.S)]
 
     # C functions cited as «name()»: they must exist in the product sources (src/), or in the benches' C.
-    c_text = code_text("src", "banchi/rcp")
+    c_text = code_text("src", "benches/rcp")
     words_c = set(re.findall(r"\b\w+\b", c_text))
-    go_content = code_text("installatore")
+    go_content = code_text("installer")
     words_go = set(re.findall(r"\b\w+\b", go_content))
-    js_text = (ROOT / "src" / "pagina.html").read_text(errors="replace")
+    js_text = (ROOT / "src" / "page.html").read_text(errors="replace")
     words_js = set(re.findall(r"\b\w+\b", js_text))
     for x in codici:
         for nome in re.findall(r"^([A-Za-z_][\w.]*)\(\)$", x.strip()):
@@ -610,7 +610,7 @@ def controlla(kinds=tuple(MANUALS)):
                 errori.append(f"cited file that does not exist: {f}")
 
     # REMOTIX_* environment variables: all those the product reads are in the manual, and no more.
-    letto = code_text("src", "installatore", "packaging")
+    letto = code_text("src", "installer", "packaging")
     in_code = {v for v in re.findall(r"getenv\(\s*\"(REMOTIX_[A-Z0-9_]+)\"", letto)}
     in_code |= {v for v in re.findall(r"Getenv\(\s*\"(REMOTIX_[A-Z0-9_]+)\"", letto)}
     in_manual = set(re.findall(r"\bREMOTIX_[A-Z0-9_]+\b", pagina))
@@ -618,7 +618,7 @@ def controlla(kinds=tuple(MANUALS)):
     for v in sorted(in_code - in_manual) if "tecnico" in kinds else ():
         errori.append(f"undocumented environment variable: {v}")
     # The benches' ones may be cited (they are not mandatory): they exist, but the product does not read them.
-    tutte = set(re.findall(r"\bREMOTIX_[A-Z0-9_]+\b", letto + code_text("banchi")))
+    tutte = set(re.findall(r"\bREMOTIX_[A-Z0-9_]+\b", letto + code_text("benches")))
     for v in sorted(in_manual - tutte):
         errori.append(f"documented but non-existent environment variable: {v}")
 

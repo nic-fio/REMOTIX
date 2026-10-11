@@ -1,7 +1,7 @@
 #version 450
 /*
  * vulkanvideo_rgb_nv12.comp — RGB → NV12 / P010, BT.709 limited range, on the
- * card.  It is `colori709.c` rewritten as a compute shader: the SAME 15-bit
+ * card.  It is `colors709.c` rewritten as a compute shader: the SAME 15-bit
  * fixed-point coefficients, the same chroma filter (sum of the horizontal
  * pairs, 1-3-3-1 tent over four rows), the same roundings ⇒ the same bytes,
  * bit for bit (`[M]` in bench 19).
@@ -17,7 +17,7 @@
  * R8/R8G8 (NV12) and R16/R16G16 (P010, ten bits at the TOP).
  *
  * Compiled with `glslc -O -mfmt=c` into `vulkanvideo_rgb_nv12_spv.h`
- * (`banchi/19-vulkan/19-shader.sh`); the generated header is kept in the
+ * (`benches/19-vulkan/19-shader.sh`); the generated header is kept in the
  * repository, so the product does not need the shader compiler.
  */
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
@@ -34,7 +34,7 @@ layout(push_constant) uniform Parameters {
 	uint prof10;      /* 0 = NV12, 1 = P010 */
 } p;
 
-/* The coefficients of `colori709.c`, SCALE 15: luma sums to 28142 = 219/255 ·
+/* The coefficients of `colors709.c`, SCALE 15: luma sums to 28142 = 219/255 ·
  * 32768 (white → 235), the two chroma triples sum to 0 (grey → 128). */
 const ivec3 CY = ivec3(5983, 20127, 2032);
 const ivec3 CU = ivec3(-3298, -11094, 14392);
