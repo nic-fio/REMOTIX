@@ -93,9 +93,11 @@ import sys
 #    order in both, one word per position.  Only the words this file reads from a run.
 _OLD_WORDS = (
     "istante",
+    "nome",
 )  # end of the old words
 _WORDS_NOW = (
     "instant",
+    "name",
 )
 OLD_SPELLING = {a: b for a, b in zip(_OLD_WORDS, _WORDS_NOW) if a != b}
 
