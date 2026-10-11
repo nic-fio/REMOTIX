@@ -990,6 +990,20 @@ int kwin_disposizione(const char *nome, GError **sbaglio)
  *     KWin's window was first configured 3822x2036 on a 3824x2064 output —
  *     the title bar's pixels taken away before the rule made it full screen —
  *     and a capture mounted in that instant asked for the wrong size.
+ *   · ⛔ NO BINDINGS AT ALL, keys or mouse (DECISIONI §10.43): an `rc.xml`
+ *     without `<keybind>` makes labwc load its DEFAULT ones, which start
+ *     programs (W-Return a terminal, the volume keys `amixer`), and any
+ *     program of the user could press them through the virtual-keyboard
+ *     protocol.  One binding each with the single action `None`: labwc decides
+ *     «defaults or not» on the bindings it has READ (one), then removes every
+ *     binding whose action list is empty — `[M]` 11 Oct 2026, labwc 0.8.3, 0.8.4
+ *     and 0.9.8 (`-d`): no «load default key/mouse bindings», «Cleared 1
+ *     keybinds», «Cleared 1 mousebinds», and W-Return sent through the
+ *     virtual keyboard starts nothing (with the old file it started the
+ *     terminal).  Same order in every labwc 0.8.0-0.9.8 (`rcxml.c`,
+ *     `post_processing()`: the defaults test, then `deduplicate_*()`).
+ *     ⛔ The key must be a VALID keysym: an unknown one creates no binding,
+ *     and the defaults come back.
  */
 static const char OSPITE_RC[] =
     "<?xml version=\"1.0\"?>\n"
@@ -1002,6 +1016,9 @@ static const char OSPITE_RC[] =
     "      <action name=\"ToggleFullscreen\"/>\n"
     "    </windowRule>\n"
     "  </windowRules>\n"
+    "  <keyboard><keybind key=\"W-Return\"><action name=\"None\"/></keybind></keyboard>\n"
+    "  <mouse><context name=\"Root\"><mousebind button=\"Left\" action=\"Press\">"
+    "<action name=\"None\"/></mousebind></context></mouse>\n"
     "</labwc_config>\n";
 
 static char *ospite_cartella(void)
@@ -1286,8 +1303,9 @@ int kwin_annidato_vive(int argc, char **argv)
 		g_unsetenv("DISPLAY");
 		/* ⛔ Never: it would publish the HOST's display to the bus and to
 		 *    systemd, and the session's programs would open on a screen
-		 *    nobody sees. */
-		g_unsetenv("LABWC_UPDATE_ACTIVATION_ENV");
+		 *    nobody sees.  Said OFF, not just unset (§10.43): unset leaves
+		 *    it to labwc's own rule (today: only with a DRM backend). */
+		g_setenv("LABWC_UPDATE_ACTIVATION_ENV", "0", TRUE);
 		g_setenv("WLR_BACKENDS", "headless", TRUE);
 		g_setenv("WLR_LIBINPUT_NO_DEVICES", "1", TRUE);
 		if (strcmp(nodo, "pixman") == 0)

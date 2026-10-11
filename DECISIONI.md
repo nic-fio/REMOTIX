@@ -6857,14 +6857,43 @@ measured the same morning and then left for `MASTERPLAN.md` M7 (local branch `m7
   and wayland-scanner, downloads nothing with `nodownload`, no binary blobs. **It starts programs** (`spawn.c`, `sh
   -c`) only from: `autostart`/`shutdown` in its config folder (with `-C`, only ours: there are none); the
   activation-environment update (`dbus-update-activation-environment`, `systemctl --user import-environment`) —
-  only with a DRM backend or `LABWC_UPDATE_ACTIVATION_ENV=1`, and `kwin.c` unsets it and runs it headless; menus and
-  `Execute` bindings. ⚠ **One finding**: an `rc.xml` without bindings makes labwc load its **default** bindings,
-  which start programs (Super+Return a terminal, the volume keys `amixer`, the root menu a terminal). On this labwc
+  only with a DRM backend or `LABWC_UPDATE_ACTIVATION_ENV=1`, and `kwin.c` says it `0` and runs it headless; menus and
+  `Execute` bindings. ✅ **One finding, FIXED on 11 Oct 2026** (user's approval: «procedi»): an `rc.xml` without
+  bindings made labwc load its **default** bindings, which start programs (Super+Return a terminal — `alacritty` in
+  0.8.x, `lab-sensible-terminal` in 0.9.x —, the volume keys `amixer`, the brightness keys `brightnessctl`; the
+  default root menu of 0.9.x has a «Terminal» entry, reached only through the default mouse binding). On this labwc
   nobody presses keys (no input device), but **any program of the same user** on its socket could, through the
-  virtual-keyboard protocol. It is no new reach — that program is already the same user — and the socket is in a 0700
-  folder. ⇒ **Proposal for the user, not applied** (it would change the tested build on all seven): one key and one
-  mouse binding with a harmless action in `kwin.c`'s `rc.xml` (`Focus`; ⛔ not `None`, which labwc *clears*: `[M]`
-  «Cleared 1 keybinds»), and `LABWC_UPDATE_ACTIVATION_ENV=0` said instead of unset.
+  virtual-keyboard protocol (no new reach: that program is already the same user, and the socket is in a 0700
+  folder).
+  - **The cure, on all seven distributions** (it is `kwin.c`'s `rc.xml`, passed with `-C`; so the six others'
+    `kwin.o` is no longer that of `4c96a4c`, by decision): **one key binding and one mouse binding, each with the
+    single action `None`**, and `LABWC_UPDATE_ACTIVATION_ENV=0` said instead of unset. ⇒ labwc keeps **zero** bindings.
+    Why it works: labwc decides «load the defaults?» on the bindings it has *read* (one each: no), and only
+    afterwards removes every binding whose action list is empty (`None` adds no action) — `rcxml.c`,
+    `post_processing()`: the defaults test, then `deduplicate_key_bindings()`/`deduplicate_mouse_bindings()`; the
+    same order in **every tag 0.8.0-0.9.8** (checked one by one). ⚠ The earlier reading («not `None`, labwc clears
+    it») saw the clearing but not its order. ⛔ The key must be a valid keysym: with an unknown one (`W-NonEsiste`)
+    labwc creates no binding and the defaults come back (`[M]`, «Invalid keybind», «load default key bindings»).
+  - `[M]` **The proof** (headless labwc as `kwin.c` runs it, `-d`, then W-Return and XF86AudioRaiseVolume sent through
+    the virtual keyboard with `wtype`, and fake `alacritty`/`lab-sensible-terminal`/`amixer`/… first in PATH that
+    write down that they ran), old file as control on each version:
+    | labwc | old `rc.xml` | new `rc.xml` |
+    |---|---|---|
+    | 0.8.3 (Debian 13) | «load default key bindings», «load default mouse bindings» (38 mousebinds), 2 Execute: `alacritty`, `amixer sset Master 5%+` ran | no defaults, «Cleared 1 keybinds», «Cleared 1 mousebinds», **nothing ran** |
+    | 0.9.8 (build of branch M7) | defaults (32 mousebinds), `lab-sensible-terminal`, `amixer` ran | the same as 0.8.3: **nothing ran** |
+    | **0.8.4 ours, Alma 10** (fresh container, the rpm rebuilt with the cure) | defaults (38 mousebinds), `alacritty`, `amixer` ran | the `rc.xml` **written by `remotix --kwin-annidato` itself**, loaded with `-d`: «Cleared 1 keybinds/mousebinds», no defaults, **nothing ran** |
+  - `[M]` **Alma 10, same day**: `remotix --kwin-annidato 1280 800 pixman` starts `/usr/lib/remotix/labwc` (0.8.4) in
+    **23 ms** at 1280×800, its environment carries `LABWC_UPDATE_ACTIVATION_ENV=0`; `wlr-randr` sets 1920×1080 and
+    reads it back; W-Return and Vol+ sent to that very labwc start nothing.
+  - `[M]` **KDE (rete11-kde, Debian 13, KWin nested in labwc 0.8.3)**, the binary of this tree on a server of its own
+    (port 8743, its own ban-file, socket and log; abandonment clock off so as not to touch the desktop of the
+    user's live server on 8512, which kept running), Chrome: **F-016/F-017 PASS** (and P-A: click and keys reach
+    the desktop after the reattach), **F-018 PASS** (2560×1440 and back to 4K), **F-018b/F-018c PASS**, each with its
+    fault seen; **three reattaches in a row** on one session at 1280×900, 3840×2160, 1920×1080: canvas = view, screen
+    inside = canvas, text read every time, panel at the bottom edge (checked on the photos; the script's automatic
+    panel-colour test failed because the panel is translucent and its colour follows the wallpaper behind — a
+    flaw of that ad-hoc script, not of the session). The tenants' labwc had the new `rc.xml` (two `None`) and
+    `LABWC_UPDATE_ACTIVATION_ENV=0`.
 - **It never listens on the network and it is invisible**: headless, no screen, no input device, its socket in a
   private folder; the user never sees it.
 - ⛔ **The rule, from now on**:
