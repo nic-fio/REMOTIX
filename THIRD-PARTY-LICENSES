@@ -5,7 +5,7 @@ third-party components used by REMOTIX keep their own licences: this file carrie
 those licences, with their full texts, for every third-party component that is
 INCORPORATED into what REMOTIX distributes:
 
-  * the remotix package (/usr/libexec/remotix/remotix and /usr/share/remotix/pagina.html),
+  * the remotix package (/usr/libexec/remotix/remotix and /usr/share/remotix/page.html),
     and, in the RHEL / Alma 10 package only, the separate program /usr/lib/remotix/labwc
     (labwc: ITS OWN licence, GPL-2.0, applies to it, not REMOTIX's - see its entry);
   * the remotix-install package and the installation engine inside the .run file.
@@ -120,7 +120,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ==============================================================================
 == libopus 1.5.2
-   Used for:  audio decoding in the browser: compiled to WebAssembly and embedded in /usr/share/remotix/pagina.html
+   Used for:  audio decoding in the browser: compiled to WebAssembly and embedded in /usr/share/remotix/page.html
    Licence:   BSD-3-Clause
    Text from: COPYING of opus-1.5.2.tar.gz (https://downloads.xiph.org/releases/opus/, sha256 65c1d2f7...)
 ------------------------------------------------------------------------------
