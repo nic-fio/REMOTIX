@@ -69,8 +69,9 @@ Source0:        %{name}-%{version}.tar.gz
 # ⭐ DECISIONI §10.43: the upstream sources of OUR labwc, exactly as released (verified by
 #   packaging/labwc/scarica.sh, pinned in packaging/labwc/VERSIONI, checked again in %%build):
 #   the source rpm carries them, with the recipe (packaging/labwc/ inside Source0).
-Source1:        labwc-%{labwc_ver}.tar.gz
-Source2:        wlroots-%{wlroots_ver}.tar.gz
+#   (the URLs are VERSIONI's; the files come from the local SOURCES, never downloaded by rpmbuild)
+Source1:        https://github.com/labwc/labwc/archive/refs/tags/%{labwc_ver}.tar.gz#/labwc-%{labwc_ver}.tar.gz
+Source2:        https://gitlab.freedesktop.org/-/project/12103/uploads/d988b4ea6ff89afc14fb36de8e5366bc/wlroots-%{wlroots_ver}.tar.gz
 
 ExclusiveArch:  x86_64
 
@@ -279,7 +280,7 @@ cd ..
 test "$(awk '$1 == "labwc" { print $2 }' packaging/labwc/VERSIONI)" = %{labwc_ver} || { echo "⛔ VERSIONI: labwc is not %{labwc_ver}"; exit 1; }
 test "$(awk '$1 == "wlroots" { print $2 }' packaging/labwc/VERSIONI)" = %{wlroots_ver} || { echo "⛔ VERSIONI: wlroots is not %{wlroots_ver}"; exit 1; }
 CFLAGS="%{optflags}" LDFLAGS="%{?build_ldflags}" \
-    sh packaging/labwc/costruisci-labwc.sh %{_sourcedir} labwc-lavoro labwc-uscita/labwc
+    sh packaging/labwc/costruisci-labwc.sh "$(dirname %{SOURCE1})" labwc-lavoro labwc-uscita/labwc
 
 # The SELinux module, with the policy interfaces of THIS distribution.
 # ⚠ `--define "rx_selinux_permissivo 1"` (costruisci-rpm.sh: RX_SELINUX_PERMISSIVO=1)
@@ -293,8 +294,6 @@ cd ../../..
 
 %install
 install -D -m 0755 src/remotix %{buildroot}%{_libexecdir}/remotix/remotix
-%dir %{_prefix}/lib/remotix
-%{_prefix}/lib/remotix/labwc
 # ⛔ our labwc at the path kwin.c execs (REMOTIX_LABWC), not on PATH (§10.43)
 install -D -m 0755 labwc-uscita/labwc %{buildroot}%{_prefix}/lib/remotix/labwc
 install -D -m 0644 src/pagina.html %{buildroot}%{_datadir}/remotix/pagina.html
@@ -399,6 +398,8 @@ fi
 %license THIRD-PARTY-LICENSES
 %dir %{_libexecdir}/remotix
 %{_libexecdir}/remotix/remotix
+%dir %{_prefix}/lib/remotix
+%{_prefix}/lib/remotix/labwc
 %dir %{_datadir}/remotix
 %{_datadir}/remotix/pagina.html
 %{_datadir}/remotix/remotix.conf

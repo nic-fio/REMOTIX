@@ -62,7 +62,7 @@ build_one()
 	tar -C "$ALBERO" --transform "s,^,remotix-$VER/," \
 		--exclude='*.o' --exclude='src/remotix' --exclude='*-client-protocol.h' --exclude='*-protocol.c' \
 		-czf "$lav/SOURCES/remotix-$VER.tar.gz" src banchi/rcp packaging/rpm packaging/labwc THIRD-PARTY-LICENSES LICENSE.md
-	cp "$SORGENTI_LABWC"/*.tar.gz "$lav/SOURCES/"
+	install -m 0644 "$SORGENTI_LABWC"/*.tar.gz "$lav/SOURCES/"
 	cp "$QUI/remotix.spec" "$lav/SPECS/"
 
 	echo "== $b: rpmbuild (log in $u/rpmbuild.log)"

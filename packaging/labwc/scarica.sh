@@ -24,6 +24,7 @@ while read -r nome ver file sha url; do
 	if [ ! -s "$DIR/$file" ]; then
 		echo "   fetching $file"
 		curl -fsSL --proto '=https' -o "$DIR/$file.parziale" "$url"
+		chmod 0644 "$DIR/$file.parziale"
 		mv "$DIR/$file.parziale" "$DIR/$file"
 	fi
 	echo "$sha  $DIR/$file" | sha256sum -c --quiet - ||

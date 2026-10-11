@@ -53,9 +53,11 @@ tar -C "$L/subprojects/wlroots" --strip-components=1 -xzf "$SRC/$WLR_TGZ"
 # ⭐ --buildtype=plain: the compiler flags are the distribution's packaging flags, which
 #    dpkg-buildpackage, rpm (%set_build_flags) and makepkg put in CFLAGS/LDFLAGS (hardening,
 #    -g for the debug packages, -ffile-prefix-map for the reproducible .deb); -O2 when alone.
+#    b_pie: a position-independent executable everywhere (openSUSE's flags do not ask for it,
+#    rpmlint does: position-independent-executable-suggested).
 export CFLAGS="${CFLAGS:--O2 -g}"
 meson setup "$LAV/b" "$L" \
-	--buildtype=plain --wrap-mode=nodownload --force-fallback-for="wlroots-${WLR_VER%.*}" \
+	--buildtype=plain -Db_pie=true --wrap-mode=nodownload --force-fallback-for="wlroots-${WLR_VER%.*}" \
 	-Dxwayland=disabled -Dicon=disabled -Dsvg=disabled -Dnls=disabled -Dman-pages=disabled \
 	-Dwlroots:default_library=static -Dwlroots:examples=false \
 	-Dwlroots:backends=drm,libinput -Dwlroots:session=enabled -Dwlroots:xwayland=disabled \
