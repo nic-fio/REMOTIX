@@ -357,6 +357,18 @@ class DiffMap(Base):
         self.assertEqual(f(6), 8)
 
 
+class TwoNewsOneFile(unittest.TestCase):
+    """One old with two news in one file, each on its own line: check() must judge each line
+    with the rows placed on it, not with whichever row comes first for the whole file."""
+
+    def test_per_line(self):
+        r1 = fase_b.Row("gira", "run", "shell-word", [("f", 1)], "", "t", "t")
+        r2 = fase_b.Row("gira", "runs", "shell-word", [("f", 2)], "", "t", "t")
+        self.assertTrue(fase_b.line_ok("x gira", "x run", [r1]))
+        self.assertTrue(fase_b.line_ok("x gira", "x runs", [r2]))
+        self.assertFalse(fase_b.line_ok("x gira", "x runs", [r1]))
+
+
 if __name__ == "__main__":
     os.environ.setdefault("TMPDIR", "/media/REMOTIX/src/full-english-uscite/tmp")
     tempfile.tempdir = os.environ["TMPDIR"] if os.path.isdir(os.environ["TMPDIR"]) else None

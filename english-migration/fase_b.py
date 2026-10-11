@@ -546,9 +546,20 @@ def check(root, table, strict):
     rows = read_merged(table)
     live = [r for r in rows if not r.keep]
     by_file = collections.defaultdict(list)
+    by_line = collections.defaultdict(list)     # (file, line or None) → rows placed there
     for r in live:
         for f in {f for f, _ in r.places}:
             by_file[f].append(r)
+        for f, l in set(r.places):
+            by_line[(f, l)].append(r)
+
+    def near(f, n, w=5):
+        # the rows placed on this line (± w, as apply allows), and the file-wide ones: one old
+        # may have two news in one file, each on its own lines
+        rs = list(by_line.get((f, None), []))
+        for k in range(n - w, n + w + 1):
+            rs += by_line.get((f, k), [])
+        return list(dict.fromkeys(rs))
     bad = 0
     changed = [c for c in subprocess.check_output(["git", "-C", root, "diff", "--name-only", "-z"]).decode().split("\0") if c]
     for f in changed:
@@ -571,7 +582,7 @@ def check(root, table, strict):
             bad += 1
             continue
         for i, (x, y) in enumerate(zip(a, b)):
-            if x != y and not line_ok(x, y, by_file.get(f, [])):
+            if x != y and not line_ok(x, y, near(f, i + 1)) and not line_ok(x, y, by_file.get(f, [])):
                 print("⛔ %s:%d: more than the table's names changed\n     before: %s\n     after:  %s" %
                       (f, i + 1, x.strip()[:160], y.strip()[:160]))
                 bad += 1
