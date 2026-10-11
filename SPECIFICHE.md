@@ -797,7 +797,10 @@ reattach** the canvas takes the window's size. KWin ≤ 6.7 cannot change the si
 born **nested** in a labwc without a screen, and the reattach changes the size of labwc's output: KWin's output
 follows it, the programs stay (`src/kwin.h`). One road for every KWin version.
 
-⚠ **The fallback, declared**: where labwc is not installed (RHEL / Alma 10: not in EPEL) KWin starts with
+⭐ On RHEL / Alma 10, which has no labwc (not in EPEL), the package carries **its own** labwc,
+`/usr/lib/remotix/labwc` (`DECISIONI.md` §10.43): the same rule holds there.
+
+⚠ **The fallback, declared**: where the host labwc is missing (a broken install) KWin starts with
 `--virtual` as before; at a reattach of another size the old canvas is kept and the client rescales, centred with
 bands (§6.2) — the same code as the point «during the session». **It is declared in the log** and in the user's
 journal.

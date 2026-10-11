@@ -1294,7 +1294,11 @@ int kwin_annidato_vive(int argc, char **argv)
 			g_setenv("WLR_RENDERER", "pixman", TRUE);
 		else if (strcmp(nodo, "-") != 0)
 			g_setenv("WLR_RENDER_DRM_DEVICE", nodo, TRUE);
+#ifdef REMOTIX_LABWC
 		execl(labwc_c_e, "labwc", "-C", config, (char *)NULL);
+#else
+		execlp("labwc", "labwc", "-C", config, (char *)NULL);
+#endif
 		g_printerr("remotix --kwin-annidato: labwc does not start: %s\n", strerror(errno));
 		_exit(127);
 	}

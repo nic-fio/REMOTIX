@@ -148,6 +148,28 @@ REMOTIX, it goes only to the print dialog. Then: which virtual printer (CUPS wit
 the print dialog in the page, the bench). ⚠ The price of use: every print goes through the browser's dialog and
 asks for a click (browsers do not print silently).
 
+## M7 · Our own labwc as KWin's host on every distribution, not only on Alma
+
+**What it is.** KWin is nested in a screenless labwc so that KDE resizes at reattach (`DECISIONI.md` §10.40). Today
+the six distributions that have labwc use **theirs**, and only RHEL / Alma 10 carries **ours**, 0.8.4 against EPEL's
+wlroots (§10.43). M7 is shipping our labwc everywhere — a pinned upstream release with wlroots linked statically,
+built in each package — so that KWin's host is one known program on all seven.
+
+**Where it comes from.** 11 Oct 2026: built and measured the same morning (labwc 0.9.8 + wlroots 0.19.3, the seven
+packages, the source review); the user chose to ship as tested (the distributions' labwc) and to put this here.
+The work is on the local branch `m7-labwc-ovunque` (`b4bb86d`, not merged): `packaging/labwc/`, the build in the
+three families, the licences.
+
+**What it costs if it is NEVER done.** KWin's host is whatever labwc each distribution ships (0.8.1 on Leap 16, 0.8.3
+on Debian 13, newer on the rolling ones): every new labwc version is a new host to test, and a labwc change can
+break the KDE reattach without REMOTIX changing.
+
+**What is needed first.** The rule of §10.43 extended to all (diff review at every update, extraordinary release on a
+serious advisory); the suite on KDE on all the distributions with our labwc; the cost (fps, CPU) against the
+distribution's labwc at 2K/3K.
+
+**How much it weighs.** Small: the branch exists; what is left is proving it.
+
 ---
 
 # ⚠ The things someone might want to put here, and do NOT belong here
