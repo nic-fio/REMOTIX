@@ -3,7 +3,7 @@
 """
 15-g8-comune — the helpers of group G8 («the users, the password, the ban»)
 
-    python3 15-g8-comune.py accendi|spegni|sblocca|stato <desktop>   (called by 15-g8-server.sh)
+    python3 15-g8-comune.py start|stop|unblock|status <desktop>   (called by 15-g8-server.sh)
 
 What is here (imported by 15-f025, 15-f026, 15-f027, 15-n027 with
 `suite._carica`, not copied):
@@ -507,22 +507,22 @@ def try_login(s, user, password, cap=30, reload=True):
 #  THE COMMAND LINE (for 15-g8-server.sh)
 # ═══════════════════════════════════════════════════════════════════════════
 def main():
-    if len(sys.argv) < 3 or sys.argv[1] not in ("accendi", "spegni", "sblocca", "state") \
+    if len(sys.argv) < 3 or sys.argv[1] not in ("start", "stop", "unblock", "status") \
             or sys.argv[2] not in MY_PORTS:
         print(__doc__)
         return 2
     what, d = sys.argv[1], sys.argv[2]
     m = MyServer(d)
-    if what == "accendi":
+    if what == "start":
         ok, t = m.turn_on()
         print(("⭐ on %s at %d: %s" if ok else "⛔ %s %d NOT on: %s")
               % (d, m.port, t))
         return 0 if ok else 1
-    if what == "spegni":
+    if what == "stop":
         ok, t = m.turn_off()
         print("stopped %s (%s)" % (d, t.splitlines()[-1] if t else "?"))
         return 0
-    if what == "sblocca":
+    if what == "unblock":
         print(m.unblock(sys.argv[3] if len(sys.argv) > 3 else ADDRESS))
         return 0
     print("unit: %s · PING: %s · ban: «%s» · ban of the 85xx: «%s»"

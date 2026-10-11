@@ -1,7 +1,7 @@
 #!/bin/bash
 # 15-g8-server.sh — the SECOND product server of group G8, inside a box.
 #
-#   bash 15-g8-server.sh turn_on|turn_off|unblock|state <gnome|kde|xfce|lxqt>
+#   bash 15-g8-server.sh start|stop|unblock|status <gnome|kde|xfce|lxqt>
 #
 # Same binary /opt/remotix/remotix, unit `rete15-g8`, port 8621 gnome ·
 # 8622 kde · 8623 xfce · 8624 lxqt, and ITS OWN ban-file, command socket, survey and
@@ -11,7 +11,7 @@
 #    failed attempts ban 192.168.0.2 for 12 hours, and on the box's server
 #    (8511-8514) they would stop the whole suite.  The ban lives in the memory
 #    of THIS process and in ITS file (/var/lib/rete15-g8/ban): the 85xx does not
-#    see it — `state` shows the two ban files side by side.
+#    see it — `status` shows the two ban files side by side.
 # ⛔ `unblock` talks to the command socket (src/comando.c: «UNBLOCK <address>»).
 # ⚠ Stopping the unit closes the sessions born in it (KillMode=mixed):
 #    they are only our tenants c15027u*.
