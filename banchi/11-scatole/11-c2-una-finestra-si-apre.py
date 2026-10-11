@@ -1488,7 +1488,7 @@ def one_round(chi, mode, a, referee, reader):
         ⇒ Swapping 2 and 4 would mean opening a window on a session that
           does not have a screen yet, ⛔ and blaming the application.
     """
-    outcome = {"who": chi, "mode": mode or "healthy", "state": "non-lo-so",
+    outcome = {"who": chi, "modo": mode or "healthy", "state": "non-lo-so",
              "why": "", "frazione_prima": None, "frazione_dopo": None,
              # ⚠ TWO counts, and not one: the one at the opening of the window and
              #   the one at the end.  ⛔ The frame that is judged is the last one,
