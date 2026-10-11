@@ -1,0 +1,29 @@
+# Containerfile.debian13 — phase 17: the "customer" box of Debian 13 with the desktop DESKTOP (gnome, kde,
+# xfce, lxqt), for the round of §7.3 ON THE server's REAL GPU (phases/17 §7.5). Generalises
+# Contenitore.debian13-kde (1 Oct 2026): one recipe per distribution, the desktop as argument.
+#
+# Like the "client" VM (17-vm.sh dress): the desktop with the distribution's official package
+# group (task-<desktop>-desktop), and NOTHING of REMOTIX: that is the job of the installer
+# and of the administrator (benches/17-distro/17-administrator.sh). In addition, because it is a box:
+#   · systemd as first process, sshd on a port of ITS OWN (--network=host: the ports are the host's);
+#   · boot into multi-user: the display manager stays off, the box has no monitor;
+#   · the GPU group aligned to that of the host's node (t10-gruppi; on the real machine
+#     udev does it).
+FROM docker.io/library/debian:13
+ARG DESKTOP
+ARG SSH_PORT=8600
+ENV DEBIAN_FRONTEND=noninteractive
+RUN case "$DESKTOP" in gnome|kde|xfce|lxqt) ;; *) echo "DESKTOP=\"$DESKTOP\": gnome|kde|xfce|lxqt" >&2; exit 2 ;; esac
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        systemd systemd-sysv dbus dbus-user-session libpam-systemd \
+        sudo procps iproute2 ca-certificates curl openssh-server \
+    && rm -rf /var/lib/apt/lists/*
+# the desktop as a normal user installs it (with the "recommends", as the task wants)
+RUN apt-get update && apt-get install -y -q "task-$DESKTOP-desktop" \
+    && rm -rf /var/lib/apt/lists/*
+COPY common.sh /usr/local/sbin/t17-comune
+RUN sh /usr/local/sbin/t17-comune "$SSH_PORT" ssh.service
+COPY chiave-banco.pub /root/.ssh/authorized_keys
+RUN chmod 600 /root/.ssh/authorized_keys
+STOPSIGNAL SIGRTMIN+3
+CMD ["/sbin/init"]

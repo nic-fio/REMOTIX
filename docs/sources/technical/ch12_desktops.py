@@ -18,15 +18,15 @@ S1 = p("REMOTIX serves four Wayland desktops, which belong to three compositor f
          + " (PipeWire)", c("zwlr_screencopy_manager_v1"), "same as XFCE"],
         ["Input", c("libei") + " via " + c("ConnectToEIS"), c("libei") + " via " + c("connectToEIS"),
          "virtual keyboard and pointer", "same as XFCE"],
-        ["Clipboard", c("appunti.c") + " (via RemoteDesktop)", c("appunti_kde.c") + " (data-control)",
-         c("appunti_kde.c"), c("appunti_kde.c")],
+        ["Clipboard", c("clipboard.c") + " (via RemoteDesktop)", c("clipboard_kde.c") + " (data-control)",
+         c("clipboard_kde.c"), c("clipboard_kde.c")],
         ["Alive when", c("DisplayConfig.GetCurrentState") + " answers", c("org.kde.KWin") + " on the bus",
          c("org.xfce.SessionManager") + " on the bus", c("org.lxqt.session") + " on the bus"],
         ["Logout", c("Logout(1)") + ", then " + c("Logout(2)"), c("org.kde.Shutdown.logout") + ", then "
          + c("StopUnit"), c("Logout(false,false)") + ", then SIGTERM to labwc", c("logout()")
          + " (no reply), then SIGTERM to labwc"],
     ], "«TAB» — The four desktops side by side") + \
-    p("<b>One desktop per machine</b> (" + c("DECISIONI.md") + " §0.6, 20 Sep 2026; §4.6-duodetricies): REMOTIX looks for "
+    p("<b>One desktop per machine</b> (" + c("DECISIONS.md") + " §0.6, 20 Sep 2026; §4.6-duodetricies): REMOTIX looks for "
       "the desktop that is installed, it does not arbitrate between desktops that coexist, and the "
       + c("--compositore") + " (compositor) option of v1 is not coming back. Machines with several desktops are out of "
       "scope; when two are found the choice is made and declared “ambiguous”. Only Wayland sessions "
@@ -196,7 +196,7 @@ S5 = p("Plasma is started with " + c("startplasma-wayland") + ", which starts KW
        + sysf("plasma-kwin_wayland.service") + "; REMOTIX overrides its " + c("ExecStart") + " the same way as "
        "GNOME's shell. The line does not start KWin directly: it starts the REMOTIX binary in "
        + c("--kwin-nested") + " mode, which starts a <b>labwc without a screen</b> and then becomes KWin, "
-       "running as a window inside that labwc (" + c("DECISIONI.md") + " §10.40, 11 Oct 2026). The desktop is "
+       "running as a window inside that labwc (" + c("DECISIONS.md") + " §10.40, 11 Oct 2026). The desktop is "
        "KWin's output; KWin's output follows the size of its window; the window follows labwc's output. "
        "To change the size of the desktop at a reattach, REMOTIX changes the size of labwc's output.",
        lead=True) + \
@@ -268,7 +268,7 @@ ExecStart=/usr/libexec/remotix/remotix --kwin-nested 1920 1080 /dev/dri/renderD1
          "configure: on Leap 16 KWin's window was first configured 3822×2036 on a 3824×2064 output, and a "
          "capture mounted in that instant asked for the wrong size."],
         ["One " + c("<keybind key=\"W-Return\">") + " and one Root " + c("<mousebind>") + ", each with the "
-         "single action " + c("None"), "labwc keeps <b>zero</b> bindings (" + c("DECISIONI.md") + " §10.43). A "
+         "single action " + c("None"), "labwc keeps <b>zero</b> bindings (" + c("DECISIONS.md") + " §10.43). A "
          + c("rc.xml") + " without bindings makes labwc load its default ones, which start programs (Super+Return "
          "a terminal, the volume keys " + c("amixer") + "); nobody presses keys on this labwc, but any program "
          "of the same user could, through the virtual-keyboard protocol on its socket. labwc decides «defaults "
@@ -300,7 +300,7 @@ ExecStart=/usr/libexec/remotix/remotix --kwin-nested 1920 1080 /dev/dri/renderD1
          "waits (at most 3 s) until KWin's output has the host's size."],
     ], "«TAB» — Five traps of KWin inside labwc, found by measuring") + \
     steps([
-        "<b>At a reattach of another size</b> (" + c("figlio.c") + ", " + c("§7.1") + "), if KWin's output is "
+        "<b>At a reattach of another size</b> (" + c("child.c") + ", " + c("§7.1") + "), if KWin's output is "
         "not the canvas asked for and the host exists, the child first dismantles the capture: KWin's stream "
         "would otherwise renegotiate to a size the fixed offer refuses, and die.",
         c("kwin_host_resize()") + " asks labwc's output for the new size (read back from labwc, not believed), "
@@ -374,7 +374,7 @@ S5B = p("labwc is needed on KDE only as KWin's host; it is not the desktop's com
         ["RHEL / Alma 10", "<b>REMOTIX's own</b>, " + c("/usr/lib/remotix/labwc"), "Built inside the package; "
          + c("Requires: libwlroots-0.18.so()(64bit)")],
     ], "«TAB» — Where KWin's labwc comes from") + \
-    p("<b>RHEL / Alma 10</b> (" + c("DECISIONI.md") + " §10.43). EPEL 10 carries KWin 6.6.4 and wlroots 0.18 "
+    p("<b>RHEL / Alma 10</b> (" + c("DECISIONS.md") + " §10.43). EPEL 10 carries KWin 6.6.4 and wlroots 0.18 "
       "but no labwc, so the Alma package builds <b>labwc 0.8.4</b>, the last release for wlroots 0.18, "
       "<b>unmodified</b>, in the same rpm build (" + c("packaging/rpm/remotix.spec") + ", " + c("%if 0%{?rhel}")
       + "), linked dynamically against EPEL's wlroots 0.18, with Xwayland, SVG, icons, translations and man "
@@ -382,7 +382,7 @@ S5B = p("labwc is needed on KDE only as KWin's host; it is not the desktop's com
       + ", so it cannot clash with a labwc EPEL may add one day, and the REMOTIX binary of that package is "
       "built with " + c("LABWC=/usr/lib/remotix/labwc") + ". The source is GitHub's archive of the tag "
       + c("0.8.4") + " (labwc publishes no tarball and signs nothing), pinned by SHA-256 in "
-      + c("packaging/rpm/labwc/VERSIONI") + " and checked at every build by " + c("scarica.sh")
+      + c("packaging/rpm/labwc/VERSIONS") + " and checked at every build by " + c("fetch.sh")
       + " also against the SHA-512 in Fedora's dist-git. Licence and updates: "
       + rif("KWin's labwc on RHEL / Alma 10") + ".") + \
     note("without labwc a Plasma session is still born, with KWin " + c("--virtual") + " and the size of its "
@@ -527,7 +527,7 @@ S8 = p("On labwc the output size is not part of the birth: the headless output i
     ])
 
 S9 = p("Nobody may shut down, reboot, suspend or hibernate the server, the person sitting in front of it "
-       "included (" + c("DECISIONI.md") + " §4.7, user decision of 15 Aug 2026): shutting down is the one gesture that takes "
+       "included (" + c("DECISIONS.md") + " §4.7, user decision of 15 Aug 2026): shutting down is the one gesture that takes "
        "away every session at once, and whoever does it from a desktop menu cannot see who is connected. "
        "Inside the remote desktop the user has a single gesture that ends something: log-out.", lead=True) + \
     table(["Entry", "GNOME", "KDE", "XFCE", "LXQt"], [
@@ -544,7 +544,7 @@ S9 = p("Nobody may shut down, reboot, suspend or hibernate the server, the perso
         ["Log out", "always shown", "stays", "stays", "stays"],
     ], "«TAB» — What is removed from the session menus") + \
     p("The menu work is cosmetic on top of three system-wide belts, which the package ships <b>inert</b> under "
-      + c("/usr/share/remotix/belts/") + ", where nothing reads them; since " + c("DECISIONI.md")
+      + c("/usr/share/remotix/belts/") + ", where nothing reads them; since " + c("DECISIONS.md")
       + " §10.36 the installer no longer puts them in force, so the “refused by polkit” entries above hold only "
       "where the administrator has installed them. They are: a polkit rule (" + c("50-remotix-no-poweroff.rules") + ") that says "
       "no to every power action of logind, including the " + c("*-multiple-sessions") + " and "
@@ -603,27 +603,27 @@ S10 = p(c("session_terminate()") + " ends the graphical session when the product
 S11 = p("Every place where the four desktops differ, in one table: the list to walk when a fifth desktop "
         "is added (the procedure is in " + rif("Extending REMOTIX") + ").", lead=True) + \
     table(["Concern", "Function", "File"], [
-        ["Recognition", c("recognize_desktop()") + ", " + c("session_on_wlroots()"), c("sessione.c")],
-        ["Environment", c("compose_environment()"), c("sessione.c")],
-        ["Command line", c("start()") + ", " + c("measured_primary()"), c("sessione.c")],
-        ["Unit override", c("write_dropin()") + ", " + c("unit_shell()"), c("sessione.c")],
-        ["Alive, state", c("session_alive()") + ", " + c("session_state()"), c("sessione.c")],
-        ["Previous session over", c("inactive_unit()"), c("sessione.c")],
+        ["Recognition", c("recognize_desktop()") + ", " + c("session_on_wlroots()"), c("session.c")],
+        ["Environment", c("compose_environment()"), c("session.c")],
+        ["Command line", c("start()") + ", " + c("measured_primary()"), c("session.c")],
+        ["Unit override", c("write_dropin()") + ", " + c("unit_shell()"), c("session.c")],
+        ["Alive, state", c("session_alive()") + ", " + c("session_state()"), c("session.c")],
+        ["Previous session over", c("inactive_unit()"), c("session.c")],
         ["Settings and menus", c("session_settings()") + ", " + c("settings_lxqt()") + ", "
-         + c("xfce_session_xfconf()"), c("sessione.c")],
-        ["Inhibition and guards", c("session_inhibit()"), c("sessione.c")],
-        ["Log-out", c("really_terminate()"), c("sessione.c")],
+         + c("xfce_session_xfconf()"), c("session.c")],
+        ["Inhibition and guards", c("session_inhibit()"), c("session.c")],
+        ["Log-out", c("really_terminate()"), c("session.c")],
         ["KWin's host (KDE only)", c("kwin_nested_alive()") + ", " + c("kwin_host_resize()") + ", "
-         + c("kwin_host_settle()") + "; the reattach branch in " + c("figlio.c"), c("kwin.c") + ", " + c("figlio.c")],
+         + c("kwin_host_settle()") + "; the reattach branch in " + c("child.c"), c("kwin.c") + ", " + c("child.c")],
         ["Capture (the “open” functions)", c("mutter_open()") + ", " + c("kwin_open()") + ", " + c("wlr_open()"), c("mutter.c")
          + ", " + c("kwin.c") + ", " + c("wlroots.c")],
         ["Input", c("input_open()") + ", " + c("input_open_kwin()") + ", " + c("input_open_wlr()"), c("input.c")],
         ["Clipboard", c("clipboard_open()") + ", " + c("clipboard_open_kde()") + ", " + c("clipboard_open_wlroots()"),
-         c("appunti.c") + ", " + c("appunti_kde.c")],
+         c("clipboard.c") + ", " + c("clipboard_kde.c")],
         ["Layout", c("input_layout()") + ", " + c("kwin_layout()") + ", "
          + c("wlr_input_keymap_from_name()"), c("input.c") + ", " + c("kwin.c") + ", " + c("wlr_input.c")],
     ], "«TAB» — Where the desktops branch") + \
-    note(c("SPECIFICHE.md") + " §11.2 still lists XFCE and LXQt as “studied, not yet served”; the code serves "
+    note(c("SPECS.md") + " §11.2 still lists XFCE and LXQt as “studied, not yet served”; the code serves "
          "both since phases 13 and 14 (September 2026). Cinnamon was studied on 9 Aug 2026 and is not served: "
          "upstream it has neither " + c("RecordVirtual") + ", nor libei, nor a clipboard path.",
          "Status of the desktops.")

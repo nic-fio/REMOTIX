@@ -11,7 +11,7 @@ S1 = p("The server starts from " + c("main()") + " in " + c("main.c") + ". Befor
     "<b>Options.</b> The command line is read; an unknown option prints the usage and exits with 2. Options "
     "retired before the first release (" + c("--ritmo-adattivo") + ", " + c("--linea-morta") + ", "
     + c("--linea-morta-permille") + ", " + c("--sblocca") + ", the " + c("--ban") + " alias of " + c("--ban-file")
-    + ") are simply unknown: REMOTIX was never released before 0.19.0, so no old name is kept (DECISIONI.md §10.45). Without a real "
+    + ") are simply unknown: REMOTIX was never released before 0.19.0, so no old name is kept (DECISIONS.md §10.45). Without a real "
     + c("--name") + " (not empty, " + c("0.0.0.0") + " or " + c("::") + ") the server refuses to start: the "
     "certificate must carry the name the browser will use.",
     "<b>Signals.</b> " + c("SIGINT") + " and " + c("SIGTERM") + " only set a flag that ends the loop; "
@@ -96,18 +96,18 @@ RestartSec=2""", "text", "packaging/debian/remotix.service (excerpt, without the
          "found again"],
         ["no test options", c("--survey") + " (frame dump), " + c("--command-socket") + " (unblock socket), "
          + c("--audio-test") + " (test tone), " + c("--verbose")
-         + " are not in the packaged command line; the rpm build script (" + c("costruisci-rpm.sh")
+         + " are not in the packaged command line; the rpm build script (" + c("build-rpm.sh")
          + ") refuses them"],
     ], "«TAB» — The unit's settings") + \
     warn("with no " + c("--command-socket") + " in the packaged command line, a banned address can only wait for "
-         "its 12 hours: the unblock command promised by SPECIFICHE.md §4.2 is there only if the administrator adds "
+         "its 12 hours: the unblock command promised by SPECS.md §4.2 is there only if the administrator adds "
          "the option in " + c("REMOTIX_OPTIONS") + " (the " + c("tmpfiles") + " entry creates "
          + c("/run/remotix") + " for that socket). No code path of the server exits with 78, so "
          + c("RestartPreventExitStatus=78") + " never applies today.", "Two gaps of the unit.") + \
     note("the server must not run inside a user's session. " + c("pam_systemd") + ", called by a process that is "
          "already in a logind session, does not create a second one and does not say so: the children stay without "
          "runtime directory, bus and desktop (measured 16 August 2026, eight bench runs out of eight). As a system "
-         "unit this cannot happen; on the test machine " + c("riavvia-7700.sh") + " starts the server with "
+         "unit this cannot happen; on the test machine " + c("restart-7700.sh") + " starts the server with "
          + c("systemd-run") + " and refuses to report success if " + c("/proc/PID/cgroup") + " shows a "
          + c("user@") + " or " + c("session-") + " cgroup.", "Started by hand.")
 
@@ -237,12 +237,12 @@ S4 = p("The child is born before it knows the canvas, and it must not start the 
     p("<b>KDE: KWin inside a labwc nobody sees.</b> KWin up to 6.7, with its " + c("--virtual") + " backend, "
       "cannot change the size of its output nor create a second one, and restarting KWin at another size kills "
       "every program that is not Qt. So since 11 October 2026 KWin is born <b>nested</b>, as the only window of "
-      "a labwc without a screen (DECISIONI.md §10.40). " + c("kwin_nested_alive()") + ", in the user's KWin unit, "
+      "a labwc without a screen (DECISIONS.md §10.40). " + c("kwin_nested_alive()") + ", in the user's KWin unit, "
       "gives labwc a runtime folder of its own (" + c("$XDG_RUNTIME_DIR/remotix-kwin-host/") + ", 0700, so its "
       "socket can never be taken for KWin's), the headless backend, no input device, the card the child chose (or "
       + c("pixman") + "), and a configuration of REMOTIX's passed with " + c("-C") + ": every window full screen and "
       "undecorated, and <b>zero</b> key and mouse bindings — without them labwc would "
-      "load its default bindings, which start programs (DECISIONI.md §10.43). It sets labwc's output to W×H at 240 Hz (on its own 60 Hz clock "
+      "load its default bindings, which start programs (DECISIONS.md §10.43). It sets labwc's output to W×H at 240 Hz (on its own 60 Hz clock "
       "KWin lost frames), starts "
       "a “ticker” process that touches a 1×1 transparent surface every 16 ms (KWin waits for labwc's answer to "
       "draw again, and labwc answers only when it repaints), and then becomes the KWin wrapper with "
@@ -263,7 +263,7 @@ S4 = p("The child is born before it knows the canvas, and it must not start the 
     p("<b>First login: the GPU's groups.</b> A user who is not in the groups of the " + c("/dev/dri") + " nodes "
       "(" + c("card*") + " belongs to " + c("video") + ", " + c("renderD*") + " to " + c("render") + ") would get a "
       "session that renders in software with llvmpipe — slow, not broken, so nobody would suspect it. Since 20 "
-      "September 2026 (DECISIONI.md §7.21) the server, as root, runs " + c("usermod -aG") + " for the missing groups "
+      "September 2026 (DECISIONS.md §7.21) the server, as root, runs " + c("usermod -aG") + " for the missing groups "
       "before forking the child, appends one JSON line per group to " + c("/var/lib/remotix/group-enrollments.jsonl")
       + " (so that uninstalling removes only what REMOTIX added) and, unless the user already has a live REMOTIX "
       "desktop, runs " + c("loginctl terminate-user") + " so that their user manager restarts with the new "
@@ -271,7 +271,7 @@ S4 = p("The child is born before it knows the canvas, and it must not start the 
     warn(c("loginctl terminate-user") + " ends <b>every</b> logind session of that user, an SSH login included. It "
          "only happens once per user, at their first REMOTIX login without the groups. Not settled yet: whether only "
          + c("render") + " should be added (" + c("video") + " also opens " + c("/dev/fb*") + " and webcams), "
-         "DECISIONI.md §10.36.", "First login ends the user's other sessions.") + \
+         "DECISIONS.md §10.36.", "First login ends the user's other sessions.") + \
     p("<b>After the first stage</b> the child, once per life, inhibits suspend and idle (on GNOME through "
       + c("org.gnome.SessionManager.Inhibit") + " with flags 4|8, never the logout flag, or the user would lose their "
       "only way out; on KDE through PowerDevil; XFCE and LXQt by configuration), then asks the sentinel whether its "
@@ -342,7 +342,7 @@ S6 = p("Detaching is the normal end of a connection, and it ends nothing else: t
          "H.264 VA-API, a 60 fps animation), nested against the old " + c("--virtual") + ": at 1080p and 2K nothing is "
          "lost in frame rate or delay; at 3K the rate goes from 58 to 54–55 fps; at 4K from 58 to 44–49 fps, with "
          "14 ms more. labwc takes 2.4–3.2 % of one core while drawing. On an AMD Radeon RX 6800 the same 4K "
-         "animation stays at 59 fps (DECISIONI.md §10.40).", "The price of the nesting.") + \
+         "animation stays at 59 fps (DECISIONS.md §10.40).", "The price of the nesting.") + \
     table(["Situation", "Result"], [
         ["the user's previous client is alive and attached", "the new one is refused, " + c("0x0F ALREADY_ACTIVE_REMOTELY")
          + " (I2)"],
@@ -353,7 +353,7 @@ S6 = p("Detaching is the normal end of a connection, and it ends nothing else: t
         ["the user opens a local session while attached remotely", "the remote client is dismissed at the next sweep (every 2 s), "
          + c("0x04 LOCAL_SESSION_PREVAILED") + " (" + c("wt_watch_locals()") + ")"],
     ], "«TAB» — One graphical session per user") + \
-    note("SPECIFICHE.md §5.1 says that when a local session starts “the remote one is closed”. The code dismisses the "
+    note("SPECS.md §5.1 says that when a local session starts “the remote one is closed”. The code dismisses the "
          "remote <i>client</i>; the remote desktop is not ended and, if nobody touches it, ends with the abandonment "
          "clock.", "Local wins: what is closed.")
 
@@ -362,7 +362,7 @@ S7 = p("Stopping the server does not stop the desktops: the server, the PAM help
        "programs (measured 29 September 2026, ten trials with Firefox on the four desktops: stopping the unit, "
        "killing only the server, killing only a child). Until phase 17 a new server started with an empty table and "
        "counted none of them — not in the cap, not in the budget, not on the abandonment clock.", lead=True) + \
-    p("At startup " + c("found_again_at_startup()") + " calls " + c("finding_again_search()") + ", which uses only logind and "
+    p("At startup " + c("found_again_at_startup()") + " calls " + c("rediscover_search()") + ", which uses only logind and "
       + c("/proc") + " — the server is root and cannot join the users' buses, and desktops started by an older binary "
       "wrote no file of ours:") + steps([
     "every logind session whose PAM service is " + c("remotix") + ", <b>in any state</b>: the child calls "
@@ -455,7 +455,7 @@ S9 = p("Only the user ends their session; the server ends it only when it is aba
       "page goes back to the login form with its sentence for " + c("0x10") + " (the session has ended and its "
       "programs were closed), out of full screen and pointer lock.") + \
     note("" + c("0x01") + " promises “reattach and you will find everything”, which after a logout is false; "
-         + c("0x10") + " exists so that the two endings never share a code (DECISIONI.md §4.1-quater).",
+         + c("0x10") + " exists so that the two endings never share a code (DECISIONS.md §4.1-quater).",
          "Why a new reason.")
 
 S10 = p("When systemd stops the unit, the server says goodbye to every client before it closes QUIC, then lets its "
@@ -500,7 +500,7 @@ S11 = p("What REMOTIX puts on the machine, and who puts it there. Paths are thos
          "binary"],
         [c("/usr/lib/remotix/labwc"), "package (RHEL / Alma 10 only)", "labwc 0.8.4, built unmodified against "
          "EPEL's wlroots 0.18 to host KWin; GPL-2.0, its text in " + c("/usr/share/doc/remotix/THIRD-PARTY-LICENSES")
-         + ", its source next to every release (DECISIONI.md §10.43)"],
+         + ", its source next to every release (DECISIONS.md §10.43)"],
         [c("/etc/ufw/applications.d/remotix"), "package (Debian)", "a firewall profile for 7447 TCP and UDP, defined "
          "but not opened"],
         ["the unit " + c("remotix.service"), "package", "installed, neither enabled nor started by the package"],
@@ -532,14 +532,14 @@ S11 = p("What REMOTIX puts on the machine, and who puts it there. Paths are thos
         [c("~/.local/state/remotix/session.log"), "the desktop's own output", "kept; if the folder is not safe, "
          + c("$XDG_RUNTIME_DIR/remotix-session.log") + " instead, declared"],
     ], "«TAB» — Per-user files, written by the child") + \
-    p("The user's own settings are not changed, with the exceptions DECISIONI.md §8.2 allows — lock, reboot, suspend and "
+    p("The user's own settings are not changed, with the exceptions DECISIONS.md §8.2 allows — lock, reboot, suspend and "
       "stand-by removed — detailed per desktop in " + rif("The four desktops") + ". The session log is created with "
       + c("O_NOFOLLOW") + " in a folder that must be the user's, not a link and not writable by others: until phase "
       "17 it lived in " + c("/tmp") + " under a predictable name, and another user could pre-create it.") + \
-    warn("since DECISIONI.md §10.36 (10 October 2026) the installer no longer puts the belts in force: on a packaged "
+    warn("since DECISIONS.md §10.36 (10 October 2026) the installer no longer puts the belts in force: on a packaged "
          "machine nobody forbids power-off unless the administrator enables the files in "
          + c("/usr/share/remotix/belts/") + ". The child checks and writes it in the log at every first stage; "
-         "SPECIFICHE.md §11.3 still says power-off is taken from everyone.", "The belts are off by default.")
+         "SPECS.md §11.3 still says power-off is taken from everyone.", "The belts are off by default.")
 
 S12 = p("A defect in this chain rarely names its cause: the user sees “black”, “slow” or “nothing happens”. "
         "Start from the symptom, find the step, then read the log of the area that owns it.", lead=True) + \

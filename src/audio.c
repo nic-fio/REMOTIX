@@ -2,7 +2,7 @@
 
 #include "audio.h"
 
-#include "registro.h"
+#include "log.h"
 
 #include <opus.h>
 #include <stdlib.h>
@@ -19,9 +19,9 @@
  * **309-439** on Firefox `[M]`: it fits in the datagram with a wide margin, which
  * is the reason a higher one was not chosen.
  *
- * ⏳ It must be put on record in `DECISIONI.md` the day the user hears it:
- *    `SPECIFICHE.md` §10 does not name the bitrate, and a number without an
- *    entry is a decision half taken (`LEZIONI.md` §2.3-quater).
+ * ⏳ It must be put on record in `DECISIONS.md` the day the user hears it:
+ *    `SPECS.md` §10 does not name the bitrate, and a number without an
+ *    entry is a decision half taken (`LESSONS.md` §2.3-quater).
  */
 #define AUDIO_OPUS_BITRATE 96000
 
@@ -30,7 +30,7 @@
  *       BORN **ON** (the user's decision; until the 23rd it was born off for
  *       invariant I6).
  *
- * `[M]` 24 August 2026, `banchi/09-b84-audio-silenzio.py`, port 7972, binary
+ * `[M]` 24 August 2026, `benches/09-b84-audio-silence.py`, port 7972, binary
  * `b484d699…`: a session with **Opus** negotiated and the desktop STILL delivers
  *
  *     50 datagrams per second · **3 bytes of payload each** · PEAK 0 of 32767
@@ -71,14 +71,14 @@
  *
  *      Until 23 August it was `-DAUDIO_SILENZIO_PREDEFINITO=1`, and it was not a
  *      choice of convenience: the encoder lives in the **child**, which is an
- *      `execve` with an environment **built from scratch** (`figlio.c`, the box
+ *      `execve` with an environment **built from scratch** (`child.c`, the box
  *      of the two cures of phase 9) — a `REMOTIX_...` does not reach it, and would
  *      not even leave a line saying it did not arrive.  The only channel
  *      that crosses the `exec` is the tail of `argv`.
  *
  *      ⇒ Now the way exists, and it is that of `--verbose`:
  *        · `main.c`   recognises `--no-audio-silence` and keeps a `bool`;
- *        · `figlio.c` puts it at the end of `argv` (`become_and_exec()`) and
+ *        · `child.c` puts it at the end of `argv` (`become_and_exec()`) and
  *                     reads it back **by name** in `child_alive()`, calling
  *                     `audio_silence_hush()`;
  *        · here       nothing changes: `audio_silence_hush()` was already there.
@@ -86,7 +86,7 @@
  * ⛔⛔ AND THE `-D` WAS REMOVED, not left beside it: two ways to switch on
  *      the same cure are two numbers that can diverge — the same reason
  *      the environment bridge of `wt_clear_threshold()` was removed on
- *      23 August.  ⚠ Whoever rebuilds `09-b84-audio-silenzio.py` must know
+ *      23 August.  ⚠ Whoever rebuilds `09-b84-audio-silence.py` must know
  *      that its arm B is no longer made with a `-D`, but with the command
  *      line: the OFF arm is now `--no-audio-silence`.
  *
@@ -141,7 +141,7 @@ struct audio_cod {
 
 /*
  * ⛔⭐ OPUS TALKS TO `libopus` DIRECTLY — phase 18, 30 September 2026
- *      (`DECISIONI.md` §10.22 and §10.25: ffmpeg leaves the product).
+ *      (`DECISIONS.md` §10.22 and §10.25: ffmpeg leaves the product).
  *
  * Until 29 September it went through libavcodec, which called the SAME
  * `libopus.so.0` with its wrapper `libopusenc.c`.  ⇒ Removing the wrapper
@@ -173,7 +173,7 @@ struct audio_cod {
  *   439 216 bytes each.  ⇒ The multistream is not carried over: it is a
  *   wrapper that with a single stream adds nothing.
  *
- * ⭐ And the bench that keeps it true is `banchi/18-a1/`: the old `audio.c`
+ * ⭐ And the bench that keeps it true is `benches/18-a1/`: the old `audio.c`
  *    (545ec55) and this one, linked together, on the same 42 s signal
  *    (speech, music, digital silence, full-scale jumps, one-block gaps,
  *    ±1 LSB, loud noise, pure tone).  `[M]` 30 Sep 2026 on the server
@@ -184,7 +184,7 @@ struct audio_cod {
  *    code 0; no 1-2 byte packet (Opus's DTX stays off); the
  *    silence sent with the cure off weighs 3 bytes, as in `09-b84`.
  *
- * ⭐ And the question of `banchi/07-b44` falls by itself (does the encoder hold
+ * ⭐ And the question of `benches/07-b44` falls by itself (does the encoder hold
  *    back a block?): `opus_encode()` is SYNCHRONOUS, one block in and one packet
  *    out by construction.  ⇒ The `EAGAIN` branch no longer exists, instead of
  *    staying written and never taken.
@@ -382,7 +382,7 @@ bool audio_enc_pass(audio_cod *c, const int16_t *samples, uint8_t *report,
 	 *   `audio.h` already promises: *"Returns `false` when there is nothing to
 	 *   send.  The caller sends nothing and goes on"*.  ⇒ No
 	 *   caller changes, and the `instant` of §6.3 keeps advancing by itself
-	 *   in `figlio.c` — which is what makes the gap a silence in the right
+	 *   in `child.c` — which is what makes the gap a silence in the right
 	 *   place instead of a shift of everything that follows.
 	 *
 	 * ⛔ And the encoder simply DOES NOT SEE those blocks: its
@@ -390,7 +390,7 @@ bool audio_enc_pass(audio_cod *c, const int16_t *samples, uint8_t *report,
 	 *    2026 libavcodec's `pts` was also held still here (it would have
 	 *    seen a jump); with `opus_encode()` time does not enter the
 	 *    call, and the behaviour is the same by construction: `[M]` 30
-	 *    Sep 2026, `banchi/18-a1`, the packets AFTER a muted stretch come out
+	 *    Sep 2026, `benches/18-a1`, the packets AFTER a muted stretch come out
 	 *    identical byte for byte to libavcodec's. */
 	if (audio_hush_silence && everything_zero(samples, c->block)) {
 		c->silenced++;

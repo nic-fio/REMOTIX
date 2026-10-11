@@ -2,7 +2,7 @@
 # .gitattributes — ⭐ e per now c'e' inside una what sola, ma vale la pena
 # ===========================================================================
 #
-# ⭐⭐ IL QUADERNO DEL HOOK — `banchi/11-scatole/11-gancio-registro.jsonl`
+# ⭐⭐ IL QUADERNO DEL HOOK — `benches/11-boxes/11-gancio-registro.jsonl`
 #
 # Ogni volta desc la network anti-regressione runs, ci writes una line: desc what e'
 # started, desc outcome ha given, how_much e' durato, e ⭐ **se un fault grafted e'
@@ -26,4 +26,4 @@
 #   conflitto desc someone risolverebbe **buttando via meta' della mem_buf** —
 #   e C13 direbbe «none mette piu' alla prova la network» without desc sia real.
 # ===========================================================================
-banchi/11-scatole/11-gancio-registro.jsonl merge=union
+benches/11-boxes/11-gancio-registro.jsonl merge=union

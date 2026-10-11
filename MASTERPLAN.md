@@ -7,7 +7,7 @@
 > utile creare un documento `MASTERPLAN.md` dove annotare tutte queste cose da fare al termine del
 > progetto.»*
 
-⇒ The decision is in [`DECISIONI.md` §0.4](DECISIONI.md).
+⇒ The decision is in [`DECISIONI.md` §0.4](DECISIONS.md).
 
 ---
 
@@ -20,9 +20,9 @@ deferred on purpose, features that were not in the initial pact.
 
 | | |
 |---|---|
-| the decision register | that is [`DECISIONI.md`](DECISIONI.md), and every entry here **refers** there instead of copying |
+| the decision register | that is [`DECISIONI.md`](DECISIONS.md), and every entry here **refers** there instead of copying |
 | the list of open questions | that is `DECISIONI.md` **§7** — there are the holes in the *thinking*, here the work of *afterwards* |
-| the phase plan | that is [`PIANO.md`](PIANO.md). ⛔ **If something must happen BEFORE the end, it does not belong here: it belongs there, with its phase** |
+| the phase plan | that is [`PIANO.md`](PLAN.md). ⛔ **If something must happen BEFORE the end, it does not belong here: it belongs there, with its phase** |
 | a list of faults | a fault does not wait for the end of the project. If it is broken it is cured, and if it is not cured it is declared in the phase |
 
 ---

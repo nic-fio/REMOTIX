@@ -1,0 +1,93 @@
+<!doctype html>
+<!--
+  18-decode-chrome.html — a REAL browser decodes the stream, along the same
+  path as the product's page: Annex-B → EncodedVideoChunk → VideoDecoder.
+
+  It is opened with headless Chrome (`18-decode-chrome.sh`) and the outcome is read
+  from the console (`console.log`, with `--enable-logging=stderr`):
+    google-chrome --headless=new --allow-file-access-from-files --enable-logging=stderr \
+      "file:///…/18-decode-chrome.html?stream=file:///…/F.bin&codec=avc1.64002a"
+  It is one JSON line: decoded frames, errors, the
+  size of the first frame, and a fingerprint (sum of the pixels) of every tenth
+  frame — so two «equal» streams are compared on the picture too.
+
+  ⚠ The codec is passed the way the page passes it (`hev1.1.6.L120.B0`,
+    `avc1.64002a`): the string is the same one `src/encoder.c` reads
+    from the SPS, and if Chrome refuses it that is a real red.
+-->
+<html><head><meta charset="utf-8"><title>18-decodifica</title></head>
+<body>
+<pre id="outcome">running</pre>
+<script>
+(async () => {
+  const p = new URLSearchParams(location.search);
+  const stream = p.get("stream"), codec = p.get("codec");
+  const outcome = { stream, codec, decoded: 0, errors: [], chunk: 0, size: "", fingerprints: [] };
+  const fine = (m) => {
+    const text = "OUTCOME " + JSON.stringify(Object.assign(outcome, m || {}));
+    document.getElementById("outcome").textContent = text;
+    console.log(text); /* it is what 18-decode-chrome.sh reads from Chrome's log */
+    setTimeout(() => window.close(), 300); /* in headless, closing the last window closes Chrome */
+  };
+  try {
+    const byte = new Uint8Array(await (await fetch(stream)).arrayBuffer());
+    // the row of NALs: cut at the start codes, grouped into frames
+    // (one frame = from the first non-VCL or VCL NAL up to and including the next VCL)
+    const hevc = codec.startsWith("hev1") || codec.startsWith("hvc1");
+    const nal = [];
+    let i = 0;
+    while (i + 3 <= byte.length) {
+      if (byte[i] === 0 && byte[i + 1] === 0 && byte[i + 2] === 1) {
+        const start = (i > 0 && byte[i - 1] === 0) ? i - 1 : i;
+        let j = i + 3;
+        while (j + 3 <= byte.length && !(byte[j] === 0 && byte[j + 1] === 0 && byte[j + 2] === 1)) j++;
+        let fine_nal = j;
+        if (j + 3 <= byte.length && j > 0 && byte[j - 1] === 0) fine_nal = j - 1;
+        nal.push({ start, end: fine_nal, type: hevc ? (byte[i + 3] >> 1) & 0x3f : byte[i + 3] & 0x1f });
+        i = j;
+      } else i++;
+    }
+    const vcl = (t) => hevc ? t <= 31 : (t >= 1 && t <= 5);
+    const key = (t) => hevc ? (t >= 16 && t <= 23) : t === 5;
+    const frames = [];
+    let current = null;
+    for (const n of nal) {
+      if (!current) current = { start: n.start, end: n.end, key: false };
+      current.end = n.end;
+      if (vcl(n.type)) { current.key = key(n.type); frames.push(current); current = null; }
+    }
+    outcome.chunk = frames.length;
+    let n = 0;
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    const dec = new VideoDecoder({
+      output: (f) => {
+        n++;
+        if (!outcome.size) outcome.size = f.codedWidth + "x" + f.codedHeight + " (shown " + f.displayWidth + "x" + f.displayHeight + ")";
+        if ((n - 1) % 10 === 0) {
+          canvas.width = 64; canvas.height = 36;
+          ctx.drawImage(f, 0, 0, 64, 36);
+          const d = ctx.getImageData(0, 0, 64, 36).data;
+          let s = 0; for (let k = 0; k < d.length; k += 4) s += d[k] + d[k + 1] + d[k + 2];
+          outcome.fingerprints.push(s);
+        }
+        f.close();
+      },
+      error: (e) => { outcome.errors.push(String(e)); },
+    });
+    const config = { codec, optimizeForLatency: true };
+    const sup = await VideoDecoder.isConfigSupported(config);
+    outcome.supported = sup.supported;
+    if (!sup.supported) return fine({ decoded: 0, why: "configure not supported" });
+    dec.configure(config);
+    frames.forEach((f, k) => {
+      dec.decode(new EncodedVideoChunk({ type: f.key ? "key" : "delta", timestamp: k * 16667, data: byte.subarray(f.start, f.end) }));
+    });
+    await dec.flush();
+    fine({ decoded: n });
+  } catch (e) {
+    fine({ exception: String(e) });
+  }
+})();
+</script>
+</body></html>

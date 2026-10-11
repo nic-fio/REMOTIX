@@ -6,43 +6,43 @@ S1 = p("REMOTIX grew out of a few rules, most of them written before the code an
     table(["Principle", "What it means in the code", "Where it comes from"], [
         ["<b>Detect capabilities, not the distribution</b>", "At startup the server checks what is there — which "
          "desktop, which GPU encodes which codec, whether the PAM file exists — chooses the best path and writes "
-         "in the log what is missing", "SPECIFICHE.md §2.1"],
+         "in the log what is missing", "SPECS.md §2.1"],
         ["<b>Degrade, but say so</b>", "Every missing piece has a fallback, and every fallback is written in the "
-         "log: a silent fallback gives two behaviours under the same label", "SPECIFICHE.md §2.2, " + c("CODER.md")
+         "log: a silent fallback gives two behaviours under the same label", "SPECS.md §2.2, " + c("CODER.md")
          + " §4.2"],
         ["<b>Depend, do not rewrite</b>", "logind, PAM, PipeWire, libei, xkbcommon, ngtcp2: one of each, the same "
-         "everywhere, used as they are", "SPECIFICHE.md §2.3"],
+         "everywhere, used as they are", "SPECS.md §2.3"],
         ["<b>Depend on the compositor, not on its surroundings</b>", "Only the compositor delivers frames and "
          "accepts input, so " + c("mutter.c") + ", " + c("kwin.c") + " and " + c("wlroots.c") + " exist. Screen "
          "lockers, idle daemons, power managers and display managers are not chased: REMOTIX keeps its own lock "
-         "(the 30-minute detach) and turns theirs off", "DECISIONI.md §0.1"],
+         "(the 30-minute detach) and turns theirs off", "DECISIONS.md §0.1"],
         ["<b>Talk to the compositor directly</b>", "Private D-Bus and Wayland interfaces, never "
          + c("xdg-desktop-portal") + ": a portal asks a person in front of the screen for permission, and an "
-         "unattended server has nobody to click", "SPECIFICHE.md §2.5"],
+         "unattended server has nobody to click", "SPECS.md §2.5"],
         ["<b>No exceptions per compositor</b>", "A feature that works on one desktop and not on another leaves the "
          "product instead of hiding behind a switch (live resizing left on 17 August 2026 for this reason). The "
          "other way round: the resize at reattach, missing on KDE, was made to work there too — KWin nested in a "
          "labwc without a screen — rather than declared an exception",
-         "DECISIONI.md §0.1, §5.1-bis, §10.40"],
+         "DECISIONS.md §0.1, §5.1-bis, §10.40"],
         ["<b>On the user's screen, their desktop and nothing else</b>", "No marks, no service boxes; test functions "
-         "are not in the installed binary", "SPECIFICHE.md §2.6, DECISIONI.md §7.16"],
+         "are not in the installed binary", "SPECS.md §2.6, DECISIONS.md §7.16"],
         ["<b>One job per process</b>", "The server checks passwords through a helper process and captures through "
          "a child process per user, because root cannot join a user's session bus and only root can verify "
-         "another user's password", "DECISIONI.md §1.10, §1.10-bis"],
+         "another user's password", "DECISIONS.md §1.10, §1.10-bis"],
         ["<b>The server never ends a healthy session without a reason</b>", "Every close carries a reason code of "
-         + c("RCP.md") + " §8.2 and a sentence the user reads; only the user ends their session", "DECISIONI.md §4.1-bis"],
+         + c("RCP.md") + " §8.2 and a sentence the user reads; only the user ends their session", "DECISIONS.md §4.1-bis"],
         ["<b>Encode on the GPU only</b>", "VA-API or Vulkan Video; a machine without a GPU that encodes declares "
-         "it at startup and offers no codec", "DECISIONI.md §10.27"],
+         "it at startup and offers no codec", "DECISIONS.md §10.27"],
         ["<b>REMOTIX does not modify the system</b>", "It says what it needs; the administrator provides it. The "
          "one deliberate exception: adding users to the GPU's groups, so that their session is not blind",
-         "DECISIONI.md §10.36, §7.21"],
+         "DECISIONS.md §10.36, §7.21"],
         ["<b>No GPL dependencies</b>", "No GPL library is linked into the server; what REMOTIX links in itself "
          "(ngtcp2, nghttp3) is MIT. labwc, GPL-2.0, is a separate program REMOTIX starts, never linked: the "
-         "distribution's, or on RHEL / Alma 10 the one the package builds unmodified", "SPECIFICHE.md §11.4, "
-         "DECISIONI.md §10.43"],
+         "distribution's, or on RHEL / Alma 10 the one the package builds unmodified", "SPECS.md §11.4, "
+         "DECISIONS.md §10.43"],
         ["<b>Build only what the distribution gets wrong</b>", "REMOTIX uses what the customer's distribution "
          "ships; a component is built by REMOTIX only for a measured problem: ngtcp2 and nghttp3 (no distribution "
-         "ships the version needed) and labwc on RHEL / Alma 10 (EPEL has none)", "DECISIONI.md §10.43, §10.46"],
+         "ships the version needed) and labwc on RHEL / Alma 10 (EPEL has none)", "DECISIONS.md §10.43, §10.46"],
     ], "«TAB» — The principles that shaped REMOTIX") + \
     p("Eight <b>invariants</b>, inherited from v1 and renumbered in " + c("CODER.md") + " §2, are quoted in the "
       "comments next to the lines that keep them. A change that breaks one of them is a defect even if every test "
@@ -60,7 +60,7 @@ S1 = p("REMOTIX grew out of a few rules, most of them written before the code an
         ["I4", "The stage (capture, control, virtual monitor) belongs to the session, not to the connection, and "
          "survives detaching", "no line ties a child's life to a connection; the desktop starts with "
          + c("setsid --fork")],
-        ["I5", "The volume belongs to the session: whoever connects finds it at maximum", c("suono.c")],
+        ["I5", "The volume belongs to the session: whoever connects finds it at maximum", c("sound.c")],
         ["I6", "Anything that changes what the user sees stays behind a switch that is off until the user has "
          "looked at it", "the switches of " + c("main.c") + " are logged at startup, on and off"],
         ["I7", "The protection against a known defect lives in the program, not in a configuration line that can "
@@ -124,7 +124,7 @@ S2 = p("REMOTIX is one binary, " + c("/usr/libexec/remotix/remotix") + ", that p
       "session's scope and not in the cgroup of " + c("remotix.service") + ": stopping the service (" + c("KillMode=mixed")
       + ") does not kill it. And the child is the leader of that logind session (it opened it with "
       + c("pam_open_session") + "): when the user logs out, logind ends the session and takes the child with it.") + \
-    note("the sentinel (" + c("sentinella.c") + ") and the found-again search (" + c("ritrovo.c") + ") are not "
+    note("the sentinel (" + c("sentinel.c") + ") and the found-again search (" + c("rediscover.c") + ") are not "
          "processes: they are modules that ask logind synchronously, with a short timeout, from inside the loop of "
          "whoever calls them (" + rif("The logind sentinel") + ").", "Not processes.")
 
@@ -141,13 +141,13 @@ S3 = p("The server is a single thread around one " + c("poll()") + " in " + c("m
        "block — PAM, a user's D-Bus, PipeWire, the GPU — lives in another process, so that one user logging in "
        "never freezes the frames of the others.", lead=True) + ROUND + \
     table(["Descriptor", "Who", "Handled by"], [
-        ["the UDP socket (QUIC, every connection)", c("trasporto.c"), c("transport_read()") + ", then "
+        ["the UDP socket (QUIC, every connection)", c("transport.c"), c("transport_read()") + ", then "
          + c("transport_expired()") + " for the timers"],
-        ["the TCP listener and its connections (the page)", c("pagina.c"), c("page_move()")],
-        ["the unblock socket, if " + c("--command-socket") + " was given", c("comando.c"), c("command_move()")],
-        ["the PAM helper's socket", c("aiutante.c"), c("helper_move()") + " delivers each verdict to "
+        ["the TCP listener and its connections (the page)", c("page.c"), c("page_move()")],
+        ["the unblock socket, if " + c("--command-socket") + " was given", c("command.c"), c("command_move()")],
+        ["the PAM helper's socket", c("helper.c"), c("helper_move()") + " delivers each verdict to "
          + c("delivery_verdict()")],
-        ["one socket per child", c("figlio.c"), c("children_move()") + ": checks, reassembles, dispatches"],
+        ["one socket per child", c("child.c"), c("children_move()") + ": checks, reassembles, dispatches"],
     ], "«TAB» — What the server's poll waits on (at most 64 descriptors, MAX_POLL)") + \
     p("The wait is the time to the next QUIC timer (" + c("transport_wait_ms()") + "), capped at one second so that "
       "clocks that do not wait for an event still fire; with the test tone of " + c("--audio-test") + " it is "
@@ -163,9 +163,9 @@ S3 = p("The server is a single thread around one " + c("poll()") + " in " + c("m
       "process with one thread — the only condition in which forking a program that links threaded libraries is "
       "safe. The PAM verdict used to block this loop: measured on 11 August 2026 on the test machine (Intel "
       "i5-13500T), 1.0 to 2.2 s per attempt, most of it added by " + c("pam_faildelay") + " on failed attempts. "
-      "With video that would have frozen every user's screen whenever someone else logged in (DECISIONI.md §1.10).") + \
+      "With video that would have frozen every user's screen whenever someone else logged in (DECISIONS.md §1.10).") + \
     p("<b>The bridge.</b> " + c("main.c") + " is the only file that knows both the transport and the children. A "
-      "small " + c("struct bridge") + " carries the two, and " + c("webtransport.c") + " and " + c("figlio.c")
+      "small " + c("struct bridge") + " carries the two, and " + c("webtransport.c") + " and " + c("child.c")
       + " call each other only through hooks registered at startup:") + \
     table(["Direction", "Hook in main.c", "What crosses"], [
         ["child → clients", c("deposit_frame()"), "an encoded frame: counted by the budget, then sent to "
@@ -228,7 +228,7 @@ S4 = p("Checking a password is the only thing the server needs root for besides 
          "different quantity.", "MAX_IN_FLIGHT.")
 
 S5 = p("For every admitted user the server forks one child that becomes that user. Two facts measured on 12 August "
-       "2026 force this shape (DECISIONI.md §1.10-bis): root cannot connect to a user's session bus — "
+       "2026 force this shape (DECISIONS.md §1.10-bis): root cannot connect to a user's session bus — "
        + c("gdbus") + " to Mutter fails with “The connection is closed” — and only root can verify another user's "
        "password with PAM, because " + c("pam_unix") + " outside root goes through " + c("unix_chkpwd") + ". Without "
        "the bus there is no capture; without root there is no authentication.", lead=True) + \
@@ -341,7 +341,7 @@ S7 = p("The sentinel answers three questions for which logind is the authority, 
         ["Which of these users have one?", c("sentinel_locals()"), "the server, every 2 s",
          "dismissing a remote client with " + c("0x04 LOCAL_SESSION_PREVAILED")],
         ["Is my session without a seat?", c("sentinel_without_seat()"), "the child, once, after the first stage",
-         "proving the session is headless (DECISIONI.md §4.3-bis)"],
+         "proving the session is headless (DECISIONS.md §4.3-bis)"],
         ["Is power-off really forbidden?", c("sentinel_shutdown_forbidden()"), "the child, once",
          "proving the belts are in force: " + c("CanPowerOff") + ", " + c("CanReboot") + ", "
          + c("CanSuspend") + " and " + c("CanHibernate") + " must all say " + c("no")],
@@ -376,29 +376,29 @@ S8 = p("Each process has its own loop. Only the child has threads, and they are 
          "capturing, at most 5 ms while audio is on", "see below", "captures, encodes and sends in the same thread"],
     ], "«TAB» — The loops") + \
     table(["Thread", "Where", "What it does"], [
-        [c("remotix-cattura"), c("cattura.c"), "PipeWire thread loop of the video stream (GNOME, KDE); the frame is "
+        [c("remotix-cattura"), c("capture.c"), "PipeWire thread loop of the video stream (GNOME, KDE); the frame is "
          "taken by the child's loop with a wait of at most 8 ms (" + c("MOTION_WAIT_S") + ")"],
-        [c("remotix-suono"), c("suono.c"), "PipeWire thread loop of the audio sink; samples go into a ring of "
+        [c("remotix-suono"), c("sound.c"), "PipeWire thread loop of the audio sink; samples go into a ring of "
          "48,000 frames that the child's loop drains"],
-        [c("remotix-appunti"), c("appunti.c") + " (GNOME), " + c("appunti_kde.c") + " (KDE, XFCE, LXQt)",
+        [c("remotix-appunti"), c("clipboard.c") + " (GNOME), " + c("clipboard_kde.c") + " (KDE, XFCE, LXQt)",
          "the clipboard: a GLib main loop on GNOME, a Wayland data-control pump elsewhere"],
         [c("remotix-kwin"), c("kwin.c"), "pumps KWin's Wayland connection; at a reattach of another size the "
          "child itself resizes the labwc that hosts KWin and reads KWin's output back"],
-        [c("powerdevil"), c("sessione.c"), "on KDE, waits up to 120 s for PowerDevil to appear and asks it to "
+        [c("powerdevil"), c("session.c"), "on KDE, waits up to 120 s for PowerDevil to appear and asks it to "
          "inhibit"],
-        [c("pannello-xfce"), c("sessione.c"), "on XFCE, watches the panel to remove lock, suspend, reboot and "
+        [c("pannello-xfce"), c("session.c"), "on XFCE, watches the panel to remove lock, suspend, reboot and "
          "power-off actions"],
     ], "«TAB» — The threads of a child") + \
     p("On labwc (XFCE, LXQt) the capture and the virtual devices run on the child's own loop with Wayland calls; "
       "on GNOME the D-Bus calls to Mutter iterate a private GLib context. The encoder runs synchronously in the "
       "child's loop: capture, encode, send, then the next frame. Encoding frame N while capturing N+1 would raise "
-      "the frame rate and add delay, and SPECIFICHE.md §3.2 forbids that trade.")
+      "the frame rate and add delay, and SPECS.md §3.2 forbids that trade.")
 
 S9 = p("Each piece of state has one owner and one lifetime. The rule in the code is that a global is a second place "
        "where something can be alive or dead, so shared things travel in structures (" + c("struct ponte")
        + ") and each table is sized once, at startup.", lead=True) + \
     table(["State", "Owner", "Lives", "Notes"], [
-        ["certificates and their fingerprint", c("certificati.c"), "files in " + c("/var/lib/remotix/certificates")
+        ["certificates and their fingerprint", c("certificates.c"), "files in " + c("/var/lib/remotix/certificates")
          + ", rotated while running", rif("Transport: QUIC, HTTP/3, WebTransport")],
         ["the address ban", c("rcp.c"), "in memory and in " + c("/var/lib/remotix/ban") + ": survives restarts",
          "lifted early only through the unblock socket of the running server"],
@@ -406,16 +406,16 @@ S9 = p("Each piece of state has one owner and one lifetime. The rule in the code
          "30 s of silence", rif("The RCP/1 protocol")],
         ["WebTransport connections, per-user stage size", c("webtransport.c"), "per connection; the stage size "
          "is forgotten when the child dies", c("wt_stage_forget()")],
-        ["the children table", c("figlio.c"), "a slot per user while their child lives", "sized on the cap"],
+        ["the children table", c("child.c"), "a slot per user while their child lives", "sized on the cap"],
         ["the presence table (abandonment clock)", c("main.c"), "a slot per user from the birth of their stage to its "
          "end", "sized on the cap; survives clients"],
         ["found-again desktops", c("main.c"), "from startup until their user returns or the desktop dies",
          "at most 256"],
         ["the budget's accounts", c("budget.c"), "per user", rif("Quality, degradation and budget")],
-        ["PAM checks in flight", c("aiutante.c"), "up to 8 s each", "user name and address only, never the "
+        ["PAM checks in flight", c("helper.c"), "up to 8 s each", "user name and address only, never the "
          "password"],
         ["the stage: capture, encoders, input, clipboard, the last keyframe per codec", "the child", "as long as the "
-         "child", "statics of " + c("figlio.c") + ": one stage per process"],
+         "child", "statics of " + c("child.c") + ": one stage per process"],
         ["the desktop and the user's programs", "the compositor", "until logout or abandonment", "survives clients, "
          "children and the server"],
         ["the user manager's environment before REMOTIX", "the child", c("$XDG_RUNTIME_DIR/remotix/manager-before")
@@ -423,9 +423,9 @@ S9 = p("Each piece of state has one owner and one lifetime. The rule in the code
     ], "«TAB» — Where state lives") + \
     p("<b>One number for the cap.</b> " + c("RCP_SESSION_CAP") + " (10) in " + c("rcp.h") + " is the default, "
       + c("--session-cap N") + " moves it at startup, and " + c("rcp_cap()") + " is read once by every table "
-      "that counts users: the attach slots of " + c("rcp.c") + ", the children of " + c("figlio.c") + ", the "
+      "that counts users: the attach slots of " + c("rcp.c") + ", the children of " + c("child.c") + ", the "
       "presence table of " + c("main.c") + " and the stages of " + c("webtransport.c") + ". Until 25 August 2026 "
-      "these were five hand copies of 16 (one of them 8) while SPECIFICHE.md promised 10.") + \
+      "these were five hand copies of 16 (one of them 8) while SPECS.md promised 10.") + \
     tip("the cap counts <b>stages</b>, not connections: a user who closed their browser still holds a stage until "
         "logout or abandonment. " + c("stage_count()") + " adds the children and the found-again desktops; a new "
         "user who finds them all taken is refused with " + c("0x0E SESSION_UNSERVABLE") + " before any process "

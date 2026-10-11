@@ -1,23 +1,23 @@
 /*
  * webtransport.c — see webtransport.h.
  *
- * ⭐ Ported from `banchi/01-b2-ngtcp2-wt-innesta.py`, which kept it as a `git
+ * ⭐ Ported from `benches/01-b2-graft-ngtcp2-wt.py`, which kept it as a `git
  *    diff` on the ngtcp2 tree.  The decisions and cures the graft's comments
  *    documented are in here **with their reason**: they are defects already
  *    paid for, and rewriting them without the reason means paying for them again.
  */
 #include "webtransport.h"
-/* ⭐ §5-bis.7: the question «does this layout exist?» is answered by `tastiera.c`. */
-#include "tastiera.h"
+/* ⭐ §5-bis.7: the question «does this layout exist?» is answered by `keyboard.c`. */
+#include "keyboard.h"
 
 /* ⛔ Only for the `FIGLI_INPUT_*`: the action numbers live in one place only
- *    (`figlio.h`), or in two weeks they will be three places with three values. */
-#include "figlio.h"
+ *    (`child.h`), or in two weeks they will be three places with three values. */
+#include "child.h"
 
-#include "aiutante.h"
+#include "helper.h"
 #include "audio.h"
 #include "rcp.h"
-#include "registro.h"
+#include "log.h"
 
 #include <assert.h>
 #include <math.h>
@@ -120,7 +120,7 @@ typedef struct {
 	 *     ⇒ Whoever finishes is marked dead; `head` slides over the dead at the head. */
 	bool dead;
 	/* ⛔⛔⭐ PHASE 9 — «HANDED OVER» IS NOT «CONFIRMED», and the difference between
-	 *      the two words is the crash of 23 Aug 2026 (`fasi/09-la-qualita-e-la-degradazione.md` §4).
+	 *      the two words is the crash of 23 Aug 2026 (`phases/09-quality-and-degradation.md` §4).
 	 *
 	 *      `ngtcp2_conn_writev_stream()` **does not copy the bytes**: it keeps
 	 *      OUR pointer in the list of packets in flight, and when a packet is
@@ -202,7 +202,7 @@ typedef struct {
  *    The biggest RCP/1 provides for is **PCM**: `RCP.md` §5.3 fixes it at
  *    5 ms = 480 samples = 960 bytes, plus the 12 of the §6.3 header =
  *    **972**, plus the RFC 9297 prefix (at most 8) = **980**.
- *    ⚠ `[M]` 17 Aug 2026, probe `banchi/07-b40`: the datagram browsers
+ *    ⚠ `[M]` 17 Aug 2026, probe `benches/07-b40`: the datagram browsers
  *    really accept against our server is **1024 bytes on Chrome 151**
  *    (fixed) and **1024 → 1214 on Firefox 140esr**.  ⇒ PCM fits by **52
  *    bytes** on the tightest engine, and this cap is not a round
@@ -252,7 +252,7 @@ typedef struct {
  *        `casa-cattiva` (40±20 ms, 2 %): **2 201 582 deferrals** in 26.2 s
  *
  *      ⇒ **84 700 write passes per second.**  A «pass» is a call of
- *      `write_connection()` (`trasporto.c:445`), and the event loop
+ *      `write_connection()` (`transport.c:445`), and the event loop
  *      repeats it as long as there is something to write: under pressure it
  *      runs four hundred times more often than at rest.  ⇒ The same `4096` was
  *      worth **~48 ms** on the bad network and **tens of seconds** on the healthy line.
@@ -387,12 +387,12 @@ struct wt {
 	ngtcp2_ccerr *last_error;
 	nghttp3_conn *h3;
 	char provenance[80];
-	/* ⭐ THE PAM HELPER — `DECISIONI.md` §1.10.  ⛔ This layer does not own
+	/* ⭐ THE PAM HELPER — `DECISIONS.md` §1.10.  ⛔ This layer does not own
 	 *    it: there is a single one for the whole server, started by `main.c` before
 	 *    any connection exists, and it comes through here because RCP's
 	 *    `ask_verify` hook is the only place that uses it.
 	 * ⚠ NULL is allowed and means «synchronous check»: it is the declared
-	 *   fallback, and it is the fault that `banchi/02-pam-*` injects. */
+	 *   fallback, and it is the fault that `benches/02-pam-*` injects. */
 	helper *help;
 
 	/* HTTP/3's control stream: it is needed to recognise it when writing,
@@ -568,7 +568,7 @@ struct wt {
 	 *    the second shape is the defect of the 30.8 GB of log.
 	 *
 	 * ⛔⭐ AND THE FOLLOWING FOUR DECIDE NOTHING: they are the INSTRUMENT with which
-	 *     one proves that the rate does not drop on a still scene.  `LEZIONI.md` §1.9:
+	 *     one proves that the rate does not drop on a still scene.  `LESSONS.md` §1.9:
 	 *     a counter at zero on a branch never reached proves nothing —
 	 *     «empty» and «forbidden» look the same.  ⇒ We count how many times
 	 *     `backlog` was READ in each second, besides what it was worth:
@@ -604,7 +604,7 @@ struct wt {
 	 *
 	 * ⛔ `network_logged_ms` at 0 means «never said», and the first line comes out
 	 *    anyway: «the session has not spoken yet» and «nothing has
-	 *    changed» must not look the same (`LEZIONI.md` §1.9). */
+	 *    changed» must not look the same (`LESSONS.md` §1.9). */
 	uint64_t network_logged_ms;
 	uint64_t network_pkt_lost, network_bytes_lost;
 	uint64_t network_pkt_sent, network_pkt_recv, network_pkt_discarded;
@@ -718,7 +718,7 @@ struct wt {
 	 *     been born yet**.  ⇒ Whoever reads ACQUITS the network when the network was involved,
 	 *     that is the EXACTLY OPPOSITE error of the one the cure exists to
 	 *     remove.  A witness accusing someone who was not there is worse than no
-	 *     witness: it sends the diagnosis the wrong way (`LEZIONI.md`
+	 *     witness: it sends the diagnosis the wrong way (`LESSONS.md`
 	 *     §1.37).
 	 *
 	 * ⭐ We note what the global counter was worth at the FIRST round in which
@@ -865,7 +865,7 @@ struct wt {
 
 	/* ⛔⭐ §4.6 — THE CAP OF THE SESSION THAT NEVER OPENS THE CHANNEL.
 	 *
-	 * ✅ `DECISIONI.md` §7.17, decided by the user on 11 Aug 2026: **5 s**
+	 * ✅ `DECISIONS.md` §7.17, decided by the user on 11 Aug 2026: **5 s**
 	 *    from the opening of the WebTransport session to the opening of the control
 	 *    channel, then `TIMED_OUT`.
 	 *
@@ -933,9 +933,9 @@ struct wt {
  * ⭐ The identity was already in hand, as in `hook_log`: the `wt` carries the
  *    RCP session, and `rcp_user()` has always existed.  Here is the only road
  *    to take it, so the print points do not each compose it in their own
- *    way — the same reason the parenthesis is written in `registro.c`.
+ *    way — the same reason the parenthesis is written in `log.c`.
  *
- * ⚠ AND WHOEVER DOES NOT KNOW KEEPS QUIET (`registro.h`): before authentication `w->rcp`
+ * ⚠ AND WHOEVER DOES NOT KNOW KEEPS QUIET (`log.h`): before authentication `w->rcp`
  *   does not yet have a user, `rcp_user()` returns `""`, and `log_says_of()`
  *   writes the line **without parenthesis**.  ⛔ The origin is not put in its
  *   place: the body of those lines already carries it (`w->provenance`), and a
@@ -983,7 +983,7 @@ static size_t varint_write(uint8_t *dest, uint64_t v)
 }
 
 /* ⛔ Returns 0 if the bytes are not enough: «I don't know yet» and «zero» are two
- *    different things, and confusing them is `LEZIONI.md` §1.9. */
+ *    different things, and confusing them is `LESSONS.md` §1.9. */
 static size_t varint_read(uint64_t *v, const uint8_t *src, size_t len)
 {
 	size_t n;
@@ -1032,7 +1032,7 @@ static size_t varint_read(uint64_t *v, const uint8_t *src, size_t len)
 
 /* ⛔ §4.6, the missing line: from the opening of the WebTransport session
  *    to the opening of the control channel, **5 s**.
- * ✅ `DECISIONI.md` §7.17, decided by the user on 11 Aug 2026.
+ * ✅ `DECISIONS.md` §7.17, decided by the user on 11 Aug 2026.
  * ⭐ The same number as the first cap of §4.6, and not for symmetry: opening the
  *    channel is the first mandatory act of the session (§2.5), it does not depend
  *    on how fast a person types and does not depend on the network any more
@@ -1797,7 +1797,7 @@ static uint64_t dgram_peer_cap(const wt *w)
  * ⛔ When the queue is full THE OLDEST is thrown away — §6.3 and the lesson of
  *    v1.  ⚠ And it is counted: «audio does not arrive» and «audio arrives and I drop it»
  *    must have two different lines, which is exactly the reason why
- *    `trasporto.c` wrote the incoming discard since phase 1.
+ *    `transport.c` wrote the incoming discard since phase 1.
  */
 static bool dgram_enqueue(wt *w, const uint8_t *d, size_t n)
 {
@@ -1810,7 +1810,7 @@ static bool dgram_enqueue(wt *w, const uint8_t *d, size_t n)
 		 *    checks the same cap three lines earlier: ⚠ **two checks for
 		 *    a single rule, and only one of the two could say it had
 		 *    fired**.  The day the second caller arrives — and with
-		 *    `figlio.c` it is arriving — a block would vanish without a trace. */
+		 *    `child.c` it is arriving — a block would vanish without a trace. */
 		w->audio_dropped++;
 		log_says_of(REG_WT, wt_chi(w),
 		                 "⛔ %s: audio block of %zu bytes beyond the cap of %u — "
@@ -1998,7 +1998,7 @@ static bool dgram_write_one(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 	 *      right after closes it — filling it.  ⇒ The filling of a
 	 *      still session **is not the datagram's: it is the stream's**, and whoever
 	 *      wanted to remove it must go there, not here.
-	 *      ⚠ `09-b84-audio-silenzio.py` attributed it to this line: it was a
+	 *      ⚠ `09-b84-audio-silence.py` attributed it to this line: it was a
 	 *        deduction, and it has been disproved.
 	 *
 	 * ⭐ On PCM instead the condition bites (−10.5 %), and one sees why: at 200
@@ -2180,7 +2180,7 @@ static bool dgram_write_one(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 			 *     control, buffer space, amplification limit — and
 			 *     the first draft of this line listed all three,
 			 *     that is it named none of them (finding 10 of the review).
-			 *     ⚠ `LEZIONI.md` §1.9: a deduction written next to a
+			 *     ⚠ `LESSONS.md` §1.9: a deduction written next to a
 			 *     number nobody measured.
 			 *
 			 * ⭐ `cwnd_left` separates them: if it is **zero** it is congestion, and
@@ -2243,7 +2243,7 @@ static size_t rewrite_settings(wt *w, const nghttp3_vec *vec, size_t veccnt)
 	/* ⛔ Every step has a foothold, and if the foothold is not there we do NOT rewrite
 	 *    blindly: we say so and leave it alone.  The server will stay without
 	 *    WebTransport, and the measurement will see it at once — which is what
-	 *    `DECISIONI.md` §6.4 asks to re-test at every update of
+	 *    `DECISIONS.md` §6.4 asks to re-test at every update of
 	 *    nghttp3. */
 	n = varint_read(&stream_type, orig, origlen);
 	if (n == 0 || stream_type != 0x00) {
@@ -2350,7 +2350,7 @@ static void hook_log(void *ctx, const char *line)
 	log_says_of(REG_RCP, chi, "%s", line);
 }
 
-/* ⛔⭐ THIS HOOK IS THE FALLBACK, SINCE 12 AUG 2026 — `DECISIONI.md` §1.10.
+/* ⛔⭐ THIS HOOK IS THE FALLBACK, SINCE 12 AUG 2026 — `DECISIONS.md` §1.10.
  *
  *     ⚠ PAM BLOCKS, and here it blocked the whole loop: one user's
  *       handshake stopped everybody else's and delayed the packets of
@@ -2372,7 +2372,7 @@ static bool hook_verify(void *ctx, const char *user, const char *password)
 	return rcp_authenticate_from(user, password, rhost);
 }
 
-/* ⭐⭐ THE GOOD ROAD: one asks, one does not wait — `DECISIONI.md` §1.10.
+/* ⭐⭐ THE GOOD ROAD: one asks, one does not wait — `DECISIONS.md` §1.10.
  *
  * ⛔ Returns `false` when the request has not left, and `rcp.c` treats it
  *    as an immediate NO: invariant I3, failure is a no and not a
@@ -2413,7 +2413,7 @@ static bool hook_ask(void *ctx, const char *user, const char *password,
 /*       case a `kind` field» — and on WebTransport it is not true.  A reader who */
 /*       applied it to the letter would derive channel `0x40` from EVERY        */
 /*       frame and would close with `PROTOCOL_ERROR`.  ⛔ The first live    */
-/*       run of `02-filo-cliente.py` ended red exactly there.                 */
+/*       run of `02-wire-client.py` ended red exactly there.                 */
 /*                                                                            */
 /*     ⭐ This file already knew it for INCOMING streams (`dispatch_uni`,       */
 /*        line ~1164): here is the other half, and it is the same `varint_write` */
@@ -2424,12 +2424,12 @@ static bool hook_ask(void *ctx, const char *user, const char *password,
  *
  * ⛔ WHY THEY ARE HOOKS AND NOT DIRECT CALLS, and it is not style: `rcp.c` lives in
  *    TWO folders that the `Makefile` (`GEMELLATI`) demands identical byte for
- *    byte, and the second copy `banchi/01-b3-rcp-innesta.py` slips it inside
+ *    byte, and the second copy `benches/01-b3-graft-rcp.py` slips it inside
  *    ngtcp2's `examples/`, where `input.h` **does not exist**.  An `#include` in
  *    there would switch off B3, B5, B6, B8 and B11 in one go.
  *
  * ⛔ AND WHY THEY GO THROUGH HERE AND NOT STRAIGHT TO THE STAGE: the stage is in
- *    ANOTHER PROCESS (`figlio.c`), which runs as the user and is the only one holding
+ *    ANOTHER PROCESS (`child.c`), which runs as the user and is the only one holding
  *    the graphical session.  These six carry the message up to the bridge of
  *    `main.c`, which is the only one that knows both sides.
  *
@@ -2527,7 +2527,7 @@ static int hook_input_release_all(void *ctx)
  * ⛔ And the answer does NOT come back from here: it comes back with a frame at the new size,
  *    which `video_a_una()` reports to `rcp_tela_concessa()`.  ⚠ Whoever read this
  *    `true` as «the canvas has changed» would repeat the mistake `wayvnc` makes with
- *    the outcome of the request (`DECISIONI.md` §5.0-sexies, «the shape rule
+ *    the outcome of the request (`DECISIONS.md` §5.0-sexies, «the shape rule
  *    stolen from neatvnc»). */
 static wt_recanvas_request hook_stage_recanvas;
 static void *hook_stage_recanvas_ctx;
@@ -2575,7 +2575,7 @@ static bool hook_layout(void *ctx, const char *name)
  *    with the line «layout unknown to this machine» — a
  *    FALSE sentence.  ⇒ A Hungarian user could not get in.
  *
- * ⭐ And the question is forwarded to `tastiera.c`, which is already the only place of the
+ * ⭐ And the question is forwarded to `keyboard.c`, which is already the only place of the
  *    product that can compile a layout: asking the same thing twice
  *    in two different ways produces two answers under the same
  *    label (shape E2).  ⚠ It also covers the VARIANT — `it(nonesiste)`
@@ -2623,7 +2623,7 @@ static bool hook_recanvas(void *ctx, uint32_t width, uint32_t height)
 
 /* ⭐⭐ §5.1 — «DOES THIS USER ALREADY HAVE A LOCAL GRAPHICAL SESSION?»
  *
- * ⛔ The hook towards `sentinella.c`, and it lives here for the same reason as the
+ * ⛔ The hook towards `sentinel.c`, and it lives here for the same reason as the
  *    others: `rcp.c` exists in two copies and the one grafted into ngtcp2 has no
  *    system bus.  Whoever does not connect it does not apply the rule, and `rcp.c`
  *    writes so in the log instead of keeping quiet. */
@@ -2657,8 +2657,8 @@ static bool hook_local_session(void *ctx, const char *user, char *which,
 }
 
 /* ⭐ D-001 — the desktop name of this machine for `SESSION` (§4.5).
- *    One per PROCESS, like the desktop choice (`sessione.h`): `main.c`
- *    sets it at startup, because `sessione.h` (glib) does not get in here. */
+ *    One per PROCESS, like the desktop choice (`session.h`): `main.c`
+ *    sets it at startup, because `session.h` (glib) does not get in here. */
 static const char *desktop_name = "unknown";
 
 void wt_desktop(const char *name)
@@ -2735,7 +2735,7 @@ static bool hook_video_open(void *ctx, int64_t *stream, uint64_t *remain)
 	}
 
 	/* ⛔ How much credit ngtcp2 BELIEVES it has, asked of it and not deduced
-	 *    (`LEZIONI.md` §1.6).  ⚠ It serves to tell «the peer gave us no
+	 *    (`LESSONS.md` §1.6).  ⚠ It serves to tell «the peer gave us no
 	 *    credit» from «it gave it and one of the two counts wrong»: on 13 Aug 2026
 	 *    a client declaring `initial_max_streams_uni = 6` closed with
 	 *    `STREAM_LIMIT_ERROR` after we had opened 11 streams, and without this
@@ -3001,7 +3001,7 @@ static bool hook_clipboard_response(void *ctx, uint32_t serial,
  *      Chrome changing that number, and the slots start falling again under the
  *      nose of whoever is reading.
  *
- * ⚠ AND THE PREDICTION OF `SPECIFICHE.md` §5.3 ABOUT THE FROZEN TAB DOES NOT
+ * ⚠ AND THE PREDICTION OF `SPECS.md` §5.3 ABOUT THE FROZEN TAB DOES NOT
  *   COME TRUE — «a background tab is frozen after about five
  *   minutes, so it goes quiet, so it is detached».  `[M]` 16 August, the user's real
  *   browser without automation attached, tab in the background for
@@ -3040,7 +3040,7 @@ static bool hook_clipboard_response(void *ctx, uint32_t serial,
 /*                                                                            */
 /* ⛔ WHAT THERE WAS: `pkt_lost / pkt_sent` within a window, with threshold at */
 /*    50‰.  ⛔⛔ AND IT ORDERS THE TWO CASES THE WRONG WAY ROUND — `[M]` 23 Aug 2026, */
-/*    `banchi/09-b81-linea-morta.py`:                                         */
+/*    `benches/09-b81-linea-morta.py`:                                         */
 /*                                                                            */
 /*      · `casa-cattiva`  — loss INJECTED 1.86-2.15 %, loss DECLARED           */
 /*        by ngtcp2 **512‰** (51.2 %).  And the line HOLDS: ten minutes, 9.60  */
@@ -3240,7 +3240,7 @@ void wt_parent_round(uint64_t now_ms)
 	uint64_t distance;
 
 	/* ⛔ The first pass is not a gap: before there was nothing to compare,
-	 *    and «never passed» is not «passed a long time ago» (`LEZIONI.md` §1.9). */
+	 *    and «never passed» is not «passed a long time ago» (`LESSONS.md` §1.9). */
 	if (!last_round_ms || now_ms <= last_round_ms) {
 		last_round_ms = now_ms;
 		return;
@@ -3275,7 +3275,7 @@ void wt_stalled_rounds(uint64_t *amount, uint64_t *worst_ms)
  *    anyone reading «an active-session PING is needed» asks: it already has one, since 16
  *    Aug 2026 (the box above).  `keepalive_rule()` switches on
  *    ngtcp2's keep-alive in ALL states except `finished` — not only while
- *    credentials are awaited.  ⇒ `FASI.md` §05 §6-bis is done, and the measurement
+ *    credentials are awaited.  ⇒ `PHASES.md` §05 §6-bis is done, and the measurement
  *    `[M]` of **15 004 / 15 005 / 15 002 ms** between two packets of a still
  *    browser is what was seen BEFORE: it was Chrome's keep-alive, and it is
  *    precisely the measurement that got ours switched on.  ⚠ Today that number is no
@@ -3325,7 +3325,7 @@ void wt_stalled_rounds(uint64_t *amount, uint64_t *worst_ms)
  *     bytes of payload plus 28 of IP/UDP) and the answer is an
  *     equally short acknowledgement.  With traffic stopped and one round every 5 s it is a CAP of
  *     ~26 bytes/s per session, against the declared floor of 20 Mbit/s
- *     (`DECISIONI.md` §3.1-bis).  The cost is not an argument; the period is
+ *     (`DECISIONS.md` §3.1-bis).  The cost is not an argument; the period is
  *     chosen by the rule, not by the bandwidth.
  *
  * ⭐ AND IT ALSO HOLDS FOR GHOST EVICTION (`rcp.c`, `--eviction-ms`): that one
@@ -3389,7 +3389,7 @@ static void rule_heartbeat(wt *w)
 
 	/* ⛔⛔⭐⭐ AND ON THE SAME STATE THE FRAME LOOP IS SWITCHED OFF TOO.
 	 *
-	 *        `fasi/13-xfce.md`, 23 Sep 2026: *«the stage stops capturing
+	 *        `phases/13-xfce.md`, 23 Sep 2026: *«the stage stops capturing
 	 *        when the TRANSPORT dies, not when the client says FAREWELL»*.  At
 	 *        farewell the SLOT was given up at once (§4.2, `closed_by_client()`)
 	 *        but capture went on: every frame was captured,
@@ -3421,7 +3421,7 @@ static void rule_heartbeat(wt *w)
 	 *
 	 * ⛔ AND IT DOES NOT DISMANTLE THE STAGE — invariant **I4**.  What is switched off is the
 	 *    request for frames to the child (`children_video()` with codec 0, which
-	 *    `figlio.h` declares as «stop capturing»); the child, the
+	 *    `child.h` declares as «stop capturing»); the child, the
 	 *    graphical session and the open windows stay exactly where they are,
 	 *    and whoever reconnects finds their desktop again.  It is the same distinction
 	 *    already written for audio: *«what switches off is the monitor's consumption, not
@@ -3460,7 +3460,7 @@ static void rule_heartbeat(wt *w)
 		return;
 	}
 	if (strcmp(state, "active") == 0) {
-		/* ⭐ The silence clock of `SPECIFICHE.md` §5.3 must be evaluated
+		/* ⭐ The silence clock of `SPECS.md` §5.3 must be evaluated
 		 *    WHILE the client is quiet, and while it is quiet nobody would walk
 		 *    the write path.  One second of granularity out of
 		 *    thirty is plenty. */
@@ -3584,7 +3584,7 @@ void wt_video_hook(wt_video_request f, void *ctx)
  *
  * ───────────────────────────────────────────────────────────────────────────
  * 🔸 DERIVED, AND THE PRICE IS VISIBLE TO THE USER — it is declared, not
- *    implied (`LEZIONI.md` §2.3-quater, `CODER.md` I6)
+ *    implied (`LESSONS.md` §2.3-quater, `CODER.md` I6)
  * ───────────────────────────────────────────────────────────────────────────
  *
  * ⛔ **On a narrow line the image stays broken longer after a loss.**
@@ -3594,11 +3594,11 @@ void wt_video_hook(wt_video_request f, void *ctx)
  *    keyframe really takes, and in exchange the sound gets through.
  *
  * ⚠ The judgement is the user's: these two numbers — the cap and the margin — are not
- *   proved, they are derived.  They go into `DECISIONI.md` the day
+ *   proved, they are derived.  They go into `DECISIONS.md` the day
  *   he listens to them and looks at them together.
  *
  * ⛔ THE CAP EXISTS BECAUSE A KEYFRAME NO LONGER REQUESTED IS A SCREEN
- *    FROZEN FOREVER.  `SPECIFICHE.md` I1: «an ugly session is worth more than
+ *    FROZEN FOREVER.  `SPECS.md` I1: «an ugly session is worth more than
  *    a closed session» — but **frozen** is not **ugly**, it is half closed.
  *    Two seconds is the longest we accept to stay broken.
  *
@@ -3732,7 +3732,7 @@ void wt_video_hook(wt_video_request f, void *ctx)
 
 /* ⛔ The fallback when ngtcp2 has neither `smoothed_rtt` nor `cwnd` yet: we
  *    assume **the declared floor**, 20 Mbit/s = 2 500 bytes/ms
- *    (`DECISIONI.md` §3.1-bis).  ⚠ It is DECLARED instead of guessed: an invented
+ *    (`DECISIONS.md` §3.1-bis).  ⚠ It is DECLARED instead of guessed: an invented
  *    number passing for measured is shape E1.  ⚠ And if the real line is
  *    narrower the fallback UNDERESTIMATES the wait and keeps one delta too
  *    many: it lasts until ngtcp2 has a measurement, that is one network round trip. */
@@ -3769,7 +3769,7 @@ static void clear_out_declare(const char *da_dove)
 {
 	/* ⚠ And the head piece — «video queue threshold (§5.1): N ms» — is NOT
 	 *   to be touched: it is what the phase 9 benches read to verify the
-	 *   arm (`09-b79-cure.py:582`).  The TAIL of the line changes, that is what
+	 *   arm (`09-b79-fixes.py:582`).  The TAIL of the line changes, that is what
 	 *   the line says; the hook stays where it was. */
 	if (clear_threshold_ms)
 		registro_dice(LOG_STARTUP,
@@ -3867,7 +3867,7 @@ static bool adaptive_rate;
  * ⚠ And the order in `main.c` is not by chance: `wt_clear_threshold()` comes FIRST,
  *   so this line reads the value in force instead of promising one.
  *
- * ⚠⚠ And the CONGESTION ALGORITHM has never been chosen — `trasporto.c`
+ * ⚠⚠ And the CONGESTION ALGORITHM has never been chosen — `transport.c`
  *     calls `ngtcp2_settings_default()` and does not touch `cc_algo`, so
  *     ngtcp2's default (CUBIC) is taken.  ⛔ It is NOT changed in this
  *     round, because it would be a second variable in the same bench; but it must be
@@ -4030,7 +4030,7 @@ static uint64_t queue_drain_ms(const wt *w, size_t byte, const char **come)
 		ngtcp2_conn_get_conn_info(w->conn, &info);
 	if (info.smoothed_rtt == 0 || info.cwnd == 0) {
 		*come = "fallback: ngtcp2 has neither rtt nor window yet, the "
-		        "declared floor of 20 Mbit/s is assumed (DECISIONI.md §3.1-bis)";
+		        "declared floor of 20 Mbit/s is assumed (DECISIONS.md §3.1-bis)";
 		return (uint64_t)byte / WT_FLOOR_BYTE_MS;
 	}
 	*come = "from the measured bandwidth (cwnd/rtt)";
@@ -4107,7 +4107,7 @@ static void inflight_clean(wt *w)
  *       | final count                  | —             | KEPT >> 0           |
  *
  *       ⭐ And outside the step the cure must be INERT: at 20 Mbit/s — the
- *       floor of `DECISIONI.md` §3.1-bis — the queue never reaches 100 ms,
+ *       floor of `DECISIONS.md` §3.1-bis — the queue never reaches 100 ms,
  *       so `abandoned by threshold` = 0 and the chain's delay stays
  *       the one of phase 8 (55.20 ms `[M]`).
  *
@@ -4123,7 +4123,7 @@ static void inflight_clean(wt *w)
  *    2. **frames/s in seconds 8-10 do not rise, or drop below 13.**
  *       ⇒ The kept deltas arrive too late to be of use: the threshold is too
  *       high and the queue is buying smoothness by selling responsiveness
- *       (`SPECIFICHE.md:128-130`).  We go down to 50 ms and measure again;
+ *       (`SPECS.md:128-130`).  We go down to 50 ms and measure again;
  *    3. ⛔ **the measured delay of the chain exceeds 55 + threshold ms** (155 ms at
  *       100).  ⇒ `queue_drain_ms()` UNDERESTIMATES the emptying for one
  *       of the three reasons declared next to it, and the threshold does not limit what
@@ -4154,7 +4154,7 @@ static void inflight_clean(wt *w)
  *     decided by him.
  *
  * ⭐⭐ AND THIS CURE IS THE PREREQUISITE OF THE RATE REGULATOR
- *     (`fasi/09-la-qualita-e-la-degradazione.md` §6).  That design hooks onto
+ *     (`phases/09-quality-and-degradation.md` §6).  That design hooks onto
  *     `backlog` = how many live DELTAS still have bytes in our queue, and
  *     ⛔ today that quantity is **zero by construction**, because this
  *     function empties everything at every round: a regulator installed now would never
@@ -4776,7 +4776,7 @@ static void video_refused_for_key(wt *w, uint64_t now_ms)
  *    and for three independent reasons: (1) here they DO NOT EXIST — the table of
  *    messages of `RCP.md` has no frame acknowledgement, and adding one
  *    would mean a network round trip INSIDE the control loop, that is
- *    buying reaction by paying for it in delay (`SPECIFICHE.md:128-131` asks to
+ *    buying reaction by paying for it in delay (`SPECS.md:128-131` asks to
  *    justify it in ms; `backlog` costs **0 ms**, it is already in our
  *    memory); (2) the peer CAN FREEZE THEM and the regulator would stop for
  *    ever — and a loop the peer can freeze does not become safe
@@ -4788,11 +4788,11 @@ static void video_refused_for_key(wt *w, uint64_t now_ms)
  *    that the deltas coming after are not blocked by them (streams are
  *    independent), and their rhythm is already handled by `key_interval_ms()`.
  *    Counting them here would stop delta production for the whole duration of a
- *    slow keyframe, which is exactly the opposite of `SPECIFICHE.md` §8.3.
+ *    slow keyframe, which is exactly the opposite of `SPECS.md` §8.3.
  *
  * ⚠ THE PRICE IN MILLISECONDS, declared: **0**.  This regulator does not
  *   add any intermediate memory, so it does not buy smoothness and does not
- *   sell responsiveness (`SPECIFICHE.md:128-131`).  It removes work, it does not postpone it.
+ *   sell responsiveness (`SPECS.md:128-131`).  It removes work, it does not postpone it.
  *
  * ⚠ THE PRICE THAT IS THERE INSTEAD: it cuts DOWNSTREAM of the encoder, so the
  *   skipped frame has already paid for the child's GPU.  The real lever — not
@@ -4801,7 +4801,7 @@ static void video_refused_for_key(wt *w, uint64_t now_ms)
  *   so a rate imposed on the stage would impose it on all of them and the session on the
  *   good line would pay for the one on the bad line.  `[?]` open.
  *
- * ⛔ THE BOTTOM OF THE SCALE IS A VERDICT, NOT A BRAKE.  `DECISIONI.md` §2.1:
+ * ⛔ THE BOTTOM OF THE SCALE IS A VERDICT, NOT A BRAKE.  `DECISIONS.md` §2.1:
  *    the line is 20 Mbit/s, the image 480p·25.  Below 25/s on a
  *    20 Mbit/s line it is a DEFECT, not a successful degradation — and the cure is NOT
  *    forcing a frame into a queue that does not empty, because that
@@ -4840,7 +4840,7 @@ static void video_refused_for_key(wt *w, uint64_t now_ms)
  *
  * 3. ⛔ THAT IT DOES NOT DROP ON A STILL SCENE — and the control can NOT be «the
  *    counter is zero»: empty and forbidden look the same
- *    (`LEZIONI.md` §1.9), and a zero on a branch never reached proves
+ *    (`LESSONS.md` §1.9), and a zero on a branch never reached proves
  *    nothing.  ⭐ The structural proof comes first: `backlog` is
  *    read ONLY when a frame arrives from the stage, and on a still scene a
  *    Wayland compositor delivers none — `video_a_una()` is not even
@@ -4920,7 +4920,7 @@ static bool rate_brake(wt *w, bool key, uint64_t now_ms)
 
 	/* ⭐ THE READ IS COUNTED, always, even when it is worth zero: it is what
 	 *    tells «the loop was walked and the backlog was zero» from
-	 *    «the loop was not walked at all» (`LEZIONI.md` §1.9). */
+	 *    «the loop was not walked at all» (`LESSONS.md` §1.9). */
 	w->rate_readings++;
 	w->rate_last = backlog;
 	if (backlog > w->rate_max)
@@ -4936,7 +4936,7 @@ static bool rate_brake(wt *w, bool key, uint64_t now_ms)
 			ngtcp2_conn_get_conn_info(w->conn, &in);
 			rtt_ms = in.smoothed_rtt / NGTCP2_MILLISECONDS;
 			/* ⛔⭐ `smoothed_rtt - min_rtt` IS THE QUEUE INSIDE THE NETWORK, IN
-			 *     MILLISECONDS: it is the number with which `SPECIFICHE.md:128` —
+			 *     MILLISECONDS: it is the number with which `SPECS.md:128` —
 			 *     «every intermediate memory buys smoothness and sells responsiveness» —
 			 *     is honoured instead of quoted.  ⚠ And it is the first time
 			 *     `min_rtt` is read: `ngtcp2_conn_get_conn_info()` has always filled it
@@ -5060,7 +5060,7 @@ static bool rate_brake(wt *w, bool key, uint64_t now_ms)
  *     frames, on a still scene nothing would come out — and «the loop was not
  *     walked» would again look the same as «the backlog was
  *     zero», which is precisely the defect this line exists to remove
- *     (`LEZIONI.md` §1.9; and it is the same cure as the child's `cycle:` line,
+ *     (`LESSONS.md` §1.9; and it is the same cure as the child's `cycle:` line,
  *     which is written BEFORE looking at the outcome of the capture).
  *
  * ⚠ It comes out only with the switch on: it is the instrument of a bench, not a
@@ -5176,7 +5176,7 @@ static void rate_cycle(wt *w, uint64_t now_ms)
 #define WT_NETWORK_WINDOW 1
 #define WT_NETWORK_LOSES    2
 
-/* ⭐⭐ THE TWO OUTCOMES OF A DATAGRAM, AND `trasporto.c` CALLS THEM FROM NGTCP2.
+/* ⭐⭐ THE TWO OUTCOMES OF A DATAGRAM, AND `transport.c` CALLS THEM FROM NGTCP2.
  *
  *    ⛔ Until 23 Aug 2026 `ngtcp2_callbacks` registered neither
  *       `lost_datagram` nor `ack_datagram`: audio left and its fate
@@ -5410,7 +5410,7 @@ static void dead_line_judge(wt *w, const ngtcp2_conn_info *in,
 	 * ⚠ AND IT TAKES NOTHING AWAY FROM THE CURE, because whoever dies does not say goodbye: a client
 	 *   killed (`kill -9`, the browser closed by force, the network dropping) leaves
 	 *   the session `"active"` and the dead line fires as before — it is
-	 *   TEST 3 of `banchi/09-b81-linea-morta.py`, and they are two of the three episodes
+	 *   TEST 3 of `benches/09-b81-linea-morta.py`, and they are two of the three episodes
 	 *   of 22 September (12:41 and 12:42), which remain RIGHT firings.
 	 *
 	 * ⛔ And the connection is NOT closed here: «session finished, connection
@@ -5629,7 +5629,7 @@ static void network_cycle(wt *w, uint64_t now_ms)
 		return;
 	/* ⚠ At most one a second.  ⛔ And the FIRST always comes out, without waiting:
 	 *   `network_logged_ms == 0` means «never spoken», which is not «nothing has
-	 *   changed» (`LEZIONI.md` §1.9). */
+	 *   changed» (`LESSONS.md` §1.9). */
 	if (w->network_logged_ms && now_ms - w->network_logged_ms < 1000)
 		return;
 
@@ -5703,7 +5703,7 @@ static void network_cycle(wt *w, uint64_t now_ms)
 		snprintf(minimum, sizeof minimum, "%llu",
 		         (unsigned long long)(in.min_rtt / NGTCP2_MICROSECONDS));
 		/* ⭐ `smoothed_rtt - min_rtt` IS THE QUEUE INSIDE THE NETWORK: it is the number
-		 *    with which `SPECIFICHE.md:128` — «every intermediate memory buys
+		 *    with which `SPECS.md:128` — «every intermediate memory buys
 		 *    smoothness and sells responsiveness» — is honoured instead of quoted. */
 		if (in.smoothed_rtt >= in.min_rtt)
 			snprintf(queue, sizeof queue, "%llu",
@@ -6020,7 +6020,7 @@ void wt_cursor_broadcast(const char *user, uint16_t width,
  * ⛔ IT SERVES THE REATTACH, and it is the only place in the parent where that number
  *    exists: `rcp.c` knows the GRANTED canvas, the child knows the REAL one, and
  *    between the two only frames pass.  ⇒ It is read from the frame — which is
- *    also the only source that does not lie (`DECISIONI.md` §5.0-sexies).
+ *    also the only source that does not lie (`DECISIONS.md` §5.0-sexies).
  *
  * ⚠ It is not a cache to keep fresh: it is a FACT dated at the last frame
  *   delivered.  If the stage dies and is reborn at another size, the first line of
@@ -6031,7 +6031,7 @@ void wt_cursor_broadcast(const char *user, uint16_t width,
  *
  *     They were **eight** with the excuse that *«`MAX_ATTACCATE` is of the same
  *     order»*, and ⛔ «of the same order» means **that it bit at nine**,
- *     that is before the ten `SPECIFICHE.md` §5.5 promises (finding
+ *     that is before the ten `SPECS.md` §5.5 promises (finding
  *     **R10-A6**).  The ninth and tenth users lost the reattach
  *     cure, and ⛔ **silently**, because the fallback below is
  *     declared **once only** and the eighth had already spent it.
@@ -6210,7 +6210,7 @@ static bool hook_stage_canvas(void *ctx, uint32_t *l, uint32_t *a)
  *    unified», it is **«is it the same quantity?»**.
  *
  * ⭐⭐ THE ANSWER IS NO, and for two independent reasons — so **it is not
- *     unified**, exactly like `MAX_IN_FLIGHT` in `aiutante.c` (finding
+ *     unified**, exactly like `MAX_IN_FLIGHT` in `helper.c` (finding
  *     R10-A7), which was left separate for the same reason:
  *
  *   1. ⛔ **It is the size of a BATCH, not of a capacity.**  `RCP_SESSION_CAP`
@@ -6303,7 +6303,7 @@ size_t wt_watch_locals(void)
 		/* ── 2. ⭐⭐ THE QUESTION, and there is ONE for all of them ────────
 		 * ⛔ It used to be one per tenant, and the cost was `N × D` inside the loop that
 		 *    delivers frames: `[M]` §6.13, the frontier narrowed
-		 *    as 1/N and cut the 300 ms `sentinella.c` already allows itself at
+		 *    as 1/N and cut the 300 ms `sentinel.c` already allows itself at
 		 *    ~4 tenants.  Here the cost is `D`, and it no longer depends on N. */
 		hook_locals(hook_locals_ctx, names, amount, local,
 		              &which_ones[0][0], WT_SWEEP_WHICH);
@@ -6316,7 +6316,7 @@ size_t wt_watch_locals(void)
 			 *     LOCAL one ⇒ **the local one wins**: the remote one is closed».
 			 *
 			 * ⭐ And it is the only point of the product where the server takes away a
-			 *    HEALTHY session — `DECISIONI.md` §4.1-bis admits it **only** with
+			 *    HEALTHY session — `DECISIONS.md` §4.1-bis admits it **only** with
 			 *    a reason that can be told, and that is why `0x04` exists. */
 			log_says_of(REG_WT, names[k],
 			                 "⛔ «%s» has opened a LOCAL graphical session (%s): the "
@@ -6393,7 +6393,7 @@ size_t wt_dismiss_user(const char *user, uint8_t reason, const char *detail,
  *     (it is decided at `SESSION`), but its cap is known from `HELLO` on:
  *     `video.max_size` of §4.3, which §4.5 requires to be respected.  ⇒ The
  *     cost of the newcomer is counted on that cap — an **upper bound**, that is the
- *     uncomfortable direction, that is the right one (`LEZIONI.md` §1.33).
+ *     uncomfortable direction, that is the right one (`LESSONS.md` §1.33).
  *
  * ⚠ It goes through here and not through `rcp.h` directly because `webtransport.c` is the one
  *   that knows **which sessions belong to that user** — the same reason, and the
@@ -6554,7 +6554,7 @@ static void audio_a_una(wt *w, const char *user, uint8_t codec,
  *     capture of the monitor, the encoder, the datagram, the browser that plays.
  *     Switching them all on together and then hearing nothing leaves **five
  *     suspects** — and it is exactly the way this project lost
- *     its worst days (`LEZIONI.md` §10).
+ *     its worst days (`LESSONS.md` §10).
  *
  *     This source puts **only three** of them under test — encoder, datagram,
  *     browser — with a signal of which **every sample is known in advance**.
@@ -6900,7 +6900,7 @@ static void rcp_start(wt *w, int64_t stream_id)
 	 * ⚠ And ALL FOUR are connected: `rcp.c` refuses to open if one is
 	 *   missing, because a host that could open and not reset could not
 	 *   honour §5.1 — and it would notice halfway through a frame.
-	 * ⭐ Compatibility with the graft of `banchi/rcp/` comes free: there the
+	 * ⭐ Compatibility with the graft of `benches/rcp/` comes free: there the
 	 *   `memset` above leaves them NULL, and `rcp_video_open()` returns
 	 *   `RCP_VIDEO_NO_CHANNEL` instead of keeping quiet. */
 	g.video_open = hook_video_open;
@@ -7874,7 +7874,7 @@ static int open_session(wt *w, request *r)
 
 	/* ⛔⭐ AND HERE STARTS THE §4.6 CAP FOR OPENING THE CHANNEL — 5 s.
 	 *
-	 * ✅ `DECISIONI.md` §7.17, from the user on 11 Aug 2026.  Whoever opens the
+	 * ✅ `DECISIONS.md` §7.17, from the user on 11 Aug 2026.  Whoever opens the
 	 *    session and never opens the control channel had NO cap
 	 *    on them: `[M]` B6, 20 014 ms without anything happening.
 	 *
@@ -7887,7 +7887,7 @@ static int open_session(wt *w, request *r)
 
 	log_says_of(REG_WT, wt_chi(w), "⭐ WebTransport session OPENED on %s (stream %ld) — "
 	                 "the control channel must be opened within %llu ms (§4.6, "
-	                 "DECISIONI.md §7.17)",
+	                 "DECISIONS.md §7.17)",
 	                 r->uri, (long)r->id,
 	                 (unsigned long long)(WT_CAP_CHANNEL_NS / NGTCP2_MILLISECONDS));
 	return 0;
@@ -8192,7 +8192,7 @@ void wt_free(wt *w)
 		 *     from the other two for the reason of this whole phase: «zero
 		 *     drops» and «the regulator is off» must not look
 		 *     the same.  ⚠ And the bottom of the scale is DECLARED here instead of being
-		 *     deduced: `DECISIONI.md` §2.1 says 480p·25, and below 25/s on a
+		 *     deduced: `DECISIONS.md` §2.1 says 480p·25, and below 25/s on a
 		 *     20 Mbit/s line it is a DEFECT — not a successful degradation.
 		 *     ⛔ The regulator has no floor to enforce, because
 		 *     forcing a frame into a queue that does not empty makes
@@ -8203,7 +8203,7 @@ void wt_free(wt *w)
 		                 "LEAVE because the backlog had reached the %u slots, out of "
 		                 "%u delivered to RCP.  ⚠ It is a number OF ITS OWN: it is not among the «not "
 		                 "sent» above.  ⛔ Declared bottom of the scale: 480p "
-		                 "25/s on 20 Mbit/s (DECISIONI.md §2.1) — below that it is a "
+		                 "25/s on 20 Mbit/s (DECISIONS.md §2.1) — below that it is a "
 		                 "DEFECT to look at, not a successful degradation",
 		                 adaptive_rate ? "ON (default since 24 Aug 2026)"
 		                                : "OFF by hand (--no-adaptive-rate)",
@@ -8233,7 +8233,7 @@ void wt_free(wt *w)
 	 *      sign that the backstop did not work, and it must be looked at.
 	 *
 	 * ⭐⭐ AND HOW TO REPRODUCE THE CURED DEFECT, so that the bench can do it
-	 *     (`fasi/09-la-qualita-e-la-degradazione.md` §4.5-4.6), on a binary WITHOUT this cure:
+	 *     (`phases/09-quality-and-degradation.md` §4.5-4.6), on a binary WITHOUT this cure:
 	 *
 	 *       1. `Environment=MALLOC_MMAP_THRESHOLD_=32768` in the unit.  ⭐
 	 *          Setting it from the environment SWITCHES OFF glibc's dynamic adaptation
@@ -8546,7 +8546,7 @@ void wt_dismiss(wt *w, uint8_t reason, const char *detail)
 	}
 }
 
-/* ⭐ PAM'S VERDICT COMING BACK — `DECISIONI.md` §1.10.
+/* ⭐ PAM'S VERDICT COMING BACK — `DECISIONS.md` §1.10.
  *
  * ⛔ The transport hands it to all live connections and only one takes it:
  *    the request is a PROCESS number, and whoever recognises it is `rcp.c`.  ⚠ And
@@ -8613,7 +8613,7 @@ void wt_beat(wt *w, ngtcp2_tstamp ts)
 
 	/* ⛔⭐ §4.6 — THE SESSION THAT NEVER OPENS THE CONTROL CHANNEL.
 	 *
-	 * ✅ `DECISIONI.md` §7.17, 11 Aug 2026: 5 s, then `TIMED_OUT`.
+	 * ✅ `DECISIONS.md` §7.17, 11 Aug 2026: 5 s, then `TIMED_OUT`.
 	 *
 	 * ⚠ And the `FAREWELL` is NOT sent: the control channel was never born,
 	 *   so there is nowhere to send it.  It is the condition decided the same
@@ -8628,7 +8628,7 @@ void wt_beat(wt *w, ngtcp2_tstamp ts)
 		log_says_of(REG_RCP, wt_chi(w),
 		                 "⛔ %s: WebTransport session open and control "
 		                 "channel NEVER opened within %llu ms — farewell "
-		                 "%#04x TIMED_OUT (§4.6, DECISIONI.md §7.17).  "
+		                 "%#04x TIMED_OUT (§4.6, DECISIONS.md §7.17).  "
 		                 "⚠ no FAREWELL on the channel: the channel does not exist, "
 		                 "the reason travels in the close code (§3.1 point "
 		                 "3, and §7.15 allows it)",
@@ -8948,7 +8948,7 @@ ngtcp2_ssize wt_write(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 					 *      packet**, not how many were **confirmed**.
 					 *      Freeing them here is freeing them while ngtcp2 still holds
 					 *      our pointer for a possible
-					 *      retransmission: `fasi/09-la-qualita-e-la-degradazione.md` §4.2 follows the
+					 *      retransmission: `phases/09-quality-and-degradation.md` §4.2 follows the
 					 *      chain line by line down to the `ngtcp2_cpymem()` that
 					 *      rereads the freed source.
 					 *

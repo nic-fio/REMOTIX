@@ -13,17 +13,17 @@ A1 = p("The session's sound is the mix of every application in it: REMOTIX creat
           ("Page", "wasm Opus, AudioContext", "light")],
          "«FIG» — The path of a sound, from an application in the session to the speakers of the client") + \
     table(["Piece", "File", "Lives as long as"], [
-        ["Virtual sink and monitor capture", c("suono.c") + " (sound)", "Sink: the graphical session. Capture: the "
+        ["Virtual sink and monitor capture", c("sound.c") + " (sound)", "Sink: the graphical session. Capture: the "
          "connection (invariant I4: the stage outlives the client)"],
-        ["Ring buffer, clock, sending", c("figlio.c") + ", the per-user child (" + c("audio_samples()") + ", "
+        ["Ring buffer, clock, sending", c("child.c") + ", the per-user child (" + c("audio_samples()") + ", "
          + c("audio_drain()") + ")", "The connection"],
         ["Opus and PCM encoder", c("audio.c"), "The connection; reopened when the negotiated codec changes"],
         ["Datagram on the wire", c("webtransport.c"), "Each block"],
-        ["Decoder and scheduler", c("pagina.html") + ", the page (" + c("start_audio()") + ") and "
-         + c("decodifica.c") + " (decoding) compiled to " + c("opus.wasm"), "Each " + c("connect()") + " in the page"],
+        ["Decoder and scheduler", c("page.html") + ", the page (" + c("start_audio()") + ") and "
+         + c("decoder.c") + " (decoding) compiled to " + c("opus.wasm"), "Each " + c("connect()") + " in the page"],
     ], "«TAB» — Who does what in the audio path") + \
     note("the session volume belongs to the session and is set to maximum at every connection (invariant "
-         "I5); RCP carries no volume. Microphone input (client to session) is foreseen by " + c("SPECIFICHE.md") + " §10 as "
+         "I5); RCP carries no volume. Microphone input (client to session) is foreseen by " + c("SPECS.md") + " §10 as "
          "not urgent and RCP/1 defines no format for it. Not settled yet: the microphone.", "Volume and microphone.")
 
 A2 = p("The audio format is fixed, not negotiated (RCP §5.3): two implementations choosing two sample "
@@ -57,7 +57,7 @@ A2 = p("The audio format is fixed, not negotiated (RCP §5.3): two implementatio
       "by itself, which would produce noise instead of an error.") + \
     p("<b>Audio goes before video.</b> In every write pass of the transport the pending datagrams enter the "
       "packet before stream bytes, so on a congestion window of two or three packets audio takes the place "
-      "of video (" + c("SPECIFICHE.md") + " §10.1). A late audio block is useless, a late frame is still a frame. The price "
+      "of video (" + c("SPECS.md") + " §10.1). A late audio block is useless, a late frame is still a frame. The price "
       "is bounded by construction: the datagram queue holds " + c("WT_DGRAM_MAX") + " = 8.")
 
 A3 = p("A server has no sound card, and a headless session has no sink at all: measured in v1 on 5 Aug "
@@ -133,7 +133,7 @@ A4 = p("Between PipeWire's real-time thread and the child's loop sits a lock-fre
          "in the session's audio graph, not in the transport.", "Real-time priority is declared, not assumed.")
 
 A5 = p(c("audio.c") + " encodes with libopus directly since 30 Sep 2026: ffmpeg left the product for "
-       "licence reasons (" + c("DECISIONI.md") + " §10.22, §10.25), and libavcodec was only a wrapper around the same "
+       "licence reasons (" + c("DECISIONS.md") + " §10.22, §10.25), and libavcodec was only a wrapper around the same "
        + c("libopus.so.0") + ". The parameters are the ones that wrapper used, and the packets were verified "
        "identical byte for byte (" + c("18-a1-opus-senza-ffmpeg.c") + ", libopus 1.5.2; a bench since retired, "
        "§10.44, because it builds against libavcodec).", lead=True) + \
@@ -161,7 +161,7 @@ A5 = p(c("audio.c") + " encodes with libopus directly since 30 Sep 2026: ffmpeg 
       "also applies to the test tone of " + c("--audio-test") + ", opened in the parent.")
 
 A6 = p("The page has its own Opus decoder: libopus 1.5.2 compiled to WebAssembly, decode only, embedded in "
-       + c("pagina.html") + " as base64 (D-006, decided 25 Sep 2026). " + c("AudioDecoder") + " remains only "
+       + c("page.html") + " as base64 (D-006, decided 25 Sep 2026). " + c("AudioDecoder") + " remains only "
        "as a declared fallback where WebAssembly is missing; PCM needs no decoder.", lead=True) + \
     p("<b>Why.</b> Firefox with a video playing in the session had short repeated sound gaps (0.1–0.4 s) and "
       "Chrome did not. Measured on 25 Sep 2026, 60 s on LXQt and KDE: Firefox with video 3–5 re-anchors, "
@@ -171,18 +171,18 @@ A6 = p("The page has its own Opus decoder: libopus 1.5.2 compiled to WebAssembly
       "every browser. It runs on the main thread, because a block costs about 0.1 ms and the "
       + c("AudioContext") + " lives there anyway.") + \
     table(["File", "Role"], [
-        [c("src/opus-wasm/decodifica.c"), "Exports " + c("rx_apri") + " (open), " + c("rx_pacchetto") + " (packet), "
+        [c("src/opus-wasm/decoder.c"), "Exports " + c("rx_apri") + " (open), " + c("rx_pacchetto") + " (packet), "
          + c("rx_pacchetto_max") + ", " + c("rx_uscita") + " (output) and " + c("rx_decodifica") + " (decode); static state and buffers, no "
          "malloc, no imports, so the module is instantiated with an empty object. Output buffer for 120 ms, "
          "the Opus maximum"],
-        [c("src/opus-wasm/costruisci.sh") + " (build)", "Downloads the pinned libopus tarball, checks its SHA-256, builds in "
+        [c("src/opus-wasm/build.sh") + " (build)", "Downloads the pinned libopus tarball, checks its SHA-256, builds in "
          "a podman container with the emscripten image pinned by digest (4.0.15), with no network, -O3, no "
          "SIMD and no extensions beyond the MVP (old phone browsers), then embeds the result between the "
          "markers " + c("OPUS_WASM_INIZIO") + " (start) and " + c("OPUS_WASM_FINE") + " (end). " + c("--verifica") + " (verify) checks "
          "that the page carries exactly " + c("opus.wasm")],
         [c("src/opus-wasm/opus.wasm.sha256"), "The digest of the module in the repository"],
-        [c("src/opus-wasm/prova/prova.sh") + " (test)", "Decodes the same packets with the embedded module (" + c("node")
-         + ", " + c("confronta.mjs") + ", compare) and with native libopus (" + c("riferimento.c") + ", reference) and compares"],
+        [c("src/opus-wasm/test/test.sh") + " (test)", "Decodes the same packets with the embedded module (" + c("node")
+         + ", " + c("compare.mjs") + ", compare) and with native libopus (" + c("reference.c") + ", reference) and compares"],
     ], "«TAB» — The WebAssembly decoder") + \
     p("<b>Scheduling.</b> The page never waits for audio: a block that arrives late is dropped. Each block is "
       "an " + c("AudioBufferSourceNode") + " started at " + c("base + istante") + ", where the anchor "
@@ -213,7 +213,7 @@ A6 = p("The page has its own Opus decoder: libopus 1.5.2 compiled to WebAssembly
       "distance metric; it is updated only by blocks that actually played and expires after 600 ms without "
       "sound.")
 
-C1 = p("The clipboard carries <b>plain text only</b>, in both directions (" + c("DECISIONI.md") + " §5-ter.1, decided by "
+C1 = p("The clipboard carries <b>plain text only</b>, in both directions (" + c("DECISIONS.md") + " §5-ter.1, decided by "
        "the user on 9 Aug 2026 and confirmed on the 17th). Text covers almost every use, costs a few bytes and "
        "has no format negotiation; images would open the question of formats and of who pays the bandwidth "
        "when an 8 MB screenshot is copied on a link that is struggling.", lead=True) + \
@@ -279,9 +279,9 @@ C2 = p("Three messages on the clipboard channel (RCP §7.4), each transfer on it
       "towards the compositor stays where the session is.")
 
 C3 = p("On GNOME the clipboard belongs to Mutter (" + c("MetaSelection") + "); the " + c("RemoteDesktop")
-       + " session only owns the door to it (" + c("EnableClipboard") + "). " + c("appunti.c") + " (clipboard) uses that "
+       + " session only owns the door to it (" + c("EnableClipboard") + "). " + c("clipboard.c") + " (clipboard) uses that "
        "door on the session that " + c("mutter.c") + " already opened.", lead=True) + \
-    table(["Trap of Mutter", "Effect", "What " + c("appunti.c") + " does"], [
+    table(["Trap of Mutter", "Effect", "What " + c("clipboard.c") + " does"], [
         [c("DisableClipboard") + " is one-way (Mutter 48.7)", "It does not reset " + c("is_clipboard_enabled")
          + "; afterwards " + c("EnableClipboard") + " answers “Already enabled” and no announcement "
          "ever comes back", "Never calls it; to let go of the selection it calls " + c("SetSelection")
@@ -311,7 +311,7 @@ C3 = p("On GNOME the clipboard belongs to Mutter (" + c("MetaSelection") + "); t
         "session: the clipboard benches have an external referee.",
     ])
 
-C4 = p("On KDE Plasma and on labwc (XFCE and LXQt) the same module, " + c("appunti_kde.c") + ", speaks the "
+C4 = p("On KDE Plasma and on labwc (XFCE and LXQt) the same module, " + c("clipboard_kde.c") + ", speaks the "
        "wlroots data-control protocol on the user's Wayland socket: " + c("clipboard_open_kde()") + " and "
        + c("clipboard_open_wlroots()") + " differ only in the compositor name used in log lines. The child "
        "chooses with " + c("session_on_wlroots()") + " first, then KDE, then GNOME. On KDE the socket found is KWin's: "
@@ -339,7 +339,7 @@ C4 = p("On KDE Plasma and on labwc (XFCE and LXQt) the same module, " + c("appun
          "a clipboard manager can still interfere.", "Clipboard managers.")
 
 C5 = p("In the browser the clipboard is not REMOTIX's: the page gets it only under conditions that differ on "
-       "every engine. The rule of " + c("SPECIFICHE.md") + " §9 applies to the letter: what cannot be done is declared, never "
+       "every engine. The rule of " + c("SPECS.md") + " §9 applies to the letter: what cannot be done is declared, never "
        "faked.", lead=True) + \
     table(["Direction", "Mechanism", "Limits"], [
         ["Session → device", "On " + c("CLIPBOARD_ANNOUNCE") + " the page asks at once (the user will paste "

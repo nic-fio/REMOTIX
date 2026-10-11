@@ -11,7 +11,7 @@
  *
  * ⭐ It is not aesthetic tidiness: it is the reason it will be able to move from
  *    the ngtcp2 example server to the real server without being rewritten — and
- *    the reason why `DECISIONI.md` §6.4, if it were reopened one day, would not
+ *    the reason why `DECISIONS.md` §6.4, if it were reopened one day, would not
  *    take the protocol away with it.
  *
  * ---------------------------------------------------------------------------
@@ -46,8 +46,8 @@ extern "C" {
  *       | where                      | what the comment said                 |
  *       |----------------------------|---------------------------------------|
  *       | `rcp.c` `MAX_ATTACCATE`    | (the original, `static`, never in this header) |
- *       | `figlio.c` `MAX_FIGLI`     | *«this one will follow it from the same place»* — and it did not |
- *       | `aiutante.c` `MAX_IN_FLIGHT` | *«it is the same `MAX_ATTACCATE` as `rcp.c`»* — and it was not |
+ *       | `child.c` `MAX_FIGLI`     | *«this one will follow it from the same place»* — and it did not |
+ *       | `helper.c` `MAX_IN_FLIGHT` | *«it is the same `MAX_ATTACCATE` as `rcp.c`»* — and it was not |
  *       | `main.c` `QUANTI_PRESENTI` | (no declared link, same number by chance) |
  *
  * ⛔ `[M]` §6.4 proved it in the field: compiling the tree with
@@ -60,11 +60,11 @@ extern "C" {
  * ⭐ From here on the number is ONE, and whoever changes it changes it in one place.
  *    The quantities that follow it are all **«one per user served»**:
  *      · `rcp.c` `MAX_ATTACCATE`   — the slots of the session registry;
- *      · `figlio.c` `MAX_FIGLI`    — the processes/stages, one per user (I2);
+ *      · `child.c` `MAX_FIGLI`    — the processes/stages, one per user (I2);
  *      · `main.c` `QUANTI_PRESENTI`— the abandonment clock, one per user;
  *      · `webtransport.c` `WT_PALCHI` — the stage's canvas for the re-attach.
  *
- * ⛔⛔ And `aiutante.c` `MAX_IN_FLIGHT` does **NOT follow it, on purpose**: that is
+ * ⛔⛔ And `helper.c` `MAX_IN_FLIGHT` does **NOT follow it, on purpose**: that is
  *      another quantity — the authentications **in flight at the same
  *      instant**, which are counted even when the active sessions are ZERO.
  *      The full reason sits next to that `#define`, because that is where
@@ -80,7 +80,7 @@ extern "C" {
  *     that no invariant rests on the 16.
  *
  * ⛔⛔ AND THE DEFAULT WENT FROM 16 TO **10**, which is the number of
- *      `SPECIFICHE.md` §5.5 — the only one a document has ever promised.  The
+ *      `SPECS.md` §5.5 — the only one a document has ever promised.  The
  *      16 had not been chosen: it was the first convenient number of a
  *      «small» list, copied into four places.  ⚠ Whoever wants yesterday's
  *      sixteen types `--session-cap 16`, and the startup line declares it.
@@ -127,7 +127,7 @@ enum {
 	RCP_TIMED_OUT = 0x0D,
 	RCP_SESSION_UNSERVABLE = 0x0E,
 	RCP_ALREADY_ACTIVE_REMOTELY = 0x0F,
-	/* ⭐ 15 Aug 2026, `DECISIONI.md` §4.1-quater: the user has LOGGED OUT of the
+	/* ⭐ 15 Aug 2026, `DECISIONS.md` §4.1-quater: the user has LOGGED OUT of the
 	 * desktop («Log out»).  ⛔ It is NOT `0x01`: that is the wire dropping and
 	 * it carries the promise «reattach and find everything again», which after a
 	 * logout is false — the graphical session has ended and the programs are closed. */
@@ -161,12 +161,12 @@ typedef struct {
 	 * ⛔⭐ THIS HOOK BLOCKS WHOEVER CALLS IT, and since 12 Aug 2026 it is the
 	 *     FALLBACK, not the good road: it is used only when `ask_verify`
 	 *     is NULL.  ⚠ It was not removed, and not out of laziness — the harness
-	 *     of `banchi/01-b3-rcp-innesta.py` mounts this same module on a
+	 *     of `benches/01-b3-graft-rcp.py` mounts this same module on a
 	 *     host that has no loop of its own to free, and breaking it in silence
 	 *     would be worse than the defect (`CODER.md` §4.2: the fallback is
 	 *     DECLARED). */
 	bool (*verify)(void *ctx, const char *user, const char *password);
-	/* ⭐ THE ASYNCHRONOUS CHECK — `DECISIONI.md` §1.10, 12 Aug 2026.
+	/* ⭐ THE ASYNCHRONOUS CHECK — `DECISIONS.md` §1.10, 12 Aug 2026.
 	 *
 	 * ⛔ `verify` blocks whoever calls it, and in the product whoever calls it
 	 *    is the server's only `poll` loop: `[M]` B8, 11 Aug 2026, **from 1.0 to
@@ -180,7 +180,7 @@ typedef struct {
 	 *
 	 * ⚠ If it is NULL `verify` is used, and the module behaves exactly
 	 *   as before 12 Aug 2026: it is what the in-process benches do,
-	 *   and it is also the FAULT that `banchi/02-pam-*` injects to certify itself. */
+	 *   and it is also the FAULT that `benches/02-pam-*` injects to certify itself. */
 	bool (*ask_verify)(void *ctx, const char *user, const char *password,
 	                        uint64_t *ticket);
 
@@ -199,7 +199,7 @@ typedef struct {
 	 *    video channel, and `rcp_video_open()` returns
 	 *    `RCP_VIDEO_NO_CHANNEL` instead of keeping quiet.  ⚠ «I have no video
 	 *    channel» and «the frame did not leave» are two different facts
-	 *    (`LEZIONI.md` §1.9 rule 1), and the in-process benches of phase 1 have
+	 *    (`LESSONS.md` §1.9 rule 1), and the in-process benches of phase 1 have
 	 *    no unidirectional streams to offer.
 	 *
 	 * ⚠ Whoever connects them connects ALL FOUR: a host that could
@@ -248,12 +248,12 @@ typedef struct {
 	 *
 	 *     `src/input.h` says, in its header, that the one calling those
 	 *     functions is `rcp.c`.  ⛔ But `rcp.c` exists in TWO folders —
-	 *     `src/` and `banchi/rcp/` — and the `Makefile` (variable `GEMELLATI`)
+	 *     `src/` and `benches/rcp/` — and the `Makefile` (variable `GEMELLATI`)
 	 *     demands that the two copies match byte for byte.  The second
-	 *     is copied by `banchi/01-b3-rcp-innesta.py` into
+	 *     is copied by `benches/01-b3-graft-rcp.py` into
 	 *     ngtcp2's `examples/`, where `input.h` **is not there and cannot
 	 *     go**: that file lists exactly three names
-	 *     (`rcp.c`, `rcp.h`, `autenticazione.c`).
+	 *     (`rcp.c`, `rcp.h`, `authentication.c`).
 	 *     ⇒ An `#include "input.h"` here does NOT compile the harness, that is it
 	 *       switches off B3, B5, B6, B8 and B11 in one go.
 	 *
@@ -306,7 +306,7 @@ typedef struct {
 	 *    nowhere else together: the farewell (`dismiss()`), the thirty-second
 	 *    silence (`rcp_time()`), the error (`rcp_violation()`).
 	 *
-	 * ⚠ `input.h` assigns it to `figlio.c` too («calls
+	 * ⚠ `input.h` assigns it to `child.c` too («calls
 	 *   `input_release_all()` on detach»), and the two calls do not
 	 *   quarrel: the function releases what APPEARS pressed and the second
 	 *   time finds nothing to release — it returns 0.  ⛔ But the
@@ -325,7 +325,7 @@ typedef struct {
 	 *
 	 *      `[M]` Measured: four detaches with the key and the button REALLY
 	 *      down — the line said `0` and the child, two lines below, `2`.
-	 *      ⛔ It is `LEZIONI.md` §1.9 in the worst place: the rule with the
+	 *      ⛔ It is `LESSONS.md` §1.9 in the worst place: the rule with the
 	 *      highest harm/cost ratio of the document had as its only witness one
 	 *      that always said «nothing was down», that is **the face of green
 	 *      on a release that had not happened at all**.
@@ -338,7 +338,7 @@ typedef struct {
 	 *                                was pressed, **it stays pressed**. */
 	int (*input_release_all)(void *ctx);
 
-	/* ⭐⭐ THE CANVAS HOOK — §7.1 `FIT_CANVAS`, and `DECISIONI.md`
+	/* ⭐⭐ THE CANVAS HOOK — §7.1 `FIT_CANVAS`, and `DECISIONS.md`
 	 *     §5.0-sexies: *«the server's canvas asks for the size of the client's
 	 *     canvas»*.
 	 *
@@ -367,7 +367,7 @@ typedef struct {
 	 *   the day one of them changes. */
 	bool (*recanvas)(void *ctx, uint32_t width, uint32_t height);
 
-	/* ⛔⭐⭐ THE TWO LAYOUT HOOKS — `DECISIONI.md` §5-bis.7, decided
+	/* ⛔⭐⭐ THE TWO LAYOUT HOOKS — `DECISIONS.md` §5-bis.7, decided
 	 *      by the user on 8 Aug 2026 and CONFIRMED on the 16th: *«for keyboards
 	 *      the same reasoning as for resolutions applies: at session creation or
 	 *      re-attach the keyboard is renegotiated too»*.
@@ -378,8 +378,8 @@ typedef struct {
 	 *    declaring `us`, `è` and `ò` arrived — which on `us` **exist on no
 	 *    key**.  That is, the declared layout touched nothing.
 	 *
-	 * ⭐ And the real harm is NOT the convenience of two accents — `SPECIFICHE.md`
-	 *    §7.3 and `DECISIONI.md` §5-bis.6: letters travel as **letters**,
+	 * ⭐ And the real harm is NOT the convenience of two accents — `SPECS.md`
+	 *    §7.3 and `DECISIONS.md` §5-bis.6: letters travel as **letters**,
 	 *    but shortcuts travel as **positions**, and positions match only if
 	 *    the two layouts are the same.  On a German keyboard the `Z` sits where
 	 *    on ours the `Y` sits:
@@ -398,8 +398,8 @@ typedef struct {
 	 *   `1`  yes          · `0`  no, and §4.5 wants `SESSION_UNSERVABLE`
 	 *   `-1` ⛔ it could NOT be asked — and it is NOT «no»: it is declared.
 	 *
-	 * ⛔ Why it is a hook and not a call to `tastiera.c`: this file is
-	 *    **twinned** with `banchi/rcp/rcp.c`, which is compiled inside ngtcp2's
+	 * ⛔ Why it is a hook and not a call to `keyboard.c`: this file is
+	 *    **twinned** with `benches/rcp/rcp.c`, which is compiled inside ngtcp2's
 	 *    `examples/` — where `xkbcommon` is not there and cannot
 	 *    go.  Same reason, and same shape, as the input hooks. */
 	int (*layout_exists)(void *ctx, const char *name);
@@ -408,7 +408,7 @@ typedef struct {
 	 *
 	 * ⛔ The direction is this one and not the other: the letter is NOT
 	 *    translated with a keymap of ours keeping the session as it is.
-	 *    `tastiera.h` explains it and `tastiera.c` measures it: with our keymap
+	 *    `keyboard.h` explains it and `keyboard.c` measures it: with our keymap
 	 *    and their session **different characters** come out, which §7.3
 	 *    forbids.  ⇒ The layout OF THE SESSION is changed, and then it is read
 	 *    back from `libei` as it has always been done: `[M]` bench `06-b34`
@@ -423,7 +423,7 @@ typedef struct {
 	/* ⛔⭐⭐ «WHAT SIZE DOES THE STAGE HAVE NOW?» — and without this question the
 	 *     RE-ATTACH is born with two truths.
 	 *
-	 * ⛔ THE CASE, and it is the one `DECISIONI.md` §5.0-sexies notes as
+	 * ⛔ THE CASE, and it is the one `DECISIONS.md` §5.0-sexies notes as
 	 *    inevitable: the stage outlives the client (invariant I4) and the canvas
 	 *    is born at every attach (§5.0).  ⇒ The user detaches from the DeX with the
 	 *    canvas at 1912×1044 and reattaches from the laptop, where the page asks
@@ -446,11 +446,11 @@ typedef struct {
 	bool (*stage_canvas)(void *ctx, uint32_t *width, uint32_t *height);
 
 	/* ⛔⭐ «DOES THIS USER ALREADY HAVE A LOCAL GRAPHICAL SESSION?» — §5.1 of
-	 *     `SPECIFICHE.md`, reason `0x05 ALREADY_ACTIVE_LOCALLY`.
+	 *     `SPECS.md`, reason `0x05 ALREADY_ACTIVE_LOCALLY`.
 	 *
 	 * ⛔ IT IS A HOOK AND NOT A CALL TO logind, for the same reason as the
 	 *    six of input: `rcp.c` exists in TWO folders and the copy in
-	 *    `banchi/rcp/` is grafted inside ngtcp2's `examples/`, where there is
+	 *    `benches/rcp/` is grafted inside ngtcp2's `examples/`, where there is
 	 *    neither `gio-2.0` nor a system bus.  An `#include <gio/gio.h>`
 	 *    here would switch off B3, B5, B6, B8 and B11 in one go.
 	 *
@@ -471,7 +471,7 @@ typedef struct {
 
 	/* ⛔⭐ «THE USER HAS ASKED TO LEAVE» — `RCP.md` §7.6, `TERMINATE_SESSION`.
 	 *
-	 * ⛔ It is the other half of `DECISIONI.md` §4.1-ter: the wire dropping leaves
+	 * ⛔ It is the other half of `DECISIONS.md` §4.1-ter: the wire dropping leaves
 	 *    the session alive (I4), this ENDS it — and with it the user's
 	 *    programs close.
 	 *
@@ -585,7 +585,7 @@ bool rcp_receive(rcp_session *s, const uint8_t *data, size_t len,
 bool rcp_time(rcp_session *s, uint64_t now_ms);
 
 /* ⭐ The outcome of the asynchronous check comes back through here —
- * `DECISIONI.md` §1.10.
+ * `DECISIONS.md` §1.10.
  *
  * ⛔ Returns `true` only if the request belonged TO THIS session and the
  *    session was really waiting for it.  The host uses it to recognise whom to
@@ -663,7 +663,7 @@ const char *rcp_user(const rcp_session *s);
  *    decided at `SESSION`), but its **ceiling** is known from the `HELLO` —
  *    §4.5 requires the granted canvas not to exceed this number.  ⇒ Counting the
  *    ceiling one counts an **upper bound** of the cost of the newcomer, which is
- *    the uncomfortable direction, that is the right one (`LEZIONI.md` §1.33).
+ *    the uncomfortable direction, that is the right one (`LESSONS.md` §1.33).
  *
  * ⚠ Returns `false` when the client **did not declare it**, and it is not the
  *   same thing as «declared it zero»: whoever receives `false` falls back on the
@@ -738,7 +738,7 @@ void rcp_reset_session_log(void);
 /*   of a state diverge: it is the same reason `RCP.md` §0 exists for,        */
 /*   applied inside a single program.  ⭐ And it has a second effect, which   */
 /*   shows in the `Makefile`: **zero lines to add**, because `rcp.c` is       */
-/*   already compiled and already compared with `banchi/rcp/` at every build. */
+/*   already compiled and already compared with `benches/rcp/` at every build. */
 /*                                                                           */
 /* ⛔ AND WHAT THIS MODULE DOES NOT DO, DECLARED: it does not look **inside** */
 /*    the codec bytes.  §5.2 wants the keyframe to be a **real** keyframe —   */
@@ -911,7 +911,7 @@ int rcp_video_send(rcp_session *s, bool key, const uint8_t *data,
  *         lines**, even in verbose mode.
  *
  * ⇒ With the fixed-size canvas no client could get there.  Since
- *   `DECISIONI.md` §5.0-sexies the client ASKS for the size ⇒ any client
+ *   `DECISIONS.md` §5.0-sexies the client ASKS for the size ⇒ any client
  *   could switch off the session of its host, and the guard
  *   becomes mandatory.
  *
@@ -923,7 +923,7 @@ int rcp_video_send(rcp_session *s, bool key, const uint8_t *data,
  *      *«width and height of the canvas MUST be between 320x240 and 7680x4320»*
  *      (the maximum of the time) —
  *      and `ATTACH` already applied it.  ⇒ They were two rules on the same number
- *      in two places, that is precisely what the box at the bottom of `cattura.h`
+ *      in two places, that is precisely what the box at the bottom of `capture.h`
  *      declares it wants to avoid.
  *
  * ⚠ And the divergence was **unreachable** as long as `FIT_CANVAS` always
@@ -934,7 +934,7 @@ int rcp_video_send(rcp_session *s, bool key, const uint8_t *data,
  *
  * ⛔ And PARITY is OURS, not the compositors': `[M]` labwc grants odd sizes
  *   too, and it is our 4:2:0 that refuses them
- *   (`src/codificatore.c:1373`).  One truncates DOWNWARDS and SAYS so, with
+ *   (`src/encoder.c:1373`).  One truncates DOWNWARDS and SAYS so, with
  *   `CANVAS` carrying back the real size.
  *
  * ⛔⭐⭐ THE MAXIMUM IS 4096x2304 SINCE 1 OCT 2026 — the user's decision
@@ -947,7 +947,7 @@ int rcp_video_send(rcp_session *s, bool key, const uint8_t *data,
  *     went only in HEVC, that is only on Chrome, and Firefox was left without video.
  *   · 2304 for HEIGHT because 4096x2304 is **36864 macroblocks**, that is
  *     exactly the `MaxFS` of H.264 levels 5.1 and 5.2 (table A-1, the
- *     same as in `src/vadiretta.c`): it is 16:9 at 4096, DCI 4096x2160 fits,
+ *     same as in `src/vadirect.c`): it is 16:9 at 4096, DCI 4096x2160 fits,
  *     and beyond it level 6 would be needed — which the page does not declare
  *     (`video.level = 5.1`).
  *
@@ -968,10 +968,10 @@ int rcp_video_send(rcp_session *s, bool key, const uint8_t *data,
  * `CANVAS(REFUSED, SIZE_OUT_OF_RANGE)`.  ⚠ Whoever must know whether the size
  * was reduced compares `fuori_*` with the request. */
 /* ⛔⭐ THE HIGHEST NUMBER §6.2 DEFINES FOR VIDEO — 1 = HEVC,
- *     2 = AV1, 3 = H.264 (`DECISIONI.md` §1.13-ter, 20 Aug 2026).
+ *     2 = AV1, 3 = H.264 (`DECISIONS.md` §1.13-ter, 20 Aug 2026).
  *
  * ⚠ It lives HERE, in `rcp.h`, because it is a fact of the PROTOCOL and three
- *   modules read it: `figlio.c` (which refuses an unknown number from the
+ *   modules read it: `child.c` (which refuses an unknown number from the
  *   parent), `webtransport.c` (which refuses a frame with an unknown number) and
  *   `rcp.c`.  ⛔ On 20 August those three places had three numbers written by
  *   hand, and one fell behind: **every H.264 frame was thrown away in
@@ -1059,7 +1059,7 @@ bool rcp_canvas_in_flight(const rcp_session *s, uint32_t *lar, uint32_t *h);
  *    BANDS.
  *
  * ⚠ And it is not «raising the timeout»: it is stopping DEDUCING.  The child knows
- *   whether the stage is not there yet, and now it says so (`LEZIONI.md` §7.5).
+ *   whether the stage is not there yet, and now it says so (`LESSONS.md` §7.5).
  *   The backstop stays at three seconds for all the cases in which nobody
  *   promised anything.
  *
@@ -1081,7 +1081,7 @@ bool rcp_canvas_in_effect(const rcp_session *s, uint32_t *lar, uint32_t *h);
  *
  * ⛔ §7.1: «`VIEW` **MUST NOT** change the canvas, and in RCP/1 it does not
  *    even change the size of what is encoded»: the server sends the whole canvas
- *    and the client rescales (`SPECIFICHE.md` §6.1).  ⇒ Whoever reads this number
+ *    and the client rescales (`SPECS.md` §6.1).  ⇒ Whoever reads this number
  *    uses it for **how many bits to spend**, never for what to encode — a
  *    small window watched on a small screen does not deserve the bits of a
  *    large one.
@@ -1182,7 +1182,7 @@ bool rcp_receive_input(rcp_session *s, int64_t stream, const uint8_t *data,
 /*                                                                           */
 /* ⛔ PLAIN UTF-8 TEXT ONLY, and there is no field declaring a type: §7.4     */
 /*    writes it in these words — «it does not exist because there is nothing  */
-/*    to choose».  `DECISIONI.md` §5-ter.1, decided by the user on            */
+/*    to choose».  `DECISIONS.md` §5-ter.1, decided by the user on            */
 /*    9 Aug 2026 and confirmed again on the 17th.                            */
 
 /* ⛔ §5.4 — the ceiling of a transfer.  ⚠ **1 000 000 bytes, not 1 MiB**, and
@@ -1258,7 +1258,7 @@ uint32_t rcp_input_last_injected(const rcp_session *s);
 
 /* The last `id` **accepted** on the channel — injected or not.  ⛔ For the log and
  * for the bench: together with the previous one it tells «the compositor took
- * nothing» from «nothing arrived», which is `LEZIONI.md` §1.9 rule 1 on the
+ * nothing» from «nothing arrived», which is `LESSONS.md` §1.9 rule 1 on the
  * field where it costs most (the symptom of both is «the desktop does not
  * respond»). */
 uint32_t rcp_input_last_id(const rcp_session *s);
@@ -1281,21 +1281,21 @@ void rcp_canvas_adapted_now(rcp_session *s, uint32_t lar, uint32_t h,
 /*                                                                           */
 /* ⛔ WHY THE PARAMETERS ARE SCALARS AND NOT A `const CursorShape *`.        */
 /*                                                                           */
-/* `src/cursore.h` defines `CursorShape` and it is the right contract — but  */
+/* `src/cursor.h` defines `CursorShape` and it is the right contract — but  */
 /* `rcp.c` exists in TWO folders and the `Makefile` (variable `GEMELLATI`)    */
 /* demands they match byte for byte; the second copy is carried by            */
-/* `banchi/01-b3-rcp-innesta.py` into ngtcp2's `examples/`, and that file     */
-/* lists THREE names: `rcp.c`, `rcp.h`, `autenticazione.c`.  ⇒ An             */
-/* `#include "cursore.h"` here **does not compile the harness**, that is it   */
+/* `benches/01-b3-graft-rcp.py` into ngtcp2's `examples/`, and that file     */
+/* lists THREE names: `rcp.c`, `rcp.h`, `authentication.c`.  ⇒ An             */
+/* `#include "cursor.h"` here **does not compile the harness**, that is it   */
 /* switches off B3, B5, B6, B8 and B11 in one go.  It is the same reason as   */
 /* the input hooks, and the cure is the same: the fields pass as scalars, and */
-/* the six-line adapter that unwraps `CursorShape` lives where `cursore.h`   */
+/* the six-line adapter that unwraps `CursorShape` lives where `cursor.h`   */
 /* can be included — that is on the coordinator's side.                       */
 /*                                                                           */
 /* ⛔ AND WHAT THIS FUNCTION DOES **NOT** CHECK, DECLARED: the limits of      */
 /*    §5.5 — 256 per side, the hotspot inside the image, `0×0` with           */
 /*    `0,0` for hidden, and «only one of the two at zero is                   */
-/*    PROTOCOL_ERROR» — are enforced by `src/cursore.c`.  Here they are    */
+/*    PROTOCOL_ERROR» — are enforced by `src/cursor.c`.  Here they are    */
 /*    not checked again: two checks on the same rule in two places become     */
 /*    two different rules the day one of them changes.                        */
 
@@ -1307,7 +1307,7 @@ void rcp_canvas_adapted_now(rcp_session *s, uint32_t lar, uint32_t h,
  *                        ⛔ `NULL` is legitimate **only** if there are no bytes
  *                        to send.  ⚠ It is COPIED in here: when this
  *                        function returns, the caller can reuse the buffer —
- *                        and it is what `cursore.h` demands, because there
+ *                        and it is what `cursor.h` demands, because there
  *                        the image «lives until the next callback».
  * `image_n`           how many bytes there REALLY are behind `bitmap`.
  *
@@ -1324,11 +1324,11 @@ void rcp_canvas_adapted_now(rcp_session *s, uint32_t lar, uint32_t h,
  *    send: §7.2 makes THE RECEIVER detect the wrong length, so a crooked message
  *    sent from here makes **the page** close the session and the server log
  *    would know nothing of it.  A cursor that does not update is
- *    ugly; a session that drops is broken (`SPECIFICHE.md` §8.3).
+ *    ugly; a session that drops is broken (`SPECS.md` §8.3).
  *
  * ⛔⛔ FROM THE LOOP THREAD, NEVER FROM THE REAL-TIME THREAD OF THE CAPTURE.
- *     `cattura.c` calls `CursorArrived` on the PipeWire thread
- *     (`cursor_bounce()`, and the box of the loop in `cattura.h`); this
+ *     `capture.c` calls `CursorArrived` on the PipeWire thread
+ *     (`cursor_bounce()`, and the box of the loop in `capture.h`); this
  *     module has no lock and `send_msg` writes into the transport's queue.
  *     Whoever sews the two together MUST pass the shape through the loop — and in
  *     the product it already does, because the capture lives in the CHILD and the
@@ -1339,7 +1339,7 @@ int rcp_cursor_shape(rcp_session *s, uint16_t width, uint16_t height,
 
 /* ------------------------------------------------------------------------ */
 /* §4.4-bis — THE ADDRESS BAN, and the three things the host must be able to
- * do.  The rule is in `DECISIONI.md` §1.9, decided by the user on 10
+ * do.  The rule is in `DECISIONS.md` §1.9, decided by the user on 10
  * Aug 2026: three consecutive failed authentications from the same address, and
  * that address is out for twelve hours.                                     */
 
@@ -1360,7 +1360,7 @@ bool rcp_unblock(const char *address, uint64_t now_ms);
 /* ⛔ Declares the ban file and reads it back: without it, the ban lives in memory
  * and a restart takes it away — invariant I7.  Returns how many it loaded,
  * ⛔ and **-1 if the file was there and could not be read**: «zero bans» and «I
- * could not look» are two different facts (`LEZIONI.md` §1.9 rule 1), and the
+ * could not look» are two different facts (`LESSONS.md` §1.9 rule 1), and the
  * caller MUST print them differently — a -1 read as zero is the protection
  * switched off with the air of having nothing to protect.
  * ⚠ An empty or NULL path switches off persistence (it is the bench's case). */

@@ -70,18 +70,18 @@ int kwin_layout(const char *name, GError **mistake);
 
 /* The user's Wayland socket: `WAYLAND_DISPLAY` if it answers, otherwise the
  * first `wayland-N` in `XDG_RUNTIME_DIR` that answers (the child is born with
- * an environment built from scratch).  The clipboard uses it too (`appunti_kde.c`). */
+ * an environment built from scratch).  The clipboard uses it too (`clipboard_kde.c`). */
 struct wl_display;
 struct wl_display *kwin_display_open(char *which, size_t how_much);
 
 /* ------------------------------------------------------------------ *
  * ⭐⭐ THE NESTED KWIN — the desktop takes the window's size at REATTACH
- *      on KDE too (`DECISIONI.md` §10.40, 11 Oct 2026).
+ *      on KDE too (`DECISIONS.md` §10.40, 11 Oct 2026).
  *
  * ⛔ THE WALL: KWin ≤ 6.7 with `--virtual` cannot change the size of its
  *    output, nor create a second one (`VirtualBackend` does not override
  *    `createVirtualOutput()`: `stream_virtual_output` answers «Could not
- *    find output», `STUDI.md` §kde §8.1, `[M]` M7a/M11).  Restarting KWin
+ *    find output», `STUDIES.md` §kde §8.1, `[M]` M7a/M11).  Restarting KWin
  *    with another size kills every non-Qt program (`[M]` 10 Oct 2026:
  *    Firefox and a GTK editor died at the first restart).
  * ⭐ THE ROAD: KWin is born NESTED (`--wayland-display`), as a full-screen
@@ -95,7 +95,7 @@ struct wl_display *kwin_display_open(char *which, size_t how_much);
  * ------------------------------------------------------------------ */
 
 /* The command-line mode: `remotix --kwin-nested W H NODE -- <kwin_wayland_wrapper> args`.
- * It is the `ExecStart` of `plasma-kwin_wayland.service` (`sessione.c`,
+ * It is the `ExecStart` of `plasma-kwin_wayland.service` (`session.c`,
  * `write_dropin()`): it starts labwc at W×H, waits for it, and becomes
  * (`execvp`) the KWin wrapper with `--wayland-display` added.  NODE is the
  * render node for labwc, `pixman` for drawing in memory, `-` to let wlroots

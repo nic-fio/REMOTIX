@@ -5,11 +5,11 @@
 #      keeps the packages' files in /usr/lib/pam.d, and /etc/pam.d is left
 #      to the administrator (their /etc/pam.d/remotix wins over ours).
 #
-# ⭐ `DECISIONI.md` §10.18 (D3 closed, 30 Sep 2026): REMOTIX MIRRORS
+# ⭐ `DECISIONS.md` §10.18 (D3 closed, 30 Sep 2026): REMOTIX MIRRORS
 #    the system's authentication.  This file is the distribution's /usr/lib/pam.d/sshd,
 #    line by line, with ONE extra line at the top: root excluded.
 #    `[M]` 30 Sep, comparison with tumbleweed-kde-iso and leap16-kde (identical to each
-#    other): 13 lines of 13 equal (`banchi/17-t6/t6-leggi-pam.sh`).
+#    other): 13 lines of 13 equal (`benches/17-t6/t6-read-pam.sh`).
 #    ⇒ What the administrator puts in `common-*` with `pam-config` (for
 #      example `pam_faillock`) holds here too.
 #
@@ -31,7 +31,7 @@ auth       requisite    pam_nologin.so
 auth       substack     common-auth
 auth       include      postlogin-auth
 
-# ── account (`autenticazione.c` calls `pam_acct_mgmt` on purpose)
+# ── account (`authentication.c` calls `pam_acct_mgmt` on purpose)
 account    requisite    pam_nologin.so
 account    substack     common-account
 account    include      postlogin-account
@@ -39,7 +39,7 @@ account    include      postlogin-account
 password   substack     common-password
 password   include      postlogin-password
 
-# ── session: `figlio.c` calls `pam_open_session`, and it is that call that
+# ── session: `child.c` calls `pam_open_session`, and it is that call that
 #    makes the user's logind session be born.
 # ⚠ `pam_loginuid` `required` like sshd: the reasons in `remotix.pam.fedora`.
 session    required     pam_loginuid.so

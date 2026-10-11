@@ -2,7 +2,7 @@
  * wlr_input.c — the virtual keyboard and pointer on wlroots.  The why and the
  * division of labour with `input.c` are in `wlr_input.h`.
  *
- * ⛔⛔ THE FIVE SILENT TRAPS of `STUDI.md` §xfce §7.2, and where they are here:
+ * ⛔⛔ THE FIVE SILENT TRAPS of `STUDIES.md` §xfce §7.2, and where they are here:
  *
  *   1. the wheel wants ±1 notches, not ±120         → `wlr_input_wheel()`
  *   2. `value` must never be 0                      → same: sent only with
@@ -14,7 +14,7 @@
  *
  * ⚠ All five are `[R]` in the study (wlroots 0.18.2, labwc 0.8.3, the
  *   Trixie versions).  ⭐ `[M]` 21 Sep 2026 ON THE LAPTOP — labwc 0.8.3
- *   headless in a private folder, witness `banchi/06-b33-testimone.c`,
+ *   headless in a private folder, witness `benches/06-b33-witness.c`,
  *   ⛔ NOT the test machine and NOT a whole XFCE session:
  *     · Shift+A: the witness sees `MODIFICATORI premuti 1` BEFORE key 30;
  *       the letter `@` (us) arrives as Shift + key 3;
@@ -33,7 +33,7 @@
  */
 #include "wlr_input.h"
 
-#include "registro.h"
+#include "log.h"
 
 #include "virtual-keyboard-unstable-v1-client-protocol.h"
 #include "wlr-virtual-pointer-unstable-v1-client-protocol.h"
@@ -514,7 +514,7 @@ static int put_keymap(WlrInput *w, struct xkb_keymap *km, const char *origin,
 
 /*
  * `de(neo)` → layout `de`, variant `neo`.  ⛔ The same `RCP.md` §4.5 form
- * that `tastiera.c` accepts; and the characters are checked, because this string
+ * that `keyboard.c` accepts; and the characters are checked, because this string
  * comes from the wire.
  */
 static bool split_name(const char *name, char *layout, size_t nl, char *variant, size_t nv)
@@ -558,7 +558,7 @@ int wlr_input_keymap_from_name(WlrInput *w, const char *name, GError **mistake)
 		            "«%.64s» is not an XKB layout name (RCP.md §4.5)", name);
 		return -1;
 	}
-	/* ⚠ All five fields, like `tastiera.c`: a NULL field is filled by
+	/* ⚠ All five fields, like `keyboard.c`: a NULL field is filled by
 	 *   the environment (`XKB_DEFAULT_*`), and the REQUESTED layout must not
 	 *   depend on whoever started the service. */
 	names.rules = "evdev";

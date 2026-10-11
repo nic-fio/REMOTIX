@@ -7,13 +7,13 @@ S1 = p("This appendix collects the central data structures of the server, with t
        "last column describe them in depth.", lead=True) + \
     table(["Structure", "Defined in", "Role", "Covered in"], [
         "Transport and protocol",
-        [c("struct transport"), c("trasporto.c"), "The UDP socket, the list of connections, the connection-id map, the "
+        [c("struct transport"), c("transport.c"), "The UDP socket, the list of connections, the connection-id map, the "
          "stateless-reset secret, the PAM helper handed to every session", rif("A connection from first packet to close")],
-        [c("connection"), c("trasporto.c"), "One QUIC connection: " + c("ngtcp2_conn") + ", " + c("SSL") + ", local and "
+        [c("connection"), c("transport.c"), "One QUIC connection: " + c("ngtcp2_conn") + ", " + c("SSL") + ", local and "
          "remote address, " + c("provenance") + " (for the log), its " + c("wt") + ", counters of discarded client "
          "datagrams",
          rif("QUIC transport parameters")],
-        [c("entry_cid"), c("trasporto.c"), "One entry of the connection-id map: several ids lead to the same connection",
+        [c("entry_cid"), c("transport.c"), "One entry of the connection-id map: several ids lead to the same connection",
          rif("QUIC transport parameters")],
         [c("struct wt"), c("webtransport.c"), "The WebTransport session of a connection: nghttp3, the session stream id, "
          "stream classification, send queue, datagram queue, clocks, the " + c("rcp_session") + " it hosts",
@@ -33,52 +33,52 @@ S1 = p("This appendix collects the central data structures of the server, with t
          "apply), stage size, local session, five clipboard hooks, logout, resumed/desktop", rif("RCP: the protocol model")],
         [c("writer") + ", " + c("reader"), c("rcp.c"), "Big-endian writer and reader with an overflow flag; every "
          "body is built and parsed through them", rif("RCP: elementary types and framing")],
-        [c("certificates"), c("certificati.h"), "Paths of the two certificates and their marker files, the session fingerprint "
+        [c("certificates"), c("certificates.h"), "Paths of the two certificates and their marker files, the session fingerprint "
          "in base64 and hex, expiry, rotation count", rif("TLS and the two certificates")],
-        [c("struct page") + ", " + c("client"), c("pagina.c"), "The TCP listener and one HTTPS client being served",
+        [c("struct page") + ", " + c("client"), c("page.c"), "The TCP listener and one HTTPS client being served",
          rif("The page server")],
         "Processes and sessions",
         [c("struct bridge"), c("main.c"), "What the parent hands to its callbacks: the transport and the table of "
          "children", "chapter «Overall architecture»"],
-        [c("struct children") + ", " + c("struct child"), c("figlio.c"), "The table of per-user children and one child: user, "
+        [c("struct children") + ", " + c("struct child"), c("child.c"), "The table of per-user children and one child: user, "
          "uid, pid, socket, serial number, reassembly buffers for frames, cursor and clipboard", "chapter «Startup and life cycle»"],
-        [c("struct helper"), c("aiutante.c"), "The PAM helper process and the tickets in flight (" + c("struct flight")
+        [c("struct helper"), c("helper.c"), "The PAM helper process and the tickets in flight (" + c("struct flight")
          + ")", rif("Credentials, the fixed delay and the address ban")],
-        [c("struct sentinel"), c("sentinella.c"), "Watches local graphical sessions on behalf of the users served",
+        [c("struct sentinel"), c("sentinel.c"), "Watches local graphical sessions on behalf of the users served",
          "chapter «Overall architecture»"],
-        [c("struct command"), c("comando.c"), "The 0600 Unix socket of the unblock command", rif("Credentials, the fixed delay and the address ban")],
-        [c("FindingAgainDesktop"), c("ritrovo.h"), "A live REMOTIX desktop found at start-up with no child holding it",
+        [c("struct command"), c("command.c"), "The 0600 Unix socket of the unblock command", rif("Credentials, the fixed delay and the address ban")],
+        [c("RediscoveredDesktop"), c("rediscover.h"), "A live REMOTIX desktop found at start-up with no child holding it",
          "chapter «Startup and life cycle»"],
         [c("struct budget_count") + ", " + c("struct tenant"), c("budget.h") + ", "
          + c("budget.c"), "The composition budget: who is inside, and the verdict on a newcomer", "chapter «Quality, degradation and budget»"],
-        [c("DesktopSession") + ", " + c("SessionState") + ", " + c("SessionMonitor"), c("sessione.h"), "Which desktop, "
+        [c("DesktopSession") + ", " + c("SessionState") + ", " + c("SessionMonitor"), c("session.h"), "Which desktop, "
          "the health of a started session, the virtual monitor read back", "chapter «The four desktops»"],
         "Capture, encoding, input, audio",
         [c("Capture") + ", " + c("CaptureFrameInfo") + ", " + c("CaptureDelivery") + ", " + c("CaptureCounts"),
-         c("cattura.h"), "The capture: the PipeWire stream, one captured frame with its damage, the buffer type asked and "
+         c("capture.h"), "The capture: the PipeWire stream, one captured frame with its damage, the buffer type asked and "
          "declared (delivery), the counters", "chapter «Screen capture per compositor»"],
         [c("MutterSession") + ", " + c("KwinSession") + ", " + c("WlrStage") + ", " + c("WlrFrame"),
          c("mutter.h") + ", " + c("kwin.h") + ", " + c("wlroots.h"), "The stage of each compositor family; " + c("WlrFrame")
          + " is one labwc frame. On KDE the " + c("KwinSession") + " talks to a KWin nested in a screenless labwc that "
          + c("remotix --kwin-nested") + " starts (" + c("kwin.c") + ")",
          "chapter «Screen capture per compositor»"],
-        [c("CursorShape") + ", " + c("Cursor"), c("cursore.h"), "A cursor shape (size, hotspot, premultiplied BGRA, "
+        [c("CursorShape") + ", " + c("Cursor"), c("cursor.h"), "A cursor shape (size, hotspot, premultiplied BGRA, "
          "series number) on its way to " + c("CURSOR_SHAPE"), rif("Cursor shape and clipboard messages")],
         [c("Encoder") + ", " + c("CodificatoreRichiesta") + ", " + c("EncoderFrame") + ", "
-         + c("EncoderConfession") + ", " + c("EncoderSurface"), c("codificatore.h"), "The encoder, what is asked of it "
+         + c("EncoderConfession") + ", " + c("EncoderSurface"), c("encoder.h"), "The encoder, what is asked of it "
          "(request), one encoded frame (with re-encodes against the 16 MiB cap), what it declares about itself "
          "(confession), a GPU surface", "chapter «Video encoding»"],
         [c("VaDirect") + ", " + c("VaDirectRequest") + ", " + c("VulkanVideo") + ", " + c("VulkanVideoRequest"),
-         c("vadiretta.h") + ", " + c("vulkanvideo.h"), "The two GPU encoders: VA-API used directly, and Vulkan Video",
+         c("vadirect.h") + ", " + c("vulkanvideo.h"), "The two GPU encoders: VA-API used directly, and Vulkan Video",
          "chapter «Video encoding»"],
-        [c("BitWriter"), c("scrittore_bit.h"), "Bit writer for SPS/PPS/slice headers, remembers an overflow",
+        [c("BitWriter"), c("bit_writer.h"), "Bit writer for SPS/PPS/slice headers, remembers an overflow",
          "chapter «Video encoding»"],
-        [c("Input") + ", " + c("Keyboard") + ", " + c("WlrInput"), c("input.h") + ", " + c("tastiera.h") + ", "
+        [c("Input") + ", " + c("Keyboard") + ", " + c("WlrInput"), c("input.h") + ", " + c("keyboard.h") + ", "
          + c("wlr_input.h"), "Injection of the five input messages; letters to key positions; the wlroots transport",
          "chapter «Input»"],
-        [c("Clipboard") + ", " + c("ClipboardKde"), c("appunti.h") + ", " + c("appunti_kde.h"), "The clipboard seam, "
+        [c("Clipboard") + ", " + c("ClipboardKde"), c("clipboard.h") + ", " + c("clipboard_kde.h"), "The clipboard seam, "
          "and its data-control implementation (KDE and labwc)", "chapter «Audio and clipboard»"],
-        [c("sound") + ", " + c("audio_cod"), c("suono.h") + ", " + c("audio.h"), "The virtual sink and its monitor "
+        [c("sound") + ", " + c("audio_cod"), c("sound.h") + ", " + c("audio.h"), "The virtual sink and its monitor "
          "capture; the Opus/PCM encoder", "chapter «Audio and clipboard»"],
     ], "«TAB» — The main data structures")
 
@@ -216,7 +216,7 @@ RCP audio datagram
   68 43     capsule type 0x2843 (2-byte varint)
   04        capsule length
   00 00 00 mm   u32 application error code = RCP reason""", "text", "The closing capsule") + \
-    code("""Parent <-> child (SOCK_SEQPACKET, native struct layout, figlio.c)
+    code("""Parent <-> child (SOCK_SEQPACKET, native struct layout, child.c)
   struct head
    ├── u8[4]  magic            'F','I','G','1'
    ├── u16    kind             MSG_*
@@ -246,7 +246,7 @@ RCP audio datagram
         [c("16"), c("MSG_BLOCK"), "child → parent", "one encoded audio block"],
         [c("17"), c("MSG_CLIPBOARD_FROM_SESSION"), "child → parent", "text copied in the session, in pieces"],
         [c("18"), c("MSG_CLIPBOARD_REQUEST"), "child → parent", "someone in the session is pasting"],
-    ], "«TAB» — Parent–child messages (figlio.c)") + \
+    ], "«TAB» — Parent–child messages (child.c)") + \
     code("""Parent -> helper   struct request  { u64 ticket; char user[257]; char password[1025]; char rhost[64]; }
 Helper -> parent   struct response { u64 ticket; u8 outcome; }       outcome 1 and only 1 = admitted
 Unlock socket      one text line:  UNBLOCK <address>  ->  REMOVED <address> | NOT-BANNED <address>
@@ -283,7 +283,7 @@ S5 = p("The protocol and transport constants a maintainer is most likely to look
         [c("CAP_HELLO") + " / " + c("CAP_CREDENTIALS") + " / " + c("CAP_ATTACH"), "5 / 60 / 10 s", c("rcp.c"), "handshake ceilings"],
         [c("WT_CAP_CHANNEL_NS"), "5 s", c("webtransport.c"), "session open → control channel"],
         [c("FIXED_DELAY"), "1000 ms", c("rcp.c"), "fixed delay before answering credentials"],
-        [c("VERDICT_CAP") + " / " + c("EXPIRY_MS"), "12 / 8 s", c("rcp.c") + " / " + c("aiutante.c"), "PAM verdict deadlines"],
+        [c("VERDICT_CAP") + " / " + c("EXPIRY_MS"), "12 / 8 s", c("rcp.c") + " / " + c("helper.c"), "PAM verdict deadlines"],
         [c("THRESHOLD") + " / " + c("WINDOW") + " / " + c("BAN_DURATION"), "3 / 5 min / 12 h", c("rcp.c"), "address ban"],
         [c("SILENCE"), "30 000 ms", c("rcp.c"), "silence detaches"],
         [c("DEFAULT_EVICTION"), "15 000 ms", c("rcp.c"), "ghost eviction"],
@@ -292,9 +292,9 @@ S5 = p("The protocol and transport constants a maintainer is most likely to look
         [c("RCP_SESSION_CAP"), "10", c("rcp.h"), "users served, default of " + c("--session-cap")],
         "Transport",
         [c("DEFAULT_PORT"), "7447", c("main.c"), "UDP and TCP"],
-        [c("IDLE_MS"), "30 000", c("trasporto.c"), c("max_idle_timeout")],
-        [c("SCIDLEN"), "18", c("trasporto.c"), "server connection id bytes"],
-        [c("MAX_PACKETS_PER_ROUND"), "64", c("trasporto.c"), "packets written per pass"],
+        [c("IDLE_MS"), "30 000", c("transport.c"), c("max_idle_timeout")],
+        [c("SCIDLEN"), "18", c("transport.c"), "server connection id bytes"],
+        [c("MAX_PACKETS_PER_ROUND"), "64", c("transport.c"), "packets written per pass"],
         [c("WT_KEEPALIVE_NS"), "10 s", c("webtransport.c"), "PING interval (half the dead-line silence when on)"],
         [c("WT_LM_STALL_MS") + " / " + c("WT_LM_SILENCE_S"), "5000 ms / 10 s", c("webtransport.h"), "dead-line defaults"],
         [c("WT_CLEAR_THRESHOLD_MS"), "100", c("webtransport.h"), "stale-delta threshold"],
@@ -304,7 +304,7 @@ S5 = p("The protocol and transport constants a maintainer is most likely to look
         [c("WT_CLOSE_WAIT_NS"), "500 ms", c("webtransport.c"), "wait before the closing capsule"],
         [c("WT_CAPSULE_MAX"), "1028", c("webtransport.c"), "incoming capsule cap"],
         [c("CERT_DAYS_PAGE") + " / " + c("CERT_DAYS_SESSION") + " / " + c("CERT_MARGIN_DAYS"), "365 / 13 / 2",
-         c("certificati.h"), "certificate validity and rotation margin"],
+         c("certificates.h"), "certificate validity and rotation margin"],
     ], "«TAB» — Protocol and transport constants")
 
 CHAPTER = ("Appendix A — Data structures and messages", [

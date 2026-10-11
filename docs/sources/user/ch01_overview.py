@@ -1,6 +1,6 @@
 """User Manual, chapter 1 — what REMOTIX is and what it offers.
-Sources: src/pagina.html (sign-in page, REASON_TEXT), SPECIFICHE.md §5.1, §11.5, §12, src/main.c and src/rcp.c
-(the 30- and 60-minute clocks), installatore/catalogo/catalogo.json, LICENSE.md."""
+Sources: src/page.html (sign-in page, REASON_TEXT), SPECS.md §5.1, §11.5, §12, src/main.c and src/rcp.c
+(the 30- and 60-minute clocks), installer/catalog/catalog.json, LICENSE.md."""
 from build import arrow, box, c, fig, note, p, table, text, ul, warn, zone
 
 PICTURE = fig(
@@ -60,7 +60,7 @@ S_BROWSERS = p("The browser needs two modern features, WebTransport and WebCodec
         ["Firefox", "Windows", "not tested yet"],
         ["Firefox", "Android", "<b>not supported</b>: it lacks WebCodecs"],
         ["Safari", "macOS, iOS", "not tested yet"],
-    ], "«TAB» — The browsers (SPECIFICHE.md §11.5)") + \
+    ], "«TAB» — The browsers (SPECS.md §11.5)") + \
     p("On an Android phone or tablet, use Chrome. A browser that is too old lacks these features, and the page "
       "cannot show the desktop.")
 
@@ -83,7 +83,7 @@ S_SESSION = p("Your desktop belongs to you, not to the browser tab. Closing the 
     warn("only your own input — keys, mouse, touch — counts as “touching”. A desktop left without any "
          "input for an hour is closed even if a video is playing in it.", "The one-hour clock.")
 
-S_NOT = p("What REMOTIX deliberately does not do (SPECIFICHE.md §12):", lead=True) + \
+S_NOT = p("What REMOTIX deliberately does not do (SPECS.md §12):", lead=True) + \
     ul([
         "a Windows or macOS machine as the server: the server is Linux only;",
         "an application to install on the device you connect from;",

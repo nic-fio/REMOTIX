@@ -1,11 +1,11 @@
 policy_module(remotix, 1.0.0)
 
-# remotix.te — the REMOTIX SELinux module (phase 17, T6; `fasi/17-l-installatore.md` §11.1 B, R19).
+# remotix.te — the REMOTIX SELinux module (phase 17, T6; `phases/17-the-installer.md` §11.1 B, R19).
 #
-# ⭐ Why it exists.  `DECISIONI.md` §10.18 (D3): the REMOTIX PAM file is the sshd stack, with
+# ⭐ Why it exists.  `DECISIONS.md` §10.18 (D3): the REMOTIX PAM file is the sshd stack, with
 #    `pam_selinux close/open`.  `pam_selinux open` requires the next `execve` to transition to the
 #    user's context (`unconfined_t` for a normal user) — and it is the REMOTIX child that does it, when it
-#    relaunches itself as the user (`figlio.c`, `execve` of itself).  In the context of an arbitrary
+#    relaunches itself as the user (`child.c`, `execve` of itself).  In the context of an arbitrary
 #    service (`unconfined_service_t`) that transition is forbidden: `[M]` T1c, 29 Sep, Fedora and Alma:
 #    `{ transition } unconfined_service_t → unconfined_t`, the child exits with 37 and the desktop is not born.
 #    ⇒ Like Cockpit (`selinux/cockpit.te`: `cockpit_session_t`), REMOTIX has a domain of ITS OWN, which is
@@ -130,7 +130,7 @@ optional_policy(`
 ')
 
 # ⭐ the transition to the user's context at the child's `execve`, without AT_SECURE (the child
-#    builds the environment itself, `figlio.c` point 5): like `cockpit_session_t`
+#    builds the environment itself, `child.c` point 5): like `cockpit_session_t`
 userdom_spec_domtrans_all_users(remotix_t)
 userdom_noatsecure_login_userdomain(remotix_t)
 # ⭐ the child relaunches itself AS THE USER by executing itself: the program is the entry point of
@@ -152,7 +152,7 @@ userdom_kill_all_users(remotix_t)
 #   permissive and dontaudit off, a whole session with a service restart with a live desktop):
 #   · `net_admin`: sd-journal and sd-bus try SO_SNDBUFFORCE on their sockets and, without it, keep the
 #     default buffer — the same denial the policy silences for systemd services;
-#   · `cap_userns sys_ptrace`: finding the stages again (`ritrovo.c`) walks /proc of ALL processes, and
+#   · `cap_userns sys_ptrace`: finding the stages again (`rediscover.c`) walks /proc of ALL processes, and
 #     those inside a user namespace (bwrap, flatpak, glycin) are not ours: skipping them is right.
 dontaudit remotix_t self:capability net_admin;
 dontaudit remotix_t self:cap_userns sys_ptrace;

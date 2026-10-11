@@ -1,8 +1,8 @@
 # remotix — the PAM service of the REMOTIX server.  ⭐ DEBIAN AND UBUNTU (and Mint).
 #
-#   installed in /etc/pam.d/remotix   (done by `costruisci.sh`)
+#   installed in /etc/pam.d/remotix   (done by `build.sh`)
 #
-# ⭐ PHASE 17 — one file per family, like Cockpit (`fasi/17-l-installatore.md`
+# ⭐ PHASE 17 — one file per family, like Cockpit (`phases/17-the-installer.md`
 #    §4.3): `@include` below is a Debian modification to Linux-PAM, and
 #    elsewhere the line is "illegal module type".  The other three:
 #      remotix.pam.fedora   Fedora, RHEL, Rocky, Alma   → /etc/pam.d/remotix
@@ -12,7 +12,7 @@
 # -----------------------------------------------------------------------------
 # ⛔ WHY IT EXISTS, AND WHY `login` IS NOT USED
 #
-# `SPECIFICHE.md` §4.2, first line: "local PAM, service `remotix`, with the ban
+# `SPECS.md` §4.2, first line: "local PAM, service `remotix`, with the ban
 # of the address after three failed attempts".  Until 10 August 2026 the code
 # said `login` (finding B-11), and the price was not one of form: on Debian
 # `/etc/pam.d/login` is the LOCAL CONSOLE stack.  Inside it there are
@@ -41,7 +41,7 @@
 #
 #   1. `main.c` looks at /etc/pam.d/remotix (and /usr/lib/pam.d/remotix, where
 #      openSUSE puts it) at startup and SAYS so if it is not there;
-#   2. `autenticazione.c` tells apart in the log "PAM refused" from "PAM could not
+#   2. `authentication.c` tells apart in the log "PAM refused" from "PAM could not
 #      judge", and names this file in the second.
 #
 # -----------------------------------------------------------------------------
@@ -50,14 +50,14 @@
 #   `common-auth` once and it holds for all services, this one included.
 #
 # -----------------------------------------------------------------------------
-# ⭐⭐ D3 CLOSED (`DECISIONI.md` §10.18, 30 Sep 2026) — REMOTIX MIRRORS
+# ⭐⭐ D3 CLOSED (`DECISIONS.md` §10.18, 30 Sep 2026) — REMOTIX MIRRORS
 #    the system's authentication: *"I do not want REMOTIX to drift
 #    from the system's default authentication, it must mirror
 #    PAM"*.  ⇒ From here down it is Debian's and Ubuntu's /etc/pam.d/sshd, line by
 #    line, with ONE extra line at the top: root excluded (like stock ssh).
 #    `[M]` 30 Sep, comparison with /etc/pam.d/sshd on debian13-gnome-iso and
 #    ubuntu2604-gnome-iso (identical to each other): 15 lines of 15 equal
-#    (`banchi/17-t6/t6-leggi-pam.sh`).  The lines that were there before (the
+#    (`benches/17-t6/t6-read-pam.sh`).  The lines that were there before (the
 #    `common-session-noninteractive` stack + `pam_systemd` by name, `pam_nologin`
 #    in auth) were a policy of OURS: the «session» § below tells
 #    why they were born, and why the rule of D3 supersedes them — stock `common-session`
@@ -70,7 +70,7 @@
 
 # ── auth: "is this password right?"
 #
-# ⭐ ROOT EXCLUDED, and BEFORE the password (`fasi/17` §4.3).  It is the only
+# ⭐ ROOT EXCLUDED, and BEFORE the password (`phases/17` §4.3).  It is the only
 #    intended difference from sshd (D3).  The file lists one name per line; it is
 #    installed with `root` in it, owned by root and not writable by others
 #    (`pam_listfile` refuses it otherwise).  Cockpit does the same with
@@ -91,25 +91,25 @@ auth       requisite    pam_listfile.so item=user sense=deny file=/etc/remotix/d
 
 # ── account: "is this account usable?"  (account expired, locked, ...)
 #    ⚠ It is not an extra: `pam_authenticate` does not answer this question, and
-#      `autenticazione.c` calls `pam_acct_mgmt` on purpose.
+#      `authentication.c` calls `pam_acct_mgmt` on purpose.
 account    required     pam_nologin.so
 @include common-account
 
-# ── session: `figlio.c` calls `pam_open_session`, and it is that call that makes
+# ── session: `child.c` calls `pam_open_session`, and it is that call that makes
 #    the user's logind session be born — with `pam_systemd`, which is in
 #    `common-session` (`[M]` 30 Sep: Debian 13 and Ubuntu 26.04).
 #
 # ⛔ HISTORY, 15 August 2026 (phase 5): back then the file included
 #    `common-session-noninteractive`, which does NOT have `pam_systemd` — and without it,
 #    the user has no logind session, Mutter's `is_headless()` has
-#    nothing to look at (`DECISIONI.md` §4.3-bis) and the rule of §5.1 loses its
+#    nothing to look at (`DECISIONS.md` §4.3-bis) and the rule of §5.1 loses its
 #    subject.  The defect was invisible by accident: the file was not
 #    installed and PAM fell back to `other`, which on Debian includes the common
 #    stacks.  The cure back then was `pam_systemd` by name; with D3 the cure is
-#    sshd's stack, which carries it.  ⛔ The proof that remains: `provisiona.sh`
+#    sshd's stack, which carries it.  ⛔ The proof that remains: `provision.sh`
 #    checks that the installed file reaches `pam_systemd`.
 #
-# ⚠ `pam_loginuid` `required` like sshd: the service (and `riavvia-7700.sh`,
+# ⚠ `pam_loginuid` `required` like sshd: the service (and `restart-7700.sh`,
 #   with `systemd-run`) starts from systemd, without loginuid, and can write it.
 # ⚠ `pam_selinux` is there as in sshd, with the actions that silence it where the
 #   module is not there (stock Debian and Ubuntu are without SELinux).

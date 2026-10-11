@@ -1,6 +1,6 @@
 # RCP — Remotix Control Protocol, version 1
 
-*⚠ Historical measurements, on the machine of the time. With phase 18 (without ffmpeg) the ones the change invalidated were removed — encoding without the card and colour conversion with swscale; those of encoding on the card and of audio stay, because the new stream is identical (comparison of 30 Sep 2026). User's decision. The measurements redone after the change (1 Oct 2026) are in `fasi/18-senza-ffmpeg.md` §5.*
+*⚠ Historical measurements, on the machine of the time. With phase 18 (without ffmpeg) the ones the change invalidated were removed — encoding without the card and colour conversion with swscale; those of encoding on the card and of audio stay, because the new stream is identical (comparison of 30 Sep 2026). User's decision. The measurements redone after the change (1 Oct 2026) are in `phases/18-without-ffmpeg.md` §5.*
 
 *Written on 9 Aug 2026, before any line of code.*
 *Completed on 9 Aug 2026, after the census of §0-bis — still before any line of code.*
@@ -8,7 +8,7 @@
 > ## 0. ⛔ Why this document exists, and why it comes first
 >
 > *⚠ The number dates from 10 Aug 2026, finding **R11.18**: four lines of this document
-> (§3, §5.2, §7.5, §11.1) and one of `FASI.md` §01-filo-nudo cited «§0» as the load-bearing argument,
+> (§3, §5.2, §7.5, §11.1) and one of `PHASES.md` §01-filo-nudo cited «§0» as the load-bearing argument,
 > and §0 did not exist — the numbering started from §0-bis. Now it exists, and it does not change a word
 > of the text.*
 >
@@ -51,7 +51,7 @@ specified of all.
 | what an implementation does after `PROTOCOL_ERROR` | «closes» | §3.1 |
 | recovery after an abandoned frame | ⛔ **did not exist** | §5.2 |
 | the audio format | «Opus, PCM» | §5.3 |
-| rate limiting of attempts | `[?]` in `SPECIFICHE.md` §4.2 | §4.4-bis |
+| rate limiting of attempts | `[?]` in `SPECS.md` §4.2 | §4.4-bis |
 
 ⛔ **And a hole that was not a gap but a design defect**: §5.1 allows the server to
 **abandon** a frame with `RESET_STREAM`, and the video is compressed with prediction between
@@ -60,7 +60,7 @@ a keyframe arrives** — and there was no way either to say that a frame is a ke
 ask for one. The cure is in §5.2 and costs **zero bytes** in the header: it fits in the values of the
 `type` field, which were undefined.
 
-⚠ **The closures are marked 🔸 in `DECISIONI.md` §1.5**: they are consequences written by me, not
+⚠ **The closures are marked 🔸 in `DECISIONS.md` §1.5**: they are consequences written by me, not
 pronounced by the user, and they are corrected without discussion. What deliberately stays open is
 in §12, declared instead of forgotten.
 
@@ -106,7 +106,7 @@ in §12, declared instead of forgotten.
 > skip it. Cured: **from `0xFFFFFFFF` it goes to `1`**.
 >
 > ⇒ ⭐ **Five lines of seven were right, two were not — and the cost of finding out was writing their
-> bench.** It is moment 1 of `PIANO.md` §0.4 working in the direction nobody expects: the
+> bench.** It is moment 1 of `PLAN.md` §0.4 working in the direction nobody expects: the
 > bench did not find a defect in the product, it found **a defect in the referee**.
 
 ⛔ **And the window to do it IS CLOSED**: §9 forbids adding message types within a
@@ -122,10 +122,10 @@ on this document is touched **only** as §9 says, with no discounts.
 > ⛔ **The implementations of RCP/1 that exist, counted on 11 Aug 2026** `[M]` (`wc -l`,
 > `md5sum`):
 > · `src/rcp.c` + `rcp.h` — `[M]` **12 Aug 2026: 2,764 / 239 lines** (they were 2,592 / 197 on the 11th);
-> · `banchi/rcp/rcp.c` + `rcp.h` — **identical byte for byte** (`md5` `6d858886…` and `62415feb…`,
+> · `benches/rcp/rcp.c` + `rcp.h` — **identical byte for byte** (`md5` `6d858886…` and `62415feb…`,
 >   they were `1adce15b…` and `0458f154…`);
 >
-> ⚠ *The numbers grew because of the cure of `DECISIONI.md` §1.10 — the PAM check off the single
+> ⚠ *The numbers grew because of the cure of `DECISIONS.md` §1.10 — the PAM check off the single
 > thread — and ⛔ **the wire has not changed by one byte**: this is a **census** cell, not a
 > normative line, and it must be realigned when the code grows or it becomes a measurement that describes
 > yesterday's code. Realigned on 12 Aug 2026, on a report from the agent that made the cure.*
@@ -133,11 +133,11 @@ on this document is touched **only** as §9 says, with no discounts.
 >   Aug 2026, for the log line of the **attach slot left** on the farewell path — the cure
 >   is in the code, commented. ⛔ And the two numbers are updated **together**, or the line that declares
 >   the identity of the two copies becomes a promise nobody checks: what enforces it is the
->   `Makefile`, which compares `src/` with `banchi/rcp/` and stops if they diverge.*
-> · `banchi/01-b3-cliente.py` — **the second reader**, in another language;
-> · `src/pagina.html` — the third, in JavaScript;
-> · and two that read the format without speaking it: `banchi/01-b4-validatore.py` (the mechanical referee)
->   and `banchi/01-b11-pagina.html`.
+>   `Makefile`, which compares `src/` with `benches/rcp/` and stops if they diverge.*
+> · `benches/01-b3-client.py` — **the second reader**, in another language;
+> · `src/page.html` — the third, in JavaScript;
+> · and two that read the format without speaking it: `benches/01-b4-validator.py` (the mechanical referee)
+>   and `benches/01-b11-page.html`.
 
 ---
 
@@ -174,13 +174,13 @@ on this document is touched **only** as §9 says, with no discounts.
 Three things this drawing says and that must be read:
 
 1. **the server proves who it is before the password leaves** — invariant I3 applied
-   to the order (`SPECIFICHE.md` §4.1);
+   to the order (`SPECS.md` §4.1);
 2. **authentication precedes attaching**: whoever is not admitted does not even name a session;
 3. **the canvas is agreed at attach**, and from there it does not change while the client stays
-   (`SPECIFICHE.md` §6.1).
+   (`SPECS.md` §6.1).
 
 ⛔ **The order of the five steps admits no permutations.** A message that arrives in a state in which
-it is not expected is `PROTOCOL_ERROR` (§3). It is trap 1 of `LEZIONI.md` §4, where every permutation
+it is not expected is `PROTOCOL_ERROR` (§3). It is trap 1 of `LESSONS.md` §4, where every permutation
 was punished with a different error and nobody said «you got the order wrong»: here it is said.
 
 ---
@@ -192,7 +192,7 @@ is no cleartext mode, and RCP never flows over TCP.
 
 > ### ⭐ Changed on 9 Aug 2026 — and the protocol did not lose a line
 >
-> `DECISIONI.md` §1.6: **no dedicated clients, the client is the browser**. A page cannot
+> `DECISIONS.md` §1.6: **no dedicated clients, the client is the browser**. A page cannot
 > open a bare QUIC connection, but **WebTransport gives it the same bricks** on which §5.1 had
 > been designed: independent unidirectional streams, the abandonment of a stream, datagrams,
 > connection migration.
@@ -209,8 +209,8 @@ is no cleartext mode, and RCP never flows over TCP.
 ### 2.1 How the pieces of QUIC are used
 
 QUIC is not «TCP that goes faster»: it carries four things that this protocol uses
-deliberately, and that must be used **instead of** reimplementing them (`SPECIFICHE.md` §2 point 3,
-*«depend, do not rewrite»* — ⚠ *this line cited a «§2.3» that does not exist in `SPECIFICHE.md`:
+deliberately, and that must be used **instead of** reimplementing them (`SPECS.md` §2 point 3,
+*«depend, do not rewrite»* — ⚠ *this line cited a «§2.3» that does not exist in `SPECS.md`:
 §2 has no subsections. Corrected on 10 Aug 2026, finding **R11.18***).
 
 | Piece of QUIC | What it is for here |
@@ -220,7 +220,7 @@ deliberately, and that must be used **instead of** reimplementing them (`SPECIFI
 | **datagrams** | audio, which is small and prefers losing a packet to waiting for it |
 | **connection migration** | the phone moves from WiFi to mobile network without the session noticing |
 | **congestion control** | the measure of how much the line carries, which in v1 had to be worked out by hand |
-| **idle timeout** | the 30 seconds of silence of `SPECIFICHE.md` §5.3 |
+| **idle timeout** | the 30 seconds of silence of `SPECS.md` §5.3 |
 
 ### 2.2 Mandatory parameters
 
@@ -256,7 +256,7 @@ job, and a second mechanism would produce two truths about the same fact.
 
 ### 2.3 ⭐ Stream credit, and what we can no longer demand
 
-*Added on 9 Aug 2026 and rewritten the same day, after `DECISIONI.md` §1.6.*
+*Added on 9 Aug 2026 and rewritten the same day, after `DECISIONS.md` §1.6.*
 
 ⛔ **The first draft of this paragraph dictated the QUIC transport parameters to the client** —
 how many streams, how much window, no 0-RTT, no `disable_active_migration`. **With a browser
@@ -326,7 +326,7 @@ demanded**.
 > to notice and **cannot ask for the keyframe** ⇒ and with an infinite GOP none arrives any more on its
 > own. ⇒ **This is the reason the line below obliges the server to produce the keyframe by itself**:
 > in this case the client has no way of asking for it.
-| ⛔ **and when credit is lacking the frame is thrown away — but NEVER a keyframe** | waiting for a free slot is a queue, and every queue **buys smoothness and sells responsiveness** (`SPECIFICHE.md` §3.2). An old **delta** is no longer needed: a new one is already arriving. ⛔ A **keyframe** instead is waited for, because it is the only thing that puts the decoder back on its feet (§5.2). And in both cases **it is written in the log** |
+| ⛔ **and when credit is lacking the frame is thrown away — but NEVER a keyframe** | waiting for a free slot is a queue, and every queue **buys smoothness and sells responsiveness** (`SPECS.md` §3.2). An old **delta** is no longer needed: a new one is already arriving. ⛔ A **keyframe** instead is waited for, because it is the only thing that puts the decoder back on its feet (§5.2). And in both cases **it is written in the log** |
 
 > ⛔ *Corrected on the evening of 9 Aug 2026, finding **R1.9**, and the sequence that broke it is this.*
 > The line gets worse, the server abandons a delta and — as §5.2 requires — immediately prepares a
@@ -339,11 +339,11 @@ demanded**.
 > why**, because the log obligation of §5.1 speaks of *abandonment* and there the stream had never
 > been born. Now the obligation covers both cases.
 | **the server MUST NOT offer 0-RTT** | 0-RTT data can be **replayed**, and the second message is `CREDENTIALS`. The gain is one network round trip on a session that lasts hours |
-| **the server MUST NOT disable migration** | it is the reason QUIC was chosen (`SPECIFICHE.md` §8.4): the phone that moves from WiFi to mobile network |
+| **the server MUST NOT disable migration** | it is the reason QUIC was chosen (`SPECS.md` §8.4): the phone that moves from WiFi to mobile network |
 
 `[?]` **How many streams per second each browser really withstands nobody knows**, and it is not read:
 it is measured. ⚠ It is the form of defect a short bench **does not see** — it works for the first seconds and
-stops afterwards (`LEZIONI.md` §1.4) — and that is why §11 has a dedicated bench, which keeps the
+stops afterwards (`LESSONS.md` §1.4) — and that is why §11 has a dedicated bench, which keeps the
 session alive **beyond the first 256 frames**.
 
 ### 2.4 🔸 The port
@@ -387,7 +387,7 @@ anywhere.*
 > which the server had done everything right — **I1 broken because the line loses packets**, that is the
 > condition I1 exists to protect.
 >
-> ⚠ *It is the **sixth** of the family* **P8 → P11 → P13 → P14 → P19 → P20** *(`LEZIONI.md` §1.13, and
+> ⚠ *It is the **sixth** of the family* **P8 → P11 → P13 → P14 → P19 → P20** *(`LESSONS.md` §1.13, and
 > ⭐ the **seventh** is of 24 Aug 2026 — see the box just below). And
 > even the first cure proposed — «only if, when the frame arrives, the bytes of `SESSION` have not yet arrived» — remained a substitute: it moves the measurement from the wake-up of the coroutine to the bytes, and
 > **the bytes are delayed by the network**. It would have been the seventh draft.*
@@ -414,7 +414,7 @@ anywhere.*
 >
 > ⇒ ⚠ **The lesson P21 adds to the six before**: *«local and monotonic»* **is not enough**. A
 > quantity must be tested **on the two known extremes**, and must **order them in the right direction** — if it does
-> not, it is not a calibration to redo: it is the wrong quantity (`LEZIONI.md` §1.33). ⛔ And it was not found
+> not, it is not a calibration to redo: it is the wrong quantity (`LESSONS.md` §1.33). ⛔ And it was not found
 > by a rereading: it was found by the **test client** on its first round against a server that
 > really sends.
 | **input** — unidirectional | the client | **only one**, opened ⛔ **after having received `SESSION`** and kept open |
@@ -441,7 +441,7 @@ streams.** Whoever receives one closes with `PROTOCOL_ERROR`.
 > ⚠ **And this is the silent defect that §0 of this document exists to prevent.** The server and the
 > page agreed **because the same hand wrote them**: neither of the two read this
 > line, and the line was false. ⭐ What found it was **the only reader that read RCP.md without
-> looking at the code** — that is precisely the piece of referee that `PIANO.md` §1.1 says it
+> looking at the code** — that is precisely the piece of referee that `PLAN.md` §1.1 says it
 > bought in place of `mstsc`, and that here paid back its own cost on the first run.
 
 ⭐ **How the channel is recognised**: one reads the **first two bytes of the RCP payload** — that is what
@@ -536,7 +536,7 @@ Whoever detects the violation, **in this order**:
 ⭐ **The third point is the one that saves diagnoses**: if the farewell does not arrive — because the stream
 was broken, because the message was unreadable — the reason travels all the same, inside the closing
 of the session. In v1 the server wrote «farewell to the client» and the client read «network error»
-for **three phases** (`LEZIONI.md` §1.7): here the two sides have two roads to tell each other the same thing, and
+for **three phases** (`LESSONS.md` §1.7): here the two sides have two roads to tell each other the same thing, and
 the acceptance test of §11 checks **from the receiving side** that at least one of the two has arrived.
 
 ⚠ Code **0** means «closing without reason» and **MUST NOT** be used: every closing has
@@ -567,7 +567,7 @@ a reason from §8.2.
 | **the key** | **MUST** be **ECDSA P-256**. ⛔ Not Ed25519 and **never RSA**: P-256 is the only one that also keeps open the road of `serverCertificateHashes` `[S]`, and a key chosen today for convenience would close that door without anyone noticing |
 | **the generation** | the server generates it at installation, and keeps the private key with permissions `0600` |
 | **the name** | the certificate **MUST** carry as `subjectAltName` the address on which the server answers — name or IP address. ⚠ A browser that finds a `SAN` that does not match shows **a different warning**, and some do not even offer the click to proceed |
-| **the real certificate** | if the administrator installs one issued by an authority, the server **MUST** use it and **MUST NOT** regenerate its own. It is the road without warnings (`SPECIFICHE.md` §4.1) |
+| **the real certificate** | if the administrator installs one issued by an authority, the server **MUST** use it and **MUST NOT** regenerate its own. It is the road without warnings (`SPECS.md` §4.1) |
 
 ⛔ **And two certificates, not one** — the rule is in §4.1-bis, and it must be read before writing the
 server.
@@ -594,23 +594,23 @@ it was not an alternative, it is **the only mechanism** browsers expose for a se
 domain.*
 
 > ⛔ *Corrected on the night of 9 Aug 2026, finding **R4.4** of the review of the phase 1 bench.*
-> The row «who stays out» said *«`[S]` WebKit does not implement it: on Safari, iPhone and iPad the road is the exception»*. **It has been false since October 2025**, and `STUDI.md` §web §3.1 and `DECISIONI.md` §1.7 had
+> The row «who stays out» said *«`[S]` WebKit does not implement it: on Safari, iPhone and iPad the road is the exception»*. **It has been false since October 2025**, and `STUDIES.md` §web §3.1 and `DECISIONS.md` §1.7 had
 > already been corrected **on the same 9 Aug**: this document had not.
 >
 > ⛔ **And the damage was of the kind that makes no noise, because this file is the referee.** Whoever
-> read it to the letter wrote the branch *«on Safari the fingerprint is not needed, one goes by exception or by real certificate»* — and wrote it **conforming to the specification**, while whoever read `STUDI.md` §web
+> read it to the letter wrote the branch *«on Safari the fingerprint is not needed, one goes by exception or by real certificate»* — and wrote it **conforming to the specification**, while whoever read `STUDIES.md` §web
 > published the fingerprint for all three. Two diverging implementations, both in the right.
 > ⚠ And a bench that had applied the criterion *«a library that works with Chrome and not with Safari is not a library that works»* would have **failed both candidates**.
 
 | | |
 |---|---|
-| **what it is** | the SHA-256 fingerprint of the session certificate travels **inside the page**, and the browser accepts without warnings. It is our trust model, made with the lever browsers offer on purpose. ⛔ **Of the DER bytes of the certificate** — not of the public key and not of the PEM bytes. ⚠ *DER was missing here and was in `DECISIONI.md` §1.5 row 7 since 9 Aug (finding R1.14): aligned on the night of 10 Aug 2026, and it is the same damage as then — whoever computes the fingerprint on the wrong envelope gets a comparison that **never matches**, with the symptom «WebTransport does not connect» and no error naming the fingerprint* |
-| ⭐ **and it is no longer `[S]`** | `[M]` **9 Aug 2026**, on **two independent engines**: a WebTransport session towards a **self-signed ECDSA P-256 certificate of 13 days**, with the fingerprint published in the page and **no warning**, opened on **Chrome 151** (30.2 ms) and on **Firefox 140** (52.0 ms), and the bytes came back identical from both. Bench `banchi/01-b2-*`, document `FASI.md` §01-filo-nudo |
-| ⚠ **and what the two engines DO NOT prove** | they are two teams that do not know us, so their agreement counts — ⛔ **but what served was `aioquic`, not an implementation of ours**: this measures **the trust model**, not the server. And **Safari stays out by decision** (`DECISIONI.md` §1.8) |
+| **what it is** | the SHA-256 fingerprint of the session certificate travels **inside the page**, and the browser accepts without warnings. It is our trust model, made with the lever browsers offer on purpose. ⛔ **Of the DER bytes of the certificate** — not of the public key and not of the PEM bytes. ⚠ *DER was missing here and was in `DECISIONS.md` §1.5 row 7 since 9 Aug (finding R1.14): aligned on the night of 10 Aug 2026, and it is the same damage as then — whoever computes the fingerprint on the wrong envelope gets a comparison that **never matches**, with the symptom «WebTransport does not connect» and no error naming the fingerprint* |
+| ⭐ **and it is no longer `[S]`** | `[M]` **9 Aug 2026**, on **two independent engines**: a WebTransport session towards a **self-signed ECDSA P-256 certificate of 13 days**, with the fingerprint published in the page and **no warning**, opened on **Chrome 151** (30.2 ms) and on **Firefox 140** (52.0 ms), and the bytes came back identical from both. Bench `benches/01-b2-*`, document `PHASES.md` §01-filo-nudo |
+| ⚠ **and what the two engines DO NOT prove** | they are two teams that do not know us, so their agreement counts — ⛔ **but what served was `aioquic`, not an implementation of ours**: this measures **the trust model**, not the server. And **Safari stays out by decision** (`DECISIONS.md` §1.8) |
 | **the constraint** | `[S]` certificate valid **less than 14 days**, **ECDSA P-256** key, no RSA, **SHA-256** fingerprint, and `allowPooling` at `false` |
 | ⭐ **why the rotation does not show** | it is **the server itself that serves the page**: it regenerates the certificate before it expires and writes the current fingerprint into it. The user touches nothing and does not know it exists |
 | ⛔ **what it does not cover** | **loading the page**, which is a TCP connection of its own. There the warning with the click remains — or the real certificate, for whoever has a domain |
-| ⭐ **and the same road is AVAILABLE on all three engines** | `[R]` **WebKit implemented it on 2 Oct 2025** (bug 300057, `NetworkTransportSessionCocoa.mm`) and it ships in **Safari 26.4**: iPhone and iPad have **the same** road as the other two, not one to be rescued. ⛔ **Available, not verified**: on Safari nobody has tried it (row above, `DECISIONI.md` §1.8), and *«holds on»* would be a claim of working supported by `[R]`, that is by reading a commit — form **E1**. ⚠ *Corrected on 10 Aug 2026, finding **R11.16**: this row and the one above said, in the same table, that it holds on three engines and that Safari stays out. This file is the **referee**, that is the place where a deduction weighs more than in the product documentation* |
+| ⭐ **and the same road is AVAILABLE on all three engines** | `[R]` **WebKit implemented it on 2 Oct 2025** (bug 300057, `NetworkTransportSessionCocoa.mm`) and it ships in **Safari 26.4**: iPhone and iPad have **the same** road as the other two, not one to be rescued. ⛔ **Available, not verified**: on Safari nobody has tried it (row above, `DECISIONS.md` §1.8), and *«holds on»* would be a claim of working supported by `[R]`, that is by reading a commit — form **E1**. ⚠ *Corrected on 10 Aug 2026, finding **R11.16**: this row and the one above said, in the same table, that it holds on three engines and that Safari stays out. This file is the **referee**, that is the place where a deduction weighs more than in the product documentation* |
 
 ⛔ **Hence two certificates, and they must be kept distinct in the code**: a **long-lived** one for the page, which
 is the one on which the user grants the exception and which therefore **must not change** more often than
@@ -632,7 +632,7 @@ the one chosen**:
 
 ⚠ **And the consequence on acceptance testing, which holds in any case**: a bench that tests trust **MUST**
 also test the **second** connection, and a third with the key changed. The
-single-connection test stays green forever (`LEZIONI.md` §2.1).
+single-connection test stays green forever (`LESSONS.md` §2.1).
 
 ### 4.2 The control channel
 
@@ -649,7 +649,7 @@ channel, it stays open for the whole session, and its closing **is** the end of 
 Whoever receives it **MUST** consider it finished; it **MUST NOT** keep sending **on any channel,
 including the control one**.
 
-> ### ✅ Decided on 11 Aug 2026 by the user: **silence** — `DECISIONI.md` §7.14
+> ### ✅ Decided on 11 Aug 2026 by the user: **silence** — `DECISIONS.md` §7.14
 >
 > *Until today this line forbade sending «on the other channels» and was silent about control. On a
 > bidirectional stream the `FIN` of one party does not close the direction of the other, so whoever received it
@@ -704,7 +704,7 @@ defined in RCP/1:
 
 | Name | Who declares it | Values |
 |---|---|---|
-| `video.codec` | both | list among `hevc`, `h264`, in order of preference. ⛔ **`av1` left on 20 Aug 2026** (`DECISIONI.md` §1.13-ter): the name stays defined and its number stays **2** forever, but it is no longer negotiated |
+| `video.codec` | both | list among `hevc`, `h264`, in order of preference. ⛔ **`av1` left on 20 Aug 2026** (`DECISIONS.md` §1.13-ter): the name stays defined and its number stays **2** forever, but it is no longer negotiated |
 | `video.depth` | both | list among `8`, `10` |
 | `video.level` | client | the maximum level it can decode, e.g. `5.1`. ⛔ The server **MUST** emit a stream of level not higher, and **does not guess it**: a level declared too low does not give a network error, **it makes the decoder refuse the configuration** and the symptom is «the browser does not open the stream» *(finding **O12**)* |
 | `video.max_size` | client | `LARGHEZZAxALTEZZA` it can decode, e.g. `3840x2160` |
@@ -726,12 +726,12 @@ defined in RCP/1:
 > itself**: an implementation that had applied the rule to the letter would have closed with
 > `PROTOCOL_ERROR` a capability **defined by this very document**, and the symptom — *«the client drops as soon as it sends `HELLO`»* — would have named neither the rule nor the name.
 >
-> ⭐ **It was found by `banchi/01-b4-validatore.py` on its first run**, that is a program
+> ⭐ **It was found by `benches/01-b4-validator.py` on its first run**, that is a program
 > written by reading only this file, before a byte of server existed. It is precisely the
 > job §11 assigns to it: *«client and server are not tested against each other»*.
 >
 > ⚠ **Of the two cures this one was chosen**, and it is 🔸 derived: admitting `_` instead of renaming the
-> capability. Renaming would touch a name already cited in `STUDI.md` §web and in `SPECIFICHE.md`, and the
+> capability. Renaming would touch a name already cited in `STUDIES.md` §web and in `SPECS.md`, and the
 > underscore is the convention the rest of the document uses in field names
 > (`canvas_width`, `max_idle_timeout`).
 - a **value** is printable UTF-8 text, at most 256 bytes;
@@ -767,7 +767,7 @@ control when Opus is not negotiated. In the same way `8` **MUST** appear in
 
 ⛔ **The one who chooses is the server**, inside the intersection, following the order of preference **of the
 client**. The choice **MUST** be written in the server log: a successful negotiation with
-the opposite of what was wanted inside is trap 4 of `LEZIONI.md` §4, and it shows only if
+the opposite of what was wanted inside is trap 4 of `LESSONS.md` §4, and it shows only if
 someone writes it.
 
 ⚠ `video.max_size` does **not** change the canvas: it is a ceiling the server **MUST** respect
@@ -794,7 +794,7 @@ REJECTED
 | rejected | `REJECTED` with reason |
 
 ⛔ The server **MUST NOT** distinguish in the reason between «nonexistent user» and «wrong password»: both are `WRONG_CREDENTIALS`. And it **MUST** apply **the address ban**
-before answering (§4.4-bis). ⚠ *This line said «the **rate limiting** of attempts», which was the form replaced on 10 Aug 2026 by `DECISIONI.md` §1.9: one does not get out of the ban
+before answering (§4.4-bis). ⚠ *This line said «the **rate limiting** of attempts», which was the form replaced on 10 Aug 2026 by `DECISIONS.md` §1.9: one does not get out of the ban
 by waiting a few seconds, and calling it rate made people write a wait where a
 refusal must be written. Aligned on the night of 10 Aug, as §8.2 row `0x08` already was.*
 
@@ -818,7 +818,7 @@ over. ⛔ Any **other** message, and in particular a second `CREDENTIALS`, is th
 > requires of it**. ⚠ The control channel had no `FIN`: §4.2 was not in play, and the only rule
 > that was speaks of **attempts**, not of leave-takings. ⭐ Now the server names the two things
 > separately, and B11 demands the farewell **once per engine** instead of merely not
-> finding excess bytes — *an absence is not a proof* (`LEZIONI.md` §1.9).
+> finding excess bytes — *an absence is not a proof* (`LESSONS.md` §1.9).
 
 > ⚠ *Clarified on 9 Aug 2026.* The first draft had `REJECTED(motivo)` in §4.4 and
 > `WRONG_CREDENTIALS` among the farewell reasons of §8.2, without saying whether after the first the
@@ -868,7 +868,7 @@ done anything wrong:
 
 | | |
 |---|---|
-| `PROTOCOL_ERROR` · `INCOMPATIBLE_VERSION` · `NOTHING_IN_COMMON` | they are faults of the **bytes**, and can arise from a defect **of ours** or from a tab left open on an old version (§13 of `PIANO.md`). A server defect that banned the user for twelve hours would be the worst diagnosis this project could produce |
+| `PROTOCOL_ERROR` · `INCOMPATIBLE_VERSION` · `NOTHING_IN_COMMON` | they are faults of the **bytes**, and can arise from a defect **of ours** or from a tab left open on an old version (§13 of `PLAN.md`). A server defect that banned the user for twelve hours would be the worst diagnosis this project could produce |
 | `TIMED_OUT` · connections that drop halfway through the handshake | they measure a slow network or a person who types slowly (§4.6), not an attempt |
 | ⛔ **`ALREADY_ACTIVE_REMOTELY`** (`0x0F`) | it is what the **second device of the same user** receives (§8.2): counting it would mean that whoever tries to reattach three times from the phone **bans themselves**, while their session is alive |
 
@@ -904,7 +904,7 @@ tripped look the same.
 > **whoever gave the command sees it exit with zero**. Since the night of 10 Aug 2026 the two
 > implementations speak the same protocol of **one line on a Unix socket `0600`** — `UNBLOCK
 > <indirizzo>` → `REMOVED` / `NOT-BANNED`, and `PING` → `PONG` to say *«the command is there»*. The full
-> account is in `FASI.md` §01-filo-nudo («What did NOT work»), not here.
+> account is in `PHASES.md` §01-filo-nudo («What did NOT work»), not here.
 
 ⭐ **The fixed delay stays, and it is not redundant with the ban.** The server **MUST NOT** answer
 `CREDENTIALS` before **one second** has passed since reception, **even when the answer is
@@ -954,7 +954,7 @@ symptom**.
 |---|---|
 | **behind a NAT addresses are shared** | three mistakes by **one** person close the door to all the others for twelve hours. The per-user-name counter of the previous form existed precisely for this, and **it was removed knowing it**: the choice is to give the address only three attempts instead of distinguishing who makes mistakes |
 | **the first to trip on it is the owner** | long password, phone keyboard, automatic capitals. This is where the obligation comes from of the page that **says** what happened and of the unlock command: without those two, the rule would be indistinguishable from a fault |
-| ⛔ **and the password remains the only key** | three attempts **per address** raise the cost for whoever guesses a lot, and do not close the game: a network of ten thousand addresses still gets thirty thousand attempts on a single account. That one is closed by the strong authentication postponed to the end of the project (`DECISIONI.md` §1.7) |
+| ⛔ **and the password remains the only key** | three attempts **per address** raise the cost for whoever guesses a lot, and do not close the game: a network of ten thousand addresses still gets thirty thousand attempts on a single account. That one is closed by the strong authentication postponed to the end of the project (`DECISIONS.md` §1.7) |
 
 ⭐ **And one thing this rule cannot do**, written so that nobody attributes it to it: nobody
 can get **someone else's** address banned. To reach `CREDENTIALS` one must have
@@ -964,7 +964,7 @@ the sender cannot be forged. The ban hits only whoever has really knocked.
 ⚠ **And a consequence on acceptance testing, which bites at once**: the benches all start **from the same
 address**, and the one that tests this rule fails on purpose. With twelve hours, «one waits for the expiry» is not a cure — the bench uses the unlock command, and the limiter bench **does not
 call it within its own round**, or it no longer tests anything. The detail is in
-`FASI.md` §01-filo-nudo, rule **B0.3** and bench **B8**.
+`PHASES.md` §01-filo-nudo, rule **B0.3** and bench **B8**.
 
 ### 4.5 `ATTACH`
 
@@ -993,7 +993,7 @@ ATTACH
   **MUST** write it in the log. It holds identically in `ATTACH` and in `FIT_CANVAS` (which answers
   `CANVAS(FITTED)` with the reduced size). It is a case of the rule below — *the granted canvas can
   be different from the one asked for* — and the client **MUST** adapt by laying out with bars
-  (`SPECIFICHE.md` §6.2), without distorting. ⭐ A client **SHOULD** all the same not ask beyond the
+  (`SPECS.md` §6.2), without distorting. ⭐ A client **SHOULD** all the same not ask beyond the
   maximum: our page already brings the side to the maximum itself (`canvas_to_request()`), with the same
   rule, so server and client arrive at the same number.
 
@@ -1038,7 +1038,7 @@ SESSION
 ```
 
 ⭐ **The granted canvas can be different from the one asked for**, and it is the case of the fallback on KDE
-< 6.8 (`SPECIFICHE.md` §6.3): the session was already alive with another size and cannot change it. The
+< 6.8 (`SPECS.md` §6.3): the session was already alive with another size and cannot change it. The
 client **MUST** adapt by rescaling, and the server **MUST** have written the fallback in the log.
 
 ⛔⛔ **And the second reason is the common one, not the exception: the canvas OUTLIVES the session.**
@@ -1047,12 +1047,12 @@ The stage stays at the size at which the previous client left it, and `SESSION` 
 user** — the graphical session is one per user, and multi-tenant does not exist — receives a canvas
 it did not ask for and whose **origin it does not know**, and has no way to tell it apart from a
 fallback. ⚠ **It is not «someone else's window»**: it is the size its own previous connection
-left (`DECISIONI.md` §5.0-septies, where the wrong sentence is recounted).
+left (`DECISIONS.md` §5.0-septies, where the wrong sentence is recounted).
 
 ⚠ **Asking for a canvas in `ATTACH` does not obtain it**: `canvas_width`/`canvas_height` are a
 **preference**, and the only message that changes the canvas is `FIT_CANVAS` (§7.1). ⇒ A client that wants
 its own size **MUST** send an `FIT_CANVAS` after `SESSION` — and it is what
-`DECISIONI.md` §5.0-sexies already makes it do at every attach.
+`DECISIONS.md` §5.0-sexies already makes it do at every attach.
 
 `[M]` 21 Aug 2026, real product: three attaches in a row with `ATTACH(1920×1080)` received
 `SESSION` with **1920×1080**, **1264×800** and **1600×900** — that is, each time, **what the round
@@ -1079,7 +1079,7 @@ declares it to nobody.*
 | ⭐ **opening of the control channel** *(the first bidirectional stream of the session)* | `HELLO` received | **5 s** |
 | `HERE_I_AM` sent | `CREDENTIALS` received | **60 s** — it is the time in which a person types the password |
 | `ADMITTED` sent | `ATTACH` received | **10 s** |
-| ⭐ **opening of the WebTransport session** | **opening of the control channel** | **5 s** — ✅ decided on 11 Aug 2026, `DECISIONI.md` §7.17 |
+| ⭐ **opening of the WebTransport session** | **opening of the control channel** | **5 s** — ✅ decided on 11 Aug 2026, `DECISIONS.md` §7.17 |
 
 > ### ⭐ The row that was missing, and a measurement found it — ✅ 11 Aug 2026
 >
@@ -1088,7 +1088,7 @@ declares it to nobody.*
 > Found by bench **B6** (finding **R12-A.25**), decided by the user the same day.*
 >
 > ⛔ **When the 5 s expire, the server closes with `TIMED_OUT`** `0x0D`. ⚠ The control channel does not
-> exist, so the `FAREWELL` **is not sent** (§8.1, the condition decided in `DECISIONI.md` §7.15):
+> exist, so the `FAREWELL` **is not sent** (§8.1, the condition decided in `DECISIONS.md` §7.15):
 > the reason travels **only** in the application error code of the closing of the session (§3.1
 > point 3). ⭐ And it is the first place where the decisions of 11 Aug fit together: without §7.15
 > this line would impose a byte on a channel that was never born.
@@ -1129,7 +1129,7 @@ declares it to nobody.*
 > ⚠ **What covers it today, and why it is not enough**: only the QUIC idle timeout, which is **30
 > seconds of silence** — but whoever keeps the session open by sending anything on another stream
 > is not silent, and never expires. ⛔ **What the right ceiling is, and from what instant, is an open
-> question and not an oversight**: it is in `DECISIONI.md` §7.17, with the two readings and the concrete case. Here
+> question and not an oversight**: it is in `DECISIONS.md` §7.17, with the two readings and the concrete case. Here
 > the hole is declared instead of being filled with a number nobody chose.
 
 ⛔ When a ceiling expires, the server **MUST** send the farewell `TIMED_OUT`. It **MUST NOT** wait for the 30
@@ -1251,7 +1251,7 @@ asked for. The two things, and the first costs **zero bytes**:
   *true* keyframe, that is carry with it everything needed to decode it on its own: for HEVC its
   VPS/SPS/PPS in front of the IDR. ⚠ Without this line a delta at the new size is **conforming**, and the
   client has no way to notice it: there is no hole in the `number` values, and — `[M]` 12 Aug 2026,
-  Chrome 151 on Linux with VA-API, bench `banchi/02-pagina-tela-*` — **the HEVC decoder raises
+  Chrome 151 on Linux with VA-API, bench `benches/02-pagina-tela-*` — **the HEVC decoder raises
   no error**: it keeps emitting frames at the **old** size and paints
   a wrecked picture, different at each round. The symptom would be *«the desktop tears when I resize the window»*, and it would name neither the protocol nor the canvas. ⛔ And the same test on
   **AV1** gives `EncodingError` on Chrome and on Firefox `[M]`: ⇒ **the rule is needed because on the
@@ -1288,7 +1288,7 @@ asked for. The two things, and the first costs **zero bytes**:
   **59 droppable pictures out of 120** come out at unchanged quality (−0.065 dB) and **−16 % bandwidth**, ⛔ but
   **67 ms of reordering** — on its own beyond the 50 ms given to *the whole* of our piece. `[?]` It stays open
   whether a VA-API encoder written by us could build them all the same: `EncPackedHeaders = 0x1f`
-  says that the headers are packed by **the application**. 📖 `fasi/08-l-anello.md` §4-D;
+  says that the headers are packed by **the application**. 📖 `phases/08-the-shortest-loop.md` §4-D;
 - ⛔ the client **MUST** send `REQUEST_KEY` when it notices a **hole** in the sequence
   of `number` values, or when the decoder refuses a frame;
 - ⛔ until a keyframe arrives, the client **MUST NOT** show frames it knows to be incomplete:
@@ -1311,7 +1311,7 @@ asked for. The two things, and the first costs **zero bytes**:
 
 ⚠ **And a consequence that touches phase 9**: if the line is so bad as to cause abandonment
 continuously, the remedy is **not** sending keyframes continuously — it is **lowering the frame rate**,
-as `SPECIFICHE.md` §8.3 says. A keyframe for every abandoned delta is the spiral.
+as `SPECS.md` §8.3 says. A keyframe for every abandoned delta is the spiral.
 
 ### 5.3 Audio: the format is fixed, not negotiated
 
@@ -1336,7 +1336,7 @@ defect.*
 > §4.3 makes PCM **the positive control of Opus**: the day Opus is not negotiated, one
 > falls back on a road that does not exist — and the bench would look for the defect in Opus.
 >
-> ⚠ **The form of the error is that of `LEZIONI.md` §2.2**, where the bench counted the blocks while
+> ⚠ **The form of the error is that of `LESSONS.md` §2.2**, where the bench counted the blocks while
 > the audio was full-scale noise. Here not even the noise would have arrived.
 >
 > ⭐⭐ **MEASURED — `[M]` 17 Aug 2026, and the estimate was optimistic by a fifth.**
@@ -1355,14 +1355,14 @@ defect.*
 >
 > `[?]` **The non-local path stays open**: this measurement is on a local network, wired. On a mobile
 > network the path may carry less, and PCM is the road **without margin** — precisely the one
-> fallen back on when Opus is not negotiated. The probe is `banchi/07-b40`.
+> fallen back on when Opus is not negotiated. The probe is `benches/07-b40`.
 
 ⛔ **The little-endian of PCM is the only exception to the network order of §6, and it is deliberate**: they are
 a payload, like the bytes of HEVC, not a protocol field. Written here because an undeclared exception
 is a silent divergence between two implementations.
 
 ⚠ The volume **does not travel**: it belongs to the session and is at maximum (invariant I5,
-`SPECIFICHE.md` §10).
+`SPECS.md` §10).
 
 ### 5.4 The clipboard: the limits
 
@@ -1482,7 +1482,7 @@ at offset 28. No field is aligned: it is read and written in sequence.
 |---|---|
 | `type` | ⭐ `0x0301` **keyframe**, `0x0302` **delta frame** (§5.2). Other values: `PROTOCOL_ERROR` |
 | `codec` | `1` = HEVC, `2` = AV1, ⭐ `3` = **H.264** (since 20 Aug 2026). **MUST** be the one negotiated in §4.3. ⛔ **A number is never reused**: `2` stays AV1 even now that AV1 is no longer negotiated, because an old client that heard «2» and received something else **would paint garbage without an error**. ⚠ And the maximum defined number is in **a single place** in the code (`RCP_CODEC_VIDEO_MAX`): the day 3 came in, three different guards carried the number written by hand and one was left behind — **every H.264 frame was thrown away in silence** |
-| `wid.`, `height` | the size of **this** frame. ⛔ In RCP/1 they **MUST** be the **canvas in force** — the one granted in `SESSION` (§4.5), **or** the last one granted by `CANVAS` if meanwhile it has been adapted (§7.1) — and whoever receives others closes with `PROTOCOL_ERROR`: the client rescales to the **view**, not to the canvas (`SPECIFICHE.md` §6.1). The field exists all the same because on the day it were decided to encode smaller when the window is small — `DECISIONI.md` §5.0-ter, which is a `[?]` deliberately outside the model — **the protocol does not change**: this row would change |
+| `wid.`, `height` | the size of **this** frame. ⛔ In RCP/1 they **MUST** be the **canvas in force** — the one granted in `SESSION` (§4.5), **or** the last one granted by `CANVAS` if meanwhile it has been adapted (§7.1) — and whoever receives others closes with `PROTOCOL_ERROR`: the client rescales to the **view**, not to the canvas (`SPECS.md` §6.1). The field exists all the same because on the day it were decided to encode smaller when the window is small — `DECISIONS.md` §5.0-ter, which is a `[?]` deliberately outside the model — **the protocol does not change**: this row would change |
 | `number` | ⛔ counter of the frames **the server decides to send**, which grows by one for each — **including those it then abandons**, and ⛔ **NOT** for those it does not send at all. ⚠ *It said «of the **captured** frames» and at the same time «that the server decides to send»: **two readings in the same sentence**, and at phase 3 they separate — lowering the frame rate when the line does not carry (I1, §8.3), the first reading would open **a hole for every skip**, hence a `REQUEST_KEY` for each, that is **the spiral §5.2 exists to avoid** precisely when the line is bad. Corrected on 12 Aug 2026, finding **P16**, found while writing the product.* A hole in the sequence is therefore normal and **means something**: it is the signal on which §5.2 has a keyframe asked for. ⛔ **The first frame of a session carries `number = 1`, and `0` is reserved**: it means «no frame», which is the meaning §7.1 gives it in `REQUEST_KEY`. ⚠ It is the same convention as the `id` of input (§7.3), and for the same reason: without it, `REQUEST_KEY(0)` means two things and the server cannot choose — that is the implicit sentinel value §6.0 forbids. ⛔ **And at the wrap of the counter `0` is skipped**: the arithmetic is modulo 2³², a session can last more than one wrap, and from `0xFFFFFFFF` it goes to **`1`** — without this line the reserved value would come back into circulation by itself |
 | `instant` | microseconds of the **server's monotonic clock** at capture |
 | `input` | ⭐ **the identifier of the last input injected before capture**; **0** if none |
@@ -1498,13 +1498,13 @@ with `PROTOCOL_ERROR` instead of continuing to accumulate.
 > 16 MiB. The client would have detached the session because the server did something §4.5
 > allows it — and §5.2 also forbids it to abandon keyframes, so it had no way out.
 >
-> ✅ **MEASURED on 22 Aug 2026** — `[M]`, 📖 `fasi/08-l-anello.md` §4-D:
+> ✅ **MEASURED on 22 Aug 2026** — `[M]`, 📖 `phases/08-the-shortest-loop.md` §4-D:
 > - ⭐ **at the user's canvas the ceiling is unreachable**: 2560×1080, **404 true keyframes**, maximum
 >   **21 433 bytes = 0.13 %**, margin **782×**. Not even uniform noise gets there (15.1 %);
 > - ⛔ **at 7680×4320 it really breaks through**: uniform noise **28.9 MiB, 8 out of 8** above the ceiling, and
 >   strong grain reaches **94.9 %**. *(The measurement of the software fallback, `libx264` going through
 >   libavcodec, no longer holds after phase 18.)*;
-> - ⚠ and the **10 bits here are eight promoted** — `DECISIONI.md` §2.3-ter. Indeed `[M]` the label
+> - ⚠ and the **10 bits here are eight promoted** — `DECISIONS.md` §2.3-ter. Indeed `[M]` the label
 >   `main10` at 8K costs **933 bytes LESS** than `main`: it carries no information that is not there;
 > - ⛔⛔ **the form defect however is not the one believed.** The **re-encoding ladder is
 >   one rung short** — the last attempt leaves **16.654 MiB**, the fourth would have made it,
@@ -1547,7 +1547,7 @@ never had.
 
 ⭐ **And the quantity is «a request in flight», not «the size the client asked for»**: §4.5 says
 that *«the granted canvas can be different from the one asked for»* — on KWin < 6.8 it is the normal road
-(`SPECIFICHE.md` §6.3) and the negotiation of §6.4 grants the mode the compositor **has**. ⇒ A
+(`SPECS.md` §6.3) and the negotiation of §6.4 grants the mode the compositor **has**. ⇒ A
 client that held back only the numbers it named would close a session in which the server has
 done exactly what §7.1 allows it. ⚠ It is the same quantity as **P20** — *what the
 client has sent itself*: local, monotonic, independent of delivery.
@@ -1638,7 +1638,7 @@ to be in flight. ⇒ **On the server side it is not curable**, and that is why t
 ⚠ **What the `input` field really says**, and it must be written here so that nobody attributes more to it:
 it says which input had been **injected**, not which had been **drawn**. That the
 compositor had already rendered it is guaranteed by nobody. It is a useful and free estimate — not the
-measurement of the delay. That is given by the closed-loop bench of `DECISIONI.md` §2.6.
+measurement of the delay. That is given by the closed-loop bench of `DECISIONS.md` §2.6.
 
 ⚠ **And `instant` is not a time of day**: it is a monotonic clock that starts from an arbitrary point. The client
 **MUST NOT** compare it with its own: only with other `instant` values of the same server.
@@ -1728,24 +1728,24 @@ FAREWELL
 session.** The server **MUST** write it in the log and **MUST** keep the previous one in force.
 ⚠ It is different from `ATTACH` (§4.5), where the farewell `SESSION_UNSERVABLE` is right because there is
 no session to save: here the previous keyboard still works, and taking away from the user the
-open work would cost **more than the fault** (`SPECIFICHE.md` §8.3, «never detach»).
+open work would cost **more than the fault** (`SPECS.md` §8.3, «never detach»).
 
 ⚠ `VIEW` **MUST NOT** make the canvas change, and ⛔ **in RCP/1 it does not even change the size of what
 is encoded**: the frames stay at the size of the canvas and the client rescales
-(`SPECIFICHE.md` §6.1). It serves two things — choosing how many bits to spend, because a small window
+(`SPECS.md` §6.1). It serves two things — choosing how many bits to spend, because a small window
 looked at on a small screen does not deserve as many as a large one; and making free the
-day `DECISIONI.md` §5.0-ter were closed. The only message that changes the canvas is
+day `DECISIONS.md` §5.0-ter were closed. The only message that changes the canvas is
 `FIT_CANVAS`.
 
 > ⛔ **Here it also said «and it is an explicit choice of the user», and since 15 Aug 2026 it is no
-> longer true.** `DECISIONI.md` §5.0-sexies — decided by the user on 14 Aug — makes the client ask for
+> longer true.** `DECISIONS.md` §5.0-sexies — decided by the user on 14 Aug — makes the client ask for
 > **the canvas of its own window at the attach of every session**, by itself. ⇒ `FIT_CANVAS` remains
 > the only message that changes the canvas, but it is no longer certain that behind it there is a finger: there may be
 > the attach. ⚠ For the referee nothing changes — the message, the checks and the answer are the
 > same — and the line is corrected because **a document that describes a client that no longer exists
 > stops being the referee**.
 >
-> ### ⛔⛔ And SINCE 17 AUG 2026 THERE IS **NEVER** A FINGER BEHIND IT — `DECISIONI.md` §5.1-bis
+> ### ⛔⛔ And SINCE 17 AUG 2026 THERE IS **NEVER** A FINGER BEHIND IT — `DECISIONS.md` §5.1-bis
 >
 > Live resizing has left the product (*«non voglio mettere delle eccezioni nel
 > progetto»*): **our page sends `FIT_CANVAS` only at attach and reattach**, and
@@ -1783,11 +1783,11 @@ day `DECISIONI.md` §5.0-ter were closed. The only message that changes the canv
 > is a cure that presupposes a stage capable of obeying, and this line says what to do when it
 > is not.
 
-> ⚠ *Clarified on 9 Aug 2026, and it was not a nuance.* This line said «it serves the server to know **at what size to encode**», and there are two entries of `DECISIONI.md` that contradict each other
+> ⚠ *Clarified on 9 Aug 2026, and it was not a nuance.* This line said «it serves the server to know **at what size to encode**», and there are two entries of `DECISIONS.md` that contradict each other
 > on the same point: §5.2 says that *«the encoder works at the size of the window, not of the canvas»*, §5.0-ter says that *«the server keeps encoding the whole canvas and the client shrinks it»* and puts the opposite **deliberately outside the model**, as `[?]`. The
-> second wins, because it is the one that holds together with `SPECIFICHE.md` §6.1 and §6.3 — where the fallback on
+> second wins, because it is the one that holds together with `SPECS.md` §6.1 and §6.3 — where the fallback on
 > KDE *«does not cost one more line, because it is the same code as the point during the session»*, and
-> that code is the **rescaling in the client**. The correction is in `DECISIONI.md` §5.2.
+> that code is the **rescaling in the client**. The correction is in `DECISIONS.md` §5.2.
 
 ⛔ If the compositor cannot resize, the server **MUST** answer `FIT_CANVAS` with
 `CANVAS(REFUSED, COMPOSITOR_UNABLE)`, and the client **MUST** show the item as off. It MUST
@@ -1813,7 +1813,7 @@ opposite: any size from **1×1 upwards** is lawful, odd included.
 > rounding is innocent: 393 logical pixels are 1080.75 physical.
 
 ⚠ The view has no proportion constraint with the canvas: if the proportions do not match, it is
-laid out with bars (`SPECIFICHE.md` §6.2).
+laid out with bars (`SPECS.md` §6.2).
 
 ⚠ **The canvas change and the coordinates in flight.** After sending `CANVAS(FITTED)` the server
 **MUST** accept for **one second** input coordinates valid on the **previous** canvas,
@@ -1841,7 +1841,7 @@ be exactly `8 + larghezza × altezza × 4`. A length that does not add up is
 of someone else's memory.
 
 ⚠ **The position never travels in this direction.** The position of the pointer belongs to the client, which
-draws it by itself (`SPECIFICHE.md` §7.1). Here only the **shape** travels, and the delay of one network
+draws it by itself (`SPECS.md` §7.1). Here only the **shape** travels, and the delay of one network
 round trip on the shape is the accepted compromise.
 
 ### 7.3 Input
@@ -1873,7 +1873,7 @@ KEY_POSITION    + u16 code · u8 pressed
 | **the wheel** | ⛔ units of **120 per notch**, ⚠ and half notches exist: `60` is half a notch and **MUST NOT** be rounded to zero. ⭐ **The sign is MEASURED** *(10 Aug 2026, on Mutter)*: the client sends `+120` when the user turns the wheel **up**, and ⛔ **the server MUST invert the vertical axis** before passing it to `libei` — see the box |
 | **the character** | ⛔ a **Unicode scalar value**: from `0` to `0x10FFFF`, excluding the surrogates `0xD800`-`0xDFFF`. Out of range is `PROTOCOL_ERROR` |
 | **the identifier** | ⛔ grows by **at least one** at every message, over the whole input channel — not one per type. It is what comes back in the `input` field of the frames (§6.2), and with separate counters nothing would add up |
-| **the `instant`** | ⚠ **no rule of this document consumes it**: the delay is measured by the closed loop of `DECISIONI.md` §2.6, and the frame carries back the `id`, not the instant. It stays because it is the only way to know **when the user moved their hand** instead of when the byte arrived, and it serves diagnosis. ⛔ The client writes **true microseconds** and **MUST NOT** make believe in a precision it does not have *(finding **R1.27**)*. ⚠ ⛔ **And the premise of this row was FALSE — corrected on 14 Aug 2026, on a measurement of the loop of the classic mode of phase 4**: it said *«the monotonic clock is in milliseconds and its granularity is deliberately coarsened: the client writes `millisecondi × 1000`»*. `[M]` on **Chrome 151**, cross-origin-isolated page, `performance.now()` has a granularity of **5 µs** — **two hundred times** finer than what was written. ⇒ ⭐ **The rule survives the premise that produced it** (*one writes what one knows*), ⛔ but a client that multiplied milliseconds by a thousand would throw away **199 parts out of 200** of a measurement it already has in hand. ⚠ And the granularity **depends on cross-origin isolation**: where it is missing, it becomes coarse again — so one writes the one one has and **declares it**, instead of fixing one in the document |
+| **the `instant`** | ⚠ **no rule of this document consumes it**: the delay is measured by the closed loop of `DECISIONS.md` §2.6, and the frame carries back the `id`, not the instant. It stays because it is the only way to know **when the user moved their hand** instead of when the byte arrived, and it serves diagnosis. ⛔ The client writes **true microseconds** and **MUST NOT** make believe in a precision it does not have *(finding **R1.27**)*. ⚠ ⛔ **And the premise of this row was FALSE — corrected on 14 Aug 2026, on a measurement of the loop of the classic mode of phase 4**: it said *«the monotonic clock is in milliseconds and its granularity is deliberately coarsened: the client writes `millisecondi × 1000`»*. `[M]` on **Chrome 151**, cross-origin-isolated page, `performance.now()` has a granularity of **5 µs** — **two hundred times** finer than what was written. ⇒ ⭐ **The rule survives the premise that produced it** (*one writes what one knows*), ⛔ but a client that multiplied milliseconds by a thousand would throw away **199 parts out of 200** of a measurement it already has in hand. ⚠ And the granularity **depends on cross-origin isolation**: where it is missing, it becomes coarse again — so one writes the one one has and **declares it**, instead of fixing one in the document |
 
 > ### ⭐ The sign of the wheel — finding **R1.26**, and it is MEASURED
 >
@@ -1894,8 +1894,8 @@ KEY_POSITION    + u16 code · u8 pressed
 > | | |
 > |---|---|
 > | **what was seen** | `ei_device_scroll_discrete(0, **+120**)` → the page's `wheel` event carries **`deltaY = +114`** (`deltaMode = 0`, pixels) and the page **goes down** by 114 px, that is it goes **towards the end of the document**. With **−120**, `deltaY = −114` and the page **goes up** |
-> | **the scene, in full** | test machine **192.168.0.2**; GNOME session without monitor from `banchi/00-sessione-gnome.sh` — `gnome-shell --headless --no-x11 --virtual-monitor 1920x1080`, **libmutter 48.7-0+deb13u1**, **libei 1.3.901**; the page in **Firefox 140.13.0esr** in `--kiosk` full screen on the virtual monitor, `dpr` 1 |
-> | **where to check again** | `banchi/01-s7-esiti.jsonl` (two rounds, `7sd0u7jv` and `oq7jqrdv`), and the report `web/rapporti/S-esiti-sonda.md` §1 |
+> | **the scene, in full** | test machine **192.168.0.2**; GNOME session without monitor from `benches/00-gnome-session.sh` — `gnome-shell --headless --no-x11 --virtual-monitor 1920x1080`, **libmutter 48.7-0+deb13u1**, **libei 1.3.901**; the page in **Firefox 140.13.0esr** in `--kiosk` full screen on the virtual monitor, `dpr` 1 |
+> | **where to check again** | `benches/01-s7-outcomes.jsonl` (two rounds, `7sd0u7jv` and `oq7jqrdv`), and the report `web/rapporti/S-esiti-sonda.md` §1 |
 >
 > ⛔ **The consequence, and it is the server's**: positive `deltaY` means that the content goes **towards the
 > end** of the document, that is that the user turned the wheel **down**; this section fixes
@@ -1928,10 +1928,10 @@ KEY_POSITION    + u16 code · u8 pressed
 > measurement is on **Mutter**, and this section binds **five** desktops. If `libei` normalises,
 > the number holds everywhere; if the compositor normalises, the KDE phase (11) will find a different sign on KWin.
 > `[?]` **stays for the other four**, and the bench can be rerun on KWin without changing a line
-> of the page (`banchi/01-s7-rotella.sh` + `01-s7-pagina.html`).
+> of the page (`benches/01-s7-wheel.sh` + `01-s7-page.html`).
 >
 > ⚠ *The precedent this line cited was wrong, and it was corrected on the night of 9 Aug
-> 2026 (finding **R4.15**): it said that «in v1 this exact conversion table cost the wheel bench». `LEZIONI.md` §2.3 says something else — the wheel bench looked for
+> 2026 (finding **R4.15**): it said that «in v1 this exact conversion table cost the wheel bench». `LESSONS.md` §2.3 says something else — the wheel bench looked for
 > `asse dy=-10` while the log wrote `asse dx=0 dy=-10`: **red, with the correct code**. It is
 > a string searched badly, not a conversion with the wrong sign, and citing the wrong lesson
 > loses it at the point where it would apply.*
@@ -1946,18 +1946,18 @@ grace of §7.1, where it saturates to the last valid pixel.
 > ⚠ *The range was missing, and the line said only «outside the canvas» (finding **R1.16**). A page
 > that divides the mouse position by the scale factor and rounds up produces 1920 on
 > a canvas of 1920: one reading injects it, the other **closes the session**. And closing the session
-> for a rounding is the thing `SPECIFICHE.md` §8.3 forbids — «never detach».*
+> for a rounding is the thing `SPECS.md` §8.3 forbids — «never detach».*
 
 ⛔ **`LETTER` is used when text is typed; `KEY_POSITION` when a command
 modifier is pressed** — Ctrl, Alt, Super. Shift and AltGr **do not** count as command: they serve
-to make the letter, and stay in the path of `LETTER` (`SPECIFICHE.md` §7.3).
+to make the letter, and stay in the path of `LETTER` (`SPECS.md` §7.3).
 
 ⛔ If a `LETTER` cannot be produced in the layout of the session, the server **MUST**
 write it in the log and **MUST NOT** send a different character nor keep silent.
 
 ⛔ **On detach everything is released.** When a connection ends — by farewell, by silence,
 by error — the server **MUST** release **every key and every button that is pressed**.
-⭐ It is trap 11 of `LEZIONI.md` §4 in its worst form: a Ctrl left down in a session
+⭐ It is trap 11 of `LESSONS.md` §4 in its worst form: a Ctrl left down in a session
 that outlives the client makes the desktop unusable at reattach, and nobody connects the two things.
 
 ### 7.4 Clipboard
@@ -2022,13 +2022,13 @@ that kept it open was that then no implementation existed. ⛔ **The first byte 
 10 Aug 2026 and the window is closed** (§0-bis, §9): these two types came in with the last
 opportunity, and there is no second one. ⚠* It said «*the clause that keeps it open is that **today** no implementation exists*», *in the present tense — corrected on 11 Aug 2026, finding **R12C.2***.
 
-⚠ **Its mark stays 🔸, not ✅**, and it is recorded where decisions live: `DECISIONI.md` §1.5
+⚠ **Its mark stays 🔸, not ✅**, and it is recorded where decisions live: `DECISIONS.md` §1.5
 row 26. The question *«was it a decision of the user?»* — finding **R11.15** — **was closed
 on 11 Aug 2026**: no, it was not, and it stays removable without going back to him.
 
 > ### ⛔⭐ And FROM TODAY IT DOES NOT ENTER THE DELIVERED PRODUCT — ✅ 11 Aug 2026
 >
-> *`DECISIONI.md` §7.16, from the user: «l'utente deve vedere il desktop senza artefatti, come se
+> *`DECISIONS.md` §7.16, from the user: «l'utente deve vedere il desktop senza artefatti, come se
 > fosse davanti al monitor del PC … si tiene quello che serve per i test, ma poi nel prodotto
 > finale si fa pulizia».*
 >
@@ -2037,13 +2037,13 @@ on 11 Aug 2026**: no, it was not, and it stays removable without going back to h
 > binary**. On the screen of whoever connects nothing ever appears that is not their desktop.
 >
 > ⚠ **«Off» was the previous form, and it is no longer enough.** The function is born off and
-> `banchi/01-b5-violazioni.py` checks that with the function off the server refuses with
+> `benches/01-b5-violations.py` checks that with the function off the server refuses with
 > `FEATURE_OFF`: that behaviour **stays**, and it is right — but it holds for the **test
 > build**, which is the only one in which these two types exist.
 >
 > ⛔ **And the difference is measured, or it is a good intention**: *«it is not there»* and *«it is there and it is off»* look
 > the same from outside. They are separated **by searching for the marks inside the delivered binary** — the
-> same technique with which `banchi/01-p1-prodotto.sh` tells a new binary from an old one. The
+> same technique with which `benches/01-p1-prodotto.sh` tells a new binary from an old one. The
 > bench belongs to **phase 13**, where the package is born.
 >
 > ⭐ **Why the function survives all the same**: calibration of the delay stopwatch at phase 3 —
@@ -2067,7 +2067,7 @@ on 11 Aug 2026**: no, it was not, and it stays removable without going back to h
 > ⭐ **And the injection outside the product is not a fallback: it is better.** The clock anchor of the yardstick
 > **does not pass** through the injected path — if it did, **P1 would pass even with the bench broken**,
 > because the N milliseconds would add up identically on both sides. A decisive control
-> that can no longer fail has stopped being a control (`LEZIONI.md` §1.2).
+> that can no longer fail has stopped being a control (`LESSONS.md` §1.2).
 >
 > ⇒ ⏳ **What remains to be decided, and is not decided here**: whether the `ACCEPTED` branch must be completed or
 > whether the two messages must be removed from the protocol, given that their only declared reason —
@@ -2079,7 +2079,7 @@ on 11 Aug 2026**: no, it was not, and it stays removable without going back to h
 **declared bench function**, not as a function of the product.
 
 > ⛔ **Why a bench function is in the protocol and not in the test code.** The delay
-> loop of `DECISIONI.md` §2.6 measures **from the receiving side**: the client causes an unmistakable visual
+> loop of `DECISIONS.md` §2.6 measures **from the receiving side**: the client causes an unmistakable visual
 > change and watches the frames it decodes until it sees it. For that number
 > to count, the bench must be able to **inject a known delay** and check that the median rises by
 > exactly that — ⛔ *«a bench that does not do it does not know it is measuring»*
@@ -2115,7 +2115,7 @@ BENCH_OUTCOME                                          server → client
 |---|---|
 | **the size** | **16×16 pixels of the canvas**, in the top-left corner: from `0,0` to `15,15` |
 | ⛔ **why 16 and not 1** | the video is encoded in **4:2:0**, so chroma is at half resolution, and encoders work in blocks. A small square or one straddling a block boundary gets **smeared**, and the bench would read a colour that was not sent. ⚠ And the receiver **MUST** read the **median** of the 256 pixels, with tolerance, not the central pixel |
-| ⛔ **who paints it** | **the server**, in the frame it is about to encode — **after capture**. ⚠ *So the measurement that comes out of it **excludes the compositor**, and this must be declared next to every number: it is the delay of* encoding → wire → decoding → drawing*, not the one the user feels. The compositor's piece is measured by the complete loop of `DECISIONI.md` §2.6, which goes through the real input* |
+| ⛔ **who paints it** | **the server**, in the frame it is about to encode — **after capture**. ⚠ *So the measurement that comes out of it **excludes the compositor**, and this must be declared next to every number: it is the delay of* encoding → wire → decoding → drawing*, not the one the user feels. The compositor's piece is measured by the complete loop of `DECISIONS.md` §2.6, which goes through the real input* |
 | ⚠ **and in the canvas, not in the view** | the client rescales: if view and canvas do not coincide, the 16×16 of the canvas become another size on its drawing, and **the computation is its own** |
 
 **The rules, and they are five:**
@@ -2139,13 +2139,13 @@ BENCH_OUTCOME                                          server → client
 
 ⚠ **And `instant` is not for measuring the delay**: it serves the bench to **distinguish the delay it
 asked for from the one it found**. The delay is measured by the client, from the receiving side, as
-`DECISIONI.md` §2.6 says — this field only says when the server obeyed.
+`DECISIONS.md` §2.6 says — this field only says when the server obeyed.
 
 ---
 
 ### 7.6 ⭐ `TERMINATE_SESSION` — the only message with which the client closes the SESSION
 
-*Born on 15 Aug 2026 with the user's decision `DECISIONI.md` §4.1-ter.*
+*Born on 15 Aug 2026 with the user's decision `DECISIONS.md` §4.1-ter.*
 
 ```
 TERMINATE_SESSION
@@ -2154,7 +2154,7 @@ TERMINATE_SESSION
 
 ⛔ **It is not «close the connection»**: that is done with `FAREWELL`, and leaves the session alive
 (invariant I4). This one says *«I am done»*: the graphical session ends and **the user's programs
-close**. They are the two exits of `DECISIONI.md` §4.1-ter, and the protocol must be able to
+close**. They are the two exits of `DECISIONS.md` §4.1-ter, and the protocol must be able to
 distinguish them — a client with only one way would force the user to choose between never logging out and
 losing their work.
 
@@ -2166,7 +2166,7 @@ losing their work.
 | **and to the others** | ⛔ the farewell goes to **all** the sessions of that user, not only to whoever asked: the graphical session is only one (I2), and whoever watched it from a second device would be left with a frozen screen forever |
 
 ⚠ **And there is no «I am terminating» answer**: the outcome is the farewell. An intermediate message
-would be a deduction in place of a fact (`LEZIONI.md` §7.5), and the only fact that counts is that the
+would be a deduction in place of a fact (`LESSONS.md` §7.5), and the only fact that counts is that the
 session is over.
 
 ---
@@ -2192,14 +2192,14 @@ channel is dead.
 
 ⚠ **And this line has a price already paid.** In v1, for **three phases**, the server dutifully wrote
 «farewell to the client» while the client, at the same time, wrote «network error»: a
-second library call nobody suspected was missing (`LEZIONI.md` §1.7). Hence the
+second library call nobody suspected was missing (`LESSONS.md` §1.7). Hence the
 acceptance-test obligation: **the farewell is checked from the side that receives it**, never from the log of whoever sends it.
 
 ⚠ **The only exception is `REJECTED`** (§4.4), which *is* the farewell of authentication.
 
 > ### ⛔ And «whoever closes» is not whoever received a `FIN` — ✅ 11 Aug 2026
 >
-> *The exception the decision of `DECISIONI.md` §7.14 demands, written here because it is here that
+> *The exception the decision of `DECISIONS.md` §7.14 demands, written here because it is here that
 > the obligation is dictated. Without this sentence §4.2 forbids sending on the control channel after a
 > `FIN` and §8.1 keeps **imposing** precisely that byte: the decision would have moved the
 > contradiction instead of closing it.*
@@ -2212,7 +2212,7 @@ acceptance-test obligation: **the farewell is checked from the side that receive
 > **this** side that closes the WebTransport session first. The exception concerns the `FAREWELL`
 > on the channel, not the reason in the closing.
 
-> ### ✅ The condition, decided by the user on 11 Aug 2026 — `DECISIONI.md` §7.15
+> ### ✅ The condition, decided by the user on 11 Aug 2026 — `DECISIONS.md` §7.15
 >
 > *Until today this line set no conditions, while §3.1 point 2 says «**if the control channel is still usable**»: ⛔ **an implementation conforming to §3.1 was in violation of
 > §8.1**, and two normative sections of the same document gave two verdicts on the same input
@@ -2226,12 +2226,12 @@ acceptance-test obligation: **the farewell is checked from the side that receive
 > "chiudo perché ho finito"»*. A `DEVE` that cannot be respected is not a rule: it is a defect
 > of this file, and §0 says that the defects of this file belong to this file.
 >
-> ⚠ **And it does not weaken `DECISIONI.md` §4.1-bis**, decided the same day — *every closing by the
+> ⚠ **And it does not weaken `DECISIONS.md` §4.1-bis**, decided the same day — *every closing by the
 > server has a reason it can explain*: the reason arrives all the same, by the second road. ⛔ What
 > is lost is **only the byte on the dead channel**, that is a byte that would not have left.
 >
 > ⭐ **And it closes a red on correct code**: **B5 and B11 already applied the conditional of §3.1**
-> (`FASI.md` §01-filo-nudo, finding R3.3), and a bench written on the absolute form **would have failed
+> (`PHASES.md` §01-filo-nudo, finding R3.3), and a bench written on the absolute form **would have failed
 > a correct server** every time the violation arrives on a unidirectional stream.
 >
 > ⛔ **And the two decisions of 11 Aug do not replace each other.** §7.15 says *when* the obligation falls;
@@ -2243,11 +2243,11 @@ acceptance-test obligation: **the farewell is checked from the side that receive
 | Code | Name | When |
 |---|---|---|
 | `0x01` | `CLOSED_BY_USER` | the user closed the client |
-| `0x02` | `INACTIVITY` | 30 minutes without input (`SPECIFICHE.md` §5.3) |
-| `0x03` | `SESSION_ABANDONED` | ⭐ **60 minutes without input** (`SPECIFICHE.md` §5.3, `DECISIONI.md` §4.8). ⚠ *It said «6 hours without attaches»: changed on 16 Aug 2026 — the ceiling **and** the criterion change, because whoever watches without touching renews nothing. The code and the name stay* |
+| `0x02` | `INACTIVITY` | 30 minutes without input (`SPECS.md` §5.3) |
+| `0x03` | `SESSION_ABANDONED` | ⭐ **60 minutes without input** (`SPECS.md` §5.3, `DECISIONS.md` §4.8). ⚠ *It said «6 hours without attaches»: changed on 16 Aug 2026 — the ceiling **and** the criterion change, because whoever watches without touching renews nothing. The code and the name stay* |
 | `0x04` | `LOCAL_SESSION_PREVAILED` | the user opened a local graphical session |
 | `0x05` | `ALREADY_ACTIVE_LOCALLY` | there is already a local graphical session |
-| `0x06` | `BUDGET_FULL` | ⭐ **the machine has no more COMPOSITION capacity** — ⚠ *it said «of encoding»: corrected on 24 Aug 2026, `DECISIONI.md` §4.6-nonies, because `[M]` the bottleneck is `rcs0` at **0.97 Gpixel/s**, **half** of the encoder. ⛔ And until phase 10 this code **was never sent by any line of the server**: from phase 10 it really leaves* |
+| `0x06` | `BUDGET_FULL` | ⭐ **the machine has no more COMPOSITION capacity** — ⚠ *it said «of encoding»: corrected on 24 Aug 2026, `DECISIONS.md` §4.6-nonies, because `[M]` the bottleneck is `rcs0` at **0.97 Gpixel/s**, **half** of the encoder. ⛔ And until phase 10 this code **was never sent by any line of the server**: from phase 10 it really leaves* |
 | `0x07` | `WRONG_CREDENTIALS` | |
 | `0x08` | `TOO_MANY_ATTEMPTS` | ⭐ **the address is banned**: three failed authentications, twelve hours (§4.4-bis). ⚠ *It said «rate limiting», and it was the previous form: since 10 Aug 2026 it is no longer a rate, it is a ban* |
 | `0x09` | `NOTHING_IN_COMMON` | no shared codec |
@@ -2257,11 +2257,11 @@ acceptance-test obligation: **the farewell is checked from the side that receive
 | `0x0D` | `TIMED_OUT` | ⭐ *new, 9 Aug*: a ceiling of §4.6 has expired |
 | `0x0E` | `SESSION_UNSERVABLE` | ⭐ *new, 9 Aug*: the attach is well formed but cannot be served — a compositor that does not start, a layout the system does not know. It **MUST** carry the detail in the body |
 | `0x0F` | `ALREADY_ACTIVE_REMOTELY` | ⭐ *new, evening of 9 Aug*: **there is already a client attached to this session**, and this connection is **refused** |
-| `0x10` | `SESSION_TERMINATED` | ⭐ *new, 15 Aug*: **the user has logged out of the desktop** («Esci/logout» from the system menu). The graphical session is over and its programs are closed ⇒ ⛔ **there is nothing to reattach to**, and the page goes back to the **login form** (`DECISIONI.md` §4.1-quater) |
+| `0x10` | `SESSION_TERMINATED` | ⭐ *new, 15 Aug*: **the user has logged out of the desktop** («Esci/logout» from the system menu). The graphical session is over and its programs are closed ⇒ ⛔ **there is nothing to reattach to**, and the page goes back to the **login form** (`DECISIONS.md` §4.1-quater) |
 
 > ### ⛔ Why `0x10` is not a duplicate of `0x01` — 15 Aug 2026
 >
-> The two codes describe **two gestures of the user with opposite outcomes**, and `DECISIONI.md` §4.1-ter
+> The two codes describe **two gestures of the user with opposite outcomes**, and `DECISIONS.md` §4.1-ter
 > separates them: `0x01 CLOSED_BY_USER` is the **wire that drops** — tab closed, browser closed, the user's
 > PC switched off or restarted — and carries the promise *«reattach and you find everything again»*. `0x10` is the
 > **logout**, and there that promise is **false**.
@@ -2276,7 +2276,7 @@ acceptance-test obligation: **the farewell is checked from the side that receive
 
 > ### ⛔ Why `0x0F` was added, and why now — finding **R1.3**
 >
-> The fourteen previous reasons covered **local against remote** (`SPECIFICHE.md` §5.1) and not
+> The fourteen previous reasons covered **local against remote** (`SPECS.md` §5.1) and not
 > **remote against remote**: you are attached from the laptop and open the same session from the phone.
 >
 > **The choice, the user's, on 9 Aug 2026**: *«se un utente ha già una sessione grafica remota
@@ -2286,9 +2286,9 @@ acceptance-test obligation: **the farewell is checked from the side that receive
 > ⛔ **The one refused is whoever arrives, not whoever was there.** No attached and live client is ever
 > ousted by another.
 >
-> ⚠ **And the boundary with `DECISIONI.md` §4.4 must be read carefully**, because the two rules seem to clash and
+> ⚠ **And the boundary with `DECISIONS.md` §4.4 must be read carefully**, because the two rules seem to clash and
 > do not: *«whoever is silent is detached, whoever arrives gets in»* speaks of the **ghost** client — the phone
-> dead in a tunnel. A client **silent for 30 seconds** (`SPECIFICHE.md` §5.3) is no longer
+> dead in a tunnel. A client **silent for 30 seconds** (`SPECS.md` §5.3) is no longer
 > attached, so it occupies nothing and the new one gets in. A **live** client occupies, and the new one is
 > refused. ⛔ The discriminant is **the silence clock**, not the intention of whoever arrives.
 >
@@ -2303,7 +2303,7 @@ acceptance-test obligation: **the farewell is checked from the side that receive
 ⛔ Every reason **MUST** be showable to the user in an understandable sentence. `BUDGET_FULL`
 is not «error 6».
 
-> ⭐ **And the sentence the client really shows, since 25 Aug 2026** (`src/pagina.html`):
+> ⭐ **And the sentence the client really shows, since 25 Aug 2026** (`src/page.html`):
 >
 > > *«questo server non ha più capacità per un altro desktop: le sessioni già aperte continuano,
 > > e un posto si libera appena qualcuno esce — riprova fra un momento, e se si ripete chiedi a
@@ -2339,7 +2339,7 @@ asked for is erring, and accepting it in silence is the leniency §3 forbids.
 > nor versions. The rule lives in **§2.2**, rows «the session address … the number after the slash is the major version» and «the two MUST coincide», and it is there that R1.24 wrote it.*
 > ⛔ **Whoever read §9 and went to §2.4 as told found the port, no constraint, and
 > came back to §9** — that is reconstructed exactly the reading that had produced the first draft of
-> `banchi/rcp/rcp.c`. The cure of a contradiction between two sections pointed to a third.
+> `benches/rcp/rcp.c`. The cure of a contradiction between two sections pointed to a third.
 >
 > This paragraph said only *«the highest that does not exceed that of `HELLO`»*. §2.2 says that
 > a `HELLO(versione=2)` on `/rcp/1` is `INCOMPATIBLE_VERSION`. ⛔ **The two rules give different bytes
@@ -2347,7 +2347,7 @@ asked for is erring, and accepting it in silence is the leniency §3 forbids.
 > of the two cited the other**.
 >
 > ⚠ It is not a textbook case: whoever writes the server reads §9, which is the paragraph titled *«The versions»*, and writes `if (versione < LA_MIA) congeda;`. It is exactly what happened — the
-> first draft of `banchi/rcp/rcp.c` **accepted a `HELLO(2)`** and answered `HERE_I_AM(1)`, and it was
+> first draft of `benches/rcp/rcp.c` **accepted a `HELLO(2)`** and answered `HERE_I_AM(1)`, and it was
 > conforming to §9 to the letter.
 >
 > ⭐ **§2.2 wins**, because it is the more specific and because it was written to resolve precisely this
@@ -2373,12 +2373,12 @@ above protects the existing implementations, and **now they exist** — the list
 ⛔ **How much the window was used, before closing: FOUR types, not two.**
 `REQUEST_KEY` (`0x000D`) and `CANVAS` (`0x000E`) on 9 Aug; ⭐ **`BENCH_MARK` (`0x000F`) and
 `BENCH_OUTCOME` (`0x0010`) on the night of the 9th** (§7.5). Plus **three** farewell reasons (`TIMED_OUT`,
-`SESSION_UNSERVABLE`, `ALREADY_ACTIVE_REMOTELY`). The count is in `DECISIONI.md` §1.5, and §12 declares
+`SESSION_UNSERVABLE`, `ALREADY_ACTIVE_REMOTELY`). The count is in `DECISIONS.md` §1.5, and §12 declares
 that the one of the two of the bench function was *«the last opportunity»*.
 
 > ⚠ *This line said* «The **two** types added on 9 Aug (`0x000D`, `0x000E`) came in under this clause», *and declared the window open. The two of the bench function had been
 > added the same night and had never been brought here: the cure of finding **R11.13** had
-> reached `DECISIONI.md` and not the line that keeps the count of the clause — that is whoever checked
+> reached `DECISIONS.md` and not the line that keeps the count of the clause — that is whoever checked
 > how much a non-repeatable window had been used, counting from here, found half of it. Corrected
 > on 11 Aug 2026, finding **R12C.3**.*
 
@@ -2388,16 +2388,16 @@ that the one of the two of the bench function was *«the last opportunity»*.
 
 | | Where it is written |
 |---|---|
-| it does not carry files, disks, printers, ports | `SPECIFICHE.md` §12 |
+| it does not carry files, disks, printers, ports | `SPECS.md` §12 |
 | it does not carry images in the clipboard | §7.4 |
 | it has no channel for the **relative** pointer | reserved, not defined in RCP/1 |
 | it has no channel for the stylus nor for multi-finger touch | `input.touch` exists as a capability and is always `no` |
-| it does not carry **microphone audio** | the direction is foreseen in §5, the format is not defined: `SPECIFICHE.md` §10 considers it not urgent |
+| it does not carry **microphone audio** | the direction is foreseen in §5, the format is not defined: `SPECS.md` §10 considers it not urgent |
 | it has no compression of its own | the codec does it, and QUIC encrypts |
 | it has no application heartbeat | §2.2 |
 | it has no cleartext mode | §2 |
 | it does not carry the volume | it belongs to the session, invariant I5 |
-| it does not describe more than **one screen** | multi-monitor is out of scope as a function (`SPECIFICHE.md` §6.5); the canvas is only one, and larger than the view |
+| it does not describe more than **one screen** | multi-monitor is out of scope as a function (`SPECS.md` §6.5); the canvas is only one, and larger than the view |
 
 ---
 
@@ -2409,14 +2409,14 @@ other**: they are tested against this document.
 | Bench | What it tests |
 |---|---|
 | **the wire validator** | a third program that reads a recording of the connection and says which byte is not conforming. It is the only external referee we will have |
-| **the handshake on two connections** | ⛔ **two, never one**: in v1 a shared certificate killed the server **at the second** connection, and a single-connection test stays green forever (`LEZIONI.md` §2.1) |
+| **the handshake on two connections** | ⛔ **two, never one**: in v1 a shared certificate killed the server **at the second** connection, and a single-connection test stays green forever (`LESSONS.md` §2.1) |
 | **the farewell** | checked **from the receiving side**, for each of the reasons **that travel in a `FAREWELL`** — and for each one **the code in the closing of the session** is checked **too** (§3.1). ⚠ *It said «for each of the fourteen»: but `WRONG_CREDENTIALS` and `TOO_MANY_ATTEMPTS` travel in `REJECTED`, which §4.4 forbids to be followed by a farewell — the bench would have failed on two reasons by construction, and whoever wrote it would have thought they had made the mistake (finding **R1.18**)* |
 | ⭐ **releasing the keys on detach** | a connection is detached **with a key pressed** and reattached to check it has not stayed down (§7.3). ⛔ **It is the rule with the highest damage/cost ratio in the document**: a Ctrl left pressed makes unusable a session that outlives the client, and nobody connects the two things |
-| ⭐ **audio, listened to** | a datagram is opened and the bytes are looked at: sample rate, channels, byte order of the PCM. ⛔ A server that sent 44 100 Hz, or big-endian PCM, would stay **green on all the other benches** — and the symptom, as in v1, «it looks like a network defect» (`LEZIONI.md` §2.2) |
+| ⭐ **audio, listened to** | a datagram is opened and the bytes are looked at: sample rate, channels, byte order of the PCM. ⛔ A server that sent 44 100 Hz, or big-endian PCM, would stay **green on all the other benches** — and the symptom, as in v1, «it looks like a network defect» (`LESSONS.md` §2.2) |
 | ⭐ **the clipboard** | the three messages, the transfer identifier, and **two transfers open together in the two directions**: it is the case in which without an identifier the texts got swapped |
 | ⭐ **the fixed second** | the answer to `CREDENTIALS` is timed — **even the successful one** (§4.4-bis). It is a security property no other bench sees, and a regression that removed it would make nothing fail |
 | ⭐ **the address ban** | three failed authentications, and ⛔ **the fourth attempt is refused even with the RIGHT password** (§4.4-bis) — which is the test that tells a ban from a counter. ⛔ And with **three different user names**, or one is not testing the decided rule but the old one. ⚠ Then three controls that say *no*: **another** address gets in all the same · a **successful** login resets the count (two failed, one successful, two failed: the third does **not** ban) · and the ban **survives the restart** of the server |
-| **the delay loop** | the client sends an input that changes the colour of the screen and watches the decoded frames until it sees it (`DECISIONI.md` §2.6) |
+| **the delay loop** | the client sends an input that changes the colour of the screen and watches the decoded frames until it sees it (`DECISIONS.md` §2.6) |
 | ⭐ **the known delay** | `BENCH_MARK` is asked with `delay_ms = N` and **the median MUST rise by exactly N** (§7.5). ⛔ *It is the control that makes every delay number of this project credible: a bench that does not do it does not know it is measuring* |
 | ⭐ **the bench function off** | ⛔ with `bench.mark = no`, a `BENCH_MARK` **MUST** receive `BENCH_OUTCOME(REFUSED, FEATURE_OFF)` — **not a silence and not a closing**. ⚠ And it is checked **from the receiving side**: a server that keeps silent leaves the bench waiting forever, and the symptom is «the bench has hung» |
 | **rigor** | an unknown type, a wrong length, a message in the wrong state are sent on purpose: ⛔ **the connection must drop every time**. A bench that does not try to violate the protocol does not test the protocol |
@@ -2427,7 +2427,7 @@ other**: they are tested against this document.
 ⚠ **And the positive control, which here is easy to forget**: before concluding that the
 validator finds no errors, it is given a recording **with an error inside** and one checks that
 it sees it. An instrument that has never found anything is not a clean instrument: it is an
-uncertified instrument (`LEZIONI.md` §1.9).
+uncertified instrument (`LESSONS.md` §1.9).
 
 ### 11.1 ⛔ The recording format
 
@@ -2497,8 +2497,8 @@ at `0x02` — in front of today's file exits **2**. ⚠ It is the `0x01`/`0x02` 
 **neither of the two files showed on its own**: here the change was made in **a single commit**, with all
 four readers and writers together.
 
-⚠ **Three benches are declared late** on this format — `banchi/02-filo-cliente.py`,
-`banchi/02-filo-validatore.py`, `banchi/04-b20-desktop-vero.py`. Today they are a **coherent island**
+⚠ **Three benches are declared late** on this format — `benches/02-wire-client.py`,
+`benches/02-wire-validator.py`, `benches/04-b20-desktop-vero.py`. Today they are a **coherent island**
 (they write and read among themselves), ⛔ but as long as they stay at `0x02` the tree carries **two live formats under
 a single specification**, which is the condition of the defect of 12 Aug writ large.
 
@@ -2521,7 +2521,7 @@ referee says so instead of a line of reasoning.
 
 > ### ⛔ The `end` field is not a luxury — added on **12 Aug 2026**, proposal **P7** of F2.4
 >
-> *And it was not found by a rereading: it was found by `banchi/02-filo-validatore.py` **trying to
+> *And it was not found by a rereading: it was found by `benches/02-wire-validator.py` **trying to
 > judge a conforming recording**, and not managing to say whether the frame was complete.*
 >
 > Without `end`, an **abandoned** frame (§5.1, lawful — the client throws it away and asks for a keyframe) and
@@ -2562,11 +2562,11 @@ stays open **until RCP/2**, or is closed without adding message types (§0-bis, 
 
 | | Why not now | When |
 |---|---|---|
-| ⭐ ~~**the ceiling of the session without control channel**~~ — ✅ **CLOSED** | **five seconds**, decided by the user on **11 Aug 2026**: `DECISIONI.md` §7.17, and the normative line is in **§4.6**. ⚠ *This cell still said* «❓ open … when the user has answered» *while §4.6 of the same file carries the line with the ✅ and the date: **two sections of the referee gave two different states to the same question**, and whoever had trusted §12 would have written a server without that ceiling while remaining convinced of being conforming. Corrected on the evening of 11 Aug 2026, at the opening reread* | ⛔ **it remains to be MEASURED**: `B6` wants a fourth case — open the session, do not open the channel, and check that at 5 s `0x0D` arrives **in the closing code**, not on the channel. *Decided ≠ measured.* ⭐ No new type: `TIMED_OUT` was already there |
-| **the microphone** | the direction is foreseen, the format is not. Closing it now would mean writing a negotiation nobody exercises | when `SPECIFICHE.md` §10 stops calling it «not urgent» — and it will be a **new major version**, because it is one more channel (§9) |
-| **the relative pointer** | it serves remote applications that **capture** the pointer, and that case is signalled by the server. It is not the case of `Pointer Capture` on Android, which is already covered (`DECISIONI.md` §5-bis.8) | when an application turns up that asks for it |
+| ⭐ ~~**the ceiling of the session without control channel**~~ — ✅ **CLOSED** | **five seconds**, decided by the user on **11 Aug 2026**: `DECISIONS.md` §7.17, and the normative line is in **§4.6**. ⚠ *This cell still said* «❓ open … when the user has answered» *while §4.6 of the same file carries the line with the ✅ and the date: **two sections of the referee gave two different states to the same question**, and whoever had trusted §12 would have written a server without that ceiling while remaining convinced of being conforming. Corrected on the evening of 11 Aug 2026, at the opening reread* | ⛔ **it remains to be MEASURED**: `B6` wants a fourth case — open the session, do not open the channel, and check that at 5 s `0x0D` arrives **in the closing code**, not on the channel. *Decided ≠ measured.* ⭐ No new type: `TIMED_OUT` was already there |
+| **the microphone** | the direction is foreseen, the format is not. Closing it now would mean writing a negotiation nobody exercises | when `SPECS.md` §10 stops calling it «not urgent» — and it will be a **new major version**, because it is one more channel (§9) |
+| **the relative pointer** | it serves remote applications that **capture** the pointer, and that case is signalled by the server. It is not the case of `Pointer Capture` on Android, which is already covered (`DECISIONS.md` §5-bis.8) | when an application turns up that asks for it |
 | **multi-finger touch** | `input.touch` exists and is `no`. A reserved slot costs nothing; a definition never exercised costs a constraint | phase A4, if native touch is really needed |
-| **4:4:4** | it is one more capability (`video.sottocampionamento`), and the product decision is `[?]` (`DECISIONI.md` §2.3) | when the user has looked at the two pictures |
+| **4:4:4** | it is one more capability (`video.sottocampionamento`), and the product decision is `[?]` (`DECISIONS.md` §2.3) | when the user has looked at the two pictures |
 | **more screens** | the canvas is only one. The form of multi-monitor is «two views on the same canvas», which the protocol already supports for the canvas; it would only be missing to say **where** each view is | never, as long as it stays out of scope |
 | `[?]` **the IANA registration of the port** | §2.4 | if and when a registered number is needed |
 | ~~the bench function of the delay loop~~ | ⭐ **closed on the night of 9 Aug 2026, a few hours after being opened** by finding **R3.4**: it is **§7.5**, two new types — `BENCH_MARK` and `BENCH_OUTCOME` | ⭐ *It came in under the clause of §9 — «today no implementation exists» — and **that was the last opportunity**: from the first byte of code on it would have been an exception, that is the first breach made by us to a rule of ours* |

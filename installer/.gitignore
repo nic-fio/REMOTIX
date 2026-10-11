@@ -1,0 +1,3 @@
+# Go cache and built binaries: rebuilt with build.sh
+.cache/
+uscita/

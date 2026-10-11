@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- remotix: the firewalld service, DEFINED and not opened (fasi/17 §6.4, D6).
+<!-- remotix: the firewalld service, DEFINED and not opened (phases/17 §6.4, D6).
      The page goes over TCP, QUIC over UDP, on the same port. -->
 <service>
   <short>REMOTIX</short>

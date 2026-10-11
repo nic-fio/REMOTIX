@@ -1,0 +1,26 @@
+# PKGBUILD — the REMOTIX installation engine for Arch.
+# STATIC Go binary (installer/build.sh): here it is only packaged; the catalogue lives
+# inside the binary (DECISIONI §10.21). Built by packaging/engine/engine-packages.sh, called
+# by the release command (pkgver/pkgrel from the environment).
+# ⛔ DECISIONI §10.12: it enables nothing. D14 (§10.23): no timer, REMOTIX updates with the system.
+
+# Maintainer: nicfio <nicfio@gmail.com>
+pkgname=remotix-install
+pkgver=${RX_VERSION:-0.1.0}
+pkgrel=${RX_RELEASE:-1}
+pkgdesc='The REMOTIX installation engine (installs, checks, certifies, uninstalls)'
+arch=('x86_64')
+url='https://github.com/nic-fio/REMOTIX'
+license=('LicenseRef-REMOTIX')
+depends=(systemd pacman)
+options=('!strip' '!debug')
+install=remotix-install.install
+source=(remotix-install README THIRD-PARTY-LICENSES LICENSE.md)
+sha256sums=('SKIP' 'SKIP' 'SKIP' 'SKIP')
+
+package() {
+	install -Dm755 remotix-install "$pkgdir/usr/bin/remotix-install"
+	install -Dm644 README          "$pkgdir/usr/share/remotix-install/README"
+	install -Dm644 THIRD-PARTY-LICENSES "$pkgdir/usr/share/licenses/remotix-install/THIRD-PARTY-LICENSES"
+	install -Dm644 LICENSE.md      "$pkgdir/usr/share/licenses/remotix-install/LICENSE.md"
+}

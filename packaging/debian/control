@@ -19,20 +19,20 @@ Build-Depends: debhelper-compat (= 13),
                libwayland-dev,
                libvulkan-dev (>= 1.3.274)
 
-# ⭐ Phase 19 (`fasi/19-nvidia.md`): Vulkan Video (src/vulkanvideo.c) — only the
+# ⭐ Phase 19 (`phases/19-nvidia.md`): Vulkan Video (src/vulkanvideo.c) — only the
 #   loader and the headers (libvulkan-dev; `[M]` 1 Oct 2026: 1.4.309 on Debian
 #   13, 1.4.341 on Ubuntu 26.04).  The drivers (ICD) are among the Recommends.
-# ⭐ Phase 18 (`fasi/18-senza-ffmpeg.md`): no ffmpeg.  Encoding on the GPU
+# ⭐ Phase 18 (`phases/18-without-ffmpeg.md`): no ffmpeg.  Encoding on the GPU
 #   with libva directly (libva-dev also brings libva-drm), audio with libopus.
 #   `[M]` 30 Sep, in the podman images: libopus0 1.5.2, libva2 2.22, in main.
 #   ⛔ Phase 19 (1 Oct 2026, DECISIONI §10.27): OpenH264 and SVT-AV1, the software
 #   fallback, are OUT — encoding happens only on the GPU.
-#   ⛔ no libyuv: the colour conversion is ours (`src/colori709.c`,
-#   fasi/18 §1) — removed on 30 Sep (T10: dpkg-checkbuilddeps asked for it and the
+#   ⛔ no libyuv: the colour conversion is ours (`src/colors709.c`,
+#   phases/18 §1) — removed on 30 Sep (T10: dpkg-checkbuilddeps asked for it and the
 #   phase 18 container does not carry it).
 # ⚠ ngtcp2 1.25.0 and nghttp3 1.18.0 are NOT in the Build-Depends: the build
-#   container brings them (src/costruzione/quic-statiche.sh), static and at a
-#   pinned version (fasi/17 §6.3; D2 closed, DECISIONI §10.6).  The
+#   container brings them (src/build-targets/quic-static.sh), static and at a
+#   pinned version (phases/17 §6.3; D2 closed, DECISIONI §10.6).  The
 #   Static-Built-Using field below names them in the finished package (for the SBOM, R24).
 
 Package: remotix
@@ -40,10 +40,10 @@ Architecture: any
 # Depends: dpkg-shlibdeps computes the libraries from the binary (${shlibs:Depends}).
 #   The others are the ones the binary uses at run time and that dpkg does NOT
 #   see: pam_systemd and pam_listfile (modules loaded by the PAM stack), usermod (the first
-#   connection, figlio.c:1525), loginctl and systemctl
-#   --user (figlio.c), the systemd user bus (dbus-user-session), and the PipeWire
+#   connection, child.c:1525), loginctl and systemctl
+#   --user (child.c), the systemd user bus (dbus-user-session), and the PipeWire
 #   DAEMON + wireplumber: GNOME/KDE video capture goes through PipeWire (mutter/kwin
-#   screencast) and so does the audio of EVERY desktop (suono.c); dpkg sees the LIBRARY
+#   screencast) and so does the audio of EVERY desktop (sound.c); dpkg sees the LIBRARY
 #   (libpipewire-0.3-0) but not the daemon. Stock desktops bring it, but minimal
 #   installations do not (T10, 30 Sep: on openSUSE GNOME without pipewire the desktop does not arrive).
 Depends: ${shlibs:Depends},
@@ -72,8 +72,8 @@ Depends: ${shlibs:Depends},
 #     a .deb has no «only if XFCE is there».  One package per desktop is for T4;
 #   ⛔ NOT gnome-session (the «vanilla» session from universe): D8 (DECISIONI
 #     §10.20) — on Ubuntu REMOTIX starts the STOCK session, `ubuntu`, which
-#     is already there (ubuntu-session); the criterion lives in sessione.c, gnome_session().
-#   · ⭐ phase 19 (`fasi/19-nvidia.md`): the GPU's VULKAN driver —
+#     is already there (ubuntu-session); the criterion lives in session.c, gnome_session().
+#   · ⭐ phase 19 (`phases/19-nvidia.md`): the GPU's VULKAN driver —
 #     `mesa-vulkan-drivers` brings the Mesa ICDs (RADV for AMD: the Vulkan
 #     Video road, tried BEFORE VA-API; ANV for Intel, which does not encode in
 #     Vulkan and stays on VA-API).  NVIDIA: the ICD comes with the proprietary driver.

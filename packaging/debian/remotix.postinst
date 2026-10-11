@@ -1,5 +1,5 @@
 #!/bin/sh
-# remotix.postinst — after the files are in place (fasi/17 §6.4).
+# remotix.postinst — after the files are in place (phases/17 §6.4).
 #
 # ⛔ DECISIONI §10.12: the package switches nothing on; the service, the groups,
 #    the belts and the firewall are set up by the ENGINE, with consent.

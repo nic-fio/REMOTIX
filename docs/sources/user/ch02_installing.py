@@ -1,12 +1,12 @@
 """User Manual, chapter 2 — installing the server, and the first connection.
-Sources: installatore/run.sh, installatore/cmd/remotix-install/main.go, installatore/motore/testi.go and codici.go,
-installatore/interfaccia/testi.go, installatore/catalogo/catalogo.json (the distribution table is generated from it),
-packaging/ (unit, conf, denied-users, firewall definitions, rilascio.sh), src/certificati.c, src/pagina.html."""
+Sources: installer/run.sh, installer/cmd/remotix-install/main.go, installer/engine/texts.go and codes.go,
+installer/ui/texts.go, installer/catalog/catalog.json (the distribution table is generated from it),
+packaging/ (unit, conf, denied-users, firewall definitions, release.sh), src/certificates.c, src/page.html."""
 import json
 
 from build import ROOT, c, esc, note, p, rif, steps, table, term, tip, ul, warn
 
-CAT = json.loads((ROOT / "installatore" / "catalogo" / "catalogo.json").read_text())
+CAT = json.loads((ROOT / "installer" / "catalog" / "catalog.json").read_text())
 NAMES = {"gnome": "GNOME", "kde": "KDE Plasma", "xfce": "XFCE", "lxqt": "LXQt"}
 RUN = "remotix-X.Y.Z-R.run"
 

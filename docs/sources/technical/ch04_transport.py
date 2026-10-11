@@ -10,20 +10,20 @@ STACK = fig(
     + box(40, 202, 250, 46, "nghttp3", "HTTP/3, QPACK, extended CONNECT", "light")
     + box(310, 202, 250, 46, "datagrams", "RFC 9297, audio only", "light")
     + arrow(165, 250, 165, 266) + arrow(435, 250, 435, 266)
-    + box(40, 268, 520, 46, "trasporto.c + ngtcp2 — QUIC v1", "one socket, connection ids, timers, PING", "dark")
+    + box(40, 268, 520, 46, "transport.c + ngtcp2 — QUIC v1", "one socket, connection ids, timers, PING", "dark")
     + box(40, 318, 520, 38, "ngtcp2_crypto_ossl + OpenSSL 3.5 — TLS 1.3, ALPN h3", "", "grey", 12)
     + zone(600, 40, 280, 330, "TCP 7447 — the page")
-    + box(620, 70, 240, 46, "pagina.c", "HTTP/1.1, one request per connection", "blue")
+    + box(620, 70, 240, 46, "page.c", "HTTP/1.1, one request per connection", "blue")
     + arrow(740, 118, 740, 134)
     + box(620, 136, 240, 64, "routes", "/ · /index.html · /fingerprint · /diary", "light")
     + arrow(740, 202, 740, 218)
-    + box(620, 220, 240, 46, "certificati.c", "long-lived + short-lived certificate", "navy")
+    + box(620, 220, 240, 46, "certificates.c", "long-lived + short-lived certificate", "navy")
     + box(620, 318, 240, 38, "OpenSSL — TLS 1.3, ALPN http/1.1", "", "grey", 12)
     + text(740, 300, "tls.c builds one SSL_CTX per listener", 11, "#334155"),
     900, 380, "«FIG» — The two listeners of the server and the layers of each")
 
 FILES = table(["File", "What it does"], [
-    [c("src/trasporto.c"), "The UDP socket, the map of connection ids, one " + c("ngtcp2_conn") + " per client, the QUIC "
+    [c("src/transport.c"), "The UDP socket, the map of connection ids, one " + c("ngtcp2_conn") + " per client, the QUIC "
      "transport parameters, version negotiation, the stateless reset token; it passes stream data, datagrams and "
      "timer expiries to the WebTransport layer."],
     [c("src/webtransport.c"), "The layer that neither ngtcp2 nor nghttp3 provides: announcing WebTransport, accepting the "
@@ -34,9 +34,9 @@ FILES = table(["File", "What it does"], [
      "bytes, returns bytes and asks its host to send them."],
     [c("src/tls.c"), "Two " + c("SSL_CTX") + ": the QUIC one (ALPN " + c("h3") + ", 0-RTT off) and the TCP one (ALPN "
      + c("http/1.1") + ")."],
-    [c("src/certificati.c"), "Generates, loads and rotates the two ECDSA P-256 certificates, and computes the "
+    [c("src/certificates.c"), "Generates, loads and rotates the two ECDSA P-256 certificates, and computes the "
      "SHA-256 fingerprint (" + c("fingerprint") + ") of the session certificate."],
-    [c("src/pagina.c"), "The TCP listener: serves " + c("pagina.html") + " with the fingerprint written into it, the "
+    [c("src/page.c"), "The TCP listener: serves " + c("page.html") + " with the fingerprint written into it, the "
      + c("/fingerprint") + " endpoint and the " + c("/diary") + " log endpoint."],
     [c("src/main.c"), "Owns the single " + c("poll") + " loop, reads the command-line options (" + c("--port") + ", "
      + c("--name") + ", " + c("--certificates") + ", " + c("--page") + ", " + c("--ban-file") + "), checks the "
@@ -51,11 +51,11 @@ S1 = p("REMOTIX has no client program: the client is the browser. A web page can
        "TCP.", lead=True) + STACK + FILES + \
     p("Everything runs in the parent process, in one " + c("poll") + " loop: QUIC, HTTP/3, WebTransport, RCP and the "
       "page server share the thread. The two pieces of work that could block that loop live elsewhere: PAM runs in "
-      "a helper process (" + c("aiutante.c") + ") and everything that touches the user's desktop runs in the per-user "
+      "a helper process (" + c("helper.c") + ") and everything that touches the user's desktop runs in the per-user "
       "child. The transport only moves bytes between the network and those processes.")
 
 # ── Why ngtcp2 ───────────────────────────────────────────────────────────
-S2 = p("The QUIC library was chosen on 10 August 2026 with a bench (" + c("banchi/01-b2-*") + "), not on paper. The "
+S2 = p("The QUIC library was chosen on 10 August 2026 with a bench (" + c("benches/01-b2-*") + "), not on paper. The "
        "question was not «which QUIC» but «which library gets as far as WebTransport on the server side, and how much "
        "glue is left to us». None of the candidates implements server-side WebTransport.", lead=True) + \
     table(["Candidate", "Outcome", "Why"], [
@@ -68,7 +68,7 @@ S2 = p("The QUIC library was chosen on 10 August 2026 with a bench (" + c("banch
         [c("ngtcp2") + " + " + c("nghttp3") + " (C)", "chosen",
          "The most complete foundations: RFC 9220 extended CONNECT, HTTP datagrams and the capsule protocol. Two real "
          "browsers opened a session through it, and the missing layer cost 373 lines of our own code."],
-    ], "«TAB» — The four candidates of DECISIONI.md §6.4") + \
+    ], "«TAB» — The four candidates of DECISIONS.md §6.4") + \
     p("The price is declared in " + c("webtransport.h") + ": nghttp3 offers no API to put an arbitrary setting on the "
       "HTTP/3 control stream, so the server rewrites the " + c("SETTINGS") + " frame while nghttp3 is writing it (" +
       c("rewrite_settings()") + "). That depends on the shape of the bytes nghttp3 produces, not on a promise of "
@@ -90,7 +90,7 @@ S3 = p("The server listens on port 7447 twice: UDP for HTTP/3 and WebTransport, 
         ["Certificate", "the short-lived session certificate", "the long-lived page certificate"],
         ["ALPN", c("h3") + " (chosen by the browser)", c("http/1.1")],
         [c("SO_REUSEADDR"), "never", "yes"],
-        ["Code", c("trasporto.c") + ", " + c("webtransport.c"), c("pagina.c")],
+        ["Code", c("transport.c") + ", " + c("webtransport.c"), c("page.c")],
     ], "«TAB» — The two listeners") + \
     p("The two are independent. The first draft of RCP.md required an " + c("Alt-Svc") + " header on the TCP response; "
       "measurement S1 (9 August 2026) showed that WebTransport does not use " + c("Alt-Svc") + " at all — a WebTransport "
@@ -109,7 +109,7 @@ S3 = p("The server listens on port 7447 twice: UDP for HTTP/3 and WebTransport, 
       "has checked.")
 
 # ── QUIC parameters ─────────────────────────────────────────────────────
-S4 = p("Each connection gets the same transport parameters, set in " + c("trasporto.c") + " just before "
+S4 = p("Each connection gets the same transport parameters, set in " + c("transport.c") + " just before "
        + c("ngtcp2_conn_server_new") + ". With a browser as client, RCP can no longer dictate the client's parameters: "
        "what stays normative is what the server announces, and what must be measured instead of assumed.",
        lead=True) + \
@@ -131,7 +131,7 @@ S4 = p("Each connection gets the same transport parameters, set in " + c("traspo
         [c("grease_quic_bit"), "1", "Standard greasing."],
         ["stateless reset", "on", "Token derived from a 32-byte per-process secret."],
         [c("disable_active_migration"), "not sent", "Migration is the reason QUIC was chosen: the phone that moves from "
-         "Wi-Fi to mobile keeps its session (SPECIFICHE.md §8.4)."],
+         "Wi-Fi to mobile keeps its session (SPECS.md §8.4)."],
         ["0-RTT", "refused", c("SSL_CTX_set_max_early_data(ctx, 0)") + ": 0-RTT data can be replayed, and the second "
          "message of RCP is " + c("CREDENTIALS") + ". The gain would be one round trip on a session that lasts hours."],
         ["ALPN", c("h3"), "Chosen by the browser; the server only accepts it (" + c("choose_alpn()") + " rejects a "
@@ -140,15 +140,15 @@ S4 = p("Each connection gets the same transport parameters, set in " + c("traspo
         ["QUIC versions", "v1 only", "Anything else gets a version negotiation packet listing " + c("NGTCP2_PROTO_VER_V1")
          + "."],
     ], "«TAB» — QUIC transport parameters announced by the server") + \
-    p("The stream credit is renewed by " + c("cb_stream_close") + " in " + c("trasporto.c") + ". Renewal is the peer's "
+    p("The stream credit is renewed by " + c("cb_stream_close") + " in " + c("transport.c") + ". Renewal is the peer's "
       "policy, not a consequence of closing a stream: on 2 October 2026 a measurement showed 19 streams and then "
       "nothing, so ngtcp2 does not raise the limit on its own in this configuration. A server that waited for "
       "credit would be counting on someone else's courtesy; the rule instead is that the server must survive a refused "
       "stream (" + rif("Streams versus datagrams") + ").") + \
     ul([
-        "No address validation with Retry: the product is meant for an own network or a VPN (SPECIFICHE.md §4.1). The "
+        "No address validation with Retry: the product is meant for an own network or a VPN (SPECS.md §4.1). The "
         "code declares it as something to restore before exposing the server.",
-        "No UDP GSO: " + c("trasporto.c") + " splits each aggregate and sends one packet per " + c("sendto") + " (at "
+        "No UDP GSO: " + c("transport.c") + " splits each aggregate and sends one packet per " + c("sendto") + " (at "
         "most " + c("MAX_PACKETS_PER_ROUND") + " = 64 packets per pass). It costs system calls, not correctness.",
         "The congestion controller was never chosen: " + c("ngtcp2_settings_default()") + " leaves " + c("cc_algo")
         + " at ngtcp2's default (CUBIC). See " + rif("Congestion and the send queue") + ".",
@@ -197,10 +197,10 @@ S5 = p("There are two certificates, not one, and they are kept apart down to the
          + " for both listeners would be the same defect written where nobody looks for it.",
          "Never one certificate for both.")
 
-TRUST = seq([("Browser", "the page", "dark"), ("TCP 7447", "pagina.c", "blue"), ("UDP 7447", "webtransport.c", "navy")], [
+TRUST = seq([("Browser", "the page", "dark"), ("TCP 7447", "page.c", "blue"), ("UDP 7447", "webtransport.c", "navy")], [
     (0, 1, "GET /  (TLS with the long-lived certificate)"),
     ("note", 0, "first visit: user accepts the warning"),
-    (1, 0, "pagina.html with __FINGERPRINT__ replaced", True),
+    (1, 0, "page.html with __FINGERPRINT__ replaced", True),
     (0, 1, "GET /fingerprint  (before every connection)"),
     (1, 0, "JSON: algorithm, base64, hex, rotations", True),
     (0, 2, "new WebTransport(https://host:7447/rcp/1, serverCertificateHashes)"),
@@ -214,8 +214,8 @@ S6 = p("The page carries the fingerprint of the session certificate, and the bro
        "connection without a warning when the certificate matches it. The user's exception on the page certificate "
        "does not extend to WebTransport on either Chrome or Firefox (measurement S1, 9 August 2026), so the "
        "fingerprint is the normal road, not a safety net.", lead=True) + TRUST + steps([
-    "The server writes the current fingerprint into the page: " + c("pagina.c") + " replaces " + c("__FINGERPRINT__")
-    + " in " + c("pagina.html") + " on every request for " + c("/") + ".",
+    "The server writes the current fingerprint into the page: " + c("page.c") + " replaces " + c("__FINGERPRINT__")
+    + " in " + c("page.html") + " on every request for " + c("/") + ".",
     "Before every connection the page fetches " + c("/fingerprint") + " with " + c("cache: \"no-store\"") + ". A tab left "
     "open for two weeks holds the fingerprint of a certificate that has since rotated; without the fresh fetch the "
     "browser would refuse the reconnection and nothing would say why. The fetch does not go through RCP — there is no "
@@ -236,12 +236,12 @@ S6 = p("The page carries the fingerprint of the session certificate, and the bro
       "tested on Safari or iOS, and nothing here claims it works there.") + \
     note("the first connection on each device is open to a man in the middle, who would not merely read the page but "
          "rewrite it. The risk is accepted for the intended scenario — own server, own network or VPN — and a real "
-         "certificate from a CA removes the warning altogether (SPECIFICHE.md §4.1, DECISIONI.md §1.7).",
+         "certificate from a CA removes the warning altogether (SPECS.md §4.1, DECISIONS.md §1.7).",
          "Accepted risk.")
 
 # ── The page server ─────────────────────────────────────────────────────
-S7 = p(c("pagina.c") + " is a small HTTPS/1.1 server: one request per connection, " + c("Connection: close") + ", "
-       "non-blocking sockets inside the same " + c("poll") + " loop. It reads " + c("pagina.html") + " from "
+S7 = p(c("page.c") + " is a small HTTPS/1.1 server: one request per connection, " + c("Connection: close") + ", "
+       "non-blocking sockets inside the same " + c("poll") + " loop. It reads " + c("page.html") + " from "
        + c("--page") + " (the packages install it as " + c("/usr/share/remotix/page.html") + ").", lead=True) + \
     table(["Path", "Response", "Purpose"], [
         [c("/") + ", " + c("/index.html"), "200, " + c("text/html"), "The page, with four placeholders replaced: "
@@ -256,7 +256,7 @@ S7 = p(c("pagina.c") + " is a small HTTPS/1.1 server: one request per connection
         ["unreadable request", "400", "—"],
     ], "«TAB» — The routes of the page server") + \
     p("Every response carries " + c("Cache-Control: no-store") + ", " + c("X-Content-Type-Options: nosniff") + " and the "
-      "cross-origin isolation headers required by SPECIFICHE.md §11.5: " + c("Cross-Origin-Opener-Policy: same-origin") + ", "
+      "cross-origin isolation headers required by SPECS.md §11.5: " + c("Cross-Origin-Opener-Policy: same-origin") + ", "
       + c("Cross-Origin-Embedder-Policy: require-corp") + " and " + c("Cross-Origin-Resource-Policy: same-origin") + ". "
       "Isolation gives the page full-resolution timers (" + c("performance.now()") + " measured at 5 µs grain on Chrome 151, "
       "14 August 2026) and shared memory. The third header is not optional: with " + c("require-corp") + " the browser "
@@ -264,7 +264,7 @@ S7 = p(c("pagina.c") + " is a small HTTPS/1.1 server: one request per connection
       "simply does not load.") + \
     p("A banned address still gets the page, with HTTP status 200 and a notice that begins " + c("attempts exhausted")
       + " and gives the hours and minutes left; the notice is written in "
-      + c("pagina.c") + ". The page is served even when banned because whoever is banned by mistake is almost always the owner, "
+      + c("page.c") + ". The page is served even when banned because whoever is banned by mistake is almost always the owner, "
       "and a server that looks dead for half a day is the worst diagnosis; 200 rather than a 4xx because an intermediary "
       "or the browser may replace the body of an error response with its own page, and the sentence the owner must read "
       "would vanish. The ban itself is described in " + rif("Credentials, the fixed delay and the address ban") + ".")
@@ -300,7 +300,7 @@ S8 = p(c("webtransport.c") + " is the layer on top of ngtcp2 and nghttp3. It cov
         "and the connection fails, logged.",
         "<b>One session per connection.</b> " + c("w->session") + " holds the stream id of the CONNECT; " +
         c("WT_CAP_CHANNEL_NS") + " (5 s) starts when the session opens: if the client does not open the control "
-        "channel in time, the session is closed with " + c("TIMED_OUT") + " in the closing code (DECISIONI.md §7.17).",
+        "channel in time, the session is closed with " + c("TIMED_OUT") + " in the closing code (DECISIONS.md §7.17).",
         "<b>Client streams are classified by their first bytes</b> (" + c("enum flavor") + "): undecided, WebTransport "
         "bidirectional (the control channel), HTTP/3 (handed to nghttp3), WebTransport unidirectional for input ("
         + c("0x01") + "), for clipboard (" + c("0x02") + "), lawful but not served, or already judged a violation. "
@@ -327,7 +327,7 @@ S9 = p("Each RCP channel uses the QUIC piece that matches its needs. The single 
         ["video", "unidirectional stream", "server", "one per frame, none before " + c("SESSION") + " (the server's "
          "answer to the attach)"],
         ["input", "unidirectional stream", "client", "exactly one, opened after " + c("SESSION") + " and kept open"],
-        ["clipboard", "unidirectional stream", "both", "one per message (DECISIONI.md §5-ter.7)"],
+        ["clipboard", "unidirectional stream", "both", "one per message (DECISIONS.md §5-ter.7)"],
         ["audio", "datagram", "server", "one block per datagram"],
         ["cursor", "the control stream", "server", "—"],
     ], "«TAB» — Which QUIC piece each channel uses") + \
@@ -390,7 +390,7 @@ S10 = p("Three different clocks watch a connection, and they measure different t
       "2026 (" + c("--no-dead-line") + " turns it off).") + \
     p("<b>Why the idle timeout stays at 30 s.</b> The value is negotiated, so 10 s would also make the browser drop us "
       "after 10 s of our own silence, and frozen images up to 14.26 s were measured on 23 August 2026 under heavy bursty "
-      "loss; ngtcp2 expires at " + c("max(idle, 3·PTO)") + " anyway; 30 s is normative (DECISIONI.md §4.4); and the "
+      "loss; ngtcp2 expires at " + c("max(idle, 3·PTO)") + " anyway; 30 s is normative (DECISIONS.md §4.4); and the "
       "PINGs every 10 s would fire at the same instant as a 10 s timeout.")
 
 # ── Congestion ──────────────────────────────────────────────────────────
@@ -417,11 +417,11 @@ S11 = p("QUIC measures the line continuously, which v1 had to do by hand. REMOTI
     note("the threshold and the regulator are on together by default since 24 August 2026 (the user's decision after "
          "watching them). With the threshold off the delta queue empties at every frame and the regulator can never "
          "trigger; the start-up log line says so. Their declared price, measured on 23–24 August 2026 with bench "
-         + c("09-b79") + " (retired on 11 October 2026, DECISIONI.md §10.44; its results stay in "
-         + c("fasi/09-la-qualita-e-la-degradazione.md") + "): up to +160 ms of drift on a bad line, zero on a "
+         + c("09-b79") + " (retired on 11 October 2026, DECISIONS.md §10.44; its results stay in "
+         + c("phases/09-quality-and-degradation.md") + "): up to +160 ms of drift on a bad line, zero on a "
          "healthy one.", "Defaults.") + \
     note(c("WT_FLOOR_BYTE_MS") + " assumes 20 Mbit/s, while the declared network floor became 30 Mbit/s on 23 August "
-         "2026 (SPECIFICHE.md §8.1). It only applies before the first RTT sample.", "Stale floor.")
+         "2026 (SPECS.md §8.1). It only applies before the first RTT sample.", "Stale floor.")
 
 # ── Connection life ─────────────────────────────────────────────────────
 S12 = p("One QUIC connection carries at most one WebTransport session and one RCP session. The figure follows a "

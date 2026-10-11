@@ -4,7 +4,7 @@
  * ⛔⛔ AND IT IS NOT A SECOND `input.c`: it is the piece that on GNOME and KDE `libei`
  *     does, and nothing more.
  *
- *     `[✗]` libei on wlroots **does not exist** (`STUDI.md` §xfce §7, searched in
+ *     `[✗]` libei on wlroots **does not exist** (`STUDIES.md` §xfce §7, searched in
  *     wlroots, labwc, sway, wayfire, weston, xdpw and wayvnc: zero).  ⇒ The way
  *     is two Wayland protocols, both `[M]` announced by labwc:
  *
@@ -53,7 +53,7 @@ typedef struct WlrInput WlrInput;
  * Connects to the user's compositor, binds the seat and the two managers, creates the
  * virtual keyboard and pointer, and ⛔ **sends a keymap at once** — without it,
  * the first key is a `no_keymap` protocol error that closes the whole
- * connection (`wlr_virtual_keyboard_v1.c:83-88`, `STUDI.md` §xfce §7.4).
+ * connection (`wlr_virtual_keyboard_v1.c:83-88`, `STUDIES.md` §xfce §7.4).
  *
  * The initial keymap: the SESSION's, copied from the wire
  * (`wl_seat.get_keyboard`, §7.4) if the compositor hands it over; otherwise
@@ -63,7 +63,7 @@ typedef struct WlrInput WlrInput;
  *    hand it over — without a real keyboard the seat declares capability 0, and the spy
  *    is not born.  ⇒ On a remote session the real way is the ENVIRONMENT, and the
  *    right layout arrives a moment later, with the negotiated one
- *    (`figlio.c` applies it when the channel opens).
+ *    (`child.c` applies it when the channel opens).
  *
  * NULL with `mistake` written.
  */
@@ -93,7 +93,7 @@ const char *wlr_input_keymap_origin(const WlrInput *w);
 /*
  * ⭐ The negotiated layout (`RCP.md` §4.5: `it`, `us`, `de(neo)`) becomes the
  *    keymap of OUR keyboard.  On this family it is the right form of
- *    `DECISIONI.md` §5-bis.7 and not a fallback: labwc, at every key, does
+ *    `DECISIONS.md` §5-bis.7 and not a fallback: labwc, at every key, does
  *    `wlr_seat_set_keyboard()` with the keyboard that typed it and sends **its
  *    keymap** to all applications (§7.4).  ⇒ The applications read our
  *    keys with our keymap, and the shortcuts match.

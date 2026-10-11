@@ -1,0 +1,54 @@
+#!/bin/bash
+# 19-f018-test.sh — ONE F-018 test (reattach at a different size) on rete11-lxqt
+# on the Radeon, with the chosen binary and route, and the count of the card's
+# page faults before and after (diagnosis of the FAIL of round 19-radeon).
+#
+#   (on the server, as nicfio)  bash 19-f018-test.sh <md5-of-the-binary> <card|vaapi|vulkan> <label>
+#
+# The binary is /media/REMOTIX/rete11/prodotto/remotix.<md5>; the route is
+# the server's --encoding-route option (restarted by hand with the same line as
+# 11-start.sh server, plus --encoding-route).  It leaves /media/REMOTIX/rete11/prodotto/remotix
+# = the chosen binary: the caller puts it back afterwards.
+set -u
+MD5=$1; ROUTE=$2; LBL=$3
+D=${REMOTIX_D:-lxqt}; case $D in gnome) PORT=8511;; kde) PORT=8512;; xfce) PORT=8513;; *) PORT=8514;; esac
+R=/media/REMOTIX/rete11
+PASSWORD=$(awk '/^pass:/{print $2; exit}' "$HOME/SERVER.ssh")
+S() { printf '%s\n' "$PASSWORD" | sudo -S -p '' "$@"; }
+cd $R || exit 2
+cp "prodotto/remotix.$MD5" prodotto/remotix || exit 2
+echo "binary $(md5sum prodotto/remotix | cut -c1-8) · route $ROUTE · $(date +%T)"
+S env REMOTIX_CARD=amd bash 11-start.sh product $D >/tmp/f018-$LBL-prodotto.log 2>&1 || { echo "⛔ product"; tail -3 /tmp/f018-$LBL-prodotto.log; exit 2; }
+S env REMOTIX_CARD=amd bash 11-start.sh server $D >/tmp/f018-$LBL-server.log 2>&1 || { echo "⛔ server"; tail -3 /tmp/f018-$LBL-server.log; exit 2; }
+if [ "$ROUTE" != card ]; then
+	S podman exec rete11-$D sh -c "
+		systemctl stop rete11-server 2>/dev/null; systemctl reset-failed rete11-server 2>/dev/null
+		rm -f /var/lib/rete11/registro.log
+		systemd-run --unit=rete11-server --working-directory=/opt/remotix \
+			--property=StandardOutput=append:/var/lib/rete11/registro.log \
+			--property=StandardError=append:/var/lib/rete11/registro.log \
+			--property=KillMode=mixed \
+			/opt/remotix/remotix --address 0.0.0.0 --name 127.0.0.1 --port $PORT \
+			--certificates /var/lib/rete11/certificati --page /opt/remotix/page.html \
+			--ban-file /var/lib/rete11/ban --command-socket /var/lib/rete11/command.sock \
+			--survey /var/lib/rete11/rilievo --verbose --journal --encoding-route $ROUTE
+	" >/dev/null 2>&1
+	for _ in $(seq 1 40); do S podman exec rete11-$D grep -q 'ready: https' /var/lib/rete11/registro.log 2>/dev/null && break; sleep 0.5; done
+fi
+echo "routes at startup: $(S podman exec rete11-$D sh -c "grep -a -o 'route [a-z]* (requested «[a-z]*»)' /var/lib/rete11/registro.log | sort | uniq -c | tr '\n' ';'")"
+PF0=$(S journalctl -k --no-pager 2>/dev/null | grep -c 'page fault')
+RS0=$(S journalctl -k --no-pager 2>/dev/null | grep -c 'GPU reset begin')
+EV=/media/REMOTIX/misure/fase15/giro19-diagnosi/$LBL
+mkdir -p "$EV"
+export XDG_RUNTIME_DIR=/run/user/$(id -u)
+bash /media/REMOTIX/src/controllo/benches/15-suite/15-one.sh 15-f018-reattach-at-a-different-size.py --box $D --browser firefox --fault --evidence "$EV" > "$EV/uscita.log" 2>&1
+echo "code of the test: $?"
+grep -a '^SUITE' "$EV/uscita.log" | python3 -c '
+import sys, json
+for r in sys.stdin:
+    j = json.loads(r[6:]); print("  ", j["function"], j["pass"], j["outcome"], "·", (j.get("rationale") or "")[:150])'
+PF1=$(S journalctl -k --no-pager 2>/dev/null | grep -c 'page fault')
+RS1=$(S journalctl -k --no-pager 2>/dev/null | grep -c 'GPU reset begin')
+echo "page faults of the card: $((PF1 - PF0)) · resets: $((RS1 - RS0))"
+echo "in the box's log: $(S podman exec rete11-$D sh -c "grep -a -c 'DEVICE_LOST' /var/lib/rete11/registro.log") DEVICE_LOST · canvases: $(S podman exec rete11-$D sh -c "grep -a -o 'new canvas [0-9x]*: reopened' /var/lib/rete11/registro.log | tr '\n' ';'")"
+S podman exec rete11-$D sh -c "grep -a -E '⛔.*(encod|decod|Vulkan|VA-API|vaapi|stage .* has gone)' /var/lib/rete11/registro.log | grep -a -v 'nobody tells it' | cut -c1-200 | head -6"

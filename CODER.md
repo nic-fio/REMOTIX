@@ -4,14 +4,14 @@ The rules to follow while writing code, so that the product gets closer
 to the declared numbers and does not drift away from what the user sees.
 
 ⛔ **Binding rule.** Not a single line of code is written without first having
-read this document and the sections of **`SPECIFICHE.md`** that the area touches — and
+read this document and the sections of **`SPECS.md`** that the area touches — and
 **`RCP.md`** if the wire is touched. It is the same rule that in v1 belonged to `⟨v1⟩ REFERENCE.md`
 §7.0, extended to all the work and not only to the protocol.
 
 > ⚠ **The old names you find below.** This document came from v1 and still cites
 > `⟨v1⟩ SPECIFICA.md` and `⟨v1⟩ REFERENCE.md`, which are the papers of the **superseded
 > product**: they are in `fondamenta/documenti/` and here they carry the mark **⟨v1⟩**.
-> ⛔ **They no longer govern anything**: what applies today is `SPECIFICHE.md` and `RCP.md`.
+> ⛔ **They no longer govern anything**: what applies today is `SPECS.md` and `RCP.md`.
 > They are read to understand *why* a rule exists, not to know what to do.
 > The full table is in §0.
 
@@ -20,7 +20,7 @@ read this document and the sections of **`SPECIFICHE.md`** that the area touches
 ## 0. How to read this document
 
 This document says **what to build and how to build it**. It does not contain the measurement
-method — that is in `LEZIONI.md`, which is the shared foundation and must be read
+method — that is in `LESSONS.md`, which is the shared foundation and must be read
 before starting. Here are the operational rules, as short as possible, with
 the reason for each beside it.
 
@@ -30,25 +30,25 @@ rule. If a check exists there but not here, it is checking something that
 nobody said to do. Both cases are a defect of the pair.
 
 The shared foundation, recalled here but not rewritten:
-- `LEZIONI.md` — the method: how to measure, how to test, how to learn.
-- `SPECIFICHE.md` §3.1 — the two numbers every technical choice must bring closer.
+- `LESSONS.md` — the method: how to measure, how to test, how to learn.
+- `SPECS.md` §3.1 — the two numbers every technical choice must bring closer.
 - `RCP.md` — the protocol, for whoever touches the wire. *(In v1 it was `⟨v1⟩ REFERENCE.md`.)*
 
 > ## ⛔ Where the cited documents are — read before going to look for them
 >
 > *Added on 9 Aug 2026: this document came from v1 **without renumbering**, like
-> `LEZIONI.md`, and like that one it cites the old names. Whoever looked for `SPECIFICA.md` in the
+> `LESSONS.md`, and like that one it cites the old names. Whoever looked for `SPECIFICA.md` in the
 > V2 folder would not find it, and it is precisely the first document §0 obliges them to read.*
 >
 > | Cited here as | Is in | How much it counts in V2 |
 > |---|---|---|
-> | `SPECIFICA.md` | `fondamenta/documenti/SPECIFICA.md` | ⛔ **read `SPECIFICHE.md`**, at the V2 level, which replaces it entirely. The §x.y cited below point to the old one, and the correspondence must be looked for by topic |
+> | `SPECIFICA.md` | `fondamenta/documenti/SPECIFICA.md` | ⛔ **read `SPECS.md`**, at the V2 level, which replaces it entirely. The §x.y cited below point to the old one, and the correspondence must be looked for by topic |
 > | `REFERENCE.md` | `fondamenta/documenti/REFERENCE.md` | they were the compatibility rules with other people's RDP clients. **In V2 it lapses almost entirely**: the clients are ours and the arbiter is `RCP.md`. The citations remain valid as **history of the price paid**, not as rules to apply |
-> | v1's `PIANO.md` | `fondamenta/documenti/PIANO.md` | closed at phase 11. The live plan is `PIANO.md` at the V2 level |
+> | v1's `PLAN.md` | `fondamenta/documenti/PIANO.md` | closed at phase 11. The live plan is `PLAN.md` at the V2 level |
 >
 > ⚠ **And the three documents that did not exist at all in V2**, and that are not cited here because they were
-> born afterwards: `RCP.md` (the arbiter of the wire), `DECISIONI.md` (the why of every choice, with the
-> date and who made it) and `SPECIFICHE.md`. Whoever touches the wire reads `RCP.md`, not `REFERENCE.md`.
+> born afterwards: `RCP.md` (the arbiter of the wire), `DECISIONS.md` (the why of every choice, with the
+> date and who made it) and `SPECS.md`. Whoever touches the wire reads `RCP.md`, not `REFERENCE.md`.
 
 When a new measurement contradicts this document, the document is updated at the
 same moment, with the date and the source. A reference that ages silently is
@@ -88,7 +88,7 @@ worse than no reference.
 >
 > ⚠ **4:4:4 remains a `[?]`, not a promise.** It would be an option for the Linux client
 > only on capable GPUs (NVIDIA yes, Intel sometimes, AMD no), but **nobody has measured how much
-> the difference really shows** on the user's desktop. `LEZIONI.md` §2.3-quater applies —
+> the difference really shows** on the user's desktop. `LESSONS.md` §2.3-quater applies —
 > an unmeasured reason makes the decision half-taken — and §2.4: it sits behind a
 > switch that stays off until the user has looked at it. It is decided on a bench that puts
 > the two images side by side, and he is the judge (§7.3).
@@ -107,7 +107,7 @@ bad session is worth more than a closed session.**
 ### 1-bis. The third number: the delay
 
 *Set by the user on 9 Aug 2026, and before that day it did not exist: neither
-`SPECIFICHE.md` nor v1's specification named latency.*
+`SPECS.md` nor v1's specification named latency.*
 
 |         | From the input arriving to the frame leaving |
 |---------|------------------------------------------------|
@@ -128,10 +128,10 @@ all the time — every intermediate buffer you add buys smoothness and sells res
 
 And the declared bandwidth is a **floor, not a budget**. It is spent, not saved:
 unspent bandwidth is no use to anyone, and lost quality shows.
-(`LEZIONI.md` §7.2 — optimising in the wrong direction is worse than not optimising.)
+(`LESSONS.md` §7.2 — optimising in the wrong direction is worse than not optimising.)
 
-⭐ **And since 23 Aug 2026 the floor has a number: 30 Mbit/s** (it was 20 in the morning, raised at night — `DECISIONI.md` §3.1-sexies)**.** *«Al di sotto di questo limite
-l'utente nemmeno riesce a navigare, figuriamoci usare remotix»* — the user, `DECISIONI.md`
+⭐ **And since 23 Aug 2026 the floor has a number: 30 Mbit/s** (it was 20 in the morning, raised at night — `DECISIONS.md` §3.1-sexies)**.** *«Al di sotto di questo limite
+l'utente nemmeno riesce a navigare, figuriamoci usare remotix»* — the user, `DECISIONS.md`
 §3.1-bis. ⇒ Below 30 Mbit/s **nothing is promised and nothing is measured as a requirement**;
 ⚠ the ban on disconnecting stays whole all the same. Whoever tuned a threshold on a 2 Mbit/s line
 would be tuning on a case the product **no longer serves**.
@@ -150,11 +150,11 @@ would be tuning on a case the product **no longer serves**.
 >
 > ⚠ **And what stays outside is declared even when it cannot be measured**: between the finished drawing
 > and the lit pixel pass `[?]` **16-40 ms** that no API exposes. They are estimated and written
-> beside the number — ⛔ **but not on Xvfb, where that piece does not exist** (`STUDI.md` §web §6.2).
+> beside the number — ⛔ **but not on Xvfb, where that piece does not exist** (`STUDIES.md` §web §6.2).
 >
 > ⛔ **The measured number, and the ceiling is exceeded**: `[M]` median **74.58 ms** capture → glass, which
 > with the blind piece makes **90-115 ms** on the user's screen. ⛔⛔ **And 78 % is ours**:
-> Mutter gets 22 %, the rest is almost all in the software encoder (`SPECIFICHE.md` §3.2).
+> Mutter gets 22 %, the rest is almost all in the software encoder (`SPECS.md` §3.2).
 >
 > ### ⭐⭐ And on 15 Aug 2026 it turned out there was a SECOND link, and nobody was measuring it
 >
@@ -168,7 +168,7 @@ would be tuning on a case the product **no longer serves**.
 > ⇒ Brought to 8 ms: **median 41 ms, worst 47** — inside the ceiling.
 >
 > ⚠ **The lesson is about method, not numbers**: a wait sized for one link becomes the
-> delay of every other link passing through the same loop (`LEZIONI.md` §6.2-bis, `REVIEWER.md`
+> delay of every other link passing through the same loop (`LESSONS.md` §6.2-bis, `REVIEWER.md`
 > **E13**). And the log line that explained it — *«3 attese a vuoto al secondo»* — had been printed for
 > a day (§6.2-ter).
 
@@ -182,20 +182,20 @@ logically correct.
 
 | # | Invariant | Where it is written |
 |---|-----------|------------------|
-| I1 | The rate never drops out of caution, to save, or because the scene is still: it drops **only** when the measurement shows that the line does not carry, and every drop is declared in the log. Below the minimum we keep dropping **frames** — never blurring the image, and **never disconnecting**. | `SPECIFICHE.md`, decided on 8 Aug 2026 |
+| I1 | The rate never drops out of caution, to save, or because the scene is still: it drops **only** when the measurement shows that the line does not carry, and every drop is declared in the log. Below the minimum we keep dropping **frames** — never blurring the image, and **never disconnecting**. | `SPECS.md`, decided on 8 Aug 2026 |
 | I2 | A single graphical session per user; the local session wins over RDP; the second connection is refused with an explicit message. | `⟨v1⟩ SPECIFICA.md` §3.4 |
 | I3 | The authentication guard starts from denied. Whoever does not pass through the validator receives not a pixel and controls nothing. | `⟨v1⟩ REFERENCE.md` R14 |
 | I4 | The stage (capture, control, virtual monitor) belongs to the session, not to the connection. It survives disconnection. | `⟨v1⟩ SPECIFICA.md` §3.3-ter |
 | I5 | The volume belongs to the session. Whoever connects finds the level at maximum; a slider left low does not survive reconnection. | `⟨v1⟩ REFERENCE.md` §7.5 |
-| I6 | Whatever changes what is SEEN sits behind a switch that stays off until the user looks at it. | `LEZIONI.md` §2.4 |
-| I7 | The protection against a known defect lives in the program, not in a configuration line that can be lost. | `LEZIONI.md` §2.5, `⟨v1⟩ REFERENCE.md` R29 |
-| I8 | The yardstick is what the user sees, not the number that comes out of the bench. | `LEZIONI.md` §0.5, §7.3 |
+| I6 | Whatever changes what is SEEN sits behind a switch that stays off until the user looks at it. | `LESSONS.md` §2.4 |
+| I7 | The protection against a known defect lives in the program, not in a configuration line that can be lost. | `LESSONS.md` §2.5, `⟨v1⟩ REFERENCE.md` R29 |
+| I8 | The yardstick is what the user sees, not the number that comes out of the bench. | `LESSONS.md` §0.5, §7.3 |
 
 ---
 
 ## 2-bis. ⭐ The cures of phase 9 are ON — *24 Aug 2026*
 
-`DECISIONI.md` §3.1-septies. ⛔ **Whoever touches the transport or the audio must know that these
+`DECISIONS.md` §3.1-septies. ⛔ **Whoever touches the transport or the audio must know that these
 behaviours are the default**, not a bench option:
 
 | cure | default | turned off **only** with |
@@ -217,9 +217,9 @@ past must **turn them off by hand** and say so.
 ## 3. The measurement rules
 
 The project has never got stuck on a hard problem. It got stuck, every time,
-on a measurement that did not measure what we believed. (`LEZIONI.md` §10.) These are
+on a measurement that did not measure what we believed. (`LESSONS.md` §10.) These are
 the rules that prevent it. They are recalled here because the coder measures while
-developing; the detail and the price of each are in `LEZIONI.md` §1 and §2.
+developing; the detail and the price of each are in `LESSONS.md` §1 and §2.
 
 ### 3.1 Before optimising a link, measure how much enters the chain
 A link faster than what reaches it produces nothing. The 18 frames that
@@ -351,7 +351,7 @@ A single implementation, or one standard across desktops ⇒ 4.1 applies in full
 `xkbcommon`, QUIC: only one of each, the same everywhere. There 4.1 applies without discounts, and
 writing our own would be the defect 4.1 forbids.
 
-*Applied in `DECISIONI.md` §4.3 (the lock is ours), where the count was: four different
+*Applied in `DECISIONS.md` §4.3 (the lock is ours), where the count was: four different
 cures — and three of the four were configuration lines, that is I7 — against a
 counter and a farewell.*
 
@@ -367,18 +367,18 @@ unacceptable for an unattended service. (`⟨v1⟩ SPECIFICA.md` §2.)
 ### 4.4 Never wait inside the asynchronous loop
 Neither explicitly, nor in a destructor that waits for a thread to end. A hidden
 wait stops all the connections entrusted to that thread, not only its own.
-(`LEZIONI.md` §5, `⟨v1⟩ SPECIFICA.md` §5.7 rule 7.)
+(`LESSONS.md` §5, `⟨v1⟩ SPECIFICA.md` §5.7 rule 7.)
 
 ### 4.5 A session's environment is composed from scratch, one variable at a time
 Whoever starts a session gives it their whole environment, including the variables that
 have nothing to do with it. A wrong locale inherited from a script can stop all the
-applications from starting. Do not pass your environment: compose it. (`LEZIONI.md` §5,
+applications from starting. Do not pass your environment: compose it. (`LESSONS.md` §5,
 `⟨v1⟩ SPECIFICA.md` §5.9-bis.)
 
 ### 4.6 Silence is not zero, and green is not true
 A green bench while the defect is alive is the worst of tests, because it gives confidence.
 If a check counts something, make sure it can see the defect you are looking for —
-not only its number. (`LEZIONI.md` §2.2.)
+not only its number. (`LESSONS.md` §2.2.)
 
 ---
 
@@ -426,7 +426,7 @@ The marks:
 | `[?]` | Hypothesised, not yet measured. |
 
 A decision that rests on a `[?]` must be written as provisional. An unmeasured
-reason in a decision is a half-taken decision. (`LEZIONI.md` §2.3-quater.)
+reason in a decision is a half-taken decision. (`LESSONS.md` §2.3-quater.)
 
 ---
 

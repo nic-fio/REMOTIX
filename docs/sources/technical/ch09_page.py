@@ -1,11 +1,11 @@
 from build import box, c, code, fig, note, p, rif, seq, steps, table, text, tip, ul, warn, zone
 
 # ── 1. One file ───────────────────────────────────────────────────────────
-S1 = p("The whole client is one file, " + c("src/pagina.html") + ": the login page, the RCP/1 client, video "
+S1 = p("The whole client is one file, " + c("src/page.html") + ": the login page, the RCP/1 client, video "
        "decoding and drawing, audio, clipboard, keyboard, pointer and touch. Nothing is installed on the user's "
        "device and nothing else is downloaded: the page is the product's only client.", lead=True) + \
     table(["What", "How"], [
-        ["Served by", c("src/pagina.c") + ", a small TLS-over-TCP server inside the parent process, on the same port "
+        ["Served by", c("src/page.c") + ", a small TLS-over-TCP server inside the parent process, on the same port "
          "number as QUIC (7447 in the packages: TCP for the page, UDP for WebTransport)"],
         ["Routes", c("/") + " and " + c("/index.html") + " (the page), " + c("/fingerprint") + " (the certificate "
          "fingerprint as JSON), " + c("/diary") + " (the page's own log lines, carried in the query string, "
@@ -17,7 +17,7 @@ S1 = p("The whole client is one file, " + c("src/pagina.html") + ": the login pa
          "streams are embedded in base64"],
         ["Connections", "At most 32 TCP clients at a time (" + c("MAX_CLIENTS") + "); a request header is at most 8 KiB"],
     ], "«TAB» — How the page reaches the browser") + \
-    p("Cross-origin isolation is a product requirement, not a bench detail (" + c("SPECIFICHE.md")
+    p("Cross-origin isolation is a product requirement, not a bench detail (" + c("SPECS.md")
       + " §11.5): without it Firefox and Safari round the page's timers to 1 ms, on a latency cap of 50 ms, and "
       "shared memory does not exist. With " + c("require-corp") + " every sub-resource would have to declare its "
       "own policy; the simplest cure is to have none, which is why everything is inline. The isolation is "
@@ -31,7 +31,7 @@ S1 = p("The whole client is one file, " + c("src/pagina.html") + ": the login pa
         [c("__BANNED__"), c("yes") + " or " + c("no") + ", on " + c("data-banned") + " of the body", "the script and the ban benches"],
         [c("__REMAINING_MS__"), "milliseconds left on the ban", c("data-remaining-ms") + " of the body"],
     ], "«TAB» — The four markers the server fills while serving") + \
-    p(c("page_open()") + " in " + c("pagina.c") + " refuses to start if any marker is missing, or if " + c("data-banned=\"")
+    p(c("page_open()") + " in " + c("page.c") + " refuses to start if any marker is missing, or if " + c("data-banned=\"")
       + " or " + c("data-remaining-ms=\"") + " occur more than once (a bench that greps the first occurrence "
       "would read the wrong one). The fingerprint is the only server text that enters a JavaScript string, and "
       "it is base64 written by REMOTIX; the ban sentence never enters the script. The TLS side, the certificates "
@@ -55,7 +55,7 @@ S2 = p("The file is about 13 000 lines, most of them comments that carry the rea
         ["Exit", c("back_to_form()") + ", " + c("run_logout()"), rif("End of session in the page")],
         ["Input anchors", c("F4-CLASSIC-INPUT") + " (mouse and keyboard), " + c("F4-TOUCH") + " (touch), "
          + c("F4-SHORTCUTS") + " (shortcuts, full screen, keyboard lock)", rif("Input")],
-    ], "«TAB» — The blocks of pagina.html") + \
+    ], "«TAB» — The blocks of page.html") + \
     p("The page defines one main global, " + c("window.REMOTIX") + ", an object <i>to be read</i> by benches and "
       "diagnostics (" + c("viewer") + " the screen object, " + c("probing") + " the probe results, " + c("stretches()")
       + " the latency stretches, " + c("round_trip") + ", " + c("video") + ", " + c("declarations") + ", "
@@ -85,7 +85,7 @@ S2 = p("The file is about 13 000 lines, most of them comments that carry the rea
 
 # ── 3. Login and connection ───────────────────────────────────────────────
 CONNESSIONE = seq(
-    [("Page", "pagina.html", "light"), ("Page server", "pagina.c, TCP", "dark"), ("RCP server", "WebTransport, UDP", "navy")],
+    [("Page", "page.html", "light"), ("Page server", "page.c, TCP", "dark"), ("RCP server", "WebTransport, UDP", "navy")],
     [(0, 1, "GET /fingerprint"),
      (1, 0, "SHA-256 of the session certificate", True),
      (0, 2, "WebTransport /rcp/1 with the certificate hash"),
@@ -140,7 +140,7 @@ S3 = p("The login form has two fields and a button — " + c("#username") + ", "
       "button pushes it out first — measured from DeX on 14 Aug 2026, median round trip 135 ms but worst 2161 ms, "
       "a queue rather than a slow network. Keys and buttons are never dropped.") + \
     p("Every user-facing text of the page — the login page, the reason sentences, the declarations, the logout "
-      "dialog — is in English (" + c("DECISIONI.md") + " §10.32).")
+      "dialog — is in English (" + c("DECISIONS.md") + " §10.32).")
 
 # ── 4. Capabilities ───────────────────────────────────────────────────────
 S4 = p("The HELLO capabilities say what <b>this</b> browser can do, measured where possible. An empty value is a "
@@ -174,7 +174,7 @@ S5 = p("The codec is not chosen by asking the browser's APIs. It is chosen by de
     table(["Step", "Detail"], [
         ["Probe frames", c("PROBES") + ": one 64×48 keyframe per codec and depth (" + c("hevc-8") + ", "
          + c("hevc-10") + ", " + c("h264-8") + "; two AV1 probes remain in the table, unused), left half red, right half blue, "
-         "generated by " + c("banchi/02-pagina-sonda-codec.py")],
+         "generated by " + c("benches/02-page-codec-probe.py")],
         ["Strings tried", "per codec, the declared level first, then a low-level fallback: " + c("hev1.1.6.L153.B0")
          + " / " + c("hev1.1.6.L93.B0") + " (Main), " + c("hev1.2.4.L153.B0") + " (Main10), " + c("avc1.640033")
          + " / " + c("avc1.64001f") + " (High 5.1 / 3.1)"],
@@ -188,7 +188,7 @@ S5 = p("The codec is not chosen by asking the browser's APIs. It is chosen by de
     ], "«TAB» — The codec probe") + \
     p("The preference is " + c("PREFERENCE") + " = " + c("[\"hevc\", \"h264\"]") + ": HEVC where it paints, "
       "H.264 as the universal fallback; the server makes the final choice within the intersection. AV1 left the "
-      "product in August 2026 (decided by the user on 17 August, removed from the page on 20 August; " + c("DECISIONI.md") + " §1.13-ter): Firefox for Android had neither HEVC nor "
+      "product in August 2026 (decided by the user on 17 August, removed from the page on 20 August; " + c("DECISIONS.md") + " §1.13-ter): Firefox for Android had neither HEVC nor "
       "AV1, H.264 is the only codec in hardware at both ends, and Firefox's AV1 decoder painted rectangular blocks "
       "where Chrome and " + c("dav1d") + " were clean on the same bytes. Its RCP number, 2, stays reserved "
       "forever (" + c("CODEC_RCP") + "): reusing it would make an old client paint garbage without an error. "
@@ -253,7 +253,7 @@ S7 = p("Two sizes must never be confused. The <b>canvas</b> (" + c("canvas") + "
         [c("renegotiate_view()"), "on " + c("resize") + ", at the next animation frame: re-measures the view and "
          "rescales. <b>Nothing is sent</b> and the canvas does not change"],
     ], "«TAB» — The geometry functions") + \
-    p("Since 15 August 2026 (" + c("DECISIONI.md") + " §5.0-sexies) the canvas takes the size of the client's "
+    p("Since 15 August 2026 (" + c("DECISIONS.md") + " §5.0-sexies) the canvas takes the size of the client's "
       "window. Scale 1 makes coordinate conversion the identity, removes the black bands and the interpolated "
       "text, and the request at attach restarts the capture stream, which makes Mutter deliver a frame at once "
       "instead of after 4.4 s of waiting on a still scene. Since 17 August (§5.1-bis) the canvas never changes "
@@ -404,7 +404,7 @@ S11 = p("The decoded " + c("VideoFrame") + " reaches the screen by one of three 
         ["<b>WebGL2</b> (default)", "unless " + c("?canvas=") + " names another path; if " + c("getContext(\"webgl2\")")
          + " fails, the next path is taken and logged", c("texImage2D(VideoFrame)") + " into a texture and one "
          "full-canvas triangle; the frame is closed right after the upload", "Default since 26 Sep 2026 "
-         "(" + c("DECISIONI.md") + " §9.4)"],
+         "(" + c("DECISIONS.md") + " §9.4)"],
         [c("bitmaprenderer"), c("?canvas=bmp") + " (or any other value except " + c("gl") + " and " + c("2d")
          + "), or no WebGL2", c("createImageBitmap(frame)") + " then "
          + c("transferFromImageBitmap()") + "; asynchronous, ordered by a serial number and an epoch", "The cure of the blocks, 17–20 Aug 2026 (§5.4)"],
@@ -524,11 +524,11 @@ S14 = p("Two other ways of drawing exist in the file and are off: they are kept 
          "(it stayed that way for eight days, until 21 Aug 2026: zero frames, and " + c("ROUND is not defined") + " on every frame). After 60 streams with nothing drawn, the page says so",
          "Combined with the worker it cannot work; MSE wins and the worker stays off"],
     ], "«TAB» — The two optional drawing paths") + \
-    p("Whether to delete them is a cleanup decision for the end of the project (" + c("DECISIONI.md") + " §7.16).")
+    p("Whether to delete them is a cleanup decision for the end of the project (" + c("DECISIONS.md") + " §7.16).")
 
 # ── 15. Browsers ──────────────────────────────────────────────────────────
 S15 = p("The technical minimum is WebTransport <b>and</b> WebCodecs. The list below is the user's declaration "
-        "of 22 August 2026 (" + c("DECISIONI.md") + " §7.20), on the live product, plus what has never been "
+        "of 22 August 2026 (" + c("DECISIONS.md") + " §7.20), on the live product, plus what has never been "
         "tried.", lead=True) + \
     table(["Where", "Browser", "Status", "Notes"], [
         ["Linux", "Chrome", "supported", "HEVC where the GPU decodes it, else H.264"],
@@ -546,7 +546,7 @@ S15 = p("The technical minimum is WebTransport <b>and</b> WebCodecs. The list be
          "noVNC issue #1727, also seen in KasmVNC #222 and in the native moonlight-android #573; it is not a REMOTIX "
          "defect. The page copes in two ways: since the canvas equals the window every event carries its own "
          "position, so pointing and clicking hit correctly even without hover; and since 3 October 2026 the first "
-         "click on the canvas captures the pointer where hover does not arrive (" + c("DECISIONI.md")
+         "click on the canvas captures the pointer where hover does not arrive (" + c("DECISIONS.md")
          + " §10.29). Details are in " + rif("Mouse and pointer in the classic layout") + ".", "DeX and the pointer.") + \
     ul([
         "Not settled yet: Safari on macOS and iOS has never been opened against REMOTIX.",
@@ -557,7 +557,7 @@ S15 = p("The technical minimum is WebTransport <b>and</b> WebCodecs. The list be
 
 CHAPTER = ("The browser page", [
     ("How the page is served", S1),
-    ("Structure of pagina.html", S2),
+    ("Structure of page.html", S2),
     ("The connection sequence", S3),
     ("Capabilities declared by the page", S4),
     ("Choosing the codec on the pixel", S5),

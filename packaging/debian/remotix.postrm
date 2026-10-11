@@ -1,5 +1,5 @@
 #!/bin/sh
-# remotix.postrm — after the files have been removed (fasi/17 §6.4).
+# remotix.postrm — after the files have been removed (phases/17 §6.4).
 #
 # ⛔ DECISIONI §10.12: groups, belts, firewall and switch-on are set up by the ENGINE,
 #    which records them in ITS log; it undoes them.  The package does not touch them,

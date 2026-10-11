@@ -1,12 +1,12 @@
 from build import c, code, note, p, rif, steps, table, term, tip, ul, warn
 
 # ── 20.1 ─────────────────────────────────────────────────────────────────────
-S1 = p("REMOTIX is fully English (" + c("DECISIONI.md") + " §10.38, 10 Oct 2026): code, comments, log lines, "
+S1 = p("REMOTIX is fully English (" + c("DECISIONS.md") + " §10.38, 10 Oct 2026): code, comments, log lines, "
        "bench output, documents, the page, the installer and commit messages. Only the user's own words, quoted "
        "«…» in the documents, stay in Italian, because they are the real sentence.", lead=True) + \
     table(["What", "Language", "Since"], [
-        ["documents: " + c("README.md") + ", " + c("SPECIFICHE.md") + " (specifications), " + c("RCP.md") + ", "
-         + c("DECISIONI.md") + " (decisions), " + c("LEZIONI.md") + " (lessons), " + c("FASI.md") + " (phases), "
+        ["documents: " + c("README.md") + ", " + c("SPECS.md") + " (specifications), " + c("RCP.md") + ", "
+         + c("DECISIONS.md") + " (decisions), " + c("LESSONS.md") + " (lessons), " + c("PHASES.md") + " (phases), "
          "phase documents, studies", "English; the user's «…» quotes stay Italian", "§10.38"],
         ["comments, log lines, messages of the server", "English", "§10.38"],
         ["identifiers inside the code: " + c("stage") + ", " + c("capture") + ", " + c("child") + "…",
@@ -15,7 +15,7 @@ S1 = p("REMOTIX is fully English (" + c("DECISIONI.md") + " §10.38, 10 Oct 2026
         ["public names: command-line options, " + c("REMOTIX_*") + " variables, files on disk, data keys, RCP and "
          "wire names, log areas, page names", "English (phase B), one hand-made decision per name; "
          "<b>no aliases, no upgrade migration</b>", "§10.45"],
-        ["file and folder names of the sources (" + c("src/figlio.c") + ", " + c("fasi/") + ", " + c("banchi/")
+        ["file and folder names of the sources (" + c("src/child.c") + ", " + c("phases/") + ", " + c("benches/")
          + "…)", "still Italian until the file-rename step; measurements, memory and reports keep their names "
          "(they are history)", "§10.45"],
         ["the browser page: login, warnings, errors, farewell reasons", "English", "§10.32, §10.38"],
@@ -30,11 +30,11 @@ S1 = p("REMOTIX is fully English (" + c("DECISIONI.md") + " §10.38, 10 Oct 2026
       "consistent (his words are in §10.38). Two consequences for a maintainer: in this manual, Italian names appear only as code, because "
       "they are still the real names of many source files; and administrator-facing texts live in one place "
       "per program — "
-      + c("installatore/motore/testi.go") + ", " + c("installatore/interfaccia/testi.go") + ", the page's own "
+      + c("installer/engine/texts.go") + ", " + c("installer/ui/texts.go") + ", the page's own "
       "strings — so that another language can be added later without hunting for them.") + \
     note("REMOTIX does not translate or touch the desktops. Users see their programs and their desktop in the "
          "machine's language; only REMOTIX's own text is English (§10.35).", "The desktops keep their language.") + \
-    p("<b>How a public name is chosen.</b> The rename of 11 Oct 2026 went in three steps (" + c("DECISIONI.md")
+    p("<b>How a public name is chosen.</b> The rename of 11 Oct 2026 went in three steps (" + c("DECISIONS.md")
       + " §10.45). A first, mechanical pass over every word of every file passed every static check and still broke "
       "the installation on all seven distributions; it was thrown away. Phase A then renamed only the internal "
       "identifiers and was proved identical from outside (the strings byte for byte, the same output from 82 "
@@ -68,14 +68,14 @@ S2 = p("Every statement of fact in the project carries a mark that says how much
         [c("[S]"), "read in a specification", "a design, to be measured"],
         [c("[?]"), "assumed, <b>not yet measured</b>", "only a provisional decision, written as such"],
     ], "«TAB» — The evidence marks (" + c("CODER.md") + " §5)") + \
-    p("A decision resting on a " + c("[?]") + " is a decision taken halfway (" + c("LEZIONI.md") + " §2.3-quater); "
+    p("A decision resting on a " + c("[?]") + " is a decision taken halfway (" + c("LESSONS.md") + " §2.3-quater); "
       "the difference between «the user said yes» and «a consequence I drew» is exactly what the marks keep. "
       "When a measurement contradicts a document, the document is updated <b>at the same moment</b>, with the "
       "date and the source: a reference that ages in silence is worse than no reference.") + \
     ul([
         "<b>Numbers come with their hardware and date.</b> The project's numbers come from one test machine with "
         "an integrated Intel GPU and, for some campaigns, an AMD Radeon RX 6800; a number without its machine "
-        "is not citable. A number measured under load comes with the load (" + c("LEZIONI.md") + " §1.26).",
+        "is not citable. A number measured under load comes with the load (" + c("LESSONS.md") + " §1.26).",
         "<b>Historical measurements are flagged.</b> When ffmpeg left the product (phase 18) the measurements it "
         "invalidated were removed, and the documents that keep older numbers carry a banner saying they are "
         "historical, measured on the machine of that time.",
@@ -87,7 +87,7 @@ S2 = p("Every statement of fact in the project carries a mark that says how much
     ])
 
 # ── 20.3 ─────────────────────────────────────────────────────────────────────
-S3 = p(c("DECISIONI.md") + " does not explain and does not persuade: it <b>records</b>. A decision taken aloud "
+S3 = p(c("DECISIONS.md") + " does not explain and does not persuade: it <b>records</b>. A decision taken aloud "
        "and not written is one nobody remembers in two weeks, and the first doubt reopens it from scratch.",
        lead=True) + \
     table(["Mark", "Meaning", "How it changes"], [
@@ -105,13 +105,13 @@ S3 = p(c("DECISIONI.md") + " does not explain and does not persuade: it <b>recor
       "that it was not already rejected — Flatpak and AppImage (§10.11), live canvas resizing (§5.1-bis), a "
       "graphical installer window (§10.31) and per-compositor targets (§0.5) all were, with reasons.") + \
     ul([
-        "<b>Decisions live in " + c("DECISIONI.md") + ", once.</b> Phase documents, " + c("README.md") + " and "
+        "<b>Decisions live in " + c("DECISIONS.md") + ", once.</b> Phase documents, " + c("README.md") + " and "
         "this manual refer to them; they do not copy them. Eleven registers are eleven places to search, and "
         "sooner or later two contradict each other.",
         "<b>The «later» has its own place:</b> " + c("MASTERPLAN.md") + " lists work for when the product is "
         "finished. Every entry must say <b>what it costs never to do it</b>; an entry whose «never» costs nothing "
         "is deleted. Anything that must happen before the end goes into a phase, not there.",
-        "<b>Open questions</b> are §7 of " + c("DECISIONI.md") + ": holes in the thinking, not work items.",
+        "<b>Open questions</b> are §7 of " + c("DECISIONS.md") + ": holes in the thinking, not work items.",
     ])
 
 # ── 20.4 ─────────────────────────────────────────────────────────────────────
@@ -119,21 +119,21 @@ S4 = p("The project keeps few, large documents, read in a fixed order. Agents' r
        "August 2026 ninety-four report files were removed by the user's decision, and what mattered in them "
        "had been moved into the documents below.", lead=True) + \
     table(["#", "Document", "What it holds"], [
-        ["1", c("LEZIONI.md"), "the method: how to measure, test and learn — inherited from v1, which stalled every time on "
+        ["1", c("LESSONS.md"), "the method: how to measure, test and learn — inherited from v1, which stalled every time on "
          "a measurement that did not measure what was believed. Its §0 is the five lessons worth more than all the rest"],
-        ["2", c("SPECIFICHE.md"), "what the product does and does not do"],
+        ["2", c("SPECS.md"), "what the product does and does not do"],
         ["3", c("RCP.md"), "how the two sides talk; the arbiter of the wire"],
-        ["4", c("PIANO.md") + " (plan)", "the phases in order, each with its bench and closing criterion"],
-        ["5", c("DECISIONI.md"), "why: every decision with date, author and certainty"],
+        ["4", c("PLAN.md") + " (plan)", "the phases in order, each with its bench and closing criterion"],
+        ["5", c("DECISIONS.md"), "why: every decision with date, author and certainty"],
         ["6", c("MASTERPLAN.md"), "what is done at the end, and what it costs never to do it"],
         ["—", c("CODER.md") + ", " + c("REVIEWER.md"), "the rules of whoever writes and whoever looks for contradictions; read before touching anything"],
-        ["—", c("STUDI.md") + " (studies)", "readings of the code of the browser as a client, GNOME, KDE, XFCE, LXQt, Cinnamon, gnome-remote-desktop and "
+        ["—", c("STUDIES.md") + " (studies)", "readings of the code of the browser as a client, GNOME, KDE, XFCE, LXQt, Cinnamon, gnome-remote-desktop and "
          "xpra, done before writing"],
-        ["—", c("FASI.md") + " and " + c("fasi/"), "what was done, phase by phase; a phase's document is opened when the phase opens"],
+        ["—", c("PHASES.md") + " and " + c("phases/"), "what was done, phase by phase; a phase's document is opened when the phase opens"],
     ], "«TAB» — The documents, in reading order") + \
     p("A phase document is <b>opened at the start and filled as the work goes</b>; written at the end it would "
       "be an account, in which measurements are remembered rather than recorded. Its skeleton is fixed by "
-      + c("PIANO.md") + " §0.2:") + \
+      + c("PLAN.md") + " §0.2:") + \
     code("""# Phase N — <title>
 Opened on <date> · Closed on <date>
 ## What it must produce         one line, and what the user sees and judges
@@ -141,12 +141,12 @@ Opened on <date> · Closed on <date>
 ## What was developed           files, lines, what they are for
 ## The measurements             what · expected · measured · date, the scene next to every number
 ## ⛔ What did NOT work          dead ends, with the reason, embarrassing ones included
-## The decisions produced       links to DECISIONI.md, never copies
+## The decisions produced       links to DECISIONS.md, never copies
 ## What remains [?]             what the phase leaves open, declared
 ## The user's judgement         the real sentence, with the date""", "text",
-         "The skeleton of a phase document (" + c("PIANO.md") + " §0.2): the headings, with what goes under each") + \
-    p("Four rules of the plan go with it: decisions once, in " + c("DECISIONI.md") + "; «what did not work» is "
-      "filled even when it looks bad — the seven dead ends of v1 in " + c("LEZIONI.md") + " §8 exist only because "
+         "The skeleton of a phase document (" + c("PLAN.md") + " §0.2): the headings, with what goes under each") + \
+    p("Four rules of the plan go with it: decisions once, in " + c("DECISIONS.md") + "; «what did not work» is "
+      "filled even when it looks bad — the seven dead ends of v1 in " + c("LESSONS.md") + " §8 exist only because "
       "failures were written; <b>a phase closes on a measurement judged by the user</b>, not on a complete "
       "document (invariant I8); and the bench is certified before it is believed. And one consequence worth "
       "more than the rules: <i>if you cannot write the bench at the start, you have not understood the phase yet.</i>")
@@ -184,7 +184,7 @@ S5 = p("Work is done by two kinds of agent with opposite jobs, under rules writt
          "a defect in the bench is found by nothing, and poisons every later measurement because it gives confidence"],
         ["when the code exists, before measuring it", "the product", "measuring code that already contradicts a written rule is time spent learning what was known"],
         ["before closing the phase", "the phase document", "every number has its scene, failures are there, no " + c("[?]") + " was silently promoted"],
-    ], "«TAB» — The three moments of review (" + c("PIANO.md") + " §0.4)") + \
+    ], "«TAB» — The three moments of review (" + c("PLAN.md") + " §0.4)") + \
     p("Review weighs more here than in a usual project because dropping RDP removed the external arbiter: "
       + c("mstsc") + " used to complain for free when the specification was misread, and two programs written by "
       "the same hand that agree confirm nothing. Three things replace it, none sufficient alone: " + c("RCP.md")
@@ -222,7 +222,7 @@ S6 = p("The numbers are set by the user and the technique serves them (" + c("CO
         ["Depend on the compositor, not on its surroundings", "the compositor must be followed (only it delivers frames and "
          "takes input); screen lockers, idle daemons, power managers and display managers come in four versions — "
          "when doing it ourselves once is cheaper, we do it ourselves (the lock after 30 minutes without input is "
-         "REMOTIX's, " + c("DECISIONI.md") + " §4.3)"],
+         "REMOTIX's, " + c("DECISIONS.md") + " §4.3)"],
         ["Degrade, do not fail — and declare it", "every missing dependency has a fallback, and a silent fallback is two behaviours under one label"],
         ["Talk to the compositor directly", "no portal where it means authorisation dialogs: an unattended service cannot click them"],
         ["Never wait inside the asynchronous loop", "not even in a destructor that joins a thread: a hidden wait stops every connection on that thread"],
@@ -230,13 +230,13 @@ S6 = p("The numbers are set by the user and the technique serves them (" + c("CO
         ["Silence is not zero, green is not true", "a counter must be able to see the defect it looks for"],
         ["One way to switch each cure", "the cures of phase 9 are on by default and switch off only with their command-line option — no "
          "environment variable, no build switch: two ways to switch one cure are two numbers that diverge"],
-        ["No per-compositor feature switches", "a function one desktop cannot give leaves the product (" + c("DECISIONI.md")
+        ["No per-compositor feature switches", "a function one desktop cannot give leaves the product (" + c("DECISIONS.md")
          + " §5.1-bis); per-desktop code only for how to start, capture and inject"],
         ["A protection lives in the program", "invariant I7: a fix in a configuration file is lost with the file"],
-    ], "«TAB» — Rules for writing the product (" + c("CODER.md") + " §2, §2-bis, §4; " + c("DECISIONI.md")
+    ], "«TAB» — Rules for writing the product (" + c("CODER.md") + " §2, §2-bis, §4; " + c("DECISIONS.md")
        + " §4.3, §5.1-bis)") + \
     p("Comments carry the <b>why</b> next to the how, and the source of the why: a section of " + c("RCP.md")
-      + " or " + c("DECISIONI.md") + ", a lesson, a measurement with its date. The sources are long because of "
+      + " or " + c("DECISIONS.md") + ", a lesson, a measurement with its date. The sources are long because of "
       "this, and deliberately so: the record of what was tried and failed sits next to the line it protects.") + \
     code("""U=${1:?serve l'utente}            # ⛔ the apostrophe OPENS a quotation…
 PROFILO=${2:?serve il profilo}    # …and this line ends up INSIDE the string""",
@@ -248,27 +248,27 @@ PROFILO=${2:?serve il profilo}    # …and this line ends up INSIDE the string""
       + " or double-quoted strings, and <b>a syntax check is not a test</b>: a new script is run at least once and "
       "one looks at what it <i>produced</i>, not at its exit code. Benches call a program by its absolute path, "
       "without nested " + c("sh -c") + " layers: a command nested three times lost its quotes, ran nothing and "
-      "returned 0 (" + c("LEZIONI.md") + " §1.46).")
+      "returned 0 (" + c("LESSONS.md") + " §1.46).")
 
 # ── 20.7 ─────────────────────────────────────────────────────────────────────
 S7 = p("Every commit leaves the project built, checked and documented. The list is short because most of "
        "it runs by itself; what does not run by itself is the part that is forgotten.", lead=True) + steps([
     "<b>The product builds</b>: " + c("make") + " in " + c("src/") + " (inside the build container — see "
-    + rif("Build and release") + "). The build first compares the twin RCP files with " + c("banchi/rcp/")
+    + rif("Build and release") + "). The build first compares the twin RCP files with " + c("benches/rcp/")
     + " and stops if they differ; " + c("TWIN=none") + " builds without the comparison only when declared.",
-    "<b>The installer's tests</b>, if " + c("installatore/") + " (the installer) changed: "
-    + c("installatore/costruisci.sh test") + " (gofmt, go vet and go test: state machine, register, resume, "
+    "<b>The installer's tests</b>, if " + c("installer/") + " (the installer) changed: "
+    + c("installer/build.sh test") + " (gofmt, go vet and go test: state machine, register, resume, "
     "codes, English texts).",
     "<b>The documents are updated in the same commit</b> as the change they describe: the phase document "
-    "(a measurement with its date and scene), " + c("DECISIONI.md") + " if something was decided, the chapter of "
+    "(a measurement with its date and scene), " + c("DECISIONS.md") + " if something was decided, the chapter of "
     "this manual that describes the behaviour.",
     "<b>The manual</b>, if " + c("docs/sources/") + " changed: " + c("python3 docs/sources/build.py --check")
     + ", then " + c("python3 docs/sources/build.py") + " to regenerate the published page in " + c("docs/") + ". "
     "The check fails on cited files, functions, " + c("REMOTIX_*") + " variables or " + c("RX-") + " codes that do "
     "not exist, on undocumented " + c("REMOTIX_*") + " variables read by the product, on broken internal links, "
     "and on Italian left in the text or in figure labels.",
-    "<b>Push</b>: the " + c("pre-push") + " hook (" + c("11-gancio.sh") + ", the hook script) picks the family "
-    "from the paths that changed — Markdown documents only run C16 in under a second; " + c("banchi/")
+    "<b>Push</b>: the " + c("pre-push") + " hook (" + c("11-hook.sh") + ", the hook script) picks the family "
+    "from the paths that changed — Markdown documents only run C16 in under a second; " + c("benches/")
     + " (the benches) runs the net's own checks, plus C14 (about 800 s) when the box recipes or the port map "
     "change; " + c("src/") + " runs the fast family under its 180 s ceiling; a new box recipe runs everything on "
     "the new desktop — and appends its line to the hook's register (" + c("11-gancio-registro.jsonl")
@@ -284,7 +284,7 @@ S7 = p("Every commit leaves the project built, checked and documented. The list 
         ["⭐ ⛔ ✅", "weight rather than kind: an important result, a refuted or failed one, a closed phase or "
          "checkpoint"],
     ], "«TAB» — Commit message prefixes, as the history uses them") + \
-    p("Commit messages are English from " + c("be21b85") + " on (" + c("DECISIONI.md") + " §10.38; the older "
+    p("Commit messages are English from " + c("be21b85") + " on (" + c("DECISIONS.md") + " §10.38; the older "
       "history is Italian), and apart from merges and the very first commits they start with an emoji that says what kind of change it is, and cite the "
       "section of the document they implement (for example «📋 DECISIONI §10.35: …»). This is a practice of "
       "the history, not a written rule.") + \

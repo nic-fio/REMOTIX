@@ -1,4 +1,4 @@
-# remotix — the service's directories (fasi/17 §6.4).
+# remotix — the service's directories (phases/17 §6.4).
 # /var/lib/remotix: certificates, ban, change log (modifiche.log).
 d /var/lib/remotix 0700 root root -
 # /run/remotix: the product does not use it today; it exists for the command socket.

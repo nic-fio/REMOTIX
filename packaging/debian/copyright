@@ -10,7 +10,7 @@ Copyright: 2026 Nicola Fiorillo
 License: LicenseRef-REMOTIX
 Comment: Free for personal use and for non-profit organisations; the source
  code may be read and built unmodified, not modified or redistributed
- (DECISIONI.md §10.39).  Not an open-source licence.  Its full text is the
+ (DECISIONS.md §10.39).  Not an open-source licence.  Its full text is the
  stand-alone License paragraph at the end of this file.
 
 Files: src/remotix
@@ -18,7 +18,7 @@ Copyright: 2016-2026 ngtcp2 contributors
            2019-2026 nghttp3 contributors
 License: Expat
 Comment: ngtcp2 1.25.0 and nghttp3 1.18.0 are linked STATICALLY into the binary
- /usr/libexec/remotix/remotix (fasi/17-l-installatore.md §6.3, decision D2).
+ /usr/libexec/remotix/remotix (phases/17-the-installer.md §6.3, decision D2).
  .
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -38,6 +38,6 @@ Comment: ngtcp2 1.25.0 and nghttp3 1.18.0 are linked STATICALLY into the binary
  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  THE SOFTWARE.
 
-# ⛔ LICENSE.md is the only copy of the licence text: src/costruzione/costruisci-deb.sh
+# ⛔ LICENSE.md is the only copy of the licence text: src/build-targets/build-deb.sh
 #    appends it below, line by line, when it turns packaging/debian into debian/.
 License: LicenseRef-REMOTIX

@@ -5,7 +5,7 @@
  *
  *    `mutter.h` and `kwin.h` do the same thing — they ask the compositor for a
  *    stream and receive **the number of a PipeWire node**. From there on the
- *    frames **arrive on their own**, pushed, and `cattura.c` collects them.
+ *    frames **arrive on their own**, pushed, and `capture.c` collects them.
  *
  *    On wlroots a PipeWire node does not exist. There is a Wayland protocol,
  *    `zwlr_screencopy_manager_v1`, and for every frame the whole round is made:
@@ -39,16 +39,16 @@
  *   frames and sizes, not protocol messages.
  *
  * ---------------------------------------------------------------------------
- * ⭐ WHY THIS FILE EXISTS, instead of a branch inside `cattura.c`
+ * ⭐ WHY THIS FILE EXISTS, instead of a branch inside `capture.c`
  *
- * `cattura.c` is 2,348 lines built on the push direction, and `figlio.c`
+ * `capture.c` is 2,348 lines built on the push direction, and `child.c`
  * uses it in **35 places**. ⛔ Redoing them two-way would mean touching in
  * thirty-five places the code GNOME and KDE depend on — that is, putting at
  * risk the protected baseline to needs the new desktop, which is exactly what
  * the phase 13 rule forbids.
  *
  * ⇒ The chosen form has a precedent in the house, and it is copied from there: the **clipboard**
- *   (`src/appunti.c:594-603`) has **two constructors** — `clipboard_open()` and
+ *   (`src/clipboard.c:594-603`) has **two constructors** — `clipboard_open()` and
  *   `clipboard_open_kde()` — and the public functions hand over at the top.
  *   Same here: `capture_start()` stays intact for GNOME and KDE, and this file
  *   gives the source of the other direction.
@@ -159,7 +159,7 @@ typedef struct {
 	 *      give it back with `wlr_release()`.  Until then the compositor does NOT
 	 *      write into it again — no `copy` names it.  ⚠ Whoever does not give it back
 	 *      runs out of slabs, and the next frame stops SAYING SO: a slab
-	 *      in hand is never recycled (`LEZIONI.md` §8).
+	 *      in hand is never recycled (`LESSONS.md` §8).
 	 * ------------------------------------------------------------------ */
 	bool on_card;
 	int fd;                /* ⛔ owned by `wlroots.c`: do not close         */
@@ -167,7 +167,7 @@ typedef struct {
 	uint64_t modifier; /* `[R]` always LINEAR: see `wlroots.c`           */
 	/* ⛔ It changes every time a slab is born or dies: descriptor numbers
 	 *    are recycled, and whoever caches the import of an
-	 *    `fd` (the encoder) must throw it away — `cattura.h`, `generation`. */
+	 *    `fd` (the encoder) must throw it away — `capture.h`, `generation`. */
 	uint64_t generation;
 	void *slab;          /* ⛔ opaque: passed to `wlr_release()` and nothing else */
 	/* ⭐ How long the compositor's GPU was waited on after `ready`, and whether
@@ -181,7 +181,7 @@ typedef struct {
  * Asks for a frame and waits at most `wait_s`.
  *
  * ⚠ The delivered pixels live until the next call: whoever wants to
- *   keep them copies them. ⛔ It is the same rule as `cattura.h`, and it is here because
+ *   keep them copies them. ⛔ It is the same rule as `capture.h`, and it is here because
  *   it is the rule that gets forgotten first.
  */
 WlrOutcome wlr_frame(WlrStage *stage, double wait_s, WlrFrame *report,
@@ -219,7 +219,7 @@ void wlr_cpu_read(int fd, bool start);
  * ⭐⭐ THE OUTPUT SIZE — and on this family it can be done, unlike KDE.
  *
  * ⛔⛔ AND "THE TRUTH IS TOLD BY THE FRAME, NOT BY THE OUTCOME OF THE REQUEST"
- *     (`DECISIONI.md` §5.0-sexies, the rule stolen from neatvnc).
+ *     (`DECISIONS.md` §5.0-sexies, the rule stolen from neatvnc).
  *
  *     `[M]` 14 August 2026: asking labwc for the size the output **already has**
  *     answers "succeeded" and sends no event; an old serial
@@ -263,7 +263,7 @@ void wlr_counts(const WlrStage *stage, WlrCounts *report);
  *
  * Usually frames are asked for with damage (the compositor answers only
  * when something changes).  ⚠ But a keyframe is sometimes needed at once on a still
- * desktop: it is the wake-up of `cattura.h`, and on this family it is this line.
+ * desktop: it is the wake-up of `capture.h`, and on this family it is this line.
  */
 void wlr_force_full(WlrStage *stage);
 
@@ -271,14 +271,14 @@ void wlr_force_full(WlrStage *stage);
  * ⭐⭐ THE POINTER PROBE — 24 September 2026, the true shape on labwc.
  *
  * The why and the three rules are in `wlroots.c`, above `wlr_probe_pointer`.
- * In short: with the encoded theme (`forma.h`) the compositor draws under the
+ * In short: with the encoded theme (`shape.h`) the compositor draws under the
  * hotspot a pixel of the shape's colour; the probe reads it with a 3x3
  * `capture_output_region`, and the dictionary turns it into the name.
  *
  *   wlr_probe_pointer()  after EVERY injected pointer gesture: `x`,`y`
  *                          in the `l`x`a` canvas (the same as
  *                          `wlr_input_absolute`).  Coalescing, ONE in flight.
- *   wlr_probe_shape()      the shape index (`forma.h`) if it has CHANGED
+ *   wlr_probe_shape()      the shape index (`shape.h`) if it has CHANGED
  *                          since last time, otherwise -1.  ⛔ To be called at
  *                          every turn of the loop (`capture_take` calls it):
  *                          it is also the place the "trailing" probe starts from.

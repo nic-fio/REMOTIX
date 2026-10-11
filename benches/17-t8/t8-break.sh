@@ -1,0 +1,38 @@
+#!/bin/bash
+#
+# ⛔ HISTORY (10 Oct 2026, DECISIONI §10.36): this bench tests an installer that no longer exists —
+#   separate plan/approve/apply, signed archive and install.sh, third-party repositories, firewall and
+#   belts set by the engine, answer files. Today: one .run, `install` with the [y/N] question, and
+#   REMOTIX that does not modify the system. It stays as the history of the tests of 29 Sep - 1 Oct 2026; the real
+#   run is benches/17-distro/17-t10.sh. It is not launched.
+# t8-break.sh — phase 17, T8: DELIBERATE faults in the served archive (on the server), and the restore.
+#
+#   bash t8-break.sh <fault>       before each fault the archive is saved as it is (once only)
+#   bash t8-break.sh restore
+#
+#   (the faults of chain A — catalogue, revocations, rotation — disappeared with it: DECISIONI §10.21)
+#   deb-byte | rpm-byte | pacman-byte     one metadata byte changed (R17)              ⇒ the manager refuses
+#   deb-signature | rpm-signature | pacman-signature  the metadata signed by a FOREIGN key (R17)
+#   package-byte   one byte of the remotix N+1 package changed (deb, rpm, pacman)
+set -euo pipefail
+V=/media/REMOTIX/vm17
+A=$V/${ARCHIVE_DIR:-archivio}; S=$V/t8/${ARCHIVE_DIR:-archivio}-sano; E=$V/t8/estranea.gpg
+ge() { gpg --homedir "$E" --batch --yes --pinentry-mode loopback --passphrase '' -u "$(gpg --homedir "$E" --list-keys --with-colons | awk -F: '/^fpr/{print $10; exit}')" "$@"; }
+byte() {  # changes one byte in the middle of the file
+	python3 -c "import sys; p=sys.argv[1]; b=bytearray(open(p,'rb').read()); i=len(b)//2; b[i]^=0x20; open(p,'wb').write(bytes(b))" "$1"
+}
+[ "${1:-}" = restore ] || { [ -d "$S" ] || cp -a "$A" "$S"; }
+case ${1:?fault} in
+restore)       [ -d "$S" ] && { rm -rf "$A"; cp -a "$S" "$A"; rm -rf "$S"; } ;;
+deb-byte)         byte "$A/deb/dists/debian13-stabile/main/binary-amd64/Packages"; rm -f "$A/deb/dists/debian13-stabile/main/binary-amd64/Packages.gz" ;;
+deb-signature)        d=$A/deb/dists/debian13-stabile; ge --clearsign -o "$d/InRelease" "$d/Release"; ge --armor --detach-sign -o "$d/Release.gpg" "$d/Release" ;;
+rpm-byte)         byte "$A/rpm/stabile/fedora44/repodata/repomd.xml" ;;
+rpm-signature)        ge --armor --detach-sign -o "$A/rpm/stabile/fedora44/repodata/repomd.xml.asc" "$A/rpm/stabile/fedora44/repodata/repomd.xml" ;;
+pacman-byte)      byte "$A/pacman/stabile/x86_64/remotix.db" ;;
+pacman-signature)     ge --detach-sign -o "$A/pacman/stabile/x86_64/remotix.db.sig" "$A/pacman/stabile/x86_64/remotix.db" ;;
+package-byte)   # the newest remotix of each family (the pending N+1)
+	for f in $(ls -v "$A"/deb/pool/debian13-stabile/remotix_*.deb | tail -1) $(ls -v "$A"/rpm/stabile/fedora44/remotix-[0-9]*.rpm | tail -1) \
+	         $(ls -v "$A"/pacman/stabile/x86_64/remotix-[0-9]*.pkg.tar.zst 2>/dev/null | tail -1); do byte "$f"; done ;;
+*) sed -n 3,13p "$0"; exit 2 ;;
+esac
+echo "fault: $1"

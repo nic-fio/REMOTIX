@@ -20,7 +20,7 @@
  *      by us** to `RecordVirtual`.  Mutter ignores that property, and
  *      generates the real UUID itself: v1 **never** found the region by key
  *      and fell every time on the fallback "I take the first" — green with one
- *      screen, crooked with two (`mutter.h`, `STUDI.md` §gnome §9);
+ *      screen, crooked with two (`mutter.h`, `STUDIES.md` §gnome §9);
  *   2. `ei_device_scroll_discrete`: Mutter does an **integer division by
  *      120** on it (`meta-eis-client.c:554`), and the half notches vanish.  Here we
  *      go with `scroll_delta`, where Mutter forces `SOURCE_WHEEL`, skips
@@ -102,13 +102,13 @@
  * ⭐⭐ AND THE CURE EXISTS, IT IS ONE LINE, AND IT IS NOT IN THIS FILE: release
  *     **BEFORE** asking for the resize, while the devices are
  *     still those that received the press.  The function already exists and is
- *     `input_release_all()`; the place to call it is `figlio.c:3964`,
+ *     `input_release_all()`; the place to call it is `child.c:3964`,
  *     right **before** `capture_resize(cat, canvas_intended_w,
  *     canvas_intended_h)`.  `[M]` Simulated from the wire — releasing before the
  *     replacement — the witness sees the release and the clicks after the replacement
  *     work again, all of them.
  *
- * ⚠ `figlio.c` does not belong to this link (sub-phase 6.3), so here the cure is
+ * ⚠ `child.c` does not belong to this link (sub-phase 6.3), so here the cure is
  *   MEASURED and WRITTEN, not applied.  ⛔ What falls to this file is
  *   the other half, and it is the one that was missing: **stop saying the release
  *   has left**.  Before, `send_button()` returned 0 and
@@ -118,9 +118,9 @@
  *
  * ---------------------------------------------------------------------------
  * ⛔⛔⛔ AND THERE IS A SECOND DOOR — `[M]` 21 August 2026, bench
- *       `banchi/06-b33-risveglio.*`.  ⚠ THE CURE ABOVE **DOES NOT COVER IT**.
+ *       `benches/06-b33-wakeup.*`.  ⚠ THE CURE ABOVE **DOES NOT COVER IT**.
  *
- * ⛔ **The replacement does NOT depend on the canvas.**  `[M]` with `banchi/06-b33-risveglio`,
+ * ⛔ **The replacement does NOT depend on the canvas.**  `[M]` with `benches/06-b33-wakeup`,
  *    still session and no `FIT_CANVAS`: **three `capture_wake()`, three
  *    pointer replacements** (delta of `pointer_replacements` = 1, 1, 1) and **zero**
  *    calls to `capture_resize()`.
@@ -134,12 +134,12 @@
  *   → `remove_viewport_devices()`.  ⇒ **The same chain as the resize,
  *   but without anyone having changed size.**
  *
- * ⛔ And `figlio.c:6365` calls `capture_wake()` **precisely on a still
+ * ⛔ And `child.c:6365` calls `capture_wake()` **precisely on a still
  *    desktop**, when the take is ZERO and a keyframe is owed — that is at the
  *    exact moment the user may be holding the mouse down on a
  *    scene that does not move.
  *
- * `[M]` The measurement, scene `06-b33-risveglio.sh held` (21 Aug 2026, load
+ * `[M]` The measurement, scene `06-b33-wakeup.sh held` (21 Aug 2026, load
  * 1.58-10.7, Wayland witness inside the session):
  *   · `BTN_LEFT` down → **1** wake-up → the release **NEVER arrives** at the
  *     witness, and **neither does the next fresh click** ⇒ from there the desktop
@@ -173,7 +173,7 @@
  *   call adds a client ⇒ the session and the stage are NOT touched.
  *
  * ⛔⛔ AND HERE I HAD WRITTEN A WRONG REASON, refuted by a fault
- *      grafted on 21 August 2026 (`06-b33-risveglio-guasti.py`, `RG3`).
+ *      grafted on 21 August 2026 (`06-b33-wakeup-faults.py`, `RG3`).
  *      It said: *"as long as `mutter.c`'s descriptor stays open the socket is
  *      still connected and Mutter sees no detach"*.  ⛔ `[M]` Removing
  *      that `close()` the healing works **identically**.
@@ -196,9 +196,9 @@
 
 #include "kwin.h"
 #include "mutter.h"
-#include "registro.h"
-#include "sessione.h"
-#include "tastiera.h"
+#include "log.h"
+#include "session.h"
+#include "keyboard.h"
 #include "wlr_input.h"
 
 #define AREA "input"
@@ -225,7 +225,7 @@
  *   become `60 / 120 = 0` and would have produced nothing.
  *
  * ⚠ And the 12 is MUTTER's, not the protocol's: on KWin `scroll_delta` does not
- *   produce any notch (`STUDI.md` §kde §7.2) and the way is `scroll_discrete`.
+ *   produce any notch (`STUDIES.md` §kde §7.2) and the way is `scroll_discrete`.
  *   The day `kwin.c` is written this constant is NOT carried over.
  */
 #define UNIT_PER_DELTA 12.0
@@ -246,7 +246,7 @@ struct input
 
 	/* ⛔ The ABSOLUTE device, and not "the first that can scroll": Mutter
 	 *    offers two, and the relative one has NO regions — with the relative one the pointer
-	 *    ends up wherever (`banchi/01-s7-rotella.c`, `[M]` 10 August 2026). */
+	 *    ends up wherever (`benches/01-s7-wheel.c`, `[M]` 10 August 2026). */
 	struct ei_device *pointer;
 	struct ei_device *keyboard_dev;
 	gboolean pointer_active;
@@ -497,7 +497,7 @@ static int send_button(Input *in, uint16_t code, int pressed)
 		              "silently discards a release on the new device "
 		              "(`meta-eis-client.c:612-621`).  ⛔ The SEAT still counts it down "
 		              "(`meta-seat-impl.c:899-908`) and from now on NO click arrives any more: the cure "
-		              "is to release BEFORE asking for the resize — `figlio.c:3964`, "
+		              "is to release BEFORE asking for the resize — `child.c:3964`, "
 		              "before `capture_resize()`",
 		              code, in->pointer_replacements);
 		return -1;
@@ -631,7 +631,7 @@ static void read_region(Input *in, struct ei_device *device)
  *    layout — GNOME chooses it, and `libei` hands it to us with the
  *    keyboard device, as XKB text on a descriptor.  *(The contract
  *    said "`keyboard_open("it")`"; link A5 refused that piece and
- *    was right — `input.h`/`tastiera.h`, 14 August 2026.)*
+ *    was right — `input.h`/`keyboard.h`, 14 August 2026.)*
  *
  * ⛔ And AT EVERY `DEVICE_ADDED`, not once at startup: `on_keymap_changed`
  *    (`meta-eis-client.c:761-781` `[R]`) does `eis_device_remove` +
@@ -696,7 +696,7 @@ static void read_keymap(Input *in, struct ei_device *device)
 	fingerprint = g_strdup_printf("%zu bytes, fingerprint %08x", measure, (unsigned) g_str_hash(text));
 
 	/*
-	 * ⛔ The layout is REOPENED, not updated: `tastiera.h` has no
+	 * ⛔ The layout is REOPENED, not updated: `keyboard.h` has no
 	 *    way to change the keymap under a live `Keyboard`, and that is right
 	 *    — an object that changes identity under whoever holds it is the
 	 *    defect we are measuring, not the cure.
@@ -709,7 +709,7 @@ static void read_keymap(Input *in, struct ei_device *device)
 	 * ⚠ `negotiated` is **NULL, and for now that is right** — but it must be said, because
 	 *   it has a consequence that reads like a defect:
 	 *
-	 *   `tastiera.c` compares the layout declared by the client in
+	 *   `keyboard.c` compares the layout declared by the client in
 	 *   `ATTACH` (`RCP.md` §4.5) with the session's real one, and if they do not
 	 *   match it uses the SESSION's, writing `FALLBACK DICHIARATO`.
 	 *   ⛔ With `NULL` that comparison **is never made**, so that line will never
@@ -726,14 +726,14 @@ static void read_keymap(Input *in, struct ei_device *device)
 	 *    tonight it was `NULL`.
 	 *
 	 * ⛔ The comment that stood here said that the NULL "for now is right", and
-	 *    declared the consequence: `tastiera.c` compares the layout
+	 *    declared the consequence: `keyboard.c` compares the layout
 	 *    declared by the client with the session's real one and writes
 	 *    `FALLBACK DICHIARATO` if they do not match — and with `NULL` that comparison
 	 *    **was never made**.  `[M]` bench `06-b34`, first round: that line
 	 *    appears in NONE of the rounds, not even reattaching declaring
 	 *    `us` to an `it` session.  ⇒ Whoever looked for it in the log would conclude
 	 *    "they always match", which is a different thing from "I did not look"
-	 *    (`LEZIONI.md` §1.9 rule 1).
+	 *    (`LESSONS.md` §1.9 rule 1).
 	 *
 	 * ⚠ And now it is needed twice over: with §5-bis.7 implemented WE ask the session
 	 *   to set that layout, and this line is the only one saying whether
@@ -775,7 +775,7 @@ static void read_keymap(Input *in, struct ei_device *device)
 	 *    it is lost, and kxkbrc had already been read before we wrote it.
 	 *    ⇒ The REAL keymap is the confirmation: if it is not the negotiated one, it is requested again,
 	 *    at most 3 times (a KWin that never sets it stays with the FALLBACK
-	 *    DECLARED of `tastiera.c`, not with an endless loop).
+	 *    DECLARED of `keyboard.c`, not with an endless loop).
 	 */
 	if (in->kwin && in->negotiated && in->kb_layout &&
 	    keyboard_is_this(in->kb_layout, in->negotiated) == 0 && in->kwin_requests < 3)
@@ -863,7 +863,7 @@ static void mark_orphans(Input *in, const uint8_t *map, uint8_t *orphans, uint32
 	              "⛔⛔ %u %s were PRESSED on the device the compositor has just removed: their "
 	              "release will reach NOBODY, and the seat still counts them down.  ⇒ From "
 	              "now on what passes through them is broken until the EIS channel drops.  The cure "
-	              "is to release BEFORE asking for the resize (`figlio.c:3964`)",
+	              "is to release BEFORE asking for the resize (`child.c:3964`)",
 	              amount, what);
 
 	/*
@@ -1168,11 +1168,11 @@ int input_descriptor(Input *in)
 /* ═══════════════════════════════════════════════════════════════════════════
  * ⛔⛔⛔ THE CHANNEL JUST BORN IS NOT DETACHED — cure **D4**, 25 August 2026.
  *
- * ⛔ THE FACT, `[M]` read from the core on 25 August 2026 (`fasi/10-…md` §5.1):
+ * ⛔ THE FACT, `[M]` read from the core on 25 August 2026 (`phases/10-…md` §5.1):
  *
  *       #0  ei_disconnect ()          from libei.so.1
  *       #2  input_close (…)          at input.c
- *       #3  unmount_stage (…)       at figlio.c
+ *       #3  unmount_stage (…)       at child.c
  *
  *   and from the same core the **when**: the EIS channel had been opened **33 ms
  *   earlier** and the handshake had not yet arrived.  The instruction that
@@ -1292,7 +1292,7 @@ static void detach_context(Input *in, const char *chi)
  * ⛔ THE PRICE, DECLARED: **the drag in progress is cut** —
  *    `drop_device()` sends a clean release for everything that was pressed.
  *    ⭐ But that drag **was already dead** (`[M]` 21 Aug 2026, bench
- *    `06-b33-risveglio.sh held`: after the replacement the release does not arrive and
+ *    `06-b33-wakeup.sh held`: after the replacement the release does not arrive and
  *    neither does the next click).  ⇒ A broken thing is cut and made to
  *    start again, which is a net gain.
  *    ⚠ It also costs a D-Bus round and the recreation of the devices, and in
@@ -1600,7 +1600,7 @@ int input_recanvas(Input *in, uint32_t canvas_w, uint32_t canvas_h)
 }
 
 /*
- * ⭐ PHASE 15, D-007 — `input.h`, and the why in `sessione.h` (the box of
+ * ⭐ PHASE 15, D-007 — `input.h`, and the why in `session.h` (the box of
  *    `SESSION_LABWC_KEYBOARD`).
  *
  * ⛔ The codes are evdev (`linux/input-event-codes.h`), and the keys are the
@@ -1726,7 +1726,7 @@ int input_layout(Input *in, const char *name)
 	 *     "WHAT IS THERE NOW?", NOT "WHAT DID I ASK FOR?".
 	 *
 	 * Not asking needlessly matters: a keymap replacement costs Mutter the
-	 * DESTRUCTION and recreation of the keyboard device (`STUDI.md` §gnome
+	 * DESTRUCTION and recreation of the keyboard device (`STUDIES.md` §gnome
 	 * §9), and doing it for nothing shows.
 	 *
 	 * ⛔ But the first draft remembered **what it had asked for**
@@ -1874,7 +1874,7 @@ int input_layout(Input *in, const char *name)
 	 *    an ORPHAN: its release does not leave, and never will.
 	 *
 	 * ⛔ And this function **causes the replacement on purpose**: changing the
-	 *    layout destroys and recreates the keyboard device (`STUDI.md`
+	 *    layout destroys and recreates the keyboard device (`STUDIES.md`
 	 *    §gnome §9).  ⇒ If the user is holding a modifier while
 	 *    the layout changes — and it happens: one reattaches from another keyboard
 	 *    **while typing** — that modifier stays down and the desktop becomes
@@ -1956,7 +1956,7 @@ int input_wheel(Input *in, int32_t axis_x, int32_t axis_y)
 	 */
 	/* ⭐ On KWin the notch is `scroll_discrete` in units of 120, that is those
 	 *    of `RCP.md` §7.3 just as they arrive: `scroll_delta` KWin translates
-	 *    with `deltaV120 = 0` and no notch (`STUDI.md` §kde §7.2, v1
+	 *    with `deltaV120 = 0` and no notch (`STUDIES.md` §kde §7.2, v1
 	 *    `input.c:227-251`).  The direction is the same convention as below. */
 	if (in->kwin)
 		ei_device_scroll_discrete(in->pointer, axis_x, -axis_y);
@@ -2001,7 +2001,7 @@ int input_letter(Input *in, uint32_t character)
 		 *    (`RCP.md` §7.3).  The return is 1 — neither 0 nor -1 — because the
 		 *    caller must be able to tell it from a fault.
 		 *
-		 * ⚠ AND THE LINE IS NOT WRITTEN HERE: `tastiera.c` already writes it, and
+		 * ⚠ AND THE LINE IS NOT WRITTEN HERE: `keyboard.c` already writes it, and
 		 *   puts in it WHICH layout — the only thing useful to whoever reads the
 		 *   log six hours later.  Writing it here too would mean counting
 		 *   the same characters twice (`input.h`, 14 August 2026).
@@ -2144,7 +2144,7 @@ void input_close(Input *in)
 	 *     `ei_disconnect(in->ei); ei_unref(in->ei);` without questions, and on an
 	 *     EIS channel opened a few tens of milliseconds earlier they killed the
 	 *     child with SIGSEGV **before the first frame**.
-	 * ⭐ The cure is HERE and not in the three `unmount_stage()` of `figlio.c`: the hole
+	 * ⭐ The cure is HERE and not in the three `unmount_stage()` of `child.c`: the hole
 	 *    belongs to the channel, and whoever put it in the callers would leave it uncovered for the
 	 *    fourth caller to be born.  The box above `detach_context()`
 	 *    carries the mechanism, read in the library. */
@@ -2205,7 +2205,7 @@ void input_count(const Input *in, unsigned *keys, unsigned *mouse_buttons, unsig
 /* ═══════════════════════════════════════════════════════════════════════════
  * ⭐⭐ WLROOTS — PHASE 13, INCREMENT 3: the same contract, another transport.
  *
- * ⛔ `libei` on wlroots does NOT exist (`STUDI.md` §xfce §7, `[✗]`).  The transport
+ * ⛔ `libei` on wlroots does NOT exist (`STUDIES.md` §xfce §7, `[✗]`).  The transport
  *    is `wlr_input.c` — Wayland's virtual keyboard and pointer — and here stays
  *    what on GNOME and KDE has already been paid for and measured: **the count** of
  *    `RCP.md` §11, the release at detach, the letters, the layout.
@@ -2380,7 +2380,7 @@ static int letter_wlr(Input *in, uint32_t character)
 	if (outcome < 0)
 		return -1;
 	if (outcome == 0 || how_many == 0)
-		return 1; /* ⛔ not producible: the line is written by `tastiera.c` */
+		return 1; /* ⛔ not producible: the line is written by `keyboard.c` */
 
 	/* The modifiers first, the key last; released in reverse.
 	 * ⭐ It is here that the modifiers of `wlr_input.c` do their job: the
@@ -2453,7 +2453,7 @@ static int layout_wlr(Input *in, const char *name)
  * the next remount of the stage.  With it, it comes back by itself within a second.
  *
  * `[M]` 21 September 2026, ON THE LAPTOP (private headless labwc 0.8.3, the
- * same as Trixie; witness `banchi/06-b33-testimone.c`), cutting ONLY
+ * same as Trixie; witness `benches/06-b33-witness.c`), cutting ONLY
  * our socket with `shutdown()` while `BTN_LEFT` and Shift were down:
  *   · ⭐ Shift is released by labwc by itself at the drop (the witness sees
  *     `TASTO 42 pressed 0`): the keyboard is fine without us (§7.2 n.5);

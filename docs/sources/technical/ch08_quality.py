@@ -2,7 +2,7 @@ from build import arrow, box, c, code, fig, note, p, rif, seq, table, text, tip,
 
 # ── 1. The quality contract ────────────────────────────────────────────────
 S1 = p("REMOTIX does not chase a bitrate or a quality score. It follows a short contract written by the user "
-       "in " + c("SPECIFICHE.md") + " §3 and §8 and in " + c("DECISIONI.md") + " §2–§4: what may be spent "
+       "in " + c("SPECS.md") + " §3 and §8 and in " + c("DECISIONS.md") + " §2–§4: what may be spent "
        "when there is not enough, in which order, and what must never be spent. Every mechanism of this "
        "chapter exists to keep one line of that contract, and each one says so in the log.", lead=True) + \
     table(["Rule", "What it says", "Where it is enforced"], [
@@ -29,8 +29,8 @@ S1 = p("REMOTIX does not chase a bitrate or a quality score. It follows a short 
         ["Latency of our piece", "cap 50 ms, target 40 ms, from input arrival to frame departure",
          "A design goal; the network is not counted because it is not ours"],
         ["Network floor", "30 Mbit/s", "A declared premise: below it nothing is promised, but nothing is cut either"],
-    ], "«TAB» — The numbers of SPECIFICHE.md §3 and §8") + \
-    note("since 30 September 2026 the thresholds of " + c("SPECIFICHE.md") + " §3 are design goals, not "
+    ], "«TAB» — The numbers of SPECS.md §3 and §8") + \
+    note("since 30 September 2026 the thresholds of " + c("SPECS.md") + " §3 are design goals, not "
          "measured promises: the user removed the performance tests from the acceptance criteria as too "
          "hardware-dependent. Parameters the product really uses (floor, session cap, clocks) are configuration "
             "and hold as written.", "Goals, not promises.") + \
@@ -84,9 +84,9 @@ S2 = p("Quality is not decided in one place. The encoder lives in the per-user c
         ["Audio silence", c("--no-audio-silence") + " turns it off (on)", "child · " + c("src/audio.c"),
          "An all-zero audio block is not sent"],
         "Encoder cures (phase 9, off by default: the user has not judged them)",
-        ["Quality rise", c("--quality-recovery") + " (absent = off)", "child · " + c("src/codificatore.c"),
+        ["Quality rise", c("--quality-recovery") + " (absent = off)", "child · " + c("src/encoder.c"),
          "After the 16 MiB ladder bit, climbs back one step at a time"],
-        ["Bandwidth cap", c("--bandwidth-cap-mbit N") + " (0 = off)", "child · " + c("src/codificatore.c"),
+        ["Bandwidth cap", c("--bandwidth-cap-mbit N") + " (0 = off)", "child · " + c("src/encoder.c"),
          "Switches the encoder from constant QP to QVBR with a ceiling"],
         "Capacity (phase 10)",
         ["Composition budget", c("--budget-mpixel-s N") + " (0 = off)", "parent · " + c("src/budget.c"),
@@ -108,7 +108,7 @@ S2 = p("Quality is not decided in one place. The encoder lives in the per-user c
 
 # ── 3. Encoder rate control ───────────────────────────────────────────────
 S3 = p("By default the encoder runs at a <b>constant QP of 26</b> (" + c("QP_HARDWARE") + " in "
-       + c("src/figlio.c") + ", mode " + c("CODIFICATORE_QUALITA_QP") + "), with no bitrate, no buffer and "
+       + c("src/child.c") + ", mode " + c("CODIFICATORE_QUALITA_QP") + "), with no bitrate, no buffer and "
        "no rate controller. With " + c("--bandwidth-cap-mbit N") + " it switches to <b>QVBR</b>, a rate "
        "controller with a ceiling in which the QP still acts as the quality factor.", lead=True) + \
     p("Constant QP is the direct translation of I1 and of “never coarsen”: the quantiser is fixed, so the "
@@ -149,7 +149,7 @@ S3 = p("By default the encoder runs at a <b>constant QP of 26</b> (" + c("QP_HAR
       "floor of the controller (" + c("open_vulkan_card()") + "); without the cap the card must declare CQP.") + \
     warn("the cap applies only to hardware encoding — since phase 19 there is no other kind — and the value "
          "passed is a <i>floor</i>, not a ceiling. The code comments and the phase 9 measurements use 20 Mbit/s; "
-         "the declared product floor is 30 (" + c("DECISIONI.md") + " §3.1-sexies). Whoever switches the cap on "
+         "the declared product floor is 30 (" + c("DECISIONS.md") + " §3.1-sexies). Whoever switches the cap on "
          "chooses which one to pass.", "Which floor.") + \
     p("Not settled yet: the cap and the quality rise are off by default and await the user's judgement on "
       "the real desktop; " + c("max_frame_size") + ", which QVBR would accept, is deliberately not used — a second "
@@ -229,7 +229,7 @@ wait >  threshold, a KEY in queue -> keep the deltas behind it (22 Sep 2026)
       "the deltas behind it did not shorten it, but opened a gap, which requested another large keyframe — "
       "abandons climbed by one per keyframe, 7 → 13 in 6 s, and then the dead line fired. Behind a keyframe "
       "the deltas are kept, and braking production is left to the rate regulator.") + \
-    p("The price, measured 23–24 August 2026 (bench 09-b79 together with the rate regulator; the bench was retired on 11 Oct 2026, " + c("DECISIONI.md") + " §10.44, and its results stay in " + c("fasi/09-la-qualita-e-la-degradazione.md") + "): up to "
+    p("The price, measured 23–24 August 2026 (bench 09-b79 together with the rate regulator; the bench was retired on 11 Oct 2026, " + c("DECISIONS.md") + " §10.44, and its results stay in " + c("phases/09-quality-and-degradation.md") + "): up to "
       "<b>+160 ms</b> of drift on a bad line, <b>zero</b> on a healthy one (39.85 / 40.19 / 39.63 frames/s in "
       "the three arms, no keyframes in any of them). " + c("--clear-threshold-ms 0") + " restores the old "
       "behaviour byte for byte.")
@@ -261,9 +261,9 @@ S7 = p("The rate regulator is the only mechanism that lowers the frame rate, and
          + ", how many times the backlog was read: <i>zero reads</i> means a still scene, not “zero backlog”"],
     ], "«TAB» — What the regulator depends on and what it costs") + \
     p("Measured in the phase 9 paired comparison: keyframes dropped from 51.7–88.1 % of frames to 0.0–5.6 %, "
-      "and the delivered rate rose 1.7–2.8× on the degraded profiles (" + c("DECISIONI.md") + " §3.1-septies). The "
+      "and the delivered rate rose 1.7–2.8× on the degraded profiles (" + c("DECISIONS.md") + " §3.1-septies). The "
       "price is the same +160 ms shared with the threshold.") + \
-    warn("the congestion algorithm was never chosen: " + c("src/trasporto.c") + " calls "
+    warn("the congestion algorithm was never chosen: " + c("src/transport.c") + " calls "
          + c("ngtcp2_settings_default()") + " and keeps ngtcp2's default (CUBIC). On Wi-Fi a loss-based "
          "algorithm reads radio loss as congestion and halves the window, which manufactures exactly the backlog "
          "this regulator measures (" + rif("Congestion and the send queue") + "). Not settled yet: a different algorithm "
@@ -298,7 +298,7 @@ S8 = p("A keyframe is about ten times a delta. Asking for one at every sign of t
         ["3 Mbit/s, moving desktop", "~171 ms", "371 · 462 → 1 552 · 1 595 · 1 725", "115 · 99 → 89 · 128"],
         ["1 Mbit/s, moving desktop", "600–1000 ms", "15 → 577", "57 → 47"],
     ], "«TAB» — Bench 07-b65, 21 Aug 2026 evening, test machine, alternating runs differing by one line (the bench was "
-      "retired on 11 Oct 2026, DECISIONI.md §10.44)") + \
+      "retired on 11 Oct 2026, DECISIONS.md §10.44)") + \
     p("Where there is bandwidth the cure declares itself inert (" + c("the measured bandwidth is enough: the 150 ms backstop remains")
       + ", 100 times out of 101 at 15 Mbit/s). On a narrow line the image stays broken longer after "
       "a loss — that is the price, and it is visible — and in exchange the audio, whose datagrams found "
@@ -328,7 +328,7 @@ S9 = p("The fifth cure is of another kind: it does not decide how well the deskt
       "500 ms — a margin above 10× (measured 23–24 Aug 2026, test machine, " + c("netem") + " profiles). It is the "
       "most expensive cure: a wrong threshold would throw out someone who is working, so whoever touches "
       + c("WT_LM_STALL_MS") + " must measure those two margins again.") + \
-    warn(c("DECISIONI.md") + " §3.1-quater also lists “copious loss within 1–2 s” as a cause. The code does "
+    warn(c("DECISIONS.md") + " §3.1-quater also lists “copious loss within 1–2 s” as a cause. The code does "
          "not: the loss fraction was refuted by its own bench on 23 August 2026 — " + c("bad-home")
          + " declared 512‰ and held for ten minutes, " + c("burst-heavy") + " declared 123‰ and did not. On a "
          "reordering line " + c("pkt_lost/pkt_sent") + " measures reordering, not loss. The fraction stays in "
@@ -354,7 +354,7 @@ S10 = p("Two of the five phase 9 cures change nothing the user sees, and were sw
          "102.1× less traffic on a still screen (557.6 → 5.5 kbit/s); 1 248 blocks silenced out of 1 248; "
          "+2 “missing” out of 5 000 at the client"],
     ], "«TAB» — The two invisible cures (bench 09-b84 and the ghost bench, 23–24 Aug 2026, test machine; 09-b84 "
-       "was retired on 11 Oct 2026, DECISIONI.md §10.44)") + \
+       "was retired on 11 Oct 2026, DECISIONS.md §10.44)") + \
     p("The eviction removes a false sentence rather than adding one: the old refusal claimed the user was "
       "“connected from another device” when it was usually their own dead session. The audio side is described "
       "in " + rif("Audio and clipboard") + ".")
@@ -424,7 +424,7 @@ worst(t)    = canvas_width * canvas_height * 39.54 / 1e6    Mpixel/s
 # ── 12. Admission ─────────────────────────────────────────────────────────
 ADMISSION = seq(
     [("Page", "browser", "light"), ("Transport", "webtransport.c", "blue"),
-     ("Main loop", "delivery_verdict()", "navy"), ("Budget", "budget.c", "amber"), ("Child", "figlio.c", "dark")],
+     ("Main loop", "delivery_verdict()", "navy"), ("Budget", "budget.c", "amber"), ("Child", "child.c", "dark")],
     [(0, 1, "HELLO · CREDENTIALS"),
      ("note", 2, "the PAM helper says yes"),
      (2, 2, "stages < --session-cap ?"),
@@ -453,7 +453,7 @@ S12 = p("A refusal decided after the desktop has started is not a refusal: it is
          c("0x06 BUDGET_FULL") + " — a physical limit",
          "no more capacity for another desktop; the open sessions continue; a place frees as soon as someone leaves"],
     ], "«TAB» — The two limits and their two refusals") + \
-    p("The two refusals are deliberately different (" + c("fasi/10-multi-tenant-e-il-budget.md") + " §8.1 D5): "
+    p("The two refusals are deliberately different (" + c("phases/10-multi-tenant-and-the-budget.md") + " §8.1 D5): "
       "two different facts may not share an outcome. Neither is checked on a <b>resume</b> — a user whose stage "
       "already exists is already inside both counts, and refusing their reattach would be a false no on capacity "
       "they are spending anyway. The refusal is sent <i>after</i> " + c("transport_verdict()") + ", "
@@ -471,9 +471,9 @@ S12 = p("A refusal decided after the desktop has started is not a refusal: it is
         ["verdict for «user»: ADMITTED/DENIED · " + c("denied") + " N (of which budget M) out of K requests · values in force", "at every verdict, on or off"],
     ], "«TAB» — The budget's log lines, which every capacity bench reads") + \
     p(c("--session-cap N") + " sizes the four tables that count a user — the attached seats in "
-      + c("src/rcp.c") + ", the children in " + c("src/figlio.c") + ", the presence table in " + c("src/main.c")
+      + c("src/rcp.c") + ", the children in " + c("src/child.c") + ", the presence table in " + c("src/main.c")
       + ", the stages in " + c("src/webtransport.c") + " — which used to be five hand-written copies (16, 16, 16, 16 "
-      "and an 8). " + c("MAX_IN_FLIGHT") + " in " + c("src/aiutante.c") + " stays separate on purpose: it counts PAM "
+      "and an 8). " + c("MAX_IN_FLIGHT") + " in " + c("src/helper.c") + " stays separate on purpose: it counts PAM "
       "verifications in flight, not sessions. The count of refusals, " + c("denied") + ", is written even with the "
       "budget off, because reading zero there is the fact that proves the product behaves as before.")
 
@@ -482,7 +482,7 @@ S13 = p("How many sessions fit depends on the hardware and on the scene, and is 
         "numbers below were measured on one machine — Intel Core i5-13500T with the integrated Intel UHD 770 "
         "(" + c("renderD128") + "), 31 GB, 1920×1080 H.264, GNOME — on 24–25 August 2026.", lead=True) + \
     table(["Scene", "Sessions that fit", "Note"], [
-        ["Saturated — the whole screen changes at every frame", "<b>6</b>", "The number the user judged: “considering that we are on a not particularly powerful integrated Intel card, 6 RDP sessions active at the same time does not seem a bad result to me” (DECISIONI.md §4.6-septies)"],
+        ["Saturated — the whole screen changes at every frame", "<b>6</b>", "The number the user judged: “considering that we are on a not particularly powerful integrated Intel card, 6 RDP sessions active at the same time does not seem a bad result to me” (DECISIONS.md §4.6-septies)"],
         ["Real desktop — windows, dragging, normal work", "<b>at least 11</b>", "The ceiling was not found: the bench ran out of users, not the machine"],
     ], "«TAB» — Phase 10 capacity on the Intel UHD 770") + \
     table(["Step", "Budget off", "Budget on (" + c("--budget-mpixel-s 480 --reserve 0.5") + ")"], [
@@ -517,7 +517,7 @@ REMOTIX_OPTIONS=--budget-mpixel-s 480 --reserve 0.5 --session-cap 8
         "Not settled yet: a second, network budget next to the GPU one (ten sessions × the floor on the server's "
         "uplink) was named in phase 9 and never written.",
         "Not settled yet: the ban per address, shared by tenants behind one NAT, was deferred to a security "
-        "chapter (" + c("DECISIONI.md") + " §4.6-octies).",
+        "chapter (" + c("DECISIONS.md") + " §4.6-octies).",
     ])
 
 CHAPTER = ("Quality, degradation and budget", [

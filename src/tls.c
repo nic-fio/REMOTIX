@@ -2,7 +2,7 @@
  * tls.c — see tls.h.
  */
 #include "tls.h"
-#include "registro.h"
+#include "log.h"
 
 #include <string.h>
 
@@ -91,7 +91,7 @@ SSL_CTX *tls_quic_context(const char *pem, const char *key)
 	 *    REPLAYED, and the second RCP message is `CREDENTIALS`; the gain
 	 *    would be one network round trip on a session that lasts hours.
 	 *
-	 * ⚠ And the symptom of 0-RTT left on DOES NOT EXIST (`FASI.md` §01-filo-nudo, B2):
+	 * ⚠ And the symptom of 0-RTT left on DOES NOT EXIST (`PHASES.md` §01-filo-nudo, B2):
 	 *   the session opens the same and the bytes come back the same.  The
 	 *   libraries offer it by default, so leaving it as it is is not a choice:
 	 *   it is an oversight that no functional bench sees.  Here it is turned
