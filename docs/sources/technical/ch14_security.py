@@ -264,7 +264,7 @@ S5 = p("Three failed authentications from the same address within five minutes, 
     table(["Aspect", "Behaviour"], [
         ["File", "Default " + c("/var/lib/remotix/ban") + ": one line " + c("<key> <epoch-seconds-of-expiry>")
          + " per banned address, only those still banned"],
-        ["Writing", "At every change (new ban, unlock), to " + c("<file>.new") + " (nuovo = new) then " + c("rename()")
+        ["Writing", "At every change (new ban, unlock), to " + c("<file>.new") + " then " + c("rename()")
          + ": a file truncated by a crash would claim «these addresses were not banned»"],
         ["Clock", "Epoch seconds on disk, monotonic in memory: a monotonic time written to disk is meaningless after "
          "a restart"],
@@ -452,7 +452,7 @@ S9 = p("«The key of everything is that REMOTIX does not modify the systems it i
 S10 = p("On 15 Aug 2026 the user decided that nobody powers off, reboots, suspends or hibernates the server — not even "
         "who sits in front of it — because powering off takes away every session at once and whoever does it does "
         "not see who is connected (" + c("DECISIONI.md") + " §4.7). Three «belts» implement it. Since §10.12 and "
-        "§10.36 they are shipped inert in " + c("/usr/share/remotix/belts/") + " (belts = belts), where nothing reads them, and "
+        "§10.36 they are shipped inert in " + c("/usr/share/remotix/belts/") + ", where nothing reads them, and "
         "the installer no longer applies them.", lead=True) + \
     table(["Belt", "Shipped as", "Would go in", "What it does"], [
         ["polkit rule", c("50-remotix-no-poweroff.rules") + " (no power-off)", c("/etc/polkit-1/rules.d/"), "Returns "

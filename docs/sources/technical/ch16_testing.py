@@ -658,7 +658,7 @@ S12 = p("When an encoder path changes, the old path stays alive as a term of com
     ], "«TAB» — Encoder and platform benches") + \
     p("Three small folders complete the picture. " + c("rcp/") + " holds the twin of the RCP module that phase 1 "
       "grafted into ngtcp2's example server; the build of the product refuses to compile if the two copies "
-      "differ, and " + c("TWIN=none") + " (twin = none) must be declared to build without the comparison. "
+      "differ, and " + c("TWIN=none") + " must be declared to build without the comparison. "
       + c("prodotto/") + " has the smoke test of the server inside the build container (" + c("fumo.sh") + ", smoke) and "
       "its pages; " + c("sonda/") + " a real-browser probe that collects what the page saw.")
 

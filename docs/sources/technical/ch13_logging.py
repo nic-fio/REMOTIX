@@ -446,7 +446,7 @@ S10 = p("REMOTIX reads almost nothing from the environment, on purpose: a cure t
          "e.g. " + c("--name 192.168.1.10") + " for users who connect by address (the last " + c("--name") + " wins). "
          "Empty by default."],
         [c("REMOTIX_VULKAN_CONVERSION") + " (conversion)", "Process environment, bench only", c("vulkanvideo.c"),
-         "Value " + c("copy") + " (copy) forces the copy path of the RGB→NV12 conversion even where the card accepts the shader "
+         "Value " + c("copy") + " forces the copy path of the RGB→NV12 conversion even where the card accepts the shader "
          "writing the encoder input directly; used to measure it and to exercise the branch other cards take."],
         [c("REMOTIX_TEST_CHILD") + " (test child)", "Process environment, tests only", c("installatore/motore/ripresa_test.go"),
          "Value " + c("1") + " makes the Go test binary act as the installer engine that the test kills with "
