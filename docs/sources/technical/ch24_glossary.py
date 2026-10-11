@@ -5,163 +5,182 @@ def v(*titoli):
     return " See " + ", ".join(rif(t) for t in titoli) + "."
 
 
-# ── Italian names met in the code ───────────────────────────────────────────
+# ── The project's own words ─────────────────────────────────────────────────
+# Since the English rename (DECISIONI.md §10.38, §10.45) the identifiers are English; many source files still
+# carry their Italian names until the file-rename step (aiutante.c, figlio.c, sessione.c…), so a term is given
+# with the file that holds it.
 NOMI = [
-    (c("aiutante"), "<i>Helper.</i> The PAM helper process: a dispatcher started once at boot that forks one short-lived "
-     "grandchild per password check, so that PAM, which can take seconds, never blocks the server's single loop "
-     "(" + c("aiutante.c") + ")." + v("The PAM helper process")),
-    (c("anello"), "<i>Link, loop, ring.</i> Three senses, three words. <i>Link</i>: one link of the chain a phase "
-     "builds — capture, encoding, wire, decoding, input; a module's header says which link of which phase it is, and "
-     "each link has its own bench. <i>Loop</i>: a delay loop or a closed loop, input to glass included. <i>Ring</i> "
-     "only for the audio ring buffer."),
-    (c("clipboard"), "<i>Clipboard.</i> Plain text only, in both directions, announced first and pulled on demand ("
-     + c("appunti.c") + " on GNOME, " + c("appunti_kde.c") + " on KDE and labwc)." + v("Clipboard at a glance")),
-    (c("attore"), "<i>Actor.</i> One simulated user of the stress benches: its own process, browser, labwc and "
-     "clock, no conductor (" + c("16-attore.py") + ")." + v("Stress and capacity benches")),
-    (c("bench") + ", " + c("banchi"), "<i>Bench, benches.</i> A test or a measurement, with its scene, its "
-     "verdict and its results kept next to it, in " + c("banchi/") + ". " + c("BANCO_ACCESO") + " is the build "
-     "switch of the bench functions, 0 in the product." + v("The bench folder")),
-    (c("budget"), "The optional composition budget: an admission check in megapixels per second, off by default ("
+    ("actor", "One simulated user of the stress benches: its own process, browser, labwc and clock, no conductor ("
+     + c("16-attore.py") + ")." + v("Stress and capacity benches")),
+    ("attach slot", "A user's place in RCP's registry: one per user, freed on detach or after 30 s of silence. The "
+     "logind and Mutter <i>seat</i> stays <i>seat</i>." + v("Detach and reattach")),
+    ("backstop", "A time limit that ends a wait whatever happens (" + c("CLIPBOARD_BACKSTOP") + ")."),
+    ("belts", "The three system settings that forbid power-off, reboot and suspend: a polkit rule, logind key "
+     "settings and sleep settings. The packages ship them inert in " + c("/usr/share/remotix/belts/") + "."
+     + v("The power belts, shipped inert")),
+    ("bench, benches", "A test or a measurement, with its scene, its verdict and its results kept next to it, in "
+     + c("banchi/") + ". " + c("BENCH_ON") + " is the build switch of the bench functions, 0 in the product."
+     + v("The bench folder")),
+    ("boxes", "The podman containers with systemd and the real graphics card in which the safety net runs, one per "
+     "desktop (" + c("rete11-gnome") + " … " + c("rete11-lxqt") + ")." + v("The boxes of the safety net")),
+    ("bridge", c("struct bridge") + ", which carries the transport and the children table to the callbacks; "
+     + c("main.c") + " is the only file that knows both." + v("The parent process")),
+    ("budget", "The optional composition budget: an admission check in megapixels per second, off by default ("
      + c("--budget-mpixel-s") + ")." + v("The composition budget")),
-    (c("capture"), "<i>Capture.</i> Reading the pixels of the session's virtual output from the compositor: a "
-     "PipeWire node on GNOME and KDE, screencopy on labwc (" + c("cattura.c") + ", " + c("wlroots.c") + ")."
-     + v("Capture at a glance")),
-    (c("certifica"), "<i>Certify.</i> In a bench, " + c("--certify") + " runs the pure judges on synthetic inputs "
-     "that must give red and inputs that must stay green; in the installer, the platform certification after "
-     "installing (" + c("certifica.go") + ")." + v("Rules every bench follows", "Verification and the certificate")),
-    (c("key"), "<i>Key</i>, that is keyframe. " + c("REQUEST_KEY") + " asks for one; the child keeps a debt ("
-     + c("debito_chiave") + ") until it has produced it." + v("Keyframes on demand")),
-    (c("belts"), "<i>Belts.</i> The three system settings that forbid power-off, reboot and suspend: a polkit "
-     "rule, logind key settings and sleep settings. The packages ship them inert in "
-     + c("/usr/share/remotix/belts/") + "." + v("The power belts, shipped inert")),
-    (c("codificatore"), "<i>Encoder.</i> The front of video encoding: picks Vulkan Video or VA-API by capability, "
-     "checks the bytes, owes keyframes, enforces the 16 MiB ceiling (" + c("codificatore.c") + ")."
-     + v("Encoding at a glance")),
-    (c("confessione"), "<i>Confession.</i> What the encoder declares it really produced, read back from the "
-     "bytes: codec string, depth, a promotion from 8 to 10 bits, the route used (" + c("CodificatoreConfessione")
-     + ")." + v("Bytes, levels and the confession")),
-    (c("FAREWELL"), "<i>Farewell.</i> The RCP message that closes a session, always with a reason code; the reason "
-     "is repeated in the WebTransport close code." + v("RCP: the farewell", "Disconnect reasons")),
-    (c("copia zero"), "<i>Zero copy</i> (" + c("ZERO_COPY") + "). The frame never leaves the GPU between "
-     "compositor and encoder; the default." + v("Zero copy and the memory fallback")),
-    (c("cucitura"), "<i>Seam.</i> A header that joins two pieces and is owned by the coordinator, not by either "
-     "piece: " + c("input.h") + ", " + c("appunti.h") + ", " + c("cursore.h") + ", " + c("tastiera.h")
-     + ". The defects of phase 3 lived between pieces each correct on its own."),
-    (c("cursore") + ", " + c("forma"), "<i>Cursor, shape.</i> The pointer is drawn by the page; only its shape "
-     "travels (" + c("CURSOR_SHAPE") + "). Where the compositor does not send it, an encoded theme of 1×1 "
-     "coloured images and a dictionary recover it." + v("The cursor channel", "The encoded cursor theme")),
-    (c("diary"), "<i>Diary.</i> The page's " + c("/diary") + " endpoint: the page writes its own lines into the "
-     "server log." + v("The page server")),
-    (c("defect"), "<i>Defect.</i> Something wrong in the product or in a bench, found and to be repaired. Never "
-     "the same word as " + c("fault") + "."),
-    (c("layout"), "<i>Layout</i> (keyboard). Proposed by the page in " + c("ATTACH") + "; the session's real "
-     "keymap is always the one in force." + v("Keyboard layout negotiation")),
-    (c("fondo"), "<i>Backstop</i> when it is a time limit that ends a wait whatever happens; <i>bottom</i> in "
-     + c("fondo della scala") + ", the lowest step of a ladder."),
-    (c("child"), "<i>Child.</i> One process per admitted user, running as that user: it opens the logind session, "
-     "starts the desktop and holds the stage. In " + c("ps") + " it is " + c("remotix-child --internal-child") + "."
-     + v("The per-user child process")),
-    (c("gancio"), "<i>Hook.</i> " + c("11-gancio.sh") + ", the git " + c("pre-push") + " hook that runs the "
-     "safety net chosen by the paths that changed." + v("When the net runs: the hook")),
-    (c("gemello"), "<i>Twin.</i> The copy of " + c("rcp.c") + ", " + c("rcp.h") + " and " + c("autenticazione.c")
-     + " in " + c("banchi/rcp/") + "; " + c("make") + " refuses to build if the two differ (" + c("TWIN")
-     + " names the folder)." + v("The twin-copy check")),
-    (c("round"), "<i>Round.</i> One full pass of a suite or a net (round 1, round 2); never <i>run</i>."),
-    (c("fault"), "<i>Fault.</i> A fault grafted on purpose by a bench to prove that its judge sees it; also the "
-     "fault in the sense of whose fault it is (" + c("colpa") + ": fault, blame). Never the same word as "
-     + c("defect") + ", which is a defect."),
-    (c("impronta"), "<i>Fingerprint.</i> Four different things: the SHA-256 of the session certificate the page "
-     "fetches from " + c("/fingerprint") + "; the installer's machine fingerprint that binds a plan; the "
-     + c("fingerprints") + " target of the Makefile (the twin check); the folder fingerprint of test R1."
-     + v("serverCertificateHashes and the fingerprint", "The machine fingerprint")),
-    (c("innesto") + ", " + c("innestare"), "<i>Graft, grafted.</i> Code added on purpose to a copy of the product "
-     "or of a third-party example, a fault grafted by a bench included. Never <i>inject</i>, which is only for "
-     + c("iniettare") + "."),
-    (c("incremento"), "<i>Increment.</i> A new capability or desktop added while every certified one is kept, "
-     "through the gates CP0 onwards." + v("The increment method")),
-    (c("tenant"), "<i>Tenant.</i> A user being served. Tenants created by benches are named "
-     + c("c&lt;n&gt;u&lt;n&gt;") + " so that cleanup never touches a person's account." + v("Rules every bench follows")),
-    (c("lastra"), "<i>Slab.</i> On labwc, a GBM buffer REMOTIX owns on the compositor's render node, into which "
-     "the compositor copies each frame." + v("Slabs: zero copy on labwc")),
-    (c("LETTER") + ", " + c("KEY_POSITION"), "<i>Letter, key position.</i> Text travels as characters, "
-     "commands as evdev key positions; the child turns a letter into the keys that produce it on the session's "
-     "layout." + v("Keyboard: letters and positions", "From a letter to key positions")),
-    (c("dead line"), "<i>Dead line.</i> The detector that closes a connection which has stopped carrying "
-     "anything: 5 s of stalled video output, or 10 s without a client packet." + v("The dead line")),
-    (c("meshes"), "<i>Meshes.</i> The checks of the safety net, C1 to C24." + v("The meshes C1 to C24")),
-    (c("mark"), "<i>Mark.</i> The bench marker " + c("BENCH_MARK") + " (a coloured square painted after a known "
-     "delay, refused in the product), and the image mark read by " + c("03-marca.py") + "."
-     + v("The bench marker: BENCH_MARK")),
-    (c("metro"), "<i>Yardstick.</i> The measure a result is compared against; never <i>meter</i>."),
-    (c("engine"), "<i>Engine.</i> " + c("remotix-install") + ", the only place with installation logic; the TUI and "
-     "the command line are its faces." + v("The installer at a glance")),
-    (c("catalogo"), "<i>Catalogue.</i> " + c("catalogo.json") + ", the supported distributions, desktops, minimum "
-     "versions and rules, compiled into the engine." + v("The catalogue of platforms")),
-    (c("operazione"), "<i>Operation.</i> One installation, upgrade or uninstallation of the engine, with its "
-     "folder, state, plan and write-ahead log." + v("Operation states")),
-    (c("pacchetto unico"), "<i>Single package.</i> The " + c("remotix-X.Y.Z-R.run") + " file: a shell header and a "
-     "tar.gz with the engine and the REMOTIX packages of every target." + v("The .run file format")),
-    (c("stage"), "<i>Stage.</i> What the child mounts on the user's desktop: virtual monitor, capture, input, "
-     "clipboard, cursor. It belongs to the session and outlives every client (invariant I4); the cap counts "
-     "stages (" + c("palchi_quanti()") + ")." + v("The stage and the virtual monitor")),
-    (c("parlantina"), "<i>Chatter.</i> " + c("--verbose") + ": frame-by-frame detail lines from transport, "
-     "capture and encoder, never sent to the journal." + v("Diagnostic instruments")),
-    (c("piano"), "<i>Plan.</i> The list of steps the installer will do, with how each is done, verified and "
-     "undone, shown before the single question." + v("The installation plan")),
-    (c("ponte"), "<i>Bridge.</i> " + c("struct ponte") + ", which carries the transport and the children table to "
-     "the callbacks; " + c("main.c") + " is the only file that knows both." + v("The parent process")),
-    (c("posto"), "<i>Attach slot.</i> A user's place in RCP's registry: one per user, freed on detach or after "
-     "30 s of silence. The logind and Mutter <i>seat</i> stays <i>seat</i>." + v("Detach and reattach")),
-    (c("presenza"), "<i>Presence.</i> The table of " + c("main.c") + " that runs each user's abandonment clock, "
-     "from the birth of the stage to its end." + v("Where state lives")),
-    (c("registro"), "<i>Register, log.</i> In the server, the log module (" + c("registro.c") + "), the only place "
-     "that writes lines. In the installer, the write-ahead log of an operation (" + c("registro.go") + ")."
-     + v("The log module", "The write-ahead log and resume")),
-    (c("riserva"), "<i>Reserve.</i> " + c("--reserve") + ": the share of an idle tenant's worst case the budget "
-     "keeps aside." + v("Admission: the session cap and the budget")),
-    (c("rinvio") + ", " + c("rimando"), "<i>Postponement.</i> The pacer putting a send off to a later moment; "
-     + c("tetto ai rinvii") + " is the <i>postponement cap</i>. <i>Resend</i> is only QUIC retransmission."),
-    (c("ritmo"), "<i>Rate</i> (frame rate). The rate regulator holds a frame back when two live deltas are "
-     "still queued (" + c("arretrato") + "); the only mechanism that lowers the frame rate." + v("The rate regulator")),
-    (c("ritrovo") + ", " + c("ritrovati"), "<i>Finding again, found again.</i> Live REMOTIX desktops that no child "
-     "holds, found at startup after a restart and counted until their user returns." + v("Desktops found again after a restart")),
-    (c("climb"), "<i>Climb.</i> One ramp of the stress campaign, adding users level by level ("
-     + c("16-salita.py") + ")." + v("Stress and capacity benches")),
-    (c("UNBLOCK"), "<i>Unblock.</i> The request on the unlock socket that lifts an address ban."
-     + v("The unlock command socket")),
-    (c("boxes"), "<i>Boxes.</i> The podman containers with systemd and the real graphics card in which the safety "
-     "net runs, one per desktop (" + c("rete11-gnome") + " … " + c("rete11-lxqt") + ")." + v("The boxes of the safety net")),
-    (c("sentinella"), "<i>Sentinel.</i> The code that asks logind whether a user has a local graphical session, and "
-     "checks that the remote one has no seat." + v("The logind sentinel")),
-    (c("session"), "<i>Session.</i> Two meanings: the RCP session of one connection, and the user's graphical "
-     "session, started headless by the child (" + c("sessione.c") + ")." + v("Birth of a session")),
-    (c("sfratto"), "<i>Eviction.</i> Ghost eviction (" + c("--eviction-ms") + ", 15 s): a slot held by a silent "
-     "client goes to a new client of the same user." + v("Ghost eviction and audio silence")),
-    (c("sgombra"), "<i>Clear out.</i> The video queue threshold (" + c("--clear-threshold-ms") + "): an old delta is "
-     "abandoned only if the queue cannot drain in time." + v("The video queue threshold")),
-    (c("strade"), "<i>Routes.</i> The hardware encoding paths, " + c("vulkan") + " and " + c("vaapi") + "; the "
-     "installer requires at least one with a capable card." + v("Encoding routes and the card verdict")),
-    (c("suite"), "The functional suite: what a user does, on four desktops with real Firefox and Chrome."
-     + v("The functional suite")),
-    (c("suono"), "<i>Sound.</i> The session's virtual sink and the capture of its monitor (" + c("suono.c") + ")."
-     + v("The session sink and its capture")),
-    (c("tastiera"), "<i>Keyboard.</i> " + c("tastiera.c") + ", from a character to the key positions that produce it."
-     + v("From a letter to key positions")),
-    (c("canvas"), "<i>Canvas.</i> The size of the remote desktop, agreed at attach (" + c("FIT_CANVAS") + ", "
-     + c("CANVAS") + "), 320×240 to 4096×2304." + v("Canvas and view")),
-    (c("terreno"), "<i>Terrain.</i> What a bench needs before it can judge (users, boxes, server, scene); exit code 2 "
-     "means the terrain does not hold." + v("Rules every bench follows")),
-    (c("testimone"), "<i>Witness.</i> An independent observer a bench uses to see an effect from outside the piece "
-     "being judged — never the sender's own log."),
-    (c("cap"), "<i>Ceiling, cap.</i> A hard limit: " + c("--session-cap") + " (10 stages), "
-     + c("TETTO_FOTOGRAMMA") + " (16 MiB per frame), the handshake ceilings."
+    ("canvas", "The size of the remote desktop, agreed at attach (" + c("FIT_CANVAS") + ", " + c("CANVAS")
+     + "), 320×240 to 4096×2304." + v("Canvas and view")),
+    ("cap, ceiling", "A hard limit: " + c("--session-cap") + " (10 stages), " + c("FRAME_CAP")
+     + " (16 MiB per frame), the handshake ceilings."
      + v("Admission: the session cap and the budget", "Handshake deadlines and session states")),
-    (c("denied-users"), "<i>Denied users.</i> The list read by " + c("pam_listfile") + " in the PAM file; it holds "
-     + c("root") + ". Missing, it makes PAM refuse everyone." + v("The PAM service files")),
-    (c("verdict"), "<i>Verdict.</i> PAM's yes or no, handed back to the server; never sent sooner than one second "
-     "after " + c("CREDENTIALS") + "." + v("Credentials, the fixed delay and the address ban")),
-    (c("view"), "<i>View.</i> The size at which the page draws the canvas; it follows the window and never touches "
-     "the desktop (" + c("VIEW") + ")." + v("Canvas and view")),
+    ("capture", "Reading the pixels of the session's virtual output from the compositor: a PipeWire node on GNOME "
+     "and KDE, screencopy on labwc (" + c("cattura.c") + ", " + c("wlroots.c") + ")." + v("Capture at a glance")),
+    ("catalogue", c("catalogo.json") + ", the supported distributions, desktops, minimum versions and rules, "
+     "compiled into the engine." + v("The catalogue of platforms")),
+    ("certify", "In a bench, " + c("--certify") + " runs the pure judges on synthetic inputs that must give red and "
+     "inputs that must stay green; in the installer, the platform certification after installing ("
+     + c("certifica.go") + ")." + v("Rules every bench follows", "Verification and the certificate")),
+    ("chatter", c("--verbose") + ": frame-by-frame detail lines from transport, capture and encoder, never sent "
+     "to the journal." + v("Diagnostic instruments")),
+    ("child", "One process per admitted user, running as that user: it opens the logind session, starts the desktop "
+     "and holds the stage. In " + c("ps") + " it is " + c("remotix-child --internal-child") + " (" + c("figlio.c")
+     + ")." + v("The per-user child process")),
+    ("clear (the video queue)", "The video queue threshold (" + c("--clear-threshold-ms") + "): an old delta is "
+     "abandoned only if the queue cannot drain in time." + v("The video queue threshold")),
+    ("climb", "One ramp of the stress campaign, adding users level by level (" + c("16-salita.py") + ")."
+     + v("Stress and capacity benches")),
+    ("clipboard", "Plain text only, in both directions, announced first and pulled on demand (" + c("appunti.c")
+     + " on GNOME, " + c("appunti_kde.c") + " on KDE and labwc)." + v("Clipboard at a glance")),
+    ("confession", "What the encoder declares it really produced, read back from the bytes: codec string, depth, a "
+     "promotion from 8 to 10 bits, the route used (" + c("EncoderConfession") + ")." + v("Bytes, levels and the confession")),
+    ("cursor, shape", "The pointer is drawn by the page; only its shape travels (" + c("CURSOR_SHAPE") + "). Where "
+     "the compositor does not send it, an encoded theme of 1×1 coloured images and a dictionary recover it ("
+     + c("cursore.c") + ", " + c("forma.c") + ")." + v("The cursor channel", "The encoded cursor theme")),
+    ("dead line", "The detector that closes a connection which has stopped carrying anything: 5 s of stalled video "
+     "output, or 10 s without a client packet. On by default; " + c("--no-dead-line") + " turns it off."
+     + v("The dead line")),
+    ("defect", "Something wrong in the product or in a bench, found and to be repaired. Never the same word as "
+     "<i>fault</i>."),
+    ("denied-users", "The list read by " + c("pam_listfile") + " in the PAM file (" + c("/etc/remotix/denied-users")
+     + "); it holds " + c("root") + ". Missing, it makes PAM refuse everyone." + v("The PAM service files")),
+    ("diary", "The page's " + c("/diary") + " endpoint: the page writes its own lines into the server log."
+     + v("The page server")),
+    ("encoder", "The front of video encoding: picks Vulkan Video or VA-API by capability, checks the bytes, owes "
+     "keyframes, enforces the 16 MiB ceiling (" + c("Encoder") + ", " + c("codificatore.c") + ")."
+     + v("Encoding at a glance")),
+    ("engine", c("remotix-install") + ", the only place with installation logic; the TUI and the command line are "
+     "its faces." + v("The installer at a glance")),
+    ("eviction", "Ghost eviction (" + c("--eviction-ms") + ", 15 s): a slot held by a silent client goes to a new "
+     "client of the same user." + v("Ghost eviction and audio silence")),
+    ("fault", "A fault grafted on purpose by a bench to prove that its judge sees it. Never the same word as "
+     "<i>defect</i>."),
+    ("fingerprint", "Four different things: the SHA-256 of the session certificate the page fetches from "
+     + c("/fingerprint") + "; the installer's machine fingerprint that binds a plan; the " + c("fingerprints")
+     + " target of the Makefile (the twin check); the folder fingerprint of test R1."
+     + v("serverCertificateHashes and the fingerprint", "The machine fingerprint")),
+    ("finding again, found again", "Live REMOTIX desktops that no child holds, found at startup after a restart and "
+     "counted until their user returns (" + c("FindingAgainDesktop") + ", " + c("ritrovo.c") + ")."
+     + v("Desktops found again after a restart")),
+    ("graft", "Code added on purpose to a copy of the product or of a third-party example, a fault grafted by a "
+     "bench included. Never <i>inject</i>, which is only for input."),
+    ("helper", "The PAM helper process: a dispatcher started once at boot that forks one short-lived grandchild per "
+     "password check, so that PAM, which can take seconds, never blocks the server's single loop ("
+     + c("struct helper") + ", " + c("aiutante.c") + ")." + v("The PAM helper process")),
+    ("hook", c("11-gancio.sh") + ", the git " + c("pre-push") + " hook that runs the safety net chosen by the "
+     "paths that changed." + v("When the net runs: the hook")),
+    ("increment", "A new capability or desktop added while every certified one is kept, through the gates CP0 "
+     "onwards." + v("The increment method")),
+    ("key", "That is keyframe. " + c("REQUEST_KEY") + " asks for one; the child keeps a debt (" + c("key_debt")
+     + ") until it has produced it." + v("Keyframes on demand")),
+    ("keyboard", c("tastiera.c") + ", from a character to the key positions that produce it."
+     + v("From a letter to key positions")),
+    ("layout", "The keyboard layout. Proposed by the page in " + c("ATTACH") + "; the session's real keymap is "
+     "always the one in force." + v("Keyboard layout negotiation")),
+    ("LETTER, KEY_POSITION", "Text travels as characters, commands as evdev key positions; the child turns a letter "
+     "into the keys that produce it on the session's layout." + v("Keyboard: letters and positions", "From a letter to key positions")),
+    ("link, loop, ring", "Three senses, three words. <i>Link</i>: one link of the chain a phase builds — capture, "
+     "encoding, wire, decoding, input; each link has its own bench. <i>Loop</i>: a delay loop or a closed loop, "
+     "input to glass included. <i>Ring</i> only for the audio ring buffer."),
+    ("log", "In the server, the log module (" + c("registro.c") + "), the only place that writes lines. In the "
+     "installer, the write-ahead log of an operation (" + c("registro.go") + ")."
+     + v("The log module", "The write-ahead log and resume")),
+    ("mark", "The bench marker " + c("BENCH_MARK") + ", a coloured square painted after a known delay and refused "
+     "in the product; and the image mark read by " + c("03-marca.py") + "." + v("The bench marker: BENCH_MARK")),
+    ("meshes", "The checks of the safety net, C1 to C24." + v("The meshes C1 to C24")),
+    ("nested KWin", "On KDE, KWin runs inside a labwc without a screen that the server starts in "
+     + c("--kwin-nested") + " mode; at a reattach of another size REMOTIX resizes labwc's output and KWin follows. "
+     "Without labwc, KWin " + c("--virtual") + " as before, declared (" + c("kwin.c") + ", DECISIONI.md §10.40)."
+     + v("KDE Plasma sessions")),
+    ("operation", "One installation, upgrade or uninstallation of the engine, with its folder, state, plan and "
+     "write-ahead log." + v("Operation states")),
+    ("plan", "The list of steps the installer will do, with how each is done, verified and undone, shown before the "
+     "single question." + v("The installation plan")),
+    ("postponement", "The pacer putting a send off to a later moment. <i>Resend</i> is only QUIC retransmission."),
+    ("presence", "The table of " + c("main.c") + " that runs each user's abandonment clock, from the birth of the "
+     "stage to its end." + v("Where state lives")),
+    ("rate", "The frame rate. The rate regulator holds a frame back when two live deltas are still queued (the "
+     + c("backlog") + "); the only mechanism that lowers the frame rate; on by default, " + c("--no-adaptive-rate")
+     + " turns it off." + v("The rate regulator")),
+    ("reserve", c("--reserve") + ": the share of an idle tenant's worst case the budget keeps aside."
+     + v("Admission: the session cap and the budget")),
+    ("round", "One full pass of a suite or a net (round 1, round 2); never <i>run</i>."),
+    ("routes", "The hardware encoding paths, " + c("vulkan") + " and " + c("vaapi") + " (" + c("--encoding-route")
+     + "); the installer requires at least one with a capable card." + v("Encoding routes and the card verdict")),
+    ("seam", "A header that joins two pieces and is owned by the coordinator, not by either piece: " + c("input.h")
+     + ", " + c("appunti.h") + ", " + c("cursore.h") + ", " + c("tastiera.h") + ". The defects of phase 3 lived "
+     "between pieces each correct on its own."),
+    ("sentinel", "The code that asks logind whether a user has a local graphical session, and checks that the remote "
+     "one has no seat (" + c("sentinella.c") + ")." + v("The logind sentinel")),
+    ("session", "Two meanings: the RCP session of one connection, and the user's graphical session, started headless "
+     "by the child (" + c("sessione.c") + ")." + v("Birth of a session")),
+    ("single package", "The " + c("remotix-X.Y.Z-R.run") + " file: a shell header and a tar.gz with the engine and "
+     "the REMOTIX packages of every target." + v("The .run file format")),
+    ("slab", "On labwc, a GBM buffer REMOTIX owns on the compositor's render node, into which the compositor copies "
+     "each frame (" + c("WlrSlab") + ")." + v("Slabs: zero copy on labwc")),
+    ("sound", "The session's virtual sink and the capture of its monitor (" + c("suono.c") + ")."
+     + v("The session sink and its capture")),
+    ("stage", "What the child mounts on the user's desktop: virtual monitor, capture, input, clipboard, cursor. It "
+     "belongs to the session and outlives every client (invariant I4); the cap counts stages ("
+     + c("stage_count()") + ")." + v("The stage and the virtual monitor")),
+    ("suite", "The functional suite: what a user does, on four desktops with real Firefox and Chrome."
+     + v("The functional suite")),
+    ("tenant", "A user being served. Tenants created by benches are named " + c("c&lt;n&gt;u&lt;n&gt;")
+     + " so that cleanup never touches a person's account." + v("Rules every bench follows")),
+    ("terrain", "What a bench needs before it can judge (users, boxes, server, scene); exit code 2 means the terrain "
+     "does not hold." + v("Rules every bench follows")),
+    ("twin", "The copy of " + c("rcp.c") + ", " + c("rcp.h") + " and " + c("autenticazione.c") + " in "
+     + c("banchi/rcp/") + "; " + c("make") + " refuses to build if the two differ (" + c("TWIN")
+     + " names the folder)." + v("The twin-copy check")),
+    ("UNBLOCK", "The request on the unblock socket (" + c("--command-socket") + ") that lifts an address ban."
+     + v("The unlock command socket")),
+    ("verdict", "PAM's yes or no, handed back to the server; never sent sooner than one second after "
+     + c("CREDENTIALS") + "." + v("Credentials, the fixed delay and the address ban")),
+    ("view", "The size at which the page draws the canvas; it follows the window and never touches the desktop ("
+     + c("VIEW") + ")." + v("Canvas and view")),
+    ("witness", "An independent observer a bench uses to see an effect from outside the piece being judged — never "
+     "the sender's own log."),
+    ("yardstick", "The measure a result is compared against; never <i>meter</i>."),
+    ("zero copy", c("ZERO_COPY") + ": the frame never leaves the GPU between compositor and encoder; the default."
+     + v("Zero copy and the memory fallback")),
+    ("FAREWELL", "The RCP message that closes a session, always with a reason code; the reason is repeated in the "
+     "WebTransport close code." + v("RCP: the farewell", "Disconnect reasons")),
+]
+
+# ── Names that left the product ─────────────────────────────────────────────
+RETIRED = [
+    ("Retired options", c("--ritmo-adattivo") + ", " + c("--linea-morta") + ", " + c("--linea-morta-permille")
+     + " and " + c("--sblocca") + " were removed, not renamed: the rate regulator and the dead line are on by "
+     "default (" + c("--no-adaptive-rate") + ", " + c("--no-dead-line") + " turn them off). The alias " + c("--ban")
+     + " is gone: the option is " + c("--ban-file") + ". The server refuses an unknown option."),
+    ("Italian public names", "Options, environment variables, data keys, RCP and wire names, log areas and page "
+     "names were renamed to English by hand-curated tables, with <b>no aliases and no upgrade migration</b>: "
+     "REMOTIX had never been released (DECISIONI.md §10.38, §10.45). The committed append-only registers of the "
+     "benches keep their file names, and their readers accept both spellings of the keys."),
+    ("Retired benches", "Benches that can no longer run left the repository on 11 Oct 2026 (" + c("07-b64-*")
+     + ", " + c("07-b65") + ", " + c("09-b70") + ", " + c("09-b76") + ", " + c("09-b77") + ", " + c("09-b79")
+     + ", " + c("09-b81") + ", " + c("09-b84") + " and others); their measurements stay in the phase documents "
+     "(DECISIONI.md §10.44)."),
+    ("AV1", "A video codec offered until phase 18; its RCP number 2 is reserved forever and never reused."
+     + v("Codecs and their negotiation")),
 ]
 
 # ── Protocol and technology terms ───────────────────────────────────────────
@@ -170,8 +189,6 @@ A_L = [
      "with parameter sets before every keyframe and no " + c("description") + "." + v("Bytes, levels and the confession")),
     ("Attach", "Asking for a desktop after admission: " + c("ATTACH") + " carries the wanted canvas, the view and the "
      "layout; " + c("SESSION") + " answers new or resumed." + v("ATTACH and SESSION: attaching to a desktop")),
-    ("AV1", "A video codec offered until phase 18; its RCP number 2 is reserved forever and never reused."
-     + v("Codecs and their negotiation")),
     ("BT.709", "The colour matrix of every REMOTIX stream: full-range RGB to limited-range YUV 4:2:0."
      + v("BT.709 colour conversion")),
     ("Bubble Tea", "The Go terminal interface library the installer's TUI is built on, with lipgloss."
@@ -193,8 +210,8 @@ A_L = [
      + v("Browsers supported and untested")),
     ("DMA-BUF", "A Linux buffer shared between devices and processes by file descriptor; how frames stay on the GPU "
      "from compositor to encoder." + v("Zero copy and the memory fallback")),
-    ("Drop-in", "A systemd override file. REMOTIX writes user-unit drop-ins that make gnome-shell headless and give "
-     "KWin a virtual output of the canvas size." + v("GNOME sessions", "KDE Plasma sessions")),
+    ("Drop-in", "A systemd override file. REMOTIX writes user-unit drop-ins that make gnome-shell headless and "
+     "start KWin nested at the canvas size." + v("GNOME sessions", "KDE Plasma sessions")),
     ("EIS, libei", "Emulated input: the library and protocol through which a sender injects input into a compositor. "
      "Used on GNOME and KDE; labwc has none." + v("Injection through libei")),
     ("Evidence marks", c("[M]") + " measured, " + c("[R]") + " read in reference code, " + c("[S]") + " read in a "
@@ -215,11 +232,14 @@ A_L = [
     ("Invariants I1–I8", "The eight rules of " + c("CODER.md") + " §2, quoted throughout the code (I1 the rate falls "
      "only on measure, I3 the guard starts from denied, I4 the stage outlives the client…)."
      + v("Architectural principles", "Writer and reviewer")),
-    ("Keyframe", "A frame decodable on its own (IDR, " + c("V_CHIAVE") + "), carrying its parameter sets; about ten "
+    ("Keyframe", "A frame decodable on its own (IDR, " + c("V_KEY") + "), carrying its parameter sets; about ten "
      "times a delta." + v("Keyframes on demand", "Keyframe request pacing")),
-    ("KWin", "The KDE Plasma compositor. REMOTIX starts it with " + c("--virtual") + " and captures through "
+    ("KWin", "The KDE Plasma compositor. REMOTIX starts it nested in a screenless labwc (" + c("--kwin-nested")
+     + ", " + c("--virtual") + " only where labwc is missing) and captures through "
      + c("zkde_screencast_unstable_v1") + "." + v("KDE: the KWin screencast protocol")),
-    ("labwc", "The wlroots compositor under which REMOTIX runs XFCE and LXQt." + v("XFCE sessions on labwc")),
+    ("labwc", "The wlroots compositor under which REMOTIX runs XFCE and LXQt, and the screenless host of the "
+     "nested KWin on KDE. On Alma/RHEL 10, which has none, the package ships its own labwc 0.8.4 at "
+     + c("/usr/lib/remotix/labwc") + " (DECISIONI.md §10.43)." + v("XFCE sessions on labwc")),
     ("logind", "systemd's login manager: sessions, seats, local-session checks, and the termination of REMOTIX "
      "sessions at uninstall." + v("The logind sentinel")),
 ]
@@ -294,10 +314,13 @@ M_Z = [
 ]
 
 CHAPTER = ("Glossary", [
-    ("Italian names in the code", p("The identifiers of REMOTIX are still Italian words used as terms, until the "
-                                   "rename to English decided in DECISIONI.md §10.38. They are listed here as "
-                                   "they are spelled in the sources, with their English meaning and the section "
-                                   "that explains them.", lead=True) + dl(NOMI, "gloss")),
+    ("The project's own words", p("Words REMOTIX uses as terms, in the code and in this manual, with what they "
+                                   "mean and the section that explains them. Since the English rename "
+                                   "(DECISIONI.md §10.38, §10.45) the identifiers are English; many source files "
+                                   "keep their Italian names until the file-rename step, so a term is given with "
+                                   "the file that holds it.", lead=True) + dl(NOMI, "gloss")),
+    ("Names that left the product", p("Names a maintainer may still meet in history, old measurements or commit "
+                                      "messages, and what became of them.", lead=True) + dl(RETIRED, "gloss")),
     ("Technical terms A–L", p("Protocol and technology terms used in the manual, with what they mean for "
                               "REMOTIX.", lead=True) + dl(A_L, "gloss")),
     ("Technical terms M–Z", dl(M_Z, "gloss")),

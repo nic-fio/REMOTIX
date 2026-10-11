@@ -9,10 +9,15 @@ S1 = p("REMOTIX is fully English (" + c("DECISIONI.md") + " §10.38, 10 Oct 2026
          + c("DECISIONI.md") + " (decisions), " + c("LEZIONI.md") + " (lessons), " + c("FASI.md") + " (phases), "
          "phase documents, studies", "English; the user's «…» quotes stay Italian", "§10.38"],
         ["comments, log lines, messages of the server", "English", "§10.38"],
-        ["identifiers, file and folder names, options, RCP message and capability names: " + c("stage")
-         + " (stage), " + c("capture") + " (capture), " + c("child") + " (child)…",
-         "being renamed to English mechanically, from one glossary; until then the Italian names are the real "
-         "ones", "§10.38"],
+        ["identifiers inside the code: " + c("stage") + ", " + c("capture") + ", " + c("child") + "…",
+         "English (phase A of the rename, proved identical from outside); a few internal names still carry an "
+         "Italian word, e.g. " + c("registro_dice()") + ", " + c("CodificatoreRichiesta"), "§10.38, §10.45"],
+        ["public names: command-line options, " + c("REMOTIX_*") + " variables, files on disk, data keys, RCP and "
+         "wire names, log areas, page names", "English (phase B), one hand-made decision per name; "
+         "<b>no aliases, no upgrade migration</b>", "§10.45"],
+        ["file and folder names of the sources (" + c("src/figlio.c") + ", " + c("fasi/") + ", " + c("banchi/")
+         + "…)", "still Italian until the file-rename step; measurements, memory and reports keep their names "
+         "(they are history)", "§10.45"],
         ["the browser page: login, warnings, errors, farewell reasons", "English", "§10.32, §10.38"],
         ["the installer: TUI, messages, " + c("RX-") + " code texts, catalogue texts, lines written into system "
          "files", "English", "§10.35"],
@@ -23,12 +28,30 @@ S1 = p("REMOTIX is fully English (" + c("DECISIONI.md") + " §10.38, 10 Oct 2026
     p("Why: the product is meant for system administrators outside Italy, and a project in one language is "
       "coherent: the user asked to remove Italian from the code and the documents so that everything is "
       "consistent (his words are in §10.38). Two consequences for a maintainer: in this manual, Italian names appear only as code, because "
-      "until the rename they are the real names in the sources; and administrator-facing texts live in one place "
+      "they are still the real names of many source files; and administrator-facing texts live in one place "
       "per program — "
       + c("installatore/motore/testi.go") + ", " + c("installatore/interfaccia/testi.go") + ", the page's own "
       "strings — so that another language can be added later without hunting for them.") + \
     note("REMOTIX does not translate or touch the desktops. Users see their programs and their desktop in the "
          "machine's language; only REMOTIX's own text is English (§10.35).", "The desktops keep their language.") + \
+    p("<b>How a public name is chosen.</b> The rename of 11 Oct 2026 went in three steps (" + c("DECISIONI.md")
+      + " §10.45). A first, mechanical pass over every word of every file passed every static check and still broke "
+      "the installation on all seven distributions; it was thrown away. Phase A then renamed only the internal "
+      "identifiers and was proved identical from outside (the strings byte for byte, the same output from 82 "
+      "benches, the same installation). Phase B renamed what someone outside the code can see, by hand, one "
+      "decision per name, checked against every place that reads it. The rules a maintainer follows when adding a "
+      "name are the ones phase B used:") + \
+    ul(["<b>English, and the standard word when there is one</b>: " + c("--verbose") + ", " + c("--quality-recovery")
+        + ", not a word-for-word translation of the Italian one.",
+        "<b>No aliases.</b> A renamed or retired option is removed, never kept as a second spelling: REMOTIX had no "
+        "release before 0.19.0, so there is no installed base to protect, and page and server ship together. "
+        "Retired: " + c("--ritmo-adattivo") + ", " + c("--linea-morta") + ", " + c("--linea-morta-permille") + ", "
+        + c("--sblocca") + ", and the " + c("--ban") + " alias of " + c("--ban-file") + ".",
+        "<b>No upgrade migration</b> of old names in files on disk or in settings: the user's reason, on 11 Oct 2026, was "
+        "that nobody has REMOTIX yet because it has never been released.",
+        "<b>History keeps its names.</b> The append-only registers of the benches keep their file names; new rows "
+        "get English keys and the readers accept both spellings. External names stay as they are (the test "
+        "accounts " + c("prova*") + ")."]) + \
     p("Where Italian survives in C and shell sources (a quoted sentence of the user, an old line not yet "
       "translated) accented letters are written with an apostrophe (" + c("e'") + ", " + c("puo'") + ", "
       + c("perche'") + "). Inside " + c("${…:?…}")
@@ -250,7 +273,7 @@ S7 = p("Every commit leaves the project built, checked and documented. The list 
     "change; " + c("src/") + " runs the fast family under its 180 s ceiling; a new box recipe runs everything on "
     "the new desktop — and appends its line to the hook's register (" + c("11-gancio-registro.jsonl")
     + "), which is committed like any file.",
-    "<b>Before closing a phase</b>, by name: " + c("--family all") + " (the “all” family) or the functional suite, which no path "
+    "<b>Before closing a phase</b>, by name: " + c("--family all") + " or the functional suite, which no path "
     "can infer.",
 ]) + \
     table(["Prefix", "Used for"], [
