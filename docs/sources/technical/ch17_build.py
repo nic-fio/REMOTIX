@@ -514,13 +514,12 @@ S_RELEASE = p(c("packaging/release.sh X.Y.Z-R") + " is the one command of a rele
         [c("OUTPUT"), c("costruzione-uscita/rilasci"), "where the " + c(".run") + " goes"],
         [c("RX_DIRTY=1"), "unset", "accept a dirty tree (the packages say so); never for a published release"],
     ], "«TAB» — The release's environment") + \
-    warn("three names no longer agree after the rename of §10.38: " + c("build-rpm.sh") + " now writes "
+    warn("two names no longer agree after the rename of §10.38: " + c("build-rpm.sh") + " now writes "
          + c("outcome.txt") + " with " + c("package=yes") + " while step 3 still looks for " + c("pacchetto=si")
          + " in " + c("esito.txt") + " (the release stops after the rpm builds); " + c("release.sh") + " fills "
          + c("VERSION=''") + " while the header of " + c("run.sh") + " still has " + c("VERSIONE=''") + " (the "
-         + c(".run") + " says “REMOTIX ” with no number); and the spec installs " + c("remotix_portcon.cil")
-         + " while the file in git is still " + c("remotix_portcon.cil") + " (the pending file rename). Not settled "
-         "yet: the release has not been run since.", "Code defect.") + \
+         + c(".run") + " says “REMOTIX ” with no number). Not settled yet: the release has not been run since.",
+         "Code defect.") + \
     p("Work files stay in " + c("costruzione-uscita/rilascio-X.Y.Z-R/") + ": " + c("rilascio.log") + " (the journal of "
       "the release), " + c("prove-motore.log") + " (the engine tests), the product packages, the engine packages, the payload. The rpm "
       "containers leave files owned by another sub-uid, so the folder is removed with " + c("podman unshare rm -rf")
