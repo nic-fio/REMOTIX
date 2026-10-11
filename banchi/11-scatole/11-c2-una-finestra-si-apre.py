@@ -1305,7 +1305,7 @@ def turn_on_application(chi, application, call_args, page):
         # ⛔ A literal `%` inside `--args` would blow up this line
         #    with a Python traceback instead of a message.  ⇒ Wrong usage.
         return None, ("I cannot build the arguments from «%s»: %s ⇒ in the "
-                      "template one writes `%%(pagina)s`, and a literal `%%` must be "
+                      "template one writes `%%(page)s`, and a literal `%%` must be "
                       "doubled" % (call_args, mistake))
     command = (
         # ⛔ `setsid` + stdin closed: without it, the browser ends up in a BACKGROUND
@@ -1584,7 +1584,7 @@ def one_round(chi, mode, a, referee, reader):
         return outcome
 
     # ── 4. the application ──────────────────────────────────────────────────
-    call_args = a.blind_args if mode == "cieca" else a.call_args
+    call_args = a.blind_args if mode == "cieca" else a.args
     display, err = turn_on_application(chi, a.app, call_args, a.page)
     if display is None:
         outcome["why"] = "I could not switch on the application: %s" % err
@@ -1895,9 +1895,9 @@ def main():
                         "box that paints a DECLARED colour. ⛔ It must be "
                         "moved onto a minimal Wayland client as soon as there is "
                         "one that can do it (see the top)")
-    p.add_argument("--args", default="--kiosk file://%(pagina)s",
+    p.add_argument("--args", default="--kiosk file://%(page)s",
                    help="how the application is asked to open the page")
-    p.add_argument("--blind-args", default="--headless file://%(pagina)s",
+    p.add_argument("--blind-args", default="--headless file://%(page)s",
                    help="⛔ THE «window that does not open» FAULT: the application "
                         "stays ALIVE and paints nothing")
     p.add_argument("--workdir", default="/var/lib/rete11/c2")

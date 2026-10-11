@@ -2656,7 +2656,7 @@ def main():
                    help="⚠ today the browser, because it is the only program in the "
                         "box that can paint a scene we decide. "
                         "⛔ To be moved as soon as there is another one")
-    p.add_argument("--args", default="--kiosk file://%(pagina)s")
+    p.add_argument("--args", default="--kiosk file://%(page)s")
     p.add_argument("--child-name", default="remotix",
                    help="what the tenant's process that encodes and delivers "
                         "is called, in the command line")
