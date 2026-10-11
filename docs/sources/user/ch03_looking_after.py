@@ -1,6 +1,8 @@
 """User Manual, chapter 3 — looking after an installation: checking it, updating, uninstalling, the logs.
 Sources: installer/cmd/remotix-install/main.go, installer/engine/texts.go, uninstall.go,
-packaging/debian/remotix.service and remotix.postrm, src/main.c (--journal), src/session.c (session.log)."""
+packaging/debian/remotix.service and remotix.postrm, src/main.c (--journal), src/session.c (session.log),
+src/remotix-no-poweroff.rules, packaging/*/remotix-no-suspend.conf and the belts in
+packaging/debian/rules, rpm/remotix.spec, arch/PKGBUILD."""
 from build import c, p, steps, table, term, ul, warn
 
 RUN = "remotix-X.Y.Z-R.run"
@@ -80,9 +82,38 @@ S_LOGS = p("When something does not work, the reason is written down. These are 
     p("Every message of the installer has a code (" + c("RX-…") + "); quote it when asking for help. "
       "Suggestions and bug reports are welcome as issues in the GitHub repository.")
 
+B = "/usr/share/remotix/belts/"
+
+S_SHARED = p("REMOTIX protects its own sessions: a user connected through REMOTIX cannot power off, restart or "
+             "suspend the machine.", lead=True) + \
+    p("For people sitting at the machine, the rules are the administrator's: REMOTIX does not change the "
+      "system. On a machine that many people really share, though, no ordinary user should be able to take it "
+      "down for everyone. For that case REMOTIX ships two ready-made rules, <b>switched off</b>, in the folder "
+      + c(B) + ". Nothing reads them there; each one works only once the administrator copies it into place.") + \
+    table(["File", "What it does", "Switch it on", "Switch it off"], [
+        [c(B + "50-remotix-no-poweroff.rules"),
+         "Ordinary users can no longer power off, restart, suspend or hibernate the machine (all twelve "
+         "login1 actions, also with other people signed in). " + c("sudo systemctl poweroff") +
+         " still works.",
+         c("sudo cp " + B + "50-remotix-no-poweroff.rules /etc/polkit-1/rules.d/") +
+         "<br>Nothing to reload: polkit reads it by itself.",
+         c("sudo rm /etc/polkit-1/rules.d/50-remotix-no-poweroff.rules")],
+        [c(B + "remotix-niente-sospensione.conf"),
+         "The machine cannot suspend or hibernate at all, not even for root.",
+         c("sudo mkdir -p /etc/systemd/sleep.conf.d") + "<br>" +
+         c("sudo cp " + B + "remotix-niente-sospensione.conf /etc/systemd/sleep.conf.d/") +
+         "<br>Nothing to reload.",
+         c("sudo rm /etc/systemd/sleep.conf.d/remotix-niente-sospensione.conf")],
+    ], "«TAB» — The two ready-made rules for a shared machine") + \
+    p("Each file can be switched on alone. The administrator always keeps " + c("sudo systemctl poweroff") +
+      " and " + c("sudo systemctl reboot") + ".") + \
+    warn("switching these on is the administrator's choice, and uninstalling REMOTIX does not remove files the "
+         "administrator copied: remove them with the commands in the last column.", "Whose choice.")
+
 CHAPTER = ("Looking after an installation", [
     ("Checking an installation", S_STATUS),
     ("Updating", S_UPDATE),
     ("Uninstalling", S_UNINSTALL),
+    ("On a shared machine", S_SHARED),
     ("Where the logs are", S_LOGS),
 ])
