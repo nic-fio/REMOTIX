@@ -351,7 +351,7 @@ install -D -m 0644 packaging/rpm/org.kde.remotix.desktop %{buildroot}%{_datadir}
 #   log; the paths they will go to are the VENDOR ones
 #   (/usr/share/polkit-1/rules.d/50-…, /usr/lib/systemd/{logind,sleep}.conf.d/),
 #   never /etc: an administrator's file with the same name in /etc wins (R34).
-install -D -m 0644 src/remotix-no-poweroff.rules %{buildroot}%{_datadir}/remotix/belts/50-remotix-no-poweroff.rules
+install -D -m 0644 src/remotix-no-poweroff.rules %{buildroot}%{_datadir}/polkit-1/rules.d/50-remotix-no-poweroff.rules
 install -D -m 0644 src/remotix-power-keys.conf %{buildroot}%{_datadir}/remotix/belts/remotix-power-keys.conf
 install -D -m 0644 packaging/rpm/remotix-no-suspend.conf %{buildroot}%{_datadir}/remotix/belts/remotix-no-suspend.conf
 
@@ -429,7 +429,7 @@ fi
 %{_datadir}/remotix/remotix.conf
 %{_datadir}/remotix/linked.json
 %dir %{_datadir}/remotix/belts
-%{_datadir}/remotix/belts/50-remotix-no-poweroff.rules
+%{_datadir}/polkit-1/rules.d/50-remotix-no-poweroff.rules
 %{_datadir}/remotix/belts/remotix-power-keys.conf
 %{_datadir}/remotix/belts/remotix-no-suspend.conf
 %{_unitdir}/remotix.service

@@ -215,7 +215,7 @@ package() {
 	#    `[M]` polkit 127-3: /usr/share/polkit-1/rules.d is 0755 root:root,
 	#    /etc/polkit-1/rules.d 0750 root:polkitd — worth knowing for the engine.
 	install -Dm644 "$s/remotix-no-poweroff.rules" \
-		"$pkgdir/usr/share/remotix/belts/50-remotix-no-poweroff.rules"
+		"$pkgdir/usr/share/polkit-1/rules.d/50-remotix-no-poweroff.rules"
 	install -Dm644 "$s/remotix-power-keys.conf" \
 		"$pkgdir/usr/share/remotix/belts/remotix-power-keys.conf"
 	install -Dm644 "$a/remotix-no-suspend.conf" \

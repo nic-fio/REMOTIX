@@ -80,7 +80,7 @@ override_dh_auto_install:
 	#    there); the ENGINE puts them into force, with consent (D4), and records them in
 	#    its log.
 	install -D -m 0644 src/remotix-no-poweroff.rules \
-	  $(B)/usr/share/remotix/belts/50-remotix-no-poweroff.rules
+	  $(B)/usr/share/polkit-1/rules.d/50-remotix-no-poweroff.rules
 	install -D -m 0644 src/remotix-power-keys.conf \
 	  $(B)/usr/share/remotix/belts/remotix-power-keys.conf
 	install -D -m 0644 debian/remotix-no-suspend.conf \
