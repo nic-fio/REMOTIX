@@ -26,8 +26,8 @@ static float output[MAX_FRAMES * CHANNELS];
 static int ready;
 
 /* 0 = ready; <0 = libopus error; -1000 = the state does not fit. */
-__attribute__((export_name("rx_apri")))
-int rx_apri(void)
+__attribute__((export_name("rx_open")))
+int rx_open(void)
 {
 	int n = opus_decoder_get_size(CHANNELS);
 	if (n <= 0 || n > (int)sizeof state)
@@ -37,19 +37,19 @@ int rx_apri(void)
 	return e;
 }
 
-__attribute__((export_name("rx_pacchetto")))
-unsigned char *rx_pacchetto(void) { return packet; }
+__attribute__((export_name("rx_packet")))
+unsigned char *rx_packet(void) { return packet; }
 
-__attribute__((export_name("rx_pacchetto_max")))
-int rx_pacchetto_max(void) { return MAX_PACKET; }
+__attribute__((export_name("rx_packet_max")))
+int rx_packet_max(void) { return MAX_PACKET; }
 
-__attribute__((export_name("rx_uscita")))
-float *rx_uscita(void) { return output; }
+__attribute__((export_name("rx_output")))
+float *rx_output(void) { return output; }
 
 /* Decodes the `n` bytes already copied into `packet`.  Returns the frames
  * (per channel) written into `output`, interleaved, or an error < 0. */
-__attribute__((export_name("rx_decodifica")))
-int rx_decodifica(int n)
+__attribute__((export_name("rx_decode")))
+int rx_decode(int n)
 {
 	if (!ready)
 		return OPUS_INVALID_STATE;

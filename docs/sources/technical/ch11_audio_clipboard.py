@@ -171,8 +171,8 @@ A6 = p("The page has its own Opus decoder: libopus 1.5.2 compiled to WebAssembly
       "every browser. It runs on the main thread, because a block costs about 0.1 ms and the "
       + c("AudioContext") + " lives there anyway.") + \
     table(["File", "Role"], [
-        [c("src/opus-wasm/decoder.c"), "Exports " + c("rx_apri") + " (open), " + c("rx_pacchetto") + " (packet), "
-         + c("rx_pacchetto_max") + ", " + c("rx_uscita") + " (output) and " + c("rx_decodifica") + " (decode); static state and buffers, no "
+        [c("src/opus-wasm/decoder.c"), "Exports " + c("rx_open") + " (open), " + c("rx_packet") + " (packet), "
+         + c("rx_packet_max") + ", " + c("rx_output") + " (output) and " + c("rx_decode") + " (decode); static state and buffers, no "
          "malloc, no imports, so the module is instantiated with an empty object. Output buffer for 120 ms, "
          "the Opus maximum"],
         [c("src/opus-wasm/build.sh") + " (build)", "Downloads the pinned libopus tarball, checks its SHA-256, builds in "
