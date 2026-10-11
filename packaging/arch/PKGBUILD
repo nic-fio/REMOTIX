@@ -45,8 +45,8 @@
 #   «ELF file outside of a valid path»).  Unit and .desktop follow it.
 
 pkgname=remotix
-pkgver=0.17.0
-pkgrel=3
+pkgver=0.19.0
+pkgrel=1
 pkgdesc='The Linux desktop in the browser (server: GNOME, KDE, XFCE, LXQt on Wayland)'
 arch=('x86_64')
 url='https://github.com/nic-fio/REMOTIX'

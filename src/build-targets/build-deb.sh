@@ -123,7 +123,7 @@ uno() {
 		[ "$n" = 0 ] && [ "$p" -ge 1 ] && r=SI || r=NO
 		echo "R13 banco-nel-binario $r (package: $n, positive control rcp.o with BENCH_ON 1: $p)"
 		o=$(grep "^ExecStart" $d/usr/lib/systemd/system/remotix.service | \
-		     grep -oE -- "--(survey|command-socket|audio-test|verbose|sblocca)" | sort -u | tr "\n" " ")
+		     grep -oE -- "--(survey|command-socket|audio-test|verbose)" | sort -u | tr "\n" " ")
 		[ -z "$o" ] && echo "R13 opzioni-di-banco-nell-unita SI (none)" \
 		            || echo "R13 opzioni-di-banco-nell-unita NO ($o)"
 		nere=$(dpkg-deb -c /u/'"$deb"' | awk "{print \$NF}" | \

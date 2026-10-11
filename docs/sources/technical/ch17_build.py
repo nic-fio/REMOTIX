@@ -299,13 +299,6 @@ S_DEB = p(c("packaging/debian/") + " is copied to " + c("debian/") + " in a fres
         ["R23 — reproducible (" + c("TWICE=1") + ")", "a second build in a second clean copy: the two .deb must be "
          "identical byte for byte"],
     ], "«TAB» — Checks on the finished .deb") + \
-    warn("the rename of §10.38 changed the switch in " + c("src/rcp.c") + " to " + c("#define BENCH_ON 0") + ", but "
-         + c("debian/rules") + " and the PKGBUILD's " + c("check()") + " still require the line " + c("#define BANCO_ACCESO 0")
-         + " and so refuse to build, and the positive controls of " + c("build-deb.sh") + " and "
-         + c("build-rpm.sh") + " still turn " + c("BANCO_ACCESO") + " to 1, which changes nothing (R13 red). The "
-         "Debian unit check still looks for the Italian bench options; the rpm one uses " + c("BENCH_OPTIONS")
-         + " = " + c("--survey|--command-socket|--audio-test|--verbose") + " (the retired " + c("--sblocca")
-         + " left the list with the option). Not settled yet: aligning the recipes with the code.", "Code defect.") + \
     p("Measured 29 Sep 2026 (commit cdefd1f): lintian 0 errors, 0 warnings; R13, R14, R4 green; R23 two identical "
       "builds on Debian 13 and Ubuntu 26.04. After " + c("apt install") + " on debian13-gnome and ubuntu2604-kde the "
       "service was disabled and inactive, nothing listened on 7447, groups were unchanged (phases/17 §13.2).")
@@ -453,10 +446,6 @@ installer/build.sh test              # gofmt -l, go vet ./..., go test -count=1 
 installer/build.sh go ...             # any go command in the same container
 RX_VERSION=1.0.0 installer/build.sh           # meant to stamp the version with -ldflags -X (see below)""",
          "bash", "Building the engine") + \
-    warn(c("build.sh") + " still passes " + c("-X remotix/installer/engine.VersioneMotore=$RX_VERSION")
-         + ", but since the rename of §10.38 the variable is " + c("EngineVersion") + " (" + c("format.go") + "): the "
-         "linker ignores an unknown name, the binary keeps " + c("0.1.0") + ", and " + c("release.sh") + " stops at "
-         "step 2 (“the binary does not say X.Y.Z”). Not settled yet: the one-word fix.", "Code defect.") + \
     p("Static and without cgo, the engine runs on every distribution before any package is there — Debian's glibc or "
       "Alma's. Until 10 Oct 2026 there was a second, cgo build for the Gio GUI on Debian 12's glibc; with the GUI gone "
       "(§10.31) " + c("vendor/") + " went from 37 to 14 MB and there is one build.") + \
@@ -495,7 +484,7 @@ S_RELEASE = p(c("packaging/release.sh X.Y.Z-R") + " is the one command of a rele
          "prints the catalogue line", "any " + c("FAIL") + " or " + c("gofmt:") + " line; the binary does not say X.Y.Z"],
         ["3. the product", c("build-deb.sh") + " (debian13, ubuntu2604), " + c("build-rpm.sh") + " (fedora44, "
          "alma10, tumbleweed, leap16), " + c("packaging/arch/build.sh") + ", with " + c("RX_VERSION")
-         + "/" + c("RX_REVISION"), "a recipe fails; an rpm target without " + c("pacchetto=si") + " in its " + c("esito.txt")
+         + "/" + c("RX_REVISION"), "a recipe fails; an rpm target without " + c("package=yes") + " in its " + c("outcome.txt")
          + " — but see the warning below"],
         ["4. the engine packages", c("engine-packages.sh"), "a package fails"],
         ["5. the .run", "the payload: " + c("packages/<target>/") + " = product packages + the engine package of that "
@@ -514,12 +503,6 @@ S_RELEASE = p(c("packaging/release.sh X.Y.Z-R") + " is the one command of a rele
         [c("OUTPUT"), c("costruzione-uscita/rilasci"), "where the " + c(".run") + " goes"],
         [c("RX_DIRTY=1"), "unset", "accept a dirty tree (the packages say so); never for a published release"],
     ], "«TAB» — The release's environment") + \
-    warn("two names no longer agree after the rename of §10.38: " + c("build-rpm.sh") + " now writes "
-         + c("outcome.txt") + " with " + c("package=yes") + " while step 3 still looks for " + c("pacchetto=si")
-         + " in " + c("esito.txt") + " (the release stops after the rpm builds); " + c("release.sh") + " fills "
-         + c("VERSION=''") + " while the header of " + c("run.sh") + " still has " + c("VERSIONE=''") + " (the "
-         + c(".run") + " says “REMOTIX ” with no number). Not settled yet: the release has not been run since.",
-         "Code defect.") + \
     p("Work files stay in " + c("costruzione-uscita/rilascio-X.Y.Z-R/") + ": " + c("rilascio.log") + " (the journal of "
       "the release), " + c("prove-motore.log") + " (the engine tests), the product packages, the engine packages, the payload. The rpm "
       "containers leave files owned by another sub-uid, so the folder is removed with " + c("podman unshare rm -rf")

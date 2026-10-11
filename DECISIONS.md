@@ -6560,8 +6560,8 @@ dei sysadmin, non agli utenti normali»*.
   names of the facts, step types, JSON fields, files in `/var/lib/remotix` and in the published archive, in English. The
   old → new table is in `fasi/17-l-installatore.md` §6.6.15. Formats: `remotix-install/2` and
   `remotix-answers/2`. What remains: the `RX-…` and `C-…` codes (identifiers), the catalogue format and what the
-  C product writes. ⚠ The product command `remotix` still has its options in Italian (`--port`,
-  `--address`, `--certificates`, `--encoding-test`…): a job of its own.
+  C product writes. ⚠ The product command `remotix` still had its options in Italian then (the ones now called
+  `--port`, `--address`, `--certificates`, `--encoding-test`…): phase B of the rename (§10.45) renamed them for 0.19.0.
 
 ### 10.36 ✅ The simple installer, and REMOTIX that does not modify the system (10 Oct 2026)
 

@@ -63,8 +63,8 @@ build_one()
 	if [ "$b" = alma10 ]; then
 		LABWC_SOURCES=${LABWC_SOURCES:-$TREE/costruzione-uscita/labwc-sources}
 		"$HERE/labwc/fetch.sh" "$LABWC_SOURCES" ||
-			{ echo "$b pacchetto=NO the labwc source" | tee "$u/esito.txt"; return 1; }
-		install -m 0644 "$LABWC_SOURCES"/labwc-*.tar.gz "$lav/SOURCES/"
+			{ echo "$b package=NO the labwc source" | tee "$u/outcome.txt"; return 1; }
+		install -m 0644 "$LABWC_SOURCES"/labwc-*.tar.gz "$workdir/SOURCES/"
 	fi
 	cp "$HERE/remotix.spec" "$workdir/SPECS/"
 
@@ -78,7 +78,7 @@ build_one()
 		rpm -q rpm-build rpmlint | sed "s/^/tools: /"
 		rpm --eval "dist=%{?dist} fedora=%{?fedora} rhel=%{?rhel} suse_version=%{?suse_version} pamvendor=%{?_pam_vendordir}"
 		rpmbuild -ba --define "_topdir /work" --define "rx_version '"$VER"'" --define "rx_release '"${RX_REVISION:-1}"'" '"${RX_SELINUX_PERMISSIVE:+--define \"rx_selinux_permissive 1\"}"' /work/SPECS/remotix.spec 2>&1
-		echo "rpmbuild-esito=$?"
+		echo "rpmbuild-outcome=$?"
 		ls /work/RPMS/*/*.rpm >/dev/null 2>&1 || exit 1
 		rpmlint /work/SPECS/remotix.spec /work/RPMS/*/*.rpm /work/SRPMS/*.rpm >/work/rpmlint.txt 2>&1
 		p=$(ls /work/RPMS/x86_64/remotix-[0-9]*.rpm)
