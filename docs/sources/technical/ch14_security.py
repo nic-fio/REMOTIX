@@ -1,4 +1,4 @@
-from build import arrow, box, c, code, fig, note, p, rif, seq, steps, table, text, tip, warn, zone
+from build import arrow, box, c, code, fig, note, p, rif, seq, steps, sysf, table, text, tip, warn, zone
 
 # ── 14.1 The security model ──────────────────────────────────────────────
 ZONE = fig(
@@ -56,7 +56,7 @@ S2 = p("The server makes its own certificates — two of them, on purpose (" + c
        "weeks, «and nobody would connect the two things».", lead=True) + \
     table(["", "Page certificate (long-lived)", "Session certificate (short-lived)"], [
         ["Serves", "The page, over TCP (HTTP/1.1)", "The WebTransport session, over QUIC"],
-        ["Files in " + c("--certificates"), c("page.pem") + ", " + c("page.key") + ", mark " + c("page.ours") + " (nostro = ours)",
+        ["Files in " + c("--certificates"), c("page.pem") + ", " + c("page.key") + ", mark " + c("page.ours") + ",",
          c("session.pem") + ", " + c("session.key") + ", mark " + c("session.ours")],
         ["Validity", c("CERT_DAYS_PAGE") + " = 365 days", c("CERT_DAYS_SESSION") + " = 13 days, below the "
          "14-day ceiling browsers impose on " + c("serverCertificateHashes")],
@@ -102,7 +102,7 @@ S2 = p("The server makes its own certificates — two of them, on purpose (" + c
         ["Key check", c("SSL_CTX_check_private_key") + ": a mismatch refuses the context", "Same"],
     ], "«TAB» — The two TLS contexts") + \
     p("0-RTT is off because early data can be <b>replayed</b>, and the client's second RCP message is " + c("CREDENTIALS")
-      + " (credentials); the gain would be one round trip on a session that lasts hours. The symptom of 0-RTT left on does not "
+      + "; the gain would be one round trip on a session that lasts hours. The symptom of 0-RTT left on does not "
       "exist — the session opens the same — and libraries offer it by default (ngtcp2's example even sets it to "
       + c("UINT32_MAX") + "), so leaving it alone would be a distraction no functional bench sees. The page's "
       "responses carry " + c("Cross-Origin-Opener-Policy: same-origin") + ", "
@@ -137,7 +137,7 @@ S3 = p("The server runs one " + c("poll") + " loop for every connected user, and
          "Call PAM"],
         ["Dispatcher (" + c("aiutante.c") + ", the PAM helper)", "Started once at startup, before any listening socket exists; reads "
          "a request and forks", "Call PAM"],
-        ["Grandchild", "Calls " + c("rcp_authenticate_from()") + " (authenticate, with the client address) <b>once</b>, writes one byte, exits", "Live on: "
+        ["Grandchild", "Calls " + c("rcp_authenticate_from()") + " <b>once</b>, writes one byte, exits", "Live on: "
          + c("alarm") + " after " + c("GRANDCHILD_ALARM_S") + " = 20 s"],
     ], "«TAB» — Three levels, so that PAM's re-entrancy is not managed but out of play") + \
     p("One process per transaction was chosen over a thread by the user: PAM is not reliably re-entrant, and its "
@@ -149,16 +149,16 @@ S3 = p("The server runs one " + c("poll") + " loop for every connected user, and
     table(["Road to failure", "Outcome"], [
         ["Helper not started", "At startup: the parent declares it and falls back to the synchronous check, which stops "
          "the loop for 1–2 s per attempt; on a helper that is not running " + c("helper_ask()")
-         + " (ask the helper) returns false ⇒ no"],
+         + " returns false ⇒ no"],
         ["Socket full, " + c("EAGAIN"), "No"],
-        ["More than " + c("MAX_IN_FLIGHT") + " (in flight) = 16 cases in flight", "No. Sized on the peak of <i>arrivals</i>, not "
+        ["More than " + c("MAX_IN_FLIGHT") + " = 16 cases in flight", "No. Sized on the peak of <i>arrivals</i>, not "
          "on the session cap: 17 people pressing «enter» together with zero sessions is possible (R10-A7)."],
         ["Dispatcher dead (EOF)", "Every case in flight ⇒ no"],
-        ["Grandchild dead without answering", "The case expires after " + c("EXPIRY_MS") + " (deadline) = 8 s ⇒ no"],
+        ["Grandchild dead without answering", "The case expires after " + c("EXPIRY_MS") + " = 8 s ⇒ no"],
         ["Short or garbled answer", "Discarded, then expiry"],
         ["Answer byte not exactly 1", "No"],
         ["The helper itself is the broken piece", "Second net in the RCP state machine: " + c("VERDICT_CAP")
-         + " (verdict ceiling) = 12 s ⇒ no. Longer than the helper's, so that normally the no comes from there with its log line."],
+         + " = 12 s ⇒ no. Longer than the helper's, so that normally the no comes from there with its log line."],
     ], "«TAB» — The seven roads to «no» (" + c("aiutante.h") + "), plus the second net") + \
     p("Inside the grandchild, " + c("rcp_authenticate_from()") + " follows sshd: " + c("pam_start(\"remotix\", user, …)")
       + ", " + c("PAM_RHOST") + " = the client's bare address (no brackets, no port, " + c("::ffff:1.2.3.4")
@@ -173,19 +173,18 @@ S3 = p("The server runs one " + c("poll") + " loop for every connected user, and
         ["Fixed delay", c("FIXED_DELAY") + " = 1000 ms after " + c("CREDENTIALS") + ", on every answer, admissions "
          "included", "Not to slow guessing, but to remove timing as a channel: without it «no such user» answers "
          "in a millisecond and «wrong password» in fifty."],
-        ["One reason for every refusal", "The client gets " + c("0x07 WRONG_CREDENTIALS") + " (wrong credentials) whether the user does "
+        ["One reason for every refusal", "The client gets " + c("0x07 WRONG_CREDENTIALS") + " whether the user does "
          "not exist, the password is wrong, the account is expired, or PAM could not judge", "Telling the outside "
          "«your account is locked» is an oracle."],
         ["Two facts in the log", c("PAM REFUSED") + " for " + c("PAM_AUTH_ERR") + ", " + c("PAM_USER_UNKNOWN") + ", "
          + c("PAM_PERM_DENIED") + ", " + c("PAM_CRED_INSUFFICIENT") + ", " + c("PAM_ACCT_EXPIRED") + ", "
          + c("PAM_NEW_AUTHTOK_REQD") + ", " + c("PAM_MAXTRIES") + "; " + c("⛔ PAM COULD NOT JUDGE")
-         + " for anything else, naming the service file and " + c("/etc/remotix/denied-users")
-         + " (the denied-users list)", "Otherwise a missing PAM file looks "
+         + " for anything else, naming the service file and " + c("/etc/remotix/denied-users"), "Otherwise a missing PAM file looks "
          "exactly like a thousand wrong passwords, and the diagnosis hunts the password for hours."],
         ["One attempt per connection", c("RCP.md") + " §4.4", "The ban counter must count attempts, not connections."],
     ], "«TAB» — What the outside sees and what the log says") + \
     note("the server checks at startup that " + c("/etc/pam.d/remotix") + " or " + c("/usr/lib/pam.d/remotix")
-         + " exists (" + c("look_pam_service()") + ", check the PAM service). Without it Linux-PAM falls back to the " + c("other")
+         + " exists (" + c("look_pam_service()") + "). Without it Linux-PAM falls back to the " + c("other")
          + " service: " + c("pam_deny") + " on Fedora and Arch (every right password refused), the common stacks "
          "without the root exclusion on Debian. The server does not refuse to start — the page, the ban and the "
          "certificates still work — but it writes the fault with the remedy.", "The service file is checked.")
@@ -252,15 +251,15 @@ S5 = p("Three failed authentications from the same address within five minutes, 
     table(["Counts", "Does not count"], [
         ["A failed authentication — wrong password and unknown user are the same thing",
          "Protocol errors, timeouts, and the refusal of a second device of the same user ("
-         + c("0x0F ALREADY_ACTIVE_REMOTELY") + ", already active remotely)"],
+         + c("0x0F ALREADY_ACTIVE_REMOTELY") + ")"],
     ], "«TAB» — What feeds the counter") + \
     p("The key is the address <b>without the port</b>, in brackets even for IPv4: " + c("[192.168.0.2]") + ", "
       + c("[fe80::1]") + ". The first version keyed on " + c("192.168.0.2:44661") + "; with one attempt per "
       "connection the port changes every time and the counter was always 1 — code that looked right and did "
       "nothing, found only by a bench case that tries seven <i>different</i> names from one address. The key is "
-      "built in exactly one place, " + c("rcp_key_address()") + " (the address key), used by the session, the page server and "
+      "built in exactly one place, " + c("rcp_key_address()") + ", used by the session, the page server and "
       "the unlock command alike: before 10 Aug 2026 a second function made keys without brackets and "
-      + c("rcp_banned(\"192.168.0.2\")") + " (is it banned?) answered «not banned» (B-8).") + \
+      + c("rcp_banned(\"192.168.0.2\")") + " answered «not banned» (B-8).") + \
     table(["Aspect", "Behaviour"], [
         ["File", "Default " + c("/var/lib/remotix/ban") + ": one line " + c("<key> <epoch-seconds-of-expiry>")
          + " per banned address, only those still banned"],
@@ -268,10 +267,10 @@ S5 = p("Three failed authentications from the same address within five minutes, 
          + ": a file truncated by a crash would claim «these addresses were not banned»"],
         ["Clock", "Epoch seconds on disk, monotonic in memory: a monotonic time written to disk is meaningless after "
          "a restart"],
-        ["Loading", c("rcp_ban_load()") + " (load the bans) at startup. A file that exists and cannot be read stops the server "
+        ["Loading", c("rcp_ban_load()") + " at startup. A file that exists and cannot be read stops the server "
          "(exit 1): «zero bans» and «could not look» are different facts"],
         ["What a banned client sees", "The page still loads (" + c("pagina.c") + " asks " + c("rcp_banned()")
-         + ") and says the attempts are exhausted; RCP answers " + c("0x08 TOO_MANY_ATTEMPTS") + " (too many attempts). Never silence: "
+         + ") and says the attempts are exhausted; RCP answers " + c("0x08 TOO_MANY_ATTEMPTS") + ". Never silence: "
          "whoever is banned by mistake is almost always the owner"],
         ["Ways out", "Twelve hours, or the unlock command (" + rif("The unlock command socket") + ")"],
     ], "«TAB» — Persistence and the visible side") + \
@@ -285,12 +284,12 @@ S6 = p("The way out for whoever bans themselves from their own phone must ask «
        "to the machine». " + c("comando.c") + " (the command module) implements it as a Unix socket, opened with "
        + c("--command-socket PATH") + ".", lead=True) + \
     table(["Request", "Answer", "Effect"], [
-        [c("UNBLOCK <address>") + " (unlock)", c("REMOVED <key>") + " (removed)", "The ban existed and was removed from the serving process's "
+        [c("UNBLOCK <address>"), c("REMOVED <key>"), "The ban existed and was removed from the serving process's "
          "memory; the file was asked to be rewritten"],
-        [c("UNBLOCK <address>"), c("NOT-BANNED <key>") + " (not banned)", "Nothing to remove; the failure count of that address "
+        [c("UNBLOCK <address>"), c("NOT-BANNED <key>"), "Nothing to remove; the failure count of that address "
          "restarts from zero anyway"],
         [c("PING"), c("PONG"), "Touches nothing; tells a bench the command exists"],
-        ["anything else", c("NOT-UNDERSTOOD <line>") + " (not understood)", "Nothing"],
+        ["anything else", c("NOT-UNDERSTOOD <line>"), "Nothing"],
     ], "«TAB» — The protocol: one line, readable without tools") + \
     code("printf 'UNBLOCK 192.168.0.2\\n' | nc -U /run/remotix/command\n"
          "python3 banchi/01-b8-sblocca.py --socket /run/remotix/command 192.168.0.2", "bash",
@@ -313,7 +312,7 @@ S6 = p("The way out for whoever bans themselves from their own phone must ask «
          "command socket». On an installed system a ban therefore ends only after twelve hours, unless the "
          "administrator adds the option through " + c("REMOTIX_OPTIONS") + " (deb, rpm). " + c("SPECIFICHE.md")
          + " §4.2 promises the command as a way out. Not settled yet.", "Not in the packaged units.") + \
-    note(c("rcp_unblock()") + " (unlock) writes the file through " + c("save_ban()") + " (save the bans) without a "
+    note(c("rcp_unblock()") + " writes the file through " + c("save_ban()") + " without a "
          "session, which stays silent on a write failure: the line " + c("⛔ UNBLOCKED") + " therefore says the rewrite was <i>requested</i>, not done.",
          "Requested, not confirmed.")
 
@@ -351,18 +350,18 @@ S7 = p("The parent stays root because only root can verify another user's passwo
         + " is taken from PAM's list. Then " + c("execve") + " (exit 37 if it fails). No secret is on the command "
         "line: the password died with the PAM grandchild.",
     ]) + \
-    p("Before any of this, " + c("children_ensure_from()") + " (ensure the user has a child) refuses to create a child for a user whose uid is 0: the "
+    p("Before any of this, " + c("children_ensure_from()") + " refuses to create a child for a user whose uid is 0: the "
       "child exists in order <b>not</b> to be root, and a root child would have nobody's session bus anyway. (Root "
       "is also excluded earlier, by PAM.)") + \
     table(["Check", "How", "Why"], [
         ["Who is at the other end of the socketpair", c("SO_PASSCRED") + " + " + c("SCM_CREDENTIALS") + ": the kernel "
          "stamps <b>every message</b> with the sender's pid/uid/gid at write time; " + c("credentials_match()")
-         + " (credentials match) compares", c("SO_PEERCRED") + " on a socketpair returns the credentials of whoever called "
+         + " compares", c("SO_PEERCRED") + " on a socketpair returns the credentials of whoever called "
          + c("socketpair()") + " — root — on both ends, forever: a check that reads a number and checks nothing."],
-        ["Re-check of silent children", c("children_recheck()") + " (re-check the children) asks every child «who are "
-         "you» at most once every " + c("RECHECK_MS") + " (re-check interval) = 60 s", "A child that delivered its frame and then fell silent would "
+        ["Re-check of silent children", c("children_recheck()") + " asks every child «who are "
+         "you» at most once every " + c("RECHECK_MS") + " = 60 s", "A child that delivered its frame and then fell silent would "
          "otherwise be verified once, at the start. A mismatch kills it."],
-        ["First words of a child", c("SHOW_UP_DEADLINE_MS") + " (deadline for «I am») = 15 s to say who it is", "A process running as a user "
+        ["First words of a child", c("SHOW_UP_DEADLINE_MS") + " = 15 s to say who it is", "A process running as a user "
          "that does not answer is not a stage, it is a forgotten process. After the first answer there is no "
          "deadline: the stage survives detachment (I4)."],
         ["The child re-checks itself", "At start " + c("child_alive()") + " (the child's main function) compares its "
@@ -371,11 +370,12 @@ S7 = p("The parent stays root because only root can verify another user's passwo
     p("One child per user, one graphical session per user (" + c("SPECIFICHE.md") + " §5.1): a second device of the "
       "same user is refused with " + c("0x0F ALREADY_ACTIVE_REMOTELY") + " (or takes the seat by ghost eviction, never "
       "across users), and a user who sits at the machine and opens a local session wins over the remote one ("
-      + c("0x05 ALREADY_ACTIVE_LOCALLY") + " (already active locally) at attach, " + c("0x04 LOCAL_SESSION_PREVAILED")
-      + " (the local session prevailed) for a session already running; logind is polled once every 2 s for all tenants). The session cap and the composition budget keep "
+      + c("0x05 ALREADY_ACTIVE_LOCALLY") + " at attach, " + c("0x04 LOCAL_SESSION_PREVAILED")
+      + " for a session already running; logind is polled once every 2 s for all tenants). The session cap and the composition budget keep "
       "one user from starving the others (" + c("0x0E") + ", " + c("0x06") + ").") + \
     p("Per-session files live with the user: runtime configuration (systemd user drop-ins, labwc and Qt settings, "
-      "menu rules) under " + c("$XDG_RUNTIME_DIR") + ", which disappears at reboot, and the session log under "
+      "menu rules; on KDE the configuration and socket of KWin's labwc in " + c("remotix-kwin-host")
+      + ", 0700) under " + c("$XDG_RUNTIME_DIR") + ", which disappears at reboot, and the session log under "
       + c("~/.local/state/remotix") + ", created 0700/0600 with " + c("O_NOFOLLOW") + " checks. Nothing is written "
       "in shared " + c("/tmp") + ".")
 
@@ -385,18 +385,17 @@ S8 = p("On a normal desktop logind grants access to " + c("/dev/dri") + " with a
        "groups of the card nodes remain. Without them the session is born blind: measured 27 Aug 2026, 0 sessions "
        "of 4 without the groups, 17 of 17 with them — and no error says so.", lead=True) + \
     table(["When", "Who", "What"], [
-        ["Installation", "The installer engine (" + c("InstallPlan()") + ", the installation plan; "
-         + c("CardGroups()") + ", the card groups)",
+        ["Installation", "The installer engine (" + c("InstallPlan()") + ", " + c("CardGroups()") + ")",
          "Adds the people of the machine to the groups <b>read from the nodes</b> " + c("card*") + " and "
          + c("renderD*") + " (never a hard-coded name or gid). It is a step of the plan the administrator confirms."],
         ["First connection", "The parent, as root, just before forking the user's child ("
-         + c("enroll_in_card_groups()") + ", enrol in the card groups, called from "
+         + c("enroll_in_card_groups()") + ", called from "
          + c("children_ensure_from()") + ")", "After PAM said yes, runs " + c("usermod -aG <groups> <user>") + " for the groups the user lacks, "
          "logs it, appends one JSON line per group to " + c("/var/lib/remotix/group-enrollments.jsonl")
-         + " (enrolled groups; format " + c("remotix-enrollments/1") + ", origin " + c("DIRECT") + ", direct), and "
+         + " (format " + c("remotix-enrollments/1") + ", origin " + c("DIRECT") + "), and "
          "restarts the user manager (" + c("loginctl terminate-user") + ") so the compositor sees the new groups — "
          "unless a desktop of that user is alive, or logind cannot say."],
-        ["Every birth", "The parent, same place (" + c("card_groups()") + ", the card-group check)", "Checks membership and says it loudly, with the cure, when the "
+        ["Every birth", "The parent, same place (" + c("card_groups()") + ")", "Checks membership and says it loudly, with the cure, when the "
          "user is still not in the groups."],
         ["Uninstallation", "The installer engine", "Removes the memberships its own plan added and those listed in "
          + c("group-enrollments.jsonl") + "; a membership that existed before, or is already gone, is never touched."],
@@ -434,6 +433,7 @@ S9 = p("«The key of everything is that REMOTIX does not modify the systems it i
         ["Binary, page, defaults, KWin capture permission", c("/usr/libexec/remotix/") + " (Arch: "
          + c("/usr/lib/remotix/") + "), " + c("/usr/share/remotix/") + ", "
          + c("/usr/share/applications/org.kde.remotix.desktop"), "Package manager"],
+        ["KWin's labwc (RHEL / Alma 10 package only)", c("/usr/lib/remotix/labwc"), "Package manager"],
         ["PAM service and root exclusion list (configuration files)", c("/etc/pam.d/remotix") + " or "
          + c("/usr/lib/pam.d/remotix") + "; " + c("/etc/remotix/denied-users"), "Package manager (purge)"],
         ["Unit, tmpfiles, empty " + c("/etc/remotix/remotix.conf.d/"), "System unit directory, " + c("tmpfiles.d"),
@@ -443,25 +443,81 @@ S9 = p("«The key of everything is that REMOTIX does not modify the systems it i
         ["SELinux module and port type (rpm, policy " + c("targeted") + ")", c("remotix-selinux") + " sub-package",
          "Package manager"],
         ["Card group memberships", c("/etc/group") + ", annotated", "Installer engine"],
-        ["A non-default port", c("/etc/remotix/remotix.conf.d/port.conf") + " (porta = port)", "Installer engine"],
+        ["A non-default port", c("/etc/remotix/remotix.conf.d/port.conf"), "Installer engine"],
         ["Enabling the service", "systemd", "Installer engine; packages never enable or start it"],
         ["Per-user session log", c("~/.local/state/remotix/session.log"), "Installer engine, on uninstall"],
     ], "«TAB» — Everything REMOTIX puts on a machine")
 
-# ── 14.10 The power belts ────────────────────────────────────────────────
+# ── 14.10 KWin's labwc on RHEL / Alma 10 ─────────────────────────────────
+S9B = p("On KDE, KWin runs nested in a labwc without a screen that REMOTIX starts (" + rif("KDE Plasma sessions")
+        + "). Six distributions provide labwc themselves; EPEL 10 does not, so the RHEL / Alma 10 package carries "
+        "its own: <b>labwc 0.8.4</b>, built unmodified inside the package and installed as "
+        + c("/usr/lib/remotix/labwc") + " (" + c("DECISIONI.md") + " §10.43, the user's decision of 11 Oct 2026). "
+        "It is the only third-party program REMOTIX ships.", lead=True) + \
+    table(["Question", "Answer (source review of 11 Oct 2026, labwc 0.9.8 read in full, 0.8.4 checked against it)"], [
+        ["Does it use the network?", "No: no " + c("AF_INET") + ", no " + c("getaddrinfo") + ". Its only socket is "
+         "the Wayland one, in " + c("$XDG_RUNTIME_DIR/remotix-kwin-host") + " (0700)."],
+        ["Does it load code or change privileges?", "No " + c("dlopen") + ", no setuid; labwc refuses to run "
+         "setuid."],
+        ["Does it write to disk?", "No: only shared memory (" + c("shm_open") + " then unlink, " + c("memfd")
+         + ") and its socket with its lock."],
+        ["Can it start programs?", "Only from " + c("autostart") + " and " + c("shutdown") + " in its "
+         "configuration folder, from menus and from " + c("Execute") + " bindings, and through the "
+         "activation-environment update. With " + c("-C") + " the folder is REMOTIX's, with no " + c("autostart")
+         + " and no menu; the configuration keeps zero bindings; the update is said off ("
+         + c("LABWC_UPDATE_ACTIVATION_ENV=0") + ") and would run only with a DRM backend anyway."],
+        ["Can anyone reach it?", "It runs headless, with no screen and no input device, as the user, inside the "
+         "user's KWin unit; it never listens on the network. A program of the same user could talk to its "
+         "socket, which gives it nothing that user does not already have."],
+        ["Does the build download or embed anything?", "No: " + c("--wrap-mode=nodownload") + " with the wraps "
+         "removed; the build runs only " + c("git describe") + " and " + c("wayland-scanner") + "; no binary "
+         "blobs."],
+    ], "«TAB» — What labwc can do on the server") + \
+    p("<b>One finding, fixed on all seven distributions.</b> An " + c("rc.xml") + " without bindings made labwc "
+      "load its default ones, which start a terminal (Super+Return) and " + c("amixer") + " or "
+      + c("brightnessctl") + " (the volume and brightness keys). Measured on labwc 0.8.3, 0.9.8 and REMOTIX's "
+      "0.8.4: keys sent through the virtual keyboard started the fake programs put first in " + c("PATH")
+      + ". The configuration REMOTIX writes now keeps zero bindings, and the same keys start nothing. The cure "
+      "is in " + c("kwin.c") + ", so it also applies to the distributions' labwc.") + \
+    table(["Rule (" + c("DECISIONI.md") + " §10.43)", "What it means"], [
+        ["Updated at every REMOTIX release", "Check labwc's releases for the wlroots that EPEL 10 carries (0.8.x while "
+         "EPEL has wlroots 0.18); change " + c("packaging/rpm/labwc/VERSIONI") + " and " + c("%global labwc_ver")
+         + " in the spec."],
+        ["Every update reviews the diff", "The diff between the pinned and the new version, by the categories of "
+         "the table above (network, exec, file writes, setuid, dlopen, environment, build scripts), recorded in "
+         + c("DECISIONI.md") + "; then the Alma package is rebuilt and the proofs run again."],
+        ["A serious advisory triggers a release", "A serious security advisory in labwc, or in the wlroots it "
+         "links (EPEL's, linked dynamically), means an extraordinary REMOTIX release with the Alma package "
+         "rebuilt at once."],
+        ["labwc is not patched", "If a patch ever becomes necessary, it is published under GPL-2.0 together with "
+         "the source."],
+        ["The source is verified", "GitHub's archive of the tag " + c("0.8.4") + " (labwc publishes no tarball and "
+         "signs nothing), pinned by SHA-256; " + c("scarica.sh") + " checks it at every build, also against the "
+         "SHA-512 in Fedora's dist-git. Checked on 11 Oct 2026 to be identical to " + c("git archive")
+         + " of the tag."],
+    ], "«TAB» — How labwc is kept") + \
+    p("<b>Licence.</b> labwc is GPL-2.0-only (two files LGPL-2.0-or-later), a separate program not linked with "
+      "REMOTIX. " + c("THIRD-PARTY-LICENSES") + " carries its full text; " + c("LICENSE.md") + " §8 and the "
+      "README say that REMOTIX's terms do not apply to it. The exact corresponding source — the upstream tarball "
+      "and the recipe (" + c("VERSIONI") + ", " + c("scarica.sh") + ", " + c("remotix.spec") + ") — goes with every "
+      "release, inside the " + c(".run") + " (" + c("source/labwc/") + ") and next to it ("
+      + c("remotix-<version>-labwc-source.tar.gz") + ", with its " + c(".sha256") + "), written by "
+      + c("packaging/rilascio.sh") + "; the Alma source rpm carries it too.")
+
+# ── 14.11 The power belts ────────────────────────────────────────────────
 S10 = p("On 15 Aug 2026 the user decided that nobody powers off, reboots, suspends or hibernates the server — not even "
         "who sits in front of it — because powering off takes away every session at once and whoever does it does "
         "not see who is connected (" + c("DECISIONI.md") + " §4.7). Three «belts» implement it. Since §10.12 and "
         "§10.36 they are shipped inert in " + c("/usr/share/remotix/belts/") + ", where nothing reads them, and "
         "the installer no longer applies them.", lead=True) + \
     table(["Belt", "Shipped as", "Would go in", "What it does"], [
-        ["polkit rule", c("50-remotix-no-poweroff.rules") + " (no power-off)", c("/etc/polkit-1/rules.d/"), "Returns "
+        ["polkit rule", c("50-remotix-no-poweroff.rules"), c("/etc/polkit-1/rules.d/"), "Returns "
          + c("polkit.Result.NO") + " for twelve logind actions: power-off, reboot, suspend, hibernate, each also as "
          + c("-multiple-sessions") + " and " + c("-ignore-inhibit")],
-        ["logind keys", c("remotix-power-keys.conf") + " (keys)", c("/etc/systemd/logind.conf.d/"), c("HandlePowerKey") + ", "
+        ["logind keys", sysf("remotix-power-keys.conf"), c("/etc/systemd/logind.conf.d/"), c("HandlePowerKey") + ", "
          + c("HandleRebootKey") + ", " + c("HandleSuspendKey") + ", " + c("HandleHibernateKey") + " (and their "
          + c("LongPress") + " variants) and the three " + c("HandleLidSwitch*") + " set to " + c("ignore")],
-        ["sleep", c("remotix-no-suspend.conf") + " (no suspend)", c("/etc/systemd/sleep.conf.d/"), c("AllowSuspend")
+        ["sleep", sysf("remotix-no-suspend.conf"), c("/etc/systemd/sleep.conf.d/"), c("AllowSuspend")
          + ", " + c("AllowHibernation") + ", " + c("AllowSuspendThenHibernate") + ", " + c("AllowHybridSleep")
          + " = " + c("no") + "; refuses at the systemd level, root included"],
     ], "«TAB» — The three belts") + \
@@ -480,12 +536,12 @@ S10 = p("On 15 Aug 2026 the user decided that nobody powers off, reboots, suspen
     p("What remains in force regardless is session behaviour, not system configuration: inside a REMOTIX session the "
       "desktops' menus lose suspend, lock, restart, power-off and switch user, so that the only gesture that ends "
       "something is the logout (" + c("DECISIONI.md") + " §4.7, §8.2; described with the four desktops). When root "
-      "does stop the machine, attached clients receive " + c("0x0C SERVER_CLOSING") + " (server shutting down).") + \
+      "does stop the machine, attached clients receive " + c("0x0C SERVER_CLOSING") + ".") + \
     warn(c("SPECIFICHE.md") + " §11.3 still says power-off and suspend are «taken away from everyone». Since "
          + c("DECISIONI.md") + " §10.36 that holds only inside REMOTIX sessions; the machine itself suspends and "
          "powers off as its administrator configured it.", "The specification is older than the decision.")
 
-# ── 14.11 The service unit ───────────────────────────────────────────────
+# ── 14.12 The service unit ───────────────────────────────────────────────
 S11 = p("The server runs as a systemd system service, as <b>root</b> and outside any user session: PAM must verify "
         "anyone's password, and the parent descends to each user's uid for the child. No " + c("User=") + " and no "
         + c("ProtectSystem") + ": it opens logind sessions, writes in users' homes and touches " + c("/dev/dri") + ".",
@@ -497,7 +553,7 @@ S11 = p("The server runs as a systemd system service, as <b>root</b> and outside
         ["Options", c("--address 0.0.0.0 --name %H --port … --certificates /var/lib/remotix/certificates --page "
                       "/usr/share/remotix/page.html --ban-file /var/lib/remotix/ban --journal") + " + "
          + c("REMOTIX_OPTIONS"), "Same", "Same", "No bench option (" + c("--survey") + " (frame dump), " + c("--command-socket") + ", "
-         + c("--audio-test") + " (test tone), " + c("--verbose") + " (verbose)): R13."],
+         + c("--audio-test") + " (test tone), " + c("--verbose") + "): R13."],
         [c("EnvironmentFile"), c("/usr/share/remotix/remotix.conf") + " then " + c("/etc/remotix/remotix.conf.d/*.conf"),
          "Same", "Same", "Defaults in "
          + c("/usr") + ", choices in " + c("/etc") + "."],
@@ -526,7 +582,7 @@ S11 = p("The server runs as a systemd system service, as <b>root</b> and outside
       + "); with it, enforcing, 0 denials on Fedora 44, Alma 10, Tumbleweed and Leap 16. A different port needs "
       + c("semanage port -a -t remotix_port_t -p tcp N") + " (and " + c("udp") + ") by the administrator.")
 
-# ── 14.12 Known limits ───────────────────────────────────────────────────
+# ── 14.13 Known limits ───────────────────────────────────────────────────
 S12 = p("The weaknesses that are known and written in the code, collected in one place for whoever evaluates "
         "exposing a REMOTIX server.", lead=True) + \
     table(["Limit", "Where", "Status"], [
@@ -543,6 +599,9 @@ S12 = p("The weaknesses that are known and written in the code, collected in one
         ["Unlock socket absent from the packaged units", "packaging", "Not settled yet"],
         ["Every journal line twice under systemd with " + c("--journal"), c("registro.c"), "Not settled yet"],
         ["Card groups include " + c("video"), c("figlio.c"), "Restriction to " + c("render") + " not settled yet"],
+        ["A third-party program in the Alma package: labwc 0.8.4", c("packaging/rpm/labwc/"), "Reviewed 11 Oct "
+         "2026; updated and reviewed again at every release; an extraordinary release on a serious advisory ("
+         + rif("KWin's labwc on RHEL / Alma 10") + ")"],
         ["Safari and iOS", "—", "Never tested"],
     ], "«TAB» — Known limits of the security model")
 
@@ -556,6 +615,7 @@ CHAPTER = ("Security model", [
     ("Isolation between users", S7),
     ("The graphics card groups", S8),
     ("What REMOTIX does not change", S9),
+    ("KWin's labwc on RHEL / Alma 10", S9B),
     ("The power belts, shipped inert", S10),
     ("The service unit and SELinux", S11),
     ("Known limits of the security model", S12),

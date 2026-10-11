@@ -1,22 +1,24 @@
-from build import box, c, code, sysf, fig, note, p, rif, steps, table, text, ul, warn, zone
+from build import arrow, box, c, code, sysf, fig, note, p, rif, steps, table, text, ul, warn, zone
 
 
 S1 = p("REMOTIX serves four Wayland desktops, which belong to three compositor families. Capture, input and "
        "clipboard talk to the <b>compositor</b>; birth, logout and settings talk to the <b>desktop</b>. XFCE "
-       "and LXQt share labwc and therefore almost everything except the session.", lead=True) + \
+       "and LXQt share labwc and therefore almost everything except the session. On KDE labwc is there too, "
+       "but only as an invisible host for KWin, not as the desktop's compositor.", lead=True) + \
     table(["", "GNOME", "KDE Plasma", "XFCE", "LXQt"], [
         ["Compositor", "Mutter (gnome-shell)", "KWin", "labwc (wlroots)", "labwc (wlroots)"],
         ["Recognised by", c("gnome-session"), c("startplasma-wayland"), c("xfce4-session"), c("lxqt-session")],
         ["Started by", "the distribution's GNOME session, through " + c("gnome-session"),
-         c("startplasma-wayland"), c("labwc -m --session") + " + primary client",
+         c("startplasma-wayland") + "; KWin through " + c("remotix --kwin-nested"), c("labwc -m --session") + " + primary client",
          c("labwc -C <ours> -S") + " + primary client"],
-        ["Monitor", "none of its own; the capture creates a virtual one", c("--virtual") + " output of the "
-         "requested size, fixed for the session", "headless output born 1280×720, resized", "same as XFCE"],
+        ["Monitor", "none of its own; the capture creates a virtual one", "KWin's output, nested in a labwc "
+         "without a screen; born at the requested size, resized at reattach", "headless output born 1280×720, "
+         "resized", "same as XFCE"],
         ["Capture", "ScreenCast " + c("RecordVirtual") + " (PipeWire)", c("zkde_screencast_unstable_v1")
          + " (PipeWire)", c("zwlr_screencopy_manager_v1"), "same as XFCE"],
         ["Input", c("libei") + " via " + c("ConnectToEIS"), c("libei") + " via " + c("connectToEIS"),
          "virtual keyboard and pointer", "same as XFCE"],
-        ["Clipboard", c("appunti.c") + " (the clipboard, via RemoteDesktop)", c("appunti_kde.c") + " (data-control)",
+        ["Clipboard", c("appunti.c") + " (via RemoteDesktop)", c("appunti_kde.c") + " (data-control)",
          c("appunti_kde.c"), c("appunti_kde.c")],
         ["Alive when", c("DisplayConfig.GetCurrentState") + " answers", c("org.kde.KWin") + " on the bus",
          c("org.xfce.SessionManager") + " on the bus", c("org.lxqt.session") + " on the bus"],
@@ -34,8 +36,8 @@ S1 = p("REMOTIX serves four Wayland desktops, which belong to three compositor f
       "<b>in front of</b> the GNOME code, which stays textually unchanged and is skipped with a "
       + c("return") + " or " + c("goto") + ".")
 
-S2 = p(c("recognize_desktop()") + " (recognise the desktop) decides once per process, from the programs in " + c("PATH") + ", and "
-       "keeps the reason in words for the server's start line (" + c("session_desktop_explain()") + ", “explain”).",
+S2 = p(c("recognize_desktop()") + " decides once per process, from the programs in " + c("PATH") + ", and "
+       "keeps the reason in words for the server's start line (" + c("session_desktop_explain()") + ").",
        lead=True) + \
     table(["Found", "Desktop", "Note"], [
         [c("startplasma-wayland") + " and not " + c("gnome-session"), "KDE", ""],
@@ -44,7 +46,7 @@ S2 = p(c("recognize_desktop()") + " (recognise the desktop) decides once per pro
         [c("xfce4-session"), "XFCE", "with " + c("lxqt-session") + " too: XFCE, declared ambiguous; without "
          + c("labwc") + ", declared that the session cannot be born"],
         [c("lxqt-session"), "LXQt", "without " + c("labwc") + ", declared"],
-        ["none", c("SESSION_DESKTOP_NONE") + " (none)", "No session is attempted"],
+        ["none", c("SESSION_DESKTOP_NONE"), "No session is attempted"],
     ], "«TAB» — The recognition order") + \
     ul([
         "The XFCE marker is " + c("xfce4-session") + ", not " + c("labwc") + ": labwc is the family's "
@@ -52,7 +54,7 @@ S2 = p(c("recognize_desktop()") + " (recognise the desktop) decides once per pro
         "Until phase 12 a machine with neither GNOME nor KDE was declared GNOME by fallback; on an XFCE box "
         "the failure surfaced as “another drop-in wins over mine” and “Mutter does not expose "
         "RemoteDesktop”, two innocents accused (measured 20 Sep 2026). The fallback was removed: "
-        + c("NESSUNO") + " is honesty, not a desktop.",
+        + c("SESSION_DESKTOP_NONE") + " is honesty, not a desktop.",
         c("DesktopSession") + " travels as a " + c("uint32_t") + " between parent and child, so new values go "
         "at the end: GNOME 0, KDE 1, XFCE 2, none 3, LXQt 4.",
         "Capture, input, clipboard and stage rebuild ask " + c("session_on_wlroots()") + " (XFCE or LXQt), not "
@@ -61,7 +63,7 @@ S2 = p(c("recognize_desktop()") + " (recognise the desktop) decides once per pro
     ])
 
 S3 = p("The environment of the session is <b>composed, not inherited</b> (" + c("compose_environment()")
-       + ", “compose the environment”): whatever the starter carries ends up in the user's systemd manager and in D-Bus activation, "
+       + "): whatever the starter carries ends up in the user's systemd manager and in D-Bus activation, "
        "where it outlives the compositor. A stray " + c("LC_ALL=C") + " from an SSH shell once stopped every "
        "application from opening.", lead=True) + \
     table(["Variable", "GNOME", "KDE", "XFCE", "LXQt"], [
@@ -76,12 +78,15 @@ S3 = p("The environment of the session is <b>composed, not inherited</b> (" + c(
          "our " + c("xdg-lxqt") + " directory, then " + c("/etc:/etc/xdg:/usr/share")],
         [c("XDG_DATA_DIRS"), "—", "—", "—", "our " + c("data-lxqt") + " (session data) directory first"],
         [c("XCURSOR_THEME") + ", " + c("XCURSOR_SIZE") + ", " + c("XCURSOR_PATH"), "—",
-         c("remotix-invisible") + " (“invisible”), 24", c("remotix-invisible") + ", 24", c("remotix-invisible") + ", 24"],
-        [c("WLR_BACKENDS") + ", " + c("WLR_LIBINPUT_NO_DEVICES"), "—", "—", c("headless") + ", 1",
+         c("remotix-invisible") + ", 24", c("remotix-invisible") + ", 24", c("remotix-invisible") + ", 24"],
+        [c("WLR_BACKENDS") + ", " + c("WLR_LIBINPUT_NO_DEVICES"), "—", "only in KWin's labwc: "
+         + c("headless") + ", 1", c("headless") + ", 1",
          c("headless") + ", 1"],
-        [c("WLR_RENDER_DRM_DEVICE") + " or " + c("WLR_RENDERER"), "—", "—", "the first openable "
+        [c("WLR_RENDER_DRM_DEVICE") + " or " + c("WLR_RENDERER"), "—", "only in KWin's labwc: same as XFCE",
+         "the first openable "
          + c("renderD*") + " node, or " + c("pixman"), "same"],
-        [c("LABWC_UPDATE_ACTIVATION_ENV"), "—", "—", "1", "1"],
+        [c("LABWC_UPDATE_ACTIVATION_ENV"), "—", "only in KWin's labwc: 0", "1", "1"],
+        [c("KWIN_FORCE_SW_CURSOR"), "—", "1, in KWin's environment", "—", "—"],
         ["Toolkit", "—", "—", c("GDK_BACKEND=wayland"), c("QT_QPA_PLATFORM=wayland") + ", "
          + c("QT_QPA_PLATFORMTHEME=lxqt")],
         [c("XFCE4_SESSION_COMPOSITOR"), "—", "—", c("labwc -m --session xfce4-session"), "—"],
@@ -96,7 +101,7 @@ S3 = p("The environment of the session is <b>composed, not inherited</b> (" + c(
       "purpose), and REMOTIX first checks with GBM that a 256×256 " + c("XRGB8888") + " buffer can be created "
       "on it. If not, " + c("WLR_RENDERER=pixman") + " is set and declared: otherwise wlroots would fall back "
       "to software in silence, or the canvas would be black.") + \
-    p("<b>Starting.</b> " + c("avvia()") + " (start) runs " + c("setsid --fork sh -c") + " with the composed "
+    p("<b>Starting.</b> " + c("start()") + " runs " + c("setsid --fork sh -c") + " with the composed "
       "environment and the user's home as working directory, with the session's output appended to "
       + c("~/.local/state/remotix/session.log") + " (the session log, under " + c("$XDG_STATE_HOME")
       + "; a directory and file that must belong to the user and "
@@ -105,7 +110,7 @@ S3 = p("The environment of the session is <b>composed, not inherited</b> (" + c(
       + c("setsid --fork") + " the session lives outside the server's unit: measured on 29 Sep 2026, stopping "
       "the unit or killing the parent or the child kills no desktop on any of the four, and a reattach finds "
       "the same compositor and windows. The child does not wait for the birth: "
-      + c("session_spawn()") + " (bring the session to life) starts it only from a dead session and "
+      + c("session_spawn()") + " starts it only from a dead session and "
       "returns at once (at most one request a minute); the child's retry loop (1 s doubling to 30 s) finds the "
       "session on a later round. The 40 s wait " + c("WAIT_STARTUP_MS") + " belongs to the blocking "
       + c("session_ensure()") + ", which the product no longer calls. The life cycle is in "
@@ -122,7 +127,7 @@ S4 = p("GNOME is started through the distribution's own session, with a systemd 
         + c("gnome") + ", then the first alphabetically, as GDM does; if none, " + c("gnome") + " as a declared "
         "fallback. The " + c("Exec") + " line is used as the command, " + c("DesktopNames")
         + " as " + c("XDG_CURRENT_DESKTOP") + ".",
-        "<b>Which shell unit</b> (" + c("unit_shell()") + ", “shell unit”): up to GNOME 49 " + sysf("org.gnome.Shell@wayland.service")
+        "<b>Which shell unit</b> (" + c("unit_shell()") + "): up to GNOME 49 " + sysf("org.gnome.Shell@wayland.service")
         + "; from GNOME 50 the template " + sysf("org.gnome.Shell@.service") + " with " + c("--mode=%i")
         + ", whose instance is the one that " + sysf("gnome-session@<session>.target") + " requires ("
         + c("@user") + " for " + c("gnome") + ", " + c("@ubuntu") + " on Ubuntu 26.04). Chosen from what is "
@@ -141,7 +146,7 @@ S4 = p("GNOME is started through the distribution's own session, with a systemd 
         + " and " + sysf("gnome-session-restart-dbus.service") + " inactive. A session started while GNOME "
         "restarts the session bus dies without writing anything (measured 16 Aug 2026).",
     ]) + \
-    p("<b>The session dconf</b> (D-015, " + c("session_dconf_prepare()") + ", “prepare”). The child writes "
+    p("<b>The session dconf</b> (D-015, " + c("session_dconf_prepare()") + "). The child writes "
       + c("$XDG_RUNTIME_DIR/remotix/dconf/profile") + " (the profile) with an in-memory database " + c("service-db:shm/remotix")
       + " on top and the user's databases below, read-only, and sets " + c("DCONF_PROFILE") + " before any "
       "GSettings call; the session gets the same variable. Everything the remote session writes goes to "
@@ -162,32 +167,172 @@ S4 = p("GNOME is started through the distribution's own session, with a systemd 
         [c("org.gnome.desktop.screensaver lock-enabled"), "false", "user dconf", "The lock is REMOTIX's, not "
          "the desktop's"],
         [c("org.gnome.desktop.input-sources"), "the negotiated layout", "session dconf (by "
-         + c("input_layout()") + ", “layout”, in " + c("input.c") + ")",
+         + c("input_layout()") + " in " + c("input.c") + ")",
          rif("Keyboard layout negotiation")],
-    ], "«TAB» — GNOME settings, " + c("session_settings()") + " (session settings)") + \
+    ], "«TAB» — GNOME settings, " + c("session_settings()")) + \
     p("The user decided on 25 Sep 2026 that the user's settings are not touched <b>except</b> those about "
       "lock screen, reboot, suspend and standby, which are dangerous for other users of the machine; those "
-      "are written to the user's dconf writer (" + c("gnome_set_user()") + ", “put in the user”) and then read back through "
+      "are written to the user's dconf writer (" + c("gnome_set_user()") + ") and then read back through "
       "the session profile, as the shell will read them. Every schema is looked up first: "
       + c("g_settings_new()") + " on a missing schema aborts the process. "
-      + c("session_inhibit()") + " (inhibit) asks " + c("org.gnome.SessionManager.Inhibit") + " with flags "
+      + c("session_inhibit()") + " asks " + c("org.gnome.SessionManager.Inhibit") + " with flags "
       + c("SUSPEND | IDLE") + " (4 | 8 = 12; never " + c("LOGOUT") + "), and the cookie is never released: it lives "
       "as long as the session.")
 
+KDE_FIG = fig(
+    zone(20, 12, 560, 240, "KWin's user unit")
+    + box(40, 44, 520, 50, "Plasma and the programs", "on KWin's socket, wayland-N", "light")
+    + box(40, 116, 520, 50, "KWin, nested", "one full-screen window on labwc; it draws the pointer itself", "navy")
+    + box(40, 188, 520, 50, "labwc, without a screen", "headless output W×H at 240 Hz; a 1×1 ticker every 16 ms", "grey")
+    + arrow(300, 94, 300, 114, "#475569") + arrow(300, 166, 300, 186, "#475569")
+    + zone(600, 12, 280, 240, "REMOTIX, the user's child")
+    + box(620, 116, 240, 50, "capture", "zkde_screencast on KWin's output", "blue")
+    + box(620, 188, 240, 50, "reattach", "zwlr_output_manager_v1 on labwc", "blue")
+    + arrow(562, 141, 618, 141, "#0050C0", label="frames", lx=590, ly=130)
+    + arrow(618, 213, 562, 213, "#0050C0", True, label="new size", lx=590, ly=202),
+    900, 262, "«FIG» — KWin nested in a labwc nobody sees: the capture reads KWin, the reattach resizes labwc")
+
 S5 = p("Plasma is started with " + c("startplasma-wayland") + ", which starts KWin as the user unit "
        + sysf("plasma-kwin_wayland.service") + "; REMOTIX overrides its " + c("ExecStart") + " the same way as "
-       "GNOME's shell.", lead=True) + \
+       "GNOME's shell. The line does not start KWin directly: it starts the REMOTIX binary in "
+       + c("--kwin-nested") + " mode, which starts a <b>labwc without a screen</b> and then becomes KWin, "
+       "running as a window inside that labwc (" + c("DECISIONI.md") + " §10.40, 11 Oct 2026). The desktop is "
+       "KWin's output; KWin's output follows the size of its window; the window follows labwc's output. "
+       "To change the size of the desktop at a reattach, REMOTIX changes the size of labwc's output.",
+       lead=True) + \
     code("""[Service]
 ExecStart=
-ExecStart=/usr/bin/kwin_wayland_wrapper --xwayland --virtual --width 1920 --height 1080 --no-lockscreen""",
+ExecStart=/usr/libexec/remotix/remotix --kwin-nested 1920 1080 /dev/dri/renderD128 -- /usr/bin/kwin_wayland_wrapper --xwayland --width 1920 --height 1080 --no-lockscreen""",
          "text", "The KWin drop-in (zz-remotix-monitor.conf), here for a 1920×1080 canvas") + \
+    KDE_FIG + \
+    table(["", "Why"], [
+        ["Not " + c("kwin_wayland --virtual") + ", which REMOTIX used until 0.19.0",
+         "KWin up to 6.7 cannot change the size of a " + c("--virtual") + " output and cannot create a second "
+         "one: the virtual backend has no " + c("createVirtualOutput()") + " (read in KWin 6.3.6; measured, every "
+         "size asked was answered «Could not find output»). The desktop kept the size it was born with, and a "
+         "reattach from a smaller or larger window got a rescaled picture."],
+        ["Not a restart of KWin at the new size", "Measured 10 Oct 2026: Firefox and a GTK editor died at the "
+         "first restart. Only Qt programs survive a compositor restart."],
+        ["A nested KWin", "KWin's Wayland backend resizes its output when its window is configured to a new size "
+         "(" + c("wayland_output.cpp") + ", " + c("handleConfigure") + "). labwc's output is resized with "
+         + c("zwlr_output_manager_v1") + ", the protocol REMOTIX already uses on XFCE and LXQt "
+         "(" + rif("Output size on labwc") + "). No program is restarted."],
+        ["One path for every KWin", "Nothing in the mechanism depends on KWin's version, 6.8 included. Tried on "
+         "KWin 6.3.6 (Debian 13) and 6.4.2 (openSUSE Leap 16) with the functional suite; the resize alone on "
+         "KWin 6.6.4 (Alma 10, in a container). Not tried: Ubuntu 26.04 (KWin 6.6) and Plasma 6.8."],
+    ], "«TAB» — Why KWin runs inside labwc") + \
+    p("<b>The start line</b> (" + c("kwin_nested_alive()") + " in " + c("kwin.c") + "). "
+      + c("write_dropin()") + " writes it with the path of the running binary (" + c("/proc/self/exe") + ") and "
+      "the canvas size, and picks the render node with the same two questions as for XFCE's labwc: the first "
+      + c("renderD*") + " that opens, and that can create a buffer. If it cannot, the node is " + c("pixman")
+      + " (labwc draws in memory) and that is declared; with no node at all it is " + c("-") + " and wlroots "
+      "chooses. The helper then runs as the user, inside the unit:") + \
+    steps([
+        "It checks the line: " + c("W H NODE -- <wrapper> …") + ", with W and H between 200 and 8192; otherwise exit 2.",
+        "<b>Which labwc.</b> A build-time choice of the package, not a runtime switch: built with "
+        + c("make LABWC=/usr/lib/remotix/labwc") + " (the macro " + c("REMOTIX_LABWC") + ") it runs that exact "
+        "file; otherwise it runs the " + c("labwc") + " found in " + c("PATH") + ". Only the RHEL / Alma 10 "
+        "package is built with it (" + rif("Where KWin's labwc comes from") + ").",
+        "If there is no labwc, the session is still born: the helper runs the KWin wrapper with "
+        + c("--virtual") + " added and writes " + c("⛔ labwc is not installed: KWin --virtual, and the desktop "
+        "will NOT take the window's size at reattach (DECLARED FALLBACK)") + " to the unit's journal.",
+        "It writes labwc's configuration, " + c("$XDG_RUNTIME_DIR/remotix-kwin-host/labwc/rc.xml")
+        + " (folder 0700), rewritten at every birth.",
+        "It starts labwc as " + c("labwc -C <that folder>") + " with " + c("XDG_RUNTIME_DIR")
+        + " set to " + c("$XDG_RUNTIME_DIR/remotix-kwin-host") + ", " + c("WAYLAND_DISPLAY") + ", "
+        + c("WAYLAND_SOCKET") + " and " + c("DISPLAY") + " removed, " + c("WLR_BACKENDS=headless") + ", "
+        + c("WLR_LIBINPUT_NO_DEVICES=1") + ", " + c("WLR_RENDER_DRM_DEVICE=<node>") + " or "
+        + c("WLR_RENDERER=pixman") + ", and " + c("LABWC_UPDATE_ACTIVATION_ENV=0") + ". labwc's socket is "
+        "then " + c("…/remotix-kwin-host/wayland-0") + ", and KWin's " + c("wayland-N") + " stays the only "
+        "socket in the user's runtime folder: whatever looks for the session's socket there (capture, input, "
+        "clipboard) cannot land on the host by mistake. With activation updates said off, labwc never "
+        "publishes its own display to the bus or to systemd, where the session's programs would open on a "
+        "screen nobody sees.",
+        "It waits for labwc's socket for at most " + c("HOST_BIRTH_MS") + " = 10 s (about 0.1 s measured; "
+        "22–23 ms on Alma 10), and stops if labwc exits first.",
+        "labwc's headless output is born 1280×720; the helper sets it to W×H at 240 Hz and reads the size back "
+        "<b>before</b> KWin opens its window, so the desktop is born at the right size.",
+        "It starts the ticker (below), sets " + c("KWIN_FORCE_SW_CURSOR=1") + " and becomes the KWin wrapper "
+        "with " + c("--wayland-display <labwc's socket>") + " added to its line.",
+    ]) + \
+    table(["Setting in " + c("rc.xml"), "Why"], [
+        [c("-C") + " on the command line", "labwc reads only this folder: a user's " + c("~/.config/labwc")
+         + " (an XFCE or LXQt user has one) and " + c("/etc/xdg/labwc") + " never get in. There is no "
+         + c("autostart") + " and no menu file in it."],
+        [c("<windowRule title=\"*\" serverDecoration=\"no\">") + " with " + c("ToggleFullscreen"),
+         "The only window is KWin's, and its size must be the output's: that is the whole mechanism. Matched on "
+         "the title: on Leap 16 (labwc 0.8.1, KWin 6.4.2) a rule on " + c("identifier=\"*\"") + " never fired, "
+         "KWin's window stayed floating 2×28 px smaller than the output, and the capture fell back to copying in "
+         "memory (38–48 fps). One rule only: the action toggles, two would undo each other."],
+        [c("<decoration>client</decoration>") + ", " + c("<gap>0</gap>"), "No title bar from the very first "
+         "configure: on Leap 16 KWin's window was first configured 3822×2036 on a 3824×2064 output, and a "
+         "capture mounted in that instant asked for the wrong size."],
+        ["One " + c("<keybind key=\"W-Return\">") + " and one Root " + c("<mousebind>") + ", each with the "
+         "single action " + c("None"), "labwc keeps <b>zero</b> bindings (" + c("DECISIONI.md") + " §10.43). A "
+         + c("rc.xml") + " without bindings makes labwc load its default ones, which start programs (Super+Return "
+         "a terminal, the volume keys " + c("amixer") + "); nobody presses keys on this labwc, but any program "
+         "of the same user could, through the virtual-keyboard protocol on its socket. labwc decides «defaults "
+         "or not» on the bindings it has read (one each: no), and only afterwards removes every binding whose "
+         "action list is empty; the same order in every labwc from 0.8.0 to 0.9.8. Measured on 0.8.3, 0.8.4 and "
+         "0.9.8: Super+Return and Vol+ sent through the virtual keyboard start nothing. The key must be a valid "
+         "keysym: with an unknown one labwc creates no binding and the defaults come back."],
+    ], "«TAB» — The labwc configuration REMOTIX writes for KWin's host") + \
+    table(["Trap of KWin inside labwc (measured 11 Oct 2026)", "Cure, in " + c("kwin.c")], [
+        ["KWin froze a few seconds after birth, every window at its first image. KWin draws its next frame only "
+         "after labwc says the previous one was presented; labwc answers only when it repaints, and a frame "
+         "without damage does not make it repaint (614 frames, 612 answered).",
+         "<b>The ticker</b>: a separate process puts a 1×1 transparent surface in labwc's overlay layer and "
+         "damages it every " + c("TICKER_MS") + " = 16 ms, so labwc repaints one pixel and answers. It ends with "
+         "labwc or with its parent."],
+        ["The pointer's shape never changed in the page, and a full-screen Firefox froze: the nested output has "
+         "a cursor layer, so KWin put the cursor on labwc's screen and handed full-screen windows to labwc as "
+         "they were.", c("KWIN_FORCE_SW_CURSOR=1") + ": KWin draws the pointer into the image, as it did with "
+         + c("--virtual") + "."],
+        ["Frames lost: labwc presents on its own 60 Hz clock and the two clocks drift (60 fps animation at "
+         "3824×2064: 59 fps with " + c("--virtual") + ", 52–55 nested).", "labwc's output at 240 Hz ("
+         + c("HOST_MHZ") + "): 59 fps again. KWin keeps its own 60."],
+        ["A full-screen window with the pointer hidden (a video, a kiosk) froze in the picture: KWin scanned it "
+         "out to labwc directly, and the stream is built from the last frame KWin composited.",
+         "<b>One transparent pixel on top</b>, inside KWin, on the capture's own connection: KWin never scans "
+         "out a full-screen window with any window above it, so it composites as with " + c("--virtual") + "."],
+        ["At birth labwc configures KWin's window more than once, and a capture asked in between offers a size "
+         "KWin's stream no longer has.", c("kwin_host_settle()") + ": before mounting the capture the child "
+         "waits (at most 3 s) until KWin's output has the host's size."],
+    ], "«TAB» — Five traps of KWin inside labwc, found by measuring") + \
+    steps([
+        "<b>At a reattach of another size</b> (" + c("figlio.c") + ", " + c("§7.1") + "), if KWin's output is "
+        "not the canvas asked for and the host exists, the child first dismantles the capture: KWin's stream "
+        "would otherwise renegotiate to a size the fixed offer refuses, and die.",
+        c("kwin_host_resize()") + " asks labwc's output for the new size (read back from labwc, not believed), "
+        "then reads KWin's output on a connection of its own until it has the same size, for at most 3 s: KWin "
+        "follows a few milliseconds later. Measured: 18–31 ms for the whole resize.",
+        "The capture is mounted again at the new canvas, and from there the road is that of every desktop "
+        "(encoder, pointer, the answer to the page).",
+    ]) + \
+    p("A reattach at the <b>same</b> size asks for nothing: the window and the output stay as they are "
+      "(measured, three reattaches in a row). A Plasma session with no host — labwc missing, or a session "
+      "born with KWin " + c("--virtual") + " — keeps the size it was born with, and the child declares it: "
+      + c("⚠ §7.1 KDE: this Plasma session has no host for KWin … DECLARED FALLBACK") + ". The capture "
+      "takes KWin's only output, " + c("WL-0") + " when nested (" + c("Virtual-0") + " with " + c("--virtual")
+      + ").") + \
+    table(["Window (canvas)", "fps " + c("--virtual") + " → nested", "Server latency, ms", "KWin, % of a core",
+           "labwc, % of a core"], [
+        ["1080p (1872×944)", "58 → 58", "15.3–15.6 → 12.5", "4.9–5.3 → 5.9–6.4", "2.4–2.6"],
+        ["2K (2512×1296)", "58 → 58", "15.5–16.4 → 13.4–13.5", "6.7–6.8 → 6.9–8.1", "2.9–3.2"],
+        ["3K (2832×1488)", "58 → 54–55", "17.9–18.1 → 18.7", "5.3–5.7 → 5.5–5.6", "2.5"],
+        ["4K (3824×2064)", "58 → 44–49", "25.5 → 39.4–39.9", "4.7–4.8 → 4.4–4.7", "2.5–2.6"],
+        ["Still desktop", "—", "—", "0 → 0", "0.5–1.5"],
+    ], "«TAB» — The cost of the nesting, measured 11 Oct 2026 on an Intel UHD 770 (i5-13500T), openSUSE Leap 16, "
+       "KWin 6.4.2, labwc 0.8.1, H.264 VA-API; a 60 fps animation in a Firefox window, two runs each") + \
+    p("Up to 2K the nesting costs about 3 % of one core (labwc; the ticker 0.1–0.2 %) and nothing in frames or "
+      "latency. At 3K it starts to lose frames, and at 4K on this integrated card it loses 9–14 fps and adds "
+      "14 ms. The likely cause, not measured, is that labwc draws KWin's whole frame once more on the same "
+      "card. On an AMD RX 6800 (Debian 13, KWin 6.3.6) the same 4K animation stays at 59 → 59 fps. "
+      "«Latency» is the server's stretch from the compositor's frame to the bytes on the wire (median); the "
+      "browser's decoding and display are not in it. Not measured on the Intel N100.") + \
     table(["Topic", "Behaviour", "Why"], [
-        ["Output size", "Given at birth with " + c("--virtual") + "; it does not change while the session "
-         "lives. At a reattach of a different size the canvas keeps the old size and the browser rescales "
-         "(" + c("DECISIONI.md") + " §8.6)", "KWin 6.3.6 of Debian stable, and no released branch up to 6.7.4, resizes a "
-         "virtual output live; restarting KWin would destroy the session"],
         ["Session configuration", c("$XDG_RUNTIME_DIR/remotix/xdg") + " first in " + c("XDG_CONFIG_DIRS")
-         + " (" + c("session_folder_kde()") + ", “KDE folder”)", "Valid for the remote session only, gone with it; the "
+         + " (" + c("session_folder_kde()") + ")", "Valid for the remote session only, gone with it; the "
          "user at the monitor keeps their own"],
         [c("kdeglobals"), c("[KDE Action Restrictions][$i]") + ": " + c("lock_screen") + ", "
          + c("start_new_session") + ", " + c("switch_user") + " false", "KIOSK: no Lock, no Switch User; Log "
@@ -204,7 +349,7 @@ ExecStart=/usr/bin/kwin_wayland_wrapper --xwayland --virtual --width 1920 --heig
          + c("PolicyAgent.AddInhibition") + " with types 4, again whenever powerdevil restarts",
          "Keeps the screen on and the session not idle; powerdevil may appear late"],
         ["Screen-cast permission", sysf("/usr/share/applications/org.kde.remotix.desktop") + ", shipped by the "
-         "package and only <b>verified</b> by " + c("kwin_check_permission()") + " (verify the permission): the "
+         "package and only <b>verified</b> by " + c("kwin_check_permission()") + ": the "
          "file exists (else " + c("RX-KDE-001") + "), its " + c("Exec") + " resolves to the running binary (else "
          + c("RX-KDE-002") + "), " + c("X-KDE-Wayland-Interfaces") + " lists " + c("zkde_screencast_unstable_v1")
          + " (else " + c("RX-KDE-003") + ")", "KWin compares " + c("/proc/<pid>/exe") + "; without the file the "
@@ -213,20 +358,49 @@ ExecStart=/usr/bin/kwin_wayland_wrapper --xwayland --virtual --width 1920 --heig
     ], "«TAB» — How Plasma is kept") + \
     p("Alive means " + c("org.kde.KWin") + " owns its name on the session bus; the previous session is over "
       "when both " + sysf("plasma-kwin_wayland.service") + " and " + sysf("plasma-workspace.target")
-      + " are inactive. " + c("session_settings()") + " writes nothing else for Plasma: the desktop lock "
+      + " are inactive. labwc and the ticker are processes of the KWin unit and end with it. "
+      + c("session_settings()") + " writes nothing else for Plasma: the desktop lock "
       "is off from the command line (" + c("--no-lockscreen") + ").")
 
+S5B = p("labwc is needed on KDE only as KWin's host; it is not the desktop's compositor. Where it comes from "
+        "depends on the distribution, and the six distributions that package labwc keep their own.",
+        lead=True) + \
+    table(["Distribution", "labwc for KDE", "How the package asks for it"], [
+        ["Debian 13, Ubuntu", "the distribution's", c("Recommends: labwc") + " (a " + c(".deb") + " cannot say "
+         "«only if Plasma is there», so it is recommended to every machine)"],
+        ["Fedora", "the distribution's", c("Requires: (labwc if plasma-workspace)")],
+        ["openSUSE Leap, Tumbleweed", "the distribution's", c("Requires: (labwc if plasma6-workspace)")],
+        ["Arch", "the distribution's", c("depends") + ", for every desktop"],
+        ["RHEL / Alma 10", "<b>REMOTIX's own</b>, " + c("/usr/lib/remotix/labwc"), "Built inside the package; "
+         + c("Requires: libwlroots-0.18.so()(64bit)")],
+    ], "«TAB» — Where KWin's labwc comes from") + \
+    p("<b>RHEL / Alma 10</b> (" + c("DECISIONI.md") + " §10.43). EPEL 10 carries KWin 6.6.4 and wlroots 0.18 "
+      "but no labwc, so the Alma package builds <b>labwc 0.8.4</b>, the last release for wlroots 0.18, "
+      "<b>unmodified</b>, in the same rpm build (" + c("packaging/rpm/remotix.spec") + ", " + c("%if 0%{?rhel}")
+      + "), linked dynamically against EPEL's wlroots 0.18, with Xwayland, SVG, icons, translations and man "
+      "pages switched off and no download during the build. It is installed privately, not in " + c("PATH")
+      + ", so it cannot clash with a labwc EPEL may add one day, and the REMOTIX binary of that package is "
+      "built with " + c("LABWC=/usr/lib/remotix/labwc") + ". The source is GitHub's archive of the tag "
+      + c("0.8.4") + " (labwc publishes no tarball and signs nothing), pinned by SHA-256 in "
+      + c("packaging/rpm/labwc/VERSIONI") + " and checked at every build by " + c("scarica.sh")
+      + " also against the SHA-512 in Fedora's dist-git. Licence and updates: "
+      + rif("KWin's labwc on RHEL / Alma 10") + ".") + \
+    note("without labwc a Plasma session is still born, with KWin " + c("--virtual") + " and the size of its "
+         "birth: a broken install (the file missing on Alma) or a deb installed with "
+         + c("--no-install-recommends") + ". It is declared in the unit's journal and in the child's log.",
+         "Without labwc.")
+
 S6 = p("XFCE on Wayland has no compositor of its own: it runs on labwc. There is no systemd unit to "
-       "override, so " + c("write_dropin()") + " (write the drop-in) has nothing to do and REMOTIX starts the compositor itself.",
+       "override, so " + c("write_dropin()") + " has nothing to do and REMOTIX starts the compositor itself.",
        lead=True) + \
     code("""exec labwc -m --session "sh -c 'u=$(wlr-randr | sed -n 1s/ .*//p);
     wlr-randr --output $u --custom-mode 1920x1080; exec xfce4-session'\"""",
-         "bash", "The XFCE command line for a 1920×1080 canvas, simplified (the inner script is built by measured_primary(), “sized primary client”)") + \
+         "bash", "The XFCE command line for a 1920×1080 canvas, simplified (the inner script is built by measured_primary())") + \
     table(["Topic", "Behaviour", "Why"], [
         [c("--session") + " (also in " + c("XFCE4_SESSION_COMPOSITOR") + ")", "Makes " + c("xfce4-session")
          + " labwc's primary client: when it exits, labwc exits. Both lines start from the "
-         "same macro, " + c("SESSION_HEAD_XFCE") + " (the head, " + c("labwc -m --session") + "), from which "
-         + c("SESSION_LINE_XFCE") + " (the line) is built for the variable", "If " + c("xfce4-session") + " does not find both "
+         "same macro, " + c("SESSION_HEAD_XFCE") + " (" + c("labwc -m --session") + "), from which "
+         + c("SESSION_LINE_XFCE") + " is built for the variable", "If " + c("xfce4-session") + " does not find both "
          + c("labwc") + " and " + c("--session") + " in that variable, at log-out it runs "
          + c("loginctl terminate-session ''") + " and kills REMOTIX's logind session"],
         [c("-m") + " (merge config)", "labwc reads " + c("rc.xml") + " from every XDG directory: ours (in "
@@ -244,7 +418,7 @@ S6 = p("XFCE on Wayland has no compositor of its own: it runs on labwc. There is
          "and on wlroots that makes the capture fail"],
         ["Session", c("LockCommand=/bin/false") + ", " + c("ShowSuspend") + ", " + c("ShowHibernate") + ", "
          + c("ShowHybridSleep") + " false", "No lock (it is REMOTIX's), no suspend in the log-out dialog"],
-        ["Panel action button", "A thread (" + c("xfce_panel_guard()") + ", the panel guard, started by "
+        ["Panel action button", "A thread (" + c("xfce_panel_guard()") + ", started by "
          + c("session_inhibit()") + "; every 2 s for up to "
          "120 s) finds every " + c("actions") + " plugin and turns " + c("lock-screen") + ", "
          + c("switch-user") + ", " + c("suspend") + ", " + c("hibernate") + ", " + c("hybrid-sleep") + ", "
@@ -256,11 +430,11 @@ S6 = p("XFCE on Wayland has no compositor of its own: it runs on labwc. There is
     ], "«TAB» — How XFCE is kept") + \
     warn(c("xfconf-query") + " exits with 0 even when the daemon refused and restored the old value: the API "
          "is asynchronous and the local cache answers first. Every key REMOTIX writes ("
-         + c("xfconf_put()") + ", “set in xfconf”) is therefore read back, and only a read-back value counts as applied.",
+         + c("xfconf_put()") + ") is therefore read back, and only a read-back value counts as applied.",
          "A successful write is not an applied setting.") + \
     p("Alive means " + c("org.xfce.SessionManager") + " owns its name on the <b>user</b> bus (labwc is "
       "started without " + c("dbus-run-session") + "). The previous session is over when no " + c("labwc")
-      + " process of the user is left, read from " + c("/proc") + " (" + c("my_processes()") + ", “my processes”): asked "
+      + " process of the user is left, read from " + c("/proc") + " (" + c("my_processes()") + "): asked "
       "about a unit that does not exist, systemd would answer " + c("inactive") + ", and the guard would vanish "
       "instead of failing.")
 
@@ -286,7 +460,7 @@ S7 = p("Debian Trixie packages no launcher for LXQt on Wayland (no " + c("lxqt-w
          "No lock, suspend, reboot or shutdown in the menu; log-out stays"],
         ["Panel menu", "The panel is started from " + c("$XDG_RUNTIME_DIR/remotix/xdg-lxqt/autostart/lxqt-panel.desktop")
          + " with " + c("--configfile") + " pointing to " + sysf("$XDG_RUNTIME_DIR/remotix/panel-lxqt.conf")
-         + " (panel): the user's panel configuration merged with the system files, with " + c("fancymenu")
+         + ": the user's panel configuration merged with the system files, with " + c("fancymenu")
          + " turned into " + c("mainmenu"), "D-018: fancymenu has a fixed Leave button; the panel rewrites the "
          "file it reads, so it must read a file of the session, not the user's (measured 25 Sep 2026)"],
         ["Lock command", c("lock_command_wayland=true") + " in the user's " + sysf("lxqt.conf")
@@ -315,7 +489,7 @@ LABWC_FIG = fig(
     + box(460, 48, 196, 56, "3. with title bar", "shade, as a mark", "light")
     + box(672, 48, 196, 56, "4. shaded", "unshade, fit, place, restore", "light")
     + text(450, 136, "maximised, tiled and full-screen windows are excluded: labwc resizes them itself", 11.5),
-    900, 168, "«FIG» — The four passes of the bring-back-inside shortcut (SESSION_LABWC_KEYBOARD, the keyboard section)")
+    900, 168, "«FIG» — The four passes of the bring-back-inside shortcut (SESSION_LABWC_KEYBOARD)")
 
 S8 = p("On labwc the output size is not part of the birth: the headless output is born 1280×720, hard-wired "
        "(measured 20 Sep 2026), and no protocol creates one of a chosen size. REMOTIX resizes it as a "
@@ -327,8 +501,8 @@ S8 = p("On labwc the output size is not part of the birth: the headless output i
          "wallpaper from the old size and kept it. Measured 24 Sep 2026 at 1400×914: 1 bad wallpaper in 20 "
          "before, 0 in 20 after; 0 in 5 at 1920×1080 and at 3840×2160. " + c("wlr-randr") + " is therefore a "
          "dependency of the product on XFCE and LXQt"],
-        ["When the capture starts on an output of another size, and at every " + c("cattura_ridimensiona()")
-         + " (resize the capture)", c("wlr_ask_size()") + " (ask for a size) with " + c("zwlr_output_manager_v1")
+        ["When the capture starts on an output of another size, and at every " + c("capture_resize()"),
+         c("wlr_ask_size()") + " with " + c("zwlr_output_manager_v1")
          + " (bound at version 4 at most) and a custom mode", "The canvas follows the browser window at attach and on "
          + c("FIT_CANVAS")],
     ], "«TAB» — Sizing the labwc output") + \
@@ -370,25 +544,24 @@ S9 = p("Nobody may shut down, reboot, suspend or hibernate the server, the perso
         ["Log out", "always shown", "stays", "stays", "stays"],
     ], "«TAB» — What is removed from the session menus") + \
     p("The menu work is cosmetic on top of three system-wide belts, which the package ships <b>inert</b> under "
-      + c("/usr/share/remotix/belts/") + " (the belts), where nothing reads them; since " + c("DECISIONI.md")
+      + c("/usr/share/remotix/belts/") + ", where nothing reads them; since " + c("DECISIONI.md")
       + " §10.36 the installer no longer puts them in force, so the “refused by polkit” entries above hold only "
-      "where the administrator has installed them. They are: a polkit rule (" + c("remotix-no-poweroff.rules")
-      + ", “no power-off”, shipped as " + c("50-remotix-no-poweroff.rules") + ") that says "
+      "where the administrator has installed them. They are: a polkit rule (" + c("50-remotix-no-poweroff.rules") + ") that says "
       "no to every power action of logind, including the " + c("*-multiple-sessions") + " and "
-      + c("*-ignore-inhibit") + " variants that v1 had missed; the logind keys of " + c("remotix-power-keys.conf")
-      + " (“keys”: " + c("HandlePowerKey") + ", suspend, hibernate, reboot and lid switch, with their long-press "
+      + c("*-ignore-inhibit") + " variants that v1 had missed; the logind keys of " + sysf("remotix-power-keys.conf")
+      + " (" + c("HandlePowerKey") + ", suspend, hibernate, reboot and lid switch, with their long-press "
       "variants, all " + c("ignore") + "), because a physical key does not go through polkit; and the "
-      + c("[Sleep]") + " section of " + c("remotix-no-suspend.conf") + " (“no suspend”). Root keeps "
+      + c("[Sleep]") + " section of " + sysf("remotix-no-suspend.conf") + ". Root keeps "
       + c("CAP_SYS_BOOT") + " and can still run " + c("systemctl poweroff") + " (measured 15 Aug 2026: "
       + c("CanPowerOff") + " is " + c("no") + " for a user and " + c("yes") + " for root); attached clients are "
-      "told with the farewell reason " + c("SERVER_CLOSING") + " (server closing). Details in "
+      "told with the farewell reason " + c("SERVER_CLOSING") + ". Details in "
       + rif("The power belts, shipped inert") + ".") + \
     note("in " + c("lxqt-leave") + ", reached from fancymenu's fixed Leave button when the user's own panel "
          "configuration wins, shut down, reboot and suspend are grey and “Lock screen” is clickable "
          "but inert. On XFCE the separate “Log Out” window keeps grey entries. Both are declared "
          "residues.", "What is left visible.")
 
-S10 = p(c("session_terminate()") + " (end the session) ends the graphical session when the product must (for instance when the "
+S10 = p(c("session_terminate()") + " ends the graphical session when the product must (for instance when the "
         "same user logs in locally, invariant I2: the local session wins, and two graphical sessions on one "
         + c("XDG_RUNTIME_DIR") + " would make the local one fail). It asks first and insists afterwards.",
         lead=True) + \
@@ -403,25 +576,26 @@ S10 = p(c("session_terminate()") + " (end the session) ends the graphical sessio
         ["LXQt", c("org.lxqt.session.logout") + ", no reply expected", "SIGTERM to every " + c("labwc") + " of "
          "the user", "no " + c("labwc") + " of the user left"],
     ], "«TAB» — Ending a session") + \
-    p("After each step REMOTIX waits up to " + c("WAIT_EXIT_MS") + " (exit wait) = 10 s, checking every 500 ms that the "
+    p("After each step REMOTIX waits up to " + c("WAIT_EXIT_MS") + " = 10 s, checking every 500 ms that the "
       "session is not alive <b>and</b> its units are " + c("inactive") + " (not merely “not active”: "
       + c("deactivating") + " is a trap), then runs " + c("systemctl --user reset-failed") + ". An application "
       "with unsaved changes may inhibit a polite log-out and show a dialog that nobody in an unattended session "
       "will close; that is why the second step exists.") + \
     p("<b>Tidying up after a session.</b> Once the session is dead, never while it lives:") + \
     ul([
-        c("session_clear_out_scope()") + " (clear the scope) closes what is left of the user's processes in "
+        c("session_clear_out_scope()") + " closes what is left of the user's processes in "
         "REMOTIX's own " + c("session-N.scope") + " — SIGTERM, then SIGKILL to whatever is still there after 2 s — "
         "declared in the log.",
-        c("session_clear_out_handler()") + " (clear the manager) gives the user's systemd manager back as it "
+        c("session_clear_out_handler()") + " gives the user's systemd manager back as it "
         "was — after a session ends, and also at the next birth for what a crash left: it removes our "
         "drop-ins (the KWin and " + sysf("xfconfd.service") + " ones, and the shell instance ones found in the "
         "directory), reloads, restores with " + c("UnsetAndSetEnvironment") + " the values that "
-        + c("session_snapshot_handler()") + " (photograph the manager) recorded at birth for the variables "
-        "REMOTIX sets (" + c("OUR_VARIABLES") + ", “our variables”), and restarts " + sysf("xfconfd.service") + " if it had our directory. "
+        + c("session_snapshot_handler()") + " recorded at birth for the variables "
+        "REMOTIX sets (" + c("OUR_VARIABLES") + "), and restarts " + sysf("xfconfd.service") + " if it had our directory. "
         "Without a photograph only values carrying the " + c("remotix") + " mark are removed, declared. If the "
         "child never comes back, the next child does it: the root server does not talk to a user manager.",
-        "Everything else REMOTIX wrote for the session lives under " + c("$XDG_RUNTIME_DIR/remotix") + " and is "
+        "Everything else REMOTIX wrote for the session lives under " + c("$XDG_RUNTIME_DIR/remotix") + " (and, on "
+        "KDE, KWin's labwc configuration and socket under " + c("$XDG_RUNTIME_DIR/remotix-kwin-host") + ") and is "
         "rewritten at every birth; the exceptions in the user's home are the GNOME and XFCE power and lock "
         "keys and LXQt's power and lock files, all of them in the categories the user allowed on 25 Sep 2026.",
     ])
@@ -431,21 +605,23 @@ S11 = p("Every place where the four desktops differ, in one table: the list to w
     table(["Concern", "Function", "File"], [
         ["Recognition", c("recognize_desktop()") + ", " + c("session_on_wlroots()"), c("sessione.c")],
         ["Environment", c("compose_environment()"), c("sessione.c")],
-        ["Command line", c("avvia()") + ", " + c("measured_primary()"), c("sessione.c")],
+        ["Command line", c("start()") + ", " + c("measured_primary()"), c("sessione.c")],
         ["Unit override", c("write_dropin()") + ", " + c("unit_shell()"), c("sessione.c")],
-        ["Alive, state", c("session_alive()") + " (alive), " + c("session_state()") + " (state)", c("sessione.c")],
-        ["Previous session over", c("inactive_unit()") + " (units inactive)", c("sessione.c")],
+        ["Alive, state", c("session_alive()") + ", " + c("session_state()"), c("sessione.c")],
+        ["Previous session over", c("inactive_unit()"), c("sessione.c")],
         ["Settings and menus", c("session_settings()") + ", " + c("settings_lxqt()") + ", "
-         + c("xfce_session_xfconf()") + " (the session's xfconf)", c("sessione.c")],
+         + c("xfce_session_xfconf()"), c("sessione.c")],
         ["Inhibition and guards", c("session_inhibit()"), c("sessione.c")],
-        ["Log-out", c("really_terminate()") + " (really end)", c("sessione.c")],
-        ["Capture (the “open” functions)", c("mutter_apri()") + ", " + c("kwin_open()") + ", " + c("wlr_open()"), c("mutter.c")
+        ["Log-out", c("really_terminate()"), c("sessione.c")],
+        ["KWin's host (KDE only)", c("kwin_nested_alive()") + ", " + c("kwin_host_resize()") + ", "
+         + c("kwin_host_settle()") + "; the reattach branch in " + c("figlio.c"), c("kwin.c") + ", " + c("figlio.c")],
+        ["Capture (the “open” functions)", c("mutter_open()") + ", " + c("kwin_open()") + ", " + c("wlr_open()"), c("mutter.c")
          + ", " + c("kwin.c") + ", " + c("wlroots.c")],
-        ["Input", c("input_apri()") + ", " + c("input_open_kwin()") + ", " + c("input_open_wlr()"), c("input.c")],
+        ["Input", c("input_open()") + ", " + c("input_open_kwin()") + ", " + c("input_open_wlr()"), c("input.c")],
         ["Clipboard", c("clipboard_open()") + ", " + c("clipboard_open_kde()") + ", " + c("clipboard_open_wlroots()"),
          c("appunti.c") + ", " + c("appunti_kde.c")],
         ["Layout", c("input_layout()") + ", " + c("kwin_layout()") + ", "
-         + c("wlr_input_keymap_from_name()") + " (keymap from a name)", c("input.c") + ", " + c("kwin.c") + ", " + c("wlr_input.c")],
+         + c("wlr_input_keymap_from_name()"), c("input.c") + ", " + c("kwin.c") + ", " + c("wlr_input.c")],
     ], "«TAB» — Where the desktops branch") + \
     note(c("SPECIFICHE.md") + " §11.2 still lists XFCE and LXQt as “studied, not yet served”; the code serves "
          "both since phases 13 and 14 (September 2026). Cinnamon was studied on 9 Aug 2026 and is not served: "
@@ -458,6 +634,7 @@ CHAPTER = ("The four desktops", [
     ("The environment of a session", S3),
     ("GNOME sessions", S4),
     ("KDE Plasma sessions", S5),
+    ("Where KWin's labwc comes from", S5B),
     ("XFCE sessions on labwc", S6),
     ("LXQt sessions on labwc", S7),
     ("Output size on labwc", S8),
