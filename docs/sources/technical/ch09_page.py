@@ -7,8 +7,8 @@ S1 = p("The whole client is one file, " + c("src/pagina.html") + ": the login pa
     table(["What", "How"], [
         ["Served by", c("src/pagina.c") + ", a small TLS-over-TCP server inside the parent process, on the same port "
          "number as QUIC (7447 in the packages: TCP for the page, UDP for WebTransport)"],
-        ["Routes", c("/") + " and " + c("/index.html") + " (the page), " + c("/fingerprint") + " (fingerprint: the certificate "
-         "fingerprint as JSON), " + c("/diary") + " (diary: the page's own log lines, carried in the query string, "
+        ["Routes", c("/") + " and " + c("/index.html") + " (the page), " + c("/fingerprint") + " (the certificate "
+         "fingerprint as JSON), " + c("/diary") + " (the page's own log lines, carried in the query string, "
          "written into the server log, answer 204). Everything else is 404; the query string and fragment are cut before matching"],
         ["Headers on every answer", c("Cross-Origin-Opener-Policy: same-origin") + ", "
          + c("Cross-Origin-Embedder-Policy: require-corp") + ", " + c("Cross-Origin-Resource-Policy: same-origin")
@@ -24,14 +24,14 @@ S1 = p("The whole client is one file, " + c("src/pagina.html") + ": the login pa
       "inherited by the optional video worker, born from a " + c("Blob") + " (measured 13 Aug 2026: "
       + c("crossOriginIsolated") + " true inside the worker, timer grain 0.005 ms).") + \
     table(["Marker", "Replaced with", "Read by"], [
-        [c("__FINGERPRINT__") + " (fingerprint)", "the base64 SHA-256 of the DER of the current session certificate", "the WebTransport "
+        [c("__FINGERPRINT__"), "the base64 SHA-256 of the DER of the current session certificate", "the WebTransport "
          + c("serverCertificateHashes") + " option, as a fallback"],
-        [c("__WARNING__") + " (notice)", "empty, or the ban notice with the hours and minutes left", "the CSS: " + c("#warning:empty")
+        [c("__WARNING__"), "empty, or the ban notice with the hours and minutes left", "the CSS: " + c("#warning:empty")
          + " hides it, so a banned visitor reads the reason even without JavaScript"],
-        [c("__BANNED__") + " (banned)", c("yes") + " (yes) or " + c("no") + ", on " + c("data-banned") + " of the body", "the script and the ban benches"],
-        [c("__REMAINING_MS__") + " (milliseconds left)", "milliseconds left on the ban", c("data-remaining-ms") + " of the body"],
+        [c("__BANNED__"), c("yes") + " or " + c("no") + ", on " + c("data-banned") + " of the body", "the script and the ban benches"],
+        [c("__REMAINING_MS__"), "milliseconds left on the ban", c("data-remaining-ms") + " of the body"],
     ], "«TAB» — The four markers the server fills while serving") + \
-    p(c("page_open()") + " (open the page server) refuses to start if any marker is missing, or if " + c("data-banned=\"")
+    p(c("page_open()") + " in " + c("pagina.c") + " refuses to start if any marker is missing, or if " + c("data-banned=\"")
       + " or " + c("data-remaining-ms=\"") + " occur more than once (a bench that greps the first occurrence "
       "would read the wrong one). The fingerprint is the only server text that enters a JavaScript string, and "
       "it is base64 written by REMOTIX; the ban sentence never enters the script. The TLS side, the certificates "
@@ -44,39 +44,39 @@ S2 = p("The file is about 13 000 lines, most of them comments that carry the rea
        "authors, each writing only inside its own markers.", lead=True) + \
     table(["Block", "Main names", "Covered in"], [
         ["Style", "the login look (" + c("Satinato") + ", i.e. satin, chosen 4 Oct 2026), the desktop styling on " + c("body[data-viewer=\"on\"]") + " (screen on)", "this chapter"],
-        ["Diagnostics", c("nota()") + " (note: one log line), " + c("log_visible()") + " (show the log), the browser and system " + c("MARK") + " (marker) lines", rif("Measurements made by the page")],
-        ["RCP bytes", c("Scrittore") + " (writer), " + c("Lettore") + " (reader), " + c("Canale") + " (channel), " + c("inquadra()") + " (frame a message), tables " + c("TYPE") + " (type), " + c("REASON_TEXT") + " (reason)", rif("The RCP/1 protocol")],
-        ["Video probes", c("PROBES") + " (probes), " + c("MEASURE_PROBES") + " (size probes), " + c("probe_all()") + " (probe everything), " + c("misura_massima()") + " (maximum size)", rif("Choosing the codec on the pixel")],
-        ["The screen", "class " + c("Viewer") + " (screen): rules of RCP §5.2/§6.2, decoder, drawing paths, counters", rif("Receiving video frames")],
-        ["Session", c("collega()") + " (connect), " + c("listen_control()") + " (listen to the control channel), " + c("start_video()") + ", " + c("leggi_uno_stream()") + " (read one stream)", rif("The connection sequence")],
+        ["Diagnostics", c("note()") + " (one log line), " + c("logbook_visible()") + " (show or hide the log), the browser and system " + c("MARK") + " lines", rif("Measurements made by the page")],
+        ["RCP bytes", c("Writer") + ", " + c("Reader") + ", " + c("Channel") + ", " + c("envelope()") + " (frame a message), tables " + c("TYPE") + " and " + c("REASON_TEXT"), rif("The RCP/1 protocol")],
+        ["Video probes", c("PROBES") + ", " + c("MEASURE_PROBES") + " (the size ladder), " + c("probe_all()") + ", " + c("max_size()"), rif("Choosing the codec on the pixel")],
+        ["The screen", "class " + c("Viewer") + ": rules of RCP §5.2/§6.2, decoder, drawing paths, counters", rif("Receiving video frames")],
+        ["Session", c("connect()") + ", " + c("listen_control()") + " (the control channel), " + c("start_video()") + ", " + c("read_one_stream()"), rif("The connection sequence")],
         ["Audio", c("start_audio()") + ", the Opus WebAssembly decoder", rif("Audio and clipboard")],
-        ["Clipboard", c("clipboard_prepare()") + " (prepare the clipboard), " + c("start_clipboard()"), rif("Audio and clipboard")],
-        ["Worker", c("WORKER_SHELL") + " (worker shell), " + c("source_worker()") + " (worker source), " + c("turn_on_worker()") + " (start the worker)", rif("The optional paths: video worker and MSE")],
-        ["Exit", c("back_to_form()") + " (back to the form), " + c("logout_run()") + " (perform the logout)", rif("End of session in the page")],
+        ["Clipboard", c("clipboard_prepare()") + ", " + c("start_clipboard()"), rif("Audio and clipboard")],
+        ["Worker", c("WORKER_SHELL") + ", " + c("worker_source()") + ", " + c("start_worker()"), rif("The optional paths: video worker and MSE")],
+        ["Exit", c("back_to_form()") + ", " + c("run_logout()"), rif("End of session in the page")],
         ["Input anchors", c("F4-CLASSIC-INPUT") + " (mouse and keyboard), " + c("F4-TOUCH") + " (touch), "
          + c("F4-SHORTCUTS") + " (shortcuts, full screen, keyboard lock)", rif("Input")],
     ], "«TAB» — The blocks of pagina.html") + \
     p("The page defines one main global, " + c("window.REMOTIX") + ", an object <i>to be read</i> by benches and "
-      "diagnostics (" + c("viewer") + " the screen, " + c("probing") + " the probe results, " + c("stretches")
-      + " the latency stretches, " + c("round_trip") + " the round trip, " + c("video") + ", " + c("declarations")
-      + " the declarations, " + c("logbook") + " the log, " + c("shortcuts") + " the shortcuts…): nothing in it "
+      "diagnostics (" + c("viewer") + " the screen object, " + c("probing") + " the probe results, " + c("stretches()")
+      + " the latency stretches, " + c("round_trip") + ", " + c("video") + ", " + c("declarations") + ", "
+      + c("logbook()") + ", " + c("shortcuts") + ", " + c("read_one_stream") + "…): nothing in it "
       "changes what the page does. The input anchors meet through " + c("REMOTIX_INPUT") + " (the input stream, "
       "set after " + c("SESSION") + "), " + c("REMOTIX_CLASSIC") + ", " + c("REMOTIX_POINTER") + " and "
       + c("REMOTIX_SHORTCUTS") + ".") + \
     table(["Switch", "Effect", "Purpose"], [
-        [c("?logbook") + " (log)", "shows the diagnostic log under the page (also " + c("REMOTIX.logbook(true)") + ")", "diagnosis"],
-        [c("?canvas=gl") + " (canvas)", "the WebGL2 path, named explicitly; it is also what no " + c("?canvas=") + " gives", "the default"],
+        [c("?logbook"), "shows the diagnostic log under the page (also " + c("REMOTIX.logbook(true)") + ")", "diagnosis"],
+        [c("?canvas=gl"), "the WebGL2 path, named explicitly; it is also what no " + c("?canvas=") + " gives", "the default"],
         [c("?canvas=bmp"), "draw with " + c("bitmaprenderer") + " instead of WebGL2 (any " + c("?canvas=")
          + " value other than " + c("gl") + " and " + c("2d") + " does the same)", "A/B comparison"],
         [c("?canvas=2d"), "draw on the 2D canvas, the path that showed the 64×192 blocks", "A/B comparison"],
-        [c("?canvas=desincronizzata") + " (desynchronized)", "asks for a 2D context with " + c("desynchronized: true")
+        [c("?canvas=desincronizzata") + " (Italian for “desynchronized”: the one switch value not renamed)", "asks for a 2D context with " + c("desynchronized: true")
          + "; since it is neither " + c("gl") + " nor " + c("2d") + ", " + c("bitmaprenderer")
          + " is taken first, and the 2D context is created only where " + c("createImageBitmap") + " is missing",
          "latency experiment"],
         [c("?video=worker") + " or " + c("#video=worker"), "decode and draw in a dedicated worker", "experiment, no gain measured"],
-        [c("?draw=mse") + " (drawing)", "draw through MediaSource and a " + c("<video>"), "bench only"],
-        [c("?fit=no") + " or " + c("#fit=no") + " (fit)", "do not ask the server for a canvas of the window size", "A/B comparison with the pre-15-Aug page"],
-        [c("?layout=touch|classic") + " (layout: touch or classic)", "force the touch or the classic layout (also as " + c("#layout=…") + ")", "override for benches and diagnosis"],
+        [c("?draw=mse"), "draw through MediaSource and a " + c("<video>"), "bench only"],
+        [c("?fit=no") + " or " + c("#fit=no"), "do not ask the server for a canvas of the window size", "A/B comparison with the pre-15-Aug page"],
+        [c("?layout=touch|classic"), "force the touch or the classic layout (also as " + c("#layout=…") + ")", "override for benches and diagnosis"],
     ], "«TAB» — URL switches the page reads; none is a user setting") + \
     note("the switches exist so that a comparison changes <b>one</b> variable inside the same page; they are not "
          "per-browser or per-compositor options, and the product has one behaviour without them. The fragment "
@@ -104,7 +104,7 @@ S3 = p("The login form has two fields and a button — " + c("#username") + ", "
        + " for what the page declares about codecs and video. The ids are stable: the functional suite finds "
        "elements by id, not by text.", lead=True) + CONNESSIONE + \
     steps([
-        "<b>Submit.</b> The button is disabled, the outcome cleared; " + c("collega()") + " runs. Whatever "
+        "<b>Submit.</b> The button is disabled, the outcome cleared; " + c("connect()") + " runs. Whatever "
         "happens, the password field is emptied at the end: it is never kept, and never logged.",
         "<b>WebTransport present?</b> If not, the page says so and stops.",
         "<b>Fingerprint.</b> " + c("fingerprint()") + " fetches " + c("/fingerprint") + " before every attempt, because a "
@@ -118,25 +118,25 @@ S3 = p("The login form has two fields and a button — " + c("#username") + ", "
         "<b>Listen first.</b> Video streams, audio datagrams and clipboard streams are listened to <i>before</i> "
         "the handshake ends: a server that opened one before " + c("SESSION") + " violates RCP §2.5, and the "
         "violation is only visible to someone already listening.",
-        "<b>" + c("HELLO") + "</b> (hello) with the capabilities (" + rif("Capabilities declared by the page") + "), after waiting for the "
-        "codec probes. <b>" + c("HERE_I_AM") + "</b> (here I am): a version other than 1 is refused with " + c("INCOMPATIBLE_VERSION")
+        "<b>" + c("HELLO") + "</b> with the capabilities (" + rif("Capabilities declared by the page") + "), after waiting for the "
+        "codec probes. <b>" + c("HERE_I_AM") + "</b>: a version other than 1 is refused with " + c("INCOMPATIBLE_VERSION")
         + " before the password leaves.",
-        "<b>" + c("CREDENTIALS") + "</b> (credentials). " + c("REJECTED") + " (rejected) shows the reason and stops (a second attempt needs a new "
-        "connection); a " + c("FAREWELL") + " (goodbye) shows its reason and stops; " + c("ADMITTED") + " (admitted) continues.",
-        "<b>" + c("ATTACH") + "</b> (attach) carries the canvas to ask for (" + c("canvas_to_request()") + "), the view ("
-        + c("view_size()") + ") and the keyboard layout (" + c("disposizione()") + "). <b>" + c("SESSION") + "</b> says "
+        "<b>" + c("CREDENTIALS") + "</b>. " + c("REJECTED") + " shows the reason and stops (a second attempt needs a new "
+        "connection); a " + c("FAREWELL") + " shows its reason and stops; " + c("ADMITTED") + " continues.",
+        "<b>" + c("ATTACH") + "</b> carries the canvas to ask for (" + c("canvas_to_request()") + "), the view ("
+        + c("view_size()") + ") and the keyboard layout (" + c("layout()") + "). <b>" + c("SESSION") + "</b> says "
         "new or resumed, the granted canvas and the desktop name. A granted canvas different from the requested "
         "one is declared to the user (RCP §4.5 allows it).",
         "<b>After " + c("SESSION") + "</b>: the single input stream is opened, the video is negotiated with the decoder, "
         "the first-frame watch starts, the control channel is read in a loop (" + c("listen_control()")
-        + "), and " + c("FIT_CANVAS") + " (fit the canvas) is sent once for the window size.",
+        + "), and " + c("FIT_CANVAS") + " is sent once for the window size.",
     ]) + \
     p("The keyboard layout is guessed from " + c("navigator.language") + " (" + c("en") + " → " + c("us")
       + ", except " + c("en-GB") + " → " + c("gb") + " and " + c("en-IE") + " → " + c("ie") + "; about thirty languages "
       "whose XKB name equals the ISO code pass through, a few are mapped, such as " + c("sv") + " → " + c("se")
       + " and " + c("da") + " → " + c("dk") + "; the rest falls back to " + c("us") + "); a page cannot know the physical keyboard, and choosing it is described in "
       + rif("Keyboard layout negotiation") + ". The input stream coalesces pointer moves: when the writer's " + c("desiredSize")
-      + " is at or below zero, a " + c("POINTER") + " (pointer move) is held aside and replaced by the next one, and any key or "
+      + " is at or below zero, a " + c("POINTER") + " is held aside and replaced by the next one, and any key or "
       "button pushes it out first — measured from DeX on 14 Aug 2026, median round trip 135 ms but worst 2161 ms, "
       "a queue rather than a slow network. Keys and buttons are never dropped.") + \
     p("Every user-facing text of the page — the login page, the reason sentences, the declarations, the logout "
@@ -148,12 +148,12 @@ S4 = p("The HELLO capabilities say what <b>this</b> browser can do, measured whe
        lead=True) + \
     table(["Capability", "Value", "Where it comes from"], [
         [c("video.codec"), c("hevc,h264") + " or a subset", "only the codecs whose probe was actually painted, in preference order"],
-        [c("video.depth") + " (depth)", c("8") + " and/or " + c("10"), "the depths that painted on at least one good codec; 8 must be present"],
-        [c("video.level") + " (level)", c("5.1"), c("DECLARED_LEVEL") + "; not measurable from the page (browsers do not enforce levels): the server checks it"],
-        [c("video.max_size") + " (maximum size)", "e.g. " + c("3840x2160"), "the decoder's ceiling measured on the pixel (" + rif("Measuring the decoder ceiling") + "); omitted when not measured"],
+        [c("video.depth"), c("8") + " and/or " + c("10"), "the depths that painted on at least one good codec; 8 must be present"],
+        [c("video.level"), c("5.1"), c("DECLARED_LEVEL") + "; not measurable from the page (browsers do not enforce levels): the server checks it"],
+        [c("video.max_size"), "e.g. " + c("3840x2160"), "the decoder's ceiling measured on the pixel (" + rif("Measuring the decoder ceiling") + "); omitted when not measured"],
         [c("audio.codec"), c("opus,pcm") + " or " + c("pcm"), "opus only if the WebAssembly decoder loads, or else " + c("AudioDecoder") + " accepts Opus"],
-        [c("input.touch") + " (touch)", c("no"), "constant"],
-        [c("clipboard.text") + " (clipboard text)", c("yes"), "constant"],
+        [c("input.touch"), c("no"), "constant"],
+        [c("clipboard.text"), c("yes"), "constant"],
         [c("client.name"), c("remotix-page 0.1.0"), "constant"],
     ], "«TAB» — The capabilities sent in HELLO") + \
     p("Declaring something the browser cannot do does not give an error; it gives a black canvas or silence, "
@@ -180,10 +180,10 @@ S5 = p("The codec is not chosen by asking the browser's APIs. It is chosen by de
          + " / " + c("avc1.64001f") + " (High 5.1 / 3.1)"],
         ["Decoder config", c("codedWidth") + ", " + c("codedHeight") + ", " + c("optimizeForLatency: true")
          + ", no " + c("description") + " (the stream is Annex B)"],
-        ["Verdict", c("paint_probe()") + " (paint the probe) fills a canvas with dark magenta, decodes, draws the frame, reads it back with "
+        ["Verdict", c("paint_probe()") + " fills a canvas with dark magenta, decodes, draws the frame, reads it back with "
          + c("getImageData") + " and requires each half to be closer to its own colour than to the other one. "
          "Black, magenta or a uniform fill cannot pass. Timeout 2.5 s"],
-        ["When", "at page load (" + c("POLL") + ", the probe survey; not on the MSE path), so the answer is ready when the user presses Connect; "
+        ["When", "at page load (" + c("PROBING") + ", the promise of " + c("probe_all()") + "; not on the MSE path), so the answer is ready when the user presses Connect; "
          "the cost is tens of ms on a capable engine"],
     ], "«TAB» — The codec probe") + \
     p("The preference is " + c("PREFERENCE") + " = " + c("[\"hevc\", \"h264\"]") + ": HEVC where it paints, "
@@ -201,7 +201,7 @@ S5 = p("The codec is not chosen by asking the browser's APIs. It is chosen by de
         ["HEVC paints but the server chose H.264", "a one-line note"],
     ], "«TAB» — The codec declarations") + \
     p("If no codec reaches the pixel, " + c("video.codec") + " is omitted and the server answers "
-      + c("NOTHING_IN_COMMON") + " (nothing in common); the page writes its own explanation first, because only the page knows which "
+      + c("NOTHING_IN_COMMON") + "; the page writes its own explanation first, because only the page knows which "
       "probe failed and why. Whether decoding happens in hardware is not observable from JavaScript, and the page "
       "never claims it.")
 
@@ -223,9 +223,9 @@ S6 = p(c("video.max_size") + " is the largest frame the browser's <b>decoder</b>
         ["The value is the minimum across declared codecs", "The server chooses the codec afterwards, so the ceiling must hold for either"],
         ["8-bit ladder frames only", "8 is the depth both sides must support; a 10-bit ladder would double the startup cost without a measured reason"],
         ["Omitted on the MSE path", "The ladder needs " + c("VideoDecoder") + "; a missing value is legal, an invented one breaks phones"],
-    ], "«TAB» — How misura_massima() measures the ceiling") + \
+    ], "«TAB» — How max_size() measures the ceiling") + \
     p("If a codec paints at 64×48 but not even at 320×240, the page declares 320×240 and tells the user the image "
-      "may not arrive at all. The cost of the ladder is logged on every load (" + c("probing.misura.ms") + ").")
+      "may not arrive at all. The cost of the ladder is logged on every load (" + c("probing.size.ms") + ").")
 
 # ── 7. Canvas and view ────────────────────────────────────────────────────
 TELA = fig(
@@ -244,22 +244,27 @@ S7 = p("Two sizes must never be confused. The <b>canvas</b> (" + c("canvas") + "
          + ", <b>truncated</b>. " + c("clientWidth") + " excludes the scrollbar, unlike " + c("innerWidth")
          + "; rounding up at a fractional ratio (Windows at 150 %) declared one pixel too many, which brought "
          "a scrollbar, a scale of 0.965 and the whole image resampled"],
-        [c("canvas_to_request()") + " (canvas to ask for)", "the view clamped to 320–4096 × 240–2304 and truncated to <b>multiples of 16</b> on both sides"],
-        [c("Viewer.frame_rect()") + " (frame)", "scale = min(view/frame width, view/frame height, 1): never enlarged; CSS width and "
+        [c("canvas_to_request()"), "the view clamped to 320–4096 × 240–2304 and truncated to <b>multiples of 16</b> on both sides"],
+        [c("Viewer.frame_rect()"), "scale = min(view/frame width, view/frame height, 1): never enlarged; CSS width and "
          "height = frame × scale ÷ " + c("devicePixelRatio") + "; " + c("image-rendering: pixelated")
          + " only at scale exactly 1, otherwise the engine interpolates"],
-        [c("Viewer.fit_view()") + " (fit the view)", "measures twice: the canvas is part of the layout, and a first measure can "
+        [c("Viewer.fit_view()"), "measures twice: the canvas is part of the layout, and a first measure can "
          "include a scrollbar that the resize itself removes"],
-        [c("renegotiate_view()") + " (renegotiate the view)", "on " + c("resize") + ", at the next animation frame: re-measures the view and "
+        [c("renegotiate_view()"), "on " + c("resize") + ", at the next animation frame: re-measures the view and "
          "rescales. <b>Nothing is sent</b> and the canvas does not change"],
     ], "«TAB» — The geometry functions") + \
     p("Since 15 August 2026 (" + c("DECISIONI.md") + " §5.0-sexies) the canvas takes the size of the client's "
       "window. Scale 1 makes coordinate conversion the identity, removes the black bands and the interpolated "
       "text, and the request at attach restarts the capture stream, which makes Mutter deliver a frame at once "
       "instead of after 4.4 s of waiting on a still scene. Since 17 August (§5.1-bis) the canvas never changes "
-      "while the session lives: resizing the window only rescales the image. Resizing an output could not be done "
-      "on KWin ≤ 6.7.4 and, where it works, it rearranges the user's windows; the user did not want a product that "
-      "behaves differently depending on the compositor. A new size is taken by reconnecting.") + \
+      "while the session lives: resizing the window only rescales the image. Resizing an output live could not be "
+      "done on KWin ≤ 6.7.4 and, where it works, it rearranges the user's windows; the user did not want a product "
+      "that behaves differently depending on the compositor. A new size is taken by reconnecting: the page asks "
+      "for its window's size at every attach, and a resumed session takes it too. Since 11 October 2026 (§10.40) "
+      "this holds on KDE as well: KWin runs nested inside a screenless labwc started by REMOTIX, and at reattach "
+      "REMOTIX resizes labwc's output, which KWin follows (" + rif("KDE Plasma sessions") + "). A KDE session "
+      "without that host (labwc not installed) keeps the canvas it was born with, and the page rescales it, "
+      "centred between black bands; the server log says so.") + \
     table(["Why multiples of 16", ""], [
         ["Width", "Measured 24 Sep 2026: Firefox 140 does not honour the horizontal cropping declared in the H.264 "
          "SPS. With a width that is not a multiple of 16 it drew the green padding stripe (8 px at 1400, 4 at 3788) "
@@ -274,34 +279,34 @@ S7 = p("Two sizes must never be confused. The <b>canvas</b> (" + c("canvas") + "
       "card stops at 4096 per side and Firefox on Linux receives only H.264. A larger window gets the maximum on the "
       "side that overflows (5120×2880 → 4096×2304, 5120×1440 → 4096×1440), shown at scale 1 with bands. The limits "
       "are protocol constants (" + c("RCP_CANVAS_MAX_W") + " and its siblings in " + c("src/rcp.h") + "); the "
-      "server applies the same rule in " + c("rcp_size_allowed()") + " (size allowed).") + \
+      "server applies the same rule in " + c("rcp_size_allowed()") + ".") + \
     p(c("html { overflow-y: scroll }") + " keeps the vertical scrollbar always present, so turning the canvas on "
       "never changes " + c("clientWidth") + ". The canvas has " + c("tabindex=\"-1\"") + ", without which its "
       + c("focus()") + " calls do nothing and the keyboard stays in the password field.") + \
     note("a change of " + c("devicePixelRatio") + " with the window still (page zoom, a window dragged to a screen "
          "with another scale) is not handled: the emulated test delivered no event at all, and a cure needs a "
-         "measurement with real zoom. The " + c("VIEW") + " (view) message is never sent after a resize either: no "
+         "measurement with real zoom. The " + c("VIEW") + " message is never sent after a resize either: no "
          "server component reads it in RCP/1.", "Not settled yet.")
 
 # ── 8. FIT_CANVAS ────────────────────────────────────────────────────────
 S8 = p("The canvas is requested once per session, at attach, with " + c("FIT_CANVAS") + ". The server answers "
-       "with " + c("CANVAS") + " (canvas): adopted, or refused with a reason.", lead=True) + \
+       "with " + c("CANVAS") + ": adopted, or refused with a reason.", lead=True) + \
     table(["Answer", "What the page does"], [
-        [c("CANVAS(FITTED)") + " (canvas adopted)", c("tela_adattata()") + ": opens a tolerance window in which frames at the previous size are "
+        [c("CANVAS(FITTED)"), c("canvas_adapted()") + ": opens a tolerance window in which frames at the previous size are "
          "still accepted and drawn; the decoder is <b>not</b> reconfigured on the message but on the first keyframe at the "
          "new size (RCP §5.2), which also closes the window"],
-        [c("CANVAS(REFUSED)") + " (refused), reason 1 " + c("COMPOSITOR_UNABLE") + " (compositor incapable)", "no further requests in this session; the user "
+        [c("CANVAS(REFUSED)") + ", reason 1 " + c("COMPOSITOR_UNABLE"), "no further requests in this session; the user "
          "reads that the desktop cannot change size and the browser adapts the image"],
-        ["reason 2 " + c("SIZE_OUT_OF_RANGE") + " (size out of limits)", "not repeated"],
-        ["reason 3 " + c("NOT_NOW") + " (not now)", "repeated <b>once</b> after " + c("CANVAS_REQUEST_RETRY_MS") + " = 4 s — once per page load, since the flag "
+        ["reason 2 " + c("SIZE_OUT_OF_RANGE"), "not repeated"],
+        ["reason 3 " + c("NOT_NOW"), "repeated <b>once</b> after " + c("CANVAS_REQUEST_RETRY_MS") + " = 4 s — once per page load, since the flag "
          + c("canvas_request_repeated") + " is never reset, so a second session in the same tab does not retry: often it "
          "means “not yet” (measured: the stage mounted 2.2 s after a server restart)"],
         ["any refusal", "if it declares a canvas different from the one the page believes, the server wins"],
     ], "«TAB» — The answers to FIT_CANVAS") + \
     p("The control channel and the video streams are independent QUIC streams, so a frame at the new size can "
       "arrive <i>before</i> the " + c("CANVAS") + " that announces it. While an " + c("FIT_CANVAS") + " is "
-      "unanswered (" + c("attese_tela") + ", the pending canvas requests, &gt; 0), a frame at an unannounced size is held (" + c("trattieni()")
-      + ", hold) and judged again when the answer arrives. With no request in flight, such a frame is "
+      "unanswered (" + c("canvas_waits") + ", the pending canvas requests, &gt; 0), a frame at an unannounced size is held ("
+      + c("Viewer.hold()") + ") and judged again when the answer arrives. With no request in flight, such a frame is "
       + c("PROTOCOL_ERROR") + " at once — the condition is a request in flight, not a number of frames "
       "(finding P21, 13 Aug 2026, which replaced an earlier limit of eight frames). The page compares a new request with "
       "the size it is <i>going to</i>, not the one in force, so a window moved and moved back before the answer "
@@ -309,7 +314,7 @@ S8 = p("The canvas is requested once per session, at attach, with " + c("FIT_CAN
 
 # ── 9. Receiving video ────────────────────────────────────────────────────
 S9 = p("Each video frame arrives on its own unidirectional stream, opened by the server in frame order. "
-       + c("start_video()") + " reads the incoming streams and " + c("leggi_uno_stream()") + " collects each one.",
+       + c("start_video()") + " reads the incoming streams and " + c("read_one_stream()") + " collects each one.",
        lead=True) + \
     table(["Rule", "Detail"], [
         ["Delivered in opening order", "Reads are chained: stream N is handed over only after N−1. Until 22 Sep 2026 "
@@ -323,18 +328,18 @@ S9 = p("Each video frame arrives on its own unidirectional stream, opened by the
     ], "«TAB» — Reading the unidirectional streams") + \
     code("""
 offset  size  field
- 0      u16   tipo      type: 0x0301 keyframe, 0x0302 delta
+ 0      u16   type      0x0301 keyframe, 0x0302 delta
  2      u16   codec     1 hevc, 3 h264 (2 reserved: av1)
- 4      u32   larghezza width
- 8      u32   altezza   height
-12      u32   numero    frame number, 0 reserved, wraps to 1
-16      u64   istante   instant: server monotonic clock, microseconds
+ 4      u32   width
+ 8      u32   height
+12      u32   number    frame number, 0 reserved, wraps to 1
+16      u64   instant   server monotonic clock, microseconds
 24      u32   input     last input id applied when captured (0 = none)
 28      ...   Annex B data
-""", "text", "The 28-byte video header (RCP.md §6.2), big-endian, read by Schermo.read_header() (read the header)") + \
+""", "text", "The 28-byte video header (RCP.md §6.2), big-endian, read by Viewer.read_header()") + \
     p("The reader of these 28 bytes is written from the protocol table, not copied from the bench's reader: two "
       "independent implementations of the same bytes are part of the referee, and a disagreement is a gift. "
-      + c("Viewer.deliver()") + " (deliver) then applies the rules in a fixed order:") + \
+      + c("Viewer.deliver()") + " then applies the rules in a fixed order:") + \
     steps([
         "type must be key or delta; codec must be the negotiated one; otherwise " + c("PROTOCOL_ERROR") + ";",
         "the " + c("input") + " field closes an input round trip (" + rif("Measurements made by the page") + ");",
@@ -344,7 +349,7 @@ offset  size  field
         "the session;",
         "size: the canvas in force or a tolerated one; an unannounced size is held if an " + c("FIT_CANVAS")
         + " is pending, a size that was in force and no longer is closes the session;",
-        "a jump in numbers is a <b>hole</b>: one " + c("REQUEST_KEY") + " (request a keyframe) with the last delivered "
+        "a jump in numbers is a <b>hole</b>: one " + c("REQUEST_KEY") + " with the last delivered "
         "number, repeated at most once a second while the hole stays open (" + c("Viewer.hole()") + "); the last "
         "good image stays on screen, deltas are not even given to the decoder until a keyframe arrives (RCP §5.2) — "
         "a delta referencing a missing frame does not error, it just decays;",
@@ -358,7 +363,7 @@ S10 = p("Decoding uses one " + c("VideoDecoder") + " per session, configured wit
         "the frame size and " + c("optimizeForLatency: true") + ". Painting happens <b>inside</b> the decoder's "
         "output callback, not on " + c("requestAnimationFrame") + ": an extra animation frame would add up to one "
         "display interval to a budget worth two and a half.", lead=True) + \
-    p(c("Viewer.reconfigure()") + " (reconfigure) creates the decoder lazily and recreates it if an error closed it: after an "
+    p(c("Viewer.reconfigure()") + " creates the decoder lazily and recreates it if an error closed it: after an "
       "error a " + c("VideoDecoder") + " is " + c("closed") + " and every " + c("configure()") + " throws, which "
       "once made a session unrecoverable in silence. A decoder error is treated as a hole and asks for a keyframe.") + \
     p("<b>The decoder-queue skip.</b> Measured 14 Aug 2026 (bench 04-b30, scene at 58 draws/s): the server sent "
@@ -368,27 +373,27 @@ S10 = p("Decoding uses one " + c("VideoDecoder") + " per session, configured wit
       "decoding, so the delta chain is intact and no key is needed. Since 26 Sep 2026 the rule is weighted by the "
       "measured drawing cost:") + \
     code("""
-skip this frame  if  decodeQueueSize > 2  and  decodeQueueSize * costo_disegno() > 16 ms
-costo_disegno()   = drawing cost: median time the callback holds the main thread
+skip this frame  if  decodeQueueSize > 2  and  decodeQueueSize * draw_cost() > 16 ms
+draw_cost()       = median time the callback holds the main thread
                     (+ median transfer-to-glass on the bitmaprenderer path)
-""", "text", "Schermo.paint(): when a decoded frame is not drawn") + \
+""", "text", "Viewer.paint(): when a decoded frame is not drawn") + \
     p("With a 34 ms drawing cost the rule fires at the old threshold; with WebGL2 at 0.26 ms it practically never "
       "fires, because skipping a 0.26 ms draw gains nothing — when the decoder itself is behind, the cure is the "
-      "server's rate regulator. Every skipped frame is counted (" + c("queue_skipped") + ", skipped by the queue): a rate that falls "
+      "server's rate regulator. Every skipped frame is counted (" + c("queue_skipped") + "): a rate that falls "
       "without a count would violate I1.") + \
     table(["Counter", "Meaning"], [
-        [c("delivered") + " (delivered)", "frames given to " + c("decode()")],
-        [c("exited") + " (out)", "frames out of the decoder (first line of the callback)"],
-        [c("painted") + " (painted)", "frames that reached the glass — the measure the first-frame watch reads"],
+        [c("delivered"), "frames given to " + c("decode()")],
+        [c("exited"), "frames out of the decoder (first line of the callback)"],
+        [c("painted"), "frames that reached the glass — the measure the first-frame watch reads"],
         [c("queue_skipped"), "decoded and not drawn by the queue rule"],
-        [c("late") + " (late)", c("createImageBitmap") + " results older than one already shown, discarded"],
-        [c("in_bmp") + ", " + c("bmp_falliti") + " (failed)", "conversions pending, conversions or uploads failed"],
-        [c("holes") + " (holes), " + c("keys_requested") + " (keys requested)", "holes opened, key requests sent"],
-        [c("scartati_ordine") + ", " + c("scartati_misura") + " (dropped for order, for size), " + c("trattenuti")
-         + " (held), " + c("tolerated_count") + " (tolerated)", "the size and order rules at work"],
+        [c("late"), c("createImageBitmap") + " results older than one already shown, discarded"],
+        [c("in_bmp") + ", " + c("bmp_failed"), "conversions pending, conversions or uploads failed"],
+        [c("holes") + ", " + c("keys_requested"), "holes opened, key requests sent"],
+        [c("discarded_order") + ", " + c("discarded_measure") + " (dropped for order, for size), " + c("held")
+         + ", " + c("tolerated_count"), "the size and order rules at work"],
     ], "«TAB» — The counters of the screen object (" + c("REMOTIX.viewer.counts") + ")") + \
-    p("The counters close, within a session: " + c("consegnati = usciti + inside the decoder") + " and "
-      + c("usciti = saltati_coda + dipinti + tardive + in_bmp + bmp_falliti") + ". They were added on 23 Sep 2026 "
+    p("The counters close, within a session: " + c("delivered = exited + inside the decoder") + " and "
+      + c("exited = queue_skipped + painted + late + in_bmp + bmp_failed") + ". They were added on 23 Sep 2026 "
       "after a Firefox session showed 8 952 delivered and 6 929 drawn, with 2 007 frames that no counter named.")
 
 # ── 11. Drawing ───────────────────────────────────────────────────────────
@@ -404,7 +409,7 @@ S11 = p("The decoded " + c("VideoFrame") + " reaches the screen by one of three 
          + "), or no WebGL2", c("createImageBitmap(frame)") + " then "
          + c("transferFromImageBitmap()") + "; asynchronous, ordered by a serial number and an epoch", "The cure of the blocks, 17–20 Aug 2026 (§5.4)"],
         ["2D canvas", c("?canvas=2d") + ", or neither of the above", "a hidden 2D staging canvas ("
-         + c("deposito") + "), then " + c("drawImage") + " to the visible one", "The original path; shows the blocks"],
+         + c("staging") + "), then " + c("drawImage") + " to the visible one", "The original path; shows the blocks"],
     ], "«TAB» — The three drawing paths") + \
     p("<b>The blocks.</b> In August 2026 the user saw rectangular blocks of 64×192 pixels in still areas. They "
       "were hunted suspect by suspect, with a measurement each: the capture was clean, the encoder was clean (0 "
@@ -426,7 +431,7 @@ S11 = p("The decoded " + c("VideoFrame") + " reaches the screen by one of three 
       "one; the log says once whether the fast path is possible.") + \
     table(["Event", "WebGL2 path behaviour"], [
         [c("webglcontextlost"), c("preventDefault()") + " to ask the context back; frames are closed and counted in "
-         + c("bmp_falliti") + "; a log line if it is not back within 3 s"],
+         + c("bmp_failed") + "; a log line if it is not back within 3 s"],
         [c("webglcontextrestored"), "program and texture rebuilt; the next frame repaints everything (no key needed)"],
         ["program does not link", "the canvas stays black and says so: a canvas that had WebGL cannot take another "
          "context, and swapping the element would detach every input handler bound to it. The fallback is the next "
@@ -445,7 +450,7 @@ S11 = p("The decoded " + c("VideoFrame") + " reaches the screen by one of three 
 S12 = p("The page measures its own share of the latency and exposes it, so that benches read the path really "
         "in use instead of a copy of it.", lead=True) + \
     table(["Name in " + c("REMOTIX.stretches()"), "From → to"], [
-        [c("8_decode_callback"), c("decode()") + " → decoder callback (" + c("richiamo") + " = callback, " + c("vetro") + " = glass)"],
+        [c("8_decode_callback"), c("decode()") + " → decoder callback"],
         [c("9a_callback_call"), "callback → start of the conversion (should be ~0)"],
         [c("9b_conversion"), "conversion or texture upload"],
         [c("10_glass"), "transfer to the canvas or " + c("drawArrays")],
@@ -453,13 +458,13 @@ S12 = p("The page measures its own share of the latency and exposes it, so that 
         [c("11_glass_next_frame"), "canvas changed → next animation frame (one sample in 16): a lower bound of when the pixel <i>can</i> light"],
         [c("queue_deliv") + ", " + c("queue_out") + ", " + c("age_ms") + ", " + c("recv_ms"), "decoder queue at delivery and at output, age of the output frame, main-thread time of the callback"],
     ], "«TAB» — The client-side stretches (median, p05, p95, min, max and n for each)") + \
-    p(c("REMOTIX.round_trip") + " (round trip) is the full input round trip: each input message records when it left, and the "
+    p(c("REMOTIX.round_trip") + " is the full input round trip: each input message records when it left, and the "
       + c("input") + " field of a later frame closes it. It is a lower bound — it stops when the frame arrives, not "
-      "when it is drawn. " + c("SCENA") + " (scene) samples the age of the image at every pointer move, which distinguishes "
+      "when it is drawn. " + c("SCENE") + " samples the age of the image at every pointer move, which distinguishes "
       "“the desktop is frozen” from “the hand moved over the wallpaper and nothing changed”. " + c("voff_ms()")
       + " (glass time minus the frame's server instant) is the video half of the audio/video distance; with the "
       "audio's " + c("aoff_ms()") + ", the unknown clock offset cancels out (" + rif("Audio and clipboard") + ").") + \
-    p("Lines passed to " + c("nota()") + " that contain " + c("MEASURE") + " (measurement), " + c("MARK") + " or ⛔ are also "
+    p("Lines passed to " + c("note()") + " that contain " + c("MEASURE") + ", " + c("MARK") + " or ⛔ are also "
       "sent to the server with " + c("fetch(\"/diary?…\")") + " and appear in its log as "
       + c("📄 the page of <address> says: PAGE …") + ": with the desktop at full screen the page's own log is unreachable. The first lines identify the "
       "browser (user agent, screen, ratio, WebCodecs), the system (" + c("userAgentData") + " on Chromium, "
@@ -480,7 +485,7 @@ S13 = p("A session ends for one of four reasons — a " + c("FAREWELL") + " from
         ["transport closed without " + c("FAREWELL"), "D-002 (25 Sep 2026): the close code's reason if any, else "
          "“the connection with the server was interrupted, type the password again”, and back to the form; the dead "
          "line usually ends here, because its single " + c("CONNECTION_CLOSE") + " often does not arrive"],
-        ["the page closes it", c("congeda()") + " (send the goodbye): " + c("FAREWELL") + " on the control channel and the same reason as "
+        ["the page closes it", c("dismiss()") + ": " + c("FAREWELL") + " on the control channel and the same reason as "
          "the close code — two roads, because Chrome drops a message written just before closing. After a FIN from the "
          "server it is “mute”: only the close code"],
         [c("pagehide") + " (tab closed, page cached)", c("FAREWELL 0x01") + " immediately, without awaiting, so the seat "
@@ -493,11 +498,11 @@ S13 = p("A session ends for one of four reasons — a " + c("FAREWELL") + " from
       "The rule written on it: whoever switches a state on must know how to switch it off.") + \
     p("<b>The first-frame watch.</b> After " + c("SESSION") + " the page says at once that the desktop is on its "
       "way — after a logout or a reboot the graphical session is born from scratch, measured 9 s and ~32 s — and "
-      "after " + c("WAIT_FIRST_FRAME_S") + " (first-frame wait) = 6 s without a frame it explains with numbers: if the granted "
+      "after " + c("FIRST_FRAME_WAIT_S") + " = 6 s without a frame it explains with numbers: if the granted "
       "canvas differs from the requested one, that is the likely cause; otherwise the server log has it.") + \
     p("<b>Logging out.</b> The page keeps no key combination for itself since 17 August 2026: every combination "
       "reaches the remote desktop, and the user leaves from the desktop's own menu, which REMOTIX keeps available "
-      "(" + rif("The four desktops") + "). " + c("TERMINATE_SESSION") + " (end the session) remains in the protocol and the "
+      "(" + rif("The four desktops") + "). " + c("TERMINATE_SESSION") + " remains in the protocol and the "
       "confirmation dialog remains in the page, but no gesture opens it today.")
 
 # ── 14. Optional paths ────────────────────────────────────────────────────
@@ -512,7 +517,7 @@ S14 = p("Two other ways of drawing exist in the file and are off: they are kept 
          "(+225 ms Firefox, +415 ms Chrome median, bench 07-b57) against a 50 ms cap; the user judged the result on "
          "Firefox for Android irregular and declared that browser unsupported (21 Aug 2026, §7.18)"],
         ["How it is built", "The worker's source is composed at runtime from " + c("Viewer.toString()") + " and "
-         + c("leggi_uno_stream.toString()") + " plus a shell supplying " + c("document") + ", " + c("devicePixelRatio")
+         + c("read_one_stream.toString()") + " plus a shell supplying " + c("document") + ", " + c("devicePixelRatio")
          + " and the view: one definition, two contexts", "Its own codec probe on the " + c("<video>") + " (H.264 only), "
          "playback speed 1.25× when the buffer is more than 250 ms behind, never seeking"],
         ["Pitfall", "Any new global used by " + c("Viewer") + " must cross into the worker or it breaks silently "
