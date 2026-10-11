@@ -1,4 +1,4 @@
-# step 2 move table: file-moves.tsv of the plan (fase-c, written at 9d7e586) with the coordinator's rulings of 11 Oct applied; the benches retired by the user on 11 Oct (09-b70/b76/b81, 07-b64/b65, 18-software/, 18-confronto, 18-a1/, 17-t9/, 01-b0-terreno; and with them 09-b77/b79/b84, 18-tabella, 18-decodifica-chrome.sh, attrezzi-allinea-*: DECISIONI §10.44) have no row
+# step 2 move table: file-moves.tsv of the plan (fase-c, written at 9d7e586) with the coordinator's rulings of 11 Oct applied; the benches retired by the user on 11 Oct (09-b70/b76/b81, 07-b64/b65, 18-software/, 18-confronto, 18-a1/, 17-t9/, 01-b0-terreno; and with them 09-b77/b79/b84, 18-tabella, 18-decodifica-chrome.sh, attrezzi-allinea-*: DECISIONI §10.44) have no row; brought up to date at manuali 52f98c1 (en-57): the KDE branch's labwc recipe (VERSIONI, scarica.sh); a row whose file a later tree no longer has is only a warning
 old_path	new_path	why
 DECISIONI.md	DECISIONS.md	top-level document; also cited by name in memory notes, agent prompts and commit messages outside the repo (see hazards)
 FASI.md	PHASES.md	top-level document; also cited by name in memory notes, agent prompts and commit messages outside the repo (see hazards)
@@ -600,6 +600,8 @@ packaging/motore/remotix-install.install	packaging/engine/remotix-install.instal
 packaging/motore/remotix-install.spec	packaging/engine/remotix-install.spec	name already English; parent dir renamed
 packaging/rilascio.sh	packaging/release.sh	rilascio=release
 packaging/rpm/costruisci-rpm.sh	packaging/rpm/build-rpm.sh	translated (costruisci-rpm.sh -> build-rpm.sh)
+packaging/rpm/labwc/VERSIONI	packaging/rpm/labwc/VERSIONS	versioni→versions (the pinned labwc source, DECISIONI §10.43; added by the KDE branch)
+packaging/rpm/labwc/scarica.sh	packaging/rpm/labwc/fetch.sh	scarica→fetch (downloads and verifies the labwc tarball; added by the KDE branch)
 packaging/rpm/remotix-niente-sospensione.conf	packaging/rpm/remotix-no-suspend.conf	disco.tsv: remotix-no-suspend.conf
 packaging/rpm/selinux/remotix_porta.cil	packaging/rpm/selinux/remotix_portcon.cil	disco.tsv: module name = CIL basename = remotix_portcon (not remotix_port: prefix of type remotix_port_t)
 src/Contenitore	src/Containerfile	Contenitore=container; «Containerfile» is podman's own name for the recipe (podman build finds it without -f)
