@@ -439,8 +439,8 @@ S9 = p("The server is configured only by its command line. Every option is parse
         [c("-DAUDIO_SILENZIO_PREDEFINITO=1"), "Compile switch removed", "Replaced by " + c("--niente-audio-silenzio")
          + " on the same binary: one road only."],
     ], "«TAB» — Options that no longer exist, and say so") + \
-    note("the options are still in Italian. " + c("DECISIONI.md") + " §10.35 records that renaming the product's "
-         "own options is «a job of its own», not yet done.", "Option names.")
+    note("the options are still in Italian. " + c("DECISIONI.md") + " §10.38 decides that they are renamed to "
+         "English too, with no compatibility aliases; the rename is not done yet.", "Option names.")
 
 # ── 13.10 Environment variables ──────────────────────────────────────────
 S10 = p("REMOTIX reads almost nothing from the environment, on purpose: a cure that can be switched by an option and "

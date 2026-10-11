@@ -85,8 +85,9 @@ S1 = p("<b>REMOTIX</b> is a remote desktop for Linux. A server runs on the Linux
          "much on the hardware. The parameters the product really uses — session cap, clocks, ban, minimum "
          "bandwidth — are configuration and hold as written.", "Goals, not promises.")
 
-S2 = p("A few concepts recur in every chapter. Most of them have an Italian name in the code, which the manual "
-       "keeps inside code spans so that it can be searched for.", lead=True) + \
+S2 = p("A few concepts recur in every chapter. Most of them still have an Italian name in the code, which the "
+       "manual keeps inside code spans so that it can be searched for; the names are being renamed to English "
+       "(" + c("DECISIONI.md") + " §10.38).", lead=True) + \
     table(["Concept", "What it is", "In the code", "More"], [
         ["<b>Server</b> (the parent)", "The process started by systemd, as root, one per machine: it listens on the "
          "two ports, speaks TLS, QUIC and RCP, and owns every connection. It never touches GLib, PipeWire or D-Bus "
@@ -184,8 +185,9 @@ S3 = p("The server's code is split by job. This is the map the manual follows ch
 ])
 
 S4 = p("The " + c("nic-fio/REMOTIX") + " repository on GitHub (private) holds everything: the product, the "
-       "installer, the packages, the test benches, the measurements and the documents. Documents and code comments "
-       "are in Italian; this manual is in English, and so is what the user and the administrator read: the page, "
+       "installer, the packages, the test benches, the measurements and the documents. Since " + c("DECISIONI.md")
+       + " §10.38 (10 Oct 2026) everything is in English — documents, comments, the manual and what the user and "
+       "the administrator read: the page, "
        "including the reasons of a farewell (" + c("MOTIVO") + " in " + c("pagina.html") + ") and the ban notice, "
        "and the server's log lines.", lead=True) + tree([
     "REMOTIX/",

@@ -186,8 +186,8 @@ S_INTRO = p("REMOTIX is installed by one program, " + c("remotix-install") + ", 
         ["<b>One file, no repository</b>", "The " + c(".run") + " carries the engine and the REMOTIX packages of every "
          "supported distribution; dependencies come from the repositories the machine already has. Upgrading = running "
          "the newer " + c(".run") + ".", "§10.36 (supersedes the signed archive of §10.21/§10.23)"],
-        ["<b>English only</b>", "Every text the administrator reads is in English; code names, comments and "
-         "the catalogue's keys stay Italian.", "§10.32, §10.35"],
+        ["<b>English only</b>", "Every text the administrator reads is in English; code names and "
+         "the catalogue's keys are still Italian, until the rename of §10.38.", "§10.32, §10.35, §10.38"],
         ["<b>Two interfaces</b>", "The command line and a TUI on the same engine; the GUI was removed on 10 Oct 2026.",
          "§10.31"],
     ], "«TAB» — The rules the installer is built on") + \

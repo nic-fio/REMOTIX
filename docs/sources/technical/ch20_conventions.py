@@ -1,37 +1,37 @@
 from build import c, code, note, p, rif, steps, table, term, tip, ul, warn
 
 # ── 20.1 ─────────────────────────────────────────────────────────────────────
-S1 = p("REMOTIX is written in Italian and speaks English. The project's own language — documents, "
-       "comments, names in the code, commit messages, reports — is Italian; everything a customer or an "
-       "administrator reads is English. The line is drawn by what the reader is, not by the file type.",
-       lead=True) + \
-    table(["Italian", "English"], [
+S1 = p("REMOTIX is fully English (" + c("DECISIONI.md") + " §10.38, 10 Oct 2026): code, comments, log lines, "
+       "bench output, documents, the page, the installer and commit messages. Only the user's own words, quoted "
+       "«…» in the documents, stay in Italian, because they are the real sentence.", lead=True) + \
+    table(["What", "Language", "Since"], [
         ["documents: " + c("README.md") + ", " + c("SPECIFICHE.md") + " (specifications), " + c("RCP.md") + ", "
          + c("DECISIONI.md") + " (decisions), " + c("LEZIONI.md") + " (lessons), " + c("FASI.md") + " (phases), "
-         "phase documents, studies",
-         "the browser page: login, warnings, errors, and the texts the server sends to the page ("
-         + c("DECISIONI.md") + " §10.32, 5 Oct 2026)"],
-        ["comments and identifiers: " + c("palco") + " (stage), " + c("cattura") + " (capture), " + c("sentinella")
-         + " (sentry), " + c("appunti") + " (clipboard), " + c("figlio") + " (child), " + c("riconosci_desktop")
-         + " (recognise the desktop)…",
-         "the installer: TUI, messages, " + c("RX-") + " code texts, catalogue texts, lines written into system files "
-         "(§10.35, 10 Oct 2026)"],
-        ["benches, their output, registers and reports", "this manual: generated from " + c("docs/sources/")
-         + ", checked for leftover Italian (§10.37)"],
-        ["commit messages", "command names and options of the installer (" + c("check") + ", " + c("install")
-         + ", …)"],
-    ], "«TAB» — Which language goes where") + \
-    p("Why the split: the product is meant for system administrators outside Italy, and one interface is "
-      "written and tested once; the project's reasoning, on the other hand, lives in a long Italian record "
-      "that the code cites section by section, and translating names would sever those links. Two consequences "
-      "for a maintainer: in this manual, Italian names appear only as code (they are the real names in the "
-      "sources); and administrator-facing texts live in one place per program — "
+         "phase documents, studies", "English; the user's «…» quotes stay Italian", "§10.38"],
+        ["comments, log lines, messages of the server", "English", "§10.38"],
+        ["identifiers, file and folder names, options, RCP message and capability names: " + c("palco")
+         + " (stage), " + c("cattura") + " (capture), " + c("figlio") + " (child)…",
+         "being renamed to English mechanically, from one glossary; until then the Italian names are the real "
+         "ones", "§10.38"],
+        ["the browser page: login, warnings, errors, farewell reasons", "English", "§10.32, §10.38"],
+        ["the installer: TUI, messages, " + c("RX-") + " code texts, catalogue texts, lines written into system "
+         "files", "English", "§10.35"],
+        ["benches, their output, registers and reports", "English", "§10.38"],
+        ["commit messages", "English, from " + c("be21b85") + " on", "§10.38"],
+        ["this manual, generated from " + c("docs/sources/"), "English, checked for leftover Italian", "§10.37"],
+    ], "«TAB» — The language of each part of the project") + \
+    p("Why: the product is meant for system administrators outside Italy, and a project in one language is "
+      "coherent: the user asked to remove Italian from the code and the documents so that everything is "
+      "consistent (his words are in §10.38). Two consequences for a maintainer: in this manual, Italian names appear only as code, because "
+      "until the rename they are the real names in the sources; and administrator-facing texts live in one place "
+      "per program — "
       + c("installatore/motore/testi.go") + ", " + c("installatore/interfaccia/testi.go") + ", the page's own "
       "strings — so that another language can be added later without hunting for them.") + \
     note("REMOTIX does not translate or touch the desktops. Users see their programs and their desktop in the "
          "machine's language; only REMOTIX's own text is English (§10.35).", "The desktops keep their language.") + \
-    p("A detail of style in C and shell sources: accented letters are written with an apostrophe in comments "
-      "and messages (" + c("e'") + ", " + c("puo'") + ", " + c("perche'") + "). Inside " + c("${…:?…}")
+    p("Where Italian survives in C and shell sources (a quoted sentence of the user, an old line not yet "
+      "translated) accented letters are written with an apostrophe (" + c("e'") + ", " + c("puo'") + ", "
+      + c("perche'") + "). Inside " + c("${…:?…}")
       + " and inside double-quoted shell strings an apostrophe is not style but a hazard — see "
       + rif("Rules for code and scripts") + ".")
 
@@ -111,17 +111,17 @@ S4 = p("The project keeps few, large documents, read in a fixed order. Agents' r
     p("A phase document is <b>opened at the start and filled as the work goes</b>; written at the end it would "
       "be an account, in which measurements are remembered rather than recorded. Its skeleton is fixed by "
       + c("PIANO.md") + " §0.2:") + \
-    code("""# Fase N — <titolo>                 Phase N — <title>
-Aperta il <data> · Chiusa il <data>   Opened on <date> · Closed on <date>
-## Che cosa deve produrre        What it must produce: one line, and what the user sees and judges
-## Il banco                      The bench: written BEFORE developing, with its positive control
-## Che cosa è stato sviluppato   What was developed: files, lines, what they are for
-## Le misure                     The measurements: what · expected · measured · date, the scene next to every number
-## ⛔ Che cosa NON ha funzionato  What did NOT work: dead ends, with the reason, embarrassing ones included
-## Le decisioni prodotte         The decisions produced: links to DECISIONI.md, never copies
-## Che cosa resta [?]            What remains [?]: what the phase leaves open, declared
-## Il giudizio dell'utente       The user's verdict: the real sentence, with the date""", "text",
-         "The skeleton of a phase document: the headings as written in Italian, with their meaning on the right") + \
+    code("""# Phase N — <title>
+Opened on <date> · Closed on <date>
+## What it must produce         one line, and what the user sees and judges
+## The bench                    written BEFORE developing, with its positive control
+## What was developed           files, lines, what they are for
+## The measurements             what · expected · measured · date, the scene next to every number
+## ⛔ What did NOT work          dead ends, with the reason, embarrassing ones included
+## The decisions produced       links to DECISIONI.md, never copies
+## What remains [?]             what the phase leaves open, declared
+## The user's judgement         the real sentence, with the date""", "text",
+         "The skeleton of a phase document (" + c("PIANO.md") + " §0.2): the headings, with what goes under each") + \
     p("Four rules of the plan go with it: decisions once, in " + c("DECISIONI.md") + "; «what did not work» is "
       "filled even when it looks bad — the seven dead ends of v1 in " + c("LEZIONI.md") + " §8 exist only because "
       "failures were written; <b>a phase closes on a measurement judged by the user</b>, not on a complete "
@@ -261,7 +261,8 @@ S7 = p("Every commit leaves the project built, checked and documented. The list 
         ["⭐ ⛔ ✅", "weight rather than kind: an important result, a refuted or failed one, a closed phase or "
          "checkpoint"],
     ], "«TAB» — Commit message prefixes, as the history uses them") + \
-    p("Commit messages are Italian, and apart from merges and the very first commits they start with an emoji that says what kind of change it is, and cite the "
+    p("Commit messages are English from " + c("be21b85") + " on (" + c("DECISIONI.md") + " §10.38; the older "
+      "history is Italian), and apart from merges and the very first commits they start with an emoji that says what kind of change it is, and cite the "
       "section of the document they implement (for example «📋 DECISIONI §10.35: …»). This is a practice of "
       "the history, not a written rule.") + \
     warn("the test machine is shared with long measurement campaigns and with the user's own manual tests. "
@@ -271,7 +272,7 @@ S7 = p("Every commit leaves the project built, checked and documented. The list 
          "Do not disturb the test machine.")
 
 CHAPTER = ("Conventions", [
-    ("Italian inside, English outside", S1),
+    ("English everywhere", S1),
     ("Evidence marks", S2),
     ("The decision register", S3),
     ("The documents of the project", S4),

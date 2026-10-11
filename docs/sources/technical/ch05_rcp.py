@@ -14,7 +14,7 @@ S1 = p("RCP/1 — the Remotix Control Protocol, version 1 — is what the page a
       "a session. And the canvas is agreed at attach time. A message that arrives in a state where it is not expected is "
       + c("ERRORE_PROTOCOLLO") + " (protocol error) — the protocol says «you got the order wrong» instead of punishing each permutation with "
       "a different error, which was trap 1 of the v1 lessons.") + \
-    p("The message names are those of the code and of " + c("RCP.md") + ", in Italian: " + c("CIAO") + " (hello) and "
+    p("The message names are those of the code and of " + c("RCP.md") + ", still in Italian until the rename of " + c("DECISIONI.md") + " §10.38: " + c("CIAO") + " (hello) and "
       + c("ECCOMI") + " (here I am) exchange versions and capabilities, " + c("CREDENZIALI") + " (credentials) carries "
       "user and password, " + c("ATTACCA") + " (attach) asks for a desktop and " + c("SESSIONE") + " (session) grants it.") + \
     p("<b>Why the specification is the referee.</b> In v1 the referee was " + c("mstsc") + ": if Microsoft's client drew "

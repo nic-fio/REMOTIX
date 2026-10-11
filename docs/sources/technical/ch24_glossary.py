@@ -294,8 +294,8 @@ M_Z = [
 ]
 
 CHAPTER = ("Glossary", [
-    ("Italian names in the code", p("The code and the documents of REMOTIX are written in Italian, and many names "
-                                   "a maintainer meets are Italian words used as terms. They are listed here as "
+    ("Italian names in the code", p("The identifiers of REMOTIX are still Italian words used as terms, until the "
+                                   "rename to English decided in DECISIONI.md §10.38. They are listed here as "
                                    "they are spelled in the sources, with their English meaning and the section "
                                    "that explains them.", lead=True) + dl(NOMI, "gloss")),
     ("Technical terms A–L", p("Protocol and technology terms used in the manual, with what they mean for "
