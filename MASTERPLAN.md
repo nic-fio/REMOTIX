@@ -150,6 +150,39 @@ asks for a click (browsers do not print silently).
 
 ---
 
+## M7 · A «factory» of our own: the packages REMOTIX runs on, read and built by us
+
+**What it is.** A build line parallel to REMOTIX that takes the packages a REMOTIX server needs from their
+upstream sources, reads them (the whole source the first time, the diff at every update), builds them and
+reorganises them — up to a minimal system image ready to be a REMOTIX server, made and checked by us.
+⚠ Taken to the end it is **a Linux distribution**, i.e. a product of its own, not a piece of REMOTIX; the
+reachable form is the minimal server image (the server's NIC-OS already goes that way).
+
+**Where it comes from.** 11 Oct 2026, while deciding to build labwc ourselves for the KWin host
+(`DECISIONI.md` §10.40, §10.43): *«questa cosa di farci le cose da soli mi stuzzica sempre»*, then *«al momento si,
+restiamo come siamo, con labwc che ce lo analizziamo e compiliamo da soli. Un domani potremmo addirittura creare
+una fabbrica parallela a remotix, con tutti i pacchetti che li riorganizziamo e ce li analizziamo e compiliamo da
+soli»*, and *«inseriamola nel masterplan»*. The rule in force meanwhile: a component is built by us only when the
+distribution's version gives a **measured** problem (today ngtcp2/nghttp3 and labwc), each one written in
+`DECISIONI.md` with its reason.
+
+**What it costs if it is NEVER done.** REMOTIX keeps depending on what each distribution ships: versions that
+differ (the KWin-host rule that did not fire on openSUSE), packages that are missing (labwc on Alma/RHEL 10), and
+binaries we did not read. Each case is cured one by one, as today, when it shows up — the cost is the variance
+between distributions and the trust placed in other people's builds.
+
+**What is needed first.** ⚠ The count of what a server really runs (the packages below REMOTIX: compositors,
+PipeWire, Mesa, libva, the kernel's drivers) and, for each, who keeps it aligned with the hardware. Mesa, libva,
+the drivers and the desktops are tied to the graphics cards: taking them in-house means owning «every card on
+every distribution», the hardest problem. And the cost per component per release: reading the diff, watching
+security advisories, rebuilding on 7 distributions.
+
+**How much it weighs.** `[?]` Not really looked at. The user's estimate for organising it: *3-4 days* of analysis
+and builds to start; after that a fixed cost at every release that grows with every component (`DECISIONI.md`
+«complexity is vulnerability»).
+
+---
+
 # ⚠ The things someone might want to put here, and do NOT belong here
 
 ⛔ For the document to stay short, it must also say what it **refuses**.
@@ -181,7 +214,7 @@ asks for a click (browsers do not print silently).
 ## The removed entries
 
 ⭐ **21 Sep 2026, decision of the user**: *«M2, M3 e M5 sono gli unici punti da conservare
-nel masterplan»* (then, on 10 Oct, **M6** came in). ⇒ Removed, and the numbers are **not** reused (rule 3):
+nel masterplan»* (then, on 10 Oct, **M6** came in, and on 11 Oct **M7**). ⇒ Removed, and the numbers are **not** reused (rule 3):
 
 | | what it was | why it left |
 |---|---|---|
