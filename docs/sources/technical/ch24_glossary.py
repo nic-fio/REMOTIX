@@ -16,8 +16,9 @@ NOMI = [
      "logind and Mutter <i>seat</i> stays <i>seat</i>." + v("Detach and reattach")),
     ("backstop", "A time limit that ends a wait whatever happens (" + c("CLIPBOARD_BACKSTOP") + ")."),
     ("belts", "The three system settings that forbid power-off, reboot and suspend: a polkit rule, logind key "
-     "settings and sleep settings. The packages ship them inert in " + c("/usr/share/remotix/belts/") + "."
-     + v("The power belts, shipped inert")),
+     "settings and sleep settings. The packages install the polkit rule active in " + c("/usr/share/polkit-1/rules.d/")
+     + " and ship the other two inert in " + c("/usr/share/remotix/belts/") + "."
+     + v("The power belts")),
     ("bench, benches", "A test or a measurement, with its scene, its verdict and its results kept next to it, in "
      + c("benches/") + ". " + c("BENCH_ON") + " is the build switch of the bench functions, 0 in the product."
      + v("The bench folder")),
@@ -267,7 +268,7 @@ M_Z = [
     ("PipeWire", "The media server that carries the screen stream on GNOME and KDE and the session's sound."
      + v("PipeWire negotiation, resize and wake-up")),
     ("polkit", "The authorisation service; the first belt is a polkit rule that refuses power-off and its relatives."
-     + v("The power belts, shipped inert")),
+     + v("The power belts")),
     ("QP", "Quantisation parameter. REMOTIX encodes at constant QP 26; the 16 MiB ceiling walks it to 35, 44, 51."
      + v("Encoder rate control", "The 16 MiB frame cap and the quality ladder")),
     ("QUIC", "The UDP transport (version 1, TLS 1.3 built in) under HTTP/3; one connection per client."

@@ -2,9 +2,15 @@
  * remotix-no-poweroff.rules — the first of the three belts of
  * `DECISIONS.md` §4.7: "nobody switches the server off".
  *
- * Installed in /etc/polkit-1/rules.d/.  Number 50 and not 49: it must win
- * over v1's (`49-remotix-niente-spegnimento.rules`), which covered three
- * actions out of twelve — see below.
+ * Installed ACTIVE by the package, as
+ * /usr/share/polkit-1/rules.d/50-remotix-no-poweroff.rules (polkit's vendor
+ * folder; the package owns it and removing the package removes it) —
+ * `DECISIONS.md` §10.50, the exception to §10.36: this change to the system is
+ * needed so that ordinary users cannot take the machine down for everyone.
+ * An administrator's file with the same name in /etc/polkit-1/rules.d/ wins.
+ * Number 50 and not 49: it must win over v1's
+ * (`49-remotix-niente-spegnimento.rules`), which covered three actions out
+ * of twelve — see below.
  *
  * ---------------------------------------------------------------------------
  * ⛔⛔ WHY `power-off`, `reboot` AND `halt` ARE NOT ENOUGH — [M] 15 August 2026

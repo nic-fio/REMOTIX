@@ -135,7 +135,7 @@ S2 = p("A few concepts recur in every chapter. The manual writes their names in 
          c("budget.c"), rif("Quality, degradation and budget")],
         ["<b>Belts</b>", "The three system settings that forbid power-off, reboot and "
          "suspend to every user: a polkit rule, logind settings for the power key and lid, and sleep settings. "
-         "The packages ship them disabled", c("remotix-no-poweroff.rules"),
+         "The packages install the polkit rule active (§10.50) and ship the other two disabled", c("remotix-no-poweroff.rules"),
          rif("Files on the machine")],
     ], "«TAB» — Basic concepts") + \
     p("The design is held together by eight <b>invariants</b>, numbered in " + c("CODER.md") + " §2 and quoted "

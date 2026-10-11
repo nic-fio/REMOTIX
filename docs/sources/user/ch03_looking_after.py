@@ -84,31 +84,25 @@ S_LOGS = p("When something does not work, the reason is written down. These are 
 
 B = "/usr/share/remotix/belts/"
 
-S_SHARED = p("REMOTIX protects its own sessions: a user connected through REMOTIX cannot power off, restart or "
-             "suspend the machine.", lead=True) + \
-    p("For people sitting at the machine, the rules are the administrator's: REMOTIX does not change the "
-      "system. On a machine that many people really share, though, no ordinary user should be able to take it "
-      "down for everyone. For that case REMOTIX ships two ready-made rules, <b>switched off</b>, in the folder "
-      + c(B) + ". Nothing reads them there; each one works only once the administrator copies it into place.") + \
+S_SHARED = p("On a machine that many people share, no ordinary user may take it down for everyone. "
+             "REMOTIX installs one rule for that, and leaves one more to the administrator.", lead=True) + \
+    p("<b>Installed by REMOTIX:</b> " + c("/usr/share/polkit-1/rules.d/50-remotix-no-poweroff.rules") + ". With it, ordinary users can no longer "
+      "power off, restart, suspend or hibernate the machine — from a REMOTIX session or sitting at it, also with "
+      "other people signed in. Without it, anyone connected could power the machine off without a password. "
+      "Administrators still can, with " + c("sudo systemctl poweroff") + " and " + c("sudo systemctl reboot")
+      + ". The installation plan says so before it asks; uninstalling REMOTIX removes it.") + \
+    p("<b>The administrator's choice:</b> one more ready-made rule, <b>switched off</b>, in " + c(B)
+      + ". Nothing reads it there; it works only once the administrator copies it into place.") + \
     table(["File", "What it does", "Switch it on", "Switch it off"], [
-        [c(B + "50-remotix-no-poweroff.rules"),
-         "Ordinary users can no longer power off, restart, suspend or hibernate the machine (all twelve "
-         "login1 actions, also with other people signed in). " + c("sudo systemctl poweroff") +
-         " still works.",
-         c("sudo cp " + B + "50-remotix-no-poweroff.rules /etc/polkit-1/rules.d/") +
-         "<br>Nothing to reload: polkit reads it by itself.",
-         c("sudo rm /etc/polkit-1/rules.d/50-remotix-no-poweroff.rules")],
         [c(B + "remotix-no-suspend.conf"),
          "The machine cannot suspend or hibernate at all, not even for root.",
          c("sudo mkdir -p /etc/systemd/sleep.conf.d") + "<br>" +
          c("sudo cp " + B + "remotix-no-suspend.conf /etc/systemd/sleep.conf.d/") +
          "<br>Nothing to reload.",
          c("sudo rm /etc/systemd/sleep.conf.d/remotix-no-suspend.conf")],
-    ], "«TAB» — The two ready-made rules for a shared machine") + \
-    p("Each file can be switched on alone. The administrator always keeps " + c("sudo systemctl poweroff") +
-      " and " + c("sudo systemctl reboot") + ".") + \
-    warn("switching these on is the administrator's choice, and uninstalling REMOTIX does not remove files the "
-         "administrator copied: remove them with the commands in the last column.", "Whose choice.")
+    ], "«TAB» — The optional rule for a shared machine") + \
+    warn("switching it on is the administrator's choice, and uninstalling REMOTIX does not remove a file the "
+         "administrator copied: remove it with the command in the last column.", "Whose choice.")
 
 CHAPTER = ("Looking after an installation", [
     ("Checking an installation", S_STATUS),

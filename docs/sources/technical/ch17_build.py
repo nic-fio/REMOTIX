@@ -410,7 +410,8 @@ INSTALLED = [
     ["who cannot log in", c("/etc/remotix/denied-users") + " = " + c("root"), "same", "same"],
     ["KWin capture permission", c("/usr/share/applications/org.kde.remotix.desktop"), "same", "same (" + c("Exec=")
      + " the Arch path)"],
-    ["guards, switched off", c("/usr/share/remotix/belts/") + " (the guards): no power-off rule, no-suspend, keys", "same", "same"],
+    ["power rule, active", c("/usr/share/polkit-1/rules.d/50-remotix-no-poweroff.rules") + " (DECISIONS §10.50)", "same", "same"],
+    ["guards, switched off", c("/usr/share/remotix/belts/") + " (the guards): no-suspend, keys", "same", "same"],
     ["firewall definition", c("/etc/ufw/applications.d/remotix") + " (profile REMOTIX)", c("/usr/lib/firewalld/services/remotix.xml"),
      c("/usr/lib/firewalld/services/remotix.xml")],
     ["SELinux", "—", c("remotix-selinux") + " subpackage", "—"],

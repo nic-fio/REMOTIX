@@ -6598,6 +6598,7 @@ REMOTIX) and the parts of §10.12, §10.21 and §10.23 that contradict what foll
   a single file (e.g. `remotix-<versione>.run`, sha256 published) with the installer and the packages of all the
   distributions; the package manager installs from a local folder. Upgrading = downloading the new `.run` and running it again.
   Supersedes the part of §10.23 on upgrading with `apt upgrade` from a repository of ours.
+- ⚠ **One exception, §10.50**: the polkit rule against powering off is installed active by the package.
 - **Rolling-release distributions stay** (Arch, Tumbleweed; and Fedora): *«chi usa arch è consapevole
   che in qualunque momento la macchina potrebbe avere problemi. Quello che noi possiamo fare al massimo è fare in
   modo che remotix usi librerie piuttosto stabili, ma non possiamo garantire la stabilità su sistemi per loro natura
@@ -7024,7 +7025,12 @@ labwc che ce lo analizziamo e compiliamo da soli»*.
   - **no mounts inside scratch folders**: the server is reached **only through ssh**;
   - **one deletes only what one created** — never a folder whose origin has not been checked.
 
-### 10.49 ✅ No Power Off, Restart or Suspend in the session menu: a feature of the product (11 Oct 2026)
+### 10.49 ⛔ No Power Off, Restart or Suspend in the session menu: a feature of the product (11 Oct 2026) — the filter WITHDRAWN by §10.50
+
+- ⛔ **Withdrawn the same day** (§10.50): the system bus filter below (`src/busfilter.c`) was reverted (cb9afe9)
+  before any release carried it. The ruling (the entries must not appear) stands, and is now met by the polkit
+  rule the package installs active: with it logind answers «no», and the four desktops hide the entries by
+  themselves — exactly what the test boxes showed (see «Why it escaped»). What follows is kept as the record.
 
 - **The ruling** (the director, 11 Oct 2026, on 0.19.0 on his tablet — Debian 13, GNOME): *«quelle voci di menu
   non devono comparire. Questa e' una feature del prodotto»*. Inside a REMOTIX session the menu must **not** offer
@@ -7081,6 +7087,37 @@ labwc che ce lo analizziamo e compiliamo da soli»*.
 - **Not measured here**: a whole REMOTIX session through the filter (boxes and the product need root; the server's
   sudo asks a password): C25 covers the desktop code and the act; reattach, input and audio are the boxes' net.
   The director's test is on the tablet (GNOME, real machine).
+
+### 10.50 ✅ The polkit rule is installed active: an exception to §10.36 (11 Oct 2026)
+
+- **The ruling** (the director, 11 Oct 2026, verbatim): *«ma certo, mettiamo la policy, e annotiamo bene che questa
+  modifica al sistema e' necessaria per evitare che utenti normali buttino giu' il sistema»*. ⇒ **This change to the
+  system is necessary to stop ordinary users from taking the machine down.** It is the one exception to §10.36
+  (REMOTIX does not modify the system), and it is written down as such.
+- **Why it is necessary**: a REMOTIX session is a real logind session, and logind counts it as **active**; the
+  login1 power actions are `allow_active=yes`, so any connected user can power off, restart or suspend the machine
+  **without a password** — for everyone on it, local and remote. On a shared machine that is a denial of service
+  open to any ordinary user. The others do the same: Citrix's Linux VDA ships the same kind of polkit rule; Windows
+  Server gives «Shut down the system» only to administrators.
+- **What it is**: `src/remotix-no-poweroff.rules`, installed by the package (deb, rpm, Arch) as
+  `/usr/share/polkit-1/rules.d/50-remotix-no-poweroff.rules` — polkit's vendor folder, read by polkit (JavaScript
+  rules, duktape) on all seven distributions; owned by the package, so **removing REMOTIX removes it**; an
+  administrator's file with the same name in `/etc/polkit-1/rules.d/` wins. The installer states it in the plan,
+  before «Proceed? [y/N]».
+- **What it blocks**: for every user who is not root, the twelve login1 actions power-off, reboot, suspend,
+  hibernate, each also in its `-multiple-sessions` and `-ignore-inhibit` forms (`polkit.Result.NO`: the entries
+  disappear from the menus of the desktops, `systemctl poweroff` is refused). For local users too: the machine is
+  shared. **Root keeps it**: logind checks `CAP_SYS_BOOT` before polkit, so `sudo systemctl poweroff` and
+  `sudo systemctl reboot` work as always (`[M]` 15 Aug 2026, §4.7).
+- **What stays the administrator's choice**: the other two belts of §4.7 (`remotix-no-suspend.conf`, no suspend
+  at all even for root; `remotix-power-keys.conf`, the power keys) stay switched off in `/usr/share/remotix/belts/`.
+- **§10.49's filter is withdrawn** (complexity = vulnerability): some 500 lines of C between every desktop and the
+  system bus protected nothing the rule does not — the rule makes logind say «no» for the session's user, and the
+  desktops hide the entries by themselves; and unlike the filter the rule is a real boundary (the session's user
+  could reach the real bus around the filter, not around polkit). XFCE's log-out dialog keeps drawing Restart and
+  Shut Down, greyed and refused (xfce4-session 4.20.2), as with the filter.
+- **The net**: `benches/11-boxes/11-c25-no-power-entries.sh` checks that every built package (deb, rpm, Arch)
+  carries the rule, active, at `/usr/share/polkit-1/rules.d/` and no longer in the belts folder.
 
 ## How this document is kept
 

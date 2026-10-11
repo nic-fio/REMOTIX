@@ -70,6 +70,9 @@ func InstallPlan(prof *ProfileV, rap *Report, cat *Catalog, env *Environment, o 
 		pn.Azioni = append(pn.Azioni, PlanPackages("packages", strings.Join(file, ","), strings.Join(rap.DependencyNames(), ",")))
 		pn.Dipendenze = rap.Dipendenze
 	}
+	// DECISIONS §10.50 (the exception to §10.36): the package brings an ACTIVE polkit rule; the
+	// plan says so before the question, on install and on upgrade alike
+	pn.Declared = append(pn.Declared, T("np.polkit"))
 	if !o.Update {
 		users := o.Utenti
 		if len(users) == 0 {

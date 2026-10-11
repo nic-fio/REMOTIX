@@ -47,9 +47,6 @@ GRUPPI = [
         (S + "rediscover.c", "Finds live REMOTIX desktops that no child holds, after a service restart"),
         (S + "rediscover.h", "Why found-again desktops exist (stopping the service does not kill desktops) and the "
          "criterion that recognises them"),
-        (S + "busfilter.c", "The session's system bus through a filter: every message passes except logind's "
-         "power-off, restart and suspend methods (DECISIONS §10.49)"),
-        (S + "busfilter.h", "Why the session sees no Power Off, Restart, Suspend, and the filter's interface"),
         (S + "budget.c", "The composition budget mechanism: per-user accounts, admission, degradation"),
         (S + "budget.h", "The reason behind every number of the budget (phase 10) and its interface"),
         (S + "log.c", "Writes log lines: instant, area, level, one place for all output"),
@@ -76,8 +73,8 @@ GRUPPI = [
         (S + "shape.c", "The encoded cursor theme and its dictionary, shared by server and child"),
         (S + "shape.h", "How the real pointer shape reaches the browser where the compositor does not send it"),
         (S + "remotix-power-keys.conf", "Second power belt: logind ignores the power, reboot, suspend and hibernate keys and the lid"),
-        (S + "remotix-no-poweroff.rules", "First power belt: polkit rule so that nobody shuts the "
-         "server down"),
+        (S + "remotix-no-poweroff.rules", "The polkit rule, installed active by the packages: ordinary users cannot power off, "
+         "restart or suspend the machine (DECISIONS §10.50)"),
     ]),
     ("Encoding", [
         (S + "encoder.c", "From the captured frame to the stream: picks the hardware path, keyframes, "

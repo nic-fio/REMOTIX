@@ -424,9 +424,9 @@ S9 = p("«The key of everything is that REMOTIX does not modify the systems it i
         ["Opens the firewall", "Warns «the firewall (…) is on: port N TCP and UDP must be reachable … opening it is "
          "up to the administrator»; ships a ufw profile (" + c("/etc/ufw/applications.d/remotix") + ") or a "
          "firewalld service (" + c("/usr/lib/firewalld/services/remotix.xml") + ") <b>defined, not enabled</b>"],
-        ["Changes power, suspend and key handling (the «belts»)", "Ships them inert; says «REMOTIX does not change how "
-         "this machine suspends or powers off: a machine that suspends when idle disconnects everyone» ("
-         + rif("The power belts, shipped inert") + ")"],
+        ["Changes power, suspend and key handling (the «belts»)", "Installs the polkit rule active (ordinary users cannot "
+         "power off, restart or suspend; §10.50), declared in the plan; ships the other two inert ("
+         + rif("The power belts") + ")"],
         ["Changes the desktops' language or the users' settings", "Only REMOTIX's own text is in English (§10.35)"],
     ], "«TAB» — What is left to the administrator") + \
     table(["What the packages and the product do place", "Where", "Removed by"], [
@@ -507,11 +507,13 @@ S9B = p("On KDE, KWin runs nested in a labwc without a screen that REMOTIX start
 # ── 14.11 The power belts ────────────────────────────────────────────────
 S10 = p("On 15 Aug 2026 the user decided that nobody powers off, reboots, suspends or hibernates the server — not even "
         "who sits in front of it — because powering off takes away every session at once and whoever does it does "
-        "not see who is connected (" + c("DECISIONS.md") + " §4.7). Three «belts» implement it. Since §10.12 and "
-        "§10.36 they are shipped inert in " + c("/usr/share/remotix/belts/") + ", where nothing reads them, and "
-        "the installer no longer applies them.", lead=True) + \
-    table(["Belt", "Shipped as", "Would go in", "What it does"], [
-        ["polkit rule", c("50-remotix-no-poweroff.rules"), c("/etc/polkit-1/rules.d/"), "Returns "
+        "not see who is connected (" + c("DECISIONS.md") + " §4.7). Three «belts» implement it. Since §10.50 the polkit rule is installed <b>active</b> by the packages, as "
+        + c("/usr/share/polkit-1/rules.d/50-remotix-no-poweroff.rules") + " — the one exception to §10.36, because a REMOTIX session counts as active and "
+        "any connected user could otherwise power the machine off without a password; removing the package removes "
+        "it. The other two are shipped inert in " + c("/usr/share/remotix/belts/") + ", where nothing reads them: "
+        "the administrator's choice.", lead=True) + \
+    table(["Belt", "Shipped as", "Goes in", "What it does"], [
+        ["polkit rule (active)", c("50-remotix-no-poweroff.rules"), c("/usr/share/polkit-1/rules.d/") + " (by the package)", "Returns "
          + c("polkit.Result.NO") + " for twelve logind actions: power-off, reboot, suspend, hibernate, each also as "
          + c("-multiple-sessions") + " and " + c("-ignore-inhibit")],
         ["logind keys", sysf("remotix-power-keys.conf"), c("/etc/systemd/logind.conf.d/"), c("HandlePowerKey") + ", "
@@ -534,12 +536,12 @@ S10 = p("On 15 Aug 2026 the user decided that nobody powers off, reboots, suspen
          + ": an entry that appears and asks for a password promises something"],
     ], "«TAB» — Why the belts look the way they do") + \
     p("What remains in force regardless is session behaviour, not system configuration: inside a REMOTIX session the "
-      "desktops' menus lose suspend, lock, restart, power-off and switch user, so that the only gesture that ends "
+      "desktops' menus lose lock and switch user (power-off, restart and suspend go through the rule), so that the only gesture that ends "
       "something is the logout (" + c("DECISIONS.md") + " §4.7, §8.2; described with the four desktops). When root "
       "does stop the machine, attached clients receive " + c("0x0C SERVER_CLOSING") + ".") + \
     warn(c("SPECS.md") + " §11.3 still says power-off and suspend are «taken away from everyone». Since "
-         + c("DECISIONS.md") + " §10.36 that holds only inside REMOTIX sessions; the machine itself suspends and "
-         "powers off as its administrator configured it.", "The specification is older than the decision.")
+         + c("DECISIONS.md") + " §10.50 ordinary users cannot power off, restart or suspend; root still can, and "
+         "automatic suspend stays as the administrator configured it.", "The specification is older than the decision.")
 
 # ── 14.12 The service unit ───────────────────────────────────────────────
 S11 = p("The server runs as a systemd system service, as <b>root</b> and outside any user session: PAM must verify "
@@ -616,7 +618,7 @@ CHAPTER = ("Security model", [
     ("The graphics card groups", S8),
     ("What REMOTIX does not change", S9),
     ("KWin's labwc on RHEL / Alma 10", S9B),
-    ("The power belts, shipped inert", S10),
+    ("The power belts", S10),
     ("The service unit and SELinux", S11),
     ("Known limits of the security model", S12),
 ])

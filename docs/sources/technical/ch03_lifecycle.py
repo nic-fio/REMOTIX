@@ -491,7 +491,9 @@ S11 = p("What REMOTIX puts on the machine, and who puts it there. Paths are thos
          + c("REMOTIX_OPTIONS") + " empty; never edited"],
         [c("/usr/share/remotix/linked.json"), "package", "versions of the static ngtcp2 and nghttp3 linked in, "
          "for the bill of materials"],
-        [c("/usr/share/remotix/belts/"), "package", "the three belts, <b>disabled</b>: the polkit rule, the logind "
+        [c("/usr/share/polkit-1/rules.d/50-remotix-no-poweroff.rules"), "package", "the polkit rule, <b>active</b>: ordinary users cannot power off, restart or "
+         "suspend (DECISIONS.md §10.50)"],
+        [c("/usr/share/remotix/belts/"), "package", "the other two belts, <b>disabled</b>: the logind "
          "keys, the sleep settings"],
         [c("/etc/remotix/remotix.conf.d/"), "administrator", "their choices, " + c("VARIABLE=value") + " lines"],
         [c("/etc/remotix/denied-users"), "package", "denied users: those PAM refuses outright; contains " + c("root")],
@@ -537,10 +539,10 @@ S11 = p("What REMOTIX puts on the machine, and who puts it there. Paths are thos
       "stand-by removed — detailed per desktop in " + rif("The four desktops") + ". The session log is created with "
       + c("O_NOFOLLOW") + " in a folder that must be the user's, not a link and not writable by others: until phase "
       "17 it lived in " + c("/tmp") + " under a predictable name, and another user could pre-create it.") + \
-    warn("since DECISIONS.md §10.36 (10 October 2026) the installer no longer puts the belts in force: on a packaged "
-         "machine nobody forbids power-off unless the administrator enables the files in "
-         + c("/usr/share/remotix/belts/") + ". The child checks and writes it in the log at every first stage; "
-         "SPECS.md §11.3 still says power-off is taken from everyone.", "The belts are off by default.")
+    warn("since DECISIONS.md §10.50 the packages install the polkit rule active: ordinary users cannot power off, "
+         "restart or suspend the machine; root can. The other two belts in "
+         + c("/usr/share/remotix/belts/") + " stay off unless the administrator enables them. The child "
+         "checks and writes it in the log at every first stage.", "One belt is on, two are off.")
 
 S12 = p("A defect in this chain rarely names its cause: the user sees “black”, “slow” or “nothing happens”. "
         "Start from the symptom, find the step, then read the log of the area that owns it.", lead=True) + \
