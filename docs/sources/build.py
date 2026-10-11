@@ -2,8 +2,9 @@
 nic-fio's projects (AMS, EFI_PARTITION_MANAGER, HOSTER, MTERM, NESH, PHONESTRA,
 SCRAPER): the canon was taken from PHONESTRA on 10 Oct 2026.
 
-It produces a self-contained HTML file (no external files), in English:
+It produces self-contained HTML files (no external files), in English:
   docs/Technical Manual.html   from the chapters in technical/chNN_*.py
+  docs/User Manual.html        from the chapters in user/chNN_*.py
 
 Each chapter exposes CHAPTER = (title, [(section_title, html), ...]).
 The placeholders «FIG» and «TAB» in the captions become «Figure N.M» and
@@ -14,8 +15,8 @@ common canon, identical byte for byte in all the manuals, and are not modified
 here; REMOTIX's only additions live in EXTRA_CSS, below.
 The file map and the numbers table are counted from the sources at every generation.
 
-    python3 docs/sources/build.py              regenerates the manual
-    python3 docs/sources/build.py --check  checks that it is aligned with the code
+    python3 docs/sources/build.py [tecnico|utente]          regenerates the manuals (default: both)
+    python3 docs/sources/build.py --check [tecnico|utente]  checks that they are aligned with the code
 
 It needs the pygments and Pillow libraries (packages python3-pygments and python3-pil).
 """
@@ -36,6 +37,7 @@ VERSION = re.search(r"rx_version}%{!\?rx_version:([0-9.]+)}", (ROOT / "packaging
 MANUALS = {
     "tecnico": dict(dir="technical", file="Technical Manual.html", title="Technical Manual — REMOTIX",
                     h1="Technical Manual"),
+    "utente": dict(dir="user", file="User Manual.html", title="User Manual — REMOTIX", h1="User Manual"),
 }
 
 # After the canon (style.css), only the rules for elements that exist only in REMOTIX's manual
@@ -553,10 +555,11 @@ def italian_sentences(pagina):
     return frasi
 
 
-def controlla():
+def controlla(kinds=tuple(MANUALS)):
     errori, pagine = [], []
     with tempfile.TemporaryDirectory() as tmp:
-        for kind, meta in MANUALS.items():
+        for kind in kinds:
+            meta = MANUALS[kind]
             fresco, _ = build(kind, tmp)
             pagina = fresco.read_text()
             if "<style>" + (HERE / "style.css").read_text() not in pagina:
@@ -611,7 +614,8 @@ def controlla():
     in_code = {v for v in re.findall(r"getenv\(\s*\"(REMOTIX_[A-Z0-9_]+)\"", letto)}
     in_code |= {v for v in re.findall(r"Getenv\(\s*\"(REMOTIX_[A-Z0-9_]+)\"", letto)}
     in_manual = set(re.findall(r"\bREMOTIX_[A-Z0-9_]+\b", pagina))
-    for v in sorted(in_code - in_manual):
+    # The variables the product reads are documented in the technical manual: the user manual alone need not.
+    for v in sorted(in_code - in_manual) if "tecnico" in kinds else ():
         errori.append(f"undocumented environment variable: {v}")
     # The benches' ones may be cited (they are not mandatory): they exist, but the product does not read them.
     tutte = set(re.findall(r"\bREMOTIX_[A-Z0-9_]+\b", letto + code_text("banchi")))
@@ -644,14 +648,15 @@ NON_FUNCTION_NAMES = {"bundled"}
 
 
 if __name__ == "__main__":
+    scelti = [a for a in sys.argv[1:] if a in MANUALS] or list(MANUALS)
     if "--check" in sys.argv[1:]:
-        errori = controlla()
+        errori = controlla(scelti)
         for e in errori:
             print("manual:", e)
         if errori:
             sys.exit(1)
         print("manual aligned with the code")
     else:
-        for kind in MANUALS:
+        for kind in scelti:
             f, n = build(kind)
             print("written", f.relative_to(ROOT), n, "bytes")

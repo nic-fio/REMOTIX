@@ -1,0 +1,536 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>User Manual — REMOTIX</title>
+<style>/* Stile comune dei manuali dei 7 progetti (nic-fio). Uguale byte per byte in tutti i manuali: non modificare in un solo progetto. */
+/* Base: style.css di AMS */
+*{box-sizing:border-box} html{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{margin:0;background:#e9edf2;color:#111827;font-family:Outfit,-apple-system,Segoe UI,Roboto,Arial,sans-serif;font-size:15px;line-height:1.62}
+.doc{max-width:1320px;margin:0 auto;background:#fff;box-shadow:0 1px 30px rgba(15,23,42,.10)}
+a{color:#0050C0;text-decoration:none}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.88em;background:#eef2f7;padding:.08em .38em;border-radius:4px;color:#003a90}
+/* Cover */
+.cover{position:relative;padding:64px 56px;min-height:56vh;background:linear-gradient(135deg,#0050C0 0%,#003a90 100%);color:#fff;overflow:hidden}
+.cover-logo{margin-bottom:38px;position:relative;z-index:2}
+.cover-kicker{text-transform:uppercase;letter-spacing:.24em;font-size:12px;font-weight:700;color:#9dc0ff;margin-bottom:14px;position:relative;z-index:2}
+.cover-title{font-size:56px;line-height:1.02;margin:0 0 12px;font-weight:800;letter-spacing:-.02em;position:relative;z-index:2}
+.cover-sub{font-size:19px;color:#cfe0ff;max-width:32em;margin-bottom:44px;position:relative;z-index:2}
+.cover-meta{display:flex;gap:36px;position:relative;z-index:2}
+.cover-meta div{display:flex;flex-direction:column} .cover-meta span{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:#9dc0ff}
+.cover-meta b{font-size:16px;color:#fff}
+.cover-swoosh{position:absolute;right:-90px;bottom:-140px;width:460px;height:460px;border-radius:50%;background:radial-gradient(circle,#3b82f655,transparent 70%);z-index:1}
+/* Layout */
+.with-side{display:flex;align-items:flex-start}
+.side{width:290px;flex:0 0 290px;background:#f8fafc;border-right:1px solid #e5e7eb;align-self:stretch}
+.side-inner{position:sticky;top:0;padding:32px 24px;max-height:100vh;overflow:auto}
+.main{flex:1;padding:48px 64px;min-width:0}
+/* TOC */
+.toc-head{font-size:14px;text-transform:uppercase;letter-spacing:.14em;color:#003a90;margin:0 0 14px;font-weight:800}
+.toc-list{list-style:none;margin:0;padding:0}
+.toc-list a{display:flex;gap:9px;align-items:baseline;padding:4px 0;color:#334155}
+.toc-list a:hover{color:#0050C0}
+.toc-ch{font-weight:700;margin-top:6px} .toc-ch a{color:#0f172a}
+.toc-se a{font-size:13px;color:#64748b;padding-left:8px}
+.toc-n{flex:0 0 30px;color:#0050C0;font-weight:700;font-variant-numeric:tabular-nums}
+.toc-se .toc-n{flex-basis:36px;font-weight:600}
+/* Chapters */
+.chapter{margin-bottom:20px}
+.ch-head{border-bottom:3px solid #0050C0;padding-bottom:10px;margin:8px 0 22px}
+.ch-kick{text-transform:uppercase;letter-spacing:.16em;font-size:11.5px;font-weight:700;color:#0050C0}
+.h-ch{font-size:34px;font-weight:800;letter-spacing:-.02em;color:#003a90;margin:4px 0 0}
+.h-sec{font-size:21px;font-weight:700;color:#003a90;margin:30px 0 10px;padding-left:12px;border-left:4px solid #3b82f6}
+.main h4{font-size:16px;color:#0f172a;margin:20px 0 6px}
+.lead{font-size:17px;color:#334155}
+.main p{margin:10px 0} .ul,.ol{margin:10px 0;padding-left:22px} .ul li,.ol li{margin:4px 0}
+/* Figure/table */
+.fig{margin:20px 0;padding:18px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;text-align:center}
+.fig svg{max-width:100%;height:auto}
+.cap{font-size:12.5px;color:#64748b;margin-top:10px;text-align:center}
+.tbl-wrap{margin:18px 0} .tbl{width:100%;border-collapse:collapse;font-size:13.5px}
+.tbl th{text-align:left;padding:10px 12px;background:#f1f5f9;color:#0f172a;font-weight:700;border-bottom:2px solid #0050C0}
+.tbl td{padding:9px 12px;border-bottom:1px solid #e5e7eb;vertical-align:top}
+.tbl tr:nth-child(even) td{background:#f8fafc}
+/* callout */
+.callout{display:flex;gap:14px;align-items:flex-start;margin:18px 0;padding:14px 18px;border-radius:8px;font-size:14.5px}
+.callout-i{flex:0 0 26px;height:26px;border-radius:50%;color:#fff;font-weight:800;text-align:center;line-height:26px;font-style:italic}
+.c-info{background:#eff6ff;border-left:4px solid #0050C0} .c-info .callout-i{background:#0050C0}
+.c-warn{background:#fffbeb;border-left:4px solid #d97706} .c-warn .callout-i{background:#d97706;font-style:normal}
+.c-ok{background:#f0fdf4;border-left:4px solid #16a34a} .c-ok .callout-i{background:#16a34a;font-style:normal}
+/* code */
+.code{background:#0f172a;color:#e2e8f0;padding:16px 18px;border-radius:10px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.8px;line-height:1.55;overflow-x:auto;margin:14px 0}
+.code code{background:none;padding:0;border-radius:0;color:inherit;font-size:inherit}
+.code .k{color:#c084fc;font-weight:600} .code .cm{color:#64748b;font-style:italic} .code .st{color:#86efac}
+/* deflist */
+.deflist{margin:12px 0} .deflist dt{font-weight:700;color:#003a90;font-family:ui-monospace,Menlo,monospace;font-size:13.5px;margin-top:10px}
+.deflist dd{margin:2px 0 0;color:#334155;font-size:14px}
+.doc-foot{padding:20px 52px;border-top:1px solid #e5e7eb;color:#94a3b8;font-size:12px;text-align:center}
+/* print */
+@page{size:A4;margin:16mm 15mm 18mm;@bottom-center{content:counter(page)}}
+@media print{
+ body{background:#fff} .doc{box-shadow:none;max-width:none}
+ .with-side{display:block} .side{display:none} .main{padding:0}
+ .cover{min-height:auto;page-break-after:always}
+ .chapter{page-break-before:always} .sec,.fig,.tbl-wrap,.callout,.code{page-break-inside:avoid}
+ a{color:inherit}
+}
+
+/* Aggiunte comuni */
+/* Manuale utente: etichette dell'interfaccia e procedure */
+.ui{font-weight:600;color:#003a90;background:#eff6ff;border:1px solid #bfdbfe;border-radius:5px;padding:.02em .4em;font-size:.93em;white-space:nowrap}
+.steps{counter-reset:st;list-style:none;margin:14px 0;padding:0}
+.steps>li{counter-increment:st;position:relative;padding:8px 0 8px 44px;margin:0;border-left:2px solid #dbeafe;margin-left:15px}
+.steps>li:before{content:counter(st);position:absolute;left:-16px;top:6px;width:30px;height:30px;border-radius:50%;background:#0050C0;color:#fff;font-weight:800;text-align:center;line-height:30px;font-size:14px}
+.steps>li:last-child{border-left-color:transparent}
+
+/* tasti, etichette, codice */
+kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.82em;background:#fff;border:1px solid #cbd5e1;border-bottom-width:2px;border-radius:5px;padding:.05em .4em;color:#0f172a;white-space:nowrap}
+.code .p{color:#64748b;user-select:none}
+.badge{display:inline-block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#fff;background:#16a34a;border-radius:4px;padding:1px 7px;margin-right:6px}
+.deflist .dt-t{font-family:Outfit,-apple-system,Segoe UI,Roboto,Arial,sans-serif;font-size:15px}
+.deflist dt[id]{scroll-margin-top:16px} .sec{scroll-margin-top:12px}
+/* ricerca nella barra laterale */
+.srch{margin:0 0 26px}
+.srch .toc-head{display:block}
+.srch-q{width:100%;font:inherit;font-size:14px;padding:8px 11px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#0f172a;outline:none}
+.srch-q:focus{border-color:#0050C0;box-shadow:0 0 0 3px #dbeafe}
+.srch-info{font-size:12px;color:#64748b;margin:6px 2px 0;min-height:1em}
+.srch-res{list-style:none;margin:8px 0 0;padding:0}
+.srch-res li{margin:0}
+.srch-res a{display:block;padding:7px 9px;border-radius:7px;border-left:3px solid transparent;color:#334155}
+.srch-res a:hover,.srch-res a.on{background:#eff6ff;border-left-color:#0050C0}
+.srch-res .r-t{display:flex;gap:8px;font-weight:700;font-size:13px;color:#0f172a}
+.srch-res .r-t .toc-n{flex:0 0 auto}
+.srch-res .r-s{display:block;font-size:12px;color:#64748b;line-height:1.45;margin-top:2px}
+.srch-res mark,mark.hit{background:#fde68a;color:inherit;border-radius:2px;padding:0 1px}
+.toc-list.filtering li{opacity:.35} .toc-list.filtering li.toc-hit{opacity:1}
+.toc-list.filtering li.toc-hit a{color:#0050C0}
+.sec.flash{animation:flash 1.6s ease-out}
+@keyframes flash{0%{background:#eff6ff}100%{background:transparent}}
+/* indice analitico */
+.idx{columns:2 300px;column-gap:40px;margin-top:18px}
+.idx-g{break-inside:avoid;margin:0 0 18px}
+.idx-l{font-size:14px;text-transform:uppercase;letter-spacing:.14em;color:#003a90;font-weight:800;margin:0 0 6px;padding-bottom:4px;border-bottom:2px solid #0050C0}
+.idx-ul{list-style:none;margin:0;padding:0}
+.idx-ul li{margin:3px 0;font-size:14px;color:#334155;break-inside:avoid}
+.idx-t{font-weight:700;color:#0f172a}
+.idx-t code{font-weight:600}
+.idx-ul a{font-size:13px;white-space:nowrap}
+/* schermi stretti */
+@media (max-width:900px){
+ .with-side{display:block} .side{width:auto;border-right:0;border-bottom:1px solid #e5e7eb}
+ .side-inner{position:static;max-height:none;padding:24px 16px}
+ .main{padding:28px 16px}
+ .tbl-wrap{overflow-x:auto}
+}
+@media print{ .srch{display:none} mark.hit{background:none} .idx{columns:2} }
+
+/* ---- Stile comune dei manuali: copertina (variante 3) ---- */
+.cover.cover-w{background:#fff;color:#0b2a5b;border-bottom:4px solid #0050C0;padding:44px 56px 46px;min-height:auto}
+.cover-w .cover-logo{margin-bottom:30px}
+.cover-w .cover-logo img{height:76px;width:auto;display:block}
+.cover-w .cover-title{color:#003a90}
+.cover-w .cover-meta{margin-top:30px}
+.cover-w .cover-meta span{color:#5a6f93}
+.cover-w .cover-meta b{color:#0b2a5b}
+/* ---- Stile comune: pulsante Copy sui blocchi di comandi ---- */
+.code-w{position:relative;margin:14px 0}
+.code-w>.code{margin:0;padding-top:38px}
+pre{tab-size:4;-moz-tab-size:4}
+.copy{position:absolute;top:9px;right:9px;font:600 11px/1 Outfit,-apple-system,Segoe UI,Roboto,Arial,sans-serif;letter-spacing:.04em;color:#cbd5e1;background:#1e293b;border:1px solid #334155;border-radius:6px;padding:5px 9px;cursor:pointer}
+.copy:after{content:attr(data-l)}
+.copy:hover,.copy:focus-visible{color:#fff;border-color:#64748b;outline:none}
+.copy.ok{color:#86efac;border-color:#16a34a}
+/* ---- Stile comune: schermi stretti ---- */
+@media (max-width:900px){
+ .cover.cover-w{padding:32px 16px 34px}
+ .cover-w .cover-logo{margin-bottom:22px}
+ .cover-w .cover-logo img{height:60px}
+ .cover-w .cover-title{font-size:42px}
+ .cover-w .cover-meta{margin-top:22px;gap:28px}
+ .doc-foot{padding:18px 16px}
+}
+@media print{ .copy{display:none} .code-w>.code{padding-top:14px} }
+
+/* REMOTIX only: terminals (title, prompt, program lines, errors), commands inside procedures,
+   folder tree, status pills, glossary, group rows in tables */
+.steps .code-w{margin:10px 0 4px}
+.code .pr{color:#93c5fd} .code .cmd{color:#fff;font-weight:700} .code .am{color:#fdba74;font-weight:600}
+.code .er{color:#fca5a5} .code .dim{color:#94a3b8}
+.code-t{display:block;font-family:Outfit,Segoe UI,Arial,sans-serif;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#64748b;margin:16px 0 -8px}
+.tree{background:transparent;border:0;padding:4px 8px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;line-height:1.6;color:#0f172a;overflow-x:auto;margin:0;text-align:left}
+.tree .d{color:#0050C0;font-weight:700} .tree .m{color:#64748b}
+.pill{display:inline-block;font-size:12px;font-weight:700;border-radius:999px;padding:.1em .65em;white-space:nowrap}
+.p-ok{background:#dcfce7;color:#166534} .p-wait{background:#dbeafe;color:#1e40af} .p-snooze{background:#fef3c7;color:#92400e}
+.p-off{background:#e2e8f0;color:#475569} .p-info{background:#f1f5f9;color:#334155;border:1px solid #cbd5e1}
+.gloss{margin:12px 0} .gloss dt{font-weight:700;color:#003a90;font-size:15px;margin-top:12px} .gloss dd{margin:2px 0 0;color:#334155;font-size:14px}
+.tbl-group td{background:#eef2f7 !important;font-weight:700;color:#003a90}
+</style></head>
+<body>
+<div class="doc">
+  <section class="cover cover-w">
+    <div class="cover-logo"><img src="data:image/png;base64,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" alt="REMOTIX"></div>
+    <h1 class="cover-title">User Manual</h1>
+    <div class="cover-meta">
+      <div><span>Version</span><b>0.17.0</b></div>
+      <div><span>Date</span><b>October 2026</b></div>
+    </div>
+  </section>
+  <div class="with-side">
+    <aside class="side"><div class="side-inner"><div class="srch" id="srch" hidden><label class="toc-head" for="srch-q">Search</label><input type="search" id="srch-q" class="srch-q" placeholder="A word, an option…  ( / )" autocomplete="off" spellcheck="false"><div class="srch-info" id="srch-info" aria-live="polite"></div><ol class="srch-res" id="srch-res"></ol></div><h2 class="toc-head">Contents</h2><ul class="toc-list" id="toc"><li class="toc-ch"><a href="#ch1"><span class="toc-n">1</span><span class="toc-t">What REMOTIX is</span></a></li><li class="toc-se"><a href="#ch1s1"><span class="toc-n">1.1</span><span class="toc-t">REMOTIX in short</span></a></li><li class="toc-se"><a href="#ch1s2"><span class="toc-n">1.2</span><span class="toc-t">The desktops</span></a></li><li class="toc-se"><a href="#ch1s3"><span class="toc-n">1.3</span><span class="toc-t">The browsers</span></a></li><li class="toc-se"><a href="#ch1s4"><span class="toc-n">1.4</span><span class="toc-t">Your session waits for you</span></a></li><li class="toc-se"><a href="#ch1s5"><span class="toc-n">1.5</span><span class="toc-t">What REMOTIX does not do</span></a></li><li class="toc-se"><a href="#ch1s6"><span class="toc-n">1.6</span><span class="toc-t">The licence</span></a></li><li class="toc-ch"><a href="#ch2"><span class="toc-n">2</span><span class="toc-t">Installing the server</span></a></li><li class="toc-se"><a href="#ch2s1"><span class="toc-n">2.1</span><span class="toc-t">What the machine needs</span></a></li><li class="toc-se"><a href="#ch2s2"><span class="toc-n">2.2</span><span class="toc-t">The seven distributions</span></a></li><li class="toc-se"><a href="#ch2s3"><span class="toc-n">2.3</span><span class="toc-t">The installation file</span></a></li><li class="toc-se"><a href="#ch2s4"><span class="toc-n">2.4</span><span class="toc-t">Installing</span></a></li><li class="toc-se"><a href="#ch2s5"><span class="toc-n">2.5</span><span class="toc-t">Who can sign in</span></a></li><li class="toc-se"><a href="#ch2s6"><span class="toc-n">2.6</span><span class="toc-t">Firewall and port</span></a></li><li class="toc-se"><a href="#ch2s7"><span class="toc-n">2.7</span><span class="toc-t">The certificate</span></a></li><li class="toc-se"><a href="#ch2s8"><span class="toc-n">2.8</span><span class="toc-t">The first connection</span></a></li><li class="toc-ch"><a href="#ch3"><span class="toc-n">3</span><span class="toc-t">Looking after an installation</span></a></li><li class="toc-se"><a href="#ch3s1"><span class="toc-n">3.1</span><span class="toc-t">Checking an installation</span></a></li><li class="toc-se"><a href="#ch3s2"><span class="toc-n">3.2</span><span class="toc-t">Updating</span></a></li><li class="toc-se"><a href="#ch3s3"><span class="toc-n">3.3</span><span class="toc-t">Uninstalling</span></a></li><li class="toc-se"><a href="#ch3s4"><span class="toc-n">3.4</span><span class="toc-t">Where the logs are</span></a></li><li class="toc-ch"><a href="#ch4"><span class="toc-n">4</span><span class="toc-t">Glossary</span></a></li><li class="toc-se"><a href="#ch4s1"><span class="toc-n">4.1</span><span class="toc-t">Words used in this manual</span></a></li></ul></div></aside>
+    <main class="main"><section class="chapter" id="ch1"><div class="ch-head"><span class="ch-kick">Chapter 1</span><h2 class="h-ch">What REMOTIX is</h2></div><section class="sec" id="ch1s1"><h3 class="h-sec">1.1 · REMOTIX in short</h3><p class="lead"><b>REMOTIX</b> shows a full Linux desktop inside a browser tab. The Linux machine runs REMOTIX; you open its address in the browser of a laptop, a phone or a tablet, sign in with your Linux user name and password, and your desktop appears, as large as the window. There is nothing to install on the device you connect from.</p><figure class="fig"><svg viewBox="0 0 900 252" xmlns="http://www.w3.org/2000/svg" font-family="Outfit,Segoe UI,Arial,sans-serif" role="img"><rect width="900" height="252" fill="#f8fafc" rx="12"/><rect x="20" y="12" width="300" height="200" rx="12" fill="#e8eef7" stroke="#d5deea"/><text x="34" y="32" text-anchor="start" font-size="11.5" font-weight="700" fill="#003a90">Your device</text><rect x="40" y="50" width="260" height="54" rx="9" fill="#003a90"/><text x="170.0" y="70.0" text-anchor="middle" dominant-baseline="middle" font-size="13" font-weight="700" fill="#fff">A browser tab</text><text x="170.0" y="89.0" text-anchor="middle" font-size="10.5" fill="#fff" opacity="0.88">Chrome, Edge or Firefox</text><rect x="40" y="128" width="260" height="54" rx="9" fill="#eef2f7" stroke="#cbd5e1"/><text x="170.0" y="148.0" text-anchor="middle" dominant-baseline="middle" font-size="13" font-weight="700" fill="#334155">Nothing else to install</text><text x="170.0" y="167.0" text-anchor="middle" font-size="10.5" fill="#334155" opacity="0.88">no app, no plug-in</text><rect x="400" y="12" width="480" height="200" rx="12" fill="#e8eef7" stroke="#d5deea"/><text x="414" y="32" text-anchor="start" font-size="11.5" font-weight="700" fill="#003a90">The Linux machine</text><rect x="420" y="50" width="440" height="54" rx="9" fill="#0050C0"/><text x="640.0" y="70.0" text-anchor="middle" dominant-baseline="middle" font-size="13" font-weight="700" fill="#fff">REMOTIX</text><text x="640.0" y="89.0" text-anchor="middle" font-size="10.5" fill="#fff" opacity="0.88">the service, started at boot</text><rect x="420" y="128" width="210" height="54" rx="9" fill="#3b82f6"/><text x="525.0" y="148.0" text-anchor="middle" dominant-baseline="middle" font-size="13" font-weight="700" fill="#fff">Desktop of Anna</text><text x="525.0" y="167.0" text-anchor="middle" font-size="10.5" fill="#fff" opacity="0.88">her windows</text><rect x="650" y="128" width="210" height="54" rx="9" fill="#3b82f6"/><text x="755.0" y="148.0" text-anchor="middle" dominant-baseline="middle" font-size="13" font-weight="700" fill="#fff">Desktop of Bruno</text><text x="755.0" y="167.0" text-anchor="middle" font-size="10.5" fill="#fff" opacity="0.88">his windows</text><line x1="302" y1="77" x2="418" y2="77" stroke="#0050C0" stroke-width="2.2"/><path d="M410.0 72.0 L418 77 L410.0 82.0 Z" fill="#0050C0"/><text x="360" y="68" text-anchor="middle" font-size="11" font-weight="400" fill="#334155" stroke="#f8fafc" stroke-width="4" stroke-linejoin="round" paint-order="stroke">port 7447, encrypted</text><line x1="560" y1="106" x2="525" y2="126" stroke="#0050C0" stroke-width="2.2"/><path d="M534.4 126.4 L525 126 L529.5 117.7 Z" fill="#0050C0"/><line x1="720" y1="106" x2="755" y2="126" stroke="#0050C0" stroke-width="2.2"/><path d="M750.5 117.7 L755 126 L745.6 126.4 Z" fill="#0050C0"/><text x="450.0" y="236" text-anchor="middle" font-size="12" font-weight="400" fill="#475569">Figure 1.1 — REMOTIX: a page in the browser, and one desktop for each user on the Linux machine</text></svg></figure><p>What it offers:</p><ul class="ul"><li><b>Your own desktop.</b> Each user gets their own desktop on the machine; several people can work on the same machine at the same time, each in their own desktop.</li><li><b>The size of your window.</b> The desktop is created as large as the browser window at the moment you sign in, up to 4096×2304.</li><li><b>Keyboard, mouse and touch.</b> The page keeps no key combination for itself. A few (such as Alt+Tab or the Super key) may be taken first by your own computer or browser: the small ⌨ button at the bottom left of the page lists the ones that do not reach the remote desktop.</li><li><b>Sound.</b> What the desktop plays, you hear in the browser.</li><li><b>Copy and paste.</b> Text can be copied between your device and the remote desktop, in both directions (text only: not images or files).</li><li><b>Leave and come back.</b> Closing the tab does not close the desktop. Sign in again, from the same device or another one, and you find your windows as you left them.</li><li><b>Encrypted.</b> Everything travels encrypted, on one port (7447).</li></ul></section><section class="sec" id="ch1s2"><h3 class="h-sec">1.2 · The desktops</h3><p class="lead">REMOTIX works with four desktops: <b>GNOME</b>, <b>KDE Plasma</b>, <b>XFCE</b> and <b>LXQt</b>. It uses the desktop already installed on the machine: it does not install one.</p><ul class="ul"><li><b>One desktop per machine.</b> If a machine has more than one of the four installed, REMOTIX picks one — GNOME before KDE, XFCE before LXQt — and writes it in its log.</li><li><b>Wayland only.</b> The remote desktop is a Wayland session. Older programs made for X11 still run, through XWayland.</li><li><b>XFCE and LXQt</b> run on the labwc compositor, which the installation brings along as a dependency.</li><li><b>KDE Plasma</b> runs inside a small labwc that REMOTIX starts without a screen of its own; this is what lets the desktop take the size of a new window when you come back. On AlmaLinux and RHEL 10, which have no labwc package, REMOTIX brings its own (<code>/usr/lib/remotix/labwc</code>).</li></ul><div class="callout c-info"><div class="callout-i">i</div><div><b>KDE at 3K and 4K.</b> on KDE this costs a little at very large sizes. Measured on an Intel UHD 770: no loss at 1080p and 2K; at 3K the desktop goes from 58 to 54-55 frames per second, at 4K from 58 to 44-49.</div></div></section><section class="sec" id="ch1s3"><h3 class="h-sec">1.3 · The browsers</h3><p class="lead">The browser needs two modern features, WebTransport and WebCodecs. These are the browsers REMOTIX declares:</p><figure class="tbl-wrap"><table class="tbl"><thead><tr><th>Browser</th><th>Where</th><th>Status</th></tr></thead><tbody><tr><td>Chrome, Edge and the other Chromium browsers</td><td>Linux, Windows</td><td>supported</td></tr><tr><td>Chrome</td><td>Android</td><td>supported</td></tr><tr><td>Firefox</td><td>Linux</td><td>supported</td></tr><tr><td>Firefox</td><td>Windows</td><td>not tested yet</td></tr><tr><td>Firefox</td><td>Android</td><td><b>not supported</b>: it lacks WebCodecs</td></tr><tr><td>Safari</td><td>macOS, iOS</td><td>not tested yet</td></tr></tbody></table><figcaption class="cap">Table 1.1 — The browsers (SPECIFICHE.md §11.5)</figcaption></figure><p>On an Android phone or tablet, use Chrome. A browser that is too old lacks these features, and the page cannot show the desktop.</p></section><section class="sec" id="ch1s4"><h3 class="h-sec">1.4 · Your session waits for you</h3><p class="lead">Your desktop belongs to you, not to the browser tab. Closing the tab, losing the network or switching device leaves it running on the machine, with every program open.</p><figure class="tbl-wrap"><table class="tbl"><thead><tr><th>What happens</th><th>Result</th></tr></thead><tbody><tr><td>You close the tab, or the network drops</td><td>The desktop keeps running. Sign in again to find it.</td></tr><tr><td>You sign in from another device</td><td>You get the same desktop. Close the tab on the first device first: while it is still connected, the second one is told “this session's slot shows as taken by another client”. If the first device simply dropped, wait a few seconds (15 to 30) and try again.</td></tr><tr><td>30 minutes without touching anything</td><td>The page is disconnected; the programs stay open. Sign in again with your password.</td></tr><tr><td>60 minutes without touching anything</td><td>REMOTIX closes the desktop and its programs. Unsaved work is lost.</td></tr><tr><td>You choose “Log Out…” in the desktop's menu</td><td>The desktop and its programs are closed. This is the way to end a session.</td></tr><tr><td>You are signed in at the machine itself (in front of its screen)</td><td>A REMOTIX session for the same user is refused; and signing in at the machine closes a REMOTIX session of that user.</td></tr></tbody></table><figcaption class="cap">Table 1.2 — Leaving and coming back</figcaption></figure><div class="callout c-warn"><div class="callout-i">!</div><div><b>The one-hour clock.</b> only your own input — keys, mouse, touch — counts as “touching”. A desktop left without any input for an hour is closed even if a video is playing in it.</div></div></section><section class="sec" id="ch1s5"><h3 class="h-sec">1.5 · What REMOTIX does not do</h3><p class="lead">What REMOTIX deliberately does not do (SPECIFICHE.md §12):</p><ul class="ul"><li>a Windows or macOS machine as the server: the server is Linux only;</li><li>an application to install on the device you connect from;</li><li>X11 desktop sessions (X11 programs run through XWayland);</li><li>file transfer, or images and files in the clipboard (text only);</li><li>access to the disks, printers, serial ports or smart cards of your device;</li><li>several monitors;</li><li>recording the session;</li><li>connections from RDP, VNC or SPICE programs.</li></ul></section><section class="sec" id="ch1s6"><h3 class="h-sec">1.6 · The licence</h3><p class="lead">REMOTIX is free for personal use and for non-profit associations, churches and religious institutes; any other use needs a written licence from the author (<code>remotix@nicfio.it</code>). The source code can be read and checked, but it may not be modified or redistributed.</p><p>The licence is in <code>LICENSE.md</code>, included in the installation file. People who only connect with a browser need nothing from it: it concerns whoever installs and runs the server.</p></section></section><section class="chapter" id="ch2"><div class="ch-head"><span class="ch-kick">Chapter 2</span><h2 class="h-ch">Installing the server</h2></div><section class="sec" id="ch2s1"><h3 class="h-sec">2.1 · What the machine needs</h3><p class="lead">REMOTIX is installed on the Linux machine whose desktop people will use. Before starting, check these points: the installer checks them too, and stops before touching anything if one is missing.</p><figure class="tbl-wrap"><table class="tbl"><thead><tr><th>Requirement</th><th>Details</th></tr></thead><tbody><tr><td>A 64-bit PC</td><td>x86_64.</td></tr><tr><td>One of the seven distributions</td><td><a href="#ch2s2">2.2 “The seven distributions”</a>.</td></tr><tr><td>A desktop already installed</td><td>GNOME 46, KDE Plasma 6.1, XFCE 4.20 or LXQt 2.0 or newer. REMOTIX does not install a desktop.</td></tr><tr><td>A graphics card that encodes video</td><td>REMOTIX encodes the picture only on the graphics card, never on the processor. Intel and AMD cards work through VA-API; AMD and NVIDIA through Vulkan Video. NVIDIA needs the proprietary driver 550 or newer with its Vulkan driver. Without such a card REMOTIX is not installed.</td></tr><tr><td>systemd and OpenSSL 3.5.0 or newer</td><td>All seven distributions have them.</td></tr><tr><td>Administrator access</td><td>The installation runs with <code>sudo</code>.</td></tr><tr><td>The port</td><td>Port 7447, TCP and UDP, free on the machine and open in its firewall (<a href="#ch2s6">2.6 “Firewall and port”</a>).</td></tr></tbody></table><figcaption class="cap">Table 2.1 — What the machine needs</figcaption></figure></section><section class="sec" id="ch2s2"><h3 class="h-sec">2.2 · The seven distributions</h3><p class="lead">REMOTIX ships one package for each of these distributions, all inside one installation file. The installer refuses any other distribution, except the derivatives named in the table.</p><figure class="tbl-wrap"><table class="tbl"><thead><tr><th>Distribution</th><th>Version</th><th>Desktops</th><th>Notes</th></tr></thead><tbody><tr><td>Debian 13</td><td>13 (Trixie)</td><td>GNOME, KDE Plasma, XFCE, LXQt</td><td>—</td></tr><tr><td>Ubuntu 26.04 LTS</td><td>26.04 LTS</td><td>GNOME, KDE Plasma, XFCE, LXQt</td><td>—</td></tr><tr><td>Fedora 44</td><td>44</td><td>GNOME, KDE Plasma, XFCE, LXQt</td><td>—</td></tr><tr><td>AlmaLinux 10</td><td>10.1 (OpenSSL 3.5)</td><td>GNOME, KDE Plasma</td><td>the EPEL (with CRB) repository must be enabled; also Rocky Linux, RHEL (compatible, not certified)</td></tr><tr><td>Arch Linux</td><td>rolling (since Sep 2026)</td><td>GNOME, KDE Plasma, XFCE, LXQt</td><td>also Manjaro, EndeavourOS (compatible, not certified)</td></tr><tr><td>openSUSE Tumbleweed</td><td>rolling (since Sep 2026)</td><td>GNOME, KDE Plasma, XFCE, LXQt</td><td>—</td></tr><tr><td>openSUSE Leap 16</td><td>16.0</td><td>GNOME, KDE Plasma, XFCE, LXQt</td><td>Plasma on Leap 16 (KWin 6.4) hangs as soon as REMOTIX captures the screen if the card has no 3D acceleration (see KDE bug 487217): a real card is needed, or virgl in a virtual machine; XFCE and LXQt work without it; XFCE on Wayland is «experimental» for SUSE; LXQt on Wayland is «experimental» for SUSE</td></tr></tbody></table><figcaption class="cap">Table 2.2 — The seven distributions, read from the installer's catalogue (<code>2026.10.10.14</code>)</figcaption></figure><div class="callout c-info"><div class="callout-i">i</div><div><b>AlmaLinux and RHEL 10.</b> on AlmaLinux and RHEL 10 only GNOME and KDE Plasma are supported. KDE there runs inside REMOTIX's own copy of labwc 0.8.4, installed at <code>/usr/lib/remotix/labwc</code> (GPL-2.0; its source is published next to each release).</div></div><p>Out of scope: Debian 12, Ubuntu 24.04, RHEL 9 and its rebuilds, openSUSE Leap 15; Linux Mint (Mint 22 is excluded, being based on Ubuntu 24.04, and the installation file has no package for Mint 23); distributions without systemd; immutable distributions (Silverblue, Kinoite, Aeon, Kalpa, Ubuntu Core, SteamOS).</p></section><section class="sec" id="ch2s3"><h3 class="h-sec">2.3 · The installation file</h3><p class="lead">REMOTIX is delivered as one file, <code>remotix-X.Y.Z-R.run</code> (X.Y.Z is the version, R the package revision). It contains the installer and the REMOTIX packages for all seven distributions; whatever else is needed comes from the distribution's own repositories, through its package manager.</p><p>Before installing you can ask the file what it thinks of the machine. This only reads, needs no administrator rights and changes nothing:</p><span class="code-t">Checking the machine</span><pre class="code"><code><span class="pr">$ </span><span class="cmd">sh remotix-X.Y.Z-R.run check</span>
+REMOTIX — machine check (read only: nothing was touched)
+…
+The desktops:
+…
+Warnings and problems:
+…</code></pre><p>The report lists the four desktops (installed or not, and whether supported), then the warnings and problems, each with a code such as <code>RX-GPU-005</code>. A section headed “MISSING — REMOTIX does not install it: providing it is up to the administrator:” lists what you must provide before installing — for example a supported desktop (<code>RX-MANCA-001</code>) or a repository (<code>RX-MANCA-002</code>).</p></section><section class="sec" id="ch2s4"><h3 class="h-sec">2.4 · Installing</h3><p class="lead">Copy the <code>.run</code> file to the machine and run it as administrator. It works like <code>apt</code>: it shows what it is going to do, asks once, and only then acts.</p><ol class="steps"><li>Run <code>sudo sh remotix-X.Y.Z-R.run</code>. Without <code>sudo</code> it stops with “run it as administrator: sudo sh …”. The file first checks itself; if it was damaged in the download it says “the file is damaged … download it again”.</li><li>The installer examines the machine (the same checks as <code>check</code>).</li><li>It prints <b>the plan</b>: the steps it will take (install the packages, add people to the graphics-card groups, start the service), each marked with how it can be undone; then, under “What the package manager will do (its own simulation):”, the exact list of packages with versions, as the package manager itself worked it out. Nothing has been touched yet.</li><li>If something is missing, the plan ends with the MISSING list and the line “REMOTIX is not installed: nothing was touched. Run it again when what is missing is there.”</li><li>Otherwise it asks <code>Proceed? [y/N]</code>. Only <code>y</code> or <code>yes</code> go ahead; anything else, or just Enter, answers no and prints “Nothing was touched.”</li><li>It installs, starts the <code>remotix.service</code> service, and checks the result: the graphics card must really encode a frame, the sign-in configuration must be complete. If a required check fails, everything it did is undone.</li><li>At the end it prints the operation and its result — <code>CONFIRMED</code>, or <code>CONFIRMED_WITH_CONDITIONS</code> when something needs your attention (typically the firewall) — and reminds you about the router.</li></ol><span class="code-t">An installation (shortened)</span><pre class="code"><code><span class="pr">$ </span><span class="cmd">sudo sh remotix-X.Y.Z-R.run</span>
+The plan (installation, …):
+  1. …  [BEST_EFFORT]
+  2. …  [EXACT]
+  …
+What the package manager will do (its own simulation):
+  …
+
+Proceed? [y/N] y
+…
+operation …: CONFIRMED
+From outside the local network: forward port 7447, TCP and UDP, on the router to this machine (REMOTIX does not do it by itself: no UPnP).</code></pre><p>Options you can add after the file name:</p><figure class="tbl-wrap"><table class="tbl"><thead><tr><th>Option</th><th>Effect</th></tr></thead><tbody><tr><td><code>--port N</code></td><td>Use port N instead of 7447 (TCP and UDP). It is written to <code>/etc/remotix/remotix.conf.d/port.conf</code>.</td></tr><tr><td><code>--users A,B</code></td><td>Give the graphics-card permissions only to these users (comma separated). Without it, every person with an account on the machine gets them.</td></tr></tbody></table><figcaption class="cap">Table 2.3 — Installation options</figcaption></figure><div class="callout c-ok"><div class="callout-i">+</div><div><b>The text interface.</b> <code>sudo sh remotix-X.Y.Z-R.run tui</code> runs the same installation in a text interface, with four steps (Check, Plan, Install, Ready): <code>Enter</code> continues, <code>d</code> shows details, <code>y</code> / <code>n</code> answer the question, <code>Tab</code> changes the port. The last screen shows the addresses to open, the certificate fingerprint and who can sign in.</div></div><div class="callout c-info"><div class="callout-i">i</div><div><b>Interrupted.</b> if an installation was interrupted (power cut, closed terminal), the next run first rolls it back, so the machine is never left half installed, then starts again from the beginning.</div></div></section><section class="sec" id="ch2s5"><h3 class="h-sec">2.5 · Who can sign in</h3><p class="lead">People sign in with <b>their Linux user name and password on that machine</b> — the same ones they would use for ssh. There is no separate list of REMOTIX users.</p><ul class="ul"><li><b>root cannot sign in.</b> The names in <code>/etc/remotix/denied-users</code> (one per line; it contains <code>root</code>) are always refused. Add other names there to keep them out.</li><li><b>Graphics-card groups.</b> To use the card, a desktop's user must be in the groups that own it (for example <code>render</code> and <code>video</code>). The installer adds every person on the machine (or those given with <code>--users</code>); someone created later is added automatically the first time they connect.</li><li><b>New users</b> need nothing else: create the account as usual, and they can sign in.</li><li><b>Three wrong passwords</b> within five minutes from the same address block that address for 12 hours. The page then says how long is left. The blocks are kept in <code>/var/lib/remotix/ban</code>, which REMOTIX reads only when it starts. To lift them all at once: <code>sudo systemctl stop remotix</code>, delete <code>/var/lib/remotix/ban</code>, <code>sudo systemctl start remotix</code>. Open desktops are not closed by the restart.</li><li><b>One desktop per user.</b> Someone signed in at the machine itself (in front of its screen) cannot open a REMOTIX session at the same time.</li></ul></section><section class="sec" id="ch2s6"><h3 class="h-sec">2.6 · Firewall and port</h3><p class="lead">REMOTIX uses one port, <b>7447</b>, on both <b>TCP</b> (the page) and <b>UDP</b> (the desktop itself). The installer does not change the firewall: if one is on, it says so in the plan and at the end, and you open the port yourself.</p><figure class="tbl-wrap"><table class="tbl"><thead><tr><th>Firewall</th><th>Command</th></tr></thead><tbody><tr><td>firewalld (Fedora, AlmaLinux, openSUSE, Arch)</td><td><code>sudo firewall-cmd --permanent --add-service=remotix</code> then <code>sudo firewall-cmd --reload</code> (the <code>remotix</code> service is defined by the package)</td></tr><tr><td>ufw (Debian, Ubuntu)</td><td><code>sudo ufw allow REMOTIX</code> (the <code>REMOTIX</code> profile is defined by the package)</td></tr></tbody></table><figcaption class="cap">Table 2.4 — Opening port 7447</figcaption></figure><p>With another port (<code>--port N</code>), open that port, TCP and UDP, instead of the service or profile.</p><p><b>From outside your home or office network</b>, the router must also forward the port, TCP and UDP, to the machine. REMOTIX does not do this itself (no UPnP).</p></section><section class="sec" id="ch2s7"><h3 class="h-sec">2.7 · The certificate</h3><p class="lead">The connection is encrypted with a certificate. At its first start REMOTIX makes its own, valid for 365 days, in <code>/var/lib/remotix/certificates</code>. Browsers do not know it, so the first time a device connects the browser shows a warning (<a href="#ch2s8">2.8 “The first connection”</a>).</p><ul class="ul"><li><b>The name in the certificate</b> is the machine's name. If people connect with the IP address instead, write it in a file of <code>/etc/remotix/remotix.conf.d/</code>, for example <code>REMOTIX_OPTIONS=--name 192.168.1.10</code>, and restart the service with <code>sudo systemctl restart remotix</code>. A name that does not match makes the browser show a different, harder warning.</li><li><b>When it expires</b>, REMOTIX makes a new one, and browsers show the warning once more.</li><li><b>A real certificate</b>: whoever has a domain name can use their own. Put the certificate (PEM, the full chain may follow it in the same file) in <code>page.pem</code> and its private key (PEM) in <code>page.key</code>, in <code>/var/lib/remotix/certificates</code>, and delete <code>page.ours</code>: that file marks a certificate REMOTIX made itself, which it replaces when it expires. Restart the service. A certificate without that mark is used as it is and never replaced, not even when it expires — renewing it is up to you. If the key does not match the certificate, the service does not start and its log says so.</li></ul></section><section class="sec" id="ch2s8"><h3 class="h-sec">2.8 · The first connection</h3><p class="lead">Once the service runs, anyone with an account can connect from a browser.</p><ol class="steps"><li>Open <code>https://&lt;machine&gt;:7447</code> — the machine's name or address, and the port.</li><li><b>The first time on each device</b>, the browser warns that the connection is not private or the certificate is not trusted. This is expected: open the details and choose to continue to the site. The browser remembers the choice.</li><li>The page “Sign in” appears. Type your <b>Username</b> and <b>Password</b> on the server and press <b>Connect</b>.</li><li>Your desktop appears, as large as the window. If the window changes size later, the picture is scaled; the desktop takes the new size the next time you sign in.</li><li>To finish, choose “Log Out…” in the desktop's own menu. Just closing the tab leaves the desktop running (<a href="#ch1s4">1.4 “Your session waits for you”</a>).</li></ol><figure class="tbl-wrap"><table class="tbl"><thead><tr><th>The page says</th><th>What to do</th></tr></thead><tbody><tr><td>incorrect username or password</td><td>Check the user name and password on the server; mind the keyboard layout.</td></tr><tr><td>attempts exhausted … There are still … hours and … minutes to go</td><td>Three wrong passwords blocked this address: wait until the time runs out, or ask the administrator to lift the block (<a href="#ch2s5">2.5 “Who can sign in”</a>).</td></tr><tr><td>this session's slot shows as taken by another client …</td><td>You are still connected from another device, or just dropped: close the other tab, or wait a few seconds and try again.</td></tr><tr><td>that user is already signed in locally</td><td>Sign out at the machine itself first.</td></tr><tr><td>this server has no capacity left for another desktop …</td><td>Too many desktops are open: try again later.</td></tr><tr><td>the server could not open your session, and it is not your mistake …</td><td>Ask the administrator: the reason is in the server's log (<a href="#ch3s4">3.4 “Where the logs are”</a>).</td></tr></tbody></table><figcaption class="cap">Table 2.5 — The messages a user meets most often</figcaption></figure></section></section><section class="chapter" id="ch3"><div class="ch-head"><span class="ch-kick">Chapter 3</span><h2 class="h-ch">Looking after an installation</h2></div><section class="sec" id="ch3s1"><h3 class="h-sec">3.1 · Checking an installation</h3><p class="lead">The installer stays on the machine as <code>remotix-install</code>, so the installation can be checked again at any time, without the <code>.run</code> file.</p><span class="code-t">Checking an installation (shortened)</span><pre class="code"><code><span class="pr">$ </span><span class="cmd">sudo remotix-install status</span>
+…  CONFIRMED
+
+Certification of installation …: GREEN
+  PASS     …</code></pre><p>It lists the installer's operations, then repeats the checks made at installation time and gives one of three results:</p><figure class="tbl-wrap"><table class="tbl"><thead><tr><th>Result</th><th>Meaning</th></tr></thead><tbody><tr><td><code>GREEN</code></td><td>Everything passes.</td></tr><tr><td><code>CONDITIONAL</code></td><td>It works, but something needs attention or could not be checked — usually the firewall.</td></tr><tr><td><code>RED</code></td><td>Something REMOTIX installed is no longer in place, or a required check fails.</td></tr></tbody></table><figcaption class="cap">Table 3.1 — The result of <code>remotix-install status</code></figcaption></figure><p>On a machine where REMOTIX was not installed by the installer it says “REMOTIX is not installed by the installer on this machine.”</p></section><section class="sec" id="ch3s2"><h3 class="h-sec">3.2 · Updating</h3><p class="lead">To update, run the newer <code>.run</code> file exactly as for the installation. There is no automatic update.</p><ol class="steps"><li>Copy the new file to the machine and run <code>sudo sh remotix-X.Y.Z-R.run</code>.</li><li>The installer sees the existing installation and makes an <b>upgrade</b> plan: only the packages change.</li><li>Answer <code>y</code> to <code>Proceed? [y/N]</code>.</li></ol><p>The service restarts, and open desktops are <b>not</b> closed: people connected at that moment see the page disconnect, sign in again and find their windows. If the version is already installed the installer says “REMOTIX X is already installed: nothing to do.”</p><p>Updates of the distribution itself (<code>apt upgrade</code>, <code>dnf upgrade</code> and so on) are fine: the installation stays valid.</p></section><section class="sec" id="ch3s3"><h3 class="h-sec">3.3 · Uninstalling</h3><p class="lead">REMOTIX is removed with the installer that stays on the machine:</p><span class="code-t">Uninstalling (shortened)</span><pre class="code"><code><span class="pr">$ </span><span class="cmd">sudo remotix-install uninstall</span>
+The plan (uninstallation, …):
+  …
+
+Remove REMOTIX? [y/N]</code></pre><p>Like the installation, it first shows the plan and asks <code>Remove REMOTIX? [y/N]</code>. It undoes what the installation did, and only that:</p><ul class="ul"><li>it stops and disables the service;</li><li>it closes every open REMOTIX desktop — <b>unsaved work in them is lost</b>, so warn people first; a session at the machine itself or by ssh is not touched;</li><li>it takes people out of the graphics-card groups that REMOTIX put them in;</li><li>it removes each user's <code>~/.local/state/remotix/session.log</code>;</li><li>it removes the packages it installed. A package that something else now needs is kept, and the plan says so.</li></ul><figure class="tbl-wrap"><table class="tbl"><thead><tr><th>Command</th><th>What stays</th></tr></thead><tbody><tr><td><code>sudo remotix-install uninstall</code></td><td>The installer's history of operations, in <code>/var/lib/remotix</code>, for support.</td></tr><tr><td><code>sudo remotix-install uninstall --purge</code></td><td>Nothing: the configuration and REMOTIX's data go too (like <code>apt purge</code>).</td></tr></tbody></table><figcaption class="cap">Table 3.2 — Uninstalling, with and without <code>--purge</code></figcaption></figure><div class="callout c-warn"><div class="callout-i">!</div><div><b>Known limit.</b> packages added later by an <i>upgrade</i> (a new dependency of a newer version) are not removed by <code>uninstall</code>.</div></div></section><section class="sec" id="ch3s4"><h3 class="h-sec">3.4 · Where the logs are</h3><p class="lead">When something does not work, the reason is written down. These are the places to look:</p><figure class="tbl-wrap"><table class="tbl"><thead><tr><th>What</th><th>Where</th><th>How to read it</th></tr></thead><tbody><tr><td>The server and each user's REMOTIX process</td><td>the systemd journal</td><td><code>journalctl -t remotix</code></td></tr><tr><td>The service as a whole (start, stop, crash)</td><td>the systemd journal</td><td><code>journalctl -u remotix</code></td></tr><tr><td>A user's desktop (what the desktop itself prints)</td><td><code>~/.local/state/remotix/session.log</code> in that user's home</td><td>any text viewer</td></tr><tr><td>Each installation, upgrade or uninstallation</td><td><code>/var/lib/remotix/operations/&lt;id&gt;/</code>: <code>certificate.txt</code> is the summary, <code>log.jsonl</code> every step</td><td><code>sudo remotix-install status</code> lists the operations</td></tr></tbody></table><figcaption class="cap">Table 3.3 — Where the logs are</figcaption></figure><p>Every message of the installer has a code (<code>RX-…</code>); quote it when asking for help. Suggestions and bug reports are welcome as issues in the GitHub repository.</p></section></section><section class="chapter" id="ch4"><div class="ch-head"><span class="ch-kick">Chapter 4</span><h2 class="h-ch">Glossary</h2></div><section class="sec" id="ch4s1"><h3 class="h-sec">4.1 · Words used in this manual</h3><dl class="gloss"><dt>Browser</dt><dd>The program you use to open web pages: Chrome, Edge, Firefox.</dd><dt>Certificate</dt><dd>The machine's proof of identity for the encrypted connection. REMOTIX makes its own; browsers do not know it and warn once per device.</dd><dt>Desktop</dt><dd>The screen with windows, menus and programs: GNOME, KDE Plasma, XFCE or LXQt.</dd><dt>Distribution</dt><dd>A version of Linux: Debian, Ubuntu, Fedora, AlmaLinux, Arch, openSUSE.</dd><dt>Firewall</dt><dd>The part of the machine that decides which connections may come in. Port 7447 must be open in it.</dd><dt>Graphics card</dt><dd>The chip that draws the screen. REMOTIX uses it to compress the picture.</dd><dt>labwc</dt><dd>A small Wayland compositor. XFCE and LXQt run on it; KDE Plasma runs inside it under REMOTIX.</dd><dt>Log</dt><dd>The file or journal where a program writes what it does and why it failed.</dd><dt>Port</dt><dd>A numbered door of the machine for network connections. REMOTIX uses 7447, TCP and UDP.</dd><dt>.run file</dt><dd>The single installation file of REMOTIX, run with <code>sudo sh</code>.</dd><dt>Session</dt><dd>Your desktop with its open programs. It stays alive when you close the tab, and ends when you log out or after an hour without input.</dd><dt>Wayland</dt><dd>The modern way Linux desktops draw on the screen. REMOTIX desktops are Wayland sessions.</dd></dl></section></section></main>
+  </div>
+  <footer class="doc-foot">REMOTIX · User Manual · Version 0.17.0 · October 2026 · © 2026 Nicola Fiorillo · Free of charge</footer>
+</div>
+<script>window.MANUAL_CODE_TERMS=[];</script>
+<script>
+/* Script comune dei manuali dei 7 progetti: ricerca, indice analitico, pulsante Copy. Uguale in tutti i manuali. */
+/* Ricerca nella barra laterale e indice analitico. Senza dipendenze; senza
+   JavaScript il manuale resta completo (la casella di ricerca resta nascosta). */
+(function () {
+  "use strict";
+  var main = document.querySelector(".main");
+  if (!main) return;
+
+  // Minuscole e senza accenti, carattere per carattere: la lunghezza resta
+  // uguale, così le posizioni trovate valgono anche sul testo originale.
+  function fold(s) {
+    var o = "";
+    for (var i = 0; i < s.length; i++) {
+      var c = s.charAt(i);
+      var f = c.normalize ? c.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase() : c.toLowerCase();
+      o += f.length === 1 ? f : c;
+    }
+    return o;
+  }
+  function esc(s) {
+    return s.replace(/[&<>"]/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+    });
+  }
+  function secTitle(sec) {
+    var h = sec && sec.querySelector("h3.h-sec, h2.h-ch");
+    return h ? h.textContent.replace(/\s+/g, " ").trim() : "";
+  }
+  function splitTitle(t) { // "5.3 · Interruzioni e ripresa" -> ["5.3", "Interruzioni e ripresa"]
+    var m = /^([\d.]+) · (.*)$/.exec(t);
+    return m ? [m[1], m[2]] : ["", t];
+  }
+
+  /* ---------------- indice analitico ---------------- */
+  var list = document.getElementById("index-list");
+  if (list) {
+    var terms = {};
+    var els = main.querySelectorAll("[data-index]");
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i];
+      var target = el.id ? el : el.closest("[id]");
+      if (!target || target.id === "index") continue;
+      var sec = el.closest(".sec") || el.closest(".chapter");
+      var label = splitTitle(secTitle(sec));
+      var names = el.getAttribute("data-index").split(";");
+      for (var j = 0; j < names.length; j++) {
+        var name = names[j].trim();
+        if (!name) continue;
+        var key = fold(name);
+        var t = terms[key] || (terms[key] = { name: name, refs: [], seen: {} });
+        if (t.seen[target.id]) continue;
+        t.seen[target.id] = true;
+        t.refs.push({ id: target.id, n: label[0], title: label[1] });
+      }
+    }
+    var sortKey = function (k) { return k.replace(/^[-.]+/, ""); };
+    var keys = Object.keys(terms).sort(function (a, b) {
+      return sortKey(a).localeCompare(sortKey(b), "en") || a.localeCompare(b, "en");
+    });
+    var groups = [], cur = null;
+    keys.forEach(function (k) {
+      var ch = sortKey(k).charAt(0).toUpperCase();
+      if (!/[A-Z]/.test(ch)) ch = "#";
+      if (!cur || cur.ch !== ch) { cur = { ch: ch, items: [] }; groups.push(cur); }
+      cur.items.push(terms[k]);
+    });
+    var out = "";
+    groups.forEach(function (g) {
+      out += '<div class="idx-g"><h3 class="idx-l">' + g.ch + '</h3><ul class="idx-ul">';
+      g.items.forEach(function (t) {
+        // Voci da mostrare come codice: nomi di file e opzioni, piu' le parole
+        // che il manuale elenca in window.MANUAL_CODE_TERMS (prima di questo script).
+        var isCode = /^[-.]|_|\.(txt|sh|example|conf|toml|json|md|py|efi|nsb)$/.test(t.name) ||
+          (window.MANUAL_CODE_TERMS || []).indexOf(t.name) >= 0;
+        var nm = isCode ? "<code>" + esc(t.name) + "</code>" : esc(t.name);
+        out += '<li><span class="idx-t">' + nm + "</span> — " + t.refs.map(function (r) {
+          return '<a href="' + '#' + r.id + '" title="' + esc(r.title) + '">' + (r.n ? r.n + " " : "") + esc(r.title) + "</a>";
+        }).join(", ") + "</li>";
+      });
+      out += "</ul></div>";
+    });
+    list.innerHTML = out;
+  }
+
+  /* ---------------- ricerca ---------------- */
+  var box = document.getElementById("srch");
+  var q = document.getElementById("srch-q");
+  var info = document.getElementById("srch-info");
+  var res = document.getElementById("srch-res");
+  var toc = document.getElementById("toc");
+  if (!box || !q) return;
+  box.hidden = false;
+
+  var secs = [];
+  var nodes = main.querySelectorAll(".sec");
+  for (var k = 0; k < nodes.length; k++) {
+    var s = nodes[k];
+    if (s.closest("#index")) continue;
+    var parts = [], w = document.createTreeWalker(s, NodeFilter.SHOW_TEXT, null), tn;
+    while ((tn = w.nextNode())) if (!tn.parentNode.closest("h3.h-sec")) parts.push(tn.data);
+    var txt = parts.join(" ").replace(/\s+/g, " ").replace(/ ([,.;:)!?»])/g, "$1").replace(/([(«]) /g, "$1").trim();
+    var tt = secTitle(s);
+    secs.push({ el: s, id: s.id, title: tt, ftitle: fold(tt), text: txt, ftext: fold(txt) });
+  }
+  var tocLinks = {};
+  if (toc) {
+    var as = toc.querySelectorAll("a");
+    for (var a = 0; a < as.length; a++) tocLinks[as[a].getAttribute("href").slice(1)] = as[a].parentNode;
+  }
+
+  function count(hay, w) {
+    var n = 0, p = hay.indexOf(w);
+    while (p >= 0) { n++; p = hay.indexOf(w, p + w.length); }
+    return n;
+  }
+  function markWords(s, fs, words) { // testo -> HTML con <mark> sulle parole cercate
+    var ranges = [];
+    words.forEach(function (w) {
+      var p = fs.indexOf(w);
+      while (p >= 0) { ranges.push([p, p + w.length]); p = fs.indexOf(w, p + w.length); }
+    });
+    ranges.sort(function (x, y) { return x[0] - y[0]; });
+    var o = "", last = 0;
+    ranges.forEach(function (r) {
+      if (r[0] < last) return;
+      o += esc(s.slice(last, r[0])) + "<mark>" + esc(s.slice(r[0], r[1])) + "</mark>";
+      last = r[1];
+    });
+    return o + esc(s.slice(last));
+  }
+
+  function clearMarks() {
+    var ms = main.querySelectorAll("mark.hit");
+    for (var i = 0; i < ms.length; i++) {
+      var m = ms[i], p = m.parentNode;
+      p.replaceChild(document.createTextNode(m.textContent), m);
+      p.normalize();
+    }
+  }
+  function highlight(root, words) {
+    var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode: function (n) {
+        return n.parentNode.closest("svg, script, style, mark") ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    var list = [], n;
+    while ((n = walker.nextNode())) list.push(n);
+    var first = null;
+    list.forEach(function (node) {
+      var s = node.data, fs = fold(s), ranges = [];
+      words.forEach(function (w) {
+        var p = fs.indexOf(w);
+        while (p >= 0) { ranges.push([p, p + w.length]); p = fs.indexOf(w, p + w.length); }
+      });
+      if (!ranges.length) return;
+      ranges.sort(function (x, y) { return x[0] - y[0]; });
+      var frag = document.createDocumentFragment(), last = 0;
+      ranges.forEach(function (r) {
+        if (r[0] < last) return;
+        if (r[0] > last) frag.appendChild(document.createTextNode(s.slice(last, r[0])));
+        var m = document.createElement("mark");
+        m.className = "hit";
+        m.textContent = s.slice(r[0], r[1]);
+        frag.appendChild(m);
+        if (!first) first = m;
+        last = r[1];
+      });
+      if (last < s.length) frag.appendChild(document.createTextNode(s.slice(last)));
+      node.parentNode.replaceChild(frag, node);
+    });
+    return first;
+  }
+
+  var found = [], sel = -1, words = [];
+  function search() {
+    var v = fold(q.value.trim());
+    words = v.split(/\s+/).filter(function (w) { return w.length > 0; });
+    found = [];
+    sel = -1;
+    Object.keys(tocLinks).forEach(function (id) { tocLinks[id].classList.remove("toc-hit"); });
+    if (v.length < 2) {
+      res.innerHTML = "";
+      info.textContent = v.length ? "Type at least two letters." : "";
+      if (toc) toc.classList.remove("filtering");
+      clearMarks();
+      return;
+    }
+    secs.forEach(function (s) {
+      var score = 0;
+      for (var i = 0; i < words.length; i++) {
+        var c = count(s.ftext, words[i]);
+        var inTitle = s.ftitle.indexOf(words[i]) >= 0;
+        if (!c && !inTitle) return;
+        score += c + (inTitle ? 20 : 0);
+      }
+      found.push({ s: s, score: score });
+    });
+    found.sort(function (x, y) { return y.score - x.score; });
+    info.textContent = found.length
+      ? (found.length === 1 ? "1 section found" : found.length + " sections found") + " · Enter to open the first"
+      : "No results.";
+    var html = "";
+    found.slice(0, 15).forEach(function (f, i) {
+      var s = f.s, p = Math.max(0, s.ftext.indexOf(words[0]));
+      var a = Math.max(0, p - 50), b = Math.min(s.text.length, p + words[0].length + 70);
+      var snip = (a > 0 ? "…" : "") + markWords(s.text.slice(a, b), s.ftext.slice(a, b), words) + (b < s.text.length ? "…" : "");
+      var t = splitTitle(s.title);
+      html += '<li><a href="' + '#' + s.id + '" data-i="' + i + '"><span class="r-t"><span class="toc-n">' + t[0] +
+        "</span><span>" + esc(t[1]) + '</span></span><span class="r-s">' + snip + "</span></a></li>";
+    });
+    res.innerHTML = html;
+    if (toc) {
+      toc.classList.add("filtering");
+      found.forEach(function (f) {
+        var li = tocLinks[f.s.id];
+        if (li) li.classList.add("toc-hit");
+        var ch = f.s.el.closest(".chapter");
+        if (ch && tocLinks[ch.id]) tocLinks[ch.id].classList.add("toc-hit");
+      });
+    }
+  }
+  function go(i) {
+    var f = found[i];
+    if (!f) return;
+    clearMarks();
+    var first = highlight(f.s.el, words);
+    if (history.replaceState) history.replaceState(null, "", "#" + f.s.id);
+    (first || f.s.el).scrollIntoView({ block: first ? "center" : "start" });
+    f.s.el.classList.remove("flash");
+    void f.s.el.offsetWidth;
+    f.s.el.classList.add("flash");
+  }
+  function setSel(i) {
+    var links = res.querySelectorAll("a");
+    if (!links.length) return;
+    sel = (i + links.length) % links.length;
+    for (var k = 0; k < links.length; k++) links[k].classList.toggle("on", k === sel);
+    links[sel].scrollIntoView({ block: "nearest" });
+  }
+
+  var timer = null;
+  q.addEventListener("input", function () {
+    clearTimeout(timer);
+    timer = setTimeout(search, 120);
+  });
+  q.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); clearTimeout(timer); search(); go(sel >= 0 ? sel : 0); }
+    else if (e.key === "ArrowDown") { e.preventDefault(); setSel(sel + 1); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); setSel(sel - 1); }
+    else if (e.key === "Escape") { q.value = ""; search(); q.blur(); }
+  });
+  res.addEventListener("click", function (e) {
+    var a = e.target.closest("a[data-i]");
+    if (!a) return;
+    e.preventDefault();
+    go(+a.getAttribute("data-i"));
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey) return;
+    var t = e.target;
+    if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+    e.preventDefault();
+    q.focus();
+    q.select();
+  });
+})();
+/* Pulsante Copy sui blocchi di comandi: copia le righe che iniziano con un
+   prompt, senza il prompt. Prompt riconosciuti: "$ ", "utente@macchina:percorso$ "
+   (e "#" di root in quella forma), "fs0:\> " e "Shell> " di UEFI. Un prompt senza
+   comando non conta; le righe che continuano un comando ("\" in fondo, o "... "
+   del BASIC di NESH) si copiano con lui. L'etichetta sta in CSS (data-l), cosi' non
+   entra nel testo della pagina ne' nella ricerca. */
+(function () {
+  "use strict";
+  var pres = document.querySelectorAll(".main pre.code");
+  for (var i = 0; i < pres.length; i++) (function (pre) {
+    var lines = pre.textContent.replace(/\s+$/, "").split("\n"), cmds = [];
+    for (var k = 0; k < lines.length; k++) {
+      var m = /^(?:\$|[\w.-]+@[\w.-]+:[^\s$#]*[$#]|fs\d+:[^>\s]*>|Shell>) (.*\S.*)$/.exec(lines[k]);
+      if (!m) continue;
+      var cmd = m[1];
+      // Il comando continua: riga che finisce con "\" (shell) o righe "... " (BASIC di NESH)
+      while (k + 1 < lines.length) {
+        if (/\\\s*$/.test(cmd)) { cmd += "\n" + lines[++k]; continue; }
+        var c = /^\.\.\. ?(.*)$/.exec(lines[k + 1]);
+        if (c) { cmd += "\n" + c[1]; k++; continue; }
+        break;
+      }
+      cmds.push(cmd);
+    }
+    if (!cmds.length) return;              // non e' un blocco di comandi
+    var text = cmds.join("\n");
+    var wrap = document.createElement("div");
+    wrap.className = "code-w";
+    pre.parentNode.insertBefore(wrap, pre);
+    wrap.appendChild(pre);
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "copy";
+    btn.setAttribute("data-l", "Copy");
+    btn.setAttribute("aria-label", "Copy the command" + (cmds.length > 1 ? "s" : ""));
+    btn.title = "Copy the command" + (cmds.length > 1 ? "s" : "");
+    var t = null;
+    function done() {
+      btn.setAttribute("data-l", "Copied");
+      btn.classList.add("ok");
+      clearTimeout(t);
+      t = setTimeout(function () { btn.setAttribute("data-l", "Copy"); btn.classList.remove("ok"); }, 1400);
+    }
+    function fallback() {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed"; ta.style.top = "-1000px"; ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try { if (document.execCommand("copy")) done(); } catch (e) {}
+      document.body.removeChild(ta);
+    }
+    btn.addEventListener("click", function () {
+      if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(done, fallback);
+      else fallback();
+    });
+    wrap.appendChild(btn);
+  })(pres[i]);
+})();
+</script>
+</body></html>
