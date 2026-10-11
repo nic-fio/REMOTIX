@@ -610,11 +610,9 @@ uint64_t wt_clear_threshold_read(void);
  *   the same log, that is no line.
  *
  * ⛔⭐ THE OPTION IS `--no-adaptive-rate`, without argument, and it
- *     SWITCHES OFF.  ⚠ The old name `--ritmo-adattivo` (which meant «switch
- *     on») **no longer exists**: with the default on it would mean nothing,
- *     and an option that does nothing is worse than an option that is not
- *     there.  ⛔ Whoever types it gets a message explaining the change and an
- *     exit 2, not a silence.  ⇒ ONE WAY ONLY: two ways of switching on the
+ *     SWITCHES OFF: with the default on, an option that switches on would
+ *     mean nothing, and an option that does nothing is worse than an option
+ *     that is not there.  ⇒ ONE WAY ONLY: two ways of switching on the
  *     same cure are two numbers that diverge (it is the reason why the
  *     bridge through the environment has already been removed once, on
  *     23 Aug 2026).
@@ -642,9 +640,8 @@ void wt_adaptive_rate(bool is_on);
  *      two cases THE WRONG WAY ROUND and no threshold separates them: on a
  *      line that REORDERS, `pkt_lost/pkt_sent` measures reordering and not
  *      loss.  ⭐ The number stays in the firing line as `permille=`, a
- *         WITNESS of reordering and no longer a judge — and
- *         `--linea-morta-permille` NO LONGER EXISTS, because an option that
- *         decides nothing is a fake switch.  The full refutation is in the
+ *         WITNESS of reordering and no longer a judge — and no option
+ *         moves it, because an option that decides nothing is a fake switch.  The full refutation is in the
  *         box above `WT_LM_STALL_MS` in `webtransport.c`.
  *
  * ⛔ THE QUANTITY IS AN OBSERVABLE FACT, not a clock: two monotonic and LOCAL
@@ -686,9 +683,6 @@ void wt_adaptive_rate(bool is_on);
  *       `--dead-line-stall-ms N`    default 5000; 0 = silence only;
  *       `--dead-line-silence-s N`   default 10;   0 = stall only.
  *
- *     ⚠ The old name `--linea-morta` (which meant «switch on») **no longer
- *       exists**: with the default on it would mean nothing.  Whoever types
- *       it gets a message explaining the change and an exit 2.
  *     ⚠ And the two `0` are NOT a second way to switch off the cure: they
  *       switch off one CAUSE at a time, and the startup line says which of
  *       the two remains.  Whoever wants yesterday's product types

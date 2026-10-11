@@ -898,8 +898,8 @@ tripped look the same.
 > ⚠ **The unlock command is NOT part of RCP, and it must be said here so that nobody looks for it on the wire.** Not
 > one byte of the session passes: it is a mechanism of the server, and this document only dictates
 > *that it exists*, *that it answers distinguishing «removed» from «was not banned»* and *that it writes in the log*.
-> ⛔ **The form is not indifferent, and it has been paid for**: `remotix --unblock IND` as a **second
-> process** does not work — the ban lives in the memory of the serving process, a second process can
+> ⛔ **The form is not indifferent, and it has been paid for**: an unlock option of `remotix`, that is a **second
+> process**, does not work — the ban lives in the memory of the serving process, a second process can
 > only rewrite the file, the server would keep answering `TOO_MANY_ATTEMPTS` until the restart, and
 > **whoever gave the command sees it exit with zero**. Since the night of 10 Aug 2026 the two
 > implementations speak the same protocol of **one line on a Unix socket `0600`** — `UNBLOCK

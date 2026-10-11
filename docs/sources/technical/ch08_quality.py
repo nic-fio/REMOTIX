@@ -102,9 +102,7 @@ S2 = p("Quality is not decided in one place. The encoder lives in the per-user c
       + c("--bandwidth-cap-mbit") + " (and the audio-silence switch) when it is built. Every switch writes its "
       "value in force at startup, <i>on and off</i>: “switched off” and “never had to act” must not look the "
       "same in the log.") + \
-    note("each cure has exactly one way to be switched off. The old enabling names " + c("--ritmo-adattivo")
-         + " and " + c("--linea-morta") + " no longer exist: typing them prints an explanation and exits with "
-         "status 2. The temporary environment bridge for the queue threshold was removed on 23 August 2026 "
+    note("each cure has exactly one way to be switched off. The temporary environment bridge for the queue threshold was removed on 23 August 2026 "
          "when the option arrived: two ways to set the same value are two numbers that can diverge.",
          "One way per switch.")
 
@@ -334,7 +332,7 @@ S9 = p("The fifth cure is of another kind: it does not decide how well the deskt
          + " declared 512‰ and held for ten minutes, " + c("burst-heavy") + " declared 123‰ and did not. On a "
          "reordering line " + c("pkt_lost/pkt_sent") + " measures reordering, not loss. The fraction stays in "
          "the log line as " + c("permille=") + ", a witness rather than a judge, and "
-         + c("--linea-morta-permille") + " no longer exists.", "Loss is not a cause.") + \
+         "no option moves it.", "Loss is not a cause.") + \
     p("On the page the closed transport takes the session back to the login form with the sentence that the "
       "connection was interrupted and the password must be typed again (" + rif("End of session in the page")
       + "). At 10 % loss the cures do not save the experience — the user called it “stuck” — and declaring the "

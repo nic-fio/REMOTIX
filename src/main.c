@@ -184,8 +184,6 @@ static void help(const char *name)
 	        "  --page FILE     the page to serve over TCP\n"
 	        "  --ban-file FILE   where the address ban is kept\n"
 	        "                    (RCP.md §4.4-bis: it survives restart)\n"
-	        "                    ⚠ `--ban` is the same name, kept because it is\n"
-	        "                      the one this server used before\n"
 	        "  --command-socket PATH\n"
 	        "                    the 0600 Unix socket of the unblock command:\n"
 	        "                    «UNBLOCK <address>» or «PING».  Without it,\n"
@@ -252,8 +250,7 @@ static void help(const char *name)
 	        "                    ⭐⭐ TURNS OFF the rate regulator, which since 24\n"
 	        "                    Aug 2026 is ON by default: a frame does not\n"
 	        "                    leave when two deltas in flight still have\n"
-	        "                    bytes in the output queue.  ⚠ The old name\n"
-	        "                    `--ritmo-adattivo` NO LONGER exists\n"
+	        "                    bytes in the output queue\n"
 	        "  --no-dead-line\n"
 	        "                    ⛔⭐ TURNS OFF the DEAD LINE, which since 24 Aug 2026\n"
 	        "                    is ON by default: a session is CLOSED\n"
@@ -265,8 +262,7 @@ static void help(const char *name)
 	        "                    `dead-line` line with the numbers it decided on (I1).\n"
 	        "                    ⛔⛔ IT IS THE CURE THAT CLOSES A SESSION: `[M]`\n"
 	        "                    margin >10x above the worst line that HOLDS\n"
-	        "                    and 2.9x below the one that serves nobody.\n"
-	        "                    ⚠ The old name `--linea-morta` NO LONGER exists\n"
+	        "                    and 2.9x below the one that serves nobody\n"
 	        "\n"
 	        "  ⭐⭐⭐ PHASE 10 — THE COMPOSITION BUDGET, and it is born OFF (I6)\n"
 	        "  --budget-mpixel-s N\n"
@@ -324,9 +320,8 @@ static void help(const char *name)
 	        "                    delivers 23.94 frames/s, and 2.9 times below\n"
 	        "                    the 14.26 s of `raffica-forte`, which serves\n"
 	        "                    nobody — `[M]` 23 Aug 2026.  0 = silence\n"
-	        "                    only.  ⛔⛔ And LOSS is no longer a\n"
-	        "                    cause: `--linea-morta-permille` no longer\n"
-	        "                    exists.  On a line that reorders that\n"
+	        "                    only.  ⛔⛔ And LOSS is not a cause:\n"
+	        "                    on a line that reorders, the loss\n"
 	        "                    fraction measures the REORDERING — `casa-cattiva`\n"
 	        "                    declared 512‰ of it and HELD for ten minutes,\n"
 	        "                    `raffica-forte` 123‰ and did not hold.  The\n"
@@ -1230,14 +1225,11 @@ static uint32_t audio_test_hz;
  *    has decided.  ⇒ I6 is not bypassed, it has been walked to the end — the
  *    switch is still there, it is just flipped the other way.
  *
- * ⛔⛔ AND THE SWITCH'S NAME MATTERS.  `--ritmo-adattivo` and `--linea-morta`
- *      were options without an argument that meant «turn on»: with the default
- *      on they no longer mean anything, and an option that does nothing is
+ * ⛔⛔ AND THE SWITCH'S NAME MATTERS.  With the default on, an option that
+ *      means «turn on» means nothing, and an option that does nothing is
  *      worse than an option that does not exist (whoever types it believes
- *      they have tuned something).  ⇒ They have been REPLACED by their
- *      opposite — `--no-adaptive-rate`, `--no-dead-line`,
- *      `--no-audio-silence` — and the old names answer with a message and
- *      exit 2, not with a silence.
+ *      they have tuned something).  ⇒ Each switch names its opposite —
+ *      `--no-adaptive-rate`, `--no-dead-line`, `--no-audio-silence`.
  *
  * ⛔ ONE ROAD ONLY FOR EACH CURE: two ways of turning on the same thing are two
  *    numbers that diverge, and it is the reason the bridge via the environment
@@ -1852,16 +1844,7 @@ int main(int argc, char **argv)
 			dir_cert = argv[++i];
 		else if (strcmp(a, "--page") == 0 && v)
 			file_html = argv[++i];
-		/* ⛔ TWO NAMES FOR THE SAME OPTION, AND BOTH ARE ACCEPTED — finding
-		 *    R12.9a, night of 10 Aug 2026.  This server said `--ban`; the
-		 *    benches' host (`01-b3-rcp-innesta.py`) and their launch scripts
-		 *    say `--ban-file`.  ⚠ Whoever brought to the product the command
-		 *    line the benches use got `help()` and exit 2 — a clear failure,
-		 *    which is the right way to be wrong, but a failure neither of the
-		 *    two documents explained.  No `.md` names either: until one does,
-		 *    both are accepted and the help declares which of the two is the
-		 *    good name. */
-		else if ((strcmp(a, "--ban-file") == 0 || strcmp(a, "--ban") == 0) && v)
+		else if (strcmp(a, "--ban-file") == 0 && v)
 			file_ban = argv[++i];
 		else if (strcmp(a, "--command-socket") == 0 && v)
 			socket_command = argv[++i];
@@ -1980,19 +1963,6 @@ int main(int argc, char **argv)
 		 *    on purpose. */
 		else if (strcmp(a, "--no-adaptive-rate") == 0)
 			adaptive_rate = false;
-		/* ⛔⭐ AND THE OLD NAME IS GONE, AND IT DOES NOT HIDE WHY — the same
-		 *     form as `--sblocca` further down.  `--ritmo-adattivo` meant «turn
-		 *     on»: with the default on it means nothing, and accepting it
-		 *     silently would be the SECOND road to the same cure.  ⚠ A bench
-		 *     that types it must read about the change, not look for a typo. */
-		else if (strcmp(a, "--ritmo-adattivo") == 0) {
-			fprintf(stderr,
-			        "⛔ --ritmo-adattivo no longer exists: since 24 Aug 2026 the "
-			        "rate regulator is ON\n"
-			        "   by default (the user's decision).  To TURN IT OFF: "
-			        "--no-adaptive-rate\n");
-			return 2;
-		}
 		/* ⛔⭐⭐⭐ PHASE 9 — THE DEAD LINE, the user's decision of 23 Aug 2026:
 		 *      a line that loses in bursts is not served, it is declared dead —
 		 *      the wire drops and the user gets back in by hand.
@@ -2012,28 +1982,13 @@ int main(int argc, char **argv)
 		 *   `--no-dead-line`. */
 		else if (strcmp(a, "--no-dead-line") == 0)
 			dead_line = false;
-		/* ⛔⭐ AND HERE TOO THE OLD NAME IS REMOVED AND EXPLAINED, not left to
-		 *     do nothing: it is the same rule with which on 23 August
-		 *     `--linea-morta-permille` disappeared. */
-		else if (strcmp(a, "--linea-morta") == 0) {
-			fprintf(stderr,
-			        "⛔ --linea-morta no longer exists: since 24 Aug 2026 the "
-			        "dead line is ON by default\n"
-			        "   (the user's decision; stall 5000 ms, silence 10 s).  "
-			        "To TURN IT OFF: --no-dead-line\n");
-			return 2;
-		}
-		/* ⛔⛔ AND `--linea-morta-permille` IS GONE, and it is an option REMOVED
-		 *      on purpose instead of left to do nothing — 23 Aug 2026.  The
-		 *      loss fraction was refuted by its bench (`casa-cattiva` declared
-		 *      512‰ and HELD for ten minutes, `raffica-forte` 123‰ and did not
-		 *      hold: the quantity orders the two cases the wrong way round).
-		 *      ⇒ The number stays in the log as a WITNESS of the reordering, but
-		 *      it no longer has a threshold to move, and an option that accepts
-		 *      a number without using it is worse than an option that does not
-		 *      exist: whoever types it believes they have tuned something.
-		 *      ⚠ Whoever used it — bench `09-b81` — will see it refused by the
-		 *      line below, which is the right way to notice. */
+		/* ⛔⛔ THE LOSS FRACTION IS NOT A CAUSE — 23 Aug 2026: it was refuted
+		 *      by its bench (`casa-cattiva` declared 512‰ and HELD for ten
+		 *      minutes, `raffica-forte` 123‰ and did not hold: the quantity
+		 *      orders the two cases the wrong way round).  ⇒ The number stays
+		 *      in the log as a WITNESS of the reordering, with no threshold to
+		 *      move: an option that accepts a number without using it is worse
+		 *      than an option that does not exist. */
 		else if (strcmp(a, "--dead-line-stall-ms") == 0 && v)
 			dead_line_stall_ms = strtoull(argv[++i], NULL, 10);
 		else if (strcmp(a, "--dead-line-silence-s") == 0 && v)
@@ -2119,42 +2074,7 @@ int main(int argc, char **argv)
 			session_cap = (int)strtol(argv[++i], NULL, 10);
 		else if (strcmp(a, "--no-audio-silence") == 0)
 			audio_silence = false;
-		else if (strcmp(a, "--sblocca") == 0) {
-			/* ⛔⭐ AND THIS OPTION IS GONE, AND IT DOES NOT HIDE WHY — finding
-			 *     R12.1, night of 10 Aug 2026.
-			 *
-			 *     `remotix --sblocca ADDR` was a SECOND PROCESS: it loaded the
-			 *     ban file, removed the entry from the table **of the new
-			 *     process**, rewrote the file, printed «was banned, now it is
-			 *     free» and exited **0**.  ⛔ The SERVING process saw nothing:
-			 *     its `attempts[]` stayed intact, the fourth attempt still
-			 *     received `TOO_MANY_ATTEMPTS`, and at the next ban of anyone
-			 *     else `save_ban()` rewrote the file from the stale memory —
-			 *     **the removed ban came back on disk too**.
-			 *
-			 *     ⚠ The damage was not that it did not work: it was that **it
-			 *       exited 0 saying it had worked**.
-			 *
-			 * ⛔ A message, and not `help()`: whoever holds a command that
-			 *    existed for one day must read WHY it is gone, or they will look
-			 *    for a typo. */
-			fprintf(stderr,
-			        "⛔ --sblocca no longer exists, and it is not a rename.\n"
-			        "   The ban lives in the memory of the serving process: a "
-			        "second process can only\n"
-			        "   rewrite the file, and the server would keep "
-			        "answering TOO_MANY_ATTEMPTS until\n"
-			        "   restart — exiting 0 as if it had worked "
-			        "(RCP.md §4.4-bis).\n"
-			        "\n"
-			        "   Start the server with --command-socket PATH and "
-			        "unblock like this:\n"
-			        "       python3 banchi/01-b8-sblocca.py --socket PATH "
-			        "192.168.0.2\n"
-			        "   or, without tools:\n"
-			        "       printf 'UNBLOCK 192.168.0.2\\n' | nc -U PATH\n");
-			return 2;
-		} else {
+		else {
 			help(argv[0]);
 			return 2;
 		}

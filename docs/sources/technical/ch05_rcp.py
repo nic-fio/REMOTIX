@@ -300,8 +300,8 @@ REJECTED
         "<b>Nobody can get someone else banned:</b> reaching " + c("CREDENTIALS") + " requires a completed QUIC handshake, "
         "so the source address cannot be forged.",
         "<b>Unlocking.</b> The ban lives in the memory of the serving process, so a second process that rewrote the file "
-        "would leave the server answering " + c("TOO_MANY_ATTEMPTS") + " and exit 0 as if it had worked; " + c("--unblock")
-        + " (unlock) was removed for that reason and now prints why. The live process answers a one-line protocol on a Unix "
+        "would leave the server answering " + c("TOO_MANY_ATTEMPTS") + " and exit 0 as if it had worked; "
+        "that is why the unlock is not an option of a second process. The live process answers a one-line protocol on a Unix "
         "socket created 0600 with " + c("--command-socket PATH") + " (command socket): " + c("UNBLOCK <address>")
         + " → " + c("REMOVED") + " (removed) or " + c("NOT-BANNED") + " (not banned), and " + c("PING") + " → " + c("PONG") + ". Every unlock is logged.",
     ]) + \

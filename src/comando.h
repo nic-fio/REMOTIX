@@ -10,7 +10,7 @@
  * telling a removed ban from a ban that never triggered.  The possible forms
  * are three and two do not hold:
  *
- *   ⛔ a SECOND PROCESS with an option (`remotix --sblocca X`) — **it does not
+ *   ⛔ a SECOND PROCESS with an option (`remotix` run again to unblock) — **it does not
  *      work**, and the way it does not work is silent: the ban lives in the
  *      memory of the serving process (`rcp.c`, `static … attempts[]`), and a
  *      second process can only rewrite the file.  The server would keep
