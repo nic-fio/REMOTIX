@@ -40,8 +40,8 @@ int rx_open(void)
 __attribute__((export_name("rx_packet")))
 unsigned char *rx_packet(void) { return packet; }
 
-__attribute__((export_name("rx_pacchetto_max")))
-int rx_pacchetto_max(void) { return MAX_PACKET; }
+__attribute__((export_name("rx_packet_max")))
+int rx_packet_max(void) { return MAX_PACKET; }
 
 __attribute__((export_name("rx_output")))
 float *rx_output(void) { return output; }
