@@ -1034,7 +1034,7 @@ SESSION
  ├── u8      state               1 = NEW, 2 = RESUMED
  ├── u32     canvas_width      ⚠ the GRANTED canvas
  ├── u32     canvas_height
- └── string desktop             one of: gnome · kde · xfce · lxqt · cinnamon · unknown
+ └── string desktop             one of: gnome · kde · xfce · lxqt · unknown
 ```
 
 ⭐ **The granted canvas can be different from the one asked for**, and it is the case of the fallback on KDE
@@ -1377,9 +1377,9 @@ is a silent divergence between two implementations.
 | | |
 |---|---|
 | maximum size | **256×256** |
-| format | **premultiplied BGRA**, row by row without padding: `larghezza × altezza × 4` bytes |
+| format | **premultiplied BGRA**, row by row without padding: `width × height × 4` bytes |
 | hidden cursor | ⛔ `width = 0` **and** `height = 0`, both, and no image bytes. Only one of the two at zero is `PROTOCOL_ERROR` |
-| the hotspot | ⛔ **MUST** be inside the image: `0 ≤ hot_x < width`, `0 ≤ hot_y < altezza`. ⛔ **Only exception, the hidden cursor**: with `width = altezza = 0` the range is empty, and then `hot_x` and `hot_y` **MUST** be `0`; any other value is `PROTOCOL_ERROR`. ⚠ *The type stays `i16` and the line «may be negative» has fallen: without a range, `hot_x = -32768` was lawful according to every line of the document, and two clients would have drawn the pointer in two different places (finding **R1.21**)* |
+| the hotspot | ⛔ **MUST** be inside the image: `0 ≤ hot_x < width`, `0 ≤ hot_y < height`. ⛔ **Only exception, the hidden cursor**: with `width = height = 0` the range is empty, and then `hot_x` and `hot_y` **MUST** be `0`; any other value is `PROTOCOL_ERROR`. ⚠ *The type stays `i16` and the line «may be negative» has fallen: without a range, `hot_x = -32768` was lawful according to every line of the document, and two clients would have drawn the pointer in two different places (finding **R1.21**)* |
 
 > ⛔ *The exception is from 10 Aug 2026, finding **R11.11**, and it is 🔸 derived: it is corrected without
 > discussion.* The row above declares `width = 0` **and** `height = 0` **mandatory** for the
@@ -1828,15 +1828,15 @@ the answer arrived are not a defect of the client.
 
 ```
 CURSOR_SHAPE
- ├── u16 width          0 with altezza 0 = hidden cursor (§5.5)
+ ├── u16 width          0 with height 0 = hidden cursor (§5.5)
  ├── u16 height
  ├── i16 hot_x           the point that «points», inside the image — ⛔ 0 if hidden (§5.5)
  ├── i16 hot_y
- └── image               larghezza × altezza × 4 bytes, premultiplied BGRA
+ └── image               width × height × 4 bytes, premultiplied BGRA
 ```
 
 ⛔ `width` and `height` **MUST NOT** exceed 256 (§5.5), and the length of the message **MUST**
-be exactly `8 + larghezza × altezza × 4`. A length that does not add up is
+be exactly `8 + width × height × 4`. A length that does not add up is
 `PROTOCOL_ERROR`: it is the case in which «I read what is there and go on» produces a cursor made
 of someone else's memory.
 
@@ -2566,7 +2566,7 @@ stays open **until RCP/2**, or is closed without adding message types (§0-bis, 
 | **the microphone** | the direction is foreseen, the format is not. Closing it now would mean writing a negotiation nobody exercises | when `SPECS.md` §10 stops calling it «not urgent» — and it will be a **new major version**, because it is one more channel (§9) |
 | **the relative pointer** | it serves remote applications that **capture** the pointer, and that case is signalled by the server. It is not the case of `Pointer Capture` on Android, which is already covered (`DECISIONS.md` §5-bis.8) | when an application turns up that asks for it |
 | **multi-finger touch** | `input.touch` exists and is `no`. A reserved slot costs nothing; a definition never exercised costs a constraint | phase A4, if native touch is really needed |
-| **4:4:4** | it is one more capability (`video.sottocampionamento`), and the product decision is `[?]` (`DECISIONS.md` §2.3) | when the user has looked at the two pictures |
+| **4:4:4** | it is one more capability (`video.subsampling`), and the product decision is `[?]` (`DECISIONS.md` §2.3) | when the user has looked at the two pictures |
 | **more screens** | the canvas is only one. The form of multi-monitor is «two views on the same canvas», which the protocol already supports for the canvas; it would only be missing to say **where** each view is | never, as long as it stays out of scope |
 | `[?]` **the IANA registration of the port** | §2.4 | if and when a registered number is needed |
 | ~~the bench function of the delay loop~~ | ⭐ **closed on the night of 9 Aug 2026, a few hours after being opened** by finding **R3.4**: it is **§7.5**, two new types — `BENCH_MARK` and `BENCH_OUTCOME` | ⭐ *It came in under the clause of §9 — «today no implementation exists» — and **that was the last opportunity**: from the first byte of code on it would have been an exception, that is the first breach made by us to a rule of ours* |
