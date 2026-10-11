@@ -6682,7 +6682,7 @@ estendo l'uso gratuito ad associazioni no-profit e a chiese e istituti religiosi
   ours, written without a lawyer: the doubtful cases are settled by the Author's written answer (§2 of the licence).
 - ⚠ **Not "open source"** and not "freeware for everyone": the site says *free for personal use*.
 
-### 10.40 ✅ KDE too resizes the desktop on reattach (10 Oct 2026) — 🔸 done on 11 Oct, waiting for the user's test
+### 10.40 ✅ KDE too resizes the desktop on reattach (10 Oct 2026) — ✅ done on 11 Oct, judged by the user the same day
 
 User's words, after the report «on KDE the desktop sits at half height» (Windows + Chrome, and a friend on Zorin OS
 from Trieste, all re-attaching the same session): *«abbiamo già rinunciato al dynamic resize per i limiti di kwin.
@@ -6767,8 +6767,13 @@ ma riprendere una sessione e non avere il resize al reattach non è accettabile�
   Recommends, Fedora/openSUSE `Requires: (labwc if plasma…)`, Arch already did).
 - ✅ Two KWin versions, one road: 6.3.6 (Debian 13) and 6.4.2 (Leap 16). ⚠ Not tried here: **Ubuntu 26.04 (KWin
   6.6)** — there is no box of it on the server; Plasma 6.8 (Forky) when it comes.
-- ⏳ **The step left is the user's judgement** on a real reattach: born on one device, re-attached from another of a
-  different size — Windows + Chrome, and the DeX — on a server with this build.
+- ✅ **The user's verdict, 11 Oct 2026, 08:25–08:32 UTC** — box `rete11-kde` (Debian 13, KWin 6.3.6, Radeon RX 6800),
+  build `4c96a4c` with the distribution's labwc: *«Il risultato e' andato ben oltre le migliori aspettative. Avviata
+  sessione da linux e fatto detach. Re-attach da windows eseguito alla perfezione, con riproduzione fluida di video a
+  1440p. detach della sessione, re-attach da Chrome per android: tutto perfetto!»*
+  `[M]` from the box's log: attaches from 192.168.0.3 (2544×912), from .21 (1888×864), from .21 again at the same
+  size (no output change, as required), from .24 (2544×912); each resize of the host and of KWin read back in
+  **18–26 ms**.
 - ⚠ Windows being rearranged is **not a KDE price**: every desktop moves and shrinks windows to fit a smaller screen
   on reattach (user: *«accade la stessa cosa anche sugli altri DE»*). The only KDE detail (August note above: KWin
   puts windows back where they were the last time it saw that size) is measured alongside GNOME, not treated as a
