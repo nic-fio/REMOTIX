@@ -20,7 +20,7 @@
 # ⭐ `--journal`: the lines go to the journal with their fields (priority,
 #    `REMOTIX_AREA`, `REMOTIX_TENANT`), also from the child (`registro.h`).
 # ⛔ No bench tool on the command line (§4.5, R13): no
-#    --command-socket, --survey, --verbose, --audio-test, --sblocca.
+#    --command-socket, --survey, --verbose, --audio-test.
 # ⚠ ARCH PATH: the binary is in /usr/lib/remotix/ (Arch has no libexec).
 [Unit]
 Description=REMOTIX, the desktop in the browser

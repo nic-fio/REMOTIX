@@ -36,7 +36,7 @@ if [ $# -eq 0 ] || [ "$1" = all ]; then set -- "${ALL[@]}"; fi
 # ⛔ R14 in small: nothing from the bench in the package (§6.4)
 DENYLIST='provisiona|sudoers|gpu-udev|riavvia-|ld\.so\.conf|/prova|banchi|\.py$|Contenitore|costruisci'
 # ⛔ R13 in small: the unit passes no bench options (§4.5)
-BENCH_OPTIONS='--survey|--command-socket|--audio-test|--verbose|--sblocca'
+BENCH_OPTIONS='--survey|--command-socket|--audio-test|--verbose'
 
 build_one()
 {

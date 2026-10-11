@@ -359,8 +359,8 @@ OPT = table(["Option", "Default", "Lives in", "Meaning"], [
     [c("--certificates DIR") + " (certificates)", c("/var/lib/remotix/certificates"), "parent", "Directory of the two certificates, "
      "created 0700 if missing."],
     [c("--page FILE") + " (page)", c("pagina.html") + " (relative)", "parent", "The page served over TCP."],
-    [c("--ban-file FILE") + " (alias " + c("--ban") + ")", c("/var/lib/remotix/ban"), "parent", "Where the address "
-     "ban survives restarts. Two names are accepted because the server used " + c("--ban") + " and the bench scripts " + c("--ban-file") + " (R12.9a)."],
+    [c("--ban-file FILE") + " (ban file)", c("/var/lib/remotix/ban"), "parent", "Where the address "
+     "ban survives restarts."],
     [c("--command-socket PATH") + " (command socket)", "none", "parent", "Unix socket 0600 of the unlock command ("
      + rif("The unlock command socket") + "). Without it a ban ends only after 12 hours."],
     "Diagnostics",
@@ -425,22 +425,12 @@ S9 = p("The server is configured only by its command line. Every option is parse
       + " when it is not " + c("card") + ".") + \
     code("remotix-child --internal-child <user> <uid> <gid> <width> <height> <serial> <rilievo-dir|-> [optional words]",
          "text", "The child's command line (written by become_and_exec(), read by child_alive())") + \
-    table(["Removed option", "What happens now", "Why it was removed"], [
-        [c("--unblock IND") + " (unlock)", "Exit 2 with an explanation and the two working alternatives", "It was a second "
-         "process: it rewrote the ban file and exited 0, while the serving process kept the ban in memory and the "
-         "next ban of anyone rewrote the file, putting the unlocked address back (R12.1)."],
-        [c("--ritmo-adattivo") + " (adaptive rhythm)", "Exit 2: the regulator is on by default", "Accepting it silently would be a second "
-         "road to the same cure."],
-        [c("--linea-morta"), "Exit 2: the dead line is on by default (stall 5000 ms, silence 10 s)", "Same."],
-        [c("--linea-morta-permille") + " (dead-line loss per mille)", "Unknown option: usage and exit 2", "Its bench "
-         "refuted it: the loss fraction measured reordering, not an unusable line (the " + c("bad-home")
-         + " profile, «bad home line», declared 512‰ and held ten minutes; " + c("burst-heavy") + ", «heavy "
-         "burst», 123‰ and did not). An option that accepts a number without using it is worse than none."],
+    table(["Removed switch", "What happens now", "Why it was removed"], [
         [c("-DAUDIO_SILENZIO_PREDEFINITO=1"), "Compile switch removed", "Replaced by " + c("--no-audio-silence")
          + " on the same binary: one road only."],
-    ], "«TAB» — Options that no longer exist, and say so") + \
-    note("the options are still in Italian. " + c("DECISIONI.md") + " §10.38 decides that they are renamed to "
-         "English too, with no compatibility aliases; the rename is not done yet.", "Option names.")
+    ], "«TAB» — A switch that no longer exists") + \
+    note("the options were renamed to English with no compatibility aliases (" + c("DECISIONI.md")
+         + " §10.38): an old Italian name is an unknown option, usage and exit 2.", "Option names.")
 
 # ── 13.10 Environment variables ──────────────────────────────────────────
 S10 = p("REMOTIX reads almost nothing from the environment, on purpose: a cure that can be switched by an option and "
