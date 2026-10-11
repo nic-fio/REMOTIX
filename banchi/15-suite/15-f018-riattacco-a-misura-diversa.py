@@ -11,9 +11,8 @@
        state.  (Live resolution change does not exist: the size changes ONLY
        by reattaching — `DECISIONI.md` §5.1-bis.)
 
-F-018  expected (`SPECIFICHE.md` §6.1-§6.3, `src/rcp.c` ~2998, `src/figlio.c`
-       `misura_del_palco`):
-   GNOME, XFCE, LXQt — the CANVAS takes the new size and the DESKTOP follows it:
+F-018  expected (`SPECIFICHE.md` §6.1-§6.3, `DECISIONI.md` §10.40, `src/figlio.c`):
+   ALL FOUR DESKTOPS — the CANVAS takes the new size and the DESKTOP follows it:
        · field: the page's canvas (`#schermo` width×height) is that of the
          new view (± 16 px: the page truncates it to multiples of 16);
        · field: inside the session a program sees the SCREEN of that
@@ -22,19 +21,16 @@ F-018  expected (`SPECIFICHE.md` §6.1-§6.3, `src/rcp.c` ~2998, `src/figlio.c`
        · photo: the scene's window is there and the text can be read; the edges of the
          photo (the rows at the top and bottom, where the panels are) are the ones
          from before; no new BLACK band on the right or at the bottom (full background).
-   ⭐ KDE — EXCEPTION DECLARED by the user (KWin < 6.8, SPECIFICHE ~851,
-       §6.3): the canvas STAYS the previous one and the browser RESCALES:
-       · field: canvas equal to before; the canvas rectangle in the browser is
-         inside the new view and fills one side of it (≥ 90 %);
-       · field: the screen seen from inside is the one from before;
-       · photo: as above (window, text, edges).
-       ⇒ on KDE THIS is the PASS.
+   ⭐ KDE included since 11 Oct 2026: KWin is nested in a screenless labwc
+       whose output changes size at the reattach (`src/kwin.h`).  Until then KDE
+       kept the canvas and the browser rescaled (the «kde» expectation below):
+       ⛔ now that is a DEFECT, and the judge keeps it only as the fault.
 P-C    expected: the two reattaches (at 2560x1440 and back at 4K) both right.
 
 FAULT: the judge receives the reattach BACK (size equal to the starting
        one) as if it were at 2560x1440 — «the reattach at the same size
        judged as if it had changed» — and then the reattach at 2560x1440 with
-       the expectation of the OTHER family (KDE judged as GNOME and vice versa).
+       the expectation of the old KDE fallback (canvas kept, browser rescaling).
        Both must give RED, on real observations.
 """
 import os
@@ -54,7 +50,9 @@ MIN_FILL = 0.90            # on KDE the rescaled canvas fills at least one side
 
 
 def famiglia(desktop):
-    return "kde" if desktop == "kde" else "segue"
+    # ⭐ 11 Oct 2026 (DECISIONI §10.40): one rule for every desktop.  «kde» (the
+    #   old KWin --virtual fallback: canvas kept) survives only as the FAULT.
+    return "segue"
 
 
 # the side of the panel that runs along the WHOLE width (seen in the photos of 24-25 Sep)
@@ -298,8 +296,7 @@ def corpo(o, E):
             eB, rB = judge_measure(fam, A, B, B["vista"][:2], testo, pan)
             ev = [x for x in (A.get("foto"), B.get("foto")) if x]
             E.metti("F-018", eB, rB,
-                    atteso=("canvas and desktop at the new size" if fam == "segue" else
-                            "⭐ KDE: previous canvas, rescaled by the browser (declared exception)"),
+                    atteso="canvas and desktop at the new size",
                     osservato="A: %s || B: %s" % (breve(A), breve(B)), evidenze=ev)
 
             C, perche = riattacca(s, 3840, 2160, testo, "C-4k", fam)

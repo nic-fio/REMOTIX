@@ -264,10 +264,15 @@ SCANNER    ?= wayland-scanner
 #    `wayland-protocols`, which the container does NOT have: the XML is in the repository like
 #    the others, copied from wayland-protocols 1.44.  ⚠ At most v4 is bound
 #    (`[M]` labwc announces it): it is the one with `main_device`.
+# ⭐ 11 Oct 2026 — `wlr-layer-shell-unstable-v1` (wlr-protocols) and `xdg-shell`
+#    (wayland-protocols 1.44, needed because layer-shell names `xdg_popup`):
+#    the nested KWin's «ticker», a 1x1 transparent surface on the labwc that
+#    hosts KWin (`kwin.c`).
 PROTOCOLLI := zkde-screencast-unstable-v1 wlr-data-control-unstable-v1 \
               wlr-screencopy-unstable-v1 wlr-output-management-unstable-v1 \
               virtual-keyboard-unstable-v1 wlr-virtual-pointer-unstable-v1 \
-              linux-dmabuf-unstable-v1 ext-data-control-v1
+              linux-dmabuf-unstable-v1 ext-data-control-v1 \
+              wlr-layer-shell-unstable-v1 xdg-shell
 GENERATI   := $(PROTOCOLLI:%=%-client-protocol.h) $(PROTOCOLLI:%=%-protocol.c)
 
 # ⭐ PHASE 17 — the PREFISSO's library folder is not always `lib`:

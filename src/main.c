@@ -1832,6 +1832,12 @@ int main(int argc, char **argv)
 	 *    sessions.  The contract is in `figlio.h`. */
 	if (argc >= 2 && strcmp(argv[1], "--prova-codifica") == 0)
 		return figlio_prova_codifica(argc - 2, argv + 2);
+	/* ⭐ 11 Oct 2026 (`DECISIONI.md` §10.40) — the start line of KWin on
+	 *    Plasma: labwc without a screen, then KWin nested in it (`kwin.h`).
+	 *    It runs as the USER, inside `plasma-kwin_wayland.service`, and it
+	 *    becomes the KWin wrapper: nothing of the server is opened here. */
+	if (argc >= 2 && strcmp(argv[1], "--kwin-annidato") == 0)
+		return kwin_annidato_vive(argc, argv);
 
 	for (int i = 1; i < argc; i++) {
 		const char *a = argv[i];

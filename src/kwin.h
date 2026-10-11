@@ -73,3 +73,46 @@ int kwin_disposizione(const char *nome, GError **sbaglio);
  * an environment built from scratch).  The clipboard uses it too (`appunti_kde.c`). */
 struct wl_display;
 struct wl_display *kwin_display_apri(char *quale, size_t quanto);
+
+/* ------------------------------------------------------------------ *
+ * ⭐⭐ THE NESTED KWIN — the desktop takes the window's size at REATTACH
+ *      on KDE too (`DECISIONI.md` §10.40, 11 Oct 2026).
+ *
+ * ⛔ THE WALL: KWin ≤ 6.7 with `--virtual` cannot change the size of its
+ *    output, nor create a second one (`VirtualBackend` does not override
+ *    `createVirtualOutput()`: `stream_virtual_output` answers «Could not
+ *    find output», `STUDI.md` §kde §8.1, `[M]` M7a/M11).  Restarting KWin
+ *    with another size kills every non-Qt program (`[M]` 10 Oct 2026:
+ *    Firefox and a GTK editor died at the first restart).
+ * ⭐ THE ROAD: KWin is born NESTED (`--wayland-display`), as a full-screen
+ *    window inside a labwc without a screen that lives in a folder of its
+ *    own.  KWin's `WaylandOutput::resize()` follows the size of its window
+ *    (`[R]` KWin 6.3.6 `wayland_output.cpp`, `handleConfigure`), and the
+ *    window follows labwc's output, whose size `zwlr_output_manager_v1`
+ *    changes (the XFCE/LXQt road).  ⇒ To change the size of the desktop is
+ *    to change the size of labwc's output: no program is restarted.
+ *    ⚠ It is one road for every KWin: on 6.8 it stays the same.
+ * ------------------------------------------------------------------ */
+
+/* The command-line mode: `remotix --kwin-annidato W H NODE -- <kwin_wayland_wrapper> args`.
+ * It is the `ExecStart` of `plasma-kwin_wayland.service` (`sessione.c`,
+ * `scrivi_dropin()`): it starts labwc at W×H, waits for it, and becomes
+ * (`execvp`) the KWin wrapper with `--wayland-display` added.  NODE is the
+ * render node for labwc, `pixman` for drawing in memory, `-` to let wlroots
+ * choose.  It returns only on failure. */
+int kwin_annidato_vive(int argc, char **argv);
+
+/* The host's display: `$XDG_RUNTIME_DIR/remotix-kwin-ospite/wayland-0`
+ * (g_free).  NULL without `XDG_RUNTIME_DIR`. */
+char *kwin_ospite_display(void);
+
+/* Changes the size of the host's output to W×H, and waits (at most
+ * `attesa_s`) until KWin's output says W×H.  FALSE with `sbaglio` set when
+ * there is no host (a session born before this road: the old fallback holds)
+ * or the size did not arrive. */
+bool kwin_ospite_misura(uint32_t larghezza, uint32_t altezza, double attesa_s,
+                        GError **sbaglio);
+
+/* Is there a host to talk to?  (The socket exists and accepts.) */
+bool kwin_ospite_c_e(void);
+

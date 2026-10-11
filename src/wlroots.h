@@ -87,6 +87,12 @@ typedef struct WlrPalco WlrPalco;
  */
 WlrPalco *wlr_apri(GError **sbaglio);
 
+/* ⭐ The same, on a NAMED display (a socket name or an absolute path), with no
+ *    search: it is the road of the labwc that hosts KWin (`kwin.h`, the nested
+ *    KWin), which lives in a folder of its own and must never be mistaken for
+ *    the session's compositor.  NULL = the search of `wlr_apri()`. */
+WlrPalco *wlr_apri_su(const char *display, GError **sbaglio);
+
 /*
  * ⛔ PHASE 19 — SLABS AT THE MAXIMUM CANVAS, only if encoding is Vulkan.
  *    True ⇒ every GBM slab is born 4096x2304 and on a size change only the
@@ -234,6 +240,12 @@ typedef enum {
 
 WlrSizeOutcome wlr_misura_chiedi(WlrPalco *palco, uint32_t larghezza, uint32_t altezza,
                                  double attesa_s, GError **sbaglio);
+
+/* The same with the output's refresh, in mHz (0 = «you choose», which is what
+ * `wlr_misura_chiedi()` sends).  Only the labwc that hosts KWin asks for one
+ * (`kwin.c`, OSPITE_MHZ). */
+WlrSizeOutcome wlr_misura_chiedi_hz(WlrPalco *palco, uint32_t larghezza, uint32_t altezza,
+                                    int32_t millihertz, double attesa_s, GError **sbaglio);
 
 /* How many frames were asked for, taken, failed. For log lines
  * and for the manifest: ⛔ a count is not a declaration. */

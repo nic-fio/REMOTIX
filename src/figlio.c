@@ -8774,9 +8774,59 @@ void figlio_vive(int argc, char **argv)
 					 *    (`misura_del_palco()`): the answer is the size that
 					 *    exists, and the page rescales.  Asking the capture for
 					 *    another would make it fall forever. */
+					/* ⭐⭐ 11 Oct 2026 — and now it IS resized, by changing
+					 *      the size of the labwc that hosts KWin (`kwin.h`,
+					 *      «the nested KWin», `DECISIONI.md` §10.40):
+					 *   1. the stage is dismantled FIRST — KWin's stream
+					 *      would otherwise renegotiate to a size our fixed
+					 *      offer refuses, and die under our feet;
+					 *   2. the host goes to the new size, and KWin's output
+					 *      is READ BACK at that size (not believed);
+					 *   3. the stage is remounted at once at the wanted
+					 *      canvas: the frame that arrives makes the
+					 *      reconciliation of «NEW CANVAS FROM THE STAGE»
+					 *      (encoder, pointer, §6.2) and the answer to the
+					 *      parent — the same road as every other desktop.
+					 * ⚠ A session born before this road (KWin `--virtual`) has
+					 *   no host: there the old fallback holds, DECLARED. */
 					if (palco_kwin) {
 						uint32_t kl = canvas_intended_w, ka = canvas_intended_h;
+						uint32_t ol = 0, oa = 0;
+						g_autoptr(GError) perche = NULL;
+						uint64_t t_ritela = registro_ora_ms();
 
+						kwin_misura(palco_kwin, &ol, &oa);
+						if ((ol != kl || oa != ka) && kwin_ospite_c_e()) {
+							smonta_il_palco(&mut, &cat);
+							if (kwin_ospite_misura(kl, ka, 3.0, &perche)) {
+								registro_dice(REG_FIGLIO,
+								              "⭐ §7.1 KDE: canvas %ux%u → %ux%u by "
+								              "resizing KWin's host (%llu ms); "
+								              "remounting the stage now",
+								              ol, oa, kl, ka,
+								              (unsigned long long)(registro_ora_ms()
+								                                   - t_ritela));
+							} else {
+								registro_dice(REG_FIGLIO,
+								              "⛔ §7.1 KDE: KWin's host did not reach "
+								              "%ux%u (%s): remounting the stage at "
+								              "the size KWin has",
+								              kl, ka,
+								              perche ? perche->message : "?");
+							}
+							stage_wait_ms = PALCO_RIPROVA_MIN_MS;
+							stage_retry_ms = 0;
+							wait_canvas(canvas_intended_w, canvas_intended_h);
+							continue;
+						}
+						if (ol != kl || oa != ka)
+							registro_dice(REG_FIGLIO,
+							              "⚠ §7.1 KDE: this Plasma session has no "
+							              "host for KWin (KWin --virtual: born before "
+							              "11 Oct 2026, or labwc is not installed): "
+							              "the canvas stays %ux%u and the page "
+							              "rescales — DECLARED FALLBACK",
+							              ol, oa);
 						misura_del_palco(&kl, &ka);
 						rispondi_tela(canvas_intended_w, canvas_intended_h, kl, ka);
 						continue;

@@ -129,6 +129,9 @@ Requires:       firewalld-filesystem
 # only if that desktop is present.
 Requires:       (labwc if xfce4-session)
 Requires:       (labwc if lxqt-session)
+# ⭐ 11 Oct 2026 (DECISIONI §10.40): KWin is born nested in a screenless labwc,
+# so the KDE desktop takes the window's size at reattach.
+Requires:       (labwc if plasma-workspace)
 Requires:       (wlr-randr if lxqt-session)
 Requires:       (wlr-randr if xfce4-session)
 # Xwayland under labwc for X11 applications (XFCE 4.20 AND the LXQt panel/config):
@@ -159,6 +162,8 @@ Recommends:     mesa-vulkan-drivers
 # ⛔ Phase 19: here were svt-av1-libs (EPEL 10) and openh264 (Cisco repository for
 #   EPEL 10), the software fallback — out.
 # ⛔ No labwc/XFCE/LXQt in RHEL/EPEL 10 (§3): no dependency to write.
+#   ⚠ So on KDE here KWin starts with --virtual (DECLARED FALLBACK, `kwin.c`):
+#     the desktop keeps the size of its birth at reattach (DECISIONI §10.40).
 # ⛔ RHEL 10 Mesa has no VA-API and EPEL lacks the Intel driver (§4.2): GPU
 #   encoding exists only with third-party repositories.
 %endif
@@ -166,6 +171,8 @@ Recommends:     mesa-vulkan-drivers
 %if 0%{?suse_version}
 Requires:       (labwc if xfce4-session)
 Requires:       (labwc if lxqt-session)
+# ⭐ 11 Oct 2026 (DECISIONI §10.40): KWin nested in a screenless labwc.
+Requires:       (labwc if plasma6-workspace)
 Requires:       (wlr-randr if lxqt-session)
 Requires:       (wlr-randr if xfce4-session)
 # Xwayland under labwc for X11 applications (XFCE 4.20 AND the LXQt panel/config):
