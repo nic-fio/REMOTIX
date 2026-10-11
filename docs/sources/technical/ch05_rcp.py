@@ -12,11 +12,11 @@ S1 = p("RCP/1 — the Remotix Control Protocol, version 1 — is what the page a
     p("Three properties are built into that order. The server proves who it is (TLS with the pinned certificate) before "
       "the password leaves the browser. Authentication comes before attachment: whoever is not admitted cannot even name "
       "a session. And the canvas is agreed at attach time. A message that arrives in a state where it is not expected is "
-      + c("PROTOCOL_ERROR") + " (protocol error) — the protocol says «you got the order wrong» instead of punishing each permutation with "
+      + c("PROTOCOL_ERROR") + " — the protocol says «you got the order wrong» instead of punishing each permutation with "
       "a different error, which was trap 1 of the v1 lessons.") + \
-    p("The message names are those of the code and of " + c("RCP.md") + ", still in Italian until the rename of " + c("DECISIONI.md") + " §10.38: " + c("HELLO") + " (hello) and "
-      + c("HERE_I_AM") + " (here I am) exchange versions and capabilities, " + c("CREDENTIALS") + " (credentials) carries "
-      "user and password, " + c("ATTACH") + " (attach) asks for a desktop and " + c("SESSION") + " (session) grants it.") + \
+    p("The message names are those of the code and of " + c("RCP.md") + ": " + c("HELLO") + " and "
+      + c("HERE_I_AM") + " exchange versions and capabilities, " + c("CREDENTIALS") + " carries "
+      "user and password, " + c("ATTACH") + " asks for a desktop and " + c("SESSION") + " grants it.") + \
     p("<b>Why the specification is the referee.</b> In v1 the referee was " + c("mstsc") + ": if Microsoft's client drew "
       "it, it was right. In REMOTIX client and server are both ours, and two programs written by the same hand that agree "
       "with each other confirm nothing — they repeat the same assumption. So client and server are never tested against "
@@ -24,8 +24,8 @@ S1 = p("RCP/1 — the Remotix Control Protocol, version 1 — is what the page a
       "specification (" + rif("Testing against the specification") + ").") + \
     table(["Implementation", "Language", "Role"], [
         [c("src/rcp.c") + ", " + c("src/rcp.h"), "C", "The server side. Knows " + c("RCP.md") + " and nothing else: no "
-         "sockets, no clock, no PAM, no compositor. Time comes in as a parameter (" + c("rcp_time()") + ", «tempo» = time), bytes go out "
-         "through hooks (" + c("rcp_hooks") + ", «ganci» = hooks), so a bench can make time run as it wants."],
+         "sockets, no clock, no PAM, no compositor. Time comes in as a parameter (" + c("rcp_time()") + "), bytes go out "
+         "through hooks (" + c("rcp_hooks") + "), so a bench can make time run as it wants."],
         [c("banchi/rcp/rcp.c") + ", " + c("rcp.h") + ", " + c("autenticazione.c"), "C", "A byte-identical twin, grafted "
          "into the ngtcp2 examples by " + c("banchi/01-b3-rcp-innesta.py") + ". The " + c("Makefile") + " variable "
          + c("GEMELLATI") + " (twinned files) compares the copies at every build and stops if they differ."],
@@ -56,11 +56,11 @@ S2 = p("An implementation that receives something it does not understand must cl
         ["2", "§6.3", "A corrupt or short audio datagram is dropped: datagrams are unreliable by definition."],
         ["3", "§7.1", "For one second after a canvas change, input coordinates valid on the previous canvas are clamped "
          "to the new one."],
-        ["4", "§7.1", c("FIT_CANVAS") + " (fit the canvas) below the minimum gets " + c("CANVAS(REFUSED, SIZE_OUT_OF_RANGE)")
-         + " (canvas: refused, size out of limits) "
+        ["4", "§7.1", c("FIT_CANVAS") + " below the minimum gets " + c("CANVAS(REFUSED, SIZE_OUT_OF_RANGE)")
+         + " "
          "instead of closing: a badly dragged window must not cost the session."],
-        ["5", "§5.2, §7.4", "A " + c("REQUEST_KEY") + " (request a key frame) within 200 ms of the last key frame may be ignored; a late "
-         + c("CLIPBOARD_ASK") + " (clipboard request) is served with the current text."],
+        ["5", "§5.2, §7.4", "A " + c("REQUEST_KEY") + " within 200 ms of the last key frame may be ignored; a late "
+         + c("CLIPBOARD_ASK") + " is served with the current text."],
         ["6", "§6.2", "After a canvas change, frames at a size in force since the queue started draining are accepted "
          "until the first key frame at the new size."],
         ["7", "§2.5", "A video stream arriving before " + c("SESSION") + " when " + c("ATTACH") + " has already left "
@@ -72,18 +72,18 @@ S2 = p("An implementation that receives something it does not understand must cl
       "whoever writes a tolerance elsewhere adds its row here in the same change.") + \
     steps([
         "<b>Log what was not understood</b>: the type, the length, the state — not «protocol error».",
-        "<b>Send " + c("FAREWELL") + "</b> (farewell) with the reason on the control channel, if the control channel is still usable.",
+        "<b>Send " + c("FAREWELL") + "</b> with the reason on the control channel, if the control channel is still usable.",
         "<b>Close the WebTransport session</b> with the application error code equal to the reason code (" +
         rif("Disconnect reasons") + "). Not the QUIC connection: a page can only close its session.",
     ]) + \
     p("Step 3 is the one that saves diagnoses: if the farewell cannot arrive — broken stream, unreadable message — the "
       "reason still travels inside the close. In v1 the server logged «dismissing the client» while the client logged "
       "«network error» for three phases. Code 0 means «closed without reason» and must never be used. In " + c("rcp.c")
-      + " the three steps are " + c("congeda()") + " (dismiss); the host's " + c("chiudi") + " (close) hook performs step 3.")
+      + " the three steps are " + c("dismiss()") + "; the host's " + c("close") + " hook performs step 3.")
 
 # ── Channels ────────────────────────────────────────────────────────────
 S3 = p("Whoever receives a stream must know what is inside before reading it. The channel is given by the high byte "
-       "of the first " + c("type") + " (type) field of the RCP payload — never by the stream number, which WebTransport does not "
+       "of the first " + c("type") + " field of the RCP payload — never by the stream number, which WebTransport does not "
        "even expose to a page.", lead=True) + \
     table(["High byte", "Channel", "Lives on", "Direction", "What follows"], [
         [c("0x00"), "control", "the first bidirectional stream of the session", "both", "framed messages (§6.1)"],
@@ -99,7 +99,7 @@ S3 = p("Whoever receives a stream must know what is inside before reading it. Th
         "The client must not open bidirectional streams beyond the control channel, and the server must not open any.",
         "The server opens no video stream before it has sent " + c("SESSION") + "; the client opens its input stream "
         "only after receiving " + c("SESSION") + ", exactly one, and keeps it open.",
-        "In " + c("rcp.c") + " the control channel accepts only high byte " + c("0x00") + " (" + c("drena()") + ", «drain»); a "
+        "In " + c("rcp.c") + " the control channel accepts only high byte " + c("0x00") + " (" + c("drain()") + "); a "
         "second input stream while the first is alive, or input bytes before " + c("SESSION") + ", are violations ("
         + c("rcp_receive_input()") + ").",
     ]) + \
@@ -137,8 +137,8 @@ S4 = p("Byte order is network order (big-endian). No field is aligned and no pad
         c("MAX_ACCUMULATION") + " = 1 MiB; the input accumulator is " + c("I_ACCUMULATION") + " = 32 bytes forever, because the "
         "five input types have fixed lengths known from the type alone — whoever announces a megabyte on the input stream "
         "is dismissed after six bytes.",
-        "Every integer has a single declared meaning of «absent»; there are no implicit sentinels (" + c("numero = 0")
-        + " (number), " + c("id = 0") + " and " + c("istante = 0") + " (instant) are each declared where they are used).",
+        "Every integer has a single declared meaning of «absent»; there are no implicit sentinels (" + c("number = 0")
+        + ", " + c("id = 0") + " and " + c("instant = 0") + " are each declared where they are used).",
     ])
 
 # ── Handshake ───────────────────────────────────────────────────────────
@@ -170,13 +170,13 @@ S5 = p("The handshake has five steps and runs on the control channel. Every mess
     "session.",
     "<b>" + c("HELLO") + " → " + c("HERE_I_AM") + ".</b> Version and capabilities; the server picks codecs (" +
     rif("HELLO and HERE_I_AM: capability negotiation") + ").",
-    "<b>" + c("CREDENTIALS") + " → " + c("ADMITTED") + " (admitted) / " + c("REJECTED") + " (rejected).</b> One attempt per connection. The server "
+    "<b>" + c("CREDENTIALS") + " → " + c("ADMITTED") + " / " + c("REJECTED") + ".</b> One attempt per connection. The server "
     "asks PAM through the helper process and answers no earlier than one second after receiving the message (" +
     rif("Credentials, the fixed delay and the address ban") + ").",
     "<b>Capacity gate.</b> Between PAM's yes and " + c("ADMITTED") + ", the parent checks that the user can have a stage: "
-    "if all stages are taken (" + c("SESSION_UNSERVABLE") + ", «session cannot be served»), the composition budget "
-    "says no (" + c("BUDGET_FULL") + ", «budget full»), or the stage cannot be started, the page receives " + c("FAREWELL") + " with that reason instead of "
-    + c("ADMITTED") + " (" + c("delivery_verdict()") + ", «deliver the verdict», in " + c("main.c") + "). The child is not spawned for a user "
+    "if all stages are taken (" + c("SESSION_UNSERVABLE") + "), the composition budget "
+    "says no (" + c("BUDGET_FULL") + "), or the stage cannot be started, the page receives " + c("FAREWELL") + " with that reason instead of "
+    + c("ADMITTED") + " (" + c("delivery_verdict()") + " in " + c("main.c") + "). The child is not spawned for a user "
     "who is about to be dismissed.",
     "<b>" + c("ATTACH") + " → " + c("SESSION") + ".</b> Canvas, view and keyboard layout; the server takes the user's "
     "seat and answers with the granted canvas (" + rif("ATTACH and SESSION: attaching to a desktop") + ").",
@@ -196,23 +196,23 @@ S6 = p(c("HELLO") + " (client → server) carries the highest major version the 
     table(["Name", "Declared by", "Values", "In the product"], [
         [c("video.codec"), "both", "comma list of " + c("hevc") + ", " + c("h264") + ", in order of preference", "Page: "
          + c("hevc,h264") + " filtered to the codecs its probe actually saw painted. Server: the codecs the GPU can "
-         "encode, measured at start-up by " + c("child_video_capabilities()") + " (the child's video capabilities) and set "
+         "encode, measured at start-up by " + c("child_video_capabilities()") + " and set "
          "with " + c("rcp_video_codec_set()") + " — " + c("hevc,h264") + ", " + c("h264") + " or empty."],
-        [c("video.depth") + " (depth)", "both", c("8") + ", " + c("10"), "Server: " + c("8,10") + "."],
-        [c("video.level") + " (level)", "client", "highest level it decodes, e.g. " + c("5.1"), "Page: " + c("5.1")
-         + " (" + c("DECLARED_LEVEL") + ", «declared level»). The server must not emit a higher level; the child imposes it on the "
+        [c("video.depth"), "both", c("8") + ", " + c("10"), "Server: " + c("8,10") + "."],
+        [c("video.level"), "client", "highest level it decodes, e.g. " + c("5.1"), "Page: " + c("5.1")
+         + " (" + c("DECLARED_LEVEL") + "). The server must not emit a higher level; the child imposes it on the "
          "encoder and re-reads it from the SPS."],
-        [c("video.max_size") + " (maximum size)", "client", c("WIDTHxHEIGHT") + " it can decode", "Page: the largest step of a "
+        [c("video.max_size"), "client", c("WIDTHxHEIGHT") + " it can decode", "Page: the largest step of a "
          "ladder its decoder actually painted; omitted if nothing was measured. It caps the granted canvas."],
         [c("audio.codec"), "both", c("opus") + ", " + c("pcm"), "Server: " + c("opus,pcm") + ". Page: " + c("opus,pcm")
          + " only if it can decode Opus, otherwise " + c("pcm") + "."],
-        [c("input.touch") + " (touch)", "client", c("yes") + " (yes), " + c("no"), "Reserved; always " + c("no") + " in RCP/1."],
-        [c("clipboard.text") + " (clipboard text)", "both", c("yes") + ", " + c("no"), "Both " + c("yes") + "; the page turns the clipboard on "
+        [c("input.touch"), "client", c("yes") + ", " + c("no"), "Reserved; always " + c("no") + " in RCP/1."],
+        [c("clipboard.text"), "both", c("yes") + ", " + c("no"), "Both " + c("yes") + "; the page turns the clipboard on "
          "only if the server declares it."],
-        [c("client.name") + " (client name)", "client", "free text for the log", "Page: " + c("remotix-page 0.1.0") + "."],
-        [c("bench.mark") + " (bench marker)", "server", c("yes") + ", " + c("no"), "Always " + c("no") + " (" + rif("The bench marker: BENCH_MARK") + ")."],
+        [c("client.name"), "client", "free text for the log", "Page: " + c("remotix-page 0.1.0") + "."],
+        [c("bench.mark"), "server", c("yes") + ", " + c("no"), "Always " + c("no") + " (" + rif("The bench marker: BENCH_MARK") + ")."],
     ], "«TAB» — The capabilities defined in RCP/1") + \
-    p("<b>Form of names and values</b>, enforced in " + c("handle_hello()") + " (handle HELLO) so that «ignore what you do not know» does "
+    p("<b>Form of names and values</b>, enforced in " + c("handle_hello()") + " so that «ignore what you do not know» does "
       "not become «guess»:") + \
     ul([
         "a name is " + c("a-z") + ", " + c("0-9") + ", " + c(".") + " and " + c("_") + ", 1 to 64 bytes (the underscore was "
@@ -227,20 +227,20 @@ S6 = p(c("HELLO") + " (client → server) carries the highest major version the 
         "a capability from the wrong side (" + c("bench.mark") + " from the client) is " + c("PROTOCOL_ERROR") + ".",
     ]) + \
     p("<b>Negotiation.</b> The server chooses, inside the intersection, following the <i>client's</i> order of "
-      "preference (" + c("first_in_common()") + ", «first in common»), and logs the choice. " + c("pcm") + " and depth " + c("8") + " must be "
-      "declared by both: a client that omits them is dismissed with " + c("NOTHING_IN_COMMON") + " (nothing in common), not "
+      "preference (" + c("first_in_common()") + "), and logs the choice. " + c("pcm") + " and depth " + c("8") + " must be "
+      "declared by both: a client that omits them is dismissed with " + c("NOTHING_IN_COMMON") + ", not "
       + c("PROTOCOL_ERROR") + " — it did not write badly, it has nothing in common. An empty intersection, or a "
       "server whose GPU encodes nothing (empty " + c("video.codec") + "), also ends in " + c("NOTHING_IN_COMMON") + "; the "
       "server never falls back to a codec nobody declared. AV1 left the negotiation on 20 August 2026 (Firefox for "
       "Android had neither HEVC nor AV1, AV1 had no hardware encoder anywhere in the setup, and Firefox painted "
       "rectangular blocks on bytes that Chrome and dav1d decoded cleanly); its number 2 is never reused.") + \
     p("<b>Version.</b> " + c("HELLO") + " must carry exactly " + c("RCP_VERSION") + " = 1, the number in the path "
-      + c("/rcp/1") + "; anything else is " + c("INCOMPATIBLE_VERSION") + " (incompatible version). The page checks the version in "
+      + c("/rcp/1") + "; anything else is " + c("INCOMPATIBLE_VERSION") + ". The page checks the version in "
       + c("HERE_I_AM") + " the same way and dismisses with the same reason.") + \
     note(c("HERE_I_AM") + " carries the server's offer (for example " + c("video.codec=hevc,h264") + "), not the single "
          "codec it chose. The page takes the first item of the server's list that it can paint; the server chose the first "
          "item of the page's list that it can encode. The two agree today because both lists are in the order "
-         + c("hevc,h264") + " (" + c("PREFERENCE") + ", «preference», in the page, the start-up probe in the server); the codec actually "
+         + c("hevc,h264") + " (" + c("PREFERENCE") + " in the page, the start-up probe in the server); the codec actually "
          "used is the one carried by each frame header.", "What HERE_I_AM says.")
 
 # ── Credentials ─────────────────────────────────────────────────────────
@@ -254,11 +254,11 @@ ADMITTED                (empty)
 REJECTED
  └── u8 reason         (reason) WRONG_CREDENTIALS 0x07 · TOO_MANY_ATTEMPTS 0x08""", "text", "Bodies") + \
     ul([
-        "<b>No distinction</b> between «no such user» and «wrong password»: both are " + c("WRONG_CREDENTIALS") + " (wrong credentials).",
+        "<b>No distinction</b> between «no such user» and «wrong password»: both are " + c("WRONG_CREDENTIALS") + ".",
         "<b>" + c("REJECTED") + " is the farewell of authentication.</b> After it the server closes the session with the "
         "same code and sends no " + c("FAREWELL") + ". The client may still send one " + c("FAREWELL") + " — §8.1 obliges "
         "whoever closes to say why — but anything else, in particular a second " + c("CREDENTIALS") + ", is the violation "
-        "§4.4 forbids. " + c("judge_after_end()") + " (judge after the end) tells the two apart in the log.",
+        "§4.4 forbids. " + c("judge_after_end()") + " tells the two apart in the log.",
         "<b>The password is wiped</b> (" + c("memset") + ") as soon as it has been handed on, and never appears in any log "
         "at any level.",
         "<b>The empty strings</b> are a protocol error, not a PAM attempt: otherwise an attacker sending empty "
@@ -266,34 +266,34 @@ REJECTED
     ]) + \
     p("<b>PAM runs outside the loop.</b> Until 12 August 2026 PAM blocked the server's single " + c("poll") + " loop for "
       "one to two seconds per attempt (bench B8, 11 August 2026), most of it " + c("pam_faildelay") + "; with video "
-      "flowing, every screen would freeze whenever someone else logged in. Now " + c("chiedi_verifica") + " (ask for verification) hands the "
-      "question to a helper process (" + c("aiutante.c") + ", «helper») and returns a ticket; the verdict comes back through "
-      + c("rcp_verdict()") + " (verdict). A process, not a thread, because PAM is not reliably re-entrant. Two deadlines guard "
-      "the answer: the helper's own at 8 s, and " + c("VERDICT_CAP") + " (verdict ceiling) = 12 s in " + c("rcp.c") + ", which counts "
+      "flowing, every screen would freeze whenever someone else logged in. Now the " + c("ask_verify") + " hook hands the "
+      "question to a helper process (" + c("aiutante.c") + ") and returns a ticket; the verdict comes back through "
+      + c("rcp_verdict()") + ". A process, not a thread, because PAM is not reliably re-entrant. Two deadlines guard "
+      "the answer: the helper's own at 8 s, and " + c("VERDICT_CAP") + " = 12 s in " + c("rcp.c") + ", which counts "
       "as a no. If the question cannot even be sent, the answer is " + c("REJECTED") + " at once and does not count as a "
       "failed attempt — the fault is ours.") + \
     p("<b>The fixed second.</b> The server never answers " + c("CREDENTIALS") + " earlier than " + c("FIXED_DELAY")
-      + " (fixed delay) = 1000 ms after receiving it, " + c("ADMITTED") + " included; the answer leaves from " + c("rcp_time()") + " "
+      + " = 1000 ms after receiving it, " + c("ADMITTED") + " included; the answer leaves from " + c("rcp_time()") + " "
       "once both the delay has passed and the verdict is in. The ban removes whoever guesses; the fixed second removes "
       "timing as a channel — without it «no such user» would answer in a millisecond and «wrong password» in fifty. "
       "Not settled yet: PAM's own delay is not constant (median 2636 ms over 42 rejected attempts, bench B8, 10 August "
       "2026), so the fixed second does not fully hide whether a user name exists.") + \
     table(["Rule", "Value", "Constant"], [
-        ["Failures that trigger the ban", "3 from the same address", c("THRESHOLD") + " (threshold)"],
-        ["Window", "5 minutes, sliding over the last three failures", c("WINDOW") + " (window) = 300 000 ms"],
+        ["Failures that trigger the ban", "3 from the same address", c("THRESHOLD")],
+        ["Window", "5 minutes, sliding over the last three failures", c("WINDOW") + " = 300 000 ms"],
         ["Ban duration", "12 hours", c("BAN_DURATION") + " = 43 200 000 ms"],
         ["Addresses tracked", "256", c("MAX_ATTEMPTS")],
-        ["Key", "the address without the port, always in brackets: " + c("[192.168.0.2]"), c("rcp_key_address()") + " (address key)"],
+        ["Key", "the address without the port, always in brackets: " + c("[192.168.0.2]"), c("rcp_key_address()")],
         ["Reset", "a successful authentication from that address, or time", ""],
-        ["Persistence", c("--ban-file") + ", default " + c("/var/lib/remotix/ban") + ", absolute expiry times", c("rcp_ban_load()") + " (load the bans)"],
+        ["Persistence", c("--ban-file") + ", default " + c("/var/lib/remotix/ban") + ", absolute expiry times", c("rcp_ban_load()")],
     ], "«TAB» — The address ban (DECISIONI.md §1.9, decided by the user on 10 August 2026)") + \
     ul([
         "<b>Only failed authentication counts.</b> Not protocol errors, version or codec mismatches (they can come from a "
-        "defect of ours or a stale tab), not timeouts, and not " + c("ALREADY_ACTIVE_REMOTELY") + " (already active remotely): counting the latter would let "
+        "defect of ours or a stale tab), not timeouts, and not " + c("ALREADY_ACTIVE_REMOTELY") + ": counting the latter would let "
         "a user ban themselves by retrying from the phone while their session is alive. The user name does not matter: three "
         "names count three.",
         "<b>A banned address</b> is answered without asking PAM, but still with " + c("REJECTED(TOO_MANY_ATTEMPTS)")
-        + " (too many attempts) after the fixed second — a ban answered in a millisecond would itself be a timing channel. The page is still "
+        + " after the fixed second — a ban answered in a millisecond would itself be a timing channel. The page is still "
         "served, with the hours left.",
         "<b>The key has no port</b> because there is one attempt per connection and the port changes at every attempt: "
         "bench B5 found that the earlier counter, keyed with the port, was always 1.",
@@ -302,8 +302,8 @@ REJECTED
         "<b>Unlocking.</b> The ban lives in the memory of the serving process, so a second process that rewrote the file "
         "would leave the server answering " + c("TOO_MANY_ATTEMPTS") + " and exit 0 as if it had worked; "
         "that is why the unlock is not an option of a second process. The live process answers a one-line protocol on a Unix "
-        "socket created 0600 with " + c("--command-socket PATH") + " (command socket): " + c("UNBLOCK <address>")
-        + " → " + c("REMOVED") + " (removed) or " + c("NOT-BANNED") + " (not banned), and " + c("PING") + " → " + c("PONG") + ". Every unlock is logged.",
+        "socket created 0600 with " + c("--command-socket PATH") + ": " + c("UNBLOCK <address>")
+        + " → " + c("REMOVED") + " or " + c("NOT-BANNED") + ", and " + c("PING") + " → " + c("PONG") + ". Every unlock is logged.",
     ]) + \
     warn("the packaged units do not pass " + c("--command-socket") + ": it is listed among the bench options that "
          + c("costruisci-rpm.sh") + " refuses in a unit. On an installed system the documented way out of a ban is the "
@@ -329,23 +329,23 @@ SESSION
       + " (handle ATTACH) applies, in order:") + \
     steps([
         "<b>Above the maximum is not an error.</b> A side over " + c("RCP_CANVAS_MAX_W") + " = 4096 or "
-        + c("RCP_CANVAS_MAX_H") + " = 2304 (in these names L is the width, A the height) is brought to the maximum, the other side unchanged (5120×2880 → 4096×2304, "
-        "5120×1440 → 4096×1440), and logged. The page applies the same rule in " + c("canvas_to_request()") + " (canvas to ask for), so both "
+        + c("RCP_CANVAS_MAX_H") + " = 2304 is brought to the maximum, the other side unchanged (5120×2880 → 4096×2304, "
+        "5120×1440 → 4096×1440), and logged. The page applies the same rule in " + c("canvas_to_request()") + ", so both "
         "arrive at the same number.",
         "<b>Below the minimum, or odd, is " + c("PROTOCOL_ERROR") + "</b>: 320×240 minimum (" + c("RCP_CANVAS_MIN_W")
         + ", " + c("RCP_CANVAS_MIN_H") + "), both sides even. A view side of 0 is also an error; any view from 1×1 up, odd "
         "included, is legal.",
         "<b>Layout form</b>: " + c("[A-Za-z0-9_-]+") + " optionally followed by " + c("(variant)") + " of the same "
         "alphabet; out of form (including an empty variant " + c("it()") + ") is " + c("PROTOCOL_ERROR") + ". A "
-        "well-formed layout the machine does not know (asked to XKB through the " + c("layout_exists") + " hook, «layout exists») is "
+        "well-formed layout the machine does not know (asked to XKB through the " + c("layout_exists") + " hook) is "
         + c("SESSION_UNSERVABLE") + ". Upper case and underscore are allowed because the system uses them: of 589 "
         "layout/variant pairs on a Debian machine (21 August 2026), 9 have a capital and 102 an underscore.",
-        "<b>A local graphical session</b> of the same user (" + c("session_local") + " hook, «local session») → "
-        + c("ALREADY_ACTIVE_LOCALLY") + " (already active locally).",
+        "<b>A local graphical session</b> of the same user (" + c("session_local") + " hook) → "
+        + c("ALREADY_ACTIVE_LOCALLY") + ".",
         "<b>The seat.</b> One remote client per user (invariant I2). If the user's seat is held by a live client, the "
         "newcomer gets " + c("ALREADY_ACTIVE_REMOTELY") + " — whoever arrives is refused, never whoever was there. If the holder "
-        "has been silent longer than " + c("--eviction-ms") + " («sfratto» = eviction; default 15 000 ms, half the silence clock) the seat is "
-        "taken from it (the «ghost eviction»). If the server's table is full (" + c("--session-cap") + ", «session cap», default "
+        "has been silent longer than " + c("--eviction-ms") + " (default 15 000 ms, half the silence clock) the seat is "
+        "taken from it (the «ghost eviction»). If the server's table is full (" + c("--session-cap") + ", default "
         + c("RCP_SESSION_CAP") + " = 10) → " + c("SESSION_UNSERVABLE") + ".",
         "<b>The decoder cap.</b> If the canvas exceeds " + c("video.max_size") + ", it is reduced keeping the "
         "proportions and parity; if not even 320×240 fits, " + c("SESSION_UNSERVABLE") + ".",
@@ -369,7 +369,7 @@ SESSION
 
 # ── Deadlines and states ────────────────────────────────────────────────
 S9 = p("A connection stuck halfway through the handshake holds a place and declares it to nobody. Each step therefore "
-       "has a ceiling, and an expired ceiling ends with " + c("TIMED_OUT") + " (time expired) — not with QUIC's 30-second idle "
+       "has a ceiling, and an expired ceiling ends with " + c("TIMED_OUT") + " — not with QUIC's 30-second idle "
        "timeout, which measures the network rather than a client that does not do its job.", lead=True) + \
     table(["From", "To", "Ceiling", "Where"], [
         ["WebTransport session open", "control channel open", "5 s", c("WT_CAP_CHANNEL_NS") + " (no channel: the reason "
@@ -378,7 +378,7 @@ S9 = p("A connection stuck halfway through the handshake holds a place and decla
         [c("HERE_I_AM") + " sent", c("CREDENTIALS") + " received", "60 s — a person typing a password", c("CAP_CREDENTIALS")],
         [c("CREDENTIALS") + " received", "PAM verdict", "12 s (helper: 8 s)", c("VERDICT_CAP")],
         [c("ADMITTED") + " sent", c("ATTACH") + " received", "10 s", c("CAP_ATTACH")],
-    ], "«TAB» — Handshake ceilings («tetto» in the constant names = ceiling)") + \
+    ], "«TAB» — Handshake ceilings") + \
     p("The first ceiling counts from the opening of the control channel, the instant the server really observes; the end "
       "of TLS is not usable, because a second session on a reused connection would start with its budget already spent. "
       "The ceiling before the channel was the last way to hold a place without saying who you are, and was decided by "
@@ -386,14 +386,14 @@ S9 = p("A connection stuck halfway through the handshake holds a place and decla
       "server sends transport PINGs while it waits (" + rif("Keep-alive, silence and the dead line") + "). A 10-second "
       "ceiling after " + c("ADMITTED") + " had been written as 60 000 by copying the line above (finding R9.9).") + \
     table(["State (" + c("rcp_state_name()") + ")", "Meaning"], [
-        [c("wait-hello"), "waiting for HELLO: control channel open, " + c("HELLO") + " not yet received"],
-        [c("wait-credentials"), "waiting for credentials: " + c("HERE_I_AM") + " sent"],
-        [c("wait-verdict"), "waiting for the verdict: " + c("CREDENTIALS") + " received; PAM and the fixed second are running"],
-        [c("wait-attach"), "waiting for ATTACH: " + c("ADMITTED") + " sent"],
-        [c("active"), "active: " + c("SESSION") + " sent, the seat is held"],
-        [c("detached-by-silence"), "detached for silence: silent for 30 s: the seat is released, the connection is still open; if the client "
+        [c("wait-hello"), "control channel open, " + c("HELLO") + " not yet received"],
+        [c("wait-credentials"), c("HERE_I_AM") + " sent"],
+        [c("wait-verdict"), c("CREDENTIALS") + " received; PAM and the fixed second are running"],
+        [c("wait-attach"), c("ADMITTED") + " sent"],
+        [c("active"), c("SESSION") + " sent, the seat is held"],
+        [c("detached-by-silence"), "silent for 30 s: the seat is released, the connection is still open; if the client "
          "speaks again and the seat is free it becomes " + c("active") + " again, otherwise it gets " + c("ALREADY_ACTIVE_REMOTELY")],
-        [c("finished"), "ended: a farewell was sent or received; the structure stays alive to judge bytes that arrive afterwards"],
+        [c("finished"), "a farewell was sent or received; the structure stays alive to judge bytes that arrive afterwards"],
     ], "«TAB» — The seven states of an RCP session")
 
 # ── Video frame ─────────────────────────────────────────────────────────
@@ -402,10 +402,9 @@ S10 = p("One stream, one frame. There is no length: the end of the stream is the
     code(""" 0      2      4        8        12       16       24       28
  ├──────┼──────┼────────┼────────┼────────┼────────┼────────┼── data …
  │ type │codec │ width  │ height │ number │instant │ input  │
- │ u16  │ u16  │ u32    │ u32    │ u32    │ u64    │ u32    │""", "text", "Video frame header (28 bytes, no padding; tipo = type, "
-    "numero = number, istante = instant)") + \
+ │ u16  │ u16  │ u32    │ u32    │ u32    │ u64    │ u32    │""", "text", "Video frame header (28 bytes, no padding)") + \
     table(["Field", "Meaning"], [
-        [c("type"), c("0x0301") + " key frame, " + c("0x0302") + " delta frame (" + c("V_KEY") + ", «chiave» = key, and " + c("V_DELTA")
+        [c("type"), c("0x0301") + " key frame, " + c("0x0302") + " delta frame (" + c("V_KEY") + " and " + c("V_DELTA")
          + "). Other values are " + c("PROTOCOL_ERROR") + "."],
         [c("codec"), c("1") + " HEVC, " + c("2") + " AV1 (retired, never reused), " + c("3") + " H.264. Must be the "
          "negotiated codec. The highest defined number lives in one place, " + c("RCP_CODEC_VIDEO_MAX") + " = 3: on 20 "
@@ -416,18 +415,18 @@ S10 = p("One stream, one frame. There is no length: the end of the stream is the
          "would not change the protocol."],
         [c("number"), "Counter of the frames the server decides to send, +1 each, including those it later abandons and "
          "excluding those it never sends. The first frame is 1; 0 means «no frame»; arithmetic is modulo 2³² and the "
-         "wrap goes from " + c("0xFFFFFFFF") + " to 1 (" + c("next_number()") + ", «next number»)."],
+         "wrap goes from " + c("0xFFFFFFFF") + " to 1 (" + c("next_number()") + ")."],
         [c("instant"), "Microseconds of the server's monotonic clock at capture. Not a time of day: compare only with "
          "other " + c("instant") + " values of the same server."],
         [c("input"), "The " + c("id") + " of the last input <i>injected</i> before the capture, 0 if none. It says which "
          "input was injected, not which was drawn; latency is measured by the closed loop, not by this field."],
     ], "«TAB» — Video header fields") + \
-    p(c("rcp_video_open()") + " (open a video frame) writes the header itself: width, height, codec and number are not parameters, so the "
+    p(c("rcp_video_open()") + " writes the header itself: width, height, codec and number are not parameters, so the "
       "rules on them cannot be broken by a caller. The caller passes " + c("key") + ", the data length (declared "
       "first, so the cap is checked before a byte leaves), the capture instant and the input id; " + c("rcp_video_piece()")
-      + " (piece) writes data, " + c("rcp_video_finish()") + " (finish) ends with FIN only if every declared byte went "
-      "out, and " + c("rcp_video_send()") + " (send) does all three. The server must never produce a frame over 16 MiB ("
-      + c("V_CAP") + ", «tetto» = cap): it re-encodes at lower quality and logs it. Measured on 22 August 2026: at a user canvas of "
+      + " writes data, " + c("rcp_video_finish()") + " ends with FIN only if every declared byte went "
+      "out, and " + c("rcp_video_send()") + " does all three. The server must never produce a frame over 16 MiB ("
+      + c("V_CAP") + "): it re-encodes at lower quality and logs it. Measured on 22 August 2026: at a user canvas of "
       "2560×1080 the largest of 404 real key frames was 21 433 bytes, so the cap is unreachable there; at 7680×4320 "
       "uniform noise exceeded it, which is one more reason the maximum canvas is now 4096×2304.") + \
     table(["Outcome", "Meaning"], [
@@ -437,7 +436,7 @@ S10 = p("One stream, one frame. There is no length: the end of the stream is the
         [c("RCP_VIDEO_NEEDS_KEY"), "a key frame is owed: first after " + c("SESSION") + ", first at a new canvas, "
          "or requested"],
         [c("RCP_VIDEO_TOO_LARGE"), "over 16 MiB: re-encode; nothing left"],
-        [c("RCP_VIDEO_STREAM_NOT_OPEN"), "no stream credit now: nothing left (logged by " + c("rcp_video_no_credit()") + ", «no credit»)"],
+        [c("RCP_VIDEO_STREAM_NOT_OPEN"), "no stream credit now: nothing left (logged by " + c("rcp_video_no_credit()") + ")"],
         [c("RCP_VIDEO_BROKEN_MIDWAY"), "a write failed halfway: the stream was reset"],
         [c("RCP_VIDEO_ALREADY_OPEN"), "another frame of this session is still open"],
     ], "«TAB» — The outcomes of rcp_video_open() and rcp_video_send()") + \
@@ -459,8 +458,7 @@ KEYS = table(["Form", "What the client sees", "When it happens", "What the serve
     ["B — gap in " + c("number"), "no stream, and the next " + c("number") + " skips", "the number was consumed and the "
      "frame abandoned before a byte left", "log it; next frame a key"],
     ["C — never sent", "nothing at all", "dropped before the wire (no credit, pace regulator, canvas mismatch)",
-     "a key frame on its own: the client cannot ask (" + c("rcp_video_discarded_before_wire()") + ", «dropped before "
-     "the wire»)"],
+     "a key frame on its own: the client cannot ask (" + c("rcp_video_discarded_before_wire()") + ")"],
 ], "«TAB» — The three forms of a lost frame")
 
 S11 = p("Video is compressed with prediction between frames: losing a delta frame ruins every following frame until a "
@@ -472,14 +470,14 @@ S11 = p("Video is compressed with prediction between frames: losing a delta fram
         "given a delta at the new size raises nothing and keeps emitting frames at the old size.",
         "The client reconfigures its decoder on the first <i>key frame</i> at the new size, not on the " + c("CANVAS") + " "
         "message; a " + c("VideoDecoder") + " reconfigured early demands a key frame anyway.",
-        "The server never abandons a key frame (" + c("rcp_video_abandon()") + ", «abandon», and " + c("rcp_video_abandoned_downstream()")
-        + ", «abandoned downstream», refuse and log). Abandoning the cure is not a cure.",
+        "The server never abandons a key frame (" + c("rcp_video_abandon()") + " and " + c("rcp_video_abandoned_downstream()")
+        + " refuse and log). Abandoning the cure is not a cure.",
         "While a key frame is still in the send queue, the deltas behind it are not abandoned for the queue threshold: "
         "they would not shorten it, and each one would open a gap asking for another key (22 September 2026, the spiral "
         "seen with a 4K video).",
-        "The client sends " + c("REQUEST_KEY") + " with " + c("last_number") + " (last number: the last decoded frame, 0 if none) on a "
+        "The client sends " + c("REQUEST_KEY") + " with " + c("last_number") + " (the last decoded frame, 0 if none) on a "
         "gap or a decoder error — one per gap, and another after 1 s without a key, never one per frame.",
-        "The server may ignore a request within " + c("V_GRACE_KEY") + " (key grace) = 200 ms of the last key it <i>sent</i> — "
+        "The server may ignore a request within " + c("V_GRACE_KEY") + " = 200 ms of the last key it <i>sent</i> — "
         "counting from requests instead, insistent clients would push the clock forever. But a request whose "
         + c("last_number") + " is at or after the last key frame says the gap came after it, and is always served (22 "
         "September 2026: ignoring it left the page frozen for good).",
@@ -509,32 +507,35 @@ VIEW (view)                       client → server
  ├── u32 width      any size from 1x1, odd included
  └── u32 height""", "text", "Bodies") + \
     steps([
-        "<b>Admissible size.</b> " + c("rcp_size_allowed()") + " (admissible size) brings each side over the maximum to the maximum and "
+        "<b>Admissible size.</b> " + c("rcp_size_allowed()") + " brings each side over the maximum to the maximum and "
         "truncates to even; below 320×240 → " + c("CANVAS(REFUSED, SIZE_OUT_OF_RANGE)") + ". The decoder cap of the "
         "client also applies. The guard is mandatory: beyond 16 384 per side " + c("gnome-shell") + " dies, and labwc at "
         "32768×32768 dies with no log line (14 August 2026).",
-        "<b>The request goes to the stage</b> through the " + c("ritela") + " hook («re-canvas»). Its " + c("true") + " means only «asked»: "
+        "<b>The request goes to the stage</b> through the " + c("recanvas") + " hook. Its " + c("true") + " means only «asked»: "
         "labwc answers success for a size it already has without any event, and a compositor may grant another size. No "
         "hook → " + c("CANVAS(REFUSED, COMPOSITOR_UNABLE)") + ".",
         "<b>The proof is a frame.</b> The child answers with the size asked and the size obtained ("
-        + c("rcp_canvas_from_stage()") + ", «canvas from the stage»); " + c("CANVAS(FITTED)") + " leaves when a frame at the new size exists, which "
+        + c("rcp_canvas_from_stage()") + "); " + c("CANVAS(FITTED)") + " leaves when a frame at the new size exists, which "
         "opens the key-frame debt and the one-second grace. Zero obtained → " + c("NOT_NOW") + " at once.",
-        "<b>The answer is never silence.</b> If no proof arrives within " + c("RCP_CANVAS_WAIT_MS") + " (wait) = 3000 ms the server "
+        "<b>The answer is never silence.</b> If no proof arrives within " + c("RCP_CANVAS_WAIT_MS") + " = 3000 ms the server "
         "answers " + c("NOT_NOW") + "; the child can postpone that deadline while the stage is still being born ("
-        + c("rcp_canvas_postpone()") + ", «postpone»), which cured black bands after a logout on 16 August 2026. Resizing itself took 41.6 "
-        "ms on Mutter and 5.1 ms on labwc (14 August 2026).",
+        + c("rcp_canvas_postpone()") + "), which cured black bands after a logout on 16 August 2026. Resizing itself took 41.6 "
+        "ms on Mutter and 5.1 ms on labwc (14 August 2026); on KDE, where KWin runs nested in a labwc without a "
+        "screen and follows its output, 18–31 ms with both read back (11 October 2026, " + c("DECISIONI.md") + " §10.40).",
         "<b>A stage elsewhere on its own</b> is recalled to the canvas in force every " + c("RCP_CANVAS_RETRY_MS")
-        + " (recall) = 500 ms, doubling up to " + c("RCP_CANVAS_RETRY_MAX_MS") + " = 8000 ms. An unsolicited " + c("CANVAS")
+        + " = 500 ms, doubling up to " + c("RCP_CANVAS_RETRY_MAX_MS") + " = 8000 ms. An unsolicited " + c("CANVAS")
         + " is forbidden — except one, before the first frame of the session has left (since 22 September 2026): after a "
-        "server restart a KWin " + c("--virtual") + " stage that cannot resize would otherwise leave the screen black forever.",
+        "server restart the stage keeps its size while the canvas table of the process starts empty, and a stage that "
+        "cannot reach the size asked for (a KWin " + c("--virtual") + " stage in the test of that day; today only the "
+        "fallback when labwc is missing, " + c("DECISIONI.md") + " §10.40) would otherwise leave the screen black forever.",
     ]) + \
-    p("<b>The grace second.</b> After " + c("CANVAS(FITTED)") + " the server accepts for " + c("CANVAS_GRACE") + " (canvas grace) = 1000 ms "
+    p("<b>The grace second.</b> After " + c("CANVAS(FITTED)") + " the server accepts for " + c("CANVAS_GRACE") + " = 1000 ms "
       "input coordinates valid on the previous canvas, clamping them to the new one and logging it; after that they are "
       "violations. It is the only moment when the two sides legitimately hold two truths. " + c("rcp_canvas_adapted_now()")
-      + " («canvas adapted, now») opens it; " + c("rcp_canvas_adapted()") + " has no clock and declares that it does not.") + \
+      + " opens it; " + c("rcp_canvas_adapted()") + " has no clock and declares that it does not.") + \
     p("<b>" + c("VIEW") + "</b> updates the view and must not change the canvas; in RCP/1 it does not even change what is "
       "encoded — the server sends the whole canvas and the client scales. The server validates it, keeps it for the bit "
-      "budget and logs it. " + c("LAYOUT") + " (layout; " + c("0x0009") + ", one string in the " + c("ATTACH") + " form) "
+      "budget and logs it. " + c("LAYOUT") + " (" + c("0x0009") + ", one string in the " + c("ATTACH") + " form) "
       "changes the keyboard layout without detaching; an unknown but well-formed layout is logged and the previous one "
       "stays in force, because the open work is worth more than the fault. The current page sends neither: the layout "
       "and the window size are renegotiated at each attach.")
@@ -549,8 +550,7 @@ BUTTON         + u16 code · u8 pressed    evdev code; 1 down, 0 up    (15 bytes
 WHEEL          + i32 axis_x · i32 axis_y    120 units per notch         (20 bytes)
 LETTER          + u32 character              Unicode scalar value        (16 bytes)
 KEY_POSITION  + u16 code · u8 pressed    evdev key code              (15 bytes)""", "text",
-         "Input bodies (0x0101–0x0105): POINTER = pointer, BUTTON = button, WHEEL = wheel, LETTER = "
-         "character, KEY_POSITION = key position; codice = code, pressed = pressed, asse = axis, character = character") + \
+         "Input bodies (0x0101–0x0105)") + \
     ul([
         "<b>Codes are evdev's</b> (" + c("BTN_LEFT") + " = " + c("0x110") + ", " + c("KEY_A") + " = 30): " + c("libei") + " "
         "works in evdev, and any other convention would add a translation table that fails in silence.",
@@ -560,7 +560,7 @@ KEY_POSITION  + u16 code · u8 pressed    evdev key code              (15 bytes)
         "<b>The wheel</b> uses 120 units per notch and half notches (60) must not be rounded away. The sign was measured "
         "on 10 August 2026 on Mutter: the client sends +120 when the user turns the wheel up, and the server must invert "
         "the vertical axis before " + c("ei_device_scroll_discrete") + ". The inversion happens once, inside "
-        + c("input_wheel()") + " (wheel input) — never in " + c("rcp.c") + ", where a second inversion would cancel it.",
+        + c("input_wheel()") + " — never in " + c("rcp.c") + ", where a second inversion would cancel it.",
         "<b>" + c("LETTER") + " for text, " + c("KEY_POSITION") + " when a command modifier is held</b> (Ctrl, Alt, "
         "Super); Shift and AltGr make letters and stay on the " + c("LETTER") + " path. A character outside "
         + c("0..0x10FFFF") + " or a surrogate is " + c("PROTOCOL_ERROR") + "; a character the session's layout cannot "
@@ -572,9 +572,9 @@ KEY_POSITION  + u16 code · u8 pressed    evdev key code              (15 bytes)
     ]) + \
     warn("when a connection ends — farewell, silence or error — the server must release every key and button still down. "
          "A Ctrl left pressed in a session that survives the client makes the desktop unusable at the next attach, and "
-         "nobody connects the two. The " + c("input_release_all") + " hook («release everything») answers a true "
-         "count, " + c("RCP_RELEASE_NO_COUNT") + " (release without a count: asked; the child knows the count and logs "
-         "it) or " + c("RCP_RELEASE_IMPOSSIBLE") + " (release impossible: could not ask: whatever was down stays down). Until 16 August 2026 it answered "
+         "nobody connects the two. The " + c("input_release_all") + " hook answers a true "
+         "count, " + c("RCP_RELEASE_NO_COUNT") + " (asked; the child knows the count and logs "
+         "it) or " + c("RCP_RELEASE_IMPOSSIBLE") + " (could not ask: whatever was down stays down). Until 16 August 2026 it answered "
          "0, logged as «nothing was down», while the child released two.", "Release everything at detach.")
 
 # ── Cursor and clipboard ────────────────────────────────────────────────
@@ -582,13 +582,13 @@ S14 = p("The pointer position belongs to the client, which draws the pointer its
         "control channel. The clipboard is plain UTF-8 text in both directions, announced first and pulled on demand.",
         lead=True) + \
     code("""CURSOR_SHAPE   0x000A   cursor shape; server → client, control channel
- ├── u16 width      width <= 256; 0 with altezza 0 = hidden cursor
+ ├── u16 width      width <= 256; 0 with height 0 = hidden cursor
  ├── u16 height        height <= 256
- ├── i16 hot_x       hotspot, 0 <= hot_x < larghezza; 0 when hidden
+ ├── i16 hot_x       hotspot, 0 <= hot_x < width; 0 when hidden
  ├── i16 hot_y
- └── image              larghezza x altezza x 4 bytes, premultiplied BGRA, no row padding
-                        message length = 8 + larghezza x altezza x 4 exactly""", "text", "Cursor shape") + \
-    p(c("rcp_cursor_shape()") + " (cursor shape) takes the number of bytes really available behind the image and refuses to send rather "
+ └── image              width x height x 4 bytes, premultiplied BGRA, no row padding
+                        message length = 8 + width x height x 4 exactly""", "text", "Cursor shape") + \
+    p(c("rcp_cursor_shape()") + " takes the number of bytes really available behind the image and refuses to send rather "
       "than read on trust: a malformed message would make the <i>page</i> close the session, and the server's log would "
       "know nothing. The limits themselves are enforced once, in " + c("cursore.c") + ". The function is called from the "
       "loop thread, never from PipeWire's real-time thread.") + \
@@ -596,22 +596,20 @@ S14 = p("The pointer position belongs to the client, which draws the pointer its
                           └── u32 length       bytes of text available
 CLIPBOARD_ASK    0x0202  └── u32 transfer   the announcement being answered
 CLIPBOARD_TEXT     0x0203  ├── u32 transfer   the request being served
-                          └── bytes               to the end of the message, valid UTF-8""", "text", "Clipboard messages "
-    "(CLIPBOARD = clipboard: ANNOUNCE = announcement, ASK = request, TEXT = text; transfer = transfer, "
-    "lunghezza = length)") + \
+                          └── bytes               to the end of the message, valid UTF-8""", "text", "Clipboard messages") + \
     ul([
         "Each side numbers its own transfers; an " + c("CLIPBOARD_ASK") + " matching no live announcement, or an unrequested "
         + c("CLIPBOARD_TEXT") + ", is " + c("PROTOCOL_ERROR") + ". A request that arrives after a newer announcement is "
         "served with the current text and logged — two people copying is a race, not an error.",
         "The transfer id exists because the three messages travel in both directions on unidirectional streams: without it "
         "two transfers open at once in opposite directions swapped their texts (finding R1.11).",
-        "Cap " + c("RCP_CLIPBOARD_CAP") + " (clipboard cap) = 1 000 000 bytes, not 1 MiB, so that a text exactly at the cap still fits in a "
+        "Cap " + c("RCP_CLIPBOARD_CAP") + " = 1 000 000 bytes, not 1 MiB, so that a text exactly at the cap still fits in a "
         "1 MiB message with its 10 bytes of overhead. Longer text is not announced at all, and logged: a truncated text "
         "pasted into a terminal is worse than a missing one.",
         "One stream per message (DECISIONI.md §5-ter.7): an announcement and its text can be far apart in time, and a "
         "stream kept open between them would stay open forever in most cases. The server keeps at most " + c("A_STREAM_MAX")
         + " = 8 clipboard streams alive and drops the oldest idle one, logged; pending paste requests time out after "
-        + c("CLIPBOARD_BACKSTOP") + " (clipboard deadline) = 8000 ms.",
+        + c("CLIPBOARD_BACKSTOP") + " = 8000 ms.",
     ])
 
 # ── Audio ───────────────────────────────────────────────────────────────
@@ -636,7 +634,7 @@ S15 = p("Audio travels only on datagrams, one block per datagram, with no retran
       "does not travel: it belongs to the session (invariant I5).")
 
 # ── Bench marker ────────────────────────────────────────────────────────
-S16 = p(c("BENCH_MARK") + " (bench marker) and " + c("BENCH_OUTCOME") + " (bench outcome) were added on the night of 9 August 2026 for the latency bench: "
+S16 = p(c("BENCH_MARK") + " and " + c("BENCH_OUTCOME") + " were added on the night of 9 August 2026 for the latency bench: "
         "the bench asks the server to paint a 16×16 square of a given colour after a known delay, and checks that the "
         "measured median rises by exactly that delay.", lead=True) + \
     code("""BENCH_MARK   0x000F   client → server
@@ -649,7 +647,7 @@ BENCH_OUTCOME   0x0010   server → client
  ├── u8  reason      reason: 0; 1 = FEATURE_OFF (function off),
  │                   2 = DELAY_OUT_OF_RANGE (delay out of range)
  └── u64 instant     server microseconds when painted; 0 if refused""", "text", "Bodies") + \
-    p("In the product " + c("BANCO_ACCESO") + " (bench on) is 0: " + c("HERE_I_AM") + " declares " + c("bench.mark=no") + ", and every "
+    p("In the product " + c("BENCH_ON") + " is 0: " + c("HERE_I_AM") + " declares " + c("bench.mark=no") + ", and every "
       + c("BENCH_MARK") + " in state " + c("active") + " is answered " + c("BENCH_OUTCOME(REFUSED, FEATURE_OFF)") + " — "
       "or " + c("DELAY_OUT_OF_RANGE") + " above 10 000 ms — never silence and never a close. The accepting branch has "
       "never been completed: the known-delay check of phase 3 was done outside the product (N = 25 → +25.08 ms, N = 60 → "
@@ -660,14 +658,14 @@ BENCH_OUTCOME   0x0010   server → client
          "without them.", "Present, not absent.")
 
 # ── TERMINATE_SESSION ────────────────────────────────────────────────────
-S17 = p(c("TERMINATE_SESSION") + " (end the session; " + c("0x0011") + ", empty body) is the only message by which the client ends the "
+S17 = p(c("TERMINATE_SESSION") + " (" + c("0x0011") + ", empty body) is the only message by which the client ends the "
         "<i>session</i>: the graphical session finishes and the user's programs close. " + c("FAREWELL") + " closes only "
         "the connection and leaves the session alive (invariant I4). The two exits are DECISIONI.md §4.1-ter; a client "
         "with a single way out would force the user to choose between never leaving and losing their work.", lead=True) + \
     ul([
         "The page sends it only after an explicit gesture: the " + c("Ctrl+Alt+End") + " shortcut and its confirmation. "
         "«Log out» from the desktop's own menu does not pass through here; the child reports it and the parent dismisses "
-        "every client of that user with " + c("SESSION_TERMINATED") + " (session ended).",
+        "every client of that user with " + c("SESSION_TERMINATED") + ".",
         "Valid only in states " + c("active") + " or " + c("detached-by-silence") + "; elsewhere " + c("PROTOCOL_ERROR") + ".",
         "The answer is " + c("FAREWELL(0x10 SESSION_TERMINATED)") + ", sent <i>before</i> the session finishes dying — when "
         "the compositor falls the stage falls with it — and then the " + c("terminate_session") + " hook is called. All "
@@ -716,10 +714,10 @@ S18 = p("Whoever closes must send " + c("FAREWELL") + " with a reason before clo
         "<b>The one exception is " + c("REJECTED") + "</b>, which is itself the farewell of authentication.",
         "<b>The page builds the sentence</b> from the code; " + c("detail") + " is for whoever diagnoses. Every reason "
         "must be expressible to the user as a sentence: " + c("BUDGET_FULL") + " is not «error 6».",
-        "<b>A second farewell is never sent.</b> " + c("rcp_dismiss()") + " (dismiss) on a session already ended does nothing: two "
+        "<b>A second farewell is never sent.</b> " + c("rcp_dismiss()") + " on a session already ended does nothing: two "
         "reasons for one fact would be two truths. Bytes arriving after the end are judged by " + c("judge_after_end()")
         + ": a single " + c("FAREWELL") + " is a legitimate leave-taking, anything more is logged.",
-        "<b>The seat is released immediately</b> on a client close (" + c("rcp_closed_by_client()") + ", «closed by the client»), without waiting "
+        "<b>The seat is released immediately</b> on a client close (" + c("rcp_closed_by_client()") + "), without waiting "
         "for the transport to finish tearing down — otherwise whoever reconnects at once would find it taken.",
     ])
 
@@ -727,13 +725,13 @@ S18 = p("Whoever closes must send " + c("FAREWELL") + " with a reason before clo
 S19 = p("The reasons are a single numbering shared by " + c("FAREWELL") + ", " + c("REJECTED") + " and the WebTransport "
         "closing code (" + c("enum") + " in " + c("rcp.h") + ").", lead=True) + \
     table(["Code", "Name", "When", "Sent by"], [
-        [c("0x01"), c("CLOSED_BY_USER") + " (closed by the user)", "the user closed the client: the wire falls, the session stays («re-attach and "
+        [c("0x01"), c("CLOSED_BY_USER"), "the user closed the client: the wire falls, the session stays («re-attach and "
          "find everything»)", "page"],
-        [c("0x02"), c("INACTIVITY") + " (inactivity)", "30 minutes without input; re-entry needs the password", c("rcp_time()") + ", "
+        [c("0x02"), c("INACTIVITY"), "30 minutes without input; re-entry needs the password", c("rcp_time()") + ", "
          + c("--inactivity-s") + " (0 = off)"],
-        [c("0x03"), c("SESSION_ABANDONED") + " (session abandoned)", "60 minutes without input: the graphical session is closed (was «6 hours "
-         "without attaches» until 16 August 2026)", c("main.c") + ", " + c("--abandon-s") + " («abandonment»)"],
-        [c("0x04"), c("LOCAL_SESSION_PREVAILED") + " (local session prevailed)", "the user opened a local graphical session", c("webtransport.c") + ", "
+        [c("0x03"), c("SESSION_ABANDONED"), "60 minutes without input: the graphical session is closed (was «6 hours "
+         "without attaches» until 16 August 2026)", c("main.c") + ", " + c("--abandon-s")],
+        [c("0x04"), c("LOCAL_SESSION_PREVAILED"), "the user opened a local graphical session", c("webtransport.c") + ", "
          "periodic survey of local sessions"],
         [c("0x05"), c("ALREADY_ACTIVE_LOCALLY"), "a local graphical session of the user already exists", c("handle_attach()")],
         [c("0x06"), c("BUDGET_FULL"), "the machine has no composition capacity left (corrected from «encoding» on 24 "
@@ -743,7 +741,7 @@ S19 = p("The reasons are a single numbering shared by " + c("FAREWELL") + ", " +
         [c("0x09"), c("NOTHING_IN_COMMON"), "no shared codec, depth or audio codec", "server or page"],
         [c("0x0A"), c("INCOMPATIBLE_VERSION"), "the versions do not match", "server or page"],
         [c("0x0B"), c("PROTOCOL_ERROR"), "§3", "both"],
-        [c("0x0C"), c("SERVER_CLOSING") + " (server closing)", "the server is shutting down", c("main.c")],
+        [c("0x0C"), c("SERVER_CLOSING"), "the server is shutting down", c("main.c")],
         [c("0x0D"), c("TIMED_OUT"), "a handshake ceiling expired", c("rcp.c") + ", " + c("webtransport.c")],
         [c("0x0E"), c("SESSION_UNSERVABLE"), "well-formed attach that cannot be served: unknown layout, table full, all "
          "stages taken, stage failed, decoder cap below 320×240", "server"],
@@ -759,7 +757,7 @@ S19 = p("The reasons are a single numbering shared by " + c("FAREWELL") + ", " +
       "nothing, so the newcomer enters; the declared price is that after a laptop dies without a farewell the phone "
       "enters after 30 s — 15 s with the ghost eviction.") + \
     note("the server accepts a " + c("FAREWELL") + " or a closing code from the client only in " + c("0x01") + "–"
-         + c("0x0F") + " (" + c("reason_for_82()") + ", «a reason of §8.2», and the range check in " + c("webtransport.c") + "): a client "
+         + c("0x0F") + " (" + c("reason_for_82()") + " and the range check in " + c("webtransport.c") + "): a client "
          "sending " + c("0x10") + " would be treated as " + c("PROTOCOL_ERROR") + ", although §8.2 defines it. Harmless "
          "today — only the server sends " + c("0x10") + " — but it is a divergence from the specification.", "Range check.")
 
@@ -768,11 +766,11 @@ S20 = p("Three clocks govern an attached session (SPECIFICHE.md §5.3), and a fo
         "somebody is waiting for the seat. The values in force are written to the log at start-up, because a one-hour "
         "ceiling cannot be verified by waiting an hour.", lead=True) + \
     table(["Clock", "Default", "Looks at", "Effect", "Option"], [
-        ["Silence", "30 s (" + c("SILENZIO") + ")", "last authenticated packet from the client", "detached: seat freed, no "
+        ["Silence", "30 s (" + c("SILENCE") + ")", "last authenticated packet from the client", "detached: seat freed, no "
          "farewell, connection left open; keys released", "—"],
         ["Ghost eviction", "15 s (" + c("DEFAULT_EVICTION") + ")", "silence of the seat holder, only while the same "
          "user is asking for the seat", "the seat moves to the newcomer", c("--eviction-ms") + " (0 = off)"],
-        ["Inactivity", "30 min (" + c("DEFAULT_INACTIVITY") + ")", "the last RCP byte from the client on control, input or clipboard (" + c("last_byte") + ", «last byte»)", c("FAREWELL(0x02)"),
+        ["Inactivity", "30 min (" + c("DEFAULT_INACTIVITY") + ")", "the last RCP byte from the client on control, input or clipboard (" + c("last_byte") + ")", c("FAREWELL(0x02)"),
          c("--inactivity-s") + " (0 = off)"],
         ["Abandonment", "60 min (" + c("DEFAULT_ABANDON_MS") + ")", "the last of the five input gestures forwarded to the child", "the graphical session is "
          "closed, " + c("0x03"), c("--abandon-s")],
