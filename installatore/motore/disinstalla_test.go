@@ -24,7 +24,7 @@ func fakeInstall(t *testing.T) *bench {
 	os.WriteFile(filepath.Join(b.root, "var/lib/finto-grafica.json"), []byte(`{"prova":18}`), 0o644)
 	// REMOTIX at the first connection enrolled «other» in «render» (and wrote it twice)
 	(&fakeGroups{b.root}).Insert("altro", "render")
-	line := `{"format":"remotix-enrollments/1","time":"2026-09-30","user":"altro","uid":1001,"group":"render","gid":991,"origin":"DIRECT","by":"REMOTIX alla prima connessione"}` + "\n"
+	line := `{"format":"remotix-enrollments/1","time":"2026-09-30","user":"altro","uid":1001,"group":"render","gid":991,"origin":"DIRECT","by":"REMOTIX at first connection"}` + "\n"
 	os.WriteFile(filepath.Join(filepath.Dir(b.operations), EnrollmentsFile), []byte(line+line), 0o644)
 	// the session logs REMOTIX wrote in the homes (sessione.c): «prova» has only that,
 	// «other» also has a file of its own in the same folder (which must stay), root nothing
