@@ -790,11 +790,17 @@ The case is rare by construction — at attach the proportions **always match** 
 when the window changes size after the attach (it is rescaled, `DECISIONI.md` §5.1-bis) and in the fallback of §6.3. On the phone held upright the band would be
 huge: there, zoom with scrolling is needed, which is in the range of gestures (§7.2).
 
-### 6.3 The fallback on KDE, declared
+### 6.3 KDE: the same rule, through a nested KWin — and the fallback where labwc is missing
 
-On reattach at a different size on KWin < 6.8 the canvas **cannot** change. The old one is kept
-and the client rescales — and it does not cost one more line, because it is the same code as the point
-«during the session». **The fallback is declared in the log.**
+⭐ Since 11 Oct 2026 (`DECISIONI.md` §10.40) KDE follows §6.1 like the other desktops: at birth **and at
+reattach** the canvas takes the window's size. KWin ≤ 6.7 cannot change the size of a `--virtual` output, so KWin is
+born **nested** in a labwc without a screen, and the reattach changes the size of labwc's output: KWin's output
+follows it, the programs stay (`src/kwin.h`). One road for every KWin version.
+
+⚠ **The fallback, declared**: where labwc is not installed (RHEL / Alma 10: not in EPEL) KWin starts with
+`--virtual` as before; at a reattach of another size the old canvas is kept and the client rescales, centred with
+bands (§6.2) — the same code as the point «during the session». **It is declared in the log** and in the user's
+journal.
 
 ### 6.4 ~~«Fit the desktop to this window»~~ — ⛔ removed from the product (`DECISIONI.md` §5.1-bis)
 
