@@ -804,7 +804,7 @@ def prova(tel, o):
        "screen timeout %s ms" % ("open" if st["chrome_acceso"] else "closed", len(st["cards"]),
                               st["rotazione"], st["spegnimento_ms"]))
     sp = Endpoint(tel, st)
-    round_id = o.round_id or "19-android-%s" % o.card
+    round_id = o.round or "19-android-%s" % o.card
     system_wide = "%s · boxes on %s · server 192.168.0.2" % (
         tel.stage(), {"intel": "Intel UHD 770 (VA-API)", "radeon": "AMD RX 6800 (Vulkan)"}
         .get(o.card, o.card))

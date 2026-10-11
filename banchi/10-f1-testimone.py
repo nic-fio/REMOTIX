@@ -831,7 +831,7 @@ def main():
                address=a.address, tree=a.tree, workdir=a.workdir,
                password_file=a.password_file, machine=a.machine,
                sudo_password=a.sudo_password, wake=a.wake or None,
-               verbose=a.verbose, tutti=a.tutti)
+               verbose=a.verbose, full_sequence=a.all)
     report = {"user": a.user, "port": a.port, "stay": a.stay,
              "duration_s": round(time.time() - t0, 1),
              "wake": a.wake or None}
