@@ -61,12 +61,14 @@ type CheckView struct {
 
 // BlockedView: a screen that ends (not supported, stopped, cancelled).
 type BlockedView struct {
-	Titolo, Below string
-	Why, CheFare  string
-	Needs         string // «At least Debian 13 is needed.»
-	Codice        string
-	Dettagli      string
-	Toccata       bool // the machine was touched (cancelled): the circle is not red but amber
+	Title    string `json:"title"`
+	Below    string `json:"below"`
+	Why      string `json:"why"`
+	WhatToDo string `json:"what_to_do"`
+	Needs    string `json:"needs"` // «At least Debian 13 is needed.»
+	Code     string `json:"code"`
+	Details  string `json:"details"`
+	Touched  bool   `json:"touched"` // the machine was touched (cancelled): the circle is not red but amber
 }
 
 // ChoicesView: screen 2 — the port.
@@ -240,8 +242,8 @@ func NewCheckView(c *CheckReport) *CheckView {
 			m = &x
 		}
 		v.Outcome = BLOCKED
-		v.Blocked = &BlockedView{Titolo: T("b.titolo.fiducia"), Below: T("b.sotto.intatta"), Why: m.Testo,
-			CheFare: m.Remediation, Codice: m.Codice, Dettagli: m.Detail}
+		v.Blocked = &BlockedView{Title: T("b.titolo.fiducia"), Below: T("b.sotto.intatta"), Why: m.Testo,
+			WhatToDo: m.Remediation, Code: m.Codice, Details: m.Detail}
 		return v
 	}
 	prof, rap, dom := c.ProfileV, c.Report, c.Questions
@@ -495,46 +497,46 @@ func viewNotSupported(prof *engine.ProfileV, rap *engine.Report) *BlockedView {
 	}
 	if rap.Lowest != "" {
 		// an excluded version of a distribution that REMOTIX supports in a newer version
-		b.Titolo = T("b.titolo.versione", distro)
+		b.Title = T("b.titolo.versione", distro)
 		b.Why = T("b.vecchia", strings.TrimSpace(distro+" "+prof.V("distro.version")))
 		b.Needs = T("b.serve", rap.Lowest)
 	} else {
-		b.Titolo = T("b.titolo.distro")
+		b.Title = T("b.titolo.distro")
 		if reason != nil {
 			b.Why = reason.Testo
 			if strings.HasPrefix(reason.Codice, "RX-GPU-") {
 				// phase 19: the distribution works, the card that encodes the video is missing
-				b.Titolo = T("b.titolo.scheda")
+				b.Title = T("b.titolo.scheda")
 			}
 		}
 	}
 	if reason != nil {
-		b.Codice = reason.Codice
-		b.Dettagli = strings.TrimSpace(reason.Detail + " " + reason.Remediation)
+		b.Code = reason.Codice
+		b.Details = strings.TrimSpace(reason.Detail + " " + reason.Remediation)
 		if reason.Remediation != "" {
-			b.CheFare = reason.Remediation + " " + T("b.rilancia")
+			b.WhatToDo = reason.Remediation + " " + T("b.rilancia")
 		}
 	}
 	if rap.Lowest != "" {
-		b.CheFare = T("b.aggiorna", rap.Lowest) + " " + T("b.versioni")
+		b.WhatToDo = T("b.aggiorna", rap.Lowest) + " " + T("b.versioni")
 	}
-	if b.CheFare == "" {
-		b.CheFare = T("b.versioni")
+	if b.WhatToDo == "" {
+		b.WhatToDo = T("b.versioni")
 	}
-	b.Dettagli = strings.TrimSpace(rap.PlatformV + " · " + rap.Recognized + " · " + b.Dettagli)
+	b.Details = strings.TrimSpace(rap.PlatformV + " · " + rap.Recognized + " · " + b.Details)
 	return b
 }
 
 // MissingView: the «something is missing» screen — what, without saying how to provide it (§10.36).
 func MissingView(m []engine.Message) *BlockedView {
-	b := &BlockedView{Titolo: T("b.titolo.manca"), Below: T("b.sotto.intatta"), CheFare: T("b.manca.chefare")}
+	b := &BlockedView{Title: T("b.titolo.manca"), Below: T("b.sotto.intatta"), WhatToDo: T("b.manca.chefare")}
 	var r, cod []string
 	for _, x := range m {
 		r = append(r, strings.TrimSpace(x.Testo+" "+x.Detail))
 		cod = append(cod, x.Codice)
 	}
 	b.Why = "• " + strings.Join(r, "\n• ")
-	b.Codice = strings.Join(cod, " ")
+	b.Code = strings.Join(cod, " ")
 	return b
 }
 
@@ -974,28 +976,28 @@ func NewEndView(es *Outcome, log []string) *BlockedView {
 	// the most serious message among those seen in the log, if the outcome has none
 	switch es.State {
 	case engine.ROLLED_BACK:
-		b.Titolo, b.Below, b.Toccata = T("b.titolo.annullata"), T("b.sotto.annullata"), true
+		b.Title, b.Below, b.Touched = T("b.titolo.annullata"), T("b.sotto.annullata"), true
 	case engine.PARTIALLY_ROLLED_BACK:
-		b.Titolo, b.Below, b.Toccata = T("b.titolo.parte"), T("b.sotto.parte"), true
+		b.Title, b.Below, b.Touched = T("b.titolo.parte"), T("b.sotto.parte"), true
 	case engine.INTERRUPTED:
-		b.Titolo, b.Below, b.Toccata = T("b.titolo.interrotta"), T("b.sotto.interrotta"), true
+		b.Title, b.Below, b.Touched = T("b.titolo.interrotta"), T("b.sotto.interrotta"), true
 	case engine.BLOCKED, engine.REFUSED, "":
-		b.Titolo, b.Below = T("b.titolo.fermo"), T("b.sotto.intatta")
+		b.Title, b.Below = T("b.titolo.fermo"), T("b.sotto.intatta")
 	default:
-		b.Titolo, b.Below = T("b.titolo.interrotta"), T("b.sotto.interrotta")
+		b.Title, b.Below = T("b.titolo.interrotta"), T("b.sotto.interrotta")
 	}
 	if m == nil && es.Certificate != nil && len(es.Certificate.Remainders) > 0 {
 		b.Why = strings.Join(es.Certificate.Remainders, "; ")
 	}
 	if m != nil {
 		if strings.HasPrefix(m.Codice, "RX-MANCA-") {
-			b.Titolo = T("b.titolo.manca")
+			b.Title = T("b.titolo.manca")
 		}
-		b.Why, b.CheFare, b.Codice = m.Testo, m.Remediation, m.Codice
-		b.Dettagli = m.Detail
+		b.Why, b.WhatToDo, b.Code = m.Testo, m.Remediation, m.Codice
+		b.Details = m.Detail
 	}
 	if es.Folder != "" {
-		b.Dettagli = strings.TrimSpace(b.Dettagli + " · " + es.Folder + " · " + string(es.State))
+		b.Details = strings.TrimSpace(b.Details + " · " + es.Folder + " · " + string(es.State))
 	}
 	return b
 }

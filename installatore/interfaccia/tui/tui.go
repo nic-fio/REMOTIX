@@ -769,27 +769,27 @@ func (m *model) bodyEnd() []string {
 	T := interfaccia.T
 	t, v := m.t, m.fine
 	st := t.red
-	if v.Toccata {
+	if v.Touched {
 		st = t.amber
 	}
-	c := m.par("✗ "+v.Titolo, st, 0)
+	c := m.par("✗ "+v.Title, st, 0)
 	c = append(c, m.par(v.Below, t.gray, 0)...)
 	if v.Why != "" {
 		c = append(c, "", t.strong.Render(T("h.perche")))
 		for _, l := range strings.Split(v.Why, "\n") {
 			c = append(c, m.par(l, lipgloss.NewStyle(), 2)...)
 		}
-		if x := strings.TrimSpace(v.Needs + "  " + v.Codice); x != "" {
+		if x := strings.TrimSpace(v.Needs + "  " + v.Code); x != "" {
 			c = append(c, m.par(x, t.gray, 2)...)
 		}
 	}
-	if v.CheFare != "" {
+	if v.WhatToDo != "" {
 		c = append(c, "", t.strong.Render(T("h.chefare")))
-		c = append(c, m.par(v.CheFare, lipgloss.NewStyle(), 2)...)
+		c = append(c, m.par(v.WhatToDo, lipgloss.NewStyle(), 2)...)
 	}
-	if m.details && v.Dettagli != "" {
+	if m.details && v.Details != "" {
 		c = append(c, "", t.strong.Render(T("h.dettagli")))
-		c = append(c, m.par(v.Dettagli, t.gray, 2)...)
+		c = append(c, m.par(v.Details, t.gray, 2)...)
 	}
 	if m.reg && m.av != nil {
 		c = append(c, "", t.strong.Render(T("h.registro")))
