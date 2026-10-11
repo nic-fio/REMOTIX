@@ -62,6 +62,8 @@ if [ -n "$DIRTY" ]; then
 	echo "⚠ RX_DIRTY=1: tree with uncommitted changes (for testing only)" | tee -a "$REG"
 fi
 echo "commit $COMMIT" | tee -a "$REG"
+# the page carries exactly opus.wasm, and the module exports every rx_* the page calls
+sh "$TREE/src/opus-wasm/build.sh" --verifica >>"$REG" 2>&1 || { tail -2 "$REG"; echo "⛔ the Opus decoder embedded in the page"; exit 1; }
 # ⛔ the same version is never published twice with different content: a new revision is needed
 [ ! -e "$RUN" ] || { echo "⛔ $RUN already exists: a new revision is needed"; exit 1; }
 

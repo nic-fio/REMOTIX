@@ -179,7 +179,7 @@ A6 = p("The page has its own Opus decoder: libopus 1.5.2 compiled to WebAssembly
          "a podman container with the emscripten image pinned by digest (4.0.15), with no network, -O3, no "
          "SIMD and no extensions beyond the MVP (old phone browsers), then embeds the result between the "
          "markers " + c("OPUS_WASM_INIZIO") + " (start) and " + c("OPUS_WASM_FINE") + " (end). " + c("--verifica") + " (verify) checks "
-         "that the page carries exactly " + c("opus.wasm")],
+         "that the page carries exactly " + c("opus.wasm") + " and that the module exports every " + c("rx_*") + " the page calls (the release runs it)"],
         [c("src/opus-wasm/opus.wasm.sha256"), "The digest of the module in the repository"],
         [c("src/opus-wasm/test/test.sh") + " (test)", "Decodes the same packets with the embedded module (" + c("node")
          + ", " + c("compare.mjs") + ", compare) and with native libopus (" + c("reference.c") + ", reference) and compares"],
