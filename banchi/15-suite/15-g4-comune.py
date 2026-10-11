@@ -81,7 +81,7 @@ EAR_JS = r"""
   };
   function campiona() {
     const ctx = O.contesti.length ? O.contesti[O.contesti.length - 1] : null;
-    const c = { t: performance.now(), stato: ctx ? ctx.state : "none", rms: null,
+    const c = { t: performance.now(), state: ctx ? ctx.state : "none", rms: null,
                 hz: null, ct: ctx ? ctx.currentTime : null };
     if (ctx && ctx.state === "running") {
       const an = ctx.__c15an, td = ctx.__c15t, fd = ctx.__c15f;
