@@ -77,7 +77,7 @@ if [ $uscita -eq 0 ] && [ "$AZIONE" = tutto ]; then
 
 	# ⛔⛔⭐ AND THE `rcp.c` BENCH RUNS HERE, at every build — 16 August 2026.
 	#
-	#   `[M]` `banchi/04-b31-tela.c` — 19 cases, the strongest bench we have
+	#   `[M]` `banchi/04-b31-tela.c` — 19 cases (20 since 11 Oct 2026), the strongest bench we have
 	#   on the most delicate module — stayed **11 of 18, red, for a whole
 	#   day** without anybody noticing.  Not because it was hard
 	#   to launch: because **nobody launched it**.
@@ -91,22 +91,24 @@ if [ $uscita -eq 0 ] && [ "$AZIONE" = tutto ]; then
 	#   compiles need remember nothing.  ⛔ And it does not stop the build: the
 	#   binary is there and may be useful — but the red shows, and it is the only thing
 	#   that was needed.
-	if command -v gcc >/dev/null 2>&1 \
-	   && [ -f "$ALBERO/banchi/04-b31-tela.c" ] && [ -f "$ALBERO/src/rcp.c" ]; then
-		B=$(mktemp -u /tmp/04-b31.XXXXXX)
-		if gcc -O1 -std=gnu11 -w -D_GNU_SOURCE -o "$B" \
-		       "$ALBERO/banchi/04-b31-tela.c" "$ALBERO/src/rcp.c" 2>/dev/null; then
-			if RIGA=$("$B" 2>&1 | grep -a passati); then
-				case "$RIGA" in
-				*"falliti 0"*) printf '⭐ 04-b31 (the canvas, %s):%s\n' \
-				                      "$(echo "$RIGA" | tr -s ' ')" '' ;;
-				*)             printf '\n⛔ 04-b31 IS RED:%s\n' "$RIGA"
-				               printf '   rerun it with:  gcc -O1 -std=gnu11 -w -D_GNU_SOURCE \\\n'
-				               printf '        -o /tmp/b31 banchi/04-b31-tela.c src/rcp.c && /tmp/b31\n' ;;
-				esac
-			fi
-			rm -f "$B"
-		fi
+	# ⛔ 11 Oct 2026: it runs INSIDE the build image, like everything else here.
+	#   It used to need `gcc` on the host, and the host that builds (the server)
+	#   has none: the bench was skipped in silence.  And since 7e15ae5 (bench
+	#   translated to English) it grepped the Italian line «passati … falliti 0»,
+	#   which no longer exists.  Meanwhile 04-b31 was red, 17 of 19, from 22 Sep
+	#   (0b84a5b, a product rule the bench had not followed), and no alarm fired.
+	#   ⇒ A line that is not found is now a red too, not a silence.
+	if [ -f "$ALBERO/banchi/04-b31-tela.c" ] && [ -f "$ALBERO/src/rcp.c" ]; then
+		RIGA=$(podman run --rm --userns=keep-id -v "$ALBERO:/albero" -w /albero \
+		        "$IMMAGINE" sh -c 'gcc -O1 -std=gnu11 -w -D_GNU_SOURCE -o /tmp/b31 \
+		            banchi/04-b31-tela.c src/rcp.c && /tmp/b31' 2>&1 \
+		       | grep -a 'passed [0-9]*, failed')
+		case "$RIGA" in
+		*"failed 0"*) printf '⭐ 04-b31 (the canvas, %s)\n' "$(echo $RIGA)" ;;
+		*)            printf '\n⛔ 04-b31 IS RED:%s\n' "${RIGA:- it did not build or did not print its total line}"
+		              printf '   rerun it with:  gcc -O1 -std=gnu11 -w -D_GNU_SOURCE \\\n'
+		              printf '        -o /tmp/b31 banchi/04-b31-tela.c src/rcp.c && /tmp/b31\n' ;;
+		esac
 	fi
 fi
 exit $uscita

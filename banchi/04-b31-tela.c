@@ -222,6 +222,54 @@ static bool g_verifica(void *ctx, const char *utente, const char *parola)
 	return strcmp(utente, "prova") == 0 && strcmp(parola, "prova2026") == 0;
 }
 
+/* ⛔ THE FOUR VIDEO HOOKS — 11 Oct 2026.  Since `0b84a5b` (22 Sep 2026,
+ *    `RCP.md` §7.1) the server ADOPTS the stage's size when the stage is
+ *    elsewhere and NO frame has gone out yet (the KDE stage that outlives a
+ *    server restart).  ⇒ Cases 9 and 18 were written for a session that has
+ *    already sent video, and they must SAY so: without a frame they were
+ *    testing the new branch with the old expectation, and the bench stayed
+ *    red, 17 of 19, from 22 Sep to 11 Oct.  The stream goes nowhere: only
+ *    `video_spediti` matters here. */
+static int64_t prossimo_stream = 3;
+static bool g_video_apri(void *ctx, int64_t *stream, uint64_t *restano)
+{
+	(void)ctx;
+	*stream = prossimo_stream;
+	prossimo_stream += 4;
+	*restano = 100;
+	return true;
+}
+static bool g_video_scrivi(void *ctx, int64_t stream, const uint8_t *dati,
+                           size_t len)
+{
+	(void)ctx;
+	(void)stream;
+	(void)dati;
+	(void)len;
+	return true;
+}
+static void g_video_fin(void *ctx, int64_t stream)
+{
+	(void)ctx;
+	(void)stream;
+}
+static void g_video_azzera(void *ctx, int64_t stream)
+{
+	(void)ctx;
+	(void)stream;
+}
+
+/* One complete keyframe, at the canvas in force: after it, §7.1 forbids
+ * adopting a stage that goes its own way. */
+static bool un_fotogramma(rcp_sessione *s, uint64_t ora)
+{
+	static const uint8_t dati[4] = { 0, 0, 0, 1 };
+	return rcp_video_apri(s, true, sizeof dati, ora * 1000, 0, ora)
+	           == RCP_VIDEO_SPEDITO
+	    && rcp_video_pezzo(s, dati, sizeof dati) == RCP_VIDEO_SPEDITO
+	    && rcp_video_finisci(s) == RCP_VIDEO_SPEDITO;
+}
+
 /* ------------------------------------------------------------------ *
  *  Reading what the server has sent
  * ------------------------------------------------------------------ */
@@ -305,6 +353,10 @@ static rcp_sessione *apri_sessione(uint32_t tela_l, uint32_t tela_a,
 	if (con_ganci) {
 		g.ritela = g_ritela;
 		g.tela_del_palco = g_tela_del_palco;
+		g.video_apri = g_video_apri;
+		g.video_scrivi = g_video_scrivi;
+		g.video_fin = g_video_fin;
+		g.video_azzera = g_video_azzera;
 	}
 
 	chiuso = false;
@@ -630,7 +682,10 @@ static void caso8(void)
  *      made a session close in which nobody had made a mistake.
  *
  *      ⇒ EXPECTED NOW: **no `TELA`, ever**, and the stage CALLED BACK to the
- *      canvas in force with a growing wait. */
+ *      canvas in force with a growing wait.
+ *
+ *      ⚠ AFTER THE FIRST FRAME (`RCP.md` §7.1, 22 Sep 2026): before it the
+ *      server adopts the stage instead, and that is case 20. */
 static void caso9(void)
 {
 	rcp_sessione *s;
@@ -641,11 +696,12 @@ static void caso9(void)
 	rcp_azzera_registro_sessioni();
 	azzera_palco();
 	s = apri_sessione(1920, 1080, NULL, true);
+	bene = un_fotogramma(s, orologio);
 	/* the stage says it is at 1280x720 without anybody having asked */
 	rcp_tela_dal_palco(s, 0, 0, 1280, 720, orologio);
 	raccogli();
 	primi = dopo_la_nascita();
-	bene = quanti_tela == 0 && primi == 1 && palco.chiesta_l == 1920
+	bene = bene && quanti_tela == 0 && primi == 1 && palco.chiesta_l == 1920
 	    && palco.chiesta_a == 1080;
 	if (bene) {
 		/* it insists: and the call-back repeats, but not at every message */
@@ -662,7 +718,7 @@ static void caso9(void)
 		    && a == 1080 && !chiuso;
 	}
 	esito("9 the stage goes its own way", bene,
-	      "ZERO TELA (an unrequested one would make the client close), the stage "
+	      "after one frame: ZERO TELA (an unrequested one would make the client close), the stage "
 	      "called back to 1920x1080 with the growing wait",
 	      dillo());
 	rcp_libera(s);
@@ -913,12 +969,15 @@ static void caso18(void)
 	uno = apri_sessione(1920, 1080, NULL, true);
 	manda_adatta(uno, 1600, 900);
 	palco_consegna(uno, orologio);
+	/* ⚠ And it has been watching: without a frame gone out, §7.1 would adopt
+	 *   the stage's size below (case 20) — not the scene this case is about. */
+	bene = un_fotogramma(uno, orologio);
 
 	/* Silent for thirty seconds: §5.3 takes its slot away, the session stays alive. */
 	orologio += 31000;
 	rcp_tempo(uno, orologio);
 	raccogli();
-	bene = strcmp(rcp_stato_nome(uno), "staccata-per-silenzio") == 0;
+	bene = bene && strcmp(rcp_stato_nome(uno), "staccata-per-silenzio") == 0;
 
 	/* The phone attaches and TAKES the slot, with a window of another
 	 * size.  ⚠ `apri_sessione` resets the clock: it is put back where it was, or
@@ -1001,13 +1060,42 @@ static void caso19(void)
 	rcp_libera(s);
 }
 
+/* 20 — ⭐ THE STAGE THAT WAS ALREADY THERE, `RCP.md` §7.1, `0b84a5b` 22 Sep 2026:
+ *      the server restarts, the KDE session outlives it at another size, KWin
+ *      `--virtual` does not resize.  ⛔ Before this rule: black screen forever.
+ *
+ *      EXPECTED: NO frame has gone out yet, so the stage's size is ADOPTED —
+ *      one `TELA(ADATTATA)` at 1280x720, canvas in force 1280x720, no new
+ *      request to the stage.  (After the first frame it is case 9.) */
+static void caso20(void)
+{
+	rcp_sessione *s;
+	uint32_t l = 0, a = 0;
+	bool bene;
+
+	rcp_azzera_registro_sessioni();
+	azzera_palco();
+	s = apri_sessione(1920, 1080, NULL, true);
+	rcp_tela_dal_palco(s, 0, 0, 1280, 720, orologio);
+	raccogli();
+	rcp_tela_in_vigore(s, &l, &a);
+	bene = quanti_tela == 1 && ultima_tela.esito == 1 && ultima_tela.l == 1280
+	    && ultima_tela.a == 720 && l == 1280 && a == 720
+	    && dopo_la_nascita() == 0 && !chiuso;
+	esito("20 the stage that was already there", bene,
+	      "no frame yet: ONE TELA(ADATTATA 1280x720), canvas in force 1280x720, "
+	      "zero new requests (§7.1)",
+	      dillo());
+	rcp_libera(s);
+}
+
 int main(int argc, char **argv)
 {
 	int solo = argc > 1 ? atoi(argv[1]) : 0;
 	void (*casi[])(void) = { caso1,  caso2,  caso3,  caso4,  caso5,  caso6,
 		                     caso7,  caso8,  caso9,  caso10, caso11, caso12,
 		                     caso13, caso14, caso15, caso16, caso17,
-		                     caso18, caso19 };
+		                     caso18, caso19, caso20 };
 	const int quanti = (int)(sizeof casi / sizeof casi[0]);
 
 	parlantina = getenv("PARLANTINA") != NULL;
