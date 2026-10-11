@@ -206,7 +206,7 @@ ExecStart=/usr/libexec/remotix/remotix --kwin-nested 1920 1080 /dev/dri/renderD1
          "text", "The KWin drop-in (zz-remotix-monitor.conf), here for a 1920×1080 canvas") + \
     KDE_FIG + \
     table(["", "Why"], [
-        ["Not " + c("kwin_wayland --virtual") + ", which REMOTIX used until 0.19.0",
+        ["Not " + c("kwin_wayland --virtual") + ", which REMOTIX used before 1.0.0",
          "KWin up to 6.7 cannot change the size of a " + c("--virtual") + " output and cannot create a second "
          "one: the virtual backend has no " + c("createVirtualOutput()") + " (read in KWin 6.3.6; measured, every "
          "size asked was answered «Could not find output»). The desktop kept the size it was born with, and a "

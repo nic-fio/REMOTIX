@@ -7119,6 +7119,11 @@ labwc che ce lo analizziamo e compiliamo da soli»*.
 - **The net**: `benches/11-boxes/11-c25-no-power-entries.sh` checks that every built package (deb, rpm, Arch)
   carries the rule, active, at `/usr/share/polkit-1/rules.d/` and no longer in the belts folder.
 
+### 10.51 ✅ The first public release is 1.0.0, not 0.19.0 (11 Oct 2026)
+
+- **The ruling** (the director, 11 Oct 2026, verbatim): *«a questo punto si e direi che possiamo usare come versione
+  1.0»*. ⇒ The release candidate built as 0.19.0 ships as **1.0.0-1**; the mentions of 0.19.0 above are history.
+
 ## How this document is kept
 
 An ❓ item that gets an answer **is moved** to the section it belongs to and changes mark; it is not

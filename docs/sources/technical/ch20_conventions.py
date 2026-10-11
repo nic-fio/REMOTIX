@@ -44,7 +44,7 @@ S1 = p("REMOTIX is fully English (" + c("DECISIONS.md") + " §10.38, 10 Oct 2026
     ul(["<b>English, and the standard word when there is one</b>: " + c("--verbose") + ", " + c("--quality-recovery")
         + ", not a word-for-word translation of the Italian one.",
         "<b>No aliases.</b> A renamed or retired option is removed, never kept as a second spelling: REMOTIX had no "
-        "release before 0.19.0, so there is no installed base to protect, and page and server ship together. "
+        "release before 1.0.0, so there is no installed base to protect, and page and server ship together. "
         "Retired: " + c("--ritmo-adattivo") + ", " + c("--linea-morta") + ", " + c("--linea-morta-permille") + ", "
         + c("--sblocca") + ", and the " + c("--ban") + " alias of " + c("--ban-file") + ".",
         "<b>No upgrade migration</b> of old names in files on disk or in settings: the user's reason, on 11 Oct 2026, was "

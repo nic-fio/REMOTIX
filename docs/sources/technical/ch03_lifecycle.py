@@ -11,7 +11,7 @@ S1 = p("The server starts from " + c("main()") + " in " + c("main.c") + ". Befor
     "<b>Options.</b> The command line is read; an unknown option prints the usage and exits with 2. Options "
     "retired before the first release (" + c("--ritmo-adattivo") + ", " + c("--linea-morta") + ", "
     + c("--linea-morta-permille") + ", " + c("--sblocca") + ", the " + c("--ban") + " alias of " + c("--ban-file")
-    + ") are simply unknown: REMOTIX was never released before 0.19.0, so no old name is kept (DECISIONS.md §10.45). Without a real "
+    + ") are simply unknown: REMOTIX was never released before 1.0.0, so no old name is kept (DECISIONS.md §10.45). Without a real "
     + c("--name") + " (not empty, " + c("0.0.0.0") + " or " + c("::") + ") the server refuses to start: the "
     "certificate must carry the name the browser will use.",
     "<b>Signals.</b> " + c("SIGINT") + " and " + c("SIGTERM") + " only set a flag that ends the loop; "

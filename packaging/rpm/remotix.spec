@@ -51,8 +51,8 @@
 Name:           remotix
 # Version and release are given by the release command (packaging/release.sh) through
 # build-rpm.sh: RX_VERSION (--define "rx_version X.Y.Z") and RX_REVISION
-# (--define "rx_release N"); defaults 0.19.0 and 1.
-Version:        %{?rx_version}%{!?rx_version:0.19.0}
+# (--define "rx_release N"); defaults 1.0.0 and 1.
+Version:        %{?rx_version}%{!?rx_version:1.0.0}
 Release:        %{?rx_release}%{!?rx_release:1}%{?dist}
 Summary:        This machine's desktop in the browser
 # Our own text, not a standard one (DECISIONI §10.39): free for personal and non-profit use,
@@ -485,8 +485,8 @@ fi
 %ghost %verify(not md5 size mode mtime) %{_sharedstatedir}/selinux/%{selinuxtype}/active/modules/200/remotix_porta
 
 %changelog
-* Sun Oct 11 2026 nicfio <nicfio@gmail.com> - 0.19.0-1
-- 0.19.0: first public release.
+* Sun Oct 11 2026 nicfio <nicfio@gmail.com> - 1.0.0-1
+- 1.0.0: first public release.
 * Wed Sep 30 2026 nicfio <nicfio@gmail.com> - 0.17.0-1
 - Phase 17, T6: the sshd PAM (D3), the remotix-selinux subpackage.
 * Tue Sep 29 2026 nicfio <nicfio@gmail.com> - 0.17.0-1

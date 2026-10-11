@@ -250,7 +250,7 @@ S6 = p("What the numbers above do not say, and why.", lead=True) + \
         "<b>The 64 MiB wall</b> cuts xrdp's XFCE and LXQt cells (" + rif("REMOTIX against xrdp") + ").",
         "<b>The driver decides two cells</b>: on the Radeon at 4K, GNOME and KDE stop at RADV 25.0.7, not at REMOTIX.",
         "<b>KDE was measured before the nesting.</b> Its cells use KWin " + c("--virtual") + "; the nested KWin of "
-        "0.19.0 costs nothing at Full HD and 2K but frames at 3K and 4K on the Intel (" + rif("The cost of the nested KWin") + ").",
+        "1.0.0 costs nothing at Full HD and 2K but frames at 3K and 4K on the Intel (" + rif("The cost of the nested KWin") + ").",
         "<b>KasmVNC</b> has one dry run, not a campaign (" + rif("A first look at KasmVNC") + ")."])
 
 # ── 7. Repeating the measurements ────────────────────────────────────────

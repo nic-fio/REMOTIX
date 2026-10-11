@@ -1,7 +1,7 @@
 from build import c, note, p, rif, table
 
 S1 = p("Defects found while this manual was written (10 October 2026), by reading the code against the documents, and "
-       "checked again in the source of 0.19.0 (11 October 2026). They are recorded here so that a maintainer meets them before a user does; "
+       "checked again in the source of 1.0.0 (11 October 2026). They are recorded here so that a maintainer meets them before a user does; "
        "a defect leaves this table in the commit that cures it.", lead=True) + \
     table(["Defect", "Where", "Consequence"], [
         ["<b>No way to lift an address ban on an installed machine.</b> The unlock socket " + c("--command-socket")
@@ -91,7 +91,7 @@ S2 = p("Comments and log lines in the code that no longer describe what the code
     note("the project documents (SPECS.md, RCP.md, DECISIONS.md, the phase documents) carry their own list of "
          "stale passages, found in the same pass; they are corrected there, not here.", "Documents.")
 
-S3 = p("Not defects but declared limits of 0.19.0: each is written in the log or in DECISIONS.md, and each has a "
+S3 = p("Not defects but declared limits of 1.0.0: each is written in the log or in DECISIONS.md, and each has a "
        "known cause outside the code that would have to change to remove it.", lead=True) + \
     table(["Limit", "Where", "What it means"], [
         ["<b>KDE without labwc keeps its birth size at reattach.</b> The nested KWin needs a labwc to host it; where "

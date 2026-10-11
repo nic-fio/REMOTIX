@@ -165,7 +165,7 @@ S3 = p("The encoder is asked for <b>by name</b>, and the name says how the path 
          + c("test_exits()") + " in " + c("child.c") + "); the comments of " + c("child.c") + ", " + c("child.h")
          + " and the installer's " + c("operation.go") + " already describe them as " + c("route") + ", "
          + c("node") + ", " + c("reason") + ", " + c("offered") + " and " + c("none") + ". Not settled yet: which "
-         "of the two the 0.19.0 binary speaks.", "Probe keys.") + \
+         "of the two the 1.0.0 binary speaks.", "Probe keys.") + \
     table(["Exit code", "Meaning"], [
         ["0", "The GPU encoded a frame and the bytes were read back"],
         ["1", "The GPU opens but no frame came out, or it cannot be told whether it is right"],
