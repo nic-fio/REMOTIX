@@ -18,7 +18,7 @@ tree it is given.
            the history lines of the documents, which keep the paths they were written with, stay alive.
         Never touched: the registers and every *.jsonl, `git show <commit>:<path>` (history), misure/,
         memoria/, fondamenta/, english-migration/, installatore/vendor/, the bench reports rapporto-giro*,
-        the frozen snapshot banchi/prodotto/, the generated manual (regenerate it), installed system paths
+        the frozen snapshot banchi/prodotto/, the generated manuals (regenerate them), installed system paths
         (/etc, /usr, /var, /run, /lib: phase B's disco table owns those), and in the history documents
         (FASI, DECISIONI, LEZIONI, STUDI, PIANO, MASTERPLAN, fasi/) everything but the links.
   python3 fase_c.py map --root COPY [--paths [--back]]
@@ -52,7 +52,7 @@ MOVES = os.path.join(HERE, "fase-c-moves.tsv")
 # never scanned, never rewritten
 SKIP_PREFIX = ("misure/", "memoria/", "fondamenta/", "installatore/vendor/", "english-migration/",
                "banchi/prodotto/", "installer/vendor/", "benches/prodotto/")
-SKIP_FILES = {"docs/Technical Manual.html"}
+SKIP_FILES = {"docs/Technical Manual.html", "docs/User Manual.html"}   # generated: regenerate them
 SKIP_RX = re.compile(r"(\.jsonl$|/rapporto-giro[^/]*$)")
 # the logs: their dated lines describe the tree as it was; only their links are rewritten
 HIST_DOC = re.compile(r"^(fasi/|FASI\.md$|DECISIONI\.md$|LEZIONI\.md$|STUDI\.md$|PIANO\.md$|MASTERPLAN\.md$|"
@@ -77,8 +77,12 @@ IDENTS = [
     (re.compile(r"\b(?:ritrovo|finding_again)_(cerca|search)\b"), "rediscover_search", ("src/", "docs/sources/")),
     (re.compile(r"\b(?:ritrovo|finding_again)_(vivo|alive)\b"), "rediscover_alive", ("src/", "docs/sources/")),
     (re.compile(r"\b(?:Ritrovo|FindingAgain)Desktop\b"), "RediscoveredDesktop", ("src/", "docs/sources/")),
+    # the Go package of installatore/interfaccia/ is ui/ (interface is a keyword): its clause and every qualifier
+    (re.compile(r"^package interfaccia$", re.M), "package ui", ("installatore/",)),
+    (re.compile(r"^// Package interfaccia\b", re.M), "// Package ui", ("installatore/",)),
+    (re.compile(r"\binterfaccia\.(?=[A-Z])"), "ui.", ("installatore/", "docs/sources/")),
 ]
-IDENT_EXT = (".c", ".h", ".py")
+IDENT_EXT = (".c", ".h", ".py", ".go")
 
 # named sites a path scan cannot see (hazards.md): (file old path, line regex, [(regex, replacement)]).
 # Each is applied on the lines of that file matching the line regex; one that matches nothing is reported.
@@ -93,7 +97,36 @@ SITES = [
                                                   (r"\bcatalogo\b", "catalog"), (r"\bprove\b", "tests")]),
     ("banchi/11-scatole/11-gancio.sh", r"##\*Contenitore\.", [(r"##\*Contenitore\.", "##*Containerfile.")]),
     ("banchi/16-stress/16-salita.py", r"\[1\]6-risorse", [(r"\[1\]6-risorse\.py", "[1]6-NEW(banchi/16-stress/16-risorse.py)")]),
+    # en-57 dry run: folders joined to a variable, files copied under /var/tmp by their name, page URLs
+    ("banchi/02-sessione-lancia.sh", r"/02-sessione-scene\}", [(r"/02-sessione-scene\}", "/02-session-scenes}")]),
+    ("banchi/17-distro/17-t10.sh", r"/scatole\}", [(r"/scatole\}", "/boxes}")]),
+    ("banchi/17-distro/17-vm.sh", r'/iso-risposte"', [(r'/iso-risposte"', '/iso-answers"')]),
+    ("banchi/17-distro/iso-differenze.md", r"`iso-risposte/`", [(r"`iso-risposte/`", "`iso-answers/`")]),
+    ("banchi/17-distro/17-t3-rpm.sh", r"/var/tmp/17-t3-", [(r"/var/tmp/17-t3-impronta-rpm\.sh", "/var/tmp/17-t3-fingerprint-rpm.sh"),
+                                                          (r"/var/tmp/17-t3-gruppi\.sh", "/var/tmp/17-t3-groups.sh")]),
+    ("banchi/17-distro/17-t3-pacchetto.sh", r"/var/tmp/17-t3-impronta-arch\.sh",
+     [(r"/var/tmp/17-t3-impronta-arch\.sh", "/var/tmp/17-t3-fingerprint-arch.sh")]),
+    ("banchi/01-b2-raccogli.py", r"/01-b2-sonda\.html", [(r"/01-b2-sonda\.html", "/01-b2-probe.html")]),
+    ("banchi/01-s7-raccogli.py", r"/01-s7-pagina\.html", [(r"/01-s7-pagina\.html", "/01-s7-page.html")]),
+    ("banchi/02-figlio-lancia.sh", r"costruisci\.sh", [(r"\bcostruisci\.sh\b", "build.sh")]),
+    ("banchi/01-casa-7448.sh", r"bash costruisci\.sh", [(r"bash costruisci\.sh", "bash build.sh")]),
+    ("grafica/sito-mockup/autocontenuta.py", r'"pubblica"|schermate-vere\|icone',
+     [(r'QUI / "pubblica"', 'QUI / "public"'), (r"\(\?:schermate-vere\|icone\)/", "(?:screenshots|icons)/")]),
+    ("grafica/sito-mockup/LEGGIMI.md", r"`icone/`", [(r"`icone/`", "`icons/`"), (r"`schermate-vere/`", "`screenshots/`")]),
+    ("README.md", r"Between one step and the next TWO things", [(r"`costruisci\.sh`", "`build.sh`")]),
+    ("docs/sources/technical/ch01_introduction.py", r'c\("costruisci\.sh"\)', [(r'c\("costruisci\.sh"\)', 'c("build.sh")')]),
+    ("docs/sources/technical/ch15_installer.py", r"\(cmd, motore, interfaccia,|catalogo, run\.sh, costruisci\.sh\)|── costruisci\.sh",
+     [(r"\(cmd, motore, interfaccia,", "(cmd, engine, ui,"), (r"catalogo, run\.sh, costruisci\.sh\)", "catalog, run.sh, build.sh)"),
+      (r"── costruisci\.sh  ", "── build.sh       ")]),
+    ("docs/sources/technical/ch17_build.py", r'src/costruisci\*\.sh|c\("costruisci\.sh( test)?"\)|arch, motore, archivio,',
+     [(r"src/costruisci\*\.sh", "src/build*.sh"), (r'c\("costruisci\.sh', 'c("build.sh'),
+      (r"arch, motore, archivio,", "arch, engine, archive,")]),
+    ("docs/sources/technical/ch22_map.py", r'\(S \+ "costruisci\.sh"', [(r'\(S \+ "costruisci\.sh"', '(S + "build.sh"')]),
 ]
+# the build images: the script is copied and run under its own name
+SITES += [("src/costruzione/Contenitore." + d, r"/usr/local/bin/quic-statiche\.sh",
+           [(r"/usr/local/bin/quic-statiche\.sh", "/usr/local/bin/quic-static.sh")])
+          for d in ("alma10", "arch", "debian13", "fedora44", "leap16", "tumbleweed", "ubuntu2404", "ubuntu2604")]
 TOP_WORD_KINDS = {"shell", "make", "packaging", "gitignore", "containerfile", "rules"}
 CODE_KINDS = {"python", "shell", "make", "c", "c-include", "go", "go-import", "go-embed", "go-module", "web",
               "packaging", "containerfile", "gitignore", "manual-source", "manual-file-map", "other", "data",
@@ -683,6 +716,35 @@ def site_subs(plan, f, text, report):
     return text
 
 
+MAP_SOURCE = "docs/sources/technical/ch22_map.py"
+GLOSS = re.compile(r't\("[^"]*"\) \+ ')
+
+
+def keep_columns(old, new):
+    """a «name   # comment» line whose name changed length keeps its comment column (same line count)"""
+    a, b = old.split("\n"), new.split("\n")
+    if len(a) != len(b):
+        return new
+    for i, (x, y) in enumerate(zip(a, b)):
+        mx, my = re.search(r"\S( {2,})# ", x), re.search(r"\S( {2,})# ", y)
+        if x != y and mx and my and mx.end(1) != my.end(1):
+            pad = max(1, len(my.group(1)) + mx.end(1) - my.end(1))
+            b[i] = y[:my.start(1)] + " " * pad + y[my.end(1):]
+    return "\n".join(b)
+
+
+def drop_glosses(old, new):
+    """the file map's t("translation") glosses an Italian file name: gone with the name (and t() with them)"""
+    a, b = old.split("\n"), new.split("\n")
+    if len(a) != len(b):
+        return new
+    b = [GLOSS.sub("", y, count=1) if x != y else y for x, y in zip(a, b)]
+    out = "\n".join(b)
+    if not GLOSS.search(out):
+        out = re.sub(r'def t\(parole\):\n    """[^\n]*"""\n    return f"\(<i>\{parole\}</i>\) "\n\n\n', "", out)
+    return out
+
+
 C16_PATCH_DEF = '''
 # step 2 of the English migration renamed files and folders.  The history lines of the documents keep the
 # paths they were written with; this map (old → new, written by the rename) says those paths are alive.
@@ -788,6 +850,10 @@ def cmd_apply(a):
             new = apply_text(text, edits[f][2])
             n_ref += len(edits[f][2])
         new = site_subs(plan, f, new, report)
+        if f.startswith("docs/sources/") and f.endswith(".py") and new != text:
+            new = keep_columns(text, new)
+        if f == MAP_SOURCE and new != text:
+            new = drop_glosses(text, new)
         if f == c16_file(plan):
             new, ok = patch_c16(new)
             if not ok:

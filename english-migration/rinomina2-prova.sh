@@ -9,7 +9,7 @@
 # paths (benches/, installer/, benches/rcp as the twin); 5b compares the server's strings with the old
 # file names mapped to the new ones, 6 compares the benches' exit codes and outputs modulo the path
 # names (fase_c.py map), 7 builds the debian13 release with the new R14 denylists, and 8 runs
-# `docs/sources/build.py --controlla` (PYTHONPATH=$FASE_C_PYLIB, default /media/REMOTIX/strumenti/pylib).
+# `docs/sources/build.py --check` (--controlla before phase B; PYTHONPATH=$FASE_C_PYLIB, default /media/REMOTIX/strumenti/pylib).
 #
 # --fase-b proves phase B instead (fase_b.py, the table english-migration/fase-b-tabella.tsv or
 # $FASE_B_TABLE, $FASE_B_SINCE = the commit the tables were written against): it applies the table,
@@ -23,7 +23,7 @@
 #   1. «…» quotes of every .md unchanged, skipped files unchanged, protected lines unchanged
 #   2. bash -n on every shell script, compile() on every Python file
 #   3. node --check on every <script> of the page and of the bench pages
-#   4. the installer: gofmt, go vet, go test (installatore/costruisci.sh prove)
+#   4. the installer: gofmt, go vet, go test (installatore/costruisci.sh prove; build.sh test after phase B and step 2)
 #   5. C: make of the server objects and the twin check in the debian13 build image
 #   6. with --rilascio: packaging/rilascio.sh (debian13 only) into the copy's costruzione-uscita
 # Exit 0 only if everything passes.  Needs podman; CONTAINERS_CONF is set to the host-network
@@ -195,7 +195,10 @@ if [ -n "$G" ]; then
 	podman run --rm --network=none -v "$COPIA/$INST:/src:Z" -w /src docker.io/library/golang:1.25 \
 		gofmt -w $G
 fi
-if (cd "$INST" && sh "$([ -f costruisci.sh ] && echo costruisci.sh || echo build.sh)" prove) >"$COPIA/.rinomina2-go.log" 2>&1 &&
+# the build script and its test action, before and after phase B (prove -> test) and step 2 (costruisci.sh -> build.sh)
+GOSH=$([ -f "$INST/costruisci.sh" ] && echo costruisci.sh || echo build.sh)
+GOACT=$(grep -qE '^[[:space:]]*test\)' "$INST/$GOSH" && echo test || echo prove)
+if (cd "$INST" && sh "$GOSH" "$GOACT") >"$COPIA/.rinomina2-go.log" 2>&1 &&
 	! grep -qE '^(FAIL|gofmt:)' "$COPIA/.rinomina2-go.log"; then
 	verde "installer: $(grep -c '^ok ' "$COPIA/.rinomina2-go.log") packages ok"
 else
@@ -356,11 +359,13 @@ d={k.split("→")[0]:k.split("→")[1] for k in m}; print(d.get(sys.argv[2], sys
 		verde "rilascio.sh debian13" || { rosso "rilascio.sh"; tail -25 "$COPIA/.rinomina2-rilascio.log"; }
 fi
 if [ "$FASEC" = 1 ]; then
-	echo "== 8. the manual's own check (docs/sources/build.py --controlla)"
+	# its option is --check after phase B, --controlla before it
+	DOCCHK=$(grep -q -- '"--check"' docs/sources/build.py && echo --check || echo --controlla)
+	echo "== 8. the manual's own check (docs/sources/build.py $DOCCHK)"
 	if PYTHONPATH=${FASE_C_PYLIB:-/media/REMOTIX/strumenti/pylib} \
-		python3 docs/sources/build.py --controlla >"$COPIA/.rinomina2-controlla.log" 2>&1; then
-		verde "build.py --controlla"
-	else rosso "build.py --controlla"; tail -15 "$COPIA/.rinomina2-controlla.log"; fi
+		python3 docs/sources/build.py "$DOCCHK" >"$COPIA/.rinomina2-controlla.log" 2>&1; then
+		verde "build.py $DOCCHK"
+	else rosso "build.py $DOCCHK"; tail -15 "$COPIA/.rinomina2-controlla.log"; fi
 fi
 echo "== $ROSSI red"
 exit $((ROSSI > 0))
