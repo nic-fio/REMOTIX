@@ -184,7 +184,11 @@ _OLD_WORDS = (
     "tipo", "campione", "macchina", "carico", "sessioni", "altro_scatola", "labwc_cliente", "processi",
     "per_inquilino", "avvisi", "disegno", "REMOTIX_INQUILINO",
     "persi", "byte_persi", "spediti", "byte_spediti", "scartati", "dgram_persi", "dgram_falsi",
-    "user-",
+    "ammissione_s", "blocco_max_ms", "categorie", "durata_lavoro_s", "fine", "freq_att_mhz", "giro_eco",
+    "inizio_finestra_t", "inizio_t", "latenza_ms", "mem_totale_mb", "mem_usata_mb", "nascita_ms",
+    "nascita_s", "occupata_pct", "potenza_w", "primo_fotogramma_ms", "primo_non_degenere_s", "recinti",
+    "ritardi_eco_ms", "ritardi_ms", "salt", "sessioni_durante", "vram_usata_mb", "tard",
+    "utente-",
 )  # end of the old words
 _WORDS_NOW = (
     "users", "user", "new", "check_min", "level", "campaign", "card", "size", "binary",
@@ -195,6 +199,10 @@ _WORDS_NOW = (
     "type", "sample", "machine", "load", "sessions", "other_box", "labwc_client", "processes",
     "per_tenant", "warnings", "draw", "REMOTIX_TENANT",
     "lost", "bytes_lost", "sent", "bytes_sent", "discarded", "dgram_lost", "dgram_spurious",
+    "admission_s", "block_max_ms", "categories", "work_duration_s", "end", "freq_cur_mhz", "echo_round",
+    "window_start_t", "start_t", "latency_ms", "mem_total_mb", "mem_used_mb", "birth_ms",
+    "birth_s", "busy_pct", "power_w", "first_frame_ms", "first_non_degenerate_s", "enclosures",
+    "echo_delays_ms", "delays_ms", "skip", "sessions_during", "vram_used_mb", "overtaken",
     "user-",
 )
 OLD_SPELLING = {a: b for a, b in zip(_OLD_WORDS, _WORDS_NOW) if a != b}
@@ -255,7 +263,7 @@ DROPS = [
     (re.compile(r"the stage of «(c[0-9a-z]+)».*has gone"), "the stage has gone"),
     (re.compile(r"il figlio di «(c[0-9a-z]+)».*se ne va"), "the child is leaving"),
     (re.compile(r"the child of «(c[0-9a-z]+)».*is leaving"), "the child is leaving"),
-    (re.compile(r"\[(c[0-9a-z]+)\].*(?:PROTOCOL_ERROR|errore di protocollo|protocol error)", re.I),
+    (re.compile(r"\[(c[0-9a-z]+)\].*(?:ERRORE_PROTOCOLLO|PROTOCOL_ERROR|errore di protocollo|protocol error)", re.I),
      "protocol error"),
     (re.compile(r"\[(c[0-9a-z]+)\].*(?:SFRATTO per silenzio|EVICTION for silence)"), "eviction for silence (§5.3)"),
 ]
@@ -324,7 +332,20 @@ def p95(v):
 
 
 # ─────────────────────────────── reading ───────────────────────────────────
+# the files of a level before the English rename (misure/ is never rewritten): their old names
+_OLD_FILES = {"state.jsonl": "stato.jsonl", "birth.json": "nascita.json", "level.json": "livello.json",
+              "resources.jsonl": "risorse.jsonl", "short-check.json": "controllo-corto.json"}
+
+
+def on_disk(p):
+    """`p`, or the same file under its old name when only that one is on disk."""
+    old = _OLD_FILES.get(os.path.basename(p))
+    q = os.path.join(os.path.dirname(p), old) if old else p
+    return q if old and not os.path.exists(p) and os.path.exists(q) else p
+
+
 def jsonl(p):
+    p = on_disk(p)
     out = []
     if not os.path.exists(p):
         return out
@@ -340,7 +361,7 @@ def jsonl(p):
 
 def jfile(p):
     try:
-        with open(p, encoding="utf-8") as f:
+        with open(on_disk(p), encoding="utf-8") as f:
             return current_spelling(json.load(f))
     except (OSError, ValueError):
         return None
@@ -348,9 +369,9 @@ def jfile(p):
 
 # the page's diary line: ⚠ BOTH forms, the old (Italian) page of the recorded campaigns and the new one
 _DIARY_RX = (
-    r"audio: (?:ricevuti|got_n) (\d+)", r"\b(?:suonati|played) (\d+)", r"\b(?:BUCHI|HOLES) (\d+)",
-    r"\b(?:mancati|missed) (\d+)", r"\b(?:dipinti|painted) (\d+)", r"\bsalt (\d+)",
-    r"\b(?:buchi|holes) (\d+)", r"\btard (\d+)",
+    r"audio: (?:ricevuti|got_n|received) (\d+)", r"\b(?:suonati|played) (\d+)", r"\b(?:BUCHI|HOLES) (\d+)",
+    r"\b(?:mancati|missed) (\d+)", r"\b(?:dipinti|painted) (\d+)", r"\b(?:salt|skip) (\d+)",
+    r"\b(?:buchi|holes) (\d+)", r"\b(?:tard|overtaken) (\d+)",
 )  # end of the diary forms
 DIARY = dict(zip(("received", "played", "HOLES", "missed", "painted", "skip", "holes", "overtaken"), _DIARY_RX))
 
