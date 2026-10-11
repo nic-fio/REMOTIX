@@ -82,7 +82,9 @@ mark() {  # desktop measure campaign code last_green
 }
 # the last true GREEN level of a campaign (the highest with class GREEN in climb.jsonl)
 last_green() {
-	python3 - "$MEASURES_DIR/$1/climb.jsonl" <<'PY' 2>/dev/null || echo null
+	local f="$MEASURES_DIR/$1/climb.jsonl"
+	[ -e "$f" ] || f="$MEASURES_DIR/$1/salita.jsonl"     # a campaign before the English rename
+	python3 - "$f" <<'PY' 2>/dev/null || echo null
 import json, sys
 g = []
 for r in open(sys.argv[1], encoding="utf-8", errors="replace"):
@@ -90,8 +92,8 @@ for r in open(sys.argv[1], encoding="utf-8", errors="replace"):
         d = json.loads(r)
     except ValueError:
         continue
-    if d.get("class") == "GREEN" and not d.get("interrupted"):
-        g.append(int(d.get("level") or 0))
+    if d.get("class", d.get("classe")) == "GREEN" and not d.get("interrupted", d.get("interrotto")):
+        g.append(int(d.get("level", d.get("livello")) or 0))
 print(max(g) if g else "null")
 PY
 }
@@ -121,7 +123,7 @@ for d in $DESKTOP; do
 		for attempt in 1 2; do
 			camp="$GPU-$m-$d"
 			[ "$attempt" = 2 ] && camp="$camp-r2"
-			[ -e "$MEASURES_DIR/$camp/climb.jsonl" ] && camp="$camp-$(date +%H%M)"
+			{ [ -e "$MEASURES_DIR/$camp/climb.jsonl" ] || [ -e "$MEASURES_DIR/$camp/salita.jsonl" ]; } && camp="$camp-$(date +%H%M)"
 			says "── climb $camp (attempt $attempt)"
 			# shellcheck disable=SC2086
 			T_CLIMB=$(date +%s)
