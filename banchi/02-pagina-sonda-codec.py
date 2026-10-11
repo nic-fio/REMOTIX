@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""02-pagina-sonda-codec.py — builds the FOUR PROBES that live inside
+"""02-pagina-sonda-codec.py — builds the FIVE PROBES that live inside
    `src/pagina.html`, and certifies them.
 
     python3 banchi/02-pagina-sonda-codec.py            builds and prints the JS
@@ -7,7 +7,7 @@
     python3 banchi/02-pagina-sonda-codec.py --certifica  healthy → fault → healed
 
 ===========================================================================
-⛔ WHY THE PRODUCT CARRIES FOUR REAL STREAMS AROUND
+⛔ WHY THE PRODUCT CARRIES FIVE REAL STREAMS AROUND
 
 `fasi/rapporti/F2-5-pagina.md` §2, `[M]` 12 Aug 2026, Firefox 140 ESR:
 
@@ -30,7 +30,7 @@
 ⇒ ⭐ The only question that has an answer is **the pixel**, and the only place where
   it can be asked is **the user's device** (`STUDI.md` §web §9 lesson 2: *«the
   browser knows and does not answer… the measurement must live in the product»*).  Hence
-  these four probes: two distant colours in a 64x48 keyframe, one
+  these five probes: two distant colours in a 64x48 keyframe, one
   per codec and per depth.
 
 ===========================================================================
@@ -47,7 +47,7 @@ fill passes them.
 
     --certifica   healthy → fault → healed, with the expectation written beforehand:
 
-      healthy    the four probes have two different colours and >= 200 bytes
+      healthy    all the probes of `src/pagina.html` have two different colours and >= 200 bytes
       fault      `GUASTO=una-tinta` builds the frame of ONE single colour
                  ⇒ the claim «two different colours» MUST fall.  Without this
                    round, «the probe has a negative control» would be just a sentence
@@ -56,6 +56,7 @@ fill passes them.
 import base64
 import json
 import os
+import re
 import subprocess
 import sys
 
@@ -298,10 +299,27 @@ def stampa_js(sonde):
     print("};")
 
 
+def sonde_della_pagina():
+    """⛔ The probes `src/pagina.html` CARRIES, read from its `const SONDE`.
+    `[M]` 11 Oct 2026: the expectation was a hand-written `4`, and since
+    9cd6b9a (20 Aug 2026, `h264-8` added) the generator makes five — so
+    `--certifica` was red for seven weeks on a correct page.  ⇒ The count
+    comes from the consumer, and a probe missing on either side is a NO."""
+    pagina = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                          "..", "src", "pagina.html")
+    with open(pagina, encoding="utf-8") as f:
+        testo = f.read()
+    blocco = testo[testo.index("const SONDE = {"):]
+    blocco = blocco[:blocco.index("\n};")]
+    return re.findall(r'^  "([a-z0-9]+-[0-9]+)": \{', blocco, re.M)
+
+
 def certifica():
+    nomi = sonde_della_pagina()
     print("\033[1m== the certification of the probe: healthy → fault → healed\033[0m")
-    print("   expected, written BEFOREHAND: healthy and healed have two DIFFERENT colours in")
-    print("   all four probes; with the `una-tinta` fault the claim FALLS.")
+    print(f"   expected, written BEFOREHAND: healthy and healed have two DIFFERENT colours in")
+    print(f"   all {len(nomi)} probes of src/pagina.html ({', '.join(nomi)}); with the")
+    print("   `una-tinta` fault the claim FALLS.")
     esiti = []
     for giro, guasto in (("sano", ""), ("guasto", "una-tinta"), ("risanato", "")):
         sonde = costruisci_tutte(guasto)
@@ -317,12 +335,14 @@ def certifica():
                 diverse += 1
             print(f"    {nome:10s} {s['byte']:5d} bytes · left {sx} · "
                   f"right {dx} · distance {d:.0f}")
-        atteso = 4 if guasto == "" else 0
-        ok = diverse == atteso
+        atteso = len(nomi) if guasto == "" else 0
+        ok = diverse == atteso and sorted(sonde) == sorted(nomi)
         esiti.append(ok)
         segno = "\033[1;32mOK\033[0m" if ok else "\033[1;31mNO\033[0m"
-        print(f"  {segno}  round «{giro}»: {diverse} probes out of 4 with two different "
-              f"colours (expected {atteso})\n")
+        if sorted(sonde) != sorted(nomi):
+            print(f"    built {sorted(sonde)}, the page carries {sorted(nomi)}")
+        print(f"  {segno}  round «{giro}»: {diverse} probes out of {len(nomi)} with two "
+              f"different colours (expected {atteso})\n")
     return 0 if all(esiti) else 1
 
 
