@@ -3,7 +3,7 @@
   18-decodifica-chrome.html — a REAL browser decodes the stream, along the same
   path as the product's page: Annex-B → EncodedVideoChunk → VideoDecoder.
 
-  It is opened with headless Chrome (`18-decodifica-chrome.sh`) and the outcome is read
+  It is opened with headless Chrome (`../19-vulkan/19-decodifica-chrome.sh`; the phase-18 driver was retired, DECISIONI §10.44) and the outcome is read
   from the console (`console.log`, with `--enable-logging=stderr`):
     google-chrome --headless=new --allow-file-access-from-files --enable-logging=stderr \
       "file:///…/18-decodifica-chrome.html?flusso=file:///…/F.bin&codec=avc1.64002a"
@@ -26,7 +26,7 @@
   const fine = (m) => {
     const testo = "ESITO " + JSON.stringify(Object.assign(esito, m || {}));
     document.getElementById("esito").textContent = testo;
-    console.log(testo); /* it is what 18-decodifica-chrome.sh reads from Chrome's log */
+    console.log(testo); /* it is what 19-decodifica-chrome.sh reads from Chrome's log */
     setTimeout(() => window.close(), 300); /* in headless, closing the last window closes Chrome */
   };
   try {

@@ -1491,8 +1491,9 @@ def scrivi_audio(a, cli):
         return
     print(f"   [audio] received {cli.a_received} · {cli.a_byte} bytes of payload · "
           f"codec {cli.a_codec if cli.a_codec is not None else '(none)'}")
-    # ⛔ `vecchi {n}` STAYS WHERE IT WAS AND AS IT WAS: `07-b64-rete.py`:538 reads it
-    #    with the regex `vecchi (\d+)` on this line.  The four of phase 9
+    # ⛔ `vecchi {n}` STAYS WHERE IT WAS AND AS IT WAS: `07-b64-rete.py` read it
+    #    with the regex `vecchi (\d+)` on this line (that bench was retired on
+    #    11 Oct 2026, DECISIONI §10.44, but old logs are still read the same way).  The four of phase 9
     #    are added AT THE END, where no regex of before meets them.
     print(f"   [audio] discarded — short {cli.a_short} · type {cli.a_type} · "
           f"prefix {cli.a_prefix} · old {cli.a_vecchi}")

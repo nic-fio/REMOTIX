@@ -27,9 +27,9 @@
 Usage (from Python):
     import importlib.util, os
     luc = ...            # load this file
-    luc.prendi("09-b76", secondi=900)     # raises if it does not manage
+    luc.prendi("09-b78", secondi=900)     # raises if it does not manage
     try:  ...measure...
-    finally: luc.molla("09-b76")
+    finally: luc.molla("09-b78")
 
 Usage (from the command line, to look):
     python3 banchi/09-lucchetto.py stato

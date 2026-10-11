@@ -1,4 +1,4 @@
-# step 2 move table: file-moves.tsv of the plan (fase-c, written at 9d7e586) with the coordinator's rulings of 11 Oct applied; the benches retired by the user on 11 Oct (09-b70/b76/b81, 07-b64/b65, 18-software-confronto, 18-confronto, 18-a1/, 17-t9/, 01-b0-terreno) have no row
+# step 2 move table: file-moves.tsv of the plan (fase-c, written at 9d7e586) with the coordinator's rulings of 11 Oct applied; the benches retired by the user on 11 Oct (09-b70/b76/b81, 07-b64/b65, 18-software/, 18-confronto, 18-a1/, 17-t9/, 01-b0-terreno; and with them 09-b77/b79/b84, 18-tabella, 18-decodifica-chrome.sh, attrezzi-allinea-*: DECISIONI §10.44) have no row
 old_path	new_path	why
 DECISIONI.md	DECISIONS.md	top-level document; also cited by name in memory notes, agent prompts and commit messages outside the repo (see hazards)
 FASI.md	PHASES.md	top-level document; also cited by name in memory notes, agent prompts and commit messages outside the repo (see hazards)
@@ -124,11 +124,7 @@ banchi/06-b5-esiti-cattura.c	benches/06-b5-capture-outcomes.c	esiti della cattur
 banchi/06-b5-esiti-cattura.sh	benches/06-b5-capture-outcomes.sh	builds and runs 06-b5-capture-outcomes.c
 banchi/07-b42-giudice.py	benches/07-b42-judge.py	giudice→judge
 banchi/07-b46-marionette.py	benches/07-b46-marionette.py	name already English; parent dir renamed
-banchi/09-b77-audio-riordino.py	benches/09-b77-audio-reorder.py	riordino→reorder
 banchi/09-b78-apertura.py	benches/09-b78-opening.py	how long a session takes to open
-banchi/09-b79-cure.py	benches/09-b79-fixes.py	cure→fixes (phase-B word; the two paired cures)
-banchi/09-b79-terreno.sh	benches/09-b79-terrain.sh	terreno→terrain
-banchi/09-b84-audio-silenzio.py	benches/09-b84-audio-silence.py	silenzio→silence
 banchi/09-lucchetto.py	benches/09-lock.py	lucchetto→lock
 banchi/10-f1-testimone.py	benches/10-f1-witness.py	testimone→witness
 banchi/11-scatole/	benches/11-boxes/	scatole→boxes (rete11 boxes)
@@ -340,11 +336,6 @@ banchi/17-t8/t8-terzi.sh	benches/17-t8/t8-third-party.sh	phase-B terzi→third-p
 banchi/17-t8/t8-vm.sh	benches/17-t8/t8-vm.sh	folder only (name already English)
 banchi/18-scheda/	benches/18-card/	scheda here = the graphics card (phase 18 hardware encoder)
 banchi/18-scheda/18-decodifica-chrome.html	benches/18-card/18-decode-chrome.html	decodifica→decode
-banchi/18-scheda/18-decodifica-chrome.sh	benches/18-card/18-decode-chrome.sh	decodifica→decode
-banchi/18-scheda/18-tabella.py	benches/18-card/18-table.py	tabella→table
-banchi/18-software/18-software-openh264-vuota.c	benches/18-software/18-software-openh264-empty.c	vuota→empty
-banchi/18-software/18-software-webcodecs.html	benches/18-software/18-software-webcodecs.html	folder only (name already English)
-banchi/18-software/18-software-webcodecs.py	benches/18-software/18-software-webcodecs.py	folder only (name already English)
 banchi/19-android/19-android.py	benches/19-android/19-android.py	folder only (name already English)
 banchi/19-android/19-android.sh	benches/19-android/19-android.sh	folder only (name already English)
 banchi/19-android/LEGGIMI.md	benches/19-android/README.md	LEGGIMI→README
@@ -362,8 +353,6 @@ banchi/19-vulkan/19-tabella.py	benches/19-vulkan/19-table.py	tabella→table
 banchi/19-vulkan/chrome/19-chrome-corri.sh	benches/19-vulkan/chrome/19-chrome-run.sh	corri→run
 banchi/19-vulkan/chrome/19-chrome-prova.html	benches/19-vulkan/chrome/19-chrome-test.html	prova→test
 banchi/19-vulkan/chrome/19-chrome-servi.py	benches/19-vulkan/chrome/19-chrome-serve.py	servi→serve
-banchi/attrezzi-allinea-innesto.sh	benches/tools-align-graft.sh	attrezzi→tools, allinea→align, innesto→graft
-banchi/attrezzi-allinea-prodotto.sh	benches/tools-align-product.sh	attrezzi→tools, allinea→align, prodotto→product
 banchi/attrezzi-gruppi-scheda.sh	benches/tools-card-groups.sh	the card (GPU) groups tool
 banchi/attrezzi-utenti.sh	benches/tools-users.sh	attrezzi→tools, utenti→users
 banchi/b2-esiti.jsonl	benches/b2-outcomes.jsonl	esiti→outcomes; append-only, rows keep their old keys

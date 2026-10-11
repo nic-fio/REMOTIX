@@ -77,7 +77,7 @@ else
 fi
 if [ "$mancano" -ne 0 ]; then
 	ko "⛔ $mancano sources are missing: I do not build, and I do NOT say it is fine"
-	inf "they are brought over with: bash banchi/attrezzi-allinea-prodotto.sh allinea  (from CHUWI)"
+	inf "copy the repository's src/ into $PRODOTTO first (the old alignment tool was retired, DECISIONI §10.44)"
 	exit 2
 fi
 

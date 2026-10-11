@@ -5241,8 +5241,9 @@ void wt_dgram_riscontrato(wt *w, uint64_t id)
 /*       geometry would read the wrong field without noticing.  Which          */
 /*       of the two causes decided is said by `causa=`, which is the FIRST field. */
 /*                                                                            */
-/* ⛔⛔ THE CONTRACT CHANGED ON 23 AUG 2026, and bench `09-b81` must be       */
-/*      redone on it.  Two fields have DISAPPEARED and the why is not kept quiet: */
+/* ⛔⛔ THE CONTRACT CHANGED ON 23 AUG 2026, and a bench of the dead line      */
+/*      must be built on it (the old `09-b81` was retired, DECISIONI §10.44). */
+/*      Two fields have DISAPPEARED and the why is not kept quiet:            */
 /*                                                                            */
 /*      · `soglia_permille=` — there is no longer any threshold on loss.       */
 /*        `permille=` instead STAYS, and it is the observation of reordering.  A */

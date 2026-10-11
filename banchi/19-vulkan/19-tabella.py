@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""19-tabella.py — the VA-API / Vulkan table from the outcomes of 19-confronto.sh (from 18-tabella.py).
+"""19-tabella.py — the VA-API / Vulkan table from the outcomes of 19-confronto.sh (from 18-tabella.py, retired, DECISIONI §10.44).
 
 For each test it puts the two engines side by side (vaapi = the product, vulkan = the new module): ffprobe (profile, level,
 size, colour) IDENTICAL or not, the decoded frames, PSNR, SSIM, the bytes

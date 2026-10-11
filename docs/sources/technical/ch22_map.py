@@ -367,11 +367,11 @@ BANCHI = table(["Folder or prefix", "What it tests"], [
     [c("15-suite/"), "The functional suite: about 30 user functions on 4 desktops with Firefox and Chrome"],
     [c("16-stress/"), "The stress ramp, the browser actors, the classifier, the xrdp comparison twin"],
     [c("17-distro/"), "Distribution VMs and boxes: install, reboot, system update, uninstall on 26 combinations"],
-    [c("17-t2/") + ", " + c("17-t6/") + ", " + c("17-t7/") + ", " + c("17-t8/") + ", " + c("17-t9/"),
+    [c("17-t2/") + ", " + c("17-t6/") + ", " + c("17-t7/") + ", " + c("17-t8/"),
      "Installer stage benches: desktops surviving a stop (T2), PAM and SELinux (T6), upgrading without closing the desktops, which the new parent finds again (T7), "
-     "faults and third-party repositories (T8), the interface (T9). T8 and T9 are history"],
-    [c("18-a1/") + ", " + c("18-scheda/") + ", " + c("18-software/"), "Old vs new when ffmpeg left (" + c("scheda") + " = card): Opus "
-     "without ffmpeg, libva direct vs ffmpeg on the card, the software path"],
+     "faults and third-party repositories (T8). T8 is history"],
+    [c("18-scheda/"), "The Chrome decoding page used by " + c("19-vulkan/") + " (the phase-18 comparisons were "
+     "retired, " + c("DECISIONI.md") + " §10.44)"],
     [c("19-vulkan/"), "Vulkan Video vs VA-API, the shader build, Chrome decoding of the result"],
     [c("19-nvidia/"), "The rented NVIDIA machine: container test and suite"],
     [c("19-android/"), "The Android phone over adb"],

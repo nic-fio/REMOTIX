@@ -24,7 +24,7 @@
 #
 # Exits **0** if everything holds, **1** if something is red, **2** if it could not
 # look.  ⛔ And «I could not look» is NOT «fine»: they are three outcomes, not
-# two (`01-b0-terreno.sh`, `LEZIONI.md` §1.9).
+# two (`LEZIONI.md` §1.9; it was born in `01-b0-terreno.sh`, retired 11 Oct 2026).
 #
 # ===========================================================================
 # ⛔ WHY IT EXISTS — the measurement no eye can make
@@ -256,7 +256,7 @@ mkdir -p "$LAV" || { echo "⛔ cannot create $LAV"; exit 2; }
 
 # ───────────────────────────────────────────────────────────────────────────
 log "1. The terrain: are the tools the ones I believe?"
-# ⛔ `01-b0-terreno.sh`: twice in one day a bench was green on a
+# ⛔ The lesson of `01-b0-terreno.sh` (retired, DECISIONI §10.44): twice in one day a bench was green on a
 #    terrain that was not the one we believed.  Here the terrain is ffmpeg.
 for prog in ffmpeg ffprobe python3; do
 	if command -v "$prog" > /dev/null; then ok "$prog: $(command -v "$prog")"

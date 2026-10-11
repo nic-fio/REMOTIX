@@ -79,11 +79,11 @@ S2 = p("The bench folder is a record, not a toolbox: most files were written for
         [c("14-stress/"), "14", "the first night-stress harness, run from the tablet; superseded by " + c("16-stress/")],
         [c("15-suite/"), "15", "the functional suite with real browsers, its register and defect list"],
         [c("16-stress/"), "16, 20", "the stress ramp, the actors, the classifier; the xrdp comparison twin"],
-        [c("17-distro/") + ", " + c("17-t2/") + " … " + c("17-t9/"), "17", "distribution VMs and boxes, the benches of "
-         "the installer's milestones T2–T9 (T4, T8 and T9 are kept as history and are not run, except "
+        [c("17-distro/") + ", " + c("17-t2/") + " … " + c("17-t8/"), "17", "distribution VMs and boxes, the benches of "
+         "the installer's milestones T2–T8 (T4 and T8 are kept as history and are not run, except "
          + c("t8-browser.py") + ", which T10 still uses)"],
-        [c("18-a1/") + ", " + c("18-scheda/") + ", " + c("18-software/"), "18", "old-vs-new comparisons when ffmpeg "
-         "left the product"],
+        [c("18-scheda/"), "18", "only the Chrome decoding page that " + c("19-vulkan/") + " still uses; the "
+         "old-vs-new comparisons of phase 18 were retired on 11 Oct 2026 (" + c("DECISIONI.md") + " §10.44)"],
         [c("19-vulkan/") + ", " + c("19-nvidia/") + ", " + c("19-android/"), "19", "Vulkan Video vs VA-API, the NVIDIA "
          "rental bench, the Android phone bench"],
         [c("rcp/"), "1", "the twin copy of the RCP module, compiled into the ngtcp2 example server"],
@@ -632,21 +632,17 @@ S11 = p("Phase 17 tests REMOTIX where an administrator would install it: on the 
          "Boxes for all combinations.") + \
     p(c("17-t2/") + " measured what kills desktops when the service stops (nothing does, 29 Sep 2026); "
       + c("17-t6/") + " PAM, SELinux and firewall per family; " + c("17-t7/") + " updating without closing "
-      "desktops on the four boxes. " + c("17-t4-motore.sh") + ", " + c("17-t8/") + " and " + c("17-t9/")
+      "desktops on the four boxes. " + c("17-t4-motore.sh") + " and " + c("17-t8/")
       + " test an installer that no longer exists (separate plan and apply, signed archive, answer files) and are "
-      "kept as history; their headers say so and they are not run — except " + c("t8-browser.py") + ", the browser "
+      "kept as history (T9 was retired on 11 Oct 2026, " + c("DECISIONI.md") + " §10.44); their headers say so and they are not run — except " + c("t8-browser.py") + ", the browser "
       "that stays attached during the update, which " + c("17-t10.sh") + " still uses.")
 
 # ── 16.12 ────────────────────────────────────────────────────────────────────
 S12 = p("When an encoder path changes, the old path stays alive as a term of comparison until the new one has "
-        "been measured against it on the same frames.", lead=True) + \
+        "been measured against it on the same frames. Once measured, the comparison is retired: the phase-18 ones "
+        "(18-a1, 18-confronto, 18-software) went on 11 Oct 2026 ("
+        + c("DECISIONI.md") + " §10.44), their results stay in " + c("fasi/18-senza-ffmpeg.md") + ".", lead=True) + \
     table(["Folder", "Compares", "How it judges"], [
-        [c("18-a1/"), "the old " + c("audio.c") + " (through libavcodec, copied verbatim from the starting commit) and the new one (libopus directly)",
-         "same input, both outputs, plus decoding in Chrome"],
-        [c("18-scheda/"), "the old VA-API path through libavcodec and the new direct libva path (" + c("vadiretta.c") + ")",
-         "streams, logs and " + c("esiti.jsonl") + " per test, a table (" + c("18-tabella.py") + "), Chrome decoding"],
-        [c("18-software/"), "the old software fallback against OpenH264 and SVT-AV1 called directly",
-         "colours, encoding, events, refusals on the same desktop scene"],
         [c("19-vulkan/"), "Vulkan Video (" + c("vulkanvideo.c") + ") against VA-API on the same card, and the integrated "
          "engine that chooses by capability", c("ffmpeg") + "/" + c("ffprobe") + " only as measuring tools (PSNR, SSIM, "
          "profile, level), plus a Chrome decoding test"],
