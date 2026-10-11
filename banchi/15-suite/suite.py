@@ -176,7 +176,7 @@ class Outcomes:
         assert outcome in (PASS, FAIL, BLOCKED), outcome
         if outcome in (FAIL, BLOCKED) and not rationale:
             rationale = "(no reason given: bench defect)"
-        r = {"function": function, "passed": passed, "outcome": outcome,
+        r = {"function": function, "pass": passed, "outcome": outcome,
              "rationale": rationale, "expected": expected, "observed": observed,
              "fault_seen": fault_seen, "evidence": list(evidence or []),
              "version": self.version}

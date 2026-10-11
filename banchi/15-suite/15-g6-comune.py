@@ -426,7 +426,7 @@ def turn_on_at_size(s, largo, alto):
             S.VERI.WINDOW[:] = [largo, alto]
             o.width = 0                           # no «maximised»
         else:
-            o.width, o.height = width, height
+            o.width, o.height = largo, alto
         s.turn_on_browser()
     finally:
         S.VERI.WINDOW[:] = old

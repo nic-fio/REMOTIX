@@ -437,7 +437,7 @@ def main():
             print("   ⛔ injected: %s%s" % (chi, (" — " + note) if note else ""))
 
         users = all_users()
-        homes = case_in(a.homes)
+        case = case_in(a.homes)
         if users is None or case is None:
             outcome, u, c, pf, why = judgment(users, case, {}, None)
             print("   ⚠ %s" % why)

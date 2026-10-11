@@ -124,7 +124,7 @@ def dump(fpath):
             continue
         kind = (data[body] >> 1) & 0x3F
         nal.append({"indice": k, "offset": off, "prefix": long,
-                    "kind": kind, "name": NAMES.get(kind, f"kind{kind}"),
+                    "type": kind, "name": NAMES.get(kind, f"kind{kind}"),
                     "byte": fine - body})
     return {"file": os.path.basename(fpath), "byte_totali": len(data),
             "nal": nal}
@@ -315,7 +315,7 @@ def mangle(fpath, mode, out_path):
 
     with open(out_path, "wb") as f:
         f.write(bytes(report))
-    print(json.dumps({"mode": mode, "note": note, "out_path": out_path,
+    print(json.dumps({"mode": mode, "note": note, "exit": out_path,
                       "byte": len(report)}, ensure_ascii=False))
     return 0
 

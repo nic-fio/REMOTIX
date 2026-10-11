@@ -113,7 +113,7 @@ def dump(fpath):
             trim = len(data) - i
         load = data[i:i + trim]
 
-        entry = {"offset": start, "kind": kind, "name": NAMES.get(kind, f"kind{kind}"),
+        entry = {"offset": start, "type": kind, "name": NAMES.get(kind, f"kind{kind}"),
                 "byte": trim, "has_size": bool(has_size)}
         if kind in (OBU_FRAME, OBU_FRAME_HEADER) and load:
             first = load[0]
@@ -223,7 +223,7 @@ def mangle(fpath, mode, out_path):
 
     with open(out_path, "wb") as f:
         f.write(bytes(report))
-    print(json.dumps({"mode": mode, "note": note, "out_path": out_path,
+    print(json.dumps({"mode": mode, "note": note, "exit": out_path,
                       "byte": len(report)}, ensure_ascii=False))
     return 0
 

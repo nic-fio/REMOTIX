@@ -517,7 +517,7 @@ class AudioSieve:
            server sends garbage».
         """
         self.on_wire += 1
-        new_one = self.rule == "new_one"
+        new_one = self.rule == "new"
 
         if self.last_instant is not None and instant == self.last_instant:
             # ⚠ With the OLD rule `duplicates` is a SUB-COUNT of

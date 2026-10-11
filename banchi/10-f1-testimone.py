@@ -316,7 +316,7 @@ def judge(fpath):
     return {
         "verdict": verdict,
         "width": w, "height": h,
-        "mean": round(mean, 3),
+        "mean": round(media, 3),
         "dev": round(float(f.std()), 3),
         "minimum": int(img.min()), "maximum": int(img.max()),
         "colors": colors,

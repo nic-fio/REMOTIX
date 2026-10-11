@@ -378,8 +378,8 @@ def technical_layer(o, desktop, meta):
         with open(os.path.join(ev, "uscita.log"), "w") as f:
             f.write(t)
         queue = [x for x in t.splitlines() if x.strip()][-1:] or [""]
-        lines.append({"round": o.round, "test": "T-%s-%s%s" % (name, d, "-guasto" if guasto else ""),
-                      "function": name, "pass": "fault" if fault else "healthy",
+        lines.append({"round": o.round, "test": "T-%s-%s%s" % (name, d, "-fault" if guasto else ""),
+                      "function": name, "pass": "fault" if guasto else "healthy",
                       "prova": "11-accendi.sh %s" % below, "desktop": d, "browser": "-",
                       "version": "", "system": SYSTEM,
                       "binary": meta.get(d, {}).get("binary", "?"),
@@ -434,7 +434,7 @@ def main():
     o = a.parse_args()
     o.desktop = [x for x in o.desktop.split(",") if x]
     o.browser = [x for x in o.browser.split(",") if x]
-    tests = read_tests(o.tests)
+    prove = read_tests(o.tests)
     if o.list:
         for p in prove:
             print("%-44s %-28s %s%s%s" % (p["name"], ",".join(p["functions"]),
