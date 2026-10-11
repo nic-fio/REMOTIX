@@ -98,8 +98,8 @@ S2 = p("Quality is not decided in one place. The encoder lives in the per-user c
     ], "«TAB» — Every quality and capacity switch, its default and where it lives") + \
     p("Two of these live in the child, which is a separate program started with " + c("execve") + " and a "
       "freshly composed environment: they cannot travel as environment variables. " + c("children_phase9()")
-      + " (the phase 9 settings for the children) stores them and the child's command line carries " + c("--quality-recovery") + " and "
-      + c("--bandwidth-cap-mbit") + " (and the audio-silence switch) when it is built. Every switch writes its "
+      + " stores them and the child's command line carries " + c("--quality-recovery") + ", "
+      + c("--bandwidth-cap-mbit") + " and " + c("--no-audio-silence") + " when it is built. Every switch writes its "
       "value in force at startup, <i>on and off</i>: “switched off” and “never had to act” must not look the "
       "same in the log.") + \
     note("each cure has exactly one way to be switched off. The temporary environment bridge for the queue threshold was removed on 23 August 2026 "
@@ -130,8 +130,8 @@ S3 = p("By default the encoder runs at a <b>constant QP of 26</b> (" + c("QP_HAR
     p("Under VBR the QP is silently ignored, which would turn the quality ladder and the quality rise into "
       "no-ops: a component that ignores an option without saying so is precisely the failure this file exists "
       "to avoid. The three numbers of the cap are <b>derived</b> from the floor given on the command line, never "
-      "written by hand (" + c("wire_cap()") + " (wire), " + c("point_cap()") + " (working point), "
-      + c("reservoir_cap_bit()") + " (buffer in bits)):") + \
+      "written by hand (" + c("wire_cap()") + ", " + c("point_cap()") + ", "
+      + c("reservoir_cap_bit()") + "):") + \
     table(["Number", "Rule", "At 20 Mbit/s", "Why"], [
         ["Wire (max rate)", c("WIRE_CAP_QUOTA") + " = 80 % of the floor", "16 Mbit/s",
          "Measured: with zero video, audio, input, clipboard and QUIC overhead take 2.4 Mbit/s; 16 + 2.4 = 92 % of the floor"],
@@ -140,13 +140,13 @@ S3 = p("By default the encoder runs at a <b>constant QP of 26</b> (" + c("QP_HAR
         ["Buffer (VBV)", c("VBV_CAP_MS") + " = 40 ms of the wire", "640 kbit",
          "The 40 ms target of our piece, not the 50 ms cap. v1 used " + c("bit_rate / 2") + ", which is half a <i>second</i>"],
     ], "«TAB» — The three numbers of the bandwidth cap, derived from the floor") + \
-    p("The mode is <b>asked for by name</b> (" + c("wanted_bitrate_mode()") + ", the wanted bitrate mode) and checked against the mask the "
+    p("The mode is <b>asked for by name</b> (" + c("wanted_bitrate_mode()") + ") and checked against the mask the "
       "driver declares: on VA-API the declared rate-control bits are read with " + c("vaGetConfigAttributes")
       + " and printed in clear, and a mode the driver does not declare makes the encoder fail loudly instead "
-      "of falling back to a mode nobody chose. " + c("cap_in_three_numbers()") + " (the cap in three numbers) refuses a working point "
-      "not below the wire and a non-positive buffer, and " + c("reservoir_within_50_ms()") + " (buffer within 50 ms) refuses a buffer "
+      "of falling back to a mode nobody chose. " + c("cap_in_three_numbers()") + " refuses a working point "
+      "not below the wire and a non-positive buffer, and " + c("reservoir_within_50_ms()") + " refuses a buffer "
       "longer than 50 ms. On Vulkan Video, which has no QVBR, the cap becomes VBR with the requested QP as the "
-      "floor of the controller (" + c("open_vulkan_card()") + ", which opens the Vulkan encoder); without the cap the card must declare CQP.") + \
+      "floor of the controller (" + c("open_vulkan_card()") + "); without the cap the card must declare CQP.") + \
     warn("the cap applies only to hardware encoding — since phase 19 there is no other kind — and the value "
          "passed is a <i>floor</i>, not a ceiling. The code comments and the phase 9 measurements use 20 Mbit/s; "
          "the declared product floor is 30 (" + c("DECISIONI.md") + " §3.1-sexies). Whoever switches the cap on "
@@ -159,15 +159,15 @@ S3 = p("By default the encoder runs at a <b>constant QP of 26</b> (" + c("QP_HAR
 S4 = p("RCP.md §6.2 forbids a video frame larger than 16 MiB: the sender must re-encode it at a lower quality "
        "and log it, never send it. That rule is the only thing that moves the QP of a running encoder.",
        lead=True) + \
-    p("When a frame comes out of the card above " + c("FRAME_CAP") + " (the frame ceiling, 16 777 216 "
-      "bytes), " + c("compress_common()") + " (the shared compression path) logs it, records the step on which the cap bit (" + c("failed_quality") + "), "
-      "and " + c("lower_quality()") + " (lower the quality) raises the QP by " + c("CRF_STEP") + " (the step) = 9, capped at 51. Changing "
-      "quality closes and reopens the card context (" + c("change_quality()") + ", change the quality), so the next frame is "
+    p("When a frame comes out of the card above " + c("FRAME_CAP") + " (16 777 216 "
+      "bytes), " + c("compress_common()") + " logs it, records the step on which the cap bit (" + c("failed_quality") + "), "
+      "and " + c("lower_quality()") + " raises the QP by " + c("CRF_STEP") + " = 9, capped at 51. Changing "
+      "quality closes and reopens the card context (" + c("change_quality()") + "), so the next frame is "
       "always a <b>keyframe</b>. The ladder from the default is therefore 26 → 35 → 44 → 51.") + \
     table(["Frame", "How far down", "If it still does not fit"], [
         ["Keyframe", "The whole ladder: a keyframe may not be abandoned (RCP.md §5.2)",
          "At 51 it is not sent, and the log says “nothing left to lower”"],
-        ["Delta", c("MAX_REENCODES") + " (maximum re-encodings) = 3 encodings in total: 26, 35, 44 — two descents, both tried",
+        ["Delta", c("MAX_REENCODES") + " = 3 encodings in total: 26, 35, 44 — two descents, both tried",
          "Abandoned. The reopened context makes the next frame a keyframe, so the client never loses its reference"],
     ], "«TAB» — How a frame over the cap is handled") + \
     p("The step was 6 until 22 August 2026, and it was one step short: at 7680×4320 with almost incompressible "
@@ -181,9 +181,9 @@ S4 = p("RCP.md §6.2 forbids a video frame larger than 16 MiB: the sender must r
       "the cap. A percentage of 100 or less would be a descent out of prudence, which I1 forbids, and the line "
       "would prove it on its own.") + \
     note("until 23 August 2026 the delta branch was dead code: the counter read " + c("next_key")
-         + " (next frame is a key) inside the loop, and every reopen set it, so a delta always walked the whole ladder while the "
+         + " inside the loop, and every reopen set it, so a delta always walked the whole ladder while the "
          "startup line claimed it stopped after three attempts. The frame's kind is now decided once, before "
-         "the first descent (" + c("key_requested") + ", key requested).", "A dead branch, fixed.")
+         "the first descent (" + c("key_requested") + ").", "A dead branch, fixed.")
 
 # ── 5. Quality recovery ────────────────────────────────────────────────────
 S5 = p("Before phase 9 the QP was a ratchet: four writes, all downwards. One exceptional frame left the "
@@ -196,9 +196,9 @@ S5 = p("Before phase 9 the QP was a ratchet: four writes, all downwards. One exc
         ["Back onto the failed step", "twice the wait", "The step where the cap bit is a measured fact, not a suspicion"],
         [c("RISE_WAIT_MAX"), "3840 frames (~64 s)", "The wait doubles at every relapse and never comes back down"],
     ], "«TAB» — The numbers of the quality rise") + \
-    p(c("raise_quality()") + " (raise the quality) runs at the entry of the next frame, never with a packet in hand (closing the "
+    p(c("raise_quality()") + " runs at the entry of the next frame, never with a packet in hand (closing the "
       "context frees its bytes). It climbs one step at a time and never above the quality the caller "
-      "requested. A relapse right after a climb doubles the wait (" + c("recently_risen") + ", recently raised). The two "
+      "requested. A relapse right after a climb doubles the wait (" + c("recently_risen") + "). The two "
       "defences against flapping are the eighth-of-the-cap margin — a scene sitting at 95 % of the cap never "
       "produces a calm frame — and the doubling, which halves the reopen rate at every round. If the context "
       "does not reopen at the new value, it falls back to the old one: climbing is optional, and a cure that "
@@ -209,7 +209,7 @@ S5 = p("Before phase 9 the QP was a ratchet: four writes, all downwards. One exc
 # ── 6. The queue threshold ────────────────────────────────────────────────
 S6 = p("Each video frame travels on its own unidirectional QUIC stream. When a newer frame is produced while an "
        "older delta still has bytes in <i>our</i> send queue, RCP.md §5.1 allows (it does not require) a "
-       + c("RESET_STREAM") + " of the old one. " + c("video_clear_out()") + " (clear the video queue) decides when to use that permission.",
+       + c("RESET_STREAM") + " of the old one. " + c("video_clear_out()") + " decides when to use that permission.",
        lead=True) + \
     p("Until 23 August 2026 every older delta was abandoned at once. On the test machine, with a 3-second dip "
       "to 10 Mbit/s and a 1920×1080 scene, abandonments and keyframes went <b>one to one</b>, even on the wide "
@@ -229,35 +229,35 @@ wait >  threshold, a KEY in queue -> keep the deltas behind it (22 Sep 2026)
       "the deltas behind it did not shorten it, but opened a gap, which requested another large keyframe — "
       "abandons climbed by one per keyframe, 7 → 13 in 6 s, and then the dead line fired. Behind a keyframe "
       "the deltas are kept, and braking production is left to the rate regulator.") + \
-    p("The price, measured 23–24 August 2026 (bench 09-b79, together with the rate regulator): up to "
+    p("The price, measured 23–24 August 2026 (bench 09-b79 together with the rate regulator; the bench was retired on 11 Oct 2026, " + c("DECISIONI.md") + " §10.44, and its results stay in " + c("fasi/09-la-qualita-e-la-degradazione.md") + "): up to "
       "<b>+160 ms</b> of drift on a bad line, <b>zero</b> on a healthy one (39.85 / 40.19 / 39.63 frames/s in "
       "the three arms, no keyframes in any of them). " + c("--clear-threshold-ms 0") + " restores the old "
       "behaviour byte for byte.")
 
 # ── 7. The rate regulator ─────────────────────────────────────────────────
 S7 = p("The rate regulator is the only mechanism that lowers the frame rate, and it does so on a local fact: "
-       "<b>" + c("arretrato") + "</b> (backlog), the number of live, non-key deltas that still have bytes in our send "
+       "<b>" + c("backlog") + "</b>, the number of live, non-key deltas that still have bytes in our send "
        "queue, read when a new frame arrives and before " + c("video_clear_out()") + ".", lead=True) + \
-    p(c("rate_brake()") + " (rate brake) returns “do not send” when " + c("arretrato") + " reaches "
-      + c("WT_RATE_SLOTS") + " (rate slots) = 2: one frame of overlap is allowed, two left behind are not. Nothing comes from outside — no loss "
+    p(c("rate_brake()") + " returns “do not send” when " + c("backlog") + " reaches "
+      + c("WT_RATE_SLOTS") + " = 2: one frame of overlap is allowed, two left behind are not. Nothing comes from outside — no loss "
       "rate, no reorder, no client silence can distort it — and there is no state to climb back: the quantity "
       "is re-read at every frame, so the episode ends by itself when the queue empties. Keyframes never pass "
       "through it; they have their own pacing (" + rif("Keyframe request pacing") + ").") + \
     table(["Fact", "Consequence"], [
         ["The threshold is its prerequisite", "With " + c("--clear-threshold-ms 0") + " the queue is emptied at every "
-         "frame, " + c("arretrato") + " can never exceed 1, and the regulator never fires. The startup log says "
+         "frame, " + c("backlog") + " can never exceed 1, and the regulator never fires. The startup log says "
          "so explicitly when that combination is chosen"],
         ["It brakes downstream of the encoder", "The dropped frame was already encoded and the encoder's "
          "references moved on. Since 23 September 2026 a drop marks the stream as damaged ("
          + c("rcp_video_discarded_before_wire()") + ") and requests a keyframe at once (" + c("video_rule()")
          + ", the only place that asks the stage for a key). Without it the client saw an image decaying into tiles with every counter green (27 and 38 "
          "drops, 0 gaps, 1 key in the session)"],
-        ["One keyframe per episode", c("needs_key") + " (key needed) is a boolean cleared only when the key has left whole, "
+        ["One keyframe per episode", c("needs_key") + " is a boolean cleared only when the key has left whole, "
          "and deltas behind that key are not abandoned"],
         ["Two log lines per episode", c("the rate DROPS") + " with " + c("backlog") + ", slots, queue bytes, "
          + c("cwnd") + ", " + c("cwnd_left") + ", bytes in flight, RTT and the queue inside the network ("
          + c("smoothed_rtt - min_rtt") + "); " + c("the rate RISES") + " with the duration. Never one line per frame"],
-        ["One line per second while on", c("rate_cycle()") + " (the once-a-second rate tick) prints " + c("backlog READ N times")
+        ["One line per second while on", c("rate_cycle()") + " prints " + c("backlog READ N times")
          + ", how many times the backlog was read: <i>zero reads</i> means a still scene, not “zero backlog”"],
     ], "«TAB» — What the regulator depends on and what it costs") + \
     p("Measured in the phase 9 paired comparison: keyframes dropped from 51.7–88.1 % of frames to 0.0–5.6 %, "
@@ -278,7 +278,7 @@ S8 = p("A keyframe is about ten times a delta. Asking for one at every sign of t
        "RCP.md §5.2 names: during a burst of losses the requests multiply and every keyframe worsens the "
        "condition that caused it. Both ends pace their requests.", lead=True) + \
     table(["Where", "Constant", "Value", "Rule"], [
-        ["Page", "—", "1 per gap, re-asked after 1 s", c("Viewer.hole()") + " (Screen.gap): while a gap is open no second "
+        ["Page", "—", "1 per gap, re-asked after 1 s", c("Viewer.hole()") + ": while a gap is open no second "
          "request is sent; if the key has not arrived after 1 s it is asked again (the server may ignore one)"],
         ["Server, RCP", c("V_GRACE_KEY"), "200 ms", "A request within 200 ms of the last keyframe sent may be ignored"],
         ["Server, towards the child", c("WT_KEY_REQUEST_MS"), "150 ms", "The floor between two requests to the capture process"],
@@ -297,7 +297,8 @@ S8 = p("A keyframe is about ten times a delta. Asking for one at every sign of t
         ["15 Mbit/s, moving desktop", "150 (inert)", "4 076 · 3 944 → 3 984 · 3 830", "743 · 742 → 683 · 677"],
         ["3 Mbit/s, moving desktop", "~171 ms", "371 · 462 → 1 552 · 1 595 · 1 725", "115 · 99 → 89 · 128"],
         ["1 Mbit/s, moving desktop", "600–1000 ms", "15 → 577", "57 → 47"],
-    ], "«TAB» — Bench 07-b65, 21 Aug 2026 evening, test machine, alternating runs differing by one line") + \
+    ], "«TAB» — Bench 07-b65, 21 Aug 2026 evening, test machine, alternating runs differing by one line (the bench was "
+      "retired on 11 Oct 2026, DECISIONI.md §10.44)") + \
     p("Where there is bandwidth the cure declares itself inert (" + c("the measured bandwidth is enough: the 150 ms backstop remains")
       + ", 100 times out of 101 at 15 Mbit/s). On a narrow line the image stays broken longer after "
       "a loss — that is the price, and it is visible — and in exchange the audio, whose datagrams found "
@@ -313,17 +314,17 @@ S9 = p("The fifth cure is of another kind: it does not decide how well the deskt
         ["<b>Silence</b>", "No packet from the client for N s, with at least " + c("WT_LM_MIN_PROVE") + " = 2 of our "
          "packets sent in the meantime", c("WT_LM_SILENCE_S") + " = 10 s"],
     ], "«TAB» — The two causes of the dead line") + \
-    p(c("dead_line_judge()") + " (judge the dead line) evaluates both from two monotonic local counters (video bytes handed to "
+    p(c("dead_line_judge()") + " evaluates both from two monotonic local counters (video bytes handed to "
       "ngtcp2, frames offered by the child) and from ngtcp2's received-packet counter; time enters only as the "
-      "distance between two samples. When either fires, " + c("dead_line_fires()") + " (fire the dead line) writes one line "
+      "distance between two samples. When either fires, " + c("dead_line_fires()") + " writes one line "
       "starting with " + c("dead-line") + " that carries every number of the decision (" + c("cause=") + ", "
       + c("stall_ms=") + ", " + c("silence_ms=") + ", " + c("unanswered=") + ", " + c("cwnd=") + ", " + c("rate_dropping=")
       + " …), and the transport, the only owner of the QUIC connection, closes it. With the dead line on, the "
       "transport's PINGs move from 10 s to half the silence threshold (5 s), or “the client does not answer” "
       "and “we never asked” would look the same.") + \
-    p("The stall threshold sits 5.0× above the longest empty second of " + c("burst-1") + " (burst 1, a line that "
-      "holds, 23.94 frames/s) and 2.9× below the 14.26 s freeze of " + c("burst-heavy") + " (strong burst, a line that serves "
-      "nobody); on " + c("bad-home") + " (bad home line), the worst line that holds for ten minutes, the stall never exceeded "
+    p("The stall threshold sits 5.0× above the longest empty second of " + c("burst-1") + " (a line that "
+      "holds, 23.94 frames/s) and 2.9× below the 14.26 s freeze of " + c("burst-heavy") + " (a line that serves "
+      "nobody); on " + c("bad-home") + ", the worst line that holds for ten minutes, the stall never exceeded "
       "500 ms — a margin above 10× (measured 23–24 Aug 2026, test machine, " + c("netem") + " profiles). It is the "
       "most expensive cure: a wrong threshold would throw out someone who is working, so whoever touches "
       + c("WT_LM_STALL_MS") + " must measure those two margins again.") + \
@@ -352,14 +353,15 @@ S10 = p("Two of the five phase 9 cures change nothing the user sees, and were sw
          "A block whose samples are all exactly zero does not become a datagram",
          "102.1× less traffic on a still screen (557.6 → 5.5 kbit/s); 1 248 blocks silenced out of 1 248; "
          "+2 “missing” out of 5 000 at the client"],
-    ], "«TAB» — The two invisible cures (bench 09-b84 and the ghost bench, 23–24 Aug 2026, test machine)") + \
+    ], "«TAB» — The two invisible cures (bench 09-b84 and the ghost bench, 23–24 Aug 2026, test machine; 09-b84 "
+       "was retired on 11 Oct 2026, DECISIONI.md §10.44)") + \
     p("The eviction removes a false sentence rather than adding one: the old refusal claimed the user was "
       "“connected from another device” when it was usually their own dead session. The audio side is described "
       "in " + rif("Audio and clipboard") + ".")
 
 # ── 11. The composition budget ────────────────────────────────────────────
 S11 = p("Until 25 August 2026 the server accepted everyone and starved everyone together: on the saturated "
-        "scene the eleventh user entered with " + c("negati 0") + " (refused: 0) and the first session fell from 39.60 to "
+        "scene the eleventh user entered with zero refusals and the first session fell from 39.60 to "
         "0.96 frames/s (−97.6 %). " + c("src/budget.c") + " is the cure: it computes, before a desktop is "
         "started, whether the machine can afford one more.", lead=True) + \
     table(["Where it gives way (Intel UHD 770, i5-13500T, 24 Aug 2026)", "Ceiling"], [
@@ -373,22 +375,22 @@ S11 = p("Until 25 August 2026 the server accepted everyone and starved everyone 
       "0.6 % across canvas sizes while frames/s differ by 74.9 %: the budget can only <i>count</i> composition, "
       "and it counts it in composed pixels per second.") + \
     code("""
-fits(inside, new)  <=>  sum of demand(inside) + peggiore(new)  <=  C * 1.01
+fits(inside, new)  <=>  sum of demand(inside) + worst(new)  <=  C * 1.01
                          AND  no tenant's median delay > 22.9 ms
 
-demand(t)   = peggiore(t)                           if t never delivered, or has no delay sample
-            = max(consegnato(t), F * peggiore(t))   otherwise
-peggiore(t) = canvas_width * canvas_height * 39.54 / 1e6    Mpixel/s
-""", "text", "The admission rule of budget.c (peggiore = worst case, consegnato = delivered)") + \
+demand(t)   = worst(t)                              if t never delivered, or has no delay sample
+            = max(delivered(t), F * worst(t))       otherwise
+worst(t)    = canvas_width * canvas_height * 39.54 / 1e6    Mpixel/s
+""", "text", "The admission rule of budget.c") + \
     table(["Constant", "Value", "Origin"], [
         [c("BUDGET_MAX_FPS"), "39.54 frames/s", "What one session alone delivered on this hardware, first step of the climb to eleven sessions (1920×1080 H.264, saturated scene). The second number of the machine: re-measure it with the first"],
         [c("BUDGET_STRAIN_DELAY_MS"), "22.9 ms", "Geometric mean of healthy steps (≤ 13.1 ms) and broken steps (≥ 39.9 ms), which do not overlap. Valid for that scene and that hardware"],
         [c("BUDGET_DEFAULT_RESERVE"), "0.5", "With F = 0.5 the predictor makes 0 false yes and 0 false no on the data available"],
         [c("BUDGET_TOLERANCE"), "1 %", "The repeatability of the meter (±0.6 %); the capacity is a peak that was seen to hold"],
         [c("BUCKETS") + " × " + c("BUCKET_US"), "8 × 250 ms = 2 s", "Window of delivered pixels; buckets let an idle tenant decay to zero"],
-        [c("DELAYS") + " (delays)", "32 samples, median", "One hiccup must not refuse a user; ~0.8 s at 40 frames/s"],
+        [c("DELAYS"), "32 samples, median", "One hiccup must not refuse a user; ~0.8 s at 40 frames/s"],
     ], "«TAB» — The numbers of the budget") + \
-    p("<b>The accumulator.</b> " + c("deposit_frame()") + " (deposit a frame) in " + c("src/main.c") + " already received every "
+    p("<b>The accumulator.</b> " + c("deposit_frame()") + " in " + c("src/main.c") + " already received every "
       "frame of every child with width, height and capture instant, so no new channel between processes was "
       "needed: " + c("budget_deposit()") + " is called there, before the frame is broadcast and without any "
       "“is someone watching” guard. That is deliberate: a session whose client has left keeps encoding until its "
@@ -407,8 +409,8 @@ peggiore(t) = canvas_width * canvas_height * 39.54 / 1e6    Mpixel/s
     p("<b>Unknown is not zero.</b> A tenant that has not yet delivered a full 2-second window, or has no delay "
       "sample, is counted at its worst case; its canvas is that of its last frame or, if none, the stage canvas, "
       "the largest any session can get. The newcomer is counted at the minimum of the stage canvas and its "
-      + c("video.max_size") + " (" + c("wt_max_size_of()") + ", the maximum size declared by that user's client), because the real canvas is only "
-      "decided at " + c("SESSION") + ", later. A missing monotonic clock gives " + c("BUDGET_UNKNOWN") + " (“I don't know”), which "
+      + c("video.max_size") + " (" + c("wt_max_size_of()") + "), because the real canvas is only "
+      "decided at " + c("SESSION") + ", later. A missing monotonic clock gives " + c("BUDGET_UNKNOWN") + ", which "
       "admits and logs: a budget that refused for having failed to measure would make the user pay for our fault.") + \
     warn("the budget is off by default (" + c("--budget-mpixel-s 0") + ") and never calibrates itself. Before the "
          "machine has given way once, the highest capacity read is a lower bound, not a ceiling. Whoever types "
@@ -440,11 +442,11 @@ ADMISSION = seq(
 S12 = p("A refusal decided after the desktop has started is not a refusal: it is a login followed by an "
         "eviction. Measured in phase 10: a user who was never admitted had 42 processes and a "
         + c("gnome-shell") + ". Since 25 August 2026 both limits are checked in " + c("delivery_verdict()")
-        + " (deliver the verdict) <b>before</b> " + c("children_ensure_from()") + " (ensure the user's child) starts "
+        + " <b>before</b> " + c("children_ensure_from()") + " starts "
         "the child.", lead=True) + ADMISSION + \
     table(["Check", "Counted on", "Refusal", "Phrase on the page (translated)"], [
         ["<b>Session cap</b> — " + c("--session-cap") + " (10)", c("stage_count()")
-         + " (how many stages): live children plus desktops found at startup and awaiting reattach",
+         + ": live children plus desktops found at startup and awaiting reattach",
          c("0x0E SESSION_UNSERVABLE") + " — an administrative limit",
          "the server could not open the session, it is not your fault; retry, and ask the administrator if it repeats"],
         ["<b>Composition budget</b> — " + c("--budget-mpixel-s"), "every stage with a child, plus the found desktops",
@@ -454,8 +456,8 @@ S12 = p("A refusal decided after the desktop has started is not a refusal: it is
     p("The two refusals are deliberately different (" + c("fasi/10-multi-tenant-e-il-budget.md") + " §8.1 D5): "
       "two different facts may not share an outcome. Neither is checked on a <b>resume</b> — a user whose stage "
       "already exists is already inside both counts, and refusing their reattach would be a false no on capacity "
-      "they are spending anyway. The refusal is sent <i>after</i> " + c("transport_verdict()") + " (hand the verdict to the transport), "
-      "through " + c("wt_dismiss_user()") + " (dismiss every connection of the user): that order resets the failed-password counter of the address, and the "
+      "they are spending anyway. The refusal is sent <i>after</i> " + c("transport_verdict()") + ", "
+      "through " + c("wt_dismiss_user()") + ": that order resets the failed-password counter of the address, and the "
       "client never sees " + c("ADMITTED") + ", only the farewell. The body of the " + c("FAREWELL") + " carries "
       "the figures (demand, declared capacity, the newcomer's worst case) for the log; the page shows its own "
       "phrase and does not print the body (RCP.md §7.1).") + \
@@ -466,13 +468,13 @@ S12 = p("A refusal decided after the desktop has started is not a refusal: it is
         ["the three values in force, with the option names next to the numbers", "at startup, budget on or off"],
         ["budget ON at N Mpixel/s, reserve, delay threshold, worst case for the stage canvas, tolerance, slots", "at startup, if on"],
         ["budget OFF — this machine ADMITS EVERYONE", "at startup, if off"],
-        ["verdict for «user»: ADMITTED/DENIED · " + c("negati") + " N (of which budget M) over K requests · values in force", "at every verdict, on or off"],
+        ["verdict for «user»: ADMITTED/DENIED · " + c("denied") + " N (of which budget M) out of K requests · values in force", "at every verdict, on or off"],
     ], "«TAB» — The budget's log lines, which every capacity bench reads") + \
     p(c("--session-cap N") + " sizes the four tables that count a user — the attached seats in "
       + c("src/rcp.c") + ", the children in " + c("src/figlio.c") + ", the presence table in " + c("src/main.c")
       + ", the stages in " + c("src/webtransport.c") + " — which used to be five hand-written copies (16, 16, 16, 16 "
-      "and an 8). " + c("MAX_IN_FLIGHT") + " (maximum in flight) in " + c("src/aiutante.c") + " stays separate on purpose: it counts PAM "
-      "verifications in flight, not sessions. The count of refusals, " + c("negati") + ", is written even with the "
+      "and an 8). " + c("MAX_IN_FLIGHT") + " in " + c("src/aiutante.c") + " stays separate on purpose: it counts PAM "
+      "verifications in flight, not sessions. The count of refusals, " + c("denied") + ", is written even with the "
       "budget off, because reading zero there is the fact that proves the product behaves as before.")
 
 # ── 13. Capacity measured ─────────────────────────────────────────────────
@@ -500,7 +502,7 @@ S13 = p("How many sessions fit depends on the hardware and on the scene, and is 
         "hardware it has to be re-measured and recompiled.", "Calibrating.")
 
 # ── 14. Configuring ───────────────────────────────────────────────────────
-S14 = p("On Debian, Ubuntu, Fedora and openSUSE the packaged unit reads " + c("/usr/share/remotix/remotix.conf")
+S14 = p("On every distribution the packaged unit reads " + c("/usr/share/remotix/remotix.conf")
         + " and then " + c("/etc/remotix/remotix.conf.d/*.conf") + "; any extra server option goes into the "
         + c("REMOTIX_OPTIONS") + " variable of a drop-in file there.", lead=True) + \
     code("""

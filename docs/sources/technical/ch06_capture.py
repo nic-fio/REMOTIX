@@ -9,7 +9,7 @@ FAMILIES = fig(
     + box(40, 170, 250, 56, "mutter.c", "the D-Bus sequence", "blue")
     + box(325, 170, 250, 56, "kwin.c", "the Wayland request", "blue")
     + box(610, 170, 250, 56, "wlroots.c", "frames pulled one by one", "blue")
-    + box(40, 262, 535, 56, "PipeWire node", "frames are pushed: cattura_avvia(node)", "dark")
+    + box(40, 262, 535, 56, "PipeWire node", "frames are pushed: capture_start(node)", "dark")
     + box(610, 262, 250, 56, "No PipeWire", "capture_start_wlr()", "dark")
     + box(160, 356, 580, 60, "cattura.c — one contract", "capture_take() · capture_stopped_free() · counters", "light")
     + arrow(165, 114, 165, 168) + arrow(450, 114, 450, 168) + arrow(735, 114, 735, 168)
@@ -23,32 +23,35 @@ S1 = p("REMOTIX does not grab the physical screen: every session has its own vir
        "behind the four desktops, and they deliver frames in two opposite directions. GNOME and KDE "
        "<i>push</i> frames through a PipeWire node; labwc (the compositor REMOTIX runs under XFCE and LXQt) "
        "has no node at all, and frames are <i>pulled</i> one by one. All three end up behind one interface, "
-       + c("cattura.h") + " (capture), which the per-user child process (" + c("figlio.c") + ") uses in the same way "
+       + c("cattura.h") + ", which the per-user child process (" + c("figlio.c") + ") uses in the same way "
        "on every desktop.", lead=True) + FAMILIES + \
     table(["", "GNOME (Mutter)", "KDE Plasma (KWin)", "XFCE and LXQt (labwc)"], [
-        ["Module that opens the source", c("mutter.c") + " — " + c("mutter_apri()"),
+        ["Module that opens the source", c("mutter.c") + " — " + c("mutter_open()"),
          c("kwin.c") + " — " + c("kwin_open()"), c("wlroots.c") + " — " + c("wlr_open()")],
         ["How frames arrive", "Pushed, PipeWire node from " + c("RecordVirtual"),
          "Pushed, PipeWire node from " + c("stream_output"), "Pulled: " + c("capture_output") + " → "
          + c("copy") + " → " + c("ready") + " per frame"],
         ["Virtual output", "Created by " + c("RecordVirtual") + " every time the stage is mounted (" + c("Meta-1")
-         + ", product name «Virtual remote monitor»)", c("Virtual-0") + ", created by " + c("kwin_wayland_wrapper --virtual --width W --height H")
-         + " when the session is born", "Headless output of labwc (" + c("HEADLESS-1") + "), born 1280×720"],
+         + ", product name «Virtual remote monitor»)", "KWin's only output (" + c("WL-0") + "), the window KWin "
+         "opens full screen inside a labwc without a screen that REMOTIX starts with the session; it has the size "
+         "of labwc's output", "Headless output of labwc (" + c("HEADLESS-1") + "), born 1280×720"],
         ["Access gate", "None beyond the user's own D-Bus session (direct compositor interfaces, no portal)",
          "A " + c(".desktop") + " file that lists the protocol in " + c("X-KDE-Wayland-Interfaces"),
          "None: the only gate is the uid (" + c("/run/user/<uid>") + " is " + c("drwx------") + ")"],
-        ["Resize while live", "Yes: " + c("pw_stream_update_params()"), "No: the output size is fixed by the "
-         "command line; the page rescales", "Yes: " + c("zwlr_output_manager_v1") + " changes the output"],
+        ["Resize", "Live: " + c("pw_stream_update_params()"), "The stage is dismantled, labwc's output is "
+         "resized with " + c("zwlr_output_manager_v1") + ", KWin's output follows and is read back, the stage is "
+         "remounted", "Live: " + c("zwlr_output_manager_v1") + " changes the output"],
         ["Zero copy (DMA-BUF)", "Yes, negotiated with modifiers", "Yes, negotiated with modifiers",
          "Yes, into GBM buffers owned by REMOTIX (“slabs”)"],
         ["Pointer shape", "Mutter cursor metadata (" + c("cursor-mode=2") + ")",
          "KWin cursor metadata (mode 4) carrying the encoded theme pixel",
          "Pointer drawn into the image; a 3×3 probe reads the encoded theme pixel"],
     ], "«TAB» — The capture, desktop by desktop") + \
-    p("Which family is in use is decided once per process by " + c("sessione_desktop()") + " (see "
+    p("Which family is in use is decided once per process by " + c("desktop_session()") + " (see "
       + rif("The four desktops") + "); there is no per-compositor switch inside the capture. Where a "
-      "compositor cannot do something (KWin cannot resize its virtual output), the behaviour is the same "
-      "for everyone that cannot: the stream keeps its size and the page rescales.")
+      "compositor cannot do something, the behaviour is the same for everyone that cannot: the stream keeps "
+      "its size and the page rescales. Since 11 Oct 2026 this applies only to a declared fallback — a KDE "
+      "session whose KWin was started with " + c("--virtual") + " because labwc is missing (" + rif("KDE: the KWin screencast protocol") + ").")
 
 # ── 6.2 ─────────────────────────────────────────────────────────────────────
 S2 = p("The capture has one job, written at the top of " + c("cattura.h") + ": deliver a frame with the "
@@ -69,7 +72,7 @@ S2 = p("The capture has one job, written at the top of " + c("cattura.h") + ": d
          + " up to " + c("MOTION_FPS") + " (60).", "“Send a frame when something changes.” On a still "
          "desktop nothing arrives, and that is a result, not a fault."],
     ], "«TAB» — The three rules of the capture") + \
-    p("The negotiated facts are exposed in " + c("CaptureDelivery") + " (capture delivery; read with " + c("capture_delivery()")
+    p("The negotiated facts are exposed in " + c("CaptureDelivery") + " (read with " + c("capture_delivery()")
       + "), four groups that the code downstream reads instead of recomputing:") + \
     ul(["<b>buffer type</b> — requested (" + c("requested_route") + ", " + c("buffer_requested") + ") and "
         "declared by the producer (" + c("buffer_declared") + "), in separate fields: what arrives is the "
@@ -85,12 +88,12 @@ S2 = p("The capture has one job, written at the top of " + c("cattura.h") + ": d
       + c("measured_pixels") + " sits beside the results so that “not black” and “not looked at” cannot be "
       "confused. Sampling one pixel in eight (0.10 ms) was measured and rejected: a frame black except for one "
       "region would be reported as black.") + \
-    table(["Outcome of " + c("capture_take()") + " (take a frame)", "Meaning", "What the caller does"], [
+    table(["Outcome of " + c("capture_take()"), "Meaning", "What the caller does"], [
         [c("CAPTURE_TAKE_DONE"), "A frame was copied into memory", "Encode from " + c("pixel")],
         [c("CAPTURE_TAKE_PIXEL_ELSEWHERE"), "A frame was delivered on the GPU path: " + c("pixel")
          + " is NULL, " + c("fd") + "/" + c("offset") + "/" + c("stride") + "/" + c("modifier")
          + " describe a DMA-BUF that is <b>retained</b>", "Encode from the descriptor, then "
-         + c("capture_stopped_free()") + " (release the frame)"],
+         + c("capture_stopped_free()")],
         [c("CAPTURE_TAKE_ZERO"), "The stream was active for the whole wait and nothing arrived (still desktop)",
          "Nothing; it is a legitimate zero"],
         [c("CAPTURE_TAKE_FAULT"), "The stream was never active, or has died", "Report, remount the stage"],
@@ -100,7 +103,7 @@ S2 = p("The capture has one job, written at the top of " + c("cattura.h") + ": d
          "pixels live only for the duration of the callback: the copy into REMOTIX's buffer is made there, "
          "and frames that arrive while nobody is waiting are only counted, not copied.",
          "Real-time thread.") + \
-    p(c("CaptureStopped") + " (the captured frame) also carries the timing of the part of the path that precedes the encoder, in "
+    p(c("CaptureStopped") + " also carries the timing of the part of the path that precedes the encoder, in "
       "microseconds of " + c("CLOCK_MONOTONIC") + " (the same clock as " + c("figlio.c") + " and "
       + c("codificatore.c") + "): " + c("arrival_us") + " (when the frame was parked), " + c("copy_us")
       + " (the " + c("memcpy") + " in the callback), " + c("alloc_us") + " (0 when the buffer was reused), "
@@ -125,7 +128,7 @@ SEQ = fig(
     + arrow(115, 232, 555, 232, "#475569", True, label="subscribe PipeWireStreamAdded first", lx=330)
     + arrow(115, 264, 555, 264, label="5  Stream.Start", lx=330)
     + arrow(555, 296, 115, 296, "#475569", True, label="signal: PipeWire node id", lx=330)
-    + arrow(115, 328, 785, 328, label="cattura_avvia(node): format proposal, buffers, metadata", lx=450)
+    + arrow(115, 328, 785, 328, label="capture_start(node): format proposal, buffers, metadata", lx=450)
     + arrow(785, 360, 115, 360, "#475569", True, label="streaming: the virtual monitor now exists", lx=450),
     900, 384, "«FIG» — The obligatory Mutter sequence; any permutation fails with a different error")
 
@@ -177,9 +180,10 @@ S3 = p("On GNOME REMOTIX talks to Mutter's direct D-Bus interfaces, " + c("org.g
 
 # ── 6.4 ─────────────────────────────────────────────────────────────────────
 S4 = p("On Plasma the capture is a Wayland request to KWin: the private protocol "
-       + c("zkde_screencast_unstable_v1") + " (version 5 on KWin 6.3.6), asked for the output "
-       + c("Virtual-0") + ", answers with the id of a PipeWire node. From the node on, the path is the GNOME one: "
-       + c("cattura_avvia(node)") + ".", lead=True) + \
+       + c("zkde_screencast_unstable_v1") + " (version 5 on KWin 6.3.6), asked for KWin's only output ("
+       + c("WL-0") + " when KWin is nested in labwc, " + c("Virtual-0") + " in the " + c("--virtual") + " fallback), "
+       "answers with the id of a PipeWire node. From the node on, the path is the GNOME one: "
+       + c("capture_start(node)") + ".", lead=True) + \
     table(["Step", "What " + c("kwin_open()") + " does"], [
         ["1", "Opens the user's Wayland socket with " + c("kwin_display_open()") + ": " + c("WAYLAND_DISPLAY")
          + " if it answers, otherwise the first " + c("wayland-N") + " in " + c("XDG_RUNTIME_DIR")
@@ -203,16 +207,62 @@ S4 = p("On Plasma the capture is a Wayland request to KWin: the private protocol
       + " pointing to the running binary, protocol declared); it never writes it. The child is an "
       + c("execve") + " of the same binary, so it is the process KWin recognises. KWin's environment also needs "
       + c("XDG_MENU_PREFIX=plasma-") + ", or its service index is built empty.") + \
-    p("<b>The size.</b> KWin on a machine without a seat starts only with the " + c("--virtual") + " backend, "
-      "and there the output is decided by the command line: " + c("kwin_wayland_wrapper --xwayland --virtual "
-      "--width W --height H --no-lockscreen") + ", written by " + c("sessione.c") + " with the size of the "
-      "client that creates the session. A virtual output cannot be resized afterwards, so "
-      + c("stage_size()") + " captures the size KWin reports (" + c("kwin_measure()") + ") and logs that "
-      "the page will rescale.") + \
+    p("<b>The size: KWin nested in labwc.</b> KWin on a machine without a seat cannot use its DRM backend, and its "
+      + c("--virtual") + " backend fixes the output at the start line: up to KWin 6.7 it can neither resize it nor "
+      "create another one, and restarting KWin at a new size killed every program that is not Qt (measured 10 Oct "
+      "2026). Since 11 Oct 2026 (" + c("DECISIONI.md") + " §10.40) KWin is born <i>nested</i>: " + c("sessione.c")
+      + " writes the " + c("ExecStart") + " of " + "Plasma's " + c("plasma-kwin_wayland") + " unit" + " as " + c("remotix --kwin-nested "
+      "W H NODE -- kwin_wayland_wrapper --xwayland --width W --height H --no-lockscreen") + ". That mode of the same "
+      "binary (" + c("kwin_nested_alive()") + ") starts a labwc without a screen (" + c("WLR_BACKENDS=headless")
+      + ", no input devices) in a runtime folder of its own, " + c("$XDG_RUNTIME_DIR/remotix-kwin-host") + ", brings "
+      "its output to W×H, and then becomes the KWin wrapper with " + c("--wayland-display") + " added. KWin opens one "
+      "full-screen window in labwc, and its output follows the size of that window. NODE is the render node labwc "
+      "draws on, " + c("pixman") + " to draw in memory when the card cannot create a buffer, or " + c("-") + ".") + \
+    p("<b>Reattach at another size.</b> The child dismantles the stage first (otherwise KWin's stream would "
+      "renegotiate to a size the fixed offer refuses and die), changes labwc's output with "
+      + c("kwin_host_resize()") + " — the " + c("zwlr_output_manager_v1") + " road of XFCE and LXQt — waits up to "
+      "3 s until KWin's own output reads the new size, and remounts the stage; before mounting, "
+      + c("kwin_host_settle()") + " waits until KWin's output has the host's size, because at birth labwc configures "
+      "KWin's window more than once. The programs of the session stay. Measured 11 Oct 2026: eight reattaches at six "
+      "sizes (1232×864 to 3824×2064) on KWin 6.3.6, resize read back in 18–31 ms, click and typing right every time.") + \
+    table(["What REMOTIX sets", "Why (measured 11 Oct 2026)"], [
+        ["labwc's own " + c("rc.xml") + ", rewritten at every birth and passed with " + c("-C dir")
+         + ": every window full screen (rule matched on " + c("title=\"*\"") + "), no decoration",
+         "The mechanism is «KWin's window = labwc's output». On Leap 16 (labwc 0.8.1) a rule on "
+         + c("identifier") + " never fired: KWin stayed floating and the capture fell back to memory."],
+        ["Zero bindings: one key and one mouse binding, each with the single action " + c("None")
+         + "; " + c("LABWC_UPDATE_ACTIVATION_ENV=0"),
+         "An " + c("rc.xml") + " without bindings makes labwc load its defaults, which start programs "
+         "(Super+Return a terminal, the volume keys " + c("amixer") + "); a program of the same user could press "
+         "them through the virtual-keyboard protocol (" + c("DECISIONI.md") + " §10.43)."],
+        ["Output refresh 240 Hz (" + c("HOST_MHZ") + ")", "labwc presents on its own clock: at 60 Hz the two clocks "
+         "drifted, 52–55 fps instead of 59 for a 60 fps animation at 3824×2064."],
+        ["The ticker: a 1×1 transparent surface in labwc's overlay layer, damaged every " + c("TICKER_MS")
+         + " = 16 ms", "KWin waits for labwc to present a frame before drawing the next, and labwc presents only "
+         "when it repaints: a frame without damage froze KWin for good."],
+        [c("KWIN_FORCE_SW_CURSOR=1"), "Nested KWin has a cursor layer: the pointer went to labwc's screen, which "
+         "nobody sees, and the shape never changed in the page."],
+        ["One transparent pixel on top, inside KWin, on the capture's own connection", "A full-screen window with "
+         "the pointer hidden was handed to labwc as it is (direct scanout) and the picture froze; any window above "
+         "it makes KWin composite as with " + c("--virtual") + "."],
+    ], "«TAB» — The nested KWin: what REMOTIX sets, and the trap behind each line") + \
+    p("<b>Which labwc.</b> The distribution's, from " + c("PATH") + ". RHEL and Alma 10 have no labwc in EPEL, so "
+      "only the Alma package ships its own, labwc 0.8.4 built unmodified against EPEL's wlroots 0.18, at "
+      + c("/usr/lib/remotix/labwc") + " (" + c("make LABWC=…") + " → " + c("REMOTIX_LABWC") + " in " + c("kwin.c")
+      + "; GPL-2.0, text in " + c("THIRD-PARTY-LICENSES") + ", source next to every release; " + c("DECISIONI.md")
+      + " §10.43). labwc never listens on the network, has no screen and no input device, and the user never sees it. "
+      "<b>Without labwc</b> the session still starts, with KWin " + c("--virtual") + " as before: the output keeps "
+      "the size it was born with, " + c("stage_size()") + " captures the size KWin reports (" + c("kwin_measure()")
+      + "), and the fallback is written in the user's journal and in the server log.") + \
+    note("measured 11 Oct 2026 on the Intel UHD 770 (openSUSE Leap 16, KWin 6.4.2, H.264 VA-API, a 60 fps "
+         "animation), nested against " + c("--virtual") + ": 1080p and 2K lose nothing (58 → 58 fps); 3K goes 58 → "
+         "54–55 fps; 4K 58 → 44–49 fps, with the server's frame-to-bytes latency 25.5 → 39.4–39.9 ms. labwc costs "
+         "2.4–3.2 % of one core while frames flow. On the AMD RX 6800 the same 4K animation stays at 59 fps. Not "
+         "measured on the N100 tablet.", "The price of nesting.") + \
     p("<b>The cursor.</b> The mode is fixed for the life of the stream; REMOTIX asks for metadata (4), like "
       "Mutter. The price is that every pointer movement produces a buffer without new pixels marked "
       + c("SPA_CHUNK_FLAG_CORRUPTED") + "; " + c("cattura.c") + " discards those and counts them as "
-      + c("cursor_only") + ". With " + c("--virtual") + " KWin draws the pointer into the image, so the session "
+      + c("cursor_only") + ". KWin draws the pointer into the image (software cursor, nested or " + c("--virtual") + "), so the session "
       "runs with REMOTIX's encoded cursor theme (" + rif("The encoded cursor theme") + "), and the child calls "
       + c("capture_cursor_never_hide()") + ": an empty metadata image is never forwarded as “hidden”, "
       "otherwise the page would remove the browser's own pointer too (the user's test of 20 Sep 2026: “the "
@@ -220,9 +270,9 @@ S4 = p("On Plasma the capture is a Wayland request to KWin: the private protocol
       "for the viewer.")
 
 # ── 6.5 ─────────────────────────────────────────────────────────────────────
-S5 = p("On GNOME and KDE the capture is a PipeWire consumer created by " + c("cattura_avvia()")
+S5 = p("On GNOME and KDE the capture is a PipeWire consumer created by " + c("capture_start()")
        + " on the node the compositor announced. Everything is declared in the format proposal "
-       "(" + c("proposta()") + ") and in the consumption parameters (" + c("consumer_parameters()") + ").",
+       "(" + c("proposal()") + ") and in the consumption parameters (" + c("consumer_parameters()") + ").",
        lead=True) + \
     table(["Parameter", "What is proposed", "Why"], [
         ["Pixel format", c("BGRx") + " then " + c("BGRA") + " (" + c("CAPTURE_COLOR_BGRX")
@@ -254,7 +304,7 @@ S5 = p("On GNOME and KDE the capture is a PipeWire consumer created by " + c("ca
          "the proposal is unchanged.", "The card that refuses linear.") + \
     p("<b>Buffer generation.</b> Every time PipeWire reallocates its buffers (renegotiation, wake-up) "
       + c("on_buffer_added()") + "/" + c("on_buffer_removed()") + " change a generation counter that travels "
-      "with every frame (" + c("generazione") + "). The encoder caches the import of each DMA-BUF, and file "
+      "with every frame (" + c("generation") + "). The encoder caches the import of each DMA-BUF, and file "
       "descriptor numbers are recycled: a cache keyed on the descriptor alone would hand the encoder a surface "
       "pointing to a freed buffer, i.e. an old image, with no error. When the generation changes, the cache is "
       "thrown away.") + \
@@ -264,7 +314,7 @@ S5 = p("On GNOME and KDE the capture is a PipeWire consumer created by " + c("ca
       "in " + c("LEZIONI.md") + " §8: two screens alternating and no error. " + c("release_held_buffer()") + " gives "
       "the buffer back only if its generation is still current.") + \
     h4("Resizing a live stream") + \
-    p(c("cattura_ridimensiona()") + " rebuilds the proposal at the new size and calls "
+    p(c("capture_resize()") + " rebuilds the proposal at the new size and calls "
       + c("pw_stream_update_params()") + " — what gnome-remote-desktop does — without touching the session or "
       "the virtual monitor. It returns " + c("CAPTURE_RECANVAS_REQUESTED") + ", " + c("CAPTURE_RECANVAS_UNCHANGED")
       + " (the size is already in force: renegotiating it would chase its own tail) or "
@@ -280,7 +330,7 @@ S5 = p("On GNOME and KDE the capture is a PipeWire consumer created by " + c("ca
     p("A Wayland compositor delivers only when the scene changes, and a desktop just started is still. Measured "
       "on 14 Aug 2026: 4.4 s between login and the first frame, with a key request every 200 ms and 659 empty "
       "waits. Wayland has no “repaint now”, but restarting the stream makes a buffer arrive. "
-      + c("cattura_risveglia()") + " repeats the current parameters at the negotiated size; on labwc it asks "
+      + c("capture_wake()") + " repeats the current parameters at the negotiated size; on labwc it asks "
       "for the next frame whole (" + c("wlr_force_full()") + "). The child calls it only when a keyframe is "
       "owed and the capture returned zero, and at most every " + c("WAKEUP_MS") + " = 400 ms.") + \
     warn("on Mutter the renegotiation recreates the absolute input devices (" + c("viewports-changed") + " → "
@@ -294,7 +344,7 @@ S5 = p("On GNOME and KDE the capture is a PipeWire consumer created by " + c("ca
       + c("virtio-vga") + " without virgl) the compositor renders in software and has no DMA-BUF to offer; the "
       "GPU proposal dies with «no more input formats» (measured 29 Sep 2026 on 7 VMs out of 7). "
       + c("capture_format_refused()") + " recognises the facts (stream in error with no format ever agreed, "
-      "or a format agreed and no frame ever delivered) and " + c("cattura_avvia()") + " returns "
+      "or a format agreed and no frame ever delivered) and " + c("capture_start()") + " returns "
       + c("G_IO_ERROR_NOT_SUPPORTED") + " when it sees the refusal itself. " + c("falls_back_if_refused()")
       + " in the child then switches to memory, logs it, and never tries the GPU again in that process. The two "
       "paths are never offered together: the compositor would choose, and zero copy would be lost where it "
@@ -364,8 +414,7 @@ SLABS = fig(
            label="failed or connection lost: the slab is dirty, rebuilt", lx=300, ly=204),
     900, 216, "«FIG» — The three states of a slab; a slab in hand is never named in a copy")
 
-S7 = p("On labwc the zero-copy path is a <i>copy</i> into a DMA-BUF that REMOTIX owns: a “slab” (" + c("lastra")
-       + ") is a GBM buffer allocated on the compositor's render node, its DMA-BUF descriptor and the "
+S7 = p("On labwc the zero-copy path is a <i>copy</i> into a DMA-BUF that REMOTIX owns: a “slab” is a GBM buffer allocated on the compositor's render node, its DMA-BUF descriptor and the "
        + c("wl_buffer") + " that names it. It is enabled by " + c("wlr_ask_card()") + ", which says no in "
        "writing if it cannot, leaving memory as a declared fallback.", lead=True) + \
     table(["", "A — copy into our own DMA-BUF (chosen)", "B — " + c("zwlr_export_dmabuf_manager_v1")], [
@@ -427,7 +476,7 @@ STRADE = fig(
     900, 264, "«FIG» — The two paths of a frame; on Vulkan the memory path uploads RGB and the same shader converts")
 
 S8 = p("“Zero copy” means the frame never leaves the GPU between the compositor and the encoder. It is the "
-       "default (" + c("ZERO_COPY") + " = 1 in " + c("figlio.c") + "; a build-time " + c("-DCOPIA_ZERO=0")
+       "default (" + c("ZERO_COPY") + " = 1 in " + c("figlio.c") + "; a build-time " + c("-DZERO_COPY=0")
        + " exists only to rebuild the “before” for A/B benches, it is not a product switch). It is not zero "
        "work: the RGB→YUV conversion still happens, on the GPU.", lead=True) + STRADE + \
     p("Why it matters, measured inside the product on 22 Aug 2026 (test server, 1920×1080, 2,450 frames, HEVC on "
@@ -457,7 +506,7 @@ S8 = p("“Zero copy” means the frame never leaves the GPU between the composi
       "defect. The producer makes the stride equal to " + c("width × 4") + ", so the code refuses the path and "
       "declares it, rather than sending a wrong image.") + \
     p("<b>Remounting only the capture.</b> Switching path does not tear down the stage. "
-      + c("remount_only_capture()") + " stops and reopens only the " + c("Cattura") + " (and its cursor "
+      + c("remount_only_capture()") + " stops and reopens only the " + c("Capture") + " (and its cursor "
       "hook), keeping the input channel, the clipboard and the " + c("RemoteDesktop") + " session: on 25 Aug "
       "2026 a full teardown 33 ms after the EIS channel was opened crashed the child inside "
       + c("ei_disconnect()") + " (SIGSEGV, core read with gdb). On labwc the capture <i>is</i> the source, so "
@@ -492,7 +541,7 @@ S9 = p("The pointer is drawn by the page, not baked into the video: the image st
     table(["Desktop", "Where the shape comes from"], [
         ["GNOME", "Mutter's metadata, a real bitmap from its theme (Adwaita). The session sets no "
          + c("XCURSOR_*") + " variable."],
-        ["KDE Plasma", "KWin's metadata (mode 4). KWin " + c("--virtual") + " also paints the pointer into the image, "
+        ["KDE Plasma", "KWin's metadata (mode 4). KWin also paints the pointer into the image (software cursor), "
          "so the session runs with REMOTIX's encoded theme: the metadata is a single opaque pixel whose colour "
          "names the shape, and " + c("cursore.c") + " replaces it with the real image (" + c("shape_from_pixel()")
          + ", " + c("shape_image()") + ")."],
@@ -505,14 +554,14 @@ S9 = p("The pointer is drawn by the page, not baked into the video: the image st
 S10 = p("Until 24 Sep 2026 the real pointer shape (resize arrows on a border, the I-beam on text, the hand on "
         "links) reached the browser only on GNOME. The user decided it must reach it on all four desktops, and "
         "the design approved was an <b>encoded theme plus a dictionary</b> (" + c("forma.h") + ", "
-        + c("forma.c") + ", «forma» = shape).", lead=True) + \
+        + c("forma.c") + ").", lead=True) + \
     p("KWin and labwc draw the pointer into the captured image, so their sessions already ran with an invisible "
       "cursor theme made of 1×1 transparent images. The compositor drew nothing, and the metadata carried the "
       "same nothing. In the encoded theme each shape is still a 1×1 image, but <b>opaque</b> and of a colour of "
       "its own. The server writes the theme before the desktop starts; the child reads the colour and looks up "
       "the real image in a real theme on disk.") + \
     table(["Item", "Value"], [
-        ["Theme name", c("SHAPE_THEME") + " = " + c("remotix-invisible") + " (“remotix-invisible”; unchanged, so the sessions' "
+        ["Theme name", c("SHAPE_THEME") + " = " + c("remotix-invisible") + " (unchanged, so the sessions' "
          + c("XCURSOR_THEME") + " did not change by one letter)"],
         ["Where", c("<runtime>/remotix/icons/remotix-invisible/") + " written by " + c("shape_theme_write()")
          + "; " + c("<runtime>/remotix/icons") + " goes into " + c("XCURSOR_PATH") + "; no " + c("Inherits=")
@@ -558,6 +607,10 @@ S11 = p("The constants of the capture, where they live and what set them.", lead
          "D-Bus call and node announcement"],
         [c("WAIT_NODE_MS"), "5000 ms", c("kwin.c"), "Node announcement from KWin"],
         [c("POINTER_METADATA"), "4", c("kwin.c"), "Cursor as metadata"],
+        [c("HOST_MHZ"), "240000 (240 Hz)", c("kwin.c"), "Refresh of the labwc that hosts KWin; at 60 Hz the two "
+         "clocks drifted"],
+        [c("TICKER_MS"), "16 ms", c("kwin.c"), "Damage interval of the 1×1 surface that keeps nested KWin drawing"],
+        [c("HOST_BIRTH_MS"), "10000 ms", c("kwin.c"), "Wait for the socket of KWin's labwc at session birth"],
         [c("WLR_SLABS"), "3", c("wlroots.c"), "Slabs: in hand, in flight, insurance"],
         [c("WLR_CARD_FAILED_MAX"), "3", c("wlroots.c"), "Consecutive failures before the GPU path is switched off"],
         [c("WLR_SLAB_W") + " × " + c("WLR_SLAB_H"), "4096 × 2304", c("wlroots.c"),
