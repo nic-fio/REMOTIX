@@ -20,6 +20,10 @@
 #   5. the .RUN: the installatore/run.sh header (with the version and the payload's sha256 written
 #      inside) and below it the tar.gz with the engine, LICENSE.md, THIRD-PARTY-LICENSES and packages/<target>/
 #      (product + engine for each distribution); next to it its .sha256, to be published on the website.
+#      ⭐ DECISIONI §10.43 (GPL-2.0): the Alma package carries OUR labwc; its exact corresponding source
+#      (the upstream tarball, unmodified, and the recipe: packaging/rpm/labwc/ and remotix.spec) goes
+#      INSIDE the .run (source/labwc/) and NEXT TO it, remotix-X.Y.Z-R-labwc-source.tar.gz (+ .sha256),
+#      to be published with every release.
 #
 # Environment:
 #   BERSAGLI   which ones (default: debian13 ubuntu2604 fedora44 alma10 tumbleweed leap16 arch)
@@ -77,6 +81,7 @@ TPL=$ALBERO/THIRD-PARTY-LICENSES
 	sed -n 's/^NGTCP2_VER=${NGTCP2_VER:-v\(.*\)}$/ngtcp2 \1/p; s/^NGHTTP3_VER=${NGHTTP3_VER:-v\(.*\)}$/nghttp3 \1/p' \
 		"$ALBERO/src/costruzione/quic-statiche.sh"
 	sed -n 's/^OPUS_VER=/libopus /p' "$ALBERO/src/opus-wasm/costruisci.sh"
+	awk '$1 == "labwc" { print $1, $2 }' "$ALBERO/packaging/rpm/labwc/VERSIONI"
 } | sort -u | while read -r c; do
 	grep -qxF "== $c" "$TPL" || { echo "⛔ THIRD-PARTY-LICENSES does not name «$c»"; exit 1; }
 done
@@ -128,6 +133,20 @@ if [ $arch = 1 ]; then
 	mkdir -p "$C/packages/arch"
 	cp "$P/arch"/remotix-"$V"-"$R"-x86_64.pkg.tar.zst "$M"/remotix-install-"$V"-"$R"-x86_64.pkg.tar.zst "$C/packages/arch/"
 fi
+# ⭐ §10.43: the corresponding source of the labwc inside the Alma package, in the .run and next to it
+if [[ " ${rpm[*]} " == *" alma10 "* ]]; then
+	SL=$ALBERO/costruzione-uscita/sorgenti-labwc
+	"$ALBERO/packaging/rpm/labwc/scarica.sh" "$SL" | tee -a "$REG"
+	mkdir -p "$C/source/labwc/recipe"
+	cp "$SL"/labwc-*.tar.gz "$C/source/labwc/"
+	cp "$ALBERO/packaging/rpm/labwc/VERSIONI" "$ALBERO/packaging/rpm/labwc/scarica.sh" \
+		"$ALBERO/packaging/rpm/remotix.spec" "$C/source/labwc/recipe/"
+	SRC_LABWC=$USCITA/remotix-$VERSIONE-labwc-source.tar.gz
+	mkdir -p "$USCITA"
+	tar --sort=name --owner=0 --group=0 --numeric-owner --mtime="@$(git -C "$ALBERO" log -1 --format=%ct)" \
+		-C "$C/source" -cf - labwc | gzip -n -9 >"$SRC_LABWC"
+	(cd "$USCITA" && sha256sum "$(basename "$SRC_LABWC")" >"$(basename "$SRC_LABWC").sha256")
+fi
 (cd "$C" && find . -type f | sort | sed 's|^\./|   |') | tee -a "$REG"
 tar --sort=name --owner=0 --group=0 --numeric-owner --mtime="@$(git -C "$ALBERO" log -1 --format=%ct)" \
 	-C "$C" -cf - . | gzip -n -9 >"$LAV/carico.tar.gz"
@@ -149,5 +168,6 @@ REMOTIX $VERSIONE — ready: $RUN ($(du -h "$RUN" | cut -f1))
   sha256 (to be published on the website, over HTTPS, next to the file):
       $(cut -d' ' -f1 "$RUN.sha256")
   install with:  sudo sh $(basename "$RUN")
+  labwc's source (GPL-2.0, Alma package; publish it with the .run): ${SRC_LABWC:-none}
   the release log: $REG
 EOF

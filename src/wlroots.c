@@ -2029,8 +2029,12 @@ void wlr_probe_counts(const WlrPalco *p, WlrProbeCounts *fuori)
 
 WlrPalco *wlr_apri(GError **sbaglio)
 {
+	return wlr_apri_su(g_getenv("WAYLAND_DISPLAY"), sbaglio);
+}
+
+WlrPalco *wlr_apri_su(const char *nome, GError **sbaglio)
+{
 	WlrPalco *p = g_new0(WlrPalco, 1);
-	const char *nome = g_getenv("WAYLAND_DISPLAY");
 
 	p->fd = -1;
 	p->s_fd = -1;
@@ -2130,6 +2134,12 @@ void wlr_counts(const WlrPalco *palco, WlrCounts *fuori)
 WlrSizeOutcome wlr_misura_chiedi(WlrPalco *palco, uint32_t larghezza, uint32_t altezza,
                                  double attesa_s, GError **sbaglio)
 {
+	return wlr_misura_chiedi_hz(palco, larghezza, altezza, 0, attesa_s, sbaglio);
+}
+
+WlrSizeOutcome wlr_misura_chiedi_hz(WlrPalco *palco, uint32_t larghezza, uint32_t altezza,
+                                    int32_t millihertz, double attesa_s, GError **sbaglio)
+{
 	struct zwlr_output_configuration_v1 *conf;
 	struct zwlr_output_configuration_head_v1 *ct;
 	Head *nostra = NULL;
@@ -2176,7 +2186,7 @@ WlrSizeOutcome wlr_misura_chiedi(WlrPalco *palco, uint32_t larghezza, uint32_t a
 			/* ⚠ `refresh = 0`: on an output without a screen the refresh rate is
 			 *   a fiction, and zero means «you choose». */
 			zwlr_output_configuration_head_v1_set_custom_mode(ct, (int32_t)larghezza,
-			                                                  (int32_t)altezza, 0);
+			                                                  (int32_t)altezza, millihertz);
 		} else if (t->accesa) {
 			zwlr_output_configuration_v1_enable_head(conf, t->proxy);
 		} else {

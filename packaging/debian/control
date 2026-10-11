@@ -62,9 +62,12 @@ Depends: ${shlibs:Depends},
 #     preliminary check refuses earlier).
 #     `[M]` 30 Sep: on Ubuntu 26.04 the Mesa VA lives in mesa-libgallium (which
 #     «provides» mesa-va-drivers and va-driver), and va-driver-all only pulls Intel;
-#   · labwc, wlr-randr, xwayland: only for XFCE and LXQt (the compositor that REMOTIX
+#   · labwc, wlr-randr, xwayland: for XFCE and LXQt (the compositor that REMOTIX
 #     starts; wlr-randr for the LXQt and XFCE size cure; XFCE 4.20 under
-#     labwc wants Xwayland);
+#     labwc wants Xwayland); ⭐ and since 11 Oct 2026 labwc for KDE too: KWin
+#     is born nested in a screenless labwc, so the desktop takes the window's
+#     size at reattach (DECISIONI §10.40).  Without labwc KDE still starts,
+#     with KWin --virtual and the size of its birth (declared in the journal);
 #     ⚠ on a GNOME-only or KDE-only machine they are installed anyway: the metadata of
 #     a .deb has no «only if XFCE is there».  One package per desktop is for T4;
 #   ⛔ NOT gnome-session (the «vanilla» session from universe): D8 (DECISIONI
