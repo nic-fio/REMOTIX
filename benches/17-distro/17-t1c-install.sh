@@ -105,9 +105,9 @@ command -v restorecon >/dev/null && sudo restorecon -R /opt/remotix /etc/remotix
 # ── 3. polkit, logind, sleep: the three belts of provision.sh §3 ────────────
 echo "==> $m: polkit, logind, sleep"
 $VM 'sudo install -D -m 644 /tmp/t1c/remotix-no-poweroff.rules /etc/polkit-1/rules.d/50-remotix-no-poweroff.rules
-sudo install -D -m 644 /tmp/t1c/remotix-power-keys.conf /etc/systemd/logind.conf.d/remotix-tasti.conf
+sudo install -D -m 644 /tmp/t1c/remotix-power-keys.conf /etc/systemd/logind.conf.d/remotix-power-keys.conf
 sudo mkdir -p /etc/systemd/sleep.conf.d
-printf "[Sleep]\nAllowSuspend=no\nAllowHibernation=no\nAllowSuspendThenHibernate=no\nAllowHybridSleep=no\n" | sudo tee /etc/systemd/sleep.conf.d/remotix-niente-sospensione.conf >/dev/null
+printf "[Sleep]\nAllowSuspend=no\nAllowHibernation=no\nAllowSuspendThenHibernate=no\nAllowHybridSleep=no\n" | sudo tee /etc/systemd/sleep.conf.d/remotix-no-suspend.conf >/dev/null
 sudo systemctl restart polkit 2>/dev/null || true
 sudo systemctl reload systemd-logind 2>/dev/null || true'
 

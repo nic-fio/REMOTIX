@@ -616,9 +616,9 @@ product)
 		# nobody had ever put them in the boxes: the box was DIFFERENT.
 		# ⚠ Same lines as provision.sh, same files: no copy of the logic.
 		install -D -m 644 /rete11/prodotto/remotix-no-poweroff.rules /etc/polkit-1/rules.d/50-remotix-no-poweroff.rules
-		install -D -m 644 /rete11/prodotto/remotix-power-keys.conf /etc/systemd/logind.conf.d/remotix-tasti.conf
+		install -D -m 644 /rete11/prodotto/remotix-power-keys.conf /etc/systemd/logind.conf.d/remotix-power-keys.conf
 		mkdir -p /etc/systemd/sleep.conf.d
-		printf "[Sleep]\nAllowSuspend=no\nAllowHibernation=no\nAllowSuspendThenHibernate=no\nAllowHybridSleep=no\n" > /etc/systemd/sleep.conf.d/remotix-niente-sospensione.conf
+		printf "[Sleep]\nAllowSuspend=no\nAllowHibernation=no\nAllowSuspendThenHibernate=no\nAllowHybridSleep=no\n" > /etc/systemd/sleep.conf.d/remotix-no-suspend.conf
 		systemctl restart polkit >/dev/null 2>&1 || true
 		systemctl reload systemd-logind >/dev/null 2>&1 || true
 		# ⭐ THE KWIN PERMISSION IS SET BY THE BENCH, LIKE THE PACKAGE — phase 17.

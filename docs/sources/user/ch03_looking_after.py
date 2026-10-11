@@ -98,12 +98,12 @@ S_SHARED = p("REMOTIX protects its own sessions: a user connected through REMOTI
          c("sudo cp " + B + "50-remotix-no-poweroff.rules /etc/polkit-1/rules.d/") +
          "<br>Nothing to reload: polkit reads it by itself.",
          c("sudo rm /etc/polkit-1/rules.d/50-remotix-no-poweroff.rules")],
-        [c(B + "remotix-niente-sospensione.conf"),
+        [c(B + "remotix-no-suspend.conf"),
          "The machine cannot suspend or hibernate at all, not even for root.",
          c("sudo mkdir -p /etc/systemd/sleep.conf.d") + "<br>" +
-         c("sudo cp " + B + "remotix-niente-sospensione.conf /etc/systemd/sleep.conf.d/") +
+         c("sudo cp " + B + "remotix-no-suspend.conf /etc/systemd/sleep.conf.d/") +
          "<br>Nothing to reload.",
-         c("sudo rm /etc/systemd/sleep.conf.d/remotix-niente-sospensione.conf")],
+         c("sudo rm /etc/systemd/sleep.conf.d/remotix-no-suspend.conf")],
     ], "«TAB» — The two ready-made rules for a shared machine") + \
     p("Each file can be switched on alone. The administrator always keeps " + c("sudo systemctl poweroff") +
       " and " + c("sudo systemctl reboot") + ".") + \

@@ -267,9 +267,10 @@ if [ "$VERIFY_ONLY" != "check" ]; then
 		/etc/polkit-1/rules.d/50-remotix-no-poweroff.rules
 	rm -f /etc/polkit-1/rules.d/49-remotix-niente-spegnimento.rules
 	install -D -m 644 "$HERE/remotix-power-keys.conf" \
-		/etc/systemd/logind.conf.d/remotix-tasti.conf
+		/etc/systemd/logind.conf.d/remotix-power-keys.conf
+	rm -f /etc/systemd/logind.conf.d/remotix-tasti.conf /etc/systemd/sleep.conf.d/remotix-niente-sospensione.conf
 	mkdir -p /etc/systemd/sleep.conf.d
-	cat > /etc/systemd/sleep.conf.d/remotix-niente-sospensione.conf <<'CONF'
+	cat > /etc/systemd/sleep.conf.d/remotix-no-suspend.conf <<'CONF'
 # ⛔ The strongest belt of the three: here SYSTEMD refuses, not polkit, and it holds
 #    for root too — `[M]` 15 Aug 2026, `CanSuspend="no"` even from root.
 [Sleep]

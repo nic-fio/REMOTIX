@@ -47,6 +47,9 @@ GRUPPI = [
         (S + "rediscover.c", "Finds live REMOTIX desktops that no child holds, after a service restart"),
         (S + "rediscover.h", "Why found-again desktops exist (stopping the service does not kill desktops) and the "
          "criterion that recognises them"),
+        (S + "busfilter.c", "The session's system bus through a filter: every message passes except logind's "
+         "power-off, restart and suspend methods (DECISIONS §10.49)"),
+        (S + "busfilter.h", "Why the session sees no Power Off, Restart, Suspend, and the filter's interface"),
         (S + "budget.c", "The composition budget mechanism: per-user accounts, admission, degradation"),
         (S + "budget.h", "The reason behind every number of the budget (phase 10) and its interface"),
         (S + "log.c", "Writes log lines: instant, area, level, one place for all output"),

@@ -217,9 +217,9 @@ package() {
 	install -Dm644 "$s/remotix-no-poweroff.rules" \
 		"$pkgdir/usr/share/remotix/belts/50-remotix-no-poweroff.rules"
 	install -Dm644 "$s/remotix-power-keys.conf" \
-		"$pkgdir/usr/share/remotix/belts/remotix-tasti.conf"
+		"$pkgdir/usr/share/remotix/belts/remotix-power-keys.conf"
 	install -Dm644 "$a/remotix-no-suspend.conf" \
-		"$pkgdir/usr/share/remotix/belts/remotix-niente-sospensione.conf"
+		"$pkgdir/usr/share/remotix/belts/remotix-no-suspend.conf"
 	# the firewall: the service DEFINED (a description, not a rule: no
 	# port opens until the engine adds it to a zone, D6)
 	install -Dm644 "$a/remotix.firewalld.xml" "$pkgdir/usr/lib/firewalld/services/remotix.xml"

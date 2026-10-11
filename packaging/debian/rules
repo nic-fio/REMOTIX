@@ -82,9 +82,9 @@ override_dh_auto_install:
 	install -D -m 0644 src/remotix-no-poweroff.rules \
 	  $(B)/usr/share/remotix/belts/50-remotix-no-poweroff.rules
 	install -D -m 0644 src/remotix-power-keys.conf \
-	  $(B)/usr/share/remotix/belts/remotix-tasti.conf
+	  $(B)/usr/share/remotix/belts/remotix-power-keys.conf
 	install -D -m 0644 debian/remotix-no-suspend.conf \
-	  $(B)/usr/share/remotix/belts/remotix-niente-sospensione.conf
+	  $(B)/usr/share/remotix/belts/remotix-no-suspend.conf
 
 override_dh_installsystemd:
 	# ⛔ DECISIONI §10.12: the package does NOT enable and does NOT start the service: the

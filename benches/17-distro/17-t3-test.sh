@@ -101,8 +101,8 @@ vm "G=\$(for x in /dev/dri/card[0-9]* /dev/dri/renderD[0-9]*; do [ -e \$x ] && g
 for g in \$G; do id -nG prova | tr ' ' '\\n' | grep -qx \$g || { sudo gpasswd -a prova \$g >/dev/null; echo \"group: prova + \$g\"; }; done
 for d in /etc/polkit-1/rules.d /etc/systemd/logind.conf.d /etc/systemd/sleep.conf.d; do [ -d \$d ] || echo \"new folder: \$d\"; done
 sudo install -D -m 644 /usr/share/remotix/belts/50-remotix-no-poweroff.rules /etc/polkit-1/rules.d/50-remotix-no-poweroff.rules
-sudo install -D -m 644 /usr/share/remotix/belts/remotix-tasti.conf /etc/systemd/logind.conf.d/remotix-tasti.conf
-sudo install -D -m 644 /usr/share/remotix/belts/remotix-niente-sospensione.conf /etc/systemd/sleep.conf.d/remotix-niente-sospensione.conf
+sudo install -D -m 644 /usr/share/remotix/belts/remotix-power-keys.conf /etc/systemd/logind.conf.d/remotix-power-keys.conf
+sudo install -D -m 644 /usr/share/remotix/belts/remotix-no-suspend.conf /etc/systemd/sleep.conf.d/remotix-no-suspend.conf
 sudo systemctl reload systemd-logind; echo belts: 3 files in /etc
 sudo touch /var/lib/remotix/installazione-confermata; echo marker: installazione-confermata
 sudo systemctl enable --now remotix 2>&1 | tail -1; sleep 2; echo active: \$(systemctl is-active remotix)
@@ -126,7 +126,7 @@ echo "   R5: $(grep -c '^[<>]' "$E/diff-R5.txt") lines differ between \"browser\
 echo "==> ⚠ the engine steps UNDONE by hand, then apt-get purge remotix (R6)"
 NEW=$(sed -n 's/^new folder: //p' "$E/passi-motore.txt" | tr '\n' ' ')
 vm "sudo systemctl disable --now remotix 2>&1 | tail -1
-sudo rm -f /etc/polkit-1/rules.d/50-remotix-no-poweroff.rules /etc/systemd/logind.conf.d/remotix-tasti.conf /etc/systemd/sleep.conf.d/remotix-niente-sospensione.conf
+sudo rm -f /etc/polkit-1/rules.d/50-remotix-no-poweroff.rules /etc/systemd/logind.conf.d/remotix-power-keys.conf /etc/systemd/sleep.conf.d/remotix-no-suspend.conf
 for d in $NEW; do sudo rmdir \$d && echo removed folder \$d; done
 sudo systemctl reload systemd-logind
 sudo rm -f /var/lib/remotix/installazione-confermata" >"$E/passi-disfatti.txt" 2>&1

@@ -578,7 +578,7 @@ S9 = p("Nobody may shut down, reboot, suspend or hibernate the server, the perso
       "told with the farewell reason " + c("SERVER_CLOSING") + ". Details in "
       + rif("The power belts, shipped inert") + ".") + \
     note("XFCE's “Log Out” window always draws Restart and Shut Down (xfce4-session 4.20.2 "
-         + c("xfsm-logout-dialog.c:263-288") + ", no key removes them): with the filter they are grey and "
+         + "xfsm-logout-dialog.c:263-288, no key removes them): with the filter they are grey and "
          "refused, not gone. In " + c("lxqt-leave") + ", reached only by hand or from fancymenu's fixed Leave "
          "button when the user's own panel configuration wins, shut down, reboot and suspend are grey and "
          "“Lock screen” is clickable but inert. Both are declared residues.", "What is left visible.")
