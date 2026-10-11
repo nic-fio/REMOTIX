@@ -332,15 +332,26 @@ PY_DATA_CALLS = {"dict", "SimpleNamespace", "Namespace", "namedtuple", "OrderedD
 PY_INTROSPECT = re.compile(r"\blocals\(\)|\bglobals\(\)|\bvars\(|__dict__|\basdict\(|\b_asdict\(|\b_fields\b|__slots__")
 
 
+PY_REPR = re.compile(r"%r|!r[}:]|\brepr\(|\bformat_exc\(|\bprint_exc\(|\bformat_exception\(|\bprint_exception\(|"
+                     r"\bexc_info\b|\blogging\.exception\(|\.exception\(")
+
+
 def py_facts(text):
-    """(defs: function name → params, keyword uses [(func, kw)], data-class fields, uses __name__)"""
+    """(defs: function name → params, keyword uses [(func, kw)], data-class fields, uses __name__,
+    classes: class name → simple names of its bases, every function and class name, prints a repr)"""
     try:
         tree = ast.parse(text)
     except (SyntaxError, ValueError):
         return None
     defs = collections.defaultdict(set)
     kws, fields = [], set()
+    classes, named = {}, set()
     for n in ast.walk(tree):
+        if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            named.add(n.name)
+        if isinstance(n, ast.ClassDef):
+            classes[n.name] = {b.id if isinstance(b, ast.Name) else b.attr for b in n.bases
+                               if isinstance(b, (ast.Name, ast.Attribute))}
         if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)):
             a = n.args
             for x in a.posonlyargs + a.args + a.kwonlyargs:
@@ -370,15 +381,48 @@ def py_facts(text):
                     kws.append((fn, k.arg))
     dunder = bool(re.search(r"__name__(?!\s*==\s*[\"']__main__)|__qualname__|__class__", text.replace(
         'if __name__ == "__main__"', "").replace("if __name__ == '__main__'", "")))
-    return defs, kws, fields, dunder
+    return defs, kws, fields, dunder, classes, named, bool(PY_REPR.search(text))
+
+
+def _builtin_exceptions():
+    import builtins
+    return {n for n in dir(builtins) if isinstance(getattr(builtins, n), type)
+            and issubclass(getattr(builtins, n), BaseException)}
+
+
+# a base that is a library's exception (subprocess.CalledProcessError, socket.timeout, ssl.SSLError …)
+PY_EXC_BASE = re.compile(r"(Error|Exception|Exit|Interrupt|Warning|Timeout|Failure|Fault)$|^(timeout|error|herror|gaierror)$")
+
+
+def py_exception_classes(facts):
+    """Every class of ours deriving, directly or through another class of ours (any file), from
+    BaseException: the runtime prints their name by itself (tracebacks, repr, type(e).__name__)."""
+    bases = collections.defaultdict(set)
+    for x in facts.values():
+        if x:
+            for c, bs in x[4].items():
+                bases[c] |= bs
+    exc = set()
+    roots = _builtin_exceptions()
+    changed = True
+    while changed:
+        changed = False
+        for c, bs in bases.items():
+            if c not in exc and any(b in roots or b in exc or PY_EXC_BASE.search(b) for b in bs):
+                exc.add(c)
+                changed = True
+    return exc
 
 
 def frozen(root, files, infos, scopes, M_candidates):
     """name → reason, for every candidate name phase A must not rename."""
     import rinomina2
     F = {}
+    TEXT = set()        # every token of a text the tool does not rename: a NEW name may not be one of them
 
-    def freeze(names, why):
+    def freeze(names, why, text=False):
+        if text:
+            TEXT.update(names)
         for n in names:
             if n in M_candidates and n not in F:
                 F[n] = why
@@ -436,7 +480,7 @@ def frozen(root, files, infos, scopes, M_candidates):
         if lang in ("c", "go", "py", "js") or (lang == "html"):
             parts = []
             if lang == "c" and f.endswith((".comp", ".glsl")):
-                freeze(tokens(text), "a shader source (the generated SPIR-V carries its names): " + f)
+                freeze(tokens(text), "a shader source (the generated SPIR-V carries its names): " + f, text=True)
                 continue
             for a, b, k in fi.regs:
                 if k in ("code", "comment"):
@@ -447,12 +491,12 @@ def frozen(root, files, infos, scopes, M_candidates):
                 for a, b, k in fi.regs:
                     if k == "comment" and not _in_script(text, a):
                         parts.append(text[a:b])
-            freeze(tokens("\n".join(parts)), "%s string literal: %s" % (lang, f))
+            freeze(tokens("\n".join(parts)), "%s string literal: %s" % (lang, f), text=True)
         elif lang == "sh":
             sf = shell[f]
             if not sf.ok:
                 freeze(tokens(blank(text, [(a, b) for a, b, k in fi.regs if k == "comment"])),
-                       "shell file shfmt cannot parse: " + f)
+                       "shell file shfmt cannot parse: " + f, text=True)
                 continue
             data = sf.data
             rng = [(a, b) for a, b, n, k in sf.pos] + sf.comments
@@ -463,12 +507,12 @@ def frozen(root, files, infos, scopes, M_candidates):
                 out += data[pos:a] + b" " * (b - a)
                 pos = b
             out += data[pos:]
-            freeze(tokens(out.decode("utf-8", "replace")), "shell word that is not a reference: " + f)
+            freeze(tokens(out.decode("utf-8", "replace")), "shell word that is not a reference: " + f, text=True)
         elif lang == "md":
             spans = md_exact_spans(text, f)
-            freeze(tokens(blank(text, [(a, b) for a, b, _ in spans])), "document: " + f)
+            freeze(tokens(blank(text, [(a, b) for a, b, _ in spans])), "document: " + f, text=True)
         else:
-            freeze(tokens(text), "%s file (never renamed in phase A): %s" % (lang or "data", f))
+            freeze(tokens(text), "%s file (never renamed in phase A): %s" % (lang or "data", f), text=True)
 
     # 3. special cases
     # history sources that benches extract from git and compile together with today's files
@@ -476,7 +520,7 @@ def frozen(root, files, infos, scopes, M_candidates):
         r = subprocess.run(["git", "-C", root, "show", "%s:%s" % (rev, path)], capture_output=True)
         if r.returncode == 0:
             freeze(tokens(r.stdout.decode("utf-8", "replace")),
-                   "a history source compiled with today's code (%s:%s, %s)" % (rev, path, who))
+                   "a history source compiled with today's code (%s:%s, %s)" % (rev, path, who), text=True)
         else:
             raise SystemExit("fase_a: cannot read history source %s:%s (%s)" % (rev, path, who))
     freeze([n for n in M_candidates if ENVNAME.match(n)], "REMOTIX_*/RX_* environment variable (public)")
@@ -492,7 +536,7 @@ def frozen(root, files, infos, scopes, M_candidates):
         if x is None:
             freeze(set(fi.code) | set(fi.member), "Python file that does not parse: " + f)
             continue
-        defs, kws, fields, dunder = x
+        defs, kws, fields, dunder, classes, named, reprs = x
         for fn, k in kws:
             if fn in PY_DATA_CALLS or fn not in alldefs or k not in alldefs[fn]:
                 freeze([k], "Python keyword argument that becomes data or goes to someone else's function: "
@@ -505,13 +549,25 @@ def frozen(root, files, infos, scopes, M_candidates):
             for g in scopes.get("py:" + f, [f]):
                 y = facts.get(g)
                 if y:
-                    freeze(set(y[0]), "Python class or function name printed through __name__: " + g)
+                    freeze(set(y[0]) | y[5], "Python class or function name printed through __name__: " + g)
+        if reprs:
+            # repr() / %r / !r / a traceback of an instance prints its class's name
+            for g in scopes.get("py:" + f, [f]):
+                y = facts.get(g)
+                if y:
+                    freeze(set(y[4]), "Python class name printed through repr/%%r/a traceback (%s): %s" % (f, g))
+    freeze(py_exception_classes(facts), "Python exception class: its name is printed by tracebacks, repr and "
+           "type(e).__name__")
     for f, fi in infos.items():
         if fi.lang in ("html", "js"):
             freeze(set(re.findall(r"\bdataset\s*\.\s*([A-Za-z_]\w*)", fi.text)),
                    "a dataset member is an HTML data-* attribute: " + f)
             freeze(js_object_keys(rinomina2.code_only(fi)),
                    "JavaScript object key or shorthand property (it becomes data: JSON, logs, messages): " + f)
+            # every property name: obj.k reads and writes, members of window.REMOTIX objects, class and
+            # object-literal methods — a property is data as soon as the object is serialised or exposed
+            freeze(set(fi.member) | fi.massign | js_methods(rinomina2.code_only(fi)),
+                   "JavaScript property name (obj.k, obj.k = …, a method): " + f)
     # C: stringified or pasted macro arguments
     for f, fi in infos.items():
         if fi.lang == "c":
@@ -553,7 +609,7 @@ def frozen(root, files, infos, scopes, M_candidates):
                 if any(n.startswith(p) and len(n) > len(p) for p in pres) or \
                         any(n.endswith(s) and len(n) > len(s) for s in sufs):
                     freeze([n], "a name a file builds at run time from a literal piece (%s)" % f)
-    return F, shell
+    return F, shell, TEXT
 
 
 def js_object_keys(code):
@@ -578,6 +634,51 @@ def js_object_keys(code):
         nxt = toks[i + 1].group(0) if i + 1 < len(toks) else ""
         if prev in ("{", ",") and nxt in (":", ",", "}"):
             out.add(t)
+    return out
+
+
+JS_NOT_A_METHOD = set("""if for while switch catch with function return typeof await new delete void do else in of
+instanceof yield""".split())
+
+
+def js_methods(code):
+    """Names of methods (class bodies and object literals: «name(…) {») and class fields
+    («name = …» / «name;» directly in a class body)."""
+    out = set()
+    toks = list(re.finditer(r"[A-Za-z_$#][\w$]*|\S", code))
+    stack = []
+    for i, m in enumerate(toks):
+        t = m.group(0)
+        if t == "{":
+            j = i - 1
+            # class X extends Y.Z {
+            k = j
+            while k >= 0 and (re.match(r"[\w$.]", toks[k].group(0)) and toks[k].group(0) != "class"):
+                k -= 1
+            stack.append("class" if k >= 0 and toks[k].group(0) == "class" and i - k <= 5 else "{")
+            continue
+        if t == "}":
+            if stack:
+                stack.pop()
+            continue
+        if not re.match(r"[A-Za-z_$#]", t) or t in JS_NOT_A_METHOD:
+            continue
+        prev = toks[i - 1].group(0) if i else ""
+        nxt = toks[i + 1].group(0) if i + 1 < len(toks) else ""
+        if prev not in ("{", "}", ";", ",", "static", "async", "get", "set", "*"):
+            continue
+        if nxt == "(":
+            depth, j = 0, i + 1
+            while j < len(toks):
+                c = toks[j].group(0)
+                depth += {"(": 1, ")": -1}.get(c, 0)
+                if depth == 0:
+                    break
+                j += 1
+            if j + 1 < len(toks) and toks[j + 1].group(0) == "{" and prev != "function":
+                out.add(t.lstrip("#"))
+        elif stack and stack[-1] == "class" and nxt in ("=", ";"):
+            out.add(t.lstrip("#"))
     return out
 
 

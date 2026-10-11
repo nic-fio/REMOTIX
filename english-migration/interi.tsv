@@ -742,7 +742,6 @@ TRATTI_CAMPIONI	STRETCH_SAMPLES	word order: samples of the stretches
 TRATTI_VOCI	STRETCH_ENTRIES	word order: twin of STRETCH_SAMPLES
 T_POSIZIONE_TASTO	T_KEY_POSITION	word order; html twin POSIZIONE_TASTO should become KEY_POSITION (other chunk)
 TabellaVersioni	VersionTable	word order: qualifier first
-TestAttendeIlGestore	TestWaitsForHandler	Attende left untranslated
 TestCatalogoIncorporato	TestEmbeddedCatalog	word order: adjective first
 TestCorniceLarghezzaCostante	TestBorderConstantWidth	word order: adjective before width
 TestDisinstallazione	TestUninstall	idiomatic: Uninstall
@@ -796,7 +795,6 @@ VERSIONE_INCOMPATIBILE	INCOMPATIBLE_VERSION	word order (RCP reason name)
 VERSO_CS	DIR_CS	verso = direction (client→server); TOWARDS is wrong
 VERSO_SC	DIR_SC	twin of DIR_CS
 VICINE	NEARBY_PORTS	a list of nearby ports; NEAR alone is unclear
-VIG	IN_FORCE	vigente = in force; INFORCE is not a word
 VK_O_FALLISCI	VK_OR_FAIL	o = or (macro: Vulkan call or fail)
 VOCI_LXQT	LXQT_ENTRIES	word order: qualifier first
 V_VERO	V_REAL	the «real» 10-bit verdict, not true
@@ -1753,7 +1751,6 @@ modo_codifica	encoding_mode	Italian word order
 modo_colori	color_mode	Italian word order
 modo_corrente	current_mode	Italian word order
 modo_prima	prev_mode	the mode before
-modo_rc	rc_mode	Italian word order
 modo_rifiuti	refusals_mode	Italian word order
 modo_eventi	events_mode	Italian word order
 modo_sorgente	source_mode	Italian word order
@@ -1800,8 +1797,6 @@ negati_tutti	all_denied	Italian word order
 nero_che_alterna	alternating_black	relative clause in Italian order
 niente_azzeramento	no_reset	niente = no
 niente_persistenza	no_persistence	niente = no
-niente_tabella_detto	no_table_said	niente = no
-no_e_nostro	no_is_ours	e = is
 nodo_del_palco	stage_node	Italian word order
 nodo_della_scheda	card_node	Italian word order
 nodo_nvidia	nvidia_node	Italian word order
@@ -2649,7 +2644,6 @@ Stato	State	natural name (scope-aware check: no real collision)
 stato	state	natural name (scope-aware check: no real collision)
 Distribuzione	Distrib	twins: the Linux distribution; distribution exists in 19-nv-macchina.sh
 distribuzione	distrib	twins: the Linux distribution; distribution exists in 19-nv-macchina.sh
-Fiducia	Attestation	twins: the installer's trust record (catalogue version, sequence, source); trust exists as a string in the installer
 fiducia	attestation	twins: the installer's trust record (catalogue version, sequence, source); trust exists as a string in the installer
 Finita	Ended	twins: finished state (RCP state name too); finished is taken by fatto
 finita	ended	twins: finished state (RCP state name too); finished is taken by fatto
@@ -2977,3 +2971,77 @@ fermi	stills	stall durations / still frames; halted is odd for a list
 tollerati	tolerated_count	counter; allowed_n is another meaning
 forn	card_vendors	map of GPU vendors present; supplier duplicates vendor
 scritto	n_written	snprintf return length; wrote is a verb
+# ── review A-10, 11 Oct 2026: quality of phase A names (wrong meaning, word order, dodges, split families);
+#    these rows replace earlier rulings for TestAttendeIlGestore, VIG, modo_rc, niente_tabella_detto, no_e_nostro, Fiducia ──
+ceco	blind	«ceco» is «cieco» misspelt: the list of case 4-blind (01-b3-cliente.py), not Czech
+SERIE	SERIES	16-rapporto.py: the chart's series of resources (cpu, card drawing…), not a serial number
+piu_bassa	lowest	09-b81: min() of the thresholds that did not fire — the lowest, not «more low»
+FRAZIONE_COLORE	COLOR_FRACTION	English order (twin of FRAZIONE_COPPIE → PAIR_FRACTION)
+FRAZIONE_NERO	BLACK_FRACTION	English order: fraction of lit pixels under which the screen is black
+FRAZIONE_PIATTO	FLAT_FRACTION	English order: fraction of differing pixels under which the screen is flat
+PERCORSO_DISPLAY	DISPLAY_PATH	D-Bus object path; twin of NOME_DISPLAY → DISPLAY_NAME (interi), English order
+PERCORSO_LOGIND	LOGIND_PATH	D-Bus object path; twin of NOME_LOGIND → LOGIND_NAME
+PERCORSO_RD	RD_PATH	D-Bus object path; twin of NOME_RD → RD_NAME
+PERCORSO_REMOTE	REMOTE_PATH	D-Bus object path; twin of NOME_REMOTE → REMOTE_NAME
+PERCORSO_SCREENCAST	SCREENCAST_PATH	D-Bus object path; twin of NOME_SCREENCAST → SCREENCAST_NAME
+PERCORSO	HOOK_PATH	11-gancio.sh: the path of the installed git hook; ROUTE_PATH was a dodge around PATH
+p_esce	p_leave	wl_pointer .leave handler (twin of p_entra → p_enter); «exits» is the wrong verb form
+spia_esce	spy_leave	wl_keyboard .leave handler (twin of spia_entra → spy_enter)
+t_esce	t_leave	wl_keyboard .leave handler (twin of t_entra → t_enter)
+collauda_la_scena_ferma	test_still_scene	the negative control on a STILL scene; «scene_stop» says the opposite
+DigestInsieme	DigestResolvedSet	its JSON key is digest_resolved_set; Insieme is ResolvedSet (interi), «Together» is wrong
+nuovaPacchetti	newPackages	installer: constructor of the install-packages action — packages, not network packets
+primaPacchetti	beforePackages	installer: the before-state of the packages action (readPackagesBefore reads it)
+pacchettiFissi	pinnedPackages	installer: package names the preflight always looks at — packages, English order
+attendiGestore	waitPackageManager	waits until no one holds the package manager's lock (dpkg/rpm); not a handler
+TestAttendeIlGestore	TestWaitsForPackageManager	tests waitPackageManager; gestore here is the package manager
+TestChiTieneIlGestore	TestWhoHoldsPackageManager	tests whoHolds: who holds the package manager's lock
+nuovaIscrizione	newMembership	constructor of the remove-membership action; same thing as Iscrizioni → Memberships
+primaIscrizione	beforeMembership	the before-state of the remove-membership action (twin of nuovaIscrizione)
+Fiducia	Trust	the trust record: JSON key trust, printTrust, trusted(), TestTrust; no Go name Trust exists
+StatoRiga	LineState	installer view: the state of one progress line (ATTESA, IN_PROGRESS…), English order
+CartellaModo	DirMode	its JSON key is dir_mode; cartella → dir everywhere else (CARTELLE → DIRS)
+CartellaUid	DirUid	its JSON key is dir_uid
+CartellaGid	DirGid	its JSON key is dir_gid
+alt_img	img_height	vulkanvideo.c: declared beside img_width on the same line
+comando_accensione	startup_command	English order: the command that starts the box
+byte_usciti	bytes_out	figlio.c: out-parameter, the bytes the encoder produced; «byte_exited» is not English
+nomina_lo_stato	mentions_state	06-b5: true if the message names the state; «names_state» reads as a list of names
+no_e_nostro	refusal_is_ours	rcp.c: the NO came from our own defect (question to PAM never left), not the user's
+RITROVO_SERVIZIO_PAM	FOUND_AGAIN_PAM_SERVICE	the PAM service a found-again session must carry; family found_again, English order
+r_ritr	r_found_again	t7-aggiorna.py: the line paired with t_found_again on the same line («refound» split the family)
+segno0	mark0	a log mark (s.log_mark(), reg.righe()): segno_registro → log_mark, so mark, not sign
+segno1	mark1	a log mark, as segno0
+segno2	mark2	a log mark, as segno0
+segno3	mark3	a log mark, as segno0
+segno_esci	mark_exit	the log mark taken at the exit gesture
+segno_fine	mark_end	the log mark taken at the end
+segno_rientro	mark_reentry	the log mark taken at the re-entry
+audio_spediti	audio_sent	spediti → sent everywhere else (video_sent, CL_SENT, TOUCH_SENT, KEYBOARD_SENT)
+audio_blocchi_spediti	audio_blocks_sent	same family: sent
+lm_spediti_v	lm_sent_v	same family: sent
+mai_spedita_una_chiave	never_sent_key	rcp.c, same struct as video_sent: sent
+cl_veste	cl_skin	the cursor's CSS skin (url(data:…)); _VESTE → _SKIN_URL, «guise» is odd
+restituisci	requeue	cattura.c: label that queues the buffer back to PipeWire (pw_stream_queue_buffer)
+casuale	fill_random	ngtcp2 .rand callback that fills a buffer with RAND_bytes; «randomized» was a dodge
+g_chiudi	g_on_close	04-b31: callback set on g.chiudi; «g_shut» was a dodge around glib's g_close
+g_registra	g_on_log	04-b31: callback set on g.registra (one log line); twin of g_on_close
+smetti	remove_listeners	pagina.html: removes the four wake-up listeners; «cease» was a dodge around stop
+spingi	send_input	pagina.html: writes one framed message on the input stream; «shove» was a dodge around push
+rinate	reborn_n	11-c24: how many rounds the session was reborn; family rinasce/rinata/rinato → reborn
+otten	got_n	11-c14: the count obtained (len of the result); «obt» was a dodge around got
+erre	ri	02-cattura-giudica: red samples, beside gi and bi
+modo_rc	rate_control	vulkanvideo: VULKANVIDEO_RC_CQP / _VBR; «manner_rc» was a dodge around rc_mode
+incornicia	frame_message	04-b31: wraps a body in the RCP frame header (type, length); «border» is the wrong sense
+mescola	shuffled	09-b77: flag that shuffles the order of the blocks; «mixes» reads as a verb
+orienta	rotate	telefono.py: rotates the phone (POST /ruota); a function, imperative
+pungola	prod	15-g1b: a function that prods the page; imperative like its siblings
+suona_pulse	play_pulse	15-f012b: plays the WAV through pulse; twin of zittisci_pulse → silence_pulse
+sottocampiona	subsample	02-codifica-immagine: a function (4:4:4 → 4:2:0); imperative
+riposa	rest	04-b28: a function that sleeps 450 ms between gestures; imperative
+incastona	embed	opus-wasm/costruisci.sh: shell function that embeds the wasm in the page; imperative
+fa_gesto	perform_gesture	15-f004/f031: a function that performs the gesture; «does_gesture» reads as a question
+RIEMPIE	MIN_FILL	15-f018: the minimum fraction of a side the rescaled canvas must fill (0.90)
+niente_tabella_detto	no_table_logged	main.c: «already logged that there is no table»; detto → logged in the whole family
+comeche	image_note	11-c8: the text that says what the image showed; «anyhow» is not its meaning
+VIG	IN_EFFECT	06-b33: the ExecStart in effect; in_vigore → in_effect everywhere else
