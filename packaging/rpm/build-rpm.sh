@@ -73,7 +73,7 @@ build_one()
 		if command -v dnf >/dev/null; then
 			dnf -y -q install --setopt=install_weak_deps=False rpm-build rpmlint systemd-rpm-macros cpio selinux-policy-devel bzip2 >/dev/null 2>&1
 		else
-			zypper -n -q refresh >/dev/null 2>&1  # Tumbleweed rolls: stale metadata in the image
+			zypper -n -q refresh -f >/dev/null 2>&1  # Tumbleweed rolls: stale metadata in the image
 			zypper -n -q install --no-recommends --force-resolution rpm-build rpmlint systemd-rpm-macros cpio selinux-policy-devel bzip2 >/dev/null 2>&1
 		fi
 		rpm -q rpm-build rpmlint | sed "s/^/tools: /"
