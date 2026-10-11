@@ -41,21 +41,21 @@
  *    §4.7), and `cattura.c` already discards them. */
 #define PUNTATORE_METADATO 4
 
-#define USCITE_MAX 8
+#define MAX_OUTPUTS 8
 
 /* The path of the permission: system-wide, because it applies to every user, and
  * KWin looks in `XDG_DATA_DIRS` (which contains `/usr/share`).  Since phase 17 the
  * package ships it and REMOTIX only checks it (`kwin_verifica_permesso`). */
-#define PERMESSO_DESKTOP "/usr/share/applications/org.kde.remotix.desktop"
+#define PERMISSION_DESKTOP_FILE "/usr/share/applications/org.kde.remotix.desktop"
 
 typedef struct
 {
 	struct wl_output *oggetto;
-	uint32_t nome_globale;
+	uint32_t global_name;
 	uint32_t versione;
 	char *nome; /* "Virtual-0" with `--virtual` */
 	uint32_t larghezza, altezza; /* of the CURRENT mode, in pixels */
-} Uscita;
+} OutDir;
 
 struct KwinSessione
 {
@@ -63,16 +63,16 @@ struct KwinSessione
 	struct wl_registry *registro;
 	struct zkde_screencast_unstable_v1 *screencast;
 	struct zkde_screencast_stream_unstable_v1 *flusso;
-	uint32_t versione_screencast;
+	uint32_t screencast_version;
 
-	Uscita uscite[USCITE_MAX];
-	unsigned quante_uscite;
-	const Uscita *scelta;
+	OutDir uscite[MAX_OUTPUTS];
+	unsigned how_many_outputs;
+	const OutDir *scelta;
 
 	uint32_t nodo;
-	bool nodo_arrivato;
+	bool node_arrived;
 	bool rifiutato;
-	char *motivo_rifiuto;
+	char *refusal_reason;
 	volatile bool chiuso;
 
 	/* ⛔ THE LOOP THAT KEEPS THE CONNECTION ALIVE IS NOT A LUXURY: the stream lives
@@ -83,24 +83,24 @@ struct KwinSessione
 
 	/* The input channel: the descriptor and the token of `connectToEIS`. */
 	int eis;
-	gint gettone_eis;
-	bool gettone_noto;
+	gint eis_token;
+	bool known_token;
 };
 
 /* ------------------------------------------------------------------ *
  * The registry
  * ------------------------------------------------------------------ */
-static void su_uscita_geometria(void *dati, struct wl_output *uscita, int32_t x, int32_t y,
-                                int32_t larghezza_mm, int32_t altezza_mm, int32_t sottopixel,
+static void on_output_geometry(void *dati, struct wl_output *uscita, int32_t x, int32_t y,
+                                int32_t width_mm, int32_t height_mm, int32_t subpixel,
                                 const char *costruttore, const char *modello,
                                 int32_t trasformazione)
 {
 }
 
-static void su_uscita_modo(void *dati, struct wl_output *oggetto, uint32_t flag,
+static void on_output_mode(void *dati, struct wl_output *oggetto, uint32_t flag,
                            int32_t larghezza, int32_t altezza, int32_t aggiornamento)
 {
-	Uscita *uscita = dati;
+	OutDir *uscita = dati;
 
 	if (!(flag & WL_OUTPUT_MODE_CURRENT))
 		return;
@@ -108,11 +108,11 @@ static void su_uscita_modo(void *dati, struct wl_output *oggetto, uint32_t flag,
 	uscita->altezza = (uint32_t)MAX(0, altezza);
 }
 
-static void su_uscita_fine(void *dati, struct wl_output *oggetto)
+static void on_output_end(void *dati, struct wl_output *oggetto)
 {
 }
 
-static void su_uscita_scala(void *dati, struct wl_output *oggetto, int32_t scala)
+static void on_output_scale(void *dati, struct wl_output *oggetto, int32_t scala)
 {
 	/* The scale does not touch the buffer's pixels (`core/output.cpp:457-459`), but
 	 * it shifts the input coordinate space: it is logged. */
@@ -121,25 +121,25 @@ static void su_uscita_scala(void *dati, struct wl_output *oggetto, int32_t scala
 		                    "smaller than the captured buffer", scala);
 }
 
-static void su_uscita_nome(void *dati, struct wl_output *oggetto, const char *nome)
+static void on_output_name(void *dati, struct wl_output *oggetto, const char *nome)
 {
-	Uscita *uscita = dati;
+	OutDir *uscita = dati;
 
 	g_free(uscita->nome);
 	uscita->nome = g_strdup(nome);
 }
 
-static void su_uscita_descrizione(void *dati, struct wl_output *oggetto,
+static void on_output_description(void *dati, struct wl_output *oggetto,
                                   const char *descrizione)
 {
 }
 
-static const struct wl_output_listener ascolto_uscita = {
-	su_uscita_geometria, su_uscita_modo, su_uscita_fine,
-	su_uscita_scala,     su_uscita_nome, su_uscita_descrizione,
+static const struct wl_output_listener kwin_output_listener = {
+	on_output_geometry, on_output_mode, on_output_end,
+	on_output_scale,     on_output_name, on_output_description,
 };
 
-static void su_globale(void *dati, struct wl_registry *registro, uint32_t nome,
+static void on_global(void *dati, struct wl_registry *registro, uint32_t nome,
                        const char *interfaccia, uint32_t versione)
 {
 	KwinSessione *sessione = dati;
@@ -147,45 +147,45 @@ static void su_globale(void *dati, struct wl_registry *registro, uint32_t nome,
 	if (!strcmp(interfaccia, zkde_screencast_unstable_v1_interface.name)) {
 		/* KWin 6.3.6 announces 5; the clamp because a newer KWin would
 		 * announce one our XML does not describe. */
-		sessione->versione_screencast = MIN(versione, 5u);
+		sessione->screencast_version = MIN(versione, 5u);
 		sessione->screencast =
 		    wl_registry_bind(registro, nome, &zkde_screencast_unstable_v1_interface,
-		                     sessione->versione_screencast);
+		                     sessione->screencast_version);
 	} else if (!strcmp(interfaccia, wl_output_interface.name)) {
-		Uscita *uscita;
+		OutDir *uscita;
 
-		if (sessione->quante_uscite >= USCITE_MAX) {
+		if (sessione->how_many_outputs >= MAX_OUTPUTS) {
 			registro_dice(AREA, "⚠ more than %d outputs: the others are ignored",
-			              USCITE_MAX);
+			              MAX_OUTPUTS);
 			return;
 		}
-		uscita = &sessione->uscite[sessione->quante_uscite++];
-		uscita->nome_globale = nome;
+		uscita = &sessione->uscite[sessione->how_many_outputs++];
+		uscita->global_name = nome;
 		/* Version 4: the one that carries the `name` event. */
 		uscita->versione = MIN(versione, 4u);
 		uscita->oggetto =
 		    wl_registry_bind(registro, nome, &wl_output_interface, uscita->versione);
-		wl_output_add_listener(uscita->oggetto, &ascolto_uscita, uscita);
+		wl_output_add_listener(uscita->oggetto, &kwin_output_listener, uscita);
 	}
 }
 
-static void su_globale_via(void *dati, struct wl_registry *registro, uint32_t nome)
+static void on_global_away(void *dati, struct wl_registry *registro, uint32_t nome)
 {
 	KwinSessione *sessione = dati;
 
-	for (unsigned i = 0; i < sessione->quante_uscite; i++)
-		if (sessione->uscite[i].nome_globale == nome)
+	for (unsigned i = 0; i < sessione->how_many_outputs; i++)
+		if (sessione->uscite[i].global_name == nome)
 			registro_dice(AREA, "⚠ output «%s» has disappeared from the compositor",
 			              sessione->uscite[i].nome ? sessione->uscite[i].nome
 			                                       : "unnamed");
 }
 
-static const struct wl_registry_listener ascolto_registro = { su_globale, su_globale_via };
+static const struct wl_registry_listener registry_listener = { on_global, on_global_away };
 
 /* ------------------------------------------------------------------ *
  * The stream
  * ------------------------------------------------------------------ */
-static void su_flusso_chiuso(void *dati, struct zkde_screencast_stream_unstable_v1 *flusso)
+static void on_stream_closed(void *dati, struct zkde_screencast_stream_unstable_v1 *flusso)
 {
 	KwinSessione *sessione = dati;
 
@@ -195,27 +195,27 @@ static void su_flusso_chiuso(void *dati, struct zkde_screencast_stream_unstable_
 	registro_dice(AREA, "KWin closed the capture stream");
 }
 
-static void su_flusso_creato(void *dati, struct zkde_screencast_stream_unstable_v1 *flusso,
+static void on_stream_created(void *dati, struct zkde_screencast_stream_unstable_v1 *flusso,
                              uint32_t nodo)
 {
 	KwinSessione *sessione = dati;
 
 	sessione->nodo = nodo;
-	sessione->nodo_arrivato = true;
+	sessione->node_arrived = true;
 }
 
-static void su_flusso_guasto(void *dati, struct zkde_screencast_stream_unstable_v1 *flusso,
+static void on_stream_fault(void *dati, struct zkde_screencast_stream_unstable_v1 *flusso,
                              const char *errore)
 {
 	KwinSessione *sessione = dati;
 
 	sessione->rifiutato = true;
-	g_free(sessione->motivo_rifiuto);
-	sessione->motivo_rifiuto = g_strdup(errore);
+	g_free(sessione->refusal_reason);
+	sessione->refusal_reason = g_strdup(errore);
 }
 
 static const struct zkde_screencast_stream_unstable_v1_listener ascolto_flusso = {
-	su_flusso_chiuso, su_flusso_creato, su_flusso_guasto
+	on_stream_closed, on_stream_created, on_stream_fault
 };
 
 /* ------------------------------------------------------------------ *
@@ -264,7 +264,7 @@ static bool gira(KwinSessione *sessione, int attesa_ms)
 	return wl_display_dispatch_pending(sessione->display) >= 0;
 }
 
-static gpointer thread_pompa(gpointer dati)
+static gpointer thread_pump(gpointer dati)
 {
 	KwinSessione *sessione = dati;
 
@@ -272,7 +272,7 @@ static gpointer thread_pompa(gpointer dati)
 		;
 	/* ⛔ AND IT IS MARKED — `[M]` 19 Sep 2026, the user's logout on KDE: KWin
 	 *    dies with the session WITHOUT closing the stream gracefully, so
-	 *    `su_flusso_chiuso` does not arrive; and the PipeWire node disappearing does NOT
+	 *    `on_stream_closed` does not arrive; and the PipeWire node disappearing does NOT
 	 *    put the capture in error — the grab returns "zero" forever, like
 	 *    a still scene.  ⇒ The connection dropping is the only sign, and
 	 *    the child reads it with `kwin_chiuso()`. */
@@ -321,9 +321,9 @@ struct wl_display *kwin_display_apri(char *quale, size_t quanto)
 }
 
 /* With `--virtual` there is a single output; the first that has a mode is taken. */
-static const Uscita *scegli_uscita(const KwinSessione *sessione)
+static const OutDir *choose_output(const KwinSessione *sessione)
 {
-	for (unsigned i = 0; i < sessione->quante_uscite; i++)
+	for (unsigned i = 0; i < sessione->how_many_outputs; i++)
 		if (sessione->uscite[i].larghezza && sessione->uscite[i].altezza)
 			return &sessione->uscite[i];
 	return NULL;
@@ -332,7 +332,7 @@ static const Uscita *scegli_uscita(const KwinSessione *sessione)
 /* The gate is closed: say WHY, because the symptom does not say it.  The
  * missing global has two causes with opposite cures, and KWin tells them apart only in
  * its own log (`QT_LOGGING_RULES='KWIN_UTILS.debug=true'`). */
-static void spiega_il_cancello(GError **sbaglio)
+static void explain_gate(GError **sbaglio)
 {
 	g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_PERMISSION_DENIED,
 	            "KWin does not announce zkde_screencast_unstable_v1: the capture permission "
@@ -340,7 +340,7 @@ static void spiega_il_cancello(GError **sbaglio)
 	            "KWin's environment must have XDG_MENU_PREFIX=plasma-, or the service "
 	            "index is built empty. KWin gives the exact cause with "
 	            "QT_LOGGING_RULES='KWIN_UTILS.debug=true'",
-	            access(PERMESSO_DESKTOP, F_OK) == 0 ? "is there" : "is NOT there", PERMESSO_DESKTOP);
+	            access(PERMISSION_DESKTOP_FILE, F_OK) == 0 ? "is there" : "is NOT there", PERMISSION_DESKTOP_FILE);
 }
 
 KwinSessione *kwin_apri(GError **sbaglio)
@@ -361,22 +361,22 @@ KwinSessione *kwin_apri(GError **sbaglio)
 	}
 
 	sessione->registro = wl_display_get_registry(sessione->display);
-	wl_registry_add_listener(sessione->registro, &ascolto_registro, sessione);
+	wl_registry_add_listener(sessione->registro, &registry_listener, sessione);
 	/* Two rounds: the globals, then the events of the globals just bound (mode, name). */
 	wl_display_roundtrip(sessione->display);
 	wl_display_roundtrip(sessione->display);
 
 	if (!sessione->screencast) {
-		spiega_il_cancello(sbaglio);
+		explain_gate(sbaglio);
 		goto guasto;
 	}
 
-	sessione->scelta = scegli_uscita(sessione);
+	sessione->scelta = choose_output(sessione);
 	if (!sessione->scelta) {
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_NOT_FOUND,
 		            "KWin has no output with a mode (%u announced): without a "
 		            "virtual screen KWin swallows the input too (kde.md §10.3)",
-		            sessione->quante_uscite);
+		            sessione->how_many_outputs);
 		goto guasto;
 	}
 
@@ -393,7 +393,7 @@ KwinSessione *kwin_apri(GError **sbaglio)
 	                                                sessione);
 
 	scadenza = g_get_monotonic_time() + (gint64)ATTESA_NODO_MS * 1000;
-	while (!sessione->nodo_arrivato && !sessione->rifiutato && !sessione->chiuso) {
+	while (!sessione->node_arrived && !sessione->rifiutato && !sessione->chiuso) {
 		gint64 resta = (scadenza - g_get_monotonic_time()) / 1000;
 
 		if (resta <= 0)
@@ -404,10 +404,10 @@ KwinSessione *kwin_apri(GError **sbaglio)
 
 	if (sessione->rifiutato) {
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_FAILED, "KWin refused the capture: %s",
-		            sessione->motivo_rifiuto ? sessione->motivo_rifiuto : "no explanation");
+		            sessione->refusal_reason ? sessione->refusal_reason : "no explanation");
 		goto guasto;
 	}
-	if (!sessione->nodo_arrivato) {
+	if (!sessione->node_arrived) {
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_TIMED_OUT,
 		            "KWin did not announce the PipeWire node within %d ms", ATTESA_NODO_MS);
 		goto guasto;
@@ -418,23 +418,23 @@ KwinSessione *kwin_apri(GError **sbaglio)
 		registro_dice(AREA, "⚠ wake-up pipe not created: closing the capture "
 		                    "will be less clean");
 	}
-	sessione->pompa = g_thread_new("remotix-kwin", thread_pompa, sessione);
+	sessione->pompa = g_thread_new("remotix-kwin", thread_pump, sessione);
 
 	registro_dice(AREA,
 	              "⭐ KWin: zkde_screencast v%u on socket «%s», output «%s» %ux%u (%u in "
 	              "all), PipeWire node %u",
-	              sessione->versione_screencast, socket,
+	              sessione->screencast_version, socket,
 	              sessione->scelta->nome ? sessione->scelta->nome : "unnamed",
 	              sessione->scelta->larghezza, sessione->scelta->altezza,
-	              sessione->quante_uscite, sessione->nodo);
+	              sessione->how_many_outputs, sessione->nodo);
 	return sessione;
 
 guasto:
-	kwin_chiudi(sessione);
+	kwin_close(sessione);
 	return NULL;
 }
 
-uint32_t kwin_nodo(const KwinSessione *sessione)
+uint32_t kwin_node(const KwinSessione *sessione)
 {
 	return sessione ? sessione->nodo : 0;
 }
@@ -445,20 +445,20 @@ void kwin_misura(const KwinSessione *sessione, uint32_t *larghezza, uint32_t *al
 	*altezza = (sessione && sessione->scelta) ? sessione->scelta->altezza : 0;
 }
 
-const char *kwin_nome_uscita(const KwinSessione *sessione)
+const char *kwin_output_name(const KwinSessione *sessione)
 {
 	if (!sessione || !sessione->scelta)
 		return NULL;
 	return sessione->scelta->nome;
 }
 
-unsigned kwin_quante_uscite(const KwinSessione *sessione)
+unsigned kwin_output_count(const KwinSessione *sessione)
 {
 	unsigned n = 0;
 
 	if (!sessione)
 		return 0;
-	for (unsigned i = 0; i < sessione->quante_uscite; i++)
+	for (unsigned i = 0; i < sessione->how_many_outputs; i++)
 		if (sessione->uscite[i].larghezza && sessione->uscite[i].altezza)
 			n++;
 	return n;
@@ -476,25 +476,25 @@ bool kwin_chiuso(const KwinSessione *sessione)
  * (`xdg-desktop-portal-kde/src/remotedesktop.cpp:457-460`). */
 #define EIS_CAPACITA 7
 
-static void stacca_eis(KwinSessione *sessione)
+static void detach_eis(KwinSessione *sessione)
 {
 	/* ⛔ With the token: KWin ties the EIS context to the life of the caller's D-Bus
 	 *    NAME, so letting it go only works while the process lives — and
 	 *    in a recovery the process stays alive, with one device too many. */
-	if (sessione->gettone_noto) {
-		GDBusConnection *bus = sessione_bus(NULL);
+	if (sessione->known_token) {
+		GDBusConnection *bus = sess_bus(NULL);
 
 		if (bus) {
 			GVariant *r = g_dbus_connection_call_sync(
 			    bus, "org.kde.KWin", "/org/kde/KWin/EIS/RemoteDesktop",
 			    "org.kde.KWin.EIS.RemoteDesktop", "disconnect",
-			    g_variant_new("(i)", sessione->gettone_eis), NULL,
+			    g_variant_new("(i)", sessione->eis_token), NULL,
 			    G_DBUS_CALL_FLAGS_NONE, 2000, NULL, NULL);
 			if (r)
 				g_variant_unref(r);
 			g_object_unref(bus);
 		}
-		sessione->gettone_noto = false;
+		sessione->known_token = false;
 	}
 	if (sessione->eis >= 0) {
 		close(sessione->eis);
@@ -502,14 +502,14 @@ static void stacca_eis(KwinSessione *sessione)
 	}
 }
 
-static int chiedi_eis(KwinSessione *sessione, GError **sbaglio)
+static int ask_eis(KwinSessione *sessione, GError **sbaglio)
 {
 	GDBusConnection *bus;
 	GUnixFDList *descrittori = NULL;
 	GVariant *risposta;
 	gint indice = -1;
 
-	bus = sessione_bus(sbaglio);
+	bus = sess_bus(sbaglio);
 	if (!bus)
 		return -1;
 	/* ⛔ THE DESCRIPTOR TRAVELS IN A SEPARATE LIST: `h` is an INDEX into
@@ -522,15 +522,15 @@ static int chiedi_eis(KwinSessione *sessione, GError **sbaglio)
 	g_object_unref(bus);
 	if (!risposta)
 		return -1;
-	g_variant_get(risposta, "(hi)", &indice, &sessione->gettone_eis);
+	g_variant_get(risposta, "(hi)", &indice, &sessione->eis_token);
 	g_variant_unref(risposta);
 	sessione->eis = g_unix_fd_list_get(descrittori, indice, sbaglio);
 	g_object_unref(descrittori);
 	if (sessione->eis < 0)
 		return -1;
-	sessione->gettone_noto = true;
+	sessione->known_token = true;
 	registro_dice(AREA, "⭐ KWin granted the input channel (connectToEIS, token %d, "
-	                    "descriptor %d)", sessione->gettone_eis, sessione->eis);
+	                    "descriptor %d)", sessione->eis_token, sessione->eis);
 	return sessione->eis;
 }
 
@@ -542,7 +542,7 @@ int kwin_eis_fd(KwinSessione *sessione, GError **sbaglio)
 	}
 	if (sessione->eis >= 0)
 		return sessione->eis;
-	return chiedi_eis(sessione, sbaglio);
+	return ask_eis(sessione, sbaglio);
 }
 
 int kwin_eis_riattacca(KwinSessione *sessione, GError **sbaglio)
@@ -551,11 +551,11 @@ int kwin_eis_riattacca(KwinSessione *sessione, GError **sbaglio)
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT, "no KWin stage");
 		return -1;
 	}
-	stacca_eis(sessione);
-	return chiedi_eis(sessione, sbaglio);
+	detach_eis(sessione);
+	return ask_eis(sessione, sbaglio);
 }
 
-void kwin_chiudi(KwinSessione *sessione)
+void kwin_close(KwinSessione *sessione)
 {
 	if (!sessione)
 		return;
@@ -576,12 +576,12 @@ void kwin_chiudi(KwinSessione *sessione)
 	if (sessione->sveglia[1] >= 0)
 		close(sessione->sveglia[1]);
 
-	stacca_eis(sessione);
+	detach_eis(sessione);
 	if (sessione->flusso)
 		zkde_screencast_stream_unstable_v1_close(sessione->flusso);
 	if (sessione->screencast)
 		zkde_screencast_unstable_v1_destroy(sessione->screencast);
-	for (unsigned i = 0; i < sessione->quante_uscite; i++) {
+	for (unsigned i = 0; i < sessione->how_many_outputs; i++) {
 		if (sessione->uscite[i].oggetto) {
 			/* `release` exists since version 3. */
 			if (sessione->uscite[i].versione >= 3)
@@ -597,7 +597,7 @@ void kwin_chiudi(KwinSessione *sessione)
 		wl_display_flush(sessione->display);
 		wl_display_disconnect(sessione->display);
 	}
-	g_free(sessione->motivo_rifiuto);
+	g_free(sessione->refusal_reason);
 	g_free(sessione);
 }
 
@@ -621,7 +621,7 @@ void kwin_chiudi(KwinSessione *sessione)
  *               `/usr/lib/remotix/remotix` on Arch, something else in a bench);
  *   RX-KDE-003  `zkde_screencast_unstable_v1` is missing from X-KDE-Wayland-Interfaces.
  */
-static bool exec_porta_a(const char *exec, const char *canonico, char **visto)
+static bool exec_leads_to(const char *exec, const char *canonico, char **visto)
 {
 	char **argv = NULL;
 	char *vero;
@@ -654,21 +654,21 @@ bool kwin_verifica_permesso(char *perche, size_t quanto)
 		snprintf(perche, quanto, "I do not know which binary I am running: %s", strerror(errno));
 		goto fine;
 	}
-	if (!g_key_file_load_from_file(chiavi, PERMESSO_DESKTOP, G_KEY_FILE_NONE, &sbaglio)) {
+	if (!g_key_file_load_from_file(chiavi, PERMISSION_DESKTOP_FILE, G_KEY_FILE_NONE, &sbaglio)) {
 		snprintf(perche, quanto,
 		         "RX-KDE-001: %s %s (%s). Remedy: reinstall REMOTIX with the installer",
-		         PERMESSO_DESKTOP,
+		         PERMISSION_DESKTOP_FILE,
 		         g_error_matches(sbaglio, G_FILE_ERROR, G_FILE_ERROR_NOENT) ? "is missing"
 		                                                                  : "cannot be read",
 		         sbaglio->message);
 		goto fine;
 	}
 	exec = g_key_file_get_string(chiavi, "Desktop Entry", "Exec", NULL);
-	if (!exec || !exec_porta_a(exec, canonico, &visto)) {
+	if (!exec || !exec_leads_to(exec, canonico, &visto)) {
 		snprintf(perche, quanto,
 		         "RX-KDE-002: in %s Exec=%s, but the running binary is %s. Remedy: "
 		         "reinstall REMOTIX with the installer",
-		         PERMESSO_DESKTOP, visto ? visto : "(missing)", canonico);
+		         PERMISSION_DESKTOP_FILE, visto ? visto : "(missing)", canonico);
 		goto fine;
 	}
 	interfacce = g_key_file_get_string(chiavi, "Desktop Entry", "X-KDE-Wayland-Interfaces",
@@ -685,11 +685,11 @@ bool kwin_verifica_permesso(char *perche, size_t quanto)
 		snprintf(perche, quanto,
 		         "RX-KDE-003: in %s X-KDE-Wayland-Interfaces=%s, without "
 		         "zkde_screencast_unstable_v1. Remedy: reinstall REMOTIX with the installer",
-		         PERMESSO_DESKTOP, interfacce ? interfacce : "(missing)");
+		         PERMISSION_DESKTOP_FILE, interfacce ? interfacce : "(missing)");
 		goto fine;
 	}
 	snprintf(perche, quanto, "%s checked (it belongs to the package: I do not write it), Exec=%s",
-	         PERMESSO_DESKTOP, canonico);
+	         PERMISSION_DESKTOP_FILE, canonico);
 fine:
 	g_clear_error(&sbaglio);
 	g_key_file_unref(chiavi);
@@ -734,7 +734,7 @@ fine:
  *    negotiated layout would not apply precisely to whoever configured their own.  Only
  *    those two: model and options stay theirs.
  */
-static bool nome_xkb_pulito(const char *s, size_t n)
+static bool clean_xkb_name(const char *s, size_t n)
 {
 	if (n == 0)
 		return false;
@@ -764,8 +764,8 @@ int kwin_disposizione(const char *nome, GError **sbaglio)
 		const char *chiusa = strchr(par + 1, ')');
 
 		if (!chiusa || chiusa[1] != '\0' ||
-		    !nome_xkb_pulito(nome, (size_t) (par - nome)) ||
-		    !nome_xkb_pulito(par + 1, (size_t) (chiusa - par - 1))) {
+		    !clean_xkb_name(nome, (size_t) (par - nome)) ||
+		    !clean_xkb_name(par + 1, (size_t) (chiusa - par - 1))) {
 			g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT,
 			            "invalid name «%s»", nome);
 			return -1;
@@ -773,7 +773,7 @@ int kwin_disposizione(const char *nome, GError **sbaglio)
 		disposizione = g_strndup(nome, (size_t) (par - nome));
 		variante = g_strndup(par + 1, (size_t) (chiusa - par - 1));
 	} else {
-		if (!nome_xkb_pulito(nome, strlen(nome))) {
+		if (!clean_xkb_name(nome, strlen(nome))) {
 			g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT,
 			            "invalid name «%s»", nome);
 			return -1;
@@ -800,7 +800,7 @@ int kwin_disposizione(const char *nome, GError **sbaglio)
 	if (!g_file_set_contents(percorso, testo, -1, sbaglio))
 		return -1;
 
-	bus = sessione_bus(sbaglio);
+	bus = sess_bus(sbaglio);
 	if (!bus)
 		return -1;
 	if (!g_dbus_connection_emit_signal(bus, NULL, "/Layouts", "org.kde.keyboard",

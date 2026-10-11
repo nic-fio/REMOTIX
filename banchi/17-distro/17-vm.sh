@@ -95,7 +95,7 @@ riga() {  # riga <distro>[-<desktop>][-iso] -> NUM, URL, ESPR, DE, D, porte
 	[ -n "$r" ] || die "unknown distribution: $dis (see: 17-vm.sh elenco)"
 	NUM=$(printf '%s' "$r" | cut -d'|' -f2 | tr -d ' ')
 	URL=$(printf '%s' "$r" | cut -d'|' -f3 | tr -d ' ')
-	ESPR=$(printf '%s' "$r" | cut -d'|' -f4 | tr -d ' ')
+	EXPR=$(printf '%s' "$r" | cut -d'|' -f4 | tr -d ' ')
 	DE=$de; D=$dis; [ "$de" = nudo ] || D="$dis-$de"
 	if [ -n "$ISO" ]; then
 		[ "$de" != nudo ] || die "the ISO state wants a desktop: <distro>-<desktop>-iso"
@@ -164,10 +164,10 @@ cmd_crea() {
 		ok "already downloaded ($(du -h "$BASE_IMG" | cut -f1))"
 	else
 		local u="$URL"
-		if [ -n "$ESPR" ]; then
+		if [ -n "$EXPR" ]; then
 			local f
-			f=$(curl -fsSL "$URL" | grep -o "$ESPR" | sort -V | tail -1)
-			[ -n "$f" ] || die "no file «$ESPR» in $URL"
+			f=$(curl -fsSL "$URL" | grep -o "$EXPR" | sort -V | tail -1)
+			[ -n "$f" ] || die "no file «$EXPR» in $URL"
 			u="${URL%/}/$f"
 		fi
 		inf "downloading $u"

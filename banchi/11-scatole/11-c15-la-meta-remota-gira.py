@@ -272,7 +272,7 @@ GIORNI_PREDEFINITI = 7    # `[R]` C12, `GIORNI_PREDEFINITI`
 
 # ⭐ «Without a running box it cannot reach a judgement.»
 #    ⇒ A 0 or 1 of theirs in the log **is the proof that the boxes were there.**
-VOGLIONO_LA_SCATOLA = {
+WANT_BOX = {
     "passo0",  # `[R]` validates the ENVIRONMENT inside the box (11-accendi.sh passo0)
     "c1",      # `[R]` the session is born and shows
     "c5",      # `[R]` the sound is not silence
@@ -298,7 +298,7 @@ ACCENDONO_UNA_SESSIONE = {"c1", "c5", "c7", "c8", "c9", "c14"}
 NON_E_UNA_MAGLIA = {"la meta remota"}
 
 
-def numero_di(nome):
+def number_of(nome):
     """From «C1(gnome)x2» to «c1», from «passo0(kde)» to «passo0».
 
     ⛔ Returns `None` when it does not recognise a mesh — and `None` is not «no»: it is
@@ -331,7 +331,7 @@ def scatola_di(nome):
     return m.group(1).strip().lower() if m else None
 
 
-def leggi_il_registro(percorso):
+def read_log(percorso):
     """Returns (giri, guaio) — ⛔ and the cases are three, as in C12 and C13.
 
        (None, "assente")     the file is not there
@@ -364,7 +364,7 @@ def leggi_il_registro(percorso):
     return giri, None
 
 
-def eta_in_giorni(istante, adesso):
+def age_in_days(istante, adesso):
     """⛔ Returns `None` if it cannot tell — never zero, never an invented number."""
     if not istante or adesso is None:
         return None
@@ -403,7 +403,7 @@ def giudica(giri, ultimi, giorni, adesso):
 
     sulle_scatole = []      # the runs in which a box mesh HAS JUDGED
     col_carico = []         # ... and among those, the ones that started something
-    scatole_viste = set()   # ⚠ information, not judgement (question 3)
+    seen_boxes = set()   # ⚠ information, not judgement (question 3)
     macchine = set()
 
     for g in fetta:
@@ -419,13 +419,13 @@ def giudica(giri, ultimi, giorni, adesso):
             #      it is a second net under the first.
             if m.get("esito") not in (0, 1):
                 continue
-            n = numero_di(m.get("nome"))
-            if n is None or n not in VOGLIONO_LA_SCATOLA:
+            n = number_of(m.get("nome"))
+            if n is None or n not in WANT_BOX:
                 continue
             giudicanti.append(m.get("nome"))
             s = scatola_di(m.get("nome"))
             if s:
-                scatole_viste.add(s)
+                seen_boxes.add(s)
             if n in ACCENDONO_UNA_SESSIONE:
                 accese.append(m.get("nome"))
         if giudicanti:
@@ -439,7 +439,7 @@ def giudica(giri, ultimi, giorni, adesso):
         "a_vuoto": len(giri) - len(veri),
         "sulle_scatole": len(sulle_scatole),
         "col_carico": len(col_carico),
-        "scatole": sorted(scatole_viste),
+        "scatole": sorted(seen_boxes),
         "macchine": sorted(macchine),
         "ultimo": sulle_scatole[-1][0] if sulle_scatole else None,
         "ultimo_maglie": sulle_scatole[-1][1] if sulle_scatole else [],
@@ -461,7 +461,7 @@ def giudica(giri, ultimi, giorni, adesso):
         return r
 
     # ── and the age of the last one ────────────────────────────────────────
-    eta = eta_in_giorni(r["ultimo"].get("istante"), adesso)
+    eta = age_in_days(r["ultimo"].get("istante"), adesso)
     r["eta"] = eta
     if eta is None:
         # ⚠ An instant that cannot be read is not «old»: it is «I do not
@@ -494,12 +494,12 @@ def certifica():
     import datetime
     adesso = time.time()
 
-    def istante(giorni_fa):
-        t = datetime.datetime.now().astimezone() - datetime.timedelta(days=giorni_fa)
+    def istante(days_ago):
+        t = datetime.datetime.now().astimezone() - datetime.timedelta(days=days_ago)
         return t.isoformat()
 
-    def giro(maglie, secco=False, giorni_fa=0.5, dove="NIC-OS"):
-        return {"istante": istante(giorni_fa), "secco": secco,
+    def giro(maglie, secco=False, days_ago=0.5, dove="NIC-OS"):
+        return {"istante": istante(days_ago), "secco": secco,
                 "dove": dove, "maglie": maglie}
 
     def m(nome, esito=0):
@@ -508,12 +508,12 @@ def certifica():
 
     # ⭐ the «laptop only» run: it is the exact line the log writes
     #   today when the test machine does not answer.
-    def portatile(giorni_fa=0.5):
+    def portatile(days_ago=0.5):
         return giro([m("C10"), m("C11", esito=3), m("C12"), m("C13"),
                      m("C14", esito=3),
                      {"nome": "C10 guasto innestato", "esito": 0, "secondi": 0,
                       "guasto_innestato": True, "ha_visto_il_guasto": True}],
-                    giorni_fa=giorni_fa, dove="CHUWI")
+                    days_ago=days_ago, dove="CHUWI")
 
     casi = [
         # ── the green, and where it comes from ──────────────────────────────
@@ -562,10 +562,10 @@ def certifica():
 
         # ── THE THRESHOLD IN DAYS, in both directions ───────────────────────
         ("⛔ the last run on the boxes is from twenty days ago (threshold 7)",
-         [giro([m("C1(gnome)x2")], giorni_fa=20)], "ROSSO"),
+         [giro([m("C1(gnome)x2")], days_ago=20)], "ROSSO"),
 
         ("⭐ … and at 6,5 days it is still GREEN (the direction one forgets)",
-         [giro([m("C1(gnome)x2")], giorni_fa=6.5)], "verde"),
+         [giro([m("C1(gnome)x2")], days_ago=6.5)], "verde"),
 
         ("⚠ the instant cannot be read ⇒ it is the log that is malformed",
          [{"istante": "yesterday morning", "secco": False,
@@ -660,7 +660,7 @@ def certifica():
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-def qui_c_e_il_deposito():
+def repo_is_here():
     """⭐ The same question as C12, and for the same reason.
 
     ⛔ It is not pedantry: on the test machine the log contains only the
@@ -696,7 +696,7 @@ def main():
     if a.certifica:
         sys.exit(certifica())
 
-    if not a.ovunque and not qui_c_e_il_deposito():
+    if not a.ovunque and not repo_is_here():
         print("⛔ I am not inside a git repository.")
         print("   ⇒ if this is the test machine, here the log contains")
         print("     ONLY this machine's runs — that is all runs on the")
@@ -706,7 +706,7 @@ def main():
         print("   ⇒ the terrain does not hold")
         sys.exit(2)
 
-    giri, guaio = leggi_il_registro(a.registro)
+    giri, guaio = read_log(a.registro)
 
     print("== C15 — does the remote half really run? ==")
     print("   ⛔ the fault it looks for: the test machine switched off silently —")

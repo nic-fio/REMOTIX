@@ -38,9 +38,9 @@ Usage:
 """
 import argparse, base64, json, math, os, struct, sys, wave
 
-FREQUENZA = 48000
+FREQUENCY = 48000
 CANALI = 2
-PASSO_PCM_US = 5000          # §5.3: the PCM block is 5 ms
+STEP_PCM_US = 5000          # §5.3: the PCM block is 5 ms
 SOGLIA = 0.02                # fraction of the peak amplitude
 
 # ⛔⛔ THE MINIMUM PEAK, AND IT IS THE CURE FOR FINDING R7 — 22 August 2026.
@@ -57,7 +57,7 @@ SOGLIA = 0.02                # fraction of the peak amplitude
 #    is ~4 LSB; for the threshold (2 % of the peak) to sit above that noise
 #    a peak of at least ~400 is needed.  Below it, the detector can no longer tell
 #    nothing from nothing, and saying so is the only honest answer (`CODER.md` §3.10).
-PICCO_MINIMO = 400           # ~1.2 % of 16-bit full scale
+MIN_PEAK = 400           # ~1.2 % of 16-bit full scale
 
 # ⛔⛔⛔ THE BLIND GAP, AND IT IS DECLARED HERE BECAUSE IT CANNOT BE REMOVED.
 #
@@ -83,13 +83,13 @@ PICCO_MINIMO = 400           # ~1.2 % of 16-bit full scale
 #     is 2.215 k cycles, and the first whole number comes at **200 blocks = 1 second**
 #     instead of five.  ⚠ The 440 stays as long as the old measurements serve for
 #     comparison: changing it now would make yesterday's numbers incomparable.
-BLOCCO_PCM_CAMPIONI = 240    # 5 ms on one channel
+BLOCK_PCM_SAMPLES = 240    # 5 ms on one channel
 
 
 # ══════════════════════════════════════════════════════════════════════════
 def residui(campioni, hz):
     """The second-order recurrence.  Returns the residual, sample by sample."""
-    w = 2.0 * math.cos(2.0 * math.pi * hz / FREQUENZA)
+    w = 2.0 * math.cos(2.0 * math.pi * hz / FREQUENCY)
     fuori = [0.0, 0.0]
     for n in range(2, len(campioni)):
         fuori.append(campioni[n] - w * campioni[n - 1] + campioni[n - 2])
@@ -107,13 +107,13 @@ def scoppiettii(campioni, hz, soglia=SOGLIA, attesi=None):
     if len(campioni) < 64:
         return {"esito": "NOTHING TO JUDGE", "campioni": len(campioni)}
     picco = max(abs(x) for x in campioni)
-    if picco < PICCO_MINIMO:
+    if picco < MIN_PEAK:
         # ⛔ R7: here `scoppiettii 0` used to come out, that is top marks.
         return {"esito": "SILENCE OR NEARLY — I DO NOT JUDGE",
                 "perche": "peak %d below the minimum of %d: the detector's "
                           "threshold would end up below the quantisation "
                           "noise, and every answer would be made up"
-                          % (picco, PICCO_MINIMO),
+                          % (picco, MIN_PEAK),
                 "campioni": len(campioni), "picco": picco}
     r = residui(campioni, hz)
     lim = soglia * picco
@@ -124,7 +124,7 @@ def scoppiettii(campioni, hz, soglia=SOGLIA, attesi=None):
                 ultimo["fine"] = n
                 ultimo["salto"] = max(ultimo["salto"], abs(v) / picco)
             else:
-                ultimo = {"campione": n, "fine": n, "ms": round(n * 1000.0 / FREQUENZA, 1),
+                ultimo = {"campione": n, "fine": n, "ms": round(n * 1000.0 / FREQUENCY, 1),
                           "salto": abs(v) / picco}
                 eventi.append(ultimo)
     for e in eventi:
@@ -141,8 +141,8 @@ def scoppiettii(campioni, hz, soglia=SOGLIA, attesi=None):
             # ⚠ And we say whether that gap would have been invisible to the residual: it is
             #   the information that explains a «zero crackles» next to a
             #   real shortfall, instead of letting them contradict each other in silence.
-            cieco = abs(manca * hz / FREQUENZA
-                        - round(manca * hz / FREQUENZA)) < 0.01
+            cieco = abs(manca * hz / FREQUENCY
+                        - round(manca * hz / FREQUENCY)) < 0.01
     return {"esito": "GIUDICATO", "campioni": len(campioni),
             "campioni_attesi": attesi,
             "campioni_mancanti": manca,
@@ -152,7 +152,7 @@ def scoppiettii(campioni, hz, soglia=SOGLIA, attesi=None):
             "residuo_99_rel": round(ordinati[int(len(ordinati) * 0.99)] / picco, 6),
             "soglia_rel": soglia,
             "scoppiettii": len(eventi),
-            "al_secondo": round(len(eventi) / (len(campioni) / FREQUENZA), 3),
+            "al_secondo": round(len(eventi) / (len(campioni) / FREQUENCY), 3),
             "dove": eventi[:40]}
 
 
@@ -176,12 +176,12 @@ def da_jsonl(percorso):
     buchi = []
     for i in range(1, len(istanti)):
         dt = istanti[i] - istanti[i - 1]
-        if dt != PASSO_PCM_US:
+        if dt != STEP_PCM_US:
             buchi.append({"blocco": i, "passo_us": dt})
-    durata_dichiarata = (istanti[-1] - istanti[0] + PASSO_PCM_US) / 1e6 if istanti else 0.0
+    declared_duration = (istanti[-1] - istanti[0] + STEP_PCM_US) / 1e6 if istanti else 0.0
     return {"campioni": campioni, "blocchi": len(istanti), "buchi_istante": buchi,
-            "durata_dichiarata_s": round(durata_dichiarata, 3),
-            "durata_campioni_s": round(len(campioni) / FREQUENZA, 3)}
+            "durata_dichiarata_s": round(declared_duration, 3),
+            "durata_campioni_s": round(len(campioni) / FREQUENCY, 3)}
 
 
 def da_wav(percorso):
@@ -195,7 +195,7 @@ def da_wav(percorso):
 
 
 # ══════════════════════════════════════════════════════════════════════════
-def giudizio_completo(dati, hz, finestra_s):
+def full_judgment(dati, hz, finestra_s):
     """⛔ The Goertzel window must be a WHOLE number of seconds, or the
        judge of `07-b42` fails a perfect tone (§2.1, the box)."""
     c = dati["campioni"]
@@ -208,16 +208,16 @@ def giudizio_completo(dati, hz, finestra_s):
     #    graph skips a cycle, the samples do not arrive at all and the `istante`
     #    do not notice — this number does.
     if dati["durata_dichiarata_s"]:
-        atteso = dati["durata_dichiarata_s"] * FREQUENZA
+        atteso = dati["durata_dichiarata_s"] * FREQUENCY
         r["campioni_mancanti"] = int(atteso - len(c))
         r["resa_campioni"] = round(len(c) / atteso, 5) if atteso else None
     # ⛔ `attesi` comes from the server's `istante` (§6.3), not from our
     #    clock: it is the only number that says how many samples there should have been.
-    attesi = (int(round(dati["durata_dichiarata_s"] * FREQUENZA))
+    attesi = (int(round(dati["durata_dichiarata_s"] * FREQUENCY))
               if dati["durata_dichiarata_s"] else None)
     r.update({"scoppiettii": scoppiettii(c, hz, attesi=attesi)})
     # The certified judge of 07-b42, on a whole window in the middle.
-    n = finestra_s * FREQUENZA
+    n = finestra_s * FREQUENCY
     if len(c) >= n:
         i = (len(c) - n) // 2
         qui = os.path.dirname(os.path.abspath(__file__))
@@ -254,26 +254,26 @@ def certifica(hz=440):
     amp = 0.5 * 32767
 
     def seno(n0, n, f=hz):
-        return [int(amp * math.sin(2 * math.pi * f * (n0 + k) / FREQUENZA))
+        return [int(amp * math.sin(2 * math.pi * f * (n0 + k) / FREQUENCY))
                 for k in range(n)]
 
-    sano = seno(0, FREQUENZA * 4)
+    sano = seno(0, FREQUENCY * 4)
     casi = []
 
     def taglia(quanti):
-        return sano[:FREQUENZA * 2] + seno(FREQUENZA * 2 + quanti,
-                                           FREQUENZA * 2 - quanti)
+        return sano[:FREQUENCY * 2] + seno(FREQUENCY * 2 + quanti,
+                                           FREQUENCY * 2 - quanti)
 
     #  (name, samples, expected, expected crackles, who must see it)
     casi.append(("0-healthy — a perfect 4 s tone", sano, None, 0, "nobody: it is healthy"))
     casi.append(("1-gap — 137 samples (2.9 ms) removed and stitched back",
                  taglia(137), None, 1, "the residual"))
     casi.append(("2-silence in the middle — 10 ms of zeros",
-                 sano[:FREQUENZA * 2] + [0] * 480 + sano[FREQUENZA * 2 + 480:],
+                 sano[:FREQUENCY * 2] + [0] * 480 + sano[FREQUENCY * 2 + 480:],
                  None, 2, "the residual"))
 
     random.seed(7)
-    posti = sorted(random.sample(range(FREQUENZA // 2, FREQUENZA * 7 // 2), 10))
+    posti = sorted(random.sample(range(FREQUENCY // 2, FREQUENCY * 7 // 2), 10))
     tanti, prima, salto = [], 0, 0
     for p in posti:
         tanti += seno(prima + salto, p - prima)
@@ -282,15 +282,15 @@ def certifica(hz=440):
     casi.append(("3-ten tears of 61 samples", tanti, None, 10, "the residual"))
 
     # ⛔ R7a — SILENCE.  It used to give `scoppiettii 0`, that is top marks.
-    casi.append(("4-⛔ R7a: four seconds of ZEROS", [0] * (FREQUENZA * 4),
+    casi.append(("4-⛔ R7a: four seconds of ZEROS", [0] * (FREQUENCY * 4),
                  None, "SILENCE OR NEARLY — I DO NOT JUDGE", "the refusal"))
 
     # ⛔ R7b — THE BLIND GAP.  The residual does not see it and cannot see it: 1200
     #    samples are exactly 11.000 cycles.  THE COUNT must see it.
     casi.append(("5-⛔ R7b: 1200 samples removed (25 ms = 11.000 cycles)",
-                 taglia(1200), FREQUENZA * 4, 0, "⭐ the COUNT (1200 missing)"))
+                 taglia(1200), FREQUENCY * 4, 0, "⭐ the COUNT (1200 missing)"))
     casi.append(("6-⛔ R7b: 2400 samples removed (50 ms = 22.000 cycles)",
-                 taglia(2400), FREQUENZA * 4, 0, "⭐ the COUNT (2400 missing)"))
+                 taglia(2400), FREQUENCY * 4, 0, "⭐ the COUNT (2400 missing)"))
 
     print("⭐ CERTIFICATION OF THE JUDGE — the expected outcome is written FIRST\n")
     verde = True
@@ -320,12 +320,12 @@ def certifica(hz=440):
     # ⭐ And the control of the CONTROL: at 443 Hz the blind gap is gone.
     #    ⚠ It is not a cure to apply today (it would make yesterday's measurements
     #    incomparable): it is the proof that the diagnosis of the blind gap is right.
-    rotto443 = ([int(amp * math.sin(2 * math.pi * 443 * k / FREQUENZA))
-                 for k in range(FREQUENZA * 2)]
-                + [int(amp * math.sin(2 * math.pi * 443 * (k + FREQUENZA * 2 + 1200)
-                                      / FREQUENZA))
-                   for k in range(FREQUENZA * 2 - 1200)])
-    e443 = scoppiettii(rotto443, 443)
+    broken443 = ([int(amp * math.sin(2 * math.pi * 443 * k / FREQUENCY))
+                 for k in range(FREQUENCY * 2)]
+                + [int(amp * math.sin(2 * math.pi * 443 * (k + FREQUENCY * 2 + 1200)
+                                      / FREQUENCY))
+                   for k in range(FREQUENCY * 2 - 1200)])
+    e443 = scoppiettii(broken443, 443)
     ok443 = e443.get("scoppiettii") == 1
     verde = verde and ok443
     print("  %-52s expected %-6s · %s  %s"
@@ -358,9 +358,9 @@ def principale():
         # ⛔ CODER.md §3.10: «I read nothing» is an outcome of ITS OWN, not a zero.
         fuori["esito"] = "NOTHING TO JUDGE — the JSONL is missing or empty"
         print(json.dumps(fuori, ensure_ascii=False, indent=1)); return 2
-    fuori["nostro"] = giudizio_completo(da_jsonl(a.jsonl), a.hz, a.finestra)
+    fuori["nostro"] = full_judgment(da_jsonl(a.jsonl), a.hz, a.finestra)
     if a.rif and os.path.exists(a.rif) and os.path.getsize(a.rif) > 1000:
-        fuori["arbitro_pw_record"] = giudizio_completo(da_wav(a.rif), a.hz, a.finestra)
+        fuori["arbitro_pw_record"] = full_judgment(da_wav(a.rif), a.hz, a.finestra)
     elif a.rif:
         fuori["arbitro_pw_record"] = "NOTHING TO JUDGE — the wav is missing or empty"
     print(json.dumps(fuori, ensure_ascii=False, indent=1))

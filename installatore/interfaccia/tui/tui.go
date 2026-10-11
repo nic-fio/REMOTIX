@@ -23,11 +23,11 @@ import (
 )
 
 const (
-	sAttesa = iota
-	sControllo
+	sWait = iota
+	sCheck
 	sPiano
-	sAvanzamento
-	sPronto
+	sProgress
+	sReady
 	sFine
 )
 
@@ -40,10 +40,10 @@ const (
 )
 
 const (
-	larghezzaMinima = 80
-	altezzaMinima   = 12
-	colEtichetta    = 18 // the column of the check's labels
-	colStato        = 12 // the column of the state labels
+	minWidth  = 80
+	minHeight = 12
+	labelCol  = 18 // the column of the check's labels
+	stateCol  = 12 // the column of the state labels
 )
 
 // tema: the mockup's colours. lipgloss brings them down by itself to 256 or 16 colours depending on the terminal, and to
@@ -52,7 +52,7 @@ type tema struct {
 	blu, verde, ambra, rosso, grigio, cornice, forte, campo lipgloss.Style
 }
 
-func nuovoTema(r *lipgloss.Renderer) tema {
+func newTheme(r *lipgloss.Renderer) tema {
 	c := func(hex string) lipgloss.Style { return r.NewStyle().Foreground(lipgloss.Color(hex)) }
 	return tema{
 		blu:     c("#5A9BFF").Bold(true),
@@ -67,7 +67,7 @@ func nuovoTema(r *lipgloss.Renderer) tema {
 }
 
 type (
-	msgControllo struct {
+	msgCheck struct {
 		c   *interfaccia.Controllo
 		err error
 	}
@@ -75,8 +75,8 @@ type (
 		p   *motore.Piano
 		err error
 	}
-	msgEvento struct{ ev motore.EventoPubblico }
-	msgEsito  struct {
+	msgEvent   struct{ ev motore.PublicEvent }
+	msgOutcome struct {
 		es  *interfaccia.Esito
 		err error
 	}
@@ -91,15 +91,15 @@ type modello struct {
 	fallito  bool // the step stopped (red ✗)
 	attesa   string
 	ctrl     *interfaccia.Controllo
-	vc       *interfaccia.VistaControllo
+	vc       *interfaccia.CheckView
 	vp       *interfaccia.VistaPiano
 	piano    *motore.Piano
 	av       *interfaccia.Avanzamento
-	eventi   []motore.EventoPubblico
-	pronto   *interfaccia.VistaPronto
-	fine     *interfaccia.VistaBloccata
+	eventi   []motore.PublicEvent
+	pronto   *interfaccia.ReadyView
+	fine     *interfaccia.BlockedView
 	porta    string
-	modPorta bool   // the port is being typed
+	modPort  bool   // the port is being typed
 	vecchia  string // the previous port, for esc
 	dett     bool
 	reg      bool
@@ -114,8 +114,8 @@ type modello struct {
 // Avvia: the TUI on the engine's session, starting from the port given with --port (the check
 // examines that one; tab still changes it in the plan). The exit code follows the CLI's (0 if
 // the installation is CONFERMATA).
-func Avvia(mot interfaccia.Motore, porta int) (int, error) {
-	m := nuovoModello(mot, lipgloss.DefaultRenderer())
+func Launch(mot interfaccia.Motore, porta int) (int, error) {
+	m := newModel(mot, lipgloss.DefaultRenderer())
 	m.iniziale(porta)
 	p := tea.NewProgram(m, tea.WithAltScreen())
 	m.prog = p
@@ -131,9 +131,9 @@ func Avvia(mot interfaccia.Motore, porta int) (int, error) {
 	return 1, nil
 }
 
-func nuovoModello(mot interfaccia.Motore, r *lipgloss.Renderer) *modello {
-	return &modello{mot: mot, t: nuovoTema(r), schermo: sAttesa, passo: pCheck,
-		attesa: interfaccia.T("attendi.controllo"), porta: "7447", larg: larghezzaMinima, alt: 24}
+func newModel(mot interfaccia.Motore, r *lipgloss.Renderer) *modello {
+	return &modello{mot: mot, t: newTheme(r), schermo: sWait, passo: pCheck,
+		attesa: interfaccia.T("attendi.controllo"), porta: "7447", larg: minWidth, alt: 24}
 }
 
 // iniziale: the starting port (--port); 0 or out of range keeps 7447.
@@ -147,12 +147,12 @@ func (m *modello) Init() tea.Cmd {
 	porta, _ := strconv.Atoi(m.porta)
 	return func() tea.Msg {
 		c, err := m.mot.Controlla(porta)
-		return msgControllo{c, err}
+		return msgCheck{c, err}
 	}
 }
 
 func messaggio(err error) *motore.Messaggio {
-	if e, ok := err.(*motore.ErroreRX); ok {
+	if e, ok := err.(*motore.ErrorRX); ok {
 		return &e.M
 	}
 	x := motore.Msg("RX-UI-005", err.Error())
@@ -167,23 +167,23 @@ func (m *modello) finisci(es *interfaccia.Esito) {
 	m.esito = es
 	if es.Stato == motore.CONFERMATA || es.Stato == motore.CONFERMATA_A_CONDIZIONI {
 		porta, _ := strconv.Atoi(m.porta)
-		m.pronto = interfaccia.VistaDelPronto(es, m.vp, porta)
+		m.pronto = interfaccia.NewReadyView(es, m.vp, porta)
 		m.passo = pReady
-		m.vai(sPronto)
+		m.vai(sReady)
 		return
 	}
 	if es.Errore == nil {
-		es.Errore = interfaccia.UltimoMessaggio(m.eventi)
+		es.Errore = interfaccia.LastMessage(m.eventi)
 	}
-	m.fine, m.fallito = interfaccia.VistaDellaFine(es, nil), true
+	m.fine, m.fallito = interfaccia.NewEndView(es, nil), true
 	m.vai(sFine)
 }
 
-// chiediPiano: the plan for the typed port (the engine re-examines the machine if it changes).
-func (m *modello) chiediPiano() tea.Cmd {
+// askPlan: the plan for the typed port (the engine re-examines the machine if it changes).
+func (m *modello) askPlan() tea.Cmd {
 	voci := map[string]string{"port": m.porta}
 	m.passo, m.attesa = pPlan, interfaccia.T("attendi.piano")
-	m.vai(sAttesa)
+	m.vai(sWait)
 	return func() tea.Msg {
 		p, err := m.mot.Piano(voci)
 		return msgPiano{p, err}
@@ -194,13 +194,13 @@ func (m *modello) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch x := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.larg, m.alt = x.Width, x.Height
-	case msgControllo:
+	case msgCheck:
 		if x.err != nil {
 			m.finisci(&interfaccia.Esito{Errore: messaggio(x.err)})
 			return m, nil
 		}
 		m.ctrl = x.c
-		m.vc = interfaccia.VistaDelControllo(x.c)
+		m.vc = interfaccia.NewCheckView(x.c)
 		if x.c.Domande != nil {
 			m.porta = strconv.Itoa(x.c.Domande.Porta)
 		}
@@ -210,7 +210,7 @@ func (m *modello) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.fallito = m.vc.Esito == interfaccia.BLOCCATA
-		m.vai(sControllo)
+		m.vai(sCheck)
 	case msgPiano:
 		if x.err != nil {
 			m.finisci(&interfaccia.Esito{Errore: messaggio(x.err)})
@@ -223,10 +223,10 @@ func (m *modello) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.piano = x.p
 		m.vp = interfaccia.VistaDelPiano(x.p)
 		m.vai(sPiano)
-	case msgEvento:
+	case msgEvent:
 		m.eventi = append(m.eventi, x.ev)
 		m.av.Evento(x.ev)
-	case msgEsito:
+	case msgOutcome:
 		if x.err != nil {
 			m.finisci(&interfaccia.Esito{Errore: messaggio(x.err)})
 			return m, nil
@@ -241,13 +241,13 @@ func (m *modello) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *modello) tasto(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	s := k.String()
 	if s == "ctrl+c" {
-		if m.schermo == sAvanzamento {
+		if m.schermo == sProgress {
 			return m, nil // while it works one cannot quit: it is stopped with «a», which puts things back as they were
 		}
 		return m, tea.Quit
 	}
-	if m.modPorta {
-		return m.tastoPorta(s)
+	if m.modPort {
+		return m.portKey(s)
 	}
 	switch s {
 	case "up", "k":
@@ -257,10 +257,10 @@ func (m *modello) tasto(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.scorri++
 		return m, nil
 	case "pgup":
-		m.scorri -= m.altCorpo() - 1
+		m.scorri -= m.bodyHeight() - 1
 		return m, nil
 	case "pgdown", " ":
-		m.scorri += m.altCorpo() - 1
+		m.scorri += m.bodyHeight() - 1
 		return m, nil
 	case "home":
 		m.scorri = 0
@@ -272,47 +272,47 @@ func (m *modello) tasto(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.dett = !m.dett
 		return m, nil
 	case "r":
-		if m.schermo == sAvanzamento || m.schermo == sPronto || m.schermo == sFine {
+		if m.schermo == sProgress || m.schermo == sReady || m.schermo == sFine {
 			m.reg = !m.reg
 			return m, nil
 		}
 	}
 	switch m.schermo {
-	case sAttesa:
+	case sWait:
 		if s == "q" {
 			return m, tea.Quit
 		}
-	case sControllo:
+	case sCheck:
 		switch s {
 		case "q":
 			return m, tea.Quit
 		case "enter":
 			if m.vc.Esito != interfaccia.BLOCCATA {
-				return m, m.chiediPiano()
+				return m, m.askPlan()
 			}
 		}
 	case sPiano:
 		switch s {
 		case "y", "Y":
-			m.av = interfaccia.NuovoAvanzamento(m.vp)
+			m.av = interfaccia.NewProgress(m.vp)
 			m.passo = pInstall
-			m.vai(sAvanzamento)
+			m.vai(sProgress)
 			digest := m.piano.Digest()
 			return m, func() tea.Msg {
-				es, err := m.mot.Applica(digest, func(ev motore.EventoPubblico) { m.prog.Send(msgEvento{ev}) })
-				return msgEsito{es, err}
+				es, err := m.mot.Applica(digest, func(ev motore.PublicEvent) { m.prog.Send(msgEvent{ev}) })
+				return msgOutcome{es, err}
 			}
 		case "n", "N", "q":
 			return m, tea.Quit // nothing has been touched
 		case "tab":
-			m.modPorta, m.vecchia = true, m.porta
+			m.modPort, m.vecchia = true, m.porta
 		}
-	case sAvanzamento:
+	case sProgress:
 		if s == "a" && !m.fermando {
 			m.fermando = true
 			go m.mot.Ferma()
 		}
-	case sPronto, sFine:
+	case sReady, sFine:
 		switch s {
 		case "enter", "q":
 			return m, tea.Quit
@@ -325,23 +325,23 @@ func (m *modello) tasto(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// tastoPorta: the port box, in the plan.
-func (m *modello) tastoPorta(s string) (tea.Model, tea.Cmd) {
+// portKey: the port box, in the plan.
+func (m *modello) portKey(s string) (tea.Model, tea.Cmd) {
 	switch s {
 	case "esc":
-		m.modPorta, m.porta = false, m.vecchia
+		m.modPort, m.porta = false, m.vecchia
 	case "backspace":
 		if len(m.porta) > 0 {
 			m.porta = m.porta[:len(m.porta)-1]
 		}
 	case "enter", "tab":
-		p, ok := interfaccia.PortaValida(m.porta)
+		p, ok := interfaccia.ValidPort(m.porta)
 		if !ok {
 			return m, nil
 		}
-		m.modPorta, m.porta = false, strconv.Itoa(p)
+		m.modPort, m.porta = false, strconv.Itoa(p)
 		if m.porta != m.vecchia {
-			return m, m.chiediPiano()
+			return m, m.askPlan()
 		}
 	default:
 		if len(s) == 1 && s[0] >= '0' && s[0] <= '9' && len(m.porta) < 5 {
@@ -369,7 +369,7 @@ func (m *modello) salva(nome string, v any) {
 
 func (m *modello) interna() int { return m.larg - 4 } // «│ » and « │»
 
-func (m *modello) altCorpo() int { return m.alt - 6 } // head, steps, two separators, keys, bottom
+func (m *modello) bodyHeight() int { return m.alt - 6 } // head, steps, two separators, keys, bottom
 
 // riempi: a line exactly n columns long (cut with «…» if longer).
 func riempi(s string, n int) string {
@@ -382,11 +382,11 @@ func riempi(s string, n int) string {
 }
 
 func (m *modello) View() string {
-	if m.larg < larghezzaMinima {
-		return riempi(interfaccia.T("tui.stretto", larghezzaMinima), m.larg)
+	if m.larg < minWidth {
+		return riempi(interfaccia.T("tui.stretto", minWidth), m.larg)
 	}
-	if m.alt < altezzaMinima {
-		return riempi(interfaccia.T("tui.basso", altezzaMinima), m.larg)
+	if m.alt < minHeight {
+		return riempi(interfaccia.T("tui.basso", minHeight), m.larg)
 	}
 	corpo, tasti := m.contenuto()
 	return m.cornice(corpo, tasti)
@@ -414,7 +414,7 @@ func (m *modello) cornice(corpo []string, tasti string) string {
 	sep := bordo("├" + strings.Repeat("─", w-2) + "┤")
 	r = append(r, riga(m.passi()), sep)
 	// the body, which scrolls
-	h := m.altCorpo()
+	h := m.bodyHeight()
 	massimo := len(corpo) - h
 	if massimo < 0 {
 		massimo = 0
@@ -452,7 +452,7 @@ func (m *modello) passi() string {
 			ps = append(ps, t.verde.Render("✓ "+n))
 		case i == m.passo && m.fallito:
 			ps = append(ps, t.rosso.Render("✗ "+n))
-		case i == m.passo && m.schermo == sPronto:
+		case i == m.passo && m.schermo == sReady:
 			ps = append(ps, t.verde.Render("✓ "+n))
 		case i == m.passo:
 			ps = append(ps, t.blu.Render("● "+n))
@@ -489,7 +489,7 @@ func (m *modello) par(testo string, st lipgloss.Style, rientro int) []string {
 
 // colonne: label, text (wrapped in its column) and state label on the right.
 func (m *modello) colonne(et, testo, cart string, st lipgloss.Style) []string {
-	tw := m.interna() - colEtichetta - colStato - 1
+	tw := m.interna() - labelCol - stateCol - 1
 	ls := strings.Split(ansi.Wrap(testo, tw, ""), "\n")
 	var r []string
 	for i, l := range ls {
@@ -497,12 +497,12 @@ func (m *modello) colonne(et, testo, cart string, st lipgloss.Style) []string {
 		if i == 0 {
 			e, c = et, st.Render(cart)
 		}
-		r = append(r, riempi(e, colEtichetta)+riempi(l, tw)+" "+c)
+		r = append(r, riempi(e, labelCol)+riempi(l, tw)+" "+c)
 	}
 	return r
 }
 
-func (m *modello) stileStato(s interfaccia.Stato) lipgloss.Style {
+func (m *modello) styleState(s interfaccia.Stato) lipgloss.Style {
 	switch s {
 	case interfaccia.OK:
 		return m.t.verde
@@ -522,36 +522,36 @@ func (m *modello) contenuto() ([]string, string) {
 	c := []string{""}
 	var tasti string
 	switch m.schermo {
-	case sAttesa:
+	case sWait:
 		c = append(c, m.par(m.attesa, m.t.forte, 0)...)
 		tasti = m.tasti("q", T("k.esci"))
-	case sControllo:
-		c = append(c, m.corpoControllo()...)
+	case sCheck:
+		c = append(c, m.bodyCheck()...)
 		if m.vc.Esito == interfaccia.BLOCCATA {
 			tasti = m.tasti("q", T("k.esci"), "d", T("k.dettagli"))
 		} else {
 			tasti = m.tasti("enter", T("k.avanti"), "d", T("k.dettagli"), "q", T("k.esci"))
 		}
 	case sPiano:
-		c = append(c, m.corpoPiano()...)
-		if m.modPorta {
+		c = append(c, m.bodyPlan()...)
+		if m.modPort {
 			tasti = m.tasti("enter", T("k.porta.ok"), "esc", T("k.porta.no"))
 		} else {
 			tasti = m.t.forte.Render(T("k.procedi")) + " " + m.t.verde.Render("y") + m.t.grigio.Render(" "+T("k.si")+" · ") +
 				m.t.rosso.Render("n") + m.t.grigio.Render(" "+T("k.no")+" · ") + m.tasti("tab", T("k.porta"), "d", T("k.dettagli"))
 		}
-	case sAvanzamento:
-		c = append(c, m.corpoAvanzamento()...)
+	case sProgress:
+		c = append(c, m.bodyProgress()...)
 		if m.fermando {
 			tasti = m.t.ambra.Render(T("btn.fermando"))
 		} else {
 			tasti = m.tasti("a", T("k.ferma"), "r", T("k.registro"))
 		}
-	case sPronto:
-		c = append(c, m.corpoPronto()...)
+	case sReady:
+		c = append(c, m.bodyReady()...)
 		tasti = m.tasti("enter", T("k.chiudi"), "r", T("k.registro"), "d", T("k.dettagli"))
 	case sFine:
-		c = append(c, m.corpoFine()...)
+		c = append(c, m.bodyEnd()...)
 		tasti = m.tasti("enter", T("k.chiudi"), "s", T("k.salva"), "d", T("k.dettagli"))
 	}
 	if m.nota != "" {
@@ -561,12 +561,12 @@ func (m *modello) contenuto() ([]string, string) {
 	return append(c, ""), tasti
 }
 
-func (m *modello) corpoControllo() []string {
+func (m *modello) bodyCheck() []string {
 	T := interfaccia.T
 	v := m.vc
 	var c []string
 	for _, r := range v.Righe {
-		c = append(c, m.colonne(r.Etichetta, r.Testo, r.Stato.Cartellino(), m.stileStato(r.Stato))...)
+		c = append(c, m.colonne(r.Etichetta, r.Testo, r.Stato.Tag(), m.styleState(r.Stato))...)
 	}
 	c = append(c, "")
 	if v.Esito == interfaccia.BLOCCATA {
@@ -584,17 +584,17 @@ func (m *modello) corpoControllo() []string {
 	return c
 }
 
-func (m *modello) corpoPiano() []string {
+func (m *modello) bodyPlan() []string {
 	T := interfaccia.T
 	t, v := m.t, m.vp
 	var c []string
 	// the port, the only choice
 	campo := "[ " + m.porta + " ]"
-	if m.modPorta {
+	if m.modPort {
 		campo = "[ " + m.porta + "▏]"
 	}
 	c = append(c, t.forte.Render(riempi(T("p.porta"), 10))+t.campo.Render(campo)+t.grigio.Render("   "+T("p.porta.t")))
-	if _, ok := interfaccia.PortaValida(m.porta); !ok {
+	if _, ok := interfaccia.ValidPort(m.porta); !ok {
 		c = append(c, t.rosso.Render(T("sc.porta.errata")))
 	}
 	// the exact packages, from the manager's simulation: REMOTIX (from the .run), then its dependencies
@@ -613,10 +613,10 @@ func (m *modello) corpoPiano() []string {
 		switch a.Esito {
 		case "new":
 			nuovi++
-			r = "  " + t.verde.Render("+") + " " + riempi(a.Nome, 22) + riempi(a.Versione, 18) + t.grigio.Render(nota)
+			r = "  " + t.verde.Render("+") + " " + riempi(a.Nome, 22) + riempi(a.Ver, 18) + t.grigio.Render(nota)
 		case "upgraded":
 			aggiornati++
-			r = "  " + t.blu.Render("↑") + " " + riempi(a.Nome, 22) + riempi(a.Versione, 18) + t.grigio.Render(T("p.da.prima", a.Prima))
+			r = "  " + t.blu.Render("↑") + " " + riempi(a.Nome, 22) + riempi(a.Ver, 18) + t.grigio.Render(T("p.da.prima", a.Prima))
 		default:
 			presenti++
 			continue
@@ -677,10 +677,10 @@ func (m *modello) corpoPiano() []string {
 	return c
 }
 
-func (m *modello) corpoAvanzamento() []string {
+func (m *modello) bodyProgress() []string {
 	T := interfaccia.T
 	t := m.t
-	punto, pc := m.av.Punto()
+	punto, pc := m.av.Spot()
 	in := m.interna()
 	perc := fmt.Sprintf("%d %%", pc)
 	c := []string{riempi(t.forte.Render(punto), in-ansi.StringWidth(perc)) + perc}
@@ -690,7 +690,7 @@ func (m *modello) corpoAvanzamento() []string {
 		switch r.Stato {
 		case interfaccia.FATTA:
 			c = append(c, "  "+t.verde.Render("✓")+" "+r.Testo)
-		case interfaccia.INCORSO:
+		case interfaccia.IN_PROGRESS:
 			c = append(c, "  "+t.blu.Render("◐ "+r.Testo))
 		case interfaccia.FALLITA:
 			c = append(c, "  "+t.rosso.Render("✗ "+r.Testo))
@@ -716,7 +716,7 @@ func ultime(r []string, n int) []string {
 	return r
 }
 
-func (m *modello) corpoPronto() []string {
+func (m *modello) bodyReady() []string {
 	T := interfaccia.T
 	t, v := m.t, m.pronto
 	c := []string{t.verde.Render("✓ " + T("pr.titolo")), ""}
@@ -727,17 +727,17 @@ func (m *modello) corpoPronto() []string {
 	c = append(c, m.par(T("pr.apri.t"), t.grigio, 2)...)
 	c = append(c, "", t.forte.Render(T("h.dafare")))
 	for _, d := range v.DaFare {
-		c = append(c, m.puntoAvviso(d)...)
+		c = append(c, m.pointWarning(d)...)
 	}
 	for _, d := range v.Condizioni {
-		c = append(c, m.puntoAvviso(d)...)
+		c = append(c, m.pointWarning(d)...)
 	}
 	c = append(c, m.par(v.Router, t.grigio, 4)...)
 	c = append(c, "", t.forte.Render(T("h.chi")))
 	c = append(c, m.par(T("pr.chi.t"), lipgloss.NewStyle(), 2)...)
 	c = append(c, "", t.forte.Render(T("h.prove")))
 	for _, p := range v.Prove {
-		c = append(c, "  "+riempi(p.Etichetta, 36)+m.stileStato(p.Stato).Render(p.Testo))
+		c = append(c, "  "+riempi(p.Etichetta, 36)+m.styleState(p.Stato).Render(p.Testo))
 	}
 	if m.dett {
 		c = append(c, "", t.forte.Render(T("h.cambiato")))
@@ -756,8 +756,8 @@ func (m *modello) corpoPronto() []string {
 	return c
 }
 
-// puntoAvviso: «  ! text» in amber, wrapped under the text.
-func (m *modello) puntoAvviso(s string) []string {
+// pointWarning: «  ! text» in amber, wrapped under the text.
+func (m *modello) pointWarning(s string) []string {
 	r := m.par(s, lipgloss.NewStyle(), 4)
 	if len(r) > 0 {
 		r[0] = "  " + m.t.ambra.Render("!") + " " + strings.TrimPrefix(r[0], "    ")
@@ -765,7 +765,7 @@ func (m *modello) puntoAvviso(s string) []string {
 	return r
 }
 
-func (m *modello) corpoFine() []string {
+func (m *modello) bodyEnd() []string {
 	T := interfaccia.T
 	t, v := m.t, m.fine
 	st := t.rosso

@@ -34,19 +34,19 @@ var vocabolario = map[string]bool{
 	"il pacchetto installato ": true,
 }
 
-// nomiDentro: the interface's names inside an English text — options, answer entries, commands,
+// namesInside: the interface's names inside an English text — options, answer entries, commands,
 // values between «», states in capitals, paths — are removed before looking for Italian.
-var nomiDentro = regexp.MustCompile(`--[\w-]+|\b[\w<>-]+(\.[\w<>-]+)+\b|«[^»]*»|\bremotix-install [\w-]+|\b[A-Z][A-Z_-]{2,}\b|\S*/\S+|\S+-<\S+|[\w.<>-]+ ?= ?[\w|,<>./:-]+|\w+(\|\w+)+|\b[a-z0-9]+(-[a-z0-9]+)+\b`)
+var namesInside = regexp.MustCompile(`--[\w-]+|\b[\w<>-]+(\.[\w<>-]+)+\b|«[^»]*»|\bremotix-install [\w-]+|\b[A-Z][A-Z_-]{2,}\b|\S*/\S+|\S+-<\S+|[\w.<>-]+ ?= ?[\w|,<>./:-]+|\w+(\|\w+)+|\b[a-z0-9]+(-[a-z0-9]+)+\b`)
 
-func testoItaliano(s string) bool {
+func italianText(s string) bool {
 	t := strings.TrimSpace(s)
 	if t == "" || identificativo.MatchString(t) || vocabolario[t] || vocabolario[s] {
 		return false
 	}
-	return italiano.MatchString(nomiDentro.ReplaceAllString(s, " "))
+	return italiano.MatchString(namesInside.ReplaceAllString(s, " "))
 }
 
-func TestSoloIngleseNelCodice(t *testing.T) {
+func TestOnlyEnglishInCode(t *testing.T) {
 	var file []string
 	for _, g := range []string{"*.go", "../interfaccia/*.go", "../interfaccia/tui/*.go", "../cmd/remotix-install/*.go"} {
 		m, _ := filepath.Glob(g)
@@ -81,7 +81,7 @@ func TestSoloIngleseNelCodice(t *testing.T) {
 				if err != nil {
 					s = x.Value
 				}
-				if testoItaliano(s) {
+				if italianText(s) {
 					trovati++
 					t.Errorf("%s: Italian left: %q", fs.Position(x.Pos()), s)
 				}
@@ -92,7 +92,7 @@ func TestSoloIngleseNelCodice(t *testing.T) {
 	_ = trovati
 }
 
-func TestSoloIngleseNelCatalogo(t *testing.T) {
+func TestOnlyEnglishInCatalog(t *testing.T) {
 	b, err := os.ReadFile("../catalogo/catalogo.json")
 	if err != nil {
 		t.Fatal(err)
@@ -116,7 +116,7 @@ func TestSoloIngleseNelCatalogo(t *testing.T) {
 				cammina(percorso+"["+strconv.Itoa(i)+"]", w)
 			}
 		case string:
-			if testoItaliano(x) {
+			if italianText(x) {
 				t.Errorf("catalogo%s: Italian left: %q", percorso, x)
 			}
 		}
@@ -125,17 +125,17 @@ func TestSoloIngleseNelCatalogo(t *testing.T) {
 }
 
 // The detector itself: an Italian it does not see is not a test.
-func TestRivelatoreItaliano(t *testing.T) {
+func TestItalianDetector(t *testing.T) {
 	for _, s := range []string{"c'era già: non si tocca", "riga 3: voce sconosciuta «x»", "niente da disfare: x",
 		"Mesa di openSUSE (senza H.264)", "com'era prima"} {
-		if !testoItaliano(s) {
+		if !italianText(s) {
 			t.Errorf("not seen: %q", s)
 		}
 	}
 	for _, s := range []string{"already there: left untouched", "consent.repo.epel", "--non-interactive",
 		"intel-media-va-driver-non-free", "present", "line 3: unknown entry «x»", "%s: %q",
 		"give consent (consent.repo.<name> = yes)", "Updates will come from there too, with the system's"} {
-		if testoItaliano(s) {
+		if italianText(s) {
 			t.Errorf("false alarm: %q", s)
 		}
 	}

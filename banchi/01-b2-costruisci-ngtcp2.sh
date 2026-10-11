@@ -129,15 +129,15 @@ inf "expected: NONE — nghttp3 brings the extended CONNECT (RFC 9220), not the 
 #
 # ⭐ The cure is not fixing the grep: it is that the bench SAYS WHAT IT
 #    LOOKED AT.  A count without its denominator is not a measurement.
-ALBERI=("$SRC/ngtcp2" "$SRC/nghttp3")
-for a in "${ALBERI[@]}"; do
+TREES=("$SRC/ngtcp2" "$SRC/nghttp3")
+for a in "${TREES[@]}"; do
 	if [ ! -d "$a" ]; then
 		ko "the tree $a does not exist: the search cannot be done"
 		exit 5
 	fi
 done
-FILE_TOT=$(find "${ALBERI[@]}" \( -name '*.c' -o -name '*.h' -o -name '*.cc' -o -name '*.hh' \) | wc -l)
-inf "looking inside $FILE_TOT files of ${#ALBERI[@]} trees"
+FILE_TOT=$(find "${TREES[@]}" \( -name '*.c' -o -name '*.h' -o -name '*.cc' -o -name '*.hh' \) | wc -l)
+inf "looking inside $FILE_TOT files of ${#TREES[@]} trees"
 if [ "$FILE_TOT" -lt 100 ]; then
 	ko "only $FILE_TOT files: the search is looking in the wrong place"
 	exit 5
@@ -149,7 +149,7 @@ cerca()
 	local n
 	# ⚠ No `2>/dev/null`: if grep complains, it must be seen.
 	n=$(grep -rIl --include='*.c' --include='*.h' --include='*.cc' --include='*.hh' \
-		-e "$modello" "${ALBERI[@]}" | wc -l)
+		-e "$modello" "${TREES[@]}" | wc -l)
 	printf '    --  %-34s %s files\n' "$etichetta" "$n" >&2
 	echo "$n"
 }

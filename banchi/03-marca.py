@@ -117,25 +117,25 @@ def np_o_muori(che):
 # ───────────────────────────────────────────────────────────────────────────
 SYNC      = 0xB2
 VERSIONE  = 0x01
-COLONNE   = 18
+COLS   = 18
 RIGHE     = 8
-BIT       = COLONNE * RIGHE          # 144
+BIT       = COLS * RIGHE          # 144
 CELLA     = 24
-MARGINE   = 32
+HEADROOM   = 32
 QUIETE    = 12
 
-CONTRASTO_MINIMO = 0.25              # see §«the three sieves»
-RICERCA          = 2                 # ± px
+MIN_CONTRAST = 0.25              # see §«the three sieves»
+SEARCH          = 2                 # ± px
 
 # BT.709, which is the matrix F2.3 chooses and that the rest of the chain
 # declares.  ⚠ Here it only serves to make ONE number out of three channels: white and black
 # give the same result with any sensible matrix.
-PESI_LUMA = (0.2126, 0.7152, 0.0722)
+LUMA_WEIGHTS = (0.2126, 0.7152, 0.0722)
 
 
 class MarcaGeometria:
-    def __init__(self, cella=CELLA, margine=MARGINE, quiete=QUIETE,
-                 colonne=COLONNE, righe=RIGHE):
+    def __init__(self, cella=CELLA, margine=HEADROOM, quiete=QUIETE,
+                 colonne=COLS, righe=RIGHE):
         self.cella, self.margine, self.quiete = int(cella), int(margine), int(quiete)
         self.colonne, self.righe = int(colonne), int(righe)
         self.bit = self.colonne * self.righe
@@ -149,7 +149,7 @@ class MarcaGeometria:
                 % (self.cella, self.margine, self.quiete, self.colonne, self.righe))
 
 
-GEOMETRIA = MarcaGeometria()
+GEOMETRY = MarcaGeometria()
 
 
 # ───────────────────────────────────────────────────────────────────────────
@@ -172,7 +172,7 @@ def crc16(dati):
     return c
 
 
-def componi_carico(disegno, istante_us, giro_numero):
+def compose_load(disegno, istante_us, giro_numero):
     """The 18 bytes of the mark, in the order in which they end up in the cells."""
     corpo = struct.pack(">BII", VERSIONE, giro_numero & 0xFFFFFFFF,
                         disegno & 0xFFFFFFFF)
@@ -197,10 +197,10 @@ def carico_in_bit(tutto, quanti):
 # `03-scena-certifica.sh` (P6) reads with this reader a frame painted
 # by the C and compares with what the C declared.
 # ───────────────────────────────────────────────────────────────────────────
-def dipingi_marca(img, disegno, istante_us, giro_numero, geo=GEOMETRIA):
+def dipingi_marca(img, disegno, istante_us, giro_numero, geo=GEOMETRY):
     """Paints the mark INTO `img` (uint8 [h,w,3]).  Returns `img`."""
     np_o_muori("dipingi_marca")
-    tutto = componi_carico(disegno, istante_us, giro_numero)
+    tutto = compose_load(disegno, istante_us, giro_numero)
     bit = carico_in_bit(tutto, geo.bit)
     x0, y0, w, h = geo.blocco()
     H, W = img.shape[:2]
@@ -224,7 +224,7 @@ def dipingi_marca(img, disegno, istante_us, giro_numero, geo=GEOMETRIA):
 def _luma(img):
     np = np_o_muori("leggi_marca")
     a = np.asarray(img)
-    pesi = np.array(PESI_LUMA, dtype=np.float64)
+    pesi = np.array(LUMA_WEIGHTS, dtype=np.float64)
     if a.ndim == 2:
         return a.astype(np.float64) / 255.0
     if a.ndim == 3 and a.shape[2] >= 3:
@@ -232,7 +232,7 @@ def _luma(img):
     raise ValueError("the image is neither grey nor three-channel: %s" % (a.shape,))
 
 
-def _celle(y, geo, dx, dy):
+def _cells(y, geo, dx, dy):
     """The mean luminance of the CENTRE of each cell, in bit order."""
     x0, y0, _, _ = geo.blocco()
     x0 += dx
@@ -249,17 +249,17 @@ def _celle(y, geo, dx, dy):
     return val
 
 
-def _prova_posizione(y, geo, dx, dy):
+def _try_position(y, geo, dx, dy):
     np = np_o_muori("leggi_marca")
-    val = _celle(y, geo, dx, dy)
+    val = _cells(y, geo, dx, dy)
     alto = float(np.percentile(val, 90))
     basso = float(np.percentile(val, 10))
     contrasto = alto - basso
     esito = {"contrasto": round(contrasto, 4), "scorrimento_provato": [dx, dy]}
-    if contrasto < CONTRASTO_MINIMO:
+    if contrasto < MIN_CONTRAST:
         esito["perche"] = ("the contrast between the cells is %.3f, below the minimum "
                            "%.2f: there is no two-level signal here"
-                           % (contrasto, CONTRASTO_MINIMO))
+                           % (contrasto, MIN_CONTRAST))
         return None, esito
     soglia = (alto + basso) / 2.0
     bit = (val > soglia).astype(np.uint8)
@@ -274,12 +274,12 @@ def _prova_posizione(y, geo, dx, dy):
         esito["perche"] = ("the first 8 bits are 0x%02X instead of the sync 0x%02X"
                            % (byte[0], SYNC))
         return None, esito
-    corpo, crc_letto = byte[1:16], struct.unpack(">H", byte[16:18])[0]
-    crc_atteso = crc16(corpo)
-    if crc_letto != crc_atteso:
+    corpo, crc_read = byte[1:16], struct.unpack(">H", byte[16:18])[0]
+    expected_crc = crc16(corpo)
+    if crc_read != expected_crc:
         esito["perche"] = ("the sync is there but the CRC does not match: read 0x%04X, "
                            "computed 0x%04X ⇒ the mark was there and broke, "
-                           "or it is chance" % (crc_letto, crc_atteso))
+                           "or it is chance" % (crc_read, expected_crc))
         return None, esito
 
     versione = corpo[0]
@@ -303,7 +303,7 @@ def _prova_posizione(y, geo, dx, dy):
     return buono, esito
 
 
-def leggi_marca(img, geo=GEOMETRIA, ricerca=RICERCA):
+def leggi_marca(img, geo=GEOMETRY, ricerca=SEARCH):
     """⭐ Given a frame, says whether the mark is there and what it says.
 
     Returns a dictionary that ALWAYS has the key `c_e`:
@@ -314,14 +314,14 @@ def leggi_marca(img, geo=GEOMETRIA, ricerca=RICERCA):
     y = _luma(img)
     H, W = y.shape
     x0, y0, w, h = geo.blocco()
-    serve_w, serve_h = x0 + w + ricerca, y0 + h + ricerca
-    if W < serve_w or H < serve_h:
+    needs_w, needs_h = x0 + w + ricerca, y0 + h + ricerca
+    if W < needs_w or H < needs_h:
         return {"c_e": False,
                 "perche": ("⛔ I could not LOOK: the frame is %dx%d and the "
                            "mark block ends at %dx%d.  ⚠ It is not «the mark "
                            "is not there»: it is «the mark would not fit»"
-                           % (W, H, serve_w, serve_h)),
-                "misura": [W, H], "serve": [serve_w, serve_h]}
+                           % (W, H, needs_w, needs_h)),
+                "misura": [W, H], "serve": [needs_w, needs_h]}
 
     # ⛔ THE ORDER OF THE POSITIONS IS NOT IRRELEVANT, and the first draft
     #    got it wrong — found by running, 13 Aug 2026.  Scanning from
@@ -340,7 +340,7 @@ def leggi_marca(img, geo=GEOMETRIA, ricerca=RICERCA):
     for dx, dy in ordine:
         if y0 + dy < 0 or x0 + dx < 0:
             continue
-        buono, esito = _prova_posizione(y, geo, dx, dy)
+        buono, esito = _try_position(y, geo, dx, dy)
         if buono is not None:
             buono["posizioni_provate"] = (2 * ricerca + 1) ** 2
             return buono
@@ -360,17 +360,17 @@ def leggi_marca(img, geo=GEOMETRIA, ricerca=RICERCA):
 # ⛔ §1.1: «alongside, count how much the client draws: it is the check that
 #    says whether the ceiling belongs to the compositor or to the scene».
 # ───────────────────────────────────────────────────────────────────────────
-STATO_MAGIA = 0x524D5853
-STATO_VERSIONE = 2
+STATE_MAGIC = 0x524D5853
+STATE_VERSION = 2
 # ⛔ Must match `struct stato_condiviso` of `03-scena.c`.  `magia` and
 #    `versione` exist so that a misalignment gives a REFUSAL instead of
 #    random numbers.
 FORMATO_STATO = "<4I Q 5Q 5Q 10I i 3I 64s 32s 64s 64s 4Q 4I"
 
 
-def leggi_conteggio(nome_shm="remotix-scena"):
+def read_count(shm_name="remotix-scena"):
     """Returns the client's counts, or `{"c_e": False, "perche": …}`."""
-    percorso = "/dev/shm/" + nome_shm
+    percorso = "/dev/shm/" + shm_name
     if not os.path.exists(percorso):
         return {"c_e": False,
                 "perche": ("⛔ «%s» does not exist: the scene never started, "
@@ -438,13 +438,13 @@ def leggi_conteggio(nome_shm="remotix-scena"):
             #     · `seq` changes continuously but is never caught even →
             #       that really would be contention (never observed)
             campioni = 0
-            primo_seq = struct.unpack(FORMATO_STATO, m[:taglia])[4]
-            ultimo_seq = primo_seq
+            first_seq = struct.unpack(FORMATO_STATO, m[:taglia])[4]
+            last_seq = first_seq
             coerente = None
             for _ in range(400):
                 a = struct.unpack(FORMATO_STATO, m[:taglia])
                 campioni += 1
-                ultimo_seq = a[4]
+                last_seq = a[4]
                 if a[4] % 2 == 0:
                     b = struct.unpack(FORMATO_STATO, m[:taglia])
                     if b[4] == a[4]:
@@ -452,9 +452,9 @@ def leggi_conteggio(nome_shm="remotix-scena"):
                         break
                 time.sleep(0.0002)
             if coerente is None:
-                fermo = (ultimo_seq == primo_seq)
-                pid_relitto = struct.unpack(FORMATO_STATO, m[:taglia])[25]
-                vivo_relitto = os.path.exists("/proc/%d" % pid_relitto)
+                fermo = (last_seq == first_seq)
+                stale_pid = struct.unpack(FORMATO_STATO, m[:taglia])[25]
+                wreck_alive = os.path.exists("/proc/%d" % stale_pid)
                 if fermo:
                     perche = (
                         "⛔ «%s» is a WRECK: `seq` is %d — odd — and has NOT "
@@ -463,38 +463,38 @@ def leggi_conteggio(nome_shm="remotix-scena"):
                         "⚠ Process %d %s.  ⛔ No number of attempts will ever "
                         "find it even: do not wait, restart the scene "
                         "(the block is reset at startup)."
-                        % (percorso, ultimo_seq, campioni, pid_relitto,
+                        % (percorso, last_seq, campioni, stale_pid,
                            "is still alive — so it is STUCK, not dead"
-                           if vivo_relitto else "no longer exists"))
+                           if wreck_alive else "no longer exists"))
                 else:
                     perche = (
                         "⛔ `seq` changes (%d → %d in %d attempts) and I never "
                         "caught it even: this really is contention.  ⚠ It was never "
                         "observed, not even with a scene at 1034 "
                         "drawings/s — if you see it, report it."
-                        % (primo_seq, ultimo_seq, campioni))
+                        % (first_seq, last_seq, campioni))
                 return {"c_e": False, "fidato": False, "campioni": campioni,
-                        "seq": int(ultimo_seq), "relitto": bool(fermo),
+                        "seq": int(last_seq), "relitto": bool(fermo),
                         "perche": perche}
             a = coerente
     (magia, versione, dim, _r0, seq,
      disegni, commit, presentati, attese, scarti,
-     avvio_mono, avvio_reale, ultimo_disegno, ultimo_pres, ultimo_pres_reale,
+     startup_mono, startup_real, last_drawing, last_pres, last_real_pres,
      giro_numero, larghezza, altezza, cella, colonne, righe, margine, quiete,
-     movimento, danno, pid, pres_disp, schermo_intero, _r1,
-     nome_giro, versione_scena, uscita_confermata, uscita_chiesta,
+     movimento, danno, pid, pres_avail, schermo_intero, _r1,
+     round_name, versione_scena, uscita_confermata, uscita_chiesta,
      rientri, corse_a_vuoto, disegni_senza_callback, saltati_senza_buffer,
      callback_in_volo, callback_in_volo_massimo, refresh_mhz, fidato) = a
 
-    if magia != STATO_MAGIA:
+    if magia != STATE_MAGIC:
         return {"c_e": False,
                 "perche": "«%s» is not a 03-scena block (magic 0x%08X)"
                           % (percorso, magia)}
-    if versione != STATO_VERSIONE:
+    if versione != STATE_VERSION:
         return {"c_e": False,
                 "perche": ("⛔ block of version %d, this reader reads version %d: "
                            "the fields are not in the same place"
-                           % (versione, STATO_VERSIONE))}
+                           % (versione, STATE_VERSION))}
     vivo = os.path.exists("/proc/%d" % pid)
 
     # ═══════════════════════════════════════════════════════════════════════
@@ -505,7 +505,7 @@ def leggi_conteggio(nome_shm="remotix-scena"):
     # Until that detector exists, every cell measured with your scene by
     # someone else's bench is `[?]`, not `[M]`.»*
     #
-    # ⇒ `leggi_conteggio()` no longer returns only counts: it returns
+    # ⇒ `read_count()` no longer returns only counts: it returns
     #   `fidato` and, when it is false, **the list of reasons**.  A bench that
     #   reads these numbers and does not look at `fidato` is deliberately doing what
     #   §2.2 forbids.
@@ -532,7 +532,7 @@ def leggi_conteggio(nome_shm="remotix-scena"):
 
     # the mean rate since startup, against the refresh declared by the output
     ritmo = None
-    durata = (ultimo_disegno - avvio_mono) / 1e6 if ultimo_disegno > avvio_mono else 0
+    durata = (last_drawing - startup_mono) / 1e6 if last_drawing > startup_mono else 0
     if durata > 0.5:
         ritmo = disegni / durata
         if refresh_mhz > 0 and ritmo > 1.5 * (refresh_mhz / 1000.0):
@@ -565,12 +565,12 @@ def leggi_conteggio(nome_shm="remotix-scena"):
         "scarti_presentazione": int(scarti),
         # ⛔ The field that tells «zero presented» from «presented not
         #    measurable on this compositor» (`LEZIONI.md` §1.9).
-        "presentazione_disponibile": bool(pres_disp),
-        "avvio_monotonico_us": int(avvio_mono), "avvio_reale_us": int(avvio_reale),
-        "ultimo_disegno_us": int(ultimo_disegno),
-        "ultimo_presentato_us": int(ultimo_pres),
-        "ultimo_presentato_reale_us": int(ultimo_pres_reale),
-        "giro": nome_giro.split(b"\0")[0].decode("utf-8", "replace"),
+        "presentazione_disponibile": bool(pres_avail),
+        "avvio_monotonico_us": int(startup_mono), "avvio_reale_us": int(startup_real),
+        "ultimo_disegno_us": int(last_drawing),
+        "ultimo_presentato_us": int(last_pres),
+        "ultimo_presentato_reale_us": int(last_real_pres),
+        "giro": round_name.split(b"\0")[0].decode("utf-8", "replace"),
         "giro_numero": int(giro_numero),
         "larghezza": int(larghezza), "altezza": int(altezza),
         "cella": int(cella), "colonne": int(colonne), "righe": int(righe),
@@ -619,9 +619,9 @@ def main():
     q.add_argument("--larghezza", type=int)
     q.add_argument("--altezza", type=int)
     q.add_argument("--cella", type=int, default=CELLA)
-    q.add_argument("--margine", type=int, default=MARGINE)
+    q.add_argument("--margine", type=int, default=HEADROOM)
     q.add_argument("--quiete", type=int, default=QUIETE)
-    q.add_argument("--ricerca", type=int, default=RICERCA)
+    q.add_argument("--ricerca", type=int, default=SEARCH)
 
     d = s.add_parser("dipingi", help="⚠ only for the positive control")
     d.add_argument("file")
@@ -712,7 +712,7 @@ def main():
         return 0
 
     if a.che == "conta":
-        r = leggi_conteggio(a.shm)
+        r = read_count(a.shm)
         print(json.dumps(r, ensure_ascii=False, indent=1))
         # ⛔⭐ THE EXIT STATUS CARRIES THE VERDICT, not only readability.
         #    0 = numbers readable AND trusted · 1 = not readable · ⭐ 2 = readable

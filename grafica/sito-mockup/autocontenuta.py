@@ -14,8 +14,8 @@ from PIL import Image
 
 QUI = Path(__file__).resolve().parent
 PAGINE = ["index.html", "performance.html"]   # each becomes pubblica/<same name>
-LARGHEZZA_MAX = 1600     # the widest screen on the page is ~1000 CSS px: 1600 covers a 1.6x display
-QUALITA_WEBP = 82
+MAX_WIDTH = 1600     # the widest screen on the page is ~1000 CSS px: 1600 covers a 1.6x display
+WEBP_QUALITY = 82
 
 
 def svg_data(percorso):
@@ -25,10 +25,10 @@ def svg_data(percorso):
 
 def webp_data(percorso):
     im = Image.open(QUI / percorso).convert("RGB")
-    if im.width > LARGHEZZA_MAX:
-        im = im.resize((LARGHEZZA_MAX, round(im.height * LARGHEZZA_MAX / im.width)), Image.LANCZOS)
+    if im.width > MAX_WIDTH:
+        im = im.resize((MAX_WIDTH, round(im.height * MAX_WIDTH / im.width)), Image.LANCZOS)
     buf = io.BytesIO()
-    im.save(buf, "WEBP", quality=QUALITA_WEBP, method=6)
+    im.save(buf, "WEBP", quality=WEBP_QUALITY, method=6)
     return "data:image/webp;base64," + base64.b64encode(buf.getvalue()).decode()
 
 

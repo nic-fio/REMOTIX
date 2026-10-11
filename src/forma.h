@@ -47,7 +47,7 @@
  *                          ⇒ the shape index, or -1 if that colour is not
  *                          one of ours.  ⛔ Exact to the byte: no
  *                          tolerance, because two neighbours differ by 1.
- *   forma_nome()           the index ⇒ the shape name (for the log).
+ *   shape_name()           the index ⇒ the shape name (for the log).
  *   forma_immagine()       the index ⇒ the TRUE image, premultiplied BGRA,
  *                          at most 256x256 (RCP §7.2), hotspot inside.
  *                          `out->immagine` lives for the whole process: whoever
@@ -84,7 +84,7 @@ gboolean forma_tema_scrivi(const char *runtime);
 
 int forma_da_pixel(uint8_t b, uint8_t g, uint8_t r, uint8_t a);
 
-const char *forma_nome(int indice);
+const char *shape_name(int indice);
 
 gboolean forma_immagine(int indice, CursoreForma *out);
 
@@ -93,6 +93,6 @@ gboolean forma_immagine(int indice, CursoreForma *out);
  *   `/usr/share/icons`, and forget what had been loaded.  The product
  *   never calls it.
  */
-void forma_prova_cartella_temi(const char *cartella);
+void shape_test_themes_folder(const char *cartella);
 
 #endif /* REMOTIX_FORMA_H */

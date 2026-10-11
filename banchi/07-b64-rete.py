@@ -107,7 +107,7 @@ def a_pulito(n):
               "yield >= 0.99 · stale 0 · purity >= 0.80")
 
 
-def a_come_pulito(n):
+def a_like_clean(n):
     """A fixed delay does not reorder: it must be indistinguishable from the smooth one."""
     return a_pulito(n)
 
@@ -120,7 +120,7 @@ def a_sorpassi(minimo):
     return f
 
 
-def a_perdita(frazione, tolleranza=0.5):
+def a_loss(frazione, tolleranza=0.5):
     """Loss shows in the yield, and in proportion to what netem removes."""
     def f(n):
         if n["resa"] is None:
@@ -197,7 +197,7 @@ PROFILI = [
      a_pulito),
     ("1-ritardo-30", ["delay", "30ms"],
      "30 ms fixed, no jitter: they arrive late but in order -- nothing must change",
-     a_come_pulito),
+     a_like_clean),
     ("2-jitter-2", ["delay", "20ms", "2ms", "distribution", "normal"],
      "jitter 2 ms, less than one PCM block (5 ms): overtakes must already be there",
      a_sorpassi(100)),
@@ -210,7 +210,7 @@ PROFILI = [
      "jitter 15 ms = three blocks: here listening is already broken",
      a_sorpassi(1500)),
     ("6-perdita-1", ["loss", "1%"], "1 datagram out of 100 lost",
-     a_perdita(0.01)),
+     a_loss(0.01)),
     # ⛔ THE PROSE OF THIS STEP WAS FALSE and must be read as a warning:
     #    it said «10 %: `[M]` the session does not open at all in 25 s».
     #    `[M]` 23 August 2026 (`banchi/09-b78-apertura.py`): the session opens
@@ -382,7 +382,7 @@ def innesca_sessione(secondi=8):
     return "SESSIONE" in (out + err)
 
 
-def tono_fabbrica(hz=440, secondi=70, ampiezza=0.5):
+def tone_factory(hz=440, secondi=70, ampiezza=0.5):
     """⛔ The tone is built HERE if missing, and the amplitude is KNOWN: the expected RMS
        is a calculation (A/sqrt2), not an estimate.  ⚠ And the file must be readable
        by the session's user, who is not root."""
@@ -403,7 +403,7 @@ def tono_fabbrica(hz=440, secondi=70, ampiezza=0.5):
 
 
 def tono_accendi():
-    tono_fabbrica()
+    tone_factory()
     """⛔ The tone must play INSIDE the session, or the judge measures silence
        and the bench reports «rms 0» as if it were a network fault.
        ⚠ It happened on the first «casa» run: 5993 perfect datagrams and rms 0.0.
@@ -739,7 +739,7 @@ def principale():
             conti = (c or {}).get("conti", {})
             import re as _re
 
-            def daconti(chiave, testo):
+            def from_counts(chiave, testo):
                 for x in conti.values():
                     if chiave in x:
                         m = _re.search(testo, x)
@@ -747,8 +747,8 @@ def principale():
                 return None
 
             numeri = {
-                "ricevuti": daconti("received", r"received (\d+)"),
-                "vecchi": daconti("discarded", r"old (\d+)"),
+                "ricevuti": from_counts("received", r"received (\d+)"),
+                "vecchi": from_counts("discarded", r"old (\d+)"),
                 "resa": g.get("resa_campioni"),
                 "purezza": (g.get("tono") or {}).get("purezza"),
                 "spediti_dal_server": sv.get("spediti"),

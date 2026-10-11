@@ -73,12 +73,12 @@
   // ⭐ The two colours are DECLARED here and repeated in the bench: if someone
   //    changes one here and not there, C3 will say «the scene I declared is not
   //    on the screen» ⇒ ⛔ «I could not look», not a red for the product.
-  var COLORI = ['#0000FF', '#FFFF00'];
+  var COLORS = ['#0000FF', '#FFFF00'];
   var n = 0, x = 0;
   var banda = document.getElementById('banda');
   function giro() {
     // the background changes every 3 frames
-    if (n % 3 === 0) document.body.style.background = COLORI[(n / 3 | 0) % 2];
+    if (n % 3 === 0) document.body.style.background = COLORS[(n / 3 | 0) % 2];
     // the band advances by 3 % at EVERY frame, and re-enters from the other side.
     // ⛔ 3 and not 4: see the box at the top — with 4 the scene would be periodic
     //    every 25 frames, and at a rate of 2.4/s C3 would see two identical

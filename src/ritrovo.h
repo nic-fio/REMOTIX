@@ -42,7 +42,7 @@
 #include <sys/types.h>
 
 /* The PAM service the child opens: `pam_start("remotix", …)`. */
-#define RITROVO_SERVIZIO_PAM "remotix"
+#define FOUND_AGAIN_PAM_SERVICE "remotix"
 
 typedef struct {
 	char utente[257];

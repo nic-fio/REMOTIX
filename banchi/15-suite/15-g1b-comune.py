@@ -26,7 +26,7 @@ import time
 TESSERACT = os.environ.get("REMOTIX_TESSERACT", "/media/REMOTIX/strumenti/tesseract")
 
 
-def ocr_disponibile():
+def ocr_available():
     return os.path.exists(os.path.join(TESSERACT, "usr", "bin", "tesseract"))
 
 
@@ -36,7 +36,7 @@ def ocr(png, riquadro=None, ingrandisci=2, psm=11, soglia=None):
     `soglia`: the crop is brought to DARK text on a light background (it is inverted
     if it is dark on average) and binarised — `[M]` 24 Sep 2026: GNOME's dark menu
     in grey cannot be read, binarised at 110 it can."""
-    if not ocr_disponibile():
+    if not ocr_available():
         return None
     from PIL import Image, ImageOps, ImageStat
     im = Image.open(io.BytesIO(png)).convert("L")
@@ -78,7 +78,7 @@ def ocr(png, riquadro=None, ingrandisci=2, psm=11, soglia=None):
     return parole
 
 
-def testo_di(parole):
+def text_of(parole):
     return " ".join(p[0] for p in parole or [])
 
 
@@ -92,7 +92,7 @@ def cerca_parola(parole, modello):
     return None
 
 
-def cerca_frase(parole, modello):
+def search_phrase(parole, modello):
     """Like `cerca_parola` but on rebuilt lines: returns (sentence, x, y) of the
     first group of close words (same line) that matches."""
     rx = re.compile(modello, re.I)
@@ -113,20 +113,20 @@ def cerca_frase(parole, modello):
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE MOUSE AND THE KEYS, REAL
 # ═══════════════════════════════════════════════════════════════════════════
-def dal_desktop_al_vetro(geo, X, Y):
+def desktop_to_glass(geo, X, Y):
     return (geo["left"] + (geo["bx0"] + X * geo["sx"]) * geo["vx"],
             geo["top"] + (geo["by0"] + Y * geo["sy"]) * geo["vy"])
 
 
-def dalla_foto_al_desktop(geo, pw, ph, px, py):
+def from_photo_to_desktop(geo, pw, ph, px, py):
     return ((px * geo["bw"] / pw - geo["bx0"]) / geo["sx"],
             (py * geo["bh"] / ph - geo["by0"]) / geo["sy"])
 
 
-def clic_desktop(s, geo, X, Y, bottone=0):
+def click_desktop(s, geo, X, Y, bottone=0):
     """A real click at the point (X, Y) of the desktop.  bottone 0 left, 2 right."""
     g = s.g
-    x, y = dal_desktop_al_vetro(geo, X, Y)
+    x, y = desktop_to_glass(geo, X, Y)
     if hasattr(g, "cdp"):
         nome = {0: "left", 1: "middle", 2: "right"}[bottone]
         try:
@@ -143,7 +143,7 @@ def clic_desktop(s, geo, X, Y, bottone=0):
         g.cdp.chiama("Input.dispatchMouseEvent", type="mouseReleased", x=x, y=y,
                      button=nome, clickCount=1)
         return
-    g._azioni([{"type": "pointer", "id": "topo", "parameters": {"pointerType": "mouse"},
+    g._actions([{"type": "pointer", "id": "topo", "parameters": {"pointerType": "mouse"},
                 "actions": [{"type": "pointerMove", "x": int(x), "y": int(y),
                              "origin": "viewport", "duration": 0},
                             {"type": "pause", "duration": 150},
@@ -152,13 +152,13 @@ def clic_desktop(s, geo, X, Y, bottone=0):
                             {"type": "pointerUp", "button": bottone}]}])
 
 
-def muovi_desktop(s, geo, X, Y):
-    x, y = dal_desktop_al_vetro(geo, X, Y)
+def move_desktop(s, geo, X, Y):
+    x, y = desktop_to_glass(geo, X, Y)
     s.g.muovi(x, y)
 
 
 #  name: (key, code, vk, WebDriver, CDP modifier bit)
-TASTI = {
+KEY_LIST = {
     "Alt": ("Alt", "AltLeft", 18, "", 1),
     "Control": ("Control", "ControlLeft", 17, "", 2),
     "Ctrl": ("Control", "ControlLeft", 17, "", 2),
@@ -176,9 +176,9 @@ TASTI = {
 }
 
 
-def _tasto(nome):
-    if nome in TASTI:
-        return TASTI[nome]
+def _key(nome):
+    if nome in KEY_LIST:
+        return KEY_LIST[nome]
     if len(nome) == 1 and nome.isalnum():
         c = nome.lower()
         code = ("Key" + c.upper()) if c.isalpha() else ("Digit" + c)
@@ -186,10 +186,10 @@ def _tasto(nome):
     raise KeyError(nome)
 
 
-def combinazione(g, nomi, tieni_ms=120):
+def combinazione(g, nomi, keep_ms=120):
     """Presses the keys in order, holds them, releases them in reverse (a
     real combination: Alt down, Tab down, Tab up, Alt up)."""
-    tasti = [_tasto(n) for n in nomi]
+    tasti = [_key(n) for n in nomi]
     if hasattr(g, "cdp"):
         mod = 0
         for key, code, vk, _w, bit in tasti:
@@ -198,7 +198,7 @@ def combinazione(g, nomi, tieni_ms=120):
                      modifiers=mod)
             g.cdp.chiama("Input.dispatchKeyEvent", **p)
             time.sleep(0.06)
-        time.sleep(tieni_ms / 1000.0)
+        time.sleep(keep_ms / 1000.0)
         for key, code, vk, _w, bit in reversed(tasti):
             mod &= ~bit
             g.cdp.chiama("Input.dispatchKeyEvent", type="keyUp", key=key, code=code,
@@ -208,7 +208,7 @@ def combinazione(g, nomi, tieni_ms=120):
     az = []
     for t in tasti:
         az += [{"type": "keyDown", "value": t[3]}, {"type": "pause", "duration": 60}]
-    az.append({"type": "pause", "duration": tieni_ms})
+    az.append({"type": "pause", "duration": keep_ms})
     for t in reversed(tasti):
         az += [{"type": "keyUp", "value": t[3]}, {"type": "pause", "duration": 60}]
     g.m.chiama("WebDriver:PerformActions",
@@ -216,7 +216,7 @@ def combinazione(g, nomi, tieni_ms=120):
     g.m.chiama("WebDriver:ReleaseActions")
 
 
-def fuoco_sulla_tela(s, geo):
+def focus_on_canvas(s, geo):
     """Takes the focus away from the form and brings the pointer onto the canvas, as
     the user does before writing (without clicking: a click would land in the desktop)."""
     try:
@@ -226,7 +226,7 @@ def fuoco_sulla_tela(s, geo):
                "return 1;")
     except Exception:                            # noqa: BLE001
         pass
-    muovi_desktop(s, geo, geo["tl"] * 0.5, geo["ta"] * 0.6)
+    move_desktop(s, geo, geo["tl"] * 0.5, geo["ta"] * 0.6)
     time.sleep(0.3)
 
 
@@ -256,7 +256,7 @@ def differenza(png_a, png_b, riquadro=None, passo=4, soglia=40):
     return cambiati / max(1, n)
 
 
-def luminanza_media(png, passo=8):
+def mean_luminance(png, passo=8):
     im = immagine(png)
     px = im.load()
     t = n = 0
@@ -281,7 +281,7 @@ def png_nero(w, h):
             + pezzo(b"IDAT", dati) + pezzo(b"IEND", b""))
 
 
-def misura_png(png):
+def png_size(png):
     import struct
     return struct.unpack(">II", png[16:24])
 
@@ -296,7 +296,7 @@ def nella_sessione(s, comando, secondi=60):
     return s.nella_sessione(comando, secondi, fondo=False)
 
 
-def ambiente_di(s, processo):
+def environment_of(s, processo):
     """An environment variable by name, read from /proc/<pid>/environ of the
     tenant's first process named `processo`: {name: value}."""
     c, t = s.sc.dentro(
@@ -312,7 +312,7 @@ def ambiente_di(s, processo):
     return amb
 
 
-def riquadro_cambiato(png_a, png_b, cella=8, soglia=60, margine=24, minimo=3, vicino=None):
+def changed_rect(png_a, png_b, cella=8, soglia=60, margine=24, minimo=3, vicino=None):
     """⭐ Where something opened: the box (x0, y0, x1, y1) of the LARGEST BLOB
     of changed cells between two photos (cells of `cella` px, one pixel
     per cell, 8-neighbours with one step of tolerance).  It serves to crop
@@ -365,17 +365,17 @@ def leggi_riquadro(png, riquadro, ingrandisci=3):
     at 150 psm 11).  Returns (lines, text): the LINES of each reading, put
     together — an entry read by only one of the three counts (for the forbidden ones
     the most sensitive is wanted).  (None, reason) if tesseract is not there."""
-    if not ocr_disponibile():
+    if not ocr_available():
         return None, "tesseract is not in %s" % TESSERACT
     tutte = []
     for psm, soglia in ((11, None), (6, 110), (11, 150)):
         p = ocr(png, riquadro, ingrandisci=ingrandisci, psm=psm, soglia=soglia) or []
-        tutte += righe_di(p)
+        tutte += lines_of(p)
         leggi_riquadro.parole = getattr(leggi_riquadro, "parole", []) + p
     return tutte, " | ".join(r[0] for r in tutte)
 
 
-def parole_lette():
+def words_read():
     """The words (with the position) of the readings made by `leggi_riquadro`
     since the last `azzera_parole()`."""
     return list(getattr(leggi_riquadro, "parole", []))
@@ -385,7 +385,7 @@ def azzera_parole():
     leggi_riquadro.parole = []
 
 
-def righe_di(parole, passo_y=14):
+def lines_of(parole, passo_y=14):
     """The words put back into lines: [(sentence, x, y)] sorted from the top.  A
     line = the words with the centre at the same height (±passo_y), in x order.
     The three readings give duplicates: within a line the words overlapping one
@@ -420,7 +420,7 @@ def righe_di(parole, passo_y=14):
 #   switches between APPLICATIONS, and two windows of the same program would be
 #   a single entry.  `[M]` 24 Sep 2026: GTK3 is only in the gnome box,
 #   GTK4 in all.
-FINESTRA_GTK = r'''
+WINDOW_GTK = r'''
 import sys
 import gi
 gi.require_version("Gtk", "4.0")
@@ -460,16 +460,16 @@ app.run([])
 '''
 
 
-def metti_finestra(s):
+def put_window(s):
     """Writes the window's program in the tenant's home."""
     import base64
-    b = base64.b64encode(FINESTRA_GTK.encode()).decode()
+    b = base64.b64encode(WINDOW_GTK.encode()).decode()
     return s.sc.dentro("echo %s | base64 -d > /home/%s/.c15-finestra.py && chown %s: "
                        "/home/%s/.c15-finestra.py && echo scritta"
                        % (b, s.chi, s.chi, s.chi), 60)
 
 
-def apri_finestra(s, nome, colore, largo, alto, altro=None, periodo=30):
+def open_window(s, nome, colore, largo, alto, altro=None, periodo=30):
     coda = " '%s' %d" % (altro, periodo) if altro else ""
     return s.nella_sessione("python3 /home/%s/.c15-finestra.py %s '%s' %d %d%s"
                             % (s.chi, nome, colore, largo, alto, coda), 60, fondo=True)
@@ -479,7 +479,7 @@ CIANO = (0, 255, 255)
 MAGENTA = (255, 0, 255)
 
 
-def conta_colori(png, colori, passo=6, toll=50):
+def count_colors(png, colori, passo=6, toll=50):
     """{colour: fraction of the sampled pixels close to that colour}."""
     im = immagine(png)
     px = im.load()
@@ -510,7 +510,7 @@ def vivi(png, passo=6, soglia=24):
     return v / max(1, n)
 
 
-def aspetta_apertura(s, png_prima, nome, vicino, tetto_s=10.0, lato_min=120):
+def wait_open(s, png_prima, nome, vicino, tetto_s=10.0, lato_min=120):
     """Photographs until near the click something of at least
     `lato_min` x `lato_min` px opens (a menu, not a button's highlight).
     Returns (png, path, box | None)."""
@@ -520,7 +520,7 @@ def aspetta_apertura(s, png_prima, nome, vicino, tetto_s=10.0, lato_min=120):
         time.sleep(1.5)
         png, dove = foto(s, nome)
         if png:
-            r = riquadro_cambiato(png_prima, png, vicino=vicino)
+            r = changed_rect(png_prima, png, vicino=vicino)
             if r and r[2] - r[0] >= lato_min and r[3] - r[1] >= lato_min:
                 return png, dove, r
         if time.time() > fine:
@@ -534,7 +534,7 @@ def aspetta_apertura(s, png_prima, nome, vicino, tetto_s=10.0, lato_min=120):
 #   to draw, and the photo comes back at once.  Is it in the top-left corner
 #   of the PAGE, outside the canvas? No: the canvas covers everything — it sits ON TOP, 1 px,
 #   and changes between two nearly equal greys; in the judgments it weighs 1 pixel in 8 million.
-JS_PUNGOLO = r"""
+JS_PROD = r"""
 let p = document.getElementById('c15-pungolo');
 if (!p) { p = document.createElement('div'); p.id = 'c15-pungolo';
   p.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;z-index:2147483647;pointer-events:none';
@@ -544,9 +544,9 @@ return 1;
 """
 
 
-def pungola(s):
+def prod(s):
     try:
-        s.g.js(JS_PUNGOLO)
+        s.g.js(JS_PROD)
     except Exception:                            # noqa: BLE001
         pass
 
@@ -559,7 +559,7 @@ def foto(s, nome, scala=1.0, tentativi=3):
     import base64
     ultimo = ""
     for _ in range(tentativi):
-        pungola(s)
+        prod(s)
         if scala < 1 and hasattr(s.g, "cdp"):
             try:
                 r = s.g.js("const t=document.getElementById('schermo');"
@@ -573,10 +573,10 @@ def foto(s, nome, scala=1.0, tentativi=3):
                                    clip={"x": r[0], "y": r[1], "width": r[2],
                                          "height": r[3], "scale": scala})
                 png = base64.b64decode(c["data"])
-                s._foto += 1
+                s._photo += 1
                 dove = ""
                 if s.o.evidenze:
-                    dove = os.path.join(s.o.evidenze, "%02d-%s.png" % (s._foto, nome))
+                    dove = os.path.join(s.o.evidenze, "%02d-%s.png" % (s._photo, nome))
                     with open(dove, "wb") as f:
                         f.write(png)
                 return png, dove

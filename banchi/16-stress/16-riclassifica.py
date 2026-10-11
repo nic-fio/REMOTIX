@@ -76,16 +76,16 @@ def _modulo(nome, file):
     return m
 
 
-campioni_nuovi = _modulo("attore16", "16-attore.py").campioni_nuovi
+new_samples = _modulo("attore16", "16-attore.py").new_samples
 
 
-def correggi_righe(righe):
+def fix_lines(righe):
     """⇒ (corrected rows, how many touched).  Pure: the rows are dicts of stato.jsonl."""
     out, toccate, prec = [], 0, None
     for r in righe:
         r = dict(r)
         giro = r.get("giro")
-        nuovi = campioni_nuovi(prec, giro) if isinstance(giro, dict) else []
+        nuovi = new_samples(prec, giro) if isinstance(giro, dict) else []
         if isinstance(giro, dict):
             prec = giro
         b = r.get("blocco_max_ms")
@@ -105,7 +105,7 @@ def ultimo_green(righe):
     return max(g) if g else None
 
 
-def classe_imposta(r):
+def class_imposed(r):
     """The class of the climb that does not come from the judgement of the thresholds.
     ⚠ Both forms: the salita.jsonl of the running campaign is written by the old
     (Italian) 16-salita.py, the new one writes in English."""
@@ -115,15 +115,15 @@ def classe_imposta(r):
             or perche.startswith(("⛔ RISORSE DELL'OSPITE", "⛔ HOST RESOURCES")))
 
 
-def copia_corretta(dirliv, dest):
+def copy_corrected(dirliv, dest):
     """The copy of the level: links, except the rewritten stato.jsonl.  ⇒ rows touched."""
     toccate = 0
     for voce in os.listdir(dirliv):
         src = os.path.join(dirliv, voce)
         if voce.startswith(spellings("utente-")) and os.path.isdir(src):
             # the copy is in the code's spelling: an old utente-NN folder takes the current prefix
-            voce_ora = "utente-" + voce.split("-", 1)[1]
-            os.makedirs(os.path.join(dest, voce_ora))
+            entry_now = "utente-" + voce.split("-", 1)[1]
+            os.makedirs(os.path.join(dest, entry_now))
             for f in os.listdir(src):
                 if f == "stato.jsonl":
                     righe = []
@@ -132,25 +132,25 @@ def copia_corretta(dirliv, dest):
                             righe.append(current_spelling(json.loads(riga)))
                         except ValueError:
                             continue
-                    nuove, n = correggi_righe(righe)
+                    nuove, n = fix_lines(righe)
                     toccate += n
-                    with open(os.path.join(dest, voce_ora, f), "w", encoding="utf-8") as o:
+                    with open(os.path.join(dest, entry_now, f), "w", encoding="utf-8") as o:
                         for r in nuove:
                             o.write(json.dumps(r, ensure_ascii=False) + "\n")
                 else:
-                    os.symlink(os.path.join(src, f), os.path.join(dest, voce_ora, f))
+                    os.symlink(os.path.join(src, f), os.path.join(dest, entry_now, f))
         elif not voce.startswith(spellings("classifica")):
             os.symlink(src, os.path.join(dest, voce))
     return toccate
 
 
-def giudica_di_nuovo(dirliv, riga, fps_video, prog):
+def judge_again(dirliv, riga, fps_video, prog):
     """⇒ (new class or None, rows touched, output of the classifier)."""
     tmp = tempfile.mkdtemp(prefix="16-riclassifica-")
     try:
         dest = os.path.join(tmp, os.path.basename(dirliv))
         os.makedirs(dest)
-        toccate = copia_corretta(dirliv, dest)
+        toccate = copy_corrected(dirliv, dest)
         cmd = [sys.executable, prog, "--livello-dir", dest, "--secco", "--json",
                "--campagna", str(riga.get("campagna") or ""), "--livello", str(riga.get("livello") or 0),
                "--finestra-s", str(int(float(riga.get("controllo_min") or 2) * 60))]
@@ -187,10 +187,10 @@ def riclassifica(salita, fps_video=None, prog=None):
         dirliv = os.path.join(salita, str(r.get("nome") or ""))
         n = dict(r)
         voce = {"nome": r.get("nome"), "livello": r.get("livello"), "classe_prima": r.get("classe")}
-        if classe_imposta(r) or not r.get("nome") or not os.path.isdir(dirliv):
+        if class_imposed(r) or not r.get("nome") or not os.path.isdir(dirliv):
             voce.update(classe_ora=r.get("classe"), toccate=0, nota="class imposed by the climb: unchanged")
         else:
-            classe, toccate, uscita = giudica_di_nuovo(dirliv, r, fps_video, prog)
+            classe, toccate, uscita = judge_again(dirliv, r, fps_video, prog)
             with open(os.path.join(dirliv, "classifica-riclassificata.log"), "w", encoding="utf-8") as f:
                 f.write("# 16-riclassifica.py: the freeze with the page's round (fasi/20 §3-bis.2); "
                         "rows touched: %d\n%s" % (toccate, uscita))
@@ -230,7 +230,7 @@ def certifica():
              {"profilo": "A", "lavoro": True, "blocco_max_ms": 3000, "giro": g(15, [20.0] * 14 + [2400.0])},
              # the video is not touched
              {"profilo": "D", "lavoro": True, "blocco_max_ms": 1200, "giro": g(20, [20.0] * 20)}]
-    nuove, n = correggi_righe(righe)
+    nuove, n = fix_lines(righe)
     b = [r["blocco_max_ms"] for r in nuove]
     prova("FAULT seen: Firefox's 1.1 s freeze becomes the page's round (48 ms)",
           b[1] == 48 and nuove[1]["blocco_ricalcolato"]["prima_ms"] == 1111, str(b))
@@ -247,10 +247,10 @@ def certifica():
     prova("last true GREEN as in 16-coda.sh", ultimo_green(sr) == 1)
     # ⚠ the two rows below are an OLD salita.jsonl, word for word (protected from the rename)
     prova("imposed class: entry failed, host, interrupted, «?»",
-          classe_imposta(current_spelling({"classe": "FAIL", "ragione_classe": "ENTRATA FALLITA (1 entrati su 4)"}))
-          and classe_imposta(current_spelling({"classe": "FAIL", "ragione_classe": "⛔ RISORSE DELL'OSPITE (§7.7): x"}))
-          and classe_imposta({"classe": "GREEN", "interrotto": True}) and classe_imposta({"classe": "?"})
-          and not classe_imposta({"classe": "DEGRADED", "ragione_classe": "blocco"}))
+          class_imposed(current_spelling({"classe": "FAIL", "ragione_classe": "ENTRATA FALLITA (1 entrati su 4)"}))
+          and class_imposed(current_spelling({"classe": "FAIL", "ragione_classe": "⛔ RISORSE DELL'OSPITE (§7.7): x"}))
+          and class_imposed({"classe": "GREEN", "interrotto": True}) and class_imposed({"classe": "?"})
+          and not class_imposed({"classe": "DEGRADED", "ragione_classe": "blocco"}))
 
     print("── end to end, with a fake classifier (the real thresholds are tested by 16-classifica)")
     tmp = tempfile.mkdtemp(prefix="16-riclassifica-cert-")

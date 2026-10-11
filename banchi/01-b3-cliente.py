@@ -125,12 +125,12 @@ NOME = {v: k for k, v in T.items()}
 #    message — that is, a diagnosis that sends you to look at the wrong
 #    channel.  ⚠ And the channels really are two: §2.5, high byte `0x00` versus
 #    `0x01`.
-T_PUNTATORE = 0x0101            # §7.3
-T_PULSANTE = 0x0102             # §7.3
-BOTTONE_SINISTRO = 0x110        # evdev BTN_LEFT
+T_POINTER = 0x0101            # §7.3
+T_BUTTON = 0x0102             # §7.3
+LEFT_BUTTON = 0x110        # evdev BTN_LEFT
 # The two outcomes and the three reasons of `TELA` — §7.1.
 TELA_ESITO = {1: "ADATTATA", 2: "RIFIUTATA"}
-TELA_MOTIVO = {0: "-", 1: "COMPOSITORE_INCAPACE", 2: "MISURA_FUORI_LIMITI",
+CANVAS_REASON = {0: "-", 1: "COMPOSITORE_INCAPACE", 2: "MISURA_FUORI_LIMITI",
                3: "NON_ORA"}
 MOTIVI = {0x07: "CREDENZIALI_ERRATE", 0x08: "TROPPI_TENTATIVI",
           0x09: "NIENTE_IN_COMUNE", 0x0A: "VERSIONE_INCOMPATIBILE",
@@ -261,10 +261,10 @@ class Registratore:
     # ⛔ Yesterday's two magics are kept HERE and not only in the arbiter: the
     #    bench that refuses them (`01-b4-registrazioni.py`) writes them, and two
     #    lists of versions in two files are two lists that diverge.
-    MAGIA_V1 = b"RCPREG\x00\x01"
-    MAGIA_V2 = b"RCPREG\x00\x02"
+    MAGIC_V1 = b"RCPREG\x00\x01"
+    MAGIC_V2 = b"RCPREG\x00\x02"
     CONTINUA, FIN, RESET = 0, 1, 2
-    OROLOGIO_CLIENT, OROLOGIO_SERVER = 1, 2
+    CLOCK_CLIENT, CLOCK_SERVER = 1, 2
 
     def __init__(self):
         self.blocchi = []
@@ -273,7 +273,7 @@ class Registratore:
         #    ⚠ Writing `2` here would mean making the arbiter believe it has
         #      the server's clock, and then the «one direction only» conclusion
         #      would become a two-direction conclusion — wrong.
-        self.orologio = self.OROLOGIO_CLIENT
+        self.orologio = self.CLOCK_CLIENT
         self.t0 = None
         # ⛔ The control channel stream, the REAL one.  §4.2: it is the first
         #    bidirectional stream of the session, and ⚠ **it is not 0** — in
@@ -426,7 +426,7 @@ class Registratore:
 #
 #   `purezza` = **delivered at the output / arrived on the wire** — where «arrived
 #   on the wire» are the conforming datagrams (right prefix, ≥12 bytes, type 0x0401)
-#   and «delivered» those that end up in `a_blocchi`, that is what the
+#   and «delivered» those that end up in `a_blocks`, that is what the
 #   sound judge will be able to listen to.  ⭐ It is the definition needed here.
 #
 #   ⛔ And it is **NOT** the formula the page benches use
@@ -441,8 +441,8 @@ class Registratore:
 AUDIO_CUSCINO_MS = 250          # `[R]` src/pagina.html:5550
 # ⛔⛔ THE DEFAULT IS `vecchia`, and it changes ONLY by the user's decision.
 REGOLA_AUDIO = "vecchia"
-PASSO_AUDIO_US = 0              # 0 = derived from the PCM (T4)
-DECODIFICA_AUDIO_S = 0.0        # ⚠ T3: at zero `scartati_tardivi` is blind
+AUDIO_STEP_US = 0              # 0 = derived from the PCM (T4)
+AUDIO_DECODE_S = 0.0        # ⚠ T3: at zero `scartati_tardivi` is blind
 
 
 class VaglioAudio:
@@ -454,19 +454,19 @@ class VaglioAudio:
 
     REGOLE = ("vecchia", "nuova")
 
-    def __init__(self, regola="vecchia", cuscino_ms=AUDIO_CUSCINO_MS,
+    def __init__(self, regola="vecchia", cushion_ms=AUDIO_CUSCINO_MS,
                  orologio=time.monotonic, passo_us=0,
                  ritardo_decodifica_s=0.0):
         if regola not in self.REGOLE:
             raise ValueError(f"audio rule «{regola}»: the rules are {self.REGOLE}")
         self.regola = regola
-        self.cuscino_s = cuscino_ms / 1000.0
-        self._orologio = orologio
+        self.cushion_s = cushion_ms / 1000.0
+        self._clock = orologio
         self.ritardo_decodifica_s = ritardo_decodifica_s
         # ⚠ T4: 0 = I do not know, and then the count of `mancati` is OFF —
         #   as in the page, which writes `if (a.passo_us > 0)`.
         self.passo_us = passo_us
-        self.passo_dichiarato = passo_us > 0
+        self.step_declared = passo_us > 0
         # ── the counters, with the page's names ───────────────────────────
         self.sul_filo = 0            # conforming datagrams arrived (denominator)
         self.ricevuti = 0            # passed the wire screening
@@ -535,7 +535,7 @@ class VaglioAudio:
                 # The rule of before, to the letter: behind ⇒ thrown away.
                 self.scartati_vecchi += 1
                 return (False, "istante no longer the most recent (old rule)")
-            ora = self._orologio()
+            ora = self._clock()
             if self._posto_passato(istante, ora):
                 self.scartati_vecchi += 1
                 return (False, "its place in time has already passed (§6.3)")
@@ -562,10 +562,10 @@ class VaglioAudio:
           zero — and with zero `scartati_tardivi` is not a measurement, it is a blind
           zero.  `--certifica` exercises it with a declared delay.
         """
-        ora = self._orologio() + self.ritardo_decodifica_s
+        ora = self._clock() + self.ritardo_decodifica_s
         t = ist_us / 1e6
         if self.base is None:
-            self.base = ora + self.cuscino_s - t
+            self.base = ora + self.cushion_s - t
         quando = self.base + t
         if quando < ora + 0.001:
             if self.regola == "nuova" and self.ist_max_us > ist_us:
@@ -578,11 +578,11 @@ class VaglioAudio:
             # late ⇒ the anchor moves.  ⚠ It is the only thing that RAISES the
             # queue again, and it is audible.
             self.riarmi += 1
-            self.base = ora + self.cuscino_s - t
+            self.base = ora + self.cushion_s - t
         if ist_us > self.ist_max_us:
             self.ist_max_us = ist_us
         # ⚠ T4: the step from the PCM payload, not from a decoder.
-        if not self.passo_dichiarato and codec == 2 and byte_carico > 0:
+        if not self.step_declared and codec == 2 and byte_carico > 0:
             self.passo_us = int(byte_carico * 5000 / 960 + 0.5)
         self.consegnati += 1
         return (True, "")
@@ -674,10 +674,10 @@ class Cliente(QuicConnectionProtocol):
         # ⛔ The counters are SIX and not one, and each names a different rule
         #    of §6.3: whoever summed them would get a number that never says
         #    where to look (`LEZIONI.md` §2.2).
-        self.a_ricevuti = 0      # datagrams arrived and conforming
-        self.a_corti = 0         # < 12 bytes: §6.3 has them discarded
-        self.a_tipo = 0          # `tipo` != 0x0401
-        self.a_prefisso = 0      # the RFC 9297 prefix is not our session
+        self.a_received = 0      # datagrams arrived and conforming
+        self.a_short = 0         # < 12 bytes: §6.3 has them discarded
+        self.a_type = 0          # `tipo` != 0x0401
+        self.a_prefix = 0      # the RFC 9297 prefix is not our session
         self.a_vecchi = 0        # `istante` no longer the most recent: §6.3
         self.a_codec = None      # the codec declared in the datagrams
         self.a_byte = 0
@@ -685,10 +685,10 @@ class Cliente(QuicConnectionProtocol):
         #    variable and not from the constructor because `create_protocol=Cliente`
         #    passes no arguments; the default is `vecchia` in two places (here
         #    and in `--audio-regola`), and they agree on purpose.
-        self.a_vaglio = VaglioAudio(regola=REGOLA_AUDIO, passo_us=PASSO_AUDIO_US,
-                                    ritardo_decodifica_s=DECODIFICA_AUDIO_S)
+        self.a_screening = VaglioAudio(regola=REGOLA_AUDIO, passo_us=AUDIO_STEP_US,
+                                    ritardo_decodifica_s=AUDIO_DECODE_S)
         # The blocks as they arrived, for the judge of `07-b42`.
-        self.a_blocchi = []
+        self.a_blocks = []
         self.caduto = asyncio.Event()
         # ⛔ AND THE THIRD CAUSE: THAT WE CLOSED THE CONNECTION OURSELVES.
         #
@@ -702,7 +702,7 @@ class Cliente(QuicConnectionProtocol):
         #
         # ⭐ «Terminated by us» and «terminated by someone else» are two different
         #    facts and now they have two different lines (CODER.md §3.9, §4.2).
-        self.chiusa_da_noi = False
+        self.closed_by_us = False
         # ═══ THE CLIPBOARD — phase 7, §7.4 ════════════════════════════════
         # ⛔ THIS CLIENT IS THE SECOND READER OF `RCP.md` (`PIANO.md` §1.1),
         #    and the three messages of §7.4 come in here because otherwise the clipboard
@@ -715,20 +715,20 @@ class Cliente(QuicConnectionProtocol):
         #   exactly the defect the identifier of §7.4 exists to
         #   remove — finding it here would mean never finding it.
         self.app_in = {}          # stream_id -> bytearray, the assembly
-        self.app_mio_id = 0       # §7.4: each side numbers its OWN, from 1
-        self.app_mio_testo = ""
-        self.app_suo_id = 0       # the server's last announcement
-        self.app_suo_len = 0
-        self.app_ricevuto = None  # the last text the server sent us
-        self.app_annunci = []     # [(id, bytes)] all the server's announcements
-        self.app_chiesti = []     # [id] the transfers the server asked us for
-        self.app_serviti = 0
-        self.app_violazioni = []  # what does NOT match §7.4, with its name
-        self.app_evento = asyncio.Event()
+        self.app_my_id = 0       # §7.4: each side numbers its OWN, from 1
+        self.app_my_text = ""
+        self.app_peer_id = 0       # the server's last announcement
+        self.app_peer_len = 0
+        self.app_received = None  # the last text the server sent us
+        self.app_announcements = []     # [(id, bytes)] all the server's announcements
+        self.app_asked = []     # [id] the transfers the server asked us for
+        self.app_served = 0
+        self.app_violations = []  # what does NOT match §7.4, with its name
+        self.app_event = asyncio.Event()
         # The preamble of the server's unidirectional streams, per stream:
         # `0x40 0x54` plus the session varint.  `None` = not ours.
         self.uni_pref = {}
-        self.uni_genere = {}
+        self.uni_kind = {}
         # ═══ THE VIDEO TAKEN FROM THE WIRE — phase 3/7, 17 August 2026 ════
         # ⛔ NOT to paint it: to SEPARATE our stream from the
         #    browser's decoder.  «The artefacts are ours» and «they are
@@ -743,7 +743,7 @@ class Cliente(QuicConnectionProtocol):
         #    per stream, or a single canvas would appear ten times and the
         #    denominator of T4 would count frames that are not there.
         self.v_reg = set()
-        self.v_fotogrammi = []  # [(number, key, width, height, data)]
+        self.v_frames = []  # [(number, key, width, height, data)]
         # ═══ THE INPUT CHANNEL — §2.5, §7.3, and 22 August 2026 ═══════════
         # ⛔ `RCP.md` §2.5: «**only one**, opened after receiving `SESSIONE`
         #    and kept open».  ⚠ It is NOT like the clipboard, where every
@@ -758,7 +758,7 @@ class Cliente(QuicConnectionProtocol):
         #    now: the grace second is arbitrated by §11.1 on `istante_ms`, and
         #    a delay counted on a clock different from the one that ends up
         #    in the file would give a `dt` that is not the one the arbiter reads.
-        self.ultimo_tela_ms = None
+        self.last_canvas_ms = None
 
     def _cade(self, perche: str) -> None:
         """The first cause wins: the following ones are consequences, not causes."""
@@ -826,7 +826,7 @@ class Cliente(QuicConnectionProtocol):
         #    of CPython's `time.monotonic()` — nanoseconds on the Linux kernel —
         #    so nothing is multiplied by a thousand.
         ist_us = int(time.monotonic() * 1_000_000)
-        b = inquadra(T_PUNTATORE,
+        b = inquadra(T_POINTER,
                      struct.pack("!IQII", self.inp_id, ist_us, x, y))
         self._quic.send_stream_data(sid, b, end_stream=False)
         self.transmit()
@@ -836,7 +836,7 @@ class Cliente(QuicConnectionProtocol):
             ms = self.reg.blocchi[-1][6]
         return self.inp_id, ms
 
-    def manda_pulsante(self, premuto, codice=BOTTONE_SINISTRO):
+    def manda_pulsante(self, premuto, codice=LEFT_BUTTON):
         """⭐ `PULSANTE` — §7.3, **evdev** code, pressed/released.
 
         ⛔ It serves one reason only and it must be written down: **giving FOCUS to a
@@ -851,7 +851,7 @@ class Cliente(QuicConnectionProtocol):
         sid = self.apri_input()
         self.inp_id += 1
         ist_us = int(time.monotonic() * 1_000_000)
-        b = inquadra(T_PULSANTE,
+        b = inquadra(T_BUTTON,
                      struct.pack("!IQHB", self.inp_id, ist_us, codice,
                                  1 if premuto else 0))
         self._quic.send_stream_data(sid, b, end_stream=False)
@@ -884,16 +884,16 @@ class Cliente(QuicConnectionProtocol):
     def appunti_annuncia(self, testo):
         """«I have new text» — §7.4, `APPUNTI_ANNUNCIO`."""
         d = testo.encode("utf-8")
-        self.app_mio_id = 1 if self.app_mio_id >= 0xFFFFFFFF else self.app_mio_id + 1
-        self.app_mio_testo = testo
-        self.appunti_manda(0x0201, struct.pack("!II", self.app_mio_id, len(d)))
-        print(f"   [app]  announced transfer {self.app_mio_id}, "
+        self.app_my_id = 1 if self.app_my_id >= 0xFFFFFFFF else self.app_my_id + 1
+        self.app_my_text = testo
+        self.appunti_manda(0x0201, struct.pack("!II", self.app_my_id, len(d)))
+        print(f"   [app]  announced transfer {self.app_my_id}, "
               f"{len(d)} bytes")
-        return self.app_mio_id
+        return self.app_my_id
 
     def appunti_chiedi(self, trasferimento=None):
         """«Send it to me» — §7.4, `APPUNTI_CHIEDI`."""
-        t = self.app_suo_id if trasferimento is None else trasferimento
+        t = self.app_peer_id if trasferimento is None else trasferimento
         self.appunti_manda(0x0202, struct.pack("!I", t))
         print(f"   [app]  asked for transfer {t}")
         return t
@@ -902,84 +902,84 @@ class Cliente(QuicConnectionProtocol):
         """A whole clipboard channel message, already unrolled from §6.1."""
         if tipo == 0x0201:                                   # ANNUNCIO
             if len(corpo) != 8:
-                self.app_violazioni.append(
+                self.app_violations.append(
                     f"APPUNTI_ANNUNCIO with {len(corpo)} bytes: §7.4 wants 8")
                 return
             t, n = struct.unpack("!II", corpo)
-            self.app_suo_id, self.app_suo_len = t, n
-            self.app_annunci.append((t, n))
+            self.app_peer_id, self.app_peer_len = t, n
+            self.app_announcements.append((t, n))
             print(f"   [app]  ⭐ the server announces transfer {t}, {n} bytes")
-            self.app_evento.set()
+            self.app_event.set()
             return
         if tipo == 0x0202:                                   # CHIEDI
             if len(corpo) != 4:
-                self.app_violazioni.append(
+                self.app_violations.append(
                     f"APPUNTI_CHIEDI with {len(corpo)} bytes: §7.4 wants 4")
                 return
             (t,) = struct.unpack("!I", corpo)
-            self.app_chiesti.append(t)
+            self.app_asked.append(t)
             print(f"   [app]  ⭐ the server asks for transfer {t}")
             # ⛔ §7.4: «an identifier that matches no live announcement
             #    is ERRORE_PROTOCOLLO».  ⚠ Here the session is NOT closed:
             #    this is a bench, and its job is to RECORD that the
             #    server got it wrong, not to punish it — if it closed, the round
             #    would end and nobody would read anything any more.
-            if t == 0 or t > self.app_mio_id:
-                self.app_violazioni.append(
+            if t == 0 or t > self.app_my_id:
+                self.app_violations.append(
                     f"APPUNTI_CHIEDI for transfer {t}, and I have "
-                    f"announced {self.app_mio_id} (§7.4)")
+                    f"announced {self.app_my_id} (§7.4)")
                 return
-            d = self.app_mio_testo.encode("utf-8")
+            d = self.app_my_text.encode("utf-8")
             self.appunti_manda(0x0203, struct.pack("!I", t) + d)
-            self.app_serviti += 1
+            self.app_served += 1
             print(f"   [app]  served {len(d)} bytes to the server (transfer {t})")
-            self.app_evento.set()
+            self.app_event.set()
             return
         if tipo == 0x0203:                                   # TESTO
             if len(corpo) < 4:
-                self.app_violazioni.append(
+                self.app_violations.append(
                     f"APPUNTI_TESTO with {len(corpo)} bytes: §7.4 wants >= 4")
                 return
             (t,) = struct.unpack("!I", corpo[:4])
             d = corpo[4:]
-            if t != self.app_suo_id:
-                self.app_violazioni.append(
+            if t != self.app_peer_id:
+                self.app_violations.append(
                     f"APPUNTI_TESTO for transfer {t}, and the live announcement "
-                    f"is {self.app_suo_id} (§7.4)")
-            if len(d) != self.app_suo_len:
-                self.app_violazioni.append(
+                    f"is {self.app_peer_id} (§7.4)")
+            if len(d) != self.app_peer_len:
+                self.app_violations.append(
                     f"APPUNTI_TESTO carries {len(d)} bytes and the announcement "
-                    f"declared {self.app_suo_len} (§7.4)")
+                    f"declared {self.app_peer_len} (§7.4)")
             # ⛔ §5.4: «the text MUST be UTF-8».  It is decoded STRICTLY: a
             #    lenient decoder would put replacement characters
             #    in place of an error, and the bench would say green on a text that
             #    is not the one that had been copied.
             try:
-                self.app_ricevuto = d.decode("utf-8")
+                self.app_received = d.decode("utf-8")
             except UnicodeDecodeError as e:
-                self.app_violazioni.append(f"APPUNTI_TESTO is not UTF-8: {e}")
-                self.app_ricevuto = None
+                self.app_violations.append(f"APPUNTI_TESTO is not UTF-8: {e}")
+                self.app_received = None
             print(f"   [app]  ⭐ {len(d)} bytes arrived from the server "
                   f"(transfer {t})")
-            self.app_evento.set()
+            self.app_event.set()
             return
-        self.app_violazioni.append(
+        self.app_violations.append(
             f"type {tipo:#06x} on the clipboard channel: §7.4 defines THREE")
 
     def _decidi_canale(self, sid, carico, fine):
         """The high byte of `tipo` gives the channel (§2.5), and now it is here."""
         self.uni_pref.pop(sid, None)
         if carico[0] == 0x02:
-            self.uni_genere[sid] = "wt"
+            self.uni_kind[sid] = "wt"
             self._appunti_stream(sid, carico, fine)
         elif carico[0] == 0x03:
-            self.uni_genere[sid] = "video"
+            self.uni_kind[sid] = "video"
             self._video_stream(sid, carico, fine)
         else:
             # ⚠ A channel this client does not serve: it SAYS so instead of
             #   keeping quiet — «received and not used» and «never arrived» must not
             #   look the same.
-            self.uni_genere[sid] = "altro"
+            self.uni_kind[sid] = "altro"
             print(f"   [wt]   ⚠ uni stream {sid}, channel 0x{carico[0]:02x}: "
                   f"legitimate and not served by this client (§2.5)")
 
@@ -1039,7 +1039,7 @@ class Cliente(QuicConnectionProtocol):
                   f"wants 28 of header")
             return
         tipo, codec, l, a, numero, istante, inp = struct.unpack("!HHIIIQI", bytes(b[:28]))
-        self.v_fotogrammi.append((numero, tipo == 0x0301, l, a, bytes(b[28:])))
+        self.v_frames.append((numero, tipo == 0x0301, l, a, bytes(b[28:])))
 
     def _appunti_stream(self, sid, dati, fine):
         """The bytes of a unidirectional SERVER stream, clipboard channel.
@@ -1061,7 +1061,7 @@ class Cliente(QuicConnectionProtocol):
             self._appunti_uno(tipo, corpo)
         if fine:
             if b:
-                self.app_violazioni.append(
+                self.app_violations.append(
                     f"clipboard stream {sid} finished with {len(b)} bytes "
                     "that do not make a message (§6.1)")
             self.app_in.pop(sid, None)
@@ -1078,21 +1078,21 @@ class Cliente(QuicConnectionProtocol):
         # The prefix: a quarter of the identifier of the session stream.
         q, i = _varint(d, 0)
         if q is None:
-            self.a_prefisso += 1
+            self.a_prefix += 1
             return
         if self.sessione is not None and q != self.sessione // 4:
             # ⛔ It is not a wrapper detail: a wrong prefix makes the
             #    BROWSER discard the datagram, with no error anywhere
             #    — that is, «the audio does not arrive» and that is all.
-            self.a_prefisso += 1
+            self.a_prefix += 1
             return
         c = d[i:]
         if len(c) < 12:
-            self.a_corti += 1
+            self.a_short += 1
             return
         tipo = int.from_bytes(c[0:2], "big")
         if tipo != 0x0401:
-            self.a_tipo += 1
+            self.a_type += 1
             return
         codec = int.from_bytes(c[2:4], "big")
         istante = int.from_bytes(c[4:12], "big")
@@ -1100,9 +1100,9 @@ class Cliente(QuicConnectionProtocol):
         # those already consumed» — and WHAT «already consumed» means is decided by
         # `--audio-regola`.  ⛔ The default is `vecchia`: with it, these
         # lines do exactly what they did before 23 August 2026.
-        consegnato, _perche = self.a_vaglio.arrivo(istante, codec, len(c) - 12)
-        self.a_vecchi = self.a_vaglio.scartati_vecchi
-        self.a_ricevuti = self.a_vaglio.ricevuti
+        consegnato, _perche = self.a_screening.arrivo(istante, codec, len(c) - 12)
+        self.a_vecchi = self.a_screening.scartati_vecchi
+        self.a_received = self.a_screening.ricevuti
         if not consegnato:
             return
         self.a_byte += len(c) - 12
@@ -1116,7 +1116,7 @@ class Cliente(QuicConnectionProtocol):
             # ⚠ The codec does not change mid-session: §4.3 negotiates it once.
             print(f"   [audio] ⛔ the codec has CHANGED: {self.a_codec} → {codec}")
             self.a_codec = codec
-        self.a_blocchi.append({"istante": istante, "codec": codec,
+        self.a_blocks.append({"istante": istante, "codec": codec,
                                "byte": bytes(c[12:])})
 
     def quic_event_received(self, event: QuicEvent) -> None:
@@ -1141,11 +1141,11 @@ class Cliente(QuicConnectionProtocol):
         #    by looking at /proc, which only says that a sleeping process is
         #    not dead (R8.2).
         if nome == "ConnectionTerminated":
-            da_noi = " — CLOSED BY US, window over" if self.chiusa_da_noi else ""
+            from_us = " — CLOSED BY US, window over" if self.closed_by_us else ""
             print(f"   [quic] connection TERMINATED: code "
                   f"{getattr(event, 'error_code', '?')} · "
                   f"{getattr(event, 'reason_phrase', '') or '(no reason)'}"
-                  f"{da_noi}")
+                  f"{from_us}")
             self._cade(f"connection TERMINATED ({getattr(event, 'reason_phrase', '') or 'no reason'})")
             self.messaggi.put_nowait(None)
             return
@@ -1202,10 +1202,10 @@ class Cliente(QuicConnectionProtocol):
         if nome == "StreamDataReceived" and (event.stream_id & 0x03) == 0x03:
             sid = event.stream_id
             if os.environ.get("B3_SPIA"):
-                print(f"   [spia] uni {sid} genere={self.uni_genere.get(sid)} "
+                print(f"   [spia] uni {sid} genere={self.uni_kind.get(sid)} "
                       f"len={len(event.data)} fin={event.end_stream} "
                       f"primi={bytes(event.data[:6]).hex()}")
-            g = self.uni_genere.get(sid)
+            g = self.uni_kind.get(sid)
             if g == "h3":
                 pass                       # it belongs to `aioquic`: left to it
             elif g == "wt":
@@ -1231,14 +1231,14 @@ class Cliente(QuicConnectionProtocol):
                 if not event.data:
                     return
                 if event.data[0] != 0x40:
-                    self.uni_genere[sid] = "h3"
+                    self.uni_kind[sid] = "h3"
                 else:
                     p = self.uni_pref.setdefault(sid, bytearray())
                     p += event.data
                     if len(p) < 2:
                         return
                     if p[1] != 0x54:
-                        self.uni_genere[sid] = "altro"
+                        self.uni_kind[sid] = "altro"
                         self.uni_pref.pop(sid, None)
                         print(f"   [wt]   ⚠ uni stream {sid} starts with 0x40 "
                               f"0x{p[1]:02x}: it is not WebTransport, and its bytes "
@@ -1248,7 +1248,7 @@ class Cliente(QuicConnectionProtocol):
                     if q is None:
                         return         # the session varint is not all here
                     resto = bytes(p[i:])
-                    self.uni_genere[sid] = "wt-attesa"
+                    self.uni_kind[sid] = "wt-attesa"
                     self.uni_pref[sid] = bytearray(resto)
                     if resto:
                         self._decidi_canale(sid, resto, event.end_stream)
@@ -1306,7 +1306,7 @@ class Cliente(QuicConnectionProtocol):
                 #    by the arbiter are two different numbers — that is exactly
                 #    the error the boundary of the second does not forgive.
                 if NOME.get(tipo) == "TELA":
-                    self.ultimo_tela_ms = self.reg.blocchi[-1][6]
+                    self.last_canvas_ms = self.reg.blocchi[-1][6]
                 if NOME.get(tipo) in ("TELA", "CURSORE_FORMA") \
                         and self.messaggi.qsize() > 0:
                     # ⚠ «It arrived while there were already others in the queue» is not
@@ -1416,7 +1416,7 @@ async def chiedi_tela(cli, reg, lar, alt, tetto):
         es, mot = corpo[0], corpo[1]
         tl, ta = struct.unpack("!II", corpo[2:10])
         print(f"   ← TELA {TELA_ESITO.get(es, es)}"
-              f"/{TELA_MOTIVO.get(mot, mot)} canvas in force {tl}x{ta} "
+              f"/{CANVAS_REASON.get(mot, mot)} canvas in force {tl}x{ta} "
               f"after {ms:.0f} ms")
         return es, mot, tl, ta, ms
 
@@ -1430,7 +1430,7 @@ def scrivi_video(a, cli):
        ⚠ It cost a round, on 17 August 2026 — a bench defect with the
          face of a product defect, the third of the day.
     """
-    if not a.video_scrivi or not cli.v_fotogrammi:
+    if not a.video_scrivi or not cli.v_frames:
         if a.video_scrivi:
             print("   [vid]  ⛔ no frame taken from the wire: no file")
         return
@@ -1438,7 +1438,7 @@ def scrivi_video(a, cli):
     #    are independent and can arrive out of order, and a stream put back
     #    in line badly would give artefacts that would be OURS, the bench's — that is
     #    the wrong answer to the question this file exists to ask.
-    ordinati = sorted(cli.v_fotogrammi, key=lambda f: f[0])
+    ordinati = sorted(cli.v_frames, key=lambda f: f[0])
     with open(a.video_scrivi, "wb") as f:
         for _, _, _, _, d in ordinati:
             f.write(d)
@@ -1463,20 +1463,20 @@ def scrivi_appunti(a, cli):
     if not a.appunti_scrivi:
         return
     esito = {
-        "annunci_dal_server": cli.app_annunci,
-        "chiesti_dal_server": cli.app_chiesti,
-        "serviti_al_server": cli.app_serviti,
-        "mio_id": cli.app_mio_id,
-        "mio_testo": cli.app_mio_testo,
+        "annunci_dal_server": cli.app_announcements,
+        "chiesti_dal_server": cli.app_asked,
+        "serviti_al_server": cli.app_served,
+        "mio_id": cli.app_my_id,
+        "mio_testo": cli.app_my_text,
         # ⛔ `None` = nothing arrived, `""` = an empty string arrived.
         #    They are two different facts, and JSON keeps them apart.
-        "ricevuto": cli.app_ricevuto,
-        "violazioni": cli.app_violazioni,
+        "ricevuto": cli.app_received,
+        "violazioni": cli.app_violations,
     }
     with open(a.appunti_scrivi, "w") as f:
         json.dump(esito, f, ensure_ascii=False, indent=1)
     print(f"   [app]  outcome written to {a.appunti_scrivi} "
-          f"({len(cli.app_violazioni)} violations of §7.4)")
+          f"({len(cli.app_violations)} violations of §7.4)")
 
 
 def scrivi_audio(a, cli):
@@ -1489,28 +1489,28 @@ def scrivi_audio(a, cli):
     """
     if cli is None:
         return
-    print(f"   [audio] received {cli.a_ricevuti} · {cli.a_byte} bytes of payload · "
+    print(f"   [audio] received {cli.a_received} · {cli.a_byte} bytes of payload · "
           f"codec {cli.a_codec if cli.a_codec is not None else '(none)'}")
     # ⛔ `vecchi {n}` STAYS WHERE IT WAS AND AS IT WAS: `07-b64-rete.py`:538 reads it
     #    with the regex `vecchi (\d+)` on this line.  The four of phase 9
     #    are added AT THE END, where no regex of before meets them.
-    print(f"   [audio] discarded — short {cli.a_corti} · type {cli.a_tipo} · "
-          f"prefix {cli.a_prefisso} · old {cli.a_vecchi}")
+    print(f"   [audio] discarded — short {cli.a_short} · type {cli.a_type} · "
+          f"prefix {cli.a_prefix} · old {cli.a_vecchi}")
     # ⛔ The phase 9 counters are printed ALWAYS and with BOTH
     #    rules, even all at zero: «a denied reading is not a reading that
     #    says zero» (`CODER.md` §3.10).  ⚠ With the old rule `tardivi`,
     #    `fuori` and `rec` are zero BY CONSTRUCTION — it is not health, it is that
     #    that rule cannot produce them.
-    print(f"   [audio] reorder — {cli.a_vaglio.riga()}")
-    print(f"   [audio] reorder — {cli.a_vaglio.riga_conti()}")
+    print(f"   [audio] reorder — {cli.a_screening.riga()}")
+    print(f"   [audio] reorder — {cli.a_screening.riga_conti()}")
     if not a.audio_scrivi:
         return
     import base64
     with open(a.audio_scrivi, "w") as f:
-        for b in cli.a_blocchi:
+        for b in cli.a_blocks:
             f.write(json.dumps({"istante": b["istante"], "codec": b["codec"],
                                 "byte": base64.b64encode(b["byte"]).decode()}) + "\n")
-    print(f"   [audio] blocks written to {a.audio_scrivi} ({len(cli.a_blocchi)})")
+    print(f"   [audio] blocks written to {a.audio_scrivi} ({len(cli.a_blocks)})")
 
 
 def scrivi_traccia(a, reg, cli=None):
@@ -1622,8 +1622,8 @@ async def principale(a) -> int:
             print(f"   ECCOMI: version {versione}")
 
             # ── CREDENZIALI ─────────────────────────────────────────────────
-            corpo_c = s(a.utente) + s(a.parola)
-            b = inquadra(T["CREDENZIALI"], corpo_c)
+            body_c = s(a.utente) + s(a.parola)
+            b = inquadra(T["CREDENZIALI"], body_c)
             # §11.1: the password is obscured, the length stays true
             ini = 6 + 2 + len(a.utente.encode()) + 2
             qua = len(a.parola.encode())
@@ -1655,11 +1655,11 @@ async def principale(a) -> int:
         except Exception:
             scrivi_traccia(a, reg, cli); scrivi_audio(a, cli); scrivi_video(a, cli)
             raise
-        stato_s = corpo[0]
+        state_s = corpo[0]
         lar, alt = struct.unpack("!II", corpo[1:9])
         n = struct.unpack("!H", corpo[9:11])[0]
         desktop = corpo[11:11 + n].decode()
-        print(f"   ⭐ SESSIONE: stato={stato_s} tela={lar}x{alt} desktop={desktop}")
+        print(f"   ⭐ SESSIONE: stato={state_s} tela={lar}x{alt} desktop={desktop}")
 
         # ═══════════════════════════════════════════════════════════════════
         # ⭐⛔ THE CANVAS PATH — sub-phase 6.6, 16 August 2026
@@ -1675,14 +1675,14 @@ async def principale(a) -> int:
         #   ties to the count the way the client treats frames, and a
         #   test client that did not keep it could not notice a
         #   `TELA` it did not ask for.
-        tela_viva = (lar, alt)
+        canvas_alive = (lar, alt)
         # ⭐ The canvas in force **BEFORE** the last `TELA(ADATTATA)`: it is the one
         #    on which the in-flight coordinates of §7.1 are still valid, and it is
         #    the only number from which the grace-second case can be built
         #    without making it up.  ⛔ `None` as long as no adaptation has
         #    succeeded: then the scene does not exist, and we say so instead of faking it.
-        tela_prec_adattata = None
-        esiti_tela = []
+        canvas_prev_adapted = None
+        outcomes_canvas = []
         if a.adatta:
             for al, aa, quando in a.adatta:
                 if quando:
@@ -1701,18 +1701,18 @@ async def principale(a) -> int:
                         return 4
                     except asyncio.TimeoutError:
                         pass
-                prima_di_questo = tela_viva
+                before_this = canvas_alive
                 r = await chiedi_tela(cli, reg, al, aa, a.attesa_tela)
-                esiti_tela.append(r)
+                outcomes_canvas.append(r)
                 if r is not None and r[0] == 1:
-                    tela_prec_adattata = prima_di_questo
+                    canvas_prev_adapted = before_this
                 if r is None:
                     # ⛔ The silence is RECORDED and we exit with a code of its own: it is
                     #    the scene of §7.1, and it must be told apart from «the session
                     #    dropped» (4) and from «all fine» (0).
                     scrivi_traccia(a, reg, cli); scrivi_audio(a, cli); scrivi_video(a, cli)
                     return 5
-                tela_viva = (r[2], r[3])
+                canvas_alive = (r[2], r[3])
         # ═══════════════════════════════════════════════════════════════════
         # ⭐⛔ THE GRACE SECOND OF §7.1, AIMED AT THE SERVER
         #     — 22 August 2026, and until this morning it had never been done.
@@ -1744,54 +1744,54 @@ async def principale(a) -> int:
         #        x < tela_larghezza»), so the case is that of §7.1 and not
         #        «a wrong coordinate» — which §7.1 does NOT cover, and the server
         #        has a line on purpose to say so;
-        #      · saturated, it must land **exactly** on `(nuova_l - 1,
-        #        nuova_a - 1)`, that is on a KNOWN point.  ⭐ It is the check that
+        #      · saturated, it must land **exactly** on `(new_w - 1,
+        #        new_h - 1)`, that is on a KNOWN point.  ⭐ It is the check that
         #        crosses the conversion: a server that refused the
         #        coordinate *saying so in the log* but applied it anyway
         #        would pass the arbiter, and would not pass this.
         if a.puntatore_vecchia is not None:
-            if tela_prec_adattata is None:
+            if canvas_prev_adapted is None:
                 print("   ⛔ --puntatore-vecchia, but no TELA(ADATTATA) "
                       "succeeded: there is no «previous canvas», and a "
                       "coordinate chosen at random would test ANOTHER rule "
                       "(§7.3 «outside the canvas»), not the grace second")
                 scrivi_traccia(a, reg, cli); scrivi_audio(a, cli); scrivi_video(a, cli)
                 return 6
-            px = tela_prec_adattata[0] - 1
-            py = tela_prec_adattata[1] - 1
-            if px < tela_viva[0] and py < tela_viva[1]:
+            px = canvas_prev_adapted[0] - 1
+            py = canvas_prev_adapted[1] - 1
+            if px < canvas_alive[0] and py < canvas_alive[1]:
                 print(f"   ⛔ ({px},{py}) is INSIDE the canvas in force "
-                      f"{tela_viva[0]}x{tela_viva[1]}: the scene of §7.1 is not "
+                      f"{canvas_alive[0]}x{canvas_alive[1]}: the scene of §7.1 is not "
                       f"exercised at all — what is needed is a new canvas smaller "
-                      f"than the previous {tela_prec_adattata[0]}x"
-                      f"{tela_prec_adattata[1]}")
+                      f"than the previous {canvas_prev_adapted[0]}x"
+                      f"{canvas_prev_adapted[1]}")
                 scrivi_traccia(a, reg, cli); scrivi_audio(a, cli); scrivi_video(a, cli)
                 return 6
             # The expected saturation, computed as §7.1 describes it: «to the last
             # valid pixel».
-            sx = px if px < tela_viva[0] else tela_viva[0] - 1
-            sy = py if py < tela_viva[1] else tela_viva[1] - 1
-            rit_ms = int(round(a.puntatore_vecchia * 1000))
+            sx = px if px < canvas_alive[0] else canvas_alive[0] - 1
+            sy = py if py < canvas_alive[1] else canvas_alive[1] - 1
+            delay_ms = int(round(a.puntatore_vecchia * 1000))
             print(f"   ⛔ EXPECTED, declared BEFOREHAND: PUNTATORE ({px},{py}) — "
-                  f"valid on the previous canvas {tela_prec_adattata[0]}x"
-                  f"{tela_prec_adattata[1]}, outside the one in force "
-                  f"{tela_viva[0]}x{tela_viva[1]} — at {rit_ms} ms from the "
+                  f"valid on the previous canvas {canvas_prev_adapted[0]}x"
+                  f"{canvas_prev_adapted[1]}, outside the one in force "
+                  f"{canvas_alive[0]}x{canvas_alive[1]} — at {delay_ms} ms from the "
                   f"TELA(ADATTATA)")
-            if rit_ms > 1000:
+            if delay_ms > 1000:
                 print(f"      ⇒ beyond the grace second, and the margin is "
-                      f"{rit_ms - 1000} ms.  ⛔ The server MUST refuse: "
+                      f"{delay_ms - 1000} ms.  ⛔ The server MUST refuse: "
                       f"ITS interval is even longer than this")
             else:
                 print(f"      ⇒ inside the second, and the margin is "
-                      f"{1000 - rit_ms} ms — that is how much network round trip it "
+                      f"{1000 - delay_ms} ms — that is how much network round trip it "
                       f"would take to push it beyond.  ⛔ The server MUST "
                       f"saturate to ({sx},{sy}) and write it in the log")
-            if cli.ultimo_tela_ms is None:
+            if cli.last_canvas_ms is None:
                 print("   ⛔ no instant recorded for the TELA: I do not know from "
                       "when to count")
                 scrivi_traccia(a, reg, cli); scrivi_audio(a, cli); scrivi_video(a, cli)
                 return 6
-            bersaglio = cli.ultimo_tela_ms + rit_ms
+            bersaglio = cli.last_canvas_ms + delay_ms
             # ⛔ WE WAIT WITH OUR EYES OPEN — findings R8.2/R8.4.  A
             #    `sleep` would not notice that the session died in the
             #    meantime, and the `PUNTATORE` would leave on an already
@@ -1814,7 +1814,7 @@ async def principale(a) -> int:
                 scrivi_traccia(a, reg, cli); scrivi_audio(a, cli); scrivi_video(a, cli)
                 return 4
             pid, pms = cli.manda_puntatore(px, py)
-            dt = None if pms is None else pms - cli.ultimo_tela_ms
+            dt = None if pms is None else pms - cli.last_canvas_ms
             print(f"   → PUNTATORE id={pid} ({px},{py}) — recorded dt "
                   f"{dt} ms from the TELA(ADATTATA).  ⚠ It is the number the arbiter "
                   f"will read: the SERVER's interval is longer than this")
@@ -1850,7 +1850,7 @@ async def principale(a) -> int:
                           f"dropped ({cli.caduta}) — ⭐ after a PUNTATORE beyond "
                           f"the second it is what §7.1 wants")
                 except asyncio.TimeoutError:
-                    ultimo = max((f[0] for f in cli.v_fotogrammi), default=0)
+                    ultimo = max((f[0] for f in cli.v_frames), default=0)
                     b = inquadra(T["RICHIEDI_CHIAVE"],
                                  struct.pack("!I", ultimo))
                     cli.manda(b)
@@ -1935,30 +1935,30 @@ async def principale(a) -> int:
             print(f"   [app]  waiting for an announcement from the server, up to "
                   f"{a.appunti_attendi} s")
             fine = time.monotonic() + a.appunti_attendi
-            while not cli.app_annunci and time.monotonic() < fine:
-                cli.app_evento.clear()
+            while not cli.app_announcements and time.monotonic() < fine:
+                cli.app_event.clear()
                 try:
-                    await asyncio.wait_for(cli.app_evento.wait(),
+                    await asyncio.wait_for(cli.app_event.wait(),
                                            timeout=max(0.1, fine - time.monotonic()))
                 except asyncio.TimeoutError:
                     break
-            if not cli.app_annunci:
+            if not cli.app_announcements:
                 print("   [app]  ⛔ no announcement from the server in time")
             else:
                 cli.appunti_chiedi()
                 fine = time.monotonic() + a.appunti_attendi
-                while cli.app_ricevuto is None and time.monotonic() < fine:
-                    cli.app_evento.clear()
+                while cli.app_received is None and time.monotonic() < fine:
+                    cli.app_event.clear()
                     try:
-                        await asyncio.wait_for(cli.app_evento.wait(),
+                        await asyncio.wait_for(cli.app_event.wait(),
                                                timeout=max(0.1, fine - time.monotonic()))
                     except asyncio.TimeoutError:
                         break
-                if cli.app_ricevuto is None:
+                if cli.app_received is None:
                     print("   [app]  ⛔ the announcement arrived and the text did NOT")
                 else:
-                    print(f"   [app]  ⭐ received {len(cli.app_ricevuto)} "
-                          f"characters: «{cli.app_ricevuto[:60]}»")
+                    print(f"   [app]  ⭐ received {len(cli.app_received)} "
+                          f"characters: «{cli.app_received[:60]}»")
         scrivi_appunti(a, cli)
         if a.resta:
             # ⛔ WE STAY WITH OUR EYES OPEN, NOT SLEEPING — findings R8.2/R8.4.
@@ -2027,7 +2027,7 @@ async def principale(a) -> int:
                 # ⛔ The flag is raised BEFORE leaving: leaving here
                 #    `connect()` closes the connection, and the event that follows
                 #    must already be recognisable as ours.
-                cli.chiusa_da_noi = True
+                cli.closed_by_us = True
                 print(f"   ⭐ still attached after {a.resta} s: nothing dropped")
                 scrivi_traccia(a, reg, cli); scrivi_audio(a, cli); scrivi_video(a, cli)
                 return 0
@@ -2075,7 +2075,7 @@ async def principale(a) -> int:
 #      real clock this test would last minutes and be different every time;
 #    · a bench that sleeps also measures the load of the machine hosting it.
 PCM_BYTE = 960                  # `[S]` RCP.md:1299 — 480 samples, 5 ms
-PCM_PASSO_US = 5000
+PCM_STEP_US = 5000
 
 
 class OrologioFinto:
@@ -2099,13 +2099,13 @@ def _giro(regola, arrivi, ritardo_decodifica_s=0.0):
        verify that neither of the two rules **fabricates** a block that was not on
        the wire, and that a duplicate does not come out twice.
     """
-    orol = OrologioFinto()
-    t0 = orol.t
-    v = VaglioAudio(regola=regola, orologio=orol,
+    clk = OrologioFinto()
+    t0 = clk.t
+    v = VaglioAudio(regola=regola, orologio=clk,
                     ritardo_decodifica_s=ritardo_decodifica_s)
     usciti = []
     for quando, ist in arrivi:
-        orol.t = t0 + quando
+        clk.t = t0 + quando
         ok, _perche = v.arrivo(ist, 2, PCM_BYTE)
         if ok:
             usciti.append(ist)
@@ -2124,7 +2124,7 @@ def _conti(v):
 
 def _ordinata(n):
     """n PCM blocks of 5 ms, in order, with no losses: the denominator."""
-    return [(i * 0.005, i * PCM_PASSO_US) for i in range(n)]
+    return [(i * 0.005, i * PCM_STEP_US) for i in range(n)]
 
 
 def _riordinata(n, k):
@@ -2141,7 +2141,7 @@ def _riordinata(n, k):
     fuori = []
     for i in range(0, n, k + 1):
         fuori += list(range(i, min(i + k + 1, n)))[::-1]
-    return [(p * 0.005, j * PCM_PASSO_US) for p, j in enumerate(fuori)]
+    return [(p * 0.005, j * PCM_STEP_US) for p, j in enumerate(fuori)]
 
 
 def _con_doppioni(n, ogni):
@@ -2154,9 +2154,9 @@ def _con_doppioni(n, ogni):
     """
     a = []
     for i in range(n):
-        a.append((i * 0.005, i * PCM_PASSO_US))
+        a.append((i * 0.005, i * PCM_STEP_US))
         if i and i % ogni == 0:
-            a.append((i * 0.005 + 0.001, i * PCM_PASSO_US))
+            a.append((i * 0.005 + 0.001, i * PCM_STEP_US))
     return a
 
 
@@ -2168,7 +2168,7 @@ def _con_buchi(n, ogni):
        jump — and mixing it with the holes in the middle would give an expectation off by 1.
        ⭐ The blind spot has a case of its own (4-blind).
     """
-    return [(i * 0.005, i * PCM_PASSO_US)
+    return [(i * 0.005, i * PCM_STEP_US)
             for i in range(n) if i == 0 or i % ogni]
 
 
@@ -2203,7 +2203,7 @@ def certifica():
 
     print("== ⭐ `01-b3-cliente.py --certifica` — the audio screening, "
           "with no network and no test machine")
-    print(f"   PCM of {PCM_BYTE} bytes = {PCM_PASSO_US} us (RCP.md:1299), "
+    print(f"   PCM of {PCM_BYTE} bytes = {PCM_STEP_US} us (RCP.md:1299), "
           f"cushion {AUDIO_CUSCINO_MS} ms, fake clock")
 
     # ── 1 · in order: the two rules must be INDISTINGUISHABLE ──────────────
@@ -2221,16 +2221,16 @@ def certifica():
     for k in (1, 2, 3, 7):
         av, uv = _giro("vecchia", _riordinata(840, k))
         an, un = _giro("nuova", _riordinata(840, k))
-        atteso_v = 1.0 / (k + 1)
+        expected_v = 1.0 / (k + 1)
         arretrati = 840 - 840 // (k + 1)
-        passa = (abs(av.purezza - atteso_v) <= 0.005
+        passa = (abs(av.purezza - expected_v) <= 0.005
                  and an.purezza >= 0.95
                  and an.fuori_ordine == arretrati
                  and an.scartati_vecchi == 0 and an.doppioni == 0
-                 and sorted(un) == [i * PCM_PASSO_US for i in range(840)])
+                 and sorted(un) == [i * PCM_STEP_US for i in range(840)])
         caso(f"2.{k} · reorder by {k} places ⇒ the old one throws away, the new one keeps",
              passa,
-             f"old purity = 1/(k+1) = {atteso_v:.4f} (±0.005) · "
+             f"old purity = 1/(k+1) = {expected_v:.4f} (±0.005) · "
              f"new purity ≥ 0.95 · fuori_ordine = {arretrati} · "
              f"vecchi 0 · and the output contains ALL 840 `istante`s",
              {"purezza_vecchia": round(av.purezza, 4),
@@ -2240,15 +2240,15 @@ def certifica():
     # ── 3 · duplicates: counted, and never played twice ────────────────────
     print("\n  ── 3 · duplicates ──")
     arrivi = _con_doppioni(840, 10)
-    attesi_dop = len(arrivi) - 840
+    expected_dup = len(arrivi) - 840
     for regola in ("vecchia", "nuova"):
         v, u = _giro(regola, arrivi)
-        passa = (v.doppioni == attesi_dop and len(u) == len(set(u))
+        passa = (v.doppioni == expected_dup and len(u) == len(set(u))
                  and len(u) == 840)
-        caso(f"3.{regola} · {attesi_dop} duplicates ⇒ counted, and never twice "
+        caso(f"3.{regola} · {expected_dup} duplicates ⇒ counted, and never twice "
              "at the output",
              passa,
-             f"doppioni = {attesi_dop} · no repeated `istante` at the output · "
+             f"doppioni = {expected_dup} · no repeated `istante` at the output · "
              f"840 delivered (⛔ a duplicate played twice doubles the "
              "signal, which §6.3 does not allow)",
              _conti(v))
@@ -2257,16 +2257,16 @@ def certifica():
     print("\n  ── 4 · real holes ──")
     arrivi = _con_buchi(840, 7)
     spediti = [ist for _q, ist in arrivi]
-    attesi_mancati = 840 - len(spediti)
+    expected_missed = 840 - len(spediti)
     for regola in ("vecchia", "nuova"):
         v, u = _giro(regola, arrivi)
-        passa = (v.mancati == attesi_mancati and u == spediti
+        passa = (v.mancati == expected_missed and u == spediti
                  and v.consegnati == len(spediti)
                  and v.recuperati == 0)
-        caso(f"4.{regola} · {attesi_mancati} blocks NEVER arrived ⇒ `mancati` "
+        caso(f"4.{regola} · {expected_missed} blocks NEVER arrived ⇒ `mancati` "
              "rises and nothing is fabricated",
              passa,
-             f"mancati = {attesi_mancati} · consegnati = {len(spediti)} · "
+             f"mancati = {expected_missed} · consegnati = {len(spediti)} · "
              "at the output ONLY the `istante`s that were on the wire · recuperati 0",
              _conti(v))
     # ⛔⭐ THE BLIND SPOT, AND IT IS DECLARED INSTEAD OF HIDDEN — found by
@@ -2277,7 +2277,7 @@ def certifica():
     #     translation (`src/pagina.html`:6550, `a.ultimo_istante !== undefined`).
     #     ⇒ A bench that asked «mancati == all the holes» on a sequence
     #     that starts with a hole would give red to the product for a defect of its own.
-    ceco = [(i * 0.005, i * PCM_PASSO_US) for i in range(3, 200)]
+    ceco = [(i * 0.005, i * PCM_STEP_US) for i in range(3, 200)]
     v, u = _giro("nuova", ceco)
     caso("4-blind · ⚠ the 3 holes AT THE HEAD are not counted, and it is not a defect",
          v.mancati == 0 and v.consegnati == len(ceco),
@@ -2311,20 +2311,20 @@ def certifica():
     #      `cushion < Δ ≤ cushion + delay`, and with no decoding delay it is
     #      EMPTY — which is T3 said in numbers.
     print("\n  ── 5 · the block really too late ──")
-    n, i_tardo = 200, 195
+    n, i_late = 200, 195
     base = _ordinata(n)
-    suo_posto = i_tardo * 0.005          # when it should have arrived
-    ultimo_arrivo = base[-1][0]
+    its_slot = i_late * 0.005          # when it should have arrived
+    last_arrival = base[-1][0]
     cusc = AUDIO_CUSCINO_MS / 1000.0
     # 5a · Δ = 300 ms > cushion 250 and delay 0 ⇒ it passed ALREADY ON THE WIRE.
-    tardo = [(suo_posto + 0.300, i_tardo * PCM_PASSO_US)]
-    assert tardo[0][0] > ultimo_arrivo    # it must be the last to arrive
-    av, uv = _giro("vecchia", base + tardo)
-    an, un = _giro("nuova", base + tardo)
+    belated = [(its_slot + 0.300, i_late * PCM_STEP_US)]
+    assert belated[0][0] > last_arrival    # it must be the last to arrive
+    av, uv = _giro("vecchia", base + belated)
+    an, un = _giro("nuova", base + belated)
     caso(f"5a · Δ = 300 ms > cushion {AUDIO_CUSCINO_MS} ⇒ the place passed "
          "ON THE WIRE, and the new one DISCARDS it",
          (an.scartati_vecchi == 1 and an.fuori_ordine == 0
-          and an.consegnati == n and un == [i * PCM_PASSO_US for i in range(n)]
+          and an.consegnati == n and un == [i * PCM_STEP_US for i in range(n)]
           and av.scartati_vecchi == 1 and av.consegnati == n),
          "new: vecchi 1 · fuori 0 · consegnati 200, and the late one is NOT "
          "in the output — old: vecchi 1 · consegnati 200",
@@ -2333,8 +2333,8 @@ def certifica():
     #      loses its place during the 50 ms of declared decoding.
     dec = 0.050
     delta = cusc + dec / 2                # 275 ms: in the middle of the window
-    quasi = [(suo_posto + delta, i_tardo * PCM_PASSO_US)]
-    assert quasi[0][0] > ultimo_arrivo
+    quasi = [(its_slot + delta, i_late * PCM_STEP_US)]
+    assert quasi[0][0] > last_arrival
     an2, un2 = _giro("nuova", base + quasi, ritardo_decodifica_s=dec)
     av2, uv2 = _giro("vecchia", base + quasi, ritardo_decodifica_s=dec)
     caso(f"5b · Δ = {delta * 1000:.0f} ms, that is inside the window "
@@ -2359,7 +2359,7 @@ def certifica():
 
     # ── 6 · the regression: the default has NOT changed ────────────────────
     print("\n  ── 6 · the old rule against the code of before ──")
-    banchi_prova = {
+    test_benches = {
         "in order": _ordinata(840),
         "reordered by 3": _riordinata(840, 3),
         "with duplicates": _con_doppioni(840, 10),
@@ -2367,7 +2367,7 @@ def certifica():
         "mixed": _riordinata(400, 2) + _con_doppioni(200, 5) + _con_buchi(200, 9),
     }
     guasti = []
-    for nome, arrivi in banchi_prova.items():
+    for nome, arrivi in test_benches.items():
         v, u = _giro("vecchia", arrivi)
         ric, vecchi, usciti = _vecchio_letterale([i for _q, i in arrivi])
         if (v.ricevuti, v.scartati_vecchi, u) != (ric, vecchi, usciti):
@@ -2587,8 +2587,8 @@ if __name__ == "__main__":
     #    ⚠ This block runs at module level: the assignment is already
     #    global, and `Cliente.__init__` reads these three lines.
     REGOLA_AUDIO = a.audio_regola
-    PASSO_AUDIO_US = a.audio_passo_us
-    DECODIFICA_AUDIO_S = a.audio_decodifica_ms / 1000.0
+    AUDIO_STEP_US = a.audio_passo_us
+    AUDIO_DECODE_S = a.audio_decodifica_ms / 1000.0
     if REGOLA_AUDIO != "vecchia":
         # ⛔ AND IT IS SAID, loudly: a round with the new rule is NOT comparable
         #    with the numbers of the benches of before, and whoever reads the log afterwards must

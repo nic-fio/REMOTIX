@@ -46,7 +46,7 @@ static const uint32_t SPV_RGB_NV12[] = {
 #define SLOT_DPB 2              /* the reference and the current one */
 #define CODED_MARGINE (1u << 16)
 #define IMPORTAZIONI_MAX 8      /* the cache of imported DMA-BUFs */
-#define INTESTAZIONI_MAX 2048
+#define MAX_HEADERS 2048
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * 1. TOOLS
@@ -114,7 +114,7 @@ static const char *vk_nome(VkResult r)
 		return false;                                        \
 	} while (0)
 
-#define VK_O_FALLISCI(chiamata, che)                                            \
+#define VK_OR_FAIL(chiamata, che)                                            \
 	do {                                                                        \
 		VkResult _r = (chiamata);                                               \
 		if (_r != VK_SUCCESS)                                                   \
@@ -126,7 +126,7 @@ static uint32_t allinea(uint32_t x, uint32_t a)
 	return a ? (x + a - 1) / a * a : x;
 }
 
-static int log2_intero(uint64_t x)
+static int log2_int(uint64_t x)
 {
 	int n = -1;
 	while (x) {
@@ -146,9 +146,9 @@ static int log2_intero(uint64_t x)
 typedef struct {
 	int level_idc, cs3f;
 	int max_mbps, max_fs, max_dpb_mbs, max_br;
-} LivelloH264;
+} H264Level;
 
-static const LivelloH264 LIVELLI_H264[] = {
+static const H264Level H264_LEVELS[] = {
 	{ 10, 0, 1485, 99, 396, 64 },          { 11, 1, 1485, 99, 396, 128 },
 	{ 9, 0, 1485, 99, 396, 128 },          { 11, 0, 3000, 396, 900, 192 },
 	{ 12, 0, 6000, 396, 2376, 384 },       { 13, 0, 11880, 396, 2376, 768 },
@@ -162,10 +162,10 @@ static const LivelloH264 LIVELLI_H264[] = {
 	{ 62, 0, 16711680, 139264, 696320, 800000 },
 };
 
-static int livello_h264(int64_t bitrate, int fps, uint32_t mb_l, uint32_t mb_a, int dpb)
+static int h264_level(int64_t bitrate, int fps, uint32_t mb_l, uint32_t mb_a, int dpb)
 {
-	for (size_t i = 0; i < sizeof LIVELLI_H264 / sizeof LIVELLI_H264[0]; i++) {
-		const LivelloH264 *L = &LIVELLI_H264[i];
+	for (size_t i = 0; i < sizeof H264_LEVELS / sizeof H264_LEVELS[0]; i++) {
+		const H264Level *L = &H264_LEVELS[i];
 		uint64_t mb = (uint64_t) mb_l * mb_a;
 
 		if (L->cs3f || L->level_idc == 9)
@@ -196,9 +196,9 @@ typedef struct {
 	int level_idc;
 	uint32_t max_luma_ps;
 	int max_br_main;
-} LivelloHEVC;
+} HEVCLevel;
 
-static const LivelloHEVC LIVELLI_HEVC[] = {
+static const HEVCLevel HEVC_LEVELS[] = {
 	{ 30, 36864, 128 },       { 60, 122880, 1500 },     { 63, 245760, 3000 },
 	{ 90, 552960, 6000 },     { 93, 983040, 10000 },    { 120, 2228224, 12000 },
 	{ 123, 2228224, 20000 },  { 150, 8912896, 25000 },  { 153, 8912896, 40000 },
@@ -206,12 +206,12 @@ static const LivelloHEVC LIVELLI_HEVC[] = {
 	{ 186, 35651584, 240000 },
 };
 
-static int livello_hevc(int64_t bitrate, uint32_t l, uint32_t a, int dpb)
+static int hevc_level(int64_t bitrate, uint32_t l, uint32_t a, int dpb)
 {
 	uint64_t pic = (uint64_t) l * a;
 
-	for (size_t i = 0; i < sizeof LIVELLI_HEVC / sizeof LIVELLI_HEVC[0]; i++) {
-		const LivelloHEVC *L = &LIVELLI_HEVC[i];
+	for (size_t i = 0; i < sizeof HEVC_LEVELS / sizeof HEVC_LEVELS[0]; i++) {
+		const HEVCLevel *L = &HEVC_LEVELS[i];
 		int dpb_max;
 
 		if (pic > L->max_luma_ps)
@@ -240,7 +240,7 @@ static int livello_hevc(int64_t bitrate, uint32_t l, uint32_t a, int dpb)
 }
 
 /* From `level_idc` to Vulkan's alphabet (`StdVideoH264LevelIdc`), and back. */
-static StdVideoH264LevelIdc h264_livello_enum(int idc)
+static StdVideoH264LevelIdc h264_level_enum(int idc)
 {
 	static const int tabella[] = { 10, 11, 12, 13, 20, 21, 22, 30, 31, 32,
 	                               40, 41, 42, 50, 51, 52, 60, 61, 62 };
@@ -250,14 +250,14 @@ static StdVideoH264LevelIdc h264_livello_enum(int idc)
 	return STD_VIDEO_H264_LEVEL_IDC_6_2;
 }
 
-static int h264_livello_idc(StdVideoH264LevelIdc e)
+static int h264_level_idc(StdVideoH264LevelIdc e)
 {
 	static const int tabella[] = { 10, 11, 12, 13, 20, 21, 22, 30, 31, 32,
 	                               40, 41, 42, 50, 51, 52, 60, 61, 62 };
 	return (unsigned) e < 19 ? tabella[e] : 62;
 }
 
-static StdVideoH265LevelIdc hevc_livello_enum(int idc)
+static StdVideoH265LevelIdc hevc_level_enum(int idc)
 {
 	static const int tabella[] = { 30, 60, 63, 90, 93, 120, 123, 150, 153, 156, 180, 183, 186 };
 	for (size_t i = 0; i < sizeof tabella / sizeof tabella[0]; i++)
@@ -266,7 +266,7 @@ static StdVideoH265LevelIdc hevc_livello_enum(int idc)
 	return STD_VIDEO_H265_LEVEL_IDC_6_2;
 }
 
-static int hevc_livello_idc(StdVideoH265LevelIdc e)
+static int hevc_level_idc(StdVideoH265LevelIdc e)
 {
 	static const int tabella[] = { 30, 60, 63, 90, 93, 120, 123, 150, 153, 156, 180, 183, 186 };
 	return (unsigned) e < 13 ? tabella[e] : 186;
@@ -293,22 +293,22 @@ typedef struct {
 	PFN_vkGetMemoryFdPropertiesKHR GetMemoryFdPropertiesKHR;
 } Funzioni;
 
-struct VulkanVideoDispositivo {
+struct VulkanVideoDevice {
 	VkInstance istanza;
 	VkPhysicalDevice fisico;
 	VkDevice dispositivo;
 	VkPhysicalDeviceMemoryProperties memoria;
-	uint32_t fam_codifica, fam_calcolo;
-	VkQueue coda_codifica, coda_calcolo;
+	uint32_t encode_fam, compute_fam;
+	VkQueue encode_queue, compute_queue;
 	VkVideoCodecOperationFlagsKHR operazioni;
 	bool ha_h264, ha_h265, ha_dmabuf, ha_foreign, ha_maintenance1, ha_drm;
-	bool scrive_senza_formato;    /* shaderStorageImageWriteWithoutFormat */
+	bool writes_without_format;    /* shaderStorageImageWriteWithoutFormat */
 	char nome[256], driver[256], nodo[64];
-	uint32_t versione_api;
+	uint32_t api_version;
 	Funzioni f;
 };
 
-static bool estensione_c_e(const VkExtensionProperties *e, uint32_t n, const char *nome)
+static bool has_extension(const VkExtensionProperties *e, uint32_t n, const char *nome)
 {
 	for (uint32_t i = 0; i < n; i++)
 		if (strcmp(e[i].extensionName, nome) == 0)
@@ -320,7 +320,7 @@ static bool estensione_c_e(const VkExtensionProperties *e, uint32_t n, const cha
  * minor of each physical device's render node, and they are compared with
  * `stat()` of the requested node.  ⛔ Not "the first device": this machine
  * has three (Radeon, Intel, llvmpipe). */
-static bool scegli_fisico(VulkanVideoDispositivo *d, const char *nodo, char *errore,
+static bool choose_physical_device(VulkanVideoDevice *d, const char *nodo, char *errore,
                           size_t errore_byte)
 {
 	struct stat st;
@@ -330,7 +330,7 @@ static bool scegli_fisico(VulkanVideoDispositivo *d, const char *nodo, char *err
 
 	if (stat(nodo, &st) != 0)
 		FALLISCI("cannot read node %s: %s", nodo, strerror(errno));
-	VK_O_FALLISCI(vkEnumeratePhysicalDevices(d->istanza, &quanti, NULL), "vkEnumeratePhysicalDevices");
+	VK_OR_FAIL(vkEnumeratePhysicalDevices(d->istanza, &quanti, NULL), "vkEnumeratePhysicalDevices");
 	if (quanti > 16)
 		quanti = 16;
 	if (!quanti)
@@ -348,7 +348,7 @@ static bool scegli_fisico(VulkanVideoDispositivo *d, const char *nodo, char *err
 		if (!est)
 			FALLISCI("out of memory");
 		vkEnumerateDeviceExtensionProperties(elenco[i], NULL, &ne, est);
-		if (estensione_c_e(est, ne, VK_EXT_PHYSICAL_DEVICE_DRM_EXTENSION_NAME))
+		if (has_extension(est, ne, VK_EXT_PHYSICAL_DEVICE_DRM_EXTENSION_NAME))
 			p2.pNext = &drm;
 		vkGetPhysicalDeviceProperties2(elenco[i], &p2);
 		snprintf(pezzo, sizeof pezzo, "%s«%s»%s", i ? ", " : "", p2.properties.deviceName,
@@ -360,18 +360,18 @@ static bool scegli_fisico(VulkanVideoDispositivo *d, const char *nodo, char *err
 		                     && drm.primaryMinor == (int64_t) minor(st.st_rdev)))) {
 			d->fisico = elenco[i];
 			d->ha_drm = true;
-			d->ha_h264 = estensione_c_e(est, ne, VK_KHR_VIDEO_ENCODE_H264_EXTENSION_NAME);
-			d->ha_h265 = estensione_c_e(est, ne, VK_KHR_VIDEO_ENCODE_H265_EXTENSION_NAME);
-			d->ha_dmabuf = estensione_c_e(est, ne, VK_EXT_EXTERNAL_MEMORY_DMA_BUF_EXTENSION_NAME)
-			               && estensione_c_e(est, ne, VK_EXT_IMAGE_DRM_FORMAT_MODIFIER_EXTENSION_NAME)
-			               && estensione_c_e(est, ne, VK_KHR_EXTERNAL_MEMORY_FD_EXTENSION_NAME);
-			d->ha_foreign = estensione_c_e(est, ne, VK_EXT_QUEUE_FAMILY_FOREIGN_EXTENSION_NAME);
-			d->ha_maintenance1 = estensione_c_e(est, ne, VK_KHR_VIDEO_MAINTENANCE_1_EXTENSION_NAME);
-			bool coda = estensione_c_e(est, ne, VK_KHR_VIDEO_QUEUE_EXTENSION_NAME)
-			            && estensione_c_e(est, ne, VK_KHR_VIDEO_ENCODE_QUEUE_EXTENSION_NAME);
+			d->ha_h264 = has_extension(est, ne, VK_KHR_VIDEO_ENCODE_H264_EXTENSION_NAME);
+			d->ha_h265 = has_extension(est, ne, VK_KHR_VIDEO_ENCODE_H265_EXTENSION_NAME);
+			d->ha_dmabuf = has_extension(est, ne, VK_EXT_EXTERNAL_MEMORY_DMA_BUF_EXTENSION_NAME)
+			               && has_extension(est, ne, VK_EXT_IMAGE_DRM_FORMAT_MODIFIER_EXTENSION_NAME)
+			               && has_extension(est, ne, VK_KHR_EXTERNAL_MEMORY_FD_EXTENSION_NAME);
+			d->ha_foreign = has_extension(est, ne, VK_EXT_QUEUE_FAMILY_FOREIGN_EXTENSION_NAME);
+			d->ha_maintenance1 = has_extension(est, ne, VK_KHR_VIDEO_MAINTENANCE_1_EXTENSION_NAME);
+			bool coda = has_extension(est, ne, VK_KHR_VIDEO_QUEUE_EXTENSION_NAME)
+			            && has_extension(est, ne, VK_KHR_VIDEO_ENCODE_QUEUE_EXTENSION_NAME);
 			free(est);
 			snprintf(d->nome, sizeof d->nome, "%s", p2.properties.deviceName);
-			d->versione_api = p2.properties.apiVersion;
+			d->api_version = p2.properties.apiVersion;
 			{
 				VkPhysicalDeviceDriverProperties dp = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES };
 				VkPhysicalDeviceProperties2 q = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, .pNext = &dp };
@@ -396,7 +396,7 @@ static bool scegli_fisico(VulkanVideoDispositivo *d, const char *nodo, char *err
 	         major(st.st_rdev), minor(st.st_rdev), visti);
 }
 
-static bool scegli_code(VulkanVideoDispositivo *d, char *errore, size_t errore_byte)
+static bool choose_code(VulkanVideoDevice *d, char *errore, size_t errore_byte)
 {
 	uint32_t n = 0;
 	VkQueueFamilyProperties2 *fp;
@@ -445,33 +445,33 @@ static bool scegli_code(VulkanVideoDispositivo *d, char *errore, size_t errore_b
 		FALLISCI("«%s»: no queue family with H.264/HEVC video encoding", d->nome);
 	if (calcolo == UINT32_MAX)
 		FALLISCI("«%s»: no queue family with compute", d->nome);
-	d->fam_codifica = codifica;
-	d->fam_calcolo = calcolo;
+	d->encode_fam = codifica;
+	d->compute_fam = calcolo;
 	return true;
 }
 
-#define PRENDI_D(nome)                                                                 \
+#define TAKE_D(nome)                                                                 \
 	do {                                                                               \
 		d->f.nome = (PFN_vk##nome) vkGetDeviceProcAddr(d->dispositivo, "vk" #nome);     \
 		if (!d->f.nome)                                                                \
 			FALLISCI("vkGetDeviceProcAddr(vk" #nome ") is null");                      \
 	} while (0)
-#define PRENDI_I(nome)                                                                 \
+#define TAKE_I(nome)                                                                 \
 	do {                                                                               \
 		d->f.nome = (PFN_vk##nome) vkGetInstanceProcAddr(d->istanza, "vk" #nome);       \
 		if (!d->f.nome)                                                                \
 			FALLISCI("vkGetInstanceProcAddr(vk" #nome ") is null");                    \
 	} while (0)
 
-static bool apri_dispositivo_logico(VulkanVideoDispositivo *d, char *errore, size_t errore_byte)
+static bool open_logical_device(VulkanVideoDevice *d, char *errore, size_t errore_byte)
 {
 	const char *est[12];
 	uint32_t ne = 0;
 	float prio = 1.0f;
 	VkDeviceQueueCreateInfo code[2] = {
-		{ .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO, .queueFamilyIndex = d->fam_codifica,
+		{ .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO, .queueFamilyIndex = d->encode_fam,
 		  .queueCount = 1, .pQueuePriorities = &prio },
-		{ .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO, .queueFamilyIndex = d->fam_calcolo,
+		{ .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO, .queueFamilyIndex = d->compute_fam,
 		  .queueCount = 1, .pQueuePriorities = &prio },
 	};
 	VkPhysicalDeviceVulkan13Features f13 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES };
@@ -484,8 +484,8 @@ static bool apri_dispositivo_logico(VulkanVideoDispositivo *d, char *errore, siz
 		FALLISCI("«%s» lacks synchronization2", d->nome);
 	if (!f11.samplerYcbcrConversion)
 		FALLISCI("«%s» lacks samplerYcbcrConversion (needed for NV12 images)", d->nome);
-	d->scrive_senza_formato = f2.features.shaderStorageImageWriteWithoutFormat;
-	if (!d->scrive_senza_formato)
+	d->writes_without_format = f2.features.shaderStorageImageWriteWithoutFormat;
+	if (!d->writes_without_format)
 		FALLISCI("«%s» lacks shaderStorageImageWriteWithoutFormat (the shader writes NV12 and P010)", d->nome);
 	/* only what is needed, switched on: the other features stay off */
 	memset(&f2.features, 0, sizeof f2.features);
@@ -517,39 +517,39 @@ static bool apri_dispositivo_logico(VulkanVideoDispositivo *d, char *errore, siz
 		est[ne++] = VK_KHR_VIDEO_MAINTENANCE_1_EXTENSION_NAME;
 
 	ci.pNext = &f2;
-	ci.queueCreateInfoCount = d->fam_codifica == d->fam_calcolo ? 1 : 2;
+	ci.queueCreateInfoCount = d->encode_fam == d->compute_fam ? 1 : 2;
 	ci.pQueueCreateInfos = code;
 	ci.enabledExtensionCount = ne;
 	ci.ppEnabledExtensionNames = est;
-	VK_O_FALLISCI(vkCreateDevice(d->fisico, &ci, NULL, &d->dispositivo), "vkCreateDevice");
-	vkGetDeviceQueue(d->dispositivo, d->fam_codifica, 0, &d->coda_codifica);
-	if (d->fam_codifica == d->fam_calcolo)
-		d->coda_calcolo = d->coda_codifica;
+	VK_OR_FAIL(vkCreateDevice(d->fisico, &ci, NULL, &d->dispositivo), "vkCreateDevice");
+	vkGetDeviceQueue(d->dispositivo, d->encode_fam, 0, &d->encode_queue);
+	if (d->encode_fam == d->compute_fam)
+		d->compute_queue = d->encode_queue;
 	else
-		vkGetDeviceQueue(d->dispositivo, d->fam_calcolo, 0, &d->coda_calcolo);
+		vkGetDeviceQueue(d->dispositivo, d->compute_fam, 0, &d->compute_queue);
 	vkGetPhysicalDeviceMemoryProperties(d->fisico, &d->memoria);
 
-	PRENDI_I(GetPhysicalDeviceVideoCapabilitiesKHR);
-	PRENDI_I(GetPhysicalDeviceVideoFormatPropertiesKHR);
-	PRENDI_D(CreateVideoSessionKHR);
-	PRENDI_D(DestroyVideoSessionKHR);
-	PRENDI_D(GetVideoSessionMemoryRequirementsKHR);
-	PRENDI_D(BindVideoSessionMemoryKHR);
-	PRENDI_D(CreateVideoSessionParametersKHR);
-	PRENDI_D(DestroyVideoSessionParametersKHR);
-	PRENDI_D(GetEncodedVideoSessionParametersKHR);
-	PRENDI_D(CmdBeginVideoCodingKHR);
-	PRENDI_D(CmdEndVideoCodingKHR);
-	PRENDI_D(CmdControlVideoCodingKHR);
-	PRENDI_D(CmdEncodeVideoKHR);
+	TAKE_I(GetPhysicalDeviceVideoCapabilitiesKHR);
+	TAKE_I(GetPhysicalDeviceVideoFormatPropertiesKHR);
+	TAKE_D(CreateVideoSessionKHR);
+	TAKE_D(DestroyVideoSessionKHR);
+	TAKE_D(GetVideoSessionMemoryRequirementsKHR);
+	TAKE_D(BindVideoSessionMemoryKHR);
+	TAKE_D(CreateVideoSessionParametersKHR);
+	TAKE_D(DestroyVideoSessionParametersKHR);
+	TAKE_D(GetEncodedVideoSessionParametersKHR);
+	TAKE_D(CmdBeginVideoCodingKHR);
+	TAKE_D(CmdEndVideoCodingKHR);
+	TAKE_D(CmdControlVideoCodingKHR);
+	TAKE_D(CmdEncodeVideoKHR);
 	if (d->ha_dmabuf)
-		PRENDI_D(GetMemoryFdPropertiesKHR);
+		TAKE_D(GetMemoryFdPropertiesKHR);
 	return true;
 }
 
-VulkanVideoDispositivo *vulkanvideo_apri_dispositivo(const char *nodo, char *errore, size_t errore_byte)
+VulkanVideoDevice *vulkanvideo_apri_dispositivo(const char *nodo, char *errore, size_t errore_byte)
 {
-	VulkanVideoDispositivo *d;
+	VulkanVideoDevice *d;
 	VkApplicationInfo app = {
 		.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
 		.pApplicationName = "remotix",
@@ -575,15 +575,15 @@ VulkanVideoDispositivo *vulkanvideo_apri_dispositivo(const char *nodo, char *err
 		free(d);
 		return NULL;
 	}
-	if (!scegli_fisico(d, nodo, errore, errore_byte) || !scegli_code(d, errore, errore_byte)
-	    || !apri_dispositivo_logico(d, errore, errore_byte)) {
-		vulkanvideo_chiudi_dispositivo(d);
+	if (!choose_physical_device(d, nodo, errore, errore_byte) || !choose_code(d, errore, errore_byte)
+	    || !open_logical_device(d, errore, errore_byte)) {
+		vulkanvideo_close_device(d);
 		return NULL;
 	}
 	return d;
 }
 
-void vulkanvideo_chiudi_dispositivo(VulkanVideoDispositivo *d)
+void vulkanvideo_close_device(VulkanVideoDevice *d)
 {
 	if (!d)
 		return;
@@ -594,12 +594,12 @@ void vulkanvideo_chiudi_dispositivo(VulkanVideoDispositivo *d)
 	free(d);
 }
 
-const char *vulkanvideo_nome_scheda(const VulkanVideoDispositivo *d)
+const char *vulkanvideo_card_name(const VulkanVideoDevice *d)
 {
 	return d ? d->nome : "";
 }
 
-const char *vulkanvideo_nome_driver(const VulkanVideoDispositivo *d)
+const char *vulkanvideo_nome_driver(const VulkanVideoDevice *d)
 {
 	return d ? d->driver : "";
 }
@@ -617,9 +617,9 @@ typedef struct {
 	VkVideoEncodeH264ProfileInfoKHR h264;
 	VkVideoEncodeH265ProfileInfoKHR h265;
 	VkVideoProfileListInfoKHR lista;
-} Profilo;
+} ProfileV;
 
-static void profilo_componi(Profilo *p, VulkanVideoCodec codec, int profondita, bool ritardo_minimo)
+static void compose_profile(ProfileV *p, VulkanVideoCodec codec, int profondita, bool ritardo_minimo)
 {
 	memset(p, 0, sizeof *p);
 	p->uso = (VkVideoEncodeUsageInfoKHR){
@@ -664,21 +664,21 @@ typedef struct {
 	VkVideoEncodeCapabilitiesKHR codifica;
 	VkVideoEncodeH264CapabilitiesKHR h264;
 	VkVideoEncodeH265CapabilitiesKHR h265;
-	VkFormat formato_ingresso, formato_dpb;
-	VkImageUsageFlags usi_ingresso, usi_dpb;
-	VkImageCreateFlags flag_ingresso, flag_dpb;
+	VkFormat formato_ingresso, dpb_format;
+	VkImageUsageFlags input_usage, dpb_usage;
+	VkImageCreateFlags input_flag, flag_dpb;
 	/* ⛔ `imageUsageFlags` of the video properties is NOT enough: `[M]` 1 Oct 2026
 	 *    RADV puts back only the requested usage (0x4000).  What an image can
 	 *    do is told by `vkGetPhysicalDeviceImageFormatProperties2` with the
 	 *    profile in the chain, and it is asked for both routes. */
-	bool ingresso_diretto;   /* ENCODE_SRC | STORAGE (with mutable planes): the shader writes the planes */
-	bool ingresso_copia;     /* ENCODE_SRC | TRANSFER_DST: the shader writes elsewhere and it is copied */
-	bool livello_dichiarato; /* `maxLevelIdc` > 1.0: if 0 the driver does not say */
+	bool direct_input;   /* ENCODE_SRC | STORAGE (with mutable planes): the shader writes the planes */
+	bool input_copy;     /* ENCODE_SRC | TRANSFER_DST: the shader writes elsewhere and it is copied */
+	bool declared_level; /* `maxLevelIdc` > 1.0: if 0 the driver does not say */
 } Capacita;
 
 /* Can an image with this format, usage and flags be created for this
  * profile?  Three outcomes: yes, no, and "the call failed", which counts as no. */
-static bool uso_sostenuto(VulkanVideoDispositivo *d, const Profilo *p, VkFormat f, VkImageUsageFlags uso,
+static bool sustained_use(VulkanVideoDevice *d, const ProfileV *p, VkFormat f, VkImageUsageFlags uso,
                           VkImageCreateFlags flag)
 {
 	VkPhysicalDeviceImageFormatInfo2 fi = {
@@ -688,7 +688,7 @@ static bool uso_sostenuto(VulkanVideoDispositivo *d, const Profilo *p, VkFormat 
 	return vkGetPhysicalDeviceImageFormatProperties2(d->fisico, &fi, &fp) == VK_SUCCESS;
 }
 
-static VkFormat formato_voluto(int profondita)
+static VkFormat wanted_format(int profondita)
 {
 	return profondita == 10 ? VK_FORMAT_G10X6_B10X6R10X6_2PLANE_420_UNORM_3PACK16
 	                        : VK_FORMAT_G8_B8R8_2PLANE_420_UNORM;
@@ -704,7 +704,7 @@ static const char *nome_formato(VkFormat f)
 	}
 }
 
-static bool formati_del_profilo(VulkanVideoDispositivo *d, const Profilo *p, int profondita,
+static bool profile_formats(VulkanVideoDevice *d, const ProfileV *p, int profondita,
                                 VkImageUsageFlags uso, VkFormat *formato, VkImageUsageFlags *usi,
                                 VkImageCreateFlags *flag, char *errore, size_t errore_byte)
 {
@@ -715,9 +715,9 @@ static bool formati_del_profilo(VulkanVideoDispositivo *d, const Profilo *p, int
 	};
 	uint32_t n = 0;
 	VkVideoFormatPropertiesKHR fp[16];
-	VkFormat voluto = formato_voluto(profondita);
+	VkFormat voluto = wanted_format(profondita);
 
-	VK_O_FALLISCI(d->f.GetPhysicalDeviceVideoFormatPropertiesKHR(d->fisico, &fi, &n, NULL),
+	VK_OR_FAIL(d->f.GetPhysicalDeviceVideoFormatPropertiesKHR(d->fisico, &fi, &n, NULL),
 	              "vkGetPhysicalDeviceVideoFormatPropertiesKHR");
 	if (n > 16)
 		n = 16;
@@ -749,7 +749,7 @@ static bool formati_del_profilo(VulkanVideoDispositivo *d, const Profilo *p, int
 	}
 }
 
-static bool capacita_del_profilo(VulkanVideoDispositivo *d, Profilo *p, VulkanVideoCodec codec,
+static bool profile_capabilities(VulkanVideoDevice *d, ProfileV *p, VulkanVideoCodec codec,
                                  int profondita, Capacita *c, char *errore, size_t errore_byte)
 {
 	VkResult r;
@@ -783,31 +783,31 @@ static bool capacita_del_profilo(VulkanVideoDispositivo *d, Profilo *p, VulkanVi
 	if (r != VK_SUCCESS)
 		FALLISCI("vkGetPhysicalDeviceVideoCapabilitiesKHR (%s %d bit): %s",
 		         codec == VULKANVIDEO_H264 ? "H.264 High" : "HEVC Main", profondita, vk_nome(r));
-	if (!formati_del_profilo(d, p, profondita, VK_IMAGE_USAGE_VIDEO_ENCODE_SRC_BIT_KHR,
-	                         &c->formato_ingresso, &c->usi_ingresso, &c->flag_ingresso, errore,
+	if (!profile_formats(d, p, profondita, VK_IMAGE_USAGE_VIDEO_ENCODE_SRC_BIT_KHR,
+	                         &c->formato_ingresso, &c->input_usage, &c->input_flag, errore,
 	                         errore_byte))
 		return false;
-	if (!formati_del_profilo(d, p, profondita, VK_IMAGE_USAGE_VIDEO_ENCODE_DPB_BIT_KHR,
-	                         &c->formato_dpb, &c->usi_dpb, &c->flag_dpb, errore, errore_byte))
+	if (!profile_formats(d, p, profondita, VK_IMAGE_USAGE_VIDEO_ENCODE_DPB_BIT_KHR,
+	                         &c->dpb_format, &c->dpb_usage, &c->flag_dpb, errore, errore_byte))
 		return false;
-	c->ingresso_diretto = uso_sostenuto(d, p, c->formato_ingresso,
+	c->direct_input = sustained_use(d, p, c->formato_ingresso,
 	                                    VK_IMAGE_USAGE_VIDEO_ENCODE_SRC_BIT_KHR | VK_IMAGE_USAGE_STORAGE_BIT,
 	                                    VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT | VK_IMAGE_CREATE_EXTENDED_USAGE_BIT);
-	c->ingresso_copia = uso_sostenuto(d, p, c->formato_ingresso,
+	c->input_copy = sustained_use(d, p, c->formato_ingresso,
 	                                  VK_IMAGE_USAGE_VIDEO_ENCODE_SRC_BIT_KHR | VK_IMAGE_USAGE_TRANSFER_DST_BIT, 0);
-	c->livello_dichiarato = codec == VULKANVIDEO_H264 ? c->h264.maxLevelIdc != STD_VIDEO_H264_LEVEL_IDC_1_0
+	c->declared_level = codec == VULKANVIDEO_H264 ? c->h264.maxLevelIdc != STD_VIDEO_H264_LEVEL_IDC_1_0
 	                                                   : c->h265.maxLevelIdc != STD_VIDEO_H265_LEVEL_IDC_1_0;
 	return true;
 }
 
-static void riempi_profilo_capacita(const VulkanVideoDispositivo *d, VulkanVideoCodec codec,
-                                    const Capacita *c, VulkanVideoProfiloCapacita *f)
+static void fill_capability_profile(const VulkanVideoDevice *d, VulkanVideoCodec codec,
+                                    const Capacita *c, VulkanVideoProfileCapabilities *f)
 {
 	f->codifica = true;
 	f->misura_massima_l = c->video.maxCodedExtent.width;
 	f->misura_massima_a = c->video.maxCodedExtent.height;
-	f->misura_minima_l = c->video.minCodedExtent.width;
-	f->misura_minima_a = c->video.minCodedExtent.height;
+	f->min_size_w = c->video.minCodedExtent.width;
+	f->min_size_h = c->video.minCodedExtent.height;
 	f->modi_bitrate = 0;
 	if (c->codifica.rateControlModes & VK_VIDEO_ENCODE_RATE_CONTROL_MODE_DISABLED_BIT_KHR)
 		f->modi_bitrate |= VULKANVIDEO_RC_CQP;
@@ -818,32 +818,32 @@ static void riempi_profilo_capacita(const VulkanVideoDispositivo *d, VulkanVideo
 	if (codec == VULKANVIDEO_H264) {
 		f->qp_minimo = c->h264.minQp;
 		f->qp_massimo = c->h264.maxQp;
-		f->livello_massimo_idc = h264_livello_idc(c->h264.maxLevelIdc);
+		f->max_level_idc = h264_level_idc(c->h264.maxLevelIdc);
 	} else {
 		f->qp_minimo = c->h265.minQp;
 		f->qp_massimo = c->h265.maxQp;
-		f->livello_massimo_idc = hevc_livello_idc(c->h265.maxLevelIdc);
+		f->max_level_idc = hevc_level_idc(c->h265.maxLevelIdc);
 	}
 	f->slot_dpb = c->video.maxDpbSlots;
-	f->riferimenti_attivi = c->video.maxActiveReferencePictures;
+	f->active_references = c->video.maxActiveReferencePictures;
 	f->livelli_qualita = c->codifica.maxQualityLevels;
-	f->granularita_l = c->codifica.encodeInputPictureGranularity.width;
-	f->granularita_a = c->codifica.encodeInputPictureGranularity.height;
+	f->granularity_w = c->codifica.encodeInputPictureGranularity.width;
+	f->granularity_h = c->codifica.encodeInputPictureGranularity.height;
 	f->intestazioni_dal_driver = d->f.GetEncodedVideoSessionParametersKHR != NULL;
 	snprintf(f->formato_ingresso, sizeof f->formato_ingresso, "%s", nome_formato(c->formato_ingresso));
-	f->ingresso_scrivibile_dallo_shader = c->ingresso_diretto;
+	f->input_writable_by_shader = c->direct_input;
 	f->sintassi = codec == VULKANVIDEO_H264 ? c->h264.stdSyntaxFlags : c->h265.stdSyntaxFlags;
 	f->cabac = codec == VULKANVIDEO_H264
 	           && (c->h264.stdSyntaxFlags & VK_VIDEO_ENCODE_H264_STD_ENTROPY_CODING_MODE_FLAG_SET_BIT_KHR);
 	f->transform_8x8 = codec == VULKANVIDEO_H264
 	                   && (c->h264.stdSyntaxFlags & VK_VIDEO_ENCODE_H264_STD_TRANSFORM_8X8_MODE_FLAG_SET_BIT_KHR);
-	if (!c->livello_dichiarato)
-		f->livello_massimo_idc = 0; /* 0 = the driver does not declare it */
+	if (!c->declared_level)
+		f->max_level_idc = 0; /* 0 = the driver does not declare it */
 }
 
-bool vulkanvideo_capacita(const char *nodo, VulkanVideoCapacita *c, char *errore, size_t errore_byte)
+bool vulkanvideo_capacita(const char *nodo, VulkanVideoCapabilities *c, char *errore, size_t errore_byte)
 {
-	VulkanVideoDispositivo *d;
+	VulkanVideoDevice *d;
 	char perche[256] = { 0 };
 
 	if (!c)
@@ -857,29 +857,29 @@ bool vulkanvideo_capacita(const char *nodo, VulkanVideoCapacita *c, char *errore
 		return false;
 	}
 	c->vulkan_c_e = true;
-	snprintf(c->nome_scheda, sizeof c->nome_scheda, "%s", d->nome);
+	snprintf(c->card_name, sizeof c->card_name, "%s", d->nome);
 	snprintf(c->driver, sizeof c->driver, "%s", d->driver);
-	c->versione_api = d->versione_api;
+	c->api_version = d->api_version;
 	c->dmabuf = d->ha_dmabuf;
 	{
 		struct {
 			VulkanVideoCodec codec;
 			int prof;
-			VulkanVideoProfiloCapacita *dove;
+			VulkanVideoProfileCapabilities *dove;
 		} tre[3] = { { VULKANVIDEO_H264, 8, &c->h264 }, { VULKANVIDEO_HEVC, 8, &c->hevc },
 			         { VULKANVIDEO_HEVC, 10, &c->hevc10 } };
 		for (int i = 0; i < 3; i++) {
-			Profilo p;
+			ProfileV p;
 			Capacita cap;
 			char e[256] = { 0 };
-			profilo_componi(&p, tre[i].codec, tre[i].prof, true);
-			if (capacita_del_profilo(d, &p, tre[i].codec, tre[i].prof, &cap, e, sizeof e))
-				riempi_profilo_capacita(d, tre[i].codec, &cap, tre[i].dove);
+			compose_profile(&p, tre[i].codec, tre[i].prof, true);
+			if (profile_capabilities(d, &p, tre[i].codec, tre[i].prof, &cap, e, sizeof e))
+				fill_capability_profile(d, tre[i].codec, &cap, tre[i].dove);
 			else
 				tre[i].dove->codifica = false;
 		}
 	}
-	vulkanvideo_chiudi_dispositivo(d);
+	vulkanvideo_close_device(d);
 	return true;
 }
 
@@ -893,7 +893,7 @@ typedef struct {
 	VkImageView vista;        /* the whole image (COLOR) */
 	VkImageView piano_y, piano_uv; /* for the shader (STORAGE), only on the direct conversion */
 	VkImageLayout layout;
-} Immagine;
+} Bitmap;
 
 /* An imported DMA-BUF, cached: `codificatore.h` explains why the key
  * carries the generation (descriptor numbers are recycled). */
@@ -906,19 +906,19 @@ typedef struct {
 	VkImage immagine;
 	VkDeviceMemory memoria;
 	VkImageView vista;
-	bool acquisita;           /* the first barrier (FOREIGN → us) has been done */
+	bool acquired;           /* the first barrier (FOREIGN → us) has been done */
 } Importazione;
 
 struct VulkanVideo {
-	VulkanVideoDispositivo *d;
+	VulkanVideoDevice *d;
 	VulkanVideoRichiesta r;
-	VulkanVideoDichiarazione dich;
-	Profilo profilo;
+	VulkanVideoDeclaration dich;
+	ProfileV profilo;
 	Capacita cap;
 
 	VkVideoSessionKHR sessione;
-	VkDeviceMemory *memoria_sessione;
-	uint32_t memorie_sessione;
+	VkDeviceMemory *session_memory;
+	uint32_t session_memories;
 	VkVideoSessionParametersKHR parametri;
 
 	/* the parameter sets as we wrote them */
@@ -931,37 +931,37 @@ struct VulkanVideo {
 	StdVideoH265ProfileTierLevel ptl265;
 	StdVideoH265DecPicBufMgr dpbm265;
 	StdVideoH265SequenceParameterSetVui vui265;
-	uint8_t intestazioni[INTESTAZIONI_MAX]; /* SPS+PPS(+VPS) in Annex-B, from the driver */
+	uint8_t intestazioni[MAX_HEADERS]; /* SPS+PPS(+VPS) in Annex-B, from the driver */
 	size_t intestazioni_byte;
 
 	uint32_t larg_cod, alt_cod;   /* the coded size (aligned to the block) */
-	uint32_t larg_img, alt_img;   /* the images (also aligned to the granularity) */
+	uint32_t img_width, img_height;   /* the images (also aligned to the granularity) */
 	uint32_t blocco;
 	uint32_t ctb;                 /* HEVC */
 	bool sao, cu_qp_delta;
-	int qp_fisso;                 /* CQP: the QP · VBR: the init_qp QP as ffmpeg (26/30) */
-	int qp_corrente;              /* the requested QP (CQP) or the floor (VBR) */
-	bool rc_da_riprogrammare;     /* VBR: the floor has changed */
+	int fixed_qp;                 /* CQP: the QP · VBR: the init_qp QP as ffmpeg (26/30) */
+	int current_qp;              /* the requested QP (CQP) or the floor (VBR) */
+	bool rc_to_reprogram;     /* VBR: the floor has changed */
 
-	Immagine ingresso[INGRESSI];
-	unsigned prossimo_ingresso;
-	Immagine dpb;                 /* SLOT_DPB layers */
+	Bitmap ingresso[INGRESSI];
+	unsigned next_ingress;
+	Bitmap dpb;                 /* SLOT_DPB layers */
 	VkImageView vista_dpb[SLOT_DPB];
-	bool dpb_inizializzata;
+	bool dpb_initialized;
 	/* the indirect conversion: the shader writes here, then the copy into the planes */
-	Immagine y_tmp, uv_tmp;
+	Bitmap y_tmp, uv_tmp;
 
 	/* pixels from memory */
 	VkBuffer scala;               /* staging */
-	VkDeviceMemory scala_memoria;
-	void *scala_mappa;
-	size_t scala_byte;
-	Immagine rgb;                 /* the RGB source on the card */
-	VulkanVideoOrdine rgb_ordine;
+	VkDeviceMemory staging_memory;
+	void *staging_map;
+	size_t staging_bytes;
+	Bitmap rgb;                 /* the RGB source on the card */
+	VulkanVideoOrder rgb_order;
 	bool rgb_c_e;
 
 	Importazione importate[IMPORTAZIONI_MAX];
-	uint64_t generazione_vista;
+	uint64_t seen_generation;
 
 	/* the shader */
 	VkDescriptorSetLayout ds_layout;
@@ -969,37 +969,37 @@ struct VulkanVideo {
 	VkPipeline pipeline;
 	VkDescriptorPool ds_pool;
 	VkDescriptorSet ds;
-	VkSampler campionatore;
+	VkSampler sampler_obj;
 
 	/* the commands */
-	VkCommandPool pool_calcolo, pool_codifica;
-	VkCommandBuffer cb_calcolo, cb_codifica;
-	VkFence fence_calcolo, fence_codifica;
+	VkCommandPool compute_pool, encode_pool;
+	VkCommandBuffer cb_compute, cb_encoding;
+	VkFence compute_fence, encode_fence;
 	VkQueryPool query;
 	bool query_overrides;
 
 	/* the bytes */
 	VkBuffer bitstream;
-	VkDeviceMemory bitstream_memoria;
-	void *bitstream_mappa;
+	VkDeviceMemory bitstream_memory;
+	void *bitstream_map;
 	VkDeviceSize bitstream_byte;
-	bool bitstream_coerente;
+	bool bitstream_consistent;
 	uint8_t *uscita;
 	size_t uscita_capacita, uscita_byte;
 
 	/* the sequence */
-	bool sessione_azzerata;       /* the RESET has been issued */
+	bool session_reset;       /* the RESET has been issued */
 	uint64_t ordine;
-	uint32_t nel_gop;
-	bool riferimento_valido;
-	unsigned slot_rif;            /* the reference's DPB slot */
-	uint32_t frame_num, frame_num_rif;
-	int32_t poc, poc_rif;
+	uint32_t in_gop;
+	bool reference_valid;
+	unsigned slot_ref;            /* the reference's DPB slot */
+	uint32_t frame_num, frame_num_ref;
+	int32_t poc, poc_ref;
 	uint32_t idr_pic_id;
-	bool rif_era_idr;
+	bool ref_was_idr;
 };
 
-static uint32_t tipo_memoria(const VulkanVideoDispositivo *d, uint32_t bits, VkMemoryPropertyFlags voluti)
+static uint32_t tipo_memoria(const VulkanVideoDevice *d, uint32_t bits, VkMemoryPropertyFlags voluti)
 {
 	for (uint32_t i = 0; i < d->memoria.memoryTypeCount; i++)
 		if ((bits & (1u << i)) && (d->memoria.memoryTypes[i].propertyFlags & voluti) == voluti)
@@ -1007,7 +1007,7 @@ static uint32_t tipo_memoria(const VulkanVideoDispositivo *d, uint32_t bits, VkM
 	return UINT32_MAX;
 }
 
-static bool memoria_alloca(VulkanVideo *v, const VkMemoryRequirements *req, VkMemoryPropertyFlags voluti,
+static bool alloc_memory(VulkanVideo *v, const VkMemoryRequirements *req, VkMemoryPropertyFlags voluti,
                    VkMemoryPropertyFlags ripiego, const void *pnext, VkDeviceMemory *mem,
                    VkMemoryPropertyFlags *ottenuti, char *errore, size_t errore_byte)
 {
@@ -1021,13 +1021,13 @@ static bool memoria_alloca(VulkanVideo *v, const VkMemoryRequirements *req, VkMe
 	if (t == UINT32_MAX)
 		FALLISCI("no memory type for bits 0x%x", req->memoryTypeBits);
 	ai.memoryTypeIndex = t;
-	VK_O_FALLISCI(vkAllocateMemory(v->d->dispositivo, &ai, NULL, mem), "vkAllocateMemory");
+	VK_OR_FAIL(vkAllocateMemory(v->d->dispositivo, &ai, NULL, mem), "vkAllocateMemory");
 	if (ottenuti)
 		*ottenuti = v->d->memoria.memoryTypes[t].propertyFlags;
 	return true;
 }
 
-static void immagine_libera(VulkanVideo *v, Immagine *i)
+static void image_free(VulkanVideo *v, Bitmap *i)
 {
 	VkDevice dev = v->d->dispositivo;
 	if (i->piano_y)
@@ -1054,17 +1054,17 @@ static bool vista(VulkanVideo *v, VkImage img, VkFormat f, VkImageAspectFlags as
 		.subresourceRange = { .aspectMask = aspetto, .levelCount = 1, .baseArrayLayer = strato,
 		                      .layerCount = 1 },
 	};
-	VK_O_FALLISCI(vkCreateImageView(v->d->dispositivo, &vi, NULL, fuori), "vkCreateImageView");
+	VK_OR_FAIL(vkCreateImageView(v->d->dispositivo, &vi, NULL, fuori), "vkCreateImageView");
 	return true;
 }
 
 /* An image on the card, with its memory.  `profilo` = with the video profile
  * list in the chain (input and DPB). */
-static bool immagine_crea(VulkanVideo *v, Immagine *i, VkFormat f, uint32_t l, uint32_t a,
+static bool image_create(VulkanVideo *v, Bitmap *i, VkFormat f, uint32_t l, uint32_t a,
                           uint32_t strati, VkImageUsageFlags uso, VkImageCreateFlags flag,
                           bool profilo, bool condivisa, char *errore, size_t errore_byte)
 {
-	uint32_t famiglie[2] = { v->d->fam_calcolo, v->d->fam_codifica };
+	uint32_t famiglie[2] = { v->d->compute_fam, v->d->encode_fam };
 	VkImageCreateInfo ci = {
 		.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
 		.pNext = profilo ? &v->profilo.lista : NULL,
@@ -1077,7 +1077,7 @@ static bool immagine_crea(VulkanVideo *v, Immagine *i, VkFormat f, uint32_t l, u
 		.samples = VK_SAMPLE_COUNT_1_BIT,
 		.tiling = VK_IMAGE_TILING_OPTIMAL,
 		.usage = uso,
-		.sharingMode = (condivisa && v->d->fam_calcolo != v->d->fam_codifica)
+		.sharingMode = (condivisa && v->d->compute_fam != v->d->encode_fam)
 		                   ? VK_SHARING_MODE_CONCURRENT : VK_SHARING_MODE_EXCLUSIVE,
 		.queueFamilyIndexCount = 2,
 		.pQueueFamilyIndices = famiglie,
@@ -1086,19 +1086,19 @@ static bool immagine_crea(VulkanVideo *v, Immagine *i, VkFormat f, uint32_t l, u
 	VkMemoryRequirements req;
 
 	memset(i, 0, sizeof *i);
-	VK_O_FALLISCI(vkCreateImage(v->d->dispositivo, &ci, NULL, &i->immagine), "vkCreateImage");
+	VK_OR_FAIL(vkCreateImage(v->d->dispositivo, &ci, NULL, &i->immagine), "vkCreateImage");
 	vkGetImageMemoryRequirements(v->d->dispositivo, i->immagine, &req);
-	if (!memoria_alloca(v, &req, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0, NULL, &i->memoria, NULL, errore,
+	if (!alloc_memory(v, &req, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0, NULL, &i->memoria, NULL, errore,
 	            errore_byte))
 		return false;
-	VK_O_FALLISCI(vkBindImageMemory(v->d->dispositivo, i->immagine, i->memoria, 0), "vkBindImageMemory");
+	VK_OR_FAIL(vkBindImageMemory(v->d->dispositivo, i->immagine, i->memoria, 0), "vkBindImageMemory");
 	i->layout = VK_IMAGE_LAYOUT_UNDEFINED;
 	return true;
 }
 
 /* ── the parameter sets, with the values of `vadiretta.c` ────────────────── */
 
-static void componi_h264(VulkanVideo *v)
+static void compose_h264(VulkanVideo *v)
 {
 	uint32_t mb_l = v->larg_cod / 16, mb_a = v->alt_cod / 16;
 	uint32_t taglio_dx = (v->larg_cod - v->r.larghezza) / 2;
@@ -1130,7 +1130,7 @@ static void componi_h264(VulkanVideo *v)
 	v->sps264.flags.frame_cropping_flag = (taglio_dx || taglio_giu) ? 1 : 0;
 	v->sps264.flags.vui_parameters_present_flag = 1;
 	v->sps264.profile_idc = STD_VIDEO_H264_PROFILE_IDC_HIGH;
-	v->sps264.level_idc = h264_livello_enum(v->dich.livello_idc);
+	v->sps264.level_idc = h264_level_enum(v->dich.livello_idc);
 	v->sps264.chroma_format_idc = STD_VIDEO_H264_CHROMA_FORMAT_IDC_420;
 	v->sps264.seq_parameter_set_id = 0;
 	v->sps264.bit_depth_luma_minus8 = 0;
@@ -1161,15 +1161,15 @@ static void componi_h264(VulkanVideo *v)
 	v->pps264.num_ref_idx_l0_default_active_minus1 = 0;
 	v->pps264.num_ref_idx_l1_default_active_minus1 = 0;
 	v->pps264.weighted_bipred_idc = STD_VIDEO_H264_WEIGHTED_BIPRED_IDC_DEFAULT;
-	v->pps264.pic_init_qp_minus26 = (int8_t) (v->qp_fisso - 26);
+	v->pps264.pic_init_qp_minus26 = (int8_t) (v->fixed_qp - 26);
 	(void) cqp;
 }
 
-static void componi_h265(VulkanVideo *v)
+static void compose_h265(VulkanVideo *v)
 {
 	uint32_t taglio_dx = (v->larg_cod - v->r.larghezza) >> 1;
 	uint32_t taglio_giu = (v->alt_cod - v->r.altezza) >> 1;
-	unsigned log2_ctb = (unsigned) log2_intero(v->ctb);
+	unsigned log2_ctb = (unsigned) log2_int(v->ctb);
 	VkVideoEncodeH265TransformBlockSizeFlagsKHR tb = v->cap.h265.transformBlockSizes;
 	unsigned log2_max_tb = (tb & VK_VIDEO_ENCODE_H265_TRANSFORM_BLOCK_SIZE_32_BIT_KHR) ? 5
 	                       : (tb & VK_VIDEO_ENCODE_H265_TRANSFORM_BLOCK_SIZE_16_BIT_KHR) ? 4 : 3;
@@ -1183,7 +1183,7 @@ static void componi_h265(VulkanVideo *v)
 	v->ptl265.flags.general_frame_only_constraint_flag = 1;
 	v->ptl265.general_profile_idc = v->r.profondita == 10 ? STD_VIDEO_H265_PROFILE_IDC_MAIN_10
 	                                                      : STD_VIDEO_H265_PROFILE_IDC_MAIN;
-	v->ptl265.general_level_idc = hevc_livello_enum(v->dich.livello_idc);
+	v->ptl265.general_level_idc = hevc_level_enum(v->dich.livello_idc);
 
 	memset(&v->dpbm265, 0, sizeof v->dpbm265);
 	v->dpbm265.max_dec_pic_buffering_minus1[0] = 1;
@@ -1256,14 +1256,14 @@ static void componi_h265(VulkanVideo *v)
 	v->pps265.pps_pic_parameter_set_id = 0;
 	v->pps265.pps_seq_parameter_set_id = 0;
 	v->pps265.sps_video_parameter_set_id = 0;
-	v->pps265.init_qp_minus26 = (int8_t) (v->qp_fisso - 26);
+	v->pps265.init_qp_minus26 = (int8_t) (v->fixed_qp - 26);
 	v->pps265.diff_cu_qp_delta_depth = v->cu_qp_delta ? (uint8_t) (log2_ctb - 3) : 0;
 	v->pps265.log2_parallel_merge_level_minus2 = 0;
 }
 
 /* The headers from the driver, one parameter set per call, each with its
  * start code if the driver does not put one. */
-static bool prendi_intestazione(VulkanVideo *v, bool vps, bool sps, bool pps, char *errore,
+static bool take_header(VulkanVideo *v, bool vps, bool sps, bool pps, char *errore,
                                 size_t errore_byte)
 {
 	VkVideoEncodeH264SessionParametersGetInfoKHR g264 = {
@@ -1288,7 +1288,7 @@ static bool prendi_intestazione(VulkanVideo *v, bool vps, bool sps, bool pps, ch
 		.pNext = v->r.codec == VULKANVIDEO_H264 ? (void *) &f264 : (void *) &f265,
 	};
 	size_t n = 0;
-	uint8_t tmp[INTESTAZIONI_MAX];
+	uint8_t tmp[MAX_HEADERS];
 	VkResult r;
 
 	r = v->d->f.GetEncodedVideoSessionParametersKHR(v->d->dispositivo, &gi, &fb, &n, NULL);
@@ -1302,11 +1302,11 @@ static bool prendi_intestazione(VulkanVideo *v, bool vps, bool sps, bool pps, ch
 	if (fb.hasOverrides)
 		v->dich.driver_ha_cambiato_parametri = true;
 	{
-		bool con_codice = n >= 4 && tmp[0] == 0 && tmp[1] == 0 && (tmp[2] == 1 || (tmp[2] == 0 && tmp[3] == 1));
-		size_t serve = n + (con_codice ? 0 : 4);
+		bool with_code = n >= 4 && tmp[0] == 0 && tmp[1] == 0 && (tmp[2] == 1 || (tmp[2] == 0 && tmp[3] == 1));
+		size_t serve = n + (with_code ? 0 : 4);
 		if (v->intestazioni_byte + serve > sizeof v->intestazioni)
 			FALLISCI("the headers exceed %zu bytes", sizeof v->intestazioni);
-		if (!con_codice) {
+		if (!with_code) {
 			memcpy(v->intestazioni + v->intestazioni_byte, "\0\0\0\1", 4);
 			v->intestazioni_byte += 4;
 		}
@@ -1348,10 +1348,10 @@ static void correggi_livello_hevc(VulkanVideo *v)
 		}
 		{
 			unsigned tipo = (v->intestazioni[inizio] >> 1) & 0x3f;
-			size_t rbsp_voluto = tipo == 32 ? 4 + 11 : tipo == 33 ? 1 + 11 : 0; /* VPS: 4+11 · SPS: 1+11 */
+			size_t wanted_rbsp = tipo == 32 ? 4 + 11 : tipo == 33 ? 1 + 11 : 0; /* VPS: 4+11 · SPS: 1+11 */
 			size_t pos = inizio + 2, rbsp = 0;
 			int zeri = 0;
-			if (!rbsp_voluto) {
+			if (!wanted_rbsp) {
 				i = inizio;
 				continue;
 			}
@@ -1363,13 +1363,13 @@ static void correggi_livello_hevc(VulkanVideo *v)
 					pos++;
 					continue;
 				}
-				if (rbsp == rbsp_voluto)
+				if (rbsp == wanted_rbsp)
 					break;
 				zeri = b == 0 ? zeri + 1 : 0;
 				rbsp++;
 				pos++;
 			}
-			if (pos < v->intestazioni_byte && rbsp == rbsp_voluto
+			if (pos < v->intestazioni_byte && rbsp == wanted_rbsp
 			    && v->intestazioni[pos] != (uint8_t) v->dich.livello_idc) {
 				registro_dice(REG_CODIFICA,
 				              "⚠ vulkanvideo HEVC: the driver wrote general_level_idc %u in the %s, the level "
@@ -1390,20 +1390,20 @@ static bool apri_sessione(VulkanVideo *v, char *errore, size_t errore_byte)
 	bool h264 = v->r.codec == VULKANVIDEO_H264;
 	VkVideoEncodeH264SessionCreateInfoKHR s264 = {
 		.sType = VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_SESSION_CREATE_INFO_KHR,
-		.useMaxLevelIdc = VK_TRUE, .maxLevelIdc = h264_livello_enum(v->dich.livello_idc),
+		.useMaxLevelIdc = VK_TRUE, .maxLevelIdc = h264_level_enum(v->dich.livello_idc),
 	};
 	VkVideoEncodeH265SessionCreateInfoKHR s265 = {
 		.sType = VK_STRUCTURE_TYPE_VIDEO_ENCODE_H265_SESSION_CREATE_INFO_KHR,
-		.useMaxLevelIdc = VK_TRUE, .maxLevelIdc = hevc_livello_enum(v->dich.livello_idc),
+		.useMaxLevelIdc = VK_TRUE, .maxLevelIdc = hevc_level_enum(v->dich.livello_idc),
 	};
 	VkVideoSessionCreateInfoKHR sc = {
 		.sType = VK_STRUCTURE_TYPE_VIDEO_SESSION_CREATE_INFO_KHR,
-		.pNext = !v->cap.livello_dichiarato ? NULL : h264 ? (void *) &s264 : (void *) &s265,
-		.queueFamilyIndex = v->d->fam_codifica,
+		.pNext = !v->cap.declared_level ? NULL : h264 ? (void *) &s264 : (void *) &s265,
+		.queueFamilyIndex = v->d->encode_fam,
 		.pVideoProfile = &v->profilo.profilo,
 		.pictureFormat = v->cap.formato_ingresso,
 		.maxCodedExtent = { v->larg_cod, v->alt_cod },
-		.referencePictureFormat = v->cap.formato_dpb,
+		.referencePictureFormat = v->cap.dpb_format,
 		.maxDpbSlots = SLOT_DPB,
 		.maxActiveReferencePictures = 1,
 		.pStdHeaderVersion = &v->cap.video.stdHeaderVersion,
@@ -1412,8 +1412,8 @@ static bool apri_sessione(VulkanVideo *v, char *errore, size_t errore_byte)
 	VkVideoSessionMemoryRequirementsKHR req[8];
 	VkBindVideoSessionMemoryInfoKHR bind[8];
 
-	VK_O_FALLISCI(v->d->f.CreateVideoSessionKHR(dev, &sc, NULL, &v->sessione), "vkCreateVideoSessionKHR");
-	VK_O_FALLISCI(v->d->f.GetVideoSessionMemoryRequirementsKHR(dev, v->sessione, &n, NULL),
+	VK_OR_FAIL(v->d->f.CreateVideoSessionKHR(dev, &sc, NULL, &v->sessione), "vkCreateVideoSessionKHR");
+	VK_OR_FAIL(v->d->f.GetVideoSessionMemoryRequirementsKHR(dev, v->sessione, &n, NULL),
 	              "vkGetVideoSessionMemoryRequirementsKHR");
 	if (n > 8)
 		FALLISCI("the session wants %u memory bindings: too many", n);
@@ -1421,31 +1421,31 @@ static bool apri_sessione(VulkanVideo *v, char *errore, size_t errore_byte)
 		memset(&req[i], 0, sizeof req[i]);
 		req[i].sType = VK_STRUCTURE_TYPE_VIDEO_SESSION_MEMORY_REQUIREMENTS_KHR;
 	}
-	VK_O_FALLISCI(v->d->f.GetVideoSessionMemoryRequirementsKHR(dev, v->sessione, &n, req),
+	VK_OR_FAIL(v->d->f.GetVideoSessionMemoryRequirementsKHR(dev, v->sessione, &n, req),
 	              "vkGetVideoSessionMemoryRequirementsKHR");
-	v->memoria_sessione = calloc(n ? n : 1, sizeof *v->memoria_sessione);
-	if (!v->memoria_sessione)
+	v->session_memory = calloc(n ? n : 1, sizeof *v->session_memory);
+	if (!v->session_memory)
 		FALLISCI("out of memory");
 	for (uint32_t i = 0; i < n; i++) {
-		if (!memoria_alloca(v, &req[i].memoryRequirements, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0, NULL,
-		            &v->memoria_sessione[i], NULL, errore, errore_byte))
+		if (!alloc_memory(v, &req[i].memoryRequirements, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0, NULL,
+		            &v->session_memory[i], NULL, errore, errore_byte))
 			return false;
-		v->memorie_sessione = i + 1;
+		v->session_memories = i + 1;
 		bind[i] = (VkBindVideoSessionMemoryInfoKHR){
 			.sType = VK_STRUCTURE_TYPE_BIND_VIDEO_SESSION_MEMORY_INFO_KHR,
 			.memoryBindIndex = req[i].memoryBindIndex,
-			.memory = v->memoria_sessione[i],
+			.memory = v->session_memory[i],
 			.memoryOffset = 0,
 			.memorySize = req[i].memoryRequirements.size,
 		};
 	}
 	if (n)
-		VK_O_FALLISCI(v->d->f.BindVideoSessionMemoryKHR(dev, v->sessione, n, bind),
+		VK_OR_FAIL(v->d->f.BindVideoSessionMemoryKHR(dev, v->sessione, n, bind),
 		              "vkBindVideoSessionMemoryKHR");
 
 	/* the parameters */
 	if (h264) {
-		componi_h264(v);
+		compose_h264(v);
 		VkVideoEncodeH264SessionParametersAddInfoKHR add = {
 			.sType = VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_SESSION_PARAMETERS_ADD_INFO_KHR,
 			.stdSPSCount = 1, .pStdSPSs = &v->sps264, .stdPPSCount = 1, .pStdPPSs = &v->pps264,
@@ -1458,10 +1458,10 @@ static bool apri_sessione(VulkanVideo *v, char *errore, size_t errore_byte)
 			.sType = VK_STRUCTURE_TYPE_VIDEO_SESSION_PARAMETERS_CREATE_INFO_KHR,
 			.pNext = &pc, .videoSession = v->sessione,
 		};
-		VK_O_FALLISCI(v->d->f.CreateVideoSessionParametersKHR(dev, &ci, NULL, &v->parametri),
+		VK_OR_FAIL(v->d->f.CreateVideoSessionParametersKHR(dev, &ci, NULL, &v->parametri),
 		              "vkCreateVideoSessionParametersKHR (H.264)");
 	} else {
-		componi_h265(v);
+		compose_h265(v);
 		VkVideoEncodeH265SessionParametersAddInfoKHR add = {
 			.sType = VK_STRUCTURE_TYPE_VIDEO_ENCODE_H265_SESSION_PARAMETERS_ADD_INFO_KHR,
 			.stdVPSCount = 1, .pStdVPSs = &v->vps265, .stdSPSCount = 1, .pStdSPSs = &v->sps265,
@@ -1475,16 +1475,16 @@ static bool apri_sessione(VulkanVideo *v, char *errore, size_t errore_byte)
 			.sType = VK_STRUCTURE_TYPE_VIDEO_SESSION_PARAMETERS_CREATE_INFO_KHR,
 			.pNext = &pc, .videoSession = v->sessione,
 		};
-		VK_O_FALLISCI(v->d->f.CreateVideoSessionParametersKHR(dev, &ci, NULL, &v->parametri),
+		VK_OR_FAIL(v->d->f.CreateVideoSessionParametersKHR(dev, &ci, NULL, &v->parametri),
 		              "vkCreateVideoSessionParametersKHR (HEVC)");
 	}
 	/* the headers, one per call */
 	v->intestazioni_byte = 0;
-	if (!h264 && !prendi_intestazione(v, true, false, false, errore, errore_byte))
+	if (!h264 && !take_header(v, true, false, false, errore, errore_byte))
 		return false;
-	if (!prendi_intestazione(v, false, true, false, errore, errore_byte))
+	if (!take_header(v, false, true, false, errore, errore_byte))
 		return false;
-	if (!prendi_intestazione(v, false, false, true, errore, errore_byte))
+	if (!take_header(v, false, false, true, errore, errore_byte))
 		return false;
 	v->dich.intestazioni_dal_driver = true;
 	if (!h264)
@@ -1493,20 +1493,20 @@ static bool apri_sessione(VulkanVideo *v, char *errore, size_t errore_byte)
 	return true;
 }
 
-static bool apri_immagini(VulkanVideo *v, char *errore, size_t errore_byte)
+static bool open_images(VulkanVideo *v, char *errore, size_t errore_byte)
 {
 	bool p10 = v->r.profondita == 10;
 	VkFormat f_y = p10 ? VK_FORMAT_R16_UNORM : VK_FORMAT_R8_UNORM;
 	VkFormat f_uv = p10 ? VK_FORMAT_R16G16_UNORM : VK_FORMAT_R8G8_UNORM;
 
 	for (unsigned i = 0; i < INGRESSI; i++) {
-		Immagine *im = &v->ingresso[i];
+		Bitmap *im = &v->ingresso[i];
 		VkImageUsageFlags uso = VK_IMAGE_USAGE_VIDEO_ENCODE_SRC_BIT_KHR
 		                        | (v->dich.conversione_diretta ? VK_IMAGE_USAGE_STORAGE_BIT
 		                                                       : VK_IMAGE_USAGE_TRANSFER_DST_BIT);
 		VkImageCreateFlags flag = v->dich.conversione_diretta
 		                              ? (VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT | VK_IMAGE_CREATE_EXTENDED_USAGE_BIT) : 0;
-		if (!immagine_crea(v, im, v->cap.formato_ingresso, v->larg_img, v->alt_img, 1, uso, flag, true,
+		if (!image_create(v, im, v->cap.formato_ingresso, v->img_width, v->img_height, 1, uso, flag, true,
 		                   true, errore, errore_byte))
 			return false;
 		if (!vista(v, im->immagine, v->cap.formato_ingresso, VK_IMAGE_ASPECT_COLOR_BIT, 0, &im->vista,
@@ -1520,13 +1520,13 @@ static bool apri_immagini(VulkanVideo *v, char *errore, size_t errore_byte)
 		}
 	}
 	if (!v->dich.conversione_diretta) {
-		if (!immagine_crea(v, &v->y_tmp, f_y, v->larg_img, v->alt_img, 1,
+		if (!image_create(v, &v->y_tmp, f_y, v->img_width, v->img_height, 1,
 		                   VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, 0, false, false,
 		                   errore, errore_byte)
 		    || !vista(v, v->y_tmp.immagine, f_y, VK_IMAGE_ASPECT_COLOR_BIT, 0, &v->y_tmp.vista, errore,
 		              errore_byte))
 			return false;
-		if (!immagine_crea(v, &v->uv_tmp, f_uv, v->larg_img / 2, v->alt_img / 2, 1,
+		if (!image_create(v, &v->uv_tmp, f_uv, v->img_width / 2, v->img_height / 2, 1,
 		                   VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, 0, false, false,
 		                   errore, errore_byte)
 		    || !vista(v, v->uv_tmp.immagine, f_uv, VK_IMAGE_ASPECT_COLOR_BIT, 0, &v->uv_tmp.vista, errore,
@@ -1535,17 +1535,17 @@ static bool apri_immagini(VulkanVideo *v, char *errore, size_t errore_byte)
 	}
 	/* the DPB: one layer per slot, in the same object (works with and without
 	 * SEPARATE_REFERENCE_IMAGES) */
-	if (!immagine_crea(v, &v->dpb, v->cap.formato_dpb, v->larg_img, v->alt_img, SLOT_DPB,
+	if (!image_create(v, &v->dpb, v->cap.dpb_format, v->img_width, v->img_height, SLOT_DPB,
 	                   VK_IMAGE_USAGE_VIDEO_ENCODE_DPB_BIT_KHR, 0, true, false, errore, errore_byte))
 		return false;
 	for (unsigned i = 0; i < SLOT_DPB; i++)
-		if (!vista(v, v->dpb.immagine, v->cap.formato_dpb, VK_IMAGE_ASPECT_COLOR_BIT, i, &v->vista_dpb[i],
+		if (!vista(v, v->dpb.immagine, v->cap.dpb_format, VK_IMAGE_ASPECT_COLOR_BIT, i, &v->vista_dpb[i],
 		           errore, errore_byte))
 			return false;
 	return true;
 }
 
-static bool apri_shader(VulkanVideo *v, char *errore, size_t errore_byte)
+static bool open_shader(VulkanVideo *v, char *errore, size_t errore_byte)
 {
 	VkDevice dev = v->d->dispositivo;
 	VkDescriptorSetLayoutBinding b[3] = {
@@ -1583,23 +1583,23 @@ static bool apri_shader(VulkanVideo *v, char *errore, size_t errore_byte)
 		                       .addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE };
 	VkResult r;
 
-	VK_O_FALLISCI(vkCreateDescriptorSetLayout(dev, &dl, NULL, &v->ds_layout), "vkCreateDescriptorSetLayout");
-	VK_O_FALLISCI(vkCreatePipelineLayout(dev, &pl, NULL, &v->pl_layout), "vkCreatePipelineLayout");
-	VK_O_FALLISCI(vkCreateShaderModule(dev, &sm, NULL, &modulo), "vkCreateShaderModule");
+	VK_OR_FAIL(vkCreateDescriptorSetLayout(dev, &dl, NULL, &v->ds_layout), "vkCreateDescriptorSetLayout");
+	VK_OR_FAIL(vkCreatePipelineLayout(dev, &pl, NULL, &v->pl_layout), "vkCreatePipelineLayout");
+	VK_OR_FAIL(vkCreateShaderModule(dev, &sm, NULL, &modulo), "vkCreateShaderModule");
 	cp.stage.module = modulo;
 	cp.layout = v->pl_layout;
 	r = vkCreateComputePipelines(dev, VK_NULL_HANDLE, 1, &cp, NULL, &v->pipeline);
 	vkDestroyShaderModule(dev, modulo, NULL);
 	if (r != VK_SUCCESS)
 		FALLISCI("vkCreateComputePipelines: %s", vk_nome(r));
-	VK_O_FALLISCI(vkCreateDescriptorPool(dev, &dp, NULL, &v->ds_pool), "vkCreateDescriptorPool");
+	VK_OR_FAIL(vkCreateDescriptorPool(dev, &dp, NULL, &v->ds_pool), "vkCreateDescriptorPool");
 	da.descriptorPool = v->ds_pool;
-	VK_O_FALLISCI(vkAllocateDescriptorSets(dev, &da, &v->ds), "vkAllocateDescriptorSets");
-	VK_O_FALLISCI(vkCreateSampler(dev, &sa, NULL, &v->campionatore), "vkCreateSampler");
+	VK_OR_FAIL(vkAllocateDescriptorSets(dev, &da, &v->ds), "vkAllocateDescriptorSets");
+	VK_OR_FAIL(vkCreateSampler(dev, &sa, NULL, &v->sampler_obj), "vkCreateSampler");
 	return true;
 }
 
-static bool apri_comandi(VulkanVideo *v, char *errore, size_t errore_byte)
+static bool open_commands(VulkanVideo *v, char *errore, size_t errore_byte)
 {
 	VkDevice dev = v->d->dispositivo;
 	VkCommandPoolCreateInfo pc = { .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
@@ -1612,20 +1612,20 @@ static bool apri_comandi(VulkanVideo *v, char *errore, size_t errore_byte)
 		.encodeFeedbackFlags = VK_VIDEO_ENCODE_FEEDBACK_BITSTREAM_BUFFER_OFFSET_BIT_KHR
 		                       | VK_VIDEO_ENCODE_FEEDBACK_BITSTREAM_BYTES_WRITTEN_BIT_KHR,
 	};
-	Profilo pq = v->profilo; /* a copy: the query pool chain continues after the usage */
+	ProfileV pq = v->profilo; /* a copy: the query pool chain continues after the usage */
 	VkQueryPoolCreateInfo qc = { .sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO,
 		                         .queryType = VK_QUERY_TYPE_VIDEO_ENCODE_FEEDBACK_KHR, .queryCount = 1 };
 
-	pc.queueFamilyIndex = v->d->fam_calcolo;
-	VK_O_FALLISCI(vkCreateCommandPool(dev, &pc, NULL, &v->pool_calcolo), "vkCreateCommandPool (compute)");
-	pc.queueFamilyIndex = v->d->fam_codifica;
-	VK_O_FALLISCI(vkCreateCommandPool(dev, &pc, NULL, &v->pool_codifica), "vkCreateCommandPool (encode)");
-	ca.commandPool = v->pool_calcolo;
-	VK_O_FALLISCI(vkAllocateCommandBuffers(dev, &ca, &v->cb_calcolo), "vkAllocateCommandBuffers");
-	ca.commandPool = v->pool_codifica;
-	VK_O_FALLISCI(vkAllocateCommandBuffers(dev, &ca, &v->cb_codifica), "vkAllocateCommandBuffers");
-	VK_O_FALLISCI(vkCreateFence(dev, &fc, NULL, &v->fence_calcolo), "vkCreateFence");
-	VK_O_FALLISCI(vkCreateFence(dev, &fc, NULL, &v->fence_codifica), "vkCreateFence");
+	pc.queueFamilyIndex = v->d->compute_fam;
+	VK_OR_FAIL(vkCreateCommandPool(dev, &pc, NULL, &v->compute_pool), "vkCreateCommandPool (compute)");
+	pc.queueFamilyIndex = v->d->encode_fam;
+	VK_OR_FAIL(vkCreateCommandPool(dev, &pc, NULL, &v->encode_pool), "vkCreateCommandPool (encode)");
+	ca.commandPool = v->compute_pool;
+	VK_OR_FAIL(vkAllocateCommandBuffers(dev, &ca, &v->cb_compute), "vkAllocateCommandBuffers");
+	ca.commandPool = v->encode_pool;
+	VK_OR_FAIL(vkAllocateCommandBuffers(dev, &ca, &v->cb_encoding), "vkAllocateCommandBuffers");
+	VK_OR_FAIL(vkCreateFence(dev, &fc, NULL, &v->compute_fence), "vkCreateFence");
+	VK_OR_FAIL(vkCreateFence(dev, &fc, NULL, &v->encode_fence), "vkCreateFence");
 
 	if (v->cap.codifica.supportedEncodeFeedbackFlags & VK_VIDEO_ENCODE_FEEDBACK_BITSTREAM_HAS_OVERRIDES_BIT_KHR) {
 		qf.encodeFeedbackFlags |= VK_VIDEO_ENCODE_FEEDBACK_BITSTREAM_HAS_OVERRIDES_BIT_KHR;
@@ -1638,11 +1638,11 @@ static bool apri_comandi(VulkanVideo *v, char *errore, size_t errore_byte)
 	pq.h265.pNext = &pq.uso;
 	pq.uso.pNext = &qf;
 	qc.pNext = &pq.profilo;
-	VK_O_FALLISCI(vkCreateQueryPool(dev, &qc, NULL, &v->query), "vkCreateQueryPool (video encode feedback)");
+	VK_OR_FAIL(vkCreateQueryPool(dev, &qc, NULL, &v->query), "vkCreateQueryPool (video encode feedback)");
 	return true;
 }
 
-static bool apri_buffer(VulkanVideo *v, char *errore, size_t errore_byte)
+static bool open_buffer(VulkanVideo *v, char *errore, size_t errore_byte)
 {
 	VkDevice dev = v->d->dispositivo;
 	VkDeviceSize all = v->cap.video.minBitstreamBufferSizeAlignment ? v->cap.video.minBitstreamBufferSizeAlignment : 1;
@@ -1658,27 +1658,27 @@ static bool apri_buffer(VulkanVideo *v, char *errore, size_t errore_byte)
 	v->bitstream_byte = (VkDeviceSize) 3 * v->larg_cod * v->alt_cod + CODED_MARGINE;
 	v->bitstream_byte = (v->bitstream_byte + all - 1) / all * all;
 	bc.size = v->bitstream_byte;
-	VK_O_FALLISCI(vkCreateBuffer(dev, &bc, NULL, &v->bitstream), "vkCreateBuffer (bitstream)");
+	VK_OR_FAIL(vkCreateBuffer(dev, &bc, NULL, &v->bitstream), "vkCreateBuffer (bitstream)");
 	vkGetBufferMemoryRequirements(dev, v->bitstream, &req);
-	if (!memoria_alloca(v, &req, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+	if (!alloc_memory(v, &req, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
 	                         | VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
 	            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, NULL,
-	            &v->bitstream_memoria, &ottenuti, errore, errore_byte))
+	            &v->bitstream_memory, &ottenuti, errore, errore_byte))
 		return false;
 	if (!(ottenuti & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT))
 		FALLISCI("the encoded-bytes buffer cannot be read by the CPU (types 0x%x)", req.memoryTypeBits);
-	v->bitstream_coerente = (ottenuti & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) != 0;
-	VK_O_FALLISCI(vkBindBufferMemory(dev, v->bitstream, v->bitstream_memoria, 0), "vkBindBufferMemory");
-	VK_O_FALLISCI(vkMapMemory(dev, v->bitstream_memoria, 0, VK_WHOLE_SIZE, 0, &v->bitstream_mappa), "vkMapMemory");
+	v->bitstream_consistent = (ottenuti & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) != 0;
+	VK_OR_FAIL(vkBindBufferMemory(dev, v->bitstream, v->bitstream_memory, 0), "vkBindBufferMemory");
+	VK_OR_FAIL(vkMapMemory(dev, v->bitstream_memory, 0, VK_WHOLE_SIZE, 0, &v->bitstream_map), "vkMapMemory");
 
-	v->uscita_capacita = (size_t) v->bitstream_byte + INTESTAZIONI_MAX;
+	v->uscita_capacita = (size_t) v->bitstream_byte + MAX_HEADERS;
 	v->uscita = malloc(v->uscita_capacita);
 	if (!v->uscita)
 		FALLISCI("out of memory for the output");
 	return true;
 }
 
-VulkanVideo *vulkanvideo_apri(VulkanVideoDispositivo *d, const VulkanVideoRichiesta *r, char *errore,
+VulkanVideo *vulkanvideo_open(VulkanVideoDevice *d, const VulkanVideoRichiesta *r, char *errore,
                               size_t errore_byte)
 {
 	VulkanVideo *v;
@@ -1708,26 +1708,26 @@ VulkanVideo *vulkanvideo_apri(VulkanVideoDispositivo *d, const VulkanVideoRichie
 	if (!v->r.fotogrammi_al_secondo)
 		v->r.fotogrammi_al_secondo = 30;
 
-	profilo_componi(&v->profilo, r->codec, r->profondita, true);
-	if (!capacita_del_profilo(d, &v->profilo, r->codec, r->profondita, &v->cap, errore, errore_byte)) {
-		vulkanvideo_chiudi(v);
+	compose_profile(&v->profilo, r->codec, r->profondita, true);
+	if (!profile_capabilities(d, &v->profilo, r->codec, r->profondita, &v->cap, errore, errore_byte)) {
+		vulkanvideo_close(v);
 		return NULL;
 	}
 	v->dich.ritardo_minimo_chiesto = v->profilo.uso.tuningMode == VK_VIDEO_ENCODE_TUNING_MODE_ULTRA_LOW_LATENCY_KHR;
-	v->dich.famiglia_codifica = d->fam_codifica;
-	v->dich.famiglia_calcolo = d->fam_calcolo;
+	v->dich.encode_family = d->encode_fam;
+	v->dich.compute_family = d->compute_fam;
 	snprintf(v->dich.formato_ingresso, sizeof v->dich.formato_ingresso, "%s", nome_formato(v->cap.formato_ingresso));
-	v->dich.conversione_diretta = v->cap.ingresso_diretto;
+	v->dich.conversione_diretta = v->cap.direct_input;
 	/* ⚠ For the BENCH only: `REMOTIX_VULKAN_CONVERSIONE=copia` forces the copy
 	 *   route even where the direct one exists, to measure it and to exercise
 	 *   the branch the other cards will take.  It is not a per-card exception:
 	 *   the default choice stays the one read from the driver. */
 	if (getenv("REMOTIX_VULKAN_CONVERSIONE") && strcmp(getenv("REMOTIX_VULKAN_CONVERSIONE"), "copia") == 0)
 		v->dich.conversione_diretta = false;
-	if (!v->dich.conversione_diretta && !v->cap.ingresso_copia) {
+	if (!v->dich.conversione_diretta && !v->cap.input_copy) {
 		di(errore, errore_byte, "the input format can be neither written by the shader nor copied (usages 0x%x)",
-		   v->cap.usi_ingresso);
-		vulkanvideo_chiudi(v);
+		   v->cap.input_usage);
+		vulkanvideo_close(v);
 		return NULL;
 	}
 
@@ -1736,33 +1736,33 @@ VulkanVideo *vulkanvideo_apri(VulkanVideoDispositivo *d, const VulkanVideoRichie
 		if (!(v->cap.codifica.rateControlModes & VK_VIDEO_ENCODE_RATE_CONTROL_MODE_VBR_BIT_KHR)) {
 			di(errore, errore_byte, "the card does not declare VBR (modes 0x%x): the bandwidth cap cannot be requested",
 			   v->cap.codifica.rateControlModes);
-			vulkanvideo_chiudi(v);
+			vulkanvideo_close(v);
 			return NULL;
 		}
-		if (r->banda_punto >= r->banda_filo || r->serbatoio_bit <= 0) {
+		if (r->banda_punto >= r->banda_filo || r->reservoir_bit <= 0) {
 			di(errore, errore_byte, "the cap numbers are broken: target %lld, wire %lld, reservoir %d",
-			   (long long) r->banda_punto, (long long) r->banda_filo, r->serbatoio_bit);
-			vulkanvideo_chiudi(v);
+			   (long long) r->banda_punto, (long long) r->banda_filo, r->reservoir_bit);
+			vulkanvideo_close(v);
 			return NULL;
 		}
 		v->dich.modo_rc = VULKANVIDEO_RC_VBR;
-		v->qp_fisso = hevc ? 30 : 26;
+		v->fixed_qp = hevc ? 30 : 26;
 	} else {
 		if (!(v->cap.codifica.rateControlModes & VK_VIDEO_ENCODE_RATE_CONTROL_MODE_DISABLED_BIT_KHR)) {
 			di(errore, errore_byte, "the card does not declare constant QP (modes 0x%x)", v->cap.codifica.rateControlModes);
-			vulkanvideo_chiudi(v);
+			vulkanvideo_close(v);
 			return NULL;
 		}
 		v->dich.modo_rc = VULKANVIDEO_RC_CQP;
-		v->qp_fisso = r->qp;
+		v->fixed_qp = r->qp;
 	}
-	v->qp_corrente = r->qp;
+	v->current_qp = r->qp;
 	v->dich.qp_minimo = hevc ? v->cap.h265.minQp : v->cap.h264.minQp;
 	v->dich.qp_massimo = hevc ? v->cap.h265.maxQp : v->cap.h264.maxQp;
 	if (r->qp < v->dich.qp_minimo || r->qp > v->dich.qp_massimo) {
 		di(errore, errore_byte, "QP %d outside what the card declares (%d..%d)", r->qp, v->dich.qp_minimo,
 		   v->dich.qp_massimo);
-		vulkanvideo_chiudi(v);
+		vulkanvideo_close(v);
 		return NULL;
 	}
 
@@ -1798,10 +1798,10 @@ VulkanVideo *vulkanvideo_apri(VulkanVideoDispositivo *d, const VulkanVideoRichie
 		v->larg_cod = allinea(v->larg_cod, gran_l);
 	if (gran_a > 1 && gran_a % 16 == 0)
 		v->alt_cod = allinea(v->alt_cod, gran_a);
-	v->larg_img = allinea(v->larg_cod, gran_l ? gran_l : 1);
-	v->alt_img = allinea(v->alt_cod, gran_a ? gran_a : 1);
-	v->larg_img = allinea(v->larg_img, v->cap.video.pictureAccessGranularity.width ? v->cap.video.pictureAccessGranularity.width : 1);
-	v->alt_img = allinea(v->alt_img, v->cap.video.pictureAccessGranularity.height ? v->cap.video.pictureAccessGranularity.height : 1);
+	v->img_width = allinea(v->larg_cod, gran_l ? gran_l : 1);
+	v->img_height = allinea(v->alt_cod, gran_a ? gran_a : 1);
+	v->img_width = allinea(v->img_width, v->cap.video.pictureAccessGranularity.width ? v->cap.video.pictureAccessGranularity.width : 1);
+	v->img_height = allinea(v->img_height, v->cap.video.pictureAccessGranularity.height ? v->cap.video.pictureAccessGranularity.height : 1);
 	v->dich.larghezza_codificata = v->larg_cod;
 	v->dich.altezza_codificata = v->alt_cod;
 	v->dich.blocco = v->blocco;
@@ -1810,51 +1810,51 @@ VulkanVideo *vulkanvideo_apri(VulkanVideoDispositivo *d, const VulkanVideoRichie
 		di(errore, errore_byte, "the size %ux%u is outside what the card declares (%ux%u … %ux%u)",
 		   v->larg_cod, v->alt_cod, v->cap.video.minCodedExtent.width, v->cap.video.minCodedExtent.height,
 		   v->cap.video.maxCodedExtent.width, v->cap.video.maxCodedExtent.height);
-		vulkanvideo_chiudi(v);
+		vulkanvideo_close(v);
 		return NULL;
 	}
 
 	/* the level */
 	if (hevc)
 		v->dich.livello_idc = r->livello_idc > 0 ? r->livello_idc
-		                      : livello_hevc(v->dich.modo_rc == VULKANVIDEO_RC_CQP ? 0 : r->banda_punto,
+		                      : hevc_level(v->dich.modo_rc == VULKANVIDEO_RC_CQP ? 0 : r->banda_punto,
 		                                     v->larg_cod, v->alt_cod, 1);
 	else
 		v->dich.livello_idc = r->livello_idc > 0 ? r->livello_idc
-		                      : livello_h264(v->dich.modo_rc == VULKANVIDEO_RC_CQP ? 0 : r->banda_filo,
+		                      : h264_level(v->dich.modo_rc == VULKANVIDEO_RC_CQP ? 0 : r->banda_filo,
 		                                     (int) v->r.fotogrammi_al_secondo, v->larg_cod / 16, v->alt_cod / 16, 1);
-	if (v->cap.livello_dichiarato) {
-		int massimo = hevc ? hevc_livello_idc(v->cap.h265.maxLevelIdc) : h264_livello_idc(v->cap.h264.maxLevelIdc);
+	if (v->cap.declared_level) {
+		int massimo = hevc ? hevc_level_idc(v->cap.h265.maxLevelIdc) : h264_level_idc(v->cap.h264.maxLevelIdc);
 		if (v->dich.livello_idc > massimo) {
 			di(errore, errore_byte, "level %d requested, the card reaches %d", v->dich.livello_idc, massimo);
-			vulkanvideo_chiudi(v);
+			vulkanvideo_close(v);
 			return NULL;
 		}
 	}
 
-	if (!apri_sessione(v, errore, errore_byte) || !apri_immagini(v, errore, errore_byte)
-	    || !apri_shader(v, errore, errore_byte) || !apri_comandi(v, errore, errore_byte)
-	    || !apri_buffer(v, errore, errore_byte)) {
-		vulkanvideo_chiudi(v);
+	if (!apri_sessione(v, errore, errore_byte) || !open_images(v, errore, errore_byte)
+	    || !open_shader(v, errore, errore_byte) || !open_commands(v, errore, errore_byte)
+	    || !open_buffer(v, errore, errore_byte)) {
+		vulkanvideo_close(v);
 		return NULL;
 	}
-	v->generazione_vista = 0;
+	v->seen_generation = 0;
 	registro_dice(REG_CODIFICA,
 	              "vulkanvideo opened on «%s» (%s): %s %d bit %ux%u (coded %ux%u, images %ux%u, block %u) · "
 	              "%s (qp %d) · level %d%s · headers from the driver %zu bytes%s · conversion %s · "
 	              "queues encode %u / compute %u · minimum latency %s · input %s · DPB %u slots",
 	              d->nome, d->driver, hevc ? "HEVC" : "H.264", r->profondita, r->larghezza, r->altezza,
-	              v->larg_cod, v->alt_cod, v->larg_img, v->alt_img, v->blocco,
+	              v->larg_cod, v->alt_cod, v->img_width, v->img_height, v->blocco,
 	              v->dich.modo_rc == VULKANVIDEO_RC_CQP ? "CQP" : "VBR (minimum QP = requested quality)", r->qp,
 	              v->dich.livello_idc, r->livello_idc > 0 ? " (imposed)" : " (computed as ffmpeg)",
 	              v->intestazioni_byte, v->dich.driver_ha_cambiato_parametri ? " ⚠ the driver CHANGED them" : "",
-	              v->dich.conversione_diretta ? "direct into the planes" : "via copy", d->fam_codifica, d->fam_calcolo,
+	              v->dich.conversione_diretta ? "direct into the planes" : "via copy", d->encode_fam, d->compute_fam,
 	              v->dich.ritardo_minimo_chiesto ? "requested" : "not accepted by the driver",
 	              v->dich.formato_ingresso, (unsigned) SLOT_DPB);
 	return v;
 }
 
-static void importazione_libera(VulkanVideo *v, Importazione *i)
+static void import_release(VulkanVideo *v, Importazione *i)
 {
 	VkDevice dev = v->d->dispositivo;
 	if (!i->usata)
@@ -1868,7 +1868,7 @@ static void importazione_libera(VulkanVideo *v, Importazione *i)
 	memset(i, 0, sizeof *i);
 }
 
-void vulkanvideo_chiudi(VulkanVideo *v)
+void vulkanvideo_close(VulkanVideo *v)
 {
 	VkDevice dev;
 	if (!v)
@@ -1876,33 +1876,33 @@ void vulkanvideo_chiudi(VulkanVideo *v)
 	dev = v->d->dispositivo;
 	vkDeviceWaitIdle(dev);
 	for (unsigned i = 0; i < IMPORTAZIONI_MAX; i++)
-		importazione_libera(v, &v->importate[i]);
+		import_release(v, &v->importate[i]);
 	if (v->uscita)
 		free(v->uscita);
-	if (v->bitstream_mappa)
-		vkUnmapMemory(dev, v->bitstream_memoria);
+	if (v->bitstream_map)
+		vkUnmapMemory(dev, v->bitstream_memory);
 	if (v->bitstream)
 		vkDestroyBuffer(dev, v->bitstream, NULL);
-	if (v->bitstream_memoria)
-		vkFreeMemory(dev, v->bitstream_memoria, NULL);
-	if (v->scala_mappa)
-		vkUnmapMemory(dev, v->scala_memoria);
+	if (v->bitstream_memory)
+		vkFreeMemory(dev, v->bitstream_memory, NULL);
+	if (v->staging_map)
+		vkUnmapMemory(dev, v->staging_memory);
 	if (v->scala)
 		vkDestroyBuffer(dev, v->scala, NULL);
-	if (v->scala_memoria)
-		vkFreeMemory(dev, v->scala_memoria, NULL);
+	if (v->staging_memory)
+		vkFreeMemory(dev, v->staging_memory, NULL);
 	if (v->query)
 		vkDestroyQueryPool(dev, v->query, NULL);
-	if (v->fence_calcolo)
-		vkDestroyFence(dev, v->fence_calcolo, NULL);
-	if (v->fence_codifica)
-		vkDestroyFence(dev, v->fence_codifica, NULL);
-	if (v->pool_calcolo)
-		vkDestroyCommandPool(dev, v->pool_calcolo, NULL);
-	if (v->pool_codifica)
-		vkDestroyCommandPool(dev, v->pool_codifica, NULL);
-	if (v->campionatore)
-		vkDestroySampler(dev, v->campionatore, NULL);
+	if (v->compute_fence)
+		vkDestroyFence(dev, v->compute_fence, NULL);
+	if (v->encode_fence)
+		vkDestroyFence(dev, v->encode_fence, NULL);
+	if (v->compute_pool)
+		vkDestroyCommandPool(dev, v->compute_pool, NULL);
+	if (v->encode_pool)
+		vkDestroyCommandPool(dev, v->encode_pool, NULL);
+	if (v->sampler_obj)
+		vkDestroySampler(dev, v->sampler_obj, NULL);
 	if (v->ds_pool)
 		vkDestroyDescriptorPool(dev, v->ds_pool, NULL);
 	if (v->pipeline)
@@ -1914,23 +1914,23 @@ void vulkanvideo_chiudi(VulkanVideo *v)
 	for (unsigned i = 0; i < SLOT_DPB; i++)
 		if (v->vista_dpb[i])
 			vkDestroyImageView(dev, v->vista_dpb[i], NULL);
-	immagine_libera(v, &v->dpb);
-	immagine_libera(v, &v->y_tmp);
-	immagine_libera(v, &v->uv_tmp);
-	immagine_libera(v, &v->rgb);
+	image_free(v, &v->dpb);
+	image_free(v, &v->y_tmp);
+	image_free(v, &v->uv_tmp);
+	image_free(v, &v->rgb);
 	for (unsigned i = 0; i < INGRESSI; i++)
-		immagine_libera(v, &v->ingresso[i]);
+		image_free(v, &v->ingresso[i]);
 	if (v->parametri)
 		v->d->f.DestroyVideoSessionParametersKHR(dev, v->parametri, NULL);
 	if (v->sessione)
 		v->d->f.DestroyVideoSessionKHR(dev, v->sessione, NULL);
-	for (uint32_t i = 0; i < v->memorie_sessione; i++)
-		vkFreeMemory(dev, v->memoria_sessione[i], NULL);
-	free(v->memoria_sessione);
+	for (uint32_t i = 0; i < v->session_memories; i++)
+		vkFreeMemory(dev, v->session_memory[i], NULL);
+	free(v->session_memory);
 	free(v);
 }
 
-const VulkanVideoDichiarazione *vulkanvideo_dichiarazione(const VulkanVideo *v)
+const VulkanVideoDeclaration *vulkanvideo_declaration(const VulkanVideo *v)
 {
 	return v ? &v->dich : NULL;
 }
@@ -1939,7 +1939,7 @@ const VulkanVideoDichiarazione *vulkanvideo_dichiarazione(const VulkanVideo *v)
  * 6. INPUT — from memory and from DMA-BUF, and the conversion on the card
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-static VkImageMemoryBarrier2 barriera_immagine(VkImage img, VkImageAspectFlags aspetto, uint32_t strati,
+static VkImageMemoryBarrier2 barrier_image(VkImage img, VkImageAspectFlags aspetto, uint32_t strati,
                                                VkPipelineStageFlags2 s0, VkAccessFlags2 a0,
                                                VkPipelineStageFlags2 s1, VkAccessFlags2 a1,
                                                VkImageLayout l0, VkImageLayout l1)
@@ -1963,16 +1963,16 @@ static void barriere(VkCommandBuffer cb, const VkImageMemoryBarrier2 *b, uint32_
 	vkCmdPipelineBarrier2(cb, &d);
 }
 
-static bool manda_e_aspetta(VulkanVideo *v, VkQueue coda, VkCommandBuffer cb, VkFence fence, char *errore,
+static bool send_and_wait(VulkanVideo *v, VkQueue coda, VkCommandBuffer cb, VkFence fence, char *errore,
                             size_t errore_byte)
 {
 	VkCommandBufferSubmitInfo ci = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO, .commandBuffer = cb };
 	VkSubmitInfo2 si = { .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2, .commandBufferInfoCount = 1,
 		                 .pCommandBufferInfos = &ci };
-	VK_O_FALLISCI(vkEndCommandBuffer(cb), "vkEndCommandBuffer");
-	VK_O_FALLISCI(vkResetFences(v->d->dispositivo, 1, &fence), "vkResetFences");
-	VK_O_FALLISCI(vkQueueSubmit2(coda, 1, &si, fence), "vkQueueSubmit2");
-	VK_O_FALLISCI(vkWaitForFences(v->d->dispositivo, 1, &fence, VK_TRUE, UINT64_MAX), "vkWaitForFences");
+	VK_OR_FAIL(vkEndCommandBuffer(cb), "vkEndCommandBuffer");
+	VK_OR_FAIL(vkResetFences(v->d->dispositivo, 1, &fence), "vkResetFences");
+	VK_OR_FAIL(vkQueueSubmit2(coda, 1, &si, fence), "vkQueueSubmit2");
+	VK_OR_FAIL(vkWaitForFences(v->d->dispositivo, 1, &fence, VK_TRUE, UINT64_MAX), "vkWaitForFences");
 	return true;
 }
 
@@ -1984,12 +1984,12 @@ static bool manda_e_aspetta(VulkanVideo *v, VkQueue coda, VkCommandBuffer cb, Vk
  */
 static bool converti(VulkanVideo *v, VkImageView sorgente, unsigned n, char *errore, size_t errore_byte)
 {
-	VkCommandBuffer cb = v->cb_calcolo;
-	Immagine *in = &v->ingresso[n];
+	VkCommandBuffer cb = v->cb_compute;
+	Bitmap *in = &v->ingresso[n];
 	bool p10 = v->r.profondita == 10;
 	VkImageView vy = v->dich.conversione_diretta ? in->piano_y : v->y_tmp.vista;
 	VkImageView vuv = v->dich.conversione_diretta ? in->piano_uv : v->uv_tmp.vista;
-	VkDescriptorImageInfo di_src = { .sampler = v->campionatore, .imageView = sorgente,
+	VkDescriptorImageInfo di_src = { .sampler = v->sampler_obj, .imageView = sorgente,
 		                             .imageLayout = VK_IMAGE_LAYOUT_GENERAL };
 	VkDescriptorImageInfo di_y = { .imageView = vy, .imageLayout = VK_IMAGE_LAYOUT_GENERAL };
 	VkDescriptorImageInfo di_uv = { .imageView = vuv, .imageLayout = VK_IMAGE_LAYOUT_GENERAL };
@@ -2001,7 +2001,7 @@ static bool converti(VulkanVideo *v, VkImageView sorgente, unsigned n, char *err
 		{ .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .dstSet = v->ds, .dstBinding = 2, .descriptorCount = 1,
 		  .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, .pImageInfo = &di_uv },
 	};
-	uint32_t pc[5] = { v->r.larghezza, v->r.altezza, v->larg_img, v->alt_img, p10 ? 1u : 0u };
+	uint32_t pc[5] = { v->r.larghezza, v->r.altezza, v->img_width, v->img_height, p10 ? 1u : 0u };
 	VkImageMemoryBarrier2 b[3];
 	uint32_t nb = 0;
 
@@ -2011,14 +2011,14 @@ static bool converti(VulkanVideo *v, VkImageView sorgente, unsigned n, char *err
 
 	/* the planes the shader writes: UNDEFINED → GENERAL (all of them are rewritten) */
 	if (v->dich.conversione_diretta) {
-		b[nb++] = barriera_immagine(in->immagine, VK_IMAGE_ASPECT_COLOR_BIT, 1, VK_PIPELINE_STAGE_2_NONE, 0,
+		b[nb++] = barrier_image(in->immagine, VK_IMAGE_ASPECT_COLOR_BIT, 1, VK_PIPELINE_STAGE_2_NONE, 0,
 		                            VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
 		                            VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 	} else {
-		b[nb++] = barriera_immagine(v->y_tmp.immagine, VK_IMAGE_ASPECT_COLOR_BIT, 1, VK_PIPELINE_STAGE_2_NONE, 0,
+		b[nb++] = barrier_image(v->y_tmp.immagine, VK_IMAGE_ASPECT_COLOR_BIT, 1, VK_PIPELINE_STAGE_2_NONE, 0,
 		                            VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
 		                            VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
-		b[nb++] = barriera_immagine(v->uv_tmp.immagine, VK_IMAGE_ASPECT_COLOR_BIT, 1, VK_PIPELINE_STAGE_2_NONE, 0,
+		b[nb++] = barrier_image(v->uv_tmp.immagine, VK_IMAGE_ASPECT_COLOR_BIT, 1, VK_PIPELINE_STAGE_2_NONE, 0,
 		                            VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
 		                            VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 	}
@@ -2027,22 +2027,22 @@ static bool converti(VulkanVideo *v, VkImageView sorgente, unsigned n, char *err
 	vkCmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_COMPUTE, v->pipeline);
 	vkCmdBindDescriptorSets(cb, VK_PIPELINE_BIND_POINT_COMPUTE, v->pl_layout, 0, 1, &v->ds, 0, NULL);
 	vkCmdPushConstants(cb, v->pl_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof pc, pc);
-	vkCmdDispatch(cb, (v->larg_img / 2 + 15) / 16, (v->alt_img / 2 + 15) / 16, 1);
+	vkCmdDispatch(cb, (v->img_width / 2 + 15) / 16, (v->img_height / 2 + 15) / 16, 1);
 
 	if (!v->dich.conversione_diretta) {
 		/* the copy of the two planes into the input image */
 		VkImageCopy2 regioni[2];
 		VkCopyImageInfo2 ci = { .sType = VK_STRUCTURE_TYPE_COPY_IMAGE_INFO_2 };
 		nb = 0;
-		b[nb++] = barriera_immagine(v->y_tmp.immagine, VK_IMAGE_ASPECT_COLOR_BIT, 1,
+		b[nb++] = barrier_image(v->y_tmp.immagine, VK_IMAGE_ASPECT_COLOR_BIT, 1,
 		                            VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
 		                            VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_READ_BIT,
 		                            VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-		b[nb++] = barriera_immagine(v->uv_tmp.immagine, VK_IMAGE_ASPECT_COLOR_BIT, 1,
+		b[nb++] = barrier_image(v->uv_tmp.immagine, VK_IMAGE_ASPECT_COLOR_BIT, 1,
 		                            VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
 		                            VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_READ_BIT,
 		                            VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-		b[nb++] = barriera_immagine(in->immagine, VK_IMAGE_ASPECT_COLOR_BIT, 1, VK_PIPELINE_STAGE_2_NONE, 0,
+		b[nb++] = barrier_image(in->immagine, VK_IMAGE_ASPECT_COLOR_BIT, 1, VK_PIPELINE_STAGE_2_NONE, 0,
 		                            VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT,
 		                            VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 		barriere(cb, b, nb, NULL, 0);
@@ -2050,7 +2050,7 @@ static bool converti(VulkanVideo *v, VkImageView sorgente, unsigned n, char *err
 		regioni[0].sType = VK_STRUCTURE_TYPE_IMAGE_COPY_2;
 		regioni[0].srcSubresource = (VkImageSubresourceLayers){ VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
 		regioni[0].dstSubresource = (VkImageSubresourceLayers){ VK_IMAGE_ASPECT_PLANE_0_BIT, 0, 0, 1 };
-		regioni[0].extent = (VkExtent3D){ v->larg_img, v->alt_img, 1 };
+		regioni[0].extent = (VkExtent3D){ v->img_width, v->img_height, 1 };
 		ci.srcImage = v->y_tmp.immagine;
 		ci.srcImageLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 		ci.dstImage = in->immagine;
@@ -2060,7 +2060,7 @@ static bool converti(VulkanVideo *v, VkImageView sorgente, unsigned n, char *err
 		vkCmdCopyImage2(cb, &ci);
 		regioni[1] = regioni[0];
 		regioni[1].dstSubresource.aspectMask = VK_IMAGE_ASPECT_PLANE_1_BIT;
-		regioni[1].extent = (VkExtent3D){ v->larg_img / 2, v->alt_img / 2, 1 };
+		regioni[1].extent = (VkExtent3D){ v->img_width / 2, v->img_height / 2, 1 };
 		ci.srcImage = v->uv_tmp.immagine;
 		ci.pRegions = &regioni[1];
 		vkCmdCopyImage2(cb, &ci);
@@ -2075,60 +2075,60 @@ static bool comincia(VkCommandBuffer cb, char *errore, size_t errore_byte)
 {
 	VkCommandBufferBeginInfo bi = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 		                            .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT };
-	VK_O_FALLISCI(vkResetCommandBuffer(cb, 0), "vkResetCommandBuffer");
-	VK_O_FALLISCI(vkBeginCommandBuffer(cb, &bi), "vkBeginCommandBuffer");
+	VK_OR_FAIL(vkResetCommandBuffer(cb, 0), "vkResetCommandBuffer");
+	VK_OR_FAIL(vkBeginCommandBuffer(cb, &bi), "vkBeginCommandBuffer");
 	return true;
 }
 
 /* ── from memory ────────────────────────────────────────────────────────── */
 
-static bool prepara_rgb(VulkanVideo *v, VulkanVideoOrdine ordine, uint32_t passo, char *errore, size_t errore_byte)
+static bool prepare_rgb(VulkanVideo *v, VulkanVideoOrder ordine, uint32_t passo, char *errore, size_t errore_byte)
 {
 	VkDevice dev = v->d->dispositivo;
 	VkFormat f = ordine == VULKANVIDEO_BGRX ? VK_FORMAT_B8G8R8A8_UNORM : VK_FORMAT_R8G8B8A8_UNORM;
 	size_t byte = (size_t) passo * v->r.altezza;
 
-	if (v->rgb_c_e && v->rgb_ordine == ordine && v->scala_byte >= byte)
+	if (v->rgb_c_e && v->rgb_order == ordine && v->staging_bytes >= byte)
 		return true;
 	vkDeviceWaitIdle(dev);
-	immagine_libera(v, &v->rgb);
+	image_free(v, &v->rgb);
 	v->rgb_c_e = false;
-	if (v->scala_mappa)
-		vkUnmapMemory(dev, v->scala_memoria);
+	if (v->staging_map)
+		vkUnmapMemory(dev, v->staging_memory);
 	if (v->scala)
 		vkDestroyBuffer(dev, v->scala, NULL);
-	if (v->scala_memoria)
-		vkFreeMemory(dev, v->scala_memoria, NULL);
+	if (v->staging_memory)
+		vkFreeMemory(dev, v->staging_memory, NULL);
 	v->scala = VK_NULL_HANDLE;
-	v->scala_memoria = VK_NULL_HANDLE;
-	v->scala_mappa = NULL;
+	v->staging_memory = VK_NULL_HANDLE;
+	v->staging_map = NULL;
 	{
 		VkBufferCreateInfo bc = { .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO, .size = byte,
 			                      .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT, .sharingMode = VK_SHARING_MODE_EXCLUSIVE };
 		VkMemoryRequirements req;
-		VK_O_FALLISCI(vkCreateBuffer(dev, &bc, NULL, &v->scala), "vkCreateBuffer (staging)");
+		VK_OR_FAIL(vkCreateBuffer(dev, &bc, NULL, &v->scala), "vkCreateBuffer (staging)");
 		vkGetBufferMemoryRequirements(dev, v->scala, &req);
-		if (!memoria_alloca(v, &req, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 0, NULL,
-		            &v->scala_memoria, NULL, errore, errore_byte))
+		if (!alloc_memory(v, &req, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 0, NULL,
+		            &v->staging_memory, NULL, errore, errore_byte))
 			return false;
-		VK_O_FALLISCI(vkBindBufferMemory(dev, v->scala, v->scala_memoria, 0), "vkBindBufferMemory (staging)");
-		VK_O_FALLISCI(vkMapMemory(dev, v->scala_memoria, 0, VK_WHOLE_SIZE, 0, &v->scala_mappa), "vkMapMemory (staging)");
-		v->scala_byte = byte;
+		VK_OR_FAIL(vkBindBufferMemory(dev, v->scala, v->staging_memory, 0), "vkBindBufferMemory (staging)");
+		VK_OR_FAIL(vkMapMemory(dev, v->staging_memory, 0, VK_WHOLE_SIZE, 0, &v->staging_map), "vkMapMemory (staging)");
+		v->staging_bytes = byte;
 	}
-	if (!immagine_crea(v, &v->rgb, f, v->r.larghezza, v->r.altezza, 1,
+	if (!image_create(v, &v->rgb, f, v->r.larghezza, v->r.altezza, 1,
 	                   VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 0, false, false, errore, errore_byte)
 	    || !vista(v, v->rgb.immagine, f, VK_IMAGE_ASPECT_COLOR_BIT, 0, &v->rgb.vista, errore, errore_byte))
 		return false;
-	v->rgb_ordine = ordine;
+	v->rgb_order = ordine;
 	v->rgb_c_e = true;
 	return true;
 }
 
 static bool codifica(VulkanVideo *v, unsigned n, bool chiave, const uint8_t **dati, size_t *byte,
-                     VulkanVideoTempi *t, char *errore, size_t errore_byte);
+                     VulkanVideoTimings *t, char *errore, size_t errore_byte);
 
-bool vulkanvideo_codifica_memoria(VulkanVideo *v, const uint8_t *pixel, uint32_t passo, VulkanVideoOrdine ordine,
-                                  bool chiave, const uint8_t **dati, size_t *byte, VulkanVideoTempi *t,
+bool vulkanvideo_encode_memory(VulkanVideo *v, const uint8_t *pixel, uint32_t passo, VulkanVideoOrder ordine,
+                                  bool chiave, const uint8_t **dati, size_t *byte, VulkanVideoTimings *t,
                                   char *errore, size_t errore_byte)
 {
 	uint64_t t0, t1;
@@ -2140,23 +2140,23 @@ bool vulkanvideo_codifica_memoria(VulkanVideo *v, const uint8_t *pixel, uint32_t
 	if (!passo)
 		passo = v->r.larghezza * 4;
 	memset(t, 0, sizeof *t);
-	if (!prepara_rgb(v, ordine, passo, errore, errore_byte))
+	if (!prepare_rgb(v, ordine, passo, errore, errore_byte))
 		return false;
 
 	/* 1. the upload: the pixels into the staging buffer (one copy, on the CPU) */
 	t0 = adesso_us();
-	memcpy(v->scala_mappa, pixel, (size_t) passo * (v->r.altezza - 1) + (size_t) v->r.larghezza * 4);
+	memcpy(v->staging_map, pixel, (size_t) passo * (v->r.altezza - 1) + (size_t) v->r.larghezza * 4);
 	t1 = adesso_us();
 	t->us_caricamento = t1 - t0;
 
 	/* 2. the conversion: buffer → RGB image → shader → planes */
-	n = v->prossimo_ingresso;
-	v->prossimo_ingresso = (n + 1) % INGRESSI;
-	cb = v->cb_calcolo;
+	n = v->next_ingress;
+	v->next_ingress = (n + 1) % INGRESSI;
+	cb = v->cb_compute;
 	if (!comincia(cb, errore, errore_byte))
 		return false;
 	{
-		VkImageMemoryBarrier2 b = barriera_immagine(v->rgb.immagine, VK_IMAGE_ASPECT_COLOR_BIT, 1,
+		VkImageMemoryBarrier2 b = barrier_image(v->rgb.immagine, VK_IMAGE_ASPECT_COLOR_BIT, 1,
 		                                            VK_PIPELINE_STAGE_2_NONE, 0, VK_PIPELINE_STAGE_2_COPY_BIT,
 		                                            VK_ACCESS_2_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
 		                                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
@@ -2172,7 +2172,7 @@ bool vulkanvideo_codifica_memoria(VulkanVideo *v, const uint8_t *pixel, uint32_t
 			                            .pRegions = &reg };
 		barriere(cb, &b, 1, NULL, 0);
 		vkCmdCopyBufferToImage2(cb, &ci);
-		b = barriera_immagine(v->rgb.immagine, VK_IMAGE_ASPECT_COLOR_BIT, 1, VK_PIPELINE_STAGE_2_COPY_BIT,
+		b = barrier_image(v->rgb.immagine, VK_IMAGE_ASPECT_COLOR_BIT, 1, VK_PIPELINE_STAGE_2_COPY_BIT,
 		                      VK_ACCESS_2_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
 		                      VK_ACCESS_2_SHADER_SAMPLED_READ_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 		                      VK_IMAGE_LAYOUT_GENERAL);
@@ -2180,7 +2180,7 @@ bool vulkanvideo_codifica_memoria(VulkanVideo *v, const uint8_t *pixel, uint32_t
 	}
 	if (!converti(v, v->rgb.vista, n, errore, errore_byte))
 		return false;
-	if (!manda_e_aspetta(v, v->d->coda_calcolo, cb, v->fence_calcolo, errore, errore_byte))
+	if (!send_and_wait(v, v->d->compute_queue, cb, v->compute_fence, errore, errore_byte))
 		return false;
 	t->us_conversione = adesso_us() - t1;
 
@@ -2189,7 +2189,7 @@ bool vulkanvideo_codifica_memoria(VulkanVideo *v, const uint8_t *pixel, uint32_t
 
 /* ── from DMA-BUF ───────────────────────────────────────────────────────── */
 
-static VkFormat formato_vulkan_di(uint32_t drm)
+static VkFormat vulkan_format_of(uint32_t drm)
 {
 	switch (drm) {
 	case DRM_FORMAT_XRGB8888:
@@ -2214,8 +2214,8 @@ static VkFormat formato_vulkan_di(uint32_t drm)
  */
 int vulkanvideo_modificatori(const char *nodo, uint32_t formato_drm, uint64_t *fuori, int quanti)
 {
-	VkFormat f = formato_vulkan_di(formato_drm);
-	VulkanVideoDispositivo *d;
+	VkFormat f = vulkan_format_of(formato_drm);
+	VulkanVideoDevice *d;
 	char perche[256] = { 0 };
 	int n = 0;
 
@@ -2245,7 +2245,7 @@ int vulkanvideo_modificatori(const char *nodo, uint32_t formato_drm, uint64_t *f
 			}
 		}
 	}
-	vulkanvideo_chiudi_dispositivo(d);
+	vulkanvideo_close_device(d);
 	return n;
 }
 
@@ -2270,11 +2270,11 @@ bool vulkanvideo_scheda_rifiuta_il_lineare(const char *nodo)
 	return bo == NULL;
 }
 
-static Importazione *importa(VulkanVideo *v, const VulkanVideoSuperficie *s, char *errore, size_t errore_byte)
+static Importazione *importa(VulkanVideo *v, const VulkanVideoSurface *s, char *errore, size_t errore_byte)
 {
 	VkDevice dev = v->d->dispositivo;
 	Importazione *libera = NULL;
-	VkFormat f = formato_vulkan_di(s->formato_drm);
+	VkFormat f = vulkan_format_of(s->formato_drm);
 
 	if (!v->d->ha_dmabuf) {
 		di(errore, errore_byte, "«%s» lacks the DMA-BUF extensions", v->d->nome);
@@ -2284,10 +2284,10 @@ static Importazione *importa(VulkanVideo *v, const VulkanVideoSuperficie *s, cha
 		di(errore, errore_byte, "unexpected DRM format 0x%08x (XRGB8888/XBGR8888)", s->formato_drm);
 		return NULL;
 	}
-	if (s->generazione != v->generazione_vista) {
+	if (s->generazione != v->seen_generation) {
 		for (unsigned i = 0; i < IMPORTAZIONI_MAX; i++)
-			importazione_libera(v, &v->importate[i]);
-		v->generazione_vista = s->generazione;
+			import_release(v, &v->importate[i]);
+		v->seen_generation = s->generazione;
 	}
 	for (unsigned i = 0; i < IMPORTAZIONI_MAX; i++) {
 		Importazione *im = &v->importate[i];
@@ -2300,7 +2300,7 @@ static Importazione *importa(VulkanVideo *v, const VulkanVideoSuperficie *s, cha
 	}
 	if (!libera) {
 		/* the cache is full: the first is dropped (no command in flight: every round is waited for) */
-		importazione_libera(v, &v->importate[0]);
+		import_release(v, &v->importate[0]);
 		libera = &v->importate[0];
 	}
 	{
@@ -2361,21 +2361,21 @@ static Importazione *importa(VulkanVideo *v, const VulkanVideoSuperficie *s, cha
 		if (r != VK_SUCCESS) {
 			di(errore, errore_byte, "vkCreateImage (DMA-BUF %ux%u stride %u): %s", s->larghezza, s->altezza, s->stride,
 			   vk_nome(r));
-			importazione_libera(v, libera);
+			import_release(v, libera);
 			return NULL;
 		}
 		vkGetImageMemoryRequirements(dev, libera->immagine, &req);
 		r = v->d->f.GetMemoryFdPropertiesKHR(dev, VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT, s->fd, &fdp);
 		if (r != VK_SUCCESS) {
 			di(errore, errore_byte, "vkGetMemoryFdPropertiesKHR(fd %d): %s", s->fd, vk_nome(r));
-			importazione_libera(v, libera);
+			import_release(v, libera);
 			return NULL;
 		}
 		/* ⛔ the descriptor is not ours: it is duplicated, and Vulkan closes the duplicate */
 		fd2 = fcntl(s->fd, F_DUPFD_CLOEXEC, 0);
 		if (fd2 < 0) {
 			di(errore, errore_byte, "dup of the DMA-BUF: %s", strerror(errno));
-			importazione_libera(v, libera);
+			import_release(v, libera);
 			return NULL;
 		}
 		{
@@ -2389,31 +2389,31 @@ static Importazione *importa(VulkanVideo *v, const VulkanVideoSuperficie *s, cha
 				close(fd2);
 				di(errore, errore_byte, "no memory type shared by the image (0x%x) and the DMA-BUF (0x%x)",
 				   req.memoryTypeBits, fdp.memoryTypeBits);
-				importazione_libera(v, libera);
+				import_release(v, libera);
 				return NULL;
 			}
-			if (!memoria_alloca(v, &req2, 0, 0, &imp, &libera->memoria, NULL, errore, errore_byte)) {
+			if (!alloc_memory(v, &req2, 0, 0, &imp, &libera->memoria, NULL, errore, errore_byte)) {
 				close(fd2);
-				importazione_libera(v, libera);
+				import_release(v, libera);
 				return NULL;
 			}
 		}
 		r = vkBindImageMemory(dev, libera->immagine, libera->memoria, 0);
 		if (r != VK_SUCCESS) {
 			di(errore, errore_byte, "vkBindImageMemory (DMA-BUF): %s", vk_nome(r));
-			importazione_libera(v, libera);
+			import_release(v, libera);
 			return NULL;
 		}
 		if (!vista(v, libera->immagine, f, VK_IMAGE_ASPECT_COLOR_BIT, 0, &libera->vista, errore, errore_byte)) {
-			importazione_libera(v, libera);
+			import_release(v, libera);
 			return NULL;
 		}
 	}
 	return libera;
 }
 
-bool vulkanvideo_codifica_dmabuf(VulkanVideo *v, const VulkanVideoSuperficie *s, bool chiave,
-                                 const uint8_t **dati, size_t *byte, VulkanVideoTempi *t, char *errore,
+bool vulkanvideo_encode_dmabuf(VulkanVideo *v, const VulkanVideoSurface *s, bool chiave,
+                                 const uint8_t **dati, size_t *byte, VulkanVideoTimings *t, char *errore,
                                  size_t errore_byte)
 {
 	uint64_t t0;
@@ -2432,36 +2432,36 @@ bool vulkanvideo_codifica_dmabuf(VulkanVideo *v, const VulkanVideoSuperficie *s,
 	im = importa(v, s, errore, errore_byte);
 	if (!im)
 		return false;
-	n = v->prossimo_ingresso;
-	v->prossimo_ingresso = (n + 1) % INGRESSI;
-	cb = v->cb_calcolo;
+	n = v->next_ingress;
+	v->next_ingress = (n + 1) % INGRESSI;
+	cb = v->cb_compute;
 	if (!comincia(cb, errore, errore_byte))
 		return false;
 	{
 		/* the acquisition from outside: the compositor wrote, we read */
-		VkImageMemoryBarrier2 b = barriera_immagine(im->immagine, VK_IMAGE_ASPECT_COLOR_BIT, 1,
+		VkImageMemoryBarrier2 b = barrier_image(im->immagine, VK_IMAGE_ASPECT_COLOR_BIT, 1,
 		                                            VK_PIPELINE_STAGE_2_NONE, 0, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
 		                                            VK_ACCESS_2_SHADER_SAMPLED_READ_BIT,
-		                                            im->acquisita ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_UNDEFINED,
+		                                            im->acquired ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_UNDEFINED,
 		                                            VK_IMAGE_LAYOUT_GENERAL);
 		b.srcQueueFamilyIndex = estranea;
-		b.dstQueueFamilyIndex = v->d->fam_calcolo;
+		b.dstQueueFamilyIndex = v->d->compute_fam;
 		barriere(cb, &b, 1, NULL, 0);
-		im->acquisita = true;
+		im->acquired = true;
 	}
 	if (!converti(v, im->vista, n, errore, errore_byte))
 		return false;
 	{
 		/* and the release: the card has finished reading when the fence fires */
-		VkImageMemoryBarrier2 b = barriera_immagine(im->immagine, VK_IMAGE_ASPECT_COLOR_BIT, 1,
+		VkImageMemoryBarrier2 b = barrier_image(im->immagine, VK_IMAGE_ASPECT_COLOR_BIT, 1,
 		                                            VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
 		                                            VK_ACCESS_2_SHADER_SAMPLED_READ_BIT, VK_PIPELINE_STAGE_2_NONE, 0,
 		                                            VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL);
-		b.srcQueueFamilyIndex = v->d->fam_calcolo;
+		b.srcQueueFamilyIndex = v->d->compute_fam;
 		b.dstQueueFamilyIndex = estranea;
 		barriere(cb, &b, 1, NULL, 0);
 	}
-	if (!manda_e_aspetta(v, v->d->coda_calcolo, cb, v->fence_calcolo, errore, errore_byte))
+	if (!send_and_wait(v, v->d->compute_queue, cb, v->compute_fence, errore, errore_byte))
 		return false;
 	t->us_conversione = adesso_us() - t0;
 	t->us_caricamento = 0; /* ⛔ this leg does NOT EXIST on zero copy */
@@ -2477,12 +2477,12 @@ typedef struct {
 	VkVideoEncodeRateControlInfoKHR rc;
 	VkVideoEncodeRateControlLayerInfoKHR strato;
 	VkVideoEncodeH264RateControlInfoKHR rc264;
-	VkVideoEncodeH264RateControlLayerInfoKHR strato264;
+	VkVideoEncodeH264RateControlLayerInfoKHR layer264;
 	VkVideoEncodeH265RateControlInfoKHR rc265;
-	VkVideoEncodeH265RateControlLayerInfoKHR strato265;
+	VkVideoEncodeH265RateControlLayerInfoKHR layer265;
 } Regolatore;
 
-static void regolatore_componi(VulkanVideo *v, Regolatore *g)
+static void regulator_compose(VulkanVideo *v, Regolatore *g)
 {
 	bool h264 = v->r.codec == VULKANVIDEO_H264;
 	uint32_t gop = v->r.chiavi_ogni ? v->r.chiavi_ogni : UINT32_MAX;
@@ -2499,32 +2499,32 @@ static void regolatore_componi(VulkanVideo *v, Regolatore *g)
 		.pNext = h264 ? (void *) &g->rc264 : (void *) &g->rc265,
 		.rateControlMode = VK_VIDEO_ENCODE_RATE_CONTROL_MODE_DISABLED_BIT_KHR };
 	if (v->dich.modo_rc == VULKANVIDEO_RC_VBR) {
-		int q = v->qp_corrente;
-		g->strato264 = (VkVideoEncodeH264RateControlLayerInfoKHR){
+		int q = v->current_qp;
+		g->layer264 = (VkVideoEncodeH264RateControlLayerInfoKHR){
 			.sType = VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_RATE_CONTROL_LAYER_INFO_KHR,
 			.useMinQp = VK_TRUE, .minQp = { q, q, q }, .useMaxQp = VK_FALSE };
-		g->strato265 = (VkVideoEncodeH265RateControlLayerInfoKHR){
+		g->layer265 = (VkVideoEncodeH265RateControlLayerInfoKHR){
 			.sType = VK_STRUCTURE_TYPE_VIDEO_ENCODE_H265_RATE_CONTROL_LAYER_INFO_KHR,
 			.useMinQp = VK_TRUE, .minQp = { q, q, q }, .useMaxQp = VK_FALSE };
 		g->strato = (VkVideoEncodeRateControlLayerInfoKHR){
 			.sType = VK_STRUCTURE_TYPE_VIDEO_ENCODE_RATE_CONTROL_LAYER_INFO_KHR,
-			.pNext = h264 ? (void *) &g->strato264 : (void *) &g->strato265,
+			.pNext = h264 ? (void *) &g->layer264 : (void *) &g->layer265,
 			.averageBitrate = (uint64_t) v->r.banda_punto, .maxBitrate = (uint64_t) v->r.banda_filo,
 			.frameRateNumerator = v->r.fotogrammi_al_secondo, .frameRateDenominator = 1 };
 		g->rc.rateControlMode = VK_VIDEO_ENCODE_RATE_CONTROL_MODE_VBR_BIT_KHR;
 		g->rc.layerCount = 1;
 		g->rc.pLayers = &g->strato;
-		g->rc.virtualBufferSizeInMs = (uint32_t) ((int64_t) v->r.serbatoio_bit * 1000 / v->r.banda_filo);
+		g->rc.virtualBufferSizeInMs = (uint32_t) ((int64_t) v->r.reservoir_bit * 1000 / v->r.banda_filo);
 		g->rc.initialVirtualBufferSizeInMs = g->rc.virtualBufferSizeInMs * 3 / 4;
 	}
 }
 
 static bool codifica(VulkanVideo *v, unsigned n, bool chiave, const uint8_t **dati, size_t *byte,
-                     VulkanVideoTempi *t, char *errore, size_t errore_byte)
+                     VulkanVideoTimings *t, char *errore, size_t errore_byte)
 {
 	uint64_t t0 = adesso_us();
-	VkCommandBuffer cb = v->cb_codifica;
-	Immagine *in = &v->ingresso[n];
+	VkCommandBuffer cb = v->cb_encoding;
+	Bitmap *in = &v->ingresso[n];
 	bool h264 = v->r.codec == VULKANVIDEO_H264;
 	bool idr;
 	unsigned slot_cur;
@@ -2533,69 +2533,69 @@ static bool codifica(VulkanVideo *v, unsigned n, bool chiave, const uint8_t **da
 	uint32_t nb = 0;
 
 	/* ── who this frame is ─────────────────────────────────────────────── */
-	idr = chiave || !v->riferimento_valido || v->ordine == 0
-	      || (v->r.chiavi_ogni && v->nel_gop >= v->r.chiavi_ogni);
+	idr = chiave || !v->reference_valid || v->ordine == 0
+	      || (v->r.chiavi_ogni && v->in_gop >= v->r.chiavi_ogni);
 	if (idr) {
-		v->nel_gop = 0;
+		v->in_gop = 0;
 		v->frame_num = 0;
 		v->poc = 0;
 		if (v->ordine)
 			v->idr_pic_id = (v->idr_pic_id + 1) & 0xFFFFu;
 	} else {
-		v->frame_num = v->frame_num_rif + 1;
-		v->poc = v->poc_rif + 1;
+		v->frame_num = v->frame_num_ref + 1;
+		v->poc = v->poc_ref + 1;
 	}
-	v->nel_gop++;
-	slot_cur = v->riferimento_valido ? (v->slot_rif + 1) % SLOT_DPB : 0;
-	regolatore_componi(v, &reg);
+	v->in_gop++;
+	slot_cur = v->reference_valid ? (v->slot_ref + 1) % SLOT_DPB : 0;
+	regulator_compose(v, &reg);
 
 	if (!comincia(cb, errore, errore_byte))
 		return false;
 	vkCmdResetQueryPool(cb, v->query, 0, 1);
 
 	/* ── the barriers: the input towards the encoder, the DPB ─────────── */
-	b[nb++] = barriera_immagine(in->immagine, VK_IMAGE_ASPECT_COLOR_BIT, 1, VK_PIPELINE_STAGE_2_NONE, 0,
+	b[nb++] = barrier_image(in->immagine, VK_IMAGE_ASPECT_COLOR_BIT, 1, VK_PIPELINE_STAGE_2_NONE, 0,
 	                            VK_PIPELINE_STAGE_2_VIDEO_ENCODE_BIT_KHR, VK_ACCESS_2_VIDEO_ENCODE_READ_BIT_KHR,
 	                            in->layout, VK_IMAGE_LAYOUT_VIDEO_ENCODE_SRC_KHR);
-	b[nb++] = barriera_immagine(v->dpb.immagine, VK_IMAGE_ASPECT_COLOR_BIT, SLOT_DPB,
-	                            v->dpb_inizializzata ? VK_PIPELINE_STAGE_2_VIDEO_ENCODE_BIT_KHR : VK_PIPELINE_STAGE_2_NONE,
-	                            v->dpb_inizializzata ? VK_ACCESS_2_VIDEO_ENCODE_WRITE_BIT_KHR : 0,
+	b[nb++] = barrier_image(v->dpb.immagine, VK_IMAGE_ASPECT_COLOR_BIT, SLOT_DPB,
+	                            v->dpb_initialized ? VK_PIPELINE_STAGE_2_VIDEO_ENCODE_BIT_KHR : VK_PIPELINE_STAGE_2_NONE,
+	                            v->dpb_initialized ? VK_ACCESS_2_VIDEO_ENCODE_WRITE_BIT_KHR : 0,
 	                            VK_PIPELINE_STAGE_2_VIDEO_ENCODE_BIT_KHR,
 	                            VK_ACCESS_2_VIDEO_ENCODE_READ_BIT_KHR | VK_ACCESS_2_VIDEO_ENCODE_WRITE_BIT_KHR,
-	                            v->dpb_inizializzata ? VK_IMAGE_LAYOUT_VIDEO_ENCODE_DPB_KHR : VK_IMAGE_LAYOUT_UNDEFINED,
+	                            v->dpb_initialized ? VK_IMAGE_LAYOUT_VIDEO_ENCODE_DPB_KHR : VK_IMAGE_LAYOUT_UNDEFINED,
 	                            VK_IMAGE_LAYOUT_VIDEO_ENCODE_DPB_KHR);
 	barriere(cb, b, nb, NULL, 0);
 	in->layout = VK_IMAGE_LAYOUT_VIDEO_ENCODE_SRC_KHR;
-	v->dpb_inizializzata = true;
+	v->dpb_initialized = true;
 
 	{
 		/* ── the DPB resources: the reference (if any) and the current one ── */
 		VkVideoPictureResourceInfoKHR res_dpb[SLOT_DPB];
-		VkVideoReferenceSlotInfoKHR slot_begin[2], slot_rif, slot_setup;
+		VkVideoReferenceSlotInfoKHR slot_begin[2], slot_ref, slot_setup;
 		uint32_t n_begin = 0;
-		StdVideoEncodeH264ReferenceInfo ri264_cur, ri264_rif;
-		StdVideoEncodeH265ReferenceInfo ri265_cur, ri265_rif;
-		VkVideoEncodeH264DpbSlotInfoKHR dpb264_cur, dpb264_rif;
-		VkVideoEncodeH265DpbSlotInfoKHR dpb265_cur, dpb265_rif;
+		StdVideoEncodeH264ReferenceInfo ri264_cur, ri264_ref;
+		StdVideoEncodeH265ReferenceInfo ri265_cur, ri265_ref;
+		VkVideoEncodeH264DpbSlotInfoKHR dpb264_cur, dpb264_ref;
+		VkVideoEncodeH265DpbSlotInfoKHR dpb265_cur, dpb265_ref;
 		VkVideoBeginCodingInfoKHR inizio = { .sType = VK_STRUCTURE_TYPE_VIDEO_BEGIN_CODING_INFO_KHR,
 			                                 .videoSession = v->sessione, .videoSessionParameters = v->parametri };
 		VkVideoEncodeInfoKHR enc = { .sType = VK_STRUCTURE_TYPE_VIDEO_ENCODE_INFO_KHR };
 		/* H.264 */
-		StdVideoEncodeH264ReferenceListsInfo liste264;
+		StdVideoEncodeH264ReferenceListsInfo lists264;
 		StdVideoEncodeH264PictureInfo pic264;
 		StdVideoEncodeH264SliceHeader slice264;
 		VkVideoEncodeH264NaluSliceInfoKHR nalu264;
 		VkVideoEncodeH264PictureInfoKHR vk264;
 		/* HEVC */
-		StdVideoEncodeH265ReferenceListsInfo liste265;
+		StdVideoEncodeH265ReferenceListsInfo lists265;
 		StdVideoH265ShortTermRefPicSet rps265;
 		StdVideoEncodeH265PictureInfo pic265;
 		StdVideoEncodeH265SliceSegmentHeader slice265;
 		VkVideoEncodeH265NaluSliceSegmentInfoKHR nalu265;
 		VkVideoEncodeH265PictureInfoKHR vk265;
-		int qp = v->dich.modo_rc == VULKANVIDEO_RC_CQP ? v->qp_corrente : 0;
+		int qp = v->dich.modo_rc == VULKANVIDEO_RC_CQP ? v->current_qp : 0;
 
-		memset(&slot_rif, 0, sizeof slot_rif);
+		memset(&slot_ref, 0, sizeof slot_ref);
 		for (unsigned i = 0; i < SLOT_DPB; i++)
 			res_dpb[i] = (VkVideoPictureResourceInfoKHR){
 				.sType = VK_STRUCTURE_TYPE_VIDEO_PICTURE_RESOURCE_INFO_KHR,
@@ -2616,21 +2616,21 @@ static bool codifica(VulkanVideo *v, unsigned n, bool chiave, const uint8_t **da
 			                                         .pNext = h264 ? (void *) &dpb264_cur : (void *) &dpb265_cur,
 			                                         .slotIndex = (int32_t) slot_cur, .pPictureResource = &res_dpb[slot_cur] };
 		if (!idr) {
-			memset(&ri264_rif, 0, sizeof ri264_rif);
-			ri264_rif.primary_pic_type = v->rif_era_idr ? STD_VIDEO_H264_PICTURE_TYPE_IDR : STD_VIDEO_H264_PICTURE_TYPE_P;
-			ri264_rif.FrameNum = v->frame_num_rif;
-			ri264_rif.PicOrderCnt = 2 * (int32_t) v->frame_num_rif;
-			memset(&ri265_rif, 0, sizeof ri265_rif);
-			ri265_rif.pic_type = v->rif_era_idr ? STD_VIDEO_H265_PICTURE_TYPE_IDR : STD_VIDEO_H265_PICTURE_TYPE_P;
-			ri265_rif.PicOrderCntVal = v->poc_rif;
-			dpb264_rif = (VkVideoEncodeH264DpbSlotInfoKHR){ .sType = VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_DPB_SLOT_INFO_KHR,
-				                                             .pStdReferenceInfo = &ri264_rif };
-			dpb265_rif = (VkVideoEncodeH265DpbSlotInfoKHR){ .sType = VK_STRUCTURE_TYPE_VIDEO_ENCODE_H265_DPB_SLOT_INFO_KHR,
-				                                             .pStdReferenceInfo = &ri265_rif };
-			slot_rif = (VkVideoReferenceSlotInfoKHR){ .sType = VK_STRUCTURE_TYPE_VIDEO_REFERENCE_SLOT_INFO_KHR,
-				                                       .pNext = h264 ? (void *) &dpb264_rif : (void *) &dpb265_rif,
-				                                       .slotIndex = (int32_t) v->slot_rif, .pPictureResource = &res_dpb[v->slot_rif] };
-			slot_begin[n_begin++] = slot_rif;
+			memset(&ri264_ref, 0, sizeof ri264_ref);
+			ri264_ref.primary_pic_type = v->ref_was_idr ? STD_VIDEO_H264_PICTURE_TYPE_IDR : STD_VIDEO_H264_PICTURE_TYPE_P;
+			ri264_ref.FrameNum = v->frame_num_ref;
+			ri264_ref.PicOrderCnt = 2 * (int32_t) v->frame_num_ref;
+			memset(&ri265_ref, 0, sizeof ri265_ref);
+			ri265_ref.pic_type = v->ref_was_idr ? STD_VIDEO_H265_PICTURE_TYPE_IDR : STD_VIDEO_H265_PICTURE_TYPE_P;
+			ri265_ref.PicOrderCntVal = v->poc_ref;
+			dpb264_ref = (VkVideoEncodeH264DpbSlotInfoKHR){ .sType = VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_DPB_SLOT_INFO_KHR,
+				                                             .pStdReferenceInfo = &ri264_ref };
+			dpb265_ref = (VkVideoEncodeH265DpbSlotInfoKHR){ .sType = VK_STRUCTURE_TYPE_VIDEO_ENCODE_H265_DPB_SLOT_INFO_KHR,
+				                                             .pStdReferenceInfo = &ri265_ref };
+			slot_ref = (VkVideoReferenceSlotInfoKHR){ .sType = VK_STRUCTURE_TYPE_VIDEO_REFERENCE_SLOT_INFO_KHR,
+				                                       .pNext = h264 ? (void *) &dpb264_ref : (void *) &dpb265_ref,
+				                                       .slotIndex = (int32_t) v->slot_ref, .pPictureResource = &res_dpb[v->slot_ref] };
+			slot_begin[n_begin++] = slot_ref;
 		}
 		/* the current one: bound to the round, still without a slot (-1); the encode activates the slot */
 		slot_begin[n_begin] = (VkVideoReferenceSlotInfoKHR){ .sType = VK_STRUCTURE_TYPE_VIDEO_REFERENCE_SLOT_INFO_KHR,
@@ -2638,28 +2638,28 @@ static bool codifica(VulkanVideo *v, unsigned n, bool chiave, const uint8_t **da
 		n_begin++;
 		inizio.referenceSlotCount = n_begin;
 		inizio.pReferenceSlots = slot_begin;
-		if (v->sessione_azzerata)
+		if (v->session_reset)
 			inizio.pNext = &reg.rc;
 		v->d->f.CmdBeginVideoCodingKHR(cb, &inizio);
 
-		if (!v->sessione_azzerata || v->rc_da_riprogrammare) {
+		if (!v->session_reset || v->rc_to_reprogram) {
 			VkVideoCodingControlInfoKHR ctrl = { .sType = VK_STRUCTURE_TYPE_VIDEO_CODING_CONTROL_INFO_KHR,
 				                                 .pNext = &reg.rc,
 				                                 .flags = VK_VIDEO_CODING_CONTROL_ENCODE_RATE_CONTROL_BIT_KHR };
-			if (!v->sessione_azzerata)
+			if (!v->session_reset)
 				ctrl.flags |= VK_VIDEO_CODING_CONTROL_RESET_BIT_KHR;
 			v->d->f.CmdControlVideoCodingKHR(cb, &ctrl);
-			v->sessione_azzerata = true;
-			v->rc_da_riprogrammare = false;
+			v->session_reset = true;
+			v->rc_to_reprogram = false;
 		}
 
 		/* ── the picture, the slice ─────────────────────────────────────── */
 		if (h264) {
-			memset(&liste264, 0, sizeof liste264);
-			memset(liste264.RefPicList0, STD_VIDEO_H264_NO_REFERENCE_PICTURE, sizeof liste264.RefPicList0);
-			memset(liste264.RefPicList1, STD_VIDEO_H264_NO_REFERENCE_PICTURE, sizeof liste264.RefPicList1);
+			memset(&lists264, 0, sizeof lists264);
+			memset(lists264.RefPicList0, STD_VIDEO_H264_NO_REFERENCE_PICTURE, sizeof lists264.RefPicList0);
+			memset(lists264.RefPicList1, STD_VIDEO_H264_NO_REFERENCE_PICTURE, sizeof lists264.RefPicList1);
 			if (!idr)
-				liste264.RefPicList0[0] = (uint8_t) v->slot_rif;
+				lists264.RefPicList0[0] = (uint8_t) v->slot_ref;
 			memset(&pic264, 0, sizeof pic264);
 			pic264.flags.IdrPicFlag = idr;
 			pic264.flags.is_reference = 1;
@@ -2667,13 +2667,13 @@ static bool codifica(VulkanVideo *v, unsigned n, bool chiave, const uint8_t **da
 			pic264.primary_pic_type = idr ? STD_VIDEO_H264_PICTURE_TYPE_IDR : STD_VIDEO_H264_PICTURE_TYPE_P;
 			pic264.frame_num = v->frame_num;
 			pic264.PicOrderCnt = 2 * (int32_t) v->frame_num;
-			pic264.pRefLists = &liste264;
+			pic264.pRefLists = &lists264;
 			memset(&slice264, 0, sizeof slice264);
 			slice264.flags.direct_spatial_mv_pred_flag = 1;
 			slice264.slice_type = idr ? STD_VIDEO_H264_SLICE_TYPE_I : STD_VIDEO_H264_SLICE_TYPE_P;
 			slice264.cabac_init_idc = STD_VIDEO_H264_CABAC_INIT_IDC_0;
 			slice264.disable_deblocking_filter_idc = STD_VIDEO_H264_DISABLE_DEBLOCKING_FILTER_IDC_DISABLED;
-			slice264.slice_qp_delta = (int8_t) (v->dich.modo_rc == VULKANVIDEO_RC_CQP ? qp - v->qp_fisso : 0);
+			slice264.slice_qp_delta = (int8_t) (v->dich.modo_rc == VULKANVIDEO_RC_CQP ? qp - v->fixed_qp : 0);
 			nalu264 = (VkVideoEncodeH264NaluSliceInfoKHR){ .sType = VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_NALU_SLICE_INFO_KHR,
 				                                            .constantQp = qp, .pStdSliceHeader = &slice264 };
 			vk264 = (VkVideoEncodeH264PictureInfoKHR){ .sType = VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_PICTURE_INFO_KHR,
@@ -2681,15 +2681,15 @@ static bool codifica(VulkanVideo *v, unsigned n, bool chiave, const uint8_t **da
 				                                        .pStdPictureInfo = &pic264, .generatePrefixNalu = VK_FALSE };
 			enc.pNext = &vk264;
 		} else {
-			memset(&liste265, 0, sizeof liste265);
-			memset(liste265.RefPicList0, STD_VIDEO_H265_NO_REFERENCE_PICTURE, sizeof liste265.RefPicList0);
-			memset(liste265.RefPicList1, STD_VIDEO_H265_NO_REFERENCE_PICTURE, sizeof liste265.RefPicList1);
+			memset(&lists265, 0, sizeof lists265);
+			memset(lists265.RefPicList0, STD_VIDEO_H265_NO_REFERENCE_PICTURE, sizeof lists265.RefPicList0);
+			memset(lists265.RefPicList1, STD_VIDEO_H265_NO_REFERENCE_PICTURE, sizeof lists265.RefPicList1);
 			if (!idr)
-				liste265.RefPicList0[0] = (uint8_t) v->slot_rif;
+				lists265.RefPicList0[0] = (uint8_t) v->slot_ref;
 			memset(&rps265, 0, sizeof rps265);
 			if (!idr) {
 				rps265.num_negative_pics = 1;
-				rps265.delta_poc_s0_minus1[0] = (uint16_t) (v->poc - v->poc_rif - 1);
+				rps265.delta_poc_s0_minus1[0] = (uint16_t) (v->poc - v->poc_ref - 1);
 				rps265.used_by_curr_pic_s0_flag = 1;
 			}
 			memset(&pic265, 0, sizeof pic265);
@@ -2699,7 +2699,7 @@ static bool codifica(VulkanVideo *v, unsigned n, bool chiave, const uint8_t **da
 			pic265.flags.short_term_ref_pic_set_sps_flag = 0;
 			pic265.pic_type = idr ? STD_VIDEO_H265_PICTURE_TYPE_IDR : STD_VIDEO_H265_PICTURE_TYPE_P;
 			pic265.PicOrderCntVal = v->poc;
-			pic265.pRefLists = &liste265;
+			pic265.pRefLists = &lists265;
 			pic265.pShortTermRefPicSet = &rps265;
 			memset(&slice265, 0, sizeof slice265);
 			slice265.flags.first_slice_segment_in_pic_flag = 1;
@@ -2708,7 +2708,7 @@ static bool codifica(VulkanVideo *v, unsigned n, bool chiave, const uint8_t **da
 			slice265.flags.collocated_from_l0_flag = 1;
 			slice265.slice_type = idr ? STD_VIDEO_H265_SLICE_TYPE_I : STD_VIDEO_H265_SLICE_TYPE_P;
 			slice265.MaxNumMergeCand = 5;
-			slice265.slice_qp_delta = (int8_t) (v->dich.modo_rc == VULKANVIDEO_RC_CQP ? qp - v->qp_fisso : 0);
+			slice265.slice_qp_delta = (int8_t) (v->dich.modo_rc == VULKANVIDEO_RC_CQP ? qp - v->fixed_qp : 0);
 			nalu265 = (VkVideoEncodeH265NaluSliceSegmentInfoKHR){
 				.sType = VK_STRUCTURE_TYPE_VIDEO_ENCODE_H265_NALU_SLICE_SEGMENT_INFO_KHR,
 				.constantQp = qp, .pStdSliceSegmentHeader = &slice265 };
@@ -2725,7 +2725,7 @@ static bool codifica(VulkanVideo *v, unsigned n, bool chiave, const uint8_t **da
 			.codedExtent = { v->larg_cod, v->alt_cod }, .baseArrayLayer = 0, .imageViewBinding = in->vista };
 		enc.pSetupReferenceSlot = &slot_setup;
 		enc.referenceSlotCount = idr ? 0 : 1;
-		enc.pReferenceSlots = idr ? NULL : &slot_rif;
+		enc.pReferenceSlots = idr ? NULL : &slot_ref;
 		enc.precedingExternallyEncodedBytes =
 		    (idr && (v->cap.codifica.flags & VK_VIDEO_ENCODE_CAPABILITY_PRECEDING_EXTERNALLY_ENCODED_BYTES_BIT_KHR))
 		        ? (uint32_t) v->intestazioni_byte : 0;
@@ -2746,7 +2746,7 @@ static bool codifica(VulkanVideo *v, unsigned n, bool chiave, const uint8_t **da
 				.buffer = v->bitstream, .offset = 0, .size = VK_WHOLE_SIZE };
 			barriere(cb, NULL, 0, &bb, 1);
 		}
-		if (!manda_e_aspetta(v, v->d->coda_codifica, cb, v->fence_codifica, errore, errore_byte))
+		if (!send_and_wait(v, v->d->encode_queue, cb, v->encode_fence, errore, errore_byte))
 			return false;
 	}
 
@@ -2773,8 +2773,8 @@ static bool codifica(VulkanVideo *v, unsigned n, bool chiave, const uint8_t **da
 		if (offset + scritti > v->bitstream_byte)
 			FALLISCI("the query declares %zu+%zu bytes in a buffer of %llu", offset, scritti,
 			         (unsigned long long) v->bitstream_byte);
-		if (!v->bitstream_coerente) {
-			VkMappedMemoryRange mr = { .sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE, .memory = v->bitstream_memoria,
+		if (!v->bitstream_consistent) {
+			VkMappedMemoryRange mr = { .sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE, .memory = v->bitstream_memory,
 				                       .offset = 0, .size = VK_WHOLE_SIZE };
 			vkInvalidateMappedMemoryRanges(v->d->dispositivo, 1, &mr);
 		}
@@ -2787,16 +2787,16 @@ static bool codifica(VulkanVideo *v, unsigned n, bool chiave, const uint8_t **da
 		}
 		if (v->uscita_byte + scritti > v->uscita_capacita)
 			FALLISCI("output of %zu bytes beyond the capacity %zu", v->uscita_byte + scritti, v->uscita_capacita);
-		memcpy(v->uscita + v->uscita_byte, (const uint8_t *) v->bitstream_mappa + offset, scritti);
+		memcpy(v->uscita + v->uscita_byte, (const uint8_t *) v->bitstream_map + offset, scritti);
 		v->uscita_byte += scritti;
 	}
 
 	/* ── this frame is the reference for the next one ─────────────────── */
-	v->riferimento_valido = true;
-	v->slot_rif = slot_cur;
-	v->frame_num_rif = v->frame_num;
-	v->poc_rif = v->poc;
-	v->rif_era_idr = idr;
+	v->reference_valid = true;
+	v->slot_ref = slot_cur;
+	v->frame_num_ref = v->frame_num;
+	v->poc_ref = v->poc;
+	v->ref_was_idr = idr;
 	v->ordine++;
 	t->us_codifica = adesso_us() - t0;
 	*dati = v->uscita;
@@ -2810,10 +2810,10 @@ bool vulkanvideo_qualita(VulkanVideo *v, int qp, char *errore, size_t errore_byt
 		FALLISCI("vulkanvideo: nothing to adjust");
 	if (qp < v->dich.qp_minimo || qp > v->dich.qp_massimo)
 		FALLISCI("QP %d outside what the card declares (%d..%d)", qp, v->dich.qp_minimo, v->dich.qp_massimo);
-	if (qp != v->qp_corrente) {
-		v->qp_corrente = qp;
+	if (qp != v->current_qp) {
+		v->current_qp = qp;
 		if (v->dich.modo_rc == VULKANVIDEO_RC_VBR)
-			v->rc_da_riprogrammare = true;
+			v->rc_to_reprogram = true;
 		registro_dice(REG_CODIFICA, "vulkanvideo: QP %d live (%s)", qp,
 		              v->dich.modo_rc == VULKANVIDEO_RC_CQP ? "the QP of the next frame"
 		                                                     : "the rate controller's floor, reprogrammed");
@@ -2825,15 +2825,15 @@ bool vulkanvideo_qualita(VulkanVideo *v, int qp, char *errore, size_t errore_byt
  * ⛔ PHASE 19 (the GPU hang hunt, 1 Oct 2026) — THE CHAINS INSIDE THE
  *    STRUCTURE.  `Profilo`, `Capacita` and the parameter sets point to fields of
  *    the SAME `VulkanVideo` (`profilo.pNext = &profilo.h264`, `lista.pProfiles`,
- *    `sps.pSequenceParameterSetVui`, ...).  `vulkanvideo_ridimensiona()`
+ *    `sps.pSequenceParameterSetVui`, ...).  `vulkanvideo_resize()`
  *    moves the structure by copy: without this line those pointers would
  *    stay in the previous structure, which is FREED right after.
  *    ⚠ Today nobody follows them after opening (the product resizes by
  *    closing and reopening, `codificatore.c`), so it is not the cause of the
  *    page fault; but it is a use-after-free ready to fire at the first
- *    `immagine_crea(..., profilo=true)` done after a move.
+ *    `image_create(..., profilo=true)` done after a move.
  */
-static void ripunta(VulkanVideo *v)
+static void repoint(VulkanVideo *v)
 {
 	bool h264 = v->r.codec == VULKANVIDEO_H264;
 
@@ -2857,7 +2857,7 @@ static void ripunta(VulkanVideo *v)
 		v->sps265.pSequenceParameterSetVui = &v->vui265;
 }
 
-bool vulkanvideo_ridimensiona(VulkanVideo *v, uint32_t larghezza, uint32_t altezza, char *errore, size_t errore_byte)
+bool vulkanvideo_resize(VulkanVideo *v, uint32_t larghezza, uint32_t altezza, char *errore, size_t errore_byte)
 {
 	VulkanVideoRichiesta r;
 	VulkanVideo *nuovo;
@@ -2867,19 +2867,19 @@ bool vulkanvideo_ridimensiona(VulkanVideo *v, uint32_t larghezza, uint32_t altez
 	r = v->r;
 	r.larghezza = larghezza;
 	r.altezza = altezza;
-	r.qp = v->qp_corrente;
+	r.qp = v->current_qp;
 	/* ⛔ the new one is opened BEFORE closing the old: if it does not open, the
 	 *    old one stays as it was and the caller knows */
-	nuovo = vulkanvideo_apri(v->d, &r, errore, errore_byte);
+	nuovo = vulkanvideo_open(v->d, &r, errore, errore_byte);
 	if (!nuovo)
 		return false;
 	{
 		VulkanVideo vecchio = *v;
 		*v = *nuovo;
 		*nuovo = vecchio;
-		ripunta(v);
-		ripunta(nuovo);
-		vulkanvideo_chiudi(nuovo); /* it is the old one, moved over */
+		repoint(v);
+		repoint(nuovo);
+		vulkanvideo_close(nuovo); /* it is the old one, moved over */
 	}
 	return true;
 }

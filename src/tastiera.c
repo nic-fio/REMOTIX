@@ -78,7 +78,7 @@
  *     a NULL with no reason.  ⇒ Here `xkbcommon`'s log is HIJACKED
  *     (`xkb_context_set_log_fn`) and the first error becomes the text of
  *     `*errore`.  Whoever reads the log finds the reason, not a NULL;
- *   · ⛔ and `tastiera_disposizione()` carries inside the name the COMPILED
+ *   · ⛔ and `kbd_layout()` carries inside the name the COMPILED
  *     layout gives itself — «it [Italian]», «us [English (US)]».  If one day
  *     a fallback came in from somewhere else, it would show **in the log**
  *     as «it [English (US)]», which is a line that reads by itself.
@@ -126,14 +126,14 @@ struct tastiera
 	 * ⛔ modifier → key that lights it up, ASKED of the layout and not
 	 *    written by hand.  0 = no key lights it up on its own.
 	 */
-	uint16_t tasto_del_mod[MAX_MOD];
+	uint16_t mod_key[MAX_MOD];
 	xkb_mod_index_t n_mod;
 
 	/* The two locks, which are NEVER used to make a letter: see below. */
-	xkb_mod_index_t mod_maiuscole, mod_numeri;
+	xkb_mod_index_t mod_caps, mod_num;
 
 	/* The hijacking of xkbcommon's log, during compilation. */
-	char primo_errore[256];
+	char first_error[256];
 	int errori;
 
 	/*
@@ -154,7 +154,7 @@ struct tastiera
 	 *      to tell which was whose.
 	 *
 	 * ⇒ The name is carried by the KEYBOARD, for the whole life of the opening: so
-	 *   the lines coming out of `xkb_parla()` see it too, which has nothing else
+	 *   the lines coming out of `xkb_log_cb()` see it too, which has nothing else
 	 *   in hand but this structure.
 	 * ⚠ Empty is the truth when it is not known: `registro.c` then falls back
 	 *   on the PROCESS identity, which in the child is the right one.  ⇒ The
@@ -167,7 +167,7 @@ struct tastiera
 /* ------------------------------------------------------------------ *
  * xkbcommon's log, hijacked
  * ------------------------------------------------------------------ */
-static void xkb_parla(struct xkb_context *ctx, enum xkb_log_level livello, const char *fmt,
+static void xkb_log_cb(struct xkb_context *ctx, enum xkb_log_level livello, const char *fmt,
                       va_list ap)
 {
 	Tastiera *t = xkb_context_get_user_data(ctx);
@@ -185,8 +185,8 @@ static void xkb_parla(struct xkb_context *ctx, enum xkb_log_level livello, const
 	if (livello <= XKB_LOG_LEVEL_ERROR)
 	{
 		t->errori++;
-		if (!t->primo_errore[0])
-			snprintf(t->primo_errore, sizeof t->primo_errore, "%s", riga);
+		if (!t->first_error[0])
+			snprintf(t->first_error, sizeof t->first_error, "%s", riga);
 		registro_dettaglio_di(REG_TASTIERA, t->chi, "xkbcommon: %s", riga);
 	}
 	else
@@ -208,13 +208,13 @@ static void xkb_parla(struct xkb_context *ctx, enum xkb_log_level livello, const
  *   text: "form:" or "unknown:".  ⇒ It is one of the seams the
  *   report asks of the coordinator.
  * ------------------------------------------------------------------ */
-static int carattere_ammesso(char c)
+static int allowed_char(char c)
 {
 	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') ||
 	       c == '_' || c == '-';
 }
 
-static int forma_valida(const char *s, char *layout, size_t nl, char *variante, size_t nv)
+static int valid_shape(const char *s, char *layout, size_t nl, char *variante, size_t nv)
 {
 	const char *par = strchr(s, '(');
 	size_t len_l;
@@ -226,7 +226,7 @@ static int forma_valida(const char *s, char *layout, size_t nl, char *variante, 
 	if (len_l == 0 || len_l >= nl)
 		return 0;
 	for (size_t i = 0; i < len_l; i++)
-		if (!carattere_ammesso(s[i]))
+		if (!allowed_char(s[i]))
 			return 0;
 	memcpy(layout, s, len_l);
 	layout[len_l] = 0;
@@ -245,7 +245,7 @@ static int forma_valida(const char *s, char *layout, size_t nl, char *variante, 
 		if (len_v == 0 || len_v >= nv)
 			return 0;
 		for (size_t i = 0; i < len_v; i++)
-			if (!carattere_ammesso(par[1 + i]))
+			if (!allowed_char(par[1 + i]))
 				return 0;
 		memcpy(variante, par + 1, len_v);
 		variante[len_v] = 0;
@@ -300,7 +300,7 @@ static const uint16_t TASTI_DI_UNA_TASTIERA_VERA[] = {
 };
 
 /* Which modifier does this key light up, if it lights up exactly one? */
-static int un_solo_modificatore(struct xkb_keymap *km, xkb_keycode_t k, int *quale)
+static int single_modifier(struct xkb_keymap *km, xkb_keycode_t k, int *quale)
 {
 	struct xkb_state *st = xkb_state_new(km);
 	xkb_mod_mask_t attivi;
@@ -317,11 +317,11 @@ static int un_solo_modificatore(struct xkb_keymap *km, xkb_keycode_t k, int *qua
 	return 1;
 }
 
-static void impara_i_modificatori(Tastiera *t)
+static void learn_modifiers(Tastiera *t)
 {
 	xkb_keycode_t min = xkb_keymap_min_keycode(t->keymap);
 	xkb_keycode_t max = xkb_keymap_max_keycode(t->keymap);
-	uint8_t gia_preferito[MAX_MOD] = {0};
+	uint8_t already_preferred[MAX_MOD] = {0};
 	size_t i;
 
 	t->n_mod = xkb_keymap_num_mods(t->keymap);
@@ -332,16 +332,16 @@ static void impara_i_modificatori(Tastiera *t)
 	for (xkb_keycode_t k = min; k <= max; k++)
 	{
 		int quale;
-		if (k < 8 || !un_solo_modificatore(t->keymap, k, &quale))
+		if (k < 8 || !single_modifier(t->keymap, k, &quale))
 			continue;
-		if (quale < (int)t->n_mod && !t->tasto_del_mod[quale])
-			t->tasto_del_mod[quale] = EVDEV_DA_XKB(k);
+		if (quale < (int)t->n_mod && !t->mod_key[quale])
+			t->mod_key[quale] = EVDEV_DA_XKB(k);
 	}
 
 	/*
 	 * 2. and then the preference, on top of the answers already obtained.
 	 *
-	 * ⚠ `gia_preferito` is not a theoretical precaution: without it, the list was
+	 * ⚠ `already_preferred` is not a theoretical precaution: without it, the list was
 	 *   walked to the end and for Shift **the right one** won (evdev 54),
 	 *   because it was the last of the two to pass through here.  It worked — the bench
 	 *   said green — but a log saying "right Shift" where every hand
@@ -356,21 +356,21 @@ static void impara_i_modificatori(Tastiera *t)
 
 		if (k < min || k > max)
 			continue;
-		if (!un_solo_modificatore(t->keymap, k, &quale))
+		if (!single_modifier(t->keymap, k, &quale))
 			continue;
 		if (quale >= (int)t->n_mod)
 			continue;
-		if (gia_preferito[quale] || t->tasto_del_mod[quale] == evdev)
+		if (already_preferred[quale] || t->mod_key[quale] == evdev)
 		{
-			gia_preferito[quale] = 1;
+			already_preferred[quale] = 1;
 			continue;
 		}
 		registro_dettaglio_di(REG_TASTIERA, t->chi,
 		                      "modifier %d: key %u is preferred to %u (a real "
 		                      "keyboard has the first)",
-		                      quale, evdev, t->tasto_del_mod[quale]);
-		t->tasto_del_mod[quale] = evdev;
-		gia_preferito[quale] = 1;
+		                      quale, evdev, t->mod_key[quale]);
+		t->mod_key[quale] = evdev;
+		already_preferred[quale] = 1;
 	}
 }
 
@@ -398,15 +398,15 @@ Tastiera *tastiera_apri_per(const char *disposizione, const char *chi, char **er
 	t = calloc(1, sizeof *t);
 	if (!t)
 		return NULL;
-	t->mod_maiuscole = XKB_MOD_INVALID;
-	t->mod_numeri = XKB_MOD_INVALID;
+	t->mod_caps = XKB_MOD_INVALID;
+	t->mod_num = XKB_MOD_INVALID;
 	/* ⭐ The name is set BEFORE any line: the first that can come out is
 	 *   the malformed-shape one, three lines below. */
 	if (chi && *chi)
 		snprintf(t->chi, sizeof t->chi, "%s", chi);
 
 	if (disposizione &&
-	    !forma_valida(disposizione, layout, sizeof layout, variante, sizeof variante))
+	    !valid_shape(disposizione, layout, sizeof layout, variante, sizeof variante))
 	{
 		/* ⛔ `RCP.md` §4.5: this is ERRORE_PROTOCOLLO, not SESSIONE_NON_SERVIBILE. */
 		registro_dice_di(REG_TASTIERA, t->chi,
@@ -428,7 +428,7 @@ Tastiera *tastiera_apri_per(const char *disposizione, const char *chi, char **er
 		return NULL;
 	}
 	xkb_context_set_user_data(t->ctx, t);
-	xkb_context_set_log_fn(t->ctx, xkb_parla);
+	xkb_context_set_log_fn(t->ctx, xkb_log_cb);
 	xkb_context_set_log_level(t->ctx, XKB_LOG_LEVEL_WARNING);
 
 	/*
@@ -476,7 +476,7 @@ Tastiera *tastiera_apri_per(const char *disposizione, const char *chi, char **er
 		 *    who knows whether a session exists or not.  Here we fail and say so.
 		 */
 		const char *perche =
-			t->primo_errore[0] ? t->primo_errore : "xkbcommon did not say why";
+			t->first_error[0] ? t->first_error : "xkbcommon did not say why";
 
 		registro_dice_di(REG_TASTIERA, t->chi,
 		                 "layout «%s» NOT loaded, and no fallback to any other: %s",
@@ -507,9 +507,9 @@ Tastiera *tastiera_apri_per(const char *disposizione, const char *chi, char **er
 	             ? xkb_keymap_layout_get_name(t->keymap, t->gruppo)
 	             : "unnamed");
 
-	impara_i_modificatori(t);
-	t->mod_maiuscole = xkb_keymap_mod_get_index(t->keymap, XKB_MOD_NAME_CAPS);
-	t->mod_numeri = xkb_keymap_mod_get_index(t->keymap, XKB_MOD_NAME_NUM);
+	learn_modifiers(t);
+	t->mod_caps = xkb_keymap_mod_get_index(t->keymap, XKB_MOD_NAME_CAPS);
+	t->mod_num = xkb_keymap_mod_get_index(t->keymap, XKB_MOD_NAME_NUM);
 
 	/*
 	 * ⚠ If `xkb_keymap_num_layouts()` gave more than one, the string would have
@@ -590,14 +590,14 @@ Tastiera *tastiera_apri_per(const char *disposizione, const char *chi, char **er
  * ⚠ And it was not found by the bench — the bench was green, because it looked at the
  *   letter coming out and the letter came out right.  I found it **reading the
  *   log**.  ⇒ Now the bench also looks at the line (`04-b25-tastiera.c`,
- *   `prova_dichiarazione`), which is the only part of this work the user
+ *   `test_declaration`), which is the only part of this work the user
  *   will see when something does not add up.
  *
  * ⇒ The keys that produce a character are compared.  Two layouts that
  *   differ only on the multimedia keys are the same layout **for
  *   what this file does**, and saying so would be noise.
  */
-static int fanno_la_stessa_cosa(struct xkb_keymap *a, xkb_layout_index_t ga,
+static int do_the_same(struct xkb_keymap *a, xkb_layout_index_t ga,
                                 struct xkb_keymap *b, xkb_layout_index_t gb)
 {
 	xkb_keycode_t min = xkb_keymap_min_keycode(a);
@@ -630,7 +630,7 @@ static int fanno_la_stessa_cosa(struct xkb_keymap *a, xkb_layout_index_t ga,
 	return 1;
 }
 
-Tastiera *tastiera_apri_da_keymap(const char *testo, size_t lunghezza, const char *negoziata,
+Tastiera *keyboard_open_from_keymap(const char *testo, size_t lunghezza, const char *negoziata,
                                   char **errore)
 {
 	Tastiera *t;
@@ -662,8 +662,8 @@ Tastiera *tastiera_apri_da_keymap(const char *testo, size_t lunghezza, const cha
 	t = calloc(1, sizeof *t);
 	if (!t)
 		return NULL;
-	t->mod_maiuscole = XKB_MOD_INVALID;
-	t->mod_numeri = XKB_MOD_INVALID;
+	t->mod_caps = XKB_MOD_INVALID;
+	t->mod_num = XKB_MOD_INVALID;
 
 	t->ctx = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
 	if (!t->ctx)
@@ -675,7 +675,7 @@ Tastiera *tastiera_apri_da_keymap(const char *testo, size_t lunghezza, const cha
 		return NULL;
 	}
 	xkb_context_set_user_data(t->ctx, t);
-	xkb_context_set_log_fn(t->ctx, xkb_parla);
+	xkb_context_set_log_fn(t->ctx, xkb_log_cb);
 	xkb_context_set_log_level(t->ctx, XKB_LOG_LEVEL_WARNING);
 
 	t->keymap = xkb_keymap_new_from_buffer(t->ctx, testo, lunghezza, XKB_KEYMAP_FORMAT_TEXT_V1,
@@ -683,7 +683,7 @@ Tastiera *tastiera_apri_da_keymap(const char *testo, size_t lunghezza, const cha
 	if (!t->keymap)
 	{
 		const char *perche =
-			t->primo_errore[0] ? t->primo_errore : "xkbcommon did not say why";
+			t->first_error[0] ? t->first_error : "xkbcommon did not say why";
 
 		registro_dice(REG_TASTIERA,
 		              "the layout handed over by the session (%zu bytes) does not compile: %s",
@@ -704,9 +704,9 @@ Tastiera *tastiera_apri_da_keymap(const char *testo, size_t lunghezza, const cha
 	snprintf(t->nome, sizeof t->nome, "%s [%s]", negoziata ? negoziata : "the session's",
 	         suo && *suo ? suo : "unnamed");
 
-	impara_i_modificatori(t);
-	t->mod_maiuscole = xkb_keymap_mod_get_index(t->keymap, XKB_MOD_NAME_CAPS);
-	t->mod_numeri = xkb_keymap_mod_get_index(t->keymap, XKB_MOD_NAME_NUM);
+	learn_modifiers(t);
+	t->mod_caps = xkb_keymap_mod_get_index(t->keymap, XKB_MOD_NAME_CAPS);
+	t->mod_num = xkb_keymap_mod_get_index(t->keymap, XKB_MOD_NAME_NUM);
 
 	if (xkb_keymap_num_layouts(t->keymap) > 1)
 		registro_dice(REG_TASTIERA,
@@ -729,7 +729,7 @@ Tastiera *tastiera_apri_da_keymap(const char *testo, size_t lunghezza, const cha
 			              "⚠ the client negotiated «%s», which this system does not know: "
 			              "the session's is used (%s)",
 			              negoziata, suo && *suo ? suo : "unnamed");
-		else if (!fanno_la_stessa_cosa(t->keymap, t->gruppo, chiesta->keymap, chiesta->gruppo))
+		else if (!do_the_same(t->keymap, t->gruppo, chiesta->keymap, chiesta->gruppo))
 			registro_dice(REG_TASTIERA,
 			              "⛔ DECLARED FALLBACK: the client negotiated «%s», the session has "
 			              "ANOTHER layout (%s) and THAT one is used — with the other, wrong "
@@ -739,14 +739,14 @@ Tastiera *tastiera_apri_da_keymap(const char *testo, size_t lunghezza, const cha
 		else
 			registro_dettaglio(REG_TASTIERA, "the session really has «%s»: nothing to declare",
 			                   negoziata);
-		tastiera_chiudi(chiesta);
+		keyboard_close(chiesta);
 	}
 
 	registro_dice(REG_TASTIERA, "layout in force (handed over by the session): %s", t->nome);
 	return t;
 }
 
-const char *tastiera_disposizione(Tastiera *t)
+const char *kbd_layout(Tastiera *t)
 {
 	return t ? t->nome : NULL;
 }
@@ -760,7 +760,7 @@ const char *tastiera_disposizione(Tastiera *t)
  *   answer comes from the REAL keymap, the one `libei` handed over, and it is
  *   compared with what the named layout WOULD DO — not with its name.
  *
- * ⛔ And `fanno_la_stessa_cosa()` is reused, which is already the only place where
+ * ⛔ And `do_the_same()` is reused, which is already the only place where
  *    this comparison is written: two comparisons in two places become two
  *    different rules the day one changes (form E2).
  */
@@ -778,12 +778,12 @@ int tastiera_e_questa(Tastiera *t, const char *nome)
 	if (!altra)
 		return -1;
 
-	uguali = fanno_la_stessa_cosa(t->keymap, t->gruppo, altra->keymap, altra->gruppo);
-	tastiera_chiudi(altra);
+	uguali = do_the_same(t->keymap, t->gruppo, altra->keymap, altra->gruppo);
+	keyboard_close(altra);
 	return uguali ? 1 : 0;
 }
 
-void tastiera_chiudi(Tastiera *t)
+void keyboard_close(Tastiera *t)
 {
 	if (!t)
 		return;
@@ -811,7 +811,7 @@ void tastiera_chiudi(Tastiera *t)
  *     the other way;
  *  2. it asks for a modifier that no key lights up in this layout.
  */
-static int tasti_della_maschera(Tastiera *t, xkb_mod_mask_t maschera,
+static int mask_keys(Tastiera *t, xkb_mod_mask_t maschera,
                                 uint16_t fuori[TASTIERA_MAX_POSIZIONI], size_t *quanti)
 {
 	*quanti = 0;
@@ -819,13 +819,13 @@ static int tasti_della_maschera(Tastiera *t, xkb_mod_mask_t maschera,
 	{
 		if (!(maschera & (1u << i)))
 			continue;
-		if (i == t->mod_maiuscole || i == t->mod_numeri)
+		if (i == t->mod_caps || i == t->mod_num)
 			return 0;
-		if (!t->tasto_del_mod[i])
+		if (!t->mod_key[i])
 			return 0;
 		if (*quanti + 1 >= TASTIERA_MAX_POSIZIONI) /* +1: the real key */
 			return 0;
-		fuori[(*quanti)++] = t->tasto_del_mod[i];
+		fuori[(*quanti)++] = t->mod_key[i];
 	}
 	return 1;
 }
@@ -835,7 +835,7 @@ int tastiera_posizioni_per(Tastiera *t, uint32_t carattere,
 {
 	xkb_keycode_t min, max;
 	uint16_t migliori[TASTIERA_MAX_POSIZIONI];
-	size_t migliori_n = 0;
+	size_t best_n = 0;
 	int trovato = 0;
 
 	if (!t || !t->keymap || !codici || !n)
@@ -858,7 +858,7 @@ int tastiera_posizioni_per(Tastiera *t, uint32_t carattere,
 	min = xkb_keymap_min_keycode(t->keymap);
 	max = xkb_keymap_max_keycode(t->keymap);
 
-	for (xkb_keycode_t k = min; k <= max && !(trovato && migliori_n == 1); k++)
+	for (xkb_keycode_t k = min; k <= max && !(trovato && best_n == 1); k++)
 	{
 		xkb_level_index_t livelli = xkb_keymap_num_levels_for_key(t->keymap, k, t->gruppo);
 
@@ -868,14 +868,14 @@ int tastiera_posizioni_per(Tastiera *t, uint32_t carattere,
 		for (xkb_level_index_t l = 0; l < livelli; l++)
 		{
 			const xkb_keysym_t *simboli = NULL;
-			int quanti_simboli;
-			int e_lui = 0;
+			int how_many_symbols;
+			int is_match = 0;
 			xkb_mod_mask_t maschere[8];
-			size_t quante_maschere;
+			size_t how_many_masks;
 
-			quanti_simboli = xkb_keymap_key_get_syms_by_level(t->keymap, k, t->gruppo, l,
+			how_many_symbols = xkb_keymap_key_get_syms_by_level(t->keymap, k, t->gruppo, l,
 			                                                  &simboli);
-			for (int i = 0; i < quanti_simboli; i++)
+			for (int i = 0; i < how_many_symbols; i++)
 			{
 				/*
 				 * ⛔ The comparison is on the CHARACTER, not on the keysym: the same
@@ -885,28 +885,28 @@ int tastiera_posizioni_per(Tastiera *t, uint32_t carattere,
 				uint32_t prodotto = xkb_keysym_to_utf32(simboli[i]);
 				if (prodotto && prodotto == carattere)
 				{
-					e_lui = 1;
+					is_match = 1;
 					break;
 				}
 			}
-			if (!e_lui)
+			if (!is_match)
 				continue;
 
-			quante_maschere = xkb_keymap_key_get_mods_for_level(t->keymap, k, t->gruppo, l,
+			how_many_masks = xkb_keymap_key_get_mods_for_level(t->keymap, k, t->gruppo, l,
 			                                                    maschere,
 			                                                    sizeof maschere / sizeof *maschere);
-			if (quante_maschere == 0 && l == 0)
+			if (how_many_masks == 0 && l == 0)
 			{
 				maschere[0] = 0;
-				quante_maschere = 1;
+				how_many_masks = 1;
 			}
 
-			for (size_t m = 0; m < quante_maschere; m++)
+			for (size_t m = 0; m < how_many_masks; m++)
 			{
 				uint16_t via[TASTIERA_MAX_POSIZIONI];
-				size_t quanti_mod = 0;
+				size_t how_many_mod = 0;
 
-				if (!tasti_della_maschera(t, maschere[m], via, &quanti_mod))
+				if (!mask_keys(t, maschere[m], via, &how_many_mod))
 					continue;
 
 				/*
@@ -915,12 +915,12 @@ int tastiera_posizioni_per(Tastiera *t, uint32_t carattere,
 				 * would do.  On a tie, the lowest key wins — which is the
 				 * criterion that keeps the numeric keypad out of the digits.
 				 */
-				if (trovato && quanti_mod + 1 >= migliori_n)
+				if (trovato && how_many_mod + 1 >= best_n)
 					continue;
 
-				memcpy(migliori, via, quanti_mod * sizeof *via);
-				migliori[quanti_mod] = EVDEV_DA_XKB(k);
-				migliori_n = quanti_mod + 1;
+				memcpy(migliori, via, how_many_mod * sizeof *via);
+				migliori[how_many_mod] = EVDEV_DA_XKB(k);
+				best_n = how_many_mod + 1;
 				trovato = 1;
 			}
 		}
@@ -943,10 +943,10 @@ int tastiera_posizioni_per(Tastiera *t, uint32_t carattere,
 		return 0;
 	}
 
-	memcpy(codici, migliori, migliori_n * sizeof *migliori);
-	*n = migliori_n;
+	memcpy(codici, migliori, best_n * sizeof *migliori);
+	*n = best_n;
 	/* ⛔ Phase 16 §12: neither the character nor the key that makes it — the two together
 	 *    are the keystroke, one line per letter. */
-	registro_dettaglio(REG_TASTIERA, "a character ⇒ %zu key positions", migliori_n);
+	registro_dettaglio(REG_TASTIERA, "a character ⇒ %zu key positions", best_n);
 	return 1;
 }

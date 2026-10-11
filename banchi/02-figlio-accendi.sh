@@ -60,7 +60,7 @@ log() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 
 impronta() { sha256sum "$1" 2>/dev/null | cut -c1-16; }
 
-mio_pid()
+my_pid()
 {
 	local p
 	if [ -f "$PIDF" ]; then
@@ -87,7 +87,7 @@ case "${1:-stato}" in
 stato)
 	log "The child server, on $PORTA"
 	inf "$(vicini)"
-	if ! pid=$(mio_pid); then
+	if ! pid=$(my_pid); then
 		ko "no server on $PORTA"
 		[ -x "$D/remotix" ] && inf "on disk: $(impronta "$D/remotix")…"
 		exit 1
@@ -128,10 +128,10 @@ bus)
 		ko "⛔ root DOES REACH IT: the measurement §1.10-bis rests on no longer holds"
 		ko "   on this machine.  ⚠ It is not a red of the product: it is a fact"
 		ko "   of the system to be reported to the coordinator."
-		esito_bus=1
+		outcome_bus=1
 	else
 		ok "⛔ root does NOT connect to the session bus of uid 1000 (expected)"
-		esito_bus=0
+		outcome_bus=0
 	fi
 	log "uid 1000 ⟷ the same bus — the POSITIVE control"
 	if setpriv --reuid=1000 --regid=1000 --init-groups \
@@ -144,14 +144,14 @@ bus)
 	else
 		ko "⛔ not even uid 1000 reaches it: the tool cannot see what is"
 		ko "   surely there, so root's «no» above proves nothing"
-		esito_bus=2
+		outcome_bus=2
 	fi
-	exit "$esito_bus" ;;
+	exit "$outcome_bus" ;;
 
 spegni)
 	log "Switching off"
 	inf "$(vicini)"
-	if ! pid=$(mio_pid); then ok "nothing was on on $PORTA"; exit 0; fi
+	if ! pid=$(my_pid); then ok "nothing was on on $PORTA"; exit 0; fi
 	# ⛔ The children are counted BEFORE switching off, to be able to say afterwards whether they
 	#    died with it: «the parent is off» and «the children are off» are two
 	#    different facts, and the second is the one that counts (no orphan
@@ -178,12 +178,12 @@ spegni)
 	#    ⚠ A pid can be recycled by the kernel between before and after: that is
 	#      why it is not enough for `/proc/$f` to exist — it is rechecked that the command
 	#      line is still that of a child of ours.
-	miei_figli=""
+	my_children=""
 	prima=0
 	for f in $(pgrep -P "$pid" 2>/dev/null); do
 		riga=$(tr '\0' ' ' < "/proc/$f/cmdline" 2>/dev/null)
 		case "$riga" in
-		*--figlio-interno*) miei_figli="$miei_figli $f"; prima=$((prima+1)) ;;
+		*--figlio-interno*) my_children="$my_children $f"; prima=$((prima+1)) ;;
 		esac
 	done
 	kill "$pid" 2>/dev/null
@@ -194,7 +194,7 @@ spegni)
 
 	restano=0
 	orfani=""
-	for f in $miei_figli; do
+	for f in $my_children; do
 		riga=$(tr '\0' ' ' < "/proc/$f/cmdline" 2>/dev/null) || continue
 		case "$riga" in
 		*--figlio-interno*) restano=$((restano+1)); orfani="$orfani $f" ;;

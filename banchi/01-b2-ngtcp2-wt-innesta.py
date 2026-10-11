@@ -70,15 +70,15 @@ import subprocess
 import sys
 
 ALBERO = "/srv/src/b2/ngtcp2"
-ESEMPI = "/srv/src/b2/ngtcp2/examples"
+EXAMPLES = "/srv/src/b2/ngtcp2/examples"
 MARCA = "REMOTIX B2"
-MARCA_B3 = "REMOTIX B3"
-MARCA_B11 = "REMOTIX B11 GUASTO"
+MARK_B3 = "REMOTIX B3"
+MARK_B11 = "REMOTIX B11 GUASTO"
 
 # ⛔ The files this graft touches.  `--togli` needs them to VERIFY that it
 #    removed: the exit status of `git` says git did not complain, not
 #    that the mark is gone.
-FILE_TOCCATI = [
+TOUCHED_FILES = [
     "http3_server_proto_codec.h",
     "http3_server_proto_codec.cc",
     "server.h",
@@ -1051,7 +1051,7 @@ def scrivi(percorso, testo):
         f.write(testo)
 
 
-def righe_di_commento(righe):
+def comment_lines(righe):
     """⛔ A SINGLE RULE FOR COMMENTS, AND THE SAME IN THE THREE GRAFTS.
 
     On 10 Aug 2026 the three scripts had three different ones for the same
@@ -1080,13 +1080,13 @@ def togli():
     #    is put back as it was", that is less than what the command does.
     print("== Putting the example back as it was")
     prima = ""
-    for f in FILE_TOCCATI:
+    for f in TOUCHED_FILES:
         try:
-            prima += leggi(f"{ESEMPI}/{f}")
+            prima += leggi(f"{EXAMPLES}/{f}")
         except FileNotFoundError:
             pass
-    for marca, chi in ((MARCA_B3, "the B3 graft"),
-                       (MARCA_B11, "the B11 faults")):
+    for marca, chi in ((MARK_B3, "the B3 graft"),
+                       (MARK_B11, "the B11 faults")):
         if marca in prima:
             print(f"   ⚠ {chi} is there too: it disappears together with this one.")
     r = subprocess.run(["git", "-C", ALBERO, "checkout", "--", "examples"])
@@ -1103,9 +1103,9 @@ def togli():
     #    counts is rereading the files.  `01-b11-guasto.sh` already does this check
     #    for its own mark; here it was missing.
     resta = 0
-    for f in FILE_TOCCATI:
+    for f in TOUCHED_FILES:
         try:
-            n = leggi(f"{ESEMPI}/{f}").count(MARCA)
+            n = leggi(f"{EXAMPLES}/{f}").count(MARCA)
         except FileNotFoundError:
             n = 0
         if n:
@@ -1115,12 +1115,12 @@ def togli():
         print(f"   ⛔ {resta} traces of «{MARCA}» survive:"
               " the example is NOT as it was.")
         return 3
-    print(f"   OK  no trace of «{MARCA}» in the {len(FILE_TOCCATI)}"
+    print(f"   OK  no trace of «{MARCA}» in the {len(TOUCHED_FILES)}"
           " files touched")
 
     # ⚠ And git does not touch UNTRACKED files: if B3 has been here, its
     #   three files stay orphaned inside an example "as it was".
-    orfani = [f for f in FILE_DI_B3 if os.path.exists(f"{ESEMPI}/{f}")]
+    orfani = [f for f in FILE_DI_B3 if os.path.exists(f"{EXAMPLES}/{f}")]
     if orfani:
         print(f"   ⚠ the B3 files remain in examples/: {', '.join(orfani)}")
         print("     git checkout does not touch untracked files;"
@@ -1139,11 +1139,11 @@ def main():
     ]
 
     print("== Grafting the WebTransport layer into the ngtcp2 example")
-    print(f"   tree: {ESEMPI}")
+    print(f"   tree: {EXAMPLES}")
     print(f"   {len(lista)} grafts to apply\n")
 
     # Already done?
-    if MARCA in leggi(f"{ESEMPI}/http3_server_proto_codec.cc"):
+    if MARCA in leggi(f"{EXAMPLES}/http3_server_proto_codec.cc"):
         print("   ⚠ the graft is already there: touching nothing.")
         print("     to redo it from scratch: --togli, then this command again")
         return 0
@@ -1167,7 +1167,7 @@ def main():
     guasti = 0
     for percorso, appiglio, sostituto, nome in lista:
         if percorso not in testi:
-            testi[percorso] = leggi(f"{ESEMPI}/{percorso}")
+            testi[percorso] = leggi(f"{EXAMPLES}/{percorso}")
         # ⛔ THE CHECK THAT MAKES ALL THE REST HONEST: the foothold must
         #    appear ONCE ONLY.  Zero means their example has
         #    changed under us; two, that we are grafting blindly.
@@ -1185,7 +1185,7 @@ def main():
         return 2
 
     for percorso, testo in testi.items():
-        scrivi(f"{ESEMPI}/{percorso}", testo)
+        scrivi(f"{EXAMPLES}/{percorso}", testo)
     print(f"\n   OK  {len(lista)} grafts of {len(lista)}, in {len(testi)} files")
 
     # ⭐ The line count, which is the datum of §6.4 and not an estimate.
@@ -1205,7 +1205,7 @@ def main():
     ).stdout.splitlines()
     agg = [r[1:] for r in d if r.startswith("+") and not r.startswith("+++")]
     vuote = sum(1 for r in agg if not r.strip())
-    comm = righe_di_commento(agg)
+    comm = comment_lines(agg)
     print(f"\n   added lines    : {len(agg)}")
     print(f"     blank        : {vuote}")
     print(f"     comment      : {comm}")

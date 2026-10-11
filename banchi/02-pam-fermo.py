@@ -144,9 +144,9 @@ MOTIVI = {0x01: "CHIUSO_DALL_UTENTE", 0x07: "CREDENZIALI_ERRATE",
 
 # ⛔ The thresholds sit HERE, at the top and with a name, so that the expectation
 #    is not adjusted once the round is over.  They are those written in the box above.
-PICCO_BLOCCATO_MS = 900.0   # above: the loop stopped (the «before»)
-PICCO_LIBERO_MS = 150.0     # below: the loop did not stop (the «after»)
-STRETTA_LIBERA_MS = 300.0
+BLOCKED_PEAK_MS = 900.0   # above: the loop stopped (the «before»)
+FREE_PEAK_MS = 150.0     # below: the loop did not stop (the «after»)
+TIGHT_FREE_MS = 300.0
 BASE_MAX_MS = 60.0          # the quiet loop: above, the ruler is broken
 
 
@@ -293,12 +293,12 @@ async def fino_a_sessione(cli, utente, parola, larghezza=1920, altezza=1080):
     cli.manda(inquadra(T["CREDENZIALI"], s(utente) + s(parola)))
     t0 = time.monotonic()
     await attendi(cli, "AMMESSO", attesa=30)
-    ms_ammesso = (time.monotonic() - t0) * 1000
+    ms_admitted = (time.monotonic() - t0) * 1000
     cli.manda(inquadra(T["ATTACCA"],
                        struct.pack("!IIII", larghezza, altezza, larghezza,
                                    altezza) + s("it")))
     await attendi(cli, "SESSIONE")
-    return ms_ammesso
+    return ms_admitted
 
 
 # ---------------------------------------------------------------------------
@@ -419,7 +419,7 @@ async def un_giro(a, parola, n):
             stretta_cronometrata(pila, a.indirizzo, a.porta, a.percorso, b_fuori))
 
         try:
-            nome_C, corpo = await attendi(C, None, attesa=40)
+            name_C, corpo = await attendi(C, None, attesa=40)
             t_resp = time.monotonic()
         except (Caduta, asyncio.TimeoutError) as e:
             ferma.set()
@@ -430,7 +430,7 @@ async def un_giro(a, parola, n):
         await seconda
 
         motivo = corpo[0] if corpo else 0
-        esito["risposta_C"] = nome_C
+        esito["risposta_C"] = name_C
         esito["motivo_C"] = motivo
         esito["motivo_C_nome"] = MOTIVI.get(motivo, "?")
         esito["ms_C"] = (t_resp - t_cred) * 1000
@@ -441,9 +441,9 @@ async def un_giro(a, parola, n):
         await righello
 
         # ⛔ THE DIRTY SAMPLE IS THROWN AWAY, AND THE REASON IS SAID.
-        if nome_C != "RESPINTO":
+        if name_C != "RESPINTO":
             esito["perche"] = (
-                f"to wrong CREDENZIALI the server answered «{nome_C}», not "
+                f"to wrong CREDENZIALI the server answered «{name_C}», not "
                 f"RESPINTO: the scene is not the declared one")
             return esito
         if motivo != 0x07:
@@ -461,10 +461,10 @@ async def un_giro(a, parola, n):
         # ⚠ And also the mark sent BEFORE and returned AFTER: it is precisely the one
         #   the blocking eats, and excluding it would mean measuring everything
         #   except the fact (`LEZIONI.md` §1.9).
-        a_cavallo = [c for c in campioni
+        a_straddle = [c for c in campioni
                      if c.get("ms") is not None and c["t0"] < t_cred
                      and c["t0"] + c["ms"] / 1000 > t_cred]
-        finestra = a_cavallo + dentro
+        finestra = a_straddle + dentro
         if not finestra:
             esito["perche"] = ("no mark was sent inside the window: the "
                                "window lasted "
@@ -508,8 +508,8 @@ def previsione():
 
    ⛔ And if the quiet loop (the base median) were above %.0f ms, the
       ruler is broken and it is NOT divided by: the round is declared invalid.
-""" % (PICCO_BLOCCATO_MS, PICCO_LIBERO_MS, PICCO_BLOCCATO_MS,
-       STRETTA_LIBERA_MS, PICCO_BLOCCATO_MS, BASE_MAX_MS))
+""" % (BLOCKED_PEAK_MS, FREE_PEAK_MS, BLOCKED_PEAK_MS,
+       TIGHT_FREE_MS, BLOCKED_PEAK_MS, BASE_MAX_MS))
 
 
 async def principale(a, parola):
@@ -534,11 +534,11 @@ async def principale(a, parola):
         esiti.append(e)
         if e["valido"]:
             b = e["ms_stretta_B"]
-            quanto_b = (f"{b:.0f} ms" if b is not None
+            how_much_b = (f"{b:.0f} ms" if b is not None
                         else f"DROPPED ({e.get('caduta_B')})")
             print(f"   round {n}: base {e['base_mediana_ms']:.1f} ms · "
                   f"⛔ peak {e['picco_ms']:.0f} ms · stalled {e['fermo_ms']:.0f} ms · "
-                  f"handshake B {quanto_b}")
+                  f"handshake B {how_much_b}")
             print(f"            and whoever was authenticating (C): {e['ms_C']:.0f} ms "
                   f"[{e['motivo_C_nome']}]  ·  A had got in in "
                   f"{e['ms_ammesso_A']:.0f} ms")
@@ -589,9 +589,9 @@ async def principale(a, parola):
               f"expected.  No comparison is readable.")
         verdetto = 3
     elif a.attesa == "bloccato":
-        ok = (riassunto["picco_mediana_ms"] >= PICCO_BLOCCATO_MS)
+        ok = (riassunto["picco_mediana_ms"] >= BLOCKED_PEAK_MS)
         print(f"\n   {'⭐ OK' if ok else '⛔ NO'}  expected «bloccato»: the peak "
-              f"had to be >= {PICCO_BLOCCATO_MS:.0f} ms and it is "
+              f"had to be >= {BLOCKED_PEAK_MS:.0f} ms and it is "
               f"{riassunto['picco_mediana_ms']:.0f}")
         if not ok:
             print("      ⛔ AND IT IS NOT GOOD NEWS: it means this "
@@ -600,14 +600,14 @@ async def principale(a, parola):
                   "the worst of proofs (`CODER.md` §4.6).")
         verdetto = 0 if ok else 1
     elif a.attesa == "libero":
-        ok = (riassunto["picco_mediana_ms"] < PICCO_LIBERO_MS)
-        ok_b = bool(strette) and riassunto["stretta_B_mediana_ms"] < STRETTA_LIBERA_MS
+        ok = (riassunto["picco_mediana_ms"] < FREE_PEAK_MS)
+        ok_b = bool(strette) and riassunto["stretta_B_mediana_ms"] < TIGHT_FREE_MS
         print(f"\n   {'⭐ OK' if ok else '⛔ NO'}  expected «libero»: the peak "
-              f"had to be < {PICCO_LIBERO_MS:.0f} ms and it is "
+              f"had to be < {FREE_PEAK_MS:.0f} ms and it is "
               f"{riassunto['picco_mediana_ms']:.0f}")
         if strette:
             print(f"   {'⭐ OK' if ok_b else '⛔ NO'}  and B's handshake < "
-                  f"{STRETTA_LIBERA_MS:.0f} ms: it is "
+                  f"{TIGHT_FREE_MS:.0f} ms: it is "
                   f"{riassunto['stretta_B_mediana_ms']:.0f}")
         else:
             print("   ⛔ NO  no handshake of B measured: it is not «it was "

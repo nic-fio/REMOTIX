@@ -18,16 +18,16 @@ import (
 // saved in the operation's folder and, if the uninstallation is cancelled, put back byte
 // by byte, with permissions and owner.
 
-func init() { registraTipo("remove-user-logs", nuovaTogliRegistri) }
+func init() { registraTipo("remove-user-logs", newRemoveLogs) }
 
 const (
-	cartellaStatoUtente = ".local/state/remotix"
-	fileSessione        = "sessione.log"
+	userStateDir = ".local/state/remotix"
+	sessionFile  = "sessione.log"
 )
 
-// RegistriUtente: the session logs that are in the homes NOW (absolute paths, in
+// UserLogs: the session logs that are in the homes NOW (absolute paths, in
 // order), read from /etc/passwd: every account with a home, root included.
-func RegistriUtente(a *Ambiente) []string {
+func UserLogs(a *Ambiente) []string {
 	f, err := os.ReadFile(a.P("/etc/passwd"))
 	if err != nil {
 		return nil
@@ -40,7 +40,7 @@ func RegistriUtente(a *Ambiente) []string {
 			continue
 		}
 		visti[c[5]] = true
-		p := filepath.Join(c[5], cartellaStatoUtente, fileSessione)
+		p := filepath.Join(c[5], userStateDir, sessionFile)
 		if st, err := os.Lstat(a.P(p)); err == nil && st.Mode().IsRegular() {
 			r = append(r, p)
 		}
@@ -48,52 +48,52 @@ func RegistriUtente(a *Ambiente) []string {
 	return r
 }
 
-// PianoTogliRegistri prepares the plan's step, with the paths found at planning time.
-func PianoTogliRegistri(id string, percorsi []string) AzionePiano {
+// PlanRemoveLogs prepares the plan's step, with the paths found at planning time.
+func PlanRemoveLogs(id string, percorsi []string) AzionePiano {
 	elenco := T("az.registri.nessuno")
 	if len(percorsi) > 0 {
 		elenco = strings.Join(percorsi, ", ")
 	}
 	return AzionePiano{
 		ID: id, Tipo: "remove-user-logs",
-		Parametri:      map[string]string{},
-		Descrizione:    T("az.registri", "~/"+cartellaStatoUtente+"/"+fileSessione, elenco),
-		ComeSiFa:       T("az.registri.fa", "~/"+cartellaStatoUtente),
-		ComeSiVerifica: T("az.registri.verifica"),
-		ComeSiAnnulla:  T("az.registri.annulla"),
-		Reversibilita:  ESATTA,
+		Parametri:     map[string]string{},
+		Descrizione:   T("az.registri", "~/"+userStateDir+"/"+sessionFile, elenco),
+		ComeSiFa:      T("az.registri.fa", "~/"+userStateDir),
+		HowToVerify:   T("az.registri.verifica"),
+		HowToUndo:     T("az.registri.annulla"),
+		Reversibilita: ESATTA,
 	}
 }
 
-type togliRegistri struct{}
+type removeLogs struct{}
 
-func nuovaTogliRegistri(AzionePiano) (Azione, error) { return &togliRegistri{}, nil }
+func newRemoveLogs(AzionePiano) (Azione, error) { return &removeLogs{}, nil }
 
-// registroSalvato: a file as it was, and its folder (to put it back if it was removed).
-type registroSalvato struct {
-	Percorso     string `json:"path"`
-	Sha          string `json:"sha256"`
-	Modo         string `json:"mode"`
-	Uid          int    `json:"uid"`
-	Gid          int    `json:"gid"`
-	Salvataggio  string `json:"backup"` // relative to the operation's folder
-	CartellaModo string `json:"dir_mode"`
-	CartellaUid  int    `json:"dir_uid"`
-	CartellaGid  int    `json:"dir_gid"`
+// savedLog: a file as it was, and its folder (to put it back if it was removed).
+type savedLog struct {
+	RoutePath   string `json:"path"`
+	Sha         string `json:"sha256"`
+	Modo        string `json:"mode"`
+	Uid         int    `json:"uid"`
+	Gid         int    `json:"gid"`
+	Salvataggio string `json:"backup"` // relative to the operation's folder
+	DirMode     string `json:"dir_mode"`
+	DirUid      int    `json:"dir_uid"`
+	DirGid      int    `json:"dir_gid"`
 }
 
-type primaRegistri struct {
-	Origine Origine           `json:"origin"`
-	File    []registroSalvato `json:"file,omitempty"`
+type beforeLogs struct {
+	Origine Origine    `json:"origin"`
+	File    []savedLog `json:"file,omitempty"`
 }
 
-func (t *togliRegistri) Vincoli(*Contesto) ([]string, error) { return nil, nil }
+func (t *removeLogs) Vincoli(*Contesto) ([]string, error) { return nil, nil }
 
-func (t *togliRegistri) Fotografa(c *Contesto) (json.RawMessage, Origine, error) {
-	p := primaRegistri{Origine: PREESISTENTE}
-	for i, percorso := range RegistriUtente(c.Amb) {
+func (t *removeLogs) Fotografa(c *Contesto) (json.RawMessage, Origine, error) {
+	p := beforeLogs{Origine: PREESISTENTE}
+	for i, percorso := range UserLogs(c.Amb) {
 		dest := c.Amb.P(percorso)
-		_, sha, modo, uid, gid, err := statoFile(dest)
+		_, sha, modo, uid, gid, err := stateFile(dest)
 		if err != nil {
 			return nil, "", err
 		}
@@ -105,15 +105,15 @@ func (t *togliRegistri) Fotografa(c *Contesto) (json.RawMessage, Origine, error)
 		if err := os.MkdirAll(cart, 0o700); err != nil {
 			return nil, "", err
 		}
-		s := registroSalvato{Percorso: percorso, Sha: sha, Modo: fmt.Sprintf("%04o", modo), Uid: uid, Gid: gid,
+		s := savedLog{RoutePath: percorso, Sha: sha, Modo: fmt.Sprintf("%04o", modo), Uid: uid, Gid: gid,
 			Salvataggio: filepath.Join("backups", c.P.ID+"-"+strconv.Itoa(i)+".before")}
 		if err := ScriviAtomico(filepath.Join(c.Cartella, s.Salvataggio), b, 0o600); err != nil {
 			return nil, "", err
 		}
 		if st, err := os.Stat(filepath.Dir(dest)); err == nil {
-			s.CartellaModo = fmt.Sprintf("%04o", st.Mode().Perm())
+			s.DirMode = fmt.Sprintf("%04o", st.Mode().Perm())
 			if sys, ok := st.Sys().(*syscall.Stat_t); ok {
-				s.CartellaUid, s.CartellaGid = int(sys.Uid), int(sys.Gid)
+				s.DirUid, s.DirGid = int(sys.Uid), int(sys.Gid)
 			}
 		}
 		p.File = append(p.File, s)
@@ -124,44 +124,44 @@ func (t *togliRegistri) Fotografa(c *Contesto) (json.RawMessage, Origine, error)
 	return jsonDi(p), p.Origine, nil
 }
 
-func (t *togliRegistri) leggi(prima json.RawMessage) (primaRegistri, error) {
-	var p primaRegistri
+func (t *removeLogs) leggi(prima json.RawMessage) (beforeLogs, error) {
+	var p beforeLogs
 	err := json.Unmarshal(prima, &p)
 	return p, err
 }
 
 // Fai removes the photographed files, and each one's folder only if it remains empty. Idempotent.
-func (t *togliRegistri) Fai(c *Contesto, prima json.RawMessage) error {
+func (t *removeLogs) Fai(c *Contesto, prima json.RawMessage) error {
 	p, err := t.leggi(prima)
 	if err != nil || p.Origine == PREESISTENTE {
 		return err
 	}
 	for _, s := range p.File {
-		dest := c.Amb.P(s.Percorso)
+		dest := c.Amb.P(s.RoutePath)
 		if err := os.Remove(dest); err != nil && !os.IsNotExist(err) {
 			return err
 		}
-		SincronizzaCartella(filepath.Dir(dest))
+		SyncFolder(filepath.Dir(dest))
 		if err := os.Remove(filepath.Dir(dest)); err == nil { // only if empty
-			SincronizzaCartella(filepath.Dir(filepath.Dir(dest)))
+			SyncFolder(filepath.Dir(filepath.Dir(dest)))
 		}
 	}
 	return nil
 }
 
 // quanti: of the photographed files, how many are still there (and which).
-func (t *togliRegistri) quanti(c *Contesto, p primaRegistri) (ancora, tolti []string) {
+func (t *removeLogs) quanti(c *Contesto, p beforeLogs) (ancora, tolti []string) {
 	for _, s := range p.File {
-		if _, err := os.Lstat(c.Amb.P(s.Percorso)); err == nil {
-			ancora = append(ancora, s.Percorso)
+		if _, err := os.Lstat(c.Amb.P(s.RoutePath)); err == nil {
+			ancora = append(ancora, s.RoutePath)
 		} else {
-			tolti = append(tolti, s.Percorso)
+			tolti = append(tolti, s.RoutePath)
 		}
 	}
 	return
 }
 
-func (t *togliRegistri) Controlla(c *Contesto, prima json.RawMessage) (Esito, string, error) {
+func (t *removeLogs) Controlla(c *Contesto, prima json.RawMessage) (Esito, string, error) {
 	p, err := t.leggi(prima)
 	if err != nil {
 		return "", "", err
@@ -180,29 +180,29 @@ func (t *togliRegistri) Controlla(c *Contesto, prima json.RawMessage) (Esito, st
 }
 
 // Annulla puts the saved files (and the folder, as it was) back where they are missing.
-func (t *togliRegistri) Annulla(c *Contesto, prima json.RawMessage) error {
+func (t *removeLogs) Annulla(c *Contesto, prima json.RawMessage) error {
 	p, err := t.leggi(prima)
 	if err != nil || p.Origine == PREESISTENTE {
 		return err
 	}
 	for _, s := range p.File {
-		dest := c.Amb.P(s.Percorso)
-		if esiste, sha, _, _, _, err := statoFile(dest); err != nil {
+		dest := c.Amb.P(s.RoutePath)
+		if esiste, sha, _, _, _, err := stateFile(dest); err != nil {
 			return err
 		} else if esiste && sha == s.Sha {
 			continue
 		} else if esiste {
-			return Errore("RX-FILE-001", s.Percorso)
+			return Errore("RX-FILE-001", s.RoutePath)
 		}
 		dir := filepath.Dir(dest)
 		if _, err := os.Stat(dir); os.IsNotExist(err) {
-			m, _ := strconv.ParseUint(nonVuoto(s.CartellaModo, "0700"), 8, 32)
+			m, _ := strconv.ParseUint(notEmpty(s.DirMode, "0700"), 8, 32)
 			if err := os.MkdirAll(dir, os.FileMode(m)); err != nil {
 				return err
 			}
 			os.Chmod(dir, os.FileMode(m))
 			if os.Geteuid() == 0 {
-				if err := os.Lchown(dir, s.CartellaUid, s.CartellaGid); err != nil {
+				if err := os.Lchown(dir, s.DirUid, s.DirGid); err != nil {
 					return err
 				}
 			}
@@ -213,14 +213,14 @@ func (t *togliRegistri) Annulla(c *Contesto, prima json.RawMessage) error {
 		}
 		m, _ := strconv.ParseUint(s.Modo, 8, 32)
 		tmp := filepath.Join(dir, "."+filepath.Base(dest)+".remotix-nuovo")
-		if err := scriviDentro(c, dest, tmp, b, os.FileMode(m), s.Uid, s.Gid, c.P.ID); err != nil {
+		if err := writeInside(c, dest, tmp, b, os.FileMode(m), s.Uid, s.Gid, c.P.ID); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (t *togliRegistri) Annullata(c *Contesto, prima json.RawMessage) (bool, string, error) {
+func (t *removeLogs) Annullata(c *Contesto, prima json.RawMessage) (bool, string, error) {
 	p, err := t.leggi(prima)
 	if err != nil {
 		return false, "", err
@@ -229,12 +229,12 @@ func (t *togliRegistri) Annullata(c *Contesto, prima json.RawMessage) (bool, str
 		return true, T("az.registri.nessuno"), nil
 	}
 	for _, s := range p.File {
-		esiste, sha, _, _, _, err := statoFile(c.Amb.P(s.Percorso))
+		esiste, sha, _, _, _, err := stateFile(c.Amb.P(s.RoutePath))
 		if err != nil {
 			return false, "", err
 		}
 		if !esiste || sha != s.Sha {
-			return false, s.Percorso + ": " + T("az.registri.non_rimesso"), nil
+			return false, s.RoutePath + ": " + T("az.registri.non_rimesso"), nil
 		}
 	}
 	return true, T("az.registri.rimessi"), nil

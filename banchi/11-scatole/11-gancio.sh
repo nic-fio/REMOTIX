@@ -199,18 +199,18 @@ COSTO_C1_GIRO=74
 # ⛔ 27 Aug 2026: it was **45**, that is the measurement from BEFORE C5 was cured of its
 #    dead ceilings.  ⚠ A cost that lags behind is not harmless: it governs whether
 #    a mesh is started or skipped.
-COSTO_C5=71
-COSTO_C7=30
-COSTO_C9=50
-COSTO_C10=1
-COSTO_C11=20
-COSTO_C12=5
-COSTO_C13=5
-COSTO_C14=800
-COSTO_C15=5
+COST_C5=71
+COST_C7=30
+COST_C9=50
+COST_C10=1
+COST_C11=20
+COST_C12=5
+COST_C13=5
+COST_C14=800
+COST_C15=5
 # ⭐ C16 `[M]` **0,79 s** — median over five runs on the laptop, 28 Aug 2026.
 #    It reads 17 documents (48 000 lines) and the list of the repository's files.
-COSTO_C16=1
+COST_C16=1
 
 # ═══════════════════════════════════════════════════════════════════════════
 # ⭐⭐ THE FIVE NEW MESHES — 27 August 2026.  ⛔ NONE is in the fast
@@ -227,11 +227,11 @@ COSTO_C16=1
 # ⭐ `[M]` 27 August 2026, cured rete11-gnome box, normal run timed
 #   by the system.  ⚠ With the fault injected C2 opens TWO tenants and costs double
 #   (`[M]` 418 and 419 s); C3 with the encoder stopped costs `[M]` 321 s.
-COSTO_C2=210
-COSTO_C3=162
-COSTO_C4=32
-COSTO_C6=205
-COSTO_C8B=378
+COST_C2=210
+COST_C3=162
+COST_C4=32
+COST_C6=205
+COST_C8B=378
 
 # ═══════════════════════════════════════════════════════════════════════════
 # ⭐⭐ THE STAGE CEILING OF C2 AND C3 — ⛔ one number, in one place only.
@@ -1177,7 +1177,7 @@ la_scatola_resta_pulita() {
 # ⛔ The fast family (`funziona`, ceiling 180 s) rebuilds NOTHING: a box
 #   costs `[?]` 15-40 s (the wait for systemd inside up to 30 s, the servers up
 #   to 20 s), and the ceiling is full.  ⇒ There the GUARD speaks (`11-accendi.sh`,
-#   `riga_eta`): one line, not a red, if the box has passed its hours or
+#   `age_line`): one line, not a red, if the box has passed its hours or
 #   its sessions.
 # ⚠ THE COST in `tutto`: `[?]` 1-3 minutes for four boxes, against runs of
 #   `[M]` 9 075-10 645 s (phase 12) ⇒ ~1-2 %.  It becomes `[M]` at the first run: the
@@ -1700,12 +1700,12 @@ meta_remota() {
 	# ⭐ The log is brought home with scp (`--get`), ⛔ never by capturing the stdout of
 	#   a remote `cat`: the password prompt also ends up in there
 	#   (`fondamenta/strumenti/sshpw.py`, and it says why).
-	local tana
-	tana=$(mktemp -d)
-	sshpw --get "$log" "$tana/remoto.log" >/dev/null 2>&1
-	if [ -s "$tana/remoto.log" ]; then
+	local scratch_dir
+	scratch_dir=$(mktemp -d)
+	sshpw --get "$log" "$scratch_dir/remoto.log" >/dev/null 2>&1
+	if [ -s "$scratch_dir/remoto.log" ]; then
 		log "what the test machine said"
-		sed 's/^/  | /' "$tana/remoto.log"
+		sed 's/^/  | /' "$scratch_dir/remoto.log"
 	fi
 
 	# ⛔ And the two ways of not knowing are TWO, and they must be said separately: «it did not
@@ -1721,13 +1721,13 @@ meta_remota() {
 			R_NOTA="the remote half did not finish within ${ATTESA_REMOTA}s"
 			ko "⛔ $R_NOTA"
 		fi
-		rm -rf "$tana"
+		rm -rf "$scratch_dir"
 		return 3
 	fi
 
 	# ⭐⭐ AND NOW THE MEMORY COMES BACK — the other half of the problem.
-	unisci_registri "$tana"
-	rm -rf "$tana"
+	unisci_registri "$scratch_dir"
+	rm -rf "$scratch_dir"
 
 	case "$risposta" in
 	0) R_ESITO=0; R_NOTA="the remote half is green" ;;
@@ -1749,16 +1749,16 @@ meta_remota() {
 #   of that machine, and serves whoever diagnoses there.  Here a copy of it is taken.
 # ---------------------------------------------------------------------------
 unisci_registri() {
-	local tana=$1
+	local scratch_dir=$1
 	local remoto="$RETE11_REMOTA/11-gancio-registro.jsonl"
-	sshpw --get "$remoto" "$tana/registro-remoto.jsonl" >/dev/null 2>&1
-	if [ ! -s "$tana/registro-remoto.jsonl" ]; then
+	sshpw --get "$remoto" "$scratch_dir/registro-remoto.jsonl" >/dev/null 2>&1
+	if [ ! -s "$scratch_dir/registro-remoto.jsonl" ]; then
 		ko "⚠ I could not bring back the test machine's log"
 		inf "  ⇒ the run over there really happened, but here nothing would be known"
 		inf "    of it: C13 would not see it.  ⛔ It is a fault, not a detail"
 		return 3
 	fi
-	python3 "$QUI/11-registro-unisci.py" "$REGISTRO" "$tana/registro-remoto.jsonl"
+	python3 "$QUI/11-registro-unisci.py" "$REGISTRO" "$scratch_dir/registro-remoto.jsonl"
 }
 
 # ---------------------------------------------------------------------------
@@ -1890,25 +1890,25 @@ case "$AZIONE" in
 decidi|gira)
 	mapfile -t ELENCO < <(cambiati "$INNESCO")
 	if [ -n "$FAMIGLIA_CHIESTA" ]; then
-		FAMIGLIA="$FAMIGLIA_CHIESTA"
+		FAMILY="$FAMIGLIA_CHIESTA"
 		MOTIVO="asked for by name"
 	else
-		FAMIGLIA=$(decidi_famiglia ELENCO)
-		MOTIVO=$(perche_famiglia "$FAMIGLIA")
+		FAMILY=$(decidi_famiglia ELENCO)
+		MOTIVO=$(perche_famiglia "$FAMILY")
 	fi
 
 	log "The hook — trigger: $INNESCO"
 	inf "files changed: ${#ELENCO[@]}"
 	for f in "${ELENCO[@]:0:12}"; do inf "  · $f"; done
 	[ ${#ELENCO[@]} -gt 12 ] && inf "  … and $(( ${#ELENCO[@]} - 12 )) more"
-	inf "family: ${FAMIGLIA%%:*}   ⇐ $MOTIVO"
-	[ "${FAMIGLIA%%:*}" = funziona ] && inf "ceiling: ${TETTO_VELOCE}s (⛔ and if it overruns tests are cut, the ceiling is not raised)"
+	inf "family: ${FAMILY%%:*}   ⇐ $MOTIVO"
+	[ "${FAMILY%%:*}" = funziona ] && inf "ceiling: ${TETTO_VELOCE}s (⛔ and if it overruns tests are cut, the ceiling is not raised)"
 
 	if [ "$AZIONE" = decidi ]; then
 		exit 0
 	fi
 
-	if [ "${FAMIGLIA%%:*}" = niente ]; then
+	if [ "${FAMILY%%:*}" = niente ]; then
 		inf "⭐ nothing starts — and it is not laziness: a hook that runs when"
 		inf "  it is not needed is a hook that someone will switch off"
 		exit 0
@@ -1922,7 +1922,7 @@ decidi|gira)
 	#   long bench is in progress the hook says NO and the push waits for it to end.
 	#   ⚠ Without the lock `sgombera_inquilini` touches nothing: it is the same
 	#   variable, REMOTIX_SCATOLE_TENUTE, that says «the boxes are ours».
-	if [ "${FAMIGLIA%%:*}" != carte ] && [ -z "${REMOTIX_SCATOLE_TENUTE:-}" ]; then
+	if [ "${FAMILY%%:*}" != carte ] && [ -z "${REMOTIX_SCATOLE_TENUTE:-}" ]; then
 		# ⚠ not in /run/lock («sticky»: root does not reopen nicfio's file, `[M]`)
 		SERRATURA_SCATOLE=/media/REMOTIX/rete11/.scatole.lock
 		exec 9<>"$SERRATURA_SCATOLE" || { ko "I cannot open $SERRATURA_SCATOLE"; exit 2; }
@@ -1933,12 +1933,12 @@ decidi|gira)
 			exit 1
 		fi
 		: > "$SERRATURA_SCATOLE"
-		printf "11-gancio %s pid %d" "${FAMIGLIA%%:*}" $$ >&9
+		printf "11-gancio %s pid %d" "${FAMILY%%:*}" $$ >&9
 		export REMOTIX_SCATOLE_TENUTE="11-gancio"
 	fi
 
 	SECONDS=0
-	case "${FAMIGLIA%%:*}" in
+	case "${FAMILY%%:*}" in
 	funziona)      log "family FUNZIONA"; famiglia_veloce ;;
 	# ⛔ AND THE LINE THAT IS PRINTED SAYS THE REAL COST.  Here it said
 	#    «C11-C14 + C10, which starts nothing»: ⛔ it was the same false
@@ -1949,17 +1949,17 @@ decidi|gira)
 	rete-intera)   log "the NET **PLUS C14** — ⛔ [M] ~800 s, and it takes the FOUR boxes"; famiglia_rete_intera ;;
 	tutto)         log "EVERYTHING — before closing a phase"; famiglia_tutto ;;
 	suite)         log "the FUNCTIONAL SUITE — 4 desktops x 2 real browsers + technical layer, ⛔ ~2 hours"; esegui_maglia "SUITE" false GIRA_SUITE ;;
-	desktop-nuovo) famiglia_desktop_nuovo "${FAMIGLIA##*:}" ;;
-	*)             ko "unknown family: $FAMIGLIA"; exit 2 ;;
+	desktop-nuovo) famiglia_desktop_nuovo "${FAMILY##*:}" ;;
+	*)             ko "unknown family: $FAMILY"; exit 2 ;;
 	esac
 	DURATA=$SECONDS
 
 	# ⭐ THE AGE GUARD — after the stopwatch, on purpose (see
 	#   `guardia_delle_scatole`): one line if a box is old, never a red.
 	# shellcheck disable=SC2086
-	case "${FAMIGLIA%%:*}" in
+	case "${FAMILY%%:*}" in
 	funziona|rete-intera|tutto) guardia_delle_scatole $DESKTOP_NOTI ;;
-	desktop-nuovo)              guardia_delle_scatole "${FAMIGLIA##*:}" $DESKTOP_NOTI ;;
+	desktop-nuovo)              guardia_delle_scatole "${FAMILY##*:}" $DESKTOP_NOTI ;;
 	esac
 
 	# ⛔ «gave red» means OUTCOME 1 — a judgement.  ⚠ 3 is NOT a
@@ -1970,11 +1970,11 @@ decidi|gira)
 	printf '%s' "$eseguiti_json" | grep -q '"guasto_innestato":true' && GUASTO=true
 
 	SFORATO=false
-	if [ "${FAMIGLIA%%:*}" = funziona ] && [ "$DURATA" -gt "$TETTO_VELOCE" ]; then
+	if [ "${FAMILY%%:*}" = funziona ] && [ "$DURATA" -gt "$TETTO_VELOCE" ]; then
 		SFORATO=true
 	fi
 
-	scrivi_registro "${FAMIGLIA%%:*}" "$INNESCO" "$SFORATO" "$DURATA" "$ROSSO" "$GUASTO" "${ELENCO[@]}"
+	scrivi_registro "${FAMILY%%:*}" "$INNESCO" "$SFORATO" "$DURATA" "$ROSSO" "$GUASTO" "${ELENCO[@]}"
 
 	log "outcome of the run"
 	inf "duration: ${DURATA}s"
@@ -2029,11 +2029,11 @@ remoto)
 
 	mapfile -t ELENCO < <(cambiati "$INNESCO")
 	if [ -n "$FAMIGLIA_CHIESTA" ]; then
-		FAMIGLIA="$FAMIGLIA_CHIESTA"
+		FAMILY="$FAMIGLIA_CHIESTA"
 		MOTIVO="asked for by name"
 	else
-		FAMIGLIA=$(decidi_famiglia ELENCO)
-		MOTIVO=$(perche_famiglia "$FAMIGLIA")
+		FAMILY=$(decidi_famiglia ELENCO)
+		MOTIVO=$(perche_famiglia "$FAMILY")
 	fi
 
 	log "The hook, THE TWO HALVES — trigger: $INNESCO"
@@ -2042,9 +2042,9 @@ remoto)
 	inf "files changed: ${#ELENCO[@]}"
 	for f in "${ELENCO[@]:0:12}"; do inf "  · $f"; done
 	[ ${#ELENCO[@]} -gt 12 ] && inf "  … and $(( ${#ELENCO[@]} - 12 )) more"
-	inf "family: ${FAMIGLIA%%:*}   ⇐ $MOTIVO"
+	inf "family: ${FAMILY%%:*}   ⇐ $MOTIVO"
 
-	if [ "${FAMIGLIA%%:*}" = niente ]; then
+	if [ "${FAMILY%%:*}" = niente ]; then
 		inf "⭐ nothing starts, neither here nor there — and it is not laziness: a hook"
 		inf "  that runs when it is not needed is a hook that someone will switch off"
 		inf "  ⇒ ⭐ and it is also the reason why the price of this road is NOT"
@@ -2057,7 +2057,7 @@ remoto)
 
 	# 1 · THERE — the real meshes, on the boxes
 	log "the half OVER THERE — the boxes and the card"
-	meta_remota "${FAMIGLIA%%:*}" "$INNESCO-remoto"
+	meta_remota "${FAMILY%%:*}" "$INNESCO-remoto"
 	R_SECONDI=$M_SECONDI
 	annota_remota "$R_ESITO" "$R_SECONDI" "$R_NOTA"
 
@@ -2077,11 +2077,11 @@ remoto)
 	#   another number, and it is right that there are two: that one says what the
 	#   meshes cost, this one what the push costs.
 	SFORATO=false
-	if [ "${FAMIGLIA%%:*}" = funziona ] && [ "$DURATA" -gt "$TETTO_VELOCE" ]; then
+	if [ "${FAMILY%%:*}" = funziona ] && [ "$DURATA" -gt "$TETTO_VELOCE" ]; then
 		SFORATO=true
 	fi
 
-	scrivi_registro "${FAMIGLIA%%:*}" "$INNESCO" "$SFORATO" "$DURATA" "$ROSSO" "$GUASTO" "${ELENCO[@]}"
+	scrivi_registro "${FAMILY%%:*}" "$INNESCO" "$SFORATO" "$DURATA" "$ROSSO" "$GUASTO" "${ELENCO[@]}"
 
 	log "outcome of the run, both halves"
 	inf "total duration (what whoever pushes waits): ${DURATA}s"
@@ -2133,7 +2133,7 @@ installa)
 	#   of the machine, and it ends up in every log line.  ⛔ Two variables
 	#   with the same name in a script without `local` are a value that
 	#   changes under the feet of whoever is not looking.
-	PERCORSO="$CARTELLA/$QUALE"
+	HOOK_PATH="$CARTELLA/$QUALE"
 	# ═══════════════════════════════════════════════════════════════════
 	# ⛔⛔ AND WHAT THE INSTALLED HOOK CALLS IS `remoto`, NOT `gira`.
 	#
@@ -2156,9 +2156,9 @@ installa)
 		printf '# ⛔ Defined BY PATH: and this file decides nothing,\n'
 		printf '#    it passes the ball to the hook, which looks at the changed files.\n'
 		printf 'exec bash %s %s --innesco %s\n' "$QUI/11-gancio.sh" "$AZIONE_GANCIO" "$QUALE"
-	} > "$PERCORSO"
-	chmod 755 "$PERCORSO"
-	ok "hook installed: $PERCORSO"
+	} > "$HOOK_PATH"
+	chmod 755 "$HOOK_PATH"
+	ok "hook installed: $HOOK_PATH"
 	inf "action: $AZIONE_GANCIO"
 	if [ "$SOLO_QUI" = 1 ]; then
 		ko "⚠ ⛔ HALF INSTALLED: with «--solo-qui» this hook runs"
@@ -2176,7 +2176,7 @@ installa)
 
 installato)
 	CARTELLA=$(cartella_ganci)
-	TROVATO=0
+	LOCATED=0
 	for q in pre-commit pre-push; do
 		D="$CARTELLA/$q"
 		if [ -f "$D" ] && grep -q '11-gancio.sh' "$D" 2>/dev/null; then
@@ -2195,10 +2195,10 @@ installato)
 				inf "    ⇒ the product meshes do NOT run.  To wire them:"
 				inf "      bash 11-gancio.sh installa $q"
 			fi
-			TROVATO=1
+			LOCATED=1
 		fi
 	done
-	[ $TROVATO -eq 0 ] && ko "the hook is NOT installed in $CARTELLA"
+	[ $LOCATED -eq 0 ] && ko "the hook is NOT installed in $CARTELLA"
 	printf '\n'
 	if [ -f "$REGISTRO" ]; then
 		inf "log: $REGISTRO ($(grep -c . "$REGISTRO") lines)"

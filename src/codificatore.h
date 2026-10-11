@@ -604,7 +604,7 @@ const char *codificatore_strada(const Codificatore *cod);
  *    from BEFORE opening: a request Vulkan cannot serve (size, bitrate) falls
  *    back to VA-API anyway.  It serves whoever must get ready before the
  *    encoder (the slabs of `wlroots.c`). */
-bool codificatore_vulkan_sul_nodo(const char *nodo);
+bool encoder_vulkan_on_node(const char *nodo);
 
 /* ⛔ PHASE 19 (1 Oct 2026, `DECISIONI.md` §10.27): here there were
  *    `codificatore_ripiego_software()`, `codificatore_software_pronto()` and

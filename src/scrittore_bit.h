@@ -30,7 +30,7 @@ typedef struct {
 	bool traboccato;
 } ScrittoreBit;
 
-void sb_apri(ScrittoreBit *s, uint8_t *dati, size_t capacita);
+void sb_open(ScrittoreBit *s, uint8_t *dati, size_t capacita);
 
 /* `u(n)`: the low `n` bits of `v`, highest first.  ⚠ `n` up to 32. */
 void sb_u(ScrittoreBit *s, int n, uint32_t v);
@@ -54,7 +54,7 @@ void sb_copia_bit(ScrittoreBit *s, const uint8_t *sorgente, size_t da, size_t qu
 
 /* How many bytes the written bits take (rounded up). */
 size_t sb_byte(const ScrittoreBit *s);
-bool sb_allineato(const ScrittoreBit *s);
+bool sb_aligned(const ScrittoreBit *s);
 
 /*
  * A NAL in Annex-B: `00 00 00 01`, the NAL header as it is, then the RBSP with
@@ -66,6 +66,6 @@ bool sb_allineato(const ScrittoreBit *s);
  * Returns the bytes written, or 0 if `fuori` is too small.
  */
 size_t nal_annexb(uint8_t *fuori, size_t capacita, const uint8_t *intestazione,
-                  size_t intestazione_byte, const uint8_t *rbsp, size_t rbsp_byte);
+                  size_t header_byte, const uint8_t *rbsp, size_t rbsp_byte);
 
 #endif

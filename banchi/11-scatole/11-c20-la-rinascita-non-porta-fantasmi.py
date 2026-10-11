@@ -173,12 +173,12 @@ PAROLA = "provanic2026"
 # ⭐ THE TWO SCENES, and they are two on purpose (see the numbers box below).
 #   · MINE moves and its light does NOT change   ⇒ the healthy run
 #   · C3's alternates blue and yellow           ⇒ the INJECTED FAULT
-SCENA_FERMA_DI_LUCE = os.path.join(QUI, "11-c20-scena.html")
-SCENA_CHE_LAMPEGGIA = os.path.join(QUI, "11-c3-scena.html")
+STILL_LIGHT_SCENE = os.path.join(QUI, "11-c20-scena.html")
+FLASHING_SCENE = os.path.join(QUI, "11-c3-scena.html")
 
 # ⭐ The product lines this mesh reads, in one place only: if the
 #   product changes them, they are changed HERE (§1.47).
-RIGA_NASCITA = "negotiated format"          # src/cattura.c
+LINE_BIRTH = "negotiated format"          # src/cattura.c
 # ═══════════════════════════════════════════════════════════════════════════
 # ⭐⭐ THE PRODUCT SAYS THE END OF THE GRAPHICAL SESSION IN TWO WAYS — and
 #     which of the two depends on **who dies with the «Log out» gesture**, not on the name
@@ -209,24 +209,24 @@ RIGHE_FINITA = (
     ("has gone ⇒ the graphical session is over",
      "⛔ the child died with the gesture, and the parent said so while reaping it"),
 )
-RIGA_RINASCITA = "RESTARTING THE CAPTURE"       # src/figlio.c:8011
-RIGA_BUTTA = re.compile(r"throwing away the (\d+) imported surfaces")  # src/codificatore.c
+LINE_REBIRTH = "RESTARTING THE CAPTURE"       # src/figlio.c:8011
+LINE_DROP = re.compile(r"throwing away the (\d+) imported surfaces")  # src/codificatore.c
 # ⭐ Who serves a session: «child spawned for «X»: pid N … serial M»
 #   (`src/figlio.c:1744`).  ⛔ It serves to SAY, and not to deduce, that the
 #   second login runs in a process DIFFERENT from the first one's.
-RIGA_FIGLIO = re.compile(r"child spawned for «([^»]+)»: pid (\d+).*?"
+LINE_CHILD = re.compile(r"child spawned for «([^»]+)»: pid (\d+).*?"
                          r"serial (\d+)")
 
 # ⚠ The numbers of the pixel judge — see the box at the top.
-SOGLIA_SALTO = 8
-FOTOGRAMMI_MINIMI = 40
+JUMP_THRESHOLD = 8
+MIN_FRAMES = 40
 # ⛔ Below this median luminance the screen is BLACK, and no judgement is made: a
 #    still black and a frozen picture look exactly the same.
-LUCE_MINIMA = 40
+MIN_LIGHT = 40
 LARGHEZZA, ALTEZZA = 64, 24
 
 
-def quanti_da_saltare(quanti):
+def how_many_to_skip(quanti):
     """⭐ The «before» not to look at: HALF of the frames.
 
     ⛔⛔ And half is not caution: the scene starts WHEN the session has
@@ -240,7 +240,7 @@ def quanti_da_saltare(quanti):
     return max(4, quanti // 2)
 
 
-def salti_ammessi(quanti_coda):
+def allowed_jumps(how_many_queue):
     """⭐ How many jumps are not yet a flicker.
 
     ⛔ Not a fixed number: with a tail of 1 770 frames «3 jumps» is
@@ -249,7 +249,7 @@ def salti_ammessi(quanti_coda):
        of the startup and the tail there can be a panel that finishes
        drawing itself, and a red on that would be a false red.
     """
-    return max(1, min(3, quanti_coda // 10))
+    return max(1, min(3, how_many_queue // 10))
 
 
 def sh(riga, secondi=60):
@@ -260,13 +260,13 @@ def sh(riga, secondi=60):
         return None
 
 
-def _carica(nome_file, mestieri):
+def _carica(file_name, mestieri):
     for base in (QUI, os.path.dirname(QUI), "/opt/remotix", "/rete11"):
-        perc = os.path.join(base, nome_file)
+        perc = os.path.join(base, file_name)
         if not os.path.exists(perc):
             continue
         spec = importlib.util.spec_from_file_location(
-            "importato_" + re.sub(r"\W", "_", nome_file), perc)
+            "importato_" + re.sub(r"\W", "_", file_name), perc)
         m = importlib.util.module_from_spec(spec)
         try:
             spec.loader.exec_module(m)
@@ -327,16 +327,16 @@ DESKTOP_E_GESTO = (
 )
 
 
-def come_si_esce():
+def how_to_exit():
     """⭐ (desktop name, gesture command) — or (None, why)."""
     def c_e(programma):
         r = sh("command -v %s >/dev/null 2>&1" % programma, 15)
         return r is not None and r.returncode == 0
 
-    for nome, ci_vuole, non_ci_vuole, gesto in DESKTOP_E_GESTO:
-        if not c_e(ci_vuole):
+    for nome, required_cmd, unwanted, gesto in DESKTOP_E_GESTO:
+        if not c_e(required_cmd):
             continue
-        if non_ci_vuole and c_e(non_ci_vuole):
+        if unwanted and c_e(unwanted):
             continue
         return nome, gesto
     return None, ("in this box there is neither startplasma-wayland, nor "
@@ -347,17 +347,17 @@ def come_si_esce():
 # ═══════════════════════════════════════════════════════════════════════════
 # ⭐ THE JUDGES — PURE functions: `--certifica` goes through them without a machine.
 # ═══════════════════════════════════════════════════════════════════════════
-def giudica_i_pixel(luminanze):
+def judge_the_pixels(luminanze):
     """⭐ (esito, salti, perche) from the sequence of mean luminances."""
     if luminanze is None:
         return 3, 0, "the video of the second login was not decoded"
-    if len(luminanze) < FOTOGRAMMI_MINIMI:
+    if len(luminanze) < MIN_FRAMES:
         return 3, 0, ("only %d frames decoded (%d are needed): there is "
                       "no tail to look at"
-                      % (len(luminanze), FOTOGRAMMI_MINIMI))
-    coda = luminanze[quanti_da_saltare(len(luminanze)):]
-    salti = sum(1 for a, b in zip(coda, coda[1:]) if abs(a - b) > SOGLIA_SALTO)
-    ammessi = salti_ammessi(len(coda))
+                      % (len(luminanze), MIN_FRAMES))
+    coda = luminanze[how_many_to_skip(len(luminanze)):]
+    salti = sum(1 for a, b in zip(coda, coda[1:]) if abs(a - b) > JUMP_THRESHOLD)
+    ammessi = allowed_jumps(len(coda))
     valori = sorted(set(coda))
     mediana = sorted(coda)[len(coda) // 2]
     # ⚠ And MINIMUM, MEDIAN and MAXIMUM are printed besides the values: `[M]` 23 Sep
@@ -368,7 +368,7 @@ def giudica_i_pixel(luminanze):
     dice = ("%d frames, tail of %d: %d jumps beyond %d levels (%d are "
             "allowed) · luminance min %d · median %d · max %d · %d distinct "
             "values %s"
-            % (len(luminanze), len(coda), salti, SOGLIA_SALTO, ammessi,
+            % (len(luminanze), len(coda), salti, JUMP_THRESHOLD, ammessi,
                ordinata[0], mediana, ordinata[-1],
                len(valori), valori[:6]))
     # ⛔⛔ AND THE ORDER OF THESE TWO CHECKS IS A DECISION, not chance:
@@ -384,15 +384,15 @@ def giudica_i_pixel(luminanze):
     #   and only that becomes an «I could not look».
     if salti > ammessi:
         return 1, salti, ("the screen FLICKERS after the rebirth — " + dice)
-    if mediana < LUCE_MINIMA:
+    if mediana < MIN_LIGHT:
         return 3, salti, ("the screen is BLACK and STILL (median luminance %d, "
                           "below %d): the scene I started did not arrive, "
                           "and a still black and a frozen picture look "
-                          "the same — " % (mediana, LUCE_MINIMA) + dice)
+                          "the same — " % (mediana, MIN_LIGHT) + dice)
     return 0, salti, ("with a still desktop the luminance is one — " + dice)
 
 
-def chi_serviva(fetta, chi):
+def who_served(fetta, chi):
     """⭐ The pid of the child serving «chi» in this log slice — or None.
 
     ⚠ If there is more than one the LAST is taken: it is the one serving
@@ -402,13 +402,13 @@ def chi_serviva(fetta, chi):
         return None
     pid = None
     for r in fetta:
-        m = RIGA_FIGLIO.search(r)
+        m = LINE_CHILD.search(r)
         if m and m.group(1) == chi:
             pid = m.group(2)
     return pid
 
 
-def giudica_il_registro(fetta, chi, figlio_morto, pid_di_prima):
+def giudica_il_registro(fetta, chi, child_dead, pid_di_prima):
     """⭐ (esito, quante, perche) from the log lines of THIS tenant.
 
     ═══════════════════════════════════════════════════════════════════════
@@ -446,9 +446,9 @@ def giudica_il_registro(fetta, chi, figlio_morto, pid_di_prima):
     if fetta is None:
         return 3, 0, "I could not read the server log"
 
-    if figlio_morto:
-        pid_adesso = chi_serviva(fetta, chi)
-        if pid_adesso is None:
+    if child_dead:
+        pid_now = who_served(fetta, chi)
+        if pid_now is None:
             return 3, 0, ("the child of «%s» had died with the «Log out» gesture and in the "
                           "log of the second login no other one is "
                           "born: I do not know who is serving this session"
@@ -456,26 +456,26 @@ def giudica_il_registro(fetta, chi, figlio_morto, pid_di_prima):
         if pid_di_prima is None:
             return 3, 0, ("I did not read the pid of the child of the FIRST login: "
                           "without it I cannot say that this one (%s) is another"
-                          % pid_adesso)
-        if pid_adesso == pid_di_prima:
+                          % pid_now)
+        if pid_now == pid_di_prima:
             return 3, 0, ("the second login is served by the SAME child "
                           "as the first (pid %s), and the product had said it "
-                          "was dead: the premise does not hold" % pid_adesso)
+                          "was dead: the premise does not hold" % pid_now)
         return 0, 0, ("the child died with the gesture and the second login runs "
                       "in a NEW child (pid %s, before %s): the encoder "
                       "of the dead session no longer exists, and neither do its "
                       "surfaces"
-                      % (pid_adesso, pid_di_prima))
+                      % (pid_now, pid_di_prima))
 
     mie = [r for r in fetta if ("[%s]" % chi) in r]
-    if not any(RIGA_RINASCITA in r for r in mie):
+    if not any(LINE_REBIRTH in r for r in mie):
         return 3, 0, ("in the log there is no rebirth of the capture "
                       "(«%s») for «%s»: the new session was not born from an "
                       "old one, and there is nothing to judge"
-                      % (RIGA_RINASCITA, chi))
+                      % (LINE_REBIRTH, chi))
     quante = 0
     for r in mie:
-        m = RIGA_BUTTA.search(r)
+        m = LINE_DROP.search(r)
         if m:
             quante += int(m.group(1))
     if quante > 0:
@@ -501,7 +501,7 @@ def giudizio(pixel, registro):
     return 0
 
 
-def luminanze_dal_grezzo(dati):
+def luminances_from_raw(dati):
     """⭐ The mean per frame from a gray 64x24 `rawvideo`."""
     n = LARGHEZZA * ALTEZZA
     if not dati or len(dati) < n:
@@ -531,7 +531,7 @@ def leggi(percorso):
         return None
 
 
-def aspetta_la_riga(percorso, segno, chi, pezzi, tetto):
+def wait_line(percorso, segno, chi, pezzi, tetto):
     """⭐ We wait for the EVENT, not the clock.  Returns (quale, fetta).
 
     ⚠ `pezzi` is a piece of a line or a list of pieces: the first one that is
@@ -559,7 +559,7 @@ def aspetta_la_riga(percorso, segno, chi, pezzi, tetto):
     return None, fetta
 
 
-def il_cliente_c_e(porta, chi):
+def client_is_there(porta, chi):
     """⛔⛔ `[c]20u2` AND NOT `c20u2`, and it is not a whim.
 
     The command line of the shell running this `pgrep` contains the name
@@ -573,16 +573,16 @@ def il_cliente_c_e(porta, chi):
     return r is not None and r.returncode == 0
 
 
-def aspetta_che_il_cliente_se_ne_vada(porta, chi, tetto):
+def wait_client_gone(porta, chi, tetto):
     scadenza = time.time() + tetto
     while time.time() < scadenza:
-        if not il_cliente_c_e(porta, chi):
+        if not client_is_there(porta, chi):
             return True
         time.sleep(0.5)
     return False
 
 
-def coda_di(percorso, quante=3):
+def tail_of(percorso, quante=3):
     righe = leggi(percorso)
     if not righe:
         return "(nothing)"
@@ -639,9 +639,9 @@ def accendi_la_scena(chi, scena, applicazione, come, prefisso="   "):
         return False, ("I cannot find `11-c2-una-finestra-si-apre.py` next to me: "
                        "the cure of the browser's provision comes from there, and "
                        "without it the scene does not start")
-    fatto, perche_p = c2.cura_della_provvista(chi)
+    fatto, why_p = c2.cura_della_provvista(chi)
     if not fatto:
-        return False, "the browser's provision is not ready: %s" % perche_p
+        return False, "the browser's provision is not ready: %s" % why_p
 
     rtd, display = il_socket_di(chi)
     if display is None:
@@ -678,34 +678,34 @@ def certifica():
     assesta = [20] * 100 + [157] * 50 + [180] * 50
     # ⭐ The short tail of a compositor that delivers little (xfce/lxqt): 80
     #   frames in all, tail of 40.
-    corto_sano = [20] * 40 + [150] * 40
-    corto_lampeggio = [20] * 40 + [29 if (i // 2) % 2 == 0 else 226
+    short_healthy = [20] * 40 + [150] * 40
+    short_blink = [20] * 40 + [29 if (i // 2) % 2 == 0 else 226
                                    for i in range(40)]
     # ⛔⛔ AND THE CASE THAT MATTERS MOST: the BLACK, still screen.
     nero = [6] * 200
     # ⛔⛔ AND ITS EVIL TWIN, which on 23 Sep 2026 came out 3 instead of
     #   red: a DARK screen THAT ALTERNATES.  It is C3's scene seen by the
     #   capture (median 17) and it is also the shape of the real ghost.
-    nero_che_alterna = [20] * 100 + [29 if (i // 2) % 2 == 0 else 6
+    alternating_black = [20] * 100 + [29 if (i // 2) % 2 == 0 else 6
                                      for i in range(100)]
-    casi_pixel = [
+    cases_pixel = [
         ("⭐ the declared scene, light ONE ⇒ GREEN", sano, 0),
         ("⭐ encoding noise below the threshold ⇒ GREEN", rumore, 0),
         ("⭐ a single settling (1 jump) ⇒ GREEN, ⛔ not a red", assesta, 0),
         ("⛔ the FLICKER (blue ⇄ yellow) ⇒ RED", lampeggio, 1),
-        ("⭐ short tail (xfce/lxqt), light one ⇒ GREEN", corto_sano, 0),
-        ("⛔ short tail that FLICKERS ⇒ RED all the same", corto_lampeggio, 1),
+        ("⭐ short tail (xfce/lxqt), light one ⇒ GREEN", short_healthy, 0),
+        ("⛔ short tail that FLICKERS ⇒ RED all the same", short_blink, 1),
         ("⛔⛔ BLACK and STILL screen ⇒ 3 — ⛔ NEVER a green: the scene did not "
          "arrive", nero, 3),
         ("⛔⛔ dark screen that ALTERNATES ⇒ RED — ⛔ the flicker comes "
-         "BEFORE the black", nero_che_alterna, 1),
+         "BEFORE the black", alternating_black, 1),
         ("⚠ video too short (39 frames) ⇒ 3, ⛔ never a red",
          [157] * 39, 3),
         ("⚠ ffmpeg decoded nothing ⇒ 3", None, 3),
     ]
     print("== C20 — certification of the judgements (⛔ without touching the machine)")
-    for nome, dato, atteso in casi_pixel:
-        e = giudica_i_pixel(dato)[0]
+    for nome, dato, atteso in cases_pixel:
+        e = judge_the_pixels(dato)[0]
         if e != atteso:
             guai += 1
         print("  %s PIXEL    %-62s outcome %s (expected %s)"
@@ -714,7 +714,7 @@ def certifica():
     buono = ["figlio  [c20u1] ⭐⭐ RESTARTING THE CAPTURE: the stage came back",
              "codifica [c20u1] ⭐ throwing away the 4 imported surfaces: generation"]
     # ⭐ THE CHILD THAT SURVIVED — KDE, XFCE: the encoder is the same.
-    casi_reg = [
+    cases_log = [
         ("⭐ reborn, and the cache thrown away ⇒ GREEN", buono, 0),
         ("⛔ reborn and the cache NOT thrown away ⇒ RED", buono[:1], 1),
         ("⚠ no rebirth ⇒ 3, ⛔ never a red", buono[1:], 3),
@@ -722,7 +722,7 @@ def certifica():
          [r.replace("c20u1", "c20u9") for r in buono], 3),
         ("⚠ the log cannot be read ⇒ 3", None, 3),
     ]
-    for nome, dato, atteso in casi_reg:
+    for nome, dato, atteso in cases_log:
         e = giudica_il_registro(dato, "c20u1", False, "111")[0]
         if e != atteso:
             guai += 1
@@ -734,7 +734,7 @@ def certifica():
     nuovo = ["figlio  ⭐ child spawned for «c20u1»: pid 222, uid 4014, gid "
              "4014, serial 3.  ⛔ That it REALLY is that uid",
              "figlio  [c20u1] ⭐⭐ RESTARTING THE CAPTURE: the stage came back"]
-    casi_morto = [
+    cases_dead = [
         ("⭐ NEW child (pid 222 ≠ 111) ⇒ GREEN", nuovo, "111", 0),
         ("⛔ no new child in the log ⇒ 3, ⛔ not a green",
          nuovo[1:], "111", 3),
@@ -745,21 +745,21 @@ def certifica():
          [r.replace("c20u1", "c20u9") for r in nuovo], "111", 3),
         ("⚠ the log cannot be read ⇒ 3", None, "111", 3),
     ]
-    for nome, dato, prima, atteso in casi_morto:
+    for nome, dato, prima, atteso in cases_dead:
         e = giudica_il_registro(dato, "c20u1", True, prima)[0]
         if e != atteso:
             guai += 1
         print("  %s LOG/DEAD  %-61s outcome %s (expected %s)"
               % ("OK " if e == atteso else "NO ", nome, e, atteso))
 
-    casi_somma = [
+    cases_sum = [
         ("⭐ both green ⇒ GREEN", (0, 0, ""), (0, 4, ""), 0),
         ("⛔ the pixels flicker ⇒ RED", (1, 60, ""), (0, 4, ""), 1),
         ("⛔ the cache not thrown away ⇒ RED", (0, 0, ""), (1, 0, ""), 1),
         ("⚠ an «I do not know» does NOT become a red", (3, 0, ""), (1, 0, ""), 3),
         ("⚠ nor from the other side", (1, 9, ""), (3, 0, ""), 3),
     ]
-    for nome, p, r, atteso in casi_somma:
+    for nome, p, r, atteso in cases_sum:
         e = giudizio(p, r)
         if e != atteso:
             guai += 1
@@ -789,10 +789,10 @@ def main():
                         "is started ⇒ the screen really flickers, and the "
                         "pixel judge MUST give red")
     p.add_argument("--registro", default=REGISTRO)
-    p.add_argument("--scena", default=SCENA_FERMA_DI_LUCE,
+    p.add_argument("--scena", default=STILL_LIGHT_SCENE,
                    help="the scene of the HEALTHY RUN: it moves, and its light does not "
                         "change")
-    p.add_argument("--scena-guasta", default=SCENA_CHE_LAMPEGGIA,
+    p.add_argument("--scena-guasta", default=FLASHING_SCENE,
                    help="the scene of the INJECTED FAULT: C3's, which "
                         "alternates blue and yellow")
     p.add_argument("--applicazione", default="firefox-esr")
@@ -832,7 +832,7 @@ def main():
     print("== C20 — rebirth after «Log out» brings no ghosts (%s, port "
           "%d)%s" % (chi, a.porta, innestato))
 
-    desktop, gesto = come_si_esce()
+    desktop, gesto = how_to_exit()
     if desktop is None:
         print("   ⛔ %s ⇒ I could not look" % gesto)
         return 3
@@ -886,18 +886,18 @@ def main():
         sh("setsid python3 -u %s --indirizzo 127.0.0.1 --porta %d --utente %s "
            "--parola %s --resta %s < /dev/null > %s/uno.txt 2>&1 &"
            % (CLIENTE, a.porta, chi, PAROLA, a.primo, dove), 30)
-        nato, fetta_uno = aspetta_la_riga(a.registro, segno, chi, RIGA_NASCITA,
+        nato, slice_one = wait_line(a.registro, segno, chi, LINE_BIRTH,
                                           a.attesa_nascita)
         if not nato:
             print("   ⛔ in %d s the log did not say «%s» for «%s»: the "
                   "session was not born\n      ⇒ I could not look"
-                  % (a.attesa_nascita, RIGA_NASCITA, chi))
+                  % (a.attesa_nascita, LINE_BIRTH, chi))
             return 3
         # ⭐ WE NOTE WHO IS SERVING NOW, and it is needed later: if the «Log out»
         #   gesture kills the child (GNOME), the only proof that the surfaces
         #   of the dead session cannot survive is that the second
         #   login runs in a process with a pid DIFFERENT from this one.
-        pid_di_prima = chi_serviva(fetta_uno, chi)
+        pid_di_prima = who_served(slice_one, chi)
         print("   ⭐ first login: the session of «%s» was born, and the client "
               "is watching (served by child pid %s)"
               % (chi, pid_di_prima or "?"))
@@ -916,7 +916,7 @@ def main():
                   % (desktop, ((r.stderr or r.stdout).strip().replace("\n", " ")[:120])
                      if r else "no answer"))
             return 3
-        finita, _ = aspetta_la_riga(a.registro, segno, chi,
+        finita, _ = wait_line(a.registro, segno, chi,
                                     [p for p, _d in RIGHE_FINITA],
                                     a.attesa_uscita)
         if not finita:
@@ -929,7 +929,7 @@ def main():
         # ⭐ We SAY which of the two forms the product used: it is the
         #   difference between «the child is alive» and «the child died with the
         #   gesture», and the log judge below depends on it.
-        figlio_morto = (finita != RIGHE_FINITA[0][0])
+        child_dead = (finita != RIGHE_FINITA[0][0])
         print("   ⭐ «Log out»: the product saw the graphical session end "
               "— %s" % dict(RIGHE_FINITA)[finita])
         # ⛔⛔ AND HERE WE WAIT FOR THE FIRST CLIENT TO HAVE REALLY LEFT.
@@ -939,13 +939,13 @@ def main():
         #    new session was not born: **outcome 3, and it was not the product's**.
         #    ⚠ The ceiling is tied to `--primo`, not borrowed: one knows
         #      when the first client would end by itself anyway.
-        if not aspetta_che_il_cliente_se_ne_vada(a.porta, chi, a.primo + 30):
+        if not wait_client_gone(a.porta, chi, a.primo + 30):
             print("   ⛔ the first client is still attached after %d s ⇒ I "
                   "could not look\n      its last line: %s"
-                  % (a.primo + 30, coda_di(os.path.join(dove, "uno.txt"))))
+                  % (a.primo + 30, tail_of(os.path.join(dove, "uno.txt"))))
             return 3
         print("   ⭐ the first client has left: %s"
-              % coda_di(os.path.join(dove, "uno.txt"), 1))
+              % tail_of(os.path.join(dove, "uno.txt"), 1))
         time.sleep(2)
 
         # ── 3. THE NEW LOGIN, with the video written ───────────────────────
@@ -954,20 +954,20 @@ def main():
         sh("setsid python3 -u %s --indirizzo 127.0.0.1 --porta %d --utente %s "
            "--parola %s --resta %s --video-scrivi %s < /dev/null > %s/due.txt "
            "2>&1 &" % (CLIENTE, a.porta, chi, PAROLA, a.secondo, video, dove), 30)
-        rinato, _ = aspetta_la_riga(a.registro, segno, chi, RIGA_NASCITA,
+        rinato, _ = wait_line(a.registro, segno, chi, LINE_BIRTH,
                                     a.attesa_nascita)
         if not rinato:
             print("   ⛔ in %d s the new session was not born ⇒ I could not "
                   "look\n      the second client says: %s"
-                  % (a.attesa_nascita, coda_di(os.path.join(dove, "due.txt"))))
+                  % (a.attesa_nascita, tail_of(os.path.join(dove, "due.txt"))))
             return 3
-        acceso, perche_s = accendi_la_scena(chi, scena, a.applicazione, come)
+        acceso, why_s = accendi_la_scena(chi, scena, a.applicazione, come)
         if not acceso:
-            print("   ⛔ %s ⇒ I could not look" % perche_s)
+            print("   ⛔ %s ⇒ I could not look" % why_s)
             return 3
         # ⚠ We wait for the client to have finished writing: the video is the
         #   only witness, and reading it half-way would be a shorter measurement.
-        aspetta_che_il_cliente_se_ne_vada(a.porta, chi, a.secondo + 60)
+        wait_client_gone(a.porta, chi, a.secondo + 60)
 
         fetta = leggi(a.registro)
         fetta = fetta[segno:] if fetta is not None else None
@@ -989,11 +989,11 @@ def main():
         if r is not None and os.path.exists(grezzo):
             try:
                 with open(grezzo, "rb") as f:
-                    luminanze = luminanze_dal_grezzo(f.read())
+                    luminanze = luminances_from_raw(f.read())
             except OSError:
                 luminanze = None
-        pixel = giudica_i_pixel(luminanze)
-        registro = giudica_il_registro(fetta, chi, figlio_morto, pid_di_prima)
+        pixel = judge_the_pixels(luminanze)
+        registro = giudica_il_registro(fetta, chi, child_dead, pid_di_prima)
         esito = giudizio(pixel, registro)
         print("   P %-3s %s" % ("SI" if pixel[0] == 0 else
                                 ("NO" if pixel[0] == 1 else "?"), pixel[2]))

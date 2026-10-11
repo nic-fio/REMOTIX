@@ -26,21 +26,21 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define NOME_REMOTE "org.gnome.Mutter.RemoteDesktop"
-#define PERCORSO_REMOTE "/org/gnome/Mutter/RemoteDesktop"
+#define REMOTE_NAME "org.gnome.Mutter.RemoteDesktop"
+#define REMOTE_PATH "/org/gnome/Mutter/RemoteDesktop"
 #define IFACE_REMOTE "org.gnome.Mutter.RemoteDesktop"
 #define IFACE_REMOTE_SESSIONE "org.gnome.Mutter.RemoteDesktop.Session"
-#define NOME_SCREENCAST "org.gnome.Mutter.ScreenCast"
-#define PERCORSO_SCREENCAST "/org/gnome/Mutter/ScreenCast"
+#define SCREENCAST_NAME "org.gnome.Mutter.ScreenCast"
+#define SCREENCAST_PATH "/org/gnome/Mutter/ScreenCast"
 #define IFACE_SCREENCAST "org.gnome.Mutter.ScreenCast"
 #define IFACE_SC_SESSIONE "org.gnome.Mutter.ScreenCast.Session"
-#define IFACE_SC_FLUSSO "org.gnome.Mutter.ScreenCast.Stream"
-#define NOME_DISPLAY "org.gnome.Mutter.DisplayConfig"
-#define PERCORSO_DISPLAY "/org/gnome/Mutter/DisplayConfig"
+#define IFACE_SC_STREAM "org.gnome.Mutter.ScreenCast.Stream"
+#define DISPLAY_NAME "org.gnome.Mutter.DisplayConfig"
+#define DISPLAY_PATH "/org/gnome/Mutter/DisplayConfig"
 #define IFACE_DISPLAY "org.gnome.Mutter.DisplayConfig"
 
 static GDBusConnection *bus;
-static char *p_controllo, *p_cattura, *p_flusso;
+static char *p_check, *p_capture, *p_stream;
 static uint32_t nodo;
 
 static gint64 ora(void) { return g_get_monotonic_time(); }
@@ -58,7 +58,7 @@ static GVariant *chiama(const char *nome, const char *percorso, const char *ifac
 	return r;
 }
 
-static void su_nodo(GDBusConnection *b, const char *m, const char *p, const char *i,
+static void on_node(GDBusConnection *b, const char *m, const char *p, const char *i,
                     const char *s, GVariant *par, gpointer d)
 {
 	if (g_variant_is_of_type(par, G_VARIANT_TYPE("(u)")))
@@ -67,9 +67,9 @@ static void su_nodo(GDBusConnection *b, const char *m, const char *p, const char
 static gboolean sveglia(gpointer d) { return G_SOURCE_CONTINUE; }
 
 /* ---- the state of the monitors according to Mutter ------------------- */
-static void stampa_stato(const char *quando)
+static void print_state(const char *quando)
 {
-	GVariant *r = chiama(NOME_DISPLAY, PERCORSO_DISPLAY, IFACE_DISPLAY, "GetCurrentState",
+	GVariant *r = chiama(DISPLAY_NAME, DISPLAY_PATH, IFACE_DISPLAY, "GetCurrentState",
 	                     NULL, NULL);
 	GVariant *monitors, *logicals;
 	GVariantIter it;
@@ -127,15 +127,15 @@ static void stampa_stato(const char *quando)
 		while ((l = g_variant_iter_next_value(&it))) {
 			int x, y;
 			double scala;
-			guint trasf;
+			guint xform;
 			gboolean primario;
 			GVariant *mons, *props;
 			GVariantIter mi;
 			GVariant *ms;
-			g_variant_get(l, "(iidub@a(ssss)@a{sv})", &x, &y, &scala, &trasf, &primario,
+			g_variant_get(l, "(iidub@a(ssss)@a{sv})", &x, &y, &scala, &xform, &primario,
 			              &mons, &props);
 			printf("  LOGICAL  at (%d,%d)  SCALE %.6f  transf %u  primary %d  ->", x, y,
-			       scala, trasf, primario);
+			       scala, xform, primario);
 			g_variant_iter_init(&mi, mons);
 			while ((ms = g_variant_iter_next_value(&mi))) {
 				const char *c, *v2, *p2, *s2;
@@ -161,13 +161,13 @@ struct banco {
 	struct pw_stream *flusso;
 	struct spa_hook ascolto;
 	struct spa_video_info_raw formato;
-	uint32_t chiesta_l, chiesta_a;
-	uint32_t nuova_l, nuova_a;
+	uint32_t requested_w, requested_h;
+	uint32_t new_w, new_h;
 	gint64 t0;
-	gint64 t_richiesta_2;   /* when I asked for the new size */
-	gint64 t_ultimo_vecchio;
+	gint64 t_request_2;   /* when I asked for the new size */
+	gint64 t_last_old;
 	int fotogrammi;
-	int fotogrammi_dopo;
+	int frames_after;
 	int fase;               /* 0 = first size, 1 = I asked for the second */
 	int secondi;
 };
@@ -188,7 +188,7 @@ static const struct spa_pod *proposta(struct spa_pod_builder *b, uint32_t l, uin
 	    SPA_POD_CHOICE_RANGE_Fraction(&cmax, &cmin, &cmax));
 }
 
-static int raffica_quante, raffica_fatte, raffica_concordate;
+static int burst_count, bursts_done, bursts_matched;
 
 static void su_parametri(void *d, uint32_t id, const struct spa_pod *param)
 {
@@ -201,13 +201,13 @@ static void su_parametri(void *d, uint32_t id, const struct spa_pod *param)
 
 	printf("[%6.3f s] AGREED FORMAT: %ux%u  (asked %ux%u)  %s\n",
 	       (ora() - B.t0) / 1e6, B.formato.size.width, B.formato.size.height,
-	       B.fase == 0 ? B.chiesta_l : B.nuova_l, B.fase == 0 ? B.chiesta_a : B.nuova_a,
-	       (B.formato.size.width == (B.fase == 0 ? B.chiesta_l : B.nuova_l) &&
-	        B.formato.size.height == (B.fase == 0 ? B.chiesta_a : B.nuova_a))
+	       B.fase == 0 ? B.requested_w : B.new_w, B.fase == 0 ? B.requested_h : B.new_h,
+	       (B.formato.size.width == (B.fase == 0 ? B.requested_w : B.new_w) &&
+	        B.formato.size.height == (B.fase == 0 ? B.requested_h : B.new_h))
 	           ? "⭐ EXACT"
 	           : "⛔ DIFFERENT — rounded silently");
-	if (B.fase == 1 && B.formato.size.width == B.nuova_l && B.formato.size.height == B.nuova_a)
-		raffica_concordate++;
+	if (B.fase == 1 && B.formato.size.width == B.new_w && B.formato.size.height == B.new_h)
+		bursts_matched++;
 	fflush(stdout);
 
 	par[0] = spa_pod_builder_add_object(
@@ -221,7 +221,7 @@ static void su_parametri(void *d, uint32_t id, const struct spa_pod *param)
 	pw_stream_update_params(B.flusso, par, 2);
 }
 
-static void su_stato(void *d, enum pw_stream_state vecchio, enum pw_stream_state nuovo,
+static void on_state(void *d, enum pw_stream_state vecchio, enum pw_stream_state nuovo,
                      const char *errore)
 {
 	printf("[%6.3f s] state: %s -> %s%s%s\n", (ora() - B.t0) / 1e6,
@@ -242,7 +242,7 @@ static void griglia(const uint8_t *dati, uint32_t l, uint32_t a, int passo)
 	const int GX = 8, GY = 4;
 	uint64_t somma[4][8];
 	uint64_t conta[4][8];
-	uint64_t ultima_col = 0, ultima_rig = 0, non_nero = 0, totale = 0;
+	uint64_t last_col = 0, last_row = 0, non_nero = 0, totale = 0;
 	uint32_t x, y;
 	int i, j;
 
@@ -258,14 +258,14 @@ static void griglia(const uint8_t *dati, uint32_t l, uint32_t a, int passo)
 			conta[gy][gx]++;
 			totale++;
 			if (v > 8) non_nero++;
-			if (x >= l - 4) ultima_col += v;
-			if (y >= a - 4) ultima_rig += v;
+			if (x >= l - 4) last_col += v;
+			if (y >= a - 4) last_row += v;
 		}
 	}
 	printf("  non-black pixels: %.2f%%   last 4 columns: mean luminance %.1f   "
 	       "last 4 rows: %.1f\n",
-	       100.0 * non_nero / (double) totale, ultima_col / (double) (4.0 * a),
-	       ultima_rig / (double) (4.0 * l));
+	       100.0 * non_nero / (double) totale, last_col / (double) (4.0 * a),
+	       last_row / (double) (4.0 * l));
 	for (i = 0; i < GY; i++) {
 		printf("  grid:");
 		for (j = 0; j < GX; j++)
@@ -279,28 +279,28 @@ static void su_processo(void *d)
 	struct pw_buffer *b = pw_stream_dequeue_buffer(B.flusso);
 	if (!b) return;
 	if (b->buffer->datas[0].chunk->size > 0 && b->buffer->datas[0].data &&
-	    ((B.fase == 0 && B.fotogrammi == 0) || (B.fase == 1 && B.fotogrammi_dopo == 0)))
+	    ((B.fase == 0 && B.fotogrammi == 0) || (B.fase == 1 && B.frames_after == 0)))
 		griglia((const uint8_t *) b->buffer->datas[0].data, B.formato.size.width,
 		        B.formato.size.height, b->buffer->datas[0].chunk->stride);
 	if (b->buffer->datas[0].chunk->size > 0) {
 		if (B.fase == 0) {
 			B.fotogrammi++;
-			B.t_ultimo_vecchio = ora();
+			B.t_last_old = ora();
 			if (B.fotogrammi <= 3)
 				printf("[%6.3f s] frame %d: %u bytes, stride %d\n",
 				       (ora() - B.t0) / 1e6, B.fotogrammi,
 				       b->buffer->datas[0].chunk->size,
 				       b->buffer->datas[0].chunk->stride);
 		} else {
-			B.fotogrammi_dopo++;
-			if (B.fotogrammi_dopo <= 3)
+			B.frames_after++;
+			if (B.frames_after <= 3)
 				printf("[%6.3f s] NEW frame %d: %u bytes, stride %d  "
 				       "(hole since the request: %.1f ms; since the last old one: %.1f ms)\n",
-				       (ora() - B.t0) / 1e6, B.fotogrammi_dopo,
+				       (ora() - B.t0) / 1e6, B.frames_after,
 				       b->buffer->datas[0].chunk->size,
 				       b->buffer->datas[0].chunk->stride,
-				       (ora() - B.t_richiesta_2) / 1000.0,
-				       (ora() - B.t_ultimo_vecchio) / 1000.0);
+				       (ora() - B.t_request_2) / 1000.0,
+				       (ora() - B.t_last_old) / 1000.0);
 		}
 	}
 	pw_stream_queue_buffer(B.flusso, b);
@@ -309,32 +309,32 @@ static void su_processo(void *d)
 
 static const struct pw_stream_events eventi = {
     PW_VERSION_STREAM_EVENTS,
-    .state_changed = su_stato,
+    .state_changed = on_state,
     .param_changed = su_parametri,
     .process = su_processo,
 };
 
 /* ⭐ THE BURST: twenty different sizes in two seconds, as a dragged browser
  *    window would do.  Question: does Mutter hold up, or does it get lost on the way? */
-static void alla_raffica(void *d, uint64_t espirazioni)
+static void on_burst(void *d, uint64_t expirations)
 {
 	uint8_t sp[1024];
 	struct spa_pod_builder b = SPA_POD_BUILDER_INIT(sp, sizeof sp);
 	const struct spa_pod *par[1];
 	uint32_t l, a;
 
-	if (raffica_fatte >= raffica_quante) return;
-	l = 1201 + (uint32_t) raffica_fatte * 37;
-	a = 801 + (uint32_t) raffica_fatte * 13;
-	B.nuova_l = l;
-	B.nuova_a = a;
+	if (bursts_done >= burst_count) return;
+	l = 1201 + (uint32_t) bursts_done * 37;
+	a = 801 + (uint32_t) bursts_done * 13;
+	B.new_w = l;
+	B.new_h = a;
 	B.fase = 1;
-	raffica_fatte++;
+	bursts_done++;
 	par[0] = proposta(&b, l, a);
 	pw_stream_update_params(B.flusso, par, 1);
 }
 
-static void al_tempo(void *d, uint64_t espirazioni)
+static void on_timer(void *d, uint64_t expirations)
 {
 	static int passo = 0;
 	uint8_t sp[1024];
@@ -345,26 +345,26 @@ static void al_tempo(void *d, uint64_t espirazioni)
 	if (passo == 1) {
 		printf("\n[%6.3f s] === after %d s: %d frames at the first size ===\n",
 		       (ora() - B.t0) / 1e6, B.secondi, B.fotogrammi);
-		stampa_stato("first size");
-		if (raffica_quante > 0) {
+		print_state("first size");
+		if (burst_count > 0) {
 			printf("[%6.3f s] burst: %d asked, %d agreed EXACT\n",
-			       (ora() - B.t0) / 1e6, raffica_fatte, raffica_concordate);
+			       (ora() - B.t0) / 1e6, bursts_done, bursts_matched);
 			return;
 		}
-		if (B.nuova_l == 0) { pw_main_loop_quit(B.loop); return; }
+		if (B.new_w == 0) { pw_main_loop_quit(B.loop); return; }
 		printf("\n[%6.3f s] === HOT CHANGE: asking %ux%u ===\n", (ora() - B.t0) / 1e6,
-		       B.nuova_l, B.nuova_a);
+		       B.new_w, B.new_h);
 		B.fase = 1;
-		B.t_richiesta_2 = ora();
-		par[0] = proposta(&b, B.nuova_l, B.nuova_a);
+		B.t_request_2 = ora();
+		par[0] = proposta(&b, B.new_w, B.new_h);
 		pw_stream_update_params(B.flusso, par, 1);
 	} else if (passo == 2) {
 		printf("\n[%6.3f s] === after the change: %d new frames ===\n",
-		       (ora() - B.t0) / 1e6, B.fotogrammi_dopo);
-		if (raffica_quante > 0)
+		       (ora() - B.t0) / 1e6, B.frames_after);
+		if (burst_count > 0)
 			printf("[%6.3f s] FINAL burst: %d asked, %d agreed EXACT\n",
-			       (ora() - B.t0) / 1e6, raffica_fatte, raffica_concordate);
-		stampa_stato("second size");
+			       (ora() - B.t0) / 1e6, bursts_done, bursts_matched);
+		print_state("second size");
 		pw_main_loop_quit(B.loop);
 	}
 	fflush(stdout);
@@ -382,19 +382,19 @@ int main(int argc, char **argv)
 	struct pw_core *core;
 	struct spa_source *tempo;
 	struct timespec quando, intervallo;
-	char nodo_s[32];
+	char node_s[32];
 
 	if (argc < 3) {
 		fprintf(stderr, "usage: %s <L> <A> [<L2> <A2>] [seconds]\n", argv[0]);
 		return 2;
 	}
-	B.chiesta_l = (uint32_t) atoi(argv[1]);
-	B.chiesta_a = (uint32_t) atoi(argv[2]);
+	B.requested_w = (uint32_t) atoi(argv[1]);
+	B.requested_h = (uint32_t) atoi(argv[2]);
 	if (argc >= 5 && strcmp(argv[3], "raffica") == 0) {
-		raffica_quante = atoi(argv[4]);
+		burst_count = atoi(argv[4]);
 	} else if (argc >= 5) {
-		B.nuova_l = (uint32_t) atoi(argv[3]);
-		B.nuova_a = (uint32_t) atoi(argv[4]);
+		B.new_w = (uint32_t) atoi(argv[3]);
+		B.new_h = (uint32_t) atoi(argv[4]);
 	}
 	B.secondi = (argc >= 6) ? atoi(argv[5]) : (argc == 4 ? atoi(argv[3]) : 4);
 	if (B.secondi <= 0) B.secondi = 4;
@@ -403,17 +403,17 @@ int main(int argc, char **argv)
 	bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &e);
 	if (!bus) { fprintf(stderr, "⛔ bus: %s\n", e->message); return 3; }
 
-	stampa_stato("BEFORE everything");
+	print_state("BEFORE everything");
 
-	r = chiama(NOME_REMOTE, PERCORSO_REMOTE, IFACE_REMOTE, "CreateSession", NULL,
+	r = chiama(REMOTE_NAME, REMOTE_PATH, IFACE_REMOTE, "CreateSession", NULL,
 	           G_VARIANT_TYPE("(o)"));
 	if (!r) return 4;
-	g_variant_get(r, "(o)", &p_controllo);
+	g_variant_get(r, "(o)", &p_check);
 	g_variant_unref(r);
 
 	g_variant_builder_init(&pr, G_VARIANT_TYPE("a{sv}"));
 	{
-		GVariant *idv = chiama(NOME_REMOTE, p_controllo, "org.freedesktop.DBus.Properties",
+		GVariant *idv = chiama(REMOTE_NAME, p_check, "org.freedesktop.DBus.Properties",
 		                       "Get",
 		                       g_variant_new("(ss)", IFACE_REMOTE_SESSIONE, "SessionId"),
 		                       G_VARIANT_TYPE("(v)"));
@@ -428,35 +428,35 @@ int main(int argc, char **argv)
 		g_variant_unref(idv);
 	}
 	g_variant_builder_add(&pr, "{sv}", "disable-animations", g_variant_new_boolean(TRUE));
-	r = chiama(NOME_SCREENCAST, PERCORSO_SCREENCAST, IFACE_SCREENCAST, "CreateSession",
+	r = chiama(SCREENCAST_NAME, SCREENCAST_PATH, IFACE_SCREENCAST, "CreateSession",
 	           g_variant_new("(a{sv})", &pr), G_VARIANT_TYPE("(o)"));
 	if (!r) return 6;
-	g_variant_get(r, "(o)", &p_cattura);
+	g_variant_get(r, "(o)", &p_capture);
 	g_variant_unref(r);
 
-	r = chiama(NOME_REMOTE, p_controllo, IFACE_REMOTE_SESSIONE, "Start", NULL, NULL);
+	r = chiama(REMOTE_NAME, p_check, IFACE_REMOTE_SESSIONE, "Start", NULL, NULL);
 	if (!r) return 7;
 	g_variant_unref(r);
 
 	g_variant_builder_init(&pr, G_VARIANT_TYPE("a{sv}"));
 	g_variant_builder_add(&pr, "{sv}", "cursor-mode", g_variant_new_uint32(2));
 	g_variant_builder_add(&pr, "{sv}", "is-platform", g_variant_new_boolean(TRUE));
-	r = chiama(NOME_SCREENCAST, p_cattura, IFACE_SC_SESSIONE, "RecordVirtual",
+	r = chiama(SCREENCAST_NAME, p_capture, IFACE_SC_SESSIONE, "RecordVirtual",
 	           g_variant_new("(a{sv})", &pr), G_VARIANT_TYPE("(o)"));
 	if (!r) return 8;
-	g_variant_get(r, "(o)", &p_flusso);
+	g_variant_get(r, "(o)", &p_stream);
 	g_variant_unref(r);
-	printf("stream: %s\n", p_flusso);
+	printf("stream: %s\n", p_stream);
 
 	{
 		GMainContext *c = g_main_context_new();
 		GSource *bat;
 		gint64 sc;
 		g_main_context_push_thread_default(c);
-		g_dbus_connection_signal_subscribe(bus, NULL, IFACE_SC_FLUSSO,
-		                                   "PipeWireStreamAdded", p_flusso, NULL,
-		                                   G_DBUS_SIGNAL_FLAGS_NONE, su_nodo, &nodo, NULL);
-		r = chiama(NOME_SCREENCAST, p_flusso, IFACE_SC_FLUSSO, "Start", NULL, NULL);
+		g_dbus_connection_signal_subscribe(bus, NULL, IFACE_SC_STREAM,
+		                                   "PipeWireStreamAdded", p_stream, NULL,
+		                                   G_DBUS_SIGNAL_FLAGS_NONE, on_node, &nodo, NULL);
+		r = chiama(SCREENCAST_NAME, p_stream, IFACE_SC_STREAM, "Start", NULL, NULL);
 		if (!r) return 9;
 		g_variant_unref(r);
 		bat = g_timeout_source_new(50);
@@ -476,25 +476,25 @@ int main(int argc, char **argv)
 	core = pw_context_connect(ctx, NULL, 0);
 	if (!core) { fprintf(stderr, "⛔ PipeWire does not answer\n"); return 11; }
 
-	snprintf(nodo_s, sizeof nodo_s, "%u", nodo);
+	snprintf(node_s, sizeof node_s, "%u", nodo);
 	B.flusso = pw_stream_new(core, "misura-f4in8",
 	                         pw_properties_new(PW_KEY_MEDIA_TYPE, "Video", PW_KEY_MEDIA_CATEGORY,
 	                                           "Capture", PW_KEY_MEDIA_ROLE, "Screen", NULL));
 	pw_stream_add_listener(B.flusso, &B.ascolto, &eventi, NULL);
-	par[0] = proposta(&b, B.chiesta_l, B.chiesta_a);
+	par[0] = proposta(&b, B.requested_w, B.requested_h);
 	if (pw_stream_connect(B.flusso, PW_DIRECTION_INPUT, nodo,
 	                      PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_MAP_BUFFERS, par, 1) < 0) {
 		fprintf(stderr, "⛔ pw_stream_connect\n");
 		return 12;
 	}
 
-	if (raffica_quante > 0) {
+	if (burst_count > 0) {
 		struct spa_source *t2 = pw_loop_add_timer(pw_main_loop_get_loop(B.loop),
-		                                          alla_raffica, NULL);
+		                                          on_burst, NULL);
 		struct timespec q = {0, 300000000}, iv = {0, 100000000};
 		pw_loop_update_timer(pw_main_loop_get_loop(B.loop), t2, &q, &iv, false);
 	}
-	tempo = pw_loop_add_timer(pw_main_loop_get_loop(B.loop), al_tempo, NULL);
+	tempo = pw_loop_add_timer(pw_main_loop_get_loop(B.loop), on_timer, NULL);
 	quando.tv_sec = B.secondi;
 	quando.tv_nsec = 0;
 	intervallo.tv_sec = B.secondi;
@@ -504,15 +504,15 @@ int main(int argc, char **argv)
 	pw_main_loop_run(B.loop);
 
 	printf("\n== summary ==\n  asked %ux%u -> got %ux%u, %d frames\n",
-	       B.chiesta_l, B.chiesta_a, B.formato.size.width, B.formato.size.height, B.fotogrammi);
-	if (B.nuova_l)
-		printf("  then asked %ux%u -> %d new frames\n", B.nuova_l, B.nuova_a,
-		       B.fotogrammi_dopo);
+	       B.requested_w, B.requested_h, B.formato.size.width, B.formato.size.height, B.fotogrammi);
+	if (B.new_w)
+		printf("  then asked %ux%u -> %d new frames\n", B.new_w, B.new_h,
+		       B.frames_after);
 	pw_stream_destroy(B.flusso);
 	pw_context_destroy(ctx);
 	pw_main_loop_destroy(B.loop);
 
-	chiama(NOME_SCREENCAST, p_cattura, IFACE_SC_SESSIONE, "Stop", NULL, NULL);
-	chiama(NOME_REMOTE, p_controllo, IFACE_REMOTE_SESSIONE, "Stop", NULL, NULL);
+	chiama(SCREENCAST_NAME, p_capture, IFACE_SC_SESSIONE, "Stop", NULL, NULL);
+	chiama(REMOTE_NAME, p_check, IFACE_REMOTE_SESSIONE, "Stop", NULL, NULL);
 	return 0;
 }

@@ -72,11 +72,11 @@ function disegna(f) {
   R.disegno_ms.push(performance.now() - t0); R.dipinti++;
 }
 
-let ultimo_cb = 0, dec;
+let last_cb = 0, dec;
 function uscita(f) {
   const ora = performance.now();
-  if (ultimo_cb) R.callback_gap_ms.push(ora - ultimo_cb);
-  ultimo_cb = ora; R.usciti++;
+  if (last_cb) R.callback_gap_ms.push(ora - last_cb);
+  last_cb = ora; R.usciti++;
   if (R.formato === null) R.formato = f.format;
   if (!gl && !ctx) prepara(f.displayWidth, f.displayHeight);
   R.coda_max = Math.max(R.coda_max, dec.decodeQueueSize);

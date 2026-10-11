@@ -27,7 +27,7 @@
 
 bool rcp_autentica_da(const char *utente, const char *parola,
                       const char *rhost);
-bool rcp_rhost_da_provenienza(const char *provenienza, char *fuori, size_t cap);
+bool rcp_rhost_from_provenance(const char *provenienza, char *fuori, size_t cap);
 
 /* ------------------------------------------------------------------------ */
 /* The two things C does not bring as dowry: a byte vector and a list.       */
@@ -37,7 +37,7 @@ typedef struct {
 	size_t n, cap;
 } bytes;
 
-static bool bytes_aggiungi(bytes *b, const uint8_t *d, size_t n)
+static bool bytes_add(bytes *b, const uint8_t *d, size_t n)
 {
 	if (n == 0)
 		return true;
@@ -57,7 +57,7 @@ static bool bytes_aggiungi(bytes *b, const uint8_t *d, size_t n)
 	return true;
 }
 
-static void bytes_togli_testa(bytes *b, size_t n)
+static void bytes_remove_head(bytes *b, size_t n)
 {
 	if (n >= b->n) {
 		b->n = 0;
@@ -67,7 +67,7 @@ static void bytes_togli_testa(bytes *b, size_t n)
 	b->n -= n;
 }
 
-static void bytes_libera(bytes *b)
+static void bytes_free(bytes *b)
 {
 	free(b->d);
 	b->d = NULL;
@@ -78,7 +78,7 @@ static void bytes_libera(bytes *b)
 
 /* How a client stream is classified. */
 enum genere {
-	G_INCERTO, /* not yet known what it is: the first bytes are missing */
+	G_UNCERTAIN, /* not yet known what it is: the first bytes are missing */
 	G_WT,      /* it is a bidirectional WebTransport stream */
 	G_NONWT,   /* it is not: it belongs to nghttp3 */
 	G_UNI_OK,  /* unidirectional WebTransport, lawful channel but not served */
@@ -150,13 +150,13 @@ typedef struct {
 	 *
 	 *      `consegnato` — all the bytes are inside ngtcp2.  It is no longer
 	 *                     chosen for writing (`coda_scegli()`), it no longer
-	 *                     counts as «to send» (`coda_vuota()`,
-	 *                     `byte_in_coda`), ⛔ **but the bytes remain ours and
+	 *                     counts as «to send» (`queue_empty()`,
+	 *                     `byte_in_queue`), ⛔ **but the bytes remain ours and
 	 *                     remain allocated**;
 	 *      `morto`      — the bytes are freed.  One gets there ONLY from an
 	 *                     acknowledgement covering them (`coda_conferma()`), from
 	 *                     the stream's closure (`wt_stream_chiuso()`) or from its
-	 *                     reset (`coda_butta_stream()`, always next to a
+	 *                     reset (`queue_drop_stream()`, always next to a
 	 *                     `RESET_STREAM`).  They are the two conditions of the
 	 *                     contract, and there is no third one.
 	 *
@@ -357,12 +357,12 @@ typedef struct {
 /* ⛔ The test tone (`--audio-prova`), `0` = off.  It sits at the top and not
  *    next to its function because `wt_battito_ns()` reads it too, and that
  *    comes much earlier — see the clock box there. */
-static uint32_t audio_prova_hz;
+static uint32_t audio_test_hz;
 
 /* ⭐ The hook towards the child, for the same reason: `audio_regola()` calls it,
- *    and it comes much earlier than `wt_audio_gancio()`. */
-static wt_audio_richiesta gancio_audio;
-static void *gancio_audio_ctx;
+ *    and it comes much earlier than `wt_audio_hook()`. */
+static wt_audio_request hook_audio;
+static void *hook_audio_ctx;
 
 /* HTTP/3 requests: only one thing is needed from them here — telling the
  * WebTransport extended CONNECT from everything else. */
@@ -375,16 +375,16 @@ typedef struct {
 } richiesta;
 
 /* ⭐ How many datagram losses are remembered in order to recognise the
- *    FALSE ones — that is reordering.  See the field `dgram_anello` further below: it
+ *    FALSE ones — that is reordering.  See the field `dgram_ring` further below: it
  *    is short on purpose, and the reason is there. */
-#define WT_DGRAM_ANELLO 512
+#define WT_DGRAM_RING 512
 
 struct wt {
 	ngtcp2_conn *conn;
 	/* ⭐ D-001: this user's stage already existed at PAM's verdict ⇒
-	 *    `SESSIONE` says `2 = RIPRESA`.  `wt_verdetto()` writes it. */
+	 *    `SESSIONE` says `2 = RIPRESA`.  `wt_verdict()` writes it. */
 	bool ripresa;
-	ngtcp2_ccerr *ultimo_errore;
+	ngtcp2_ccerr *last_error;
 	nghttp3_conn *h3;
 	char provenienza[80];
 	/* ⭐ THE PAM HELPER — `DECISIONI.md` §1.10.  ⛔ This layer does not own
@@ -399,30 +399,30 @@ struct wt {
 	 * which is the only instant in which one can tell the browser we speak
 	 * WebTransport */
 	int64_t ctrl_id;
-	bool impostazioni_scritte;
+	bool settings_written;
 	bool guasto;
-	uint8_t impbuf[256];
-	size_t impbuf_len;
+	uint8_t settings_buf[256];
+	size_t settings_buf_len;
 	/* ⛔ How many bytes of the rewritten SETTINGS have ALREADY GONE OUT, and how
 	 *    many bytes of nghttp3 that buffer replaces.  They are needed because a
 	 *    PARTIAL write is a normal outcome of `ngtcp2_conn_writev_stream` — not
 	 *    a fault — and in the graft, before the cure, it killed the
 	 *    connection: now one resumes from the point reached,
 	 *    as has always been done for the output queue. */
-	size_t impbuf_off, impbuf_orig;
+	size_t settings_buf_off, settings_buf_orig;
 
 	stream_giudizio *giudizi;
-	size_t ngiudizi, capgiudizi;
+	size_t njudgments, capjudgments;
 
 	uscita *coda;
-	size_t ncoda, capcoda, testa;
+	size_t nqueue, capqueue, testa;
 	/* ⛔ The streams blocked for THIS write pass: ngtcp2 said
 	 *    STREAM_DATA_BLOCKED, and retrying within the same pass would be a
 	 *    loop that does not advance.  ⚠ They were a `bool` until phase 2 — see the
 	 *    box of `WT_BLOCCATI_MAX`: that `bool` redid by hand the head-of-line
 	 *    blocking that `RCP.md` §5.1 exists to remove. */
 	int64_t bloccati[WT_BLOCCATI_MAX];
-	size_t nbloccati;
+	size_t nblocked;
 	/* ⛔ The cap has been touched and the queue really stops: it is kept in order
 	 *    to write it ONCE instead of at every pass. */
 	bool troppi_bloccati;
@@ -433,10 +433,10 @@ struct wt {
 	bytes capsbuf;
 	/* ⛔ How many bytes of a capsule already judged TOO BIG remain to be
 	 *    thrown away as they pass. */
-	uint64_t capsalta;
+	uint64_t capsule_skip;
 
 	richiesta *richieste;
-	size_t nrichieste, caprichieste;
+	size_t nrequests, caprequests;
 
 	/* ═══ RCP over WebTransport ═════════════════════════════════════════ */
 	struct rcp_sessione *rcp;
@@ -455,7 +455,7 @@ struct wt {
 	 * ⚠ The reason the `bool` existed remains valid and must be honoured all
 	 *   the same: without a backstop, `video_regola()` would rewrite the same log
 	 *   line at every heartbeat of every session, and a log that repeats itself
-	 *   is no longer read.  ⇒ `video_detto` is that backstop, and it is only for the
+	 *   is no longer read.  ⇒ `video_logged` is that backstop, and it is only for the
 	 *   log: it no longer stops frames.
 	 */
 	/* This session's video channel is on: `SESSIONE` has left, the
@@ -471,7 +471,7 @@ struct wt {
 	 *                        until the end, because it is what lets the
 	 *                        FINAL COUNT out in `wt_libera()`: switching it off at the
 	 *                        farewell would mean losing that line.
-	 *      `video_fermo`   = «I have already asked the child to capture NO MORE».
+	 *      `video_stopped`   = «I have already asked the child to capture NO MORE».
 	 *
 	 * ⛔ And it goes back to `false` in `video_regola()` when a new session
 	 *    restarts the loop: without that return the cure for waste
@@ -480,16 +480,16 @@ struct wt {
 	 *    `video_acceso` already true, would ask the stage nothing, and
 	 *    the user would be left in front of a frozen screen forever.  ⚠ It is
 	 *    much worse than the waste being cured. */
-	bool video_fermo;
+	bool video_stopped;
 	/* ⛔ «I have already explained why this session has no video»: once
 	 *    only, and the why is in the line written then. */
-	bool video_detto;
+	bool video_logged;
 	/* ⛔ The last frame size for which «it is not the canvas in force» has already
 	 *    been written.  ⚠ It is a SIZE and not a `bool` on purpose: so the backstop
 	 *    rearms when the fact changes, instead of keeping quiet forever after the first
-	 *    time — and it is a field of its own, because `video_detto` tells another
+	 *    time — and it is a field of its own, because `video_logged` tells another
 	 *    fact and one flag for two facts switches one of them off. */
-	uint32_t tela_detta_l, tela_detta_a;
+	uint32_t canvas_logged_w, canvas_logged_h;
 	/* ⛔⭐ HOW MANY MISMATCH ANNOUNCEMENTS HAVE BEEN WRITTEN — and it is not the same
 	 *     number as the frames not sent, which is precisely the point.
 	 *
@@ -504,23 +504,23 @@ struct wt {
 	 * ⛔ The backstop is NOT touched — 799 identical lines would make the log
 	 *    unusable.  What was missing is the COUNT next to it, and they are two
 	 *    distinct numbers because they count two distinct things. */
-	uint32_t video_annunci_tela;
+	uint32_t video_canvas_announcements;
 	/* When the last keyframe was requested from the child, so as not to request one at
 	 * every heartbeat while the first is still on its way.  ⛔ It is not the grace
 	 * of §5.2 (that one belongs to `rcp.c` and counts from the last keyframe SENT): it is the
 	 * backstop of a repeated request towards the stage. */
-	uint64_t chiave_chiesta_ms;
+	uint64_t key_requested_ms;
 	/* ⛔⭐ THE SECOND BELT of 23 Sep 2026 (see `batti_fra()` and
-	 *     `video_rifiutato_per_chiave()`): the §5.2 debt that has been on for too
+	 *     `video_refused_for_key()`): the §5.2 debt that has been on for too
 	 *     long is said ONCE per episode, not 45 278 times.  It is switched off when
 	 *     a keyframe leaves again. */
-	bool debito_detto;
+	bool debt_logged;
 	/* ⭐ How big the last keyframe SENT was, in bytes, and the last interval
 	 *    applied to it — they serve `chiave_intervallo_ms()`, and the
 	 *    second exists only so as not to repeat the same log line
 	 *    fifty times a second. */
-	uint64_t chiave_byte, chiave_attesa_detta_ms;
-	uint32_t video_diffusi, video_saltati;
+	uint64_t chiave_byte, key_wait_logged_ms;
+	uint32_t video_broadcast, video_saltati;
 
 	/* ⭐⭐ PHASE 9 — THE QUEUE THRESHOLD, and the three counts that make it
 	 *     READABLE from the log instead of deduced.
@@ -531,7 +531,7 @@ struct wt {
 	 *    must be subtractable.
 	 * `sgombra_abbandoni` — how many times the threshold was exceeded all the same
 	 *    and the delta went away.
-	 * ⛔ `sgombra_credito` — the deltas that did not even ENTER the queue
+	 * ⛔ `clear_out_credit` — the deltas that did not even ENTER the queue
 	 *    because §2.3 had no credit (`rcp.c:3441`, cause 4 of the debt of
 	 *    §5.2).  ⚠ IT IS THE SHAPE INVISIBLE TO THE RECEIVER, and it is here for a
 	 *    precise reason: this phase's cure touches **cause 3**, not
@@ -540,18 +540,18 @@ struct wt {
 	 *    this number next to the other two the bench knows **to whom** to attribute it;
 	 *    without it it would see «the cure did not work» and that would be false.
 	 *
-	 * ⚠ `sgombra_sopra` is the backstop of the log lines: it is written when
+	 * ⚠ `clear_out_above` is the backstop of the log lines: it is written when
 	 *   the STATE changes (below→above and above→below), not thirty times a
 	 *   second.  ⛔ And the startup line with the value in force is written by
 	 *   `wt_sgombra_soglia()`, which `main.c` always calls: «off» and «never
 	 *   fired» must not look the same. */
-	uint32_t sgombra_tenuti, sgombra_abbandoni, sgombra_credito;
-	bool sgombra_sopra;
+	uint32_t sgombra_tenuti, sgombra_abbandoni, clear_out_credit;
+	bool clear_out_above;
 	/* ⛔ 22 Sep 2026 — deltas KEPT because ahead there is a KEYFRAME still in
 	 *    the queue (see `video_sgombra()`, «THE KEYFRAME SPIRAL»), and the backstop
 	 *    of the line that says so once per keyframe. */
-	uint32_t sgombra_dietro_chiave;
-	uint32_t sgombra_chiave_detta;
+	uint32_t clear_out_behind_key;
+	uint32_t clear_key_logged;
 
 	/* ⭐⭐ PHASE 9 — THE RATE REGULATOR, and its numbers.
 	 *
@@ -559,10 +559,10 @@ struct wt {
 	 *    was not emptying.  ⛔ It does not go into `video_saltati`: that one counts
 	 *    INADMISSIBLE frames (wrong canvas, credit exhausted, refusal by
 	 *    rcp), this one counts a RATE DROP decided by us.  It is the lesson
-	 *    of `video_annunci_tela` (:331-343): two numbers for two facts, or one
+	 *    of `video_canvas_announcements` (:331-343): two numbers for two facts, or one
 	 *    of the two lies with a value that looks healthy.
 	 *
-	 * `ritmo_giu` / `ritmo_da_ms` / `ritmo_da_n` — whether a drop episode is
+	 * `ritmo_giu` / `rate_from_ms` / `rate_from_n` — whether a drop episode is
 	 *    in progress, since when and from what count: they serve to write TWO lines per
 	 *    episode instead of one per skipped frame.  ⛔ At thirty a second
 	 *    the second shape is the defect of the 30.8 GB of log.
@@ -578,12 +578,12 @@ struct wt {
 	 *     frames arrive at all. */
 	uint32_t video_ritmo_scesi;
 	bool     ritmo_giu;
-	uint64_t ritmo_da_ms;
-	uint32_t ritmo_da_n;
-	uint32_t ritmo_letture;
-	unsigned ritmo_max, ritmo_ultimo;
-	uint32_t ritmo_detti_n;
-	uint64_t ritmo_detto_ms;
+	uint64_t rate_from_ms;
+	uint32_t rate_from_n;
+	uint32_t rate_readings;
+	unsigned ritmo_max, rate_last;
+	uint32_t rate_logged_n;
+	uint64_t rate_logged_ms;
 
 	/* ⛔⭐⭐ PHASE 9 — THE SNAPSHOT OF THE NETWORK OF THE PREVIOUS SECOND, and it serves to
 	 *      answer the only question that counts under loss: **is it the line
@@ -602,16 +602,16 @@ struct wt {
 	 *   and to keep quiet when nothing has changed.  No threshold, no
 	 *   rate, no switch: `rete_ciclo()` is pure observation.
 	 *
-	 * ⛔ `rete_detto_ms` at 0 means «never said», and the first line comes out
+	 * ⛔ `network_logged_ms` at 0 means «never said», and the first line comes out
 	 *    anyway: «the session has not spoken yet» and «nothing has
 	 *    changed» must not look the same (`LEZIONI.md` §1.9). */
-	uint64_t rete_detto_ms;
-	uint64_t rete_pkt_lost, rete_bytes_lost;
-	uint64_t rete_pkt_sent, rete_pkt_recv, rete_pkt_discarded;
+	uint64_t network_logged_ms;
+	uint64_t network_pkt_lost, network_bytes_lost;
+	uint64_t network_pkt_sent, network_pkt_recv, network_pkt_discarded;
 	/* The verdict of the last line: if it changes, the line comes out even with counters
 	 * still — going from «the window is closed» to «nothing to report» is
 	 * precisely the fact one wants to see. */
-	int rete_giudizio;
+	int network_verdict;
 
 	/* ⭐⭐⭐ LOST DATAGRAMS — AND THE MEASURE OF REORDERING THAT NGTCP2 DOES NOT GIVE.
 	 *
@@ -635,11 +635,11 @@ struct wt {
 	 *    number precisely in the case — the line that really loses — in which it must
 	 *    stay honest.  ⇒ Whatever falls out of the ring stays lost. */
 	uint64_t dgram_persi;        /* `lost_datagram` said: lost */
-	uint64_t dgram_riscontrati;  /* `ack_datagram` said: arrived */
+	uint64_t dgram_acked;  /* `ack_datagram` said: arrived */
 	uint64_t dgram_falsi;        /* lost AND THEN acknowledged = REORDERING */
-	uint64_t dgram_anello[WT_DGRAM_ANELLO];
-	unsigned dgram_anello_i;
-	uint64_t rete_dgram_persi, rete_dgram_falsi;
+	uint64_t dgram_ring[WT_DGRAM_RING];
+	unsigned dgram_ring_i;
+	uint64_t network_dgram_lost, network_dgram_bogus;
 
 	/* ⛔⭐⭐ PHASE 9 — THE DEAD LINE: the fields on which the most visible
 	 *      DECISION of the whole product is taken — throwing a session out.
@@ -654,11 +654,11 @@ struct wt {
 	 *        itself — that is the threshold would change without anybody having
 	 *        written it.
 	 *
-	 * ⛔ `lm_finestra_ms == 0` means «never opened»: the first round takes a snapshot
+	 * ⛔ `lm_window_ms == 0` means «never opened»: the first round takes a snapshot
 	 *    and does not judge.  A verdict taken on the difference with the totals of the whole
 	 *    connection would be a fraction over a window as long as the
 	 *    session, that is another quantity. */
-	uint64_t lm_finestra_ms;    /* when the current window opened            */
+	uint64_t lm_window_ms;    /* when the current window opened            */
 	uint64_t lm_pkt_sent;       /* `pkt_sent` when the window opened          */
 	uint64_t lm_pkt_lost;       /* `pkt_lost` when the window opened          */
 	/* ⛔⛔⭐ THE LOSS FRACTION IS A WITNESS, NO LONGER A JUDGE — 23
@@ -667,8 +667,8 @@ struct wt {
 	 *      of the last CLOSED window, so the firing line carries the
 	 *      number even when another cause decided. */
 	unsigned lm_permille;       /* the fraction of the last closed window     */
-	uint64_t lm_persi_v, lm_spediti_v; /* the two counts of that window       */
-	uint64_t lm_durata_v;       /* and how long it really lasted, in ms       */
+	uint64_t lm_lost_v, lm_sent_v; /* the two counts of that window       */
+	uint64_t lm_duration_v;       /* and how long it really lasted, in ms       */
 	/* ⛔⭐⭐ THE OUTPUT STALL — the quantity on which we DECIDE from today.
 	 *
 	 *      They are two monotonic counters plus an instant, and each of the three carries
@@ -681,24 +681,24 @@ struct wt {
 	 *                         session, counted BEFORE any brake, clear-out or
 	 *                         refusal: if it does not rise and the queue is empty, there
 	 *                         was nothing to send and the count DOES NOT START;
-	 *        · `lm_uscita_ms` — the instant the count last restarted,
+	 *        · `lm_out_ms` — the instant the count last restarted,
 	 *                         for one of the two reasons above.
 	 *
 	 * ⛔ The two `_visti` are the values at the last verdict round: the quantity
 	 *    is a DIFFERENCE between two samples, not a total.  A total
 	 *    would say «since the session began», which is another thing. */
-	uint64_t lm_usciti, lm_usciti_visti;
-	uint64_t lm_offerti, lm_offerti_visti;
-	uint64_t lm_uscita_ms;
+	uint64_t lm_usciti, lm_out_seen;
+	uint64_t lm_offerti, lm_offered_seen;
+	uint64_t lm_out_ms;
 	/* ⛔ Silence is not a free clock: it is «since when the client has not shown
 	 *    a packet any more», and next to it there is the number of times
 	 *    WE have sent it one since then.  Without the second, a
 	 *    session in which neither of the two speaks would declare itself dead
 	 *    on its own — and it is instead a still desktop. */
-	uint64_t lm_vivo_ms;        /* the last time `pkt_recv` rose              */
+	uint64_t lm_alive_ms;        /* the last time `pkt_recv` rose              */
 	uint64_t lm_pkt_recv;       /* `pkt_recv` at that time                    */
-	uint64_t lm_pkt_sent_vivo;  /* `pkt_sent` at that time = the PROBES       */
-	bool lm_scattata;           /* ⛔ once only: afterwards, the wire drops   */
+	uint64_t lm_pkt_sent_alive;  /* `pkt_sent` at that time = the PROBES       */
+	bool lm_fired;           /* ⛔ once only: afterwards, the wire drops   */
 	/* ⛔⭐⭐ HOW BLIND WE HAVE BEEN, and how much of it THIS session has already
 	 *      taken into account.  The two quantities the dead line decides on — the bytes
 	 *      sent and the packets received — move ONLY while the parent's loop
@@ -707,10 +707,10 @@ struct wt {
 	 *      means blaming its network for a blindness of ours.
 	 * ⭐ The snapshot of the GLOBAL counter is kept instead of a flag: between two
 	 *    verdicts there may have been several gaps, and a flag would lose some. */
-	uint64_t lm_fermo_visto;    /* `giro_fermo_ms` at the last verdict        */
+	uint64_t lm_stopped_seen;    /* `round_stall_ms` at the last verdict        */
 	/* ⛔⛔ THIS SESSION'S ZERO POINT — 25 Aug 2026, finding R5.
 	 *
-	 *     `giro_fermo_ms` is a GLOBAL counter that grows from when the
+	 *     `round_stall_ms` is a GLOBAL counter that grows from when the
 	 *     server is switched on, and the eviction line printed it as
 	 *     `fermo_ms=` with a comment next to it saying *«since this
 	 *     session was born»*.  ⛔ `[M]` §5.5 R5: a line attributed **54.5
@@ -723,8 +723,8 @@ struct wt {
 	 *
 	 * ⭐ We note what the global counter was worth at the FIRST round in which
 	 *    this session was looked at, and the line prints the difference. */
-	uint64_t lm_fermo_nato;     /* `giro_fermo_ms` at the first round of THIS  */
-	uint64_t lm_fermo_saltati;  /* how many verdicts it skipped for a gap     */
+	uint64_t lm_stopped_born;     /* `round_stall_ms` at the first round of THIS  */
+	uint64_t lm_stopped_skipped;  /* how many verdicts it skipped for a gap     */
 
 	/* ⛔⭐ FRAMES IN FLIGHT — §5.1, «a more recent one has already left».
 	 *
@@ -744,11 +744,11 @@ struct wt {
 		bool vivo;
 		bool detto; /* the keyframe holding back the queue is said once */
 	} involo[WT_INVOLO_MAX];
-	size_t ninvolo;
-	/* ⛔ The stream `gancio_video_apri()` has just opened: `rcp.c` does not
+	size_t ninflight;
+	/* ⛔ The stream `hook_video_open()` has just opened: `rcp.c` does not
 	 *    return it, and deducing it from «the last opened on the connection» would be
 	 *    guessing. */
-	int64_t video_stream_ultimo;
+	int64_t video_stream_last;
 
 	/* ═══ THIS SESSION'S AUDIO — phase 7 ═══════════════════════════════ */
 	/*
@@ -788,27 +788,27 @@ struct wt {
 		 *   difference that is not a time. */
 		ngtcp2_tstamp nato;
 	} dgram[WT_DGRAM_MAX];
-	size_t ndgram, dgram_testa;
+	size_t ndgram, dgram_head;
 	uint64_t dgram_id; /* the identifier ngtcp2 reports in the outcomes */
 
-	bool audio_acceso;
+	bool audio_on;
 	uint8_t audio_codec;
-	/* ⛔ The twin of `video_fermo`, and the box is there: «I have already asked
+	/* ⛔ The twin of `video_stopped`, and the box is there: «I have already asked
 	 *    the child to capture no more».  ⚠ It is cured HERE together with video and not
 	 *    another day because the defect is the same and the shape is the
 	 *    same — it is lesson §1.20 written in this file on the counts
 	 *    of audio and video: *«a cure is looked for wherever it applies, not where
 	 *    it was found»*, and that time the twin stayed behind for five
 	 *    days. */
-	bool audio_fermo;
+	bool audio_stopped;
 	/* ⛔ «I have already explained why this session has no audio»: once
-	 *    only, like `video_detto`, and for the same reason. */
-	bool audio_detto;
+	 *    only, like `video_logged`, and for the same reason. */
+	bool audio_logged;
 	/* ⛔ «The peer does not accept datagrams»: said once.  ⚠ `RCP.md` §2.2
 	 *    DEMANDS them, but §6.3 forbids closing the connection over a datagram
 	 *    fact — so it is declared and then kept quiet, not killed. */
-	bool dgram_negati_detto;
-	uint64_t audio_spediti, audio_buttati, audio_rifiutati;
+	bool dgram_denied_logged;
+	uint64_t audio_sent, audio_buttati, audio_rifiutati;
 	/* ⛔ DEFERRED and REFUSED are two different facts and are not added: the
 	 *    first is «the pacer said not now» and the block leaves all the same a
 	 *    moment later; the second is «thrown away».  A single counter for two opposite
@@ -836,7 +836,7 @@ struct wt {
 	 *   this field has been brought up to date.
 	 * ⛔ A `clock_gettime()` called in here would be a SECOND clock, and
 	 *   the difference between two clocks is not a time. */
-	ngtcp2_tstamp ts_ora;
+	ngtcp2_tstamp ts_now;
 
 	/* The test tone (`--audio-prova`), which normally does not exist. */
 	audio_cod *tono_cod;
@@ -844,7 +844,7 @@ struct wt {
 	uint64_t tono_i;           /* the sample index: the phase is continuous */
 
 	/* The list of live sessions, for broadcasting frames. */
-	wt *viva_dopo;
+	wt *alive_after;
 
 	/* ⛔ The session's closure WAITS for the output queue to have
 	 *    emptied, and then a little more: see `chiudi_sessione()`. */
@@ -861,7 +861,7 @@ struct wt {
 	 *
 	 * ⭐ Hence the deadline: once past it, the capsule leaves all the same and the
 	 *    giving-up is WRITTEN. */
-	ngtcp2_tstamp chiusura_scadenza;
+	ngtcp2_tstamp closing_deadline;
 
 	/* ⛔⭐ §4.6 — THE CAP OF THE SESSION THAT NEVER OPENS THE CHANNEL.
 	 *
@@ -882,7 +882,7 @@ struct wt {
 	 * ⛔ Zero when the channel is already there (or the session is not there yet): a
 	 *    clock that has not started and one that has expired must not look
 	 *    the same. */
-	ngtcp2_tstamp canale_entro;
+	ngtcp2_tstamp channel_deadline;
 
 	/* ⛔ How many bytes are in the queue, for the cap of `coda_metti()`.
 	 * ⚠ PHASE 9: it counts the bytes that must STILL LEAVE.  An element
@@ -890,7 +890,7 @@ struct wt {
 	 *   still ours — the cap of `coda_metti()` regulates the BACKLOG, and
 	 *   putting the bytes in flight inside it would make good frames be refused
 	 *   because of stuff that is already on the wire. */
-	size_t byte_in_coda;
+	size_t byte_in_queue;
 	/* ⛔⭐ PHASE 9 — THE MEMORY PRICE OF THE CURE, MEASURED AND NOT ESTIMATED.
 	 *
 	 *     The bytes HANDED to ngtcp2 and not yet confirmed: out of the queue's
@@ -905,14 +905,14 @@ struct wt {
 	 *    the peer's — it cannot grant us more credit than `initial_max_data`.
 	 * ⛔ `byte_in_volo_max` is the PEAK, and it is written at closure: it is the
 	 *    quantity that says whether the cure holds or is hoarding memory. */
-	size_t byte_in_volo, byte_in_volo_max;
+	size_t byte_in_flight, byte_in_volo_max;
 	/* How many surplus streams (§2.5) have already been written: so as not to fill the
 	 * log with one line per packet. */
-	uint64_t scartati_stream, scartati_byte;
+	uint64_t discarded_stream, discarded_byte;
 
 	/* ⭐ OUR clock, in place of the graft's keep-alive. */
 	ngtcp2_tstamp battito;
-	uint64_t battito_ms;
+	uint64_t heartbeat_ms;
 	/* ⛔ §4.6: the TRANSPORT PINGs while the credentials are awaited.  Whether
 	 *    they are on is kept here, so as not to call ngtcp2 back at every heartbeat and
 	 *    to be able to WRITE it in the log when it changes. */
@@ -958,7 +958,7 @@ static const char *wt_chi(const wt *w)
 /* QUIC variable-length integers (RFC 9000 §16).  They are needed three times   */
 /* and are in neither library: nghttp3 keeps its own to itself.               */
 
-static size_t varint_scrivi(uint8_t *dest, uint64_t v)
+static size_t varint_write(uint8_t *dest, uint64_t v)
 {
 	if (v < 64) {
 		dest[0] = (uint8_t)v;
@@ -984,7 +984,7 @@ static size_t varint_scrivi(uint8_t *dest, uint64_t v)
 
 /* ⛔ Returns 0 if the bytes are not enough: «I don't know yet» and «zero» are two
  *    different things, and confusing them is `LEZIONI.md` §1.9. */
-static size_t varint_leggi(uint64_t *v, const uint8_t *src, size_t len)
+static size_t varint_read(uint64_t *v, const uint8_t *src, size_t len)
 {
 	size_t n;
 	if (len == 0)
@@ -1042,58 +1042,58 @@ static size_t varint_leggi(uint64_t *v, const uint8_t *src, size_t len)
 /* ------------------------------------------------------------------------ */
 /* The lists.                                                                 */
 
-static stream_giudizio *giudizio_trova(wt *w, int64_t id)
+static stream_giudizio *judgment_find(wt *w, int64_t id)
 {
-	for (size_t i = 0; i < w->ngiudizi; i++)
+	for (size_t i = 0; i < w->njudgments; i++)
 		if (w->giudizi[i].id == id)
 			return &w->giudizi[i];
 	return NULL;
 }
 
-static stream_giudizio *giudizio_crea(wt *w, int64_t id)
+static stream_giudizio *judgment_create(wt *w, int64_t id)
 {
-	stream_giudizio *g = giudizio_trova(w, id);
+	stream_giudizio *g = judgment_find(w, id);
 	if (g)
 		return g;
-	if (w->ngiudizi == w->capgiudizi) {
-		size_t c = w->capgiudizi ? w->capgiudizi * 2 : 8;
+	if (w->njudgments == w->capjudgments) {
+		size_t c = w->capjudgments ? w->capjudgments * 2 : 8;
 		stream_giudizio *n = realloc(w->giudizi, c * sizeof *n);
 		if (!n)
 			return NULL;
 		w->giudizi = n;
-		w->capgiudizi = c;
+		w->capjudgments = c;
 	}
-	g = &w->giudizi[w->ngiudizi++];
+	g = &w->giudizi[w->njudgments++];
 	memset(g, 0, sizeof *g);
 	g->id = id;
-	g->genere = G_INCERTO;
+	g->genere = G_UNCERTAIN;
 	return g;
 }
 
-static richiesta *richiesta_trova(wt *w, int64_t id, bool crea)
+static richiesta *request_find(wt *w, int64_t id, bool crea)
 {
-	for (size_t i = 0; i < w->nrichieste; i++)
+	for (size_t i = 0; i < w->nrequests; i++)
 		if (w->richieste[i].usato && w->richieste[i].id == id)
 			return &w->richieste[i];
 	if (!crea)
 		return NULL;
-	for (size_t i = 0; i < w->nrichieste; i++)
+	for (size_t i = 0; i < w->nrequests; i++)
 		if (!w->richieste[i].usato) {
 			memset(&w->richieste[i], 0, sizeof w->richieste[i]);
 			w->richieste[i].id = id;
 			w->richieste[i].usato = true;
 			return &w->richieste[i];
 		}
-	if (w->nrichieste == w->caprichieste) {
-		size_t c = w->caprichieste ? w->caprichieste * 2 : 8;
+	if (w->nrequests == w->caprequests) {
+		size_t c = w->caprequests ? w->caprequests * 2 : 8;
 		richiesta *n = realloc(w->richieste, c * sizeof *n);
 		if (!n)
 			return NULL;
 		w->richieste = n;
-		w->caprichieste = c;
+		w->caprequests = c;
 	}
 	{
-		richiesta *r = &w->richieste[w->nrichieste++];
+		richiesta *r = &w->richieste[w->nrequests++];
 		memset(r, 0, sizeof *r);
 		r->id = id;
 		r->usato = true;
@@ -1118,17 +1118,17 @@ static richiesta *richiesta_trova(wt *w, int64_t id, bool crea)
  *   reset the stall.  ⛔ It errs on the STRICT side — but a full list
  *   means thirty-two frames in flight together, that is a queue that does not
  *   empty: it is already the stall, not a healthy case mistaken for broken.  And the
- *   line of `involo_aggiungi()` declares it when it happens. */
-static bool stream_di_un_fotogramma(const wt *w, int64_t id)
+ *   line of `inflight_add()` declares it when it happens. */
+static bool single_frame_stream(const wt *w, int64_t id)
 {
-	for (size_t i = 0; i < w->ninvolo; i++)
+	for (size_t i = 0; i < w->ninflight; i++)
 		if (w->involo[i].vivo && w->involo[i].stream == id)
 			return true;
 	return false;
 }
 
 /* ⛔ An element dies here and nowhere else: it is the only point where
- *    `byte_in_coda` (and now `byte_in_volo`) goes down, and two points that
+ *    `byte_in_queue` (and now `byte_in_flight`) goes down, and two points that
  *    lowered it would diverge.
  *
  * ⛔⭐ PHASE 9 — AND «DYING» MEANS `free()`, that is «from now on ngtcp2 MUST NO
@@ -1139,7 +1139,7 @@ static bool stream_di_un_fotogramma(const wt *w, int64_t id)
  *       2. `wt_stream_chiuso()`  — the stream is closed (ngtcp2 says literally
  *          that «after stream_close ... application can free all unacknowledged
  *          stream data»);
- *       3. `coda_butta_stream()` — the stream was RESET a moment before
+ *       3. `queue_drop_stream()` — the stream was RESET a moment before
  *          (`ngtcp2_conn_shutdown_stream_write()`), and after a `RESET_STREAM`
  *          ngtcp2 does not requeue the frames of that stream.
  *
@@ -1147,44 +1147,44 @@ static bool stream_di_un_fotogramma(const wt *w, int64_t id)
 static void coda_uccidi(wt *w, size_t i)
 {
 	uscita *u;
-	if (i >= w->ncoda)
+	if (i >= w->nqueue)
 		return;
 	u = &w->coda[i];
 	if (u->morto)
 		return;
 	/* ⚠ The two counts are EXCLUSIVE: whoever is handed over has already left
-	 *   `byte_in_coda` and entered `byte_in_volo`.  Lowering both
+	 *   `byte_in_queue` and entered `byte_in_flight`.  Lowering both
 	 *   would remove the same bytes twice from different quantities. */
 	if (u->consegnato) {
-		if (w->byte_in_volo >= u->dati.n)
-			w->byte_in_volo -= u->dati.n;
+		if (w->byte_in_flight >= u->dati.n)
+			w->byte_in_flight -= u->dati.n;
 		else
-			w->byte_in_volo = 0;
-	} else if (w->byte_in_coda >= u->dati.n) {
-		w->byte_in_coda -= u->dati.n;
+			w->byte_in_flight = 0;
+	} else if (w->byte_in_queue >= u->dati.n) {
+		w->byte_in_queue -= u->dati.n;
 	} else {
-		w->byte_in_coda = 0;
+		w->byte_in_queue = 0;
 	}
-	bytes_libera(&u->dati);
+	bytes_free(&u->dati);
 	u->morto = true;
 	/* The dead at the head are of no use to anyone: the head slides. */
-	while (w->testa < w->ncoda && w->coda[w->testa].morto)
+	while (w->testa < w->nqueue && w->coda[w->testa].morto)
 		w->testa++;
-	if (w->testa == w->ncoda)
-		w->testa = w->ncoda = 0;
+	if (w->testa == w->nqueue)
+		w->testa = w->nqueue = 0;
 }
 
 /* ⛔⭐ PHASE 9 — «HANDED OVER»: all the bytes are inside ngtcp2, and they are NOT
  *     FREED.  It is what `coda_uccidi()` used to do at this point.
  *
  *     The element leaves the choice (`coda_scegli()`) and the backlog count
- *     (`byte_in_coda`, `coda_vuota()`) — it has nothing more to offer — but
+ *     (`byte_in_queue`, `queue_empty()`) — it has nothing more to offer — but
  *     stays in the queue with its bytes, because they are the ones ngtcp2 will reread
  *     if a packet is lost. */
 static void coda_consegna(wt *w, size_t i)
 {
 	uscita *u;
-	if (i >= w->ncoda)
+	if (i >= w->nqueue)
 		return;
 	u = &w->coda[i];
 	if (u->morto || u->consegnato)
@@ -1193,19 +1193,19 @@ static void coda_consegna(wt *w, size_t i)
 	 *    like the others — gives no pointer to ngtcp2: there is nothing to
 	 *    keep alive.  ⛔ And keeping it would leave it in the queue FOREVER: it
 	 *    occupies no offset of the stream, so no ack could ever
-	 *    cover it, and `coda_vuota()` would never become true again. */
+	 *    cover it, and `queue_empty()` would never become true again. */
 	if (u->dati.n == 0) {
 		coda_uccidi(w, i);
 		return;
 	}
-	if (w->byte_in_coda >= u->dati.n)
-		w->byte_in_coda -= u->dati.n;
+	if (w->byte_in_queue >= u->dati.n)
+		w->byte_in_queue -= u->dati.n;
 	else
-		w->byte_in_coda = 0;
+		w->byte_in_queue = 0;
 	u->consegnato = true;
-	w->byte_in_volo += u->dati.n;
-	if (w->byte_in_volo > w->byte_in_volo_max)
-		w->byte_in_volo_max = w->byte_in_volo;
+	w->byte_in_flight += u->dati.n;
+	if (w->byte_in_flight > w->byte_in_volo_max)
+		w->byte_in_volo_max = w->byte_in_flight;
 	/* ⛔⭐⭐ PHASE 9 — AND IT IS HERE THAT «A FRAME GOES OUT», at the only point of the
 	 *      file where the fact happens: `ndatalen` has covered the whole
 	 *      element, that is those bytes have ended up INSIDE A PACKET.
@@ -1220,7 +1220,7 @@ static void coda_consegna(wt *w, size_t i)
 	 *    can take seconds to go out entirely, and counting frames those
 	 *    seconds would be a «stall» while the wire is working.  A byte
 	 *    that leaves is a wire that carries. */
-	if (stream_di_un_fotogramma(w, u->id))
+	if (single_frame_stream(w, u->id))
 		w->lm_usciti += u->dati.n;
 }
 
@@ -1246,7 +1246,7 @@ static void coda_consegna(wt *w, size_t i)
  * ⭐ On all the others exclusivity is true and can be proved: the video streams
  *    and the clipboard streams are OPENED BY US (`ngtcp2_conn_open_uni_stream()`, and nobody
  *    else writes on them), and the control channel (`rcp_stream`) is judged
- *    `G_WT` — its bytes come back `E_MIO` from `smista()` and never reach
+ *    `G_WT` — its bytes come back `E_MINE` from `smista()` and never reach
  *    nghttp3.  ⇒ On those streams our first byte is at offset 0 and
  *    the sum of the `datalen` is our count, exactly. */
 static void coda_conferma(wt *w, int64_t id, uint64_t quanti)
@@ -1255,7 +1255,7 @@ static void coda_conferma(wt *w, int64_t id, uint64_t quanti)
 
 	if (id == w->sessione)
 		return;
-	while (quanti > 0 && i < w->ncoda) {
+	while (quanti > 0 && i < w->nqueue) {
 		uscita *u = &w->coda[i];
 		size_t apertura;
 
@@ -1280,7 +1280,7 @@ static void coda_conferma(wt *w, int64_t id, uint64_t quanti)
 			coda_uccidi(w, i);
 			/* ⚠ `coda_uccidi()` slides the head and can reset the whole
 			 *   queue: the loop's end must be reread, not remembered. */
-			if (w->ncoda == 0)
+			if (w->nqueue == 0)
 				return;
 		}
 		i++;
@@ -1291,13 +1291,13 @@ static void coda_conferma(wt *w, int64_t id, uint64_t quanti)
  *
  *     An element handed over and not yet confirmed no longer has a byte to
  *     send: counting it here would keep `wt_ha_da_dire()` on forever — the
- *     server would spin idle — and above all the `!coda_vuota` branch of
+ *     server would spin idle — and above all the `!queue_empty` branch of
  *     `wt_batti()` would reset `chiusura_da` at every heartbeat, that is the capsule
  *     of §3.1 point 3 would NEVER leave.  ⛔ It is defect B-3, redone from
  *     another side. */
-static bool coda_vuota(const wt *w)
+static bool queue_empty(const wt *w)
 {
-	for (size_t i = w->testa; i < w->ncoda; i++)
+	for (size_t i = w->testa; i < w->nqueue; i++)
 		if (!w->coda[i].morto && !w->coda[i].consegnato)
 			return false;
 	return true;
@@ -1308,10 +1308,10 @@ static bool coda_vuota(const wt *w)
  *    which is what they used to write, would from today also count the handed-over ones:
  *    it would send people looking for a backlog that is not there precisely at the point where
  *    someone is looking for why the capsule does not leave. */
-static size_t coda_da_spedire(const wt *w)
+static size_t queue_unsent(const wt *w)
 {
 	size_t n = 0;
-	for (size_t i = w->testa; i < w->ncoda; i++)
+	for (size_t i = w->testa; i < w->nqueue; i++)
 		if (!w->coda[i].morto && !w->coda[i].consegnato)
 			n++;
 	return n;
@@ -1322,10 +1322,10 @@ static size_t coda_da_spedire(const wt *w)
  *    to ngtcp2.  The difference is declared here because §5.1 uses it: a
  *    frame that no longer has bytes in the queue is not abandoned, because
  *    abandoning it would no longer save anything. */
-static size_t coda_byte_stream(const wt *w, int64_t id)
+static size_t queue_byte_stream(const wt *w, int64_t id)
 {
 	size_t n = 0;
-	for (size_t i = w->testa; i < w->ncoda; i++)
+	for (size_t i = w->testa; i < w->nqueue; i++)
 		if (!w->coda[i].morto && w->coda[i].id == id)
 			n += w->coda[i].dati.n - w->coda[i].off;
 	return n;
@@ -1343,12 +1343,12 @@ static size_t coda_byte_stream(const wt *w, int64_t id)
  * ⚠ Zero does NOT mean «it has arrived»: it means «it is no longer our stuff».
  *   It is exactly the meaning needed — if we have nothing left at
  *   home, there is nothing the wire is holding back from us. */
-static size_t coda_byte_video(const wt *w)
+static size_t queue_byte_video(const wt *w)
 {
 	size_t n = 0;
-	for (size_t i = 0; i < w->ninvolo; i++)
+	for (size_t i = 0; i < w->ninflight; i++)
 		if (w->involo[i].vivo)
-			n += coda_byte_stream(w, w->involo[i].stream);
+			n += queue_byte_stream(w, w->involo[i].stream);
 	return n;
 }
 
@@ -1366,10 +1366,10 @@ static size_t coda_byte_video(const wt *w)
  *       rule was known: it was missing where the bytes went away at the end of
  *       sending.  ⛔ Calling this function without a `shutdown_stream_write`
  *       (or a closure already happened) next to it redoes the defect of 23 August. */
-static size_t coda_butta_stream(wt *w, int64_t id)
+static size_t queue_drop_stream(wt *w, int64_t id)
 {
 	size_t buttati = 0;
-	for (size_t i = w->testa; i < w->ncoda; i++) {
+	for (size_t i = w->testa; i < w->nqueue; i++) {
 		if (w->coda[i].morto || w->coda[i].id != id)
 			continue;
 		buttati += w->coda[i].dati.n - w->coda[i].off;
@@ -1380,7 +1380,7 @@ static size_t coda_butta_stream(wt *w, int64_t id)
 
 static bool stream_bloccato(const wt *w, int64_t id)
 {
-	for (size_t i = 0; i < w->nbloccati; i++)
+	for (size_t i = 0; i < w->nblocked; i++)
 		if (w->bloccati[i] == id)
 			return true;
 	return false;
@@ -1392,7 +1392,7 @@ static bool stream_bloccato(const wt *w, int64_t id)
  *    is by construction its oldest. */
 static uscita *coda_scegli(wt *w, size_t *fuori)
 {
-	for (size_t i = w->testa; i < w->ncoda; i++) {
+	for (size_t i = w->testa; i < w->nqueue; i++) {
 		/* ⛔ PHASE 9: the HANDED-OVER ones are skipped too.  They are still in the queue
 		 *    because their bytes are needed by ngtcp2 to retransmit, but they
 		 *    have nothing more to offer: choosing them would mean proposing a
@@ -1411,7 +1411,7 @@ static uscita *coda_scegli(wt *w, size_t *fuori)
 
 /* ⛔ THE OUTPUT QUEUE CAP — finding B-3 point 4, night of 10 Aug 2026.
  *
- * `coda_metti()` and `bytes_aggiungi()` doubled without limit: the memory
+ * `coda_metti()` and `bytes_add()` doubled without limit: the memory
  * of the process grew as much as the client wanted, and grew **on a session
  * already declared dead**.  ⚠ A cap that is not there is not a high cap: it is
  * an absent limiter, and nobody sees it until the machine runs out
@@ -1450,38 +1450,38 @@ static uscita *coda_scegli(wt *w, size_t *fuori)
 static bool coda_metti(wt *w, int64_t id, const uint8_t *d, size_t n, bool fin)
 {
 	uscita *u;
-	if (w->byte_in_coda + n > WT_CODA_MAX) {
+	if (w->byte_in_queue + n > WT_CODA_MAX) {
 		registro_dice_di(REG_WT, wt_chi(w),
 		                 "⛔ the output queue has touched the cap (%zu bytes in "
 		                 "queue + %zu, cap %u): not enqueuing",
-		                 w->byte_in_coda, n, WT_CODA_MAX);
+		                 w->byte_in_queue, n, WT_CODA_MAX);
 		return false;
 	}
-	if (w->ncoda == w->capcoda) {
+	if (w->nqueue == w->capqueue) {
 		if (w->testa > 0) {
 			memmove(w->coda, w->coda + w->testa,
-			        (w->ncoda - w->testa) * sizeof *w->coda);
-			w->ncoda -= w->testa;
+			        (w->nqueue - w->testa) * sizeof *w->coda);
+			w->nqueue -= w->testa;
 			w->testa = 0;
 		}
-		if (w->ncoda == w->capcoda) {
-			size_t c = w->capcoda ? w->capcoda * 2 : 8;
+		if (w->nqueue == w->capqueue) {
+			size_t c = w->capqueue ? w->capqueue * 2 : 8;
 			uscita *nu = realloc(w->coda, c * sizeof *nu);
 			if (!nu)
 				return false;
 			w->coda = nu;
-			w->capcoda = c;
+			w->capqueue = c;
 		}
 	}
-	u = &w->coda[w->ncoda++];
+	u = &w->coda[w->nqueue++];
 	memset(u, 0, sizeof *u);
 	u->id = id;
 	u->fin = fin;
-	if (!bytes_aggiungi(&u->dati, d, n)) {
-		w->ncoda--;
+	if (!bytes_add(&u->dati, d, n)) {
+		w->nqueue--;
 		return false;
 	}
-	w->byte_in_coda += n;
+	w->byte_in_queue += n;
 	return true;
 }
 
@@ -1489,7 +1489,7 @@ static bool coda_metti(wt *w, int64_t id, const uint8_t *d, size_t n, bool fin)
  *     night of 10 Aug 2026.
  *
  *     This function wrote a line in the log and **went on**.  The
- *     caller — `manda_controllo()`, that is the road of ALL RCP messages
+ *     caller — `send_control()`, that is the road of ALL RCP messages
  *     — received no outcome: RCP believed it had sent `ECCOMI`,
  *     moved on to `attesa-credenziali`, and the next message would have
  *     been welded to the void left by the first.  ⛔ The client would have read
@@ -1507,7 +1507,7 @@ static bool coda_metti(wt *w, int64_t id, const uint8_t *d, size_t n, bool fin)
  *    travel: if the queue does not take six bytes it does not take the
  *    capsule either, and this log line is the only place where the fact
  *    appears.  It is written because it is the only one. */
-static bool accoda(wt *w, int64_t id, const uint8_t *d, size_t n)
+static bool enqueue(wt *w, int64_t id, const uint8_t *d, size_t n)
 {
 	if (coda_metti(w, id, d, n, false))
 		return true;
@@ -1628,16 +1628,16 @@ static void batti_fra(wt *w, uint64_t ms)
 	ngtcp2_tstamp ora = ngtcp2_conn_get_timestamp(w->conn);
 	ngtcp2_tstamp quando = ora + ms * NGTCP2_MILLISECONDS;
 
-	if (w->battito_ms && w->battito > ora && w->battito < quando)
+	if (w->heartbeat_ms && w->battito > ora && w->battito < quando)
 		quando = w->battito;
 
-	w->battito_ms = ms;
+	w->heartbeat_ms = ms;
 	w->battito = quando;
 }
 
 ngtcp2_tstamp wt_battito_ns(const wt *w)
 {
-	ngtcp2_tstamp b = w->battito_ms ? w->battito : UINT64_MAX;
+	ngtcp2_tstamp b = w->heartbeat_ms ? w->battito : UINT64_MAX;
 
 	/* ⛔⭐ AND THE TEST TONE HAS A CLOCK OF ITS OWN — `[M]` 17 Aug 2026.
 	 *
@@ -1658,7 +1658,7 @@ ngtcp2_tstamp wt_battito_ns(const wt *w)
 	/* ⛔⛔ THE CONDITIONS ARE THE SAME AS `tono_passo()`, AND IT IS A CURE —
 	 *      finding 4 of the adversarial review of 17 Aug 2026.
 	 *
-	 *      Here there was `audio_prova_hz && w->audio_acceso`, and there there are also
+	 *      Here there was `audio_test_hz && w->audio_on`, and there there are also
 	 *      `w->chiusura < 0` and `w->rcp`.  ⛔ **In every case covered by one
 	 *      guard and not by the other this function returned an instant IN THE
 	 *      PAST and nobody moved it any more** — because the only one moving it is
@@ -1670,7 +1670,7 @@ ngtcp2_tstamp wt_battito_ns(const wt *w)
 	 *
 	 * ⚠ And the case is not a lab one: a BROWSER closes the WebTransport
 	 *   session and **keeps the QUIC connection alive** — it is written in
-	 *   this very file — and there `w->rcp` becomes NULL while `audio_acceso`
+	 *   this very file — and there `w->rcp` becomes NULL while `audio_on`
 	 *   stays on, because no line switches it off.  ⛔ The server would have
 	 *   spun idle until QUIC's idle cap, and longer if
 	 *   the browser kept it alive with PINGs.
@@ -1700,7 +1700,7 @@ ngtcp2_tstamp wt_battito_ns(const wt *w)
 			b = t;
 	}
 
-	if (audio_prova_hz && w->audio_acceso && w->chiusura < 0 && w->rcp) {
+	if (audio_test_hz && w->audio_on && w->chiusura < 0 && w->rcp) {
 		/* ⛔ The first block is DUE AT ONCE.  `[M]` 17 Aug 2026: without
 		 *    this line the tone waited for the normal heartbeat before
 		 *    starting, and **exactly one second** was missing at the head of every
@@ -1717,7 +1717,7 @@ ngtcp2_tstamp wt_battito_ns(const wt *w)
 	return b;
 }
 
-const char *wt_stato_rcp(const wt *w)
+const char *wt_rcp_state(const wt *w)
 {
 	return w->rcp ? rcp_stato_nome(w->rcp) : "(none)";
 }
@@ -1729,11 +1729,11 @@ const char *wt_stato_rcp(const wt *w)
  * ⚠ `[M]` 11 Aug 2026: the `server-in-chiusura` case of B7 is red precisely
  *   here — §3.1 point 3 absent at shutdown — and the diagnosis stopped
  *   in front of this ambiguity. */
-const char *wt_perche_ha_da_dire(const wt *w)
+const char *wt_pending_reason(const wt *w)
 {
 	if (!w)
 		return "(no session)";
-	if (w->chiusura >= 0 && !coda_vuota(w))
+	if (w->chiusura >= 0 && !queue_empty(w))
 		return "closing capsule pending AND queue not empty";
 	if (w->chiusura >= 0) {
 		/* ⛔ AND HOW MUCH IS LEFT, or the diagnosis stops here — 11 Aug 2026.
@@ -1751,12 +1751,12 @@ const char *wt_perche_ha_da_dire(const wt *w)
 		         w->chiusura_da
 		             ? (long long)(((long long)w->chiusura_da - (long long)ora)
 		                           / (long long)NGTCP2_MILLISECONDS) : 0LL,
-		         w->battito_ms
+		         w->heartbeat_ms
 		             ? (long long)(((long long)w->battito - (long long)ora)
 		                           / (long long)NGTCP2_MILLISECONDS) : -1LL);
 		return detto;
 	}
-	if (!coda_vuota(w))
+	if (!queue_empty(w))
 		return "output queue not empty";
 	return "nothing";
 }
@@ -1768,21 +1768,21 @@ bool wt_ha_da_dire(const wt *w)
 	 *    sound would come out **in jerks dictated by the video**.  ⚠ It is the same shape
 	 *    as the defect of `MOVIMENTO_ATTESA_S` (`CODER.md` §1-bis): the rhythm of
 	 *    one link becoming the delay of another link. */
-	return w->chiusura >= 0 || !coda_vuota(w) || w->ndgram > 0;
+	return w->chiusura >= 0 || !queue_empty(w) || w->ndgram > 0;
 }
 
 /* ------------------------------------------------------------------------ */
 /* ⭐ DATAGRAMS — the audio of §6.3.                                          */
 
 /* ⭐ The variable-length integer for the RFC 9297 prefix is the one that
- *    already exists — `varint_scrivi()`, at the top of this file.  ⛔ A second
+ *    already exists — `varint_write()`, at the top of this file.  ⛔ A second
  *    copy had been written here, and it was the compiler that noticed:
  *    two implementations of the same rule diverge, and it is the shape of the
  *    defect the three-copy check (R12.3) exists to prevent between
  *    files — there is no reason to admit it within the same file. */
 
 /* How many bytes the peer accepts in a DATAGRAM, `0` = it accepts none at all. */
-static uint64_t dgram_tetto_del_pari(const wt *w)
+static uint64_t dgram_peer_cap(const wt *w)
 {
 	const ngtcp2_transport_params *p;
 	if (!w->conn)
@@ -1821,26 +1821,26 @@ static bool dgram_accoda(wt *w, const uint8_t *d, size_t n)
 	}
 
 	if (w->ndgram == WT_DGRAM_MAX) {
-		w->dgram_testa = (w->dgram_testa + 1) % WT_DGRAM_MAX;
+		w->dgram_head = (w->dgram_head + 1) % WT_DGRAM_MAX;
 		w->ndgram--;
 		w->audio_buttati++;
 	}
-	coda = (w->dgram_testa + w->ndgram) % WT_DGRAM_MAX;
+	coda = (w->dgram_head + w->ndgram) % WT_DGRAM_MAX;
 	memcpy(w->dgram[coda].d, d, n);
 	w->dgram[coda].n = n;
 	/* ⭐ THE STAMP — see `WT_DGRAM_ZITTO_MAX_MS`.  ⛔ It is here and not elsewhere
 	 *    because «when it entered the queue» is a fact that exists only at
 	 *    this point: afterwards, the slot is reused and memory does not remember. */
-	w->dgram[coda].nato = w->ts_ora;
+	w->dgram[coda].nato = w->ts_now;
 	w->ndgram++;
 	return true;
 }
 
-static void dgram_togli_testa(wt *w)
+static void dgram_remove_head(wt *w)
 {
 	if (w->ndgram == 0)
 		return;
-	w->dgram_testa = (w->dgram_testa + 1) % WT_DGRAM_MAX;
+	w->dgram_head = (w->dgram_head + 1) % WT_DGRAM_MAX;
 	w->ndgram--;
 }
 
@@ -1858,12 +1858,12 @@ static void dgram_togli_testa(wt *w)
  */
 static bool dgram_scrivi_uno(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
                              uint8_t *dest, size_t destlen, ngtcp2_tstamp ts,
-                             ngtcp2_ssize *nfuori)
+                             ngtcp2_ssize *nout)
 {
 	int accettato = 0;
 	ngtcp2_vec v;
 	ngtcp2_ssize nw;
-	uint64_t eta_ms, zitto_ms;
+	uint64_t eta_ms, quiet_ms;
 
 	if (w->ndgram == 0)
 		return false;
@@ -1871,7 +1871,7 @@ static bool dgram_scrivi_uno(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 	/* ⛔⭐ THE TWO QUANTITIES, AND ONLY ONE OF THE TWO DECIDES — ⇒ the box of
 	 *     `WT_DGRAM_ZITTO_MAX_MS`, which says why it is not the one it seems.
 	 *
-	 *   · `zitto_ms` — how long the CONNECTION has not put a datagram in a
+	 *   · `quiet_ms` — how long the CONNECTION has not put a datagram in a
 	 *     packet.  It is the one on which we drop.
 	 *   · `eta_ms`   — how many ms old the BLOCK AT THE HEAD is.  It decides nothing: it goes
 	 *     in the log line, and it is the quantity the old comment
@@ -1881,10 +1881,10 @@ static bool dgram_scrivi_uno(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 	 *   or `dgram_zitto_da` at zero).  ⛔ A clock that has not started and one that has expired
 	 *   must not look the same: the wrong look would drop the
 	 *   first audio block of every session. */
-	eta_ms = (w->dgram[w->dgram_testa].nato && ts > w->dgram[w->dgram_testa].nato)
-	             ? (ts - w->dgram[w->dgram_testa].nato) / NGTCP2_MILLISECONDS
+	eta_ms = (w->dgram[w->dgram_head].nato && ts > w->dgram[w->dgram_head].nato)
+	             ? (ts - w->dgram[w->dgram_head].nato) / NGTCP2_MILLISECONDS
 	             : 0;
-	zitto_ms = (w->dgram_zitto_da && ts > w->dgram_zitto_da)
+	quiet_ms = (w->dgram_zitto_da && ts > w->dgram_zitto_da)
 	               ? (ts - w->dgram_zitto_da) / NGTCP2_MILLISECONDS
 	               : 0;
 
@@ -1918,8 +1918,8 @@ static bool dgram_scrivi_uno(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 	 *   the ring is full), and it holds only because of point 2: the day
 	 *   datagrams became retransmittable, this would be the same defect
 	 *   as `coda_uccidi()` with another face. */
-	v.base = w->dgram[w->dgram_testa].d;
-	v.len = w->dgram[w->dgram_testa].n;
+	v.base = w->dgram[w->dgram_head].d;
+	v.len = w->dgram[w->dgram_head].n;
 
 	/* ⛔⛔ `MORE` AND NOT `NONE`, AND IT IS THE CURE FOR THE DEFECT THE USER HEARD.
 	 *
@@ -1972,7 +1972,7 @@ static bool dgram_scrivi_uno(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 	 * GSO batch is one packet by construction, and filling it protects
 	 * nothing — it just costs.  ⚠ The sum looked big: an Opus block is
 	 * ~290 bytes inside a 1 441-byte packet, that is 1 150 bytes thrown away 50 times
-	 * a second.  ⇒ Written (`w->ndgram > 1 || !coda_vuota(w)`), built,
+	 * a second.  ⇒ Written (`w->ndgram > 1 || !queue_empty(w)`), built,
 	 * measured paired.  `[M]` 24 Aug 2026, bench NR12, port 7981, smooth
 	 * `lo`, STILL desktop with the tone at 440 Hz — that is REAL audio and motionless
 	 * video, the only case in which the condition can bite — 25 s per run,
@@ -2021,9 +2021,9 @@ static bool dgram_scrivi_uno(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 	                                 ++w->dgram_id, &v, 1, ts);
 	if (nw == NGTCP2_ERR_WRITE_MORE) {
 		/* ⭐ The block is in the packet being composed: it is removed from the queue. */
-		w->audio_spediti++;
+		w->audio_sent++;
 		w->dgram_zitto_da = 0; /* ⭐ I am no longer mute */
-		dgram_togli_testa(w);
+		dgram_remove_head(w);
 
 		/* ⛔⛔⛔ AND WE KEEP SLIPPING THEM IN, as long as they fit — `[M]` 17
 		 *       Aug 2026, from the user's session with real video:
@@ -2047,17 +2047,17 @@ static bool dgram_scrivi_uno(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 			int acc2 = 0;
 			ngtcp2_ssize nw2;
 
-			v2.base = w->dgram[w->dgram_testa].d;
-			v2.len = w->dgram[w->dgram_testa].n;
+			v2.base = w->dgram[w->dgram_head].d;
+			v2.len = w->dgram[w->dgram_head].n;
 			nw2 = ngtcp2_conn_writev_datagram(
 				w->conn, path, pi, dest, destlen, &acc2,
 				NGTCP2_WRITE_DATAGRAM_FLAG_MORE |
 					NGTCP2_WRITE_DATAGRAM_FLAG_PADDING,
 				++w->dgram_id, &v2, 1, ts);
 			if (nw2 == NGTCP2_ERR_WRITE_MORE) {
-				w->audio_spediti++;
+				w->audio_sent++;
 				w->dgram_zitto_da = 0;
-				dgram_togli_testa(w);
+				dgram_remove_head(w);
 				continue; /* there is still room: go on */
 			}
 			if (nw2 > 0) {
@@ -2065,11 +2065,11 @@ static bool dgram_scrivi_uno(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 				 *    block it is removed; in any case the packet MUST BE
 				 *    SENT — dropping it would take the acknowledgements away. */
 				if (acc2) {
-					w->audio_spediti++;
+					w->audio_sent++;
 					w->dgram_zitto_da = 0;
-					dgram_togli_testa(w);
+					dgram_remove_head(w);
 				}
-				*nfuori = nw2;
+				*nout = nw2;
 				return true;
 			}
 			break; /* `0` or an error: retry at the next pass */
@@ -2087,18 +2087,18 @@ static bool dgram_scrivi_uno(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 		                 "is DROPPED (§6.3: no retransmission).  Sent %llu, "
 		                 "dropped %llu",
 		                 w->provenienza, v.len, ngtcp2_strerror((int)nw),
-		                 (unsigned long long)w->audio_spediti,
+		                 (unsigned long long)w->audio_sent,
 		                 (unsigned long long)(w->audio_buttati + 1));
 		w->audio_buttati++;
-		dgram_togli_testa(w);
+		dgram_remove_head(w);
 		return false;
 	}
 
 	if (accettato) {
-		w->audio_spediti++;
+		w->audio_sent++;
 		w->dgram_zitto_da = 0;
-		dgram_togli_testa(w);
-	} else if (zitto_ms < WT_DGRAM_ZITTO_MAX_MS) {
+		dgram_remove_head(w);
+	} else if (quiet_ms < WT_DGRAM_ZITTO_MAX_MS) {
 		/* ⛔⛔ IT IS NOT DROPPED: IT IS DEFERRED — and the difference is worth 38 % of the audio.
 		 *
 		 *      `[M]` 17 Aug 2026, REAL audio in PCM with video on:
@@ -2195,7 +2195,7 @@ static bool dgram_scrivi_uno(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 			                 "queue is not refreshing.  Refused %llu.  "
 			                 "⛔ cwnd_left = %llu bytes, pacer quantum = %zu%s",
 			                 w->provenienza, v.len, destlen,
-			                 (unsigned long long)zitto_ms,
+			                 (unsigned long long)quiet_ms,
 			                 (unsigned)WT_DGRAM_ZITTO_MAX_MS,
 			                 (unsigned long long)eta_ms,
 			                 (unsigned long long)w->audio_rifiutati,
@@ -2204,11 +2204,11 @@ static bool dgram_scrivi_uno(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 			                 ngtcp2_conn_get_cwnd_left(w->conn) < v.len
 			                     ? " ⇒ IT IS CONGESTION: the block does not fit NOW"
 			                     : " ⇒ it is NOT congestion: look at the quantum");
-		dgram_togli_testa(w);
+		dgram_remove_head(w);
 	}
 
 	if (nw > 0) {
-		*nfuori = nw;
+		*nout = nw;
 		return true;
 	}
 	return false;
@@ -2245,7 +2245,7 @@ static size_t riscrivi_impostazioni(wt *w, const nghttp3_vec *vec, size_t veccnt
 	 *    WebTransport, and the measurement will see it at once — which is what
 	 *    `DECISIONI.md` §6.4 asks to re-test at every update of
 	 *    nghttp3. */
-	n = varint_leggi(&tipo_stream, orig, origlen);
+	n = varint_read(&tipo_stream, orig, origlen);
 	if (n == 0 || tipo_stream != 0x00) {
 		registro_dice_di(REG_WT, wt_chi(w),
 		                 "⛔ the control stream does not start with 0x00 (it is "
@@ -2255,7 +2255,7 @@ static size_t riscrivi_impostazioni(wt *w, const nghttp3_vec *vec, size_t veccnt
 	}
 	p = n;
 
-	n = varint_leggi(&tipo_frame, orig + p, origlen - p);
+	n = varint_read(&tipo_frame, orig + p, origlen - p);
 	if (n == 0 || tipo_frame != 0x04) {
 		registro_dice_di(REG_WT, wt_chi(w), "⛔ the first frame is not SETTINGS (it is %llu)",
 		                 (unsigned long long)tipo_frame);
@@ -2263,7 +2263,7 @@ static size_t riscrivi_impostazioni(wt *w, const nghttp3_vec *vec, size_t veccnt
 	}
 	p += n;
 
-	n = varint_leggi(&lung, orig + p, origlen - p);
+	n = varint_read(&lung, orig + p, origlen - p);
 	if (n == 0)
 		return 0;
 	p += n;
@@ -2275,28 +2275,28 @@ static size_t riscrivi_impostazioni(wt *w, const nghttp3_vec *vec, size_t veccnt
 		return 0;
 	}
 
-	a += varint_scrivi(aggiunta + a, WT_ENABLE_WEBTRANSPORT);
-	a += varint_scrivi(aggiunta + a, 1);
-	a += varint_scrivi(aggiunta + a, WT_MAX_SESSIONS);
-	a += varint_scrivi(aggiunta + a, 1);
+	a += varint_write(aggiunta + a, WT_ENABLE_WEBTRANSPORT);
+	a += varint_write(aggiunta + a, 1);
+	a += varint_write(aggiunta + a, WT_MAX_SESSIONS);
+	a += varint_write(aggiunta + a, 1);
 
-	t += varint_scrivi(testa + t, 0x00); /* the stream type */
-	t += varint_scrivi(testa + t, 0x04); /* SETTINGS */
-	t += varint_scrivi(testa + t, lung + a);
+	t += varint_write(testa + t, 0x00); /* the stream type */
+	t += varint_write(testa + t, 0x04); /* SETTINGS */
+	t += varint_write(testa + t, lung + a);
 
-	if (t + lung + a > sizeof w->impbuf) {
+	if (t + lung + a > sizeof w->settings_buf) {
 		registro_dice_di(REG_WT, wt_chi(w), "⛔ SETTINGS too big for the buffer");
 		return 0;
 	}
 
 	o = 0;
-	memcpy(w->impbuf + o, testa, t);
+	memcpy(w->settings_buf + o, testa, t);
 	o += t;
-	memcpy(w->impbuf + o, orig + p, (size_t)lung);
+	memcpy(w->settings_buf + o, orig + p, (size_t)lung);
 	o += (size_t)lung;
-	memcpy(w->impbuf + o, aggiunta, a);
+	memcpy(w->settings_buf + o, aggiunta, a);
 	o += a;
-	w->impbuf_len = o;
+	w->settings_buf_len = o;
 
 	registro_dice_di(REG_WT, wt_chi(w),
 	                 "⭐ SETTINGS rewritten — %zu bytes of nghttp3 + %zu of ours "
@@ -2309,18 +2309,18 @@ static size_t riscrivi_impostazioni(wt *w, const nghttp3_vec *vec, size_t veccnt
 /* RCP: the four hooks, which are the only thing the protocol knows of the     */
 /* world below.                                                               */
 
-static void manda_controllo(wt *w, const uint8_t *dati, size_t len);
+static void send_control(wt *w, const uint8_t *dati, size_t len);
 static void chiudi_sessione(wt *w, uint8_t motivo);
 /* ⛔ Declared here because `regola_battito()` calls it and the body comes after the
- *    census of who is watching (`video_guarda_qualcuno()`), which it needs. */
-static void cattura_spegni_se_sola(wt *w, const char *perche);
+ *    census of who is watching (`video_someone_watching()`), which it needs. */
+static void capture_turn_off_if_alone(wt *w, const char *perche);
 
 static void gancio_manda(void *ctx, const uint8_t *dati, size_t len)
 {
-	manda_controllo((wt *)ctx, dati, len);
+	send_control((wt *)ctx, dati, len);
 }
 
-static void gancio_chiudi(void *ctx, uint8_t motivo)
+static void hook_close(void *ctx, uint8_t motivo)
 {
 	chiudi_sessione((wt *)ctx, motivo);
 }
@@ -2363,11 +2363,11 @@ static void gancio_registra(void *ctx, const char *riga)
  *    right that the server works all the same, with less (`CODER.md` §4.2).
  * ⚠ But the fallback IS DECLARED: whoever takes it finds it written in the log
  *   by `rcp.c`, «SYNCHRONOUSLY — the wire stood still». */
-static bool gancio_verifica(void *ctx, const char *utente, const char *parola)
+static bool hook_verify(void *ctx, const char *utente, const char *parola)
 {
 	wt *w = (wt *)ctx;
 	char rhost[64];
-	(void)rcp_rhost_da_provenienza(w ? w->provenienza : NULL, rhost,
+	(void)rcp_rhost_from_provenance(w ? w->provenienza : NULL, rhost,
 	                               sizeof rhost);
 	return rcp_autentica_da(utente, parola, rhost);
 }
@@ -2415,8 +2415,8 @@ static bool gancio_chiedi(void *ctx, const char *utente, const char *parola,
 /*       frame and would close with `ERRORE_PROTOCOLLO`.  ⛔ The first live    */
 /*       run of `02-filo-cliente.py` ended red exactly there.                 */
 /*                                                                            */
-/*     ⭐ This file already knew it for INCOMING streams (`smista_uni`,       */
-/*        line ~1164): here is the other half, and it is the same `varint_scrivi` */
+/*     ⭐ This file already knew it for INCOMING streams (`dispatch_uni`,       */
+/*        line ~1164): here is the other half, and it is the same `varint_write` */
 /*        — not a copy of the two bytes by hand, which the day the session      */
 /*        number goes past 63 would become mute and wrong.                    */
 
@@ -2440,69 +2440,69 @@ static bool gancio_chiedi(void *ctx, const char *utente, const char *parola,
  *   stage»**, and whoever really counts what the compositor TOOK is the
  *   child, which stamps it on the frame (§6.2).  This asymmetry is
  *   declared and not hidden: it is the price of the process boundary. */
-static wt_input_richiesta gancio_palco_input;
-static void *gancio_palco_input_ctx;
+static wt_input_request hook_stage_input;
+static void *hook_stage_input_ctx;
 
-void wt_input_gancio(wt_input_richiesta f, void *ctx)
+void wt_input_hook(wt_input_request f, void *ctx)
 {
-	gancio_palco_input = f;
-	gancio_palco_input_ctx = ctx;
+	hook_stage_input = f;
+	hook_stage_input_ctx = ctx;
 }
 
-static int input_al_palco(wt *w, uint32_t id, uint8_t azione, uint16_t codice,
+static int input_to_stage(wt *w, uint32_t id, uint8_t azione, uint16_t codice,
                           int premuto, int32_t a, int32_t b)
 {
 	const char *mio;
-	if (!gancio_palco_input || !w->rcp)
+	if (!hook_stage_input || !w->rcp)
 		return -1;
 	mio = rcp_utente(w->rcp);
 	if (!mio || !mio[0])
 		return -1;
-	return gancio_palco_input(gancio_palco_input_ctx, mio, id, azione, codice,
+	return hook_stage_input(hook_stage_input_ctx, mio, id, azione, codice,
 	                          premuto, a, b)
 	           ? 0
 	           : -1;
 }
 
-static int gancio_input_puntatore(void *ctx, uint32_t x, uint32_t y)
+static int hook_input_pointer(void *ctx, uint32_t x, uint32_t y)
 {
 	wt *w = (wt *)ctx;
-	return input_al_palco(w, rcp_input_ultimo_id(w->rcp), FIGLI_INPUT_PUNTATORE,
+	return input_to_stage(w, rcp_input_last_id(w->rcp), CHILDREN_INPUT_POINTER,
 	                      0, 0, (int32_t)x, (int32_t)y);
 }
 
-static int gancio_input_pulsante(void *ctx, uint16_t codice, int premuto)
+static int hook_input_button(void *ctx, uint16_t codice, int premuto)
 {
 	wt *w = (wt *)ctx;
-	return input_al_palco(w, rcp_input_ultimo_id(w->rcp), FIGLI_INPUT_PULSANTE,
+	return input_to_stage(w, rcp_input_last_id(w->rcp), CHILDREN_INPUT_BUTTON,
 	                      codice, premuto, 0, 0);
 }
 
-static int gancio_input_rotella(void *ctx, int32_t asse_x, int32_t asse_y)
+static int hook_input_wheel(void *ctx, int32_t asse_x, int32_t asse_y)
 {
 	wt *w = (wt *)ctx;
 	/* ⛔ The sign is NOT touched here, and half notches pass whole: `RCP.md`
 	 *    §7.3 puts the inversion inside `input_rotella()`, once only.
 	 *    Inverting it here too would cancel it. */
-	return input_al_palco(w, rcp_input_ultimo_id(w->rcp), FIGLI_INPUT_ROTELLA, 0,
+	return input_to_stage(w, rcp_input_last_id(w->rcp), CHILDREN_INPUT_WHEEL, 0,
 	                      0, asse_x, asse_y);
 }
 
-static int gancio_input_lettera(void *ctx, uint32_t carattere)
+static int hook_input_letter(void *ctx, uint32_t carattere)
 {
 	wt *w = (wt *)ctx;
-	return input_al_palco(w, rcp_input_ultimo_id(w->rcp), FIGLI_INPUT_LETTERA, 0,
+	return input_to_stage(w, rcp_input_last_id(w->rcp), CHILDREN_INPUT_LETTER, 0,
 	                      0, (int32_t)carattere, 0);
 }
 
-static int gancio_input_posizione(void *ctx, uint16_t codice, int premuto)
+static int hook_input_position(void *ctx, uint16_t codice, int premuto)
 {
 	wt *w = (wt *)ctx;
-	return input_al_palco(w, rcp_input_ultimo_id(w->rcp), FIGLI_INPUT_POSIZIONE,
+	return input_to_stage(w, rcp_input_last_id(w->rcp), CHILDREN_INPUT_POSITION,
 	                      codice, premuto, 0, 0);
 }
 
-static int gancio_input_rilascia_tutto(void *ctx)
+static int hook_input_release_all(void *ctx)
 {
 	wt *w = (wt *)ctx;
 	/* ⛔⭐ «The rule with the highest damage/cost ratio of the document»
@@ -2514,14 +2514,14 @@ static int gancio_input_rilascia_tutto(void *ctx)
 	 *      as «0 were pressed», which is the face of green on a release
 	 *      that never happened.  ⇒ Now we answer `SENZA_CONTO`, which is the
 	 *      truth: «done, and ask for the number whoever knows it». */
-	return input_al_palco(w, 0, FIGLI_INPUT_RILASCIA_TUTTO, 0, 0, 0, 0) == 0
+	return input_to_stage(w, 0, FIGLI_INPUT_RILASCIA_TUTTO, 0, 0, 0, 0) == 0
 	           ? RCP_RILASCIO_SENZA_CONTO
 	           : RCP_RILASCIO_IMPOSSIBILE;
 }
 
 /* ⭐⭐ THE CANVAS HOOK — §7.1, and the whole chain in one line:
  *
- *     `rcp.c` (T_ADATTA_TELA) → this → `main.c` → `figli_ritela()` →
+ *     `rcp.c` (T_FIT_CANVAS) → this → `main.c` → `figli_ritela()` →
  *     `MSG_INPUT/RITELA` → `cattura_ridimensiona()` → `pw_stream_update_params()`
  *
  * ⛔ And the answer does NOT come back from here: it comes back with a frame at the new size,
@@ -2529,22 +2529,22 @@ static int gancio_input_rilascia_tutto(void *ctx)
  *    `true` as «the canvas has changed» would repeat the mistake `wayvnc` makes with
  *    the outcome of the request (`DECISIONI.md` §5.0-sexies, «the shape rule
  *    stolen from neatvnc»). */
-static wt_ritela_richiesta gancio_palco_ritela;
-static void *gancio_palco_ritela_ctx;
+static wt_recanvas_request hook_stage_recanvas;
+static void *hook_stage_recanvas_ctx;
 
-void wt_ritela_gancio(wt_ritela_richiesta f, void *ctx)
+void wt_recanvas_hook(wt_recanvas_request f, void *ctx)
 {
-	gancio_palco_ritela = f;
-	gancio_palco_ritela_ctx = ctx;
+	hook_stage_recanvas = f;
+	hook_stage_recanvas_ctx = ctx;
 }
 
-static wt_disposizione_richiesta gancio_palco_disposizione;
-static void *gancio_palco_disposizione_ctx;
+static wt_layout_request hook_stage_layout;
+static void *hook_stage_layout_ctx;
 
-void wt_disposizione_gancio(wt_disposizione_richiesta f, void *ctx)
+void wt_layout_hook(wt_layout_request f, void *ctx)
 {
-	gancio_palco_disposizione = f;
-	gancio_palco_disposizione_ctx = ctx;
+	hook_stage_layout = f;
+	hook_stage_layout_ctx = ctx;
 }
 
 /* ⭐⭐ §5-bis.7 — «set this layout», and it goes to the stage of WHOEVER
@@ -2553,17 +2553,17 @@ void wt_disposizione_gancio(wt_disposizione_richiesta f, void *ctx)
  *     comes from the wire.  A user who could change another's keyboard
  *     would be a small defect with a big face — the other's
  *     desktop that stops answering shortcuts. */
-static bool gancio_disposizione(void *ctx, const char *nome)
+static bool hook_layout(void *ctx, const char *nome)
 {
 	wt *w = (wt *)ctx;
 	const char *mio;
 
-	if (!gancio_palco_disposizione || !w->rcp)
+	if (!hook_stage_layout || !w->rcp)
 		return false;
 	mio = rcp_utente(w->rcp);
 	if (!mio || !mio[0])
 		return false;
-	return gancio_palco_disposizione(gancio_palco_disposizione_ctx, mio, nome);
+	return hook_stage_layout(hook_stage_layout_ctx, mio, nome);
 }
 
 /* ⭐⭐ «DOES THIS MACHINE KNOW THIS LAYOUT?» — and the answer is given by
@@ -2599,16 +2599,16 @@ static int gancio_disposizione_esiste(void *ctx, const char *nome)
 		free(sbaglio);
 		return 0;
 	}
-	tastiera_chiudi(t);
+	keyboard_close(t);
 	return 1;
 }
 
-static bool gancio_ritela(void *ctx, uint32_t larghezza, uint32_t altezza)
+static bool hook_recanvas(void *ctx, uint32_t larghezza, uint32_t altezza)
 {
 	wt *w = (wt *)ctx;
 	const char *mio;
 
-	if (!gancio_palco_ritela || !w->rcp)
+	if (!hook_stage_recanvas || !w->rcp)
 		return false;
 	/* ⛔ Invariant I3: the canvas is changed on the stage of WHOEVER ASKED, and the name
 	 *    is the one PAM admitted on this session — not a parameter that
@@ -2618,7 +2618,7 @@ static bool gancio_ritela(void *ctx, uint32_t larghezza, uint32_t altezza)
 	mio = rcp_utente(w->rcp);
 	if (!mio || !mio[0])
 		return false;
-	return gancio_palco_ritela(gancio_palco_ritela_ctx, mio, larghezza, altezza);
+	return hook_stage_recanvas(hook_stage_recanvas_ctx, mio, larghezza, altezza);
 }
 
 /* ⭐⭐ §5.1 — «DOES THIS USER ALREADY HAVE A LOCAL GRAPHICAL SESSION?»
@@ -2627,72 +2627,72 @@ static bool gancio_ritela(void *ctx, uint32_t larghezza, uint32_t altezza)
  *    others: `rcp.c` exists in two copies and the one grafted into ngtcp2 has no
  *    system bus.  Whoever does not connect it does not apply the rule, and `rcp.c`
  *    writes so in the log instead of keeping quiet. */
-static wt_locale_richiesta gancio_locale;
-static void *gancio_locale_ctx;
+static wt_local_request hook_local;
+static void *hook_local_ctx;
 
-void wt_locale_gancio(wt_locale_richiesta f, void *ctx)
+void wt_local_hook(wt_local_request f, void *ctx)
 {
-	gancio_locale = f;
-	gancio_locale_ctx = ctx;
+	hook_local = f;
+	hook_local_ctx = ctx;
 }
 
 /* ⭐⭐ AND THE SWEEP HAS ITS OWN, which asks for EVERYONE at once: the why —
- *     with the numbers — is in `webtransport.h` above `wt_locali_ripasso`. */
-static wt_locali_ripasso gancio_locali;
-static void *gancio_locali_ctx;
+ *     with the numbers — is in `webtransport.h` above `wt_locals_sweep`. */
+static wt_locals_sweep hook_locals;
+static void *hook_locals_ctx;
 
-void wt_locali_gancio(wt_locali_ripasso f, void *ctx)
+void wt_locals_hook(wt_locals_sweep f, void *ctx)
 {
-	gancio_locali = f;
-	gancio_locali_ctx = ctx;
+	hook_locals = f;
+	hook_locals_ctx = ctx;
 }
 
-static bool gancio_sessione_locale(void *ctx, const char *utente, char *quale,
+static bool hook_local_session(void *ctx, const char *utente, char *quale,
                                    size_t quanto)
 {
 	(void)ctx;
-	if (!gancio_locale)
+	if (!hook_local)
 		return false;
-	return gancio_locale(gancio_locale_ctx, utente, quale, quanto);
+	return hook_local(hook_local_ctx, utente, quale, quanto);
 }
 
 /* ⭐ D-001 — the desktop name of this machine for `SESSIONE` (§4.5).
  *    One per PROCESS, like the desktop choice (`sessione.h`): `main.c`
  *    sets it at startup, because `sessione.h` (glib) does not get in here. */
-static const char *desktop_nome = "unknown";
+static const char *desktop_name = "unknown";
 
 void wt_desktop(const char *nome)
 {
-	desktop_nome = (nome && nome[0]) ? nome : "unknown";
+	desktop_name = (nome && nome[0]) ? nome : "unknown";
 }
 
-static bool gancio_sessione_ripresa(void *ctx)
+static bool hook_session_resumed(void *ctx)
 {
 	return ((wt *)ctx)->ripresa;
 }
 
-static const char *gancio_desktop(void *ctx)
+static const char *hook_desktop(void *ctx)
 {
 	(void)ctx;
-	return desktop_nome;
+	return desktop_name;
 }
 
 /* ⭐⭐ §7.6 — «the user asked to log out». */
-static wt_termina_richiesta gancio_termina;
-static void *gancio_termina_ctx;
+static wt_terminate_request hook_terminate;
+static void *hook_terminate_ctx;
 
-void wt_termina_gancio(wt_termina_richiesta f, void *ctx)
+void wt_terminate_hook(wt_terminate_request f, void *ctx)
 {
-	gancio_termina = f;
-	gancio_termina_ctx = ctx;
+	hook_terminate = f;
+	hook_terminate_ctx = ctx;
 }
 
-static void gancio_termina_sessione(void *ctx)
+static void hook_terminate_session(void *ctx)
 {
 	wt *w = (wt *)ctx;
 	const char *mio;
 
-	if (!gancio_termina || !w->rcp)
+	if (!hook_terminate || !w->rcp)
 		return;
 	/* ⛔ Invariant I3: the session of WHOEVER ASKED is terminated, and the name is
 	 *    the one PAM admitted on this session — not a parameter that
@@ -2701,10 +2701,10 @@ static void gancio_termina_sessione(void *ctx)
 	mio = rcp_utente(w->rcp);
 	if (!mio || !mio[0])
 		return;
-	gancio_termina(gancio_termina_ctx, mio);
+	hook_terminate(hook_terminate_ctx, mio);
 }
 
-static bool gancio_video_apri(void *ctx, int64_t *stream, uint64_t *restano)
+static bool hook_video_open(void *ctx, int64_t *stream, uint64_t *restano)
 {
 	wt *w = (wt *)ctx;
 	uint8_t pre[16];
@@ -2747,8 +2747,8 @@ static bool gancio_video_apri(void *ctx, int64_t *stream, uint64_t *restano)
 	                           (unsigned long long)ngtcp2_conn_get_streams_uni_left2(
 		                           w->conn));
 
-	n += varint_scrivi(pre + n, 0x54);
-	n += varint_scrivi(pre + n, (uint64_t)w->sessione);
+	n += varint_write(pre + n, 0x54);
+	n += varint_write(pre + n, (uint64_t)w->sessione);
 
 	if (!coda_metti(w, id, pre, n, false)) {
 		/* ⛔ The stream has been opened and the preamble is not there: it is RESET
@@ -2768,11 +2768,11 @@ static bool gancio_video_apri(void *ctx, int64_t *stream, uint64_t *restano)
 	 *    of the stream it opened, and deriving it from «the last opened on the
 	 *    connection» would be guessing.  ⭐ Without this, §5.1 has no
 	 *    way of saying WHICH stream to reset when a more recent one leaves. */
-	w->video_stream_ultimo = id;
+	w->video_stream_last = id;
 	return true;
 }
 
-static bool gancio_video_scrivi(void *ctx, int64_t stream, const uint8_t *dati,
+static bool hook_video_write(void *ctx, int64_t stream, const uint8_t *dati,
                                 size_t len)
 {
 	/* ⛔ `false` = «they did not get in», and the caller RESETS: `rcp.c` never
@@ -2781,7 +2781,7 @@ static bool gancio_video_scrivi(void *ctx, int64_t stream, const uint8_t *dati,
 	return coda_metti((wt *)ctx, stream, dati, len, false);
 }
 
-static void gancio_video_fin(void *ctx, int64_t stream)
+static void hook_video_fin(void *ctx, int64_t stream)
 {
 	wt *w = (wt *)ctx;
 	/* ⛔ The FIN is a queue element like the others, and it is NOT written
@@ -2796,7 +2796,7 @@ static void gancio_video_fin(void *ctx, int64_t stream)
 		                 (long)stream);
 }
 
-static void gancio_video_azzera(void *ctx, int64_t stream)
+static void hook_video_reset(void *ctx, int64_t stream)
 {
 	wt *w = (wt *)ctx;
 	if (!w->conn)
@@ -2809,27 +2809,27 @@ static void gancio_video_azzera(void *ctx, int64_t stream)
 	 *     The previous comment said `wt_scrivi()` would discard them on the
 	 *     `NGTCP2_ERR_STREAM_SHUT_WR` branch, and with a single frame per
 	 *     session that was true and enough.  ⛔ At sixty a second it is not: those bytes
-	 *     stay counted in `byte_in_coda` until the next pass, that is the
+	 *     stay counted in `byte_in_queue` until the next pass, that is the
 	 *     queue cap bites on stuff it has already been decided not to send —
 	 *     and §5.1 says **«the bytes not yet sent do not leave at all»**, not
-	 *     «they leave later».  ⚠ The count does not go out of step: `coda_butta_stream()` goes
-	 *     through `coda_uccidi()`, which is the only point where `byte_in_coda` goes down. */
-	coda_butta_stream(w, stream);
+	 *     «they leave later».  ⚠ The count does not go out of step: `queue_drop_stream()` goes
+	 *     through `coda_uccidi()`, which is the only point where `byte_in_queue` goes down. */
+	queue_drop_stream(w, stream);
 }
 
 /* ------------------------------------------------------------------------- */
 /* ⭐⭐ PHASE 7 — THE THREE CLIPBOARD CHANNEL HOOKS TOWARDS THE CLIENT (§2.5, §7.4). */
 /*                                                                            */
 /* ⛔⭐ AND THEY ARE NOT THE `video_*` ONES REUSED, although they open the same kind of */
-/*     stream: `gancio_video_apri()` REMEMBERS which stream it opened          */
-/*     (`video_stream_ultimo`), because §5.1 makes it reset **the previous one** */
+/*     stream: `hook_video_open()` REMEMBERS which stream it opened          */
+/*     (`video_stream_last`), because §5.1 makes it reset **the previous one** */
 /*     when a more recent one leaves.  A clipboard transfer that              */
 /*     went through there would become «the previous frame» of the next       */
 /*     frame — ⛔ that is it would be reset halfway by a rule that does not    */
 /*     concern it, and the symptom would be «the clipboard arrives cut when the */
 /*     desktop moves».                                                         */
 
-static bool gancio_appunti_apri(void *ctx, int64_t *stream, uint64_t *restano)
+static bool hook_clipboard_open(void *ctx, int64_t *stream, uint64_t *restano)
 {
 	wt *w = (wt *)ctx;
 	uint8_t pre[16];
@@ -2853,8 +2853,8 @@ static bool gancio_appunti_apri(void *ctx, int64_t *stream, uint64_t *restano)
 		return false;
 	}
 
-	n += varint_scrivi(pre + n, 0x54);
-	n += varint_scrivi(pre + n, (uint64_t)w->sessione);
+	n += varint_write(pre + n, 0x54);
+	n += varint_write(pre + n, (uint64_t)w->sessione);
 
 	if (!coda_metti(w, id, pre, n, false)) {
 		/* ⛔ Same treatment as video: an opened and mute stream holds a
@@ -2870,13 +2870,13 @@ static bool gancio_appunti_apri(void *ctx, int64_t *stream, uint64_t *restano)
 	return true;
 }
 
-static bool gancio_appunti_scrivi(void *ctx, int64_t stream, const uint8_t *dati,
+static bool hook_clipboard_write(void *ctx, int64_t stream, const uint8_t *dati,
                                   size_t len)
 {
 	return coda_metti((wt *)ctx, stream, dati, len, false);
 }
 
-static void gancio_appunti_fin(void *ctx, int64_t stream)
+static void hook_clipboard_fin(void *ctx, int64_t stream)
 {
 	wt *w = (wt *)ctx;
 	/* ⛔ The FIN is a queue element like the others, and it is NOT written
@@ -2895,24 +2895,24 @@ static void gancio_appunti_fin(void *ctx, int64_t stream)
 /*    `webtransport.c` knows the wire and does not know the children, and whoever sews the two */
 /*    worlds together is the only one who knows both sides.                   */
 
-static wt_appunti_offerta gancio_palco_appunti_offri;
-static wt_appunti_consegna gancio_palco_appunti_risposta;
-static void *gancio_palco_appunti_ctx;
+static wt_clipboard_offer hook_stage_clipboard_offer;
+static wt_clipboard_delivery hook_stage_clipboard_response;
+static void *hook_stage_clipboard_ctx;
 
-void wt_appunti_gancio(wt_appunti_offerta offri, wt_appunti_consegna risposta,
+void wt_clipboard_hook(wt_clipboard_offer offri, wt_clipboard_delivery risposta,
                        void *ctx)
 {
-	gancio_palco_appunti_offri = offri;
-	gancio_palco_appunti_risposta = risposta;
-	gancio_palco_appunti_ctx = ctx;
+	hook_stage_clipboard_offer = offri;
+	hook_stage_clipboard_response = risposta;
+	hook_stage_clipboard_ctx = ctx;
 }
 
-static bool gancio_appunti_offri(void *ctx)
+static bool hook_clipboard_offer(void *ctx)
 {
 	wt *w = (wt *)ctx;
 	const char *mio;
 
-	if (!gancio_palco_appunti_offri || !w->rcp)
+	if (!hook_stage_clipboard_offer || !w->rcp)
 		return false;
 	/* ⛔ Invariant I3: it is offered to the session OF WHOEVER ASKED, and the name is
 	 *    the one PAM admitted on this connection — not a parameter that
@@ -2922,21 +2922,21 @@ static bool gancio_appunti_offri(void *ctx)
 	mio = rcp_utente(w->rcp);
 	if (!mio || !mio[0])
 		return false;
-	return gancio_palco_appunti_offri(gancio_palco_appunti_ctx, mio);
+	return hook_stage_clipboard_offer(hook_stage_clipboard_ctx, mio);
 }
 
-static bool gancio_appunti_risposta(void *ctx, uint32_t serial,
+static bool hook_clipboard_response(void *ctx, uint32_t serial,
                                     const char *testo, size_t byte)
 {
 	wt *w = (wt *)ctx;
 	const char *mio;
 
-	if (!gancio_palco_appunti_risposta || !w->rcp)
+	if (!hook_stage_clipboard_response || !w->rcp)
 		return false;
 	mio = rcp_utente(w->rcp);
 	if (!mio || !mio[0])
 		return false;
-	return gancio_palco_appunti_risposta(gancio_palco_appunti_ctx, mio, serial,
+	return hook_stage_clipboard_response(hook_stage_clipboard_ctx, mio, serial,
 	                                     testo, byte);
 }
 
@@ -3092,7 +3092,7 @@ static bool gancio_appunti_risposta(void *ctx, uint32_t serial,
 /*                                                                            */
 /*        «it went out»  `lm_usciti` — the VIDEO bytes handed to ngtcp2        */
 /*                      (`coda_consegna()`).  If it rises, the count RESTARTS. */
-/*        «I had some   `coda_byte_video() > 0` — frame bytes still            */
+/*        «I had some   `queue_byte_video() > 0` — frame bytes still            */
 /*         to send»     in our house — OR `lm_offerti` risen, that is          */
 /*                      the stage gave us a frame.  If neither of the          */
 /*                      two, the count restarts all the same: there was nothing */
@@ -3163,8 +3163,8 @@ static bool gancio_appunti_risposta(void *ctx, uint32_t serial,
 /* ⚠ `[?]` The three numbers below are tuned by the bench, like `WT_RITMO_POSTI`: the
  *   tuning is falsifiable — at 20 Mbit/s with `casa-cattiva` on for
  *   ten minutes the firings must be ZERO, and with `raffica-1` too. */
-#define WT_LM_MIN_PACCHETTI 200u  /* below, the WITNESS window lengthens        */
-#define WT_LM_FINESTRA_MS 1000u   /* the minimum window: the rhythm of rete_ciclo*/
+#define WT_LM_MIN_PACKETS 200u  /* below, the WITNESS window lengthens        */
+#define WT_LM_WINDOW_MS 1000u   /* the minimum window: the rhythm of rete_ciclo*/
 /* ⛔ The PROBES of silence: how many of OUR packets have gone out since the
  *    client last showed itself.  Two, not two hundred: on a still
  *    desktop the traffic is made of transport PINGs and nothing else, and asking for
@@ -3178,9 +3178,9 @@ static bool gancio_appunti_risposta(void *ctx, uint32_t serial,
  *     place where the default is written; the two numbers are born with the
  *     defaults above — `main.c` ALWAYS calls `wt_linea_morta()`, so
  *     the startup line comes out in both cases by construction. */
-static bool linea_morta_accesa;
+static bool dead_line_on;
 static uint64_t linea_morta_stallo_ms = WT_LM_STALLO_MS;
-static uint64_t linea_morta_silenzio_ms = WT_LM_SILENZIO_S * 1000ULL;
+static uint64_t dead_line_silence_ms = WT_LM_SILENZIO_S * 1000ULL;
 
 /* ========================================================================== */
 /* ⛔⭐⭐⭐ THE GAP IN THE PARENT'S LOOP — «our silence is not theirs».        */
@@ -3228,43 +3228,43 @@ static uint64_t linea_morta_silenzio_ms = WT_LM_SILENZIO_S * 1000ULL;
 /*    ⚠ It is a number TUNED ON THE LOOP, not on the network: if one day `attesa` */
 /*      changed, it must be changed with it.                                   */
 /* ========================================================================== */
-#define WT_GIRO_ATTESO_MS 1100
+#define WT_EXPECTED_ROUND_MS 1100
 
-static uint64_t giro_ultimo_ms;    /* when the parent's loop passed           */
-static uint64_t giro_fermo_ms;     /* ⛔ the milliseconds of gap, in total     */
-static uint64_t giro_fermi;        /* how many gaps                           */
-static uint64_t giro_fermo_peggiore_ms;
+static uint64_t last_round_ms;    /* when the parent's loop passed           */
+static uint64_t round_stall_ms;     /* ⛔ the milliseconds of gap, in total     */
+static uint64_t round_stalls;        /* how many gaps                           */
+static uint64_t round_worst_stall_ms;
 
-void wt_giro_del_padre(uint64_t ora_ms)
+void wt_giro_del_padre(uint64_t now_ms)
 {
 	uint64_t distanza;
 
 	/* ⛔ The first pass is not a gap: before there was nothing to compare,
 	 *    and «never passed» is not «passed a long time ago» (`LEZIONI.md` §1.9). */
-	if (!giro_ultimo_ms || ora_ms <= giro_ultimo_ms) {
-		giro_ultimo_ms = ora_ms;
+	if (!last_round_ms || now_ms <= last_round_ms) {
+		last_round_ms = now_ms;
 		return;
 	}
-	distanza = ora_ms - giro_ultimo_ms;
-	giro_ultimo_ms = ora_ms;
-	if (distanza <= WT_GIRO_ATTESO_MS)
+	distanza = now_ms - last_round_ms;
+	last_round_ms = now_ms;
+	if (distanza <= WT_EXPECTED_ROUND_MS)
 		return;
-	giro_fermo_ms += distanza - WT_GIRO_ATTESO_MS;
-	giro_fermi++;
-	if (distanza > giro_fermo_peggiore_ms)
-		giro_fermo_peggiore_ms = distanza;
+	round_stall_ms += distanza - WT_EXPECTED_ROUND_MS;
+	round_stalls++;
+	if (distanza > round_worst_stall_ms)
+		round_worst_stall_ms = distanza;
 	/* ⚠ No line here: it is written by whoever suffers the effect, with the
 	 *   session and its numbers next to it.  One line per gap, without context, would be
 	 *   noise on a loaded machine — and the number is there all the same, it is carried by
-	 *   `wt_giri_fermi()` once a minute. */
+	 *   `wt_stalled_rounds()` once a minute. */
 }
 
-void wt_giri_fermi(uint64_t *quanti, uint64_t *peggiore_ms)
+void wt_stalled_rounds(uint64_t *quanti, uint64_t *peggiore_ms)
 {
 	if (quanti)
-		*quanti = giro_fermi;
+		*quanti = round_stalls;
 	if (peggiore_ms)
-		*peggiore_ms = giro_fermo_peggiore_ms;
+		*peggiore_ms = round_worst_stall_ms;
 }
 
 /* ⛔⛔⭐⭐ HOW OFTEN THE CLIENT IS ASKED TO SHOW ITSELF — and with the dead line
@@ -3340,8 +3340,8 @@ void wt_giri_fermi(uint64_t *quanti, uint64_t *peggiore_ms)
  */
 static uint64_t tienila_viva_ns(void)
 {
-	if (linea_morta_accesa && linea_morta_silenzio_ms)
-		return (linea_morta_silenzio_ms / 2) * NGTCP2_MILLISECONDS;
+	if (dead_line_on && dead_line_silence_ms)
+		return (dead_line_silence_ms / 2) * NGTCP2_MILLISECONDS;
 	return WT_TIENILA_VIVA_NS;
 }
 
@@ -3369,7 +3369,7 @@ static void regola_tienila_viva(wt *w, const char *stato)
 		                 "keep-alive (which gave 15 s out of a 30 cap)%s",
 		                 (unsigned long long)(tienila_viva_ns() / NGTCP2_SECONDS),
 		                 w->provenienza,
-		                 linea_morta_accesa && linea_morta_silenzio_ms
+		                 dead_line_on && dead_line_silence_ms
 		                     ? ".  ⚠ They are HALF the silence threshold of the "
 		                       "dead line: when it expires, the unanswered questions "
 		                       "are two"
@@ -3435,16 +3435,16 @@ static void regola_battito(wt *w)
 	 *   The cost of the 30 s is paid only by whoever says FAREWELL, and that is
 	 *   the measured case. */
 	if (stato && strcmp(stato, "finita") == 0)
-		cattura_spegni_se_sola(w, "the client said farewell");
+		capture_turn_off_if_alone(w, "the client said farewell");
 
 	if (!stato) {
 		/* No RCP session: we beat if there is a closure to let
 		 * mature — ⛔ **or if the cap of §7.17 is armed**.
 		 *
 		 * ⛔ It is here that the first draft of the cap died, `[M]` 11 Aug
-		 *    2026 with bench B6: `cb_end_headers` armed `canale_entro` and
+		 *    2026 with bench B6: `cb_end_headers` armed `channel_deadline` and
 		 *    called `batti_fra`, and then the first pass of this function
-		 *    set `battito_ms = 0` back.  The cap fired only if the client
+		 *    set `heartbeat_ms = 0` back.  The cap fired only if the client
 		 *    did something else that woke the heartbeat up — that is
 		 *    **precisely in the case where it is not needed**: `ciao-sessione-tardiva`
 		 *    expired at 5.10 s, `ciao-senza-controllo` stayed hanging for 20 s.
@@ -3453,10 +3453,10 @@ static void regola_battito(wt *w)
 		 *   in the very run in which it was being applied: **whoever sets a cap must
 		 *   also switch on what will make it expire** — and switching it on is not
 		 *   enough, nobody else must switch it off. */
-		if (w->chiusura >= 0 || w->canale_entro)
+		if (w->chiusura >= 0 || w->channel_deadline)
 			batti_fra(w, 100);
 		else
-			w->battito_ms = 0;
+			w->heartbeat_ms = 0;
 		return;
 	}
 	if (strcmp(stato, "attiva") == 0) {
@@ -3523,13 +3523,13 @@ static void regola_battito(wt *w)
  *    pointers itself, and two lists of the same set diverge. */
 static wt *vive_prima;
 
-static wt_video_richiesta gancio_palco;
-static void *gancio_palco_ctx;
+static wt_video_request hook_stage;
+static void *hook_stage_ctx;
 
-void wt_video_gancio(wt_video_richiesta f, void *ctx)
+void wt_video_gancio(wt_video_request f, void *ctx)
 {
-	gancio_palco = f;
-	gancio_palco_ctx = ctx;
+	hook_stage = f;
+	hook_stage_ctx = ctx;
 }
 
 /* ⛔ How often a keyframe can be REquested from the stage while the debt is
@@ -3808,7 +3808,7 @@ void wt_sgombra_soglia(uint64_t ms)
 	                 "the default is 100, and 0 switches it off)");
 }
 
-uint64_t wt_sgombra_soglia_letta(void)
+uint64_t wt_clear_threshold_read(void)
 {
 	return sgombra_soglia_ms;
 }
@@ -3952,9 +3952,9 @@ void wt_ritmo_adattivo(bool acceso)
  */
 void wt_linea_morta(bool accesa, uint64_t stallo_ms, uint64_t silenzio_s)
 {
-	linea_morta_accesa = accesa;
+	dead_line_on = accesa;
 	linea_morta_stallo_ms = stallo_ms;
-	linea_morta_silenzio_ms = silenzio_s * 1000;
+	dead_line_silence_ms = silenzio_s * 1000;
 	if (!accesa) {
 		registro_dice(REG_AVVIO,
 		              "⛔ the DEAD LINE is OFF by whoever launched the server "
@@ -3993,13 +3993,13 @@ void wt_linea_morta(bool accesa, uint64_t stallo_ms, uint64_t silenzio_s)
 	              "WITNESS of reordering — `casa-cattiva` declared 512‰ and "
 	              "HELD for ten minutes, `raffica-forte` 123‰ and did not hold",
 	              (unsigned long long)linea_morta_stallo_ms,
-	              (unsigned long long)(linea_morta_silenzio_ms / 1000),
+	              (unsigned long long)(dead_line_silence_ms / 1000),
 	              (unsigned)WT_LM_MIN_PROVE);
 	if (!linea_morta_stallo_ms)
 		registro_dice(REG_AVVIO,
 		              "⚠ but the STALL threshold is at 0 ms: silence alone "
 		              "remains.  A frozen image will close nothing");
-	if (!linea_morta_silenzio_ms)
+	if (!dead_line_silence_ms)
 		registro_dice(REG_AVVIO,
 		              "⚠ but the SILENCE threshold is at 0 s: loss alone "
 		              "remains, and a client that goes quiet waits for QUIC's 30 s "
@@ -4019,7 +4019,7 @@ void wt_linea_morta(bool accesa, uint64_t stallo_ms, uint64_t silenzio_s)
  *     (c) a retransmission pays the same bandwidth twice.
  *     ⇒ If the measured delay of the chain exceeds 55 + threshold ms, it is HERE that
  *     it gave way: it would be a number that *looks* measured. */
-static uint64_t coda_svuotamento_ms(const wt *w, size_t byte, const char **come)
+static uint64_t queue_drain_ms(const wt *w, size_t byte, const char **come)
 {
 	ngtcp2_conn_info info;
 
@@ -4042,13 +4042,13 @@ static uint64_t coda_svuotamento_ms(const wt *w, size_t byte, const char **come)
 /* ------------------------------------------------------------------------ */
 /* ⭐ §5.1 — ABANDONMENT, AND IT IS WHAT SHOWS ON THE RECEIVING SIDE.        */
 
-static void involo_pulisci(wt *w)
+static void inflight_clean(wt *w)
 {
 	size_t j = 0;
-	for (size_t i = 0; i < w->ninvolo; i++)
+	for (size_t i = 0; i < w->ninflight; i++)
 		if (w->involo[i].vivo)
 			w->involo[j++] = w->involo[i];
-	w->ninvolo = j;
+	w->ninflight = j;
 }
 
 /* ⛔ §5.1: «the server MAY call `RESET_STREAM` on a frame that is no longer
@@ -4127,7 +4127,7 @@ static void involo_pulisci(wt *w)
  *       high and the queue is buying smoothness by selling responsiveness
  *       (`SPECIFICHE.md:128-130`).  We go down to 50 ms and measure again;
  *    3. ⛔ **the measured delay of the chain exceeds 55 + threshold ms** (155 ms at
- *       100).  ⇒ `coda_svuotamento_ms()` UNDERESTIMATES the emptying for one
+ *       100).  ⇒ `queue_drain_ms()` UNDERESTIMATES the emptying for one
  *       of the three reasons declared next to it, and the threshold does not limit what
  *       it promises.  ⭐ It is the most important red, because it would be **a
  *       number that looks measured**;
@@ -4182,27 +4182,27 @@ static void video_sgombra(wt *w, const char *perche)
 
 	/* ⛔ FIRST PASS — and it is not one round too many: whoever has no more bytes leaves
 	 * the list (it was not abandoned, it was SENT), and what
-	 * remains is added up.  The sum is the VIDEO queue — not `w->byte_in_coda`,
+	 * remains is added up.  The sum is the VIDEO queue — not `w->byte_in_queue`,
 	 * which would also contain the control channel and audio.
 	 * ⚠ The bytes are kept in `resto[]` instead of being reread: between the two
-	 *   passes nothing changes, and `coda_byte_stream()` scans the whole queue
+	 *   passes nothing changes, and `queue_byte_stream()` scans the whole queue
 	 *   every time. */
-	bool chiave_in_coda = false;
-	uint32_t chiave_numero = 0;
+	bool key_in_queue = false;
+	uint32_t key_number = 0;
 
-	for (size_t i = 0; i < w->ninvolo; i++) {
+	for (size_t i = 0; i < w->ninflight; i++) {
 		resto[i] = 0;
 		if (!w->involo[i].vivo)
 			continue;
-		resto[i] = coda_byte_stream(w, w->involo[i].stream);
+		resto[i] = queue_byte_stream(w, w->involo[i].stream);
 		if (resto[i] == 0) {
 			w->involo[i].vivo = false;
 			continue;
 		}
 		in_coda += resto[i];
 		if (w->involo[i].chiave) {
-			chiave_in_coda = true;
-			chiave_numero = w->involo[i].numero;
+			key_in_queue = true;
+			key_number = w->involo[i].numero;
 		}
 		/* ⭐ `arretrato` excludes KEYFRAMES, and it is the definition of §3.1 of the
 		 *    regulator's design: a slow keyframe in the queue must not stop
@@ -4214,7 +4214,7 @@ static void video_sgombra(wt *w, const char *perche)
 	}
 
 	if (sgombra_soglia_ms) {
-		attesa = coda_svuotamento_ms(w, in_coda, &come);
+		attesa = queue_drain_ms(w, in_coda, &come);
 		/* ⛔⛔ THE KEYFRAME SPIRAL — 22 Sep 2026, the user's test with a
 		 *     4K video on KDE, Chrome and Firefox.  A ~300 KB keyframe in the queue
 		 *     takes the wait above the threshold BY ITSELF; abandoning the deltas that
@@ -4225,11 +4225,11 @@ static void video_sgombra(wt *w, const char *perche)
 		 *     `RCP.md` §5.2 names.  ⇒ As long as a keyframe is in the queue the
 		 *     deltas are KEPT: braking production is the job of the rate
 		 *     regulator, not of abandonment. */
-		if (attesa > sgombra_soglia_ms && chiave_in_coda) {
+		if (attesa > sgombra_soglia_ms && key_in_queue) {
 			w->sgombra_tenuti += arretrato;
-			w->sgombra_dietro_chiave += arretrato;
-			if (w->sgombra_chiave_detta != chiave_numero + 1) {
-				w->sgombra_chiave_detta = chiave_numero + 1;
+			w->clear_out_behind_key += arretrato;
+			if (w->clear_key_logged != key_number + 1) {
+				w->clear_key_logged = key_number + 1;
 				registro_dice_di(REG_RCP, wt_chi(w),
 				                 "⭐ %s: the video queue is above the threshold "
 				                 "(%zu bytes = %llu ms, threshold %llu ms) but there is "
@@ -4240,9 +4240,9 @@ static void video_sgombra(wt *w, const char *perche)
 				                 w->provenienza, in_coda,
 				                 (unsigned long long)attesa,
 				                 (unsigned long long)sgombra_soglia_ms,
-				                 chiave_numero, arretrato);
+				                 key_number, arretrato);
 			}
-			involo_pulisci(w);
+			inflight_clean(w);
 			return;
 		}
 		if (attesa <= sgombra_soglia_ms) {
@@ -4251,8 +4251,8 @@ static void video_sgombra(wt *w, const char *perche)
 			 * second would make the log unreadable precisely where it is needed:
 			 * it is the same reason as the backstop of `chiave_intervallo_ms()`. */
 			w->sgombra_tenuti += arretrato;
-			if (w->sgombra_sopra) {
-				w->sgombra_sopra = false;
+			if (w->clear_out_above) {
+				w->clear_out_above = false;
 				registro_dice_di(REG_RCP, wt_chi(w),
 				                 "⭐ %s: the video queue goes back BELOW the threshold "
 				                 "(%zu bytes = %llu ms, threshold %llu ms, %s): the %u "
@@ -4263,11 +4263,11 @@ static void video_sgombra(wt *w, const char *perche)
 				                 (unsigned long long)sgombra_soglia_ms, come,
 				                 arretrato);
 			}
-			involo_pulisci(w);
+			inflight_clean(w);
 			return;
 		}
-		if (!w->sgombra_sopra) {
-			w->sgombra_sopra = true;
+		if (!w->clear_out_above) {
+			w->clear_out_above = true;
 			registro_dice_di(REG_RCP, wt_chi(w),
 			                 "⛔ %s: the video queue goes ABOVE the threshold (%zu "
 			                 "bytes = %llu ms, threshold %llu ms, %s), backlog %u "
@@ -4279,7 +4279,7 @@ static void video_sgombra(wt *w, const char *perche)
 		}
 	}
 
-	for (size_t i = 0; i < w->ninvolo; i++) {
+	for (size_t i = 0; i < w->ninflight; i++) {
 		size_t rimasti = resto[i];
 		if (!w->involo[i].vivo || rimasti == 0)
 			continue;
@@ -4323,11 +4323,11 @@ static void video_sgombra(wt *w, const char *perche)
 		 * its bytes are no longer there: `wt_scrivi()` would find it mute instead
 		 * of reset, and the client would wait for an end that does not come. */
 		ngtcp2_conn_shutdown_stream_write(w->conn, 0, w->involo[i].stream, 0);
-		coda_butta_stream(w, w->involo[i].stream);
+		queue_drop_stream(w, w->involo[i].stream);
 		w->involo[i].vivo = false;
 		w->sgombra_abbandoni++;
 		/* ⭐ THE MINIMUM IS ABANDONED, scanning from the OLDEST: the list is
-		 * in insertion order (`involo_aggiungi()`), so the first live one
+		 * in insertion order (`inflight_add()`), so the first live one
 		 * is the oldest and it is the one that serves least.  ⛔ As soon as the queue
 		 * gets back below the threshold we STOP: abandoning the others too
 		 * would cost a keyframe for nothing, and it is precisely the spiral
@@ -4339,26 +4339,26 @@ static void video_sgombra(wt *w, const char *perche)
 		 *   this abandonment, not of the line.  Writing it here would mean
 		 *   two lines per frame, that is sixty a second while the
 		 *   step lasts: it is the defect the backstop of `chiave_intervallo_ms()`
-		 *   exists not to commit.  ⭐ `sgombra_sopra` goes back to false only when a
+		 *   exists not to commit.  ⭐ `clear_out_above` goes back to false only when a
 		 *   WHOLE pass finds the queue below the threshold without abandoning
 		 *   anything: that is indeed a change of state. */
 		if (sgombra_soglia_ms) {
 			arretrato--;
 			in_coda -= rimasti;
-			attesa = coda_svuotamento_ms(w, in_coda, &come);
+			attesa = queue_drain_ms(w, in_coda, &come);
 			if (attesa <= sgombra_soglia_ms)
 				break;
 		}
 	}
-	involo_pulisci(w);
+	inflight_clean(w);
 }
 
-static void involo_aggiungi(wt *w, int64_t stream, uint32_t numero, bool chiave)
+static void inflight_add(wt *w, int64_t stream, uint32_t numero, bool chiave)
 {
 	if (stream < 0)
 		return;
-	involo_pulisci(w);
-	if (w->ninvolo >= WT_INVOLO_MAX) {
+	inflight_clean(w);
+	if (w->ninflight >= WT_INVOLO_MAX) {
 		/* ⚠ It is said instead of slipping by: from here on that frame will not
 		 *   be abandonable, and whoever reads the log must know it — an
 		 *   abandonment that does not happen because a table is full looks in
@@ -4369,12 +4369,12 @@ static void involo_aggiungi(wt *w, int64_t stream, uint32_t numero, bool chiave)
 		                 w->provenienza, WT_INVOLO_MAX, numero);
 		return;
 	}
-	w->involo[w->ninvolo].stream = stream;
-	w->involo[w->ninvolo].numero = numero;
-	w->involo[w->ninvolo].chiave = chiave;
-	w->involo[w->ninvolo].vivo = true;
-	w->involo[w->ninvolo].detto = false;
-	w->ninvolo++;
+	w->involo[w->ninflight].stream = stream;
+	w->involo[w->ninflight].numero = numero;
+	w->involo[w->ninflight].chiave = chiave;
+	w->involo[w->ninflight].vivo = true;
+	w->involo[w->ninflight].detto = false;
+	w->ninflight++;
 }
 
 /* ------------------------------------------------------------------------ */
@@ -4456,9 +4456,9 @@ static uint64_t chiave_intervallo_ms(wt *w, const char **come)
 	 *    line does not carry the keyframe away, after two seconds one is requested
 	 *    all the same.  A screen frozen forever is not «ugly», it is half
 	 *    closed (I1). */
-	for (size_t i = 0; i < w->ninvolo; i++)
+	for (size_t i = 0; i < w->ninflight; i++)
 		if (w->involo[i].vivo && w->involo[i].chiave)
-			in_coda += coda_byte_stream(w, w->involo[i].stream);
+			in_coda += queue_byte_stream(w, w->involo[i].stream);
 	if (in_coda > 0) {
 		*come = "🔸 the previous KEYFRAME has not gone out yet (bytes in the queue)";
 		/* ⚠ The log backstop is the same as the computed road's: the line
@@ -4499,11 +4499,11 @@ static uint64_t chiave_intervallo_ms(wt *w, const char **come)
 	 *    visible to the user (the image stays broken longer) and visible
 	 *    prices are judged by him.  ⚠ With a backstop, or at fifty heartbeats a
 	 *    second this line would fill the log instead of telling it. */
-	if (w->chiave_attesa_detta_ms == 0
-	    || (ms > w->chiave_attesa_detta_ms
-	        ? ms - w->chiave_attesa_detta_ms
-	        : w->chiave_attesa_detta_ms - ms) >= 100) {
-		w->chiave_attesa_detta_ms = ms;
+	if (w->key_wait_logged_ms == 0
+	    || (ms > w->key_wait_logged_ms
+	        ? ms - w->key_wait_logged_ms
+	        : w->key_wait_logged_ms - ms) >= 100) {
+		w->key_wait_logged_ms = ms;
 		registro_dice_di(REG_RCP, wt_chi(w),
 		                 "🔸 %s: the KEYFRAME can be requested every %llu ms instead "
 		                 "of %u — the last one measured %llu bytes and the MEASURED bandwidth is "
@@ -4530,14 +4530,14 @@ static void audio_regola(wt *w)
 	uint8_t codec;
 	const char *utente;
 
-	/* ⚠ `audio_fermo` does here the same job `video_fermo` does in the
+	/* ⚠ `audio_stopped` does here the same job `video_stopped` does in the
 	 *   twin: if capture had been switched off because nobody was listening
 	 *   any more, a new session must be able to restart it.  Without it, the
 	 *   reattach would be mute. */
-	if (!w->rcp || w->chiusura >= 0 || (w->audio_acceso && !w->audio_fermo))
+	if (!w->rcp || w->chiusura >= 0 || (w->audio_on && !w->audio_stopped))
 		return;
 	/* ⛔ The same trap as the twin, and the box is on `video_regola()`:
-	 *    `rcp_tela_in_vigore()` does not look at the state, so without this line
+	 *    `rcp_canvas_in_effect()` does not look at the state, so without this line
 	 *    a finished session would switch capture back on at every heartbeat. */
 	if (rcp_e_finita(w->rcp))
 		return;
@@ -4545,13 +4545,13 @@ static void audio_regola(wt *w)
 	/* ⛔ Invariant I3: no sound before `SESSIONE` has left.  It is the
 	 *    same guard as video, for the same reason — whoever has not gone
 	 *    through the validator does not receive a pixel, nor a sample. */
-	if (!rcp_tela_in_vigore(w->rcp, &l, &a))
+	if (!rcp_canvas_in_effect(w->rcp, &l, &a))
 		return;
 
 	codec = rcp_audio_negoziato(w->rcp);
 	if (codec == 0) {
-		if (!w->audio_detto) {
-			w->audio_detto = true;
+		if (!w->audio_logged) {
+			w->audio_logged = true;
 			registro_dice_di(REG_RCP, wt_chi(w),
 			                 "%s: no audio codec negotiated (§4.3) — this "
 			                 "session has no audio",
@@ -4564,8 +4564,8 @@ static void audio_regola(wt *w)
 	if (!utente || !utente[0])
 		return;
 
-	w->audio_acceso = true;
-	w->audio_fermo = false;
+	w->audio_on = true;
+	w->audio_stopped = false;
 	w->audio_codec = codec;
 	/* ⛔ AND THE TEST TONE IS NAMED HERE, at every session — finding 8.
 	 *    `wt_audio_prova()` writes a single line, at startup: whoever read the
@@ -4578,8 +4578,8 @@ static void audio_regola(wt *w)
 	                 "bytes%s",
 	                 utente, w->provenienza, codec,
 	                 codec == 1 ? "Opus" : "PCM",
-	                 (unsigned long long)dgram_tetto_del_pari(w),
-	                 audio_prova_hz
+	                 (unsigned long long)dgram_peer_cap(w),
+	                 audio_test_hz
 	                     ? "  ⚠⚠ AND WHAT WILL BE HEARD IS THE TEST TONE, not the "
 	                       "desktop: `--audio-prova` is on (bench function, I6)"
 	                     : "");
@@ -4589,11 +4589,11 @@ static void audio_regola(wt *w)
 	 *    would mean two sources on the same channel.  ⚠ The client would hear
 	 *    the two mixed and the bench would measure a scene the product will never
 	 *    have. */
-	if (gancio_audio && !audio_prova_hz)
-		gancio_audio(gancio_audio_ctx, utente, codec);
+	if (hook_audio && !audio_test_hz)
+		hook_audio(hook_audio_ctx, utente, codec);
 }
 
-static void video_regola(wt *w, uint64_t ora_ms)
+static void video_regola(wt *w, uint64_t now_ms)
 {
 	uint32_t l = 0, a = 0;
 	uint8_t codec;
@@ -4608,12 +4608,12 @@ static void video_regola(wt *w, uint64_t ora_ms)
 	 *        writing it out in full because the trap is made on purpose not to be
 	 *        seen:
 	 *
-	 *        `rcp_tela_in_vigore()` below does NOT look at the state — it looks at
-	 *        `sessione_spedita`, which once true **stays true even after the
+	 *        `rcp_canvas_in_effect()` below does NOT look at the state — it looks at
+	 *        `session_sent`, which once true **stays true even after the
 	 *        end**.  ⇒ On a «finished» session this function goes all the way to
 	 *        the bottom as if nothing were wrong.  Before it did no harm (`video_acceso`
 	 *        was already true and the switch-on branch was not taken); from
-	 *        today, with `video_fermo` on, it would take it — and in `wt_batti()`
+	 *        today, with `video_stopped` on, it would take it — and in `wt_batti()`
 	 *        `video_regola()` comes BEFORE `regola_battito()`.
 	 *
 	 *        ⇒ Every heartbeat: switch on, switch off again.  Two messages to the child and two
@@ -4632,19 +4632,19 @@ static void video_regola(wt *w, uint64_t ora_ms)
 		return;
 
 	/* ⛔ P1 / §2.5 / invariant I3 — «no video stream before having
-	 *    SENT `SESSIONE`».  `rcp_tela_in_vigore()` answers `false` until
+	 *    SENT `SESSIONE`».  `rcp_canvas_in_effect()` answers `false` until
 	 *    `SESSIONE` has left, and writes nothing in the log: calling
 	 *    `rcp_video_apri()` to find out would fill the log with one line a
 	 *    second for every session waiting for the password. */
-	if (!rcp_tela_in_vigore(w->rcp, &l, &a))
+	if (!rcp_canvas_in_effect(w->rcp, &l, &a))
 		return;
 
-	codec = rcp_codec_negoziato(w->rcp);
+	codec = rcp_codec_negotiated(w->rcp);
 	if (codec == 0) {
-		if (!w->video_detto) {
+		if (!w->video_logged) {
 			/* ⚠ It is not a defect: a phase 1 client declares no
 			 *   codec, and §4.3 proves it right. */
-			w->video_detto = true;
+			w->video_logged = true;
 			registro_dice_di(REG_RCP, wt_chi(w),
 			                 "%s: no codec negotiated (§4.3) — this session "
 			                 "has no video, and it is what phase 1 did",
@@ -4657,7 +4657,7 @@ static void video_regola(wt *w, uint64_t ora_ms)
 	if (!utente || !utente[0])
 		return;
 
-	/* ⛔⭐⭐ AND `video_fermo` IS THE HALF THAT RESTARTS CAPTURE.
+	/* ⛔⭐⭐ AND `video_stopped` IS THE HALF THAT RESTARTS CAPTURE.
 	 *
 	 *      Since the loop switches off at farewell (see `regola_battito()`),
 	 *      «the channel is on» no longer implies «the stage is capturing».
@@ -4670,14 +4670,14 @@ static void video_regola(wt *w, uint64_t ora_ms)
 	 *      frozen screen.
 	 *
 	 * ⚠ We go through here as soon as the new session's `SESSIONE` has left
-	 *   (`rcp_tela_in_vigore()` above), and we start again with a KEYFRAME —
+	 *   (`rcp_canvas_in_effect()` above), and we start again with a KEYFRAME —
 	 *   which is what §5.2 wants anyway from the first frame. */
-	if (!w->video_acceso || w->video_fermo) {
-		bool ripartenza = w->video_fermo;
+	if (!w->video_acceso || w->video_stopped) {
+		bool ripartenza = w->video_stopped;
 		w->video_acceso = true;
-		w->video_fermo = false;
+		w->video_stopped = false;
 		w->video_codec = codec;
-		w->chiave_chiesta_ms = ora_ms;
+		w->key_requested_ms = now_ms;
 		registro_dice_di(REG_RCP, wt_chi(w),
 		                 "⭐ PHASE 3: video channel %s for «%s» from %s — codec %u, "
 		                 "canvas %ux%u.  Asking the stage to capture continuously, and "
@@ -4686,9 +4686,9 @@ static void video_regola(wt *w, uint64_t ora_ms)
 		                              "watching it any more)"
 		                            : "ON",
 		                 utente, w->provenienza, codec, l, a);
-		if (gancio_palco)
-			gancio_palco(gancio_palco_ctx, utente, codec,
-			             rcp_profondita_negoziata(w->rcp),
+		if (hook_stage)
+			hook_stage(hook_stage_ctx, utente, codec,
+			             rcp_depth_negotiated(w->rcp),
 			             rcp_livello_negoziato(w->rcp), true);
 		return;
 	}
@@ -4699,11 +4699,11 @@ static void video_regola(wt *w, uint64_t ora_ms)
 		uint64_t attesa = chiave_intervallo_ms(w, &come);
 
 		if (rcp_video_serve_chiave(w->rcp)
-		    && ora_ms - w->chiave_chiesta_ms >= attesa) {
-			w->chiave_chiesta_ms = ora_ms;
-			if (gancio_palco)
-				gancio_palco(gancio_palco_ctx, utente, codec,
-				             rcp_profondita_negoziata(w->rcp),
+		    && now_ms - w->key_requested_ms >= attesa) {
+			w->key_requested_ms = now_ms;
+			if (hook_stage)
+				hook_stage(hook_stage_ctx, utente, codec,
+				             rcp_depth_negotiated(w->rcp),
 				             rcp_livello_negoziato(w->rcp), true);
 			registro_dettaglio_di(REG_RCP, wt_chi(w),
 			                           "%s: §5.2 wants a KEYFRAME — request forwarded to the "
@@ -4727,12 +4727,12 @@ static void video_regola(wt *w, uint64_t ora_ms)
  * ⛔ And the line is written ONCE per episode: the log of the measured
  *    session had **45 278** of the same refusal, that is 40 MB in which the
  *    block was invisible precisely because it was always shouting. */
-static void video_rifiutato_per_chiave(wt *w, uint64_t ora_ms)
+static void video_refused_for_key(wt *w, uint64_t now_ms)
 {
-	if (ora_ms - w->chiave_chiesta_ms < WT_CHIAVE_DEBITO_TETTO_MS)
+	if (now_ms - w->key_requested_ms < WT_CHIAVE_DEBITO_TETTO_MS)
 		return;
-	if (!w->debito_detto) {
-		w->debito_detto = true;
+	if (!w->debt_logged) {
+		w->debt_logged = true;
 		registro_dice_di(REG_RCP, wt_chi(w),
 		                 "⛔ %s: the KEYFRAME debt (§5.2) has been on for %llu ms "
 		                 "and no keyframe has arrived — every delta is refused, "
@@ -4741,9 +4741,9 @@ static void video_rifiutato_per_chiave(wt *w, uint64_t ora_ms)
 		                 "of 23 Sep 2026, and the first (`batti_fra()`) evidently "
 		                 "was not enough",
 		                 w->provenienza,
-		                 (unsigned long long)(ora_ms - w->chiave_chiesta_ms));
+		                 (unsigned long long)(now_ms - w->key_requested_ms));
 	}
-	video_regola(w, ora_ms);
+	video_regola(w, now_ms);
 }
 
 /* ------------------------------------------------------------------------ */
@@ -4882,17 +4882,17 @@ static void video_rifiutato_per_chiave(wt *w, uint64_t ora_ms)
  *     important red, because it produces a loop that SEEMS to work well;
  *  c. **`video_saltati` growing while `arretrato` stays 0** ⇒ the bottleneck is
  *     stream credit (§2.3, cause 4 of the debt), not bandwidth, and
- *     this regulator has nothing to do with it: look at `sgombra_credito`;
+ *     this regulator has nothing to do with it: look at `clear_out_credit`;
  *  d. **zero drops and ZERO READS in the moving half** ⇒ it is not a
  *     confirmed prediction, it is a loop never walked.  Almost certainly the
  *     queue threshold is off (see `wt_ritmo_adattivo()`);
  *  e. **the RISE never arrives after the line comes back** ⇒ something
  *     holds bytes in the queue that do not go away, and it is not the rate: look at
- *     the peak of `byte_in_volo` and the streams never closed.
+ *     the peak of `byte_in_flight` and the streams never closed.
  *
  * ⇒ Returns `true` when this frame must NOT leave.
  */
-static bool ritmo_frena(wt *w, bool chiave, uint64_t ora_ms)
+static bool ritmo_frena(wt *w, bool chiave, uint64_t now_ms)
 {
 	unsigned arretrato = 0;
 	size_t in_coda = 0;
@@ -4905,15 +4905,15 @@ static bool ritmo_frena(wt *w, bool chiave, uint64_t ora_ms)
 
 	/* ⛔ IT IS READ BEFORE `video_sgombra()`, which a few lines below empties that
 	 *    queue: afterwards, `arretrato` would always be zero and this loop
-	 *    would never fire.  ⚠ `coda_byte_stream()` counts the bytes that have NOT
+	 *    would never fire.  ⚠ `queue_byte_stream()` counts the bytes that have NOT
 	 *    YET left our house — an element already handed to ngtcp2 has
 	 *    `off == dati.n` and is worth zero, even if after the cure of 23 August its
 	 *    memory is still ours.  ⇒ The quantity stayed the same. */
-	for (size_t i = 0; i < w->ninvolo; i++) {
+	for (size_t i = 0; i < w->ninflight; i++) {
 		size_t resto;
 		if (!w->involo[i].vivo || w->involo[i].chiave)
 			continue;
-		resto = coda_byte_stream(w, w->involo[i].stream);
+		resto = queue_byte_stream(w, w->involo[i].stream);
 		if (resto == 0)
 			continue;
 		in_coda += resto;
@@ -4923,8 +4923,8 @@ static bool ritmo_frena(wt *w, bool chiave, uint64_t ora_ms)
 	/* ⭐ THE READ IS COUNTED, always, even when it is worth zero: it is what
 	 *    tells «the loop was walked and the backlog was zero» from
 	 *    «the loop was not walked at all» (`LEZIONI.md` §1.9). */
-	w->ritmo_letture++;
-	w->ritmo_ultimo = arretrato;
+	w->rate_readings++;
+	w->rate_last = arretrato;
 	if (arretrato > w->ritmo_max)
 		w->ritmo_max = arretrato;
 
@@ -4960,8 +4960,8 @@ static bool ritmo_frena(wt *w, bool chiave, uint64_t ora_ms)
 				snprintf(rete, sizeof rete,
 				         "queue inside the network NOT YET KNOWN (min_rtt missing)");
 			w->ritmo_giu   = true;
-			w->ritmo_da_ms = ora_ms;
-			w->ritmo_da_n  = w->video_ritmo_scesi;
+			w->rate_from_ms = now_ms;
+			w->rate_from_n  = w->video_ritmo_scesi;
 			/* ⛔⭐ INVARIANT I1: «the rate never drops out of caution, to
 			 *     save, or because the scene is still.  It drops only when the
 			 *     MEASUREMENT proves the line does not carry, and every drop is
@@ -4983,11 +4983,11 @@ static bool ritmo_frena(wt *w, bool chiave, uint64_t ora_ms)
 			                 "queue that does not empty (I1).  ⚠ If cwnd_left is HIGH "
 			                 "it is not the line, it is the browser's window",
 			                 w->provenienza, arretrato, (unsigned)WT_RITMO_POSTI,
-			                 in_coda, w->byte_in_coda,
+			                 in_coda, w->byte_in_queue,
 			                 (unsigned long long)in.cwnd,
 			                 (unsigned long long)ngtcp2_conn_get_cwnd_left(w->conn),
 			                 (unsigned long long)in.bytes_in_flight,
-			                 w->byte_in_volo,
+			                 w->byte_in_flight,
 			                 (unsigned long long)rtt_ms, rete);
 		}
 		w->video_ritmo_scesi++;
@@ -5035,7 +5035,7 @@ static bool ritmo_frena(wt *w, bool chiave, uint64_t ora_ms)
 		 *      (`rcp.c`, the `RCP_VIDEO_SERVE_UNA_CHIAVE` branch): until the
 		 *      keyframe goes out, the user's screen is FROZEN.  ⇒ How long
 		 *      that darkness lasts is not a detail, it is the rate. */
-		video_regola(w, ora_ms);
+		video_regola(w, now_ms);
 		return true; /* ⛔ this frame does NOT leave: it IS the drop */
 	}
 
@@ -5050,8 +5050,8 @@ static bool ritmo_frena(wt *w, bool chiave, uint64_t ora_ms)
 		                 "%u frames were left behind.  ⚠ Nobody decided it: "
 		                 "the queue emptied and the backlog is zero",
 		                 w->provenienza,
-		                 (unsigned long long)(ora_ms - w->ritmo_da_ms),
-		                 w->video_ritmo_scesi - w->ritmo_da_n);
+		                 (unsigned long long)(now_ms - w->rate_from_ms),
+		                 w->video_ritmo_scesi - w->rate_from_n);
 	}
 	return false;
 }
@@ -5068,24 +5068,24 @@ static bool ritmo_frena(wt *w, bool chiave, uint64_t ora_ms)
  * ⚠ It comes out only with the switch on: it is the instrument of a bench, not a
  *   product line, and with a still session it would be one line a second for
  *   ever. */
-static void ritmo_ciclo(wt *w, uint64_t ora_ms)
+static void ritmo_ciclo(wt *w, uint64_t now_ms)
 {
 	if (!ritmo_adattivo || !w->rcp || w->chiusura >= 0)
 		return;
-	if (ora_ms - w->ritmo_detto_ms < 1000)
+	if (now_ms - w->rate_logged_ms < 1000)
 		return;
-	w->ritmo_detto_ms = ora_ms;
+	w->rate_logged_ms = now_ms;
 	registro_dice_di(REG_RCP, wt_chi(w),
 	                 "rate of %s: backlog READ %u times in the last second, "
 	                 "maximum %u, last %u, slots %u — %u frames not sent in "
 	                 "this second, %u in total.  ⚠ ZERO READS = the stage delivered "
 	                 "nothing (still scene), and NOT «backlog zero»",
-	                 w->provenienza, w->ritmo_letture, w->ritmo_max, w->ritmo_ultimo,
+	                 w->provenienza, w->rate_readings, w->ritmo_max, w->rate_last,
 	                 (unsigned)WT_RITMO_POSTI,
-	                 w->video_ritmo_scesi - w->ritmo_detti_n, w->video_ritmo_scesi);
-	w->ritmo_letture = 0;
+	                 w->video_ritmo_scesi - w->rate_logged_n, w->video_ritmo_scesi);
+	w->rate_readings = 0;
 	w->ritmo_max = 0;
-	w->ritmo_detti_n = w->video_ritmo_scesi;
+	w->rate_logged_n = w->video_ritmo_scesi;
 }
 
 /* ========================================================================== */
@@ -5174,8 +5174,8 @@ static void ritmo_ciclo(wt *w, uint64_t ora_ms)
 /* ⭐ THE THREE VERDICTS, and the rule that chooses them is all in `rete_ciclo()`.
  *    They are numbers and not strings only to be able to say «the verdict has changed»
  *    with counters still, which is a fact worth a line. */
-#define WT_RETE_NULLA    0
-#define WT_RETE_FINESTRA 1
+#define WT_NETWORK_NONE    0
+#define WT_NETWORK_WINDOW 1
 #define WT_RETE_PERDE    2
 
 /* ⭐⭐ THE TWO OUTCOMES OF A DATAGRAM, AND `trasporto.c` CALLS THEM FROM NGTCP2.
@@ -5197,8 +5197,8 @@ void wt_dgram_perso(wt *w, uint64_t id)
 	w->dgram_persi++;
 	/* ⛔ It is always written, even over an identifier not yet
 	 *    acknowledged: the ring is a RECENT memory, not a list. */
-	w->dgram_anello[w->dgram_anello_i] = id;
-	w->dgram_anello_i = (w->dgram_anello_i + 1) % WT_DGRAM_ANELLO;
+	w->dgram_ring[w->dgram_ring_i] = id;
+	w->dgram_ring_i = (w->dgram_ring_i + 1) % WT_DGRAM_RING;
 }
 
 void wt_dgram_riscontrato(wt *w, uint64_t id)
@@ -5207,16 +5207,16 @@ void wt_dgram_riscontrato(wt *w, uint64_t id)
 
 	if (!w)
 		return;
-	w->dgram_riscontrati++;
+	w->dgram_acked++;
 	/* ⭐ The fact that counts: it had been DECLARED lost, and here it is.
 	 *    ⇒ It was not lost: it was late.  It is reordering, measured. */
-	for (i = 0; i < WT_DGRAM_ANELLO; i++) {
-		if (w->dgram_anello[i] != id)
+	for (i = 0; i < WT_DGRAM_RING; i++) {
+		if (w->dgram_ring[i] != id)
 			continue;
 		w->dgram_falsi++;
 		/* ⛔ It is consumed, or a second acknowledgement of the same
 		 *    identifier would count it twice. */
-		w->dgram_anello[i] = 0;
+		w->dgram_ring[i] = 0;
 		return;
 	}
 }
@@ -5267,7 +5267,7 @@ void wt_dgram_riscontrato(wt *w, uint64_t id)
 /*                         frozen through our fault for that long.            */
 /*        ⛔⛔ AND UNTIL 25 AUG 2026 THIS LINE WAS LYING — finding R5 of       */
 /*           §5.5.  The comment said «since this session was born»            */
-/*           and the code printed `giro_fermo_ms`, that is the                */
+/*           and the code printed `round_stall_ms`, that is the                */
 /*           **GLOBAL** counter since the server was switched on.  `[M]` a line */
 /*           attributed **54.5 s** of our blindness to a session that         */
 /*           at the time **had not been born yet**.  ⇒ On a server on for a   */
@@ -5315,7 +5315,7 @@ static void linea_morta_scatta(wt *w, const ngtcp2_conn_info *in,
 {
 	static const uint8_t motivo[] = "linea morta";
 
-	w->lm_scattata = true;
+	w->lm_fired = true;
 	registro_dice_di(REG_WT, wt_chi(w),
 	                 "linea-morta %s causa=%s stallo_ms=%llu soglia_stallo_ms=%llu "
 	                 "offerti=%llu usciti_byte=%llu coda_video=%llu "
@@ -5331,22 +5331,22 @@ static void linea_morta_scatta(wt *w, const ngtcp2_conn_info *in,
 	                 (unsigned long long)offerti, (unsigned long long)usciti,
 	                 (unsigned long long)coda_video,
 	                 (unsigned long long)silenzio_ms,
-	                 (unsigned long long)linea_morta_silenzio_ms,
+	                 (unsigned long long)dead_line_silence_ms,
 	                 (unsigned long long)prove, (unsigned)WT_LM_MIN_PROVE,
-	                 (unsigned long long)w->lm_persi_v,
-	                 (unsigned long long)w->lm_spediti_v, w->lm_permille,
-	                 (unsigned long long)w->lm_durata_v,
-	                 (unsigned)WT_LM_MIN_PACCHETTI,
+	                 (unsigned long long)w->lm_lost_v,
+	                 (unsigned long long)w->lm_sent_v, w->lm_permille,
+	                 (unsigned long long)w->lm_duration_v,
+	                 (unsigned)WT_LM_MIN_PACKETS,
 	                 (unsigned long long)in->cwnd,
 	                 (unsigned long long)ngtcp2_conn_get_cwnd_left(w->conn),
 	                 (unsigned long long)(in->smoothed_rtt / NGTCP2_MICROSECONDS),
 	                 /* ⛔ R5, 25 Aug 2026: the DIFFERENCE, not the global
-	                  *    counter — see `lm_fermo_nato` and the field `fermo_ms=`
+	                  *    counter — see `lm_stopped_born` and the field `fermo_ms=`
 	                  *    in the box above. */
-	                 (unsigned long long)(giro_fermo_ms - w->lm_fermo_nato),
-	                 (unsigned long long)giro_fermi,
-	                 (unsigned long long)w->lm_fermo_saltati,
-	                 w->ritmo_giu ? 1 : 0, w->ritmo_ultimo,
+	                 (unsigned long long)(round_stall_ms - w->lm_stopped_born),
+	                 (unsigned long long)round_stalls,
+	                 (unsigned long long)w->lm_stopped_skipped,
+	                 w->ritmo_giu ? 1 : 0, w->rate_last,
 	                 (unsigned)WT_RITMO_POSTI,
 	                 (unsigned long long)w->video_ritmo_scesi,
 	                 detto);
@@ -5361,23 +5361,23 @@ static void linea_morta_scatta(wt *w, const ngtcp2_conn_info *in,
 	 *   WebTransport session) on purpose: that one wants the queue to empty and
 	 *   waits up to 3 s on a line that by hypothesis DOES NOT CARRY.  Here the wire
 	 *   drops — it is what the user chose to show. */
-	if (w->ultimo_errore)
-		ngtcp2_ccerr_set_application_error(w->ultimo_errore,
+	if (w->last_error)
+		ngtcp2_ccerr_set_application_error(w->last_error,
 		                                   NGHTTP3_H3_NO_ERROR, motivo,
 		                                   sizeof motivo - 1);
 }
 
 static void linea_morta_giudica(wt *w, const ngtcp2_conn_info *in,
-                                uint64_t ora_ms)
+                                uint64_t now_ms)
 {
-	uint64_t spediti, persi, prove, fermo_da, stallo;
+	uint64_t spediti, persi, prove, stalled_for, stallo;
 	uint64_t coda_video, offerti, usciti;
-	bool avevo_da_mandare;
+	bool had_to_send;
 
 	/* ⛔ Off = yesterday's product byte for byte (I6).  And once fired
 	 *    it no longer judges: the connection is already dropping, and a second
 	 *    line would say the same thing twice. */
-	if (!linea_morta_accesa || w->lm_scattata)
+	if (!dead_line_on || w->lm_fired)
 		return;
 	/* ⛔ Only with a live RCP session: before there is nothing to throw
 	 *    out, and at closure someone else has already chosen the reason. */
@@ -5432,34 +5432,34 @@ static void linea_morta_giudica(wt *w, const ngtcp2_conn_info *in,
 	/* ⛔ The first round TAKES A SNAPSHOT and does not judge: without this line the first
 	 *    window would be as long as the whole connection, and the stall
 	 *    would start from an instant that was never looked at. */
-	if (!w->lm_finestra_ms) {
-		w->lm_finestra_ms = ora_ms;
+	if (!w->lm_window_ms) {
+		w->lm_window_ms = now_ms;
 		w->lm_pkt_sent = in->pkt_sent;
 		w->lm_pkt_lost = in->pkt_lost;
-		w->lm_vivo_ms = ora_ms;
+		w->lm_alive_ms = now_ms;
 		w->lm_pkt_recv = in->pkt_recv;
-		w->lm_pkt_sent_vivo = in->pkt_sent;
-		w->lm_uscita_ms = ora_ms;
-		w->lm_usciti_visti = w->lm_usciti;
-		w->lm_offerti_visti = w->lm_offerti;
-		w->lm_fermo_visto = giro_fermo_ms;
+		w->lm_pkt_sent_alive = in->pkt_sent;
+		w->lm_out_ms = now_ms;
+		w->lm_out_seen = w->lm_usciti;
+		w->lm_offered_seen = w->lm_offerti;
+		w->lm_stopped_seen = round_stall_ms;
 		/* ⛔ R5: the zero point of `fermo_ms=`, and it is noted HERE because here is
 		 *    the first instant in which this session was looked at — before
 		 *    this round there was nothing to attribute to it. */
-		w->lm_fermo_nato = giro_fermo_ms;
+		w->lm_stopped_born = round_stall_ms;
 		return;
 	}
 
 	/* ── 0. ⛔⛔⭐ THE GAP IN THE LOOP — «our silence is not theirs» ──
 	 *
-	 * The box above `WT_GIRO_ATTESO_MS` carries the fact and the three measurements that
+	 * The box above `WT_EXPECTED_ROUND_MS` carries the fact and the three measurements that
 	 * lead to it.  Here there is the rule, and it is two lines: if since the last verdict
 	 * the parent's loop fell behind, **the bytes could not go out and the
 	 * client's packets could not be read** — so there is nothing
 	 * to judge, and the counts restart from now as if a
 	 * progress had arrived.  Because there has been a progress: the loop has started running again.
 	 *
-	 * ⛔ And `lm_scattata` is NOT touched, nothing is switched off and no
+	 * ⛔ And `lm_fired` is NOT touched, nothing is switched off and no
 	 *    threshold is widened: the cure holds **only** for the time in which we did not
 	 *    look.  At the next round, if the client is really quiet, the ten seconds
 	 *    start again and the dead line does its job.
@@ -5467,17 +5467,17 @@ static void linea_morta_giudica(wt *w, const ngtcp2_conn_info *in,
 	 *   up to one threshold later.  ⭐ It is the right side of the usual
 	 *   asymmetry (above `WT_LM_STALLO_MS`): erring high costs seconds of
 	 *   frozen screen, erring low throws out someone who is working. */
-	if (giro_fermo_ms != w->lm_fermo_visto) {
-		uint64_t buco = giro_fermo_ms - w->lm_fermo_visto;
+	if (round_stall_ms != w->lm_stopped_seen) {
+		uint64_t buco = round_stall_ms - w->lm_stopped_seen;
 
-		w->lm_fermo_visto = giro_fermo_ms;
-		w->lm_fermo_saltati++;
-		w->lm_vivo_ms = ora_ms;
+		w->lm_stopped_seen = round_stall_ms;
+		w->lm_stopped_skipped++;
+		w->lm_alive_ms = now_ms;
 		w->lm_pkt_recv = in->pkt_recv;
-		w->lm_pkt_sent_vivo = in->pkt_sent;
-		w->lm_uscita_ms = ora_ms;
-		w->lm_usciti_visti = w->lm_usciti;
-		w->lm_offerti_visti = w->lm_offerti;
+		w->lm_pkt_sent_alive = in->pkt_sent;
+		w->lm_out_ms = now_ms;
+		w->lm_out_seen = w->lm_usciti;
+		w->lm_offered_seen = w->lm_offerti;
 		/* ⛔ ONE LINE, and it is not noise: it is the only trace of a defect that
 		 *    otherwise leaves none — the SILENT degradation of
 		 *    `CODER.md` §1-bis.  ⭐ And it carries the gap next to the threshold, so
@@ -5492,9 +5492,9 @@ static void linea_morta_giudica(wt *w, const ngtcp2_conn_info *in,
 		                 "would mean blaming its network for a blindness of ours "
 		                 "(skipped %llu times by this session)",
 		                 w->provenienza, (unsigned long long)buco,
-		                 (unsigned long long)giro_fermi,
-		                 (unsigned long long)giro_fermo_peggiore_ms,
-		                 (unsigned long long)w->lm_fermo_saltati);
+		                 (unsigned long long)round_stalls,
+		                 (unsigned long long)round_worst_stall_ms,
+		                 (unsigned long long)w->lm_stopped_skipped);
 		return;
 	}
 
@@ -5507,25 +5507,25 @@ static void linea_morta_giudica(wt *w, const ngtcp2_conn_info *in,
 	 *      `dgram_falsi` (§17.3) does not reach.
 	 *
 	 * ⚠ The guards stay because a witness that lies is worse than a
-	 *   witness that keeps quiet: below `WT_LM_MIN_PACCHETTI` sent the window
+	 *   witness that keeps quiet: below `WT_LM_MIN_PACKETS` sent the window
 	 *   does NOT close, it lengthens — a fraction over twenty packets is not a
 	 *   fraction, it is noise.  ⭐ And the minimum is on the packets WE send,
 	 *   which is the abundant direction of this session (video downwards, almost
 	 *   nothing upwards). */
-	if (ora_ms - w->lm_finestra_ms >= WT_LM_FINESTRA_MS) {
+	if (now_ms - w->lm_window_ms >= WT_LM_WINDOW_MS) {
 		spediti = in->pkt_sent - w->lm_pkt_sent;
-		if (spediti >= WT_LM_MIN_PACCHETTI) {
+		if (spediti >= WT_LM_MIN_PACKETS) {
 			persi = in->pkt_lost - w->lm_pkt_lost;
 			/* ⛔ The REAL duration of the window, taken before closing it: it is the
 			 *    number that says whether the packet minimum lengthened it, and
 			 *    with the constant in its place that line would always say 1000 —
 			 *    that is a number that LOOKS measured (shape E1). */
-			w->lm_durata_v = ora_ms - w->lm_finestra_ms;
-			w->lm_persi_v = persi;
-			w->lm_spediti_v = spediti;
+			w->lm_duration_v = now_ms - w->lm_window_ms;
+			w->lm_lost_v = persi;
+			w->lm_sent_v = spediti;
 			w->lm_permille = (unsigned)(persi * 1000 / spediti);
 			/* The window closes here, and the next one starts from now. */
-			w->lm_finestra_ms = ora_ms;
+			w->lm_window_ms = now_ms;
 			w->lm_pkt_sent = in->pkt_sent;
 			w->lm_pkt_lost = in->pkt_lost;
 		}
@@ -5541,9 +5541,9 @@ static void linea_morta_giudica(wt *w, const ngtcp2_conn_info *in,
 	 *    last restarted, not session totals: the
 	 *    quantity is «how long», and the totals would answer another
 	 *    question. */
-	coda_video = coda_byte_video(w);
-	offerti = w->lm_offerti - w->lm_offerti_visti;
-	usciti = w->lm_usciti - w->lm_usciti_visti;
+	coda_video = queue_byte_video(w);
+	offerti = w->lm_offerti - w->lm_offered_seen;
+	usciti = w->lm_usciti - w->lm_out_seen;
 	/* ⛔⭐ «I HAD SOMETHING TO SEND» — and it is the half that holds the other one up.
 	 *     Two terms, and each covers a hole of the other:
 	 *       · `coda_video > 0` — frame bytes are still in our
@@ -5553,8 +5553,8 @@ static void linea_morta_giudica(wt *w, const ngtcp2_conn_info *in,
 	 *         would hide the stall: it stops producing, `video_sgombra()`
 	 *         abandons old deltas, the queue empties, and «I have nothing to
 	 *         send» would become true while the screen is frozen. */
-	avevo_da_mandare = coda_video > 0 || offerti > 0;
-	stallo = ora_ms - w->lm_uscita_ms;
+	had_to_send = coda_video > 0 || offerti > 0;
+	stallo = now_ms - w->lm_out_ms;
 
 	/* ── 3. SILENCE ──────────────────────────────────────────────────────
 	 * ⛔ The quantity is NOT «how much time has passed»: it is «how many of our
@@ -5565,16 +5565,16 @@ static void linea_morta_giudica(wt *w, const ngtcp2_conn_info *in,
 	 *   test — `kill -9` on the client, firing at `silenzio_ms=10002` with
 	 *   `prove=10`, 10.36 s after the blow; with the cure off, zero firings. */
 	if (in->pkt_recv > w->lm_pkt_recv) {
-		w->lm_vivo_ms = ora_ms;
+		w->lm_alive_ms = now_ms;
 		w->lm_pkt_recv = in->pkt_recv;
-		w->lm_pkt_sent_vivo = in->pkt_sent;
-	} else if (linea_morta_silenzio_ms) {
-		fermo_da = ora_ms - w->lm_vivo_ms;
-		prove = in->pkt_sent - w->lm_pkt_sent_vivo;
-		if (fermo_da >= linea_morta_silenzio_ms && prove >= WT_LM_MIN_PROVE) {
+		w->lm_pkt_sent_alive = in->pkt_sent;
+	} else if (dead_line_silence_ms) {
+		stalled_for = now_ms - w->lm_alive_ms;
+		prove = in->pkt_sent - w->lm_pkt_sent_alive;
+		if (stalled_for >= dead_line_silence_ms && prove >= WT_LM_MIN_PROVE) {
 			linea_morta_scatta(
 				w, in, "silenzio", stallo, offerti, usciti, coda_video,
-				fermo_da, prove,
+				stalled_for, prove,
 				"⛔ the line is DEAD: the client has not shown a packet for "
 				"too long and the questions we asked it meanwhile "
 				"have all remained unanswered.  The wire drops, and to "
@@ -5595,17 +5595,17 @@ static void linea_morta_giudica(wt *w, const ngtcp2_conn_info *in,
 	 * ⚠ And the instant is the ROUND's, not the one in which the bytes went out:
 	 *   the measured `stallo_ms` can be up to ~1 s shorter than the truth.
 	 *   It fires later, never earlier — which is the right side. */
-	if (usciti > 0 || !avevo_da_mandare) {
-		w->lm_uscita_ms = ora_ms;
-		w->lm_usciti_visti = w->lm_usciti;
-		w->lm_offerti_visti = w->lm_offerti;
+	if (usciti > 0 || !had_to_send) {
+		w->lm_out_ms = now_ms;
+		w->lm_out_seen = w->lm_usciti;
+		w->lm_offered_seen = w->lm_offerti;
 		return;
 	}
 	if (!linea_morta_stallo_ms || stallo < linea_morta_stallo_ms)
 		return;
 	linea_morta_scatta(
 		w, in, "stallo", stallo, offerti, usciti, coda_video,
-		ora_ms - w->lm_vivo_ms, in->pkt_sent - w->lm_pkt_sent_vivo,
+		now_ms - w->lm_alive_ms, in->pkt_sent - w->lm_pkt_sent_alive,
 		"⛔ the line is DEAD: for too long no frame has gone out while "
 		"having some to send — the user's image is FROZEN, and at this "
 		"point the product either freezes it or shows it seconds late "
@@ -5614,12 +5614,12 @@ static void linea_morta_giudica(wt *w, const ngtcp2_conn_info *in,
 		"reconnect by hand (the user's decision)");
 }
 
-bool wt_linea_morta_scattata(const wt *w)
+bool wt_dead_line_fired(const wt *w)
 {
-	return w && w->lm_scattata;
+	return w && w->lm_fired;
 }
 
-static void rete_ciclo(wt *w, uint64_t ora_ms)
+static void rete_ciclo(wt *w, uint64_t now_ms)
 {
 	ngtcp2_conn_info in;
 	uint64_t cwnd_left, da_ms;
@@ -5630,9 +5630,9 @@ static void rete_ciclo(wt *w, uint64_t ora_ms)
 	if (!w->conn || w->chiusura >= 0)
 		return;
 	/* ⚠ At most one a second.  ⛔ And the FIRST always comes out, without waiting:
-	 *   `rete_detto_ms == 0` means «never spoken», which is not «nothing has
+	 *   `network_logged_ms == 0` means «never spoken», which is not «nothing has
 	 *   changed» (`LEZIONI.md` §1.9). */
-	if (w->rete_detto_ms && ora_ms - w->rete_detto_ms < 1000)
+	if (w->network_logged_ms && now_ms - w->network_logged_ms < 1000)
 		return;
 
 	memset(&in, 0, sizeof in);
@@ -5644,7 +5644,7 @@ static void rete_ciclo(wt *w, uint64_t ora_ms)
 	 *     after that filter this verdict would NEVER be walked precisely
 	 *     when it is needed.  ⚠ The rhythm is that of `rete_ciclo()`, once a
 	 *     second, and it is also the minimum window. */
-	linea_morta_giudica(w, &in, ora_ms);
+	linea_morta_giudica(w, &in, now_ms);
 
 	/* ⛔⭐ THE VERDICT RULE, and it is read from the top: the first that fires
 	 *     wins, and the order is NOT arbitrary.
@@ -5664,12 +5664,12 @@ static void rete_ciclo(wt *w, uint64_t ora_ms)
 	 *   numbers ngtcp2 does not give (see the box above), and a verdict
 	 *   deduced from `rttvar` would have wanted a THRESHOLD — that is a decision, and
 	 *   here none is taken. */
-	if (in.pkt_lost > w->rete_pkt_lost)
+	if (in.pkt_lost > w->network_pkt_lost)
 		g = WT_RETE_PERDE;
 	else if (in.cwnd > 0 && cwnd_left == 0)
-		g = WT_RETE_FINESTRA;
+		g = WT_NETWORK_WINDOW;
 	else
-		g = WT_RETE_NULLA;
+		g = WT_NETWORK_NONE;
 
 	/* ⛔⭐ ONLY WHEN SOMETHING HAS CHANGED.  A line a second repeating
 	 *     the same numbers is noise that HIDES the lines that count — and it is
@@ -5686,14 +5686,14 @@ static void rete_ciclo(wt *w, uint64_t ora_ms)
 	 *    audio — packets with DATAGRAMS inside are packets like the
 	 *    others, but a reordering may not move `pkt_lost` — would stay mute
 	 *    precisely in the case phase 9 is looking for. */
-	if (w->rete_detto_ms
-	    && in.pkt_lost == w->rete_pkt_lost
-	    && in.pkt_sent == w->rete_pkt_sent
-	    && in.pkt_recv == w->rete_pkt_recv
-	    && in.pkt_discarded == w->rete_pkt_discarded
-	    && w->dgram_persi == w->rete_dgram_persi
-	    && w->dgram_falsi == w->rete_dgram_falsi
-	    && g == w->rete_giudizio)
+	if (w->network_logged_ms
+	    && in.pkt_lost == w->network_pkt_lost
+	    && in.pkt_sent == w->network_pkt_sent
+	    && in.pkt_recv == w->network_pkt_recv
+	    && in.pkt_discarded == w->network_pkt_discarded
+	    && w->dgram_persi == w->network_dgram_lost
+	    && w->dgram_falsi == w->network_dgram_bogus
+	    && g == w->network_verdict)
 		return;
 
 	/* ⛔ `min_rtt` is `UINT64_MAX` until a sample has arrived, and the
@@ -5722,7 +5722,7 @@ static void rete_ciclo(wt *w, uint64_t ora_ms)
 	case WT_RETE_PERDE:
 		detto = "⛔ the line is losing";
 		break;
-	case WT_RETE_FINESTRA:
+	case WT_NETWORK_WINDOW:
 		detto = "⚠ the window is closed";
 		break;
 	default:
@@ -5730,7 +5730,7 @@ static void rete_ciclo(wt *w, uint64_t ora_ms)
 		break;
 	}
 
-	da_ms = w->rete_detto_ms ? ora_ms - w->rete_detto_ms : 0;
+	da_ms = w->network_logged_ms ? now_ms - w->network_logged_ms : 0;
 
 	registro_dice_di(REG_WT, wt_chi(w),
 	                 "rete-quic %s da_ms=%llu persi=%llu persi_d=%llu "
@@ -5744,16 +5744,16 @@ static void rete_ciclo(wt *w, uint64_t ora_ms)
 	                 w->provenienza,
 	                 (unsigned long long)da_ms,
 	                 (unsigned long long)in.pkt_lost,
-	                 (unsigned long long)(in.pkt_lost - w->rete_pkt_lost),
+	                 (unsigned long long)(in.pkt_lost - w->network_pkt_lost),
 	                 (unsigned long long)in.bytes_lost,
-	                 (unsigned long long)(in.bytes_lost - w->rete_bytes_lost),
+	                 (unsigned long long)(in.bytes_lost - w->network_bytes_lost),
 	                 (unsigned long long)in.pkt_sent,
-	                 (unsigned long long)(in.pkt_sent - w->rete_pkt_sent),
+	                 (unsigned long long)(in.pkt_sent - w->network_pkt_sent),
 	                 (unsigned long long)in.bytes_sent,
 	                 (unsigned long long)in.pkt_recv,
-	                 (unsigned long long)(in.pkt_recv - w->rete_pkt_recv),
+	                 (unsigned long long)(in.pkt_recv - w->network_pkt_recv),
 	                 (unsigned long long)in.pkt_discarded,
-	                 (unsigned long long)(in.pkt_discarded - w->rete_pkt_discarded),
+	                 (unsigned long long)(in.pkt_discarded - w->network_pkt_discarded),
 	                 (unsigned long long)in.cwnd,
 	                 (unsigned long long)cwnd_left,
 	                 (unsigned long long)in.ssthresh,
@@ -5765,21 +5765,21 @@ static void rete_ciclo(wt *w, uint64_t ora_ms)
 	                 (unsigned long long)(ngtcp2_conn_get_pto(w->conn)
 	                                      / NGTCP2_MICROSECONDS),
 	                 (unsigned long long)w->dgram_persi,
-	                 (unsigned long long)(w->dgram_persi - w->rete_dgram_persi),
-	                 (unsigned long long)w->dgram_riscontrati,
+	                 (unsigned long long)(w->dgram_persi - w->network_dgram_lost),
+	                 (unsigned long long)w->dgram_acked,
 	                 (unsigned long long)w->dgram_falsi,
-	                 (unsigned long long)(w->dgram_falsi - w->rete_dgram_falsi),
+	                 (unsigned long long)(w->dgram_falsi - w->network_dgram_bogus),
 	                 detto);
 
-	w->rete_detto_ms      = ora_ms;
-	w->rete_pkt_lost      = in.pkt_lost;
-	w->rete_bytes_lost    = in.bytes_lost;
-	w->rete_pkt_sent      = in.pkt_sent;
-	w->rete_pkt_recv      = in.pkt_recv;
-	w->rete_pkt_discarded = in.pkt_discarded;
-	w->rete_dgram_persi   = w->dgram_persi;
-	w->rete_dgram_falsi   = w->dgram_falsi;
-	w->rete_giudizio      = g;
+	w->network_logged_ms      = now_ms;
+	w->network_pkt_lost      = in.pkt_lost;
+	w->network_bytes_lost    = in.bytes_lost;
+	w->network_pkt_sent      = in.pkt_sent;
+	w->network_pkt_recv      = in.pkt_recv;
+	w->network_pkt_discarded = in.pkt_discarded;
+	w->network_dgram_lost   = w->dgram_persi;
+	w->network_dgram_bogus   = w->dgram_falsi;
+	w->network_verdict      = g;
 }
 
 /* ------------------------------------------------------------------------ */
@@ -5790,17 +5790,17 @@ static void video_a_una(wt *w, const char *utente, uint8_t codec, bool chiave,
                         uint64_t istante_us, uint32_t input)
 {
 	uint32_t tl = 0, ta = 0;
-	uint64_t ora_ms;
+	uint64_t now_ms;
 	const char *mio;
 	int e;
 
-	/* ⚠ `video_fermo` = I have already told the stage to stop, and what arrives
+	/* ⚠ `video_stopped` = I have already told the stage to stop, and what arrives
 	 *   now is the TAIL of what was already in flight when I told it.
 	 *   ⛔ Without this condition those two or three frames would walk
 	 *   the whole way to get refused by `rcp_video_apri()` with
 	 *   `RCP_VIDEO_PRIMA_DI_SESSIONE`, that is with the same ⛔ line the cure
 	 *   of 23 Sep exists to remove — only three times instead of a thousand. */
-	if (!w->video_acceso || w->video_fermo || w->video_codec != codec)
+	if (!w->video_acceso || w->video_stopped || w->video_codec != codec)
 		return;
 	if (!w->rcp || !w->conn || w->chiusura >= 0)
 		return;
@@ -5818,7 +5818,7 @@ static void video_a_una(wt *w, const char *utente, uint8_t codec, bool chiave,
 	if (!mio || !utente || strcmp(mio, utente) != 0)
 		return;
 
-	if (!rcp_tela_in_vigore(w->rcp, &tl, &ta))
+	if (!rcp_canvas_in_effect(w->rcp, &tl, &ta))
 		return;
 
 	/* ⛔⭐ AND THE CANVAS MUST BE THAT ONE, not «more or less that one» — §6.2, P5.
@@ -5831,17 +5831,17 @@ static void video_a_una(wt *w, const char *utente, uint8_t codec, bool chiave,
 	 *     ⛔ Better no frame than a frame that lies. */
 	if (tl != l || ta != a) {
 		w->video_saltati++;
-		/* ⚠ A backstop OF ITS OWN, and no longer `video_detto`: that field is the backstop of the
+		/* ⚠ A backstop OF ITS OWN, and no longer `video_logged`: that field is the backstop of the
 		 *   message «no codec negotiated», and one flag for two different facts
 		 *   switches one off when the other speaks.  ⛔ And here the backstop REARMS at
 		 *   every canvas change, because the fact has changed. */
-		if (w->tela_detta_l != l || w->tela_detta_a != a) {
-			w->tela_detta_l = l;
-			w->tela_detta_a = a;
+		if (w->canvas_logged_w != l || w->canvas_logged_h != a) {
+			w->canvas_logged_w = l;
+			w->canvas_logged_h = a;
 			/* ⭐ The ANNOUNCEMENT is counted, not the frame: the frame has
 			 *    already been counted by `video_saltati` three lines above.  Two numbers for
 			 *    two facts, and the closing line writes both. */
-			w->video_annunci_tela++;
+			w->video_canvas_announcements++;
 			registro_dice_di(REG_RCP, wt_chi(w),
 			                 "⛔ %s: canvas in force %ux%u but the captured frame "
 			                 "is %ux%u — NOT sending it (§6.2): the header "
@@ -5877,7 +5877,7 @@ static void video_a_una(wt *w, const char *utente, uint8_t codec, bool chiave,
 		/* ⛔ The keyframe is requested NOW, for the same reason as the twin in
 		 *    `ritmo_frena()`: with the debt on every delta is refused, and
 		 *    waiting for the heartbeat means keeping the screen frozen.
-		 * ⚠ And `ora_ms` has not been read here yet — it is read now
+		 * ⚠ And `now_ms` has not been read here yet — it is read now
 		 *   instead of moving the line further up: that one sits AFTER the three
 		 *   «is this frame mine?» checks on purpose (see the box of
 		 *   `lm_offerti`), and moving it would change something else. */
@@ -5887,9 +5887,9 @@ static void video_a_una(wt *w, const char *utente, uint8_t codec, bool chiave,
 	/* ⭐ Canvas and frame agree: the backstop of the message above is
 	 *    disarmed, so the next mismatch will be seen instead of being
 	 *    mistaken for the tail of the previous one. */
-	w->tela_detta_l = w->tela_detta_a = 0;
+	w->canvas_logged_w = w->canvas_logged_h = 0;
 
-	ora_ms = ngtcp2_conn_get_timestamp(w->conn) / NGTCP2_MILLISECONDS;
+	now_ms = ngtcp2_conn_get_timestamp(w->conn) / NGTCP2_MILLISECONDS;
 
 	/* ⛔⭐⭐ PHASE 9 — «I HAD SOMETHING TO SEND», AND IT IS COUNTED HERE, BEFORE EVERYTHING.
 	 *
@@ -5927,7 +5927,7 @@ static void video_a_una(wt *w, const char *utente, uint8_t codec, bool chiave,
 	 *   stay marked alive until a pass of `video_sgombra()` removes
 	 *   them, but `ritmo_frena()` counts them by rereading the BYTES — so
 	 *   `arretrato` goes down all the same, and the braking ends by itself. */
-	if (ritmo_frena(w, chiave, ora_ms))
+	if (ritmo_frena(w, chiave, now_ms))
 		return;
 
 	/* ⛔ §5.1 — «a more recent one has already left»: the deltas still stuck
@@ -5949,16 +5949,16 @@ static void video_a_una(wt *w, const char *utente, uint8_t codec, bool chiave,
 		 *     cause 3, not this one: if under congestion this were what kept the
 		 *     debt on, the cure would spin idle and the numbers would not
 		 *     move.  ⇒ Two counters, or the bench cannot attribute. */
-		w->sgombra_credito++;
+		w->clear_out_credit++;
 		rcp_video_niente_credito(w->rcp, false,
 		                         ngtcp2_conn_get_streams_uni_left2(w->conn));
 		return;
 	}
 
-	w->video_stream_ultimo = -1;
-	e = rcp_video_spedisci(w->rcp, chiave, dati, byte, istante_us, input, ora_ms);
+	w->video_stream_last = -1;
+	e = rcp_video_spedisci(w->rcp, chiave, dati, byte, istante_us, input, now_ms);
 	if (e == RCP_VIDEO_SPEDITO) {
-		w->video_diffusi++;
+		w->video_broadcast++;
 		/* ⭐ The size of the last KEYFRAME, and it serves `chiave_intervallo_ms()`:
 		 *    it is the number from which how long it takes to go out is computed.  ⛔ It is
 		 *    taken HERE, where it is a fact, instead of estimating it from an average —
@@ -5968,10 +5968,10 @@ static void video_a_una(wt *w, const char *utente, uint8_t codec, bool chiave,
 			w->chiave_byte = (uint64_t)byte;
 			/* ⭐ The debt episode is closed: next time the ⛔ line
 			 *    of the second belt can be written again. */
-			w->debito_detto = false;
+			w->debt_logged = false;
 		}
-		involo_aggiungi(w, w->video_stream_ultimo,
-		                rcp_video_ultimo_numero(w->rcp), chiave);
+		inflight_add(w, w->video_stream_last,
+		                rcp_video_last_number(w->rcp), chiave);
 		return;
 	}
 
@@ -5981,7 +5981,7 @@ static void video_a_una(wt *w, const char *utente, uint8_t codec, bool chiave,
 	 *       45 278 frames thrown away while the heartbeat never matured —
 	 *       the whole story is on `batti_fra()`. */
 	if (e == RCP_VIDEO_SERVE_UNA_CHIAVE)
-		video_rifiutato_per_chiave(w, ora_ms);
+		video_refused_for_key(w, now_ms);
 	/* ⛔ And the refusal is NOT a fatal error: §2.3 — «the server MUST withstand
 	 * the refusal to open a stream instead of considering it a fatal
 	 * error».  ⚠ The lines have already been written by `rcp.c`, which knows which of the seven
@@ -6001,7 +6001,7 @@ void wt_cursore_diffondi(const char *utente, uint16_t larghezza,
 {
 	if (!utente || !utente[0])
 		return;
-	for (wt *w = vive_prima; w; w = w->viva_dopo) {
+	for (wt *w = vive_prima; w; w = w->alive_after) {
 		const char *mio;
 		if (!w->rcp)
 			continue;
@@ -6044,7 +6044,7 @@ void wt_cursore_diffondi(const char *utente, uint16_t larghezza,
  * ⭐⭐ And since the evening of 25 Aug 2026 it is **allocated** on `rcp_tetto()`, which
  *     `--tetto-sessioni` moves at startup: the `WT_PALCHI` that was here has
  *     disappeared, and was not left next to it as a «maximum». */
-static struct palco_misura {
+static struct stage_measure {
 	/* ⛔ 257 and not 64: it is the size of the `utente` field of `rcp.c`.  ⚠ With a
 	 *    shorter field `snprintf` truncated on writing and `strcmp` compared
 	 *    the WHOLE name with the truncated one: the entry was never found again, a
@@ -6054,22 +6054,22 @@ static struct palco_misura {
 	char utente[257];
 	uint32_t l, a;
 } *palchi;
-static int quanti_palchi;
+static int how_many_stages;
 static bool palchi_pieni_detto;
 
 /* ⛔ It is allocated at the first size to note, once only.  ⚠ If the memory
  *    is not there, the fallback is the one this table already declares: at
  *    reattach the canvas is granted as the client asks for it.  Nobody dies
  *    because of this, but it is written. */
-static bool palchi_pronti(void)
+static bool ready_stages(void)
 {
 	if (palchi)
 		return true;
-	quanti_palchi = rcp_tetto();
-	palchi = (struct palco_misura *)calloc((size_t)quanti_palchi,
+	how_many_stages = rcp_tetto();
+	palchi = (struct stage_measure *)calloc((size_t)how_many_stages,
 	                                       sizeof *palchi);
 	if (!palchi) {
-		quanti_palchi = 0;
+		how_many_stages = 0;
 		return false;
 	}
 	return true;
@@ -6081,9 +6081,9 @@ static void palco_misura_segna(const char *utente, uint32_t l, uint32_t a)
 
 	if (!utente || !utente[0] || !l || !a)
 		return;
-	if (!palchi_pronti())
+	if (!ready_stages())
 		return;
-	for (int i = 0; i < quanti_palchi; i++) {
+	for (int i = 0; i < how_many_stages; i++) {
 		if (palchi[i].utente[0] == '\0') {
 			if (libero < 0)
 				libero = i;
@@ -6107,7 +6107,7 @@ static void palco_misura_segna(const char *utente, uint32_t l, uint32_t a)
 			                 "is full (%d): «%s» does not fit, and on its reattach the "
 			                 "canvas will be granted as the client asks for it instead "
 			                 "of as the stage has it",
-			                 quanti_palchi, utente);
+			                 how_many_stages, utente);
 		}
 		return;
 	}
@@ -6128,7 +6128,7 @@ void wt_palco_dimentica(const char *utente)
 {
 	if (!utente || !utente[0])
 		return;
-	for (int i = 0; i < quanti_palchi; i++) {
+	for (int i = 0; i < how_many_stages; i++) {
 		if (strcmp(palchi[i].utente, utente) != 0)
 			continue;
 		registro_dice_di(REG_RCP, utente,
@@ -6148,32 +6148,32 @@ void wt_palco_dimentica(const char *utente)
  *    stage's canvas is a single one, and a session that did not know it would keep
  *    discarding every frame for wrong size.  ⚠ `rcp.c` decides by itself
  *    whether that message answers a request OF ITS OWN — here we do not choose. */
-void wt_tela_dal_palco(const char *utente, uint32_t voluta_l, uint32_t voluta_a,
-                       uint32_t avuta_l, uint32_t avuta_a)
+void wt_canvas_from_stage(const char *utente, uint32_t intended_w, uint32_t intended_h,
+                       uint32_t got_w, uint32_t got_h)
 {
 	/* ⛔ And the table is updated HERE and not only from frames: this is the
 	 *    freshest news the parent has about the stage's size, and it arrives
 	 *    even when no frame leaves. */
-	palco_misura_segna(utente, avuta_l, avuta_a);
-	for (wt *w = vive_prima; w; w = w->viva_dopo) {
+	palco_misura_segna(utente, got_w, got_h);
+	for (wt *w = vive_prima; w; w = w->alive_after) {
 		const char *mio;
 		if (!w->rcp || w->chiusura >= 0)
 			continue;
 		mio = rcp_utente(w->rcp);
 		if (!mio || !utente || strcmp(mio, utente) != 0)
 			continue;
-		rcp_tela_dal_palco(w->rcp, voluta_l, voluta_a, avuta_l, avuta_a,
+		rcp_tela_dal_palco(w->rcp, intended_w, intended_h, got_w, got_h,
 		                   w->conn ? ngtcp2_conn_get_timestamp(w->conn)
 		                                 / NGTCP2_MILLISECONDS
 		                           : 0);
 	}
 }
 
-static bool wt_palco_misura(const char *utente, uint32_t *l, uint32_t *a)
+static bool wt_stage_measure(const char *utente, uint32_t *l, uint32_t *a)
 {
 	if (!utente || !utente[0])
 		return false;
-	for (int i = 0; i < quanti_palchi; i++) {
+	for (int i = 0; i < how_many_stages; i++) {
 		if (strcmp(palchi[i].utente, utente) != 0)
 			continue;
 		if (!palchi[i].l || !palchi[i].a)
@@ -6190,7 +6190,7 @@ static bool wt_palco_misura(const char *utente, uint32_t *l, uint32_t *a)
 /* ⛔ The hook `rcp.c` calls in `ATTACCA`.  ⚠ The user is the one PAM
  *    admitted on THIS session: asking for another's stage would mean telling
  *    this client the size of somebody else's desktop. */
-static bool gancio_tela_del_palco(void *ctx, uint32_t *l, uint32_t *a)
+static bool hook_stage_canvas(void *ctx, uint32_t *l, uint32_t *a)
 {
 	wt *w = (wt *)ctx;
 	const char *mio;
@@ -6200,7 +6200,7 @@ static bool gancio_tela_del_palco(void *ctx, uint32_t *l, uint32_t *a)
 	mio = rcp_utente(w->rcp);
 	if (!mio || !mio[0])
 		return false;
-	return wt_palco_misura(mio, l, a);
+	return wt_stage_measure(mio, l, a);
 }
 
 /* ⛔⭐⭐ HOW MANY SESSIONS FIT IN **ONE** QUESTION TO THE GUARD — and ⛔ it is NOT the
@@ -6249,7 +6249,7 @@ _Static_assert(WT_RIPASSO_INSIEME >= RCP_TETTO_SESSIONI,
                "the sweep batch is smaller than the default session "
                "cap: a sweep would cost more than ONE call to "
                "logind already in the stock configuration (§6.13)");
-#define WT_RIPASSO_QUALE 160
+#define WT_SWEEP_WHICH 160
 
 size_t wt_sorveglia_locali(void)
 {
@@ -6270,7 +6270,7 @@ size_t wt_sorveglia_locali(void)
 	 *      force **on AND off**.  ⚠ A comment promising a nonexistent
 	 *      guard is worse than no guard: whoever reads stops
 	 *      looking for it. */
-	if (!gancio_locali)
+	if (!hook_locals)
 		return 0;
 
 	/* ⛔ The list is looked at every round instead of keeping a list of users:
@@ -6281,12 +6281,12 @@ size_t wt_sorveglia_locali(void)
 		const char *nomi[WT_RIPASSO_INSIEME];
 		wt *chi[WT_RIPASSO_INSIEME];
 		bool locale[WT_RIPASSO_INSIEME];
-		char quali[WT_RIPASSO_INSIEME][WT_RIPASSO_QUALE];
+		char quali[WT_RIPASSO_INSIEME][WT_SWEEP_WHICH];
 		size_t quanti = 0;
 		wt *w;
 
 		/* ── 1. WHO IS THERE, in memory and without asking anybody anything ── */
-		for (w = dal; w && quanti < WT_RIPASSO_INSIEME; w = w->viva_dopo) {
+		for (w = dal; w && quanti < WT_RIPASSO_INSIEME; w = w->alive_after) {
 			const char *mio;
 
 			if (!w->rcp || w->chiusura >= 0)
@@ -6307,8 +6307,8 @@ size_t wt_sorveglia_locali(void)
 		 *    delivers frames: `[M]` §6.13, the frontier narrowed
 		 *    as 1/N and cut the 300 ms `sentinella.c` already allows itself at
 		 *    ~4 tenants.  Here the cost is `D`, and it no longer depends on N. */
-		gancio_locali(gancio_locali_ctx, nomi, quanti, locale,
-		              &quali[0][0], WT_RIPASSO_QUALE);
+		hook_locals(hook_locals_ctx, nomi, quanti, locale,
+		              &quali[0][0], WT_SWEEP_WHICH);
 
 		/* ── 3. AND THEN THE FAREWELL, which costs nobody anything ─────── */
 		for (size_t k = 0; k < quanti; k++) {
@@ -6324,7 +6324,7 @@ size_t wt_sorveglia_locali(void)
 			                 "⛔ «%s» has opened a LOCAL graphical session (%s): the "
 			                 "remote session is being closed — §5.1, reason 0x04",
 			                 nomi[k], quali[k][0] ? quali[k] : "no detail");
-			wt_congeda(chi[k], RCP_SESSIONE_LOCALE_PREVALSA,
+			wt_dismiss(chi[k], RCP_LOCAL_SESSION_PREVAILED,
 			           "a local graphical session has been opened on this "
 			           "machine");
 			congedate++;
@@ -6336,11 +6336,11 @@ size_t wt_sorveglia_locali(void)
 /* ⛔ The box is in `webtransport.h`: it is the DENOMINATOR that was missing from the
  *    guard's line (finding R7).  ⚠ The same three guards as the sweep
  *    above, in the same order: whoever is not a served tenant is not counted. */
-size_t wt_inquilini_serviti(void)
+size_t wt_tenants_served(void)
 {
 	size_t quanti = 0;
 
-	for (wt *w = vive_prima; w; w = w->viva_dopo) {
+	for (wt *w = vive_prima; w; w = w->alive_after) {
 		const char *mio;
 
 		if (!w->rcp || w->chiusura >= 0)
@@ -6353,18 +6353,18 @@ size_t wt_inquilini_serviti(void)
 	return quanti;
 }
 
-void wt_tela_rimanda(const char *utente, uint32_t voluta_l, uint32_t voluta_a)
+void wt_canvas_resend(const char *utente, uint32_t intended_w, uint32_t intended_h)
 {
 	uint64_t ora = registro_ora_ms();
 
-	for (wt *w = vive_prima; w; w = w->viva_dopo) {
+	for (wt *w = vive_prima; w; w = w->alive_after) {
 		const char *mio;
 		if (!w->rcp || w->chiusura >= 0)
 			continue;
 		mio = rcp_utente(w->rcp);
 		if (!mio || !utente || strcmp(mio, utente) != 0)
 			continue;
-		rcp_tela_rimanda(w->rcp, voluta_l, voluta_a, ora);
+		rcp_tela_rimanda(w->rcp, intended_w, intended_h, ora);
 	}
 }
 
@@ -6375,7 +6375,7 @@ size_t wt_congeda_utente(const char *utente, uint8_t motivo, const char *dettagl
 
 	if (!utente || !utente[0])
 		return 0;
-	for (wt *w = vive_prima; w; w = w->viva_dopo) {
+	for (wt *w = vive_prima; w; w = w->alive_after) {
 		const char *mio;
 
 		if (w == tranne || !w->rcp || w->chiusura >= 0)
@@ -6383,7 +6383,7 @@ size_t wt_congeda_utente(const char *utente, uint8_t motivo, const char *dettagl
 		mio = rcp_utente(w->rcp);
 		if (!mio || strcmp(mio, utente) != 0)
 			continue;
-		wt_congeda(w, motivo, dettaglio);
+		wt_dismiss(w, motivo, dettaglio);
 		quante++;
 	}
 	return quante;
@@ -6410,7 +6410,7 @@ bool wt_misura_massima_di(const char *utente, uint32_t *l, uint32_t *a)
 
 	if (!utente || !utente[0])
 		return false;
-	for (wt *w = vive_prima; w; w = w->viva_dopo) {
+	for (wt *w = vive_prima; w; w = w->alive_after) {
 		const char *mio;
 		uint32_t sl, sa;
 
@@ -6419,7 +6419,7 @@ bool wt_misura_massima_di(const char *utente, uint32_t *l, uint32_t *a)
 		mio = rcp_utente(w->rcp);
 		if (!mio || strcmp(mio, utente) != 0)
 			continue;
-		if (!rcp_misura_massima(w->rcp, &sl, &sa))
+		if (!rcp_max_size(w->rcp, &sl, &sa))
 			continue;
 		if ((uint64_t)sl * sa > (uint64_t)ml * ma) {
 			ml = sl;
@@ -6469,7 +6469,7 @@ void wt_video_diffondi(const char *utente, uint8_t codec, bool chiave,
 	 *    exactly the reattach case, where the session that will see that
 	 *    number **does not exist yet**. */
 	palco_misura_segna(utente, larghezza, altezza);
-	for (wt *w = vive_prima; w; w = w->viva_dopo)
+	for (wt *w = vive_prima; w; w = w->alive_after)
 		video_a_una(w, utente, codec, chiave, dati, byte, larghezza, altezza,
 		            istante_us, input);
 }
@@ -6485,9 +6485,9 @@ static void audio_a_una(wt *w, const char *utente, uint8_t codec,
 	uint64_t tetto;
 	const char *mio;
 
-	/* ⚠ The twin of `video_fermo` in `video_a_una()`: the tail of what was
+	/* ⚠ The twin of `video_stopped` in `video_a_una()`: the tail of what was
 	 *   already in flight when the child was told to stop. */
-	if (!w->audio_acceso || w->audio_fermo || w->audio_codec != codec)
+	if (!w->audio_on || w->audio_stopped || w->audio_codec != codec)
 		return;
 	if (!w->rcp || !w->conn || w->chiusura >= 0)
 		return;
@@ -6502,10 +6502,10 @@ static void audio_a_una(wt *w, const char *utente, uint8_t codec,
 	if (!mio || !utente || strcmp(mio, utente) != 0)
 		return;
 
-	tetto = dgram_tetto_del_pari(w);
+	tetto = dgram_peer_cap(w);
 	if (tetto == 0) {
-		if (!w->dgram_negati_detto) {
-			w->dgram_negati_detto = true;
+		if (!w->dgram_denied_logged) {
+			w->dgram_denied_logged = true;
 			registro_dice_di(REG_RCP, wt_chi(w),
 			                 "⛔ %s: the peer does NOT accept datagrams "
 			                 "(`max_datagram_frame_size` = 0) — this session will not "
@@ -6520,7 +6520,7 @@ static void audio_a_una(wt *w, const char *utente, uint8_t codec,
 	/* The RFC 9297 prefix: a quarter of the identifier of the stream on
 	 * which the WebTransport session lives.  ⛔ Without it, the browser discards the
 	 * datagram **without an error**: it is not a field of ours, it is the envelope. */
-	p = varint_scrivi(buf, (uint64_t)w->sessione / 4);
+	p = varint_write(buf, (uint64_t)w->sessione / 4);
 
 	/* The framing of `RCP.md` §6.3, in network order. */
 	if (p + 12 + byte > sizeof buf || (uint64_t)(p + 12 + byte) > tetto) {
@@ -6575,15 +6575,15 @@ static void audio_a_una(wt *w, const char *utente, uint8_t codec,
  *   THROWS AWAY short blocks»).  The rhythm will come from capture, which has a clock
  *   of its own; here one looks at the CONTENT, not the cadence.
  */
-void wt_audio_gancio(wt_audio_richiesta f, void *ctx)
+void wt_audio_hook(wt_audio_request f, void *ctx)
 {
-	gancio_audio = f;
-	gancio_audio_ctx = ctx;
+	hook_audio = f;
+	hook_audio_ctx = ctx;
 }
 
 void wt_audio_prova(uint32_t hz)
 {
-	audio_prova_hz = hz;
+	audio_test_hz = hz;
 	if (hz)
 		registro_dice(REG_WT,
 		              "⚠ TEST TONE ON at %u Hz — every admitted session "
@@ -6598,10 +6598,10 @@ static void tono_passo(wt *w, ngtcp2_tstamp ts)
 	 *    blocks in one go, the queue would throw away ninety-two of them and the log
 	 *    would say «dropped» for a defect that is not the network's. */
 	int quanti = 0;
-	uint64_t ora_us;
+	uint64_t now_us;
 	const char *utente;
 
-	if (!audio_prova_hz || !w->audio_acceso || w->chiusura >= 0 || !w->rcp)
+	if (!audio_test_hz || !w->audio_on || w->chiusura >= 0 || !w->rcp)
 		return;
 
 	utente = rcp_utente(w->rcp);
@@ -6613,16 +6613,16 @@ static void tono_passo(wt *w, ngtcp2_tstamp ts)
 		if (!w->tono_cod) {
 			/* ⛔ This session is switched off, not the server: the log has
 			 *    already said so inside `audio_cod_apri`. */
-			w->audio_acceso = false;
+			w->audio_on = false;
 			return;
 		}
 	}
 
-	ora_us = ts / NGTCP2_MICROSECONDS;
+	now_us = ts / NGTCP2_MICROSECONDS;
 	if (w->tono_prossimo_us == 0)
-		w->tono_prossimo_us = ora_us;
+		w->tono_prossimo_us = now_us;
 
-	while (ora_us >= w->tono_prossimo_us && quanti < WT_DGRAM_MAX) {
+	while (now_us >= w->tono_prossimo_us && quanti < WT_DGRAM_MAX) {
 		int16_t campioni[AUDIO_BLOCCO_OPUS * AUDIO_CANALI];
 		uint8_t fuori[AUDIO_FUORI_MAX];
 		size_t n = 0;
@@ -6634,7 +6634,7 @@ static void tono_passo(wt *w, ngtcp2_tstamp ts)
 			 *    click every 20 ms, that is an audible defect fabricated by the
 			 *    bench and blamed on the encoder. */
 			double t = (double)(w->tono_i + i) / (double)AUDIO_FREQUENZA;
-			double v = 0.5 * sin(2.0 * M_PI * (double)audio_prova_hz * t);
+			double v = 0.5 * sin(2.0 * M_PI * (double)audio_test_hz * t);
 			int16_t s = (int16_t)(v * 32767.0);
 			campioni[i * AUDIO_CANALI] = s;
 			campioni[i * AUDIO_CANALI + 1] = s;
@@ -6654,14 +6654,14 @@ void wt_audio_diffondi(const char *utente, uint8_t codec, uint64_t istante_us,
 {
 	if (codec != 1 && codec != 2)
 		return;
-	for (wt *w = vive_prima; w; w = w->viva_dopo)
+	for (wt *w = vive_prima; w; w = w->alive_after)
 		audio_a_una(w, utente, codec, istante_us, dati, byte);
 }
 
 /* ------------------------------------------------------------------------- */
 /* ⭐⭐ AND THE TWO DOORS FROM THE CHILD TOWARDS THE WIRE.                    */
 
-static void appunti_a_una(wt *w, const char *utente, const char *testo,
+static void clipboard_to_one(wt *w, const char *utente, const char *testo,
                           size_t byte)
 {
 	const char *mio;
@@ -6671,19 +6671,19 @@ static void appunti_a_una(wt *w, const char *utente, const char *testo,
 	mio = rcp_utente(w->rcp);
 	if (!mio || !mio[0] || strcmp(mio, utente) != 0)
 		return;
-	rcp_appunti_dalla_sessione(w->rcp, testo, byte);
+	rcp_clipboard_from_session(w->rcp, testo, byte);
 }
 
-void wt_appunti_dalla_sessione(const char *utente, const char *testo,
+void wt_clipboard_from_session(const char *utente, const char *testo,
                                size_t byte)
 {
 	if (!utente || !testo)
 		return;
-	for (wt *w = vive_prima; w; w = w->viva_dopo)
-		appunti_a_una(w, utente, testo, byte);
+	for (wt *w = vive_prima; w; w = w->alive_after)
+		clipboard_to_one(w, utente, testo, byte);
 }
 
-bool wt_appunti_richiesta(const char *utente, uint32_t serial)
+bool wt_clipboard_request(const char *utente, uint32_t serial)
 {
 	if (!utente)
 		return false;
@@ -6693,7 +6693,7 @@ bool wt_appunti_richiesta(const char *utente, uint32_t serial)
 	 *    one day I2 changed, this line would be the place where it is decided
 	 *    WHOM to ask — and then the choice would have to be written, not left
 	 *    to the order of a list. */
-	for (wt *w = vive_prima; w; w = w->viva_dopo) {
+	for (wt *w = vive_prima; w; w = w->alive_after) {
 		const char *mio;
 		uint64_t ora;
 
@@ -6726,20 +6726,20 @@ bool wt_appunti_richiesta(const char *utente, uint32_t serial)
  *         so without this line a GHOST would keep the desktop's microphone on
  *         for everybody else.  It is the same line, for the same
  *         reason, that `linea_morta_giudica()` already has.
- *      3. `audio_fermo` — whoever has already said «stop» is not asked again.
+ *      3. `audio_stopped` — whoever has already said «stop» is not asked again.
  *
  * ⚠ The LIVE sessions of the same user on OTHER connections stay inside:
  *   it is the case I2 provides for, and if one of those is watching, capture does not
  *   stop.  It is precisely the reason why this is not «switch off at
  *   farewell» but «switch off if you are left alone». */
-static bool audio_ascolta_qualcuno(const char *utente, const wt *tranne,
+static bool audio_has_listener(const char *utente, const wt *tranne,
                                    uint8_t *codec)
 {
-	for (wt *w = vive_prima; w; w = w->viva_dopo) {
+	for (wt *w = vive_prima; w; w = w->alive_after) {
 		const char *mio;
 		if (w == tranne)
 			continue;
-		if (!w->audio_acceso || w->audio_fermo || !w->rcp || w->chiusura >= 0)
+		if (!w->audio_on || w->audio_stopped || !w->rcp || w->chiusura >= 0)
 			continue;
 		if (rcp_e_finita(w->rcp))
 			continue;
@@ -6753,16 +6753,16 @@ static bool audio_ascolta_qualcuno(const char *utente, const wt *tranne,
 	return false;
 }
 
-bool wt_audio_qualcuno_ascolta(const char *utente, uint8_t *codec)
+bool wt_audio_someone_listening(const char *utente, uint8_t *codec)
 {
-	return audio_ascolta_qualcuno(utente, NULL, codec);
+	return audio_has_listener(utente, NULL, codec);
 }
 
 void wt_audio_conti(const wt *w, uint64_t *spediti, uint64_t *buttati,
                     uint64_t *rifiutati, size_t *in_coda)
 {
 	if (spediti)
-		*spediti = w ? w->audio_spediti : 0;
+		*spediti = w ? w->audio_sent : 0;
 	if (buttati)
 		*buttati = w ? w->audio_buttati : 0;
 	if (rifiutati)
@@ -6773,14 +6773,14 @@ void wt_audio_conti(const wt *w, uint64_t *spediti, uint64_t *buttati,
 
 /* ⚠ The twin of the audio census, and the three exclusions are the same:
  *   the box is there, and the two are read together. */
-static bool video_guarda_qualcuno(const char *utente, const wt *tranne,
+static bool video_someone_watching(const char *utente, const wt *tranne,
                                   uint8_t *codec)
 {
-	for (wt *w = vive_prima; w; w = w->viva_dopo) {
+	for (wt *w = vive_prima; w; w = w->alive_after) {
 		const char *mio;
 		if (w == tranne)
 			continue;
-		if (!w->video_acceso || w->video_fermo || !w->rcp || w->chiusura >= 0)
+		if (!w->video_acceso || w->video_stopped || !w->rcp || w->chiusura >= 0)
 			continue;
 		if (rcp_e_finita(w->rcp))
 			continue;
@@ -6796,7 +6796,7 @@ static bool video_guarda_qualcuno(const char *utente, const wt *tranne,
 
 bool wt_video_qualcuno_guarda(const char *utente, uint8_t *codec)
 {
-	return video_guarda_qualcuno(utente, NULL, codec);
+	return video_someone_watching(utente, NULL, codec);
 }
 
 /* ------------------------------------------------------------------------ */
@@ -6821,16 +6821,16 @@ bool wt_video_qualcuno_guarda(const char *utente, uint8_t *codec)
  *
  * ⛔ In all three the STAGE STAYS UP — invariant **I4**.  What is switched off is the
  *    consumption, not the graphical session: `figli_video()` with codec 0 and
- *    `figli_audio()` with codec 0 mean «stop capturing», not
+ *    `children_audio()` with codec 0 mean «stop capturing», not
  *    «dismantle».  The child, the windows and the sink stay where they are, and whoever
  *    reconnects finds their desktop again — which is the whole point of I4.
  *
- * ⚠ And it is idempotent by construction (`video_fermo` / `audio_fermo`): the three
+ * ⚠ And it is idempotent by construction (`video_stopped` / `audio_stopped`): the three
  *   occasions may well fire in a row on the same session — a
  *   farewell, then the stream closed, then the connection dying — and the child
  *   gets the «enough» only once.
  */
-static void cattura_spegni_se_sola(wt *w, const char *perche)
+static void capture_turn_off_if_alone(wt *w, const char *perche)
 {
 	const char *mio;
 
@@ -6840,26 +6840,26 @@ static void cattura_spegni_se_sola(wt *w, const char *perche)
 	if (!mio || !mio[0])
 		return;
 
-	if (w->audio_acceso && !w->audio_fermo && gancio_audio
-	    && !audio_ascolta_qualcuno(mio, w, NULL)) {
-		w->audio_fermo = true;
+	if (w->audio_on && !w->audio_stopped && hook_audio
+	    && !audio_has_listener(mio, w, NULL)) {
+		w->audio_stopped = true;
 		registro_dice_di(REG_RCP, wt_chi(w),
 		                 "%s and nobody listens to «%s» any more: audio "
 		                 "capture stops (the sink stays, it is invariant "
 		                 "I4)",
 		                 perche, mio);
-		gancio_audio(gancio_audio_ctx, mio, 0);
+		hook_audio(hook_audio_ctx, mio, 0);
 	}
-	if (w->video_acceso && !w->video_fermo && gancio_palco
-	    && !video_guarda_qualcuno(mio, w, NULL)) {
-		w->video_fermo = true;
+	if (w->video_acceso && !w->video_stopped && hook_stage
+	    && !video_someone_watching(mio, w, NULL)) {
+		w->video_stopped = true;
 		registro_dice_di(REG_RCP, wt_chi(w),
 		                 "%s and nobody watches «%s» any more: the stage stops "
 		                 "capturing (the child stays, it is invariant I4)",
 		                 perche, mio);
 		/* ⚠ «Stop capturing»: the codec is 0, and the depth with
 		 *   it means nothing. */
-		gancio_palco(gancio_palco_ctx, mio, 0, 0, 0, false);
+		hook_stage(hook_stage_ctx, mio, 0, 0, 0, false);
 	}
 }
 
@@ -6868,7 +6868,7 @@ void wt_video_conti(const wt *w, uint32_t *diffusi, uint32_t *saltati,
                     uint32_t *ritmo_scesi)
 {
 	if (diffusi)
-		*diffusi = w ? w->video_diffusi : 0;
+		*diffusi = w ? w->video_broadcast : 0;
 	if (saltati)
 		*saltati = w ? w->video_saltati : 0;
 	/* ⭐ PHASE 9 — the fifth number, and it is here and not in `rcp.c` because it is a
@@ -6876,7 +6876,7 @@ void wt_video_conti(const wt *w, uint32_t *diffusi, uint32_t *saltati,
 	 *    never offered to it. */
 	if (ritmo_scesi)
 		*ritmo_scesi = w ? w->video_ritmo_scesi : 0;
-	rcp_video_conti(w ? w->rcp : NULL, spediti, abbandonati);
+	rcp_video_counts(w ? w->rcp : NULL, spediti, abbandonati);
 }
 
 static void rcp_avvia(wt *w, int64_t stream_id)
@@ -6888,9 +6888,9 @@ static void rcp_avvia(wt *w, int64_t stream_id)
 	memset(&g, 0, sizeof g);
 	g.ctx = w;
 	g.manda = gancio_manda;
-	g.chiudi = gancio_chiudi;
+	g.chiudi = hook_close;
 	g.registra = gancio_registra;
-	g.verifica = gancio_verifica;
+	g.verifica = hook_verify;
 	/* ⛔ And it is connected ONLY if the helper is there: `rcp.c` looks at this pointer
 	 *    to decide which of the two roads to take, and connecting it to nothing
 	 *    would mean telling it «ask nobody». */
@@ -6905,10 +6905,10 @@ static void rcp_avvia(wt *w, int64_t stream_id)
 	 * ⭐ Compatibility with the graft of `banchi/rcp/` comes free: there the
 	 *   `memset` above leaves them NULL, and `rcp_video_apri()` returns
 	 *   `RCP_VIDEO_NIENTE_CANALE` instead of keeping quiet. */
-	g.video_apri = gancio_video_apri;
-	g.video_scrivi = gancio_video_scrivi;
-	g.video_fin = gancio_video_fin;
-	g.video_azzera = gancio_video_azzera;
+	g.video_open = hook_video_open;
+	g.video_scrivi = hook_video_write;
+	g.video_fin = hook_video_fin;
+	g.video_reset = hook_video_reset;
 
 	/* ⭐⭐ §7.4 — THE CLIPBOARD CHANNEL, and ALL FIVE are connected or none.
 	 *
@@ -6920,12 +6920,12 @@ static void rcp_avvia(wt *w, int64_t stream_id)
 	 *    announcing to the client a text that then cannot be sent, or sending it
 	 *    what the session copied without being able to serve whoever pastes, are
 	 *    two halves the user sees as «the clipboard does not work». */
-	if (gancio_palco_appunti_offri && gancio_palco_appunti_risposta) {
-		g.appunti_apri = gancio_appunti_apri;
-		g.appunti_scrivi = gancio_appunti_scrivi;
-		g.appunti_fin = gancio_appunti_fin;
-		g.appunti_offri = gancio_appunti_offri;
-		g.appunti_risposta = gancio_appunti_risposta;
+	if (hook_stage_clipboard_offer && hook_stage_clipboard_response) {
+		g.appunti_apri = hook_clipboard_open;
+		g.appunti_scrivi = hook_clipboard_write;
+		g.clipboard_fin = hook_clipboard_fin;
+		g.clipboard_offer = hook_clipboard_offer;
+		g.clipboard_response = hook_clipboard_response;
 	}
 
 	/* ⭐⭐ §7.3 — THE INPUT CHANNEL.  ⛔ And ALL SIX are connected or none:
@@ -6936,15 +6936,15 @@ static void rcp_avvia(wt *w, int64_t stream_id)
 	 *   `rcp.c` validates the message all the same (that is protocol) and
 	 *   writes that it did not inject it.  «I have no input channel» and «the
 	 *   client made a mistake» are two different facts. */
-	if (gancio_palco_input) {
-		g.input_puntatore = gancio_input_puntatore;
-		g.input_pulsante = gancio_input_pulsante;
-		g.input_rotella = gancio_input_rotella;
-		g.input_lettera = gancio_input_lettera;
-		g.disposizione = gancio_disposizione;
+	if (hook_stage_input) {
+		g.input_pointer = hook_input_pointer;
+		g.input_button = hook_input_button;
+		g.input_rotella = hook_input_wheel;
+		g.input_lettera = hook_input_letter;
+		g.disposizione = hook_layout;
 		g.disposizione_esiste = gancio_disposizione_esiste;
-		g.input_posizione = gancio_input_posizione;
-		g.input_rilascia_tutto = gancio_input_rilascia_tutto;
+		g.input_position = hook_input_position;
+		g.input_rilascia_tutto = hook_input_release_all;
 	}
 
 	/* ⭐⭐ §7.1 — THE CANVAS HOOK, and it is connected ON ITS OWN: it does not belong to the
@@ -6955,37 +6955,37 @@ static void rcp_avvia(wt *w, int64_t stream_id)
 	 *   hook connected to nothing would tell `rcp.c` «I can resize» and then
 	 *   would leave the client waiting for a frame nobody asked
 	 *   anybody for. */
-	if (gancio_palco_ritela)
-		g.ritela = gancio_ritela;
+	if (hook_stage_recanvas)
+		g.ritela = hook_recanvas;
 
 	/* ⛔⭐ AND THIS ONE IS ALWAYS CONNECTED, even without the bridge towards the stage: it
 	 *     asks nobody anything — it reads a number this module already has,
 	 *     the last size delivered by that user's stage.  ⚠ If it is not there
 	 *     yet (first attach, no frame) it answers `false`, and `rcp.c`
 	 *     grants what the client asks: the previous behaviour. */
-	g.tela_del_palco = gancio_tela_del_palco;
+	g.stage_canvas = hook_stage_canvas;
 
 	/* ⛔⭐ §5.1 — and it is connected ONLY if the guard is there, like all the others:
 	 *     a hook connected to nothing would tell `rcp.c` «I looked, there is
 	 *     no local session», which is the worse lie of the two — because
 	 *     it is indistinguishable from the truth. */
-	if (gancio_locale)
-		g.sessione_locale = gancio_sessione_locale;
+	if (hook_local)
+		g.sessione_locale = hook_local_session;
 
 	/* ⭐ §7.6 — and it is connected only if there is someone who can really terminate the
 	 *    session: without it, `rcp.c` says farewell with `0x10` and writes that the desktop
 	 *    was not touched, instead of making believe it has ended. */
-	if (gancio_termina)
-		g.termina_sessione = gancio_termina_sessione;
+	if (hook_terminate)
+		g.termina_sessione = hook_terminate_session;
 
 	/* ⭐ D-001 — `SESSIONE` says whether the stage was there and which desktop it is. */
-	g.sessione_ripresa = gancio_sessione_ripresa;
-	g.desktop = gancio_desktop;
+	g.session_resumed = hook_session_resumed;
+	g.desktop = hook_desktop;
 
 	/* ⛔ And the cap of §7.17 is SWITCHED OFF here: the channel has been opened, which is
 	 *    the thing that clock was waiting for.  ⚠ Zero and not «past»: a
 	 *    disarmed clock and an expired one must not look the same. */
-	w->canale_entro = 0;
+	w->channel_deadline = 0;
 
 	w->rcp = rcp_apri(&g, w->provenienza,
 	                  ngtcp2_conn_get_timestamp(w->conn) / NGTCP2_MILLISECONDS);
@@ -7024,7 +7024,7 @@ static void rcp_passa(wt *w, const uint8_t *dati, size_t len)
 /* ⭐⭐ THE INPUT CHANNEL — the seam of phase 4, 14 Aug 2026.
  *
  * ⛔ Before today the input bytes really arrived and ended up in
- *    `conta_credito()` **and that was all**: the channel was lawful, the log line
+ *    `count_credit()` **and that was all**: the channel was lawful, the log line
  *    declared it («this phase does not serve it»), and the client could move the
  *    mouse for an hour without anything reaching the desktop.  ⇒ Here that
  *    declared tolerance is CLOSED.
@@ -7059,7 +7059,7 @@ static void rcp_passa_input(wt *w, int64_t stream, const uint8_t *dati,
  *    is the only way `rcp.c` has to free the slot in the table.  ⚠ Without it,
  *    the channel would work for the first eight transfers and then stop
  *    — that is the worst defect to diagnose: the one that shows up later. */
-static void rcp_passa_appunti(wt *w, int64_t stream, const uint8_t *dati,
+static void rcp_pass_clipboard(wt *w, int64_t stream, const uint8_t *dati,
                               size_t len, bool fin)
 {
 	uint64_t ora;
@@ -7156,7 +7156,7 @@ static void chiudi_sessione(wt *w, uint8_t motivo)
 	 *    decisions of 11 August (§7.14, §7.15) make the only one that always
 	 *    arrives — on Firefox, which resets the channel, it was the ONLY one.
 	 *
-	 * ⚠ And the meaning does not change: if the queue is NOT empty, the `!coda_vuota`
+	 * ⚠ And the meaning does not change: if the queue is NOT empty, the `!queue_empty`
 	 *   branch of `wt_batti` resets this field and the wait starts over, as
 	 *   before.  What changes is that now the wait exists even when
 	 *   nobody comes back to say «the queue is empty». */
@@ -7166,7 +7166,7 @@ static void chiudi_sessione(wt *w, uint8_t motivo)
 	 *    emptied» is a condition someone else must make happen; if
 	 *    it does not happen, point 3 of §3.1 is never executed and the reason stays
 	 *    inside the server.  Three seconds is six times the normal wait. */
-	w->chiusura_scadenza =
+	w->closing_deadline =
 	    ngtcp2_conn_get_timestamp(w->conn) + 3ULL * NGTCP2_SECONDS;
 	/* ⛔ And whoever postpones a job must also switch on what will make it
 	 *    mature: without this heartbeat, on a violation found at the first
@@ -7176,14 +7176,14 @@ static void chiudi_sessione(wt *w, uint8_t motivo)
 	registro_dice_di(REG_WT, wt_chi(w),
 	                 "session closure DEFERRED, code 0x%02x (in the queue: "
 	                 "%zu elements still to send)",
-	                 motivo, coda_da_spedire(w));
+	                 motivo, queue_unsent(w));
 }
 
-static void manda_controllo(wt *w, const uint8_t *dati, size_t len)
+static void send_control(wt *w, const uint8_t *dati, size_t len)
 {
 	if (w->rcp_stream == -1)
 		return;
-	(void)accoda(w, w->rcp_stream, dati, len);
+	(void)enqueue(w, w->rcp_stream, dati, len);
 }
 
 /* ⛔⭐ THE BYTES OF A SURPLUS STREAM ARE THROWN AWAY, AND NOT SENT BACK
@@ -7194,9 +7194,9 @@ static void manda_controllo(wt *w, const uint8_t *dati, size_t len)
  *     just judged a **violation of §2.5**.  ⛔ An echo no line
  *     of `RCP.md` provides for, and three consequences each worse than the other:
  *
- *       1. `coda_vuota()` never became true, so the closing capsule
- *          of §3.1 point 3 never left (see `chiusura_scadenza`);
- *       2. `conta_credito()` reopened the window at every round, so the
+ *       1. `queue_empty()` never became true, so the closing capsule
+ *          of §3.1 point 3 never left (see `closing_deadline`);
+ *       2. `count_credit()` reopened the window at every round, so the
  *          client could write without end — and the 30 s idleness did not
  *          fire, because it was writing;
  *       3. the queue grew as much as the client wanted, on a session already
@@ -7206,19 +7206,19 @@ static void manda_controllo(wt *w, const uint8_t *dati, size_t len)
  *    — «and every tolerance must be written in the log».  ⚠ The lines are counted and
  *    not one per packet: a client writing without end would fill the
  *    log, which is another way of losing the information. */
-static void scarta_stream_di_troppo(wt *w, int64_t stream_id, size_t len)
+static void discard_extra_stream(wt *w, int64_t stream_id, size_t len)
 {
-	w->scartati_stream++;
-	w->scartati_byte += len;
-	if (w->scartati_stream <= 3 || (w->scartati_stream % 256) == 0)
+	w->discarded_stream++;
+	w->discarded_byte += len;
+	if (w->discarded_stream <= 3 || (w->discarded_stream % 256) == 0)
 		registro_dice_di(REG_WT, wt_chi(w),
 		                 "⛔ %zu bytes DROPPED from stream %ld: it is not the control "
 		                 "channel (§2.5, the violation is already on record) — "
 		                 "%llu blocks, %llu bytes in total, and the credit is NOT "
 		                 "reopened",
 		                 len, (long)stream_id,
-		                 (unsigned long long)w->scartati_stream,
-		                 (unsigned long long)w->scartati_byte);
+		                 (unsigned long long)w->discarded_stream,
+		                 (unsigned long long)w->discarded_byte);
 }
 
 /* ------------------------------------------------------------------------ */
@@ -7277,15 +7277,15 @@ static void capsula(wt *w, int64_t stream_id, const uint8_t *dati, size_t len)
 	/* ⛔ The bytes of a capsule already judged too big are thrown away
 	 *    AS THEY PASS, without keeping them: it is the only way not to get one's
 	 *    memory filled by whoever can write two variable-length integers. */
-	if (w->capsalta > 0) {
-		uint64_t n = w->capsalta < len ? w->capsalta : (uint64_t)len;
-		w->capsalta -= n;
+	if (w->capsule_skip > 0) {
+		uint64_t n = w->capsule_skip < len ? w->capsule_skip : (uint64_t)len;
+		w->capsule_skip -= n;
 		dati += n;
 		len -= (size_t)n;
 		if (len == 0)
 			return;
 	}
-	if (!bytes_aggiungi(&w->capsbuf, dati, len))
+	if (!bytes_add(&w->capsbuf, dati, len))
 		return;
 
 	for (;;) {
@@ -7296,10 +7296,10 @@ static void capsula(wt *w, int64_t stream_id, const uint8_t *dati, size_t len)
 		/* ⚠ Here the buffer cannot grow without end: a variable-length
 		 *   integer is at most 8 bytes, so with 16 bytes type and
 		 *   length are always read. */
-		a = varint_leggi(&tipo, w->capsbuf.d, w->capsbuf.n);
+		a = varint_read(&tipo, w->capsbuf.d, w->capsbuf.n);
 		if (a == 0)
 			return;
-		b = varint_leggi(&lung, w->capsbuf.d + a, w->capsbuf.n - a);
+		b = varint_read(&lung, w->capsbuf.d + a, w->capsbuf.n - a);
 		if (b == 0)
 			return;
 
@@ -7321,9 +7321,9 @@ static void capsula(wt *w, int64_t stream_id, const uint8_t *dati, size_t len)
 			                 "9297 §3.2; RCP.md §6.1)",
 			                 (unsigned long long)tipo,
 			                 (unsigned long long)lung, WT_CAPSULA_MAX);
-			w->capsalta = lung - presi;
-			bytes_togli_testa(&w->capsbuf, a + b + (size_t)presi);
-			if (w->capsalta > 0)
+			w->capsule_skip = lung - presi;
+			bytes_remove_head(&w->capsbuf, a + b + (size_t)presi);
+			if (w->capsule_skip > 0)
 				return;
 			continue;
 		}
@@ -7342,7 +7342,7 @@ static void capsula(wt *w, int64_t stream_id, const uint8_t *dati, size_t len)
 			                 codice);
 			chiusa_dal_client(w, codice);
 		}
-		bytes_togli_testa(&w->capsbuf, a + b + (size_t)lung);
+		bytes_remove_head(&w->capsbuf, a + b + (size_t)lung);
 	}
 }
 
@@ -7366,7 +7366,7 @@ static void fin_dal_client(wt *w, int64_t stream_id)
 	rcp_canale_chiuso(w->rcp);
 }
 
-static void conta_credito(wt *w, int64_t stream_id, size_t n)
+static void count_credit(wt *w, int64_t stream_id, size_t n)
 {
 	if (n == 0)
 		return;
@@ -7374,7 +7374,7 @@ static void conta_credito(wt *w, int64_t stream_id, size_t n)
 	ngtcp2_conn_extend_max_offset(w->conn, n);
 }
 
-enum esito { E_MIO, E_ATTENDI, E_HTTP3 };
+enum esito { E_MINE, E_WAIT, E_HTTP3 };
 
 /* ⛔ `RCP.md` §2.5 — the unidirectional streams opened by the CLIENT.
  *
@@ -7392,16 +7392,16 @@ enum esito { E_MIO, E_ATTENDI, E_HTTP3 };
  *   client's unidirectional ones there are HTTP/3's control channel and the two
  *   of QPACK, which belong to nghttp3.  A WebTransport stream is recognised by its
  *   type, 0x54 — which like 0x41 does not fit in a byte: on the wire it is 0x40 0x54. */
-static enum esito smista_uni(wt *w, int64_t stream_id, const uint8_t *dati,
+static enum esito dispatch_uni(wt *w, int64_t stream_id, const uint8_t *dati,
                              size_t len, bool fin, bytes *riunito)
 {
-	stream_giudizio *g = giudizio_trova(w, stream_id);
+	stream_giudizio *g = judgment_find(w, stream_id);
 	uint64_t sessione = 0;
 	size_t n, consumati;
 	uint16_t tipo;
 	uint8_t canale;
 	const uint8_t *carico = NULL;
-	size_t carico_n = 0;
+	size_t load_n = 0;
 	const char *guasto = NULL;
 
 	if (g) {
@@ -7422,51 +7422,51 @@ static enum esito smista_uni(wt *w, int64_t stream_id, const uint8_t *dati,
 			 *   In both cases the bytes are counted against the credit:
 			 *   not counting them would leave the client without credit on
 			 *   a live connection (§2.3). */
-			conta_credito(w, stream_id, len);
-			return E_MIO;
+			count_credit(w, stream_id, len);
+			return E_MINE;
 		case G_UNI_INPUT:
 			/* ⭐ The input channel, already recognised: the bytes are
 			 *    counted against the credit **and delivered**.  ⛔ The
 			 *    credit before delivery: if delivery made the
 			 *    session drop, those bytes have arrived anyway
 			 *    and the count of §2.3 must not fall behind. */
-			conta_credito(w, stream_id, len);
+			count_credit(w, stream_id, len);
 			rcp_passa_input(w, stream_id, dati, len);
-			return E_MIO;
+			return E_MINE;
 		case G_UNI_APPUNTI:
 			/* ⭐ The clipboard channel, already recognised.  ⛔ The credit BEFORE
 			 *    delivery, as for input, and for the same reason: if
 			 *    delivery made the session drop, those bytes have
 			 *    arrived anyway and the count of §2.3 must not fall
 			 *    behind. */
-			conta_credito(w, stream_id, len);
-			rcp_passa_appunti(w, stream_id, dati, len, fin);
-			return E_MIO;
+			count_credit(w, stream_id, len);
+			rcp_pass_clipboard(w, stream_id, dati, len, fin);
+			return E_MINE;
 		default:
 			break;
 		}
 	} else {
-		g = giudizio_crea(w, stream_id);
+		g = judgment_create(w, stream_id);
 		if (!g)
 			return E_HTTP3;
 	}
 
-	if (!bytes_aggiungi(&g->pref, dati, len))
+	if (!bytes_add(&g->pref, dati, len))
 		return E_HTTP3;
 	if (g->pref.n < 2)
-		return E_ATTENDI;
+		return E_WAIT;
 
 	if (!(g->pref.d[0] == 0x40 && g->pref.d[1] == 0x54)) {
 		/* It is not WebTransport: it belongs to nghttp3, and the bytes must be delivered
 		 * whole — including those we held back. */
-		bytes_aggiungi(riunito, g->pref.d, g->pref.n);
-		bytes_libera(&g->pref);
+		bytes_add(riunito, g->pref.d, g->pref.n);
+		bytes_free(&g->pref);
 		g->genere = G_NONWT;
 		return E_HTTP3;
 	}
-	n = varint_leggi(&sessione, g->pref.d + 2, g->pref.n - 2);
+	n = varint_read(&sessione, g->pref.d + 2, g->pref.n - 2);
 	if (n == 0 || g->pref.n < 2 + n + 2)
-		return E_ATTENDI; /* the `tipo` field has not fully arrived yet */
+		return E_WAIT; /* the `tipo` field has not fully arrived yet */
 
 	consumati = g->pref.n;
 	tipo = (uint16_t)((g->pref.d[2 + n] << 8) | g->pref.d[2 + n + 1]);
@@ -7476,11 +7476,11 @@ static enum esito smista_uni(wt *w, int64_t stream_id, const uint8_t *dati,
 	 *    message, not to the preamble.  ⚠ Peeking at them and then not delivering them
 	 *    would give `rcp.c` a message without a header — and the symptom
 	 *    would be «the first input of every session is malformed».
-	 * ⚠ And `bytes_libera()` was moved to the end on purpose: until that
+	 * ⚠ And `bytes_free()` was moved to the end on purpose: until that
 	 *   moment `carico` points inside `g->pref`. */
 	carico = g->pref.d + 2 + n;
-	carico_n = g->pref.n - (2 + n);
-	conta_credito(w, stream_id, consumati);
+	load_n = g->pref.n - (2 + n);
+	count_credit(w, stream_id, consumati);
 
 	switch (canale) {
 	case 0x00:
@@ -7544,7 +7544,7 @@ static enum esito smista_uni(wt *w, int64_t stream_id, const uint8_t *dati,
 		 *    message of every session — and the first message is
 		 *    precisely the one the user feels as «the first click
 		 *    did nothing». */
-		rcp_passa_input(w, stream_id, carico, carico_n);
+		rcp_passa_input(w, stream_id, carico, load_n);
 	} else if (canale == 0x02) {
 		/* ⭐ As for input: the first piece arrives together with the preamble that
 		 *    made it recognisable, and it is delivered AT ONCE.  ⛔ Waiting for the
@@ -7553,10 +7553,10 @@ static enum esito smista_uni(wt *w, int64_t stream_id, const uint8_t *dati,
 		 *    message only, so the whole transfer would be lost.
 		 * ⚠ And the `fin` travels with it: a stream carrying a short message
 		 *   can arrive all together, preamble and FIN included. */
-		rcp_passa_appunti(w, stream_id, carico, carico_n, fin);
+		rcp_pass_clipboard(w, stream_id, carico, load_n, fin);
 	}
-	bytes_libera(&g->pref);
-	return E_MIO;
+	bytes_free(&g->pref);
+	return E_MINE;
 }
 
 static enum esito smista(wt *w, int64_t stream_id, const uint8_t *dati,
@@ -7570,14 +7570,14 @@ static enum esito smista(wt *w, int64_t stream_id, const uint8_t *dati,
 	 *    all: among them there are HTTP/3's control channel and the two of
 	 *    QPACK, which belong to nghttp3 and not to us. */
 	if ((stream_id & 0x03) == 0x02)
-		return smista_uni(w, stream_id, dati, len, fin, riunito);
+		return dispatch_uni(w, stream_id, dati, len, fin, riunito);
 
 	/* Only the bidirectional streams opened by the client: the extended CONNECT and
 	 * the WebTransport streams all arrive from there. */
 	if ((stream_id & 0x03) != 0x00)
 		return E_HTTP3;
 
-	g = giudizio_trova(w, stream_id);
+	g = judgment_find(w, stream_id);
 	if (g && g->genere == G_NONWT)
 		return E_HTTP3;
 
@@ -7586,11 +7586,11 @@ static enum esito smista(wt *w, int64_t stream_id, const uint8_t *dati,
 		if (len > 0) {
 			if (stream_id == w->rcp_stream) {
 				rcp_passa(w, dati, len);
-				conta_credito(w, stream_id, len);
+				count_credit(w, stream_id, len);
 			} else {
 				/* ⛔ They are NOT sent back and the credit is NOT
-				 *    reopened: see `scarta_stream_di_troppo()`. */
-				scarta_stream_di_troppo(w, stream_id, len);
+				 *    reopened: see `discard_extra_stream()`. */
+				discard_extra_stream(w, stream_id, len);
 			}
 		}
 		/* ⛔ AND THE FIN IS LOOKED AT AFTER THE BYTES, not before: the last bytes
@@ -7600,21 +7600,21 @@ static enum esito smista(wt *w, int64_t stream_id, const uint8_t *dati,
 		 *    that never happened. */
 		if (fin)
 			fin_dal_client(w, stream_id);
-		return E_MIO;
+		return E_MINE;
 	}
 
 	if (!g) {
-		g = giudizio_crea(w, stream_id);
+		g = judgment_create(w, stream_id);
 		if (!g)
 			return E_HTTP3;
 	}
-	if (!bytes_aggiungi(&g->pref, dati, len))
+	if (!bytes_add(&g->pref, dati, len))
 		return E_HTTP3;
 	if (g->pref.n < 2) {
 		/* ⚠ AND the window is NOT widened: those bytes have not been
 		 *   taken by anyone yet, and counting them now and then again would distort the
 		 *   credit. */
-		return E_ATTENDI;
+		return E_WAIT;
 	}
 
 	/* ⛔ The WEBTRANSPORT_STREAM frame type is 0x41 — but a variable-length
@@ -7623,15 +7623,15 @@ static enum esito smista(wt *w, int64_t stream_id, const uint8_t *dati,
 	 *    two are enough to decide.  A HEADERS frame starts with 0x01,
 	 *    a DATA one with 0x00. */
 	if (!(g->pref.d[0] == 0x40 && g->pref.d[1] == 0x41)) {
-		bytes_aggiungi(riunito, g->pref.d, g->pref.n);
-		bytes_libera(&g->pref);
+		bytes_add(riunito, g->pref.d, g->pref.n);
+		bytes_free(&g->pref);
 		g->genere = G_NONWT;
 		return E_HTTP3;
 	}
 
-	n = varint_leggi(&sessione, g->pref.d + 2, g->pref.n - 2);
+	n = varint_read(&sessione, g->pref.d + 2, g->pref.n - 2);
 	if (n == 0)
-		return E_ATTENDI;
+		return E_WAIT;
 
 	consumati = g->pref.n;
 	g->genere = G_WT;
@@ -7685,21 +7685,21 @@ static enum esito smista(wt *w, int64_t stream_id, const uint8_t *dati,
 		if (stream_id == w->rcp_stream)
 			rcp_passa(w, resto, rn);
 		else
-			scarta_stream_di_troppo(w, stream_id, rn);
+			discard_extra_stream(w, stream_id, rn);
 	}
-	bytes_libera(&g->pref);
+	bytes_free(&g->pref);
 	/* ⚠ The credit of the PREFIX bytes is reopened anyway: those bytes
 	 *   we consumed ourselves to judge the stream, and not counting them
 	 *   would block the legitimate control channel too.  ⛔ What is NOT
 	 *   reopened is the credit of the bytes of a surplus channel — see the
-	 *   branch above and `scarta_stream_di_troppo()`. */
-	conta_credito(w, stream_id, consumati);
+	 *   branch above and `discard_extra_stream()`. */
+	count_credit(w, stream_id, consumati);
 
 	/* ⛔ Here too: the stream can be recognised and finished in the same
 	 *    packet (§4.2, the FIN from either of the two sides). */
 	if (fin)
 		fin_dal_client(w, stream_id);
-	return E_MIO;
+	return E_MINE;
 }
 
 /* ------------------------------------------------------------------------ */
@@ -7749,7 +7749,7 @@ static int cb_begin_headers(nghttp3_conn *conn, int64_t stream_id, void *cud,
 	wt *w = cud;
 	(void)conn;
 	(void)sud;
-	if (!richiesta_trova(w, stream_id, true))
+	if (!request_find(w, stream_id, true))
 		return NGHTTP3_ERR_CALLBACK_FAILURE;
 	return 0;
 }
@@ -7767,7 +7767,7 @@ static int cb_recv_header(nghttp3_conn *conn, int64_t stream_id, int32_t token,
                           uint8_t flags, void *cud, void *sud)
 {
 	wt *w = cud;
-	richiesta *r = richiesta_trova(w, stream_id, true);
+	richiesta *r = request_find(w, stream_id, true);
 	(void)conn;
 	(void)name;
 	(void)flags;
@@ -7795,7 +7795,7 @@ static int cb_recv_header(nghttp3_conn *conn, int64_t stream_id, int32_t token,
 /* The extended CONNECT stream is NOT closed: it IS the session.  A reader that
  * said «I have finished» would put the FIN on it, and the session would die
  * the instant it opens. */
-static nghttp3_ssize cb_niente_dati(nghttp3_conn *conn, int64_t stream_id,
+static nghttp3_ssize cb_nothing_data(nghttp3_conn *conn, int64_t stream_id,
                                     nghttp3_vec *vec, size_t veccnt,
                                     uint32_t *pflags, void *cud, void *sud)
 {
@@ -7809,7 +7809,7 @@ static nghttp3_ssize cb_niente_dati(nghttp3_conn *conn, int64_t stream_id,
 	return NGHTTP3_ERR_WOULDBLOCK;
 }
 
-static int risposta_secca(wt *w, int64_t stream_id, const char *stato)
+static int bare_response(wt *w, int64_t stream_id, const char *stato)
 {
 	nghttp3_nv nv[2];
 	int rv;
@@ -7848,7 +7848,7 @@ static int apri_sessione(wt *w, richiesta *r)
 		                 "⛔ WebTransport session REFUSED, path «%s» "
 		                 "(expected /rcp/1 — §2.2): 404",
 		                 r->uri);
-		return risposta_secca(w, r->id, "404");
+		return bare_response(w, r->id, "404");
 	}
 
 	nv[0].name = (uint8_t *)":status";
@@ -7863,7 +7863,7 @@ static int apri_sessione(wt *w, richiesta *r)
 	nv[1].flags = NGHTTP3_NV_FLAG_NONE;
 
 	memset(&dr, 0, sizeof dr);
-	dr.read_data = cb_niente_dati;
+	dr.read_data = cb_nothing_data;
 
 	rv = nghttp3_conn_submit_response(w->h3, r->id, nv, 2, &dr);
 	if (rv != 0) {
@@ -7883,7 +7883,7 @@ static int apri_sessione(wt *w, richiesta *r)
 	 * ⛔ And what will make it expire is armed too, at the same instant — it is
 	 *    the dearest lesson of the graft, written thirty lines further below in
 	 *    `rcp_avvia`: a cap without a heartbeat is a cap that does not expire. */
-	w->canale_entro = ngtcp2_conn_get_timestamp(w->conn)
+	w->channel_deadline = ngtcp2_conn_get_timestamp(w->conn)
 	                  + WT_TETTO_CANALE_NS;
 	batti_fra(w, 100);
 
@@ -7899,7 +7899,7 @@ static int cb_end_headers(nghttp3_conn *conn, int64_t stream_id, int fin,
                           void *cud, void *sud)
 {
 	wt *w = cud;
-	richiesta *r = richiesta_trova(w, stream_id, false);
+	richiesta *r = request_find(w, stream_id, false);
 	(void)conn;
 	(void)fin;
 	(void)sud;
@@ -7917,7 +7917,7 @@ static int cb_end_headers(nghttp3_conn *conn, int64_t stream_id, int fin,
 	                 "HTTP/3 request %s %s on stream %ld: 404 (over UDP only "
 	                 "the WebTransport session is served)",
 	                 r->metodo, r->uri, (long)stream_id);
-	return risposta_secca(w, stream_id, "404") == 0
+	return bare_response(w, stream_id, "404") == 0
 	         ? 0
 	         : NGHTTP3_ERR_CALLBACK_FAILURE;
 }
@@ -8031,26 +8031,26 @@ static int apri_http3(wt *w)
 
 /* ------------------------------------------------------------------------ */
 
-wt *wt_nuovo(ngtcp2_conn *conn, ngtcp2_ccerr *ultimo_errore,
+wt *wt_new(ngtcp2_conn *conn, ngtcp2_ccerr *last_error,
              const char *provenienza, aiutante *aiuto)
 {
 	wt *w = calloc(1, sizeof *w);
 	if (!w)
 		return NULL;
 	w->conn = conn;
-	w->ultimo_errore = ultimo_errore;
+	w->last_error = last_error;
 	w->aiuto = aiuto;
 	w->ctrl_id = -1;
 	w->sessione = -1;
 	w->rcp_stream = -1;
 	w->chiusura = -1;
-	w->video_stream_ultimo = -1;
+	w->video_stream_last = -1;
 	snprintf(w->provenienza, sizeof w->provenienza, "%s",
 	         provenienza ? provenienza : "");
 	/* ⛔ In the list of live ones BEFORE returning: a frame can
 	 *    arrive from the stage between two `poll` rounds, and a session that is not
 	 *    in the list does not receive it — without anybody noticing. */
-	w->viva_dopo = vive_prima;
+	w->alive_after = vive_prima;
 	vive_prima = w;
 	return w;
 }
@@ -8062,11 +8062,11 @@ void wt_libera(wt *w)
 	/* ⛔ Out of the list of live ones BEFORE freeing anything: from here
 	 *    on `wt_video_diffondi()` must no longer find it. */
 	if (vive_prima == w) {
-		vive_prima = w->viva_dopo;
+		vive_prima = w->alive_after;
 	} else {
-		for (wt *p = vive_prima; p; p = p->viva_dopo)
-			if (p->viva_dopo == w) {
-				p->viva_dopo = w->viva_dopo;
+		for (wt *p = vive_prima; p; p = p->alive_after)
+			if (p->alive_after == w) {
+				p->alive_after = w->alive_after;
 				break;
 			}
 	}
@@ -8080,14 +8080,14 @@ void wt_libera(wt *w)
 	 *     the frame loop stops. */
 	/* ⛔⭐ THE AUDIO COUNTS ARE WRITTEN, and before NOBODY read them —
 	 *     finding 6 of the review of 17 Aug 2026: `wt_audio_conti()` did not
-	 *     have a single caller in all of `src/`, so `audio_spediti`,
+	 *     have a single caller in all of `src/`, so `audio_sent`,
 	 *     `audio_buttati` and `audio_rifiutati` never reached a line.
 	 *     ⚠ On a normal server «audio dropped» and «audio never arrived»
 	 *     looked exactly the same — which is the defect those
 	 *     counters exist to remove.
 	 * ⭐ It is written at the end of the session because it is the instant at which the
 	 *    count is complete, and with the ZEROS in it: `CODER.md` §3.10. */
-	if (w->audio_acceso) {
+	if (w->audio_on) {
 		uint64_t sp, bu, ri;
 		size_t coda;
 		wt_audio_conti(w, &sp, &bu, &ri, &coda);
@@ -8170,7 +8170,7 @@ void wt_libera(wt *w)
 		                 "log writes one for every new size, not one "
 		                 "per frame (§E2, B2 22 Aug 2026) — codec %u",
 		                 w->provenienza, diffusi, saltati, spediti, abbandonati,
-		                 w->video_annunci_tela, w->video_codec);
+		                 w->video_canvas_announcements, w->video_codec);
 		/* ⛔⭐ PHASE 9 — and the THRESHOLD count is kept apart, for the reason of
 		 *     this whole phase: «zero abandonments» and «the cure is off» must not
 		 *     look the same.  ⚠ And the three numbers count three
@@ -8189,7 +8189,7 @@ void wt_libera(wt *w)
 		                                   : "OFF by hand (--sgombra-soglia-ms 0)",
 		                 (unsigned long long)sgombra_soglia_ms,
 		                 w->sgombra_tenuti, w->sgombra_abbandoni,
-		                 w->sgombra_credito, w->sgombra_dietro_chiave);
+		                 w->clear_out_credit, w->clear_out_behind_key);
 		/* ⛔⭐ PHASE 9 — AND THE RATE REGULATOR'S COUNT, which is kept apart
 		 *     from the other two for the reason of this whole phase: «zero
 		 *     drops» and «the regulator is off» must not look
@@ -8259,7 +8259,7 @@ void wt_libera(wt *w)
 	                 "⭐ PHASE 9, the bytes HELD for retransmission (contract of "
 	                 "ngtcp2_conn_writev_stream): peak %zu bytes, residue at "
 	                 "closure %zu, and %zu bytes still to send in the queue",
-	                 w->byte_in_volo_max, w->byte_in_volo, w->byte_in_coda);
+	                 w->byte_in_volo_max, w->byte_in_flight, w->byte_in_queue);
 	/* ⛔⛔ AND CAPTURE IS SWITCHED OFF — OF AUDIO AND OF PIXELS — IF NOBODY
 	 *     IS LEFT.
 	 *
@@ -8275,7 +8275,7 @@ void wt_libera(wt *w)
 	 *
 	 * ⛔⭐ AND SINCE 23 SEP 2026 THIS IS NO LONGER THE FIRST OCCASION, IT IS THE LAST.
 	 *     The two policies were here in two twin blocks; now they are
-	 *     both in `cattura_spegni_se_sola()`, which `regola_battito()`
+	 *     both in `capture_turn_off_if_alone()`, which `regola_battito()`
 	 *     already calls at FAREWELL — that is ~30 s before here.  ⇒ One gets here
 	 *     only for whoever leaves WITHOUT saying goodbye (`kill -9`, the network dropping, the
 	 *     `max_idle_timeout`), and the call is idempotent: if the farewell
@@ -8285,7 +8285,7 @@ void wt_libera(wt *w)
 	 *    it is no longer needed — the census excludes `w` by its own name — but
 	 *    the order stays that one, and the reason why it was necessary is written
 	 *    on the census. */
-	cattura_spegni_se_sola(w, "the connection is going away without a farewell");
+	capture_turn_off_if_alone(w, "the connection is going away without a farewell");
 	/* The test tone's encoder, if this session had one. */
 	if (w->tono_cod) {
 		/* ⭐ And the ENCODER's counts, which answer a question the
@@ -8318,20 +8318,20 @@ void wt_libera(wt *w)
 		rcp_libera(w->rcp);
 	if (w->h3)
 		nghttp3_conn_del(w->h3);
-	for (size_t i = 0; i < w->ngiudizi; i++)
-		bytes_libera(&w->giudizi[i].pref);
+	for (size_t i = 0; i < w->njudgments; i++)
+		bytes_free(&w->giudizi[i].pref);
 	free(w->giudizi);
-	for (size_t i = 0; i < w->ncoda; i++)
-		bytes_libera(&w->coda[i].dati);
+	for (size_t i = 0; i < w->nqueue; i++)
+		bytes_free(&w->coda[i].dati);
 	free(w->coda);
-	bytes_libera(&w->capsbuf);
+	bytes_free(&w->capsbuf);
 	free(w->richieste);
 	free(w);
 }
 
 int wt_app_pronta(wt *w) { return apri_http3(w); }
 
-int wt_ricevi_stream(wt *w, uint32_t flags, int64_t stream_id,
+int wt_receive_stream(wt *w, uint32_t flags, int64_t stream_id,
                      const uint8_t *dati, size_t len)
 {
 	bytes riunito = {0};
@@ -8350,9 +8350,9 @@ int wt_ricevi_stream(wt *w, uint32_t flags, int64_t stream_id,
 	 *       can be seen — below we return before `nghttp3_conn_read_stream2`,
 	 *       so not even nghttp3 meets it. */
 	switch (smista(w, stream_id, dati, len, fin, &riunito)) {
-	case E_MIO:
-	case E_ATTENDI:
-		bytes_libera(&riunito);
+	case E_MINE:
+	case E_WAIT:
+		bytes_free(&riunito);
 		return 0;
 	case E_HTTP3:
 		break;
@@ -8369,17 +8369,17 @@ int wt_ricevi_stream(wt *w, uint32_t flags, int64_t stream_id,
 		registro_dice_di(REG_WT, wt_chi(w), "⛔ nghttp3_conn_read_stream2: %s",
 		                 nghttp3_strerror((int)nconsumed));
 		ngtcp2_ccerr_set_application_error(
-			w->ultimo_errore,
+			w->last_error,
 			nghttp3_err_infer_quic_app_error_code((int)nconsumed), NULL, 0);
 		esito = NGTCP2_ERR_CALLBACK_FAILURE;
 	} else {
-		conta_credito(w, stream_id, (size_t)nconsumed);
+		count_credit(w, stream_id, (size_t)nconsumed);
 	}
-	bytes_libera(&riunito);
+	bytes_free(&riunito);
 	return esito;
 }
 
-int wt_stream_chiuso(wt *w, int64_t stream_id, uint64_t codice, bool con_codice)
+int wt_stream_chiuso(wt *w, int64_t stream_id, uint64_t codice, bool with_code)
 {
 	richiesta *r;
 
@@ -8409,7 +8409,7 @@ int wt_stream_chiuso(wt *w, int64_t stream_id, uint64_t codice, bool con_codice)
 	 *    `w->sessione` becomes `-1`: afterwards, the identifier to look for in the queue
 	 *    would no longer be there — and it is precisely the CONNECT stream that
 	 *    `coda_conferma()` leaves on purpose to this function. */
-	coda_butta_stream(w, stream_id);
+	queue_drop_stream(w, stream_id);
 
 	/* ⛔⭐ `RCP.md` §4.2: the control channel closes, and ITS
 	 *     CLOSING IS THE END OF THE SESSION.  The registry slot (§8.2
@@ -8437,7 +8437,7 @@ int wt_stream_chiuso(wt *w, int64_t stream_id, uint64_t codice, bool con_codice)
 		 * ⚠ It is not the case of the measured ~30 s (that one goes through `"finita"` and
 		 *   the heartbeat): it is a WORSE case that is closed by the same
 		 *   line, and it came out while writing it. */
-		cattura_spegni_se_sola(w, "the client closed the control channel");
+		capture_turn_off_if_alone(w, "the client closed the control channel");
 		rcp_libera(w->rcp);
 		w->rcp = NULL;
 		w->rcp_stream = -1;
@@ -8446,19 +8446,19 @@ int wt_stream_chiuso(wt *w, int64_t stream_id, uint64_t codice, bool con_codice)
 	if (stream_id == w->sessione)
 		w->sessione = -1;
 
-	r = richiesta_trova(w, stream_id, false);
+	r = request_find(w, stream_id, false);
 	if (r)
 		r->usato = false;
 
 	if (!w->h3)
 		return 0;
-	if (con_codice) {
+	if (with_code) {
 		int rv = nghttp3_conn_close_stream(w->h3, stream_id, codice);
 		if (rv != 0 && rv != NGHTTP3_ERR_STREAM_NOT_FOUND) {
 			registro_dice_di(REG_WT, wt_chi(w), "⛔ nghttp3_conn_close_stream: %s",
 			                 nghttp3_strerror(rv));
 			ngtcp2_ccerr_set_application_error(
-				w->ultimo_errore,
+				w->last_error,
 				nghttp3_err_infer_quic_app_error_code(rv), NULL, 0);
 			return NGTCP2_ERR_CALLBACK_FAILURE;
 		}
@@ -8503,7 +8503,7 @@ int wt_ack_stream_data(wt *w, int64_t stream_id, uint64_t len)
 	return 0;
 }
 
-int wt_estendi_max_stream_data(wt *w, int64_t stream_id)
+int wt_extend_max_stream_data(wt *w, int64_t stream_id)
 {
 	if (!w->h3)
 		return 0;
@@ -8511,7 +8511,7 @@ int wt_estendi_max_stream_data(wt *w, int64_t stream_id)
 	return 0;
 }
 
-int wt_estendi_max_streams_bidi(wt *w, uint64_t max_streams)
+int wt_extend_max_streams_bidi(wt *w, uint64_t max_streams)
 {
 	if (!w->h3)
 		return 0;
@@ -8530,7 +8530,7 @@ int wt_estendi_max_streams_bidi(wt *w, uint64_t max_streams)
  * ⚠ And if the RCP session does not exist yet — a QUIC connection open but without a
  *   control channel — the second road remains, which is precisely the case for
  *   which §3.1 wanted two of them. */
-void wt_congeda(wt *w, uint8_t motivo, const char *dettaglio)
+void wt_dismiss(wt *w, uint8_t motivo, const char *dettaglio)
 {
 	if (!w)
 		return;
@@ -8554,7 +8554,7 @@ void wt_congeda(wt *w, uint8_t motivo, const char *dettaglio)
  *    the request is a PROCESS number, and whoever recognises it is `rcp.c`.  ⚠ And
  *    if nobody takes it that is fine — it means the connection
  *    died while PAM was answering, and there is nobody left to admit. */
-bool wt_verdetto(wt *w, uint64_t pratica, bool ammesso, bool ripresa)
+bool wt_verdict(wt *w, uint64_t pratica, bool ammesso, bool ripresa)
 {
 	if (!w || !w->rcp)
 		return false;
@@ -8574,7 +8574,7 @@ bool wt_verdetto(wt *w, uint64_t pratica, bool ammesso, bool ripresa)
  * ⚠ It goes through BEFORE the RCP session exists (the QUIC connection is there, the control
  *   channel is not): then there is nothing to note and that is fine — whoever
  *   is not attached yet holds no slot. */
-void wt_segno_di_vita(wt *w, ngtcp2_tstamp ts)
+void wt_sign_of_life(wt *w, ngtcp2_tstamp ts)
 {
 	if (w && w->rcp)
 		rcp_segno_di_vita(w->rcp, ts / NGTCP2_MILLISECONDS);
@@ -8585,7 +8585,7 @@ void wt_batti(wt *w, ngtcp2_tstamp ts)
 	/* ⛔ FIRST of all: `audio_regola()` below enqueues audio blocks, and
 	 *    `dgram_accoda()` stamps them with this field.  A stamp one
 	 *    heartbeat old would give every block a false age. */
-	w->ts_ora = ts;
+	w->ts_now = ts;
 
 	if (w->rcp)
 		rcp_tempo(w->rcp, ts / NGTCP2_MILLISECONDS);
@@ -8626,7 +8626,7 @@ void wt_batti(wt *w, ngtcp2_tstamp ts)
 	 * ⭐ The two decisions interlock precisely here, and it is the first place in
 	 *    which it happens: without §7.15 this line would have to send a byte on a
 	 *    channel never born. */
-	if (w->canale_entro && ts >= w->canale_entro && w->chiusura < 0) {
+	if (w->channel_deadline && ts >= w->channel_deadline && w->chiusura < 0) {
 		registro_dice_di(REG_RCP, wt_chi(w),
 		                 "⛔ %s: WebTransport session open and control "
 		                 "channel NEVER opened within %llu ms — farewell "
@@ -8638,7 +8638,7 @@ void wt_batti(wt *w, ngtcp2_tstamp ts)
 		                 (unsigned long long)(WT_TETTO_CANALE_NS
 		                                      / NGTCP2_MILLISECONDS),
 		                 RCP_TEMPO_SCADUTO);
-		w->canale_entro = 0;
+		w->channel_deadline = 0;
 		chiudi_sessione(w, RCP_TEMPO_SCADUTO);
 	}
 
@@ -8651,7 +8651,7 @@ void wt_batti(wt *w, ngtcp2_tstamp ts)
 		 *    were looked at after, the «queue not empty» branch would reset
 		 *    `chiusura_da` forever and one would never get here: it is
 		 *    exactly the defect this line removes. */
-		if (w->chiusura_scadenza && ts >= w->chiusura_scadenza) {
+		if (w->closing_deadline && ts >= w->closing_deadline) {
 			uint8_t m = (uint8_t)w->chiusura;
 			registro_dice_di(REG_WT, wt_chi(w),
 			                 "⛔ the output queue did not empty in 3 s "
@@ -8661,13 +8661,13 @@ void wt_batti(wt *w, ngtcp2_tstamp ts)
 			                 "0x%02x — §3.1 point 3 is the reason that saves the "
 			                 "diagnoses, and waiting forever means never "
 			                 "executing it",
-			                 coda_da_spedire(w), w->byte_in_coda,
-			                 w->byte_in_volo, m);
+			                 queue_unsent(w), w->byte_in_queue,
+			                 w->byte_in_flight, m);
 			w->chiusura = -1;
 			w->chiusura_da = 0;
-			w->chiusura_scadenza = 0;
+			w->closing_deadline = 0;
 			chiudi_adesso(w, m);
-		} else if (!coda_vuota(w)) {
+		} else if (!queue_empty(w)) {
 			w->chiusura_da = 0;
 		} else if (w->chiusura_da == 0) {
 			w->chiusura_da = ts + WT_ATTESA_CHIUSURA_NS;
@@ -8675,16 +8675,16 @@ void wt_batti(wt *w, ngtcp2_tstamp ts)
 			uint8_t m = (uint8_t)w->chiusura;
 			w->chiusura = -1;
 			w->chiusura_da = 0;
-			w->chiusura_scadenza = 0;
+			w->closing_deadline = 0;
 			chiudi_adesso(w, m);
 		}
 	}
 
 	regola_battito(w);
-	if (w->battito_ms && w->battito <= ts) {
+	if (w->heartbeat_ms && w->battito <= ts) {
 		/* Time has not advanced as much as needed: it is postponed forward anyway,
 		 * or the loop would spin idle. */
-		w->battito = ts + w->battito_ms * NGTCP2_MILLISECONDS;
+		w->battito = ts + w->heartbeat_ms * NGTCP2_MILLISECONDS;
 	}
 }
 
@@ -8698,13 +8698,13 @@ ngtcp2_ssize wt_scrivi(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 
 	/* ⛔ The session clock: see `wt_batti()`.  ⚠ Here it is needed because a
 	 *   write can arrive between one heartbeat and the next. */
-	w->ts_ora = ts;
+	w->ts_now = ts;
 
 	/* ⭐ A write pass starts here, and the streams all start again
 	 *    UNBLOCKED: the list holds for one pass only.  ⚠ It sits outside the loop
 	 *    on purpose — resetting it inside would put the same element back in play at
 	 *    every round, which is precisely the loop that does not advance. */
-	w->nbloccati = 0;
+	w->nblocked = 0;
 	w->troppi_bloccati = false;
 
 	/* ═══════════════════════════════════════════════════════════════════════
@@ -8773,7 +8773,7 @@ ngtcp2_ssize wt_scrivi(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 		nghttp3_vec wtvec[1];
 		size_t wt_orig = 0;
 		bool wt_mio = false;
-		size_t mio_i = 0;
+		size_t my_i = 0;
 		ngtcp2_ssize ndatalen = -1, nwrite;
 		const nghttp3_vec *v;
 		size_t vcnt;
@@ -8793,7 +8793,7 @@ ngtcp2_ssize wt_scrivi(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 				registro_dice_di(REG_WT, wt_chi(w), "⛔ nghttp3_conn_writev_stream: %s",
 				                 nghttp3_strerror((int)sveccnt));
 				ngtcp2_ccerr_set_application_error(
-					w->ultimo_errore,
+					w->last_error,
 					nghttp3_err_infer_quic_app_error_code((int)sveccnt),
 					NULL, 0);
 				return NGTCP2_ERR_CALLBACK_FAILURE;
@@ -8801,16 +8801,16 @@ ngtcp2_ssize wt_scrivi(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 		}
 
 		/* ── 1. the settings ────────────────────────────────────────── */
-		if (sveccnt > 0 && stream_id == w->ctrl_id && !w->impostazioni_scritte) {
+		if (sveccnt > 0 && stream_id == w->ctrl_id && !w->settings_written) {
 			/* ⛔ The rewriting is done ONCE ONLY.  If the previous pass
 			 *    sent only a piece of it, nghttp3 offers us
 			 *    the same bytes again — we have not yet told it we
 			 *    consumed them — and recomposing the buffer from scratch
 			 *    would resend the piece already gone out. */
-			if (w->impbuf_off == 0)
-				w->impbuf_orig =
+			if (w->settings_buf_off == 0)
+				w->settings_buf_orig =
 					riscrivi_impostazioni(w, vec, (size_t)sveccnt);
-			wt_orig = w->impbuf_orig;
+			wt_orig = w->settings_buf_orig;
 		}
 
 		/* ── 2. our own queue ───────────────────────────────────────── */
@@ -8818,7 +8818,7 @@ ngtcp2_ssize wt_scrivi(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 		 *    blocked stream, and stopping there would redo the head-of-line blocking that
 		 *    §5.1 exists to remove. */
 		if (sveccnt <= 0 && !w->troppi_bloccati) {
-			uscita *u = coda_scegli(w, &mio_i);
+			uscita *u = coda_scegli(w, &my_i);
 			if (u) {
 				stream_id = u->id;
 				fin = u->fin ? 1 : 0;
@@ -8834,12 +8834,12 @@ ngtcp2_ssize wt_scrivi(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 		if (wt_orig) {
 			/* ⭐ PHASE 9 — and not even here is the defect of 23 August present:
 			 *    `impbuf` is a FIXED array inside `wt` (256 bytes), written
-			 *    ONCE ONLY (`impostazioni_scritte`) and alive as long as the
+			 *    ONCE ONLY (`settings_written`) and alive as long as the
 			 *    connection.  ⛔ If one day the settings were
 			 *    rewritten, rewriting it while ngtcp2 still holds this
 			 *    pointer would be the same silent corruption. */
-			wtvec[0].base = w->impbuf + w->impbuf_off;
-			wtvec[0].len = w->impbuf_len - w->impbuf_off;
+			wtvec[0].base = w->settings_buf + w->settings_buf_off;
+			wtvec[0].len = w->settings_buf_len - w->settings_buf_off;
 			v = wtvec;
 			vcnt = 1;
 		} else if (wt_mio) {
@@ -8870,7 +8870,7 @@ ngtcp2_ssize wt_scrivi(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 				 *   normal and transient condition that dissolves with the
 				 *   first MAX_STREAM_DATA. */
 				if (wt_mio) {
-					uscita *u = &w->coda[mio_i];
+					uscita *u = &w->coda[my_i];
 					registro_dettaglio(
 						REG_WT,
 						"stream %ld blocked: %zu bytes STAY in the "
@@ -8884,8 +8884,8 @@ ngtcp2_ssize wt_scrivi(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 					 *     frame at the head blocked the following ones **at
 					 *     application level**, cancelling exactly the
 					 *     benefit §5.1 buys at the QUIC level. */
-					if (w->nbloccati < WT_BLOCCATI_MAX) {
-						w->bloccati[w->nbloccati++] = stream_id;
+					if (w->nblocked < WT_BLOCCATI_MAX) {
+						w->bloccati[w->nblocked++] = stream_id;
 					} else {
 						/* ⚠ The cap is declared instead of slipping by:
 						 *   from here on the pass really stops, and
@@ -8909,7 +8909,7 @@ ngtcp2_ssize wt_scrivi(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 					/* The stream is already closed for writing — normally
 					 * because WE RESET it (§5.1): the bytes that
 					 * remained do not leave, which is what was wanted. */
-					coda_uccidi(w, mio_i);
+					coda_uccidi(w, my_i);
 					continue;
 				}
 				nghttp3_conn_shutdown_stream_write(w->h3, stream_id);
@@ -8919,7 +8919,7 @@ ngtcp2_ssize wt_scrivi(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 			default:
 				registro_dice_di(REG_WT, wt_chi(w), "⛔ ngtcp2_conn_writev_stream: %s",
 				                 ngtcp2_strerror((int)nwrite));
-				ngtcp2_ccerr_set_liberr(w->ultimo_errore, (int)nwrite,
+				ngtcp2_ccerr_set_liberr(w->last_error, (int)nwrite,
 				                        NULL, 0);
 				return NGTCP2_ERR_CALLBACK_FAILURE;
 			}
@@ -8931,7 +8931,7 @@ ngtcp2_ssize wt_scrivi(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 			 * returns is OURS, and telling it would throw off its
 			 * counts. */
 			if (wt_mio) {
-				uscita *u = &w->coda[mio_i];
+				uscita *u = &w->coda[my_i];
 				u->off += (size_t)ndatalen;
 				if (u->off >= u->dati.n) {
 					/* ⛔⭐ `RCP.md` §4.2: the control channel
@@ -8959,7 +8959,7 @@ ngtcp2_ssize wt_scrivi(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 					 *    is the job of the ack (`coda_conferma()`) or of the closure of the
 					 *    stream (`wt_stream_chiuso()`) — the only two conditions
 					 *    ngtcp2's contract admits. */
-					coda_consegna(w, mio_i);
+					coda_consegna(w, my_i);
 				}
 			} else if (wt_orig) {
 				uint64_t c = (uint64_t)ndatalen;
@@ -8978,26 +8978,26 @@ ngtcp2_ssize wt_scrivi(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 				 *    partial write with `off`.  Two
 				 *    opposite policies for the same outcome, in the
 				 *    same module. */
-				if (c > w->impbuf_len - w->impbuf_off) {
+				if (c > w->settings_buf_len - w->settings_buf_off) {
 					registro_dice_di(REG_WT, wt_chi(w),
 					                 "⛔ settings, impossible count "
 					                 "(%llu taken out of %zu offered)",
 					                 (unsigned long long)c,
-					                 w->impbuf_len - w->impbuf_off);
+					                 w->settings_buf_len - w->settings_buf_off);
 					w->guasto = true;
 					return NGTCP2_ERR_CALLBACK_FAILURE;
 				}
-				w->impbuf_off += (size_t)c;
-				if (w->impbuf_off < w->impbuf_len) {
+				w->settings_buf_off += (size_t)c;
+				if (w->settings_buf_off < w->settings_buf_len) {
 					registro_dettaglio(
 						REG_WT,
 						"settings, %zu bytes out of %zu — the rest "
 						"at the next pass",
-						w->impbuf_off, w->impbuf_len);
+						w->settings_buf_off, w->settings_buf_len);
 				} else {
-					w->impostazioni_scritte = true;
+					w->settings_written = true;
 					if (nghttp3_conn_add_write_offset(
-						    w->h3, stream_id, w->impbuf_orig) != 0) {
+						    w->h3, stream_id, w->settings_buf_orig) != 0) {
 						w->guasto = true;
 						return NGTCP2_ERR_CALLBACK_FAILURE;
 					}
@@ -9010,7 +9010,7 @@ ngtcp2_ssize wt_scrivi(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 					                 "⛔ nghttp3_conn_add_write_offset: %s",
 					                 nghttp3_strerror(rv));
 					ngtcp2_ccerr_set_application_error(
-						w->ultimo_errore,
+						w->last_error,
 						nghttp3_err_infer_quic_app_error_code(rv), NULL,
 						0);
 					return NGTCP2_ERR_CALLBACK_FAILURE;

@@ -25,13 +25,13 @@ AppuntiKde *appunti_kde_apri(GError **sbaglio);
  *    belongs to wlroots, and there we are in its home (`STUDI.md` §xfce §8).  Only
  *    the compositor's name in the log lines changes. */
 AppuntiKde *appunti_kde_apri_wlroots(GError **sbaglio);
-void appunti_kde_chiudi(AppuntiKde *appunti);
-void appunti_kde_ascolta(AppuntiKde *appunti, AppuntiSuTesto su_testo,
-                         AppuntiSuRichiesta su_richiesta, void *dati);
-char *appunti_kde_ultimo_testo(AppuntiKde *appunti, size_t *byte);
-void appunti_kde_leggi_adesso(AppuntiKde *appunti);
-gboolean appunti_kde_offri(AppuntiKde *appunti, GError **sbaglio);
-void appunti_kde_rispondi(AppuntiKde *appunti, uint32_t serial, const char *testo,
+void clipboard_kde_close(AppuntiKde *appunti);
+void clipboard_kde_listen(AppuntiKde *appunti, ClipboardOnText on_text,
+                         ClipboardOnRequest on_request, void *dati);
+char *clipboard_kde_last_text(AppuntiKde *appunti, size_t *byte);
+void clipboard_kde_read_now(AppuntiKde *appunti);
+gboolean clipboard_kde_offer(AppuntiKde *appunti, GError **sbaglio);
+void clipboard_kde_reply(AppuntiKde *appunti, uint32_t serial, const char *testo,
                           size_t byte);
 
 #endif

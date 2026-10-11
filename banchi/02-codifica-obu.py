@@ -117,8 +117,8 @@ def elenca(percorso):
                 "byte": taglia, "ha_taglia": bool(ha_taglia)}
         if tipo in (OBU_FRAME, OBU_FRAME_HEADER) and carico:
             primo = carico[0]
-            mostra_esistente = (primo >> 7) & 1
-            if mostra_esistente:
+            show_existing = (primo >> 7) & 1
+            if show_existing:
                 voce["chiave"] = False
             else:
                 voce["chiave"] = ((primo >> 5) & 3) == 0  # frame_type 0 = KEY_FRAME
@@ -152,14 +152,14 @@ def verifica(percorso, chiavi_attese):
 
     # ⛔ And the half that gets forgotten: the sequence in front of EVERY keyframe.
     gruppi = 0
-    sequenza_vista = False
+    sequence_seen = False
     for o in obu:
         if o["tipo"] == OBU_SEQUENCE_HEADER:
-            sequenza_vista = True
+            sequence_seen = True
         elif o["tipo"] in (OBU_FRAME, OBU_FRAME_HEADER):
-            if o.get("chiave") and sequenza_vista:
+            if o.get("chiave") and sequence_seen:
                 gruppi += 1
-            sequenza_vista = False
+            sequence_seen = False
     if gruppi < chiavi_attese:
         guasti.append(f"⛔ the SEQUENCE_HEADER precedes {gruppi} keyframes and should have "
                       f"preceded {chiavi_attese}: a client connecting later "

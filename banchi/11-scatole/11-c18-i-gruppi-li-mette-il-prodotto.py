@@ -76,23 +76,23 @@ PAROLA = "provanic2026"
 # ⛔ The group in which `gpu-udev.sh` puts the EXCLUDED card: nobody must
 #    be in it, ⇒ it does not count among the groups the product must give.
 #    ⚠ It is the same rule as `src/provisiona.sh`: the excluded card exists
-#    so that the measurements are always made on the same one (`gid_della_scheda`).
-GRUPPO_ESCLUSO = "remotix-nogpu"
+#    so that the measurements are always made on the same one (`card_gid`).
+EXCLUDED_GROUP = "remotix-nogpu"
 
 # ⭐ The two product lines this mesh reads, and they are in one place
 #    only because if the product changes them they are changed HERE (§1.47).
 #    `[R]` `src/figlio.c`, `iscrivi_ai_gruppi_della_scheda` and `gruppi_della_scheda`.
-RIGA_ISCRIZIONE = "FIRST CONNECTION"
-RIGA_VEDE = "in the card's groups"
-RIGA_CIECO = "IS NOT IN THE CARD'S GROUP"
+LINE_ENROLLMENT = "FIRST CONNECTION"
+LINE_SEES = "in the card's groups"
+LINE_BLIND = "IS NOT IN THE CARD'S GROUP"
 # ⚠ The log is in UTF-8 and the product writes straight apostrophes: the line
 #   «IS NOT IN THE CARD'S GROUP» is searched as it is, without normalising anything.
 
 # ⛔ The two places where the product looks for `usermod` (`src/figlio.c`,
-#    `comando_da_root`): the injected fault must hide BOTH of them, or
+#    `run_as_root`): the injected fault must hide BOTH of them, or
 #    the product finds the second and the fault does not bite.
-POSTI_USERMOD = ("/usr/sbin/usermod", "/sbin/usermod")
-CODA_NASCOSTO = ".c18-nascosto"
+USERMOD_PATHS = ("/usr/sbin/usermod", "/sbin/usermod")
+HIDDEN_SUFFIX = ".c18-nascosto"
 
 
 def corri(argv, tempo=30, **kw):
@@ -109,19 +109,19 @@ def corri(argv, tempo=30, **kw):
 #     a convenience.  `video` and `render` are the names of ONE distribution;
 #     what counts is the **gid** that the kernel and udev put on
 #     `/dev/dri/cardN` and `/dev/dri/renderDN` of THIS machine.
-#     `[R]` `src/provisiona.sh`, `gid_della_scheda()`; `src/figlio.c`,
+#     `[R]` `src/provisiona.sh`, `card_gid()`; `src/figlio.c`,
 #     `raccogli_gruppi_scheda()`.  ⛔ Three places that read the same thing
 #     in the same way: if they diverge, the judgement diverges.
 # ═══════════════════════════════════════════════════════════════════════════
-def gid_escluso():
-    r = corri(["getent", "group", GRUPPO_ESCLUSO], 10)
+def excluded_gid():
+    r = corri(["getent", "group", EXCLUDED_GROUP], 10)
     if r is None or r.returncode != 0:
         return None
     pezzi = (r.stdout or "").strip().split(":")
     return pezzi[2] if len(pezzi) > 2 else None
 
 
-def gruppi_dei_nodi(cartella="/dev/dri"):
+def node_groups(cartella="/dev/dri"):
     """⭐ (nomi, perche') — the NAMES of the groups of the card's nodes.
 
     ⛔ Empty list and a reason when it cannot be known: without the nodes this
@@ -130,7 +130,7 @@ def gruppi_dei_nodi(cartella="/dev/dri"):
     """
     if not os.path.isdir(cartella):
         return [], "%s is not there: this box has no nodes of the card" % cartella
-    escluso = gid_escluso()
+    escluso = excluded_gid()
     gid = []
     for nome in sorted(os.listdir(cartella)):
         if not re.match(r"^(card|renderD)[0-9]+$", nome):
@@ -158,7 +158,7 @@ def gruppi_dei_nodi(cartella="/dev/dri"):
     return nomi, ""
 
 
-def gruppi_di(chi):
+def groups_of(chi):
     """The user's groups NOW, read from the system.  `None` = I do not know."""
     r = corri(["id", "-nG", chi], 10)
     if r is None or r.returncode != 0:
@@ -191,15 +191,15 @@ def giudizio(attesi, prima, dopo, fetta, chi):
             "had nothing to enrol and this run proves nothing"
             % (chi, ", ".join(gia)))
 
-    righe_mie = [r for r in fetta if ("[%s]" % chi) in r]
-    iscritto = any(RIGA_ISCRIZIONE in r for r in righe_mie)
-    vede = any(RIGA_VEDE in r and RIGA_CIECO not in r for r in righe_mie)
-    cieco = any(RIGA_CIECO in r for r in righe_mie)
+    my_lines = [r for r in fetta if ("[%s]" % chi) in r]
+    iscritto = any(LINE_ENROLLMENT in r for r in my_lines)
+    vede = any(LINE_SEES in r and LINE_BLIND not in r for r in my_lines)
+    cieco = any(LINE_BLIND in r for r in my_lines)
     mancanti = [g for g in attesi if g not in dopo]
 
     # ⛔ No line of this tenant ⇒ the client never reached
     #    the child: it is not a red of the product, it is a run not done.
-    if not righe_mie:
+    if not my_lines:
         return 3, "SI", "?", "?", (
             "in the log there is no line of «%s»: the client did not "
             "reach the child, and without a session there is no enrolment to "
@@ -216,15 +216,15 @@ def giudizio(attesi, prima, dopo, fetta, chi):
     perche = []
     if not iscritto:
         perche.append("«%s» is missing from the log: the product did NOT try to "
-                      "enrol it" % RIGA_ISCRIZIONE)
+                      "enrol it" % LINE_ENROLLMENT)
     if mancanti:
         perche.append("after the connection «%s» is NOT in the groups %s (has: %s)"
                       % (chi, ", ".join(mancanti), " ".join(dopo) or "nothing"))
     if cieco:
-        perche.append("the product declares the session BLIND («%s»)" % RIGA_CIECO)
+        perche.append("the product declares the session BLIND («%s»)" % LINE_BLIND)
     elif not vede:
         perche.append("the line «%s» is missing: the product does not declare that this "
-                      "session sees" % RIGA_VEDE)
+                      "session sees" % LINE_SEES)
     return 1, "SI", faccia_i, faccia_d, "; ".join(perche)
 
 
@@ -240,22 +240,22 @@ def giudizio(attesi, prima, dopo, fetta, chi):
 #   `usermod` left hidden would make blind all the meshes that come
 #   after, and that is precisely the defect this net is made not to have.
 # ═══════════════════════════════════════════════════════════════════════════
-def nascondi_usermod():
+def hide_usermod():
     """⛔ Returns the list of what it moved (to be put back)."""
     spostati = []
-    for p in POSTI_USERMOD:
+    for p in USERMOD_PATHS:
         if os.path.exists(p) and not os.path.islink(p):
-            if corri(["mv", p, p + CODA_NASCOSTO], 10) is not None:
+            if corri(["mv", p, p + HIDDEN_SUFFIX], 10) is not None:
                 spostati.append(p)
     return spostati
 
 
-def rimetti_usermod():
+def restore_usermod():
     """⭐ Always, and without asking: what it finds hidden it puts back."""
     rimessi = []
-    for p in POSTI_USERMOD:
-        if os.path.exists(p + CODA_NASCOSTO):
-            corri(["mv", p + CODA_NASCOSTO, p], 10)
+    for p in USERMOD_PATHS:
+        if os.path.exists(p + HIDDEN_SUFFIX):
+            corri(["mv", p + HIDDEN_SUFFIX, p], 10)
             rimessi.append(p)
     return rimessi
 
@@ -320,9 +320,9 @@ def certifica():
     # ⭐ And the fault's two tools are tested by NAME, not by trust: a
     #   `usermod` that is not put back is a broken box for all the meshes.
     print("  %s %-62s %s"
-          % ("OK " if len(POSTI_USERMOD) == 2 else "NO ",
+          % ("OK " if len(USERMOD_PATHS) == 2 else "NO ",
              "⛔ the fault hides ALL the places of `usermod`",
-             " ".join(POSTI_USERMOD)))
+             " ".join(USERMOD_PATHS)))
     print()
     if guai:
         print("⛔ %d cases of the judgement do NOT give what they must" % guai)
@@ -362,14 +362,14 @@ def main():
     # ⭐ First of all: if a dead run left `usermod` hidden, it is
     #    put back BEFORE measuring — otherwise this run would measure the
     #    leftover of yesterday's run and call it a defect of the product.
-    rimessi = rimetti_usermod()
+    rimessi = restore_usermod()
     if rimessi:
         print("   ⚠ a previous run had left %s hidden: put back"
               % ", ".join(rimessi))
 
-    attesi, perche_nodi = gruppi_dei_nodi()
+    attesi, why_nodes = node_groups()
     if not attesi:
-        print("   ⛔ %s ⇒ I could not look" % perche_nodi)
+        print("   ⛔ %s ⇒ I could not look" % why_nodes)
         return 3
     print("   the groups of the card's nodes, READ NOW: %s" % ", ".join(attesi))
 
@@ -383,11 +383,11 @@ def main():
 
     spostati = []
     try:
-        prima = gruppi_di(chi)
+        prima = groups_of(chi)
         print("   G  before: %s" % (" ".join(prima) if prima else "I do not know"))
 
         if a.senza_usermod:
-            spostati = nascondi_usermod()
+            spostati = hide_usermod()
             if not spostati:
                 print("   ⛔ I could not hide `usermod`: the fault is not "
                       "injected ⇒ I could not look")
@@ -411,15 +411,15 @@ def main():
         #   the parent has spawned it, and how long it takes is not up to us.
         fetta, scadenza = [], time.time() + a.attesa
         while time.time() < scadenza:
-            dopo_righe = leggi(a.registro)
-            fetta = dopo_righe[segno:] if dopo_righe is not None else []
+            after_lines = leggi(a.registro)
+            fetta = after_lines[segno:] if after_lines is not None else []
             if any(("[%s]" % chi) in x and
-                   (RIGA_ISCRIZIONE in x or RIGA_VEDE in x or RIGA_CIECO in x)
+                   (LINE_ENROLLMENT in x or LINE_SEES in x or LINE_BLIND in x)
                    for x in fetta):
                 break
             time.sleep(0.5)
 
-        dopo = gruppi_di(chi)
+        dopo = groups_of(chi)
         print("   D  after:  %s" % (" ".join(dopo) if dopo else "I do not know"))
         esito, fg, fi, fd, perche = giudizio(attesi, prima, dopo, fetta, chi)
 
@@ -433,8 +433,8 @@ def main():
         print("   ⚠ FINDING, not verdict: frames sent to «%s»: %s"
               % (chi, "I do not know" if fot is None else fot))
         for riga in fetta:
-            if ("[%s]" % chi) in riga and (RIGA_ISCRIZIONE in riga or
-                                           RIGA_VEDE in riga or RIGA_CIECO in riga):
+            if ("[%s]" % chi) in riga and (LINE_ENROLLMENT in riga or
+                                           LINE_SEES in riga or LINE_BLIND in riga):
                 print("   log: %s" % riga.strip()[:150])
 
         print()
@@ -461,7 +461,7 @@ def main():
     finally:
         # ⛔ In order: first `usermod` goes back to its place (does `userdel` need it?
         #    no, but ANYONE who comes after does), then the tenant is cleared out.
-        rimetti_usermod()
+        restore_usermod()
         if spostati:
             print("   ⭐ `usermod` put back in its place")
         sgombera(chi)

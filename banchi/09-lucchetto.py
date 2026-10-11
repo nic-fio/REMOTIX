@@ -75,7 +75,7 @@ def prendi(chi, secondi=900, attesa=0, dillo=True):
     """⛔ `attesa` = how many seconds I am willing to wait for my turn.
        Zero means «now or I stop», which is the default: a bench
        that waits in silence looks like a stuck bench."""
-    fine_attesa = time.time() + attesa
+    wait_deadline = time.time() + attesa
     while True:
         # ⭐ The atomic act.  `mkdir` without `-p`: if it already exists, it fails.
         rc, _, _ = _root("mkdir %s 2>/dev/null" % POSTO)
@@ -123,7 +123,7 @@ def prendi(chi, secondi=900, attesa=0, dillo=True):
                       " CHANGED — it was someone else's, fresh.")
             continue
 
-        if time.time() >= fine_attesa:
+        if time.time() >= wait_deadline:
             raise NonMio("the netem on `lo` belongs to «%s» for %d more s: "
                          "I do NOT measure, because a fault that is not mine "
                          "would give a plausible and false number"

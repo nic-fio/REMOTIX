@@ -19,9 +19,9 @@ def tempi(prova, versione):
     righe = [r for r in open(p) if r and r[0].isdigit()]
     if not righe:
         return None
-    lett = csv.DictReader(io.StringIO("n,chiave,byte,us_conversione,us_caricamento,us_codifica,ricodifiche\n" + "".join(righe)))
+    rdr = csv.DictReader(io.StringIO("n,chiave,byte,us_conversione,us_caricamento,us_codifica,ricodifiche\n" + "".join(righe)))
     cod, prep, chiave_byte, delta_byte = [], [], [], []
-    for r in lett:
+    for r in rdr:
         if r["chiave"] == "-":
             continue
         cod.append(int(r["us_codifica"]))
@@ -33,9 +33,9 @@ def tempi(prova, versione):
                 chiave=max(chiave_byte) if chiave_byte else 0,
                 delta=statistics.median(delta_byte) if delta_byte else 0, n=len(cod))
 
-per_prova = {}
+per_test = {}
 for e in esiti:
-    per_prova.setdefault(e["prova"], {})[e["versione"]] = e
+    per_test.setdefault(e["prova"], {})[e["versione"]] = e
 
 def num(x):
     """the PSNR is «y:.. u:.. v:.. average:..»: the average is judged, everything is printed"""
@@ -48,7 +48,7 @@ def num(x):
 
 print(f"{'prova':38} {'ver':7} {'cod':4} {'dec':>4} {'psnr':>6} {'ssim':>6} {'byte':>9} {'chiave':>8} {'delta':>7} {'cod µs':>7} {'prep µs':>7}  ffprobe · psnr y/u/v")
 peggio = []
-for prova, v in per_prova.items():
+for prova, v in per_test.items():
     for versione in ("vecchio", "nuovo"):
         e = v.get(versione)
         if not e:

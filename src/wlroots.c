@@ -35,7 +35,7 @@
  *   6. the configuration enabled a single head: with two outputs the
  *      protocol dies (`unconfigured_head`) ⇒ the others are reconfirmed as
  *      they are;
- *   7. the object leaks in `wlr_chiudi`.
+ *   7. the object leaks in `wlr_close`.
  *
  * ===========================================================================
  * ⭐⭐ THE CARD ROUTE — 21 Sep 2026, behind `CATTURA_STRADA_SCHEDA`
@@ -48,7 +48,7 @@
  *
  * ⛔ Memory stays: it is the FALLBACK, and a DECLARED fallback.  If the card
  *    is asked for and memory arrives, the log says so with the reason, and
- *    every frame carries `sulla_scheda` — it is never deduced from the route
+ *    every frame carries `on_card` — it is never deduced from the route
  *    asked for.
  *
  * ---------------------------------------------------------------------------
@@ -108,7 +108,7 @@
  *   · «Does the wait time out while the copy onto the slab is in flight, and
  *     the next round resume another one?»  ⇒ No: the next round resumes THE
  *     SAME frame (`palco->frame` is alive) with THE SAME slab
- *     (`lastra_del_giro` is kept).  A new `capture_output` starts only
+ *     (`round_slab` is kept).  A new `capture_output` starts only
  *     when `frame` is NULL, and `frame` goes back to NULL only when its slab
  *     is delivered or thrown away.  ⛔ And on timeout the slab does NOT get
  *     dirty: the old draft threw it away, and that was defect 2 in card form.
@@ -152,7 +152,7 @@
  *
  *   The `buffer` event speaks `wl_shm.format` (0 and 1 special) → `f_shm`, and
  *   is translated with `shm_a_drm()` ONLY for whoever is downstream.  The
- *   `linux_dmabuf` event speaks the true DRM fourcc → `o_scheda_formato`, and
+ *   `linux_dmabuf` event speaks the true DRM fourcc → `o_card_format`, and
  *   does NOT go through `shm_a_drm()`.  The slab is allocated EXACTLY in the
  *   format and size of that event: `[R]` wlroots, a different format or size
  *   is `invalid buffer` — a PROTOCOL ERROR, and the connection dies.
@@ -210,7 +210,7 @@ typedef struct {
 	struct zwlr_output_head_v1 *proxy;
 	char *nome;
 	bool accesa;
-} Testa;
+} Head;
 
 static void allarga_24(WlrPalco *p, WlrFotogramma *fuori);
 
@@ -262,36 +262,36 @@ static void allarga_24(WlrPalco *p, WlrFotogramma *fuori);
 /* The default is FALSE: with VA-API (the Intel, where radeonsi/iHD are alone
  * in the process) the defect is not there, and 113 MB per session on an
  * integrated GPU are system RAM spent for nothing. */
-static bool lastre_massime = false;
+static bool max_slabs = false;
 
 void wlr_lastre_alla_tela_massima(bool si)
 {
-	lastre_massime = si;
+	max_slabs = si;
 }
 
 typedef enum {
-	LASTRA_LIBERA = 0,
-	LASTRA_IN_VOLO, /* named in the `copy` of the frame in progress    */
-	LASTRA_IN_MANO  /* delivered: until it comes back with `wlr_rendi()` */
-} LastraStato;
+	SLAB_FREE = 0,
+	SLAB_IN_FLIGHT, /* named in the `copy` of the frame in progress    */
+	SLAB_IN_HAND  /* delivered: until it comes back with `wlr_rendi()` */
+} SlabState;
 
 typedef struct {
 	struct gbm_bo *bo;
 	struct wl_buffer *buffer;
 	int fd;
 	uint32_t larghezza, altezza, stride, offset, formato; /* formato: DRM fourcc */
-	uint32_t bo_larghezza, bo_altezza; /* the BO: the birth size (WLR_LASTRA_*) */
+	uint32_t bo_width, bo_height; /* the BO: the birth size (WLR_LASTRA_*) */
 	uint64_t modificatore;
-	LastraStato stato;
+	SlabState stato;
 	bool sporca;
-} WlrLastra;
+} WlrSlab;
 
 typedef enum {
-	CONF_IN_CORSO = 0,
-	CONF_RIUSCITA,
-	CONF_FALLITA,  /* `failed`: the compositor said NO               */
-	CONF_ANNULLATA /* `cancelled`: the serial was old, try again     */
-} ConfEsito;
+	CONF_IN_PROGRESS = 0,
+	CONF_SUCCEEDED,
+	CONF_FAILED,  /* `failed`: the compositor said NO               */
+	CONF_CANCELLED /* `cancelled`: the serial was old, try again     */
+} ConfOutcome;
 
 struct WlrPalco {
 	struct wl_display *display;
@@ -299,7 +299,7 @@ struct WlrPalco {
 	struct wl_shm *shm;
 	struct zwlr_screencopy_manager_v1 *manager;
 	struct wl_output *uscita;
-	char *uscita_nome;
+	char *output_name;
 
 	/* the geometry the output declares — ⛔ the one it HAS, not the one wanted */
 	uint32_t larghezza, altezza;
@@ -314,15 +314,15 @@ struct WlrPalco {
 	struct zwlr_output_manager_v1 *gestore;
 	GPtrArray *teste; /* of `Testa *` — ALL of them, not just ours (defect 5) */
 	uint32_t serial;
-	bool serial_noto;
-	ConfEsito conf;
+	bool known_serial;
+	ConfOutcome conf;
 
 	/* the shared buffer, reused from one frame to the next */
 	struct wl_buffer *buffer;
 	void *pixel;
 	gsize byte;
 	int fd;
-	uint32_t b_larghezza, b_altezza, b_stride, b_formato;
+	uint32_t b_width, b_height, b_stride, b_format;
 	/*
 	 * ⛔⛔ THE DIRTY BUFFER.  If a frame is abandoned AFTER sending `copy`
 	 *     and without waiting for its outcome (dropped wire), the compositor
@@ -331,19 +331,19 @@ struct WlrPalco {
 	 *  ⚠ With the PENDING frame (defect 2) the timeout no longer dirties it:
 	 *    the copy stays ours and we wait.  It remains only for the dropped wire.
 	 */
-	bool buffer_sporco;
+	bool buffer_dirty;
 
 	/* ------------------------------------------------------------------ *
 	 * THE FRAME IN PROGRESS — ⭐ and it can survive a call.
 	 * ------------------------------------------------------------------ */
 	struct zwlr_screencopy_frame_v1 *frame;
-	bool visto_buffer, visto_buffer_done, pronto, fallito, copia_partita, y_invertita;
+	bool seen_buffer, seen_buffer_done, pronto, fallito, copy_started, y_invertita;
 	uint32_t f_shm; /* the format as wl_shm says it: needed by the buffer */
-	uint32_t f_larghezza, f_altezza, f_stride;
-	uint64_t f_secondi;
-	uint32_t f_nanosecondi;
+	uint32_t f_width, f_height, f_stride;
+	uint64_t f_seconds;
+	uint32_t f_nanoseconds;
 
-	bool detto_il_formato;
+	bool format_logged;
 	/*
 	 * ⭐ 24-BIT PIXELS — 5 Oct 2026, NVIDIA (RTX 4090, driver 595).
 	 *   `[M]` labwc on the NVIDIA offers in memory ONLY `BG24` (3 bytes per
@@ -357,11 +357,11 @@ struct WlrPalco {
 	 */
 	uint8_t *largo;
 	gsize largo_byte;
-	/* ⭐ The modifiers the encoder can import (see `lastra_prepara`):
-	 *    for the format `mod_formato`, asked once. */
-	uint32_t mod_formato;
-	uint64_t mod_ammessi[16];
-	int mod_quanti;
+	/* ⭐ The modifiers the encoder can import (see `slab_prepare`):
+	 *    for the format `mod_format`, asked once. */
+	uint32_t mod_format;
+	uint64_t mod_allowed[16];
+	int mod_count;
 	/*
 	 * ⭐⭐ THE DAMAGE — 21 Sep 2026, and the safety net found it.
 	 *
@@ -376,55 +376,55 @@ struct WlrPalco {
 	 * ⇒ `copy_with_damage` (screencopy v2+): the compositor answers only
 	 *   when the output has CHANGED.  It is the same contract as the push.
 	 * ⚠ But a KEYFRAME is sometimes needed at once even on a still desktop (a
-	 *   client attaching, a §5.2 request): `forza_intero` makes the NEXT round
+	 *   client attaching, a §5.2 request): `force_full` makes the NEXT round
 	 *   use `copy`, and `wlr_forza_intero()` sets it.  The very first round is
 	 *   full too: whoever attaches must see at once.
 	 */
-	bool forza_intero, detto_il_danno;
-	bool copia_col_danno; /* the copy in flight is `copy_with_damage` */
+	bool force_full, logged_damage;
+	bool duplicate_with_damage; /* the copy in flight is `copy_with_damage` */
 	/* ⭐ The damage DECLARED by the compositor, per frame (witness only,
 	 *    with `--parlantina`): `[M]` 5 Oct 2026, NVIDIA + zero copy, the
 	 *    compositor answers at 60/s on a still desktop — and the question is
 	 *    whether it declares it changed everywhere or in a corner. */
-	uint64_t danno_area_fotogramma, danno_area_somma;
-	uint32_t danno_rett_fotogramma, danno_rett_somma, danno_fotogrammi, danno_interi;
-	uint32_t danno_x, danno_y, danno_l, danno_a; /* the last rectangle */
-	WlrConteggi conteggi;
+	uint64_t frame_damage_area, damage_area_sum;
+	uint32_t frame_damage_rects, damage_rect_sum, damage_frames, whole_damage;
+	uint32_t damage_x, damage_y, damage_w, damage_h; /* the last rectangle */
+	WlrCounts conteggi;
 
 	/* ------------------------------------------------------------------ *
 	 * ⭐⭐ THE CARD ROUTE — the box at the top.
 	 *
-	 * ⛔ Everything below is valid ONLY if `scheda_nata`: before
+	 * ⛔ Everything below is valid ONLY if `card_born`: before
 	 *    `wlr_chiedi_la_scheda()` the fields are the zeros of `g_new0`, and
 	 *    zero for a descriptor means standard input — hence the flag.
 	 * ------------------------------------------------------------------ */
 	struct zwp_linux_dmabuf_v1 *dmabuf;
-	uint32_t dmabuf_versione;
-	bool scheda_nata; /* node open, `gbm` created, slabs initialised */
+	uint32_t dmabuf_version;
+	bool card_born; /* node open, `gbm` created, slabs initialised */
 	bool scheda;      /* ⭐ in force NOW                               */
 	int drm_fd;
 	struct gbm_device *gbm;
 	char *nodo;
 	/* the feedback's `main_device`: the node the compositor draws on */
 	dev_t principale;
-	bool principale_noto, feedback_finito;
+	bool main_known, feedback_finished;
 	/* the card offer in THIS frame — ⛔ DRM fourcc, NOT wl_shm */
-	bool offerto_scheda;
-	uint32_t o_scheda_formato, o_scheda_l, o_scheda_a;
-	WlrLastra lastre[WLR_LASTRE];
+	bool card_offered;
+	uint32_t o_card_format, o_card_w, o_card_h;
+	WlrSlab lastre[WLR_LASTRE];
 	unsigned prossima;
 	/* ⭐ -1: the frame in progress goes (or will go) to memory.  ⛔ It survives
 	 *    the timeout together with `frame`: it is the slab IN FLIGHT of THAT
 	 *    frame, and the next call finds it again. */
-	int lastra_del_giro;
+	int round_slab;
 	uint64_t generazione;
-	unsigned falliti_di_fila;
+	unsigned failed_in_a_row;
 	/* the creation of the `wl_buffer` (`zwp_linux_buffer_params_v1`) */
 	struct wl_buffer *creato;
-	bool params_finito, params_fallito;
+	bool params_finished, params_failed;
 	/* ⚠ the lines said only once */
-	bool detto_senza_offerta, detto_formato_scheda, detta_sync_implicita;
-	bool detto_il_formato_scheda;
+	bool logged_no_offer, logged_card_format, logged_implicit_sync;
+	bool card_format_logged;
 
 	/* ------------------------------------------------------------------ *
 	 * ⭐⭐ THE POINTER PROBE — the box above `wlr_sonda_puntatore`.
@@ -433,7 +433,7 @@ struct WlrPalco {
 	 *    the stream.  The main stream does not know the probe exists.
 	 * ------------------------------------------------------------------ */
 	struct zwlr_screencopy_frame_v1 *s_frame; /* ONLY ONE in flight      */
-	bool s_visto_buffer, s_copia_partita;
+	bool s_seen_buffer, s_copy_started;
 	uint32_t s_f_shm, s_f_l, s_f_a, s_f_stride;
 	struct wl_buffer *s_buffer;
 	void *s_pixel;
@@ -442,17 +442,17 @@ struct WlrPalco {
 	uint32_t s_b_l, s_b_a, s_b_stride, s_b_shm;
 	/* the position of the request IN FLIGHT, and the one to relaunch */
 	int32_t s_x, s_y;
-	bool s_in_attesa; /* ⭐ coalescing: only the LAST position is remembered */
-	int32_t s_attesa_x, s_attesa_y;
+	bool s_pending; /* ⭐ coalescing: only the LAST position is remembered */
+	int32_t s_wait_x, s_wait_y;
 	/* ⭐ the «tail» probe: one more, with the hand still — see the box */
-	gint64 s_coda_a;
-	bool s_coda_fatta;
-	gint64 s_ultima_partita; /* for the thinning */
-	int s_forma;             /* the last recognised shape, -1 = none     */
-	int s_nuova;             /* to deliver to `wlr_sonda_forma`, or -1     */
-	bool s_spenta;           /* the format cannot be read: said, and that's it */
-	bool s_detto_formato, s_detta_ignota, s_detto_fallito;
-	WlrSondaConteggi s_conto;
+	gint64 s_tail_at;
+	bool s_queue_done;
+	gint64 s_last_started; /* for the thinning */
+	int s_shape;             /* the last recognised shape, -1 = none     */
+	int s_new;             /* to deliver to `wlr_probe_shape`, or -1     */
+	bool s_off;           /* the format cannot be read: said, and that's it */
+	bool s_format_logged, s_unknown_logged, s_failed_logged;
+	WlrProbeCounts s_count;
 };
 
 /* ------------------------------------------------------------------------- */
@@ -513,12 +513,12 @@ static bool pompa(WlrPalco *p, gint64 scadenza, GError **sbaglio)
 	return true;
 }
 
-static void giro_fatto(void *dati, struct wl_callback *cb, uint32_t t)
+static void round_done(void *dati, struct wl_callback *cb, uint32_t t)
 {
 	*(bool *)dati = true;
 }
 
-static const struct wl_callback_listener ASCOLTO_GIRO = { .done = giro_fatto };
+static const struct wl_callback_listener ROUND_LISTENER = { .done = round_done };
 
 /*
  * ⭐ A round trip WITH A CEILING — in place of `wl_display_roundtrip()`.
@@ -534,7 +534,7 @@ static bool giro(WlrPalco *p, double attesa_s, GError **sbaglio)
 	struct wl_callback *cb = wl_display_sync(p->display);
 	gint64 scadenza = g_get_monotonic_time() + (gint64)(attesa_s * 1e6);
 
-	wl_callback_add_listener(cb, &ASCOLTO_GIRO, &fatto);
+	wl_callback_add_listener(cb, &ROUND_LISTENER, &fatto);
 	while (!fatto) {
 		if (!pompa(p, scadenza, sbaglio)) {
 			wl_callback_destroy(cb);
@@ -556,13 +556,13 @@ static bool giro(WlrPalco *p, double attesa_s, GError **sbaglio)
 /* ------------------------------------------------------------------------- */
 /* The output (wl_output). */
 
-static void uscita_geometria(void *dati, struct wl_output *o, int32_t x, int32_t y, int32_t lf,
+static void output_geometry(void *dati, struct wl_output *o, int32_t x, int32_t y, int32_t lf,
                              int32_t af, int32_t sub, const char *make, const char *model,
-                             int32_t trasf)
+                             int32_t xform)
 {
 }
 
-static void uscita_modo(void *dati, struct wl_output *o, uint32_t flag, int32_t l, int32_t a,
+static void output_mode(void *dati, struct wl_output *o, uint32_t flag, int32_t l, int32_t a,
                         int32_t refresh)
 {
 	WlrPalco *p = dati;
@@ -574,26 +574,26 @@ static void uscita_modo(void *dati, struct wl_output *o, uint32_t flag, int32_t 
 	}
 }
 
-static void uscita_fine(void *dati, struct wl_output *o) {}
-static void uscita_scala(void *dati, struct wl_output *o, int32_t scala) {}
+static void output_end(void *dati, struct wl_output *o) {}
+static void output_scale(void *dati, struct wl_output *o, int32_t scala) {}
 
-static void uscita_nome(void *dati, struct wl_output *o, const char *nome)
+static void output_name(void *dati, struct wl_output *o, const char *nome)
 {
 	WlrPalco *p = dati;
 
-	g_free(p->uscita_nome);
-	p->uscita_nome = g_strdup(nome);
+	g_free(p->output_name);
+	p->output_name = g_strdup(nome);
 }
 
-static void uscita_descrizione(void *dati, struct wl_output *o, const char *d) {}
+static void output_description(void *dati, struct wl_output *o, const char *d) {}
 
-static const struct wl_output_listener ASCOLTO_USCITA = {
-	.geometry = uscita_geometria,
-	.mode = uscita_modo,
-	.done = uscita_fine,
-	.scale = uscita_scala,
-	.name = uscita_nome,
-	.description = uscita_descrizione,
+static const struct wl_output_listener OUTPUT_LISTENER = {
+	.geometry = output_geometry,
+	.mode = output_mode,
+	.done = output_end,
+	.scale = output_scale,
+	.name = output_name,
+	.description = output_description,
 };
 
 /* ------------------------------------------------------------------------- */
@@ -604,18 +604,18 @@ static const struct wl_output_listener ASCOLTO_USCITA = {
  *     with an old serial is CANCELLED — and `cancelled` is not `failed`:
  *     it means «reality changed underneath», not «no».
  */
-static void gestore_testa(void *dati, struct zwlr_output_manager_v1 *m,
+static void head_handler(void *dati, struct zwlr_output_manager_v1 *m,
                           struct zwlr_output_head_v1 *testa);
 
-static void gestore_fine(void *dati, struct zwlr_output_manager_v1 *m, uint32_t serial)
+static void end_handler(void *dati, struct zwlr_output_manager_v1 *m, uint32_t serial)
 {
 	WlrPalco *p = dati;
 
 	p->serial = serial;
-	p->serial_noto = true;
+	p->known_serial = true;
 }
 
-static void gestore_finito(void *dati, struct zwlr_output_manager_v1 *m)
+static void handler_finished(void *dati, struct zwlr_output_manager_v1 *m)
 {
 	WlrPalco *p = dati;
 
@@ -623,16 +623,16 @@ static void gestore_finito(void *dati, struct zwlr_output_manager_v1 *m)
 	p->gestore = NULL;
 }
 
-static const struct zwlr_output_manager_v1_listener ASCOLTO_GESTORE = {
-	.head = gestore_testa,
-	.done = gestore_fine,
-	.finished = gestore_finito,
+static const struct zwlr_output_manager_v1_listener MANAGER_LISTENER = {
+	.head = head_handler,
+	.done = end_handler,
+	.finished = handler_finished,
 };
 
-static Testa *testa_di(WlrPalco *p, struct zwlr_output_head_v1 *proxy)
+static Head *head_of(WlrPalco *p, struct zwlr_output_head_v1 *proxy)
 {
 	for (guint i = 0; p->teste && i < p->teste->len; i++) {
-		Testa *t = g_ptr_array_index(p->teste, i);
+		Head *t = g_ptr_array_index(p->teste, i);
 
 		if (t->proxy == proxy)
 			return t;
@@ -640,9 +640,9 @@ static Testa *testa_di(WlrPalco *p, struct zwlr_output_head_v1 *proxy)
 	return NULL;
 }
 
-static void testa_nome(void *dati, struct zwlr_output_head_v1 *proxy, const char *nome)
+static void head_name(void *dati, struct zwlr_output_head_v1 *proxy, const char *nome)
 {
-	Testa *t = testa_di(dati, proxy);
+	Head *t = head_of(dati, proxy);
 
 	/* ⭐ Defect 5: the name is KEPT, and the right head is chosen when it is
 	 *    needed.  Before, it was compared here with the name of the `wl_output`,
@@ -653,56 +653,56 @@ static void testa_nome(void *dati, struct zwlr_output_head_v1 *proxy, const char
 	}
 }
 
-static void testa_accesa(void *dati, struct zwlr_output_head_v1 *proxy, int32_t accesa)
+static void head_enabled(void *dati, struct zwlr_output_head_v1 *proxy, int32_t accesa)
 {
-	Testa *t = testa_di(dati, proxy);
+	Head *t = head_of(dati, proxy);
 
 	if (t)
 		t->accesa = accesa != 0;
 }
 
-static void testa_finita(void *dati, struct zwlr_output_head_v1 *proxy)
+static void head_finished(void *dati, struct zwlr_output_head_v1 *proxy)
 {
 	WlrPalco *p = dati;
-	Testa *t = testa_di(p, proxy);
+	Head *t = head_of(p, proxy);
 
 	if (t)
-		g_ptr_array_remove(p->teste, t); /* `libera_testa` frees it */
+		g_ptr_array_remove(p->teste, t); /* `free_head` frees it */
 }
 
-static void testa_descrizione(void *d, struct zwlr_output_head_v1 *t, const char *x) {}
-static void testa_misura_fisica(void *d, struct zwlr_output_head_v1 *t, int32_t l, int32_t a) {}
-static void testa_modo(void *d, struct zwlr_output_head_v1 *t, struct zwlr_output_mode_v1 *m) {}
-static void testa_modo_corrente(void *d, struct zwlr_output_head_v1 *t,
+static void head_description(void *d, struct zwlr_output_head_v1 *t, const char *x) {}
+static void head_physical_size(void *d, struct zwlr_output_head_v1 *t, int32_t l, int32_t a) {}
+static void head_mode(void *d, struct zwlr_output_head_v1 *t, struct zwlr_output_mode_v1 *m) {}
+static void head_current_mode(void *d, struct zwlr_output_head_v1 *t,
                                 struct zwlr_output_mode_v1 *m) {}
-static void testa_posizione(void *d, struct zwlr_output_head_v1 *t, int32_t x, int32_t y) {}
-static void testa_trasformazione(void *d, struct zwlr_output_head_v1 *t, int32_t x) {}
-static void testa_scala(void *d, struct zwlr_output_head_v1 *t, wl_fixed_t s) {}
-static void testa_marca(void *d, struct zwlr_output_head_v1 *t, const char *x) {}
-static void testa_modello(void *d, struct zwlr_output_head_v1 *t, const char *x) {}
-static void testa_matricola(void *d, struct zwlr_output_head_v1 *t, const char *x) {}
-static void testa_sincronia(void *d, struct zwlr_output_head_v1 *t, uint32_t x) {}
+static void head_position(void *d, struct zwlr_output_head_v1 *t, int32_t x, int32_t y) {}
+static void head_transform(void *d, struct zwlr_output_head_v1 *t, int32_t x) {}
+static void head_scale(void *d, struct zwlr_output_head_v1 *t, wl_fixed_t s) {}
+static void head_make(void *d, struct zwlr_output_head_v1 *t, const char *x) {}
+static void head_model(void *d, struct zwlr_output_head_v1 *t, const char *x) {}
+static void head_serial(void *d, struct zwlr_output_head_v1 *t, const char *x) {}
+static void head_sync(void *d, struct zwlr_output_head_v1 *t, uint32_t x) {}
 
-static const struct zwlr_output_head_v1_listener ASCOLTO_TESTA = {
-	.name = testa_nome,
-	.description = testa_descrizione,
-	.physical_size = testa_misura_fisica,
-	.mode = testa_modo,
-	.enabled = testa_accesa,
-	.current_mode = testa_modo_corrente,
-	.position = testa_posizione,
-	.transform = testa_trasformazione,
-	.scale = testa_scala,
-	.finished = testa_finita,
-	.make = testa_marca,
-	.model = testa_modello,
-	.serial_number = testa_matricola,
-	.adaptive_sync = testa_sincronia,
+static const struct zwlr_output_head_v1_listener HEAD_LISTENER = {
+	.name = head_name,
+	.description = head_description,
+	.physical_size = head_physical_size,
+	.mode = head_mode,
+	.enabled = head_enabled,
+	.current_mode = head_current_mode,
+	.position = head_position,
+	.transform = head_transform,
+	.scale = head_scale,
+	.finished = head_finished,
+	.make = head_make,
+	.model = head_model,
+	.serial_number = head_serial,
+	.adaptive_sync = head_sync,
 };
 
-static void libera_testa(gpointer dati)
+static void free_head(gpointer dati)
 {
-	Testa *t = dati;
+	Head *t = dati;
 
 	if (t->proxy)
 		zwlr_output_head_v1_destroy(t->proxy);
@@ -710,36 +710,36 @@ static void libera_testa(gpointer dati)
 	g_free(t);
 }
 
-static void gestore_testa(void *dati, struct zwlr_output_manager_v1 *m,
+static void head_handler(void *dati, struct zwlr_output_manager_v1 *m,
                           struct zwlr_output_head_v1 *proxy)
 {
 	WlrPalco *p = dati;
-	Testa *t = g_new0(Testa, 1);
+	Head *t = g_new0(Head, 1);
 
 	t->proxy = proxy;
 	g_ptr_array_add(p->teste, t);
-	zwlr_output_head_v1_add_listener(proxy, &ASCOLTO_TESTA, p);
+	zwlr_output_head_v1_add_listener(proxy, &HEAD_LISTENER, p);
 }
 
-static void conf_riuscita(void *dati, struct zwlr_output_configuration_v1 *c)
+static void conf_succeeded(void *dati, struct zwlr_output_configuration_v1 *c)
 {
-	((WlrPalco *)dati)->conf = CONF_RIUSCITA;
+	((WlrPalco *)dati)->conf = CONF_SUCCEEDED;
 }
 
-static void conf_fallita(void *dati, struct zwlr_output_configuration_v1 *c)
+static void conf_failed(void *dati, struct zwlr_output_configuration_v1 *c)
 {
-	((WlrPalco *)dati)->conf = CONF_FALLITA;
+	((WlrPalco *)dati)->conf = CONF_FAILED;
 }
 
-static void conf_annullata(void *dati, struct zwlr_output_configuration_v1 *c)
+static void conf_cancelled(void *dati, struct zwlr_output_configuration_v1 *c)
 {
-	((WlrPalco *)dati)->conf = CONF_ANNULLATA;
+	((WlrPalco *)dati)->conf = CONF_CANCELLED;
 }
 
-static const struct zwlr_output_configuration_v1_listener ASCOLTO_CONF = {
-	.succeeded = conf_riuscita,
-	.failed = conf_fallita,
-	.cancelled = conf_annullata,
+static const struct zwlr_output_configuration_v1_listener CONF_LISTENER = {
+	.succeeded = conf_succeeded,
+	.failed = conf_failed,
+	.cancelled = conf_cancelled,
 };
 
 /* ------------------------------------------------------------------------- */
@@ -748,16 +748,16 @@ static const struct zwlr_output_configuration_v1_listener ASCOLTO_CONF = {
 /* ⚠ Below v4 the global sends `format` and `modifier` as soon as it is bound:
  *   they are listened to and dropped — the modifier is decided by us
  *   (LINEAR, the box at the top), not by the list. */
-static void dmabuf_formato(void *d, struct zwp_linux_dmabuf_v1 *m, uint32_t f) {}
-static void dmabuf_modificatore(void *d, struct zwp_linux_dmabuf_v1 *m, uint32_t f,
+static void dmabuf_format(void *d, struct zwp_linux_dmabuf_v1 *m, uint32_t f) {}
+static void dmabuf_modifier(void *d, struct zwp_linux_dmabuf_v1 *m, uint32_t f,
                                 uint32_t alto, uint32_t basso) {}
 
-static const struct zwp_linux_dmabuf_v1_listener ASCOLTO_DMABUF = {
-	.format = dmabuf_formato,
-	.modifier = dmabuf_modificatore,
+static const struct zwp_linux_dmabuf_v1_listener DMABUF_LISTENER = {
+	.format = dmabuf_format,
+	.modifier = dmabuf_modifier,
 };
 
-static void registro_global(void *dati, struct wl_registry *reg, uint32_t nome,
+static void registry_global(void *dati, struct wl_registry *reg, uint32_t nome,
                             const char *interfaccia, uint32_t versione)
 {
 	WlrPalco *p = dati;
@@ -774,21 +774,21 @@ static void registro_global(void *dati, struct wl_registry *reg, uint32_t nome,
 		 *   one with `main_device`, that is the node the compositor draws on.
 		 *   ⛔ It is always bound, even if the card is not asked for: binding
 		 *   costs nothing and changes nothing. */
-		p->dmabuf_versione = versione < 4 ? versione : 4;
+		p->dmabuf_version = versione < 4 ? versione : 4;
 		p->dmabuf = wl_registry_bind(reg, nome, &zwp_linux_dmabuf_v1_interface,
-		                             p->dmabuf_versione);
-		zwp_linux_dmabuf_v1_add_listener(p->dmabuf, &ASCOLTO_DMABUF, p);
+		                             p->dmabuf_version);
+		zwp_linux_dmabuf_v1_add_listener(p->dmabuf, &DMABUF_LISTENER, p);
 	} else if (g_strcmp0(interfaccia, zwlr_output_manager_v1_interface.name) == 0) {
 		uint32_t v = versione < 4 ? versione : 4;
 
 		p->gestore = wl_registry_bind(reg, nome, &zwlr_output_manager_v1_interface, v);
-		zwlr_output_manager_v1_add_listener(p->gestore, &ASCOLTO_GESTORE, p);
+		zwlr_output_manager_v1_add_listener(p->gestore, &MANAGER_LISTENER, p);
 	} else if (g_strcmp0(interfaccia, wl_output_interface.name) == 0) {
 		if (!p->uscita) {
 			uint32_t v = versione < 4 ? versione : 4;
 
 			p->uscita = wl_registry_bind(reg, nome, &wl_output_interface, v);
-			wl_output_add_listener(p->uscita, &ASCOLTO_USCITA, p);
+			wl_output_add_listener(p->uscita, &OUTPUT_LISTENER, p);
 		} else {
 			registro_dice(AREA,
 			              "⚠ wlroots: the compositor announces more than one output — "
@@ -798,11 +798,11 @@ static void registro_global(void *dati, struct wl_registry *reg, uint32_t nome,
 	}
 }
 
-static void registro_via(void *dati, struct wl_registry *reg, uint32_t nome) {}
+static void registry_remove(void *dati, struct wl_registry *reg, uint32_t nome) {}
 
-static const struct wl_registry_listener ASCOLTO_REGISTRO = {
-	.global = registro_global,
-	.global_remove = registro_via,
+static const struct wl_registry_listener REGISTRY_LISTENER = {
+	.global = registry_global,
+	.global_remove = registry_remove,
 };
 
 /* ------------------------------------------------------------------------- */
@@ -816,17 +816,17 @@ static void frame_buffer(void *dati, struct zwlr_screencopy_frame_v1 *f, uint32_
 	/* ⛔ ONCE per frame (defect 1): there is nothing to choose.
 	 *    The format is in the wl_shm numbering, and is kept THAT WAY to create
 	 *    the buffer; the translation to DRM is done only for whoever is downstream. */
-	p->visto_buffer = true;
+	p->seen_buffer = true;
 	p->f_shm = formato;
-	p->f_larghezza = larghezza;
-	p->f_altezza = altezza;
+	p->f_width = larghezza;
+	p->f_height = altezza;
 	p->f_stride = stride;
 
-	if (!p->detto_il_formato) {
+	if (!p->format_logged) {
 		uint32_t drm = shm_a_drm(formato);
 		char nome[5];
 
-		p->detto_il_formato = true;
+		p->format_logged = true;
 		memcpy(nome, &drm, 4);
 		nome[4] = 0;
 		registro_dice(AREA,
@@ -848,56 +848,56 @@ static void frame_flags(void *dati, struct zwlr_screencopy_frame_v1 *f, uint32_t
 	((WlrPalco *)dati)->y_invertita = (flags & ZWLR_SCREENCOPY_FRAME_V1_FLAGS_Y_INVERT) != 0;
 }
 
-static void frame_pronto(void *dati, struct zwlr_screencopy_frame_v1 *f, uint32_t sec_alto,
-                         uint32_t sec_basso, uint32_t nsec)
+static void frame_ready(void *dati, struct zwlr_screencopy_frame_v1 *f, uint32_t sec_alto,
+                         uint32_t sec_low, uint32_t nsec)
 {
 	WlrPalco *p = dati;
 
-	p->f_secondi = ((uint64_t)sec_alto << 32) | sec_basso;
-	p->f_nanosecondi = nsec;
+	p->f_seconds = ((uint64_t)sec_alto << 32) | sec_low;
+	p->f_nanoseconds = nsec;
 	p->pronto = true;
-	if (p->copia_col_danno && registro_parla_molto()) {
+	if (p->duplicate_with_damage && registro_parla_molto()) {
 		uint64_t uscita = (uint64_t)p->larghezza * p->altezza;
 
-		p->danno_fotogrammi++;
-		p->danno_area_somma += p->danno_area_fotogramma;
-		p->danno_rett_somma += p->danno_rett_fotogramma;
-		if (uscita && p->danno_area_fotogramma >= uscita)
-			p->danno_interi++;
-		if (p->danno_fotogrammi == 120) {
+		p->damage_frames++;
+		p->damage_area_sum += p->frame_damage_area;
+		p->damage_rect_sum += p->frame_damage_rects;
+		if (uscita && p->frame_damage_area >= uscita)
+			p->whole_damage++;
+		if (p->damage_frames == 120) {
 			registro_dettaglio(AREA,
 			                   "wlroots: the declared damage, last 120 frames with damage: "
 			                   "mean area %.1f%% of the output %ux%u, %u full, %.1f "
 			                   "rectangles per frame (the last: %ux%u at %u,%u)",
-			                   uscita ? 100.0 * (double)p->danno_area_somma / 120.0 / (double)uscita : 0.0,
-			                   p->larghezza, p->altezza, p->danno_interi,
-			                   p->danno_rett_somma / 120.0, p->danno_l, p->danno_a,
-			                   p->danno_x, p->danno_y);
-			p->danno_fotogrammi = p->danno_interi = p->danno_rett_somma = 0;
-			p->danno_area_somma = 0;
+			                   uscita ? 100.0 * (double)p->damage_area_sum / 120.0 / (double)uscita : 0.0,
+			                   p->larghezza, p->altezza, p->whole_damage,
+			                   p->damage_rect_sum / 120.0, p->damage_w, p->damage_h,
+			                   p->damage_x, p->damage_y);
+			p->damage_frames = p->whole_damage = p->damage_rect_sum = 0;
+			p->damage_area_sum = 0;
 		}
 	}
-	p->danno_area_fotogramma = 0;
-	p->danno_rett_fotogramma = 0;
+	p->frame_damage_area = 0;
+	p->frame_damage_rects = 0;
 }
 
-static void frame_fallito(void *dati, struct zwlr_screencopy_frame_v1 *f)
+static void frame_failed(void *dati, struct zwlr_screencopy_frame_v1 *f)
 {
 	((WlrPalco *)dati)->fallito = true;
 }
 
-static void frame_danno(void *dati, struct zwlr_screencopy_frame_v1 *f, uint32_t x, uint32_t y,
+static void frame_damage(void *dati, struct zwlr_screencopy_frame_v1 *f, uint32_t x, uint32_t y,
                         uint32_t l, uint32_t a)
 {
 	WlrPalco *p = dati;
 
 	/* ⚠ It arrives only with `copy_with_damage`, before `ready`. */
-	p->danno_area_fotogramma += (uint64_t)l * a;
-	p->danno_rett_fotogramma++;
-	p->danno_x = x;
-	p->danno_y = y;
-	p->danno_l = l;
-	p->danno_a = a;
+	p->frame_damage_area += (uint64_t)l * a;
+	p->frame_damage_rects++;
+	p->damage_x = x;
+	p->damage_y = y;
+	p->damage_w = l;
+	p->damage_h = a;
 }
 
 static void frame_dmabuf(void *dati, struct zwlr_screencopy_frame_v1 *f, uint32_t formato,
@@ -906,51 +906,51 @@ static void frame_dmabuf(void *dati, struct zwlr_screencopy_frame_v1 *f, uint32_
 	WlrPalco *p = dati;
 
 	/* ⭐ The card route: the offer is NOTED, and the choice is made by
-	 *    `scheda_destinazione()` once the list is closed.  ⛔ And here the
+	 *    `card_destination()` once the list is closed.  ⛔ And here the
 	 *    format is a TRUE DRM fourcc — a different numbering from that of
 	 *    `buffer`, in a field of its own, and it does NOT go through
 	 *    `shm_a_drm()` (defect 1). */
-	p->offerto_scheda = true;
-	p->o_scheda_formato = formato;
-	p->o_scheda_l = larghezza;
-	p->o_scheda_a = altezza;
+	p->card_offered = true;
+	p->o_card_format = formato;
+	p->o_card_w = larghezza;
+	p->o_card_h = altezza;
 }
 
 static void frame_buffer_done(void *dati, struct zwlr_screencopy_frame_v1 *f)
 {
-	((WlrPalco *)dati)->visto_buffer_done = true;
+	((WlrPalco *)dati)->seen_buffer_done = true;
 }
 
 /* ⭐ «Is the list of offers closed?» — on v3 `buffer_done` says so, and only
  *    then do we know whether the card was offered.  ⚠ Below v3
  *    `buffer_done` does not exist: there `buffer` is enough, and it is also the only offer. */
-static bool elenco_chiuso(const WlrPalco *p)
+static bool list_closed(const WlrPalco *p)
 {
-	if (p->visto_buffer_done)
+	if (p->seen_buffer_done)
 		return true;
-	return p->visto_buffer && zwlr_screencopy_frame_v1_get_version(p->frame) < 3;
+	return p->seen_buffer && zwlr_screencopy_frame_v1_get_version(p->frame) < 3;
 }
 
-static const struct zwlr_screencopy_frame_v1_listener ASCOLTO_FRAME = {
+static const struct zwlr_screencopy_frame_v1_listener FRAME_LISTENER = {
 	.buffer = frame_buffer,
 	.flags = frame_flags,
-	.ready = frame_pronto,
-	.failed = frame_fallito,
-	.damage = frame_danno,
+	.ready = frame_ready,
+	.failed = frame_failed,
+	.damage = frame_damage,
 	.linux_dmabuf = frame_dmabuf,
 	.buffer_done = frame_buffer_done,
 };
 
-static bool prepara_buffer(WlrPalco *p, GError **sbaglio)
+static bool prepare_buffer(WlrPalco *p, GError **sbaglio)
 {
 	struct wl_shm_pool *pool;
-	gsize byte = (gsize)p->f_stride * p->f_altezza;
+	gsize byte = (gsize)p->f_stride * p->f_height;
 
-	if (!p->buffer_sporco && p->buffer && p->b_larghezza == p->f_larghezza &&
-	    p->b_altezza == p->f_altezza && p->b_stride == p->f_stride &&
-	    p->b_formato == p->f_shm)
+	if (!p->buffer_dirty && p->buffer && p->b_width == p->f_width &&
+	    p->b_height == p->f_height && p->b_stride == p->f_stride &&
+	    p->b_format == p->f_shm)
 		return true; /* the previous one is fine */
-	p->buffer_sporco = false;
+	p->buffer_dirty = false;
 
 	if (p->buffer) {
 		wl_buffer_destroy(p->buffer);
@@ -967,7 +967,7 @@ static bool prepara_buffer(WlrPalco *p, GError **sbaglio)
 	if (!byte) {
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_INVALID_DATA,
 		            "the compositor declared a buffer of 0 bytes (%ux%u stride %u)",
-		            p->f_larghezza, p->f_altezza, p->f_stride);
+		            p->f_width, p->f_height, p->f_stride);
 		return false;
 	}
 
@@ -994,14 +994,14 @@ static bool prepara_buffer(WlrPalco *p, GError **sbaglio)
 	pool = wl_shm_create_pool(p->shm, p->fd, (int32_t)byte);
 	/* ⛔ The wl_shm format, NOT the translated one: the buffer is read by the
 	 *    compositor, which speaks the wl_shm numbering. */
-	p->buffer = wl_shm_pool_create_buffer(pool, 0, (int32_t)p->f_larghezza,
-	                                      (int32_t)p->f_altezza, (int32_t)p->f_stride,
+	p->buffer = wl_shm_pool_create_buffer(pool, 0, (int32_t)p->f_width,
+	                                      (int32_t)p->f_height, (int32_t)p->f_stride,
 	                                      p->f_shm);
 	wl_shm_pool_destroy(pool);
-	p->b_larghezza = p->f_larghezza;
-	p->b_altezza = p->f_altezza;
+	p->b_width = p->f_width;
+	p->b_height = p->f_height;
 	p->b_stride = p->f_stride;
-	p->b_formato = p->f_shm;
+	p->b_format = p->f_shm;
 	return true;
 }
 
@@ -1017,10 +1017,10 @@ static bool prepara_buffer(WlrPalco *p, GError **sbaglio)
 
 static void feedback_fine(void *dati, struct zwp_linux_dmabuf_feedback_v1 *f)
 {
-	((WlrPalco *)dati)->feedback_finito = true;
+	((WlrPalco *)dati)->feedback_finished = true;
 }
 
-static void feedback_tabella(void *dati, struct zwp_linux_dmabuf_feedback_v1 *f, int32_t fd,
+static void feedback_table(void *dati, struct zwp_linux_dmabuf_feedback_v1 *f, int32_t fd,
                              uint32_t quanti)
 {
 	/* ⛔ The descriptor is OURS as soon as it arrives, and it is closed: the
@@ -1029,7 +1029,7 @@ static void feedback_tabella(void *dati, struct zwp_linux_dmabuf_feedback_v1 *f,
 	close(fd);
 }
 
-static void feedback_principale(void *dati, struct zwp_linux_dmabuf_feedback_v1 *f,
+static void feedback_main(void *dati, struct zwp_linux_dmabuf_feedback_v1 *f,
                                 struct wl_array *dispositivo)
 {
 	WlrPalco *p = dati;
@@ -1038,26 +1038,26 @@ static void feedback_principale(void *dati, struct zwp_linux_dmabuf_feedback_v1 
 	 *   match we do not guess, we leave it «not known» and fall back, saying so. */
 	if (dispositivo->size == sizeof(dev_t)) {
 		memcpy(&p->principale, dispositivo->data, sizeof(dev_t));
-		p->principale_noto = true;
+		p->main_known = true;
 	}
 }
 
 static void feedback_tranche_fine(void *d, struct zwp_linux_dmabuf_feedback_v1 *f) {}
-static void feedback_tranche_disp(void *d, struct zwp_linux_dmabuf_feedback_v1 *f,
+static void feedback_tranche_avail(void *d, struct zwp_linux_dmabuf_feedback_v1 *f,
                                   struct wl_array *a) {}
-static void feedback_tranche_formati(void *d, struct zwp_linux_dmabuf_feedback_v1 *f,
+static void feedback_tranche_formats(void *d, struct zwp_linux_dmabuf_feedback_v1 *f,
                                      struct wl_array *a) {}
-static void feedback_tranche_bandiere(void *d, struct zwp_linux_dmabuf_feedback_v1 *f,
+static void feedback_tranche_flags(void *d, struct zwp_linux_dmabuf_feedback_v1 *f,
                                       uint32_t b) {}
 
-static const struct zwp_linux_dmabuf_feedback_v1_listener ASCOLTO_FEEDBACK = {
+static const struct zwp_linux_dmabuf_feedback_v1_listener FEEDBACK_LISTENER = {
 	.done = feedback_fine,
-	.format_table = feedback_tabella,
-	.main_device = feedback_principale,
+	.format_table = feedback_table,
+	.main_device = feedback_main,
 	.tranche_done = feedback_tranche_fine,
-	.tranche_target_device = feedback_tranche_disp,
-	.tranche_formats = feedback_tranche_formati,
-	.tranche_flags = feedback_tranche_bandiere,
+	.tranche_target_device = feedback_tranche_avail,
+	.tranche_formats = feedback_tranche_formats,
+	.tranche_flags = feedback_tranche_flags,
 };
 
 /*
@@ -1068,7 +1068,7 @@ static const struct zwp_linux_dmabuf_feedback_v1_listener ASCOLTO_FEEDBACK = {
  *   either case, and the `renderD*` is taken from there.  ⛔ No `libdrm` to
  *   link for this: one more library for one line of sysfs.
  */
-static char *nodo_da_dispositivo(dev_t d)
+static char *node_from_device(dev_t d)
 {
 	g_autofree char *cartella =
 	    g_strdup_printf("/sys/dev/char/%u:%u/device/drm", major(d), minor(d));
@@ -1089,7 +1089,7 @@ static char *nodo_da_dispositivo(dev_t d)
  *   openable `renderD*`, in name order.  ⛔ A different rule here would mean
  *   allocating on the other card exactly on the day the nodes swap.
  */
-static char *nodo_come_sessione(void)
+static char *node_as_session(void)
 {
 	g_autoptr(GDir) dri = g_dir_open("/dev/dri", 0, NULL);
 	const char *voce;
@@ -1139,14 +1139,14 @@ static uint64_t generazione_nuova(void)
 /* ⛔ «Is the frame in progress on the card?» — and the flag before the
  *    index: before `wlr_chiedi_la_scheda()` the index is the zero of
  *    `g_new0`, that is a slab that does not exist. */
-static bool scheda_nel_giro(const WlrPalco *p)
+static bool card_in_round(const WlrPalco *p)
 {
-	return p->scheda_nata && p->lastra_del_giro >= 0;
+	return p->card_born && p->round_slab >= 0;
 }
 
-static void lastra_butta(WlrPalco *p, WlrLastra *l)
+static void slab_drop(WlrPalco *p, WlrSlab *l)
 {
-	bool cera = l->bo || l->buffer;
+	bool had_buffer = l->bo || l->buffer;
 
 	if (l->buffer)
 		wl_buffer_destroy(l->buffer);
@@ -1157,7 +1157,7 @@ static void lastra_butta(WlrPalco *p, WlrLastra *l)
 	memset(l, 0, sizeof *l);
 	l->fd = -1;
 	/* ⛔ Rule 3: a slab that dies changes the generation. */
-	if (cera)
+	if (had_buffer)
 		p->generazione = generazione_nuova();
 }
 
@@ -1167,35 +1167,35 @@ static void lastra_butta(WlrPalco *p, WlrLastra *l)
  * ⚠ If the card has been turned off in the meantime, the slab is no longer
  *   needed: it is thrown away now, which is the first moment it can be.
  */
-static void lastra_torna_libera(WlrPalco *p, WlrLastra *l, bool sporca)
+static void slab_returns_free(WlrPalco *p, WlrSlab *l, bool sporca)
 {
-	l->stato = LASTRA_LIBERA;
+	l->stato = SLAB_FREE;
 	if (sporca)
 		l->sporca = true;
 	if (!p->scheda)
-		lastra_butta(p, l);
+		slab_drop(p, l);
 }
 
-static void params_creato(void *dati, struct zwp_linux_buffer_params_v1 *pr,
+static void params_created(void *dati, struct zwp_linux_buffer_params_v1 *pr,
                           struct wl_buffer *buffer)
 {
 	WlrPalco *p = dati;
 
 	p->creato = buffer;
-	p->params_finito = true;
+	p->params_finished = true;
 }
 
-static void params_fallito(void *dati, struct zwp_linux_buffer_params_v1 *pr)
+static void params_failed(void *dati, struct zwp_linux_buffer_params_v1 *pr)
 {
 	WlrPalco *p = dati;
 
-	p->params_fallito = true;
-	p->params_finito = true;
+	p->params_failed = true;
+	p->params_finished = true;
 }
 
-static const struct zwp_linux_buffer_params_v1_listener ASCOLTO_PARAMS = {
-	.created = params_creato,
-	.failed = params_fallito,
+static const struct zwp_linux_buffer_params_v1_listener PARAMS_LISTENER = {
+	.created = params_created,
+	.failed = params_failed,
 };
 
 /*
@@ -1207,7 +1207,7 @@ static const struct zwp_linux_buffer_params_v1_listener ASCOLTO_PARAMS = {
  * ⛔ And we wait with a ceiling OF ITS OWN (`WLR_LASTRA_NASCITA_S`), not with
  *    the frame's: see the definition.
  */
-static bool lastra_prepara(WlrPalco *p, WlrLastra *l, uint32_t formato, uint32_t larghezza,
+static bool slab_prepare(WlrPalco *p, WlrSlab *l, uint32_t formato, uint32_t larghezza,
                            uint32_t altezza, GError **sbaglio)
 {
 	uint64_t lineare = DRM_FORMAT_MOD_LINEAR;
@@ -1217,8 +1217,8 @@ static bool lastra_prepara(WlrPalco *p, WlrLastra *l, uint32_t formato, uint32_t
 	if (l->buffer && !l->sporca && l->larghezza == larghezza && l->altezza == altezza &&
 	    l->formato == formato)
 		return true; /* the previous one is fine */
-	if (lastre_massime && l->bo && l->formato == formato && larghezza <= l->bo_larghezza &&
-	    altezza <= l->bo_altezza) {
+	if (max_slabs && l->bo && l->formato == formato && larghezza <= l->bo_width &&
+	    altezza <= l->bo_height) {
 		/* ⛔ PHASE 19: the BO stays (see WLR_LASTRA_L), only the `wl_buffer`
 		 *    changes.  ⛔ Rule 3: the size has changed, so the generation
 		 *    changes — the encoder must not find in its cache the import
@@ -1231,8 +1231,8 @@ static bool lastra_prepara(WlrPalco *p, WlrLastra *l, uint32_t formato, uint32_t
 		p->generazione = generazione_nuova();
 		goto il_buffer;
 	}
-	lastra_butta(p, l);
-	if (lastre_massime && (larghezza > WLR_LASTRA_L || altezza > WLR_LASTRA_A))
+	slab_drop(p, l);
+	if (max_slabs && (larghezza > WLR_LASTRA_L || altezza > WLR_LASTRA_A))
 		registro_dice(AREA,
 		              "⚠ wlroots: a %ux%u canvas beyond the maximum slab %ux%u — the "
 		              "slab is born at the requested size, and on a size change it WILL DIE "
@@ -1242,12 +1242,12 @@ static bool lastra_prepara(WlrPalco *p, WlrLastra *l, uint32_t formato, uint32_t
 	/* ⭐ LINEAR, asked for by name.  ⚠ If the driver does not accept the
 	 *   modifier list we retry with the LINEAR flag, which says the same
 	 *   thing in the old dialect. */
-	l->bo_larghezza = (lastre_massime && larghezza < WLR_LASTRA_L) ? WLR_LASTRA_L : larghezza;
-	l->bo_altezza = (lastre_massime && altezza < WLR_LASTRA_A) ? WLR_LASTRA_A : altezza;
-	l->bo = gbm_bo_create_with_modifiers2(p->gbm, l->bo_larghezza, l->bo_altezza, formato,
+	l->bo_width = (max_slabs && larghezza < WLR_LASTRA_L) ? WLR_LASTRA_L : larghezza;
+	l->bo_height = (max_slabs && altezza < WLR_LASTRA_A) ? WLR_LASTRA_A : altezza;
+	l->bo = gbm_bo_create_with_modifiers2(p->gbm, l->bo_width, l->bo_height, formato,
 	                                      &lineare, 1, GBM_BO_USE_RENDERING);
 	if (!l->bo)
-		l->bo = gbm_bo_create(p->gbm, l->bo_larghezza, l->bo_altezza, formato,
+		l->bo = gbm_bo_create(p->gbm, l->bo_width, l->bo_height, formato,
 		                      GBM_BO_USE_RENDERING | GBM_BO_USE_LINEAR);
 	/*
 	 * ⭐ 5 Oct 2026, NVIDIA (RTX 4090, driver 595): `[M]` the NVIDIA GBM
@@ -1265,18 +1265,18 @@ static bool lastra_prepara(WlrPalco *p, WlrLastra *l, uint32_t formato, uint32_t
 		 *    modifier Vulkan does not import.  Only those the encoder
 		 *    declares (`vulkanvideo_modificatori`), asked once per stage and
 		 *    format. */
-		int lineare_errno = errno;
-		if (p->mod_formato != formato) {
-			p->mod_formato = formato;
-			p->mod_quanti = vulkanvideo_modificatori(p->nodo, formato, p->mod_ammessi,
-			                                         (int)G_N_ELEMENTS(p->mod_ammessi));
+		int linear_errno = errno;
+		if (p->mod_format != formato) {
+			p->mod_format = formato;
+			p->mod_count = vulkanvideo_modificatori(p->nodo, formato, p->mod_allowed,
+			                                         (int)G_N_ELEMENTS(p->mod_allowed));
 		}
-		if (p->mod_quanti > 0)
-			l->bo = gbm_bo_create_with_modifiers2(p->gbm, l->bo_larghezza, l->bo_altezza,
-			                                      formato, p->mod_ammessi,
-			                                      (unsigned)p->mod_quanti, GBM_BO_USE_RENDERING);
+		if (p->mod_count > 0)
+			l->bo = gbm_bo_create_with_modifiers2(p->gbm, l->bo_width, l->bo_height,
+			                                      formato, p->mod_allowed,
+			                                      (unsigned)p->mod_count, GBM_BO_USE_RENDERING);
 		if (!l->bo)
-			errno = lineare_errno;
+			errno = linear_errno;
 		else
 			scelta_del_driver = true;
 	}
@@ -1284,7 +1284,7 @@ static bool lastra_prepara(WlrPalco *p, WlrLastra *l, uint32_t formato, uint32_t
 		g_set_error(sbaglio, G_IO_ERROR, g_io_error_from_errno(errno),
 		            "gbm does not allocate %ux%u fourcc 0x%08x on %s, neither linear nor with one of "
 		            "the %d modifiers the encoder imports: %s",
-		            l->bo_larghezza, l->bo_altezza, formato, p->nodo, p->mod_quanti,
+		            l->bo_width, l->bo_height, formato, p->nodo, p->mod_count,
 		            g_strerror(errno));
 		return false;
 	}
@@ -1292,7 +1292,7 @@ static bool lastra_prepara(WlrPalco *p, WlrLastra *l, uint32_t formato, uint32_t
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
 		            "gbm gave a slab with %d planes: the encoder can read one",
 		            gbm_bo_get_plane_count(l->bo));
-		lastra_butta(p, l);
+		slab_drop(p, l);
 		return false;
 	}
 	l->modificatore = gbm_bo_get_modifier(l->bo);
@@ -1306,7 +1306,7 @@ static bool lastra_prepara(WlrPalco *p, WlrLastra *l, uint32_t formato, uint32_t
 			g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
 			            "gbm refused linear, and the driver's slab does not say "
 			            "its modifier: nobody could import it");
-			lastra_butta(p, l);
+			slab_drop(p, l);
 			return false;
 		}
 		if (!detto) {
@@ -1315,7 +1315,7 @@ static bool lastra_prepara(WlrPalco *p, WlrLastra *l, uint32_t formato, uint32_t
 			              "⭐ wlroots: the driver refuses the LINEAR slab (NVIDIA): the "
 			              "slab is born with modifier 0x%" G_GINT64_MODIFIER "x, chosen "
 			              "among the %d the Vulkan encoder declares it can import",
-			              (guint64)l->modificatore, p->mod_quanti);
+			              (guint64)l->modificatore, p->mod_count);
 		}
 	} else if (l->modificatore != DRM_FORMAT_MOD_LINEAR) {
 		/* ⛔ LINEAR was asked for: a tiling nobody chose is an import
@@ -1324,7 +1324,7 @@ static bool lastra_prepara(WlrPalco *p, WlrLastra *l, uint32_t formato, uint32_t
 		            "gbm gave modifier 0x%" G_GINT64_MODIFIER "x instead of the "
 		            "LINEAR asked for",
 		            (guint64)l->modificatore);
-		lastra_butta(p, l);
+		slab_drop(p, l);
 		return false;
 	}
 	l->fd = gbm_bo_get_fd(l->bo);
@@ -1336,7 +1336,7 @@ static bool lastra_prepara(WlrPalco *p, WlrLastra *l, uint32_t formato, uint32_t
 	if (l->fd < 0) {
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_FAILED,
 		            "gbm_bo_get_fd: the slab has no DMA-BUF descriptor");
-		lastra_butta(p, l);
+		slab_drop(p, l);
 		return false;
 	}
 	/* ⛔ The slab is already born here, even if the `wl_buffer` is not there
@@ -1345,33 +1345,33 @@ static bool lastra_prepara(WlrPalco *p, WlrLastra *l, uint32_t formato, uint32_t
 
 il_buffer:
 	p->creato = NULL;
-	p->params_finito = p->params_fallito = false;
+	p->params_finished = p->params_failed = false;
 	params = zwp_linux_dmabuf_v1_create_params(p->dmabuf);
-	zwp_linux_buffer_params_v1_add_listener(params, &ASCOLTO_PARAMS, p);
+	zwp_linux_buffer_params_v1_add_listener(params, &PARAMS_LISTENER, p);
 	zwp_linux_buffer_params_v1_add(params, l->fd, 0, l->offset, l->stride,
 	                               (uint32_t)(l->modificatore >> 32),
 	                               (uint32_t)(l->modificatore & 0xffffffffu));
 	zwp_linux_buffer_params_v1_create(params, (int32_t)larghezza, (int32_t)altezza, formato, 0);
 	scadenza = g_get_monotonic_time() + (gint64)(WLR_LASTRA_NASCITA_S * G_USEC_PER_SEC);
-	while (!p->params_finito) {
+	while (!p->params_finished) {
 		if (!pompa(p, scadenza, sbaglio)) {
 			zwp_linux_buffer_params_v1_destroy(params);
-			lastra_butta(p, l);
+			slab_drop(p, l);
 			return false;
 		}
-		if (!p->params_finito && g_get_monotonic_time() >= scadenza)
+		if (!p->params_finished && g_get_monotonic_time() >= scadenza)
 			break;
 	}
 	zwp_linux_buffer_params_v1_destroy(params);
-	if (!p->params_finito || p->params_fallito || !p->creato) {
+	if (!p->params_finished || p->params_failed || !p->creato) {
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_FAILED,
 		            "the compositor %s the %ux%u DMA-BUF (modifier 0x%" G_GINT64_MODIFIER
 		            "x, stride %u)",
-		            p->params_finito ? "REFUSED" : "did not answer in time for",
+		            p->params_finished ? "REFUSED" : "did not answer in time for",
 		            larghezza, altezza, (guint64)l->modificatore, l->stride);
 		/* ⚠ If `created` arrived after the ceiling the `wl_buffer` would be left
 		 *   orphaned: one lost object, once, against a live connection. */
-		lastra_butta(p, l);
+		slab_drop(p, l);
 		return false;
 	}
 	l->buffer = p->creato;
@@ -1381,12 +1381,12 @@ il_buffer:
 }
 
 /* ⛔ Rule 1: ONLY a FREE slab is chosen, in rotation. */
-static int lastra_scegli(WlrPalco *p)
+static int slab_choose(WlrPalco *p)
 {
 	for (unsigned i = 0; i < WLR_LASTRE; i++) {
 		unsigned k = (p->prossima + i) % WLR_LASTRE;
 
-		if (p->lastre[k].stato == LASTRA_LIBERA) {
+		if (p->lastre[k].stato == SLAB_FREE) {
 			p->prossima = (k + 1) % WLR_LASTRE;
 			return (int)k;
 		}
@@ -1399,17 +1399,17 @@ static int lastra_scegli(WlrPalco *p)
  *    goes to memory, and the counters show it.
  * ⚠ Only the FREE ones are thrown away: one IN HAND is thrown away by
  *   `wlr_rendi()` when it comes back, one IN FLIGHT by the closing of its
- *   frame (`lastra_torna_libera`).  ⛔ Throwing away a slab in flight would
+ *   frame (`slab_returns_free`).  ⛔ Throwing away a slab in flight would
  *   mean destroying a `wl_buffer` named in a `copy` still open.
  */
-static void scheda_spegni(WlrPalco *p, const char *perche)
+static void card_turn_off(WlrPalco *p, const char *perche)
 {
 	if (!p->scheda)
 		return;
 	p->scheda = false;
 	for (unsigned i = 0; i < WLR_LASTRE; i++)
-		if (p->lastre[i].stato == LASTRA_LIBERA)
-			lastra_butta(p, &p->lastre[i]);
+		if (p->lastre[i].stato == SLAB_FREE)
+			slab_drop(p, &p->lastre[i]);
 	registro_dice(AREA,
 	              "⛔⛔ wlroots: the CARD route is TURNED OFF — %s.  ⇒ DECLARED "
 	              "FALLBACK: from here the pixels go through MEMORY (`glReadPixels` "
@@ -1420,29 +1420,29 @@ static void scheda_spegni(WlrPalco *p, const char *perche)
 
 /*
  * ⭐ THE TARGET OF THIS FRAME'S `copy` — the card, or NULL for memory.  It is
- *    called once the list is closed (`elenco_chiuso()`), ONCE per frame:
- *    after that, the answer is in `lastra_del_giro`.
+ *    called once the list is closed (`list_closed()`), ONCE per frame:
+ *    after that, the answer is in `round_slab`.
  *
  * ⛔ It returns NULL also with `*rotto` true: all the slabs are in hand
  *    downstream.  There the frame STOPS; a slab in hand is not recycled and
  *    there is no silent fallback to memory (rule 1).
  */
-static struct wl_buffer *scheda_destinazione(WlrPalco *p, bool *rotto, GError **sbaglio)
+static struct wl_buffer *card_destination(WlrPalco *p, bool *rotto, GError **sbaglio)
 {
 	g_autoptr(GError) perche = NULL;
-	WlrLastra *l;
+	WlrSlab *l;
 	int k;
 
 	*rotto = false;
-	p->lastra_del_giro = -1;
+	p->round_slab = -1;
 	if (!p->scheda)
 		return NULL;
-	if (!p->offerto_scheda) {
+	if (!p->card_offered) {
 		/* ⚠ `[R]` wlroots sends `linux_dmabuf` only if the output's allocator
 		 *   can do DMA-BUF: without it, the compositor is in SOFTWARE
 		 *   (pixman, `STUDI.md` §xfce §5.2).  It is a diagnosis, and it is written. */
-		if (!p->detto_senza_offerta) {
-			p->detto_senza_offerta = true;
+		if (!p->logged_no_offer) {
+			p->logged_no_offer = true;
 			registro_dice(AREA,
 			              "⛔ wlroots: the compositor does NOT offer DMA-BUF for this "
 			              "frame — it usually means it draws in SOFTWARE "
@@ -1451,13 +1451,13 @@ static struct wl_buffer *scheda_destinazione(WlrPalco *p, bool *rotto, GError **
 		}
 		return NULL;
 	}
-	if (p->o_scheda_formato != DRM_FORMAT_XRGB8888 &&
-	    p->o_scheda_formato != DRM_FORMAT_ARGB8888) {
-		if (!p->detto_formato_scheda) {
+	if (p->o_card_format != DRM_FORMAT_XRGB8888 &&
+	    p->o_card_format != DRM_FORMAT_ARGB8888) {
+		if (!p->logged_card_format) {
 			char nome[5];
 
-			p->detto_formato_scheda = true;
-			memcpy(nome, &p->o_scheda_formato, 4);
+			p->logged_card_format = true;
+			memcpy(nome, &p->o_card_format, 4);
 			nome[4] = 0;
 			registro_dice(AREA,
 			              "⛔ wlroots: the card offers «%s», and the encoder imports "
@@ -1469,7 +1469,7 @@ static struct wl_buffer *scheda_destinazione(WlrPalco *p, bool *rotto, GError **
 		return NULL;
 	}
 
-	k = lastra_scegli(p);
+	k = slab_choose(p);
 	if (k < 0) {
 		*rotto = true;
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_BUSY,
@@ -1481,15 +1481,15 @@ static struct wl_buffer *scheda_destinazione(WlrPalco *p, bool *rotto, GError **
 		return NULL;
 	}
 	l = &p->lastre[k];
-	if (!lastra_prepara(p, l, p->o_scheda_formato, p->o_scheda_l, p->o_scheda_a, &perche)) {
+	if (!slab_prepare(p, l, p->o_card_format, p->o_card_w, p->o_card_h, &perche)) {
 		g_autofree char *motivo =
 		    g_strdup_printf("the slab was not born (%s)", perche ? perche->message : "?");
 
-		scheda_spegni(p, motivo);
+		card_turn_off(p, motivo);
 		return NULL;
 	}
-	l->stato = LASTRA_IN_VOLO;
-	p->lastra_del_giro = k;
+	l->stato = SLAB_IN_FLIGHT;
+	p->round_slab = k;
 	return l->buffer;
 }
 
@@ -1500,7 +1500,7 @@ static struct wl_buffer *scheda_destinazione(WlrPalco *p, bool *rotto, GError **
  * deadline: then the slab is not delivered (whoever read it would see a half
  * blit), and the frame stays PENDING — the next call waits again.
  */
-static bool scheda_aspetta_la_gpu(WlrPalco *p, WlrLastra *l, gint64 scadenza,
+static bool card_wait_gpu(WlrPalco *p, WlrSlab *l, gint64 scadenza,
                                   WlrFotogramma *fuori, GError **sbaglio)
 {
 	struct dma_buf_export_sync_file sf = { .flags = DMA_BUF_SYNC_READ, .fd = -1 };
@@ -1510,12 +1510,12 @@ static bool scheda_aspetta_la_gpu(WlrPalco *p, WlrLastra *l, gint64 scadenza,
 	int r;
 
 	fuori->us_attesa_gpu = 0;
-	fuori->attesa_esplicita = false;
+	fuori->explicit_wait = false;
 	if (ioctl(l->fd, DMA_BUF_IOCTL_EXPORT_SYNC_FILE, &sf) != 0) {
 		/* ⚠ Kernel without the ioctl (< 5.20), or a driver that does not support
 		 *   it: we rely on IMPLICIT synchronisation, and say so once. */
-		if (!p->detta_sync_implicita) {
-			p->detta_sync_implicita = true;
+		if (!p->logged_implicit_sync) {
+			p->logged_implicit_sync = true;
 			registro_dice(AREA,
 			              "⚠ wlroots: the fence inside the DMA-BUF cannot be extracted "
 			              "(DMA_BUF_IOCTL_EXPORT_SYNC_FILE: %s) — from here we rely "
@@ -1526,7 +1526,7 @@ static bool scheda_aspetta_la_gpu(WlrPalco *p, WlrLastra *l, gint64 scadenza,
 		}
 		return true;
 	}
-	fuori->attesa_esplicita = true;
+	fuori->explicit_wait = true;
 	resta = (scadenza - prima) / 1000;
 	pfd.fd = sf.fd;
 	pfd.events = POLLIN;
@@ -1547,15 +1547,15 @@ static bool scheda_aspetta_la_gpu(WlrPalco *p, WlrLastra *l, gint64 scadenza,
 }
 
 /* ⭐ The delivery of a card frame: the slab goes IN HAND. */
-static void scheda_consegna(WlrPalco *p, WlrFotogramma *fuori)
+static void card_delivery(WlrPalco *p, WlrFotogramma *fuori)
 {
-	WlrLastra *l = &p->lastre[p->lastra_del_giro];
+	WlrSlab *l = &p->lastre[p->round_slab];
 
-	p->falliti_di_fila = 0;
-	l->stato = LASTRA_IN_MANO;
-	p->lastra_del_giro = -1;
+	p->failed_in_a_row = 0;
+	l->stato = SLAB_IN_HAND;
+	p->round_slab = -1;
 
-	fuori->sulla_scheda = true;
+	fuori->on_card = true;
 	fuori->pixel = NULL;
 	fuori->larghezza = l->larghezza;
 	fuori->altezza = l->altezza;
@@ -1569,64 +1569,64 @@ static void scheda_consegna(WlrPalco *p, WlrFotogramma *fuori)
 	fuori->modificatore = l->modificatore;
 	fuori->generazione = p->generazione;
 	fuori->lastra = l;
-	fuori->secondi = p->f_secondi;
-	fuori->nanosecondi = p->f_nanosecondi;
+	fuori->secondi = p->f_seconds;
+	fuori->nanosecondi = p->f_nanoseconds;
 	/* ⚠ `[R]` On the card the compositor sends `flags 0`: the blit already
 	 *   writes upright.  What it said is delivered anyway. */
 	fuori->y_invertita = p->y_invertita;
 
-	if (!p->detto_il_formato_scheda) {
+	if (!p->card_format_logged) {
 		char nome[5];
 
-		p->detto_il_formato_scheda = true;
+		p->card_format_logged = true;
 		memcpy(nome, &l->formato, 4);
 		nome[4] = 0;
 		registro_dice(AREA,
 		              "⭐ wlroots: the FIRST frame from the CARD — «%s» %ux%u stride "
 		              "%u, linear slab, %s",
 		              nome, l->larghezza, l->altezza, l->stride,
-		              fuori->attesa_esplicita
+		              fuori->explicit_wait
 		                  ? "fence extracted from the DMA-BUF and waited on"
 		                  : "⚠ without a fence: implicit synchronisation");
 	}
 }
 
-static void scheda_chiudi(WlrPalco *p)
+static void card_close(WlrPalco *p)
 {
-	if (!p->scheda_nata)
+	if (!p->card_born)
 		return;
 	for (unsigned i = 0; i < WLR_LASTRE; i++)
-		lastra_butta(p, &p->lastre[i]);
+		slab_drop(p, &p->lastre[i]);
 	if (p->gbm)
 		gbm_device_destroy(p->gbm);
 	if (p->drm_fd >= 0)
 		close(p->drm_fd);
 	g_free(p->nodo);
 	p->nodo = NULL;
-	p->scheda_nata = p->scheda = false;
+	p->card_born = p->scheda = false;
 }
 
 /*
- * Closes the frame in progress.  `copia_viva` = the copy had started and
+ * Closes the frame in progress.  `copy_alive` = the copy had started and
  * neither `ready` nor `failed` has arrived: the buffer is not reused.
  *
  * ⭐ And the frame's slab, if there was one and it was NOT delivered (dropped
  *    wire, `failed`): rule 2, it is dirty.  ⚠ A delivered slab already has
- *    `lastra_del_giro = -1`, and is not touched here.
+ *    `round_slab = -1`, and is not touched here.
  */
-static void chiudi_frame(WlrPalco *p, bool copia_viva)
+static void close_frame(WlrPalco *p, bool copy_alive)
 {
 	if (p->frame)
 		zwlr_screencopy_frame_v1_destroy(p->frame);
 	p->frame = NULL;
-	if (scheda_nel_giro(p)) {
-		lastra_torna_libera(p, &p->lastre[p->lastra_del_giro], true);
-		p->lastra_del_giro = -1;
-	} else if (copia_viva) {
-		p->buffer_sporco = true;
+	if (card_in_round(p)) {
+		slab_returns_free(p, &p->lastre[p->round_slab], true);
+		p->round_slab = -1;
+	} else if (copy_alive) {
+		p->buffer_dirty = true;
 	}
-	p->copia_partita = false;
-	p->copia_col_danno = false;
+	p->copy_started = false;
+	p->duplicate_with_damage = false;
 }
 
 /* ========================================================================= */
@@ -1664,7 +1664,7 @@ static void chiudi_frame(WlrPalco *p, bool copia_viva)
  * ⛔ THE THREAD: everything runs on the thread of the child's loop — the
  *    request starts from `wlr_sonda_puntatore` (after the gesture injection),
  *    the events are pumped by `wlr_fotogramma` (the same pump as the stream),
- *    and the shape is collected by `wlr_sonda_forma` (from `cattura_prendi`).
+ *    and the shape is collected by `wlr_probe_shape` (from `cattura_prendi`).
  *    ⇒ No lock, and no delivery from inside a `libwayland` callback.
  *
  * ⚠ THE SPACE: the region is in OUTPUT coordinates; the child passes the
@@ -1691,14 +1691,14 @@ static void chiudi_frame(WlrPalco *p, bool copia_viva)
 /* ⚠ The thinning: 0 = one per gesture (coalescing).  See the cost, above. */
 #define SONDA_MINIMO_US 0
 
-static void sonda_lancia(WlrPalco *p, int32_t x, int32_t y);
+static void probe_launch(WlrPalco *p, int32_t x, int32_t y);
 
-static void sonda_chiudi_frame(WlrPalco *p)
+static void probe_close_frame(WlrPalco *p)
 {
 	if (p->s_frame)
 		zwlr_screencopy_frame_v1_destroy(p->s_frame);
 	p->s_frame = NULL;
-	p->s_visto_buffer = p->s_copia_partita = false;
+	p->s_seen_buffer = p->s_copy_started = false;
 }
 
 /*
@@ -1725,7 +1725,7 @@ static unsigned sonda_bpp(uint32_t shm)
 }
 
 /* The probe's buffer: it is remade only if the compositor asks for another one. */
-static bool sonda_buffer(WlrPalco *p)
+static bool probe_buffer(WlrPalco *p)
 {
 	struct wl_shm_pool *pool;
 	gsize byte = (gsize)p->s_f_stride * p->s_f_a;
@@ -1768,64 +1768,64 @@ static bool sonda_buffer(WlrPalco *p)
 }
 
 /* The end of a probe (returned or failed): if one is waiting, it starts. */
-static void sonda_prossima(WlrPalco *p)
+static void probe_next(WlrPalco *p)
 {
-	sonda_chiudi_frame(p);
-	if (p->s_in_attesa && g_get_monotonic_time() - p->s_ultima_partita >= SONDA_MINIMO_US) {
-		p->s_in_attesa = false;
-		sonda_lancia(p, p->s_attesa_x, p->s_attesa_y);
+	probe_close_frame(p);
+	if (p->s_pending && g_get_monotonic_time() - p->s_last_started >= SONDA_MINIMO_US) {
+		p->s_pending = false;
+		probe_launch(p, p->s_wait_x, p->s_wait_y);
 	}
 }
 
-static void sonda_parti(WlrPalco *p)
+static void probe_start(WlrPalco *p)
 {
-	if (p->s_copia_partita)
+	if (p->s_copy_started)
 		return;
-	if (!sonda_buffer(p)) {
-		if (!p->s_detto_fallito) {
-			p->s_detto_fallito = true;
+	if (!probe_buffer(p)) {
+		if (!p->s_failed_logged) {
+			p->s_failed_logged = true;
 			registro_dice(AREA, "⚠ wlroots: the pointer probe has no buffer "
 			                    "(%ux%u stride %u): the shape is not looked at, and the client "
 			                    "keeps its arrow",
 			              p->s_f_l, p->s_f_a, p->s_f_stride);
 			registro_dice(AREA, "   (wl_shm format of the probe: 0x%08x)", p->s_f_shm);
 		}
-		p->s_conto.fallite++;
-		sonda_prossima(p);
+		p->s_count.fallite++;
+		probe_next(p);
 		return;
 	}
 	zwlr_screencopy_frame_v1_copy(p->s_frame, p->s_buffer);
-	p->s_copia_partita = true;
+	p->s_copy_started = true;
 }
 
-static void sonda_buffer_ev(void *dati, struct zwlr_screencopy_frame_v1 *f, uint32_t formato,
+static void probe_buffer_ev(void *dati, struct zwlr_screencopy_frame_v1 *f, uint32_t formato,
                             uint32_t l, uint32_t a, uint32_t stride)
 {
 	WlrPalco *p = dati;
 
-	p->s_visto_buffer = true;
+	p->s_seen_buffer = true;
 	p->s_f_shm = formato;
 	p->s_f_l = l;
 	p->s_f_a = a;
 	p->s_f_stride = stride;
 	/* ⚠ Below v3 `buffer_done` does not exist: this is the only offer. */
 	if (zwlr_screencopy_frame_v1_get_version(f) < 3)
-		sonda_parti(p);
+		probe_start(p);
 }
 
-static void sonda_buffer_done(void *dati, struct zwlr_screencopy_frame_v1 *f)
+static void probe_buffer_done(void *dati, struct zwlr_screencopy_frame_v1 *f)
 {
 	WlrPalco *p = dati;
 
-	if (p->s_visto_buffer)
-		sonda_parti(p);
+	if (p->s_seen_buffer)
+		probe_start(p);
 }
 
 /*
  * A probe pixel ⇒ B G R, according to the declared format.  FALSE = a
  * format that is not read here (said once, and the probe turns off).
  */
-static bool sonda_bgr(uint32_t shm, const uint8_t *q, uint8_t *b, uint8_t *g, uint8_t *r)
+static bool probe_bgr(uint32_t shm, const uint8_t *q, uint8_t *b, uint8_t *g, uint8_t *r)
 {
 	switch (shm) {
 	case WL_SHM_FORMAT_ARGB8888:
@@ -1848,7 +1848,7 @@ static bool sonda_bgr(uint32_t shm, const uint8_t *q, uint8_t *b, uint8_t *g, ui
 	}
 }
 
-static void sonda_pronta(void *dati, struct zwlr_screencopy_frame_v1 *f, uint32_t sa,
+static void probe_ready(void *dati, struct zwlr_screencopy_frame_v1 *f, uint32_t sa,
                          uint32_t sb, uint32_t ns)
 {
 	WlrPalco *p = dati;
@@ -1859,22 +1859,22 @@ static void sonda_pronta(void *dati, struct zwlr_screencopy_frame_v1 *f, uint32_
 	int trovata = -1;
 	uint8_t b = 0, g = 0, r = 0;
 
-	p->s_conto.tornate++;
+	p->s_count.tornate++;
 	if (!px) {
-		sonda_prossima(p);
+		probe_next(p);
 		return;
 	}
-	if (!sonda_bgr(p->s_f_shm, px, &b, &g, &r)) {
-		if (!p->s_detto_formato) {
-			p->s_detto_formato = true;
+	if (!probe_bgr(p->s_f_shm, px, &b, &g, &r)) {
+		if (!p->s_format_logged) {
+			p->s_format_logged = true;
 			registro_dice(AREA,
 			              "⛔ wlroots: the pointer probe receives wl_shm format "
 			              "0x%08x, which is not read here: the probe TURNS OFF, and the "
 			              "client keeps its arrow",
 			              p->s_f_shm);
 		}
-		p->s_spenta = true;
-		sonda_chiudi_frame(p);
+		p->s_off = true;
+		probe_close_frame(p);
 		return;
 	}
 	/* ⭐ First the centre, then the neighbours — `forma_da_pixel` is exact to
@@ -1886,60 +1886,60 @@ static void sonda_pronta(void *dati, struct zwlr_screencopy_frame_v1 *f, uint32_
 
 				if (centro != (giro == 0))
 					continue;
-				sonda_bgr(p->s_f_shm,
+				probe_bgr(p->s_f_shm,
 				          px + (gsize)y * p->s_f_stride + x * sonda_bpp(p->s_f_shm), &b,
 				          &g, &r);
 				trovata = forma_da_pixel(b, g, r, 0xFF);
 				if (trovata >= 0 && !centro)
-					p->s_conto.dai_vicini++;
+					p->s_count.from_neighbors++;
 			}
 	if (trovata < 0) {
 		/* ⚠ None of our colours: an application that hides the pointer, or
 		 *   that draws a surface of its own.  The previous shape is kept. */
-		p->s_conto.ignote++;
-		if (!p->s_detta_ignota) {
-			p->s_detta_ignota = true;
+		p->s_count.ignote++;
+		if (!p->s_unknown_logged) {
+			p->s_unknown_logged = true;
 			registro_dice(AREA,
 			              "⚠ wlroots: under the pointer (%d,%d) no colour of the encoded "
 			              "theme: the previous shape is kept.  The line is not "
 			              "repeated; the count is in the closing line",
 			              p->s_x, p->s_y);
 		}
-	} else if (trovata != p->s_forma) {
-		p->s_forma = trovata;
-		p->s_nuova = trovata;
-		p->s_conto.cambi++;
+	} else if (trovata != p->s_shape) {
+		p->s_shape = trovata;
+		p->s_new = trovata;
+		p->s_count.cambi++;
 	}
-	sonda_prossima(p);
+	probe_next(p);
 }
 
-static void sonda_fallita(void *dati, struct zwlr_screencopy_frame_v1 *f)
+static void probe_failed(void *dati, struct zwlr_screencopy_frame_v1 *f)
 {
 	WlrPalco *p = dati;
 
-	p->s_conto.fallite++;
-	sonda_prossima(p);
+	p->s_count.fallite++;
+	probe_next(p);
 }
 
-static void sonda_flags(void *d, struct zwlr_screencopy_frame_v1 *f, uint32_t flags) {}
-static void sonda_danno(void *d, struct zwlr_screencopy_frame_v1 *f, uint32_t x, uint32_t y,
+static void probe_flags(void *d, struct zwlr_screencopy_frame_v1 *f, uint32_t flags) {}
+static void probe_damage(void *d, struct zwlr_screencopy_frame_v1 *f, uint32_t x, uint32_t y,
                         uint32_t l, uint32_t a) {}
-static void sonda_dmabuf(void *d, struct zwlr_screencopy_frame_v1 *f, uint32_t formato,
+static void probe_dmabuf(void *d, struct zwlr_screencopy_frame_v1 *f, uint32_t formato,
                          uint32_t l, uint32_t a) {}
 
 /* ⛔ ALL the events have a function: `libwayland` calls without looking,
  *    and a hole here is a jump to NULL at the first version that sends it. */
-static const struct zwlr_screencopy_frame_v1_listener ASCOLTO_SONDA = {
-	.buffer = sonda_buffer_ev,
-	.flags = sonda_flags,
-	.ready = sonda_pronta,
-	.failed = sonda_fallita,
-	.damage = sonda_danno,
-	.linux_dmabuf = sonda_dmabuf,
-	.buffer_done = sonda_buffer_done,
+static const struct zwlr_screencopy_frame_v1_listener PROBE_LISTENER = {
+	.buffer = probe_buffer_ev,
+	.flags = probe_flags,
+	.ready = probe_ready,
+	.failed = probe_failed,
+	.damage = probe_damage,
+	.linux_dmabuf = probe_dmabuf,
+	.buffer_done = probe_buffer_done,
 };
 
-static void sonda_lancia(WlrPalco *p, int32_t x, int32_t y)
+static void probe_launch(WlrPalco *p, int32_t x, int32_t y)
 {
 	int32_t rx = MAX(x - 1, 0), ry = MAX(y - 1, 0);
 	int32_t rl = MIN(x + 2, (int32_t)p->larghezza) - rx;
@@ -1949,17 +1949,17 @@ static void sonda_lancia(WlrPalco *p, int32_t x, int32_t y)
 		return;
 	p->s_x = x;
 	p->s_y = y;
-	p->s_visto_buffer = p->s_copia_partita = false;
+	p->s_seen_buffer = p->s_copy_started = false;
 	p->s_frame = zwlr_screencopy_manager_v1_capture_output_region(p->manager, 1, p->uscita,
 	                                                             rx, ry, rl, ra);
 	if (!p->s_frame) {
-		p->s_conto.fallite++;
+		p->s_count.fallite++;
 		return;
 	}
-	zwlr_screencopy_frame_v1_add_listener(p->s_frame, &ASCOLTO_SONDA, p);
-	p->s_conto.lanciate++;
-	p->s_ultima_partita = g_get_monotonic_time();
-	p->s_coda_a = p->s_ultima_partita + SONDA_CODA_US;
+	zwlr_screencopy_frame_v1_add_listener(p->s_frame, &PROBE_LISTENER, p);
+	p->s_count.lanciate++;
+	p->s_last_started = g_get_monotonic_time();
+	p->s_tail_at = p->s_last_started + SONDA_CODA_US;
 	/* ⭐ Straight onto the wire: the stream's pump runs within 8 ms, and the
 	 *    shape arrives sooner if the request leaves now.  ⚠ EAGAIN is not a
 	 *    fault: it leaves with the pump's next `flush`. */
@@ -1970,7 +1970,7 @@ void wlr_sonda_puntatore(WlrPalco *p, uint32_t x, uint32_t y, uint32_t l, uint32
 {
 	int32_t ux, uy;
 
-	if (!p || p->s_spenta || !p->manager || !p->uscita || !p->shm || l == 0 || a == 0 ||
+	if (!p || p->s_off || !p->manager || !p->uscita || !p->shm || l == 0 || a == 0 ||
 	    p->larghezza == 0 || p->altezza == 0)
 		return;
 	/* ⭐ From the canvas to the output, as wlroots does with the virtual pointer. */
@@ -1980,49 +1980,49 @@ void wlr_sonda_puntatore(WlrPalco *p, uint32_t x, uint32_t y, uint32_t l, uint32
 		y = a - 1;
 	ux = (int32_t)((uint64_t)x * p->larghezza / l);
 	uy = (int32_t)((uint64_t)y * p->altezza / a);
-	p->s_conto.chieste++;
-	p->s_coda_fatta = false;
+	p->s_count.chieste++;
+	p->s_queue_done = false;
 	if (p->s_frame || (SONDA_MINIMO_US > 0 &&
-	                   g_get_monotonic_time() - p->s_ultima_partita < SONDA_MINIMO_US)) {
+	                   g_get_monotonic_time() - p->s_last_started < SONDA_MINIMO_US)) {
 		/* ⭐ coalescing: only the LAST position is remembered */
-		p->s_in_attesa = true;
-		p->s_attesa_x = ux;
-		p->s_attesa_y = uy;
+		p->s_pending = true;
+		p->s_wait_x = ux;
+		p->s_wait_y = uy;
 		return;
 	}
-	sonda_lancia(p, ux, uy);
+	probe_launch(p, ux, uy);
 }
 
-int wlr_sonda_forma(WlrPalco *p)
+int wlr_probe_shape(WlrPalco *p)
 {
 	int nuova;
 
-	if (!p || p->s_spenta)
+	if (!p || p->s_off)
 		return -1;
 	/* ⭐ the tail probe (rule 3), and the one left behind by the thinning:
 	 *    they start from here, which the child's loop always calls */
 	if (!p->s_frame) {
 		gint64 ora = g_get_monotonic_time();
 
-		if (p->s_in_attesa && ora - p->s_ultima_partita >= SONDA_MINIMO_US) {
-			p->s_in_attesa = false;
-			sonda_lancia(p, p->s_attesa_x, p->s_attesa_y);
-		} else if (!p->s_in_attesa && !p->s_coda_fatta && p->s_conto.lanciate > 0 &&
-		           ora >= p->s_coda_a) {
-			p->s_coda_fatta = true;
-			p->s_conto.di_coda++;
-			sonda_lancia(p, p->s_x, p->s_y);
+		if (p->s_pending && ora - p->s_last_started >= SONDA_MINIMO_US) {
+			p->s_pending = false;
+			probe_launch(p, p->s_wait_x, p->s_wait_y);
+		} else if (!p->s_pending && !p->s_queue_done && p->s_count.lanciate > 0 &&
+		           ora >= p->s_tail_at) {
+			p->s_queue_done = true;
+			p->s_count.of_queue++;
+			probe_launch(p, p->s_x, p->s_y);
 		}
 	}
-	nuova = p->s_nuova;
-	p->s_nuova = -1;
+	nuova = p->s_new;
+	p->s_new = -1;
 	return nuova;
 }
 
-void wlr_sonda_conteggi(const WlrPalco *p, WlrSondaConteggi *fuori)
+void wlr_probe_counts(const WlrPalco *p, WlrProbeCounts *fuori)
 {
 	if (fuori)
-		*fuori = p ? p->s_conto : (WlrSondaConteggi){ 0 };
+		*fuori = p ? p->s_count : (WlrProbeCounts){ 0 };
 }
 
 /* ------------------------------------------------------------------------- */
@@ -2034,15 +2034,15 @@ WlrPalco *wlr_apri(GError **sbaglio)
 
 	p->fd = -1;
 	p->s_fd = -1;
-	p->s_forma = p->s_nuova = -1;
-	p->forza_intero = true; /* the first round: whoever attaches must see at once */
+	p->s_shape = p->s_new = -1;
+	p->force_full = true; /* the first round: whoever attaches must see at once */
 	/* ⛔ The card's descriptors at -1 AT ONCE: the zero of `g_new0` is
 	 *    standard input, and a mistaken close would close it. */
 	p->drm_fd = -1;
-	p->lastra_del_giro = -1;
+	p->round_slab = -1;
 	for (unsigned i = 0; i < WLR_LASTRE; i++)
 		p->lastre[i].fd = -1;
-	p->teste = g_ptr_array_new_with_free_func(libera_testa);
+	p->teste = g_ptr_array_new_with_free_func(free_head);
 	p->display = wl_display_connect(nome);
 	if (!p->display && !nome) {
 		for (int i = 0; i < 10 && !p->display; i++) {
@@ -2059,17 +2059,17 @@ WlrPalco *wlr_apri(GError **sbaglio)
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_NOT_FOUND,
 		            "no Wayland compositor reachable in XDG_RUNTIME_DIR=%s",
 		            g_getenv("XDG_RUNTIME_DIR") ?: "(not set)");
-		wlr_chiudi(p);
+		wlr_close(p);
 		return NULL;
 	}
 
 	p->registry = wl_display_get_registry(p->display);
-	wl_registry_add_listener(p->registry, &ASCOLTO_REGISTRO, p);
+	wl_registry_add_listener(p->registry, &REGISTRY_LISTENER, p);
 	/* ⚠ TWO rounds, not one: the first brings the globals, the second the
 	 *   events the globals send as soon as they are bound.  ⛔ And with a
 	 *   ceiling (defect 3). */
 	if (!giro(p, 2.0, sbaglio) || !giro(p, 2.0, sbaglio)) {
-		wlr_chiudi(p);
+		wlr_close(p);
 		return NULL;
 	}
 
@@ -2077,32 +2077,32 @@ WlrPalco *wlr_apri(GError **sbaglio)
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
 		            "the compositor does not announce zwlr_screencopy_manager_v1: on this "
 		            "desktop capture does not go through here");
-		wlr_chiudi(p);
+		wlr_close(p);
 		return NULL;
 	}
 	if (!p->shm) {
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
 		            "the compositor does not announce wl_shm: I have nowhere to have the "
 		            "pixels written");
-		wlr_chiudi(p);
+		wlr_close(p);
 		return NULL;
 	}
 	if (!p->uscita) {
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_NOT_FOUND,
 		            "the compositor announces no wl_output: there is nothing to "
 		            "capture (the session is alive but without a screen?)");
-		wlr_chiudi(p);
+		wlr_close(p);
 		return NULL;
 	}
 
 	registro_dice(AREA,
 	              "⭐ wlroots: capture ready on output «%s», %ux%u — ⚠ and the size is "
 	              "the one the output HAS, not the one asked for",
-	              p->uscita_nome ?: "unnamed", p->larghezza, p->altezza);
+	              p->output_name ?: "unnamed", p->larghezza, p->altezza);
 	return p;
 }
 
-void wlr_misura(const WlrPalco *palco, uint32_t *larghezza, uint32_t *altezza)
+void wlr_measure(const WlrPalco *palco, uint32_t *larghezza, uint32_t *altezza)
 {
 	if (larghezza)
 		*larghezza = palco ? palco->larghezza : 0;
@@ -2110,40 +2110,40 @@ void wlr_misura(const WlrPalco *palco, uint32_t *larghezza, uint32_t *altezza)
 		*altezza = palco ? palco->altezza : 0;
 }
 
-const char *wlr_uscita_nome(const WlrPalco *palco)
+const char *wlr_output_name(const WlrPalco *palco)
 {
-	return palco && palco->uscita_nome ? palco->uscita_nome : "";
+	return palco && palco->output_name ? palco->output_name : "";
 }
 
 void wlr_forza_intero(WlrPalco *palco)
 {
 	if (palco)
-		palco->forza_intero = true;
+		palco->force_full = true;
 }
 
-void wlr_conteggi(const WlrPalco *palco, WlrConteggi *fuori)
+void wlr_counts(const WlrPalco *palco, WlrCounts *fuori)
 {
 	if (fuori)
-		*fuori = palco ? palco->conteggi : (WlrConteggi){ 0 };
+		*fuori = palco ? palco->conteggi : (WlrCounts){ 0 };
 }
 
-WlrMisuraEsito wlr_misura_chiedi(WlrPalco *palco, uint32_t larghezza, uint32_t altezza,
+WlrSizeOutcome wlr_misura_chiedi(WlrPalco *palco, uint32_t larghezza, uint32_t altezza,
                                  double attesa_s, GError **sbaglio)
 {
 	struct zwlr_output_configuration_v1 *conf;
 	struct zwlr_output_configuration_head_v1 *ct;
-	Testa *nostra = NULL;
+	Head *nostra = NULL;
 	gint64 scadenza;
 
 	g_return_val_if_fail(palco != NULL, WLR_MISURA_IMPOSSIBILE);
 
 	for (guint i = 0; palco->teste && i < palco->teste->len; i++) {
-		Testa *t = g_ptr_array_index(palco->teste, i);
+		Head *t = g_ptr_array_index(palco->teste, i);
 
-		if (palco->uscita_nome && g_strcmp0(t->nome, palco->uscita_nome) == 0)
+		if (palco->output_name && g_strcmp0(t->nome, palco->output_name) == 0)
 			nostra = t;
 	}
-	if (!palco->gestore || !nostra || !palco->serial_noto) {
+	if (!palco->gestore || !nostra || !palco->known_serial) {
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED, "%s",
 		            !palco->gestore ? "the compositor does not announce "
 		                              "zwlr_output_manager_v1: the size cannot be "
@@ -2157,9 +2157,9 @@ WlrMisuraEsito wlr_misura_chiedi(WlrPalco *palco, uint32_t larghezza, uint32_t a
 	if (palco->larghezza == larghezza && palco->altezza == altezza)
 		return WLR_MISURA_GIA_COSI;
 
-	palco->conf = CONF_IN_CORSO;
+	palco->conf = CONF_IN_PROGRESS;
 	conf = zwlr_output_manager_v1_create_configuration(palco->gestore, palco->serial);
-	zwlr_output_configuration_v1_add_listener(conf, &ASCOLTO_CONF, palco);
+	zwlr_output_configuration_v1_add_listener(conf, &CONF_LISTENER, palco);
 
 	/*
 	 * ⛔ Defect 6: EVERY head must be configured, or the compositor closes the
@@ -2169,7 +2169,7 @@ WlrMisuraEsito wlr_misura_chiedi(WlrPalco *palco, uint32_t larghezza, uint32_t a
 	 *    real machine it would be someone's screen.
 	 */
 	for (guint i = 0; i < palco->teste->len; i++) {
-		Testa *t = g_ptr_array_index(palco->teste, i);
+		Head *t = g_ptr_array_index(palco->teste, i);
 
 		if (t == nostra) {
 			ct = zwlr_output_configuration_v1_enable_head(conf, t->proxy);
@@ -2186,12 +2186,12 @@ WlrMisuraEsito wlr_misura_chiedi(WlrPalco *palco, uint32_t larghezza, uint32_t a
 	zwlr_output_configuration_v1_apply(conf);
 
 	scadenza = g_get_monotonic_time() + (gint64)(attesa_s * 1e6);
-	while (palco->conf == CONF_IN_CORSO) {
+	while (palco->conf == CONF_IN_PROGRESS) {
 		if (!pompa(palco, scadenza, sbaglio)) {
 			zwlr_output_configuration_v1_destroy(conf);
 			return WLR_MISURA_RIFIUTATA;
 		}
-		if (palco->conf == CONF_IN_CORSO && g_get_monotonic_time() >= scadenza) {
+		if (palco->conf == CONF_IN_PROGRESS && g_get_monotonic_time() >= scadenza) {
 			zwlr_output_configuration_v1_destroy(conf);
 			g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_TIMED_OUT,
 			            "the compositor did not answer the size request within %.1f s "
@@ -2203,9 +2203,9 @@ WlrMisuraEsito wlr_misura_chiedi(WlrPalco *palco, uint32_t larghezza, uint32_t a
 	zwlr_output_configuration_v1_destroy(conf);
 
 	/* ⛔ Defect 4: three outcomes, three branches. */
-	if (palco->conf == CONF_FALLITA)
+	if (palco->conf == CONF_FAILED)
 		return WLR_MISURA_RIFIUTATA;
-	if (palco->conf == CONF_ANNULLATA)
+	if (palco->conf == CONF_CANCELLED)
 		return WLR_MISURA_ANNULLATA;
 
 	/*
@@ -2229,7 +2229,7 @@ bool wlr_chiedi_la_scheda(WlrPalco *p, GError **sbaglio)
 	g_return_val_if_fail(p != NULL, false);
 	if (p->scheda)
 		return true;
-	if (p->scheda_nata) {
+	if (p->card_born) {
 		/* ⛔ It was born and turned off: it is not turned back on at every
 		 *    request, or a compositor that refuses DMA-BUFs would make it
 		 *    turn off and on again at every round. */
@@ -2254,28 +2254,28 @@ bool wlr_chiedi_la_scheda(WlrPalco *p, GError **sbaglio)
 	/* 1 · the node the compositor draws on — asked of it (v4).
 	 *     ⛔ With a ceiling (defect 3): a feedback that does not close does not
 	 *     stop the child, it only makes it take the node fallback, saying so. */
-	if (p->dmabuf_versione >= 4) {
+	if (p->dmabuf_version >= 4) {
 		struct zwp_linux_dmabuf_feedback_v1 *fb =
 		    zwp_linux_dmabuf_v1_get_default_feedback(p->dmabuf);
 
-		zwp_linux_dmabuf_feedback_v1_add_listener(fb, &ASCOLTO_FEEDBACK, p);
+		zwp_linux_dmabuf_feedback_v1_add_listener(fb, &FEEDBACK_LISTENER, p);
 		scadenza = g_get_monotonic_time() + 2 * G_USEC_PER_SEC;
-		while (!p->feedback_finito) {
+		while (!p->feedback_finished) {
 			if (!pompa(p, scadenza, sbaglio)) {
 				zwp_linux_dmabuf_feedback_v1_destroy(fb);
 				return false;
 			}
-			if (!p->feedback_finito && g_get_monotonic_time() >= scadenza)
+			if (!p->feedback_finished && g_get_monotonic_time() >= scadenza)
 				break;
 		}
 		zwp_linux_dmabuf_feedback_v1_destroy(fb);
 	}
-	if (p->principale_noto) {
-		p->nodo = nodo_da_dispositivo(p->principale);
+	if (p->main_known) {
+		p->nodo = node_from_device(p->principale);
 		come = "stated by the compositor (`main_device`)";
 	}
 	if (!p->nodo) {
-		p->nodo = nodo_come_sessione();
+		p->nodo = node_as_session();
 		come = "⚠ NOT stated by the compositor: taken with the rule of `sessione.c` "
 		       "(the first openable renderD*), the same as WLR_RENDER_DRM_DEVICE";
 	}
@@ -2307,9 +2307,9 @@ bool wlr_chiedi_la_scheda(WlrPalco *p, GError **sbaglio)
 		p->lastre[i].fd = -1;
 	}
 	/* ⚠ If there is already a pending frame, its `copy` (if started) goes to
-	 *   memory: `lastra_del_giro` stays -1 and the card starts from the next one. */
-	p->lastra_del_giro = -1;
-	p->scheda_nata = true;
+	 *   memory: `round_slab` stays -1 and the card starts from the next one. */
+	p->round_slab = -1;
+	p->card_born = true;
 	p->scheda = true;
 	registro_dice(AREA,
 	              "⭐ wlroots: CARD route on — the slabs (%d, LINEAR "
@@ -2320,14 +2320,14 @@ bool wlr_chiedi_la_scheda(WlrPalco *p, GError **sbaglio)
 	return true;
 }
 
-bool wlr_sulla_scheda(const WlrPalco *p)
+bool wlr_on_card(const WlrPalco *p)
 {
 	return p && p->scheda;
 }
 
 void wlr_rendi(WlrPalco *p, void *lastra)
 {
-	WlrLastra *l = lastra;
+	WlrSlab *l = lastra;
 
 	if (!p || !l)
 		return;
@@ -2338,12 +2338,12 @@ void wlr_rendi(WlrPalco *p, void *lastra)
 	/* ⛔ Only a slab IN HAND becomes free again: one returned twice is found
 	 *    FREE (or IN FLIGHT, if it has already left again) and nothing happens.
 	 *    ⚠ Never one IN FLIGHT: that one is closed by its frame. */
-	if (l->stato != LASTRA_IN_MANO)
+	if (l->stato != SLAB_IN_HAND)
 		return;
-	lastra_torna_libera(p, l, false);
+	slab_returns_free(p, l, false);
 }
 
-void wlr_lettura_cpu(int fd, bool inizio)
+void wlr_cpu_read(int fd, bool inizio)
 {
 	struct dma_buf_sync s = {
 		.flags = (inizio ? DMA_BUF_SYNC_START : DMA_BUF_SYNC_END) | DMA_BUF_SYNC_READ,
@@ -2360,7 +2360,7 @@ void wlr_lettura_cpu(int fd, bool inizio)
 		;
 }
 
-WlrEsito wlr_fotogramma(WlrPalco *palco, double attesa_s, WlrFotogramma *fuori, GError **sbaglio)
+WlrOutcome wlr_fotogramma(WlrPalco *palco, double attesa_s, WlrFotogramma *fuori, GError **sbaglio)
 {
 	gint64 scadenza;
 
@@ -2388,16 +2388,16 @@ WlrEsito wlr_fotogramma(WlrPalco *palco, double attesa_s, WlrFotogramma *fuori, 
 	 * looked at: no frame in 8 s»*).  ⇒ The waiting one is abandoned — with
 	 * the buffer marked, because the copy had started — and a full one is opened.
 	 */
-	if (palco->frame && palco->forza_intero && palco->copia_col_danno)
-		chiudi_frame(palco, true);
+	if (palco->frame && palco->force_full && palco->duplicate_with_damage)
+		close_frame(palco, true);
 
 	if (!palco->frame) {
-		palco->visto_buffer = palco->visto_buffer_done = false;
+		palco->seen_buffer = palco->seen_buffer_done = false;
 		palco->pronto = palco->fallito = false;
-		palco->copia_partita = palco->y_invertita = false;
+		palco->copy_started = palco->y_invertita = false;
 		/* ⭐ the card: the offer belongs to THIS frame, and so does the slab */
-		palco->offerto_scheda = false;
-		palco->lastra_del_giro = -1;
+		palco->card_offered = false;
+		palco->round_slab = -1;
 		palco->conteggi.chiesti++;
 		/* ⭐ `overlay_cursor = 1`: on this family the pointer is INSIDE the
 		 *    image, and there is no channel for its shape. */
@@ -2408,20 +2408,20 @@ WlrEsito wlr_fotogramma(WlrPalco *palco, double attesa_s, WlrFotogramma *fuori, 
 			            "capture_output did not produce a frame");
 			return WLR_FOTOGRAMMA_ROTTO;
 		}
-		zwlr_screencopy_frame_v1_add_listener(palco->frame, &ASCOLTO_FRAME, palco);
+		zwlr_screencopy_frame_v1_add_listener(palco->frame, &FRAME_LISTENER, palco);
 	}
 
 	for (;;) {
 		if (palco->fallito) {
-			bool sulla_scheda = scheda_nel_giro(palco);
+			bool on_card = card_in_round(palco);
 
 			/* ⚠ First it is closed (the slab becomes free, dirty), THEN it is
 			 *   counted: if the count turns the card off, the slab is already
-			 *   free and `scheda_spegni` throws it away with the others. */
-			chiudi_frame(palco, false);
+			 *   free and `card_turn_off` throws it away with the others. */
+			close_frame(palco, false);
 			palco->conteggi.falliti++;
-			if (sulla_scheda && ++palco->falliti_di_fila >= WLR_SCHEDA_FALLITI_MAX)
-				scheda_spegni(palco, "three `failed` in a row from the compositor on DMA-BUFs");
+			if (on_card && ++palco->failed_in_a_row >= WLR_SCHEDA_FALLITI_MAX)
+				card_turn_off(palco, "three `failed` in a row from the compositor on DMA-BUFs");
 			return WLR_FOTOGRAMMA_FALLITO;
 		}
 		if (palco->pronto)
@@ -2429,36 +2429,36 @@ WlrEsito wlr_fotogramma(WlrPalco *palco, double attesa_s, WlrFotogramma *fuori, 
 		/*
 		 * The list of offers is closed and the copy has not started yet: the
 		 * target is chosen and it starts.  ⭐ Only once per frame —
-		 * `copia_partita` survives the timeout together with `frame` and
-		 * `lastra_del_giro`, so the call that resumes a pending frame does
+		 * `copy_started` survives the timeout together with `frame` and
+		 * `round_slab`, so the call that resumes a pending frame does
 		 * NOT choose another slab.
 		 */
-		if (elenco_chiuso(palco) && !palco->copia_partita) {
+		if (list_closed(palco) && !palco->copy_started) {
 			bool rotto = false;
-			struct wl_buffer *dove = scheda_destinazione(palco, &rotto, sbaglio);
+			struct wl_buffer *dove = card_destination(palco, &rotto, sbaglio);
 
 			if (rotto) {
 				/* ⛔ No `copy` has started: closing the frame here leaves
 				 *    nothing dirty. */
-				chiudi_frame(palco, false);
+				close_frame(palco, false);
 				return WLR_FOTOGRAMMA_ROTTO;
 			}
 			if (!dove) {
 				/* MEMORY: by default, or a fallback already declared */
-				if (!prepara_buffer(palco, sbaglio)) {
-					chiudi_frame(palco, false);
+				if (!prepare_buffer(palco, sbaglio)) {
+					close_frame(palco, false);
 					return WLR_FOTOGRAMMA_ROTTO;
 				}
 				dove = palco->buffer;
 			}
 			/* ⭐ With damage, if the compositor can do it and nobody has asked
-			 *    for a full frame: see `forza_intero` in the structure. */
-			if (!palco->forza_intero &&
+			 *    for a full frame: see `force_full` in the structure. */
+			if (!palco->force_full &&
 			    zwlr_screencopy_frame_v1_get_version(palco->frame) >= 2) {
 				zwlr_screencopy_frame_v1_copy_with_damage(palco->frame, dove);
-				palco->copia_col_danno = true;
-				if (!palco->detto_il_danno) {
-					palco->detto_il_danno = true;
+				palco->duplicate_with_damage = true;
+				if (!palco->logged_damage) {
+					palco->logged_damage = true;
 					registro_dice(AREA,
 					              "⭐ wlroots: from here frames are asked WITH "
 					              "DAMAGE — the compositor answers only when the "
@@ -2466,9 +2466,9 @@ WlrEsito wlr_fotogramma(WlrPalco *palco, double attesa_s, WlrFotogramma *fuori, 
 				}
 			} else {
 				zwlr_screencopy_frame_v1_copy(palco->frame, dove);
-				palco->forza_intero = false;
+				palco->force_full = false;
 			}
-			palco->copia_partita = true;
+			palco->copy_started = true;
 		}
 		if (g_get_monotonic_time() >= scadenza) {
 			/* ⭐ Timed out, but the frame STAYS pending: the next call resumes
@@ -2484,7 +2484,7 @@ WlrEsito wlr_fotogramma(WlrPalco *palco, double attesa_s, WlrFotogramma *fuori, 
 		if (!pompa(palco, scadenza, sbaglio)) {
 			/* ⛔ The wire dropped: if the copy had started, the buffer (or the
 			 *    slab) is not reused. */
-			chiudi_frame(palco, palco->copia_partita);
+			close_frame(palco, palco->copy_started);
 			return WLR_FOTOGRAMMA_ROTTO;
 		}
 	}
@@ -2497,35 +2497,35 @@ WlrEsito wlr_fotogramma(WlrPalco *palco, double attesa_s, WlrFotogramma *fuori, 
 	 *    re-enters the loop above, finds `pronto`, and waits again on the
 	 *    same fence.  No half blit delivered, no slab lost.
 	 */
-	if (scheda_nel_giro(palco)) {
-		if (!scheda_aspetta_la_gpu(palco, &palco->lastre[palco->lastra_del_giro], scadenza,
+	if (card_in_round(palco)) {
+		if (!card_wait_gpu(palco, &palco->lastre[palco->round_slab], scadenza,
 		                           fuori, sbaglio)) {
 			palco->conteggi.scaduti++;
 			return WLR_FOTOGRAMMA_SCADUTO;
 		}
-		scheda_consegna(palco, fuori); /* ⚠ resets `lastra_del_giro` */
-		chiudi_frame(palco, false);
+		card_delivery(palco, fuori); /* ⚠ resets `round_slab` */
+		close_frame(palco, false);
 		palco->conteggi.presi++;
-		palco->conteggi.sulla_scheda++;
+		palco->conteggi.on_card++;
 		return WLR_FOTOGRAMMA_PRESO;
 	}
 
-	chiudi_frame(palco, false);
+	close_frame(palco, false);
 	palco->conteggi.presi++;
-	palco->conteggi.in_memoria++;
+	palco->conteggi.in_mem++;
 	/* ⛔ The card fields are written here too, empty: `fuori` may come from
 	 *    a round on the card, and an `fd` left there would be a slab that does
 	 *    not belong to this frame. */
-	fuori->sulla_scheda = false;
+	fuori->on_card = false;
 	fuori->fd = -1;
 	fuori->offset = 0;
 	fuori->modificatore = DRM_FORMAT_MOD_LINEAR;
 	fuori->generazione = 0;
 	fuori->lastra = NULL;
 	fuori->us_attesa_gpu = 0;
-	fuori->attesa_esplicita = false;
-	fuori->larghezza = palco->f_larghezza;
-	fuori->altezza = palco->f_altezza;
+	fuori->explicit_wait = false;
+	fuori->larghezza = palco->f_width;
+	fuori->altezza = palco->f_height;
 	fuori->stride = palco->f_stride;
 	/* ⭐ Translated to DRM for whoever is downstream (defect 1). */
 	fuori->formato = shm_a_drm(palco->f_shm);
@@ -2533,8 +2533,8 @@ WlrEsito wlr_fotogramma(WlrPalco *palco, double attesa_s, WlrFotogramma *fuori, 
 	fuori->byte = palco->byte;
 	if (fuori->formato == FOURCC('B', 'G', '2', '4') || fuori->formato == FOURCC('R', 'G', '2', '4'))
 		allarga_24(palco, fuori);
-	fuori->secondi = palco->f_secondi;
-	fuori->nanosecondi = palco->f_nanosecondi;
+	fuori->secondi = palco->f_seconds;
+	fuori->nanosecondi = palco->f_nanoseconds;
 	fuori->y_invertita = palco->y_invertita;
 	return WLR_FOTOGRAMMA_PRESO;
 }
@@ -2571,7 +2571,7 @@ static void allarga_24(WlrPalco *p, WlrFotogramma *fuori)
 	fuori->stride = (uint32_t)passo;
 }
 
-void wlr_chiudi(WlrPalco *palco)
+void wlr_close(WlrPalco *palco)
 {
 	if (!palco)
 		return;
@@ -2579,7 +2579,7 @@ void wlr_chiudi(WlrPalco *palco)
 	if (palco->frame)
 		zwlr_screencopy_frame_v1_destroy(palco->frame);
 	/* ⭐ the probe: its frame before its buffer, like the stream */
-	sonda_chiudi_frame(palco);
+	probe_close_frame(palco);
 	if (palco->s_buffer)
 		wl_buffer_destroy(palco->s_buffer);
 	if (palco->s_pixel)
@@ -2595,7 +2595,7 @@ void wlr_chiudi(WlrPalco *palco)
 		close(palco->fd);
 	/* ⭐ the slabs, `gbm`, the node — AFTER the frame, which could name one
 	 *    in a `copy` */
-	scheda_chiudi(palco);
+	card_close(palco);
 	if (palco->dmabuf)
 		zwp_linux_dmabuf_v1_destroy(palco->dmabuf);
 	if (palco->teste)
@@ -2612,6 +2612,6 @@ void wlr_chiudi(WlrPalco *palco)
 		wl_registry_destroy(palco->registry);
 	if (palco->display)
 		wl_display_disconnect(palco->display);
-	g_free(palco->uscita_nome);
+	g_free(palco->output_name);
 	g_free(palco);
 }

@@ -16,8 +16,8 @@
 # |---|---|---|---|
 # | the reasons on the wire (`ERRORE_PROTOCOLLO`, `NIENTE_IN_COMUNE`, …) | same | same | ⭐ they are decided by `rcp.c`, which is **identical byte for byte** in the two servers (md5 `cb7af778…`) |
 # | the codec choice and the discard in the log (§4.3) | present | present | same lines, same `rcp.c` |
-# | `0x01` input and `0x02` clipboard on a unidirectional stream | «violation» | ⭐ **lawful**, the session stays alive | `src/webtransport.c` `smista_uni()`: *«in the graft both were marked as violations, and a compliant client that opened the input channel saw EVERY byte discarded forever»*.  ⚠ B5 today **does not test them**: it is a hole, not an expected difference |
-# | the **echo** on the streams opened by the bench | present (30 bytes, it is B2's «byte that comes back») | ⛔ **NOT present** | `src/webtransport.c` `scarta_stream_di_troppo()`: *«the bytes are thrown away, and NOT sent back»*.  ⚠ No tool must **wait** for it: whoever does stays hanging, and it is the red that on 10 August was diagnosed for hours as a certificate defect |
+# | `0x01` input and `0x02` clipboard on a unidirectional stream | «violation» | ⭐ **lawful**, the session stays alive | `src/webtransport.c` `dispatch_uni()`: *«in the graft both were marked as violations, and a compliant client that opened the input channel saw EVERY byte discarded forever»*.  ⚠ B5 today **does not test them**: it is a hole, not an expected difference |
+# | the **echo** on the streams opened by the bench | present (30 bytes, it is B2's «byte that comes back») | ⛔ **NOT present** | `src/webtransport.c` `discard_extra_stream()`: *«the bytes are thrown away, and NOT sent back»*.  ⚠ No tool must **wait** for it: whoever does stays hanging, and it is the red that on 10 August was diagnosed for hours as a certificate defect |
 # | the inactivity cap | 120 s, requested by us | ⛔ **30 s, not chosen by us** | `IDLE_MS` in `src/trasporto.c`, and no option touches it.  The B5 cases wait at most 12 s: they fit, but the margin goes from 108 s to 18 s |
 # | the summary line «REMOTIX B3\|B5» | present | ⛔ not present | the product writes `HH:MM:SS.mmm <area>`: the target's fingerprint is counted, not the graft's |
 # | the limiter (7 failed) | bans in memory, dies with the process | bans **on file** | the ban file is per bench and is thrown away at the start, and at the end it is unblocked **declaring it** (B0.3) |
@@ -79,7 +79,7 @@ if [ "$AZIONE" = elenco ]; then
 	exit 0
 fi
 
-bersaglio_dichiara
+target_declare
 
 # ---------------------------------------------------------------------------
 # ⛔ 1. THE SERVER IS PREPARED — and the two roads are not the same.
@@ -124,7 +124,7 @@ inf "⚠ the inactivity cap is \$B_IDLE_LUNGO = $B_IDLE_LUNGO ms: some cases"
 inf "  wait up to twelve seconds to be sure that the farewell does NOT"
 inf "  arrive, and a shorter cap would close the connection on its own —"
 inf "  the bench would read «it dropped» where nothing dropped (R3.19)"
-if [ "$B_IDLE_SCELTA" = no ]; then
+if [ "$B_IDLE_CHOICE" = no ]; then
 	inf "⛔ and on this target we do NOT choose that number: it is IDLE_MS"
 	inf "   in src/trasporto.c.  The margin above the 12 s goes from 108 s to 18 s"
 fi
@@ -136,7 +136,7 @@ PID=$B_PID
 #    unblock never reached anyone» look the same again — and one would find out
 #    at the end, with the measurements done.
 inf "does the unblock command answer? (PING — the denominator of B0.3)"
-bersaglio_ping || { ko "⛔ the unblock command does not answer: at the end I could not"
+target_ping || { ko "⛔ the unblock command does not answer: at the end I could not"
                     ko "   put the machine back in order, and I would notice"
                     ko "   with the measurements done.  I stop now."
                     bersaglio_spegni; exit 4; }
@@ -156,11 +156,11 @@ esac
 
 # ---------------------------------------------------------------------------
 log "4. The violations"
-OPZ=$(bersaglio_opzioni_python)
+OPT=$(bersaglio_opzioni_python)
 if [ -n "$FILTRO" ]; then
-	bash "$ENTRA" --root "python3 -u $DENTRO/01-b5-violazioni.py --indirizzo $IND $OPZ --solo $FILTRO"
+	bash "$ENTRA" --root "python3 -u $DENTRO/01-b5-violazioni.py --indirizzo $IND $OPT --solo $FILTRO"
 else
-	bash "$ENTRA" --root "python3 -u $DENTRO/01-b5-violazioni.py --indirizzo $IND $OPZ"
+	bash "$ENTRA" --root "python3 -u $DENTRO/01-b5-violazioni.py --indirizzo $IND $OPT"
 fi
 ESITO=$?
 
@@ -193,7 +193,7 @@ inf "the CHOICE of the codec, and the DISCARD of the unknown entries"
 #    missing» and «the log cannot be read» ended up in the same `else` branch,
 #    that is form E8.  The file is looked at first, and it is said which of the
 #    two things happened.
-riga_nel_registro() {   # $1 = searched pattern, $2 = sentence if absent
+line_in_log() {   # $1 = searched pattern, $2 = sentence if absent
 	if [ ! -f "$B_LOG_FUORI" ]; then
 		ko "⛔ THE LOG CANNOT BE READ: $B_LOG_FUORI does not exist"
 		ko "   it is not the server that did not write — it is that it cannot be read."
@@ -216,9 +216,9 @@ if [ -n "$FILTRO" ]; then
 	inf "  have been selected: a red here would be a red on a"
 	inf "  rule the server never had the chance to apply"
 else
-	riga_nel_registro "negoziato video.codec=hevc" \
+	line_in_log "negoziato video.codec=hevc" \
 		"⛔ the codec choice is NOT in the log: §4.3 requires it"
-	riga_nel_registro "discarded unknown entries" \
+	line_in_log "discarded unknown entries" \
 		"⛔ the discard of vp9 is NOT in the log: a successful negotiation with the opposite of what was wanted inside it is seen only if someone writes it (trap 4 of LEZIONI.md §4)"
 fi
 
@@ -251,7 +251,7 @@ inf "⛔ never before: inside the run it would make the limiter pass by construc
 inf "⚠ expected «TOLTO» on the bench's address: after seven failures the ban"
 inf "  is there, and a «NON-BANNATO» here would be news about the limiter, not a"
 inf "  successful clean-up"
-bersaglio_sblocca dopo-b5 "$IND" || {
+target_unblock dopo-b5 "$IND" || {
 	ko "⚠ the final unblock did not go through: the address may stay out"
 	ko "  for twelve hours on the ban file of THIS bench ($B_BAN)"
 	ko "  — not on the others', which have one each"

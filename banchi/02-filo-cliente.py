@@ -170,7 +170,7 @@ CLIENT, SERVER = 1, 2
 MAGIA = b"RCPREG\x00\x03"
 BLOCCO = "!BBBIQIH"
 CONTINUA, FIN, RESET = 0, 1, 2
-OROLOGIO_CLIENT = 1        # §11.1: this program is the client
+CLOCK_CLIENT = 1        # §11.1: this program is the client
 
 # ⛔ The instant is MONOTONIC and RELATIVE to the first block, never a wall-clock time:
 #    §4.4 forbids secrets in the file, and an absolute date says **when** and —
@@ -188,7 +188,7 @@ def istante():
         _t0 = adesso
     return min(int((adesso - _t0) * 1000.0), 0xFFFFFFFF)
 
-T_RICHIEDI_CHIAVE = 0x000D
+T_REQUEST_KEY = 0x000D
 T_CONGEDO = 0x000C
 ERRORE_PROTOCOLLO = 0x0B      # §8.2
 CHIUSO_DALL_UTENTE = 0x01
@@ -228,17 +228,17 @@ def fabbrica_cliente():
             # ⛔ The streams we recognised as VIDEO: the set is kept
             #    and not recomputed, because the WebTransport preamble
             #    arrives only once, in the first event.
-            self.video_visti = set()
+            self.video_seen = set()
             self.flussi = {}
             self.finiti = []
             self.chiavi_chieste = 0
             # (direction, channel, stream, payload, masked, end) — §11.1
             self.reg_video = []
-            self.primo_byte = None     # ⛔ when the FIRST video byte arrived
+            self.first_byte = None     # ⛔ when the FIRST video byte arrived
             # ⚠ The codec negotiated in §4.3.  The driver sets it BEFORE the
             #   handshake, because `_sfoglia` may need it already
             #   in the first packet that carries `SESSIONE`.
-            self.codec_atteso = 1
+            self.expected_codec = 1
 
         # ⛔⛔ THE CONTEXT IS SET **HERE**, AND NOT IN THE COROUTINE THAT WAITS —
         #     bench defect found by the FIRST round against a server that
@@ -281,7 +281,7 @@ def fabbrica_cliente():
                         lar, alt = struct.unpack("!II", dati[i + 7:i + 15])
                         self.contesto = f24.Contesto(
                             tela=(lar, alt),
-                            codec_negoziato=self.codec_atteso,
+                            codec_negoziato=self.expected_codec,
                             sessione_aperta=True)
                         break
                     i += 6 + lung
@@ -297,7 +297,7 @@ def fabbrica_cliente():
             #    Aug 2026 on the control channel (`01-b3-cliente.py`).
             if nome == "StreamDataReceived" and self._smista(event):
                 return
-            if nome == "StreamReset" and event.stream_id in self.video_visti:
+            if nome == "StreamReset" and event.stream_id in self.video_seen:
                 # ⛔ `RESET_STREAM`: the frame is INCOMPLETE (§6.2).
                 self._azzerato(event.stream_id)
                 return
@@ -345,7 +345,7 @@ def fabbrica_cliente():
             is consumed**: those bytes belong to HTTP/3, and taking them is
             the defect the first round paid for."""
             sid = event.stream_id
-            if sid in self.video_visti:
+            if sid in self.video_seen:
                 self._arrivano(sid, event.data, event.end_stream)
                 return True
             # 0b11 = unidirectional, opened by the server
@@ -361,7 +361,7 @@ def fabbrica_cliente():
             sessione, i = self._varint(d, i)
             if tipo != self.WT_UNI or sessione is None:
                 return False
-            self.video_visti.add(sid)
+            self.video_seen.add(sid)
             self._arrivano(sid, bytes(d[i:]), event.end_stream)
             return True
 
@@ -373,8 +373,8 @@ def fabbrica_cliente():
             f = self.flussi.get(sid)
             if f is None:
                 f = self.flussi[sid] = Flusso(sid, self.contesto)
-                if self.primo_byte is None:
-                    self.primo_byte = time.monotonic()
+                if self.first_byte is None:
+                    self.first_byte = time.monotonic()
             f.byte += len(dati)
             self.reg_video.append([SERVER, 0x03, sid, bytes(dati), [],
                                    FIN if fine else CONTINUA, istante()])
@@ -427,7 +427,7 @@ def fabbrica_cliente():
                what the document says is sent, and the ambiguity is flagged
                instead of being resolved by hand by the bench.
             """
-            self.manda(struct.pack("!HII", T_RICHIEDI_CHIAVE, 4,
+            self.manda(struct.pack("!HII", T_REQUEST_KEY, 4,
                                    ultimo if ultimo is not None else 0))
             self.chiavi_chieste += 1
 
@@ -502,7 +502,7 @@ def scrivi_registrazione(percorso, blocchi):
 
     blocchi = sorted(blocchi, key=_quando)
     out = bytearray(MAGIA + struct.pack("!IBBBB", len(blocchi),
-                                        OROLOGIO_CLIENT, 0, 0, 0))
+                                        CLOCK_CLIENT, 0, 0, 0))
     for verso, canale, stream, carico, *resto in blocchi:
         oscurati = resto[0] if resto else []
         fine = resto[1] if len(resto) > 1 else CONTINUA
@@ -556,7 +556,7 @@ async def principale(a):
         #    codec already in the packet that carries `SESSIONE`, and a value set
         #    after would be set too late — it is the same ordering defect
         #    the box of `_sfoglia` describes.
-        cli.codec_atteso = a.codec
+        cli.expected_codec = a.codec
         try:
             b = b3.inquadra(b3.T["CIAO"], b3.corpo_ciao())
             cli.manda(b)
@@ -564,8 +564,8 @@ async def principale(a):
             _, corpo, grezzo = await b3.attendi(cli, "ECCOMI")
             blocchi.append((SERVER, 0x00, 0, grezzo, [], CONTINUA, istante()))
 
-            corpo_c = b3.s(a.utente) + b3.s(a.parola)
-            b = b3.inquadra(b3.T["CREDENZIALI"], corpo_c)
+            body_c = b3.s(a.utente) + b3.s(a.parola)
+            b = b3.inquadra(b3.T["CREDENZIALI"], body_c)
             ini = 6 + 2 + len(a.utente.encode()) + 2
             qua = len(a.parola.encode())
             cli.manda(b)

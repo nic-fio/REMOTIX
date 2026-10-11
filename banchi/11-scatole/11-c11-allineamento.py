@@ -160,7 +160,7 @@ def giudica(tavola):
     if len(presenti) < 2:
         return None
     guai = []
-    for nome, _che in DEVE_COMBACIARE:
+    for nome, _what in DEVE_COMBACIARE:
         valori = {}
         for scatola, d in presenti.items():
             v = d.get(nome)
@@ -236,7 +236,7 @@ def main():
     # ⛔ `subprocess.TimeoutExpired` does NOT descend from `OSError`: without
     #    naming it, a command that hangs produces a traceback ⇒ Python exits **1**
     #    ⇒ the hook reads RED on a fault of the BENCH (`LEZIONI.md` §1.51, and
-    #    the cure C10 already has in `radice_del_deposito()`).
+    #    the cure C10 already has in `repo_root()`).
     # ⚠ And this mesh is in the `rete` family, that is it fires at EVERY
     #   change, and it does ~76 `podman exec` on four boxes: it is precisely
     #   the one where a slow command is most likely.
@@ -275,7 +275,7 @@ def main():
     #   across the four boxes, and whoever reads must be able to see it.
     largh = max(len(n) for n, _ in DEVE_COMBACIARE)
     print("   %-*s  %s" % (largh, "entry", "  ".join("%-16s" % n for n in accese)))
-    for nome, _che in DEVE_COMBACIARE:
+    for nome, _what in DEVE_COMBACIARE:
         valori = [tavola[n].get(nome) or "?" for n in accese]
         segno = "  " if len(set(valori)) == 1 else "⛔"
         print(" %s %-*s  %s" % (segno, largh, nome,

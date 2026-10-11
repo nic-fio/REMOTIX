@@ -33,7 +33,7 @@ set -u
 REGISTRO=/var/tmp/remotix-t3-gruppi.registro
 
 # login.defs: on openSUSE it lives in /usr/etc (and /etc overrides it if present).
-leggi_defs()
+read_defs()
 {
 	v=""
 	for f in /usr/etc/login.defs /etc/login.defs; do
@@ -67,8 +67,8 @@ annotata()
 
 iscrivi()
 {
-	min=$(leggi_defs UID_MIN 1000)
-	max=$(leggi_defs UID_MAX 60000)
+	min=$(read_defs UID_MIN 1000)
+	max=$(read_defs UID_MAX 60000)
 	gruppi=$(gruppi_della_scheda)
 	if [ -z "$gruppi" ]; then
 		echo "remotix: no /dev/dri node on this machine: no GPU group to give"

@@ -51,17 +51,17 @@ G4 = _iu.module_from_spec(_s)
 _s.loader.exec_module(G4)
 
 FUNZIONI = ("F-012",)
-TONO_HZ = 440
+TONE_HZ = 440
 FINESTRA_S = 6.0
 WAV = "c15-tono-440.wav"
 
 
 def certifica():
-    return G4.certifica_comune()
+    return G4.certify_common()
 
 
-def prepara_tono(s):
-    b = base64.b64encode(G4.onda_wav(TONO_HZ, 20.0)).decode()
+def prepare_tone(s):
+    b = base64.b64encode(G4.wave_wav(TONE_HZ, 20.0)).decode()
     # ⚠ the file is ~3.8 MB: in base64 ~5 MB, too much for a command line.
     #   ⇒ it is written inside the box in pieces.
     h = "/home/%s/%s" % (s.chi, WAV)
@@ -76,14 +76,14 @@ def prepara_tono(s):
     return c == 0, t.strip()[-200:]
 
 
-def prepara_tono_ffmpeg(s):
+def prepare_tone_ffmpeg(s):
     """⭐ Faster: the tone is written by ffmpeg INSIDE the box, with an exact
     amplitude (`aevalsrc`, not `sine` which attenuates by itself — the lesson of C5)."""
     h = "/home/%s/%s" % (s.chi, WAV)
     c, t = s.sc.dentro(
         "ffmpeg -loglevel error -y -f lavfi -i "
         "\"aevalsrc=0.5*sin(2*PI*%d*t)|0.5*sin(2*PI*%d*t):s=48000:d=20\" "
-        "-c:a pcm_s16le %s && chown %s: %s && ls -l %s" % (TONO_HZ, TONO_HZ, h, s.chi, h, h), 60)
+        "-c:a pcm_s16le %s && chown %s: %s && ls -l %s" % (TONE_HZ, TONE_HZ, h, s.chi, h, h), 60)
     return c == 0, t.strip()[-200:]
 
 
@@ -98,7 +98,7 @@ def zittisci(s):
 
 
 def wpctl(s, cosa):
-    c, t = s.come_utente("wpctl %s" % cosa, 30)
+    c, t = s.as_user("wpctl %s" % cosa, 30)
     return t.strip()
 
 
@@ -113,36 +113,36 @@ def volume(s):
     return (m.group(1) if m else None, float(v.group(1)) if v else None, "MUTED" in t, riga)
 
 
-def ascolta(s, secondi, attesa_hz=TONO_HZ, **k):
-    t0 = G4.ora_pagina(s.g)
+def ascolta(s, secondi, wait_hz=TONE_HZ, **k):
+    t0 = G4.now_page(s.g)
     time.sleep(secondi)
-    r = G4.leggi_orecchio(s.g, t0) or {}
+    r = G4.read_ear(s.g, t0) or {}
     camp = r.get("campioni") or []
-    e, d, num = G4.giudica_suono(camp, attesa_hz, **k)
+    e, d, num = G4.judge_sound(camp, wait_hz, **k)
     return e, d, num, r
 
 
 def sveglia(s, note):
     """Waits for the page's audio context and makes the real click."""
-    stato, conti = G4.aspetta_contesto(s.g, 30)
+    stato, conti = G4.wait_context(s.g, 30)
     if stato is None:
         note.append("the page did not create an AudioContext in 30 s (counts %s)" % (conti,))
         return False
     note.append("context born «%s»" % stato)
-    note.append(G4.clic_vero(s, 0.62, 0.55))
+    note.append(G4.real_click(s, 0.62, 0.55))
     time.sleep(1.5)
-    stato2, _ = G4.aspetta_contesto(s.g, 5)
-    note.append("after the click «%s»" % stato2)
+    state2, _ = G4.wait_context(s.g, 5)
+    note.append("after the click «%s»" % state2)
     return True
 
 
-def entra_con_orecchio(s):
+def enter_with_ear(s):
     """The page, the ear BEFORE the login (the audio context can be born
     right after admission, if the session is already playing), then the login."""
     ok, m = s.pr.apri()
     if not ok:
         return False, "the page does not open: " + m
-    ok, m = G4.metti_orecchio(s.g)
+    ok, m = G4.put_ear(s.g)
     if not ok:
         return False, m
     ok, m = s.entra(apri=False)
@@ -155,26 +155,26 @@ def corpo(o, E):
     sess = S.Sessione(o, "012", E)
     G4.robusta(sess.sc)
     with sess as s:
-        ok, m = entra_con_orecchio(s)
+        ok, m = enter_with_ear(s)
         if not ok:
             raise S.Bloccata(m)
-        ok, m = prepara_tono_ffmpeg(s)
+        ok, m = prepare_tone_ffmpeg(s)
         if not ok:
             print("   ⚠ the tone with ffmpeg: %s — the bench writes it" % m, flush=True)
-            ok, m = prepara_tono(s)
+            ok, m = prepare_tone(s)
         if not ok:
             raise S.Bloccata("the tone does not get ready in the box: " + m)
-        segno = s.segno_registro()
+        segno = s.log_mark()
         c, t = suona(s)
         if c != 0:
             raise S.Bloccata("pw-play does not start in the session: " + t[-200:])
         note = []
         if not sveglia(s, note):
-            r = G4.leggi_orecchio(s.g) or {}
+            r = G4.read_ear(s.g) or {}
             conti = r.get("conti")
             nome, vol, muto, tv = volume(s)
-            ev = [s.salva_testo("server-f012.txt", s.registro_da(segno) if segno else []),
-                  s.salva_console()]
+            ev = [s.save_text("server-f012.txt", s.registro_da(segno) if segno else []),
+                  s.save_console()]
             if conti and (conti.get("ricevuti") or 0) > 0:
                 raise S.Bloccata("the page receives audio (%s) but the ear does not see the context"
                                  % conti)
@@ -184,7 +184,7 @@ def corpo(o, E):
             return
         time.sleep(1.0)
         e1, d1, num1, r1 = ascolta(s, FINESTRA_S)
-        campioni_sani = r1.get("campioni") or []
+        healthy_samples = r1.get("campioni") or []
         ev = [G4.salva_json(o, "f012-orecchio-sano.json", r1)]
         nome, vol, muto, tv = volume(s)
         i5 = ["at connection: default sink «%s», %s" % (nome, tv)]
@@ -208,7 +208,7 @@ def corpo(o, E):
             male.append("I5: with the sink muted at 0.10 the browser STILL HEARS (the session's "
                         "slider does not govern): %s" % d2)
         # the reattach: the page again, user and password, same session
-        ok, m = entra_con_orecchio(s)
+        ok, m = enter_with_ear(s)
         if not ok:
             male.append("I5: the reattach does not succeed: %s" % m)
         else:
@@ -226,8 +226,8 @@ def corpo(o, E):
             else:
                 male.append("I5: after the reattach the page does not play (%s %s)" % (m, note2))
         # server evidence
-        ev.append(s.salva_testo("server-f012.txt", s.registro_da(segno) if segno else []))
-        ev.append(s.salva_console())
+        ev.append(s.save_text("server-f012.txt", s.registro_da(segno) if segno else []))
+        ev.append(s.save_console())
         foto, dove = s.foto("f012-fine")
         if dove:
             ev.append(dove)
@@ -244,13 +244,13 @@ def corpo(o, E):
 
         if o.guasto:
             # g2 first (it does not touch the scene): the wrong expectation on the real samples
-            eg2, dg2, _ = G4.giudica_suono(campioni_sani, 660)
+            eg2, dg2, _ = G4.judge_sound(healthy_samples, 660)
             # g1: the application goes silent
             zittisci(s)
             time.sleep(1.5)
             eg1, dg1, _n1, rg1 = ascolta(s, 4.0)
             evg = [G4.salva_json(o, "f012-orecchio-guasto.json", rg1)]
-            if not campioni_sani:
+            if not healthy_samples:
                 E.guasto("F-012", None, "no healthy sample on which to judge the wrong expectation")
             else:
                 visto = eg1 == "FAIL" and eg2 == "FAIL"

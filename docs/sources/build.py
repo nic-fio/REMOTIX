@@ -364,11 +364,11 @@ def file_map(groups, cap):
     tutti = sorgenti()
     citati = [f for _, rows in groups for f, _ in rows]
     mancano = sorted(set(tutti) - set(citati))
-    in_piu = sorted(set(citati) - set(tutti))
-    if mancano or in_piu:
+    in_excess = sorted(set(citati) - set(tutti))
+    if mancano or in_excess:
         raise SystemExit("the manual's file map needs updating (technical/ch22_map.py):"
                          + "".join(f"\n  missing {f}" for f in mancano)
-                         + "".join(f"\n  no longer exists {f}" for f in in_piu))
+                         + "".join(f"\n  no longer exists {f}" for f in in_excess))
     out = []
     for gruppo, rows in groups:
         out.append(gruppo)
@@ -506,7 +506,7 @@ def build(kind, outdir=ROOT / "docs"):
 
 
 # ── Checks: the manual aligned with the code ────────────────────────────
-def testo_del_codice(*cartelle, estensioni=(".c", ".h", ".go", ".sh", ".py", ".html", ".mjs", ".comp", ".service",
+def code_text(*cartelle, estensioni=(".c", ".h", ".go", ".sh", ".py", ".html", ".mjs", ".comp", ".service",
                                              ".conf", ".rules", ".spec")):
     """The text of the git-tracked sources under those folders (no builds, no vendor/)."""
     out = []
@@ -524,31 +524,31 @@ def testo_del_codice(*cartelle, estensioni=(".c", ".h", ".go", ".sh", ".py", ".h
 # from the sources, which are in Italian). The manuals are entirely in English: no
 # Italian labels in brackets, no Italian quotations, no Italian text
 # in the diagrams (decision of 4 Oct 2026).
-PAROLE_ITALIANE = re.compile(
+ITALIAN_WORDS = re.compile(
     r"\b(il|lo|gli|della|delle|degli|dello|nella|nelle|negli|sono|questo|questa|quando|perché|anche|però|oppure|"
     r"finché|ancora|sempre|niente|nessun|nessuna|dopo|ogni|tutti|tutte|viene|serve|deve|può|hanno|col|coi|dal|dai|"
     r"sul|sui|alla|alle|allo|che|non|una|del|con|si|è)\b", re.I)
 
 
-PAROLE_ITALIANE_GRAFICI = re.compile(
+ITALIAN_CHART_WORDS = re.compile(
     r"\b(il|lo|gli|della|delle|dello|nella|sono|questo|quando|perché|anche|ogni|che|una|è|di|telefono|collegamento|"
     r"collegato|bloccato|chiuso|perso|cassetto|finestra|servizio|comandi|errore|risposta|evento|appunti|ricevi|"
     r"invia|chiudi|apri|notifiche|stato|primo|riserva|margine|posta|lettura|codifica|spedizione|sentinella)\b", re.I)
 
 
-def frasi_italiane(pagina):
+def italian_sentences(pagina):
     """The sentences of a manual's running text that still look Italian."""
     t = re.sub(r'<style.*?</style>|<script.*?</script>|<pre.*?</pre>|<code>.*?</code>|<kbd>.*?</kbd>', " ",
                pagina, flags=re.S)
     frasi = [f.strip() for f in re.split(r"(?<=[.;:!?])\s+|\n", html.unescape(re.sub(r"<[^>]+>", "\n", t)))
-             if len({w.lower() for w in PAROLE_ITALIANE.findall(f)}) >= 2]
+             if len({w.lower() for w in ITALIAN_WORDS.findall(f)}) >= 2]
     # Diagram labels are short: one typically Italian word is enough.
     for svg in re.findall(r"<svg.*?</svg>", t, flags=re.S):
         for x in re.findall(r"<text[^>]*>(.*?)</text>", svg, flags=re.S):
             x = html.unescape(x)
             # Options, paths and code names (--prova-codifica, figlio.c, REMOTIX_AREA) are real names, not Italian.
             parole = re.sub(r"(?<!\w)(--?[\w-]+|[\w./-]*[_/.][\w./-]*)", " ", x)
-            if PAROLE_ITALIANE_GRAFICI.search(parole):
+            if ITALIAN_CHART_WORDS.search(parole):
                 frasi.append("diagram: " + x)
     return frasi
 
@@ -571,7 +571,7 @@ def controlla():
                 errori.append(f"{meta['file']}: version {VERSION} does not appear")
             if '<html lang="en">' not in pagina:
                 errori.append(f"{meta['file']}: the page does not declare lang=\"en\"")
-            for frase in frasi_italiane(pagina):
+            for frase in italian_sentences(pagina):
                 errori.append(f"{meta['file']}: text still in Italian: {frase[:120]}")
             ids = set(re.findall(r'\bid="([^"]+)"', pagina))
             for a in sorted(set(re.findall(r'href="#([^"]+)"', pagina)) - ids):
@@ -580,17 +580,17 @@ def controlla():
     codici = [html.unescape(re.sub(r"<[^>]+>", "", x)) for x in re.findall(r"<code>(.*?)</code>", pagina, re.S)]
 
     # C functions cited as «name()»: they must exist in the product sources (src/), or in the benches' C.
-    c_testo = testo_del_codice("src", "banchi/rcp")
-    parole_c = set(re.findall(r"\b\w+\b", c_testo))
-    go_testo = testo_del_codice("installatore")
-    parole_go = set(re.findall(r"\b\w+\b", go_testo))
-    js_testo = (ROOT / "src" / "pagina.html").read_text(errors="replace")
-    parole_js = set(re.findall(r"\b\w+\b", js_testo))
+    c_text = code_text("src", "banchi/rcp")
+    words_c = set(re.findall(r"\b\w+\b", c_text))
+    go_content = code_text("installatore")
+    words_go = set(re.findall(r"\b\w+\b", go_content))
+    js_text = (ROOT / "src" / "pagina.html").read_text(errors="replace")
+    words_js = set(re.findall(r"\b\w+\b", js_text))
     for x in codici:
         for nome in re.findall(r"^([A-Za-z_][\w.]*)\(\)$", x.strip()):
             ultimo = nome.split(".")[-1]
-            if ultimo not in parole_c and ultimo not in parole_go and ultimo not in parole_js \
-                    and nome not in NOMI_NON_FUNZIONI:
+            if ultimo not in words_c and ultimo not in words_go and ultimo not in words_js \
+                    and nome not in NON_FUNCTION_NAMES:
                 errori.append(f"cited function that does not exist in the sources: {nome}()")
 
     # Cited files: they must exist in the repository (the name is compared, and the path if written in full).
@@ -598,29 +598,29 @@ def controlla():
     nomi = {f.rsplit("/", 1)[-1] for f in tenuti}
     for x in codici:
         for f in re.findall(r"(?<![\w/.-])((?:[\w.]+[\w.-]*/)*[\w]+[\w-]*\.(?:c|h|go|sh|py|html|mjs|comp|service|conf|spec|md))\b", x):
-            if f in INTESTAZIONI_DI_SISTEMA or f in FILE_DI_SISTEMA:
+            if f in SYSTEM_HEADERS or f in SYSTEM_FILES:
                 continue
             if "/" in f and not f.startswith(("/", "~")):
                 if f not in tenuti and not any(t.endswith("/" + f) for t in tenuti):
                     errori.append(f"cited file that does not exist: {f}")
-            elif f not in nomi and f not in FILE_DI_SISTEMA:
+            elif f not in nomi and f not in SYSTEM_FILES:
                 errori.append(f"cited file that does not exist: {f}")
 
     # REMOTIX_* environment variables: all those the product reads are in the manual, and no more.
-    letto = testo_del_codice("src", "installatore", "packaging")
-    nel_codice = {v for v in re.findall(r"getenv\(\s*\"(REMOTIX_[A-Z0-9_]+)\"", letto)}
-    nel_codice |= {v for v in re.findall(r"Getenv\(\s*\"(REMOTIX_[A-Z0-9_]+)\"", letto)}
-    nel_manuale = set(re.findall(r"\bREMOTIX_[A-Z0-9_]+\b", pagina))
-    for v in sorted(nel_codice - nel_manuale):
+    letto = code_text("src", "installatore", "packaging")
+    in_code = {v for v in re.findall(r"getenv\(\s*\"(REMOTIX_[A-Z0-9_]+)\"", letto)}
+    in_code |= {v for v in re.findall(r"Getenv\(\s*\"(REMOTIX_[A-Z0-9_]+)\"", letto)}
+    in_manual = set(re.findall(r"\bREMOTIX_[A-Z0-9_]+\b", pagina))
+    for v in sorted(in_code - in_manual):
         errori.append(f"undocumented environment variable: {v}")
     # The benches' ones may be cited (they are not mandatory): they exist, but the product does not read them.
-    tutte = set(re.findall(r"\bREMOTIX_[A-Z0-9_]+\b", letto + testo_del_codice("banchi")))
-    for v in sorted(nel_manuale - tutte):
+    tutte = set(re.findall(r"\bREMOTIX_[A-Z0-9_]+\b", letto + code_text("banchi")))
+    for v in sorted(in_manual - tutte):
         errori.append(f"documented but non-existent environment variable: {v}")
 
     # RX-… codes: every cited code must exist in the code, of the installer or of the server (RX-KDE-… is in kwin.c).
-    codici_rx = set(re.findall(r"\bRX-[A-Z]+-\d{3}\b", go_testo + c_testo))
-    for x in sorted(set(re.findall(r"\bRX-[A-Z]+-\d{3}\b", pagina)) - codici_rx):
+    rx_codes = set(re.findall(r"\bRX-[A-Z]+-\d{3}\b", go_content + c_text))
+    for x in sorted(set(re.findall(r"\bRX-[A-Z]+-\d{3}\b", pagina)) - rx_codes):
         errori.append(f"cited code that does not exist in the code: {x}")
     return list(dict.fromkeys(errori))
 
@@ -632,15 +632,15 @@ def subprocess_ls():
 
 
 # Files of the machine REMOTIX runs on, not of the repository: they may be cited.
-FILE_DI_SISTEMA = {"remotix.conf", "sessione.log", "porta.conf"}
+SYSTEM_FILES = {"remotix.conf", "sessione.log", "porta.conf"}
 
 # System headers: those the sources include between < >.
-INTESTAZIONI_DI_SISTEMA = set(re.findall(r"#\s*include\s*<([^>]+)>", "\n".join(
+SYSTEM_HEADERS = set(re.findall(r"#\s*include\s*<([^>]+)>", "\n".join(
     (ROOT / f).read_text(errors="replace") for f in sorted(subprocess_ls())
     if f.startswith("src/") and f.endswith((".c", ".h")) and (ROOT / f).is_file())))
 
 # Spellings with brackets that are not functions: the rpm recipe syntax, Provides: bundled(ngtcp2).
-NOMI_NON_FUNZIONI = {"bundled"}
+NON_FUNCTION_NAMES = {"bundled"}
 
 
 if __name__ == "__main__":

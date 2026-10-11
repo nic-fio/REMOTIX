@@ -10,7 +10,7 @@ import (
 // rpmFinto: an rpm database answering «rpm -q --qf» the way rpm does — it expands %{NAME},
 // %{VERSION}, %{RELEASE}, %{ARCH} and the conditional %|EPOCH?{%{EPOCH}:}|, which prints nothing
 // for a package without an epoch. The other commands (rpm -qa, zypper verify) answer «all fine».
-func rpmFinto(db map[string][3]string) func(time.Duration, string, ...string) (string, int, error) {
+func rpmFake(db map[string][3]string) func(time.Duration, string, ...string) (string, int, error) {
 	return func(_ time.Duration, nome string, arg ...string) (string, int, error) {
 		if nome != "rpm" || len(arg) < 3 || arg[0] != "-q" || arg[1] != "--qf" {
 			return "", 0, nil
@@ -38,7 +38,7 @@ func rpmFinto(db map[string][3]string) func(time.Duration, string, ...string) (s
 // read the installed one with its epoch, or every package that has one stays «missing» —
 // `[M]` installa-91, fedora44: «packages: HALF_DONE 104 of 112», the 8 being libglvnd ×4,
 // libogg, libtheora, libvisual, libvorbis.
-func TestEpocaRpm(t *testing.T) {
+func TestEpochRpm(t *testing.T) {
 	db := map[string][3]string{
 		"libglvnd":     {"1", "1.7.0", "9.fc44"},
 		"libglvnd-egl": {"1", "1.7.0", "9.fc44"},
@@ -48,18 +48,18 @@ func TestEpocaRpm(t *testing.T) {
 		"zlib-ng":      {"0", "2.2.4", "3.fc44"},
 	}
 	insieme := []Artefatto{
-		{Nome: "libglvnd", Versione: "1:1.7.0-9.fc44", Esito: "new"},
-		{Nome: "libglvnd-egl", Versione: "1:1.7.0-9.fc44", Esito: "new"},
-		{Nome: "libogg", Versione: "2:1.3.6-2.fc44", Esito: "new"},
-		{Nome: "libvorbis", Versione: "1:1.3.7-14.fc44", Esito: "new"},
-		{Nome: "nettle", Versione: "3.10.1-1.fc44", Esito: "new"},
-		{Nome: "zlib-ng", Versione: "2.2.4-3.fc44", Esito: "new"},
+		{Nome: "libglvnd", Ver: "1:1.7.0-9.fc44", Esito: "new"},
+		{Nome: "libglvnd-egl", Ver: "1:1.7.0-9.fc44", Esito: "new"},
+		{Nome: "libogg", Ver: "2:1.3.6-2.fc44", Esito: "new"},
+		{Nome: "libvorbis", Ver: "1:1.3.7-14.fc44", Esito: "new"},
+		{Nome: "nettle", Ver: "3.10.1-1.fc44", Esito: "new"},
+		{Nome: "zlib-ng", Ver: "2.2.4-3.fc44", Esito: "new"},
 	}
 	for _, fam := range []string{"fedora", "suse"} {
-		a := &Ambiente{Radice: t.TempDir(), Famiglia: fam, Esegui: rpmFinto(db)}
+		a := &Ambiente{Radice: t.TempDir(), Famiglia: fam, Esegui: rpmFake(db)}
 		a.Pacchetti = ScegliGestore(a, fam)
 
-		v, err := a.Pacchetti.Versioni([]string{"libglvnd", "nettle", "zlib-ng", "absent"})
+		v, err := a.Pacchetti.Vers([]string{"libglvnd", "nettle", "zlib-ng", "absent"})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -69,7 +69,7 @@ func TestEpocaRpm(t *testing.T) {
 			}
 		}
 
-		prima, _ := json.Marshal(primaPacchetti{Origine: DIRETTA, Gestore: a.Pacchetti.Nome(), Insieme: insieme})
+		prima, _ := json.Marshal(beforePackages{Origine: DIRETTA, Gestore: a.Pacchetti.Nome(), ResolvedSet: insieme})
 		c := &Contesto{Amb: a, Cartella: t.TempDir() + "/ops/op1"}
 		es, det, err := (&pacchetti{}).Controlla(c, prima)
 		if err != nil || es != COMPLETO {
@@ -82,14 +82,14 @@ func TestEpocaRpm(t *testing.T) {
 			vecchio[k] = x
 		}
 		vecchio["libogg"] = [3]string{"1", "1.3.6", "2.fc44"}
-		a.Esegui = rpmFinto(vecchio)
+		a.Esegui = rpmFake(vecchio)
 		if es, det, _ := (&pacchetti{}).Controlla(c, prima); es != A_META || det != "5 of 6" {
 			t.Errorf("%s: libogg at an older epoch: %s %q, want HALF_DONE 5 of 6", fam, es, det)
 		}
 	}
 }
 
-func TestVersioneUguale(t *testing.T) {
+func TestSameVersion(t *testing.T) {
 	for _, c := range []struct {
 		a, b string
 		ok   bool

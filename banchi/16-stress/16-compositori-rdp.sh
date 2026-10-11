@@ -37,16 +37,16 @@ misura() {
 
 vivo() { [ -f "$C/$1.pid" ] && kill -0 "$(cat "$C/$1.pid")" 2>/dev/null; }
 
-misura_di() {  # :N ⇒ WIDTHxHEIGHT
+size_of() {  # :N ⇒ WIDTHxHEIGHT
 	DISPLAY=$1 xdpyinfo 2>/dev/null | awk '/dimensions:/{print $2; exit}'
 }
 
-accendi_uno() {  # uNN WxH
+turn_on_one() {  # uNN WxH
 	local n=$1 m=$2 k d
 	k=$((10#${n#u}))
 	d=":$((BASE_DISPLAY + k))"
 	if vivo "$n"; then
-		if [ "$(misura_di "$d")" = "$m" ]; then
+		if [ "$(size_of "$d")" = "$m" ]; then
 			echo "$n: already on at $d ($m)"
 			return 0
 		fi
@@ -59,10 +59,10 @@ accendi_uno() {  # uNN WxH
 	echo $! >"$C/$n.pid"
 	echo 800 >"/proc/$(cat "$C/$n.pid")/oom_score_adj" 2>/dev/null
 	for _ in $(seq 1 40); do
-		[ "$(misura_di "$d")" = "$m" ] && break
+		[ "$(size_of "$d")" = "$m" ] && break
 		sleep 0.25
 	done
-	if [ "$(misura_di "$d")" != "$m" ]; then
+	if [ "$(size_of "$d")" != "$m" ]; then
 		echo "$n: ⛔ Xvfb $d does not answer at $m ($(tail -2 "$C/$n.log" | tr '\n' ' '))"
 		kill "$(cat "$C/$n.pid")" 2>/dev/null
 		rm -f "$C/$n.pid"
@@ -78,7 +78,7 @@ accendi() {
 	M=$(misura "${2:-4k}") || { echo "unknown size: ${2:-}"; exit 2; }
 	esito=0
 	for i in $(seq 0 "$N"); do
-		accendi_uno "$(printf 'u%02d' "$i")" "$M" || esito=1
+		turn_on_one "$(printf 'u%02d' "$i")" "$M" || esito=1
 	done
 	return $esito
 }
@@ -100,7 +100,7 @@ stato() {
 		[ -e "$f" ] || continue
 		n=$(basename "$f")
 		if vivo "$n"; then
-			echo "$n: on at $(cat "$f") — $(misura_di "$(cat "$f")")"
+			echo "$n: on at $(cat "$f") — $(size_of "$(cat "$f")")"
 			quanti=$((quanti + 1))
 		else
 			echo "$n: ⚠ off (the file is left)"

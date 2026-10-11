@@ -55,9 +55,9 @@ struct AppuntiKde {
 	struct wl_registry *registro;
 	struct zwlr_data_control_manager_v1 *gestore;
 	struct wl_seat *seat;
-	uint32_t versione_gestore;
+	uint32_t handler_version;
 	const char *protocollo; /* the name of the bound manager, for the log */
-	uint32_t nome_ext, versione_ext; /* ext_data_control_manager_v1, if present */
+	uint32_t ext_name, ext_version; /* ext_data_control_manager_v1, if present */
 	struct zwlr_data_control_device_v1 *dispositivo;
 
 	GThread *pompa;
@@ -69,23 +69,23 @@ struct AppuntiKde {
 	Offerta *corrente;  /* the session's selection, or NULL */
 	Offerta *in_arrivo; /* announced, not yet read */
 	struct zwlr_data_control_source_v1 *nostra;
-	gint64 ultimo_set;
+	gint64 last_set;
 	GHashTable *richieste; /* serial → fd */
-	guint32 prossimo_serial;
+	guint32 next_serial;
 
 	/* As in `appunti.c`: the lock is held while a callback runs. */
 	GMutex lucchetto;
 	char *ultimo;
 	size_t ultimo_byte;
-	AppuntiSuTesto su_testo;
-	AppuntiSuRichiesta su_richiesta;
+	ClipboardOnText on_text;
+	ClipboardOnRequest on_request;
 	void *dati;
 };
 
 /* ------------------------------------------------------------------ *
  * The session's offers
  * ------------------------------------------------------------------ */
-static void offerta_libera(Offerta *offerta)
+static void offer_free(Offerta *offerta)
 {
 	if (!offerta)
 		return;
@@ -95,7 +95,7 @@ static void offerta_libera(Offerta *offerta)
 	g_free(offerta);
 }
 
-static bool offerta_ha(const Offerta *offerta, const char *mime)
+static bool offer_has(const Offerta *offerta, const char *mime)
 {
 	for (guint i = 0; offerta && i < offerta->mime->len; i++)
 		if (g_ascii_strcasecmp(g_ptr_array_index(offerta->mime, i), mime) == 0)
@@ -118,17 +118,17 @@ static bool offerta_ha(const Offerta *offerta, const char *mime)
  *      our own source from the pump that serves it delivers nothing (5 s of
  *      waiting, then "wrote nothing"), so no text goes back up to the client
  *      to be re-offered. */
-static bool tipi_nostri(const Offerta *offerta)
+static bool our_types(const Offerta *offerta)
 {
 	guint quanti = 0;
 
 	for (int i = 0; TIPI_TESTO[i]; i++, quanti++)
-		if (!offerta_ha(offerta, TIPI_TESTO[i]))
+		if (!offer_has(offerta, TIPI_TESTO[i]))
 			return false;
 	return offerta && offerta->mime->len == quanti;
 }
 
-static void su_tipo_offerto(void *dati, struct zwlr_data_control_offer_v1 *proxy,
+static void on_type_offered(void *dati, struct zwlr_data_control_offer_v1 *proxy,
                             const char *mime)
 {
 	Offerta *offerta = dati;
@@ -137,9 +137,9 @@ static void su_tipo_offerto(void *dati, struct zwlr_data_control_offer_v1 *proxy
 		g_ptr_array_add(offerta->mime, g_strdup(mime));
 }
 
-static const struct zwlr_data_control_offer_v1_listener ascolto_offerta = { su_tipo_offerto };
+static const struct zwlr_data_control_offer_v1_listener offer_listener = { on_type_offered };
 
-static void su_offerta_nuova(void *dati, struct zwlr_data_control_device_v1 *dispositivo,
+static void on_new_offer(void *dati, struct zwlr_data_control_device_v1 *dispositivo,
                              struct zwlr_data_control_offer_v1 *proxy)
 {
 	Offerta *offerta = g_new0(Offerta, 1);
@@ -148,19 +148,19 @@ static void su_offerta_nuova(void *dati, struct zwlr_data_control_device_v1 *dis
 	offerta->mime = g_ptr_array_new_with_free_func(g_free);
 	/* The offer hooks onto ITSELF: the `offer`s arrive before knowing
 	 * whether it is the selection or the primary, which arrive on the same device. */
-	zwlr_data_control_offer_v1_add_listener(proxy, &ascolto_offerta, offerta);
+	zwlr_data_control_offer_v1_add_listener(proxy, &offer_listener, offerta);
 }
 
-static Offerta *offerta_di(struct zwlr_data_control_offer_v1 *proxy)
+static Offerta *offer_of(struct zwlr_data_control_offer_v1 *proxy)
 {
 	return proxy ? wl_proxy_get_user_data((struct wl_proxy *)proxy) : NULL;
 }
 
-static void su_selezione(void *dati, struct zwlr_data_control_device_v1 *dispositivo,
+static void on_selection(void *dati, struct zwlr_data_control_device_v1 *dispositivo,
                          struct zwlr_data_control_offer_v1 *proxy)
 {
 	AppuntiKde *appunti = dati;
-	Offerta *offerta = offerta_di(proxy);
+	Offerta *offerta = offer_of(proxy);
 
 	g_mutex_lock(&appunti->stato);
 	/*
@@ -184,13 +184,13 @@ static void su_selezione(void *dati, struct zwlr_data_control_device_v1 *disposi
 	 *   whoever copied, and it is NOT our job to keep it alive.  OUR
 	 *   source instead lives as long as the child.
 	 */
-	if (appunti->nostra && tipi_nostri(offerta)) {
+	if (appunti->nostra && our_types(offerta)) {
 		g_mutex_unlock(&appunti->stato);
 		registro_dettaglio(REG_APPUNTI, "return announcement after our own copy: ignored");
-		offerta_libera(offerta);
+		offer_free(offerta);
 		return;
 	}
-	g_clear_pointer(&appunti->corrente, offerta_libera);
+	g_clear_pointer(&appunti->corrente, offer_free);
 	appunti->corrente = offerta;
 	/* We do not read from here: an `offer(mime)` may arrive AFTER `selection`
 	 * (`kde.md` §9).  The pump reads it, after a full roundtrip. */
@@ -200,13 +200,13 @@ static void su_selezione(void *dati, struct zwlr_data_control_device_v1 *disposi
 
 /* The primary selection (X11's middle button) has no counterpart
  * in the protocol: it is accepted and dropped. */
-static void su_selezione_primaria(void *dati, struct zwlr_data_control_device_v1 *dispositivo,
+static void on_primary_selection(void *dati, struct zwlr_data_control_device_v1 *dispositivo,
                                   struct zwlr_data_control_offer_v1 *proxy)
 {
-	offerta_libera(offerta_di(proxy));
+	offer_free(offer_of(proxy));
 }
 
-static void su_finito(void *dati, struct zwlr_data_control_device_v1 *dispositivo)
+static void on_finished(void *dati, struct zwlr_data_control_device_v1 *dispositivo)
 {
 	const AppuntiKde *appunti = dati;
 
@@ -215,17 +215,17 @@ static void su_finito(void *dati, struct zwlr_data_control_device_v1 *dispositiv
 	              appunti->compositore);
 }
 
-static const struct zwlr_data_control_device_v1_listener ascolto_dispositivo = {
-	su_offerta_nuova,
-	su_selezione,
-	su_finito,
-	su_selezione_primaria,
+static const struct zwlr_data_control_device_v1_listener device_listener = {
+	on_new_offer,
+	on_selection,
+	on_finished,
+	on_primary_selection,
 };
 
 /* ------------------------------------------------------------------ *
  * Our source: the CLIENT's text
  * ------------------------------------------------------------------ */
-static void su_richiesta_dati(void *dati, struct zwlr_data_control_source_v1 *sorgente,
+static void on_data_request(void *dati, struct zwlr_data_control_source_v1 *sorgente,
                               const char *mime, int32_t fd)
 {
 	AppuntiKde *appunti = dati;
@@ -235,22 +235,22 @@ static void su_richiesta_dati(void *dati, struct zwlr_data_control_source_v1 *so
 	/* ⛔ We do not write here: the text is on the client and must be asked for.  We put
 	 *    the descriptor aside and return at once — it is the event thread. */
 	g_mutex_lock(&appunti->stato);
-	serial = ++appunti->prossimo_serial;
+	serial = ++appunti->next_serial;
 	g_hash_table_insert(appunti->richieste, GUINT_TO_POINTER(serial), GINT_TO_POINTER(fd));
 	g_mutex_unlock(&appunti->stato);
 
 	g_mutex_lock(&appunti->lucchetto);
-	qualcuno = appunti->su_richiesta != NULL;
+	qualcuno = appunti->on_request != NULL;
 	if (qualcuno)
-		appunti->su_richiesta(serial, appunti->dati);
+		appunti->on_request(serial, appunti->dati);
 	g_mutex_unlock(&appunti->lucchetto);
 
 	if (!qualcuno)
 		/* Nobody is listening: we answer with what there is (or close). */
-		appunti_kde_rispondi(appunti, serial, NULL, 0);
+		clipboard_kde_reply(appunti, serial, NULL, 0);
 }
 
-static void su_annullata(void *dati, struct zwlr_data_control_source_v1 *sorgente)
+static void on_cancelled(void *dati, struct zwlr_data_control_source_v1 *sorgente)
 {
 	AppuntiKde *appunti = dati;
 
@@ -261,40 +261,40 @@ static void su_annullata(void *dati, struct zwlr_data_control_source_v1 *sorgent
 	zwlr_data_control_source_v1_destroy(sorgente);
 }
 
-static const struct zwlr_data_control_source_v1_listener ascolto_sorgente = {
-	su_richiesta_dati, su_annullata
+static const struct zwlr_data_control_source_v1_listener source_listener = {
+	on_data_request, on_cancelled
 };
 
 /* ------------------------------------------------------------------ *
  * The Wayland registry
  * ------------------------------------------------------------------ */
-static void su_globale(void *dati, struct wl_registry *registro, uint32_t nome,
+static void on_global(void *dati, struct wl_registry *registro, uint32_t nome,
                        const char *interfaccia, uint32_t versione)
 {
 	AppuntiKde *appunti = dati;
 
 	if (!g_strcmp0(interfaccia, zwlr_data_control_manager_v1_interface.name)) {
 		/* Version 2 adds the primary, which we do not need: we bind what there is. */
-		appunti->versione_gestore = MIN(versione, 2u);
+		appunti->handler_version = MIN(versione, 2u);
 		appunti->protocollo = zwlr_data_control_manager_v1_interface.name;
 		appunti->gestore = wl_registry_bind(registro, nome,
 		                                    &zwlr_data_control_manager_v1_interface,
-		                                    appunti->versione_gestore);
+		                                    appunti->handler_version);
 	} else if (!g_strcmp0(interfaccia, ext_data_control_manager_v1_interface.name)) {
 		/* Bound AFTER the registry roundtrip, and only if zwlr is missing: see
-		 * `lega_ext_se_serve`. */
-		appunti->nome_ext = nome;
-		appunti->versione_ext = versione;
+		 * `bind_ext_if_needed`. */
+		appunti->ext_name = nome;
+		appunti->ext_version = versione;
 	} else if (!g_strcmp0(interfaccia, wl_seat_interface.name) && !appunti->seat) {
 		appunti->seat = wl_registry_bind(registro, nome, &wl_seat_interface, 1);
 	}
 }
 
-static void su_globale_via(void *dati, struct wl_registry *registro, uint32_t nome)
+static void on_global_away(void *dati, struct wl_registry *registro, uint32_t nome)
 {
 }
 
-static const struct wl_registry_listener ascolto_registro = { su_globale, su_globale_via };
+static const struct wl_registry_listener registry_listener = { on_global, on_global_away };
 
 /* ⛔ [M] 6 Oct 2026, Ubuntu 26.04 / KWin 6.6.6: KWin NO LONGER exposes
  *    `zwlr_data_control_manager_v1`, only the standard `ext_data_control_manager_v1`
@@ -308,14 +308,14 @@ static const struct wl_registry_listener ascolto_registro = { su_globale, su_glo
  *    source, offer) are born from new_id, where the interface name does not
  *    travel.  One code for both, instead of 800 doubled lines.
  *    zwlr is preferred when both are present: it is the path already tested. */
-static void lega_ext_se_serve(AppuntiKde *appunti)
+static void bind_ext_if_needed(AppuntiKde *appunti)
 {
-	if (appunti->gestore || !appunti->nome_ext)
+	if (appunti->gestore || !appunti->ext_name)
 		return;
-	appunti->versione_gestore = 1;
+	appunti->handler_version = 1;
 	appunti->protocollo = ext_data_control_manager_v1_interface.name;
 	appunti->gestore = (struct zwlr_data_control_manager_v1 *)wl_registry_bind(
-	    appunti->registro, appunti->nome_ext, &ext_data_control_manager_v1_interface, 1);
+	    appunti->registro, appunti->ext_name, &ext_data_control_manager_v1_interface, 1);
 }
 
 /* ------------------------------------------------------------------ *
@@ -341,53 +341,53 @@ static bool pronto(int fd, short cosa)
 
 /* One type, read to the end with the ceiling of `appunti.c` (ceiling PLUS ONE: a
  * text as large as the ceiling is lawful).  NULL with `perche` written. */
-static GBytes *leggi_un_tipo(AppuntiKde *appunti, struct zwlr_data_control_offer_v1 *proxy,
+static GBytes *read_type(AppuntiKde *appunti, struct zwlr_data_control_offer_v1 *proxy,
                              const char *mime, const char **perche)
 {
-	int tubo[2];
+	int pipe_fd[2];
 	GByteArray *raccolta;
 
-	if (pipe2(tubo, O_CLOEXEC) != 0) {
+	if (pipe2(pipe_fd, O_CLOEXEC) != 0) {
 		*perche = "pipe not created";
 		return NULL;
 	}
-	zwlr_data_control_offer_v1_receive(proxy, mime, tubo[1]);
+	zwlr_data_control_offer_v1_receive(proxy, mime, pipe_fd[1]);
 	wl_display_flush(appunti->display);
 	/* ⛔ Our copy of the write end is closed AT ONCE, or the read
 	 *    never ends. */
-	close(tubo[1]);
+	close(pipe_fd[1]);
 
 	raccolta = g_byte_array_new();
 	for (;;) {
 		guint8 pezzo[16384];
 		ssize_t quanti;
 
-		if (!pronto(tubo[0], POLLIN)) {
-			close(tubo[0]);
+		if (!pronto(pipe_fd[0], POLLIN)) {
+			close(pipe_fd[0]);
 			g_byte_array_unref(raccolta);
 			*perche = "whoever owns the clipboard wrote nothing for 5 s";
 			return NULL;
 		}
-		quanti = read(tubo[0], pezzo, sizeof pezzo);
+		quanti = read(pipe_fd[0], pezzo, sizeof pezzo);
 		if (quanti < 0 && errno == EINTR)
 			continue;
 		if (quanti <= 0)
 			break;
 		if (raccolta->len + (guint)quanti > APPUNTI_TETTO) {
-			close(tubo[0]);
+			close(pipe_fd[0]);
 			g_byte_array_unref(raccolta);
 			*perche = "clipboard over the ceiling (§5.4): left where it is, NOT truncated";
 			return NULL;
 		}
 		g_byte_array_append(raccolta, pezzo, (guint)quanti);
 	}
-	close(tubo[0]);
+	close(pipe_fd[0]);
 	return g_byte_array_free_to_bytes(raccolta);
 }
 
 /* The text of the current selection, along the row of types: the first that
  * delivers valid UTF-8.  NULL if there is no text (and it says so). */
-static char *leggi_il_testo(AppuntiKde *appunti, size_t *byte)
+static char *read_text(AppuntiKde *appunti, size_t *byte)
 {
 	struct zwlr_data_control_offer_v1 *proxy = NULL;
 	Offerta *offerta;
@@ -419,7 +419,7 @@ static char *leggi_il_testo(AppuntiKde *appunti, size_t *byte)
 			c_e = g_ascii_strcasecmp(g_ptr_array_index(tipi, k), TIPI_TESTO[i]) == 0;
 		if (!c_e)
 			continue;
-		dati = leggi_un_tipo(appunti, proxy, TIPI_TESTO[i], &perche);
+		dati = read_type(appunti, proxy, TIPI_TESTO[i], &perche);
 		if (!dati) {
 			registro_dice(REG_APPUNTI, "⛔ «%s» cannot be read: %s", TIPI_TESTO[i], perche);
 			continue;
@@ -460,7 +460,7 @@ static char *leggi_il_testo(AppuntiKde *appunti, size_t *byte)
 }
 
 /* Hands the listener the text of the last announcement. */
-static void consegna_annuncio(AppuntiKde *appunti)
+static void delivery_announcement(AppuntiKde *appunti)
 {
 	char *testo;
 	size_t byte = 0;
@@ -473,15 +473,15 @@ static void consegna_annuncio(AppuntiKde *appunti)
 	if (!c_era)
 		return;
 
-	testo = leggi_il_testo(appunti, &byte);
+	testo = read_text(appunti, &byte);
 	if (!testo)
 		return;
 	g_mutex_lock(&appunti->lucchetto);
 	g_free(appunti->ultimo);
 	appunti->ultimo = g_strdup(testo);
 	appunti->ultimo_byte = byte;
-	if (appunti->su_testo)
-		appunti->su_testo(testo, byte, appunti->dati);
+	if (appunti->on_text)
+		appunti->on_text(testo, byte, appunti->dati);
 	g_mutex_unlock(&appunti->lucchetto);
 	registro_dice(REG_APPUNTI, "⭐ the session copied %zu bytes of text", byte);
 	g_free(testo);
@@ -531,12 +531,12 @@ static bool gira(AppuntiKde *appunti, int attesa_ms)
 	 *    after the `selection` they belong to. */
 	if (appunti->in_arrivo) {
 		wl_display_roundtrip(appunti->display);
-		consegna_annuncio(appunti);
+		delivery_announcement(appunti);
 	}
 	return true;
 }
 
-static gpointer thread_pompa(gpointer dati)
+static gpointer thread_pump(gpointer dati)
 {
 	AppuntiKde *appunti = dati;
 
@@ -572,10 +572,10 @@ static AppuntiKde *apri_su(const char *compositore, GError **sbaglio)
 		goto guasto;
 	}
 	appunti->registro = wl_display_get_registry(appunti->display);
-	wl_registry_add_listener(appunti->registro, &ascolto_registro, appunti);
+	wl_registry_add_listener(appunti->registro, &registry_listener, appunti);
 	wl_display_roundtrip(appunti->display);
 	wl_display_roundtrip(appunti->display);
-	lega_ext_se_serve(appunti);
+	bind_ext_if_needed(appunti);
 	if (!appunti->gestore) {
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
 		            "%s exposes neither zwlr_data_control_manager_v1 nor "
@@ -589,7 +589,7 @@ static AppuntiKde *apri_su(const char *compositore, GError **sbaglio)
 	}
 	appunti->dispositivo =
 	    zwlr_data_control_manager_v1_get_data_device(appunti->gestore, appunti->seat);
-	zwlr_data_control_device_v1_add_listener(appunti->dispositivo, &ascolto_dispositivo,
+	zwlr_data_control_device_v1_add_listener(appunti->dispositivo, &device_listener,
 	                                         appunti);
 	/* ⭐ KWin sends the current selection AT ONCE (`seat.cpp:228-229`), even
 	 *    empty: it is the asymmetry that on Mutter must be asked for (`appunti_leggi_adesso`).
@@ -603,16 +603,16 @@ static AppuntiKde *apri_su(const char *compositore, GError **sbaglio)
 
 	if (!g_unix_open_pipe(appunti->sveglia, O_CLOEXEC, NULL))
 		appunti->sveglia[0] = appunti->sveglia[1] = -1;
-	appunti->pompa = g_thread_new("remotix-appunti", thread_pompa, appunti);
+	appunti->pompa = g_thread_new("remotix-appunti", thread_pump, appunti);
 
 	registro_dice(REG_APPUNTI, "⭐ clipboard hooked to %s on socket «%s» with "
 	                           "%s v%u",
 	              compositore, appunti->socket, appunti->protocollo,
-	              appunti->versione_gestore);
+	              appunti->handler_version);
 	return appunti;
 
 guasto:
-	appunti_kde_chiudi(appunti);
+	clipboard_kde_close(appunti);
 	return NULL;
 }
 
@@ -626,14 +626,14 @@ AppuntiKde *appunti_kde_apri_wlroots(GError **sbaglio)
 	return apri_su("labwc", sbaglio);
 }
 
-void appunti_kde_chiudi(AppuntiKde *appunti)
+void clipboard_kde_close(AppuntiKde *appunti)
 {
 	GHashTableIter giro;
 	gpointer chiave, valore;
 
 	if (!appunti)
 		return;
-	appunti_kde_ascolta(appunti, NULL, NULL, NULL);
+	clipboard_kde_listen(appunti, NULL, NULL, NULL);
 
 	if (appunti->sveglia[1] >= 0) {
 		ssize_t scritti = write(appunti->sveglia[1], "x", 1);
@@ -649,7 +649,7 @@ void appunti_kde_chiudi(AppuntiKde *appunti)
 		close(GPOINTER_TO_INT(valore));
 	g_hash_table_unref(appunti->richieste);
 
-	g_clear_pointer(&appunti->corrente, offerta_libera);
+	g_clear_pointer(&appunti->corrente, offer_free);
 	if (appunti->nostra)
 		zwlr_data_control_source_v1_destroy(appunti->nostra);
 	if (appunti->dispositivo)
@@ -671,19 +671,19 @@ void appunti_kde_chiudi(AppuntiKde *appunti)
 	g_free(appunti);
 }
 
-void appunti_kde_ascolta(AppuntiKde *appunti, AppuntiSuTesto su_testo,
-                         AppuntiSuRichiesta su_richiesta, void *dati)
+void clipboard_kde_listen(AppuntiKde *appunti, ClipboardOnText on_text,
+                         ClipboardOnRequest on_request, void *dati)
 {
 	if (!appunti)
 		return;
 	g_mutex_lock(&appunti->lucchetto);
-	appunti->su_testo = su_testo;
-	appunti->su_richiesta = su_richiesta;
+	appunti->on_text = on_text;
+	appunti->on_request = on_request;
 	appunti->dati = dati;
 	g_mutex_unlock(&appunti->lucchetto);
 }
 
-char *appunti_kde_ultimo_testo(AppuntiKde *appunti, size_t *byte)
+char *clipboard_kde_last_text(AppuntiKde *appunti, size_t *byte)
 {
 	char *copia;
 
@@ -697,14 +697,14 @@ char *appunti_kde_ultimo_testo(AppuntiKde *appunti, size_t *byte)
 	return copia;
 }
 
-void appunti_kde_leggi_adesso(AppuntiKde *appunti)
+void clipboard_kde_read_now(AppuntiKde *appunti)
 {
 	char *testo;
 	size_t byte = 0;
 
 	if (!appunti)
 		return;
-	testo = leggi_il_testo(appunti, &byte);
+	testo = read_text(appunti, &byte);
 	if (!testo) {
 		registro_dettaglio(REG_APPUNTI, "the session had no clipboard to give us at the "
 		                                "time of switching on: it is not a fault");
@@ -716,13 +716,13 @@ void appunti_kde_leggi_adesso(AppuntiKde *appunti)
 	g_free(appunti->ultimo);
 	appunti->ultimo = g_strdup(testo);
 	appunti->ultimo_byte = byte;
-	if (appunti->su_testo)
-		appunti->su_testo(testo, byte, appunti->dati);
+	if (appunti->on_text)
+		appunti->on_text(testo, byte, appunti->dati);
 	g_mutex_unlock(&appunti->lucchetto);
 	g_free(testo);
 }
 
-gboolean appunti_kde_offri(AppuntiKde *appunti, GError **sbaglio)
+gboolean clipboard_kde_offer(AppuntiKde *appunti, GError **sbaglio)
 {
 	struct zwlr_data_control_source_v1 *sorgente;
 	gint64 adesso;
@@ -734,18 +734,18 @@ gboolean appunti_kde_offri(AppuntiKde *appunti, GError **sbaglio)
 	/* The minimum step towards klipper: we wait, we do not skip. */
 	g_mutex_lock(&appunti->stato);
 	adesso = g_get_monotonic_time();
-	if (appunti->ultimo_set && adesso - appunti->ultimo_set < PASSO_MINIMO_US) {
-		gint64 resta = PASSO_MINIMO_US - (adesso - appunti->ultimo_set);
+	if (appunti->last_set && adesso - appunti->last_set < PASSO_MINIMO_US) {
+		gint64 resta = PASSO_MINIMO_US - (adesso - appunti->last_set);
 
 		g_mutex_unlock(&appunti->stato);
 		g_usleep((gulong)resta);
 		g_mutex_lock(&appunti->stato);
 	}
-	appunti->ultimo_set = g_get_monotonic_time();
+	appunti->last_set = g_get_monotonic_time();
 	g_mutex_unlock(&appunti->stato);
 
 	sorgente = zwlr_data_control_manager_v1_create_data_source(appunti->gestore);
-	zwlr_data_control_source_v1_add_listener(sorgente, &ascolto_sorgente, appunti);
+	zwlr_data_control_source_v1_add_listener(sorgente, &source_listener, appunti);
 	for (int i = 0; TIPI_TESTO[i]; i++)
 		zwlr_data_control_source_v1_offer(sorgente, TIPI_TESTO[i]);
 
@@ -762,7 +762,7 @@ gboolean appunti_kde_offri(AppuntiKde *appunti, GError **sbaglio)
 	return TRUE;
 }
 
-void appunti_kde_rispondi(AppuntiKde *appunti, uint32_t serial, const char *testo,
+void clipboard_kde_reply(AppuntiKde *appunti, uint32_t serial, const char *testo,
                           size_t byte)
 {
 	gpointer valore;
@@ -788,7 +788,7 @@ void appunti_kde_rispondi(AppuntiKde *appunti, uint32_t serial, const char *test
 	if (!testo || byte == 0) {
 		size_t quanti = 0;
 
-		ripiego = appunti_kde_ultimo_testo(appunti, &quanti);
+		ripiego = clipboard_kde_last_text(appunti, &quanti);
 		if (ripiego && quanti > 0) {
 			registro_dice(REG_APPUNTI, "⭐ the client has no clipboard for request %u: "
 			                           "giving back to the session the %zu bytes IT had",

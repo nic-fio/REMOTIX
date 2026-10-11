@@ -88,7 +88,7 @@
  *
  * ⚠ And the other half of the ban — the **file** that survives restart — this
  *   module cannot look at: `rcp_sblocca()` calls `salva_ban(NULL, …)`, which
- *   with the session at `NULL` stays silent on every fault, and `percorso_ban`
+ *   with the session at `NULL` stays silent on every fault, and `ban_path`
  *   is `static` inside `rcp.c`.  ⛔ So here it is never declared that the file
  *   was written: it is said that it was **requested**.  Whoever measures looks
  *   at it from outside — `01-b8-sblocca.py --ban-file`, which reads it before
@@ -108,7 +108,7 @@ typedef struct comando comando;
  * is the twelve hours — so whoever starts the server goes on, but the missing
  * half must be readable in the log. */
 comando *comando_apri(const char *percorso);
-void comando_chiudi(comando *k);
+void command_close(comando *k);
 
 /* Like `pagina_*`: the descriptor is put in the `poll` and whatever moved is
  * moved. */

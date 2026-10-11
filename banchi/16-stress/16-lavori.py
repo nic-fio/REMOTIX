@@ -82,13 +82,13 @@ APP = {
 }
 
 # the passage of files into the box: the host's folder mounted inside
-PASSAGGIO_OSPITE = os.environ.get("REMOTIX_PASSAGGIO16", "/media/REMOTIX/rete11/.c16-passaggio")
-PASSAGGIO_SCATOLA = "/rete11/.c16-passaggio"
+GUEST_HANDOFF = os.environ.get("REMOTIX_PASSAGGIO16", "/media/REMOTIX/rete11/.c16-passaggio")
+BOX_HANDOFF = "/rete11/.c16-passaggio"
 
 PROFILI = {1: "A", 2: "B", 3: "C", 0: "D"}
 
 
-def profilo_di(n):
+def profile_of(n):
     """1,5,9,13 A · 2,6,10,14 B · 3,7,11,15 C · 4,8,12,16 D (§5)."""
     return PROFILI[n % 4]
 
@@ -98,7 +98,7 @@ def browser_di(n):
     return "firefox" if n % 2 else "chrome"
 
 
-def inquilino_di(n):
+def tenant_of(n):
     """`c16%03du%d`: the clear-out recognises it (`^c[0-9]+b?u[0-9]+$`)."""
     return "c16%03du%d" % (n, n)
 
@@ -177,13 +177,13 @@ http.server.ThreadingHTTPServer(("127.0.0.1", PORTA), H).serve_forever()
 #  THE PAGES OF WORKLOAD A (and the video one)
 # ═══════════════════════════════════════════════════════════════════════════
 PAGINE_A = ("testo", "immagini", "lunga", "tabella")
-COLORI_NAV = ("#c0392b", "#2471a3", "#1e8449", "#b7950b")
+NAV_COLORS = ("#c0392b", "#2471a3", "#1e8449", "#b7950b")
 NAV_Y = 0.16            # centre of the buttons, fraction of the desktop's height
-NOTA_Y = 0.94           # centre of the text field at the bottom
+NOTE_Y = 0.94           # centre of the text field at the bottom
 PAROLE_NOTA = ("alpha", "beta", "gamma", "delta", "session", "desktop", "keyboard", "server",
                "measure", "network", "frame", "remote")
 
-_TESTA = r"""<!doctype html><html lang=en><meta charset=utf-8><title>c16 %(nome)s</title>
+_HEAD = r"""<!doctype html><html lang=en><meta charset=utf-8><title>c16 %(nome)s</title>
 <style>
  body{margin:0;font:28px/1.5 sans-serif;background:%(fondo)s;color:#222}
  nav{position:fixed;left:0;right:0;top:8vh;height:16vh;display:flex;z-index:9}
@@ -200,7 +200,7 @@ _TESTA = r"""<!doctype html><html lang=en><meta charset=utf-8><title>c16 %(nome)
 <nav>%(nav)s</nav><textarea id=nota spellcheck=false></textarea><main>
 """
 
-_CODA = r"""</main>
+_QUEUE = r"""</main>
 <script>
 const NOME = %(nome_js)s;
 function manda(t){ try { fetch('/log', {method:'POST', body:t, keepalive:true}).catch(()=>{}); } catch(e){} }
@@ -231,35 +231,35 @@ addEventListener('click', (e) => { if (e.target.closest('a')) return;
 </script></html>
 """
 
-_PAROLE = ("the session", "the desktop", "a window", "the encoder", "the network",
+_WORDS = ("the session", "the desktop", "a window", "the encoder", "the network",
            "the frame", "a user", "the keyboard", "the server", "the graphics card",
            "updates", "arrives", "scrolls", "stays still", "redraws", "measures",
            "without hurry", "in 4K", "on the glass", "from the browser")
 
 
-def _paragrafi(n, seme):
+def _paragraphs(n, seme):
     import random
     r = random.Random(seme)
     out = []
     for i in range(n):
         frasi = []
         for _j in range(r.randint(3, 7)):
-            frasi.append(" ".join(r.choice(_PAROLE) for _k in range(r.randint(6, 14))).capitalize() + ".")
+            frasi.append(" ".join(r.choice(_WORDS) for _k in range(r.randint(6, 14))).capitalize() + ".")
         out.append("<p><b>%d.</b> %s</p>" % (i + 1, " ".join(frasi)))
     return "\n".join(out)
 
 
-def pagine_a():
+def pages_a():
     """{file name: html} — four pages at least three 4K screens long."""
     fondo = {"testo": "#fdfdf6", "immagini": "#20252b", "lunga": "#ffffff", "tabella": "#f6fbff"}
     out = {}
     for nome in PAGINE_A:
         nav = "".join('<a href="%s.html" style="background:%s"%s>%s</a>' % (
-            p, COLORI_NAV[i], ' class=qui' if p == nome else "", p.upper())
+            p, NAV_COLORS[i], ' class=qui' if p == nome else "", p.upper())
             for i, p in enumerate(PAGINE_A))
         corpo, extra = "", ""
         if nome == "testo":
-            corpo = "<h1>A text to read</h1>" + _paragrafi(60, 1)
+            corpo = "<h1>A text to read</h1>" + _paragraphs(60, 1)
         elif nome == "immagini":
             corpo = "<h1 style=color:#eee>Images</h1><div id=g></div>"
             extra = r"""
@@ -279,22 +279,22 @@ for (let i = 0; i < 36; i++) {
             for i in range(400):
                 sez.append('<section style="background:hsl(%d,55%%,%d%%)"><h2>Section %d</h2>%s</section>'
                            % ((i * 37) % 360, 78 + (i % 3) * 6, i + 1,
-                              _paragrafi(1, 100 + i)))
+                              _paragraphs(1, 100 + i)))
             corpo = "<h1>A long page</h1>" + "\n".join(sez)
         elif nome == "tabella":
             righe = ["<tr><th>#</th><th>name</th><th>value</th><th>state</th><th>note</th></tr>"]
             for i in range(600):
                 righe.append("<tr><td>%d</td><td>entry-%04d</td><td>%d.%02d</td><td>%s</td><td>%s</td></tr>"
                              % (i + 1, (i * 7919) % 10000, (i * 37) % 997, i % 100,
-                                ("GREEN", "DEGRADED", "FAIL")[i % 3], _PAROLE[i % len(_PAROLE)]))
+                                ("GREEN", "DEGRADED", "FAIL")[i % 3], _WORDS[i % len(_WORDS)]))
             corpo = "<h1>A table</h1><table>" + "".join(righe) + "</table>"
-        out[nome + ".html"] = (_TESTA % {"nome": nome, "fondo": fondo[nome], "nav": nav} + corpo
-                               + _CODA % {"nome_js": json.dumps(nome), "extra": extra})
-    out["video.html"] = PAGINA_VIDEO
+        out[nome + ".html"] = (_HEAD % {"nome": nome, "fondo": fondo[nome], "nav": nav} + corpo
+                               + _QUEUE % {"nome_js": json.dumps(nome), "extra": extra})
+    out["video.html"] = VIDEO_PAGE
     return out
 
 
-PAGINA_VIDEO = r"""<!doctype html><html><meta charset=utf-8><title>c16 video</title>
+VIDEO_PAGE = r"""<!doctype html><html><meta charset=utf-8><title>c16 video</title>
 <style>html,body{margin:0;height:100%;background:#000;overflow:hidden}
 #p,video{position:fixed;left:0;top:0;width:100vw;height:100vh;border:0}</style>
 <div id=p></div>
@@ -346,7 +346,7 @@ if (yt) {
 </script></html>
 """
 
-PREF_INTERNE = """user_pref("media.autoplay.default", 0);
+INTERNAL_PREFS = """user_pref("media.autoplay.default", 0);
 user_pref("media.autoplay.blocking_policy", 0);
 user_pref("app.update.enabled", false);
 user_pref("browser.tabs.warnOnClose", false);
@@ -358,20 +358,20 @@ user_pref("privacy.webrtc.legacyGlobalIndicator", false);
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE PURE READINGS (certified by 16-attore.py --certifica)
 # ═══════════════════════════════════════════════════════════════════════════
-_RIGA_LOG = re.compile(r"^(\d+\.\d+) (\S+)(?: (.*))?$")
+_LOG_LINE = re.compile(r"^(\d+\.\d+) (\S+)(?: (.*))?$")
 
 
-def leggi_quaderno(testo):
+def read_notebook(testo):
     """The rows of the pages' notebook ⇒ [(time, type, [words])]."""
     out = []
     for r in (testo or "").splitlines():
-        m = _RIGA_LOG.match(r.strip())
+        m = _LOG_LINE.match(r.strip())
         if m:
             out.append((float(m.group(1)), m.group(2), (m.group(3) or "").split()))
     return out
 
 
-def leggi_video(parole):
+def read_video(parole):
     """`video yt t=12.3 stato=1 q=hd2160 …` (words after «video») ⇒ dict."""
     d = {"fonte": parole[0] if parole else None}
     for p in parole[1:]:
@@ -385,31 +385,31 @@ def leggi_video(parole):
     return d
 
 
-def frase_nel_campo(e, frase):
+def sentence_in_field(e, frase):
     """⭐ A notebook row «testo <page> <value>» with the value EQUAL
     to the typed sentence (a character lost or outside the field ⇒ no)."""
     return e[1] == "testo" and " ".join(e[2][1:]) == frase
 
 
-def campo_lascia_da_solo(html):
+def field_left_alone(html):
     """⛔ Does the page's field drop the focus ON ITS OWN on a timer (a setTimeout that
     calls blur)?  It must be no: under load the letters after it would be lost."""
     return bool(re.search(r"setTimeout\([^;]*\.blur\(\)", html or ""))
 
 
-def storia_contiene(testo, riga):
+def history_contains(testo, riga):
     """⭐ The typed line is in the bash history EXACTLY (a whole line)."""
     return any(r == riga for r in (testo or "").splitlines())
 
 
-def shell_sotto(ps_testo, proc):
+def shell_below(ps_text, proc):
     """⭐ The processes running UNDER the terminal (the direct children of every
     process whose name matches `proc`), from `ps -o pid=,ppid=,comm=`:
     ['bash'], ['dash'], [] if the terminal is not there or has no children yet.
     ⚠ `comm` is cut at 15 characters («gnome-terminal-server» ⇒
     «gnome-terminal-»): `proc` is searched inside, not compared whole."""
     righe = []
-    for r in (ps_testo or "").splitlines():
+    for r in (ps_text or "").splitlines():
         p = r.split(None, 2)
         if len(p) == 3 and p[0].isdigit() and p[1].isdigit():
             righe.append((p[0], p[1], p[2].strip()))
@@ -444,7 +444,7 @@ def piano_cancella(scatola):
     return ([], "Delete", "Enter", 2.5, False)
 
 
-def rett_finestra(prima, dopo, soglia=40, fattore=8):
+def window_rect(prima, dopo, soglia=40, fattore=8):
     """⭐ The rect (x0,y0,x1,y1) — photo pixels — of the window that APPEARED
     between two PIL photos of the same size, or None.  «Changed» columns and rows
     (at least 2 points above `soglia` at scale 1/`fattore`), and the LONGEST
@@ -508,20 +508,20 @@ class Lavoro:
         host's folder mounted in the box (/media/REMOTIX/rete11 ⇒
         /rete11) and is installed from there."""
         nome = "%s-%s" % (self.a.chi, os.path.basename(percorso))
-        os.makedirs(PASSAGGIO_OSPITE, exist_ok=True)
-        with open(os.path.join(PASSAGGIO_OSPITE, nome), "w") as f:
+        os.makedirs(GUEST_HANDOFF, exist_ok=True)
+        with open(os.path.join(GUEST_HANDOFF, nome), "w") as f:
             f.write(testo)
         try:
             return self.dentro("install -D -o %s -g %s -m %s %s/%s %s"
-                               % (self.a.chi, self.a.chi, modo, PASSAGGIO_SCATOLA, nome,
+                               % (self.a.chi, self.a.chi, modo, BOX_HANDOFF, nome,
                                   percorso), 60)
         finally:
             try:
-                os.unlink(os.path.join(PASSAGGIO_OSPITE, nome))
+                os.unlink(os.path.join(GUEST_HANDOFF, nome))
             except OSError:
                 pass
 
-    def quaderno_nuovo(self):
+    def new_notebook(self):
         """The new rows of the pages' notebook (from the byte already read)."""
         # ⚠ `dentro` strips the trailing whitespace (the last newline too): the
         #   sentinel says where the file ends, and we advance only over whole
@@ -533,7 +533,7 @@ class Lavoro:
         t = t[:t.rfind("@@FINE")]
         testo = t[:t.rfind("\n") + 1] if "\n" in t else ""
         self.log_da += len(testo.encode())
-        return leggi_quaderno(testo)
+        return read_notebook(testo)
 
     def servitore(self, video=""):
         porta = self.a.porta_interna
@@ -548,15 +548,15 @@ class Lavoro:
         self.log_da = 0
         return c == 0, t
 
-    def prepara_pagine(self):
-        for nome, html in pagine_a().items():
+    def prepare_pages(self):
+        for nome, html in pages_a().items():
             self.scrivi_file("%s/.c16/pagine/%s" % (self.h, nome), html)
         self.scrivi_file("%s/.c16/c16-servitore.py" % self.h, SERVITORE)
         self.scrivi_file("%s/.c16/profilo/user.js" % self.h,
-                         self.a.preferenze_interne() + PREF_INTERNE, "600")
+                         self.a.internal_preferences() + INTERNAL_PREFS, "600")
         self.dentro("chown -R %s: %s/.c16" % (self.a.chi, self.h), 30)
 
-    def firefox_interno(self, url):
+    def internal_firefox(self, url):
         # an earlier attempt would leave «Firefox is already running»
         self.dentro("pkill -u %s -f firefox-esr 2>/dev/null; sleep 1" % self.a.chi, 30)
         return self.a.s.nella_sessione(
@@ -577,11 +577,11 @@ class Lavoro:
             dopo = self.a.foto_pil()
             if dopo is None or prima is None or dopo.size != prima.size:
                 continue
-            r = rett_finestra(prima, dopo)
+            r = window_rect(prima, dopo)
             if r and ultimo and all(abs(x - y) < 20 for x, y in zip(r, ultimo)):
-                return self.a.foto_al_desktop(r)
+                return self.a.photo_to_desktop(r)
             ultimo = r
-        return self.a.foto_al_desktop(ultimo) if ultimo else None
+        return self.a.photo_to_desktop(ultimo) if ultimo else None
 
     def punto(self, fx, fy):
         """A point of the application's window (or of the desktop), fractions."""
@@ -604,22 +604,22 @@ class LavoroA(Lavoro):
         self.pagina, self.y, self.max = "testo", 0, 0
 
     def prepara(self):
-        self.prepara_pagine()
+        self.prepare_pages()
 
     def avvia(self):
         ok, t = self.servitore()
         if not ok:
             return False, "the page server does not start: %s" % t[-200:]
-        c, t = self.firefox_interno("http://127.0.0.1:%d/testo.html" % self.a.porta_interna)
+        c, t = self.internal_firefox("http://127.0.0.1:%d/testo.html" % self.a.porta_interna)
         if c != 0:
             return False, "firefox-esr does not launch: %s" % t[-200:]
         r = self.aspetta(lambda e: e[1] == "carica" and e[2][:1] == ["testo"], 60)
         if not r:
             return False, "the first page did not say «carica» in 60 s"
-        self.leggi_pos(r)
+        self.read_pos(r)
         return True, "firefox-esr --kiosk on the «testo» page (max scroll %d)" % self.max
 
-    def leggi_pos(self, e):
+    def read_pos(self, e):
         try:
             self.pagina, self.y, self.max = e[2][0], int(e[2][1]), int(e[2][2])
         except (IndexError, ValueError):
@@ -637,9 +637,9 @@ class LavoroA(Lavoro):
         fine = time.time() + attesa
         while True:
             trovata = None
-            for e in self.quaderno_nuovo():
+            for e in self.new_notebook():
                 if e[1] in ("carica", "scroll"):
-                    self.leggi_pos(e)
+                    self.read_pos(e)
                 if trovata is None and e[0] >= dopo and cerca(e):
                     trovata = e
             if trovata is not None:
@@ -648,7 +648,7 @@ class LavoroA(Lavoro):
                 return None
             self.a.dorme(0.4)
 
-    def lascia_il_campo(self):
+    def leave_field(self):
         """⭐ Once the sentence is finished, the actor takes the focus off the field: Esc (the page
         says «lascia»); if it does not say it, a click on an empty point of the page."""
         t = self.a.mani.premi("Escape")
@@ -673,7 +673,7 @@ class LavoroA(Lavoro):
             e = self.aspetta(lambda e: e[1] == "carica" and e[2][:1] == [dove], 10, t0)
             self.a.verifica("naviga", e is not None, (e[0] - t0) * 1000 if e else None,
                             dove)
-            self.a.dorme(R.pausa_s("leggere"))
+            self.a.dorme(R.pause_s("leggere"))
         elif az == "rotella":
             self.aspetta(lambda e: False, 0)   # ⭐ A4: the REAL position before choosing
             giu = self.y < self.max * 0.6
@@ -685,24 +685,24 @@ class LavoroA(Lavoro):
                              and e[2][1].isdigit() and int(e[2][1]) != y0, 8, t0)
             self.a.verifica("rotella", e is not None, (e[0] - t0) * 1000 if e else None,
                             "%s %d notches" % ("down" if giu else "up", tacche))
-            self.a.dorme(R.pausa_s("breve"))
+            self.a.dorme(R.pause_s("breve"))
         elif az == "scrivi":
             # ⭐ typing with immediate echo in a field of the page: the click
             #   sets the focus, Ctrl+A makes the earlier text get replaced
-            M.clic(tl * R.uniforme(0.3, 0.7), NOTA_Y * ta)
-            self.a.dorme(R.pausa_s("gesto"))
+            M.clic(tl * R.uniforme(0.3, 0.7), NOTE_Y * ta)
+            self.a.dorme(R.pause_s("gesto"))
             M.combo(["Control"], "a")
             frase = " ".join(R.scegli(PAROLE_NOTA) for _ in range(R.intero(2, 5)))
             t0 = M.batti(frase, eco=True)
-            e = self.aspetta(lambda e: frase_nel_campo(e, frase), 8, t0 - 30)
+            e = self.aspetta(lambda e: sentence_in_field(e, frase), 8, t0 - 30)
             self.a.verifica("scrivi", e is not None, (e[0] - t0) * 1000 if e else None, frase)
-            self.lascia_il_campo()
-            self.a.dorme(R.pausa_s("breve"))
+            self.leave_field()
+            self.a.dorme(R.pause_s("breve"))
         elif az == "clic":
             t0 = M.clic(tl * R.uniforme(0.2, 0.8), ta * R.uniforme(0.45, 0.85))
             e = self.aspetta(lambda e: e[1] == "clic", 8, t0)
             self.a.verifica("clic", e is not None, (e[0] - t0) * 1000 if e else None, self.pagina)
-            self.a.dorme(R.pausa_s("breve"))
+            self.a.dorme(R.pause_s("breve"))
         else:
             self.aspetta(lambda e: False, 0)   # ⭐ A4: the REAL position before choosing
             tasto = "PageDown" if self.y < self.max * 0.7 else "Home"
@@ -712,7 +712,7 @@ class LavoroA(Lavoro):
             e = self.aspetta(lambda e: e[1] == "scroll" and len(e[2]) > 1
                              and e[2][1].isdigit() and int(e[2][1]) != y0, 8, t0)
             self.a.verifica("tasto", e is not None, (e[0] - t0) * 1000 if e else None, tasto)
-            self.a.dorme(R.pausa_s("breve"))
+            self.a.dorme(R.pause_s("breve"))
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -726,7 +726,7 @@ class LavoroB(Lavoro):
         self.fm, self.proc = APP[att.o.scatola]["fm"]
         self.k = 0
         self.nuove = []
-        self.foto_ko = 0                  # the photos taken at a failed «cancella»
+        self.photo_ko = 0                  # the photos taken at a failed «cancella»
 
     def prepara(self):
         p = self.h + "/prova16"
@@ -753,13 +753,13 @@ class LavoroB(Lavoro):
     def vai(self, percorso):
         M, R = self.a.mani, self.a.ritmo
         M.combo(["Control"], "l")
-        self.a.dorme(R.pausa_s("gesto"))
+        self.a.dorme(R.pause_s("gesto"))
         M.combo(["Control"], "a")
         M.batti(percorso, eco=True)
         M.premi("Enter")
-        self.a.dorme(0.8 + R.pausa_s("gesto"))
+        self.a.dorme(0.8 + R.pause_s("gesto"))
 
-    def fuoco_vista(self):
+    def focus_view(self):
         """A click on an EMPTY point of the view (bottom right)."""
         x, y = self.punto(0.85, 0.88)
         self.a.mani.clic(x, y)
@@ -787,11 +787,11 @@ class LavoroB(Lavoro):
                       (30, 12 if len(self.nuove) < 3 else 35, 15, 12, 8, 12))
         if az == "crea":
             self.vai(self.h + "/prova16/nuove")
-            self.fuoco_vista()
+            self.focus_view()
             self.k += 1
             nome = "c16n%d%s" % (self.k, R.cifre(3))
             M.combo(["Control", "Shift"], "N")
-            self.a.dorme(1.2 + R.pausa_s("gesto"))
+            self.a.dorme(1.2 + R.pause_s("gesto"))
             M.combo(["Control"], "a")
             M.batti(nome, eco=True)
             t0 = M.premi("Enter")
@@ -808,16 +808,16 @@ class LavoroB(Lavoro):
                 M.premi("Escape")           # a dialog left open
         elif az == "cancella":
             self.vai(self.h + "/prova16/nuove")
-            self.fuoco_vista()
+            self.focus_view()
             M.combo(["Control"], "a")
-            self.a.dorme(R.pausa_s("gesto"))
-            mod, tasto, risposta, dopo_s, sempre = piano_cancella(self.a.o.scatola)
+            self.a.dorme(R.pause_s("gesto"))
+            mod, tasto, risposta, after_s, sempre = piano_cancella(self.a.o.scatola)
             t0 = M.combo(mod, tasto) if mod else M.premi(tasto)
             fine = time.time() + 10
             conferma = False
             n = -1
             while time.time() < fine:
-                if sempre and not conferma and time.time() > t0 + dopo_s:
+                if sempre and not conferma and time.time() > t0 + after_s:
                     # ⭐ LXQt: the «delete?» question is always there, and the answer is «y»
                     M.batti(risposta, atteso=False)
                     conferma = True
@@ -825,7 +825,7 @@ class LavoroB(Lavoro):
                 n = int(t.split()[-1]) if t and t.split()[-1].isdigit() else -1
                 if n == 0:
                     break
-                if not sempre and not conferma and time.time() > t0 + dopo_s:
+                if not sempre and not conferma and time.time() > t0 + after_s:
                     M.premi(risposta)        # the confirmation dialog (thunar)
                     conferma = True
                 self.a.dorme(0.4)
@@ -838,8 +838,8 @@ class LavoroB(Lavoro):
                 # ⛔ The screen is LOOKED AT: the photo says what was there (dialog? filter?
                 #   selection?) — at most three per actor, then Esc to close
                 #   whatever was left open (dialog, filter bar)
-                if self.foto_ko < 3:
-                    self.foto_ko += 1
+                if self.photo_ko < 3:
+                    self.photo_ko += 1
                     self.a.scatta()
                 M.premi("Escape")
         elif az == "naviga":
@@ -851,20 +851,20 @@ class LavoroB(Lavoro):
             self.a.conta("vista")
         elif az == "finestra":
             M.combo(["Control"], "n")
-            self.a.dorme(1.5 + R.pausa_s("breve"))
+            self.a.dorme(1.5 + R.pause_s("breve"))
             M.combo(["Control"], "w")
             self.a.conta("finestra")
         else:
             x, y = self.punto(R.uniforme(0.4, 0.7), R.uniforme(0.4, 0.7))
             M.rotella(x, y, R.intero(2, 8) * R.scegli((1, -1)))
             self.a.conta("rotella")
-        self.a.dorme(R.pausa_s("breve"))
+        self.a.dorme(R.pause_s("breve"))
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 #  C — TERMINAL
 # ═══════════════════════════════════════════════════════════════════════════
-COMANDI_C = (
+COMMANDS_C = (
     ("ls -la ~/prova16", 20),
     ("ls -R /usr/share/doc | head -n 200", 10),
     ("find /usr/share -name '*.png' | head -n 60", 12),
@@ -889,7 +889,7 @@ class LavoroC(Lavoro):
 
     def prepara(self):
         h = self.h
-        testo = "\n".join("line %05d · %s" % (i, " ".join(_PAROLE[(i * 7 + j) % len(_PAROLE)]
+        testo = "\n".join("line %05d · %s" % (i, " ".join(_WORDS[(i * 7 + j) % len(_WORDS)]
                                                             for j in range(8)))
                           for i in range(1, 2001))
         self.scrivi_file(h + "/prova16/lungo.txt", testo + "\n")
@@ -927,7 +927,7 @@ class LavoroC(Lavoro):
     def shell(self):
         """The terminal's direct children (the shell), from the box's `ps`."""
         c, t = self.dentro("ps -u %s -o pid=,ppid=,comm=" % self.a.chi, 30)
-        return shell_sotto(t, self.proc) if c == 0 else []
+        return shell_below(t, self.proc) if c == 0 else []
 
     def storia(self):
         c, t = self.dentro("stat -c %%.3Y %s/.c16-storia; tail -n 30 %s/.c16-storia"
@@ -940,21 +940,21 @@ class LavoroC(Lavoro):
         except ValueError:
             return None, resto
 
-    def comando(self, cmd, durata_top=0.0):
+    def comando(self, cmd, duration_top=0.0):
         R, M = self.a.ritmo, self.a.mani
         self.k += 1
         riga = "%s #k%d" % (cmd, self.k)
         M.batti(riga, eco=True)
-        self.a.dorme(R.pausa_s("gesto"))
+        self.a.dorme(R.pause_s("gesto"))
         t0 = M.premi("Enter", atteso=True)
-        if durata_top:
-            self.a.dorme(durata_top)
+        if duration_top:
+            self.a.dorme(duration_top)
             t0 = M.premi("q", atteso=True)
         fine = time.time() + 20
         ok, mt = False, None
         while time.time() < fine:
             mt, st = self.storia()
-            if storia_contiene(st, riga):
+            if history_contains(st, riga):
                 ok = True
                 break
             self.a.dorme(0.4)
@@ -977,15 +977,15 @@ class LavoroC(Lavoro):
             M.rotella(x, y, R.intero(3, 10) * R.scegli((1, -1)))
             self.a.conta("rotella")
         else:
-            cmd = R.scegli([c for c, _p in COMANDI_C], [p for _c, p in COMANDI_C])
+            cmd = R.scegli([c for c, _p in COMMANDS_C], [p for _c, p in COMMANDS_C])
             self.comando(cmd, R.uniforme(3, 8) if cmd == "top" else 0.0)
-        self.a.dorme(R.pausa_s("leggere" if R.probabile(0.3) else "breve"))
+        self.a.dorme(R.pause_s("leggere" if R.probabile(0.3) else "breve"))
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 #  D — 4K VIDEO
 # ═══════════════════════════════════════════════════════════════════════════
-def fonte_video(url):
+def video_source(url):
     """--video ⇒ ('yt', ID) | ('file', path) | (None, reason)."""
     u = (url or "").strip()
     m = re.search(r"(?:youtube(?:-nocookie)?\.com/(?:watch\?v=|embed/)|youtu\.be/)([\w-]{11})", u)
@@ -1000,7 +1000,7 @@ def fonte_video(url):
     return None, "video source not recognised: %r" % url
 
 
-RETE11_OSPITE, RETE11_SCATOLA = "/media/REMOTIX/rete11", "/rete11"
+NETWORK11_GUEST, NETWORK11_BOX = "/media/REMOTIX/rete11", "/rete11"
 
 
 def video_nella_scatola(percorso):
@@ -1008,13 +1008,13 @@ def video_nella_scatola(percorso):
     of the host under /media/REMOTIX (e.g. misure/fase16/video/) is hooked in
     with a hard link in /media/REMOTIX/rete11/.c16-video/ (same
     disk: no copy) ⇒ /rete11/.c16-video/<nome>."""
-    if percorso.startswith(RETE11_SCATOLA + "/"):
+    if percorso.startswith(NETWORK11_BOX + "/"):
         return percorso, ""
-    if percorso.startswith(RETE11_OSPITE + "/"):
-        return RETE11_SCATOLA + percorso[len(RETE11_OSPITE):], ""
+    if percorso.startswith(NETWORK11_GUEST + "/"):
+        return NETWORK11_BOX + percorso[len(NETWORK11_GUEST):], ""
     if not os.path.isfile(percorso):
         return None, "the video file %s is not on the host" % percorso
-    cartella = os.path.join(RETE11_OSPITE, ".c16-video")
+    cartella = os.path.join(NETWORK11_GUEST, ".c16-video")
     os.makedirs(cartella, exist_ok=True)
     dest = os.path.join(cartella, os.path.basename(percorso))
     try:
@@ -1024,7 +1024,7 @@ def video_nella_scatola(percorso):
             os.replace(tmp, dest)
     except OSError as e:
         return None, "the video file cannot be hooked in %s: %s" % (cartella, e)
-    return RETE11_SCATOLA + "/.c16-video/" + os.path.basename(percorso), ""
+    return NETWORK11_BOX + "/.c16-video/" + os.path.basename(percorso), ""
 
 
 class LavoroD(Lavoro):
@@ -1032,11 +1032,11 @@ class LavoroD(Lavoro):
 
     def __init__(self, att):
         super().__init__(att)
-        self.tipo, self.fonte = fonte_video(att.o.video)
-        self.t_video, self.fermo_da = None, None
+        self.tipo, self.fonte = video_source(att.o.video)
+        self.t_video, self.stalled_for = None, None
 
     def prepara(self):
-        self.prepara_pagine()
+        self.prepare_pages()
 
     def avvia(self):
         if not self.tipo:
@@ -1053,24 +1053,24 @@ class LavoroD(Lavoro):
         if not ok:
             return False, "the server does not start: %s" % t[-200:]
         q = "yt=%s" % self.fonte if self.tipo == "yt" else "file=1"
-        c, t = self.firefox_interno("http://127.0.0.1:%d/video.html?%s" % (self.a.porta_interna, q))
+        c, t = self.internal_firefox("http://127.0.0.1:%d/video.html?%s" % (self.a.porta_interna, q))
         if c != 0:
             return False, "firefox-esr does not launch: %s" % t[-200:]
         fine = time.time() + 90
         while time.time() < fine:
-            self.leggi_video()
+            self.read_video()
             if self.ultimo_video.get("stato") == 1 and (self.ultimo_video.get("t") or 0) > 0:
                 return True, "video %s %s playing: %s" % (self.tipo, self.fonte,
                                                                  self.ultimo_video)
             self.a.dorme(2)
         return False, "the video did not start in 90 s: %s" % (self.ultimo_video or "no row")
 
-    def leggi_video(self):
-        for ora, tipo, parole in self.quaderno_nuovo():
+    def read_video(self):
+        for ora, tipo, parole in self.new_notebook():
             if tipo != "video" or not parole:
                 continue
             if parole[0] in ("yt", "file"):
-                d = leggi_video(parole)
+                d = read_video(parole)
                 d["ora"] = ora
                 self.ultimo_video = d
             elif parole[0] in ("errore", "qualita"):
@@ -1082,7 +1082,7 @@ class LavoroD(Lavoro):
         tl, ta = self.a.desktop
         prima = self.ultimo_video.get("t")
         self.a.dorme(R.uniforme(15, 40))
-        v = self.leggi_video()
+        v = self.read_video()
         dopo = v.get("t")
         avanza = prima is not None and dopo is not None and dopo != prima
         self.a.verifica("video_avanza", avanza, None,
@@ -1093,8 +1093,8 @@ class LavoroD(Lavoro):
             self.a.conta("muovi")
 
     def extra(self):
-        self.leggi_video()
+        self.read_video()
         return {"video": dict(self.ultimo_video)}
 
 
-LAVORI = {"A": LavoroA, "B": LavoroB, "C": LavoroC, "D": LavoroD}
+JOBS = {"A": LavoroA, "B": LavoroB, "C": LavoroC, "D": LavoroD}

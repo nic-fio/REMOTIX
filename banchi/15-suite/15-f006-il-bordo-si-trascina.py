@@ -44,7 +44,7 @@ def corpo(o, E):
     with S.Sessione(o, "006", E) as s:
         G3.prepara_o(o, s)
         oom0 = G3.uccisi_dal_server()
-        segno = s.segno_registro()
+        segno = s.log_mark()
         prima = G3.evidenze_ora(o)
         # ⚠ the mesh uses ITS OWN `12-client-veri` (C22 → C21 → C20V → VERI)
         with G3.guida_prestata(C22.VERI, s.g):
@@ -53,8 +53,8 @@ def corpo(o, E):
             s.foto("quando-non-si-guarda")        # what was on the canvas
             riga["perche"] = riga.get("perche", "") + G3.spiega_cieco(oom0)
         server = s.registro_da(segno) if segno is not None else []
-        ev = G3.evidenze_nuove(o, prima) + [s.salva_testo("server-f006.txt", server),
-                                             s.salva_console()]
+        ev = G3.evidenze_nuove(o, prima) + [s.save_text("server-f006.txt", server),
+                                             s.save_console()]
         prese = "; ".join(m for _k, _e, m in riga.get("prese", []))
         E.metti("F-006", riga["esito"], riga.get("perche", ""), atteso=ATTESO,
                 osservato=prese or riga.get("perche", ""), evidenze=[e for e in ev if e],

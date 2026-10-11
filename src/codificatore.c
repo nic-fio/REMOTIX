@@ -514,10 +514,10 @@ typedef struct {
  *    of the SPS and copy the tail back as it is. */
 typedef struct {
 	size_t bit_flag;      /* where the flag sits */
-	size_t bit_dopo;      /* the first bit after the flag and its offsets */
+	size_t bit_after;      /* the first bit after the flag and its offsets */
 	bool presente;        /* the flag was 1 */
 	uint32_t sx, dx, su, giu; /* the offsets read (0 if the flag was 0) */
-} PosizioneCornice;
+} FramePosition;
 
 static void lb_apri(LettoreBit *l, const uint8_t *dati, size_t byte)
 {
@@ -779,7 +779,7 @@ static void salta_liste_scala(LettoreBit *l, int quante)
  *    counts two pixels per unit horizontally and two vertically.
  */
 static bool leggi_sps_h264(const uint8_t *nal, size_t byte, CodificatoreConfessione *c,
-                           PosizioneCornice *dove)
+                           FramePosition *dove)
 {
 	uint8_t *rbsp;
 	size_t n;
@@ -870,7 +870,7 @@ static bool leggi_sps_h264(const uint8_t *nal, size_t byte, CodificatoreConfessi
 	}
 	if (dove) {
 		dove->bit_flag = bit_flag;
-		dove->bit_dopo = l.bit;
+		dove->bit_after = l.bit;
 		dove->sx = taglio_sx;
 		dove->dx = taglio_dx;
 		dove->su = taglio_su;
@@ -937,7 +937,7 @@ static bool leggi_sps_h264(const uint8_t *nal, size_t byte, CodificatoreConfessi
  *    `hev1.2.4.L93.B0` string of `VideoDecoder.configure()`.
  */
 static bool leggi_sps_hevc(const uint8_t *nal, size_t byte, CodificatoreConfessione *c,
-                           PosizioneCornice *dove)
+                           FramePosition *dove)
 {
 	if (byte < 4)
 		return false;
@@ -1034,7 +1034,7 @@ static bool leggi_sps_hevc(const uint8_t *nal, size_t byte, CodificatoreConfessi
 			altezza -= taglio_a;
 	}
 	if (dove)
-		dove->bit_dopo = l.bit;
+		dove->bit_after = l.bit;
 	uint32_t bit_luma = lb_ue(&l) + 8;
 	uint32_t bit_croma = lb_ue(&l) + 8;
 	free(rbsp);
@@ -1300,11 +1300,11 @@ static bool leggi_sequenza_av1(const uint8_t *d, size_t byte, CodificatoreConfes
 /* ⭐ PHASE 19 — the card route.  `NESSUNA` in a request means
  *    "by capability" (`h264_scheda`); in an encoder that was born it is always one
  *    of the two. */
-typedef enum { STRADA_NESSUNA = 0, STRADA_VAAPI, STRADA_VULKAN } Strada;
+typedef enum { ROUTE_NONE = 0, ROUTE_VAAPI, ROUTE_VULKAN } Strada;
 
-static const char *nome_strada(Strada s)
+static const char *route_name(Strada s)
 {
-	return s == STRADA_VULKAN ? "vulkan" : s == STRADA_VAAPI ? "vaapi" : "";
+	return s == ROUTE_VULKAN ? "vulkan" : s == ROUTE_VAAPI ? "vaapi" : "";
 }
 
 struct Codificatore {
@@ -1314,7 +1314,7 @@ struct Codificatore {
 	 *    asked for `h264_scheda` (by capability) reads here which of the two
 	 *    came out.  `figlio.c` and `--prova-codifica` write it to the log and
 	 *    to the JSON, and the installer reads the outcome, not the name. */
-	char nome_componente[64];
+	char component_name[64];
 	/* ⭐ The route REQUESTED (NESSUNA = by capability) and the one OPENED. */
 	Strada strada_chiesta;
 	Strada strada;
@@ -1322,7 +1322,7 @@ struct Codificatore {
 	 *    converted on the CPU (NV12 or P010, `colori709.c`) before being uploaded to the
 	 *    card.  Empty on the zero copy (the frame is already on the card). */
 	uint8_t *appoggio;
-	size_t appoggio_byte;
+	size_t staging_byte;
 	CodificatoreConfessione conf;
 	/* ⭐ The entrypoint CHOSEN in `apri_dispositivo()` after reading it from the
 	 *    driver: it is what is asked of vadiretta and what the reread is compared
@@ -1343,20 +1343,20 @@ struct Codificatore {
 	 *    open), and because the Vulkan route will be grafted alongside.
 	 */
 	bool hardware;
-	VaDispositivo dispositivo;    /* the open node: display and vendor */
+	VaDevice dispositivo;    /* the open node: display and vendor */
 	VAProfile profilo_va;         /* the pair chosen and VERIFIED in apri_dispositivo() */
 	VAEntrypoint entrypoint_va;
 	VaDiretta *va;                /* the encoder on the card */
-	VASurfaceID superficie_pronta; /* the input filled by prepara_*, to be encoded */
+	VASurfaceID surface_ready; /* the input filled by prepara_*, to be encoded */
 	/* ⭐ PHASE 19 — the VULKAN VIDEO route: the device (instance, card chosen
 	 *    from the node, queues) lives as long as the encoder, like `dispositivo` above;
 	 *    the encoder (`vk`) is closed and reopened with the context, like
 	 *    `va`.  ⚠ The cache of imported DMA-BUFs sits INSIDE `vk` (one per
 	 *    session): on every reopening it is reimported — it costs one import per
 	 *    buffer, and the producer recycles four. */
-	VulkanVideoDispositivo *vk_dispositivo;
+	VulkanVideoDevice *vk_device;
 	VulkanVideo *vk;
-	VulkanVideoCapacita vk_capacita; /* read in apri_dispositivo(), for the choice */
+	VulkanVideoCapabilities vk_capabilities; /* read in apri_dispositivo(), for the choice */
 
 	/* ───────────────────────────────────────────────────────────────────────
 	 * ⭐⭐⭐ ZERO COPY — the three things needed, and nothing else
@@ -1398,8 +1398,8 @@ struct Codificatore {
 	 *    `cornice_al_suo_posto()` rewrites it with the bits.  It is decided on the first SPS of
 	 *    each context. */
 	bool cornice_decisa;
-	bool cornice_attiva;
-	uint32_t cornice_dx, cornice_dy; /* columns and rows to crop on the right and at the bottom */
+	bool active_border;
+	uint32_t border_dx, border_dy; /* columns and rows to crop on the right and at the bottom */
 	/* ⭐ THE BYTES THAT ARE DELIVERED — ours, for both routes.  The
 	 *    encoder (card or software) produces them in its buffer; here they are
 	 *    copied (`[M]` a 4K key is ~1 MB: tens of µs) so that the
@@ -1438,7 +1438,7 @@ static void butta_le_importate(Codificatore *c, const char *perche);
 static void chiudi_vpp(Codificatore *c);
 /* ⭐ Phase 19: the bytes in `c->uscita` are common to both routes, and the
  *    Vulkan round (`codifica_vulkan`, with the zero copy box) puts them there. */
-static bool metti_in_uscita(Codificatore *c, const uint8_t *dati, size_t byte);
+static bool put_in_output(Codificatore *c, const uint8_t *dati, size_t byte);
 
 static uint64_t adesso_us(void)
 {
@@ -1510,19 +1510,19 @@ static const char *nome_modo(ModoQualita modo)
  * ⭐ PHASE 19: the names are six (`codificatore.h`): `*_scheda` = the route is
  *    chosen by capability, `*_vulkan` and `*_vaapi` = that one and nothing else.
  */
-static bool componente_della_scheda(const char *nome, CodecVideo *codec, Strada *strada)
+static bool component_of_card(const char *nome, CodecVideo *codec, Strada *strada)
 {
 	static const struct {
 		const char *nome;
 		CodecVideo codec;
 		Strada strada;
 	} nomi[] = {
-		{ "h264_scheda", CODIFICATORE_H264, STRADA_NESSUNA },
-		{ "hevc_scheda", CODIFICATORE_HEVC, STRADA_NESSUNA },
-		{ "h264_vulkan", CODIFICATORE_H264, STRADA_VULKAN },
-		{ "hevc_vulkan", CODIFICATORE_HEVC, STRADA_VULKAN },
-		{ "h264_vaapi", CODIFICATORE_H264, STRADA_VAAPI },
-		{ "hevc_vaapi", CODIFICATORE_HEVC, STRADA_VAAPI },
+		{ "h264_scheda", CODIFICATORE_H264, ROUTE_NONE },
+		{ "hevc_scheda", CODIFICATORE_HEVC, ROUTE_NONE },
+		{ "h264_vulkan", CODIFICATORE_H264, ROUTE_VULKAN },
+		{ "hevc_vulkan", CODIFICATORE_HEVC, ROUTE_VULKAN },
+		{ "h264_vaapi", CODIFICATORE_H264, ROUTE_VAAPI },
+		{ "hevc_vaapi", CODIFICATORE_HEVC, ROUTE_VAAPI },
 	};
 	for (size_t i = 0; i < sizeof nomi / sizeof nomi[0]; i++)
 		if (strcmp(nome, nomi[i].nome) == 0) {
@@ -1536,7 +1536,7 @@ static bool componente_della_scheda(const char *nome, CodecVideo *codec, Strada 
 }
 
 /* The Vulkan bitrate modes, by name (the `VULKANVIDEO_RC_*` mask). */
-static void nomi_modi_vulkan(unsigned maschera, char *fuori, size_t byte)
+static void vulkan_mode_names(unsigned maschera, char *fuori, size_t byte)
 {
 	snprintf(fuori, byte, "%s%s%s", (maschera & VULKANVIDEO_RC_CQP) ? "CQP " : "",
 	         (maschera & VULKANVIDEO_RC_CBR) ? "CBR " : "",
@@ -1561,8 +1561,8 @@ static void nomi_modi_vulkan(unsigned maschera, char *fuori, size_t byte)
 static bool vulkan_adatta(Codificatore *c, char *perche, size_t perche_byte)
 {
 	const CodificatoreRichiesta *r = &c->richiesta;
-	VulkanVideoCapacita *cap = &c->vk_capacita;
-	const VulkanVideoProfiloCapacita *p;
+	VulkanVideoCapabilities *cap = &c->vk_capabilities;
+	const VulkanVideoProfileCapabilities *p;
 	char errore[256] = { 0 };
 	const char *profilo;
 
@@ -1596,15 +1596,15 @@ static bool vulkan_adatta(Codificatore *c, char *perche, size_t perche_byte)
 		profilo = "HEVC Main";
 	}
 	if (!p->codifica) {
-		di(perche, perche_byte, "«%s» (%s) in Vulkan does NOT declare %s encoding", cap->nome_scheda,
+		di(perche, perche_byte, "«%s» (%s) in Vulkan does NOT declare %s encoding", cap->card_name,
 		   cap->driver, profilo);
 		return false;
 	}
 	if (r->larghezza > p->misura_massima_l || r->altezza > p->misura_massima_a
-	    || r->larghezza < p->misura_minima_l || r->altezza < p->misura_minima_a) {
+	    || r->larghezza < p->min_size_w || r->altezza < p->min_size_h) {
 		di(perche, perche_byte,
-		   "«%s» in Vulkan encodes %s between %ux%u and %ux%u, and the canvas is %ux%u", cap->nome_scheda,
-		   profilo, p->misura_minima_l, p->misura_minima_a, p->misura_massima_l,
+		   "«%s» in Vulkan encodes %s between %ux%u and %ux%u, and the canvas is %ux%u", cap->card_name,
+		   profilo, p->min_size_w, p->min_size_h, p->misura_massima_l,
 		   p->misura_massima_a, r->larghezza, r->altezza);
 		return false;
 	}
@@ -1612,28 +1612,28 @@ static bool vulkan_adatta(Codificatore *c, char *perche, size_t perche_byte)
 	 *    card DECLARES it — with the ceiling VBR is needed, without it CQP. */
 	if (tetto_pavimento_mbit && !(p->modi_bitrate & VULKANVIDEO_RC_VBR)) {
 		char modi[48];
-		nomi_modi_vulkan(p->modi_bitrate, modi, sizeof modi);
+		vulkan_mode_names(p->modi_bitrate, modi, sizeof modi);
 		di(perche, perche_byte, "the bandwidth ceiling wants VBR and «%s» in Vulkan declares [%s]",
-		   cap->nome_scheda, modi);
+		   cap->card_name, modi);
 		return false;
 	}
 	if (!tetto_pavimento_mbit && !(p->modi_bitrate & VULKANVIDEO_RC_CQP)) {
 		char modi[48];
-		nomi_modi_vulkan(p->modi_bitrate, modi, sizeof modi);
+		vulkan_mode_names(p->modi_bitrate, modi, sizeof modi);
 		di(perche, perche_byte, "constant QP wants CQP and «%s» in Vulkan declares [%s]",
-		   cap->nome_scheda, modi);
+		   cap->card_name, modi);
 		return false;
 	}
 	if (p->qp_massimo > 0 && (c->qualita_corrente < p->qp_minimo || c->qualita_corrente > p->qp_massimo)) {
 		di(perche, perche_byte, "QP %d outside what «%s» declares in Vulkan (%d..%d)",
-		   c->qualita_corrente, cap->nome_scheda, p->qp_minimo, p->qp_massimo);
+		   c->qualita_corrente, cap->card_name, p->qp_minimo, p->qp_massimo);
 		return false;
 	}
 	/* the API version as Vulkan packs it (variant:3, major:7,
 	 * minor:10, patch:12): unpacked here so as not to include `vulkan.h` */
 	di(perche, perche_byte, "«%s» (%s, API %u.%u) declares %s up to %ux%u, DMA-BUF %s",
-	   cap->nome_scheda, cap->driver, (cap->versione_api >> 22) & 0x7fu,
-	   (cap->versione_api >> 12) & 0x3ffu, profilo, p->misura_massima_l, p->misura_massima_a,
+	   cap->card_name, cap->driver, (cap->api_version >> 22) & 0x7fu,
+	   (cap->api_version >> 12) & 0x3ffu, profilo, p->misura_massima_l, p->misura_massima_a,
 	   cap->dmabuf ? "yes" : "NO");
 	return true;
 }
@@ -1719,7 +1719,7 @@ static int apri_dispositivo(Codificatore *c, char *errore, size_t errore_byte)
 		di(errore, errore_byte,
 		   "«%s» is a HARDWARE encoder and no render node "
 		   "was declared: ⛔ none is guessed — on this machine the two "
-		   "nodes are from two different vendors [M]", c->nome_componente);
+		   "nodes are from two different vendors [M]", c->component_name);
 		return -1;
 	}
 	snprintf(c->conf.nodo, sizeof(c->conf.nodo), "%s", r->nodo_rendering);
@@ -1735,34 +1735,34 @@ static int apri_dispositivo(Codificatore *c, char *errore, size_t errore_byte)
 	 * ⚠ `[M]` 1 Oct 2026 on the server: the Radeon RX 6800 (RADV, Mesa 25.0.7)
 	 *   offers it for H.264 and HEVC; the Intel UHD 770 (ANV) does not, and stays on VA-API.
 	 * ═══════════════════════════════════════════════════════════════════════ */
-	if (c->strada_chiesta != STRADA_VAAPI) {
+	if (c->strada_chiesta != ROUTE_VAAPI) {
 		char perche[512] = { 0 };
-		char errore_vk[256] = { 0 };
+		char error_vk[256] = { 0 };
 		bool adatta = vulkan_adatta(c, perche, sizeof perche);
 
 		if (adatta) {
-			c->vk_dispositivo = vulkanvideo_apri_dispositivo(r->nodo_rendering, errore_vk,
-			                                                 sizeof errore_vk);
-			if (!c->vk_dispositivo) {
+			c->vk_device = vulkanvideo_apri_dispositivo(r->nodo_rendering, error_vk,
+			                                                 sizeof error_vk);
+			if (!c->vk_device) {
 				adatta = false;
 				di(perche, sizeof perche,
-				   "the capability is there but the Vulkan device did not open: %s", errore_vk);
+				   "the capability is there but the Vulkan device did not open: %s", error_vk);
 			}
 		}
 		if (adatta) {
-			const VulkanVideoProfiloCapacita *p =
-			    r->codec == CODIFICATORE_H264 ? &c->vk_capacita.h264
-			    : r->profondita == 10        ? &c->vk_capacita.hevc10
-			                                 : &c->vk_capacita.hevc;
+			const VulkanVideoProfileCapabilities *p =
+			    r->codec == CODIFICATORE_H264 ? &c->vk_capabilities.h264
+			    : r->profondita == 10        ? &c->vk_capabilities.hevc10
+			                                 : &c->vk_capabilities.hevc;
 			char modi[48];
 
-			c->strada = STRADA_VULKAN;
-			snprintf(c->nome_componente, sizeof c->nome_componente, "%s_vulkan",
+			c->strada = ROUTE_VULKAN;
+			snprintf(c->component_name, sizeof c->component_name, "%s_vulkan",
 			         r->codec == CODIFICATORE_H264 ? "h264" : "hevc");
 			snprintf(c->conf.strada, sizeof c->conf.strada, "vulkan");
 			snprintf(c->conf.fornitore_va, sizeof c->conf.fornitore_va, "%s · %s",
-			         vulkanvideo_nome_scheda(c->vk_dispositivo),
-			         vulkanvideo_nome_driver(c->vk_dispositivo));
+			         vulkanvideo_card_name(c->vk_device),
+			         vulkanvideo_nome_driver(c->vk_device));
 			c->conf.bassa_potenza = false;
 			c->conf.bassa_potenza_verificata = false;
 			c->conf.misura_massima_l = p->misura_massima_l;
@@ -1770,7 +1770,7 @@ static int apri_dispositivo(Codificatore *c, char *errore, size_t errore_byte)
 			c->conf.misura_massima_letta = true;
 			c->conf.modi_bitrate = p->modi_bitrate;
 			c->conf.modi_bitrate_letti = true;
-			nomi_modi_vulkan(p->modi_bitrate, modi, sizeof modi);
+			vulkan_mode_names(p->modi_bitrate, modi, sizeof modi);
 			registro_dice(REG_CODIFICA,
 			              "⭐⭐ PHASE 19: VULKAN VIDEO route on «%s» — %s.  Requested %s.  "
 			              "Declared bitrate modes [%s], QP %d..%d, granularity %ux%u, "
@@ -1778,18 +1778,18 @@ static int apri_dispositivo(Codificatore *c, char *errore, size_t errore_byte)
 			              "⚠ Whether it really encodes is said by the BYTES (forma_va_bene) and the "
 			              "third witness, not by this line",
 			              r->nodo_rendering, perche,
-			              c->strada_chiesta == STRADA_VULKAN ? "BY NAME"
+			              c->strada_chiesta == ROUTE_VULKAN ? "BY NAME"
 			                                                 : "by CAPABILITY (Vulkan before VA-API)",
-			              modi, p->qp_minimo, p->qp_massimo, p->granularita_l, p->granularita_a,
+			              modi, p->qp_minimo, p->qp_massimo, p->granularity_w, p->granularity_h,
 			              p->intestazioni_dal_driver ? "yes" : "NO",
-			              p->ingresso_scrivibile_dallo_shader ? "yes" : "no (copy)");
+			              p->input_writable_by_shader ? "yes" : "no (copy)");
 			return 0;
 		}
-		if (c->strada_chiesta == STRADA_VULKAN) {
+		if (c->strada_chiesta == ROUTE_VULKAN) {
 			di(errore, errore_byte,
 			   "«%s» on «%s»: Vulkan Video does NOT encode %s here — %s.  ⛔ Requested by name: "
 			   "no fallback to VA-API, it would be two measurements under the same label",
-			   c->nome_componente, r->nodo_rendering, nome_codec(r->codec), perche);
+			   c->component_name, r->nodo_rendering, nome_codec(r->codec), perche);
 			return -1;
 		}
 		registro_dice(REG_CODIFICA,
@@ -1797,8 +1797,8 @@ static int apri_dispositivo(Codificatore *c, char *errore, size_t errore_byte)
 		              "suitable for %s (%s) ⇒ trying VA-API",
 		              r->nodo_rendering, nome_codec(r->codec), perche);
 	}
-	c->strada = STRADA_VAAPI;
-	snprintf(c->nome_componente, sizeof c->nome_componente, "%s_vaapi",
+	c->strada = ROUTE_VAAPI;
+	snprintf(c->component_name, sizeof c->component_name, "%s_vaapi",
 	         r->codec == CODIFICATORE_H264 ? "h264" : "hevc");
 	snprintf(c->conf.strada, sizeof c->conf.strada, "vaapi");
 
@@ -1807,13 +1807,13 @@ static int apri_dispositivo(Codificatore *c, char *errore, size_t errore_byte)
 		   "«%s»: the entrypoint was not declared.  ⛔ `EncSliceLP` (low "
 		   "power) and `EncSlice` (full) are NOT equivalent, and a default "
 		   "(full) is not inherited: ask for FULL or LOW",
-		   c->nome_componente);
+		   c->component_name);
 		return -1;
 	}
 
 	/* ⭐ PHASE 18: the node is opened by `vadiretta.c` (vaGetDisplayDRM + vaInitialize),
 	 *    no longer by `av_hwdevice_ctx_create`.  It asks for the vendor itself. */
-	if (!vadiretta_apri_dispositivo(r->nodo_rendering, &c->dispositivo, errore, errore_byte))
+	if (!vadirect_open_device(r->nodo_rendering, &c->dispositivo, errore, errore_byte))
 		return -1;
 
 	VADisplay display = c->dispositivo.display;
@@ -1870,7 +1870,7 @@ static int apri_dispositivo(Codificatore *c, char *errore, size_t errore_byte)
 		c->bassa_potenza_scelta = (voluto == VAEntrypointEncSliceLP);
 		c->conf.bassa_potenza = c->bassa_potenza_scelta;
 		c->conf.bassa_potenza_verificata = true;
-		/* ⭐ The VERIFIED pair is the one `vadiretta_apri()` will use: it does not
+		/* ⭐ The VERIFIED pair is the one `vadirect_open()` will use: it does not
 		 *    rediscover it, it receives it. */
 		c->profilo_va = profilo;
 		c->entrypoint_va = voluto;
@@ -1968,14 +1968,14 @@ static int apri_dispositivo(Codificatore *c, char *errore, size_t errore_byte)
 				   "driver says so BEFORE, and we declare it instead of finding out at the first "
 				   "frame (phase 19: without the card there is no encoding, no "
 				   "software fallback)",
-				   c->nome_componente, r->nodo_rendering, c->conf.fornitore_va,
+				   c->component_name, r->nodo_rendering, c->conf.fornitore_va,
 				   attr[0].value, attr[1].value, r->larghezza, r->altezza);
 				return -1;
 			}
 			registro_dice(REG_CODIFICA,
 			              "⭐ the driver declares at most %ux%u for «%s» on %s, and "
 			              "%ux%u fits — ASKED of the driver, not deduced from the name",
-			              attr[0].value, attr[1].value, c->nome_componente,
+			              attr[0].value, attr[1].value, c->component_name,
 			              c->conf.nodo, r->larghezza, r->altezza);
 		}
 
@@ -2053,7 +2053,7 @@ static int apri_dispositivo(Codificatore *c, char *errore, size_t errore_byte)
 				   "was requested and the driver DECLARES [%s] (0x%x) — "
 				   "⛔ it is NOT there.  No fallback to another mode: it would be R31 from the other "
 				   "end, that is a bitrate mode chosen by nobody",
-				   c->nome_componente, r->nodo_rendering, c->conf.fornitore_va,
+				   c->component_name, r->nodo_rendering, c->conf.fornitore_va,
 				   (int) profilo,
 				   voluto == VAEntrypointEncSliceLP ? "EncSliceLP" : "EncSlice",
 				   modo.nome, modo.va_bit, modi, attr[2].value);
@@ -2154,7 +2154,7 @@ static int livello_imposto(const Codificatore *c)
  */
 /* ⛔ THE TWO REFUSALS (and the third, on the QP) are the same for both card
  *    routes, and live in one place only. */
-static bool qualita_ammessa_sulla_scheda(const Codificatore *c, char *errore, size_t errore_byte)
+static bool allowed_quality_on_card(const Codificatore *c, char *errore, size_t errore_byte)
 {
 	if (c->modo_corrente == CODIFICATORE_QUALITA_LOSSLESS) {
 		/* ⛔ It is not faked, as it is not faked on SVT-AV1: the card has no
@@ -2230,18 +2230,18 @@ static bool serbatoio_entro_i_50_ms(Codificatore *c, char *errore, size_t errore
 	return true;
 }
 
-static int apri_scheda_vaapi(Codificatore *c, char *errore, size_t errore_byte)
+static int open_vaapi_card(Codificatore *c, char *errore, size_t errore_byte)
 {
 	const CodificatoreRichiesta *r = &c->richiesta;
 	VaDirettaRichiesta v;
 	const VaDirettaDichiarazione *d;
-	char errore_va[256] = { 0 };
+	char error_va[256] = { 0 };
 
-	if (!qualita_ammessa_sulla_scheda(c, errore, errore_byte))
+	if (!allowed_quality_on_card(c, errore, errore_byte))
 		return -1;
 
 	memset(&v, 0, sizeof v);
-	v.codec = (r->codec == CODIFICATORE_H264) ? VADIRETTA_H264 : VADIRETTA_HEVC;
+	v.codec = (r->codec == CODIFICATORE_H264) ? VADIRECT_H264 : VADIRECT_HEVC;
 	v.profondita = r->profondita;
 	v.larghezza = r->larghezza;
 	v.altezza = r->altezza;
@@ -2250,9 +2250,9 @@ static int apri_scheda_vaapi(Codificatore *c, char *errore, size_t errore_byte)
 	v.entrypoint = c->entrypoint_va;
 	v.qp = c->qualita_corrente;
 	v.chiavi_ogni = r->chiavi_ogni;
-	v.superfici_ingresso = SUPERFICI_PRONTE;
+	v.input_surfaces = SUPERFICI_PRONTE;
 	if (tetto_pavimento_mbit
-	    && !tetto_in_tre_numeri(&v.banda_punto, &v.banda_filo, &v.serbatoio_bit, errore,
+	    && !tetto_in_tre_numeri(&v.banda_punto, &v.banda_filo, &v.reservoir_bit, errore,
 	                            errore_byte))
 		return -1;
 	/* ⛔⭐⭐ AND THE §4.3 LEVEL, ASKED FOR BY NAME — 23 Aug 2026.  A
@@ -2265,17 +2265,17 @@ static int apri_scheda_vaapi(Codificatore *c, char *errore, size_t errore_byte)
 		              "⭐ §4.3: level IMPOSED on «%s» — %d.%d, that is %d in "
 		              "%s.  ⚠ Requested does not mean obeyed: the verdict "
 		              "comes from the SPS",
-		              c->nome_componente, r->livello_x10 / 10, r->livello_x10 % 10,
+		              c->component_name, r->livello_x10 / 10, r->livello_x10 % 10,
 		              v.livello_idc,
 		              r->codec == CODIFICATORE_H264 ? "level_idc"
 		                                            : "general_level_idc (three times)");
 
-	c->va = vadiretta_apri(&c->dispositivo, &v, errore_va, sizeof errore_va);
+	c->va = vadirect_open(&c->dispositivo, &v, error_va, sizeof error_va);
 	if (!c->va) {
-		di(errore, errore_byte, "«%s» did not open: %s", c->nome_componente, errore_va);
+		di(errore, errore_byte, "«%s» did not open: %s", c->component_name, error_va);
 		return -1;
 	}
-	d = vadiretta_dichiarazione(c->va);
+	d = vadirect_declaration(c->va);
 
 	/* ───────────────────────────────────────────────────────────────────────
 	 * ⛔ FIRST WITNESS: the confession from the context — which is now OURS, and
@@ -2286,7 +2286,7 @@ static int apri_scheda_vaapi(Codificatore *c, char *errore, size_t errore_byte)
 	 *    — and the THIRD, the measured bandwidth.
 	 */
 	c->conf.codec = r->codec;
-	c->conf.componente = c->nome_componente;
+	c->conf.componente = c->component_name;
 	c->conf.profondita_chiesta = r->profondita;
 	c->conf.fotogrammi_b = 0;
 	c->conf.global_header = false;
@@ -2297,16 +2297,16 @@ static int apri_scheda_vaapi(Codificatore *c, char *errore, size_t errore_byte)
 	c->conf.bassa_potenza = c->bassa_potenza_scelta;
 	/* yesterday's numbers for the mode (1 = CQP, 5 = QVBR) stay, so the log
 	 * lines and the benches that read them do not change */
-	c->conf.modo_bitrate = (d->modo_va == VA_RC_QVBR) ? 5 : 1;
+	c->conf.modo_bitrate = (d->va_mode == VA_RC_QVBR) ? 5 : 1;
 	c->conf.banda_punto = v.banda_punto;
 	c->conf.banda_filo = v.banda_filo;
-	c->conf.banda_serbatoio = v.serbatoio_bit;
+	c->conf.banda_serbatoio = v.reservoir_bit;
 	c->conf.banda_serbatoio_ms =
-	    (v.banda_filo > 0 && v.serbatoio_bit > 0)
-	        ? (uint32_t) ((int64_t) v.serbatoio_bit * 1000 / v.banda_filo)
+	    (v.banda_filo > 0 && v.reservoir_bit > 0)
+	        ? (uint32_t) ((int64_t) v.reservoir_bit * 1000 / v.banda_filo)
 	        : 0;
 	if (!serbatoio_entro_i_50_ms(c, errore, errore_byte)) {
-		vadiretta_chiudi(c->va);
+		vadirect_close(c->va);
 		c->va = NULL;
 		return -1;
 	}
@@ -2316,9 +2316,9 @@ static int apri_scheda_vaapi(Codificatore *c, char *errore, size_t errore_byte)
 
 /*
  * ⭐⭐ PHASE 19 — THE CARD OPENS IN VULKAN VIDEO.  The same numbers as
- *     `apri_scheda_vaapi()`, told to `vulkanvideo.c`:
+ *     `open_vaapi_card()`, told to `vulkanvideo.c`:
  *
- *   the ceiling   → `banda_*`/`serbatoio_bit`: zeros = CQP, otherwise VBR with
+ *   the ceiling   → `banda_*`/`reservoir_bit`: zeros = CQP, otherwise VBR with
  *                   the requested QP as the regulator's FLOOR (Vulkan does not
  *                   have VA-API's QVBR: `vulkanvideo.h`);
  *   the level     → `livello_idc` = `livello_imposto()`, 0 = computed as
@@ -2334,10 +2334,10 @@ static int apri_scheda_vulkan(Codificatore *c, char *errore, size_t errore_byte)
 {
 	const CodificatoreRichiesta *r = &c->richiesta;
 	VulkanVideoRichiesta v;
-	const VulkanVideoDichiarazione *d;
-	char errore_vk[256] = { 0 };
+	const VulkanVideoDeclaration *d;
+	char error_vk[256] = { 0 };
 
-	if (!qualita_ammessa_sulla_scheda(c, errore, errore_byte))
+	if (!allowed_quality_on_card(c, errore, errore_byte))
 		return -1;
 
 	memset(&v, 0, sizeof v);
@@ -2349,7 +2349,7 @@ static int apri_scheda_vulkan(Codificatore *c, char *errore, size_t errore_byte)
 	v.qp = c->qualita_corrente;
 	v.chiavi_ogni = r->chiavi_ogni;
 	if (tetto_pavimento_mbit
-	    && !tetto_in_tre_numeri(&v.banda_punto, &v.banda_filo, &v.serbatoio_bit, errore,
+	    && !tetto_in_tre_numeri(&v.banda_punto, &v.banda_filo, &v.reservoir_bit, errore,
 	                            errore_byte))
 		return -1;
 	v.livello_idc = livello_imposto(c);
@@ -2358,20 +2358,20 @@ static int apri_scheda_vulkan(Codificatore *c, char *errore, size_t errore_byte)
 		              "⭐ §4.3: level IMPOSED on «%s» — %d.%d, that is %d in "
 		              "%s.  ⚠ Requested does not mean obeyed: the verdict "
 		              "comes from the SPS",
-		              c->nome_componente, r->livello_x10 / 10, r->livello_x10 % 10,
+		              c->component_name, r->livello_x10 / 10, r->livello_x10 % 10,
 		              v.livello_idc,
 		              r->codec == CODIFICATORE_H264 ? "level_idc"
 		                                            : "general_level_idc (three times)");
 
-	c->vk = vulkanvideo_apri(c->vk_dispositivo, &v, errore_vk, sizeof errore_vk);
+	c->vk = vulkanvideo_open(c->vk_device, &v, error_vk, sizeof error_vk);
 	if (!c->vk) {
-		di(errore, errore_byte, "«%s» did not open: %s", c->nome_componente, errore_vk);
+		di(errore, errore_byte, "«%s» did not open: %s", c->component_name, error_vk);
 		return -1;
 	}
-	d = vulkanvideo_dichiarazione(c->vk);
+	d = vulkanvideo_declaration(c->vk);
 
 	c->conf.codec = r->codec;
-	c->conf.componente = c->nome_componente;
+	c->conf.componente = c->component_name;
 	c->conf.profondita_chiesta = r->profondita;
 	c->conf.fotogrammi_b = 0;
 	c->conf.global_header = false;
@@ -2384,13 +2384,13 @@ static int apri_scheda_vulkan(Codificatore *c, char *errore, size_t errore_byte)
 	c->conf.modo_bitrate = (d->modo_rc == VULKANVIDEO_RC_VBR) ? 3 : 1;
 	c->conf.banda_punto = v.banda_punto;
 	c->conf.banda_filo = v.banda_filo;
-	c->conf.banda_serbatoio = v.serbatoio_bit;
+	c->conf.banda_serbatoio = v.reservoir_bit;
 	c->conf.banda_serbatoio_ms =
-	    (v.banda_filo > 0 && v.serbatoio_bit > 0)
-	        ? (uint32_t) ((int64_t) v.serbatoio_bit * 1000 / v.banda_filo)
+	    (v.banda_filo > 0 && v.reservoir_bit > 0)
+	        ? (uint32_t) ((int64_t) v.reservoir_bit * 1000 / v.banda_filo)
 	        : 0;
 	if (!serbatoio_entro_i_50_ms(c, errore, errore_byte)) {
-		vulkanvideo_chiudi(c->vk);
+		vulkanvideo_close(c->vk);
 		c->vk = NULL;
 		return -1;
 	}
@@ -2401,7 +2401,7 @@ static int apri_scheda_vulkan(Codificatore *c, char *errore, size_t errore_byte)
 	              "level %d in the SPS · %s · headers %s%s%s · conversion %s · "
 	              "minimum latency %s · input %s · QP %d..%d · %zu bytes of "
 	              "headers in front of every key",
-	              c->nome_componente, d->larghezza_codificata, d->altezza_codificata, d->blocco,
+	              c->component_name, d->larghezza_codificata, d->altezza_codificata, d->blocco,
 	              r->larghezza, r->altezza, d->livello_idc,
 	              d->modo_rc == VULKANVIDEO_RC_VBR ? "VBR (requested QP = floor)" : "CQP",
 	              d->intestazioni_dal_driver ? "from the driver" : "written by us",
@@ -2426,16 +2426,16 @@ static int apri_scheda_vulkan(Codificatore *c, char *errore, size_t errore_byte)
  */
 static void chiudi_contesto(Codificatore *c)
 {
-	if (c->strada == STRADA_VULKAN) {
-		vulkanvideo_chiudi(c->vk);
+	if (c->strada == ROUTE_VULKAN) {
+		vulkanvideo_close(c->vk);
 		c->vk = NULL;
 	} else if (c->hardware) {
-		vadiretta_chiudi(c->va);
+		vadirect_close(c->va);
 		c->va = NULL;
-		c->superficie_pronta = VA_INVALID_ID;
+		c->surface_ready = VA_INVALID_ID;
 	}
 	c->cornice_decisa = false;
-	c->cornice_attiva = false;
+	c->active_border = false;
 }
 
 static int apri_contesto(Codificatore *c, char *errore, size_t errore_byte)
@@ -2444,8 +2444,8 @@ static int apri_contesto(Codificatore *c, char *errore, size_t errore_byte)
 		di(errore, errore_byte, "no card open: without a card there is no encoding (phase 19)");
 		return -1;
 	}
-	return c->strada == STRADA_VULKAN ? apri_scheda_vulkan(c, errore, errore_byte)
-	                                  : apri_scheda_vaapi(c, errore, errore_byte);
+	return c->strada == ROUTE_VULKAN ? apri_scheda_vulkan(c, errore, errore_byte)
+	                                  : open_vaapi_card(c, errore, errore_byte);
 }
 
 /*
@@ -2465,16 +2465,16 @@ static int apri_fotogrammi(Codificatore *c, char *errore, size_t errore_byte)
 
 	free(c->appoggio);
 	c->appoggio = NULL;
-	c->appoggio_byte = 0;
+	c->staging_byte = 0;
 	/* ⭐ Phase 19: on the Vulkan route the BGRx are uploaded as they are and
 	 *    the shader converts them: no staging buffer. */
-	if (c->hardware && c->strada == STRADA_VAAPI && FORMATO_PIXEL_IMPACCHETTATO(r->formato)) {
+	if (c->hardware && c->strada == ROUTE_VAAPI && FORMATO_PIXEL_IMPACCHETTATO(r->formato)) {
 		size_t campione = r->profondita == 10 ? 2u : 1u;
 		/* Y in full, then interleaved UV at half height: 1.5 samples per pixel. */
-		c->appoggio_byte = (size_t) r->larghezza * r->altezza * campione * 3u / 2u;
-		c->appoggio = malloc(c->appoggio_byte);
+		c->staging_byte = (size_t) r->larghezza * r->altezza * campione * 3u / 2u;
+		c->appoggio = malloc(c->staging_byte);
 		if (!c->appoggio) {
-			c->appoggio_byte = 0;
+			c->staging_byte = 0;
 			di(errore, errore_byte, "no memory for the %ux%u staging buffer", r->larghezza,
 			   r->altezza);
 			return -1;
@@ -2482,7 +2482,7 @@ static int apri_fotogrammi(Codificatore *c, char *errore, size_t errore_byte)
 	}
 	/* ⚠ The source has real 8 bits (`[M]` F2.2): the Main10 that comes out is 8 bits
 	 *   PROMOTED, and the promotion is declared instead of suffered.  It holds for both
-	 *   routes: in hardware the promotion is done by `colori709_a_p010()`. */
+	 *   routes: in hardware the promotion is done by `colors709_to_p010()`. */
 	c->conf.promozione_8_a_10 =
 	    (FORMATO_PIXEL_IMPACCHETTATO(r->formato) && r->profondita == 10);
 	return 0;
@@ -2544,8 +2544,8 @@ Codificatore *codificatore_nuovo(const CodificatoreRichiesta *richiesta,
 	 *    two different measurements with the same label, which is worse than not
 	 *    measuring."
 	 */
-	snprintf(c->nome_componente, sizeof c->nome_componente, "%s", nome);
-	c->superficie_pronta = VA_INVALID_ID;
+	snprintf(c->component_name, sizeof c->component_name, "%s", nome);
+	c->surface_ready = VA_INVALID_ID;
 	c->dispositivo.fd = -1;
 
 	/*
@@ -2556,9 +2556,9 @@ Codificatore *codificatore_nuovo(const CodificatoreRichiesta *richiesta,
 	 *    label's codec must be the one requested.
 	 */
 	{
-		CodecVideo codec_scheda;
-		c->hardware = componente_della_scheda(nome, &codec_scheda, &c->strada_chiesta);
-		if (c->hardware && codec_scheda != richiesta->codec) {
+		CodecVideo card_codec;
+		c->hardware = component_of_card(nome, &card_codec, &c->strada_chiesta);
+		if (c->hardware && card_codec != richiesta->codec) {
 			di(errore, errore_byte, "«%s» is not a %s encoder", nome,
 			   nome_codec(richiesta->codec));
 			free(c);
@@ -2598,18 +2598,18 @@ Codificatore *codificatore_nuovo(const CodificatoreRichiesta *richiesta,
 	 *    "which card" and "which entrypoint" next to it is a number that holds for
 	 *    a machine nobody knows (`LEZIONI.md` §1.1).
 	 */
-	if (c->strada == STRADA_VULKAN)
+	if (c->strada == ROUTE_VULKAN)
 		snprintf(c->nome, sizeof(c->nome),
 		         "%s %s via %.40s (in HARDWARE · %.60s · Vulkan Video: %.160s)",
 		         nome_codec(richiesta->codec),
 		         richiesta->profondita == 10 ? "10 bit" : "8 bit",
-		         c->nome_componente, c->conf.nodo, c->conf.fornitore_va);
+		         c->component_name, c->conf.nodo, c->conf.fornitore_va);
 	else
 		snprintf(c->nome, sizeof(c->nome),
 		         "%s %s via %.40s (in HARDWARE · %.60s · VA-API: %.120s · %s)",
 		         nome_codec(richiesta->codec),
 		         richiesta->profondita == 10 ? "10 bit" : "8 bit",
-		         c->nome_componente, c->conf.nodo, c->conf.fornitore_va,
+		         c->component_name, c->conf.nodo, c->conf.fornitore_va,
 		         c->conf.bassa_potenza ? "⚠ EncSliceLP, low power — it is NOT "
 		                                 "full encoding"
 		                               : "EncSlice, full");
@@ -2789,10 +2789,10 @@ void codificatore_libera(Codificatore *c)
 	chiudi_vpp(c);
 	chiudi_contesto(c);
 	/* ⚠ The device is closed LAST — the one of the open route. */
-	if (c->strada == STRADA_VULKAN)
-		vulkanvideo_chiudi_dispositivo(c->vk_dispositivo);
+	if (c->strada == ROUTE_VULKAN)
+		vulkanvideo_close_device(c->vk_device);
 	else if (c->hardware)
-		vadiretta_chiudi_dispositivo(&c->dispositivo);
+		vadirect_close_device(&c->dispositivo);
 	free(c->uscita);
 	free(c);
 }
@@ -2802,9 +2802,9 @@ const char *codificatore_nome(const Codificatore *c)
 	return c ? c->nome : "(none)";
 }
 
-bool codificatore_vulkan_sul_nodo(const char *nodo)
+bool encoder_vulkan_on_node(const char *nodo)
 {
-	VulkanVideoCapacita cap;
+	VulkanVideoCapabilities cap;
 	char errore[256] = { 0 };
 
 	memset(&cap, 0, sizeof cap);
@@ -2815,7 +2815,7 @@ bool codificatore_vulkan_sul_nodo(const char *nodo)
 
 const char *codificatore_strada(const Codificatore *c)
 {
-	return c ? nome_strada(c->strada) : "";
+	return c ? route_name(c->strada) : "";
 }
 
 const CodificatoreConfessione *codificatore_confessione(const Codificatore *c)
@@ -2954,7 +2954,7 @@ static VADisplay display_di(Codificatore *c)
 {
 	/* ⛔ Only on the VA-API route: Vulkan's zero copy lives inside
 	 *    `vulkanvideo.c` (import, cache, conversion) and does not pass through here. */
-	return (c->hardware && c->strada == STRADA_VAAPI) ? c->dispositivo.display : NULL;
+	return (c->hardware && c->strada == ROUTE_VAAPI) ? c->dispositivo.display : NULL;
 }
 
 /*
@@ -2971,17 +2971,17 @@ static bool codifica_vulkan(Codificatore *c, const uint8_t *pixel, uint32_t pass
 {
 	const uint8_t *dati = NULL;
 	size_t byte = 0;
-	VulkanVideoTempi t;
+	VulkanVideoTimings t;
 	char errore[256] = { 0 };
 	bool ok;
 
 	memset(&t, 0, sizeof t);
 	if (s) {
-		VulkanVideoSuperficie vs = { .fd = s->fd, .offset = s->offset, .stride = s->stride,
+		VulkanVideoSurface vs = { .fd = s->fd, .offset = s->offset, .stride = s->stride,
 			                         .larghezza = s->larghezza, .altezza = s->altezza,
 			                         .formato_drm = s->formato_drm, .modificatore = s->modificatore,
 			                         .generazione = s->generazione };
-		ok = vulkanvideo_codifica_dmabuf(c->vk, &vs, c->prossimo_chiave, &dati, &byte, &t, errore,
+		ok = vulkanvideo_encode_dmabuf(c->vk, &vs, c->prossimo_chiave, &dati, &byte, &t, errore,
 		                                 sizeof errore);
 		if (ok && !c->detto_copia_zero) {
 			c->detto_copia_zero = true;
@@ -3003,7 +3003,7 @@ static bool codifica_vulkan(Codificatore *c, const uint8_t *pixel, uint32_t pass
 			              "the input is not: `vulkan_adatta()` should have stopped it earlier");
 			return false;
 		}
-		ok = vulkanvideo_codifica_memoria(c->vk, pixel, passo ? passo : c->richiesta.larghezza * 4u,
+		ok = vulkanvideo_encode_memory(c->vk, pixel, passo ? passo : c->richiesta.larghezza * 4u,
 		                                  c->richiesta.formato == CODIFICATORE_PIXEL_RGBX
 		                                      ? VULKANVIDEO_RGBX
 		                                      : VULKANVIDEO_BGRX,
@@ -3014,7 +3014,7 @@ static bool codifica_vulkan(Codificatore *c, const uint8_t *pixel, uint32_t pass
 		registro_dice(REG_CODIFICA, "⛔ Vulkan Video did not encode: %s", errore);
 		return false;
 	}
-	if (!metti_in_uscita(c, dati, byte))
+	if (!put_in_output(c, dati, byte))
 		return false;
 	fuori->us_conversione = t.us_conversione;
 	fuori->us_caricamento = t.us_caricamento;
@@ -3336,7 +3336,7 @@ static bool prepara_dalla_scheda(Codificatore *c, const CodificatoreSuperficie *
 
 	/* ⭐ Phase 18: the input surface is given by vadiretta, from its store
 	 *    (a new one on every round, as yesterday with libavutil's store). */
-	destinazione = vadiretta_superficie_ingresso(c->va);
+	destinazione = vadirect_input_surface(c->va);
 	if (destinazione == VA_INVALID_ID) {
 		registro_dice(REG_CODIFICA, "⛔ no input surface (%d ready)",
 		              SUPERFICI_PRONTE);
@@ -3344,7 +3344,7 @@ static bool prepara_dalla_scheda(Codificatore *c, const CodificatoreSuperficie *
 	}
 	if (!converti_sulla_gpu(c, sorgente, destinazione))
 		return false;
-	c->superficie_pronta = destinazione;
+	c->surface_ready = destinazione;
 	*us = adesso_us() - t0;
 
 	if (!c->detto_copia_zero) {
@@ -3392,7 +3392,7 @@ static bool prepara_fotogramma(Codificatore *c, const uint8_t *pixel, uint32_t p
 
 	char errore[256] = { 0 };
 	const uint32_t l = c->richiesta.larghezza, a = c->richiesta.altezza;
-	VASurfaceID destinazione = vadiretta_superficie_ingresso(c->va);
+	VASurfaceID destinazione = vadirect_input_surface(c->va);
 	if (destinazione == VA_INVALID_ID) {
 		registro_dice(REG_CODIFICA, "⛔ no input surface (%d ready)",
 		              SUPERFICI_PRONTE);
@@ -3406,13 +3406,13 @@ static bool prepara_fotogramma(Codificatore *c, const uint8_t *pixel, uint32_t p
 		Colori709Ordine ordine = (c->richiesta.formato == CODIFICATORE_PIXEL_RGBX)
 		                             ? COLORI709_RGBX
 		                             : COLORI709_BGRX;
-		uint32_t passo_pixel = passo ? passo : l * 4u;
+		uint32_t pixel_stride = passo ? passo : l * 4u;
 		bool ok, caricato;
 		uint64_t t1;
 		if (c->richiesta.profondita == 10) {
 			uint16_t *y = (uint16_t *) c->appoggio;
 			uint16_t *uv = y + (size_t) l * a;
-			ok = colori709_a_p010(pixel, passo_pixel, l, a, ordine, y, l * 2u, uv, l * 2u);
+			ok = colors709_to_p010(pixel, pixel_stride, l, a, ordine, y, l * 2u, uv, l * 2u);
 			*us = adesso_us() - t0;
 			t1 = adesso_us();
 			caricato = ok && vadiretta_carica_p010(c->va, destinazione, y, l * 2u, uv, l * 2u,
@@ -3420,7 +3420,7 @@ static bool prepara_fotogramma(Codificatore *c, const uint8_t *pixel, uint32_t p
 		} else {
 			uint8_t *y = c->appoggio;
 			uint8_t *uv = y + (size_t) l * a;
-			ok = colori709_a_nv12(pixel, passo_pixel, l, a, ordine, y, l, uv, l);
+			ok = colori709_a_nv12(pixel, pixel_stride, l, a, ordine, y, l, uv, l);
 			*us = adesso_us() - t0;
 			t1 = adesso_us();
 			caricato = ok && vadiretta_carica_nv12(c->va, destinazione, y, l, uv, l, errore,
@@ -3437,7 +3437,7 @@ static bool prepara_fotogramma(Codificatore *c, const uint8_t *pixel, uint32_t p
 		*us_carico = adesso_us() - t1;
 	} else {
 		/* yuv420p10le (the bench) → P010, directly into the input */
-		if (!vadiretta_carica_yuv420p10(c->va, destinazione, pixel, passo, errore,
+		if (!vadirect_load_yuv420p10(c->va, destinazione, pixel, passo, errore,
 		                                sizeof errore)) {
 			registro_dice(REG_CODIFICA, "⛔ the samples were not uploaded to the card: %s",
 			              errore);
@@ -3445,7 +3445,7 @@ static bool prepara_fotogramma(Codificatore *c, const uint8_t *pixel, uint32_t p
 		}
 		*us_carico = adesso_us() - t0;
 	}
-	c->superficie_pronta = destinazione;
+	c->surface_ready = destinazione;
 	return true;
 }
 
@@ -3475,7 +3475,7 @@ static bool prepara_fotogramma(Codificatore *c, const uint8_t *pixel, uint32_t p
  * ⭐ PHASE 18: WE write the frame, bit by bit, and no longer with libavcodec's
  *    `hevc_metadata`/`h264_metadata` filter.  The method: we reread
  *    the SPS up to the cropping flag (the reader above says WHERE it is,
- *    `PosizioneCornice`), we rewrite the head unchanged, then the flag at 1 with the
+ *    `FramePosition`), we rewrite the head unchanged, then the flag at 1 with the
  *    four offsets (added to those that were there), and we copy the TAIL
  *    of the SPS back as it is, bit by bit, up to the stop bit.  ⛔ It is legitimate
  *    because the SPS syntax is sequential and nothing, after the window,
@@ -3491,12 +3491,12 @@ static bool prepara_fotogramma(Codificatore *c, const uint8_t *pixel, uint32_t p
 static bool riscrivi_sps_con_cornice(Codificatore *c, size_t sps_offset, size_t sps_byte)
 {
 	const bool hevc = c->richiesta.codec == CODIFICATORE_HEVC;
-	const size_t testa_byte = hevc ? 2 : 1;
+	const size_t head_byte = hevc ? 2 : 1;
 	const uint8_t *nal = c->uscita + sps_offset;
-	uint8_t *rbsp, *nuovo_rbsp, *nuovo_nal, *fotogramma;
-	size_t n, ultimo_uno, nuovo_byte, inizio_codice, dopo, totale;
+	uint8_t *rbsp, *new_rbsp, *new_nal, *fotogramma;
+	size_t n, last_one, new_byte, inizio_codice, dopo, totale;
 	CodificatoreConfessione letta;
-	PosizioneCornice dove;
+	FramePosition dove;
 	ScrittoreBit w;
 	bool ok;
 
@@ -3504,53 +3504,53 @@ static bool riscrivi_sps_con_cornice(Codificatore *c, size_t sps_offset, size_t 
 	memset(&dove, 0, sizeof dove);
 	ok = hevc ? leggi_sps_hevc(nal, sps_byte, &letta, &dove)
 	          : leggi_sps_h264(nal, sps_byte, &letta, &dove);
-	if (!ok || sps_byte <= testa_byte)
+	if (!ok || sps_byte <= head_byte)
 		return false;
 
 	rbsp = malloc(sps_byte);
-	nuovo_rbsp = malloc(sps_byte + 32);
-	nuovo_nal = malloc(sps_byte + 64);
-	if (!rbsp || !nuovo_rbsp || !nuovo_nal) {
+	new_rbsp = malloc(sps_byte + 32);
+	new_nal = malloc(sps_byte + 64);
+	if (!rbsp || !new_rbsp || !new_nal) {
 		free(rbsp);
-		free(nuovo_rbsp);
-		free(nuovo_nal);
+		free(new_rbsp);
+		free(new_nal);
 		return false;
 	}
-	n = togli_emulazione(nal + testa_byte, sps_byte - testa_byte, rbsp, sps_byte);
+	n = togli_emulazione(nal + head_byte, sps_byte - head_byte, rbsp, sps_byte);
 	/* the stop bit: the LAST 1 of the RBSP */
-	ultimo_uno = 0;
+	last_one = 0;
 	for (size_t b = n * 8; b > 0; b--) {
 		if ((rbsp[(b - 1) >> 3] >> (7 - ((b - 1) & 7))) & 1u) {
-			ultimo_uno = b - 1;
+			last_one = b - 1;
 			break;
 		}
 	}
-	if (dove.bit_dopo > ultimo_uno || dove.bit_flag >= dove.bit_dopo) {
+	if (dove.bit_after > last_one || dove.bit_flag >= dove.bit_after) {
 		free(rbsp);
-		free(nuovo_rbsp);
-		free(nuovo_nal);
+		free(new_rbsp);
+		free(new_nal);
 		return false;
 	}
-	sb_apri(&w, nuovo_rbsp, sps_byte + 32);
+	sb_open(&w, new_rbsp, sps_byte + 32);
 	sb_copia_bit(&w, rbsp, 0, dove.bit_flag);
 	sb_flag(&w, true);
 	sb_ue(&w, dove.sx);
-	sb_ue(&w, dove.dx + c->cornice_dx / 2);
+	sb_ue(&w, dove.dx + c->border_dx / 2);
 	sb_ue(&w, dove.su);
-	sb_ue(&w, dove.giu + c->cornice_dy / 2);
-	sb_copia_bit(&w, rbsp, dove.bit_dopo, ultimo_uno - dove.bit_dopo);
+	sb_ue(&w, dove.giu + c->border_dy / 2);
+	sb_copia_bit(&w, rbsp, dove.bit_after, last_one - dove.bit_after);
 	sb_chiudi_rbsp(&w);
 	if (w.traboccato) {
 		free(rbsp);
-		free(nuovo_rbsp);
-		free(nuovo_nal);
+		free(new_rbsp);
+		free(new_nal);
 		return false;
 	}
-	nuovo_byte = nal_annexb(nuovo_nal, sps_byte + 64, nal, testa_byte, nuovo_rbsp, sb_byte(&w));
+	new_byte = nal_annexb(new_nal, sps_byte + 64, nal, head_byte, new_rbsp, sb_byte(&w));
 	free(rbsp);
-	free(nuovo_rbsp);
-	if (!nuovo_byte) {
-		free(nuovo_nal);
+	free(new_rbsp);
+	if (!new_byte) {
+		free(new_nal);
 		return false;
 	}
 	/* the start code in front of the old SPS: 3 or 4 bytes */
@@ -3558,16 +3558,16 @@ static bool riscrivi_sps_con_cornice(Codificatore *c, size_t sps_offset, size_t 
 	if (inizio_codice > 0 && c->uscita[inizio_codice - 1] == 0)
 		inizio_codice--;
 	dopo = sps_offset + sps_byte;
-	totale = inizio_codice + nuovo_byte + (c->uscita_byte - dopo);
+	totale = inizio_codice + new_byte + (c->uscita_byte - dopo);
 	fotogramma = malloc(totale);
 	if (!fotogramma) {
-		free(nuovo_nal);
+		free(new_nal);
 		return false;
 	}
 	memcpy(fotogramma, c->uscita, inizio_codice);
-	memcpy(fotogramma + inizio_codice, nuovo_nal, nuovo_byte);
-	memcpy(fotogramma + inizio_codice + nuovo_byte, c->uscita + dopo, c->uscita_byte - dopo);
-	free(nuovo_nal);
+	memcpy(fotogramma + inizio_codice, new_nal, new_byte);
+	memcpy(fotogramma + inizio_codice + new_byte, c->uscita + dopo, c->uscita_byte - dopo);
+	free(new_nal);
 	free(c->uscita);
 	c->uscita = fotogramma;
 	c->uscita_capacita = totale;
@@ -3608,24 +3608,24 @@ static bool cornice_al_suo_posto(Codificatore *c, bool chiave)
 		if (!ok)
 			return true; /* no readable SPS: `forma_va_bene()` decides */
 		c->cornice_decisa = true;
-		c->cornice_attiva = false;
+		c->active_border = false;
 		uint32_t dx = letta.larghezza_flusso - c->richiesta.larghezza;
 		uint32_t dy = letta.altezza_flusso - c->richiesta.altezza;
 		if (letta.larghezza_flusso < c->richiesta.larghezza ||
 		    letta.altezza_flusso < c->richiesta.altezza || (dx == 0 && dy == 0) ||
 		    dx >= 64 || dy >= 64 || (dx | dy) & 1u)
 			return true;
-		c->cornice_attiva = true;
-		c->cornice_dx = dx;
-		c->cornice_dy = dy;
+		c->active_border = true;
+		c->border_dx = dx;
+		c->border_dy = dy;
 		registro_dice(REG_CODIFICA,
 		              "⭐ D-023: «%s» declares %ux%u for a %ux%u canvas (it encodes the "
 		              "multiple of the block and does not write the frame): I write it in the SPS, "
 		              "bit by bit, %u columns and %u rows cropped on the right and at the bottom",
-		              c->nome_componente, letta.larghezza_flusso, letta.altezza_flusso,
+		              c->component_name, letta.larghezza_flusso, letta.altezza_flusso,
 		              c->richiesta.larghezza, c->richiesta.altezza, dx, dy);
 	}
-	if (!c->cornice_attiva)
+	if (!c->active_border)
 		return true;
 	if (!riscrivi_sps_con_cornice(c, off, n)) {
 		registro_dice(REG_CODIFICA,
@@ -3933,7 +3933,7 @@ static bool risali_qualita(Codificatore *c)
 
 /* The encoded bytes are copied into `c->uscita`, which is ours: see the
  * structure.  It grows when needed and never shrinks. */
-static bool metti_in_uscita(Codificatore *c, const uint8_t *dati, size_t byte)
+static bool put_in_output(Codificatore *c, const uint8_t *dati, size_t byte)
 {
 	if (byte > c->uscita_capacita) {
 		size_t nuova = byte + byte / 4 + 4096;
@@ -4097,10 +4097,10 @@ static bool comprimi_comune(Codificatore *c, const uint8_t *pixel, uint32_t pass
 		uint64_t us_conv = 0, us_carico = 0;
 		/* ⭐ PHASE 19: the ONLY `if` between the two card routes — and it sits before
 		 *    the bytes boundary, like the `if` between memory and zero copy. */
-		if (c->strada == STRADA_VULKAN) {
+		if (c->strada == ROUTE_VULKAN) {
 			if (!codifica_vulkan(c, pixel, passo, superficie, fuori))
 				return false;
-			goto byte_pronti;
+			goto byte_ready;
 		}
 		bool pronto = superficie
 		                  ? prepara_dalla_scheda(c, superficie, &us_conv, &us_carico)
@@ -4117,18 +4117,18 @@ static bool comprimi_comune(Codificatore *c, const uint8_t *pixel, uint32_t pass
 			const uint8_t *dati = NULL;
 			size_t byte = 0;
 			char errore[256] = { 0 };
-			if (!vadiretta_codifica(c->va, c->superficie_pronta, c->prossimo_chiave, &dati,
+			if (!vadirect_encode(c->va, c->surface_ready, c->prossimo_chiave, &dati,
 			                        &byte, errore, sizeof errore)) {
 				registro_dice(REG_CODIFICA, "⛔ the card did not encode: %s", errore);
 				return false;
 			}
-			if (!metti_in_uscita(c, dati, byte))
+			if (!put_in_output(c, dati, byte))
 				return false;
 			fuori->us_codifica = adesso_us() - t0;
 			fuori->trattenuto = false;
 			c->pacchetto_in_mano = true;
 		}
-byte_pronti:
+byte_ready:
 		/* ⛔ BOUNDARY — from here down we work on the BYTES in `c->uscita`. */
 
 		/* ───────────────────────────────────────────────────────────────────
@@ -4387,7 +4387,7 @@ byte_pronti:
 
 	/* ═══════════════════════════════════════════════════════════════════════
 	 * ⛔⛔ THIS POINTER SITS **INSIDE** THE PACKET, AND `chiudi_contesto()`
-	 *      **FREES** THE ENCODER'S BYTES (`vadiretta_chiudi`).
+	 *      **FREES** THE ENCODER'S BYTES (`vadirect_close`).
 	 *
 	 * ⚠ It is the third time in one day that someone trips over it, so the proof
 	 *   is written here instead of being redone from memory.  From here until
@@ -4451,7 +4451,7 @@ bool codificatore_comprimi_scheda(Codificatore *c, const CodificatoreSuperficie 
 		registro_dice(REG_CODIFICA,
 		              "⛔⛔ ZERO COPY requested on «%s», which has no card open: "
 		              "nothing is imported",
-		              c->nome_componente);
+		              c->component_name);
 		return false;
 	}
 	if (superficie->fd < 0 || !superficie->larghezza || !superficie->altezza

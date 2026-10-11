@@ -34,7 +34,7 @@ QUI = Path(__file__).resolve().parent
 REGISTRO = QUI / "b2-esiti.jsonl"
 
 
-class Raccoglitore(SimpleHTTPRequestHandler):
+class Collector(SimpleHTTPRequestHandler):
     def __init__(self, *a, **kw):
         super().__init__(*a, directory=str(QUI), **kw)
 
@@ -84,4 +84,4 @@ if __name__ == "__main__":
     print(f"== bench B2: probe on http://localhost:{porta}/01-b2-sonda.html")
     print(f"   the outcomes accumulate in {REGISTRO}")
     print("   waiting for someone to press the button.\n", flush=True)
-    ThreadingHTTPServer(("127.0.0.1", porta), Raccoglitore).serve_forever()
+    ThreadingHTTPServer(("127.0.0.1", porta), Collector).serve_forever()

@@ -21,7 +21,7 @@
 # | the other six reasons | same | same | they are decided by `rcp.c`, identical |
 # | `gia-attiva-remota` (0x0F) | the place is freed at the death of the CONNECTION | ⭐ it is freed at the closing of the **stream** | `src/webtransport.c` `wt_stream_chiuso()`.  ⚠ With the test client the two instants coincide, so here **no** difference is expected: a browser sees the difference (B11, `[M]` 7 «place DENIED» out of 9 with Chrome) |
 # | the inactivity cap | 120 s, requested by us | ⛔ 30 s, **not chosen by us** | `IDLE_MS` in `src/trasporto.c`.  The `tempo-scaduto` case keeps quiet for 20 s: it fits under the 30, but the margin goes from 100 s to 10 s |
-# | B2's echo on the streams | present | ⛔ not present | `scarta_stream_di_troppo()`: «the bytes are thrown away and NOT sent back».  B7 never waits for it, so it does not touch it — ⚠ but no new tool must wait for it |
+# | B2's echo on the streams | present | ⛔ not present | `discard_extra_stream()`: «the bytes are thrown away and NOT sent back».  B7 never waits for it, so it does not touch it — ⚠ but no new tool must wait for it |
 #
 # ⛔ WITH A FILTER THE RUN IS PARTIAL, AND IT SAYS SO.  The green outcome reads «the
 #    selected cases pass», never «B7 passes».  ⚠ And a filter that matches no
@@ -116,7 +116,7 @@ IND=$B_IND
 PORTA=$B_PORTA
 # ⛔ The root of the sources from which the exclusion of 0x0C is measured: it
 #    depends on the target, and it is NOT `rcp.c` alone.
-DENTRO_SORG=$DENTRO
+INSIDE_SRC=$DENTRO
 
 AZIONE=${1:-tutto}
 FILTRO=${2:-}
@@ -130,8 +130,8 @@ if [ "$AZIONE" = elenco ]; then
 	exit $?
 fi
 
-FRASI=
-[ "$AZIONE" = frasi ] && FRASI=--frasi
+SENTENCES=
+[ "$AZIONE" = frasi ] && SENTENCES=--frasi
 
 # ---------------------------------------------------------------------------
 # ⛔ 1. THE SERVER IS PREPARED — and the two roads are not the same.
@@ -158,15 +158,15 @@ bersaglio_pronto || exit 3
 # ⚠ And the file where it lives changes with the target: in the graft it is the
 #   grafted codec, in the product it is `webtransport.c` (`chiudi_sessione()`).
 if [ "$B_NOME" = innesto ]; then
-	DOVE_RIMANDO=$DENTRO/b2/ngtcp2/examples/http3_server_proto_codec.cc
+	DEFERRED_WHERE=$DENTRO/b2/ngtcp2/examples/http3_server_proto_codec.cc
 else
-	DOVE_RIMANDO=$DENTRO/remotix/webtransport.c
+	DEFERRED_WHERE=$DENTRO/remotix/webtransport.c
 fi
-RIMANDO=$(bash "$ENTRA" --root "grep -c 'DEFERRED' $DOVE_RIMANDO" | tr -cd '0-9')
+RIMANDO=$(bash "$ENTRA" --root "grep -c 'DEFERRED' $DEFERRED_WHERE" | tr -cd '0-9')
 if [ "${RIMANDO:-0}" -ge 1 ]; then
-	ok "the deferred closing (§3.1 point 3) is in $(basename "$DOVE_RIMANDO")"
+	ok "the deferred closing (§3.1 point 3) is in $(basename "$DEFERRED_WHERE")"
 else
-	ko "⚠ the DEFERRED closing is not in $DOVE_RIMANDO: if the second"
+	ko "⚠ the DEFERRED closing is not in $DEFERRED_WHERE: if the second"
 	ko "  road turns out absent, the cause is THIS and not the RCP module"
 fi
 
@@ -188,7 +188,7 @@ inf "  «tempo-scaduto» keeps quiet for twenty seconds, and a shorter cap"
 inf "  would close the connection on its own — the bench would read «it"
 inf "  dropped» where nothing dropped, and on top of that WITHOUT a reason, that is"
 inf "  precisely the shape B7 must be able to tell from a farewell"
-if [ "$B_IDLE_SCELTA" = no ]; then
+if [ "$B_IDLE_CHOICE" = no ]; then
 	inf "⛔ and on this target we do not choose that number (IDLE_MS in"
 	inf "   src/trasporto.c): the margin above the 20 s goes from 100 s to 10 s"
 fi
@@ -196,7 +196,7 @@ bersaglio_accendi filo "$B_IDLE_LUNGO" || exit 4
 PID=$B_PID
 
 inf "does the unblock command answer? (PING — the denominator of B0.3)"
-bersaglio_ping || { ko "⛔ the unblock command does not answer: at the end I could not"
+target_ping || { ko "⛔ the unblock command does not answer: at the end I could not"
                     ko "   put the machine back in order"
                     bersaglio_spegni; exit 4; }
 
@@ -213,15 +213,15 @@ fermare() { bersaglio_spegni; }
 
 # ---------------------------------------------------------------------------
 log "4. The farewell, from the receiving side"
-OPZ=$(bersaglio_opzioni_python)
-COMUNE="--indirizzo $IND $OPZ --utente $UTENTE --parola-file $PAROLA_DENTRO \
-	--registro $B_LOG --pagina $DENTRO/01-b11-pagina.html --dentro $DENTRO_SORG"
+OPT=$(bersaglio_opzioni_python)
+COMUNE="--indirizzo $IND $OPT --utente $UTENTE --parola-file $PAROLA_DENTRO \
+	--registro $B_LOG --pagina $DENTRO/01-b11-pagina.html --dentro $INSIDE_SRC"
 if [ -n "$FILTRO" ]; then
 	bash "$ENTRA" --root "python3 -u $DENTRO/01-b7-congedo.py $COMUNE --solo $FILTRO"
 else
 	# ⛔ The normal run EXCLUDES `server-in-chiusura`, which shuts the server down:
 	#    it runs afterwards, with the server restarted on purpose (point 7).
-	bash "$ENTRA" --root "python3 -u $DENTRO/01-b7-congedo.py $COMUNE $FRASI --escludi server-in-chiusura"
+	bash "$ENTRA" --root "python3 -u $DENTRO/01-b7-congedo.py $COMUNE $SENTENCES --escludi server-in-chiusura"
 fi
 ESITO=$?
 
@@ -275,7 +275,7 @@ fi
 # ⚠ And the server is restarted on purpose: the one of point 3 is still alive, and
 #   it is shut down first, properly, watching the port get freed.
 log "7. ⭐ The shutdown run (SERVER_IN_CHIUSURA 0x0C)"
-if [ "$B_SPEGNIMENTO" != si ]; then
+if [ "$B_SHUTDOWN" != si ]; then
 	inf "⚠ SKIPPED: the target «$B_NOME» has no shutdown"
 	inf "  path, and its reasons that can be provoked are SEVEN.  ⛔ This is not"
 	inf "  a missing case: it is a case that does not exist on this server, and"
@@ -290,13 +290,13 @@ else
 		PID=$B_PID
 		bersaglio_impronta || { ko "⛔ it is not the declared target"; ESITO=6; }
 		if [ "${ESITO:-0}" -ne 6 ]; then
-			OPZ2=$(bersaglio_opzioni_python)
+			OPT2=$(bersaglio_opzioni_python)
 			bash "$ENTRA" --root "python3 -u $DENTRO/01-b7-congedo.py \
-				--indirizzo $IND $OPZ2 --utente $UTENTE --parola-file $PAROLA_DENTRO \
+				--indirizzo $IND $OPT2 --utente $UTENTE --parola-file $PAROLA_DENTRO \
 				--registro $B_LOG --pagina $DENTRO/01-b11-pagina.html \
-				--dentro $DENTRO_SORG --pid-server $PID \
+				--dentro $INSIDE_SRC --pid-server $PID \
 				--solo server-in-chiusura"
-			ESITO_SPEGN=$?
+			OUTCOME_POWEROFF=$?
 			# ⛔ AND HERE THE SERVER MUST BE DEAD, not alive: it is the only point
 			#    of the bench where B0.5 is read backwards.  ⚠ A server still
 			#    alive after a SIGTERM is not «resilient»: it is a server that did
@@ -324,14 +324,14 @@ else
 				ko "   path of src/main.c was not run, and the"
 				ko "   0x0C farewell the bench did (or did not) read does not come"
 				ko "   from there.  ⚠ It is not a green: it is a measurement to redo"
-				ESITO_SPEGN=1
+				OUTCOME_POWEROFF=1
 				bersaglio_spegni
 			else
 				ok "the server disappeared after the SIGTERM, as it must"
 				B_PID=""
 			fi
-			if [ "$ESITO_SPEGN" -ne 0 ] && [ "${ESITO:-0}" -eq 0 ]; then
-				ESITO=$ESITO_SPEGN
+			if [ "$OUTCOME_POWEROFF" -ne 0 ] && [ "${ESITO:-0}" -eq 0 ]; then
+				ESITO=$OUTCOME_POWEROFF
 			fi
 		fi
 	else
@@ -351,7 +351,7 @@ log "8. The final unblock, declared (B0.3)"
 if [ -n "${B_PID:-}" ]; then
 	inf "⚠ expected «NON-BANNATO»: B7 fails ONE attempt out of three, and alone"
 	inf "  it does not ban.  A «TOLTO» here would be news about the initial state"
-	bersaglio_sblocca dopo-b7 "$IND" || \
+	target_unblock dopo-b7 "$IND" || \
 		ko "⚠ the final unblock did not go through: look at the line above"
 else
 	# ⛔ And this is NOT «unblocked»: it is «I talked to nobody», which is the
@@ -375,7 +375,7 @@ case "$ESITO" in
 		ok "⭐ the cases «$FILTRO» pass against «$B_NOME»"
 		inf "⚠ and this is NOT «B7 passes»: the run was partial"
 	else
-		ok "⭐ B7 passes against «$B_NOME» — $( [ "$B_SPEGNIMENTO" = si ] \
+		ok "⭐ B7 passes against «$B_NOME» — $( [ "$B_SHUTDOWN" = si ] \
 			&& printf 'EIGHT reasons that can be provoked' || printf 'SEVEN reasons that can be provoked' )"
 		inf "⚠ and it is not «B7 passes»: the other target is another program,"
 		inf "  with a different denominator, and this run says nothing about it"

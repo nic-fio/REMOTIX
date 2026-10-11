@@ -79,7 +79,7 @@ def corpo(o, E):
         processo = PANNELLO[o.scatola]
         amb = {}
         for _ in range(30):                     # the panel is born a few seconds later
-            amb = G1B.ambiente_di(s, processo)
+            amb = G1B.environment_of(s, processo)
             if amb:
                 break
             time.sleep(1)
@@ -111,7 +111,7 @@ def corpo(o, E):
         E.metti("F-032", esito, ragione if esito != S.PASS else "",
                 atteso="the session's SHELL = passwd (%s) outside GNOME, empty on GNOME; "
                        "on LXQt qterminal opens %s" % (shell, os.path.basename(shell)),
-                osservato=ragione, evidenze=[s.salva_console()])
+                osservato=ragione, evidenze=[s.save_console()])
         if o.guasto:
             # the fault: the judge with the wrong expectation — /bin/sh outside GNOME, and on
             # GNOME another desktop's judge (which wants the shell, not the empty one)

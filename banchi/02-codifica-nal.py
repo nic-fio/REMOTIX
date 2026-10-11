@@ -86,10 +86,10 @@ NOMI = {
 }
 PARAMETRI = (32, 33, 34)
 IDR = (19, 20)
-VCL_MASSIMO = 31          # types 0..31 are picture data (VCL)
+VCL_MAX = 31          # types 0..31 are picture data (VCL)
 
 
-def trova_inizi(dati):
+def find_starts(dati):
     """The offsets of the Annex-B start codes, and their length (3 or 4).
 
     ⛔ `00 00 01` is told from `00 00 00 01`: both are legal, and a
@@ -115,7 +115,7 @@ def elenca(percorso):
     dati = open(percorso, "rb").read()
     if not dati:
         raise SystemExit(f"⛔ {percorso} is empty: zero bytes is not a stream")
-    inizi = trova_inizi(dati)
+    inizi = find_starts(dati)
     nal = []
     for k, (off, lungo) in enumerate(inizi):
         corpo = off + lungo
@@ -148,7 +148,7 @@ def verifica(percorso, idr_attesi):
     # 2 — before the first picture data there must be VPS, SPS, PPS
     prima = []
     for t in tipi:
-        if t <= VCL_MASSIMO:
+        if t <= VCL_MAX:
             break
         prima.append(t)
     for atteso in PARAMETRI:
@@ -158,7 +158,7 @@ def verifica(percorso, idr_attesi):
                           f"all the parameter sets (S2-decodifica.md §3.5)")
 
     # 3 — the first picture data must be an IDR
-    vcl = [t for t in tipi if t <= VCL_MASSIMO]
+    vcl = [t for t in tipi if t <= VCL_MAX]
     if not vcl:
         guasti.append("⛔ no picture data: the stream carries no pixels")
     elif vcl[0] not in IDR:
@@ -183,7 +183,7 @@ def verifica(percorso, idr_attesi):
                       f"would receive a naked IDR (v1 src/codificatore.c:268-272)")
 
     # 5 — no trace of a length prefix instead of the start code
-    if len(dati_len := open(percorso, "rb").read(4)) == 4 and dati_len[:3] not in (
+    if len(data_len := open(percorso, "rb").read(4)) == 4 and data_len[:3] not in (
             b"\x00\x00\x00", b"\x00\x00\x01"):
         guasti.append("⛔ the first bytes are not a start code: it looks like a "
                       "length-prefixed stream (`hevc`/hvcC format), not Annex-B")
@@ -242,7 +242,7 @@ def confessione(percorso):
     fine = dati.find(b"\x00", i)
     testo = dati[i:fine if fine > i else i + 4000].decode("ascii", "replace")
     voci = testo.split()
-    def dammi(chiave):
+    def give_me(chiave):
         for v in voci:
             if v.startswith(chiave + "="):
                 return v.split("=", 1)[1]
@@ -251,12 +251,12 @@ def confessione(percorso):
         "confessione": True,
         "versione": testo.split(" - ")[0],
         "banner_bit": "10bit" if "10bit" in testo.split("options:")[0] else "8bit",
-        "bitdepth": dammi("bitdepth"),
-        "input_csp": dammi("input-csp"),
+        "bitdepth": give_me("bitdepth"),
+        "input_csp": give_me("input-csp"),
         "annexb": " annexb" in testo,
         "repeat_headers": " repeat-headers" in testo,
-        "bframes": dammi("bframes"),
-        "keyint": dammi("keyint"),
+        "bframes": give_me("bframes"),
+        "keyint": give_me("keyint"),
         "lossless": " lossless" in testo,
         "byte_del_sei": (fine - i) if fine > i else None,
     }
@@ -279,7 +279,7 @@ def storpia(percorso, modo, uscita):
         fuori = tenuti
         nota = "VPS/SPS/PPS removed, picture data left"
     elif modo == "byte-girato":
-        primo = next((n for n in nal if n["tipo"] <= VCL_MASSIMO), None)
+        primo = next((n for n in nal if n["tipo"] <= VCL_MAX), None)
         if primo is None:
             raise SystemExit("⛔ no picture data to mangle")
         # ⛔ WHERE the byte is flipped is NOT a detail — measured on 12 Aug 2026.

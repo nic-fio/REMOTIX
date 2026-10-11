@@ -68,21 +68,21 @@ trasporto *trasporto_apri(const char *indirizzo, const char *porta, SSL_CTX *ctx
  * it travels up to `SESSIONE` (§4.5, `2 = RIPRESA`). */
 void trasporto_verdetto(trasporto *t, uint64_t pratica, bool ammesso,
                         bool ripresa);
-void trasporto_chiudi(trasporto *t);
+void transport_close(trasporto *t);
 
-int trasporto_fd(const trasporto *t);
+int transport_fd(const trasporto *t);
 
 /* ⛔ After a rotation of the session certificate the TLS context changes: the
  * connections already open keep theirs, the new ones take this one.  Whoever
  * does not redo it serves for fourteen days a certificate whose fingerprint
  * the page no longer publishes. */
-void trasporto_contesto(trasporto *t, SSL_CTX *ctx);
+void transport_context(trasporto *t, SSL_CTX *ctx);
 
 /* The socket is readable: everything there is gets read. */
 void trasporto_leggi(trasporto *t);
 
 /* Whatever there is to write is written on all connections. */
-void trasporto_scrivi(trasporto *t);
+void transport_write(trasporto *t);
 
 /* Milliseconds from now to the first timer that expires, or -1 if there is none.
  * ⛔ It is not «zero if there is none»: zero means «now», and confusing the two
@@ -93,7 +93,7 @@ int trasporto_attesa_ms(const trasporto *t);
 void trasporto_scaduti(trasporto *t);
 
 /* How many connections are alive.  For the log. */
-size_t trasporto_quante(const trasporto *t);
+size_t transport_count(const trasporto *t);
 
 /* ⛔ §8.1 — «never with a silence»: sends `CONGEDO` with the reason to all live
  * sessions and closes each one with the reason's code (§3.1 point 3).  It is
@@ -103,7 +103,7 @@ size_t trasporto_quante(const trasporto *t);
  * ⭐ Returns how many connections still have bytes to get out: whoever shuts
  *    down runs the loop until it is zero (or until its patience runs out),
  *    because «handed to ngtcp2» is not «out on the wire». */
-const char *trasporto_perche_restano(const trasporto *t);
+const char *transport_remain_reason(const trasporto *t);
 size_t trasporto_congeda_tutte(trasporto *t, uint8_t motivo, const char *perche);
 
 #endif

@@ -161,7 +161,7 @@
 #define ATTESA_NODO_MS 10000
 #define ATTESA_AVVIO_S 10
 #define FD_MAX 16
-#define TIPI_MAX 8
+#define MAX_TYPES 8
 
 /* ------------------------------------------------------------------ *
  *  The held frame
@@ -175,10 +175,10 @@ typedef struct
 	uint32_t stride;
 	uint32_t offset;
 	uint32_t dimensione_chunk;
-	uint32_t tipo_dati;
+	uint32_t data_type;
 	int64_t seq;
 	int64_t pts;
-	gboolean seq_noto;
+	gboolean seq_known;
 	const char *danno;   /* "pieno" | "parziale" | "assente"                */
 	guint64 indice;      /* which frame it was, counted from the first arrived */
 	gint64 quando;
@@ -193,10 +193,10 @@ typedef struct
 	struct spa_hook gancio;
 
 	struct spa_video_info_raw formato;
-	gboolean formato_noto;
+	gboolean known_format;
 	enum pw_stream_state stato;
 	char *guasto;
-	gboolean vuole_dmabuf;
+	gboolean wants_dmabuf;
 
 	guint64 arrivati;
 	guint64 prima_della_scena;
@@ -204,10 +204,10 @@ typedef struct
 	guint64 danno_pieno, danno_parziale, danno_assente;
 	guint64 senza_header;
 
-	int fd_visti[FD_MAX];
-	guint quanti_fd;
-	uint32_t tipi_visti[TIPI_MAX];
-	guint quanti_tipi;
+	int fd_seen[FD_MAX];
+	guint how_many_fd;
+	uint32_t tipi_visti[MAX_TYPES];
+	guint how_many_types;
 
 	/* ⛔ The scene is declared alive with a variable written by WHOEVER LAUNCHES,
 	 *    not with a clock: the program must know which frames
@@ -215,7 +215,7 @@ typedef struct
 	volatile gboolean scena_viva;
 	gint64 t_scena;      /* when the scene was declared alive               */
 	gint64 t_regime;     /* from when the steady-state frame may be taken   */
-	guint64 salta_ancora;
+	guint64 skip_left;
 
 	Fermo primo;
 	Fermo regime;
@@ -227,11 +227,11 @@ typedef struct
  *  The damage — copied from phase 0 because the question is the same
  * ------------------------------------------------------------------ */
 
-static const char *guarda_danno(Presa *p, struct pw_buffer *pacco)
+static const char *look_damage(Presa *p, struct pw_buffer *pacco)
 {
 	struct spa_meta *meta = spa_buffer_find_meta(pacco->buffer, SPA_META_VideoDamage);
 	struct spa_meta_region *regione;
-	gboolean copre_tutto = FALSE;
+	gboolean covers_all = FALSE;
 	gboolean vista = FALSE;
 
 	if (!meta)
@@ -247,14 +247,14 @@ static const char *guarda_danno(Presa *p, struct pw_buffer *pacco)
 		if (regione->region.position.x == 0 && regione->region.position.y == 0 &&
 		    regione->region.size.width >= p->formato.size.width &&
 		    regione->region.size.height >= p->formato.size.height)
-			copre_tutto = TRUE;
+			covers_all = TRUE;
 	}
 	if (!vista)
 	{
 		p->danno_assente++;
 		return "assente";
 	}
-	if (copre_tutto)
+	if (covers_all)
 	{
 		p->danno_pieno++;
 		return "pieno";
@@ -291,7 +291,7 @@ static void trattieni(Fermo *f, struct spa_data *piano, struct spa_meta_header *
 	f->stride = piano->chunk ? (uint32_t) piano->chunk->stride : 0;
 	f->offset = offset;
 	f->dimensione_chunk = piano->chunk ? piano->chunk->size : 0;
-	f->tipo_dati = piano->type;
+	f->data_type = piano->type;
 	f->danno = danno;
 	f->indice = indice;
 	f->quando = adesso;
@@ -299,12 +299,12 @@ static void trattieni(Fermo *f, struct spa_data *piano, struct spa_meta_header *
 	{
 		f->seq = (int64_t) intestazione->seq;
 		f->pts = (int64_t) intestazione->pts;
-		f->seq_noto = TRUE;
+		f->seq_known = TRUE;
 	}
 	f->preso = TRUE;
 }
 
-static void su_stato(void *dati, enum pw_stream_state vecchio, enum pw_stream_state nuovo,
+static void on_state(void *dati, enum pw_stream_state vecchio, enum pw_stream_state nuovo,
                      const char *errore)
 {
 	Presa *p = dati;
@@ -326,7 +326,7 @@ static void su_stato(void *dati, enum pw_stream_state vecchio, enum pw_stream_st
 static void su_parametri(void *dati, uint32_t id, const struct spa_pod *param)
 {
 	Presa *p = dati;
-	uint32_t tipo, sottotipo;
+	uint32_t tipo, subtype;
 	uint8_t spazio[1024];
 	struct spa_pod_builder costruttore = SPA_POD_BUILDER_INIT(spazio, sizeof spazio);
 	const struct spa_pod *parametri[3];
@@ -334,14 +334,14 @@ static void su_parametri(void *dati, uint32_t id, const struct spa_pod *param)
 
 	if (!param || id != SPA_PARAM_Format)
 		return;
-	if (spa_format_parse(param, &tipo, &sottotipo) < 0)
+	if (spa_format_parse(param, &tipo, &subtype) < 0)
 		return;
-	if (tipo != SPA_MEDIA_TYPE_video || sottotipo != SPA_MEDIA_SUBTYPE_raw)
+	if (tipo != SPA_MEDIA_TYPE_video || subtype != SPA_MEDIA_SUBTYPE_raw)
 		return;
 	if (spa_format_video_raw_parse(param, &p->formato) < 0)
 		return;
 
-	p->formato_noto = TRUE;
+	p->known_format = TRUE;
 	fprintf(stderr, "  negotiated format: %ux%u %s, modifier 0x%" PRIx64 "\n",
 	        p->formato.size.width, p->formato.size.height,
 	        p->formato.format == SPA_VIDEO_FORMAT_BGRx ? "BGRx"
@@ -353,7 +353,7 @@ static void su_parametri(void *dati, uint32_t id, const struct spa_pod *param)
 	 * default.  `LEZIONI.md` §4 trap 4 — the buffer type is asked for in
 	 * TWO places, and declaring only one makes the negotiation succeed with inside
 	 * the opposite of what was wanted. */
-	if (p->vuole_dmabuf)
+	if (p->wants_dmabuf)
 		tipi |= (1 << SPA_DATA_DmaBuf);
 
 	parametri[0] = spa_pod_builder_add_object(
@@ -396,28 +396,28 @@ static void su_processo(void *dati)
 	/* How many distinct buffers the producer recycles: Mutter uses four, and
 	 * knowing it serves to read the rest (R29). */
 	noto = FALSE;
-	for (i = 0; i < p->quanti_fd; i++)
-		if (p->fd_visti[i] == (piano->fd >= 0 ? (int) piano->fd : -1))
+	for (i = 0; i < p->how_many_fd; i++)
+		if (p->fd_seen[i] == (piano->fd >= 0 ? (int) piano->fd : -1))
 			noto = TRUE;
-	if (!noto && p->quanti_fd < FD_MAX)
-		p->fd_visti[p->quanti_fd++] = piano->fd >= 0 ? (int) piano->fd : -1;
+	if (!noto && p->how_many_fd < FD_MAX)
+		p->fd_seen[p->how_many_fd++] = piano->fd >= 0 ? (int) piano->fd : -1;
 
 	/* ⛔ THE TYPES ARE ALL COLLECTED, not only the last one kept.
-	 *    `misura-cattura` prints `m->tipo_dati` of the LAST frame: if the
+	 *    `misura-cattura` prints `m->data_type` of the LAST frame: if the
 	 *    producer changed road midway through the measurement, the line would say one road
 	 *    only for two different populations.  It has never been seen happening,
 	 *    but «it has never been seen» is not «it cannot», and it costs eight integers. */
 	noto = FALSE;
-	for (i = 0; i < p->quanti_tipi; i++)
+	for (i = 0; i < p->how_many_types; i++)
 		if (p->tipi_visti[i] == piano->type)
 			noto = TRUE;
-	if (!noto && p->quanti_tipi < TIPI_MAX)
-		p->tipi_visti[p->quanti_tipi++] = piano->type;
+	if (!noto && p->how_many_types < MAX_TYPES)
+		p->tipi_visti[p->how_many_types++] = piano->type;
 
 	intestazione = spa_buffer_find_meta_data(pacco->buffer, SPA_META_Header, sizeof *intestazione);
 	if (!intestazione)
 		p->senza_header++;
-	danno = guarda_danno(p, pacco);
+	danno = look_damage(p, pacco);
 
 	if (!p->scena_viva)
 	{
@@ -434,8 +434,8 @@ static void su_processo(void *dati)
 			p->t_regime = p->t_scena;
 		if (adesso >= p->t_regime)
 		{
-			if (p->salta_ancora > 0)
-				p->salta_ancora--;
+			if (p->skip_left > 0)
+				p->skip_left--;
 			else
 				/* It is rewritten at every round: the steady-state frame of
 				 * interest is the LAST of the window, not the first — so
@@ -450,7 +450,7 @@ static void su_processo(void *dati)
 
 static const struct pw_stream_events eventi = {
 	PW_VERSION_STREAM_EVENTS,
-	.state_changed = su_stato,
+	.state_changed = on_state,
 	.param_changed = su_parametri,
 	.process = su_processo,
 };
@@ -476,7 +476,7 @@ static const struct spa_pod *formato_memoria(struct spa_pod_builder *c, uint32_t
 	    SPA_POD_CHOICE_RANGE_Fraction(&massima, &minima, &massima));
 }
 
-static const struct spa_pod *formato_dmabuf(struct spa_pod_builder *c, uint32_t w, uint32_t h,
+static const struct spa_pod *format_dmabuf(struct spa_pod_builder *c, uint32_t w, uint32_t h,
                                             uint32_t fps, uint32_t colore)
 {
 	struct spa_rectangle misura = SPA_RECTANGLE(w, h);
@@ -507,15 +507,15 @@ static const struct spa_pod *formato_dmabuf(struct spa_pod_builder *c, uint32_t 
  *  Mutter's virtual monitor — the sequence that admits no permutations
  * ------------------------------------------------------------------ */
 
-#define NOME_REMOTE "org.gnome.Mutter.RemoteDesktop"
-#define PERCORSO_REMOTE "/org/gnome/Mutter/RemoteDesktop"
+#define REMOTE_NAME "org.gnome.Mutter.RemoteDesktop"
+#define REMOTE_PATH "/org/gnome/Mutter/RemoteDesktop"
 #define IFACE_REMOTE "org.gnome.Mutter.RemoteDesktop"
 #define IFACE_REMOTE_SESSIONE "org.gnome.Mutter.RemoteDesktop.Session"
-#define NOME_SCREENCAST "org.gnome.Mutter.ScreenCast"
-#define PERCORSO_SCREENCAST "/org/gnome/Mutter/ScreenCast"
+#define SCREENCAST_NAME "org.gnome.Mutter.ScreenCast"
+#define SCREENCAST_PATH "/org/gnome/Mutter/ScreenCast"
 #define IFACE_SCREENCAST "org.gnome.Mutter.ScreenCast"
 #define IFACE_SC_SESSIONE "org.gnome.Mutter.ScreenCast.Session"
-#define IFACE_SC_FLUSSO "org.gnome.Mutter.ScreenCast.Stream"
+#define IFACE_SC_STREAM "org.gnome.Mutter.ScreenCast.Stream"
 
 typedef struct
 {
@@ -524,9 +524,9 @@ typedef struct
 	char *cattura;
 	char *flusso;
 	uint32_t nodo;
-} Palco;
+} StageV;
 
-static void su_nodo(GDBusConnection *bus, const char *mittente, const char *percorso,
+static void on_node(GDBusConnection *bus, const char *mittente, const char *percorso,
                     const char *interfaccia, const char *segnale, GVariant *parametri, gpointer d)
 {
 	if (g_variant_is_of_type(parametri, G_VARIANT_TYPE("(u)")))
@@ -541,7 +541,7 @@ static gboolean sveglia(gpointer d)
 /* g_bus_get_sync is never used on the session bus: GIO keeps
  * `exit-on-close` on there and kills us at logout (`LEZIONI.md` §5, «the session
  * bus»). */
-static GDBusConnection *bus_di_sessione(GError **sbaglio)
+static GDBusConnection *session_dbus(GError **sbaglio)
 {
 	g_autofree char *indirizzo = g_dbus_address_get_for_bus_sync(G_BUS_TYPE_SESSION, NULL, sbaglio);
 	GDBusConnection *bus;
@@ -586,9 +586,9 @@ static GVariant *chiama(GDBusConnection *bus, const char *nome, const char *perc
  *   attached to Mutter.  On the server two other rounds are on: a monitor
  *   forgotten by this bench would be a defect the others pay for.
  */
-static Palco *palco_monta(uint32_t larghezza, uint32_t altezza, GError **sbaglio)
+static StageV *stage_mount(uint32_t larghezza, uint32_t altezza, GError **sbaglio)
 {
-	Palco *p = g_new0(Palco, 1);
+	StageV *p = g_new0(StageV, 1);
 	g_autofree char *id = NULL;
 	GVariantBuilder prop;
 	guint sottoscrizione;
@@ -596,12 +596,12 @@ static Palco *palco_monta(uint32_t larghezza, uint32_t altezza, GError **sbaglio
 	GSource *battito;
 	gint64 scadenza;
 
-	p->bus = bus_di_sessione(sbaglio);
+	p->bus = session_dbus(sbaglio);
 	if (!p->bus)
 		goto guasto;
 
 	{
-		g_autoptr(GVariant) r = chiama(p->bus, NOME_REMOTE, PERCORSO_REMOTE, IFACE_REMOTE,
+		g_autoptr(GVariant) r = chiama(p->bus, REMOTE_NAME, REMOTE_PATH, IFACE_REMOTE,
 		                               "CreateSession", NULL, G_VARIANT_TYPE("(o)"), sbaglio);
 		if (!r)
 		{
@@ -612,7 +612,7 @@ static Palco *palco_monta(uint32_t larghezza, uint32_t altezza, GError **sbaglio
 	}
 	{
 		g_autoptr(GVariant) r =
-		    chiama(p->bus, NOME_REMOTE, p->controllo, "org.freedesktop.DBus.Properties", "Get",
+		    chiama(p->bus, REMOTE_NAME, p->controllo, "org.freedesktop.DBus.Properties", "Get",
 		           g_variant_new("(ss)", IFACE_REMOTE_SESSIONE, "SessionId"),
 		           G_VARIANT_TYPE("(v)"), sbaglio);
 		g_autoptr(GVariant) v = NULL;
@@ -627,14 +627,14 @@ static Palco *palco_monta(uint32_t larghezza, uint32_t altezza, GError **sbaglio
 	g_variant_builder_add(&prop, "{sv}", "disable-animations", g_variant_new_boolean(TRUE));
 	{
 		g_autoptr(GVariant) r =
-		    chiama(p->bus, NOME_SCREENCAST, PERCORSO_SCREENCAST, IFACE_SCREENCAST, "CreateSession",
+		    chiama(p->bus, SCREENCAST_NAME, SCREENCAST_PATH, IFACE_SCREENCAST, "CreateSession",
 		           g_variant_new("(a{sv})", &prop), G_VARIANT_TYPE("(o)"), sbaglio);
 		if (!r)
 			goto guasto;
 		g_variant_get(r, "(o)", &p->cattura);
 	}
 	{
-		g_autoptr(GVariant) r = chiama(p->bus, NOME_REMOTE, p->controllo, IFACE_REMOTE_SESSIONE,
+		g_autoptr(GVariant) r = chiama(p->bus, REMOTE_NAME, p->controllo, IFACE_REMOTE_SESSIONE,
 		                               "Start", NULL, NULL, sbaglio);
 		if (!r)
 			goto guasto;
@@ -648,7 +648,7 @@ static Palco *palco_monta(uint32_t larghezza, uint32_t altezza, GError **sbaglio
 		g_autoptr(GVariant) r = NULL;
 
 		g_variant_builder_add(&prop, "{sv}", "mapping-id", g_variant_new_string(mapping));
-		r = chiama(p->bus, NOME_SCREENCAST, p->cattura, IFACE_SC_SESSIONE, "RecordVirtual",
+		r = chiama(p->bus, SCREENCAST_NAME, p->cattura, IFACE_SC_SESSIONE, "RecordVirtual",
 		           g_variant_new("(a{sv})", &prop), G_VARIANT_TYPE("(o)"), sbaglio);
 		if (!r)
 			goto guasto;
@@ -657,13 +657,13 @@ static Palco *palco_monta(uint32_t larghezza, uint32_t altezza, GError **sbaglio
 
 	contesto = g_main_context_new();
 	g_main_context_push_thread_default(contesto);
-	sottoscrizione = g_dbus_connection_signal_subscribe(p->bus, NULL, IFACE_SC_FLUSSO,
+	sottoscrizione = g_dbus_connection_signal_subscribe(p->bus, NULL, IFACE_SC_STREAM,
 	                                                    "PipeWireStreamAdded", p->flusso, NULL,
-	                                                    G_DBUS_SIGNAL_FLAGS_NONE, su_nodo, &p->nodo,
+	                                                    G_DBUS_SIGNAL_FLAGS_NONE, on_node, &p->nodo,
 	                                                    NULL);
 	{
 		g_autoptr(GVariant) r =
-		    chiama(p->bus, NOME_SCREENCAST, p->flusso, IFACE_SC_FLUSSO, "Start", NULL, NULL, sbaglio);
+		    chiama(p->bus, SCREENCAST_NAME, p->flusso, IFACE_SC_STREAM, "Start", NULL, NULL, sbaglio);
 		if (!r)
 		{
 			g_dbus_connection_signal_unsubscribe(p->bus, sottoscrizione);
@@ -698,7 +698,7 @@ guasto:
 	{
 		g_autoptr(GError) x = NULL;
 		g_autoptr(GVariant) r = g_dbus_connection_call_sync(
-		    p->bus, NOME_REMOTE, p->controllo, IFACE_REMOTE_SESSIONE, "Stop", NULL, NULL,
+		    p->bus, REMOTE_NAME, p->controllo, IFACE_REMOTE_SESSIONE, "Stop", NULL, NULL,
 		    G_DBUS_CALL_FLAGS_NONE, 2000, NULL, &x);
 	}
 	g_clear_object(&p->bus);
@@ -709,7 +709,7 @@ guasto:
 	return NULL;
 }
 
-static void palco_smonta(Palco *p)
+static void stage_unmount(StageV *p)
 {
 	if (!p)
 		return;
@@ -717,7 +717,7 @@ static void palco_smonta(Palco *p)
 	{
 		g_autoptr(GError) x = NULL;
 		g_autoptr(GVariant) r = g_dbus_connection_call_sync(
-		    p->bus, NOME_REMOTE, p->controllo, IFACE_REMOTE_SESSIONE, "Stop", NULL, NULL,
+		    p->bus, REMOTE_NAME, p->controllo, IFACE_REMOTE_SESSIONE, "Stop", NULL, NULL,
 		    G_DBUS_CALL_FLAGS_NONE, 2000, NULL, &x);
 	}
 	g_clear_object(&p->bus);
@@ -731,7 +731,7 @@ static void palco_smonta(Palco *p)
  *  The manifest
  * ------------------------------------------------------------------ */
 
-static const char *nome_tipo(uint32_t t)
+static const char *type_name(uint32_t t)
 {
 	return t == SPA_DATA_DmaBuf   ? "DMA-BUF"
 	       : t == SPA_DATA_MemFd  ? "MemFd"
@@ -740,7 +740,7 @@ static const char *nome_tipo(uint32_t t)
 	                              : "UNKNOWN";
 }
 
-static const char *nome_colore(uint32_t c)
+static const char *color_name(uint32_t c)
 {
 	return c == SPA_VIDEO_FORMAT_BGRx   ? "BGRx"
 	       : c == SPA_VIDEO_FORMAT_BGRA ? "BGRA"
@@ -776,7 +776,7 @@ static const char *nome_colore(uint32_t c)
  *      F2.3 calls **F2.3-A**, and ⛔ **the defendant is here, not in the encoder**.
  *      That is why the number is measured already at capture.
  */
-static const char *nome_range(uint32_t r)
+static const char *range_name(uint32_t r)
 {
 	switch (r)
 	{
@@ -786,7 +786,7 @@ static const char *nome_range(uint32_t r)
 	}
 }
 
-static const char *nome_matrice(uint32_t m)
+static const char *matrix_name(uint32_t m)
 {
 	switch (m)
 	{
@@ -800,7 +800,7 @@ static const char *nome_matrice(uint32_t m)
 	}
 }
 
-static const char *nome_trasferimento(uint32_t t)
+static const char *transfer_name(uint32_t t)
 {
 	switch (t)
 	{
@@ -813,7 +813,7 @@ static const char *nome_trasferimento(uint32_t t)
 	}
 }
 
-static const char *nome_primari(uint32_t p)
+static const char *primaries_name(uint32_t p)
 {
 	switch (p)
 	{
@@ -844,12 +844,12 @@ static int bit_per_canale(uint32_t c)
 	}
 }
 
-static gboolean scrivi_raw(const char *percorso, const Fermo *f, GError **sbaglio)
+static gboolean write_raw(const char *percorso, const Fermo *f, GError **sbaglio)
 {
 	return g_file_set_contents(percorso, (const char *) f->pixel, (gssize) f->byte, sbaglio);
 }
 
-static void manifesto_fermo(GString *s, const char *chiave, const Fermo *f, const char *file)
+static void manifest_still(GString *s, const char *chiave, const Fermo *f, const char *file)
 {
 	if (!f->preso)
 	{
@@ -871,8 +871,8 @@ static void manifesto_fermo(GString *s, const char *chiave, const Fermo *f, cons
 	                       "    \"seq_nota\": %s\n"
 	                       "  },\n",
 	                       chiave, file, f->byte, f->stride, f->offset, f->dimensione_chunk,
-	                       nome_tipo(f->tipo_dati), f->danno, f->indice, f->seq, f->pts,
-	                       f->seq_noto ? "true" : "false");
+	                       type_name(f->data_type), f->danno, f->indice, f->seq, f->pts,
+	                       f->seq_known ? "true" : "false");
 }
 
 /* ------------------------------------------------------------------ *
@@ -889,25 +889,25 @@ int main(int argc, char **argv)
 	 *    are capturing, yes or no?».  With `0` one declares one wants to measure
 	 *    the legitimate zero («fermo» scene). */
 	guint64 minimo_dopo_scena = 1;
-	gboolean vuole_dmabuf = FALSE;
+	gboolean wants_dmabuf = FALSE;
 	uint32_t colore = SPA_VIDEO_FORMAT_BGRx;
 	const char *etichetta = "senza-nome";
 	const char *uscita = NULL, *pronto = NULL, *segnale_scena = NULL;
 	Presa p = { 0 };
-	Palco *palco = NULL;
+	StageV *palco = NULL;
 	uint8_t spazio[2048];
 	struct spa_pod_builder costruttore = SPA_POD_BUILDER_INIT(spazio, sizeof spazio);
 	const struct spa_pod *parametri[2];
-	uint32_t n_parametri = 0;
+	uint32_t n_parameters = 0;
 	g_autoptr(GError) sbaglio = NULL;
-	g_autofree char *file_primo = NULL, *file_regime = NULL, *file_json = NULL;
+	g_autofree char *first_file = NULL, *file_regime = NULL, *file_json = NULL;
 	GString *manifesto;
 	gint64 scadenza, fine;
 	int codice = 0;
 	const char *esito;
 	char quando[64];
-	time_t adesso_epoch;
-	struct tm adesso_tm;
+	time_t now_epoch;
+	struct tm now_tm;
 	guint i;
 
 	for (i = 1; (int) i < argc; i++)
@@ -937,7 +937,7 @@ int main(int argc, char **argv)
 		else if (!strcmp(argv[i], "--minimo-dopo-scena") && (int) i + 1 < argc)
 			minimo_dopo_scena = (guint64) atoll(argv[++i]);
 		else if (!strcmp(argv[i], "--dmabuf"))
-			vuole_dmabuf = TRUE;
+			wants_dmabuf = TRUE;
 		else if (!strcmp(argv[i], "--bgra"))
 			colore = SPA_VIDEO_FORMAT_BGRA;
 		else if (!strcmp(argv[i], "--etichetta") && (int) i + 1 < argc)
@@ -963,22 +963,22 @@ int main(int argc, char **argv)
 		return 2;
 	}
 
-	file_primo = g_strdup_printf("%s-primo.raw", uscita);
+	first_file = g_strdup_printf("%s-primo.raw", uscita);
 	file_regime = g_strdup_printf("%s-regime.raw", uscita);
 	file_json = g_strdup_printf("%s.json", uscita);
 
-	adesso_epoch = time(NULL);
-	gmtime_r(&adesso_epoch, &adesso_tm);
-	strftime(quando, sizeof quando, "%Y-%m-%dT%H:%M:%SZ", &adesso_tm);
+	now_epoch = time(NULL);
+	gmtime_r(&now_epoch, &now_tm);
+	strftime(quando, sizeof quando, "%Y-%m-%dT%H:%M:%SZ", &now_tm);
 
-	p.vuole_dmabuf = vuole_dmabuf;
+	p.wants_dmabuf = wants_dmabuf;
 
 	fprintf(stderr, "== %s: requested %ux%u, %s, ceiling %u fps, road %s ==\n", etichetta, larghezza,
-	        altezza, nome_colore(colore), fps, vuole_dmabuf ? "DMA-BUF" : "memory");
+	        altezza, color_name(colore), fps, wants_dmabuf ? "DMA-BUF" : "memory");
 
 	if (nodo == 0)
 	{
-		palco = palco_monta(larghezza, altezza, &sbaglio);
+		palco = stage_mount(larghezza, altezza, &sbaglio);
 		if (!palco)
 		{
 			fprintf(stderr, "⛔ virtual monitor not mounted: %s\n", sbaglio->message);
@@ -995,7 +995,7 @@ int main(int argc, char **argv)
 	{
 		pw_thread_loop_unlock(p.ciclo);
 		fprintf(stderr, "⛔ PipeWire thread not started\n");
-		palco_smonta(palco);
+		stage_unmount(palco);
 		return 1;
 	}
 	p.nucleo = pw_context_connect(p.contesto, NULL, 0);
@@ -1003,7 +1003,7 @@ int main(int argc, char **argv)
 	{
 		pw_thread_loop_unlock(p.ciclo);
 		fprintf(stderr, "⛔ connection to PipeWire failed\n");
-		palco_smonta(palco);
+		stage_unmount(palco);
 		return 1;
 	}
 	p.flusso = pw_stream_new(p.nucleo, "02-cattura-fotogramma",
@@ -1011,18 +1011,18 @@ int main(int argc, char **argv)
 	                                           "Capture", PW_KEY_MEDIA_ROLE, "Screen", NULL));
 	pw_stream_add_listener(p.flusso, &p.gancio, &eventi, &p);
 
-	if (vuole_dmabuf)
-		parametri[n_parametri++] = formato_dmabuf(&costruttore, larghezza, altezza, fps, colore);
-	parametri[n_parametri++] = formato_memoria(&costruttore, larghezza, altezza, fps, colore);
+	if (wants_dmabuf)
+		parametri[n_parameters++] = format_dmabuf(&costruttore, larghezza, altezza, fps, colore);
+	parametri[n_parameters++] = formato_memoria(&costruttore, larghezza, altezza, fps, colore);
 
 	if (pw_stream_connect(p.flusso, PW_DIRECTION_INPUT, nodo,
 	                      PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_MAP_BUFFERS |
 	                          PW_STREAM_FLAG_RT_PROCESS,
-	                      parametri, n_parametri) < 0)
+	                      parametri, n_parameters) < 0)
 	{
 		pw_thread_loop_unlock(p.ciclo);
 		fprintf(stderr, "⛔ hooking onto node %u failed\n", nodo);
-		palco_smonta(palco);
+		stage_unmount(palco);
 		return 1;
 	}
 	scadenza = g_get_monotonic_time() + (gint64) ATTESA_AVVIO_S * G_USEC_PER_SEC;
@@ -1036,7 +1036,7 @@ int main(int argc, char **argv)
 		printf("GUASTO\t%s\tcapture refused\n", etichetta);
 		fprintf(stderr, "⛔ FAILED: capture refused: %s\n",
 		        p.guasto ? p.guasto : "without explanation");
-		palco_smonta(palco);
+		stage_unmount(palco);
 		return 2;
 	}
 
@@ -1055,13 +1055,13 @@ int main(int argc, char **argv)
 		        "   final state %d%s%s.  There is no frame to judge here:\n"
 		        "   capture never started (LEZIONI.md §1.9).\n",
 		        (int) p.stato, p.guasto ? ", fault: " : "", p.guasto ? p.guasto : "");
-		palco_smonta(palco);
+		stage_unmount(palco);
 		return 2;
 	}
 	if (!g_file_set_contents(pronto, "pronto\n", -1, &sbaglio))
 	{
 		fprintf(stderr, "⛔ I cannot write %s: %s\n", pronto, sbaglio->message);
-		palco_smonta(palco);
+		stage_unmount(palco);
 		return 1;
 	}
 	fprintf(stderr, "  pronto: the scene can be switched on now\n");
@@ -1081,12 +1081,12 @@ int main(int argc, char **argv)
 		        "   A frame taken now would be the empty desktop under\n"
 		        "   the scene's label: two different things under the same name.\n",
 		        attesa_scena, segnale_scena);
-		palco_smonta(palco);
+		stage_unmount(palco);
 		return 2;
 	}
 	p.t_scena = g_get_monotonic_time();
 	p.t_regime = p.t_scena + (gint64) (dopo_scena * G_USEC_PER_SEC);
-	p.salta_ancora = scarta;
+	p.skip_left = scarta;
 	p.scena_viva = TRUE;
 	fprintf(stderr, "  scene declared on: the steady state starts in %.1f s\n", dopo_scena);
 
@@ -1102,19 +1102,19 @@ int main(int argc, char **argv)
 		        "⛔ FAILED (not «zero»): the stream was active and dropped.\n"
 		        "   final state %d%s%s.  Frames arrived before dropping: %" PRIu64 ".\n",
 		        (int) p.stato, p.guasto ? ", fault: " : "", p.guasto ? p.guasto : "", p.arrivati);
-		palco_smonta(palco);
+		stage_unmount(palco);
 		return 2;
 	}
 
 	/* ⛔ THE ROAD IS CHECKED, IT IS NOT TAKEN AS ASKED FOR — `LEZIONI.md` §1.8. */
-	if (vuole_dmabuf && p.quanti_tipi > 0 && p.tipi_visti[0] != SPA_DATA_DmaBuf)
+	if (wants_dmabuf && p.how_many_types > 0 && p.tipi_visti[0] != SPA_DATA_DmaBuf)
 	{
 		printf("GUASTO\t%s\tDMA-BUF requested, memory obtained\n", etichetta);
 		fprintf(stderr,
 		        "⛔ FAILED: DMA-BUF was requested and the producer delivered %s.\n"
 		        "   No silent fallback (LEZIONI.md §1.8, corollary).\n",
-		        nome_tipo(p.tipi_visti[0]));
-		palco_smonta(palco);
+		        type_name(p.tipi_visti[0]));
+		stage_unmount(palco);
 		return 2;
 	}
 
@@ -1157,7 +1157,7 @@ int main(int argc, char **argv)
 		        "     The screen is declared to the scene (mpv `--fs-screen-name`), and it is\n"
 		        "     checked that it obeyed (CODER.md §3.9).\n",
 		        p.dopo_la_scena, minimo_dopo_scena, p.prima_della_scena);
-		palco_smonta(palco);
+		stage_unmount(palco);
 		return 2;
 	}
 
@@ -1171,7 +1171,7 @@ int main(int argc, char **argv)
 		esito = "ZERO FRAMES";
 		codice = 3;
 	}
-	else if (vuole_dmabuf)
+	else if (wants_dmabuf)
 	{
 		/* ⛔ WITH DMA-BUF THE PIXELS ARE NOT READ FROM HERE, AND IT IS SAID.
 		 *    The descriptor lives on the card: reading it would mean
@@ -1189,23 +1189,23 @@ int main(int argc, char **argv)
 		        "   pixels (null data or empty chunk).  It is not a zero: it is a buffer\n"
 		        "   that could not be read.\n",
 		        p.arrivati);
-		palco_smonta(palco);
+		stage_unmount(palco);
 		return 2;
 	}
 	else
 	{
 		esito = "ONE FRAME";
 		codice = 0;
-		if (p.primo.preso && !scrivi_raw(file_primo, &p.primo, &sbaglio))
+		if (p.primo.preso && !write_raw(first_file, &p.primo, &sbaglio))
 		{
-			fprintf(stderr, "⛔ I cannot write %s: %s\n", file_primo, sbaglio->message);
-			palco_smonta(palco);
+			fprintf(stderr, "⛔ I cannot write %s: %s\n", first_file, sbaglio->message);
+			stage_unmount(palco);
 			return 1;
 		}
-		if (p.regime.preso && !scrivi_raw(file_regime, &p.regime, &sbaglio))
+		if (p.regime.preso && !write_raw(file_regime, &p.regime, &sbaglio))
 		{
 			fprintf(stderr, "⛔ I cannot write %s: %s\n", file_regime, sbaglio->message);
-			palco_smonta(palco);
+			stage_unmount(palco);
 			return 1;
 		}
 	}
@@ -1226,8 +1226,8 @@ int main(int argc, char **argv)
 	                       "    \"cadenza\": \"0/1 with maxFramerate at %u — «send me a frame "
 	                       "when something changes»\"\n"
 	                       "  },\n",
-	                       larghezza, altezza, fps, nome_colore(colore),
-	                       vuole_dmabuf ? "dmabuf" : "memoria", fps);
+	                       larghezza, altezza, fps, color_name(colore),
+	                       wants_dmabuf ? "dmabuf" : "memoria", fps);
 	g_string_append_printf(manifesto,
 	                       "  \"negoziato\": {\n"
 	                       "    \"noto\": %s,\n"
@@ -1237,8 +1237,8 @@ int main(int argc, char **argv)
 	                       "    \"chi_lo_dice\": \"PipeWire, SPA_PARAM_Format in the param_changed "
 	                       "callback — it is not the label we gave it\"\n"
 	                       "  },\n",
-	                       p.formato_noto ? "true" : "false", p.formato.size.width,
-	                       p.formato.size.height, nome_colore(p.formato.format),
+	                       p.known_format ? "true" : "false", p.formato.size.width,
+	                       p.formato.size.height, color_name(p.formato.format),
 	                       (uint64_t) p.formato.modifier);
 
 	/* ⛔ THE THREE THINGS F2.3 ASKS TO BE DECLARED — asked of the producer, not
@@ -1267,22 +1267,22 @@ int main(int argc, char **argv)
 	    "    \"valori_grezzi\": {\"color_range\": %u, \"color_matrix\": %u, "
 	    "\"transfer_function\": %u, \"color_primaries\": %u}\n"
 	    "  },\n",
-	    bit_per_canale(p.formato.format), nome_colore(p.formato.format),
-	    nome_range(p.formato.color_range), nome_matrice(p.formato.color_matrix),
-	    nome_trasferimento(p.formato.transfer_function),
-	    nome_primari(p.formato.color_primaries), p.formato.color_range,
+	    bit_per_canale(p.formato.format), color_name(p.formato.format),
+	    range_name(p.formato.color_range), matrix_name(p.formato.color_matrix),
+	    transfer_name(p.formato.transfer_function),
+	    primaries_name(p.formato.color_primaries), p.formato.color_range,
 	    p.formato.color_matrix, p.formato.transfer_function, p.formato.color_primaries);
 
 	g_string_append(manifesto, "  \"buffer\": {\n    \"tipi_visti\": [");
-	for (i = 0; i < p.quanti_tipi; i++)
-		g_string_append_printf(manifesto, "%s\"%s\"", i ? ", " : "", nome_tipo(p.tipi_visti[i]));
+	for (i = 0; i < p.how_many_types; i++)
+		g_string_append_printf(manifesto, "%s\"%s\"", i ? ", " : "", type_name(p.tipi_visti[i]));
 	g_string_append_printf(manifesto,
 	                       "],\n"
 	                       "    \"distinti_riciclati\": %u,\n"
 	                       "    \"chi_lo_dice\": \"PipeWire, spa_data.type of plane 0 of every "
 	                       "buffer — asked for in two places (format and SPA_PARAM_Buffers)\"\n"
 	                       "  },\n",
-	                       p.quanti_fd);
+	                       p.how_many_fd);
 
 	g_string_append_printf(manifesto,
 	                       "  \"fotogrammi\": {\n"
@@ -1298,8 +1298,8 @@ int main(int argc, char **argv)
 	                       minimo_dopo_scena, p.arrivati, p.prima_della_scena, p.dopo_la_scena,
 	                       p.danno_pieno, p.danno_parziale, p.danno_assente, p.senza_header);
 
-	manifesto_fermo(manifesto, "primo", &p.primo, file_primo);
-	manifesto_fermo(manifesto, "regime", &p.regime, file_regime);
+	manifest_still(manifesto, "primo", &p.primo, first_file);
+	manifest_still(manifesto, "regime", &p.regime, file_regime);
 
 	/*
 	 * ⛔ THE WARNINGS SIT IN THE MANIFEST, NOT IN A DOCUMENT.
@@ -1329,14 +1329,14 @@ int main(int argc, char **argv)
 	{
 		fprintf(stderr, "⛔ I cannot write %s: %s\n", file_json, sbaglio->message);
 		g_string_free(manifesto, TRUE);
-		palco_smonta(palco);
+		stage_unmount(palco);
 		return 1;
 	}
 	g_string_free(manifesto, TRUE);
 
 	printf("PRESA\t%s\t%s\t%s\t%" PRIu64 "\t%" PRIu64 "\t%s\n", etichetta, esito, file_json,
 	       p.arrivati, p.dopo_la_scena,
-	       p.quanti_tipi > 0 ? nome_tipo(p.tipi_visti[0]) : "NONE");
+	       p.how_many_types > 0 ? type_name(p.tipi_visti[0]) : "NONE");
 	fprintf(stderr,
 	        "  outcome: %s\n"
 	        "  arrived %" PRIu64 " (before the scene %" PRIu64 ", after %" PRIu64 ")\n"
@@ -1344,7 +1344,7 @@ int main(int argc, char **argv)
 	        "  distinct recycled buffers: %u\n"
 	        "  manifest: %s\n",
 	        esito, p.arrivati, p.prima_della_scena, p.dopo_la_scena, p.danno_pieno,
-	        p.danno_parziale, p.danno_assente, p.quanti_fd, file_json);
+	        p.danno_parziale, p.danno_assente, p.how_many_fd, file_json);
 
 	pw_thread_loop_lock(p.ciclo);
 	pw_stream_disconnect(p.flusso);
@@ -1354,7 +1354,7 @@ int main(int argc, char **argv)
 	pw_core_disconnect(p.nucleo);
 	pw_context_destroy(p.contesto);
 	pw_thread_loop_destroy(p.ciclo);
-	palco_smonta(palco);
+	stage_unmount(palco);
 	g_free(p.primo.pixel);
 	g_free(p.regime.pixel);
 	g_free(p.guasto);

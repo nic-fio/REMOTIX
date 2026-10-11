@@ -155,7 +155,7 @@ def leggi(percorso):
         return None
 
 
-def stato_proc(pid):
+def proc_state(pid):
     """The four uids, the four gids and the state, asked of the kernel."""
     b = leggi(f"/proc/{pid}/status")
     if b is None:
@@ -197,7 +197,7 @@ def descrittori(pid):
     return fuori
 
 
-def figli_di(pid_padre):
+def children_of(pid_padre):
     """The server's «--figlio-interno» children, asked of /proc.
 
     ⛔ `pgrep remotix` is NOT used: it would also catch the servers of the other
@@ -208,7 +208,7 @@ def figli_di(pid_padre):
     for n in os.listdir("/proc"):
         if not n.isdigit():
             continue
-        s = stato_proc(n)
+        s = proc_state(n)
         if not s or s.get("ppid") != int(pid_padre):
             continue
         riga = cmdline(n)
@@ -310,10 +310,10 @@ def cliente(a, attesa=6.0, utente=None, parola=None):
 # The cases
 
 
-def caso_nasce(a, reg, guai):
+def case_born(a, reg, guai):
     titolo("1. `nasce` — one child, running AS THE USER (asked of the kernel)")
     off = reg.offset()
-    prima = figli_di(a.pid_server)
+    prima = children_of(a.pid_server)
     inf(f"children before: {len(prima)}")
     # ⛔ THE SCENE OF THIS CASE IS «A SERVER JUST STARTED», and it is CHECKED
     #    instead of hoped for: with a child already alive, I2 does the right thing —
@@ -333,7 +333,7 @@ def caso_nasce(a, reg, guai):
         if "SESSIONE" in r or "frames" in r or "ACCETTATO" in r:
             inf(r.strip())
 
-    dopo, quanto = aspetta(lambda: figli_di(a.pid_server) or None, 20)
+    dopo, quanto = aspetta(lambda: children_of(a.pid_server) or None, 20)
     if not dopo:
         ko("⛔ NO child after an admitted login: §1.10-bis is not alive")
         guai.append("nasce: no child")
@@ -381,13 +381,13 @@ def caso_nasce(a, reg, guai):
         # ⚠ 0,1,2 are the same log on purpose: it is what makes readable
         #   «who said what».  What must NOT be there is a socket
         #   of the parent — the port, or the unblock command socket.
-        socket_comuni = {v for v in comuni if v.startswith("socket:")}
-        if not socket_comuni:
+        shared_sockets = {v for v in comuni if v.startswith("socket:")}
+        if not shared_sockets:
             ok(f"⭐ ZERO sockets in common with the parent: it did NOT take port {a.porta} "
                f"along with it")
         else:
-            ko(f"⛔ {len(socket_comuni)} sockets in common with the parent: "
-               f"{sorted(socket_comuni)}")
+            ko(f"⛔ {len(shared_sockets)} sockets in common with the parent: "
+               f"{sorted(shared_sockets)}")
             guai.append("nasce: sockets inherited from the parent")
         # ⛔⭐ AND THE NUMBER THAT COUNTS IS THE ONE AT BIRTH, NOT THE ONE NOW
         #     — defect of THIS BENCH, found in the first round, 12 Aug 2026.
@@ -436,13 +436,13 @@ def caso_nasce(a, reg, guai):
             "«figlio»/«video» lines above for the reason")
 
 
-def caso_due(a, reg, guai):
+def case_two(a, reg, guai):
     titolo("2. `due` — two connections of the same user, ONE single child (I2)")
     off = reg.offset()
-    prima = figli_di(a.pid_server)
+    prima = children_of(a.pid_server)
     if not prima:
         cliente(a)
-        prima, _ = aspetta(lambda: figli_di(a.pid_server) or None, 20)
+        prima, _ = aspetta(lambda: children_of(a.pid_server) or None, 20)
     if not prima:
         ko("⛔ not even the first child is there: I could not measure")
         guai.append("due: no first child")
@@ -453,7 +453,7 @@ def caso_due(a, reg, guai):
     p = cliente(a)
     inf(f"second connection: the client exited {p.returncode}")
     time.sleep(1.0)
-    dopo = figli_di(a.pid_server)
+    dopo = children_of(a.pid_server)
     if len(dopo) == 1 and dopo[0]["pid"] == pid1:
         ok(f"⭐ a single child, and the SAME pid {pid1}: I2 holds, and the stage is "
            f"the same because it belongs to the session (I4)")
@@ -470,12 +470,12 @@ def caso_due(a, reg, guai):
         guai.append("due: I2 line missing")
 
 
-def caso_distacco(a, reg, guai):
+def detach_case(a, reg, guai):
     titolo("3. `distacco` — the client leaves, the stage STAYS (I4)")
-    prima = figli_di(a.pid_server)
+    prima = children_of(a.pid_server)
     if not prima:
         cliente(a)
-        prima, _ = aspetta(lambda: figli_di(a.pid_server) or None, 20)
+        prima, _ = aspetta(lambda: children_of(a.pid_server) or None, 20)
     if not prima:
         ko("⛔ no child: I could not measure")
         guai.append("distacco: no child")
@@ -485,7 +485,7 @@ def caso_distacco(a, reg, guai):
         f"(its process has ended)")
     inf("waiting 6 s with NO live connection…")
     time.sleep(6.0)
-    s = stato_proc(pid1)
+    s = proc_state(pid1)
     if s is None:
         ko("⛔ I could not read the child's state")
         guai.append("distacco: state not readable")
@@ -504,13 +504,13 @@ def caso_distacco(a, reg, guai):
        f"the stage belongs to the SESSION, not to the connection (I4)")
 
 
-def caso_muore(a, reg, guai):
+def case_dies(a, reg, guai):
     titolo("4. `muore` — child killed, the parent REAPS it and says so")
     off = reg.offset()
-    prima = figli_di(a.pid_server)
+    prima = children_of(a.pid_server)
     if not prima:
         cliente(a)
-        prima, _ = aspetta(lambda: figli_di(a.pid_server) or None, 20)
+        prima, _ = aspetta(lambda: children_of(a.pid_server) or None, 20)
     if not prima:
         ko("⛔ no child: I could not measure")
         guai.append("muore: no child")
@@ -526,7 +526,7 @@ def caso_muore(a, reg, guai):
         return
 
     def sparito():
-        s = stato_proc(pid1)
+        s = proc_state(pid1)
         if s is None:
             return None
         if not s:
@@ -540,7 +540,7 @@ def caso_muore(a, reg, guai):
         ok(f"⭐ pid {pid1} vanished from /proc after {quanto:.1f} s: the parent "
            f"REAPED it, and «dead» no longer looks the same as «alive»")
     else:
-        s = stato_proc(pid1) or {}
+        s = proc_state(pid1) or {}
         ko(f"⛔ after {quanto:.1f} s pid {pid1} is still there, state "
            f"{s.get('stato')}: if it is `Z` it is an unreaped zombie")
         guai.append("muore: not reaped")
@@ -560,7 +560,7 @@ def caso_muore(a, reg, guai):
     off2 = reg.offset()
     p = cliente(a)
     inf(f"new connection: the client exited {p.returncode}")
-    nuovi, _ = aspetta(lambda: figli_di(a.pid_server) or None, 20)
+    nuovi, _ = aspetta(lambda: children_of(a.pid_server) or None, 20)
     if not nuovi:
         ko("⛔ after the child's death no new one is born: the slot "
            "stayed occupied by a dead one")
@@ -572,7 +572,7 @@ def caso_muore(a, reg, guai):
         guai.append("muore: same pid")
 
 
-def caso_senza_palco(a, reg, guai):
+def no_stage_case(a, reg, guai):
     titolo("5. `senza-palco` — a user who does NOT have the bus")
     off = reg.offset()
     p = cliente(a, utente=a.utente2, parola=a.parola2)
@@ -600,7 +600,7 @@ def caso_senza_palco(a, reg, guai):
            f"Invariant I3 violated invisibly.")
         guai.append("senza-palco: PIXEL LEAK between users")
     dopo, _ = aspetta(
-        lambda: [x for x in figli_di(a.pid_server) if x["utente"] == a.utente2]
+        lambda: [x for x in children_of(a.pid_server) if x["utente"] == a.utente2]
         or None, 20)
     if not dopo:
         ko(f"⛔ no child for «{a.utente2}»: the session was admitted and "
@@ -626,7 +626,7 @@ def caso_senza_palco(a, reg, guai):
     #   gone: commit 92105b5 (13 Aug 2026) removed the process store altogether
     #   (one stream per frame, per session), so there is no guard line to look for.
 
-def caso_guasto(a, reg, guai, cieco):
+def fault_case(a, reg, guai, cieco):
     nome = "guasto-cieco" if cieco else "guasto-uid"
     titolo(f"{'7' if cieco else '6'}. `{nome}` — a child running as the "
            f"WRONG user")
@@ -634,7 +634,7 @@ def caso_guasto(a, reg, guai, cieco):
     p = cliente(a)
     inf(f"the client exited {p.returncode}")
     time.sleep(3.0)
-    vivi = figli_di(a.pid_server)
+    vivi = children_of(a.pid_server)
     testo = reg.da(off) or ""
 
     if vivi:
@@ -675,13 +675,13 @@ def caso_guasto(a, reg, guai, cieco):
 
 
 CASI = {
-    "nasce": caso_nasce,
-    "due": caso_due,
-    "distacco": caso_distacco,
-    "muore": caso_muore,
-    "senza-palco": caso_senza_palco,
-    "guasto-uid": lambda a, r, g: caso_guasto(a, r, g, False),
-    "guasto-cieco": lambda a, r, g: caso_guasto(a, r, g, True),
+    "nasce": case_born,
+    "due": case_two,
+    "distacco": detach_case,
+    "muore": case_dies,
+    "senza-palco": no_stage_case,
+    "guasto-uid": lambda a, r, g: fault_case(a, r, g, False),
+    "guasto-cieco": lambda a, r, g: fault_case(a, r, g, True),
 }
 
 
@@ -730,7 +730,7 @@ def main():
         ko("⛔ this bench wants root: half of the readings are on /proc of a "
            "root process, and «I could not read» is not «it was not there».")
         return 2
-    s = stato_proc(a.pid_server)
+    s = proc_state(a.pid_server)
     if not s:
         ko(f"⛔ pid {a.pid_server} does not exist: there is nothing to measure")
         return 2
@@ -748,7 +748,7 @@ def main():
            f"have nowhere to look")
         return 2
     ok(f"log: {a.registro} ({reg.offset()} bytes so far)")
-    prima = figli_di(a.pid_server)
+    prima = children_of(a.pid_server)
     inf(f"children already alive: {len(prima)} {[x['pid'] for x in prima]}")
 
     guai = []

@@ -80,13 +80,13 @@ PAROLA = "provanic2026"
 #     uid shifts.  `[?]` the direct link was not measured inside the
 #     old box: it is the only write shared between different tenants
 #     that C17 does, and it matches the bisection (new box ⇒ green 2 out of 2).
-# ⭐ Now the name carries the tenant, like `esito_a` and `esito_r`, and it is removed
+# ⭐ Now the name carries the tenant, like `esito_a` and `outcome_r`, and it is removed
 #   at the end: no run leaves anything to the next run.
-def prova_copia(chi):
+def test_copy(chi):
     return "/tmp/%s-arbitro-copia.log" % chi
 
 
-ARBITRO_GTK = ("env GDK_BACKEND=wayland python3 " +
+ARBITER_GTK = ("env GDK_BACKEND=wayland python3 " +
                os.path.join(QUI, "appunti-gtk.py"))
 
 
@@ -109,15 +109,15 @@ def arbitro(chi):
         return {"nome": "wl-clipboard",
                 "incolla": "timeout 8 wl-paste -n 2>/dev/null",
                 "copia": "pkill -x wl-copy; printf %%s '%s' | timeout 90 wl-copy "
-                         ">" + prova_copia(chi) + " 2>&1 &",
+                         ">" + test_copy(chi) + " 2>&1 &",
                 "attesa_copia": 3, "dice": ""}
     return {"nome": "GTK with focus (the client's click)",
-            "incolla": ARBITRO_GTK + " incolla 2>/dev/null",
-            "copia": ARBITRO_GTK + " copia '%s' 60 >" + prova_copia(chi) + " 2>&1 &",
+            "incolla": ARBITER_GTK + " incolla 2>/dev/null",
+            "copia": ARBITER_GTK + " copia '%s' 60 >" + test_copy(chi) + " 2>&1 &",
             "attesa_copia": 30, "dice": "copied WITH FOCUS"}
 
 
-def carica_c1():
+def load_c1():
     """From C1 come the admission and the card groups: one place only (§1.47)."""
     for p in (os.path.join(QUI, "11-c1-nasce-e-si-vede.py"),):
         if os.path.exists(p):
@@ -172,7 +172,7 @@ def socket_wayland(chi):
 #   of tools ⇒ «THE INJECTED FAULT WAS SEEN», outcome 0 ⇒ a
 #   certification for C13 that had looked at nothing.
 # ⇒ Two nets, one under the other:
-#   1. ⭐ a POSITIVE check before starting (`attrezzo_che_manca`):
+#   1. ⭐ a POSITIVE check before starting (`missing_tool`):
 #      every piece the chosen arbiter will use is ASKED of the session;
 #   2. and here, for what slips through: the shell that exits 126/127 (command not
 #      found / not executable) does not give a stdout, it gives `AttrezzoMancante`.
@@ -185,10 +185,10 @@ class AttrezzoMancante(Exception):
 
 # `[R]` POSIX, «Command Search and Execution»: 127 = not found, 126 =
 #   found but not executable.  `timeout` and `env` pass them on unchanged.
-NON_TROVATO = (126, 127)
+NOT_FOUND = (126, 127)
 
 
-def nella_sessione_rc(chi, copione, tempo=15):
+def in_session_rc(chi, copione, tempo=15):
     """Like `nella_sessione`, but returns `(code, stdout)`.  `None` = it is not there."""
     uid = corri(["id", "-u", chi], 5).stdout.strip()
     run = "/run/user/%s" % uid
@@ -207,11 +207,11 @@ def nella_sessione(chi, copione, tempo=15):
     ⛔ If the shell says «command not found» (126/127) it raises
        `AttrezzoMancante` instead of returning an empty stdout (see above).
     """
-    r = nella_sessione_rc(chi, copione, tempo)
+    r = in_session_rc(chi, copione, tempo)
     if r is None:
         return None
     codice, uscita = r
-    if codice in NON_TROVATO:
+    if codice in NOT_FOUND:
         raise AttrezzoMancante("«%s» exits %d (command not found or not executable)"
                                % (copione, codice))
     return uscita
@@ -222,7 +222,7 @@ def nella_sessione(chi, copione, tempo=15):
 #     it were missing the choice would fall on GTK silently (`grep -c` answers «0»).
 #   ⚠ For GTK `command -v` is not enough: `python3` is always there, it is `import gi`
 #     with GTK 4 that is missing ⇒ it is really imported, as `appunti-gtk.py` does.
-ATTREZZI_COMUNI = [
+COMMON_TOOLS = [
     ("wayland-info (wayland-utils)", "command -v wayland-info"),
 ]
 ATTREZZI = {
@@ -240,14 +240,14 @@ ATTREZZI = {
 }
 
 
-def attrezzo_che_manca(chi, elenco):
+def missing_tool(chi, elenco):
     """⭐ The POSITIVE check: returns the name of the first missing piece, or `None`.
 
     ⛔ A piece the session does not answer about (no socket, time out)
        counts as missing: I do not know whether it is there, and so I do not look.
     """
     for nome, prova in elenco:
-        r = nella_sessione_rc(chi, prova + " >/dev/null 2>&1", 30)
+        r = in_session_rc(chi, prova + " >/dev/null 2>&1", 30)
         if r is None or r[0] != 0:
             return nome
     return None
@@ -265,14 +265,14 @@ def main():
                    help="⛔ THE INJECTED FAULT: nobody copies anything ⇒ three reds")
     p.add_argument("--attesa", type=float, default=20.0)
     a = p.parse_args()
-    c1 = carica_c1()
+    c1 = load_c1()
 
     chi = "c17u%d" % random.randint(100, 999)
     marca = random.randint(10000, 99999)
     testo_a = "C17-A-àèìòù-%d" % marca
-    testo_b = "C17-B-€ß→%d" % marca
+    text_b = "C17-B-€ß→%d" % marca
     esito_a = "/tmp/%s-a.json" % chi
-    esito_r = "/tmp/%s-r.json" % chi
+    outcome_r = "/tmp/%s-r.json" % chi
     segnale = "/tmp/%s-segnale" % chi
     print("== C17 — the clipboard goes both ways (%s, port %d)%s"
           % (chi, a.porta, "  ⛔ INJECTED FAULT: --senza-copia" if a.senza_copia else ""))
@@ -287,7 +287,7 @@ def main():
         print("⛔ %s ⇒ I could not look" % perche)
         sgombera(chi)
         return 3
-    for f in (esito_a, esito_r, segnale, prova_copia(chi)):
+    for f in (esito_a, outcome_r, segnale, test_copy(chi)):
         if os.path.exists(f):
             os.unlink(f)
 
@@ -334,12 +334,12 @@ def main():
         #   ⛔ Not in parallel: two windows would steal the focus from each other.
         # ⛔ FIRST we ask whether the tools are there (see `AttrezzoMancante`):
         #    one that is missing is «I could not look», ⛔ never a red.
-        manca = attrezzo_che_manca(chi, ATTREZZI_COMUNI)
+        manca = missing_tool(chi, COMMON_TOOLS)
         arb = arbitro(chi) if manca is None else None
         if arb is not None:
             print("   the arbiter of this desktop: %s" % arb["nome"])
             chiave = "wl-clipboard" if arb["nome"] == "wl-clipboard" else "GTK"
-            manca = attrezzo_che_manca(chi, ATTREZZI[chiave])
+            manca = missing_tool(chi, ATTREZZI[chiave])
         if manca is not None:
             print("   ⛔ «%s» is missing in the session: it is a tool of the BENCH, not of the"
                   " product ⇒ I could not look" % manca)
@@ -361,8 +361,8 @@ def main():
 
         # B — session → device, with the client attached
         if not a.senza_copia:
-            nella_sessione(chi, "rm -f " + prova_copia(chi))
-            nella_sessione(chi, arb["copia"] % testo_b)
+            nella_sessione(chi, "rm -f " + test_copy(chi))
+            nella_sessione(chi, arb["copia"] % text_b)
             # ⚠ We wait for the copy to HAVE HAPPENED, not a fixed time: with GTK
             #   it starts when the focus arrives, and the focus arrives with the
             #   client's click.  ⛔ A clock-based wait gave an intermittent red
@@ -373,7 +373,7 @@ def main():
                 time.sleep(1)
                 if not arb["dice"]:
                     break
-                detto = nella_sessione(chi, "cat " + prova_copia(chi) + " 2>/dev/null") or ""
+                detto = nella_sessione(chi, "cat " + test_copy(chi) + " 2>/dev/null") or ""
                 if arb["dice"] in detto:
                     print("   the copy in the session happened after %.0f s"
                           % (time.time() - t1))
@@ -392,20 +392,20 @@ def main():
         #   B's announcement arrives after.
         annunci = [(int(m.group(1)), int(m.group(2))) for m in re.finditer(
             r"the server announces transfer (\d+), (\d+) bytes", uscita)]
-        lungo_b = len(testo_b.encode("utf-8"))
-        ok_b = any(n == lungo_b for _, n in annunci)
+        len_b = len(text_b.encode("utf-8"))
+        ok_b = any(n == len_b for _, n in annunci)
         print("   B  session → device       : %s  (server announcements: %s, expected one of %d bytes)"
-              % ("⭐ YES" if ok_b else "⛔ NO", annunci, lungo_b))
+              % ("⭐ YES" if ok_b else "⛔ NO", annunci, len_b))
 
         # R — whoever reattaches receives the session's text
-        r = corri(cliente(chi, a.porta, "--appunti-attendi", "15", "--appunti-scrivi", esito_r), 60)
+        r = corri(cliente(chi, a.porta, "--appunti-attendi", "15", "--appunti-scrivi", outcome_r), 60)
         try:
-            ricevuto = json.load(open(esito_r))["ricevuto"]
+            ricevuto = json.load(open(outcome_r))["ricevuto"]
         except (OSError, ValueError, KeyError):
             ricevuto = None
-        ok_r = ricevuto == testo_b
+        ok_r = ricevuto == text_b
         print("   R  whoever reattaches     : %s  (expected «%s», received «%s»)"
-              % ("⭐ YES" if ok_r else "⛔ NO", testo_b, ricevuto))
+              % ("⭐ YES" if ok_r else "⛔ NO", text_b, ricevuto))
         if r is not None and c1.e_stato_ammesso(r.stdout) is False:
             print("   ⛔ the second client was REJECTED ⇒ I could not look")
             return 3
@@ -435,7 +435,7 @@ def main():
         return 3
     finally:
         sgombera(chi)
-        for f in (esito_a, esito_r, segnale, prova_copia(chi)):
+        for f in (esito_a, outcome_r, segnale, test_copy(chi)):
             if os.path.exists(f):
                 os.unlink(f)
 

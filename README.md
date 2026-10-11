@@ -478,7 +478,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 >
 > **The defect**: when the browser tab is closed, the page **sends no `CONGEDO`**, where
 > `RCP.md` §8.1 requires it unconditionally. The slot goes away after **30 seconds of silence**.
-> ⛔ **On both engines.** The cause has a name: `src/pagina.html` · `TASTI_ULTIMO()` resets
+> ⛔ **On both engines.** The cause has a name: `src/pagina.html` · `LAST_KEY()` resets
 > `congeda_corrente` **one millisecond after `SESSIONE`**, and the `pagehide` handler (line 331) is
 > **dead code**. ⭐ **The cure is three lines and it is written** in `FASI.md` §01-filo-nudo, box
 > P5.

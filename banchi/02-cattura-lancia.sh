@@ -357,11 +357,11 @@ genera_scena()
 	#       real (the gradient) — and F2.3 can redo the same count on the same
 	#       frame instead of on another.
 	local corsa=$((LARGHEZZA - 160))
-	local y_sfumatura=$((ALTEZZA - 240))
+	local y_gradient=$((ALTEZZA - 240))
 	ffmpeg -nostdin -loglevel error -y \
 	       -f lavfi -i "smptebars=size=${LARGHEZZA}x${ALTEZZA}:rate=60" \
 	       -f lavfi -i "color=black:size=${LARGHEZZA}x100:rate=60,geq=r='floor(X*256/W)':g='floor(X*256/W)':b='floor(X*256/W)'" \
-	       -filter_complex "[0][1]overlay=0:${y_sfumatura},drawbox=x='t*720-${corsa}*floor(t*720/${corsa})':y=$((ALTEZZA - 120)):w=160:h=100:color=white:t=fill" \
+	       -filter_complex "[0][1]overlay=0:${y_gradient},drawbox=x='t*720-${corsa}*floor(t*720/${corsa})':y=$((ALTEZZA - 120)):w=160:h=100:color=white:t=fill" \
 	       -t 30 -c:v libx264 -preset ultrafast -qp 0 -pix_fmt yuv420p "$f"
 	local esito=$?
 	if [ $esito -ne 0 ] || [ ! -s "$f" ]; then

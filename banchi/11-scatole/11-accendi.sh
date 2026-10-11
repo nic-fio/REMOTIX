@@ -76,10 +76,10 @@ RICETTA="$BASE/Contenitore.$DESKTOP"
 # ⭐ phase 20 §7: `<desktop>-xrdp` is the box of that desktop with xrdp, from ONE
 #   recipe only (Contenitore.xrdp) built on top of the measurements image.
 DESKTOP_BASE=${DESKTOP%-xrdp}
-ARGOMENTI_RICETTA=""
+RECIPE_ARGS=""
 if [ "$DESKTOP_BASE" != "$DESKTOP" ]; then
 	RICETTA="$BASE/Contenitore.xrdp"
-	ARGOMENTI_RICETTA="--build-arg DESKTOP=$DESKTOP_BASE"
+	RECIPE_ARGS="--build-arg DESKTOP=$DESKTOP_BASE"
 fi
 # ⭐ What the product can do, and on which desktop: the SAME list as the
 #   hook, in one place only.  ⛔ If it is missing, the gate stays CLOSED and says so.
@@ -138,7 +138,7 @@ esac
 #   BRINGS IT CLOSER.  On the real machine `polkit` works; ⛔ it was the box that was
 #   different, and the difference showed as a fault of the product.
 # ---------------------------------------------------------------------------
-CAPS_COMUNI="--cap-add=SYS_ADMIN"
+COMMON_CAPS="--cap-add=SYS_ADMIN"
 
 case "$DESKTOP" in
   # ⭐ WAKE_ALARM (phase 12, 19 Sep 2026): `org_kde_powerdevil` carries the
@@ -146,8 +146,8 @@ case "$DESKTOP" in
   #   OUTSIDE the container's bound does not run at all ⇒ `[M]` 203/EXEC
   #   «Operation not permitted», powerdevil dead at every session.  Same
   #   reason as above: on the real machine it starts, and the permission BRINGS IT CLOSER.
-  kde|kde-xrdp) CAPS="$CAPS_COMUNI --cap-add=SYS_NICE --cap-add=WAKE_ALARM" ;;
-  *)   CAPS="$CAPS_COMUNI" ;;
+  kde|kde-xrdp) CAPS="$COMMON_CAPS --cap-add=SYS_NICE --cap-add=WAKE_ALARM" ;;
+  *)   CAPS="$COMMON_CAPS" ;;
 esac
 
 ok()  { printf '  \033[1;32mOK\033[0m  %s\n' "$*"; }
@@ -220,8 +220,8 @@ fi
 #   A `tutto` run on a box is worth `[R]` ~36 launches and ~45 sessions, in
 #   less than 3 hours ⇒ a run that starts from a rebuilt box does not trigger it.
 # ═══════════════════════════════════════════════════════════════════════════
-GUARDIA_ORE=8
-GUARDIA_SESSIONI=100
+GUARD_HOURS=8
+GUARD_SESSIONS=100
 CONTATORE=/var/lib/rete11/lanci-dalla-nascita
 NASCITA=/var/lib/rete11/nascita
 
@@ -240,7 +240,7 @@ eta_in_ore() {
 
 # ⭐ One line only, for machines: `ore=… lanci=… sessioni=… guardia=entro|SUPERATA`
 #   (or `spenta`).  The hook reads it and writes it in the log.
-riga_eta() {
+age_line() {
 	local conti lanci sessioni ore guardia=entro
 	if [ "$(podman inspect --format '{{.State.Running}}' "$NOME" 2>/dev/null)" != true ]; then
 		printf 'spenta'; return
@@ -250,8 +250,8 @@ riga_eta() {
 	case "$lanci" in ''|*[!0-9]*) lanci=ignoti; sessioni=ignoti ;; esac
 	case "$sessioni" in ''|*[!0-9]*) sessioni=ignoti ;; esac
 	ore=$(eta_in_ore)
-	case "$ore" in ignota) : ;; *) awk -v o="$ore" -v g="$GUARDIA_ORE" 'BEGIN { exit !(o >= g) }' && guardia=SUPERATA ;; esac
-	case "$sessioni" in ignoti) : ;; *) [ "$sessioni" -ge "$GUARDIA_SESSIONI" ] && guardia=SUPERATA ;; esac
+	case "$ore" in ignota) : ;; *) awk -v o="$ore" -v g="$GUARD_HOURS" 'BEGIN { exit !(o >= g) }' && guardia=SUPERATA ;; esac
+	case "$sessioni" in ignoti) : ;; *) [ "$sessioni" -ge "$GUARD_SESSIONS" ] && guardia=SUPERATA ;; esac
 	printf 'ore=%s lanci=%s sessioni=%s guardia=%s' "$ore" "$lanci" "$sessioni" "$guardia"
 }
 
@@ -260,21 +260,21 @@ riga_eta() {
 #   by itself, and a second message about the same fault would be noise.
 #   ⚠ Cost `[?]` two or three `podman exec`, under a second: against the `[M]`
 #   74 s of a C1 run it does not move the fast family's ceiling.
-conta_un_lancio() {
+count_launch() {
 	local maglia=$1 quante=$2 riga
 	case "$quante" in ''|*[!0-9]*) quante=1 ;; esac
 	podman exec "$NOME" sh -c "mkdir -p /var/lib/rete11 && echo $(date +%s) $maglia $quante >> $CONTATORE" >/dev/null 2>&1 || return 0
-	riga=$(riga_eta)
+	riga=$(age_line)
 	case "$riga" in
 	*guardia=SUPERATA*)
 		printf '  \033[1;33m⚠\033[0m  box %s OLD (%s; guard: %s hours or %s sessions) — a red here may be the BOX'"'"'s: «11-accendi.sh accendi|prodotto|server %s» and try again\n' \
-			"$NOME" "$riga" "$GUARDIA_ORE" "$GUARDIA_SESSIONI" "$DESKTOP" ;;
+			"$NOME" "$riga" "$GUARD_HOURS" "$GUARD_SESSIONS" "$DESKTOP" ;;
 	esac
 }
 
 case "${1:-}" in
-c1)                                     conta_un_lancio c1 "${3:-5}" ;;
-c2|c3|c4|c5|c6|c7|c8|c8b|c9|c17|c18|passo0) conta_un_lancio "$1" 1 ;;
+c1)                                     count_launch c1 "${3:-5}" ;;
+c2|c3|c4|c5|c6|c7|c8|c8b|c9|c17|c18|passo0) count_launch "$1" 1 ;;
 esac
 
 case "${1:-}" in
@@ -294,7 +294,7 @@ costruisci)
 	fi
 	# ⚠ `--network=host` here too: without it, the build does not reach the
 	#   packages (same reason as above, measured on 25 August 2026).
-	podman build --network=host $ARGOMENTI_RICETTA -f "$RICETTA" -t "$IMMAGINE" "$BASE" || exit 1
+	podman build --network=host $RECIPE_ARGS -f "$RICETTA" -t "$IMMAGINE" "$BASE" || exit 1
 	ok "image $IMMAGINE"
 	;;
 
@@ -306,8 +306,8 @@ accendi)
 	#   cost the box that is there.  See the «NO RADEON» block further down.
 	SCHEDA=${REMOTIX_SCHEDA:-intel}
 	case "$SCHEDA" in
-	intel) DRIVER_SCHEDA="i915|xe"; NOME_SCHEDA="the integrated Intel" ;;
-	amd)   DRIVER_SCHEDA="amdgpu";  NOME_SCHEDA="the Radeon (amdgpu)" ;;
+	intel) DRIVER_SCHEDA="i915|xe"; CARD_NAME="the integrated Intel" ;;
+	amd)   DRIVER_SCHEDA="amdgpu";  CARD_NAME="the Radeon (amdgpu)" ;;
 	*)     ko "REMOTIX_SCHEDA=«$SCHEDA»: it is intel or amd"; exit 1 ;;
 	esac
 	# ⛔ `-t 0`, that is we kill instead of asking nicely.  `[M]` 25 August
@@ -398,7 +398,7 @@ accendi)
 	# ⚠ The `INTEL_*` names stay so as not to touch the Intel lines: with
 	#   REMOTIX_SCHEDA=amd the Radeon is inside.
 	if [ ! -e "$INTEL_CARD" ] || [ ! -e "$INTEL_RENDER" ]; then
-		ko "⛔ I cannot find $NOME_SCHEDA (driver ${DRIVER_SCHEDA//|//}): NOT starting — the box is not born on another card"
+		ko "⛔ I cannot find $CARD_NAME (driver ${DRIVER_SCHEDA//|//}): NOT starting — the box is not born on another card"
 		exit 1
 	fi
 	if [ "$SCHEDA" = intel ]; then
@@ -457,7 +457,7 @@ accendi)
 		sleep 0.5
 	done
 	ok "$NOME started (internal state: ${S:-unknown})"
-	# ⭐ The birth date, for the age guard (see `riga_eta`).  ⚠ The
+	# ⭐ The birth date, for the age guard (see `age_line`).  ⚠ The
 	#   launch counter is NOT reset: it was born with the container, that is now.
 	podman exec "$NOME" sh -c "mkdir -p /var/lib/rete11 && date +%s > $NASCITA" >/dev/null 2>&1 \
 		|| ko "I could not write the birth date: the age guard will fall back on podman"
@@ -490,15 +490,15 @@ accendi)
 		G=$(stat -c %g "$N" 2>/dev/null) || continue
 		[ -n "$G" ] || continue
 		podman exec "$NOME" getent group "$G" >/dev/null 2>&1 && continue
-		NOME_G=$(getent group "$G" 2>/dev/null | cut -d: -f1)
-		[ -n "$NOME_G" ] || NOME_G="scheda$G"
+		GROUP_NAME=$(getent group "$G" 2>/dev/null | cut -d: -f1)
+		[ -n "$GROUP_NAME" ] || GROUP_NAME="scheda$G"
 		# ⛔ The name the product excludes does not go in: in the AMD campaign it
 		#   would be the card closed to the tenant, that is the blind session.
-		[ "$NOME_G" = remotix-nogpu ] && NOME_G="scheda$G"
-		if podman exec "$NOME" groupadd -g "$G" "$NOME_G" >/dev/null 2>&1; then
-			ok "group $G ($NOME_G) created inside, for $N"
+		[ "$GROUP_NAME" = remotix-nogpu ] && GROUP_NAME="scheda$G"
+		if podman exec "$NOME" groupadd -g "$G" "$GROUP_NAME" >/dev/null 2>&1; then
+			ok "group $G ($GROUP_NAME) created inside, for $N"
 		elif podman exec "$NOME" groupadd -g "$G" "scheda$G" >/dev/null 2>&1; then
-			ok "group $G (scheda$G) created inside, for $N — the name $NOME_G was already taken"
+			ok "group $G (scheda$G) created inside, for $N — the name $GROUP_NAME was already taken"
 		else
 			ko "gid $G of $N has NO name inside: the meshes will exit 3"
 		fi
@@ -506,12 +506,12 @@ accendi)
 
 	# The proof that the group alignment REALLY happened — «written is not
 	# in force»: it is read back from the node, not from the unit's log.
-	G_NODO=$(stat -c %g "$INTEL_RENDER" 2>/dev/null)
+	G_NODE=$(stat -c %g "$INTEL_RENDER" 2>/dev/null)
 	G_DENTRO=$(podman exec "$NOME" sh -c 'id -G provanic' 2>/dev/null)
-	if printf '%s\n' $G_DENTRO | grep -qx "$G_NODO"; then
-		ok "the tenant is in the card's group ($G_NODO)"
+	if printf '%s\n' $G_DENTRO | grep -qx "$G_NODE"; then
+		ok "the tenant is in the card's group ($G_NODE)"
 	else
-		ko "the tenant is NOT in the card's group ($G_NODO): its groups are $G_DENTRO"
+		ko "the tenant is NOT in the card's group ($G_NODE): its groups are $G_DENTRO"
 		ko "⛔ this way the compositor would fall back on software, and the numbers would be false"
 	fi
 
@@ -892,7 +892,7 @@ passo0)
 
 eta)
 	# ⭐ The guard, for machines: one line `ore=… lanci=… sessioni=… guardia=…`.
-	riga_eta; printf '\n'
+	age_line; printf '\n'
 	;;
 
 bilancio)

@@ -26,7 +26,7 @@
  *      (`06-b33-testimone.c`), and read by `06-b33-risveglio.py`.
  *
  * ⚠ The only thing this program measures by itself — and it measures it, it
- *   does not deduce it — is `ricambi_puntatore`, read from `input_conto()`,
+ *   does not deduce it — is `ricambi_puntatore`, read from `input_count()`,
  *   which is a window on the internal state of `input.c` and not a log line.
  *
  * ---------------------------------------------------------------------------
@@ -78,14 +78,14 @@
  * ---------------------------------------------------------------------------
  * THE COMMANDS (one per line; every answer starts with "B33R: ")
  *
- *   punta X Y            input_puntatore
- *   pulsante C P         input_pulsante        (C evdev: BTN_LEFT = 272)
- *   posizione C P        input_posizione       (C evdev: KEY_LEFTCTRL = 29)
+ *   punta X Y            input_pointer
+ *   pulsante C P         input_button        (C evdev: BTN_LEFT = 272)
+ *   posizione C P        input_position       (C evdev: KEY_LEFTCTRL = 29)
  *   lettera N            input_lettera
  *   risveglia            ⭐⭐ `cattura_risveglia()`, THE PRODUCT'S FUNCTION
  *   ridimensiona L A     `cattura_ridimensiona()` — the ALREADY KNOWN case (§4.6),
  *                        which serves as a comparison: the door we knew about
- *   ritela L A           input_ritela
+ *   ritela L A           input_recanvas
  *   rilascia             input_rilascia_tutto  → prints HOW MANY it released
  *   dormi MS             ⛔ sleeps WHILE KEEPING libei running and consuming
  *   stato                the count, the replacements, the orphans, the frames
@@ -110,7 +110,7 @@
  *    is the PRODUCT contract and belongs to the coordinator.  They are
  *    declared here, with the same signature — changing it under them would
  *    break `04-b24`. */
-extern void input_conto(const Input *, unsigned *tasti, unsigned *pulsanti,
+extern void input_count(const Input *, unsigned *tasti, unsigned *pulsanti,
                         unsigned *ricambi_puntatore, unsigned *ricambi_tastiera, int *pronto);
 extern unsigned input_orfani(const Input *);
 
@@ -141,7 +141,7 @@ static void dilo(const char *forma, ...)
  *
  * Returns FALSE if the input channel has dropped.
  */
-static gboolean gira_una_volta(void)
+static gboolean run_once(void)
 {
 	CatturaFermo fermo;
 	g_autoptr(GError) sbaglio = NULL;
@@ -163,13 +163,13 @@ static gboolean gira_una_volta(void)
 	return TRUE;
 }
 
-static void stampa_stato(const char *quando)
+static void print_state(const char *quando)
 {
 	unsigned tasti = 0, pulsanti = 0, rp = 0, rt = 0;
 	uint32_t nl = 0, na = 0;
 	int pronto = 0;
 
-	input_conto(canale, &tasti, &pulsanti, &rp, &rt, &pronto);
+	input_count(canale, &tasti, &pulsanti, &rp, &rt, &pronto);
 	cattura_misura_negoziata(cat, &nl, &na);
 	dilo("STATO %s pronto=%d tasti_premuti=%u pulsanti_premuti=%u orfani=%u "
 	     "ricambi_puntatore=%u ricambi_tastiera=%u risvegli=%lu fotogrammi=%lu "
@@ -181,13 +181,13 @@ static void stampa_stato(const char *quando)
 /* ⛔ Sleeps WHILE KEEPING the loop running: a plain `g_usleep` would lose the
  *    `DEVICE_REMOVED`/`DEVICE_ADDED` that arrive 8-24 ms after the wake-up, and
  *    the bench would say "no replacement" while measuring its own deafness. */
-static gboolean dormi_girando(int ms)
+static gboolean spin_sleep(int ms)
 {
 	gint64 scadenza = g_get_monotonic_time() + (gint64) ms * 1000;
 
 	while (g_get_monotonic_time() < scadenza)
 	{
-		if (!gira_una_volta())
+		if (!run_once())
 			return FALSE;
 		g_usleep(5 * 1000);
 	}
@@ -212,7 +212,7 @@ static void comando(char *riga)
 	}
 	if (g_str_equal(riga, "stato"))
 	{
-		stampa_stato("");
+		print_state("");
 		return;
 	}
 	if (g_str_equal(riga, "rilascia"))
@@ -240,15 +240,15 @@ static void comando(char *riga)
 		 *   replacement arrives **8-24 ms later**, and 400 is twenty times as
 		 *   much.  A bench that waited 10 ms would measure its own haste.
 		 */
-		input_conto(canale, NULL, NULL, &prima, NULL, NULL);
+		input_count(canale, NULL, NULL, &prima, NULL, NULL);
 		esito = cattura_risveglia(cat);
 		risvegli++;
-		if (!dormi_girando(400))
+		if (!spin_sleep(400))
 		{
 			dilo("ERRORE: the input channel dropped during the wake-up");
 			exit(4);
 		}
-		input_conto(canale, NULL, NULL, &dopo, NULL, NULL);
+		input_count(canale, NULL, NULL, &dopo, NULL, NULL);
 		dilo("WAKE-UP n.%lu esito=%d ricambi_puntatore %u → %u (delta %d) "
 		     "⛔ and NOBODY touched the canvas",
 		     risvegli, (int) esito, prima, dopo, (int) dopo - (int) prima);
@@ -256,7 +256,7 @@ static void comando(char *riga)
 	}
 	if (sscanf(riga, "dormi %ld", &a1) == 1)
 	{
-		if (!dormi_girando((int) a1))
+		if (!spin_sleep((int) a1))
 		{
 			dilo("ERRORE: the input channel dropped during the wait");
 			exit(4);
@@ -266,17 +266,17 @@ static void comando(char *riga)
 	}
 	if (sscanf(riga, "punta %ld %ld", &a1, &a2) == 2)
 	{
-		dilo("punta %ld %ld -> %d", a1, a2, input_puntatore(canale, (uint32_t) a1, (uint32_t) a2));
+		dilo("punta %ld %ld -> %d", a1, a2, input_pointer(canale, (uint32_t) a1, (uint32_t) a2));
 		return;
 	}
 	if (sscanf(riga, "pulsante %ld %ld", &a1, &a2) == 2)
 	{
-		dilo("pulsante %ld %ld -> %d", a1, a2, input_pulsante(canale, (uint16_t) a1, (int) a2));
+		dilo("pulsante %ld %ld -> %d", a1, a2, input_button(canale, (uint16_t) a1, (int) a2));
 		return;
 	}
 	if (sscanf(riga, "posizione %ld %ld", &a1, &a2) == 2)
 	{
-		dilo("posizione %ld %ld -> %d", a1, a2, input_posizione(canale, (uint16_t) a1, (int) a2));
+		dilo("posizione %ld %ld -> %d", a1, a2, input_position(canale, (uint16_t) a1, (int) a2));
 		return;
 	}
 	if (sscanf(riga, "lettera %ld", &a1) == 1)
@@ -287,7 +287,7 @@ static void comando(char *riga)
 	if (sscanf(riga, "ritela %ld %ld", &a1, &a2) == 2)
 	{
 		dilo("ritela %ld %ld -> %d", a1, a2,
-		     input_ritela(canale, (uint32_t) a1, (uint32_t) a2));
+		     input_recanvas(canale, (uint32_t) a1, (uint32_t) a2));
 		tela_l = (uint32_t) a1;
 		tela_a = (uint32_t) a2;
 		return;
@@ -295,20 +295,20 @@ static void comando(char *riga)
 	if (sscanf(riga, "ridimensiona %ld %ld", &a1, &a2) == 2)
 	{
 		unsigned prima = 0, dopo = 0;
-		CatturaRitela esito;
+		CaptureRecanvas esito;
 
 		/* ⛔ THE ALREADY KNOWN DOOR, §4.6: it serves as a comparison.  If the
 		 *    replacement arrived ONLY from here, §7.1 would be false — and it is
 		 *    the only way to know, because a number without its comparison does
 		 *    not tell "the wake-up replaces" from "everything always replaces". */
-		input_conto(canale, NULL, NULL, &prima, NULL, NULL);
+		input_count(canale, NULL, NULL, &prima, NULL, NULL);
 		esito = cattura_ridimensiona(cat, (uint32_t) a1, (uint32_t) a2);
-		if (!dormi_girando(400))
+		if (!spin_sleep(400))
 		{
 			dilo("ERRORE: the input channel dropped during the resize");
 			exit(4);
 		}
-		input_conto(canale, NULL, NULL, &dopo, NULL, NULL);
+		input_count(canale, NULL, NULL, &dopo, NULL, NULL);
 		dilo("RESIZED to %ldx%ld esito=%d ricambi_puntatore %u → %u (delta %d)", a1, a2,
 		     (int) esito, prima, dopo, (int) dopo - (int) prima);
 		return;
@@ -354,19 +354,19 @@ int main(int argc, char **argv)
 		 *    wake-up would have nothing to replace. */
 		gint64 scadenza = g_get_monotonic_time() + 20 * G_USEC_PER_SEC;
 
-		while (g_get_monotonic_time() < scadenza && !cattura_attiva(cat))
+		while (g_get_monotonic_time() < scadenza && !capture_active(cat))
 			g_usleep(50 * 1000);
-		if (!cattura_attiva(cat))
+		if (!capture_active(cat))
 		{
 			dilo("ERRORE: the stream is not active after 20 s (%s)",
-			     cattura_guasto(cat) ?: "no explanation");
+			     capture_fault(cat) ?: "no explanation");
 			return 2;
 		}
 	}
 	dilo("capture active at %ux%u on node %u", tela_l, tela_a, mutter_nodo(sessione));
 
 	if (mutter_monitor_cerca(sessione))
-		dilo("MONITOR %s («%s»)", mutter_monitor_nostro(sessione),
+		dilo("MONITOR %s («%s»)", mutter_our_monitor(sessione),
 		     mutter_monitor_prodotto(sessione));
 	else
 		dilo("⚠ our monitor is not known by name: I do NOT say which one it is");
@@ -390,23 +390,23 @@ int main(int argc, char **argv)
 
 		while (g_get_monotonic_time() < scadenza && !pronto)
 		{
-			if (!gira_una_volta())
+			if (!run_once())
 			{
 				dilo("ERRORE: the input channel dropped");
 				return 3;
 			}
-			input_conto(canale, NULL, NULL, NULL, NULL, &pronto);
+			input_count(canale, NULL, NULL, NULL, NULL, &pronto);
 			if (!pronto)
 				g_usleep(50 * 1000);
 		}
 		if (!pronto)
 		{
 			dilo("ERRORE: no ABSOLUTE device with a region after 20 s");
-			stampa_stato("mai-pronto");
+			print_state("mai-pronto");
 			return 3;
 		}
 	}
-	stampa_stato("all-avvio");
+	print_state("all-avvio");
 	dilo("PRONTO");
 
 	/* --- 4. the commands ---------------------------------------------------- */
@@ -417,7 +417,7 @@ int main(int argc, char **argv)
 		sonda.revents = 0;
 		if (poll(&sonda, 1, 20) < 0 && errno != EINTR)
 			break;
-		if (!gira_una_volta())
+		if (!run_once())
 		{
 			dilo("ERRORE: the compositor closed the input channel");
 			return 4;
@@ -429,7 +429,7 @@ int main(int argc, char **argv)
 				/* ⛔ A closed stdin is NOT "fine": it is the driver that went
 				 *    away, and the count of what is pressed stays full.  It is
 				 *    said, and we exit with a different code. */
-				stampa_stato("stdin-chiuso");
+				print_state("stdin-chiuso");
 				dilo("⛔ stdin closed without «fine»: I exit WITHOUT releasing");
 				return 5;
 			}

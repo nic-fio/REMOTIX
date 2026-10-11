@@ -70,8 +70,8 @@ F21 = S._carica("f021", os.path.join(S.QUI, "15-f021-esci.py"))
 FUNZIONI = ("F-031B",)
 PER_BROWSER = False
 
-SENTINELLA = "xfce4-session-c15-sentinella:0"
-ATTESA_IN_PIEDI_S = 20.0
+SENTINEL_V = "xfce4-session-c15-sentinella:0"
+WAIT_UP_S = 20.0
 
 # ── what is read ─────────────────────────────────────────────────────────────
 DCONF = (
@@ -92,7 +92,7 @@ FILE = (
     ".config/lxqt/lxqt-powermanagement.conf", ".config/kxkbrc")
 XFCONF_SESSIONE = ("/general/WaylandLogoutCommand", "/general/SessionName",
                    "/general/SaveOnExit", "/shutdown/ShowSwitchUser")
-VOCI_LXQT = ("lxqt-leave", "lxqt-lockscreen", "lxqt-suspend", "lxqt-hibernate",
+LXQT_ENTRIES = ("lxqt-leave", "lxqt-lockscreen", "lxqt-suspend", "lxqt-hibernate",
              "lxqt-shutdown", "lxqt-reboot")
 
 # ── the classes ──────────────────────────────────────────────────────────────
@@ -144,7 +144,7 @@ def riga_lettura(chi):
     for f in FILE:
         r.append("f=\"$HOME/%s\"; if [ -f \"$f\" ]; then echo \"@@file %s $(base64 -w0 < \"$f\")\";"
                  " fi" % (f, f))
-    for v in VOCI_LXQT:
+    for v in LXQT_ENTRIES:
         r.append("f=\"$HOME/.local/share/applications/%s.desktop\"; if [ -f \"$f\" ]; then "
                  "echo \"@@app %s $(base64 -w0 < \"$f\")\"; fi" % (v, v))
     r.append("ls -1 \"$HOME/.cache/sessions\" 2>/dev/null | sed 's/^/@@cache /'")
@@ -243,7 +243,7 @@ def interpreta(uscita):
 
 def leggi(s):
     for _ in range(3):
-        c, t = s.come_utente("sh -c %s" % S._q(riga_lettura(s.chi)), 90)
+        c, t = s.as_user("sh -c %s" % S._q(riga_lettura(s.chi)), 90)
         d = interpreta(t) if c == 0 else None
         if d is not None:
             return d, t
@@ -256,7 +256,7 @@ def giudica(prima, dopo):
     if prima is None or dopo is None:
         return S.BLOCKED, "the user's settings could not be read (%s)" % (
             "prima" if prima is None else "dopo"), {}
-    if not any(k.startswith("cache:" + SENTINELLA) for k in prima):
+    if not any(k.startswith("cache:" + SENTINEL_V) for k in prima):
         return S.BLOCKED, "the sentinel of ~/.cache/sessions was not there before", {}
     per = {"permessa": [], "sorvegliata": [], "altra": []}
     for k in sorted(set(prima) | set(dopo)):
@@ -283,11 +283,11 @@ def giudica(prima, dopo):
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE FAULT
 # ═══════════════════════════════════════════════════════════════════════════
-def riga_guasto(chi, desktop):
+def fault_line(chi, desktop):
     casa = "/home/%s" % chi
     r = ["export HOME=%s" % casa,
          # the old `rm -rf ~/.cache/sessions`
-         "rm -f \"$HOME/.cache/sessions/%s\"" % SENTINELLA]
+         "rm -f \"$HOME/.cache/sessions/%s\"" % SENTINEL_V]
     if desktop == "gnome":
         r.append("p=$(mktemp); echo user-db:user > \"$p\"; "
                  "DCONF_PROFILE=\"$p\" gsettings set org.gnome.shell always-show-log-out true "
@@ -331,12 +331,12 @@ def certifica():
         "@@dconf org.gnome.desktop.session idle-delay=uint32 300",
         "@@file .config/xfce4/xfconf/xfce-perchannel-xml/xfce4-session.xml " + b(xml),
         "@@file .config/lxqt/panel.conf " + b("panels=panel1\n[fancymenu]\ntype=fancymenu\n"),
-        "@@cache " + SENTINELLA, "@@fine"])
+        "@@cache " + SENTINEL_V, "@@fine"])
     p = interpreta(uscita)
     prova("reading", p and p.get("xfconf:xfce4-session:/general/LockCommand") == "/bin/false"
           and p.get("lxqt:panel.conf:[fancymenu]type") == "fancymenu"
           and p.get("lxqt:panel.conf:[General]panels") == "panel1"
-          and ("cache:" + SENTINELLA) in p, repr(p))
+          and ("cache:" + SENTINEL_V) in p, repr(p))
     prova("truncated reading ⇒ None", interpreta("@@dconf a b=c") is None)
     prova("equal ⇒ PASS", giudica(p, dict(p))[0] == S.PASS)
     prova("idle-delay 0 (allowed) ⇒ PASS",
@@ -372,7 +372,7 @@ def certifica():
     prova("kxkbrc touched ⇒ FAIL",
           giudica(p, dict(p, **{"kxkbrc:[Layout]LayoutList": "it"}))[0] == S.FAIL)
     senza = dict(p)
-    senza.pop("cache:" + SENTINELLA)
+    senza.pop("cache:" + SENTINEL_V)
     prova("sentinel taken away ⇒ FAIL", giudica(p, senza)[0] == S.FAIL)
     prova("one more desktop file (other) ⇒ PASS",
           giudica(p, dict(p, **{"lxqt:lxqt.conf:[General]__userfile__": "true"}))[0] == S.PASS)
@@ -393,7 +393,7 @@ def certifica():
           os.system("sh -n -c %s" % S._q(riga_lettura("x"))) == 0)
     for d in S.DESKTOP:
         prova("fault line %s: valid shell" % d,
-              os.system("sh -n -c %s" % S._q(riga_guasto("x", d))) == 0)
+              os.system("sh -n -c %s" % S._q(fault_line("x", d))) == 0)
     print("⛔ CERTIFICATION FAILED" if guai else "⭐ CERTIFIED")
     return 1 if guai else 0
 
@@ -401,28 +401,28 @@ def certifica():
 # ═══════════════════════════════════════════════════════════════════════════
 def corpo(o, E):
     with S.Sessione(o, "031", E) as s:
-        desktop, gesto = s.sc.gesto_esci()
+        desktop, gesto = s.sc.exit_gesture()
         if not gesto:
             raise S.Bloccata("I do not know how to say «Exit» in %s" % s.sc.contenitore)
-        c, t = s.come_utente("sh -c %s" % S._q(
+        c, t = s.as_user("sh -c %s" % S._q(
             "mkdir -p /home/%s/.cache/sessions && echo bench sentinel 15-f031b > "
-            "'/home/%s/.cache/sessions/%s'" % (s.chi, s.chi, SENTINELLA)), 30)
+            "'/home/%s/.cache/sessions/%s'" % (s.chi, s.chi, SENTINEL_V)), 30)
         prima, tp = leggi(s)
-        ev = [x for x in (s.salva_testo("impostazioni-prima.txt", tp or ""),) if x]
+        ev = [x for x in (s.save_text("impostazioni-prima.txt", tp or ""),) if x]
         print("   before: %s keys" % (None if prima is None else len(prima)), flush=True)
         ok, m = s.entra()
         if not ok:
             raise S.Bloccata(m)
-        time.sleep(ATTESA_IN_PIEDI_S)        # the session is born, the panel too
-        d, ev2 = F21.esci_e_guarda(s, gesto, nome="esci")
+        time.sleep(WAIT_UP_S)        # the session is born, the panel too
+        d, ev2 = F21.exit_and_look(s, gesto, nome="esci")
         ev += [x for x in ev2 if x]
         if not d.get("finita"):
             raise S.Bloccata("«Exit» (%s) did not close the session: the «after» would not be "
                              "the after" % gesto)
         dopo, td = leggi(s)
         e, frase, per = giudica(prima, dopo)
-        p = s.salva_testo("impostazioni-dopo.txt", td or "")
-        q = s.salva_testo("impostazioni-giudizio.txt", "\n".join(
+        p = s.save_text("impostazioni-dopo.txt", td or "")
+        q = s.save_text("impostazioni-giudizio.txt", "\n".join(
             "%s:\n  %s" % (k, "\n  ".join(v) or "-") for k, v in per.items()))
         ev += [x for x in (p, q) if x]
         E.metti("F-031B", e, frase,
@@ -431,16 +431,16 @@ def corpo(o, E):
                 osservato=frase, evidenze=ev)
         if not o.guasto:
             return
-        _c, tg = s.come_utente("sh -c %s" % S._q(riga_guasto(s.chi, o.scatola)), 60)
-        dopo_g, tdg = leggi(s)
-        eg, fg, _per = giudica(prima, dopo_g)
+        _c, tg = s.as_user("sh -c %s" % S._q(fault_line(s.chi, o.scatola)), 60)
+        after_g, tdg = leggi(s)
+        eg, fg, _per = giudica(prima, after_g)
         print("   FAULT (%s): %s" % ((tg or "").strip().replace("\n", " | ")[-120:], fg[:300]),
               flush=True)
         E.guasto("F-031B", None if eg == S.BLOCKED else eg == S.FAIL,
                  "simulated persistent write (sentinel gone + a key of %s): %s"
                  % (o.scatola, fg),
                  atteso="red: a watched key changed", osservato=fg,
-                 evidenze=[x for x in (s.salva_testo("impostazioni-guasto.txt", tdg or ""),)
+                 evidenze=[x for x in (s.save_text("impostazioni-guasto.txt", tdg or ""),)
                            if x])
 
 

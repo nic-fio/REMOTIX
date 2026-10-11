@@ -51,7 +51,7 @@ with S.Sessione(o, "974", E) as s:
     ok, m = s.entra()
     log("enter: %s %s" % (ok, m[:80]))
     time.sleep(5)
-    s.spegni_browser()
+    s.turn_off_browser()
     p0 = palco(s.chi)
     esito["palco_prima"] = p0.get("palco")
     t0 = float(dentro("date +%s.%N")[1].strip())

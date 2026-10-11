@@ -109,7 +109,7 @@ PROFILO = {
         # ⛔ And we do NOT search in `rcp.c`: `rcp.c` is identical in the two servers and does not
         #    know a process exists.  The path lives in `main.c`,
         #    `trasporto.c` (`trasporto_congeda_tutte`) and `webtransport.c`
-        #    (`wt_congeda`).  A denominator is read where the thing happens.
+        #    (`wt_dismiss`).  A denominator is read where the thing happens.
         "sorgenti_spegnimento": ("remotix/rcp.c", "remotix/main.c",
                                  "remotix/trasporto.c", "remotix/webtransport.c"),
         # ⛔ `#define IDLE_MS 30000` in `src/trasporto.c`, and no option
@@ -126,7 +126,7 @@ PROFILO = {
         "ban_illeggibile_parte": False,
         "impronta": r"^\d\d:\d\d:\d\d\.\d\d\d (avvio|quic|wt|rcp|pagina|cert) ",
         "controllo": "REMOTIX — phase 1, the bare wire",
-        # ⛔ NO ECHO.  `src/webtransport.c`, `scarta_stream_di_troppo()`:
+        # ⛔ NO ECHO.  `src/webtransport.c`, `discard_extra_stream()`:
         #    "the bytes of a stream too many are thrown away, and NOT sent
         #    back".  ⚠ None of the four benches must **wait** for bytes
         #    coming back on a stream it opened itself: whoever did would stay
@@ -233,7 +233,7 @@ class Registro:
         self.guasto = None
         self.profilo = profilo(bersaglio)
 
-    def apri_giro(self, banco, scena, impronta_vista=None, extra=None):
+    def open_round(self, banco, scena, impronta_vista=None, extra=None):
         """⛔ The first line of every round, and it carries the fingerprint SEEN.
 
         `impronta_vista` is what the SERVER's log says it is; if

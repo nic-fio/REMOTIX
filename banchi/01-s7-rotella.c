@@ -56,8 +56,8 @@
 #include <string.h>
 #include <unistd.h>
 
-#define NOME_RD "org.gnome.Mutter.RemoteDesktop"
-#define PERCORSO_RD "/org/gnome/Mutter/RemoteDesktop"
+#define RD_NAME "org.gnome.Mutter.RemoteDesktop"
+#define RD_PATH "/org/gnome/Mutter/RemoteDesktop"
 #define IFACE_RD "org.gnome.Mutter.RemoteDesktop"
 #define IFACE_RD_SESSIONE "org.gnome.Mutter.RemoteDesktop.Session"
 #define ATTESA_MS 5000
@@ -79,7 +79,7 @@ static void dilo(const char *forma, ...)
  * ------------------------------------------------------------------------ */
 static struct ei *contesto;
 static struct ei_device *puntatore;     /* the one that has scrolling */
-static bool puntatore_pronto;
+static bool pointer_ready;
 static uint32_t sequenza;
 static bool regione_nota;
 static double reg_x, reg_y, reg_l, reg_a;
@@ -92,7 +92,7 @@ static bool assoluto;                   /* the region is there: one goes to the 
  *    quoted in `fondamenta/remotix-c/src/sessione.h`, and here it would produce an
  *    injector that dies by itself halfway through the measurement without anything saying so.
  */
-static GDBusConnection *apri_bus(GError **sbaglio)
+static GDBusConnection *open_bus(GError **sbaglio)
 {
 	g_autofree char *indirizzo = g_dbus_address_get_for_bus_sync(G_BUS_TYPE_SESSION, NULL, sbaglio);
 
@@ -110,7 +110,7 @@ static GDBusConnection *apri_bus(GError **sbaglio)
  *   CreateSession → ConnectToEIS → Start.  `ConnectToEIS` is asked on the
  *   session NOT yet started.
  * ------------------------------------------------------------------------ */
-static int apri_eis(GDBusConnection *bus, GError **sbaglio)
+static int open_eis(GDBusConnection *bus, GError **sbaglio)
 {
 	g_autofree char *sessione = NULL;
 	g_autoptr(GUnixFDList) descrittori = NULL;
@@ -121,7 +121,7 @@ static int apri_eis(GDBusConnection *bus, GError **sbaglio)
 
 	{
 		g_autoptr(GVariant) r =
-		    g_dbus_connection_call_sync(bus, NOME_RD, PERCORSO_RD, IFACE_RD, "CreateSession", NULL,
+		    g_dbus_connection_call_sync(bus, RD_NAME, RD_PATH, IFACE_RD, "CreateSession", NULL,
 		                                G_VARIANT_TYPE("(o)"), G_DBUS_CALL_FLAGS_NONE, ATTESA_MS,
 		                                NULL, sbaglio);
 		if (!r)
@@ -136,7 +136,7 @@ static int apri_eis(GDBusConnection *bus, GError **sbaglio)
 
 	g_variant_builder_init(&vuote, G_VARIANT_TYPE("a{sv}"));
 	risposta = g_dbus_connection_call_with_unix_fd_list_sync(
-	    bus, NOME_RD, sessione, IFACE_RD_SESSIONE, "ConnectToEIS", g_variant_new("(a{sv})", &vuote),
+	    bus, RD_NAME, sessione, IFACE_RD_SESSIONE, "ConnectToEIS", g_variant_new("(a{sv})", &vuote),
 	    G_VARIANT_TYPE("(h)"), G_DBUS_CALL_FLAGS_NONE, ATTESA_MS, NULL, &descrittori, NULL, sbaglio);
 	if (!risposta)
 	{
@@ -150,7 +150,7 @@ static int apri_eis(GDBusConnection *bus, GError **sbaglio)
 
 	{
 		g_autoptr(GVariant) r =
-		    g_dbus_connection_call_sync(bus, NOME_RD, sessione, IFACE_RD_SESSIONE, "Start", NULL,
+		    g_dbus_connection_call_sync(bus, RD_NAME, sessione, IFACE_RD_SESSIONE, "Start", NULL,
 		                                NULL, G_DBUS_CALL_FLAGS_NONE, ATTESA_MS, NULL, sbaglio);
 		if (!r)
 		{
@@ -169,7 +169,7 @@ static int apri_eis(GDBusConnection *bus, GError **sbaglio)
  * ⛔ It is always PRINTED, even when it is not there.  «No region» and «region
  *    0x0» have two different cures, and a mute injector confuses them.
  * ------------------------------------------------------------------------ */
-static void leggi_regione(struct ei_device *dispositivo)
+static void read_region(struct ei_device *dispositivo)
 {
 	regione_nota = false;
 	for (size_t i = 0;; i++)
@@ -200,9 +200,9 @@ static void leggi_regione(struct ei_device *dispositivo)
 		     "position is not guaranteed");
 }
 
-static void al_centro(void)
+static void to_center(void)
 {
-	if (!puntatore_pronto)
+	if (!pointer_ready)
 	{
 		dilo("ERROR: no pointing device ready");
 		return;
@@ -230,7 +230,7 @@ static void al_centro(void)
  * The libei events.  Names and order are those already tested in
  * `fondamenta/remotix-c/src/input.c`, which runs on this same Mutter.
  * ------------------------------------------------------------------------ */
-static void tratta_evento(struct ei_event *evento)
+static void handle_event(struct ei_event *evento)
 {
 	enum ei_event_type tipo = ei_event_get_type(evento);
 	struct ei_device *dispositivo = ei_event_get_device(evento);
@@ -280,19 +280,19 @@ static void tratta_evento(struct ei_event *evento)
 				{
 					dilo("switching device: the previous one did not have absolute mode");
 					ei_device_unref(puntatore);
-					puntatore_pronto = false;
+					pointer_ready = false;
 				}
 				puntatore = ei_device_ref(dispositivo);
 				assoluto = ei_device_has_capability(dispositivo, EI_DEVICE_CAP_POINTER_ABSOLUTE);
-				leggi_regione(dispositivo);
+				read_region(dispositivo);
 			}
 			break;
 		case EI_EVENT_DEVICE_RESUMED:
 			ei_device_start_emulating(dispositivo, ++sequenza);
 			if (dispositivo == puntatore)
 			{
-				leggi_regione(dispositivo);
-				puntatore_pronto = true;
+				read_region(dispositivo);
+				pointer_ready = true;
 				/* ⛔ Two different words for two different situations: whoever launches
 				 *    the bench must be able to wait for the good one instead of
 				 *    starting with the first that arrives. */
@@ -302,14 +302,14 @@ static void tratta_evento(struct ei_event *evento)
 		case EI_EVENT_DEVICE_PAUSED:
 			if (dispositivo == puntatore)
 			{
-				puntatore_pronto = false;
+				pointer_ready = false;
 				dilo("the device was SUSPENDED by the compositor");
 			}
 			break;
 		case EI_EVENT_DEVICE_REMOVED:
 			if (dispositivo == puntatore)
 			{
-				puntatore_pronto = false;
+				pointer_ready = false;
 				dilo("the device was REMOVED by the compositor");
 			}
 			break;
@@ -321,14 +321,14 @@ static void tratta_evento(struct ei_event *evento)
 	}
 }
 
-static void dispatcia(void)
+static void dispatch_all(void)
 {
 	struct ei_event *evento;
 
 	ei_dispatch(contesto);
 	while ((evento = ei_get_event(contesto)) != NULL)
 	{
-		tratta_evento(evento);
+		handle_event(evento);
 		ei_event_unref(evento);
 	}
 }
@@ -348,18 +348,18 @@ static void comando(char *riga)
 	}
 	if (g_str_equal(riga, "centro"))
 	{
-		al_centro();
+		to_center();
 		return;
 	}
 	if (g_str_equal(riga, "stato"))
 	{
 		dilo("device ready=%d  absolute=%d  region=%d (%.0f,%.0f %.0fx%.0f)",
-		     puntatore_pronto, assoluto, regione_nota, reg_x, reg_y, reg_l, reg_a);
+		     pointer_ready, assoluto, regione_nota, reg_x, reg_y, reg_l, reg_a);
 		return;
 	}
 	if (sscanf(riga, "scatto %d %d", &dx, &dy) == 2)
 	{
-		if (!puntatore_pronto)
+		if (!pointer_ready)
 		{
 			dilo("ERROR: no device ready, the click was NOT sent");
 			return;
@@ -373,7 +373,7 @@ static void comando(char *riga)
 	 * the pointer move, the road from the injector to the page is open. */
 	if (sscanf(riga, "muovi %d %d", &dx, &dy) == 2)
 	{
-		if (!puntatore_pronto)
+		if (!pointer_ready)
 		{
 			dilo("ERROR: no device ready");
 			return;
@@ -388,7 +388,7 @@ static void comando(char *riga)
 	}
 	if (sscanf(riga, "bottone %d %d", &dx, &dy) == 2)
 	{
-		if (!puntatore_pronto)
+		if (!pointer_ready)
 		{
 			dilo("ERROR: no device ready");
 			return;
@@ -400,7 +400,7 @@ static void comando(char *riga)
 	}
 	if (sscanf(riga, "liscio %d %d", &dx, &dy) == 2)
 	{
-		if (!puntatore_pronto)
+		if (!pointer_ready)
 		{
 			dilo("ERROR: no device ready, the smooth scroll was NOT sent");
 			return;
@@ -423,13 +423,13 @@ int main(void)
 
 	setvbuf(stdout, NULL, _IOLBF, 0);
 
-	bus = apri_bus(&sbaglio);
+	bus = open_bus(&sbaglio);
 	if (!bus)
 	{
 		dilo("ERROR: session bus not reachable: %s", sbaglio->message);
 		return 2;
 	}
-	fd_eis = apri_eis(bus, &sbaglio);
+	fd_eis = open_eis(bus, &sbaglio);
 	if (fd_eis < 0)
 	{
 		dilo("ERROR: %s", sbaglio->message);
@@ -449,13 +449,13 @@ int main(void)
 	sorveglianza[1].fd = STDIN_FILENO;
 	sorveglianza[1].events = POLLIN;
 
-	dispatcia();
+	dispatch_all();
 	for (;;)
 	{
 		if (poll(sorveglianza, 2, 1000) < 0)
 			break;
 		if (sorveglianza[0].revents & POLLIN)
-			dispatcia();
+			dispatch_all();
 		if (sorveglianza[1].revents & POLLIN)
 		{
 			if (!fgets(riga, sizeof riga, stdin))
@@ -464,7 +464,7 @@ int main(void)
 				break;
 			}
 			comando(riga);
-			dispatcia();
+			dispatch_all();
 		}
 		if (sorveglianza[1].revents & POLLHUP)
 			break;

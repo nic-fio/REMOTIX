@@ -45,7 +45,7 @@ func main() {
 		codice, err = tuiCmd(arg)
 	// hidden: used by the release command and by the packages' scripts
 	case "catalog":
-		err = mostraCatalogo(arg)
+		err = showCatalog(arg)
 	case "post-upgrade":
 		codice, err = aggiornato(arg)
 	case "version", "--version":
@@ -80,8 +80,8 @@ func (c *comuni) aggiungi(fs *flag.FlagSet) {
 }
 
 // fonti: where the catalogue comes from (phase 0 TRUST): the engine's, or the one given by hand.
-func (c *comuni) fonti() *motore.FontiFiducia {
-	return &motore.FontiFiducia{Incorporato: catalogo.Incorporato, Esplicito: c.catalogo}
+func (c *comuni) fonti() *motore.TrustSources {
+	return &motore.TrustSources{Incorporato: catalogo.Incorporato, Esplicito: c.catalogo}
 }
 
 func (c *comuni) fidati() (*motore.Catalogo, *motore.Fiducia, error) {
@@ -91,7 +91,7 @@ func (c *comuni) fidati() (*motore.Catalogo, *motore.Fiducia, error) {
 // motore: the engine on the real machine, with the events printed for whoever is watching.
 // Before an operation is open (the plan's simulation) the engine's waits are printed too.
 func (c *comuni) motore() *motore.Motore {
-	m := &motore.Motore{Amb: motore.AmbienteVero(), Cartella: c.operazioni, Fonti: c.fonti(),
+	m := &motore.Motore{Amb: motore.RealEnvironment(), Cartella: c.operazioni, Fonti: c.fonti(),
 		Porta: c.porta, Ev: &motore.Eventi{W: os.Stdout}}
 	m.Amb.Avvisa = func(x motore.Messaggio) { m.Ev.Messaggio("", x) }
 	return m
@@ -124,7 +124,7 @@ func chi() string {
 	return fmt.Sprintf("uid %d", os.Getuid())
 }
 
-func stampaJSON(v any) {
+func printJSON(v any) {
 	b, _ := json.MarshalIndent(v, "", "  ")
 	fmt.Println(string(b))
 }
@@ -155,35 +155,35 @@ func verifica(arg []string) (int, error) {
 	cat, fid, errF := c.fidati() // check writes nothing (R1)
 	if errF != nil {
 		if *comeJSON {
-			stampaJSON(map[string]any{"format": motore.Formato, "trust": fid})
+			printJSON(map[string]any{"format": motore.Formato, "trust": fid})
 		} else if fid != nil {
-			stampaFiducia(fid)
+			printTrust(fid)
 		}
 		return 1, errF
 	}
-	amb := motore.AmbienteVero()
-	prof := motore.Preflight(amb, motore.OpzioniPreflight{Porta: c.porta, Pacchetti: cat.Componenti()})
+	amb := motore.RealEnvironment()
+	prof := motore.Preflight(amb, motore.PreflightOptions{Porta: c.porta, Pacchetti: cat.Componenti()})
 	rap := motore.Valuta(cat, prof)
 	if *comeJSON {
-		stampaJSON(map[string]any{"format": motore.Formato, "trust": fid, "profile": prof, "compatibility": rap})
+		printJSON(map[string]any{"format": motore.Formato, "trust": fid, "profile": prof, "compatibility": rap})
 	} else {
-		stampaRapporto(fid, prof, rap)
+		printReport(fid, prof, rap)
 	}
 	if len(rap.Mancano) > 0 {
 		return 1, nil
 	}
 	for _, e := range rap.Desktop {
-		if e.Livello != motore.NON_SUPPORTATA && e.Installato != "absent" && e.Installato != "unknown" && e.Installato != "" {
+		if e.Lvl != motore.NON_SUPPORTATA && e.Installato != "absent" && e.Installato != "unknown" && e.Installato != "" {
 			return 0, nil
 		}
 	}
 	return 1, nil
 }
 
-func stampaRapporto(fid *motore.Fiducia, p *motore.Profilo, r *motore.Rapporto) {
+func printReport(fid *motore.Fiducia, p *motore.ProfileV, r *motore.Rapporto) {
 	fmt.Printf("%s\n\n", T("cli.titolo"))
-	fmt.Printf("%s: %s — %s\n", T("cli.distribuzione"), r.Piattaforma, r.Riconosciuta)
-	fmt.Printf("%s\n\n", T("cli.fiducia", fid.Catalogo.Versione, fid.Sequenza, fid.Fonte))
+	fmt.Printf("%s: %s — %s\n", T("cli.distribuzione"), r.PlatformV, r.Recognized)
+	fmt.Printf("%s\n\n", T("cli.fiducia", fid.Catalogo.Ver, fid.Sequenza, fid.Fonte))
 	fmt.Printf("%s\n", T("cli.desktop"))
 	for _, e := range r.Desktop {
 		inst := e.Installato
@@ -195,7 +195,7 @@ func stampaRapporto(fid *motore.Fiducia, p *motore.Profilo, r *motore.Rapporto) 
 		default:
 			inst = T("cli.installato", inst)
 		}
-		fmt.Printf("  %-11s %-28s %s\n", e.Nome, inst, e.Livello)
+		fmt.Printf("  %-11s %-28s %s\n", e.Nome, inst, e.Lvl)
 		for _, m := range e.Motivi {
 			fmt.Printf("      %s: [%s] %s %s\n", T("cli.perche"), m.Codice, m.Testo, m.Dettaglio)
 		}
@@ -206,15 +206,15 @@ func stampaRapporto(fid *motore.Fiducia, p *motore.Profilo, r *motore.Rapporto) 
 			fmt.Printf("      %s: %s\n", T("cli.nota"), n)
 		}
 	}
-	stampaMancano(r.Mancano)
-	if len(r.Incognite) > 0 {
+	printMissing(r.Mancano)
+	if len(r.Unknowns) > 0 {
 		fmt.Printf("\n%s\n", T("cli.incognite"))
-		for _, x := range r.Incognite {
+		for _, x := range r.Unknowns {
 			fmt.Printf("  - %s\n", x)
 		}
 	}
 	fmt.Printf("\n%s\n", T("cli.avvisi"))
-	msgs := append(append([]motore.Messaggio{}, fid.Messaggi...), p.Messaggi...)
+	msgs := append(append([]motore.Messaggio{}, fid.Messages...), p.Messages...)
 	sort.SliceStable(msgs, func(i, j int) bool { return peso(msgs[i].Gravita) > peso(msgs[j].Gravita) })
 	for _, m := range msgs {
 		fmt.Printf("  [%s] %-9s %s", m.Codice, m.Gravita, m.Testo)
@@ -222,17 +222,17 @@ func stampaRapporto(fid *motore.Fiducia, p *motore.Profilo, r *motore.Rapporto) 
 			fmt.Printf(" (%s)", m.Dettaglio)
 		}
 		fmt.Println()
-		if m.Rimedio != "" {
-			fmt.Printf("                  %s: %s\n", T("ev.rimedio"), m.Rimedio)
+		if m.Remediation != "" {
+			fmt.Printf("                  %s: %s\n", T("ev.rimedio"), m.Remediation)
 		}
 	}
 	fmt.Printf("\n%s\n", T("cli.fatti"))
 	for _, f := range p.Fatti {
-		v := f.Valore
+		v := f.Val
 		if f.Stato == motore.SCONOSCIUTO {
 			v = "?"
 		}
-		fmt.Printf("  %-34s %-40s %-11s %s\n", f.Chiave, tronca(v, 40), f.Stato, tronca(strings.TrimSpace(f.Fonte+" "+f.Nota), 70))
+		fmt.Printf("  %-34s %-40s %-11s %s\n", f.KeyId, truncate(v, 40), f.Stato, truncate(strings.TrimSpace(f.Fonte+" "+f.Nota), 70))
 	}
 	for _, n := range r.Note {
 		fmt.Printf("\n%s: %s", T("cli.nota"), n)
@@ -240,8 +240,8 @@ func stampaRapporto(fid *motore.Fiducia, p *motore.Profilo, r *motore.Rapporto) 
 	fmt.Println()
 }
 
-// stampaMancano: what is missing, and what the administrator must provide (DECISIONI §10.36).
-func stampaMancano(m []motore.Messaggio) {
+// printMissing: what is missing, and what the administrator must provide (DECISIONI §10.36).
+func printMissing(m []motore.Messaggio) {
 	if len(m) == 0 {
 		return
 	}
@@ -265,7 +265,7 @@ func peso(g motore.Gravita) int {
 	return 0
 }
 
-func tronca(s string, n int) string {
+func truncate(s string, n int) string {
 	r := []rune(s)
 	if len(r) <= n {
 		return s
@@ -278,14 +278,14 @@ func tronca(s string, n int) string {
 // uninstallation is carried through. Then the caller starts over, with its plan and its
 // question: no automatic retry.
 func sistemaAperta(m *motore.Motore) error {
-	ap, err := m.Aperta()
+	ap, err := m.IsOpen()
 	if err != nil || ap == nil {
 		return err
 	}
 	var p motore.Piano
 	_ = motore.LeggiJSON(filepath.Join(ap.Cartella, "plan.json"), &p)
 	var op *motore.Operazione
-	if p.Mestiere == "uninstallation" {
+	if p.Duty == "uninstallation" {
 		fmt.Println(T("cli.aperta_disinstalla", ap.ID))
 		op, err = m.Riprendi()
 	} else {
@@ -298,7 +298,7 @@ func sistemaAperta(m *motore.Motore) error {
 	if err != nil {
 		return err
 	}
-	if fin, _ := op.Finita(); !fin {
+	if fin, _ := op.Ended(); !fin {
 		return motore.Errore("RX-STATO-001", op.ID+" is "+string(op.Stato))
 	}
 	return nil
@@ -325,30 +325,30 @@ func installa(arg []string) (int, error) {
 	cat, fid, err := c.fidati()
 	if err != nil {
 		if fid != nil {
-			stampaFiducia(fid)
+			printTrust(fid)
 		}
 		return 1, err
 	}
 	m.Catalogo = cat
-	prof := m.Profilo()
+	prof := m.ProfileV()
 	rap := motore.Valuta(cat, prof)
-	o := motore.OpzioniInstallazione{Pacchetti: c.pacchetti, Porta: c.porta}
+	o := motore.InstallOptions{Pacchetti: c.pacchetti, Porta: c.porta}
 	if *utenti != "" {
 		o.Utenti = strings.Split(*utenti, ",")
 	}
-	if in, err := m.ControllaInstallazione(); err == nil && in != nil {
+	if in, err := m.CheckInstallation(); err == nil && in != nil {
 		o.Aggiornamento = true
 	}
 	p, err := motore.PianoInstallazione(prof, rap, cat, m.Amb, o)
 	if err != nil {
 		return 1, err
 	}
-	mostraPiano(p)
-	if motore.Bloccato(p) {
+	showPlan(p)
+	if motore.Blocked(p) {
 		fmt.Printf("\n%s\n", T("cli.bloccato"))
 		return 1, nil
 	}
-	if motore.NienteDaFare(p) {
+	if motore.NothingToDo(p) {
 		fmt.Printf("\n%s\n", T("cli.gia_installato", motore.VersioneMotore))
 		return 0, nil
 	}
@@ -362,12 +362,12 @@ func installa(arg []string) (int, error) {
 
 // applica: the plan approved now by whoever answered «yes», from the plans folder.
 func applica(m *motore.Motore, p *motore.Piano) (int, error) {
-	dir := filepath.Join(filepath.Dir(m.Cartella), motore.CartellaPiani)
+	dir := filepath.Join(filepath.Dir(m.Cartella), motore.PlansFolder)
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return 1, err
 	}
 	file := filepath.Join(dir, p.ID+".json")
-	if err := motore.ScriviJSON(file, p); err != nil {
+	if err := motore.WriteJSON(file, p); err != nil {
 		return 1, err
 	}
 	op, err := m.Applica(file, true, chi())
@@ -379,7 +379,7 @@ func applica(m *motore.Motore, p *motore.Piano) (int, error) {
 	}
 	switch op.Stato {
 	case motore.CONFERMATA, motore.CONFERMATA_A_CONDIZIONI:
-		if p.Mestiere == "installation" {
+		if p.Duty == "installation" {
 			fmt.Println(T("cli.router", m.Porta))
 		}
 		return 0, nil
@@ -387,8 +387,8 @@ func applica(m *motore.Motore, p *motore.Piano) (int, error) {
 	return 1, nil
 }
 
-func mostraPiano(p *motore.Piano) {
-	fmt.Println(T("cli.piano", p.Mestiere, p.Piattaforma))
+func showPlan(p *motore.Piano) {
+	fmt.Println(T("cli.piano", p.Duty, p.PlatformV))
 	for i, a := range p.Azioni {
 		fmt.Printf("  %d. %s  [%s]\n", i+1, a.Descrizione, a.Reversibilita)
 	}
@@ -399,7 +399,7 @@ func mostraPiano(p *motore.Piano) {
 			if a.Prima != "" {
 				esito += " (" + a.Prima + ")"
 			}
-			fmt.Printf("  %-36s %-28s %-10s %s\n", a.Nome, a.Versione, esito, a.Origine)
+			fmt.Printf("  %-36s %-28s %-10s %s\n", a.Nome, a.Ver, esito, a.Origine)
 		}
 	}
 	for _, x := range p.Dichiarate {
@@ -409,14 +409,14 @@ func mostraPiano(p *motore.Piano) {
 		fmt.Printf("\n%s %s: %s\n", T("cli.condizione"), k.Codice, k.Testo)
 	}
 	var mancano []motore.Messaggio
-	for _, m := range p.NonFatto {
+	for _, m := range p.NotDone {
 		if m.Gravita == motore.BLOCCANTE {
 			mancano = append(mancano, m)
 		} else {
 			fmt.Printf("\n%s\n", T("cli.non_fatto", m.Codice, m.Testo, m.Dettaglio))
 		}
 	}
-	stampaMancano(mancano)
+	printMissing(mancano)
 }
 
 // disinstalla: the uninstallation plan from the log of the confirmed installation, the
@@ -434,7 +434,7 @@ func disinstalla(arg []string) (int, error) {
 		return 1, err
 	}
 	m := c.motore()
-	if ap, err := m.Aperta(); err != nil {
+	if ap, err := m.IsOpen(); err != nil {
 		return 1, err
 	} else if ap != nil {
 		return 0, sistemaAperta(m)
@@ -444,11 +444,11 @@ func disinstalla(arg []string) (int, error) {
 		return 1, err
 	}
 	m.Catalogo = cat
-	p, err := m.PianoDisinstallazione(m.Profilo(), *purge)
+	p, err := m.PianoDisinstallazione(m.ProfileV(), *purge)
 	if err != nil {
 		return 1, err
 	}
-	mostraPiano(p)
+	showPlan(p)
 	fmt.Println()
 	if !chiedi(T("cli.procedo_togli")) {
 		fmt.Println(T("cli.niente_toccato"))
@@ -467,9 +467,9 @@ func stato(arg []string) (int, error) {
 	if _, err := argomenti(fs, arg); err != nil {
 		return 2, err
 	}
-	m := &motore.Motore{Amb: motore.AmbienteVero(), Cartella: c.operazioni, Porta: c.porta}
+	m := &motore.Motore{Amb: motore.RealEnvironment(), Cartella: c.operazioni, Porta: c.porta}
 	if !*comeJSON {
-		ops, err := m.Elenco()
+		ops, err := m.Listing()
 		if err != nil {
 			return 1, err
 		}
@@ -477,7 +477,7 @@ func stato(arg []string) (int, error) {
 			fmt.Println(T("cli.nessuna_op", c.operazioni))
 		}
 		for _, op := range ops {
-			fin, _ := op.Finita()
+			fin, _ := op.Ended()
 			aperta := ""
 			if !fin {
 				aperta = T("cli.aperta")
@@ -485,7 +485,7 @@ func stato(arg []string) (int, error) {
 			fmt.Printf("%s  %-24s%s\n", op.ID, op.Stato, aperta)
 		}
 	}
-	if _, err := m.ControllaInstallazione(); err != nil {
+	if _, err := m.CheckInstallation(); err != nil {
 		if !*comeJSON {
 			fmt.Printf("\n%s\n", T("cli.non_installato_ora"))
 		}
@@ -501,10 +501,10 @@ func stato(arg []string) (int, error) {
 		return 1, err
 	}
 	if *comeJSON {
-		stampaJSON(r)
+		printJSON(r)
 	} else {
 		fmt.Printf("\n%s\n", T("cli.certifica", r.Operazione, r.Esito))
-		for _, k := range r.Controlli {
+		for _, k := range r.Verifications {
 			fmt.Printf("  %-8s %s — %s\n", k.Esito, k.ID, k.Dettaglio)
 		}
 		for _, k := range r.Condizioni {
@@ -528,20 +528,20 @@ func aggiornato(arg []string) (int, error) {
 	if _, err := argomenti(fs, arg); err != nil {
 		return 0, err
 	}
-	amb := motore.AmbienteVero()
+	amb := motore.RealEnvironment()
 	m := &motore.Motore{Amb: amb, Cartella: c.operazioni}
-	in, err := m.ControllaInstallazione()
+	in, err := m.CheckInstallation()
 	if err != nil {
 		// REMOTIX was not installed by the installer: nothing to record (§10.12)
 		fmt.Println(err)
 		return 0, nil
 	}
 	fmt.Println(T("cli.certificata", in.Operazione, in.Stato))
-	if v, err := m.AnnotaVersioni(); err != nil {
+	if v, err := m.AnnotateVersions(); err != nil {
 		fmt.Fprintln(os.Stderr, "remotix-install post-upgrade:", err)
 	} else {
 		var r []string
-		for _, n := range motore.PacchettiRemotix {
+		for _, n := range motore.RemotixPackages {
 			if v[n] != "" {
 				r = append(r, n+" "+v[n])
 			}
@@ -553,9 +553,9 @@ func aggiornato(arg []string) (int, error) {
 		fmt.Fprintln(os.Stderr, "remotix-install post-upgrade:", err)
 		return 0, nil
 	}
-	prof := motore.Preflight(amb, motore.OpzioniPreflight{Porta: c.porta, Pacchetti: cat.Componenti()})
+	prof := motore.Preflight(amb, motore.PreflightOptions{Porta: c.porta, Pacchetti: cat.Componenti()})
 	rap := motore.Valuta(cat, prof)
-	for _, x := range append(rap.Messaggi, rap.Mancano...) {
+	for _, x := range append(rap.Messages, rap.Mancano...) {
 		if x.Gravita == motore.BLOCCANTE {
 			fmt.Println(motore.Msg("RX-INST-002", x.Codice+" "+x.Testo).Testo, x.Codice)
 		}
@@ -563,7 +563,7 @@ func aggiornato(arg []string) (int, error) {
 	return 0, nil
 }
 
-func mostraCatalogo(arg []string) error {
+func showCatalog(arg []string) error {
 	fs := flag.NewFlagSet("catalog", flag.ContinueOnError)
 	var c comuni
 	c.aggiungi(fs)
@@ -579,13 +579,13 @@ func mostraCatalogo(arg []string) error {
 		fmt.Print(motore.TabellaVersioni(cat))
 		return nil
 	}
-	fmt.Print(T("cli.catalogo_info", cat.Versione, cat.Sequenza, cat.Emesso, cat.MotoreMinimo, cat.Digest, cat.Provenienza))
+	fmt.Print(T("cli.catalogo_info", cat.Ver, cat.Sequenza, cat.Emitted, cat.EngineMinimum, cat.Digest, cat.Provenienza))
 	return nil
 }
 
-func stampaFiducia(f *motore.Fiducia) {
-	fmt.Println(T("cli.fiducia", f.Catalogo.Versione, f.Sequenza, f.Fonte))
-	for _, m := range f.Messaggi {
+func printTrust(f *motore.Fiducia) {
+	fmt.Println(T("cli.fiducia", f.Catalogo.Ver, f.Sequenza, f.Fonte))
+	for _, m := range f.Messages {
 		fmt.Printf("  [%s] %s %s", m.Codice, m.Gravita, m.Testo)
 		if m.Dettaglio != "" {
 			fmt.Printf(" (%s)", m.Dettaglio)

@@ -18,15 +18,15 @@ import (
 // The restart that does not close the desktops is done by the remotix package's script (try-restart), not by the
 // engine: a service stopped by the administrator stays stopped.
 
-// FileVersioniAnnotate: the versions recorded after the last change.
-const FileVersioniAnnotate = "recorded-versions.json"
+// AnnotatedVersionsFile: the versions recorded after the last change.
+const AnnotatedVersionsFile = "recorded-versions.json"
 
-// AnnotaVersioni writes the installed versions of REMOTIX's packages (not the missing ones).
-func (m *Motore) AnnotaVersioni() (map[string]string, error) {
+// AnnotateVersions writes the installed versions of REMOTIX's packages (not the missing ones).
+func (m *Motore) AnnotateVersions() (map[string]string, error) {
 	if m.Amb == nil || m.Amb.Pacchetti == nil {
 		return nil, Errore("RX-PACCHETTI-003", "")
 	}
-	v, err := m.Amb.Pacchetti.Versioni(PacchettiRemotix)
+	v, err := m.Amb.Pacchetti.Vers(RemotixPackages)
 	if err != nil {
 		return nil, err
 	}
@@ -36,22 +36,22 @@ func (m *Motore) AnnotaVersioni() (map[string]string, error) {
 			r[n] = x
 		}
 	}
-	return r, ScriviJSON(filepath.Join(filepath.Dir(m.Cartella), FileVersioniAnnotate),
+	return r, WriteJSON(filepath.Join(filepath.Dir(m.Cartella), AnnotatedVersionsFile),
 		map[string]any{"format": Formato, "object": "recorded-versions", "versions": r, "written": ora()})
 }
 
-// versioniAggiornate: those recorded by the last `aggiornato` (empty if none).
-func versioniAggiornate(cartellaOp string) map[string]string {
+// updatedVersions: those recorded by the last `aggiornato` (empty if none).
+func updatedVersions(folderOp string) map[string]string {
 	var x struct {
-		Versioni map[string]string `json:"versions"`
+		Vers map[string]string `json:"versions"`
 	}
-	LeggiJSON(filepath.Join(filepath.Dir(filepath.Dir(cartellaOp)), FileVersioniAnnotate), &x)
-	return x.Versioni
+	LeggiJSON(filepath.Join(filepath.Dir(filepath.Dir(folderOp)), AnnotatedVersionsFile), &x)
+	return x.Vers
 }
 
 // ---------------------------------------------------------------- small helpers
 
-func chiaviOrdinate(m map[string]string) []string {
+func sortedKeys(m map[string]string) []string {
 	r := make([]string, 0, len(m))
 	for k := range m {
 		r = append(r, k)
@@ -69,7 +69,7 @@ func contiene(l []string, x string) bool {
 	return false
 }
 
-func haCodice(m []Messaggio, c string) bool {
+func hasCode(m []Messaggio, c string) bool {
 	for _, x := range m {
 		if x.Codice == c {
 			return true
@@ -78,7 +78,7 @@ func haCodice(m []Messaggio, c string) bool {
 	return false
 }
 
-func jsonCompatto(v any) string {
+func jsonCompact(v any) string {
 	b, _ := json.Marshal(v)
 	return string(b)
 }

@@ -24,30 +24,30 @@ import (
 // what is on disk is read (the VA drivers, the Vulkan drivers). The REAL test — an encoded
 // frame — is done by REMOTIX's binary in 7a, after installation, and it is the one that counts.
 
-// StradaCodifica: a way of having the card encode H.264.
-type StradaCodifica struct {
+// EncodeRoute: a way of having the card encode H.264.
+type EncodeRoute struct {
 	Nome string
 	// Attiva: REMOTIX already uses it. A route that is declared and not active detects, but saves no
 	// machine from refusal
 	Attiva bool
 	// Rileva: in PREFLIGHT, read-only (R1): writes the route's facts into the profile
-	Rileva func(a *Ambiente, p *Profilo, fam string)
+	Rileva func(a *Ambiente, p *ProfileV, fam string)
 	// Schede: the vendors of THIS machine's cards that the route can make encode on this
 	// platform (pl nil: there is no catalogue yet, judged from the profile alone). A card whose
 	// driver comes from a third-party repository counts: the «no» to the repository is stopped by D5 (RX-H264-006).
 	// A card that is there but of unknown vendor counts as «?»: the real test is in 7a
-	Schede func(pl *Piattaforma, p *Profilo) []string
+	Schede func(pl *PlatformV, p *ProfileV) []string
 }
 
 // StradeCodifica: in the order of preference of §10.27.
-var StradeCodifica = []StradaCodifica{
+var StradeCodifica = []EncodeRoute{
 	{Nome: "vulkan", Attiva: true, Rileva: rilevaVulkan, Schede: schedeVulkan},
-	{Nome: "vaapi", Attiva: true, Rileva: h264, Schede: schedeVaapi},
+	{Nome: "vaapi", Attiva: true, Rileva: h264, Schede: vaapiCards},
 }
 
 // codifica: the routes in PREFLIGHT, then the verdict from the profile alone (the catalogue redoes it in Valuta,
 // where it also knows which drivers the distribution can provide).
-func codifica(a *Ambiente, p *Profilo, fam string) {
+func codifica(a *Ambiente, p *ProfileV, fam string) {
 	var attive []string
 	for _, s := range StradeCodifica {
 		s.Rileva(a, p, fam)
@@ -67,13 +67,13 @@ func codifica(a *Ambiente, p *Profilo, fam string) {
 // `intel_icd.x86_64.json` (ANV), `lvp_icd` (llvmpipe: no video), `virtio_icd`… The normalised list
 // (without `_icd` and without the architecture) is written in codifica.vulkan.icd; «nessuno» if there is
 // no file: the loader would see no card, and the route is not here.
-func rilevaVulkan(a *Ambiente, p *Profilo, _ string) {
+func rilevaVulkan(a *Ambiente, p *ProfileV, _ string) {
 	visti := map[string]bool{}
 	var icd []string
 	for _, g := range []string{"/usr/share/vulkan/icd.d/*.json", "/etc/vulkan/icd.d/*.json"} {
 		v, _ := filepath.Glob(a.P(g))
 		for _, x := range v {
-			n := nomeICD(filepath.Base(x))
+			n := icdName(filepath.Base(x))
 			if n != "" && !visti[n] {
 				visti[n] = true
 				icd = append(icd, n)
@@ -86,12 +86,12 @@ func rilevaVulkan(a *Ambiente, p *Profilo, _ string) {
 		valore = "none"
 	}
 	p.Rilevato("encoding.vulkan.icd", valore, "/usr/share/vulkan/icd.d")
-	p.Metti(Fatto{Chiave: "encoding.vulkan", Valore: "active", Stato: RILEVATO, Fonte: "strade.go (phase 19)",
+	p.Place(Fatto{KeyId: "encoding.vulkan", Val: "active", Stato: RILEVATO, Fonte: "strade.go (phase 19)",
 		Nota: "Vulkan Video, tried BEFORE VA-API by the product; the real test is in 7a (remotix --prova-codifica, field «strada»)"})
 }
 
-// nomeICD: «radeon_icd.x86_64.json» → «radeon», «nvidia_icd.json» → «nvidia»; "" if it is not an ICD.
-func nomeICD(file string) string {
+// icdName: «radeon_icd.x86_64.json» → «radeon», «nvidia_icd.json» → «nvidia»; "" if it is not an ICD.
+func icdName(file string) string {
 	n := strings.TrimSuffix(file, ".json")
 	i := strings.Index(n, "_icd")
 	if i < 0 {
@@ -107,14 +107,14 @@ func nomeICD(file string) string {
 // ⚠ That the ICD is there does not mean it encodes: `[?]` the minimum Mesa version with RADV encoding
 // by default is not measured (`[M]` 25.0.7 yes); 7a is what tells.
 // ⭐ With the catalogue (pl), for AMD the platform is needed too: the `radeon` ICD counts only where the official
-// RADV encodes (VulkanCodifica); where Mesa is built without codecs (Fedora, RHEL, openSUSE:
+// RADV encodes (VulkanEncoding); where Mesa is built without codecs (Fedora, RHEL, openSUSE:
 // `all_free`) it is not enough, and the AMD card is judged by the VA-API route. Without the ICD the AMD card does not
 // count: the engine does not install the driver (DECISIONI §10.36), VerdettoScheda says so.
-func schedeVulkan(pl *Piattaforma, p *Profilo) []string {
+func schedeVulkan(pl *PlatformV, p *ProfileV) []string {
 	if p.V("gpu.nodes") == "none" {
 		return nil
 	}
-	forn, noti := fornitoriScheda(p)
+	card_vendors, noti := cardVendors(p)
 	if !noti {
 		return nil
 	}
@@ -124,13 +124,13 @@ func schedeVulkan(pl *Piattaforma, p *Profilo) []string {
 	}
 	var r []string
 	amd := icd["radeon"]
-	if pl != nil && !contiene(pl.H264.VulkanCodifica, "AMD") {
+	if pl != nil && !contiene(pl.H264.VulkanEncoding, "AMD") {
 		amd = false
 	}
-	if forn["AMD"] && amd {
+	if card_vendors["AMD"] && amd {
 		r = append(r, "AMD")
 	}
-	if forn["NVIDIA"] && icd["nvidia"] && p.V("gpu.nvidia_proprietary") == "yes" {
+	if card_vendors["NVIDIA"] && icd["nvidia"] && p.V("gpu.nvidia_proprietary") == "yes" {
 		r = append(r, "NVIDIA")
 	}
 	return r
@@ -139,7 +139,7 @@ func schedeVulkan(pl *Piattaforma, p *Profilo) []string {
 // SchedaSullaStrada: the route `nome` (active) can make a card of vendor `f` encode on
 // this machine. It serves whoever must say whether a card stays OUT (the NVIDIA's condition
 // C-HARDWARE): with Vulkan the proprietary NVIDIA with its ICD is no longer out.
-func SchedaSullaStrada(nome, f string, pl *Piattaforma, p *Profilo) bool {
+func SchedaSullaStrada(nome, f string, pl *PlatformV, p *ProfileV) bool {
 	for _, s := range StradeCodifica {
 		if s.Nome != nome || !s.Attiva {
 			continue
@@ -153,12 +153,12 @@ func SchedaSullaStrada(nome, f string, pl *Piattaforma, p *Profilo) bool {
 	return false
 }
 
-// schedeVaapi: the Intel and AMD cards that encode H.264 via VA-API on this platform.
-func schedeVaapi(pl *Piattaforma, p *Profilo) []string {
+// vaapiCards: the Intel and AMD cards that encode H.264 via VA-API on this platform.
+func vaapiCards(pl *PlatformV, p *ProfileV) []string {
 	if p.V("gpu.nodes") == "none" {
 		return nil
 	}
-	forn, noti := fornitoriScheda(p)
+	card_vendors, noti := cardVendors(p)
 	if !noti {
 		return []string{"?"}
 	}
@@ -166,10 +166,10 @@ func schedeVaapi(pl *Piattaforma, p *Profilo) []string {
 	senza := map[string]bool{"Intel": intel == "without", "AMD": amd == "without"}
 	var r []string
 	for _, f := range []string{"Intel", "AMD"} {
-		if !forn[f] {
+		if !card_vendors[f] {
 			continue
 		}
-		if pl != nil && !pl.H264.codificaPer(f, senza[f]) {
+		if pl != nil && !pl.H264.encodesFor(f, senza[f]) {
 			continue
 		}
 		r = append(r, f)
@@ -180,7 +180,7 @@ func schedeVaapi(pl *Piattaforma, p *Profilo) []string {
 // VerdettoScheda: the card check (phase 19). "" if at least one ACTIVE route has a capable
 // card (or if it is not known: unread nodes are not a refusal); otherwise the BLOCKING code and the
 // detail, from the most precise case to the most general.
-func VerdettoScheda(pl *Piattaforma, p *Profilo) (codice, dettaglio string) {
+func VerdettoScheda(pl *PlatformV, p *ProfileV) (codice, dettaglio string) {
 	nodi := p.V("gpu.nodes")
 	if nodi == "" {
 		return "", ""
@@ -190,9 +190,9 @@ func VerdettoScheda(pl *Piattaforma, p *Profilo) (codice, dettaglio string) {
 			return "", ""
 		}
 	}
-	forn, _ := fornitoriScheda(p)
+	card_vendors, _ := cardVendors(p)
 	var nomi []string
-	for f := range forn {
+	for f := range card_vendors {
 		nomi = append(nomi, f)
 	}
 	sort.Strings(nomi)
@@ -201,20 +201,20 @@ func VerdettoScheda(pl *Piattaforma, p *Profilo) (codice, dettaglio string) {
 		return "RX-GPU-003", ""
 	case p.V("gpu.nvidia_proprietary") == "yes":
 		// the proprietary NVIDIA encodes ONLY in Vulkan: if we are here, its ICD is not there
-		return "RX-GPU-004", strings.Join(nomi, ", ") + "; ICD Vulkan: " + nonVuoto(p.V("encoding.vulkan.icd"), "none")
-	case forn["Intel"] || forn["AMD"]:
+		return "RX-GPU-004", strings.Join(nomi, ", ") + "; ICD Vulkan: " + notEmpty(p.V("encoding.vulkan.icd"), "none")
+	case card_vendors["Intel"] || card_vendors["AMD"]:
 		// there is a card of the VA-API route, but on this platform it does not encode and no driver
 		// of the catalogue completes it (AMD on RHEL and derivatives; a driver without H.264 and nothing to add)
 		// — and it is not in Vulkan (AMD without RADV's ICD, or with the distribution's codec-less
 		// RADV; Intel is not there by default)
 		var d []string
-		if pl != nil && pl.H264.AmdSenzaVaapi && forn["AMD"] {
+		if pl != nil && pl.H264.AmdWithoutVaapi && card_vendors["AMD"] {
 			d = append(d, "AMD on "+pl.Nome+": Mesa built without VA-API")
 		}
 		if f := p.V("h264.driver_family"); f != "" {
 			d = append(d, f)
 		}
-		d = append(d, "ICD Vulkan: "+nonVuoto(p.V("encoding.vulkan.icd"), "none"))
+		d = append(d, "ICD Vulkan: "+notEmpty(p.V("encoding.vulkan.icd"), "none"))
 		return "RX-GPU-006", strings.Join(d, "; ")
 	}
 	return "RX-GPU-005", strings.Join(nomi, ", ")

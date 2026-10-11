@@ -128,7 +128,7 @@ MARIONETTE = _carica("marionette", "07-b46-marionette.py")
 CDPMOD = _carica("cdp", "02-pagina-misura-cdp.py")
 
 VERDE, ROSSO, CIECO = 0, 1, 3
-NOMI_PUNTI = {
+POINT_NAMES = {
     "a": "the page opens and the form is there",
     "b": "admitted with user and password",
     "c": "first frame, non-degenerate pixels",
@@ -137,7 +137,7 @@ NOMI_PUNTI = {
     "f": "JavaScript and network errors",
     "g": "reconnection: reload, log in again, first frame",
 }
-TIPI_INPUT = {0x0101: "PUNTATORE", 0x0102: "PULSANTE", 0x0103: "ROTELLA",
+INPUT_TYPES = {0x0101: "PUNTATORE", 0x0102: "PULSANTE", 0x0103: "ROTELLA",
               0x0104: "LETTERA", 0x0105: "POSIZIONE_TASTO"}
 
 
@@ -181,7 +181,7 @@ def giudica_pixel(png):
     return (quota >= 0.97 or dev < 3.0), desc
 
 
-def certifica_giudice():
+def certify_judge():
     """The pixel judge must be able to say "degenerate"."""
     try:
         from PIL import Image
@@ -205,7 +205,7 @@ def certifica_giudice():
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE JAVASCRIPT PIECES — function bodies, with `return`
 # ═══════════════════════════════════════════════════════════════════════════
-JS_MODULO = r"""
+JS_MODULE = r"""
 const m = document.getElementById('modulo');
 const vis = (e) => !!e && getComputedStyle(e).display !== 'none'
                    && getComputedStyle(e).visibility !== 'hidden'
@@ -225,7 +225,7 @@ return { url: location.href, titolo: document.title,
 # ⚠ The value is put in the field and `requestSubmit()` is asked of the form: it is
 #   the same `submit` handler that starts the page when the user
 #   presses "Connect" (pagina.html ~8445).  Nothing is typed at coordinates.
-JS_ENTRA = r"""
+JS_ENTER = r"""
 const u = document.getElementById('utente'), p = document.getElementById('parola');
 const m = document.getElementById('modulo');
 if (!u || !p || !m) return 'the form is missing';
@@ -296,7 +296,7 @@ RACCOGLITORE = r"""
 #   by type what the page SENT, with the `id` taken from the first 4 bytes
 #   of the body (§7.3, big-endian).  ⚠ It changes nothing of what the page
 #   sends: it calls the real `manda` with the same arguments.
-JS_ANELLO = r"""
+JS_LINK = r"""
 (function () {
   const c = window.REMOTIX_INPUT;
   if (!c || typeof c.manda !== 'function' || c.__banco) return;
@@ -317,7 +317,7 @@ JS_ANELLO = r"""
 
 # ⭐ Which `id`s came back in a frame: the sent ones that
 #   `GIRO.quando` no longer has (`torna()` deletes them, line ~2211).
-JS_TORNATI = r"""
+JS_RETURNED = r"""
 const B = window.__BANCO_IN__, R = window.REMOTIX;
 if (!B || !R || !R.giro) return null;
 let max_tornato = 0;
@@ -330,7 +330,7 @@ return { max_tornato: max_tornato, ids: per_tipo, tipi: B.tipi, visti: R.giro.vi
 """
 
 
-def _inietta(corpo):
+def _inject(corpo):
     """A body to run in the REAL page, not in the driver's sandbox:
     in Firefox a function born in Marionette's sandbox and called by the
     page goes through the "xrays" and may not work.  ⇒ `<script>` in the DOM."""
@@ -400,8 +400,8 @@ class GuidaCdp:
             return "? (%s)" % e
 
     def js(self, corpo, *arg):
-        espr = "(function(){%s}).apply(null, %s)" % (corpo, json.dumps(list(arg)))
-        r = self.cdp.chiama("Runtime.evaluate", expression=espr,
+        expr = "(function(){%s}).apply(null, %s)" % (corpo, json.dumps(list(arg)))
+        r = self.cdp.chiama("Runtime.evaluate", expression=expr,
                             returnByValue=True, awaitPromise=True)
         if "exceptionDetails" in r:
             raise RuntimeError("exception in the bench: %s"
@@ -478,7 +478,7 @@ class GuidaCdp:
         self.cdp.chiama("Input.dispatchTouchEvent", type="touchEnd", touchPoints=[])
 
     def tasto(self, t):
-        k = TASTI[t]
+        k = KEY_LIST[t]
         mod = 2 if t == "Control" else 0
         self.cdp.chiama("Input.dispatchKeyEvent", type="rawKeyDown", key=k["key"],
                         code=k["code"], windowsVirtualKeyCode=k["vk"], modifiers=mod)
@@ -486,7 +486,7 @@ class GuidaCdp:
         self.cdp.chiama("Input.dispatchKeyEvent", type="keyUp", key=k["key"],
                         code=k["code"], windowsVirtualKeyCode=k["vk"])
 
-    def errori_fuori(self):
+    def errors_out(self):
         """The errors seen by the PROTOCOL, independent of the page."""
         try:
             self.cdp.chiama("Runtime.evaluate", expression="1")   # drains the queue
@@ -521,11 +521,11 @@ class GuidaCdp:
                 rete.append("network: %s (%s)" % (p.get("errorText"), p.get("type")))
         return js, rete, ""
 
-    def azzera_eventi(self):
+    def reset_events(self):
         self.cdp.eventi = []
 
 
-TASTI = {
+KEY_LIST = {
     "Control": {"key": "Control", "code": "ControlLeft", "vk": 17, "wd": ""},
     "ArrowRight": {"key": "ArrowRight", "code": "ArrowRight", "vk": 39, "wd": ""},
 }
@@ -594,7 +594,7 @@ class GuidaAndroid(GuidaCdp):
 
     def __init__(self, porta, lascia_acceso):
         super().__init__(porta, "android")
-        self.acceso_da_me = False
+        self.turned_on_by_me = False
         self.lascia = lascia_acceso
         if "\tdevice" not in adb("devices"):
             print("   ⏳ starting the emulator «%s»…" % AVD, flush=True)
@@ -602,7 +602,7 @@ class GuidaAndroid(GuidaCdp):
                               "-no-boot-anim", "-gpu", "swiftshader_indirect",
                               "-no-snapshot", "-accel", "on", "-memory", "3072"],
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            self.acceso_da_me = True
+            self.turned_on_by_me = True
             t0 = time.time()
             while time.time() - t0 < 300:
                 if adb("shell", "getprop", "sys.boot_completed").strip() == "1":
@@ -652,7 +652,7 @@ class GuidaAndroid(GuidaCdp):
             pass
         adb("shell", "am", "force-stop", CHROME_ANDROID)
         adb("forward", "--remove", "tcp:%d" % self.porta)
-        if self.acceso_da_me and not self.lascia:
+        if self.turned_on_by_me and not self.lascia:
             print("   ⏹ stopping the emulator (I had started it)", flush=True)
             adb("emu", "kill")
             t0 = time.time()
@@ -696,7 +696,7 @@ class GuidaFirefox:
             return False, str(e)[:300]
         time.sleep(1)
         try:
-            self.js(_inietta(RACCOGLITORE))
+            self.js(_inject(RACCOGLITORE))
         except Exception:                        # noqa: BLE001
             pass
         return True, ""
@@ -705,7 +705,7 @@ class GuidaFirefox:
         self.m.chiama("WebDriver:Refresh")
         time.sleep(1)
         try:
-            self.js(_inietta(RACCOGLITORE))
+            self.js(_inject(RACCOGLITORE))
         except Exception:                        # noqa: BLE001
             pass
 
@@ -718,18 +718,18 @@ class GuidaFirefox:
                           {"id": list(el.values())[0], "full": False})
         return base64.b64decode(r["value"]), ""
 
-    def _azioni(self, azioni):
+    def _actions(self, azioni):
         self.m.chiama("WebDriver:PerformActions", {"actions": azioni})
         self.m.chiama("WebDriver:ReleaseActions")
 
     def muovi(self, x, y):
-        self._azioni([{"type": "pointer", "id": "topo",
+        self._actions([{"type": "pointer", "id": "topo",
                        "parameters": {"pointerType": "mouse"},
                        "actions": [{"type": "pointerMove", "x": int(x), "y": int(y),
                                     "origin": "viewport", "duration": 0}]}])
 
     def clic(self, x, y):
-        self._azioni([{"type": "pointer", "id": "topo",
+        self._actions([{"type": "pointer", "id": "topo",
                        "parameters": {"pointerType": "mouse"},
                        "actions": [{"type": "pointerMove", "x": int(x), "y": int(y),
                                     "origin": "viewport", "duration": 0},
@@ -738,13 +738,13 @@ class GuidaFirefox:
                                    {"type": "pointerUp", "button": 0}]}])
 
     def tasto(self, t):
-        w = TASTI[t]["wd"]
-        self._azioni([{"type": "key", "id": "tastiera",
+        w = KEY_LIST[t]["wd"]
+        self._actions([{"type": "key", "id": "tastiera",
                        "actions": [{"type": "keyDown", "value": w},
                                    {"type": "pause", "duration": 80},
                                    {"type": "keyUp", "value": w}]}])
 
-    def errori_fuori(self):
+    def errors_out(self):
         """⚠ From Firefox the errors "from outside" are read in its output
         (`devtools.console.stdout.content`, turned on by `07-b46`)."""
         try:
@@ -767,7 +767,7 @@ class GuidaFirefox:
                 rete.append(r[:300])
         return js, rete, ""
 
-    def azzera_eventi(self):
+    def reset_events(self):
         try:
             self.log_da = os.path.getsize(self.log)
         except OSError:
@@ -807,7 +807,7 @@ def leggi_registro(cmd):
     return r.stdout.splitlines(), ""
 
 
-def righe_nuove(prima, dopo):
+def new_lines(prima, dopo):
     """The lines of `dopo` that were not in `prima` — counting duplicates."""
     visto = {}
     for r in prima:
@@ -834,10 +834,10 @@ class Prova:
     def metti(self, punto, esito, motivo):
         self.esiti[punto] = (esito, motivo)
         segno = {VERDE: "⭐ 0", ROSSO: "⛔ 1", CIECO: "⚠ 3"}[esito]
-        print("   %s  %-3s %-48s %s" % (punto, segno, NOMI_PUNTI[punto], motivo),
+        print("   %s  %-3s %-48s %s" % (punto, segno, POINT_NAMES[punto], motivo),
               flush=True)
 
-    def cieco_da(self, da, perche):
+    def blind_from(self, da, perche):
         for p in da:
             if p not in self.esiti:
                 self.metti(p, CIECO, "I could not look: " + perche)
@@ -856,7 +856,7 @@ class Prova:
         m = None
         while time.time() < fine:
             try:
-                m = self.g.js(JS_MODULO)
+                m = self.g.js(JS_MODULE)
             except Exception as e:               # noqa: BLE001
                 m = {"errore": str(e)[:200]}
             if m and m.get("modulo") and m.get("pronta") == "complete":
@@ -879,7 +879,7 @@ class Prova:
 
     def entra(self, parola):
         """Returns (outcome, reason, state)."""
-        r = self.g.js(JS_ENTRA, self.o.utente, parola)
+        r = self.g.js(JS_ENTER, self.o.utente, parola)
         if r != "sent":
             return ROSSO, "I could not fill in the form: %s" % r, None
         fine = time.time() + self.o.tetto_s
@@ -890,17 +890,17 @@ class Prova:
                     and (s.get("esito") or "").startswith("Admitted"):
                 return VERDE, "«%s»" % s["esito"], s
             if s.get("esito_classe") == "male" and s.get("esito"):
-                self.rifiuto = self._rifiuto(s)
+                self.rifiuto = self._refusal(s)
                 return ROSSO, "the page says: «%s»" % s["esito"], s
             time.sleep(0.4)
         coda = [x for x in (s.get("registro") or "").splitlines() if x.strip()][-3:]
-        self.rifiuto = self._rifiuto(s)
+        self.rifiuto = self._refusal(s)
         return ROSSO, ("no admission in %d s (outcome «%s», session=%s); last "
                        "lines of the page: %s" % (self.o.tetto_s, s.get("esito"),
                                                   s.get("sessione"), " | ".join(coda)[:300])), s
 
     @staticmethod
-    def _rifiuto(s):
+    def _refusal(s):
         """⛔ A real REFUSAL: the page sent the credentials (line
         "CREDENZIALI sent", pagina.html ~4955) and "AMMESSO" did not arrive
         (line ~4980).  A missed connection is not a refusal."""
@@ -932,7 +932,7 @@ class Prova:
         #    how many degenerate photographs preceded it.  ⛔ A canvas that stays
         #    black up to the ceiling is still ROSSO (the certification proves it).
         degeneri = 0
-        prima_desc = ""
+        first_desc = ""
         while True:
             time.sleep(1.0)        # the glass: the photograph after at least one frame
             try:
@@ -952,7 +952,7 @@ class Prova:
             if not degenere:
                 break
             degeneri += 1
-            prima_desc = prima_desc or desc
+            first_desc = first_desc or desc
             if time.time() >= fine:
                 return ROSSO, ("dipinti=%d but the canvas is DEGENERATE up to the ceiling of %d s "
                                "(%d photographs): %s" % (s["dipinti"], self.o.tetto_s,
@@ -962,7 +962,7 @@ class Prova:
         if degeneri:
             return VERDE, ("dipinti=%d · first frame at %.1f s, desktop NOT degenerate at "
                            "%.1f s after %d degenerate photographs (the first: %s) · %s"
-                           % (s.get("dipinti") or 0, dopo, visto, degeneri, prima_desc,
+                           % (s.get("dipinti") or 0, dopo, visto, degeneri, first_desc,
                               desc)), s
         return VERDE, "dipinti=%d after %.1f s · %s" % (s["dipinti"], dopo, desc), s
 
@@ -1019,9 +1019,9 @@ class Prova:
                                  "does not react to the passage, redo it with a live scene"
         return ROSSO, base
 
-    def ingresso(self, prima_reg):
+    def ingresso(self, before_log):
         """Key + move/click (tap on Android).  Returns (outcome, reason)."""
-        a = self.g.js(_inietta(JS_ANELLO))
+        a = self.g.js(_inject(JS_LINK))
         chk = self.g.js("const c=window.REMOTIX_INPUT; return c ? !!c.__banco : null;")
         if chk is None:
             return ROSSO, "the page has no input seam (`REMOTIX_INPUT` is null)"
@@ -1052,24 +1052,24 @@ class Prova:
             return CIECO, "the injection did not start (%s): %s" % (", ".join(fatti),
                                                                      str(e)[:200])
         time.sleep(3.0)
-        t = self.g.js(JS_TORNATI) or {}
-        tipi = {TIPI_INPUT.get(int(k), k): v for k, v in (t.get("tipi") or {}).items()}
+        t = self.g.js(JS_RETURNED) or {}
+        tipi = {INPUT_TYPES.get(int(k), k): v for k, v in (t.get("tipi") or {}).items()}
         ids = {int(k): v for k, v in (t.get("ids") or {}).items()}
-        tasto_ids = ids.get(0x0105, []) + ids.get(0x0104, [])
-        topo_ids = ids.get(0x0101, []) + ids.get(0x0102, [])
+        key_ids = ids.get(0x0105, []) + ids.get(0x0104, [])
+        mouse_ids = ids.get(0x0101, []) + ids.get(0x0102, [])
         spediti = "the page sent %s" % (tipi or "NOTHING")
-        if not tasto_ids and not topo_ids:
+        if not key_ids and not mouse_ids:
             return ROSSO, "%s after %s: the input does not leave the page" % (spediti, fatti)
         mancano = []
-        if not tasto_ids:
+        if not key_ids:
             mancano.append("the key")
-        if not topo_ids:
+        if not mouse_ids:
             mancano.append("the mouse/touch")
         # 1) the server log, if there is one
-        dopo, perche = leggi_registro(self.o.registro_cmd) if prima_reg is not None \
+        dopo, perche = leggi_registro(self.o.registro_cmd) if before_log is not None \
             else (None, "no --registro-cmd")
         if dopo is not None:
-            nuove = [r for r in righe_nuove(prima_reg, dopo) if "input id=" in r]
+            nuove = [r for r in new_lines(before_log, dopo) if "input id=" in r]
             srv_t = [r for r in nuove if "POSIZIONE_TASTO" in r or "LETTERA" in r]
             srv_m = [r for r in nuove if "PUNTATORE" in r or "PULSANTE" in r]
             base = ("%s · in the server log %d new input lines (key %d, "
@@ -1088,19 +1088,19 @@ class Prova:
             spediti, mx or "none", perche)
         if mancano:
             return ROSSO, base + " · ⛔ the page did NOT send " + " and ".join(mancano)
-        if mx >= max(tasto_ids) and mx >= min(topo_ids):
+        if mx >= max(key_ids) and mx >= min(mouse_ids):
             return VERDE, base + " ⇒ the server applied all of them up to %d" % mx
         return CIECO, base + " · no return covering both: without the server " \
                              "log I cannot tell whether they arrived"
 
     def errori(self, s):
-        dentro_js = (s.get("banco") or {}).get("errori") or []
+        inside_js = (s.get("banco") or {}).get("errori") or []
         dentro_rete = (s.get("banco") or {}).get("rete") or []
-        fuori_js, fuori_rete, perche = self.g.errori_fuori()
+        out_js, fuori_rete, perche = self.g.errors_out()
         dich = [r for r in (s.get("registro") or "").splitlines() if "⛔" in r]
-        tutti_js = list(dict.fromkeys(fuori_js + dentro_js))
+        all_js = list(dict.fromkeys(out_js + inside_js))
         tutti_rete = list(dict.fromkeys(fuori_rete + dentro_rete))
-        for r in tutti_js[:12]:
+        for r in all_js[:12]:
             print("         js    %s" % r[:220])
         for r in tutti_rete[:12]:
             print("         net   %s" % r[:220])
@@ -1109,31 +1109,31 @@ class Prova:
         if s.get("errori_schermo"):
             print("         schermo.errori %s" % s["errori_schermo"])
         base = "%d JS errors · %d network · %d «⛔» lines declared by the page" % (
-            len(tutti_js), len(tutti_rete), len(dich))
+            len(all_js), len(tutti_rete), len(dich))
         if s.get("banco") is None and perche:
             return CIECO, base + " · ⚠ neither collector in the page nor output: " + perche
-        if tutti_js or tutti_rete:
+        if all_js or tutti_rete:
             return ROSSO, base
         return VERDE, base + (" (the page's «⛔» are listed, not judged)"
                               if dich else "")
 
     def corri(self, solo_ab=False):
-        prima_reg, perche_reg = (leggi_registro(self.o.registro_cmd)
+        before_log, why_log = (leggi_registro(self.o.registro_cmd)
                                  if self.o.registro_cmd else (None, "no --registro-cmd"))
-        if self.o.registro_cmd and prima_reg is None:
-            self.note.append("server log: " + perche_reg)
-        self.g.azzera_eventi()
+        if self.o.registro_cmd and before_log is None:
+            self.note.append("server log: " + why_log)
+        self.g.reset_events()
         ok, motivo = self.apri()
         self.metti("a", VERDE if ok else ROSSO, motivo)
         if not ok:
-            self.cieco_da("bcdefg", "(a) is not green")
+            self.blind_from("bcdefg", "(a) is not green")
             return
         e, motivo, s = self.entra(self.parola)
         self.metti("b", e, motivo)
         if e != VERDE:
             if s:
                 self.metti("f", *self.errori(s))
-            self.cieco_da("cdeg", "(b) is not green")
+            self.blind_from("cdeg", "(b) is not green")
             return
         if solo_ab:
             return
@@ -1142,20 +1142,20 @@ class Prova:
         if s.get("dipinti"):
             self.metti("d", *self.continuita())
         else:
-            self.cieco_da("d", "no first frame")
+            self.blind_from("d", "no first frame")
         if s.get("sessione"):
-            prima_in = None
+            before_in = None
             if self.o.registro_cmd:
-                prima_in, _ = leggi_registro(self.o.registro_cmd)
-            self.metti("e", *self.ingresso(prima_in))
+                before_in, _ = leggi_registro(self.o.registro_cmd)
+            self.metti("e", *self.ingresso(before_in))
         else:
-            self.cieco_da("e", "the session is not there")
+            self.blind_from("e", "the session is not there")
         s = self.stato()
         self.metti("f", *self.errori(s))
         # (g) the reconnection
         try:
             self.g.ricarica()
-            ok, motivo = self.apri_dopo_ricarica()
+            ok, motivo = self.open_after_reload()
             if not ok:
                 self.metti("g", ROSSO, "after the reload: " + motivo)
                 return
@@ -1169,11 +1169,11 @@ class Prova:
         except Exception as ex:                  # noqa: BLE001
             self.metti("g", CIECO, "the bench could not reload: %s" % str(ex)[:200])
 
-    def apri_dopo_ricarica(self):
+    def open_after_reload(self):
         fine = time.time() + min(self.o.tetto_s, 30)
         while time.time() < fine:
             try:
-                m = self.g.js(JS_MODULO)
+                m = self.g.js(JS_MODULE)
                 if m and m.get("modulo") and m.get("pronta") == "complete" and m.get("visibile"):
                     return True, ""
             except Exception:                    # noqa: BLE001
@@ -1222,7 +1222,7 @@ def un_browser(nome, o, url, parola, solo_ab=False, etichetta=""):
             pr.corri(solo_ab=solo_ab)
         except Exception as e:                   # noqa: BLE001
             print("   ⛔ the bench fell over: %s" % repr(e)[:300])
-            pr.cieco_da("abcdefg", "the bench fell over: %s" % str(e)[:160])
+            pr.blind_from("abcdefg", "the bench fell over: %s" % str(e)[:160])
         if solo_ab:
             for p in "cdefg":
                 pr.esiti.setdefault(p, (CIECO, "not looked at: certification test"))
@@ -1245,7 +1245,7 @@ def un_browser(nome, o, url, parola, solo_ab=False, etichetta=""):
                 print("   ⚠ closing the browser: %s" % e)
 
 
-def porta_vuota():
+def unused_port():
     s = socket.socket()
     s.bind(("127.0.0.1", 0))
     p = s.getsockname()[1]
@@ -1265,12 +1265,12 @@ def url_android(url):
 
 def certifica(o, browser):
     print("\n══════════ CERTIFICATION OF THE BENCH ══════════")
-    e, t = certifica_giudice()
+    e, t = certify_judge()
     print("   pixel judge: %s — %s" % ({VERDE: "⭐ can say degenerate",
                                          ROSSO: "⛔ BLIND", CIECO: "⚠ 3"}[e], t))
     tab = [("giudice-pixel", e, t)]
     for nome in browser:
-        vuota = "https://127.0.0.1:%d/" % porta_vuota()
+        vuota = "https://127.0.0.1:%d/" % unused_port()
         u = url_android(vuota) if nome == "android" else vuota
         r = un_browser(nome, o, u, o.parola, solo_ab=True, etichetta=" · certify: empty port")
         ea = r["esiti"]["a"][0]
@@ -1318,7 +1318,7 @@ def main():
                    help="ceiling for admission and for the first frame")
     a.add_argument("--scena", choices=("muovi", "viva", "ferma"), default="muovi")
     a.add_argument("--continuita-s", type=int, default=8)
-    a.add_argument("--tasto", choices=sorted(TASTI), default="Control",
+    a.add_argument("--tasto", choices=sorted(KEY_LIST), default="Control",
                    help="the key to press: Control alone does nothing on the desktop")
     a.add_argument("--clic", default="0.5,0.5",
                    help="where to click/tap, in fractions of the canvas")

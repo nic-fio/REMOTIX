@@ -21,8 +21,8 @@ import (
 // One check remains: the catalogue can be read (RX-TRUST-004) and this engine understands it
 // (RX-TRUST-003).
 
-// FontiFiducia: where the catalogue comes from.
-type FontiFiducia struct {
+// TrustSources: where the catalogue comes from.
+type TrustSources struct {
 	Incorporato []byte // the catalogue inside the engine
 	Esplicito   string // --catalogo FILE: given by hand by the administrator
 	Motore      string // the running binary ("" ⇒ /proc/self/exe): it says who delivered it
@@ -30,24 +30,24 @@ type FontiFiducia struct {
 
 // Fiducia is the outcome of phase 0 TRUST (object fiducia.json of the operation).
 type Fiducia struct {
-	Catalogo RifCatalogo `json:"catalog"`
-	Sequenza int         `json:"sequence"`
+	Catalogo CatalogRef `json:"catalog"`
+	Sequenza int        `json:"sequence"`
 	// Fonte: where the catalogue comes from, and who guarantees its authenticity.
 	Fonte    string      `json:"source"`
-	Motore   RifMotore   `json:"engine"`
-	Messaggi []Messaggio `json:"messages"`
+	Motore   EngineRef   `json:"engine"`
+	Messages []Messaggio `json:"messages"`
 }
 
-// MotoreDelPacchetto: where the remotix-install package puts the engine.
-const MotoreDelPacchetto = "/usr/bin/remotix-install"
+// PackagedEngine: where the remotix-install package puts the engine.
+const PackagedEngine = "/usr/bin/remotix-install"
 
-// chiHaConsegnato: the sentence saying who guarantees the running engine (and the catalogue it carries).
-func (f *FontiFiducia) chiHaConsegnato() string {
+// whoDelivered: the sentence saying who guarantees the running engine (and the catalogue it carries).
+func (f *TrustSources) whoDelivered() string {
 	exe := f.Motore
 	if exe == "" {
 		exe, _ = os.Readlink("/proc/self/exe")
 	}
-	if filepath.Clean(exe) == MotoreDelPacchetto {
+	if filepath.Clean(exe) == PackagedEngine {
 		return T("fid.pacchetto")
 	}
 	return T("fid.scaricato", exe)
@@ -55,15 +55,15 @@ func (f *FontiFiducia) chiHaConsegnato() string {
 
 // Fidati: phase 0 TRUST. Returns the catalogue and the outcome (even on error, because
 // fiducia.json says what was looked at).
-func (f *FontiFiducia) Fidati(adesso time.Time) (*Catalogo, *Fiducia, error) {
-	fid := &Fiducia{Motore: RifMotore{VersioneMotore, DigestMotore()}, Messaggi: []Messaggio{}}
+func (f *TrustSources) Fidati(adesso time.Time) (*Catalogo, *Fiducia, error) {
+	fid := &Fiducia{Motore: EngineRef{VersioneMotore, EngineDigest()}, Messages: []Messaggio{}}
 	blocca := func(err error) (*Catalogo, *Fiducia, error) {
-		if m, ok := err.(*ErroreRX); ok {
-			fid.Messaggi = append(fid.Messaggi, m.M)
+		if m, ok := err.(*ErrorRX); ok {
+			fid.Messages = append(fid.Messages, m.M)
 		}
 		return nil, fid, err
 	}
-	dati, fonte := f.Incorporato, f.chiHaConsegnato()
+	dati, fonte := f.Incorporato, f.whoDelivered()
 	if f.Esplicito != "" {
 		d, err := os.ReadFile(f.Esplicito)
 		if err != nil {
@@ -71,24 +71,24 @@ func (f *FontiFiducia) Fidati(adesso time.Time) (*Catalogo, *Fiducia, error) {
 		}
 		dati, fonte = d, T("fid.a_mano", f.Esplicito)
 	}
-	cat, err := LeggiCatalogo(dati)
+	cat, err := ReadCatalog(dati)
 	if err != nil {
 		fid.Fonte = fonte
 		return blocca(err)
 	}
 	cat.Provenienza = fonte
-	fid.Catalogo = RifCatalogo{cat.Versione, cat.Digest}
+	fid.Catalogo = CatalogRef{cat.Ver, cat.Digest}
 	fid.Sequenza, fid.Fonte = cat.Sequenza, fonte
-	if err := ControllaMotoreMinimo(cat); err != nil {
+	if err := CheckMinEngine(cat); err != nil {
 		return blocca(err)
 	}
 	return cat, fid, nil
 }
 
-// ControllaMotoreMinimo: this engine understands the catalogue.
-func ControllaMotoreMinimo(c *Catalogo) error {
-	if ConfrontaVersioni(VersioneMotore, c.MotoreMinimo) < 0 {
-		return Errore("RX-TRUST-003", "needs "+c.MotoreMinimo+", this is "+VersioneMotore)
+// CheckMinEngine: this engine understands the catalogue.
+func CheckMinEngine(c *Catalogo) error {
+	if CompareVersions(VersioneMotore, c.EngineMinimum) < 0 {
+		return Errore("RX-TRUST-003", "needs "+c.EngineMinimum+", this is "+VersioneMotore)
 	}
 	return nil
 }

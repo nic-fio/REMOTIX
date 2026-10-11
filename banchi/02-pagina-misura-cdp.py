@@ -89,7 +89,7 @@ class Ws:
         del self.buf[:quanti]
         return fuori
 
-    def _pezzo(self):
+    def _piece(self):
         b0, b1 = self._leggi(2)
         fin = b0 & 0x80
         codice = b0 & 0x0F
@@ -119,7 +119,7 @@ class Ws:
     def ricevi(self):
         pezzi = b""
         while True:
-            fin, codice, corpo = self._pezzo()
+            fin, codice, corpo = self._piece()
             if codice == 0x9:               # ping → pong
                 self.s.sendall(b"\x8a\x80" + os.urandom(4))
                 continue
@@ -209,7 +209,7 @@ def pagina(porta, attesa=25):
 #    answer CONSISTENTLY: a fake decoder that said «yes» to the
 #    filter and threw at `configure` would measure a device that does not
 #    exist — and precisely the case in which the page already does not trust the filter.
-PROLOGO_TELEFONO = r"""
+PHONE_PROLOGUE = r"""
 (function () {
   if (typeof VideoDecoder === "undefined") return;
   const TETTO_L = %d, TETTO_A = %d;

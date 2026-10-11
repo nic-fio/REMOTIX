@@ -18,7 +18,7 @@ type Eventi struct {
 }
 
 // Public event (one JSON line).
-type EventoPubblico struct {
+type PublicEvent struct {
 	Formato    string     `json:"format"`
 	Ora        string     `json:"time"`
 	Evento     string     `json:"event"` // stato · azione · messaggio · oggetto
@@ -28,12 +28,12 @@ type EventoPubblico struct {
 	Azione     string     `json:"action,omitempty"`
 	Fase       string     `json:"phase,omitempty"`
 	Messaggio  *Messaggio `json:"message,omitempty"`
-	Oggetto    string     `json:"object,omitempty"`
-	Percorso   string     `json:"path,omitempty"`
+	Obj        string     `json:"object,omitempty"`
+	RoutePath  string     `json:"path,omitempty"`
 	Dettaglio  string     `json:"detail,omitempty"`
 }
 
-func (e *Eventi) scrivi(ev EventoPubblico, testo string) {
+func (e *Eventi) scrivi(ev PublicEvent, testo string) {
 	if e == nil || e.W == nil {
 		return
 	}
@@ -46,14 +46,14 @@ func (e *Eventi) scrivi(ev EventoPubblico, testo string) {
 	fmt.Fprintln(e.W, testo)
 }
 
-func nomeStato(s Stato) string { return T("state." + string(s)) }
+func stateName(s Stato) string { return T("state." + string(s)) }
 
 func (e *Eventi) Stato(op string, da, a Stato, dettaglio string) {
-	t := "  → " + nomeStato(a)
+	t := "  → " + stateName(a)
 	if dettaglio != "" {
 		t += " — " + dettaglio
 	}
-	e.scrivi(EventoPubblico{Evento: "state", Operazione: op, Da: da, A: a, Dettaglio: dettaglio}, t)
+	e.scrivi(PublicEvent{Evento: "state", Operazione: op, Da: da, A: a, Dettaglio: dettaglio}, t)
 }
 
 func (e *Eventi) Azione(op, azione, fase, dettaglio string) {
@@ -61,7 +61,7 @@ func (e *Eventi) Azione(op, azione, fase, dettaglio string) {
 	if dettaglio != "" {
 		t += " (" + dettaglio + ")"
 	}
-	e.scrivi(EventoPubblico{Evento: "action", Operazione: op, Azione: azione, Fase: fase, Dettaglio: dettaglio}, t)
+	e.scrivi(PublicEvent{Evento: "action", Operazione: op, Azione: azione, Fase: fase, Dettaglio: dettaglio}, t)
 }
 
 func (e *Eventi) Messaggio(op string, m Messaggio) {
@@ -69,12 +69,12 @@ func (e *Eventi) Messaggio(op string, m Messaggio) {
 	if m.Dettaglio != "" {
 		t += " (" + m.Dettaglio + ")"
 	}
-	if m.Rimedio != "" {
-		t += "\n      " + T("ev.rimedio") + ": " + m.Rimedio
+	if m.Remediation != "" {
+		t += "\n      " + T("ev.rimedio") + ": " + m.Remediation
 	}
-	e.scrivi(EventoPubblico{Evento: "message", Operazione: op, Messaggio: &m}, t)
+	e.scrivi(PublicEvent{Evento: "message", Operazione: op, Messaggio: &m}, t)
 }
 
-func (e *Eventi) Oggetto(op, oggetto, percorso string) {
-	e.scrivi(EventoPubblico{Evento: "object", Operazione: op, Oggetto: oggetto, Percorso: percorso}, "      "+oggetto+": "+percorso)
+func (e *Eventi) Obj(op, oggetto, percorso string) {
+	e.scrivi(PublicEvent{Evento: "object", Operazione: op, Obj: oggetto, RoutePath: percorso}, "      "+oggetto+": "+percorso)
 }

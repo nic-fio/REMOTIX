@@ -54,10 +54,10 @@ static void verdetto(const char *prova, int buono, const char *cosa)
 		rossi++;
 }
 
-static int indice_di(const char *nome)
+static int index_of(const char *nome)
 {
 	for (int i = 0; i < FORMA_QUANTE; i++)
-		if (strcmp(forma_nome(i), nome) == 0)
+		if (strcmp(shape_name(i), nome) == 0)
 			return i;
 	return -1;
 }
@@ -65,7 +65,7 @@ static int indice_di(const char *nome)
 /* --- what the seam delivers --------------------------------------------- */
 static int consegnate;
 static CursoreForma ultima;
-static uint8_t ultima_img[CURSORE_MAX_LATO * CURSORE_MAX_LATO * 4];
+static uint8_t last_img[CURSORE_MAX_LATO * CURSORE_MAX_LATO * 4];
 
 static int ricevi(void *chi, const CursoreForma *f)
 {
@@ -73,7 +73,7 @@ static int ricevi(void *chi, const CursoreForma *f)
 	consegnate++;
 	ultima = *f;
 	if (f->immagine)
-		memcpy(ultima_img, f->immagine, (size_t) f->larghezza * f->altezza * 4u);
+		memcpy(last_img, f->immagine, (size_t) f->larghezza * f->altezza * 4u);
 	return 0;
 }
 
@@ -98,9 +98,9 @@ static size_t metadato(uint8_t *buf, uint32_t l, uint32_t a, const uint8_t *pixe
 	return sizeof *m + sizeof *b + (size_t) l * a * 4;
 }
 
-static void colore_di(int i, uint8_t bgra[4], const char *cartella_tema)
+static void color_of(int i, uint8_t bgra[4], const char *theme_dir)
 {
-	g_autofree char *p = g_build_filename(cartella_tema, "cursors", forma_nome(i), NULL);
+	g_autofree char *p = g_build_filename(theme_dir, "cursors", shape_name(i), NULL);
 	g_autofree char *d = NULL;
 	gsize n = 0;
 
@@ -112,7 +112,7 @@ static void colore_di(int i, uint8_t bgra[4], const char *cartella_tema)
 int main(int argc, char **argv)
 {
 	const char *lavoro, *temi, *guasti, *vuota, *misti;
-	int attesa_l, attesa_a, attesa_x, attesa_y;
+	int want_w, want_h, want_x, want_y;
 	static uint8_t buf[sizeof(struct spa_meta_cursor) + sizeof(struct spa_meta_bitmap) +
 	                   64 * 64 * 4];
 
@@ -123,10 +123,10 @@ int main(int argc, char **argv)
 	}
 	lavoro = argv[1];
 	temi = argv[2];
-	attesa_l = atoi(argv[3]);
-	attesa_a = atoi(argv[4]);
-	attesa_x = atoi(argv[5]);
-	attesa_y = atoi(argv[6]);
+	want_w = atoi(argv[3]);
+	want_h = atoi(argv[4]);
+	want_x = atoi(argv[5]);
+	want_y = atoi(argv[6]);
 	guasti = argv[7];
 	vuota = argv[8];
 	misti = argv[9];
@@ -139,11 +139,11 @@ int main(int argc, char **argv)
 		for (int i = 0; i < FORMA_QUANTE; i++) {
 			uint8_t p[4];
 
-			colore_di(i, p, tema);
+			color_of(i, p, tema);
 			if (forma_da_pixel(p[0], p[1], p[2], p[3]) == i)
 				giusti++;
 			else
-				printf("    ⛔ «%s»: pixel %02x%02x%02x%02x decoded %d\n", forma_nome(i),
+				printf("    ⛔ «%s»: pixel %02x%02x%02x%02x decoded %d\n", shape_name(i),
 				       p[3], p[2], p[1], p[0], forma_da_pixel(p[0], p[1], p[2], p[3]));
 		}
 		{
@@ -166,7 +166,7 @@ int main(int argc, char **argv)
 			uint8_t p[4];
 			int dn, db;
 
-			colore_di(i, p, tema);
+			color_of(i, p, tema);
 			visti[i] = (uint32_t) p[0] | (uint32_t) p[1] << 8 | (uint32_t) p[2] << 16;
 			for (int k = 0; k < i; k++)
 				if (visti[k] == visti[i])
@@ -197,7 +197,7 @@ int main(int argc, char **argv)
 	}
 
 	/* --- T3 ------------------------------------------------------------ */
-	forma_prova_cartella_temi(temi);
+	shape_test_themes_folder(temi);
 	{
 		const char *nomi[] = { "ew-resize", "sb_h_double_arrow" };
 
@@ -207,7 +207,7 @@ int main(int argc, char **argv)
 			char riga[200];
 
 			memset(&f, 0, sizeof f);
-			ok = forma_immagine(indice_di(nomi[k]), &f);
+			ok = forma_immagine(index_of(nomi[k]), &f);
 			for (int p = 0; ok && p < f.larghezza * f.altezza; p++) {
 				if (memcmp(f.immagine + p * 4, f.immagine, 4))
 					uniforme = 0;
@@ -218,36 +218,36 @@ int main(int argc, char **argv)
 			         "«%s» from the real theme: %s, %ux%u hotspot %d,%d (expected %dx%d, %d,%d), "
 			         "%d transparent pixels and %d opaque",
 			         nomi[k], ok ? "loaded" : "NOT loaded", f.larghezza, f.altezza,
-			         f.attivo_x, f.attivo_y, attesa_l, attesa_a, attesa_x, attesa_y,
+			         f.attivo_x, f.attivo_y, want_w, want_h, want_x, want_y,
 			         trasparenti, opachi);
-			verdetto("T3", ok && f.larghezza == attesa_l && f.altezza == attesa_a &&
-			                   f.attivo_x == attesa_x && f.attivo_y == attesa_y && !uniforme &&
+			verdetto("T3", ok && f.larghezza == want_w && f.altezza == want_h &&
+			                   f.attivo_x == want_x && f.attivo_y == want_y && !uniforme &&
 			                   trasparenti > 0 && opachi > 0,
 			         riga);
 		}
 	}
 
 	/* --- T3b ----------------------------------------------------------- */
-	forma_prova_cartella_temi(misti);
+	shape_test_themes_folder(misti);
 	{
 		CursoreForma sh, ew;
 		int ok;
 
 		memset(&sh, 0, sizeof sh);
 		memset(&ew, 0, sizeof ew);
-		ok = forma_immagine(indice_di("size_hor"), &sh) &&
-		     forma_immagine(indice_di("ew-resize"), &ew) && sh.larghezza == ew.larghezza &&
+		ok = forma_immagine(index_of("size_hor"), &sh) &&
+		     forma_immagine(index_of("ew-resize"), &ew) && sh.larghezza == ew.larghezza &&
 		     sh.altezza == ew.altezza &&
 		     memcmp(sh.immagine, ew.immagine, (size_t) ew.larghezza * ew.altezza * 4) == 0;
 		verdetto("T3b", ok, "«size_hor» with a breeze_cursors that has it ⇒ the Adwaita "
 		                    "alias (ew-resize), not the other theme's drawing");
 	}
-	forma_prova_cartella_temi(temi);
+	shape_test_themes_folder(temi);
 
 	/* --- T4 ------------------------------------------------------------ */
 	{
-		Cursore *c = cursore_apri(ricevi, NULL);
-		int ew = indice_di("ew-resize"), tx = indice_di("text");
+		Cursore *c = cursor_open(ricevi, NULL);
+		int ew = index_of("ew-resize"), tx = index_of("text");
 		uint8_t p[4];
 		g_autofree char *tema = g_build_filename(lavoro, "remotix", "icons", FORMA_TEMA, NULL);
 		CursoreForma vera;
@@ -259,41 +259,41 @@ int main(int argc, char **argv)
 		memset(&vera, 0, sizeof vera);
 		forma_immagine(ew, &vera);
 
-		colore_di(ew, p, tema);
+		color_of(ew, p, tema);
 		n = metadato(buf, 1, 1, p, NULL);
-		r = cursore_metadato(c, buf, n);
+		r = cursor_metadata(c, buf, n);
 		esito = r == 1 && consegnate == 1 && ultima.larghezza == vera.larghezza &&
 		        ultima.altezza == vera.altezza && ultima.attivo_x == vera.attivo_x &&
-		        memcmp(ultima_img, vera.immagine, (size_t) vera.larghezza * vera.altezza * 4) == 0;
+		        memcmp(last_img, vera.immagine, (size_t) vera.larghezza * vera.altezza * 4) == 0;
 		snprintf(riga, sizeof riga, "1x1 of the colour of «ew-resize» ⇒ delivered %ux%u hotspot %d,%d",
 		         ultima.larghezza, ultima.altezza, ultima.attivo_x, ultima.attivo_y);
 		verdetto("T4", esito, riga);
 
 		/* the same colour in the next buffer: UNCHANGED, nothing new */
-		r = cursore_metadato(c, buf, n);
+		r = cursor_metadata(c, buf, n);
 		verdetto("T4", r == 0 && consegnate == 1, "same colour in the next buffer ⇒ nothing sent");
 
 		/* "scaled": 32x32 of the same colour ⇒ the same shape, nothing sent */
 		n = metadato(buf, 32, 32, p, NULL);
-		r = cursore_metadato(c, buf, n);
+		r = cursor_metadata(c, buf, n);
 		verdetto("T4", r == 0 && consegnate == 1, "uniform 32x32 of the same colour ⇒ unchanged");
 
 		/* another encoded shape: the text I-beam */
-		colore_di(tx, p, tema);
+		color_of(tx, p, tema);
 		n = metadato(buf, 1, 1, p, NULL);
-		r = cursore_metadato(c, buf, n);
+		r = cursor_metadata(c, buf, n);
 		snprintf(riga, sizeof riga, "1x1 of the colour of «text» ⇒ delivered %ux%u hotspot %d,%d",
 		         ultima.larghezza, ultima.altezza, ultima.attivo_x, ultima.attivo_y);
 		verdetto("T4", r == 1 && consegnate == 2 && ultima.larghezza > 1, riga);
 
 		/* GNOME: a real bitmap passes as it is (they are Adwaita's own pixels) */
 		n = metadato(buf, vera.larghezza, vera.altezza, NULL, vera.immagine);
-		r = cursore_metadato(c, buf, n);
+		r = cursor_metadata(c, buf, n);
 		verdetto("T4", r == 1 && consegnate == 3 &&
-		                   memcmp(ultima_img, vera.immagine,
+		                   memcmp(last_img, vera.immagine,
 		                          (size_t) vera.larghezza * vera.altezza * 4) == 0,
 		         "real bitmap (the GNOME case) ⇒ delivered as it is, the dictionary does not trigger");
-		cursore_chiudi(c);
+		cursor_close(c);
 	}
 
 	/* --- G1 and G2 ------------------------------------------------------ */
@@ -311,22 +311,22 @@ int main(int argc, char **argv)
 				g_build_filename(lavoro, "remotix", "icons", FORMA_TEMA, NULL);
 			char riga[200];
 
-			forma_prova_cartella_temi(cartelle[k]);
+			shape_test_themes_folder(cartelle[k]);
 			for (int i = 0; i < FORMA_QUANTE; i++) {
 				memset(&f, 0, sizeof f);
 				caricate += forma_immagine(i, &f);
 			}
 			consegnate = 0;
-			c = cursore_apri(ricevi, NULL);
+			c = cursor_open(ricevi, NULL);
 			cursore_mai_nascondere(c, "bench 14-f1: fault");
-			colore_di(indice_di("ew-resize"), p, tema);
-			r = cursore_metadato(c, buf, metadato(buf, 1, 1, p, NULL));
+			color_of(index_of("ew-resize"), p, tema);
+			r = cursor_metadata(c, buf, metadato(buf, 1, 1, p, NULL));
 			snprintf(riga, sizeof riga,
 			         "fault «%s»: shapes loaded %d (expected 0), delivered by the seam %d "
 			         "(expected 0: the client keeps its arrow)",
 			         cosa[k], caricate, consegnate);
 			verdetto(nomi[k], caricate == 0 && consegnate == 0 && r == 0, riga);
-			cursore_chiudi(c);
+			cursor_close(c);
 		}
 	}
 

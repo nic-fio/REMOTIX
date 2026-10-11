@@ -45,14 +45,14 @@ G = S._carica("g6", os.path.join(S.QUI, "15-g6-comune.py"))
 F16 = S._carica("f016", os.path.join(S.QUI, "15-f016-stacco-e-riattacco.py"))
 FUNZIONI = ("F-018b", "F-018c")
 FINESTRA = (1800, 1000)       # centred in 3776x2016 it sticks out of 2544x1344; it fits
-MISURA_NUOVA = (2560, 1440)
-TOLL_MISURA = 0.03            # the window must have the previous size (± 3 %)
-MARGINE_4K = 4                # at 4K the window must not touch the edges (photo px)
-ATTESA_CURA_S = 15.0          # how long the photo is looked at again after the reattach
-TOLL_POSTO = 8                # desktop px: the photo is reduced to 960 (~4 px at 4K)
+NEW_SIZE = (2560, 1440)
+TOL_SIZE = 0.03            # the window must have the previous size (± 3 %)
+MARGIN_4K = 4                # at 4K the window must not touch the edges (photo px)
+WAIT_FIX_S = 15.0          # how long the photo is looked at again after the reattach
+TOL_POS = 8                # desktop px: the photo is reduced to 960 (~4 px at 4K)
 
 
-def ciano_in_px(v, tela):
+def cyan_in_px(v, tela):
     """The cyan rectangle of `guarda_la_scena` in CANVAS (desktop) pixels:
     (x0, y0, width, height) or None."""
     if not v or not v.get("finestra") or not v.get("misura") or not tela:
@@ -63,55 +63,55 @@ def ciano_in_px(v, tela):
     return (x0 * sx, y0 * sy, (x1 - x0 + 1) * sx, (y1 - y0 + 1) * sy)
 
 
-def giudica_dentro(prima, dopo):
+def judge_inside(prima, dopo):
     """⭐ F-018b.  prima/dopo: {"finestra": (x0,y0,x1,y1) in the photo,
     "misura": (w,h) of the photo, "tela": (W,H) in desktop px}.
     Returns (outcome, reason)."""
-    a = ciano_in_px(prima, prima.get("tela"))
+    a = cyan_in_px(prima, prima.get("tela"))
     if not a:
         return S.BLOCKED, "at 4K the scene's window is not seen: nothing to compare"
     w, h = prima["misura"]
     x0, y0, x1, y1 = prima["finestra"]
-    if x0 < MARGINE_4K or y0 < MARGINE_4K or x1 > w - 1 - MARGINE_4K or y1 > h - 1 - MARGINE_4K:
+    if x0 < MARGIN_4K or y0 < MARGIN_4K or x1 > w - 1 - MARGIN_4K or y1 > h - 1 - MARGIN_4K:
         return S.BLOCKED, ("at 4K the window already touches an edge (%s in %dx%d): the scene is not "
                            "the intended one" % (prima["finestra"], w, h))
-    b = ciano_in_px(dopo, dopo.get("tela"))
+    b = cyan_in_px(dopo, dopo.get("tela"))
     if not b:
         return S.FAIL, "after the reattach the scene's window is not seen (%s)" % (
             (dopo or {}).get("perche") or "no cyan")
     dl, da = b[2] / a[2], b[3] / a[3]
-    probl = []
-    if dl < 1 - TOLL_MISURA or da < 1 - TOLL_MISURA:
+    probs = []
+    if dl < 1 - TOL_SIZE or da < 1 - TOL_SIZE:
         # cut by the edge (outside) or shrunk: both NO
         bw, bh = dopo["misura"]
         bx0, by0, bx1, by1 = dopo["finestra"]
         tocca = [n for n, t in (("right", bx1 >= bw - 2), ("bottom", by1 >= bh - 2),
                                 ("left", bx0 <= 1), ("top", by0 <= 1)) if t]
-        probl.append("the window is seen at %.0fx%.0f, at 4K it was %.0fx%.0f (%.0f %% x %.0f %%)%s"
+        probs.append("the window is seen at %.0fx%.0f, at 4K it was %.0fx%.0f (%.0f %% x %.0f %%)%s"
                      % (b[2], b[3], a[2], a[3], 100 * dl, 100 * da,
                         (": CUT by the %s edge — it is partly OUTSIDE the screen"
                          % "/".join(tocca)) if tocca else
                         ": it was SHRUNK although it fits"))
-    elif dl > 1 + TOLL_MISURA or da > 1 + TOLL_MISURA:
-        probl.append("the window is seen at %.0fx%.0f, at 4K it was %.0fx%.0f: larger? the "
+    elif dl > 1 + TOL_SIZE or da > 1 + TOL_SIZE:
+        probs.append("the window is seen at %.0fx%.0f, at 4K it was %.0fx%.0f: larger? the "
                      "photo does not add up" % (b[2], b[3], a[2], a[3]))
-    if probl:
-        return S.FAIL, "; ".join(probl)
+    if probs:
+        return S.FAIL, "; ".join(probs)
     return S.PASS, ("whole window %.0fx%.0f (at 4K %.0fx%.0f) at (%.0f,%.0f) of the canvas "
                     "%dx%d" % (b[2], b[3], a[2], a[3], b[0], b[1], dopo["tela"][0],
                                dopo["tela"][1]))
 
 
-def giudica_indietro(prima, dopo, stesso_posto):
+def judge_going_back(prima, dopo, stesso_posto):
     """⭐ F-018c: back at the starting size the window is whole and of the
     previous size; with `stesso_posto` (labwc) also in the previous place."""
-    e, r = giudica_dentro(prima, dopo)
+    e, r = judge_inside(prima, dopo)
     if e != S.PASS or not stesso_posto:
         return e, r
-    a = ciano_in_px(prima, prima.get("tela"))
-    b = ciano_in_px(dopo, dopo.get("tela"))
+    a = cyan_in_px(prima, prima.get("tela"))
+    b = cyan_in_px(dopo, dopo.get("tela"))
     dx, dy = b[0] - a[0], b[1] - a[1]
-    if abs(dx) > TOLL_POSTO or abs(dy) > TOLL_POSTO:
+    if abs(dx) > TOL_POS or abs(dy) > TOL_POS:
         return S.FAIL, ("back at 4K the window is whole but MOVED by (%+.0f, %+.0f) px "
                         "relative to the creation: the shortcut moved a window that "
                         "was already inside" % (dx, dy))
@@ -129,10 +129,10 @@ def taglia(png, largo, alto):
     return fuori.getvalue()
 
 
-def guarda_png(png):
+def look_png(png):
     """`guarda_la_scena` on a png already in hand (the fault)."""
     im = G.immagine(png)
-    r, perche = G.trova_ciano(im)
+    r, perche = G.find_cyan(im)
     return {"finestra": list(r) if r else None, "misura": list(im.size), "perche": perche}
 
 
@@ -155,38 +155,38 @@ def certifica():
         f = io.BytesIO()
         im.save(f, "PNG")
         png = f.getvalue()
-        v = guarda_png(png)
+        v = look_png(png)
         v["tela"] = list(tela)
         return v, png
 
     A, pngA = foto((3776, 2016), (988, 522, 988 + 1799, 522 + 999))
     B, _ = foto((2544, 1344), (743, 343, 743 + 1799, 343 + 999))
-    e, m = giudica_dentro(A, B)
+    e, m = judge_inside(A, B)
     prova("brought back inside, same size ⇒ PASS (%s)" % m[:60], e == S.PASS)
     Bb, _ = foto((2544, 1344), (743, 343, 2543, 1343))           # against the edge, to the pixel
-    e, m = giudica_dentro(A, Bb)
+    e, m = judge_inside(A, Bb)
     prova("against the right/bottom edge but whole ⇒ PASS", e == S.PASS)
-    T = guarda_png(taglia(pngA, 2544, 1344))
+    T = look_png(taglia(pngA, 2544, 1344))
     T["tela"] = [2544, 1344]
-    e, m = giudica_dentro(A, T)
+    e, m = judge_inside(A, T)
     prova("fault: 4K cut (cure off) ⇒ FAIL (%s)" % m[:70], e == S.FAIL)
     Bp, _ = foto((2544, 1344), (100, 100, 100 + 1399, 100 + 799))   # inside but narrow
-    e, m = giudica_dentro(A, Bp)
+    e, m = judge_inside(A, Bp)
     prova("shrunk although it fits ⇒ FAIL", e == S.FAIL)
-    e, _ = giudica_dentro(A, {"finestra": None, "misura": [960, 507], "tela": [2544, 1344]})
+    e, _ = judge_inside(A, {"finestra": None, "misura": [960, 507], "tela": [2544, 1344]})
     prova("window gone ⇒ FAIL", e == S.FAIL)
     Ab, _ = foto((3776, 2016), (3000, 522, 3775, 1521))
-    e, _ = giudica_dentro(Ab, B)
+    e, _ = judge_inside(Ab, B)
     prova("at 4K already against the edge ⇒ BLOCKED (wrong scene)", e == S.BLOCKED)
     K, _ = foto((3776, 2016), (988, 522, 988 + 1799, 522 + 999))   # KDE: canvas kept
-    e, _ = giudica_dentro(A, K)
+    e, _ = judge_inside(A, K)
     prova("kde: canvas kept, whole window ⇒ PASS", e == S.PASS)
-    e, m = giudica_indietro(A, dict(A), True)
+    e, m = judge_going_back(A, dict(A), True)
     prova("back at 4K in the previous place ⇒ PASS (%s)" % m[-40:], e == S.PASS)
     Cs, _ = foto((3776, 2016), (988, 522 + 13, 988 + 1799, 522 + 13 + 999))
-    e, m = giudica_indietro(A, Cs, True)
+    e, m = judge_going_back(A, Cs, True)
     prova("fault: back, moved down by half a bar (13 px) ⇒ FAIL (%s)" % m[:60], e == S.FAIL)
-    e, _ = giudica_indietro(A, Cs, False)
+    e, _ = judge_going_back(A, Cs, False)
     prova("gnome/kde: the place is not judged ⇒ PASS", e == S.PASS)
     return 0 if ok else 1
 
@@ -195,7 +195,7 @@ def certifica():
 #  THE TEST
 # ═══════════════════════════════════════════════════════════════════════════
 def osserva(s, nome):
-    ob = G.aspetta_tela_ferma(s)
+    ob = G.wait_canvas_still(s)
     v = G.guarda_la_scena(s, nome)
     v["tela"] = ob.get("buffer")
     v["vista"] = ob.get("vista")
@@ -205,7 +205,7 @@ def osserva(s, nome):
 def breve(v):
     return "canvas %s · view %s · cyan %s (desktop px %s)" % (
         v.get("tela"), (v.get("vista") or [None])[:2], v.get("finestra"),
-        [round(x) for x in (ciano_in_px(v, v.get("tela")) or [])])
+        [round(x) for x in (cyan_in_px(v, v.get("tela")) or [])])
 
 
 def corpo(o, E):
@@ -246,20 +246,20 @@ def corpo(o, E):
                 raise S.Bloccata("at 4K the canvas or the window cannot be read: %s" % breve(A))
 
             # ── DETACH and smaller reattach
-            s.spegni_browser()
+            s.turn_off_browser()
             time.sleep(2)
-            mis = G.accendi_a_misura(s, *MISURA_NUOVA)
-            print("   browser restarted at %dx%d: view %s" % (MISURA_NUOVA + (mis,)), flush=True)
-            ok, m, _rif, _sec = G.entra_con_riprova(s, tetto_s=40)
+            mis = G.accendi_a_misura(s, *NEW_SIZE)
+            print("   browser restarted at %dx%d: view %s" % (NEW_SIZE + (mis,)), flush=True)
+            ok, m, _ref, _sec = G.enter_with_retry(s, tetto_s=40)
             if not ok:
                 E.metti("F-018b", S.FAIL, "the reattach at %dx%d does not get in: %s"
-                        % (MISURA_NUOVA + (m,)))
+                        % (NEW_SIZE + (m,)))
                 return
             G.sveglia(s)
-            fine = time.time() + ATTESA_CURA_S
+            fine = time.time() + WAIT_FIX_S
             while True:
                 B = osserva(s, "B-2560")
-                eB, rB = giudica_dentro(A, B)
+                eB, rB = judge_inside(A, B)
                 if eB == S.PASS or time.time() > fine:
                     break
                 time.sleep(1.5)
@@ -280,10 +280,10 @@ def corpo(o, E):
             #    window already inside, must NOT move it by one pixel (if it
             #    moved it — half a title bar down, the risk of
             #    `MoveToCursor` — it would be seen here)
-            s.spegni_browser()
+            s.turn_off_browser()
             time.sleep(2)
             G.accendi_a_misura(s, 3840, 2160)
-            ok, m, _rif, _sec = G.entra_con_riprova(s, tetto_s=40)
+            ok, m, _ref, _sec = G.enter_with_retry(s, tetto_s=40)
             if not ok:
                 E.metti("F-018c", S.FAIL, "the reattach back at 4K does not get in: %s" % m)
             else:
@@ -291,10 +291,10 @@ def corpo(o, E):
                 time.sleep(2)
                 C = osserva(s, "C-4k")
                 print("   C (back at 4K): %s" % breve(C), flush=True)
-                eC, rC = giudica_indietro(A, C, o.scatola in ("xfce", "lxqt"))
+                eC, rC = judge_going_back(A, C, o.scatola in ("xfce", "lxqt"))
                 E.metti("F-018c", eC, rC,
                         atteso="back at 4K the window whole, of the previous size; on "
-                               "labwc also in the previous place (± %d px)" % TOLL_POSTO,
+                               "labwc also in the previous place (± %d px)" % TOL_POS,
                         osservato="A: %s || C: %s" % (breve(A), breve(C)),
                         evidenze=[x for x in (A.get("foto"), C.get("foto")) if x])
                 if o.guasto:
@@ -302,7 +302,7 @@ def corpo(o, E):
                     Cg = dict(C, finestra=[C["finestra"][0], C["finestra"][1] + 4,
                                            C["finestra"][2], C["finestra"][3] + 4]) \
                         if C.get("finestra") else C
-                    g, r = giudica_indietro(A, Cg, True)
+                    g, r = judge_going_back(A, Cg, True)
                     E.guasto("F-018c", g == S.FAIL, "C's window moved down by ~16 px ⇒ %s "
                              "(%s)" % (g, r[:160]))
 
@@ -310,19 +310,19 @@ def corpo(o, E):
                 if not A.get("png"):
                     E.guasto("F-018b", None, "the 4K photo is no longer there: nothing to cut")
                 else:
-                    tl, ta = B.get("tela") or (MISURA_NUOVA[0] - 16, MISURA_NUOVA[1] - 96)
+                    tl, ta = B.get("tela") or (NEW_SIZE[0] - 16, NEW_SIZE[1] - 96)
                     if o.scatola == "kde":
                         tl, ta = B.get("vista")[:2] if B.get("vista") else (tl, ta)
-                    T = guarda_png(taglia(A["png"], int(tl), int(ta)))
+                    T = look_png(taglia(A["png"], int(tl), int(ta)))
                     T["tela"] = [int(tl), int(ta)]
-                    g, r = giudica_dentro(A, T)
+                    g, r = judge_inside(A, T)
                     E.guasto("F-018b", g == S.FAIL,
                              "the 4K cut to %dx%d (the windows left where they were) ⇒ %s (%s)"
                              % (tl, ta, g, r[:200]))
         finally:
             if s.g:
-                s.salva_console()
-            G.spegni_servitore(s)
+                s.save_console()
+            G.turn_off_server(s)
 
 
 if __name__ == "__main__":

@@ -37,26 +37,26 @@ import suite as S                                                     # noqa: E4
 
 G = S._carica("g8", os.path.join(S.QUI, "15-g8-comune.py"))
 FUNZIONI = ("F-026",)
-COLORI = {"rosso": (220, 40, 40), "verde": (40, 190, 60), "magenta": (200, 40, 200)}
+COLORS = {"rosso": (220, 40, 40), "verde": (40, 190, 60), "magenta": (200, 40, 200)}
 NOMI = ("rosso", "verde", "magenta")
-PAROLE = ("alfa", "bravo", "xyz")        # different letters: someone else's key shows
-SUO_MIN = 0.5
-ALTRUI_MAX = 0.03
+WORDS = ("alfa", "bravo", "xyz")        # different letters: someone else's key shows
+MIN_SHARE = 0.5
+OTHERS_MAX = 0.03
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE JUDGES — pure
 # ═══════════════════════════════════════════════════════════════════════════
-def giudica_immagini(frazioni, nomi):
+def judge_images(frazioni, nomi):
     """`frazioni[i]` = {colour: fraction} of tenant i's canvas."""
     guai = []
     for i, fr in enumerate(frazioni):
         if fr is None:
             return S.BLOCKED, "tenant %d's canvas cannot be photographed" % (i + 1)
-        if fr.get(nomi[i], 0) < SUO_MIN:
+        if fr.get(nomi[i], 0) < MIN_SHARE:
             guai.append("%d: ITS OWN %s covers only %.1f%%" % (i + 1, nomi[i], 100 * fr.get(nomi[i], 0)))
         for j, n in enumerate(nomi):
-            if j != i and fr.get(n, 0) > ALTRUI_MAX:
+            if j != i and fr.get(n, 0) > OTHERS_MAX:
                 guai.append("%d: shows the %s of tenant %d (%.1f%%)" % (
                     i + 1, n, j + 1, 100 * fr[n]))
     if guai:
@@ -65,7 +65,7 @@ def giudica_immagini(frazioni, nomi):
                               for i, fr in enumerate(frazioni))
 
 
-def giudica_input(valori, tasti, parole):
+def judge_input(valori, tasti, parole):
     """`valori[i]` = final value of the field, `tasti[i]` = keys received."""
     guai = []
     for i, v in enumerate(valori):
@@ -90,27 +90,27 @@ def certifica():
         print("%s %s" % ("⭐" if vero else "⛔", cosa))
     n = NOMI[:2]
     buone = [{"rosso": 0.9, "verde": 0.0}, {"rosso": 0.0, "verde": 0.9}]
-    prova("each their own ⇒ PASS", giudica_immagini(buone, n)[0] == S.PASS)
-    prova("the second sees the red ⇒ FAIL", giudica_immagini(
+    prova("each their own ⇒ PASS", judge_images(buone, n)[0] == S.PASS)
+    prova("the second sees the red ⇒ FAIL", judge_images(
         [buone[0], {"rosso": 0.9, "verde": 0.0}], n)[0] == S.FAIL)
-    prova("half and half ⇒ FAIL", giudica_immagini(
+    prova("half and half ⇒ FAIL", judge_images(
         [buone[0], {"rosso": 0.2, "verde": 0.6}], n)[0] == S.FAIL)
-    prova("photo missing ⇒ BLOCKED", giudica_immagini([buone[0], None], n)[0] == S.BLOCKED)
-    p = PAROLE[:2]
-    prova("right words ⇒ PASS", giudica_input(["alfa", "bravo"], [list("alfa"), list("bravo")], p)[0] == S.PASS)
-    prova("word in the wrong place ⇒ FAIL", giudica_input(
+    prova("photo missing ⇒ BLOCKED", judge_images([buone[0], None], n)[0] == S.BLOCKED)
+    p = WORDS[:2]
+    prova("right words ⇒ PASS", judge_input(["alfa", "bravo"], [list("alfa"), list("bravo")], p)[0] == S.PASS)
+    prova("word in the wrong place ⇒ FAIL", judge_input(
         ["", "bravoalfa"], [[], list("bravoalfa")], p)[0] == S.FAIL)
-    prova("foreign key ⇒ FAIL", giudica_input(
+    prova("foreign key ⇒ FAIL", judge_input(
         ["alfa", "bravo"], [list("alfa") + ["x"], list("bravo")], p)[0] == S.FAIL)
     # the fractions on a synthetic photo
     from PIL import Image
     import io
-    im = Image.new("RGB", (100, 50), COLORI["verde"])
-    im.paste(COLORI["rosso"], (0, 0, 10, 50))
+    im = Image.new("RGB", (100, 50), COLORS["verde"])
+    im.paste(COLORS["rosso"], (0, 0, 10, 50))
     b = io.BytesIO()
     im.save(b, "PNG")
-    fr = G.frazioni(b.getvalue(), COLORI, riduci=1)
-    prova("fractions: green 90%%, red 10%% (%s)" % G.fr_testo(fr),
+    fr = G.frazioni(b.getvalue(), COLORS, riduci=1)
+    prova("fractions: green 90%%, red 10%% (%s)" % G.fr_text(fr),
           abs(fr["verde"] - 0.9) < 0.01 and abs(fr["rosso"] - 0.1) < 0.01 and fr["magenta"] == 0)
     return 0 if ok else 1
 
@@ -142,18 +142,18 @@ def browser_per(o, i, n):
     if o.browser == "chrome":
         if i < n - 1:
             o2.browser = "firefox"
-            o2.porte_base = o.porte_base + G.SPOSTA_BROWSER[i + 1]
+            o2.porte_base = o.porte_base + G.MOVE_BROWSER[i + 1]
         else:
             o2.porte_base = o.porte_base
     return o2
 
 
-def fotografa_tutti(sess, nomi, etichetta):
+def snapshot_all(sess, nomi, etichetta):
     frs, ev = [], []
     for i, s in enumerate(sess):
         davanti(s)
         png, dove = s.foto("%s-%d-%s" % (etichetta, i + 1, nomi[i]))
-        frs.append(G.frazioni(png, COLORI) if png else None)
+        frs.append(G.frazioni(png, COLORS) if png else None)
         if dove:
             ev.append(dove)
     return frs, ev
@@ -161,12 +161,12 @@ def fotografa_tutti(sess, nomi, etichetta):
 
 def batti(s, parola):
     davanti(s)
-    G.clic_centro(s)
+    G.click_center(s)
     time.sleep(0.8)
     G.C23.manda(s.g, G.C23.scrivi(parola))
 
 
-def leggi_tutti(sess):
+def read_all(sess):
     val, tas = [], []
     for s in sess:
         q = G.quaderno(s.sc, s.chi)
@@ -177,7 +177,7 @@ def leggi_tutti(sess):
 
 def corpo(o, E):
     n = o.inquilini
-    nomi, parole = NOMI[:n], PAROLE[:n]
+    nomi, parole = NOMI[:n], WORDS[:n]
     sess = []
     try:
         for i in range(n):
@@ -191,35 +191,35 @@ def corpo(o, E):
             davanti(s)
             S.C21.sveglia(s.g, s.geometria())
             ok, t = G.accendi_scena(s.sc, s.chi, o.porte_base + G.SPOSTA_SCENA + i,
-                                    COLORI[nomi[i]])
+                                    COLORS[nomi[i]])
             if not ok:
                 raise S.Bloccata("the %s scene of %s does not start: %s"
                                  % (nomi[i], s.chi, " | ".join(t.splitlines()[-6:])[-400:]))
         # all in, each with their scene: wait for each one to be seen
         for i, s in enumerate(sess):
             davanti(s)
-            fr, _d, perche = G.aspetta_colore(s, "attesa-%d" % (i + 1), COLORI, nomi[i],
-                                              SUO_MIN, 40)
-            print("   canvas %d: %s %s" % (i + 1, G.fr_testo(fr), perche), flush=True)
+            fr, _d, perche = G.wait_color(s, "attesa-%d" % (i + 1), COLORS, nomi[i],
+                                              MIN_SHARE, 40)
+            print("   canvas %d: %s %s" % (i + 1, G.fr_text(fr), perche), flush=True)
         # ── the image ──────────────────────────────────────────────────────
-        frs, ev = fotografa_tutti(sess, nomi, "immagine")
-        ei, ri = giudica_immagini(frs, nomi)
+        frs, ev = snapshot_all(sess, nomi, "immagine")
+        ei, ri = judge_images(frs, nomi)
         print("   image: %s — %s" % (ei, ri), flush=True)
         # ── the input, in turn ─────────────────────────────────────────────
         for i, s in enumerate(sess):
             batti(s, parole[i])
             time.sleep(2.5)
         time.sleep(2)
-        val, tas = leggi_tutti(sess)
-        ein, rin = giudica_input(val, tas, parole)
+        val, tas = read_all(sess)
+        ein, rin = judge_input(val, tas, parole)
         print("   input: %s — %s" % (ein, rin), flush=True)
-        _f, ev2 = fotografa_tutti(sess, nomi, "dopo-input")
+        _f, ev2 = snapshot_all(sess, nomi, "dopo-input")
         chi = [s.chi for s in sess]
         righe = []
         for s in sess:
             righe += ["## %s" % s.chi] + [r for r in s.registro_da(0)
                                           if "session open" in r or "slot" in r][-6:]
-        ev.append(sess[0].salva_testo("f026-server.txt", righe))
+        ev.append(sess[0].save_text("f026-server.txt", righe))
         tutti = [ei, ein]
         esito = S.FAIL if S.FAIL in tutti else (S.BLOCKED if S.BLOCKED in tutti else S.PASS)
         E.metti("F-026", esito, "image %s · input %s" % (ei, ein),
@@ -229,17 +229,17 @@ def corpo(o, E):
 
         if o.guasto:
             # image: the second one's scene takes the colour of the first
-            G.cambia_colore(sess[1].sc, sess[1].chi, COLORI[nomi[0]])
+            G.change_color(sess[1].sc, sess[1].chi, COLORS[nomi[0]])
             davanti(sess[1])
-            G.aspetta_colore(sess[1], "guasto-attesa", COLORI, nomi[0], SUO_MIN, 20)
-            frs, _e = fotografa_tutti(sess, nomi, "guasto-immagine")
-            eg1, rg1 = giudica_immagini(frs, nomi)
-            G.cambia_colore(sess[1].sc, sess[1].chi, COLORI[nomi[1]])
+            G.wait_color(sess[1], "guasto-attesa", COLORS, nomi[0], MIN_SHARE, 20)
+            frs, _e = snapshot_all(sess, nomi, "guasto-immagine")
+            eg1, rg1 = judge_images(frs, nomi)
+            G.change_color(sess[1].sc, sess[1].chi, COLORS[nomi[1]])
             # input: the first one's word in the second one's browser
             batti(sess[1], parole[0])
             time.sleep(3)
-            val, tas = leggi_tutti(sess)
-            eg2, rg2 = giudica_input(val, tas, parole)
+            val, tas = read_all(sess)
+            eg2, rg2 = judge_input(val, tas, parole)
             v1 = eg1 == S.FAIL if eg1 != S.BLOCKED else None
             v2 = eg2 == S.FAIL if eg2 != S.BLOCKED else None
             visto = None if None in (v1, v2) else (v1 and v2)

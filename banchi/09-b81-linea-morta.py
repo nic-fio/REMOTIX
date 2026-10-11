@@ -244,19 +244,19 @@ def _carica(nome, percorso):
 # `[R]` `src/webtransport.h` and `src/webtransport.c`, 23 August 2026.  ⚠ They are
 # here because the predicates rest on them; if the product changes them, the bench
 # must give red — and for this reason the value IN FORCE is reread from the startup
-# line (`stato_delle_cure()`) and compared with these.
-LM_STALLO_MS = 5000         # `WT_LM_STALLO_MS`  — 5.0 s of frozen image
-LM_SILENZIO_S = 10          # `WT_LM_SILENZIO_S`
-LM_MIN_PACCHETTI = 200      # `WT_LM_MIN_PACCHETTI` — guard of the WITNESS
-LM_FINESTRA_MS = 1000       # `WT_LM_FINESTRA_MS`   — ditto
+# line (`fixes_state()`) and compared with these.
+LM_STALL_MS = 5000         # `WT_LM_STALLO_MS`  — 5.0 s of frozen image
+LM_SILENCE_S = 10          # `WT_LM_SILENZIO_S`
+LM_MIN_PACKETS = 200      # `WT_LM_MIN_PACKETS` — guard of the WITNESS
+LM_WINDOW_MS = 1000       # `WT_LM_WINDOW_MS`   — ditto
 LM_MIN_PROVE = 2            # `WT_LM_MIN_PROVE`
 # ⛔⛔ AND `WT_LM_PERMILLE` NO LONGER EXISTS, neither the constant nor the option: the
 #     loss fraction was refuted by this very bench on 23 August
 #     2026 (⇒ the box at the top) and went down from JUDGE to WITNESS.
 #     ⚠ `permille=` stays in the firing line, but it no longer has a threshold:
 #       whoever looked for `soglia_permille=` would not find it, and that is right.
-SFRATTO_CONSIGLIATO_MS = 15000   # `SFRATTO_PREDEFINITO` = `SILENZIO / 2`
-SILENZIO_MS = 30000              # `SILENZIO` of `rcp.c` — the clock of §5.3
+RECOMMENDED_EVICTION_MS = 15000   # `SFRATTO_PREDEFINITO` = `SILENZIO / 2`
+SILENCE_MS = 30000              # `SILENZIO` of `rcp.c` — the clock of §5.3
 
 # ── the BENCH's thresholds, in one place only and each with its reason ────
 #
@@ -269,7 +269,7 @@ FPS_LINEA_CHE_REGGE = 5.0
 # ⛔ Below this number of valid windows the reconstruction of the declared fraction is not
 #    a measurement: ten minutes at one window per second give ~600.
 #    ⚠ Now it serves only DIAGNOSIS: the fraction no longer judges anything.
-MIN_FINESTRE_VALIDE = 60
+MIN_VALID_WINDOWS = 60
 # ⛔⭐ THE MINIMUM STALL MARGIN — how far the threshold must sit above the
 #    worst stall observed on a line that HOLDS.
 #    ⚠ *Sufficient, not exact*: the cure declares itself 5.0× above the empty
@@ -277,46 +277,46 @@ MIN_FINESTRE_VALIDE = 60
 #      half the narrower of those two, and it is the point below which the
 #      threshold begins to look like a lucky number — and erring
 #      low means throwing out someone who is working, which cannot be undone.
-MARGINE_STALLO_MINIMO = 2.0
+MIN_STALL_MARGIN = 2.0
 # ⚠ AND THESE TWO SERVE ONLY DIAGNOSIS, not a judgement: the reconstruction
 #   of the DECLARED fraction stays in the bench because it is the number that
 #   REFUTED the old cure, and continuing to print it next to the stall is the
 #   way to show that the reordering is still there and that it now decides
 #   nothing.  ⛔ The 50‰ here is no longer «the threshold»: it is the yardstick with which we
 #   look at the same number as back then, so as to compare it with that run.
-PERMILLE_DIAGNOSI = 50
-FINESTRE_DIAGNOSI = 2
+PERMILLE_DIAGNOSIS = 50
+DIAGNOSIS_WINDOWS = 2
 # ⭐ The scale with which the maximum stall is TRACKED DOWN when the cure does NOT fire:
 #    the `linea-morta` line comes out only on firing, so «it did not fire»
 #    alone does not say BY HOW MUCH it did not fire.  ⇒ We retry with lower and lower
 #    thresholds until one fires, and the number that comes out is a true `stallo_ms`
 #    measured by the product.  ⛔ Between the lowest that does NOT fire and the highest
 #    that fires, the maximum stall is pinned.
-SCALA_STALLO_MS = [2000, 1000, 500]
+STALL_LADDER_MS = [2000, 1000, 500]
 # ⭐ How many windows count as «the connection START-UP»: ten, that is
 #   the first ~10 s, which is the stretch where `cwnd` opens and ngtcp2 does the bulk
 #   of its loss detection with a small window.  ⚠ The number is chosen,
 #   not measured: it serves to SEPARATE two stretches, not to judge one.
-PRIME_FINESTRE = 10
+FIRST_WINDOWS = 10
 # ⭐ The HEALTHY profile on which the reference stall is measured: `ritardo-30` is
 #   the denominator of all of `09-b76`'s comparisons — late but IN ORDER, zero
 #   loss, zero disorder.  ⚠ Not `liscio`: a profile without even a
 #   delay has no RTT, and without RTT the congestion window does not fill
 #   and the pacer has nothing to do — that is, it is not a line, it is a short circuit.
-RIFERIMENTO_SANO = "ritardo-30"
+HEALTHY_REFERENCE = "ritardo-30"
 # ⚠ The dead line's judgement is taken ONCE PER SECOND (`rete_ciclo`),
 #   so a firing cannot come BEFORE the threshold and must not come
 #   much after.  Three seconds cover the loop, the pacer queue and the `ssh`.
-TOLLERANZA_SILENZIO_MS = 3000
+SILENCE_TOLERANCE_MS = 3000
 # ⭐ The declared cost of the PINGs: ~130 B per round every threshold/2 seconds.
-COSTO_PING_DICHIARATO_KBIT_S = 0.21
+COST_PING_DECLARED_KBIT_S = 0.21
 # ⚠ The eviction is a big number: we accept the delay of one retry round of the
 #   client (1 s) plus the server's loop.
-TOLLERANZA_SFRATTO_MS = 4000
+EVICTION_TOLERANCE_MS = 4000
 
 # ⭐ The grid of `09-b76`, `[M]` 23 August 2026 — it is the denominator of
 #    test 6: «the defaults change nothing» means *identical to this*.
-GRIGLIA_B76 = {
+GRID_B76 = {
     "casa-cattiva": {"fps_min": 7.0, "fps_max": 11.0, "copertura_min": 0.90,
                      "perche": "`[M]` 7.8-10.2 frames/s, live session, "
                                "delivery that does not stop"},
@@ -441,7 +441,7 @@ def righe_registro():
     return B76.righe_registro()
 
 
-def riga0_pulita(tetto=90.0):
+def line0_clean(tetto=90.0):
     """⭐ The line from which to read THIS run, taken when the previous run has
        finished writing itself."""
     registro_posato(tetto=tetto)
@@ -457,29 +457,29 @@ def riga0_pulita(tetto=90.0):
 #    ⚠ A stopwatch on the laptop would also measure the `ssh`, the container and
 #      the difference between two clocks — on a 10 s threshold that is half
 #      the error I am looking for.
-_OROLOGIO = re.compile(r"^(\d\d):(\d\d):(\d\d)\.(\d\d\d)\s")
+_CLOCK = re.compile(r"^(\d\d):(\d\d):(\d\d)\.(\d\d\d)\s")
 
 
-def t_registro(riga):
+def t_log(riga):
     """The seconds since midnight of a log line, or `None`.
 
     ⚠ It returns `None` and not `0` when there is no time: a zero here would mean
       «midnight» and would be a plausible and false number (`LEZIONI.md` §1.9).
     """
-    m = _OROLOGIO.match(riga or "")
+    m = _CLOCK.match(riga or "")
     if not m:
         return None
     return (int(m.group(1)) * 3600 + int(m.group(2)) * 60 + int(m.group(3))
             + int(m.group(4)) / 1000.0)
 
 
-def dt_registro(dopo, prima):
+def dt_log(dopo, prima):
     """`dopo - prima` in seconds, with midnight stepped over.
 
     ⚠ It returns `None` if one of the two is missing: «I do not know» must not look
       the same as «zero seconds», which here would mean «it fired at once».
     """
-    a, b = t_registro(dopo), t_registro(prima)
+    a, b = t_log(dopo), t_log(prima)
     if a is None or b is None:
         return None
     d = a - b
@@ -538,7 +538,7 @@ def riduci_linea_morta(righe, letto=True):
                 k, v = p.split("=", 1)
                 d[k] = v
         d["giudizio"] = giud.strip()
-        d["ora"] = t_registro(r)
+        d["ora"] = t_log(r)
         d["riga"] = r
         n["righe"].append(d)
     if righe:
@@ -576,7 +576,7 @@ def riduci_linea_morta(righe, letto=True):
     return n
 
 
-def leggi_linea_morta(riga0):
+def read_dead_line(riga0):
     """The firings of THIS run, and the transport line that carries them out.
 
     ⚠ `DEAD LINE — the QUIC connection is closing` is read too: it is the half
@@ -592,7 +592,7 @@ def leggi_linea_morta(riga0):
 # ═══════════════════════════════════════════════════════════════════════════
 # ⭐⭐ THE EVICTION — the three greppable marks, as `src/rcp.c` declares them
 # ═══════════════════════════════════════════════════════════════════════════
-def riduci_sfratto(righe, letto=True):
+def reduce_eviction(righe, letto=True):
     """`EVICTION for silence:` · `⛔ EVICTION DENIED:` · `slot DENIED`.
 
     ⛔ Here too «zero» is not «I did not read» — see `riduci_linea_morta`.
@@ -610,7 +610,7 @@ def riduci_sfratto(righe, letto=True):
     if sfratti:
         m = re.search(r"EVICTION for silence: (\d+) ms", sfratti[0])
         n["muto_ms"] = int(m.group(1)) if m else None
-        n["ora_sfratto"] = t_registro(sfratti[0])
+        n["ora_sfratto"] = t_log(sfratti[0])
         # ⭐ Who was evicted: it serves test 5, where evicting the wrong
         #    user would not be a convenience but a security hole.
         m = re.search(r"the slot of (\S+) goes to the client", sfratti[0])
@@ -629,13 +629,13 @@ def riduci_sfratto(righe, letto=True):
     if presi:
         m = re.search(r"slot TAKEN by (\S+)", presi[-1])
         n["ultimo_preso_da"] = m.group(1) if m else None
-        n["ora_ultimo_preso"] = t_registro(presi[-1])
+        n["ora_ultimo_preso"] = t_log(presi[-1])
     return n
 
 
-def leggi_sfratto(riga0):
+def read_eviction(riga0):
     righe = leggi_registro(riga0, ["EVICTION", "slot DENIED", "slot TAKEN"])
-    return riduci_sfratto(righe, letto=True)
+    return reduce_eviction(righe, letto=True)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -653,7 +653,7 @@ def leggi_sfratto(riga0):
 #   LOWERS the peak.  ⇒ On its own it does not close the question: next to it goes the
 #   calibration at `--linea-morta-permille 1`, which makes the product print the
 #   `permille=` it computed itself.
-def finestre_dichiarate(righe, soglia_permille=PERMILLE_DIAGNOSI):
+def declared_windows(righe, soglia_permille=PERMILLE_DIAGNOSIS):
     """From the `rete-quic` lines to the dead line's judgement windows."""
     righe = [r for r in righe if "rete-quic " in r]
     if not righe:
@@ -674,14 +674,14 @@ def finestre_dichiarate(righe, soglia_permille=PERMILLE_DIAGNOSI):
         # ⛔ The cure's two guards, to the letter: below the minimum number of
         #    packets nothing is decided, and the window must be at least
         #    the minimum one.
-        if sped >= LM_MIN_PACCHETTI and da >= LM_FINESTRA_MS:
+        if sped >= LM_MIN_PACKETS and da >= LM_WINDOW_MS:
             valide.append(pm)
     n = {"esito": "letto", "righe": len(tutte), "finestre_valide": len(valide)}
     if not valide:
         n["esito"] = ("I DO NOT JUDGE — no window passed the cure's "
                       "guards (%d packets sent, %d ms): over %d "
                       "`rete-quic` lines the cure would NEVER have decided anything"
-                      % (LM_MIN_PACCHETTI, LM_FINESTRA_MS, len(tutte)))
+                      % (LM_MIN_PACKETS, LM_WINDOW_MS, len(tutte)))
         return n
     ordinate = sorted(valide)
     n["permille_max"] = ordinate[-1]
@@ -697,7 +697,7 @@ def finestre_dichiarate(righe, soglia_permille=PERMILLE_DIAGNOSI):
         if x >= soglia_permille:
             fila += 1
             massima = max(massima, fila)
-            if fila >= FINESTRE_DIAGNOSI:
+            if fila >= DIAGNOSIS_WINDOWS:
                 coppie += 1
         else:
             fila = 0
@@ -711,24 +711,24 @@ def finestre_dichiarate(righe, soglia_permille=PERMILLE_DIAGNOSI):
     #    that overtakes is worth, proportionally, much more.
     # ⇒ The two halves are counted apart: if the tail is low and only the start is
     #   high, the defect is not the THRESHOLD, it is the MOMENT at which one judges.
-    primi = valide[:PRIME_FINESTRE]
-    dopo = valide[PRIME_FINESTRE:]
+    primi = valide[:FIRST_WINDOWS]
+    dopo = valide[FIRST_WINDOWS:]
     n["prime_finestre"] = len(primi)
     n["permille_max_prime"] = max(primi) if primi else None
     n["permille_max_dopo"] = max(dopo) if dopo else None
     n["permille_mediano_dopo"] = (sorted(dopo)[len(dopo) // 2] if dopo else None)
     n["sopra_soglia_dopo"] = len([x for x in dopo if x >= soglia_permille])
-    fila, massima_d, coppie_d = 0, 0, 0
+    fila, maximum_d, pairs_d = 0, 0, 0
     for x in dopo:
         if x >= soglia_permille:
             fila += 1
-            massima_d = max(massima_d, fila)
-            if fila >= FINESTRE_DIAGNOSI:
-                coppie_d += 1
+            maximum_d = max(maximum_d, fila)
+            if fila >= DIAGNOSIS_WINDOWS:
+                pairs_d += 1
         else:
             fila = 0
-    n["fila_massima_dopo"] = massima_d
-    n["coppie_sopra_soglia_dopo"] = coppie_d
+    n["fila_massima_dopo"] = maximum_d
+    n["coppie_sopra_soglia_dopo"] = pairs_d
     # ⭐ And the CUMULATIVE one, which is another quantity and must be stated alongside: it is the
     #    fraction over the whole session, not over one window.
     tot_p = sum(x["persi_d"] for x in tutte)
@@ -739,9 +739,9 @@ def finestre_dichiarate(righe, soglia_permille=PERMILLE_DIAGNOSI):
     return n
 
 
-def leggi_finestre(riga0, soglia_permille=PERMILLE_DIAGNOSI):
+def read_windows(riga0, soglia_permille=PERMILLE_DIAGNOSIS):
     righe = leggi_registro(riga0, ["rete-quic "], quante=2000)
-    return finestre_dichiarate(righe, soglia_permille)
+    return declared_windows(righe, soglia_permille)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -782,7 +782,7 @@ if __name__ == "__main__":
 '''
 
 
-def riduci_orologio(campioni, quiete_s=0.6):
+def reduce_clock(campioni, quiete_s=0.6):
     """From the counter samples to the numbers of the TRAFFIC AT REST.
 
     · **kbit_s** and **pacchetti_s** — what a still session REALLY costs;
@@ -814,19 +814,19 @@ def riduci_orologio(campioni, quiete_s=0.6):
     n["pacchetti"] = p1 - p0
     n["kbit_s"] = round(8.0 * (b1 - b0) / durata / 1000.0, 4)
     n["pacchetti_s"] = round((p1 - p0) / durata, 3)
-    eventi, prec_t, prec_p, aperto = [], t0, p0, None
+    eventi, prev_t, prev_p, aperto = [], t0, p0, None
     for t, b, p in campioni[1:]:
-        if p > prec_p:
+        if p > prev_p:
             if aperto is None:
                 aperto = t
-            prec_t = t
-        elif aperto is not None and t - prec_t >= quiete_s:
-            eventi.append([round(aperto, 3), round(prec_t, 3),
+            prev_t = t
+        elif aperto is not None and t - prev_t >= quiete_s:
+            eventi.append([round(aperto, 3), round(prev_t, 3),
                            p - _pkt_a(campioni, aperto)])
             aperto = None
-        prec_p = p
+        prev_p = p
     if aperto is not None:
-        eventi.append([round(aperto, 3), round(prec_t, 3), None])
+        eventi.append([round(aperto, 3), round(prev_t, 3), None])
     n["eventi"] = len(eventi)
     n["eventi_primi"] = eventi[:6]
     if len(eventi) >= 2:
@@ -855,7 +855,7 @@ def _pkt_a(campioni, t):
     return campioni[-1][2]
 
 
-def orologio_gira(secondi=60.0, passo=0.1):
+def clock_runs(secondi=60.0, passo=0.1):
     rc, out, err = root("python3 %s/09-b81-orologio.py %s %g %g"
                         % (LAV, DEV, secondi, passo), int(secondi) + 120)
     try:
@@ -863,7 +863,7 @@ def orologio_gira(secondi=60.0, passo=0.1):
     except Exception as e:
         _dub("the clock did not answer: %s — %s" % (e, (out + err)[-200:]))
         return {"esito": "I DO NOT JUDGE — the wire clock did not answer"}
-    return riduci_orologio(d.get("campioni") or [])
+    return reduce_clock(d.get("campioni") or [])
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -878,9 +878,9 @@ def orologio_gira(secondi=60.0, passo=0.1):
 #     hypothesis.
 #
 # ⭐ And it can be done only because `main.c` calls `wt_linea_morta()` ALWAYS, and
-#    `rcp_sfratto()` prints itself on AND off: the startup line comes out in both
+#    `rcp_eviction()` prints itself on AND off: the startup line comes out in both
 #    cases by construction, and it is half the value of the two cures.
-def stato_delle_cure():
+def fixes_state():
     """What the server says about itself, at the LAST startup."""
     rc, out, _ = root("bash -c \"grep -a -n -e 'DEAD LINE is' -e 'ghost "
                       "eviction: threshold' %s/registro.log | tail -6\"" % LAV)
@@ -945,7 +945,7 @@ def cure_come_voglio(stato, linea_morta=None, stallo_ms=None, silenzio_s=None,
 #    `--certifica` proves it on manufactured numbers.  A predicate never seen
 #    failing is not a predicate.
 
-def p1_niente_falso_positivo(lm, testimoni, n, minuti):
+def p1_no_false_positive(lm, testimoni, n, minuti):
     """⛔⛔ **THE TEST THAT CAN MAKE THE CURE BE WITHDRAWN.**
 
     On `casa-cattiva` — the line that HOLDS — the dead line when on must not
@@ -1002,7 +1002,7 @@ def p1_niente_falso_positivo(lm, testimoni, n, minuti):
                % (minuti, fps, c.get("copertura"), c.get("buco_max_s")))
 
 
-def p1c_la_linea_regge_a_cura_spenta(testimoni, n, minuti, scatti_accesa):
+def p1c_line_holds_with_fix_off(testimoni, n, minuti, shots_on):
     """⛔⛔ **THE CONTROL OF TEST 1, AND WITHOUT IT ITS RED DOES NOT COUNT.**
 
     When the cure fires, the session DIES — and from a run in which the session
@@ -1049,7 +1049,7 @@ def p1c_la_linea_regge_a_cura_spenta(testimoni, n, minuti, scatti_accesa):
     return _si("⭐ WITH THE CURE OFF THE SAME LINE HOLDS %g whole minutes: %s — "
                "⇒ between the two runs ONE SWITCH changes, and with it on the "
                "session was closed %d time(s).  What the cure throws "
-               "out is a user at work" % (minuti, coda, scatti_accesa))
+               "out is a user at work" % (minuti, coda, shots_on))
 
 
 def p1b_il_margine_dello_stallo(scala, soglia_ms, nome):
@@ -1070,13 +1070,13 @@ def p1b_il_margine_dello_stallo(scala, soglia_ms, nome):
     ⛔ Red if it drops below: below that point the threshold begins to look like
        a lucky number, and erring low means throwing out someone who
        was working.
-    """ % MARGINE_STALLO_MINIMO
+    """ % MIN_STALL_MARGIN
     if not scala:
         return _muto("I did not try any lower threshold: without the scale "
                      "I have no margin, only «it did not fire»")
     scattate = [x for x in scala if x.get("scattata")]
-    non_scattate = [x for x in scala if x.get("scattata") is False]
-    if not scattate and not non_scattate:
+    not_triggered = [x for x in scala if x.get("scattata") is False]
+    if not scattate and not not_triggered:
         return _muto("no step of the scale gave a readable outcome")
     # ⛔ A firing at the TRUE threshold (or above) is not a narrow margin: it is the
     #    false positive, and P1 judges it.  Here we keep quiet, or I would say the
@@ -1086,15 +1086,15 @@ def p1b_il_margine_dello_stallo(scala, soglia_ms, nome):
                      "there is no margin to measure, and P1 states the "
                      "fact" % soglia_ms)
     if not scattate:
-        piu_bassa = min(x["soglia_ms"] for x in non_scattate)
+        piu_bassa = min(x["soglia_ms"] for x in not_triggered)
         margine = soglia_ms / float(piu_bassa)
         coda = ("not even at %d ms — the scale tried is %s"
                 % (piu_bassa, [x["soglia_ms"] for x in scala]))
-        if margine < MARGINE_STALLO_MINIMO:
+        if margine < MIN_STALL_MARGIN:
             return _muto("⚠ it did not fire at any of the thresholds tried, but "
                          "the lowest (%d ms) gives only %.1f× of margin: to "
                          "say the margin is ≥ %.1f× one must go further "
-                         "down" % (piu_bassa, margine, MARGINE_STALLO_MINIMO))
+                         "down" % (piu_bassa, margine, MIN_STALL_MARGIN))
         return _si("⭐ «%s»: the maximum stall sits BELOW %d ms — the cure does not "
                    "fire %s ⇒ the margin of the threshold (%d ms) is **more than "
                    "%.1f×**" % (nome, piu_bassa, coda, soglia_ms, margine))
@@ -1109,16 +1109,16 @@ def p1b_il_margine_dello_stallo(scala, soglia_ms, nome):
             "%d ms · scale tried %s"
             % (peggiore, min(x["soglia_ms"] for x in scattate), soglia_ms,
                [(x["soglia_ms"], x.get("stallo_ms")) for x in scala]))
-    if margine < MARGINE_STALLO_MINIMO:
+    if margine < MIN_STALL_MARGIN:
         return _no("⛔ THE MARGIN IS NARROW on a line that HOLDS: %.2f× "
                    "(minimum %.1f×) — %s.  ⇒ The threshold sits too close to a "
                    "stall that a good line produces on its own, and erring "
                    "low means throwing out someone who is working"
-                   % (margine, MARGINE_STALLO_MINIMO, coda))
+                   % (margine, MIN_STALL_MARGIN, coda))
     return _si("⭐ «%s»: the margin is **%.1f×** — %s" % (nome, margine, coda))
 
 
-def p_non_deve_scattare(nome, lm, testimoni, n, minuti, atteso):
+def p_must_not_fire(nome, lm, testimoni, n, minuti, atteso):
     """⛔ **THIS LINE HOLDS, AND MUST NOT BE DECLARED DEAD.**  It is the general
     form of test 1, applied to any profile of the grid of
     `09-b76` — it serves `raffica-1`, which is the case the narrow
@@ -1212,10 +1212,10 @@ def p_scena_ferma_non_scatta(lm, testimoni, secondi, soglia_ms):
                "(that is %.1f times narrower than the one in force): ZERO "
                "firings, and the client stayed attached to the end.  ⇒ The "
                "count does not start when there is nothing to send"
-               % (secondi, soglia_ms, LM_STALLO_MS / float(soglia_ms or 1)))
+               % (secondi, soglia_ms, LM_STALL_MS / float(soglia_ms or 1)))
 
 
-def p2_scatta_sullo_stallo(lm, sonda, secondi_a_scatto):
+def p2_fires_on_stall(lm, sonda, secondi_a_scatto):
     """**The real firing.**  On `raffica-forte` — `[M]` 11.10 % loss in
     bursts, `cwnd` median 8 948 B against 105 616 of the reference, delivery
     that stops — the cure MUST fire, and with `causa=perdita`.
@@ -1265,7 +1265,7 @@ def p2_scatta_sullo_stallo(lm, sonda, secondi_a_scatto):
                   lm.get("permille")))
 
 
-def p3_scatta_sul_silenzio(lm, soglia_ms):
+def p3_fires_on_silence(lm, soglia_ms):
     """**Silence.**  Client killed with `kill -9` — that is a goodbye NEVER
     SAID, which for the server is identical to a lost goodbye — and the cure must
     fire with `causa=silenzio` at its threshold.
@@ -1275,7 +1275,7 @@ def p3_scatta_sul_silenzio(lm, soglia_ms):
        threshold means throwing out a live client that was keeping quiet — ⇒ below
        the threshold it is red with no discount, above it %.1f s is granted (the judgement is
        taken once per second, and there is the pacer queue).
-    """ % (TOLLERANZA_SILENZIO_MS / 1000.0)
+    """ % (SILENCE_TOLERANCE_MS / 1000.0)
     if not lm or lm.get("esito") != "letto":
         return _muto((lm or {}).get("esito", "I did not read the firings"))
     if lm["scatti"] == 0:
@@ -1296,11 +1296,11 @@ def p3_scatta_sul_silenzio(lm, soglia_ms):
                    "against %d declared — a live and idle client would be "
                    "thrown out, and it is the regression already paid for on 16 "
                    "August 2026" % (s, soglia_ms))
-    if s > soglia_ms + TOLLERANZA_SILENZIO_MS:
+    if s > soglia_ms + SILENCE_TOLERANCE_MS:
         return _no("⛔ fired at %d ms against %d declared (+%d of "
                    "tolerance): the number written and the one in force "
                    "diverge, and it is form E1"
-                   % (s, soglia_ms, TOLLERANZA_SILENZIO_MS))
+                   % (s, soglia_ms, SILENCE_TOLERANCE_MS))
     if lm.get("chiuse_dal_trasporto", 0) < 1:
         return _no("⛔ the decision was taken but the wire did NOT drop: "
                    "the `trasporto.c` line is missing")
@@ -1310,7 +1310,7 @@ def p3_scatta_sul_silenzio(lm, soglia_ms):
                   or LM_MIN_PROVE))
 
 
-def p3b_costo_dei_ping(acceso, spento, dichiarato=COSTO_PING_DICHIARATO_KBIT_S):
+def p3b_ping_cost(acceso, spento, dichiarato=COST_PING_DECLARED_KBIT_S):
     """⚠ **THE DECLARED PRICE OF THE PINGs.**  The box of `webtransport.c`
     declares ~130 B per round every HALF of the threshold, that is **%.2f kbit/s** per
     session.  ⇒ The REAL traffic of a still session is measured, on and
@@ -1321,7 +1321,7 @@ def p3b_costo_dei_ping(acceso, spento, dichiarato=COSTO_PING_DICHIARATO_KBIT_S):
        TARGET, which is the only honest thing to do: a «green» obtained
        by measuring %.2f kbit/s inside a background a thousand times higher does not
        prove anything, and it would be form E1 in reverse.
-    """ % (COSTO_PING_DICHIARATO_KBIT_S, COSTO_PING_DICHIARATO_KBIT_S)
+    """ % (COST_PING_DECLARED_KBIT_S, COST_PING_DECLARED_KBIT_S)
     if not acceso or acceso.get("esito") != "misurato":
         return _muto("I did not measure the traffic with the cure ON")
     if not spento or spento.get("esito") != "misurato":
@@ -1349,7 +1349,7 @@ def p3b_costo_dei_ping(acceso, spento, dichiarato=COSTO_PING_DICHIARATO_KBIT_S):
     return _si("the cost of the PINGs is within the declared one: %s" % coda)
 
 
-def p4_lo_sfratto_libera_il_posto(sf, soglia_ms, secondi_a_entrare, riferimento_s):
+def p4_eviction_frees_slot(sf, soglia_ms, secondi_a_entrare, riferimento_s):
     """**The eviction.**  Same user, client killed with `-9`, a second
     client asking for the slot.  `[M]` today it takes **30.5 s** and **11 refusals**;
     with `--sfratto-ms %d` the slot must be free again at **~%.0f s**.
@@ -1357,7 +1357,7 @@ def p4_lo_sfratto_libera_il_posto(sf, soglia_ms, secondi_a_entrare, riferimento_
     ⚠ And here too the direction counts: evicting TOO EARLY means taking the
       slot from a live and idle client, that is switching off I2 — so below the
       threshold it is red.
-    """ % (SFRATTO_CONSIGLIATO_MS, SFRATTO_CONSIGLIATO_MS / 1000.0)
+    """ % (RECOMMENDED_EVICTION_MS, RECOMMENDED_EVICTION_MS / 1000.0)
     if not sf or sf.get("esito") != "letto":
         return _muto((sf or {}).get("esito", "I did not read the log"))
     if secondi_a_entrare is None:
@@ -1377,12 +1377,12 @@ def p4_lo_sfratto_libera_il_posto(sf, soglia_ms, secondi_a_entrare, riferimento_
                    "ms and the threshold is %d — a live and idle client (`[M]` the "
                    "keep-alive of a browser is silent for 15 s) would be thrown out, "
                    "and that switches off invariant I2" % (muto, soglia_ms))
-    if secondi_a_entrare > (soglia_ms + TOLLERANZA_SFRATTO_MS) / 1000.0:
+    if secondi_a_entrare > (soglia_ms + EVICTION_TOLERANCE_MS) / 1000.0:
         return _no("⛔ the slot became free again after %.2f s with the threshold at "
                    "%.1f s (+%.1f of tolerance): the cure fired but did not "
                    "shorten what it was supposed to"
                    % (secondi_a_entrare, soglia_ms / 1000.0,
-                      TOLLERANZA_SFRATTO_MS / 1000.0))
+                      EVICTION_TOLERANCE_MS / 1000.0))
     guadagno = ("from %.1f s to %.2f s (%.0f %% less)"
                 % (riferimento_s, secondi_a_entrare,
                    100.0 * (1.0 - secondi_a_entrare / riferimento_s))
@@ -1393,7 +1393,7 @@ def p4_lo_sfratto_libera_il_posto(sf, soglia_ms, secondi_a_entrare, riferimento_
                   sf.get("sfrattato"), guadagno))
 
 
-def p5_fra_utenti_diversi_non_si_sfratta(sf, entrato, utente_a, utente_b):
+def p5_no_eviction_across_users(sf, entrato, utente_a, utente_b):
     """⛔ **THE CASE THAT MUST NOT BREAK.**  An eviction between different users would not
     be a convenience: it would be a security hole — anyone could make
     another person's desktop drop simply by knocking.
@@ -1422,7 +1422,7 @@ def p5_fra_utenti_diversi_non_si_sfratta(sf, entrato, utente_a, utente_b):
                % (utente_a, utente_b, sf["presi"], sf["rifiuti"]))
 
 
-def p5b_la_riga_del_negato(sf):
+def p5b_denied_line(sf):
     """⚠ **AND DOES THE `⛔ EVICTION DENIED` LINE COME OUT?**  The prediction is written FIRST
     and goes the uncomfortable way: `[R]` 23 August 2026, reading `src/rcp.c`, **NO**.
 
@@ -1451,7 +1451,7 @@ def p5b_la_riga_del_negato(sf):
                "as a net for the day the structure changes")
 
 
-def p6_i_predefiniti_non_cambiano_niente(lm, sf, stato, n, nome_profilo):
+def p6_defaults_change_nothing(lm, sf, stato, n, nome_profilo):
     """⛔ **INVARIANT I6.**  Without `--linea-morta` and with `--sfratto-ms 0` —
     that is **as the product ships today** — everything must be identical to
     yesterday: no firing, no eviction, and the profile behaves as in the
@@ -1475,7 +1475,7 @@ def p6_i_predefiniti_non_cambiano_niente(lm, sf, stato, n, nome_profilo):
     if sf["sfratti"] > 0:
         return _no("⛔ I6 VIOLATED: with the eviction OFF there was an "
                    "eviction — «%s»" % (sf.get("righe_sfratto") or [""])[0][:180])
-    atteso = GRIGLIA_B76.get(nome_profilo)
+    atteso = GRID_B76.get(nome_profilo)
     if not atteso:
         return _si("no firing and no eviction with the cures off "
                    "(⚠ «%s» is not in the grid of 09-b76: nothing to "
@@ -1542,7 +1542,7 @@ def p6_i_predefiniti_non_cambiano_niente(lm, sf, stato, n, nome_profilo):
 #    `saltati` `ritmo_giu` `ritmo_arretrato` `ritmo_posti` `ritmo_scesi`.  This
 #    bench reads none of them, but step 0 rereads the order and gave red until
 #    they were written here too.
-CAMPI_LM = ["causa", "stallo_ms", "soglia_stallo_ms", "offerti", "usciti_byte",
+FIELDS_LM = ["causa", "stallo_ms", "soglia_stallo_ms", "offerti", "usciti_byte",
             "coda_video", "silenzio_ms", "soglia_silenzio_ms", "prove",
             "minimo_prove", "persi", "spediti", "permille", "finestra_ms",
             "minimo_pacchetti", "cwnd", "cwnd_left", "srtt_us", "fermo_ms",
@@ -1551,7 +1551,7 @@ CAMPI_LM = ["causa", "stallo_ms", "soglia_stallo_ms", "offerti", "usciti_byte",
 
 
 def _fab_lm(ora="21:14:02.123", causa="stallo", stallo_ms=5004,
-            soglia_stallo=LM_STALLO_MS, offerti=41, usciti=0, coda_video=61240,
+            stall_threshold=LM_STALL_MS, offerti=41, usciti=0, coda_video=61240,
             silenzio_ms=1300, prove=9, persi=31, spediti=412, permille=75,
             finestra_ms=1004, cwnd=8948, cwnd_left=0, srtt_us=61230,
             giudizio="⛔ the line is DEAD: for too long no frame has gone out while "
@@ -1568,13 +1568,13 @@ def _fab_lm(ora="21:14:02.123", causa="stallo", stallo_ms=5004,
             "minimo_pacchetti=%d cwnd=%d cwnd_left=%d srtt_us=%d fermo_ms=0 "
             "giri_fermi=0 saltati=0 ritmo_giu=0 ritmo_arretrato=0 ritmo_posti=0 "
             "ritmo_scesi=0 giudizio=%s"
-            % (ora, causa, stallo_ms, soglia_stallo, offerti, usciti,
-               coda_video, silenzio_ms, LM_SILENZIO_S * 1000, prove,
+            % (ora, causa, stallo_ms, stall_threshold, offerti, usciti,
+               coda_video, silenzio_ms, LM_SILENCE_S * 1000, prove,
                LM_MIN_PROVE, persi, spediti, permille, finestra_ms,
-               LM_MIN_PACCHETTI, cwnd, cwnd_left, srtt_us, giudizio))
+               LM_MIN_PACKETS, cwnd, cwnd_left, srtt_us, giudizio))
 
 
-def _fab_chiusa(ora="21:14:02.124"):
+def _make_closed(ora="21:14:02.124"):
     return ("%s quic    ⛔ [192.168.0.2]:50875: DEAD LINE — the QUIC connection "
             "is closing (one single CONNECTION_CLOSE, sent)." % ora)
 
@@ -1590,7 +1590,7 @@ def _fab_rq(da_ms=1002, persi_d=3, spediti_d=410):
             "giudizio=-- nothing to report" % (da_ms, persi_d, spediti_d))
 
 
-def _fab_sfratto(ora="21:14:31.500", muto=15412, chi=UTENTE):
+def _make_eviction(ora="21:14:31.500", muto=15412, chi=UTENTE):
     return ("%s rcp     ⭐ EVICTION for silence: %d ms without a PACKET from "
             "[192.168.0.2]:50875 (threshold 15000 ms) — the slot of %s goes to the "
             "client arriving from [192.168.0.2]:50999 (§4.4: whoever is silent is "
@@ -1598,7 +1598,7 @@ def _fab_sfratto(ora="21:14:31.500", muto=15412, chi=UTENTE):
             % (ora, muto, chi))
 
 
-def _fab_rifiuto(ora="21:14:20.100", muto=4020, acceso=True):
+def _make_refusal(ora="21:14:20.100", muto=4020, acceso=True):
     return ("%s rcp     slot DENIED to %s from [192.168.0.2]:50999: another "
             "client of this same user holds it (taken: 1) — that occupant "
             "gave a sign of life %d ms ago, and the eviction %s"
@@ -1606,19 +1606,19 @@ def _fab_rifiuto(ora="21:14:20.100", muto=4020, acceso=True):
                "did NOT fire (threshold in force)" if acceso else "is switched OFF by hand (--sfratto-ms 0)"))
 
 
-def _fab_preso(ora="21:14:31.510", chi=UTENTE):
+def _make_taken(ora="21:14:31.510", chi=UTENTE):
     return ("%s rcp     slot TAKEN by %s via [192.168.0.2]:50999 "
             "(taken now: 1)" % (ora, chi))
 
 
-def _fab_negato(ora="21:14:20.100"):
+def _make_denied(ora="21:14:20.100"):
     return ("%s rcp     ⛔ EVICTION DENIED: the slot belongs to «%s» and the one asking "
             "is «%s» — between different users there is NEVER an eviction, and this registry "
             "should not even be able to propose it" % (ora, UTENTE, UTENTE2))
 
 
-def _fab_campioni(secondi=60.0, passo=0.1, periodo=5.0, byte_giro=130,
-                  pacchetti_giro=2, fondo_byte_s=0.0, fondo_pkt_s=0.0):
+def _make_samples(secondi=60.0, passo=0.1, periodo=5.0, byte_round=130,
+                  packets_per_round=2, background_byte_s=0.0, background_pkt_s=0.0):
     """Counter samples: one «round» of PINGs every `periodo` seconds.
 
     ⭐ Manufacturing the samples and not the numbers is what makes the control real:
@@ -1629,13 +1629,13 @@ def _fab_campioni(secondi=60.0, passo=0.1, periodo=5.0, byte_giro=130,
     prossimo = periodo
     while t < secondi:
         if t >= prossimo:
-            b += byte_giro
-            p += pacchetti_giro
+            b += byte_round
+            p += packets_per_round
             prossimo += periodo
         # ⛔ The background moves the packets TOO, or it is not a background: it is precisely
         #    what makes the events invisible, and it is the case to test.
-        b += int(fondo_byte_s * passo)
-        resto += fondo_pkt_s * passo
+        b += int(background_byte_s * passo)
+        resto += background_pkt_s * passo
         p += int(resto)
         resto -= int(resto)
         campioni.append([round(t, 3), b, p])
@@ -1685,9 +1685,9 @@ def _certifica_contratto():
             break
     fmt = "".join(pezzi)
     nomi = [x.split("=")[0] for x in fmt.split() if "=" in x]
-    if nomi != CAMPI_LM:
+    if nomi != FIELDS_LM:
         return (False, "⛔ THE CONTRACT HAS CHANGED: the source writes the fields "
-                       "%s, this bench expects %s" % (nomi, CAMPI_LM))
+                       "%s, this bench expects %s" % (nomi, FIELDS_LM))
     if not fmt.rstrip().endswith("giudizio=%s"):
         return (False, "⛔ `giudizio=` is no longer the LAST field: the value "
                        "contains spaces, and a field after it would be read "
@@ -1744,7 +1744,7 @@ def certifica():
     lm = riduci_linea_morta([_fab_lm()])
     ok = (lm["esito"] == "letto" and lm["scatti"] == 1
           and lm["causa"] == "stallo" and lm["stallo_ms"] == 5004
-          and lm["soglia_stallo_ms"] == LM_STALLO_MS and lm["offerti"] == 41
+          and lm["soglia_stallo_ms"] == LM_STALL_MS and lm["offerti"] == 41
           and lm["usciti_byte"] == 0 and lm["coda_video"] == 61240
           and lm["permille"] == 75 and lm["spediti"] == 412
           and lm["cwnd_left"] == 0
@@ -1773,16 +1773,16 @@ def certifica():
     verde = verde and ok
 
     lm0 = riduci_linea_morta([])
-    lmx = riduci_linea_morta([], letto=False)
+    dlx = riduci_linea_morta([], letto=False)
     ok = (lm0["esito"] == "letto" and lm0["scatti"] == 0
-          and lmx["esito"] != "letto")
+          and dlx["esito"] != "letto")
     (_ok if ok else _ko)("⛔⛔ «zero firings» and «I did not read» do NOT look "
                          "the same: «%s» against «%s»"
-                         % (lm0["esito"], lmx["esito"][:60]))
+                         % (lm0["esito"], dlx["esito"][:60]))
     verde = verde and ok
 
-    sf = riduci_sfratto([_fab_rifiuto(), _fab_rifiuto(), _fab_sfratto(),
-                         _fab_preso()])
+    sf = reduce_eviction([_make_refusal(), _make_refusal(), _make_eviction(),
+                         _make_taken()])
     ok = (sf["sfratti"] == 1 and sf["rifiuti"] == 2 and sf["presi"] == 1
           and sf["muto_ms"] == 15412 and sf["sfrattato"] == UTENTE
           and sf["negati"] == 0 and sf["ultimo_rifiuto_muto_ms"] == 4020
@@ -1794,7 +1794,7 @@ def certifica():
                             sf.get("sfrattato"), sf.get("sfratto_dice")))
     verde = verde and ok
 
-    sf2 = riduci_sfratto([_fab_rifiuto(acceso=False), _fab_negato()])
+    sf2 = reduce_eviction([_make_refusal(acceso=False), _make_denied()])
     ok = (sf2["negati"] == 1 and sf2["sfratti"] == 0
           and sf2["sfratto_dice"] == "SPENTO")
     (_ok if ok else _ko)("the «EVICTION DENIED» line and the refusal with the eviction OFF "
@@ -1810,7 +1810,7 @@ def certifica():
              + [_fab_rq(persi_d=2, spediti_d=400)] * 20
              + [_fab_rq(persi_d=90, spediti_d=100)]      # ⛔ few packets
              + [_fab_rq(persi_d=90, spediti_d=400, da_ms=400)])  # ⛔ short window
-    fin = finestre_dichiarate(righe)
+    fin = declared_windows(righe)
     ok = (fin["esito"] == "letto" and fin["finestre_valide"] == 42
           and fin["permille_max"] == 75 and fin["sopra_soglia"] == 2
           and fin["coppie_sopra_soglia"] == 1
@@ -1818,19 +1818,19 @@ def certifica():
     (_ok if ok else _ko)("⛔ the cure's GUARDS apply: 44 lines, %d "
                          "valid windows (the two below %d packets / below %d "
                          "ms are discarded), max %d‰, %d pairs in a row above "
-                         "threshold" % (fin["finestre_valide"], LM_MIN_PACCHETTI,
-                                     LM_FINESTRA_MS, fin["permille_max"],
+                         "threshold" % (fin["finestre_valide"], LM_MIN_PACKETS,
+                                     LM_WINDOW_MS, fin["permille_max"],
                                      fin["coppie_sopra_soglia"]))
     verde = verde and ok
 
-    fin0 = finestre_dichiarate([_fab_rq(persi_d=1, spediti_d=10)] * 30)
+    fin0 = declared_windows([_fab_rq(persi_d=1, spediti_d=10)] * 30)
     ok = fin0["esito"].startswith("I DO NOT JUDGE")
     (_ok if ok else _ko)("⭐ and if NO window passes the guards, the "
                          "reconstruction REFUSES instead of saying «zero»: «%s»"
                          % fin0["esito"][:110])
     verde = verde and ok
 
-    oro = riduci_orologio(_fab_campioni(periodo=5.0))
+    oro = reduce_clock(_make_samples(periodo=5.0))
     ok = (oro["esito"] == "misurato" and abs(oro["intervallo_mediano_s"] - 5.0) < 0.3
           and oro["eventi"] >= 10)
     (_ok if ok else _ko)("the wire clock finds the PING rounds inside the "
@@ -1840,24 +1840,24 @@ def certifica():
                             oro["kbit_s"], oro.get("byte_per_evento")))
     verde = verde and ok
 
-    oro10 = riduci_orologio(_fab_campioni(periodo=10.0))
-    ok = (oro10["esito"] == "misurato"
-          and abs(oro10["intervallo_mediano_s"] - 10.0) < 0.3)
+    gold10 = reduce_clock(_make_samples(periodo=10.0))
+    ok = (gold10["esito"] == "misurato"
+          and abs(gold10["intervallo_mediano_s"] - 10.0) < 0.3)
     (_ok if ok else _ko)("⭐ and it can tell 10 s from 5: median interval %s s"
-                         % oro10.get("intervallo_mediano_s"))
+                         % gold10.get("intervallo_mediano_s"))
     verde = verde and ok
 
-    oroF = riduci_orologio(_fab_campioni(periodo=5.0, fondo_byte_s=180000,
-                                         fondo_pkt_s=190.0))
-    ok = (oroF["esito"] == "misurato" and oroF["intervallo_mediano_s"] is None
-          and "is NOT still" in oroF.get("perche_niente_intervallo", ""))
+    goldF = reduce_clock(_make_samples(periodo=5.0, background_byte_s=180000,
+                                         background_pkt_s=190.0))
+    ok = (goldF["esito"] == "misurato" and goldF["intervallo_mediano_s"] is None
+          and "is NOT still" in goldF.get("perche_niente_intervallo", ""))
     (_ok if ok else _ko)("⛔ and on a session that is NOT still (audio background) it "
                          "refuses to give an interval instead of inventing "
-                         "one: «%s»" % oroF.get("perche_niente_intervallo", "")[:90])
+                         "one: «%s»" % goldF.get("perche_niente_intervallo", "")[:90])
     verde = verde and ok
 
-    ok = (abs(dt_registro("00:00:01.500 x", "23:59:59.500 x") - 2.0) < 1e-6
-          and dt_registro("nessuna ora", "23:59:59.500 x") is None)
+    ok = (abs(dt_log("00:00:01.500 x", "23:59:59.500 x") - 2.0) < 1e-6
+          and dt_log("nessuna ora", "23:59:59.500 x") is None)
     (_ok if ok else _ko)("the log clock steps over midnight, and "
                          "«I do not know» is not «zero seconds»")
     verde = verde and ok
@@ -1865,277 +1865,277 @@ def certifica():
     # ── 2 · the six predicates: GREEN, RED and MUTE ───────────────────────
     _log("2 · THE SIX PREDICATES — and each must be able to give red, not only green")
 
-    testimone_vivo = {"aperta": True, "cliente_attaccato": True,
+    witness_alive = {"aperta": True, "cliente_attaccato": True,
                       "cliente_staccato": False, "congedi": []}
-    testimone_caduto = {"aperta": True, "cliente_attaccato": False,
+    witness_dropped = {"aperta": True, "cliente_attaccato": False,
                         "cliente_staccato": True, "caduta": "the session dropped",
                         "congedi": []}
-    giro_buono = {"fps": 9.1, "consegna": {"esito": "misurato", "copertura": 1.0,
+    good_round = {"fps": 9.1, "consegna": {"esito": "misurato", "copertura": 1.0,
                                            "buco_max_s": 0.37}}
-    giro_fiacco = {"fps": 1.2, "consegna": {"esito": "misurato", "copertura": 0.4,
+    sluggish_round = {"fps": 1.2, "consegna": {"esito": "misurato", "copertura": 0.4,
                                             "buco_max_s": 6.0}}
 
     _inf("P1 · ⛔⛔ the false positive")
     verde &= caso("P1 green · zero firings on a line that holds", True,
-                  p1_niente_falso_positivo(lm0, testimone_vivo, giro_buono, 10))
+                  p1_no_false_positive(lm0, witness_alive, good_round, 10))
     verde &= caso("P1 RED · one firing on a line that holds", False,
-                  p1_niente_falso_positivo(lm, testimone_vivo, giro_buono, 10))
+                  p1_no_false_positive(lm, witness_alive, good_round, 10))
     verde &= caso("P1 mute · zero firings but the line was not holding", None,
-                  p1_niente_falso_positivo(lm0, testimone_vivo, giro_fiacco, 10))
+                  p1_no_false_positive(lm0, witness_alive, sluggish_round, 10))
     verde &= caso("P1 mute · zero firings but the client dropped for other reasons", None,
-                  p1_niente_falso_positivo(lm0, testimone_caduto, giro_buono, 10))
+                  p1_no_false_positive(lm0, witness_dropped, good_round, 10))
     verde &= caso("P1 mute · I did not read the log", None,
-                  p1_niente_falso_positivo(lmx, testimone_vivo, giro_buono, 10))
+                  p1_no_false_positive(dlx, witness_alive, good_round, 10))
 
     _inf("P1c · ⛔⛔ the CONTROL: the same line with the cures off")
-    giro_regge = {"fps": 9.1, "consegna": {"esito": "misurato", "copertura": 0.99,
+    round_holds = {"fps": 9.1, "consegna": {"esito": "misurato", "copertura": 0.99,
                                            "buco_max_s": 0.42,
                                            "consegna_fino_a_s": 599.8}}
-    giro_non_regge = {"fps": 1.1, "consegna": {"esito": "misurato",
+    round_does_not_hold = {"fps": 1.1, "consegna": {"esito": "misurato",
                                                "copertura": 0.30,
                                                "buco_max_s": 40.0,
                                                "consegna_fino_a_s": 22.0}}
-    giro_si_ferma = {"fps": 8.0, "consegna": {"esito": "misurato",
+    round_stops = {"fps": 8.0, "consegna": {"esito": "misurato",
                                               "copertura": 0.40,
                                               "buco_max_s": 30.0,
                                               "consegna_fino_a_s": 240.0}}
     verde &= caso("P1c green · with the cures off the same line holds 10 minutes",
-                  True, p1c_la_linea_regge_a_cura_spenta(testimone_vivo,
-                                                         giro_regge, 10, 1))
+                  True, p1c_line_holds_with_fix_off(witness_alive,
+                                                         round_holds, 10, 1))
     verde &= caso("P1c RED · ⛔ it drops even with the cures off: the red of test 1 is "
                   "not a false positive", False,
-                  p1c_la_linea_regge_a_cura_spenta(testimone_caduto,
-                                                   giro_regge, 10, 1))
+                  p1c_line_holds_with_fix_off(witness_dropped,
+                                                   round_holds, 10, 1))
     verde &= caso("P1c RED · with the cures off the rate is below the bench's "
                   "floor", False,
-                  p1c_la_linea_regge_a_cura_spenta(testimone_vivo,
-                                                   giro_non_regge, 10, 1))
+                  p1c_line_holds_with_fix_off(witness_alive,
+                                                   round_does_not_hold, 10, 1))
     verde &= caso("P1c RED · with the cures off delivery stops anyway",
-                  False, p1c_la_linea_regge_a_cura_spenta(testimone_vivo,
-                                                          giro_si_ferma, 10, 1))
+                  False, p1c_line_holds_with_fix_off(witness_alive,
+                                                          round_stops, 10, 1))
     verde &= caso("P1c mute · I do not have the numbers of the control run", None,
-                  p1c_la_linea_regge_a_cura_spenta(testimone_vivo,
+                  p1c_line_holds_with_fix_off(witness_alive,
                                                    {"fps": None}, 10, 1))
 
     _inf("P1b · ⭐⭐ the TRUE MARGIN — the scale that tracks down the maximum stall")
-    sonda_casa = {"esito": "misurato", "persi_pc": 1.86, "raffica_media": 1.02}
-    scala_larga = [{"soglia_ms": 2000, "scattata": False},
+    home_probe = {"esito": "misurato", "persi_pc": 1.86, "raffica_media": 1.02}
+    wide_ladder = [{"soglia_ms": 2000, "scattata": False},
                    {"soglia_ms": 1000, "scattata": False},
                    {"soglia_ms": 500, "scattata": False}]
-    scala_stretta = [{"soglia_ms": 2000, "scattata": False},
+    tight_ladder = [{"soglia_ms": 2000, "scattata": False},
                      {"soglia_ms": 1000, "scattata": True, "stallo_ms": 1043}]
-    scala_strettissima = [{"soglia_ms": 3000, "scattata": True,
+    tightest_ladder = [{"soglia_ms": 3000, "scattata": True,
                            "stallo_ms": 3120}]
-    scala_gia_scattata = [{"soglia_ms": LM_STALLO_MS, "scattata": True,
+    ladder_already_fired = [{"soglia_ms": LM_STALL_MS, "scattata": True,
                            "stallo_ms": 5300}]
-    scala_poco_giu = [{"soglia_ms": 4000, "scattata": False}]
+    slightly_lower_ladder = [{"soglia_ms": 4000, "scattata": False}]
     verde &= caso("P1b green · it does not fire even at 500 ms ⇒ margin > 10×",
-                  True, p1b_il_margine_dello_stallo(scala_larga, LM_STALLO_MS,
+                  True, p1b_il_margine_dello_stallo(wide_ladder, LM_STALL_MS,
                                                     "casa-cattiva"))
     verde &= caso("P1b green · fires at 1000 with stall 1043 ms ⇒ margin 4.8×",
-                  True, p1b_il_margine_dello_stallo(scala_stretta, LM_STALLO_MS,
+                  True, p1b_il_margine_dello_stallo(tight_ladder, LM_STALL_MS,
                                                     "raffica-1"))
     verde &= caso("P1b RED · ⛔ stall 3120 ms on a line that holds: "
                   "margin 1.6×", False,
-                  p1b_il_margine_dello_stallo(scala_strettissima, LM_STALLO_MS,
+                  p1b_il_margine_dello_stallo(tightest_ladder, LM_STALL_MS,
                                               "casa-cattiva"))
     verde &= caso("P1b mute · it already fired at the threshold in force: it is the "
                   "false positive, and P1 says so", None,
-                  p1b_il_margine_dello_stallo(scala_gia_scattata, LM_STALLO_MS,
+                  p1b_il_margine_dello_stallo(ladder_already_fired, LM_STALL_MS,
                                               "casa-cattiva"))
     verde &= caso("P1b mute · the scale did not go down enough to give a "
                   "margin", None,
-                  p1b_il_margine_dello_stallo(scala_poco_giu, LM_STALLO_MS,
+                  p1b_il_margine_dello_stallo(slightly_lower_ladder, LM_STALL_MS,
                                               "casa-cattiva"))
     verde &= caso("P1b mute · no scale tried", None,
-                  p1b_il_margine_dello_stallo([], LM_STALLO_MS, "casa-cattiva"))
+                  p1b_il_margine_dello_stallo([], LM_STALL_MS, "casa-cattiva"))
 
     _inf("P-raffica1 · ⭐ the line that delivers 24/s with an empty second")
-    att_r1 = GRIGLIA_B76["raffica-1"]
-    giro_r1 = {"fps": 23.94, "consegna": {"esito": "misurato", "copertura": 0.96,
+    expected_r1 = GRID_B76["raffica-1"]
+    round_r1 = {"fps": 23.94, "consegna": {"esito": "misurato", "copertura": 0.96,
                                           "buco_max_s": 1.00}}
-    giro_r1_fuori = {"fps": 3.0, "consegna": {"esito": "misurato",
+    round_r1_out = {"fps": 3.0, "consegna": {"esito": "misurato",
                                               "copertura": 0.5,
                                               "buco_max_s": 8.0}}
-    lm_stallo = riduci_linea_morta([_fab_lm(causa="stallo")])
-    lm_stallo["chiuse_dal_trasporto"] = 1
+    lm_stall = riduci_linea_morta([_fab_lm(causa="stallo")])
+    lm_stall["chiuse_dal_trasporto"] = 1
     verde &= caso("P-raffica1 green · zero firings and the line is within the grid",
-                  True, p_non_deve_scattare("raffica-1", lm0, testimone_vivo,
-                                            giro_r1, 1, att_r1))
+                  True, p_must_not_fire("raffica-1", lm0, witness_alive,
+                                            round_r1, 1, expected_r1))
     verde &= caso("P-raffica1 RED · ⛔⛔ declared dead a line that "
                   "delivers 24 frames/s", False,
-                  p_non_deve_scattare("raffica-1", lm_stallo, testimone_vivo,
-                                      giro_r1, 1, att_r1))
+                  p_must_not_fire("raffica-1", lm_stall, witness_alive,
+                                      round_r1, 1, expected_r1))
     verde &= caso("P-raffica1 mute · the run is not the grid's one", None,
-                  p_non_deve_scattare("raffica-1", lm0, testimone_vivo,
-                                      giro_r1_fuori, 1, att_r1))
+                  p_must_not_fire("raffica-1", lm0, witness_alive,
+                                      round_r1_out, 1, expected_r1))
     verde &= caso("P-raffica1 mute · the client dropped for other reasons", None,
-                  p_non_deve_scattare("raffica-1", lm0, testimone_caduto,
-                                      giro_r1, 1, att_r1))
+                  p_must_not_fire("raffica-1", lm0, witness_dropped,
+                                      round_r1, 1, expected_r1))
 
     _inf("P-scena-ferma · ⛔⛔ the worst way in which the cure could fail")
     lm_scena = riduci_linea_morta([_fab_lm(causa="stallo", stallo_ms=1004,
-                                           soglia_stallo=1000, offerti=0,
+                                           stall_threshold=1000, offerti=0,
                                            usciti=0, coda_video=0)])
     lm_scena["chiuse_dal_trasporto"] = 1
     verde &= caso("P-scena-ferma green · 120 s of still desktop at threshold 1000, "
                   "zero firings", True,
-                  p_scena_ferma_non_scatta(lm0, testimone_vivo, 120, 1000))
+                  p_scena_ferma_non_scatta(lm0, witness_alive, 120, 1000))
     verde &= caso("P-scena-ferma RED · ⛔⛔ throws out whoever looks at a still "
                   "desktop (offerti=0, coda_video=0)", False,
-                  p_scena_ferma_non_scatta(lm_scena, testimone_vivo, 120, 1000))
+                  p_scena_ferma_non_scatta(lm_scena, witness_alive, 120, 1000))
     verde &= caso("P-scena-ferma mute · the client dropped for other reasons", None,
-                  p_scena_ferma_non_scatta(lm0, testimone_caduto, 120, 1000))
+                  p_scena_ferma_non_scatta(lm0, witness_dropped, 120, 1000))
     verde &= caso("P-scena-ferma mute · I did not read the log", None,
-                  p_scena_ferma_non_scatta(lmx, testimone_vivo, 120, 1000))
+                  p_scena_ferma_non_scatta(dlx, witness_alive, 120, 1000))
 
     _inf("P2 · the real firing")
-    sonda_raffica = {"esito": "misurato", "persi_pc": 11.10, "raffica_media": 5.5}
+    probe_burst = {"esito": "misurato", "persi_pc": 11.10, "raffica_media": 5.5}
     lm_p = riduci_linea_morta([_fab_lm(causa="stallo")])
     lm_p["chiuse_dal_trasporto"] = 1
-    lm_p_senza_filo = riduci_linea_morta([_fab_lm(causa="stallo")])
-    lm_p_senza_filo["chiuse_dal_trasporto"] = 0
+    lm_p_without_wire = riduci_linea_morta([_fab_lm(causa="stallo")])
+    lm_p_without_wire["chiuse_dal_trasporto"] = 0
     lm_s = riduci_linea_morta([_fab_lm(causa="silenzio", stallo_ms=800,
                                        silenzio_ms=10004, prove=3)])
     lm_s["chiuse_dal_trasporto"] = 1
     lm0["chiuse_dal_trasporto"] = 0
     verde &= caso("P2 green · fired with causa=stallo and the wire dropped", True,
-                  p2_scatta_sullo_stallo(lm_p, sonda_raffica, 18.4))
+                  p2_fires_on_stall(lm_p, probe_burst, 18.4))
     verde &= caso("P2 RED · it did not fire on a line that cannot be served",
-                  False, p2_scatta_sullo_stallo(lm0, sonda_raffica, None))
+                  False, p2_fires_on_stall(lm0, probe_burst, None))
     verde &= caso("P2 RED · fired for silence instead of stall", False,
-                  p2_scatta_sullo_stallo(lm_s, sonda_raffica, 12.0))
+                  p2_fires_on_stall(lm_s, probe_burst, 12.0))
     verde &= caso("P2 RED · decided but the wire did NOT drop", False,
-                  p2_scatta_sullo_stallo(lm_p_senza_filo, sonda_raffica, 18.4))
+                  p2_fires_on_stall(lm_p_without_wire, probe_burst, 18.4))
     verde &= caso("P2 mute · the fault was not put in place", None,
-                  p2_scatta_sullo_stallo(lm_p, sonda_casa, 18.4))
+                  p2_fires_on_stall(lm_p, home_probe, 18.4))
     verde &= caso("P2 mute · the probe did not measure", None,
-                  p2_scatta_sullo_stallo(lm_p, None, 18.4))
+                  p2_fires_on_stall(lm_p, None, 18.4))
 
     _inf("P3 · silence")
-    lm_presto = riduci_linea_morta([_fab_lm(causa="silenzio", silenzio_ms=6100)])
-    lm_presto["chiuse_dal_trasporto"] = 1
-    lm_tardi = riduci_linea_morta([_fab_lm(causa="silenzio", silenzio_ms=21000)])
-    lm_tardi["chiuse_dal_trasporto"] = 1
+    lm_early = riduci_linea_morta([_fab_lm(causa="silenzio", silenzio_ms=6100)])
+    lm_early["chiuse_dal_trasporto"] = 1
+    lm_late = riduci_linea_morta([_fab_lm(causa="silenzio", silenzio_ms=21000)])
+    lm_late["chiuse_dal_trasporto"] = 1
     verde &= caso("P3 green · fired at 10.0 s with causa=silenzio", True,
-                  p3_scatta_sul_silenzio(lm_s, LM_SILENZIO_S * 1000))
+                  p3_fires_on_silence(lm_s, LM_SILENCE_S * 1000))
     verde &= caso("P3 RED · it did not fire: the ghost stays until 30 s", False,
-                  p3_scatta_sul_silenzio(lm0, LM_SILENZIO_S * 1000))
+                  p3_fires_on_silence(lm0, LM_SILENCE_S * 1000))
     verde &= caso("P3 RED · ⛔ fired BEFORE the threshold (a live and idle "
                   "client would be thrown out)", False,
-                  p3_scatta_sul_silenzio(lm_presto, LM_SILENZIO_S * 1000))
+                  p3_fires_on_silence(lm_early, LM_SILENCE_S * 1000))
     verde &= caso("P3 RED · fired long after the threshold (form E1)", False,
-                  p3_scatta_sul_silenzio(lm_tardi, LM_SILENZIO_S * 1000))
+                  p3_fires_on_silence(lm_late, LM_SILENCE_S * 1000))
     verde &= caso("P3 RED · fired for stall and not for silence", False,
-                  p3_scatta_sul_silenzio(lm_p, LM_SILENZIO_S * 1000))
+                  p3_fires_on_silence(lm_p, LM_SILENCE_S * 1000))
     verde &= caso("P3 mute · I did not read the log", None,
-                  p3_scatta_sul_silenzio(lmx, LM_SILENZIO_S * 1000))
+                  p3_fires_on_silence(dlx, LM_SILENCE_S * 1000))
 
     _inf("P3b · the declared price of the PINGs")
-    fermo_acceso = {"esito": "misurato", "kbit_s": 0.21, "pacchetti": 24,
+    idle_on = {"esito": "misurato", "kbit_s": 0.21, "pacchetti": 24,
                     "secondi": 60.0}
-    fermo_spento = {"esito": "misurato", "kbit_s": 0.10, "pacchetti": 12,
+    idle_off = {"esito": "misurato", "kbit_s": 0.10, "pacchetti": 12,
                     "secondi": 60.0}
-    fermo_caro = {"esito": "misurato", "kbit_s": 1.30, "pacchetti": 160,
+    idle_costly = {"esito": "misurato", "kbit_s": 1.30, "pacchetti": 160,
                   "secondi": 60.0}
-    audio_acceso = {"esito": "misurato", "kbit_s": 1412.0, "pacchetti": 11800,
+    audio_on = {"esito": "misurato", "kbit_s": 1412.0, "pacchetti": 11800,
                     "secondi": 60.0}
-    audio_spento = {"esito": "misurato", "kbit_s": 1409.0, "pacchetti": 11790,
+    audio_off = {"esito": "misurato", "kbit_s": 1409.0, "pacchetti": 11790,
                     "secondi": 60.0}
     verde &= caso("P3b green · the difference is within the declared one", True,
-                  p3b_costo_dei_ping(fermo_acceso, fermo_spento))
+                  p3b_ping_cost(idle_on, idle_off))
     verde &= caso("P3b RED · the PINGs cost more than declared", False,
-                  p3b_costo_dei_ping(fermo_caro, fermo_spento))
+                  p3b_ping_cost(idle_costly, idle_off))
     verde &= caso("P3b mute · ⛔ the background is bigger than the target", None,
-                  p3b_costo_dei_ping(audio_acceso, audio_spento))
+                  p3b_ping_cost(audio_on, audio_off))
     verde &= caso("P3b mute · one of the two measurements is missing", None,
-                  p3b_costo_dei_ping(fermo_acceso, {"esito": "I DO NOT JUDGE"}))
+                  p3b_ping_cost(idle_on, {"esito": "I DO NOT JUDGE"}))
 
     _inf("P4 · the eviction")
-    sf_ok = riduci_sfratto([_fab_rifiuto(), _fab_sfratto(), _fab_preso()])
-    sf_presto = riduci_sfratto([_fab_sfratto(muto=9000), _fab_preso()])
-    sf_niente = riduci_sfratto([_fab_rifiuto()] * 11 + [_fab_preso()])
+    sf_ok = reduce_eviction([_make_refusal(), _make_eviction(), _make_taken()])
+    sf_early = reduce_eviction([_make_eviction(muto=9000), _make_taken()])
+    sf_nothing = reduce_eviction([_make_refusal()] * 11 + [_make_taken()])
     verde &= caso("P4 green · the slot becomes free again at ~15 s", True,
-                  p4_lo_sfratto_libera_il_posto(sf_ok, SFRATTO_CONSIGLIATO_MS,
+                  p4_eviction_frees_slot(sf_ok, RECOMMENDED_EVICTION_MS,
                                                 15.6, 30.5))
     verde &= caso("P4 RED · no eviction, the silence of §5.3 is waited for",
                   False,
-                  p4_lo_sfratto_libera_il_posto(sf_niente, SFRATTO_CONSIGLIATO_MS,
+                  p4_eviction_frees_slot(sf_nothing, RECOMMENDED_EVICTION_MS,
                                                 30.5, 30.5))
     verde &= caso("P4 RED · ⛔ evicted BEFORE the threshold (I2 off)", False,
-                  p4_lo_sfratto_libera_il_posto(sf_presto, SFRATTO_CONSIGLIATO_MS,
+                  p4_eviction_frees_slot(sf_early, RECOMMENDED_EVICTION_MS,
                                                 9.2, 30.5))
     verde &= caso("P4 RED · evicted, but the slot still takes 28 s",
                   False,
-                  p4_lo_sfratto_libera_il_posto(sf_ok, SFRATTO_CONSIGLIATO_MS,
+                  p4_eviction_frees_slot(sf_ok, RECOMMENDED_EVICTION_MS,
                                                 28.0, 30.5))
     verde &= caso("P4 mute · I do not know when the slot was taken back", None,
-                  p4_lo_sfratto_libera_il_posto(sf_ok, SFRATTO_CONSIGLIATO_MS,
+                  p4_eviction_frees_slot(sf_ok, RECOMMENDED_EVICTION_MS,
                                                 None, 30.5))
 
     _inf("P5 · ⛔ two different users")
-    sf_due_ok = riduci_sfratto([_fab_preso(chi=UTENTE), _fab_preso(chi=UTENTE2)])
-    sf_buco = riduci_sfratto([_fab_sfratto(chi=UTENTE), _fab_preso(chi=UTENTE2)])
+    sf_due_ok = reduce_eviction([_make_taken(chi=UTENTE), _make_taken(chi=UTENTE2)])
+    sf_hole = reduce_eviction([_make_eviction(chi=UTENTE), _make_taken(chi=UTENTE2)])
     verde &= caso("P5 green · no eviction and the second user gets in", True,
-                  p5_fra_utenti_diversi_non_si_sfratta(sf_due_ok, True,
+                  p5_no_eviction_across_users(sf_due_ok, True,
                                                        UTENTE, UTENTE2))
     verde &= caso("P5 RED · ⛔⛔ eviction between different users = security hole",
                   False,
-                  p5_fra_utenti_diversi_non_si_sfratta(sf_buco, True,
+                  p5_no_eviction_across_users(sf_hole, True,
                                                        UTENTE, UTENTE2))
     verde &= caso("P5 mute · no eviction, but the second did not get in", None,
-                  p5_fra_utenti_diversi_non_si_sfratta(sf_due_ok, False,
+                  p5_no_eviction_across_users(sf_due_ok, False,
                                                        UTENTE, UTENTE2))
     verde &= caso("P5b green · the «EVICTION DENIED» line does NOT come out (predicted `[R]`)",
-                  True, p5b_la_riga_del_negato(sf_due_ok))
+                  True, p5b_denied_line(sf_due_ok))
     verde &= caso("P5b RED · the line COMES OUT, that is my reading was wrong",
-                  False, p5b_la_riga_del_negato(riduci_sfratto([_fab_negato()])))
+                  False, p5b_denied_line(reduce_eviction([_make_denied()])))
 
     _inf("P6 · ⛔ the defaults change nothing (I6)")
     spento = {"esito": "letto", "linea_morta": "spenta", "stallo_ms": None,
               "silenzio_s": None, "sfratto_ms": 0, "righe": []}
-    acceso = {"esito": "letto", "linea_morta": "accesa", "stallo_ms": LM_STALLO_MS,
-              "silenzio_s": LM_SILENZIO_S, "sfratto_ms": SFRATTO_CONSIGLIATO_MS,
+    acceso = {"esito": "letto", "linea_morta": "accesa", "stallo_ms": LM_STALL_MS,
+              "silenzio_s": LM_SILENCE_S, "sfratto_ms": RECOMMENDED_EVICTION_MS,
               "righe": []}
-    sf_vuoto = riduci_sfratto([_fab_preso()])
-    giro_casa = {"fps": 9.1, "consegna": {"esito": "misurato", "copertura": 0.96,
+    sf_empty = reduce_eviction([_make_taken()])
+    round_home = {"fps": 9.1, "consegna": {"esito": "misurato", "copertura": 0.96,
                                           "buco_max_s": 0.42}}
-    giro_casa_fuori = {"fps": 22.0, "consegna": {"esito": "misurato",
+    round_home_out = {"fps": 22.0, "consegna": {"esito": "misurato",
                                                  "copertura": 1.0,
                                                  "buco_max_s": 0.1}}
-    giro_raffica = {"fps": 2.1, "consegna": {"esito": "misurato", "copertura": 0.28,
+    burst_round = {"fps": 2.1, "consegna": {"esito": "misurato", "copertura": 0.28,
                                              "buco_max_s": 14.26}}
-    giro_raffica_sana = {"fps": 30.0, "consegna": {"esito": "misurato",
+    healthy_burst_round = {"fps": 30.0, "consegna": {"esito": "misurato",
                                                    "copertura": 1.0,
                                                    "buco_max_s": 0.2}}
     verde &= caso("P6 green · cures off, «casa-cattiva» as in the b76 grid",
-                  True, p6_i_predefiniti_non_cambiano_niente(
-                      lm0, sf_vuoto, spento, giro_casa, "casa-cattiva"))
+                  True, p6_defaults_change_nothing(
+                      lm0, sf_empty, spento, round_home, "casa-cattiva"))
     verde &= caso("P6 green · cures off, «raffica-forte» stops as it does there",
-                  True, p6_i_predefiniti_non_cambiano_niente(
-                      lm0, sf_vuoto, spento, giro_raffica, "raffica-forte"))
+                  True, p6_defaults_change_nothing(
+                      lm0, sf_empty, spento, burst_round, "raffica-forte"))
     verde &= caso("P6 RED · ⛔ I6: the cure is off and fired anyway",
-                  False, p6_i_predefiniti_non_cambiano_niente(
-                      lm_p, sf_vuoto, spento, giro_casa, "casa-cattiva"))
+                  False, p6_defaults_change_nothing(
+                      lm_p, sf_empty, spento, round_home, "casa-cattiva"))
     verde &= caso("P6 RED · ⛔ I6: the eviction is off and there was an eviction",
-                  False, p6_i_predefiniti_non_cambiano_niente(
-                      lm0, sf_ok, spento, giro_casa, "casa-cattiva"))
+                  False, p6_defaults_change_nothing(
+                      lm0, sf_ok, spento, round_home, "casa-cattiva"))
     verde &= caso("P6 RED · the profile leaves the grid of 09-b76", False,
-                  p6_i_predefiniti_non_cambiano_niente(
-                      lm0, sf_vuoto, spento, giro_casa_fuori, "casa-cattiva"))
+                  p6_defaults_change_nothing(
+                      lm0, sf_empty, spento, round_home_out, "casa-cattiva"))
     verde &= caso("P6 RED · «raffica-forte» NO longer stops: the product has "
-                  "changed", False, p6_i_predefiniti_non_cambiano_niente(
-                      lm0, sf_vuoto, spento, giro_raffica_sana, "raffica-forte"))
+                  "changed", False, p6_defaults_change_nothing(
+                      lm0, sf_empty, spento, healthy_burst_round, "raffica-forte"))
     verde &= caso("P6 mute · the server was NOT on the defaults", None,
-                  p6_i_predefiniti_non_cambiano_niente(
-                      lm0, sf_vuoto, acceso, giro_casa, "casa-cattiva"))
+                  p6_defaults_change_nothing(
+                      lm0, sf_empty, acceso, round_home, "casa-cattiva"))
 
     # ── 3 · the configuration guard ────────────────────────────────────
     _log("3 · THE GUARD — «is the server configured as this test believes?»")
     verde &= caso("cures ON as I want them", True,
                   cure_come_voglio(acceso, linea_morta="accesa",
-                                   stallo_ms=LM_STALLO_MS,
-                                   sfratto_ms=SFRATTO_CONSIGLIATO_MS))
+                                   stallo_ms=LM_STALL_MS,
+                                   sfratto_ms=RECOMMENDED_EVICTION_MS))
     verde &= caso("⛔ mute if the dead line turns out OFF when I wanted it "
                   "on", None,
                   cure_come_voglio(spento, linea_morta="accesa"))
@@ -2187,7 +2187,7 @@ def preparati():
     if not B76.spedisci_sonda():
         _ko("the scripts of the probe / of the reader were not written in %s" % LAV)
         return False
-    if not B76.scrivi_sulla_macchina("09-b81-orologio.py", OROLOGIO):
+    if not B76.write_on_machine("09-b81-orologio.py", OROLOGIO):
         _ko("the wire clock was not written in %s" % LAV)
         return False
     if B76.scegli_porta_sonda() is None:
@@ -2204,7 +2204,7 @@ def preparati():
     return True
 
 
-def accendi_server(opzioni, perche):
+def turn_on_server(opzioni, perche):
     """⛔ Restarts MY server (unit `%s`) with those options, and THEN
        rereads from the startup line that it really took them.
 
@@ -2227,7 +2227,7 @@ def accendi_server(opzioni, perche):
     if p.returncode != 0:
         _ko("⛔ the server did not restart: %s" % testo[-400:])
         return False
-    stato = stato_delle_cure()
+    stato = fixes_state()
     _inf("the server says of itself: dead line %s (stall %s ms, silence %s s) · "
          "eviction %s ms"
          % (stato["linea_morta"], stato["stallo_ms"], stato["silenzio_s"],
@@ -2242,7 +2242,7 @@ def accendi_server(opzioni, perche):
 
 
 @contextlib.contextmanager
-def rete_guasta(regole, previsti_s, attesa=1800):
+def broken_network(regole, expected_s, attesa=1800):
     """⛔ The lock, the guardian and the `netem`, taken and given back TOGETHER.
 
     · the lock because the `netem` on `lo` is only one for the whole machine,
@@ -2252,7 +2252,7 @@ def rete_guasta(regole, previsti_s, attesa=1800):
     · the `u32` filters on %d only, and `enp7s0` is NEVER touched.
     """ % PORTA
     LUC.prendi(CHI, secondi=AFFITTO, attesa=attesa)
-    RETE.guardiano_arma(min(3600, previsti_s + 600))
+    RETE.guardiano_arma(min(3600, expected_s + 600))
     messa = False
     try:
         ok, q = RETE.stringi(regole)
@@ -2297,19 +2297,19 @@ def sonda(nome):
     return s, (passa, perche)
 
 
-def cliente_in_sottofondo(utente, parola_dentro, secondi, marca):
+def background_client(utente, password_inside, secondi, marca):
     """⛔ The client INSIDE the chroot, detached from my `ssh`: it must be
        still alive when I kill it, and `enter.sh` is a `chroot` — so the
        process is seen and killed from the HOST with its real pid."""
     dentro = ("python3 -u %s/banchi/01-b3-cliente.py --indirizzo %s --porta %d "
               "--utente %s --parola-file %s --audio-codec pcm --video-codec h264 "
               "--adatta 1920x1080 --resta %d"
-              % (DENTRO_ALB, IND, PORTA, utente, parola_dentro, secondi))
+              % (DENTRO_ALB, IND, PORTA, utente, password_inside, secondi))
     root("bash /media/REMOTIX/enter.sh --root 'setsid nohup %s > %s/%s.log 2>&1 & "
          "sleep 0.5; echo lanciato'" % (dentro, DENTRO_LAV, marca), 180)
 
 
-def cliente_pid(utente):
+def client_pid(utente):
     """⛔ TWO guards in the pattern, and both are against the same error —
        killing the wrong process:
 
@@ -2342,14 +2342,14 @@ def uccidi(pid):
     return (t[-1] + " x") if t else None
 
 
-def ripulisci_clienti():
+def clean_up_clients():
     """⚠ Between one test and the next: a client left alive would keep the slot, and
        the next test would measure the previous run's lock."""
     root("bash -c \"pkill -9 -f '^python3 .*b3-cliente[.]py .*--porta %d ' ; "
          "true\"" % PORTA)
 
 
-def aspetta_riga(riga0, filtro, tetto=45.0, passo=1.0):
+def wait_line(riga0, filtro, tetto=45.0, passo=1.0):
     scade = time.time() + tetto
     while True:
         r = leggi_registro(riga0, filtro)
@@ -2358,7 +2358,7 @@ def aspetta_riga(riga0, filtro, tetto=45.0, passo=1.0):
         time.sleep(passo)
 
 
-def stampa_finestre(fin):
+def print_windows(fin):
     if fin.get("esito") != "letto":
         _dub("DECLARED  %s" % fin.get("esito"))
         return
@@ -2381,7 +2381,7 @@ def stampa_finestre(fin):
             fin["coppie_sopra_soglia_dopo"]))
 
 
-def stampa_scatti(lm):
+def print_shots(lm):
     if lm.get("esito") != "letto":
         _dub("FIRINGS  %s" % lm.get("esito"))
         return
@@ -2397,7 +2397,7 @@ def stampa_scatti(lm):
         _inf("        %s" % r["riga"][:240])
 
 
-def stampa_sfratto(sf):
+def print_eviction(sf):
     if sf.get("esito") != "letto":
         _dub("EVICTION %s" % sf.get("esito"))
         return
@@ -2412,7 +2412,7 @@ def stampa_sfratto(sf):
         _inf("        %s" % r[:240])
 
 
-def stampa_orologio(o, come):
+def print_clock(o, come):
     if o.get("esito") != "misurato":
         _dub("WIRE %s  %s" % (come, o.get("esito")))
         return
@@ -2426,7 +2426,7 @@ def stampa_orologio(o, come):
         _inf("        ⚠ %s" % o["perche_niente_intervallo"])
 
 
-def fps_del_giro(n):
+def round_fps(n):
     """⭐ The rate, and from TWO witnesses: the §11.1 trace if it was read, and the
        count the CLIENT prints by itself otherwise.
 
@@ -2443,31 +2443,31 @@ def fps_del_giro(n):
     return None, "no witness of the rate"
 
 
-def _fuori(nome):
+def _out(nome):
     return os.path.join(FUORI, "09-b81-%s.json" % nome)
 
 
 def salva(nome, roba):
     os.makedirs(FUORI, exist_ok=True)
-    with open(_fuori(nome), "w") as f:
+    with open(_out(nome), "w") as f:
         json.dump(roba, f, ensure_ascii=False, indent=1)
 
 
 def carica(nome):
     try:
-        with open(_fuori(nome)) as f:
+        with open(_out(nome)) as f:
             return json.load(f)
     except Exception:
         return None
 
 
-def _voci(titolo, **k):
+def _entries(titolo, **k):
     v = {"prova": titolo, "predicati": []}
     v.update(k)
     return v
 
 
-def _predica(voci, etichetta, esito):
+def _predicate(voci, etichetta, esito):
     passa, perche = esito
     voci["predicati"].append({"predicato": etichetta, "passa": passa,
                               "perche": perche})
@@ -2485,42 +2485,42 @@ def prova1(a):
     print("   line ON, for %g minutes: the expectation is ZERO firings." % (a.secondi / 60.0))
     print("   ⛔ That line HOLDS (`[M]` 7.8-10.2 frames/s): declaring it")
     print("      dead would mean throwing out someone who was working.")
-    v = _voci("1 · the false positive", profilo="casa-cattiva", secondi=a.secondi)
-    stato = stato_delle_cure()
+    v = _entries("1 · the false positive", profilo="casa-cattiva", secondi=a.secondi)
+    stato = fixes_state()
     v["stato_cure"] = stato
     va, perche = cure_come_voglio(stato, linea_morta="accesa",
-                                  stallo_ms=LM_STALLO_MS,
-                                  silenzio_s=LM_SILENZIO_S)
+                                  stallo_ms=LM_STALL_MS,
+                                  silenzio_s=LM_SILENCE_S)
     (_ok if va else _dub)(perche)
     if va is not True:
-        return _predica(v, "P1 · ⛔⛔ no false positive", _muto(perche))
+        return _predicate(v, "P1 · ⛔⛔ no false positive", _muto(perche))
     p = profilo("casa-cattiva")
-    with rete_guasta(B76._regole(p[1]), a.secondi + 400) as riletta:
+    with broken_network(B76._regole(p[1]), a.secondi + 400) as riletta:
         v["regola"] = riletta
         s, (pg, perche_g) = sonda("casa-cattiva")
         v["sonda"], v["guasto"] = s, {"passa": pg, "perche": perche_g}
         usc = B76.scena_accendi("barra")
         if not usc:
             _ko("the scene does not start: I do NOT judge this run")
-            return _predica(v, "P1 · ⛔⛔ no false positive",
+            return _predicate(v, "P1 · ⛔⛔ no false positive",
                             _muto("the scene did not start: without a moving "
                                   "scene there is no user at work "
                                   "not to throw out"))
         _inf("«barra» scene on monitor %s" % usc)
-        riga0 = riga0_pulita()
+        riga0 = line0_clean()
         B76.rinnova(CHI, AFFITTO)
         _inf("⏳ %g minutes of session — starting now" % (a.secondi / 60.0))
         n = B70.giro("p1-casa-cattiva", "barra", B70.TELA_PIENA, a.secondi)
-        n["testimoni"] = B76.testimoni_connessione(riga0, n)
-        lm = leggi_linea_morta(riga0)
-        fin = leggi_finestre(riga0)
+        n["testimoni"] = B76.connection_witnesses(riga0, n)
+        lm = read_dead_line(riga0)
+        fin = read_windows(riga0)
         B76.scena_spegni()
     B70.stampa_giro(n)
-    B76.stampa_consegna(n)
-    B76.stampa_testimoni(n["testimoni"])
-    stampa_scatti(lm)
-    stampa_finestre(fin)
-    fps, da_dove = fps_del_giro(n)
+    B76.print_delivery(n)
+    B76.print_witnesses(n["testimoni"])
+    print_shots(lm)
+    print_windows(fin)
+    fps, da_dove = round_fps(n)
     _inf("RATE    %s frames/s (%s)" % (fps, da_dove))
     n2 = dict(n)
     n2["fps"] = fps
@@ -2530,8 +2530,8 @@ def prova1(a):
     v["fps"], v["fps_da"] = fps, da_dove
     v["scatti"], v["dichiarata"] = lm, fin
     salva("p1", v)
-    _predica(v, "P1 · ⛔⛔ NO FALSE POSITIVE in %g minutes" % (a.secondi / 60.0),
-             p1_niente_falso_positivo(lm, n["testimoni"], n2, a.secondi / 60.0))
+    _predicate(v, "P1 · ⛔⛔ NO FALSE POSITIVE in %g minutes" % (a.secondi / 60.0),
+             p1_no_false_positive(lm, n["testimoni"], n2, a.secondi / 60.0))
     # ⚠ The DECLARED fraction stays printed as DIAGNOSIS: it is the witness
     #   of the reordering, and it is the number that refuted the old cure.  ⛔ But
     #   it no longer judges anything, and indeed here there is no predicate looking
@@ -2554,41 +2554,41 @@ def prova1_controllo(a):
     print("   ⛔ Without this run the red of test 1 does not count: when the cure")
     print("      fires the session dies, and «it threw out someone who was working»")
     print("      would look the same as «the line was finished anyway».")
-    v = _voci("1-controllo · the same line with the cures OFF",
+    v = _entries("1-controllo · the same line with the cures OFF",
               profilo="casa-cattiva", secondi=a.secondi)
-    stato = stato_delle_cure()
+    stato = fixes_state()
     v["stato_cure"] = stato
     va, perche = cure_come_voglio(stato, linea_morta="spenta", sfratto_ms=0)
     (_ok if va else _dub)(perche)
     if va is not True:
-        return _predica(v, "P1c · the control", _muto(perche))
+        return _predicate(v, "P1c · the control", _muto(perche))
     accesa = carica("p1") or {}
-    scatti_accesa = ((accesa.get("scatti") or {}).get("scatti"))
+    shots_on = ((accesa.get("scatti") or {}).get("scatti"))
     p = profilo("casa-cattiva")
-    with rete_guasta(B76._regole(p[1]), a.secondi + 400) as riletta:
+    with broken_network(B76._regole(p[1]), a.secondi + 400) as riletta:
         v["regola"] = riletta
         s, (pg, perche_g) = sonda("casa-cattiva")
         v["sonda"], v["guasto"] = s, {"passa": pg, "perche": perche_g}
         usc = B76.scena_accendi("barra")
         if not usc:
-            return _predica(v, "P1c · the control",
+            return _predicate(v, "P1c · the control",
                             _muto("the scene did not start"))
         _inf("«barra» scene on monitor %s" % usc)
-        riga0 = riga0_pulita()
+        riga0 = line0_clean()
         B76.rinnova(CHI, AFFITTO)
         _inf("⏳ %g minutes of session with the cures OFF — starting now"
              % (a.secondi / 60.0))
         n = B70.giro("p1c-casa-cattiva", "barra", B70.TELA_PIENA, a.secondi)
-        n["testimoni"] = B76.testimoni_connessione(riga0, n)
-        lm = leggi_linea_morta(riga0)
-        fin = leggi_finestre(riga0)
+        n["testimoni"] = B76.connection_witnesses(riga0, n)
+        lm = read_dead_line(riga0)
+        fin = read_windows(riga0)
         B76.scena_spegni()
     B70.stampa_giro(n)
-    B76.stampa_consegna(n)
-    B76.stampa_testimoni(n["testimoni"])
-    stampa_scatti(lm)
-    stampa_finestre(fin)
-    fps, da_dove = fps_del_giro(n)
+    B76.print_delivery(n)
+    B76.print_witnesses(n["testimoni"])
+    print_shots(lm)
+    print_windows(fin)
+    fps, da_dove = round_fps(n)
     _inf("RATE    %s frames/s (%s)" % (fps, da_dove))
     n2 = dict(n)
     n2["fps"] = fps
@@ -2596,10 +2596,10 @@ def prova1_controllo(a):
                                        "secondi_veri", "consegna")}
     v["fps"], v["scatti"], v["dichiarata"] = fps, lm, fin
     salva("p1-controllo", v)
-    _predica(v, "P1c · ⛔⛔ with the cures OFF the same line HOLDS %g minutes"
+    _predicate(v, "P1c · ⛔⛔ with the cures OFF the same line HOLDS %g minutes"
              % (a.secondi / 60.0),
-             p1c_la_linea_regge_a_cura_spenta(n["testimoni"], n2,
-                                              a.secondi / 60.0, scatti_accesa))
+             p1c_line_holds_with_fix_off(n["testimoni"], n2,
+                                              a.secondi / 60.0, shots_on))
     # ⛔ AND HERE the threshold is judged, not in the run with the cure on: it is the only run that
     #    has enough windows for «it never broke through» to be a measurement.
     return v
@@ -2622,17 +2622,17 @@ def scala_stallo(a, nome, secondi, soglie=None):
       that comes out is an UPPER BOUND — and the only number that really closes
       test 1 remains the zero firings over the ten minutes.
     """ % secondi
-    soglie = soglie or SCALA_STALLO_MS
+    soglie = soglie or STALL_LADDER_MS
     gradini = []
     p = profilo(nome)
     for soglia in soglie:
-        if not accendi_server("--linea-morta --linea-morta-stallo-ms %d" % soglia,
+        if not turn_on_server("--linea-morta --linea-morta-stallo-ms %d" % soglia,
                               "stall scale on «%s» — threshold %d ms"
                               % (nome, soglia)):
             gradini.append({"soglia_ms": soglia, "scattata": None,
                             "perche": "the server did not restart"})
             break
-        stato = stato_delle_cure()
+        stato = fixes_state()
         va, perche = cure_come_voglio(stato, linea_morta="accesa",
                                       stallo_ms=soglia)
         if va is not True:
@@ -2640,22 +2640,22 @@ def scala_stallo(a, nome, secondi, soglie=None):
             gradini.append({"soglia_ms": soglia, "scattata": None,
                             "perche": perche})
             continue
-        with rete_guasta(B76._regole(p[1]), secondi + 400):
-            s_sonda, (pg, perche_g) = sonda(nome)
+        with broken_network(B76._regole(p[1]), secondi + 400):
+            s_probe, (pg, perche_g) = sonda(nome)
             usc = B76.scena_accendi("barra")
             if not usc:
                 gradini.append({"soglia_ms": soglia, "scattata": None,
                                 "perche": "the scene did not start"})
                 continue
-            riga0 = riga0_pulita()
+            riga0 = line0_clean()
             n = B70.giro("scala-%s-%d" % (nome, soglia), "barra",
                          B70.TELA_PIENA, secondi)
-            n["testimoni"] = B76.testimoni_connessione(riga0, n)
-            lm = leggi_linea_morta(riga0)
+            n["testimoni"] = B76.connection_witnesses(riga0, n)
+            lm = read_dead_line(riga0)
             B76.scena_spegni()
-        fps, da_dove = fps_del_giro(n)
+        fps, da_dove = round_fps(n)
         c = (n.get("consegna") or {})
-        stampa_scatti(lm)
+        print_shots(lm)
         # ⛔⛔ AND A STEP IN WHICH THE FAULT WAS NOT PUT IN PLACE IS NOT A
         #     TEST — `[M]` 24 August 2026, found while running: on `raffica-1` one
         #     step had 0.28 % loss instead of 1 %, and without
@@ -2671,7 +2671,7 @@ def scala_stallo(a, nome, secondi, soglie=None):
              "coda_video": lm.get("coda_video"), "permille": lm.get("permille"),
              "fps": fps, "buco_max_s": c.get("buco_max_s"),
              "copertura": c.get("copertura"),
-             "sonda_persi_pc": (s_sonda or {}).get("persi_pc"),
+             "sonda_persi_pc": (s_probe or {}).get("persi_pc"),
              "guasto": perche_g}
         gradini.append(g)
         _inf("STEP threshold %d ms → %s · stallo_ms=%s · %s frames/s · client "
@@ -2689,24 +2689,24 @@ def scala_stallo(a, nome, secondi, soglie=None):
     return gradini
 
 
-def prova_margine(a, nome, soglie=None, etichetta=None):
+def test_margin(a, nome, soglie=None, etichetta=None):
     """⭐⭐ THE TRUE MARGIN — and without it the green does not say how close it
        came.  ⇒ The box above `p1b_il_margine_dello_stallo`."""
     _log("THE MARGIN — the scale that tracks down the stall of «%s»" % nome)
-    v = _voci("%s · the maximum stall of %s" % (etichetta or "margine", nome),
+    v = _entries("%s · the maximum stall of %s" % (etichetta or "margine", nome),
               profilo=nome, finestra_s=a.scala_s)
     v["scala"] = scala_stallo(a, nome, a.scala_s, soglie)
     salva("margine-%s" % nome, v)
-    _predica(v, "P1b · ⭐⭐ the MARGIN of the stall threshold on «%s»" % nome,
-             p1b_il_margine_dello_stallo(v["scala"], LM_STALLO_MS, nome))
+    _predicate(v, "P1b · ⭐⭐ the MARGIN of the stall threshold on «%s»" % nome,
+             p1b_il_margine_dello_stallo(v["scala"], LM_STALL_MS, nome))
     return v
 
 
 def prova1_margine(a):
-    return prova_margine(a, "casa-cattiva", etichetta="1-margine")
+    return test_margin(a, "casa-cattiva", etichetta="1-margine")
 
 
-def prova_raffica1(a):
+def test_burst1(a):
     """⭐ THE CASE THAT KEEPS THE THRESHOLD HONEST — and before, it was not there.
 
     `raffica-1` is the exact twin of `perdita-1`: same average loss, but in
@@ -2718,34 +2718,34 @@ def prova_raffica1(a):
     _log("TEST 3-nuova · ⭐ `raffica-1` — 24 frames/s with an empty second")
     print("   ⛔ It must NOT fire.  It is the case that keeps the threshold honest: a")
     print("      perfectly usable line that still has a second at zero.")
-    v = _voci("3-nuova · raffica-1, the case that keeps the threshold honest",
+    v = _entries("3-nuova · raffica-1, the case that keeps the threshold honest",
               profilo="raffica-1", secondi=a.corti)
-    stato = stato_delle_cure()
+    stato = fixes_state()
     v["stato_cure"] = stato
     va, perche = cure_come_voglio(stato, linea_morta="accesa",
-                                  stallo_ms=LM_STALLO_MS)
+                                  stallo_ms=LM_STALL_MS)
     (_ok if va else _dub)(perche)
     if va is not True:
-        return _predica(v, "P-raffica1", _muto(perche))
+        return _predicate(v, "P-raffica1", _muto(perche))
     p = profilo("raffica-1")
-    with rete_guasta(B76._regole(p[1]), a.corti + 400) as riletta:
+    with broken_network(B76._regole(p[1]), a.corti + 400) as riletta:
         v["regola"] = riletta
-        s_sonda, (pg, perche_g) = sonda("raffica-1")
-        v["sonda"], v["guasto"] = s_sonda, {"passa": pg, "perche": perche_g}
+        s_probe, (pg, perche_g) = sonda("raffica-1")
+        v["sonda"], v["guasto"] = s_probe, {"passa": pg, "perche": perche_g}
         usc = B76.scena_accendi("barra")
         _inf("«barra» scene on monitor %s" % usc)
-        riga0 = riga0_pulita()
+        riga0 = line0_clean()
         n = B70.giro("p3n-raffica-1", "barra", B70.TELA_PIENA, a.corti)
-        n["testimoni"] = B76.testimoni_connessione(riga0, n)
-        lm = leggi_linea_morta(riga0)
-        fin = leggi_finestre(riga0)
+        n["testimoni"] = B76.connection_witnesses(riga0, n)
+        lm = read_dead_line(riga0)
+        fin = read_windows(riga0)
         B76.scena_spegni()
     B70.stampa_giro(n)
-    B76.stampa_consegna(n)
-    B76.stampa_testimoni(n["testimoni"])
-    stampa_scatti(lm)
-    stampa_finestre(fin)
-    fps, da_dove = fps_del_giro(n)
+    B76.print_delivery(n)
+    B76.print_witnesses(n["testimoni"])
+    print_shots(lm)
+    print_windows(fin)
+    fps, da_dove = round_fps(n)
     _inf("RATE    %s frames/s (%s)" % (fps, da_dove))
     n2 = dict(n)
     n2["fps"] = fps
@@ -2753,19 +2753,19 @@ def prova_raffica1(a):
     v["giro"] = {k: n.get(k) for k in ("fps", "esito", "dal_cliente",
                                        "secondi_veri", "consegna")}
     salva("p3n-raffica1", v)
-    _predica(v, "P-raffica1 · ⭐ «raffica-1» HOLDS and must not be declared dead",
-             p_non_deve_scattare("raffica-1", lm, n["testimoni"], n2,
-                                 a.corti / 60.0, GRIGLIA_B76["raffica-1"]))
+    _predicate(v, "P-raffica1 · ⭐ «raffica-1» HOLDS and must not be declared dead",
+             p_must_not_fire("raffica-1", lm, n["testimoni"], n2,
+                                 a.corti / 60.0, GRID_B76["raffica-1"]))
     # ⭐ And the margin here too: it is the NARROW side of the threshold, so it is the
     #   place where a thin margin would hurt most.
     v["scala"] = scala_stallo(a, "raffica-1", a.corti)
     salva("p3n-raffica1", v)
-    _predica(v, "P1b · ⭐⭐ the MARGIN of the threshold on «raffica-1» (narrow side)",
-             p1b_il_margine_dello_stallo(v["scala"], LM_STALLO_MS, "raffica-1"))
+    _predicate(v, "P1b · ⭐⭐ the MARGIN of the threshold on «raffica-1» (narrow side)",
+             p1b_il_margine_dello_stallo(v["scala"], LM_STALL_MS, "raffica-1"))
     return v
 
 
-def prova_scena_ferma(a, soglia_ms):
+def test_still_scene(a, soglia_ms):
     """⛔⛔ THE STILL SCENE WITH THE CURE ON — the worst way in which this
        cure could fail.  ⇒ The box above `p_scena_ferma_non_scatta`.
 
@@ -2779,15 +2779,15 @@ def prova_scena_ferma(a, soglia_ms):
     print("   Mutter's `RecordVirtual` delivers only on CHANGE.  ⛔ If the stall")
     print("   count started there, the cure would throw out whoever looks at a")
     print("   still desktop — and not sometimes: after the threshold, every time.")
-    v = _voci("4-nuova · the still scene (threshold %d ms)" % soglia_ms,
+    v = _entries("4-nuova · the still scene (threshold %d ms)" % soglia_ms,
               soglia_stallo_ms=soglia_ms, secondi=a.scena_s)
-    stato = stato_delle_cure()
+    stato = fixes_state()
     v["stato_cure"] = stato
     va, perche = cure_come_voglio(stato, linea_morta="accesa",
                                   stallo_ms=soglia_ms)
     (_ok if va else _dub)(perche)
     if va is not True:
-        return _predica(v, "P-scena-ferma", _muto(perche))
+        return _predicate(v, "P-scena-ferma", _muto(perche))
     # ⛔ The scene is SWITCHED OFF, and we check it is off: a scene left
     #    on would make this test pass for the wrong reason.
     B76.scena_spegni()
@@ -2795,21 +2795,21 @@ def prova_scena_ferma(a, soglia_ms):
                       % UID_B)
     v["scene_vive"] = out.strip()
     if out.strip() not in ("0", ""):
-        return _predica(v, "P-scena-ferma",
+        return _predicate(v, "P-scena-ferma",
                         _muto("⚠ there is still a live scene (%s): this run "
                               "is not «still scene»" % out.strip()))
     _ok("no live scene: the desktop does not change")
-    riga0 = riga0_pulita()
+    riga0 = line0_clean()
     _inf("⏳ %g s of session with a STILL SCENE" % a.scena_s)
     # ⛔ Without a trace: here there is nothing to reduce — the point is precisely that
     #    no frames arrive — and a reader that refuses would give the
     #    test the look of a fault.
     n = B70.giro("p4n-scena-ferma-%d" % soglia_ms, "ferma", B70.TELA_PIENA,
                  a.scena_s, con_traccia=False)
-    n["testimoni"] = B76.testimoni_connessione(riga0, n)
-    lm = leggi_linea_morta(riga0)
-    B76.stampa_testimoni(n["testimoni"])
-    stampa_scatti(lm)
+    n["testimoni"] = B76.connection_witnesses(riga0, n)
+    lm = read_dead_line(riga0)
+    B76.print_witnesses(n["testimoni"])
+    print_shots(lm)
     _inf("CLIENT %s · %s real s"
          % (json.dumps(n.get("dal_cliente"), ensure_ascii=False),
             n.get("secondi_veri")))
@@ -2817,7 +2817,7 @@ def prova_scena_ferma(a, soglia_ms):
     v["giro"] = {k: n.get(k) for k in ("dal_cliente", "secondi_veri",
                                        "testimoni")}
     salva("p4n-scena-ferma-%d" % soglia_ms, v)
-    _predica(v, "P-scena-ferma · ⛔⛔ %g s of STILL desktop, threshold %d ms"
+    _predicate(v, "P-scena-ferma · ⛔⛔ %g s of STILL desktop, threshold %d ms"
              % (a.scena_s, soglia_ms),
              p_scena_ferma_non_scatta(lm, n["testimoni"], a.scena_s, soglia_ms))
     return v
@@ -2835,28 +2835,28 @@ def prova1_taratura(a):
     """
     _log("TEST 1 · THE CALIBRATION — how much the DECLARED fraction is worth, told by the "
          "PRODUCT")
-    v = _voci("1-taratura · the declared fraction, read from the product",
+    v = _entries("1-taratura · the declared fraction, read from the product",
               profilo="casa-cattiva")
-    stato = stato_delle_cure()
+    stato = fixes_state()
     v["stato_cure"] = stato
     va, perche = cure_come_voglio(stato, linea_morta="accesa", stallo_ms=1)
     (_ok if va else _dub)(perche)
     if va is not True:
-        return _predica(v, "calibration", _muto(perche))
+        return _predicate(v, "calibration", _muto(perche))
     p = profilo("casa-cattiva")
-    with rete_guasta(B76._regole(p[1]), 240) as riletta:
+    with broken_network(B76._regole(p[1]), 240) as riletta:
         v["regola"] = riletta
         s, _g = sonda("casa-cattiva")
         v["sonda"] = s
         usc = B76.scena_accendi("barra")
         _inf("«barra» scene on monitor %s" % usc)
-        riga0 = riga0_pulita()
+        riga0 = line0_clean()
         n = B70.giro("p1-taratura", "barra", B70.TELA_PIENA, a.taratura_s)
-        lm = leggi_linea_morta(riga0)
-        fin = leggi_finestre(riga0, soglia_permille=1)
+        lm = read_dead_line(riga0)
+        fin = read_windows(riga0, soglia_permille=1)
         B76.scena_spegni()
-    stampa_scatti(lm)
-    stampa_finestre(fin)
+    print_shots(lm)
+    print_windows(fin)
     v["scatti"], v["dichiarata"] = lm, fin
     if lm.get("esito") == "letto" and lm["scatti"]:
         _ok("⭐ THE PRODUCT HAS ITS SAY: on the window in which it decided, the "
@@ -2882,37 +2882,37 @@ def prova2(a):
     print("   `[M]` 11.10 % loss in bursts: with the cure off the screen stays")
     print("   frozen 14.26 s out of 25 (grid of 09-b76).  ⇒ The cure must fire,")
     print("   with causa=stallo, and the wire must drop.")
-    v = _voci("2 · the real firing", profilo="raffica-forte", secondi=a.corti)
-    stato = stato_delle_cure()
+    v = _entries("2 · the real firing", profilo="raffica-forte", secondi=a.corti)
+    stato = fixes_state()
     v["stato_cure"] = stato
     va, perche = cure_come_voglio(stato, linea_morta="accesa",
-                                  stallo_ms=LM_STALLO_MS)
+                                  stallo_ms=LM_STALL_MS)
     (_ok if va else _dub)(perche)
     if va is not True:
-        return _predica(v, "P2 · the real firing", _muto(perche))
+        return _predicate(v, "P2 · the real firing", _muto(perche))
     p = profilo("raffica-forte")
-    with rete_guasta(B76._regole(p[1]), a.corti + 400) as riletta:
+    with broken_network(B76._regole(p[1]), a.corti + 400) as riletta:
         v["regola"] = riletta
         s, (pg, perche_g) = sonda("raffica-forte")
         v["sonda"], v["guasto"] = s, {"passa": pg, "perche": perche_g}
         usc = B76.scena_accendi("barra")
         _inf("«barra» scene on monitor %s" % usc)
-        riga0 = riga0_pulita()
+        riga0 = line0_clean()
         n = B70.giro("p2-raffica-forte", "barra", B70.TELA_PIENA, a.corti)
-        n["testimoni"] = B76.testimoni_connessione(riga0, n)
-        lm = leggi_linea_morta(riga0)
-        fin = leggi_finestre(riga0)
-        sf = leggi_sfratto(riga0)
+        n["testimoni"] = B76.connection_witnesses(riga0, n)
+        lm = read_dead_line(riga0)
+        fin = read_windows(riga0)
+        sf = read_eviction(riga0)
         B76.scena_spegni()
     B70.stampa_giro(n)
-    B76.stampa_consegna(n)
-    stampa_scatti(lm)
-    stampa_finestre(fin)
+    B76.print_delivery(n)
+    print_shots(lm)
+    print_windows(fin)
     # ⭐ From when the slot was taken to when the cure decided: it is
     #   the SERVER's clock, and the two instants are in the same log.
     secondi = None
     if lm.get("esito") == "letto" and lm["scatti"] and sf.get("righe_preso"):
-        secondi = dt_registro(lm["righe"][0]["riga"], sf["righe_preso"][0])
+        secondi = dt_log(lm["righe"][0]["riga"], sf["righe_preso"][0])
     v["secondi_a_scatto"] = secondi
     _inf("WHEN    fired %s s after the slot had been taken"
          % (("%.2f" % secondi) if secondi is not None else "?"))
@@ -2920,8 +2920,8 @@ def prova2(a):
     v["giro"] = {k: n.get(k) for k in ("fps", "esito", "dal_cliente",
                                        "secondi_veri", "consegna")}
     salva("p2", v)
-    _predica(v, "P2 · the cure FIRES on the burst, with causa=stallo",
-             p2_scatta_sullo_stallo(lm, s, secondi))
+    _predicate(v, "P2 · the cure FIRES on the burst, with causa=stallo",
+             p2_fires_on_stall(lm, s, secondi))
     return v
 
 
@@ -2933,90 +2933,90 @@ def prova3(a, acceso):
     _log("TEST 3 · SILENCE — client killed with `kill -9`, cure %s" % come)
     print("   ⛔ `-9` and not a farewell: the goodbye does NOT leave, and for the server it is")
     print("      identical to a LOST goodbye — that is, it is the real case.")
-    v = _voci("3 · silence (cure %s)" % come, acceso=acceso)
-    stato = stato_delle_cure()
+    v = _entries("3 · silence (cure %s)" % come, acceso=acceso)
+    stato = fixes_state()
     v["stato_cure"] = stato
     va, perche = cure_come_voglio(
         stato, linea_morta=("accesa" if acceso else "spenta"),
-        silenzio_s=(LM_SILENZIO_S if acceso else None))
+        silenzio_s=(LM_SILENCE_S if acceso else None))
     (_ok if va else _dub)(perche)
     if va is not True:
-        return _predica(v, "P3 · silence", _muto(perche))
-    ripulisci_clienti()
+        return _predicate(v, "P3 · silence", _muto(perche))
+    clean_up_clients()
     # ⛔ The `netem` is there even without a fault: it is what carries the byte
     #    COUNTER, and without a counter «the real traffic of a still session» cannot be
     #    measured.  ⚠ `limit 20000` and nothing else — and the `liscio` profile of 09-b76
     #    checks that that queue drops nothing of its own.
-    with rete_guasta(B76._regole([]), 400) as riletta:
+    with broken_network(B76._regole([]), 400) as riletta:
         v["regola"] = riletta
         # ⭐ Scene OFF: «with a still session» means the desktop does not
         #   move, or what I measure is the video.
         B76.scena_spegni()
-        riga0 = riga0_pulita()
-        cliente_in_sottofondo(UTENTE, DENTRO_LAV + "/parola", 400,
+        riga0 = line0_clean()
+        background_client(UTENTE, DENTRO_LAV + "/parola", 400,
                               "p3-%s" % ("acceso" if acceso else "spento"))
-        preso = aspetta_riga(riga0, ["slot TAKEN by %s " % UTENTE], 120)
+        preso = wait_line(riga0, ["slot TAKEN by %s " % UTENTE], 120)
         if not preso:
-            ripulisci_clienti()
-            return _predica(v, "P3 · silence",
+            clean_up_clients()
+            return _predicate(v, "P3 · silence",
                             _muto("the session did not open in 120 s: I have "
                                   "nothing to kill"))
         _ok("session open: %s" % preso[-1][:120])
         _inf("⏳ %g s of wire clock with a STILL session" % a.orologio_s)
-        oro = orologio_gira(a.orologio_s)
-        stampa_orologio(oro, come)
+        oro = clock_runs(a.orologio_s)
+        print_clock(oro, come)
         v["orologio"] = oro
         salva("p3-orologio-%s" % ("acceso" if acceso else "spento"), oro)
-        pid = cliente_pid(UTENTE)
+        pid = client_pid(UTENTE)
         _inf("the client is pid %s on the host (⛔ `enter.sh` is a chroot)" % pid)
         t_kill = uccidi(pid)
         _inf("KILLED  with -9 at %s (SERVER clock)" % (t_kill or "?"))
         v["t_kill"] = t_kill
-        righe = aspetta_riga(riga0, ["linea-morta "],
+        righe = wait_line(riga0, ["linea-morta "],
                              tetto=(a.attesa_scatto if acceso else 25.0))
-        lm = leggi_linea_morta(riga0)
+        lm = read_dead_line(riga0)
         # ⭐ AND RIGHT AFTER: is the slot free again?  It is the other half of the
         #   ghost, and the answer of the DEAD LINE (not of the eviction).
         posto = None
         if acceso:
-            righe_p, coda = B78.misura(giri=1, fino="sessione", tetto=20,
+            lines_p, coda = B78.misura(giri=1, fino="sessione", tetto=20,
                                        riprova=a.riprova_s)
-            v["apertura_dopo_scatto"] = righe_p
-            if righe_p:
-                r = righe_p[0]
+            v["apertura_dopo_scatto"] = lines_p
+            if lines_p:
+                r = lines_p[0]
                 posto = (r.get("attesa_posto_ms") if r.get("attesa_posto_ms")
                          is not None else 0)
                 _inf("SLOT    after the firing: outcome «%s», wait for the slot %s ms"
                      % (r.get("esito"), r.get("attesa_posto_ms")))
-        sf = leggi_sfratto(riga0)
-        ripulisci_clienti()
-    stampa_scatti(lm)
-    stampa_sfratto(sf)
+        sf = read_eviction(riga0)
+        clean_up_clients()
+    print_shots(lm)
+    print_eviction(sf)
     if lm.get("esito") == "letto" and lm["scatti"] and t_kill:
-        v["secondi_dal_kill"] = dt_registro(lm["righe"][0]["riga"], t_kill)
+        v["secondi_dal_kill"] = dt_log(lm["righe"][0]["riga"], t_kill)
         _inf("WHEN    fired %.2f s after the `kill -9` (server clock) · "
              "the line says silenzio_ms=%s"
              % (v["secondi_dal_kill"] or -1, lm.get("silenzio_ms")))
     v["scatti"], v["sfratto"] = lm, sf
     salva("p3-%s" % ("acceso" if acceso else "spento"), v)
     if acceso:
-        _predica(v, "P3 · the cure fires on SILENCE at its threshold",
-                 p3_scatta_sul_silenzio(lm, LM_SILENZIO_S * 1000))
+        _predicate(v, "P3 · the cure fires on SILENCE at its threshold",
+                 p3_fires_on_silence(lm, LM_SILENCE_S * 1000))
     else:
         # ⛔ With the cure off the firing must NOT be there: it is half of I6, and it is
         #    judged with the predicate of I6, not with this one.
-        _predica(v, "P3/I6 · with the cure OFF silence closes nothing",
-                 p6_i_predefiniti_non_cambiano_niente(lm, sf, stato, None,
+        _predicate(v, "P3/I6 · with the cure OFF silence closes nothing",
+                 p6_defaults_change_nothing(lm, sf, stato, None,
                                                       "(no profile)"))
     acc = carica("p3-orologio-acceso")
-    spe = carica("p3-orologio-spento")
-    if acc and spe:
-        _predica(v, "P3b · ⚠ the DECLARED price of the PINGs (%.2f kbit/s)"
-                 % COSTO_PING_DICHIARATO_KBIT_S, p3b_costo_dei_ping(acc, spe))
+    off_run = carica("p3-orologio-spento")
+    if acc and off_run:
+        _predicate(v, "P3b · ⚠ the DECLARED price of the PINGs (%.2f kbit/s)"
+                 % COST_PING_DECLARED_KBIT_S, p3b_ping_cost(acc, off_run))
     else:
         _dub("P3b · the price of the PINGs: I have only one of the two measurements "
              "(on=%s, off=%s) — it is judged when both are there"
-             % (bool(acc), bool(spe)))
+             % (bool(acc), bool(off_run)))
     return v
 
 
@@ -3031,18 +3031,18 @@ def prova3(a, acceso):
 #     on the eviction would NEVER fire in this scenario, and a bench that
 #     turned them on together would measure the dead line calling it eviction.
 #     ⇒ Tests 4 and 5 run with `--sfratto-ms 15000` and the DEAD LINE OFF.
-def _fantasma(a, chi_chiede, parola_dentro_dir, attesa_prima=0.0):
+def _ghost(a, chi_chiede, password_inside_dir, attesa_prima=0.0):
     """The common piece: a client of `%s` takes the slot, dies of `-9`, and then
        someone asks for that slot.  It returns the numbers, not the judgements.""" % UTENTE
-    ripulisci_clienti()
-    riga0 = riga0_pulita()
-    cliente_in_sottofondo(UTENTE, DENTRO_LAV + "/parola", 400, "p4-vittima")
-    preso = aspetta_riga(riga0, ["slot TAKEN by %s " % UTENTE], 120)
+    clean_up_clients()
+    riga0 = line0_clean()
+    background_client(UTENTE, DENTRO_LAV + "/parola", 400, "p4-vittima")
+    preso = wait_line(riga0, ["slot TAKEN by %s " % UTENTE], 120)
     if not preso:
-        ripulisci_clienti()
+        clean_up_clients()
         return {"esito": "⛔ the victim's session did not open in 120 s"}
     _ok("the slot belongs to %s: %s" % (UTENTE, preso[-1][:120]))
-    pid = cliente_pid(UTENTE)
+    pid = client_pid(UTENTE)
     t_kill = uccidi(pid)
     _inf("KILLED  pid %s with -9 at %s (SERVER clock)" % (pid, t_kill))
     if attesa_prima:
@@ -3055,12 +3055,12 @@ def _fantasma(a, chi_chiede, parola_dentro_dir, attesa_prima=0.0):
     #    make it look like a permanent fault.
     ute, dl = B78.UTENTE, B78.DENTRO_LAV
     try:
-        B78.UTENTE, B78.DENTRO_LAV = chi_chiede, parola_dentro_dir
+        B78.UTENTE, B78.DENTRO_LAV = chi_chiede, password_inside_dir
         righe, coda = B78.misura(giri=1, fino="sessione", tetto=20,
                                  riprova=a.riprova_s)
     finally:
         B78.UTENTE, B78.DENTRO_LAV = ute, dl
-    sf = leggi_sfratto(riga0)
+    sf = read_eviction(riga0)
     n = {"esito": "misurato", "t_kill": t_kill, "aperture": righe,
          "coda": coda[-400:], "sfratto": sf, "chi_chiede": chi_chiede}
     r = righe[0] if righe else {}
@@ -3070,8 +3070,8 @@ def _fantasma(a, chi_chiede, parola_dentro_dir, attesa_prima=0.0):
     # ⭐ «At which second it gets in», on the SERVER's clock: the last `slot TAKEN`
     #   after `riga0` is that of whoever knocked.
     if sf.get("presi", 0) >= 2 and t_kill:
-        n["secondi_a_entrare"] = dt_registro(sf["righe_preso"][-1], t_kill)
-    ripulisci_clienti()
+        n["secondi_a_entrare"] = dt_log(sf["righe_preso"][-1], t_kill)
+    clean_up_clients()
     return n
 
 
@@ -3081,20 +3081,20 @@ def prova4(a, sfratto_ms):
     print("   `[M]` today it takes 30.5 s and 11 refusals: the wire drops, the user")
     print("   retries, and for half a minute is told «you already have an active session")
     print("   elsewhere» — which for them is FALSE: that session is theirs.")
-    v = _voci("4 · the eviction (%s)" % come, sfratto_ms=sfratto_ms)
-    stato = stato_delle_cure()
+    v = _entries("4 · the eviction (%s)" % come, sfratto_ms=sfratto_ms)
+    stato = fixes_state()
     v["stato_cure"] = stato
     # ⛔ The dead line must be OFF: see the box above `_fantasma`.
     va, perche = cure_come_voglio(stato, linea_morta="spenta",
                                   sfratto_ms=sfratto_ms)
     (_ok if va else _dub)(perche)
     if va is not True:
-        return _predica(v, "P4 · the eviction", _muto(perche))
-    n = _fantasma(a, UTENTE, DENTRO_LAV)
+        return _predicate(v, "P4 · the eviction", _muto(perche))
+    n = _ghost(a, UTENTE, DENTRO_LAV)
     v["fantasma"] = n
     if n.get("esito") != "misurato":
-        return _predica(v, "P4 · the eviction", _muto(n.get("esito")))
-    stampa_sfratto(n["sfratto"])
+        return _predicate(v, "P4 · the eviction", _muto(n.get("esito")))
+    print_eviction(n["sfratto"])
     _inf("SCALE   %d refusals («slot DENIED») · outcome «%s» · the slot became "
          "free again after %s s (server clock) · the client waited %s ms"
          % (n["sfratto"]["rifiuti"], n.get("esito_apertura"),
@@ -3111,17 +3111,17 @@ def prova4(a, sfratto_ms):
         #   already demanded it), and in this run there is no `netem`: there is
         #   nothing that could have made it fire.  ⇒ An EMPTY and READ
         #   reduction is passed, and only the eviction is left to judge.
-        _predica(v, "P4/I6 · with the eviction OFF there is no eviction",
-                 p6_i_predefiniti_non_cambiano_niente(
+        _predicate(v, "P4/I6 · with the eviction OFF there is no eviction",
+                 p6_defaults_change_nothing(
                      {"esito": "letto", "scatti": 0, "righe": [],
                       "chiuse_dal_trasporto": 0},
                      n["sfratto"], stato, None, "(no profile)"))
         return v
     rif = carica("p4-0")
-    rif_s = ((rif or {}).get("fantasma") or {}).get("secondi_a_entrare")
-    _predica(v, "P4 · the EVICTION frees the slot at the threshold",
-             p4_lo_sfratto_libera_il_posto(n["sfratto"], sfratto_ms,
-                                           n.get("secondi_a_entrare"), rif_s))
+    ref_s = ((rif or {}).get("fantasma") or {}).get("secondi_a_entrare")
+    _predicate(v, "P4 · the EVICTION frees the slot at the threshold",
+             p4_eviction_frees_slot(n["sfratto"], sfratto_ms,
+                                           n.get("secondi_a_entrare"), ref_s))
     return v
 
 
@@ -3130,14 +3130,14 @@ def prova5(a):
     print("   An eviction between different users would not be a convenience: it would be")
     print("   a security hole — anyone could make another person's desktop")
     print("   drop simply by knocking.")
-    v = _voci("5 · two different users", utente_a=UTENTE, utente_b=UTENTE2)
-    stato = stato_delle_cure()
+    v = _entries("5 · two different users", utente_a=UTENTE, utente_b=UTENTE2)
+    stato = fixes_state()
     v["stato_cure"] = stato
     va, perche = cure_come_voglio(stato, linea_morta="spenta",
-                                  sfratto_ms=SFRATTO_CONSIGLIATO_MS)
+                                  sfratto_ms=RECOMMENDED_EVICTION_MS)
     (_ok if va else _dub)(perche)
     if va is not True:
-        return _predica(v, "P5 · two different users", _muto(perche))
+        return _predicate(v, "P5 · two different users", _muto(perche))
     # ⛔ The SECOND user's password sits in a separate file, and it is put where
     #    `09-b78` looks for it (`<DENTRO_LAV>/parola`) without touching a line of it: so
     #    the second user's opening goes through the SAME tool as test 4.
@@ -3145,27 +3145,27 @@ def prova5(a):
          "chmod 600 %s/u2/parola\"" % (LAV, LAV, LAV, LAV))
     rc, out, _ = root("bash -c \"test -s %s/u2/parola && echo si || echo no\"" % LAV)
     if "si" not in out:
-        return _predica(v, "P5 · two different users",
+        return _predicate(v, "P5 · two different users",
                         _muto("the second user's password is not in %s/u2/parola: "
                               "without it, I would open two sessions of the SAME user "
                               "believing I had opened two of different users" % LAV))
     # ⭐ We wait BEYOND the eviction threshold before knocking: if the eviction
     #   could fire between different users, at that point it would fire.
-    n = _fantasma(a, UTENTE2, DENTRO_LAV + "/u2",
-                  attesa_prima=SFRATTO_CONSIGLIATO_MS / 1000.0 + 3.0)
+    n = _ghost(a, UTENTE2, DENTRO_LAV + "/u2",
+                  attesa_prima=RECOMMENDED_EVICTION_MS / 1000.0 + 3.0)
     v["fantasma"] = n
     if n.get("esito") != "misurato":
-        return _predica(v, "P5 · two different users", _muto(n.get("esito")))
-    stampa_sfratto(n["sfratto"])
+        return _predicate(v, "P5 · two different users", _muto(n.get("esito")))
+    print_eviction(n["sfratto"])
     _inf("OUTCOME «%s» for «%s» · %d refusals · %d slots taken"
          % (n.get("esito_apertura"), UTENTE2, n["sfratto"]["rifiuti"],
             n["sfratto"]["presi"]))
     salva("p5", v)
-    _predica(v, "P5 · ⛔ between different users there is NO eviction",
-             p5_fra_utenti_diversi_non_si_sfratta(n["sfratto"], n.get("entrato"),
+    _predicate(v, "P5 · ⛔ between different users there is NO eviction",
+             p5_no_eviction_across_users(n["sfratto"], n.get("entrato"),
                                                   UTENTE, UTENTE2))
-    _predica(v, "P5b · ⚠ and the «EVICTION DENIED» line? (prediction `[R]`: it does not come out)",
-             p5b_la_riga_del_negato(n["sfratto"]))
+    _predicate(v, "P5b · ⚠ and the «EVICTION DENIED» line? (prediction `[R]`: it does not come out)",
+             p5b_denied_line(n["sfratto"]))
     return v
 
 
@@ -3178,34 +3178,34 @@ def prova6(a, nome):
     print("   no eviction, and the profile behaves as in the grid of")
     print("   09-b76.  ⛔ It is invariant I6, and it is also the proof that the two")
     print("   cures are really OFF, not only written.")
-    v = _voci("6 · the defaults (%s)" % nome, profilo=nome, secondi=a.corti)
-    stato = stato_delle_cure()
+    v = _entries("6 · the defaults (%s)" % nome, profilo=nome, secondi=a.corti)
+    stato = fixes_state()
     v["stato_cure"] = stato
     va, perche = cure_come_voglio(stato, linea_morta="spenta", sfratto_ms=0)
     (_ok if va else _dub)(perche)
     if va is not True:
-        return _predica(v, "P6 · I6 on «%s»" % nome, _muto(perche))
+        return _predicate(v, "P6 · I6 on «%s»" % nome, _muto(perche))
     p = profilo(nome)
-    with rete_guasta(B76._regole(p[1]), a.corti + 400) as riletta:
+    with broken_network(B76._regole(p[1]), a.corti + 400) as riletta:
         v["regola"] = riletta
         s, (pg, perche_g) = sonda(nome)
         v["sonda"], v["guasto"] = s, {"passa": pg, "perche": perche_g}
         usc = B76.scena_accendi("barra")
         _inf("«barra» scene on monitor %s" % usc)
-        riga0 = riga0_pulita()
+        riga0 = line0_clean()
         n = B70.giro("p6-%s" % nome, "barra", B70.TELA_PIENA, a.corti)
-        n["testimoni"] = B76.testimoni_connessione(riga0, n)
-        lm = leggi_linea_morta(riga0)
-        sf = leggi_sfratto(riga0)
-        fin = leggi_finestre(riga0)
+        n["testimoni"] = B76.connection_witnesses(riga0, n)
+        lm = read_dead_line(riga0)
+        sf = read_eviction(riga0)
+        fin = read_windows(riga0)
         B76.scena_spegni()
     B70.stampa_giro(n)
-    B76.stampa_consegna(n)
-    B76.stampa_testimoni(n["testimoni"])
-    stampa_scatti(lm)
-    stampa_sfratto(sf)
-    stampa_finestre(fin)
-    fps, da_dove = fps_del_giro(n)
+    B76.print_delivery(n)
+    B76.print_witnesses(n["testimoni"])
+    print_shots(lm)
+    print_eviction(sf)
+    print_windows(fin)
+    fps, da_dove = round_fps(n)
     _inf("RATE    %s frames/s (%s)" % (fps, da_dove))
     n2 = dict(n)
     n2["fps"] = fps
@@ -3213,8 +3213,8 @@ def prova6(a, nome):
                                        "secondi_veri", "consegna")}
     v["fps"], v["scatti"], v["sfratto"], v["dichiarata"] = fps, lm, sf, fin
     salva("p6-%s" % nome, v)
-    _predica(v, "P6 · ⛔ I6: with the defaults «%s» is identical to before" % nome,
-             p6_i_predefiniti_non_cambiano_niente(lm, sf, stato, n2, nome))
+    _predicate(v, "P6 · ⛔ I6: with the defaults «%s» is identical to before" % nome,
+             p6_defaults_change_nothing(lm, sf, stato, n2, nome))
     return v
 
 
@@ -3226,11 +3226,11 @@ def prova6(a, nome):
 #    would make one measure the first calling it the second (⇒ the box above
 #    `_fantasma`).  ⇒ Every test runs on the configuration that ISOLATES the cure it
 #    measures, and `cure_come_voglio()` refuses if the server is not on it.
-CONFIGURAZIONI = {
+CONFIGURATIONS = {
     "A": ("--linea-morta",
           "the DEAD LINE on with the defaults (stall 5 000 ms, silence 10 s) "
           "and the eviction OFF — tests 1, 2, 3, raffica-1 and still scene"),
-    "C": ("--sfratto-ms %d" % SFRATTO_CONSIGLIATO_MS,
+    "C": ("--sfratto-ms %d" % RECOMMENDED_EVICTION_MS,
           "the EVICTION on and the dead line OFF — tests 4 and 5, and the dead "
           "line must be off or the ghost would vanish at 10 s because of the other "
           "cure and the eviction would never fire"),
@@ -3292,7 +3292,7 @@ def principale():
         ok = RETE.rimetti()
         _inf("ports NOT mine: %s" % vicine())
         _inf("the cures, as the server declares them: %s"
-             % json.dumps(stato_delle_cure(), ensure_ascii=False)[:400])
+             % json.dumps(fixes_state(), ensure_ascii=False)[:400])
         return 0 if ok else 2
 
     _log("09-b81 · THE TWO CURES — port %d · user %s (uid %d) · dev «%s»"
@@ -3308,14 +3308,14 @@ def principale():
         _ok("the ground is there, and it is mine")
         return 0
 
-    def configura_stallo(ms):
+    def configure_stall(ms):
         """⛔ An off-catalogue configuration, and for one case only: the still
            scene with the narrow threshold.  ⚠ `cure_come_voglio()` rechecks it
            inside the test, like all the others."""
         if a.salta_riaccensione:
             _dub("⚠ I do NOT restart the server (--salta-riaccensione)")
             return True
-        return accendi_server(
+        return turn_on_server(
             "--linea-morta --linea-morta-stallo-ms %d" % ms,
             "the dead line with the stall threshold NARROWED to %d ms — the "
             "still scene holding the knife by the handle" % ms)
@@ -3325,8 +3325,8 @@ def principale():
             _dub("⚠ I do NOT restart the server (--salta-riaccensione): I trust "
                  "`cure_come_voglio()`, which will refuse if it is not %s" % chiave)
             return True
-        opz, perche = CONFIGURAZIONI[chiave]
-        return accendi_server(opz, "configuration %s — %s" % (chiave, perche))
+        opz, perche = CONFIGURATIONS[chiave]
+        return turn_on_server(opz, "configuration %s — %s" % (chiave, perche))
 
     esiti = []
     try:
@@ -3345,18 +3345,18 @@ def principale():
                 if a.passo in ("p2", "tutte"):
                     esiti.append(prova2(a))
                 if a.passo in ("pr1", "tutte"):
-                    esiti.append(prova_raffica1(a))
+                    esiti.append(test_burst1(a))
                 if a.passo in ("psf", "tutte"):
                     # ⛔ The still scene at the threshold IN FORCE…
-                    esiti.append(prova_scena_ferma(a, LM_STALLO_MS))
+                    esiti.append(test_still_scene(a, LM_STALL_MS))
                 if a.passo in ("p3", "tutte"):
                     esiti.append(prova3(a, acceso=True))
         # ── and the still scene holding the knife by the handle: the same
         #    test with a MUCH narrower threshold.  If the count does not start
         #    there, it does not start at any threshold.
         if a.passo in ("psf", "tutte"):
-            if configura_stallo(a.scena_soglia_stretta_ms):
-                esiti.append(prova_scena_ferma(a, a.scena_soglia_stretta_ms))
+            if configure_stall(a.scena_soglia_stretta_ms):
+                esiti.append(test_still_scene(a, a.scena_soglia_stretta_ms))
         # ── the MARGIN of test 1: the scale that tracks down the maximum stall ─
         if a.passo in ("p1m", "tutte"):
             esiti.append(prova1_margine(a))
@@ -3364,7 +3364,7 @@ def principale():
         #    ⛔ It is not deduced from `casa-cattiva`: «a healthy line cannot do
         #    worse» is a reasoning, and the report asks for a measurement.
         if a.passo in ("psani", "tutte"):
-            esiti.append(prova_margine(a, RIFERIMENTO_SANO, [1000, 500],
+            esiti.append(test_margin(a, HEALTHY_REFERENCE, [1000, 500],
                                        etichetta="sani"))
         if a.passo == "p1t":
             if configura("A"):
@@ -3373,7 +3373,7 @@ def principale():
         if a.passo in ("p4", "p5", "tutte"):
             if configura("C"):
                 if a.passo in ("p4", "tutte"):
-                    esiti.append(prova4(a, SFRATTO_CONSIGLIATO_MS))
+                    esiti.append(prova4(a, RECOMMENDED_EVICTION_MS))
                 if a.passo in ("p5", "tutte"):
                     esiti.append(prova5(a))
         # ── configuration D: ⛔ the defaults, the product as it ships today ──
@@ -3394,7 +3394,7 @@ def principale():
         #    ghost drop») needs both numbers, and when test 4 with the
         #    cure ran the reference was not there yet.
         if tutte:
-            rif, cur = carica("p4-0"), carica("p4-%d" % SFRATTO_CONSIGLIATO_MS)
+            rif, cur = carica("p4-0"), carica("p4-%d" % RECOMMENDED_EVICTION_MS)
             if rif and cur:
                 _log("THE GAIN — «how much did the ghost drop»")
                 rs = (rif.get("fantasma") or {}).get("secondi_a_entrare")
@@ -3402,12 +3402,12 @@ def principale():
                 rr = ((rif.get("fantasma") or {}).get("sfratto") or {}).get("rifiuti")
                 cr = ((cur.get("fantasma") or {}).get("sfratto") or {}).get("rifiuti")
                 _inf("eviction OFF: %s s and %s refusals · eviction at %d ms: %s s "
-                     "and %s refusals" % (rs, rr, SFRATTO_CONSIGLIATO_MS, cs, cr))
+                     "and %s refusals" % (rs, rr, RECOMMENDED_EVICTION_MS, cs, cr))
                 esiti.append({"prova": "the gain", "predicati": [],
                               "riferimento_s": rs, "con_cura_s": cs,
                               "rifiuti_riferimento": rr, "rifiuti_con_cura": cr})
     finally:
-        ripulisci_clienti()
+        clean_up_clients()
         B76.scena_spegni()
         rimessa = RETE.rimetti()
         try:
@@ -3427,7 +3427,7 @@ def principale():
                 muti.append("%s · %s — %s" % (v["prova"], d["predicato"],
                                               d["perche"][:120]))
     _inf("%d tests run · %d red · %d not judged · outcomes in %s"
-         % (len(esiti), len(rossi), len(muti), _fuori("esiti")))
+         % (len(esiti), len(rossi), len(muti), _out("esiti")))
     for r in rossi:
         _ko(r)
     for m in muti:

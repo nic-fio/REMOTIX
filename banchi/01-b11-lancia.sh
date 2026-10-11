@@ -96,12 +96,12 @@ ok "collector listening, PID $PID_RACC"
 # ⭐ And it is called BEFORE the verdict, not only from the `trap`: a cleanup that
 #    fails after the green line is a wrong green line.  The `trap` stays
 #    for early exits, and does not repeat it.
-RIPULITO=0
+CLEANED=0
 ripulisci()
 {
 	local st esito=0
-	[ "$RIPULITO" -eq 0 ] || return 0
-	RIPULITO=1
+	[ "$CLEANED" -eq 0 ] || return 0
+	CLEANED=1
 	kill $PID_RACC 2>/dev/null
 	$SSH "bash /media/REMOTIX/src/01-b2-lancia-wt.sh spegni" \
 		> "$TEMP/rip-sano.log" 2>&1
@@ -534,7 +534,7 @@ fi
 #    engines against the faulty server are 0" pinning its own
 #    arithmetic on the page, and in the green branch "the farewell arrives every time: 0 of 0"
 #    (findings R5.16 and R5.5).
-ATTESI=$MOTORI_GUASTO
+EXPECTED_COUNT=$MOTORI_GUASTO
 eval "$(awk '
   function chiudi_caso() { if (aperto && (canale_visto || chiusura_vista)) con++ }
   /fault requested by the client:/ {
@@ -565,20 +565,20 @@ if [ "$CONTROLLO" -ne 1 ]; then
 	ko "   is missing.  This round is not a verdict on B11."
 	ESITO=1
 fi
-if [ "$ATTESI" -eq 0 ]; then
-	ko "⛔ no engine ran against the faulty server: «$CON of $ATTESI»"
+if [ "$EXPECTED_COUNT" -eq 0 ]; then
+	ko "⛔ no engine ran against the faulty server: «$CON of $EXPECTED_COUNT»"
 	ko "   would be a positive control passed with zero observations"
 	ESITO=1
-elif [ "$CASI" -ne "$ATTESI" ]; then
+elif [ "$CASI" -ne "$EXPECTED_COUNT" ]; then
 	ko "⛔ the case was served $CASI times, and the engines against the faulty server are"
-	ko "   $ATTESI: the count below would have no denominator"
+	ko "   $EXPECTED_COUNT: the count below would have no denominator"
 	ESITO=1
-elif [ "$CON" -ne "$ATTESI" ]; then
-	ko "⛔ only $CON farewells of $ATTESI: there is an engine that closes and does NOT say"
+elif [ "$CON" -ne "$EXPECTED_COUNT" ]; then
+	ko "⛔ only $CON farewells of $EXPECTED_COUNT: there is an engine that closes and does NOT say"
 	ko "   why, neither on the channel nor in the close code (§8.1)"
 	ESITO=1
 else
-	ok "⭐ the farewell of §8.1 arrives every time: $CON of $ATTESI"
+	ok "⭐ the farewell of §8.1 arrives every time: $CON of $EXPECTED_COUNT"
 	# ⛔ And the two roads are DECLARED counted, not declared seen.  The
 	#    green branch asserted "and ⛔ by TWO different roads" on the sole
 	#    condition `CON -eq ATTESI`, with `CANALE` and `CHIUSURA` computed and never

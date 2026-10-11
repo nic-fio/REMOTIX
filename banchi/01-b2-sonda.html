@@ -114,9 +114,9 @@ const esito = $("esito");
 //   32 s of B11 — chosen there to be just above the `max_idle_timeout` of
 //   §2.2, so that the transport is the first to speak — would not fit here
 //   twice, and the bench would go back to the silence this page cures.
-const TETTO_APERTURA = 10000;   // `wt.ready`: neither opened nor refused
-const TETTO_ECCOMI   = 10000;   // from the `CIAO` sent to the complete `ECCOMI`
-const TETTO_TOTALE   = 25000;   // the safety net: beyond this, it records anyway
+const CAP_OPENING = 10000;   // `wt.ready`: neither opened nor refused
+const CAP_HERE_I_AM   = 10000;   // from the `CIAO` sent to the complete `ECCOMI`
+const CAP_TOTAL   = 25000;   // the safety net: beyond this, it records anyway
 
 // ⛔ The version this page can speak, written once only: §2.2
 //    wants the one of the path `/rcp/<n>` and the one of the `CIAO` to match.
@@ -127,7 +127,7 @@ const VERSIONE = 1;
 
 const T = { CIAO: 0x0001, ECCOMI: 0x0002, CREDENZIALI: 0x0003, AMMESSO: 0x0004,
             RESPINTO: 0x0005, SESSIONE: 0x0007, CONGEDO: 0x000C };
-const NOME_T = Object.fromEntries(Object.entries(T).map(([k, v]) => [v, k]));
+const TYPE_NAME = Object.fromEntries(Object.entries(T).map(([k, v]) => [v, k]));
 
 // ⛔ The names of the reasons of §8.2, because "reason 9" is not a diagnosis: if the
 //    server says farewell instead of answering, the outcome must say WHY.
@@ -206,7 +206,7 @@ function attesa(tetto, cosa) {
 //    deadline passed to it.  ⚠ A piece received is not a message: it
 //    accumulates until the 6 header bytes and the `lunghezza` body bytes
 //    are all there.
-async function leggi_messaggio(r, entro) {
+async function read_message(r, entro) {
   let arrivati = new Uint8Array(0);
   for (;;) {
     const { value, done } = await entro(r.read());
@@ -301,9 +301,9 @@ $("vai").onclick = async () => {
   //    asserted by the source and not by the log is a property
   //    that nobody has seen (LEZIONI.md §1.9).
   righe.push("allowPooling: false   (RCP.md §4.1-bis)");
-  righe.push("wait caps of THIS probe: opening " + TETTO_APERTURA / 1000 +
-             " s · ECCOMI " + TETTO_ECCOMI / 1000 + " s · safety net " +
-             TETTO_TOTALE / 1000 + " s   (⚠ ours, not RCP's: §4.6 gives " +
+  righe.push("wait caps of THIS probe: opening " + CAP_OPENING / 1000 +
+             " s · ECCOMI " + CAP_HERE_I_AM / 1000 + " s · safety net " +
+             CAP_TOTAL / 1000 + " s   (⚠ ours, not RCP's: §4.6 gives " +
              "no cap to the server)");
 
   // ⛔ THE SAFETY NET, and it is armed BEFORE anything else.
@@ -320,13 +320,13 @@ $("vai").onclick = async () => {
     if (registrato) return;
     righe.push("");
     righe.push("⛔ SILENCE: the probe did not reach the end within " +
-               TETTO_TOTALE / 1000 + " s, and none of the declared caps" +
+               CAP_TOTAL / 1000 + " s, and none of the declared caps" +
                " fired.  The wait stayed at a point this page" +
                " does not foresee: the line leaves all the same, because \"no line\"" +
                " is the only outcome that cannot be read.");
     scrivi(righe.join("\n"), false);
     registra("SILENZIO", righe.join("\n"));
-  }, TETTO_TOTALE);
+  }, CAP_TOTAL);
 
   if (!("WebTransport" in window)) {
     righe.push("");
@@ -376,7 +376,7 @@ $("vai").onclick = async () => {
     // ── 1. the session ────────────────────────────────────────────────────
     const wt = new WebTransport(url, opzioni);
     try {
-      await attesa(TETTO_APERTURA, "opening of the session")(wt.ready);
+      await attesa(CAP_OPENING, "opening of the session")(wt.ready);
     } catch (e) {
       righe.push("");
       if (e instanceof Scaduto) {
@@ -427,7 +427,7 @@ $("vai").onclick = async () => {
       //    that stream, from either side, closes the
       //    session").  It would close the door at the exact second in which we
       //    wait for someone to come out of it.
-      const m = await leggi_messaggio(r, attesa(TETTO_ECCOMI, "answer from the server"));
+      const m = await read_message(r, attesa(CAP_HERE_I_AM, "answer from the server"));
       if (m.fine) {
         righe.push("⛔ the control channel closed (FIN) without answering:");
         righe.push("   §4.2 — that FIN IS the end of the session.");
@@ -469,7 +469,7 @@ $("vai").onclick = async () => {
                    " page or in the server, and the server log names it.");
       } else {
         righe.push("⛔ on the control channel came back " +
-                   (NOME_T[m.tipo] || "type 0x" + m.tipo.toString(16).padStart(4, "0")) +
+                   (TYPE_NAME[m.tipo] || "type 0x" + m.tipo.toString(16).padStart(4, "0")) +
                    " instead of ECCOMI");
       }
     } catch (e) {

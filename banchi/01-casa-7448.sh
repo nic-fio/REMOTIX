@@ -55,7 +55,7 @@ PIDF=/srv/src/remotix-casa.pid
 
 # ⛔ The PID is not looked for with `pgrep -f remotix`: it would take away the servers of
 #    the other runs (P5's 7501, B13's 7481).  The port is looked for.
-mio_pid()
+my_pid()
 {
 	local p
 	# ⭐ First the file, which is a written fact; then the command line, for the
@@ -73,7 +73,7 @@ impronta() { sha256sum "$1" 2>/dev/null | cut -c1-16; }
 
 case "${1:-stato}" in
 stato)
-	if ! pid=$(mio_pid); then
+	if ! pid=$(my_pid); then
 		echo "--  no server on $PORTA"
 		[ -x "$D/remotix" ] && echo "--  on disk: $(impronta "$D/remotix")…  $(stat -c '%y' "$D/remotix" | cut -c1-16)"
 		exit 1
@@ -107,7 +107,7 @@ costruisci)
 	echo "OK  built: $(impronta "$D/remotix")…"
 	exit 0 ;;
 spegni)
-	if ! pid=$(mio_pid); then echo "--  there was nothing running on $PORTA"; exit 0; fi
+	if ! pid=$(my_pid); then echo "--  there was nothing running on $PORTA"; exit 0; fi
 	kill "$pid" 2>/dev/null
 	g=0
 	while [ -d "/proc/$pid" ] && [ "$g" -lt 20 ]; do sleep 0.5; g=$((g+1)); done

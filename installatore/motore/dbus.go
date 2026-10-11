@@ -32,15 +32,15 @@ func (b *Bus) c() (*dbus.Conn, error) {
 }
 
 const (
-	sdNome     = "org.freedesktop.systemd1"
-	sdPercorso = "/org/freedesktop/systemd1"
-	sdManager  = "org.freedesktop.systemd1.Manager"
-	fwNome     = "org.fedoraproject.FirewallD1"
-	fwPercorso = "/org/fedoraproject/FirewallD1"
+	sdName    = "org.freedesktop.systemd1"
+	sdPath    = "/org/freedesktop/systemd1"
+	sdManager = "org.freedesktop.systemd1.Manager"
+	fwName    = "org.fedoraproject.FirewallD1"
+	fwPath    = "/org/fedoraproject/FirewallD1"
 )
 
-// HaPadrone: does someone answer to that name on the bus?
-func (b *Bus) HaPadrone(nome string) (bool, error) {
+// HasOwner: does someone answer to that name on the bus?
+func (b *Bus) HasOwner(nome string) (bool, error) {
 	c, err := b.c()
 	if err != nil {
 		return false, err
@@ -64,7 +64,7 @@ func (b *Bus) Proprieta(nome, percorso, proprieta string) (any, error) {
 }
 
 // Chiama a method and put its results into «in».
-func (b *Bus) Chiama(nome, percorso, metodo string, in []any, args ...any) error {
+func (b *Bus) Invoke(nome, percorso, metodo string, in []any, args ...any) error {
 	c, err := b.c()
 	if err != nil {
 		return err
@@ -82,13 +82,13 @@ func (b *Bus) Chiama(nome, percorso, metodo string, in []any, args ...any) error
 // StatoAttivo: ActiveState of a unit («inactive» if systemd has not loaded it).
 func (b *Bus) StatoAttivo(unita string) (string, error) {
 	var p dbus.ObjectPath
-	if err := b.Chiama(sdNome, sdPercorso, sdManager+".GetUnit", []any{&p}, unita); err != nil {
-		if strings.Contains(err.Error(), "not loaded") || isNome(err, "org.freedesktop.systemd1.NoSuchUnit") {
+	if err := b.Invoke(sdName, sdPath, sdManager+".GetUnit", []any{&p}, unita); err != nil {
+		if strings.Contains(err.Error(), "not loaded") || isName(err, "org.freedesktop.systemd1.NoSuchUnit") {
 			return "inactive", nil
 		}
 		return "", err
 	}
-	v, err := b.Proprieta(sdNome, string(p), "org.freedesktop.systemd1.Unit.ActiveState")
+	v, err := b.Proprieta(sdName, string(p), "org.freedesktop.systemd1.Unit.ActiveState")
 	if err != nil {
 		return "", err
 	}
@@ -96,7 +96,7 @@ func (b *Bus) StatoAttivo(unita string) (string, error) {
 	return s, nil
 }
 
-func isNome(err error, nome string) bool {
+func isName(err error, nome string) bool {
 	var e dbus.Error
 	if errors.As(err, &e) {
 		return e.Name == nome
@@ -108,15 +108,15 @@ func isNome(err error, nome string) bool {
 	return false
 }
 
-// unitaDBus: systemd1.Manager — GetUnitFileState, EnableUnitFiles, DisableUnitFiles, Reload
+// unitDBus: systemd1.Manager — GetUnitFileState, EnableUnitFiles, DisableUnitFiles, Reload
 // (what systemctl enable/disable does, without launching it).
-type unitaDBus struct{ b *Bus }
+type unitDBus struct{ b *Bus }
 
-func (u *unitaDBus) Stato(unita string) (string, error) {
+func (u *unitDBus) Stato(unita string) (string, error) {
 	var s string
-	err := u.b.Chiama(sdNome, sdPercorso, sdManager+".GetUnitFileState", []any{&s}, unita)
+	err := u.b.Invoke(sdName, sdPath, sdManager+".GetUnitFileState", []any{&s}, unita)
 	if err != nil {
-		if isNome(err, "org.freedesktop.DBus.Error.FileNotFound") || isNome(err, "org.freedesktop.systemd1.NoSuchUnit") ||
+		if isName(err, "org.freedesktop.DBus.Error.FileNotFound") || isName(err, "org.freedesktop.systemd1.NoSuchUnit") ||
 			strings.Contains(err.Error(), "No such file") {
 			return "not-found", nil
 		}
@@ -125,23 +125,23 @@ func (u *unitaDBus) Stato(unita string) (string, error) {
 	return s, nil
 }
 
-type cambioUnita struct{ Tipo, File, Destinazione string }
+type changeUnit struct{ Tipo, File, Destinazione string }
 
-func (u *unitaDBus) Abilita(unita string) error {
+func (u *unitDBus) Abilita(unita string) error {
 	var info bool
-	var cambi []cambioUnita
-	if err := u.b.Chiama(sdNome, sdPercorso, sdManager+".EnableUnitFiles", []any{&info, &cambi}, []string{unita}, false, false); err != nil {
+	var cambi []changeUnit
+	if err := u.b.Invoke(sdName, sdPath, sdManager+".EnableUnitFiles", []any{&info, &cambi}, []string{unita}, false, false); err != nil {
 		return err
 	}
-	return u.b.Chiama(sdNome, sdPercorso, sdManager+".Reload", nil)
+	return u.b.Invoke(sdName, sdPath, sdManager+".Reload", nil)
 }
 
-func (u *unitaDBus) Disabilita(unita string) error {
-	var cambi []cambioUnita
-	if err := u.b.Chiama(sdNome, sdPercorso, sdManager+".DisableUnitFiles", []any{&cambi}, []string{unita}, false); err != nil {
+func (u *unitDBus) Disabilita(unita string) error {
+	var cambi []changeUnit
+	if err := u.b.Invoke(sdName, sdPath, sdManager+".DisableUnitFiles", []any{&cambi}, []string{unita}, false); err != nil {
 		return err
 	}
-	return u.b.Chiama(sdNome, sdPercorso, sdManager+".Reload", nil)
+	return u.b.Invoke(sdName, sdPath, sdManager+".Reload", nil)
 }
 
 // firewalldDBus: the live rules on org.fedoraproject.FirewallD1.zone, the permanent ones on the
@@ -151,34 +151,34 @@ type firewalldDBus struct{ b *Bus }
 func (f *firewalldDBus) Nome() string { return "firewalld" }
 
 // Acceso: firewalld is on the bus and says RUNNING.
-func (f *firewalldDBus) Acceso() bool {
-	if ok, err := f.b.HaPadrone(fwNome); err != nil || !ok {
+func (f *firewalldDBus) Lit() bool {
+	if ok, err := f.b.HasOwner(fwName); err != nil || !ok {
 		return false
 	}
-	v, err := f.b.Proprieta(fwNome, fwPercorso, fwNome+".state")
+	v, err := f.b.Proprieta(fwName, fwPath, fwName+".state")
 	s, _ := v.(string)
 	return err == nil && s == "RUNNING"
 }
 
-func (f *firewalldDBus) ZonaPredefinita() (string, error) {
+func (f *firewalldDBus) DefaultZone() (string, error) {
 	var z string
-	err := f.b.Chiama(fwNome, fwPercorso, fwNome+".getDefaultZone", []any{&z})
+	err := f.b.Invoke(fwName, fwPath, fwName+".getDefaultZone", []any{&z})
 	return z, err
 }
 
-func (f *firewalldDBus) zonaConfig(zona string) (string, error) {
+func (f *firewalldDBus) zoneConfig(zona string) (string, error) {
 	var p dbus.ObjectPath
-	err := f.b.Chiama(fwNome, fwPercorso+"/config", fwNome+".config.getZoneByName", []any{&p}, zona)
+	err := f.b.Invoke(fwName, fwPath+"/config", fwName+".config.getZoneByName", []any{&p}, zona)
 	return string(p), err
 }
 
-func dividiPorta(porta string) (string, string) {
+func splitPort(porta string) (string, string) {
 	p, proto, _ := strings.Cut(porta, "/")
 	return p, proto
 }
 
-// servizioDi: «servizio:remotix» ⇒ «remotix»; a port ⇒ "".
-func servizioDi(regola string) string {
+// serviceOf: «servizio:remotix» ⇒ «remotix»; a port ⇒ "".
+func serviceOf(regola string) string {
 	s, _ := strings.CutPrefix(regola, "service:")
 	if s == regola {
 		return ""
@@ -186,89 +186,89 @@ func servizioDi(regola string) string {
 	return s
 }
 
-// HaPorta: is the rule (a port «7447/tcp», or a service «servizio:remotix») there, live or permanent?
-func (f *firewalldDBus) HaPorta(zona, porta string, permanente bool) (bool, error) {
+// HasPort: is the rule (a port «7447/tcp», or a service «servizio:remotix») there, live or permanent?
+func (f *firewalldDBus) HasPort(zona, porta string, permanente bool) (bool, error) {
 	var ok bool
-	s := servizioDi(porta)
-	p, proto := dividiPorta(porta)
+	s := serviceOf(porta)
+	p, proto := splitPort(porta)
 	if !permanente {
 		if s != "" {
-			err := f.b.Chiama(fwNome, fwPercorso, fwNome+".zone.queryService", []any{&ok}, zona, s)
+			err := f.b.Invoke(fwName, fwPath, fwName+".zone.queryService", []any{&ok}, zona, s)
 			return ok, err
 		}
-		err := f.b.Chiama(fwNome, fwPercorso, fwNome+".zone.queryPort", []any{&ok}, zona, p, proto)
+		err := f.b.Invoke(fwName, fwPath, fwName+".zone.queryPort", []any{&ok}, zona, p, proto)
 		return ok, err
 	}
-	zp, err := f.zonaConfig(zona)
+	zp, err := f.zoneConfig(zona)
 	if err != nil {
 		return false, err
 	}
 	if s != "" {
-		err = f.b.Chiama(fwNome, zp, fwNome+".config.zone.queryService", []any{&ok}, s)
+		err = f.b.Invoke(fwName, zp, fwName+".config.zone.queryService", []any{&ok}, s)
 		return ok, err
 	}
-	err = f.b.Chiama(fwNome, zp, fwNome+".config.zone.queryPort", []any{&ok}, p, proto)
+	err = f.b.Invoke(fwName, zp, fwName+".config.zone.queryPort", []any{&ok}, p, proto)
 	return ok, err
 }
 
-func (f *firewalldDBus) Aggiungi(zona, porta string, permanente bool) error {
-	s := servizioDi(porta)
-	p, proto := dividiPorta(porta)
+func (f *firewalldDBus) Insert(zona, porta string, permanente bool) error {
+	s := serviceOf(porta)
+	p, proto := splitPort(porta)
 	if !permanente {
 		var z string
 		if s != "" {
-			return f.b.Chiama(fwNome, fwPercorso, fwNome+".zone.addService", []any{&z}, zona, s, int32(0))
+			return f.b.Invoke(fwName, fwPath, fwName+".zone.addService", []any{&z}, zona, s, int32(0))
 		}
-		return f.b.Chiama(fwNome, fwPercorso, fwNome+".zone.addPort", []any{&z}, zona, p, proto, int32(0))
+		return f.b.Invoke(fwName, fwPath, fwName+".zone.addPort", []any{&z}, zona, p, proto, int32(0))
 	}
-	return f.AggiornaPermanente(zona, []string{porta}, nil)
+	return f.UpdatePermanent(zona, []string{porta}, nil)
 }
 
 func (f *firewalldDBus) Togli(zona, porta string, permanente bool) error {
-	s := servizioDi(porta)
-	p, proto := dividiPorta(porta)
+	s := serviceOf(porta)
+	p, proto := splitPort(porta)
 	if !permanente {
 		var z string
 		if s != "" {
-			return f.b.Chiama(fwNome, fwPercorso, fwNome+".zone.removeService", []any{&z}, zona, s)
+			return f.b.Invoke(fwName, fwPath, fwName+".zone.removeService", []any{&z}, zona, s)
 		}
-		return f.b.Chiama(fwNome, fwPercorso, fwNome+".zone.removePort", []any{&z}, zona, p, proto)
+		return f.b.Invoke(fwName, fwPath, fwName+".zone.removePort", []any{&z}, zona, p, proto)
 	}
-	return f.AggiornaPermanente(zona, nil, []string{porta})
+	return f.UpdatePermanent(zona, nil, []string{porta})
 }
 
 // Conosce: firewalld knows the service both in the live rules and in the permanent ones. `[M]` T6:
 // a new file in /usr/lib/firewalld/services is seen by neither of the two until the reload.
 func (f *firewalldDBus) Conosce(servizio string) (bool, error) {
 	var vive, perm []string
-	if err := f.b.Chiama(fwNome, fwPercorso, fwNome+".listServices", []any{&vive}); err != nil {
+	if err := f.b.Invoke(fwName, fwPath, fwName+".listServices", []any{&vive}); err != nil {
 		return false, err
 	}
-	if err := f.b.Chiama(fwNome, fwPercorso+"/config", fwNome+".config.getServiceNames", []any{&perm}); err != nil {
+	if err := f.b.Invoke(fwName, fwPath+"/config", fwName+".config.getServiceNames", []any{&perm}); err != nil {
 		return false, err
 	}
 	return slices.Contains(vive, servizio) && slices.Contains(perm, servizio), nil
 }
 
-type portaFw struct{ Porta, Proto string }
+type portFw struct{ Porta, Proto string }
 
 // impostazioni: the zone's permanent ports and services (getSettings2), and the rest as text
 // in order, for the fingerprint.
 func (f *firewalldDBus) impostazioni(zp string) (map[string]dbus.Variant, error) {
 	var m map[string]dbus.Variant
-	err := f.b.Chiama(fwNome, zp, fwNome+".config.zone.getSettings2", []any{&m})
+	err := f.b.Invoke(fwName, zp, fwName+".config.zone.getSettings2", []any{&m})
 	return m, err
 }
 
-func portePermanenti(m map[string]dbus.Variant) []portaFw {
-	var r []portaFw
+func permanentPorts(m map[string]dbus.Variant) []portFw {
+	var r []portFw
 	if v, ok := m["ports"]; ok {
 		if l, ok := v.Value().([][]any); ok {
 			for _, x := range l {
 				if len(x) == 2 {
 					a, _ := x[0].(string)
 					b, _ := x[1].(string)
-					r = append(r, portaFw{a, b})
+					r = append(r, portFw{a, b})
 				}
 			}
 		}
@@ -276,7 +276,7 @@ func portePermanenti(m map[string]dbus.Variant) []portaFw {
 	return r
 }
 
-func serviziPermanenti(m map[string]dbus.Variant) []string {
+func permanentServices(m map[string]dbus.Variant) []string {
 	if v, ok := m["services"]; ok {
 		if l, ok := v.Value().([]string); ok {
 			return l
@@ -285,13 +285,13 @@ func serviziPermanenti(m map[string]dbus.Variant) []string {
 	return nil
 }
 
-// togliRegole: the ports and services without the given rules.
-func togliRegole(porte []portaFw, servizi []string, via []string) ([]portaFw, []string) {
+// removeRules: the ports and services without the given rules.
+func removeRules(porte []portFw, servizi []string, via []string) ([]portFw, []string) {
 	fuori := map[string]bool{}
 	for _, r := range via {
 		fuori[r] = true
 	}
-	var p2 []portaFw
+	var p2 []portFw
 	for _, p := range porte {
 		if !fuori[p.Porta+"/"+p.Proto] {
 			p2 = append(p2, p)
@@ -306,11 +306,11 @@ func togliRegole(porte []portaFw, servizi []string, via []string) ([]portaFw, []
 	return p2, s2
 }
 
-// StatoPermanente: the fingerprint of the zone's permanent settings (minus «senza»), in an
+// StatePermanent: the fingerprint of the zone's permanent settings (minus «senza»), in an
 // order that does not depend on firewalld; and whether the zone is the stock one (the property «default»:
 // `[M]` false for public.xml in /etc/firewalld/zones, true for work.xml in /usr/lib).
-func (f *firewalldDBus) StatoPermanente(zona string, senza []string) (string, bool, error) {
-	zp, err := f.zonaConfig(zona)
+func (f *firewalldDBus) StatePermanent(zona string, senza []string) (string, bool, error) {
+	zp, err := f.zoneConfig(zona)
 	if err != nil {
 		return "", false, err
 	}
@@ -318,7 +318,7 @@ func (f *firewalldDBus) StatoPermanente(zona string, senza []string) (string, bo
 	if err != nil {
 		return "", false, err
 	}
-	porte, servizi := togliRegole(portePermanenti(m), serviziPermanenti(m), senza)
+	porte, servizi := removeRules(permanentPorts(m), permanentServices(m), senza)
 	var righe []string
 	for k, v := range m {
 		if k != "ports" && k != "services" {
@@ -333,7 +333,7 @@ func (f *firewalldDBus) StatoPermanente(zona string, senza []string) (string, bo
 	}
 	sort.Strings(righe)
 	h := sha256.Sum256([]byte(strings.Join(righe, "\n")))
-	v, err := f.b.Proprieta(fwNome, zp, fwNome+".config.zone.default")
+	v, err := f.b.Proprieta(fwName, zp, fwName+".config.zone.default")
 	if err != nil {
 		return "", false, err
 	}
@@ -341,11 +341,11 @@ func (f *firewalldDBus) StatoPermanente(zona string, senza []string) (string, bo
 	return hex.EncodeToString(h[:]), diSerie, nil
 }
 
-// AggiornaPermanente: the permanent rules added and removed in ONE write (update2 with only the
+// UpdatePermanent: the permanent rules added and removed in ONE write (update2 with only the
 // keys «ports» and «services»: firewalld keeps the others as they were). ⚠ One write per rule makes
 // <zona>.xml.old appear (firewalld copies the file that was there before rewriting it).
-func (f *firewalldDBus) AggiornaPermanente(zona string, aggiungi, togli []string) error {
-	zp, err := f.zonaConfig(zona)
+func (f *firewalldDBus) UpdatePermanent(zona string, aggiungi, togli []string) error {
+	zp, err := f.zoneConfig(zona)
 	if err != nil {
 		return err
 	}
@@ -353,77 +353,77 @@ func (f *firewalldDBus) AggiornaPermanente(zona string, aggiungi, togli []string
 	if err != nil {
 		return err
 	}
-	porte, servizi := togliRegole(portePermanenti(m), serviziPermanenti(m), togli)
+	porte, servizi := removeRules(permanentPorts(m), permanentServices(m), togli)
 	for _, r := range aggiungi {
-		if s := servizioDi(r); s != "" {
+		if s := serviceOf(r); s != "" {
 			if !slices.Contains(servizi, s) {
 				servizi = append(servizi, s)
 			}
 			continue
 		}
-		p, proto := dividiPorta(r)
-		if !slices.Contains(porte, portaFw{p, proto}) {
-			porte = append(porte, portaFw{p, proto})
+		p, proto := splitPort(r)
+		if !slices.Contains(porte, portFw{p, proto}) {
+			porte = append(porte, portFw{p, proto})
 		}
 	}
 	if porte == nil {
-		porte = []portaFw{}
+		porte = []portFw{}
 	}
 	if servizi == nil {
 		servizi = []string{}
 	}
 	nuove := map[string]dbus.Variant{"ports": dbus.MakeVariant(porte), "services": dbus.MakeVariant(servizi)}
-	return f.b.Chiama(fwNome, zp, fwNome+".config.zone.update2", nil, nuove)
+	return f.b.Invoke(fwName, zp, fwName+".config.zone.update2", nil, nuove)
 }
 
-// RimettiDiSerie: the zone goes back to the one in /usr/lib/firewalld/zones (loadDefaults: the file in /etc
+// ResetToDefaults: the zone goes back to the one in /usr/lib/firewalld/zones (loadDefaults: the file in /etc
 // goes away).
-func (f *firewalldDBus) RimettiDiSerie(zona string) error {
-	zp, err := f.zonaConfig(zona)
+func (f *firewalldDBus) ResetToDefaults(zona string) error {
+	zp, err := f.zoneConfig(zona)
 	if err != nil {
 		return err
 	}
-	return f.b.Chiama(fwNome, zp, fwNome+".config.zone.loadDefaults", nil)
+	return f.b.Invoke(fwName, zp, fwName+".config.zone.loadDefaults", nil)
 }
 
-// PorteVive: the ports (ranges too) open in the zone, to see Fedora Workstation's range 1025-65535,
+// LivePorts: the ports (ranges too) open in the zone, to see Fedora Workstation's range 1025-65535,
 // which queryPort does not see.
-func (f *firewalldDBus) PorteVive(zona string) ([][]string, error) {
+func (f *firewalldDBus) LivePorts(zona string) ([][]string, error) {
 	var r [][]string
-	err := f.b.Chiama(fwNome, fwPercorso, fwNome+".zone.getPorts", []any{&r}, zona)
+	err := f.b.Invoke(fwName, fwPath, fwName+".zone.getPorts", []any{&r}, zona)
 	return r, err
 }
 
-// RiavviaSeAttiva: TryRestartUnit (what systemctl try-restart does): restarts the unit only if
+// RestartIfActive: TryRestartUnit (what systemctl try-restart does): restarts the unit only if
 // it was running. The desktops survive the service restart (§5.2, T2).
-func (b *Bus) RiavviaSeAttiva(unita string) error {
+func (b *Bus) RestartIfActive(unita string) error {
 	var job dbus.ObjectPath
-	return b.Chiama(sdNome, sdPercorso, sdManager+".TryRestartUnit", []any{&job}, unita, "replace")
+	return b.Invoke(sdName, sdPath, sdManager+".TryRestartUnit", []any{&job}, unita, "replace")
 }
 
-func (u *unitaDBus) Attiva(unita string) (string, error) { return u.b.StatoAttivo(unita) }
+func (u *unitDBus) Attiva(unita string) (string, error) { return u.b.StatoAttivo(unita) }
 
-func (u *unitaDBus) job(metodo, unita string) error {
+func (u *unitDBus) job(metodo, unita string) error {
 	var job dbus.ObjectPath
-	return u.b.Chiama(sdNome, sdPercorso, sdManager+"."+metodo, []any{&job}, unita, "replace")
+	return u.b.Invoke(sdName, sdPath, sdManager+"."+metodo, []any{&job}, unita, "replace")
 }
 
 // Avvia: StartUnit, and waits for the unit to become active (or fail), up to 60 s.
-func (u *unitaDBus) Avvia(unita string) error {
+func (u *unitDBus) Launch(unita string) error {
 	if err := u.job("StartUnit", unita); err != nil {
 		return err
 	}
 	return u.aspetta(unita, "active")
 }
 
-func (u *unitaDBus) Ferma(unita string) error {
+func (u *unitDBus) Ferma(unita string) error {
 	if err := u.job("StopUnit", unita); err != nil {
 		return err
 	}
 	return u.aspetta(unita, "inactive")
 }
 
-func (u *unitaDBus) aspetta(unita, voluto string) error {
+func (u *unitDBus) aspetta(unita, voluto string) error {
 	for i := 0; i < 120; i++ {
 		s, err := u.b.StatoAttivo(unita)
 		if err != nil {
@@ -440,38 +440,38 @@ func (u *unitaDBus) aspetta(unita, voluto string) error {
 	return errors.New(unita + ": did not become " + voluto + " in 60 s")
 }
 
-func (u *unitaDBus) Ricarica(unita string) error { return u.job("ReloadUnit", unita) }
+func (u *unitDBus) Ricarica(unita string) error { return u.job("ReloadUnit", unita) }
 
-func (u *unitaDBus) Predefinito() (string, error) {
+func (u *unitDBus) Predefinito() (string, error) {
 	var s string
-	err := u.b.Chiama(sdNome, sdPercorso, sdManager+".GetDefaultTarget", []any{&s})
+	err := u.b.Invoke(sdName, sdPath, sdManager+".GetDefaultTarget", []any{&s})
 	return s, err
 }
 
-func (u *unitaDBus) ImpostaPredefinito(b string) error {
-	var cambi []cambioUnita
-	return u.b.Chiama(sdNome, sdPercorso, sdManager+".SetDefaultTarget", []any{&cambi}, b, true)
+func (u *unitDBus) SetDefault(b string) error {
+	var cambi []changeUnit
+	return u.b.Invoke(sdName, sdPath, sdManager+".SetDefaultTarget", []any{&cambi}, b, true)
 }
 
-// sessioniDBus: logind. List = ListSessions + the Service property of each one.
-type sessioniDBus struct {
+// sessionsDBus: logind. List = ListSessions + the Service property of each one.
+type sessionsDBus struct {
 	b *Bus
 	a *Ambiente
 }
 
-func (s *sessioniDBus) Grafici(utente string) (int, error) {
+func (s *sessionsDBus) Charts(utente string) (int, error) {
 	uid, err := uidDi(s.a, utente)
 	if err != nil {
 		return 0, err
 	}
-	return len(ProcessiGrafici(s.a, uid)), nil
+	return len(GraphicalProcesses(s.a, uid)), nil
 }
 
-func (s *sessioniDBus) ChiudiGrafica(utente string) ([]string, error) {
-	return ChiudiGraficaUtente(s.a, utente)
+func (s *sessionsDBus) CloseGraphical(utente string) ([]string, error) {
+	return CloseGraphicalUser(s.a, utente)
 }
 
-type sessioneLogind struct {
+type sessionLogind struct {
 	ID     string
 	UID    uint32
 	Utente string
@@ -479,9 +479,9 @@ type sessioneLogind struct {
 	Via    dbus.ObjectPath
 }
 
-func (s *sessioniDBus) Elenco() ([]Sessione, error) {
-	var l []sessioneLogind
-	if err := s.b.Chiama("org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.login1.Manager.ListSessions", []any{&l}); err != nil {
+func (s *sessionsDBus) Listing() ([]Sessione, error) {
+	var l []sessionLogind
+	if err := s.b.Invoke("org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.login1.Manager.ListSessions", []any{&l}); err != nil {
 		return nil, err
 	}
 	var r []Sessione
@@ -497,10 +497,10 @@ func (s *sessioniDBus) Elenco() ([]Sessione, error) {
 	return r, nil
 }
 
-func (s *sessioniDBus) Segnale(id string, segnale int32) error {
-	return s.b.Chiama("org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.login1.Manager.KillSession", nil, id, "all", segnale)
+func (s *sessionsDBus) Segnale(id string, segnale int32) error {
+	return s.b.Invoke("org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.login1.Manager.KillSession", nil, id, "all", segnale)
 }
 
-func (s *sessioniDBus) Termina(id string) error {
-	return s.b.Chiama("org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.login1.Manager.TerminateSession", nil, id)
+func (s *sessionsDBus) Terminate(id string) error {
+	return s.b.Invoke("org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.login1.Manager.TerminateSession", nil, id)
 }

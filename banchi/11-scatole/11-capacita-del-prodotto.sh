@@ -22,9 +22,9 @@
 #
 # ⭐ THE SHAPE: two small tables.
 #   1. what each DESKTOP has from the product  (`capacita_del_desktop`)
-#   2. what each MESH wants                    (`capacita_della_maglia`)
+#   2. what each MESH wants                    (`mesh_capabilities`)
 #   A mesh runs if the desktop has EVERYTHING it wants; otherwise it skips
-#   naming the FIRST missing capability, and why (`perche_manca`); the
+#   naming the FIRST missing capability, and why (`why_missing`); the
 #   question is asked with `prodotto_pronto`.
 #
 # ⛔⛔ AND NO YARDSTICK IS DECIDED HERE.  Opening a capability softens
@@ -120,7 +120,7 @@ capacita_del_desktop() {
 #     reason the code does not show; if it does not, C6 wants only
 #     the image and it is moved to the line above.
 # ---------------------------------------------------------------------------
-capacita_della_maglia() {
+mesh_capabilities() {
 	case "$1" in
 	C2|C3|C8b|C20) printf 'immagine' ;;
 	C4|C6|C22|C23) printf 'immagine input' ;;
@@ -135,7 +135,7 @@ capacita_della_maglia() {
 # ---------------------------------------------------------------------------
 # 3. ⭐ THE REASON, written for whoever reads the log.
 # ---------------------------------------------------------------------------
-perche_manca() {
+why_missing() {
 	local desktop=$1 capacita=$2
 	case " $DESKTOP_COL_PRODOTTO " in
 	*" $desktop "*) : ;;
@@ -177,16 +177,16 @@ prodotto_pronto() {
 	# ⭐ We name ALL the missing capabilities, not the first: C17 on xfce
 	#   waits for input AND the clipboard, and whoever reads the log must know it.
 	#   ⚠ A desktop the product does not recognise has a single reason.
-	for c in $(capacita_della_maglia "$maglia"); do
+	for c in $(mesh_capabilities "$maglia"); do
 		case "$ha" in
 		*" $c "*) : ;;
 		*)
 			case " $DESKTOP_COL_PRODOTTO " in
 			*" $desktop "*) : ;;
-			*) perche_manca "$desktop" "$c"; return 1 ;;
+			*) why_missing "$desktop" "$c"; return 1 ;;
 			esac
 			[ -n "$detto" ] && detto="$detto · "
-			detto="$detto$(perche_manca "$desktop" "$c")"
+			detto="$detto$(why_missing "$desktop" "$c")"
 			;;
 		esac
 	done

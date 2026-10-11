@@ -65,7 +65,7 @@ static const struct
 	{0, NULL, NULL},
 };
 
-static const char *DISPOSIZIONI[] = {"it", "us", "de", "de(neo)", NULL};
+static const char *LAYOUTS[] = {"it", "us", "de", "de(neo)", NULL};
 
 /* ⛔⭐ AND SINCE 21 AUGUST 2026 THE PROGRAM ANSWERS A SECOND QUESTION, which
  *     is the one the A3 brief insists on:
@@ -109,8 +109,8 @@ static int elenco(void)
 		t = tastiera_apri(riga, &sbaglio);
 		if (t)
 		{
-			printf("SI  %-32s %s\n", riga, tastiera_disposizione(t));
-			tastiera_chiudi(t);
+			printf("SI  %-32s %s\n", riga, kbd_layout(t));
+			keyboard_close(t);
 		}
 		else
 		{
@@ -147,7 +147,7 @@ static const struct
 };
 
 /* The canary candidates, in order: the first one the layout can produce. */
-static const unsigned CANARINI[] = {0x0061, 0x0031, 0x0020, 0};
+static const unsigned CANARIES[] = {0x0061, 0x0031, 0x0020, 0};
 
 static int esotiche(void)
 {
@@ -187,12 +187,12 @@ static int esotiche(void)
 		 *    layout cannot produce would make every test INVALID. */
 		{
 			unsigned can = 0;
-			for (int c = 0; CANARINI[c]; c++)
+			for (int c = 0; CANARIES[c]; c++)
 			{
 				size_t m = 0;
-				if (tastiera_posizioni_per(t, CANARINI[c], codici, &m) == 1 && m)
+				if (tastiera_posizioni_per(t, CANARIES[c], codici, &m) == 1 && m)
 				{
-					can = CANARINI[c];
+					can = CANARIES[c];
 					break;
 				}
 			}
@@ -202,7 +202,7 @@ static int esotiche(void)
 				printf(" ⛔ NO CANARY");
 		}
 		printf("   %s\n", ESOTICHE[i].perche);
-		tastiera_chiudi(t);
+		keyboard_close(t);
 	}
 	return 0;
 }
@@ -223,7 +223,7 @@ static int posizione(int argc, char **argv)
 		free(sbaglio);
 		return 1;
 	}
-	printf("# %s (%s)\n", argv[2], tastiera_disposizione(t));
+	printf("# %s (%s)\n", argv[2], kbd_layout(t));
 	for (int i = 3; i < argc; i++)
 	{
 		uint16_t codici[TASTIERA_MAX_POSIZIONI];
@@ -241,7 +241,7 @@ static int posizione(int argc, char **argv)
 			printf("\n");
 		}
 	}
-	tastiera_chiudi(t);
+	keyboard_close(t);
 	return 0;
 }
 
@@ -258,19 +258,19 @@ int main(int argc, char **argv)
 	printf("# position = the EVDEV codes the product would send, in order\n");
 	printf("# «-» = NOT producible: RCP.md §7.3 requires sending NOTHING\n\n");
 
-	for (int d = 0; DISPOSIZIONI[d]; d++)
+	for (int d = 0; LAYOUTS[d]; d++)
 	{
 		char *sbaglio = NULL;
-		Tastiera *t = tastiera_apri(DISPOSIZIONI[d], &sbaglio);
+		Tastiera *t = tastiera_apri(LAYOUTS[d], &sbaglio);
 
 		if (!t)
 		{
-			printf("LAYOUT %-9s ⛔ NOT OPENED: %s\n", DISPOSIZIONI[d],
+			printf("LAYOUT %-9s ⛔ NOT OPENED: %s\n", LAYOUTS[d],
 			       sbaglio ? sbaglio : "no reason given");
 			free(sbaglio);
 			continue;
 		}
-		printf("LAYOUT %-9s (%s)\n", DISPOSIZIONI[d], tastiera_disposizione(t));
+		printf("LAYOUT %-9s (%s)\n", LAYOUTS[d], kbd_layout(t));
 		for (int i = 0; PROVE[i].utf8; i++)
 		{
 			uint16_t codici[TASTIERA_MAX_POSIZIONI];
@@ -288,7 +288,7 @@ int main(int argc, char **argv)
 			}
 		}
 		printf("\n");
-		tastiera_chiudi(t);
+		keyboard_close(t);
 	}
 
 	printf("# the reasons for the tests\n");

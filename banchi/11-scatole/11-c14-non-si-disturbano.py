@@ -125,16 +125,16 @@ DESKTOP = ("gnome", "kde", "xfce", "lxqt")
 PORTA = {"gnome": 8511, "kde": 8512, "xfce": 8513, "lxqt": 8514}
 
 # how long one run of the test is waited for (one only, not all)
-TETTO_PROVA_S = 600
+CAP_TEST_S = 600
 # how long a server is waited for to say it is ready
-TETTO_SERVER_S = 40
+CAP_SERVER_S = 40
 # ⚠ the hook's ceiling, which this mesh does not enforce: it only MEASURES it
-TETTO_GANCIO_S = 180
+CAP_HOOK_S = 180
 # ⚠ the ceiling C8 gives itself for one snapshot: it is copied here ONLY to be able to tell
 #   the reader where the fixed wait in the times with the injected fault comes from.
 #   ⛔ This mesh does not impose it: C8 imposes it, and it is its option
 #   `--attesa-scatto`.
-TETTO_SCATTO_C8_S = 120
+CAP_SHOT_C8_S = 120
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -237,7 +237,7 @@ def giudica(sole, insieme, quante_in_parallelo=None):
     return [n for n in giudicabili if sole[n] != insieme[n]]
 
 
-def non_giudicate(sole, insieme):
+def unjudged(sole, insieme):
     nomi = sorted(set(sole) | set(insieme))
     return [n for n in nomi
             if sole.get(n) is None or insieme.get(n) is None]
@@ -334,19 +334,19 @@ def certifica():
 # ═══════════════════════════════════════════════════════════════════════════
 # PART 1 — THE PORTS: the price of `--network=host`, put to the test
 # ═══════════════════════════════════════════════════════════════════════════
-def spegni_server(scatola):
+def turn_off_server(scatola):
     dentro(scatola, "/usr/bin/systemctl", "stop", "rete11-server", tetto=90)
     dentro(scatola, "/usr/bin/systemctl", "reset-failed", "rete11-server", tetto=60)
     dentro(scatola, "/bin/rm", "-f", "/var/lib/rete11/registro.log", tetto=60)
 
 
-def accendi_server(scatola, porta):
+def turn_on_server(scatola, porta):
     """Starts the server inside the box on the given port.
 
     ⛔ The line is the one of `11-accendi.sh server`, copied piece by piece
        as ARGUMENTS: no shell in between.
     """
-    spegni_server(scatola)
+    turn_off_server(scatola)
     dentro(scatola, "/bin/mkdir", "-p", "/var/lib/rete11/certificati",
            "/var/lib/rete11/rilievo", tetto=60)
     return dentro(
@@ -364,7 +364,7 @@ def accendi_server(scatola, porta):
         "--rilievo", "/var/lib/rete11/rilievo", "--parlantina", tetto=90)
 
 
-def aspetta_pronto(scatola, tetto=TETTO_SERVER_S):
+def wait_ready(scatola, tetto=CAP_SERVER_S):
     """⛔ «On» means SOMEONE LISTENING, not «the process exists».
 
     Lesson of phase 10 §1.36: a server with a live process and nobody
@@ -383,7 +383,7 @@ def aspetta_pronto(scatola, tetto=TETTO_SERVER_S):
     return False, (coda or "(empty log)").strip().replace("\n", " ")[:200]
 
 
-def rifiuto_di_legarsi(scatola, porta):
+def bind_refusal(scatola, porta):
     """⛔ The REASON why the server did not start, not only the fact.
 
     ⚠⚠ And this function was born from a finding about myself.  The first draft
@@ -454,7 +454,7 @@ def un_giro(scatola, a, guasto=None):
     return impronta(out, c), time.time() - t0
 
 
-def giro_sole(scatole, a, guasto=None):
+def solo_round(scatole, a, guasto=None):
     """One box at a time. ⛔ It is the starting line: if this does not speak,
        there is nothing to compare."""
     esiti, tempi = {}, {}
@@ -465,7 +465,7 @@ def giro_sole(scatole, a, guasto=None):
     return esiti, tempi
 
 
-def giro_insieme(scatole, a, guasto=None):
+def round_together(scatole, a, guasto=None):
     """All together, really: they are launched and then waited for.
 
     ⚠ `ThreadPoolExecutor` with as many slots as there are boxes: if it had
@@ -502,7 +502,7 @@ def giro_insieme(scatole, a, guasto=None):
 #     the question that would come first: **can four boxes OPEN the
 #     encoder at the same instant?**  If even this does not hold, the
 #     real contention does not even need to be tested.
-def guarda_la_scheda(scatola):
+def look_card(scatola):
     """Asks the node how many H.264 encoding profiles it exposes.
 
     ⛔ Returns `None` if it could not look — and `None` is not zero: *«I did not
@@ -519,7 +519,7 @@ def guarda_la_scheda(scatola):
     return n
 
 
-def parte_scheda(scatole):
+def part_card(scatole):
     """Returns (guai, ignoti). ⭐ Alone and together, like everything else."""
     guai, ignoti = [], []
     print("== PART 1-bis — the graphics card, alone and with all %d together =="
@@ -529,9 +529,9 @@ def parte_scheda(scatole):
     print()
     sole = {}
     for s in scatole:
-        sole[s] = guarda_la_scheda(s)
+        sole[s] = look_card(s)
     with ThreadPoolExecutor(max_workers=len(scatole)) as pool:
-        futuri = {s: pool.submit(guarda_la_scheda, s) for s in scatole}
+        futuri = {s: pool.submit(look_card, s) for s in scatole}
         insieme = {s: futuri[s].result() for s in scatole}
     for s in scatole:
         q, i = sole[s], insieme[s]
@@ -560,7 +560,7 @@ def parte_scheda(scatole):
     return guai, ignoti
 
 
-def parte_porte(scatole, a):
+def part_ports(scatole, a):
     """Returns (guai, ignoti) — two lists of sentences, empty if everything holds.
 
     ⛔ `ignoti` is not `guai`: it is *«I could not look»*, and for §4.5 it is not
@@ -575,11 +575,11 @@ def parte_porte(scatole, a):
     # ── 1.1 · the four servers, together, each on its own port ─────────────
     print("   1.1 · the servers started TOGETHER, each on its own port")
     with ThreadPoolExecutor(max_workers=len(scatole)) as pool:
-        list(pool.map(lambda s: accendi_server(s, PORTA[s.split("-")[-1]]),
+        list(pool.map(lambda s: turn_on_server(s, PORTA[s.split("-")[-1]]),
                       scatole))
     pronti = {}
     for s in scatole:
-        ok, perche = aspetta_pronto(s)
+        ok, perche = wait_ready(s)
         pronti[s] = ok
         print("       %-14s port %-5d  %s" % (
             s, PORTA[s.split("-")[-1]],
@@ -616,20 +616,20 @@ def parte_porte(scatole, a):
         print("       ⚠ fewer than two boxes: I cannot test it")
     else:
         vittima, invasore = scatole[0], scatole[1]
-        porta_contesa = PORTA[vittima.split("-")[-1]]
-        spegni_server(invasore)
-        accendi_server(invasore, porta_contesa)
-        ok, _perche = aspetta_pronto(invasore, tetto=20)
-        stato, riga = rifiuto_di_legarsi(invasore, porta_contesa)
+        contended_port = PORTA[vittima.split("-")[-1]]
+        turn_off_server(invasore)
+        turn_on_server(invasore, contended_port)
+        ok, _perche = wait_ready(invasore, tetto=20)
+        stato, riga = bind_refusal(invasore, contended_port)
         if ok or stato == "vivo":
             print("       ⛔⛔ %s took %d, which was %s's"
-                  % (invasore, porta_contesa, vittima))
+                  % (invasore, contended_port, vittima))
             guai.append("two boxes can take the same port without "
                         "anyone noticing: ⛔ the separation by port "
                         "does NOT separate")
         elif stato == "rifiutato":
             print("       ⭐ %s could NOT take %d (%s's), and it"
-                  % (invasore, porta_contesa, vittima))
+                  % (invasore, contended_port, vittima))
             print("          said WHY:")
             print("          %s" % riga[:150])
             print("       ⭐ ⇒ the separation by port is a REAL separation:")
@@ -644,9 +644,9 @@ def parte_porte(scatole, a):
             ignoti.append("I have no proof that the port prevents the "
                           "intrusion: the intruder stopped without saying so")
         # ⚠ And things are put back, or part 2 would start from dirty terrain.
-        spegni_server(invasore)
-        accendi_server(invasore, PORTA[invasore.split("-")[-1]])
-        rimesso, _ = aspetta_pronto(invasore)
+        turn_off_server(invasore)
+        turn_on_server(invasore, PORTA[invasore.split("-")[-1]])
+        rimesso, _ = wait_ready(invasore)
         if not rimesso:
             ignoti.append("after the intrusion test %s did not go back to "
                           "listening on its port" % invasore)
@@ -669,7 +669,7 @@ def main():
                         "a green AND a red, that is it is a fingerprint that "
                         "can break in two ways")
     p.add_argument("--senza-guasto", dest="guasto", action="store_false")
-    p.add_argument("--tetto-prova", type=int, default=TETTO_PROVA_S)
+    p.add_argument("--tetto-prova", type=int, default=CAP_TEST_S)
     p.add_argument("--senza-riscaldamento", action="store_true",
                    help="⛔ skips the run that is thrown away. ⚠ Only for diagnosis: "
                         "without it, the parallel starts with memory already warm")
@@ -713,7 +713,7 @@ def main():
         "  --senza-cura (injected fault)" if a.guasto else "",
         ("  " + a.passa) if a.passa else ""))
     print("   declared ceilings: one run %d s · a server ready %d s"
-          % (a.tetto_prova, TETTO_SERVER_S))
+          % (a.tetto_prova, CAP_SERVER_S))
     print("   ⚠ time is NOT a verdict: it is measured and printed, and that is all\n")
     for n in nomi:
         print("   %-14s %s" % (n, "on" if n in scatole else "⛔ off"))
@@ -724,23 +724,23 @@ def main():
         print("   means nothing.  ⇒ I could not look")
         sys.exit(3)
 
-    guai_porte, ignoti_porte = [], []
+    port_troubles, unknown_ports = [], []
     if not a.solo_esito:
-        g1, i1 = parte_scheda(scatole)
+        g1, i1 = part_card(scatole)
         print()
-        g2, i2 = parte_porte(scatole, a)
-        guai_porte, ignoti_porte = g1 + g2, i1 + i2
+        g2, i2 = part_ports(scatole, a)
+        port_troubles, unknown_ports = g1 + g2, i1 + i2
         print()
 
     if a.solo_porte:
-        if guai_porte:
+        if port_troubles:
             print("⛔⛔ RED — the ports clash:")
-            for g in guai_porte:
+            for g in port_troubles:
                 print("   · %s" % g)
             return 1
-        if ignoti_porte:
+        if unknown_ports:
             print("⛔ I could not look all the way:")
-            for g in ignoti_porte:
+            for g in unknown_ports:
                 print("   · %s" % g)
             return 3
         print("⭐ the card holds four boxes together, and the ports do not")
@@ -760,12 +760,12 @@ def main():
         print("       (the first start of the browser is slower: without it, the")
         print("        parallel would start with an advantage)")
         t0 = time.time()
-        giro_insieme(scatole, a)
+        round_together(scatole, a)
         print("       thrown away, %.1f s\n" % (time.time() - t0))
 
     print("   1 · ALONE, one at a time")
     t0 = time.time()
-    sole, tempi_sole = giro_sole(scatole, a)
+    sole, times_only = solo_round(scatole, a)
     tot_sole = time.time() - t0
     print("       total: %.1f s\n" % tot_sole)
 
@@ -785,7 +785,7 @@ def main():
     #   mode, so the two fingerprints MUST be different and this mesh MUST
     #   turn red.  ⚠ If it stays green, it is not able to see a change of
     #   outcome, and every previous green of it is worth nothing.
-    insieme, tempi_ins = giro_insieme(
+    insieme, times_set = round_together(
         scatole, a, guasto=(not a.guasto) if a.smentisci else None)
     tot_ins = time.time() - t0
     print("       total: %.1f s\n" % tot_ins)
@@ -819,14 +819,14 @@ def main():
         #   tenants succeed and nobody waits for a ceiling.
         print("     ⛔ RESERVATION: with the injected fault the second tenant does NOT open")
         print("        the browser, and C8 waits for it for its ceiling (%d s)."
-              % TETTO_SCATTO_C8_S)
+              % CAP_SHOT_C8_S)
         print("        ⇒ these times are almost all FIXED WAIT, not work.")
         print("        ⭐ The clean time is taken with `--senza-guasto`.")
-    piu_lenta = max((tempi_ins[s] for s in scatole), default=0)
-    piu_lenta_sola = max((tempi_sole[s] for s in scatole), default=0)
+    piu_lenta = max((times_set[s] for s in scatole), default=0)
+    slowest_alone = max((times_only[s] for s in scatole), default=0)
     for s in scatole:
-        q = tempi_sole[s]
-        i = tempi_ins[s]
+        q = times_only[s]
+        i = times_set[s]
         print("     %-14s  alone %6.1f s   together %6.1f s   %s"
               % (s, q, i, ("×%.2f" % (i / q)) if q > 0 else "?"))
     print("     %-14s  alone %6.1f s   together %6.1f s"
@@ -834,18 +834,18 @@ def main():
     if tot_ins > 0:
         print("     ⭐ the parallel saves ×%.2f on the total" % (tot_sole / tot_ins))
     print("     ⚠ the slowest in parallel: %.1f s (alone the slowest: %.1f s)"
-          % (piu_lenta, piu_lenta_sola))
+          % (piu_lenta, slowest_alone))
     # ⚠ And the reference to the hook: it is the only place where this number is needed.
     print("     ⇒ the hook (§5.1) has a ceiling of %d s for the fast family: "
           "this run %s"
-          % (TETTO_GANCIO_S,
-             "fits inside it" if piu_lenta <= TETTO_GANCIO_S else
+          % (CAP_HOOK_S,
+             "fits inside it" if piu_lenta <= CAP_HOOK_S else
              "⛔ does NOT fit inside it ⇒ tests are cut, the ceiling is not raised"))
     print()
 
     # ── the verdict ───────────────────────────────────────────────────────
     r = giudica(sole, insieme, quante_in_parallelo=len(scatole))
-    mute = non_giudicate(sole, insieme)
+    mute = unjudged(sole, insieme)
     if mute:
         print("⚠ ⛔ %d boxes not judged — and a silent box is NOT «equal»"
               % len(mute))
@@ -855,9 +855,9 @@ def main():
         print("   ⇒ `LEZIONI.md` §1.47: «?» equal to «?» would pass the comparison")
         print("     without having looked at anything.\n")
 
-    if ignoti_porte:
+    if unknown_ports:
         print("⚠ ⛔ and on the ports I could not look all the way:")
-        for g in ignoti_porte:
+        for g in unknown_ports:
             print("     · %s" % g)
         print()
     if r is None:
@@ -880,12 +880,12 @@ def main():
         print("    different and this mesh did not notice.")
         print("    ⇒ every previous green of it is worth nothing.")
         return 1
-    if r or guai_porte:
+    if r or port_troubles:
         print("⛔⛔ RED — the boxes disturb each other:")
         for s in r:
             print("   · %-14s alone %s   ⇒   together %s"
                   % (s, dillo(sole[s]), dillo(insieme[s])))
-        for g in guai_porte:
+        for g in port_troubles:
             print("   · %s" % g)
         print()
         print("   ⇒ as long as it is like this, ⛔ **running the four boxes together")
@@ -905,7 +905,7 @@ def main():
               % (len(mute), len(scatole)))
         print("   ⇒ I do not judge (§4.5, outcome 3)")
         return 3
-    if ignoti_porte:
+    if unknown_ports:
         print("⛔ but on the ports something I could not look at ⇒ I do not judge")
         return 3
     print("⚠ ⇒ §3.4 is no longer an assertion: it is `[M]`.")

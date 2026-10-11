@@ -148,12 +148,12 @@ for d in $DESKTOP; do
 			esito=$c
 			break
 		done
-		restano_qui=$(( $(echo $SCALA | wc -w) - I_MISURA ))
+		remain_here=$(( $(echo $SCALA | wc -w) - I_MISURA ))
 		case "$esito" in
 		1) ;;
-		*) restano_qui=0 ;;
+		*) remain_here=0 ;;
 		esac
-		preventivo "$d" "$restano_qui" "$((N_DESKTOP - I_DESKTOP))"
+		preventivo "$d" "$remain_here" "$((N_DESKTOP - I_DESKTOP))"
 		case "$esito" in
 		0) dice "✅ $d holds 16 users at $m (last true GREEN: $verde)"; break ;;
 		1) dice "↘ $d gives way at $m (last true GREEN: $verde): going down a size" ;;

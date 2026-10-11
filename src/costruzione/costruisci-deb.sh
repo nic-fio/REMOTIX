@@ -41,14 +41,14 @@ export TMPDIR="$CACHE/tmp"
 HASH=$(git -C "$ALBERO" rev-parse --short=7 HEAD)
 DATA_R=$(git -C "$ALBERO" log -1 --format=%cD HEAD)
 GIORNO=$(git -C "$ALBERO" log -1 --date=format:%Y%m%d --format=%cd HEAD)
-SPORCO=""
+DIRTY=""
 if [ -n "$(git -C "$ALBERO" status --porcelain -- src packaging banchi/rcp THIRD-PARTY-LICENSES LICENSE.md)" ]; then
-	SPORCO=".modificato"
+	DIRTY=".modificato"
 	echo "⚠ the tree has uncommitted changes in src/ packaging/ banchi/rcp/:"
-	echo "  the version carries «$SPORCO» and the package does NOT match $HASH"
+	echo "  the version carries «$DIRTY» and the package does NOT match $HASH"
 fi
 
-prepara_copia() {  # prepara_copia <cartella> <bersaglio>
+prepare_copy() {  # prepare_copy <cartella> <bersaglio>
 	local c=$1 b=$2 suff dist
 	case $b in
 	debian13)   suff=+deb13;       dist=trixie ;;
@@ -69,20 +69,20 @@ prepara_copia() {  # prepara_copia <cartella> <bersaglio>
 	#     (0.17.0-2+deb13: the revision grows at every maintenance rebuild);
 	#     without them, the test one with the commit, as in T3.
 	if [ -n "${RX_VERSIONE:-}" ]; then
-		VERSIONE="$RX_VERSIONE$SPORCO-${RX_REVISIONE:-1}$suff"
+		VERSIONE="$RX_VERSIONE$DIRTY-${RX_REVISIONE:-1}$suff"
 	else
-		VERSIONE="0.17.0~git$GIORNO.$HASH$SPORCO-1$suff"
+		VERSIONE="0.17.0~git$GIORNO.$HASH$DIRTY-1$suff"
 	fi
 	cat >"$c/remotix/debian/changelog" <<EOF
 remotix ($VERSIONE) $dist; urgency=medium
 
-  * Built from $HASH$SPORCO (phase 17, T3).
+  * Built from $HASH$DIRTY (phase 17, T3).
 
  -- nicfio <nicfio@gmail.com>  $DATA_R
 EOF
 }
 
-costruisci_in() {  # costruisci_in <copia> <immagine> <log>
+build_in() {  # build_in <copia> <immagine> <log>
 	podman run --rm --userns=keep-id -v "$1:/lavoro" -w /lavoro/remotix "$2" \
 		sh -c 'dpkg-buildpackage -b -us -uc' >"$3" 2>&1
 }
@@ -96,8 +96,8 @@ uno() {
 		|| { echo "⛔ $b: image (see $u/immagine.log)"; return 1; }
 
 	printf '== %s: package\n' "$b"
-	prepara_copia "$c1" "$b" || return 1
-	if ! costruisci_in "$c1" "$imm" "$u/costruzione.log"; then
+	prepare_copy "$c1" "$b" || return 1
+	if ! build_in "$c1" "$imm" "$u/costruzione.log"; then
 		echo "⛔ $b: dpkg-buildpackage failed (see $u/costruzione.log)"; tail -20 "$u/costruzione.log"
 		return 1
 	fi
@@ -143,8 +143,8 @@ uno() {
 
 	if [ "${DUE:-0}" = 1 ]; then
 		printf '== %s: second build (R23)\n' "$b"
-		prepara_copia "$c2" "$b" || return 1
-		if costruisci_in "$c2" "$imm" "$u/costruzione-2.log"; then
+		prepare_copy "$c2" "$b" || return 1
+		if build_in "$c2" "$imm" "$u/costruzione-2.log"; then
 			if cmp -s "$c1/$deb" "$c2/$deb"; then
 				echo "R23 riproducibile SI ($(sha256sum <"$u/$deb" | cut -c1-16)… identical in two clean copies)" >>"$u/controlli.txt"
 			else

@@ -39,11 +39,11 @@ typedef struct KwinSessione KwinSessione;
  * if the gate is closed, `sbaglio` says which of the two causes to look at. */
 KwinSessione *kwin_apri(GError **sbaglio);
 
-uint32_t kwin_nodo(const KwinSessione *sessione);
+uint32_t kwin_node(const KwinSessione *sessione);
 void kwin_misura(const KwinSessione *sessione, uint32_t *larghezza, uint32_t *altezza);
-const char *kwin_nome_uscita(const KwinSessione *sessione);
+const char *kwin_output_name(const KwinSessione *sessione);
 /* How many outputs the compositor announced (with a mode). */
-unsigned kwin_quante_uscite(const KwinSessione *sessione);
+unsigned kwin_output_count(const KwinSessione *sessione);
 bool kwin_chiuso(const KwinSessione *sessione);
 
 /* The input channel: KWin's EIS descriptor, requested the first time it is
@@ -53,7 +53,7 @@ int kwin_eis_fd(KwinSessione *sessione, GError **sbaglio);
 /* The healing: the old context is detached (with the token) and a new one is
  * requested.  Same shape as `mutter_eis_riattacca()`. */
 int kwin_eis_riattacca(KwinSessione *sessione, GError **sbaglio);
-void kwin_chiudi(KwinSessione *sessione);
+void kwin_close(KwinSessione *sessione);
 
 /* The `.desktop` that opens the gate, owned by the PACKAGE, at
  * `/usr/share/applications/org.kde.remotix.desktop`: it checks that it exists,

@@ -115,9 +115,9 @@ H3_DATAGRAM = 0x33
 #   works would be the wrong one to draw conclusions from.  The symptom, on the
 #   side that gets it wrong, is "the session does not open" — which is the
 #   same sentence as four other causes.
-WT_BOZZA_02 = 0x2B603742
-WT_BOZZA_07 = 0xC671706A
-BOZZE = {"02": WT_BOZZA_02, "07": WT_BOZZA_07}
+WT_DRAFT_02 = 0x2B603742
+WT_DRAFT_07 = 0xC671706A
+DRAFTS = {"02": WT_DRAFT_02, "07": WT_DRAFT_07}
 
 # ⚠ RFC 9220: without this, the extended CONNECT does not exist and WebTransport
 #   over HTTP/3 cannot even begin.  `RCP.md` does not name it — so here it is
@@ -134,24 +134,24 @@ HTTP3_UNI_ATTESI = 3
 
 # ---------------------------------------------------------------------------
 # The spy on the transport parameters.
-VISTI = {}
-_originale = mod_conn.pull_quic_transport_parameters
+SEEN_N = {}
+_original = mod_conn.pull_quic_transport_parameters
 
 
 def _spia(*a, **kw):
-    p = _originale(*a, **kw)
-    VISTI["parametri"] = p
+    p = _original(*a, **kw)
+    SEEN_N["parametri"] = p
     return p
 
 
 mod_conn.pull_quic_transport_parameters = _spia
 
 # The session tickets, that is the 0-RTT.
-BIGLIETTI = []
+TICKETS = []
 
 
 def raccogli_biglietto(b):
-    BIGLIETTI.append(b)
+    TICKETS.append(b)
 
 
 class Ascoltatore(QuicConnectionProtocol):
@@ -211,7 +211,7 @@ async def principale(a) -> int:
     impostazioni = None
     perche_niente_settings = None
     uni_h3 = []
-    credito_corrente = None
+    current_credit = None
     try:
         # ⚠ `session_ticket_handler` sits on `connect`, not on the
         #   configuration: they are two different places in two different modules.
@@ -237,7 +237,7 @@ async def principale(a) -> int:
             #    `_remote_max_streams_uni` at every `MAX_STREAMS_UNI` received.
             #    If the server renews, a number higher than the initial one is seen
             #    here; if it does not renew, the same one is seen.
-            credito_corrente = getattr(cliente._quic, "_remote_max_streams_uni",
+            current_credit = getattr(cliente._quic, "_remote_max_streams_uni",
                                        None)
     except Exception as e:  # noqa: BLE001
         print(f"   ⛔ cannot connect: {type(e).__name__}: {e}")
@@ -247,7 +247,7 @@ async def principale(a) -> int:
                         controlli=[])
         return 3
 
-    p = VISTI.get("parametri")
+    p = SEEN_N.get("parametri")
     if p is None:
         print("   ⛔ the spy caught nothing: `aioquic` has moved")
         print("      `pull_quic_transport_parameters`.  No number below")
@@ -280,7 +280,7 @@ async def principale(a) -> int:
     print(f"      disable_active_migration   = {migr}")
     print(f"      initial_max_streams_uni    = {suni}   (TOTAL)")
     print(f"      initial_max_streams_bidi   = {sbidi}")
-    print(f"      uni credit NOW             = {credito_corrente}"
+    print(f"      uni credit NOW             = {current_credit}"
           "   (initial + any MAX_STREAMS_UNI)")
     print()
     print("   what is left of it to RCP, and the sum is written out:")
@@ -294,12 +294,12 @@ async def principale(a) -> int:
         for chiave, nome in ((H3_DATAGRAM, "H3_DATAGRAM        (0x33)"),
                              (ENABLE_CONNECT_PROTOCOL,
                               "ENABLE_CONNECT_PROT (0x08)"),
-                             (WT_BOZZA_02, "WT draft 02 (0x2b603742)"),
-                             (WT_BOZZA_07, "WT draft 07 (0xc671706a)")):
+                             (WT_DRAFT_02, "WT draft 02 (0x2b603742)"),
+                             (WT_DRAFT_07, "WT draft 07 (0xc671706a)")):
             v = impostazioni.get(chiave, "absent")
             print(f"         {nome} = {v}")
-    print(f"      session tickets            = {len(BIGLIETTI)}")
-    for b in BIGLIETTI:
+    print(f"      session tickets            = {len(TICKETS)}")
+    for b in TICKETS:
         print(f"         max_early_data_size = {getattr(b, 'max_early_data_size', None)}")
     print()
 
@@ -350,11 +350,11 @@ async def principale(a) -> int:
     #        be able to say no and the greens on the other two targets would
     #        be worth nothing.
     attese = [b.strip() for b in a.bozze_attese.split(",") if b.strip()]
-    for nome_bozza in ("02", "07"):
-        chiave = BOZZE[nome_bozza]
+    for draft_name in ("02", "07"):
+        chiave = DRAFTS[draft_name]
         presente = bool(impostazioni.get(chiave)) if impostazioni else False
-        if nome_bozza in attese:
-            prova(f"WebTransport declared — draft {nome_bozza}",
+        if draft_name in attese:
+            prova(f"WebTransport declared — draft {draft_name}",
                   "RCP.md §2 (the graft sends two)",
                   presente,
                   impostazioni.get(chiave, "absent") if impostazioni
@@ -364,7 +364,7 @@ async def principale(a) -> int:
             # It is not a check: it is a reading, and it is printed without a grade.
             visto = (impostazioni.get(chiave, "absent") if impostazioni
                      else "no SETTINGS")
-            print(f"   --  draft {nome_bozza} not demanded from this target "
+            print(f"   --  draft {draft_name} not demanded from this target "
                   f"· read: {visto}")
 
     if impostazioni is not None:
@@ -427,7 +427,7 @@ async def principale(a) -> int:
     #    10 Aug 2026.  That is, the probe can see a 0-RTT turned on, because
     #    it saw one.  The green that follows is a green after a cure, not a
     #    green from a blind tool — which is the difference that counts.
-    con_early = [b for b in BIGLIETTI
+    con_early = [b for b in TICKETS
                  if getattr(b, "max_early_data_size", None)]
     prova("no 0-RTT", "RCP.md §2.3",
           not con_early, f"{len(con_early)} tickets with early data",
@@ -449,7 +449,7 @@ async def principale(a) -> int:
     print("     (aioquic).  A browser could open more of them — for example")
     print("     a \"grease\" stream — and then the available ones would be fewer")
     print("     than the ones read here.  Nobody has measured it: `[?]`")
-    if not BIGLIETTI:
+    if not TICKETS:
         # ⛔ "No ticket" and "tickets without early data" are two different
         #    facts, and the green is the same.  Whoever reads must know which of the
         #    two they got: in the first case this round did not prove that the
@@ -468,13 +468,13 @@ async def principale(a) -> int:
         "disable_active_migration": migr,
         "initial_max_streams_uni": suni,
         "initial_max_streams_bidi": sbidi,
-        "credito_uni_adesso": credito_corrente,
+        "credito_uni_adesso": current_credit,
         "uni_presi_da_http3": consumati,
         "uni_disponibili_a_rcp": disponibili,
         "settings_http3": (None if impostazioni is None
                            else {hex(k): v for k, v in impostazioni.items()}),
         "perche_niente_settings": perche_niente_settings,
-        "biglietti": len(BIGLIETTI),
+        "biglietti": len(TICKETS),
         "biglietti_con_early_data": len(con_early),
     }
     esito = "TUTTI" if not falliti else "ROSSO"

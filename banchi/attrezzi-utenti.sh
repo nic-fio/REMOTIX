@@ -74,8 +74,8 @@ GRUPPI_SCHEDA_SH=${GRUPPI_SCHEDA_SH:-$(cd "$(dirname "$0")" && pwd)/attrezzi-gru
 [ -f "$GRUPPI_SCHEDA_SH" ] || { ko "⛔ $GRUPPI_SCHEDA_SH is missing: the tenants would be born BLIND"; exit 2; }
 # ⚠ The text goes into `"$GRUPPI_SCHEDA_TESTO"`, and the shell does NOT re-expand the
 #   result of an expansion: the `$`s in there arrive intact.
-GRUPPI_SCHEDA_TESTO=$(bash "$GRUPPI_SCHEDA_SH" --testo)
-[ -n "$GRUPPI_SCHEDA_TESTO" ] || { ko "⛔ $GRUPPI_SCHEDA_SH --testo printed nothing"; exit 2; }
+CARD_GROUPS_TEXT=$(bash "$GRUPPI_SCHEDA_SH" --testo)
+[ -n "$CARD_GROUPS_TEXT" ] || { ko "⛔ $GRUPPI_SCHEDA_SH --testo printed nothing"; exit 2; }
 
 mkdir -p "$FUORI/tmp" || { ko "⛔ cannot create $FUORI/tmp"; exit 2; }
 
@@ -111,7 +111,7 @@ crea() # $1 name  $2 uid  $3 password
   # ⭐⭐ THE CARD GROUPS, READ FROM THE NODES INSIDE THE CHROOT.
   # ⛔ And if it does not get in, this tool STOPS: a blind `prova` sends
   #    every bench that starts from here to zero frames, and nobody notices.
-  bash $E --root "$GRUPPI_SCHEDA_TESTO
+  bash $E --root "$CARD_GROUPS_TEXT
 gruppi_scheda_dai_a $1"
   stato=$?
   [ "$stato" -eq 0 ] || ko "⛔⛔ '$1' is NOT in the card groups (exit $stato): do NOT use this user to measure"
@@ -146,7 +146,7 @@ for u in prova prova2; do
   fi
 done
 # ⭐ And it is READ BACK from inside, which is the only place that counts (E1).
-bash $E --root "$GRUPPI_SCHEDA_TESTO
+bash $E --root "$CARD_GROUPS_TEXT
 for u in prova prova2; do
   m=\$(gruppi_scheda_mancanti \$u)
   if [ -z \"\$m\" ]; then echo \"    OK  ⭐ \$u is in the groups of the card nodes: \$(id -nG \$u)\"

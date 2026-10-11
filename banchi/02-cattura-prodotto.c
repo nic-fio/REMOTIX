@@ -61,14 +61,14 @@ typedef struct
 	const char *danno; /* "pieno" | "parziale" | "assente" — the bench's words */
 } Voce;
 
-static const char *nome_danno(const CatturaFermo *f)
+static const char *damage_name(const CatturaFermo *f)
 {
-	if (!f->danno_dichiarato)
+	if (!f->declared_damage)
 		return "assente";
-	return f->danno_copre_tutto ? "pieno" : "parziale";
+	return f->damage_covers_all ? "pieno" : "parziale";
 }
 
-static void manifesto_voce(GString *s, const char *chiave, const Voce *v, const char *file)
+static void manifest_entry(GString *s, const char *chiave, const Voce *v, const char *file)
 {
 	if (!v->preso)
 	{
@@ -96,13 +96,13 @@ static void manifesto_voce(GString *s, const char *chiave, const Voce *v, const 
 	                       "    \"uniforme\": %s\n"
 	                       "  },\n",
 	                       chiave, file, v->fermo.byte, v->fermo.stride, v->fermo.byte,
-	                       cattura_buffer_nome(v->fermo.consegna.buffer_dichiarato), v->danno,
+	                       capture_buffer_name(v->fermo.consegna.buffer_dichiarato), v->danno,
 	                       v->fermo.indice, v->fermo.seq, v->fermo.pts,
 	                       v->fermo.seq_nota ? "true" : "false", v->fermo.consegna.minimo[0],
 	                       v->fermo.consegna.minimo[1], v->fermo.consegna.minimo[2],
 	                       v->fermo.consegna.massimo[0], v->fermo.consegna.massimo[1],
 	                       v->fermo.consegna.massimo[2],
-	                       cattura_range_misurato_nome(v->fermo.consegna.range_misurato),
+	                       capture_range_measured_name(v->fermo.consegna.range_misurato),
 	                       v->fermo.consegna.nero ? "true" : "false",
 	                       v->fermo.consegna.uniforme ? "true" : "false");
 }
@@ -112,11 +112,11 @@ int main(int argc, char **argv)
 	uint32_t larghezza = 1920, altezza = 1080, fps = 60, nodo = 0;
 	double dopo_scena = 3.0, durata = 12.0, attesa_scena = 25.0;
 	guint64 scarta = 10, minimo_dopo_scena = 1;
-	CatturaStrada strada = CATTURA_STRADA_MEMORIA;
-	CatturaColore colore = CATTURA_COLORE_BGRX;
+	CaptureRoute strada = CATTURA_STRADA_MEMORIA;
+	CaptureColor colore = CATTURA_COLORE_BGRX;
 	const char *etichetta = "senza-nome";
 	const char *uscita = NULL, *pronto = NULL, *segnale_scena = NULL;
-	const char *nome_colore_chiesto = "BGRx";
+	const char *requested_color_name = "BGRx";
 	MutterSessione *sessione = NULL;
 	Cattura *cattura = NULL;
 	Voce primo = { 0 }, regime = { 0 };
@@ -124,14 +124,14 @@ int main(int argc, char **argv)
 	CatturaConteggi conto;
 	guint64 prima_della_scena = 0, dopo_la_scena = 0;
 	g_autoptr(GError) sbaglio = NULL;
-	g_autofree char *file_primo = NULL, *file_regime = NULL, *file_json = NULL;
+	g_autofree char *first_file = NULL, *file_regime = NULL, *file_json = NULL;
 	GString *manifesto;
 	gint64 scadenza, fine;
 	int codice = 0, i;
 	const char *esito;
 	char quando[64];
-	time_t adesso_epoch;
-	struct tm adesso_tm;
+	time_t now_epoch;
+	struct tm now_tm;
 
 	for (i = 1; i < argc; i++)
 	{
@@ -163,8 +163,8 @@ int main(int argc, char **argv)
 			strada = CATTURA_STRADA_SCHEDA;
 		else if (!strcmp(argv[i], "--bgra"))
 		{
-			colore = CATTURA_COLORE_BGRA;
-			nome_colore_chiesto = "BGRA";
+			colore = CAPTURE_COLOR_BGRA;
+			requested_color_name = "BGRA";
 		}
 		else if (!strcmp(argv[i], "--10bit"))
 		{
@@ -174,8 +174,8 @@ int main(int argc, char **argv)
 			 * Asking for a ten-bit format and receiving a refusal turns
 			 * that reading into a MEASUREMENT — and the refusal must be written, not
 			 * deduced (`LEZIONI.md` §1.11). */
-			colore = CATTURA_COLORE_10BIT;
-			nome_colore_chiesto = "10 bits (xBGR_210LE and companions)";
+			colore = CAPTURE_COLOR_10BIT;
+			requested_color_name = "10 bits (xBGR_210LE and companions)";
 		}
 		else if (!strcmp(argv[i], "--etichetta") && i + 1 < argc)
 			etichetta = argv[++i];
@@ -207,16 +207,16 @@ int main(int argc, char **argv)
 		return 2;
 	}
 
-	file_primo = g_strdup_printf("%s-primo.raw", uscita);
+	first_file = g_strdup_printf("%s-primo.raw", uscita);
 	file_regime = g_strdup_printf("%s-regime.raw", uscita);
 	file_json = g_strdup_printf("%s.json", uscita);
 
-	adesso_epoch = time(NULL);
-	gmtime_r(&adesso_epoch, &adesso_tm);
-	strftime(quando, sizeof quando, "%Y-%m-%dT%H:%M:%SZ", &adesso_tm);
+	now_epoch = time(NULL);
+	gmtime_r(&now_epoch, &now_tm);
+	strftime(quando, sizeof quando, "%Y-%m-%dT%H:%M:%SZ", &now_tm);
 
 	fprintf(stderr, "== %s: requested %ux%u, %s, ceiling %u fps, road %s ==\n", etichetta, larghezza,
-	        altezza, nome_colore_chiesto, fps,
+	        altezza, requested_color_name, fps,
 	        strada == CATTURA_STRADA_SCHEDA ? "card (DMA-BUF)" : "memory");
 	fprintf(stderr, "   the producer is THE PRODUCT: src/cattura.c + src/mutter.c\n");
 
@@ -247,14 +247,14 @@ int main(int argc, char **argv)
 	 * writing it before would mean switching the scene on on a monitor that does not
 	 * exist yet. */
 	scadenza = g_get_monotonic_time() + 10 * G_USEC_PER_SEC;
-	while (!cattura_attiva(cattura) && g_get_monotonic_time() < scadenza)
+	while (!capture_active(cattura) && g_get_monotonic_time() < scadenza)
 		g_usleep(20000);
-	if (!cattura_attiva(cattura))
+	if (!capture_active(cattura))
 	{
 		printf("GUASTO\t%s\tstream never active\n", etichetta);
 		fprintf(stderr, "⛔ FAILED (not «zero»): the stream never became active%s%s.\n",
-		        cattura_guasto(cattura) ? " — " : "",
-		        cattura_guasto(cattura) ? cattura_guasto(cattura) : "");
+		        capture_fault(cattura) ? " — " : "",
+		        capture_fault(cattura) ? capture_fault(cattura) : "");
 		cattura_ferma(cattura);
 		mutter_chiudi(sessione);
 		return 2;
@@ -268,7 +268,7 @@ int main(int argc, char **argv)
 	{
 		mutter_monitor_cerca(sessione);
 		fprintf(stderr, "   our monitor: %s («%s»)\n",
-		        mutter_monitor_nostro(sessione) ? mutter_monitor_nostro(sessione) : "I DO NOT KNOW",
+		        mutter_our_monitor(sessione) ? mutter_our_monitor(sessione) : "I DO NOT KNOW",
 		        mutter_monitor_prodotto(sessione) ? mutter_monitor_prodotto(sessione) : "—");
 	}
 
@@ -279,12 +279,12 @@ int main(int argc, char **argv)
 	 *    phase 3 will read as steady state.  ⇒ Two frames, two files, and the manifest
 	 *    says for each which it was among those arrived. */
 	{
-		CatturaPresa p = cattura_prendi(cattura, 3.0, &primo.fermo, &sbaglio);
+		CaptureTake p = cattura_prendi(cattura, 3.0, &primo.fermo, &sbaglio);
 
 		if (p == CATTURA_PRESA_FATTA)
 		{
 			primo.preso = TRUE;
-			primo.danno = nome_danno(&primo.fermo);
+			primo.danno = damage_name(&primo.fermo);
 		}
 		else if (p == CATTURA_PRESA_GUASTO)
 		{
@@ -349,12 +349,12 @@ int main(int argc, char **argv)
 		g_usleep(50000);
 
 	{
-		CatturaPresa p = cattura_prendi(cattura, 1.5, &regime.fermo, &sbaglio);
+		CaptureTake p = cattura_prendi(cattura, 1.5, &regime.fermo, &sbaglio);
 
 		if (p == CATTURA_PRESA_FATTA)
 		{
 			regime.preso = TRUE;
-			regime.danno = nome_danno(&regime.fermo);
+			regime.danno = damage_name(&regime.fermo);
 		}
 		else if (p == CATTURA_PRESA_GUASTO)
 		{
@@ -369,7 +369,7 @@ int main(int argc, char **argv)
 	}
 
 	/* --- the guards, BEFORE writing any number --------------------------- */
-	if (!cattura_attiva(cattura))
+	if (!capture_active(cattura))
 	{
 		printf("GUASTO\t%s\tstream dropped during the take\n", etichetta);
 		fprintf(stderr, "⛔ FAILED (not «zero»): the stream was active and dropped.\n");
@@ -401,7 +401,7 @@ int main(int argc, char **argv)
 		        "   ⇒ It is not the still desktop: it is that the scene paints on a DIFFERENT SCREEN\n"
 		        "     from the one we are capturing (ours is %s).\n",
 		        dopo_la_scena, minimo_dopo_scena, prima_della_scena,
-		        sessione && mutter_monitor_nostro(sessione) ? mutter_monitor_nostro(sessione)
+		        sessione && mutter_our_monitor(sessione) ? mutter_our_monitor(sessione)
 		                                                    : "unknown");
 		cattura_fermo_libera(&primo.fermo);
 		cattura_fermo_libera(&regime.fermo);
@@ -446,10 +446,10 @@ int main(int argc, char **argv)
 		esito = "ONE FRAME";
 		codice = 0;
 		if (primo.preso &&
-		    !g_file_set_contents(file_primo, (const char *) primo.fermo.pixel,
+		    !g_file_set_contents(first_file, (const char *) primo.fermo.pixel,
 		                         (gssize) primo.fermo.byte, &sbaglio))
 		{
-			fprintf(stderr, "⛔ I cannot write %s: %s\n", file_primo, sbaglio->message);
+			fprintf(stderr, "⛔ I cannot write %s: %s\n", first_file, sbaglio->message);
 			cattura_ferma(cattura);
 			mutter_chiudi(sessione);
 			return 1;
@@ -484,8 +484,8 @@ int main(int argc, char **argv)
 	                       "frame when something changes»\"\n"
 	                       "  },\n",
 	                       larghezza, altezza, fps,
-	                       colore == CATTURA_COLORE_BGRA ? "BGRA"
-	                       : colore == CATTURA_COLORE_10BIT ? "10bit"
+	                       colore == CAPTURE_COLOR_BGRA ? "BGRA"
+	                       : colore == CAPTURE_COLOR_10BIT ? "10bit"
 	                                                        : "BGRx",
 	                       strada == CATTURA_STRADA_SCHEDA ? "dmabuf" : "memoria", fps);
 	g_string_append_printf(manifesto,
@@ -529,7 +529,7 @@ int main(int argc, char **argv)
 	    "    \"valori_grezzi\": {\"color_range\": %u, \"color_matrix\": %u, "
 	    "\"transfer_function\": %u, \"color_primaries\": %u}\n"
 	    "  },\n",
-	    consegna.bit_per_canale, consegna.formato, cattura_fonte_nome(consegna.fonte_bit),
+	    consegna.bit_per_canale, consegna.formato, capture_source_name(consegna.source_bit),
 	    /* ⛔ The stride is read from WHATEVER frame arrived, even from one
 	     *    without pixels: on the card road the pixels are not here, but the
 	     *    stride is a fact of the chunk, and it is one of the four that are
@@ -540,18 +540,18 @@ int main(int argc, char **argv)
 	                      : (guint64) (regime.fermo.stride ? regime.fermo.stride
 	                                                       : primo.fermo.stride) *
 	                            consegna.altezza,
-	    cattura_range_nome(consegna.range_grezzo), cattura_matrice_nome(consegna.matrice_grezza),
-	    cattura_trasferimento_nome(consegna.trasferimento_grezzo),
-	    cattura_primari_nome(consegna.primari_grezzi),
-	    cattura_range_misurato_nome(regime.preso ? regime.fermo.consegna.range_misurato
-	                                             : CATTURA_RANGE_NON_MISURATO),
-	    consegna.range_grezzo, consegna.matrice_grezza, consegna.trasferimento_grezzo,
-	    consegna.primari_grezzi);
+	    capture_range_name(consegna.raw_range), capture_matrix_name(consegna.raw_matrix),
+	    capture_transfer_name(consegna.raw_transfer),
+	    capture_primaries_name(consegna.raw_primaries),
+	    capture_range_measured_name(regime.preso ? regime.fermo.consegna.range_misurato
+	                                             : CAPTURE_RANGE_UNMEASURED),
+	    consegna.raw_range, consegna.raw_matrix, consegna.raw_transfer,
+	    consegna.raw_primaries);
 
 	g_string_append(manifesto, "  \"buffer\": {\n    \"tipi_visti\": [");
-	for (i = 0; (guint) i < conto.quanti_tipi; i++)
+	for (i = 0; (guint) i < conto.how_many_types; i++)
 		g_string_append_printf(manifesto, "%s\"%s\"", i ? ", " : "",
-		                       cattura_buffer_nome(conto.tipi_visti[i]));
+		                       capture_buffer_name(conto.tipi_visti[i]));
 	g_string_append_printf(manifesto,
 	                       "],\n"
 	                       "    \"chiesto\": \"%s\",\n"
@@ -560,7 +560,7 @@ int main(int argc, char **argv)
 	                       "buffer — asked for in TWO places (the modifier in the format and "
 	                       "SPA_PARAM_BUFFERS_dataType)\"\n"
 	                       "  },\n",
-	                       cattura_buffer_nome(consegna.buffer_chiesto), conto.buffer_distinti);
+	                       capture_buffer_name(consegna.buffer_chiesto), conto.buffer_distinti);
 
 	g_string_append_printf(manifesto,
 	                       "  \"fotogrammi\": {\n"
@@ -578,8 +578,8 @@ int main(int argc, char **argv)
 	                       "  },\n",
 	                       minimo_dopo_scena, conto.arrivati, prima_della_scena, dopo_la_scena,
 	                       conto.danno_pieno, conto.danno_parziale, conto.danno_assente,
-	                       conto.senza_intestazione, conto.solo_cursore, conto.stride_zero,
-	                       conto.senza_pixel);
+	                       conto.without_header, conto.solo_cursore, conto.stride_zero,
+	                       conto.without_pixel);
 
 	g_string_append_printf(manifesto,
 	                       "  \"schermo\": {\n"
@@ -590,15 +590,15 @@ int main(int argc, char **argv)
 	                       "that must agree, because the two virtual monitors of the server "
 	                       "are BOTH 1920×1080@60\"\n"
 	                       "  },\n",
-	                       sessione && mutter_monitor_nostro(sessione)
-	                           ? mutter_monitor_nostro(sessione)
+	                       sessione && mutter_our_monitor(sessione)
+	                           ? mutter_our_monitor(sessione)
 	                           : "I DO NOT KNOW",
 	                       sessione && mutter_monitor_prodotto(sessione)
 	                           ? mutter_monitor_prodotto(sessione)
 	                           : "—");
 
-	manifesto_voce(manifesto, "primo", &primo, file_primo);
-	manifesto_voce(manifesto, "regime", &regime, file_regime);
+	manifest_entry(manifesto, "primo", &primo, first_file);
+	manifest_entry(manifesto, "regime", &regime, file_regime);
 
 	g_string_append(manifesto,
 	                "  \"avvertenze\": [\n"
@@ -631,7 +631,7 @@ int main(int argc, char **argv)
 
 	printf("PRESA\t%s\t%s\t%s\t%" G_GUINT64_FORMAT "\t%" G_GUINT64_FORMAT "\t%s\n", etichetta,
 	       esito, file_json, conto.arrivati, dopo_la_scena,
-	       cattura_buffer_nome(consegna.buffer_dichiarato));
+	       capture_buffer_name(consegna.buffer_dichiarato));
 	fprintf(stderr,
 	        "  outcome: %s\n"
 	        "  arrived %" G_GUINT64_FORMAT " (before the scene %" G_GUINT64_FORMAT ", after %"
@@ -643,7 +643,7 @@ int main(int argc, char **argv)
 	        "  manifest: %s\n",
 	        esito, conto.arrivati, prima_della_scena, dopo_la_scena, conto.danno_pieno,
 	        conto.danno_parziale, conto.danno_assente, conto.buffer_distinti,
-	        cattura_buffer_nome(consegna.buffer_dichiarato),
+	        capture_buffer_name(consegna.buffer_dichiarato),
 	        regime.fermo.stride ? regime.fermo.stride : primo.fermo.stride, regime.fermo.byte,
 	        file_json);
 

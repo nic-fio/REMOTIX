@@ -373,17 +373,17 @@ log "3. ⛔ Is there a grafted fault in one of the two trees?"
 #   A retired catalogue can no longer change its mark: it is the one of its last
 #   version (`git show bde27c5^:banchi/01-b12-guasti.py`), and grafts made with
 #   it may still sit in old copies, so the needle stays.
-MARCA12="REMOTIX B12 GUASTO"
-MARCA11=$(grep -m1 '^MARCA = ' "$QUI/01-b11-guasto-innesta.py" | cut -d'"' -f2)
-[ -n "$MARCA11" ] || { dub "⛔ B11 mark not read: I do not look halfway"; exit 2; }
-inf "needles read from the catalogues: «$MARCA12» · «$MARCA11»"
+MARK12="REMOTIX B12 GUASTO"
+MARK11=$(grep -m1 '^MARCA = ' "$QUI/01-b11-guasto-innesta.py" | cut -d'"' -f2)
+[ -n "$MARK11" ] || { dub "⛔ B11 mark not read: I do not look halfway"; exit 2; }
+inf "needles read from the catalogues: «$MARK12» · «$MARK11»"
 
 TROVATI=0
 # --- over here (the tree we copy from): the direction that matters most
 # ⛔ The status of `grep` is THREE facts and not two — `LEZIONI.md` §1.9 rule 1:
 #    0 = found · 1 = not there (which is an ANSWER) · ≥2 = I could not
 #    look (which is not an answer).  Only the third is a «??».
-for m in "$MARCA12" "$MARCA11"; do
+for m in "$MARK12" "$MARK11"; do
 	grep -rlF -e "$m" "$FONTE" > "$T/qua-guasti.txt"
 	s=$?
 	if [ "$s" -eq 0 ]; then
@@ -398,7 +398,7 @@ for m in "$MARCA12" "$MARCA11"; do
 	fi
 done
 # --- over there (the tree we write on)
-for m in "$MARCA12" "$MARCA11"; do
+for m in "$MARK12" "$MARK11"; do
 	$SSH "grep -lF -e '$m' -- $DEST/*" > "$T/la-guasti.txt"
 	s=$?
 	if [ "$s" -eq 0 ]; then

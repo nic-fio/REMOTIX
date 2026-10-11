@@ -347,7 +347,7 @@ S8 = p("At startup the parent writes the value <b>in force</b> of every mechanis
       + c("0x0C SERVER_IN_CHIUSURA") + " (server shutting down) left on the wire within 4 s.")
 
 # ── 13.9 Command-line options of the server ──────────────────────────────
-OPZ = table(["Option", "Default", "Lives in", "Meaning"], [
+OPT = table(["Option", "Default", "Lives in", "Meaning"], [
     "Network and files",
     [c("--indirizzo IND") + " (address)", c("0.0.0.0"), "parent", "Address to listen on (UDP for QUIC, TCP for the page, same "
      "port)."],
@@ -414,7 +414,7 @@ OPZ = table(["Option", "Default", "Lives in", "Meaning"], [
 
 S9 = p("The server is configured only by its command line. Every option is parsed in the single loop of "
        + c("main()") + "; an unknown option prints the usage text (" + c("aiuto()") + ") and exits 2.", lead=True) + \
-    OPZ + \
+    OPT + \
     p("The column «lives in» matters because the child is an " + c("execve") + " with an environment built from "
       "scratch: a setting that the encoder or the audio encoder needs must be repeated on the child's command line, "
       "or it silently does not exist there. That cost a day on 16 Aug 2026: " + c("--parlantina") + " was not "

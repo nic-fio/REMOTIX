@@ -60,7 +60,7 @@
  *
  * The F2.2 bench paid for this defect head-on: `mpv --fs` went
  * full screen on the FIRST monitor, the scene was live, and the capture received
- * **zero frames** — with the bench GREEN.  ⇒ `mutter_monitor_nostro` exists
+ * **zero frames** — with the bench GREEN.  ⇒ `mutter_our_monitor` exists
  * so that whoever opens a window on this screen can name it
  * (`CODER.md` §3.9: tell it what to do, and verify that it obeyed).
  *
@@ -96,15 +96,15 @@ uint32_t mutter_nodo(const MutterSessione *sessione);
 
 /* The D-Bus path of the stream and that of the control: they are the addresses
  * phase 4 will talk to in order to move the pointer. */
-const char *mutter_percorso_flusso(const MutterSessione *sessione);
-const char *mutter_percorso_controllo(const MutterSessione *sessione);
+const char *mutter_stream_path(const MutterSessione *sessione);
+const char *mutter_control_path(const MutterSessione *sessione);
 
 /*
  * ⭐ PHASE 7 — the session bus on which this session was opened.
  *
  * ⛔ It is ASKED of whoever has it instead of opening a second one, and the reason is not
  *    economy: the clipboard lives on the **same** `RemoteDesktop` session
- *    as the stage (`EnableClipboard` on `mutter_percorso_controllo()`), and a
+ *    as the stage (`EnableClipboard` on `mutter_control_path()`), and a
  *    second connection to the bus would mean a second name on the bus — that is
  *    a sender that Mutter does not recognise as the owner of the session.
  *
@@ -220,7 +220,7 @@ gboolean mutter_monitor_cerca(MutterSessione *sessione);
  * "I don't know", not "it is not there": whoever receives it declares it instead of picking
  * the most convenient one.
  */
-const char *mutter_monitor_nostro(const MutterSessione *sessione);
+const char *mutter_our_monitor(const MutterSessione *sessione);
 const char *mutter_monitor_prodotto(const MutterSessione *sessione);
 
 /*
@@ -228,7 +228,7 @@ const char *mutter_monitor_prodotto(const MutterSessione *sessione);
  * not one: `dopo - prima != 1` is precisely the case in which the name of our
  * screen cannot be known, and must be written instead of deduced.
  */
-void mutter_monitor_conteggi(const MutterSessione *sessione, guint *prima, guint *dopo);
+void mutter_monitor_counts(const MutterSessione *sessione, guint *prima, guint *dopo);
 
 /* ⛔⭐⭐ THE SCALE OF OUR LOGICAL MONITOR — guard 2 of `DECISIONI.md`
  *     §5.0-sexies, and it is not a diagnostic datum: it is a condition of service.

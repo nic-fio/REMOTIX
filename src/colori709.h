@@ -10,7 +10,7 @@
  * SWS_CS_ITU709)`, full-range source, limited output.  Removing ffmpeg also
  * removes libswscale, and the conversion has to be redone **identically**:
  * two different matrices at the two ends would measure the matrix, not the
- * image (the colour numbers are declared, not inherited: `COLORE_PRIMARI`… in
+ * image (the colour numbers are declared, not inherited: `COLOR_PRIMARIES`… in
  * `vadiretta.c`, `vui264`/`vui265` in `vulkanvideo.c`, and the matrix IMPOSED
  * on the GPU conversion, `converti_sulla_gpu()` in `codificatore.c`).
  *
@@ -77,7 +77,7 @@ bool colori709_a_nv12(const uint8_t *pixel, uint32_t passo, uint32_t larghezza,
                       uint8_t *uv, uint32_t passo_uv);
 
 /* ⭐ 10-bit semi-planar (P010: the ten bits in the HIGH bits of sixteen). */
-bool colori709_a_p010(const uint8_t *pixel, uint32_t passo, uint32_t larghezza,
+bool colors709_to_p010(const uint8_t *pixel, uint32_t passo, uint32_t larghezza,
                       uint32_t altezza, Colori709Ordine ordine,
                       uint16_t *y, uint32_t passo_y,
                       uint16_t *uv, uint32_t passo_uv);

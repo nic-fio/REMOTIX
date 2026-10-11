@@ -45,7 +45,7 @@ C23 = S._carica("c23", os.path.join(S.BANCHI, "11-scatole",
 # ---------------------------------------------------------------------------
 CIANO = (0, 255, 255)
 VUOTO = (128, 128, 128)
-TAVOLOZZA = {"a": (255, 0, 0), "b": (0, 0, 255), "c": (0, 150, 0),
+PALETTE = {"a": (255, 0, 0), "b": (0, 0, 255), "c": (0, 150, 0),
              "d": (255, 0, 255), "e": (0, 0, 0), "f": (255, 140, 0)}
 ALFABETO = "abcdef"
 CASELLE = 8
@@ -92,7 +92,7 @@ PROFILO = ".g6-profilo"
 
 def pagina():
     passo = (STR_X1 - STR_X0) / CASELLE * 100
-    tav = {k: "rgb(%d,%d,%d)" % v for k, v in TAVOLOZZA.items()}
+    tav = {k: "rgb(%d,%d,%d)" % v for k, v in PALETTE.items()}
     return PAGINA % {"tav": json.dumps(tav), "n": CASELLE, "x0": STR_X0 * 100, "w": passo,
                      "y0": STR_Y0 * 100, "h": (STR_Y1 - STR_Y0) * 100}
 
@@ -134,7 +134,7 @@ def accendi_scena(s, finestra=FINESTRA_SCENA):
     return c == 0, t
 
 
-def spegni_servitore(s):
+def turn_off_server(s):
     s.sc.dentro("pkill -f '[g]6-servitore.py %d ' 2>/dev/null; true" % porta_scena(s.o), 30)
 
 
@@ -150,14 +150,14 @@ def quaderno(s):
     return fuori
 
 
-def ultimo_stato(s, fresco_s=8.0):
+def last_state(s, fresh_s=8.0):
     """The last line of the notebook, ⛔ only if FRESH (the scene beats every 2 s):
     an old line is the state of a program that may no longer be there."""
     q = quaderno(s)
     if not q:
         return None
     r = q[-1]
-    if time.time() * 1000 - r.get("t", 0) > fresco_s * 1000:
+    if time.time() * 1000 - r.get("t", 0) > fresh_s * 1000:
         return None
     return r
 
@@ -189,7 +189,7 @@ def pid_scena(pr):
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE PHOTO: the cyan window and the strip
 # ═══════════════════════════════════════════════════════════════════════════
-def _vicino(p, c, toll=TOLLERANZA):
+def _near(p, c, toll=TOLLERANZA):
     return abs(p[0] - c[0]) <= toll and abs(p[1] - c[1]) <= toll and abs(p[2] - c[2]) <= toll
 
 
@@ -203,7 +203,7 @@ def immagine(png, largo=960):
     return im
 
 
-def trova_ciano(im):
+def find_cyan(im):
     """The cyan rectangle (the scene's view): (x0,y0,x1,y1) or (None, reason)."""
     w, h = im.size
     px = list(im.getdata())
@@ -211,7 +211,7 @@ def trova_ciano(im):
     for y in range(h):
         b = y * w
         for x in range(w):
-            if _vicino(px[b + x], CIANO, 40):
+            if _near(px[b + x], CIANO, 40):
                 col[x] += 1
                 rig[y] += 1
     if max(col) == 0:
@@ -224,16 +224,16 @@ def trova_ciano(im):
     return r, ""
 
 
-def nome_colore(p):
+def color_name(p):
     best, dist = None, 10 ** 9
-    for k, c in list(TAVOLOZZA.items()) + [("_", VUOTO), ("?", (255, 255, 255))]:
+    for k, c in list(PALETTE.items()) + [("_", VUOTO), ("?", (255, 255, 255))]:
         d = max(abs(p[0] - c[0]), abs(p[1] - c[1]), abs(p[2] - c[2]))
         if d < dist:
             best, dist = k, d
     return best if dist <= TOLLERANZA else "!"
 
 
-def leggi_striscia(im, r):
+def read_strip(im, r):
     """The text read from the strip inside the cyan rectangle `r`.
     Returns (text, detail): «_» = empty cell, «!» = unknown colour."""
     x0, y0, x1, y1 = r
@@ -250,7 +250,7 @@ def leggi_striscia(im, r):
                 yy = min(max(int(cy) + dy, 0), im.size[1] - 1)
                 vals.append(im.getpixel((xx, yy)))
         vals.sort(key=lambda p: sum(p))
-        letti.append(nome_colore(vals[len(vals) // 2]))
+        letti.append(color_name(vals[len(vals) // 2]))
     s = "".join(letti)
     return s.rstrip("_"), s
 
@@ -262,16 +262,16 @@ def guarda_la_scena(s, nome):
     if not png:
         return {"finestra": None, "letto": None, "foto": "", "perche": dove, "png": None}
     im = immagine(png)
-    r, perche = trova_ciano(im)
+    r, perche = find_cyan(im)
     if not r:
         return {"finestra": None, "letto": None, "foto": dove, "perche": perche, "png": png,
                 "misura": list(im.size)}
-    letto, crudo = leggi_striscia(im, r)
+    letto, crudo = read_strip(im, r)
     return {"finestra": list(r), "letto": letto, "crudo": crudo, "foto": dove, "perche": "",
             "png": png, "misura": list(im.size)}
 
 
-def aspetta_testo(s, voluto, nome, tetto=12.0):
+def wait_text(s, voluto, nome, tetto=12.0):
     """Photographs until the strip says `voluto` (or the cap)."""
     fine = time.time() + tetto
     v = None
@@ -311,8 +311,8 @@ def clic_sulla_scena(s, v):
     x0, y0, x1, y1 = v["finestra"]
     # a point of the cyan below the strip
     fx, fy = x0 + (x1 - x0) * 0.5, y0 + (y1 - y0) * 0.9
-    X, Y = S.C21.dalla_foto_al_desktop(geo, pw, ph, fx, fy)
-    vx, vy = S.C21.dal_desktop_al_vetro(geo, X, Y)
+    X, Y = S.C21.from_photo_to_desktop(geo, pw, ph, fx, fy)
+    vx, vy = S.C21.desktop_to_glass(geo, X, Y)
     try:
         s.g.js("if (document.activeElement && document.activeElement.blur) "
                "document.activeElement.blur(); return 1;")
@@ -323,7 +323,7 @@ def clic_sulla_scena(s, v):
     return "click at (%d,%d) of the desktop" % (X, Y)
 
 
-def scrivi_la_base(s, v, testo, prove=3):
+def write_base(s, v, testo, prove=3):
     """⭐ The PREPARATION (not the function looked at): click on the scene, text
     written, read in the photo.  `[M]` 24 Sep 2026, KDE under load 50: once
     in one 2 letters out of 4 arrived (the focus arrives late) ⇒ it is cleaned
@@ -336,7 +336,7 @@ def scrivi_la_base(s, v, testo, prove=3):
             time.sleep(0.5)
         time.sleep(0.7)
         C23.manda(s.g, C23.scrivi(testo))
-        v2 = aspetta_testo(s, testo, "scritto-prima", tetto=10)
+        v2 = wait_text(s, testo, "scritto-prima", tetto=10)
         note.append("attempt %d: %s, read «%s»" % (k + 1, cl, v2.get("letto")))
         if v2.get("letto") == testo:
             return v2, note
@@ -414,7 +414,7 @@ def accendi_a_misura(s, largo, alto):
         #   the phone TURNED; the starting 4K is the orientation the user left it in
         print("   phone: %s" % S.telefono().orienta(
             "partenza" if (largo, alto) == (3840, 2160) else "altro"), flush=True)
-        s.accendi_browser()
+        s.turn_on_browser()
         try:
             return s.g.js("return [innerWidth, innerHeight, devicePixelRatio]")
         except Exception as e:                   # noqa: BLE001
@@ -427,7 +427,7 @@ def accendi_a_misura(s, largo, alto):
             o.largo = 0                           # no «maximised»
         else:
             o.largo, o.alto = largo, alto
-        s.accendi_browser()
+        s.turn_on_browser()
     finally:
         S.VERI.FINESTRA[:] = vecchio
         o.largo, o.alto = ol, oa
@@ -437,7 +437,7 @@ def accendi_a_misura(s, largo, alto):
         return "? (%s)" % e
 
 
-def entra_con_riprova(s, tetto_s=45.0, primo_apri=True):
+def enter_with_retry(s, tetto_s=45.0, first_open=True):
     """Logs in; if the slot is still taken (0x0F, the ghost of §5.1) it retries
     every 3 s up to the cap.  Returns (ok, reason, refusals, seconds)."""
     t0 = time.time()
@@ -452,7 +452,7 @@ def entra_con_riprova(s, tetto_s=45.0, primo_apri=True):
         time.sleep(3)
 
 
-def osserva_tela(s):
+def observe_canvas(s):
     """The page's fields: canvas (buffer), view, rectangle, outcome, scale."""
     st = s.stato()
     geo = None
@@ -466,14 +466,14 @@ def osserva_tela(s):
             "tl_ta": [geo["tl"], geo["ta"]] if geo else None}
 
 
-def aspetta_tela_ferma(s, tetto=25.0):
+def wait_canvas_still(s, tetto=25.0):
     """After the reattach the canvas can still change (`ADATTA_TELA` → `TELA`):
     we wait for the buffer to stay the same for 4 s."""
     fine = time.time() + tetto
     ult, da = None, time.time()
-    ob = osserva_tela(s)
+    ob = observe_canvas(s)
     while time.time() < fine:
-        ob = osserva_tela(s)
+        ob = observe_canvas(s)
         b = tuple(ob.get("buffer") or ())
         if b != ult:
             ult, da = b, time.time()

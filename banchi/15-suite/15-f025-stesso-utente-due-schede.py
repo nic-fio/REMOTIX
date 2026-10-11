@@ -47,17 +47,17 @@ import suite as S                                                     # noqa: E4
 G = S._carica("g8", os.path.join(S.QUI, "15-g8-comune.py"))
 FUNZIONI = ("F-025",)
 CIANO = (0, 200, 200)
-COLORI = {"scena": CIANO}
+COLORS = {"scena": CIANO}
 SOGLIA_SCENA = 0.5
-SFRATTO_S = 15
-DOPO_S = 17
-RISVEGLIO_S = 60     # how long to wait for A, woken up, to know it is no longer in
+EVICTION_S = 15
+AFTER_S = 17
+WAKEUP_S = 60     # how long to wait for A, woken up, to know it is no longer in
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE JUDGES — pure
 # ═══════════════════════════════════════════════════════════════════════════
-def giudica_rifiutato(ammesso, esito, righe, chi, pagina_a, fr_a):
+def judge_refused(ammesso, esito, righe, chi, page_a, fr_a):
     """Point 1 / 2a: B refused with the clear reason, A still in."""
     if ammesso is True:
         return S.FAIL, "B GOT IN while A was alive (expected 0x0F): «%s»" % esito
@@ -67,18 +67,18 @@ def giudica_rifiutato(ammesso, esito, righe, chi, pagina_a, fr_a):
         return S.FAIL, "B refused but not with reason 0x0F: «%s»" % esito
     if not any("slot DENIED to %s" % chi in r for r in righe):
         return S.FAIL, "the page says 0x0F but the server does not write «slot DENIED»"
-    if pagina_a is not None and (pagina_a.get("classe") == "male" or not pagina_a.get("sessione")):
-        return S.FAIL, "B's refusal threw A out: «%s»" % pagina_a.get("esito")
+    if page_a is not None and (page_a.get("classe") == "male" or not page_a.get("sessione")):
+        return S.FAIL, "B's refusal threw A out: «%s»" % page_a.get("esito")
     if fr_a is not None and fr_a.get("scena", 0) < SOGLIA_SCENA:
         return S.FAIL, "A is still in session but its canvas does not show the scene (%.1f%%)" % (
             100 * fr_a.get("scena", 0))
     return S.PASS, "B refused: «%s»; A stays in" % (esito or "")[:70]
 
 
-def giudica_sfratto(ammesso, esito, righe, chi, fr_b):
+def judge_eviction(ammesso, esito, righe, chi, fr_b):
     """Point 2b: after the silence B gets in and finds A's session again."""
     if ammesso is not True:
-        return S.FAIL, "A has been silent for %d s and B does NOT get in: «%s»" % (DOPO_S, esito)
+        return S.FAIL, "A has been silent for %d s and B does NOT get in: «%s»" % (AFTER_S, esito)
     sfratto = any("EVICTION for silence" in r for r in righe)
     lasciato = any("slot LEFT" in r for r in righe)
     if not (sfratto or lasciato):
@@ -92,22 +92,22 @@ def giudica_sfratto(ammesso, esito, righe, chi, fr_b):
         return S.FAIL, ("B got in but does NOT find A's session again: the scene covers %.1f%% "
                         "of the canvas" % (100 * fr_b.get("scena", 0)))
     return S.PASS, "after %d s of A's silence, B gets in (%s) and finds the scene again (%.0f%%)" % (
-        DOPO_S, come, 100 * fr_b["scena"])
+        AFTER_S, come, 100 * fr_b["scena"])
 
 
-def giudica_risveglio(pagina_a, righe, chi):
+def judge_wakeup(page_a, righe, chi):
     """Point 3: A woken up must NOT make the user believe it is still
     in: the page says a farewell (outcome «male») or puts the form back."""
-    if pagina_a.get("errore") or pagina_a.get("classe") is None:
+    if page_a.get("errore") or page_a.get("classe") is None:
         return S.BLOCKED, "A's page cannot be read after the wake-up: %s" % (
-            pagina_a.get("errore") or pagina_a)
-    if pagina_a.get("classe") == "male":
-        return S.PASS, "A woken up: the page says «%s»" % (pagina_a.get("esito") or "")[:90]
-    if pagina_a.get("modulo"):
+            page_a.get("errore") or page_a)
+    if page_a.get("classe") == "male":
+        return S.PASS, "A woken up: the page says «%s»" % (page_a.get("esito") or "")[:90]
+    if page_a.get("modulo"):
         return S.PASS, "A woken up: the page puts the sign-in form back"
     return S.FAIL, ("A woken up: its wire is already closed by the server, but the page still says "
                     "«%s» (sessione=%s, form hidden) — the user sees a frozen desktop and "
-                    "no warning" % (pagina_a.get("esito"), pagina_a.get("sessione")))
+                    "no warning" % (page_a.get("esito"), page_a.get("sessione")))
 
 
 def certifica():
@@ -122,38 +122,38 @@ def certifica():
     neg = ["slot DENIED to %s from [192.168.0.2]:1" % ch]
     pa = {"classe": "bene", "sessione": True, "esito": "Admitted"}
     prova("0x0F refusal, A in ⇒ PASS",
-          giudica_rifiutato(False, f0f, neg, ch, pa, {"scena": 0.9})[0] == S.PASS)
-    prova("B admitted ⇒ FAIL", giudica_rifiutato(True, "Admitted", [], ch, pa, None)[0] == S.FAIL)
+          judge_refused(False, f0f, neg, ch, pa, {"scena": 0.9})[0] == S.PASS)
+    prova("B admitted ⇒ FAIL", judge_refused(True, "Admitted", [], ch, pa, None)[0] == S.FAIL)
     prova("different reason ⇒ FAIL",
-          giudica_rifiutato(False, "user or password", neg, ch, pa, None)[0] == S.FAIL)
-    prova("A thrown out ⇒ FAIL", giudica_rifiutato(
+          judge_refused(False, "user or password", neg, ch, pa, None)[0] == S.FAIL)
+    prova("A thrown out ⇒ FAIL", judge_refused(
         False, f0f, neg, ch, {"classe": "male", "sessione": False, "esito": "x"}, None)[0] == S.FAIL)
-    prova("eviction with the scene ⇒ PASS", giudica_sfratto(
+    prova("eviction with the scene ⇒ PASS", judge_eviction(
         True, "Admitted", ["⭐ EVICTION for silence: 17000 ms"], ch, {"scena": 0.8})[0] == S.PASS)
-    prova("eviction without the scene ⇒ FAIL", giudica_sfratto(
+    prova("eviction without the scene ⇒ FAIL", judge_eviction(
         True, "Admitted", ["⭐ EVICTION for silence"], ch, {"scena": 0.0})[0] == S.FAIL)
-    prova("no eviction ⇒ FAIL", giudica_sfratto(False, f0f, [], ch, None)[0] == S.FAIL)
+    prova("no eviction ⇒ FAIL", judge_eviction(False, f0f, [], ch, None)[0] == S.FAIL)
     prova("wake-up in session ⇒ FAIL",
-          giudica_risveglio({"classe": "bene", "sessione": True, "modulo": False}, [], ch)[0] == S.FAIL)
+          judge_wakeup({"classe": "bene", "sessione": True, "modulo": False}, [], ch)[0] == S.FAIL)
     prova("wake-up with the form ⇒ PASS",
-          giudica_risveglio({"classe": "bene", "sessione": False, "modulo": True}, [], ch)[0] == S.PASS)
+          judge_wakeup({"classe": "bene", "sessione": False, "modulo": True}, [], ch)[0] == S.PASS)
     prova("wake-up sent away ⇒ PASS",
-          giudica_risveglio({"classe": "male", "sessione": False, "esito": f0f}, [], ch)[0] == S.PASS)
+          judge_wakeup({"classe": "male", "sessione": False, "esito": f0f}, [], ch)[0] == S.PASS)
     from PIL import Image
     import io
     im = Image.new("RGB", (40, 20), (20, 20, 20))
     im.paste(CIANO, (0, 0, 30, 20))
     buf = io.BytesIO()
     im.save(buf, "PNG")
-    fr = G.frazioni(buf.getvalue(), COLORI, riduci=1)
-    prova("fractions: 75%% cyan (%s)" % G.fr_testo(fr), fr and abs(fr["scena"] - 0.75) < 0.01)
+    fr = G.frazioni(buf.getvalue(), COLORS, riduci=1)
+    prova("fractions: 75%% cyan (%s)" % G.fr_text(fr), fr and abs(fr["scena"] - 0.75) < 0.01)
     return 0 if ok else 1
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE TEST
 # ═══════════════════════════════════════════════════════════════════════════
-def aspetta_pagina(g, tetto=25):
+def wait_page(g, tetto=25):
     fine = time.time() + tetto
     p = {}
     while time.time() < fine:
@@ -177,57 +177,57 @@ def corpo(o, E):
         ok, t = G.accendi_scena(sc, chi, o.porte_base + G.SPOSTA_SCENA, CIANO)
         if not ok:
             raise S.Bloccata("the colour scene does not start: %s" % " | ".join(t.splitlines()[-14:])[-900:])
-        fr_a, foto_a, perche = G.aspetta_colore(A, "A-scena", COLORI, "scena", SOGLIA_SCENA)
+        fr_a, photo_a, perche = G.wait_color(A, "A-scena", COLORS, "scena", SOGLIA_SCENA)
         if not fr_a or fr_a["scena"] < SOGLIA_SCENA:
-            raise S.Bloccata("the scene does not cover A's canvas: %s %s" % (G.fr_testo(fr_a), perche))
-        print("   scene in A: %s" % G.fr_testo(fr_a), flush=True)
+            raise S.Bloccata("the scene does not cover A's canvas: %s %s" % (G.fr_text(fr_a), perche))
+        print("   scene in A: %s" % G.fr_text(fr_a), flush=True)
 
         with S.Sessione(G.o_per(o, 1), "025", E, inquilino=False, chi=chi,
                         parola=A.parola) as B:
-            ev = [foto_a]
+            ev = [photo_a]
             # ── 1: A alive ⇒ B refused ──────────────────────────────────────
-            segno = A.segno_registro()
-            G.muovi_un_po(A)
-            amm, st, amb = G.tenta_tenace(B, chi, B.parola)
+            segno = A.log_mark()
+            G.nudge(A)
+            amm, st, amb = G.try_hard(B, chi, B.parola)
             righe = A.registro_da(segno)
             pa = G.leggi_pagina(A.g)
-            fr, dove, _ = G.aspetta_colore(A, "A-dopo-rifiuto", COLORI, "scena", SOGLIA_SCENA, 6)
+            fr, dove, _ = G.wait_color(A, "A-dopo-rifiuto", COLORS, "scena", SOGLIA_SCENA, 6)
             ev.append(dove)
-            e1, r1 = giudica_rifiutato(amm, st.get("esito"), righe, chi, pa, fr)
+            e1, r1 = judge_refused(amm, st.get("esito"), righe, chi, pa, fr)
             if amb:
                 r1 += " (retried after %s)" % amb
             print("   1 (A alive): %s — %s" % (e1, r1), flush=True)
 
             # ── 2: the ghost ────────────────────────────────────────────────
-            G.muovi_un_po(A)
-            segno_f = A.segno_registro()
+            G.nudge(A)
+            segno_f = A.log_mark()
             n = G.ferma(A.g)
             t0 = time.time()
             print("   A STOPPED (%d processes)" % n, flush=True)
             e2a = e2b = e3 = S.BLOCKED
             r2a = r2b = r3 = "not looked at"
             try:
-                segno = A.segno_registro()
+                segno = A.log_mark()
                 time.sleep(1.5)
-                amm, st, amb = G.tenta_tenace(B, chi, B.parola)
+                amm, st, amb = G.try_hard(B, chi, B.parola)
                 muto = time.time() - t0
                 righe = A.registro_da(segno)
-                e2a, r2a = giudica_rifiutato(amm, st.get("esito"), righe, chi, None, None)
+                e2a, r2a = judge_refused(amm, st.get("esito"), righe, chi, None, None)
                 r2a = "(A mute for %.1f s) %s" % (muto, r2a)
-                if muto >= SFRATTO_S - 2:
+                if muto >= EVICTION_S - 2:
                     e2a, r2a = S.BLOCKED, "attempt 2a arrived late (%.1f s)" % muto
                 print("   2a: %s — %s" % (e2a, r2a), flush=True)
-                time.sleep(max(0.0, t0 + DOPO_S - time.time()))
-                amm, st, amb = G.tenta_tenace(B, chi, B.parola)
+                time.sleep(max(0.0, t0 + AFTER_S - time.time()))
+                amm, st, amb = G.try_hard(B, chi, B.parola)
                 muto = time.time() - t0
                 fr_b = None
                 if amm:
                     e, m2, s2 = B.pr.primo_fotogramma()
-                    fr_b, dove, _ = G.aspetta_colore(B, "B-dopo-sfratto", COLORI, "scena",
+                    fr_b, dove, _ = G.wait_color(B, "B-dopo-sfratto", COLORS, "scena",
                                                      SOGLIA_SCENA, 20)
                     ev.append(dove)
                 righe = A.registro_da(segno_f)
-                e2b, r2b = giudica_sfratto(amm, st.get("esito"), righe, chi, fr_b)
+                e2b, r2b = judge_eviction(amm, st.get("esito"), righe, chi, fr_b)
                 r2b = "(A mute for %.1f s) %s · B's page says «%s»%s" % (
                     muto, r2b, (st.get("esito") or "")[:60],
                     " (retried after %s)" % amb if amb else "")
@@ -236,11 +236,11 @@ def corpo(o, E):
                 G.riprendi(A.g)
             # ── 3: the wake-up ──────────────────────────────────────────────
             t_sv = time.time()
-            G.muovi_un_po(A)
-            pa = aspetta_pagina(A.g, RISVEGLIO_S)
-            dopo_sv = time.time() - t_sv
+            G.nudge(A)
+            pa = wait_page(A.g, WAKEUP_S)
+            after_sv = time.time() - t_sv
             righe = A.registro_da(segno_f)
-            e3, r3 = giudica_risveglio(pa, righe, chi)
+            e3, r3 = judge_wakeup(pa, righe, chi)
             reg_a = [x for x in (A.stato().get("registro") or "").splitlines() if x.strip()][-6:]
             detto = [r for r in righe if "speaks again after the silence" in r]
             r3 += " · server: %s" % ("«speaks again… their slot belongs to another»" if detto
@@ -248,12 +248,12 @@ def corpo(o, E):
             r3 += " · dead line on A's wire: %s · A's page diary: %s" % (
                 "YES" if any("DEAD LINE" in r or "linea-morta" in r for r in righe) else "no",
                 " | ".join(reg_a)[-300:])
-            r3 = "(after %.0f s) %s" % (dopo_sv, r3)
+            r3 = "(after %.0f s) %s" % (after_sv, r3)
             print("   3: %s — %s" % (e3, r3), flush=True)
 
             tutti = [e1, e2a, e2b, e3]
             esito = S.FAIL if S.FAIL in tutti else (S.BLOCKED if S.BLOCKED in tutti else S.PASS)
-            ev.append(A.salva_testo("f025-server.txt", righe))
+            ev.append(A.save_text("f025-server.txt", righe))
             E.metti("F-025", esito, "1 %s · 2a %s · 2b %s · 3 %s" % (e1, e2a, e2b, e3),
                     atteso="A alive ⇒ B refused with 0x0F and A stays; A mute >15 s ⇒ B gets in "
                            "(eviction) and finds the scene again; A woken up sent away",
@@ -265,10 +265,10 @@ def corpo(o, E):
                 # 1: B (in) says farewell before A knocks
                 B.g.vai("about:blank")
                 time.sleep(3)
-                segno = A.segno_registro()
-                amm, st, amb = G.tenta_tenace(A, chi, A.parola)
+                segno = A.log_mark()
+                amm, st, amb = G.try_hard(A, chi, A.parola)
                 righe = A.registro_da(segno)
-                eg1, rg1 = giudica_rifiutato(amm, st.get("esito"), righe, chi, None, None)
+                eg1, rg1 = judge_refused(amm, st.get("esito"), righe, chi, None, None)
                 gv.append(eg1 == S.FAIL if amm is not None else None)
                 print("   fault 1 (the other is NOT alive): the judge says %s — %s" % (eg1, rg1),
                       flush=True)
@@ -280,21 +280,21 @@ def corpo(o, E):
                     G.riprendi(A.g)
                     t0 = time.time()
                     B.pr.apri()
-                    while time.time() < t0 + DOPO_S:
-                        G.muovi_un_po(A, 2)
+                    while time.time() < t0 + AFTER_S:
+                        G.nudge(A, 2)
                         time.sleep(1.5)
-                    segno = A.segno_registro()
-                    amm2, st2, amb = G.tenta_tenace(B, chi, B.parola)
+                    segno = A.log_mark()
+                    admitted2, st2, amb = G.try_hard(B, chi, B.parola)
                     righe = A.registro_da(segno)
-                    eg2, rg2 = giudica_sfratto(amm2, st2.get("esito"), righe, chi, None)
-                    gv.append(eg2 == S.FAIL if amm2 is not None else None)
+                    eg2, rg2 = judge_eviction(admitted2, st2.get("esito"), righe, chi, None)
+                    gv.append(eg2 == S.FAIL if admitted2 is not None else None)
                 else:
                     gv.append(None)
                 print("   fault 2 (A alive, no ghost): the judge says %s — %s" % (eg2, rg2),
                       flush=True)
                 visto = None if None in gv else all(gv)
                 E.guasto("F-025", visto, "the other sent away ⇒ %s (%s) · A alive for %d s ⇒ %s (%s)"
-                         % (eg1, rg1[:80], DOPO_S, eg2, rg2[:80]))
+                         % (eg1, rg1[:80], AFTER_S, eg2, rg2[:80]))
 
 
 if __name__ == "__main__":

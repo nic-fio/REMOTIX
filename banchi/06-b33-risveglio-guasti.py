@@ -114,7 +114,7 @@ GUASTI = {
         #    down would have triggered the KEYS' `segna_orfani()` and therefore
         #    the healing.  ⛔ False, and it is `[M]`: at the viewport change the
         #    keyboard **is not replaced** (`remove_viewport_devices` looks only
-        #    at TOUCH and POINTER_ABSOLUTE), so `dispositivo_tolto()` is never
+        #    at TOUCH and POINTER_ABSOLUTE), so `device_removed()` is never
         #    called for it and its orphans are never marked.  ⇒ In this scene
         #    the healing flag depends **only on the buttons**.
         "T1 T3 T4 T7",
@@ -230,7 +230,7 @@ def main():
         print("⛔ unknown fault: %s" % a.guasto, file=sys.stderr)
         return 2
 
-    rel, _desc, _casi, cerca, sost = GUASTI[a.guasto]
+    rel, _desc, _cases, cerca, subst = GUASTI[a.guasto]
     percorso = os.path.join(a.albero, rel)
     with open(percorso, encoding="utf-8") as f:
         testo = f.read()
@@ -245,7 +245,7 @@ def main():
         return 3
 
     with open(percorso, "w", encoding="utf-8") as f:
-        f.write(testo.replace(cerca, sost, 1))
+        f.write(testo.replace(cerca, subst, 1))
     print("⭐ %s injected into %s" % (a.guasto, rel))
     return 0
 

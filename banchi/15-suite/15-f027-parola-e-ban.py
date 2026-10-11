@@ -57,19 +57,19 @@ G = S._carica("g8", os.path.join(S.QUI, "15-g8-comune.py"))
 FUNZIONI = ("F-027", "N-1", "F-028")
 PER_BROWSER = False
 SERVER = "15-g8-server.sh"
-RE_FALLITO = re.compile(r"failed attempt from \[([0-9.]+)\]: (\d) of (\d)")
+RE_FAILED = re.compile(r"failed attempt from \[([0-9.]+)\]: (\d) of (\d)")
 IND = "[%s]" % G.INDIRIZZO
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE JUDGES — pure
 # ═══════════════════════════════════════════════════════════════════════════
-def conti_falliti(righe):
-    return [int(m.group(2)) for r in righe for m in [RE_FALLITO.search(r)]
+def failed_counts(righe):
+    return [int(m.group(2)) for r in righe for m in [RE_FAILED.search(r)]
             if m and m.group(1) == G.INDIRIZZO]
 
 
-def giudica_rifiuto(ammesso, esito, righe, chi, processi):
+def judge_refusal(ammesso, esito, righe, chi, processi):
     """F-027: (outcome, reason).  `righe` = G8 server log from the attempt,
     `processi` = how many processes the tenant has in the box (None = don't know)."""
     if ammesso is True:
@@ -84,15 +84,15 @@ def giudica_rifiuto(ammesso, esito, righe, chi, processi):
         return S.FAIL, "refused but the sentence is not clear: «%s»" % esito
     if not any("refused" in r and "PAM answered" in r for r in righe):
         return S.FAIL, "the page refuses but the server does not say «PAM … refused»"
-    if not conti_falliti(righe):
+    if not failed_counts(righe):
         return S.FAIL, "the server does not count the failed attempt (§4.2)"
     if processi:
         return S.FAIL, "refused but the tenant has %d processes in the box" % processi
     return S.PASS, "«%s» · failed %s of 3 · no session, %s processes" % (
-        esito, conti_falliti(righe)[-1], processi)
+        esito, failed_counts(righe)[-1], processi)
 
 
-def giudica_inesistente(ammesso, esito, esito_f027, righe, finto, esiste):
+def judge_nonexistent(ammesso, esito, outcome_f027, righe, finto, esiste):
     """N-1: (esito, ragione)."""
     if ammesso is True:
         return S.FAIL, "nonexistent user and the page says ADMITTED"
@@ -100,18 +100,18 @@ def giudica_inesistente(ammesso, esito, esito_f027, righe, finto, esiste):
         return S.BLOCKED, "no verdict from the page: «%s»" % esito
     if esiste:
         return S.FAIL, "the user «%s» exists: it is not the nonexistent-user test" % finto
-    if (esito or "").strip() != (esito_f027 or "").strip():
+    if (esito or "").strip() != (outcome_f027 or "").strip():
         return S.FAIL, ("the sentence differs from the wrong-password one: «%s» against "
-                        "«%s» (§4.2: they are the same thing)" % (esito, esito_f027))
+                        "«%s» (§4.2: they are the same thing)" % (esito, outcome_f027))
     if any("session open utente=%s" % finto in r for r in righe):
         return S.FAIL, "the server opened a session for a nonexistent user"
-    if not conti_falliti(righe):
+    if not failed_counts(righe):
         return S.FAIL, "the attempt with the nonexistent user is not counted (§4.2)"
     return S.PASS, "«%s», identical to the wrong password · failed %d of 3" % (
-        esito, conti_falliti(righe)[-1])
+        esito, failed_counts(righe)[-1])
 
 
-def giudica_gia_attiva(ammesso, esito, pagina_dopo, righe):
+def judge_already_active(ammesso, esito, pagina_dopo, righe):
     """F-028, half 1: the 0x0F refusal does not count as an error."""
     if ammesso is True:
         return S.BLOCKED, "the second got in: A was not alive, there is no 0x0F to look at"
@@ -124,7 +124,7 @@ def giudica_gia_attiva(ammesso, esito, pagina_dopo, righe):
     return S.PASS, "two errors + 0x0F «%s» ⇒ no ban" % esito
 
 
-def giudica_ban(pagina, file_mio, righe):
+def judge_ban(pagina, my_file, righe):
     """F-028, half 2: after three errors.  (outcome, reason)."""
     if not any("BANNED address %s" % IND in r for r in righe):
         return S.FAIL, "three failed attempts and the server does not say «BANNED»"
@@ -136,8 +136,8 @@ def giudica_ban(pagina, file_mio, righe):
     if pagina.get("ore") not in ("11", "12"):
         return S.FAIL, "the notice says %s hours and %s minutes, not ~12 hours" % (
             pagina.get("ore"), pagina.get("minuti"))
-    if IND not in (file_mio or ""):
-        return S.FAIL, "the server's ban file does not carry %s: «%s»" % (IND, file_mio)
+    if IND not in (my_file or ""):
+        return S.FAIL, "the server's ban file does not carry %s: «%s»" % (IND, my_file)
     return S.PASS, "banned: the page loads and says «attempts exhausted», %s hours %s min" % (
         pagina.get("ore"), pagina.get("minuti"))
 
@@ -152,35 +152,35 @@ def certifica():
     ch = "c15027u1"
     fr = G.FRASE[0x07]
     righe = ["PAM answered (request 3): refused", "failed attempt from [192.168.0.2]: 1 of 3 within the 5 minutes"]
-    prova("clear refusal ⇒ PASS", giudica_rifiuto(False, fr, righe, ch, 0)[0] == S.PASS)
-    prova("admitted ⇒ FAIL", giudica_rifiuto(True, "Admitted", righe, ch, 0)[0] == S.FAIL)
-    prova("session open ⇒ FAIL", giudica_rifiuto(
+    prova("clear refusal ⇒ PASS", judge_refusal(False, fr, righe, ch, 0)[0] == S.PASS)
+    prova("admitted ⇒ FAIL", judge_refusal(True, "Admitted", righe, ch, 0)[0] == S.FAIL)
+    prova("session open ⇒ FAIL", judge_refusal(
         False, fr, righe + ["session open utente=%s via=x" % ch], ch, 0)[0] == S.FAIL)
-    prova("different sentence ⇒ FAIL", giudica_rifiuto(False, "sent away", righe, ch, 0)[0] == S.FAIL)
-    prova("processes ⇒ FAIL", giudica_rifiuto(False, fr, righe, ch, 3)[0] == S.FAIL)
+    prova("different sentence ⇒ FAIL", judge_refusal(False, "sent away", righe, ch, 0)[0] == S.FAIL)
+    prova("processes ⇒ FAIL", judge_refusal(False, fr, righe, ch, 3)[0] == S.FAIL)
     prova("nonexistent, same sentence ⇒ PASS",
-          giudica_inesistente(False, fr, fr, righe, "c15027u9", False)[0] == S.PASS)
+          judge_nonexistent(False, fr, fr, righe, "c15027u9", False)[0] == S.PASS)
     prova("nonexistent, different sentence ⇒ FAIL",
-          giudica_inesistente(False, "unknown user", fr, righe, "c15027u9", False)[0] == S.FAIL)
+          judge_nonexistent(False, "unknown user", fr, righe, "c15027u9", False)[0] == S.FAIL)
     prova("nonexistent but exists ⇒ FAIL",
-          giudica_inesistente(False, fr, fr, righe, "c15027u9", True)[0] == S.FAIL)
+          judge_nonexistent(False, fr, fr, righe, "c15027u9", True)[0] == S.FAIL)
     g0f = "refused: this session's slot shows as " + G.FRASE[0x0F]
-    prova("0x0F without ban ⇒ PASS", giudica_gia_attiva(False, g0f, {"bannato": "no"}, righe)[0] == S.PASS)
-    prova("0x0F with ban ⇒ FAIL", giudica_gia_attiva(
+    prova("0x0F without ban ⇒ PASS", judge_already_active(False, g0f, {"bannato": "no"}, righe)[0] == S.PASS)
+    prova("0x0F with ban ⇒ FAIL", judge_already_active(
         False, g0f, {"bannato": "si"}, righe + ["⛔ BANNED address [192.168.0.2] for 12 hours"])[0] == S.FAIL)
     rb = ["⛔ BANNED address [192.168.0.2] for 12 hours"]
     pb = {"bannato": "si", "avviso": "attempts exhausted: … There are still 12 hours", "ore": "12", "minuti": "0"}
-    prova("ban seen ⇒ PASS", giudica_ban(pb, "[192.168.0.2] 1790000000", rb)[0] == S.PASS)
-    prova("page not banned ⇒ FAIL", giudica_ban(dict(pb, bannato="no"), "[192.168.0.2] 1", rb)[0] == S.FAIL)
-    prova("no BANNED line ⇒ FAIL", giudica_ban(pb, "[192.168.0.2] 1", [])[0] == S.FAIL)
-    prova("file without address ⇒ FAIL", giudica_ban(pb, "", rb)[0] == S.FAIL)
+    prova("ban seen ⇒ PASS", judge_ban(pb, "[192.168.0.2] 1790000000", rb)[0] == S.PASS)
+    prova("page not banned ⇒ FAIL", judge_ban(dict(pb, bannato="no"), "[192.168.0.2] 1", rb)[0] == S.FAIL)
+    prova("no BANNED line ⇒ FAIL", judge_ban(pb, "[192.168.0.2] 1", [])[0] == S.FAIL)
+    prova("file without address ⇒ FAIL", judge_ban(pb, "", rb)[0] == S.FAIL)
     return 0 if ok else 1
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE TEST
 # ═══════════════════════════════════════════════════════════════════════════
-def processi_di(sc, chi):
+def processes_of(sc, chi):
     c, t = G.dentro(sc, "pgrep -u %s 2>/dev/null | wc -l; true" % chi, 30)
     try:
         return int(t.split()[-1])
@@ -193,8 +193,8 @@ def esiste(sc, chi):
     return t.strip().endswith("si")
 
 
-def manda_senza_ricaricare(s, utente, parola, tetto=30):
-    r = s.g.js(S.VERI.JS_ENTRA, utente, parola)
+def send_without_reload(s, utente, parola, tetto=30):
+    r = s.g.js(S.VERI.JS_ENTER, utente, parola)
     if r != "mandato":
         return None, {"esito": "form not filled in: %s" % r}
     fine = time.time() + tetto
@@ -222,7 +222,7 @@ def corpo(o, E):
     print("   ⭐ G8 server %s · initial unblock: %s" % (o.url, srv.sblocca()), flush=True)
     ban85 = srv.file_ban(G.BAN_85XX)
     sbagliata = lambda: "wrong-" + secrets.token_hex(4)   # noqa: E731
-    ev_testi = {}
+    ev_texts = {}
 
     with S.Sessione(o, "027", E) as A:
         chi = A.chi
@@ -235,9 +235,9 @@ def corpo(o, E):
         amm, st = G.tenta(A, chi, sbagliata())
         time.sleep(1)
         righe = srv.registro_da(segno)
-        esito_f027 = st.get("esito")
-        e, r = giudica_rifiuto(amm, esito_f027, righe, chi, processi_di(A.sc, chi))
-        ev = [A.salva_testo("f027-server.txt", righe)]
+        outcome_f027 = st.get("esito")
+        e, r = judge_refusal(amm, outcome_f027, righe, chi, processes_of(A.sc, chi))
+        ev = [A.save_text("f027-server.txt", righe)]
         E.metti("F-027", e, r, atteso="«%s», no session, attempt counted" % G.FRASE[0x07],
                 osservato=r, evidenze=[x for x in ev if x])
 
@@ -247,9 +247,9 @@ def corpo(o, E):
         amm, st = G.tenta(A, finto, sbagliata())
         time.sleep(1)
         righe = srv.registro_da(segno)
-        e, r = giudica_inesistente(amm, st.get("esito"), esito_f027, righe, finto,
+        e, r = judge_nonexistent(amm, st.get("esito"), outcome_f027, righe, finto,
                                    esiste(A.sc, finto))
-        ev = [A.salva_testo("n1-server.txt", righe)]
+        ev = [A.save_text("n1-server.txt", righe)]
         E.metti("N-1", e, r, atteso="the same sentence as the wrong password, counted, no session",
                 osservato=r, evidenze=ev)
 
@@ -268,13 +268,13 @@ def corpo(o, E):
             segno = srv.righe_registro()
             for _ in range(2):
                 G.tenta(B, chi, sbagliata())
-            G.muovi_un_po(A)
+            G.nudge(A)
             amm, st = G.tenta(B, chi, A.parola)
             time.sleep(1.5)
             pagina = G.carica(B.g, o.url)
             righe = srv.registro_da(segno)
-            ev_testi["f028-gia-attiva-server.txt"] = righe
-            e1, r1 = giudica_gia_attiva(amm, st.get("esito"), pagina, righe)
+            ev_texts["f028-gia-attiva-server.txt"] = righe
+            e1, r1 = judge_already_active(amm, st.get("esito"), pagina, righe)
             print("   F-028 (0x0F does not count): %s — %s" % (e1, r1), flush=True)
             if pagina.get("bannato") == "si":
                 print("   ⚠ banned already here: unblocking to be able to look at the rest: %s"
@@ -284,46 +284,46 @@ def corpo(o, E):
             segno = srv.righe_registro()
             for _ in range(3):
                 amm, st = G.tenta(B, chi, sbagliata())
-            quarta_amm, quarta = manda_senza_ricaricare(B, chi, A.parola)
+            fourth_admitted, quarta = send_without_reload(B, chi, A.parola)
             time.sleep(1)
             pagina = G.carica(B.g, o.url)
             righe = srv.registro_da(segno)
-            ev_testi["f028-ban-server.txt"] = righe
-            file_mio = srv.file_ban()
-            e2, r2 = giudica_ban(pagina, file_mio, righe)
+            ev_texts["f028-ban-server.txt"] = righe
+            my_file = srv.file_ban()
+            e2, r2 = judge_ban(pagina, my_file, righe)
             # the fourth attempt, with the RIGHT password
-            if e2 == S.PASS and (quarta_amm is not False
+            if e2 == S.PASS and (fourth_admitted is not False
                                  or G.FRASE[0x08] not in (quarta.get("esito") or "")):
                 e2, r2 = S.FAIL, ("banned, but the RIGHT password from that address receives: "
-                                  "admitted=%s «%s» (expected 0x08)" % (quarta_amm, quarta.get("esito")))
+                                  "admitted=%s «%s» (expected 0x08)" % (fourth_admitted, quarta.get("esito")))
             # ⛔ the 85xx not touched
             p85 = G.carica(B.g, "https://%s:%d/" % (o.host, S.PORTE[o.scatola]))
-            ban85_dopo = srv.file_ban(G.BAN_85XX)
-            if e2 == S.PASS and (p85.get("bannato") != "no" or IND in ban85_dopo):
+            ban85_after = srv.file_ban(G.BAN_85XX)
+            if e2 == S.PASS and (p85.get("bannato") != "no" or IND in ban85_after):
                 e2, r2 = S.FAIL, ("the G8 server's ban touched %d: data-bannato=%s, file «%s»"
-                                  % (S.PORTE[o.scatola], p85.get("bannato"), ban85_dopo))
-            vivo_a = G.leggi_pagina(A.g)
+                                  % (S.PORTE[o.scatola], p85.get("bannato"), ban85_after))
+            alive_a = G.leggi_pagina(A.g)
             # the unblock
-            sbl = srv.sblocca()
-            pagina2 = G.carica(B.g, o.url)
-            if e2 == S.PASS and (not sbl.startswith("TOLTO") or pagina2.get("bannato") != "no"):
+            unb = srv.sblocca()
+            page2 = G.carica(B.g, o.url)
+            if e2 == S.PASS and (not unb.startswith("TOLTO") or page2.get("bannato") != "no"):
                 e2, r2 = S.FAIL, "the unblock from the socket does not reopen: «%s», data-bannato=%s" % (
-                    sbl, pagina2.get("bannato"))
-            conti = conti_falliti(righe)
+                    unb, page2.get("bannato"))
+            conti = failed_counts(righe)
             oss = ("%s · failures counted %s · fourth (right password): «%s» · %d data-bannato=%s, "
                    "file «%s» (before «%s») · A during the ban: sessione=%s «%s» · unblock «%s»"
                    % (r2, conti, (quarta.get("esito") or "")[:90], S.PORTE[o.scatola],
-                      p85.get("bannato"), ban85_dopo, ban85, vivo_a.get("sessione"),
-                      (vivo_a.get("esito") or "")[:40], sbl))
+                      p85.get("bannato"), ban85_after, ban85, alive_a.get("sessione"),
+                      (alive_a.get("esito") or "")[:40], unb))
             if e1 == S.FAIL or e2 == S.FAIL:
                 ef = S.FAIL
             elif e1 == S.BLOCKED or e2 == S.BLOCKED:
                 ef = S.BLOCKED
             else:
                 ef = S.PASS
-            ev = [B.salva_testo(n, t) for n, t in ev_testi.items()]
-            ev.append(B.salva_testo("f028-pagine.json", json.dumps(
-                {"bannata": pagina, "quarto": quarta, "85xx": p85, "sbloccata": pagina2},
+            ev = [B.save_text(n, t) for n, t in ev_texts.items()]
+            ev.append(B.save_text("f028-pagine.json", json.dumps(
+                {"bannata": pagina, "quarto": quarta, "85xx": p85, "sbloccata": page2},
                 ensure_ascii=False, indent=1)))
             E.metti("F-028", ef, "0x0F does not count: %s · ban: %s" % (r1, r2),
                     atteso="0x0F does not count; 3 errors ⇒ 12 h ban said by the page, 0x08 on the "
@@ -339,7 +339,7 @@ def corpo(o, E):
                 vero = any("BANNED address %s" % IND in x for x in righe)
                 srv.sblocca()                                   # ⛔ the fault
                 pagina = G.carica(B.g, o.url)
-                eg, rg = giudica_ban(pagina, srv.file_ban(), righe)
+                eg, rg = judge_ban(pagina, srv.file_ban(), righe)
                 E.guasto("F-028", (eg != S.PASS) if vero else None,
                          "real ban (%s), removed before the judgment ⇒ the judge says %s: %s"
                          % (vero, eg, rg))
@@ -351,7 +351,7 @@ def corpo(o, E):
                 amm, st = G.tenta(B, chi, B.parola)
                 time.sleep(1)
                 righe = srv.registro_da(segno)
-                eg, rg = giudica_rifiuto(amm, st.get("esito"), righe, chi, processi_di(A.sc, chi))
+                eg, rg = judge_refusal(amm, st.get("esito"), righe, chi, processes_of(A.sc, chi))
                 E.guasto("F-027", eg == S.FAIL if amm is not None else None,
                          "right password passed off as wrong ⇒ the judge says %s: %s" % (eg, rg))
                 # N-1: the «nonexistent» one is the real user with the right password
@@ -359,7 +359,7 @@ def corpo(o, E):
                 amm, st = G.tenta(A, chi, A.parola)
                 time.sleep(1)
                 righe = srv.registro_da(segno)
-                eg, rg = giudica_inesistente(amm, st.get("esito"), esito_f027, righe, chi,
+                eg, rg = judge_nonexistent(amm, st.get("esito"), outcome_f027, righe, chi,
                                              esiste(A.sc, chi))
                 E.guasto("N-1", eg == S.FAIL if amm is not None else None,
                          "real user instead of the nonexistent one ⇒ the judge says %s: %s" % (eg, rg))

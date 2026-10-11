@@ -265,7 +265,7 @@ TETTI_DOC = {"CIAO": 5000, "CREDENZIALI": 60000, "ATTACCA": 10000,
 # ⛔ And it stays very wide compared with what it must tell apart: 5 from 30, 10
 #    from 60, 60 from 15.  A tolerance that does not separate the numbers in play
 #    is not a tolerance, it is a blessing.
-TOLL_GIU, TOLL_SU = 1000, 2500
+TOL_DOWN, TOLL_SU = 1000, 2500
 
 # ⛔ THE INACTIVITY CAP WE ANNOUNCE, AND WHY IT IS NOT ALWAYS THE SAME.  It is
 #    our half of the rule «the cap is read from the peer, not presumed», and
@@ -289,7 +289,7 @@ TOLL_GIU, TOLL_SU = 1000, 2500
 #      would be seen even earlier: in both cases it is seen, and that is why it
 #      is slightly above and not well above.
 IDLE_SANI = 180.0
-IDLE_PING_MARGINE = 5.0
+IDLE_PING_MARGIN = 5.0
 
 # How long one waits before opening the session, in `ciao-sessione-tardiva`.
 # ⚠ It MUST be longer than the `CIAO` cap, or the case separates nothing.
@@ -452,7 +452,7 @@ async def apri(a, percorso="/rcp/1"):
     """Connection + WebTransport session.  ⚠ NOT the control channel."""
     conf = QuicConfiguration(is_client=True, alpn_protocols=H3_ALPN,
                              max_datagram_frame_size=65536,
-                             idle_timeout=a.idle_nostro)
+                             idle_timeout=a.our_idle)
     conf.verify_mode = ssl.CERT_NONE
     autorita = f"{a.indirizzo}:{a.porta}"
     gestore = connect(a.indirizzo, a.porta, configuration=conf,
@@ -472,7 +472,7 @@ async def solo_connessione(a):
     """
     conf = QuicConfiguration(is_client=True, alpn_protocols=H3_ALPN,
                              max_datagram_frame_size=65536,
-                             idle_timeout=a.idle_nostro)
+                             idle_timeout=a.our_idle)
     conf.verify_mode = ssl.CERT_NONE
     gestore = connect(a.indirizzo, a.porta, configuration=conf,
                       create_protocol=b3.Cliente)
@@ -908,8 +908,8 @@ def riga_gialla(nome, testo):
     print(f"    {GIALLO}??{GRIGIO}  {nome:34s} {testo}")
 
 
-def dentro_tolleranza(ms, tetto_ms):
-    return tetto_ms - TOLL_GIU <= ms <= tetto_ms + TOLL_SU
+def dentro_tolleranza(ms, cap_ms):
+    return cap_ms - TOL_DOWN <= ms <= cap_ms + TOLL_SU
 
 
 def leggi_tetti_codice(testo):
@@ -937,8 +937,8 @@ async def principale(a):
     # ⛔ Our inactivity cap depends on the phase — see the box next to
     #    IDLE_SANI: in the «ping» phase it is the only way we have to SEE a
     #    death from inactivity, which sends nothing on the wire.
-    a.idle_nostro = (IDLE_SANI if a.fase == "sani"
-                     else a.idle / 1000 + IDLE_PING_MARGINE)
+    a.our_idle = (IDLE_SANI if a.fase == "sani"
+                     else a.idle / 1000 + IDLE_PING_MARGIN)
 
     if a.elenco:
         print(f"== B6 — the three caps of the handshake (RCP.md §4.6)")
@@ -1031,12 +1031,12 @@ async def principale(a):
     #         would be counting the same measurement twice, which is the inflated
     #         denominator shape of `LEZIONI.md` §1.9 rule 4.
     a.fasi_indipendenti = prof["idle_lungo"] != prof["idle_corto"]
-    a.reg.apri_giro(
+    a.reg.open_round(
         "B6", "the client KEEPS QUIET: no RCP byte after the message that brings "
               "to the state.  Acknowledgements and transport PINGs are not the scene, "
               "and are declared (§4.6)",
         extra={"fase": a.fase, "idle_chiesto": a.idle,
-               "idle_nostro_ms": int(a.idle_nostro * 1000),
+               "idle_nostro_ms": int(a.our_idle * 1000),
                "casi": len(casi), "casi_totali": len(CASI),
                "tetti_documento": dict(TETTI_DOC),
                "tetti_codice": tetti_codice,
@@ -1059,14 +1059,14 @@ async def principale(a):
     print(f"   transport inactivity cap in force, READ FROM THE PEER: "
           f"{a.idle} ms")
     print(f"   inactivity cap announced by us: "
-          f"{a.idle_nostro * 1000:.0f} ms — ⛔ and aioquic's default "
+          f"{a.our_idle * 1000:.0f} ms — ⛔ and aioquic's default "
           f"would be 60 000 ms,")
     print(f"   that is exactly the cap to measure: here it is chosen on purpose "
           f"(see IDLE_SANI in the file)\n")
 
     # ── THE THREE NUMBERS, BEFORE MEASURING ────────────────────────────────
     print("   ⛔ the three numbers this bench compares:")
-    disaccordo_doc_codice = []
+    mismatch_doc_code = []
     for n in ("CIAO", "CREDENZIALI", "ATTACCA"):
         c = tetti_codice.get(n)
         if c is None:
@@ -1076,7 +1076,7 @@ async def principale(a):
         elif c != TETTI_DOC[n]:
             print(f"      {n:12s} document {TETTI_DOC[n]:6d} ms · code "
                   f"{ROSSO}{c} ms — ⛔ THEY DO NOT MATCH{GRIGIO}")
-            disaccordo_doc_codice.append(n)
+            mismatch_doc_code.append(n)
         else:
             print(f"      {n:12s} document {TETTI_DOC[n]:6d} ms · code "
                   f"{c} ms · they match")
@@ -1109,7 +1109,7 @@ async def principale(a):
     print("   (REVIEWER.md §1.2: a negative outcome with an uncertified "
           "tool is ambiguous)")
 
-    ok, testo, bloccato, ms_fisso = await cert_giro_completo(a)
+    ok, testo, bloccato, ms_fixed = await cert_giro_completo(a)
     conti["certifications of the tool"][1] += 1
     conti["certifications of the tool"][0] += int(ok)
     riga(ok, "cert-giro-completo", testo)
@@ -1144,21 +1144,21 @@ async def principale(a):
         return 4
 
     # ⭐ The stopwatch, on a KNOWN wait: the fixed second of §4.4-bis.
-    ok_cr = ms_fisso is not None and 1000 <= ms_fisso <= 3000
+    ok_cr = ms_fixed is not None and 1000 <= ms_fixed <= 3000
     conti["certifications of the tool"][1] += 1
     conti["certifications of the tool"][0] += int(ok_cr)
     riga(ok_cr, "cert-cronometro",
-         (f"the fixed second of §4.4-bis measured {ms_fisso:.0f} ms "
-          f"(B3: 1074-1085 ms)" if ms_fisso is not None
+         (f"the fixed second of §4.4-bis measured {ms_fixed:.0f} ms "
+          f"(B3: 1074-1085 ms)" if ms_fixed is not None
           else "⛔ not measured: without a known wait the stopwatch is not "
                "certified"))
     if not ok_cr:
         guasti += 1
 
-    ok_cn, testo_cn, ms_cn = await cert_congedo_noto(a)
+    ok_cn, text_cn, ms_cn = await cert_congedo_noto(a)
     conti["certifications of the tool"][1] += 1
     conti["certifications of the tool"][0] += int(ok_cn)
-    riga(ok_cn, "cert-congedo-noto", testo_cn)
+    riga(ok_cn, "cert-congedo-noto", text_cn)
     if not ok_cn:
         print(f"\n    {ROSSO}⛔ the tool cannot read a KNOWN farewell "
               f"by the two roads of §3.1{GRIGIO}")
@@ -1167,10 +1167,10 @@ async def principale(a):
         return 4
 
     if a.fase == "ping":
-        ok_ms, testo_ms, ms_ms = await cert_morte_silenziosa(a, a.idle)
+        ok_ms, text_ms, ms_ms = await cert_morte_silenziosa(a, a.idle)
         conti["certifications of the tool"][1] += 1
         conti["certifications of the tool"][0] += int(ok_ms)
-        riga(ok_ms, "cert-morte-silenziosa", testo_ms)
+        riga(ok_ms, "cert-morte-silenziosa", text_ms)
         if ms_ms is not None:
             print(f"        ⚠ dead after {ms_ms / 1000:.1f} s, and the transport "
                   f"cap is {a.idle / 1000:.0f} s")
@@ -1189,7 +1189,7 @@ async def principale(a):
         except Exception as e:  # noqa: BLE001 — the error type IS the measurement
             es.errore = f"{type(e).__name__}: {e}"
 
-        tetto_ms = TETTI_DOC[c["tetto"]] if c["tetto"] else None
+        cap_ms = TETTI_DOC[c["tetto"]] if c["tetto"] else None
 
         if c["atteso"] is None:
             # ⭐ The check that says NO: the cap does not trigger before.
@@ -1197,8 +1197,8 @@ async def principale(a):
             ok = es.pronto and es.esito == "servito" and es.errore is None
             conti["⭐ the cap does NOT trigger before"][0] += int(ok)
             riga(ok, c["nome"],
-                 (f"served after {tetto_ms * 0.7 / 1000:.1f} s of silence "
-                  f"(cap {tetto_ms / 1000:.0f} s)") if ok else str(es))
+                 (f"served after {cap_ms * 0.7 / 1000:.1f} s of silence "
+                  f"(cap {cap_ms / 1000:.0f} s)") if ok else str(es))
             if not ok:
                 guasti += 1
                 print(f"        expected: ⭐ no drop — {c['spiega']}")
@@ -1221,12 +1221,12 @@ async def principale(a):
                 #    the session with the reason code (§3.1 point 3).  Counting
                 #    only the `CONGEDO` would give «nothing happened» to a server
                 #    that did all it could do.
-                per_congedo = es.esito == "congedo" and es.motivo is not None
-                per_chiusura = es.codice_wt is not None
-                motivo_visto = es.motivo if per_congedo else es.codice_wt
-                strada = ("CONGEDO" if per_congedo else
-                          "session closing" if per_chiusura else "")
-                if (per_congedo or per_chiusura) and es.ms is not None:
+                per_farewell = es.esito == "congedo" and es.motivo is not None
+                per_closing = es.codice_wt is not None
+                motivo_visto = es.motivo if per_farewell else es.codice_wt
+                strada = ("CONGEDO" if per_farewell else
+                          "session closing" if per_closing else "")
+                if (per_farewell or per_closing) and es.ms is not None:
                     if motivo_visto != TEMPO_SCADUTO:
                         risp = (f"⛔ {motivo_visto:#04x}="
                                 f"{MOTIVI.get(motivo_visto, '?')} arrived instead of "
@@ -1258,7 +1258,7 @@ async def principale(a):
                 #    is **the exact signature of the missing PING**, the one
                 #    the «ping» phase exists for — fell into the `else` below,
                 #    did not increment `guasti`, ended up in `risposte` with
-                #    `verso="?"`, and then `fuori_dal_documento` collected it
+                #    `verso="?"`, and then `out_of_document` collected it
                 #    and the script exited **3**, printing «the caps behave as
                 #    the CODE says, but §4.6 says something else … the cure is
                 #    in RCP.md, not in the server».  ⛔ That is, the symptom that
@@ -1313,16 +1313,16 @@ async def principale(a):
             #    below by `ok_wt`, with no discounts.  ⚠ That is, this case does
             #    not test less: it tests the road that the decisions of 11
             #    August make the only one that always arrives.
-            congedo_esigibile = c["tetto"] != "CANALE"
+            farewell_due = c["tetto"] != "CANALE"
             conti["caps expired with TEMPO_SCADUTO"][1] += 1
-            if congedo_esigibile:
-                ok_motivo = (es.motivo == c["atteso"]
+            if farewell_due:
+                ok_reason = (es.motivo == c["atteso"]
                              and es.tipo_motivo == "CONGEDO")
             else:
-                ok_motivo = es.codice_wt == c["atteso"]
+                ok_reason = es.codice_wt == c["atteso"]
             if not es.pronto:
-                ok_motivo = False
-            conti["caps expired with TEMPO_SCADUTO"][0] += int(ok_motivo)
+                ok_reason = False
+            conti["caps expired with TEMPO_SCADUTO"][0] += int(ok_reason)
 
             conti["caps expired IN THE RIGHT TIME (§4.6)"][1] += 1
             # ⛔ «In the right time» holds only on a CONGEDO: the wait window
@@ -1334,24 +1334,24 @@ async def principale(a):
             # ⚠ And with the channel never opened the outcome is NOT «congedo»:
             #   it is «sessione-chiusa», which here is the right thing and not a
             #   fallback.
-            esiti_buoni = ("congedo",) if congedo_esigibile \
+            good_outcomes = ("congedo",) if farewell_due \
                 else ("congedo", "sessione-chiusa")
-            ok_tempo = (es.esito in esiti_buoni and es.ms is not None
-                        and es.pronto and dentro_tolleranza(es.ms, tetto_ms))
-            conti["caps expired IN THE RIGHT TIME (§4.6)"][0] += int(ok_tempo)
+            time_ok = (es.esito in good_outcomes and es.ms is not None
+                        and es.pronto and dentro_tolleranza(es.ms, cap_ms))
+            conti["caps expired IN THE RIGHT TIME (§4.6)"][0] += int(time_ok)
 
             conti["§3.1 point 3 — 0x0D in the WT closing"][1] += 1
             ok_wt = es.codice_wt == c["atteso"]
             conti["§3.1 point 3 — 0x0D in the WT closing"][0] += int(ok_wt)
 
-            ok = ok_motivo and ok_tempo and ok_wt
+            ok = ok_reason and time_ok and ok_wt
             riga(ok, c["nome"], str(es))
             if not ok:
                 guasti += 1
                 print(f"        expected: {c['atteso']:#04x} "
                       f"{MOTIVI.get(c['atteso'], '?')} at "
-                      f"{tetto_ms / 1000:.0f} s "
-                      f"(tolerance -{TOLL_GIU / 1000:.1f} / "
+                      f"{cap_ms / 1000:.0f} s "
+                      f"(tolerance -{TOL_DOWN / 1000:.1f} / "
                       f"+{TOLL_SU / 1000:.1f} s)")
                 print(f"        {c['spiega']}")
                 if not es.pronto:
@@ -1368,7 +1368,7 @@ async def principale(a):
                     print(f"        ⛔ NOTHING HAPPENED for "
                           f"{es.ms / 1000 if es.ms else 0:.0f} s: the cap did not "
                           f"expire, and the connection stays there hanging")
-                elif es.ms is not None and not ok_tempo:
+                elif es.ms is not None and not time_ok:
                     altri = [n for n, v in TETTI_DOC.items()
                              if dentro_tolleranza(es.ms, v)]
                     if altri:
@@ -1389,7 +1389,7 @@ async def principale(a):
                       "tipo_motivo": es.tipo_motivo, "codice_wt": es.codice_wt,
                       "pronto": es.pronto, "fase_raggiunta": es.fase,
                       "errore": es.errore,
-                      "tetto_documento_ms": tetto_ms,
+                      "tetto_documento_ms": cap_ms,
                       # ⛔ And the line says whether this measurement was CLEAN: on
                       #    the product the credentials case in the «sani» phase is
                       #    not, because the transport cap is below.
@@ -1424,23 +1424,23 @@ async def principale(a):
     #    An outcome the bench could not classify is not «a number to bring into
     #    the documents»: it is a measurement to redo, and printing it in the same
     #    list as the answers made it weigh like an answer.
-    non_classificati = [r for r in risposte if r[1] == "NON-SO"]
-    risposte_vere = [r for r in risposte if r[1] not in ("NON-SO", "SERVER")]
-    if risposte_vere:
+    unclassified = [r for r in risposte if r[1] == "NON-SO"]
+    real_replies = [r for r in risposte if r[1] not in ("NON-SO", "SERVER")]
+    if real_replies:
         print()
         print("    == ⛔ the open questions this run has ANSWERED")
         print("       (they are not pass/fail: they are numbers to bring into the "
                "documents)")
-        for nome, verso, risp in risposte_vere:
+        for nome, verso, risp in real_replies:
             print(f"    ??  {nome:34s} {risp}")
-    if non_classificati:
+    if unclassified:
         print()
-        print(f"    == ⛔ and {len(non_classificati)} cases the bench COULD NOT "
+        print(f"    == ⛔ and {len(unclassified)} cases the bench COULD NOT "
               f"CLASSIFY")
         print("       ⚠ They do not go among the answers: an «I do not know» handed over "
               "as an answer")
         print("         would send the cure to the wrong place.")
-        for nome, _, risp in non_classificati:
+        for nome, _, risp in unclassified:
             print(f"    ?!  {nome:34s} {risp}")
 
     # ⛔ THREE DIFFERENT OUTCOMES, BECAUSE THEY ARE THREE DIFFERENT THINGS — and it
@@ -1471,20 +1471,20 @@ async def principale(a):
     #    automatically ended up among the proofs that the DOCUMENT is wrong.  A
     #    list by exclusion grows by itself every time someone adds a case, and
     #    in the direction that accuses the document.
-    fuori_dal_documento = [r for r in risposte if r[1] in ("APERTURA", "MAI")]
-    if disaccordo_doc_codice:
+    out_of_document = [r for r in risposte if r[1] in ("APERTURA", "MAI")]
+    if mismatch_doc_code:
         print(f"    {ROSSO}⛔ B6 «{a.fase}»: the wire behaves well, but "
               f"DOCUMENT and CODE do not say the same number{GRIGIO}")
-        for n in disaccordo_doc_codice:
+        for n in mismatch_doc_code:
             print(f"       {n}: §4.6 says {TETTI_DOC[n]} ms, "
                   f"`banchi/rcp/rcp.c` says {tetti_codice[n]} ms")
         print("       ⛔ The cure is not choosing: it is that one of the two gets "
               "updated, with the date and the source (CODER.md §5).")
         return 3
-    if fuori_dal_documento:
+    if out_of_document:
         print(f"    {GIALLO}⛔ B6 «{a.fase}»: the caps behave as the "
               f"CODE says, but §4.6 line 1 says something else{GRIGIO}")
-        for nome, verso, risp in fuori_dal_documento:
+        for nome, verso, risp in out_of_document:
             print(f"       {nome}: {risp}")
         print("       §4.6 says «TLS handshake finished», and the stopwatch "
               "starts from another instant.")
@@ -1522,8 +1522,8 @@ async def principale(a):
     #    It is not 1 («the server is wrong») and it is not 3 («the document is
     #    wrong»): they are the two things between which the bench could not
     #    choose, and choosing one at random is the red sent where there is nothing.
-    if non_classificati:
-        print(f"    {GIALLO}⛔ B6 «{a.fase}»: {len(non_classificati)} cases "
+    if unclassified:
+        print(f"    {GIALLO}⛔ B6 «{a.fase}»: {len(unclassified)} cases "
               f"produced an outcome the bench cannot classify"
               f"{GRIGIO}")
         print("       It is not a server red and it is not a document "

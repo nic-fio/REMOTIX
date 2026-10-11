@@ -42,7 +42,7 @@ def finestra(app):
     return f
 
 
-def al_fuoco(f, fatto):
+def on_focus(f, fatto):
     """⭐⭐ WE WAIT FOR THE FOCUS, AND DO NOTHING BEFORE — 20 Sep 2026.
 
     ⛔ `[M]` On GNOME the clipboard is granted to whoever has the ACTIVE window, and in
@@ -75,7 +75,7 @@ def copia(testo, secondi):
                   % (len(testo), secondi), flush=True)
 
         print("window open, waiting for focus", flush=True)
-        al_fuoco(f, adesso)
+        on_focus(f, adesso)
         GLib.timeout_add_seconds(int(secondi), lambda: (app.quit(), False)[1])
 
     app = Gtk.Application(application_id="org.remotix.appunti.copia")
@@ -101,7 +101,7 @@ def incolla():
             Gdk.Display.get_default().get_clipboard().read_text_async(None, letto)
 
         print("window open, waiting for focus", file=sys.stderr, flush=True)
-        al_fuoco(f, adesso)
+        on_focus(f, adesso)
         GLib.timeout_add_seconds(25, lambda: (app.quit(), False)[1])
 
     app = Gtk.Application(application_id="org.remotix.appunti.incolla")

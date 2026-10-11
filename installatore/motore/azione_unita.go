@@ -10,18 +10,18 @@ import "encoding/json"
 // new plan uses it any more (it was the updates timer, removed with D14, DECISIONI §10.23): it stays
 // so that uninstalling an installation made earlier knows how to stop what it had started.
 
-func init() { registraTipo("enable-unit", nuovaUnita) }
+func init() { registraTipo("enable-unit", newUnit) }
 
-// PianoUnita prepares the plan's step.
-func PianoUnita(id, unita string) AzionePiano {
+// PlanUnit prepares the plan's step.
+func PlanUnit(id, unita string) AzionePiano {
 	return AzionePiano{
 		ID: id, Tipo: "enable-unit",
-		Parametri:      map[string]string{"unit": unita},
-		Descrizione:    T("az.unita", unita),
-		ComeSiFa:       T("az.unita.fa", unita),
-		ComeSiVerifica: T("az.unita.verifica", unita),
-		ComeSiAnnulla:  T("az.unita.annulla", unita),
-		Reversibilita:  ESATTA,
+		Parametri:     map[string]string{"unit": unita},
+		Descrizione:   T("az.unita", unita),
+		ComeSiFa:      T("az.unita.fa", unita),
+		HowToVerify:   T("az.unita.verifica", unita),
+		HowToUndo:     T("az.unita.annulla", unita),
+		Reversibilita: ESATTA,
 	}
 }
 
@@ -30,12 +30,12 @@ type unita struct {
 	avvia bool
 }
 
-type primaUnita struct {
+type beforeUnit struct {
 	Origine Origine `json:"origin"`
 	Stato   string  `json:"state"` // what is-enabled said
 }
 
-func nuovaUnita(p AzionePiano) (Azione, error) {
+func newUnit(p AzionePiano) (Azione, error) {
 	return &unita{p.Parametri["unit"], p.Parametri["start"] == "yes"}, nil
 }
 
@@ -63,7 +63,7 @@ func (u *unita) Fotografa(c *Contesto) (json.RawMessage, Origine, error) {
 	case "not-found":
 		return nil, "", Errore("RX-SYSTEMD-003", u.nome)
 	}
-	p := primaUnita{Origine: DIRETTA, Stato: s}
+	p := beforeUnit{Origine: DIRETTA, Stato: s}
 	if s == "enabled" {
 		p.Origine = PREESISTENTE
 	}
@@ -71,7 +71,7 @@ func (u *unita) Fotografa(c *Contesto) (json.RawMessage, Origine, error) {
 }
 
 func (u *unita) Fai(c *Contesto, prima json.RawMessage) error {
-	var p primaUnita
+	var p beforeUnit
 	if err := json.Unmarshal(prima, &p); err != nil {
 		return err
 	}
@@ -82,13 +82,13 @@ func (u *unita) Fai(c *Contesto, prima json.RawMessage) error {
 		return err
 	}
 	if u.avvia && !u.attiva(c) {
-		return c.Amb.Unita.Avvia(u.nome)
+		return c.Amb.Unita.Launch(u.nome)
 	}
 	return nil
 }
 
 func (u *unita) Controlla(c *Contesto, prima json.RawMessage) (Esito, string, error) {
-	var p primaUnita
+	var p beforeUnit
 	if err := json.Unmarshal(prima, &p); err != nil {
 		return "", "", err
 	}
@@ -110,7 +110,7 @@ func (u *unita) Controlla(c *Contesto, prima json.RawMessage) (Esito, string, er
 }
 
 func (u *unita) Annulla(c *Contesto, prima json.RawMessage) error {
-	var p primaUnita
+	var p beforeUnit
 	if err := json.Unmarshal(prima, &p); err != nil {
 		return err
 	}
@@ -136,7 +136,7 @@ func (u *unita) Annulla(c *Contesto, prima json.RawMessage) error {
 }
 
 func (u *unita) Annullata(c *Contesto, prima json.RawMessage) (bool, string, error) {
-	var p primaUnita
+	var p beforeUnit
 	if err := json.Unmarshal(prima, &p); err != nil {
 		return false, "", err
 	}

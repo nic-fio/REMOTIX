@@ -37,7 +37,7 @@ import time
 # ═══════════════════════════════════════════════════════════════════════════
 #  1. THE EAR IN THE PAGE
 # ═══════════════════════════════════════════════════════════════════════════
-ORECCHIO_JS = r"""
+EAR_JS = r"""
 (function () {
   if (window.__c15orecchio) return;
   const O = window.__c15orecchio = { campioni: [], contesti: [], agganci: 0, errori: [] };
@@ -110,7 +110,7 @@ ORECCHIO_JS = r"""
 """
 
 
-def _inietta(corpo):
+def _inject(corpo):
     """A script in the REAL page (not in Marionette's sandbox)."""
     return ("const s = document.createElement('script');"
             "s.textContent = %s;"
@@ -118,7 +118,7 @@ def _inietta(corpo):
             "return true;" % json.dumps(corpo))
 
 
-def in_pagina(g, espressione):
+def in_page(g, espressione):
     """Evaluates `espressione` IN THE REAL PAGE and returns the value (via JSON in a
     DOM attribute: Firefox's xrays do not let you see the properties
     written by the page)."""
@@ -127,28 +127,28 @@ def in_pagina(g, espressione):
              " document.documentElement.setAttribute('data-c15g4', JSON.stringify(v));"
              " })();" % espressione)
     g.js("document.documentElement.removeAttribute('data-c15g4'); return 1;")
-    g.js(_inietta(corpo))
+    g.js(_inject(corpo))
     t = g.js("return document.documentElement.getAttribute('data-c15g4');")
     return json.loads(t) if t else None
 
 
-def metti_orecchio(g):
+def put_ear(g):
     """Mounts the ear.  Returns (ok, description)."""
-    g.js(_inietta(ORECCHIO_JS))
-    r = in_pagina(g, "window.__c15orecchio ? { ok: true, ora: performance.now() } : null")
+    g.js(_inject(EAR_JS))
+    r = in_page(g, "window.__c15orecchio ? { ok: true, ora: performance.now() } : null")
     if not r or not r.get("ok"):
         return False, "the ear did not mount in the page: %r" % (r,)
     return True, "ear mounted"
 
 
-def ora_pagina(g):
-    r = in_pagina(g, "performance.now()")
+def now_page(g):
+    r = in_page(g, "performance.now()")
     return float(r) if r is not None else None
 
 
-def leggi_orecchio(g, da=0.0, a=None):
+def read_ear(g, da=0.0, a=None):
     """The samples with `da <= t < a` (page time, ms) and the state."""
-    r = in_pagina(g, (
+    r = in_page(g, (
         "(function(){ const O = window.__c15orecchio; if (!O) return null;"
         " const da = %f, a = %s;"
         " return { ora: performance.now(), agganci: O.agganci, contesti: O.contesti.length,"
@@ -159,13 +159,13 @@ def leggi_orecchio(g, da=0.0, a=None):
     return r
 
 
-def aspetta_contesto(g, tetto_s=30):
+def wait_context(g, tetto_s=30):
     """Waits for the page to create its `AudioContext` (at the first audio
     delivery).  Returns (context state | None, page counts)."""
     fine = time.time() + tetto_s
     r = None
     while time.time() < fine:
-        r = in_pagina(g, "(function(){ const O = window.__c15orecchio;"
+        r = in_page(g, "(function(){ const O = window.__c15orecchio;"
                          " return { n: O ? O.contesti.length : -1,"
                          " stato: O && O.contesti.length ? O.contesti[O.contesti.length-1].state : null,"
                          " conti: (typeof audio_conti === 'function') ? audio_conti() : null }; })()")
@@ -175,7 +175,7 @@ def aspetta_contesto(g, tetto_s=30):
     return None, (r or {}).get("conti")
 
 
-def clic_vero(s, fx, fy):
+def real_click(s, fx, fy):
     """⭐ A REAL click on the canvas (trusted browser event), like the user:
     it is the gesture that wakes up the audio.  Returns the description."""
     st = s.stato()
@@ -199,8 +199,8 @@ def mediana(v):
     return v[n // 2] if n % 2 else 0.5 * (v[n // 2 - 1] + v[n // 2])
 
 
-def giudica_suono(campioni, atteso_hz, min_frazione=0.8, max_buco_s=None,
-                  min_campioni=10, soglia=SOGLIA_RMS, toll=TOLL_HZ):
+def judge_sound(campioni, atteso_hz, min_frazione=0.8, max_buco_s=None,
+                  min_samples=10, soglia=SOGLIA_RMS, toll=TOLL_HZ):
     """(outcome 'PASS'|'FAIL'|'BLOCKED', description, numbers).
 
     Audible = context `running` and RMS > threshold.  PASS if the audible fraction is
@@ -208,8 +208,8 @@ def giudica_suono(campioni, atteso_hz, min_frazione=0.8, max_buco_s=None,
     of the expectation for at least `min_frazione`, and (if requested) no silence
     gap longer than `max_buco_s`."""
     n = len(campioni)
-    if n < min_campioni:
-        return "BLOCKED", "only %d samples from the ear (%d needed)" % (n, min_campioni), {}
+    if n < min_samples:
+        return "BLOCKED", "only %d samples from the ear (%d needed)" % (n, min_samples), {}
     udibili = [c for c in campioni if c.get("stato") == "running"
                and (c.get("rms") or 0) > soglia]
     sospesi = sum(1 for c in campioni if c.get("stato") != "running")
@@ -253,7 +253,7 @@ def giudica_suono(campioni, atteso_hz, min_frazione=0.8, max_buco_s=None,
     return "PASS", desc, num
 
 
-def onda_wav(hz, secondi, ampiezza=0.5, frequenza=48000):
+def wave_wav(hz, secondi, ampiezza=0.5, frequenza=48000):
     """A pure tone, stereo s16 — the amplitude is a number of this file (like C5)."""
     import struct
     n = int(secondi * frequenza)
@@ -270,7 +270,7 @@ def onda_wav(hz, secondi, ampiezza=0.5, frequenza=48000):
 # ═══════════════════════════════════════════════════════════════════════════
 #  3. THE EYE ON THE VIDEO (pure)
 # ═══════════════════════════════════════════════════════════════════════════
-def foto_ridotta(g, scala=0.5):
+def reduced_photo(g, scala=0.5):
     """The canvas photographed and reduced: (PIL RGB | None, png | None, reason)."""
     from PIL import Image
     try:
@@ -311,7 +311,7 @@ def foto_ridotta(g, scala=0.5):
         return None, None, "photo failed: %s" % str(e)[:200]
 
 
-def _corsa_piu_lunga(valori, soglia):
+def _longest_run(valori, soglia):
     """(start, end) of the longest contiguous run with value > soglia."""
     migliore, lung, i0 = (0, -1), 0, None
     for i, v in enumerate(list(valori) + [0]):
@@ -324,7 +324,7 @@ def _corsa_piu_lunga(valori, soglia):
     return migliore
 
 
-def trova_video(imgs, soglia=24):
+def find_video(imgs, soglia=24):
     """⭐ The video window: the pixels that change in ALL the pairs of consecutive
     photos (the video is the only thing that always changes).  Returns
     ((x0, y0, x1, y1) | None, description)."""
@@ -349,8 +349,8 @@ def trova_video(imgs, soglia=24):
                 rig[y] += 1
     if max(col) == 0:
         return None, "no pixel changes in all the photos: the video does not move (or is not there)"
-    x0, x1 = _corsa_piu_lunga(col, 0.15 * max(col))
-    y0, y1 = _corsa_piu_lunga(rig, 0.15 * max(rig))
+    x0, x1 = _longest_run(col, 0.15 * max(col))
+    y0, y1 = _longest_run(rig, 0.15 * max(rig))
     if x1 < 0 or y1 < 0:
         return None, "no changing area"
     x0, x1, y0, y1 = x0 * f, (x1 + 1) * f - 1, y0 * f, (y1 + 1) * f - 1
@@ -371,7 +371,7 @@ def ritaglia(im, box, margine=0.05):
     return im.crop((int(x0 + mx), int(y0 + my), int(x1 - mx), int(y1 - my))).resize((160, 90))
 
 
-def esamina_quadro(crop):
+def examine_frame(crop):
     """A frame of the video (160x90): (ok, description, numbers).
     The background is ONE saturated colour (rotating hue); the white target covers at
     most ~9 tiles out of 144.  Tiles of a different colour beyond the target ⇒
@@ -407,45 +407,45 @@ def diff_media(a, b):
     return sum(ImageStat.Stat(ImageChops.difference(a, b)).mean) / 3.0
 
 
-def giudica_immagine(quadri, min_ok=0.9, min_cambi=0.9, max_blocco_s=4.0, soglia_cambio=6.0):
+def judge_image(quadri, min_ok=0.9, min_changes=0.9, max_block_s=4.0, change_threshold=6.0):
     """quadri: [(t_seconds, crop 160x90)].  (outcome, description, numbers)."""
     n = len(quadri)
     if n < 5:
         return "BLOCKED", "only %d photos of the video" % n, {}
-    esami = [esamina_quadro(c) for _t, c in quadri]
-    ok = sum(1 for e in esami if e[0])
-    cambi, blocco, inizio, blocco_max = 0, 0.0, None, 0.0
+    exams = [examine_frame(c) for _t, c in quadri]
+    ok = sum(1 for e in exams if e[0])
+    cambi, blocco, inizio, block_max = 0, 0.0, None, 0.0
     diffs = []
     for (t0, a), (t1, b) in zip(quadri, quadri[1:]):
         d = diff_media(a, b)
         diffs.append(round(d, 1))
-        if d > soglia_cambio:
+        if d > change_threshold:
             cambi += 1
             inizio = None
         else:
             inizio = t0 if inizio is None else inizio
-            blocco_max = max(blocco_max, t1 - inizio)
+            block_max = max(block_max, t1 - inizio)
     fr_ok = ok / float(n)
     fr_c = cambi / float(n - 1)
     dur = quadri[-1][0] - quadri[0][0]
-    primo_male = next((e[1] for e in esami if not e[0]), "")
+    first_bad = next((e[1] for e in exams if not e[0]), "")
     num = {"foto": n, "durata_s": round(dur, 1), "quadri_buoni": round(fr_ok, 3),
-           "cambi": round(fr_c, 3), "blocco_max_s": round(blocco_max, 1),
+           "cambi": round(fr_c, 3), "blocco_max_s": round(block_max, 1),
            "diff_mediana": mediana(diffs)}
     desc = ("%d photos in %.0f s: good frames %.0f%%, changes between consecutive photos %.0f%% "
             "(median difference %.1f), longest freeze %.1f s"
-            % (n, dur, 100 * fr_ok, 100 * fr_c, num["diff_mediana"] or 0, blocco_max))
-    if fr_c < min_cambi or blocco_max > max_blocco_s:
+            % (n, dur, 100 * fr_ok, 100 * fr_c, num["diff_mediana"] or 0, block_max))
+    if fr_c < min_changes or block_max > max_block_s:
         return "FAIL", "STILL IMAGE: " + desc, num
     if fr_ok < min_ok:
-        return "FAIL", "wrong frames (%s): %s" % (primo_male, desc), num
+        return "FAIL", "wrong frames (%s): %s" % (first_bad, desc), num
     return "PASS", desc, num
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE CERTIFICATION of the pure functions
 # ═══════════════════════════════════════════════════════════════════════════
-def _quadro_sintetico(tinta, mx, my, mosaico=False):
+def _synthetic_frame(tinta, mx, my, mosaico=False):
     from PIL import Image, ImageDraw
     import colorsys
     r, g, b = colorsys.hsv_to_rgb((tinta % 360) / 360.0, 1, 1)
@@ -459,7 +459,7 @@ def _quadro_sintetico(tinta, mx, my, mosaico=False):
     return im
 
 
-def certifica_comune():
+def certify_common():
     from PIL import Image
     bene = True
 
@@ -471,22 +471,22 @@ def certifica_comune():
     def camp(hz, rms, n=60, stato="running"):
         return [{"t": i * 100.0, "stato": stato, "rms": rms, "hz": hz} for i in range(n)]
 
-    e, d, _ = giudica_suono(camp(440.3, 0.35), 440)
+    e, d, _ = judge_sound(camp(440.3, 0.35), 440)
     di("tone 440 expected 440 ⇒ PASS", e == "PASS", d)
-    e, d, _ = giudica_suono(camp(440.3, 0.35), 660)
+    e, d, _ = judge_sound(camp(440.3, 0.35), 660)
     di("tone 440 expected 660 ⇒ FAIL", e == "FAIL", d)
-    e, d, _ = giudica_suono(camp(None, 0.0), 440)
+    e, d, _ = judge_sound(camp(None, 0.0), 440)
     di("silence ⇒ FAIL", e == "FAIL", d)
-    e, d, _ = giudica_suono(camp(440, 0.35, stato="suspended"), 440)
+    e, d, _ = judge_sound(camp(440, 0.35, stato="suspended"), 440)
     di("context suspended (old frame) ⇒ FAIL", e == "FAIL", d)
     buco = camp(660, 0.3, 300)
     for c in buco[100:125]:
         c["rms"] = 0.0
-    e, d, _ = giudica_suono(buco, 660, min_frazione=0.9, max_buco_s=1.0)
+    e, d, _ = judge_sound(buco, 660, min_frazione=0.9, max_buco_s=1.0)
     di("gap of 2.5 s over 30 s ⇒ FAIL", e == "FAIL", d)
-    e, d, _ = giudica_suono(camp(440, 0.35, 3), 440)
+    e, d, _ = judge_sound(camp(440, 0.35, 3), 440)
     di("three samples ⇒ BLOCKED", e == "BLOCKED", d)
-    e, d, _ = giudica_suono(camp(440, 0.005), 440)
+    e, d, _ = judge_sound(camp(440, 0.005), 440)
     di("below threshold (−46 dBFS) ⇒ FAIL", e == "FAIL", d)
 
     # the video: a grey desktop canvas with the video at (300,200)
@@ -494,29 +494,29 @@ def certifica_comune():
         t = Image.new("RGB", (1920, 1080), (40, 44, 52))
         t.paste(q.resize((640, 360)), (300, 200))
         return t
-    fotos = [tela(_quadro_sintetico(i * 94, 20 + (i * 97) % 540, 30 + (i * 53) % 260))
+    fotos = [tela(_synthetic_frame(i * 94, 20 + (i * 97) % 540, 30 + (i * 53) % 260))
              for i in range(12)]
-    box, d = trova_video(fotos[:4])
+    box, d = find_video(fotos[:4])
     ok = box is not None and abs(box[0] - 300) <= 4 and abs(box[2] - 940) <= 4
     di("the video window is found by difference", ok, "%s · %s" % (box, d))
     if box:
         quadri = [(i * 2.0, ritaglia(f, box)) for i, f in enumerate(fotos)]
-        e, d, _ = giudica_immagine(quadri)
+        e, d, _ = judge_image(quadri)
         di("moving video ⇒ PASS", e == "PASS", d)
         fermo = [(i * 2.0, quadri[3][1]) for i in range(12)]
-        e, d, _ = giudica_immagine(fermo)
+        e, d, _ = judge_image(fermo)
         di("STILL video ⇒ FAIL", e == "FAIL", d)
-        mos = [(i * 2.0, ritaglia(tela(_quadro_sintetico(i * 94, 300, 200, mosaico=True)), box))
+        mos = [(i * 2.0, ritaglia(tela(_synthetic_frame(i * 94, 300, 200, mosaico=True)), box))
                for i in range(12)]
-        e, d, _ = giudica_immagine(mos)
+        e, d, _ = judge_image(mos)
         di("MOSAIC video ⇒ FAIL", e == "FAIL", d)
         nero = [(i * 2.0, Image.new("RGB", (160, 90), (0, 0, 0))) for i in range(12)]
-        e, d, _ = giudica_immagine(nero)
+        e, d, _ = judge_image(nero)
         di("BLACK video ⇒ FAIL", e == "FAIL", d)
     fermi = [fotos[0]] * 4
-    box, d = trova_video(fermi)
+    box, d = find_video(fermi)
     di("no moving video ⇒ not found", box is None, d)
-    wav = onda_wav(440, 0.1)
+    wav = wave_wav(440, 0.1)
     di("the wave: WAV header and length", wav[:4] == b"RIFF" and len(wav) == 44 + 4800 * 4,
        "%d bytes" % len(wav))
     return 0 if bene else 1
@@ -534,7 +534,7 @@ def salva_json(o, nome, dati):
 # ═══════════════════════════════════════════════════════════════════════════
 #  ssh that does not give up at a passing refusal
 # ═══════════════════════════════════════════════════════════════════════════
-_PASSEGGERO = ("Connection closed by", "kex_exchange_identification", "Connection reset by",
+_TRANSIENT = ("Connection closed by", "kex_exchange_identification", "Connection reset by",
                "ssh_exchange_identification")
 
 
@@ -551,7 +551,7 @@ def robusta(sc, tentativi=6):
     def dentro(riga, secondi=90):
         c, t = originale(riga, secondi)
         for k in range(tentativi):
-            if c == 0 or "@@codice=" in (t or "") or not any(p in (t or "") for p in _PASSEGGERO):
+            if c == 0 or "@@codice=" in (t or "") or not any(p in (t or "") for p in _TRANSIENT):
                 break
             time.sleep(1.0 + k)
             c, t = originale(riga, secondi)
@@ -561,13 +561,13 @@ def robusta(sc, tentativi=6):
     return sc
 
 
-def entra_con_orecchio(s):
+def enter_with_ear(s):
     """The page, the ear BEFORE the login (the audio context can be born
     right after admission, if the session is already playing), then the login."""
     ok, m = s.pr.apri()
     if not ok:
         return False, "the page does not open: " + m
-    ok, m = metti_orecchio(s.g)
+    ok, m = put_ear(s.g)
     if not ok:
         return False, m
     ok, m = s.entra(apri=False)

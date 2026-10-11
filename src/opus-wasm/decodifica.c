@@ -17,12 +17,12 @@
 
 #define FREQ 48000
 #define CANALI 2
-#define MAX_FOTOGRAMMI 5760           /* 120 ms at 48 kHz: Opus's maximum */
-#define MAX_PACCHETTO 4000            /* a datagram is well below */
+#define MAX_FRAMES 5760           /* 120 ms at 48 kHz: Opus's maximum */
+#define MAX_PACKET 4000            /* a datagram is well below */
 
 static unsigned char stato[64 * 1024] __attribute__((aligned(16)));
-static unsigned char pacchetto[MAX_PACCHETTO];
-static float uscita[MAX_FOTOGRAMMI * CANALI];
+static unsigned char pacchetto[MAX_PACKET];
+static float uscita[MAX_FRAMES * CANALI];
 static int pronto;
 
 /* 0 = ready; <0 = libopus error; -1000 = the state does not fit. */
@@ -41,7 +41,7 @@ __attribute__((export_name("rx_pacchetto")))
 unsigned char *rx_pacchetto(void) { return pacchetto; }
 
 __attribute__((export_name("rx_pacchetto_max")))
-int rx_pacchetto_max(void) { return MAX_PACCHETTO; }
+int rx_pacchetto_max(void) { return MAX_PACKET; }
 
 __attribute__((export_name("rx_uscita")))
 float *rx_uscita(void) { return uscita; }
@@ -53,8 +53,8 @@ int rx_decodifica(int n)
 {
 	if (!pronto)
 		return OPUS_INVALID_STATE;
-	if (n <= 0 || n > MAX_PACCHETTO)
+	if (n <= 0 || n > MAX_PACKET)
 		return OPUS_BAD_ARG;
 	return opus_decode_float((OpusDecoder *)stato, pacchetto, n, uscita,
-	                         MAX_FOTOGRAMMI, 0);
+	                         MAX_FRAMES, 0);
 }

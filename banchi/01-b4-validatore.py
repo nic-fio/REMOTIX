@@ -194,10 +194,10 @@ MAGIA = b"RCPREG\x00\x03"
 # ⛔ The old ones are ALL kept, each with its own sentence: «it is not of the
 #    format» and «it is of another version» send one looking in two places, and
 #    so do two different old versions.
-MAGIA_V1 = b"RCPREG\x00\x01"
-MAGIA_V2 = b"RCPREG\x00\x02"
-MAGIA_VECCHIA = MAGIA_V1        # ⚠ the old name stays: 01-b12 imports it
-RIEMPIMENTO = 0x2A  # the byte of the obscured intervals (RCP.md §11.1)
+MAGIC_V1 = b"RCPREG\x00\x01"
+MAGIC_V2 = b"RCPREG\x00\x02"
+OLD_MAGIC = MAGIC_V1        # ⚠ the old name stays: 01-b12 imports it
+FILL = 0x2A  # the byte of the obscured intervals (RCP.md §11.1)
 
 # The block of §11.1: direction, channel, end, istante_ms, stream, length,
 # quanti_oscurati.  ⭐ `istante_ms` since 21 Aug 2026: 21 bytes, no longer 17.
@@ -209,16 +209,16 @@ FINE = {CONTINUA: "continua", FIN: "FIN", RESET: "RESET_STREAM"}
 VIDEO = 0x03
 CONTROLLO = 0x00
 INPUT = 0x01
-T_PUNTATORE = 0x0101            # §7.3
+T_POINTER = 0x0101            # §7.3
 OROLOGIO = {1: "client", 2: "server"}
 # §7.1: «for one second».  The same number as `rcp.c` (`TELA_GRAZIA`).
-GRAZIA_MS = 1000
+GRACE_MS = 1000
 # ⛔ The T4 cap, and where it comes from: §7.1 grants the server `RCP_TELA_ATTESA_MS`
 #    = 3000 ms to get a frame at the new size delivered **before**
 #    answering.  ⇒ After a `TELA(ADATTATA)` that frame already exists, and three
 #    seconds are generous.  ⚠ It is a READING, not a line of RCP.md: if it is
 #    wrong the place to fix is §7.1, not this file.
-T4_TETTO_MS = 3000
+T4_CAP_MS = 3000
 
 
 def cerca_in_su(nome, da):
@@ -318,9 +318,9 @@ CAPACITA = {
 # ⛔ The underscore is there since 10 Aug 2026: the first run of this
 #    validator found that §4.3 forbade a character that §4.3 itself uses in
 #    `video.misura_massima`.  The cure is in RCP.md.
-NOME_LECITO = set("abcdefghijklmnopqrstuvwxyz0123456789._")
+ALLOWED_NAME_CHARS = set("abcdefghijklmnopqrstuvwxyz0123456789._")
 
-MASSIMO_MESSAGGIO = 1024 * 1024  # §6.1
+MAX_MESSAGE_LEN = 1024 * 1024  # §6.1
 
 
 class NonConforme(Exception):
@@ -380,7 +380,7 @@ class Lettore:
     def resta(self):
         return len(self.b) - self.i
 
-    def _prendi(self, n, che, ammetti_oscurato=False):
+    def _prendi(self, n, che, admit_obscured=False):
         if self.resta() < n:
             raise NonConforme(
                 "RCP.md §6.1",
@@ -400,12 +400,12 @@ class Lettore:
         #    inside a choice of the recorder, and §11.1 asks for two different
         #    sentences for *«a malformed recording»* and *«a non-compliant
         #    wire»*.  ⇒ it is outcome **2**.
-        # ⚠ `ammetti_oscurato` is passed only by `stringa()` for the DATA of the
+        # ⚠ `admit_obscured` is passed only by `stringa()` for the DATA of the
         #   string, which are the only thing §11.1 exists to hide (§4.4, the
         #   password).  Its LENGTH is not: obscuring it would make the body
         #   unreadable, which is the perpetual false red §11.1 was written
         #   against.
-        if not ammetti_oscurato and self.oscurato(self.i, n):
+        if not admit_obscured and self.oscurato(self.i, n):
             raise Malformata(
                 f"an obscured interval covers {che}, at offset "
                 f"{self.i} of the payload (byte {self.ass()} in the file).  ⛔ §11.1 "
@@ -440,21 +440,21 @@ class Lettore:
            without anybody noticing, because the colour is the right one
            (finding R7.12).
         """
-        inizio_campo = self.i
+        field_start = self.i
         n = self.u16(f"the length of {che}")
-        dati_inizio = self.i
-        b = self._prendi(n, che, ammetti_oscurato=True)
+        data_start = self.i
+        b = self._prendi(n, che, admit_obscured=True)
         if n < minimo:
             raise NonConforme(regola,
                               f"{che} is {n} bytes long, the minimum is {minimo}",
-                              self.base + inizio_campo, inizio_campo)
+                              self.base + field_start, field_start)
         if massimo is not None and n > massimo:
             raise NonConforme(regola,
                               f"{che} is {n} bytes long, the maximum is {massimo}",
-                              self.base + inizio_campo, inizio_campo)
+                              self.base + field_start, field_start)
         # ⛔ Inside an obscured interval one does NOT look: those bytes are
         #    padding, and judging them would be judging the bench.
-        if self.oscurato(dati_inizio, n):
+        if self.oscurato(data_start, n):
             return None
         try:
             return b.decode("utf-8")
@@ -462,7 +462,7 @@ class Lettore:
             raise NonConforme(
                 "RCP.md §6.0",
                 f"{che} is not valid UTF-8 ({e.reason}) at byte {e.start} of the string",
-                self.base + dati_inizio + e.start, dati_inizio + e.start) from None
+                self.base + data_start + e.start, data_start + e.start) from None
 
     def fine(self, nome):
         """⛔ Not one byte more: §6.0 forbids alignment and padding."""
@@ -475,7 +475,7 @@ class Lettore:
 
 
 # ---------------------------------------------------------------------------
-def leggi_capacita(le, nome_messaggio, lato):
+def leggi_capacita(le, message_name, lato):
     """RCP.md §4.3 — the list of capabilities, with all its rules."""
     quante = le.u16("the number of capabilities")
     visti, valori = {}, {}
@@ -487,7 +487,7 @@ def leggi_capacita(le, nome_messaggio, lato):
                             regola="RCP.md §4.3")
         if nome is None:
             continue  # obscured: not judged
-        if not nome or any(c not in NOME_LECITO for c in nome):
+        if not nome or any(c not in ALLOWED_NAME_CHARS for c in nome):
             raise NonConforme("RCP.md §4.3",
                               f"the capability name {nome!r} is not made of a-z, 0-9 and dot",
                               le.base + inizio, inizio)
@@ -590,7 +590,7 @@ def corpo(tipo, nome, le, lato, stato=None):
         #    byte was the width's anyway (finding R7.12).
         off_lar = le.i
         lar = le.u32("tela_larghezza")
-        off_alt = le.i
+        off_height = le.i
         alt = le.u32("tela_altezza")
         le.u32("vista_larghezza")
         le.u32("vista_altezza")
@@ -602,14 +602,14 @@ def corpo(tipo, nome, le, lato, stato=None):
         #    reduces it and grants it, so it is NOT a client violation —
         #    the minimum and the parity are checked, and the maximum stays with
         #    the GRANTED canvas (SESSIONE and TELA)
-        for eti, v, off, mi, ma in (("tela_larghezza", lar, off_lar, 320, None),
-                                    ("tela_altezza", alt, off_alt, 240, None)):
+        for lbl, v, off, mi, ma in (("tela_larghezza", lar, off_lar, 320, None),
+                                    ("tela_altezza", alt, off_height, 240, None)):
             if v < mi:
                 raise NonConforme("RCP.md §4.5",
-                                  f"{eti} = {v}, below the minimum {mi}",
+                                  f"{lbl} = {v}, below the minimum {mi}",
                                   le.base + off, off)
             if v % 2:
-                raise NonConforme("RCP.md §4.5", f"{eti} = {v} is odd",
+                raise NonConforme("RCP.md §4.5", f"{lbl} = {v} is odd",
                                   le.base + off, off)
     elif nome == "SESSIONE":
         st = le.u8("the state")
@@ -656,14 +656,14 @@ def corpo(tipo, nome, le, lato, stato=None):
         #    resurrect R1.17 from the arbiter's side.
         off_lar = le.i
         lar = le.u32("larghezza")
-        off_alt = le.i
+        off_height = le.i
         alt = le.u32("altezza")
-        for eti, v, off in (("larghezza", lar, off_lar),
-                            ("altezza", alt, off_alt)):
+        for lbl, v, off in (("larghezza", lar, off_lar),
+                            ("altezza", alt, off_height)):
             if v == 0:
                 raise NonConforme(
                     "RCP.md §7.1",
-                    f"VISTA with {eti} = 0: §7.1 says «any size from 1x1 "
+                    f"VISTA with {lbl} = 0: §7.1 says «any size from 1x1 "
                     f"up is legal» — zero is not «up», and there is "
                     f"no «absent» value declared for this field "
                     f"(§6.0)",
@@ -713,7 +713,7 @@ def corpo(tipo, nome, le, lato, stato=None):
                               le.base + le.i - 1, le.i - 1)
         off_lar = le.i
         lar = le.u32("tela_larghezza")
-        off_alt = le.i
+        off_height = le.i
         alt = le.u32("tela_altezza")
         # ⛔ §7.1: these two fields are «the canvas in force AFTER this
         #    message» — and they are so **also** when the outcome is RIFIUTATA,
@@ -772,13 +772,13 @@ def corpo(tipo, nome, le, lato, stato=None):
                     f"had declared video.misura_massima = {m[0]}x{m[1]}",
                     le.base + off_lar, off_lar)
             if es == 1:
-                for eti, v, off, mi, ma in (
+                for lbl, v, off, mi, ma in (
                         ("tela_larghezza", lar, off_lar, 320, 4096),
-                        ("tela_altezza", alt, off_alt, 240, 2304)):
+                        ("tela_altezza", alt, off_height, 240, 2304)):
                     if not (mi <= v <= ma):
                         raise NonConforme(
                             "RCP.md §4.5",
-                            f"TELA(ADATTATA) grants {eti} = {v}, outside "
+                            f"TELA(ADATTATA) grants {lbl} = {v}, outside "
                             f"{mi}..{ma}: §4.5 declares the limits «normative» "
                             f"for the canvas, and §6.2 sends every frame at "
                             f"this size",
@@ -786,7 +786,7 @@ def corpo(tipo, nome, le, lato, stato=None):
                     if v % 2:
                         raise NonConforme(
                             "RCP.md §4.5",
-                            f"TELA(ADATTATA) grants {eti} = {v}, odd: "
+                            f"TELA(ADATTATA) grants {lbl} = {v}, odd: "
                             f"«an odd size gets rounded by whoever "
                             f"encodes, silently» — and the refusal must be said "
                             f"here, where one can say why",
@@ -796,7 +796,7 @@ def corpo(tipo, nome, le, lato, stato=None):
                 stato.tela_da = "TELA(ADATTATA) (§7.1)"
                 # ⭐ The instant of the `TELA(ADATTATA)`: it is the start date of
                 #    the grace second (§7.1) and the point from which T4 counts.
-                stato.tela_adattata_ms = stato.istante
+                stato.canvas_adapted_ms = stato.istante
                 stato.adattate.append((le.base + off_lar, (lar, alt),
                                        stato.istante))
     else:
@@ -868,20 +868,20 @@ class Stato:
         #    to the GRANTED canvas — from `SESSIONE` and from `TELA`.
         self.misura_massima = None
         # ⛔ §8.1: whoever has already sent their own `CONGEDO` speaks no more.
-        self.congedato_da = set()
+        self.dismissed_from = set()
         self.in_volo = []           # [(nb, ass, rel, misura)] the ADATTA_TELA
         self.telate = 0             # how many TELA have answered
-        self.ultima_consumata = None  # the ADATTA_TELA the last TELA closed
-        self.ultimo_dal_client = None  # to tell «it answered VISTA»
+        self.last_consumed = None  # the ADATTA_TELA the last TELA closed
+        self.last_from_client = None  # to tell «it answered VISTA»
         self.congedo = None         # (nb, ass) of the CONGEDO, if it has passed
         # ⭐⛔ WHAT TIME MAKES POSSIBLE — 21 Aug 2026, magic 0x03.
         self.istante = 0            # the `istante_ms` of the block being read
         self.orologio = 1           # 1 = client, 2 = server (§11.1)
-        self.tela_adattata_ms = None   # when the last TELA(ADATTATA) passed
+        self.canvas_adapted_ms = None   # when the last TELA(ADATTATA) passed
         self.adattate = []          # [(ass, (W,H), instant)] — needed by T4
         self.tardi = []             # [(nb, ass, dt)] the PUNTATORE beyond the grace
-        self.serve_ancora = None    # did the server speak AFTER a late PUNTATORE?
-        self.congedo_motivo = None
+        self.still_needed = None    # did the server speak AFTER a late PUNTATORE?
+        self.farewell_reason = None
 
     def chiede_tela(self, nb, ass, rel, misura):
         self.in_volo.append((nb, ass, rel, misura))
@@ -897,13 +897,13 @@ class Stato:
         product has got where the specification has not got yet.
         """
         if self.in_volo:
-            self.ultima_consumata = self.in_volo.pop(0)
+            self.last_consumed = self.in_volo.pop(0)
             self.telate += 1
             return
         # ── T2: there has already been a TELA that consumed a request, and
         #    since then the client has not sent any others.
-        if self.ultima_consumata is not None:
-            vecchio = self.ultima_consumata
+        if self.last_consumed is not None:
+            vecchio = self.last_consumed
             raise NonConforme(
                 "RCP.md §6.2",
                 f"second TELA for a single ADATTA_TELA: the request of "
@@ -914,14 +914,14 @@ class Stato:
                 f"holds or throws away the frames against the wrong canvas",
                 ass, rel)
         # ── T1: no request was ever made.
-        dopo_vista = (" ⚠ and it arrived right after a VISTA: §7.1 says that "
+        after_view = (" ⚠ and it arrived right after a VISTA: §7.1 says that "
                       "«VISTA MUST NOT change the canvas», and «the only "
                       "message that changes the canvas is ADATTA_TELA»"
-                      if self.ultimo_dal_client == "VISTA" else "")
+                      if self.last_from_client == "VISTA" else "")
         raise NonConforme(
             "RCP.md §7.1",
             f"unsolicited TELA: no ADATTA_TELA is unanswered."
-            f"{dopo_vista}  ⛔ §6.2 gives the client a single way of accepting an "
+            f"{after_view}  ⛔ §6.2 gives the client a single way of accepting an "
             f"unexpected size — holding «as long as an ADATTA_TELA the "
             f"client sent remains» — and «if no ADATTA_TELA is "
             f"unanswered nothing is held»: this TELA makes a healthy "
@@ -948,7 +948,7 @@ class Stato:
         session, but a `CONGEDO` is not a FIN, and the other side still has its
         own to send.
         """
-        if verso is not None and verso in self.congedato_da:
+        if verso is not None and verso in self.dismissed_from:
             chi = "client" if verso == CLIENT else "server"
             return (f"the {chi} has already sent its CONGEDO, and §8.1 wants it "
                     f"«before closing the session»: after that it sends "
@@ -1019,7 +1019,7 @@ FINTE = {
 def controlla_impronta(nb, ini, qua, impronta):
     perche = FINTE.get(impronta)
     if perche is None and impronta == hashlib.sha256(
-            bytes([RIEMPIMENTO]) * qua).digest():
+            bytes([FILL]) * qua).digest():
         perche = ("SHA-256 of the 0x2A PADDING: the recorder fingerprinted "
                   "what it put in, not what it took out")
     if perche:
@@ -1039,14 +1039,14 @@ def valida(percorso):
     #    with two different cures: the first sends one looking for whoever broke
     #    the file, the second to regenerate it.  ⛔ And misreading it is not an
     #    option: the old block is 16 bytes, this reader wants 17.
-    if len(d) >= 8 and d[:8] == MAGIA_V1:
+    if len(d) >= 8 and d[:8] == MAGIC_V1:
         raise Malformata(
             "it is a recording in the OLD format, «RCPREG 0x00 0x01»: the "
             "block carries neither `fine` nor `istante_ms`, and is 16 bytes "
             "instead of 21.  ⛔ It is not misread — §11.1, 12 Aug "
             "2026 — and it is not a broken file: it is REGENERATED with "
             "`01-b4-registrazioni.py`")
-    if len(d) >= 8 and d[:8] == MAGIA_V2:
+    if len(d) >= 8 and d[:8] == MAGIC_V2:
         raise Malformata(
             "it is a recording in the format of 12 August, «RCPREG 0x00 "
             "0x02»: the block does not carry `istante_ms` and is 17 bytes instead "
@@ -1083,18 +1083,18 @@ def valida(percorso):
     #    «No violation» without them was true even on a file of zero
     #    blocks (finding R7.4).
     visti = 0        # blocks read
-    di_controllo = 0  # blocks on channel 0x00
+    control_blocks = 0  # blocks on channel 0x00
     messaggi = 0     # control messages read
     giudicati = 0    # ... of which with the body actually judged
     di_video = 0     # blocks on channel 0x03
-    flussi_video = 0  # ... grouped by stream: one stream, one frame
+    video_streams = 0  # ... grouped by stream: one stream, one frame
     # ⛔ The two rules of 12 August that speak of STREAMS and not of bytes: they
     #    are decided here, while leafing through, because a single-frame judge
     #    knows neither which stream it arrived on nor what had already passed.
-    sessione_vista = False          # P1 — §2.5
-    stream_di_controllo = set()     # P3 — §2.5
-    controllo_chiuso_dal_server = None   # T3 — §7.1
-    controllo_chiuso_dal_client = None   # T3 — §4.2, and the contradiction
+    session_seen = False          # P1 — §2.5
+    control_stream = set()     # P3 — §2.5
+    check_closed_by_server = None   # T3 — §7.1
+    check_closed_by_client = None   # T3 — §4.2, and the contradiction
     flussi, ordine = {}, []
     ultimo_istante = 0
     # ⭐ The two lists that time makes possible — see at the bottom.
@@ -1150,7 +1150,7 @@ def valida(percorso):
         #    format that requires it, and an interval of zeros «by chance»
         #    legitimate would be an obscuring that cannot be seen.
         for o, q in oscurati:
-            if any(b != RIEMPIMENTO for b in carico[o:o + q]):
+            if any(b != FILL for b in carico[o:o + q]):
                 raise Malformata(
                     f"block {nb}: an obscured interval is not made of 0x2A")
 
@@ -1177,8 +1177,8 @@ def valida(percorso):
                                   #    frame that follows — see the box
                                   #    in the judgement loop.
                                   "tela_n": len(stato.adattate),
-                                  "dopo_sessione": sessione_vista,
-                                  "sul_controllo": stream in stream_di_controllo,
+                                  "dopo_sessione": session_seen,
+                                  "sul_controllo": stream in control_stream,
                                   # ⛔ the canvas IN FORCE when the stream
                                   #    opens, not the end-of-file one: judging
                                   #    a frame with a canvas granted after
@@ -1197,7 +1197,7 @@ def valida(percorso):
                                   #  as an `ADATTA_TELA` the client
                                   #  sent remains»*.
                                   #  ⛔ `02-filo-fotogramma.py` has
-                                  #  `adatta_spedito()` and `adatta_in_volo`
+                                  #  `adatta_spedito()` and `fit_in_flight`
                                   #  written on purpose for this — and it names
                                   #  in full *«no reader that imports
                                   #  this file (01-b4-validatore.py …)»* —
@@ -1259,18 +1259,18 @@ def valida(percorso):
             # ═══════════════════════════════════════════════════════════
             if (canale == INPUT and verso == CLIENT and lung >= 26
                     and stato.tela is not None and stato.tela_prec is not None
-                    and stato.tela_adattata_ms is not None):
-                tipo_i = struct.unpack("!H", carico[:2])[0]
-                if tipo_i == T_PUNTATORE:
+                    and stato.canvas_adapted_ms is not None):
+                type_i = struct.unpack("!H", carico[:2])[0]
+                if type_i == T_POINTER:
                     x, y = struct.unpack("!II", carico[18:26])
                     fuori = x >= stato.tela[0] or y >= stato.tela[1]
                     dentro_prima = (x < stato.tela_prec[0]
                                     and y < stato.tela_prec[1])
-                    dt = istante - stato.tela_adattata_ms
+                    dt = istante - stato.canvas_adapted_ms
                     if fuori and dentro_prima:
-                        if stato.orologio == CLIENT and dt > GRAZIA_MS:
+                        if stato.orologio == CLIENT and dt > GRACE_MS:
                             stato.tardi.append((nb, base, dt, x, y))
-                            stato.serve_ancora = False
+                            stato.still_needed = False
                         else:
                             # ⛔ NOT JUDGEABLE, and it is SAID.  An arbiter that
                             #    keeps quiet about what it does not know is an
@@ -1283,7 +1283,7 @@ def valida(percorso):
                                   f"recording: "
                                   + (f"the times are the "
                                      f"{OROLOGIO[stato.orologio]}'s and "
-                                     f"{dt} <= {GRAZIA_MS} ms, and the server's "
+                                     f"{dt} <= {GRACE_MS} ms, and the server's "
                                      f"true interval is LONGER than this"
                                      if stato.orologio == CLIENT else
                                      f"the clock is the server's and this "
@@ -1292,48 +1292,48 @@ def valida(percorso):
             print(f"   block {nb}: channel {CANALI[canale]} from the {chi}, "
                   f"{lung} bytes — not judged by this validator")
             continue
-        di_controllo += 1
-        stream_di_controllo.add(stream)
+        control_blocks += 1
+        control_stream.add(stream)
         # ⛔ «The server kept serving» is measured HERE: a control block from
         #    the server after a `PUNTATORE` beyond the grace.  ⚠ A `CONGEDO`
         #    does not count — that is the refusal — and it is removed further
         #    down, when the type is read.
         if stato.tardi and verso == SERVER:
-            stato.serve_ancora = (nb, base)
+            stato.still_needed = (nb, base)
 
         # The control channel lives only on stream 0 of the session (§2.5).
         le = Lettore(carico, base, oscurati)
         while le.resta():
-            inizio_msg = le.i
+            msg_start = le.i
             tipo = le.u16("the type")
             lung_msg = le.u32("the length")
-            if lung_msg > MASSIMO_MESSAGGIO:
+            if lung_msg > MAX_MESSAGE_LEN:
                 raise NonConforme("RCP.md §6.1",
                                   f"length {lung_msg} beyond the 1 MiB cap",
-                                  base + inizio_msg + 2, inizio_msg + 2)
+                                  base + msg_start + 2, msg_start + 2)
             if le.resta() < lung_msg:
                 raise NonConforme(
                     "RCP.md §6.1",
                     f"declares {lung_msg} bytes of body and there are {le.resta()}",
-                    base + inizio_msg + 2, inizio_msg + 2)
+                    base + msg_start + 2, msg_start + 2)
             if (tipo >> 8) != 0x00:
                 raise NonConforme("RCP.md §2.5",
                                   f"type {tipo:#06x}: high byte {tipo >> 8:#04x}, "
                                   "the control channel wants 0x00",
-                                  base + inizio_msg, inizio_msg)
+                                  base + msg_start, msg_start)
             if tipo not in TIPI:
                 raise NonConforme("RCP.md §7.1", f"unknown type {tipo:#06x}",
-                                  base + inizio_msg, inizio_msg)
-            nome, verso_atteso = TIPI[tipo]
-            if verso_atteso is not None and verso_atteso != verso:
+                                  base + msg_start, msg_start)
+            nome, expected_direction = TIPI[tipo]
+            if expected_direction is not None and expected_direction != verso:
                 raise NonConforme("RCP.md §7.1",
                                   f"{nome} cannot come from the {chi}",
-                                  base + inizio_msg, inizio_msg)
+                                  base + msg_start, msg_start)
             perche = stato.ammette(nome, verso)
             if perche:
                 raise NonConforme("RCP.md §4 (the handshake order)",
                                   f"{nome} in the wrong state: {perche}",
-                                  base + inizio_msg, inizio_msg)
+                                  base + msg_start, msg_start)
 
             # ⭐⛔ THE CANVAS COUNT — and it is done BEFORE reading the body.
             #
@@ -1346,9 +1346,9 @@ def valida(percorso):
             if nome == "ADATTA_TELA":
                 misura = (struct.unpack("!II", carico[le.i:le.i + 8])
                           if lung_msg >= 8 else None)
-                stato.chiede_tela(nb, base + inizio_msg, inizio_msg, misura)
+                stato.chiede_tela(nb, base + msg_start, msg_start, misura)
             elif nome == "TELA":
-                stato.risponde_tela(nb, base + inizio_msg, inizio_msg)
+                stato.risponde_tela(nb, base + msg_start, msg_start)
 
             sotto = Lettore(carico[le.i:le.i + lung_msg], base + le.i,
                             [(o - le.i, q) for o, q in oscurati
@@ -1361,19 +1361,19 @@ def valida(percorso):
             stato.segna(nome)
             # ⛔ P1 — §2.5: from here on the video is lawful, and before it is not.
             if nome == "SESSIONE" and verso == SERVER:
-                sessione_vista = True
+                session_seen = True
             if verso == CLIENT:
-                stato.ultimo_dal_client = nome
+                stato.last_from_client = nome
             if nome == "CONGEDO":
-                stato.congedo = (nb, base + inizio_msg)
-                stato.congedato_da.add(verso)   # §8.1: from here on it is silent
+                stato.congedo = (nb, base + msg_start)
+                stato.dismissed_from.add(verso)   # §8.1: from here on it is silent
                 # ⛔ A CONGEDO is NOT «the server kept serving»: it is the
                 #    refusal.  ⇒ the mark set above is removed, or the server
                 #    would be accused precisely for having done the right thing
                 #    — a red to the opposite defendant.
                 if verso == SERVER and stato.tardi:
-                    stato.serve_ancora = False
-                    stato.congedo_motivo = (carico[le.i] if lung_msg >= 1
+                    stato.still_needed = False
+                    stato.farewell_reason = (carico[le.i] if lung_msg >= 1
                                             else None)
             le.i += lung_msg
         # ⛔ HOW THE CONTROL CHANNEL WAS CLOSED, AND FROM WHICH SIDE.
@@ -1385,7 +1385,7 @@ def valida(percorso):
         #    with `fine = 0`.
         if fine in (FIN, RESET):
             if verso == SERVER:
-                controllo_chiuso_dal_server = (nb, fine)
+                check_closed_by_server = (nb, fine)
             else:
                 # ⛔⛔ THE **CLIENT'S** FIN DOES NOT ACCUSE THE SERVER, AND NOT
                 #     because it is a lesser end: because there `RCP.md`
@@ -1410,7 +1410,7 @@ def valida(percorso):
                 #     a FIN is not "whoever closes"»* — and **has not done it for
                 #     the `TELA`**.  It is the missing line, and this verdict
                 #     names it instead of filling it in.
-                controllo_chiuso_dal_client = (nb, fine)
+                check_closed_by_client = (nb, fine)
 
     # ⛔ THE CHECK THAT WAS THERE COULD NOT FAIL, AND THE ONE NEEDED WAS MISSING.
     #
@@ -1464,11 +1464,11 @@ def valida(percorso):
     if stato.in_volo:
         nb0, ass0, rel0, misura = stato.in_volo[0]
         che = (f"{misura[0]}x{misura[1]}" if misura else "size not read")
-        if controllo_chiuso_dal_server is not None or stato.congedo is not None:
-            comesi = ("the control channel was closed from the server side "
-                      f"({FINE[controllo_chiuso_dal_server[1]]} on block "
-                      f"{controllo_chiuso_dal_server[0]})"
-                      if controllo_chiuso_dal_server is not None else
+        if check_closed_by_server is not None or stato.congedo is not None:
+            how_to = ("the control channel was closed from the server side "
+                      f"({FINE[check_closed_by_server[1]]} on block "
+                      f"{check_closed_by_server[0]})"
+                      if check_closed_by_server is not None else
                       f"a CONGEDO passed (block {stato.congedo[0]}, byte "
                       f"{stato.congedo[1]}) — ⚠ and the server had "
                       f"TELA(RIFIUTATA, NON_ORA) available even while "
@@ -1476,15 +1476,15 @@ def valida(percorso):
             raise NonConforme(
                 "RCP.md §7.1",
                 f"ADATTA_TELA({che}) of block {nb0} without any TELA "
-                f"answering it, and {comesi}: the answer can no longer arrive.  "
+                f"answering it, and {how_to}: the answer can no longer arrive.  "
                 f"⛔ «A silence leaves the client waiting forever, and "
                 f"the symptom is \"the application froze\"».  "
                 f"⚠ {len(stato.in_volo)} are still in flight",
                 ass0, rel0)
-        if controllo_chiuso_dal_client is not None:
+        if check_closed_by_client is not None:
             print(f"   ⚠⛔ {len(stato.in_volo)} unanswered ADATTA_TELA (the "
                   f"first at byte {ass0}), and the channel was closed by the "
-                  f"**CLIENT** (block {controllo_chiuso_dal_client[0]}).")
+                  f"**CLIENT** (block {check_closed_by_client[0]}).")
             print("      ⛔ HERE RCP.md CONTRADICTS ITSELF, and this arbiter does NOT "
                   "choose:")
             print("        · §7.1 — «to every ADATTA_TELA the server MUST "
@@ -1559,14 +1559,14 @@ def valida(percorso):
         #   not record the video channel at all.  ⛔ The arbiter would have
         #   declared **every real session** non-compliant as soon as the trace
         #   contained video — that is at the first useful run.
-        ultima_tela_n = None
+        last_canvas_n = None
         for sid in ordine:
             fl = flussi[sid]
-            flussi_video += 1
+            video_streams += 1
             # ⛔ P5 — the canvas IN FORCE when THIS stream opened.
             if fl["tela"] is not None:
                 if (fl["tela_da"].startswith("TELA")
-                        and fl["tela_n"] != ultima_tela_n):
+                        and fl["tela_n"] != last_canvas_n):
                     # ⛔⛔ ONE STARTS FROM THE **PREVIOUS** CANVAS AND THEN JUMPS,
                     #     and it is not a roundabout way of saying it:
                     #     `adatta_tela` has an early return when the size does
@@ -1577,7 +1577,7 @@ def valida(percorso):
                     #  ⚠ B4 built the context with the **end-of-file** canvas
                     #    and then called `adatta_tela` on it with the **same**
                     #    size: for the judge nothing had happened.  ⇒
-                    #    `tele_recenti` stayed empty, `coda_da_svuotare()`
+                    #    `recent_canvases` stayed empty, `coda_da_svuotare()`
                     #    false, and the grace of **D14** — the frames at the
                     #    old size still in flight — **never opened**.
                     #  ⛔ A canvas change the arbiter did not see as a
@@ -1591,11 +1591,11 @@ def valida(percorso):
                 # ⚠ and if it is a TELA already replayed NOTHING is touched: the
                 #   context is already at the new size, and the key-frame debt
                 #   was already paid by the previous stream.
-                ultima_tela_n = fl["tela_n"]
+                last_canvas_n = fl["tela_n"]
             # ⛔ And the requests in flight, which are the other half of §6.2: the
             #    frame at the new size that arrived BEFORE its `TELA` is held,
             #    and holding it «is not a number: it is a condition».
-            ctx.adatta_in_volo = list(fl["in_volo"])
+            ctx.fit_in_flight = list(fl["in_volo"])
             b0 = fl["pezzi"][0]
             base0 = fl["base"]
 
@@ -1654,7 +1654,7 @@ def valida(percorso):
                     # ⛔ `fine = 0` on the last block: the stream does not close
                     #    inside the file, so COMPLETENESS is not judged —
                     #    and it is declared instead of being taken as good.
-                    print(f"   stream {sid}: {g.byte_dati} bytes of data and "
+                    print(f"   stream {sid}: {g.byte_data} bytes of data and "
                           f"`fine = 0` on the last block — ⛔ completeness "
                           f"is NOT judged (§6.2)")
                     continue
@@ -1671,8 +1671,8 @@ def valida(percorso):
     # =======================================================================
     if stato.tardi:
         nb_t, ass_t, dt_t, x_t, y_t = stato.tardi[0]
-        if stato.serve_ancora:
-            nb_s, ass_s = stato.serve_ancora
+        if stato.still_needed:
+            nb_s, ass_s = stato.still_needed
             raise NonConforme(
                 "RCP.md §7.1",
                 f"block {nb_t} carries a PUNTATORE at ({x_t},{y_t}) — valid "
@@ -1685,14 +1685,14 @@ def valida(percorso):
                 f"longer than this, not shorter — that is why the "
                 f"conclusion holds",
                 ass_t, 0)
-        if stato.congedo is not None and stato.serve_ancora is False:
-            m = stato.congedo_motivo
+        if stato.congedo is not None and stato.still_needed is False:
+            m = stato.farewell_reason
             print(f"   ⭐ §7.1: the PUNTATORE of block {nb_t} was {dt_t} ms "
                   f"after the TELA(ADATTATA) — beyond the second — and the server "
                   f"SENT A CONGEDO"
                   + (f" with reason {m:#04x}" if m is not None else "")
                   + ".  It is the right road.")
-        elif stato.serve_ancora is False:
+        elif stato.still_needed is False:
             print(f"   ⚠ §7.1: the PUNTATORE of block {nb_t} was {dt_t} ms "
                   f"after the TELA(ADATTATA), beyond the second — ⛔ but after "
                   f"it the server says nothing more and the recording "
@@ -1706,7 +1706,7 @@ def valida(percorso):
     # rounds»*.  ⭐ Not any more, if the recording also carries the VIDEO: §5.2
     # wants the first frame at the new size to be a KEY frame, and §6.2 ties the
     # 28 bytes to the canvas in force.  ⇒ If after a `TELA(ADATTATA, WxH)` frames
-    # pass for more than `T4_TETTO_MS` and **none** declares `WxH`, the
+    # pass for more than `T4_CAP_MS` and **none** declares `WxH`, the
     # server answered without touching the stage.
     #
     # ⛔ AND NOT «the first»: §6.2 explicitly allows the frame **already in
@@ -1715,46 +1715,46 @@ def valida(percorso):
     #    count — and it is the reason T4 could not be written before
     #    `istante_ms`.
     # =======================================================================
-    misure_video = []
+    video_measures = []
     for sid in ordine:
         fl = flussi[sid]
         car0 = fl["pezzi"][0][2]
         if len(car0) >= 12:
-            misure_video.append((fl["istante"],
+            video_measures.append((fl["istante"],
                                  struct.unpack("!II", car0[4:12]), fl["base"]))
-    for ass_a, misura_a, ist_a in stato.adattate:
-        dopo = [m for m in misure_video if m[0] >= ist_a]
-        if any(m[1] == misura_a for m in dopo):
+    for ass_a, size_h, ist_a in stato.adattate:
+        dopo = [m for m in video_measures if m[0] >= ist_a]
+        if any(m[1] == size_h for m in dopo):
             continue
         if not dopo:
-            print(f"   ⚠ T4 §7.1: TELA(ADATTATA, {misura_a[0]}x{misura_a[1]}) "
+            print(f"   ⚠ T4 §7.1: TELA(ADATTATA, {size_h[0]}x{size_h[1]}) "
                   f"at byte {ass_a} — ⛔ after it the recording carries "
                   f"NO frame: «was the stage touched?» is NOT "
                   f"judged on this trace")
             continue
         finestra = max(m[0] for m in dopo) - ist_a
-        if finestra > T4_TETTO_MS:
+        if finestra > T4_CAP_MS:
             viste = ", ".join(f"{m[1][0]}x{m[1][1]}" for m in dopo[:5])
             raise NonConforme(
                 "RCP.md §7.1",
-                f"T4 — TELA(ADATTATA, {misura_a[0]}x{misura_a[1]}) and then "
+                f"T4 — TELA(ADATTATA, {size_h[0]}x{size_h[1]}) and then "
                 f"{len(dopo)} frames in {finestra} ms, NONE at the granted "
                 f"size (seen: {viste}).  ⛔ §5.2 wants a KEY frame at the "
                 f"new size and §6.2 ties the 28 bytes to the canvas in force: a "
                 f"server that answers ADATTATA and does not touch the stage is "
                 f"compliant on every other rule, and this is the only one that "
-                f"sees it.  ⚠ The {T4_TETTO_MS} ms cap is a READING of §7.1 "
+                f"sees it.  ⚠ The {T4_CAP_MS} ms cap is a READING of §7.1 "
                 f"(the ADATTA_TELA deadline), not a line of RCP.md",
                 ass_a, 0)
-        print(f"   ⚠ T4 §7.1: TELA(ADATTATA, {misura_a[0]}x{misura_a[1]}) and "
+        print(f"   ⚠ T4 §7.1: TELA(ADATTATA, {size_h[0]}x{size_h[1]}) and "
               f"{len(dopo)} frames in {finestra} ms, none at the granted "
-              f"size — ⛔ below the {T4_TETTO_MS} ms cap: it is NOT "
+              f"size — ⛔ below the {T4_CAP_MS} ms cap: it is NOT "
               f"judged, the recording is too short")
 
     # ⛔ AND «COMPLIANT» IS SAID WITH THE DENOMINATOR, OR IT IS NOT SAID.
-    print(f"\n   looked at: {visti} blocks, of which {di_controllo} on the "
+    print(f"\n   looked at: {visti} blocks, of which {control_blocks} on the "
           f"control channel and {di_video} on the video channel · {messaggi} messages "
-          f"read, {giudicati} with the body judged · {flussi_video} video "
+          f"read, {giudicati} with the body judged · {video_streams} video "
           f"streams")
     # ⛔ AND THE DENOMINATOR OF THE CANVAS, since 16 Aug 2026.  «Compliant» on a
     #    trace with **zero** ADATTA_TELA says nothing about the seven canvas
@@ -1773,13 +1773,13 @@ def valida(percorso):
     #    truth.  ⛔ Today those frames are the object of the judgement, and
     #    exiting 3 would be acquitting without having looked — the very thing
     #    code 3 exists to prevent.
-    if messaggi == 0 and flussi_video == 0:
+    if messaggi == 0 and video_streams == 0:
         raise NienteDaGiudicare(
-            f"{visti} blocks, {di_controllo} on the control channel and "
+            f"{visti} blocks, {control_blocks} on the control channel and "
             f"{di_video} on the video channel, ZERO control messages and ZERO "
             f"video streams")
     print(f"   ⭐ compliant: no violation in {messaggi} messages and "
-          f"{flussi_video} video streams")
+          f"{video_streams} video streams")
     return 0
 
 

@@ -76,7 +76,7 @@ import subprocess
 import sys
 import tempfile
 
-MARCHE_ESTERNE = ("⟨v1⟩", "⟨mutter⟩", "⟨gnome⟩", "⟨lsquic⟩", "⟨quiche⟩",
+EXTERNAL_MARKS = ("⟨v1⟩", "⟨mutter⟩", "⟨gnome⟩", "⟨lsquic⟩", "⟨quiche⟩",
                   "⟨ngtcp2⟩", "⟨kwin⟩", "⟨xrdp⟩", "⟨esterno⟩")
 # the historical papers: photographs of what was, they are not chased
 ESCLUSE = ("fondamenta/", "memoria/")
@@ -86,13 +86,13 @@ ESCLUSE = ("fondamenta/", "memoria/")
 #    recipe to get one out.  ⇒ Citing them is PROVENANCE and it is kept: it says
 #    where a measurement comes from.  ⛔ **Linking them** is not: a link promises to open.
 #    That is why they are here and not in check 3, which catches the links anyway.
-TOLTI_APPOSTA = ("fasi/rapporti/", "web/rapporti/")
+DELIBERATELY_REMOVED = ("fasi/rapporti/", "web/rapporti/")
 
 ECCEZIONI = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                          "11-c16-eccezioni.txt")
 
 
-def eccezioni_dichiarate(percorso=ECCEZIONI):
+def declared_exceptions(percorso=ECCEZIONI):
     """⛔ the exceptions live in a file, not in the code: so they are COUNTED"""
     fuori = []
     try:
@@ -117,7 +117,7 @@ RX_RIGA  = re.compile(r'`([A-Za-z0-9_./-]+\.(?:c|h|py|sh|html)):([0-9]+)`')
 # ⭐ THE FROZEN CODE — `fondamenta/` is the v1 product, closed and still.
 #    A coordinate in there **does not age**, because there is nothing that
 #    moves it.  ⇒ Forbidding those too would be a rule without a defect behind it.
-CONGELATO = ("fondamenta/",)
+FROZEN_V = ("fondamenta/",)
 RX_PERC  = re.compile(r'`([A-Za-z0-9_][A-Za-z0-9_./-]*\.(?:c|h|py|sh|md|html|json|jsonl|pam|rs))`')
 RX_LINK  = re.compile(r'\[[^\]]+\]\(([A-Za-z0-9_][A-Za-z0-9_./-]*\.(?:md|png|jpg|sh|py|c|h))\)')
 # ⚠ 11 Oct 2026: the documents went to English (§10.38) and the heading with them,
@@ -135,7 +135,7 @@ def documenti(radice):
     return [f for f in fuori.split() if not f.startswith(ESCLUSE)]
 
 
-def elenco_file(radice):
+def file_list(radice):
     fuori = subprocess.check_output(["git", "-C", radice, "ls-files"], text=True)
     tutti = set(fuori.split())
     nomi = set(p.rsplit("/", 1)[-1] for p in tutti)
@@ -144,11 +144,11 @@ def elenco_file(radice):
 
 def guarda(radice, eccezioni=None):
     """returns (coordinate, percorsi_morti, link_rotti, riprese) — each a list"""
-    scusati = eccezioni if eccezioni is not None else eccezioni_dichiarate()
+    excused = eccezioni if eccezioni is not None else declared_exceptions()
     docs = documenti(radice)
     if docs is None:
         return None
-    tutti, nomi = elenco_file(radice)
+    tutti, nomi = file_list(radice)
     coord, morti, rotti, riprese = [], [], [], []
     for d in docs:
         p = os.path.join(radice, d)
@@ -159,18 +159,18 @@ def guarda(radice, eccezioni=None):
             continue
         for n, riga in enumerate(righe, 1):
             for m in RX_RIGA.finditer(riga):
-                f_cit = m.group(1)
-                if f_cit.startswith(CONGELATO):
+                f_cited = m.group(1)
+                if f_cited.startswith(FROZEN_V):
                     continue
                 vivo = any(os.path.exists(os.path.join(radice, x))
-                           for x in (f_cit, "src/" + f_cit, "banchi/" + f_cit))
+                           for x in (f_cited, "src/" + f_cited, "banchi/" + f_cited))
                 if vivo:
                     coord.append(f"{d}:{n}  {m.group(0)}")
             if RX_RIPR.search(riga) and riga.lstrip("> ").startswith("#"):
                 riprese.append(f"{d}:{n}")
             # the paths marked ⟨…⟩ are declared as other people's: they are not chased
             ripulita = riga
-            for marca in MARCHE_ESTERNE:
+            for marca in EXTERNAL_MARKS:
                 ripulita = re.sub(re.escape(marca) + r'\s*[A-Za-z0-9_./-]+', "", ripulita)
             for m in RX_PERC.finditer(ripulita):
                 c = m.group(1)
@@ -178,9 +178,9 @@ def guarda(radice, eccezioni=None):
                     continue
                 if os.path.exists(os.path.join(radice, c)):
                     continue
-                if c.startswith(TOLTI_APPOSTA):
+                if c.startswith(DELIBERATELY_REMOVED):
                     continue
-                if any(s in c for s in scusati):
+                if any(s in c for s in excused):
                     continue
                 morti.append(f"{d}:{n}  {c}")
             for m in RX_LINK.finditer(riga):

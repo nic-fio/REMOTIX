@@ -23,21 +23,21 @@ const (
 
 // Codice is an entry of the codes catalogue: stable, never reused for another meaning.
 type Codice struct {
-	Gravita Gravita `json:"severity"`
-	Natura  Natura  `json:"nature"`
-	Testo   string  `json:"text"`
-	Rimedio string  `json:"remedy,omitempty"`
+	Gravita     Gravita `json:"severity"`
+	Natura      Natura  `json:"nature"`
+	Testo       string  `json:"text"`
+	Remediation string  `json:"remedy,omitempty"`
 }
 
 // Messaggio is a code in its context: what the CLI prints, the log records, the
 // certificate keeps, and every future interface shows (§6.6.9).
 type Messaggio struct {
-	Codice    string  `json:"code"`
-	Gravita   Gravita `json:"severity"`
-	Natura    Natura  `json:"nature"`
-	Testo     string  `json:"text"`
-	Rimedio   string  `json:"remedy,omitempty"`
-	Dettaglio string  `json:"detail,omitempty"`
+	Codice      string  `json:"code"`
+	Gravita     Gravita `json:"severity"`
+	Natura      Natura  `json:"nature"`
+	Testo       string  `json:"text"`
+	Remediation string  `json:"remedy,omitempty"`
+	Dettaglio   string  `json:"detail,omitempty"`
 }
 
 // Codici: ⛔ a code never changes meaning and is never reused. If a text must be corrected,
@@ -195,13 +195,13 @@ func Msg(codice, dettaglio string) Messaggio {
 	if !ok {
 		panic("unknown code: " + codice)
 	}
-	return Messaggio{Codice: codice, Gravita: c.Gravita, Natura: c.Natura, Testo: c.Testo, Rimedio: c.Rimedio, Dettaglio: dettaglio}
+	return Messaggio{Codice: codice, Gravita: c.Gravita, Natura: c.Natura, Testo: c.Testo, Remediation: c.Remediation, Dettaglio: dettaglio}
 }
 
-// ErroreRX is an error carrying its stable code.
-type ErroreRX struct{ M Messaggio }
+// ErrorRX is an error carrying its stable code.
+type ErrorRX struct{ M Messaggio }
 
-func (e *ErroreRX) Error() string {
+func (e *ErrorRX) Error() string {
 	if e.M.Dettaglio != "" {
 		return fmt.Sprintf("%s: %s (%s)", e.M.Codice, e.M.Testo, e.M.Dettaglio)
 	}
@@ -209,11 +209,11 @@ func (e *ErroreRX) Error() string {
 }
 
 // Errore builds an error with a code.
-func Errore(codice, dettaglio string) error { return &ErroreRX{Msg(codice, dettaglio)} }
+func Errore(codice, dettaglio string) error { return &ErrorRX{Msg(codice, dettaglio)} }
 
-// CodiceDi extracts the code from an error, or "" if the error has none.
-func CodiceDi(err error) string {
-	var e *ErroreRX
+// CodeOf extracts the code from an error, or "" if the error has none.
+func CodeOf(err error) string {
+	var e *ErrorRX
 	if errors.As(err, &e) {
 		return e.M.Codice
 	}

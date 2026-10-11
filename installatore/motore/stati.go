@@ -68,8 +68,8 @@ func Finale(s Stato) bool {
 	return false
 }
 
-// TuttiGliStati, in alphabetical order (for the tests).
-func TuttiGliStati() []Stato {
+// AllStates, in alphabetical order (for the tests).
+func AllStates() []Stato {
 	visti := map[Stato]bool{}
 	for da, aa := range transizioni {
 		visti[da] = true

@@ -18,9 +18,9 @@ import (
 // The frame: every line of every screen is exactly as wide as the terminal, at 80 and at 120
 // columns, with and without colours, as tall as needed and 24 lines tall (there the body scrolls); and the lines
 // are as many as the height.
-func TestCorniceLarghezzaCostante(t *testing.T) {
+func TestBorderConstantWidth(t *testing.T) {
 	for _, larg := range []int{80, 120} {
-		for _, alt := range []int{0, 24, altezzaMinima} {
+		for _, alt := range []int{0, 24, minHeight} {
 			for _, colori := range []bool{false, true} {
 				for _, s := range Anteprime(larg, alt, colori) {
 					righe := strings.Split(s.Testo, "\n")
@@ -42,7 +42,7 @@ func TestCorniceLarghezzaCostante(t *testing.T) {
 }
 
 // Without colours (NO_COLOR, or a terminal that does not have them) no colour remains; bold does.
-func TestSenzaColori(t *testing.T) {
+func TestWithoutColors(t *testing.T) {
 	for _, s := range Anteprime(80, 0, false) {
 		if strings.Contains(s.Testo, "38;2;") || strings.Contains(s.Testo, "38;5;") {
 			t.Errorf("%s: colours with the Ascii profile", s.Nome)
@@ -71,8 +71,8 @@ func TestComeIlMockup(t *testing.T) {
 }
 
 // Below 80 columns a single line that says so, never broken wrapping.
-func TestTroppoStretto(t *testing.T) {
-	m := nuovoModello(nil, lipgloss.NewRenderer(io.Discard))
+func TestTooTight(t *testing.T) {
+	m := newModel(nil, lipgloss.NewRenderer(io.Discard))
 	m.Update(tea.WindowSizeMsg{Width: 60, Height: 30})
 	v := m.View()
 	if strings.Contains(v, "\n") || !strings.Contains(v, "80 columns needed") || ansi.StringWidth(v) != 60 {
@@ -81,12 +81,12 @@ func TestTroppoStretto(t *testing.T) {
 }
 
 // The body longer than the screen scrolls inside the frame, and the keys line says where we are.
-func TestScorre(t *testing.T) {
+func TestScrolls(t *testing.T) {
 	r := lipgloss.NewRenderer(io.Discard)
 	r.SetColorProfile(termenv.Ascii)
-	m := nuovoModello(nil, r)
+	m := newModel(nil, r)
 	esempi()[2].prepara(m) // the plan
-	m.larg, m.alt = 80, altezzaMinima
+	m.larg, m.alt = 80, minHeight
 	prima := m.View()
 	if !strings.Contains(prima, "↑↓ 1–") {
 		t.Fatalf("no indicator:\n%s", prima)
@@ -99,18 +99,18 @@ func TestScorre(t *testing.T) {
 	m.tasto(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("G")}) // any key does not break it
 	m.scorri = 1 << 20
 	m.View()
-	if corpo, _ := m.contenuto(); m.scorri != len(corpo)-m.altCorpo() {
-		t.Errorf("at the bottom: scorri %d, body %d, height %d", m.scorri, len(corpo), m.altCorpo())
+	if corpo, _ := m.contenuto(); m.scorri != len(corpo)-m.bodyHeight() {
+		t.Errorf("at the bottom: scorri %d, body %d, height %d", m.scorri, len(corpo), m.bodyHeight())
 	}
 }
 
 // The port is typed with tab in the plan; a wrong number does not pass.
-func TestPortaNelPiano(t *testing.T) {
+func TestPortInPlan(t *testing.T) {
 	r := lipgloss.NewRenderer(io.Discard)
-	m := nuovoModello(nil, r)
+	m := newModel(nil, r)
 	esempi()[2].prepara(m)
 	m.tasto(tea.KeyMsg{Type: tea.KeyTab})
-	if !m.modPorta {
+	if !m.modPort {
 		t.Fatal("tab does not open the port")
 	}
 	for i := 0; i < 4; i++ {
@@ -118,34 +118,34 @@ func TestPortaNelPiano(t *testing.T) {
 	}
 	m.tasto(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("0")})
 	m.tasto(tea.KeyMsg{Type: tea.KeyEnter})
-	if !m.modPorta || !strings.Contains(ansi.Strip(m.View()), "Enter a number between 1 and 65535.") {
+	if !m.modPort || !strings.Contains(ansi.Strip(m.View()), "Enter a number between 1 and 65535.") {
 		t.Errorf("port 0 accepted")
 	}
 	m.tasto(tea.KeyMsg{Type: tea.KeyEsc})
-	if m.modPorta || m.porta != "7447" {
-		t.Errorf("esc: port %q, editing %v", m.porta, m.modPorta)
+	if m.modPort || m.porta != "7447" {
+		t.Errorf("esc: port %q, editing %v", m.porta, m.modPort)
 	}
 }
 
-// motoreFinto: records the port the check is asked for.
-type motoreFinto struct{ porta int }
+// fakeEngine: records the port the check is asked for.
+type fakeEngine struct{ porta int }
 
-func (f *motoreFinto) Controlla(porta int) (*interfaccia.Controllo, error) {
+func (f *fakeEngine) Controlla(porta int) (*interfaccia.Controllo, error) {
 	f.porta = porta
 	return &interfaccia.Controllo{Domande: motore.DomandeDaFare(nil, porta)}, nil
 }
-func (f *motoreFinto) Piano(map[string]string) (*motore.Piano, error) { return nil, nil }
-func (f *motoreFinto) Applica(string, func(motore.EventoPubblico)) (*interfaccia.Esito, error) {
+func (f *fakeEngine) Piano(map[string]string) (*motore.Piano, error) { return nil, nil }
+func (f *fakeEngine) Applica(string, func(motore.PublicEvent)) (*interfaccia.Esito, error) {
 	return nil, nil
 }
-func (f *motoreFinto) Ferma()  {}
-func (f *motoreFinto) Chiudi() {}
+func (f *fakeEngine) Ferma()  {}
+func (f *fakeEngine) Chiudi() {}
 
 // --port N: the check examines N (not 7447) and the plan's box starts from N; without --port, 7447.
-func TestPortaDaRigaDiComando(t *testing.T) {
+func TestPortFromCommandLine(t *testing.T) {
 	for _, c := range []struct{ data, attesa int }{{8640, 8640}, {0, 7447}, {70000, 7447}} {
-		f := &motoreFinto{}
-		m := nuovoModello(f, lipgloss.NewRenderer(io.Discard))
+		f := &fakeEngine{}
+		m := newModel(f, lipgloss.NewRenderer(io.Discard))
 		m.iniziale(c.data)
 		msg := m.Init()()
 		if f.porta != c.attesa {

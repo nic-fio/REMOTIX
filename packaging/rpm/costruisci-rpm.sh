@@ -38,7 +38,7 @@ LISTA_NERA='provisiona|sudoers|gpu-udev|riavvia-|ld\.so\.conf|/prova|banchi|\.py
 # ⛔ R13 in small: the unit passes no bench options (§4.5)
 OPZIONI_BANCO='--rilievo|--comando-socket|--audio-prova|--parlantina|--sblocca'
 
-costruisci_uno()
+build_one()
 {
 	local b=$1 imm="localhost/remotix-costruzione-$1" u="$USCITA/rpm/$1" lav="$CACHE/rpm-$1"
 	local nota=""
@@ -119,7 +119,7 @@ costruisci_uno()
 }
 
 stato=0
-for b in "$@"; do costruisci_uno "$b" || stato=1; done
+for b in "$@"; do build_one "$b" || stato=1; done
 printf '\n== summary (%s/rpm)\n' "$USCITA"
 for b in "$@"; do cat "$USCITA/rpm/$b/esito.txt" 2>/dev/null || echo "$b (no outcome)"; done
 exit $stato

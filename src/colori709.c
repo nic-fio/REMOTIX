@@ -42,7 +42,7 @@
 
 #if defined(__SSE2__) && !defined(COLORI709_SENZA_SIMD) /* the second: for the bench */
 #include <emmintrin.h>
-#define COLORI709_SSE2 1
+#define COLORS709_SSE2 1
 #endif
 
 #define SCALA 15
@@ -93,7 +93,7 @@ static void riga(const uint8_t *restrict px, uint32_t l, const Coeff *c, int pro
 	const int32_t off = ((16 * k) << SCALA) + (1 << (SCALA - 1));
 	const int sp = prof10 && semi ? 6 : 0; /* P010: the ten bits at the TOP */
 	uint32_t x = 0;
-#ifdef COLORI709_SSE2
+#ifdef COLORS709_SSE2
 	const __m128i zero = _mm_setzero_si128();
 	const __m128i cy = _mm_setr_epi16(c->y[0], c->y[1], c->y[2], c->y[3], c->y[0], c->y[1],
 	                                  c->y[2], c->y[3]);
@@ -170,7 +170,7 @@ static void croma(const int16_t *const s[4], uint32_t lc, const Coeff *c, int pr
 	const int32_t off = ((128 * k) << sh) + (1 << (sh - 1));
 	const int16_t *a = s[0], *b = s[1], *cc = s[2], *d = s[3];
 	uint32_t i = 0;
-#ifdef COLORI709_SSE2
+#ifdef COLORS709_SSE2
 	const __m128i cu = _mm_setr_epi16(c->u[0], c->u[1], c->u[2], c->u[3], c->u[0], c->u[1],
 	                                  c->u[2], c->u[3]);
 	const __m128i cv = _mm_setr_epi16(c->v[0], c->v[1], c->v[2], c->v[3], c->v[0], c->v[1],
@@ -320,7 +320,7 @@ bool colori709_a_nv12(const uint8_t *pixel, uint32_t passo, uint32_t larghezza,
 	                y, passo_y, uv, passo_uv, NULL, 0);
 }
 
-bool colori709_a_p010(const uint8_t *pixel, uint32_t passo, uint32_t larghezza,
+bool colors709_to_p010(const uint8_t *pixel, uint32_t passo, uint32_t larghezza,
                       uint32_t altezza, Colori709Ordine ordine,
                       uint16_t *y, uint32_t passo_y,
                       uint16_t *uv, uint32_t passo_uv)

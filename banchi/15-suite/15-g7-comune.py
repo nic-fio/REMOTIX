@@ -40,9 +40,9 @@ def _parola_sudo():
 
 QUI = os.path.dirname(os.path.abspath(__file__))
 SERVER_SH = os.path.join(QUI, "15-g7-server.sh")
-PORTE_G7 = {"gnome": 8611, "kde": 8612, "xfce": 8613, "lxqt": 8614}
+PORTS_G7 = {"gnome": 8611, "kde": 8612, "xfce": 8613, "lxqt": 8614}
 DIR_G7 = "/var/lib/rete15-g7"
-REGISTRO_G7 = DIR_G7 + "/registro.log"
+G7_LOG = DIR_G7 + "/registro.log"
 
 
 def sudo(argv, secondi=60, entrata=""):
@@ -74,9 +74,9 @@ def server(azione, desktop, *opzioni, secondi=90):
     return r.returncode == 0, (r.stdout + r.stderr).strip()
 
 
-def orologi_in_vigore(desktop):
+def clocks_in_effect(desktop):
     """The startup line with the three clocks of §5.3: (inattivita_s, abbandono_s, line)."""
-    _c, t = dentro(desktop, "grep -a '§5.3, the three clocks' %s | tail -n 1" % REGISTRO_G7)
+    _c, t = dentro(desktop, "grep -a '§5.3, the three clocks' %s | tail -n 1" % G7_LOG)
     m1 = re.search(r"user inactivity (\d+) s", t or "")
     m2 = re.search(r"session abandonment (\d+) s", t or "")
     return (int(m1.group(1)) if m1 else None, int(m2.group(1)) if m2 else None,
@@ -86,7 +86,7 @@ def orologi_in_vigore(desktop):
 class Registro:
     """OUR server's log, with the same form as Scatola."""
 
-    def __init__(self, desktop, percorso=REGISTRO_G7):
+    def __init__(self, desktop, percorso=G7_LOG):
         self.d, self.p = desktop, percorso
 
     def righe(self):
@@ -260,7 +260,7 @@ def pid_browser(g):
     return getattr(p, "pid", None)
 
 
-def segnale_albero(g, sig):
+def signal_tree(g, sig):
     pid = pid_browser(g)
     if not pid:
         return []
@@ -275,17 +275,17 @@ def segnale_albero(g, sig):
 
 
 def ferma_browser(g):
-    return segnale_albero(g, signal.SIGSTOP)
+    return signal_tree(g, signal.SIGSTOP)
 
 
-def riprendi_browser(g):
-    return segnale_albero(g, signal.SIGCONT)
+def resume_browser(g):
+    return signal_tree(g, signal.SIGCONT)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE TENANT IN THE BOX
 # ═══════════════════════════════════════════════════════════════════════════
-def processi_inquilino(desktop, chi):
+def tenant_processes(desktop, chi):
     """{pid: command} of the tenant's processes (empty = the session is not there)."""
     _c, t = dentro(desktop, "ps -u %s -o pid=,comm= 2>/dev/null" % chi, 30)
     ps = {}
@@ -328,7 +328,7 @@ def lancia_scena(s, S=None, cosa="scena"):
     Returns (pid | None, text)."""
     c, t = nella_sessione(s, "weston-simple-egl -f", 60)
     for _ in range(40):
-        ps = processi_inquilino(s.o.scatola, s.chi)
+        ps = tenant_processes(s.o.scatola, s.chi)
         f = [p for p, n in ps.items() if n.startswith("weston-simple")]
         if f:
             return min(f), "weston-simple-egl of the %s: pid %d" % (cosa, min(f))
@@ -336,7 +336,7 @@ def lancia_scena(s, S=None, cosa="scena"):
     return None, "weston-simple-egl was not seen starting: %s" % (t or "")[-200:]
 
 
-def lancia_tono(s, secondi=600):
+def launch_tone(s, secondi=600):
     """pw-play of a 440 Hz wave on the product's «remotix» sink, in a loop."""
     corpo = ("python3 -c \"import math,struct,wave;w=wave.open('/tmp/g7-onda-%(c)s.wav','wb');"
              "w.setnchannels(2);w.setsampwidth(2);w.setframerate(48000);"
@@ -353,7 +353,7 @@ def lancia_tono(s, secondi=600):
 #   SAMPLES is measured (blocks are not counted: a stream of zeros is blocks that
 #   arrive and it is silence).  It is put after loading, before the login:
 #   the page creates the sources only with the session open.
-JS_ORECCHIO = r"""
+JS_EAR = r"""
 if (window.__G7_ORECCHIO__) return 'gia';
 const O = window.__G7_ORECCHIO__ = { finestre: [] };
 const vero = AudioBufferSourceNode.prototype.start;
@@ -376,7 +376,7 @@ AudioBufferSourceNode.prototype.start = function () {
 return 'messo';
 """
 
-JS_ASCOLTA = r"""
+JS_LISTEN = r"""
 const O = window.__G7_ORECCHIO__;
 if (!O) return null;
 const da = arguments[0], a = arguments[1];
@@ -391,7 +391,7 @@ SOGLIA_RMS = 0.01      # the wave is 16000/32767 ≈ 0.49 peak ⇒ RMS ≈ 0.35
 
 def orecchio(g):
     try:
-        return g.js(JS_ORECCHIO)
+        return g.js(JS_EAR)
     except Exception as e:                       # noqa: BLE001
         return "not put: %s" % str(e)[:120]
 
@@ -400,7 +400,7 @@ def ascolta(g, secondi):
     """(rms | None, details) over the last `secondi` of sound PLAYED by the page."""
     try:
         ora = g.js("return Math.floor(performance.now() / 1000);")
-        r = g.js(JS_ASCOLTA, ora - secondi, ora + 1)
+        r = g.js(JS_LISTEN, ora - secondi, ora + 1)
     except Exception as e:                       # noqa: BLE001
         return None, "ear unreadable: %s" % str(e)[:120]
     if not r:
@@ -411,7 +411,7 @@ def ascolta(g, secondi):
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE PHOTOS: does the scene move?
 # ═══════════════════════════════════════════════════════════════════════════
-def diversita(png_a, png_b):
+def diversity(png_a, png_b):
     """Fraction of pixels that change (|Δ| > 40 on a channel) between two photos,
     at reduced scale.  None if they cannot be compared."""
     try:
@@ -452,7 +452,7 @@ def aspetta_scena(s, S, tetto=40):
         except Exception as e:                   # noqa: BLE001
             png, desc = None, str(e)[:120]
         if png and prima:
-            d = diversita(prima, png)
+            d = diversity(prima, png)
             desc = "change %.1f%%" % (100 * (d or 0))
             if d and d > 0.02:
                 return True, "moving scene after %.0f s (%s)" % (time.time() - t0, desc)
@@ -479,7 +479,7 @@ def la_scena_si_muove(s, nome, coppie=3, pausa=None):
         if dove:
             ev.append(dove)
         time.sleep(pausa if pausa is not None else pause[i % len(pause)])
-    diffs = [diversita(foto[i], foto[j]) for i in range(len(foto))
+    diffs = [diversity(foto[i], foto[j]) for i in range(len(foto))
              for j in range(i + 1, len(foto))]
     if any(d is None for d in diffs):
         return None, "photos not comparable", ev
@@ -500,8 +500,8 @@ def scatola_locale(S):
     if os.environ.get("REMOTIX_SUL_SERVER") != "1":
         return False
 
-    def _dentro(self, riga, secondi=90):
+    def _inside(self, riga, secondi=90):
         c, t = sudo(["podman", "exec", self.contenitore, "sh", "-c", riga], secondi)
         return c, (t or "").strip()
-    S.C20V.Scatola.dentro = _dentro
+    S.C20V.Scatola.dentro = _inside
     return True

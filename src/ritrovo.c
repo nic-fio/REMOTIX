@@ -17,8 +17,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#define NOME_LOGIND "org.freedesktop.login1"
-#define PERCORSO_LOGIND "/org/freedesktop/login1"
+#define LOGIND_NAME "org.freedesktop.login1"
+#define LOGIND_PATH "/org/freedesktop/login1"
 #define IFACE_MANAGER "org.freedesktop.login1.Manager"
 #define IFACE_SESSIONE "org.freedesktop.login1.Session"
 /* ⚠ The same ceiling as `sentinella.c`, and for the same reason: the question
@@ -26,9 +26,9 @@
 #define ATTESA_MS 300
 /* How many `remotix` sessions are looked at in one go.  ⚠ Every reattach
  * leaves one more with a dead leader (`[M]` T2, §5.2 point b): 256 is ample. */
-#define QUANTE_CANDIDATE 256
+#define MAX_CANDIDATES 256
 
-struct candidata {
+struct candidate_entry {
 	uid_t uid;
 	char id[32];
 	char scope[128];
@@ -36,7 +36,7 @@ struct candidata {
 };
 
 /* The content of a small /proc file, terminated with '\0'.  -1 if it is missing. */
-static ssize_t leggi_piccolo(const char *percorso, char *buf, size_t cap)
+static ssize_t read_small(const char *percorso, char *buf, size_t cap)
 {
 	int fd = open(percorso, O_RDONLY | O_CLOEXEC);
 	ssize_t n;
@@ -59,7 +59,7 @@ static bool cgroup_di(pid_t pid, char *dove, size_t cap)
 	char *r;
 
 	snprintf(percorso, sizeof percorso, "/proc/%ld/cgroup", (long)pid);
-	if (leggi_piccolo(percorso, buf, sizeof buf) < 0)
+	if (read_small(percorso, buf, sizeof buf) < 0)
 		return false;
 	for (r = buf; r && *r; r = strchr(r, '\n') ? strchr(r, '\n') + 1 : NULL) {
 		if (strncmp(r, "0::", 3) == 0) {
@@ -75,14 +75,14 @@ static bool cgroup_di(pid_t pid, char *dove, size_t cap)
 	return false;
 }
 
-static const char *ultimo_pezzo(const char *cg)
+static const char *last_piece(const char *cg)
 {
 	const char *u = strrchr(cg, '/');
 	return u ? u + 1 : cg;
 }
 
 /* The logind sessions with the PAM service `remotix`.  -1 if logind does not answer. */
-static int candidate(struct candidata *v, int cap, char *perche, size_t quanto)
+static int candidate(struct candidate_entry *v, int cap, char *perche, size_t quanto)
 {
 	g_autoptr(GError) sbaglio = NULL;
 	g_autoptr(GDBusConnection) bus = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, &sbaglio);
@@ -97,7 +97,7 @@ static int candidate(struct candidata *v, int cap, char *perche, size_t quanto)
 		         sbaglio ? sbaglio->message : "no reason given");
 		return -1;
 	}
-	elenco = g_dbus_connection_call_sync(bus, NOME_LOGIND, PERCORSO_LOGIND, IFACE_MANAGER,
+	elenco = g_dbus_connection_call_sync(bus, LOGIND_NAME, LOGIND_PATH, IFACE_MANAGER,
 	                                     "ListSessions", NULL, G_VARIANT_TYPE("(a(susso))"),
 	                                     G_DBUS_CALL_FLAGS_NONE, ATTESA_MS, NULL, &sbaglio);
 	if (!elenco) {
@@ -114,7 +114,7 @@ static int candidate(struct candidata *v, int cap, char *perche, size_t quanto)
 
 		if (n >= cap)
 			break;
-		r = g_dbus_connection_call_sync(bus, NOME_LOGIND, percorso,
+		r = g_dbus_connection_call_sync(bus, LOGIND_NAME, percorso,
 		                                "org.freedesktop.DBus.Properties", "GetAll",
 		                                g_variant_new("(s)", IFACE_SESSIONE),
 		                                G_VARIANT_TYPE("(a{sv})"), G_DBUS_CALL_FLAGS_NONE,
@@ -126,7 +126,7 @@ static int candidate(struct candidata *v, int cap, char *perche, size_t quanto)
 		v_serv = g_variant_lookup_value(prop, "Service", G_VARIANT_TYPE_STRING);
 		v_scope = g_variant_lookup_value(prop, "Scope", G_VARIANT_TYPE_STRING);
 		if (!v_serv || !v_scope ||
-		    strcmp(g_variant_get_string(v_serv, NULL), RITROVO_SERVIZIO_PAM) != 0 ||
+		    strcmp(g_variant_get_string(v_serv, NULL), FOUND_AGAIN_PAM_SERVICE) != 0 ||
 		    !g_variant_get_string(v_scope, NULL)[0])
 			continue;
 		v[n].uid = (uid_t)uid;
@@ -142,7 +142,7 @@ static int candidate(struct candidata *v, int cap, char *perche, size_t quanto)
  * (if not (uid_t)-1) restricts to one user. */
 static int cerca(RitrovoDesktop *v, int cap, uid_t solo_uid, char *perche, size_t quanto)
 {
-	struct candidata *c = calloc(QUANTE_CANDIDATE, sizeof *c);
+	struct candidate_entry *c = calloc(MAX_CANDIDATES, sizeof *c);
 	int nc, trovati = 0;
 	DIR *proc;
 	struct dirent *e;
@@ -151,7 +151,7 @@ static int cerca(RitrovoDesktop *v, int cap, uid_t solo_uid, char *perche, size_
 		snprintf(perche, quanto, "out of memory");
 		return -1;
 	}
-	nc = candidate(c, QUANTE_CANDIDATE, perche, quanto);
+	nc = candidate(c, MAX_CANDIDATES, perche, quanto);
 	if (nc <= 0) {
 		free(c);
 		return nc;
@@ -174,7 +174,7 @@ static int cerca(RitrovoDesktop *v, int cap, uid_t solo_uid, char *perche, size_
 			continue;
 		pid = strtol(e->d_name, NULL, 10);
 		snprintf(percorso, sizeof percorso, "/proc/%ld/stat", pid);
-		if (leggi_piccolo(percorso, stat_buf, sizeof stat_buf) < 0)
+		if (read_small(percorso, stat_buf, sizeof stat_buf) < 0)
 			continue;
 		/* ⚠ The name is in parentheses and may contain some: start from the LAST one. */
 		chiusa = strrchr(stat_buf, ')');
@@ -192,7 +192,7 @@ static int cerca(RitrovoDesktop *v, int cap, uid_t solo_uid, char *perche, size_
 		if (!cgroup_di((pid_t)pid, cg, sizeof cg))
 			continue;
 		for (int i = 0; i < nc; i++)
-			if (c[i].uid == st.st_uid && strcmp(ultimo_pezzo(cg), c[i].scope) == 0) {
+			if (c[i].uid == st.st_uid && strcmp(last_piece(cg), c[i].scope) == 0) {
 				quale = i;
 				break;
 			}

@@ -230,16 +230,16 @@ _spec.loader.exec_module(f24)
 
 # ⛔ THE MAGIC, AND THE ONE THAT IS NO LONGER READ — §11.1, 12 Aug 2026.
 #
-#    ⛔ `MAGIA_VECCHIA` is not a leftover: it is the only way of giving the old
+#    ⛔ `OLD_MAGIC` is not a leftover: it is the only way of giving the old
 #       file the sentence it deserves.  Without it, a `.rcpreg` of 10 Aug
 #       would fall into the «does not start with the magic» branch, which sends you looking for a
 #       corrupt file — and the file is not corrupt, it is of **another version**.
 #       They are two different cures: regenerate it, or go and see who broke it.
 MAGIA = b"RCPREG\x00\x03"
-MAGIA_V1 = b"RCPREG\x00\x01"
-MAGIA_V2 = b"RCPREG\x00\x02"
-MAGIA_VECCHIA = MAGIA_V1     # ⚠ the old name stays: the tests below use it
-RIEMPIMENTO = 0x2A          # §11.1
+MAGIC_V1 = b"RCPREG\x00\x01"
+MAGIC_V2 = b"RCPREG\x00\x02"
+OLD_MAGIC = MAGIC_V1     # ⚠ the old name stays: the tests below use it
+FILL = 0x2A          # §11.1
 CLIENT, SERVER = 1, 2
 CANALI = {0x00: "controllo", 0x01: "input", 0x02: "appunti",
           0x03: "video", 0x04: "audio"}
@@ -283,7 +283,7 @@ class NienteDaGiudicare(Exception):
 
 
 # ---------------------------------------------------------------------------
-def leggi_blocchi(d):
+def read_blocks(d):
     """The blocks of §11.1, with the checks the format imposes.
 
     ⛔ The FORMAT checks sit here and raise `Malformata`, not
@@ -299,14 +299,14 @@ def leggi_blocchi(d):
     #    would shift by one.  ⛔ A JUDGEMENT would come out — a red on a byte
     #    nobody wrote, or a worse green — instead of «this file is
     #    of another version».
-    if len(d) >= 8 and d[:8] == MAGIA_V1:
+    if len(d) >= 8 and d[:8] == MAGIC_V1:
         raise Malformata(
             "it is a recording in the OLD format, «RCPREG 0x00 0x01»: the "
             "block carries neither `fine` nor `istante_ms`, and measures 16 bytes "
             "instead of 21.  ⛔ It is not read askew — §11.1, 12 Aug "
             "2026 — and it is not a broken file: REGENERATE it with today's "
             "recorder")
-    if len(d) >= 8 and d[:8] == MAGIA_V2:
+    if len(d) >= 8 and d[:8] == MAGIC_V2:
         raise Malformata(
             "it is a recording in the format of 12 Aug, «RCPREG 0x00 "
             "0x02»: the block does not carry `istante_ms` and measures 17 bytes instead "
@@ -368,7 +368,7 @@ def leggi_blocchi(d):
         if verso not in (CLIENT, SERVER):
             raise Malformata(f"block {nb}: direction {verso}, expected 1 or 2")
         for o, q in oscurati:
-            if any(b != RIEMPIMENTO for b in d[p + o:p + o + q]):
+            if any(b != FILL for b in d[p + o:p + o + q]):
                 raise Malformata(
                     f"block {nb}: a masked interval is not made of 0x2A")
         fuori.append({"n": nb, "verso": verso, "canale": canale, "fine": fine,
@@ -395,7 +395,7 @@ class ControlloIlleggibile(Exception):
     """
 
 
-def tipi_di_controllo(carico):
+def check_types(carico):
     """The `tipo`s of the §6.1 messages inside a control channel block.
 
     ⛔ It serves **two things only**: knowing when `SESSIONE` passed (half of
@@ -427,7 +427,7 @@ def tipi_di_controllo(carico):
 def valida(percorso, guasti=(), tela=(1920, 1080), codec=1, stampa=True):
     with open(percorso, "rb") as f:
         d = f.read()
-    blocchi = leggi_blocchi(d)
+    blocchi = read_blocks(d)
 
     if stampa:
         print(f"== the VIDEO channel referee — {percorso}")
@@ -470,16 +470,16 @@ def valida(percorso, guasti=(), tela=(1920, 1080), codec=1, stampa=True):
     #     FRAME CANNOT HAVE — they are the two rules of 12 Aug that
     #     talk about **streams** instead of bytes:
     #
-    #       `su_controllo`      P3 — which streams the control
+    #       `on_check`      P3 — which streams the control
     #                           channel lives on (§4.2: the first bidirectional).  A
     #                           video block on one of those is a `0x03` on the
     #                           control channel;
     #       `prima_di_sessione` P1 — which video streams start **before**
     #                           `SESSIONE` has passed.
     flussi, ordine, tele = {}, [], {}
-    su_controllo, prima_di_sessione = set(), set()
-    controllo_stream = {b["stream"] for b in blocchi if b["canale"] == CONTROLLO}
-    sessione_vista, controllo_leggibile, perche_illeggibile = False, True, ""
+    on_check, prima_di_sessione = set(), set()
+    check_stream = {b["stream"] for b in blocchi if b["canale"] == CONTROLLO}
+    session_seen, readable_check, why_unreadable = False, True, ""
     # ⛔⭐ THE CANVAS **IN FORCE**, AND IT CHANGES MIDWAY THROUGH THE SESSION — §6.2, corrected on
     #     12 Aug 2026.  It starts from the one declared from outside (which is the
     #     canvas of `SESSIONE`) and a `TELA(ADATTATA, …)` moves it.
@@ -497,7 +497,7 @@ def valida(percorso, guasti=(), tela=(1920, 1080), codec=1, stampa=True):
     #        list serves to **show** that hole (test
     #        `p8-due-tele-in-un-secondo`), not to plug it: the stream there comes out
     #        `AMBIGUO` with proposal P11, not ACCETTATO.
-    tela_ora, tela_da_tela, tele_prec = tuple(tela), False, []
+    canvas_now, canvas_from_canvas, prev_canvases = tuple(tela), False, []
     for b in blocchi:
         if b["canale"] not in CANALI:
             raise NonConforme("RCP.md §2.5",
@@ -510,11 +510,11 @@ def valida(percorso, guasti=(), tela=(1920, 1080), codec=1, stampa=True):
             #    password (§4.4), which sits in the **body** of `CREDENZIALI`, and here
             #    the six bytes of the framing are looked at.
             try:
-                for tipo, corpo in tipi_di_controllo(b["carico"]):
+                for tipo, corpo in check_types(b["carico"]):
                     if b["verso"] != SERVER:
                         continue        # §7.1: both arrive from the server
                     if tipo == SESSIONE:
-                        sessione_vista = True
+                        session_seen = True
                     elif tipo == TELA and len(corpo) >= 10:
                         # ⛔ §7.1: `tela_larghezza`/`tela_altezza` are «the canvas
                         #    in force AFTER this message» — and they are so even
@@ -527,12 +527,12 @@ def valida(percorso, guasti=(), tela=(1920, 1080), codec=1, stampa=True):
                         #    which is what a `RIFIUTATA` does — leaves
                         #    nothing in flight, and recording it as a change
                         #    would open a grace that serves nobody.
-                        if nuova != tela_ora:
-                            tele_prec = [tela_ora] + tele_prec
-                        tela_ora = nuova
-                        tela_da_tela = corpo[0] == ADATTATA
+                        if nuova != canvas_now:
+                            prev_canvases = [canvas_now] + prev_canvases
+                        canvas_now = nuova
+                        canvas_from_canvas = corpo[0] == ADATTATA
             except ControlloIlleggibile as e:
-                controllo_leggibile, perche_illeggibile = False, str(e)
+                readable_check, why_unreadable = False, str(e)
             continue
         if b["canale"] != VIDEO:
             continue
@@ -570,11 +570,11 @@ def valida(percorso, guasti=(), tela=(1920, 1080), codec=1, stampa=True):
             # ⛔ The two stream rules are decided on the FIRST block of the
             #    stream, not on the last: it is the moment the stream
             #    opens, and it is the one §2.5 constrains.
-            if b["stream"] in controllo_stream:
-                su_controllo.add(b["stream"])
-            if not sessione_vista:
+            if b["stream"] in check_stream:
+                on_check.add(b["stream"])
+            if not session_seen:
                 prima_di_sessione.add(b["stream"])
-            tele[b["stream"]] = (tela_ora, tela_da_tela, list(tele_prec))
+            tele[b["stream"]] = (canvas_now, canvas_from_canvas, list(prev_canvases))
         flussi[b["stream"]].append(b)
 
     if not flussi:
@@ -588,7 +588,7 @@ def valida(percorso, guasti=(), tela=(1920, 1080), codec=1, stampa=True):
         b0 = pezzi[0]
 
         # ── P3 — §2.5: «a `0x03` on the control channel is ERRORE_PROTOCOLLO»
-        if sid in su_controllo:
+        if sid in on_check:
             raise NonConforme(
                 "RCP.md §2.5",
                 f"stream {sid}: a frame on the CONTROL CHANNEL — the "
@@ -598,7 +598,7 @@ def valida(percorso, guasti=(), tela=(1920, 1080), codec=1, stampa=True):
                 b0["base"], 0)
 
         # ── P1 — §2.5: «none before sending `SESSIONE`»
-        if not controllo_leggibile:
+        if not readable_check:
             # ⛔ E8 the other way round: it does not conclude «so it was after».  It counts.
             conta["ordine_ignoto"] += 1
         elif sid in prima_di_sessione:
@@ -615,8 +615,8 @@ def valida(percorso, guasti=(), tela=(1920, 1080), codec=1, stampa=True):
         #    ⛔ The context is set back to the canvas that was in force WHEN
         #       this stream opened: it is the judge that applies the
         #       rule, but only the referee knows what had passed before.
-        tela_fl, da_tela, prec_fl = tele.get(sid, (tuple(tela), False, []))
-        if da_tela:
+        canvas_fl, from_canvas, prev_fl = tele.get(sid, (tuple(tela), False, []))
+        if from_canvas:
             # ⛔⛔ And the **draining queue** of D14 opens, with the previous
             #    canvases at hand.  ⭐ Since the **P13** cure the queue no longer ends
             #    by the clock but at the **first keyframe at the new size** —
@@ -625,8 +625,8 @@ def valida(percorso, guasti=(), tela=(1920, 1080), codec=1, stampa=True):
             #    recording**.  Before it was one second, that is the only thing
             #    §11.1 does not carry, and the referee had to declare it could not
             #    judge it.
-            ctx.adatta_tela(*tela_fl,
-                            precedente=prec_fl[0] if prec_fl else None)
+            ctx.adatta_tela(*canvas_fl,
+                            precedente=prev_fl[0] if prev_fl else None)
             # ⛔ And the previous ones are set **all**, not only the last: the
             #    judge reads the P11 window from them, and without them a
             #    session with two `TELA`s in a row would exit **1** — that is
@@ -637,15 +637,15 @@ def valida(percorso, guasti=(), tela=(1920, 1080), codec=1, stampa=True):
             #       has just closed — and the test `p13-vecchia-dopo-la-chiave-
             #       nuova` would exit 0 instead of 1.
             if not ctx.chiave_alla_tela_nuova:
-                ctx.tele_recenti = list(prec_fl)
+                ctx.recent_canvases = list(prev_fl)
         else:
-            ctx.tela_larghezza, ctx.tela_altezza = tela_fl
+            ctx.tela_larghezza, ctx.tela_altezza = canvas_fl
             # ⛔ And the context is RESET between one stream and the next: it is the same
             #    object for the whole recording, and a queue left open
             #    by an earlier stream would acquit the next stream.
-            ctx.tela_precedente = None
+            ctx.previous_canvas = None
             ctx.chiave_alla_tela_nuova = True
-            ctx.tele_recenti = []
+            ctx.recent_canvases = []
 
         # ── and the other four are applied by the judge, one byte at a time
         g = f24.Giudice(ctx, dove="uni", guasti=guasti)
@@ -690,7 +690,7 @@ def valida(percorso, guasti=(), tela=(1920, 1080), codec=1, stampa=True):
                 conta["completezza_ignota"] += 1
                 conta["giudicati"] += 1
                 if stampa:
-                    print(f"   {GIALLO}?? stream {sid}: {g.byte_dati} bytes of "
+                    print(f"   {GIALLO}?? stream {sid}: {g.byte_data} bytes of "
                           f"data and `fine = 0` on the last block — ⛔ the stream "
                           f"does not close inside this recording, so "
                           f"completeness is NOT judged (§6.2){GRIGIO}")
@@ -773,7 +773,7 @@ def valida(percorso, guasti=(), tela=(1920, 1080), codec=1, stampa=True):
                   f"{conta['flussi']} it could NOT be judged whether they came "
                   f"before `SESSIONE`{GRIGIO}")
             print(f"      the control channel cannot be scanned: "
-                  f"{perche_illeggibile}")
+                  f"{why_unreadable}")
             print(f"      ⚠ and the one judging THAT channel is "
                   f"`01-b4-validatore.py`, not this one")
         print(f"   ⭐ conforming: no violation in {conta['giudicati']} "
@@ -788,23 +788,23 @@ def valida(percorso, guasti=(), tela=(1920, 1080), codec=1, stampa=True):
 #    a recording WITH AN ERROR INSIDE and it is checked that it sees it.  A
 #    tool that has never found anything is not a clean tool: it is
 #    an uncertified tool»*.
-def scrivi_reg(percorso, blocchi, magia=MAGIA, orologio=1):
+def write_log(percorso, blocchi, magia=MAGIA, orologio=1):
     """⛔ `magia` is a parameter for ONE reason only: the test that must be
        refused.  A format that can write only its own version cannot
        certify that it can refuse the others."""
     # ⛔ `orologio = 1`: these tests are written from the client side, like the
     #    real traces of `02-filo-cliente.py`.  ⚠ Declaring another one would make
     #    the tests different from the traces the referee really judges.
-    if magia == MAGIA_V1 or magia == MAGIA_V2:
+    if magia == MAGIC_V1 or magia == MAGIC_V2:
         out = bytearray(magia + struct.pack("!II", len(blocchi), 0))
     else:
         out = bytearray(magia + struct.pack("!IBBBB", len(blocchi), orologio,
                                             0, 0, 0))
     for i, (verso, canale, fine, stream, carico) in enumerate(blocchi):
-        if magia == MAGIA_V1:
+        if magia == MAGIC_V1:
             # the block of 10 Aug: 16 bytes, without `fine` and without instant
             out += struct.pack("!BBQIH", verso, canale, stream, len(carico), 0)
-        elif magia == MAGIA_V2:
+        elif magia == MAGIC_V2:
             # the block of 12 Aug: 17 bytes, with `fine` and without instant
             out += struct.pack("!BBBQIH", verso, canale, fine, stream,
                                len(carico), 0)
@@ -826,7 +826,7 @@ def msg(tipo, corpo=b""):
     return struct.pack("!HI", tipo, len(corpo)) + corpo
 
 
-def apre_la_sessione(stream=0):
+def opens_session(stream=0):
     """⛔ The block that makes LEGAL all the video that follows — P1.
 
     ⚠ The body of `SESSIONE` is empty, and it must be said: this referee reads of the
@@ -838,7 +838,7 @@ def apre_la_sessione(stream=0):
     return (SERVER, CONTROLLO, CONTINUA, stream, msg(SESSIONE))
 
 
-def adatta_la_tela(lar, alt, esito=ADATTATA, stream=0):
+def fit_canvas(lar, alt, esito=ADATTATA, stream=0):
     """⛔ `TELA` — §7.1: *«the canvas in force AFTER this message»*.
 
     It is the message that corrected `RCP.md`: without it P5 said «the canvas
@@ -850,7 +850,7 @@ def adatta_la_tela(lar, alt, esito=ADATTATA, stream=0):
 
 
 def chiave(stream=8, coda=64, **campi):
-    return [apre_la_sessione(),
+    return [opens_session(),
             (SERVER, VIDEO, FIN, stream, f24.intestazione(**campi) + b"\x00" * coda)]
 
 
@@ -864,7 +864,7 @@ PROVE = {
                   "lines of 12 Aug in one go",
         "uscita": 0,
         "blocchi": lambda: [
-            apre_la_sessione(),
+            opens_session(),
             (SERVER, VIDEO, CONTINUA, 8, f24.intestazione()),
             (SERVER, VIDEO, CONTINUA, 8, b"\x00" * 2048),
             (SERVER, VIDEO, FIN, 8, b"\x00" * 2048)],
@@ -878,7 +878,7 @@ PROVE = {
                   "written for",
         "uscita": 0,
         "blocchi": lambda: [
-            apre_la_sessione(),
+            opens_session(),
             (SERVER, VIDEO, CONTINUA, 8, f24.intestazione()),
             (SERVER, VIDEO, RESET, 8, b"\x00" * 10240)],
     },
@@ -889,7 +889,7 @@ PROVE = {
                   "judged, which is a different fact from «judged and fine»",
         "uscita": 0,
         "blocchi": lambda: [
-            apre_la_sessione(),
+            opens_session(),
             (SERVER, VIDEO, CONTINUA, 8, f24.intestazione() + b"\x00" * 64)],
     },
     "formato-vecchio": {
@@ -899,7 +899,7 @@ PROVE = {
                   "ways.  ⛔ It exits **2**: it is a defect of the FILE, not of the wire, "
                   "and the cure is to regenerate it",
         "uscita": 2,
-        "magia": MAGIA_VECCHIA,
+        "magia": OLD_MAGIC,
         "blocchi": lambda: chiave(),
     },
     "formato-del-12-agosto": {
@@ -910,7 +910,7 @@ PROVE = {
                   "would stay green.  ⛔ It is exactly the form in which the "
                   "12 Aug defect lived for four days",
         "uscita": 2,
-        "magia": MAGIA_V2,
+        "magia": MAGIC_V2,
         "blocchi": lambda: chiave(),
     },
     "orologio-non-dichiarato": {
@@ -934,7 +934,7 @@ PROVE = {
         "spiega": "a frame FROM THE CLIENT: §2.5, the channel in the wrong "
                   "direction",
         "uscita": 1,
-        "blocchi": lambda: [apre_la_sessione(),
+        "blocchi": lambda: [opens_session(),
                             (CLIENT, VIDEO, FIN, 9,
                              f24.intestazione() + b"\x00" * 64)],
     },
@@ -960,7 +960,7 @@ PROVE = {
                   "travels on.  ⛔ It is the only place where the server can "
                   "get the stream wrong: §2.5 forbids it from opening bidirectional ones",
         "uscita": 1,
-        "blocchi": lambda: [apre_la_sessione(),
+        "blocchi": lambda: [opens_session(),
                             (SERVER, VIDEO, FIN, 0,
                              f24.intestazione() + b"\x00" * 64)],
     },
@@ -969,7 +969,7 @@ PROVE = {
                   "12 bytes: it is not a short frame, it is a length that "
                   "does not add up (§6.2, third line)",
         "uscita": 1,
-        "blocchi": lambda: [apre_la_sessione(),
+        "blocchi": lambda: [opens_session(),
                             (SERVER, VIDEO, FIN, 8,
                              f24.intestazione()[:12])],
     },
@@ -991,8 +991,8 @@ PROVE = {
                   "the wrong one before, and no bench would say so",
         "uscita": 0,
         "blocchi": lambda: [
-            apre_la_sessione(),
-            adatta_la_tela(1280, 720),
+            opens_session(),
+            fit_canvas(1280, 720),
             (SERVER, VIDEO, FIN, 8,
              f24.intestazione(lar=1280, alt=720) + b"\x00" * 64)],
     },
@@ -1023,8 +1023,8 @@ PROVE = {
                   "instead of guessing it",
         "uscita": 0,
         "blocchi": lambda: [
-            apre_la_sessione(),
-            adatta_la_tela(1280, 720),
+            opens_session(),
+            fit_canvas(1280, 720),
             (SERVER, VIDEO, FIN, 8,
              f24.intestazione(lar=1920, alt=1080, num=41) + b"\x00" * 64)],
     },
@@ -1044,9 +1044,9 @@ PROVE = {
                   "is not the rare scene, it is the normal one",
         "uscita": 0,
         "blocchi": lambda: [
-            apre_la_sessione(),
-            adatta_la_tela(1600, 900),
-            adatta_la_tela(1280, 720),
+            opens_session(),
+            fit_canvas(1600, 900),
+            fit_canvas(1280, 720),
             (SERVER, VIDEO, FIN, 8,
              f24.intestazione(lar=1920, alt=1080, num=41) + b"\x00" * 64)],
     },
@@ -1067,8 +1067,8 @@ PROVE = {
                   "by a mechanical referee**",
         "uscita": 1,
         "blocchi": lambda: [
-            apre_la_sessione(),
-            adatta_la_tela(1280, 720),
+            opens_session(),
+            fit_canvas(1280, 720),
             (SERVER, VIDEO, FIN, 8,
              f24.intestazione(lar=1280, alt=720, num=41) + b"\x00" * 64),
             # ⛔ `numero` 42, that is captured AFTER the keyframe at the new size:
@@ -1094,8 +1094,8 @@ PROVE = {
                   "violation of the wire (§5.1)",
         "uscita": 0,
         "blocchi": lambda: [
-            apre_la_sessione(),
-            adatta_la_tela(1280, 720),
+            opens_session(),
+            fit_canvas(1280, 720),
             (SERVER, VIDEO, FIN, 8,
              f24.intestazione(lar=1280, alt=720, num=41) + b"\x00" * 64),
             (SERVER, VIDEO, FIN, 9,
@@ -1113,9 +1113,9 @@ PROVE = {
                   "likely to err",
         "uscita": 1,
         "blocchi": lambda: [
-            apre_la_sessione(),
-            adatta_la_tela(1600, 900),
-            adatta_la_tela(1280, 720),
+            opens_session(),
+            fit_canvas(1600, 900),
+            fit_canvas(1280, 720),
             (SERVER, VIDEO, FIN, 8,
              f24.intestazione(lar=800, alt=600, num=41) + b"\x00" * 64)],
     },
@@ -1129,9 +1129,9 @@ PROVE = {
                   "desktop tears when I resize the window»",
         "uscita": 1,
         "blocchi": lambda: [
-            apre_la_sessione(),
+            opens_session(),
             (SERVER, VIDEO, FIN, 7, f24.intestazione(num=1) + b"\x00" * 64),
-            adatta_la_tela(1280, 720),
+            fit_canvas(1280, 720),
             (SERVER, VIDEO, FIN, 8,
              f24.intestazione(tipo=0x0302, lar=1280, alt=720, num=2)
              + b"\x00" * 64)],
@@ -1146,9 +1146,9 @@ PROVE = {
                   "does not keep the data",
         "uscita": 0,
         "blocchi": lambda: [
-            apre_la_sessione(),
+            opens_session(),
             (SERVER, VIDEO, FIN, 7, f24.intestazione(num=1) + b"\x00" * 64),
-            adatta_la_tela(1280, 720),
+            fit_canvas(1280, 720),
             (SERVER, VIDEO, FIN, 8,
              f24.intestazione(tipo=0x0301, lar=1280, alt=720, num=2)
              + b"\x00" * 64)],
@@ -1165,9 +1165,9 @@ PROVE = {
                   "size in force must not reopen the debt",
         "uscita": 0,
         "blocchi": lambda: [
-            apre_la_sessione(),
+            opens_session(),
             (SERVER, VIDEO, FIN, 7, f24.intestazione(num=1) + b"\x00" * 64),
-            adatta_la_tela(1280, 720),
+            fit_canvas(1280, 720),
             (SERVER, VIDEO, FIN, 8,
              f24.intestazione(tipo=0x0301, lar=1280, alt=720, num=2)
              + b"\x00" * 64),
@@ -1188,8 +1188,8 @@ PROVE = {
                   "time",
         "uscita": 1,
         "blocchi": lambda: [
-            apre_la_sessione(),
-            adatta_la_tela(1280, 720),
+            opens_session(),
+            fit_canvas(1280, 720),
             (SERVER, VIDEO, FIN, 8,
              f24.intestazione(lar=800, alt=600, num=41) + b"\x00" * 64)],
     },
@@ -1209,7 +1209,7 @@ PROVE = {
                   "from phase 3 on",
         "uscita": 0,
         "blocchi": lambda: [
-            apre_la_sessione(),
+            opens_session(),
             (SERVER, VIDEO, FIN, 8, f24.intestazione(num=1) + b"\x00" * 64),
             (SERVER, VIDEO, FIN, 9,
              f24.intestazione(tipo=0x0302, num=2) + b"\x00" * 64)],
@@ -1231,7 +1231,7 @@ PROVE = {
     "canale-ignoto": {
         "spiega": "a high byte that is none of the five of §2.5",
         "uscita": 1,
-        "blocchi": lambda: [apre_la_sessione(),
+        "blocchi": lambda: [opens_session(),
                             (SERVER, 0x09, FIN, 8, b"\x00" * 28)],
     },
     "controllo-illeggibile": {
@@ -1267,7 +1267,7 @@ REGOLE_NUOVE = {
     "P6": ("RCP.md §5.2", "p6-primo-delta", "p6-delta-dopo-la-chiave"),
     "P7": ("RCP.md §11.1", "formato-vecchio", "abbandonato"),
     # ── ⭐⛔ AND THE TWO OF THE **EVENING** OF 12 AUG — D14 and D13 ───────────
-    #    ⚠ Until that evening P8 sat in `PROPOSTE_APERTE` and its test
+    #    ⚠ Until that evening P8 sat in `OPEN_PROPOSALS` and its test
     #      exited 0 **declaring**; now it exits 0 **accepting**, and it is a
     #      different fact that can be read in the printed line.
     "P8": ("RCP.md §6.2 in coda, §3 eccezione 6",
@@ -1307,12 +1307,12 @@ REGOLE_NUOVE = {
 #    place stays because the next point where the document does not decide will have
 #    somewhere to sit, and `proposte_coperte()` keeps saying «0 of 0» — which is a
 #    number, not a silence.
-PROPOSTE_APERTE = {}
+OPEN_PROPOSALS = {}
 
 # ⛔⛔ AND WHAT CANNOT BE JUDGED FROM A RECORDING AT ALL — it is declared, not
 #    faked.  ⚠ A proposal without a test put together with those that have the test
 #    would inflate the count, and it is the same reason
-#    `REGOLE_NUOVE` and `PROPOSTE_APERTE` sit in two tables.
+#    `REGOLE_NUOVE` and `OPEN_PROPOSALS` sit in two tables.
 FUORI_PORTATA = {
     "P10": ("§5.2 says **when** the client reconfigures the decoder — "
             "*«on the first KEYFRAME at the new size, not on the `TELA`»* — and it is "
@@ -1330,7 +1330,7 @@ FUORI_PORTATA = {
 def proposte_coperte():
     """⛔ Like `regole_coperte()`, for the cures the document does not have yet."""
     coperte, mancanti = [], []
-    for sigla, (_, stretta, vede) in PROPOSTE_APERTE.items():
+    for sigla, (_, stretta, vede) in OPEN_PROPOSALS.items():
         buchi = []
         if stretta not in PROVE:
             buchi.append(f"the test that keeps it TIGHT is missing («{stretta}»)")
@@ -1372,11 +1372,11 @@ def fabbrica(cartella):
         magia = v.get("magia", MAGIA)
         if v["blocchi"] is None:
             # the garbage tail is built by hand
-            scrivi_reg(p, chiave())
+            write_log(p, chiave())
             with open(p, "ab") as fh:
                 fh.write(b"spazzatura")
         else:
-            scrivi_reg(p, v["blocchi"](), magia=magia,
+            write_log(p, v["blocchi"](), magia=magia,
                        orologio=v.get("orologio", 1))
         fatti.append((nome, p, v["uscita"], v["spiega"],
                       v.get("tela", (1920, 1080))))
@@ -1385,9 +1385,9 @@ def fabbrica(cartella):
     return fatti
 
 
-def gira_prove(cartella, guasti=(), stampa=True):
+def run_tests(cartella, guasti=(), stampa=True):
     """⛔ Every test declares its own exit code BEFORE being run."""
-    fatti = fabbrica(cartella) if stampa else _fabbrica_muta(cartella)
+    fatti = fabbrica(cartella) if stampa else _quiet_factory(cartella)
     guastati, righe = 0, []
     if stampa:
         print()
@@ -1414,7 +1414,7 @@ def gira_prove(cartella, guasti=(), stampa=True):
     return guastati, righe
 
 
-def _fabbrica_muta(cartella):
+def _quiet_factory(cartella):
     import io
     import contextlib
     with contextlib.redirect_stdout(io.StringIO()):
@@ -1473,28 +1473,28 @@ def certifica(a):
     print("                     referee that skips everything does not acquit, it declares")
     print("                     it did not look.  If it exited 0 the fault")
     print("                     would have passed for a green\n")
-    sano, righe_sane = gira_prove(a.cartella, guasti=())
+    sano, healthy_lines = run_tests(a.cartella, guasti=())
     print()
-    rotto, righe_rotte = gira_prove(a.cartella, guasti=("G4",))
+    rotto, broken_lines = run_tests(a.cartella, guasti=("G4",))
     print()
     # ⛔ THE MARK, WITH ITS TWO HALVES (R12-A.3): the faulty round must say it
     #    and the healthy round must NOT already say it.
-    marca_rotto = sum(1 for r in righe_rotte
+    mark_broken = sum(1 for r in broken_lines
                       if r["atteso"] == 1 and r["visto"] == 3)
-    marca_sano = sum(1 for r in righe_sane
+    mark_healthy = sum(1 for r in healthy_lines
                      if r["atteso"] == 1 and r["visto"] == 3)
-    risanato, _ = gira_prove(a.cartella, guasti=(), stampa=False)
-    ok = (sano == 0 and rotto > 0 and marca_rotto > 0 and marca_sano == 0
+    risanato, _ = run_tests(a.cartella, guasti=(), stampa=False)
+    ok = (sano == 0 and rotto > 0 and mark_broken > 0 and mark_healthy == 0
           and risanato == 0)
     print(f"    {VERDE if ok else ROSSO}{'OK' if ok else 'NO'}{GRIGIO}  G4  "
           f"healthy {sano} -> fault {rotto} -> healed {risanato}   "
-          f"mark «exit 3 where 1 was needed»: {marca_rotto} times with the "
-          f"fault, {marca_sano} times when healthy")
+          f"mark «exit 3 where 1 was needed»: {mark_broken} times with the "
+          f"fault, {mark_healthy} times when healthy")
     scrivi_esito(a.uscita, {"tipo": "certificazione", "guasto": "G4",
                             "sano": sano, "guasto_conta": rotto,
-                            "risanato": risanato, "marca_col_guasto": marca_rotto,
-                            "marca_da_sano": marca_sano, "esito": bool(ok),
-                            "prove_sane": righe_sane, "prove_rotte": righe_rotte})
+                            "risanato": risanato, "marca_col_guasto": mark_broken,
+                            "marca_da_sano": mark_healthy, "esito": bool(ok),
+                            "prove_sane": healthy_lines, "prove_rotte": broken_lines})
     print()
     if ok:
         print(f"    {VERDE}⭐ 02-filo-validatore.py IS CERTIFIED{GRIGIO}")
@@ -1529,14 +1529,14 @@ def principale(a):
         print(f"        (the referee declares, it does not condemn) and the one that keeps "
               f"the cure")
         print(f"        TIGHT exits 1 — and it is the second one that counts")
-        ap_coperte, ap_mancanti = proposte_coperte()
-        for sigla, (dove, stretta, vede) in PROPOSTE_APERTE.items():
+        ap_covered, ap_missing = proposte_coperte()
+        for sigla, (dove, stretta, vede) in OPEN_PROPOSALS.items():
             print(f"  {sigla}  {dove}")
             print(f"      SHOWS it:       {vede}")
             print(f"      keeps it TIGHT: {stretta}")
-        print(f"\n  ⛔ proposals with BOTH tests: {len(ap_coperte)} of "
-              f"{len(PROPOSTE_APERTE)} — {', '.join(ap_coperte) or '—'}")
-        for sigla, perche in ap_mancanti:
+        print(f"\n  ⛔ proposals with BOTH tests: {len(ap_covered)} of "
+              f"{len(OPEN_PROPOSALS)} — {', '.join(ap_covered) or '—'}")
+        for sigla, perche in ap_missing:
             print(f"     {ROSSO}⛔ {sigla}: {perche}{GRIGIO}")
         print(f"\n== ⛔⛔ AND WHAT CANNOT BE JUDGED FROM A RECORDING")
         print(f"      ⚠ It sits in a table of its own: a cure without a test put "
@@ -1566,7 +1566,7 @@ def principale(a):
     #    afterwards is it pointed at the unknown (`LEZIONI.md` §1.2).
     print("== ⛔ the positive control, BEFORE pointing the referee "
           "at the unknown")
-    guastati, _ = gira_prove(a.cartella)
+    guastati, _ = run_tests(a.cartella)
     if guastati:
         print(f"\n    {ROSSO}⛔ the referee gets {guastati} known recordings "
               f"wrong: it is not the case to believe it on a new one{GRIGIO}")

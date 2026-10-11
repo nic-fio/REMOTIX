@@ -76,7 +76,7 @@ RADICE = os.path.dirname(QUI)
 PUNTATORE, PULSANTE, ROTELLA = 0x0101, 0x0102, 0x0103
 SINISTRO, DESTRO, CENTRALE = 0x110, 0x111, 0x112
 NOMI = {PUNTATORE: "PUNTATORE", PULSANTE: "PULSANTE", ROTELLA: "ROTELLA"}
-NOMI_BTN = {SINISTRO: "sinistro", DESTRO: "destro", CENTRALE: "centrale"}
+BTN_NAMES = {SINISTRO: "sinistro", DESTRO: "destro", CENTRALE: "centrale"}
 
 TELA = (1920, 1080)
 
@@ -188,15 +188,15 @@ def _solo(ms, codice):
         return False, "there is a ROTELLA: it was not a tap"
     if _clic(ms, codice) != 1:
         return False, ("%s clicks expected 1, counted %d (buttons: %s)"
-                       % (NOMI_BTN.get(codice, codice), _clic(ms, codice),
-                          [(NOMI_BTN.get(m["codice"], m["codice"]), m["premuto"])
+                       % (BTN_NAMES.get(codice, codice), _clic(ms, codice),
+                          [(BTN_NAMES.get(m["codice"], m["codice"]), m["premuto"])
                            for m in _pul(ms)]))
     altri = [m for m in _pul(ms) if m["codice"] != codice]
     if altri:
         return False, ("there are other buttons on the wire too: %s"
-                       % [(NOMI_BTN.get(m["codice"], m["codice"]), m["premuto"])
+                       % [(BTN_NAMES.get(m["codice"], m["codice"]), m["premuto"])
                           for m in altri])
-    return True, "one %s click and nothing else" % NOMI_BTN.get(codice, codice)
+    return True, "one %s click and nothing else" % BTN_NAMES.get(codice, codice)
 
 
 def c_G1(ms):
@@ -337,7 +337,7 @@ def c_C5a(ms):
     sin = [m for m in _pul(ms) if m["codice"] == SINISTRO]
     if [m["premuto"] for m in sin] != [1, 0, 1, 0]:
         return False, "they are not four events down,up,down,up: %s" % [
-            (NOMI_BTN.get(m["codice"], m["codice"]), m["premuto"]) for m in _pul(ms)]
+            (BTN_NAMES.get(m["codice"], m["codice"]), m["premuto"]) for m in _pul(ms)]
     if _punt(ms):
         return False, ("there are %d PUNTATORE inside a still double click: the "
                        "remote desktop would read it as a drag"
@@ -415,24 +415,24 @@ CASI = {
 }
 
 # Which cases also want the zoom read from the page.
-VOGLIONO_ZOOM = {"G7-pizzico", "C7a-pizzico-non-rotella", "C7b-rotella-non-pizzico"}
+WANT_ZOOM = {"G7-pizzico", "C7a-pizzico-non-rotella", "C7b-rotella-non-pizzico"}
 
 
 def giudica(righe):
     """righe: [{"fase":…, "hex":…} | {"fase":…, "marca":True} | {"fase":…, "zoom":…}]"""
-    per_fase, zoom = {}, {}
+    per_phase, zoom = {}, {}
     for r in righe:
         f = r.get("fase", "?")
         if "hex" in r:
-            per_fase.setdefault(f, b"")
-            per_fase[f] += bytes.fromhex(r["hex"])
+            per_phase.setdefault(f, b"")
+            per_phase[f] += bytes.fromhex(r["hex"])
         elif "zoom" in r:
             zoom[f] = r["zoom"]
         else:
-            per_fase.setdefault(f, b"")
+            per_phase.setdefault(f, b"")
     esiti = []
     for nome, fn in CASI.items():
-        dati = per_fase.get(nome)
+        dati = per_phase.get(nome)
         if dati is None:
             esiti.append({"caso": nome, "verde": False,
                           "perche": "⛔ the phase was not recorded at all"})
@@ -443,7 +443,7 @@ def giudica(righe):
             esiti.append({"caso": nome, "verde": False,
                           "perche": "⛔ violation of RCP.md §7.3: %s" % e})
             continue
-        if nome in VOGLIONO_ZOOM:
+        if nome in WANT_ZOOM:
             verde, perche = fn(ms, zoom.get(nome))
         else:
             verde, perche = fn(ms)
@@ -678,7 +678,7 @@ class Raccolta:
             self.righe.append({"t": time.time(), "fase": fase, "zoom": z})
 
 
-def servitore(porta, raccolta, pagina_html):
+def servitore(porta, raccolta, page_html):
     class H(http.server.BaseHTTPRequestHandler):
         protocol_version = "HTTP/1.1"
 
@@ -695,7 +695,7 @@ def servitore(porta, raccolta, pagina_html):
         def do_GET(self):
             p = self.path.split("?")[0].split("#")[0]
             if p == "/":
-                self._corpo("text/html; charset=utf-8", pagina_html)
+                self._corpo("text/html; charset=utf-8", page_html)
             else:
                 self._corpo("text/plain", b"not here", 404)
 
@@ -778,7 +778,7 @@ def _cdp():
 #    unidirectional stream of §2.5, here it sends to this process.
 #    ⚠ It is the only difference between bench and product, and it is declared: the
 #      TRANSPORT is not measured here.
-PROLOGO = r"""
+PROLOGUE = r"""
 (function () {
   var n = 0, coda = Promise.resolve();
   window.__b28 = { spediti: 0, errori: [] };
@@ -862,7 +862,7 @@ def gira(porta, diagnosi, esiti_f, registro_f, attesa=30):
     c = Guida(cdp, b["webSocketDebuggerUrl"], timeout=20)
     c.chiama("Page.enable")
     c.chiama("Runtime.enable")
-    c.chiama("Page.addScriptToEvaluateOnNewDocument", source=PROLOGO)
+    c.chiama("Page.addScriptToEvaluateOnNewDocument", source=PROLOGUE)
     # ⛔ Touch is DECLARED: without it, a desktop Chrome delivers no
     #    `Touch` event and the bench would measure its own silence.
     c.chiama("Emulation.setTouchEmulationEnabled", enabled=True, maxTouchPoints=5)
@@ -1203,7 +1203,7 @@ def gira(porta, diagnosi, esiti_f, registro_f, attesa=30):
         "the scenes and the judge's cases do not match"
 
     verdetti = {}
-    guasti_di_fase = []
+    phase_faults = []
     for nome, fn in SCENE:
         # ⛔ ONE ATTEMPT ONLY, and the second is NOT made.  On a retry, the bytes of the
         #    half-successful attempt stay in the phase and add up to those
@@ -1228,7 +1228,7 @@ def gira(porta, diagnosi, esiti_f, registro_f, attesa=30):
             except (TimeoutError, OSError, RuntimeError) as e:
                 print("  ⚠ TOOL FAULT in phase %s (%s)"
                       % (nome, type(e).__name__))
-                guasti_di_fase.append(nome)
+                phase_faults.append(nome)
                 c.riaggancia("phase %s: %s" % (nome, type(e).__name__))
                 attivi.clear()
                 posti.clear()
@@ -1269,14 +1269,14 @@ def gira(porta, diagnosi, esiti_f, registro_f, attesa=30):
     #    MEASURED, with a mark all their own, and the bench exits with a different
     #    code: «to be redone», not «the product is broken».
     for e in esiti:
-        if e["caso"] in guasti_di_fase:
+        if e["caso"] in phase_faults:
             e["strumento"] = True
     return 0, scena, esiti
 
 
 # ⛔ The switch is measured on WHICH LAYOUT IS IN FORCE, read from the
 #    document — not «there is a function that changes it».
-def misura_passaggio(c_vecchia, cdp, porta, ox, oy, diagnosi):
+def misura_passaggio(c_old, cdp, porta, ox, oy, diagnosi):
     """⛔⭐ THE SWITCH IS MEASURED IN A NEW TAB, AND IT IS NOT A CONVENIENCE.
 
     `[M]` 14 Aug 2026, Chrome 151.0.7922.137.  Measuring the switch in the
@@ -1329,10 +1329,10 @@ def misura_passaggio(c_vecchia, cdp, porta, ox, oy, diagnosi):
 
     # ⚠ A NEW identifier at every contact, as in the synthetic hand: a recycled
     #   id blocks `Input.dispatchTouchEvent` (measured, see above).
-    dito_id = [200]
+    finger_id = [200]
 
     def dito(pt=None):
-        dito_id[0] += 1
+        finger_id[0] += 1
         # ⛔ Touch emulation is switched ON AGAIN before every contact — `[M]`
         #    14 Aug 2026, and the page's spy is the one that said so:
         #    after the second navigation and after a mouse event the
@@ -1344,7 +1344,7 @@ def misura_passaggio(c_vecchia, cdp, porta, ox, oy, diagnosi):
                  maxTouchPoints=5)
         c.chiama("Input.dispatchTouchEvent", type="touchStart",
                  touchPoints=[{"x": pt[0] if pt else ox, "y": pt[1] if pt else oy,
-                               "id": dito_id[0]}])
+                               "id": finger_id[0]}])
         c.chiama("Input.dispatchTouchEvent", type="touchEnd", touchPoints=[])
         time.sleep(0.3)
 
@@ -1360,7 +1360,7 @@ def misura_passaggio(c_vecchia, cdp, porta, ox, oy, diagnosi):
 
     # ── D1 · the forced layout is really in force, and touch speaks ────────
     #    ⚠ It is read on the GESTURES tab, not on the new one.
-    d = c_vecchia.valuta("document.body.dataset.disposizione")
+    d = c_old.valuta("document.body.dataset.disposizione")
     esiti.append({"caso": "D1-disposizione-in-vigore", "verde": d == "tocco",
                   "perche": "`body[data-disposizione]` = «%s» (the PRODUCT "
                             "wrote it, not the bench)" % d})
@@ -1379,18 +1379,18 @@ def misura_passaggio(c_vecchia, cdp, porta, ox, oy, diagnosi):
                             c.valuta("JSON.stringify(window.REMOTIX.tocco.contesto())"))}
 
     dito()
-    d_dito0 = disposizione()
+    d_finger0 = disposizione()
     mouse()
     d_mouse = disposizione()
     dito()
-    d_dito = disposizione()
+    d_finger = disposizione()
 
     note["spia"] = json.loads(c.valuta("JSON.stringify(window.__spia)") or "[]")
-    verde = (d_dito0 == "tocco" and d_mouse == "classico" and d_dito == "tocco")
+    verde = (d_finger0 == "tocco" and d_mouse == "classico" and d_finger == "tocco")
     esiti.append({"caso": "D2-passaggio-automatico", "verde": verde,
                   "perche": ("at start «%s»; after a FINGER «%s»; after a mouse "
                              "CLICK «%s»; after another FINGER «%s»"
-                             % (d0, d_dito0, d_mouse, d_dito))
+                             % (d0, d_finger0, d_mouse, d_finger))
                             + ("" if verde else
                                "  ⛔ expected tocco → classico → tocco; the spy says: %s"
                                % note["spia"][-8:])})
@@ -1499,12 +1499,12 @@ def misura_passaggio(c_vecchia, cdp, porta, ox, oy, diagnosi):
     import re as _re
     codice = _re.sub(r"/\*.*?\*/", "", a, flags=_re.S)
     codice = _re.sub(r"^\s*//.*$", "", codice, flags=_re.M)
-    colpevoli = [s for s in ("userAgent", "navigator.platform", "userAgentData")
+    culprits = [s for s in ("userAgent", "navigator.platform", "userAgentData")
                  if s in codice]
-    esiti.append({"caso": "D4-il-contesto-non-e-il-sistema", "verde": not colpevoli,
+    esiti.append({"caso": "D4-il-contesto-non-e-il-sistema", "verde": not culprits,
                   "perche": ("in the F4-TOCCO anchor nothing appears that comes from the "
-                             "operating system" if not colpevoli
-                             else "⛔ they appear: %s" % colpevoli)})
+                             "operating system" if not culprits
+                             else "⛔ they appear: %s" % culprits)})
 
     try:
         urllib.request.urlopen(

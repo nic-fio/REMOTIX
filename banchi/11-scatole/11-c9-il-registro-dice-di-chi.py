@@ -256,7 +256,7 @@ import time
 # ⛔ And if it cannot be imported we exit **3** and say so, ⇒ ⛔ we do not
 #   silently fall back on the poor predicate — which is the defect itself.
 # ═══════════════════════════════════════════════════════════════════════════
-_QUI_C1 = os.path.dirname(os.path.abspath(__file__))
+_HERE_C1 = os.path.dirname(os.path.abspath(__file__))
 _C1 = None
 
 
@@ -266,8 +266,8 @@ def _carica_c1():
     ⚠ It is looked for next to me (inside the box everything is in `/opt/remotix`) and
       one level up, as C2, C3 and C6 do with their imported judges.
     """
-    for p in (os.path.join(_QUI_C1, "11-c1-nasce-e-si-vede.py"),
-              os.path.join(os.path.dirname(_QUI_C1), "11-scatole",
+    for p in (os.path.join(_HERE_C1, "11-c1-nasce-e-si-vede.py"),
+              os.path.join(os.path.dirname(_HERE_C1), "11-scatole",
                            "11-c1-nasce-e-si-vede.py")):
         if not os.path.exists(p):
             continue
@@ -293,7 +293,7 @@ def _carica_c1():
     return None
 
 
-def casa_dell_ammissione():
+def admission_home():
     global _C1
     if _C1 is None:
         _C1 = _carica_c1()
@@ -312,7 +312,7 @@ def e_stato_ammesso(coda):
     ⛔ `False` is not a product red: a client turned away is a client
        turned away, and the caller exits **3**.
     """
-    return casa_dell_ammissione().e_stato_ammesso(coda)
+    return admission_home().e_stato_ammesso(coda)
 
 
 def garantisci_i_gruppi(chi, prefisso="   "):
@@ -330,7 +330,7 @@ def garantisci_i_gruppi(chi, prefisso="   "):
     ⭐ The work is done by `attrezzi-gruppi-scheda.sh`, which reads the gids from the NODES and
        reads back comparing the numbers.  ⛔ No copy of it is made here (§1.47).
     """
-    return casa_dell_ammissione().garantisci_i_gruppi(chi, prefisso)
+    return admission_home().garantisci_i_gruppi(chi, prefisso)
 
 # ---------------------------------------------------------------------------
 # ⛔ THE MANDATORY SET, DECLARED HERE AND PRINTED IN EVERY OUTCOME.
@@ -349,7 +349,7 @@ AREE_DI_SESSIONE = ("figlio", "sessione", "video", "cattura", "cursore",
                     "forma")
 
 # ⚠ The same area serves the greeting and the dialogue: they are not judged, they are counted.
-AREE_DEL_SALUTO = ("quic", "wt", "rcp", "pagina")
+HELLO_AREAS = ("quic", "wt", "rcp", "pagina")
 
 # ⛔ They speak of the machine, not of a tenant.
 #
@@ -361,7 +361,7 @@ AREE_DEL_SALUTO = ("quic", "wt", "rcp", "pagina")
 #    read — the `#define`s are in `registro.h`, in `figlio.h`, in
 #    `appunti.h` and in four scattered `#define AREA`.  ⇒ The defence is not
 #    the list: it is that what the list does not know **is seen**.
-AREE_DEL_SERVER = ("avvio", "cert", "budget")
+SERVER_AREAS = ("avvio", "cert", "budget")
 
 # ⭐ The ONLY exemption by content, and it must be named in full: a line that
 #    carries a count ABOUT ALL the tenants cannot name one.
@@ -388,19 +388,19 @@ class Conto(object):
         self.orfane = 0          # ⛔ lines without a timestamp (registro.c)
         self.obbligate = 0
         self.parentesi = 0
-        self.solo_corpo = 0
+        self.body_only = 0
         self.senza = []          # (area, body) of the red lines
-        self.esenti_area = 0
-        self.esenti_riepilogo = 0
+        self.exempt_area = 0
+        self.exempt_summary = 0
         self.saluto = 0
-        self.saluto_con_nome = 0
+        self.greeting_with_name = 0
         self.per_inquilino = {}  # name -> how many mandatory lines of its own
-        self.altri_nomi = {}     # brackets with a name NOT declared
+        self.other_names = {}     # brackets with a name NOT declared
         # ⛔⛔ The areas that NONE of the three lists knows — see `analizza`.
         #     `area -> how many lines`, ⭐ and they are printed BY NAME.
         self.sconosciute = {}
 
-    def righe_sconosciute(self):
+    def unknown_lines(self):
         return sum(self.sconosciute.values())
 
 
@@ -427,12 +427,12 @@ def analizza(testo, nomi):
             c.orfane += 1
             continue
         _quando, area, ident, corpo = m.group(1), m.group(2), m.group(3), m.group(4)
-        nel_corpo = next((n for n in nomi if n and n in corpo), None)
+        in_body = next((n for n in nomi if n and n in corpo), None)
 
-        if area in AREE_DEL_SALUTO:
+        if area in HELLO_AREAS:
             c.saluto += 1
-            if ident or nel_corpo:
-                c.saluto_con_nome += 1
+            if ident or in_body:
+                c.greeting_with_name += 1
             continue
         if area not in AREE_DI_SESSIONE:
             # ═══════════════════════════════════════════════════════════════
@@ -440,7 +440,7 @@ def analizza(testo, nomi):
             #     «server stuff».
             #
             # ⚠ Until 27 Aug 2026 there was only `c.esenti_area += 1` here, and
-            #   `stampa_conto` presented the count under the label
+            #   `print_count` presented the count under the label
             #   *«exempt — server areas (avvio cert budget)»*.  ⇒ Everything
             #   that was not in the three lists ended up **mute** inside
             #   that line: `[D]` five hundred lines of an invented area
@@ -456,13 +456,13 @@ def analizza(testo, nomi):
             #   (§1.49): it goes off as soon as someone puts the new area in the
             #   right list, which is exactly the gesture needed.
             # ═══════════════════════════════════════════════════════════════
-            if area in AREE_DEL_SERVER:
-                c.esenti_area += 1
+            if area in SERVER_AREAS:
+                c.exempt_area += 1
             else:
                 c.sconosciute[area] = c.sconosciute.get(area, 0) + 1
             continue
         if any(s in corpo for s in SEGNI_DI_RIEPILOGO):
-            c.esenti_riepilogo += 1
+            c.exempt_summary += 1
             continue
 
         c.obbligate += 1
@@ -472,16 +472,16 @@ def analizza(testo, nomi):
                 c.per_inquilino[ident] = c.per_inquilino.get(ident, 0) + 1
             else:
                 # ⚠ Attributed, but to someone I had not declared: it is said.
-                c.altri_nomi[ident] = c.altri_nomi.get(ident, 0) + 1
-        elif nel_corpo:
-            c.solo_corpo += 1
-            c.per_inquilino[nel_corpo] = c.per_inquilino.get(nel_corpo, 0) + 1
+                c.other_names[ident] = c.other_names.get(ident, 0) + 1
+        elif in_body:
+            c.body_only += 1
+            c.per_inquilino[in_body] = c.per_inquilino.get(in_body, 0) + 1
         else:
             c.senza.append((area, corpo))
     return c
 
 
-def verdetto_ammissione(quanti_ammessi, quanti_aperti):
+def admission_verdict(how_many_allowed, quanti_aperti):
     """⭐⭐ «Do I have enough tenants to do the test I say I do?»
 
     ⛔ Separated from the rest on purpose, like `verdetto()`: a rule that reads in
@@ -497,9 +497,9 @@ def verdetto_ammissione(quanti_ammessi, quanti_aperti):
     """
     if quanti_aperti == 0:
         return 0, "I did not open the tenants myself: I judge what is there"
-    if quanti_ammessi < quanti_aperti:
+    if how_many_allowed < quanti_aperti:
         return 3, ("%d tenants out of %d got in: the strong form — TWO alive "
-                   "together — was not tested" % (quanti_ammessi,
+                   "together — was not tested" % (how_many_allowed,
                                                   quanti_aperti))
     return 0, "all the opened tenants got in"
 
@@ -549,7 +549,7 @@ def verdetto(c, quanti_attesi):
         return 3, ("⛔ %d lines of %d areas I do NOT know how to classify (%s): they "
                    "are neither judged nor exempt, and a green that ignores them "
                    "would be a green that has not looked at them (§1.44)"
-                   % (c.righe_sconosciute(), len(c.sconosciute),
+                   % (c.unknown_lines(), len(c.sconosciute),
                       " ".join(sorted(c.sconosciute))))
     if quanti_attesi >= 2 and len(c.per_inquilino) < 2:
         return 3, ("⭐ the strong form is TWO tenants together, and in the "
@@ -575,7 +575,7 @@ def sfregia(testo, nomi, come):
 
 
 # ---------------------------------------------------------------------------
-def stampa_conto(c, nomi, esito, perche):
+def print_count(c, nomi, esito, perche):
     print()
     print("  ⭐ THE COUNT — and it is always printed, green or red:")
     print("     total lines in the window          %6d" % c.totali)
@@ -587,37 +587,37 @@ def stampa_conto(c, nomi, esito, perche):
         print("        · with the name IN THE BRACKETS  %6d   (%4.1f %%)"
               % (c.parentesi, 100.0 * c.parentesi / c.obbligate))
         print("        · with the name ONLY IN THE BODY %6d   (%4.1f %%)  ⚠"
-              % (c.solo_corpo, 100.0 * c.solo_corpo / c.obbligate))
+              % (c.body_only, 100.0 * c.body_only / c.obbligate))
         print("        · ⛔ WITHOUT A NAME              %6d   (%4.1f %%)"
               % (len(c.senza), 100.0 * len(c.senza) / c.obbligate))
     print("     exempt — server areas              %6d   (%s)"
-          % (c.esenti_area, " ".join(AREE_DEL_SERVER)))
+          % (c.exempt_area, " ".join(SERVER_AREAS)))
     # ⛔⛔ And the areas nobody knows are printed BY NAME, always: an
     #     exemption that cannot be seen is an exemption nobody notices.
     if c.sconosciute:
         print("     ⛔⛔ AREAS I CANNOT CLASSIFY       %6d   lines, in %d areas"
-              % (c.righe_sconosciute(), len(c.sconosciute)))
+              % (c.unknown_lines(), len(c.sconosciute)))
         for area, q in sorted(c.sconosciute.items(), key=lambda x: -x[1]):
             print("        · %-12s %6d   ⛔ neither mandatory nor exempt: nobody"
                   " has ever judged it" % (area, q))
         print("        ⇒ it must be put in one of the three lists at the top of this")
         print("          mesh (session · greeting · server).")
     print("     exempt — summaries about EVERYONE  %6d   (they carry «%s»)"
-          % (c.esenti_riepilogo, "» «".join(SEGNI_DI_RIEPILOGO)))
+          % (c.exempt_summary, "» «".join(SEGNI_DI_RIEPILOGO)))
     print("     ⚠ greeting areas, NOT judged       %6d   of which with the name %d"
-          % (c.saluto, c.saluto_con_nome))
+          % (c.saluto, c.greeting_with_name))
     print("       (%s — the same area serves the handshake and the dialogue)"
-          % " ".join(AREE_DEL_SALUTO))
+          % " ".join(HELLO_AREAS))
     print()
     print("  ⭐ and the STRONG FORM — mandatory lines attributed, per tenant:")
     for n in nomi:
         print("       %-12s %6d" % (n, c.per_inquilino.get(n, 0)))
-    for n, q in sorted(c.altri_nomi.items()):
+    for n, q in sorted(c.other_names.items()):
         print("       ⚠ %-10s %6d   (name NOT declared to this mesh)" % (n, q))
     print()
-    if c.solo_corpo:
+    if c.body_only:
         print("  ⚠ FINDING, not verdict: %d mandatory lines (%.1f %%) name"
-              % (c.solo_corpo, 100.0 * c.solo_corpo / max(1, c.obbligate)))
+              % (c.body_only, 100.0 * c.body_only / max(1, c.obbligate)))
         print("    the tenant ONLY in the prose, not in the identity brackets.")
         print("    ⛔ They are attributable — a man who reads knows who is meant —")
         print("       but the prose changes when someone rewrites a message,")
@@ -686,18 +686,18 @@ def certifica():
         ("⛔ with --da-file the START-UP enters the window and gives red: it is the price",
          "15:20:51.193 avvio   REMOTIX — phase 1, the bare wire\n"
          "15:20:51.194 figlio  ⭐ children table on: up to 10\n" + sano,
-         2, 1, lambda c: len(c.senza) == 1 and c.esenti_area == 1),
+         2, 1, lambda c: len(c.senza) == 1 and c.exempt_area == 1),
         # ⛔ The guardian's summary line: exempt, or it would be a red per
         #    minute forever.
         ("⭐ the summary about EVERYONE is exempt (or it is a red per minute)",
          sano + "20:08:45.559 sessione guardiano: chiamate=2 inquilini=2 "
                 "giri_fermi=0\n", 2, 0,
-         lambda c: c.esenti_riepilogo == 1),
+         lambda c: c.exempt_summary == 1),
         # ⚠ The name only in the prose: attributable, counted separately.
         ("⚠ name ONLY in the body ⇒ green, but counted separately",
          sano + "20:07:46.000 figlio  «c9u1»: the stage for the canvas 1920x1080 "
                 "is NOT there YET\n", 2, 0,
-         lambda c: c.solo_corpo == 1),
+         lambda c: c.body_only == 1),
         # ⛔ THE REAL TRAP, and it comes from the measured data: a bracket at the END
         #    is not an identity.  If it were, this line would be attributed to
         #    a tenant called «Italian» ⇒ a green bought with an error.
@@ -707,11 +707,11 @@ def certifica():
         # ⛔ The greeting areas without a name are not red — and they are counted.
         ("⛔ a GREETING line without a name is not red (and it is counted)",
          sano + "20:07:41.261 quic    new connection from [127.0.0.1]:58048\n",
-         2, 0, lambda c: c.saluto == 2 and c.saluto_con_nome == 1),
+         2, 0, lambda c: c.saluto == 2 and c.greeting_with_name == 1),
         # ⛔ The server areas: exempt even when they name someone.
         ("⛔ `budget verdict for «c9u1»` is exempt: the area is the server's",
          sano + "20:07:42.250 budget  verdict for «c9u1»: ⭐ AMMESSO\n",
-         2, 0, lambda c: c.esenti_area == 1 and not c.sconosciute),
+         2, 0, lambda c: c.exempt_area == 1 and not c.sconosciute),
 
         # ═══════════════════════════════════════════════════════════════════
         # ⛔⛔ THE CASE THAT WAS MISSING BEFORE TODAY, and it would have caught the defect of
@@ -727,7 +727,7 @@ def certifica():
          sano + "".join("20:09:%02d.%03d penna   [c9u1] traccia %d\n"
                         % (i // 60, i % 1000, i) for i in range(500)),
          2, 3, lambda c: c.sconosciute.get("penna") == 500
-                         and c.esenti_area == 0),
+                         and c.exempt_area == 0),
 
         ("⛔ and ONE line of an unknown area is enough: there is no threshold",
          sano + "20:09:01.000 penna   [c9u1] traccia 1\n", 2, 3,
@@ -738,7 +738,7 @@ def certifica():
         #   unknown area is `avvio`, which is already in the server's list.
         ("⭐ …and a KNOWN area of the server does not trigger anything (§1.49)",
          sano + "20:09:01.000 avvio   any start-up line\n", 2, 0,
-         lambda c: not c.sconosciute and c.esenti_area == 1),
+         lambda c: not c.sconosciute and c.exempt_area == 1),
 
         # ⛔ A real red wins over «I do not know»: the order of the two checks
         #    is that one, and it must be tested instead of remembered.
@@ -759,7 +759,7 @@ def certifica():
         # ⚠ A name NOT declared: attributed, not «without a name».
         ("⚠ a bracket with an undeclared name is ATTRIBUTED",
          sano + "20:07:44.500 figlio  [provanic7] entering the stage mounting\n", 2, 0,
-         lambda c: c.altri_nomi.get("provanic7") == 1 and not c.senza),
+         lambda c: c.other_names.get("provanic7") == 1 and not c.senza),
         # ⭐ The fault on the REAL DATA, «corpo» direction: the brackets stay, and the
         #    line stays attributable ⇒ green.  It serves to prove that the two
         #    forms are really counted separately.
@@ -788,7 +788,7 @@ def certifica():
     # ═══════════════════════════════════════════════════════════════════════
     print()
     print("  ── the admission guard: how many REALLY got in")
-    casi_amm = [
+    cases_admitted = [
         ("⭐ both got in ⇒ go on", 2, 2, 0),
         ("⛔ only one of two ⇒ 3, the strong form was not tested", 1, 2, 3),
         ("⛔ neither of the two (turned away) ⇒ 3, ⛔ NOT a red", 0, 2, 3),
@@ -796,8 +796,8 @@ def certifica():
          0, 0, 0),
         ("⭐ three of three ⇒ go on (it is not nailed down to two)", 3, 3, 0),
     ]
-    for nome, amm, ape, atteso in casi_amm:
-        e, perche = verdetto_ammissione(amm, ape)
+    for nome, amm, ape, atteso in cases_admitted:
+        e, perche = admission_verdict(amm, ape)
         ok = e == atteso
         if not ok:
             guai += 1
@@ -807,17 +807,17 @@ def certifica():
     # ⭐⭐ AND THE «AMMESSO» PREDICATE — it lives in C1, and it is certified with C1's cases:
     #    ⛔ a copy of the cases here would be a second place to diverge from.
     print()
-    guai_amm, quanti_amm = casa_dell_ammissione().certifica_ammissione("C9")
-    guai += guai_amm
+    admission_troubles, how_many_admitted = admission_home().certifica_ammissione("C9")
+    guai += admission_troubles
 
     # ⭐⭐ AND THE CARD GROUPS CASES — ⛔ the other case that was missing:
     #    a tenant without the groups of the nodes ⇒ «I could not look», ⛔
     #    never red.  They live in C1 with the step they certify.
     print()
-    guai_gr, quanti_gr = casa_dell_ammissione().certifica_gruppi("C9")
-    guai += guai_gr
+    group_troubles, how_many_groups = admission_home().certifica_gruppi("C9")
+    guai += group_troubles
 
-    quanti = len(casi) + len(casi_amm) + quanti_amm + quanti_gr
+    quanti = len(casi) + len(cases_admitted) + how_many_admitted + how_many_groups
     print()
     if guai:
         print("⛔ the judge is NOT reliable: %d cases out of %d wrong"
@@ -839,7 +839,7 @@ def leggi(percorso):
         return None
 
 
-def apri_inquilini(a, nomi):
+def open_tenants(a, nomi):
     """⭐ THE STRONG FORM: the two are opened TOGETHER, not one after the other.
 
     ⛔ And «from zero» includes «from zero with respect to myself of yesterday»: the user is
@@ -869,9 +869,9 @@ def apri_inquilini(a, nomi):
         #     is born blind, and a log that names nobody because nobody
         #     has ever seen anything is not an attribution defect.
         #     ⇒ `None` ⇒ the caller exits **2/3**, ⛔ never red.
-        e_gr, perche_gr = garantisci_i_gruppi(chi, prefisso="  ")
+        e_gr, why_groups = garantisci_i_gruppi(chi, prefisso="  ")
         if e_gr != 0:
-            print("  %s" % perche_gr)
+            print("  %s" % why_groups)
             return None, []
 
     # ⛔ We mark WHERE we are in the log BEFORE opening: the window is the
@@ -987,9 +987,9 @@ def main():
     print()
     print("   the MANDATORY set, declared:")
     print("     session areas    : %s" % " ".join(AREE_DI_SESSIONE))
-    print("     exempt (server)  : %s" % " ".join(AREE_DEL_SERVER))
+    print("     exempt (server)  : %s" % " ".join(SERVER_AREAS))
     print("     not judged       : %s   ⚠ the greeting does not have a name yet"
-          % " ".join(AREE_DEL_SALUTO))
+          % " ".join(HELLO_AREAS))
     print("     exempt by count  : the lines that carry «%s»"
           % "» «".join(SEGNI_DI_RIEPILOGO))
     print()
@@ -1020,7 +1020,7 @@ def main():
 
         print("   I open the two, port %d, and they stay alive together %.0f s…"
               % (a.porta, a.resta))
-        segno, ammessi = apri_inquilini(a, nomi)
+        segno, ammessi = open_tenants(a, nomi)
         if segno is None:
             print("⛔ the terrain does not hold: I could not prepare the")
             print("   tenants  ⇒ 2")
@@ -1038,16 +1038,16 @@ def main():
         # tested — and not tested does not mean broken.
         # ⇒ Outcome **3**, ⛔ and it is not a red (§4.5).
         # ═══════════════════════════════════════════════════════════════════
-        e_amm, perche_amm = verdetto_ammissione(len(ammessi), len(nomi))
-        if e_amm != 0:
+        e_admitted, why_admitted = admission_verdict(len(ammessi), len(nomi))
+        if e_admitted != 0:
             print()
-            print("  ⛔ %s," % perche_amm)
+            print("  ⛔ %s," % why_admitted)
             print("     so there is nothing whose attribution to judge.")
             print("  ⇒ I could not look, outcome %d — ⛔ and a client"
-                  % e_amm)
+                  % e_admitted)
             print("     TURNED AWAY is not a broken product (§4.5, §1.51).")
             sgombra(nomi)
-            sys.exit(e_amm)
+            sys.exit(e_admitted)
         fetta = leggi(a.registro)
         fetta = fetta[segno:] if fetta is not None else None
         sgombra(nomi)
@@ -1083,7 +1083,7 @@ def main():
         print("  ⛔ %s" % perche)
         print("  outcome 3 — and ⛔ it is not a red (§4.5).")
         sys.exit(3)
-    stampa_conto(c, nomi, esito, perche)
+    print_count(c, nomi, esito, perche)
 
     # ═══════════════════════════════════════════════════════════════════════
     # ⛔⛔ WITH THE GRAFTED FAULT THE OUTCOME IS READ BACKWARDS — and without these
@@ -1107,12 +1107,12 @@ def main():
     # ═══════════════════════════════════════════════════════════════════════
     if a.togli_nome != "no":
         senza_prima = len(prima.senza) if prima is not None else 0
-        senza_dopo = len(c.senza)
+        without_after = len(c.senza)
         print()
         print("   ⛔ THE GRAFTED FAULT — and here the outcome is read BACKWARDS")
         print("      lines without a name: %d without the fault  ⇒  %d with the fault"
-              % (senza_prima, senza_dopo))
-        if esito == 1 and senza_dopo > senza_prima:
+              % (senza_prima, without_after))
+        if esito == 1 and without_after > senza_prima:
             print("   ⭐ THE FAULT WAS SEEN — C9 can still say red,")
             print("      and the red comes FROM THE FAULT, not from the defect that was already there.")
             sys.exit(0)

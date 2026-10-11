@@ -16,7 +16,7 @@ ESP = sys.argv[2:]
 sys.argv = [sys.argv[0], "--scatola", D, "--browser", "firefox"]
 import suite as S                                                     # noqa: E402
 
-SERRATURA = "/media/REMOTIX/rete11/.scatole.lock"
+LOCK_V = "/media/REMOTIX/rete11/.scatole.lock"
 BASE = "/media/REMOTIX/tmp/t2"
 BOX = "rete11-" + D
 
@@ -32,7 +32,7 @@ def sudo(cmd, t=300):
 
 
 def tieni():
-    fd = os.open(SERRATURA, os.O_RDWR | os.O_CREAT, 0o666)
+    fd = os.open(LOCK_V, os.O_RDWR | os.O_CREAT, 0o666)
     while True:
         try:
             fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -114,7 +114,7 @@ def una(esp):
         figlio = s.sc.dentro("ps -eo pid=,ppid=,user:32= | awk '$2==%s && $3==\"%s\"{print $1}' | head -1" % (padre, u), 10)[1].strip()
         log("parent %s child %s" % (padre, figlio))
         if esp == "uccidi-figlio":
-            s.spegni_browser()
+            s.turn_off_browser()
             time.sleep(4)
         c, ta = s.sc.dentro("date +%H:%M:%S.%N", 10)
         if esp == "ferma":
@@ -136,8 +136,8 @@ def una(esp):
             c, t = sudo("bash /media/REMOTIX/rete11/11-accendi.sh server %s" % D, 120)
             log("service restarted: rc %s" % c)
             rimetti = False
-        s.spegni_browser()
-        s.accendi_browser()
+        s.turn_off_browser()
+        s.turn_on_browser()
         ok, m = s.entra()
         log("reattach: %s %s" % (ok, m[:100]))
         time.sleep(15)

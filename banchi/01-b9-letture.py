@@ -190,7 +190,7 @@ def eccomi(voci):
     return inquadratura(0x0002, u16(1) + capacita(voci))
 
 
-def capsula_chiusura(codice, larghezza=4, dentro_data=True):
+def capsula_chiusura(codice, larghezza=4, inside_data=True):
     """The `CLOSE_WEBTRANSPORT_SESSION` capsule (0x2843), as the wire sees it.
 
     ⚠ The type and the length are QUIC variable-length integers: `0x2843` fits
@@ -198,7 +198,7 @@ def capsula_chiusura(codice, larghezza=4, dentro_data=True):
     """
     corpo = codice.to_bytes(larghezza, "big")
     capsula = b"\x68\x43" + bytes([len(corpo)]) + corpo
-    if not dentro_data:
+    if not inside_data:
         return capsula
     # RFC 9297: on the wire of the CONNECT the capsules travel inside DATA frames
     return b"\x00" + bytes([len(capsula)]) + capsula
@@ -214,11 +214,11 @@ def capsula_chiusura(codice, larghezza=4, dentro_data=True):
 VOCI = []
 
 
-def voce(sigla, dove, domanda, lettura_a, lettura_b, scelta, morde,
+def voce(sigla, dove, domanda, reading_a, reading_b, scelta, morde,
          appigli_rcp=(), appigli_cliente=(), byte=None, nota=""):
     VOCI.append({
         "sigla": sigla, "dove": dove, "domanda": domanda,
-        "a": lettura_a, "b": lettura_b, "scelta": scelta, "morde": morde,
+        "a": reading_a, "b": reading_b, "scelta": scelta, "morde": morde,
         "appigli_rcp": list(appigli_rcp),
         "appigli_cliente": list(appigli_cliente),
         "byte": byte, "nota": nota,
@@ -819,8 +819,8 @@ def prova_L4(sp):
        arrives because the reader refused the framing."""
     dentro = u16(1) + capacita([("audio.codec", "opus,pcm"),
                                 ("video.profondita", "8")])
-    con_coda = dentro + b"\xDE\xAD\xBE\xEF"
-    byte = inquadratura(0x0001, con_coda)
+    with_queue = dentro + b"\xDE\xAD\xBE\xEF"
+    byte = inquadratura(0x0001, with_queue)
     c = _Finto(byte)
     try:
         sp["_sfoglia"](c)
@@ -838,13 +838,13 @@ def prova_L4(sp):
         return "?", (f"the reader delivered {len(c.messaggi.dentro)} "
                      f"messages instead of 1: it is neither A nor B, it is a third "
                      f"behaviour that neither of the two readings describes")
-    _tipo, corpo, _grezzo = c.messaggi.dentro[0]
-    if corpo == con_coda:
+    _type, corpo, _raw = c.messaggi.dentro[0]
+    if corpo == with_queue:
         return "B", (f"the delivered body is {len(corpo)} bytes long — "
                      f"whole `lunghezza`, tail included: **reading B**, "
                      f"tolerant, as written in the entry")
     return "A", (f"the delivered body is {len(corpo)} bytes long instead of "
-                 f"{len(con_coda)}: the tail was CUT, that is **reading "
+                 f"{len(with_queue)}: the tail was CUT, that is **reading "
                  f"A** — and the entry says B")
 
 
@@ -916,7 +916,7 @@ def principale(a):
              "⛔ entries TESTED on the client's behaviour": [0, 0],
              "⛔ entries that really separate the two readings": [0, 0]}
     conti["entries of the inventory"] = [len(VOCI), len(VOCI)]
-    scollegate, rotte, smentite, non_provate = [], [], [], []
+    scollegate, rotte, smentite, untried = [], [], [], []
 
     for v in VOCI:
         print(f"== {v['sigla']}  ·  {v['dove']}")
@@ -931,9 +931,9 @@ def principale(a):
         persi = []
         for testo, quali in ((testi["RCP.md"], v["appigli_rcp"]),
                              (testi["01-b3-cliente.py"], v["appigli_cliente"])):
-            n_testo = normalizza(testo)
+            n_text = normalizza(testo)
             for ap in quali:
-                if normalizza(ap) not in n_testo:
+                if normalizza(ap) not in n_text:
                     persi.append(ap)
         if persi:
             scollegate.append((v["sigla"], persi))
@@ -987,13 +987,13 @@ def principale(a):
         conti["⛔ entries TESTED on the client's behaviour"][1] += 1
         spazio, errore = estrai_funzioni(testi["01-b3-cliente.py"], funzioni)
         if spazio is None:
-            non_provate.append((sigla, errore))
+            untried.append((sigla, errore))
             print(f"   {GIALLO}[?]{GRIGIO} {sigla}: {errore}")
             continue
         vista, perche = prova(spazio)
         if vista == "?":
             # ⛔ «I could not measure it» is the third thing, and it has its colour.
-            non_provate.append((sigla, perche))
+            untried.append((sigla, perche))
             print(f"   {GIALLO}[?]{GRIGIO} {sigla}: {perche}")
         elif vista == dichiarata:
             conti["⛔ entries TESTED on the client's behaviour"][0] += 1
@@ -1051,10 +1051,10 @@ def principale(a):
         print("          and the new choice must be brought into «what did NOT "
               "work».")
         return 1
-    if non_provate:
-        print(f"    {GIALLO}[?] B9: {len(non_provate)} entries could not be "
+    if untried:
+        print(f"    {GIALLO}[?] B9: {len(untried)} entries could not be "
               f"tested on the behaviour{GRIGIO}")
-        for sigla, errore in non_provate:
+        for sigla, errore in untried:
             print(f"       {sigla}: {errore}")
         print("       ⛔ «I could not test it» is not «passes»: without these "
               "lines the")

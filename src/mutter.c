@@ -12,19 +12,19 @@
 
 #define AREA "cattura"
 
-#define NOME_REMOTE "org.gnome.Mutter.RemoteDesktop"
-#define PERCORSO_REMOTE "/org/gnome/Mutter/RemoteDesktop"
+#define REMOTE_NAME "org.gnome.Mutter.RemoteDesktop"
+#define REMOTE_PATH "/org/gnome/Mutter/RemoteDesktop"
 #define IFACE_REMOTE "org.gnome.Mutter.RemoteDesktop"
 #define IFACE_REMOTE_SESSIONE "org.gnome.Mutter.RemoteDesktop.Session"
 
-#define NOME_SCREENCAST "org.gnome.Mutter.ScreenCast"
-#define PERCORSO_SCREENCAST "/org/gnome/Mutter/ScreenCast"
+#define SCREENCAST_NAME "org.gnome.Mutter.ScreenCast"
+#define SCREENCAST_PATH "/org/gnome/Mutter/ScreenCast"
 #define IFACE_SCREENCAST "org.gnome.Mutter.ScreenCast"
 #define IFACE_SC_SESSIONE "org.gnome.Mutter.ScreenCast.Session"
-#define IFACE_SC_FLUSSO "org.gnome.Mutter.ScreenCast.Stream"
+#define IFACE_SC_STREAM "org.gnome.Mutter.ScreenCast.Stream"
 
-#define NOME_DISPLAY "org.gnome.Mutter.DisplayConfig"
-#define PERCORSO_DISPLAY "/org/gnome/Mutter/DisplayConfig"
+#define DISPLAY_NAME "org.gnome.Mutter.DisplayConfig"
+#define DISPLAY_PATH "/org/gnome/Mutter/DisplayConfig"
 #define IFACE_DISPLAY "org.gnome.Mutter.DisplayConfig"
 
 /*
@@ -53,7 +53,7 @@ struct MutterSessione
 	char *flusso;    /* path of the Stream                   */
 	uint32_t nodo;
 	char *mapping_id;           /* the one WE DECLARE to RecordVirtual   */
-	char *mapping_id_pubblicato; /* ⛔ the one Mutter GENERATES and tells us */
+	char *published_mapping_id; /* ⛔ the one Mutter GENERATES and tells us */
 
 	/* The input channel, opened by `ConnectToEIS` at the right point of the
 	 * sequence.  -1 = not open, and whoever receives it DECLARES it. */
@@ -79,7 +79,7 @@ struct MutterSessione
  *    and nobody knows who killed it" — is form E6 (the sender inferred instead
  *    of asked).
  */
-static GDBusConnection *bus_di_sessione(GError **sbaglio)
+static GDBusConnection *session_dbus(GError **sbaglio)
 {
 	g_autofree char *indirizzo =
 	    g_dbus_address_get_for_bus_sync(G_BUS_TYPE_SESSION, NULL, sbaglio);
@@ -99,10 +99,10 @@ static GDBusConnection *bus_di_sessione(GError **sbaglio)
 
 static GVariant *chiama(GDBusConnection *bus, const char *nome, const char *percorso,
                         const char *interfaccia, const char *metodo, GVariant *argomenti,
-                        const GVariantType *tipo_risposta, GError **sbaglio)
+                        const GVariantType *response_type, GError **sbaglio)
 {
 	return g_dbus_connection_call_sync(bus, nome, percorso, interfaccia, metodo, argomenti,
-	                                   tipo_risposta, G_DBUS_CALL_FLAGS_NONE, ATTESA_CHIAMATA_MS,
+	                                   response_type, G_DBUS_CALL_FLAGS_NONE, ATTESA_CHIAMATA_MS,
 	                                   NULL, sbaglio);
 }
 
@@ -147,7 +147,7 @@ static char *proprieta_stringa(GDBusConnection *bus, const char *nome, const cha
  * ⛔ And a DENIED read is not "zero monitors": if the call fails
  *    -1 is returned and the caller declares it (form E8).
  */
-static int elenca_monitor(GDBusConnection *bus, char **nomi, char **prodotti, guint quanti_max)
+static int list_monitors(GDBusConnection *bus, char **nomi, char **prodotti, guint how_many_max)
 {
 	g_autoptr(GError) sbaglio = NULL;
 	g_autoptr(GVariant) risposta = NULL;
@@ -156,7 +156,7 @@ static int elenca_monitor(GDBusConnection *bus, char **nomi, char **prodotti, gu
 	GVariant *voce;
 	guint quanti = 0;
 
-	risposta = g_dbus_connection_call_sync(bus, NOME_DISPLAY, PERCORSO_DISPLAY, IFACE_DISPLAY,
+	risposta = g_dbus_connection_call_sync(bus, DISPLAY_NAME, DISPLAY_PATH, IFACE_DISPLAY,
 	                                       "GetCurrentState", NULL, NULL, G_DBUS_CALL_FLAGS_NONE,
 	                                       ATTESA_CHIAMATA_MS, NULL, &sbaglio);
 	if (!risposta)
@@ -175,7 +175,7 @@ static int elenca_monitor(GDBusConnection *bus, char **nomi, char **prodotti, gu
 		const char *connettore = NULL, *venditore = NULL, *prodotto = NULL, *seriale = NULL;
 
 		g_variant_get(chiave, "(&s&s&s&s)", &connettore, &venditore, &prodotto, &seriale);
-		if (quanti < quanti_max)
+		if (quanti < how_many_max)
 		{
 			if (nomi)
 				nomi[quanti] = g_strdup(connettore);
@@ -205,7 +205,7 @@ static int elenca_monitor(GDBusConnection *bus, char **nomi, char **prodotti, gu
  *   the client's size (`DECISIONI.md` §5.0-sexies) it is concrete.
  *
  * Returns the worst scale found, or -1 if it could not be read. */
-static double scala_dei_monitor_logici(GDBusConnection *bus)
+static double logical_monitor_scale(GDBusConnection *bus)
 {
 	g_autoptr(GError) sbaglio = NULL;
 	g_autoptr(GVariant) risposta = NULL;
@@ -215,13 +215,13 @@ static double scala_dei_monitor_logici(GDBusConnection *bus)
 	double peggiore = 1.0;
 	gboolean vista = FALSE;
 
-	risposta = g_dbus_connection_call_sync(bus, NOME_DISPLAY, PERCORSO_DISPLAY, IFACE_DISPLAY,
+	risposta = g_dbus_connection_call_sync(bus, DISPLAY_NAME, DISPLAY_PATH, IFACE_DISPLAY,
 	                                       "GetCurrentState", NULL, NULL, G_DBUS_CALL_FLAGS_NONE,
 	                                       ATTESA_CHIAMATA_MS, NULL, &sbaglio);
 	if (!risposta)
 		return -1.0;
 	/* ⚠ Child 2 is the list of LOGICAL monitors — `(iiduba(ssss)a{sv})` — and
-	 *   the scale is the third field.  Child 1, which `elenca_monitor` reads,
+	 *   the scale is the third field.  Child 1, which `list_monitors` reads,
 	 *   is something else: the PHYSICAL monitors, which have no scale. */
 	logici = g_variant_get_child_value(risposta, 2);
 	g_variant_iter_init(&iter, logici);
@@ -256,7 +256,7 @@ static double scala_dei_monitor_logici(GDBusConnection *bus)
  * Returns -1 if it could not be read, or if our connector does not appear
  * in any logical monitor.  ⛔ "I do not know" is not "1.0".
  */
-static double scala_del_nostro(GDBusConnection *bus, const char *connettore)
+static double our_scale(GDBusConnection *bus, const char *connettore)
 {
 	g_autoptr(GError) sbaglio = NULL;
 	g_autoptr(GVariant) risposta = NULL;
@@ -266,7 +266,7 @@ static double scala_del_nostro(GDBusConnection *bus, const char *connettore)
 
 	if (!bus || !connettore || !connettore[0])
 		return -1.0;
-	risposta = g_dbus_connection_call_sync(bus, NOME_DISPLAY, PERCORSO_DISPLAY, IFACE_DISPLAY,
+	risposta = g_dbus_connection_call_sync(bus, DISPLAY_NAME, DISPLAY_PATH, IFACE_DISPLAY,
 	                                       "GetCurrentState", NULL, NULL, G_DBUS_CALL_FLAGS_NONE,
 	                                       ATTESA_CHIAMATA_MS, NULL, &sbaglio);
 	if (!risposta)
@@ -327,19 +327,19 @@ gboolean mutter_monitor_cerca(MutterSessione *sessione)
 	char *nomi[MONITOR_MAX] = { NULL };
 	char *prodotti[MONITOR_MAX] = { NULL };
 	guint quanti_prima;
-	int quanti_dopo = -1;
+	int how_many_after = -1;
 	guint i, nuovi = 0;
-	int indice_nuovo = -1;
+	int new_index = -1;
 
 	g_return_val_if_fail(sessione != NULL, FALSE);
 	if (sessione->monitor)
 		return TRUE; /* already known: the bus is not asked again out of habit */
 	quanti_prima = sessione->monitor_prima;
 
-	quanti_dopo = elenca_monitor(sessione->bus, nomi, prodotti, MONITOR_MAX);
-	if (quanti_dopo < 0)
+	how_many_after = list_monitors(sessione->bus, nomi, prodotti, MONITOR_MAX);
+	if (how_many_after < 0)
 		return FALSE;
-	sessione->monitor_dopo = (guint) quanti_dopo;
+	sessione->monitor_dopo = (guint) how_many_after;
 
 	/* ⛔⛔⭐ A MONITOR WAS ALREADY THERE, AND THE USER WOULD SEE ONLY THE WALLPAPER.
 	 *
@@ -383,7 +383,7 @@ gboolean mutter_monitor_cerca(MutterSessione *sessione)
 	 *    the first instant there is something to look at, and it is before a
 	 *    single coordinate has been converted. */
 	{
-		double scala = scala_dei_monitor_logici(sessione->bus);
+		double scala = logical_monitor_scale(sessione->bus);
 
 		if (scala < 0)
 			registro_dice(AREA, "⚠ the scale of the logical monitors could not be read: "
@@ -398,23 +398,23 @@ gboolean mutter_monitor_cerca(MutterSessione *sessione)
 			              scala);
 	}
 
-	for (i = 0; i < (guint) quanti_dopo && i < MONITOR_MAX; i++)
+	for (i = 0; i < (guint) how_many_after && i < MONITOR_MAX; i++)
 	{
 		if (!fra(sessione->prima, quanti_prima, nomi[i]))
 		{
 			nuovi++;
-			indice_nuovo = (int) i;
+			new_index = (int) i;
 		}
 	}
 
-	if (nuovi != 1 || indice_nuovo < 0)
+	if (nuovi != 1 || new_index < 0)
 	{
 		registro_dice(AREA,
 		              "⚠ after mounting %u new monitors appeared instead of 1 "
 		              "(%u before, %d after): I do NOT say which one is ours",
-		              nuovi, quanti_prima, quanti_dopo);
+		              nuovi, quanti_prima, how_many_after);
 	}
-	else if (!prodotti[indice_nuovo] || !strstr(prodotti[indice_nuovo], "remote"))
+	else if (!prodotti[new_index] || !strstr(prodotti[new_index], "remote"))
 	{
 		/* ⛔ The two roads disagree: stop instead of choosing the
 		 *    handier one.  A wrong name here sends a full-screen window
@@ -424,14 +424,14 @@ gboolean mutter_monitor_cerca(MutterSessione *sessione)
 		              "⚠ the monitor that appeared (%s) is called «%s», which is not the name Mutter "
 		              "gives a RecordVirtual monitor («Virtual remote monitor»): I do not "
 		              "declare it ours",
-		              nomi[indice_nuovo], prodotti[indice_nuovo] ? prodotti[indice_nuovo] : "?");
+		              nomi[new_index], prodotti[new_index] ? prodotti[new_index] : "?");
 	}
 	else
 	{
-		sessione->monitor = g_strdup(nomi[indice_nuovo]);
-		sessione->monitor_prodotto = g_strdup(prodotti[indice_nuovo]);
+		sessione->monitor = g_strdup(nomi[new_index]);
+		sessione->monitor_prodotto = g_strdup(prodotti[new_index]);
 		registro_dice(AREA, "our monitor is %s («%s»), %u before and %d after",
-		              sessione->monitor, sessione->monitor_prodotto, quanti_prima, quanti_dopo);
+		              sessione->monitor, sessione->monitor_prodotto, quanti_prima, how_many_after);
 	}
 
 	for (i = 0; i < MONITOR_MAX; i++)
@@ -446,7 +446,7 @@ gboolean mutter_monitor_cerca(MutterSessione *sessione)
  *  The node announcement
  * ------------------------------------------------------------------ */
 
-static void su_nodo_annunciato(GDBusConnection *bus, const char *mittente, const char *percorso,
+static void on_node_announced(GDBusConnection *bus, const char *mittente, const char *percorso,
                                const char *interfaccia, const char *segnale, GVariant *parametri,
                                gpointer dati)
 {
@@ -470,7 +470,7 @@ static gboolean sveglia(gpointer dati)
  * run on a thread that runs no GLib loop: without a context to
  * run here, the signal would arrive and never be delivered.
  */
-static gboolean attendi_nodo(MutterSessione *sessione, GError **sbaglio)
+static gboolean wait_node(MutterSessione *sessione, GError **sbaglio)
 {
 	GMainContext *contesto = g_main_context_new();
 	GSource *battito = NULL;
@@ -485,14 +485,14 @@ static gboolean attendi_nodo(MutterSessione *sessione, GError **sbaglio)
 	 * resolution there is a window in which the signal would be discarded.  The
 	 * object path is unique to this stream, and filters enough. */
 	sottoscrizione = g_dbus_connection_signal_subscribe(
-	    sessione->bus, NULL, IFACE_SC_FLUSSO, "PipeWireStreamAdded", sessione->flusso, NULL,
-	    G_DBUS_SIGNAL_FLAGS_NONE, su_nodo_annunciato, &sessione->nodo, NULL);
+	    sessione->bus, NULL, IFACE_SC_STREAM, "PipeWireStreamAdded", sessione->flusso, NULL,
+	    G_DBUS_SIGNAL_FLAGS_NONE, on_node_announced, &sessione->nodo, NULL);
 
 	/* Only NOW is the stream started: not the capture session, which an
 	 * associated capture refuses to start on its own. */
 	{
-		g_autoptr(GVariant) risposta = chiama(sessione->bus, NOME_SCREENCAST, sessione->flusso,
-		                                      IFACE_SC_FLUSSO, "Start", NULL, NULL, sbaglio);
+		g_autoptr(GVariant) risposta = chiama(sessione->bus, SCREENCAST_NAME, sessione->flusso,
+		                                      IFACE_SC_STREAM, "Start", NULL, NULL, sbaglio);
 		if (!risposta)
 			goto fine;
 	}
@@ -533,7 +533,7 @@ fine:
 MutterSessione *mutter_apri(GError **sbaglio)
 {
 	MutterSessione *sessione = g_new0(MutterSessione, 1);
-	g_autofree char *id_controllo = NULL;
+	g_autofree char *check_id = NULL;
 	int quanti_prima;
 	GVariantBuilder proprieta;
 
@@ -542,12 +542,12 @@ MutterSessione *mutter_apri(GError **sbaglio)
 	 *    hosts us.  "Not open" is written -1, not left at zero. */
 	sessione->eis = -1;
 
-	sessione->bus = bus_di_sessione(sbaglio);
+	sessione->bus = session_dbus(sbaglio);
 	if (!sessione->bus)
 		goto guasto;
 
 	/* --- 0. the monitors BEFORE: ours will be the one that appears after - */
-	quanti_prima = elenca_monitor(sessione->bus, sessione->prima, NULL, MONITOR_MAX);
+	quanti_prima = list_monitors(sessione->bus, sessione->prima, NULL, MONITOR_MAX);
 	sessione->monitor_prima = quanti_prima > 0 ? (guint) quanti_prima : 0;
 	if (quanti_prima == 0)
 	{
@@ -563,7 +563,7 @@ MutterSessione *mutter_apri(GError **sbaglio)
 	/* --- 1. the control, created and NOT started -------------------------- */
 	{
 		g_autoptr(GVariant) risposta =
-		    chiama(sessione->bus, NOME_REMOTE, PERCORSO_REMOTE, IFACE_REMOTE, "CreateSession", NULL,
+		    chiama(sessione->bus, REMOTE_NAME, REMOTE_PATH, IFACE_REMOTE, "CreateSession", NULL,
 		           G_VARIANT_TYPE("(o)"), sbaglio);
 		if (!risposta)
 		{
@@ -574,9 +574,9 @@ MutterSessione *mutter_apri(GError **sbaglio)
 		g_variant_get(risposta, "(o)", &sessione->controllo);
 	}
 
-	id_controllo = proprieta_stringa(sessione->bus, NOME_REMOTE, sessione->controllo,
+	check_id = proprieta_stringa(sessione->bus, REMOTE_NAME, sessione->controllo,
 	                                 IFACE_REMOTE_SESSIONE, "SessionId", sbaglio);
-	if (!id_controllo)
+	if (!check_id)
 		goto guasto;
 
 	/*
@@ -602,10 +602,10 @@ MutterSessione *mutter_apri(GError **sbaglio)
 	 *    will fail with an error that says WHY.
 	 */
 	{
-		g_autoptr(GError) sbaglio_eis = NULL;
+		g_autoptr(GError) err_eis = NULL;
 		g_autoptr(GUnixFDList) descrittori = NULL;
 		g_autoptr(GVariant) risposta = NULL;
-		GVariantBuilder senza_opzioni;
+		GVariantBuilder without_options;
 		gint32 indice = -1;
 
 		sessione->eis = -1;
@@ -617,26 +617,26 @@ MutterSessione *mutter_apri(GError **sbaglio)
 		 *    new options.  Asking for everything now is the only way not to
 		 *    find out in phase 6.
 		 */
-		g_variant_builder_init(&senza_opzioni, G_VARIANT_TYPE("a{sv}"));
+		g_variant_builder_init(&without_options, G_VARIANT_TYPE("a{sv}"));
 		risposta = g_dbus_connection_call_with_unix_fd_list_sync(
-		    sessione->bus, NOME_REMOTE, sessione->controllo, IFACE_REMOTE_SESSIONE, "ConnectToEIS",
-		    g_variant_new("(a{sv})", &senza_opzioni), G_VARIANT_TYPE("(h)"), G_DBUS_CALL_FLAGS_NONE,
-		    ATTESA_CHIAMATA_MS, NULL, &descrittori, NULL, &sbaglio_eis);
+		    sessione->bus, REMOTE_NAME, sessione->controllo, IFACE_REMOTE_SESSIONE, "ConnectToEIS",
+		    g_variant_new("(a{sv})", &without_options), G_VARIANT_TYPE("(h)"), G_DBUS_CALL_FLAGS_NONE,
+		    ATTESA_CHIAMATA_MS, NULL, &descrittori, NULL, &err_eis);
 		if (!risposta)
 		{
 			registro_dice(AREA,
 			              "⚠ ConnectToEIS refused (%s): the session opens all the same, but "
 			              "NO input will reach the desktop",
-			              sbaglio_eis->message);
+			              err_eis->message);
 		}
 		else
 		{
 			g_variant_get(risposta, "(h)", &indice);
-			sessione->eis = g_unix_fd_list_get(descrittori, indice, &sbaglio_eis);
+			sessione->eis = g_unix_fd_list_get(descrittori, indice, &err_eis);
 			if (sessione->eis < 0)
 				registro_dice(AREA, "⚠ ConnectToEIS answered but the descriptor cannot be read "
 				                    "(%s): no input will reach the desktop",
-				              sbaglio_eis->message);
+				              err_eis->message);
 			else
 				registro_dice(AREA, "input channel open: EIS descriptor %d", sessione->eis);
 		}
@@ -645,13 +645,13 @@ MutterSessione *mutter_apri(GError **sbaglio)
 	/* --- 2. the capture, which registers on the control not yet started -- */
 	g_variant_builder_init(&proprieta, G_VARIANT_TYPE("a{sv}"));
 	g_variant_builder_add(&proprieta, "{sv}", "remote-desktop-session-id",
-	                      g_variant_new_string(id_controllo));
+	                      g_variant_new_string(check_id));
 	/* Taken from the reference: GNOME's animations over a remote link
 	 * cost bandwidth and add nothing. */
 	g_variant_builder_add(&proprieta, "{sv}", "disable-animations", g_variant_new_boolean(TRUE));
 	{
 		g_autoptr(GVariant) risposta = chiama(
-		    sessione->bus, NOME_SCREENCAST, PERCORSO_SCREENCAST, IFACE_SCREENCAST, "CreateSession",
+		    sessione->bus, SCREENCAST_NAME, SCREENCAST_PATH, IFACE_SCREENCAST, "CreateSession",
 		    g_variant_new("(a{sv})", &proprieta), G_VARIANT_TYPE("(o)"), sbaglio);
 		if (!risposta)
 			goto guasto;
@@ -661,7 +661,7 @@ MutterSessione *mutter_apri(GError **sbaglio)
 	/* --- 3. NOW the control is started ------------------------------------ */
 	{
 		g_autoptr(GVariant) risposta =
-		    chiama(sessione->bus, NOME_REMOTE, sessione->controllo, IFACE_REMOTE_SESSIONE, "Start",
+		    chiama(sessione->bus, REMOTE_NAME, sessione->controllo, IFACE_REMOTE_SESSIONE, "Start",
 		           NULL, NULL, sbaglio);
 		if (!risposta)
 			goto guasto;
@@ -679,7 +679,7 @@ MutterSessione *mutter_apri(GError **sbaglio)
 	                      g_variant_new_string(sessione->mapping_id));
 	{
 		g_autoptr(GVariant) risposta =
-		    chiama(sessione->bus, NOME_SCREENCAST, sessione->cattura, IFACE_SC_SESSIONE,
+		    chiama(sessione->bus, SCREENCAST_NAME, sessione->cattura, IFACE_SC_SESSIONE,
 		           "RecordVirtual", g_variant_new("(a{sv})", &proprieta), G_VARIANT_TYPE("(o)"),
 		           sbaglio);
 		if (!risposta)
@@ -688,7 +688,7 @@ MutterSessione *mutter_apri(GError **sbaglio)
 	}
 
 	/* --- 5. listening, and then starting the stream ----------------------- */
-	if (!attendi_nodo(sessione, sbaglio))
+	if (!wait_node(sessione, sbaglio))
 		goto guasto;
 
 	/* ⛔ AND OUR MONITOR IS NOT LOOKED FOR HERE: at this point it does not exist yet,
@@ -723,12 +723,12 @@ uint32_t mutter_nodo(const MutterSessione *sessione)
 	return sessione ? sessione->nodo : 0;
 }
 
-const char *mutter_percorso_flusso(const MutterSessione *sessione)
+const char *mutter_stream_path(const MutterSessione *sessione)
 {
 	return sessione ? sessione->flusso : NULL;
 }
 
-const char *mutter_percorso_controllo(const MutterSessione *sessione)
+const char *mutter_control_path(const MutterSessione *sessione)
 {
 	return sessione ? sessione->controllo : NULL;
 }
@@ -805,7 +805,7 @@ int mutter_eis_riattacca(MutterSessione *sessione, GError **sbaglio)
 {
 	g_autoptr(GUnixFDList) descrittori = NULL;
 	g_autoptr(GVariant) risposta = NULL;
-	GVariantBuilder senza_opzioni;
+	GVariantBuilder without_options;
 	gint32 indice = -1;
 
 	if (!sessione || !sessione->bus || !sessione->controllo)
@@ -852,10 +852,10 @@ int mutter_eis_riattacca(MutterSessione *sessione, GError **sbaglio)
 		sessione->eis = -1;
 	}
 
-	g_variant_builder_init(&senza_opzioni, G_VARIANT_TYPE("a{sv}"));
+	g_variant_builder_init(&without_options, G_VARIANT_TYPE("a{sv}"));
 	risposta = g_dbus_connection_call_with_unix_fd_list_sync(
-	    sessione->bus, NOME_REMOTE, sessione->controllo, IFACE_REMOTE_SESSIONE, "ConnectToEIS",
-	    g_variant_new("(a{sv})", &senza_opzioni), G_VARIANT_TYPE("(h)"), G_DBUS_CALL_FLAGS_NONE,
+	    sessione->bus, REMOTE_NAME, sessione->controllo, IFACE_REMOTE_SESSIONE, "ConnectToEIS",
+	    g_variant_new("(a{sv})", &without_options), G_VARIANT_TYPE("(h)"), G_DBUS_CALL_FLAGS_NONE,
 	    ATTESA_CHIAMATA_MS, NULL, &descrittori, NULL, sbaglio);
 	if (!risposta)
 	{
@@ -910,12 +910,12 @@ const char *mutter_mapping_id_pubblicato(MutterSessione *sessione)
 
 	if (!sessione || !sessione->bus || !sessione->flusso)
 		return NULL;
-	if (sessione->mapping_id_pubblicato)
-		return sessione->mapping_id_pubblicato;
+	if (sessione->published_mapping_id)
+		return sessione->published_mapping_id;
 
-	risposta = chiama(sessione->bus, NOME_SCREENCAST, sessione->flusso,
+	risposta = chiama(sessione->bus, SCREENCAST_NAME, sessione->flusso,
 	                  "org.freedesktop.DBus.Properties", "Get",
-	                  g_variant_new("(ss)", IFACE_SC_FLUSSO, "Parameters"), G_VARIANT_TYPE("(v)"),
+	                  g_variant_new("(ss)", IFACE_SC_STREAM, "Parameters"), G_VARIANT_TYPE("(v)"),
 	                  &sbaglio);
 	if (!risposta)
 	{
@@ -935,15 +935,15 @@ const char *mutter_mapping_id_pubblicato(MutterSessione *sessione)
 		return NULL;
 	}
 
-	sessione->mapping_id_pubblicato = letto;
+	sessione->published_mapping_id = letto;
 	registro_dice(AREA, "mapping-id published by Mutter: «%s»%s", letto,
 	              g_strcmp0(letto, sessione->mapping_id) == 0
 	                  ? ""
 	                  : "  ⛔ DIFFERENT from the one we had declared to RecordVirtual");
-	return sessione->mapping_id_pubblicato;
+	return sessione->published_mapping_id;
 }
 
-const char *mutter_monitor_nostro(const MutterSessione *sessione)
+const char *mutter_our_monitor(const MutterSessione *sessione)
 {
 	return sessione ? sessione->monitor : NULL;
 }
@@ -952,7 +952,7 @@ const char *mutter_monitor_nostro(const MutterSessione *sessione)
  *     log line told.
  *
  * ⚠ Until 15 August 2026 the scale was READ and SAID, and the comment above
- *   `scala_dei_monitor_logici()` declared it: *"with a fixed-size canvas the
+ *   `logical_monitor_scale()` declared it: *"with a fixed-size canvas the
  *   damage was theoretical, with the canvas at the client's size it is concrete"*.  ⛔ Since
  *   tonight the canvas IS at the client's size, so the damage is concrete: the
  *   layout of the logical monitor and the stream's pixels no longer match, **and the
@@ -968,7 +968,7 @@ double mutter_scala_nostra(const MutterSessione *sessione)
 {
 	if (!sessione || !sessione->bus || !sessione->monitor || !sessione->monitor[0])
 		return -1.0;
-	return scala_del_nostro(sessione->bus, sessione->monitor);
+	return our_scale(sessione->bus, sessione->monitor);
 }
 
 const char *mutter_monitor_prodotto(const MutterSessione *sessione)
@@ -976,7 +976,7 @@ const char *mutter_monitor_prodotto(const MutterSessione *sessione)
 	return sessione ? sessione->monitor_prodotto : NULL;
 }
 
-void mutter_monitor_conteggi(const MutterSessione *sessione, guint *prima, guint *dopo)
+void mutter_monitor_counts(const MutterSessione *sessione, guint *prima, guint *dopo)
 {
 	if (prima)
 		*prima = sessione ? sessione->monitor_prima : 0;
@@ -998,7 +998,7 @@ void mutter_chiudi(MutterSessione *sessione)
 		 * already gone, and waiting fifteen seconds for an answer that cannot
 		 * arrive would hold up whoever is tearing down. */
 		g_autoptr(GVariant) risposta = g_dbus_connection_call_sync(
-		    sessione->bus, NOME_REMOTE, sessione->controllo, IFACE_REMOTE_SESSIONE, "Stop", NULL,
+		    sessione->bus, REMOTE_NAME, sessione->controllo, IFACE_REMOTE_SESSIONE, "Stop", NULL,
 		    NULL, G_DBUS_CALL_FLAGS_NONE, 2000, NULL, &sbaglio);
 
 		if (!risposta)
@@ -1013,7 +1013,7 @@ void mutter_chiudi(MutterSessione *sessione)
 	g_free(sessione->cattura);
 	g_free(sessione->flusso);
 	g_free(sessione->mapping_id);
-	g_free(sessione->mapping_id_pubblicato);
+	g_free(sessione->published_mapping_id);
 	g_free(sessione->monitor);
 	g_free(sessione->monitor_prodotto);
 	for (guint i = 0; i < MONITOR_MAX; i++)

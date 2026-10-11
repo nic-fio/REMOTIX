@@ -86,7 +86,7 @@ ssh_s() {
 		root@127.0.0.1 "$@"
 }
 accesa() { [ "$(P inspect -f '{{.State.Running}}' "$NOME" 2>/dev/null)" = true ]; }
-aspetta_systemd() {
+wait_systemd() {
 	local S=""
 	for _ in $(seq 1 120); do
 		S=$(P exec "$NOME" systemctl is-system-running 2>&1 | head -1)
@@ -170,7 +170,7 @@ avvia)
 		--device "$CARD:/dev/dri/card0" --device "$RENDER:/dev/dri/renderD128" "${VERI[@]}" \
 		--cap-add=AUDIT_WRITE --cap-add=AUDIT_CONTROL --cap-add=SYS_ADMIN --cap-add=SYS_NICE --cap-add=WAKE_ALARM \
 		"$IMMAGINE" >/dev/null || die "podman run failed"
-	S=$(aspetta_systemd)
+	S=$(wait_systemd)
 	# the ssh port: the image is born with the Intel one; on the Radeon (or if the scheme changes) it is
 	# rewritten before the bench enters
 	P exec "$NOME" sh -c "grep -q '^Port $PSSH\$' /etc/ssh/sshd_config.d/t17.conf || { sed -i 's/^Port .*/Port $PSSH/' /etc/ssh/sshd_config.d/t17.conf; systemctl restart sshd.service 2>/dev/null || systemctl restart ssh.service; }"
@@ -188,7 +188,7 @@ riavvia)
 	P restart -t 15 "$NOME" >/dev/null || die "podman restart failed"
 	a1=$(P inspect -f '{{.State.StartedAt}}' "$NOME")
 	[ "$a0" != "$a1" ] || die "the box did not restart (StartedAt unchanged)"
-	S=$(aspetta_systemd)
+	S=$(wait_systemd)
 	ok "rebooted: the container restarted ($a0 → $a1; systemd $S)"
 	aspetta_ssh 90
 	;;

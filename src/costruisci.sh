@@ -54,7 +54,7 @@ log "The dependencies built from source"
 INC=""
 LIB=""
 
-cerca_ngtcp2()
+search_ngtcp2()
 {
 	local i h
 	for i in "$NGTCP2/build/lib/includes" "$NGTCP2/lib/includes" \
@@ -71,7 +71,7 @@ cerca_ngtcp2()
 	done
 }
 
-cerca_nghttp3()
+search_nghttp3()
 {
 	local i
 	for i in "$NGHTTP3/lib/includes" "$NGHTTP3/build/lib/includes" \
@@ -84,8 +84,8 @@ cerca_nghttp3()
 	done
 }
 
-cerca_ngtcp2
-cerca_nghttp3
+search_ngtcp2
+search_nghttp3
 
 printf '    --  I looked in:\n'
 printf '        %s\n' "$NGTCP2" "$NGHTTP3" "$PREFISSO"

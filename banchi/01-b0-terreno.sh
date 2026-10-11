@@ -57,7 +57,7 @@
 #    applied to the tool that should prevent it for the others.  The path
 #    was not guessed a second time: it is read in `src/Makefile` and
 #    in `src/costruisci.sh`, and it is the same one already declared by
-#    `01-b0-bersaglio.sh` (`B_ESE="$B0_DENTRO/remotix/remotix"`).
+#    `01-b0-bersaglio.sh` (`B_EXE="$B0_DENTRO/remotix/remotix"`).
 #
 # ⭐ Hence the four things this round changed, and each answers
 #    "which input would turn it RED?":
@@ -81,8 +81,8 @@ QUI=$(cd "$(dirname "$0")" && pwd)
 ENTRA=/media/REMOTIX/enter.sh
 FUORI=/media/REMOTIX/src
 DENTRO=/srv/src
-ESEMPI=$FUORI/b2/ngtcp2/examples
-BINARIO_INNESTO=$FUORI/b2/ngtcp2/build/examples/bsslserver
+EXAMPLES=$FUORI/b2/ngtcp2/examples
+GRAFT_BINARY=$FUORI/b2/ngtcp2/build/examples/bsslserver
 
 # ⛔ The product tree is DECLARED, as in `01-p1-prodotto.sh` (SORG):
 #    the binary always sits next to its sources, but there is more than one tree
@@ -208,7 +208,7 @@ piu_nuovo() # $1 = binary, $2.. = sources
 #    question D5 paid for: *which of the two is running?*
 #    ⭐ Here we do not choose: we count them and say so.  EXISTENCE is judged by
 #       `piu_nuovo()`; this only checks that there is not MORE THAN ONE.
-posto_unico() # $1 = tree, $2 = the binary I am about to judge
+unique_place() # $1 = tree, $2 = the binary I am about to judge
 {
 	local albero=$1 atteso=$2 trovati s n
 	GUARDATI=$((GUARDATI + 1))
@@ -277,7 +277,7 @@ posto_unico() # $1 = tree, $2 = the binary I am about to judge
 CATALOGO=$QUI/01-b12-guasti.py
 
 # Returns: first line = the MARCA · following lines = «CODES<TAB>path».
-posti_dei_guasti()
+fault_slots()
 {
 	python3 - "$CATALOGO" <<'PY'
 import importlib.util
@@ -308,12 +308,12 @@ for d in ordine:
 PY
 }
 
-guasti_rimasti_addosso()
+faults_left_on()
 {
 	local righe s marca n riga sigle percorso
 	local posti=0 guardati=0 sporchi=0 assenti=0
 
-	righe=$(posti_dei_guasti)
+	righe=$(fault_slots)
 	s=$?
 	# ⛔ No `2>/dev/null` above: if the catalogue does not load, the Python
 	#    error is seen, and this check declares itself UNKNOWN instead of
@@ -351,7 +351,7 @@ guasti_rimasti_addosso()
 		posti=$((posti + 1))
 		if [ ! -e "$percorso" ]; then
 			# ⛔ ABSENT IS NOT UNKNOWN, AND HERE THE DIFFERENCE CAN BE PROVED.
-			#    The targets of B12 are COPIES that `prepara_copia()` redoes from
+			#    The targets of B12 are COPIES that `prepare_copy()` redoes from
 			#    scratch at every round: as long as the copy does not exist, it cannot
 			#    carry anything on it.  ⇒ it is not "I could not look",
 			#    and it must not cost an UNKNOWN that would stop every round.
@@ -399,15 +399,15 @@ if [ "$BERSAGLIO" = innesto ]; then
 	# ── The two grafts, and BOTH of them live in server.cc ───────────────
 	# ⚠ It is the point where they stepped on each other's toes: the `--togli` of one
 	#   puts back as it was a file the other had written.
-	almeno "RCP graft (B3) in the codec"    "$ESEMPI/http3_server_proto_codec.cc" "rcp_"        20
-	almeno "WebTransport graft (B2) in the codec" "$ESEMPI/http3_server_proto_codec.cc" "REMOTIX B2" 5
-	almeno "the host-side ban (B3) in server.cc" "$ESEMPI/server.cc"            "REMOTIX B3"  5
-	almeno "the transport parameters (B2) in server.cc" "$ESEMPI/server.cc"      "REMOTIX B2"  1
+	almeno "RCP graft (B3) in the codec"    "$EXAMPLES/http3_server_proto_codec.cc" "rcp_"        20
+	almeno "WebTransport graft (B2) in the codec" "$EXAMPLES/http3_server_proto_codec.cc" "REMOTIX B2" 5
+	almeno "the host-side ban (B3) in server.cc" "$EXAMPLES/server.cc"            "REMOTIX B3"  5
+	almeno "the transport parameters (B2) in server.cc" "$EXAMPLES/server.cc"      "REMOTIX B2"  1
 
 	# ── The three files B3 copies into examples/ ─────────────────────────
 	for f in rcp.c rcp.h autenticazione.c; do
 		GUARDATI=$((GUARDATI + 1))
-		if [ -f "$ESEMPI/$f" ]; then
+		if [ -f "$EXAMPLES/$f" ]; then
 			ok "examples/$f is there"
 		else
 			ko "⛔ examples/$f is MISSING: the RCP graft is not complete"
@@ -417,8 +417,8 @@ if [ "$BERSAGLIO" = innesto ]; then
 
 	# ── ⭐ And the copy must be THE SOURCE, not a stale copy ─────────────
 	GUARDATI=$((GUARDATI + 1))
-	if [ -f "$ESEMPI/rcp.c" ] && [ -f "$FUORI/rcp/rcp.c" ]; then
-		A=$(md5sum "$ESEMPI/rcp.c" | cut -d' ' -f1)
+	if [ -f "$EXAMPLES/rcp.c" ] && [ -f "$FUORI/rcp/rcp.c" ]; then
+		A=$(md5sum "$EXAMPLES/rcp.c" | cut -d' ' -f1)
 		B=$(md5sum "$FUORI/rcp/rcp.c" | cut -d' ' -f1)
 		if [ "$A" = "$B" ]; then
 			ok "examples/rcp.c is identical to rcp/rcp.c ($A)"
@@ -435,13 +435,13 @@ if [ "$BERSAGLIO" = innesto ]; then
 	fi
 
 	# ⚠ The **B12** faults are no longer here: they are sieved by
-	#   `guasti_rimasti_addosso()`, at the bottom of this file, asking the
+	#   `faults_left_on()`, at the bottom of this file, asking the
 	#   catalogue where they really go — and its targets are not three, they are
 	#   nine (gap L2, 12 Aug 2026).  Those of **B11** stay written by
 	#   hand because another program grafts them,
 	#   `01-b11-guasto-innesta.py`, which has no catalogue.
-	nessuno "B11 faults in the codec"  "$ESEMPI/http3_server_proto_codec.cc" "REMOTIX B11 GUASTO"
-	nessuno "B11 faults in rcp.c"      "$ESEMPI/rcp.c"                       "REMOTIX B11 GUASTO"
+	nessuno "B11 faults in the codec"  "$EXAMPLES/http3_server_proto_codec.cc" "REMOTIX B11 GUASTO"
+	nessuno "B11 faults in rcp.c"      "$EXAMPLES/rcp.c"                       "REMOTIX B11 GUASTO"
 	# ⛔ ⭐ AND THE THIRD FILE OF B11, which until 12 Aug 2026 nobody
 	#    looked at: `01-b11-guasto-innesta.py` writes into THREE files — `rcp.c`,
 	#    `http3_server_proto_codec.cc` and `http3_server_proto_codec.h` (the
@@ -450,17 +450,17 @@ if [ "$BERSAGLIO" = innesto ]; then
 	#    this tool: the same form as R12-A.45, which is the reason
 	#    this file exists.
 	nessuno "B11 faults in the codec header" \
-		"$ESEMPI/http3_server_proto_codec.h" "REMOTIX B11 GUASTO"
+		"$EXAMPLES/http3_server_proto_codec.h" "REMOTIX B11 GUASTO"
 
 	# ⛔ The HEADERS are among the sources the binary declares: without them,
 	#    a `touch examples/rcp.h` — or the codec header rewritten by
 	#    `--togli` — left this check GREEN on a stale binary.
 	#    It is the same defect as D5 on the other target, where only
 	#    `rcp.c` was compared.
-	piu_nuovo "$BINARIO_INNESTO" \
-		"$ESEMPI/http3_server_proto_codec.cc" "$ESEMPI/http3_server_proto_codec.h" \
-		"$ESEMPI/server.cc" \
-		"$ESEMPI/rcp.c" "$ESEMPI/rcp.h" "$ESEMPI/autenticazione.c"
+	piu_nuovo "$GRAFT_BINARY" \
+		"$EXAMPLES/http3_server_proto_codec.cc" "$EXAMPLES/http3_server_proto_codec.h" \
+		"$EXAMPLES/server.cc" \
+		"$EXAMPLES/rcp.c" "$EXAMPLES/rcp.h" "$EXAMPLES/autenticazione.c"
 else
 	# ── The product ─────────────────────────────────────────────────────
 	# ⛔ `src/rcp.c` and `banchi/rcp/rcp.c` MUST stay identical byte for
@@ -485,14 +485,14 @@ else
 	# ⛔ HERE THERE WAS `nessuno "B12 faults in remotix/rcp.c"`, AND IT COULD NOT
 	#    TURN RED: `01-b12-guasti.py` does not graft into the originals, by
 	#    declared design.  The reason at length is next to
-	#    `guasti_rimasti_addosso()`, which now sieves the REAL targets — and
+	#    `faults_left_on()`, which now sieves the REAL targets — and
 	#    sieves them on both targets of this script, because a forgotten
 	#    fault poisons anyone's measurements, not only those
 	#    of the graft.
 
 	# ── ⛔ THE PRODUCT BINARY — the cure of D5 ───────────────────────────
 	inf "product tree: $SORG   (changed with SORG=<path>)"
-	posto_unico "$SORG" "$BINARIO_PRODOTTO"
+	unique_place "$SORG" "$BINARIO_PRODOTTO"
 
 	# ⛔ ALL the sources that go into the binary, not `rcp.c` alone:
 	#    `src/Makefile` compiles TEN of them, and with `rcp.c` alone a `main.c`
@@ -516,7 +516,7 @@ fi
 # ── ⛔ THE B12 FAULTS, LOOKED FOR WHERE B12 PUTS THEM (gap L2) ──────────────
 #    Outside the if on purpose: the target says which SERVER is about to be used,
 #    not which files can be dirty.
-guasti_rimasti_addosso
+faults_left_on
 
 # ---------------------------------------------------------------------------
 # ⛔ THE DENOMINATOR — `LEZIONI.md` §1.9 rule 6.  "All those tested

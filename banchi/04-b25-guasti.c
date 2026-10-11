@@ -131,7 +131,7 @@ Tastiera *tastiera_apri(const char *disposizione, char **errore)
  * ⚠ For the other three faults this function is CORRECT: each must
  *   get one thing wrong only, or nobody knows what the bench has seen.
  */
-Tastiera *tastiera_apri_da_keymap(const char *testo, size_t lunghezza, const char *negoziata,
+Tastiera *keyboard_open_from_keymap(const char *testo, size_t lunghezza, const char *negoziata,
                                   char **errore)
 {
 	Tastiera *t;
@@ -173,9 +173,9 @@ Tastiera *tastiera_apri_da_keymap(const char *testo, size_t lunghezza, const cha
 #endif
 }
 
-const char *tastiera_disposizione(Tastiera *t) { return t ? t->nome : NULL; }
+const char *kbd_layout(Tastiera *t) { return t ? t->nome : NULL; }
 
-void tastiera_chiudi(Tastiera *t)
+void keyboard_close(Tastiera *t)
 {
 	if (!t)
 		return;
@@ -229,11 +229,11 @@ int tastiera_posizioni_per(Tastiera *t, uint32_t carattere, uint16_t codici[TAST
 		static const struct
 		{
 			uint32_t accentata, nuda;
-		} pieghe[] = {{0x00E0, 'a'}, {0x00E8, 'e'}, {0x00E9, 'e'}, {0x00EC, 'i'},
+		} folds[] = {{0x00E0, 'a'}, {0x00E8, 'e'}, {0x00E9, 'e'}, {0x00EC, 'i'},
 		              {0x00F2, 'o'}, {0x00F9, 'u'}, {0x00E7, 'c'}};
-		for (size_t i = 0; i < sizeof pieghe / sizeof *pieghe; i++)
-			if (pieghe[i].accentata == carattere &&
-			    cerca(t->km, pieghe[i].nuda, &tasto, &livello))
+		for (size_t i = 0; i < sizeof folds / sizeof *folds; i++)
+			if (folds[i].accentata == carattere &&
+			    cerca(t->km, folds[i].nuda, &tasto, &livello))
 				goto trovato;
 #endif
 		return 0;

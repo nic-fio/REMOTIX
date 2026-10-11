@@ -29,7 +29,7 @@
  * ─────────────────────────────────────────────────────────────────────────── */
 #define SECCHI 8
 #define SECCHIO_US 250000ull
-#define FINESTRA_US ((uint64_t)SECCHI * SECCHIO_US)
+#define WINDOW_US ((uint64_t)SECCHI * SECCHIO_US)
 
 /* ⛔⭐ HOW MANY DELAYS ARE KEPT, AND WHY THE MEDIAN AND NOT THE MAXIMUM.
  *
@@ -61,27 +61,27 @@ struct inquilino {
 	char utente[257];
 	/* the composed pixels delivered, per bucket */
 	uint64_t pixel[SECCHI];
-	int secchio;              /* index of the current bucket */
-	uint64_t secchio_da_us;   /* the instant the current bucket was born */
-	uint64_t primo_us;        /* the first frame ever seen */
-	uint64_t ultimo_us;       /* the last one, for slot reuse */
-	bool mai_consegnato;
+	int bucket;              /* index of the current bucket */
+	uint64_t bucket_from_us;   /* the instant the current bucket was born */
+	uint64_t first_us;        /* the first frame ever seen */
+	uint64_t last_us;       /* the last one, for slot reuse */
+	bool never_delivered;
 	uint32_t tela_l, tela_a;  /* the last canvas delivered */
 	uint32_t ritardo_ms[RITARDI];
-	int quanti_ritardi, prossimo_ritardo;
+	int how_many_delays, next_delay;
 };
 
 static struct inquilino *tabella;
-static int quante_caselle;
+static int how_many_cells;
 
 /* ⛔ `0` = OFF, and it is the default: I6.  See `budget.h` point 5. */
-static double capacita_mpixel_s;
+static double capacity_mpixel_s;
 static double riserva = BUDGET_RISERVA_PREDEFINITA;
-static uint32_t tela_palco_l, tela_palco_a;
+static uint32_t canvas_stage_w, canvas_stage_h;
 
 /* ------------------------------------------------------------------------- */
 
-static uint64_t ora_us(bool *letta)
+static uint64_t now_us(bool *letta)
 {
 	struct timespec t;
 
@@ -100,7 +100,7 @@ static uint64_t ora_us(bool *letta)
 /* ⛔ The table is sized on the cap in force, and allocated at the first
  *    switch-on.  ⚠ If `calloc` fails, the budget **does not turn on**: a
  *    budget that cannot count must not be able to say no. */
-static bool tabella_pronta(int quante)
+static bool table_ready(int quante)
 {
 	if (tabella)
 		return true;
@@ -115,25 +115,25 @@ static bool tabella_pronta(int quante)
 		              quante);
 		return false;
 	}
-	quante_caselle = quante;
+	how_many_cells = quante;
 	return true;
 }
 
 /* ⭐ The user's slot, or the oldest one if it is not there and there is no room.
  *
- * ⛔ Oldest-first reuse looks at `ultimo_us`, and it is needed because NOBODY
+ * ⛔ Oldest-first reuse looks at `last_us`, and it is needed because NOBODY
  *    tells this module that a stage has died: a tenant that vanished simply
  *    stops delivering, and its slot becomes the oldest.
  * ⚠ And it is not a disguised defect: a stale slot never enters the count,
  *   because the count is filled by the table of **live stages** and not by
- *   this one (see `budget_conto_dentro()`). */
+ *   this one (see `budget_count_inside()`). */
 static struct inquilino *casella(const char *utente, bool crea)
 {
 	struct inquilino *libera = NULL, *vecchia = NULL;
 
 	if (!tabella || !utente || !utente[0])
 		return NULL;
-	for (int i = 0; i < quante_caselle; i++) {
+	for (int i = 0; i < how_many_cells; i++) {
 		struct inquilino *in = &tabella[i];
 
 		if (!in->usato) {
@@ -143,7 +143,7 @@ static struct inquilino *casella(const char *utente, bool crea)
 		}
 		if (strcmp(in->utente, utente) == 0)
 			return in;
-		if (!vecchia || in->ultimo_us < vecchia->ultimo_us)
+		if (!vecchia || in->last_us < vecchia->last_us)
 			vecchia = in;
 	}
 	if (!crea)
@@ -154,7 +154,7 @@ static struct inquilino *casella(const char *utente, bool crea)
 		return NULL;
 	memset(libera, 0, sizeof *libera);
 	libera->usato = true;
-	libera->mai_consegnato = true;
+	libera->never_delivered = true;
 	snprintf(libera->utente, sizeof libera->utente, "%s", utente);
 	return libera;
 }
@@ -165,20 +165,20 @@ static struct inquilino *casella(const char *utente, bool crea)
  *      would stay counted at the rate it had. */
 static void avanza(struct inquilino *in, uint64_t adesso)
 {
-	if (in->mai_consegnato)
+	if (in->never_delivered)
 		return;
-	if (adesso < in->secchio_da_us)
+	if (adesso < in->bucket_from_us)
 		return;  /* ⚠ the clock is monotonic: it should not happen */
-	while (adesso - in->secchio_da_us >= SECCHIO_US) {
-		in->secchio_da_us += SECCHIO_US;
-		in->secchio = (in->secchio + 1) % SECCHI;
-		in->pixel[in->secchio] = 0;
+	while (adesso - in->bucket_from_us >= SECCHIO_US) {
+		in->bucket_from_us += SECCHIO_US;
+		in->bucket = (in->bucket + 1) % SECCHI;
+		in->pixel[in->bucket] = 0;
 		/* ⭐ If the gap is longer than the whole window we do not loop a
 		 *    thousand times: everything is zeroed and restarted from now. */
-		if (adesso - in->secchio_da_us >= FINESTRA_US) {
+		if (adesso - in->bucket_from_us >= WINDOW_US) {
 			memset(in->pixel, 0, sizeof in->pixel);
-			in->secchio_da_us = adesso;
-			in->secchio = 0;
+			in->bucket_from_us = adesso;
+			in->bucket = 0;
 			return;
 		}
 	}
@@ -193,11 +193,11 @@ static bool consegnato(struct inquilino *in, uint64_t adesso, double *mpixel_s)
 	uint64_t somma = 0;
 	double secondi;
 
-	if (!in || in->mai_consegnato)
+	if (!in || in->never_delivered)
 		return false;
 	/* ⛔ Until there is a WHOLE window of history the number does not describe
 	 *    a rate: it describes «how recently it was born».  ⇒ Not measured. */
-	if (adesso < in->primo_us + FINESTRA_US)
+	if (adesso < in->first_us + WINDOW_US)
 		return false;
 	avanza(in, adesso);
 	for (int i = 0; i < SECCHI; i++)
@@ -208,7 +208,7 @@ static bool consegnato(struct inquilino *in, uint64_t adesso, double *mpixel_s)
 	 *   underestimate the demand by ~6 %.  ⛔ Underestimating the demand is the
 	 *   direction that starves everyone (§1.33). */
 	secondi = (double)(SECCHI - 1) * (double)SECCHIO_US / 1e6;
-	secondi += (double)(adesso - in->secchio_da_us) / 1e6;
+	secondi += (double)(adesso - in->bucket_from_us) / 1e6;
 	if (secondi <= 0.0)
 		return false;
 	*mpixel_s = (double)somma / 1e6 / secondi;
@@ -217,14 +217,14 @@ static bool consegnato(struct inquilino *in, uint64_t adesso, double *mpixel_s)
 
 /* ⭐ The median of the kept delays.  `false` = never delivered anything, so
  *    there is nothing to take the median of — and it is not «zero delay». */
-static bool ritardo_mediano(const struct inquilino *in, double *ms)
+static bool median_delay(const struct inquilino *in, double *ms)
 {
 	uint32_t v[RITARDI];
 	int n;
 
-	if (!in || in->quanti_ritardi <= 0)
+	if (!in || in->how_many_delays <= 0)
 		return false;
-	n = in->quanti_ritardi;
+	n = in->how_many_delays;
 	memcpy(v, in->ritardo_ms, (size_t)n * sizeof v[0]);
 	/* ⚠ Insertion sort on at most 32 elements, once per verdict: `qsort`
 	 *   here would cost more lines than it saves. */
@@ -247,47 +247,47 @@ static double peggiore(uint32_t l, uint32_t a)
 
 /* ------------------------------------------------------------------------- */
 
-void budget_accendi(double capacita, double f, uint32_t tela_l, uint32_t tela_a)
+void budget_turn_on(double capacita, double f, uint32_t tela_l, uint32_t tela_a)
 {
-	tela_palco_l = tela_l;
-	tela_palco_a = tela_a;
+	canvas_stage_w = tela_l;
+	canvas_stage_h = tela_a;
 	riserva = f;
 	if (riserva < 0.0)
 		riserva = 0.0;
 	if (riserva > 1.0)
 		riserva = 1.0;
-	capacita_mpixel_s = capacita > 0.0 ? capacita : 0.0;
-	if (capacita_mpixel_s > 0.0 && !tabella_pronta(quante_caselle))
-		capacita_mpixel_s = 0.0;
+	capacity_mpixel_s = capacita > 0.0 ? capacita : 0.0;
+	if (capacity_mpixel_s > 0.0 && !table_ready(how_many_cells))
+		capacity_mpixel_s = 0.0;
 }
 
 /* ⛔ The table is sized **before** switching on: `main.c` calls it with the
  *    cap in force, so the slots are as many as the possible stages and
  *    oldest-first reuse never bites in normal operation. */
-void budget_caselle(int quante)
+void budget_cells(int quante)
 {
 	if (!tabella)
-		quante_caselle = quante;
+		how_many_cells = quante;
 }
 
-bool budget_acceso(void)
+bool budget_on(void)
 {
-	return capacita_mpixel_s > 0.0 && tabella != NULL;
+	return capacity_mpixel_s > 0.0 && tabella != NULL;
 }
 
 /* ⛔ The two counts of the noes, and they live here because this is where
  *    they are written.  ⚠ They are never reset: they are «since this server
  *    started», which is the only window a log reader can reconstruct. */
-static uint64_t domande_viste, negati_tutti, negati_budget;
+static uint64_t questions_seen, all_denied, denied_budget;
 
-void budget_riga_verdetto(const char *utente, bool ammesso, uint8_t motivo,
+void budget_verdict_line(const char *utente, bool ammesso, uint8_t motivo,
                           int tetto_sessioni, const char *perche)
 {
-	domande_viste++;
+	questions_seen++;
 	if (!ammesso) {
-		negati_tutti++;
+		all_denied++;
 		if (motivo == 0x06)
-			negati_budget++;
+			denied_budget++;
 	}
 	/* ⛔ ONE line per verdict, and not one per frame: we pass here at every
 	 *    login, not at every pixel.  ⭐ And it is written with the budget OFF
@@ -299,10 +299,10 @@ void budget_riga_verdetto(const char *utente, bool ammesso, uint8_t motivo,
 	              "--tetto-sessioni %d --riserva %.2f%s%s",
 	              utente ? utente : "?",
 	              ammesso ? "⭐ ADMITTED" : "⛔ DENIED",
-	              (unsigned long long)negati_tutti,
-	              (unsigned long long)negati_budget,
-	              (unsigned long long)domande_viste,
-	              capacita_mpixel_s, budget_acceso() ? "ON" : "OFF",
+	              (unsigned long long)all_denied,
+	              (unsigned long long)denied_budget,
+	              (unsigned long long)questions_seen,
+	              capacity_mpixel_s, budget_on() ? "ON" : "OFF",
 	              tetto_sessioni, riserva,
 	              (!ammesso && perche && perche[0]) ? " · reason: " : "",
 	              (!ammesso && perche && perche[0]) ? perche : "");
@@ -321,10 +321,10 @@ void budget_riga_avvio(int tetto_sessioni)
 	              "budget --budget-mpixel-s %.1f (%s) · "
 	              "cap --tetto-sessioni %d · "
 	              "reserve --riserva %.2f",
-	              budget_acceso() ? "⭐⭐" : "⛔",
-	              capacita_mpixel_s, budget_acceso() ? "ON" : "OFF",
+	              budget_on() ? "⭐⭐" : "⛔",
+	              capacity_mpixel_s, budget_on() ? "ON" : "OFF",
 	              tetto_sessioni, riserva);
-	if (budget_acceso())
+	if (budget_on())
 		registro_dice(REG_BUDGET,
 		              "⭐⭐ phase 10 — THE COMPOSITION BUDGET: ON at %.1f "
 		              "Mpixel/s, reserve %.2f, delay threshold %.1f ms, "
@@ -338,10 +338,10 @@ void budget_riga_avvio(int tetto_sessioni)
 		              "the machine has given way once it is a lower "
 		              "bound, not a ceiling — this was declared by whoever "
 		              "typed `--budget-mpixel-s`",
-		              capacita_mpixel_s, riserva, BUDGET_RITARDO_AFFANNO_MS,
+		              capacity_mpixel_s, riserva, BUDGET_RITARDO_AFFANNO_MS,
 		              (double)BUDGET_RITMO_MAX_FOT_S,
-		              peggiore(tela_palco_l, tela_palco_a), tela_palco_l,
-		              tela_palco_a, BUDGET_TOLLERANZA * 100.0, quante_caselle);
+		              peggiore(canvas_stage_w, canvas_stage_h), canvas_stage_w,
+		              canvas_stage_h, BUDGET_TOLLERANZA * 100.0, how_many_cells);
 	else
 		registro_dice(REG_BUDGET,
 		              "⛔ phase 10 — THE COMPOSITION BUDGET: OFF "
@@ -365,23 +365,23 @@ void budget_deposita(const char *utente, uint32_t larghezza, uint32_t altezza,
 	bool letta = false;
 	uint64_t adesso;
 
-	if (!budget_acceso() || !utente || !utente[0] || !larghezza || !altezza)
+	if (!budget_on() || !utente || !utente[0] || !larghezza || !altezza)
 		return;
-	adesso = ora_us(&letta);
+	adesso = now_us(&letta);
 	if (!letta)
 		return;
 	in = casella(utente, true);
 	if (!in)
 		return;
-	if (in->mai_consegnato) {
-		in->mai_consegnato = false;
-		in->primo_us = adesso;
-		in->secchio_da_us = adesso;
-		in->secchio = 0;
+	if (in->never_delivered) {
+		in->never_delivered = false;
+		in->first_us = adesso;
+		in->bucket_from_us = adesso;
+		in->bucket = 0;
 	}
 	avanza(in, adesso);
-	in->pixel[in->secchio] += (uint64_t)larghezza * (uint64_t)altezza;
-	in->ultimo_us = adesso;
+	in->pixel[in->bucket] += (uint64_t)larghezza * (uint64_t)altezza;
+	in->last_us = adesso;
 	in->tela_l = larghezza;
 	in->tela_a = altezza;
 	/* ⛔ The delay is *capture → parent*, and the instant is stamped by the
@@ -394,27 +394,27 @@ void budget_deposita(const char *utente, uint32_t larghezza, uint32_t altezza,
 		uint64_t d = adesso > istante_us ? adesso - istante_us : 0;
 		uint32_t ms = (uint32_t)(d / 1000ull);
 
-		in->ritardo_ms[in->prossimo_ritardo] = ms;
-		in->prossimo_ritardo = (in->prossimo_ritardo + 1) % RITARDI;
-		if (in->quanti_ritardi < RITARDI)
-			in->quanti_ritardi++;
+		in->ritardo_ms[in->next_delay] = ms;
+		in->next_delay = (in->next_delay + 1) % RITARDI;
+		if (in->how_many_delays < RITARDI)
+			in->how_many_delays++;
 	}
 }
 
-void budget_conto_apri(struct budget_conto *c)
+void budget_count_open(struct budget_conto *c)
 {
 	memset(c, 0, sizeof *c);
-	c->ora_us = ora_us(&c->orologio);
+	c->now_us = now_us(&c->orologio);
 }
 
-void budget_conto_dentro(struct budget_conto *c, const char *utente)
+void budget_count_inside(struct budget_conto *c, const char *utente)
 {
 	struct inquilino *in;
 	double consegna = 0.0, rit = 0.0, pg, d;
-	bool ho_consegna, ho_ritardo;
+	bool got_delivery, got_delay;
 	uint32_t l, a;
 
-	if (!c || !c->orologio || !budget_acceso() || !utente || !utente[0])
+	if (!c || !c->orologio || !budget_on() || !utente || !utente[0])
 		return;
 	c->quanti++;
 	in = casella(utente, false);
@@ -422,12 +422,12 @@ void budget_conto_dentro(struct budget_conto *c, const char *utente)
 	/* ⚠ The canvas: that of the last frame delivered; if it has never
 	 *   delivered, that of the STAGE — which is the upper bound of what it can
 	 *   obtain.  ⛔ Uncomfortable direction. */
-	l = (in && in->tela_l) ? in->tela_l : tela_palco_l;
-	a = (in && in->tela_a) ? in->tela_a : tela_palco_a;
+	l = (in && in->tela_l) ? in->tela_l : canvas_stage_w;
+	a = (in && in->tela_a) ? in->tela_a : canvas_stage_h;
 	pg = peggiore(l, a);
 
-	ho_consegna = consegnato(in, c->ora_us, &consegna);
-	ho_ritardo = ritardo_mediano(in, &rit);
+	got_delivery = consegnato(in, c->now_us, &consegna);
+	got_delay = median_delay(in, &rit);
 
 	/* ── ⛔⛔ THE DELAY GATE — and it stands BEFORE the sum ────────────────
 	 *
@@ -436,19 +436,19 @@ void budget_conto_dentro(struct budget_conto *c, const char *utente)
 	 * while everyone sits at 1.5 fps.  ⇒ Whoever delivers little **with a delay
 	 * above the threshold** is throttled, not idle, and admitting now violates
 	 * I1 on whoever is already working. */
-	if (ho_ritardo && rit > BUDGET_RITARDO_AFFANNO_MS &&
-	    (!c->strozzato[0] || rit > c->strozzato_ms)) {
+	if (got_delay && rit > BUDGET_RITARDO_AFFANNO_MS &&
+	    (!c->strozzato[0] || rit > c->throttled_ms)) {
 		snprintf(c->strozzato, sizeof c->strozzato, "%s", utente);
-		c->strozzato_ms = rit;
+		c->throttled_ms = rit;
 	}
 
 	/* ── THE DEMAND OF THIS TENANT ────────────────────────────────────── */
-	if (!ho_consegna || !ho_ritardo) {
+	if (!got_delivery || !got_delay) {
 		/* ⛔ DECLARED fallback, and in the uncomfortable direction: without
 		 *    the delivered — or without the delay, which is what tells «idle»
 		 *    from «throttled» — the worst case is counted. */
 		d = pg;
-		c->al_peggiore++;
+		c->at_worst++;
 	} else {
 		/* ⭐⭐ THE RESERVE: the larger of what it delivers and the fraction
 		 *     `F` of its worst case.  It is the defence against the WAKE-UP —
@@ -464,53 +464,53 @@ void budget_conto_dentro(struct budget_conto *c, const char *utente)
 	c->domanda += d;
 }
 
-enum budget_esito budget_conto_verdetto(struct budget_conto *c,
+enum budget_esito budget_count_verdict(struct budget_conto *c,
                                         const char *nuovo, uint32_t tela_l,
                                         uint32_t tela_a, char *perche,
-                                        size_t perche_cap)
+                                        size_t why_cap)
 {
-	double d_nuovo, tetto, domanda;
+	double d_new, tetto, domanda;
 
-	if (perche && perche_cap)
+	if (perche && why_cap)
 		perche[0] = '\0';
-	if (!budget_acceso())
-		return BUDGET_REGGE;
+	if (!budget_on())
+		return BUDGET_HOLDS;
 	if (!c || !c->orologio) {
-		if (perche && perche_cap)
-			snprintf(perche, perche_cap,
+		if (perche && why_cap)
+			snprintf(perche, why_cap,
 			         "the monotonic clock could not be read: the budget "
 			         "HAS NOT MEASURED, and does not judge");
 		return BUDGET_NON_SO;
 	}
 	if (c->strozzato[0]) {
-		if (perche && perche_cap)
-			snprintf(perche, perche_cap,
+		if (perche && why_cap)
+			snprintf(perche, why_cap,
 			         "this machine is already struggling: the session of «%s» "
 			         "delivers with %.0f ms of delay (measured threshold %.1f "
 			         "ms), and letting someone in now would take frame rate away "
 			         "from whoever is working.  ⭐ Try again shortly",
-			         c->strozzato, c->strozzato_ms, BUDGET_RITARDO_AFFANNO_MS);
-		return BUDGET_NON_REGGE;
+			         c->strozzato, c->throttled_ms, BUDGET_RITARDO_AFFANNO_MS);
+		return BUDGET_DOES_NOT_HOLD;
 	}
 
 	if (!tela_l || !tela_a) {
-		tela_l = tela_palco_l;
-		tela_a = tela_palco_a;
+		tela_l = canvas_stage_w;
+		tela_a = canvas_stage_h;
 	}
-	d_nuovo = peggiore(tela_l, tela_a);
-	domanda = c->domanda + d_nuovo;
-	tetto = capacita_mpixel_s * (1.0 + BUDGET_TOLLERANZA);
+	d_new = peggiore(tela_l, tela_a);
+	domanda = c->domanda + d_new;
+	tetto = capacity_mpixel_s * (1.0 + BUDGET_TOLLERANZA);
 
 	if (domanda <= tetto) {
-		if (perche && perche_cap)
-			snprintf(perche, perche_cap,
+		if (perche && why_cap)
+			snprintf(perche, why_cap,
 			         "demand %.1f ≤ %.1f Mpixel/s (%d inside%s, the newcomer "
 			         "asks for %.1f at worst with %ux%u)",
 			         domanda, tetto, c->quanti,
-			         c->al_peggiore ? ", some of them counted at the worst "
+			         c->at_worst ? ", some of them counted at the worst "
 			                          "case" : "",
-			         d_nuovo, tela_l, tela_a);
-		return BUDGET_REGGE;
+			         d_new, tela_l, tela_a);
+		return BUDGET_HOLDS;
 	}
 	/* ⛔⭐ THE BODY CARRIES THE FIGURES, and it is not decoration: **demand**
 	 *     and **capacity** are the two numbers on which the no was decided, and
@@ -532,14 +532,14 @@ enum budget_esito budget_conto_verdetto(struct budget_conto *c,
 	 *      ⭐ What is true instead: capacity comes back as soon as someone
 	 *        leaves, and a device that declares a smaller ceiling really costs
 	 *        less.  ⚠ That is what is promised, and only that. */
-	if (perche && perche_cap)
-		snprintf(perche, perche_cap,
+	if (perche && why_cap)
+		snprintf(perche, why_cap,
 		         "this machine has no composition capacity left: the %d "
 		         "sessions already open ask for %.0f of the %.0f Mpixel/s "
 		         "declared, and yours would ask for %.0f more (%ux%u at %.1f "
 		         "fps).  ⭐ Try again shortly: capacity comes back as soon as "
 		         "someone leaves",
-		         c->quanti, c->domanda, capacita_mpixel_s, d_nuovo, tela_l,
+		         c->quanti, c->domanda, capacity_mpixel_s, d_new, tela_l,
 		         tela_a, (double)BUDGET_RITMO_MAX_FOT_S);
-	return BUDGET_NON_REGGE;
+	return BUDGET_DOES_NOT_HOLD;
 }

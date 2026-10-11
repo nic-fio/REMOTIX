@@ -83,7 +83,7 @@ set -uo pipefail
 QUI=${QUI:-/media/REMOTIX/tmp/02-cattura}
 SRC=${SRC:-/media/REMOTIX/src}
 GIUDICE=$SRC/02-cattura-giudica.py
-LANCIA=$SRC/02-cattura-lancia.sh
+LAUNCH=$SRC/02-cattura-lancia.sh
 SCENA=${SCENA:-bandiera}
 mkdir -p "$QUI" || { echo "⛔ I cannot create $QUI" >&2; exit 2; }
 REGISTRO=$QUI/certificazione-$(date -u +%Y%m%d-%H%M%S).log
@@ -93,7 +93,7 @@ ko()  { printf '    \033[1;31mNO\033[0m  %s\n' "$*"; }
 inf() { printf '    --  %s\n' "$*"; }
 log() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 
-ATTESO_SANO=0
+EXPECTED_HEALTHY=0
 
 # ---------------------------------------------------------------------------
 #  The injection: always on a copy, with the fingerprint before and after
@@ -141,7 +141,7 @@ giudica()
 	return $?
 }
 
-marche_di()
+marks_of()
 {
 	# ⛔ Only the RED marks: a warning on the `primo` frame — where the scene
 	#    is not there yet — is not a finding, and counting it here would pass off as
@@ -178,7 +178,7 @@ verifica()
 # ===========================================================================
 {
 log "0. THE INITIAL STATE — declared and checked (B0.1)"
-for f in "$GIUDICE" "$LANCIA"; do
+for f in "$GIUDICE" "$LAUNCH"; do
 	if [ ! -r "$f" ]; then ko "⛔ cannot read: $f"; exit 2; fi
 done
 ok "the two files of the bench can be read"
@@ -194,29 +194,29 @@ fi
 ok "the judge finds the flag, calls black the black, and does NOT call black the grey"
 
 # ---------------------------------------------------------------------------
-log "1. THE HEALTHY ROUND — and the expectation is $ATTESO_SANO, written beforehand"
+log "1. THE HEALTHY ROUND — and the expectation is $EXPECTED_HEALTHY, written beforehand"
 PREFISSO=${1:-}
 if [ -z "$PREFISSO" ]; then
-	inf "no prefix given: I do a real round with $LANCIA"
-	SCENA=$SCENA bash "$LANCIA" misura
-	U_LANCIA=$?
-	inf "the healthy round exited with $U_LANCIA"
+	inf "no prefix given: I do a real round with $LAUNCH"
+	SCENA=$SCENA bash "$LAUNCH" misura
+	U_LAUNCH=$?
+	inf "the healthy round exited with $U_LAUNCH"
 	# ⛔ The exit is not enough: the PREFIX of the round is needed, and it is taken from the
 	#    most recent file instead of guessed.  ⚠ And the list is built with a
 	#    glob, not with `ls` inside a pipe: «no file» and «ls failed»
 	#    look the same in a chain of `|`, and it is item 3 of
 	#    `FASI.md` §00-ambiente — «no line found» was a denied read.
-	CANDIDATI=()
+	CANDIDATES=()
 	for m in "$QUI"/giro-*.json; do
 		case "$m" in *-verdetto.json) continue ;; esac
-		[ -f "$m" ] && CANDIDATI+=("$m")
+		[ -f "$m" ] && CANDIDATES+=("$m")
 	done
-	if [ ${#CANDIDATI[@]} -eq 0 ]; then
+	if [ ${#CANDIDATES[@]} -eq 0 ]; then
 		ko "⛔ no manifest in $QUI: the healthy round produced nothing."
 		inf "⚠ It is not «the bench is broken»: it is «there was no round»."
 		exit 2
 	fi
-	PREFISSO=$(ls -t "${CANDIDATI[@]}" | head -1)
+	PREFISSO=$(ls -t "${CANDIDATES[@]}" | head -1)
 	PREFISSO=${PREFISSO%.json}
 fi
 if [ -z "$PREFISSO" ] || [ ! -f "$PREFISSO.json" ]; then
@@ -240,9 +240,9 @@ IMP_ORIG=$(impronta "$ORIGINALE")
 inf "original put aside: $ORIGINALE"
 inf "fingerprint: $IMP_ORIG"
 
-giudica "$PREFISSO" "$QUI/cert-sano"; U_SANO=$?
-M_SANO=$(marche_di "$QUI/cert-sano.json")
-verifica "sano" "$U_SANO" "$ATTESO_SANO" "$M_SANO" "" ""
+giudica "$PREFISSO" "$QUI/cert-sano"; U_HEALTHY=$?
+M_HEALTHY=$(marks_of "$QUI/cert-sano.json")
+verifica "sano" "$U_HEALTHY" "$EXPECTED_HEALTHY" "$M_HEALTHY" "" ""
 if [ $? -ne 0 ]; then
 	ko "⛔ THE HEALTHY ROUND IS NOT HEALTHY: the certification stops."
 	inf "Injecting a fault on a bench already red would give a red that says nothing."
@@ -262,18 +262,18 @@ GUASTI=(
 	"copia|1|THE BUFFER DID NOT CHANGE|BLACK FRAME"
 )
 for voce in "${GUASTI[@]}"; do
-	IFS='|' read -r NOME ATT PRETESA VIETATA <<< "$voce"
+	IFS='|' read -r NOME EXP PRETESA VIETATA <<< "$voce"
 
-	log "2. FAULT «$NOME» — expected $ATT, required mark «$PRETESA», forbidden «${VIETATA:-none}»"
+	log "2. FAULT «$NOME» — expected $EXP, required mark «$PRETESA», forbidden «${VIETATA:-none}»"
 	cp -f "$ORIGINALE" "$REGIME" || exit 2
 	innesta "$NOME" "$REGIME" "$PRIMO" || { ko "injection failed"; FALLITI=$((FALLITI+1)); continue; }
 	inf "fingerprint after the injection: $(impronta "$REGIME")"
 
 	giudica "$PREFISSO" "$QUI/cert-guasto-$NOME"; U=$?
-	M=$(marche_di "$QUI/cert-guasto-$NOME.json")
-	verifica "guasto/$NOME" "$U" "$ATT" "$M" "$PRETESA" "$VIETATA" || FALLITI=$((FALLITI+1))
+	M=$(marks_of "$QUI/cert-guasto-$NOME.json")
+	verifica "guasto/$NOME" "$U" "$EXP" "$M" "$PRETESA" "$VIETATA" || FALLITI=$((FALLITI+1))
 
-	log "3. HEALED after «$NOME» — expected $ATTESO_SANO"
+	log "3. HEALED after «$NOME» — expected $EXPECTED_HEALTHY"
 	cp -f "$ORIGINALE" "$REGIME" || exit 2
 	IMP=$(impronta "$REGIME")
 	if [ "$IMP" != "$IMP_ORIG" ]; then
@@ -283,15 +283,15 @@ for voce in "${GUASTI[@]}"; do
 		ok "the fingerprint went back to the one before: $IMP"
 	fi
 	giudica "$PREFISSO" "$QUI/cert-risano-$NOME"; U=$?
-	M=$(marche_di "$QUI/cert-risano-$NOME.json")
-	verifica "risanato/$NOME" "$U" "$ATTESO_SANO" "$M" "" "" || FALLITI=$((FALLITI+1))
+	M=$(marks_of "$QUI/cert-risano-$NOME.json")
+	verifica "risanato/$NOME" "$U" "$EXPECTED_HEALTHY" "$M" "" "" || FALLITI=$((FALLITI+1))
 done
 
 # ---------------------------------------------------------------------------
 log "4. THE VERDICT OF THE CERTIFICATION"
 cp -f "$ORIGINALE" "$REGIME"
 if [ $FALLITI -eq 0 ]; then
-	ok "⭐ THE F2.2 BENCH IS CERTIFIED: healthy $ATTESO_SANO → four faults → healed $ATTESO_SANO"
+	ok "⭐ THE F2.2 BENCH IS CERTIFIED: healthy $EXPECTED_HEALTHY → four faults → healed $EXPECTED_HEALTHY"
 	inf "⚠ And this does not say the bench is right: it says it can see THESE four"
 	inf "  defects. «I found nothing» is not «it is right» (REVIEWER.md §0)."
 	ESITO=0

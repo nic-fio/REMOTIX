@@ -56,15 +56,15 @@ C21 = S.C21
 #   `Input.dispatchMouseEvent` answers «Internal error» (`[M]` 25 Sep 2026,
 #   kde/xfce/lxqt).  A real user has the browser IN FRONT: the throttling of
 #   covered windows is turned off (declared: BENCH flags).
-_OPZ = os.environ.get("REMOTIX_CHROME_OPZIONI", "")
+_OPT = os.environ.get("REMOTIX_CHROME_OPZIONI", "")
 for _b in ("--disable-backgrounding-occluded-windows", "--disable-renderer-backgrounding",
            "--disable-background-timer-throttling"):
-    if _b not in _OPZ:
-        _OPZ += " " + _b
-os.environ["REMOTIX_CHROME_OPZIONI"] = _OPZ.strip()
-BLU, VERDE_C, GIALLO, MAGENTA = (0, 0, 255), (0, 255, 0), (255, 255, 0), (255, 0, 255)
-TOLL_COLORE = 70
-PAROLE = ("alfa", "beta", "gamma", "delta")
+    if _b not in _OPT:
+        _OPT += " " + _b
+os.environ["REMOTIX_CHROME_OPZIONI"] = _OPT.strip()
+BLU, GREEN_C, GIALLO, MAGENTA = (0, 0, 255), (0, 255, 0), (255, 255, 0), (255, 0, 255)
+TOL_COLOR = 70
+WORDS = ("alfa", "beta", "gamma", "delta")
 
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE PAGE AND THE SERVER
@@ -252,7 +252,7 @@ def _json(t):
 # ═══════════════════════════════════════════════════════════════════════════
 #  WHERE THE SCENE IS IN THE DESKTOP — from the PHOTO
 # ═══════════════════════════════════════════════════════════════════════════
-def trova_colore(im, colore, passo=4, toll=TOLL_COLORE):
+def find_color(im, colore, passo=4, toll=TOL_COLOR):
     """The box {x0,y0,x1,y1, n, pieno} of the pixels close to `colore` in
     a PIL image, sampling every `passo` pixels; None if there are none.
     `pieno` = fraction of the box covered (a real block is ~1)."""
@@ -299,7 +299,7 @@ class Mappa:
 
     def vetro(self, cx, cy):
         X, Y = self.desktop(cx, cy)
-        return C21.dal_desktop_al_vetro(self.geo, X, Y)
+        return C21.desktop_to_glass(self.geo, X, Y)
 
     def descrivi(self):
         return "desktop = %.3f·x%+.0f, %.3f·y%+.0f" % (self.ax, self.bx, self.ay, self.by)
@@ -310,15 +310,15 @@ def calibra(im, geo, rett):
     rectangles declared by the page.  Returns (Mappa | None, why)."""
     pw, ph = im.size
     trovati = {}
-    for nome, col in (("pad", BLU), ("bot", VERDE_C)):
-        t = trova_colore(im, col)
+    for nome, col in (("pad", BLU), ("bot", GREEN_C)):
+        t = find_color(im, col)
         if not t:
             return None, "the %s block (%s) is not seen in the photo" % (nome, col)
         if t["pieno"] < 0.8:
             return None, ("the colour of %s is scattered (pieno %.2f): the scene does not cover the "
                           "desktop or there is something else of the same colour" % (nome, t["pieno"]))
-        X0, Y0 = C21.dalla_foto_al_desktop(geo, pw, ph, t["x0"], t["y0"])
-        X1, Y1 = C21.dalla_foto_al_desktop(geo, pw, ph, t["x1"], t["y1"])
+        X0, Y0 = C21.from_photo_to_desktop(geo, pw, ph, t["x0"], t["y0"])
+        X1, Y1 = C21.from_photo_to_desktop(geo, pw, ph, t["x1"], t["y1"])
         trovati[nome] = (X0, Y0, X1, Y1)
     cx, cy = [], []
     for nome in ("pad", "bot"):
@@ -351,9 +351,9 @@ def tetto(secondi, cosa):
     error» — the Chrome window in the common labwc covered by those of the
     others no longer receives frames.  The protocol reading does not time out because
     the EVENTS keep arriving ⇒ an alarm is needed."""
-    def _suona(_n, _f):
+    def _on_alarm(_n, _f):
         raise Tetto("%s: no answer from the browser in %d s" % (cosa, secondi))
-    vecchio = signal.signal(signal.SIGALRM, _suona)
+    vecchio = signal.signal(signal.SIGALRM, _on_alarm)
     signal.alarm(int(secondi))
     try:
         yield
@@ -397,7 +397,7 @@ def foto_pil(s, nome):
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE REAL MOUSE
 # ═══════════════════════════════════════════════════════════════════════════
-_BOTTONI_CDP = {0: ("left", 1), 1: ("middle", 4), 2: ("right", 2)}
+_CDP_BUTTONS = {0: ("left", 1), 1: ("middle", 4), 2: ("right", 2)}
 
 
 def mouse(g, passi):
@@ -424,11 +424,11 @@ def _mouse_cdp(g, passi):
                 x, y = p[1], p[2]
                 k = dict(type="mouseMoved", x=x, y=y)
                 if mask:
-                    giu = [b for b, (_n, m) in _BOTTONI_CDP.items() if mask & m]
-                    k.update(button=_BOTTONI_CDP[giu[0]][0], buttons=mask)
+                    giu = [b for b, (_n, m) in _CDP_BUTTONS.items() if mask & m]
+                    k.update(button=_CDP_BUTTONS[giu[0]][0], buttons=mask)
                 c("Input.dispatchMouseEvent", **k)
             elif p[0] in ("giu", "su"):
-                nome, m = _BOTTONI_CDP[p[1]]
+                nome, m = _CDP_BUTTONS[p[1]]
                 mask = (mask | m) if p[0] == "giu" else (mask & ~m)
                 c("Input.dispatchMouseEvent",
                   type="mousePressed" if p[0] == "giu" else "mouseReleased",
@@ -449,7 +449,7 @@ def _mouse_wd(g, passi):
             az.append({"type": "pointerUp", "button": p[1]})
         elif p[0] == "pausa":
             az.append({"type": "pause", "duration": int(p[1])})
-    g._azioni([{"type": "pointer", "id": "topo", "parameters": {"pointerType": "mouse"},
+    g._actions([{"type": "pointer", "id": "topo", "parameters": {"pointerType": "mouse"},
                 "actions": az}])
 
 
@@ -474,10 +474,10 @@ SPECIALI = {
     "ArrowDown":  ("ArrowDown", "ArrowDown", 40, "", 0),
     "End":        ("End", "End", 35, "", 0),
 }
-PAUSA_MS = 90
+PAUSE_MS = 90
 
 
-def codice_di(c):
+def code_of(c):
     """The `code` and the keyCode of an ASCII character on any keyboard."""
     if c.isalpha() and c.isascii():
         return "Key" + c.upper(), ord(c.upper())
@@ -488,7 +488,7 @@ def codice_di(c):
     return "", 0
 
 
-def tasti(g, passi, pausa_ms=PAUSA_MS):
+def tasti(g, passi, pause_ms=PAUSE_MS):
     """⭐ REAL keys.  `passi` = [(«giu»|«su», name, code, vk)]; for the letters
     `nome` is the character (the `key` the browser reports) and code/vk those
     of the position (None ⇒ those of any keyboard).
@@ -497,12 +497,12 @@ def tasti(g, passi, pausa_ms=PAUSA_MS):
     if hasattr(g, "cdp"):
         davanti(g)
         with tetto(90, "the keys"):
-            _tasti_cdp(g, passi, pausa_ms)
+            _cdp_keys(g, passi, pause_ms)
         return saltati
-    return _tasti_wd(g, passi, pausa_ms)
+    return _wd_keys(g, passi, pause_ms)
 
 
-def _tasti_cdp(g, passi, pausa_ms):
+def _cdp_keys(g, passi, pause_ms):
     if True:
         mod = 0
         for tipo, nome, code, vk in passi:
@@ -516,17 +516,17 @@ def _tasti_cdp(g, passi, pausa_ms):
                 if tipo == "su":
                     mod &= ~bit
             else:
-                cd, v = codice_di(nome)
+                cd, v = code_of(nome)
                 cd, v = code or cd, vk or v
                 p = dict(type="keyDown" if tipo == "giu" else "keyUp", key=nome, code=cd,
                          windowsVirtualKeyCode=v, modifiers=mod)
                 if tipo == "giu" and not (mod & 2):
                     p["text"] = p["unmodifiedText"] = nome
                 g.cdp.chiama("Input.dispatchKeyEvent", **p)
-            time.sleep(pausa_ms / 1000.0)
+            time.sleep(pause_ms / 1000.0)
 
 
-def _tasti_wd(g, passi, pausa_ms):
+def _wd_keys(g, passi, pause_ms):
     saltati = []
     az = []
     for tipo, nome, _code, _vk in passi:
@@ -535,7 +535,7 @@ def _tasti_wd(g, passi, pausa_ms):
             saltati.append((tipo, nome))
             continue
         az.append({"type": "keyDown" if tipo == "giu" else "keyUp", "value": v})
-        az.append({"type": "pause", "duration": pausa_ms})
+        az.append({"type": "pause", "duration": pause_ms})
     g.m.chiama("WebDriver:PerformActions",
                {"actions": [{"type": "key", "id": "tastiera", "actions": az}]})
     g.m.chiama("WebDriver:ReleaseActions")
@@ -560,7 +560,7 @@ def col(mod, passi):
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE BROWSER'S LANGUAGE — from it the page declares the layout (ATTACCA)
 # ═══════════════════════════════════════════════════════════════════════════
-def metti_lingua(g, lingua):
+def set_language(g, lingua):
     """Makes the browser say `navigator.language == lingua` (for the documents that
     open AFTERWARDS).  Returns a sentence saying how."""
     if hasattr(g, "cdp"):
@@ -593,7 +593,7 @@ def prepara(s, porta_scena, lingua=None):
     """Logs in, wakes up, starts the scene, finds it in the photo.
     Returns (Scena, Mappa, geo, evidence_photo).  Raises `S.Bloccata`."""
     if lingua:
-        print("   language: %s" % metti_lingua(s.g, lingua), flush=True)
+        print("   language: %s" % set_language(s.g, lingua), flush=True)
     ok, m = s.entra()
     if not ok:
         raise S.Bloccata(m)
@@ -640,7 +640,7 @@ def centro(r):
     return (r[0] + r[2]) / 2.0, (r[1] + r[3]) / 2.0
 
 
-def batti(s, sc, mp, passi, nome, fatto, attesa=8.0, saltabili=()):
+def batti(s, sc, mp, passi, nome, fatto, attesa=8.0, skippable=()):
     """Clean scene, click in field «a», the REAL KEYS, the state read until
     `fatto(stato)` or the wait ends.  Returns (state, photo, skipped, why):
     a non-empty `why` = it could not be looked at."""
@@ -655,7 +655,7 @@ def batti(s, sc, mp, passi, nome, fatto, attesa=8.0, saltabili=()):
     if st is None or st.get("a") != "" or st.get("fuoco") != "a":
         return None, "", [], "the scene is not ready: %s" % (st,)
     saltati = tasti(s.g, passi)
-    fuori = [x for x in saltati if x[1] not in saltabili]
+    fuori = [x for x in saltati if x[1] not in skippable]
     if fuori:
         return None, "", saltati, "keys this browser cannot press: %s" % fuori
     st = sc.aspetta(fatto, attesa)

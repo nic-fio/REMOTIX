@@ -21,7 +21,7 @@
 #include "wlroots.h"
 #define AREA "cattura"
 
-/* ⛔ The SAME clock as `figlio.c` (`ora_monotona_us`) and `codificatore.c`
+/* ⛔ The SAME clock as `figlio.c` (`now_monotonic_us`) and `codificatore.c`
  *    (`adesso_us`): the phase 8 segments are subtracted across different files,
  *    and two different clocks would give differences that mean nothing. */
 static uint64_t adesso_us(void)
@@ -116,18 +116,18 @@ struct Cattura
 	 * textually what it was before.
 	 */
 	WlrPalco *wlr;
-	WlrFotogramma wlr_ultimo;
-	gboolean wlr_ultimo_noto;
-	gboolean wlr_detto_il_testimone, wlr_detto_y;
-	gboolean wlr_detto_ripiego;      /* «card requested, memory arrived» */
-	gboolean wlr_guardato_il_primo;  /* the first card frame, mapped */
+	WlrFotogramma wlr_last;
+	gboolean wlr_last_known;
+	gboolean wlr_witness_logged, wlr_y_logged;
+	gboolean wlr_fallback_logged;      /* «card requested, memory arrived» */
+	gboolean wlr_watched_first;  /* the first card frame, mapped */
 	/* ⭐ The true shape on labwc (the probe, `wlroots.h`): the last one DELIVERED,
 	 *    so as not to resend the same image under two names (`default` and
 	 *    `left_ptr` are the same drawing), and the serial that `forma.h` leaves to
 	 *    whoever delivers. */
-	CursoreForma wlr_forma;
-	gboolean wlr_forma_data;
-	guint64 wlr_forme_mandate, wlr_forme_uguali;
+	CursoreForma wlr_shape;
+	gboolean wlr_shape_data;
+	guint64 wlr_shapes_sent, wlr_shapes_equal;
 
 	struct pw_thread_loop *ciclo;
 	struct pw_context *contesto;
@@ -136,25 +136,25 @@ struct Cattura
 	struct spa_hook gancio;
 
 	struct spa_video_info_raw formato;
-	gboolean formato_noto;
+	gboolean known_format;
 
-	CatturaFotogramma su_fotogramma;
-	CatturaFine su_fine;
+	CaptureFrame on_frame;
+	CaptureEnd su_fine;
 	gpointer dati;
 
 	enum pw_stream_state stato;
 	char *guasto;
-	gboolean fine_segnalata;
-	gboolean detto_il_tipo;
+	gboolean end_reported;
+	gboolean type_logged;
 
-	CatturaStrada strada;
-	CatturaColore colore;
-	uint32_t chiesta_larghezza, chiesta_altezza;
+	CaptureRoute strada;
+	CaptureColor colore;
+	uint32_t requested_width, requested_height;
 	/* ⛔ The rate REQUESTED at startup, kept because `cattura_ridimensiona()`
 	 *    repeats the same proposal: putting a hand-written one in there
 	 *    would mean that after a resize the stream runs at a rate
 	 *    different from the one it was born with — and no line would say so. */
-	uint32_t chiesti_al_secondo;
+	uint32_t requested_per_second;
 	/* ⛔ Whether the NEGOTIATED size differs from the REQUESTED one.  It is said
 	 *    only once and kept, because the format callback runs several times.
 	 * ⚠ It exists because the canvas is about to stop being a constant
@@ -180,20 +180,20 @@ struct Cattura
 	 *
 	 * ⇒ ⛔ Exporting it would mean giving the caller a `TRUE` that in the only
 	 *   measured scene is **wrong**.  And it would not help: `cattura.h` already
-	 *   exposes `cattura_misura_chiesta()` and `cattura_misura_negoziata()`, and the
+	 *   exposes `capture_measure_requested()` and `cattura_misura_negoziata()`, and the
 	 *   divergence is their inequality (case 6).  ⭐ The real verdict is
 	 *   given by the FRAME, in `figlio.c`, and it is the rule that §5.0-sexies had
 	 *   already written: *«the truth is told by the frame, not by the outcome of the
 	 *   request»*. */
-	gboolean misura_divergente;
+	gboolean measure_divergent;
 
 	/* --- the counters, which run on the real-time thread ---------------- *
 	 * ⚠ THEY ARE COUNTED, NOT PRINTED: one log line per frame
 	 *   would distort the very thing being watched.  The first is said, and then a
 	 *   summary every three hundred. */
 	CatturaConteggi conto;
-	int fd_visti[FD_MAX];
-	uint32_t primo_tipo_grezzo; /* the SPA value, for whoever wants the bare number */
+	int fd_seen[FD_MAX];
+	uint32_t first_raw_type; /* the SPA value, for whoever wants the bare number */
 
 	/* --- the slot of whoever waits for a frame -------------------------- *
 	 * ⛔ The slot exists only while someone waits: a frame that arrives
@@ -208,7 +208,7 @@ struct Cattura
 	 *    frame.  ⛔ It is needed because now we ALWAYS copy (see below), and
 	 *    a `g_malloc`/`g_free` of 8 MB sixty times per second inside the
 	 *    real-time callback would be a cure worse than the disease. */
-	size_t posto_capienza;
+	size_t slot_capacity;
 	/* ⛔ How many times a frame not yet consumed was replaced by
 	 *    a more recent one.  ⚠ It is NOT a fault — it is the intended behaviour,
 	 *    «the newest wins» — but it is also the number that says how often the
@@ -220,11 +220,11 @@ struct Cattura
 	 *    on the CALLER's thread (`cattura_prendi`), not on the real-time
 	 *    one: no lock is needed, and adding one would suggest that
 	 *    one is needed. */
-	uint64_t misura_ultima_us;
-	guint64 misura_fatte, misura_saltate;
+	uint64_t last_measure_us;
+	guint64 measures_done, measures_skipped;
 	/* ⚠ On the card the pixels are looked at only if the buffer can be mapped: it is
 	 *   said once if it could not be, and then we stay quiet. */
-	gboolean detta_misura_impossibile;
+	gboolean logged_measure_impossible;
 
 	/* ------------------------------------------------------------------ *
 	 * ⭐⭐ THE RETENTION — the cure for the RELEASE problem of `LEZIONI.md` §8
@@ -255,14 +255,14 @@ struct Cattura
 	 *    while `su_processo` runs on the real-time one, which already has
 	 *    the lock.  The order is always `loop → lock`, never the reverse.
 	 */
-	guint64 ritenuti;      /* how many buffers have been held in total         */
-	guint64 ritenuti_resi; /* how many came back: the difference is how many   */
+	guint64 held_count;      /* how many buffers have been held in total         */
+	guint64 held_returned; /* how many came back: the difference is how many   */
 	                       /* we hold right now                                */
 	/* ⛔ It changes every time PipeWire allocates or frees the buffers.  ⚠ Whoever
 	 *    caches the import of an `fd` must watch it: descriptor numbers
 	 *    are recycled, and a blind cache would point to a dead buffer
 	 *    without any error. */
-	uint64_t generazione_buffer;
+	uint64_t buffer_generation;
 
 	/* --- ⭐ THE CURSOR CHANNEL ------------------------------------------- *
 	 *
@@ -276,36 +276,36 @@ struct Cattura
 	 *   `cattura_cursore`, and the two fields are read under the lock because
 	 *   whoever registers is on another thread. */
 	Cursore *cursore;
-	CursoreArrivata cursore_fn;
-	void *cursore_chi;
-	gboolean detto_il_cursore; /* the first metadata is said once */
+	CursorArrived cursor_fn;
+	void *cursor_who;
+	gboolean logged_cursor; /* the first metadata is said once */
 };
 
 /* ------------------------------------------------------------------ *
  *  The names — a single place, so that whoever writes a manifest does not reinvent them
  * ------------------------------------------------------------------ */
 
-const char *cattura_buffer_nome(CatturaBuffer buffer)
+const char *capture_buffer_name(CaptureBuffer buffer)
 {
 	switch (buffer)
 	{
-	case CATTURA_BUFFER_MEMFD: return "MemFd";
-	case CATTURA_BUFFER_MEMPTR: return "MemPtr";
-	case CATTURA_BUFFER_MEMID: return "MemId";
-	case CATTURA_BUFFER_DMABUF: return "DMA-BUF";
+	case CAPTURE_BUFFER_MEMFD: return "MemFd";
+	case CAPTURE_BUFFER_MEMPTR: return "MemPtr";
+	case CAPTURE_BUFFER_MEMID: return "MemId";
+	case CAPTURE_BUFFER_DMABUF: return "DMA-BUF";
 	default: return "UNKNOWN";
 	}
 }
 
-static CatturaBuffer buffer_da_spa(uint32_t tipo)
+static CaptureBuffer buffer_da_spa(uint32_t tipo)
 {
 	switch (tipo)
 	{
-	case SPA_DATA_MemFd: return CATTURA_BUFFER_MEMFD;
-	case SPA_DATA_MemPtr: return CATTURA_BUFFER_MEMPTR;
-	case SPA_DATA_MemId: return CATTURA_BUFFER_MEMID;
-	case SPA_DATA_DmaBuf: return CATTURA_BUFFER_DMABUF;
-	default: return CATTURA_BUFFER_IGNOTO;
+	case SPA_DATA_MemFd: return CAPTURE_BUFFER_MEMFD;
+	case SPA_DATA_MemPtr: return CAPTURE_BUFFER_MEMPTR;
+	case SPA_DATA_MemId: return CAPTURE_BUFFER_MEMID;
+	case SPA_DATA_DmaBuf: return CAPTURE_BUFFER_DMABUF;
+	default: return CAPTURE_BUFFER_UNKNOWN;
 	}
 }
 
@@ -338,9 +338,9 @@ static uint32_t drm_da_spa(uint32_t formato_spa)
 	}
 }
 
-const char *cattura_colore_nome(uint32_t formato_grezzo)
+const char *capture_color_name(uint32_t raw_format)
 {
-	switch (formato_grezzo)
+	switch (raw_format)
 	{
 	case SPA_VIDEO_FORMAT_BGRx: return "BGRx";
 	case SPA_VIDEO_FORMAT_BGRA: return "BGRA";
@@ -356,13 +356,13 @@ const char *cattura_colore_nome(uint32_t formato_grezzo)
 	}
 }
 
-const char *cattura_fonte_nome(CatturaFonte fonte)
+const char *capture_source_name(CaptureSource fonte)
 {
 	switch (fonte)
 	{
-	case CATTURA_FONTE_PRODUTTORE: return "requested from the producer (SPA_PARAM_Format)";
-	case CATTURA_FONTE_FORMATO: return "follows from the negotiated format";
-	case CATTURA_FONTE_MISURATA: return "[M] measured by us on the delivered pixels";
+	case CAPTURE_SOURCE_PRODUCER: return "requested from the producer (SPA_PARAM_Format)";
+	case CAPTURE_SOURCE_FORMAT: return "follows from the negotiated format";
+	case CAPTURE_SOURCE_MEASURED: return "[M] measured by us on the delivered pixels";
 	default: return "NOT DECLARED by the producer";
 	}
 }
@@ -375,7 +375,7 @@ const char *cattura_fonte_nome(CatturaFonte fonte)
  * `color_primaries`).  Whoever filled them with what they expect would be
  * deducing, and that is form E8.
  */
-const char *cattura_range_nome(uint32_t grezzo)
+const char *capture_range_name(uint32_t grezzo)
 {
 	switch (grezzo)
 	{
@@ -385,7 +385,7 @@ const char *cattura_range_nome(uint32_t grezzo)
 	}
 }
 
-const char *cattura_matrice_nome(uint32_t grezzo)
+const char *capture_matrix_name(uint32_t grezzo)
 {
 	switch (grezzo)
 	{
@@ -399,7 +399,7 @@ const char *cattura_matrice_nome(uint32_t grezzo)
 	}
 }
 
-const char *cattura_trasferimento_nome(uint32_t grezzo)
+const char *capture_transfer_name(uint32_t grezzo)
 {
 	switch (grezzo)
 	{
@@ -412,7 +412,7 @@ const char *cattura_trasferimento_nome(uint32_t grezzo)
 	}
 }
 
-const char *cattura_primari_nome(uint32_t grezzo)
+const char *capture_primaries_name(uint32_t grezzo)
 {
 	switch (grezzo)
 	{
@@ -423,13 +423,13 @@ const char *cattura_primari_nome(uint32_t grezzo)
 	}
 }
 
-const char *cattura_range_misurato_nome(CatturaRangeMisurato misurato)
+const char *capture_range_measured_name(CaptureRangeMeasured misurato)
 {
 	switch (misurato)
 	{
-	case CATTURA_RANGE_COMPATIBILE_PIENO:
+	case CAPTURE_RANGE_COMPATIBLE_FULL:
 		return "[M] the pixels reach 0 and 255: compatible with FULL";
-	case CATTURA_RANGE_NON_CONCLUSIVO:
+	case CAPTURE_RANGE_INCONCLUSIVE:
 		return "[M] the pixels do not reach the extremes: NOT CONCLUSIVE — it depends on the scene, "
 		       "and does not prove a limited range";
 	default:
@@ -472,7 +472,7 @@ static int bit_per_canale(uint32_t formato)
 /* The byte order, to know where R, G and B are when measuring the range.
  * ⛔ Valid only for 8-bit formats with four bytes per pixel: on the others we
  *    answer FALSE and the measurement is NOT done, instead of doing it on the wrong bytes. */
-static gboolean posizioni_rgb(uint32_t formato, int *r, int *g, int *b)
+static gboolean rgb_positions(uint32_t formato, int *r, int *g, int *b)
 {
 	switch (formato)
 	{
@@ -494,7 +494,7 @@ static gboolean posizioni_rgb(uint32_t formato, int *r, int *g, int *b)
  *  The PipeWire callbacks
  * ------------------------------------------------------------------ */
 
-static void su_stato(void *dati, enum pw_stream_state vecchio, enum pw_stream_state nuovo,
+static void on_state(void *dati, enum pw_stream_state vecchio, enum pw_stream_state nuovo,
                      const char *errore)
 {
 	Cattura *cattura = dati;
@@ -518,9 +518,9 @@ static void su_stato(void *dati, enum pw_stream_state vecchio, enum pw_stream_st
 	 * «there is nothing left to capture».
 	 */
 	if ((vecchio == PW_STREAM_STATE_PAUSED || vecchio == PW_STREAM_STATE_STREAMING) &&
-	    nuovo == PW_STREAM_STATE_UNCONNECTED && !cattura->fine_segnalata)
+	    nuovo == PW_STREAM_STATE_UNCONNECTED && !cattura->end_reported)
 	{
-		cattura->fine_segnalata = TRUE;
+		cattura->end_reported = TRUE;
 		registro_dice(AREA, "the capture stream has detached");
 		if (cattura->su_fine)
 			cattura->su_fine(cattura->dati);
@@ -536,7 +536,7 @@ static void su_stato(void *dati, enum pw_stream_state vecchio, enum pw_stream_st
 }
 
 /*
- * ⛔ THE BOUNCE TOWARDS THE LISTENER, and it is not a convenience: `cursore_apri` wants
+ * ⛔ THE BOUNCE TOWARDS THE LISTENER, and it is not a convenience: `cursor_open` wants
  *    the recipient at opening time, but the stream starts before
  *    anyone registers.  Without the bounce the first shape — the one that arrives
  *    with the first pointer movement — would have nowhere to go.
@@ -544,15 +544,15 @@ static void su_stato(void *dati, enum pw_stream_state vecchio, enum pw_stream_st
  * ⚠ It runs on PipeWire's real-time thread: whoever registers here must not
  *   wait for anything (`cattura.h`, the box on the loop).
  */
-static int cursore_rimbalzo(void *chi, const CursoreForma *forma)
+static int cursor_bounce(void *chi, const CursoreForma *forma)
 {
 	Cattura *cattura = chi;
-	CursoreArrivata fn;
+	CursorArrived fn;
 	void *dove;
 
 	g_mutex_lock(&cattura->lucchetto);
-	fn = cattura->cursore_fn;
-	dove = cattura->cursore_chi;
+	fn = cattura->cursor_fn;
+	dove = cattura->cursor_who;
 	g_mutex_unlock(&cattura->lucchetto);
 
 	/* ⛔ Nobody listening is NOT an error: the shape has been counted anyway, and
@@ -691,16 +691,16 @@ static uint32_t parametri_di_consumo(Cattura *cattura, struct spa_pod_builder *c
 static void su_parametri(void *dati, uint32_t id, const struct spa_pod *param)
 {
 	Cattura *cattura = dati;
-	uint32_t tipo, sottotipo;
+	uint32_t tipo, subtype;
 	uint8_t spazio[1024];
 	struct spa_pod_builder costruttore = SPA_POD_BUILDER_INIT(spazio, sizeof spazio);
 	const struct spa_pod *parametri[4];
 
 	if (!param || id != SPA_PARAM_Format)
 		return;
-	if (spa_format_parse(param, &tipo, &sottotipo) < 0)
+	if (spa_format_parse(param, &tipo, &subtype) < 0)
 		return;
-	if (tipo != SPA_MEDIA_TYPE_video || sottotipo != SPA_MEDIA_SUBTYPE_raw)
+	if (tipo != SPA_MEDIA_TYPE_video || subtype != SPA_MEDIA_SUBTYPE_raw)
 		return;
 	if (spa_format_video_raw_parse(param, &cattura->formato) < 0)
 	{
@@ -708,10 +708,10 @@ static void su_parametri(void *dati, uint32_t id, const struct spa_pod *param)
 		return;
 	}
 
-	cattura->formato_noto = TRUE;
+	cattura->known_format = TRUE;
 	registro_dice(AREA, "negotiated format: %ux%u %s (%d bits per channel), modifier 0x%" G_GINT64_MODIFIER "x",
 	              cattura->formato.size.width, cattura->formato.size.height,
-	              cattura_colore_nome(cattura->formato.format),
+	              capture_color_name(cattura->formato.format),
 	              bit_per_canale(cattura->formato.format), (guint64) cattura->formato.modifier);
 
 	/* ⛔⛔ THE GUARD: requested versus granted.
@@ -773,11 +773,11 @@ static void su_parametri(void *dati, uint32_t id, const struct spa_pod *param)
 	 *   produces **a single** `Format`, so the two counts diverge forever and
 	 *   the guard would turn off forever.  ⭐ The place that can tell them apart is
 	 *   the one that sees the PIXELS. */
-	if (cattura->chiesta_larghezza && cattura->chiesta_altezza
-	    && (cattura->formato.size.width != cattura->chiesta_larghezza
-	        || cattura->formato.size.height != cattura->chiesta_altezza))
+	if (cattura->requested_width && cattura->requested_height
+	    && (cattura->formato.size.width != cattura->requested_width
+	        || cattura->formato.size.height != cattura->requested_height))
 	{
-		if (!cattura->misura_divergente)
+		if (!cattura->measure_divergent)
 			registro_dice(AREA,
 			              "⛔ DIVERGENT SIZE: requested %ux%u, granted %ux%u.  ⚠ Two "
 			              "motives, and from here they cannot be told apart: either the compositor "
@@ -787,12 +787,12 @@ static void su_parametri(void *dati, uint32_t id, const struct spa_pod *param)
 			              "chained resizes, bench 06-b5 case 4.  ⭐ The "
 			              "verdict is given by the FRAME (`DECISIONI.md` §5.0-sexies), "
 			              "not by this line",
-			              cattura->chiesta_larghezza, cattura->chiesta_altezza,
+			              cattura->requested_width, cattura->requested_height,
 			              cattura->formato.size.width, cattura->formato.size.height);
-		cattura->misura_divergente = TRUE;
+		cattura->measure_divergent = TRUE;
 	}
 	else
-		cattura->misura_divergente = FALSE;
+		cattura->measure_divergent = FALSE;
 
 	/* ⛔ And the four consumption parameters are written by `parametri_di_consumo()`, in
 	 *    a single place: `cattura_ridimensiona()` repeats them too, and two lists
@@ -815,7 +815,7 @@ static void su_parametri(void *dati, uint32_t id, const struct spa_pod *param)
  *   real SIZE of the metadata, or the checks in `cursore.c` have no
  *   limit against which to measure the bitmap pixels.
  */
-static void guarda_cursore(Cattura *cattura, struct pw_buffer *pacco)
+static void look_cursor(Cattura *cattura, struct pw_buffer *pacco)
 {
 	struct spa_meta *meta;
 
@@ -833,27 +833,27 @@ static void guarda_cursore(Cattura *cattura, struct pw_buffer *pacco)
 		return;
 	}
 
-	cattura->conto.cursore_metadati++;
-	if (!cattura->detto_il_cursore)
+	cattura->conto.cursor_meta_seen++;
+	if (!cattura->logged_cursor)
 	{
-		cattura->detto_il_cursore = TRUE;
+		cattura->logged_cursor = TRUE;
 		registro_dice(AREA, "⭐ the cursor metadata ARRIVES: %u bytes per buffer", meta->size);
 	}
 
-	if (cursore_metadato(cattura->cursore, meta->data, meta->size) < 0)
-		cattura->conto.cursore_malformati++;
+	if (cursor_metadata(cattura->cursore, meta->data, meta->size) < 0)
+		cattura->conto.malformed_cursors++;
 }
 
 /* The damage: looked at, counted, and delivered as INFORMATION. */
-static gboolean guarda_danno(Cattura *cattura, struct pw_buffer *pacco, CatturaRegione *regioni,
-                             guint *quante, gboolean *copre_tutto)
+static gboolean look_damage(Cattura *cattura, struct pw_buffer *pacco, CaptureRegion *regioni,
+                             guint *quante, gboolean *covers_all)
 {
 	struct spa_meta *meta = spa_buffer_find_meta(pacco->buffer, SPA_META_VideoDamage);
 	struct spa_meta_region *regione;
 	gboolean vista = FALSE;
 
 	*quante = 0;
-	*copre_tutto = FALSE;
+	*covers_all = FALSE;
 
 	if (!meta)
 	{
@@ -868,7 +868,7 @@ static gboolean guarda_danno(Cattura *cattura, struct pw_buffer *pacco, CatturaR
 		if (regione->region.position.x == 0 && regione->region.position.y == 0 &&
 		    regione->region.size.width >= cattura->formato.size.width &&
 		    regione->region.size.height >= cattura->formato.size.height)
-			*copre_tutto = TRUE;
+			*covers_all = TRUE;
 		if (*quante < REGIONI_MAX)
 		{
 			regioni[*quante].x = (uint32_t) MAX(0, regione->region.position.x);
@@ -882,7 +882,7 @@ static gboolean guarda_danno(Cattura *cattura, struct pw_buffer *pacco, CatturaR
 			/* We err on the safe side: more regions than we carry
 			 * ⇒ we declare «everything counts» instead of delivering part of them. */
 			*quante = 0;
-			*copre_tutto = TRUE;
+			*covers_all = TRUE;
 			break;
 		}
 	}
@@ -891,7 +891,7 @@ static gboolean guarda_danno(Cattura *cattura, struct pw_buffer *pacco, CatturaR
 		cattura->conto.danno_assente++;
 		return FALSE;
 	}
-	if (*copre_tutto)
+	if (*covers_all)
 		cattura->conto.danno_pieno++;
 	else
 		cattura->conto.danno_parziale++;
@@ -904,11 +904,11 @@ static void su_processo(void *dati)
 	struct pw_buffer *pacco;
 	struct spa_data *piano;
 	struct spa_meta_header *intestazione;
-	CatturaRegione regioni[REGIONI_MAX];
+	CaptureRegion regioni[REGIONI_MAX];
 	CatturaFotogrammaInfo info = { 0 };
 	CatturaConsegna consegna;
 	guint quante = 0;
-	gboolean copre_tutto = FALSE, danno_dichiarato;
+	gboolean covers_all = FALSE, declared_damage;
 	uint32_t passo, offset;
 	guint64 disponibili, byte;
 	guint i;
@@ -922,11 +922,11 @@ static void su_processo(void *dati)
 	if (!pacco)
 		return;
 
-	/* ⛔ BEFORE ANY DISCARD: see the box of `guarda_cursore`. */
-	guarda_cursore(cattura, pacco);
+	/* ⛔ BEFORE ANY DISCARD: see the box of `look_cursor`. */
+	look_cursor(cattura, pacco);
 
 	if (pacco->buffer->n_datas == 0)
-		goto restituisci;
+		goto requeue;
 	piano = &pacco->buffer->datas[0];
 	cattura->conto.arrivati++;
 
@@ -934,39 +934,39 @@ static void su_processo(void *dati)
 	 * knowing it helps read the rest. */
 	noto = FALSE;
 	for (i = 0; i < cattura->conto.buffer_distinti; i++)
-		if (cattura->fd_visti[i] == (int) piano->fd)
+		if (cattura->fd_seen[i] == (int) piano->fd)
 			noto = TRUE;
 	if (!noto && cattura->conto.buffer_distinti < FD_MAX)
-		cattura->fd_visti[cattura->conto.buffer_distinti++] = (int) piano->fd;
+		cattura->fd_seen[cattura->conto.buffer_distinti++] = (int) piano->fd;
 
 	/* ⛔ THE TYPES ARE ALL COLLECTED, not just the last one: if the
 	 *    producer changed route midway, a single line would state one
 	 *    route for two different populations — which is form E2. */
 	noto = FALSE;
-	for (i = 0; i < cattura->conto.quanti_tipi; i++)
+	for (i = 0; i < cattura->conto.how_many_types; i++)
 		if (cattura->conto.tipi_visti[i] == buffer_da_spa(piano->type))
 			noto = TRUE;
-	if (!noto && cattura->conto.quanti_tipi < G_N_ELEMENTS(cattura->conto.tipi_visti))
+	if (!noto && cattura->conto.how_many_types < G_N_ELEMENTS(cattura->conto.tipi_visti))
 	{
-		if (cattura->conto.quanti_tipi == 0)
-			cattura->primo_tipo_grezzo = piano->type;
-		cattura->conto.tipi_visti[cattura->conto.quanti_tipi++] = buffer_da_spa(piano->type);
+		if (cattura->conto.how_many_types == 0)
+			cattura->first_raw_type = piano->type;
+		cattura->conto.tipi_visti[cattura->conto.how_many_types++] = buffer_da_spa(piano->type);
 	}
 
-	if (!cattura->detto_il_tipo)
+	if (!cattura->type_logged)
 	{
-		cattura->detto_il_tipo = TRUE;
+		cattura->type_logged = TRUE;
 		/* ⛔ Said ONCE and in full, with next to it what it does NOT prove. */
 		registro_dice(AREA,
 		              "the frames arrive as %s (%u planes) — ⚠ and this does NOT say where "
 		              "Mutter renders: it is the answer to what we asked for (E1)",
-		              cattura_buffer_nome(buffer_da_spa(piano->type)), pacco->buffer->n_datas);
+		              capture_buffer_name(buffer_da_spa(piano->type)), pacco->buffer->n_datas);
 	}
 
 	if (!piano->chunk)
 	{
-		cattura->conto.senza_pixel++;
-		goto restituisci;
+		cattura->conto.without_pixel++;
+		goto requeue;
 	}
 
 	/*
@@ -987,56 +987,56 @@ static void su_processo(void *dati)
 	if (piano->chunk->flags & SPA_CHUNK_FLAG_CORRUPTED)
 	{
 		cattura->conto.solo_cursore++;
-		goto restituisci;
+		goto requeue;
 	}
 	intestazione = spa_buffer_find_meta_data(pacco->buffer, SPA_META_Header, sizeof *intestazione);
 	if (!intestazione)
-		cattura->conto.senza_intestazione++;
+		cattura->conto.without_header++;
 	else if (intestazione->flags & SPA_META_HEADER_FLAG_CORRUPTED)
 	{
 		cattura->conto.solo_cursore++;
-		goto restituisci;
+		goto requeue;
 	}
 
-	danno_dichiarato = guarda_danno(cattura, pacco, regioni, &quante, &copre_tutto);
+	declared_damage = look_damage(cattura, pacco, regioni, &quante, &covers_all);
 
 	/* ⛔ The authoritative stride is this one, and if it is missing none is computed. */
 	passo = (uint32_t) MAX(0, piano->chunk->stride);
 	if (passo == 0)
 	{
 		cattura->conto.stride_zero++;
-		goto restituisci;
+		goto requeue;
 	}
 	offset = (uint32_t) piano->chunk->offset;
 
 	/* --- the four facts, frozen for this frame -------------------------- */
 	memset(&consegna, 0, sizeof consegna);
-	consegna.noto = cattura->formato_noto;
+	consegna.noto = cattura->known_format;
 	consegna.strada_chiesta = cattura->strada;
 	consegna.buffer_chiesto =
-	    cattura->strada == CATTURA_STRADA_SCHEDA ? CATTURA_BUFFER_DMABUF : CATTURA_BUFFER_MEMFD;
+	    cattura->strada == CATTURA_STRADA_SCHEDA ? CAPTURE_BUFFER_DMABUF : CAPTURE_BUFFER_MEMFD;
 	consegna.buffer_dichiarato = buffer_da_spa(piano->type);
-	consegna.buffer_dichiarato_grezzo = piano->type;
+	consegna.buffer_declared_raw = piano->type;
 	consegna.buffer_distinti = cattura->conto.buffer_distinti;
-	consegna.formato_grezzo = cattura->formato.format;
-	consegna.formato = cattura_colore_nome(cattura->formato.format);
+	consegna.raw_format = cattura->formato.format;
+	consegna.formato = capture_color_name(cattura->formato.format);
 	consegna.bit_per_canale = bit_per_canale(cattura->formato.format);
-	consegna.fonte_bit = consegna.bit_per_canale > 0 ? CATTURA_FONTE_FORMATO
-	                                                 : CATTURA_FONTE_NON_DICHIARATA;
+	consegna.source_bit = consegna.bit_per_canale > 0 ? CAPTURE_SOURCE_FORMAT
+	                                                 : CAPTURE_SOURCE_UNDECLARED;
 	consegna.larghezza = cattura->formato.size.width;
 	consegna.altezza = cattura->formato.size.height;
 	consegna.stride = passo;
 	consegna.stride_letto = TRUE;
 	consegna.byte = (guint64) passo * cattura->formato.size.height;
 	consegna.modificatore = cattura->formato.modifier;
-	consegna.range_grezzo = cattura->formato.color_range;
-	consegna.matrice_grezza = cattura->formato.color_matrix;
-	consegna.trasferimento_grezzo = cattura->formato.transfer_function;
-	consegna.primari_grezzi = cattura->formato.color_primaries;
-	consegna.fonte_range =
-	    cattura->formato.color_range ? CATTURA_FONTE_PRODUTTORE : CATTURA_FONTE_NON_DICHIARATA;
-	consegna.fonte_matrice =
-	    cattura->formato.color_matrix ? CATTURA_FONTE_PRODUTTORE : CATTURA_FONTE_NON_DICHIARATA;
+	consegna.raw_range = cattura->formato.color_range;
+	consegna.raw_matrix = cattura->formato.color_matrix;
+	consegna.raw_transfer = cattura->formato.transfer_function;
+	consegna.raw_primaries = cattura->formato.color_primaries;
+	consegna.source_range =
+	    cattura->formato.color_range ? CAPTURE_SOURCE_PRODUCER : CAPTURE_SOURCE_UNDECLARED;
+	consegna.source_matrix =
+	    cattura->formato.color_matrix ? CAPTURE_SOURCE_PRODUCER : CAPTURE_SOURCE_UNDECLARED;
 
 	/* --- how many bytes there really are -------------------------------- */
 	disponibili = piano->maxsize > offset ? (guint64) piano->maxsize - offset : 0;
@@ -1072,8 +1072,8 @@ static void su_processo(void *dati)
 	        || passo < cattura->formato.size.width * 4u
 	        || byte < (guint64) passo * cattura->formato.size.height))
 	{
-		cattura->conto.geometria_incoerente++;
-		if (cattura->conto.geometria_incoerente == 1)
+		cattura->conto.inconsistent_geometry++;
+		if (cattura->conto.inconsistent_geometry == 1)
 			registro_dice(AREA,
 			              "⛔ frame DISCARDED: the format declares %ux%u but the buffer "
 			              "carries stride %u and %" G_GUINT64_FORMAT " bytes (%"
@@ -1081,7 +1081,7 @@ static void su_processo(void *dati)
 			              "the new buffers: the reader would go beyond the delivered memory",
 			              cattura->formato.size.width, cattura->formato.size.height, passo,
 			              byte, (guint64) passo * cattura->formato.size.height);
-		goto restituisci;
+		goto requeue;
 	}
 
 	info.pixel = NULL;
@@ -1093,9 +1093,9 @@ static void su_processo(void *dati)
 	info.pts = intestazione ? (int64_t) intestazione->pts : 0;
 	info.seq_nota = intestazione != NULL;
 	info.danno = quante ? regioni : NULL;
-	info.quante_regioni = quante;
-	info.danno_dichiarato = danno_dichiarato;
-	info.danno_copre_tutto = copre_tutto;
+	info.how_many_regions = quante;
+	info.declared_damage = declared_damage;
+	info.damage_covers_all = covers_all;
 	info.indice = cattura->conto.arrivati;
 	info.consegna = &consegna;
 
@@ -1109,8 +1109,8 @@ static void su_processo(void *dati)
 	{
 		if (!piano->data || byte == 0)
 		{
-			cattura->conto.senza_pixel++;
-			goto restituisci;
+			cattura->conto.without_pixel++;
+			goto requeue;
 		}
 		info.pixel = (const uint8_t *) piano->data + offset;
 	}
@@ -1124,20 +1124,20 @@ static void su_processo(void *dati)
 	else if (info.fd < 0 || drm_da_spa(cattura->formato.format) == 0
 	         || pacco->buffer->n_datas != 1)
 	{
-		cattura->conto.senza_pixel++;
-		if (cattura->conto.senza_pixel == 1)
+		cattura->conto.without_pixel++;
+		if (cattura->conto.without_pixel == 1)
 			registro_dice(AREA,
 			              "⛔ DMA-BUF DISCARDED: fd %d, format «%s» (%u), %u planes.  On the "
 			              "card route we need a descriptor, a format that can be "
 			              "NAMED in DRM, and a single plane — ⚠ and this is NOT «the "
 			              "producer does not deliver»: it is «I cannot describe it»",
-			              info.fd, cattura_colore_nome(cattura->formato.format),
+			              info.fd, capture_color_name(cattura->formato.format),
 			              cattura->formato.format, pacco->buffer->n_datas);
-		goto restituisci;
+		goto requeue;
 	}
 
-	if (cattura->su_fotogramma)
-		cattura->su_fotogramma(&info, cattura->dati);
+	if (cattura->on_frame)
+		cattura->on_frame(&info, cattura->dati);
 
 	/* --- the slot of the LAST frame --------------------------------------- *
 	 *
@@ -1166,7 +1166,7 @@ static void su_processo(void *dati)
 	 *    old frame is of no use to anyone.
 	 *
 	 * ⚠ And the cost the old comment feared is paid LESS than before, not
-	 *   more: the buffer is REUSED (`posto_capienza`), so the real-time
+	 *   more: the buffer is REUSED (`slot_capacity`), so the real-time
 	 *   callback does a `memcpy` and no longer a `g_free`+`g_malloc` of 8 MB.
 	 */
 	g_mutex_lock(&cattura->lucchetto);
@@ -1186,7 +1186,7 @@ static void su_processo(void *dati)
 		if (f->ritenuta)
 		{
 			pw_stream_queue_buffer(cattura->flusso, (struct pw_buffer *) f->ritenuta);
-			cattura->ritenuti_resi++;
+			cattura->held_returned++;
 			f->ritenuta = NULL;
 			f->padrone = NULL;
 		}
@@ -1196,12 +1196,12 @@ static void su_processo(void *dati)
 		f->us_copia = 0;
 		f->us_nel_posto = 0;
 		f->us_misura = 0;
-		f->sulla_scheda = FALSE;
+		f->on_card = FALSE;
 		f->fd = -1;
 		f->offset = 0;
 		f->formato_drm = 0;
 		f->modificatore = 0;
-		f->generazione = cattura->generazione_buffer;
+		f->generazione = cattura->buffer_generation;
 
 		/* ═══════════════════════════════════════════════════════════════════
 		 * ⭐⭐⭐ ZERO COPY — and here NOTHING is done, which is the point.
@@ -1218,7 +1218,7 @@ static void su_processo(void *dati)
 		 * ═══════════════════════════════════════════════════════════════════ */
 		if (cattura->strada == CATTURA_STRADA_SCHEDA)
 		{
-			f->sulla_scheda = TRUE;
+			f->on_card = TRUE;
 			f->fd = info.fd;
 			f->offset = offset;
 			f->formato_drm = drm_da_spa(cattura->formato.format);
@@ -1227,7 +1227,7 @@ static void su_processo(void *dati)
 			f->ritenuta = pacco;
 			f->padrone = cattura;
 			trattenuto = TRUE;
-			cattura->ritenuti++;
+			cattura->held_count++;
 		}
 		else if (info.pixel)
 		{
@@ -1237,7 +1237,7 @@ static void su_processo(void *dati)
 			 *    under the same label.
 			 * ⭐ But the allocation is REUSED when it is enough: it is the same size for
 			 *    the whole session, except at a canvas change. */
-			if (!f->pixel || cattura->posto_capienza < byte)
+			if (!f->pixel || cattura->slot_capacity < byte)
 			{
 				/* ⛔ The `g_malloc` is TIMED, and it is not pedantry: when the
 				 *    slot is emptied at every take (see `cattura_prendi`) this
@@ -1247,7 +1247,7 @@ static void su_processo(void *dati)
 				uint64_t ta = adesso_us();
 				g_free(f->pixel);
 				f->pixel = g_malloc(byte);
-				cattura->posto_capienza = byte;
+				cattura->slot_capacity = byte;
 				f->us_allocazione = adesso_us() - ta;
 			}
 			{
@@ -1260,7 +1260,7 @@ static void su_processo(void *dati)
 		{
 			g_free(f->pixel);
 			f->pixel = NULL;
-			cattura->posto_capienza = 0;
+			cattura->slot_capacity = 0;
 		}
 		f->stride = passo;
 		f->larghezza = consegna.larghezza;
@@ -1268,8 +1268,8 @@ static void su_processo(void *dati)
 		f->seq = info.seq;
 		f->pts = info.pts;
 		f->seq_nota = info.seq_nota;
-		f->danno_dichiarato = danno_dichiarato;
-		f->danno_copre_tutto = copre_tutto;
+		f->declared_damage = declared_damage;
+		f->damage_covers_all = covers_all;
 		f->indice = info.indice;
 		f->consegna = consegna;
 		/* ⛔ The instant is taken HERE, after the copy: from this moment the
@@ -1291,10 +1291,10 @@ static void su_processo(void *dati)
 		                   " (before 15 Aug they were LOST)",
 		                   cattura->conto.arrivati, cattura->conto.buffer_distinti,
 		                   cattura->conto.danno_pieno, cattura->conto.danno_parziale,
-		                   cattura->conto.danno_assente, cattura->conto.senza_intestazione,
+		                   cattura->conto.danno_assente, cattura->conto.without_header,
 		                   cattura->conto.solo_cursore, cattura->sovrascritti);
 
-restituisci:
+requeue:
 	/* ⛔ AND HERE IS THE RELEASE CURE, in one line: a HELD buffer does not
 	 *    go back to the producer now.  ⚠ Without this guard the DMA-BUF
 	 *    would go back to Mutter at the very instant we hand it to the
@@ -1350,7 +1350,7 @@ static void su_buffer_aggiunto(void *dati, struct pw_buffer *pacco)
 {
 	Cattura *cattura = dati;
 	(void) pacco;
-	cattura->generazione_buffer = generazione_nuova();
+	cattura->buffer_generation = generazione_nuova();
 }
 
 /*
@@ -1380,9 +1380,9 @@ static void su_buffer_tolto(void *dati, struct pw_buffer *pacco)
 		cattura->posto.ritenuta = NULL;
 		cattura->posto.padrone = NULL;
 		cattura->posto_pieno = FALSE;
-		cattura->ritenuti_resi++;
+		cattura->held_returned++;
 	}
-	cattura->generazione_buffer = generazione_nuova();
+	cattura->buffer_generation = generazione_nuova();
 	g_mutex_unlock(&cattura->lucchetto);
 }
 
@@ -1402,15 +1402,15 @@ static void rendi_ritenuta(Cattura *cattura, struct pw_buffer *pacco, uint64_t g
 	pw_thread_loop_lock(cattura->ciclo);
 	/* ⛔ The comparison is the point: if the producer remade the buffers, this
 	 *    `pw_buffer` no longer exists and giving it back would write into freed memory. */
-	if (cattura->generazione_buffer == generazione)
+	if (cattura->buffer_generation == generazione)
 		pw_stream_queue_buffer(cattura->flusso, pacco);
-	cattura->ritenuti_resi++;
+	cattura->held_returned++;
 	pw_thread_loop_unlock(cattura->ciclo);
 }
 
 static const struct pw_stream_events eventi = {
 	PW_VERSION_STREAM_EVENTS,
-	.state_changed = su_stato,
+	.state_changed = on_state,
 	.param_changed = su_parametri,
 	/* ⭐ The two that count the buffer GENERATION: without them, a downstream import
 	 *    cache would point to dead buffers after every
@@ -1432,20 +1432,20 @@ static const struct pw_stream_events eventi = {
  * if the compositor chose an RGB variant, red and blue would come out
  * swapped without any error.
  *
- * ⛔ And `CATTURA_COLORE_10BIT` proposes **only** the ten-bit formats.
+ * ⛔ And `CAPTURE_COLOR_10BIT` proposes **only** the ten-bit formats.
  *    Putting BGRx in the same list would negotiate BGRx and we would
  *    learn nothing: the question «do ten bits exist from this source?» has
  *    an answer only if the refusal is a refusal.
  */
-static uint32_t quanti_colori(CatturaColore colore, uint32_t elenco[8])
+static uint32_t how_many_colors(CaptureColor colore, uint32_t elenco[8])
 {
 	switch (colore)
 	{
-	case CATTURA_COLORE_BGRA:
+	case CAPTURE_COLOR_BGRA:
 		elenco[0] = SPA_VIDEO_FORMAT_BGRA;
 		elenco[1] = SPA_VIDEO_FORMAT_BGRx;
 		return 2;
-	case CATTURA_COLORE_10BIT:
+	case CAPTURE_COLOR_10BIT:
 		elenco[0] = SPA_VIDEO_FORMAT_xBGR_210LE;
 		elenco[1] = SPA_VIDEO_FORMAT_xRGB_210LE;
 		elenco[2] = SPA_VIDEO_FORMAT_ABGR_210LE;
@@ -1458,27 +1458,27 @@ static uint32_t quanti_colori(CatturaColore colore, uint32_t elenco[8])
 	}
 }
 
-static uint64_t mod_scheda[16];
-static int mod_scheda_quanti;
+static uint64_t mod_card[16];
+static int mod_card_count;
 
 void cattura_modificatori_scheda(const uint64_t *modificatori, int quanti)
 {
-	mod_scheda_quanti = 0;
-	for (int i = 0; modificatori && i < quanti && i < (int)G_N_ELEMENTS(mod_scheda); i++)
-		mod_scheda[mod_scheda_quanti++] = modificatori[i];
+	mod_card_count = 0;
+	for (int i = 0; modificatori && i < quanti && i < (int)G_N_ELEMENTS(mod_card); i++)
+		mod_card[mod_card_count++] = modificatori[i];
 }
 
 static const struct spa_pod *proposta(struct spa_pod_builder *costruttore, uint32_t larghezza,
                                       uint32_t altezza, uint32_t fotogrammi_al_secondo,
-                                      CatturaColore colore, gboolean con_modificatori)
+                                      CaptureColor colore, gboolean with_modifiers)
 {
 	struct spa_rectangle misura = SPA_RECTANGLE(larghezza, altezza);
 	struct spa_fraction cadenza = SPA_FRACTION(0, 1);
-	struct spa_fraction cadenza_minima = SPA_FRACTION(1, 1);
-	struct spa_fraction cadenza_massima = SPA_FRACTION(MAX(1u, fotogrammi_al_secondo), 1);
+	struct spa_fraction min_cadence = SPA_FRACTION(1, 1);
+	struct spa_fraction max_cadence = SPA_FRACTION(MAX(1u, fotogrammi_al_secondo), 1);
 	struct spa_pod_frame cornice[3];
 	uint32_t elenco[8];
-	uint32_t quanti = quanti_colori(colore, elenco);
+	uint32_t quanti = how_many_colors(colore, elenco);
 	uint32_t i;
 
 	spa_pod_builder_push_object(costruttore, &cornice[0], SPA_TYPE_OBJECT_Format,
@@ -1496,7 +1496,7 @@ static const struct spa_pod *proposta(struct spa_pod_builder *costruttore, uint3
 		spa_pod_builder_id(costruttore, elenco[i]);
 	spa_pod_builder_pop(costruttore, &cornice[1]);
 
-	if (con_modificatori)
+	if (with_modifiers)
 	{
 		/*
 		 * ⛔ THE MODIFIER MUST BE DECLARED `MANDATORY | DONT_FIXATE`, or the value
@@ -1522,8 +1522,8 @@ static const struct spa_pod *proposta(struct spa_pod_builder *costruttore, uint3
 		spa_pod_builder_long(costruttore, DRM_FORMAT_MOD_LINEAR);
 		/* ⭐ 6 Oct 2026: only where the card refuses linear — see
 		 *    `cattura_modificatori_scheda()` in cattura.h. */
-		for (i = 0; i < (uint32_t)mod_scheda_quanti; i++)
-			spa_pod_builder_long(costruttore, mod_scheda[i]);
+		for (i = 0; i < (uint32_t)mod_card_count; i++)
+			spa_pod_builder_long(costruttore, mod_card[i]);
 		spa_pod_builder_long(costruttore, DRM_FORMAT_MOD_INVALID);
 		spa_pod_builder_pop(costruttore, &cornice[2]);
 	}
@@ -1534,8 +1534,8 @@ static const struct spa_pod *proposta(struct spa_pod_builder *costruttore, uint3
 	spa_pod_builder_add(costruttore, SPA_FORMAT_VIDEO_size, SPA_POD_Rectangle(&misura),
 	                    SPA_FORMAT_VIDEO_framerate, SPA_POD_Fraction(&cadenza),
 	                    SPA_FORMAT_VIDEO_maxFramerate,
-	                    SPA_POD_CHOICE_RANGE_Fraction(&cadenza_massima, &cadenza_minima,
-	                                                  &cadenza_massima),
+	                    SPA_POD_CHOICE_RANGE_Fraction(&max_cadence, &min_cadence,
+	                                                  &max_cadence),
 	                    0);
 	return spa_pod_builder_pop(costruttore, &cornice[0]);
 }
@@ -1549,11 +1549,11 @@ static const struct spa_pod *proposta(struct spa_pod_builder *costruttore, uint3
  * ------------------------------------------------------------------ */
 
 Cattura *cattura_avvia_wlr(uint32_t larghezza, uint32_t altezza,
-                           uint32_t fotogrammi_al_secondo, CatturaStrada strada,
-                           CatturaColore colore, GError **sbaglio)
+                           uint32_t fotogrammi_al_secondo, CaptureRoute strada,
+                           CaptureColor colore, GError **sbaglio)
 {
 	Cattura *c = g_new0(Cattura, 1);
-	uint32_t uscita_l = 0, uscita_a = 0;
+	uint32_t output_w = 0, output_h = 0;
 
 	c->wlr = wlr_apri(sbaglio);
 	if (!c->wlr) {
@@ -1562,9 +1562,9 @@ Cattura *cattura_avvia_wlr(uint32_t larghezza, uint32_t altezza,
 	}
 	c->strada = strada;
 	c->colore = colore;
-	c->chiesta_larghezza = larghezza;
-	c->chiesta_altezza = altezza;
-	c->chiesti_al_secondo = fotogrammi_al_secondo;
+	c->requested_width = larghezza;
+	c->requested_height = altezza;
+	c->requested_per_second = fotogrammi_al_secondo;
 
 	/*
 	 * ⛔⛔ AND THE DIVERGENCE IS DECLARED AT ONCE, not when the screen of the
@@ -1576,18 +1576,18 @@ Cattura *cattura_avvia_wlr(uint32_t larghezza, uint32_t altezza,
 	 * that size** — and whoever reads the log must know it from the first line,
 	 * not deduce it from an image that does not add up.
 	 */
-	wlr_misura(c->wlr, &uscita_l, &uscita_a);
-	if (uscita_l != larghezza || uscita_a != altezza) {
-		g_autoptr(GError) misura_sbaglio = NULL;
-		WlrMisuraEsito e;
+	wlr_measure(c->wlr, &output_w, &output_h);
+	if (output_w != larghezza || output_h != altezza) {
+		g_autoptr(GError) size_error = NULL;
+		WlrSizeOutcome e;
 
 		registro_dice(AREA,
 		              "wlroots: the requested canvas is %ux%u and the output is %ux%u — "
 		              "asking the compositor for it (on this family the size does not "
 		              "enter the birth: it is given afterwards, with the output protocol)",
-		              larghezza, altezza, uscita_l, uscita_a);
-		e = wlr_misura_chiedi(c->wlr, larghezza, altezza, 2.0, &misura_sbaglio);
-		wlr_misura(c->wlr, &uscita_l, &uscita_a);
+		              larghezza, altezza, output_w, output_h);
+		e = wlr_misura_chiedi(c->wlr, larghezza, altezza, 2.0, &size_error);
+		wlr_measure(c->wlr, &output_w, &output_h);
 		/*
 		 * ⛔⛔ AND THE JUDGEMENT IS GIVEN BY THE SIZE READ BACK, NOT BY THE OUTCOME.
 		 *
@@ -1595,27 +1595,27 @@ Cattura *cattura_avvia_wlr(uint32_t larghezza, uint32_t altezza,
 		 * answers «succeeded» without sending anything, and an old serial
 		 * answers «cancelled» without doing anything.  ⇒ We look at the output.
 		 */
-		if (uscita_l == larghezza && uscita_a == altezza)
+		if (output_w == larghezza && output_h == altezza)
 			registro_dice(AREA,
 			              "⭐ wlroots: the output is NOW %ux%u, the size requested by the "
 			              "client — and I do not say so because the request succeeded, "
 			              "I say so because I read it back",
-			              uscita_l, uscita_a);
+			              output_w, output_h);
 		else
 			registro_dice(AREA,
 			              "⛔ wlroots: I asked for %ux%u and the output stayed %ux%u "
 			              "(outcome of the request: %s%s%s).  ⚠ The frames will be "
 			              "%ux%u, and it is NOT an encoder fault: it is this "
 			              "line",
-			              larghezza, altezza, uscita_l, uscita_a,
+			              larghezza, altezza, output_w, output_h,
 			              e == WLR_MISURA_CHIESTA      ? "accepted but without effect"
 			              : e == WLR_MISURA_GIA_COSI   ? "already so (and it was not)"
 			              : e == WLR_MISURA_RIFIUTATA  ? "refused"
 			              : e == WLR_MISURA_ANNULLATA  ? "cancelled (old serial)"
 			                                           : "the compositor cannot change it",
-			              misura_sbaglio ? " — " : "",
-			              misura_sbaglio ? misura_sbaglio->message : "",
-			              uscita_l, uscita_a);
+			              size_error ? " — " : "",
+			              size_error ? size_error->message : "",
+			              output_w, output_h);
 	}
 
 	/*
@@ -1641,13 +1641,13 @@ Cattura *cattura_avvia_wlr(uint32_t larghezza, uint32_t altezza,
 	              "⭐ wlroots: PULL source opened on output «%s» — one frame "
 	              "per request, no PipeWire node.  The pace is decided by our "
 	              "loop, not by the compositor",
-	              wlr_uscita_nome(c->wlr));
+	              wlr_output_name(c->wlr));
 	return c;
 }
 
 Cattura *cattura_avvia(uint32_t nodo, uint32_t larghezza, uint32_t altezza,
-                       uint32_t fotogrammi_al_secondo, CatturaStrada strada, CatturaColore colore,
-                       CatturaFotogramma su_fotogramma, CatturaFine su_fine, gpointer dati,
+                       uint32_t fotogrammi_al_secondo, CaptureRoute strada, CaptureColor colore,
+                       CaptureFrame on_frame, CaptureEnd su_fine, gpointer dati,
                        GError **sbaglio)
 {
 	static gsize inizializzato = 0;
@@ -1663,14 +1663,14 @@ Cattura *cattura_avvia(uint32_t nodo, uint32_t larghezza, uint32_t altezza,
 		g_once_init_leave(&inizializzato, 1);
 	}
 
-	cattura->su_fotogramma = su_fotogramma;
+	cattura->on_frame = on_frame;
 	cattura->su_fine = su_fine;
 	cattura->dati = dati;
 	cattura->strada = strada;
 	cattura->colore = colore;
-	cattura->chiesta_larghezza = larghezza;
-	cattura->chiesta_altezza = altezza;
-	cattura->chiesti_al_secondo = fotogrammi_al_secondo;
+	cattura->requested_width = larghezza;
+	cattura->requested_height = altezza;
+	cattura->requested_per_second = fotogrammi_al_secondo;
 	g_mutex_init(&cattura->lucchetto);
 	g_cond_init(&cattura->novita);
 
@@ -1678,7 +1678,7 @@ Cattura *cattura_avvia(uint32_t nodo, uint32_t larghezza, uint32_t altezza,
 	 *    counters answer «does the metadata arrive?» without depending on who
 	 *    consumes it.  ⚠ If it is not born we do not fail: the pixels are worth more than the
 	 *    pointer (`CODER.md` §4.2), but the fallback is SAID. */
-	cattura->cursore = cursore_apri(cursore_rimbalzo, cattura);
+	cattura->cursore = cursor_open(cursor_bounce, cattura);
 	if (!cattura->cursore)
 		registro_dice(AREA, "⛔ FALLBACK: the cursor module did not open — the pointer "
 		                    "shape will not be sent (the frames will, all of them)");
@@ -1782,16 +1782,16 @@ Cattura *cattura_avvia(uint32_t nodo, uint32_t larghezza, uint32_t altezza,
 		/* ⭐ And we DECLARE how much it cost, if it cost: it was the last
 		 *    region of the mount without a stopwatch, and that is why
 		 *    it took five diagnoses. */
-		gint64 speso_ms = (g_get_monotonic_time() -
+		gint64 spent_ms = (g_get_monotonic_time() -
 		                   (scadenza - (gint64)(ATTESA_AGGANCIO_MS * 1000))) / 1000;
 
-		if (speso_ms >= 250)
+		if (spent_ms >= 250)
 			registro_dice(AREA,
 			              "⏱ attaching the PipeWire stream cost %lld ms "
 			              "(state %d, ceiling %d ms) — ⚠ when the compositor is "
 			              "ready it costs about ten milliseconds: this means "
 			              "it was not ready",
-			              (long long)speso_ms, (int)cattura->stato,
+			              (long long)spent_ms, (int)cattura->stato,
 			              ATTESA_AGGANCIO_MS);
 	}
 
@@ -1803,10 +1803,10 @@ Cattura *cattura_avvia(uint32_t nodo, uint32_t larghezza, uint32_t altezza,
 		 *    caller tells «the requested route does not exist here» from any
 		 *    fault without reading PipeWire's text. */
 		g_set_error(sbaglio, G_IO_ERROR,
-		            cattura->formato_noto ? G_IO_ERROR_FAILED : G_IO_ERROR_NOT_SUPPORTED,
+		            cattura->known_format ? G_IO_ERROR_FAILED : G_IO_ERROR_NOT_SUPPORTED,
 		            "the compositor refused what was requested (%s, route %s): %s",
-		            colore == CATTURA_COLORE_10BIT   ? "10 bit"
-		            : colore == CATTURA_COLORE_BGRA ? "BGRA"
+		            colore == CAPTURE_COLOR_10BIT   ? "10 bit"
+		            : colore == CAPTURE_COLOR_BGRA ? "BGRA"
 		                                            : "BGRx",
 		            strada == CATTURA_STRADA_SCHEDA ? "card" : "memory",
 		            cattura->guasto ? cattura->guasto : "without explanation");
@@ -1835,7 +1835,7 @@ guasto:
  *  ⭐⭐ THE HOT SIZE CHANGE — see `cattura.h`
  * ------------------------------------------------------------------ */
 
-CatturaRitela cattura_ridimensiona(Cattura *cattura, uint32_t larghezza, uint32_t altezza)
+CaptureRecanvas cattura_ridimensiona(Cattura *cattura, uint32_t larghezza, uint32_t altezza)
 {
 	/* ⛔ PHASE 13 — on wlroots the size is NOT changed on the stream: it is changed
 	 *    on the output, with another protocol (`zwlr_output_manager_v1`, `[M]`
@@ -1844,15 +1844,15 @@ CatturaRitela cattura_ridimensiona(Cattura *cattura, uint32_t larghezza, uint32_
 	if (cattura && cattura->wlr) {
 		g_autoptr(GError) sbaglio = NULL;
 		uint32_t l = 0, a = 0;
-		WlrMisuraEsito e;
+		WlrSizeOutcome e;
 
 		/* ⭐ On this family the size is changed on the OUTPUT, not on the stream —
 		 *    and it is the thing that could not be done on KDE.  ⛔ And the real outcome is
 		 *    given by reading it back, not by the answer to the request. */
 		e = wlr_misura_chiedi(cattura->wlr, larghezza, altezza, 2.0, &sbaglio);
-		cattura->chiesta_larghezza = larghezza;
-		cattura->chiesta_altezza = altezza;
-		wlr_misura(cattura->wlr, &l, &a);
+		cattura->requested_width = larghezza;
+		cattura->requested_height = altezza;
+		wlr_measure(cattura->wlr, &l, &a);
 		if (l == larghezza && a == altezza) {
 			registro_dice(AREA,
 			              "⭐ wlroots: the output is now %ux%u — read back, not "
@@ -1911,10 +1911,10 @@ CatturaRitela cattura_ridimensiona(Cattura *cattura, uint32_t larghezza, uint32_
 	 * ⚠ As long as the format is not known there is no «current»: then we look at the
 	 *   requested one, which is the only thing there is — and it is declared here instead of
 	 *   leaving it to be deduced. */
-	if (cattura->formato_noto ? (larghezza == cattura->formato.size.width
+	if (cattura->known_format ? (larghezza == cattura->formato.size.width
 	                             && altezza == cattura->formato.size.height)
-	                          : (larghezza == cattura->chiesta_larghezza
-	                             && altezza == cattura->chiesta_altezza))
+	                          : (larghezza == cattura->requested_width
+	                             && altezza == cattura->requested_height))
 	{
 		pw_thread_loop_unlock(cattura->ciclo);
 		registro_dettaglio(AREA,
@@ -1932,11 +1932,11 @@ CatturaRitela cattura_ridimensiona(Cattura *cattura, uint32_t larghezza, uint32_
 	{
 		enum pw_stream_state stato = cattura->stato;
 		/* ⛔ THE FAULT IS COPIED BEFORE RELEASING THE LOCK — defect found
-		 *    while refuting: `su_stato()` runs on the loop thread and does
+		 *    while refuting: `on_state()` runs on the loop thread and does
 		 *    `g_free(guasto); guasto = g_strdup(...)`, so between the `g_free` and
 		 *    the assignment the field is a dangling pointer.  ⚠ And this branch
 		 *    is taken **precisely while** the stream is dying, that is
-		 *    at the instant `su_stato` is running: reading it after the unlock is
+		 *    at the instant `on_state` is running: reading it after the unlock is
 		 *    reading freed memory, and for a log line. */
 		char *guasto = cattura->guasto ? g_strdup(cattura->guasto) : NULL;
 		pw_thread_loop_unlock(cattura->ciclo);
@@ -1953,17 +1953,17 @@ CatturaRitela cattura_ridimensiona(Cattura *cattura, uint32_t larghezza, uint32_
 	 *    against the negotiated format (the «requested versus granted» guard).
 	 *    Updating it afterwards would mean comparing the new answer with the
 	 *    old question, that is declaring a divergence that does not exist. */
-	cattura->chiesta_larghezza = larghezza;
-	cattura->chiesta_altezza = altezza;
+	cattura->requested_width = larghezza;
+	cattura->requested_height = altezza;
 	/* ⚠ And the divergence is reset: it is a fact of the negotiation that is about to be
 	 *   redone, not a scar of the previous one. */
-	cattura->misura_divergente = FALSE;
+	cattura->measure_divergent = FALSE;
 
 	/* ⛔ The same `proposta()` as at startup, with the same colour and route: a
 	 *    proposal written by hand here would be a second rule on the format, and the
 	 *    day one of the two changed the stream would reopen with a
 	 *    colour different from the negotiated one — without any error. */
-	parametri[0] = proposta(&costruttore, larghezza, altezza, cattura->chiesti_al_secondo,
+	parametri[0] = proposta(&costruttore, larghezza, altezza, cattura->requested_per_second,
 	                        cattura->colore, cattura->strada == CATTURA_STRADA_SCHEDA);
 	/* ⛔⭐ AND WITH IT THE FOUR CONSUMPTION PARAMETERS — defect found while refuting:
 	 *     `pw_stream_update_params()` does NOT add, **it replaces the whole
@@ -1996,7 +1996,7 @@ gboolean cattura_risveglia(Cattura *cattura)
 	/* ⭐ On the pull direction waking up means asking for the next WHOLE frame.
 	 *    ⛔ Until 21 Sep 2026 nothing was done here, because every round was
 	 *    already a whole copy; since frames are requested WITH DAMAGE
-	 *    (`wlroots.c`, `forza_intero`), on an idle desktop none would
+	 *    (`wlroots.c`, `force_full`), on an idle desktop none would
 	 *    arrive — exactly when a keyframe is needed. */
 	if (cattura && cattura->wlr) {
 		wlr_forza_intero(cattura->wlr);
@@ -2022,14 +2022,14 @@ gboolean cattura_risveglia(Cattura *cattura)
 	 *    the stream.  ⚠ Redoing the proposal with the REQUESTED size, at a time when
 	 *    the compositor has granted another one (§4.5), would be a
 	 *    resize disguised as a wake-up. */
-	l = cattura->formato_noto ? cattura->formato.size.width : cattura->chiesta_larghezza;
-	a = cattura->formato_noto ? cattura->formato.size.height : cattura->chiesta_altezza;
+	l = cattura->known_format ? cattura->formato.size.width : cattura->requested_width;
+	a = cattura->known_format ? cattura->formato.size.height : cattura->requested_height;
 	if (!l || !a)
 	{
 		pw_thread_loop_unlock(cattura->ciclo);
 		return FALSE;
 	}
-	parametri[0] = proposta(&costruttore, l, a, cattura->chiesti_al_secondo, cattura->colore,
+	parametri[0] = proposta(&costruttore, l, a, cattura->requested_per_second, cattura->colore,
 	                        cattura->strada == CATTURA_STRADA_SCHEDA);
 	quanti = 1 + parametri_di_consumo(cattura, &costruttore, parametri + 1);
 	esito = pw_stream_update_params(cattura->flusso, parametri, quanti);
@@ -2048,12 +2048,12 @@ gboolean cattura_risveglia(Cattura *cattura)
 	return TRUE;
 }
 
-void cattura_misura_chiesta(Cattura *cattura, uint32_t *larghezza, uint32_t *altezza)
+void capture_measure_requested(Cattura *cattura, uint32_t *larghezza, uint32_t *altezza)
 {
 	if (larghezza)
-		*larghezza = cattura ? cattura->chiesta_larghezza : 0;
+		*larghezza = cattura ? cattura->requested_width : 0;
 	if (altezza)
-		*altezza = cattura ? cattura->chiesta_altezza : 0;
+		*altezza = cattura ? cattura->requested_height : 0;
 }
 
 gboolean cattura_misura_negoziata(Cattura *cattura, uint32_t *larghezza, uint32_t *altezza)
@@ -2062,7 +2062,7 @@ gboolean cattura_misura_negoziata(Cattura *cattura, uint32_t *larghezza, uint32_
 	if (cattura && cattura->wlr) {
 		uint32_t l = 0, a = 0;
 
-		wlr_misura(cattura->wlr, &l, &a);
+		wlr_measure(cattura->wlr, &l, &a);
 		if (!l || !a)
 			return FALSE;
 		if (larghezza)
@@ -2071,7 +2071,7 @@ gboolean cattura_misura_negoziata(Cattura *cattura, uint32_t *larghezza, uint32_
 			*altezza = a;
 		return TRUE;
 	}
-	if (!cattura || !cattura->formato_noto)
+	if (!cattura || !cattura->known_format)
 		return FALSE; /* ⛔ «it has not been negotiated», not «it is 0x0» */
 	if (larghezza)
 		*larghezza = cattura->formato.size.width;
@@ -2112,10 +2112,10 @@ static void misura_i_pixel(CatturaFermo *fermo)
 	uint8_t primo[4] = { 0, 0, 0, 0 };
 	gboolean uniforme = TRUE;
 
-	c->range_misurato = CATTURA_RANGE_NON_MISURATO;
+	c->range_misurato = CAPTURE_RANGE_UNMEASURED;
 	if (!fermo->pixel || fermo->byte == 0)
 		return;
-	if (c->bit_per_canale != 8 || !posizioni_rgb(c->formato_grezzo, &r, &g, &b))
+	if (c->bit_per_canale != 8 || !rgb_positions(c->raw_format, &r, &g, &b))
 	{
 		/* ⛔ We do not measure on the wrong bytes: a number taken from a layout
 		 *    we do not know would be worse than no number. */
@@ -2153,9 +2153,9 @@ static void misura_i_pixel(CatturaFermo *fermo)
 	c->nero = (c->massimo[0] == 0 && c->massimo[1] == 0 && c->massimo[2] == 0);
 	if (c->minimo[0] == 0 && c->minimo[1] == 0 && c->minimo[2] == 0 && c->massimo[0] == 255 &&
 	    c->massimo[1] == 255 && c->massimo[2] == 255)
-		c->range_misurato = CATTURA_RANGE_COMPATIBILE_PIENO;
+		c->range_misurato = CAPTURE_RANGE_COMPATIBLE_FULL;
 	else
-		c->range_misurato = CATTURA_RANGE_NON_CONCLUSIVO;
+		c->range_misurato = CAPTURE_RANGE_INCONCLUSIVE;
 }
 
 /*
@@ -2173,7 +2173,7 @@ static void misura_i_pixel(CatturaFermo *fermo)
  *    it had not been seen until the Radeon.
  *
  * ⭐ THE «BLACK / NOT BLACK» JUDGEMENT DOES NOT NEED 30 MB: a grid of
- *    `CAMPIONE_LATO` x `CAMPIONE_LATO` points, at the CENTRE of each cell (on 4K
+ *    `SAMPLE_SIDE` x `SAMPLE_SIDE` points, at the CENTRE of each cell (on 4K
  *    a cell is 60x34 pixels), each read with ONE 4-byte read
  *    (`memcpy` into a local variable: a single bus transaction, not
  *    three to six as in the full pass), touching only the pages needed.
@@ -2188,7 +2188,7 @@ static void misura_i_pixel(CatturaFermo *fermo)
  *    ⇒ On a normal scene (background, panel) the outcome is that of the full
  *      pass; the milliseconds change.
  *
- * ⛔ THE TIME CEILING (`CAMPIONE_TETTO_US`), checked at every row of the
+ * ⛔ THE TIME CEILING (`SAMPLE_CAP_US`), checked at every row of the
  *    grid: if it expires, what was seen counts only if it proves «not black»
  *    (one lit sample and two different ones).  A «black» or a «uniform» on a
  *    half grid is NOT declared: `pixel_misurati` stays FALSE, «I did not
@@ -2202,10 +2202,10 @@ static void misura_i_pixel(CatturaFermo *fermo)
  *   (DCC/CCS) the bytes are not pixels, exactly as for the full pass:
  *   it gets no worse, and no better.
  */
-#define CAMPIONE_LATO 64u
-#define CAMPIONE_TETTO_US 250000u
+#define SAMPLE_SIDE 64u
+#define SAMPLE_CAP_US 250000u
 
-static guint misura_i_pixel_a_campione(CatturaFermo *fermo, gboolean *tetto)
+static guint measure_pixels_sampled(CatturaFermo *fermo, gboolean *tetto)
 {
 	CatturaConsegna *c = &fermo->consegna;
 	int r = 0, g = 1, b = 2;
@@ -2216,39 +2216,39 @@ static guint misura_i_pixel_a_campione(CatturaFermo *fermo, gboolean *tetto)
 	uint64_t inizio = adesso_us();
 
 	*tetto = FALSE;
-	c->range_misurato = CATTURA_RANGE_NON_MISURATO;
+	c->range_misurato = CAPTURE_RANGE_UNMEASURED;
 	if (!fermo->pixel || fermo->byte == 0 || fermo->larghezza == 0 || fermo->altezza == 0)
 		return 0;
 	/* ⛔ Like the full pass: on the bytes of a layout we do not
 	 *    know we do not measure. */
-	if (c->bit_per_canale != 8 || !posizioni_rgb(c->formato_grezzo, &r, &g, &b))
+	if (c->bit_per_canale != 8 || !rgb_positions(c->raw_format, &r, &g, &b))
 		return 0;
 
 	c->minimo[0] = c->minimo[1] = c->minimo[2] = 255;
 	c->massimo[0] = c->massimo[1] = c->massimo[2] = 0;
 
-	for (i = 0; i < CAMPIONE_LATO; i++)
+	for (i = 0; i < SAMPLE_SIDE; i++)
 	{
-		guint64 riga = ((2u * (guint64) i + 1u) * fermo->altezza) / (2u * CAMPIONE_LATO);
-		const uint8_t *p_riga = base + riga * (guint64) fermo->stride;
+		guint64 riga = ((2u * (guint64) i + 1u) * fermo->altezza) / (2u * SAMPLE_SIDE);
+		const uint8_t *p_line = base + riga * (guint64) fermo->stride;
 
 		if ((riga + 1) * (guint64) fermo->stride > fermo->byte)
 			break;
-		if (i > 0 && adesso_us() - inizio > CAMPIONE_TETTO_US)
+		if (i > 0 && adesso_us() - inizio > SAMPLE_CAP_US)
 		{
 			*tetto = TRUE;
 			break;
 		}
-		for (j = 0; j < CAMPIONE_LATO; j++)
+		for (j = 0; j < SAMPLE_SIDE; j++)
 		{
 			guint64 colonna =
-			    ((2u * (guint64) j + 1u) * fermo->larghezza) / (2u * CAMPIONE_LATO);
+			    ((2u * (guint64) j + 1u) * fermo->larghezza) / (2u * SAMPLE_SIDE);
 			uint8_t px[4];
 			uint8_t v[3];
 			int k;
 
 			/* ⭐ ONE 4-byte read, then we work on the local copy. */
-			memcpy(px, p_riga + colonna * 4u, 4);
+			memcpy(px, p_line + colonna * 4u, 4);
 			if (guardati == 0)
 				memcpy(primo, px, 4);
 			v[0] = px[r];
@@ -2273,9 +2273,9 @@ static guint misura_i_pixel_a_campione(CatturaFermo *fermo, gboolean *tetto)
 	c->nero = (c->massimo[0] == 0 && c->massimo[1] == 0 && c->massimo[2] == 0);
 	if (c->minimo[0] == 0 && c->minimo[1] == 0 && c->minimo[2] == 0 && c->massimo[0] == 255 &&
 	    c->massimo[1] == 255 && c->massimo[2] == 255)
-		c->range_misurato = CATTURA_RANGE_COMPATIBILE_PIENO;
+		c->range_misurato = CAPTURE_RANGE_COMPATIBLE_FULL;
 	else
-		c->range_misurato = CATTURA_RANGE_NON_CONCLUSIVO;
+		c->range_misurato = CAPTURE_RANGE_INCONCLUSIVE;
 	return guardati;
 }
 
@@ -2305,12 +2305,12 @@ static guint misura_i_pixel_a_campione(CatturaFermo *fermo, gboolean *tetto)
  *    mid-session, on this route, no longer has anyone to say so.  It is declared
  *    here instead of discovered later.
  *
- * ⛔⛔ AND IT IS NOT READ IN FULL: it is read by sampling (`misura_i_pixel_a_campione`,
+ * ⛔⛔ AND IT IS NOT READ IN FULL: it is read by sampling (`measure_pixels_sampled`,
  *     the box above), because on a discrete card the full pass
  *     took 63.7 s.  It returns how many pixels it looked at; `*tetto` says whether the
  *     time expired before the end of the grid.
  */
-static guint guarda_i_pixel_del_dmabuf(Cattura *cattura, CatturaFermo *fermo, gboolean *tetto)
+static guint look_dmabuf_pixels(Cattura *cattura, CatturaFermo *fermo, gboolean *tetto)
 {
 	void *mappa;
 	size_t quanti;
@@ -2328,9 +2328,9 @@ static guint guarda_i_pixel_del_dmabuf(Cattura *cattura, CatturaFermo *fermo, gb
 		 *    green.  ⚠ It happens for example with a non-linear modifier: there
 		 *    the bytes in memory are not the rows of the image, and reading them
 		 *    would give a wrong answer instead of no answer. */
-		if (!cattura->detta_misura_impossibile)
+		if (!cattura->logged_measure_impossible)
 		{
-			cattura->detta_misura_impossibile = TRUE;
+			cattura->logged_measure_impossible = TRUE;
 			registro_dice(AREA,
 			              "⚠ the DMA-BUF could not be mapped (fd %d, %zu bytes, "
 			              "modifier 0x%" G_GINT64_MODIFIER "x): ⛔ we do NOT conclude that "
@@ -2343,10 +2343,10 @@ static guint guarda_i_pixel_del_dmabuf(Cattura *cattura, CatturaFermo *fermo, gb
 	/* ⚠ `misura_i_pixel` reads from `fermo->pixel`: it is lent for the duration
 	 *   of the measurement and taken away right after.  ⛔ Leaving it there would
 	 *   mean handing downstream a pointer to a mapping we are about to
-	 *   tear down — and downstream nobody expects it, because `sulla_scheda` says
+	 *   tear down — and downstream nobody expects it, because `on_card` says
 	 *   the opposite. */
 	fermo->pixel = (uint8_t *) mappa + fermo->offset;
-	guardati = misura_i_pixel_a_campione(fermo, tetto);
+	guardati = measure_pixels_sampled(fermo, tetto);
 	/* ⛔ Zero looked at = «I did not look» (unknown format, slab
 	 *    shorter than the first row).  And with the ceiling expired a «black» or a
 	 *    «uniform» on half a grid is not declared: only «not black» counts,
@@ -2356,7 +2356,7 @@ static guint guarda_i_pixel_del_dmabuf(Cattura *cattura, CatturaFermo *fermo, gb
 	if (!fermo->consegna.pixel_misurati) {
 		fermo->consegna.nero = FALSE;
 		fermo->consegna.uniforme = FALSE;
-		fermo->consegna.range_misurato = CATTURA_RANGE_NON_MISURATO;
+		fermo->consegna.range_misurato = CAPTURE_RANGE_UNMEASURED;
 	}
 	fermo->pixel = NULL;
 	munmap(mappa, quanti);
@@ -2367,8 +2367,8 @@ static guint guarda_i_pixel_del_dmabuf(Cattura *cattura, CatturaFermo *fermo, gb
  * ⭐⭐ THE TRUE SHAPE ON LABWC — the probe (`wlroots.h`) has seen under the
  *      pointer the colour of a shape: here it becomes the TRUE image of the
  *      real theme (`forma_immagine`) and leaves along the SAME road as GNOME and
- *      KDE — `cursore_rimbalzo`, and from there whoever registered with
- *      `cattura_cursore` (the child: `cursore_al_padre`).
+ *      KDE — `cursor_bounce`, and from there whoever registered with
+ *      `cattura_cursore` (the child: `cursor_to_parent`).
  *
  * ⛔ It runs on the thread of whoever calls `cattura_prendi` (the child's loop), not
  *    on PipeWire's: there is no PipeWire here.  ⇒ The receiver can do
@@ -2377,9 +2377,9 @@ static guint guarda_i_pixel_del_dmabuf(Cattura *cattura, CatturaFermo *fermo, gb
  *   previous shape.  ⇒ An application that hides the pointer does not
  *   hide it from whoever watches — as on KDE (`cursore_mai_nascondere`).
  */
-static void wlr_forma_consegna(Cattura *cattura)
+static void wlr_shape_delivery(Cattura *cattura)
 {
-	int indice = wlr_sonda_forma(cattura->wlr);
+	int indice = wlr_probe_shape(cattura->wlr);
 	CursoreForma f;
 
 	if (indice < 0)
@@ -2388,25 +2388,25 @@ static void wlr_forma_consegna(Cattura *cattura)
 	if (!forma_immagine(indice, &f))
 		return; /* ⛔ real theme missing: already said by `forma.c`, the client
 		         *    keeps its arrow */
-	if (cattura->wlr_forma_data && f.larghezza == cattura->wlr_forma.larghezza &&
-	    f.altezza == cattura->wlr_forma.altezza &&
-	    f.attivo_x == cattura->wlr_forma.attivo_x &&
-	    f.attivo_y == cattura->wlr_forma.attivo_y &&
-	    memcmp(f.immagine, cattura->wlr_forma.immagine,
+	if (cattura->wlr_shape_data && f.larghezza == cattura->wlr_shape.larghezza &&
+	    f.altezza == cattura->wlr_shape.altezza &&
+	    f.attivo_x == cattura->wlr_shape.attivo_x &&
+	    f.attivo_y == cattura->wlr_shape.attivo_y &&
+	    memcmp(f.immagine, cattura->wlr_shape.immagine,
 	           (gsize)f.larghezza * f.altezza * 4u) == 0) {
-		cattura->wlr_forme_uguali++;
+		cattura->wlr_shapes_equal++;
 		return;
 	}
-	f.serie = cattura->wlr_forma.serie + 1;
+	f.serie = cattura->wlr_shape.serie + 1;
 	/* ⚠ One line per shape CHANGE, as on KDE (`cursore.c`): it is the pace
 	 *   of the hand, and the proof that the probe is working is read here. */
 	registro_dice(AREA, "encoded shape %d «%s» ⇒ %ux%u, hotspot %d,%d (wlroots probe)",
-	              indice, forma_nome(indice), (unsigned)f.larghezza, (unsigned)f.altezza,
+	              indice, shape_name(indice), (unsigned)f.larghezza, (unsigned)f.altezza,
 	              (int)f.attivo_x, (int)f.attivo_y);
-	cattura->wlr_forma = f;
-	cattura->wlr_forma_data = TRUE;
-	cattura->wlr_forme_mandate++;
-	cursore_rimbalzo(cattura, &f);
+	cattura->wlr_shape = f;
+	cattura->wlr_shape_data = TRUE;
+	cattura->wlr_shapes_sent++;
+	cursor_bounce(cattura, &f);
 }
 
 void cattura_sonda_puntatore(Cattura *cattura, uint32_t x, uint32_t y)
@@ -2415,16 +2415,16 @@ void cattura_sonda_puntatore(Cattura *cattura, uint32_t x, uint32_t y)
 
 	if (!cattura || !cattura->wlr)
 		return;
-	/* ⚠ The pointer's canvas is the frame's (`input_ritela` resets
+	/* ⚠ The pointer's canvas is the frame's (`input_recanvas` resets
 	 *   it at every size change, `figlio.c`), and on this family the
 	 *   frame is the whole output: ⇒ the output size is the yardstick.
 	 *   For the frame straddling a size change the point may be
 	 *   scaled wrong ONCE: the next probe puts it right. */
-	wlr_misura(cattura->wlr, &l, &a);
+	wlr_measure(cattura->wlr, &l, &a);
 	wlr_sonda_puntatore(cattura->wlr, x, y, l, a);
 }
 
-CatturaPresa cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuori,
+CaptureTake cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuori,
                             GError **sbaglio)
 {
 	gint64 scadenza;
@@ -2444,13 +2444,13 @@ CatturaPresa cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuo
 	if (cattura->wlr) {
 		WlrFotogramma w;
 		gint64 prima = g_get_monotonic_time(), dopo;
-		WlrEsito e = wlr_fotogramma(cattura->wlr, attesa_s, &w, sbaglio);
+		WlrOutcome e = wlr_fotogramma(cattura->wlr, attesa_s, &w, sbaglio);
 
 		/* ⭐ The pointer probe: its events have just been pumped by
 		 *    `wlr_fotogramma`.  ⛔ BEFORE the `switch`, which has three exits:
 		 *    on an idle desktop the frame almost always times out, and the shape
 		 *    must arrive all the same. */
-		wlr_forma_consegna(cattura);
+		wlr_shape_delivery(cattura);
 
 		switch (e) {
 		case WLR_FOTOGRAMMA_SCADUTO:
@@ -2473,7 +2473,7 @@ CatturaPresa cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuo
 		fuori->pts = (int64_t)(w.secondi * 1000000000ull + w.nanosecondi);
 		fuori->seq_nota = FALSE;
 		fuori->formato_drm = w.formato;
-		if (w.sulla_scheda) {
+		if (w.on_card) {
 			/*
 			 * ⭐⭐ THE CARD: no copy of ours, and the slab stays HELD.
 			 *
@@ -2487,7 +2487,7 @@ CatturaPresa cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuo
 			 *   compositor's GPU, wait for the fence — as on memory it is the
 			 *   whole round plus the `memcpy`: the same quantity on both routes.
 			 */
-			fuori->sulla_scheda = TRUE;
+			fuori->on_card = TRUE;
 			fuori->pixel = NULL;
 			fuori->fd = w.fd;
 			fuori->offset = w.offset;
@@ -2497,8 +2497,8 @@ CatturaPresa cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuo
 			fuori->padrone = cattura;
 		} else {
 			/* ⛔ Card requested and memory arrived: it is SAID, once. */
-			if (cattura->strada == CATTURA_STRADA_SCHEDA && !cattura->wlr_detto_ripiego) {
-				cattura->wlr_detto_ripiego = TRUE;
+			if (cattura->strada == CATTURA_STRADA_SCHEDA && !cattura->wlr_fallback_logged) {
+				cattura->wlr_fallback_logged = TRUE;
 				registro_dice(AREA,
 				              "⛔ wlroots: CARD requested, and this frame "
 				              "arrived in MEMORY — DECLARED FALLBACK (the reason is "
@@ -2506,16 +2506,16 @@ CatturaPresa cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuo
 				              "repeated; the closing counters say how many per "
 				              "route");
 			}
-			fuori->sulla_scheda = FALSE;
+			fuori->on_card = FALSE;
 			fuori->pixel = g_malloc(w.byte);
 			memcpy(fuori->pixel, w.pixel, w.byte);
 		}
 		dopo = g_get_monotonic_time();
 		fuori->us_copia = (uint64_t)(dopo - prima);
 
-		cattura->wlr_ultimo = w;
-		cattura->wlr_ultimo_noto = TRUE;
-		cattura->formato_noto = TRUE;
+		cattura->wlr_last = w;
+		cattura->wlr_last_known = TRUE;
+		cattura->known_format = TRUE;
 
 		/*
 		 * ⛔⛔ THE WITNESS IS WRITTEN HERE, AT THE FIRST REAL FRAME — and not
@@ -2531,10 +2531,10 @@ CatturaPresa cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuo
 		 *   are those of the `buffer` event, and C1's green again means
 		 *   what it says.
 		 */
-		if (!cattura->wlr_detto_il_testimone) {
+		if (!cattura->wlr_witness_logged) {
 			char nome[5];
 
-			cattura->wlr_detto_il_testimone = TRUE;
+			cattura->wlr_witness_logged = TRUE;
 			memcpy(nome, &w.formato, 4);
 			nome[4] = 0;
 			registro_dice(AREA,
@@ -2543,8 +2543,8 @@ CatturaPresa cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuo
 			              "frame taken, with the size and format the "
 			              "compositor really gave, %s",
 			              w.larghezza, w.altezza, nome,
-			              (guint64)(w.sulla_scheda ? w.modificatore : 0),
-			              w.sulla_scheda ? "on the CARD (wlroots-dmabuf)"
+			              (guint64)(w.on_card ? w.modificatore : 0),
+			              w.on_card ? "on the CARD (wlroots-dmabuf)"
 			                             : "in MEMORY (wlroots-shm)");
 		}
 
@@ -2557,14 +2557,14 @@ CatturaPresa cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuo
 		/* ⚠ ONCE only: inside the branch of every take it would be sixty
 		 *   lines per second, the form that already produced the 30.8 GB of
 		 *   log (the reviewer, 21 Sep 2026). */
-		if (w.y_invertita && !cattura->wlr_detto_y && (cattura->wlr_detto_y = TRUE))
+		if (w.y_invertita && !cattura->wlr_y_logged && (cattura->wlr_y_logged = TRUE))
 			registro_dice(AREA,
 			              "⛔ wlroots: the compositor declares Y INVERTED and this "
 			              "draft does not flip it — the image will come out upside down, and the "
 			              "cause is this line, not the encoder");
 
 		cattura_consegna(cattura, &fuori->consegna);
-		if (!w.sulla_scheda)
+		if (!w.on_card)
 			return CATTURA_PRESA_FATTA;
 
 		/* ⭐ The FIRST card frame is looked at, by mapping the slab —
@@ -2573,32 +2573,32 @@ CatturaPresa cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuo
 		 *    DMA-BUF SYNC around it: the bytes the CPU sees must be
 		 *    those written by the GPU. */
 		/* ⛔⛔ AND THE NUMBERING, found re-reading the port: `misura_i_pixel`
-		 *     reads the channel order from `formato_grezzo` with SPA
-		 *     numbers, and here `formato_grezzo` is a DRM fourcc.  Passed as is, the
+		 *     reads the channel order from `raw_format` with SPA
+		 *     numbers, and here `raw_format` is a DRM fourcc.  Passed as is, the
 		 *     measurement exits AT ONCE without looking at anything — and
-		 *     `guarda_i_pixel_del_dmabuf` writes `pixel_misurati =
+		 *     `look_dmabuf_pixels` writes `pixel_misurati =
 		 *     TRUE` all the same: a «not black» on a frame never looked at, that is the
 		 *     false green of `LEZIONI.md` §1.9.  ⇒ For the duration of the measurement
 		 *     we lend the SPA number that states the same order; if there
 		 *     is none, we do NOT look, and we say so. */
-		if (!cattura->wlr_guardato_il_primo) {
+		if (!cattura->wlr_watched_first) {
 			uint64_t tm = adesso_us();
 			guint guardati = 0;
 			gboolean tetto = FALSE;
-			uint32_t grezzo = fuori->consegna.formato_grezzo;
+			uint32_t grezzo = fuori->consegna.raw_format;
 			uint32_t spa = (w.formato == DRM_FORMAT_XRGB8888) ? SPA_VIDEO_FORMAT_BGRx
 			               : (w.formato == DRM_FORMAT_ARGB8888) ? SPA_VIDEO_FORMAT_BGRA
 			               : (w.formato == DRM_FORMAT_XBGR8888) ? SPA_VIDEO_FORMAT_RGBx
 			               : (w.formato == DRM_FORMAT_ABGR8888) ? SPA_VIDEO_FORMAT_RGBA
 			                                                   : SPA_VIDEO_FORMAT_UNKNOWN;
 
-			cattura->wlr_guardato_il_primo = TRUE;
+			cattura->wlr_watched_first = TRUE;
 			if (spa != SPA_VIDEO_FORMAT_UNKNOWN) {
-				fuori->consegna.formato_grezzo = spa;
-				wlr_lettura_cpu(fuori->fd, TRUE);
-				guardati = guarda_i_pixel_del_dmabuf(cattura, fuori, &tetto);
-				wlr_lettura_cpu(fuori->fd, FALSE);
-				fuori->consegna.formato_grezzo = grezzo;
+				fuori->consegna.raw_format = spa;
+				wlr_cpu_read(fuori->fd, TRUE);
+				guardati = look_dmabuf_pixels(cattura, fuori, &tetto);
+				wlr_cpu_read(fuori->fd, FALSE);
+				fuori->consegna.raw_format = grezzo;
 			} else {
 				registro_dice(AREA,
 				              "⚠ wlroots: the first CARD frame was NOT "
@@ -2619,7 +2619,7 @@ CatturaPresa cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuo
 				              guardati, fuori->larghezza, fuori->altezza,
 				              tetto ? ", ⚠ time CEILING expired with the grid incomplete" : "",
 				              fuori->us_misura / 1000.0, w.us_attesa_gpu / 1000.0,
-				              w.attesa_esplicita
+				              w.explicit_wait
 				                  ? "fence extracted from the DMA-BUF"
 				                  : "⚠ no fence: implicit synchronisation");
 			else if (tetto)
@@ -2628,7 +2628,7 @@ CatturaPresa cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuo
 				              "judged — CEILING of %u ms expired after %u "
 				              "sampled pixels all dark or equal (%.2f ms): «I did not look», "
 				              "not «it is not black», and `pixel_misurati` stays FALSE",
-				              CAMPIONE_TETTO_US / 1000u, guardati,
+				              SAMPLE_CAP_US / 1000u, guardati,
 				              fuori->us_misura / 1000.0);
 		}
 		return CATTURA_PRESA_PIXEL_ALTROVE;
@@ -2657,7 +2657,7 @@ CatturaPresa cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuo
 	/* ⭐ PHASE 17 — and a stream in ERROR will deliver nothing more: we exit
 	 *    at once instead of waiting the whole timeout.  `[M]` 29 Sep 2026, VM without
 	 *    3D: the negotiation refusal arrived in milliseconds and the take
-	 *    said so five seconds later, at every login.  ⚠ `su_stato` writes the
+	 *    said so five seconds later, at every login.  ⚠ `on_state` writes the
 	 *    state BEFORE taking the lock and waking up: here, with the lock
 	 *    in hand, the state read is the one of the wake-up. */
 	while (!cattura->posto_pieno && cattura->stato != PW_STREAM_STATE_ERROR)
@@ -2682,7 +2682,7 @@ CatturaPresa cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuo
 		 *     means that the frame was waiting for US. */
 		fuori->us_nel_posto = adesso_us() - fuori->us_arrivo;
 		memset(&cattura->posto, 0, sizeof cattura->posto);
-		cattura->posto_capienza = 0;
+		cattura->slot_capacity = 0;
 		cattura->posto_pieno = FALSE;
 		preso = TRUE;
 	}
@@ -2711,19 +2711,19 @@ CatturaPresa cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuo
 
 	/* ⛔ THE ROUTE IS VERIFIED, NOT TAKEN AS REQUESTED (`LEZIONI.md` §1.8). */
 	if (cattura->strada == CATTURA_STRADA_SCHEDA &&
-	    fuori->consegna.buffer_dichiarato != CATTURA_BUFFER_DMABUF)
+	    fuori->consegna.buffer_dichiarato != CAPTURE_BUFFER_DMABUF)
 	{
-		CatturaBuffer arrivato = fuori->consegna.buffer_dichiarato;
+		CaptureBuffer arrivato = fuori->consegna.buffer_dichiarato;
 
 		cattura_fermo_libera(fuori);
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_FAILED,
 		            "the card (DMA-BUF) was requested and the producer delivered %s: no "
 		            "silent fallback",
-		            cattura_buffer_nome(arrivato));
+		            capture_buffer_name(arrivato));
 		return CATTURA_PRESA_GUASTO;
 	}
 	if (cattura->strada == CATTURA_STRADA_MEMORIA &&
-	    fuori->consegna.buffer_dichiarato == CATTURA_BUFFER_DMABUF)
+	    fuori->consegna.buffer_dichiarato == CAPTURE_BUFFER_DMABUF)
 	{
 		cattura_fermo_libera(fuori);
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_FAILED,
@@ -2737,17 +2737,17 @@ CatturaPresa cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuo
 		 * ⛔ It is not a fault and not a zero, and it is the third exit.
 		 *
 		 * ⭐ But BEFORE returning we look **only once** inside the buffer:
-		 *    see `guarda_i_pixel_del_dmabuf`. */
-		if (fuori->sulla_scheda && cattura->misura_ultima_us == 0)
+		 *    see `look_dmabuf_pixels`. */
+		if (fuori->on_card && cattura->last_measure_us == 0)
 		{
 			uint64_t tm = adesso_us();
 			gboolean tetto = FALSE;
-			guint guardati = guarda_i_pixel_del_dmabuf(cattura, fuori, &tetto);
-			cattura->misura_ultima_us = tm;
+			guint guardati = look_dmabuf_pixels(cattura, fuori, &tetto);
+			cattura->last_measure_us = tm;
 			fuori->us_misura = adesso_us() - tm;
 			if (fuori->consegna.pixel_misurati)
 			{
-				cattura->misura_fatte++;
+				cattura->measures_done++;
 				registro_dice(AREA,
 				              "⭐ the FIRST card frame was looked at "
 				              "by mapping the DMA-BUF: %s — %u sampled pixels over "
@@ -2769,7 +2769,7 @@ CatturaPresa cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuo
 				              "judged — CEILING of %u ms expired after %u sampled "
 				              "pixels all dark or equal (%.2f ms): «I did not "
 				              "look», not «it is not black»",
-				              CAMPIONE_TETTO_US / 1000u, guardati,
+				              SAMPLE_CAP_US / 1000u, guardati,
 				              fuori->us_misura / 1000.0);
 		}
 		return CATTURA_PRESA_PIXEL_ALTROVE;
@@ -2777,20 +2777,20 @@ CatturaPresa cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuo
 
 	/* ⭐⭐ THE PASS OVER THE PIXELS, AT A RATE — see `MISURA_PIXEL_OGNI_MS`.
 	 *
-	 * ⛔ The FIRST is always looked at (`misura_ultima_us == 0`): it is the one whose
+	 * ⛔ The FIRST is always looked at (`last_measure_us == 0`): it is the one whose
 	 *    line «⛔ BLACK / not black» `figlio.c` writes, and it is also the only
 	 *    frame the bench `banchi/02-cattura-prodotto.c` can count on
 	 *    for sure. */
 	{
 		uint64_t tm = adesso_us();
 
-		if (cattura->misura_ultima_us == 0 ||
-		    tm - cattura->misura_ultima_us >= (uint64_t) MISURA_PIXEL_OGNI_MS * 1000u)
+		if (cattura->last_measure_us == 0 ||
+		    tm - cattura->last_measure_us >= (uint64_t) MISURA_PIXEL_OGNI_MS * 1000u)
 		{
 			misura_i_pixel(fuori);
 			fuori->consegna.pixel_misurati = TRUE;
-			cattura->misura_ultima_us = tm;
-			cattura->misura_fatte++;
+			cattura->last_measure_us = tm;
+			cattura->measures_done++;
 			fuori->us_misura = adesso_us() - tm;
 
 			if (fuori->consegna.nero)
@@ -2812,8 +2812,8 @@ CatturaPresa cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuo
 			 *    that those three facts concern THIS frame, while there
 			 *    they concern another one (`LEZIONI.md` §1.11, two measurements under the
 			 *    same label). */
-			cattura->misura_saltate++;
-			if (cattura->misura_saltate == 1)
+			cattura->measures_skipped++;
+			if (cattura->measures_skipped == 1)
 				registro_dice(AREA,
 				              "⭐ from here on the pass over the pixels is done at most every %d ms and no "
 				              "longer on every frame: `[M]` it cost 5.34 ms on a segment "
@@ -2863,9 +2863,9 @@ gboolean cattura_consegna(Cattura *cattura, CatturaConsegna *fuori)
 	memset(fuori, 0, sizeof *fuori);
 
 	if (cattura->wlr) {
-		const WlrFotogramma *w = &cattura->wlr_ultimo;
+		const WlrFotogramma *w = &cattura->wlr_last;
 
-		if (!cattura->wlr_ultimo_noto)
+		if (!cattura->wlr_last_known)
 			return FALSE; /* no frame yet: «I do not know» */
 		fuori->noto = TRUE;
 		fuori->strada_chiesta = cattura->strada;
@@ -2874,61 +2874,61 @@ gboolean cattura_consegna(Cattura *cattura, CatturaConsegna *fuori)
 		 *    PipeWire: it is the same thing (a shared memfd), and calling it by the
 		 *    name the reader already knows is worth more than a new name. */
 		/* ⭐ And since 21 Sep 2026 there are two routes: the type is told by the
-		 *    FRAME (`sulla_scheda`), the question by `strada`. */
+		 *    FRAME (`on_card`), the question by `strada`. */
 		fuori->buffer_chiesto = cattura->strada == CATTURA_STRADA_SCHEDA
-		                            ? CATTURA_BUFFER_DMABUF
-		                            : CATTURA_BUFFER_MEMFD;
+		                            ? CAPTURE_BUFFER_DMABUF
+		                            : CAPTURE_BUFFER_MEMFD;
 		fuori->buffer_dichiarato =
-		    w->sulla_scheda ? CATTURA_BUFFER_DMABUF : CATTURA_BUFFER_MEMFD;
-		fuori->buffer_dichiarato_grezzo = 0;
+		    w->on_card ? CAPTURE_BUFFER_DMABUF : CAPTURE_BUFFER_MEMFD;
+		fuori->buffer_declared_raw = 0;
 		fuori->buffer_distinti = 1;
-		fuori->formato_grezzo = w->formato;
-		fuori->formato = cattura_colore_nome(w->formato);
+		fuori->raw_format = w->formato;
+		fuori->formato = capture_color_name(w->formato);
 		fuori->bit_per_canale = 8;
-		fuori->fonte_bit = CATTURA_FONTE_FORMATO;
+		fuori->source_bit = CAPTURE_SOURCE_FORMAT;
 		fuori->larghezza = w->larghezza;
 		fuori->altezza = w->altezza;
 		fuori->stride = w->stride;
 		fuori->stride_letto = TRUE;
 		fuori->byte = w->byte;
-		fuori->modificatore = w->sulla_scheda ? w->modificatore : 0;
+		fuori->modificatore = w->on_card ? w->modificatore : 0;
 		/* ⛔ The colour: the compositor declares neither range nor matrix, and
 		 *    here we do NOT invent.  `pixel_misurati` stays FALSE: whoever reads
 		 *    `nero`/`uniforme` must find them not looked at, not false. */
-		fuori->fonte_range = CATTURA_FONTE_NON_DICHIARATA;
-		fuori->fonte_matrice = CATTURA_FONTE_NON_DICHIARATA;
-		fuori->range_misurato = CATTURA_RANGE_NON_MISURATO;
+		fuori->source_range = CAPTURE_SOURCE_UNDECLARED;
+		fuori->source_matrix = CAPTURE_SOURCE_UNDECLARED;
+		fuori->range_misurato = CAPTURE_RANGE_UNMEASURED;
 		fuori->pixel_misurati = FALSE;
 		return TRUE;
 	}
 
-	if (!cattura->formato_noto)
+	if (!cattura->known_format)
 		return FALSE; /* ⛔ «I do not know yet», and not «it is all zero» */
 
 	fuori->noto = TRUE;
 	fuori->strada_chiesta = cattura->strada;
 	fuori->buffer_chiesto =
-	    cattura->strada == CATTURA_STRADA_SCHEDA ? CATTURA_BUFFER_DMABUF : CATTURA_BUFFER_MEMFD;
+	    cattura->strada == CATTURA_STRADA_SCHEDA ? CAPTURE_BUFFER_DMABUF : CAPTURE_BUFFER_MEMFD;
 	fuori->buffer_dichiarato =
-	    cattura->conto.quanti_tipi > 0 ? cattura->conto.tipi_visti[0] : CATTURA_BUFFER_IGNOTO;
-	fuori->buffer_dichiarato_grezzo = cattura->primo_tipo_grezzo;
+	    cattura->conto.how_many_types > 0 ? cattura->conto.tipi_visti[0] : CAPTURE_BUFFER_UNKNOWN;
+	fuori->buffer_declared_raw = cattura->first_raw_type;
 	fuori->buffer_distinti = cattura->conto.buffer_distinti;
-	fuori->formato_grezzo = cattura->formato.format;
-	fuori->formato = cattura_colore_nome(cattura->formato.format);
+	fuori->raw_format = cattura->formato.format;
+	fuori->formato = capture_color_name(cattura->formato.format);
 	fuori->bit_per_canale = bit_per_canale(cattura->formato.format);
-	fuori->fonte_bit =
-	    fuori->bit_per_canale > 0 ? CATTURA_FONTE_FORMATO : CATTURA_FONTE_NON_DICHIARATA;
+	fuori->source_bit =
+	    fuori->bit_per_canale > 0 ? CAPTURE_SOURCE_FORMAT : CAPTURE_SOURCE_UNDECLARED;
 	fuori->larghezza = cattura->formato.size.width;
 	fuori->altezza = cattura->formato.size.height;
 	fuori->modificatore = cattura->formato.modifier;
-	fuori->range_grezzo = cattura->formato.color_range;
-	fuori->matrice_grezza = cattura->formato.color_matrix;
-	fuori->trasferimento_grezzo = cattura->formato.transfer_function;
-	fuori->primari_grezzi = cattura->formato.color_primaries;
-	fuori->fonte_range =
-	    cattura->formato.color_range ? CATTURA_FONTE_PRODUTTORE : CATTURA_FONTE_NON_DICHIARATA;
-	fuori->fonte_matrice =
-	    cattura->formato.color_matrix ? CATTURA_FONTE_PRODUTTORE : CATTURA_FONTE_NON_DICHIARATA;
+	fuori->raw_range = cattura->formato.color_range;
+	fuori->raw_matrix = cattura->formato.color_matrix;
+	fuori->raw_transfer = cattura->formato.transfer_function;
+	fuori->raw_primaries = cattura->formato.color_primaries;
+	fuori->source_range =
+	    cattura->formato.color_range ? CAPTURE_SOURCE_PRODUCER : CAPTURE_SOURCE_UNDECLARED;
+	fuori->source_matrix =
+	    cattura->formato.color_matrix ? CAPTURE_SOURCE_PRODUCER : CAPTURE_SOURCE_UNDECLARED;
 	/* ⛔ The stride is NOT put here: until a frame has arrived it is not
 	 *    a fact, and it is the field that must not be recomputed downstream.  The
 	 *    frame carries it. */
@@ -2941,9 +2941,9 @@ gboolean cattura_consegna(Cattura *cattura, CatturaConsegna *fuori)
 void cattura_conteggi(Cattura *cattura, CatturaConteggi *fuori)
 {
 	if (cattura && cattura->wlr) {
-		WlrConteggi w;
+		WlrCounts w;
 
-		wlr_conteggi(cattura->wlr, &w);
+		wlr_counts(cattura->wlr, &w);
 		memset(fuori, 0, sizeof *fuori);
 		fuori->arrivati = w.presi;
 		/* ⚠ The other fields stay zero, and NOT because they are worth zero: on
@@ -2956,21 +2956,21 @@ void cattura_conteggi(Cattura *cattura, CatturaConteggi *fuori)
 	*fuori = cattura->conto;
 }
 
-const char *cattura_uscita_nome(Cattura *cattura)
+const char *capture_output_name(Cattura *cattura)
 {
 	if (cattura && cattura->wlr)
-		return wlr_uscita_nome(cattura->wlr);
+		return wlr_output_name(cattura->wlr);
 	return NULL;
 }
 
-gboolean cattura_attiva(Cattura *cattura)
+gboolean capture_active(Cattura *cattura)
 {
 	if (cattura && cattura->wlr)
 		return TRUE;
 	return cattura && cattura->stato == PW_STREAM_STATE_STREAMING;
 }
 
-const char *cattura_guasto(Cattura *cattura)
+const char *capture_fault(Cattura *cattura)
 {
 	return cattura ? cattura->guasto : NULL;
 }
@@ -2988,17 +2988,17 @@ gboolean cattura_formato_rifiutato(Cattura *cattura)
 	 *    agreed but no frame arrived» is a refusal too: the requested route
 	 *    here never gave anything. */
 	return cattura && !cattura->wlr && cattura->stato == PW_STREAM_STATE_ERROR &&
-	       (!cattura->formato_noto || cattura->conto.arrivati == 0);
+	       (!cattura->known_format || cattura->conto.arrivati == 0);
 }
 
-void cattura_cursore(Cattura *cattura, CursoreArrivata quando_cambia, void *chi)
+void cattura_cursore(Cattura *cattura, CursorArrived when_changes, void *chi)
 {
 	/* ⛔ PHASE 13 — on this family a channel for the pointer SHAPE does not
 	 *    exist: there is only `overlay_cursor`, and the pointer sits INSIDE
 	 *    the image.  Until 24 September 2026 the registration was accepted
 	 *    and never called back.
 	 * ⭐ Since 24 September the shape is found by the PROBE (`wlroots.h`), and it arrives
-	 *    through `cursore_rimbalzo` as on GNOME and KDE (`wlr_forma_consegna`).
+	 *    through `cursor_bounce` as on GNOME and KDE (`wlr_shape_delivery`).
 	 *    ⇒ The registration counts here too; the line says where it will come from. */
 	if (cattura && cattura->wlr)
 		registro_dice(AREA,
@@ -3008,8 +3008,8 @@ void cattura_cursore(Cattura *cattura, CursoreArrivata quando_cambia, void *chi)
 	if (!cattura)
 		return;
 	g_mutex_lock(&cattura->lucchetto);
-	cattura->cursore_fn = quando_cambia;
-	cattura->cursore_chi = chi;
+	cattura->cursor_fn = when_changes;
+	cattura->cursor_who = chi;
 	g_mutex_unlock(&cattura->lucchetto);
 }
 
@@ -3030,10 +3030,10 @@ void cattura_ferma(Cattura *cattura)
 		return;
 
 	if (cattura->wlr) {
-		WlrConteggi w;
-		WlrSondaConteggi so;
+		WlrCounts w;
+		WlrProbeCounts so;
 
-		wlr_sonda_conteggi(cattura->wlr, &so);
+		wlr_probe_counts(cattura->wlr, &so);
 		registro_dice(AREA,
 		              "wlroots: pointer probe — gestures %" G_GUINT64_FORMAT
 		              ", probes sent %" G_GUINT64_FORMAT " (trailing %" G_GUINT64_FORMAT
@@ -3041,18 +3041,18 @@ void cattura_ferma(Cattura *cattura)
 		              "; new shapes %" G_GUINT64_FORMAT " (from neighbours %" G_GUINT64_FORMAT
 		              "), without our colour %" G_GUINT64_FORMAT "; delivered %"
 		              G_GUINT64_FORMAT ", same drawing %" G_GUINT64_FORMAT,
-		              so.chieste, so.lanciate, so.di_coda, so.tornate, so.fallite, so.cambi,
-		              so.dai_vicini, so.ignote, cattura->wlr_forme_mandate,
-		              cattura->wlr_forme_uguali);
-		wlr_conteggi(cattura->wlr, &w);
+		              so.chieste, so.lanciate, so.of_queue, so.tornate, so.fallite, so.cambi,
+		              so.from_neighbors, so.ignote, cattura->wlr_shapes_sent,
+		              cattura->wlr_shapes_equal);
+		wlr_counts(cattura->wlr, &w);
 		registro_dice(AREA,
 		              "wlroots: capture closed — requested %" G_GUINT64_FORMAT
 		              ", taken %" G_GUINT64_FORMAT " (on the CARD %" G_GUINT64_FORMAT
 		              ", in MEMORY %" G_GUINT64_FORMAT "), failed %" G_GUINT64_FORMAT
 		              ", timed out %" G_GUINT64_FORMAT,
-		              w.chiesti, w.presi, w.sulla_scheda, w.in_memoria, w.falliti,
+		              w.chiesti, w.presi, w.on_card, w.in_mem, w.falliti,
 		              w.scaduti);
-		wlr_chiudi(cattura->wlr);
+		wlr_close(cattura->wlr);
 		g_free(cattura);
 		return;
 	}
@@ -3084,18 +3084,18 @@ void cattura_ferma(Cattura *cattura)
 			cattura->posto.ritenuta = NULL;
 			cattura->posto.padrone = NULL;
 			cattura->posto_pieno = FALSE;
-			cattura->ritenuti_resi++;
+			cattura->held_returned++;
 		}
 		pw_thread_loop_unlock(cattura->ciclo);
 	}
-	if (cattura->ritenuti)
+	if (cattura->held_count)
 		registro_dice(AREA,
 		              "the retention closes: %" G_GUINT64_FORMAT " buffers held, %"
 		              G_GUINT64_FORMAT " given back.  ⛔ The difference (%lld) is how many were "
 		              "still in hand, and if it is not zero someone did not free their "
 		              "`CatturaFermo`",
-		              cattura->ritenuti, cattura->ritenuti_resi,
-		              (long long) cattura->ritenuti - (long long) cattura->ritenuti_resi);
+		              cattura->held_count, cattura->held_returned,
+		              (long long) cattura->held_count - (long long) cattura->held_returned);
 
 	if (cattura->ciclo)
 		pw_thread_loop_stop(cattura->ciclo);
@@ -3108,8 +3108,8 @@ void cattura_ferma(Cattura *cattura)
 	if (cattura->ciclo)
 		pw_thread_loop_destroy(cattura->ciclo);
 
-	/* ⛔ AFTER the thread, not before: `guarda_cursore` runs over there. */
-	cursore_chiudi(cattura->cursore);
+	/* ⛔ AFTER the thread, not before: `look_cursor` runs over there. */
+	cursor_close(cattura->cursore);
 
 	g_free(cattura->posto.pixel);
 	g_mutex_clear(&cattura->lucchetto);

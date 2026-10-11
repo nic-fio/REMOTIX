@@ -45,20 +45,20 @@
  *    `__FILE__` and `__LINE__`, which go to the journal as
  *    `CODE_FILE`/`CODE_LINE` (phase 16 §12).  ⚠ They do not appear on the
  *    `stderr` line: that stays byte for byte as it was. */
-void registro_dice_in(const char *file, int linea, const char *area,
+void log_says_in(const char *file, int linea, const char *area,
                       const char *fmt, ...)
 	__attribute__((format(printf, 4, 5)));
-#define registro_dice(...) registro_dice_in(__FILE__, __LINE__, __VA_ARGS__)
+#define registro_dice(...) log_says_in(__FILE__, __LINE__, __VA_ARGS__)
 
 /* The transport's detail lines: many, and useful only when one is looking for
  * something.  Off by default. */
 void registro_parlantina(bool acceso);
 bool registro_parla_molto(void);
-void registro_dettaglio_in(const char *file, int linea, const char *area,
+void log_detail_in(const char *file, int linea, const char *area,
                            const char *fmt, ...)
 	__attribute__((format(printf, 4, 5)));
 #define registro_dettaglio(...) \
-	registro_dettaglio_in(__FILE__, __LINE__, __VA_ARGS__)
+	log_detail_in(__FILE__, __LINE__, __VA_ARGS__)
 
 /*
  * ---------------------------------------------------------------------------
@@ -152,16 +152,16 @@ void registro_identita(const char *chi);
 /* The line of ONE session, written by a process that serves many.
  * ⚠ `chi` NULL or "" ⇒ the process identity applies; if there is not even that,
  *   the line goes out mute, which is the truth. */
-void registro_dice_di_in(const char *file, int linea, const char *area,
+void log_says_of_in(const char *file, int linea, const char *area,
                          const char *chi, const char *fmt, ...)
 	__attribute__((format(printf, 5, 6)));
 #define registro_dice_di(...) \
-	registro_dice_di_in(__FILE__, __LINE__, __VA_ARGS__)
-void registro_dettaglio_di_in(const char *file, int linea, const char *area,
+	log_says_of_in(__FILE__, __LINE__, __VA_ARGS__)
+void log_detail_of_in(const char *file, int linea, const char *area,
                               const char *chi, const char *fmt, ...)
 	__attribute__((format(printf, 5, 6)));
 #define registro_dettaglio_di(...) \
-	registro_dettaglio_di_in(__FILE__, __LINE__, __VA_ARGS__)
+	log_detail_of_in(__FILE__, __LINE__, __VA_ARGS__)
 
 /* Milliseconds from a monotonic clock — the time RCP wants. */
 uint64_t registro_ora_ms(void);

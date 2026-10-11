@@ -36,7 +36,7 @@
  * ⭐ AND A THIRD CHANGE, FROM THE NIGHT OF 10 AUG 2026 (finding B-11)
  *
  * 3. ⛔ **The PAM service is `remotix`, not `login`** — `SPECIFICHE.md` §4.2.
- *    See the box above `SERVIZIO_PAM`, the file `src/remotix.pam` that must be
+ *    See the box above `SERVICE_PAM`, the file `src/remotix.pam` that must be
  *    installed in `/etc/pam.d/`, and the check `main.c` does at startup.
  *    ⚠ Together with it came the distinction between «PAM refused» and «PAM
  *      could not judge», which did not exist before: they were the same `false`.
@@ -68,7 +68,7 @@
  *   the fallback below is NOT silent: `perche_no()` tells «PAM says the
  *   password is wrong» from «PAM could not judge», and whoever starts the
  *   server checks the file at startup (`main.c`). */
-#define SERVIZIO_PAM "remotix"
+#define SERVICE_PAM "remotix"
 
 bool rcp_autentica_da(const char *utente, const char *parola,
                       const char *rhost);
@@ -156,7 +156,7 @@ static void perche_no(const char *utente, const char *passo, pam_handle_t *pam,
 		fprintf(stderr,
 		        "RCP: PAM REFUSED user «%s» in %s: %s (service "
 		        "«%s»)\n",
-		        utente, passo, pam_strerror(pam, rv), SERVIZIO_PAM);
+		        utente, passo, pam_strerror(pam, rv), SERVICE_PAM);
 	} else {
 		fprintf(stderr,
 		        "RCP: ⛔ PAM COULD NOT JUDGE user «%s» in %s: %s "
@@ -165,8 +165,8 @@ static void perche_no(const char *utente, const char *passo, pam_handle_t *pam,
 		        "/etc/remotix/utenti-negati exist: without the first Linux-PAM "
 		        "falls back to «other» (pam_deny on Fedora and Arch), without the "
 		        "second pam_listfile refuses everyone.\n",
-		        utente, passo, pam_strerror(pam, rv), SERVIZIO_PAM,
-		        SERVIZIO_PAM, SERVIZIO_PAM);
+		        utente, passo, pam_strerror(pam, rv), SERVICE_PAM,
+		        SERVICE_PAM, SERVICE_PAM);
 	}
 	fflush(stderr);
 }
@@ -183,7 +183,7 @@ static void perche_no(const char *utente, const char *passo, pam_handle_t *pam,
  *   marks the session with `RemoteHost`.
  * Returns false (and `fuori` empty) if the form is not the expected one: no
  * `PAM_RHOST` is preferred to an invented one. */
-bool rcp_rhost_da_provenienza(const char *provenienza, char *fuori, size_t cap)
+bool rcp_rhost_from_provenance(const char *provenienza, char *fuori, size_t cap)
 {
 	const char *a, *c;
 	size_t n;
@@ -225,12 +225,12 @@ bool rcp_autentica_da(const char *utente, const char *parola,
 	pam_handle_t *pam = NULL;
 	int rv;
 
-	rv = pam_start(SERVIZIO_PAM, utente, &conv, &pam);
+	rv = pam_start(SERVICE_PAM, utente, &conv, &pam);
 	if (rv != PAM_SUCCESS) {
 		fprintf(stderr,
 		        "RCP: ⛔ pam_start(«%s») failed (%d): no "
 		        "authentication was even attempted\n",
-		        SERVIZIO_PAM, rv);
+		        SERVICE_PAM, rv);
 		fflush(stderr);
 		return false;
 	}
@@ -241,7 +241,7 @@ bool rcp_autentica_da(const char *utente, const char *parola,
 	 *    one.  sshd does not set `PAM_RUSER`, and neither do we. */
 	if (rhost && rhost[0])
 		pam_set_item(pam, PAM_RHOST, rhost);
-	pam_set_item(pam, PAM_TTY, SERVIZIO_PAM);
+	pam_set_item(pam, PAM_TTY, SERVICE_PAM);
 
 	bool ammesso = false;
 	rv = pam_authenticate(pam, 0);

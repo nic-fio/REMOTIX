@@ -211,7 +211,7 @@ else
 	A_CODEC="hevc"
 	OPZIONI_GIRO_A="lossless=1"
 fi
-A_PROFILO_HEVC="Main 10"
+A_PROFILE_HEVC="Main 10"
 A_LIVELLI_VERI=877          # all the integers from 64 to 940
 A_LIVELLI_8IN10=220         # from 64 to 940 in steps of 4
 A_M4_8IN10="1.0"            # every 8-bit sample promoted to 10 is v<<2
@@ -340,7 +340,7 @@ SORGENTE_VERA="$LAV/sorgente-10bit.yuv"
 #    Aug 2026, and it is the reason step 6 counts the groups instead of
 #    trusting the number requested.
 codifica_ffmpeg() {
-	local sorg=$1 usc=$2 n=$3; shift 3
+	local source_dir=$1 usc=$2 n=$3; shift 3
 	local giri=$((n - 1))
 	if [ "$CODEC" = av1 ]; then
 		# ⛔ `-c:v libsvtav1` by name, never `-c:v av1`: in this ffmpeg there are
@@ -356,7 +356,7 @@ codifica_ffmpeg() {
 		fi
 		ffmpeg -hide_banner -loglevel error -nostdin \
 			-stream_loop "$giri" \
-			-f rawvideo -pix_fmt yuv420p10le -s 1920x1080 -framerate 30 -i "$sorg" \
+			-f rawvideo -pix_fmt yuv420p10le -s 1920x1080 -framerate 30 -i "$source_dir" \
 			-frames:v "$n" \
 			-c:v libsvtav1 -pix_fmt yuv420p10le -preset 10 -crf "${crf:-20}" \
 			-g "$([ "$n" -gt 1 ] && echo 1 || echo 999)" \
@@ -364,7 +364,7 @@ codifica_ffmpeg() {
 	else
 		ffmpeg -hide_banner -loglevel error -nostdin \
 			-stream_loop "$giri" \
-			-f rawvideo -pix_fmt yuv420p10le -s 1920x1080 -framerate 30 -i "$sorg" \
+			-f rawvideo -pix_fmt yuv420p10le -s 1920x1080 -framerate 30 -i "$source_dir" \
 			-frames:v "$n" \
 			-c:v libx265 -pix_fmt yuv420p10le -profile:v main10 \
 			-x265-params "$@" \
@@ -378,7 +378,7 @@ codifica_ffmpeg() {
 #    mean measuring the command line instead of the code.  Here only what
 #    the REAL caller will pass is passed — the quality and how many frames.
 codifica_prodotto() {
-	local sorg=$1 usc=$2 n=$3; shift 3
+	local source_dir=$1 usc=$2 n=$3; shift 3
 	local opz=$1
 	# ⚠ When the caller does not say the quality (step 6 asks only for the
 	#   keyframes), that of round A applies — which is NOT the same for the two codecs:
@@ -394,7 +394,7 @@ codifica_prodotto() {
 	case "$opz" in
 		crf=*) qualita=(--crf "$(printf '%s' "${opz#crf=}" | cut -d: -f1)") ;;
 	esac
-	"$PROVA" --codec "$CODEC" --sorgente "$sorg" --uscita "$usc" \
+	"$PROVA" --codec "$CODEC" --sorgente "$source_dir" --uscita "$usc" \
 		--misura 1920x1080 --fotogrammi "$n" "${qualita[@]}" \
 		--confessione "${usc%.*}-prodotto.json" > /dev/null
 }
@@ -463,25 +463,25 @@ interroga() {
 log "3. Round A — the CHAIN: Main10 lossless, and it must come back identical"
 inf "lossless because at a real bitrate HEVC destroys a 1-LSB ramp anyway,"
 inf "and then a red would not tell «8 bits» from «low bitrate» — two opposite diagnoses"
-FLUSSO=$LAV/A.$CODEC
-if ! codifica "$SORGENTE_VERA" "$FLUSSO" 1 "$OPZIONI_GIRO_A:log-level=error"; then
+FLOW=$LAV/A.$CODEC
+if ! codifica "$SORGENTE_VERA" "$FLOW" 1 "$OPZIONI_GIRO_A:log-level=error"; then
 	ko "⛔ lossless encoding failed: nothing to measure"; exit 1
 fi
-BYTE_A=$(stat -c%s "$FLUSSO")
+BYTE_A=$(stat -c%s "$FLOW")
 ok "stream produced: $BYTE_A bytes"
 fatto byte_flusso_lossless "$BYTE_A"
 
 # 3a — the first witness: ffprobe, which derives the profile from the SPS
-esige "3a codec, read from the stream"  "$A_CODEC"   "$(interroga "$FLUSSO" codec_name)"
-esige "3a profile, read from the SPS"   "$A_PROFILO" "$(interroga "$FLUSSO" profile)"
-esige "3a pixel format, from the SPS"   "$A_PIXFMT"  "$(interroga "$FLUSSO" pix_fmt)"
-fatto profilo "$(interroga "$FLUSSO" profile)"
-fatto pix_fmt "$(interroga "$FLUSSO" pix_fmt)"
+esige "3a codec, read from the stream"  "$A_CODEC"   "$(interroga "$FLOW" codec_name)"
+esige "3a profile, read from the SPS"   "$A_PROFILO" "$(interroga "$FLOW" profile)"
+esige "3a pixel format, from the SPS"   "$A_PIXFMT"  "$(interroga "$FLOW" pix_fmt)"
+fatto profilo "$(interroga "$FLOW" profile)"
+fatto pix_fmt "$(interroga "$FLOW" pix_fmt)"
 
 # 3b — ⭐ the second witness, and it is the encoder itself
 leggi_conf() { python3 -c "import json,sys;print(json.load(open(sys.argv[1])).get(sys.argv[2]))" "$LAV/A-confessione.json" "$1"; }
 if [ "$CODEC" = hevc ]; then
-	python3 "$QUI/02-codifica-nal.py" --confessione "$FLUSSO" > "$LAV/A-confessione.json"
+	python3 "$QUI/02-codifica-nal.py" --confessione "$FLOW" > "$LAV/A-confessione.json"
 	inf "x265 confession: $(cat "$LAV/A-confessione.json")"
 	esige "3b depth stated by the encoder"        "10"   "$(leggi_conf bitdepth)"
 	esige "3b the encoder says ANNEX-B"           "True" "$(leggi_conf annexb)"
@@ -531,7 +531,7 @@ else
 fi
 
 # 3c — the shape, read on the bytes
-if verifica_forma "$FLUSSO" 1 "$LAV/A-forma.json"; then
+if verifica_forma "$FLOW" 1 "$LAV/A-forma.json"; then
 	ok "3c the shape is the one promised to F2.5, and the first frame is a KEYFRAME"
 else
 	ko "⛔ 3c the stream shape is not the one F2.5 will give VideoDecoder"
@@ -540,7 +540,7 @@ fi
 inf "sequence: $(python3 -c "import json;print(' '.join(json.load(open('$LAV/A-forma.json'))['sequenza']))")"
 
 # 3d — the PIXELS, with the independent reader
-if ! decodifica "$FLUSSO" "$LAV/A.yuv"; then
+if ! decodifica "$FLOW" "$LAV/A.yuv"; then
 	ko "⛔ 3d the independent reader did not decode the stream"
 else
 	DIFF_A=$(python3 -c "
@@ -608,19 +608,19 @@ fi
 log "5. Round B — the RENDERING: how much is lost at CRF $CRF_RESA"
 inf "⚠ CRF $CRF_RESA is not the working point of the product — that is phase 9."
 inf "   Here it only serves to know that the stream holds also when it is not lossless."
-RESA=$LAV/B.$CODEC
-if ! codifica "$SORGENTE_VERA" "$RESA" 1 "crf=$CRF_RESA:log-level=error"; then
+RENDERED=$LAV/B.$CODEC
+if ! codifica "$SORGENTE_VERA" "$RENDERED" 1 "crf=$CRF_RESA:log-level=error"; then
 	ko "⛔ 5 encoding at CRF $CRF_RESA failed"
 else
-	BYTE_B=$(stat -c%s "$RESA")
+	BYTE_B=$(stat -c%s "$RENDERED")
 	inf "stream: $BYTE_B bytes against the $BYTE_A of the lossless"
-	esige "5 profile also at CRF $CRF_RESA" "$A_PROFILO" "$(interroga "$RESA" profile)"
-	if verifica_forma "$RESA" 1 "$LAV/B-forma.json"; then
+	esige "5 profile also at CRF $CRF_RESA" "$A_PROFILO" "$(interroga "$RENDERED" profile)"
+	if verifica_forma "$RENDERED" 1 "$LAV/B-forma.json"; then
 		ok "5 the shape holds also at CRF $CRF_RESA"
 	else
 		ko "⛔ 5 the shape changes with the bitrate"; cat "$LAV/B-forma.json"
 	fi
-	if decodifica "$RESA" "$LAV/B.yuv"; then
+	if decodifica "$RENDERED" "$LAV/B.yuv"; then
 		C_B=$(python3 "$QUI/02-codifica-immagine.py" --confronta "$SORGENTE_VERA" "$LAV/B.yuv")
 		inf "loss at CRF $CRF_RESA: $C_B"
 		MAXY=$(python3 -c "import json;print(json.loads('''$C_B''')['Y']['differenza_massima'])")
@@ -667,7 +667,7 @@ RIFIUTATE=0
 MODI="senza-parametri byte-girato troncato"
 [ "$CODEC" = av1 ] && MODI="senza-sequenza byte-girato troncato"
 for MODO in $MODI; do
-	storpia_flusso "$FLUSSO" "$MODO" "$LAV/S-$MODO.$CODEC" > "$LAV/S-$MODO.json"
+	storpia_flusso "$FLOW" "$MODO" "$LAV/S-$MODO.$CODEC" > "$LAV/S-$MODO.json"
 	# ⛔ The exit status is CAPTURED, not thrown into a chain of pipes.
 	decodifica "$LAV/S-$MODO.$CODEC" "$LAV/S-$MODO.yuv"
 	USCITA=$?

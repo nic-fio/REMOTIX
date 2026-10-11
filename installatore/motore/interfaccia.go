@@ -10,8 +10,8 @@ type Domande struct {
 	Porta int `json:"port"`
 	// Firewall: the name of the running firewall ("none" if none): opening the port is the administrator's job
 	Firewall string `json:"firewall"`
-	// SenzaScheda: the people lacking permission to use the card (the engine enrolls them)
-	SenzaScheda []string `json:"no_gpu"`
+	// NoCard: the people lacking permission to use the card (the engine enrolls them)
+	NoCard []string `json:"no_gpu"`
 	// Persone: who will be able to log in (the machine's people; root is excluded)
 	Persone []string `json:"people"`
 }
@@ -21,7 +21,7 @@ func DomandeDaFare(amb *Ambiente, porta int) *Domande {
 	if porta == 0 {
 		porta = 7447
 	}
-	d := &Domande{Porta: porta, Firewall: "none", SenzaScheda: []string{}, Persone: []string{}}
+	d := &Domande{Porta: porta, Firewall: "none", NoCard: []string{}, Persone: []string{}}
 	if amb == nil {
 		return d
 	}
@@ -32,11 +32,11 @@ func DomandeDaFare(amb *Ambiente, porta int) *Domande {
 		d.Persone = p
 	}
 	gruppi := GruppiScheda(amb)
-	gr, _ := LeggiGruppi(amb.P("/etc/group"))
+	gr, _ := ReadGroups(amb.P("/etc/group"))
 	for _, u := range d.Persone {
 		for _, g := range gruppi {
-			if !contiene(DividiMembri(gr[g][1]), u) {
-				d.SenzaScheda = append(d.SenzaScheda, u)
+			if !contiene(SplitMembers(gr[g][1]), u) {
+				d.NoCard = append(d.NoCard, u)
 				break
 			}
 		}

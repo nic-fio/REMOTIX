@@ -210,16 +210,16 @@ class Fotogramma:
         self.colore = colore
         self.byte = os.path.getsize(percorso)
         self.f = open(percorso, "rb")
-        self._righe = {}
+        self._lines = {}
 
     def chiudi(self):
         self.f.close()
 
     def riga(self, y):
-        if y not in self._righe:
+        if y not in self._lines:
             self.f.seek(y * self.stride)
-            self._righe[y] = self.f.read(self.stride)
-        return self._righe[y]
+            self._lines[y] = self.f.read(self.stride)
+        return self._lines[y]
 
     def pixel(self, x, y):
         """Returns (R, G, B).  ⛔ The byte order is BGRx: B, G, R, x."""
@@ -230,7 +230,7 @@ class Fotogramma:
         return (r[i + 2], r[i + 1], r[i])
 
 
-def campiona_griglia(fg, passo_x=24, passo_y=24):
+def sample_grid(fg, stride_x=24, passo_y=24):
     """A grid over the whole frame: it serves black and uniform.
 
     ⚠ It samples instead of reading everything: at 1920×1080 the file is 8 MB, and
@@ -247,12 +247,12 @@ def campiona_griglia(fg, passo_x=24, passo_y=24):
             i = x * BYTE_PER_PIXEL
             if i + 3 <= len(riga):
                 punti.append((riga[i + 2], riga[i + 1], riga[i]))
-            x += passo_x
+            x += stride_x
         y += passo_y
     return punti
 
 
-def media_e_scarto(valori):
+def mean_and_dev(valori):
     if not valori:
         return 0.0, 0.0
     m = sum(valori) / len(valori)
@@ -263,16 +263,16 @@ def media_e_scarto(valori):
 # ===========================================================================
 #  The checks
 # ===========================================================================
-def controlla_nero(fg, rilievi, misure):
-    punti = campiona_griglia(fg)
+def check_black(fg, rilievi, misure):
+    punti = sample_grid(fg)
     if not punti:
         rilievi.append(("BYTES DO NOT ADD UP",
                         "the grid did not find even one readable pixel: "
                         "stride or height do not match the bytes of the file"))
         return
-    lume = [luma(*p) for p in punti]
-    media, scarto = media_e_scarto(lume)
-    massima = max(lume)
+    lumas = [luma(*p) for p in punti]
+    media, scarto = mean_and_dev(lumas)
+    massima = max(lumas)
     misure["luma_media"] = round(media, 2)
     misure["luma_massima"] = round(massima, 2)
     misure["luma_scarto"] = round(scarto, 2)
@@ -295,7 +295,7 @@ def controlla_nero(fg, rilievi, misure):
                         % (scarto, SOGLIE["uniforme_scarto"], len(punti))))
 
 
-def misura_profondita(fg, misure):
+def measure_depth(fg, misure):
     """⛔ REAL BITS ARE COUNTED, not read on the label.
 
     Asked by F2.3 (encoding) as a **seam**, and the fault behind it
@@ -318,7 +318,7 @@ def misura_profondita(fg, misure):
        promoted?»**.  A channel that took only 64 distinct values,
        all multiples of 4, would be a 6-bit path under an 8-bit label.
     """
-    punti = campiona_griglia(fg, 8, 8)
+    punti = sample_grid(fg, 8, 8)
     if not punti:
         return
     for i, canale in enumerate(("R", "G", "B")):
@@ -351,7 +351,7 @@ def misura_profondita(fg, misure):
         if mn >= 16 and mx <= 235 else "compatible with FULL (min %d, max %d)" % (mn, mx))
 
 
-def misura_profondita_sfumatura(fg, misure):
+def measure_gradient_depth(fg, misure):
     """⭐ THE BIT COUNT IS DONE WHERE THE BITS SHOW: on the gradient.
 
     The «bandiera» scene carries, under the bars, a **ramp from black to white as wide
@@ -406,7 +406,7 @@ def misura_profondita_sfumatura(fg, misure):
     misure["profondita_sfumatura"] = d
 
 
-def controlla_byte(fg, atteso_larghezza, atteso_altezza, rilievi, misure):
+def controlla_byte(fg, expected_width, expected_height, rilievi, misure):
     """⛔ The bytes must add up with the DECLARED stride, not with width*4.
 
     v1's `cattura.h`, first line: *«the stride is read from the buffer chunk, never
@@ -431,27 +431,27 @@ def controlla_byte(fg, atteso_larghezza, atteso_altezza, rilievi, misure):
     elif fg.byte > atteso:
         misure["byte_in_piu"] = fg.byte - atteso
 
-    if atteso_larghezza and (fg.larghezza != atteso_larghezza or fg.altezza != atteso_altezza):
+    if expected_width and (fg.larghezza != expected_width or fg.altezza != expected_height):
         rilievi.append(("SIZE DIFFERENT FROM THE ONE REQUESTED",
                         "requested %d×%d, negotiated %d×%d. ⛔ On Mutter it is a fault: the "
                         "virtual monitor is requested and it makes it of the requested size "
                         "(cattura.h, `misura_negoziabile` FALSE). On KWin it would be the "
                         "normal answer — and that is why the two columns stay "
                         "separate instead of being compared mentally"
-                        % (atteso_larghezza, atteso_altezza, fg.larghezza, fg.altezza)))
+                        % (expected_width, expected_height, fg.larghezza, fg.altezza)))
 
 
-def leggi_bande(fg):
+def read_bands(fg):
     """Reads the seven bands on the signature row and returns their measurements."""
     y = int(fg.altezza * 0.25)          # inside the zone of the seven bars
-    larghezza_banda = fg.larghezza / 7.0
+    stripe_width = fg.larghezza / 7.0
     bande = []
     for i in range(7):
         # ⛔ The CORE of the band is sampled, not the edge: 4:2:0 blurs the
         #    transitions over two pixels per side, and a sample on the edge would measure
         #    the blur instead of the band.
-        x0 = int(i * larghezza_banda + larghezza_banda * 0.25)
-        x1 = int(i * larghezza_banda + larghezza_banda * 0.75)
+        x0 = int(i * stripe_width + stripe_width * 0.25)
+        x1 = int(i * stripe_width + stripe_width * 0.75)
         erre, gi, bi = [], [], []
         for x in range(x0, x1, 3):
             p = fg.pixel(x, y)
@@ -459,9 +459,9 @@ def leggi_bande(fg):
                 erre.append(p[0])
                 gi.append(p[1])
                 bi.append(p[2])
-        mr, sr = media_e_scarto(erre)
-        mg, sg = media_e_scarto(gi)
-        mb, sb = media_e_scarto(bi)
+        mr, sr = mean_and_dev(erre)
+        mg, sg = mean_and_dev(gi)
+        mb, sb = mean_and_dev(bi)
         bande.append({
             "riga": y, "da_x": x0, "a_x": x1, "campioni": len(erre),
             "R": round(mr, 1), "G": round(mg, 1), "B": round(mb, 1),
@@ -471,8 +471,8 @@ def leggi_bande(fg):
     return bande
 
 
-def controlla_firma(fg, rilievi, misure):
-    bande = leggi_bande(fg)
+def check_signature(fg, rilievi, misure):
+    bande = read_bands(fg)
     misure["bande"] = bande
     if any(b["campioni"] == 0 for b in bande):
         rilievi.append(("SCENE NOT RECOGNISED",
@@ -485,7 +485,7 @@ def controlla_firma(fg, rilievi, misure):
     # F2 — luma decreases from left to right
     salti = [round(bande[i]["luma"] - bande[i + 1]["luma"], 1) for i in range(6)]
     misure["salti_luma"] = salti
-    non_cala = [i for i, s in enumerate(salti) if s < SOGLIE["salto_luma"]]
+    not_decreasing = [i for i, s in enumerate(salti) if s < SOGLIE["salto_luma"]]
     # F3 — the channel signature
     sbagliate = []
     for i, (nome, alti, bassi, vicini) in enumerate(BANDE):
@@ -495,19 +495,19 @@ def controlla_firma(fg, rilievi, misure):
             if max(val.values()) - min(val.values()) > SOGLIE["canale_stacco"]:
                 sbagliate.append((nome, "the three channels should be close: %s" % val))
             continue
-        piu_basso_alto = min(val[c] for c in alti)
-        piu_alto_basso = max(val[c] for c in bassi)
-        if piu_basso_alto - piu_alto_basso < SOGLIE["canale_stacco"]:
+        lowest_high = min(val[c] for c in alti)
+        highest_low = max(val[c] for c in bassi)
+        if lowest_high - highest_low < SOGLIE["canale_stacco"]:
             sbagliate.append((nome, "%s should dominate over %s, and instead %s"
                               % ("+".join(alti), "+".join(bassi), val)))
 
-    if sporche or non_cala or sbagliate:
+    if sporche or not_decreasing or sbagliate:
         motivi = []
         if sporche:
             motivi.append("F1 — bands not uniform: %s" % sporche)
-        if non_cala:
+        if not_decreasing:
             motivi.append("F2 — luma does not decrease between bands %s (jumps %s, threshold %.1f)"
-                          % ([(i, i + 1) for i in non_cala], salti, SOGLIE["salto_luma"]))
+                          % ([(i, i + 1) for i in not_decreasing], salti, SOGLIE["salto_luma"]))
         if sbagliate:
             motivi.append("F3 — channel signature: %s" % sbagliate)
         rilievi.append(("SCENE NOT RECOGNISED",
@@ -515,15 +515,15 @@ def controlla_firma(fg, rilievi, misure):
                         + " · ".join(motivi)))
 
 
-def controlla_cambiato(a, b, rilievi, misure):
+def check_changed(a, b, rilievi, misure):
     """⛔ `primo` and `regime` must be DIFFERENT.
 
     If they were identical, the producer would be giving us the same buffer
     twice — and it is the exact form of trap 8 of `LEZIONI.md` §4: whoever
     connects to a still desktop stays on black until something moves, and the
     old screen looks the same as a new one."""
-    pa = campiona_griglia(a)
-    pb = campiona_griglia(b)
+    pa = sample_grid(a)
+    pb = sample_grid(b)
     n = min(len(pa), len(pb))
     if n == 0:
         return
@@ -543,23 +543,23 @@ def controlla_cambiato(a, b, rilievi, misure):
 # ===========================================================================
 #  The judgement of a frame
 # ===========================================================================
-def giudica_uno(percorso, larghezza, altezza, stride, colore, scena,
-                chiesto_larghezza, chiesto_altezza):
+def judge_one(percorso, larghezza, altezza, stride, colore, scena,
+                requested_width, requested_height):
     rilievi, misure = [], {}
     if not os.path.exists(percorso):
         return [("FILE MISSING", "there is no file to judge: %s" % percorso)], misure, None
     fg = Fotogramma(percorso, larghezza, altezza, stride, colore)
-    controlla_byte(fg, chiesto_larghezza, chiesto_altezza, rilievi, misure)
-    misura_profondita(fg, misure)
+    controlla_byte(fg, requested_width, requested_height, rilievi, misure)
+    measure_depth(fg, misure)
     if scena == "bandiera":
-        misura_profondita_sfumatura(fg, misure)
-    controlla_nero(fg, rilievi, misure)
+        measure_gradient_depth(fg, misure)
+    check_black(fg, rilievi, misure)
     # ⛔ The signature is checked ONLY if the frame is not already black or uniform:
     #    on a black one it would fail too, and three marks for a single cause make
     #    what is one defect look like three.
     marche = [m for m, _ in rilievi]
     if scena == "bandiera" and "BLACK FRAME" not in marche:
-        controlla_firma(fg, rilievi, misure)
+        check_signature(fg, rilievi, misure)
     elif scena != "bandiera":
         misure["firma"] = "not checked: scene «%s», no signature declared" % scena
     return rilievi, misure, fg
@@ -613,28 +613,28 @@ def controllo_positivo(cartella, righe):
         ("uniform grey",       "grigio",   ["SCENE NOT RECOGNISED",
                                             "UNIFORM FRAME"],       ["BLACK FRAME"]),
     ]
-    tutto_bene = True
+    all_well = True
     for nome, che, pretese, vietate in prove:
         p = os.path.join(cartella, "controllo-positivo-%s.raw" % che)
         fabbrica(p, L, A, S, che)
-        rilievi, misure, fg = giudica_uno(p, L, A, S, "BGRx", "bandiera", L, A)
+        rilievi, misure, fg = judge_one(p, L, A, S, "BGRx", "bandiera", L, A)
         if fg:
             fg.chiudi()
         os.unlink(p)
         marche = [m for m, _ in rilievi]
         mancano = [m for m in pretese if m not in marche]
-        di_troppo = [m for m in vietate if m in marche]
-        ok = not mancano and not di_troppo
+        unwanted = [m for m in vietate if m in marche]
+        ok = not mancano and not unwanted
         detto = "said %s" % (marche or "green")
         if mancano:
             detto += " ⛔ missing %s" % mancano
-        if di_troppo:
-            detto += " ⛔ extra %s" % di_troppo
+        if unwanted:
+            detto += " ⛔ extra %s" % unwanted
         righe.append(("  positive control — %s" % nome,
                       "expected %s / forbidden %s, %s"
                       % (pretese or "green", vietate or "—", detto), ok))
-        tutto_bene = tutto_bene and ok
-    return tutto_bene
+        all_well = all_well and ok
+    return all_well
 
 
 # ===========================================================================
@@ -648,11 +648,11 @@ def main():
     o = a.parse_args()
 
     cartella = os.path.dirname(os.path.abspath(o.manifesto)) if o.manifesto else "."
-    righe_cp = []
+    lines_cp = []
 
     if o.solo_controllo_positivo:
-        ok = controllo_positivo(cartella, righe_cp)
-        for t, d, buono in righe_cp:
+        ok = controllo_positivo(cartella, lines_cp)
+        for t, d, buono in lines_cp:
             print("%s%s%s  %s — %s" % (VERDE if buono else ROSSO, "OK" if buono else "NO",
                                        GRIGIO, t.strip(), d))
         return 0 if ok else 2
@@ -691,7 +691,7 @@ def main():
               % (GIALLO, GRIGIO))
         verdetto["verdetto"] = "ZERO FRAMES"
         codice = 3
-        rilievi_tutti = []
+        all_findings = []
     elif str(man.get("esito", "")).startswith(("TYPE DECLARED", "TIPO DICHIARATO")):
         print("%s--%s  DMA-BUF road: the buffer type is declared, the pixels are NOT\n"
               "      read from here (the descriptor lives on the card). This round\n"
@@ -699,7 +699,7 @@ def main():
               % (GIALLO, GRIGIO))
         verdetto["verdetto"] = "ONLY THE TYPE"
         codice = 3
-        rilievi_tutti = []
+        all_findings = []
     else:
         neg = man.get("negoziato", {})
         chi = man.get("chiesto", {})
@@ -732,7 +732,7 @@ def main():
         for av in man.get("avvertenze", []):
             print("   %s" % av)
 
-        rilievi_tutti = []
+        all_findings = []
         quali = ["primo", "regime"] if o.quale == "tutti" else [o.quale]
         letti = {}
         for q in quali:
@@ -759,7 +759,7 @@ def main():
                 verdetto["zero_legittimo_confermato"] = True
                 continue
             if f and q == "regime" and o.scena == "fermo":
-                rilievi_tutti.append((q, "SOMETHING WAS MOVING AND WE DID NOT DECLARE IT",
+                all_findings.append((q, "SOMETHING WAS MOVING AND WE DID NOT DECLARE IT",
                                       "on the «fermo» scene no steady-state "
                                       "frame should have arrived, and one did: on the "
                                       "screen something moves that the bench does not know, "
@@ -778,7 +778,7 @@ def main():
                 # It is form E8: silence mistaken for zero.  The frame
                 # that is missing is the one that ANSWERS the question of F2.2 — and
                 # without it there is no green to give.
-                rilievi_tutti.append((q, "THE FRAME IS MISSING",
+                all_findings.append((q, "THE FRAME IS MISSING",
                                       "the producer did not take «%s». If the "
                                       "«regime» is missing, there is no frame with the scene "
                                       "inside: no green is given" % q))
@@ -788,7 +788,7 @@ def main():
             percorso = f["file"]
             if not os.path.isabs(percorso):
                 percorso = os.path.join(cartella, percorso)
-            rilievi, misure, fg = giudica_uno(percorso, larghezza, altezza, f["stride"], colore,
+            rilievi, misure, fg = judge_one(percorso, larghezza, altezza, f["stride"], colore,
                                               o.scena if q == "regime" else "ignota",
                                               chi.get("larghezza"), chi.get("altezza"))
             # ⚠ The signature is required only on the STEADY-STATE frame.  The `primo`
@@ -799,10 +799,10 @@ def main():
             misure["danno"] = f.get("danno")
             misure["seq"] = f.get("seq")
             misure["indice_fra_gli_arrivati"] = f.get("indice_fra_gli_arrivati")
-            rosse_q = MARCHE_ROSSE.get(q)
+            red_q = MARCHE_ROSSE.get(q)
             verdetto["fotogrammi"][q] = {
                 "rilievi": [{"marca": m, "perche": d,
-                             "rosso": rosse_q is None or m in rosse_q}
+                             "rosso": red_q is None or m in red_q}
                             for m, d in rilievi],
                 "misure": misure}
             letti[q] = fg
@@ -845,7 +845,7 @@ def main():
                 #    same label (form E2).
                 if rosse is None or m in rosse:
                     print("      %sNO%s  %s — %s" % (ROSSO, GRIGIO, m, d))
-                    rilievi_tutti.append((q, m, d))
+                    all_findings.append((q, m, d))
                 else:
                     print("      %s⚠%s   %s — %s" % (GIALLO, GRIGIO, m, d))
                     print("            (warning, not red: on the «%s» the scene is not there"
@@ -856,7 +856,7 @@ def main():
         # ⛔ And the comparison between the two, which neither of the two alone can give.
         if letti.get("primo") and letti.get("regime"):
             rc, mc = [], {}
-            controlla_cambiato(letti["primo"], letti["regime"], rc, mc)
+            check_changed(letti["primo"], letti["regime"], rc, mc)
             verdetto["confronto_primo_regime"] = {
                 "rilievi": [{"marca": m, "perche": d} for m, d in rc], "misure": mc}
             print("\n   ── primo against regime ──")
@@ -866,7 +866,7 @@ def main():
                      round((mc.get("frazione_diversa") or 0) * 100, 2)))
             for m, d in rc:
                 print("      %sNO%s  %s — %s" % (ROSSO, GRIGIO, m, d))
-                rilievi_tutti.append(("confronto", m, d))
+                all_findings.append(("confronto", m, d))
             if not rc:
                 print("      %sOK%s  the buffer changed: it is not an old screen"
                       % (VERDE, GRIGIO))
@@ -875,30 +875,30 @@ def main():
         #    is a frame with PARTIAL damage nevertheless WHOLE?
         reg = man.get("regime") or {}
         if reg.get("danno") == "parziale":
-            firma_ok = not any(q == "regime" and m == "SCENE NOT RECOGNISED"
-                               for q, m, _ in rilievi_tutti)
-            nero = any(q == "regime" and m == "BLACK FRAME" for q, m, _ in rilievi_tutti)
-            verdetto["danno_parziale_ma_intero"] = bool(firma_ok and not nero)
+            signature_ok = not any(q == "regime" and m == "SCENE NOT RECOGNISED"
+                               for q, m, _ in all_findings)
+            nero = any(q == "regime" and m == "BLACK FRAME" for q, m, _ in all_findings)
+            verdetto["danno_parziale_ma_intero"] = bool(signature_ok and not nero)
             print("\n   ⭐ the steady-state frame carries PARTIAL damage and the scene %s"
                   % ("IS SEEN WHOLE ⇒ the buffer is whole (STUDI.md §gnome §8.1: blit of the whole "
                      "framebuffer), not a diff (v1's cattura.h)"
-                     if firma_ok and not nero else
+                     if signature_ok and not nero else
                      "is NOT seen whole ⇒ suspicion falls on the diff of cattura.h"))
 
         for fg in letti.values():
             if fg:
                 fg.chiudi()
-        codice = 1 if rilievi_tutti else 0
-        verdetto["verdetto"] = "ROSSO" if rilievi_tutti else "VERDE"
+        codice = 1 if all_findings else 0
+        verdetto["verdetto"] = "ROSSO" if all_findings else "VERDE"
 
     # ── ⛔ THE POSITIVE CONTROL, AT THE END OF EVERY EXECUTION ─────────────
     print("\n\033[1m== the positive control of the tool ==\033[0m")
-    ok_cp = controllo_positivo(cartella, righe_cp)
-    for t, d, buono in righe_cp:
+    ok_cp = controllo_positivo(cartella, lines_cp)
+    for t, d, buono in lines_cp:
         print("%s%s%s%s — %s" % (VERDE if buono else ROSSO, t, GRIGIO, " OK" if buono else " NO", d))
     verdetto["controllo_positivo"] = {"passato": ok_cp,
                                       "prove": [{"prova": t.strip(), "esito": d, "ok": b}
-                                                for t, d, b in righe_cp]}
+                                                for t, d, b in lines_cp]}
     if not ok_cp:
         print("\n%s⛔ THE JUDGE IS NOT CERTIFIED%s: the positive control did not pass.\n"
               "   The verdict on the real frame is NOT issued — a tool that cannot\n"

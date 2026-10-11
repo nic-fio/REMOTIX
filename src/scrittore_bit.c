@@ -6,7 +6,7 @@
 
 #include <string.h>
 
-void sb_apri(ScrittoreBit *s, uint8_t *dati, size_t capacita)
+void sb_open(ScrittoreBit *s, uint8_t *dati, size_t capacita)
 {
 	s->dati = dati;
 	s->capacita = capacita;
@@ -91,24 +91,24 @@ size_t sb_byte(const ScrittoreBit *s)
 	return (s->bit + 7) >> 3;
 }
 
-bool sb_allineato(const ScrittoreBit *s)
+bool sb_aligned(const ScrittoreBit *s)
 {
 	return (s->bit & 7) == 0;
 }
 
 size_t nal_annexb(uint8_t *fuori, size_t capacita, const uint8_t *intestazione,
-                  size_t intestazione_byte, const uint8_t *rbsp, size_t rbsp_byte)
+                  size_t header_byte, const uint8_t *rbsp, size_t rbsp_byte)
 {
 	size_t n = 0, zeri = 0;
 
-	if (capacita < 4 + intestazione_byte)
+	if (capacita < 4 + header_byte)
 		return 0;
 	fuori[n++] = 0;
 	fuori[n++] = 0;
 	fuori[n++] = 0;
 	fuori[n++] = 1;
-	memcpy(fuori + n, intestazione, intestazione_byte);
-	n += intestazione_byte;
+	memcpy(fuori + n, intestazione, header_byte);
+	n += header_byte;
 	/*
 	 * H.264 7.4.1 / H.265 7.4.2: inside the payload the sequence `00 00 0x` with
 	 * x in {0,1,2,3} must not appear — a `03` is slipped in.  ⛔ And the zero

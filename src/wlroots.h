@@ -103,10 +103,10 @@ void wlr_lastre_alla_tela_massima(bool si);
  * `[M]` 20 September 2026: a labwc headless output is born **1280×720**
  * hard-wired, and no protocol creates one of the wanted size. ⇒ Whoever asks for
  * 1920×1080 must know it, and this function is the place where they find out. */
-void wlr_misura(const WlrPalco *palco, uint32_t *larghezza, uint32_t *altezza);
+void wlr_measure(const WlrPalco *palco, uint32_t *larghezza, uint32_t *altezza);
 
 /* The name of the output, for log lines (`HEADLESS-1` and the like). */
-const char *wlr_uscita_nome(const WlrPalco *palco);
+const char *wlr_output_name(const WlrPalco *palco);
 
 /*
  * ⭐ ONE FRAME, ASKED FOR AND WAITED ON — the whole round of the pull direction.
@@ -121,7 +121,7 @@ typedef enum {
 	WLR_FOTOGRAMMA_FALLITO,    /* the compositor sent `failed`                 */
 	WLR_FOTOGRAMMA_SCADUTO,    /* the wait is over: I could not look           */
 	WLR_FOTOGRAMMA_ROTTO       /* the line to the compositor has dropped       */
-} WlrEsito;
+} WlrOutcome;
 
 typedef struct {
 	uint32_t larghezza, altezza, stride;
@@ -145,9 +145,9 @@ typedef struct {
 	/* ------------------------------------------------------------------ *
 	 * ⭐⭐ THE CARD ROAD — see the box at the top of `wlroots.c`.
 	 *
-	 * ⛔ When `sulla_scheda` is true `pixel` is **NULL**: the image is in a
+	 * ⛔ When `on_card` is true `pixel` is **NULL**: the image is in a
 	 *    DMA-BUF of ours (a "slab"), and the pixels are reached through `fd`.  It is the
-	 *    same rule as `CatturaFermo`: whoever reads looks at `sulla_scheda`
+	 *    same rule as `CatturaFermo`: whoever reads looks at `on_card`
 	 *    BEFORE `pixel`.
 	 * ⛔⛔ AND THE SLAB IS HELD BY WHOEVER RECEIVED THE FRAME until they
 	 *      give it back with `wlr_rendi()`.  Until then the compositor does NOT
@@ -155,7 +155,7 @@ typedef struct {
 	 *      runs out of slabs, and the next frame stops SAYING SO: a slab
 	 *      in hand is never recycled (`LEZIONI.md` §8).
 	 * ------------------------------------------------------------------ */
-	bool sulla_scheda;
+	bool on_card;
 	int fd;                /* ⛔ owned by `wlroots.c`: do not close         */
 	uint32_t offset;
 	uint64_t modificatore; /* `[R]` always LINEAR: see `wlroots.c`           */
@@ -168,7 +168,7 @@ typedef struct {
 	 *    the wait was REAL (the fence extracted from the DMA-BUF) or it could
 	 *    not be done and implicit synchronisation is relied upon. */
 	uint64_t us_attesa_gpu;
-	bool attesa_esplicita;
+	bool explicit_wait;
 } WlrFotogramma;
 
 /*
@@ -178,7 +178,7 @@ typedef struct {
  *   keep them copies them. ⛔ It is the same rule as `cattura.h`, and it is here because
  *   it is the rule that gets forgotten first.
  */
-WlrEsito wlr_fotogramma(WlrPalco *palco, double attesa_s, WlrFotogramma *fuori,
+WlrOutcome wlr_fotogramma(WlrPalco *palco, double attesa_s, WlrFotogramma *fuori,
                         GError **sbaglio);
 
 /*
@@ -189,14 +189,14 @@ WlrEsito wlr_fotogramma(WlrPalco *palco, double attesa_s, WlrFotogramma *fuori,
  *    would also take away the first road, which works.
  *
  * True: from here every frame is tried on the card, and each one
- * says in `sulla_scheda` where it REALLY ended up.  False with `sbaglio` set:
+ * says in `on_card` where it REALLY ended up.  False with `sbaglio` set:
  * the road stays memory, and the caller MUST write it in the log.
  */
 bool wlr_chiedi_la_scheda(WlrPalco *palco, GError **sbaglio);
 
 /* The road in force NOW.  ⚠ It can become false on its own: three `failed`
  * in a row on the card turn it off, and `wlroots.c` writes so. */
-bool wlr_sulla_scheda(const WlrPalco *palco);
+bool wlr_on_card(const WlrPalco *palco);
 
 /* ⛔ Gives back the slab of a card frame: from here the compositor can
  *    write into it again.  Call it ONLY when whoever was reading has FINISHED (for the
@@ -207,7 +207,7 @@ void wlr_rendi(WlrPalco *palco, void *lastra);
 /* ⚠ To be put around a CPU read inside the slab (`mmap`):
  *   `DMA_BUF_IOCTL_SYNC`, so that the bytes seen by the CPU are those written
  *   by the GPU.  Only one place uses it — the first frame looked at. */
-void wlr_lettura_cpu(int fd, bool inizio);
+void wlr_cpu_read(int fd, bool inizio);
 
 /*
  * ⭐⭐ THE OUTPUT SIZE — and on this family it can be done, unlike KDE.
@@ -221,7 +221,7 @@ void wlr_lettura_cpu(int fd, bool inizio);
  *     *failed* and *cancelled* in the same branch — not to be copied.
  *
  * ⇒ This function only says **whether the request was accepted**. That
- *   the output changed will be told by `wlr_misura()` after the following frame,
+ *   the output changed will be told by `wlr_measure()` after the following frame,
  *   and it is the only witness that counts.
  */
 typedef enum {
@@ -230,9 +230,9 @@ typedef enum {
 	WLR_MISURA_RIFIUTATA,   /* `failed`: the compositor said no                     */
 	WLR_MISURA_ANNULLATA,   /* `cancelled`: the serial was old — can be retried     */
 	WLR_MISURA_IMPOSSIBILE  /* the compositor does not announce the output manager  */
-} WlrMisuraEsito;
+} WlrSizeOutcome;
 
-WlrMisuraEsito wlr_misura_chiedi(WlrPalco *palco, uint32_t larghezza, uint32_t altezza,
+WlrSizeOutcome wlr_misura_chiedi(WlrPalco *palco, uint32_t larghezza, uint32_t altezza,
                                  double attesa_s, GError **sbaglio);
 
 /* How many frames were asked for, taken, failed. For log lines
@@ -240,11 +240,11 @@ WlrMisuraEsito wlr_misura_chiedi(WlrPalco *palco, uint32_t larghezza, uint32_t a
 typedef struct {
 	guint64 chiesti, presi, falliti, scaduti;
 	/* ⛔ The TWO roads counted separately: a number without its road is a
-	 *    number that will lie.  `presi == sulla_scheda + in_memoria`. */
-	guint64 sulla_scheda, in_memoria;
-} WlrConteggi;
+	 *    number that will lie.  `presi == on_card + in_mem`. */
+	guint64 on_card, in_mem;
+} WlrCounts;
 
-void wlr_conteggi(const WlrPalco *palco, WlrConteggi *fuori);
+void wlr_counts(const WlrPalco *palco, WlrCounts *fuori);
 
 /*
  * ⭐ The NEXT frame will be whole, even if the screen has not changed.
@@ -265,29 +265,29 @@ void wlr_forza_intero(WlrPalco *palco);
  *
  *   wlr_sonda_puntatore()  after EVERY injected pointer gesture: `x`,`y`
  *                          in the `l`x`a` canvas (the same as
- *                          `wlr_input_assoluto`).  Coalescing, ONE in flight.
- *   wlr_sonda_forma()      the shape index (`forma.h`) if it has CHANGED
+ *                          `wlr_input_absolute`).  Coalescing, ONE in flight.
+ *   wlr_probe_shape()      the shape index (`forma.h`) if it has CHANGED
  *                          since last time, otherwise -1.  ⛔ To be called at
  *                          every turn of the loop (`cattura_prendi` calls it):
  *                          it is also the place the "trailing" probe starts from.
  *
  * ⛔ Same thread as `wlr_fotogramma`: it is its pump that carries the events.
  * ⛔ The main stream does NOT change: the probe has its own frame and its own
- *    buffer, and touches neither `forza_intero` nor the damage.
+ *    buffer, and touches neither `force_full` nor the damage.
  */
 void wlr_sonda_puntatore(WlrPalco *palco, uint32_t x, uint32_t y, uint32_t l, uint32_t a);
-int wlr_sonda_forma(WlrPalco *palco);
+int wlr_probe_shape(WlrPalco *palco);
 
 typedef struct {
 	guint64 chieste;   /* pointer gestures arrived                            */
 	guint64 lanciate;  /* probes really launched (⚠ < chieste: coalescing)    */
 	guint64 tornate, fallite;
-	guint64 di_coda;   /* the "still hand" probes (rule 3)                    */
+	guint64 of_queue;   /* the "still hand" probes (rule 3)                    */
 	guint64 cambi;     /* new shapes recognised                               */
 	guint64 ignote;    /* returned without a colour of ours under the pointer */
-	guint64 dai_vicini; /* recognised on a neighbour and not on the centre    */
-} WlrSondaConteggi;
+	guint64 from_neighbors; /* recognised on a neighbour and not on the centre    */
+} WlrProbeCounts;
 
-void wlr_sonda_conteggi(const WlrPalco *palco, WlrSondaConteggi *fuori);
+void wlr_probe_counts(const WlrPalco *palco, WlrProbeCounts *fuori);
 
-void wlr_chiudi(WlrPalco *palco);
+void wlr_close(WlrPalco *palco);

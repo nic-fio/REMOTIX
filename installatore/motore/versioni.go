@@ -7,15 +7,15 @@ import (
 
 // Comparing PACKAGE versions (after D14: an installation package moved further
 // ahead by a system upgrade is still «complete», azione_pacchetti.go). Two algorithms, those of the managers themselves: dpkg (Debian, Ubuntu) and rpmvercmp
-// (rpm, and pacman which uses the same one). ⚠ ConfrontaVersioni (profilo.go) stays the simple one for
+// (rpm, and pacman which uses the same one). ⚠ CompareVersions (profilo.go) stays the simple one for
 // «human» versions (GNOME 48, OpenSSL 3.5.1): here there are epochs, revisions, tildes.
 
-// ConfrontaPacchetti compares two package versions of the family: -1, 0, 1.
-func ConfrontaPacchetti(famiglia, a, b string) int {
+// ComparePackages compares two package versions of the family: -1, 0, 1.
+func ComparePackages(famiglia, a, b string) int {
 	if famiglia == "debian" {
-		return confrontaDeb(a, b)
+		return compareDeb(a, b)
 	}
-	return confrontaRpm(a, b)
+	return compareRpm(a, b)
 }
 
 func segno(x int) int {
@@ -40,29 +40,29 @@ func epoca(v string) (int, string) {
 	return 0, v
 }
 
-// ultimoTrattino: "1.0-2+deb13" → "1.0", "2+deb13".
-func ultimoTrattino(v string) (string, string) {
+// lastDash: "1.0-2+deb13" → "1.0", "2+deb13".
+func lastDash(v string) (string, string) {
 	if i := strings.LastIndex(v, "-"); i >= 0 {
 		return v[:i], v[i+1:]
 	}
 	return v, ""
 }
 
-func confrontaDeb(a, b string) int {
+func compareDeb(a, b string) int {
 	ea, va := epoca(a)
 	eb, vb := epoca(b)
 	if ea != eb {
 		return segno(ea - eb)
 	}
-	ua, ra := ultimoTrattino(va)
-	ub, rb := ultimoTrattino(vb)
+	ua, ra := lastDash(va)
+	ub, rb := lastDash(vb)
 	if c := verrevcmp(ua, ub); c != 0 {
 		return c
 	}
 	return verrevcmp(ra, rb)
 }
 
-func ordineDeb(s string, i int) int {
+func debOrder(s string, i int) int {
 	if i >= len(s) {
 		return 0
 	}
@@ -84,7 +84,7 @@ func verrevcmp(a, b string) int {
 	for i < len(a) || j < len(b) {
 		diff := 0
 		for (i < len(a) && !cifra(a[i])) || (j < len(b) && !cifra(b[j])) {
-			ac, bc := ordineDeb(a, i), ordineDeb(b, j)
+			ac, bc := debOrder(a, i), debOrder(b, j)
 			if ac != bc {
 				return segno(ac - bc)
 			}
@@ -117,14 +117,14 @@ func verrevcmp(a, b string) int {
 	return 0
 }
 
-func confrontaRpm(a, b string) int {
+func compareRpm(a, b string) int {
 	ea, va := epoca(a)
 	eb, vb := epoca(b)
 	if ea != eb {
 		return segno(ea - eb)
 	}
-	ua, ra := ultimoTrattino(va)
-	ub, rb := ultimoTrattino(vb)
+	ua, ra := lastDash(va)
+	ub, rb := lastDash(vb)
 	if c := rpmvercmp(ua, ub); c != 0 {
 		return c
 	}

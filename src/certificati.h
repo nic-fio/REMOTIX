@@ -46,8 +46,8 @@ typedef struct {
 	char dir[256];
 	char indirizzo[128];
 
-	char pagina_pem[320], pagina_key[320], pagina_marca[320];
-	char sessione_pem[320], sessione_key[320], sessione_marca[320];
+	char page_pem[320], page_key[320], page_marker[320];
+	char session_pem[320], session_key[320], session_mark[320];
 
 	/* The SHA-256 fingerprint of the DER of the SESSION certificate, in base64:
 	 * ⛔ of the certificate, not of the public key (finding R1.14 of
@@ -57,13 +57,13 @@ typedef struct {
 	char impronta[64];
 	/* The same in hexadecimal, which is the form of the logs and of the
 	 * browsers' error messages. */
-	char impronta_esa[80];
-	time_t sessione_scade;
+	char fingerprint_hex[80];
+	time_t session_expires;
 	/* ⛔ How many times the session certificate has been rotated since the
 	 *    server started.  It is the denominator of B13.1: without it «it
 	 *    rotated» and «it was never tried» look the same. */
 	unsigned rotazioni;
-	bool pagina_e_nostro;
+	bool page_is_ours;
 } certificati;
 
 /* Prepares the two certificates: reads them if they exist and are valid,

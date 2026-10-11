@@ -117,11 +117,11 @@ dice "   machine: $(uname -n)   python: $(python3 -V)"
 # ⛔ The port is looked at, not freed.  And if `ss` is not there it is SAID, instead of
 #    concluding «free» from a command that did not run (form E8).
 if command -v ss >/dev/null; then
-    OCCUPANTI="$(ss -lun | grep -c ":$PORTA " || true)"
-    if [ "$OCCUPANTI" -eq 0 ]; then
-        dice "   port $PORTA: ${VERDE}free${GRIGIO} (${OCCUPANTI} listeners)"
+    OCCUPANTS="$(ss -lun | grep -c ":$PORTA " || true)"
+    if [ "$OCCUPANTS" -eq 0 ]; then
+        dice "   port $PORTA: ${VERDE}free${GRIGIO} (${OCCUPANTS} listeners)"
     else
-        dice "   port $PORTA: ${ROSSO}TAKEN${GRIGIO} by $OCCUPANTI listeners"
+        dice "   port $PORTA: ${ROSSO}TAKEN${GRIGIO} by $OCCUPANTS listeners"
         dice "   ⛔ NOTHING is switched off.  It is declared and it exits: on 7448 runs"
         dice "      the house product and on 7501 the P5 target."
         exit 2

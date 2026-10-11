@@ -8,20 +8,20 @@
  * ⛔ WHAT WAS BROUGHT OVER FROM v1, AND WHAT WAS LEFT THERE
  *
  * Brought over (`fondamenta/remotix-c/src/sessione.c`, 797 real lines):
- *   · `sessione_bus()`            — our own connection, without «exit-on-close»
+ *   · `sess_bus()`            — our own connection, without «exit-on-close»
  *   · `componi_ambiente()`        — the environment from scratch, GNOME branch (408-540)
- *   · `locale_utf8()`             — the locale that must EXIST, not just be named
+ *   · `local_utf8()`             — the locale that must EXIST, not just be named
  *   · the shape of `scrivi_dropin()` (569-623) — `user.control` folder, file,
  *     `daemon-reload`, and the rule «the drop-in BEFORE the command»
  *   · `avvia()` with `setsid --fork` and the session log
- *   · `esci_gnome()` with `Logout(2)` (699-711)
+ *   · `exit_gnome()` with `Logout(2)` (699-711)
  *
  * Left there, because it is apparatus that does not exist in V2 or is not needed for GNOME:
  *   · the whole KWin branch: `nome_occupato()`, `esci_kde_ordinato()`,
- *     `esci_kde_a_forza()`, `SESSIONE_COMANDO_KDE`, `TipoCompositore` and
+ *     `esci_kde_a_forza()`, `SESSION_COMMAND_KDE`, `TipoCompositore` and
  *     `compositore.h` (in V2 that file does not exist, and creating it would be apparatus for
  *     a compositor this phase does not serve);
- *   · `scrivi_tema_cursore()` + `scrivi_cursore_vuoto()` + `cartella_cursori()`
+ *   · `write_cursor_theme()` + `scrivi_cursore_vuoto()` + `cartella_cursori()`
  *     — 120 lines of hand-written Xcursor format: it is the cure for KWin's double
  *     pointer, and on GNOME it **is not needed** (`STUDI.md` §gnome §5.2: there the cursor is not
  *     inside the captured image);
@@ -36,7 +36,7 @@
  *
  * ⚠ And one thing brought over from a BENCH and not from the product: waiting for `inactive`
  *   instead of «other than active» (`banchi/02-sessione-lancia.sh`,
- *   `ferma_e_aspetta`).  v1 only waited for the process to disappear, and here
+ *   `stop_and_wait`).  v1 only waited for the process to disappear, and here
  *   more is needed because right afterwards the session is made to BE BORN AGAIN: restarting
  *   during `deactivating` is another first run.
  */
@@ -63,11 +63,11 @@
 /* On this machine, without acceleration, the session takes about ten
  * seconds: the margin is for slower machines. */
 #define ATTESA_AVVIO_MS 40000
-#define CADENZA_CONTROLLO_MS 500
-#define ATTESA_RISPOSTA_MS 5000
+#define CHECK_INTERVAL_MS 500
+#define WAIT_RESPONSE_MS 5000
 /* ⚠ The bus is only asked whether a name has an owner: the bus itself answers, and
  *   if it takes more than half a second the problem is not the graphical session. */
-#define ATTESA_NOME_MS 500
+#define WAIT_NAME_MS 500
 
 /*
  * ⛔⭐⭐ THE POLL CEILING, and this number is the cure for the «many seconds»
@@ -79,7 +79,7 @@
  *    takes the name **before** `meta_context_start()`, so the name is there
  *    when the Shell is not yet good for anything.
  *
- * ⛔⛔ BUT WITH `ATTESA_RISPOSTA_MS` (5 s) THAT POLL BECOMES A WAIT.  The
+ * ⛔⛔ BUT WITH `WAIT_RESPONSE_MS` (5 s) THAT POLL BECOMES A WAIT.  The
  *     name has an owner, the call leaves, and the Shell that is still
  *     being born does not answer: we stay there a good five seconds.  `[M]` 16
  *     August 2026, round 4 of twelve: between «THE SESSION BUS IS MINE» and
@@ -101,7 +101,7 @@
  *   fire even once in twenty-two rounds.  Without the dense retry
  *   this ceiling would discover readiness up to a second later.
  */
-#define ATTESA_SONDAGGIO_MS 400
+#define WAIT_POLL_MS 400
 #define ATTESA_USCITA_MS 10000
 
 /*
@@ -118,7 +118,7 @@
  *    healthy session (false red, seen at once); too long would just make us
  *    wait.  We err on the side that shows.
  */
-#define GRAZIA_MONITOR_MS 5000
+#define GRACE_MONITOR_MS 5000
 
 /*
  * The shape of the `GetCurrentState` answer, which is READ here.
@@ -141,46 +141,46 @@
  */
 #define TIPO_STATO "(ua((ssss)a(siiddada{sv})a{sv})a(iiduba(ssss)a{sv})a{sv})"
 
-const char *sessione_marca(SessioneStato stato)
+const char *session_mark(SessioneStato stato)
 {
 	switch (stato) {
 	case SESSIONE_SANA:
 		return "HEALTHY";
 	case SESSIONE_NERA:
 		return "BLACK: ZERO MONITORS";
-	case SESSIONE_MISURA_ALTRA:
+	case SESSION_WRONG_SIZE:
 		return "WRONG SIZE";
-	case SESSIONE_SCELTO_DA_SE:
+	case SESSION_SELF_CHOSEN:
 		return "MONITOR CHOSEN BY ITSELF";
-	case SESSIONE_MORTA:
+	case SESSION_DEAD:
 		return "SESSION DEAD";
-	case SESSIONE_NON_LETTA:
+	case SESSION_NOT_READ:
 		return "UNKNOWN READING";
 	}
 	return "UNKNOWN STATE";
 }
 
 /* ------------------------------------------------------------------------- */
-static GMutex lucchetto_bus;
-static GDBusConnection *bus_di_sessione;
+static GMutex bus_lock;
+static GDBusConnection *session_dbus;
 
-GDBusConnection *sessione_bus(GError **sbaglio)
+GDBusConnection *sess_bus(GError **sbaglio)
 {
 	GDBusConnection *nostro = NULL;
 
-	g_mutex_lock(&lucchetto_bus);
+	g_mutex_lock(&bus_lock);
 
 	/* The user's bus dies at logout and is reborn right after, on the same
 	 * socket but as a new daemon.  The old connection stays there, closed:
 	 * whoever kept using it would not get a clear error, they would get
 	 * silence — no session, no Mutter, black screen at the second
 	 * login.  So it is thrown away and another one is opened. */
-	if (bus_di_sessione && g_dbus_connection_is_closed(bus_di_sessione)) {
+	if (session_dbus && g_dbus_connection_is_closed(session_dbus)) {
 		registro_dice(REG_SESSIONE, "the session bus has closed: opening another one");
-		g_clear_object(&bus_di_sessione);
+		g_clear_object(&session_dbus);
 	}
 
-	if (!bus_di_sessione) {
+	if (!session_dbus) {
 		g_autofree char *indirizzo =
 			g_dbus_address_get_for_bus_sync(G_BUS_TYPE_SESSION, NULL, sbaglio);
 
@@ -191,18 +191,18 @@ GDBusConnection *sessione_bus(GError **sbaglio)
 		 * is born off (see the box in `sessione.h`).
 		 */
 		if (indirizzo)
-			bus_di_sessione = g_dbus_connection_new_for_address_sync(
+			session_dbus = g_dbus_connection_new_for_address_sync(
 				indirizzo,
 				G_DBUS_CONNECTION_FLAGS_AUTHENTICATION_CLIENT |
 					G_DBUS_CONNECTION_FLAGS_MESSAGE_BUS_CONNECTION,
 				NULL, NULL, sbaglio);
-		if (bus_di_sessione)
-			g_dbus_connection_set_exit_on_close(bus_di_sessione, FALSE);
+		if (session_dbus)
+			g_dbus_connection_set_exit_on_close(session_dbus, FALSE);
 	}
 
-	if (bus_di_sessione)
-		nostro = g_object_ref(bus_di_sessione);
-	g_mutex_unlock(&lucchetto_bus);
+	if (session_dbus)
+		nostro = g_object_ref(session_dbus);
+	g_mutex_unlock(&bus_lock);
 	return nostro;
 }
 
@@ -227,7 +227,7 @@ GDBusConnection *sessione_bus(GError **sbaglio)
  *   exactly what the caller wanted to know, obtained in a millisecond
  *   instead of thirty seconds.
  */
-static gboolean nome_ha_padrone(GDBusConnection *bus, const char *nome)
+static gboolean name_has_owner(GDBusConnection *bus, const char *nome)
 {
 	g_autoptr(GVariant) risposta = NULL;
 	gboolean c_e = FALSE;
@@ -237,7 +237,7 @@ static gboolean nome_ha_padrone(GDBusConnection *bus, const char *nome)
 	risposta = g_dbus_connection_call_sync(
 		bus, "org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus",
 		"NameHasOwner", g_variant_new("(s)", nome), G_VARIANT_TYPE("(b)"),
-		G_DBUS_CALL_FLAGS_NO_AUTO_START, ATTESA_NOME_MS, NULL, NULL);
+		G_DBUS_CALL_FLAGS_NO_AUTO_START, WAIT_NAME_MS, NULL, NULL);
 	if (!risposta)
 		return FALSE;
 	g_variant_get(risposta, "(b)", &c_e);
@@ -245,10 +245,10 @@ static gboolean nome_ha_padrone(GDBusConnection *bus, const char *nome)
 }
 
 /* A call to Mutter, without declaring the type of the answer. */
-static GVariant *chiedi_a_mutter(GDBusConnection *bus, const char *nome, const char *oggetto,
+static GVariant *ask_mutter(GDBusConnection *bus, const char *nome, const char *oggetto,
                                  const char *interfaccia, const char *metodo, GError **sbaglio)
 {
-	if (!nome_ha_padrone(bus, nome)) {
+	if (!name_has_owner(bus, nome)) {
 		/* ⛔⭐ AND THE ERROR IS `NAME_HAS_NO_OWNER`, not just any: the
 		 *     distinction between «not there» (4) and «could not look» (5) already exists
 		 *     in `sessione_stato()`, and it is recognised PRECISELY by this code.
@@ -265,11 +265,11 @@ static GVariant *chiedi_a_mutter(GDBusConnection *bus, const char *nome, const c
 		            nome);
 		return NULL;
 	}
-	/* ⛔ `ATTESA_SONDAGGIO_MS`, not `ATTESA_RISPOSTA_MS`: here we POLL, and a
+	/* ⛔ `WAIT_POLL_MS`, not `WAIT_RESPONSE_MS`: here we POLL, and a
 	 *    poll that waits five seconds is not a poll, it is a wait
 	 *    — see the box on the constant. */
 	return g_dbus_connection_call_sync(bus, nome, oggetto, interfaccia, metodo, NULL, NULL,
-	                                   G_DBUS_CALL_FLAGS_NO_AUTO_START, ATTESA_SONDAGGIO_MS,
+	                                   G_DBUS_CALL_FLAGS_NO_AUTO_START, WAIT_POLL_MS,
 	                                   NULL, sbaglio);
 }
 
@@ -281,8 +281,8 @@ static GVariant *chiedi_a_mutter(GDBusConnection *bus, const char *nome, const c
  *   (`/usr/local/bin:/usr/bin:/bin`), so parent and child give the same
  *   answer without having to pass it along.
  */
-static SessioneDesktop desktop_scelto;
-static const char *desktop_spiegato;
+static SessioneDesktop chosen_desktop;
+static const char *desktop_description;
 
 static void riconosci_desktop(void)
 {
@@ -292,28 +292,28 @@ static void riconosci_desktop(void)
 		g_autofree char *gnome = g_find_program_in_path("gnome-session");
 		g_autofree char *plasma = g_find_program_in_path("startplasma-wayland");
 		g_autofree char *xfce = g_find_program_in_path("xfce4-session");
-		g_autofree char *labwc = g_find_program_in_path(SESSIONE_PROCESSO_XFCE);
+		g_autofree char *labwc = g_find_program_in_path(SESSION_PROCESS_XFCE);
 		/* ⭐ PHASE 14 — always looked up, but it decides only AFTER XFCE: see the branch. */
-		g_autofree char *lxqt = g_find_program_in_path(SESSIONE_MARCATORE_LXQT);
+		g_autofree char *lxqt = g_find_program_in_path(SESSION_MARKER_LXQT);
 
 		if (plasma && !gnome) {
-			desktop_scelto = SESSIONE_DESKTOP_KDE;
-			desktop_spiegato = "KDE Plasma (startplasma-wayland is there, gnome-session is "
+			chosen_desktop = SESSION_DESKTOP_KDE;
+			desktop_description = "KDE Plasma (startplasma-wayland is there, gnome-session is "
 			                   "not)";
 		} else if (plasma && gnome) {
-			desktop_scelto = SESSIONE_DESKTOP_GNOME;
-			desktop_spiegato = "GNOME — ⚠ AMBIGUOUS: this machine has both GNOME and "
+			chosen_desktop = SESSION_DESKTOP_GNOME;
+			desktop_description = "GNOME — ⚠ AMBIGUOUS: this machine has both GNOME and "
 			                   "KDE, and GNOME wins.  Choosing among several desktops is not available "
 			                   "yet (DECISIONI.md §4.6-duodetricies, MASTERPLAN.md M5)";
 		} else if (gnome) {
-			desktop_scelto = SESSIONE_DESKTOP_GNOME;
-			desktop_spiegato = "GNOME (gnome-session is there)";
+			chosen_desktop = SESSION_DESKTOP_GNOME;
+			desktop_description = "GNOME (gnome-session is there)";
 		} else if (xfce) {
 			/* ⭐ PHASE 13.  The marker is `xfce4-session`, not `labwc`: see
 			 *    `sessione.h`.  `labwc` is a PRECONDITION, and its absence
 			 *    is said at once instead of letting a failed `exec` discover it. */
-			desktop_scelto = SESSIONE_DESKTOP_XFCE;
-			desktop_spiegato =
+			chosen_desktop = SESSIONE_DESKTOP_XFCE;
+			desktop_description =
 				labwc ? "XFCE (xfce4-session is there, and labwc to run it)"
 				      : "XFCE (xfce4-session is there) — ⛔ but labwc is NOT, and XFCE "
 				        "on Wayland does not bring a compositor of its own: the session cannot "
@@ -322,7 +322,7 @@ static void riconosci_desktop(void)
 			 *    is chosen, that is what the machine did yesterday, and it is SAID:
 			 *    the choice changes only the explanation, never the desktop. */
 			if (lxqt)
-				desktop_spiegato =
+				desktop_description =
 					"XFCE — ⚠ AMBIGUOUS: this machine has both XFCE and LXQt "
 					"(xfce4-session and lxqt-session), and XFCE wins.  Choosing among "
 					"several desktops is not available yet (DECISIONI.md "
@@ -330,8 +330,8 @@ static void riconosci_desktop(void)
 		} else if (lxqt) {
 			/* ⭐ PHASE 14.  Same discipline as XFCE: the marker is the
 			 *    SESSION, `labwc` the precondition, said at once. */
-			desktop_scelto = SESSIONE_DESKTOP_LXQT;
-			desktop_spiegato =
+			chosen_desktop = SESSIONE_DESKTOP_LXQT;
+			desktop_description =
 				labwc ? "LXQt (lxqt-session is there, and labwc to run it)"
 				      : "LXQt (lxqt-session is there) — ⛔ but labwc is NOT, and LXQt "
 				        "on Wayland does not bring a compositor of its own: the session cannot "
@@ -348,8 +348,8 @@ static void riconosci_desktop(void)
 			 *   machine without a desktop we used to try and fail badly,
 			 *   now we do not try and we say why.
 			 */
-			desktop_scelto = SESSIONE_DESKTOP_NESSUNO;
-			desktop_spiegato = "⛔ NO DESKTOP RECOGNISED — I cannot find "
+			chosen_desktop = SESSIONE_DESKTOP_NESSUNO;
+			desktop_description = "⛔ NO DESKTOP RECOGNISED — I cannot find "
 			                   "gnome-session, nor startplasma-wayland, nor "
 			                   "xfce4-session, nor lxqt-session: no graphical "
 			                   "session can "
@@ -362,18 +362,18 @@ static void riconosci_desktop(void)
 SessioneDesktop sessione_desktop(void)
 {
 	riconosci_desktop();
-	return desktop_scelto;
+	return chosen_desktop;
 }
 
 const char *sessione_desktop_spiega(void)
 {
 	riconosci_desktop();
-	return desktop_spiegato;
+	return desktop_description;
 }
 
 static gboolean e_kde(void)
 {
-	return sessione_desktop() == SESSIONE_DESKTOP_KDE;
+	return sessione_desktop() == SESSION_DESKTOP_KDE;
 }
 
 /*
@@ -531,7 +531,7 @@ bool sessione_su_wlroots(void)
 static const char *nome_desktop(void)
 {
 	switch (sessione_desktop()) {
-	case SESSIONE_DESKTOP_KDE:
+	case SESSION_DESKTOP_KDE:
 		return "Plasma";
 	case SESSIONE_DESKTOP_XFCE:
 		return "XFCE";
@@ -579,11 +579,11 @@ typedef struct {
 	char *riga;     /* "exec …", the start line */
 	char *desktop;  /* XDG_CURRENT_DESKTOP, already with the colons */
 	char *gestore;  /* gnome-session-manager@<nome>.service */
-} SessioneGnome;
+} GnomeSession;
 
 /* The session name from the argv of an `Exec`, or NULL if it does not launch
  * gnome-session. */
-static char *nome_da_exec(char **argv)
+static char *name_from_exec(char **argv)
 {
 	for (int i = 0; argv[i]; i++) {
 		g_autofree char *base = g_path_get_basename(argv[i]);
@@ -616,7 +616,7 @@ static gboolean c_e_il_file_session(const char *nome)
 }
 
 /* A candidate from the .desktop file, or NULL if it is not one. */
-static SessioneGnome *candidato(const char *percorso, const char *id)
+static GnomeSession *candidato(const char *percorso, const char *id)
 {
 	g_autoptr(GKeyFile) kf = g_key_file_new();
 	g_autofree char *exec = NULL;
@@ -625,13 +625,13 @@ static SessioneGnome *candidato(const char *percorso, const char *id)
 	g_auto(GStrv) argv = NULL;
 	g_auto(GStrv) nomi = NULL;
 	g_autoptr(GString) riga = g_string_new("exec");
-	SessioneGnome *s;
+	GnomeSession *s;
 	char *nome;
 
 	if (!g_key_file_load_from_file(kf, percorso, G_KEY_FILE_NONE, NULL) ||
 	    g_key_file_get_boolean(kf, G_KEY_FILE_DESKTOP_GROUP, "Hidden", NULL) ||
 	    !(exec = g_key_file_get_string(kf, G_KEY_FILE_DESKTOP_GROUP, "Exec", NULL)) ||
-	    !g_shell_parse_argv(exec, NULL, &argv, NULL) || !(nome = nome_da_exec(argv)))
+	    !g_shell_parse_argv(exec, NULL, &argv, NULL) || !(nome = name_from_exec(argv)))
 		return NULL;
 	prova = g_key_file_get_string(kf, G_KEY_FILE_DESKTOP_GROUP, "TryExec", NULL);
 	trovato = prova ? g_find_program_in_path(prova) : NULL;
@@ -650,7 +650,7 @@ static SessioneGnome *candidato(const char *percorso, const char *id)
 	}
 	nomi = g_key_file_get_string_list(kf, G_KEY_FILE_DESKTOP_GROUP, "DesktopNames", NULL,
 	                                  NULL);
-	s = g_new0(SessioneGnome, 1);
+	s = g_new0(GnomeSession, 1);
 	s->nome = nome;
 	s->id = g_strdup(id);
 	s->riga = g_string_free(g_steal_pointer(&riga), FALSE);
@@ -659,10 +659,10 @@ static SessioneGnome *candidato(const char *percorso, const char *id)
 	return s;
 }
 
-static const SessioneGnome *sessione_gnome(void)
+static const GnomeSession *sessione_gnome(void)
 {
 	static gsize fatto;
-	static SessioneGnome *scelta;
+	static GnomeSession *scelta;
 
 	if (g_once_init_enter(&fatto)) {
 		const char *const *dati = g_get_system_data_dirs();
@@ -683,7 +683,7 @@ static const SessioneGnome *sessione_gnome(void)
 			while (d && (f = g_dir_read_name(d))) {
 				g_autofree char *id = NULL;
 				g_autofree char *p = NULL;
-				SessioneGnome *s;
+				GnomeSession *s;
 
 				if (!g_str_has_suffix(f, ".desktop"))
 					continue;
@@ -697,15 +697,15 @@ static const SessioneGnome *sessione_gnome(void)
 			}
 		}
 		for (guint i = 0; i < tutti->len; i++) {
-			SessioneGnome *s = tutti->pdata[i];
+			GnomeSession *s = tutti->pdata[i];
 
 			g_string_append_printf(elenco, "%s%s (%s)", i ? ", " : "", s->id, s->nome);
 		}
 		/* alphabetical on the file name, like GDM's list */
 		for (guint i = 0; i + 1 < tutti->len; i++)
 			for (guint j = i + 1; j < tutti->len; j++)
-				if (strcmp(((SessioneGnome *) tutti->pdata[j])->id,
-				           ((SessioneGnome *) tutti->pdata[i])->id) < 0) {
+				if (strcmp(((GnomeSession *) tutti->pdata[j])->id,
+				           ((GnomeSession *) tutti->pdata[i])->id) < 0) {
 					gpointer t = tutti->pdata[i];
 
 					tutti->pdata[i] = tutti->pdata[j];
@@ -716,33 +716,33 @@ static const SessioneGnome *sessione_gnome(void)
 			perche = "the only one the machine offers";
 		}
 		for (guint i = 0; !scelta && os && i < tutti->len; i++)
-			if (strcmp(((SessioneGnome *) tutti->pdata[i])->nome, os) == 0) {
+			if (strcmp(((GnomeSession *) tutti->pdata[i])->nome, os) == 0) {
 				scelta = tutti->pdata[i];
 				perche = "it bears the distribution's name (ID of os-release)";
 			}
 		for (guint i = 0; !scelta && i < tutti->len; i++)
-			if (strcmp(((SessioneGnome *) tutti->pdata[i])->nome,
-			           SESSIONE_GNOME_RIPIEGO) == 0) {
+			if (strcmp(((GnomeSession *) tutti->pdata[i])->nome,
+			           SESSION_GNOME_FALLBACK) == 0) {
 				scelta = tutti->pdata[i];
-				perche = "it is «" SESSIONE_GNOME_RIPIEGO "», the upstream GDM default";
+				perche = "it is «" SESSION_GNOME_FALLBACK "», the upstream GDM default";
 			}
 		if (!scelta && tutti->len) {
 			scelta = tutti->pdata[0];
 			perche = "the first in alphabetical order, like upstream GDM";
 		}
 		if (!scelta) {
-			scelta = g_new0(SessioneGnome, 1);
-			scelta->nome = g_strdup(SESSIONE_GNOME_RIPIEGO);
-			scelta->id = g_strdup(SESSIONE_GNOME_RIPIEGO);
-			scelta->riga = g_strdup("exec gnome-session --session=" SESSIONE_GNOME_RIPIEGO);
+			scelta = g_new0(GnomeSession, 1);
+			scelta->nome = g_strdup(SESSION_GNOME_FALLBACK);
+			scelta->id = g_strdup(SESSION_GNOME_FALLBACK);
+			scelta->riga = g_strdup("exec gnome-session --session=" SESSION_GNOME_FALLBACK);
 			scelta->desktop = g_strdup("GNOME");
 			scelta->gestore =
-				g_strdup("gnome-session-manager@" SESSIONE_GNOME_RIPIEGO ".service");
+				g_strdup("gnome-session-manager@" SESSION_GNOME_FALLBACK ".service");
 			registro_dice(REG_SESSIONE,
 			              "⚠ D8: no wayland-sessions/*.desktop session launches "
 			              "gnome-session with an installed .session: DECLARED "
 			              "FALLBACK to «%s»",
-			              SESSIONE_GNOME_RIPIEGO);
+			              SESSION_GNOME_FALLBACK);
 		} else
 			registro_dice(REG_SESSIONE,
 			              "⭐ D8: the GNOME session is «%s» (%s.desktop): %s.  "
@@ -800,7 +800,7 @@ bool sessione_viva(void)
 	g_autoptr(GDBusConnection) bus = NULL;
 	g_autoptr(GVariant) risposta = NULL;
 
-	bus = sessione_bus(NULL);
+	bus = sess_bus(NULL);
 	if (!bus)
 		return false;
 
@@ -808,17 +808,17 @@ bool sessione_viva(void)
 	 *    compositor takes it when it starts), and the weakness is the same one
 	 *    declared in `sessione.h` — «alive» does not mean «ready». */
 	if (e_kde())
-		return nome_ha_padrone(bus, "org.kde.KWin");
+		return name_has_owner(bus, "org.kde.KWin");
 
 	/* ⭐ PHASE 13 — on XFCE the weak question is the session manager's name.
 	 *    `[M]` 20 Sep 2026: it appears on the USER bus, because we start `labwc`
 	 *    ourselves without `dbus-run-session` — that is exactly the bus that
-	 *    `sessione_bus()` already opens.  ⚠ And the weakness is the same declared for
+	 *    `sess_bus()` already opens.  ⚠ And the weakness is the same declared for
 	 *    the other two, with a wider margin: between the name and the USABLE
 	 *    session there are up to 8 s per priority group, and they are structural
 	 *    (`STARTUP_TIMEOUT_WAYLAND`, `STUDI.md` §xfce §9.4). */
 	if (e_xfce())
-		return nome_ha_padrone(bus, SESSIONE_BUS_XFCE);
+		return name_has_owner(bus, SESSION_BUS_XFCE);
 
 	/* ⭐ PHASE 14 — on LXQt, the same weak question: the name of `lxqt-session`
 	 *    on the user bus (labwc starts without `dbus-run-session`, as on XFCE).
@@ -829,7 +829,7 @@ bool sessione_viva(void)
 	 *   how long passes between the name and the panel, and whether in between capture
 	 *   on labwc fails and retries (as on XFCE) or does something else. */
 	if (e_lxqt())
-		return nome_ha_padrone(bus, SESSIONE_BUS_LXQT);
+		return name_has_owner(bus, SESSION_BUS_LXQT);
 
 	/*
 	 * ⛔ IT IS NOT ENOUGH THAT THE NAME IS TAKEN, for two different reasons, both
@@ -839,14 +839,14 @@ bool sessione_viva(void)
 	 *    of readiness.  A real method is called and we check that the answer
 	 *    ARRIVES — without interpreting it: only one thing matters here.
 	 */
-	risposta = chiedi_a_mutter(bus, "org.gnome.Mutter.DisplayConfig",
+	risposta = ask_mutter(bus, "org.gnome.Mutter.DisplayConfig",
 	                           "/org/gnome/Mutter/DisplayConfig",
 	                           "org.gnome.Mutter.DisplayConfig", "GetCurrentState", NULL);
 	return risposta != NULL;
 }
 
 /* ------------------------------------------------------------------------- */
-static void copia_in(char *dove, gsize quanto, const char *cosa)
+static void copy_in(char *dove, gsize quanto, const char *cosa)
 {
 	g_strlcpy(dove, cosa ? cosa : "", quanto);
 }
@@ -858,7 +858,7 @@ static void copia_in(char *dove, gsize quanto, const char *cosa)
  *    «zero monitors» and «could not look» — and the third will never disguise
  *    itself as the second.
  */
-static SessioneStato leggi_monitor(GVariant *risposta, uint32_t larghezza, uint32_t altezza,
+static SessioneStato read_monitor(GVariant *risposta, uint32_t larghezza, uint32_t altezza,
                                    SessioneMonitor *scelto)
 {
 	g_autoptr(GVariant) monitor = NULL;
@@ -874,7 +874,7 @@ static SessioneStato leggi_monitor(GVariant *risposta, uint32_t larghezza, uint3
 		              "read («%s» instead of «%s»): it is the PARSER that is broken, not the "
 		              "session — and this is not «zero monitors» (E8)",
 		              g_variant_get_type_string(risposta), TIPO_STATO);
-		return SESSIONE_NON_LETTA;
+		return SESSION_NOT_READ;
 	}
 
 	monitor = g_variant_get_child_value(risposta, 1);
@@ -894,7 +894,7 @@ static SessioneStato leggi_monitor(GVariant *risposta, uint32_t larghezza, uint3
 		registro_dice(REG_SESSIONE,
 		              "⛔ the GetCurrentState answer has no «layout-mode», "
 		              "which is always there: I did not read it right, and I do not say «zero monitors»");
-		return SESSIONE_NON_LETTA;
+		return SESSION_NOT_READ;
 	}
 
 	quanti = g_variant_n_children(monitor);
@@ -919,7 +919,7 @@ static SessioneStato leggi_monitor(GVariant *risposta, uint32_t larghezza, uint3
 	 * log is the only place there is: if it does not name them, nobody
 	 * names them.
 	 */
-	verdetto = (quanti == 1) ? SESSIONE_SANA : SESSIONE_SCELTO_DA_SE;
+	verdetto = (quanti == 1) ? SESSIONE_SANA : SESSION_SELF_CHOSEN;
 	if (quanti > 1)
 		registro_dice(REG_SESSIONE,
 		              "⛔ %zu monitors, and ONE had been requested: I list them all, "
@@ -931,15 +931,15 @@ static SessioneStato leggi_monitor(GVariant *risposta, uint32_t larghezza, uint3
 		g_autoptr(GVariant) nomi = g_variant_get_child_value(m, 0);
 		g_autoptr(GVariant) modi = g_variant_get_child_value(m, 1);
 		const char *connettore = NULL, *fornitore = NULL, *prodotto = NULL, *seriale = NULL;
-		gsize quanti_modi, k;
-		gboolean trovato_modo = FALSE;
+		gsize how_many_modes, k;
+		gboolean mode_found = FALSE;
 		gint32 ml = 0, ma = 0;
 		gdouble refresh = 0;
 
 		g_variant_get(nomi, "(&s&s&s&s)", &connettore, &fornitore, &prodotto, &seriale);
 
-		quanti_modi = g_variant_n_children(modi);
-		for (k = 0; k < quanti_modi; k++) {
+		how_many_modes = g_variant_n_children(modi);
+		for (k = 0; k < how_many_modes; k++) {
 			g_autoptr(GVariant) modo = g_variant_get_child_value(modi, k);
 			g_autoptr(GVariant) mprop = g_variant_get_child_value(modo, 6);
 			gboolean corrente = FALSE;
@@ -949,7 +949,7 @@ static SessioneStato leggi_monitor(GVariant *risposta, uint32_t larghezza, uint3
 			g_variant_get_child(modo, 1, "i", &ml);
 			g_variant_get_child(modo, 2, "i", &ma);
 			g_variant_get_child(modo, 3, "d", &refresh);
-			trovato_modo = TRUE;
+			mode_found = TRUE;
 			break;
 		}
 
@@ -957,13 +957,13 @@ static SessioneStato leggi_monitor(GVariant *risposta, uint32_t larghezza, uint3
 		              "monitor %zu/%zu: connector «%s» vendor «%s» product «%s» "
 		              "serial «%s» mode %s%dx%d@%.3f",
 		              i + 1, quanti, connettore, fornitore, prodotto, seriale,
-		              trovato_modo ? "" : "(none in use) ", ml, ma, refresh);
+		              mode_found ? "" : "(none in use) ", ml, ma, refresh);
 
 		if (i == 0 && scelto) {
-			copia_in(scelto->connettore, sizeof scelto->connettore, connettore);
-			copia_in(scelto->fornitore, sizeof scelto->fornitore, fornitore);
-			copia_in(scelto->prodotto, sizeof scelto->prodotto, prodotto);
-			copia_in(scelto->seriale, sizeof scelto->seriale, seriale);
+			copy_in(scelto->connettore, sizeof scelto->connettore, connettore);
+			copy_in(scelto->fornitore, sizeof scelto->fornitore, fornitore);
+			copy_in(scelto->prodotto, sizeof scelto->prodotto, prodotto);
+			copy_in(scelto->seriale, sizeof scelto->seriale, seriale);
 			scelto->larghezza = (uint32_t) ml;
 			scelto->altezza = (uint32_t) ma;
 			scelto->refresh = refresh;
@@ -978,29 +978,29 @@ static SessioneStato leggi_monitor(GVariant *risposta, uint32_t larghezza, uint3
 		 *    1920x1080@60**, and whoever had looked at the resolution would have
 		 *    told nothing apart.
 		 */
-		if (g_strcmp0(prodotto, SESSIONE_PRODOTTO_CHIESTO) != 0) {
+		if (g_strcmp0(prodotto, SESSION_REQUESTED_PRODUCT) != 0) {
 			registro_dice(REG_SESSIONE,
 			              "⛔ the monitor is called «%s» and not «%s»: it is not the one "
 			              "I asked for — someone else chose it (E2)",
-			              prodotto, SESSIONE_PRODOTTO_CHIESTO);
-			verdetto = SESSIONE_SCELTO_DA_SE;
-		} else if (!trovato_modo) {
+			              prodotto, SESSION_REQUESTED_PRODUCT);
+			verdetto = SESSION_SELF_CHOSEN;
+		} else if (!mode_found) {
 			registro_dice(REG_SESSIONE,
 			              "⛔ «%s» has no mode IN USE: there is a monitor and it has "
 			              "no size, so it does not have the requested size",
 			              connettore);
-			verdetto = SESSIONE_MISURA_ALTRA;
+			verdetto = SESSION_WRONG_SIZE;
 		} else if ((uint32_t) ml != larghezza || (uint32_t) ma != altezza) {
 			registro_dice(REG_SESSIONE,
 			              "⛔ the monitor is %dx%d and I had asked for one %ux%u",
 			              ml, ma, larghezza, altezza);
-			verdetto = SESSIONE_MISURA_ALTRA;
+			verdetto = SESSION_WRONG_SIZE;
 		}
 	}
 
 	if (verdetto == SESSIONE_SANA)
 		registro_dice(REG_SESSIONE, "⭐ one monitor «%s» «%s», %ux%u: there is something to capture",
-		              scelto ? scelto->connettore : "?", SESSIONE_PRODOTTO_CHIESTO, larghezza,
+		              scelto ? scelto->connettore : "?", SESSION_REQUESTED_PRODUCT, larghezza,
 		              altezza);
 	return verdetto;
 }
@@ -1014,13 +1014,13 @@ SessioneStato sessione_stato(uint32_t larghezza, uint32_t altezza, SessioneMonit
 	if (scelto)
 		memset(scelto, 0, sizeof *scelto);
 
-	bus = sessione_bus(&sbaglio);
+	bus = sess_bus(&sbaglio);
 	if (!bus) {
 		registro_dice(REG_SESSIONE,
 		              "⛔ I do not even have the session bus (%s): it is not «the session "
 		              "is not there», it is «I could not look»",
 		              sbaglio ? sbaglio->message : "no reason given");
-		return SESSIONE_NON_LETTA;
+		return SESSION_NOT_READ;
 	}
 
 	/*
@@ -1033,10 +1033,10 @@ SessioneStato sessione_stato(uint32_t larghezza, uint32_t altezza, SessioneMonit
 	 *   compositor (it needs a Wayland client, and that arrives with capture).
 	 */
 	if (e_kde()) {
-		if (!nome_ha_padrone(bus, "org.kde.KWin")) {
+		if (!name_has_owner(bus, "org.kde.KWin")) {
 			registro_dice(REG_SESSIONE,
 			              "no KWin on the bus: the Plasma session is not there");
-			return SESSIONE_MORTA;
+			return SESSION_DEAD;
 		}
 		registro_dettaglio(REG_SESSIONE,
 		                   "KWin is on the bus: the Plasma session is alive, with the drop-in's "
@@ -1053,11 +1053,11 @@ SessioneStato sessione_stato(uint32_t larghezza, uint32_t altezza, SessioneMonit
 	 *    means «it is there», not «of the right size», and whoever reads must know it.
 	 */
 	if (e_xfce()) {
-		if (!nome_ha_padrone(bus, SESSIONE_BUS_XFCE)) {
+		if (!name_has_owner(bus, SESSION_BUS_XFCE)) {
 			registro_dice(REG_SESSIONE,
-			              "no " SESSIONE_BUS_XFCE " on the bus: the XFCE session "
+			              "no " SESSION_BUS_XFCE " on the bus: the XFCE session "
 			              "is not there");
-			return SESSIONE_MORTA;
+			return SESSION_DEAD;
 		}
 		registro_dettaglio(REG_SESSIONE,
 		                   "the XFCE session manager is on the bus: the session is "
@@ -1073,11 +1073,11 @@ SessioneStato sessione_stato(uint32_t larghezza, uint32_t altezza, SessioneMonit
 	 *   starts too early, the right question is `listModules()` or the panel's
 	 *   signal — not a timed wait. */
 	if (e_lxqt()) {
-		if (!nome_ha_padrone(bus, SESSIONE_BUS_LXQT)) {
+		if (!name_has_owner(bus, SESSION_BUS_LXQT)) {
 			registro_dice(REG_SESSIONE,
-			              "no " SESSIONE_BUS_LXQT " on the bus: the LXQt session "
+			              "no " SESSION_BUS_LXQT " on the bus: the LXQt session "
 			              "is not there");
-			return SESSIONE_MORTA;
+			return SESSION_DEAD;
 		}
 		registro_dettaglio(REG_SESSIONE,
 		                   "lxqt-session is on the bus: the session is alive — ⚠ and its "
@@ -1086,7 +1086,7 @@ SessioneStato sessione_stato(uint32_t larghezza, uint32_t altezza, SessioneMonit
 		return SESSIONE_SANA;
 	}
 
-	risposta = chiedi_a_mutter(bus, "org.gnome.Mutter.DisplayConfig",
+	risposta = ask_mutter(bus, "org.gnome.Mutter.DisplayConfig",
 	                           "/org/gnome/Mutter/DisplayConfig",
 	                           "org.gnome.Mutter.DisplayConfig", "GetCurrentState", &sbaglio);
 	if (!risposta) {
@@ -1103,16 +1103,16 @@ SessioneStato sessione_stato(uint32_t larghezza, uint32_t altezza, SessioneMonit
 		if (g_error_matches(sbaglio, G_DBUS_ERROR, G_DBUS_ERROR_SERVICE_UNKNOWN) ||
 		    g_error_matches(sbaglio, G_DBUS_ERROR, G_DBUS_ERROR_NAME_HAS_NO_OWNER)) {
 			registro_dice(REG_SESSIONE, "no compositor on the bus: the session is not there");
-			return SESSIONE_MORTA;
+			return SESSION_DEAD;
 		}
 		registro_dice(REG_SESSIONE,
 		              "⛔ GetCurrentState did not answer (%s): I could not look, "
 		              "and this is NOT «the session is not there»",
 		              sbaglio ? sbaglio->message : "no reason given");
-		return SESSIONE_NON_LETTA;
+		return SESSION_NOT_READ;
 	}
 
-	return leggi_monitor(risposta, larghezza, altezza, scelto);
+	return read_monitor(risposta, larghezza, altezza, scelto);
 }
 
 /* ------------------------------------------------------------------------- */
@@ -1132,7 +1132,7 @@ SessioneStato sessione_stato(uint32_t larghezza, uint32_t altezza, SessioneMonit
  *    once» is not enough: it is checked at every start, asking the LIBRARY
  *    instead of the name.
  */
-static gboolean locale_esiste(const char *nome)
+static gboolean local_exists(const char *nome)
 {
 	locale_t prova = newlocale(LC_ALL_MASK, nome, (locale_t) 0);
 
@@ -1142,7 +1142,7 @@ static gboolean locale_esiste(const char *nome)
 	return TRUE;
 }
 
-static const char *locale_utf8(void)
+static const char *local_utf8(void)
 {
 	/* Debian generates `C.utf8`; glibc also accepts the form with the dash, but not
 	 * on all versions: both are tried instead of betting. */
@@ -1154,7 +1154,7 @@ static const char *locale_utf8(void)
 		g_autofree char *maiuscolo = g_ascii_strup(lingua, -1);
 
 		if (strstr(maiuscolo, "UTF-8") || strstr(maiuscolo, "UTF8")) {
-			if (locale_esiste(lingua))
+			if (local_exists(lingua))
 				return lingua;
 			registro_dice(REG_SESSIONE,
 			              "⚠ the locale «%s» is UTF-8 by name but is NOT generated on "
@@ -1168,7 +1168,7 @@ static const char *locale_utf8(void)
 	}
 
 	for (i = 0; i < G_N_ELEMENTS(RIPIEGHI); i++)
-		if (locale_esiste(RIPIEGHI[i])) {
+		if (local_exists(RIPIEGHI[i])) {
 			registro_dice(REG_SESSIONE,
 			              "declared fallback: the session will start with the locale «%s»",
 			              RIPIEGHI[i]);
@@ -1186,7 +1186,7 @@ static const char *locale_utf8(void)
 /*
  * ⭐⭐ PHASE 12 — THE CURE FOR THE DOUBLE POINTER: THE KDE CURSOR BECOMES
  *      TRANSPARENT.  ⛔ Brought back from v1 (`fondamenta/remotix-c/src/sessione.c`,
- *      `scrivi_tema_cursore` + `scrivi_cursore_vuoto`), measured on 8 August
+ *      `write_cursor_theme` + `scrivi_cursore_vuoto`), measured on 8 August
  *      2026 (`STUDI.md` §kde) and left out of the move to v2: `[M]` 19 Sep
  *      2026, the user's test — «the pointer's tail».
  *
@@ -1214,10 +1214,10 @@ static const char *locale_utf8(void)
  * ⚠ The NAME stays `remotix-invisibile`: it is the one the environment below
  *   has always declared, and changing it cures nothing.
  */
-#define TEMA_CURSORE FORMA_TEMA
+#define THEME_CURSOR FORMA_TEMA
 
 /* Returns the folder to put in `XCURSOR_PATH`, or NULL (said in the log). */
-static char *scrivi_tema_cursore(const char *runtime)
+static char *write_cursor_theme(const char *runtime)
 {
 	if (!forma_tema_scrivi(runtime)) {
 		registro_dice(REG_SESSIONE,
@@ -1229,7 +1229,7 @@ static char *scrivi_tema_cursore(const char *runtime)
 	registro_dice(REG_SESSIONE,
 	              "⭐ %s: theme «%s» encoded — the compositor's cursor is one pixel, "
 	              "and its real shape is drawn by whoever watches",
-	              nome_desktop(), TEMA_CURSORE);
+	              nome_desktop(), THEME_CURSOR);
 	return g_build_filename(runtime, "remotix", "icons", NULL);
 }
 
@@ -1404,7 +1404,7 @@ static char *scrivi_regole_menu_kde(const char *runtime)
  * ⚠ THE PRICES, declared:
  *   · whatever the USER changes from the remote desktop (the wallpaper, a
  *     shortcut) also ends up in the session database, and is lost when the
- *     session is reborn (`sessione_dconf_azzera()`) or the machine reboots;
+ *     session is reborn (`session_dconf_reset()`) or the machine reboots;
  *   · the MANDATORY profile (`/run/dconf/user/<uid>`) wins over
  *     `DCONF_PROFILE`: if it exists, the cure cannot hold, and it is said;
  *   · the variable stays in the user manager's environment as long as it lives
@@ -1412,10 +1412,10 @@ static char *scrivi_regole_menu_kde(const char *runtime)
  *     A login at the monitor that shared THAT manager would inherit it —
  *     as it already inherits the `--headless` drop-in of `scrivi_dropin()`.
  */
-#define DCONF_SESSIONE_SORGENTE "service-db:shm/remotix"
-#define DCONF_SESSIONE_OGGETTO "/ca/desrt/dconf/shm/remotix"
+#define DCONF_SESSION_SOURCE "service-db:shm/remotix"
+#define DCONF_SESSION_OBJECT "/ca/desrt/dconf/shm/remotix"
 
-static char *dconf_profilo_percorso(void)
+static char *dconf_profile_path(void)
 {
 	const char *runtime = g_getenv("XDG_RUNTIME_DIR");
 
@@ -1424,13 +1424,13 @@ static char *dconf_profilo_percorso(void)
 	return g_build_filename(runtime, "remotix", "dconf", "profilo", NULL);
 }
 
-static gboolean dconf_in_vigore;
+static gboolean dconf_in_effect;
 
 /* The profile dconf would use WITHOUT us, in the order of
  * `dconf_engine_profile_open()`: `DCONF_PROFILE` (if it is not ours), the
  * runtime one, `user` in `/etc` and in the `XDG_DATA_DIRS`.  NULL = none, that is
  * dconf's default, «user-db:user». */
-static char *dconf_profilo_di_base(const char *nostro)
+static char *dconf_base_profile(const char *nostro)
 {
 	const char *amb = g_getenv("DCONF_PROFILE");
 	g_autoptr(GPtrArray) candidati = g_ptr_array_new_with_free_func(g_free);
@@ -1464,7 +1464,7 @@ static char *dconf_profilo_di_base(const char *nostro)
 
 bool sessione_dconf_prepara(void)
 {
-	g_autofree char *percorso = dconf_profilo_percorso();
+	g_autofree char *percorso = dconf_profile_path();
 	g_autofree char *cartella = NULL;
 	g_autofree char *obbligatorio = NULL;
 	g_autofree char *base = NULL;
@@ -1476,7 +1476,7 @@ bool sessione_dconf_prepara(void)
 	/* ⚠ GNOME only: the other desktops do not read their settings from
 	 *   dconf, and set the layout by other roads (the session's kxkbrc
 	 *   on KDE, the virtual keyboard's keymap on wlroots). */
-	if (sessione_desktop() != SESSIONE_DESKTOP_GNOME)
+	if (sessione_desktop() != SESSION_DESKTOP_GNOME)
 		return false;
 	if (!percorso) {
 		registro_dice(REG_SESSIONE,
@@ -1498,13 +1498,13 @@ bool sessione_dconf_prepara(void)
 	                "# REMOTIX (D-015): the dconf of the remote session.  On top an\n"
 	                "# in-memory database that takes EVERY write; below, read-only,\n"
 	                "# the user's and the system databases.\n"
-	                DCONF_SESSIONE_SORGENTE "\n");
-	base = dconf_profilo_di_base(percorso);
+	                DCONF_SESSION_SOURCE "\n");
+	base = dconf_base_profile(percorso);
 	righe = g_strsplit(base ? base : "", "\n", -1);
 	for (int i = 0; righe[i]; i++) {
 		const char *r = g_strstrip(righe[i]);
 
-		if (!*r || r[0] == '#' || g_strcmp0(r, DCONF_SESSIONE_SORGENTE) == 0)
+		if (!*r || r[0] == '#' || g_strcmp0(r, DCONF_SESSION_SOURCE) == 0)
 			continue;
 		if (g_str_has_prefix(r, "user-db:") || g_str_has_prefix(r, "system-db:") ||
 		    g_str_has_prefix(r, "service-db:") || g_str_has_prefix(r, "file-db:")) {
@@ -1527,20 +1527,20 @@ bool sessione_dconf_prepara(void)
 	/* ⛔ Before any `GSettings` of the child: the dconf engine reads
 	 *    `DCONF_PROFILE` only once, when it is born. */
 	g_setenv("DCONF_PROFILE", percorso, TRUE);
-	dconf_in_vigore = TRUE;
+	dconf_in_effect = TRUE;
 	registro_dice(REG_SESSIONE,
-	              "⭐ D-015: SESSION dconf in %s (" DCONF_SESSIONE_SORGENTE
+	              "⭐ D-015: SESSION dconf in %s (" DCONF_SESSION_SOURCE
 	              " on top, %s below read-only): what the session writes "
 	              "does NOT touch the user's settings",
 	              percorso, sorgenti ? "the system profile" : "user-db:user");
 	return true;
 }
 
-bool sessione_dconf_di_sessione(void)
+bool session_dconf_of_session(void)
 {
-	g_autofree char *percorso = dconf_profilo_percorso();
+	g_autofree char *percorso = dconf_profile_path();
 
-	return dconf_in_vigore && percorso &&
+	return dconf_in_effect && percorso &&
 	       g_strcmp0(g_getenv("DCONF_PROFILE"), percorso) == 0 &&
 	       g_file_test(percorso, G_FILE_TEST_EXISTS);
 }
@@ -1555,10 +1555,10 @@ bool sessione_dconf_di_sessione(void)
  *    `a{smv}` (`dconf_changeset_serialise`); the writer notifies the readers
  *    (`Notify`), so the Shell and the `gsd-*` see the change at once.
  */
-static gboolean dconf_cambia(const char *oggetto, const char *percorso, GVariant *valore,
+static gboolean dconf_change(const char *oggetto, const char *percorso, GVariant *valore,
                              GError **sbaglio)
 {
-	g_autoptr(GDBusConnection) bus = sessione_bus(sbaglio);
+	g_autoptr(GDBusConnection) bus = sess_bus(sbaglio);
 	g_autoptr(GVariant) insieme = NULL;
 	g_autoptr(GVariant) risposta = NULL;
 	GVariantBuilder b;
@@ -1584,13 +1584,13 @@ static gboolean dconf_cambia(const char *oggetto, const char *percorso, GVariant
  *    what the previous session (or its client) had left there.
  *    It is `dconf reset -f /` said by hand, so as not to depend on `dconf-cli`.
  */
-static void sessione_dconf_azzera(void)
+static void session_dconf_reset(void)
 {
 	g_autoptr(GError) sbaglio = NULL;
 
-	if (!sessione_dconf_di_sessione())
+	if (!session_dconf_of_session())
 		return;
-	if (dconf_cambia(DCONF_SESSIONE_OGGETTO, "/", NULL, &sbaglio))
+	if (dconf_change(DCONF_SESSION_OBJECT, "/", NULL, &sbaglio))
 		registro_dice(REG_SESSIONE,
 		              "⭐ D-015: session dconf EMPTIED — the session is born from the "
 		              "user's current settings, plus ours");
@@ -1609,14 +1609,14 @@ static void sessione_dconf_azzera(void)
  *    standby lives here, and not in the user's files.  NULL without
  *    `XDG_RUNTIME_DIR`.
  */
-static char *lxqt_cartella_config_sessione(void)
+static char *lxqt_session_config_folder(void)
 {
 	const char *runtime = g_getenv("XDG_RUNTIME_DIR");
 
 	return runtime && *runtime ? g_build_filename(runtime, "remotix", "xdg-lxqt", NULL) : NULL;
 }
 
-static char *lxqt_cartella_dati_sessione(void)
+static char *lxqt_session_data_folder(void)
 {
 	const char *runtime = g_getenv("XDG_RUNTIME_DIR");
 
@@ -1640,7 +1640,7 @@ static char *lxqt_cartella_dati_sessione(void)
  * Returns the folder to put in `XDG_CONFIG_DIRS`, or NULL (said: the
  * session is born anyway, without the cure).
  */
-static char *scrivi_config_labwc_xfce(const char *runtime)
+static char *write_config_labwc_xfce(const char *runtime)
 {
 	g_autofree char *cartella = NULL;
 	g_autofree char *sotto = NULL;
@@ -1688,7 +1688,7 @@ static char **componi_ambiente(void)
 	GPtrArray *ambiente = g_ptr_array_new_with_free_func(g_free);
 	const char *runtime = g_getenv("XDG_RUNTIME_DIR");
 	const char *bus = g_getenv("DBUS_SESSION_BUS_ADDRESS");
-	g_autofree char *bus_dedotto = NULL;
+	g_autofree char *bus_inferred = NULL;
 
 	if (!runtime || !*runtime) {
 		registro_dice(REG_SESSIONE,
@@ -1700,8 +1700,8 @@ static char **componi_ambiente(void)
 		/* The session bus conventionally lives in there; deducing it is better
 		 * than giving up, because an environment lacking the variable — a systemd
 		 * unit, for example — is entirely normal. */
-		bus_dedotto = g_strdup_printf("unix:path=%s/bus", runtime);
-		bus = bus_dedotto;
+		bus_inferred = g_strdup_printf("unix:path=%s/bus", runtime);
+		bus = bus_inferred;
 		registro_dice(REG_SESSIONE, "DBUS_SESSION_BUS_ADDRESS missing: using %s", bus);
 	}
 
@@ -1725,7 +1725,7 @@ static char **componi_ambiente(void)
 	 */
 	if (e_kde()) {
 		g_autofree char *regole = scrivi_regole_menu_kde(runtime);
-		g_autofree char *icone = scrivi_tema_cursore(runtime);
+		g_autofree char *icone = write_cursor_theme(runtime);
 
 		g_ptr_array_add(ambiente, g_strdup("XDG_MENU_PREFIX=plasma-"));
 		/* ⚠ IN FRONT of `/etc/xdg`, not in its place: from there comes
@@ -1741,7 +1741,7 @@ static char **componi_ambiente(void)
 		 *    search looks at — with the system folders at the end, so as not to
 		 *    take the real themes away from whoever looks for them for other reasons. */
 		if (icone) {
-			g_ptr_array_add(ambiente, g_strdup("XCURSOR_THEME=" TEMA_CURSORE));
+			g_ptr_array_add(ambiente, g_strdup("XCURSOR_THEME=" THEME_CURSOR));
 			g_ptr_array_add(ambiente, g_strdup("XCURSOR_SIZE=24"));
 			g_ptr_array_add(ambiente,
 			                g_strdup_printf("XCURSOR_PATH=%s:%s", icone,
@@ -1769,7 +1769,7 @@ static char **componi_ambiente(void)
 	 *      in two separate branches, and the XFCE branch is the one from before.
 	 */
 	if (e_xfce() || e_lxqt()) {
-		g_autofree char *icone = scrivi_tema_cursore(runtime);
+		g_autofree char *icone = write_cursor_theme(runtime);
 
 		if (e_xfce()) {
 			/* ⛔ BARE and uppercase, without suffixes: labwc would put
@@ -1786,7 +1786,7 @@ static char **componi_ambiente(void)
 			 *    `labwc/rc.xml`, so for every other program nothing
 			 *    changes. */
 			{
-				g_autofree char *labwc_cfg = scrivi_config_labwc_xfce(runtime);
+				g_autofree char *labwc_cfg = write_config_labwc_xfce(runtime);
 				const char *prima = g_getenv("XDG_CONFIG_DIRS");
 
 				if (labwc_cfg)
@@ -1829,8 +1829,8 @@ static char **componi_ambiente(void)
 			 *    lives there, not in the user's files.  ⚠ Only `~/.config` stays before it,
 			 *    that is the user — who wins, and that is fine. */
 			{
-				g_autofree char *cfg = lxqt_cartella_config_sessione();
-				g_autofree char *dati = lxqt_cartella_dati_sessione();
+				g_autofree char *cfg = lxqt_session_config_folder();
+				g_autofree char *dati = lxqt_session_data_folder();
 				const char *dati_prima = g_getenv("XDG_DATA_DIRS");
 
 				g_ptr_array_add(ambiente,
@@ -1936,7 +1936,7 @@ static char **componi_ambiente(void)
 		 * theme must BE THERE: with an empty theme wlroots falls back to a built-in,
 		 * VISIBLE one, which is the opposite of what we wanted. */
 		if (icone) {
-			g_ptr_array_add(ambiente, g_strdup("XCURSOR_THEME=" TEMA_CURSORE));
+			g_ptr_array_add(ambiente, g_strdup("XCURSOR_THEME=" THEME_CURSOR));
 			g_ptr_array_add(ambiente, g_strdup("XCURSOR_SIZE=24"));
 			g_ptr_array_add(ambiente,
 			                g_strdup_printf("XCURSOR_PATH=%s:%s", icone,
@@ -1979,8 +1979,8 @@ static char **componi_ambiente(void)
 	/* ⭐ PHASE 15, D-015 — the session dconf: `gnome-session` exports it
 	 *    to the user manager, and the Shell and the `gsd-*` inherit it (the box
 	 *    above `sessione_dconf_prepara()`). */
-	if (sessione_dconf_di_sessione()) {
-		g_autofree char *profilo = dconf_profilo_percorso();
+	if (session_dconf_of_session()) {
+		g_autofree char *profilo = dconf_profile_path();
 
 		g_ptr_array_add(ambiente, g_strdup_printf("DCONF_PROFILE=%s", profilo));
 	} else
@@ -2021,7 +2021,7 @@ la_coda:
 			              "⚠ D-022: the user has no shell in passwd — the session "
 			              "is born without `SHELL`, and qterminal will fall back to /bin/sh");
 	}
-	g_ptr_array_add(ambiente, g_strdup_printf("LANG=%s", locale_utf8()));
+	g_ptr_array_add(ambiente, g_strdup_printf("LANG=%s", local_utf8()));
 	g_ptr_array_add(ambiente, g_strdup_printf("HOME=%s", g_get_home_dir()));
 	g_ptr_array_add(ambiente, g_strdup_printf("USER=%s", g_get_user_name()));
 	g_ptr_array_add(ambiente, g_strdup_printf("PATH=%s", g_getenv("PATH") ?: "/usr/bin:/bin"));
@@ -2099,12 +2099,12 @@ static char *chiedi(char **argv)
 static char *unita_shell(void)
 {
 	char *argv[] = { "systemctl", "--user", "show", "-p", "FragmentPath", "--value",
-		         SESSIONE_UNITA_SHELL_48, NULL };
+		         SESSION_UNIT_SHELL_48, NULL };
 	g_autofree char *frammento = chiedi(argv);
 	g_autofree char *bersaglio = NULL;
 	g_autofree char *richieste = NULL;
 	g_auto(GStrv) voci = NULL;
-	char *chiedi_bersaglio[] = { "systemctl", "--user", "show", "-p", "Requires", "--value",
+	char *ask_target[] = { "systemctl", "--user", "show", "-p", "Requires", "--value",
 		                     NULL, NULL };
 
 	if (!frammento) {
@@ -2113,22 +2113,22 @@ static char *unita_shell(void)
 		return NULL;
 	}
 	g_strstrip(frammento);
-	if (g_str_has_suffix(frammento, "/" SESSIONE_UNITA_SHELL_48))
-		return g_strdup(SESSIONE_UNITA_SHELL_48);
-	if (g_str_has_suffix(frammento, "/" SESSIONE_UNITA_SHELL_MODELLO)) {
+	if (g_str_has_suffix(frammento, "/" SESSION_UNIT_SHELL_48))
+		return g_strdup(SESSION_UNIT_SHELL_48);
+	if (g_str_has_suffix(frammento, "/" SESSION_UNIT_SHELL_MODEL)) {
 		/* ⭐ D8: the instance is asked for by the SESSION (`gnome` ⇒ `@user`, `ubuntu`
 		 *    ⇒ `@ubuntu`), and it is read from its target, drop-ins included. */
 		bersaglio = g_strdup_printf("gnome-session@%s.target", sessione_gnome()->nome);
-		chiedi_bersaglio[6] = bersaglio;
-		richieste = chiedi(chiedi_bersaglio);
+		ask_target[6] = bersaglio;
+		richieste = chiedi(ask_target);
 		voci = richieste ? g_strsplit_set(g_strstrip(richieste), " \t\n", -1) : NULL;
 		for (int i = 0; voci && voci[i]; i++)
 			if (g_str_has_prefix(voci[i], "org.gnome.Shell@") &&
 			    g_str_has_suffix(voci[i], ".service") &&
-			    strcmp(voci[i], SESSIONE_UNITA_SHELL_MODELLO) != 0)
+			    strcmp(voci[i], SESSION_UNIT_SHELL_MODEL) != 0)
 				return g_strdup(voci[i]);
 		registro_dice(REG_SESSIONE,
-		              "⛔ GNOME 50: the Shell is the template " SESSIONE_UNITA_SHELL_MODELLO
+		              "⛔ GNOME 50: the Shell is the template " SESSION_UNIT_SHELL_MODEL
 		              ", but %s does not ask for any instance of it (Requires: «%s»): I do not know "
 		              "which Shell the session will start, and I do not bet",
 		              bersaglio, richieste ? richieste : "(no answer)");
@@ -2136,9 +2136,9 @@ static char *unita_shell(void)
 	}
 	registro_dice(REG_SESSIONE,
 	              "⛔ I do not recognise the Shell unit: the manager loads «%s» from «%s», "
-	              "and I only know " SESSIONE_UNITA_SHELL_48 " (GNOME ≤ 49) and the "
-	              "template " SESSIONE_UNITA_SHELL_MODELLO " (GNOME 50)",
-	              SESSIONE_UNITA_SHELL_48, *frammento ? frammento : "(nothing)");
+	              "and I only know " SESSION_UNIT_SHELL_48 " (GNOME ≤ 49) and the "
+	              "template " SESSION_UNIT_SHELL_MODEL " (GNOME 50)",
+	              SESSION_UNIT_SHELL_48, *frammento ? frammento : "(nothing)");
 	return NULL;
 }
 
@@ -2220,7 +2220,7 @@ static gboolean scrivi_dropin(uint32_t larghezza, uint32_t altezza)
 	/* ⭐ PHASE 17: on GNOME the unit is chosen from what is installed, and
 	 *    THE SAME one is re-read below (`mostra`) — never a fixed name on one
 	 *    side and the other on the other. */
-	unita = kde ? g_strdup(SESSIONE_UNITA_KWIN) : unita_shell();
+	unita = kde ? g_strdup(SESSION_UNIT_KWIN) : unita_shell();
 	if (!unita)
 		return FALSE;
 	mostra[6] = unita;
@@ -2228,9 +2228,9 @@ static gboolean scrivi_dropin(uint32_t larghezza, uint32_t altezza)
 	/* ⛔ `<instance>.d/`, never `org.gnome.Shell@.service.d/`: the template's
 	 *    folder would also apply to GDM's Shell. */
 	{
-		g_autofree char *nome_cartella = g_strconcat(unita, ".d", NULL);
+		g_autofree char *folder_name = g_strconcat(unita, ".d", NULL);
 
-		cartella = g_build_filename(runtime, "systemd", "user.control", nome_cartella,
+		cartella = g_build_filename(runtime, "systemd", "user.control", folder_name,
 		                            NULL);
 	}
 	percorso = g_build_filename(cartella, "zz-remotix-monitor.conf", NULL);
@@ -2325,7 +2325,7 @@ static gboolean scrivi_dropin(uint32_t larghezza, uint32_t altezza)
 	                            "ExecStart=\n"
 	                            "ExecStart=%s --headless --no-x11%s\n",
 	                            shell,
-	                            strcmp(unita, SESSIONE_UNITA_SHELL_48) != 0 ? " --mode=%i"
+	                            strcmp(unita, SESSION_UNIT_SHELL_48) != 0 ? " --mode=%i"
 	                                                                        : "");
 	(void) larghezza;
 	(void) altezza;
@@ -2442,7 +2442,7 @@ scrivi:
  *
  * Returns the folder, or NULL (said in the log).
  */
-static char *scrivi_config_labwc_lxqt(const char *runtime)
+static char *write_config_labwc_lxqt(const char *runtime)
 {
 	g_autofree char *cartella = NULL;
 	g_autofree char *rc = NULL;
@@ -2596,7 +2596,7 @@ static char *primario_misurato(const char *desktop, const char *primario, uint32
  *   a log that gets lost is worth more than a desktop that does not start
  *   (`CODER.md` §4.2).  NULL only if not even that exists.
  */
-static gboolean cartella_nostra(const char *cartella)
+static gboolean is_our_dir(const char *cartella)
 {
 	struct stat st;
 
@@ -2605,7 +2605,7 @@ static gboolean cartella_nostra(const char *cartella)
 	return S_ISDIR(st.st_mode) && st.st_uid == getuid() && (st.st_mode & 022) == 0;
 }
 
-static gboolean file_nostro(const char *percorso)
+static gboolean our_file(const char *percorso)
 {
 	struct stat st;
 	int fd = open(percorso, O_WRONLY | O_CREAT | O_APPEND | O_NOFOLLOW | O_CLOEXEC, 0600);
@@ -2624,13 +2624,13 @@ static char *registro_sessione_percorso(void)
 	g_autofree char *percorso = g_build_filename(cartella, "sessione.log", NULL);
 	const char *runtime = g_getenv("XDG_RUNTIME_DIR");
 
-	if (cartella_nostra(cartella) && file_nostro(percorso))
+	if (is_our_dir(cartella) && our_file(percorso))
 		return g_steal_pointer(&percorso);
 
 	if (runtime && *runtime) {
 		g_autofree char *ripiego = g_build_filename(runtime, "remotix-sessione.log", NULL);
 
-		if (file_nostro(ripiego)) {
+		if (our_file(ripiego)) {
 			registro_dice(REG_SESSIONE,
 			              "⚠ I cannot write the session log in %s "
 			              "(folder or file not mine, or not creatable): DECLARED fallback "
@@ -2664,34 +2664,34 @@ static gboolean avvia(uint32_t larghezza, uint32_t altezza)
 	const char *comando = sessione_gnome()->riga; /* D8 */
 	/* ⭐ PHASE 14 — the LXQt line is composed (the `-C` folder is under
 	 *    `XDG_RUNTIME_DIR`): it lives here, and `comando` points to it. */
-	g_autofree char *comando_lxqt = NULL;
-	g_autofree char *comando_xfce = NULL;
+	g_autofree char *lxqt_command = NULL;
+	g_autofree char *xfce_command = NULL;
 
 	if (e_kde())
-		comando = SESSIONE_COMANDO_KDE;
+		comando = SESSION_COMMAND_KDE;
 	else if (e_xfce()) {
 		/* ⭐ 5 Oct 2026: the size BEFORE xfce4-session (`primario_misurato()`) */
 		g_autofree char *primario =
-			primario_misurato("XFCE", SESSIONE_PRIMARIO_XFCE, larghezza, altezza);
-		g_autofree char *primario_citato = g_shell_quote(primario);
+			primario_misurato("XFCE", SESSION_PRIMARY_XFCE, larghezza, altezza);
+		g_autofree char *cited_primary = g_shell_quote(primario);
 
-		comando_xfce = g_strdup_printf("exec " SESSIONE_TESTA_XFCE " %s", primario_citato);
-		comando = comando_xfce;
+		xfce_command = g_strdup_printf("exec " SESSIONE_TESTA_XFCE " %s", cited_primary);
+		comando = xfce_command;
 	}
 	else if (e_lxqt()) {
-		g_autofree char *cartella = scrivi_config_labwc_lxqt(g_getenv("XDG_RUNTIME_DIR"));
+		g_autofree char *cartella = write_config_labwc_lxqt(g_getenv("XDG_RUNTIME_DIR"));
 
 		if (!cartella)
 			return FALSE;
-		/* ⚠ `SESSIONE_PROCESSO_XFCE` is `labwc`: the FAMILY compositor,
+		/* ⚠ `SESSION_PROCESS_XFCE` is `labwc`: the FAMILY compositor,
 		 *   the same executable — the constant's name is from phase 13. */
 		g_autofree char *primario =
-			primario_misurato("LXQt", SESSIONE_PRIMARIO_LXQT, larghezza, altezza);
-		g_autofree char *primario_citato = g_shell_quote(primario);
+			primario_misurato("LXQt", SESSION_PRIMARY_LXQT, larghezza, altezza);
+		g_autofree char *cited_primary = g_shell_quote(primario);
 
-		comando_lxqt = g_strdup_printf("exec " SESSIONE_PROCESSO_XFCE " -C '%s' -S %s",
-		                               cartella, primario_citato);
-		comando = comando_lxqt;
+		lxqt_command = g_strdup_printf("exec " SESSION_PROCESS_XFCE " -C '%s' -S %s",
+		                               cartella, cited_primary);
+		comando = lxqt_command;
 	}
 
 	ambiente = componi_ambiente();
@@ -2733,9 +2733,9 @@ static gboolean avvia(uint32_t larghezza, uint32_t altezza)
 }
 
 /* `org.gnome.SessionManager.Logout`: 0 asks for confirmation, 1 does not, 2 forces. */
-static gboolean esci_gnome(guint32 modo)
+static gboolean exit_gnome(guint32 modo)
 {
-	g_autoptr(GDBusConnection) bus = sessione_bus(NULL);
+	g_autoptr(GDBusConnection) bus = sess_bus(NULL);
 	g_autoptr(GVariant) risposta = NULL;
 	g_autoptr(GError) sbaglio = NULL;
 
@@ -2744,7 +2744,7 @@ static gboolean esci_gnome(guint32 modo)
 	risposta = g_dbus_connection_call_sync(
 		bus, "org.gnome.SessionManager", "/org/gnome/SessionManager",
 		"org.gnome.SessionManager", "Logout", g_variant_new("(u)", modo), NULL,
-		G_DBUS_CALL_FLAGS_NONE, ATTESA_RISPOSTA_MS, NULL, &sbaglio);
+		G_DBUS_CALL_FLAGS_NONE, WAIT_RESPONSE_MS, NULL, &sbaglio);
 	if (!risposta)
 		registro_dice(REG_SESSIONE, "⛔ Logout(%u) did not go through: %s", modo,
 		              sbaglio ? sbaglio->message : "no reason given");
@@ -2793,7 +2793,7 @@ static gboolean unita_inattiva(void)
 	 *    guard against a second Plasma when KWin takes longer than the child's
 	 *    leash to show up on the bus. */
 	if (e_kde())
-		return unita_ferma(SESSIONE_UNITA_KWIN) && unita_ferma(SESSIONE_UNITA_PLASMA);
+		return unita_ferma(SESSION_UNIT_KWIN) && unita_ferma(SESSION_UNIT_PLASMA);
 
 	/*
 	 * ⛔⛔ PHASE 13 — ON XFCE THIS GUARD WOULD NOT FAIL: IT WOULD VANISH.
@@ -2814,21 +2814,21 @@ static gboolean unita_inattiva(void)
 	 * ⚠ Just one thing: a `labwc` of mine counts even if it belongs to another desktop —
 	 *   but «one desktop per machine» (§0.6) rules that out. */
 	if (e_xfce() || e_lxqt()) {
-		int quanti = processi_miei(SESSIONE_PROCESSO_XFCE);
+		int quanti = processi_miei(SESSION_PROCESS_XFCE);
 
 		if (quanti < 0) {
 			/* ⛔ «I could not look» is not «it is free»: the answer is no,
 			 *    and the caller retries. */
 			registro_dice(REG_SESSIONE,
 			              "⛔ %s: I cannot read /proc, so I do not know whether "
-			              "there is still a " SESSIONE_PROCESSO_XFCE " of mine — and «I don't "
+			              "there is still a " SESSION_PROCESS_XFCE " of mine — and «I don't "
 			              "know» here counts as «no»",
 			              nome_desktop());
 			return FALSE;
 		}
 		if (quanti > 0) {
 			registro_dice(REG_SESSIONE,
-			              "%s: there are still %d " SESSIONE_PROCESSO_XFCE
+			              "%s: there are still %d " SESSION_PROCESS_XFCE
 			              " of mine: the previous session has not ended",
 			              nome_desktop(), quanti);
 			return FALSE;
@@ -2843,15 +2843,15 @@ static gboolean unita_inattiva(void)
 	 * ⚠ If one day they changed, `is-active` would answer «inactive» for a
 	 *   name that does not exist, and the guard would vanish as on XFCE: to be
 	 *   re-checked at every new GNOME (`fasi/17-l-installatore.md` §5.1). */
-	return unita_ferma(sessione_gnome()->gestore) && unita_ferma(SESSIONE_UNITA_DBUS);
+	return unita_ferma(sessione_gnome()->gestore) && unita_ferma(SESSION_UNIT_DBUS);
 }
 
-static gboolean aspetta_che_finisca(void)
+static gboolean wait_until_done(void)
 {
 	gint64 scadenza = g_get_monotonic_time() + (gint64) ATTESA_USCITA_MS * 1000;
 
 	while (g_get_monotonic_time() < scadenza) {
-		g_usleep(CADENZA_CONTROLLO_MS * 1000);
+		g_usleep(CHECK_INTERVAL_MS * 1000);
 		if (!sessione_viva() && unita_inattiva()) {
 			char *pulisci[] = { "systemctl", "--user", "reset-failed", NULL };
 
@@ -2871,27 +2871,27 @@ static gboolean aspetta_che_finisca(void)
  *   forced     `StopUnit("plasma-workspace.target", "fail")` — ⛔ `Logout(2)`
  *              does not exist on KDE; it is what `plasma-shutdown` does at the end
  */
-static gboolean esci_kde(gboolean a_forza)
+static gboolean exit_kde(gboolean a_force)
 {
-	g_autoptr(GDBusConnection) bus = sessione_bus(NULL);
+	g_autoptr(GDBusConnection) bus = sess_bus(NULL);
 	g_autoptr(GVariant) risposta = NULL;
 	g_autoptr(GError) sbaglio = NULL;
 
 	if (!bus)
 		return FALSE;
-	if (a_forza)
+	if (a_force)
 		risposta = g_dbus_connection_call_sync(
 			bus, "org.freedesktop.systemd1", "/org/freedesktop/systemd1",
 			"org.freedesktop.systemd1.Manager", "StopUnit",
-			g_variant_new("(ss)", SESSIONE_UNITA_PLASMA, "fail"), NULL,
-			G_DBUS_CALL_FLAGS_NONE, ATTESA_RISPOSTA_MS, NULL, &sbaglio);
+			g_variant_new("(ss)", SESSION_UNIT_PLASMA, "fail"), NULL,
+			G_DBUS_CALL_FLAGS_NONE, WAIT_RESPONSE_MS, NULL, &sbaglio);
 	else
 		risposta = g_dbus_connection_call_sync(
 			bus, "org.kde.Shutdown", "/Shutdown", "org.kde.Shutdown", "logout", NULL,
-			NULL, G_DBUS_CALL_FLAGS_NONE, ATTESA_RISPOSTA_MS, NULL, &sbaglio);
+			NULL, G_DBUS_CALL_FLAGS_NONE, WAIT_RESPONSE_MS, NULL, &sbaglio);
 	if (!risposta)
 		registro_dice(REG_SESSIONE, "⛔ the Plasma exit (%s) did not go through: %s",
-		              a_forza ? "forced StopUnit" : "Shutdown.logout",
+		              a_force ? "forced StopUnit" : "Shutdown.logout",
 		              sbaglio ? sbaglio->message : "no reason given");
 	return risposta != NULL;
 }
@@ -2910,9 +2910,9 @@ static gboolean esci_kde(gboolean a_forza)
  *   `org.xfce.Session.Manager` — with one more dot.  Confusing them gives
  *   «unknown method», which looks like «the session does not answer».
  */
-static gboolean esci_xfce(void)
+static gboolean exit_xfce(void)
 {
-	g_autoptr(GDBusConnection) bus = sessione_bus(NULL);
+	g_autoptr(GDBusConnection) bus = sess_bus(NULL);
 	g_autoptr(GVariant) risposta = NULL;
 	g_autoptr(GError) sbaglio = NULL;
 
@@ -2921,9 +2921,9 @@ static gboolean esci_xfce(void)
 	/* (show_dialog, allow_save) — both false: nobody can answer a
 	 * dialog inside a remote session we are closing. */
 	risposta = g_dbus_connection_call_sync(
-		bus, SESSIONE_BUS_XFCE, "/org/xfce/SessionManager",
+		bus, SESSION_BUS_XFCE, "/org/xfce/SessionManager",
 		"org.xfce.Session.Manager", "Logout", g_variant_new("(bb)", FALSE, FALSE),
-		NULL, G_DBUS_CALL_FLAGS_NO_AUTO_START, ATTESA_RISPOSTA_MS, NULL, &sbaglio);
+		NULL, G_DBUS_CALL_FLAGS_NO_AUTO_START, WAIT_RESPONSE_MS, NULL, &sbaglio);
 	if (!risposta) {
 		registro_dice(REG_SESSIONE,
 		              "⚠ XFCE: Logout did not go through (%s)",
@@ -2933,7 +2933,7 @@ static gboolean esci_xfce(void)
 	return TRUE;
 }
 
-static gboolean uccidi_xfce(void)
+static gboolean kill_xfce(void)
 {
 	g_autoptr(GDir) proc = g_dir_open("/proc", 0, NULL);
 	const char *voce;
@@ -2955,7 +2955,7 @@ static gboolean uccidi_xfce(void)
 		if (!g_file_get_contents(percorso, &comm, NULL, NULL))
 			continue;
 		g_strstrip(comm);
-		if (g_strcmp0(comm, SESSIONE_PROCESSO_XFCE) != 0)
+		if (g_strcmp0(comm, SESSION_PROCESS_XFCE) != 0)
 			continue;
 		/* ⚠ SIGTERM, not SIGKILL: labwc closes its clients, and a SIGKILL
 		 *   would leave behind exactly what C7 goes looking for. */
@@ -2963,7 +2963,7 @@ static gboolean uccidi_xfce(void)
 			colpiti++;
 	}
 	registro_dice(REG_SESSIONE,
-	              "%s: sent SIGTERM to %d " SESSIONE_PROCESSO_XFCE " of mine", nome_desktop(),
+	              "%s: sent SIGTERM to %d " SESSION_PROCESS_XFCE " of mine", nome_desktop(),
 	              colpiti);
 	return colpiti > 0;
 }
@@ -2976,7 +2976,7 @@ static gboolean uccidi_xfce(void)
  *              `lxqt-leave --logout`, which opens a modal confirmation.
  *              ✅ LXQt's logout does not consult inhibitors, shows nothing,
  *              cannot be cancelled (`STUDI.md` §lxqt §3.3, `[✗]`)
- *   forced     SIGTERM to labwc (`uccidi_xfce`): with `-S` `lxqt-session` is the
+ *   forced     SIGTERM to labwc (`kill_xfce`): with `-S` `lxqt-session` is the
  *              primary client, and with labwc dead it goes away with it
  *
  * ⛔⛔ AND IT IS SENT WITHOUT WAITING FOR AN ANSWER, because no answer arrives:
@@ -2984,21 +2984,21 @@ static gboolean uccidi_xfce(void)
  *     `sessiondbusadaptor.h`).  A synchronous call would hang up to
  *     the ceiling and say «did not go through» to a successful logout — form E8
  *     reversed.  ⇒ A message with `NO_REPLY_EXPECTED`, and the verdict is given by
- *     `aspetta_che_finisca()`, that is a fact.
+ *     `wait_until_done()`, that is a fact.
  * [?] Whether `logout()` really brings `lxqt-session` to exit (and so labwc)
  *     within the 10 s of `ATTESA_USCITA_MS` is to be measured: if not we fall into
  *     the force, and the log says so.
  */
-static gboolean esci_lxqt(void)
+static gboolean exit_lxqt(void)
 {
-	g_autoptr(GDBusConnection) bus = sessione_bus(NULL);
+	g_autoptr(GDBusConnection) bus = sess_bus(NULL);
 	g_autoptr(GDBusMessage) messaggio = NULL;
 	g_autoptr(GError) sbaglio = NULL;
 
 	if (!bus)
 		return FALSE;
-	messaggio = g_dbus_message_new_method_call(SESSIONE_BUS_LXQT, "/LXQtSession",
-	                                           SESSIONE_BUS_LXQT, "logout");
+	messaggio = g_dbus_message_new_method_call(SESSION_BUS_LXQT, "/LXQtSession",
+	                                           SESSION_BUS_LXQT, "logout");
 	g_dbus_message_set_flags(messaggio, G_DBUS_MESSAGE_FLAGS_NO_REPLY_EXPECTED |
 	                                            G_DBUS_MESSAGE_FLAGS_NO_AUTO_START);
 	if (!g_dbus_connection_send_message(bus, messaggio, G_DBUS_SEND_MESSAGE_FLAGS_NONE, NULL,
@@ -3064,15 +3064,15 @@ static const char *const VARIABILI_NOSTRE[] = {
 };
 
 /* { drop-in folder, name } — all of ours and only ours */
-static const char *const DROPIN_NOSTRI[][2] = {
+static const char *const OUR_DROPINS[][2] = {
 	/* ⭐ PHASE 17: the Shell instances (`@wayland`, `@user`, `@ubuntu`…)
 	 *    are not here: `sessione_sgombera_gestore()` looks for them in the folder,
 	 *    because with D8 the name depends on the session (§5.1). */
-	{ SESSIONE_UNITA_KWIN ".d", "zz-remotix-monitor.conf" },
+	{ SESSION_UNIT_KWIN ".d", "zz-remotix-monitor.conf" },
 	{ "xfconfd.service.d", "zz-remotix-sessione.conf" },
 };
 
-static char *gestore_prima_percorso(void)
+static char *manager_before_path(void)
 {
 	const char *runtime = g_getenv("XDG_RUNTIME_DIR");
 
@@ -3083,7 +3083,7 @@ static char *gestore_prima_percorso(void)
 /* The manager's environment, {name: value}, asked of it (property
  * `Environment` of `org.freedesktop.systemd1.Manager`: raw strings, without
  * the quotes of `show-environment`).  NULL if it does not answer. */
-static GHashTable *ambiente_del_gestore(GDBusConnection *bus)
+static GHashTable *handler_environment(GDBusConnection *bus)
 {
 	g_autoptr(GVariant) risposta = NULL;
 	g_autoptr(GVariant) dentro = NULL;
@@ -3114,14 +3114,14 @@ static GHashTable *ambiente_del_gestore(GDBusConnection *bus)
 
 void sessione_fotografa_gestore(void)
 {
-	g_autoptr(GDBusConnection) bus = sessione_bus(NULL);
+	g_autoptr(GDBusConnection) bus = sess_bus(NULL);
 	g_autoptr(GHashTable) amb = NULL;
 	g_autoptr(GKeyFile) foto = g_key_file_new();
-	g_autofree char *percorso = gestore_prima_percorso();
+	g_autofree char *percorso = manager_before_path();
 	g_autofree char *cartella = NULL;
 	g_autoptr(GError) sbaglio = NULL;
 
-	if (!bus || !percorso || !(amb = ambiente_del_gestore(bus))) {
+	if (!bus || !percorso || !(amb = handler_environment(bus))) {
 		registro_dice(REG_SESSIONE,
 		              "⚠ R1/R2: I could not snapshot the user manager's environment — "
 		              "at the end of the session I will remove only the variables bearing our mark");
@@ -3153,11 +3153,11 @@ void sessione_sgombera_gestore(const char *perche)
 	g_autoptr(GDBusConnection) bus = NULL;
 	g_autoptr(GHashTable) amb = NULL;
 	g_autoptr(GKeyFile) foto = g_key_file_new();
-	g_autofree char *percorso = gestore_prima_percorso();
+	g_autofree char *percorso = manager_before_path();
 	g_autoptr(GPtrArray) togli = g_ptr_array_new_with_free_func(g_free);
 	g_autoptr(GPtrArray) metti = g_ptr_array_new_with_free_func(g_free);
 	g_autoptr(GString) detto = g_string_new(NULL);
-	gboolean con_foto;
+	gboolean with_photo;
 	int drop = 0;
 	gboolean xfconfd = FALSE;
 	char *ricarica[] = { "systemctl", "--user", "daemon-reload", NULL };
@@ -3174,16 +3174,16 @@ void sessione_sgombera_gestore(const char *perche)
 	}
 
 	/* 1. the drop-ins: all of ours and only ours */
-	for (guint i = 0; i < G_N_ELEMENTS(DROPIN_NOSTRI); i++) {
+	for (guint i = 0; i < G_N_ELEMENTS(OUR_DROPINS); i++) {
 		g_autofree char *cartella = g_build_filename(runtime, "systemd", "user.control",
-		                                             DROPIN_NOSTRI[i][0], NULL);
-		g_autofree char *file = g_build_filename(cartella, DROPIN_NOSTRI[i][1], NULL);
+		                                             OUR_DROPINS[i][0], NULL);
+		g_autofree char *file = g_build_filename(cartella, OUR_DROPINS[i][1], NULL);
 
 		if (g_unlink(file) == 0) {
 			drop++;
-			xfconfd |= g_str_has_prefix(DROPIN_NOSTRI[i][0], "xfconfd");
-			g_string_append_printf(detto, " %s/%s", DROPIN_NOSTRI[i][0],
-			                       DROPIN_NOSTRI[i][1]);
+			xfconfd |= g_str_has_prefix(OUR_DROPINS[i][0], "xfconfd");
+			g_string_append_printf(detto, " %s/%s", OUR_DROPINS[i][0],
+			                       OUR_DROPINS[i][1]);
 			g_rmdir(cartella); /* only if empty */
 		}
 	}
@@ -3202,7 +3202,7 @@ void sessione_sgombera_gestore(const char *perche)
 
 			if (!g_str_has_prefix(f, "org.gnome.Shell@") ||
 			    !g_str_has_suffix(f, ".service.d") ||
-			    strcmp(f, SESSIONE_UNITA_SHELL_MODELLO ".d") == 0)
+			    strcmp(f, SESSION_UNIT_SHELL_MODEL ".d") == 0)
 				continue;
 			cartella = g_build_filename(controllo, f, NULL);
 			file = g_build_filename(cartella, "zz-remotix-monitor.conf", NULL);
@@ -3219,20 +3219,20 @@ void sessione_sgombera_gestore(const char *perche)
 		esegui(riparti);
 
 	/* 2. the variables: as they were, or only those with our mark without a snapshot */
-	bus = sessione_bus(NULL);
-	amb = bus ? ambiente_del_gestore(bus) : NULL;
-	con_foto = percorso && g_key_file_load_from_file(foto, percorso, G_KEY_FILE_NONE, NULL);
+	bus = sess_bus(NULL);
+	amb = bus ? handler_environment(bus) : NULL;
+	with_photo = percorso && g_key_file_load_from_file(foto, percorso, G_KEY_FILE_NONE, NULL);
 	for (int i = 0; amb && VARIABILI_NOSTRE[i]; i++) {
 		const char *nome = VARIABILI_NOSTRE[i];
 		const char *ora = g_hash_table_lookup(amb, nome);
-		g_autofree char *prima = con_foto ? g_key_file_get_string(foto, "prima", nome, NULL)
+		g_autofree char *prima = with_photo ? g_key_file_get_string(foto, "prima", nome, NULL)
 		                                  : NULL;
-		gboolean era_assente = con_foto && g_key_file_get_boolean(foto, "assenti", nome, NULL);
+		gboolean was_absent = with_photo && g_key_file_get_boolean(foto, "assenti", nome, NULL);
 
-		if (con_foto) {
+		if (with_photo) {
 			if (prima && g_strcmp0(prima, ora) != 0)
 				g_ptr_array_add(metti, g_strdup_printf("%s=%s", nome, prima));
-			else if (era_assente && ora)
+			else if (was_absent && ora)
 				g_ptr_array_add(togli, g_strdup(nome));
 		} else if (ora && strstr(ora, "remotix")) {
 			g_ptr_array_add(togli, g_strdup(nome));
@@ -3264,14 +3264,14 @@ void sessione_sgombera_gestore(const char *perche)
 			              perche, sbaglio ? sbaglio->message : "no reason given");
 		}
 	}
-	if (con_foto && amb)
+	if (with_photo && amb)
 		g_unlink(percorso); /* consumed: the next birth makes another one */
 
 	if (detto->len)
 		registro_dice(REG_SESSIONE,
 		              "⭐ R1/R2 (%s): the user manager goes back to how it was —%s%s%s",
 		              perche, detto->str, xfconfd ? " · xfconfd restarted" : "",
-		              con_foto ? "" : " (⚠ without a snapshot: removed only the variables bearing "
+		              with_photo ? "" : " (⚠ without a snapshot: removed only the variables bearing "
 		                              "our mark)");
 	else
 		registro_dettaglio(REG_SESSIONE,
@@ -3285,7 +3285,7 @@ static bool termina_davvero(void);
  * The pids of the cgroup this process runs in (logind's `session-N.scope`),
  * ours included.  NULL if the cgroup cannot be read.
  */
-static GArray *pid_del_mio_scope(void)
+static GArray *my_scope_pid(void)
 {
 	g_autofree char *mio = NULL;
 	g_autofree char *procs = NULL;
@@ -3348,7 +3348,7 @@ static bool superstite(pid_t p, char *nome, gsize n)
  */
 void sessione_sgombera_scope(void)
 {
-	g_autoptr(GArray) pid = pid_del_mio_scope();
+	g_autoptr(GArray) pid = my_scope_pid();
 	g_autoptr(GString) nomi = g_string_new(NULL);
 	int colpiti = 0, ostinati = 0;
 	char nome[32];
@@ -3371,7 +3371,7 @@ void sessione_sgombera_scope(void)
 		return;
 	}
 	for (int giro = 0; giro < 20; giro++) {
-		g_autoptr(GArray) ancora = pid_del_mio_scope();
+		g_autoptr(GArray) ancora = my_scope_pid();
 		bool vivo = false;
 
 		for (guint i = 0; ancora && i < ancora->len && !vivo; i++)
@@ -3381,7 +3381,7 @@ void sessione_sgombera_scope(void)
 		g_usleep(100 * 1000);
 	}
 	{
-		g_autoptr(GArray) ancora = pid_del_mio_scope();
+		g_autoptr(GArray) ancora = my_scope_pid();
 
 		for (guint i = 0; ancora && i < ancora->len; i++) {
 			pid_t p = g_array_index(ancora, pid_t, i);
@@ -3419,16 +3419,16 @@ static bool termina_davvero(void)
 		registro_dice(REG_SESSIONE,
 		              "asking the XFCE session to exit "
 		              "(org.xfce.Session.Manager.Logout)");
-		if (esci_xfce() && aspetta_che_finisca()) {
+		if (exit_xfce() && wait_until_done()) {
 			registro_dice(REG_SESSIONE, "the graphical session has exited");
 			return true;
 		}
 		registro_dice(REG_SESSIONE,
 		              "⚠ the session does not exit: I close it by force (SIGTERM to "
-		              SESSIONE_PROCESSO_XFCE "), whatever was not saved is "
+		              SESSION_PROCESS_XFCE "), whatever was not saved is "
 		              "lost — ⛔ and here the force is not systemd: on XFCE the "
 		              "compositor is not a unit");
-		if (uccidi_xfce() && aspetta_che_finisca()) {
+		if (kill_xfce() && wait_until_done()) {
 			registro_dice(REG_SESSIONE, "the graphical session has exited, by force");
 			return true;
 		}
@@ -3441,16 +3441,16 @@ static bool termina_davvero(void)
 		registro_dice(REG_SESSIONE,
 		              "asking the LXQt session to exit (org.lxqt.session.logout, "
 		              "without waiting for an answer: it is Q_NOREPLY)");
-		if (esci_lxqt() && aspetta_che_finisca()) {
+		if (exit_lxqt() && wait_until_done()) {
 			registro_dice(REG_SESSIONE, "the graphical session has exited");
 			return true;
 		}
 		registro_dice(REG_SESSIONE,
 		              "⚠ the session does not exit: I close it by force (SIGTERM to "
-		              SESSIONE_PROCESSO_XFCE "), whatever was not saved is "
+		              SESSION_PROCESS_XFCE "), whatever was not saved is "
 		              "lost — ⛔ and here the force is not systemd: on LXQt the "
 		              "compositor is not a unit");
-		if (uccidi_xfce() && aspetta_che_finisca()) {
+		if (kill_xfce() && wait_until_done()) {
 			registro_dice(REG_SESSIONE, "the graphical session has exited, by force");
 			return true;
 		}
@@ -3461,15 +3461,15 @@ static bool termina_davvero(void)
 	if (e_kde()) {
 		registro_dice(REG_SESSIONE,
 		              "asking the Plasma session to exit (org.kde.Shutdown.logout)");
-		if (esci_kde(FALSE) && aspetta_che_finisca()) {
+		if (exit_kde(FALSE) && wait_until_done()) {
 			registro_dice(REG_SESSIONE, "the graphical session has exited");
 			return true;
 		}
 		registro_dice(REG_SESSIONE,
 		              "⚠ the session does not exit: I close it by force (StopUnit %s), whatever "
 		              "was not saved is lost",
-		              SESSIONE_UNITA_PLASMA);
-		if (esci_kde(TRUE) && aspetta_che_finisca()) {
+		              SESSION_UNIT_PLASMA);
+		if (exit_kde(TRUE) && wait_until_done()) {
 			registro_dice(REG_SESSIONE, "the graphical session has exited, by force");
 			return true;
 		}
@@ -3478,7 +3478,7 @@ static bool termina_davvero(void)
 	}
 
 	registro_dice(REG_SESSIONE, "asking the graphical session to exit (Logout 1)");
-	if (esci_gnome(1) && aspetta_che_finisca()) {
+	if (exit_gnome(1) && wait_until_done()) {
 		registro_dice(REG_SESSIONE, "the graphical session has exited");
 		return true;
 	}
@@ -3486,7 +3486,7 @@ static bool termina_davvero(void)
 	registro_dice(REG_SESSIONE,
 	              "⚠ the session does not exit: I close it by force (Logout 2), whatever was not "
 	              "saved is lost");
-	if (esci_gnome(2) && aspetta_che_finisca()) {
+	if (exit_gnome(2) && wait_until_done()) {
 		registro_dice(REG_SESSIONE, "the graphical session has exited, by force");
 		return true;
 	}
@@ -3524,7 +3524,7 @@ struct impostazione {
  * not even by asking.  ⚠ In a headless session there is NO virtual
  * console to switch to: Mutter intercepts them, tries, fails and writes a
  * warning.  ⇒ Twelve combinations taken away from the user for nothing. */
-static const char *SCORCIATOIE_VT[] = { "switch-to-session-1",  "switch-to-session-2",
+static const char *VT_SHORTCUTS[] = { "switch-to-session-1",  "switch-to-session-2",
 	                                "switch-to-session-3",  "switch-to-session-4",
 	                                "switch-to-session-5",  "switch-to-session-6",
 	                                "switch-to-session-7",  "switch-to-session-8",
@@ -3547,14 +3547,14 @@ static const char *SCORCIATOIE_VT[] = { "switch-to-session-1",  "switch-to-sessi
  *   trap.  ⇒ Here both are checked, and a missing key is
  *   a log line, not a death.
  */
-struct schema_aperto {
+struct schema_open {
 	GSettings *impostazioni;
 	GSettingsSchema *schema;
 };
 
-static struct schema_aperto apri_schema(const char *nome)
+static struct schema_open open_schema(const char *nome)
 {
-	struct schema_aperto a = { NULL, NULL };
+	struct schema_open a = { NULL, NULL };
 	GSettingsSchemaSource *sorgente = g_settings_schema_source_get_default();
 
 	if (!sorgente)
@@ -3571,14 +3571,14 @@ static struct schema_aperto apri_schema(const char *nome)
 	return a;
 }
 
-static void chiudi_schema(struct schema_aperto *a)
+static void close_schema(struct schema_open *a)
 {
 	g_clear_object(&a->impostazioni);
 	g_clear_pointer(&a->schema, g_settings_schema_unref);
 }
 
 /* ⛔ The guard: is the key there?  If not, say so and move on. */
-static gboolean c_e_la_chiave(const struct schema_aperto *a, const char *chiave,
+static gboolean schema_has_key(const struct schema_open *a, const char *chiave,
                               const char *schema)
 {
 	if (!a->impostazioni || !a->schema)
@@ -3607,7 +3607,7 @@ static gboolean c_e_la_chiave(const struct schema_aperto *a, const char *chiave,
  *    written is not in force until it is re-read.
  * ⚠ `valore` may be floating: it is always taken.
  */
-static gboolean gnome_metti_utente(const struct schema_aperto *a, const char *schema,
+static gboolean gnome_metti_utente(const struct schema_open *a, const char *schema,
                                    const char *chiave, GVariant *valore)
 {
 	g_autoptr(GVariant) v = g_variant_ref_sink(valore);
@@ -3616,7 +3616,7 @@ static gboolean gnome_metti_utente(const struct schema_aperto *a, const char *sc
 	g_autofree char *percorso = NULL;
 	const char *base;
 
-	if (!c_e_la_chiave(a, chiave, schema))
+	if (!schema_has_key(a, chiave, schema))
 		return FALSE;
 	base = g_settings_schema_get_path(a->schema);
 	if (!base) {
@@ -3625,7 +3625,7 @@ static gboolean gnome_metti_utente(const struct schema_aperto *a, const char *sc
 		return FALSE;
 	}
 	percorso = g_strconcat(base, chiave, NULL);
-	if (!dconf_cambia("/ca/desrt/dconf/Writer/user", percorso, v, &sbaglio)) {
+	if (!dconf_change("/ca/desrt/dconf/Writer/user", percorso, v, &sbaglio)) {
 		registro_dice(REG_SESSIONE,
 		              "⛔ D-015: %s NOT written in the user's dconf (%s)", percorso,
 		              sbaglio ? sbaglio->message : "no reason given");
@@ -3685,11 +3685,11 @@ static gboolean xfconf_metti(const char *canale, const char *chiave, const char 
 	char *scrivi[] = { "xfconf-query", "-c",       (char *) canale, "-p",
 		           (char *) chiave, "-n",       "-t",            (char *) tipo,
 		           "-s",            (char *) valore, NULL };
-	char *rileggi[] = { "xfconf-query", "-c", (char *) canale, "-p", (char *) chiave, NULL };
+	char *reread_cmd[] = { "xfconf-query", "-c", (char *) canale, "-p", (char *) chiave, NULL };
 	g_autofree char *letto = NULL;
 
 	esegui(scrivi);
-	letto = chiedi(rileggi);
+	letto = chiedi(reread_cmd);
 	if (letto)
 		g_strstrip(letto);
 	if (g_strcmp0(letto, valore) == 0) {
@@ -3724,14 +3724,14 @@ static gboolean xfconf_metti(const char *canale, const char *chiave, const char 
  *    behaviour uniform across all DEs: the only entry that must remain is logout»*.
  *    KDE removes it since phase 12 (KIOSK), GNOME with the dconf lockdown.
  */
-static const char *AZIONI_DA_TOGLIERE[] = { "lock-screen", "switch-user", "suspend",
+static const char *ACTIONS_TO_REMOVE[] = { "lock-screen", "switch-user", "suspend",
 	                                    "hibernate",   "hybrid-sleep", "restart",
 	                                    "shutdown",    NULL };
 
 /* ⚠ The stock default, `actions_plugin_default_array()` (`actions.c:1437`):
  *   needed when the `items` property is not there yet — and that is the normal case
  *   for a newly born panel, because `default.xml` does not write it. */
-static const char *AZIONI_DI_SERIE[] = { "+lock-screen", "+switch-user",  "+separator",
+static const char *DEFAULT_ACTIONS[] = { "+lock-screen", "+switch-user",  "+separator",
 	                                 "+suspend",     "-hibernate",    "-hybrid-sleep",
 	                                 "-separator",   "+shutdown",     "-restart",
 	                                 "+separator",   "+logout",       NULL };
@@ -3739,7 +3739,7 @@ static const char *AZIONI_DI_SERIE[] = { "+lock-screen", "+switch-user",  "+sepa
 /* The entries of an array as `xfconf-query` prints them: a header line
  * (translated, so it is NOT read), an empty line, then one entry per line.  ⇒ What
  * follows the first empty line is taken.  NULL if it is not an array. */
-static char **voci_di_array(const char *uscita)
+static char **array_entries(const char *uscita)
 {
 	const char *dopo = uscita ? strstr(uscita, "\n\n") : NULL;
 	g_autoptr(GPtrArray) voci = NULL;
@@ -3756,9 +3756,9 @@ static char **voci_di_array(const char *uscita)
 	return (char **) g_ptr_array_free(g_steal_pointer(&voci), FALSE);
 }
 
-static gboolean da_togliere(const char *voce)
+static gboolean to_remove(const char *voce)
 {
-	return voce[0] == '+' && g_strv_contains(AZIONI_DA_TOGLIERE, voce + 1);
+	return voce[0] == '+' && g_strv_contains(ACTIONS_TO_REMOVE, voce + 1);
 }
 
 /* An «actions» plugin: the entries to remove go from `+` to `-`, the others
@@ -3769,23 +3769,23 @@ static gboolean da_togliere(const char *voce)
  *    («dangerous for other users present on the machine»).  ⚠ It stays in the
  *    user's channel: the plugin number is theirs, and a session block
  *    for `plugin-N` cannot be written before the panel is born. */
-static gboolean sistema_azioni_del_pannello(const char *base)
+static gboolean fix_panel_actions(const char *base)
 {
 	g_autofree char *chiave = g_strdup_printf("%s/items", base);
 	char *leggi[] = { "xfconf-query", "-c", "xfce4-panel", "-p", chiave, NULL };
 	g_autofree char *prima = chiedi(leggi);
-	g_auto(GStrv) vecchie = voci_di_array(prima);
+	g_auto(GStrv) old_ones = array_entries(prima);
 	g_autoptr(GPtrArray) scrivi = g_ptr_array_new_with_free_func(g_free);
 	g_autoptr(GPtrArray) nuove = g_ptr_array_new_with_free_func(g_free);
 	g_autofree char *riletto = NULL;
-	g_auto(GStrv) rilette = NULL;
-	const char *const *da = vecchie ? (const char *const *) vecchie
-	                                : (const char *const *) AZIONI_DI_SERIE;
+	g_auto(GStrv) reread_items = NULL;
+	const char *const *da = old_ones ? (const char *const *) old_ones
+	                                : (const char *const *) DEFAULT_ACTIONS;
 	int tolte = 0;
 	gboolean uguali;
 
 	for (int i = 0; da[i]; i++) {
-		if (da_togliere(da[i])) {
+		if (to_remove(da[i])) {
 			g_ptr_array_add(nuove, g_strdup_printf("-%s", da[i] + 1));
 			tolte++;
 		} else {
@@ -3818,8 +3818,8 @@ static gboolean sistema_azioni_del_pannello(const char *base)
 	esegui((char **) scrivi->pdata);
 
 	riletto = chiedi(leggi);
-	rilette = voci_di_array(riletto);
-	uguali = rilette && g_strv_equal((const char *const *) rilette,
+	reread_items = array_entries(riletto);
+	uguali = reread_items && g_strv_equal((const char *const *) reread_items,
 	                                 (const char *const *) nuove->pdata);
 	if (uguali)
 		registro_dice(REG_SESSIONE,
@@ -3859,8 +3859,8 @@ static gboolean sistema_azioni_del_pannello(const char *base)
  *   grey anyway (polkit), suspend is not there (sleep.conf), and lock
  *   does not lock (`LockCommand`).
  */
-#define PANNELLO_XFCE_PASSO_US (2 * G_USEC_PER_SEC)
-#define PANNELLO_XFCE_PAZIENZA_S 120
+#define PANEL_XFCE_STEP_US (2 * G_USEC_PER_SEC)
+#define PANEL_XFCE_PATIENCE_S 120
 
 static gpointer guardia_del_pannello_xfce(gpointer dati)
 {
@@ -3887,7 +3887,7 @@ static gpointer guardia_del_pannello_xfce(gpointer dati)
 			if (g_strcmp0(g_strstrip(parti[1]), "actions") != 0)
 				continue;
 			trovati++;
-			if (sistema_azioni_del_pannello(parti[0]))
+			if (fix_panel_actions(parti[0]))
 				sistemati++;
 		}
 		if (trovati) {
@@ -3897,15 +3897,15 @@ static gpointer guardia_del_pannello_xfce(gpointer dati)
 			              sistemati == trovati ? "⭐" : "⛔", trovati, sistemati);
 			return NULL;
 		}
-		if (g_get_monotonic_time() - partito > PANNELLO_XFCE_PAZIENZA_S * G_USEC_PER_SEC) {
+		if (g_get_monotonic_time() - partito > PANEL_XFCE_PATIENCE_S * G_USEC_PER_SEC) {
 			registro_dice(REG_SESSIONE,
 			              "⚠ XFCE: in %d s no action button in the channel "
 			              "xfce4-panel — I remove nothing, because there is nothing to "
 			              "remove (or the panel did not start).  I stop watching",
-			              PANNELLO_XFCE_PAZIENZA_S);
+			              PANEL_XFCE_PATIENCE_S);
 			return NULL;
 		}
-		g_usleep(PANNELLO_XFCE_PASSO_US);
+		g_usleep(PANEL_XFCE_STEP_US);
 	}
 }
 
@@ -3928,7 +3928,7 @@ static gpointer guardia_del_pannello_xfce(gpointer dati)
  *      the classic menu has NO fixed buttons, and reads the same
  *      `lxqt-applications.menu`, so the six entries hidden
  *      by increment 2 stay hidden and «Leave» contains only «Logout»;
- *   B) `blocco_lxqt()` — the safety net: `lock_command_wayland=true`,
+ *   B) `block_lxqt()` — the safety net: `lock_command_wayland=true`,
  *      for whoever launches `lxqt-leave` by hand (or from a shortcut).
  */
 
@@ -3940,15 +3940,15 @@ static gpointer guardia_del_pannello_xfce(gpointer dati)
  *   the name QSettings gives to that group; if the file already has a `[General]`,
  *   GKeyFile merges the two.
  */
-static gboolean leggi_ini_qt(GKeyFile *chiavi, const char *file, GError **sbaglio)
+static gboolean read_ini_qt(GKeyFile *chiavi, const char *file, GError **sbaglio)
 {
 	g_autofree char *dentro = NULL;
-	g_autofree char *con_testa = NULL;
+	g_autofree char *with_head = NULL;
 
 	if (!g_file_get_contents(file, &dentro, NULL, sbaglio))
 		return FALSE;
-	con_testa = g_strconcat("[General]\n", dentro, NULL);
-	return g_key_file_load_from_data(chiavi, con_testa, -1,
+	with_head = g_strconcat("[General]\n", dentro, NULL);
+	return g_key_file_load_from_data(chiavi, with_head, -1,
 	                                 G_KEY_FILE_KEEP_COMMENTS |
 	                                         G_KEY_FILE_KEEP_TRANSLATIONS,
 	                                 sbaglio);
@@ -3960,7 +3960,7 @@ static gboolean leggi_ini_qt(GKeyFile *chiavi, const char *file, GError **sbagli
  *   and cannot be read it is NOT rewritten.  Returns the value RE-READ from the file
  *   (NULL if it cannot be re-read), and in `*perche` the reason, if it did not write.
  */
-static char *scrivi_chiave_qt(const char *file, const char *gruppo, const char *chiave,
+static char *write_qt_key(const char *file, const char *gruppo, const char *chiave,
                               const char *valore, char **perche)
 {
 	g_autofree char *cartella = g_path_get_dirname(file);
@@ -3968,7 +3968,7 @@ static char *scrivi_chiave_qt(const char *file, const char *gruppo, const char *
 	g_autoptr(GKeyFile) riletto = g_key_file_new();
 	g_autoptr(GError) sbaglio = NULL;
 
-	if (g_file_test(file, G_FILE_TEST_EXISTS) && !leggi_ini_qt(chiavi, file, &sbaglio)) {
+	if (g_file_test(file, G_FILE_TEST_EXISTS) && !read_ini_qt(chiavi, file, &sbaglio)) {
 		*perche = g_strdup_printf("it exists but I cannot read it (%s) — I do NOT rewrite it, "
 		                          "so as not to throw away the user's keys",
 		                          sbaglio->message);
@@ -3983,7 +3983,7 @@ static char *scrivi_chiave_qt(const char *file, const char *gruppo, const char *
 		return NULL;
 	}
 	/* ⛔ AND IT IS RE-READ: written is not in force until it is re-read. */
-	if (!leggi_ini_qt(riletto, file, NULL))
+	if (!read_ini_qt(riletto, file, NULL))
 		return NULL;
 	return g_key_file_get_value(riletto, gruppo, chiave, NULL);
 }
@@ -3992,17 +3992,17 @@ static char *scrivi_chiave_qt(const char *file, const char *gruppo, const char *
  * The SYSTEM files of an LXQt module, in the order QSettings looks for them:
  * `XDG_CONFIG_DIRS=/etc:/etc/xdg:/usr/share`, which we set at launch.
  */
-static GPtrArray *file_di_sistema(const char *modulo)
+static GPtrArray *system_files(const char *modulo)
 {
-	static const char *const CARTELLE[] = { "/etc", "/etc/xdg", "/usr/share", NULL };
+	static const char *const DIRS[] = { "/etc", "/etc/xdg", "/usr/share", NULL };
 	GPtrArray *sistema = g_ptr_array_new_with_free_func((GDestroyNotify) g_key_file_unref);
 
-	for (int i = 0; CARTELLE[i]; i++) {
+	for (int i = 0; DIRS[i]; i++) {
 		g_autofree char *nome = g_strconcat(modulo, ".conf", NULL);
-		g_autofree char *file = g_build_filename(CARTELLE[i], "lxqt", nome, NULL);
+		g_autofree char *file = g_build_filename(DIRS[i], "lxqt", nome, NULL);
 		GKeyFile *uno = g_key_file_new();
 
-		if (g_file_test(file, G_FILE_TEST_EXISTS) && leggi_ini_qt(uno, file, NULL))
+		if (g_file_test(file, G_FILE_TEST_EXISTS) && read_ini_qt(uno, file, NULL))
 			g_ptr_array_add(sistema, uno);
 		else
 			g_key_file_unref(uno);
@@ -4018,7 +4018,7 @@ static GPtrArray *file_di_sistema(const char *modulo)
  *   rest comes from the system.  ⇒ Looking at the user's file alone
  *   would say «no fancymenu» to a user who has one.
  */
-static char *valore_effettivo(GKeyFile *utente, GPtrArray *sistema, const char *gruppo,
+static char *effective_value(GKeyFile *utente, GPtrArray *sistema, const char *gruppo,
                               const char *chiave)
 {
 	char *valore = g_key_file_get_value(utente, gruppo, chiave, NULL);
@@ -4040,29 +4040,29 @@ static char *valore_effettivo(GKeyFile *utente, GPtrArray *sistema, const char *
  *   user's key that counts even when it is `@Invalid()`: QSettings
  *   finds it there and does not look at the system.
  */
-static GPtrArray *plugin_di_tipo(GKeyFile *utente, GPtrArray *sistema, const char *tipo)
+static GPtrArray *plugins_of_type(GKeyFile *utente, GPtrArray *sistema, const char *tipo)
 {
-	g_autofree char *pannelli = valore_effettivo(utente, sistema, "General", "panels");
+	g_autofree char *pannelli = effective_value(utente, sistema, "General", "panels");
 	gboolean vuota = !pannelli || !*g_strstrip(pannelli) ||
 	                 g_strcmp0(pannelli, "@Invalid()") == 0;
 	g_auto(GStrv) quali = g_strsplit(vuota ? "panel1" : pannelli, ",", -1);
-	GPtrArray *nomi_trovati = g_ptr_array_new_with_free_func(g_free);
+	GPtrArray *found_names = g_ptr_array_new_with_free_func(g_free);
 
 	for (int p = 0; quali[p]; p++) {
-		g_autofree char *elenco = valore_effettivo(utente, sistema, g_strstrip(quali[p]),
+		g_autofree char *elenco = effective_value(utente, sistema, g_strstrip(quali[p]),
 		                                           "plugins");
 		g_auto(GStrv) nomi = g_strsplit(elenco ? elenco : "", ",", -1);
 
 		for (int n = 0; nomi[n]; n++) {
 			const char *nome = g_strstrip(nomi[n]);
-			g_autofree char *e = *nome ? valore_effettivo(utente, sistema, nome, "type")
+			g_autofree char *e = *nome ? effective_value(utente, sistema, nome, "type")
 			                           : NULL;
 
 			if (g_strcmp0(e, tipo) == 0)
-				g_ptr_array_add(nomi_trovati, g_strdup(nome));
+				g_ptr_array_add(found_names, g_strdup(nome));
 		}
 	}
-	return nomi_trovati;
+	return found_names;
 }
 
 /*
@@ -4108,19 +4108,19 @@ static void pannello_lxqt(void)
 	const char *runtime = g_getenv("XDG_RUNTIME_DIR");
 	g_autofree char *file = g_build_filename(g_get_home_dir(), ".config", "lxqt", "panel.conf",
 	                                         NULL);
-	g_autofree char *suo_avvio = g_build_filename(g_get_home_dir(), ".config", "autostart",
+	g_autofree char *its_startup = g_build_filename(g_get_home_dir(), ".config", "autostart",
 	                                              "lxqt-panel.desktop", NULL);
-	g_autofree char *cfg = lxqt_cartella_config_sessione();
+	g_autofree char *cfg = lxqt_session_config_folder();
 	g_autofree char *nostro = NULL;
 	g_autofree char *avvio = NULL;
-	g_autofree char *cartella_avvio = NULL;
+	g_autofree char *autostart_dir = NULL;
 	g_autofree char *vecchio = NULL;
-	g_autofree char *riga_avvio = NULL;
+	g_autofree char *startup_line = NULL;
 	g_autoptr(GKeyFile) utente = g_key_file_new();
 	g_autoptr(GKeyFile) fuso = g_key_file_new();
 	g_autoptr(GKeyFile) riletto = g_key_file_new();
-	g_autoptr(GPtrArray) sistema = file_di_sistema("panel");
-	g_autoptr(GPtrArray) solo_nostro = NULL;
+	g_autoptr(GPtrArray) sistema = system_files("panel");
+	g_autoptr(GPtrArray) ours_only = NULL;
 	g_autoptr(GPtrArray) strati = g_ptr_array_new();
 	g_autoptr(GPtrArray) fancy = NULL;
 	g_autoptr(GPtrArray) restano = NULL;
@@ -4134,13 +4134,13 @@ static void pannello_lxqt(void)
 		return;
 	}
 	nostro = g_build_filename(runtime, "remotix", "lxqt-pannello.conf", NULL);
-	cartella_avvio = g_build_filename(cfg, "autostart", NULL);
-	avvio = g_build_filename(cartella_avvio, "lxqt-panel.desktop", NULL);
+	autostart_dir = g_build_filename(cfg, "autostart", NULL);
+	avvio = g_build_filename(autostart_dir, "lxqt-panel.desktop", NULL);
 	/* ⛔ the leftover of the first draft: read by lxqt-panel, it ended up in the user's */
 	vecchio = g_build_filename(cfg, "lxqt", "panel.conf", NULL);
 	g_unlink(vecchio);
 
-	if (g_file_test(file, G_FILE_TEST_EXISTS) && !leggi_ini_qt(utente, file, &sbaglio)) {
+	if (g_file_test(file, G_FILE_TEST_EXISTS) && !read_ini_qt(utente, file, &sbaglio)) {
 		registro_dice(REG_SESSIONE,
 		              "⚠ LXQt: %s exists but I cannot read it (%s) — the session's panel "
 		              "starts from the system alone (and I do not touch the file)",
@@ -4167,10 +4167,10 @@ static void pannello_lxqt(void)
 			}
 		}
 	}
-	fancy = plugin_di_tipo(utente, sistema, "fancymenu");
+	fancy = plugins_of_type(utente, sistema, "fancymenu");
 	for (guint i = 0; i < fancy->len; i++)
 		g_key_file_set_value(fuso, g_ptr_array_index(fancy, i), "type", "mainmenu");
-	if (g_mkdir_with_parents(cartella_avvio, 0700) != 0 ||
+	if (g_mkdir_with_parents(autostart_dir, 0700) != 0 ||
 	    !g_key_file_save_to_file(fuso, nostro, &sbaglio)) {
 		registro_dice(REG_SESSIONE,
 		              "⛔ LXQt: %s NOT written (%s): the panel keeps the fancymenu, "
@@ -4178,7 +4178,7 @@ static void pannello_lxqt(void)
 		              nostro, sbaglio ? sbaglio->message : g_strerror(errno));
 		return;
 	}
-	riga_avvio = g_strdup_printf("[Desktop Entry]\n"
+	startup_line = g_strdup_printf("[Desktop Entry]\n"
 	                             "Type=Application\n"
 	                             "Name=Panel\n"
 	                             "TryExec=lxqt-panel\n"
@@ -4187,7 +4187,7 @@ static void pannello_lxqt(void)
 	                             "X-LXQt-Module=true\n"
 	                             "X-REMOTIX=the session's panel (D-018)\n",
 	                             nostro);
-	if (!g_file_set_contents(avvio, riga_avvio, -1, &sbaglio)) {
+	if (!g_file_set_contents(avvio, startup_line, -1, &sbaglio)) {
 		registro_dice(REG_SESSIONE,
 		              "⛔ LXQt: %s NOT written (%s): the panel will start with the user's "
 		              "file, and with the fancymenu",
@@ -4197,24 +4197,24 @@ static void pannello_lxqt(void)
 
 	/* ⛔ AND IT IS RE-READ: the session's file, alone (it is all the
 	 *    panel will read), and who wins in autostart. */
-	if (!leggi_ini_qt(riletto, nostro, NULL)) {
+	if (!read_ini_qt(riletto, nostro, NULL)) {
 		registro_dice(REG_SESSIONE, "⛔ LXQt: %s written but it does NOT re-read", nostro);
 		return;
 	}
-	solo_nostro = g_ptr_array_new();
+	ours_only = g_ptr_array_new();
 	for (guint i = 0; i < fancy->len; i++) {
 		g_autofree char *e = g_key_file_get_value(riletto, g_ptr_array_index(fancy, i),
 		                                          "type", NULL);
 
 		cambiati += g_strcmp0(e, "mainmenu") == 0;
 	}
-	restano = plugin_di_tipo(riletto, solo_nostro, "fancymenu");
-	if (g_file_test(suo_avvio, G_FILE_TEST_EXISTS))
+	restano = plugins_of_type(riletto, ours_only, "fancymenu");
+	if (g_file_test(its_startup, G_FILE_TEST_EXISTS))
 		registro_dice(REG_SESSIONE,
 		              "⛔ LXQt: %s exists and belongs to the user: it comes BEFORE ours, and the "
 		              "panel will start as it says (with its file, and with the fancymenu if "
 		              "it has one) — I do not touch it",
-		              suo_avvio);
+		              its_startup);
 	else if (restano->len == 0 && cambiati == fancy->len)
 		registro_dice(REG_SESSIONE,
 		              "⭐ LXQt: the SESSION's panel is %s (%u fancymenu→mainmenu, "
@@ -4250,40 +4250,40 @@ static void pannello_lxqt(void)
  *   REMOTIX (§4.3), and the real cure is A, which no longer shows that button.
  * ⚠ The price, declared: these are the USER's `lxqt.conf` and (if needed) `session.conf`.
  */
-static void blocco_lxqt(void)
+static void block_lxqt(void)
 {
 	static const char *const CHIAVE = "lock_command_wayland";
 	g_autofree char *cartella = g_build_filename(g_get_home_dir(), ".config", "lxqt", NULL);
 	g_autofree char *lxqt = g_build_filename(cartella, "lxqt.conf", NULL);
 	g_autofree char *sessione = g_build_filename(cartella, "session.conf", NULL);
-	g_autoptr(GPtrArray) sistema_lxqt = file_di_sistema("lxqt");
-	g_autoptr(GPtrArray) sistema_sessione = file_di_sistema("session");
-	g_autoptr(GKeyFile) utente_sessione = g_key_file_new();
-	g_autoptr(GKeyFile) sessione_riletta = g_key_file_new();
-	g_autoptr(GKeyFile) utente_lxqt = g_key_file_new();
+	g_autoptr(GPtrArray) system_lxqt = system_files("lxqt");
+	g_autoptr(GPtrArray) system_session = system_files("session");
+	g_autoptr(GKeyFile) session_user = g_key_file_new();
+	g_autoptr(GKeyFile) session_reread = g_key_file_new();
+	g_autoptr(GKeyFile) lxqt_user = g_key_file_new();
 	g_autofree char *perche = NULL;
-	g_autofree char *nel_lxqt = NULL;
+	g_autofree char *in_lxqt = NULL;
 	g_autofree char *era = NULL;
 	g_autofree char *effettivo = NULL;
 
 	/* number 2, always: it is the one that holds if number 1 is not there */
-	nel_lxqt = scrivi_chiave_qt(lxqt, "Screensaver", CHIAVE, "true", &perche);
+	in_lxqt = write_qt_key(lxqt, "Screensaver", CHIAVE, "true", &perche);
 	if (perche)
 		registro_dice(REG_SESSIONE, "⛔ LXQt: %s %s", lxqt, perche);
 	g_clear_pointer(&perche, g_free);
 
 	/* number 1, only if it is there and is not `true` */
 	if (g_file_test(sessione, G_FILE_TEST_EXISTS) &&
-	    !leggi_ini_qt(utente_sessione, sessione, NULL)) {
+	    !read_ini_qt(session_user, sessione, NULL)) {
 		registro_dice(REG_SESSIONE,
 		              "⛔ LXQt: %s exists but I cannot read it — I do NOT rewrite it, and I do not "
 		              "know which lock command holds",
 		              sessione);
 		return;
 	}
-	era = valore_effettivo(utente_sessione, sistema_sessione, "General", CHIAVE);
+	era = effective_value(session_user, system_session, "General", CHIAVE);
 	if (era && g_strcmp0(era, "true") != 0) {
-		g_autofree char *riletto = scrivi_chiave_qt(sessione, "General", CHIAVE, "true",
+		g_autofree char *riletto = write_qt_key(sessione, "General", CHIAVE, "true",
 		                                            &perche);
 
 		registro_dice(REG_SESSIONE,
@@ -4295,18 +4295,18 @@ static void blocco_lxqt(void)
 
 	/* ⛔ AND THE EFFECTIVE VALUE IS RE-READ, with liblxqt's precedence. */
 	if (g_file_test(sessione, G_FILE_TEST_EXISTS))
-		leggi_ini_qt(sessione_riletta, sessione, NULL);
+		read_ini_qt(session_reread, sessione, NULL);
 	if (g_file_test(lxqt, G_FILE_TEST_EXISTS))
-		leggi_ini_qt(utente_lxqt, lxqt, NULL);
-	effettivo = valore_effettivo(sessione_riletta, sistema_sessione, "General", CHIAVE);
+		read_ini_qt(lxqt_user, lxqt, NULL);
+	effettivo = effective_value(session_reread, system_session, "General", CHIAVE);
 	if (!effettivo)
-		effettivo = valore_effettivo(utente_lxqt, sistema_lxqt, "Screensaver", CHIAVE);
+		effettivo = effective_value(lxqt_user, system_lxqt, "Screensaver", CHIAVE);
 	if (g_strcmp0(effettivo, "true") == 0)
 		registro_dice(REG_SESSIONE,
 		              "⭐ LXQt: effective %s = true, RE-READ (session.conf, then "
 		              "lxqt.conf [Screensaver]: %s) — «Lock screen» closes "
 		              "lxqt-leave without locking and without error windows",
-		              CHIAVE, nel_lxqt ? nel_lxqt : "unknown");
+		              CHIAVE, in_lxqt ? in_lxqt : "unknown");
 	else
 		registro_dice(REG_SESSIONE,
 		              "⛔ LXQt: effective %s is NOT true (I re-read «%s»)", CHIAVE,
@@ -4334,7 +4334,7 @@ static void blocco_lxqt(void)
  * ⚠ The price, declared as on XFCE: it is the USER's file.  If the same
  *   user opens LXQt in front of the machine, the idleness watcher
  *   stays off.  ⭐ PHASE 15, D-018 — ALLOWED (standby), like the lock
- *   command of `blocco_lxqt()` (lock): the decision of 25 Sep 2026.
+ *   command of `block_lxqt()` (lock): the decision of 25 Sep 2026.
  *   The panel and the menu entries, instead, go into the SESSION.
  * ⚠ ONLY what must be touched is touched: the file is read, two keys are changed,
  *   the others stay.  If it cannot be read (a format GKeyFile does not
@@ -4347,7 +4347,7 @@ static void blocco_lxqt(void)
  *     (`lxqtmodman.cpp`).  With our launcher the key has no readers;
  *   · lock set to `/bin/false` — ⛔ it would open a MODAL window («Screen
  *     Saver Error»): not written.  ⚠ The lock IS written, but as `true`
- *     (increment 4, `blocco_lxqt()` further below): empty was NOT inert.
+ *     (increment 4, `block_lxqt()` further below): empty was NOT inert.
  *   · the D-Bus inhibition — it does not exist (`sessione_inibisci()`).
  */
 static void impostazioni_lxqt(void)
@@ -4358,11 +4358,11 @@ static void impostazioni_lxqt(void)
 	g_autofree char *attivo = NULL;
 	g_autofree char *livello = NULL;
 
-	/* ⚠ If the file cannot be read, `scrivi_chiave_qt()` does NOT rewrite it, and the
+	/* ⚠ If the file cannot be read, `write_qt_key()` does NOT rewrite it, and the
 	 *   dangerous menu entries below are hidden all the same. */
-	attivo = scrivi_chiave_qt(file, "General", "enableIdlenessWatcher", "false", &perche);
+	attivo = write_qt_key(file, "General", "enableIdlenessWatcher", "false", &perche);
 	if (!perche)
-		livello = scrivi_chiave_qt(file, "General", "runCheckLevel", "1", &perche);
+		livello = write_qt_key(file, "General", "runCheckLevel", "1", &perche);
 	if (perche)
 		registro_dice(REG_SESSIONE,
 		              "⛔ LXQt: %s %s.  ⚠ The idleness watcher stays as it is",
@@ -4413,7 +4413,7 @@ static void impostazioni_lxqt(void)
 	 *   versions: it hides all the same, and is not touched.
 	 *
 	 * ⛔ THE TWO LEFTOVERS THESE SIX DO NOT CURE — cured by increment 4,
-	 *    `pannello_lxqt()` and `blocco_lxqt()` at the end of this function:
+	 *    `pannello_lxqt()` and `block_lxqt()` at the end of this function:
 	 *   1. the «Leave» button inside the fancymenu is FIXED CODE, not a
 	 *      menu entry (`[R]` lxqt-panel 2.1.4 `lxqtfancymenuwindow.cpp:
 	 *      165-169, 315-318`, and no key removes it): it opens `lxqt-leave`,
@@ -4433,10 +4433,10 @@ static void impostazioni_lxqt(void)
 			"lxqt-hibernate", "lxqt-shutdown", "lxqt-reboot", NULL
 		};
 		const int quante = G_N_ELEMENTS(PERICOLOSE) - 1;
-		g_autofree char *dati = lxqt_cartella_dati_sessione();
+		g_autofree char *dati = lxqt_session_data_folder();
 		g_autofree char *applicazioni = dati ? g_build_filename(dati, "applications", NULL)
 		                                     : NULL;
-		g_autofree char *dell_utente = g_build_filename(g_get_home_dir(), ".local", "share",
+		g_autofree char *user_share = g_build_filename(g_get_home_dir(), ".local", "share",
 		                                                "applications", NULL);
 		int nascoste = 0;
 
@@ -4454,7 +4454,7 @@ static void impostazioni_lxqt(void)
 		for (int i = 0; PERICOLOSE[i]; i++) {
 			g_autofree char *nome = g_strconcat(PERICOLOSE[i], ".desktop", NULL);
 			g_autofree char *voce = g_build_filename(applicazioni, nome, NULL);
-			g_autofree char *sua = g_build_filename(dell_utente, nome, NULL);
+			g_autofree char *sua = g_build_filename(user_share, nome, NULL);
 			g_autofree char *contenuto = NULL;
 			g_autoptr(GKeyFile) rilegge = g_key_file_new();
 			g_autoptr(GError) guasto = NULL;
@@ -4499,7 +4499,7 @@ static void impostazioni_lxqt(void)
 	}
 pannello:
 	pannello_lxqt();
-	blocco_lxqt();
+	block_lxqt();
 }
 
 /* ------------------------------------------------------------------------- */
@@ -4547,14 +4547,14 @@ pannello:
  *     drop-in does not count: the re-read says so, and the session keys
  *     stay at their defaults (the logout belt stays `XFCE4_SESSION_COMPOSITOR`).
  */
-struct chiave_xfconf {
+struct key_xfconf {
 	const char *gruppo; /* the property's folder in the channel */
 	const char *nome;
 	const char *tipo;
 	const char *valore;
 };
 
-static const struct chiave_xfconf XFCE_SESSIONE[] = {
+static const struct key_xfconf XFCE_SESSIONE[] = {
 	/* the second logout belt (the first is XFCE4_SESSION_COMPOSITOR) */
 	{ "general", "WaylandLogoutCommand", "string", "/bin/true" },
 	/* the remote session neither finds nor saves sessions */
@@ -4573,7 +4573,7 @@ static void xfce_xfconf_di_sessione(void)
 	g_autofree char *cfg = NULL;
 	g_autofree char *canali = NULL;
 	g_autofree char *file = NULL;
-	g_autofree char *cartella_dropin = NULL;
+	g_autofree char *dropin_dir = NULL;
 	g_autofree char *dropin = NULL;
 	g_autofree char *riga = NULL;
 	g_autofree char *vigore = NULL;
@@ -4621,15 +4621,15 @@ static void xfce_xfconf_di_sessione(void)
 		return;
 	}
 
-	cartella_dropin = g_build_filename(runtime, "systemd", "user.control", "xfconfd.service.d",
+	dropin_dir = g_build_filename(runtime, "systemd", "user.control", "xfconfd.service.d",
 	                                   NULL);
-	dropin = g_build_filename(cartella_dropin, "zz-remotix-sessione.conf", NULL);
+	dropin = g_build_filename(dropin_dir, "zz-remotix-sessione.conf", NULL);
 	riga = g_strdup_printf("[Service]\nEnvironment=XDG_CONFIG_DIRS=%s:%s\n", cfg,
 	                       g_getenv("XDG_CONFIG_DIRS") && *g_getenv("XDG_CONFIG_DIRS")
 	                               ? g_getenv("XDG_CONFIG_DIRS")
 	                               : "/etc/xdg");
 	g_clear_error(&sbaglio);
-	if (g_mkdir_with_parents(cartella_dropin, 0700) != 0 ||
+	if (g_mkdir_with_parents(dropin_dir, 0700) != 0 ||
 	    !g_file_set_contents(dropin, riga, -1, &sbaglio)) {
 		registro_dice(REG_SESSIONE, "⛔ XFCE, D-017: xfconfd drop-in NOT written (%s): %s",
 		              dropin, sbaglio ? sbaglio->message : g_strerror(errno));
@@ -4649,8 +4649,8 @@ static void xfce_xfconf_di_sessione(void)
 	for (int i = 0; XFCE_SESSIONE[i].nome; i++) {
 		g_autofree char *chiave = g_strdup_printf("/%s/%s", XFCE_SESSIONE[i].gruppo,
 		                                          XFCE_SESSIONE[i].nome);
-		char *rileggi[] = { "xfconf-query", "-c", "xfce4-session", "-p", chiave, NULL };
-		g_autofree char *letto = chiedi(rileggi);
+		char *reread_cmd[] = { "xfconf-query", "-c", "xfce4-session", "-p", chiave, NULL };
+		g_autofree char *letto = chiedi(reread_cmd);
 
 		quante++;
 		if (letto && g_strcmp0(g_strstrip(letto), XFCE_SESSIONE[i].valore) == 0)
@@ -4799,12 +4799,12 @@ void sessione_impostazioni(void)
 		impostazioni_lxqt();
 		return;
 	}
-	struct schema_aperto wayland = apri_schema("org.gnome.mutter.wayland");
-	struct schema_aperto shell = apri_schema("org.gnome.shell");
-	struct schema_aperto energia = apri_schema("org.gnome.settings-daemon.plugins.power");
-	struct schema_aperto sessione = apri_schema("org.gnome.desktop.session");
-	struct schema_aperto salvaschermo = apri_schema("org.gnome.desktop.screensaver");
-	struct schema_aperto blocchi = apri_schema("org.gnome.desktop.lockdown");
+	struct schema_open wayland = open_schema("org.gnome.mutter.wayland");
+	struct schema_open shell = open_schema("org.gnome.shell");
+	struct schema_open energia = open_schema("org.gnome.settings-daemon.plugins.power");
+	struct schema_open sessione = open_schema("org.gnome.desktop.session");
+	struct schema_open salvaschermo = open_schema("org.gnome.desktop.screensaver");
+	struct schema_open blocchi = open_schema("org.gnome.desktop.lockdown");
 	const char *vuoto[] = { NULL };
 	int tolte = 0;
 	/*
@@ -4824,7 +4824,7 @@ void sessione_impostazioni(void)
 	 *     the layout, in `input.c`).  ⛔ Without the session dconf
 	 *     they are NOT written: they would end up in the user's.
 	 */
-	const gboolean di_sessione = sessione_dconf_di_sessione();
+	const gboolean di_sessione = session_dconf_of_session();
 
 	if (!di_sessione)
 		registro_dice(REG_SESSIONE,
@@ -4833,9 +4833,9 @@ void sessione_impostazioni(void)
 		              "write: they would end up in the user's settings.  The allowed ones "
 		              "(lock, suspend, standby) are written anyway");
 
-	for (int i = 0; di_sessione && SCORCIATOIE_VT[i]; i++)
-		if (c_e_la_chiave(&wayland, SCORCIATOIE_VT[i], "org.gnome.mutter.wayland") &&
-		    g_settings_set_strv(wayland.impostazioni, SCORCIATOIE_VT[i], vuoto))
+	for (int i = 0; di_sessione && VT_SHORTCUTS[i]; i++)
+		if (schema_has_key(&wayland, VT_SHORTCUTS[i], "org.gnome.mutter.wayland") &&
+		    g_settings_set_strv(wayland.impostazioni, VT_SHORTCUTS[i], vuoto))
 			tolte++;
 	if (tolte)
 		registro_dice(REG_SESSIONE,
@@ -4855,7 +4855,7 @@ void sessione_impostazioni(void)
 	 * session only it DOES NOT APPEAR, and without it logout does not exist.
 	 * ⭐ D-015: SESSION.
 	 */
-	if (di_sessione && c_e_la_chiave(&shell, "always-show-log-out", "org.gnome.shell") &&
+	if (di_sessione && schema_has_key(&shell, "always-show-log-out", "org.gnome.shell") &&
 	    g_settings_set_boolean(shell.impostazioni, "always-show-log-out", TRUE))
 		registro_dice(REG_SESSIONE,
 		              "⭐ «Log Out…» on (always-show-log-out, in the SESSION): without it, on "
@@ -4900,19 +4900,19 @@ void sessione_impostazioni(void)
 	 * ⭐ D-015: SESSION.
 	 */
 	if (di_sessione &&
-	    c_e_la_chiave(&blocchi, "disable-user-switching", "org.gnome.desktop.lockdown") &&
+	    schema_has_key(&blocchi, "disable-user-switching", "org.gnome.desktop.lockdown") &&
 	    g_settings_set_boolean(blocchi.impostazioni, "disable-user-switching", TRUE))
 		registro_dice(REG_SESSIONE,
 		              "⭐ «Switch User» removed (disable-user-switching, in the SESSION): "
 		              "the only entry left is «Log Out…»");
 
 	g_settings_sync();
-	chiudi_schema(&wayland);
-	chiudi_schema(&shell);
-	chiudi_schema(&energia);
-	chiudi_schema(&sessione);
-	chiudi_schema(&salvaschermo);
-	chiudi_schema(&blocchi);
+	close_schema(&wayland);
+	close_schema(&shell);
+	close_schema(&energia);
+	close_schema(&sessione);
+	close_schema(&salvaschermo);
+	close_schema(&blocchi);
 }
 
 /* ------------------------------------------------------------------------- */
@@ -4940,15 +4940,15 @@ void sessione_impostazioni(void)
  *     The thread lives as long as the child, that is as long as the session.
  */
 #define POWERDEVIL "org.kde.Solid.PowerManagement"
-#define POWERDEVIL_PASSO_US (2 * G_USEC_PER_SEC)
-#define POWERDEVIL_PAZIENZA_S 120
+#define POWERDEVIL_STEP_US (2 * G_USEC_PER_SEC)
+#define POWERDEVIL_PATIENCE_S 120
 
-static char *proprietario_di(GDBusConnection *bus, const char *nome)
+static char *owner_of(GDBusConnection *bus, const char *nome)
 {
 	g_autoptr(GVariant) risposta = g_dbus_connection_call_sync(
 		bus, "org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus",
 		"GetNameOwner", g_variant_new("(s)", nome), G_VARIANT_TYPE("(s)"),
-		G_DBUS_CALL_FLAGS_NONE, ATTESA_RISPOSTA_MS, NULL, NULL);
+		G_DBUS_CALL_FLAGS_NONE, WAIT_RESPONSE_MS, NULL, NULL);
 	char *chi = NULL;
 
 	if (risposta)
@@ -4960,20 +4960,20 @@ static gpointer guardia_di_powerdevil(gpointer dati)
 {
 	g_autofree char *ultimo = NULL;
 	const gint64 partito = g_get_monotonic_time();
-	gboolean detto_assente = FALSE;
+	gboolean logged_absent = FALSE;
 
 	(void) dati;
 	for (;;) {
-		g_autoptr(GDBusConnection) bus = sessione_bus(NULL);
-		g_autofree char *chi = bus ? proprietario_di(bus, POWERDEVIL) : NULL;
+		g_autoptr(GDBusConnection) bus = sess_bus(NULL);
+		g_autofree char *chi = bus ? owner_of(bus, POWERDEVIL) : NULL;
 
-		if (!chi && !ultimo && !detto_assente &&
-		    g_get_monotonic_time() - partito > POWERDEVIL_PAZIENZA_S * G_USEC_PER_SEC) {
-			detto_assente = TRUE;
+		if (!chi && !ultimo && !logged_absent &&
+		    g_get_monotonic_time() - partito > POWERDEVIL_PATIENCE_S * G_USEC_PER_SEC) {
+			logged_absent = TRUE;
 			registro_dice(REG_SESSIONE,
 			              "⚠ Plasma: powerdevil did not appear within %d s: nobody "
 			              "switches the screen off, and I keep watching",
-			              POWERDEVIL_PAZIENZA_S);
+			              POWERDEVIL_PATIENCE_S);
 		}
 		if (chi && g_strcmp0(chi, ultimo) != 0) {
 			g_autoptr(GVariant) risposta = NULL;
@@ -4986,7 +4986,7 @@ static gpointer guardia_di_powerdevil(gpointer dati)
 				g_variant_new("(uss)", 4u, "REMOTIX",
 			                      "a remote session is alive: the screen does not "
 			                      "turn off and the session is not idle"),
-				G_VARIANT_TYPE("(u)"), G_DBUS_CALL_FLAGS_NONE, ATTESA_RISPOSTA_MS,
+				G_VARIANT_TYPE("(u)"), G_DBUS_CALL_FLAGS_NONE, WAIT_RESPONSE_MS,
 				NULL, &sbaglio);
 			if (risposta) {
 				g_variant_get(risposta, "(u)", &gettone);
@@ -5004,7 +5004,7 @@ static gpointer guardia_di_powerdevil(gpointer dati)
 				              chi, sbaglio ? sbaglio->message : "no reason given");
 			}
 		}
-		g_usleep(POWERDEVIL_PASSO_US);
+		g_usleep(POWERDEVIL_STEP_US);
 	}
 	return NULL;
 }
@@ -5034,7 +5034,7 @@ static gpointer guardia_di_powerdevil(gpointer dati)
  */
 guint32 sessione_inibisci(void)
 {
-	g_autoptr(GDBusConnection) bus = sessione_bus(NULL);
+	g_autoptr(GDBusConnection) bus = sess_bus(NULL);
 	g_autoptr(GVariant) risposta = NULL;
 	g_autoptr(GError) sbaglio = NULL;
 	guint32 gettone = 0;
@@ -5102,7 +5102,7 @@ guint32 sessione_inibisci(void)
 	                      "a remote session is alive: the machine must "
 	                      "not suspend nor consider itself idle",
 	                      (guint32)(4u | 8u)),
-		G_VARIANT_TYPE("(u)"), G_DBUS_CALL_FLAGS_NONE, ATTESA_RISPOSTA_MS, NULL,
+		G_VARIANT_TYPE("(u)"), G_DBUS_CALL_FLAGS_NONE, WAIT_RESPONSE_MS, NULL,
 		&sbaglio);
 
 	if (!risposta) {
@@ -5137,7 +5137,7 @@ guint32 sessione_inibisci(void)
  *    a doubling wait (1 s → 30 s).  ⇒ Here the birth is ASKED for and we
  *    return; finding out that the session is there is the next round's job.
  *
- * ⚠ It starts ONLY from `SESSIONE_MORTA`.  The other states are governed by
+ * ⚠ It starts ONLY from `SESSION_DEAD`.  The other states are governed by
  *   `sessione_assicura()`, and redoing them here would mean two rules on the same
  *   fact — that is two different rules the day one of them changes.
  */
@@ -5166,11 +5166,11 @@ bool sessione_fai_nascere(uint32_t larghezza, uint32_t altezza)
 
 	stato = sessione_stato(larghezza, altezza, NULL);
 
-	if (stato != SESSIONE_MORTA) {
+	if (stato != SESSION_DEAD) {
 		registro_dice(REG_SESSIONE,
 		              "I am not making it be born: the state is «%s», not «dead» — and "
 		              "the other cases are governed by sessione_assicura()",
-		              sessione_marca(stato));
+		              session_mark(stato));
 		return false;
 	}
 
@@ -5251,8 +5251,8 @@ bool sessione_fai_nascere(uint32_t larghezza, uint32_t altezza)
 		              "(«%s» is not inactive): I do not make a second one be born "
 		              "now — it would be born inside the one that is dying.  ⭐ Retrying "
 		              "shortly",
-		              e_kde()                   ? SESSIONE_UNITA_KWIN
-		              : (e_xfce() || e_lxqt()) ? "the process " SESSIONE_PROCESSO_XFCE
+		              e_kde()                   ? SESSION_UNIT_KWIN
+		              : (e_xfce() || e_lxqt()) ? "the process " SESSION_PROCESS_XFCE
 		                                        : sessione_gnome()->gestore);
 		return false;
 	}
@@ -5288,8 +5288,8 @@ bool sessione_fai_nascere(uint32_t larghezza, uint32_t altezza)
 		               "-p", "ActiveEnterTimestampMonotonic", "pipewire-pulse.service", NULL };
 		g_autofree char *s_pw = chiedi(pw);
 		g_autofree char *s_pp = chiedi(pp);
-		bool pw_attivo = s_pw && strstr(s_pw, "ActiveState=active\n");
-		bool pp_attivo = s_pp && strstr(s_pp, "ActiveState=active\n");
+		bool pw_active = s_pw && strstr(s_pw, "ActiveState=active\n");
+		bool pp_active = s_pp && strstr(s_pp, "ActiveState=active\n");
 		const char *t;
 		unsigned long long da_pw = 0, da_pp = 0;
 
@@ -5297,7 +5297,7 @@ bool sessione_fai_nascere(uint32_t larghezza, uint32_t altezza)
 			da_pw = g_ascii_strtoull(t + 30, NULL, 10);
 		if (s_pp && (t = strstr(s_pp, "ActiveEnterTimestampMonotonic=")))
 			da_pp = g_ascii_strtoull(t + 30, NULL, 10);
-		if (pp_attivo && (!pw_attivo || da_pp < da_pw)) {
+		if (pp_active && (!pw_active || da_pp < da_pw)) {
 			char *ferma[] = { "systemctl", "--user", "stop", "pipewire-pulse.service", NULL };
 
 			registro_dice(REG_SESSIONE,
@@ -5305,14 +5305,14 @@ bool sessione_fai_nascere(uint32_t larghezza, uint32_t altezza)
 			              "(%s, since %llu): it is the leftover of the previous session, and "
 			              "programs playing through PulseAudio would stay mute.  I "
 			              "stop it: the socket turns it back on attached to the new `pipewire` — %s",
-			              da_pp, pw_attivo ? "active" : "off", da_pw,
+			              da_pp, pw_active ? "active" : "off", da_pw,
 			              esegui(ferma) ? "stopped" : "⛔ NOT stopped");
 		} else {
 			registro_dice(REG_SESSIONE,
 			              "`pipewire-pulse` %s (since %llu), `pipewire` %s (since %llu): no "
 			              "leftovers of the previous session",
-			              pp_attivo ? "active" : "off", da_pp,
-			              pw_attivo ? "active" : "off", da_pw);
+			              pp_active ? "active" : "off", da_pp,
+			              pw_active ? "active" : "off", da_pw);
 		}
 	}
 
@@ -5320,8 +5320,8 @@ bool sessione_fai_nascere(uint32_t larghezza, uint32_t altezza)
 	 *    `gnome-session` starts the Shell as the first thing, and a key
 	 *    written afterwards holds for the NEXT session — that is it is right tomorrow. */
 	/* ⭐ D-015: first the session dconf is emptied, then it is written to. */
-	if (sessione_desktop() == SESSIONE_DESKTOP_GNOME)
-		sessione_dconf_azzera();
+	if (sessione_desktop() == SESSION_DESKTOP_GNOME)
+		session_dconf_reset();
 	sessione_impostazioni();
 
 	return avvia(larghezza, altezza) ? true : false;
@@ -5356,7 +5356,7 @@ SessioneStato sessione_assicura(uint32_t larghezza, uint32_t altezza, bool *avvi
 		 *      — that is ours.  Nothing is taken away from anyone.
 		 *
 		 * ⚠ And it is reborn ONLY here, where the monitors are **one**: if there were two
-		 *   there would be a live capture (`SESSIONE_SCELTO_DA_SE`), and knocking down
+		 *   there would be a live capture (`SESSION_SELF_CHOSEN`), and knocking down
 		 *   the session would take the desktop away from an attached client.
 		 */
 		registro_dice(REG_SESSIONE,
@@ -5368,14 +5368,14 @@ SessioneStato sessione_assicura(uint32_t larghezza, uint32_t altezza, bool *avvi
 		              scelto.connettore, scelto.prodotto, scelto.larghezza,
 		              scelto.altezza);
 		break;
-	case SESSIONE_NON_LETTA:
+	case SESSION_NOT_READ:
 		registro_dice(REG_SESSIONE,
 		              "⛔ I could not read the session state: I touch "
 		              "NOTHING.  «I could not look» is not «it is not there» (E8), and a "
 		              "session knocked down because of a failed read is damage done "
 		              "on a hypothesis");
-		return SESSIONE_NON_LETTA;
-	case SESSIONE_MISURA_ALTRA:
+		return SESSION_NOT_READ;
+	case SESSION_WRONG_SIZE:
 		/* ⛔ It is the same defect as above with another size: a
 		 *    «MetaVirtualMonitor» monitor the session was not supposed to have. */
 		registro_dice(REG_SESSIONE,
@@ -5384,7 +5384,7 @@ SessioneStato sessione_assicura(uint32_t larghezza, uint32_t altezza, bool *avvi
 		              "make it BE BORN AGAIN without monitors of its own",
 		              scelto.larghezza, scelto.altezza, larghezza, altezza);
 		break;
-	case SESSIONE_SCELTO_DA_SE:
+	case SESSION_SELF_CHOSEN:
 		/*
 		 * ⭐ AND THIS, AFTER THE CURE, IS OFTEN THE HEALTHY CASE: «Virtual remote
 		 *    monitor» is the name Mutter gives to the monitor of a `RecordVirtual`
@@ -5399,7 +5399,7 @@ SessioneStato sessione_assicura(uint32_t larghezza, uint32_t altezza, bool *avvi
 		              "«Virtual remote monitor» is the monitor capture mounts when "
 		              "a client is attached, and knocking it down would take it away (I4)",
 		              scelto.quanti, scelto.prodotto);
-		return SESSIONE_SCELTO_DA_SE;
+		return SESSION_SELF_CHOSEN;
 	case SESSIONE_NERA:
 		/*
 		 * ⛔⛔ AND THIS IS NO LONGER A FAULT — 14 August 2026, phase 4, A1.
@@ -5421,7 +5421,7 @@ SessioneStato sessione_assicura(uint32_t larghezza, uint32_t altezza, bool *avvi
 		              "the bar and the dock.  ⚠ Until then the session is black, and that is "
 		              "fine: it is a REMOTE-ONLY session");
 		return SESSIONE_NERA;
-	case SESSIONE_MORTA:
+	case SESSION_DEAD:
 		registro_dice(REG_SESSIONE, "no graphical session: I am starting it");
 		break;
 	}
@@ -5442,14 +5442,14 @@ SessioneStato sessione_assicura(uint32_t larghezza, uint32_t altezza, bool *avvi
 		              "⛔ without the drop-in in force the session would be reborn with the "
 		              "same extra monitor, and the user would again look at an empty "
 		              "screen: I do not make it be born at all, and the state stays «%s»",
-		              sessione_marca(stato));
+		              session_mark(stato));
 		return stato;
 	}
 
 	/* ⛔ Only the one with ITS OWN monitor (just one, and ours) is knocked down: never the
 	 *    black one — which is now the right one — and never the one with two monitors, which
 	 *    has a live capture on it. */
-	if ((stato == SESSIONE_SANA || stato == SESSIONE_MISURA_ALTRA) &&
+	if ((stato == SESSIONE_SANA || stato == SESSION_WRONG_SIZE) &&
 	    !sessione_termina()) {
 		registro_dice(REG_SESSIONE,
 		              "⛔ the session with the extra monitor did not go away: I do not "
@@ -5479,7 +5479,7 @@ SessioneStato sessione_assicura(uint32_t larghezza, uint32_t altezza, bool *avvi
 	 */
 	scadenza = g_get_monotonic_time() + (gint64) ATTESA_AVVIO_MS * 1000;
 	while (g_get_monotonic_time() < scadenza) {
-		g_usleep(CADENZA_CONTROLLO_MS * 1000);
+		g_usleep(CHECK_INTERVAL_MS * 1000);
 		if (!sessione_viva())
 			continue;
 		if (viva_da == 0) {
@@ -5487,10 +5487,10 @@ SessioneStato sessione_assicura(uint32_t larghezza, uint32_t altezza, bool *avvi
 			registro_dice(REG_SESSIONE,
 			              "the compositor answers; I check that it has NOT taken a "
 			              "monitor of its own (grace %d ms)",
-			              GRAZIA_MONITOR_MS);
+			              GRACE_MONITOR_MS);
 			continue;
 		}
-		if (g_get_monotonic_time() - viva_da < (gint64) GRAZIA_MONITOR_MS * 1000)
+		if (g_get_monotonic_time() - viva_da < (gint64) GRACE_MONITOR_MS * 1000)
 			continue;
 
 		stato = sessione_stato(larghezza, altezza, &scelto);
@@ -5503,7 +5503,7 @@ SessioneStato sessione_assicura(uint32_t larghezza, uint32_t altezza, bool *avvi
 			              "first client, and the bar and the dock will go on it");
 			return SESSIONE_NERA;
 		}
-		if (stato != SESSIONE_MORTA && stato != SESSIONE_NON_LETTA) {
+		if (stato != SESSION_DEAD && stato != SESSION_NOT_READ) {
 			/* It is born, and it took a monitor: waiting longer would
 			 * change nothing, and this is the number to give. */
 			if (avviata)
@@ -5512,7 +5512,7 @@ SessioneStato sessione_assicura(uint32_t larghezza, uint32_t altezza, bool *avvi
 			              "⛔ the session was born AND TOOK A MONITOR («%s»): "
 			              "«%s».  My drop-in did not win, and the user "
 			              "will look at an empty screen",
-			              scelto.prodotto, sessione_marca(stato));
+			              scelto.prodotto, session_mark(stato));
 			return stato;
 		}
 	}
@@ -5520,6 +5520,6 @@ SessioneStato sessione_assicura(uint32_t larghezza, uint32_t altezza, bool *avvi
 	stato = sessione_stato(larghezza, altezza, NULL);
 	registro_dice(REG_SESSIONE,
 	              "⛔ the graphical session did not answer within %d seconds: it stays «%s»",
-	              ATTESA_AVVIO_MS / 1000, sessione_marca(stato));
+	              ATTESA_AVVIO_MS / 1000, session_mark(stato));
 	return stato;
 }

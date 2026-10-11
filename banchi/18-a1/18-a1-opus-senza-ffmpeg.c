@@ -56,7 +56,7 @@ uint64_t vecchio_cod_taciuti(const audio_cod *c);
 
 /* ⚠ The real log is not needed: the lines are printed, indented, because
  *   the opening ones ARE one of the things to compare. */
-void registro_dice_in(const char *file, int linea, const char *area,
+void log_says_in(const char *file, int linea, const char *area,
                       const char *fmt, ...)
 {
 	va_list ap;
@@ -79,7 +79,7 @@ static const char *nome_tratto[T_N] = {
 	"H pure tone",
 };
 /* blocks per stretch: 10 s, 10 s, 4 s, 2 s, 4 s, 4 s, 4 s, 4 s */
-static const int blocchi_tratto[T_N] = { 500, 500, 200, 100, 200, 200, 200, 200 };
+static const int blocks_stretch[T_N] = { 500, 500, 200, 100, 200, 200, 200, 200 };
 
 static uint32_t seme = 12345;
 static double rumore(void)
@@ -99,15 +99,15 @@ static int16_t sat(double v)
 }
 
 /* Two-pole resonator, one per channel per formant. */
-typedef struct { double a1, a2, g, y1, y2; } riso;
-static void riso_metti(riso *r, double f, double banda)
+typedef struct { double a1, a2, g, y1, y2; } resonator;
+static void resonator_set(resonator *r, double f, double banda)
 {
 	double rr = exp(-M_PI * banda / FQ);
 	r->a1 = 2.0 * rr * cos(2.0 * M_PI * f / FQ);
 	r->a2 = -rr * rr;
 	r->g = 1.0 - rr;
 }
-static double riso_passa(riso *r, double x)
+static double resonator_step(resonator *r, double x)
 {
 	double y = r->g * x + r->a1 * r->y1 + r->a2 * r->y2;
 	r->y2 = r->y1;
@@ -120,30 +120,30 @@ static int16_t *segnale;
 /* `--scrivi DIR`: the Opus arm with the cure on leaves its packets for
  * `chrome.py` — two bytes of little-endian length and the packet, 0 = muted
  * block — and the NATIVE float decoding of the new one, for the comparison. */
-static const char *scrivi_in;
+static const char *write_dir;
 static int *tratto_di; /* per block */
-static int blocchi_tot;
+static int blocks_total;
 
 static void genera(void)
 {
-	static const double formanti[5][3] = {
+	static const double formants[5][3] = {
 		{ 700, 1220, 2600 }, { 300, 2300, 3000 }, { 500, 900, 2400 },
 		{ 350, 800, 2250 },  { 600, 1700, 2600 },
 	};
-	riso f[3];
-	double fase_gl = 0, t;
+	resonator f[3];
+	double phase_gl = 0, t;
 	long n = 0;
 
-	blocchi_tot = 0;
+	blocks_total = 0;
 	for (int i = 0; i < T_N; i++)
-		blocchi_tot += blocchi_tratto[i];
-	segnale = calloc((size_t)blocchi_tot * BL * 2, sizeof(int16_t));
-	tratto_di = calloc((size_t)blocchi_tot, sizeof(int));
+		blocks_total += blocks_stretch[i];
+	segnale = calloc((size_t)blocks_total * BL * 2, sizeof(int16_t));
+	tratto_di = calloc((size_t)blocks_total, sizeof(int));
 	memset(f, 0, sizeof f);
 
 	int b = 0;
 	for (int tr = 0; tr < T_N; tr++) {
-		for (int k = 0; k < blocchi_tratto[tr]; k++, b++) {
+		for (int k = 0; k < blocks_stretch[tr]; k++, b++) {
 			tratto_di[b] = tr;
 			int16_t *d = segnale + (size_t)b * BL * 2;
 			for (int i = 0; i < BL; i++, n++) {
@@ -151,21 +151,21 @@ static void genera(void)
 				t = (double)n / FQ;
 				switch (tr) {
 				case T_A: {
-					int sill = (int)(t / 0.2);
-					bool pausa = (sill % 7) == 6;
+					int syl = (int)(t / 0.2);
+					bool pausa = (syl % 7) == 6;
 					if (i == 0 && k % 10 == 0)
 						for (int q = 0; q < 3; q++)
-							riso_metti(&f[q], formanti[sill % 5][q], 80 + 40 * q);
+							resonator_set(&f[q], formants[syl % 5][q], 80 + 40 * q);
 					double f0 = 90 + 130 * (0.5 + 0.5 * sin(2 * M_PI * 0.7 * t));
-					fase_gl += f0 / FQ;
+					phase_gl += f0 / FQ;
 					double imp = 0;
-					if (fase_gl >= 1.0) {
-						fase_gl -= 1.0;
+					if (phase_gl >= 1.0) {
+						phase_gl -= 1.0;
 						imp = 1.0;
 					}
 					double x = pausa ? 0.0 : imp * 6.0 + 0.02 * rumore();
-					double y = riso_passa(&f[0], x) + 0.6 * riso_passa(&f[1], x) +
-					           0.3 * riso_passa(&f[2], x);
+					double y = resonator_step(&f[0], x) + 0.6 * resonator_step(&f[1], x) +
+					           0.3 * resonator_step(&f[2], x);
 					l = r = pausa ? 0.001 * rumore() : y;
 					break;
 				}
@@ -260,18 +260,18 @@ static const char *modo(int cfg)
  *   and new.  The pure tone H is the check that the alignment is right.  ⚠ And at
  *   the borders between stretches the 312 tail samples end up in the next
  *   stretch: hence the "decoded" energy in silence C. */
-static void errore_per_tratto(const int16_t *dec, const char *chi)
+static void error_per_stretch(const int16_t *dec, const char *chi)
 {
 	printf("   error against the source, %s (SNR per stretch, pre-skip %d):\n",
 	       chi, RITARDO);
 	long inizio = 0;
 	for (int tr = 0; tr < T_N; tr++) {
-		long fine = inizio + (long)blocchi_tratto[tr] * BL;
+		long fine = inizio + (long)blocks_stretch[tr] * BL;
 		double es = 0, ee = 0;
 		for (long i = inizio; i < fine; i++)
 			for (int c = 0; c < 2; c++) {
 				long j = i + RITARDO;
-				if (j >= (long)blocchi_tot * BL)
+				if (j >= (long)blocks_total * BL)
 					continue;
 				double s = segnale[i * 2 + c];
 				double e = s - dec[j * 2 + c];
@@ -293,7 +293,7 @@ static int braccio(uint8_t codec, bool cura)
 	audio_cod *v, *nu;
 	OpusDecoder *dv = NULL, *dn = NULL;
 	conto cv, cn;
-	int diversi = 0, primo_diverso = -1, e, rifiutati = 0;
+	int diversi = 0, first_different = -1, e, rifiutati = 0;
 	static uint8_t pv[AUDIO_FUORI_MAX], pn[AUDIO_FUORI_MAX];
 
 	memset(&cv, 0, sizeof cv);
@@ -314,28 +314,28 @@ static int braccio(uint8_t codec, bool cura)
 	if (codec == 1) {
 		dv = opus_decoder_create(FQ, 2, &e);
 		dn = opus_decoder_create(FQ, 2, &e);
-		cv.decodificato = calloc((size_t)blocchi_tot * BL * 2, sizeof(int16_t));
-		cn.decodificato = calloc((size_t)blocchi_tot * BL * 2, sizeof(int16_t));
+		cv.decodificato = calloc((size_t)blocks_total * BL * 2, sizeof(int16_t));
+		cn.decodificato = calloc((size_t)blocks_total * BL * 2, sizeof(int16_t));
 	}
 
 	FILE *fv = NULL, *fn = NULL, *ff = NULL;
 	OpusDecoder *dfl = NULL;
-	if (scrivi_in && codec == 1 && cura) {
+	if (write_dir && codec == 1 && cura) {
 		char nome[512];
-		snprintf(nome, sizeof nome, "%s/vecchio.pkt", scrivi_in);
+		snprintf(nome, sizeof nome, "%s/vecchio.pkt", write_dir);
 		fv = fopen(nome, "wb");
-		snprintf(nome, sizeof nome, "%s/nuovo.pkt", scrivi_in);
+		snprintf(nome, sizeof nome, "%s/nuovo.pkt", write_dir);
 		fn = fopen(nome, "wb");
-		snprintf(nome, sizeof nome, "%s/nuovo.f32", scrivi_in);
+		snprintf(nome, sizeof nome, "%s/nuovo.f32", write_dir);
 		ff = fopen(nome, "wb");
 		dfl = opus_decoder_create(FQ, 2, &e);
 		if (!fv || !fn || !ff || !dfl) {
-			printf("⛔ cannot write in %s\n", scrivi_in);
+			printf("⛔ cannot write in %s\n", write_dir);
 			return 2;
 		}
 	}
 
-	uint32_t passi = (uint32_t)blocchi_tot * BL / bl;
+	uint32_t passi = (uint32_t)blocks_total * BL / bl;
 	for (uint32_t b = 0; b < passi; b++) {
 		const int16_t *s = segnale + (size_t)b * bl * 2;
 		size_t qv = 0, qn = 0;
@@ -347,8 +347,8 @@ static int braccio(uint8_t codec, bool cura)
 			conta(&cn, pn, qn);
 		if (ov != on || qv != qn || (ov && memcmp(pv, pn, qv))) {
 			diversi++;
-			if (primo_diverso < 0)
-				primo_diverso = (int)b;
+			if (first_different < 0)
+				first_different = (int)b;
 		}
 		if (fv) {
 			uint8_t l2[2] = { (uint8_t)(qv & 0xFF), (uint8_t)(qv >> 8) };
@@ -386,7 +386,7 @@ static int braccio(uint8_t codec, bool cura)
 		fclose(fn);
 		fclose(ff);
 		opus_decoder_destroy(dfl);
-		printf("   ⭐ packets and native decoding written in %s\n", scrivi_in);
+		printf("   ⭐ packets and native decoding written in %s\n", write_dir);
 	}
 	cv.taciuti = vecchio_cod_taciuti(v);
 	cn.taciuti = audio_cod_taciuti(nu);
@@ -423,14 +423,14 @@ static int braccio(uint8_t codec, bool cura)
 				       modo(k), (unsigned long long)cv.config[k],
 				       (unsigned long long)cn.config[k]);
 		long dd = 0;
-		for (size_t i = 0; i < (size_t)blocchi_tot * BL * 2; i++)
+		for (size_t i = 0; i < (size_t)blocks_total * BL * 2; i++)
 			if (cv.decodificato[i] != cn.decodificato[i])
 				dd++;
 		printf("   packets the decoder refuses: %d\n", rifiutati);
 		printf("   decoded samples different between old and new: %ld of %ld\n",
-		       dd, (long)blocchi_tot * BL * 2);
-		errore_per_tratto(cv.decodificato, "old");
-		errore_per_tratto(cn.decodificato, "new");
+		       dd, (long)blocks_total * BL * 2);
+		error_per_stretch(cv.decodificato, "old");
+		error_per_stretch(cn.decodificato, "new");
 		opus_decoder_destroy(dv);
 		opus_decoder_destroy(dn);
 		free(cv.decodificato);
@@ -438,7 +438,7 @@ static int braccio(uint8_t codec, bool cura)
 	}
 	if (diversi)
 		printf("   ⛔ ROSSO: %d blocks with a different outcome, the first at block %d\n",
-		       diversi, primo_diverso);
+		       diversi, first_different);
 	else
 		printf("   ⭐ VERDE: %u blocks, every outcome and every packet IDENTICAL "
 		       "byte for byte\n", passi);
@@ -449,10 +449,10 @@ int main(int argc, char **argv)
 {
 	int esito = 0;
 	if (argc == 3 && strcmp(argv[1], "--scrivi") == 0)
-		scrivi_in = argv[2];
+		write_dir = argv[2];
 	genera();
 	printf("== 18-a1 · Opus without ffmpeg · %d blocks of 20 ms (%.0f s) · %s\n",
-	       blocchi_tot, blocchi_tot * 0.02, opus_get_version_string());
+	       blocks_total, blocks_total * 0.02, opus_get_version_string());
 	esito |= braccio(1, true);
 	esito |= braccio(1, false);
 	esito |= braccio(2, true);

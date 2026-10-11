@@ -62,7 +62,7 @@
  *       `06-b33`, and this file CANNOT cure it
  *
  * ⚠ *This box is the most important thing in the file, and must be read before
- *   touching `dispositivo_tolto()`: the comment in there said* "at the replacement
+ *   touching `device_removed()`: the comment in there said* "at the replacement
  *   we release on the new device, which is the only place where the release
  *   arrives" *— and it was **false**.  The release on the new device arrives
  *   nowhere.*
@@ -103,15 +103,15 @@
  *     **BEFORE** asking for the resize, while the devices are
  *     still those that received the press.  The function already exists and is
  *     `input_rilascia_tutto()`; the place to call it is `figlio.c:3964`,
- *     right **before** `cattura_ridimensiona(cat, tela_voluta_l,
- *     tela_voluta_a)`.  `[M]` Simulated from the wire — releasing before the
+ *     right **before** `cattura_ridimensiona(cat, canvas_intended_w,
+ *     canvas_intended_h)`.  `[M]` Simulated from the wire — releasing before the
  *     replacement — the witness sees the release and the clicks after the replacement
  *     work again, all of them.
  *
  * ⚠ `figlio.c` does not belong to this link (sub-phase 6.3), so here the cure is
  *   MEASURED and WRITTEN, not applied.  ⛔ What falls to this file is
  *   the other half, and it is the one that was missing: **stop saying the release
- *   has left**.  Before, `manda_bottone()` returned 0 and
+ *   has left**.  Before, `send_button()` returned 0 and
  *   `input_rilascia_tutto()` counted a release that happened, that is the log
  *   said "done" while the desktop stayed blocked — the worst form of
  *   `CODER.md` §4.6, *the green is not true*.
@@ -208,7 +208,7 @@
  *    beyond them, the event is discarded **silently**.  The bitmaps cover them
  *    entirely: so "I marked it" and "I sent it" cannot diverge.
  */
-#define MAX_TASTO 0x300u
+#define MAX_KEY 0x300u
 #define MAX_BOTTONE 0x300u
 #define BIT_BYTE(n) (((n) + 7u) / 8u)
 
@@ -249,35 +249,35 @@ struct input
 	 *    ends up wherever (`banchi/01-s7-rotella.c`, `[M]` 10 August 2026). */
 	struct ei_device *puntatore;
 	struct ei_device *tastiera_dev;
-	gboolean puntatore_attivo;
+	gboolean pointer_active;
 	gboolean tastiera_attiva;
 	uint32_t sequenza;
 
 	/* The region the pointer moves on, in global logical coordinates. */
 	gboolean regione_nota;
-	gboolean regione_scalata_lamentata;
+	gboolean scaled_region_warned;
 	double reg_x, reg_y, reg_l, reg_a;
 	char *reg_per; /* «key», «geometry», «only»: how we chose it */
 
 	Tastiera *disposizione;
-	char *keymap_nome; /* the name libei publishes, to SEE a replacement */
+	char *keymap_name; /* the name libei publishes, to SEE a replacement */
 	/* ⭐ What the CLIENT declared in `ATTACCA` (`RCP.md` §4.5), that is
 	 *    the layout §5-bis.7 says to put into the session.  NULL
 	 *    until someone has asked for it. */
 	char *negoziata;
 	/* ⭐ How many times the negotiated layout was REQUESTED from KWin on seeing
 	 *    another keymap arrive (see "KWIN DID NOT HEAR" below). */
-	int richieste_kwin;
+	int kwin_requests;
 
 	/* ⛔⛔ THE COUNT.  See the box at the top of the file. */
-	uint8_t tasti[BIT_BYTE(MAX_TASTO)];
+	uint8_t tasti[BIT_BYTE(MAX_KEY)];
 	uint8_t bottoni[BIT_BYTE(MAX_BOTTONE)];
-	unsigned quanti_tasti;
+	unsigned how_many_keys;
 	unsigned quanti_bottoni;
 
 	/* ⛔⛔ THE ORPHANS — what was pressed on a device THAT IS NO LONGER
 	 *     THERE.  See the box "THE RELEASE THAT REACHES NOBODY". */
-	uint8_t tasti_orfani[BIT_BYTE(MAX_TASTO)];
+	uint8_t orphan_keys[BIT_BYTE(MAX_KEY)];
 	uint8_t bottoni_orfani[BIT_BYTE(MAX_BOTTONE)];
 	unsigned quanti_orfani;
 
@@ -294,19 +294,19 @@ struct input
 	 *     only at the drop of the EIS channel. */
 	gboolean guarigione_dovuta;
 	unsigned guarigioni;
-	gint64 ultima_guarigione_us;
+	gint64 last_heal_us;
 
 	/* ⛔⛔ `libei`'s HANDSHAKE — cure D4, 25 August 2026.  The
 	 *     box above `stacca_il_contesto()` names the instruction that crashed and
 	 *     why these four fields are what is needed not to pass through it.
 	 *
-	 * ⭐ `stretta_fatta` is NOT a heuristic on the pointers: it is `EI_EVENT_CONNECT`,
+	 * ⭐ `handshake_done` is NOT a heuristic on the pointers: it is `EI_EVENT_CONNECT`,
 	 *    that is the way `libei` has of saying "the server has approved".  The
 	 *    devices arrive LATER, and looking at them would say "not yet" even
 	 *    on a context that is by now mature. */
-	gboolean stretta_fatta;
-	gint64 aperto_us;  /* when the channel was opened (monotonic) */
-	gint64 stretta_us; /* when the handshake arrived; 0 = never */
+	gboolean handshake_done;
+	gint64 open_us;  /* when the channel was opened (monotonic) */
+	gint64 handshake_us; /* when the handshake arrived; 0 = never */
 	/* ⛔ The descriptor we gave `libei`, kept aside for ONE case only:
 	 *    the one in which the context must be **abandoned** instead of freed,
 	 *    and then we must close the socket ourselves.  ⚠ In the normal case it is not
@@ -321,58 +321,58 @@ struct input
 	 *    replaces it, so no function falls by mistake into the libei branches.
 	 *    The "WLROOTS" box at the bottom of the file says the rest. */
 	WlrInput *wlr;
-	gint64 wlr_ultimo_riattacco_us;
-	unsigned wlr_riattacchi;
-	gboolean wlr_riattacco_fallito_detto;
+	gint64 wlr_last_reattach_us;
+	unsigned wlr_reattaches;
+	gboolean wlr_reattach_failed_logged;
 	/* ⭐ PHASE 15, D-007 — the last absolute position sent (on the canvas of
 	 *    then): `input_riporta_dentro()` puts it back after the shortcut, which
 	 *    moves labwc's pointer onto the windows. */
-	gboolean wlr_puntatore_noto;
+	gboolean wlr_pointer_known;
 	uint32_t wlr_px, wlr_py, wlr_pl, wlr_pa;
 };
 
 /* ⭐ PHASE 13 — the wlroots branches, written at the bottom of the file (box
  *    "WLROOTS").  ⛔ Each one sits at the TOP of the public function and returns: the
  *    GNOME and KDE path below it does not change by one line. */
-static int manda_tasto_wlr(Input *in, uint16_t codice, int premuto);
-static int manda_bottone_wlr(Input *in, uint16_t codice, int premuto);
-static int gira_wlr(Input *in);
-static int disposizione_wlr(Input *in, const char *nome);
-static int lettera_wlr(Input *in, uint32_t carattere);
-static void chiudi_wlr(Input *in);
+static int send_key_wlr(Input *in, uint16_t codice, int premuto);
+static int send_button_wlr(Input *in, uint16_t codice, int premuto);
+static int run_wlr(Input *in);
+static int layout_wlr(Input *in, const char *nome);
+static int letter_wlr(Input *in, uint32_t carattere);
+static void close_wlr(Input *in);
 static void riattacca_wlr(Input *in);
 
 /* ⛔ The count of ABANDONED contexts — the PRICE of cure D4, and a price
  *    that is not counted is a price nobody discovers.  ⚠ It belongs to the process, not
  *    to the channel: the `Input` that paid it is already freed when the bench
  *    reads the number. */
-static unsigned contesti_abbandonati;
+static unsigned abandoned_contexts;
 
 /* ⭐ The window of bench `10-d4`.  ⛔ It is NOT in `input.h` on purpose, like
- *    `input_conto()` below: `input.h` is the PRODUCT's contract, and this
+ *    `input_count()` below: `input.h` is the PRODUCT's contract, and this
  *    is a witness.  The bench declares it `extern` by itself. */
 unsigned input_abbandoni(void);
 
 unsigned input_abbandoni(void)
 {
-	return contesti_abbandonati;
+	return abandoned_contexts;
 }
 
 /* ⛔ The floor between two healings.  It is not prudence: a healing that
  *    failed in a repeatable way would run at every round of the child's loop,
  *    that is sixty D-Bus calls a second on an already broken channel.  ⚠ The
  *    flag is NOT switched off: it is retried at the round after the floor. */
-#define GUARIGIONE_FONDO_US (1000 * 1000)
+#define HEALING_BACKSTOP_US (1000 * 1000)
 
 /* ------------------------------------------------------------------ *
  *  The bitmaps — "marked" and "sent" must not be able to diverge
  * ------------------------------------------------------------------ */
-static gboolean bit_leggi(const uint8_t *mappa, uint32_t n)
+static gboolean bit_read(const uint8_t *mappa, uint32_t n)
 {
 	return (mappa[n / 8u] & (uint8_t) (1u << (n % 8u))) != 0;
 }
 
-static void bit_scrivi(uint8_t *mappa, uint32_t n, gboolean acceso)
+static void bit_write(uint8_t *mappa, uint32_t n, gboolean acceso)
 {
 	if (acceso)
 		mappa[n / 8u] |= (uint8_t) (1u << (n % 8u));
@@ -392,22 +392,22 @@ static void bit_scrivi(uint8_t *mappa, uint32_t n, gboolean acceso)
  * `[R]`).  ⛔ On KWin and on wlroots it is **mandatory**: without it, the event does not
  * come out at all.  Sending it here is free, and it is the only portable form.
  */
-static void batti_cornice(Input *in, struct ei_device *dispositivo)
+static void beat_border(Input *in, struct ei_device *dispositivo)
 {
 	ei_device_frame(dispositivo, ei_now(in->ei));
 }
 
-static int manda_tasto(Input *in, uint16_t codice, int premuto)
+static int send_key(Input *in, uint16_t codice, int premuto)
 {
-	if (codice >= MAX_TASTO)
+	if (codice >= MAX_KEY)
 	{
 		registro_dice(AREA, "⚠ key code 0x%X beyond Mutter's maximum (0x%X): Mutter would "
 		                    "discard it SILENTLY, so I refuse it myself and say so",
-		              codice, MAX_TASTO - 1);
+		              codice, MAX_KEY - 1);
 		return -1;
 	}
 	if (in->wlr)
-		return manda_tasto_wlr(in, codice, premuto);
+		return send_key_wlr(in, codice, premuto);
 	if (!in->tastiera_dev || !in->tastiera_attiva)
 		return -1;
 
@@ -415,16 +415,16 @@ static int manda_tasto(Input *in, uint16_t codice, int premuto)
 	 *    compositor destroyed (keymap change, `:762-781`) can no longer be
 	 *    released — `handle_key` (`:638-645`) has the same guard as
 	 *    `handle_button`.  It is said and -1 is returned, instead of writing "done". */
-	if (!premuto && bit_leggi(in->tasti_orfani, codice))
+	if (!premuto && bit_read(in->orphan_keys, codice))
 	{
-		bit_scrivi(in->tasti_orfani, codice, FALSE);
+		bit_write(in->orphan_keys, codice, FALSE);
 		if (in->quanti_orfani)
 			in->quanti_orfani--;
-		if (bit_leggi(in->tasti, codice))
+		if (bit_read(in->tasti, codice))
 		{
-			bit_scrivi(in->tasti, codice, FALSE);
-			if (in->quanti_tasti)
-				in->quanti_tasti--;
+			bit_write(in->tasti, codice, FALSE);
+			if (in->how_many_keys)
+				in->how_many_keys--;
 		}
 		/* ⛔ Phase 16 §12: the code only if it is a modifier — the other
 		 *    keys are typed characters, and in the log they are called «key». */
@@ -442,22 +442,22 @@ static int manda_tasto(Input *in, uint16_t codice, int premuto)
 	}
 
 	ei_device_keyboard_key(in->tastiera_dev, codice, premuto != 0);
-	batti_cornice(in, in->tastiera_dev);
+	beat_border(in, in->tastiera_dev);
 
 	/* ⛔ The count is kept AFTER sending: marking a key that did not leave
 	 *    would make the detach release something nobody pressed. */
-	if ((premuto != 0) != bit_leggi(in->tasti, codice))
+	if ((premuto != 0) != bit_read(in->tasti, codice))
 	{
-		bit_scrivi(in->tasti, codice, premuto != 0);
+		bit_write(in->tasti, codice, premuto != 0);
 		if (premuto)
-			in->quanti_tasti++;
-		else if (in->quanti_tasti)
-			in->quanti_tasti--;
+			in->how_many_keys++;
+		else if (in->how_many_keys)
+			in->how_many_keys--;
 	}
 	return 0;
 }
 
-static int manda_bottone(Input *in, uint16_t codice, int premuto)
+static int send_button(Input *in, uint16_t codice, int premuto)
 {
 	if (codice >= MAX_BOTTONE)
 	{
@@ -465,8 +465,8 @@ static int manda_bottone(Input *in, uint16_t codice, int premuto)
 		return -1;
 	}
 	if (in->wlr)
-		return manda_bottone_wlr(in, codice, premuto);
-	if (!in->puntatore || !in->puntatore_attivo)
+		return send_button_wlr(in, codice, premuto);
+	if (!in->puntatore || !in->pointer_active)
 		return -1;
 
 	/*
@@ -475,19 +475,19 @@ static int manda_bottone(Input *in, uint16_t codice, int premuto)
 	 *     longer ours to release, and keeping it marked would retry forever
 	 *     something that cannot succeed.
 	 *
-	 * ⭐ And **-1** is returned, not 0: `rcp.c` counts it among the `input_rifiutati`,
+	 * ⭐ And **-1** is returned, not 0: `rcp.c` counts it among the `input_refused`,
 	 *   which is the truth.  Returning 0 would mean writing "done" next to
 	 *   a desktop left with the button down — and that is six hours of
 	 *   diagnosis for whoever reads the log.
 	 */
-	if (!premuto && bit_leggi(in->bottoni_orfani, codice))
+	if (!premuto && bit_read(in->bottoni_orfani, codice))
 	{
-		bit_scrivi(in->bottoni_orfani, codice, FALSE);
+		bit_write(in->bottoni_orfani, codice, FALSE);
 		if (in->quanti_orfani)
 			in->quanti_orfani--;
-		if (bit_leggi(in->bottoni, codice))
+		if (bit_read(in->bottoni, codice))
 		{
-			bit_scrivi(in->bottoni, codice, FALSE);
+			bit_write(in->bottoni, codice, FALSE);
 			if (in->quanti_bottoni)
 				in->quanti_bottoni--;
 		}
@@ -504,11 +504,11 @@ static int manda_bottone(Input *in, uint16_t codice, int premuto)
 	}
 
 	ei_device_button_button(in->puntatore, codice, premuto != 0);
-	batti_cornice(in, in->puntatore);
+	beat_border(in, in->puntatore);
 
-	if ((premuto != 0) != bit_leggi(in->bottoni, codice))
+	if ((premuto != 0) != bit_read(in->bottoni, codice))
 	{
-		bit_scrivi(in->bottoni, codice, premuto != 0);
+		bit_write(in->bottoni, codice, premuto != 0);
 		if (premuto)
 			in->quanti_bottoni++;
 		else if (in->quanti_bottoni)
@@ -543,12 +543,12 @@ static int manda_bottone(Input *in, uint16_t codice, int premuto)
  *                  the wrong region sends the pointer to another screen
  *                  **without an error** (`meta-eis-client.c:470-472`).
  */
-static void leggi_regione(Input *in, struct ei_device *dispositivo)
+static void read_region(Input *in, struct ei_device *dispositivo)
 {
 	/* On KWin there is no key (`eis_region_set_mapping_id` is never
 	 * called): geometry and "only" remain. */
 	const char *chiave = in->kwin ? NULL : mutter_mapping_id_pubblicato(in->sessione);
-	struct ei_region *per_chiave = NULL, *per_geometria = NULL, *unica = NULL;
+	struct ei_region *per_key = NULL, *per_geometry = NULL, *unica = NULL;
 	size_t quante = 0;
 	struct ei_region *scelta = NULL;
 	const char *per = NULL;
@@ -575,22 +575,22 @@ static void leggi_regione(Input *in, struct ei_device *dispositivo)
 		                   ei_region_get_width(regione), ei_region_get_height(regione),
 		                   id ?: "absent");
 
-		if (!per_chiave && chiave && id && g_strcmp0(id, chiave) == 0)
-			per_chiave = regione;
-		if (!per_geometria && in->tela_l && in->tela_a &&
+		if (!per_key && chiave && id && g_strcmp0(id, chiave) == 0)
+			per_key = regione;
+		if (!per_geometry && in->tela_l && in->tela_a &&
 		    ei_region_get_width(regione) == in->tela_l &&
 		    ei_region_get_height(regione) == in->tela_a)
-			per_geometria = regione;
+			per_geometry = regione;
 	}
 
-	if (per_chiave)
+	if (per_key)
 	{
-		scelta = per_chiave;
+		scelta = per_key;
 		per = "key";
 	}
-	else if (per_geometria)
+	else if (per_geometry)
 	{
-		scelta = per_geometria;
+		scelta = per_geometry;
 		per = "geometry";
 	}
 	else if (quante == 1)
@@ -658,8 +658,8 @@ static void leggi_keymap(Input *in, struct ei_device *dispositivo)
 		 *    and it is declared instead of falling back silently. */
 		registro_dice(AREA, "⚠ the keyboard device carries no keymap: LETTERS "
 		                    "stay off (KEY POSITIONS do not)");
-		g_clear_pointer(&in->disposizione, tastiera_chiudi);
-		g_clear_pointer(&in->keymap_nome, g_free);
+		g_clear_pointer(&in->disposizione, keyboard_close);
+		g_clear_pointer(&in->keymap_name, g_free);
 		return;
 	}
 	if (ei_keymap_get_type(keymap) != EI_KEYMAP_TYPE_XKB)
@@ -742,7 +742,7 @@ static void leggi_keymap(Input *in, struct ei_device *dispositivo)
 	 *   the fallback would appear HERE, instead of leaving the user with `Ctrl+Z`
 	 *   on the wrong key and no line explaining it.
 	 */
-	nuova = tastiera_apri_da_keymap(testo, misura, in->negoziata, &sbaglio);
+	nuova = keyboard_open_from_keymap(testo, misura, in->negoziata, &sbaglio);
 	if (!nuova)
 	{
 		registro_dice(AREA, "⚠ the keymap handed over by libei does not open (%s): %s",
@@ -751,17 +751,17 @@ static void leggi_keymap(Input *in, struct ei_device *dispositivo)
 	}
 	else
 	{
-		g_clear_pointer(&in->disposizione, tastiera_chiudi);
+		g_clear_pointer(&in->disposizione, keyboard_close);
 		in->disposizione = nuova;
 	}
 
-	if (g_strcmp0(impronta, in->keymap_nome) != 0)
+	if (g_strcmp0(impronta, in->keymap_name) != 0)
 	{
 		registro_dice(AREA, "KEYMAP CHANGED: %s (was: %s) → layout «%s»", impronta,
-		              in->keymap_nome ?: "none",
-		              in->disposizione ? tastiera_disposizione(in->disposizione) : "none");
-		g_free(in->keymap_nome);
-		in->keymap_nome = g_steal_pointer(&impronta);
+		              in->keymap_name ?: "none",
+		              in->disposizione ? kbd_layout(in->disposizione) : "none");
+		g_free(in->keymap_name);
+		in->keymap_name = g_steal_pointer(&impronta);
 	}
 	else
 		registro_dettaglio(AREA, "keymap unchanged: %s", impronta);
@@ -778,28 +778,28 @@ static void leggi_keymap(Input *in, struct ei_device *dispositivo)
 	 *    DECLARED of `tastiera.c`, not with an endless loop).
 	 */
 	if (in->kwin && in->negoziata && in->disposizione &&
-	    tastiera_e_questa(in->disposizione, in->negoziata) == 0 && in->richieste_kwin < 3)
+	    tastiera_e_questa(in->disposizione, in->negoziata) == 0 && in->kwin_requests < 3)
 	{
-		g_autoptr(GError) sbaglio_kwin = NULL;
+		g_autoptr(GError) err_kwin = NULL;
 
-		in->richieste_kwin++;
+		in->kwin_requests++;
 		input_rilascia_tutto(in); /* KWin redoes the keyboard device */
-		if (kwin_disposizione(in->negoziata, &sbaglio_kwin) == 0)
+		if (kwin_disposizione(in->negoziata, &err_kwin) == 0)
 			registro_dice(AREA,
 			              "⚠ KWin set «%s» and not the negotiated «%s»: REQUESTING it again (%d of 3)",
-			              tastiera_disposizione(in->disposizione), in->negoziata,
-			              in->richieste_kwin);
+			              kbd_layout(in->disposizione), in->negoziata,
+			              in->kwin_requests);
 		else
 			registro_dice(AREA, "⚠ KWin set «%s» and not «%s», and requesting it does not succeed: %s",
-			              tastiera_disposizione(in->disposizione), in->negoziata,
-			              sbaglio_kwin ? sbaglio_kwin->message : "no reason");
+			              kbd_layout(in->disposizione), in->negoziata,
+			              err_kwin ? err_kwin->message : "no reason");
 	}
 }
 
 /* ------------------------------------------------------------------ *
  *  libei's events
  * ------------------------------------------------------------------ */
-static void dispositivo_aggiunto(Input *in, struct ei_device *dispositivo)
+static void device_added(Input *in, struct ei_device *dispositivo)
 {
 	gboolean assoluto = ei_device_has_capability(dispositivo, EI_DEVICE_CAP_POINTER_ABSOLUTE);
 	gboolean tasti = ei_device_has_capability(dispositivo, EI_DEVICE_CAP_KEYBOARD);
@@ -818,13 +818,13 @@ static void dispositivo_aggiunto(Input *in, struct ei_device *dispositivo)
 	 */
 	if (assoluto)
 	{
-		/* ⚠ The replacement is NOT counted here: `dispositivo_tolto` counts it, which
+		/* ⚠ The replacement is NOT counted here: `device_removed` counts it, which
 		 *   arrives first.  Counting it in both places would double it. */
 		if (in->puntatore)
 			ei_device_unref(in->puntatore);
 		in->puntatore = ei_device_ref(dispositivo);
-		in->puntatore_attivo = FALSE;
-		leggi_regione(in, dispositivo);
+		in->pointer_active = FALSE;
+		read_region(in, dispositivo);
 	}
 	if (tasti)
 	{
@@ -854,9 +854,9 @@ static void segna_orfani(Input *in, const uint8_t *mappa, uint8_t *orfani, uint3
 	if (!quanti)
 		return;
 	for (uint32_t c = 0; c < massimo; c++)
-		if (bit_leggi(mappa, c) && !bit_leggi(orfani, c))
+		if (bit_read(mappa, c) && !bit_read(orfani, c))
 		{
-			bit_scrivi(orfani, c, TRUE);
+			bit_write(orfani, c, TRUE);
 			in->quanti_orfani++;
 		}
 	registro_dice(AREA,
@@ -885,7 +885,7 @@ static void segna_orfani(Input *in, const uint8_t *mappa, uint8_t *orfani, uint3
 	in->guarigione_dovuta = TRUE;
 }
 
-static void dispositivo_tolto(Input *in, struct ei_device *dispositivo)
+static void device_removed(Input *in, struct ei_device *dispositivo)
 {
 	if (in->puntatore == dispositivo)
 	{
@@ -897,7 +897,7 @@ static void dispositivo_tolto(Input *in, struct ei_device *dispositivo)
 		             "buttons");
 		ei_device_unref(in->puntatore);
 		in->puntatore = NULL;
-		in->puntatore_attivo = FALSE;
+		in->pointer_active = FALSE;
 		in->regione_nota = FALSE;
 		/* ⛔ THE REPLACEMENT IS COUNTED HERE, NOT ONLY ON ADDITION — `[M]` 14 August
 		 *    2026, and the bench paid for it: Mutter sends `DEVICE_REMOVED` **and
@@ -920,7 +920,7 @@ static void dispositivo_tolto(Input *in, struct ei_device *dispositivo)
 		 *   recreates it — and there the orphan defect has the same form.  It is
 		 *   sub-phase 6.2: here it is marked, so when it measures it the count
 		 *   is already there. */
-		segna_orfani(in, in->tasti, in->tasti_orfani, MAX_TASTO, in->quanti_tasti, "keys");
+		segna_orfani(in, in->tasti, in->orphan_keys, MAX_KEY, in->how_many_keys, "keys");
 		ei_device_unref(in->tastiera_dev);
 		in->tastiera_dev = NULL;
 		in->tastiera_attiva = FALSE;
@@ -930,7 +930,7 @@ static void dispositivo_tolto(Input *in, struct ei_device *dispositivo)
 	}
 }
 
-static void tratta_evento(Input *in, struct ei_event *evento)
+static void handle_event(Input *in, struct ei_event *evento)
 {
 	enum ei_event_type tipo = ei_event_get_type(evento);
 	struct ei_device *dispositivo = ei_event_get_device(evento);
@@ -951,12 +951,12 @@ static void tratta_evento(Input *in, struct ei_event *evento)
 			 *    `EI_EVENT_DISCONNECT` arrives in its place.  ⇒ It is the
 			 *    PROTOCOL's predicate, not a symptom.
 			 */
-			in->stretta_fatta = TRUE;
-			in->stretta_us = g_get_monotonic_time();
+			in->handshake_done = TRUE;
+			in->handshake_us = g_get_monotonic_time();
 			registro_dettaglio(AREA,
 			                   "libei's handshake has ARRIVED after %.1f ms: from now on the "
 			                   "channel can be closed the normal way",
-			                   (double) (in->stretta_us - in->aperto_us) / 1000.0);
+			                   (double) (in->handshake_us - in->open_us) / 1000.0);
 			break;
 
 		case EI_EVENT_SEAT_ADDED:
@@ -978,21 +978,21 @@ static void tratta_evento(Input *in, struct ei_event *evento)
 			break;
 
 		case EI_EVENT_DEVICE_ADDED:
-			dispositivo_aggiunto(in, dispositivo);
+			device_added(in, dispositivo);
 			break;
 
 		case EI_EVENT_DEVICE_REMOVED:
-			dispositivo_tolto(in, dispositivo);
+			device_removed(in, dispositivo);
 			break;
 
 		case EI_EVENT_DEVICE_RESUMED:
 			ei_device_start_emulating(dispositivo, ++in->sequenza);
 			if (dispositivo == in->puntatore)
 			{
-				in->puntatore_attivo = TRUE;
+				in->pointer_active = TRUE;
 				/* ⛔ And it is reread HERE TOO: between `DEVICE_ADDED` and the resume the
 				 *    compositor may have redone the viewports. */
-				leggi_regione(in, dispositivo);
+				read_region(in, dispositivo);
 			}
 			if (dispositivo == in->tastiera_dev)
 				in->tastiera_attiva = TRUE;
@@ -1002,7 +1002,7 @@ static void tratta_evento(Input *in, struct ei_event *evento)
 
 		case EI_EVENT_DEVICE_PAUSED:
 			if (dispositivo == in->puntatore)
-				in->puntatore_attivo = FALSE;
+				in->pointer_active = FALSE;
 			if (dispositivo == in->tastiera_dev)
 				in->tastiera_attiva = FALSE;
 			break;
@@ -1078,7 +1078,7 @@ static Input *apri(MutterSessione *sessione, KwinSessione *kwin, uint32_t tela_l
 	in->tela_a = tela_a;
 	/* ⛔ Cure D4: the instant of the opening is marked HERE, because it is the only way
 	 *    to say how long the dangerous window lasted when it closes. */
-	in->aperto_us = g_get_monotonic_time();
+	in->open_us = g_get_monotonic_time();
 	in->fd_socket = -1;
 
 	in->ei = ei_new_sender(in);
@@ -1139,9 +1139,9 @@ static Input *apri(MutterSessione *sessione, KwinSessione *kwin, uint32_t tela_l
  *
  * ⛔ -1 means "nothing to put in the poll", not "error".
  */
-Input *input_apri(void *sessione_mutter, uint32_t tela_l, uint32_t tela_a, char **errore)
+Input *input_apri(void *session_mutter, uint32_t tela_l, uint32_t tela_a, char **errore)
 {
-	return apri(sessione_mutter, NULL, tela_l, tela_a, errore);
+	return apri(session_mutter, NULL, tela_l, tela_a, errore);
 }
 
 Input *input_apri_kwin(KwinSessione *kwin, uint32_t tela_l, uint32_t tela_a, char **errore)
@@ -1155,11 +1155,11 @@ Input *input_apri_kwin(KwinSessione *kwin, uint32_t tela_l, uint32_t tela_a, cha
 	return apri(NULL, kwin, tela_l, tela_a, errore);
 }
 
-int input_descrittore(Input *in)
+int input_descriptor(Input *in)
 {
 	/* ⭐ wlroots: the descriptor of the Wayland wire, and -1 if it has dropped. */
 	if (in && in->wlr)
-		return wlr_input_descrittore(in->wlr);
+		return wlr_input_descriptor(in->wlr);
 	if (!in || !in->ei)
 		return -1;
 	return ei_get_fd(in->ei);
@@ -1233,15 +1233,15 @@ int input_descrittore(Input *in)
  * ═══════════════════════════════════════════════════════════════════════════ */
 static void stacca_il_contesto(Input *in, const char *chi)
 {
-	double vissuto_ms;
+	double lived_ms;
 	int epoll_di_libei;
 
 	if (!in || !in->ei)
 		return;
 
-	vissuto_ms = (double) (g_get_monotonic_time() - in->aperto_us) / 1000.0;
+	lived_ms = (double) (g_get_monotonic_time() - in->open_us) / 1000.0;
 
-	if (in->stretta_fatta)
+	if (in->handshake_done)
 	{
 		/* ⭐ THE REAL CLOSE — this line is the usual one, and must
 		 *    stay: it is `ei_disconnect()` that sends the protocol detach,
@@ -1254,7 +1254,7 @@ static void stacca_il_contesto(Input *in, const char *chi)
 		registro_dettaglio(AREA,
 		                   "input channel detached by «%s»: handshake arrived after %.1f ms, "
 		                   "lived %.1f ms, REAL close (ei_disconnect + ei_unref)",
-		                   chi, (double) (in->stretta_us - in->aperto_us) / 1000.0, vissuto_ms);
+		                   chi, (double) (in->handshake_us - in->open_us) / 1000.0, lived_ms);
 		return;
 	}
 
@@ -1262,14 +1262,14 @@ static void stacca_il_contesto(Input *in, const char *chi)
 	 *     `registro_dettaglio`: it is a rare event with a price, and whoever reads the
 	 *     log after a stage that died young must find it written. */
 	epoll_di_libei = ei_get_fd(in->ei);
-	contesti_abbandonati++;
+	abandoned_contexts++;
 	registro_dice(AREA,
 	              "⛔ input channel ABANDONED by «%s» after %.1f ms: libei's handshake "
 	              "had never arrived, and disconnecting (or freeing) such a context "
 	              "makes the library crash.  ⇒ The descriptors are closed and the context is lost "
 	              "(abandonments so far: %u).  ⚠ No virtual device is left hanging: at "
 	              "this point none had been born yet",
-	              chi, vissuto_ms, contesti_abbandonati);
+	              chi, lived_ms, abandoned_contexts);
 
 	/* ⛔ The order: first the reference is dropped, then the descriptors are closed.
 	 *    The other way round there would be an instant in which the context is still
@@ -1308,9 +1308,9 @@ static void guarisci(Input *in)
 	gint64 adesso = g_get_monotonic_time();
 	int fd, nuovo;
 
-	if (in->ultima_guarigione_us && adesso - in->ultima_guarigione_us < GUARIGIONE_FONDO_US)
+	if (in->last_heal_us && adesso - in->last_heal_us < HEALING_BACKSTOP_US)
 		return; /* ⚠ and the flag STAYS on: retried after the floor */
-	in->ultima_guarigione_us = adesso;
+	in->last_heal_us = adesso;
 
 	registro_dice(AREA,
 	              "⭐⭐ HEALING (n. %u): redoing the EIS channel.  The seat still counts down "
@@ -1328,12 +1328,12 @@ static void guarisci(Input *in)
 		ei_device_unref(in->tastiera_dev);
 	in->puntatore = NULL;
 	in->tastiera_dev = NULL;
-	in->puntatore_attivo = FALSE;
+	in->pointer_active = FALSE;
 	in->tastiera_attiva = FALSE;
 	in->regione_nota = FALSE;
-	in->regione_scalata_lamentata = FALSE;
+	in->scaled_region_warned = FALSE;
 	g_clear_pointer(&in->reg_per, g_free);
-	g_clear_pointer(&in->keymap_nome, g_free);
+	g_clear_pointer(&in->keymap_name, g_free);
 
 	/* ⛔ Cure D4: the same door as `input_chiudi()`, and not a copy.  ⚠ Here
 	 *    the handshake has almost always arrived (we heal after a device
@@ -1365,9 +1365,9 @@ static void guarisci(Input *in)
 	 *    and the clock of the dangerous window reset.  ⚠ Forgetting it
 	 *    would make a connection just born look mature, that is it would put back
 	 *    the hole at the first teardown after a healing. */
-	in->stretta_fatta = FALSE;
-	in->stretta_us = 0;
-	in->aperto_us = g_get_monotonic_time();
+	in->handshake_done = FALSE;
+	in->handshake_us = 0;
+	in->open_us = g_get_monotonic_time();
 	in->fd_socket = -1;
 
 	in->ei = ei_new_sender(in);
@@ -1405,9 +1405,9 @@ static void guarisci(Input *in)
 	 */
 	memset(in->tasti, 0, sizeof in->tasti);
 	memset(in->bottoni, 0, sizeof in->bottoni);
-	memset(in->tasti_orfani, 0, sizeof in->tasti_orfani);
+	memset(in->orphan_keys, 0, sizeof in->orphan_keys);
 	memset(in->bottoni_orfani, 0, sizeof in->bottoni_orfani);
-	in->quanti_tasti = 0;
+	in->how_many_keys = 0;
 	in->quanti_bottoni = 0;
 	in->quanti_orfani = 0;
 	in->sequenza = 0;
@@ -1430,7 +1430,7 @@ int input_gira(Input *in)
 	if (!in)
 		return -1;
 	if (in->wlr)
-		return gira_wlr(in);
+		return run_wlr(in);
 	if (in->caduto)
 		return -1;
 
@@ -1462,7 +1462,7 @@ int input_gira(Input *in)
 	 *   `libei` handles the drop well by itself, and interfering would be a
 	 *   second way of doing the same thing.
 	 */
-	if (!in->stretta_fatta && in->ei && in->fd_socket >= 0)
+	if (!in->handshake_done && in->ei && in->fd_socket >= 0)
 	{
 		struct pollfd sonda;
 
@@ -1476,7 +1476,7 @@ int input_gira(Input *in)
 			              "handshake (after %.1f ms): NOT dispatching it, because libei would crash "
 			              "inside its own ei_disconnect().  ⚠ From now on the user WATCHES "
 			              "and does not control, and the stage is torn down the normal way",
-			              (double) (g_get_monotonic_time() - in->aperto_us) / 1000.0);
+			              (double) (g_get_monotonic_time() - in->open_us) / 1000.0);
 			stacca_il_contesto(in, "drop before the handshake");
 			in->caduto = TRUE;
 			return -1;
@@ -1486,18 +1486,18 @@ int input_gira(Input *in)
 	ei_dispatch(in->ei);
 	while ((evento = ei_get_event(in->ei)) != NULL)
 	{
-		tratta_evento(in, evento);
+		handle_event(in, evento);
 		ei_event_unref(evento);
 		quanti++;
 	}
-	/* ⛔ The healing is HERE and not inside `tratta_evento`: with an empty queue, and
-	 *    after `dispositivo_tolto()` has already marked the orphans. */
+	/* ⛔ The healing is HERE and not inside `handle_event`: with an empty queue, and
+	 *    after `device_removed()` has already marked the orphans. */
 	if (in->guarigione_dovuta && !in->caduto)
 		guarisci(in);
 	return in->caduto ? -1 : quanti;
 }
 
-int input_puntatore(Input *in, uint32_t x, uint32_t y)
+int input_pointer(Input *in, uint32_t x, uint32_t y)
 {
 	double fx, fy;
 
@@ -1506,14 +1506,14 @@ int input_puntatore(Input *in, uint32_t x, uint32_t y)
 	 *    region to look for.  ⛔ And no transformation: the coordinates go
 	 *    as they arrive, with the canvas as yardstick. */
 	if (in && in->wlr) {
-		in->wlr_puntatore_noto = TRUE;
+		in->wlr_pointer_known = TRUE;
 		in->wlr_px = x;
 		in->wlr_py = y;
 		in->wlr_pl = in->tela_l;
 		in->wlr_pa = in->tela_a;
-		return wlr_input_assoluto(in->wlr, x, y, in->tela_l, in->tela_a);
+		return wlr_input_absolute(in->wlr, x, y, in->tela_l, in->tela_a);
 	}
-	if (!in || !in->puntatore || !in->puntatore_attivo)
+	if (!in || !in->puntatore || !in->pointer_active)
 		return -1;
 	if (!in->regione_nota)
 		return -1;
@@ -1539,9 +1539,9 @@ int input_puntatore(Input *in, uint32_t x, uint32_t y)
 	}
 	else
 	{
-		if (!in->regione_scalata_lamentata)
+		if (!in->scaled_region_warned)
 		{
-			in->regione_scalata_lamentata = TRUE;
+			in->scaled_region_warned = TRUE;
 			registro_dice(AREA,
 			              "⚠ the region (%.0fx%.0f) is NOT as large as the canvas (%ux%u): scaling the "
 			              "coordinates, and it is a decision this module should not "
@@ -1553,7 +1553,7 @@ int input_puntatore(Input *in, uint32_t x, uint32_t y)
 	}
 
 	ei_device_pointer_motion_absolute(in->puntatore, fx, fy);
-	batti_cornice(in, in->puntatore);
+	beat_border(in, in->puntatore);
 	return 0;
 }
 
@@ -1571,11 +1571,11 @@ int input_puntatore(Input *in, uint32_t x, uint32_t y)
  *
  * ⚠ Whoever changes the canvas, though, **is not whoever changes the monitor**: if
  *   `libei`'s region stays as large as it was, this function will find it different from the
- *   canvas and will say so (see `input_puntatore`).  It is open question n.1 of
+ *   canvas and will say so (see `input_pointer`).  It is open question n.1 of
  *   phase 4 — who decides the size of the monitor (`RCP.md` §4.5) — and this
  *   module DECLARES it instead of answering it on its own.
  */
-int input_ritela(Input *in, uint32_t tela_l, uint32_t tela_a)
+int input_recanvas(Input *in, uint32_t tela_l, uint32_t tela_a)
 {
 	if (!in)
 		return -1;
@@ -1593,9 +1593,9 @@ int input_ritela(Input *in, uint32_t tela_l, uint32_t tela_a)
 	in->tela_a = tela_a;
 	/* ⛔ And the complaint about the scale is re-armed: the previous region may have been
 	 *    as large as the previous canvas, and no longer be. */
-	in->regione_scalata_lamentata = FALSE;
+	in->scaled_region_warned = FALSE;
 	if (in->puntatore)
-		leggi_regione(in, in->puntatore);
+		read_region(in, in->puntatore);
 	return 0;
 }
 
@@ -1609,16 +1609,16 @@ int input_ritela(Input *in, uint32_t tela_l, uint32_t tela_a)
  *    F12 stays F12 even with Shift.  ⚠ `SESSIONE_LABWC_TASTO` and these
  *    five numbers say the same thing: if one changes, the others change.
  */
-#define RIPORTA_SUPER 125 /* KEY_LEFTMETA */
-#define RIPORTA_CTRL 29   /* KEY_LEFTCTRL */
-#define RIPORTA_ALT 56    /* KEY_LEFTALT */
-#define RIPORTA_MAIUSC 42 /* KEY_LEFTSHIFT */
-#define RIPORTA_F12 88    /* KEY_F12 */
+#define RETURN_SUPER 125 /* KEY_LEFTMETA */
+#define RETURN_CTRL 29   /* KEY_LEFTCTRL */
+#define RETURN_ALT 56    /* KEY_LEFTALT */
+#define RETURN_SHIFT 42 /* KEY_LEFTSHIFT */
+#define RETURN_F12 88    /* KEY_F12 */
 
 int input_riporta_dentro(Input *in)
 {
-	static const uint16_t combinazione[] = { RIPORTA_SUPER, RIPORTA_CTRL, RIPORTA_ALT,
-		                                 RIPORTA_MAIUSC, RIPORTA_F12 };
+	static const uint16_t combinazione[] = { RETURN_SUPER, RETURN_CTRL, RETURN_ALT,
+		                                 RETURN_SHIFT, RETURN_F12 };
 	const size_t quanti = G_N_ELEMENTS(combinazione);
 	size_t giu = 0;
 	int esito = 1;
@@ -1631,17 +1631,17 @@ int input_riporta_dentro(Input *in)
 	 *    a combination labwc does not recognise (or, worse, another one). */
 	input_rilascia_tutto(in);
 	for (giu = 0; giu < quanti; giu++)
-		if (manda_tasto(in, combinazione[giu], 1) < 0) {
+		if (send_key(in, combinazione[giu], 1) < 0) {
 			esito = -1;
 			break;
 		}
 	/* ⛔ And EVERYTHING that left is released in reverse, even if the
 	 *    combination stayed half way. */
 	while (giu > 0)
-		manda_tasto(in, combinazione[--giu], 0);
+		send_key(in, combinazione[--giu], 0);
 
 	/* The pointer goes back where the user had it, on the canvas of NOW. */
-	if (in->wlr_puntatore_noto && in->wlr_pl && in->wlr_pa && in->tela_l && in->tela_a) {
+	if (in->wlr_pointer_known && in->wlr_pl && in->wlr_pa && in->tela_l && in->tela_a) {
 		uint32_t x = (uint32_t)((uint64_t)in->wlr_px * in->tela_l / in->wlr_pl);
 		uint32_t y = (uint32_t)((uint64_t)in->wlr_py * in->tela_a / in->wlr_pa);
 
@@ -1649,7 +1649,7 @@ int input_riporta_dentro(Input *in)
 			x = in->tela_l - 1;
 		if (y >= in->tela_a)
 			y = in->tela_a - 1;
-		input_puntatore(in, x, y);
+		input_pointer(in, x, y);
 	}
 
 	if (esito < 0)
@@ -1719,7 +1719,7 @@ int input_disposizione(Input *in, const char *nome)
 	 *    virtual keyboard.  ⛔ The branch below is GNOME's (its box
 	 *    says so) and on XFCE it would write into a schema nobody reads. */
 	if (in->wlr)
-		return disposizione_wlr(in, nome);
+		return layout_wlr(in, nome);
 
 	/*
 	 * ⛔⛔ THE SAME THING IS NOT ASKED TWICE — ⚠ AND THE RIGHT QUESTION IS
@@ -1764,23 +1764,23 @@ int input_disposizione(Input *in, const char *nome)
 	 */
 	if (in->kwin)
 	{
-		g_autoptr(GError) sbaglio_kwin = NULL;
+		g_autoptr(GError) err_kwin = NULL;
 
 		/* ⛔ First everything is released: KWin redoes the keyboard device (see
 		 *    the box below, "AND BEFORE ASKING FOR THE CHANGE"). */
 		input_rilascia_tutto(in);
 		g_free(in->negoziata);
 		in->negoziata = g_strdup(nome);
-		in->richieste_kwin = 0;
-		if (kwin_disposizione(nome, &sbaglio_kwin) != 0)
+		in->kwin_requests = 0;
+		if (kwin_disposizione(nome, &err_kwin) != 0)
 		{
 			registro_dice(AREA,
 			              "⚠ DECLARED FALLBACK: layout «%s» was NOT requested "
 			              "from KWin (%s) — the session keeps «%s».  ⛔ The letters that "
 			              "layout does not have do NOT come out, and the SHORTCUTS go on the keys "
 			              "of that one (RCP.md §7.3)",
-			              nome, sbaglio_kwin ? sbaglio_kwin->message : "no reason",
-			              in->disposizione ? tastiera_disposizione(in->disposizione)
+			              nome, err_kwin ? err_kwin->message : "no reason",
+			              in->disposizione ? kbd_layout(in->disposizione)
 			                               : "none");
 			return -1;
 		}
@@ -1848,7 +1848,7 @@ int input_disposizione(Input *in, const char *nome)
 	 * ⛔ And if that dconf is not there, we do NOT write: better a layout not
 	 *    applied, and said, than one written where the user does not want it.
 	 */
-	if (!sessione_dconf_di_sessione())
+	if (!session_dconf_of_session())
 	{
 		registro_dice(AREA,
 		              "⚠ DECLARED FALLBACK: the session's dconf is not in force — "
@@ -1856,7 +1856,7 @@ int input_disposizione(Input *in, const char *nome)
 		              "settings, D-015), and the session keeps «%s».  ⛔ The letters that "
 		              "one does not have do NOT come out, and the SHORTCUTS go on its keys "
 		              "(RCP.md §7.3)",
-		              nome, in->disposizione ? tastiera_disposizione(in->disposizione)
+		              nome, in->disposizione ? kbd_layout(in->disposizione)
 		                                     : "none");
 		return -1;
 	}
@@ -1923,11 +1923,11 @@ int input_disposizione(Input *in, const char *nome)
 	return 0;
 }
 
-int input_pulsante(Input *in, uint16_t codice, int premuto)
+int input_button(Input *in, uint16_t codice, int premuto)
 {
 	if (!in)
 		return -1;
-	return manda_bottone(in, codice, premuto);
+	return send_button(in, codice, premuto);
 }
 
 int input_rotella(Input *in, int32_t asse_x, int32_t asse_y)
@@ -1937,7 +1937,7 @@ int input_rotella(Input *in, int32_t asse_x, int32_t asse_y)
 	 *    Wayland convention.  It makes the whole notches itself (§7.2 n.1). */
 	if (in && in->wlr)
 		return wlr_input_rotella(in->wlr, asse_x, -asse_y);
-	if (!in || !in->puntatore || !in->puntatore_attivo)
+	if (!in || !in->puntatore || !in->pointer_active)
 		return -1;
 
 	/*
@@ -1963,7 +1963,7 @@ int input_rotella(Input *in, int32_t asse_x, int32_t asse_y)
 	else
 	ei_device_scroll_delta(in->puntatore, (double) asse_x / UNITA_PER_DELTA,
 	                       (double) -asse_y / UNITA_PER_DELTA);
-	batti_cornice(in, in->puntatore);
+	beat_border(in, in->puntatore);
 	return 0;
 }
 
@@ -1976,7 +1976,7 @@ int input_lettera(Input *in, uint32_t carattere)
 	if (!in)
 		return -1;
 	if (in->wlr)
-		return lettera_wlr(in, carattere);
+		return letter_wlr(in, carattere);
 	if (!in->disposizione)
 	{
 		/* ⛔ And it is NOT the "not producible" case: that one is 1, and means the
@@ -2011,25 +2011,25 @@ int input_lettera(Input *in, uint32_t carattere)
 
 	/* The modifiers first, the key last; released in reverse. */
 	for (size_t i = 0; i < quante; i++)
-		if (manda_tasto(in, codici[i], 1) < 0)
+		if (send_key(in, codici[i], 1) < 0)
 		{
 			/* ⛔ Half way, what was pressed is released: a Shift
 			 *    left down because of a send error is the same damage as the
 			 *    Ctrl left down at detach. */
 			for (size_t j = i; j > 0; j--)
-				manda_tasto(in, codici[j - 1], 0);
+				send_key(in, codici[j - 1], 0);
 			return -1;
 		}
 	for (size_t i = quante; i > 0; i--)
-		manda_tasto(in, codici[i - 1], 0);
+		send_key(in, codici[i - 1], 0);
 	return 0;
 }
 
-int input_posizione(Input *in, uint16_t codice, int premuto)
+int input_position(Input *in, uint16_t codice, int premuto)
 {
 	if (!in)
 		return -1;
-	return manda_tasto(in, codice, premuto);
+	return send_key(in, codice, premuto);
 }
 
 int input_rilascia_tutto(Input *in)
@@ -2040,45 +2040,45 @@ int input_rilascia_tutto(Input *in)
 	if (!in)
 		return -1;
 
-	for (uint32_t c = 0; c < MAX_TASTO; c++)
-		if (bit_leggi(in->tasti, c))
+	for (uint32_t c = 0; c < MAX_KEY; c++)
+		if (bit_read(in->tasti, c))
 		{
 			/* ⛔ The bit is switched off EVEN IF the send fails: if the device
 			 *    is no longer there, that key is no longer ours to release, and
 			 *    keeping it marked would make the bench count a release that cannot
 			 *    happen.  ⚠ And only what LEFT is counted.
 			 *
-			 * ⛔⛔ And the ORPHAN is counted separately: `manda_tasto()` has already switched off the
+			 * ⛔⛔ And the ORPHAN is counted separately: `send_key()` has already switched off the
 			 *     bit and lowered the count, so here NOTHING is touched — doing it
 			 *     twice would bring the counter below zero, and an `unsigned`
 			 *     below zero is four billion. */
-			if (bit_leggi(in->tasti_orfani, c))
+			if (bit_read(in->orphan_keys, c))
 			{
-				(void) manda_tasto(in, (uint16_t) c, 0);
+				(void) send_key(in, (uint16_t) c, 0);
 				orfani++;
 			}
-			else if (manda_tasto(in, (uint16_t) c, 0) == 0)
+			else if (send_key(in, (uint16_t) c, 0) == 0)
 				quanti++;
 			else
 			{
-				bit_scrivi(in->tasti, c, FALSE);
-				if (in->quanti_tasti)
-					in->quanti_tasti--;
+				bit_write(in->tasti, c, FALSE);
+				if (in->how_many_keys)
+					in->how_many_keys--;
 			}
 		}
 	for (uint32_t c = 0; c < MAX_BOTTONE; c++)
-		if (bit_leggi(in->bottoni, c))
+		if (bit_read(in->bottoni, c))
 		{
-			if (bit_leggi(in->bottoni_orfani, c))
+			if (bit_read(in->bottoni_orfani, c))
 			{
-				(void) manda_bottone(in, (uint16_t) c, 0);
+				(void) send_button(in, (uint16_t) c, 0);
 				orfani++;
 			}
-			else if (manda_bottone(in, (uint16_t) c, 0) == 0)
+			else if (send_button(in, (uint16_t) c, 0) == 0)
 				quanti++;
 			else
 			{
-				bit_scrivi(in->bottoni, c, FALSE);
+				bit_write(in->bottoni, c, FALSE);
 				if (in->quanti_bottoni)
 					in->quanti_bottoni--;
 			}
@@ -2094,7 +2094,7 @@ int input_rilascia_tutto(Input *in)
 	 *     absolved. */
 	registro_dice(AREA, "release at detach: %d keys and buttons (still marked: %u keys and "
 	                    "%u buttons)%s",
-	              quanti, in->quanti_tasti, in->quanti_bottoni,
+	              quanti, in->how_many_keys, in->quanti_bottoni,
 	              orfani ? " — ⛔ and see the line about the ORPHANS above" : "");
 	if (orfani)
 		registro_dice(AREA,
@@ -2112,7 +2112,7 @@ unsigned input_premuti(const Input *in)
 	 *    would forever prevent the wake-up on an already broken session — that is
 	 *    precisely when the user is looking at a white page and waiting for a
 	 *    frame.  ⚠ That case is handled by cure "C", which repairs it. */
-	return in ? in->quanti_tasti + in->quanti_bottoni : 0;
+	return in ? in->how_many_keys + in->quanti_bottoni : 0;
 }
 
 void input_chiudi(Input *in)
@@ -2121,18 +2121,18 @@ void input_chiudi(Input *in)
 		return;
 	if (in->wlr)
 	{
-		chiudi_wlr(in);
+		close_wlr(in);
 		return;
 	}
 
 	/* ⚠ A net, not the rule: the stitcher calls `input_rilascia_tutto()` at
 	 *   detach (it is in the contract).  If it has not done so, here the count is still
 	 *   full and the log line says so — that is, the defect SHOWS. */
-	if (in->quanti_tasti || in->quanti_bottoni)
+	if (in->how_many_keys || in->quanti_bottoni)
 	{
 		registro_dice(AREA, "⛔ closing with %u keys and %u buttons STILL PRESSED: the stitcher did not "
 		                    "call input_rilascia_tutto()",
-		              in->quanti_tasti, in->quanti_bottoni);
+		              in->how_many_keys, in->quanti_bottoni);
 		input_rilascia_tutto(in);
 	}
 
@@ -2149,8 +2149,8 @@ void input_chiudi(Input *in)
 	 *    fourth caller to be born.  The box above `stacca_il_contesto()`
 	 *    carries the mechanism, read in the library. */
 	stacca_il_contesto(in, "closing");
-	g_clear_pointer(&in->disposizione, tastiera_chiudi);
-	g_free(in->keymap_nome);
+	g_clear_pointer(&in->disposizione, keyboard_close);
+	g_free(in->keymap_name);
 	g_free(in->negoziata);
 	g_free(in->reg_per);
 	g_free(in);
@@ -2167,7 +2167,7 @@ void input_chiudi(Input *in)
  *  ⛔ It is NOT in `input.h` on purpose: `input.h` belongs to the coordinator and is the
  *     PRODUCT's contract.  The bench declares it `extern` by itself.
  * ------------------------------------------------------------------ */
-void input_conto(const Input *in, unsigned *tasti, unsigned *pulsanti, unsigned *ricambi_puntatore,
+void input_count(const Input *in, unsigned *tasti, unsigned *pulsanti, unsigned *ricambi_puntatore,
                  unsigned *ricambi_tastiera, int *pronto);
 
 /* ⛔ The count of the ORPHANS, for bench `06-b33`: what stayed pressed
@@ -2182,11 +2182,11 @@ unsigned input_orfani(const Input *in)
 	return in ? in->quanti_orfani : 0;
 }
 
-void input_conto(const Input *in, unsigned *tasti, unsigned *pulsanti, unsigned *ricambi_puntatore,
+void input_count(const Input *in, unsigned *tasti, unsigned *pulsanti, unsigned *ricambi_puntatore,
                  unsigned *ricambi_tastiera, int *pronto)
 {
 	if (tasti)
-		*tasti = in ? in->quanti_tasti : 0;
+		*tasti = in ? in->how_many_keys : 0;
 	if (pulsanti)
 		*pulsanti = in ? in->quanti_bottoni : 0;
 	if (ricambi_puntatore)
@@ -2195,11 +2195,11 @@ void input_conto(const Input *in, unsigned *tasti, unsigned *pulsanti, unsigned 
 		*ricambi_tastiera = in ? in->ricambi_tastiera : 0;
 	if (pronto && in && in->wlr)
 	{
-		*pronto = !wlr_input_caduto(in->wlr);
+		*pronto = !wlr_input_dropped(in->wlr);
 		return;
 	}
 	if (pronto)
-		*pronto = in && in->puntatore_attivo && in->regione_nota;
+		*pronto = in && in->pointer_active && in->regione_nota;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -2219,7 +2219,7 @@ void input_conto(const Input *in, unsigned *tasti, unsigned *pulsanti, unsigned 
  *
  *   · **no replacements, no orphans**: the devices are OURS, the
  *     compositor does not destroy them for a geometry or keymap change.  ⇒
- *     `tasti_orfani`/`bottoni_orfani` stay at zero by construction;
+ *     `orphan_keys`/`bottoni_orfani` stay at zero by construction;
  *   · **the layout does not go through GSettings**: it becomes the keymap of
  *     our keyboard, and labwc hands it to the applications with our keys
  *     (§7.4).  ⭐ It is §5-bis.7 in its most direct form: the shortcuts
@@ -2245,7 +2245,7 @@ void input_conto(const Input *in, unsigned *tasti, unsigned *pulsanti, unsigned 
  *    line is the same, so that whoever looks for «KEYMAP CHANGED» finds it on
  *    all three desktops.
  */
-static void riapri_disposizione_wlr(Input *in)
+static void reopen_layout_wlr(Input *in)
 {
 	size_t misura = 0;
 	const char *testo = wlr_input_keymap(in->wlr, &misura);
@@ -2256,24 +2256,24 @@ static void riapri_disposizione_wlr(Input *in)
 	if (!testo || misura == 0)
 		return;
 	impronta = g_strdup_printf("%zu bytes, fingerprint %08x", misura, (unsigned) g_str_hash(testo));
-	nuova = tastiera_apri_da_keymap(testo, misura, in->negoziata, &sbaglio);
+	nuova = keyboard_open_from_keymap(testo, misura, in->negoziata, &sbaglio);
 	if (!nuova)
 		registro_dice(AREA, "⚠ the virtual keyboard's keymap does not open for letters (%s): %s",
 		              sbaglio ?: "no reason declared",
 		              in->disposizione ? "keeping the previous one" : "LETTERS stay off");
 	else
 	{
-		g_clear_pointer(&in->disposizione, tastiera_chiudi);
+		g_clear_pointer(&in->disposizione, keyboard_close);
 		in->disposizione = nuova;
 	}
-	if (g_strcmp0(impronta, in->keymap_nome) != 0)
+	if (g_strcmp0(impronta, in->keymap_name) != 0)
 	{
 		registro_dice(AREA, "KEYMAP CHANGED: %s (was: %s) → layout «%s», from %s (wlroots)",
-		              impronta, in->keymap_nome ?: "none",
-		              in->disposizione ? tastiera_disposizione(in->disposizione) : "none",
-		              wlr_input_keymap_origine(in->wlr));
-		g_free(in->keymap_nome);
-		in->keymap_nome = g_steal_pointer(&impronta);
+		              impronta, in->keymap_name ?: "none",
+		              in->disposizione ? kbd_layout(in->disposizione) : "none",
+		              wlr_input_keymap_origin(in->wlr));
+		g_free(in->keymap_name);
+		in->keymap_name = g_steal_pointer(&impronta);
 	}
 }
 
@@ -2293,7 +2293,7 @@ Input *input_apri_wlr(uint32_t tela_l, uint32_t tela_a, char **errore)
 			                          tela_l, tela_a);
 		return NULL;
 	}
-	w = wlr_input_apri(&sbaglio);
+	w = wlr_input_open(&sbaglio);
 	if (!w)
 	{
 		if (errore)
@@ -2306,9 +2306,9 @@ Input *input_apri_wlr(uint32_t tela_l, uint32_t tela_a, char **errore)
 	in->wlr = w;
 	in->tela_l = tela_l;
 	in->tela_a = tela_a;
-	in->aperto_us = g_get_monotonic_time();
+	in->open_us = g_get_monotonic_time();
 	in->fd_socket = -1;
-	riapri_disposizione_wlr(in);
+	reopen_layout_wlr(in);
 
 	registro_dice(AREA,
 	              "input channel open to the compositor (wlroots: virtual keyboard and "
@@ -2317,40 +2317,40 @@ Input *input_apri_wlr(uint32_t tela_l, uint32_t tela_a, char **errore)
 	return in;
 }
 
-/* ⛔ The count is kept as in `manda_tasto()`: AFTER sending, and only if it
+/* ⛔ The count is kept as in `send_key()`: AFTER sending, and only if it
  *    left — marking a key that did not leave would make the detach release
  *    something nobody pressed. */
-static int manda_tasto_wlr(Input *in, uint16_t codice, int premuto)
+static int send_key_wlr(Input *in, uint16_t codice, int premuto)
 {
 	/* ⛔ Wire dropped ⇒ we try to reattach BEFORE saying -1.  It is not
 	 *    zeal: `input_rilascia_tutto()` on a failed send CLEARS the bit, and
 	 *    a button cleared from the count is a button the reattach will no longer
 	 *    release.  ⚠ With a floor of one second: within that second the
 	 *    hole stays, and it is said. */
-	if (wlr_input_caduto(in->wlr))
+	if (wlr_input_dropped(in->wlr))
 		riattacca_wlr(in);
-	if (wlr_input_tasto(in->wlr, codice, premuto != 0) != 0)
+	if (wlr_input_key(in->wlr, codice, premuto != 0) != 0)
 		return -1;
-	if ((premuto != 0) != bit_leggi(in->tasti, codice))
+	if ((premuto != 0) != bit_read(in->tasti, codice))
 	{
-		bit_scrivi(in->tasti, codice, premuto != 0);
+		bit_write(in->tasti, codice, premuto != 0);
 		if (premuto)
-			in->quanti_tasti++;
-		else if (in->quanti_tasti)
-			in->quanti_tasti--;
+			in->how_many_keys++;
+		else if (in->how_many_keys)
+			in->how_many_keys--;
 	}
 	return 0;
 }
 
-static int manda_bottone_wlr(Input *in, uint16_t codice, int premuto)
+static int send_button_wlr(Input *in, uint16_t codice, int premuto)
 {
-	if (wlr_input_caduto(in->wlr))
-		riattacca_wlr(in); /* see `manda_tasto_wlr()` */
-	if (wlr_input_pulsante(in->wlr, codice, premuto != 0) != 0)
+	if (wlr_input_dropped(in->wlr))
+		riattacca_wlr(in); /* see `send_key_wlr()` */
+	if (wlr_input_button(in->wlr, codice, premuto != 0) != 0)
 		return -1;
-	if ((premuto != 0) != bit_leggi(in->bottoni, codice))
+	if ((premuto != 0) != bit_read(in->bottoni, codice))
 	{
-		bit_scrivi(in->bottoni, codice, premuto != 0);
+		bit_write(in->bottoni, codice, premuto != 0);
 		if (premuto)
 			in->quanti_bottoni++;
 		else if (in->quanti_bottoni)
@@ -2360,7 +2360,7 @@ static int manda_bottone_wlr(Input *in, uint16_t codice, int premuto)
 }
 
 /* The same as `input_lettera()`, without libei's device. */
-static int lettera_wlr(Input *in, uint32_t carattere)
+static int letter_wlr(Input *in, uint32_t carattere)
 {
 	uint16_t codici[TASTIERA_MAX_POSIZIONI];
 	size_t quante = 0;
@@ -2373,7 +2373,7 @@ static int lettera_wlr(Input *in, uint32_t carattere)
 		                    "keymap did not open)");
 		return -1;
 	}
-	if (wlr_input_caduto(in->wlr))
+	if (wlr_input_dropped(in->wlr))
 		return -1;
 
 	esito = tastiera_posizioni_per(in->disposizione, carattere, codici, &quante);
@@ -2387,18 +2387,18 @@ static int lettera_wlr(Input *in, uint32_t carattere)
 	 *    pressed Shift updates OUR state, and the compositor receives it
 	 *    as `modifiers` before the letter. */
 	for (size_t i = 0; i < quante; i++)
-		if (manda_tasto(in, codici[i], 1) < 0)
+		if (send_key(in, codici[i], 1) < 0)
 		{
 			for (size_t j = i; j > 0; j--)
-				manda_tasto(in, codici[j - 1], 0);
+				send_key(in, codici[j - 1], 0);
 			return -1;
 		}
 	for (size_t i = quante; i > 0; i--)
-		manda_tasto(in, codici[i - 1], 0);
+		send_key(in, codici[i - 1], 0);
 	return 0;
 }
 
-static int disposizione_wlr(Input *in, const char *nome)
+static int layout_wlr(Input *in, const char *nome)
 {
 	g_autoptr(GError) sbaglio = NULL;
 
@@ -2433,10 +2433,10 @@ static int disposizione_wlr(Input *in, const char *nome)
 		              "virtual keyboard (%s) — «%s» stays.  ⛔ The letters that one does not have "
 		              "do NOT come out, and the SHORTCUTS go on its keys (RCP.md §7.3)",
 		              nome, sbaglio ? sbaglio->message : "no reason",
-		              in->disposizione ? tastiera_disposizione(in->disposizione) : "none");
+		              in->disposizione ? kbd_layout(in->disposizione) : "none");
 		return -1;
 	}
-	riapri_disposizione_wlr(in);
+	reopen_layout_wlr(in);
 	/* ⚠ "Sent", not "in force": that labwc passed it on to the applications
 	 *   only a witness inside the session can say.  `[?]` Not measured. */
 	registro_dice(AREA,
@@ -2469,7 +2469,7 @@ static int disposizione_wlr(Input *in, const char *nome)
  *   that has not been measured.  It costs one event; removing it would cost a
  *   diagnosis the day that case exists.
  *
- * ⚠ The floor is that of cure "C" (`GUARIGIONE_FONDO_US`): if the compositor
+ * ⚠ The floor is that of cure "C" (`HEALING_BACKSTOP_US`): if the compositor
  *   is really gone, the attempt costs one failed `connect()` per
  *   second, and the line comes out once only.
  */
@@ -2480,20 +2480,20 @@ static void riattacca_wlr(Input *in)
 	WlrInput *nuovo;
 	unsigned pulsanti = 0, tasti = 0;
 
-	if (in->wlr_ultimo_riattacco_us && ora - in->wlr_ultimo_riattacco_us < GUARIGIONE_FONDO_US)
+	if (in->wlr_last_reattach_us && ora - in->wlr_last_reattach_us < HEALING_BACKSTOP_US)
 		return;
-	in->wlr_ultimo_riattacco_us = ora;
+	in->wlr_last_reattach_us = ora;
 
-	nuovo = wlr_input_apri(&sbaglio);
+	nuovo = wlr_input_open(&sbaglio);
 	if (!nuovo)
 	{
-		if (!in->wlr_riattacco_fallito_detto)
+		if (!in->wlr_reattach_failed_logged)
 			registro_dice(AREA,
 			              "⛔ wlroots: the input reattach does not succeed (%s) — retrying every "
 			              "second, and this line does not repeat.  ⚠ Meanwhile the desktop can be "
 			              "SEEN and not CONTROLLED",
 			              sbaglio ? sbaglio->message : "no reason");
-		in->wlr_riattacco_fallito_detto = TRUE;
+		in->wlr_reattach_failed_logged = TRUE;
 		return;
 	}
 
@@ -2509,62 +2509,62 @@ static void riattacca_wlr(Input *in)
 	}
 
 	for (uint32_t c = 0; c < MAX_BOTTONE; c++)
-		if (bit_leggi(in->bottoni, c))
+		if (bit_read(in->bottoni, c))
 		{
-			(void) wlr_input_rilascia_forzato(nuovo, (uint16_t) c);
-			bit_scrivi(in->bottoni, c, FALSE);
+			(void) wlr_input_force_release(nuovo, (uint16_t) c);
+			bit_write(in->bottoni, c, FALSE);
 			if (in->quanti_bottoni)
 				in->quanti_bottoni--;
 			pulsanti++;
 		}
-	for (uint32_t c = 0; c < MAX_TASTO; c++)
-		if (bit_leggi(in->tasti, c))
+	for (uint32_t c = 0; c < MAX_KEY; c++)
+		if (bit_read(in->tasti, c))
 		{
-			bit_scrivi(in->tasti, c, FALSE);
-			if (in->quanti_tasti)
-				in->quanti_tasti--;
+			bit_write(in->tasti, c, FALSE);
+			if (in->how_many_keys)
+				in->how_many_keys--;
 			tasti++;
 		}
 
-	wlr_input_chiudi(in->wlr);
+	wlr_input_close(in->wlr);
 	in->wlr = nuovo;
-	in->wlr_riattacchi++;
-	in->wlr_riattacco_fallito_detto = FALSE;
-	riapri_disposizione_wlr(in);
+	in->wlr_reattaches++;
+	in->wlr_reattach_failed_logged = FALSE;
+	reopen_layout_wlr(in);
 	registro_dice(AREA,
 	              "⭐ wlroots: input REATTACHED (n. %u).  %u buttons left down released by the "
 	              "new device (`[?]` not measured that the seat accepts them), %u keys already "
 	              "released by the compositor at the drop",
-	              in->wlr_riattacchi, pulsanti, tasti);
+	              in->wlr_reattaches, pulsanti, tasti);
 }
 
-static int gira_wlr(Input *in)
+static int run_wlr(Input *in)
 {
-	if (!wlr_input_caduto(in->wlr))
+	if (!wlr_input_dropped(in->wlr))
 	{
-		int n = wlr_input_gira(in->wlr);
+		int n = wlr_input_run(in->wlr);
 
 		if (n >= 0)
 			return n;
 	}
 	riattacca_wlr(in);
-	return wlr_input_caduto(in->wlr) ? -1 : 0;
+	return wlr_input_dropped(in->wlr) ? -1 : 0;
 }
 
-static void chiudi_wlr(Input *in)
+static void close_wlr(Input *in)
 {
 	/* ⚠ The same net as `input_chiudi()`: the stitcher has already released; if it has not
 	 *   done it, the line says so and we release here. */
-	if (in->quanti_tasti || in->quanti_bottoni)
+	if (in->how_many_keys || in->quanti_bottoni)
 	{
 		registro_dice(AREA, "⛔ closing with %u keys and %u buttons STILL PRESSED: the stitcher did not "
 		                    "call input_rilascia_tutto()",
-		              in->quanti_tasti, in->quanti_bottoni);
+		              in->how_many_keys, in->quanti_bottoni);
 		input_rilascia_tutto(in);
 	}
-	wlr_input_chiudi(in->wlr);
-	g_clear_pointer(&in->disposizione, tastiera_chiudi);
-	g_free(in->keymap_nome);
+	wlr_input_close(in->wlr);
+	g_clear_pointer(&in->disposizione, keyboard_close);
+	g_free(in->keymap_name);
 	g_free(in->negoziata);
 	g_free(in->reg_per);
 	g_free(in);

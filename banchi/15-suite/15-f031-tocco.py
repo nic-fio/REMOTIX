@@ -65,10 +65,10 @@ SOLO_TELEFONO = True
 GESTI = ("dito-muove", "tocco-clic", "tocco-e-mezzo", "tastiera")
 PAROLA = "prova"
 SCARTO_GUASTO = 60       # CSS px: the tap of the control in the void lands left of the ⌨
-PUNTI_DITO = ((0.25, 0.3), (0.7, 0.6))
-DITI_VERI_MAX = 8        # a user corrects: several short finger passes to get there (each ≤ 30 % of the canvas)
-PAUSA_SANA_S = 0.12      # between the tap and the second contact (page threshold 0.3 s)
-PAUSA_GUASTO_S = 0.7
+FINGER_POINTS = ((0.25, 0.3), (0.7, 0.6))
+REAL_FINGERS_MAX = 8        # a user corrects: several short finger passes to get there (each ≤ 30 % of the canvas)
+HEALTHY_PAUSE_S = 0.12      # between the tap and the second contact (page threshold 0.3 s)
+FAULT_PAUSE_S = 0.7
 
 
 def giudica_tastiera(prima, aperta, scritto, chiusa):
@@ -130,10 +130,10 @@ def tastiera(s, sc, mp, geo, guasto, note):
         return giudica_tastiera(prima, None, None, None)
     # the remote desktop's focus in the field «a»: the pointer above it, a REAL tap
     R = sc.rett
-    err = g.porta_il_puntatore(geo, *vetro(mp, *F4.centro_r(R["a"])))
+    err = g.porta_il_puntatore(geo, *vetro(mp, *F4.center_r(R["a"])))
     if err is None or err > 3:
         return S.BLOCKED, "the pointer cannot be brought onto the field «a» (error %s px)" % err
-    if not g.tap_vero(geo):
+    if not g.real_tap(geo):
         return S.BLOCKED, "the real tap on the field «a» did not reach the page (adb tap)"
     st = sc.comanda("fuoco-a")
     if st is None or st.get("a") != "" or st.get("fuoco") != "a":
@@ -170,7 +170,7 @@ def vetro(mp, x, y):
     return mp.vetro(x, y)
 
 
-def fa_gesto(nome, s, sc, mp, geo, guasto, note):
+def perform_gesture(nome, s, sc, mp, geo, guasto, note):
     g = s.g
     if sc.comanda("reset") is None:
         return S.BLOCKED, "the scene did not answer the reset"
@@ -179,43 +179,43 @@ def fa_gesto(nome, s, sc, mp, geo, guasto, note):
     fuori = vetro(mp, W * 0.33, H * 0.12)        # between the pad and the button: outside everything
     if nome == "dito-muove":
         esiti = []
-        for fx, fy in PUNTI_DITO:
+        for fx, fy in FINGER_POINTS:
             atteso = (fx, fy)
-            tx, ty = fuori if guasto else vetro(mp, *F4.nel_rett(R["pad"], fx, fy))
+            tx, ty = fuori if guasto else vetro(mp, *F4.in_rect(R["pad"], fx, fy))
             st = None
-            for _i in range(DITI_VERI_MAX):
-                p = g.puntatore_vetro(geo)
+            for _i in range(REAL_FINGERS_MAX):
+                p = g.glass_pointer(geo)
                 if p is None:
                     return S.BLOCKED, "the page does not say where the pointer is (REMOTIX.tocco)"
                 if max(abs(tx - p[0]), abs(ty - p[1])) <= 2:
                     break
-                t = g.scorri_vero(geo, tx - p[0], ty - p[1])
+                t = g.real_scroll(geo, tx - p[0], ty - p[1])
                 if not t:
                     return S.BLOCKED, ("the real finger did not reach the page (adb swipe "
                                        "from %s by (%.0f,%.0f) px of the glass; touches seen %d)"
                                        % (getattr(g, "ultimo_dito", None), tx - p[0], ty - p[1],
-                                          len(g.tocchi_visti())))
+                                          len(g.touches_seen())))
                 note.append("finger on «%s» at (%.0f,%.0f)" % (t.get("su"), t["x"], t["y"]))
-            st = sc.aspetta(lambda q, a=atteso: F4.giudica_movimento(q, a)[0] == S.PASS,
+            st = sc.aspetta(lambda q, a=atteso: F4.judge_motion(q, a)[0] == S.PASS,
                             F4.ATTESA_S)
-            esiti.append(F4.giudica_movimento(st, atteso))
+            esiti.append(F4.judge_motion(st, atteso))
             if esiti[-1][0] != S.PASS:
                 break
         brutti = [e for e in esiti if e[0] != S.PASS]
         return brutti[0] if brutti else (S.PASS, "two points: " + " · ".join(e[1] for e in esiti))
     if nome == "tocco-clic":
-        tx, ty = fuori if guasto else vetro(mp, *F4.centro_r(R["bot"]))
+        tx, ty = fuori if guasto else vetro(mp, *F4.center_r(R["bot"]))
         err = g.porta_il_puntatore(geo, tx, ty)
         if err is None or err > 3:
             return S.BLOCKED, "the pointer cannot be brought onto the target (error %s px)" % err
-        t = g.tap_vero(geo)
+        t = g.real_tap(geo)
         if not t:
             return S.BLOCKED, "the real tap did not reach the page (adb tap)"
         note.append("tap on «%s» at (%.0f,%.0f)" % (t.get("su"), t["x"], t["y"]))
-        st = sc.aspetta(lambda q: F4.giudica_clic(q)[0] == S.PASS, F4.ATTESA_S)
-        return F4.giudica_clic(st)
+        st = sc.aspetta(lambda q: F4.judge_click(q)[0] == S.PASS, F4.ATTESA_S)
+        return F4.judge_click(st)
     if nome == "tocco-e-mezzo":
-        x0, y0 = F4.centro_r(R["box"])
+        x0, y0 = F4.center_r(R["box"])
         x1 = x0 + F4.SPINTA * W
         a0, b0 = vetro(mp, x0, y0)
         a1, _b1 = vetro(mp, x1, y0)
@@ -223,18 +223,18 @@ def fa_gesto(nome, s, sc, mp, geo, guasto, note):
         if err is None or err > 3:
             return S.BLOCKED, "the pointer cannot be brought onto the box (error %s px)" % err
         d = a1 - a0
-        cx, cy = g._centro_tela(geo)
+        cx, cy = g._canvas_center(geo)
         fx, fy = cx - d / 2.0, cy                 # the finger: both ends inside the canvas
         g.guardia(subito=True)
         c = g.cdp.chiama
         c("Input.dispatchTouchEvent", type="touchStart", touchPoints=[{"x": fx, "y": fy}])
         time.sleep(0.06)
         c("Input.dispatchTouchEvent", type="touchEnd", touchPoints=[])
-        time.sleep(PAUSA_GUASTO_S if guasto else PAUSA_SANA_S)
+        time.sleep(FAULT_PAUSE_S if guasto else HEALTHY_PAUSE_S)
         punti = [(fx + d * i / 15.0, fy) for i in range(1, 16)]
-        g.dito_cdp([(fx, fy)] + punti, pausa_s=0.04, tieni_s=0.15)
-        st = sc.aspetta(lambda q: F4.giudica_box(q, x1 - x0, H)[0] == S.PASS, F4.ATTESA_S)
-        return F4.giudica_box(st, x1 - x0, H)
+        g.finger_cdp([(fx, fy)] + punti, pause_s=0.04, keep_s=0.15)
+        st = sc.aspetta(lambda q: F4.judge_box(q, x1 - x0, H)[0] == S.PASS, F4.ATTESA_S)
+        return F4.judge_box(st, x1 - x0, H)
     if nome == "tastiera":
         return tastiera(s, sc, mp, geo, guasto, note)
     raise ValueError(nome)
@@ -245,7 +245,7 @@ def passata(s, sc, mp, geo, guasto):
     for nome in GESTI:
         note = []
         try:
-            e, m = fa_gesto(nome, s, sc, mp, geo, guasto, note)
+            e, m = perform_gesture(nome, s, sc, mp, geo, guasto, note)
         except S.telefono().ChiamataInCorso:
             raise
         except Exception as x:                   # noqa: BLE001
@@ -253,7 +253,7 @@ def passata(s, sc, mp, geo, guasto):
         if e == S.FAIL and not guasto:
             print("   ⚠ %s red (%s): redoing it to confirm" % (nome, m), flush=True)
             try:
-                e2, m2 = fa_gesto(nome, s, sc, mp, geo, guasto, note)
+                e2, m2 = perform_gesture(nome, s, sc, mp, geo, guasto, note)
             except Exception as x:               # noqa: BLE001
                 e2, m2 = S.BLOCKED, "the bench fell over in the gesture: %s" % str(x)[:160]
             m = ("⚠ RED at the first attempt (%s), green at the second: %s" % (m, m2)
@@ -298,7 +298,7 @@ def corpo(o, E):
         if S.FAIL in es:
             E.metti("F-031", S.FAIL, "red gestures: " + ", ".join(n for n, e, _m in righe
                                                                    if e == S.FAIL),
-                    atteso=atteso, osservato=oss, evidenze=ev + [s.salva_console()])
+                    atteso=atteso, osservato=oss, evidenze=ev + [s.save_console()])
         elif S.BLOCKED in es:
             E.metti("F-031", S.BLOCKED, "gestures not looked at: " + ", ".join(
                 "%s (%s)" % (n, m) for n, e, m in righe if e == S.BLOCKED),
@@ -309,7 +309,7 @@ def corpo(o, E):
                     atteso=atteso, osservato=oss, evidenze=ev)
         if o.guasto:
             righe = passata(s, sc, mp, geo, True)
-            visto = F4.esito_col_guasto([r[1] for r in righe])
+            visto = F4.outcome_with_fault([r[1] for r in righe])
             E.guasto("F-031", visto,
                      {True: "every gesture in the void gave red",
                       False: "gestures in the void GREEN anyway: " + ", ".join(

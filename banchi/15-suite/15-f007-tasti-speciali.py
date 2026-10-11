@@ -40,8 +40,8 @@ SEQUENZA = (G2.scrivi("uno") + P("Enter") + G2.scrivi("dxe") + P("Backspace") * 
             + G2.scrivi("ue") + P("ArrowLeft") * 3 + G2.scrivi("X") + P("ArrowUp")
             + G2.scrivi("Y") + P("ArrowDown") + G2.scrivi("Z") + P("Tab") + G2.scrivi("tre")
             + P("Escape") + G2.scrivi("fine"))
-SPECIALI_PROVATI = ("Enter", "Backspace", "ArrowLeft", "ArrowUp", "ArrowDown", "Tab", "Escape")
-GUASTO_TOGLIE = "Escape"
+TRIED_SPECIALS = ("Enter", "Backspace", "ArrowLeft", "ArrowUp", "ArrowDown", "Tab", "Escape")
+FAULT_REMOVES = "Escape"
 ATTESA_S = 8.0
 
 
@@ -56,7 +56,7 @@ def simula(passi):
     """Applies the steps to the fake scene; returns (a, b)."""
     val = {"a": "", "b": ""}
     pos = {"a": 0, "b": 0}
-    col_mem = None
+    with_mem = None
     f = "a"
     for tipo, nome, _c, _v in passi:
         if tipo != "giu":
@@ -65,17 +65,17 @@ def simula(passi):
         if nome == "Enter":
             if f == "a":
                 val[f], pos[f] = v[:p] + "\n" + v[p:], p + 1
-            col_mem = None
+            with_mem = None
         elif nome == "Backspace":
             if p > 0:
                 val[f], pos[f] = v[:p - 1] + v[p:], p - 1
-            col_mem = None
+            with_mem = None
         elif nome == "ArrowLeft":
             pos[f] = max(0, p - 1)
-            col_mem = None
+            with_mem = None
         elif nome == "ArrowRight":
             pos[f] = min(len(v), p + 1)
-            col_mem = None
+            with_mem = None
         elif nome in ("ArrowUp", "ArrowDown"):
             if f != "a":
                 continue
@@ -84,8 +84,8 @@ def simula(passi):
             while resto > len(righe[r]):
                 resto -= len(righe[r]) + 1
                 r += 1
-            c = resto if col_mem is None else col_mem
-            col_mem = c
+            c = resto if with_mem is None else with_mem
+            with_mem = c
             r2 = r - 1 if nome == "ArrowUp" else r + 1
             if r2 < 0:
                 pos[f] = 0
@@ -95,13 +95,13 @@ def simula(passi):
                 pos[f] = sum(len(x) + 1 for x in righe[:r2]) + min(c, len(righe[r2]))
         elif nome == "Tab":
             f = "b" if f == "a" else f
-            col_mem = None
+            with_mem = None
         elif nome == "Escape":
             if f == "b":
                 val["b"], pos["b"] = "", 0
         elif len(nome) == 1:
             val[f], pos[f] = v[:p] + nome + v[p:], p + 1
-            col_mem = None
+            with_mem = None
     return val["a"], val["b"]
 
 
@@ -128,12 +128,12 @@ def certifica():
             guai.append(cosa)
     prova("the expectation is a='uYno\\nXdZue' b='fine'", ATTESO == ("uYno\nXdZue", "fine"),
           repr(ATTESO))
-    for k in SPECIALI_PROVATI:
+    for k in TRIED_SPECIALS:
         r = simula(senza(SEQUENZA, k))
         prova("without %s the value changes" % k, r != ATTESO, repr(r))
     prova("judge: right ⇒ PASS", giudica({"a": ATTESO[0], "b": ATTESO[1]}, ATTESO)[0]
           == S.PASS)
-    rg = simula(senza(SEQUENZA, GUASTO_TOGLIE))
+    rg = simula(senza(SEQUENZA, FAULT_REMOVES))
     prova("judge: with the fault ⇒ FAIL", giudica({"a": rg[0], "b": rg[1]}, ATTESO)[0] == S.FAIL,
           repr(rg))
     prova("judge: wrong expectation ⇒ FAIL",
@@ -153,32 +153,32 @@ def batti(s, sc, mp, passi, nome):
 def corpo(o, E):
     with S.Sessione(o, "007", E) as s:
         sc, mp, geo, dove = G2.prepara(s, o.porte_base + 6)
-        atteso_txt = "a=%r b=%r" % ATTESO
+        expected_txt = "a=%r b=%r" % ATTESO
         st, foto, perche = batti(s, sc, mp, SEQUENZA, "tasti-sana")
         if perche:
             raise S.Bloccata(perche)
         e, m = giudica(st, ATTESO)
         if e == S.FAIL:
             print("   ⚠ red (%s): redoing it to confirm" % m, flush=True)
-            st2, foto2, perche2 = batti(s, sc, mp, SEQUENZA, "tasti-sana-bis")
-            e2, m2 = giudica(st2, ATTESO) if not perche2 else (S.BLOCKED, perche2)
+            st2, photo2, why2 = batti(s, sc, mp, SEQUENZA, "tasti-sana-bis")
+            e2, m2 = giudica(st2, ATTESO) if not why2 else (S.BLOCKED, why2)
             if e2 == S.PASS:
                 e, m = S.PASS, "⚠ RED at the first attempt (%s), green at the second" % m
             else:
                 m = "red twice: %s · %s" % (m, m2)
-            foto = foto2 or foto
-        E.metti("F-007", e, m, atteso=atteso_txt, osservato=m,
-                evidenze=[x for x in (dove, foto, s.salva_console() if e != S.PASS else "")
+            foto = photo2 or foto
+        E.metti("F-007", e, m, atteso=expected_txt, osservato=m,
+                evidenze=[x for x in (dove, foto, s.save_console() if e != S.PASS else "")
                           if x])
         if o.guasto:
-            passi = senza(SEQUENZA, GUASTO_TOGLIE)
+            passi = senza(SEQUENZA, FAULT_REMOVES)
             st, foto, perche = batti(s, sc, mp, passi, "tasti-guasto")
             if perche:
                 E.guasto("F-007", None, perche)
             else:
                 eg, mg = giudica(st, ATTESO)
                 E.guasto("F-007", None if eg == S.BLOCKED else eg == S.FAIL,
-                         "without %s: %s" % (GUASTO_TOGLIE, mg),
+                         "without %s: %s" % (FAULT_REMOVES, mg),
                          atteso="red (the Esc is missing: b is not emptied)", osservato=mg,
                          evidenze=[foto] if foto else [])
 

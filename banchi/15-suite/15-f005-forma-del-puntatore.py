@@ -44,7 +44,7 @@ ATTESO = ("arrow at the centre, text bar on the text, horizontal arrow on the ri
 
 # the dot: the neighbourhood of the tip, in PHOTO pixels, and the move
 INTORNO = 10
-SPOSTA = 120
+MOVE = 120
 
 
 def certifica():
@@ -54,12 +54,12 @@ def certifica():
 # ─────────────────────────────────────────────────────────────────────────────
 #  the 1 px dot — an observation, not a judgment
 # ─────────────────────────────────────────────────────────────────────────────
-def _al_pixel_foto(geo, pw, ph, X, Y):
+def _to_photo_pixel(geo, pw, ph, X, Y):
     return ((geo["bx0"] + X * geo["sx"]) * pw / geo["bw"],
             (geo["by0"] + Y * geo["sy"]) * ph / geo["bh"])
 
 
-def _non_ciano(im, cx, cy):
+def _not_cyan(im, cx, cy):
     """[(dx, dy, rgb)] of the NON-cyan pixels around (cx, cy) in the photo."""
     fuori = []
     for dy in range(-INTORNO, INTORNO + 1):
@@ -67,12 +67,12 @@ def _non_ciano(im, cx, cy):
             x, y = int(cx) + dx, int(cy) + dy
             if 0 <= x < im.size[0] and 0 <= y < im.size[1]:
                 p = im.getpixel((x, y))[:3]
-                if not C21._vicino(p, C21.CIANO):
+                if not C21._near(p, C21.CIANO):
                     fuori.append((dx, dy, p))
     return fuori
 
 
-def _ingrandisci(s, im, cx, cy, nome):
+def _zoom_in(s, im, cx, cy, nome):
     if not s.o.evidenze:
         return ""
     r = INTORNO + 6
@@ -83,7 +83,7 @@ def _ingrandisci(s, im, cx, cy, nome):
     return p
 
 
-def osserva_puntino(s, riga):
+def observe_dot(s, riga):
     from PIL import Image
     try:
         mira = riga["finestra"]["mira_desktop"]["centro"]
@@ -93,8 +93,8 @@ def osserva_puntino(s, riga):
     X, Y = mira
     out = {"evidenze": []}
 
-    def foto_con_puntatore(Xp, Yp, nome):
-        vx, vy = C21.dal_desktop_al_vetro(geo, Xp, Yp)
+    def photo_with_pointer(Xp, Yp, nome):
+        vx, vy = C21.desktop_to_glass(geo, Xp, Yp)
         s.g.muovi(vx, vy)
         time.sleep(2.0)
         png, dove = s.foto("puntino-" + nome)
@@ -104,17 +104,17 @@ def osserva_puntino(s, riga):
             out["evidenze"].append(dove)
         return Image.open(io.BytesIO(png)).convert("RGB")
 
-    a = foto_con_puntatore(X, Y, "fermo")
-    b = foto_con_puntatore(X - SPOSTA, Y, "spostato")
+    a = photo_with_pointer(X, Y, "fermo")
+    b = photo_with_pointer(X - MOVE, Y, "spostato")
     if a is None or b is None:
         return {"visto": None, "detto": "the canvas cannot be photographed"}
     pw, ph = a.size
-    p1 = _al_pixel_foto(geo, pw, ph, X, Y)
-    p2 = _al_pixel_foto(geo, pw, ph, X - SPOSTA, Y)
-    a_p1, b_p1, b_p2 = _non_ciano(a, *p1), _non_ciano(b, *p1), _non_ciano(b, *p2)
+    p1 = _to_photo_pixel(geo, pw, ph, X, Y)
+    p2 = _to_photo_pixel(geo, pw, ph, X - MOVE, Y)
+    a_p1, b_p1, b_p2 = _not_cyan(a, *p1), _not_cyan(b, *p1), _not_cyan(b, *p2)
     for im, (cx, cy), nome in ((a, p1, "sotto-la-punta"), (b, p1, "posto-lasciato"),
                                (b, p2, "sotto-la-punta-spostata")):
-        e = _ingrandisci(s, im, cx, cy, nome)
+        e = _zoom_in(s, im, cx, cy, nome)
         if e:
             out["evidenze"].append(e)
     # ⭐ and over the WHOLE cyan window: what changes between the two photos (the
@@ -143,7 +143,7 @@ def osserva_puntino(s, riga):
         out["detto"] = ("DOT SEEN: %d non-cyan px around the tip (%s), and it follows the "
                         "pointer moved by %d px — for the user to judge"
                         % (len(a_p1), ", ".join("%+d,%+d rgb%s" % (dx, dy, p)
-                                                for dx, dy, p in a_p1[:4]), SPOSTA))
+                                                for dx, dy, p in a_p1[:4]), MOVE))
     elif not a_p1 and not b_p2:
         out["detto"] = ("no dot: around the tip all cyan, still and moved; "
                         "between the two photos %d px of the window change (%d near the tips)"
@@ -159,13 +159,13 @@ def corpo(o, E):
     with S.Sessione(o, "005", E) as s:
         G3.prepara_o(o, s)
         oom0 = G3.uccisi_dal_server()
-        segno = s.segno_registro()
+        segno = s.log_mark()
         prima = G3.evidenze_ora(o)
         with G3.guida_prestata(S.VERI, s.g):
             riga, oss = C21.osserva(o.browser, o, s.sc, s.chi)
         server = s.registro_da(segno) if segno is not None else []
-        ev = G3.evidenze_nuove(o, prima) + [s.salva_testo("server-f005.txt", server),
-                                             s.salva_console()]
+        ev = G3.evidenze_nuove(o, prima) + [s.save_text("server-f005.txt", server),
+                                             s.save_console()]
         if oss is None:
             s.foto("quando-non-si-guarda")
             raise S.Bloccata(riga.get("perche", "the mesh did not observe")
@@ -175,7 +175,7 @@ def corpo(o, E):
 
         # the dot: after the judgment, with the same browser and the same window
         try:
-            pt = osserva_puntino(s, riga)
+            pt = observe_dot(s, riga)
         except Exception as ex:                  # noqa: BLE001
             pt = {"visto": None, "detto": "observation fell over: %r" % ex}
         print("   DOT: %s" % pt.get("detto"), flush=True)

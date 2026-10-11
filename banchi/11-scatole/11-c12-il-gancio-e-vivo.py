@@ -111,7 +111,7 @@ def current_spelling(x):
 GIORNI_PREDEFINITI = 7
 
 
-def leggi_il_registro(percorso):
+def read_log(percorso):
     """Returns (giri, guaio).
 
     ⛔ And the cases are THREE, not two, and that is the whole difference:
@@ -192,7 +192,7 @@ def giudica(stato, giorni):
 
     ultimo = veri[-1]
     quando = ultimo.get("istante")
-    eta = eta_in_giorni(quando, stato.get("adesso"))
+    eta = age_in_days(quando, stato.get("adesso"))
     if eta is None:
         # ⚠ An instant that cannot be read is not «old»: it is «I do not
         #   know».  ⛔ And here we choose to say it as a fault of the LOG, not
@@ -205,7 +205,7 @@ def giudica(stato, giorni):
     return guai
 
 
-def eta_in_giorni(istante, adesso):
+def age_in_days(istante, adesso):
     """⛔ Returns `None` if it cannot tell — never zero, never an invented number."""
     if not istante or adesso is None:
         return None
@@ -219,7 +219,7 @@ def eta_in_giorni(istante, adesso):
         return None
 
 
-def ganci_installati():
+def installed_hooks():
     """Which git hooks NAME our hook.
 
     ⛔ It is not enough that the `pre-push` file exists: it must be OURS.  Someone
@@ -232,7 +232,7 @@ def ganci_installati():
     # ⛔ `subprocess.TimeoutExpired` does NOT descend from `OSError`: without naming it,
     #    a `git` that hangs produced a traceback ⇒ Python exited **1** ⇒ the
     #    hook read RED on a fault of the BENCH (`LEZIONI.md` §1.51).
-    #    It is the same cure C10 already has in `radice_del_deposito()`.
+    #    It is the same cure C10 already has in `repo_root()`.
     except (OSError, subprocess.SubprocessError):
         return None
     if p.returncode != 0:
@@ -272,8 +272,8 @@ def certifica():
     import datetime
     adesso = time.time()
 
-    def istante(giorni_fa):
-        t = datetime.datetime.now().astimezone() - datetime.timedelta(days=giorni_fa)
+    def istante(days_ago):
+        t = datetime.datetime.now().astimezone() - datetime.timedelta(days=days_ago)
         return t.isoformat()
 
     def sano(**cambia):
@@ -360,14 +360,14 @@ def main():
     if a.certifica:
         sys.exit(certifica())
 
-    installati = ganci_installati()
+    installati = installed_hooks()
     if installati is None:
         print("⛔ I am not inside a git repository: I do not even know where")
         print("   to look for the hooks")
         print("   ⇒ the terrain does not hold")
         sys.exit(2)
 
-    giri, guaio = leggi_il_registro(a.registro)
+    giri, guaio = read_log(a.registro)
     stato = {
         "c_e": os.path.isfile(a.gancio),
         # ⚠ «executable» here means two things together: the bit on the file OR
@@ -403,7 +403,7 @@ def main():
         print("   log         : %d runs (%d real, %d dry)"
               % (len(giri), len(veri), len(giri) - len(veri)))
         if veri:
-            eta = eta_in_giorni(veri[-1].get("istante"), stato["adesso"])
+            eta = age_in_days(veri[-1].get("istante"), stato["adesso"])
             print("   last run    : %s  (%s)"
                   % (veri[-1].get("istante"),
                      "age unknown" if eta is None else "%.1f days ago" % eta))

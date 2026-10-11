@@ -429,12 +429,12 @@ def guasta(perdita_pc, un_verso=False):
 def netem_conti():
     """⛔ The loss `netem` REALLY applied, read — not deduced."""
     out = qdisc(stat=True)
-    dentro_netem = False
+    inside_netem = False
     for riga in out.split("\n"):
         if riga.startswith("qdisc netem"):
-            dentro_netem = True
+            inside_netem = True
             continue
-        if dentro_netem and "Sent" in riga:
+        if inside_netem and "Sent" in riga:
             m = re.search(r"Sent (\d+) bytes (\d+) pkt \(dropped (\d+)", riga)
             if m:
                 sped, pkt, but = int(m.group(1)), int(m.group(2)), int(m.group(3))
@@ -442,7 +442,7 @@ def netem_conti():
                 return {"pkt_passati": pkt, "pkt_buttati": but,
                         "frazione_vera": round(but / tot, 4) if tot else None}
             break
-        if dentro_netem and riga.startswith("qdisc"):
+        if inside_netem and riga.startswith("qdisc"):
             break
     return {"pkt_passati": None, "pkt_buttati": None, "frazione_vera": None}
 
@@ -534,11 +534,11 @@ def riassumi(righe, fino):
     quic = [r["tempi_ms"].get("quic") for r in aperte if r["tempi_ms"].get("quic")]
     # ⭐ And the number that accuses or acquits `01-b3-cliente.py`: how many runs
     #    would have broken through its 8 s ceiling on the QUIC handshake.
-    oltre8 = len([x for x in quic if x > 8000])
+    beyond8 = len([x for x in quic if x > 8000])
     return {"giri": len(righe), "aperte": len(aperte), "aperte_subito": len(subito),
             "quic_mediana_ms": mediana(quic), "quic_max_ms": max(quic) if quic else None,
             "tot_mediana_ms": mediana(tot), "tot_max_ms": max(tot) if tot else None,
-            "quic_oltre_8s": oltre8,
+            "quic_oltre_8s": beyond8,
             "posto_serrato_ms": serrate,
             "guai": [r["perche"] for r in righe
                      if not r["esito"].startswith("aperta")][:3]}
@@ -598,9 +598,9 @@ def principale():
     luc.loader.exec_module(lucchetto)
 
     # ⛔ SHORT lease: there are other agents queued.
-    per_gradino = a.giri * ((a.tetto if a.fino != "wt" else 12)
+    per_rung = a.giri * ((a.tetto if a.fino != "wt" else 12)
                             + a.pausa + a.riprova_0f) + 60
-    affitto = int(min(900, len(gradini) * per_gradino + 120))
+    affitto = int(min(900, len(gradini) * per_rung + 120))
     lucchetto.prendi("09-b78", secondi=affitto, attesa=2400)
     esiti = []
     try:

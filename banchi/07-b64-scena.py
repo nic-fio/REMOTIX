@@ -41,12 +41,12 @@ DENTRO_LAV = os.environ.get("DENTRO_LAV", "/srv/remotix/tmp/07-r")
 SINK = os.environ.get("SINK", "remotix")
 SCENA_BIN = os.environ.get("SCENA_BIN", "/media/REMOTIX/src/04-b30-scena-lav/04-b30-scena")
 
-POLITICA = {0: "normale", 1: "FIFO", 2: "RR", 3: "batch", 5: "idle", 6: "deadline"}
+POLICY_V = {0: "normale", 1: "FIFO", 2: "RR", 3: "batch", 5: "idle", 6: "deadline"}
 HZ_TICK = os.sysconf("SC_CLK_TCK")
 
 
 # ── the session's environment, built from scratch (CODER.md §4.5) ──────────
-def come_utente(cmd, **kw):
+def as_user(cmd, **kw):
     base = ["setpriv", "--reuid=%d" % UID_B, "--regid=%d" % UID_B, "--init-groups",
             "env", "-i",
             "HOME=/home/%s" % UTENTE, "USER=%s" % UTENTE, "LANG=C.UTF-8",
@@ -86,11 +86,11 @@ def thread_stat(pid, tid):
         pass
     return {"nome": nome, "tid": tid, "cpu_tick": utime + stime,
             "rtprio": rtprio, "policy": policy,
-            "politica": POLITICA.get(policy, str(policy)),
+            "politica": POLICY_V.get(policy, str(policy)),
             "attesa_ns": attesa, "quanti": eseguiti}
 
 
-def limite_rt(pid):
+def rt_limit(pid):
     try:
         for r in open("/proc/%d/limits" % pid):
             if "realtime priority" in r.lower():
@@ -100,7 +100,7 @@ def limite_rt(pid):
     return "?"
 
 
-def processi_interessanti():
+def interesting_processes():
     """The session's child, the user's PipeWire daemons, the player and
        the referee.  ⛔ And the SERVER, which is the one carrying the rlimit."""
     fuori = []
@@ -123,9 +123,9 @@ def processi_interessanti():
 def fotografia():
     """Who has real time and who does not — the snapshot of R26, in full."""
     r = []
-    for p, uid, comm, cmd in sorted(processi_interessanti()):
+    for p, uid, comm, cmd in sorted(interesting_processes()):
         v = {"pid": p, "uid": uid, "comm": comm, "cmdline": cmd,
-             "rlimit_rtprio": limite_rt(p), "thread": []}
+             "rlimit_rtprio": rt_limit(p), "thread": []}
         try:
             tids = sorted(int(t) for t in os.listdir("/proc/%d/task" % p))
         except Exception:
@@ -140,7 +140,7 @@ def fotografia():
 
 # ── the PipeWire graph, read INSIDE the session ────────────────────────────
 def grafo():
-    rc, out, err = esegui(come_utente(["pw-dump"]), 25)
+    rc, out, err = esegui(as_user(["pw-dump"]), 25)
     if rc != 0 or not out.strip():
         return {"errore": "pw-dump produced nothing (rc %d): %s" % (rc, err[:200])}
     try:
@@ -181,7 +181,7 @@ def tono(hz, secondi, ampiezza=0.5):
 
 
 # ── the load: the desktop that WORKS ───────────────────────────────────────
-def monitor_catturato():
+def captured_monitor():
     """⛔ The monitor name is NOT written by hand: MY product's log
        says it.  A scene started «somewhere» does not load the stage."""
     try:
@@ -198,7 +198,7 @@ def monitor_catturato():
     return m[-1] if m else None
 
 
-def monitor_atteso(tetto_s=25.0):
+def expected_monitor(tetto_s=25.0):
     """⛔ THE MONITOR NAME IS WAITED FOR — and the first draft did not.
 
        `[M]` 21 August 2026: the log writes «monitor «Meta-0»» ~2.9 s after
@@ -210,14 +210,14 @@ def monitor_atteso(tetto_s=25.0):
        form — a bench that stops working when you clean it."""
     fine = time.time() + tetto_s
     while time.time() < fine:
-        u = monitor_catturato()
+        u = captured_monitor()
         if u:
             return u
         time.sleep(0.5)
     return None
 
 
-def carico_accendi(quanti):
+def load_turn_on(quanti):
     """⛔ Two loads, and they are two different things:
          · the SCENE, which makes the child's capture and encoder work —
            it is the one R26 names;
@@ -226,11 +226,11 @@ def carico_accendi(quanti):
        ⚠ We declare which of the two started: if the scene does not start, the run
          stays valid but is NO longer «the desktop works», and it is something else."""
     stato = {"scena": None, "bruciatori": 0, "scena_perche_no": None}
-    usc = monitor_atteso()
+    usc = expected_monitor()
     if os.access(SCENA_BIN, os.X_OK) and usc:
         log = open(os.path.join(LAV, "scena.log"), "ab")
         p = subprocess.Popen(
-            come_utente(["env", "WAYLAND_DISPLAY=wayland-0", SCENA_BIN,
+            as_user(["env", "WAYLAND_DISPLAY=wayland-0", SCENA_BIN,
                          "--uscita", usc, "--movimento", "barra",
                          "--shm", "/07-b64-scena", "--giro", "b64"]),
             stdout=log, stderr=log)
@@ -248,14 +248,14 @@ def carico_accendi(quanti):
     bruc = []
     for _ in range(quanti):
         bruc.append(subprocess.Popen(
-            come_utente(["python3", "-c", "\nwhile True: pass\n"]),
+            as_user(["python3", "-c", "\nwhile True: pass\n"]),
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL))
     stato["bruciatori"] = len(bruc)
     stato["_bruc"] = bruc
     return stato
 
 
-def carico_spegni(stato):
+def load_turn_off(stato):
     for p in stato.get("_bruc", []):
         try: p.kill()
         except Exception: pass
@@ -279,7 +279,7 @@ def carico_spegni(stato):
 # ⭐ And it has a second merit, which is not secondary: nine other benches work on
 #   the machine.  A load that saturates twenty cores would distort their
 #   time measurements; this one takes **one**.
-def stringi_su_un_core(cpu):
+def pin_to_one_core(cpu):
     fatti = []
     for v in fotografia():
         if v["comm"] in ("remotix", "pipewire", "pipewire-pulse", "wireplumber",
@@ -299,7 +299,7 @@ def allarga(cpu_tutti):
 
 
 # ── real time, given by hand — ⭐ it is the A/B of R26 ─────────────────────
-def rt_applica(prio):
+def rt_apply(prio):
     """⛔ We do not «configure PipeWire»: the policy of the LIVE threads is moved with
        `chrt`, so that between the two runs ONE thing only changes.  ⚠ And we record who
        was moved and who refused."""
@@ -326,7 +326,7 @@ def rt_applica(prio):
 # So the A/B of R26 is done with the LEVER THAT WORKS, niceness (`nice`):
 #   it is the other half of what the unit grants (`LimitNICE=-11`), and nobody
 #   uses it — `[M]` all the threads of the audio path sit at `nice 0`.
-def nice_applica(livello):
+def nice_apply(livello):
     fatti, falliti = [], []
     for v in fotografia():
         if v["uid"] == 0:
@@ -342,7 +342,7 @@ def nice_applica(livello):
     return {"livello": livello, "fatti": fatti, "falliti": falliti}
 
 
-def rt_rimetti():
+def rt_restore():
     fatti = []
     for v in fotografia():
         for t in v["thread"]:
@@ -423,20 +423,20 @@ def giro(a):
     #    and on $LAV (root 755) it cannot create anything.  ⚠ The symptom was
     #    "Permission denied" inside a stderr file nobody looked at, and the
     #    run was left without a referee without saying so.
-    dir_rif = os.path.join(LAV, "rif")
-    os.makedirs(dir_rif, exist_ok=True)
-    os.chown(dir_rif, UID_B, UID_B)
-    rifwav = os.path.join(dir_rif, a.nome + ".rif.wav")
+    dir_ref = os.path.join(LAV, "rif")
+    os.makedirs(dir_ref, exist_ok=True)
+    os.chown(dir_ref, UID_B, UID_B)
+    refwav = os.path.join(dir_ref, a.nome + ".rif.wav")
     if g.get("sink_id"):
         rif = subprocess.Popen(
-            come_utente(["pw-record", "--target", str(g["sink_id"]),
+            as_user(["pw-record", "--target", str(g["sink_id"]),
                          "--rate", "48000", "--channels", "2", "--format", "s16",
-                         rifwav]),
+                         refwav]),
             stdout=subprocess.DEVNULL, stderr=open(base + ".rif.txt", "wb"))
 
     # M3 · the tone REALLY plays inside the sink (the graph says so, not pw-play)
     f = tono(a.hz, a.secondi + 30)
-    play = subprocess.Popen(come_utente(["pw-play", "--target", SINK, f]),
+    play = subprocess.Popen(as_user(["pw-play", "--target", SINK, f]),
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     leg = 0
     for _ in range(50):
@@ -451,30 +451,30 @@ def giro(a):
     # ── real time, and the threads BEFORE ──────────────────────────────────
     esiti["fotografia_prima"] = fotografia()
     if a.nice is not None:
-        esiti["nice_applicato"] = nice_applica(a.nice)
+        esiti["nice_applicato"] = nice_apply(a.nice)
     if a.rt == "si":
-        esiti["rt_applicato"] = rt_applica(a.prio)
+        esiti["rt_applicato"] = rt_apply(a.prio)
     elif a.rt == "no":
         esiti["rt_applicato"] = {"nota": "put back to normal policy"}
-        rt_rimetti()
+        rt_restore()
 
     # ── the load ───────────────────────────────────────────────────────────
     car = {"scena": None, "bruciatori": 0}
     if a.carico == "si":
-        car = carico_accendi(a.bruciatori)
+        car = load_turn_on(a.bruciatori)
     esiti["carico"] = {k: v for k, v in car.items() if not k.startswith("_")}
     if a.cpu >= 0:
         time.sleep(1.0)
-        esiti["stretti_su_core"] = {"cpu": a.cpu, "chi": stringi_su_un_core(a.cpu)}
+        esiti["stretti_su_core"] = {"cpu": a.cpu, "chi": pin_to_one_core(a.cpu)}
 
     # ── the sampling, one second at a time ─────────────────────────────────
     campioni = []
     prima = {}
-    tprima = time.time()
+    t_before = time.time()
     while cli.poll() is None and time.time() - t0 < a.secondi + 40:
         time.sleep(1.0)
         adesso = time.time()
-        dt = adesso - tprima
+        dt = adesso - t_before
         riga = {"t": round(adesso - t0, 1), "carico": open("/proc/loadavg").read().split()[0],
                 "thread": []}
         dopo = {}
@@ -503,7 +503,7 @@ def giro(a):
                         "quanti": qua, "politica": t["politica"], "prio": t["rtprio"],
                         "attesa_per_quanto_us": round(att * 1000.0 / qua, 1) if qua else None})
         prima = dopo
-        tprima = adesso
+        t_before = adesso
         campioni.append(riga)
     esiti["campioni"] = campioni
     esiti["fotografia_dopo"] = fotografia()
@@ -524,15 +524,15 @@ def giro(a):
                 except Exception: pass
     subprocess.run(["pkill", "-u", str(UID_B), "-x", "pw-play"], capture_output=True)
     subprocess.run(["pkill", "-u", str(UID_B), "-x", "pw-record"], capture_output=True)
-    carico_spegni(car)
+    load_turn_off(car)
     if a.cpu >= 0:
         # ⛔ IT IS PUT BACK AS IT WAS, and declared: a session left on a single
         #    core would be an invisible state inherited by the next run.
         esiti["allargati_di_nuovo"] = allarga(a.cpu_tutti)
     if a.nice is not None:
-        esiti["nice_rimesso"] = nice_applica(0)
+        esiti["nice_rimesso"] = nice_apply(0)
     if a.rt == "si":
-        esiti["rt_rimesso"] = rt_rimetti()
+        esiti["rt_rimesso"] = rt_restore()
     # ⛔ «I killed» is not «nobody is playing any more»: the graph says so.
     for _ in range(20):
         gg = grafo()

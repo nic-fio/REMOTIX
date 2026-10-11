@@ -47,10 +47,10 @@ import suite as S                                                     # noqa: E4
 G = S._carica("g6", os.path.join(S.QUI, "15-g6-comune.py"))
 F16 = S._carica("f016", os.path.join(S.QUI, "15-f016-stacco-e-riattacco.py"))
 FUNZIONI = ("F-018", "P-C")
-MISURA_NUOVA = (2560, 1440)
-TOLL_TELA = 16            # the page truncates the canvas to multiples of 16 (fc0fbff)
-TOLL_BORDO = 40           # mean colour of the edge rows
-RIEMPIE = 0.90            # on KDE the rescaled canvas fills at least one side
+NEW_SIZE = (2560, 1440)
+TOL_CANVAS = 16            # the page truncates the canvas to multiples of 16 (fc0fbff)
+TOL_EDGE = 40           # mean colour of the edge rows
+MIN_FILL = 0.90            # on KDE the rescaled canvas fills at least one side
 
 
 def famiglia(desktop):
@@ -61,7 +61,7 @@ def famiglia(desktop):
 PANNELLO = {"gnome": "alto", "kde": "basso", "xfce": "alto", "lxqt": "basso"}
 
 
-def confronta_pannello(bp, bd, lato):
+def compare_panel(bp, bd, lato):
     """Maximum distance between the slices of the panel side, before and after, outside
     the slices covered by the window in either photo.  (d, how many)."""
     fp, fd = bp.get(lato + "_f"), bd.get(lato + "_f")
@@ -78,16 +78,16 @@ def confronta_pannello(bp, bd, lato):
     return d[len(d) // 2], len(ks)
 
 
-def giudica_misura(fam, prima, dopo, vista_attesa, testo, pannello="alto"):
+def judge_measure(fam, prima, dopo, vista_attesa, testo, pannello="alto"):
     """⭐ F-018 for one reattach.  prima/dopo: the observations (see `osserva`).
     `vista_attesa` [w, h]: the view the browser draws in now.
     Returns (outcome, reason)."""
-    probl, bene = [], []
+    probs, bene = [], []
     b0, b1 = prima.get("buffer"), dopo.get("buffer")
     if not b0 or not b1:
         return S.BLOCKED, "the page's canvas cannot be read (before %s, after %s)" % (b0, b1)
     vl, va = vista_attesa[0], vista_attesa[1]
-    sch = dopo.get("schermo")
+    scr = dopo.get("schermo")
     if fam == "segue":
         # ⚠ the view is in CSS pixels; the canvas in DEVICE pixels (the page:
         #   `misura_vista()` = view × devicePixelRatio, truncated).  On the computer dpr 1 and
@@ -95,66 +95,66 @@ def giudica_misura(fam, prima, dopo, vista_attesa, testo, pannello="alto"):
         k = dopo.get("dpr") or 1
         tl, ta = int(vl * k), int(va * k)
         detta = "%dx%d" % (vl, va) if k == 1 else "%dx%d (%dx%d CSS × dpr %g)" % (tl, ta, vl, va, k)
-        if abs(b1[0] - tl) > TOLL_TELA or abs(b1[1] - ta) > TOLL_TELA:
-            probl.append("the canvas is %dx%d, the view %s: the canvas did NOT take the size "
+        if abs(b1[0] - tl) > TOL_CANVAS or abs(b1[1] - ta) > TOL_CANVAS:
+            probs.append("the canvas is %dx%d, the view %s: the canvas did NOT take the size "
                          "of the window" % (b1[0], b1[1], detta))
         else:
             bene.append("canvas %dx%d for the view %s" % (b1[0], b1[1], detta))
-        if not sch:
-            probl.append("the screen seen from inside the session cannot be read")
-        elif abs(sch[0] - b1[0]) > 2 or abs(sch[1] - b1[1]) > 2:
-            probl.append("inside the session the screen is %dx%d, the canvas %dx%d: the desktop "
-                         "did NOT follow" % (sch[0], sch[1], b1[0], b1[1]))
+        if not scr:
+            probs.append("the screen seen from inside the session cannot be read")
+        elif abs(scr[0] - b1[0]) > 2 or abs(scr[1] - b1[1]) > 2:
+            probs.append("inside the session the screen is %dx%d, the canvas %dx%d: the desktop "
+                         "did NOT follow" % (scr[0], scr[1], b1[0], b1[1]))
         else:
-            bene.append("inside, the screen is %dx%d" % tuple(sch))
+            bene.append("inside, the screen is %dx%d" % tuple(scr))
     else:
         if list(b1) != list(b0):
-            probl.append("on KDE the canvas had to stay %dx%d (KWin < 6.8), it is %dx%d"
+            probs.append("on KDE the canvas had to stay %dx%d (KWin < 6.8), it is %dx%d"
                          % (b0[0], b0[1], b1[0], b1[1]))
         else:
             bene.append("canvas kept %dx%d (KWin < 6.8, declared exception)" % tuple(b1))
         r = dopo.get("tela_rett") or [0, 0, 0, 0]
         if r[2] > vl + 1 or r[3] > va + 1:
-            probl.append("the canvas in the browser is %dx%d, larger than the view %dx%d: the "
+            probs.append("the canvas in the browser is %dx%d, larger than the view %dx%d: the "
                          "browser does NOT rescale" % (r[2], r[3], vl, va))
-        elif max(r[2] / max(1, vl), r[3] / max(1, va)) < RIEMPIE:
-            probl.append("the canvas in the browser is %dx%d in the view %dx%d: it does not fill it"
+        elif max(r[2] / max(1, vl), r[3] / max(1, va)) < MIN_FILL:
+            probs.append("the canvas in the browser is %dx%d in the view %dx%d: it does not fill it"
                          % (r[2], r[3], vl, va))
         else:
             bene.append("rescaled to %dx%d in the view %dx%d" % (r[2], r[3], vl, va))
         s0 = prima.get("schermo")
-        if sch and s0 and list(sch) != list(s0):
-            probl.append("on KDE the screen inside had to stay %s, it is %s" % (s0, sch))
+        if scr and s0 and list(scr) != list(s0):
+            probs.append("on KDE the screen inside had to stay %s, it is %s" % (s0, scr))
     # the photo: window, text, edges
     if dopo.get("cieco"):
-        if probl:
-            return S.FAIL, "; ".join(probl) + " (and the photo could not be taken)"
+        if probs:
+            return S.FAIL, "; ".join(probs) + " (and the photo could not be taken)"
         return S.BLOCKED, ("the fields add up (%s) but the photo could not be taken: %s"
                            % (" · ".join(bene), dopo.get("perche")))
     if not dopo.get("finestra"):
-        probl.append("in the photo the scene's window is not there (%s)" % dopo.get("perche"))
+        probs.append("in the photo the scene's window is not there (%s)" % dopo.get("perche"))
     elif dopo.get("letto") != testo:
-        probl.append("in the photo the strip says «%s», written «%s»" % (dopo.get("letto"), testo))
+        probs.append("in the photo the strip says «%s», written «%s»" % (dopo.get("letto"), testo))
     else:
         bene.append("window and text «%s» in the photo" % testo)
     bp, bd = prima.get("bordi"), dopo.get("bordi")
     if bp and bd:
-        d, n = confronta_pannello(bp, bd, pannello)
+        d, n = compare_panel(bp, bd, pannello)
         if d is None:
-            probl.append("the panel edge (%s) is entirely covered by the window" % pannello)
-        elif d > TOLL_BORDO:
-            probl.append("the panel edge (%s) changed (median deviation %d over %d free "
+            probs.append("the panel edge (%s) is entirely covered by the window" % pannello)
+        elif d > TOL_EDGE:
+            probs.append("the panel edge (%s) changed (median deviation %d over %d free "
                          "slices): the panel is not at the new edge" % (pannello, d, n))
         else:
             bene.append("panel at the %s edge (%d slices, deviation %d)" % (pannello, n, d))
         for lato in ("nero_destra", "nero_basso"):
             if bd[lato] > bp[lato] + 0.5:
-                probl.append("a new BLACK band (%s %.0f %%, before %.0f %%): the background is not "
+                probs.append("a new BLACK band (%s %.0f %%, before %.0f %%): the background is not "
                              "full" % (lato, 100 * bd[lato], 100 * bp[lato]))
     else:
-        probl.append("the edges of the photo cannot be read")
-    if probl:
-        return S.FAIL, "; ".join(probl)
+        probs.append("the edges of the photo cannot be read")
+    if probs:
+        return S.FAIL, "; ".join(probs)
     return S.PASS, " · ".join(bene)
 
 
@@ -175,31 +175,31 @@ def certifica():
     A = _oss([3776, 2016], [3788, 2023, 1], [0, 0, 3776, 2016], [3776, 2016], bo)
     B = _oss([2544, 1344], [2548, 1350, 1], [0, 0, 2544, 1344], [2544, 1344], bo)
     C = _oss([3776, 2016], [3788, 2023, 1], [0, 0, 3776, 2016], [3776, 2016], bo)
-    e, m = giudica_misura("segue", A, B, B["vista"], "abc")
+    e, m = judge_measure("segue", A, B, B["vista"], "abc")
     prova("gnome: new canvas and screen ⇒ PASS (%s)" % m[:50], e == S.PASS)
-    e, _ = giudica_misura("segue", A, C, B["vista"], "abc")
+    e, _ = judge_measure("segue", A, C, B["vista"], "abc")
     prova("fault: same size judged as changed ⇒ FAIL", e == S.FAIL)
     Bs = dict(B, schermo=[3776, 2016])
-    e, _ = giudica_misura("segue", A, Bs, B["vista"], "abc")
+    e, _ = judge_measure("segue", A, Bs, B["vista"], "abc")
     prova("new canvas but desktop still ⇒ FAIL", e == S.FAIL)
     Bn = dict(B, bordi=dict(bo, nero_destra=0.9))
-    e, _ = giudica_misura("segue", A, Bn, B["vista"], "abc")
+    e, _ = judge_measure("segue", A, Bn, B["vista"], "abc")
     prova("new black band ⇒ FAIL", e == S.FAIL)
     K = _oss([3776, 2016], [2548, 1350, 1], [0, 3, 2548, 1360], [3776, 2016], bo)
     K["tela_rett"] = [0, 0, 2528, 1350]
-    e, m = giudica_misura("kde", A, K, K["vista"], "abc")
+    e, m = judge_measure("kde", A, K, K["vista"], "abc")
     prova("kde: canvas kept and rescaled ⇒ PASS (%s)" % m[:50], e == S.PASS)
-    e, _ = giudica_misura("segue", A, K, K["vista"], "abc")
+    e, _ = judge_measure("segue", A, K, K["vista"], "abc")
     prova("fault: kde judged as gnome ⇒ FAIL", e == S.FAIL)
-    e, _ = giudica_misura("kde", A, B, B["vista"], "abc")
+    e, _ = judge_measure("kde", A, B, B["vista"], "abc")
     prova("fault: gnome judged as kde ⇒ FAIL", e == S.FAIL)
-    e, _ = giudica_misura("kde", A, C, B["vista"], "abc")
+    e, _ = judge_measure("kde", A, C, B["vista"], "abc")
     prova("kde fault: same size as changed ⇒ FAIL", e == S.FAIL)
-    e, _ = giudica_misura("segue", A, dict(B, letto="ab"), B["vista"], "abc")
+    e, _ = judge_measure("segue", A, dict(B, letto="ab"), B["vista"], "abc")
     prova("text lost ⇒ FAIL", e == S.FAIL)
-    e, _ = giudica_misura("segue", A, dict(B, cieco=True, finestra=None), B["vista"], "abc")
+    e, _ = judge_measure("segue", A, dict(B, cieco=True, finestra=None), B["vista"], "abc")
     prova("photo failed, good fields ⇒ BLOCKED", e == S.BLOCKED)
-    e, _ = giudica_misura("segue", A, dict(C, cieco=True), B["vista"], "abc")
+    e, _ = judge_measure("segue", A, dict(C, cieco=True), B["vista"], "abc")
     prova("photo failed, wrong fields ⇒ FAIL", e == S.FAIL)
     return 0 if ok else 1
 
@@ -207,28 +207,28 @@ def certifica():
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE TEST
 # ═══════════════════════════════════════════════════════════════════════════
-def osserva(s, testo, nome, schermo_voluto=None):
+def osserva(s, testo, nome, wanted_screen=None):
     """Canvas (fields), screen from inside (field), photo (window, text, edges)."""
-    ob = G.aspetta_tela_ferma(s)
+    ob = G.wait_canvas_still(s)
     try:
         ob["dpr"] = float(s.g.js("return window.devicePixelRatio || 1;") or 1)
     except Exception:                            # noqa: BLE001
         ob["dpr"] = 1
-    v = G.aspetta_testo(s, testo, nome, tetto=12)
+    v = G.wait_text(s, testo, nome, tetto=12)
     # the screen seen from inside: the last fresh line; if we are waiting for a size,
     # it is given a few seconds (the desktop follows after the canvas)
-    sch = None
+    scr = None
     fine = time.time() + 12
     while True:
-        st = G.ultimo_stato(s)
+        st = G.last_state(s)
         if st:
-            sch = [st.get("sw"), st.get("sh")]
-        if schermo_voluto is None or (sch and abs(sch[0] - schermo_voluto[0]) <= 2
-                                      and abs(sch[1] - schermo_voluto[1]) <= 2) \
+            scr = [st.get("sw"), st.get("sh")]
+        if wanted_screen is None or (scr and abs(scr[0] - wanted_screen[0]) <= 2
+                                      and abs(scr[1] - wanted_screen[1]) <= 2) \
                 or time.time() > fine:
             break
         time.sleep(1.5)
-    ob.update({"schermo": sch, "finestra": v.get("finestra"), "letto": v.get("letto"),
+    ob.update({"schermo": scr, "finestra": v.get("finestra"), "letto": v.get("letto"),
                "perche": v.get("perche"), "foto": v.get("foto"), "cieco": v.get("png") is None})
     ob["bordi"] = G.bordi(G.immagine(v["png"]), v.get("finestra")) if v.get("png") else None
     return ob
@@ -244,18 +244,18 @@ def breve(ob):
 
 def riattacca(s, largo, alto, testo, nome, fam):
     """Detach (browser closed) and reattach with the window at largo x alto."""
-    s.spegni_browser()
+    s.turn_off_browser()
     time.sleep(2)
     mis = G.accendi_a_misura(s, largo, alto)
     print("   browser restarted at %dx%d: view %s" % (largo, alto, mis), flush=True)
-    ok, m, rifiuti, sec = G.entra_con_riprova(s, tetto_s=40)
+    ok, m, rifiuti, sec = G.enter_with_retry(s, tetto_s=40)
     if not ok:
         return None, "the reattach at %dx%d does not get in: %s" % (largo, alto, m)
     G.sveglia(s)
-    ob0 = G.osserva_tela(s)
-    ob = osserva(s, testo, nome, schermo_voluto=None)
+    ob0 = G.observe_canvas(s)
+    ob = osserva(s, testo, nome, wanted_screen=None)
     if fam == "segue" and ob.get("buffer") and ob.get("schermo") != ob.get("buffer"):
-        ob = osserva(s, testo, nome + "-bis", schermo_voluto=ob.get("buffer"))
+        ob = osserva(s, testo, nome + "-bis", wanted_screen=ob.get("buffer"))
     ob["esito"] = ob0.get("esito")
     print("   %s: %s" % (nome, breve(ob)), flush=True)
     return ob, ""
@@ -276,8 +276,8 @@ def corpo(o, E):
             if not v.get("finestra"):
                 raise S.Bloccata("the scene's window is not seen in the photo: %s"
                                  % v.get("perche"))
-            testo = F16.testo_a_caso(4)
-            v, note = G.scrivi_la_base(s, v, testo)
+            testo = F16.random_text(4)
+            v, note = G.write_base(s, v, testo)
             if v.get("letto") != testo:
                 raise S.Bloccata("the PREPARATION input does not reach the scene (it is F-004/F-007, "
                                  "not this function): %s" % " | ".join(note))
@@ -286,7 +286,7 @@ def corpo(o, E):
             if not A.get("buffer"):
                 raise S.Bloccata("the starting canvas cannot be read")
 
-            B, perche = riattacca(s, MISURA_NUOVA[0], MISURA_NUOVA[1], testo, "B-2560", fam)
+            B, perche = riattacca(s, NEW_SIZE[0], NEW_SIZE[1], testo, "B-2560", fam)
             if B is None:
                 E.metti("F-018", S.FAIL, perche)
                 E.metti("P-C", S.FAIL, perche)
@@ -295,7 +295,7 @@ def corpo(o, E):
                 raise S.Bloccata("the browser did not change size (view %s, previous canvas %s):"
                                  " the reattach is not «at a different size»" % (B["vista"], A["buffer"]))
             pan = PANNELLO[o.scatola]
-            eB, rB = giudica_misura(fam, A, B, B["vista"][:2], testo, pan)
+            eB, rB = judge_measure(fam, A, B, B["vista"][:2], testo, pan)
             ev = [x for x in (A.get("foto"), B.get("foto")) if x]
             E.metti("F-018", eB, rB,
                     atteso=("canvas and desktop at the new size" if fam == "segue" else
@@ -306,7 +306,7 @@ def corpo(o, E):
             if C is None:
                 E.metti("P-C", S.FAIL, "at 2560x1440 %s; " % eB + perche)
                 return
-            eC, rC = giudica_misura(fam, B, C, C["vista"][:2], testo, pan)
+            eC, rC = judge_measure(fam, B, C, C["vista"][:2], testo, pan)
             eP = S.PASS if (eB == S.PASS and eC == S.PASS) else S.FAIL
             E.metti("P-C", eP, "at 2560x1440: %s · back at 4K: %s — %s"
                     % (eB, eC, rC if eC != S.PASS else rC[:200]),
@@ -317,10 +317,10 @@ def corpo(o, E):
 
             if o.guasto:
                 # 1. the same size (C = A) judged as if it had changed to B
-                g1, r1 = giudica_misura(fam, A, C, B["vista"][:2], testo, pan)
+                g1, r1 = judge_measure(fam, A, C, B["vista"][:2], testo, pan)
                 # 2. the reattach at 2560x1440 with the other family's expectation
                 altra = "segue" if fam == "kde" else "kde"
-                g2, r2 = giudica_misura(altra, A, B, B["vista"][:2], testo, pan)
+                g2, r2 = judge_measure(altra, A, B, B["vista"][:2], testo, pan)
                 visto = g1 == S.FAIL and g2 == S.FAIL
                 E.guasto("F-018", visto, "same size as changed ⇒ %s (%s) · expectation "
                          "«%s» on %s ⇒ %s (%s)" % (g1, r1[:140], altra, o.scatola, g2, r2[:140]))
@@ -328,8 +328,8 @@ def corpo(o, E):
                          "⇒ %s" % g1)
         finally:
             if s.g:
-                s.salva_console()
-            G.spegni_servitore(s)
+                s.save_console()
+            G.turn_off_server(s)
 
 
 if __name__ == "__main__":

@@ -13,18 +13,18 @@ import (
 //
 // parameters: unita, porta.
 
-func init() { registraTipo("start-service", nuovaServizio) }
+func init() { registraTipo("start-service", newService) }
 
-// PianoAccendiServizio prepares the plan's step.
-func PianoAccendiServizio(id, unita string, porta int) AzionePiano {
+// PlanStartService prepares the plan's step.
+func PlanStartService(id, unita string, porta int) AzionePiano {
 	return AzionePiano{
 		ID: id, Tipo: "start-service",
-		Parametri:      map[string]string{"unit": unita, "port": strconv.Itoa(porta)},
-		Descrizione:    T("az.servizio"),
-		ComeSiFa:       T("az.servizio.fa"),
-		ComeSiVerifica: T("az.servizio.verifica"),
-		ComeSiAnnulla:  T("az.servizio.annulla"),
-		Reversibilita:  ESATTA,
+		Parametri:     map[string]string{"unit": unita, "port": strconv.Itoa(porta)},
+		Descrizione:   T("az.servizio"),
+		ComeSiFa:      T("az.servizio.fa"),
+		HowToVerify:   T("az.servizio.verifica"),
+		HowToUndo:     T("az.servizio.annulla"),
+		Reversibilita: ESATTA,
 	}
 }
 
@@ -33,15 +33,15 @@ type servizio struct {
 	porta int
 }
 
-type primaServizio struct {
+type beforeService struct {
 	Origine Origine `json:"origin"`
 	File    string  `json:"file"`   // enabled, disabled…
 	Attiva  string  `json:"active"` // active, inactive…
 }
 
-func nuovaServizio(p AzionePiano) (Azione, error) {
+func newService(p AzionePiano) (Azione, error) {
 	n, _ := strconv.Atoi(p.Parametri["port"])
-	return &servizio{unita: nonVuoto(p.Parametri["unit"], "remotix.service"), porta: n}, nil
+	return &servizio{unita: notEmpty(p.Parametri["unit"], "remotix.service"), porta: n}, nil
 }
 
 func (s *servizio) stato(c *Contesto) (string, string, error) {
@@ -72,7 +72,7 @@ func (s *servizio) Fotografa(c *Contesto) (json.RawMessage, Origine, error) {
 	case "not-found":
 		return nil, "", Errore("RX-SYSTEMD-003", s.unita)
 	}
-	p := primaServizio{Origine: DIRETTA, File: f, Attiva: a}
+	p := beforeService{Origine: DIRETTA, File: f, Attiva: a}
 	if f == "enabled" && a == "active" {
 		p.Origine = PREESISTENTE
 	}
@@ -80,7 +80,7 @@ func (s *servizio) Fotografa(c *Contesto) (json.RawMessage, Origine, error) {
 }
 
 func (s *servizio) Fai(c *Contesto, prima json.RawMessage) error {
-	var p primaServizio
+	var p beforeService
 	if err := json.Unmarshal(prima, &p); err != nil || p.Origine == PREESISTENTE {
 		return err
 	}
@@ -94,7 +94,7 @@ func (s *servizio) Fai(c *Contesto, prima json.RawMessage) error {
 		}
 	}
 	if a != "active" {
-		if err := c.Amb.Unita.Avvia(s.unita); err != nil {
+		if err := c.Amb.Unita.Launch(s.unita); err != nil {
 			return err
 		}
 	}
@@ -115,7 +115,7 @@ func (s *servizio) inAscolto(c *Contesto) (bool, string) {
 		return true, ""
 	}
 	for _, proto := range []string{"tcp", "udp"} {
-		if ok, letto := portaInAscolto(c.Amb, s.porta, proto); !ok || !letto {
+		if ok, letto := listeningPort(c.Amb, s.porta, proto); !ok || !letto {
 			return false, strconv.Itoa(s.porta) + "/" + proto + " not listening"
 		}
 	}
@@ -123,7 +123,7 @@ func (s *servizio) inAscolto(c *Contesto) (bool, string) {
 }
 
 func (s *servizio) Controlla(c *Contesto, prima json.RawMessage) (Esito, string, error) {
-	var p primaServizio
+	var p beforeService
 	if err := json.Unmarshal(prima, &p); err != nil {
 		return "", "", err
 	}
@@ -148,7 +148,7 @@ func (s *servizio) Controlla(c *Contesto, prima json.RawMessage) (Esito, string,
 }
 
 func (s *servizio) Annulla(c *Contesto, prima json.RawMessage) error {
-	var p primaServizio
+	var p beforeService
 	if err := json.Unmarshal(prima, &p); err != nil || p.Origine == PREESISTENTE {
 		return err
 	}
@@ -168,7 +168,7 @@ func (s *servizio) Annulla(c *Contesto, prima json.RawMessage) error {
 }
 
 func (s *servizio) Annullata(c *Contesto, prima json.RawMessage) (bool, string, error) {
-	var p primaServizio
+	var p beforeService
 	if err := json.Unmarshal(prima, &p); err != nil {
 		return false, "", err
 	}

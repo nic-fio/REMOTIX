@@ -39,16 +39,16 @@ import urllib.parse
 import urllib.request
 
 PORTA_CDP = int(os.environ.get("REMOTIX_TELEFONO_CDP", "19333"))
-SPORTELLO = "http://127.0.0.1:%s" % os.environ.get("REMOTIX_TELEFONO_SPORTELLO", "19334")
+ENDPOINT = "http://127.0.0.1:%s" % os.environ.get("REMOTIX_TELEFONO_SPORTELLO", "19334")
 SERVER = os.environ.get("REMOTIX_TELEFONO_HOST", "192.168.0.2")
 # 8599: the "nonexistent server" of the F-001 fault (nobody listens: the page does not open)
 PORTE_AMMESSE = set(range(8511, 8515)) | set(range(8611, 8615)) | {8599}
 # ⚠ only for the bench's dry run (19-android.py a-secco): a local page over http
-A_SECCO = os.environ.get("REMOTIX_TELEFONO_A_SECCO") == "1"
-GUARDIA_OGNI_S = 5.0
+DRY_RUN = os.environ.get("REMOTIX_TELEFONO_A_SECCO") == "1"
+GUARD_EVERY_S = 5.0
 
 # The notebook of REAL touches: where every finger landed, as seen by the page.
-QUADERNO_TOCCHI = r"""
+NOTEBOOK_TOUCHES = r"""
 (function () {
   if (window.__T19) return;
   window.__T19 = [];
@@ -71,7 +71,7 @@ class ChiamataInCorso(RuntimeError):
 def sportello(percorso, dati=None, tetto=1800):
     """A question to the laptop's counter.  Returns the answer's dictionary."""
     corpo = json.dumps(dati or {}).encode()
-    rq = urllib.request.Request(SPORTELLO + percorso, data=corpo, method="POST",
+    rq = urllib.request.Request(ENDPOINT + percorso, data=corpo, method="POST",
                                 headers={"Content-Type": "application/json"})
     try:
         with urllib.request.urlopen(rq, timeout=tetto) as r:
@@ -86,7 +86,7 @@ def sportello(percorso, dati=None, tetto=1800):
         raise RuntimeError("counter %s: %s %s" % (percorso, e.code, d.get("perche", "")))
     except urllib.error.URLError as e:
         raise RuntimeError("the laptop's counter does not answer (%s): is the ssh tunnel "
-                           "there?  %s" % (SPORTELLO, e))
+                           "there?  %s" % (ENDPOINT, e))
 
 
 def ammesso(url):
@@ -94,7 +94,7 @@ def ammesso(url):
     if url in ("about:blank",):
         return True
     u = urllib.parse.urlsplit(url)
-    if A_SECCO and u.scheme == "http" and u.hostname == "127.0.0.1":
+    if DRY_RUN and u.scheme == "http" and u.hostname == "127.0.0.1":
         return True
     return u.scheme == "https" and u.hostname == SERVER and u.port in PORTE_AMMESSE
 
@@ -115,7 +115,7 @@ def _http(percorso, metodo="GET"):
         return t
 
 
-def _veri():
+def _real():
     """`12-client-veri.py` as the suite loads it (already loaded: not reloaded)."""
     import sys
     s = sys.modules.get("suite") or sys.modules.get("__main__")
@@ -129,22 +129,22 @@ def _veri():
     return v
 
 
-VERI = _veri()
+VERI = _real()
 
 
-class GuidaTelefono(VERI.GuidaCdp):
+class PhoneDriver(VERI.GuidaCdp):
     """The real phone's Chrome, in a tab of OUR OWN."""
     tocco = False                 # the common input is the protocol's mouse+keyboard (DeX)
-    _n_chiusure = 0
+    _n_closures = 0
 
     def __init__(self, o=None):
         super().__init__(PORTA_CDP, "telefono")
         self.o = o
-        self._ultima_guardia = 0.0
+        self._last_guard = 0.0
         self.scala_foto = 1
-        self._palco = None
+        self._stage = None
         sportello("/pronto")                      # call? screen? Chrome in front
-        self.scheda = self._nuova_scheda()
+        self.scheda = self._new_tab()
         sportello("/mia", {"id": self.scheda["id"]})
         self.aggancia()
         try:
@@ -153,7 +153,7 @@ class GuidaTelefono(VERI.GuidaCdp):
             self.scala_foto = 1
 
     # -- the tab ---------------------------------------------------------------
-    def _nuova_scheda(self):
+    def _new_tab(self):
         try:
             t = _http("/json/new?about:blank", "PUT")
             if isinstance(t, dict) and t.get("id"):
@@ -162,7 +162,7 @@ class GuidaTelefono(VERI.GuidaCdp):
             pass
         # fallback: Target.createTarget from the browser target
         v = _http("/json/version")
-        b = VERI.Cdp(self._qui(v["webSocketDebuggerUrl"]))
+        b = VERI.Cdp(self._here(v["webSocketDebuggerUrl"]))
         r = b.chiama("Target.createTarget", url="about:blank")
         try:
             b.ws.chiudi()
@@ -174,20 +174,20 @@ class GuidaTelefono(VERI.GuidaCdp):
         raise RuntimeError("the new tab does not appear in the phone's list")
 
     @staticmethod
-    def _qui(ws):
+    def _here(ws):
         """The websocket goes through the tunnel: the host is always 127.0.0.1:PORTA_CDP."""
         u = urllib.parse.urlsplit(ws)
         return urllib.parse.urlunsplit(u._replace(netloc="127.0.0.1:%d" % PORTA_CDP))
 
     def aggancia(self, attesa=40):
-        self.cdp = VERI.Cdp(self._qui(self.scheda["webSocketDebuggerUrl"]))
+        self.cdp = VERI.Cdp(self._here(self.scheda["webSocketDebuggerUrl"]))
         for d in ("Page.enable", "Runtime.enable", "Log.enable", "Network.enable"):
             try:
                 self.cdp.chiama(d)
             except Exception:                     # noqa: BLE001
                 pass
         self.cdp.chiama("Page.addScriptToEvaluateOnNewDocument", source=VERI.RACCOGLITORE)
-        self.cdp.chiama("Page.addScriptToEvaluateOnNewDocument", source=QUADERNO_TOCCHI)
+        self.cdp.chiama("Page.addScriptToEvaluateOnNewDocument", source=NOTEBOOK_TOUCHES)
         try:
             self.cdp.chiama("Page.bringToFront")
         except Exception:                         # noqa: BLE001
@@ -200,12 +200,12 @@ class GuidaTelefono(VERI.GuidaCdp):
             return "? (%s)" % e
 
     def palco(self):
-        if self._palco is None:
+        if self._stage is None:
             try:
-                self._palco = sportello("/palco").get("palco")
+                self._stage = sportello("/palco").get("palco")
             except Exception as e:                # noqa: BLE001
-                self._palco = "%s on Android (stage not read: %s)" % (self.versione(), e)
-        return self._palco
+                self._stage = "%s on Android (stage not read: %s)" % (self.versione(), e)
+        return self._stage
 
     # -- the call guard ------------------------------------------------------
     def guardia(self, subito=False):
@@ -213,14 +213,14 @@ class GuidaTelefono(VERI.GuidaCdp):
         to the system: they cannot answer a call nor touch anything else.  For
         them the check is redone every 5 s (a test sends hundreds of keys).
         The REAL gestures (`adb shell input`) the counter checks every time."""
-        if not subito and time.time() - self._ultima_guardia < GUARDIA_OGNI_S:
+        if not subito and time.time() - self._last_guard < GUARD_EVERY_S:
             return
         try:
             sportello("/chiamata")                # it waits; 409 ⇒ ChiamataInCorso
         except Exception:
-            self._ultima_guardia = 0.0            # the next gesture checks again
+            self._last_guard = 0.0            # the next gesture checks again
             raise
-        self._ultima_guardia = time.time()
+        self._last_guard = time.time()
 
     # -- the actions: guard first --------------------------------------------
     def vai(self, url):
@@ -254,7 +254,7 @@ class GuidaTelefono(VERI.GuidaCdp):
         return super().tasto(t)
 
     # -- closing, and killing -------------------------------------------------
-    def _chiudi_scheda(self):
+    def _close_tab(self):
         sid = self.scheda.get("id")
         try:
             _http("/json/close/%s" % sid, "PUT")
@@ -272,8 +272,8 @@ class GuidaTelefono(VERI.GuidaCdp):
         # ⭐ the evidence: how the phone's page was a moment before closing
         cartella = getattr(self.o, "evidenze", "") if self.o else ""
         if cartella:
-            GuidaTelefono._n_chiusure += 1
-            foto_png(self, "chiusura-%02d" % GuidaTelefono._n_chiusure, cartella)
+            PhoneDriver._n_closures += 1
+            photo_png(self, "chiusura-%02d" % PhoneDriver._n_closures, cartella)
         try:
             self.cdp.chiama("Page.navigate", url="about:blank")   # pagehide ⇒ CONGEDO
             time.sleep(1)
@@ -283,7 +283,7 @@ class GuidaTelefono(VERI.GuidaCdp):
             self.cdp.ws.chiudi()
         except Exception:                         # noqa: BLE001
             pass
-        self._chiudi_scheda()
+        self._close_tab()
 
     def uccidi(self):
         """⛔ Chrome stopped ABRUPTLY (`am force-stop`): no farewell, the wire goes silent.
@@ -300,19 +300,19 @@ class GuidaTelefono(VERI.GuidaCdp):
     # ═════════════════════════════════════════════════════════════════════════
     #  TOUCH (for 15-f031-tocco.py): the trackpad model of SPECIFICHE §7.1
     # ═════════════════════════════════════════════════════════════════════════
-    def stato_tocco(self):
+    def touch_state(self):
         return self.js("return (window.REMOTIX && REMOTIX.tocco) ? REMOTIX.tocco.stato() : null")
 
     def disposizione(self):
         return self.js("return (window.REMOTIX && REMOTIX.tocco && REMOTIX.tocco.disposizione)"
                        " ? REMOTIX.tocco.disposizione() : null")
 
-    def tocchi_visti(self, da=0):
+    def touches_seen(self, da=0):
         return (self.js("return (window.__T19 || []).slice(arguments[0])", da) or [])
 
-    def puntatore_vetro(self, geo):
+    def glass_pointer(self, geo):
         """Where the DRAWN pointer is, in glass coordinates."""
-        st = self.stato_tocco() or {}
+        st = self.touch_state() or {}
         p = st.get("puntatore")
         if not p:
             return None
@@ -325,21 +325,21 @@ class GuidaTelefono(VERI.GuidaCdp):
                     " innerWidth, innerHeight]")
         return r[0] * r[2], r[1] * r[2], r[2], r[3], r[4]
 
-    def dito_cdp(self, punti, pausa_s=0.03, tieni_s=0.0):
+    def finger_cdp(self, punti, pause_s=0.03, keep_s=0.0):
         """A protocol finger: down on the first point, the moves, up."""
         self.guardia()
         c = self.cdp.chiama
         c("Input.dispatchTouchEvent", type="touchStart",
           touchPoints=[{"x": punti[0][0], "y": punti[0][1]}])
-        if tieni_s:
-            time.sleep(tieni_s)
+        if keep_s:
+            time.sleep(keep_s)
         for x, y in punti[1:]:
-            time.sleep(pausa_s)
+            time.sleep(pause_s)
             c("Input.dispatchTouchEvent", type="touchMove", touchPoints=[{"x": x, "y": y}])
-        time.sleep(pausa_s)
+        time.sleep(pause_s)
         c("Input.dispatchTouchEvent", type="touchEnd", touchPoints=[])
 
-    def _centro_tela(self, geo):
+    def _canvas_center(self, geo):
         return geo["left"] + geo["width"] / 2.0, geo["top"] + geo["height"] / 2.0
 
     def porta_il_puntatore(self, geo, tx, ty, giri=6):
@@ -347,7 +347,7 @@ class GuidaTelefono(VERI.GuidaCdp):
         of the glass.  Returns the final error in glass px, or None if unreadable."""
         err = None
         for _ in range(giri):
-            p = self.puntatore_vetro(geo)
+            p = self.glass_pointer(geo)
             if p is None:
                 return None
             dx, dy = tx - p[0], ty - p[1]
@@ -358,10 +358,10 @@ class GuidaTelefono(VERI.GuidaCdp):
             # (beyond the tap threshold, 9 CSS px): if the step is short, a wide loop
             lim = 0.35 * min(geo["width"], geo["height"])
             dx, dy = max(-lim, min(lim, dx)), max(-lim, min(lim, dy))
-            cx, cy = self._centro_tela(geo)
+            cx, cy = self._canvas_center(geo)
             x0, y0 = cx - dx / 2.0, cy - dy / 2.0
             # ⚠ the page CONSUMES the sample that exceeds the slop (D_TAP, 9 CSS
-            #   px: `tocco_muovi`, "the slop is consumed"): a first step
+            #   px: `touch_move`, "the slop is consumed"): a first step
             #   of 12 px vertically that moves nothing, and from there the whole
             #   movement.  Before, the consumed step was a piece of dx: the pointer
             #   lagged 9-18 px behind at every loop (2 Oct 2026, S23+).
@@ -370,42 +370,42 @@ class GuidaTelefono(VERI.GuidaCdp):
             n = 10
             for i in range(1, n + 1):
                 punti.append((x0 + dx * i / n, y0 + sb + dy * i / n))
-            self.dito_cdp(punti)
+            self.finger_cdp(punti)
             time.sleep(0.25)
-        p = self.puntatore_vetro(geo)
+        p = self.glass_pointer(geo)
         return None if p is None else max(abs(tx - p[0]), abs(ty - p[1]))
 
-    def tap_vero(self, geo):
+    def real_tap(self, geo):
         """⭐ A REAL TAP (`adb shell input tap`) inside the canvas.  In the trackpad
         model the tap clicks where the pointer is, not where the finger lands:
         the finger goes to the centre of the canvas.  Returns the touch as the page saw it."""
-        da = len(self.tocchi_visti())
-        x, y = self.vetro_su_schermo(*self._centro_tela(geo))
+        da = len(self.touches_seen())
+        x, y = self.glass_on_screen(*self._canvas_center(geo))
         sportello("/tocca", {"x": round(x), "y": round(y)})
         time.sleep(0.6)
-        return (self.tocchi_visti(da) or [None])[0]
+        return (self.touches_seen(da) or [None])[0]
 
-    def scorri_vero(self, geo, dx, dy, ms=600):
+    def real_scroll(self, geo, dx, dy, ms=600):
         """⭐ A REAL finger that swipes (`adb shell input swipe`) by (dx,dy) glass px,
         starting so that both ends stay inside the canvas."""
-        da = len(self.tocchi_visti())
+        da = len(self.touches_seen())
         # ⚠ a short stroke, like the hand on a trackpad: a half-screen diagonal
         #   swipe Chrome does not pass to the page (2 Oct
         #   2026, S23+: 200x284 CSS px ⇒ no touch seen).  The rest is done by
-        #   the next stroke (15-f031 `DITI_VERI_MAX`).
+        #   the next stroke (15-f031 `REAL_FINGERS_MAX`).
         lim = 0.3 * min(geo["width"], geo["height"])
         k = min(1.0, lim / max(abs(dx), abs(dy), 1e-9))
         dx, dy = dx * k, dy * k
         # ⚠ the page consumes the slop (D_TAP, 9 CSS px, and the sample that
-        #   exceeds it: `tocco_muovi`): the finger swipes ~10 px more, in the same
+        #   exceeds it: `touch_move`): the finger swipes ~10 px more, in the same
         #   direction, or small corrections would move nothing
         n = (dx * dx + dy * dy) ** 0.5
         if n > 0.5:
             dx, dy = dx * (n + 10.0) / n, dy * (n + 10.0) / n
-        cx, cy = self._centro_tela(geo)
+        cx, cy = self._canvas_center(geo)
         # the finger STARTS from the centre of the canvas (where the real touch always arrives)
-        x0, y0 = self.vetro_su_schermo(cx, cy)
-        x1, y1 = self.vetro_su_schermo(cx + dx, cy + dy)
+        x0, y0 = self.glass_on_screen(cx, cy)
+        x1, y1 = self.glass_on_screen(cx + dx, cy + dy)
         self.ultimo_dito = (round(x0), round(y0), round(x1), round(y1))
         sportello("/scorri", {"x1": round(x0), "y1": round(y0), "x2": round(x1),
                               "y2": round(y1), "ms": int(ms)})
@@ -413,7 +413,7 @@ class GuidaTelefono(VERI.GuidaCdp):
         #   answer (2 Oct 2026: with a fixed 0.5 s the first swipe "was not there")
         fine = time.time() + 3.0
         while True:
-            t = self.tocchi_visti(da)
+            t = self.touches_seen(da)
             if t or time.time() > fine:
                 break
             time.sleep(0.2)
@@ -454,11 +454,11 @@ class GuidaTelefono(VERI.GuidaCdp):
         """⭐ A REAL TAP (`adb shell input tap`) at (x,y) of the glass.  Returns the
         touch as the page saw it, or None."""
         self.guardia(subito=True)
-        da = len(self.tocchi_visti())
-        sx, sy = self.vetro_su_schermo(x, y)
+        da = len(self.touches_seen())
+        sx, sy = self.glass_on_screen(x, y)
         sportello("/tocca", {"x": round(sx), "y": round(sy)})
         time.sleep(0.6)
-        return (self.tocchi_visti(da) or [None])[0]
+        return (self.touches_seen(da) or [None])[0]
 
     def scrivi_ime(self, parola):
         """A word as an on-screen keyboard writes it: composition letter by
@@ -474,34 +474,34 @@ class GuidaTelefono(VERI.GuidaCdp):
             pass                                  # without composition: the commit remains
         c("Input.insertText", text=parola)
 
-    _scarto = None        # (ox, oy): screen = offset + glass × dpr, from the first real touch
+    _gap = None        # (ox, oy): screen = offset + glass × dpr, from the first real touch
 
-    def vetro_su_schermo(self, x, y):
+    def glass_on_screen(self, x, y):
         sw, sh, dpr, iw, ih = self.schermo()
-        if self._scarto is None:
+        if self._gap is None:
             # first estimate: the page fills the bottom of the screen, as wide as it
             # (above is Chrome's bar); the first real touch corrects it
             return (sw - iw * dpr) / 2.0 + x * dpr, (sh - ih * dpr) + y * dpr - 0.0
-        return self._scarto[0] + x * dpr, self._scarto[1] + y * dpr
+        return self._gap[0] + x * dpr, self._gap[1] + y * dpr
 
     def taratura(self, geo):
         """A real finger that swipes a little (it only moves the pointer, no click):
         where the page saw it tells the offset between screen and glass."""
         sw, sh, dpr, iw, ih = self.schermo()
-        cx, cy = self._centro_tela(geo)
-        x0, y0 = self.vetro_su_schermo(cx, cy)
-        da = len(self.tocchi_visti())
+        cx, cy = self._canvas_center(geo)
+        x0, y0 = self.glass_on_screen(cx, cy)
+        da = len(self.touches_seen())
         sportello("/scorri", {"x1": round(x0), "y1": round(y0), "x2": round(x0 + 60 * dpr),
                               "y2": round(y0), "ms": 400})
         time.sleep(0.5)
-        t = (self.tocchi_visti(da) or [None])[0]
+        t = (self.touches_seen(da) or [None])[0]
         if not t:
             return None
-        self._scarto = (x0 - t["x"] * dpr, y0 - t["y"] * dpr)
-        return {"tocco": t, "scarto": [round(v, 1) for v in self._scarto]}
+        self._gap = (x0 - t["x"] * dpr, y0 - t["y"] * dpr)
+        return {"tocco": t, "scarto": [round(v, 1) for v in self._gap]}
 
 
-def foto_png(g, nome, cartella):
+def photo_png(g, nome, cartella):
     """A photo of the WHOLE phone page (evidence), or None."""
     try:
         s = g.cdp.chiama("Page.captureScreenshot", format="png")

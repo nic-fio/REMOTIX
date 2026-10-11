@@ -154,7 +154,7 @@ import time
 #     hooks onto the stream, ⇒ this line cannot be written without a monitor.
 #     `[M]` 27 Aug 2026, cured GNOME box: it appears **8 times**, at
 #     1.105 s · 0.998 s · 0.957 s from the «session opened» line.
-FIRMA_FORMATO = re.compile(
+FORMAT_SIGNATURE = re.compile(
     r"cattura +\[(?P<chi>[^\]]+)\] negotiated format: (?P<l>\d+)x(?P<a>\d+)")
 
 # ⭐⭐ WITNESS B — `src/figlio.c:1826`, the line the PARENT writes when the
@@ -163,7 +163,7 @@ FIRMA_FORMATO = re.compile(
 #     C9 keeps those lines out of the mandatory set.
 #     `[M]` 27 Aug 2026, cured box: `monitor «Meta-0» (0 before, 1 after),
 #     1920x1080`.
-FIRMA_PALCO = re.compile(
+STAGE_SIGNATURE = re.compile(
     r"the stage of «(?P<chi>[^»]+)»:.*?monitor «(?P<nome>[^»]*)» "
     r"\((?P<prima>\d+) before, (?P<dopo>\d+) after\), (?P<l>\d+)x(?P<a>\d+) stride")
 
@@ -178,11 +178,11 @@ FIRMA_PALCO = re.compile(
 # ⇒ Until it is, those lines are DISCARDED by name — and ⭐ COUNTED and
 #   PRINTED: an exclusion that cannot be seen is an exclusion nobody
 #   notices.
-CODA_SPAZZATURA = "waiting for the client's canvas"
+NOISE_LINE = "waiting for the client's canvas"
 
 # ⭐ WITNESS C — the frames delivered.  ⚠ It is printed and NOT judged:
 #   see «the three witnesses» at the top of the file, where the reason is.
-FIRMA_FOTOGRAMMI = re.compile(
+FRAMES_SIGNATURE = re.compile(
     r"figlio +\[(?P<chi>[^\]]+)\] loop: (?P<n>\d+) frames delivered")
 
 # ⚠⚠ AND THIS IS NO LONGER A PROOF OF BLINDNESS — `src/sessione.c:345-348`.
@@ -193,7 +193,7 @@ FIRMA_FOTOGRAMMI = re.compile(
 #     is mounted by CAPTURE, later.  ⇒ It is counted and printed — because it is the line
 #     that for months was read backwards, and seeing it counted with zero
 #     judgements is what prevents falling into it again — ⛔ but it decides nothing.
-FIRMA_ZERO_MONITOR = re.compile(
+ZERO_MONITOR_SIGNATURE = re.compile(
     r"sessione \[(?P<chi>[^\]]+)\] .*ZERO MONITOR")
 
 
@@ -235,7 +235,7 @@ FIRMA_ZERO_MONITOR = re.compile(
 #       another mesh» is already the shape of the project (C2 and C3 import
 #       `giudica()` from `10-f1-testimone.py` and `frazione_del_colore()` from C8).
 # ═══════════════════════════════════════════════════════════════════════════
-FIRMA_AMMESSO = re.compile(r"^\s*AMMESSO after ", re.M)
+ADMITTED_SIGNATURE = re.compile(r"^\s*AMMESSO after ", re.M)
 
 
 def e_stato_ammesso(coda):
@@ -248,7 +248,7 @@ def e_stato_ammesso(coda):
     """
     if not coda or not coda.strip():
         return None
-    return bool(FIRMA_AMMESSO.search(coda))
+    return bool(ADMITTED_SIGNATURE.search(coda))
 
 
 def certifica_ammissione(sigla):
@@ -357,7 +357,7 @@ def verdetto_gruppi(codice):
                "know (%s): I cannot tell whether the tenant sees" % codice)
 
 
-def trova_attrezzo_gruppi():
+def find_tool_groups():
     """⛔ The path of the tool, or `None`.  It is a FINDER, not a judge.
 
     ⚠ The places: next to me (inside the box everything is in `/opt/remotix`), one
@@ -380,7 +380,7 @@ def garantisci_i_gruppi(chi, prefisso="       "):
     ⚠ It prints what the tool says, because an exclusion that cannot be seen is
       an exclusion nobody notices.
     """
-    attrezzo = trova_attrezzo_gruppi()
+    attrezzo = find_tool_groups()
     if attrezzo is None:
         print("%s⛔⛔ I cannot find `%s`, and without it I cannot GUARANTEE that"
               % (prefisso, NOME_ATTREZZO_GRUPPI))
@@ -516,10 +516,10 @@ class Nascita(object):
         self.nominato = False       # the log talks about this tenant
         self.formato = None         # ⭐ witness A: (width, height)
         self.monitor_dopo = None    # ⭐ witness B: the M of «(N before, M after)»
-        self.monitor_nome = None
-        self.monitor_misura = None  # the size declared by the stage line
+        self.monitor_name = None
+        self.monitor_size = None  # the size declared by the stage line
         self.fotogrammi = None      # ⚠ witness C: printed, NOT judged
-        self.palchi_scartati = 0    # ⛔ the «waiting for the canvas» lines: counted
+        self.discarded_stages = 0    # ⛔ the «waiting for the canvas» lines: counted
         self.zero_monitor = 0       # ⚠ counted and printed, NOT judged
 
 
@@ -539,26 +539,26 @@ def leggi_nascita(testo, chi):
         if marca in riga or virgolette in riga:
             n.nominato = True
 
-        m = FIRMA_FORMATO.search(riga)
+        m = FORMAT_SIGNATURE.search(riga)
         if m and m.group("chi") == chi:
             n.formato = (int(m.group("l")), int(m.group("a")))
 
-        m = FIRMA_PALCO.search(riga)
+        m = STAGE_SIGNATURE.search(riga)
         if m and m.group("chi") == chi:
             # ⛔⛔ THE TRAP: on that branch the counts are garbage.
             #    ⭐ It is discarded, COUNTED and will be said out loud.
-            if CODA_SPAZZATURA in riga:
-                n.palchi_scartati += 1
+            if NOISE_LINE in riga:
+                n.discarded_stages += 1
             else:
                 n.monitor_dopo = int(m.group("dopo"))
-                n.monitor_nome = m.group("nome")
-                n.monitor_misura = (int(m.group("l")), int(m.group("a")))
+                n.monitor_name = m.group("nome")
+                n.monitor_size = (int(m.group("l")), int(m.group("a")))
 
-        m = FIRMA_FOTOGRAMMI.search(riga)
+        m = FRAMES_SIGNATURE.search(riga)
         if m and m.group("chi") == chi:
             n.fotogrammi = int(m.group("n"))
 
-        m = FIRMA_ZERO_MONITOR.search(riga)
+        m = ZERO_MONITOR_SIGNATURE.search(riga)
         if m and m.group("chi") == chi:
             n.zero_monitor += 1
     return n
@@ -584,11 +584,11 @@ def monitor_nato(n):
     #    count with nothing underneath, and it is exactly the line that for months
     #    was read as «two monitors appeared».
     if (n.monitor_dopo is not None and n.monitor_dopo >= 1
-            and n.monitor_misura is not None
-            and n.monitor_misura[0] > 0 and n.monitor_misura[1] > 0):
+            and n.monitor_size is not None
+            and n.monitor_size[0] > 0 and n.monitor_size[1] > 0):
         testimoni.append("stage: monitor «%s» (%d after) %dx%d"
-                         % (n.monitor_nome, n.monitor_dopo,
-                            n.monitor_misura[0], n.monitor_misura[1]))
+                         % (n.monitor_name, n.monitor_dopo,
+                            n.monitor_size[0], n.monitor_size[1]))
     return testimoni
 
 
@@ -684,7 +684,7 @@ def certifica():
         ("⭐⭐ THE HEALTHY LOG ENDS GREEN (the case that was missing)",
          SANO, "c1u1", "NATA",
          lambda n: n.formato == (1920, 1080) and n.monitor_dopo == 1
-                   and n.monitor_misura == (1920, 1080) and n.fotogrammi == 37),
+                   and n.monitor_size == (1920, 1080) and n.fotogrammi == 37),
 
         # ⭐ And the two witnesses are INDEPENDENT: one is enough, and it is tested
         #   by removing the other.  ⇒ The day one of the two lines changes
@@ -705,7 +705,7 @@ def certifica():
         # ═══════════════════════════════════════════════════════════════════
         ("⛔ the REAL fault of 25 August ⇒ CIECA",
          CIECO, "c1u1", "CIECA",
-         lambda n: n.monitor_dopo == 2 and n.monitor_misura == (0, 0)
+         lambda n: n.monitor_dopo == 2 and n.monitor_size == (0, 0)
                    and n.zero_monitor == 1),
 
         # ⭐ The half that gets forgotten (§1.49): with the fault removed, it is GREEN again.
@@ -743,7 +743,7 @@ def certifica():
          "(0 before, 3 after), 1440x900 stride 306537694 at 32 bits, 0 streams "
          "delivering — waiting for the client's canvas\n",
          "c1u1", "CIECA",
-         lambda n: n.palchi_scartati == 1 and n.monitor_dopo is None),
+         lambda n: n.discarded_stages == 1 and n.monitor_dopo is None),
 
         ("⭐ …and the GOOD line arriving after the discarded one still counts",
          "20:07:43.200 figlio  ⛔ the stage of «c1u1»: monitor «x» (0 before, "
@@ -751,7 +751,7 @@ def certifica():
          "— waiting for the client's canvas\n"
          "20:07:44.402 figlio  ⭐ the stage of «c1u1»: monitor «Meta-0» "
          "(0 before, 1 after), 1920x1080 stride 7680 at 32 bits, 1 streams\n",
-         "c1u1", "NATA", lambda n: n.palchi_scartati == 1),
+         "c1u1", "NATA", lambda n: n.discarded_stages == 1),
 
         # ═══════════════════════════════════════════════════════════════════
         # ⛔ «I COULD NOT LOOK» — and it is not a red (§4.5).
@@ -814,30 +814,30 @@ def certifica():
     #    The predicate lives in this file and serves four other meshes: it is
     #    certified here, once, for all.
     print()
-    guai_amm, quanti_amm = certifica_ammissione("C1")
-    guai += guai_amm
+    admission_troubles, how_many_admitted = certifica_ammissione("C1")
+    guai += admission_troubles
 
     # ⭐⭐ AND THE CARD GROUPS CASES — ⛔ the other case that was missing.
     print()
-    guai_gr, quanti_gr = certifica_gruppi("C1")
-    guai += guai_gr
+    group_troubles, how_many_groups = certifica_gruppi("C1")
+    guai += group_troubles
 
-    MISURE_SANE = (1.105, 0.998, 0.957)   # `[M]` 27 Aug 2026, cured box
-    PEGGIORE_MAI_VISTA = 13.0             # `[M]` 26 Aug 2026, loaded box
-    MARGINE = 2.0
-    serve = PEGGIORE_MAI_VISTA * MARGINE
-    tetto_ok = TETTO_NASCITA >= serve
-    if not tetto_ok:
+    HEALTHY_MEASUREMENTS = (1.105, 0.998, 0.957)   # `[M]` 27 Aug 2026, cured box
+    WORST_EVER_SEEN = 13.0             # `[M]` 26 Aug 2026, loaded box
+    HEADROOM = 2.0
+    serve = WORST_EVER_SEEN * HEADROOM
+    cap_ok = TETTO_NASCITA >= serve
+    if not cap_ok:
         guai += 1
     print()
     print("  %s  the ceiling covers the slowest birth EVER measured: "
           "%.0f s × %.0f = %.0f s ⇒ ceiling %.0f s"
-          % ("OK " if tetto_ok else "NO ", PEGGIORE_MAI_VISTA, MARGINE,
+          % ("OK " if cap_ok else "NO ", WORST_EVER_SEEN, HEADROOM,
              serve, TETTO_NASCITA))
     print("      ⇒ and that is %.0f times today's healthy phenomenon (%.3f s)"
-          % (TETTO_NASCITA / max(MISURE_SANE), max(MISURE_SANE)))
+          % (TETTO_NASCITA / max(HEALTHY_MEASUREMENTS), max(HEALTHY_MEASUREMENTS)))
 
-    quanti = len(casi) + quanti_amm + quanti_gr + 1
+    quanti = len(casi) + how_many_admitted + how_many_groups + 1
     print()
     if guai:
         print("⛔ the judge is NOT reliable: %d cases out of %d wrong"
@@ -963,11 +963,11 @@ def main():
         # ⛔ And if it cannot be guaranteed, the round does NOT measure: «I do not know», ⛔ never
         #    red — a blind tenant is a fault of the bench (§1.51).
         # ═══════════════════════════════════════════════════════════════════
-        e_gr, perche_gr = garantisci_i_gruppi(chi)
+        e_gr, why_groups = garantisci_i_gruppi(chi)
         if e_gr != 0:
             print("  round %2d/%d  ?    «%s» is not in a condition to see"
                   % (giro, a.giri, chi))
-            print("       %s" % perche_gr)
+            print("       %s" % why_groups)
             esiti.append(("NON-LO-SO", None))
             continue
 
@@ -1007,13 +1007,13 @@ def main():
         n = None
         istante = None
         scadenza = time.time() + a.attesa_palco
-        partenza_attesa = time.time()
+        wait_start = time.time()
         while time.time() < scadenza:
             dopo = leggi(a.registro)
             fetta = dopo[segno:] if dopo is not None else None
             n = leggi_nascita(fetta, chi)
             if monitor_nato(n):
-                istante = time.time() - partenza_attesa
+                istante = time.time() - wait_start
                 break
             time.sleep(0.5)
 
@@ -1061,10 +1061,10 @@ def main():
         #   its yardstick is an opinion (C11).
         print("       %s" % perche)
         if n is not None:
-            if n.palchi_scartati:
+            if n.discarded_stages:
                 print("       ⚠ %d stage lines DISCARDED («%s»): their "
-                      "counts are garbage" % (n.palchi_scartati,
-                                              CODA_SPAZZATURA))
+                      "counts are garbage" % (n.discarded_stages,
+                                              NOISE_LINE))
             if n.zero_monitor:
                 print("       ⚠ «⛔ ZERO MONITOR» ×%d — ⭐ and it is NOT a red: it is "
                       "the mandatory step of a successful birth"

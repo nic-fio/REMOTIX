@@ -118,7 +118,7 @@ typedef struct Appunti Appunti;
  * `testo` is valid UTF-8, zero-terminated, and valid ONLY inside the call.
  * Runs on the clipboard thread.
  */
-typedef void (*AppuntiSuTesto)(const char *testo, size_t byte, void *dati);
+typedef void (*ClipboardOnText)(const char *testo, size_t byte, void *dati);
 
 /*
  * ⭐ "THE SESSION WANTS TO PASTE what the client has": ask the client,
@@ -134,13 +134,13 @@ typedef void (*AppuntiSuTesto)(const char *testo, size_t byte, void *dati);
  *
  * Runs on the clipboard thread.
  */
-typedef void (*AppuntiSuRichiesta)(uint32_t serial, void *dati);
+typedef void (*ClipboardOnRequest)(uint32_t serial, void *dati);
 
 /*
  * Switches the clipboard on, on the given control session, and switches it on **once
  * per graphical session**.
  *
- * ⛔ IT IS NEVER SWITCHED OFF — see trap 1 at the top.  `appunti_chiudi`
+ * ⛔ IT IS NEVER SWITCHED OFF — see trap 1 at the top.  `clipboard_close`
  *    dismantles what is ours (thread, context, subscriptions) and **does not
  *    call `DisableClipboard`**: closing the control session everything goes
  *    away together, which is the clean way.
@@ -152,7 +152,7 @@ typedef void (*AppuntiSuRichiesta)(uint32_t serial, void *dati);
  *    when the owner **changes**, and at a reconnection nothing
  *    changes (`STUDI.md` §gnome §10 — "it was our recipe that lost it").
  */
-Appunti *appunti_apri(GDBusConnection *bus, const char *percorso_controllo,
+Appunti *appunti_apri(GDBusConnection *bus, const char *check_path,
                       GError **sbaglio);
 /* ⭐ PHASE 12 — the same clipboard on KDE Plasma (`appunti_kde.h`): no bus
  *    to pass, KWin is reached on the user's Wayland socket.  From there
@@ -162,12 +162,12 @@ Appunti *appunti_apri_kde(GError **sbaglio);
  *    the wlroots protocol (`appunti_kde.h`). */
 Appunti *appunti_apri_wlroots(GError **sbaglio);
 
-void appunti_chiudi(Appunti *appunti);
+void clipboard_close(Appunti *appunti);
 
 /* Who listens to the two callbacks.  With NULL callbacks listening stops,
  * and the call **waits** until no callback is in progress. */
-void appunti_ascolta(Appunti *appunti, AppuntiSuTesto su_testo,
-                     AppuntiSuRichiesta su_richiesta, void *dati);
+void clipboard_listen(Appunti *appunti, ClipboardOnText on_text,
+                     ClipboardOnRequest on_request, void *dati);
 
 /*
  * ⭐ The last text the SESSION copied, or NULL.
@@ -183,7 +183,7 @@ char *appunti_ultimo_testo(Appunti *appunti, size_t *byte);
 
 /*
  * "THE CLIENT HAS COPIED SOME TEXT": from now on the session can ask for it, and
- * will ask for it with the `AppuntiSuRichiesta` callback.
+ * will ask for it with the `ClipboardOnRequest` callback.
  *
  * ⛔ It does NOT carry the text, and it is not an oversight: it is §7.4's "announce
  *    and then pull" applied on this side.  Whoever copies a whole document on
@@ -195,7 +195,7 @@ char *appunti_ultimo_testo(Appunti *appunti, size_t *byte);
  *    See the box in `appunti.c`. */
 void appunti_leggi_adesso(Appunti *appunti);
 
-gboolean appunti_offri(Appunti *appunti, GError **sbaglio);
+gboolean clipboard_offer(Appunti *appunti, GError **sbaglio);
 
 /*
  * Answers a request of the session.  With `testo` NULL it declares it does not

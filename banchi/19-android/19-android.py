@@ -66,7 +66,7 @@ CASA = os.path.expanduser("~")
 
 ADB = os.environ.get("REMOTIX_ADB", "adb")
 CHIAVE = os.environ.get("ADB_VENDOR_KEYS") or os.path.join(CASA, ".config/Phonestra/adbkey")
-TELEFONI = os.path.join(CASA, ".config/Phonestra/telefoni.toml")
+PHONES = os.path.join(CASA, ".config/Phonestra/telefoni.toml")
 HOST = os.environ.get("REMOTIX_HOST", "nicfio@192.168.0.2")
 IP_SERVER = os.environ.get("REMOTIX_TELEFONO_HOST", "192.168.0.2")
 CONTROLLO = os.environ.get("REMOTIX_CONTROLLO_ANDROID", "/media/REMOTIX/src/controllo-android")
@@ -77,8 +77,8 @@ CHROME = "com.android.chrome"
 CHROME_MAIN = CHROME + "/com.google.android.apps.chrome.Main"
 STATO_DIR = os.path.join(CASA, ".cache", "remotix-19-android")
 STATO = os.path.join(STATO_DIR, "stato.json")
-ATTESA_CHIAMATA_S = int(os.environ.get("REMOTIX_ATTESA_CHIAMATA_S", "1200"))
-SCHERMO_ACCESO_MS = 30 * 60 * 1000
+CALL_WAIT_S = int(os.environ.get("REMOTIX_ATTESA_CHIAMATA_S", "1200"))
+SCREEN_ON_MS = 30 * 60 * 1000
 PORTE_SCATOLE = (8511, 8512, 8513, 8514)
 DESKTOP = ("gnome", "kde", "xfce", "lxqt")
 
@@ -95,8 +95,8 @@ PROVE = {
     9: ("F-019 the network drops", ["f019"]),
     10: ("F-021 Exit", ["f021"]),
 }
-GIRO_PIENO = ("gnome", tuple(range(1, 11)))
-GIRO_CORTO = (("kde", "xfce", "lxqt"), (1, 2, 6, 9))
+FULL_ROUND = ("gnome", tuple(range(1, 11)))
+SHORT_ROUND = (("kde", "xfce", "lxqt"), (1, 2, 6, 9))
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -158,12 +158,12 @@ class Telefono:
                 el.append(p[0])
         return el, t.strip()
 
-    def indirizzo_noto(self):
+    def known_address(self):
         """The last address Phonestra wrote (ip:port), or REMOTIX_TELEFONO."""
         if os.environ.get("REMOTIX_TELEFONO"):
             return os.environ["REMOTIX_TELEFONO"]
         try:
-            m = re.search(r'^ultimo_indirizzo\s*=\s*"([^"]+)"', open(TELEFONI).read(), re.M)
+            m = re.search(r'^ultimo_indirizzo\s*=\s*"([^"]+)"', open(PHONES).read(), re.M)
             return m.group(1) if m else None
         except OSError:
             return None
@@ -173,7 +173,7 @@ class Telefono:
         el, grezzo = self.visti()
         if el is None:
             return False, "adb is not answering: %s" % grezzo[-200:]
-        ind = self.indirizzo_noto()
+        ind = self.known_address()
         if not el and collega and ind:
             if not os.path.exists(CHIAVE):
                 return False, "phone not seen, and Phonestra's key is missing (%s)" % CHIAVE
@@ -208,9 +208,9 @@ class Telefono:
         return bool(accese), "%d mCallState lines, active: %s" % (
             len(re.findall(r"mCallState=", t)), accese or "none")
 
-    def aspetta_fine_chiamata(self, tetto=None, parla=True):
+    def wait_call_end(self, tetto=None, parla=True):
         """True if (by now) no call; False if after `tetto` s there still is one."""
-        tetto = ATTESA_CHIAMATA_S if tetto is None else tetto
+        tetto = CALL_WAIT_S if tetto is None else tetto
         t0 = time.time()
         detto = False
         while True:
@@ -250,7 +250,7 @@ class Telefono:
         return acceso, not bloccato, "%s, %s" % ("on" if acceso else "OFF",
                                                   "locked" if bloccato else "unlocked")
 
-    def chrome_versione(self):
+    def chrome_version(self):
         _c, t = self.sh("dumpsys package %s | grep -m1 versionName=" % CHROME, t=20)
         m = re.search(r"versionName=(\S+)", t)
         return m.group(1) if m else None
@@ -259,7 +259,7 @@ class Telefono:
         _c, t = self.sh("pidof %s" % CHROME, t=10)
         return bool(t.strip()) and t.strip().split()[0].isdigit()
 
-    def chrome_davanti(self):
+    def chrome_in_front(self):
         _c, t = self.sh("dumpsys activity activities | grep -m1 -E "
                         "'topResumedActivity|mResumedActivity'", t=15)
         return CHROME in t
@@ -269,9 +269,9 @@ class Telefono:
                         "getprop ro.build.version.release", t=10)
         p = (m.split("\n") + ["", "", ""])[:3]
         return "Chrome %s on Android %s · %s %s (real phone, Wi-Fi)" % (
-            self.chrome_versione() or "?", p[2].strip(), p[0].strip(), p[1].strip())
+            self.chrome_version() or "?", p[2].strip(), p[0].strip(), p[1].strip())
 
-    def misura_schermo(self):
+    def screen_size(self):
         _c, t = self.sh("wm size", t=10)
         m = re.findall(r"(\d+)x(\d+)", t)
         return tuple(int(v) for v in m[-1]) if m else None
@@ -309,12 +309,12 @@ def schede(porta=CDP_QUI):
     return [x for x in cdp_http("/json/list", porta=porta) if x.get("type") == "page"]
 
 
-def e_delle_scatole(url):
+def is_from_boxes(url):
     u = urllib.parse.urlsplit(url or "")
     return u.hostname == IP_SERVER
 
 
-def chiudi_scheda(sid, porta=CDP_QUI):
+def close_tab(sid, porta=CDP_QUI):
     for m in ("PUT", "GET"):
         try:
             cdp_http("/json/close/%s" % sid, m, porta=porta)
@@ -324,7 +324,7 @@ def chiudi_scheda(sid, porta=CDP_QUI):
     return False
 
 
-def aspetta_devtools(porta=CDP_QUI, tetto=25):
+def wait_devtools(porta=CDP_QUI, tetto=25):
     fine = time.time() + tetto
     ultimo = ""
     while time.time() < fine:
@@ -339,14 +339,14 @@ def aspetta_devtools(porta=CDP_QUI, tetto=25):
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE STARTING STATE ("as I found it")
 # ═══════════════════════════════════════════════════════════════════════════
-def leggi_stato():
+def read_state():
     try:
         return json.load(open(STATO))
     except (OSError, ValueError):
         return None
 
 
-def scrivi_stato(st):
+def write_state(st):
     os.makedirs(STATO_DIR, exist_ok=True)
     tmp = STATO + ".nuovo"
     with open(tmp, "w") as f:
@@ -354,7 +354,7 @@ def scrivi_stato(st):
     os.replace(tmp, STATO)
 
 
-def annota_partenza(tel):
+def annotate_start(tel):
     st = {"quando": datetime.datetime.now().isoformat(timespec="seconds"),
           "seriale": tel.seriale,
           "chrome_acceso": tel.chrome_acceso(),
@@ -366,12 +366,12 @@ def annota_partenza(tel):
     if st["chrome_acceso"]:
         tel.forward()
         try:
-            aspetta_devtools(tetto=10)
+            wait_devtools(tetto=10)
             st["schede"] = [{"id": x.get("id"), "url": x.get("url"), "title": x.get("title")}
                             for x in schede()]
         except Exception as e:                    # noqa: BLE001
             st["schede_errore"] = str(e)
-    scrivi_stato(st)
+    write_state(st)
     return st
 
 
@@ -384,17 +384,17 @@ def ripristina(tel, st, parla=True):
         t_ok, _ = tel.trova(collega=False)
         if not t_ok:
             return ["⛔ phone not seen: NOT restored (the state stays in %s)" % STATO]
-    if not tel.aspetta_fine_chiamata(parla=parla):
+    if not tel.wait_call_end(parla=parla):
         return ["⛔ call in progress for too long: NOT restored (run `ripristina` again)"]
     loro = {x["id"] for x in st.get("schede", [])}
     if tel.chrome_acceso():
         tel.forward()
         try:
-            aspetta_devtools(tetto=10)
+            wait_devtools(tetto=10)
             chiuse = 0
             for x in schede():
-                if x.get("id") not in loro and e_delle_scatole(x.get("url")):
-                    chiuse += chiudi_scheda(x["id"])
+                if x.get("id") not in loro and is_from_boxes(x.get("url")):
+                    chiuse += close_tab(x["id"])
             fatto.append("closed %d tabs of ours (towards the boxes)" % chiuse)
             ora = {x.get("id") for x in schede()}
             perse = [x for x in st.get("schede", []) if x["id"] not in ora]
@@ -444,9 +444,9 @@ class Sportello:
 
     def segna(self, chiave, valore=True):
         self.st.setdefault("toccato", {})[chiave] = valore
-        scrivi_stato(self.st)
+        write_state(self.st)
 
-    def scrivi_diario(self, t):
+    def write_diary(self, t):
         r = "%s %s" % (time.strftime("%H:%M:%S"), t)
         self.diario.append(r)
         if os.environ.get("REMOTIX_SPORTELLO_PARLA") == "1":
@@ -455,9 +455,9 @@ class Sportello:
     # -- the answers ----------------------------------------------------------
     def guardia(self):
         """None if the phone may be touched; otherwise (code, sentence)."""
-        if self.tel.aspetta_fine_chiamata():
+        if self.tel.wait_call_end():
             return None
-        return 409, "call in progress on the phone for more than %d s" % ATTESA_CHIAMATA_S
+        return 409, "call in progress on the phone for more than %d s" % CALL_WAIT_S
 
     def pronto(self):
         g = self.guardia()
@@ -475,23 +475,23 @@ class Sportello:
             if time.time() > fine:
                 return 423, "phone %s: not touching anything" % frase
             time.sleep(5)
-        if not self.tel.chrome_acceso() or not self.tel.chrome_davanti():
+        if not self.tel.chrome_acceso() or not self.tel.chrome_in_front():
             self.tel.sh("am start -a android.intent.action.MAIN -c "
                         "android.intent.category.LAUNCHER -n %s" % CHROME_MAIN, t=20)
-            self.scrivi_diario("Chrome brought to the front")
+            self.write_diary("Chrome brought to the front")
         self.tel.forward(self.cdp)
-        aspetta_devtools(self.cdp)
+        wait_devtools(self.cdp)
         # the boxes' tabs left over by a killed Chrome (reopened by it): away
         loro = {x["id"] for x in self.st.get("schede", [])}
         for x in schede(self.cdp):
             if (x.get("id") not in loro and x.get("id") not in self.mie
-                    and e_delle_scatole(x.get("url"))):
-                chiudi_scheda(x["id"], self.cdp)
-                self.scrivi_diario("closed the leftover tab %s" % x.get("url"))
+                    and is_from_boxes(x.get("url"))):
+                close_tab(x["id"], self.cdp)
+                self.write_diary("closed the leftover tab %s" % x.get("url"))
         return 200, {"pronto": True}
 
-    def dentro_schermo(self, *xy):
-        m = self.tel.misura_schermo()
+    def inside_screen(self, *xy):
+        m = self.tel.screen_size()
         if not m:
             return False
         lato = max(m)
@@ -523,18 +523,18 @@ class Sportello:
                 return g
         if percorso == "/tocca":
             x, y = int(d["x"]), int(d["y"])
-            if not self.dentro_schermo(x, y):
+            if not self.inside_screen(x, y):
                 return 400, "tap outside the screen: %s" % ((x, y),)
             c, t = self.tel.sh("input tap %d %d" % (x, y), t=15)
-            self.scrivi_diario("tap %d,%d" % (x, y))
+            self.write_diary("tap %d,%d" % (x, y))
             return (200, {}) if c == 0 else (500, "input tap: %s" % t[-120:])
         if percorso == "/scorri":
             v = [int(d[k]) for k in ("x1", "y1", "x2", "y2")]
             ms = max(100, min(3000, int(d.get("ms", 500))))
-            if not self.dentro_schermo(*v):
+            if not self.inside_screen(*v):
                 return 400, "finger outside the screen: %s" % v
             c, t = self.tel.sh("input swipe %d %d %d %d %d" % tuple(v + [ms]), t=15)
-            self.scrivi_diario("finger %s in %d ms" % (v, ms))
+            self.write_diary("finger %s in %d ms" % (v, ms))
             return (200, {}) if c == 0 else (500, "input swipe: %s" % t[-120:])
         if percorso == "/ruota":
             return 200, {"detto": self.ruota(d.get("verso", "altro"))}
@@ -542,7 +542,7 @@ class Sportello:
             self.tel.sh("am force-stop %s" % CHROME, t=15)
             self.mie.clear()
             self.segna("chrome_ucciso")
-            self.scrivi_diario("Chrome stopped abruptly (force-stop)")
+            self.write_diary("Chrome stopped abruptly (force-stop)")
             return 200, {}
         return 404, "the counter does not know %s" % percorso
 
@@ -558,7 +558,7 @@ class Sportello:
         else:
             self.tel.metti("system", "accelerometer_rotation", "0")
         time.sleep(2.5)
-        self.scrivi_diario("rotated: %s" % ("portrait" if n == 0 else "landscape"))
+        self.write_diary("rotated: %s" % ("portrait" if n == 0 else "landscape"))
         return "phone %s" % ("portrait" if n == 0 else "landscape")
 
     # -- the server ------------------------------------------------------------
@@ -620,7 +620,7 @@ SCHEDA_SH = ("P=$(awk '/^pass:/{print $2; exit}' $HOME/SERVER.ssh 2>/dev/null); 
              "sh -c \"grep -ohE 'route (vulkan|vaapi)' /var/lib/rete11/registro.log | tail -1\"")
 
 
-def scheda_delle_scatole():
+def card_of_boxes():
     _c, t = ssh(SCHEDA_SH, 30)
     if "route vaapi" in t:
         return "intel", "Intel UHD 770 (VA-API)"
@@ -650,7 +650,7 @@ def controlla(tel, o):
     ok("no call (%s)" % d)
     acceso, sbloccato, fr = tel.schermo()
     (ok if (acceso and sbloccato) else no)("screen %s" % fr)
-    v = tel.chrome_versione()
+    v = tel.chrome_version()
     if not v:
         no("Chrome (%s) is not on the phone" % CHROME)
         return False
@@ -658,7 +658,7 @@ def controlla(tel, o):
     if tel.chrome_acceso():
         tel.forward()
         try:
-            ver = aspetta_devtools(tetto=10)
+            ver = wait_devtools(tetto=10)
             ok("DevTools reachable: %s" % ver.get("Browser"))
             sc = schede()
             ok("user's open tabs: %d (not touched)" % len(sc))
@@ -698,7 +698,7 @@ def controlla(tel, o):
         no("a round is already running on the server (%s): the boxes are its own, wait" % altri[0][:100])
         return False
     ok("no other round on the server")
-    s, frase = scheda_delle_scatole()
+    s, frase = card_of_boxes()
     ok("boxes on the GPU: %s" % frase)
     o.scheda = s
     pronto = (acceso and sbloccato and "si" in ping
@@ -715,9 +715,9 @@ def controlla(tel, o):
 # ═══════════════════════════════════════════════════════════════════════════
 def piano(o):
     if o.cosa == "tutte":
-        p = [(GIRO_PIENO[0], n) for n in GIRO_PIENO[1]]
-        for d in GIRO_CORTO[0]:
-            p += [(d, n) for n in GIRO_CORTO[1]]
+        p = [(FULL_ROUND[0], n) for n in FULL_ROUND[1]]
+        for d in SHORT_ROUND[0]:
+            p += [(d, n) for n in SHORT_ROUND[1]]
         if o.desktop:
             p = [x for x in p if x[0] in o.desktop]
         return p
@@ -727,7 +727,7 @@ def piano(o):
     return [(d, n) for d in (o.desktop or ["gnome"])]
 
 
-def porta_i_banchi():
+def push_benches():
     amb = dict(os.environ, REMOTIX_CONTROLLO=CONTROLLO, REMOTIX_HOST=HOST)
     r = subprocess.run(["bash", os.path.join(RADICE, "banchi/15-suite/15-porta.sh")],
                        capture_output=True, text=True, env=amb, timeout=300)
@@ -736,7 +736,7 @@ def porta_i_banchi():
     nota((r.stdout.strip().splitlines() or ["?"])[-1])
 
 
-def righe_del_registro(giro, desktop, prove):
+def log_lines(giro, desktop, prove):
     c, t = ssh("grep -F '\"giro\": \"%s\"' %s/registro.jsonl 2>/dev/null | grep -F "
                "'\"desktop\": \"%s\"' | tail -200" % (giro, MISURE, desktop), 30)
     righe = []
@@ -757,7 +757,7 @@ def righe_del_registro(giro, desktop, prove):
 def una_riga(o, tel, sp, d, n, giro, sistema):
     cosa, prove = PROVE[n]
     titolo("Test %d · %s · %s" % (n, d.upper(), cosa))
-    if not tel.aspetta_fine_chiamata():
+    if not tel.wait_call_end():
         return [{"esito": "BLOCKED", "ragione": "call in progress for too long", "funzione": "?"}]
     if n == 7:
         sp.ruota("partenza")
@@ -779,7 +779,7 @@ def una_riga(o, tel, sp, d, n, giro, sistema):
     for r in out.splitlines():
         if r.startswith(("[", "⛔", "⭐ ROUND", "   server")):
             nota(r)
-    righe = righe_del_registro(giro, d, prove)
+    righe = log_lines(giro, d, prove)
     if not righe:
         no("no line in the log (code %s): %s" % (c, out[-400:]))
     for r in righe:
@@ -791,15 +791,15 @@ def una_riga(o, tel, sp, d, n, giro, sistema):
 
 
 def prova(tel, o):
-    if leggi_stato():
+    if read_state():
         raise Fermo("there is an unrestored starting state (%s): first "
                     "`19-android.sh ripristina`" % STATO)
     if not controlla(tel, o):
         return 3
     pi = piano(o)
     titolo("The plan: %s" % ", ".join("%s/%d" % x for x in pi))
-    porta_i_banchi()
-    st = annota_partenza(tel)
+    push_benches()
+    st = annotate_start(tel)
     ok("recorded the phone as I found it: Chrome %s, %d tabs, rotation %s, "
        "screen timeout %s ms" % ("open" if st["chrome_acceso"] else "closed", len(st["schede"]),
                               st["rotazione"], st["spegnimento_ms"]))
@@ -819,14 +819,14 @@ def prova(tel, o):
         sp.accendi()
         tel.forward()
         # the screen must not turn off halfway through a test (restored at the end)
-        tel.metti("system", "screen_off_timeout", str(SCHERMO_ACCESO_MS))
+        tel.metti("system", "screen_off_timeout", str(SCREEN_ON_MS))
         sp.segna("spegnimento")
         for d, n in pi:
             righe = una_riga(o, tel, sp, d, n, giro, sistema)
             if any("call in progress" in (r.get("ragione") or "") and r["esito"] == "BLOCKED"
                    for r in righe):
                 nota("📞 a call interrupted test %d: redoing it" % n)
-                tel.aspetta_fine_chiamata()
+                tel.wait_call_end()
                 righe = una_riga(o, tel, sp, d, n, giro, sistema)
             tutte += [(d, n, r) for r in righe]
     except KeyboardInterrupt:
@@ -834,7 +834,7 @@ def prova(tel, o):
     finally:
         sp.spegni()
         titolo("The phone as I found it")
-        for f in ripristina(tel, leggi_stato() or st):
+        for f in ripristina(tel, read_state() or st):
             (no if f.startswith("⛔") else nota)(f)
     titolo("Summary (round %s)" % giro)
     conto = {}
@@ -856,7 +856,7 @@ def prova(tel, o):
 # ═══════════════════════════════════════════════════════════════════════════
 #  DRY RUN: the whole bench without phone and without server
 # ═══════════════════════════════════════════════════════════════════════════
-ADB_FINTO = r"""#!/bin/bash
+FAKE_ADB = r"""#!/bin/bash
 # FAKE adb of the dry run: it talks to no phone.
 D="$(dirname "$0")"
 echo "$*" >> "$D/adb.log"
@@ -888,7 +888,7 @@ case "$r" in
 esac
 """
 
-PAGINA_FINTA = """<!doctype html><meta charset=utf-8><title>fake box</title>
+FAKE_PAGE = """<!doctype html><meta charset=utf-8><title>fake box</title>
 <style>html,body{margin:0;height:100%;background:#000}#schermo{width:100vw;height:100vh;display:block}</style>
 <canvas id=schermo width=800 height=500></canvas>
 <script>
@@ -918,7 +918,7 @@ def a_secco(o):
     import importlib.util as iu
     tmp = tempfile.mkdtemp(prefix="remotix-19-secco-")
     finto = os.path.join(tmp, "adb")
-    open(finto, "w").write(ADB_FINTO)
+    open(finto, "w").write(FAKE_ADB)
     os.chmod(finto, 0o755)
     global ADB, STATO_DIR, STATO, IP_SERVER
     ADB = finto
@@ -958,12 +958,12 @@ def a_secco(o):
     open(os.path.join(tmp, "visto"), "w").close()
     # the "boxes" page, local
     os.makedirs(os.path.join(tmp, "sito"))
-    open(os.path.join(tmp, "sito", "index.html"), "w").write(PAGINA_FINTA)
+    open(os.path.join(tmp, "sito", "index.html"), "w").write(FAKE_PAGE)
     s = socket.socket()
     s.bind(("127.0.0.1", 0))
-    porta_sito = s.getsockname()[1]
+    site_port = s.getsockname()[1]
     s.close()
-    sito = subprocess.Popen([sys.executable, "-m", "http.server", str(porta_sito), "--bind",
+    sito = subprocess.Popen([sys.executable, "-m", "http.server", str(site_port), "--bind",
                              "127.0.0.1", "--directory", os.path.join(tmp, "sito")],
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     prof = os.path.join(tmp, "chrome")
@@ -975,11 +975,11 @@ def a_secco(o):
                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     sp = None
     try:
-        aspetta_devtools(tetto=30)
+        wait_devtools(tetto=30)
         tel = Telefono()
         trovato, fr = tel.trova(collega=False)
         esito("with the fake adb the phone is \"seen\"", trovato, fr)
-        st = annota_partenza(tel)
+        st = annotate_start(tel)
         esito("user's tabs recorded", len(st["schede"]) == 1,
               str([x["title"] for x in st["schede"]]))
         sp = Sportello(tel, st)
@@ -994,7 +994,7 @@ def a_secco(o):
         class O:
             evidenze = os.path.join(tmp, "evidenze")
         os.makedirs(O.evidenze)
-        g = T.GuidaTelefono(O())
+        g = T.PhoneDriver(O())
         esito("the driver opens a tab of ITS OWN", g.scheda["id"] not in
               {x["id"] for x in st["schede"]}, g.scheda["id"])
         esito("palco", "Android 16" in g.palco(), g.palco())
@@ -1003,7 +1003,7 @@ def a_secco(o):
             esito("refuses an address outside the boxes", False)
         except RuntimeError as e:
             esito("refuses an address outside the boxes", "only to the server's boxes" in str(e))
-        aperta, perche = g.vai("http://127.0.0.1:%d/" % porta_sito)
+        aperta, perche = g.vai("http://127.0.0.1:%d/" % site_port)
         esito("goes to the \"box\" (local page)", aperta, perche)
         time.sleep(1)
         png, _ = g.fotografa_tela()
@@ -1011,11 +1011,11 @@ def a_secco(o):
               "%d byte" % len(png or b""))
         g.clic(100, 100)
         g.tasto("ArrowRight")
-        g.dito_cdp([(50, 50), (80, 60), (120, 70)])
+        g.finger_cdp([(50, 50), (80, 60), (120, 70)])
         visti = g.js("return window.__visti")
         esito("click, key and finger reach the page", visti and "mousedown:" in visti
               and "keydown:ArrowRight" in visti and "touchstart:" in visti, str(visti))
-        tocchi = g.tocchi_visti()
+        tocchi = g.touches_seen()
         esito("the touch notebook sees them", len(tocchi) >= 1, str(tocchi[:1]))
         # the trackpad pointer brought onto a target, even a near one (wide loop)
         geo = g.js("const P=window.REMOTIX_PUNTATORE,t=document.getElementById('schermo');"
@@ -1028,8 +1028,8 @@ def a_secco(o):
               "errors %s and %s px" % (e1, e2))
         # the call: with the "call" on the counter must refuse
         open(os.path.join(tmp, "chiamata"), "w").close()
-        global ATTESA_CHIAMATA_S
-        vecchia, ATTESA_CHIAMATA_S = ATTESA_CHIAMATA_S, 1
+        global CALL_WAIT_S
+        vecchia, CALL_WAIT_S = CALL_WAIT_S, 1
         try:
             g.guardia(subito=True)
             esito("with a call the guard stops the gesture", False)
@@ -1040,7 +1040,7 @@ def a_secco(o):
             esito("…a click too", False)
         except T.ChiamataInCorso:
             esito("…a click too", True)
-        ATTESA_CHIAMATA_S = vecchia
+        CALL_WAIT_S = vecchia
         os.remove(os.path.join(tmp, "chiamata"))
         g.guardia(subito=True)
         esito("once the call is over we resume", True)
@@ -1067,7 +1067,7 @@ def a_secco(o):
         # a "boxes" tab left behind: the restore closes it
         cdp_http("/json/new?http://%s:8511/" % IP_SERVER, "PUT")
         time.sleep(1)
-        for f in ripristina(tel, leggi_stato()):
+        for f in ripristina(tel, read_state()):
             print("      | %s" % f)
         rimaste = schede()
         esito("the restore closes the tabs towards the boxes and leaves the user's",
@@ -1129,7 +1129,7 @@ def main():
         if o.azione == "controlla":
             return 0 if controlla(tel, o) else 2 if not tel.seriale else 3
         if o.azione == "ripristina":
-            st = leggi_stato()
+            st = read_state()
             if not st:
                 nota("nothing to restore (%s is missing)" % STATO)
                 return 0

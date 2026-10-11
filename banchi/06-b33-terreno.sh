@@ -85,9 +85,9 @@ RILIEVO=$LAV/rilievo
 VISTO=$LAV/visto.jsonl
 INVII=$LAV/invii.txt
 TESTIMONE=$LAV/06-b33-testimone
-INIETTORE=$LAV/06-b33-risveglio
-INILOG=$LAV/06-b33-risveglio.log
-INIFIFO=$LAV/06-b33-risveglio.fifo
+INJECTOR=$LAV/06-b33-risveglio
+INJECTOR_LOG=$LAV/06-b33-risveglio.log
+INJECTOR_FIFO=$LAV/06-b33-risveglio.fifo
 
 ok()  { printf '    \033[1;32mOK\033[0m  %s\n' "$*"; }
 ko()  { printf '    \033[1;31mNO\033[0m  %s\n' "$*"; }
@@ -118,7 +118,7 @@ vicini() {
 
 # ⛔ Everything that must be done INSIDE the user's session goes through here: uid,
 #    gid, environment built from scratch (`CODER.md` §4.5).
-come_utente() {
+as_user() {
 	setpriv --reuid="$UID_B" --regid="$UID_B" --init-groups \
 		env -i \
 		HOME="/home/$UTENTE" USER="$UTENTE" SHELL= LANG=C.UTF-8 \
@@ -130,7 +130,7 @@ come_utente() {
 		"$@"
 }
 
-mio_pid() {
+my_pid() {
 	local p
 	if [ -f "$PIDF" ]; then
 		p=$(cat "$PIDF" 2>/dev/null)
@@ -143,9 +143,9 @@ mio_pid() {
 
 # ⭐ The child of THIS server, and not any child: on the same machine
 #    the servers of the other six sub-phases run.
-mio_figlio() {
+my_child() {
 	local s f
-	s=$(mio_pid) || return 1
+	s=$(my_pid) || return 1
 	for f in $(pgrep -P "$s" 2>/dev/null); do
 		[ -r "/proc/$f/cmdline" ] || continue
 		case "$(tr '\0' ' ' < "/proc/$f/cmdline" 2>/dev/null)" in
@@ -235,14 +235,14 @@ sessione)
 	#     does the same, and a new `gnome-session` with the manager still **active**
 	#     exits **silently**.  ⇒ We wait for `inactive` and then start.
 	inf "the session is not there: I wait for the manager to be inactive"
-	come_utente systemctl --user reset-failed >/dev/null 2>&1
+	as_user systemctl --user reset-failed >/dev/null 2>&1
 	g=0
 	while [ $g -lt 40 ]; do
-		come_utente systemctl --user is-active gnome-session-manager@gnome.service \
+		as_user systemctl --user is-active gnome-session-manager@gnome.service \
 			>/dev/null 2>&1 || break
 		sleep 0.5; g=$((g+1))
 	done
-	if come_utente systemctl --user is-active gnome-session-manager@gnome.service >/dev/null 2>&1; then
+	if as_user systemctl --user is-active gnome-session-manager@gnome.service >/dev/null 2>&1; then
 		ko "⚠ the manager does not go away: LAST RESORT — I tear everything down"
 		loginctl terminate-user "$UTENTE" >/dev/null 2>&1
 		sleep 3
@@ -271,33 +271,33 @@ sessione)
 		ok "the session manager is inactive: gnome-session can start again"
 	fi
 
-	come_utente systemctl --user daemon-reload || { ko "⛔ daemon-reload"; exit 2; }
-	come_utente systemctl --user reset-failed >/dev/null 2>&1
-	come_utente systemctl --user start pipewire.socket pipewire-pulse.socket >/dev/null 2>&1
-	come_utente systemctl --user start pipewire.service wireplumber.service >/dev/null 2>&1
-	if come_utente systemctl --user is-active pipewire.service >/dev/null 2>&1; then
+	as_user systemctl --user daemon-reload || { ko "⛔ daemon-reload"; exit 2; }
+	as_user systemctl --user reset-failed >/dev/null 2>&1
+	as_user systemctl --user start pipewire.socket pipewire-pulse.socket >/dev/null 2>&1
+	as_user systemctl --user start pipewire.service wireplumber.service >/dev/null 2>&1
+	if as_user systemctl --user is-active pipewire.service >/dev/null 2>&1; then
 		ok "PipeWire is alive: without it, the capture would have no node"
 	else
 		ko "⚠ PipeWire is NOT alive: the capture will find no node"
 	fi
 	# ⛔ WRITTEN IS NOT IN FORCE (form E1): we read it back from the manager.
-	VIG=$(come_utente systemctl --user show -p ExecStart --value "$UNITA")
-	inf "ExecStart in force: $VIG"
-	case "$VIG" in *--no-x11*) ok "«--no-x11» is there" ;;
+	IN_EFFECT=$(as_user systemctl --user show -p ExecStart --value "$UNITA")
+	inf "ExecStart in force: $IN_EFFECT"
+	case "$IN_EFFECT" in *--no-x11*) ok "«--no-x11» is there" ;;
 		*) ko "⛔ «--no-x11» is NOT there: another drop-in wins over mine"; exit 3 ;;
 	esac
-	case "$VIG" in *--virtual-monitor*)
+	case "$IN_EFFECT" in *--virtual-monitor*)
 		ko "⛔ «--virtual-monitor» is still there: the scene is not the one I believe"
 		exit 3 ;;
 	*) ok "and «--virtual-monitor» is NOT there" ;;
 	esac
 
-	come_utente setsid --fork sh -c \
+	as_user setsid --fork sh -c \
 		"exec >>/run/user/$UID_B/remotix-sessione.log 2>&1; exec gnome-session --session=gnome"
 	g=0
 	while [ $g -lt 120 ]; do
 		if pgrep -u "$UID_B" -x gnome-shell >/dev/null 2>&1 \
-		   && come_utente busctl --user list 2>/dev/null | grep -q org.gnome.Shell; then
+		   && as_user busctl --user list 2>/dev/null | grep -q org.gnome.Shell; then
 			break
 		fi
 		sleep 0.5; g=$((g+1))
@@ -314,7 +314,7 @@ sessione)
 
 sessione-via)
 	log "⛔ I kill the graphical session of $UTENTE"
-	come_utente gdbus call --session -d org.gnome.SessionManager \
+	as_user gdbus call --session -d org.gnome.SessionManager \
 		-o /org/gnome/SessionManager -m org.gnome.SessionManager.Logout 2 \
 		>/dev/null 2>&1
 	sleep 4
@@ -345,7 +345,7 @@ testimone)
 	#    it is reset HERE, at opening, and the line number restarts from 1 with the
 	#    process.  ⚠ Whoever compares two runs must read the count, not the file.
 	: > "$VISTO"; chmod 666 "$VISTO"
-	come_utente setsid --fork sh -c \
+	as_user setsid --fork sh -c \
 		"exec >>'$VISTO' 2>&1; exec '$TESTIMONE' --misura $M"
 	g=0
 	while [ $g -lt 40 ]; do
@@ -402,9 +402,9 @@ terminale)
 	#    instant, and the real loop is a child of the server with a command
 	#    line that does not have that title.  A `pgrep -f b33-invii` never
 	#    finds it, and the bench stays hung waiting for something that is there.
-	come_utente pkill -f 'b33-ciclo-invii' >/dev/null 2>&1; sleep 1
+	as_user pkill -f 'b33-ciclo-invii' >/dev/null 2>&1; sleep 1
 	rm -f "$INVII"; : > "$INVII"; chmod 666 "$INVII"
-	come_utente setsid --fork gnome-terminal --title=b33-invii -- \
+	as_user setsid --fork gnome-terminal --title=b33-invii -- \
 		bash -c "# b33-ciclo-invii
 			while IFS= read -r _; do date +%s%N >> '$INVII'; done" \
 		>/dev/null 2>&1
@@ -426,7 +426,7 @@ terminale)
 	exit 0 ;;
 
 terminale-via)
-	come_utente pkill -f 'b33-ciclo-invii' 2>/dev/null
+	as_user pkill -f 'b33-ciclo-invii' 2>/dev/null
 	ok "terminal off"
 	exit 0 ;;
 
@@ -457,29 +457,29 @@ iniettore-accendi)
 	#      connect it to the fifo.
 	M=${2:-1264x800}
 	log "The wake-up injector, canvas $M"
-	[ -x "$INIETTORE" ] || { ko "⛔ $INIETTORE is not there: do «06-b33-risveglio-costruisci.sh»"; exit 2; }
-	if pid=$(mio_pid); then
+	[ -x "$INJECTOR" ] || { ko "⛔ $INJECTOR is not there: do «06-b33-risveglio-costruisci.sh»"; exit 2; }
+	if pid=$(my_pid); then
 		ko "⛔ the $PORTA server is on (pid $pid): switch it off, or there are two sessions"
 		exit 2
 	fi
 	pkill -u "$UID_B" -f 06-b33-risveglio 2>/dev/null; sleep 1
-	rm -f "$INIFIFO"; mkfifo -m 666 "$INIFIFO" || { ko "⛔ the fifo cannot be created"; exit 2; }
-	: > "$INILOG"; chmod 666 "$INILOG"
-	come_utente setsid --fork sh -c \
-		"exec >>'$INILOG' 2>&1; exec 3<>'$INIFIFO'; exec '$INIETTORE' --tela $M <&3"
+	rm -f "$INJECTOR_FIFO"; mkfifo -m 666 "$INJECTOR_FIFO" || { ko "⛔ the fifo cannot be created"; exit 2; }
+	: > "$INJECTOR_LOG"; chmod 666 "$INJECTOR_LOG"
+	as_user setsid --fork sh -c \
+		"exec >>'$INJECTOR_LOG' 2>&1; exec 3<>'$INJECTOR_FIFO'; exec '$INJECTOR' --tela $M <&3"
 	g=0
 	while [ $g -lt 120 ]; do
-		grep -qa '^B33R: PRONTO' "$INILOG" 2>/dev/null && break
-		grep -qa '^B33R: ERRORE' "$INILOG" 2>/dev/null && break
+		grep -qa '^B33R: PRONTO' "$INJECTOR_LOG" 2>/dev/null && break
+		grep -qa '^B33R: ERRORE' "$INJECTOR_LOG" 2>/dev/null && break
 		sleep 0.5; g=$((g+1))
 	done
-	if grep -qa '^B33R: PRONTO' "$INILOG" 2>/dev/null; then
+	if grep -qa '^B33R: PRONTO' "$INJECTOR_LOG" 2>/dev/null; then
 		ok "the injector is READY after $((g/2)) s"
-		grep -a '^B33R: ' "$INILOG" | sed 's/^/        /'
+		grep -a '^B33R: ' "$INJECTOR_LOG" | sed 's/^/        /'
 		exit 0
 	fi
 	ko "⛔ the injector is NOT ready:"
-	tail -25 "$INILOG" 2>/dev/null | sed 's/^/        /'
+	tail -25 "$INJECTOR_LOG" 2>/dev/null | sed 's/^/        /'
 	exit 3 ;;
 
 iniettore-di)
@@ -487,12 +487,12 @@ iniettore-di)
 	shift
 	pgrep -u "$UID_B" -f 06-b33-risveglio >/dev/null 2>&1 || {
 		ko "⛔ the injector is not alive: nobody reads the command «$*»"; exit 3; }
-	printf '%s\n' "$*" > "$INIFIFO"
+	printf '%s\n' "$*" > "$INJECTOR_FIFO"
 	exit 0 ;;
 
 iniettore-spegni)
 	if pgrep -u "$UID_B" -f 06-b33-risveglio >/dev/null 2>&1; then
-		printf 'fine\n' > "$INIFIFO" 2>/dev/null
+		printf 'fine\n' > "$INJECTOR_FIFO" 2>/dev/null
 		g=0
 		while [ $g -lt 20 ]; do
 			pgrep -u "$UID_B" -f 06-b33-risveglio >/dev/null 2>&1 || break
@@ -500,7 +500,7 @@ iniettore-spegni)
 		done
 		pkill -9 -u "$UID_B" -f 06-b33-risveglio 2>/dev/null
 	fi
-	rm -f "$INIFIFO"
+	rm -f "$INJECTOR_FIFO"
 	ok "injector off"
 	exit 0 ;;
 
@@ -519,24 +519,24 @@ giornale-tutto)
 	exit 0 ;;
 
 iniettore-registro)
-	tail -n "${2:-80}" "$INILOG" 2>/dev/null
+	tail -n "${2:-80}" "$INJECTOR_LOG" 2>/dev/null
 	exit 0 ;;
 
 iniettore-dice)
 	# ⛔ Only the injector's lines, not the product's log: they are two
 	#    different voices and mixing them is the way to believe the sender.
-	grep -a '^B33R: ' "$INILOG" 2>/dev/null | tail -n "${2:-40}"
+	grep -a '^B33R: ' "$INJECTOR_LOG" 2>/dev/null | tail -n "${2:-40}"
 	exit 0 ;;
 
 # ---------------------------------------------------------------------------
 monitor)
 	# ⛔ The count is DIVIDED BY TWO: `GetCurrentState` lists every screen twice
 	#    (found by A1 on 14 August 2026).
-	n=$(come_utente busctl --user call org.gnome.Mutter.DisplayConfig \
+	n=$(as_user busctl --user call org.gnome.Mutter.DisplayConfig \
 		/org/gnome/Mutter/DisplayConfig org.gnome.Mutter.DisplayConfig \
 		GetCurrentState 2>/dev/null | tr ' ' '\n' | grep -c '"Meta-')
 	printf 'MONITOR %s\n' "$((n / 2))"
-	come_utente busctl --user call org.gnome.Mutter.DisplayConfig \
+	as_user busctl --user call org.gnome.Mutter.DisplayConfig \
 		/org/gnome/Mutter/DisplayConfig org.gnome.Mutter.DisplayConfig \
 		GetCurrentState 2>&1 | tr ' ' '\n' \
 		| grep -E '^"(Meta-[0-9]+|MetaVirtualMonitor|Virtual)' | sed 's/^/        /'
@@ -605,7 +605,7 @@ registro-byte)
 
 spegni)
 	log "I switch off $PORTA"
-	if ! pid=$(mio_pid); then ok "there was nothing on $PORTA"; exit 0; fi
+	if ! pid=$(my_pid); then ok "there was nothing on $PORTA"; exit 0; fi
 	miei=""
 	for f in $(pgrep -P "$pid" 2>/dev/null); do
 		[ -r "/proc/$f/cmdline" ] || continue
@@ -632,7 +632,7 @@ spegni)
 pulisci)
 	log "I remove the user of sub-phase 6.1"
 	bash "$0" spegni
-	come_utente gdbus call --session -d org.gnome.SessionManager \
+	as_user gdbus call --session -d org.gnome.SessionManager \
 		-o /org/gnome/SessionManager -m org.gnome.SessionManager.Logout 2 \
 		>/dev/null 2>&1
 	sleep 3
@@ -650,8 +650,8 @@ stato|*)
 	for p in $(pgrep -u "$UID_B" -x gnome-shell 2>/dev/null); do
 		inf "gnome-shell $p: $(tr '\0' ' ' < /proc/$p/cmdline)"
 	done
-	if pid=$(mio_pid); then inf "server $PORTA: pid $pid"; else inf "server $PORTA: off"; fi
-	if f=$(mio_figlio); then inf "child: $f"; else inf "child: none"; fi
+	if pid=$(my_pid); then inf "server $PORTA: pid $pid"; else inf "server $PORTA: off"; fi
+	if f=$(my_child); then inf "child: $f"; else inf "child: none"; fi
 	inf "log: $(stat -c %s "$LOG" 2>/dev/null || echo 0) bytes"
 	inf "witness: $(pgrep -u "$UID_B" -f 06-b33-testimone | wc -l) alive, $(wc -l < "$VISTO" 2>/dev/null || echo 0) lines seen"
 	inf "terminal: $(pgrep -u "$UID_B" -f b33-ciclo-invii | wc -l) alive, $(wc -l < "$INVII" 2>/dev/null || echo 0) Enters received"

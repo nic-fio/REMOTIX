@@ -61,7 +61,7 @@ ko()   { printf '    \033[1;31mNO\033[0m  %s\n' "$*"; }
 inf()  { printf '    --  %s\n' "$*"; }
 
 AZIONE=${1:-accendi}
-MARCHE_ATTESE=""
+EXPECTED_MARKS=""
 
 # ⛔ No redirection AROUND enter.sh: it would carry off sudo's password
 #    prompt, and the script would stay stuck on a question nobody
@@ -186,9 +186,9 @@ ricostruisci() # $1 = "con-guasti" | "sano"
 		# ⭐ THE DENOMINATOR IS COMPUTED BY WHOEVER GRAFTS, and printed.  Here no
 		#    number is written by hand: it would age with the first graft
 		#    someone adds to the table.
-		MARCHE_ATTESE=$(printf '%s\n' "$USCITA" \
+		EXPECTED_MARKS=$(printf '%s\n' "$USCITA" \
 			| sed -n 's/^== B11-MARCHE-ATTESE: \([0-9][0-9]*\)$/\1/p' | tail -1)
-		if [ -z "$MARCHE_ATTESE" ]; then
+		if [ -z "$EXPECTED_MARKS" ]; then
 			ko "⛔ the graft did not declare how many marks are expected:"
 			ko "   without that number the check below has no denominator"
 			return 1
@@ -218,7 +218,7 @@ ricostruisci() # $1 = "con-guasti" | "sano"
 
 # The B11 marks across all three sources.  The total in $TOTALE.
 TOTALE=0
-conta_le_marche()
+count_marks()
 {
 	local f
 	TOTALE=0
@@ -262,14 +262,14 @@ registro)
 		ko "   the second witness of B11 has nothing to say (form E8)."
 		exit 7
 	fi
-	QUANTE=$(grep -Ec "$FILTRO" "$FUORI/b11-server.log")
+	HOW_MANY=$(grep -Ec "$FILTRO" "$FUORI/b11-server.log")
 	ST=$?
 	if [ "$ST" -gt 1 ]; then
 		ko "⛔ the log could not be read (grep exited $ST)"
 		exit 7
 	fi
 	grep -E "$FILTRO" "$FUORI/b11-server.log"
-	printf '== RIGHE-DEL-REGISTRO-FILTRATE: %s\n' "$QUANTE"
+	printf '== RIGHE-DEL-REGISTRO-FILTRATE: %s\n' "$HOW_MANY"
 	exit 0
 	;;
 spegni)
@@ -347,7 +347,7 @@ spegni)
 		ko "   source does not say so: put back the B2 and B3 grafts by hand."
 		exit 5
 	fi
-	conta_le_marche || exit 5
+	count_marks || exit 5
 	if [ "$TOTALE" -eq 0 ]; then
 		ok "⭐ no trace of B11 in the ${#SORGENTI[@]} sources, and the binary"
 		ok "   is the one just rebuilt: the server is the real one"
@@ -380,14 +380,14 @@ if ! ricostruisci con-guasti; then
 	ko "   turning it on would mean measuring a HEALTHY server believing it faulty"
 	exit 4
 fi
-conta_le_marche || exit 4
-if [ "$TOTALE" -ne "$MARCHE_ATTESE" ]; then
+count_marks || exit 4
+if [ "$TOTALE" -ne "$EXPECTED_MARKS" ]; then
 	ko "⛔ on disk there are $TOTALE B11 marks, and whoever grafted them"
-	ko "   declares $MARCHE_ATTESE: the faults the bench believes it measures are not"
+	ko "   declares $EXPECTED_MARKS: the faults the bench believes it measures are not"
 	ko "   those the server has inside, and the red would land on the PAGE"
 	exit 4
 fi
-ok "built, and the faults are all there: $TOTALE of $MARCHE_ATTESE expected, in ${#SORGENTI[@]} files"
+ok "built, and the faults are all there: $TOTALE of $EXPECTED_MARKS expected, in ${#SORGENTI[@]} files"
 
 log "3. Turning on"
 rm -f "$FUORI/b11-server.log" "$FUORI/b11-server.pid"

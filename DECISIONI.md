@@ -2108,7 +2108,7 @@ gestures**, and that they lead to two different places.
 
 ⭐ **The gain of this distinction is that it removes work instead of adding it**: the client side does not
 have to detect anything — shutdown, reboot and closing the tab are **the same thing, already
-implemented and measured** (`pagehide` → `CONGEDO`, `pagina.html` · `canale_corrente()`).
+implemented and measured** (`pagehide` → `CONGEDO`, `pagina.html` · `current_channel()`).
 
 **And three consequences that were not chosen, they fell out by themselves:**
 
@@ -3556,7 +3556,7 @@ All three discovered by measuring, and all three of the same family: **silence**
    `roundf(2133/2) = 1067` and **1067×2 = 2134 ≠ 2133**. It is the coordinate space of the **input**
    ⇒ **the pointer goes elsewhere and nobody says so.** Cure: read the scale and **fail** if it is not
    `1.0`.
-3. **Asked versus granted.** `[R]` `src/cattura.c` · `chiesta_larghezza`/`chiesta_altezza` never compares the size **asked** of
+3. **Asked versus granted.** `[R]` `src/cattura.c` · `requested_width`/`requested_height` never compares the size **asked** of
    PipeWire with the **negotiated** one, and `codificatore_comprimi()` receives the pixels and the stride but
    **not** width and height, so it cannot act as witness. ⛔ Today it is unreachable because
    1920×1080 is always asked: **it is this decision that makes it reachable**, and it must be closed
@@ -3603,7 +3603,7 @@ study anything new — they must **call** `cattura_ridimensiona()` and reread th
 > | where | what |
 > |---|---|
 > | `src/pagina.html` | `chiedi_tela()` sends `ADATTA_TELA` with the size of the window, **at attach** |
-> | `src/rcp.c` `T_ADATTA_TELA` | applies §4.5 (limits, parity, `video.misura_massima`) and passes the request to the stage. ⛔ **It does not answer right away**: it marks a request «in flight» |
+> | `src/rcp.c` `T_FIT_CANVAS` | applies §4.5 (limits, parity, `video.misura_massima`) and passes the request to the stage. ⛔ **It does not answer right away**: it marks a request «in flight» |
 > | `src/webtransport.c` · `src/main.c` | carry the question across the process boundary |
 > | `src/figlio.c` `figli_ritela()` | → `MSG_INPUT/RITELA` to the child |
 > | `src/cattura.c` `cattura_ridimensiona()` | → `pw_stream_update_params()` |
@@ -4234,8 +4234,8 @@ suspect is rare but nobody has measured it.
 > ⇒ ⭐ **What holds is the hard half**: when the layout **of the session** changes,
 > Mutter destroys and recreates the keyboard device and `tastiera.c` rereads the new keymap — the
 > letters come out right. ⛔ **What is missing is the easy half**: nobody takes the layout
-> *of the client* and gives it to the session. `input.c` · `leggi_regione()` passes `NULL` where the negotiated one should go, and the
-> `RIPIEGO DICHIARATO` line of `tastiera.c` · `tastiera_apri_da_keymap()` **does not appear in any round** — that is, whoever looked for
+> *of the client* and gives it to the session. `input.c` · `read_region()` passes `NULL` where the negotiated one should go, and the
+> `RIPIEGO DICHIARATO` line of `tastiera.c` · `keyboard_open_from_keymap()` **does not appear in any round** — that is, whoever looked for
 > that line in the log would conclude *«they always match»*, which is different from *«I did not
 > look»*.
 >

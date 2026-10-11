@@ -100,15 +100,15 @@ fi
 
 # ---------------------------------------------------------------------------
 # The places, and they are the same for all benches.
-B0_ENTRA=/media/REMOTIX/enter.sh
-B0_FUORI=/media/REMOTIX/src          # as the server sees it
+B0_ENTER=/media/REMOTIX/enter.sh
+B0_OUT=/media/REMOTIX/src          # as the server sees it
 B0_DENTRO=/srv/src                   # the same place, as the container sees it
 
 # ⛔ The code of the bench that includes this file: it goes into the names of the
 #    ban file, the command socket and the logs.  Without it, two different benches
 #    would write over each other — and it is the kind of state surviving between one bench
 #    and the next that B0.2 lists first.
-B0_SIGLA=${SIGLA:-b0}
+B0_TAG=${SIGLA:-b0}
 
 b0_ok()  { printf '    \033[1;32mOK\033[0m  %s\n' "$*"; }
 b0_ko()  { printf '    \033[1;31mNO\033[0m  %s\n' "$*"; }
@@ -122,8 +122,8 @@ b0_inf() { printf '    --  %s\n' "$*"; }
 if [ -z "${BERSAGLIO:-}" ]; then
 	b0_ko "⛔ BERSAGLIO is missing, and I have no default value."
 	b0_ko "   The three values are «innesto», «prodotto» and «controllo»:"
-	b0_ko "     BERSAGLIO=innesto  bash .../01-${B0_SIGLA}-lancia.sh …"
-	b0_ko "     BERSAGLIO=prodotto bash .../01-${B0_SIGLA}-lancia.sh …"
+	b0_ko "     BERSAGLIO=innesto  bash .../01-${B0_TAG}-lancia.sh …"
+	b0_ko "     BERSAGLIO=prodotto bash .../01-${B0_TAG}-lancia.sh …"
 	b0_ko "   ⛔ A default here would be the most convenient way to measure the"
 	b0_ko "      wrong server: whoever relaunches from memory does not type the"
 	b0_ko "      variable, and the round would end up against the graft with"
@@ -136,41 +136,41 @@ case "$B_NOME" in
 innesto)
 	B_PORTA=7447
 	B_IND=192.168.0.2
-	B_LEGAME=0.0.0.0
-	B_INDIRIZZI=127.0.0.1,192.168.0.2
+	B_BIND=0.0.0.0
+	B_ADDRESSES=127.0.0.1,192.168.0.2
 	B_CERT=/media/REMOTIX/b2-certificati      # ⚠ path INSIDE the container
-	B_ESE="$B0_DENTRO/b2/ngtcp2/build/examples/bsslserver"
+	B_EXE="$B0_DENTRO/b2/ngtcp2/build/examples/bsslserver"
 	B_LIBS="$B0_DENTRO/b2/ngtcp2/build/lib"
 	B_COMM=bsslserver                         # expected /proc/<pid>/comm
 	# ⛔ The fingerprint: EVERY log line of this server starts with
 	#    «REMOTIX B3: » or «REMOTIX B5: » (the graft puts them there), or it is a
 	#    line of the ngtcp2 example.  It is enough that there are some.
 	B_IMPRONTA='REMOTIX B[35]:'
-	B_CONTROLLO='REMOTIX B3'
+	B_CHECK='REMOTIX B3'
 	# ⭐ The transport idle cap CAN BE CHOSEN: the ngtcp2 example
 	#    takes `--timeout=Ns`.
-	B_IDLE_SCELTA=si
+	B_IDLE_CHOICE=si
 	B_IDLE_LUNGO=120000     # above all three caps of §4.6: only RCP closes
 	B_IDLE_CORTO=15000      # below the 60 s of the credentials: the «ping» phase
 	# ⛔ Where a shutdown path can live, for B7.  The denominator
 	#    is read WHERE THE THING HAPPENS: in `rcp.c` it will never be, because
 	#    `rcp.c` does not know a process exists.
-	B_SORGENTI="$B0_DENTRO/rcp/rcp.c,$B0_DENTRO/01-b3-rcp-innesta.py"
-	B_SPEGNIMENTO=no        # ⇒ B7 has SEVEN reasons that can be provoked
+	B_SOURCES="$B0_DENTRO/rcp/rcp.c,$B0_DENTRO/01-b3-rcp-innesta.py"
+	B_SHUTDOWN=no        # ⇒ B7 has SEVEN reasons that can be provoked
 	# The lines the host-side ban writes at startup (B8 compares them).
-	B_R_BAN_CARICATI='bans loaded:'
-	B_R_BAN_ILLEGGIBILE='COULD NOT READ the ban file'
-	B_R_COMANDO_VIVO="the unblock command listens on"
+	B_R_BAN_LOADED='bans loaded:'
+	B_R_BAN_UNREADABLE='COULD NOT READ the ban file'
+	B_R_COMMAND_ALIVE="the unblock command listens on"
 	B_R_PAGINA='TCP page at'
-	B_BAN_ILLEGGIBILE_PARTE=si  # the graft starts all the same and writes so
+	B_BAN_UNREADABLE_PART=si  # the graft starts all the same and writes so
 	;;
 prodotto)
 	B_PORTA=7448
 	B_IND=192.168.0.2
-	B_LEGAME=0.0.0.0
-	B_INDIRIZZI=127.0.0.1,192.168.0.2
+	B_BIND=0.0.0.0
+	B_ADDRESSES=127.0.0.1,192.168.0.2
 	B_CERT="$B0_DENTRO/remotix-cert"
-	B_ESE="$B0_DENTRO/remotix/remotix"
+	B_EXE="$B0_DENTRO/remotix/remotix"
 	B_LIBS=""
 	B_COMM=remotix
 	# ⛔ The product's fingerprint: `registro.c` writes «HH:MM:SS.mmm <area> …»,
@@ -178,7 +178,7 @@ prodotto)
 	#    «REMOTIX B3», and no line of the graft carries this form: the two
 	#    fingerprints exclude each other, and that is what makes them useful.
 	B_IMPRONTA='^[0-9][0-9]:[0-9][0-9]:[0-9][0-9]\.[0-9][0-9][0-9] (avvio|quic|wt|rcp|pagina|cert) '
-	B_CONTROLLO='REMOTIX — phase 1, the bare wire'
+	B_CHECK='REMOTIX — phase 1, the bare wire'
 	# ⛔ THE IDLE CAP CANNOT BE CHOSEN: `src/trasporto.c` has
 	#    `#define IDLE_MS 30000` and no option touches it (verified with
 	#    grep on 11 Aug 2026: no `getenv` in all of `src/`).  ⚠ Asking the product
@@ -186,20 +186,20 @@ prodotto)
 	#    `bersaglio_accendi` refuses instead of turning on something different
 	#    from what it was asked (`CODER.md` §3.9: if it does not obey,
 	#    declare the failure, do not silently fall back).
-	B_IDLE_SCELTA=no
+	B_IDLE_CHOICE=no
 	B_IDLE_LUNGO=30000
 	B_IDLE_CORTO=30000
 	# ⛔ The product's shutdown path is NOT in `rcp.c`: it is in
 	#    `main.c` (which dismisses everyone before exiting), in `trasporto.c`
-	#    (`trasporto_congeda_tutte`) and in `webtransport.c` (`wt_congeda`).
+	#    (`trasporto_congeda_tutte`) and in `webtransport.c` (`wt_dismiss`).
 	#    Searching for it in `rcp.c` — which is identical in the two servers — would say "zero"
 	#    on both targets, and it is a denominator read where the thing does NOT
 	#    happen.
-	B_SORGENTI="$B0_DENTRO/remotix/rcp.c,$B0_DENTRO/remotix/main.c,$B0_DENTRO/remotix/trasporto.c,$B0_DENTRO/remotix/webtransport.c"
-	B_SPEGNIMENTO=si        # ⇒ B7 has EIGHT reasons that can be provoked
-	B_R_BAN_CARICATI='addresses loaded'
-	B_R_BAN_ILLEGGIBILE="exists and could NOT be read"
-	B_R_COMANDO_VIVO="the unblock command listens on"
+	B_SOURCES="$B0_DENTRO/remotix/rcp.c,$B0_DENTRO/remotix/main.c,$B0_DENTRO/remotix/trasporto.c,$B0_DENTRO/remotix/webtransport.c"
+	B_SHUTDOWN=si        # ⇒ B7 has EIGHT reasons that can be provoked
+	B_R_BAN_LOADED='addresses loaded'
+	B_R_BAN_UNREADABLE="exists and could NOT be read"
+	B_R_COMMAND_ALIVE="the unblock command listens on"
 	B_R_PAGINA='listening over TCP on'
 	# ⛔⭐ AND HERE THE TWO SERVERS DO TWO OPPOSITE THINGS: if the ban file exists and
 	#     cannot be read, the product **DOES NOT START** (`src/main.c`: "it is not «zero
@@ -208,7 +208,7 @@ prodotto)
 	#     is not observed as "a line in the log": it is observed as "the
 	#     server did not turn on", and a bench that looked for the line would give
 	#     red on a server that does **more** than what it is asked.
-	B_BAN_ILLEGGIBILE_PARTE=no
+	B_BAN_UNREADABLE_PART=no
 	;;
 controllo)
 	# ⛔ THE THIRD VALUE EXISTS IN THE GRAMMAR AND NOT IN THESE FOUR
@@ -249,12 +249,12 @@ esac
 #    giving it one per bench is the only isolation that does not depend on who
 #    remembers to unblock.  ⚠ And it must be DECLARED, because it changes what
 #    a green of B0.3 means: in production the file is a single one.
-B_BAN="$B0_DENTRO/${B0_SIGLA}-${B_NOME}-ban.txt"
-B_COMANDO="$B0_DENTRO/${B0_SIGLA}-${B_NOME}-comando.sock"
+B_BAN="$B0_DENTRO/${B0_TAG}-${B_NOME}-ban.txt"
+B_COMANDO="$B0_DENTRO/${B0_TAG}-${B_NOME}-comando.sock"
 # The bench's log of facts, one per target: two rounds against two different
 # servers never end up in the same file, and every line repeats it anyway.
-B_ESITI="$B0_DENTRO/${B0_SIGLA}-esiti-${B_NOME}.jsonl"
-B_ESITI_FUORI="$B0_FUORI/${B0_SIGLA}-esiti-${B_NOME}.jsonl"
+B_OUTCOMES="$B0_DENTRO/${B0_TAG}-esiti-${B_NOME}.jsonl"
+B_ESITI_FUORI="$B0_OUT/${B0_TAG}-esiti-${B_NOME}.jsonl"
 
 B_PID=""
 B_LOG=""
@@ -275,16 +275,16 @@ B_GIRO=$(date +%Y%m%d-%H%M%S)
 
 # ---------------------------------------------------------------------------
 # ⛔ THE DECLARATION, and it must be printed BEFORE any number.
-bersaglio_dichiara()
+target_declare()
 {
 	printf '\n\033[1m== The target\033[0m\n'
-	b0_ok "BERSAGLIO=$B_NOME  ·  $B_ESE  ·  port $B_PORTA"
+	b0_ok "BERSAGLIO=$B_NOME  ·  $B_EXE  ·  port $B_PORTA"
 	b0_inf "ban: $B_BAN"
 	b0_inf "unblock command: $B_COMANDO"
 	b0_inf "log of facts: $B_ESITI_FUORI"
 	b0_inf "transport idle cap: ${B_IDLE_LUNGO} ms$(
-		[ "$B_IDLE_SCELTA" = no ] && printf ' ⛔ NOT CHOSEN BY US (IDLE_MS in trasporto.c)')"
-	b0_inf "shutdown path (SERVER_IN_CHIUSURA 0x0C): $B_SPEGNIMENTO"
+		[ "$B_IDLE_CHOICE" = no ] && printf ' ⛔ NOT CHOSEN BY US (IDLE_MS in trasporto.c)')"
+	b0_inf "shutdown path (SERVER_IN_CHIUSURA 0x0C): $B_SHUTDOWN"
 	b0_inf "md5 fingerprint of the binary: ${B_MD5:-⛔ not taken yet}"
 	b0_inf "binary from $(date -d "@${B_BIN_QUANDO:-0}" '+%d %b %H:%M:%S' 2>/dev/null || echo '—')\
  · most recent source: ${B_SORG_PIU_RECENTE:-—}"
@@ -308,13 +308,13 @@ bersaglio_dichiara()
 # ⛔ And both UDP **and** TCP are looked at: both servers listen on the same
 #    port with two protocols (`RCP.md` §2.4), and a bench that looked only at
 #    UDP would say "free" with the page of another round still listening.
-B0_USCITA=""
-b0_dentro() # $1 = remote command.  Output in $B0_USCITA, status = that of the command
+B0_OUTPUT=""
+b0_inside() # $1 = remote command.  Output in $B0_USCITA, status = that of the command
 {
 	local tutto stato
-	tutto=$(bash "$B0_ENTRA" --root "$1"'; printf "\nB0-FINE=%s\n" $?')
+	tutto=$(bash "$B0_ENTER" --root "$1"'; printf "\nB0-FINE=%s\n" $?')
 	stato=$(printf '%s\n' "$tutto" | sed -n 's/^B0-FINE=\([0-9][0-9]*\)$/\1/p' | tail -1)
-	B0_USCITA=$(printf '%s\n' "$tutto" | grep -v '^B0-FINE=')
+	B0_OUTPUT=$(printf '%s\n' "$tutto" | grep -v '^B0-FINE=')
 	if [ -z "$stato" ]; then
 		return 125   # it did not reach the end: it is not a zero
 	fi
@@ -322,22 +322,22 @@ b0_dentro() # $1 = remote command.  Output in $B0_USCITA, status = that of the c
 }
 
 B_CHI=""
-bersaglio_porta() # 0 = taken ($B_CHI) · 1 = free · 2 = unknown
+target_port() # 0 = taken ($B_CHI) · 1 = free · 2 = unknown
 {
 	local st
-	b0_dentro "ss -ulnp; ss -tlnp"
+	b0_inside "ss -ulnp; ss -tlnp"
 	st=$?
 	if [ "$st" -ne 0 ]; then
 		b0_ko "⛔ «ss» did not answer inside the container (exit $st):"
-		printf '%s\n' "$B0_USCITA" | tail -5 | sed 's/^/        /'
+		printf '%s\n' "$B0_OUTPUT" | tail -5 | sed 's/^/        /'
 		return 2
 	fi
-	if [ -z "$B0_USCITA" ]; then
+	if [ -z "$B0_OUTPUT" ]; then
 		b0_ko "⛔ «ss» printed NOTHING, not even the header:"
 		b0_ko "   the tool is mute, and its silence is not a free port"
 		return 2
 	fi
-	B_CHI=$(printf '%s\n' "$B0_USCITA" | grep ":$B_PORTA ")
+	B_CHI=$(printf '%s\n' "$B0_OUTPUT" | grep ":$B_PORTA ")
 	[ -n "$B_CHI" ]
 }
 
@@ -365,16 +365,16 @@ bersaglio_porta() # 0 = taken ($B_CHI) · 1 = free · 2 = unknown
 #     of the last start carried a wording from **two generations
 #     before**, and anyone who had measured that process would have attributed to
 #     tonight's code the behaviour of last evening.
-b0_binario_e_sorgenti() # $1 = list of source globs, already quoted for the remote shell
+b0_binary_and_sources() # $1 = list of source globs, already quoted for the remote shell
 {
-	local glob=$1 f="$B0_FUORI/${B0_SIGLA}-${B_NOME}-binario.txt"
+	local glob=$1 f="$B0_OUT/${B0_TAG}-${B_NOME}-binario.txt"
 	rm -f "$f"
-	bash "$B0_ENTRA" --root \
-		"{ md5sum $B_ESE 2>/dev/null | cut -d' ' -f1 || echo x; \
-		   stat -c %Y $B_ESE 2>/dev/null || echo x; \
+	bash "$B0_ENTER" --root \
+		"{ md5sum $B_EXE 2>/dev/null | cut -d' ' -f1 || echo x; \
+		   stat -c %Y $B_EXE 2>/dev/null || echo x; \
 		   ls -t $glob 2>/dev/null | head -1; \
 		   stat -c %Y \$(ls -t $glob 2>/dev/null | head -1) 2>/dev/null || echo x; \
-		 } > $B0_DENTRO/${B0_SIGLA}-${B_NOME}-binario.txt 2>&1"
+		 } > $B0_DENTRO/${B0_TAG}-${B_NOME}-binario.txt 2>&1"
 	if [ ! -f "$f" ]; then
 		b0_ko "⛔ I could not look at the binary: the file was not"
 		b0_ko "   written.  It is not «it is old», it is that nobody looked"
@@ -387,7 +387,7 @@ b0_binario_e_sorgenti() # $1 = list of source globs, already quoted for the remo
 	t_src=$(sed -n 4p "$f")
 	case "$B_MD5" in
 	''|*[!0-9a-f]*)
-		b0_ko "⛔ the binary «$B_ESE» is not there or cannot be read:"
+		b0_ko "⛔ the binary «$B_EXE» is not there or cannot be read:"
 		sed 's/^/        /' "$f"
 		return 3 ;;
 	esac
@@ -408,7 +408,7 @@ b0_binario_e_sorgenti() # $1 = list of source globs, already quoted for the remo
 		b0_ko "   executed.  ⛔ I do not measure."
 		if [ "$B_NOME" = prodotto ]; then
 			b0_ko "   Redo it with:"
-			b0_ko "     bash $B0_ENTRA --root \"bash $B0_DENTRO/remotix/costruisci.sh\""
+			b0_ko "     bash $B0_ENTER --root \"bash $B0_DENTRO/remotix/costruisci.sh\""
 		else
 			b0_ko "   Redo it by relaunching this same bench: the graft"
 			b0_ko "   recompiles by itself (but here the compilation has already passed,"
@@ -424,20 +424,20 @@ b0_binario_e_sorgenti() # $1 = list of source globs, already quoted for the remo
 bersaglio_pronto()
 {
 	if [ "$B_NOME" = innesto ]; then
-		local sorg="$B0_DENTRO/b2/ngtcp2/examples/http3_server_proto_codec.cc"
+		local source_dir="$B0_DENTRO/b2/ngtcp2/examples/http3_server_proto_codec.cc"
 		local main="$B0_DENTRO/b2/ngtcp2/examples/server.cc"
 		printf '\n\033[1m== The graft server is put back and recompiled\033[0m\n'
 		b0_inf "⛔ the grafts are REMOVED and put back: applying one on top of"
 		b0_inf "   the other would leave two copies of the same code"
-		bash "$B0_ENTRA" --root "python3 $B0_DENTRO/01-b3-rcp-innesta.py --togli > /dev/null"
-		bash "$B0_ENTRA" --root "python3 $B0_DENTRO/01-b2-ngtcp2-wt-innesta.py --togli > /dev/null"
-		bash "$B0_ENTRA" --root "python3 $B0_DENTRO/01-b2-ngtcp2-wt-innesta.py" \
+		bash "$B0_ENTER" --root "python3 $B0_DENTRO/01-b3-rcp-innesta.py --togli > /dev/null"
+		bash "$B0_ENTER" --root "python3 $B0_DENTRO/01-b2-ngtcp2-wt-innesta.py --togli > /dev/null"
+		bash "$B0_ENTER" --root "python3 $B0_DENTRO/01-b2-ngtcp2-wt-innesta.py" \
 			| grep -E "foothold|lines|CODE" | sed 's/^/        /'
-		bash "$B0_ENTRA" --root "python3 $B0_DENTRO/01-b3-rcp-innesta.py" \
+		bash "$B0_ENTER" --root "python3 $B0_DENTRO/01-b3-rcp-innesta.py" \
 			| grep -E "foothold|NO |our files" | sed 's/^/        /'
 		local q o
-		q=$(bash "$B0_ENTRA" --root "grep -c 'REMOTIX B3' $sorg" | tr -cd '0-9')
-		o=$(bash "$B0_ENTRA" --root "grep -c 'REMOTIX B3' $main" | tr -cd '0-9')
+		q=$(bash "$B0_ENTER" --root "grep -c 'REMOTIX B3' $source_dir" | tr -cd '0-9')
+		o=$(bash "$B0_ENTER" --root "grep -c 'REMOTIX B3' $main" | tr -cd '0-9')
 		if [ "${q:-0}" -lt 3 ]; then
 			b0_ko "⛔ the RCP layer is NOT in the codec («REMOTIX B3» lines: ${q:-0})"
 			return 3
@@ -448,12 +448,12 @@ bersaglio_pronto()
 			return 3
 		fi
 		b0_ok "the graft is in the two files (codec $q lines · host $o)"
-		rm -f "$B0_FUORI/${B0_SIGLA}-compila.log"
-		if ! bash "$B0_ENTRA" --root \
-			"ninja -C $B0_DENTRO/b2/ngtcp2/build bsslserver > $B0_DENTRO/${B0_SIGLA}-compila.log 2>&1"; then
+		rm -f "$B0_OUT/${B0_TAG}-compila.log"
+		if ! bash "$B0_ENTER" --root \
+			"ninja -C $B0_DENTRO/b2/ngtcp2/build bsslserver > $B0_DENTRO/${B0_TAG}-compila.log 2>&1"; then
 			b0_ko "the compilation failed:"
-			if [ -f "$B0_FUORI/${B0_SIGLA}-compila.log" ]; then
-				tail -25 "$B0_FUORI/${B0_SIGLA}-compila.log" | sed 's/^/        /'
+			if [ -f "$B0_OUT/${B0_TAG}-compila.log" ]; then
+				tail -25 "$B0_OUT/${B0_TAG}-compila.log" | sed 's/^/        /'
 			else
 				b0_ko "   ⛔ and the compilation log DOES NOT EXIST: it is not"
 				b0_ko "      ninja that kept quiet, it is that we never got as far as"
@@ -465,7 +465,7 @@ bersaglio_pronto()
 		# ⛔ And here too the BUILDER's outcome is looked at and then the binary:
 		#    `ninja` can exit 0 without having redone anything, and the grafted
 		#    sources have just changed.
-		b0_binario_e_sorgenti \
+		b0_binary_and_sources \
 			"$B0_DENTRO/b2/ngtcp2/examples/*.cc $B0_DENTRO/b2/ngtcp2/examples/*.c $B0_DENTRO/rcp/rcp.c" \
 			|| return 3
 		return 0
@@ -476,7 +476,7 @@ bersaglio_pronto()
 	b0_inf "⛔ a bench that recompiles what it measures takes away its own"
 	b0_inf "   independent witness: here only the binary is looked at, and if it is not more"
 	b0_inf "   recent than the sources we stop"
-	b0_binario_e_sorgenti "$B0_DENTRO/remotix/*.c $B0_DENTRO/remotix/*.h" || return 3
+	b0_binary_and_sources "$B0_DENTRO/remotix/*.c $B0_DENTRO/remotix/*.h" || return 3
 	return 0
 }
 
@@ -493,11 +493,11 @@ bersaglio_accendi()
 {
 	local et=$1 idle=$2
 	shift 2
-	B_LOG="$B0_DENTRO/${B0_SIGLA}-${B_NOME}-${et}.log"
-	B_LOG_FUORI="$B0_FUORI/${B0_SIGLA}-${B_NOME}-${et}.log"
-	rm -f "$B_LOG_FUORI" "$B0_FUORI/${B0_SIGLA}-${B_NOME}-${et}.pid"
+	B_LOG="$B0_DENTRO/${B0_TAG}-${B_NOME}-${et}.log"
+	B_LOG_FUORI="$B0_OUT/${B0_TAG}-${B_NOME}-${et}.log"
+	rm -f "$B_LOG_FUORI" "$B0_OUT/${B0_TAG}-${B_NOME}-${et}.pid"
 
-	if [ "$B_IDLE_SCELTA" = no ] && [ "$idle" != "$B_IDLE_LUNGO" ]; then
+	if [ "$B_IDLE_CHOICE" = no ] && [ "$idle" != "$B_IDLE_LUNGO" ]; then
 		b0_ko "⛔ the target «$B_NOME» CANNOT turn on with an idle"
 		b0_ko "   cap of $idle ms: `IDLE_MS` in src/trasporto.c is"
 		b0_ko "   $B_IDLE_LUNGO ms and no option touches it."
@@ -513,7 +513,7 @@ bersaglio_accendi()
 	#    ⚠ "Unknown" is not rounded to "free": a second server on top of the
 	#      first would measure the server of another round, and the red would land
 	#      on the wrong suspect (findings R8.15, R12-A.7, R12-A.23).
-	bersaglio_porta
+	target_port
 	case $? in
 	0)	b0_ko "⛔ port $B_PORTA is ALREADY TAKEN: I turn on nothing."
 		printf '%s\n' "$B_CHI" | sed 's/^/        /'
@@ -527,14 +527,14 @@ bersaglio_accendi()
 
 	local ts=$((idle / 1000))
 	if [ "$B_NOME" = innesto ]; then
-		bash "$B0_ENTRA" --root \
-			"nohup env LD_LIBRARY_PATH=$B_LIBS $B_ESE --timeout=${ts}s --ban-file=$B_BAN --comando-socket=$B_COMANDO $* $B_LEGAME $B_PORTA $B_CERT/sessione.key $B_CERT/sessione.pem < /dev/null > $B_LOG 2>&1 & echo \$! > $B0_DENTRO/${B0_SIGLA}-${B_NOME}-${et}.pid"
+		bash "$B0_ENTER" --root \
+			"nohup env LD_LIBRARY_PATH=$B_LIBS $B_EXE --timeout=${ts}s --ban-file=$B_BAN --comando-socket=$B_COMANDO $* $B_BIND $B_PORTA $B_CERT/sessione.key $B_CERT/sessione.pem < /dev/null > $B_LOG 2>&1 & echo \$! > $B0_DENTRO/${B0_TAG}-${B_NOME}-${et}.pid"
 	else
-		bash "$B0_ENTRA" --root \
-			"nohup $B_ESE --indirizzo $B_LEGAME --nome $B_IND --porta $B_PORTA --certificati $B_CERT --pagina $B0_DENTRO/remotix/pagina.html --ban-file $B_BAN --comando-socket $B_COMANDO $* < /dev/null > $B_LOG 2>&1 & echo \$! > $B0_DENTRO/${B0_SIGLA}-${B_NOME}-${et}.pid"
+		bash "$B0_ENTER" --root \
+			"nohup $B_EXE --indirizzo $B_BIND --nome $B_IND --porta $B_PORTA --certificati $B_CERT --pagina $B0_DENTRO/remotix/pagina.html --ban-file $B_BAN --comando-socket $B_COMANDO $* < /dev/null > $B_LOG 2>&1 & echo \$! > $B0_DENTRO/${B0_TAG}-${B_NOME}-${et}.pid"
 	fi
 	sleep 2
-	B_PID=$(cat "$B0_FUORI/${B0_SIGLA}-${B_NOME}-${et}.pid" 2>/dev/null)
+	B_PID=$(cat "$B0_OUT/${B0_TAG}-${B_NOME}-${et}.pid" 2>/dev/null)
 	# ⛔ `/proc`, not `kill -0`: the server belongs to root and this script does not, and as
 	#    a normal user `kill -0` answers "operation not permitted", which is not
 	#    "does not exist" (LEZIONI.md §1.9, sixth guise).
@@ -546,7 +546,7 @@ bersaglio_accendi()
 			b0_ko "   ⛔ and the log DOES NOT EXIST: it is not the server that"
 			b0_ko "      kept quiet, it is that we never got as far as launching it"
 		fi
-		if [ "$B_NOME" = prodotto ] && [ "$B_BAN_ILLEGGIBILE_PARTE" = no ]; then
+		if [ "$B_NOME" = prodotto ] && [ "$B_BAN_UNREADABLE_PART" = no ]; then
 			b0_inf "⚠ and on this target «does not start» has one more cause that"
 			b0_inf "  the graft does not have: if «$B_BAN» exists and cannot be read, the"
 			b0_inf "  product REFUSES to start on purpose (src/main.c).  Look at"
@@ -574,7 +574,7 @@ bersaglio_spegni()
 {
 	local giri=0
 	[ -n "${B_PID:-}" ] || return 0
-	bash "$B0_ENTRA" --root "kill $B_PID 2>/dev/null || true"
+	bash "$B0_ENTER" --root "kill $B_PID 2>/dev/null || true"
 	while [ -d "/proc/$B_PID" ] && [ "$giri" -lt 20 ]; do
 		sleep 0.5
 		giri=$((giri + 1))
@@ -586,7 +586,7 @@ bersaglio_spegni()
 	fi
 	b0_inf "process $B_PID is gone (after $giri half seconds)"
 	B_PID=""
-	bersaglio_porta
+	target_port
 	case $? in
 	0)	b0_ko "⛔ port $B_PORTA is still held after shutdown:"
 		printf '%s\n' "$B_CHI" | sed 's/^/        /'
@@ -643,8 +643,8 @@ bersaglio_impronta()
 	# ⭐ And the positive control, on the same tool: the startup line that
 	#    that server certainly writes.  Without it, "I found my fingerprint"
 	#    could be a file of a previous round left there.
-	if ! grep -qF "$B_CONTROLLO" "$B_LOG_FUORI"; then
-		b0_ko "⛔ the fingerprint is there ($mie lines) but the startup line «$B_CONTROLLO»"
+	if ! grep -qF "$B_CHECK" "$B_LOG_FUORI"; then
+		b0_ko "⛔ the fingerprint is there ($mie lines) but the startup line «$B_CHECK»"
 		b0_ko "   is NOT there: this log may be from a previous round."
 		b0_ko "   ⛔ The positive control exists on purpose (LEZIONI.md §1.9,"
 		b0_ko "      second rule): without it, my «I recognised it» is worth nothing"
@@ -663,29 +663,29 @@ bersaglio_impronta()
 # this rule**: without it, "the ban did not fire" and "the unblock never
 # reached anyone" have the same face again.
 #
-#   bersaglio_ping                       is the command there and does it answer?
-#   bersaglio_sblocca <why> [addr…]      removes, and prints which of the three outcomes
+#   target_ping                       is the command there and does it answer?
+#   target_unblock <why> [addr…]      removes, and prints which of the three outcomes
 #
 # ⛔ NEVER INSIDE THE BAN ROUND OF B8 (B0.3): there the unblock is not a tool,
 #    it is the thing tested, and calling it first would make everything else pass by
 #    construction.  This function does not know it: whoever calls it knows, and that is
 #    why `<why>` is mandatory and ends up printed.
-bersaglio_ping()
+target_ping()
 {
-	bash "$B0_ENTRA" --root \
+	bash "$B0_ENTER" --root \
 		"python3 $B0_DENTRO/01-b8-sblocca.py --socket $B_COMANDO --ping"
 }
 
-bersaglio_sblocca() # $1 = why · $2… = addresses (default: $B_INDIRIZZI)
+target_unblock() # $1 = why · $2… = addresses (default: $B_INDIRIZZI)
 {
 	local perche=$1
 	shift
 	local elenco=${*:-}
-	[ -n "$elenco" ] || elenco=$(printf '%s' "$B_INDIRIZZI" | tr ',' ' ')
+	[ -n "$elenco" ] || elenco=$(printf '%s' "$B_ADDRESSES" | tr ',' ' ')
 	local ind esito=0
 	for ind in $elenco; do
 		printf '    --  unblocking «%s» (why: %s):\n' "$ind" "$perche"
-		bash "$B0_ENTRA" --root \
+		bash "$B0_ENTER" --root \
 			"python3 $B0_DENTRO/01-b8-sblocca.py --socket $B_COMANDO $ind" \
 			|| esito=$?
 	done
@@ -700,7 +700,7 @@ bersaglio_sblocca() # $1 = why · $2… = addresses (default: $B_INDIRIZZI)
 #   everyone.
 bersaglio_butta_il_ban()
 {
-	bash "$B0_ENTRA" --root "rm -f $B_BAN $B_BAN.nuovo $B_COMANDO"
+	bash "$B0_ENTER" --root "rm -f $B_BAN $B_BAN.nuovo $B_COMANDO"
 	b0_inf "⛔ threw away the ban file «$B_BAN» and the socket «$B_COMANDO»"
 	b0_inf "   (B0.2: it is the state that survives longest of all)"
 }
@@ -712,5 +712,5 @@ bersaglio_butta_il_ban()
 bersaglio_opzioni_python()
 {
 	printf -- '--bersaglio %s --porta %s --uscita %s --md5 %s --giro %s' \
-		"$B_NOME" "$B_PORTA" "$B_ESITI" "${B_MD5:-ignota}" "${B_GIRO:-$(date +%Y%m%d-%H%M%S)}"
+		"$B_NOME" "$B_PORTA" "$B_OUTCOMES" "${B_MD5:-ignota}" "${B_GIRO:-$(date +%Y%m%d-%H%M%S)}"
 }

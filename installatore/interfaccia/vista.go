@@ -27,7 +27,7 @@ const (
 )
 
 // Cartellino: the label text of a state, in the right-hand column of the check.
-func (s Stato) Cartellino() string {
+func (s Stato) Tag() string {
 	return [...]string{T("s.ok"), T("s.consenso"), T("s.sistemo"), T("s.dopo"), T("s.male"), T("s.nonsi"),
 		T("s.avviso"), T("s.manca")}[s]
 }
@@ -39,28 +39,28 @@ type Riga struct {
 }
 
 // Esito of the check.
-type EsitoControllo int
+type CheckOutcome int
 
 const (
-	PRONTA EsitoControllo = iota
-	CONDIZIONI
+	PRONTA CheckOutcome = iota
+	CONDS
 	BLOCCATA
 )
 
-// VistaControllo: screen 1. With Esito == BLOCCATA and Righe filled it is «something is missing»: the lines
+// CheckView: screen 1. With Esito == BLOCCATA and Righe filled it is «something is missing»: the lines
 // with the MANCA label, and the codes; with Righe empty it is an ending (Bloccata: distribution out…).
-type VistaControllo struct {
+type CheckView struct {
 	Intestazione  string // «Fedora Linux 44 · Workstation · GNOME 50»
-	Esito         EsitoControllo
+	Esito         CheckOutcome
 	Banner, Sotto string
 	Righe         []Riga
 	Codici        []string // the RX codes of what is missing
 	Dettagli      string
-	Bloccata      *VistaBloccata // if Esito == BLOCCATA
+	Bloccata      *BlockedView // if Esito == BLOCCATA
 }
 
-// VistaBloccata: a screen that ends (not supported, stopped, cancelled).
-type VistaBloccata struct {
+// BlockedView: a screen that ends (not supported, stopped, cancelled).
+type BlockedView struct {
 	Titolo, Sotto   string
 	Perche, CheFare string
 	Serve           string // «At least Debian 13 is needed.»
@@ -69,15 +69,15 @@ type VistaBloccata struct {
 	Toccata         bool // the machine was touched (cancelled): the circle is not red but amber
 }
 
-// VistaScelte: screen 2 — the port.
-type VistaScelte struct {
+// ChoicesView: screen 2 — the port.
+type ChoicesView struct {
 	Titolo, Sotto string
 	PortaRiga     string // the line under the port (green if there is no running firewall)
 	PortaVerde    bool
 }
 
 // Passo: a line of the plan, with the engine actions it gathers.
-type Passo struct {
+type Stride struct {
 	Tipo                string // "packages" · "groups" · "service" · "other"
 	Titolo, Nota, Sotto string
 	Fatto               string // how the welcome says it
@@ -87,7 +87,7 @@ type Passo struct {
 }
 
 // Cartellino of the reversibility.
-func (p Passo) Cartellino() string {
+func (p Stride) Tag() string {
 	switch p.Rev {
 	case OK:
 		return T("rev.tutto")
@@ -99,7 +99,7 @@ func (p Passo) Cartellino() string {
 
 // VistaPiano: screen 3.
 type VistaPiano struct {
-	Passi    []Passo
+	Passi    []Stride
 	Dettagli string
 	// Pacchetti: what the manager will do (its simulation), to show before the «yes»
 	Pacchetti []motore.Artefatto
@@ -113,7 +113,7 @@ type VistaPiano struct {
 
 // ---- 1 · the check ---------------------------------------------------------------------------
 
-func nomeDistro(prof *motore.Profilo) string {
+func distroName(prof *motore.ProfileV) string {
 	id := prof.V("distro.id")
 	switch id {
 	case "debian":
@@ -139,22 +139,22 @@ func nomeDistro(prof *motore.Profilo) string {
 	return n
 }
 
-var nomiDesktop = map[string]string{"gnome": "GNOME", "kde": "KDE Plasma", "xfce": "XFCE", "lxqt": "LXQt"}
+var desktopNames = map[string]string{"gnome": "GNOME", "kde": "KDE Plasma", "xfce": "XFCE", "lxqt": "LXQt"}
 
 // NomeDesktop: the name to display.
 func NomeDesktop(d string) string {
-	if n, ok := nomiDesktop[d]; ok {
+	if n, ok := desktopNames[d]; ok {
 		return n
 	}
 	return d
 }
 
-func installato(e motore.EsitoDesktop) bool {
+func installato(e motore.DesktopOutcome) bool {
 	return e.Installato != "" && e.Installato != "absent" && e.Installato != "unknown"
 }
 
 // Intestazione: the line at the top right.
-func Intestazione(prof *motore.Profilo, rap *motore.Rapporto) string {
+func Intestazione(prof *motore.ProfileV, rap *motore.Rapporto) string {
 	if prof == nil {
 		return ""
 	}
@@ -181,15 +181,15 @@ func Intestazione(prof *motore.Profilo, rap *motore.Rapporto) string {
 			}
 		}
 	}
-	if len(ds) == 0 && rap != nil && rap.SenzaDesktop {
+	if len(ds) == 0 && rap != nil && rap.NoDesktop {
 		ds = append(ds, "no desktop")
 	}
 	return strings.Join(append(parti, ds...), " · ")
 }
 
-func condizioneDi(rap *motore.Rapporto, codice string) bool {
+func conditionOf(rap *motore.Rapporto, codice string) bool {
 	for _, e := range rap.Desktop {
-		if e.Livello == motore.NON_SUPPORTATA || !installato(e) {
+		if e.Lvl == motore.NON_SUPPORTATA || !installato(e) {
 			continue
 		}
 		for _, k := range e.Condizioni {
@@ -201,7 +201,7 @@ func condizioneDi(rap *motore.Rapporto, codice string) bool {
 	return false
 }
 
-func haMessaggio(ms []motore.Messaggio, codice string) *motore.Messaggio {
+func hasMessage(ms []motore.Messaggio, codice string) *motore.Messaggio {
 	for i := range ms {
 		if ms[i].Codice == codice {
 			return &ms[i]
@@ -210,8 +210,8 @@ func haMessaggio(ms []motore.Messaggio, codice string) *motore.Messaggio {
 	return nil
 }
 
-// nomeScheda: the card in plain words (driver and bus are in the technical details).
-func nomeScheda(prof *motore.Profilo) string {
+// cardName: the card in plain words (driver and bus are in the technical details).
+func cardName(prof *motore.ProfileV) string {
 	nodi := strings.Fields(prof.V("gpu.nodes"))
 	if len(nodi) == 0 {
 		return ""
@@ -231,27 +231,27 @@ func nomeScheda(prof *motore.Profilo) string {
 }
 
 // Controllo: screen 1 from the engine's objects.
-func VistaDelControllo(c *Controllo) *VistaControllo {
-	v := &VistaControllo{}
-	if c.Errore != nil || c.Profilo == nil || c.Rapporto == nil {
+func NewCheckView(c *Controllo) *CheckView {
+	v := &CheckView{}
+	if c.Errore != nil || c.ProfileV == nil || c.Rapporto == nil {
 		m := c.Errore
 		if m == nil {
 			x := motore.Msg("RX-UI-005", "")
 			m = &x
 		}
 		v.Esito = BLOCCATA
-		v.Bloccata = &VistaBloccata{Titolo: T("b.titolo.fiducia"), Sotto: T("b.sotto.intatta"), Perche: m.Testo,
-			CheFare: m.Rimedio, Codice: m.Codice, Dettagli: m.Dettaglio}
+		v.Bloccata = &BlockedView{Titolo: T("b.titolo.fiducia"), Sotto: T("b.sotto.intatta"), Perche: m.Testo,
+			CheFare: m.Remediation, Codice: m.Codice, Dettagli: m.Dettaglio}
 		return v
 	}
-	prof, rap, dom := c.Profilo, c.Rapporto, c.Domande
+	prof, rap, dom := c.ProfileV, c.Rapporto, c.Domande
 	v.Intestazione = Intestazione(prof, rap)
-	distro := nomeDistro(prof)
+	distro := distroName(prof)
 
 	// blocked: no possible desktop (the distribution out, too old, excluded)
 	possibili := 0
 	for _, e := range rap.Desktop {
-		if e.Livello != motore.NON_SUPPORTATA {
+		if e.Lvl != motore.NON_SUPPORTATA {
 			possibili++
 		}
 	}
@@ -259,10 +259,10 @@ func VistaDelControllo(c *Controllo) *VistaControllo {
 	// The card that does not encode (RX-GPU-*) leaves no possible desktops, but it too is «missing».
 	mancano := append([]motore.Messaggio{}, rap.Mancano...)
 	if possibili == 0 {
-		g := motivoScheda(rap)
+		g := cardReason(rap)
 		if g == nil || rap.Minima != "" {
 			v.Esito = BLOCCATA
-			v.Bloccata = vistaNonSupportata(prof, rap)
+			v.Bloccata = viewNotSupported(prof, rap)
 			return v
 		}
 		mancano = append(mancano, *g)
@@ -270,16 +270,16 @@ func VistaDelControllo(c *Controllo) *VistaControllo {
 
 	var righe []Riga
 	// system
-	piatt := strings.TrimSpace(distro + " " + prof.V("distro.version"))
-	if strings.HasPrefix(rap.Riconosciuta, strings.SplitN(motore.T("comp.nella_matrice", ""), " (", 2)[0]) {
-		righe = append(righe, Riga{T("r.sistema"), T("t.sistema.ok", piatt), OK})
+	plat := strings.TrimSpace(distro + " " + prof.V("distro.version"))
+	if strings.HasPrefix(rap.Recognized, strings.SplitN(motore.T("comp.nella_matrice", ""), " (", 2)[0]) {
+		righe = append(righe, Riga{T("r.sistema"), T("t.sistema.ok", plat), OK})
 	} else {
-		righe = append(righe, Riga{T("r.sistema"), T("t.sistema.fuori", piatt), DOPO})
+		righe = append(righe, Riga{T("r.sistema"), T("t.sistema.fuori", plat), DOPO})
 	}
 	// desktop
 	var ds []string
 	for _, e := range rap.Desktop {
-		if installato(e) && (e.Livello != motore.NON_SUPPORTATA || possibili == 0) {
+		if installato(e) && (e.Lvl != motore.NON_SUPPORTATA || possibili == 0) {
 			ds = append(ds, NomeDesktop(e.Desktop))
 		}
 	}
@@ -291,15 +291,15 @@ func VistaDelControllo(c *Controllo) *VistaControllo {
 	switch {
 	case prof.V("gpu.nvidia_proprietary") == "yes":
 		righe = append(righe, Riga{T("r.scheda"), T("t.scheda.nvidia"), DOPO})
-	case nomeScheda(prof) == "":
+	case cardName(prof) == "":
 		righe = append(righe, Riga{T("r.scheda"), T("t.scheda.nessuna"), DOPO})
 	default:
-		righe = append(righe, Riga{T("r.scheda"), T("t.scheda.ok", nomeScheda(prof)), OK})
+		righe = append(righe, Riga{T("r.scheda"), T("t.scheda.ok", cardName(prof)), OK})
 	}
 	// video: the real test is after installation (7a)
 	righe = append(righe, Riga{T("r.video"), T("t.video.ok"), DOPO})
 	// sign-in
-	if m := haMessaggio(prof.Messaggi, "RX-PAM-001"); m != nil {
+	if m := hasMessage(prof.Messages, "RX-PAM-001"); m != nil {
 		righe = append(righe, Riga{T("r.accesso"), T("t.accesso.male"), MALE})
 	} else {
 		righe = append(righe, Riga{T("r.accesso"), T("t.accesso.ok"), OK})
@@ -335,7 +335,7 @@ func VistaDelControllo(c *Controllo) *VistaControllo {
 		righe = append(righe, Riga{T("r.porta"), T("t.porta.libera", p), OK})
 	}
 	// permissions
-	switch n := len(dom.SenzaScheda); {
+	switch n := len(dom.NoCard); {
 	case n == 0:
 		righe = append(righe, Riga{T("r.permessi"), T("t.permessi.ok"), OK})
 	case n == 1:
@@ -345,16 +345,16 @@ func VistaDelControllo(c *Controllo) *VistaControllo {
 	}
 	righe = append(righe, Riga{T("r.audio"), T("t.audio"), DOPO})
 	v.Righe = righe
-	v.Dettagli = dettagliControllo(prof, rap, c.Fiducia)
+	v.Dettagli = checkDetails(prof, rap, c.Fiducia)
 
 	if len(mancano) > 0 {
 		for _, m := range mancano {
-			v.Righe = conMancanza(v.Righe, m)
+			v.Righe = withMissing(v.Righe, m)
 			v.Codici = append(v.Codici, m.Codice)
 		}
 		v.Esito = BLOCCATA
 		v.Banner, v.Sotto = T("c.manca.titolo"), T("c.manca.testo")
-		v.Bloccata = VistaMancano(mancano)
+		v.Bloccata = MissingView(mancano)
 		return v
 	}
 
@@ -362,16 +362,16 @@ func VistaDelControllo(c *Controllo) *VistaControllo {
 	case 0:
 		v.Esito, v.Banner, v.Sotto = PRONTA, T("c.ok.titolo"), ""
 	case 1:
-		v.Esito, v.Banner, v.Sotto = CONDIZIONI, T("c.cond1.titolo"), condizioni[0]
+		v.Esito, v.Banner, v.Sotto = CONDS, T("c.cond1.titolo"), condizioni[0]
 	default:
-		v.Esito, v.Banner, v.Sotto = CONDIZIONI, T("c.condN.titolo", len(condizioni)), strings.Join(condizioni, " ")
+		v.Esito, v.Banner, v.Sotto = CONDS, T("c.condN.titolo", len(condizioni)), strings.Join(condizioni, " ")
 	}
 	return v
 }
 
-// motivoScheda: the RX-GPU-* reason that leaves no possible desktops (the distribution works, the
+// cardReason: the RX-GPU-* reason that leaves no possible desktops (the distribution works, the
 // card or the driver that encodes is missing).
-func motivoScheda(rap *motore.Rapporto) *motore.Messaggio {
+func cardReason(rap *motore.Rapporto) *motore.Messaggio {
 	for _, e := range rap.Desktop {
 		for i := range e.Motivi {
 			if strings.HasPrefix(e.Motivi[i].Codice, "RX-GPU-") {
@@ -379,16 +379,16 @@ func motivoScheda(rap *motore.Rapporto) *motore.Messaggio {
 			}
 		}
 	}
-	for i := range rap.Messaggi {
-		if strings.HasPrefix(rap.Messaggi[i].Codice, "RX-GPU-") && rap.Messaggi[i].Gravita == motore.BLOCCANTE {
-			return &rap.Messaggi[i]
+	for i := range rap.Messages {
+		if strings.HasPrefix(rap.Messages[i].Codice, "RX-GPU-") && rap.Messages[i].Gravita == motore.BLOCCANTE {
+			return &rap.Messages[i]
 		}
 	}
 	return nil
 }
 
-// etichettaMancanza: in which line of the check what is missing goes.
-func etichettaMancanza(codice string) string {
+// labelForMissing: in which line of the check what is missing goes.
+func labelForMissing(codice string) string {
 	switch {
 	case strings.HasPrefix(codice, "RX-GPU-"):
 		return T("r.scheda")
@@ -402,10 +402,10 @@ func etichettaMancanza(codice string) string {
 	return T("r.pacchetto")
 }
 
-// conMancanza: the line of what is missing takes the place of the line with the same label (the
+// withMissing: the line of what is missing takes the place of the line with the same label (the
 // «OK» card becomes «missing»), or is added after the desktop.
-func conMancanza(righe []Riga, m motore.Messaggio) []Riga {
-	et := etichettaMancanza(m.Codice)
+func withMissing(righe []Riga, m motore.Messaggio) []Riga {
+	et := labelForMissing(m.Codice)
 	t := T("m." + m.Codice)
 	if strings.HasPrefix(t, "⟨") {
 		t = strings.TrimPrefix(m.Testo, "Missing: ")
@@ -430,12 +430,12 @@ func conMancanza(righe []Riga, m motore.Messaggio) []Riga {
 	return append(righe[:pos], append([]Riga{r}, righe[pos:]...)...)
 }
 
-func dettagliControllo(prof *motore.Profilo, rap *motore.Rapporto, fid *motore.Fiducia) string {
+func checkDetails(prof *motore.ProfileV, rap *motore.Rapporto, fid *motore.Fiducia) string {
 	var d []string
-	d = append(d, prof.V("distro.name"), rap.Riconosciuta)
+	d = append(d, prof.V("distro.name"), rap.Recognized)
 	for _, e := range rap.Desktop {
 		if installato(e) {
-			d = append(d, e.Desktop+" "+e.Installato+" "+e.Livello)
+			d = append(d, e.Desktop+" "+e.Installato+" "+e.Lvl)
 		}
 	}
 	for _, n := range strings.Fields(prof.V("gpu.nodes")) {
@@ -447,7 +447,7 @@ func dettagliControllo(prof *motore.Profilo, rap *motore.Rapporto, fid *motore.F
 		}
 	}
 	visti := map[string]bool{}
-	for _, m := range append(append([]motore.Messaggio{}, prof.Messaggi...), rap.Messaggi...) {
+	for _, m := range append(append([]motore.Messaggio{}, prof.Messages...), rap.Messages...) {
 		if !visti[m.Codice] {
 			visti[m.Codice] = true
 			d = append(d, m.Codice)
@@ -464,7 +464,7 @@ func dettagliControllo(prof *motore.Profilo, rap *motore.Rapporto, fid *motore.F
 		}
 	}
 	if fid != nil {
-		d = append(d, fmt.Sprintf("catalog %s", rap.Catalogo.Versione), "engine "+motore.VersioneMotore)
+		d = append(d, fmt.Sprintf("catalog %s", rap.Catalogo.Ver), "engine "+motore.VersioneMotore)
 	}
 	var r []string
 	for _, x := range d {
@@ -475,9 +475,9 @@ func dettagliControllo(prof *motore.Profilo, rap *motore.Rapporto, fid *motore.F
 	return strings.Join(r, " · ")
 }
 
-func vistaNonSupportata(prof *motore.Profilo, rap *motore.Rapporto) *VistaBloccata {
-	distro := nomeDistro(prof)
-	b := &VistaBloccata{Sotto: T("b.sotto.intatta")}
+func viewNotSupported(prof *motore.ProfileV, rap *motore.Rapporto) *BlockedView {
+	distro := distroName(prof)
+	b := &BlockedView{Sotto: T("b.sotto.intatta")}
 	var motivo *motore.Messaggio
 	for _, e := range rap.Desktop {
 		if len(e.Motivi) > 0 {
@@ -486,9 +486,9 @@ func vistaNonSupportata(prof *motore.Profilo, rap *motore.Rapporto) *VistaBlocca
 		}
 	}
 	if motivo == nil {
-		for i := range rap.Messaggi {
-			if rap.Messaggi[i].Gravita == motore.BLOCCANTE {
-				motivo = &rap.Messaggi[i]
+		for i := range rap.Messages {
+			if rap.Messages[i].Gravita == motore.BLOCCANTE {
+				motivo = &rap.Messages[i]
 				break
 			}
 		}
@@ -510,9 +510,9 @@ func vistaNonSupportata(prof *motore.Profilo, rap *motore.Rapporto) *VistaBlocca
 	}
 	if motivo != nil {
 		b.Codice = motivo.Codice
-		b.Dettagli = strings.TrimSpace(motivo.Dettaglio + " " + motivo.Rimedio)
-		if motivo.Rimedio != "" {
-			b.CheFare = motivo.Rimedio + " " + T("b.rilancia")
+		b.Dettagli = strings.TrimSpace(motivo.Dettaglio + " " + motivo.Remediation)
+		if motivo.Remediation != "" {
+			b.CheFare = motivo.Remediation + " " + T("b.rilancia")
 		}
 	}
 	if rap.Minima != "" {
@@ -521,13 +521,13 @@ func vistaNonSupportata(prof *motore.Profilo, rap *motore.Rapporto) *VistaBlocca
 	if b.CheFare == "" {
 		b.CheFare = T("b.versioni")
 	}
-	b.Dettagli = strings.TrimSpace(rap.Piattaforma + " · " + rap.Riconosciuta + " · " + b.Dettagli)
+	b.Dettagli = strings.TrimSpace(rap.PlatformV + " · " + rap.Recognized + " · " + b.Dettagli)
 	return b
 }
 
-// VistaMancano: the «something is missing» screen — what, without saying how to provide it (§10.36).
-func VistaMancano(m []motore.Messaggio) *VistaBloccata {
-	b := &VistaBloccata{Titolo: T("b.titolo.manca"), Sotto: T("b.sotto.intatta"), CheFare: T("b.manca.chefare")}
+// MissingView: the «something is missing» screen — what, without saying how to provide it (§10.36).
+func MissingView(m []motore.Messaggio) *BlockedView {
+	b := &BlockedView{Titolo: T("b.titolo.manca"), Sotto: T("b.sotto.intatta"), CheFare: T("b.manca.chefare")}
 	var r, cod []string
 	for _, x := range m {
 		r = append(r, strings.TrimSpace(x.Testo+" "+x.Dettaglio))
@@ -540,11 +540,11 @@ func VistaMancano(m []motore.Messaggio) *VistaBloccata {
 
 // ---- 2 · the choices -------------------------------------------------------------------------
 
-// VistaDelleScelte: screen 2 — a single question, the port (§10.36: no repositories, firewalls or
+// NewChoicesView: screen 2 — a single question, the port (§10.36: no repositories, firewalls or
 // desktops to choose).
-func VistaDelleScelte(c *Controllo) *VistaScelte {
+func NewChoicesView(c *Controllo) *ChoicesView {
 	dom := c.Domande
-	v := &VistaScelte{Titolo: T("sc.titolo.1"), Sotto: T("sc.sotto")}
+	v := &ChoicesView{Titolo: T("sc.titolo.1"), Sotto: T("sc.sotto")}
 	if dom.Firewall == "none" {
 		v.PortaRiga, v.PortaVerde = T("sc.fw.nessuno"), true
 	} else {
@@ -561,8 +561,8 @@ func numero(n int) string {
 	return en[n]
 }
 
-// PortaValida: the number written in the box.
-func PortaValida(s string) (int, bool) {
+// ValidPort: the number written in the box.
+func ValidPort(s string) (int, bool) {
 	p, err := strconv.Atoi(strings.TrimSpace(s))
 	return p, err == nil && p >= 1 && p <= 65535
 }
@@ -600,9 +600,9 @@ func elenco(nomi []string) string {
 func VistaDelPiano(p *motore.Piano) *VistaPiano {
 	v := &VistaPiano{}
 	gruppo := map[string]int{}
-	var utentiGruppi []string
+	var usersGroups []string
 	visti := map[string]bool{}
-	metti := func(chiave string, crea func() Passo, a motore.AzionePiano) {
+	metti := func(chiave string, crea func() Stride, a motore.AzionePiano) {
 		i, ok := gruppo[chiave]
 		if !ok {
 			v.Passi = append(v.Passi, crea())
@@ -617,51 +617,51 @@ func VistaDelPiano(p *motore.Piano) *VistaPiano {
 	for _, a := range p.Azioni {
 		switch {
 		case a.Tipo == "install-packages":
-			metti("packages", func() Passo {
-				return Passo{Tipo: "packages", Titolo: T("a.pacchetti"), Sotto: T("a.pacchetti.t"), Fatto: T("a.pacchetti.f"), Breve: T("a.pacchetti.b")}
+			metti("packages", func() Stride {
+				return Stride{Tipo: "packages", Titolo: T("a.pacchetti"), Sotto: T("a.pacchetti.t"), Fatto: T("a.pacchetti.f"), Breve: T("a.pacchetti.b")}
 			}, a)
 		case a.Tipo == "add-user-to-group":
 			if u := a.Parametri["user"]; !visti[u] {
 				visti[u] = true
-				utentiGruppi = append(utentiGruppi, u)
+				usersGroups = append(usersGroups, u)
 			}
 			if g := a.Parametri["group"]; !visti["group:"+g] {
 				visti["group:"+g] = true
 				v.Gruppi = append(v.Gruppi, g)
 			}
-			metti("gruppi", func() Passo { return Passo{Tipo: "groups"} }, a)
+			metti("gruppi", func() Stride { return Stride{Tipo: "groups"} }, a)
 		case a.Tipo == "start-service":
 			porta = a.Parametri["port"]
-			metti(a.ID, func() Passo {
-				return Passo{Tipo: "service", Titolo: T("a.servizio", porta), Sotto: T("a.servizio.t"), Fatto: T("a.servizio.f", porta), Breve: T("a.servizio.b")}
+			metti(a.ID, func() Stride {
+				return Stride{Tipo: "service", Titolo: T("a.servizio", porta), Sotto: T("a.servizio.t"), Fatto: T("a.servizio.f", porta), Breve: T("a.servizio.b")}
 			}, a)
 		default:
-			metti(a.ID, func() Passo {
+			metti(a.ID, func() Stride {
 				d := a.Descrizione
 				if d != "" {
 					d = strings.ToUpper(d[:1]) + d[1:]
 				}
-				return Passo{Tipo: "other", Titolo: d, Fatto: d, Breve: d}
+				return Stride{Tipo: "other", Titolo: d, Fatto: d, Breve: d}
 			}, a)
 		}
 	}
 	if i, ok := gruppo["gruppi"]; ok {
-		chi := elenco(utentiGruppi)
+		chi := elenco(usersGroups)
 		f := T("a.gruppi.f", chi)
-		if len(utentiGruppi) > 1 {
+		if len(usersGroups) > 1 {
 			f = T("a.gruppi.fn", chi)
 		}
 		v.Passi[i].Titolo, v.Passi[i].Sotto, v.Passi[i].Fatto = T("a.gruppi", chi), T("a.gruppi.t"), f
 		v.Passi[i].Breve = T("a.gruppi.b", chi, strings.Join(v.Gruppi, ", "))
 	}
-	v.Utenti, v.Porta = utentiGruppi, porta
+	v.Utenti, v.Porta = usersGroups, porta
 	// the details: every engine action with its type, its undo and the fingerprint
 	var d []string
 	for _, a := range p.Azioni {
 		d = append(d, a.ID+" ("+a.Tipo+", "+string(a.Reversibilita)+")")
 	}
 	d = append(d, "plan "+p.ID, "fingerprint "+short(p.Impronta.Digest), "digest "+short(p.Digest()))
-	for _, m := range p.NonFatto {
+	for _, m := range p.NotDone {
 		d = append(d, strings.TrimSpace(m.Codice+" "+m.Testo))
 	}
 	v.Dettagli = strings.Join(d, " · ")
@@ -682,27 +682,27 @@ func short(s string) string {
 
 // ---- 4 · the progress ------------------------------------------------------------------------
 
-// StatoRiga of the progress.
-type StatoRiga int
+// LineState of the progress.
+type LineState int
 
 const (
-	ATTESA StatoRiga = iota
-	INCORSO
+	ATTESA LineState = iota
+	IN_PROGRESS
 	FATTA
 	FALLITA
 	ANNULLATA
 )
 
-// RigaAv: a line of the progress.
-type RigaAv struct {
+// LineAv: a line of the progress.
+type LineAv struct {
 	Testo string
-	Stato StatoRiga
+	Stato LineState
 }
 
 // Avanzamento: the state of screen 4, updated by the engine's events (§6.6.1).
 type Avanzamento struct {
-	Righe    []RigaAv
-	passi    []Passo
+	Righe    []LineAv
+	passi    []Stride
 	azione   map[string]int // action id → step index
 	fatte    map[string]bool
 	Stato    motore.Stato
@@ -710,22 +710,22 @@ type Avanzamento struct {
 	Annulla  bool // undoing in progress
 }
 
-// NuovoAvanzamento: the lines from the plan's steps, plus the trust, the plan and the verification.
-func NuovoAvanzamento(vp *VistaPiano) *Avanzamento {
+// NewProgress: the lines from the plan's steps, plus the trust, the plan and the verification.
+func NewProgress(vp *VistaPiano) *Avanzamento {
 	a := &Avanzamento{passi: vp.Passi, azione: map[string]int{}, fatte: map[string]bool{}}
-	a.Righe = append(a.Righe, RigaAv{Testo: T("av.fiducia")}, RigaAv{Testo: T("av.piano")})
+	a.Righe = append(a.Righe, LineAv{Testo: T("av.fiducia")}, LineAv{Testo: T("av.piano")})
 	for i, p := range vp.Passi {
-		a.Righe = append(a.Righe, RigaAv{Testo: p.Breve})
+		a.Righe = append(a.Righe, LineAv{Testo: p.Breve})
 		for _, id := range p.Azioni {
 			a.azione[id] = i
 		}
 	}
-	a.Righe = append(a.Righe, RigaAv{Testo: T("av.verifica")})
+	a.Righe = append(a.Righe, LineAv{Testo: T("av.verifica")})
 	return a
 }
 
 // Evento: an engine event.
-func (a *Avanzamento) Evento(ev motore.EventoPubblico) {
+func (a *Avanzamento) Evento(ev motore.PublicEvent) {
 	riga := ev.Evento
 	switch ev.Evento {
 	case "state":
@@ -736,30 +736,30 @@ func (a *Avanzamento) Evento(ev motore.EventoPubblico) {
 		a.Stato = ev.A
 		switch ev.A {
 		case motore.NUOVA:
-			a.Righe[0].Stato = INCORSO
+			a.Righe[0].Stato = IN_PROGRESS
 		case motore.FIDATA:
 			a.Righe[0].Stato = FATTA
-			a.Righe[1].Stato = INCORSO
+			a.Righe[1].Stato = IN_PROGRESS
 		case motore.PIANIFICATA:
 			a.Righe[1].Stato = FATTA
 		case motore.IN_ESECUZIONE:
 			if len(a.Righe) > 3 && a.Righe[2].Stato == ATTESA {
-				a.Righe[2].Stato = INCORSO
+				a.Righe[2].Stato = IN_PROGRESS
 			}
 		case motore.IN_VERIFICA:
-			a.Righe[len(a.Righe)-1].Stato = INCORSO
+			a.Righe[len(a.Righe)-1].Stato = IN_PROGRESS
 		case motore.VERIFICATA, motore.CONFERMATA, motore.CONFERMATA_A_CONDIZIONI:
 			a.Righe[len(a.Righe)-1].Stato = FATTA
 		case motore.IN_ANNULLAMENTO:
 			a.Annulla = true
 			for i := range a.Righe {
-				if a.Righe[i].Stato == INCORSO {
+				if a.Righe[i].Stato == IN_PROGRESS {
 					a.Righe[i].Stato = FALLITA
 				}
 			}
 		case motore.BLOCCATA, motore.RIFIUTATA:
 			for i := range a.Righe {
-				if a.Righe[i].Stato == INCORSO {
+				if a.Righe[i].Stato == IN_PROGRESS {
 					a.Righe[i].Stato = FALLITA
 				}
 			}
@@ -767,7 +767,7 @@ func (a *Avanzamento) Evento(ev motore.EventoPubblico) {
 	case "action":
 		riga = "   " + ev.Azione + ": " + ev.Fase
 		if ev.Dettaglio != "" {
-			riga += " (" + tronca(ev.Dettaglio, 160) + ")"
+			riga += " (" + truncate(ev.Dettaglio, 160) + ")"
 		}
 		i, ok := a.azione[ev.Azione]
 		if !ok {
@@ -777,7 +777,7 @@ func (a *Avanzamento) Evento(ev motore.EventoPubblico) {
 		switch ev.Fase {
 		case "INTENT", "RESUMED":
 			if !a.Annulla {
-				r.Stato = INCORSO
+				r.Stato = IN_PROGRESS
 			}
 		case "DONE":
 			a.fatte[ev.Azione] = true
@@ -789,7 +789,7 @@ func (a *Avanzamento) Evento(ev motore.EventoPubblico) {
 				r.Stato = FATTA
 				// the next step starts now (its INTENTION arrives when downloading is over)
 				if n := i + 3; n < len(a.Righe)-1 && a.Righe[n].Stato == ATTESA && !a.Annulla {
-					a.Righe[n].Stato = INCORSO
+					a.Righe[n].Stato = IN_PROGRESS
 				}
 			}
 		case "FAILED":
@@ -804,12 +804,12 @@ func (a *Avanzamento) Evento(ev motore.EventoPubblico) {
 			riga = "   [" + ev.Messaggio.Codice + "] " + ev.Messaggio.Testo
 		}
 	case "object":
-		riga = "   " + ev.Oggetto + ": " + ev.Percorso
+		riga = "   " + ev.Obj + ": " + ev.RoutePath
 	}
 	a.Registro = append(a.Registro, riga)
 }
 
-func tronca(s string, n int) string {
+func truncate(s string, n int) string {
 	r := []rune(s)
 	if len(r) <= n {
 		return s
@@ -818,7 +818,7 @@ func tronca(s string, n int) string {
 }
 
 // Punto: the step in progress («Step 4 of 7 · installing REMOTIX») and the percentage.
-func (a *Avanzamento) Punto() (string, int) {
+func (a *Avanzamento) Spot() (string, int) {
 	tot := len(a.Righe)
 	fatte := 0
 	cur := -1
@@ -826,7 +826,7 @@ func (a *Avanzamento) Punto() (string, int) {
 		if r.Stato == FATTA || r.Stato == ANNULLATA {
 			fatte++
 		}
-		if r.Stato == INCORSO && cur < 0 {
+		if r.Stato == IN_PROGRESS && cur < 0 {
 			cur = i
 		}
 	}
@@ -849,8 +849,8 @@ func (a *Avanzamento) Punto() (string, int) {
 
 // ---- 5 · ready, and the other endings --------------------------------------------------------
 
-// VistaPronto: screen 5.
-type VistaPronto struct {
+// ReadyView: screen 5.
+type ReadyView struct {
 	Sotto      string
 	Router     string // D6: the port to forward on the router, TCP and UDP
 	Indirizzo  string
@@ -863,26 +863,26 @@ type VistaPronto struct {
 	DaFare []string
 }
 
-// VistaDelPronto: from the certificate, from the plan (the steps done) and from the outcome.
-func VistaDelPronto(es *Esito, vp *VistaPiano, porta int) *VistaPronto {
-	v := &VistaPronto{Sotto: T("pr.sotto")}
+// NewReadyView: from the certificate, from the plan (the steps done) and from the outcome.
+func NewReadyView(es *Esito, vp *VistaPiano, porta int) *ReadyView {
+	v := &ReadyView{Sotto: T("pr.sotto")}
 	ind := "[indirizzo]"
 	if len(es.Indirizzi) > 0 {
 		ind = es.Indirizzi[0]
 	}
 	v.Indirizzo = fmt.Sprintf("https://%s:%d/", ind, porta)
 	v.Router = T("pr.router", porta, ind)
-	v.Impronta = es.ImprontaTLS
+	v.Impronta = es.FingerprintTLS
 	for _, p := range vp.Passi {
 		v.Cambiato = append(v.Cambiato, p.Fatto)
 	}
 	c := es.Certificato
 	if c != nil {
-		passi, passiOK := 0, 0
-		idPassi := map[string]bool{}
+		passi, stepsOK := 0, 0
+		stepsId := map[string]bool{}
 		for _, p := range vp.Passi {
 			for _, id := range p.Azioni {
-				idPassi[id] = true
+				stepsId[id] = true
 			}
 		}
 		esito := func(e string) (string, Stato) {
@@ -895,7 +895,7 @@ func VistaDelPronto(es *Esito, vp *VistaPiano, porta int) *VistaPronto {
 			return T("pr.nonsi"), IGNOTO
 		}
 		var altre []Riga
-		for _, k := range c.Controlli {
+		for _, k := range c.Verifications {
 			if k.Esito == "N.A." {
 				continue
 			}
@@ -920,10 +920,10 @@ func VistaDelPronto(es *Esito, vp *VistaPiano, porta int) *VistaPronto {
 				default:
 					v.DaFare = append(v.DaFare, T("pr.todo.ignota", porta, dove))
 				}
-			case idPassi[k.ID]:
+			case stepsId[k.ID]:
 				passi++
 				if k.Esito == "PASS" {
-					passiOK++
+					stepsOK++
 				}
 			}
 		}
@@ -931,19 +931,19 @@ func VistaDelPronto(es *Esito, vp *VistaPiano, porta int) *VistaPronto {
 		if passi > 0 {
 			s := OK
 			t := T("pr.riuscita")
-			if passiOK < passi {
+			if stepsOK < passi {
 				s, t = MALE, T("pr.fallita")
 			}
-			v.Prove = append(v.Prove, Riga{T("pr.k.passi", passiOK, passi), t, s})
+			v.Prove = append(v.Prove, Riga{T("pr.k.passi", stepsOK, passi), t, s})
 		}
 		for _, k := range c.Condizioni {
 			if k.Codice == "C-AMMINISTRATORE" { // the port: it goes in DaFare, stated in full
 				continue
 			}
-			v.Condizioni = append(v.Condizioni, CondizioneComune(k.Codice))
+			v.Condizioni = append(v.Condizioni, CommonCondition(k.Codice))
 		}
-		v.Dettagli = strings.Join([]string{es.Cartella + "/certificate.json", "catalog " + c.Catalogo.Versione,
-			"engine " + c.Motore.Versione, string(c.Stato)}, " · ")
+		v.Dettagli = strings.Join([]string{es.Cartella + "/certificate.json", "catalog " + c.Catalogo.Ver,
+			"engine " + c.Motore.Ver, string(c.Stato)}, " · ")
 		for _, k := range c.Condizioni {
 			v.Dettagli += " · " + k.Codice + ": " + k.Testo
 		}
@@ -955,18 +955,18 @@ func VistaDelPronto(es *Esito, vp *VistaPiano, porta int) *VistaPronto {
 	return v
 }
 
-// CondizioneComune: a condition of the certificate in plain words (the engine's text, technical,
+// CommonCondition: a condition of the certificate in plain words (the engine's text, technical,
 // is in the details).
-func CondizioneComune(codice string) string {
+func CommonCondition(codice string) string {
 	if _, ok := testi["cond."+codice]; ok {
 		return T("cond." + codice)
 	}
 	return T("cond.altra")
 }
 
-// VistaDellaFine: the endings that are not «ready» (BLOCCATA, RIFIUTATA, ANNULLATA…).
-func VistaDellaFine(es *Esito, registro []string) *VistaBloccata {
-	b := &VistaBloccata{}
+// NewEndView: the endings that are not «ready» (BLOCCATA, RIFIUTATA, ANNULLATA…).
+func NewEndView(es *Esito, registro []string) *BlockedView {
+	b := &BlockedView{}
 	var m *motore.Messaggio
 	if es.Errore != nil {
 		m = es.Errore
@@ -984,14 +984,14 @@ func VistaDellaFine(es *Esito, registro []string) *VistaBloccata {
 	default:
 		b.Titolo, b.Sotto = T("b.titolo.interrotta"), T("b.sotto.interrotta")
 	}
-	if m == nil && es.Certificato != nil && len(es.Certificato.Resti) > 0 {
-		b.Perche = strings.Join(es.Certificato.Resti, "; ")
+	if m == nil && es.Certificato != nil && len(es.Certificato.Remainders) > 0 {
+		b.Perche = strings.Join(es.Certificato.Remainders, "; ")
 	}
 	if m != nil {
 		if strings.HasPrefix(m.Codice, "RX-MANCA-") {
 			b.Titolo = T("b.titolo.manca")
 		}
-		b.Perche, b.CheFare, b.Codice = m.Testo, m.Rimedio, m.Codice
+		b.Perche, b.CheFare, b.Codice = m.Testo, m.Remediation, m.Codice
 		b.Dettagli = m.Dettaglio
 	}
 	if es.Cartella != "" {
@@ -1003,16 +1003,16 @@ func VistaDellaFine(es *Esito, registro []string) *VistaBloccata {
 // BloccoNelPiano: what is missing, already in the plan (the manager's simulation that does not resolve, for
 // example), to state at once instead of asking to confirm a plan the engine will refuse.
 func BloccoNelPiano(p *motore.Piano) *motore.Messaggio {
-	for i := range p.NonFatto {
-		if p.NonFatto[i].Gravita == motore.BLOCCANTE {
-			return &p.NonFatto[i]
+	for i := range p.NotDone {
+		if p.NotDone[i].Gravita == motore.BLOCCANTE {
+			return &p.NotDone[i]
 		}
 	}
 	return nil
 }
 
-// UltimoMessaggio: the most recent BLOCKING message among the events (to say why).
-func UltimoMessaggio(evs []motore.EventoPubblico) *motore.Messaggio {
+// LastMessage: the most recent BLOCKING message among the events (to say why).
+func LastMessage(evs []motore.PublicEvent) *motore.Messaggio {
 	for i := len(evs) - 1; i >= 0; i-- {
 		if m := evs[i].Messaggio; m != nil && m.Gravita == motore.BLOCCANTE {
 			return m

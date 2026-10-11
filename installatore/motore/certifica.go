@@ -27,14 +27,14 @@ func ControlliPiattaforma(a *Ambiente, porta int) (k []Controllo, cond []Condizi
 	if c.Esito == "FAIL" {
 		fallito = true
 	}
-	p := controllaPAM(a)
+	p := checkPAM(a)
 	k = append(k, p)
 	if p.Esito == "FAIL" {
 		fallito = true
 	} else if p.Esito == "UNKNOWN" {
 		cond = append(cond, Condizione{Codice: "C-LIMITE", Testo: T("cond.pam_ignota", p.Dettaglio)})
 	}
-	f, fc := controllaPorta(a, porta)
+	f, fc := checkPort(a, porta)
 	k = append(k, f)
 	if fc != nil {
 		cond = append(cond, *fc)
@@ -42,13 +42,13 @@ func ControlliPiattaforma(a *Ambiente, porta int) (k []Controllo, cond []Condizi
 	return
 }
 
-var cartelleModuliPAM = []string{"/usr/lib/security", "/usr/lib64/security", "/lib/security", "/lib64/security",
+var pamModuleDirs = []string{"/usr/lib/security", "/usr/lib64/security", "/lib/security", "/lib64/security",
 	"/usr/lib/x86_64-linux-gnu/security", "/lib/x86_64-linux-gnu/security", "/usr/lib/aarch64-linux-gnu/security"}
 
-// controllaPAM follows the stack from /etc/pam.d/remotix (or /usr/lib/pam.d/remotix).
-func controllaPAM(a *Ambiente) Controllo {
+// checkPAM follows the stack from /etc/pam.d/remotix (or /usr/lib/pam.d/remotix).
+func checkPAM(a *Ambiente) Controllo {
 	k := Controllo{ID: "pam-resolved", Cosa: T("ver.pam"), Richiesto: true}
-	f := trovaPam(a, "remotix")
+	f := findPam(a, "remotix")
 	if f == "" {
 		k.Esito, k.Dettaglio = "FAIL", "the remotix file is missing in /etc/pam.d and /usr/lib/pam.d"
 		return k
@@ -74,7 +74,7 @@ func controllaPAM(a *Ambiente) Controllo {
 			}
 			c := strings.Fields(riga)
 			if c[0] == "@include" && len(c) > 1 {
-				g := trovaPam(a, c[1])
+				g := findPam(a, c[1])
 				if g == "" {
 					guasto = file + ": @include " + c[1] + " is missing"
 					return
@@ -100,7 +100,7 @@ func controllaPAM(a *Ambiente) Controllo {
 				continue
 			}
 			if controllo == "include" || controllo == "substack" {
-				g := trovaPam(a, resto[0])
+				g := findPam(a, resto[0])
 				if g == "" {
 					guasto = file + ": " + controllo + " " + resto[0] + " is missing"
 					return
@@ -110,7 +110,7 @@ func controllaPAM(a *Ambiente) Controllo {
 			}
 			mod := resto[0]
 			facoltativo := strings.HasPrefix(c[0], "-") // «-session»: the module may be missing
-			if !moduloPAM(a, mod) && !facoltativo {
+			if !pamModule(a, mod) && !facoltativo {
 				guasto = file + ": the module " + mod + " is missing"
 				return
 			}
@@ -126,12 +126,12 @@ func controllaPAM(a *Ambiente) Controllo {
 	return k
 }
 
-func moduloPAM(a *Ambiente, m string) bool {
+func pamModule(a *Ambiente, m string) bool {
 	if filepath.IsAbs(m) {
 		_, err := os.Stat(a.P(m))
 		return err == nil
 	}
-	for _, c := range cartelleModuliPAM {
+	for _, c := range pamModuleDirs {
 		if _, err := os.Stat(a.P(filepath.Join(c, m))); err == nil {
 			return true
 		}
@@ -139,7 +139,7 @@ func moduloPAM(a *Ambiente, m string) bool {
 	return false
 }
 
-func controllaPorta(a *Ambiente, porta int) (Controllo, *Condizione) {
+func checkPort(a *Ambiente, porta int) (Controllo, *Condizione) {
 	ps := strconv.Itoa(porta)
 	k := Controllo{ID: "firewall-port", Cosa: T("ver.porta", ps), Richiesto: false}
 	if a.Firewall == nil {
@@ -151,21 +151,21 @@ func controllaPorta(a *Ambiente, porta int) (Controllo, *Condizione) {
 		k.Esito, k.Dettaglio = "PASS", T("ver.porta_nessuno")
 		return k, nil
 	case "firewalld":
-		zona, err := a.Firewall.ZonaPredefinita()
+		zona, err := a.Firewall.DefaultZone()
 		if err != nil {
 			k.Esito, k.Dettaglio = "UNKNOWN", err.Error()
 			return k, &Condizione{Codice: "C-AMMINISTRATORE", Testo: T("cond.porta_ignota", ps)}
 		}
 		var chiuse []string
 		for _, proto := range []string{"tcp", "udp"} {
-			ok, err := a.Firewall.HaPorta(zona, ps+"/"+proto, false)
+			ok, err := a.Firewall.HasPort(zona, ps+"/"+proto, false)
 			if err != nil {
 				k.Esito, k.Dettaglio = "UNKNOWN", err.Error()
 				return k, &Condizione{Codice: "C-AMMINISTRATORE", Testo: T("cond.porta_ignota", ps)}
 			}
 			if !ok {
 				if fw, isD := a.Firewall.(*firewalldDBus); isD {
-					if porte, err := fw.PorteVive(zona); err == nil && portaInIntervalli(porte, porta, proto) {
+					if porte, err := fw.LivePorts(zona); err == nil && portInRanges(porte, porta, proto) {
 						continue
 					}
 				}
@@ -187,17 +187,17 @@ func controllaPorta(a *Ambiente, porta int) (Controllo, *Condizione) {
 // Certificazione: the report of `remotix-install certifica` (§6.6.11: the checks are redone
 // on the confirmed installation, and it says what is still as it was then).
 type Certificazione struct {
-	Formato    string       `json:"format"`
-	Oggetto    string       `json:"object"` // "certification"
-	Operazione string       `json:"operation"`
-	Controlli  []Controllo  `json:"checks"`
-	Condizioni []Condizione `json:"conditions"`
-	Esito      string       `json:"result"` // VERDE · A_CONDIZIONI · ROSSO
+	Formato       string       `json:"format"`
+	Obj           string       `json:"object"` // "certification"
+	Operazione    string       `json:"operation"`
+	Verifications []Controllo  `json:"checks"`
+	Condizioni    []Condizione `json:"conditions"`
+	Esito         string       `json:"result"` // VERDE · A_CONDIZIONI · ROSSO
 }
 
 // Certifica redoes, read-only, the checks of the confirmed installation.
 func (m *Motore) Certifica() (*Certificazione, error) {
-	in, err := m.ControllaInstallazione()
+	in, err := m.CheckInstallation()
 	if err != nil {
 		return nil, err
 	}
@@ -206,22 +206,22 @@ func (m *Motore) Certifica() (*Certificazione, error) {
 	if err := LeggiJSON(filepath.Join(dir, "plan.json"), &pn); err != nil {
 		return nil, err
 	}
-	ev, err := LeggiRegistro(filepath.Join(dir, "log.jsonl"))
+	ev, err := ReadLog(filepath.Join(dir, "log.jsonl"))
 	if err != nil {
 		return nil, err
 	}
-	r := &Certificazione{Formato: Formato, Oggetto: "certification", Operazione: in.Operazione, Condizioni: []Condizione{}}
+	r := &Certificazione{Formato: Formato, Obj: "certification", Operazione: in.Operazione, Condizioni: []Condizione{}}
 	rosso := false
 	for _, ap := range pn.Azioni {
 		var intz *Evento
 		for i := range ev {
-			if ev[i].Azione == ap.ID && ev[i].Tipo == EvIntenzione {
+			if ev[i].Azione == ap.ID && ev[i].Tipo == EvIntent {
 				intz = &ev[i]
 				break
 			}
 		}
-		k := Controllo{ID: ap.ID, Cosa: ap.ComeSiVerifica, Richiesto: true}
-		a, err := NuovaAzione(ap)
+		k := Controllo{ID: ap.ID, Cosa: ap.HowToVerify, Richiesto: true}
+		a, err := NewAction(ap)
 		switch {
 		case err != nil || intz == nil:
 			k.Esito, k.Dettaglio = "UNKNOWN", "no intention in the log"
@@ -237,25 +237,25 @@ func (m *Motore) Certifica() (*Certificazione, error) {
 				rosso = true
 			}
 		}
-		r.Controlli = append(r.Controlli, k)
+		r.Verifications = append(r.Verifications, k)
 	}
 	porta := m.Porta
 	if porta == 0 {
 		porta = 7447
 	}
 	k, cond, fallito := ControlliPiattaforma(m.Amb, porta)
-	r.Controlli = append(r.Controlli, k...)
+	r.Verifications = append(r.Verifications, k...)
 	r.Condizioni = append(r.Condizioni, cond...)
-	tuttiPass := true
-	for _, x := range r.Controlli {
+	allPass := true
+	for _, x := range r.Verifications {
 		if x.Esito != "PASS" {
-			tuttiPass = false
+			allPass = false
 		}
 	}
 	switch {
 	case rosso || fallito:
 		r.Esito = "RED"
-	case tuttiPass && len(r.Condizioni) == 0:
+	case allPass && len(r.Condizioni) == 0:
 		r.Esito = "GREEN"
 	default:
 		r.Esito = "CONDITIONAL" // ⛔ UNKNOWN is never PASS, a condition is never green (R29, R32)

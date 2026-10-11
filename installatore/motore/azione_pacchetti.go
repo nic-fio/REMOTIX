@@ -26,23 +26,23 @@ import (
 // parameters: file (paths of the .run's packages, comma-separated: a single transaction),
 // names (comma-separated, from the machine's repositories).
 
-func init() { registraTipo("install-packages", nuovaPacchetti) }
+func init() { registraTipo("install-packages", newPackages) }
 
-// PianoPacchetti prepares the plan's step.
-func PianoPacchetti(id, file, nomi string) AzionePiano {
+// PlanPackages prepares the plan's step.
+func PlanPackages(id, file, nomi string) AzionePiano {
 	var basi []string
-	for _, f := range dividiVirgole(file) {
+	for _, f := range splitCommas(file) {
 		basi = append(basi, filepath.Base(f))
 	}
 	cosa := strings.TrimSpace(strings.Join(basi, " ") + " " + nomi)
 	return AzionePiano{
 		ID: id, Tipo: "install-packages",
-		Parametri:      map[string]string{"file": file, "names": nomi},
-		Descrizione:    T("az.pacchetti", cosa),
-		ComeSiFa:       T("az.pacchetti.fa"),
-		ComeSiVerifica: T("az.pacchetti.verifica"),
-		ComeSiAnnulla:  T("az.pacchetti.annulla"),
-		Reversibilita:  AL_MEGLIO,
+		Parametri:     map[string]string{"file": file, "names": nomi},
+		Descrizione:   T("az.pacchetti", cosa),
+		ComeSiFa:      T("az.pacchetti.fa"),
+		HowToVerify:   T("az.pacchetti.verifica"),
+		HowToUndo:     T("az.pacchetti.annulla"),
+		Reversibilita: AL_MEGLIO,
 	}
 }
 
@@ -50,16 +50,16 @@ type pacchetti struct {
 	file, nomi []string
 }
 
-type primaPacchetti struct {
-	Origine Origine     `json:"origin"`
-	Gestore string      `json:"manager"`
-	File    []string    `json:"files,omitempty"`
-	Nomi    []string    `json:"names"`
-	Insieme []Artefatto `json:"resolved_set"`
+type beforePackages struct {
+	Origine     Origine     `json:"origin"`
+	Gestore     string      `json:"manager"`
+	File        []string    `json:"files,omitempty"`
+	Nomi        []string    `json:"names"`
+	ResolvedSet []Artefatto `json:"resolved_set"`
 }
 
-func nuovaPacchetti(p AzionePiano) (Azione, error) {
-	return &pacchetti{file: dividiVirgole(p.Parametri["file"]), nomi: dividiVirgole(p.Parametri["names"])}, nil
+func newPackages(p AzionePiano) (Azione, error) {
+	return &pacchetti{file: splitCommas(p.Parametri["file"]), nomi: splitCommas(p.Parametri["names"])}, nil
 }
 
 func (a *pacchetti) gestore(c *Contesto) (Gestore, error) {
@@ -80,12 +80,12 @@ func (a *pacchetti) Vincoli(c *Contesto) ([]string, error) {
 	for _, f := range a.file {
 		v = append(v, "package-file:"+filepath.Base(f))
 	}
-	ver, err := g.Versioni(a.nomi)
+	ver, err := g.Vers(a.nomi)
 	if err != nil {
 		return nil, err
 	}
 	for _, n := range a.nomi {
-		v = append(v, "package:"+n+"="+nonVuoto(ver[n], "absent"))
+		v = append(v, "package:"+n+"="+notEmpty(ver[n], "absent"))
 	}
 	return v, nil
 }
@@ -99,8 +99,8 @@ func veri(c *Contesto, file []string) []string {
 	return r
 }
 
-// dividiVirgole: «a,b» ⇒ [a b]; empty ⇒ none.
-func dividiVirgole(s string) []string {
+// splitCommas: «a,b» ⇒ [a b]; empty ⇒ none.
+func splitCommas(s string) []string {
 	var r []string
 	for _, x := range strings.Split(s, ",") {
 		if x = strings.TrimSpace(x); x != "" {
@@ -115,7 +115,7 @@ func (a *pacchetti) Fotografa(c *Contesto) (json.RawMessage, Origine, error) {
 	if err != nil {
 		return nil, "", err
 	}
-	if ok, det, err := g.Integro(); err != nil {
+	if ok, det, err := g.Intact(); err != nil {
 		return nil, "", err
 	} else if !ok {
 		return nil, "", Errore("RX-PACCHETTI-004", det)
@@ -127,39 +127,39 @@ func (a *pacchetti) Fotografa(c *Contesto) (json.RawMessage, Origine, error) {
 	}
 	ins, err := g.Simula(veri(c, a.file), a.nomi)
 	if err != nil {
-		return nil, "", &ErroreRX{messaggioSimula(err)}
+		return nil, "", &ErrorRX{messageSimulate(err)}
 	}
-	p := primaPacchetti{Origine: PREESISTENTE, Gestore: g.Nome(), File: a.file, Nomi: a.nomi, Insieme: ins}
+	p := beforePackages{Origine: PREESISTENTE, Gestore: g.Nome(), File: a.file, Nomi: a.nomi, ResolvedSet: ins}
 	for _, x := range ins {
 		if x.Esito != "present" {
 			p.Origine = DIRETTA
 		}
 	}
-	if err := ScriviJSON(filepath.Join(c.Cartella, "resolved-set-"+c.P.ID+".json"),
+	if err := WriteJSON(filepath.Join(c.Cartella, "resolved-set-"+c.P.ID+".json"),
 		map[string]any{"format": Formato, "object": "resolved-set", "action": c.P.ID, "manager": g.Nome(), "artifacts": ins}); err != nil {
 		return nil, "", err
 	}
 	return jsonDi(p), p.Origine, nil
 }
 
-// messaggioSimula: the manager's simulation did not succeed — RX-PACCHETTI-005 with what it says, unless
+// messageSimulate: the manager's simulation did not succeed — RX-PACCHETTI-005 with what it says, unless
 // the engine already has the reason (the manager stayed busy: RX-PACCHETTI-008).
-func messaggioSimula(err error) Messaggio {
-	var e *ErroreRX
+func messageSimulate(err error) Messaggio {
+	var e *ErrorRX
 	if errors.As(err, &e) {
 		return e.M
 	}
 	return Msg("RX-PACCHETTI-005", err.Error())
 }
 
-func leggiPrimaPacchetti(prima json.RawMessage) (primaPacchetti, error) {
-	var p primaPacchetti
+func readPackagesBefore(prima json.RawMessage) (beforePackages, error) {
+	var p beforePackages
 	err := json.Unmarshal(prima, &p)
 	return p, err
 }
 
 func (a *pacchetti) Fai(c *Contesto, prima json.RawMessage) error {
-	p, err := leggiPrimaPacchetti(prima)
+	p, err := readPackagesBefore(prima)
 	if err != nil || p.Origine == PREESISTENTE {
 		return err
 	}
@@ -171,12 +171,12 @@ func (a *pacchetti) Fai(c *Contesto, prima json.RawMessage) error {
 }
 
 // state of the set's packages, now.
-func (a *pacchetti) conta(c *Contesto, p primaPacchetti) (completi, nuoviPresenti int, err error) {
+func (a *pacchetti) conta(c *Contesto, p beforePackages) (completi, newPresent int, err error) {
 	g, err := a.gestore(c)
 	if err != nil {
 		return 0, 0, err
 	}
-	ver, err := g.Versioni(nomiDi(p.Insieme))
+	ver, err := g.Vers(namesOf(p.ResolvedSet))
 	if err != nil {
 		return 0, 0, err
 	}
@@ -184,18 +184,18 @@ func (a *pacchetti) conta(c *Contesto, p primaPacchetti) (completi, nuoviPresent
 	// of the set is «complete» at the resolved version, at a NEWER one (a system upgrade
 	// brought it), or at the one recorded by the last `remotix-install aggiornato` (a rollback
 	// done with the manager's commands)
-	agg := versioniAggiornate(c.Cartella)
-	for _, x := range p.Insieme {
+	agg := updatedVersions(c.Cartella)
+	for _, x := range p.ResolvedSet {
 		v := ver[x.Nome]
-		if versioneUguale(v, x.Versione) || (agg[x.Nome] != "" && versioneUguale(v, agg[x.Nome])) ||
-			(v != "" && x.Versione != "" && ConfrontaPacchetti(c.Amb.Famiglia, v, x.Versione) > 0) {
+		if versioneUguale(v, x.Ver) || (agg[x.Nome] != "" && versioneUguale(v, agg[x.Nome])) ||
+			(v != "" && x.Ver != "" && ComparePackages(c.Amb.Famiglia, v, x.Ver) > 0) {
 			completi++
 		}
 		if x.Esito == "new" && v != "" {
-			nuoviPresenti++
+			newPresent++
 		}
 	}
-	return completi, nuoviPresenti, nil
+	return completi, newPresent, nil
 }
 
 // versioneUguale: the epoch «0:» does not count (dnf may write «0:2.3-1», rpm and dpkg «2.3-1»); any
@@ -205,7 +205,7 @@ func versioneUguale(a, b string) bool {
 }
 
 func (a *pacchetti) Controlla(c *Contesto, prima json.RawMessage) (Esito, string, error) {
-	p, err := leggiPrimaPacchetti(prima)
+	p, err := readPackagesBefore(prima)
 	if err != nil {
 		return "", "", err
 	}
@@ -213,7 +213,7 @@ func (a *pacchetti) Controlla(c *Contesto, prima json.RawMessage) (Esito, string
 	if err != nil {
 		return "", "", err
 	}
-	if ok, det, err := g.Integro(); err != nil {
+	if ok, det, err := g.Intact(); err != nil {
 		return "", "", err
 	} else if !ok {
 		return A_META, "the package manager is half way: " + det, nil
@@ -223,14 +223,14 @@ func (a *pacchetti) Controlla(c *Contesto, prima json.RawMessage) (Esito, string
 		return "", "", err
 	}
 	switch {
-	case completi == len(p.Insieme):
+	case completi == len(p.ResolvedSet):
 		return COMPLETO, fmt.Sprintf("%d packages at the resolved version", completi), nil
 	case nuovi == 0 && completi == 0:
 		return ASSENTE, "none of the new packages", nil
 	case nuovi == 0:
 		return ASSENTE, "none of the new packages (the upgraded ones stay)", nil
 	}
-	return A_META, fmt.Sprintf("%d of %d", completi, len(p.Insieme)), nil
+	return A_META, fmt.Sprintf("%d of %d", completi, len(p.ResolvedSet)), nil
 }
 
 func (a *pacchetti) Ripara(c *Contesto, prima json.RawMessage) error {
@@ -238,14 +238,14 @@ func (a *pacchetti) Ripara(c *Contesto, prima json.RawMessage) error {
 	if err != nil {
 		return err
 	}
-	if ok, _, err := g.Integro(); err == nil && ok {
+	if ok, _, err := g.Intact(); err == nil && ok {
 		return nil
 	}
 	return g.Ripara()
 }
 
 func (a *pacchetti) Annulla(c *Contesto, prima json.RawMessage) error {
-	p, err := leggiPrimaPacchetti(prima)
+	p, err := readPackagesBefore(prima)
 	if err != nil || p.Origine == PREESISTENTE {
 		return err
 	}
@@ -253,17 +253,17 @@ func (a *pacchetti) Annulla(c *Contesto, prima json.RawMessage) error {
 	if err != nil {
 		return err
 	}
-	if ok, _, err := g.Integro(); err == nil && !ok {
+	if ok, _, err := g.Intact(); err == nil && !ok {
 		if err := g.Ripara(); err != nil {
 			return err
 		}
 	}
-	ver, err := g.Versioni(nomiDi(p.Insieme))
+	ver, err := g.Vers(namesOf(p.ResolvedSet))
 	if err != nil {
 		return err
 	}
 	var nuovi []string
-	for _, x := range p.Insieme {
+	for _, x := range p.ResolvedSet {
 		if x.Esito == "new" && ver[x.Nome] != "" {
 			nuovi = append(nuovi, x.Nome)
 		}
@@ -279,7 +279,7 @@ func (a *pacchetti) Annulla(c *Contesto, prima json.RawMessage) error {
 }
 
 func (a *pacchetti) Annullata(c *Contesto, prima json.RawMessage) (bool, string, error) {
-	p, err := leggiPrimaPacchetti(prima)
+	p, err := readPackagesBefore(prima)
 	if err != nil {
 		return false, "", err
 	}
@@ -290,12 +290,12 @@ func (a *pacchetti) Annullata(c *Contesto, prima json.RawMessage) (bool, string,
 	if err != nil {
 		return false, "", err
 	}
-	ver, err := g.Versioni(nomiDi(p.Insieme))
+	ver, err := g.Vers(namesOf(p.ResolvedSet))
 	if err != nil {
 		return false, "", err
 	}
 	var tutti, ancora []string
-	for _, x := range p.Insieme {
+	for _, x := range p.ResolvedSet {
 		if x.Esito == "new" {
 			tutti = append(tutti, x.Nome)
 			if ver[x.Nome] != "" {
@@ -332,7 +332,7 @@ func trattenuti(g Gestore, candidati, nostri []string, purge bool) (via, resta [
 	if err != nil {
 		return nil, nil, err
 	}
-	if len(fuoriDa(altri, nostri)) == 0 {
+	if len(notIn(altri, nostri)) == 0 {
 		return candidati, nil, nil
 	}
 	for _, n := range candidati {
@@ -340,8 +340,8 @@ func trattenuti(g Gestore, candidati, nostri []string, purge bool) (via, resta [
 		if err != nil {
 			return nil, nil, err
 		}
-		if len(fuoriDa(a, nostri)) > 0 {
-			resta = append(resta, n+" ("+T("pacchetti.chiesto_da", strings.Join(fuoriDa(a, nostri), ", "))+")")
+		if len(notIn(a, nostri)) > 0 {
+			resta = append(resta, n+" ("+T("pacchetti.chiesto_da", strings.Join(notIn(a, nostri), ", "))+")")
 		} else {
 			via = append(via, n)
 		}
@@ -351,14 +351,14 @@ func trattenuti(g Gestore, candidati, nostri []string, purge bool) (via, resta [
 
 // Indirette: the packages UPGRADED for us stay upgraded (§6.6.4): they are declared.
 func (a *pacchetti) Indirette(prima json.RawMessage) []string {
-	p, err := leggiPrimaPacchetti(prima)
+	p, err := readPackagesBefore(prima)
 	if err != nil {
 		return nil
 	}
 	var r []string
-	for _, x := range p.Insieme {
+	for _, x := range p.ResolvedSet {
 		if x.Esito == "upgraded" {
-			r = append(r, x.Nome+" "+x.Prima+" → "+x.Versione)
+			r = append(r, x.Nome+" "+x.Prima+" → "+x.Ver)
 		}
 	}
 	return r

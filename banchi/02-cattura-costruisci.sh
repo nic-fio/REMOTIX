@@ -116,11 +116,11 @@ bash /media/REMOTIX/enter.sh "cd $DENTRO_QUI && \
         \$(pkg-config --cflags --libs libpipewire-0.3 gio-2.0 libdrm) \
         > $DENTRO_QUI/costruzione-prodotto.log 2>&1; \
     echo \"uscita-gcc: \$?\" >> $DENTRO_QUI/costruzione-prodotto.log"
-esito_enter=$?
+outcome_enter=$?
 
 log "2. The COMPILER's outcome, not the presence of the binary"
 if [ ! -r "$REGISTRO" ]; then
-	ko "⛔ there is no build log ($REGISTRO): enter.sh exited with $esito_enter"
+	ko "⛔ there is no build log ($REGISTRO): enter.sh exited with $outcome_enter"
 	inf "⚠ and this is NOT «it compiled»: it is «I could not look»"
 	exit 2
 fi

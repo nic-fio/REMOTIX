@@ -69,13 +69,13 @@ LOGIND = ("CanPowerOff", "CanReboot", "CanSuspend", "CanHibernate", "CanHybridSl
 # ⚠ «negato»: `[M]` 24 Sep 2026, CanPowerOff and CanReboot asked by the tenant
 #   answer «Call failed: Access denied» (the polkit rule says NO), while
 #   from root they say «yes».  GNOME and Plasma treat the error as «cannot».
-LOGIND_BUONE = ("no", "na", "negato")
+LOGIND_GOOD = ("no", "na", "negato")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE JUDGE (pure functions)
 # ═══════════════════════════════════════════════════════════════════════════
-def giudica_righe(righe, desktop, vietate=VIETATE):
+def judge_lines(righe, desktop, vietate=VIETATE):
     """righe = [(sentence, x, y)].  Returns (found [(family, sentence)], esci_read,
     discarded_lines)."""
     scartate = []
@@ -95,14 +95,14 @@ def giudica_righe(righe, desktop, vietate=VIETATE):
     return trovate, esci, scartate
 
 
-def giudica_campi(campi, desktop):
+def judge_fields(campi, desktop):
     """campi = {name: value read}.  Returns [defects]."""
     guai = []
     for k in LOGIND:
         v = campi.get(k)
         if v is None:
             guai.append("%s not read" % k)
-        elif v not in LOGIND_BUONE:
+        elif v not in LOGIND_GOOD:
             guai.append("%s=%s (expected no/na)" % (k, v))
     if desktop == "gnome":
         gdm, dis = campi.get("gdm_sul_bus"), campi.get("disable-lock-screen")
@@ -122,31 +122,31 @@ def certifica():
             guai.append(cosa)
 
     menu_gnome = [("(Power Off", 3500, 140), ("Log Out...", 3490, 212)]
-    t, e, sc = giudica_righe(menu_gnome, "gnome")
+    t, e, sc = judge_lines(menu_gnome, "gnome")
     prova("gnome: the title «Power Off» is discarded, «Log Out» is there", not t and e and sc)
-    t, e, _ = giudica_righe(menu_gnome + [("Power Off...", 3490, 180)], "gnome")
+    t, e, _ = judge_lines(menu_gnome + [("Power Off...", 3490, 180)], "gnome")
     prova("gnome: the ENTRY «Power Off…» under the title is red", bool(t) and e)
-    t, e, _ = giudica_righe(menu_gnome, "kde")
+    t, e, _ = judge_lines(menu_gnome, "kde")
     prova("kde: «Power Off» is not a title, it is red", bool(t))
     for voce in ("Lock Screen", "Suspend", "Sleep", "Hibernate", "Restart", "Shut Down",
                  "Switch User", "Blocca schermo", "Riavvia"):
-        t, e, _ = giudica_righe([(voce, 10, 10), ("Logout", 10, 40)], "lxqt")
+        t, e, _ = judge_lines([(voce, 10, 10), ("Logout", 10, 40)], "lxqt")
         prova("«%s» is forbidden" % voce, bool(t) and e)
-    t, e, _ = giudica_righe([("Accessories", 1, 1), ("Leave", 1, 30), ("Logout", 80, 30)],
+    t, e, _ = judge_lines([("Accessories", 1, 1), ("Leave", 1, 30), ("Logout", 80, 30)],
                             "lxqt")
     prova("LXQt's clean menu is green", not t and e)
-    t, e, _ = giudica_righe([("Workspace 1", 1, 1)], "xfce")
+    t, e, _ = judge_lines([("Workspace 1", 1, 1)], "xfce")
     prova("without «Log Out» ⇒ exit not read", not e)
-    t, e, _ = giudica_righe([("Log Out...", 1, 1)], "xfce", VIETATE_COL_GUASTO)
+    t, e, _ = judge_lines([("Log Out...", 1, 1)], "xfce", VIETATE_COL_GUASTO)
     prova("FAULT A: with «Exit» in the list the right menu is red", bool(t))
     buoni = {k: "no" for k in LOGIND}
-    prova("fields: all «no» ⇒ no defects", not giudica_campi(buoni, "xfce"))
+    prova("fields: all «no» ⇒ no defects", not judge_fields(buoni, "xfce"))
     prova("FAULT B: CanPowerOff=yes ⇒ defect",
-          bool(giudica_campi(dict(buoni, CanPowerOff="yes"), "kde")))
+          bool(judge_fields(dict(buoni, CanPowerOff="yes"), "kde")))
     prova("gnome: GDM present without disable-lock-screen ⇒ defect",
-          bool(giudica_campi(dict(buoni, gdm_sul_bus=True,
+          bool(judge_fields(dict(buoni, gdm_sul_bus=True,
                                   **{"disable-lock-screen": "false"}), "gnome")))
-    prova("gnome: no GDM ⇒ no icon", not giudica_campi(
+    prova("gnome: no GDM ⇒ no icon", not judge_fields(
         dict(buoni, gdm_sul_bus=False, **{"disable-lock-screen": "false"}), "gnome"))
     print("⛔ %d problems" % len(guai) if guai else "⭐ CERTIFIED")
     return 1 if guai else 0
@@ -155,7 +155,7 @@ def certifica():
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE FIELDS, inside the box
 # ═══════════════════════════════════════════════════════════════════════════
-def leggi_logind(s, come_root=False):
+def read_logind(s, come_root=False):
     """{CanX: "no"|...} asked as the tenant (or as root, for the fault)."""
     chi = "" if come_root else "runuser -u %s -- " % s.chi
     riga = "; ".join(
@@ -170,7 +170,7 @@ def leggi_logind(s, come_root=False):
     return campi, t
 
 
-def leggi_blocco_gnome(s):
+def read_gnome_block(s):
     c, t = s.sc.dentro("busctl --system list 2>/dev/null | grep -c '^org.gnome.DisplayManager '",
                        30)
     gdm = None
@@ -186,12 +186,12 @@ def leggi_blocco_gnome(s):
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE GESTURES, per desktop (desktop coordinates: W, H = canvas size)
 # ═══════════════════════════════════════════════════════════════════════════
-def primo_clic(desktop, W, H):
+def first_click(desktop, W, H):
     return {"gnome": (W - 30, 14), "kde": (28, H - 27),
             "xfce": (W - 64, 10), "lxqt": (12, H - 18)}[desktop]
 
 
-def secondo_clic(desktop, W, H, parole):
+def second_click(desktop, W, H, parole):
     """The second level: (X, Y, how) or None if the menu has one level.
     `parole` = [(text, x, y, w, h, confidence)] of the first level."""
     if desktop == "gnome":
@@ -213,7 +213,7 @@ def corpo(o, E):
         G1B.passo("inside: %s" % m[:80])
         if not ok:
             raise S.Bloccata(m)
-        if not G1B.ocr_disponibile():
+        if not G1B.ocr_available():
             raise S.Bloccata("tesseract is not there (%s): without OCR the menu cannot be read"
                              % G1B.TESSERACT)
         time.sleep(6 if d != "kde" else 10)      # the panel finishes being born
@@ -225,9 +225,9 @@ def corpo(o, E):
             raise S.Bloccata("no photo before the menu: " + p0)
         ev.append(p0)
 
-        X, Y = primo_clic(d, W, H)
-        G1B.clic_desktop(s, geo, X, Y)
-        png1, p1, r1 = G1B.aspetta_apertura(s, png0, "menu-livello-1", (X, Y, 1300))
+        X, Y = first_click(d, W, H)
+        G1B.click_desktop(s, geo, X, Y)
+        png1, p1, r1 = G1B.wait_open(s, png0, "menu-livello-1", (X, Y, 1300))
         if not png1:
             raise S.Bloccata("no photo of the menu: " + p1)
         ev.append(p1)
@@ -235,47 +235,47 @@ def corpo(o, E):
             raise S.Bloccata("the click at (%d, %d) opened nothing: the photo does not "
                              "change" % (X, Y))
         G1B.azzera_parole()
-        righe, _testo1 = G1B.leggi_riquadro(png1, r1)
+        righe, _text1 = G1B.leggi_riquadro(png1, r1)
         print("   level 1 %s: %s" % (r1, [f for f, _x, _y in righe]), flush=True)
 
         tutte = list(righe)
-        sec = secondo_clic(d, W, H, G1B.parole_lette())
+        sec = second_click(d, W, H, G1B.words_read())
         r2 = None
         if sec:
             X2, Y2, come = sec
             print("   second click at (%d, %d): %s" % (X2, Y2, come), flush=True)
-            G1B.clic_desktop(s, geo, X2, Y2)
-            png2, p2, r2 = G1B.aspetta_apertura(s, png1, "menu-livello-2", (X2, Y2, 1300),
+            G1B.click_desktop(s, geo, X2, Y2)
+            png2, p2, r2 = G1B.wait_open(s, png1, "menu-livello-2", (X2, Y2, 1300),
                                                 lato_min=40)
             if png2:
                 ev.append(p2)
                 if r2:
-                    righe2, _t2 = G1B.leggi_riquadro(png2, r2)
-                    print("   level 2 %s: %s" % (r2, [f for f, _x, _y in righe2]),
+                    lines2, _t2 = G1B.leggi_riquadro(png2, r2)
+                    print("   level 2 %s: %s" % (r2, [f for f, _x, _y in lines2]),
                           flush=True)
-                    tutte += righe2
+                    tutte += lines2
         # the menu closes (two ESC), to leave the desktop as it was found
         for _ in range(2):
             G1B.combinazione(s.g, ["Escape"])
             time.sleep(0.4)
 
-        trovate, esci, scartate = giudica_righe(tutte, d)
-        campi, grezzo = leggi_logind(s)
-        testo_campi = "logind as %s: %s" % (s.chi, ", ".join(
+        trovate, esci, scartate = judge_lines(tutte, d)
+        campi, grezzo = read_logind(s)
+        fields_text = "logind as %s: %s" % (s.chi, ", ".join(
             "%s=%s" % (k, campi.get(k, "?")) for k in LOGIND))
         if d == "gnome":
-            gdm, dis, g_grezzo = leggi_blocco_gnome(s)
+            gdm, dis, g_raw = read_gnome_block(s)
             campi["gdm_sul_bus"], campi["disable-lock-screen"] = gdm, dis
-            testo_campi += " · GDM on the system bus=%s · disable-lock-screen=%s" % (gdm, dis)
-            grezzo += "\n" + g_grezzo
-        guai_campi = giudica_campi(campi, d)
-        ev.append(s.salva_testo("f029-letto.txt",
+            fields_text += " · GDM on the system bus=%s · disable-lock-screen=%s" % (gdm, dis)
+            grezzo += "\n" + g_raw
+        field_troubles = judge_fields(campi, d)
+        ev.append(s.save_text("f029-letto.txt",
                                 ["lines read by the OCR:"] + ["  %s  (x=%d y=%d)" % r
                                                              for r in tutte]
                                 + ["discarded (GNOME title): %s" % scartate,
-                                   "fields: " + testo_campi, "", grezzo]))
+                                   "fields: " + fields_text, "", grezzo]))
         letto = " | ".join(f for f, _x, _y in tutte)
-        oss = "OCR: «%s» · %s" % (letto[:300], testo_campi)
+        oss = "OCR: «%s» · %s" % (letto[:300], fields_text)
         atteso = ("in the exit menu only «Exit» (Log Out): no lock, suspend, "
                   "hibernate, restart, shut down, switch user; logind «no» for "
                   "the tenant")
@@ -285,27 +285,27 @@ def corpo(o, E):
         elif not esci:
             E.metti("F-029", S.FAIL, "the menu opened but «Exit/Log Out» can NOT be read",
                     atteso=atteso, osservato=oss, evidenze=ev)
-        elif guai_campi:
+        elif field_troubles:
             E.metti("F-029", S.FAIL, "the menu is clean but the fields are not: %s"
-                    % "; ".join(guai_campi), atteso=atteso, osservato=oss, evidenze=ev)
+                    % "; ".join(field_troubles), atteso=atteso, osservato=oss, evidenze=ev)
         else:
             E.metti("F-029", S.PASS, "in the menu only «Exit» (OCR), and logind says no",
                     atteso=atteso, osservato=oss, evidenze=ev)
 
         if o.guasto:
-            ta, _e, _s = giudica_righe(tutte, d, VIETATE_COL_GUASTO)
-            visto_a = bool(ta)
-            root, _g = leggi_logind(s, come_root=True)
+            ta, _e, _s = judge_lines(tutte, d, VIETATE_COL_GUASTO)
+            seen_a = bool(ta)
+            root, _g = read_logind(s, come_root=True)
             if d == "gnome":
                 root["gdm_sul_bus"] = campi.get("gdm_sul_bus")
                 root["disable-lock-screen"] = campi.get("disable-lock-screen")
-            gb = giudica_campi(root, d)
-            visto_b = bool(gb)
-            E.guasto("F-029", visto_a and visto_b,
+            gb = judge_fields(root, d)
+            seen_b = bool(gb)
+            E.guasto("F-029", seen_a and seen_b,
                      "A) «Exit» among the forbidden ⇒ %s · B) logind asked by root (%s) ⇒ %s"
-                     % ("ROSSO" if visto_a else "verde (NOT seen)",
+                     % ("ROSSO" if seen_a else "verde (NOT seen)",
                         ", ".join("%s=%s" % (k, root.get(k, "?")) for k in LOGIND),
-                        "ROSSO" if visto_b else "verde (NOT seen)"),
+                        "ROSSO" if seen_b else "verde (NOT seen)"),
                      evidenze=ev)
 
 

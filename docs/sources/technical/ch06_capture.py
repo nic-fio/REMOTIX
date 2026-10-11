@@ -1,7 +1,7 @@
 from build import arrow, box, c, fig, h4, note, p, path, rif, table, text, tip, ul, warn, zone
 
 # ── 6.1 ─────────────────────────────────────────────────────────────────────
-FAMIGLIE = fig(
+FAMILIES = fig(
     zone(20, 12, 860, 118, "The compositor of the user's session")
     + box(40, 46, 250, 66, "Mutter (GNOME)", "D-Bus ScreenCast + RemoteDesktop", "navy")
     + box(325, 46, 250, 66, "KWin (KDE Plasma)", "zkde_screencast_unstable_v1", "navy")
@@ -24,7 +24,7 @@ S1 = p("REMOTIX does not grab the physical screen: every session has its own vir
        "<i>push</i> frames through a PipeWire node; labwc (the compositor REMOTIX runs under XFCE and LXQt) "
        "has no node at all, and frames are <i>pulled</i> one by one. All three end up behind one interface, "
        + c("cattura.h") + " (capture), which the per-user child process (" + c("figlio.c") + ") uses in the same way "
-       "on every desktop.", lead=True) + FAMIGLIE + \
+       "on every desktop.", lead=True) + FAMILIES + \
     table(["", "GNOME (Mutter)", "KDE Plasma (KWin)", "XFCE and LXQt (labwc)"], [
         ["Module that opens the source", c("mutter.c") + " — " + c("mutter_apri()"),
          c("kwin.c") + " — " + c("kwin_apri()"), c("wlroots.c") + " — " + c("wlr_apri()")],
@@ -353,7 +353,7 @@ S6 = p("labwc has no PipeWire node. It offers " + c("zwlr_screencopy_manager_v1"
       "enabling one head only, and leaks on close.")
 
 # ── 6.7 ─────────────────────────────────────────────────────────────────────
-LASTRE = fig(
+SLABS = fig(
     box(40, 40, 180, 60, "FREE", "may be named in a copy", "green")
     + box(360, 40, 180, 60, "IN FLIGHT", "named in the current copy", "blue")
     + box(680, 40, 180, 60, "IN HAND", "delivered to the encoder", "navy")
@@ -377,7 +377,7 @@ S7 = p("On labwc the zero-copy path is a <i>copy</i> into a DMA-BUF that REMOTIX
          "form"],
         ["New dependency", c("gbm") + " (already present wherever labwc runs) and the " + c("linux-dmabuf")
          + " protocol", "—"],
-    ], "«TAB» — The two ways to get a DMA-BUF from labwc") + LASTRE + \
+    ], "«TAB» — The two ways to get a DMA-BUF from labwc") + SLABS + \
     ul(["<b>Three slabs</b> (" + c("WLR_LASTRE") + "): one in hand, one in flight, one as cheap insurance (8 MB at "
         "1080p). If all are in hand the frame stops and says so; a slab in hand is never recycled.",
         "<b>Linear modifier.</b> The " + c("linux_dmabuf") + " event carries format and size, not modifiers, so "
