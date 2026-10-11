@@ -531,11 +531,11 @@ S9 = p("Nobody may shut down, reboot, suspend or hibernate the server, the perso
        "away every session at once, and whoever does it from a desktop menu cannot see who is connected. "
        "Inside the remote desktop the user has a single gesture that ends something: log-out.", lead=True) + \
     table(["Entry", "GNOME", "KDE", "XFCE", "LXQt"], [
-        ["Shut down, reboot", "refused by polkit", "refused by polkit", c("-shutdown") + ", " + c("-restart")
-         + " in the panel; grey in dialogs (polkit)", "entries hidden; grey in " + c("lxqt-leave") + " (polkit)"],
-        ["Suspend, hibernate", "no automatic suspend; refused by polkit and " + sysf("sleep.conf"),
-         "powerdevil inhibited; refused", "removed from panel and log-out dialog; inactivity 0",
-         "entries hidden; idleness watcher off"],
+        ["Shut down, reboot", "hidden (system bus filter)", "hidden (system bus filter)", c("-shutdown") + ", "
+         + c("-restart") + " in the panel; grey in the log-out dialog (filter)", "entries hidden; grey in "
+         + c("lxqt-leave") + " (filter)"],
+        ["Suspend, hibernate", "hidden (filter); no automatic suspend", "hidden (filter); powerdevil inhibited",
+         "removed from panel and log-out dialog; inactivity 0", "entries hidden; idleness watcher off"],
         ["Lock screen", c("lock-enabled=false"), "KIOSK " + c("lock_screen") + ", " + c("--no-lockscreen"),
          c("LockCommand=/bin/false") + ", removed from panel", "entry hidden, command " + c("true")],
         ["Switch user", c("disable-user-switching"), "KIOSK " + c("switch_user") + ", " + c("start_new_session"),
@@ -543,6 +543,27 @@ S9 = p("Nobody may shut down, reboot, suspend or hibernate the server, the perso
         ["Virtual consoles", c("Ctrl+Alt+F1") + "…F12 emptied", "—", "—", "—"],
         ["Log out", "always shown", "stays", "stays", "stays"],
     ], "«TAB» — What is removed from the session menus") + \
+    p("<b>The system bus filter</b> (" + c("DECISIONS.md") + " §10.49, " + c("src/busfilter.c")
+      + ") is what removes power off, restart, suspend and hibernate on all four desktops with one mechanism and "
+      "nothing installed: every desktop decides those entries from logind's " + c("Can*") + " answers on the "
+      "system bus. " + c("start()") + " runs the session's command as " + c("remotix --internal-bus-filter")
+      + " " + c("$XDG_RUNTIME_DIR/remotix/system-bus") + " " + c("-- sh -c '<command>'") + ": the process forks "
+      "the filter (a grandchild, not the desktop's child), waits until it listens, and becomes the desktop with "
+      + c("DBUS_SYSTEM_BUS_ADDRESS=unix:path=<socket>;<the real bus>") + ". The filter passes every message as it "
+      "is (serial and file descriptors included: logind's " + c("Inhibit") + " works), except thirty-two methods of "
+      + c("org.freedesktop.login1.Manager") + ": " + c("CanPowerOff") + ", " + c("CanReboot") + ", "
+      + c("CanSuspend") + ", " + c("CanHibernate") + " and the other " + c("Can*") + " answer " + c("na")
+      + " (the word logind uses for a machine that cannot; xfce4-session would fall back to its polkit helper on "
+      "an error), and " + c("PowerOff") + ", " + c("Reboot") + ", " + c("Suspend") + ", " + c("Hibernate")
+      + ", their " + c("*WithFlags") + " forms and " + c("ScheduleShutdown") + " are refused with "
+      + c("AccessDenied") + ", so " + c("systemctl poweroff") + " typed in a session terminal fails too. "
+      "gnome-session and startplasma export the variable to the user manager, so the Shell and the Plasma units "
+      "get it; " + c("DBUS_SYSTEM_BUS_ADDRESS") + " is among the variables put back after the session (R1/R2). "
+      "The filter dies with the desktop (a pidfd) and removes its socket. It is not a security boundary: the "
+      "second address is the real bus, taken if the filter is gone, and the session's user can always reach "
+      "the real bus; logind and polkit still govern the acts. The services behind it see the filter as the "
+      "caller (same user, same logind session). Measured by "
+      + c("benches/11-boxes/11-c25-no-power-entries.sh") + " against a logind that says “yes”.") + \
     p("The menu work is cosmetic on top of three system-wide belts, which the package ships <b>inert</b> under "
       + c("/usr/share/remotix/belts/") + ", where nothing reads them; since " + c("DECISIONS.md")
       + " §10.36 the installer no longer puts them in force, so the “refused by polkit” entries above hold only "
@@ -556,10 +577,11 @@ S9 = p("Nobody may shut down, reboot, suspend or hibernate the server, the perso
       + c("CanPowerOff") + " is " + c("no") + " for a user and " + c("yes") + " for root); attached clients are "
       "told with the farewell reason " + c("SERVER_CLOSING") + ". Details in "
       + rif("The power belts, shipped inert") + ".") + \
-    note("in " + c("lxqt-leave") + ", reached from fancymenu's fixed Leave button when the user's own panel "
-         "configuration wins, shut down, reboot and suspend are grey and “Lock screen” is clickable "
-         "but inert. On XFCE the separate “Log Out” window keeps grey entries. Both are declared "
-         "residues.", "What is left visible.")
+    note("XFCE's “Log Out” window always draws Restart and Shut Down (xfce4-session 4.20.2 "
+         + c("xfsm-logout-dialog.c:263-288") + ", no key removes them): with the filter they are grey and "
+         "refused, not gone. In " + c("lxqt-leave") + ", reached only by hand or from fancymenu's fixed Leave "
+         "button when the user's own panel configuration wins, shut down, reboot and suspend are grey and "
+         "“Lock screen” is clickable but inert. Both are declared residues.", "What is left visible.")
 
 S10 = p(c("session_terminate()") + " ends the graphical session when the product must (for instance when the "
         "same user logs in locally, invariant I2: the local session wins, and two graphical sessions on one "

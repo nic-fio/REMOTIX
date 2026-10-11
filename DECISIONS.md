@@ -7028,36 +7028,59 @@ labwc che ce lo analizziamo e compiliamo da soli»*.
 
 - **The ruling** (the director, 11 Oct 2026, on 0.19.0 on his tablet — Debian 13, GNOME): *«quelle voci di menu
   non devono comparire. Questa e' una feature del prodotto»*. Inside a REMOTIX session the menu must **not** offer
-  Power Off, Restart, Suspend, on all four desktops; **«Log Out…» stays** (§4.1-ter). Session only, nothing
-  written into the system (§10.36).
+  Power Off, Restart, Suspend (and Hibernate), on all four desktops; **«Log Out…» stays** (§4.1-ter). And: nothing
+  installed that the local users can see — *«installare estensioni a insaputa degli utenti non è ammissibile»* —,
+  no system files (§10.36: no polkit, logind or sleep files), one mechanism for all four desktops. His fallback,
+  *«solo come soluzione disperata»*: where an entry cannot be hidden, it must at least fail for the session's user.
 - **Why it escaped**: since §10.36 the package leaves the polkit/logind/sleep belts of §4.7 off, so on a real machine
   logind answers «yes» and the desktops show the entries; the test boxes put the belts in (`11-start.sh`) and
   answered «no»/«na», so every desktop hid them **by itself** and the net was green with the defect inside.
-- **GNOME** — `[R]` gnome-shell 48.7 `js/misc/systemActions.js:340-374`: power-off and restart follow
-  gnome-session's `CanShutdown`, suspend follows logind's `CanSuspend`; **no key** hides them in a user session
-  (`disable-restart-buttons` is the login screen's, `disable-log-out` would take «Log Out…» away too). ⇒ A tiny
-  Shell extension, `remotix-session@remotix` (`src/gnome-extension/`, shipped in
-  `/usr/share/gnome-shell/extensions/`), forces the three actions to «not available»; `src/session.c`
-  (`gnome_power_entries()`) switches it on **only in the session dconf** (D-015), added to the user's list. Its cost:
-  the extension is visible, off, in the local users' Extensions app. `[M]` 11 Oct 2026,
-  `benches/11-boxes/11-c25-no-power-entries.sh` (a real gnome-shell 48.7 against `11-fake-logind.py`, a login1 and
-  a gnome-session on private buses that say «yes» and refuse the acts): **red** on 5b4165d
-  (`[true,true,true,true]`), **green** with the fix (`[false,false,false,true]`).
-- **KDE** — `[R]` plasma-workspace 6.3.6 `libkworkspace/sessionmanagement.cpp:86-105`: shutdown and reboot are
-  `canLogout() && logind`, suspend is logind alone; KIOSK has no key for them that spares «Log Out» (the whole 6.3.6 tree authorizes only `logout`, and
-  `offerShutdown` no longer exists); the menus (`kicker/plugin/systementry.cpp:108-124`) and the log-out screen
-  (`logout-greeter/shutdowndlg.cpp:116-129`) read the same answers. ⛔ **Not hidden**: no session-only lever
-  exists; to be decided.
-- **XFCE** — the panel's action button loses them (`-shutdown`, `-restart`, `-suspend`…, independent of logind);
-  the log-out dialog loses Suspend/Hibernate (`ShowSuspend`…); ⛔ its Restart and Shut Down **stay**: `[R]`
-  xfce4-session 4.20.2 `xfsm-logout-dialog.c:263-288` always shows them (no `Show…` key), only greyed when
-  not allowed, and the only key that greys them, the kiosk `Shutdown` capability, is read from the compiled-in
-  `/etc/xdg/xfce4/kiosk/kioskrc` (libxfce4util 4.20.1 `xfce-kiosk.c:65`, `meson.build:85`), not from
-  `XDG_CONFIG_DIRS` — a system file, excluded by §10.36.
-- **LXQt** — the menu entries are hidden by session `.desktop` files and the fancymenu's «Leave» button is gone
-  with the switch to mainmenu, independent of logind; `lxqt-leave` (which follows logind) is reachable only by hand.
-- **The net**: C25 is GNOME only and runs as a user, outside the boxes (they need root); the boxes still put the
-  belts in, and so still cannot see this defect on their own.
+- **Rejected**: a GNOME Shell extension (d8032a0, reverted): it was visible, off, in the local users' Extensions
+  app, and it was GNOME only. No session-only key exists elsewhere: Plasma 6.3.6 authorizes only `logout`
+  (`offerShutdown` is gone, `[R]` `libkworkspace/sessionmanagement.cpp:86-105`), xfce4-session's only lever is the
+  compiled-in `/etc/xdg/xfce4/kiosk/kioskrc` (a system file). `xdg-dbus-proxy` (Flatpak's) was looked at first
+  and does not fit (`[R]` 0.1.6 `flatpak-proxy.c:40-110, 2560-2600`): its filter lists what is ALLOWED (every name
+  not listed is invisible, «all» cannot be written), and what it refuses gets an error, never «na».
+- **The decision: a filter on the session's system bus** (`src/busfilter.c`, `busfilter.h`). All four desktops decide
+  the entries from logind's `Can*` on the system bus — gnome-shell (`systemActions.js`, suspend directly, power-off
+  and restart through gnome-session's `CanShutdown`, which asks logind: `[R]` gnome-session 48
+  `gsm-manager.c:2713-2717`), Plasma's `SessionManagement`, xfce4-session through libxfce4util's `XfceSystemd`,
+  liblxqt's `LXQt::Power`. ⇒ `start()` (`src/session.c`) runs every desktop's command as
+  `remotix --internal-bus-filter $XDG_RUNTIME_DIR/remotix/system-bus -- sh -c '<command>'`: the process forks the
+  filter (a grandchild: no desktop meets an unknown child), waits until it listens, and becomes the desktop
+  (same pid, same name: `rediscover.h` still finds the stage) with
+  `DBUS_SYSTEM_BUS_ADDRESS=unix:path=<socket>;<the real bus>`. The filter passes everything as it is — serial,
+  file descriptors (logind's `Inhibit`), signals — except 32 methods of `org.freedesktop.login1.Manager`: the 12
+  `Can*` (power off, reboot, halt, suspend, hibernate, hybrid sleep, suspend-then-hibernate, sleep, the reboot
+  parameters and firmware/boot-loader) answer **«na»** — the word logind uses for a machine that cannot, and the
+  only one xfce4-session reads as «not there» (`[R]` libxfce4util 4.20.1 `xfce-systemd.c:196-198`; on an error it
+  would fall back to its polkit helper) —; the 20 acts (`PowerOff`, `Reboot`, `Halt`, `Suspend`, `Hibernate`,
+  `HybridSleep`, `SuspendThenHibernate`, `Sleep`, their `*WithFlags`, `ScheduleShutdown`, the `SetReboot*`) are
+  refused with `AccessDenied`, so `systemctl poweroff` typed in a session terminal fails («Call to PowerOff failed:
+  Access denied»). gnome-session and startplasma export the variable to the user manager (the Shell and the
+  Plasma units get it); `DBUS_SYSTEM_BUS_ADDRESS` joined the variables put back after the session (R1/R2). The
+  filter dies with the desktop (pidfd) and removes its socket. **No new dependency**: GIO, which the product
+  already needs; no package, installer or `check` change.
+- **What it is not**: a security boundary. The second address is the real bus (taken if the filter is gone: a
+  crash leaves a working session, not one without a system bus), and the session's user can always reach the
+  real bus; the acts stay governed by logind and polkit, as on any machine. The services behind the filter see
+  it as the caller: same user, same logind session (polkit agents register — `[M]` `pkttyagent` through the
+  filter; the inhibitor list shows `remotix` as the holder's process).
+- **Per desktop**, `[M]` 11 Oct 2026, `benches/11-boxes/11-c25-no-power-entries.sh` (each desktop's real code
+  against `11-fake-logind.py`, a login1 that says «yes»; red on 5b4165d for all four and for the act, green on the
+  fix):
+  - **GNOME** — hidden: SystemActions `[false,false,false,true]` (power-off, restart, suspend, log-out).
+  - **KDE** — hidden: SessionManagement `[false,false,false,false,true]` (shut down, reboot, suspend, hibernate,
+    log-out) — the object of Kickoff, Kicker and the log-out screen.
+  - **XFCE** — panel: removed (already, `ACTIONS_TO_REMOVE`); log-out dialog: Suspend/Hibernate not drawn,
+    ⛔ **Restart and Shut Down GREY, not gone** — xfce4-session 4.20.2 always draws them
+    (`xfsm-logout-dialog.c:263-288`); greyed and refused: the director's fallback.
+  - **LXQt** — hidden in the menus (`LXQt::Power` `[false,false,false,false]`); in `lxqt-leave`, reachable only
+    by hand, grey.
+  - **The act**: `systemctl poweroff` refused by the filter before logind, on all four (one path).
+- **Not measured here**: a whole REMOTIX session through the filter (boxes and the product need root; the server's
+  sudo asks a password): C25 covers the desktop code and the act; reattach, input and audio are the boxes' net.
+  The director's test is on the tablet (GNOME, real machine).
 
 ## How this document is kept
 
