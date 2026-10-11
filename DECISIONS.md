@@ -7024,6 +7024,36 @@ labwc che ce lo analizziamo e compiliamo da soli»*.
   - **no mounts inside scratch folders**: the server is reached **only through ssh**;
   - **one deletes only what one created** — never a folder whose origin has not been checked.
 
+### 10.49 ✅ No Power Off, Restart or Suspend in the session menu: a feature of the product (11 Oct 2026)
+
+- **The ruling** (the director, 11 Oct 2026, on 0.19.0 on his tablet — Debian 13, GNOME): *«quelle voci di menu
+  non devono comparire. Questa e' una feature del prodotto»*. Inside a REMOTIX session the menu must **not** offer
+  Power Off, Restart, Suspend, on all four desktops; **«Log Out…» stays** (§4.1-ter). Session only, nothing
+  written into the system (§10.36).
+- **Why it escaped**: since §10.36 the package leaves the polkit/logind/sleep belts of §4.7 off, so on a real machine
+  logind answers «yes» and the desktops show the entries; the test boxes put the belts in (`11-start.sh`) and
+  answered «no»/«na», so every desktop hid them **by itself** and the net was green with the defect inside.
+- **GNOME** — `[R]` gnome-shell 48.7 `js/misc/systemActions.js:340-374`: power-off and restart follow
+  gnome-session's `CanShutdown`, suspend follows logind's `CanSuspend`; **no key** hides them in a user session
+  (`disable-restart-buttons` is the login screen's, `disable-log-out` would take «Log Out…» away too). ⇒ A tiny
+  Shell extension, `remotix-session@remotix` (`src/gnome-extension/`, shipped in
+  `/usr/share/gnome-shell/extensions/`), forces the three actions to «not available»; `src/session.c`
+  (`gnome_power_entries()`) switches it on **only in the session dconf** (D-015), added to the user's list. Its cost:
+  the extension is visible, off, in the local users' Extensions app. `[M]` 11 Oct 2026,
+  `benches/11-boxes/11-c25-no-power-entries.sh` (a real gnome-shell 48.7 against `11-fake-logind.py`, a login1 and
+  a gnome-session on private buses that say «yes» and refuse the acts): **red** on 5b4165d
+  (`[true,true,true,true]`), **green** with the fix (`[false,false,false,true]`).
+- **KDE** — `[R]` plasma-workspace 6.3.6 `libkworkspace/sessionmanagement.cpp:86-105`: shutdown and reboot are
+  `canLogout() && logind`, suspend is logind alone; KIOSK has no key for them that spares «Log Out». ⛔ **Not
+  hidden yet**: no session-only lever found; to be decided.
+- **XFCE** — the panel's action button loses them (`-shutdown`, `-restart`, `-suspend`…, independent of logind);
+  the log-out dialog loses Suspend/Hibernate (`ShowSuspend`…); ⛔ its Restart and Shut Down have no key and
+  **stay** where logind allows.
+- **LXQt** — the menu entries are hidden by session `.desktop` files and the fancymenu's «Leave» button is gone
+  with the switch to mainmenu, independent of logind; `lxqt-leave` (which follows logind) is reachable only by hand.
+- **The net**: C25 is GNOME only and runs as a user, outside the boxes (they need root); the boxes still put the
+  belts in, and so still cannot see this defect on their own.
+
 ## How this document is kept
 
 An ❓ item that gets an answer **is moved** to the section it belongs to and changes mark; it is not

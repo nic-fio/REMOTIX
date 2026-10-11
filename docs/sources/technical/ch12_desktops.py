@@ -161,6 +161,12 @@ S4 = p("GNOME is started through the distribution's own session, with a systemd 
          "gesture that ends the session"],
         [c("org.gnome.desktop.lockdown disable-user-switching"), "true", "session dconf", "Only log-out stays "
          "in the menu, on every desktop"],
+        [c("org.gnome.shell enabled-extensions"), "the user's list + " + c("remotix-session@remotix"),
+         "session dconf", "No Power Off, Restart, Suspend in the menu (" + c("DECISIONS.md") + " §10.49): no key "
+         "hides them in a user session, so a tiny Shell extension, shipped in "
+         + c("/usr/share/gnome-shell/extensions/") + " and switched on only here, marks the three actions "
+         "unavailable. If the user has " + c("disable-user-extensions") + " on, in the session it goes off and "
+         "the list is ours alone"],
         [c("org.gnome.settings-daemon.plugins.power sleep-inactive-ac-type") + ", "
          + c("…-battery-type"), c("nothing"), "user dconf", "No automatic suspend"],
         [c("org.gnome.desktop.session idle-delay"), "0", "user dconf", "No idle blanking"],
@@ -531,11 +537,13 @@ S9 = p("Nobody may shut down, reboot, suspend or hibernate the server, the perso
        "away every session at once, and whoever does it from a desktop menu cannot see who is connected. "
        "Inside the remote desktop the user has a single gesture that ends something: log-out.", lead=True) + \
     table(["Entry", "GNOME", "KDE", "XFCE", "LXQt"], [
-        ["Shut down, reboot", "refused by polkit", "refused by polkit", c("-shutdown") + ", " + c("-restart")
-         + " in the panel; grey in dialogs (polkit)", "entries hidden; grey in " + c("lxqt-leave") + " (polkit)"],
-        ["Suspend, hibernate", "no automatic suspend; refused by polkit and " + sysf("sleep.conf"),
-         "powerdevil inhibited; refused", "removed from panel and log-out dialog; inactivity 0",
-         "entries hidden; idleness watcher off"],
+        ["Shut down, reboot", "hidden by the " + c("remotix-session@remotix") + " extension (§10.49)",
+         "⛔ still shown where logind allows (no session-only lever in Plasma 6)", c("-shutdown") + ", "
+         + c("-restart") + " in the panel; ⛔ still in the log-out dialog where logind allows",
+         "entries hidden; " + c("lxqt-leave") + " (which follows logind) no longer reachable from the menu"],
+        ["Suspend, hibernate", "hidden by the same extension; no automatic suspend",
+         "⛔ still shown where logind allows; powerdevil inhibited", "removed from panel and log-out dialog; "
+         "inactivity 0", "entries hidden; idleness watcher off"],
         ["Lock screen", c("lock-enabled=false"), "KIOSK " + c("lock_screen") + ", " + c("--no-lockscreen"),
          c("LockCommand=/bin/false") + ", removed from panel", "entry hidden, command " + c("true")],
         ["Switch user", c("disable-user-switching"), "KIOSK " + c("switch_user") + ", " + c("start_new_session"),
@@ -543,6 +551,13 @@ S9 = p("Nobody may shut down, reboot, suspend or hibernate the server, the perso
         ["Virtual consoles", c("Ctrl+Alt+F1") + "…F12 emptied", "—", "—", "—"],
         ["Log out", "always shown", "stays", "stays", "stays"],
     ], "«TAB» — What is removed from the session menus") + \
+    p("Since 11 Oct 2026 (" + c("DECISIONS.md") + " §10.49) the menu entries are a feature of the product, not "
+      "a side effect of the belts: on the director's tablet (the package, no belts) logind answers “yes” and "
+      "Power Off, Restart and Suspend were in the GNOME menu, while the test boxes, which had the belts, never "
+      "showed them. The check " + c("benches/11-boxes/11-c25-no-power-entries.sh") + " runs a real GNOME Shell "
+      "against a fake logind and gnome-session that say “yes” (" + c("11-fake-logind.py") + ") and reads the "
+      "Shell's own actions: red on 0.19.0, green with the extension. KDE, XFCE's log-out dialog and "
+      + c("lxqt-leave") + " still follow logind: see §10.49.") + \
     p("The menu work is cosmetic on top of three system-wide belts, which the package ships <b>inert</b> under "
       + c("/usr/share/remotix/belts/") + ", where nothing reads them; since " + c("DECISIONS.md")
       + " §10.36 the installer no longer puts them in force, so the “refused by polkit” entries above hold only "

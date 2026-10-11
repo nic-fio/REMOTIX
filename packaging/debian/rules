@@ -53,6 +53,10 @@ override_dh_auto_install:
 	install -D -m 0755 src/remotix             $(B)/usr/libexec/remotix/remotix
 	install -D -m 0644 src/page.html         $(B)/usr/share/remotix/page.html
 	install -D -m 0644 debian/remotix.conf     $(B)/usr/share/remotix/remotix.conf
+	# ⭐ DECISIONI §10.49: the GNOME Shell extension that hides Power Off, Restart and
+	#   Suspend; inert here — only the REMOTIX session's dconf switches it on
+	install -D -m 0644 -t $(B)/usr/share/gnome-shell/extensions/remotix-session@remotix \
+	  src/gnome-extension/remotix-session@remotix/metadata.json src/gnome-extension/remotix-session@remotix/extension.js
 	# LICENSE.md §8: the licences of the third-party components inside the package, with their texts
 	install -D -m 0644 THIRD-PARTY-LICENSES     $(B)/usr/share/doc/remotix/THIRD-PARTY-LICENSES
 	# R24 (T8): the versions of the LINKED static libraries, read by pkg-config in the

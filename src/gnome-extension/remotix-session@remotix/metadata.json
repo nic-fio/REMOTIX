@@ -1,0 +1,7 @@
+{
+  "uuid": "remotix-session@remotix",
+  "name": "REMOTIX session",
+  "description": "Inside a REMOTIX remote session: no Power Off, Restart or Suspend in the menu; Log Out stays. Enabled by REMOTIX in the session only.",
+  "shell-version": ["45", "46", "47", "48", "49", "50"],
+  "url": "https://github.com/nic-fio/REMOTIX"
+}
