@@ -6,7 +6,8 @@
 #
 #   sh src/opus-wasm/build.sh            # builds and embeds
 #   sh src/opus-wasm/build.sh --verify # checks that the page carries
-#                                             # exactly opus.wasm
+#                                             # exactly opus.wasm, and that it
+#                                             # exports every rx_* the page calls
 set -eu
 
 HERE=$(cd "$(dirname "$0")" && pwd)
@@ -28,6 +29,36 @@ rx = re.compile(r'(/\*OPUS_WASM_INIZIO\*/")([A-Za-z0-9+/=]*)("/\*OPUS_WASM_FINE\
 m = rx.search(t)
 if not m:
     sys.exit("⛔ the OPUS_WASM markers are not in " + pagina)
+
+def exports(w):
+    """The names in the export section (id 7) of a wasm module."""
+    def leb(i):
+        r = s = 0
+        while True:
+            x = w[i]; i += 1; r |= (x & 0x7f) << s; s += 7
+            if x < 0x80:
+                return r, i
+    if w[:8] != b"\0asm\1\0\0\0":
+        return set()
+    i, names = 8, set()
+    while i < len(w):
+        n, j = leb(i + 1)
+        if w[i] == 7:
+            k, q = leb(j)
+            for _ in range(k):
+                l, q = leb(q); names.add(w[q:q + l].decode()); q += l + 1; _, q = leb(q)
+        i = j + n
+    return names
+
+# ⛔ Every `.rx_*` the page calls must be an export of the module it carries: after
+#   the English rename the page called rx_open and the module still exported
+#   rx_apri, rx_open() threw and the page silently fell back to AudioDecoder.
+chiamate = set(re.findall(r"\.(rx_\w+)\b", t[:m.start()] + t[m.end():]))
+mancano = sorted(chiamate - exports(base64.b64decode(m.group(2) if modo == "verifica" else b64)))
+if not chiamate or mancano:
+    sys.exit("⛔ the page calls rx_* exports the embedded module lacks: "
+             + (", ".join(mancano) if mancano else "(no rx_* call found in the page)"))
+print("⭐ the module exports every rx_* the page calls (%s)" % ", ".join(sorted(chiamate)))
 if modo == "verifica":
     ok = m.group(2) == b64
     print(("⭐ the page carries exactly opus.wasm (%d bytes, %d in base64)" if ok
