@@ -143,9 +143,9 @@ func examples() []example {
 			m.screen, m.step = sReady, pReady
 		}},
 		{"stopped", func(m *model) {
-			m.fine = &interfaccia.BlockedView{Titolo: interfaccia.T("b.titolo.annullata"), Below: interfaccia.T("b.sotto.annullata"),
+			m.fine = &interfaccia.BlockedView{Title: interfaccia.T("b.titolo.annullata"), Below: interfaccia.T("b.sotto.annullata"),
 				Why: "The package manager could not install labwc: no repository of this machine provides it.",
-				Codice: "RX-PACCHETTI-005", Toccata: true}
+				Code: "RX-PACCHETTI-005", Touched: true}
 			m.screen, m.step, m.has_failed = sFine, pInstall, true
 		}},
 	}
