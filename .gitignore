@@ -75,3 +75,6 @@ costruzione-uscita/
 # Archivi grezzi delle measures: too grandi per git (GitHub refuse beyond 100 MB).
 # Stanno nelle release di GitHub (es. tag misure-19-nvidia); here stays solo SHA256SUMS.
 misure/**/*.tar.gz
+
+# The site's copies of the manuals: autocontenuta.py makes them from docs/*.html at every release.
+grafica/sito-mockup/pubblica/docs/

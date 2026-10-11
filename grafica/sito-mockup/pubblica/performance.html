@@ -135,12 +135,6 @@ input:focus, select:focus { outline: none; border-color: var(--accento); box-sha
 .piede a { color: var(--tenue-fondo); text-decoration: none; }
 .piede a:hover { color: #fff; }
 .piede .fondo { margin-top: 2.5rem; padding-top: 1.4rem; border-top: 1px solid rgba(255,255,255,.1); font-size: .8rem; }
-
-/* the mockup ribbon */
-.nastro { position: fixed; right: 12px; bottom: 12px; z-index: 50; font-size: .72rem; font-weight: 700;
-  letter-spacing: .06em; text-transform: uppercase; color: #fff; background: #d92d20; padding: .35em .7em;
-  border-radius: .4em; box-shadow: 0 4px 12px rgba(0,0,0,.25); }
-.nastro a { color: #fff; }
 </style>
 <style>
   .largo { width: 100%; max-width: 1480px; margin: 0 auto; padding: 0 20px; }
@@ -242,7 +236,7 @@ input:focus, select:focus { outline: none; border-color: var(--accento); box-sha
   <header class="testata">
     <div class="largo riga">
       <a class="marchio" href="/" aria-label="REMOTIX home"><svg viewBox="0 0 1640 360"><use href="#logo"/></svg></a>
-      <nav aria-label="Main"><a href="/#features">Features</a><a href="/performance.html" aria-current="page">Performance</a><a href="/#download">Download</a><a href="#">Docs</a></nav>
+      <nav aria-label="Main"><a href="/#features">Features</a><a href="/performance.html" aria-current="page">Performance</a><a href="/#download">Download</a><a href="/docs.html">Docs</a></nav>
       <div class="azioni"><a class="pulsante primario" href="/#download">Get started</a></div>
     </div>
   </header>
@@ -304,7 +298,7 @@ input:focus, select:focus { outline: none; border-color: var(--accento); box-sha
         <li>Users are added one at a time, up to 16, at 4K, 3K, 2K and Full HD, on GNOME, KDE Plasma, XFCE and LXQt; each one types, scrolls and moves windows, and one watches a 4K film. A level counts when every user keeps latency under 50 ms and the video at 80% of its frame rate or more.</li>
         <li>One machine, and a modest one: the Intel card is the integrated one. The clients ran on the server itself, so REMOTIX's figures are a lower bound. xrdp is used as Debian 13 packages it.</li>
         <li>xrdp is the remote desktop server most Linux machines use today; other products were not measured.</li>
-        <li>Full tables and analysis: the technical manual, chapter «Performance and capacity».</li>
+        <li>Full tables and analysis: <a href="/docs/technical-manual.html#ch18">the technical manual, chapter «Performance and capacity»</a>.</li>
       </ul>
     </div>
   </section>
@@ -313,13 +307,12 @@ input:focus, select:focus { outline: none; border-color: var(--accento); box-sha
 <footer class="piede-chiaro">
   <div class="largo riga">
     <a class="marchio" href="/" aria-label="REMOTIX"><svg viewBox="0 0 1640 360"><use href="#logo"/></svg></a>
-    <nav><a href="/#features">Features</a><a href="/performance.html">Performance</a><a href="/#download">Download</a><a href="https://github.com/nic-fio/REMOTIX/blob/HEAD/LICENSE.md">License</a></nav>
+    <nav><a href="/#features">Features</a><a href="/performance.html">Performance</a><a href="/#download">Download</a><a href="/docs.html">Docs</a><a href="https://github.com/nic-fio/REMOTIX/blob/HEAD/LICENSE.md">License</a></nav>
     <span class="destra">© 2026 REMOTIX · <a href="https://github.com/nic-fio/REMOTIX">GitHub</a></span>
   </div>
 </footer>
 
 <div class="suggerimento" id="suggerimento" role="status"></div>
-<div class="nastro">Mockup</div>
 
 <script>
 // Data: fasi/20-le-prestazioni.md §8 (10 Oct 2026). Capacity = users who hold («buono»), allowing one

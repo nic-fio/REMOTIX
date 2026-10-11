@@ -31,22 +31,49 @@ It opens directly from disk: `xdg-open grafica/sito-mockup/index.html`.
 ## The page in a single file (10 Oct evening)
 
 ✅ User: *«rendi la landing page autocontenuta (con le immagini incorporate)»*. The source stays `index.html` +
-`stile.css` + `icone/` (Simple Icons 13.21.0, local copies) + `schermate-vere/`; the file to publish is regenerated with
+`stile.css` + `icone/` (Simple Icons 13.21.0, local copies) + `schermate-vere/`; the files to publish are regenerated with
 
-    python3 grafica/sito-mockup/autocontenuta.py                 # pubblica/index.html, with the «Mockup» ribbon
-    python3 grafica/sito-mockup/autocontenuta.py --no-ribbon  # the one to put online
+    python3 grafica/sito-mockup/autocontenuta.py
 
-It inlines CSS, icons (SVG) and screenshots (WebP, at most 1600 px, quality 82): **~420 KB, no requests to
-third parties** (no CDN or external fonts). The script refuses to write if a link to an external file remains.
+(11 Oct: the red «Mockup» ribbon and the `--no-ribbon` option are gone — the user removed it from the published pages.) It inlines CSS, icons (SVG) and screenshots (WebP, at most 1600 px, quality 82): **~420 KB, no requests to
+third parties** (no CDN or external fonts). The script refuses to write if a link to an external file remains, and if a link inside the site does not reach an
+existing page and anchor (`href="#"` included).
 
 ## Online (10 Oct 2026, evening)
 
 ✅ User: *«ormai la homepage di remotix direi che è ok»* ⇒ published at **https://remotix.nicfio.it** (DNS A at
-OVH, Caddy block with `~/Documenti/VPS/add-site.sh`, Let's Encrypt certificate). It is republished with
-
-    python3 grafica/sito-mockup/autocontenuta.py --no-ribbon
-    scp grafica/sito-mockup/pubblica/index.html progetti@57.131.27.241:/srv/www/remotix.nicfio.it/index.html
+OVH, Caddy block with `~/Documenti/VPS/add-site.sh`, Let's Encrypt certificate). It is republished, with the release, with the commands in «Republishing» below.
 
 The button that pointed to the `.run` is «Coming soon» until the first release is in `/download/` on the VPS.
 REMOTIX's card («Coming soon · Free») is on the nicfio.it homepage (`~/Documenti/VPS/sites/nicfio.it/holding`,
 `publish.sh`). Contact: Zimbra alias `remotix@nicfio.it` → nicfio@nicfio.it.
+
+## The manuals on the site (11 Oct 2026)
+
+The «Docs» link leads to **`docs.html`**: a light page, the same style as `performance.html`, with the two manuals —
+the **User Manual** first (what REMOTIX is, how to install it), then the **Technical Manual** (how it works inside), each
+with one line and the version, read from the manual itself at generation. The manuals are the self-contained files made
+by `docs/sources/build.py`; `autocontenuta.py` copies them to `pubblica/docs/` with the names the site serves:
+
+| in the repository | on the site |
+|---|---|
+| `docs/User Manual.html` | `/docs/user-manual.html` |
+| `docs/Technical Manual.html` | `/docs/technical-manual.html` |
+
+The copies are not in git (`.gitignore`): they are byte-for-byte the manuals, remade at every run. Other links: on the
+home page «Get started now» has «Installation guide» → `/docs/user-manual.html#ch2`; on `performance.html` «the
+technical manual, chapter Performance and capacity» → `/docs/technical-manual.html#ch18`; the footers have «Docs». The
+chapters are linked by number: if `build.py` renumbers them, `autocontenuta.py` stops (table `CAPITOLI`). The «FAQ»
+entry was removed: there is no FAQ content.
+
+## Republishing
+
+Commands only, to be run with the release (the manuals first, so that the site copies the new ones):
+
+    python3 docs/sources/build.py
+    python3 grafica/sito-mockup/autocontenuta.py
+    ssh progetti@57.131.27.241 mkdir -p /srv/www/remotix.nicfio.it/docs
+    scp grafica/sito-mockup/pubblica/index.html grafica/sito-mockup/pubblica/performance.html \
+        grafica/sito-mockup/pubblica/docs.html progetti@57.131.27.241:/srv/www/remotix.nicfio.it/
+    scp grafica/sito-mockup/pubblica/docs/user-manual.html grafica/sito-mockup/pubblica/docs/technical-manual.html \
+        progetti@57.131.27.241:/srv/www/remotix.nicfio.it/docs/
