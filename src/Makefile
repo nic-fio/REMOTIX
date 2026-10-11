@@ -122,6 +122,14 @@ CFLAGS   ?= -O2 -g -std=gnu11 $(AVVERTIMENTI)
 #    line together with the rest, and `struct in6_pktinfo` would vanish with an error that
 #    names no option.
 override CFLAGS += -D_GNU_SOURCE
+# ⭐ DECISIONI §10.43 — the labwc that hosts the nested KWin (`kwin.c`): empty = the
+#    distribution's, from PATH (six distributions); a path = OUR labwc at that exact path,
+#    for the distributions without one (RHEL/Alma 10: `packaging/rpm/remotix.spec`).
+#    A build-time choice of the package, never a runtime switch.  `make pulisci` first.
+LABWC ?=
+ifneq ($(LABWC),)
+override CFLAGS += -DREMOTIX_LABWC='"$(LABWC)"'
+endif
 
 # ⛔⭐ THE LIBRARIES OF PHASE 2, ASKED OF `pkg-config` ONCE ONLY.
 #
@@ -264,10 +272,15 @@ SCANNER    ?= wayland-scanner
 #    `wayland-protocols`, which the container does NOT have: the XML is in the repository like
 #    the others, copied from wayland-protocols 1.44.  ⚠ At most v4 is bound
 #    (`[M]` labwc announces it): it is the one with `main_device`.
+# ⭐ 11 Oct 2026 — `wlr-layer-shell-unstable-v1` (wlr-protocols) and `xdg-shell`
+#    (wayland-protocols 1.44, needed because layer-shell names `xdg_popup`):
+#    the nested KWin's «ticker», a 1x1 transparent surface on the labwc that
+#    hosts KWin (`kwin.c`).
 PROTOCOLLI := zkde-screencast-unstable-v1 wlr-data-control-unstable-v1 \
               wlr-screencopy-unstable-v1 wlr-output-management-unstable-v1 \
               virtual-keyboard-unstable-v1 wlr-virtual-pointer-unstable-v1 \
-              linux-dmabuf-unstable-v1 ext-data-control-v1
+              linux-dmabuf-unstable-v1 ext-data-control-v1 \
+              wlr-layer-shell-unstable-v1 xdg-shell
 GENERATI   := $(PROTOCOLLI:%=%-client-protocol.h) $(PROTOCOLLI:%=%-protocol.c)
 
 # ⭐ PHASE 17 — the PREFISSO's library folder is not always `lib`:

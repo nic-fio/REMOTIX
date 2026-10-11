@@ -84,6 +84,8 @@ depends=(
 	#    wlr-randr serves the size cure on LXQt and XFCE.  ⛔ As optdepends
 	#    pacman would never install them, and R4 («nothing by hand») would fail on
 	#    XFCE and LXQt.  The price: labwc+wlroots on GNOME and KDE too.
+	#    ⭐ 11 Oct 2026: KDE uses it too — KWin nested in a screenless labwc
+	#    (DECISIONI §10.40, the desktop's size at reattach).
 	#    ⚠ labwc dies without a scalable font (labwc #2525, leap16-lxqt
 	#    in T1): on Arch labwc depends on `ttf-font`, and pacman brings one.
 	#    ⛔ Not the DESKTOP: without a desktop the engine installs it (§10.7).
