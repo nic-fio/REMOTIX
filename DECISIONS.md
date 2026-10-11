@@ -189,7 +189,7 @@ phases 8, 9 and 10 arrived, each with its own theme. ⇒ **It was not hidden: it
 > grows and never shrinks is the drawer where things go to die.
 
 ⚠ **And it does not widen the number of registers**: `MASTERPLAN.md` **decides nothing** and copies nothing.
-The decisions stay here, only once (§0 of `README.md`); the plan of the phases stays in
+The decisions stay here, only once (§0 of the former `README.md`, now `PHASES.md` §The former README); the plan of the phases stays in
 `PIANO.md`; ⛔ **what must happen BEFORE the end does not go into the masterplan**, it goes into a
 phase.
 

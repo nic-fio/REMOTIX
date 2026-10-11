@@ -83,7 +83,7 @@ needs equipment, not an afternoon.
 
 **What it is.** On the wire the transport uses **CUBIC**. ⛔ Nobody chose it: it is what was there.
 
-**Where it comes from.** Phase 9, listed among the open things in the `README.md`.
+**Where it comes from.** Phase 9, listed among the open things in the `README.md` (now `PHASES.md` §The former README).
 
 **What it costs if it is NEVER done.** `[?]` **Nobody knows, and that is the point.** The contrast
 test has never been done **because no option exposes it** — so it is not that we

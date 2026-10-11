@@ -18,7 +18,7 @@ fase 7»*); ⛔ what remains of 6 **stays open and does not close by itself**.
 
 > # 📅 HOW IT WAS ON **17 Aug 2026, evening** — *the resume of that time*
 >
-> ⚠ **Do not restart from here**: the entry point is the **⏸** box at the head of `README.md`.
+> ⚠ **Do not restart from here**: the entry point is the **⏸** box at the head of the former `README.md`, now `PHASES.md` §The former README.
 >
 > *Decided by the user: «per gli appunti apriamo una nuova sessione».*
 >

@@ -179,6 +179,7 @@ GRUPPI = [
         ("installer/cmd/remotix-install/main.go", "The command line: " + c("check") + ", " + c("install")
          + ", " + c("uninstall") + ", " + c("status") + ", " + c("tui") + " and the commands package scripts call"),
         ("installer/cmd/remotix-install/tui.go", "Starts the text interface"),
+        ("installer/cmd/remotix-install/main_test.go", "The install plan states the port before the confirmation"),
         (M + "format.go", "Package entry: object format version, engine version, fingerprints"),
         (M + "states.go", "The operation states and the only valid transitions"),
         (M + "operation.go", "The engine and an operation: lock, apply, resume, cancel, verify, certify"),
