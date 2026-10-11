@@ -538,7 +538,7 @@ def summarize(lines, until):
     # ⭐ And the number that accuses or acquits `01-b3-cliente.py`: how many runs
     #    would have broken through its 8 s ceiling on the QUIC handshake.
     beyond8 = len([x for x in quic if x > 8000])
-    return {"rounds": len(lines), "opened": len(opened), "aperte_subito": len(immediately),
+    return {"rounds": len(lines), "aperte": len(opened), "aperte_subito": len(immediately),
             "quic_mediana_ms": median(quic), "quic_max_ms": max(quic) if quic else None,
             "tot_mediana_ms": median(tot), "tot_max_ms": max(tot) if tot else None,
             "quic_oltre_8s": beyond8,

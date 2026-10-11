@@ -320,9 +320,9 @@ def judge(fpath):
         "mean": round(media, 3),
         "dev": round(float(f.std()), 3),
         "minimum": int(img.min()), "maximum": int(img.max()),
-        "colors": colors,
-        "lit": round(lit, 6),
-        "different": round(different, 6),
+        "colori": colors,
+        "accesi": round(lit, 6),
+        "diversi": round(different, 6),
         "thresholds": {"luma_nero": LUMA_NERO, "frazione_nero": BLACK_FRACTION,
                    "media_quasi_nero": MEAN_NEARLY_BLACK,
                    "frazione_piatto": FLAT_FRACTION},
@@ -436,7 +436,7 @@ def _read_client_outcome(text):
             continue
     if not frames:
         return None
-    return {"frames": frames, "keys": keys, "size": size,
+    return {"frames": frames, "chiavi": keys, "size": size,
             "session": session}
 
 

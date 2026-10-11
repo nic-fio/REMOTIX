@@ -1865,7 +1865,7 @@ def one_round(chi, mode, a, referee, reader, healthy_rate=None):
           wrong moment of the story.  The guardian was not touched: the graft
           was moved.
     """
-    outcome = {"who": chi, "mode": mode or "healthy", "state": "non-lo-so",
+    outcome = {"who": chi, "modo": mode or "healthy", "state": "non-lo-so",
              "why": "", "frames": None, "ritmo": None, "coppie": None,
              "diverse": None, "palco_s": None, "schermi": None,
              "reason": "", "scena_viva": None, "scena_viva_prima": None,

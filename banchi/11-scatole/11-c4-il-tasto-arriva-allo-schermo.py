@@ -730,7 +730,7 @@ def measure(png_before, png_after, zone=ZONE):
         "dopo_partenza": color_fraction(zb, START_COLOR),
         "dopo_arrivo": color_fraction(zb, ARRIVAL_COLOR),
         "inside": float(diff[inside].mean()),
-        "witness": (float(diff[witness].mean())
+        "testimone": (float(diff[witness].mean())
                       if int(witness.sum()) else 0.0),
     }
 

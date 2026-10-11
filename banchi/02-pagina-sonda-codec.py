@@ -275,7 +275,7 @@ def build_all(fault=""):
                 continue
             read, troubles = stream_tints(stream, codec, depth)
             report[f"{codec}-{depth}"] = {
-                "codec": codec, "depth": depth,
+                "codec": codec, "profondita": depth,
                 "width": WIDTH, "height": ALTEZZA,
                 "byte": len(stream),
                 "dati": base64.b64encode(stream).decode(),

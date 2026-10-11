@@ -225,7 +225,7 @@ def drop(s, o, reg, lm, observe_s, remove=True, during=None):
     if f["linea_morta"] is None:
         _f, line, _ = reg.wait_until(sign, ["dead-line"], s.chi, cap=2)
         f["linea_morta"] = line
-    f["sign"] = sign
+    f["segno"] = sign
     return f
 
 
