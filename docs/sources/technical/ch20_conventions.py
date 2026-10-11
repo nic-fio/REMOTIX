@@ -232,7 +232,7 @@ S7 = p("Every commit leaves the project built, checked and documented. The list 
        "it runs by itself; what does not run by itself is the part that is forgotten.", lead=True) + steps([
     "<b>The product builds</b>: " + c("make") + " in " + c("src/") + " (inside the build container — see "
     + rif("Build and release") + "). The build first compares the twin RCP files with " + c("banchi/rcp/")
-    + " and stops if they differ; " + c("TWIN=none") + " (twin = none) builds without the comparison only when declared.",
+    + " and stops if they differ; " + c("TWIN=none") + " builds without the comparison only when declared.",
     "<b>The installer's tests</b>, if " + c("installatore/") + " (the installer) changed: "
     + c("installatore/costruisci.sh test") + " (gofmt, go vet and go test: state machine, register, resume, "
     "codes, English texts).",

@@ -128,7 +128,7 @@ S_MAKEFILE = p(c("src/Makefile") + " builds one program, " + c("remotix") + ", f
          + c("?=") + "); then " + c("override CFLAGS +=") + " adds " + c("-D_GNU_SOURCE") + " and the pkg-config flags"],
         [c("LIBS"), c("-lngtcp2_crypto_ossl") + " first, then " + c("-lngtcp2 -lnghttp3 -lssl -lcrypto -lpam -lm")
          + " and the pkg-config libraries"],
-        [c("DEPS_PREFIX") + " (prefix)", "where ngtcp2/nghttp3 are installed when pkg-config does not find them: the libdir is asked to "
+        [c("DEPS_PREFIX"), "where ngtcp2/nghttp3 are installed when pkg-config does not find them: the libdir is asked to "
          "pkg-config <i>inside</i> the prefix (" + c("PKG_CONFIG_LIBDIR") + ", without " + c("PKG_CONFIG_PATH")
          + "), then " + c("-L") + " and " + c("-rpath")],
         [c("TWIN") + " (twin)", "the twin copy to compare (" + c("../banchi/rcp") + " by default, " + c("none")
