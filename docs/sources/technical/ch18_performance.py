@@ -1,8 +1,9 @@
 from build import c, code, note, p, rif, table, tip, ul, warn
 
-# Every number in this chapter comes from the phase 20 campaigns (7–10 Oct 2026), read from the files of
+# The capacity numbers come from the phase 20 campaigns (7–10 Oct 2026), read from the files of
 # /media/REMOTIX/misure/fase16 and from banchi/16-stress/16-rapporto.py; fasi/20-le-prestazioni.md §8 holds
-# the same tables with the details.
+# the same tables with the details. The nested-KWin cost is DECISIONI.md §10.40 (11 Oct 2026); the KasmVNC
+# dry run is DECISIONI.md §10.47 and fasi/20 §9 (branch fix-kasmvnc).
 
 
 def cell(remotix, xrdp):
@@ -14,7 +15,7 @@ def cell(remotix, xrdp):
 S1 = p("This chapter answers one question for whoever maintains REMOTIX: <b>how much load does the product carry "
        "while still working</b>, on which hardware, and how does that compare with xrdp, the X11 remote desktop "
        "server most Linux administrators would otherwise install. Every figure was measured once, on one machine, "
-       "between 7 and 10 October 2026, and is tied to that hardware and that date.", lead=True) + \
+       "between 7 and 11 October 2026, and is tied to that hardware and that date.", lead=True) + \
     table(["", "Value"], [
         ["Machine", "Intel Core i5-13500T (14 cores, 20 threads), <b>31 GB</b> RAM, Debian 13, kernel 7.0"],
         ["Card 1", "<b>Intel UHD 770, the GPU integrated in the processor</b> — REMOTIX encodes with VA-API"],
@@ -24,7 +25,9 @@ S1 = p("This chapter answers one question for whoever maintains REMOTIX: <b>how 
          "ceiling raised to 17 so that the short check fits at the top step; clients Firefox 153.4 ESR and Chrome 154"],
         ["xrdp", "0.10.1-3.1+deb13u2 with xorgxrdp 1:0.10.2-1, Debian's configuration untouched (" + c("dpkg --verify")
          + " clean); RemoteFX compression on the CPU (Debian builds xrdp without H.264); clients FreeRDP 3.15.0"],
-        ["Desktops", "GNOME, KDE Plasma, XFCE, LXQt — each in its own box; xrdp runs the same boxes on X11"],
+        ["Desktops", "GNOME, KDE Plasma, XFCE, LXQt — each in its own box; xrdp runs the same boxes on X11. KDE was "
+         "measured with KWin " + c("--virtual") + ", before KWin moved inside a labwc on 11 Oct 2026: the cost of that "
+         "change is in " + rif("The cost of the nested KWin")],
         ["Screen sizes", "4K (3840×2160), 3K (3200×1800), 2K (2560×1440), Full HD (1920×1080)"],
         ["Campaigns", c("intel-f20") + ", " + c("amd-f20") + " (REMOTIX, 7–9 Oct) · " + c("intel-x20") + ", "
          + c("amd-x20") + " (xrdp, 9 Oct 17:47 → 10 Oct 16:09 UTC) — 64 climbs in all"],
@@ -49,9 +52,9 @@ S2 = p("The bench is the stress harness of " + c("banchi/16-stress/") + ", descr
       "step one more session (user 99) logs in and runs the short functional check: a level where nobody else can "
       "get in is not a healthy level. If 4K breaks, the climb is redone at 3K, then 2K, then Full HD.") + \
     p("<b>Two numbers per climb</b>, both written by " + c("16-coda.sh") + " in the queue log:") + \
-    ul(["<b>true GREEN</b> (" + c("ultimo GREEN vero") + "): the highest level where <i>every</i> session is GREEN "
+    ul(["<b>true GREEN</b> (" + c("last true GREEN") + "): the highest level where <i>every</i> session is GREEN "
         "— the «optimal up to» of the public table;",
-        "<b>good</b> (" + c("buono") + "): the highest level the climb passed, admitting a non-significant DEGRADED "
+        "<b>good</b> (" + c("good") + "): the highest level the climb passed, admitting a non-significant DEGRADED "
         "(at most one session in four, inside the first half of its band) — the «holds up to»."]) + \
     p("A level is FAIL if one session is FAIL, which includes the short check. The thresholds (input → frame delay, "
       "frames skipped, longest freeze, video frames painted per second, audible sound, birth time, drops, memory "
@@ -129,6 +132,37 @@ S4 = p("At the first level that is not GREEN, " + c("16-rapporto.py") + " names 
         "first: the budget then protects a resource it does not count directly, and the ceiling is the simpler "
         "lever.", "Using the numbers.")
 
+# ── 4-bis. The cost of the nested KWin ───────────────────────────────────
+S4B = p("Since 11 Oct 2026 KWin runs nested inside a labwc without a screen, so that the KDE desktop can take the "
+        "window's size at every reattach (" + c("DECISIONI.md") + " §10.40; " + c("src/kwin.c") + "). labwc draws "
+        "KWin's whole frame once more, and on an integrated card that is not free. It was measured against the KWin "
+        + c("--virtual") + " of the campaigns above, on the same machine and the same card.", lead=True) + \
+    table(["", "Value"], [
+        ["Card", "<b>Intel UHD 770, the GPU integrated in the i5-13500T</b>; H.264 through VA-API"],
+        ["Box", c("t10-kde-leap16") + ": openSUSE Leap 16, KWin 6.4.2, labwc 0.8.1; two servers side by side in the same box"],
+        ["Scene", "a 60 fps animation filling a Firefox window; two runs per size; CPU in % of <b>one</b> core"],
+        ["Latency", "the server's stretch from the compositor's frame to the bytes on the wire (median) — the part "
+         "the nesting can change; the browser's decoding and display are not in it"],
+    ], "«TAB» — How the nested KWin was measured (11 Oct 2026)") + \
+    table(["Window (canvas)", "fps: --virtual → nested", "Latency ms", "KWin % of a core", "labwc % of a core"], [
+        ["1080p (1872×944)", "58 → 58", "15.3–15.6 → 12.5", "4.9–5.3 → 5.9–6.4", "2.4–2.6"],
+        ["2K (2512×1296)", "58 → 58", "15.5–16.4 → 13.4–13.5", "6.7–6.8 → 6.9–8.1", "2.9–3.2"],
+        ["3K (2832×1488)", "58 → <b>54–55</b> (minimum 56–57 → 46–48)", "17.9–18.1 → 18.7", "5.3–5.7 → 5.5–5.6", "2.5"],
+        ["4K (3824×2064)", "58 → <b>44–49</b>", "25.5 → 39.4–39.9", "4.7–4.8 → 4.4–4.7", "2.5–2.6"],
+        ["still desktop", "—", "—", "0 → 0", "0.5–1.5"],
+    ], "«TAB» — The nested KWin against KWin --virtual, Intel UHD 770 (integrated)") + \
+    ul(["<b>At 1080p and 2K the nesting costs about 3 % of one core</b> (labwc) and nothing in frames or latency.",
+        "<b>At 3K it starts to lose frames</b> (−3 to −4 fps); <b>at 4K it loses 9 to 14 fps and adds 14 ms</b> on "
+        "this integrated card. The likely cause — labwc composing KWin's frame again on the same GPU — is not "
+        "measured: the card's time cannot be read inside the boxes.",
+        "On the <b>AMD Radeon RX 6800</b> (box " + c("rete11-kde") + ", KWin 6.3.6) the same 4K animation stays at "
+        "59 → 59 fps, with labwc at 2.6–2.9 % of a core.",
+        "Not measured on the Intel N100 tablet, which runs GNOME. The capacity tables above were <i>not</i> "
+        "re-measured with the nested KWin; read the KDE cells at 3K and 4K on the Intel as an upper bound."]) + \
+    note("this is the price of a function, not of a defect: the alternative, KWin " + c("--virtual") + ", cannot "
+         "change its output's size, and restarting KWin at the new size kills every program that is not Qt. The "
+         "user accepted the road on 11 Oct 2026 for KDE only; the other desktops keep theirs.", "Why it is paid.")
+
 # ── 5. REMOTIX against xrdp ───────────────────────────────────────────────
 S5 = p("xrdp ran the same scene, the same steps and the same thresholds, in the same desktop boxes switched to X11 "
        "(" + c("Contenitore.xrdp") + "), driven by " + c("16-attore-rdp.py") + ": FreeRDP in a private Xvfb per "
@@ -184,6 +218,22 @@ S5 = p("xrdp ran the same scene, the same steps and the same thresholds, in the 
          "cells for XFCE and LXQt are a <b>lower bound</b> set by the box. The verdict on CPU, memory and video "
          "does not depend on it: it was measured on the users who were inside.", "The 64 MiB wall.")
 
+# ── 5-bis. A first look at KasmVNC ───────────────────────────────────────
+S5B = p("KasmVNC is the strongest of the free alternatives that reach a Linux desktop from a browser (the others "
+        "are noVNC and Guacamole), so it is the one REMOTIX is to be measured against next. The bench reruns the "
+        "same scene with REMOTIX as the twin, row by row (" + c("DECISIONI.md") + " §10.47; " + c("fasi/20-le-prestazioni.md")
+        + " §9). KasmVNC serves X11 sessions only, so GNOME, which REMOTIX serves on Wayland only, is outside the "
+        "comparison; the sizes are 1080p, 2K and 3K.", lead=True) + \
+    table(["At 1080p, one user", "KasmVNC", "REMOTIX"], [
+        ["Frames per second", "24.4", "<b>30.0</b>"],
+        ["Bandwidth", "62.7 Mbit/s", "<b>5.6 Mbit/s</b>"],
+        ["Key latency, p95", "77 ms", "<b>45 ms</b>"],
+    ], "«TAB» — KasmVNC against REMOTIX: one dry run, Intel UHD 770 (integrated), 11 Oct 2026") + \
+    warn("these numbers come from <b>a single dry run</b> on the i5-13500T with its integrated Intel UHD 770, made "
+         "to prove that the bench works while the server was not quiet. They are not a result. The campaign, on a "
+         "quiet server and at the three sizes, is still to be run; until then quote them only as «the bench "
+         "works».", "A dry run, not a campaign.")
+
 # ── 6. Limits of the measurements ─────────────────────────────────────────
 S6 = p("What the numbers above do not say, and why.", lead=True) + \
     ul(["<b>One machine</b>, and a modest one where it matters: the Intel card is the integrated UHD 770.",
@@ -198,7 +248,10 @@ S6 = p("What the numbers above do not say, and why.", lead=True) + \
         "<b>Not comparable:</b> skipped frames, video-chain holes and audio exist only on the REMOTIX side; GPU "
         "engine readings are empty for xrdp; the delay is compared only as seen by the viewer.",
         "<b>The 64 MiB wall</b> cuts xrdp's XFCE and LXQt cells (" + rif("REMOTIX against xrdp") + ").",
-        "<b>The driver decides two cells</b>: on the Radeon at 4K, GNOME and KDE stop at RADV 25.0.7, not at REMOTIX."])
+        "<b>The driver decides two cells</b>: on the Radeon at 4K, GNOME and KDE stop at RADV 25.0.7, not at REMOTIX.",
+        "<b>KDE was measured before the nesting.</b> Its cells use KWin " + c("--virtual") + "; the nested KWin of "
+        "0.19.0 costs nothing at Full HD and 2K but frames at 3K and 4K on the Intel (" + rif("The cost of the nested KWin") + ").",
+        "<b>KasmVNC</b> has one dry run, not a campaign (" + rif("A first look at KasmVNC") + ")."])
 
 # ── 7. Repeating the measurements ────────────────────────────────────────
 S7 = p("A campaign is a queue of climbs that runs unattended on the test machine for one to two days per card. "
@@ -251,7 +304,9 @@ CHAPTER = ("Performance and capacity", [
     ("The bench, the scene and the classes", S2),
     ("Capacity per card and desktop", S3),
     ("What limits capacity", S4),
+    ("The cost of the nested KWin", S4B),
     ("REMOTIX against xrdp", S5),
+    ("A first look at KasmVNC", S5B),
     ("Limits of the measurements", S6),
     ("Repeating the measurements", S7),
 ])
