@@ -1178,7 +1178,7 @@ class Climb:
                            "detail": cards_b["outside_intel"]})
         self.trim_actors(level_path, t_start, t_fine)
         line = dict(self.meta, **{
-            "campaign": o.campaign, "level": n, "name": name, "kind": kind,
+            "campaign": o.campaign, "level": n, "name": name, "type": kind,
             "desktop": o.box, "size": o.size, "width": o.width, "height": o.height,
             "session_cap": o.cap, "minutes": minutes, "check_min": o.check_min,
             "started": iso(t_start), "start_t": round(t_start, 3),
@@ -1246,11 +1246,11 @@ class Climb:
                 self.guest, grade, why_c[:200])
             grade, signif = "FAIL", True
         self.levels_done += 1
-        line.update(grade=grade, significant=signif, reason_class=why_c)
+        line.update(**{"class": grade}, significant=signif, class_rationale=why_c)
         with open(os.path.join(self.base, "climb.jsonl"), "a", encoding="utf-8") as f:
             fcntl.flock(f, fcntl.LOCK_EX)
             f.write(json.dumps(line, ensure_ascii=False) + "\n")
-        self.history.append({"level": n, "name": name, "kind": kind, "grade": grade,
+        self.history.append({"level": n, "name": name, "type": kind, "class": grade,
                             "significant": signif, "dir": level_path})
         self.do_update(class_last=grade)
         says("   ▶ %s: %s%s — %s" % (name, grade, " (significant)" if signif else "",

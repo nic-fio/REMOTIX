@@ -460,7 +460,7 @@ def synthetic(p):
             f.write(json.dumps({"type": "level", "campaign": camp, "level": n, "desktop": "kde",
                                 "card": "Intel UHD 770", "driver": "i915", "size": size,
                                 "commit": "abc1234", "binary": "b1443a0b", "page": "c5279e66",
-                                "kernel": "7.0", "grade": grade, "significant": sig,
+                                "kernel": "7.0", "class": grade, "significant": sig,
                                 "sessions": {"GREEN": n if grade == "GREEN" else n - 1,
                                              "DEGRADED": 1 if grade == "DEGRADED" else 0,
                                              "FAIL": 1 if grade == "FAIL" else 0},

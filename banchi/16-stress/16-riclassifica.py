@@ -170,7 +170,7 @@ def judge_again(level_path, line, fps_video, prog):
         except ValueError:
             continue
         if isinstance(d, dict) and d.get("type") == "level" and d.get("class") in CLASSES:
-            grade = d["grade"]
+            grade = d["class"]
     return grade, touched, output
 
 
@@ -194,7 +194,7 @@ def reclassify(climb, fps_video=None, prog=None):
             with open(os.path.join(level_path, "ranking-reclassified.log"), "w", encoding="utf-8") as f:
                 f.write("# 16-riclassifica.py: the freeze with the page's round (fasi/20 §3-bis.2); "
                         "rows touched: %d\n%s" % (touched, output))
-            n["grade"] = grade or "?"
+            n["class"] = grade or "?"
             entry.update(class_now=n["class"], touched=touched)
             if touched == 0 and n["class"] != r.get("class"):
                 # ⚠ without rows touched the judgement MUST come back the same: otherwise the
