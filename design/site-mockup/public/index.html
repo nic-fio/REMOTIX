@@ -135,12 +135,6 @@ input:focus, select:focus { outline: none; border-color: var(--accento); box-sha
 .piede a { color: var(--tenue-fondo); text-decoration: none; }
 .piede a:hover { color: #fff; }
 .piede .fondo { margin-top: 2.5rem; padding-top: 1.4rem; border-top: 1px solid rgba(255,255,255,.1); font-size: .8rem; }
-
-/* the mockup ribbon */
-.nastro { position: fixed; right: 12px; bottom: 12px; z-index: 50; font-size: .72rem; font-weight: 700;
-  letter-spacing: .06em; text-transform: uppercase; color: #fff; background: #d92d20; padding: .35em .7em;
-  border-radius: .4em; box-shadow: 0 4px 12px rgba(0,0,0,.25); }
-.nastro a { color: #fff; }
 </style>
 <style>
   /* widescreen: the content reaches 1320px, the dark bands go from edge to edge */
@@ -364,7 +358,7 @@ input:focus, select:focus { outline: none; border-color: var(--accento); box-sha
   <header class="testata">
     <div class="largo riga">
       <a class="marchio" href="/" aria-label="REMOTIX home"><svg viewBox="0 0 1640 360"><use href="#logo"/></svg></a>
-      <nav aria-label="Main"><a href="#features">Features</a><a href="#browsers">Browsers</a><a href="/performance.html">Performance</a><a href="#download">Download</a><a href="#">Docs</a><a href="#">FAQ</a></nav>
+      <nav aria-label="Main"><a href="#features">Features</a><a href="#browsers">Browsers</a><a href="/performance.html">Performance</a><a href="#download">Download</a><a href="/docs.html">Docs</a></nav>
       <div class="azioni"><a class="pulsante primario" href="#download">Get started</a></div>
     </div>
   </header>
@@ -504,6 +498,7 @@ input:focus, select:focus { outline: none; border-color: var(--accento); box-sha
         <p>The first release is on its way: one file to install on your server, and your remote desktop opens in minutes.</p>
         <div class="bottoni">
           <span class="pulsante primario presto" aria-disabled="true">Coming soon</span>
+          <a class="pulsante bordo-blu" href="/docs/user-manual.html#ch2">Installation guide</a>
           <a class="pulsante bordo-blu" href="https://github.com/nic-fio/REMOTIX">View on GitHub</a>
         </div>
         <div class="spunte">
@@ -537,11 +532,10 @@ input:focus, select:focus { outline: none; border-color: var(--accento); box-sha
 <footer class="piede-chiaro">
   <div class="largo riga">
     <a class="marchio" href="/" aria-label="REMOTIX"><svg viewBox="0 0 1640 360"><use href="#logo"/></svg></a>
-    <nav><a href="#features">Features</a><a href="/performance.html">Performance</a><a href="#download">Download</a><a href="#">Docs</a><a href="#">FAQ</a><a href="https://github.com/nic-fio/REMOTIX/blob/HEAD/LICENSE.md">License</a></nav>
+    <nav><a href="#features">Features</a><a href="/performance.html">Performance</a><a href="#download">Download</a><a href="/docs.html">Docs</a><a href="https://github.com/nic-fio/REMOTIX/blob/HEAD/LICENSE.md">License</a></nav>
     <span class="destra">© 2026 REMOTIX · <a href="https://github.com/nic-fio/REMOTIX">GitHub</a></span>
   </div>
 </footer>
 
-<div class="nastro">Mockup</div>
 </body>
 </html>

@@ -128,9 +128,3 @@ input:focus, select:focus { outline: none; border-color: var(--accento); box-sha
 .piede a { color: var(--tenue-fondo); text-decoration: none; }
 .piede a:hover { color: #fff; }
 .piede .fondo { margin-top: 2.5rem; padding-top: 1.4rem; border-top: 1px solid rgba(255,255,255,.1); font-size: .8rem; }
-
-/* the mockup ribbon */
-.nastro { position: fixed; right: 12px; bottom: 12px; z-index: 50; font-size: .72rem; font-weight: 700;
-  letter-spacing: .06em; text-transform: uppercase; color: #fff; background: #d92d20; padding: .35em .7em;
-  border-radius: .4em; box-shadow: 0 4px 12px rgba(0,0,0,.25); }
-.nastro a { color: #fff; }
