@@ -1,13 +1,13 @@
 # Contenitore.ubuntu2604 — phase 17: the "customer" box of Ubuntu 26.04 LTS with the desktop DESKTOP
 # (gnome = ubuntu-desktop, kde = kubuntu-desktop, xfce = xubuntu-desktop, lxqt = lubuntu-desktop: the
-# same as 17-vm.sh vesti). The rest as in Contenitore.debian13.
+# same as 17-vm.sh dress). The rest as in Contenitore.debian13.
 # ⚠ A declared difference from the real machine: in a box snapd does not run (no squashfs nor
 #   apparmor), and the "transitional" packages that install a snap (firefox, thunderbird) fail
 #   in their preinst. They are kept OUT with an apt preference (priority -1): the round's browser is
 #   outside the box, and REMOTIX does not depend on them.
 FROM docker.io/library/ubuntu:26.04
 ARG DESKTOP
-ARG PORTA_SSH=8600
+ARG SSH_PORT=8600
 ENV DEBIAN_FRONTEND=noninteractive
 RUN case "$DESKTOP" in gnome|kde|xfce|lxqt) ;; *) echo "DESKTOP=\"$DESKTOP\": gnome|kde|xfce|lxqt" >&2; exit 2 ;; esac
 RUN printf 'Package: firefox thunderbird chromium-browser\nPin: release *\nPin-Priority: -1\n' > /etc/apt/preferences.d/t17-niente-snap
@@ -19,7 +19,7 @@ RUN case "$DESKTOP" in gnome) P=ubuntu-desktop ;; kde) P=kubuntu-desktop ;; xfce
     && apt-get update && apt-get install -y -q "$P" \
     && rm -rf /var/lib/apt/lists/*
 COPY comune.sh /usr/local/sbin/t17-comune
-RUN sh /usr/local/sbin/t17-comune "$PORTA_SSH" ssh.service
+RUN sh /usr/local/sbin/t17-comune "$SSH_PORT" ssh.service
 COPY chiave-banco.pub /root/.ssh/authorized_keys
 RUN chmod 600 /root/.ssh/authorized_keys
 STOPSIGNAL SIGRTMIN+3

@@ -1,4 +1,4 @@
-package motore
+package engine
 
 import (
 	"os"
@@ -8,7 +8,7 @@ import (
 )
 
 // a fake root for the PREFLIGHT: the files it reads, and no command (all «not there»).
-func fakeRoot(t *testing.T, file map[string]string, collegamenti map[string]string) string {
+func fakeRoot(t *testing.T, file map[string]string, links map[string]string) string {
 	r := t.TempDir()
 	for p, c := range file {
 		d := filepath.Join(r, p)
@@ -17,7 +17,7 @@ func fakeRoot(t *testing.T, file map[string]string, collegamenti map[string]stri
 			t.Fatal(err)
 		}
 	}
-	for p, dest := range collegamenti {
+	for p, dest := range links {
 		d := filepath.Join(r, p)
 		os.MkdirAll(filepath.Dir(d), 0o755)
 		if err := os.Symlink(dest, d); err != nil {
@@ -27,26 +27,26 @@ func fakeRoot(t *testing.T, file map[string]string, collegamenti map[string]stri
 	return r
 }
 
-func conditionsOf(r *Rapporto, d string) string {
+func conditionsOf(r *Report, d string) string {
 	for _, e := range r.Desktop {
 		if e.Desktop == d {
 			var c []string
 			for _, k := range e.Condizioni {
 				c = append(c, k.Codice)
 			}
-			for _, m := range e.Motivi {
+			for _, m := range e.Reasons {
 				c = append(c, m.Codice)
 			}
 			// what is missing (§10.36): for the desktop, and for the whole machine
-			if len(e.Mancano) > 0 {
+			if len(e.Missing) > 0 {
 				c = append(c, "RX-MANCA-003")
 			}
 			// the pieces the desktop requires: REMOTIX dependencies, the manager installs them
-			if len(e.Dipende) > 0 {
-				c = append(c, "DEP("+strings.Join(e.Dipende, ",")+")")
+			if len(e.Depends) > 0 {
+				c = append(c, "DEP("+strings.Join(e.Depends, ",")+")")
 			}
-			for _, m := range r.Mancano {
-				if m.Codice != "RX-MANCA-003" && e.Lvl != NON_SUPPORTATA {
+			for _, m := range r.Missing {
+				if m.Codice != "RX-MANCA-003" && e.Lvl != NOT_SUPPORTED {
 					c = append(c, m.Codice)
 				}
 			}
@@ -72,7 +72,7 @@ func TestPreflightFedoraNvidia(t *testing.T) {
 		"usr/lib64/security/pam_systemd.so":        "",
 		"etc/systemd/logind.conf.d/50-uccidi.conf": "[Login]\nKillUserProcesses=yes\n",
 	}, map[string]string{"sys/class/drm/renderD128/device/driver": "../../../bus/pci/drivers/nvidia"})
-	a := &Ambiente{Radice: r, Esegui: noCommand}
+	a := &Environment{Root: r, Run: noCommand}
 	p := Preflight(a, PreflightOptions{})
 	for k, v := range map[string]string{"distro.family": "fedora", "selinux": "enforcing", "gpu.nvidia_proprietary": "yes",
 		"gpu.renderD128.driver": "nvidia", "pam.faillock": "yes", "desktop.gnome": "present", "group.render": "absent",
@@ -81,31 +81,31 @@ func TestPreflightFedoraNvidia(t *testing.T) {
 			t.Errorf("%s = %q, expected %q", k, p.V(k), v)
 		}
 	}
-	// no VA driver (proprietary NVIDIA) ⇒ the card does not encode, RILEVATO. Never «yes»
-	if f, _ := p.F("h264.gpu"); f.Stato != RILEVATO || f.Val != "no" {
+	// no VA driver (proprietary NVIDIA) ⇒ the card does not encode, DETECTED. Never «yes»
+	if f, _ := p.F("h264.gpu"); f.State != DETECTED || f.Val != "no" {
 		t.Errorf("h264.scheda without a VA driver: %+v", f)
 	}
-	codici := map[string]bool{}
+	codes := map[string]bool{}
 	for _, m := range p.Messages {
-		codici[m.Codice] = true
+		codes[m.Codice] = true
 	}
 	// phase 19: no fallback — a proprietary NVIDIA alone is a refusal (RX-GPU-004), already in the
 	// preliminary check; RPM Fusion (RX-H264-003) does not matter, it is not an Intel or AMD card
 	for _, c := range []string{"RX-GPU-002", "RX-GPU-004", "RX-PAM-002", "RX-SELINUX-001", "RX-GRUPPI-001", "RX-LOGIND-001"} {
-		if !codici[c] {
-			t.Errorf("%s missing among %v", c, codici)
+		if !codes[c] {
+			t.Errorf("%s missing among %v", c, codes)
 		}
 	}
 	for _, c := range []string{"RX-H264-003", "RX-H264-005", "RX-GPU-001"} {
-		if codici[c] {
-			t.Errorf("%s no longer applies: %v", c, codici)
+		if codes[c] {
+			t.Errorf("%s no longer applies: %v", c, codes)
 		}
 	}
 	// phase 19: the two active routes, Vulkan first; here without any ICD ⇒ the NVIDIA stays out
 	if p.V("encoding.routes") != "vulkan,vaapi" || p.V("encoding.vulkan") != "active" || p.V("encoding.vulkan.icd") != "none" {
 		t.Errorf("the routes: %q, vulkan %q, icd %q", p.V("encoding.routes"), p.V("encoding.vulkan"), p.V("encoding.vulkan.icd"))
 	}
-	rap := Valuta(catalogTest(t), p)
+	rap := Evaluate(catalogTest(t), p)
 	for _, d := range DESKTOP {
 		if got := conditionsOf(rap, d); !strings.HasPrefix(got, "UNSUPPORTED RX-GPU-004") {
 			t.Errorf("%s on Fedora 44 with only the proprietary NVIDIA: %s", d, got)
@@ -120,13 +120,13 @@ func TestPreflightFedoraNvidia(t *testing.T) {
 		"run/systemd/system/.x":                  "",
 		"usr/bin/gnome-shell":                    "",
 	}, nil)
-	p2 := Preflight(&Ambiente{Radice: r2, Esegui: noCommand}, PreflightOptions{})
+	p2 := Preflight(&Environment{Root: r2, Run: noCommand}, PreflightOptions{})
 	for _, m := range p2.Messages {
 		if strings.HasPrefix(m.Codice, "RX-GPU-00") && m.Codice != "RX-GPU-002" {
 			t.Errorf("Intel + NVIDIA: %s", m.Codice)
 		}
 	}
-	if got := conditionsOf(Valuta(catalogTest(t), p2), "gnome"); got != "COMPATIBLE C-HARDWARE" {
+	if got := conditionsOf(Evaluate(catalogTest(t), p2), "gnome"); got != "COMPATIBLE C-HARDWARE" {
 		t.Errorf("gnome on Fedora 44 with Intel and NVIDIA: %s", got)
 	}
 }
@@ -146,9 +146,9 @@ func TestPreflightWithoutCapableCard(t *testing.T) {
 		return m
 	}
 	for _, c := range []struct {
-		nome   string
-		file   map[string]string
-		codice string
+		name string
+		file map[string]string
+		code string
 	}{
 		{"no card (VM without a card)", con(nil), "RX-GPU-003"},
 		{"NVIDIA with the proprietary driver", con(map[string]string{"sys/class/drm/renderD128/device/vendor": "0x10de\n", "sys/module/nvidia/x": ""}), "RX-GPU-004"},
@@ -157,48 +157,48 @@ func TestPreflightWithoutCapableCard(t *testing.T) {
 		{"AMD", con(map[string]string{"sys/class/drm/renderD128/device/vendor": "0x1002\n", "usr/lib/x86_64-linux-gnu/dri/radeonsi_drv_video.so": ""}), ""},
 		{"unreadable vendor: the real test decides (7a)", con(map[string]string{"sys/class/drm/renderD128/device/.x": ""}), ""},
 	} {
-		p := Preflight(&Ambiente{Radice: fakeRoot(t, c.file, nil), Esegui: noCommand}, PreflightOptions{})
+		p := Preflight(&Environment{Root: fakeRoot(t, c.file, nil), Run: noCommand}, PreflightOptions{})
 		var gpu []string
 		for _, m := range p.Messages {
 			if m.Codice != "RX-GPU-002" && strings.HasPrefix(m.Codice, "RX-GPU-") {
 				gpu = append(gpu, m.Codice)
-				if m.Gravita != BLOCCANTE || !strings.HasPrefix(m.Testo, "Missing") {
-					t.Errorf("%s: %s is not BLOCKING or does not say what is missing: %+v", c.nome, m.Codice, m)
+				if m.Severity != BLOCKING || !strings.HasPrefix(m.Testo, "Missing") {
+					t.Errorf("%s: %s is not BLOCKING or does not say what is missing: %+v", c.name, m.Codice, m)
 				}
 			}
 		}
-		if strings.Join(gpu, ",") != c.codice {
-			t.Errorf("%s: %v, expected %q", c.nome, gpu, c.codice)
+		if strings.Join(gpu, ",") != c.code {
+			t.Errorf("%s: %v, expected %q", c.name, gpu, c.code)
 		}
-		rap := Valuta(catalogTest(t), p)
+		rap := Evaluate(catalogTest(t), p)
 		got := conditionsOf(rap, "gnome")
-		if c.codice != "" && !strings.HasPrefix(got, "UNSUPPORTED "+c.codice) {
-			t.Errorf("%s: gnome %s", c.nome, got)
+		if c.code != "" && !strings.HasPrefix(got, "UNSUPPORTED "+c.code) {
+			t.Errorf("%s: gnome %s", c.name, got)
 		}
-		if c.codice == "" && strings.HasPrefix(got, "UNSUPPORTED") {
-			t.Errorf("%s: gnome %s", c.nome, got)
+		if c.code == "" && strings.HasPrefix(got, "UNSUPPORTED") {
+			t.Errorf("%s: gnome %s", c.name, got)
 		}
 	}
 }
 
 func profileOf(id, ver string, extra map[string]string) *ProfileV {
 	p := fakeProfile()
-	p.Rilevato("distro.id", id, "finto")
-	p.Rilevato("distro.version", ver, "finto")
-	p.Rilevato("distro.family", Famiglia(id, ""), "finto")
+	p.Detected("distro.id", id, "finto")
+	p.Detected("distro.version", ver, "finto")
+	p.Detected("distro.family", Famiglia(id, ""), "finto")
 	for k, v := range extra {
-		p.Rilevato(k, v, "finto")
+		p.Detected(k, v, "finto")
 	}
 	return p
 }
 
 // The catalogue: the matrix of §3, the derivatives, the excluded ones, the conditions of §11.1.
-func TestCatalogo(t *testing.T) {
+func TestCatalog(t *testing.T) {
 	cat := catalogTest(t)
-	casi := []struct {
+	cases := []struct {
 		id, ver, desktop string
 		extra            map[string]string
-		atteso           string
+		expected         string
 	}{
 		{"debian", "13", "gnome", nil, "COMPATIBLE "},
 		{"ubuntu", "24.04", "gnome", nil, "UNSUPPORTED RX-COMPAT-001"}, // D7 closed: out
@@ -240,10 +240,10 @@ func TestCatalogo(t *testing.T) {
 		{"debian", "13", "gnome", map[string]string{"system.systemd": "no"}, "UNSUPPORTED RX-COMPAT-007"},
 		{"debian", "13", "gnome", map[string]string{"distro.immutable": "yes"}, "UNSUPPORTED RX-COMPAT-003"},
 	}
-	for _, c := range casi {
-		rap := Valuta(cat, profileOf(c.id, c.ver, c.extra))
-		if got := conditionsOf(rap, c.desktop); got != c.atteso {
-			t.Errorf("%s %s %s: %q, expected %q (%s)", c.id, c.ver, c.desktop, got, c.atteso, rap.Recognized)
+	for _, c := range cases {
+		rap := Evaluate(cat, profileOf(c.id, c.ver, c.extra))
+		if got := conditionsOf(rap, c.desktop); got != c.expected {
+			t.Errorf("%s %s %s: %q, expected %q (%s)", c.id, c.ver, c.desktop, got, c.expected, rap.Recognized)
 		}
 	}
 	// no combination is CERTIFIED until the catalogue records a full run (T10)
@@ -257,8 +257,8 @@ func TestCatalogo(t *testing.T) {
 // ⛔ UNKNOWN is not PASS in the judgement either: an untested H.264 is a written unknown.
 func TestUnknowns(t *testing.T) {
 	p := fakeProfile()
-	p.Sconosciuto("h264.gpu", "ffmpeg is not there")
-	rap := Valuta(catalogTest(t), p)
+	p.Unknown("h264.gpu", "ffmpeg is not there")
+	rap := Evaluate(catalogTest(t), p)
 	if len(rap.Unknowns) == 0 || !strings.Contains(strings.Join(rap.Unknowns, " "), "H.264") {
 		t.Fatalf("unknowns: %v", rap.Unknowns)
 	}
@@ -266,7 +266,7 @@ func TestUnknowns(t *testing.T) {
 
 // The manual's table (§3.1) is generated from the catalogue.
 func TestVersionTable(t *testing.T) {
-	tab := TabellaVersioni(catalogTest(t))
+	tab := VersionTable(catalogTest(t))
 	for _, x := range []string{"| Debian | **13** (Trixie)", "Rocky Linux", "Ubuntu 24.04", "| OpenSSL | 3.5 |", "labwc #2525"} {
 		if !strings.Contains(tab, x) {
 			t.Errorf("the table does not contain %q:\n%s", x, tab)
@@ -277,7 +277,7 @@ func TestVersionTable(t *testing.T) {
 // Phase 19, the «vulkan» route active (DECISIONI §10.27): the NVIDIA with the proprietary driver and its
 // ICD passes (Vulkan Video encodes the video); without the ICD it stays RX-GPU-004; the AMD with RADV's ICD
 // passes even without any VA driver; llvmpipe's ICD (lvp) is not a card.
-func TestStradaVulkan(t *testing.T) {
+func TestVulkanRoute(t *testing.T) {
 	base := map[string]string{"etc/os-release": "ID=debian\nVERSION_ID=13\n", "run/systemd/system/.x": "", "usr/bin/gnome-shell": ""}
 	con := func(extra map[string]string) map[string]string {
 		m := map[string]string{}
@@ -291,11 +291,11 @@ func TestStradaVulkan(t *testing.T) {
 	}
 	nvidia := map[string]string{"sys/class/drm/renderD128/device/vendor": "0x10de\n", "sys/module/nvidia/x": ""}
 	for _, c := range []struct {
-		nome   string
-		file   map[string]string
-		icd    string
-		schede string
-		codice string
+		name  string
+		file  map[string]string
+		icd   string
+		cards string
+		code  string
 	}{
 		{"proprietary NVIDIA with the ICD", con(map[string]string{"sys/class/drm/renderD128/device/vendor": "0x10de\n", "sys/module/nvidia/x": "",
 			"usr/share/vulkan/icd.d/nvidia_icd.json": "{}"}), "nvidia", "NVIDIA", ""},
@@ -307,12 +307,12 @@ func TestStradaVulkan(t *testing.T) {
 		{"Intel with ANV: it does not count in Vulkan, VA-API does", con(map[string]string{"sys/class/drm/renderD128/device/vendor": "0x8086\n",
 			"usr/share/vulkan/icd.d/intel_icd.x86_64.json": "{}", "usr/lib/x86_64-linux-gnu/dri/iHD_drv_video.so": ""}), "intel", "", ""},
 	} {
-		p := Preflight(&Ambiente{Radice: fakeRoot(t, c.file, nil), Esegui: noCommand}, PreflightOptions{})
+		p := Preflight(&Environment{Root: fakeRoot(t, c.file, nil), Run: noCommand}, PreflightOptions{})
 		if p.V("encoding.vulkan.icd") != c.icd {
-			t.Errorf("%s: icd %q, expected %q", c.nome, p.V("encoding.vulkan.icd"), c.icd)
+			t.Errorf("%s: icd %q, expected %q", c.name, p.V("encoding.vulkan.icd"), c.icd)
 		}
-		if got := strings.Join(schedeVulkan(nil, p), ","); got != c.schede {
-			t.Errorf("%s: vulkan cards %q, expected %q", c.nome, got, c.schede)
+		if got := strings.Join(vulkanCards(nil, p), ","); got != c.cards {
+			t.Errorf("%s: vulkan cards %q, expected %q", c.name, got, c.cards)
 		}
 		var gpu []string
 		for _, m := range p.Messages {
@@ -320,16 +320,16 @@ func TestStradaVulkan(t *testing.T) {
 				gpu = append(gpu, m.Codice)
 			}
 		}
-		if strings.Join(gpu, ",") != c.codice {
-			t.Errorf("%s: %v, expected %q", c.nome, gpu, c.codice)
+		if strings.Join(gpu, ",") != c.code {
+			t.Errorf("%s: %v, expected %q", c.name, gpu, c.code)
 		}
-		rap := Valuta(catalogTest(t), p)
+		rap := Evaluate(catalogTest(t), p)
 		got := conditionsOf(rap, "gnome")
-		if c.codice != "" && !strings.HasPrefix(got, "UNSUPPORTED "+c.codice) {
-			t.Errorf("%s: gnome %s", c.nome, got)
+		if c.code != "" && !strings.HasPrefix(got, "UNSUPPORTED "+c.code) {
+			t.Errorf("%s: gnome %s", c.name, got)
 		}
-		if c.codice == "" && (strings.HasPrefix(got, "UNSUPPORTED") || strings.Contains(got, "C-HARDWARE")) {
-			t.Errorf("%s: gnome %s (with Vulkan the card is not out)", c.nome, got)
+		if c.code == "" && (strings.HasPrefix(got, "UNSUPPORTED") || strings.Contains(got, "C-HARDWARE")) {
+			t.Errorf("%s: gnome %s (with Vulkan the card is not out)", c.name, got)
 		}
 	}
 }

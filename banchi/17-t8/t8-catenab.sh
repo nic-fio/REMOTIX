@@ -38,7 +38,7 @@ echo \"remotix before: \$a · after: \$b\"" 2>&1)
 		printf '%-6s %-15s %-16s\n' "$v" "$g" "$m"
 		echo "$out" | sed 's/^/         /' | cut -c1-300
 	done
-	bash $T8/t8-guasta.sh ripristina >/dev/null
+	bash $T8/t8-guasta.sh restore >/dev/null
 }
 ms=("$@")
 f=$(fam "${ms[0]}")

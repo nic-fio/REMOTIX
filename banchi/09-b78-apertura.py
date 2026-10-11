@@ -6,7 +6,7 @@
 ⚠ `07-b64` was retired on 11 Oct 2026 (DECISIONI §10.44): the lines of it cited below
   are read in git history (d2f27b3).  This bench does not import it.
 
-⛔⭐ WHY IT EXISTS.  `banchi/07-b64-rete.py`, profile `7-perdita-10`, carries a
+⛔⭐ WHY IT EXISTS.  `banchi/07-b64-rete.py`, profile `7-loss-10`, carries a
     `[M]` written as an **outcome**, not as a fault:
 
         «10 %: `[M]` the session does not open at all in 25 s»
@@ -30,9 +30,9 @@ The facts read in the code, before any measurement:
 
   `[R]` `banchi/01-b3-cliente.py:1222`  `wait_connected()` has **8 s**, not 25.
   `[R]` `banchi/01-b3-cliente.py:1224`  `cli.accettata` has **8 s**.
-  `[R]` `banchi/01-b3-cliente.py:1250`  `ECCOMI` has 10 s (default of
-        `attendi`), `:1266` `AMMESSO` 20 s, `:1284` `SESSIONE` 10 s.
-  `[R]` `banchi/07-b64-rete.py`  `--secondi` (default 25) is `--resta`, that is
+  `[R]` `banchi/01-b3-cliente.py:1250`  `HERE_I_AM` has 10 s (default of
+        `attendi`), `:1266` `ADMITTED` 20 s, `:1284` `SESSION` 10 s.
+  `[R]` `banchi/07-b64-rete.py`  `--seconds` (default 25) is `--stay`, that is
         **how long the session stays open AFTER having opened**; the ssh
         ceiling is `secondi + 180`.  ⇒ ⛔ **«in 25 s» was never the
         time granted to the handshake.**
@@ -41,14 +41,14 @@ The facts read in the code, before any measurement:
         **no ceiling on the handshake on the server side**;
         `initial_rtt` = 333 ms (`NGTCP2_DEFAULT_INITIAL_RTT`).
   `[R]` `src/trasporto.c:590`  `max_idle_timeout` = 30 000 ms.
-  `[R]` `src/main.c:1379,1429`  the loop rearms on `trasporto_attesa_ms()`
-        (ceiling 1000 ms) and calls `trasporto_scaduti()` →
+  `[R]` `src/main.c:1379,1429`  the loop rearms on `transport_wait_ms()`
+        (ceiling 1000 ms) and calls `transport_expired()` →
         `ngtcp2_conn_handle_expiry()`.  ⇒ the server **has** a clock to
         retry, and is not awake only when packets arrive.
   `[R]` `src/trasporto.c:434`  **no GSO**: one packet per `sendto`.  ⇒
         `netem` drops single QUIC packets, not bunches.
-  `[R]` `src/rcp.c:925-927`  `SOGLIA 3`, `FINESTRA` 5 min, `BAN_DURATA` 12 h —
-        and the count moves **only** on a PAM verdict for `CREDENZIALI`.
+  `[R]` `src/rcp.c:925-927`  `THRESHOLD 3`, `WINDOW` 5 min, `BAN_DURATION` 12 h —
+        and the count moves **only** on a PAM verdict for `CREDENTIALS`.
         A handshake that does not finish never gets there.
   `[R]` `banchi/07-b64-rete.py` `guasta()`  puts **two** `u32` filters, `sport`
         and `dport`: on `lo` every packet crosses the qdisc **once
@@ -63,7 +63,7 @@ Hence the five predictions, one per hypothesis, and falsifiable:
       time is **below 3 s**; and at least one run in twenty exceeds the 8 s
       of `01-b3-cliente.py:1222` — that is, the ceiling is the defect.
   (b) **it is the ban of §4.4-bis.**  ⇒ In the server log
-      «BANNATO» / `TROPPI_TENTATIVI` appears, and the **clean** step run
+      «BANNATO» / `TOO_MANY_ATTEMPTS` appears, and the **clean** step run
       RIGHT AFTER a bad step fails too.
   (c) **it is ngtcp2 not retrying.**  ⇒ The opening time at 10 % is
       **flat and very long** (tens of seconds, every run), and the `tcpdump`
@@ -93,8 +93,8 @@ WHAT CAME OUT — `[M]` 23 August 2026, port 7932, Intel UHD 730
 ⭐⭐ **THE `[M]` OF `07-b64` IS FALSE AS WRITTEN: at 10 % loss the
     session DOES OPEN, and it takes little more than a second.**
 
-1. The opening time up to `AMMESSO` (QUIC handshake + extended CONNECT
-   + `CIAO/ECCOMI` + `CREDENZIALI/AMMESSO`), 10 runs per step, the
+1. The opening time up to `ADMITTED` (QUIC handshake + extended CONNECT
+   + `HELLO/HERE_I_AM` + `CREDENTIALS/ADMITTED`), 10 runs per step, the
    loss **read** from `tc -s qdisc`, not deduced:
 
    | loss requested | true loss | opened | QUIC median | total median | total max |
@@ -120,9 +120,9 @@ WHAT CAME OUT — `[M]` 23 August 2026, port 7932, Intel UHD 730
         round trip pays `1-(1-p)²`; but a datagram, which goes one way only, pays `p`.
 
 2. The exact form of `07-b64` — the real client, PCM, with the tone on,
-   `--resta 20` — at **10 %**:
+   `--stay 20` — at **10 %**:
 
-       SESSIONE open: True
+       SESSION open: True
        [audio] received **3235** · 3 105 600 bytes · codec 2
        SERVER: sent 3607 · dropped 0 · **refused 391** · deferred 293 718
        judgement: resa_campioni **0.810** · purity 0.182 · scoppiettii 19.1/s
@@ -134,19 +134,19 @@ WHAT CAME OUT — `[M]` 23 August 2026, port 7932, Intel UHD 730
      the yield adds them up.
 
 3. ⛔⛔ **WHY THE BENCH SAID THE OPPOSITE.**  The predicate of that step
-   is `a_non_si_apre(n) = (n["ricevuti"] == 0)`, and `01-b3-cliente.py` prints
+   is `a_non_si_apre(n) = (n["received"] == 0)`, and `01-b3-cliente.py` prints
    `[audio] ricevuti 0` **even from the `except` branch** (`:1286`), before
-   re-raising.  ⇒ **Any** way of failing — a `CONGEDO`, an expired
+   re-raising.  ⇒ **Any** way of failing — a `FAREWELL`, an expired
    ceiling, a `NameError` in the bench — produces «ricevuti 0» and passes that
    step as GREEN.  It is a predicate that cannot give red, that is the form
    of `LEZIONI.md` §1.9: it did not measure «it does not open», it measured «I did not
    receive», and the two look the same.
-   `[M]` checked by running the real client **without a tone**: `SESSIONE=True` at
+   `[M]` checked by running the real client **without a tone**: `SESSION=True` at
    every run, `[audio] ricevuti 0` at every run, at 1 % as at 10 %.
 
 4. ⭐⭐ **AND BEHIND IT THERE IS A FACT OF THE PRODUCT, and it is on the phase's target.**
    The only way in which, under loss, an opening really fails is:
-   `ATTACCA` → `CONGEDO(0x0F) GIA_ATTIVA_REMOTA`, that is **the slot of the
+   `ATTACH` → `FAREWELL(0x0F) ALREADY_ACTIVE_REMOTELY`, that is **the slot of the
    previous session is still taken**.  `[M]` in the first scale run:
    5/10 at 10 %, 0/10 at 15 %, with the log saying
    *«slot DENIED to provanr3 … it is held by another client of this same
@@ -157,12 +157,12 @@ WHAT CAME OUT — `[M]` 23 August 2026, port 7932, Intel UHD 730
       the client is killed with `-9` and we measure from when the slot is free
       again.  `[M]` 23 August 2026:
 
-          + 1.6 s  CONGEDO 0x0F      + 17.3 s  CONGEDO 0x0F
-          + 4.2 s  CONGEDO 0x0F      + 19.9 s  CONGEDO 0x0F
-          + 6.8 s  CONGEDO 0x0F      + 22.5 s  CONGEDO 0x0F
-          + 9.5 s  CONGEDO 0x0F      + 25.2 s  CONGEDO 0x0F
-          +12.1 s  CONGEDO 0x0F      + 27.9 s  CONGEDO 0x0F
-          +14.7 s  CONGEDO 0x0F      **+30.5 s  OPEN**
+          + 1.6 s  FAREWELL 0x0F      + 17.3 s  FAREWELL 0x0F
+          + 4.2 s  FAREWELL 0x0F      + 19.9 s  FAREWELL 0x0F
+          + 6.8 s  FAREWELL 0x0F      + 22.5 s  FAREWELL 0x0F
+          + 9.5 s  FAREWELL 0x0F      + 25.2 s  FAREWELL 0x0F
+          +12.1 s  FAREWELL 0x0F      + 27.9 s  FAREWELL 0x0F
+          +14.7 s  FAREWELL 0x0F      **+30.5 s  OPEN**
 
       ⇒ **30.5 s of lock**, that is `SILENZIO` (`src/rcp.c:263`, 30 000 ms)
         plus the loop.  Eleven refusals in a row, and the sentence the client
@@ -191,46 +191,46 @@ ISOLATION — ⛔ and for a bench that touches the network it counts double
 ⛔ The detached guardian removes the qdisc even if this script dies.
 
 Usage (from the laptop):
-    python3 banchi/09-b78-apertura.py scala   [--giri 10] [--fino wt]
-    python3 banchi/09-b78-apertura.py un-verso              # hypothesis (d)
-    python3 banchi/09-b78-apertura.py rimetti
-    python3 banchi/09-b78-apertura.py stato
+    python3 banchi/09-b78-apertura.py ladder   [--rounds 10] [--until wt]
+    python3 banchi/09-b78-apertura.py one-way              # hypothesis (d)
+    python3 banchi/09-b78-apertura.py restore
+    python3 banchi/09-b78-apertura.py status
 
-Usage (INSIDE the test machine's container — `scala` calls it):
-    python3 banchi/09-b78-apertura.py dentro --porta 7932 --giri 10 ...
+Usage (INSIDE the test machine's container — `ladder` calls it):
+    python3 banchi/09-b78-apertura.py inside --port 7932 --rounds 10 ...
 """
 import argparse, importlib.util, json, os, re, subprocess, sys, time
 
-QUI = os.path.dirname(os.path.abspath(__file__))
+HERE = os.path.dirname(os.path.abspath(__file__))
 
-MACCHINA = os.environ.get("MACCHINA", "nicfio@192.168.0.2")
-PAROLA_SUDO = os.environ.get("PAROLA_SUDO", "nicfio")
-IND = os.environ.get("IND", "192.168.0.2")
-PORTA = int(os.environ.get("PORTA", "7932"))
-UTENTE = os.environ.get("UTENTE", "provanr3")
+MACHINE = os.environ.get("MACHINE", "nicfio@192.168.0.2")
+SUDO_PASSWORD = os.environ.get("SUDO_PASSWORD", "nicfio")
+ADDR = os.environ.get("ADDR", "192.168.0.2")
+PORT = int(os.environ.get("PORT", "7932"))
+ACCOUNT = os.environ.get("ACCOUNT", "provanr3")
 UID_B = int(os.environ.get("UID_B", "1032"))
-ALB = os.environ.get("ALBERO", "/media/REMOTIX/src/09nr3-src")
-LAV = os.environ.get("LAV", "/media/REMOTIX/tmp/09nr3")
-DENTRO_ALB = os.environ.get("DENTRO_ALB", "/srv/src/09nr3-src")
-DENTRO_LAV = os.environ.get("DENTRO_LAV", "/srv/remotix/tmp/09nr3")
-FUORI = os.environ.get("FUORI", os.path.join(
+TREE_DIR = os.environ.get("TREE", "/media/REMOTIX/src/09nr3-src")
+WORKDIR = os.environ.get("WORKDIR", "/media/REMOTIX/tmp/09nr3")
+INSIDE_TREE = os.environ.get("INSIDE_TREE", "/srv/src/09nr3-src")
+INSIDE_WORK = os.environ.get("INSIDE_WORK", "/srv/remotix/tmp/09nr3")
+OUT = os.environ.get("OUT", os.path.join(
     "/tmp/claude-1000/-home-nicfio-Documenti-REMOTIX",
     "b62d7177-9fdd-47c7-8aa1-567c8b13accf/scratchpad/09nr3"))
 
 VIETATA = "enp7s0"        # ssh and the user's 7730 go through it
 DEV = "lo"
-VICINE = ("7700", "7730", "7900", "7910", "7920")
+NEARBY_PORTS = ("7700", "7730", "7900", "7910", "7920")
 
 # The steps.  ⭐ We do not start from 10 %: a scale tells what kind of
 #   phenomenon it is, a single point does not.
-GRADINI = [0, 1, 3, 5, 8, 10, 15]
+RUNGS = [0, 1, 3, 5, 8, 10, 15]
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 # THE HALF THAT RUNS INSIDE THE CONTAINER — measures ONE opening at a time
 # ═══════════════════════════════════════════════════════════════════════════
 
-def dentro(a):
+def inside(a):
     """⛔ The phases are timed ONE BY ONE, and with a **wide** ceiling: the
        narrow ceiling is precisely suspect (a), and a bench that repeats it
        cannot see it.
@@ -239,7 +239,7 @@ def dentro(a):
           opposite diagnoses, and a boolean confuses them."""
     import asyncio, ssl, struct
     spec = importlib.util.spec_from_file_location(
-        "b3", os.path.join(QUI, "01-b3-cliente.py"))
+        "b3", os.path.join(HERE, "01-b3-cliente.py"))
     b3 = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(b3)
 
@@ -247,94 +247,94 @@ def dentro(a):
     from aioquic.quic.configuration import QuicConfiguration
     from aioquic.h3.connection import H3_ALPN
 
-    parola = open(a.parola_file).read().strip()
-    autorita = "%s:%d" % (a.indirizzo, a.porta)
+    password = open(a.password_file).read().strip()
+    authority = "%s:%d" % (a.address, a.port)
 
-    async def un_giro():
+    async def one_round():
         t = {}
-        fermo = "prima-di-tutto"
+        stopped = "prima-di-tutto"
         t0 = time.monotonic()
 
-        def segna(nome):
-            t[nome] = round((time.monotonic() - t0) * 1000, 1)
+        def mark(name):
+            t[name] = round((time.monotonic() - t0) * 1000, 1)
 
         conf = QuicConfiguration(is_client=True, alpn_protocols=H3_ALPN,
                                  max_datagram_frame_size=65536)
         conf.verify_mode = ssl.CERT_NONE
         try:
-            async with connect(a.indirizzo, a.porta, configuration=conf,
-                               create_protocol=b3.Cliente) as cli:
-                fermo = "quic"
-                await asyncio.wait_for(cli.wait_connected(), timeout=a.tetto)
-                segna("quic")
-                if a.fino == "quic":
-                    return t, "aperta", None
-                fermo = "wt"
-                cli.apri_sessione(autorita, a.percorso)
-                stato = await asyncio.wait_for(cli.accettata, timeout=a.tetto)
-                segna("wt")
-                if stato != "200":
-                    return t, "respinta", ":status = %s" % stato
-                if a.fino == "wt":
-                    return t, "aperta", None
-                reg = b3.Registratore()
-                reg.stream = cli.apri_controllo()
+            async with connect(a.address, a.port, configuration=conf,
+                               create_protocol=b3.Client) as cli:
+                stopped = "quic"
+                await asyncio.wait_for(cli.wait_connected(), timeout=a.cap)
+                mark("quic")
+                if a.until == "quic":
+                    return t, "is_open", None
+                stopped = "wt"
+                cli.open_session(authority, a.path)
+                status = await asyncio.wait_for(cli.accepted, timeout=a.cap)
+                mark("wt")
+                if status != "200":
+                    return t, "respinta", ":status = %s" % status
+                if a.until == "wt":
+                    return t, "is_open", None
+                reg = b3.Recorder()
+                reg.stream = cli.open_control()
                 cli.reg = reg
-                fermo = "eccomi"
-                cli.manda(b3.inquadra(b3.T["CIAO"], b3.corpo_ciao("pcm", "h264", "8,10")))
-                await b3.attendi(cli, "ECCOMI", attesa=a.tetto)
-                segna("eccomi")
-                fermo = "ammesso"
-                cli.manda(b3.inquadra(b3.T["CREDENZIALI"],
-                                      b3.s(a.utente) + b3.s(parola)))
-                await b3.attendi(cli, "AMMESSO", attesa=a.tetto)
-                segna("ammesso")
-                if a.fino == "ammesso":
-                    return t, "aperta", None
-                fermo = "sessione"
-                cli.manda(b3.inquadra(
-                    b3.T["ATTACCA"],
+                stopped = "eccomi"
+                cli.send_msg(b3.wrap(b3.T["HELLO"], b3.body_hello("pcm", "h264", "8,10")))
+                await b3.should_wait(cli, "HERE_I_AM", wait=a.cap)
+                mark("eccomi")
+                stopped = "ammesso"
+                cli.send_msg(b3.wrap(b3.T["CREDENTIALS"],
+                                      b3.s(a.user) + b3.s(password)))
+                await b3.should_wait(cli, "ADMITTED", wait=a.cap)
+                mark("ammesso")
+                if a.until == "admitted":
+                    return t, "is_open", None
+                stopped = "session"
+                cli.send_msg(b3.wrap(
+                    b3.T["ATTACH"],
                     struct.pack("!IIII", 1920, 1080, 1920, 1080) + b3.s("it")))
-                await b3.attendi(cli, "SESSIONE", attesa=a.tetto)
-                segna("sessione")
-                return t, "aperta", None
+                await b3.should_wait(cli, "SESSION", wait=a.cap)
+                mark("session")
+                return t, "is_open", None
         except asyncio.TimeoutError:
-            return t, "scaduta", "ceiling of %g s expired in phase «%s»" % (a.tetto, fermo)
+            return t, "scaduta", "ceiling of %g s expired in phase «%s»" % (a.cap, stopped)
         except Exception as e:
-            return t, "rotta", "%s in phase «%s»: %s" % (type(e).__name__, fermo, e)
+            return t, "rotta", "%s in phase «%s»: %s" % (type(e).__name__, stopped, e)
 
-    async def tutti():
-        for i in range(a.giri):
-            t, esito, perche = await un_giro()
-            riga = {"giro": i, "tempi_ms": t, "esito": esito, "perche": perche}
+    async def all_items():
+        for i in range(a.rounds):
+            t, outcome, why = await one_round()
+            line = {"round": i, "tempi_ms": t, "outcome": outcome, "why": why}
             # ⛔⭐ THE DENIED SLOT IS TIMED, not counted.
             #
-            #   `GIA_ATTIVA_REMOTA` means «your slot is still taken
+            #   `ALREADY_ACTIVE_REMOTELY` means «your slot is still taken
             #   by YOUR previous session»: it is a state that PASSES, and a
             #   yes/no makes it look like a permanent fault.  ⇒ We retry
             #   until the slot frees up, and the number that comes out is **how long
             #   the lock lasts** — which is what the user suffers.
-            if a.riprova_0f and esito == "rotta" and "0x0f" in (perche or ""):
+            if a.retry_0f and outcome == "rotta" and "0x0f" in (why or ""):
                 t_1 = time.monotonic()
-                while time.monotonic() - t_1 < a.riprova_0f:
+                while time.monotonic() - t_1 < a.retry_0f:
                     await asyncio.sleep(1.0)
-                    t2, e2, p2 = await un_giro()
-                    if e2 == "aperta":
-                        riga["esito"] = "aperta-dopo-attesa"
-                        riga["attesa_posto_ms"] = round(
+                    t2, e2, p2 = await one_round()
+                    if e2 == "is_open":
+                        line["outcome"] = "aperta-dopo-attesa"
+                        line["attesa_posto_ms"] = round(
                             (time.monotonic() - t_1) * 1000, 1)
-                        riga["tempi_ms"] = t2
+                        line["tempi_ms"] = t2
                         break
                     if not (e2 == "rotta" and "0x0f" in (p2 or "")):
-                        riga["perche"] = p2
+                        line["why"] = p2
                         break
                 else:
-                    riga["attesa_posto_ms"] = -1   # ⛔ never freed within the ceiling
-            print("APERTURA " + json.dumps(riga, ensure_ascii=False), flush=True)
-            if a.pausa:
-                await asyncio.sleep(a.pausa)
+                    line["attesa_posto_ms"] = -1   # ⛔ never freed within the ceiling
+            print("APERTURA " + json.dumps(line, ensure_ascii=False), flush=True)
+            if a.pause:
+                await asyncio.sleep(a.pause)
 
-    asyncio.get_event_loop().run_until_complete(tutti())
+    asyncio.get_event_loop().run_until_complete(all_items())
     return 0
 
 
@@ -342,57 +342,57 @@ def dentro(a):
 # THE HALF THAT RUNS ON THE LAPTOP
 # ═══════════════════════════════════════════════════════════════════════════
 
-def rem(comando, tetto=300):
-    p = subprocess.run(["ssh", "-o", "BatchMode=yes", MACCHINA, comando],
-                       capture_output=True, timeout=tetto)
+def rem(command, cap=300):
+    p = subprocess.run(["ssh", "-o", "BatchMode=yes", MACHINE, command],
+                       capture_output=True, timeout=cap)
     return (p.returncode, p.stdout.decode("utf-8", "replace"),
             p.stderr.decode("utf-8", "replace"))
 
 
-def root(comando, tetto=300):
-    return rem("printf '%%s\\n' '%s' | sudo -S -p '' %s" % (PAROLA_SUDO, comando),
-               tetto)
+def root(command, cap=300):
+    return rem("printf '%%s\\n' '%s' | sudo -S -p '' %s" % (SUDO_PASSWORD, command),
+               cap)
 
 
 def qdisc(stat=False):
     return root("/usr/sbin/tc %s qdisc show dev %s" % ("-s" if stat else "", DEV))[1]
 
 
-GUARDIANO = LAV + "/.guardiano-b78.pid"
+GUARDIAN = WORKDIR + "/.guardiano-b78.pid"
 
 
-def guardiano_arma(secondi):
-    guardiano_disarma()
+def guardian_arm(seconds):
+    guardian_disarm()
     root('bash -c "setsid sh -c \'sleep %d; /usr/sbin/tc qdisc del dev %s root\' '
-         '>/dev/null 2>&1 & echo \\$! > %s"' % (secondi, DEV, GUARDIANO))
-    rc, out, _ = root("cat %s 2>/dev/null" % GUARDIANO)
+         '>/dev/null 2>&1 & echo \\$! > %s"' % (seconds, DEV, GUARDIAN))
+    rc, out, _ = root("cat %s 2>/dev/null" % GUARDIAN)
     print("   OK  guardian armed for %d s (pid %s): the network goes back as it was "
-          "EVEN if I die" % (secondi, out.strip() or "?"))
+          "EVEN if I die" % (seconds, out.strip() or "?"))
 
 
-def guardiano_disarma():
-    rc, out, _ = root("cat %s 2>/dev/null || true" % GUARDIANO)
+def guardian_disarm():
+    rc, out, _ = root("cat %s 2>/dev/null || true" % GUARDIAN)
     p = out.strip()
     if p.isdigit():
         root("kill -TERM -%s 2>/dev/null; kill -TERM %s 2>/dev/null; true" % (p, p))
-    root("rm -f %s; true" % GUARDIANO)
+    root("rm -f %s; true" % GUARDIAN)
 
 
-def rimetti(dillo=True, disarma=True):
-    """⛔⭐ `disarma` is NOT a convenience.  The «0 %» step removes the
+def restore(report_it=True, disarm=True):
+    """⛔⭐ `disarm` is NOT a convenience.  The «0 %» step removes the
        qdisc like all the others, and if removing it also disarmed the
        guardian, the run would go on **without a safety net**: from there
        on a death of the script would leave the machine with `netem` on it, and
        the next bench would attribute a fault of mine to the product.
-       ⚠ `banchi/07-b64-rete.py` has this form: its profile `0-liscio`
+       ⚠ `banchi/07-b64-rete.py` has this form: its profile `0-smooth`
          calls `rimetti(False)`, which disarms the guardian armed two lines
          earlier — and the seven profiles after it run uncovered."""
-    if disarma:
-        guardiano_disarma()
+    if disarm:
+        guardian_disarm()
     root("/usr/sbin/tc qdisc del dev %s root 2>/dev/null; true" % DEV)
     q = qdisc()
     ok = "netem" not in q
-    if dillo:
+    if report_it:
         print("   %s the qdisc of «%s» is now: %s"
               % ("OK " if ok else "NO ", DEV, q.strip() or "(none)"))
         print("   --  %s (ssh + 7730): %s"
@@ -401,124 +401,124 @@ def rimetti(dillo=True, disarma=True):
     return ok
 
 
-def guasta(perdita_pc, un_verso=False):
-    """⛔ The fault, and ONLY on my port.  `un_verso` removes the
+def broken(loss_pc, one_way=False):
+    """⛔ The fault, and ONLY on my port.  `one_way` removes the
        `sport` filter: it is the control of hypothesis (d)."""
-    if perdita_pc <= 0:
-        rimetti(False, disarma=False)
+    if loss_pc <= 0:
+        restore(False, disarm=False)
         return True, "(no fault)"
-    passi = [
+    steps = [
         "/usr/sbin/tc qdisc del dev %s root 2>/dev/null; true" % DEV,
         "/usr/sbin/tc qdisc add dev %s root handle 1: prio bands 4" % DEV,
         "/usr/sbin/tc qdisc add dev %s parent 1:4 handle 40: netem loss %g%%"
-        % (DEV, perdita_pc),
+        % (DEV, loss_pc),
         "/usr/sbin/tc filter add dev %s protocol ip parent 1:0 prio 1 u32 "
         "match ip protocol 17 0xff match ip dport %d 0xffff flowid 1:4"
-        % (DEV, PORTA),
+        % (DEV, PORT),
     ]
-    if not un_verso:
-        passi.append(
+    if not one_way:
+        steps.append(
             "/usr/sbin/tc filter add dev %s protocol ip parent 1:0 prio 1 u32 "
             "match ip protocol 17 0xff match ip sport %d 0xffff flowid 1:4"
-            % (DEV, PORTA))
-    for c in passi:
+            % (DEV, PORT))
+    for c in steps:
         rc, out, err = root(c)
         if rc != 0 and "del dev" not in c:
-            rimetti()
+            restore()
             return False, "⛔ tc refused «%s»: %s" % (c[-60:], err[:200])
     return True, qdisc().strip()
 
 
-def netem_conti():
+def netem_counts():
     """⛔ The loss `netem` REALLY applied, read — not deduced."""
     out = qdisc(stat=True)
     inside_netem = False
-    for riga in out.split("\n"):
-        if riga.startswith("qdisc netem"):
+    for line in out.split("\n"):
+        if line.startswith("qdisc netem"):
             inside_netem = True
             continue
-        if inside_netem and "Sent" in riga:
-            m = re.search(r"Sent (\d+) bytes (\d+) pkt \(dropped (\d+)", riga)
+        if inside_netem and "Sent" in line:
+            m = re.search(r"Sent (\d+) bytes (\d+) pkt \(dropped (\d+)", line)
             if m:
                 sped, pkt, but = int(m.group(1)), int(m.group(2)), int(m.group(3))
                 tot = pkt + but
                 return {"pkt_passati": pkt, "pkt_buttati": but,
                         "frazione_vera": round(but / tot, 4) if tot else None}
             break
-        if inside_netem and riga.startswith("qdisc"):
+        if inside_netem and line.startswith("qdisc"):
             break
     return {"pkt_passati": None, "pkt_buttati": None, "frazione_vera": None}
 
 
-def ban_scattato(riga0):
+def ban_triggered(line0):
     """⛔ Between one run and the next: or a fault of 10 % is attributed to 15 %."""
     rc, out, _ = root("tail -n +%d %s/registro.log 2>/dev/null | "
-                      "grep -ac 'BANNED' || true" % (riga0 + 1, LAV))
+                      "grep -ac 'BANNED' || true" % (line0 + 1, WORKDIR))
     n = out.strip()
-    rc2, out2, _ = root("test -s %s/ban && cat %s/ban || echo '(empty)'" % (LAV, LAV))
+    rc2, out2, _ = root("test -s %s/ban && cat %s/ban || echo '(empty)'" % (WORKDIR, WORKDIR))
     return (n not in ("", "0")), out2.strip()[:200]
 
 
-def righe_registro():
-    rc, out, _ = root("wc -l < %s/registro.log 2>/dev/null || echo 0" % LAV)
+def log_line_list():
+    rc, out, _ = root("wc -l < %s/registro.log 2>/dev/null || echo 0" % WORKDIR)
     try:
         return int(out.strip())
     except Exception:
         return 0
 
 
-def vicine():
-    fuori = []
-    for p in VICINE:
+def near():
+    report = []
+    for p in NEARBY_PORTS:
         rc, o, _ = root("ss -uln 2>/dev/null | grep -c ':%s ' || true" % p)
-        fuori.append("%s:%s" % (p, o.strip()))
-    return " ".join(fuori)
+        report.append("%s:%s" % (p, o.strip()))
+    return " ".join(report)
 
 
-def spedisci():
-    """⛔ This script — and the client it takes the `Cliente` class from —
+def ship_sources():
+    """⛔ This script — and the client it takes the `Client` class from —
        must be INSIDE the tree, or the container does not see them.
 
     ⛔⭐ And `01-b3-cliente.py` IS SENT AGAIN AT EVERY RUN, and its fingerprint is
         printed.  `[M]` 23 August 2026: the copy in the tree had stayed
-        one change behind (`REGOLA_AUDIO` did not exist yet) and the
+        one change behind (`AUDIO_RULE` did not exist yet) and the
         first run died with a `NameError` in phase «prima-di-tutto» —
         that is, looking like «the session does not open».  ⚠ That file is being
         modified today by another agent: whoever measures must DECLARE which copy
         they measured with, or the number cannot be reproduced."""
-    fuori = []
+    report = []
     for f in ("09-b78-apertura.py", "01-b3-cliente.py"):
         p = subprocess.run(
             "cat %s | ssh -o BatchMode=yes %s \"cat > %s/banchi/%s\""
-            % (os.path.join(QUI, f), MACCHINA, ALB, f), shell=True,
+            % (os.path.join(HERE, f), MACHINE, TREE_DIR, f), shell=True,
             capture_output=True)
         if p.returncode != 0:
             return None
-        h = subprocess.run(["md5sum", os.path.join(QUI, f)],
+        h = subprocess.run(["md5sum", os.path.join(HERE, f)],
                            capture_output=True).stdout.decode().split()[0]
-        fuori.append("%s %s" % (h[:8], f))
-    return fuori
+        report.append("%s %s" % (h[:8], f))
+    return report
 
 
-def misura(giri, fino, tetto, pausa=0.0, riprova=0.0):
-    dcmd = ("python3 -u %s/banchi/09-b78-apertura.py dentro "
-            "--indirizzo %s --porta %d --utente %s --parola-file %s/parola "
-            "--giri %d --fino %s --tetto %g --pausa %g --riprova-0f %g"
-            % (DENTRO_ALB, IND, PORTA, UTENTE, DENTRO_LAV, giri, fino, tetto,
-               pausa, riprova))
+def measure(rounds, until, cap, delay=0.0, retry=0.0):
+    dcmd = ("python3 -u %s/banchi/09-b78-apertura.py inside "
+            "--address %s --port %d --user %s --password-file %s/parola "
+            "--rounds %d --until %s --cap %g --pause %g --retry-0f %g"
+            % (INSIDE_TREE, ADDR, PORT, ACCOUNT, INSIDE_WORK, rounds, until, cap,
+               delay, retry))
     rc, out, err = root("bash /media/REMOTIX/enter.sh --root '%s'" % dcmd,
-                        int(giri * (tetto + pausa + riprova) + 300))
-    righe = []
+                        int(rounds * (cap + delay + retry) + 300))
+    lines = []
     for r in (out + err).splitlines():
         if r.startswith("APERTURA "):
             try:
-                righe.append(json.loads(r[9:]))
+                lines.append(json.loads(r[9:]))
             except Exception:
                 pass
-    return righe, (out + err)[-800:]
+    return lines, (out + err)[-800:]
 
 
-def mediana(v):
+def median(v):
     v = sorted(v)
     if not v:
         return None
@@ -526,154 +526,154 @@ def mediana(v):
     return v[n // 2] if n % 2 else round((v[n // 2 - 1] + v[n // 2]) / 2, 1)
 
 
-def riassumi(righe, fino):
-    aperte = [r for r in righe if r["esito"].startswith("aperta")]
-    subito = [r for r in righe if r["esito"] == "aperta"]
-    serrate = [r.get("attesa_posto_ms") for r in righe
+def summarize(lines, until):
+    opened = [r for r in lines if r["outcome"].startswith("is_open")]
+    immediately = [r for r in lines if r["outcome"] == "is_open"]
+    tight = [r.get("attesa_posto_ms") for r in lines
                if r.get("attesa_posto_ms") is not None]
-    fase = {"quic": "quic", "wt": "wt", "ammesso": "ammesso",
-            "sessione": "sessione"}[fino]
-    tot = [r["tempi_ms"].get(fase) for r in aperte if r["tempi_ms"].get(fase)]
-    quic = [r["tempi_ms"].get("quic") for r in aperte if r["tempi_ms"].get("quic")]
+    phase = {"quic": "quic", "wt": "wt", "ammesso": "ammesso",
+            "session": "session"}[until]
+    tot = [r["tempi_ms"].get(phase) for r in opened if r["tempi_ms"].get(phase)]
+    quic = [r["tempi_ms"].get("quic") for r in opened if r["tempi_ms"].get("quic")]
     # ⭐ And the number that accuses or acquits `01-b3-cliente.py`: how many runs
     #    would have broken through its 8 s ceiling on the QUIC handshake.
     beyond8 = len([x for x in quic if x > 8000])
-    return {"giri": len(righe), "aperte": len(aperte), "aperte_subito": len(subito),
-            "quic_mediana_ms": mediana(quic), "quic_max_ms": max(quic) if quic else None,
-            "tot_mediana_ms": mediana(tot), "tot_max_ms": max(tot) if tot else None,
+    return {"rounds": len(lines), "opened": len(opened), "aperte_subito": len(immediately),
+            "quic_mediana_ms": median(quic), "quic_max_ms": max(quic) if quic else None,
+            "tot_mediana_ms": median(tot), "tot_max_ms": max(tot) if tot else None,
             "quic_oltre_8s": beyond8,
-            "posto_serrato_ms": serrate,
-            "guai": [r["perche"] for r in righe
-                     if not r["esito"].startswith("aperta")][:3]}
+            "posto_serrato_ms": tight,
+            "troubles": [r["why"] for r in lines
+                     if not r["outcome"].startswith("is_open")][:3]}
 
 
-def principale():
+def main():
     p = argparse.ArgumentParser()
-    p.add_argument("passo", choices=["scala", "un-verso", "dentro", "rimetti", "stato"])
-    p.add_argument("--giri", type=int, default=10)
-    p.add_argument("--fino", default="wt", choices=["quic", "wt", "ammesso", "sessione"])
-    p.add_argument("--tetto", type=float, default=60.0)
-    p.add_argument("--pausa", type=float, default=0.0)
-    p.add_argument("--gradini", default="")
-    # the arguments of the «dentro» half
-    p.add_argument("--indirizzo", default=IND)
-    p.add_argument("--porta", type=int, default=PORTA)
-    p.add_argument("--percorso", default="/rcp/1")
-    p.add_argument("--utente", default=UTENTE)
-    p.add_argument("--parola-file", default="")
-    p.add_argument("--riprova-0f", type=float, default=0, metavar="SECONDI",
-                   help="⭐ after a CONGEDO(0x0F) retry for up to N s and "
+    p.add_argument("step", choices=["ladder", "one-way", "inside", "restore", "status"])
+    p.add_argument("--rounds", type=int, default=10)
+    p.add_argument("--until", default="wt", choices=["quic", "wt", "admitted", "session"])
+    p.add_argument("--cap", type=float, default=60.0)
+    p.add_argument("--pause", type=float, default=0.0)
+    p.add_argument("--rungs", default="")
+    # the arguments of the «inside» half
+    p.add_argument("--address", default=ADDR)
+    p.add_argument("--port", type=int, default=PORT)
+    p.add_argument("--path", default="/rcp/1")
+    p.add_argument("--user", default=ACCOUNT)
+    p.add_argument("--password-file", default="")
+    p.add_argument("--retry-0f", type=float, default=0, metavar="SECONDS",
+                   help="⭐ after a FAREWELL(0x0F) retry for up to N s and "
                         "time HOW LONG the slot lock lasts")
     a = p.parse_args()
 
-    if a.passo == "dentro":
-        return dentro(a)
+    if a.step == "inside":
+        return inside(a)
 
-    os.makedirs(FUORI, exist_ok=True)
+    os.makedirs(OUT, exist_ok=True)
 
-    if a.passo in ("rimetti", "stato"):
+    if a.step in ("restore", "status"):
         print("== the test machine's network")
-        print("   --  listeners NOT mine (counted, not touched): %s" % vicine())
-        return 0 if rimetti() else 2
+        print("   --  listeners NOT mine (counted, not touched): %s" % near())
+        return 0 if restore() else 2
 
-    gradini = ([float(x) for x in a.gradini.split(",")] if a.gradini
-               else ([0, 10] if a.passo == "un-verso" else GRADINI))
-    un_verso = (a.passo == "un-verso")
+    rungs = ([float(x) for x in a.rungs.split(",")] if a.rungs
+               else ([0, 10] if a.step == "one-way" else RUNGS))
+    one_way = (a.step == "one-way")
 
-    print("== 09-b78 · OPENING TIME AGAINST LOSS — port %d" % PORTA)
+    print("== 09-b78 · OPENING TIME AGAINST LOSS — port %d" % PORT)
     print("   ⛔ «%s» (ssh + 7730) is NOT touched; the fault sits on «%s», "
-          "filters on %d only" % (VIETATA, DEV, PORTA))
-    print("   --  listeners NOT mine: %s" % vicine())
-    if un_verso:
+          "filters on %d only" % (VIETATA, DEV, PORT))
+    print("   --  listeners NOT mine: %s" % near())
+    if one_way:
         print("   ⭐ ONE DIRECTION ONLY (`dport` only): it is the control of hypothesis (d)")
     print("   --  steps: %s %%   runs: %d   up to: «%s»   ceiling: %g s"
-          % (gradini, a.giri, a.fino, a.tetto))
+          % (rungs, a.rounds, a.until, a.cap))
 
-    impronte = spedisci()
-    if not impronte:
+    fingerprints = ship_sources()
+    if not fingerprints:
         print("   NO  the scripts did not arrive in the tree: I do not measure")
         return 2
-    print("   --  measured with: %s" % " · ".join(impronte))
+    print("   --  measured with: %s" % " · ".join(fingerprints))
 
     luc = importlib.util.spec_from_file_location(
-        "luc", os.path.join(QUI, "09-lucchetto.py"))
-    lucchetto = importlib.util.module_from_spec(luc)
-    luc.loader.exec_module(lucchetto)
+        "luc", os.path.join(HERE, "09-lucchetto.py"))
+    lock = importlib.util.module_from_spec(luc)
+    luc.loader.exec_module(lock)
 
     # ⛔ SHORT lease: there are other agents queued.
-    per_rung = a.giri * ((a.tetto if a.fino != "wt" else 12)
-                            + a.pausa + a.riprova_0f) + 60
-    affitto = int(min(900, len(gradini) * per_rung + 120))
-    lucchetto.prendi("09-b78", secondi=affitto, attesa=2400)
-    esiti = []
+    per_rung = a.rounds * ((a.cap if a.until != "wt" else 12)
+                            + a.pause + a.retry_0f) + 60
+    lease = int(min(900, len(rungs) * per_rung + 120))
+    lock.take("09-b78", seconds=lease, wait=2400)
+    outcomes = []
     try:
-        guardiano_arma(affitto)
-        for g in gradini:
+        guardian_arm(lease)
+        for g in rungs:
             print("\n-- loss %g %%" % g)
-            riga0 = righe_registro()
-            ok, q = guasta(g, un_verso)
+            line0 = log_line_list()
+            ok, q = broken(g, one_way)
             if not ok:
                 print("   ", q)
                 break
             print("   tc:", " ".join(q.split("\n")[:3])[:150])
-            righe, coda = misura(a.giri, a.fino, a.tetto, a.pausa, a.riprova_0f)
-            vero = netem_conti()
-            bannato, banfile = ban_scattato(riga0)
-            r = riassumi(righe, a.fino)
-            r.update({"perdita_chiesta_pc": g, "netem": vero,
-                      "ban_scattato": bannato, "ban_file": banfile,
-                      "un_verso": un_verso})
-            if not righe:
-                r["coda"] = coda
-            esiti.append(r)
+            lines, queue = measure(a.rounds, a.until, a.cap, a.pause, a.retry_0f)
+            real = netem_counts()
+            banned, banfile = ban_triggered(line0)
+            r = summarize(lines, a.until)
+            r.update({"perdita_chiesta_pc": g, "netem": real,
+                      "ban_scattato": banned, "ban_file": banfile,
+                      "one_way": one_way})
+            if not lines:
+                r["queue"] = queue
+            outcomes.append(r)
             print("   ", json.dumps(r, ensure_ascii=False))
-            if bannato:
+            if banned:
                 print("   ⛔ THE BAN FIRED: I stop, or I would attribute to the "
                       "next step a fault of this one")
                 break
     finally:
         print("\n== ⛔ THE NETWORK IS PUT BACK AS IT WAS")
-        rimetti()
-        lucchetto.molla("09-b78")
+        restore()
+        lock.release("09-b78")
 
-    nome = "apertura-un-verso.json" if un_verso else "apertura-scala.json"
-    json.dump(esiti, open(os.path.join(FUORI, nome), "w"),
+    name = "apertura-un-verso.json" if one_way else "apertura-scala.json"
+    json.dump(outcomes, open(os.path.join(OUT, name), "w"),
               ensure_ascii=False, indent=1)
 
-    print("\n== THE TABLE — opening time (up to «%s») against loss" % a.fino)
+    print("\n== THE TABLE — opening time (up to «%s») against loss" % a.until)
     print("   %-8s %-9s %-8s %-11s %-11s %-9s %s"
           % ("loss", "netem_true", "now+later/n", "quic_med", "tot_med",
              "tot_max", "over 8 s"))
-    for e in esiti:
+    for e in outcomes:
         print("   %-8s %-9s %-8s %-11s %-11s %-9s %s"
               % ("%g %%" % e["perdita_chiesta_pc"],
                  ("%.1f %%" % (100 * e["netem"]["frazione_vera"]))
                  if e["netem"]["frazione_vera"] is not None else "—",
                  "%d+%d/%d" % (e["aperte_subito"],
-                               e["aperte"] - e["aperte_subito"], e["giri"]),
+                               e["aperte"] - e["aperte_subito"], e["rounds"]),
                  e["quic_mediana_ms"], e["tot_mediana_ms"], e["tot_max_ms"],
                  e["quic_oltre_8s"]))
 
     # ⛔ THE PREDICATE, written in the box at the top BEFORE running.
-    dieci = [e for e in esiti if e["perdita_chiesta_pc"] == 10]
-    if not dieci:
+    ten = [e for e in outcomes if e["perdita_chiesta_pc"] == 10]
+    if not ten:
         print("\n   ⚠  the 10 % step was not measured: no verdict")
         return 2
-    e = dieci[0]
-    passa = (e["aperte"] >= 0.9 * e["giri"]
+    e = ten[0]
+    passes = (e["aperte"] >= 0.9 * e["rounds"]
              and e["tot_mediana_ms"] is not None and e["tot_mediana_ms"] < 5000)
-    print("\n== THE VERDICT ON THE `[M]` OF 07-b64 (`7-perdita-10`)")
-    if passa:
+    print("\n== THE VERDICT ON THE `[M]` OF 07-b64 (`7-loss-10`)")
+    if passes:
         print("   ⭐ at 10 %% the session DOES OPEN: %d/%d, median %.0f ms.  "
               "⇒ The «does not open at all in 25 s» was a bench defect."
-              % (e["aperte"], e["giri"], e["tot_mediana_ms"]))
+              % (e["aperte"], e["rounds"], e["tot_mediana_ms"]))
         return 0
     print("   ⛔ at 10 %% the session does NOT open as predicted: %d/%d, "
           "median %s ms ⇒ the `[M]` stands, and the curve says why"
 
-          % (e["aperte"], e["giri"], e["tot_mediana_ms"]))
+          % (e["aperte"], e["rounds"], e["tot_mediana_ms"]))
     return 1
 
 
 if __name__ == "__main__":
-    sys.exit(principale())
+    sys.exit(main())

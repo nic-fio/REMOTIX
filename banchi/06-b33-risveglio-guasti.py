@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """06-b33-risveglio-guasti.py — ⛔ THE INJECTED FAULTS of the §7.1 bench.
 
-    python3 06-b33-risveglio-guasti.py --elenco
-    python3 06-b33-risveglio-guasti.py --albero /media/REMOTIX/src/06-i-src \\
-        --guasto RG1
+    python3 06-b33-risveglio-guasti.py --list
+    python3 06-b33-risveglio-guasti.py --tree /media/REMOTIX/src/06-i-src \\
+        --fault RG1
 
 ⛔ It injects into a COPY of the tree, never into the original: the caller saves
    the healthy files BEFORE and puts them back AFTER
@@ -20,7 +20,7 @@ for a reason that must be written down so that nobody rediscovers it:
   ⭐ The cure at `figlio.c:3964` releases everything **before**
     `cattura_ridimensiona()`.  ⇒ In that scene, with the HEALTHY product,
     nothing is pressed any more at the moment of the replacement:
-    `segna_orfani()` **is not called at all**, and fault G3 — which removes
+    `mark_orphans()` **is not called at all**, and fault G3 — which removes
     it — does not change a thing.
     `[M]` Certification of 21 August: G3 injected lights up **zero** cases.
 
@@ -78,7 +78,7 @@ all the same and **no case changes**.
   already written in `mutter.h` as if it were a fact (`CODER.md` §4.6: `[R]` is
   not `[M]`).
 
-⭐ `mutter_eis_riattacca()` remains necessary anyway, and this was NOT
+⭐ `mutter_eis_reattach()` remains necessary anyway, and this was NOT
   refuted: after the detach the descriptor set aside is dead, and a NEW one
   can be asked for only by whoever has the bus and the session path.
 """
@@ -87,15 +87,15 @@ import os
 import sys
 
 # (file, description, cases that must CHANGE, search, replace)
-GUASTI = {
+FAULTS = {
     # ⛔ RG1 — cure "C" exists but is never called.  It is the positive
     #    control of the cure itself: if removing it the bench stays green, the
     #    green was not the cure's.
     "RG1": (
         "src/input.c",
-        "cure \"C\" does not kick in: `guarisci()` is never called",
+        "cure \"C\" does not kick in: `heal()` is never called",
         "T3 T4",
-        """	if (in->guarigione_dovuta && !in->caduto)
+        """	if (in->healing_due && !in->caduto)
 		guarisci(in);""",
         """	/* fault RG1 injected: cure "C" does not kick in */
 	(void) guarisci;""",
@@ -111,21 +111,21 @@ GUASTI = {
         "the orphans of the BUTTONS are not marked: the log goes back to saying \"done\"",
         # ⛔ THE EXPECTATION WAS CORRECTED BY THE MEASUREMENT, not the verdict —
         #    21 Aug 2026.  I had declared "only T1", reasoning that the Ctrl held
-        #    down would have triggered the KEYS' `segna_orfani()` and therefore
+        #    down would have triggered the KEYS' `mark_orphans()` and therefore
         #    the healing.  ⛔ False, and it is `[M]`: at the viewport change the
         #    keyboard **is not replaced** (`remove_viewport_devices` looks only
         #    at TOUCH and POINTER_ABSOLUTE), so `device_removed()` is never
         #    called for it and its orphans are never marked.  ⇒ In this scene
         #    the healing flag depends **only on the buttons**.
         "T1 T3 T4 T7",
-        """		segna_orfani(in, in->bottoni, in->bottoni_orfani, MAX_BOTTONE, in->quanti_bottoni,
+        """		mark_orphans(in, in->bottoni, in->orphan_buttons, MAX_BUTTON, in->how_many_buttons,
 		             "buttons");""",
         """		/* fault RG2 injected: the orphans of the buttons are not marked */""",
     ),
     # ⛔⛔ RG3 — THE MEASURED NON-FAULT, and the discovery is worth more than the fault.
     #
     #      I had declared it "the most precious of the three", with this reason:
-    #      *"`input_apri()` does a `dup` of the descriptor that `mutter.c` keeps
+    #      *"`input_open()` does a `dup` of the descriptor that `mutter.c` keeps
     #      aside, and as long as THAT one stays open the socket is still
     #      connected ⇒ Mutter sees no detach"*.  And I had written next to it:
     #      *"if this fault changed nothing, it would mean that the close is not
@@ -212,41 +212,41 @@ GUASTI = {
 
 def main():
     p = argparse.ArgumentParser(description="06-b33 §7.1 — the injected faults")
-    p.add_argument("--elenco", action="store_true")
-    p.add_argument("--albero", default="")
-    p.add_argument("--guasto", default="")
+    p.add_argument("--list", action="store_true")
+    p.add_argument("--tree", default="")
+    p.add_argument("--fault", default="")
     a = p.parse_args()
 
-    if a.elenco:
-        for nome, (f, desc, casi, _c, _s) in GUASTI.items():
-            print("%s  %s  [%s]" % (nome, desc, f))
-            print("    ⇒ must CHANGE: %s" % (casi or "none"))
+    if a.list:
+        for name, (f, desc, cases, _c, _s) in FAULTS.items():
+            print("%s  %s  [%s]" % (name, desc, f))
+            print("    ⇒ must CHANGE: %s" % (cases or "none"))
         return 0
 
-    if not a.albero or not a.guasto:
-        print("⛔ --albero and --guasto are needed (or --elenco)", file=sys.stderr)
+    if not a.tree or not a.fault:
+        print("⛔ --tree and --fault are needed (or --list)", file=sys.stderr)
         return 2
-    if a.guasto not in GUASTI:
-        print("⛔ unknown fault: %s" % a.guasto, file=sys.stderr)
+    if a.fault not in FAULTS:
+        print("⛔ unknown fault: %s" % a.fault, file=sys.stderr)
         return 2
 
-    rel, _desc, _cases, cerca, subst = GUASTI[a.guasto]
-    percorso = os.path.join(a.albero, rel)
-    with open(percorso, encoding="utf-8") as f:
-        testo = f.read()
+    rel, _desc, _cases, search, subst = FAULTS[a.fault]
+    fpath = os.path.join(a.tree, rel)
+    with open(fpath, encoding="utf-8") as f:
+        text = f.read()
 
     # ⛔ IT IS COUNTED, and a single occurrence is a requirement: an anchor that
     #    appears twice would inject two faults, and nobody knows about one of them.
-    quante = testo.count(cerca)
-    if quante != 1:
+    how_many = text.count(search)
+    if how_many != 1:
         print("⛔ the anchor of %s appears %d times in %s (ONE is needed): the fault is NOT "
               "injected, and this is NOT \"the fault does nothing\""
-              % (a.guasto, quante, rel), file=sys.stderr)
+              % (a.fault, how_many, rel), file=sys.stderr)
         return 3
 
-    with open(percorso, "w", encoding="utf-8") as f:
-        f.write(testo.replace(cerca, subst, 1))
-    print("⭐ %s injected into %s" % (a.guasto, rel))
+    with open(fpath, "w", encoding="utf-8") as f:
+        f.write(text.replace(search, subst, 1))
+    print("⭐ %s injected into %s" % (a.fault, rel))
     return 0
 
 

@@ -8,7 +8,7 @@
 #
 # ⛔⛔ WHY IT EXISTS — 21 September 2026, phase 13, increment 2.
 #   Until today the «on which desktop does this mesh run» was written TWICE,
-#   by hand, in two whitelists: `le_cinque_nuove` in `11-gancio.sh` (all the
+#   by hand, in two whitelists: `five_new` in `11-gancio.sh` (all the
 #   product meshes) and the `c8b` branch of `11-accendi.sh` (C8b only).
 #   ⇒ `fasi/13-xfce.md`, «The bench», points 1 and 2: two places to open, and
 #     opening only one of them C8b(xfce) stayed silent at 3 without anything saying so
@@ -21,11 +21,11 @@
 #     **for which capability** it skips.
 #
 # ⭐ THE SHAPE: two small tables.
-#   1. what each DESKTOP has from the product  (`capacita_del_desktop`)
+#   1. what each DESKTOP has from the product  (`desktop_capabilities`)
 #   2. what each MESH wants                    (`mesh_capabilities`)
 #   A mesh runs if the desktop has EVERYTHING it wants; otherwise it skips
 #   naming the FIRST missing capability, and why (`why_missing`); the
-#   question is asked with `prodotto_pronto`.
+#   question is asked with `product_ready`.
 #
 # ⛔⛔ AND NO YARDSTICK IS DECIDED HERE.  Opening a capability softens
 #     nothing: it only means that the mesh LOOKS, with its usual yardstick.
@@ -42,11 +42,11 @@
 # ---------------------------------------------------------------------------
 # 1. ⭐ THE DESKTOPS THE PRODUCT CAN START, and what it can do with them.
 #
-#   immagine   the capture reaches the client       (C1 green on that box)
-#   forma      the real shape of the pointer         (C21 green; phase 14: on gnome
+#   bitmap   the capture reaches the client       (C1 green on that box)
+#   shape      the real shape of the pointer         (C21 green; phase 14: on gnome
 #              it was already there, kde/xfce/lxqt open when C21 is green there)
 #   input      keyboard and mouse arrive             (C4 green)
-#   appunti    the clipboard in both directions      (C17 green)
+#   clipboard    the clipboard in both directions      (C17 green)
 #
 # ⚠ `[M]` gnome and kde: all three — the net of 20 Sep 2026 has them green with
 #   their faults seen (`fasi/13-xfce.md`, the baseline).
@@ -55,9 +55,9 @@
 # ⭐⭐ AND SINCE 21 SEPTEMBER 2026, MORNING, INPUT AND CLIPBOARD TOO — opened
 #     only AFTER the measurement, not before: `[M]` binary `0c0634dd`, xfce box
 #     rebuilt from scratch, launched by hand with `11-accendi.sh`:
-#       C4(xfce)  GREEN · faults `--senza-tasto` and `--scena-sorda` SEEN
-#       C6(xfce)  GREEN · fault `--uccidi-la-sessione` SEEN
-#       C17(xfce) GREEN (A · B · R, wl-clipboard arbiter) · `--senza-copia` SEEN
+#       C4(xfce)  GREEN · faults `--no-key` and `--deaf-scene` SEEN
+#       C6(xfce)  GREEN · fault `--kill-session` SEEN
+#       C17(xfce) GREEN (A · B · R, wl-clipboard arbiter) · `--no-copy` SEEN
 #     ⛔ A capability is opened here when the mesh that judges it has given GREEN
 #        and has seen its fault — not when the code is there.
 # ⭐ lxqt: ALL THREE since 24 September 2026 — phase 14 (`fasi/14-lxqt.md`).  Until
@@ -65,11 +65,11 @@
 #   only AFTER the measurement, `[M]` on the development box `rete14-lxqt` (binaries
 #   `404f9907` → `1a10a66e`), launched by hand with `11-accendi.sh`:
 #     C1(lxqt)×3 GREEN · C2 C3 C4 C6 C8b C17 C20 GREEN · 16 faults out of 16 SEEN
-#     (`--senza-tasto` `--scena-sorda` `--uccidi-la-sessione` `--senza-copia` …)
+#     (`--no-key` `--deaf-scene` `--kill-session` `--no-copy` …)
 # ---------------------------------------------------------------------------
-DESKTOP_COL_PRODOTTO="gnome kde xfce lxqt"
+DESKTOP_WITH_PRODUCT="gnome kde xfce lxqt"
 
-capacita_del_desktop() {
+desktop_capabilities() {
 	case "$1" in
 	gnome) printf 'immagine input appunti forma' ;;
 	kde)   printf 'immagine input appunti forma' ;;
@@ -87,14 +87,14 @@ capacita_del_desktop() {
 #   «I could not look» — ⛔ taking them out of the run would be another decision,
 #   not this one.
 #
-#   C2   a window opens                 looks at the PIXEL       ⇒ immagine
-#   C3   the frames change              looks at the PIXEL       ⇒ immagine
-#   C8b  the page shows from the client looks at the PIXEL       ⇒ immagine
+#   C2   a window opens                 looks at the PIXEL       ⇒ bitmap
+#   C3   the frames change              looks at the PIXEL       ⇒ bitmap
+#   C8b  the page shows from the client looks at the PIXEL       ⇒ bitmap
 #   C4   the key reaches the screen     sends a KEY              ⇒ + input
 #   C6   detaches and finds itself again ⚠ see below             ⇒ + input
 #   C17  the clipboard both ways        focus with the client's CLICK
-#                                       (`--clic`) and the clipboard ⇒ + input + appunti
-#   C20  rebirth after «Log out»        looks at the PIXEL       ⇒ immagine
+#                                       (`--click`) and the clipboard ⇒ + input + clipboard
+#   C20  rebirth after «Log out»        looks at the PIXEL       ⇒ bitmap
 #
 # ⚠⚠ C20 AND THE «LOG OUT» GESTURE — declared, because it is NOT a capability of the
 #   product.  Logging out from the menu is a gesture of the DESKTOP (`org.kde.Shutdown`,
@@ -112,8 +112,8 @@ capacita_del_desktop() {
 #   on the desktops where the product does less, which is the opposite of what is needed.
 #
 # ⚠⚠ C6 AND INPUT — declared, because I did NOT read it in the code.
-#   `[R]` 21 Sep 2026: the C6 client (`attacca`) sends neither keys nor
-#   clicks, and the scene is started by the bench inside the session (`apri_la_scena`).
+#   `[R]` 21 Sep 2026: the C6 client (`attach`) sends neither keys nor
+#   clicks, and the scene is started by the bench inside the session (`open_scene`).
 #   ⇒ The dependency written here is the PLAN's (`fasi/13-xfce.md`, table
 #     of increments: *«3 · … C4(xfce), and C3 · C6 on xfce»*), not a reading
 #     of the mesh.  ⛔ Before opening C6(xfce) we decide whether the plan has a
@@ -136,15 +136,15 @@ mesh_capabilities() {
 # 3. ⭐ THE REASON, written for whoever reads the log.
 # ---------------------------------------------------------------------------
 why_missing() {
-	local desktop=$1 capacita=$2
-	case " $DESKTOP_COL_PRODOTTO " in
+	local desktop=$1 capabilities=$2
+	case " $DESKTOP_WITH_PRODUCT " in
 	*" $desktop "*) : ;;
 	*)
 		printf 'the product does not recognise the desktop «%s» (src/sessione.c, sessione_desktop: «NO DESKTOP RECOGNISED»)' "$desktop"
 		return
 		;;
 	esac
-	case "$desktop:$capacita" in
+	case "$desktop:$capabilities" in
 	xfce:input)
 		printf 'input on XFCE is increment 3 of phase 13 (virtual-keyboard, virtual-pointer: fasi/13-xfce.md)' ;;
 	xfce:appunti)
@@ -154,43 +154,43 @@ why_missing() {
 	*:sconosciuta)
 		printf 'the mesh is not declared in 11-capacita-del-prodotto.sh: I do not know what it wants' ;;
 	*)
-		printf 'the product does not provide «%s» on %s (11-capacita-del-prodotto.sh)' "$capacita" "$desktop" ;;
+		printf 'the product does not provide «%s» on %s (11-capacita-del-prodotto.sh)' "$capabilities" "$desktop" ;;
 	esac
 }
 
 # ---------------------------------------------------------------------------
-# ⭐ THE GATE'S QUESTION: `prodotto_pronto <maglia> <desktop>`
+# ⭐ THE GATE'S QUESTION: `product_ready <mesh> <desktop>`
 #
 #   returns 0 silently             if everything is there ⇒ the mesh runs
 #   returns 1 and PRINTS THE REASON if something is missing ⇒ the mesh skips
 #
 # ⛔⛔ AND THE DIRECTION IS NOT A MATTER OF TASTE.  The caller writes
-#     `if ! perche=$(prodotto_pronto …); then salta …; else gira …`, and ⇒ ONLY
+#     `if ! why=$(product_ready …); then skip …; else runs …`, and ⇒ ONLY
 #     0 makes it run.  If this function were not there (file not read, wrong
 #     name) the shell would exit 127, ⭐ and 127 SKIPS.  `[M]` 21 Sep 2026:
 #     with the opposite direction («missing? 0 = yes») the first draft, without the list,
 #     ran EVERYTHING silently — a gate that opens when it breaks.
 # ---------------------------------------------------------------------------
-prodotto_pronto() {
-	local maglia=$1 desktop=$2 c ha detto=""
-	ha=" $(capacita_del_desktop "$desktop") "
+product_ready() {
+	local mesh=$1 desktop=$2 c ha said=""
+	ha=" $(desktop_capabilities "$desktop") "
 	# ⭐ We name ALL the missing capabilities, not the first: C17 on xfce
 	#   waits for input AND the clipboard, and whoever reads the log must know it.
 	#   ⚠ A desktop the product does not recognise has a single reason.
-	for c in $(mesh_capabilities "$maglia"); do
+	for c in $(mesh_capabilities "$mesh"); do
 		case "$ha" in
 		*" $c "*) : ;;
 		*)
-			case " $DESKTOP_COL_PRODOTTO " in
+			case " $DESKTOP_WITH_PRODUCT " in
 			*" $desktop "*) : ;;
 			*) why_missing "$desktop" "$c"; return 1 ;;
 			esac
-			[ -n "$detto" ] && detto="$detto · "
-			detto="$detto$(why_missing "$desktop" "$c")"
+			[ -n "$said" ] && said="$said · "
+			said="$said$(why_missing "$desktop" "$c")"
 			;;
 		esac
 	done
-	[ -z "$detto" ] && return 0
-	printf '%s' "$detto"
+	[ -z "$said" ] && return 0
+	printf '%s' "$said"
 	return 1
 }

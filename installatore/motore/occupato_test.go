@@ -1,4 +1,4 @@
-package motore
+package engine
 
 import (
 	"fmt"
@@ -11,20 +11,20 @@ import (
 )
 
 // machineBusy: a fake root where process 4242 «unattended-upgr» holds dpkg's frontend lock.
-func machineBusy(t *testing.T) (*Ambiente, string) {
+func machineBusy(t *testing.T) (*Environment, string) {
 	r := t.TempDir()
-	scrivi := func(p, s string) {
+	write := func(p, s string) {
 		os.MkdirAll(filepath.Dir(filepath.Join(r, p)), 0o755)
 		os.WriteFile(filepath.Join(r, p), []byte(s), 0o644)
 	}
-	scrivi("var/lib/dpkg/lock-frontend", "")
+	write("var/lib/dpkg/lock-frontend", "")
 	st, _ := os.Stat(filepath.Join(r, "var/lib/dpkg/lock-frontend"))
 	ino := st.Sys().(*syscall.Stat_t).Ino
 	// a line of someone waiting («->») does not count, and neither does another inode
 	locks := fmt.Sprintf("1: POSIX  ADVISORY  WRITE 777 00:8a:%d 0 EOF\n2: -> POSIX  ADVISORY  WRITE 778 00:8a:%d 0 EOF\n3: POSIX  ADVISORY  WRITE 4242 00:8a:%d 0 EOF\n", ino+1, ino, ino)
-	scrivi("proc/locks", locks)
-	scrivi("proc/4242/comm", "unattended-upgr\n")
-	return &Ambiente{Radice: r}, r
+	write("proc/locks", locks)
+	write("proc/4242/comm", "unattended-upgr\n")
+	return &Environment{Root: r}, r
 }
 
 func TestWhoHoldsPackageManager(t *testing.T) {
@@ -65,27 +65,27 @@ func TestWhoHoldsPackageManager(t *testing.T) {
 // The manager busy: the engine says who, waits; when it is free it goes on, beyond the cap it stops
 // without launching the manager.
 func TestWaitsForPackageManager(t *testing.T) {
-	tetto, passo := BusyCap, busyStep
-	defer func() { BusyCap, busyStep = tetto, passo }()
+	savedCap, step := BusyCap, busyStep
+	defer func() { BusyCap, busyStep = savedCap, step }()
 	BusyCap, busyStep = 300*time.Millisecond, 10*time.Millisecond
 	a, r := machineBusy(t)
-	var detti []Messaggio
-	a.Avvisa = func(m Messaggio) { detti = append(detti, m) }
+	var said []Message
+	a.Avvisa = func(m Message) { said = append(said, m) }
 	lanciati := 0
-	a.Esegui = func(time.Duration, string, ...string) (string, int, error) { lanciati++; return "", 0, nil }
+	a.Run = func(time.Duration, string, ...string) (string, int, error) { lanciati++; return "", 0, nil }
 	g := &aptManager{a}
 
-	if err := g.Installa(nil, []string{"x"}); CodeOf(err) != "RX-PACCHETTI-008" || !strings.Contains(err.Error(), "unattended-upgr") {
+	if err := g.Install(nil, []string{"x"}); CodeOf(err) != "RX-PACCHETTI-008" || !strings.Contains(err.Error(), "unattended-upgr") {
 		t.Fatalf("beyond the cap: %v", err)
 	}
 	if lanciati != 0 {
 		t.Fatalf("apt-get launched %d times while busy", lanciati)
 	}
-	if len(detti) != 1 || detti[0].Codice != "RX-PACCHETTI-007" || !strings.Contains(detti[0].Dettaglio, "pid 4242 (unattended-upgr)") {
-		t.Fatalf("said once, with who: %+v", detti)
+	if len(said) != 1 || said[0].Codice != "RX-PACCHETTI-007" || !strings.Contains(said[0].Detail, "pid 4242 (unattended-upgr)") {
+		t.Fatalf("said once, with who: %+v", said)
 	}
 	// the plan: blocked with the reason, not with «cannot install» (RX-PACCHETTI-005)
-	if _, err := g.Simula(nil, []string{"x"}); messageSimulate(err).Codice != "RX-PACCHETTI-008" {
+	if _, err := g.Simulate(nil, []string{"x"}); messageSimulate(err).Codice != "RX-PACCHETTI-008" {
 		t.Fatalf("simulation: %v", err)
 	}
 
@@ -94,7 +94,7 @@ func TestWaitsForPackageManager(t *testing.T) {
 		time.Sleep(50 * time.Millisecond)
 		os.WriteFile(filepath.Join(r, "proc/locks"), nil, 0o644)
 	}()
-	if err := g.Installa(nil, []string{"x"}); err != nil || lanciati != 1 {
+	if err := g.Install(nil, []string{"x"}); err != nil || lanciati != 1 {
 		t.Fatalf("after the wait: %v, launched %d", err, lanciati)
 	}
 }
@@ -107,7 +107,7 @@ func TestPurgeRemovesPlans(t *testing.T) {
 		os.MkdirAll(filepath.Dir(filepath.Join(base, f)), 0o700)
 		os.WriteFile(filepath.Join(base, f), []byte("{}"), 0o600)
 	}
-	m := &Motore{Cartella: filepath.Join(base, "operations")}
+	m := &Engine{Folder: filepath.Join(base, "operations")}
 	if err := m.CleanHistory(true); err != nil {
 		t.Fatal(err)
 	}

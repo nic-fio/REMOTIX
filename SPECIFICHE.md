@@ -319,7 +319,7 @@ one** graphical one — local or remote. Text and graphical sessions coexist.
 |---|---|
 | has an active **local** graphical session and opens a remote one | ⛔ the remote one is **refused**, with an explicit message |
 | has an active **remote** graphical session and opens a local one | ⛔ **the local one wins**: the remote one is closed |
-| ⭐ has a remote one **active and alive** and connects from a **second device** | ⛔ **the second connection is refused** *(decided on 9 Aug 2026)* — it is invariant I2, and the reason is `GIA_ATTIVA_REMOTA` |
+| ⭐ has a remote one **active and alive** and connects from a **second device** | ⛔ **the second connection is refused** *(decided on 9 Aug 2026)* — it is invariant I2, and the reason is `ALREADY_ACTIVE_REMOTELY` |
 | has a remote one whose client **has been silent for 30 seconds** | that client is **detached** (§5.3): it does not hold the slot, and the new device **gets in** |
 
 ⚠ **The last two rows do not contradict each other, and the deciding factor is the silence clock**: a live
@@ -368,7 +368,7 @@ unusable after the first detachment. (`DECISIONI.md` §4.1)
 | the user's gesture | what happens |
 |---|---|
 | closes the tab, closes the browser, **shuts down or restarts their own PC**, loses signal | ⭐ **a single case**: the wire drops, the **session stays alive**, and whoever comes back finds everything (§5.2). ⛔ The user's PC is not an actor of the model: there is nothing to tell apart |
-| chooses **«Log Out»** from the desktop's system menu | ⛔ **the session ends**, and with it all the programs the user had running are closed. The page goes back to the **sign-in form** with the line *«the session has ended»*, and the reason on the wire is `SESSIONE_TERMINATA` (`RCP.md` §8.2 `0x10`) |
+| chooses **«Log Out»** from the desktop's system menu | ⛔ **the session ends**, and with it all the programs the user had running are closed. The page goes back to the **sign-in form** with the line *«the session has ended»*, and the reason on the wire is `SESSION_TERMINATED` (`RCP.md` §8.2 `0x10`) |
 
 ⭐ **It is the only gesture that declares «I am done»**, and that is why the «Log Out…» entry must **be there**: on
 GNOME it must be switched on explicitly, because with one user and a single session the shell does not show it.
@@ -469,7 +469,7 @@ that is what I1 forbids. (`DECISIONI.md` §4.6)
 > ⇒ ⭐⭐ **That is why the budget can be computed BEFORE accepting**: the currency is the composed
 > pixel, and the cost of a session is known from its canvas. ⛔ **But the pixel alone is not
 > enough**: we also look at **the delay of whoever is already inside**, with a threshold
-> (`BUDGET_RITARDO_AFFANNO_MS`, **22.9 ms**, in `src/budget.h`) tuned on the phase 10 machine.
+> (`BUDGET_STRAIN_DELAY_MS`, **22.9 ms**, in `src/budget.h`) tuned on the phase 10 machine.
 >
 > ### The rule, in full
 >
@@ -483,10 +483,10 @@ that is what I1 forbids. (`DECISIONI.md` §4.6)
 > | | default | |
 > |---|---|---|
 > | `--budget-mpixel-s N` | ⛔ **0, that is OFF** | ⭐ because of **I6**: what changes what the user sees is born off |
-> | `--tetto-sessioni N` | **10** | and from here descend `MAX_ATTACCATE`, `MAX_FIGLI`, `QUANTI_PRESENTI`, `WT_PALCHI` — ⭐ **the fallback of the `#define`s at 16 is over** |
-> | `--riserva F` | **0.5** | how much is kept aside for whoever is already inside |
+> | `--session-cap N` | **10** | and from here descend `MAX_ATTACCATE`, `MAX_FIGLI`, `QUANTI_PRESENTI`, `WT_PALCHI` — ⭐ **the fallback of the `#define`s at 16 is over** |
+> | `--reserve F` | **0.5** | how much is kept aside for whoever is already inside |
 >
-> ⭐ **And `BUDGET_PIENO 0x06` now really leaves** — with the sentence that says *why*, not a mute
+> ⭐ **And `BUDGET_FULL 0x06` now really leaves** — with the sentence that says *why*, not a mute
 > refusal. Until phase 10 it was declared in `src/rcp.h` and in `RCP.md` §8.2 **and no line ever
 > sent it**.
 >
@@ -512,13 +512,13 @@ that is what I1 forbids. (`DECISIONI.md` §4.6)
 >
 > ⛔ *It said: «`src/rcp.c` keeps **16** attached sessions in a table fixed at compile time
 > (`MAX_ATTACCATE`), where here the ceiling is ten, configurable».* ⭐ **Now there is only one ceiling,
-> `RCP_TETTO_SESSIONI`, it is ten, and it is changed on the fly with `--tetto-sessioni N`.**
+> `RCP_SESSION_CAP`, it is ten, and it is changed on the fly with `--session-cap N`.**
 >
 > ⚠ The hand-made copies were **five**, not one: `MAX_ATTACCATE` (`rcp.c`), `MAX_FIGLI` (`figlio.c`),
 > `QUANTI_PRESENTI` (`main.c`), `WT_PALCHI` (`webtransport.c`, it was **8** — that is **a sixth number
 > different again**). ⭐ They all descend from the ceiling.
 >
-> ⛔ **And one was left separate on purpose**: `MAX_IN_VOLO` (`src/aiutante.c`) **is not** the number
+> ⛔ **And one was left separate on purpose**: `MAX_IN_FLIGHT` (`src/aiutante.c`) **is not** the number
 > of sessions — it is how many PAM checks are in flight together. ⇒ ⭐ *unifying for symmetry what
 > is not the same quantity is a new defect, not a cure.*
 > The boundary in full is in `FASI.md` §01-filo-nudo, «What was developed».
@@ -568,7 +568,7 @@ symptom, find the step, and look at **who** had to do it. ⛔ Never start from t
 
 ### Part A — what must be true BEFORE, and is not done by the product
 
-*It is in `src/provisiona.sh`, and is verified with `sudo bash src/provisiona.sh verifica`.*
+*It is in `src/provisiona.sh`, and is verified with `sudo bash src/provisiona.sh check`.*
 
 | # | what | who | if missing |
 |---|---|---|---|
@@ -612,12 +612,12 @@ symptom, find the step, and look at **who** had to do it. ⛔ Never start from t
 | B3 | ⛔⭐ the child **opens the PAM session**: `XDG_SESSION_TYPE=wayland`, `XDG_SESSION_CLASS=user`, `PAM_RHOST`, **no `XDG_SEAT`** | `figlio.c`, step 2-bis | ⛔ Mutter asks `sd_pid_get_session()`, gets **ENXIO** and dies with *«Failed to find any matching session»*. ⚠ **Linger** is not enough: it gives runtime and bus, but puts the processes in a scope of class `manager` |
 | B4 | the **`XDG_*`** variables are **read** from `pam_getenvlist`, not invented | `figlio.c` | a *declared* value in place of an *obtained* one: it holds as long as it holds |
 | B5 | the client **ATTACHES declaring canvas = window** | `pagina.html` | ⛔ the session is born with the wrong canvas and must be **resized**, and resizing is a race: black bands, «broken» desktop, input in the wrong place |
-| B6 | ⛔ the server **tells the stage the canvas** at the instant it grants it | `rcp.c`, after `SESSIONE` | the stage is born at a size nobody asked for, and every frame is thrown away |
+| B6 | ⛔ the server **tells the stage the canvas** at the instant it grants it | `rcp.c`, after `SESSION` | the stage is born at a size nobody asked for, and every frame is thrown away |
 | B7 | ⛔ **the previous session must be FINISHED** — the user manager **and** `gnome-session-restart-dbus.service` | `sessione.c` | ⛔ the new session is born inside the one that is dying and **dies with it without writing a line**: `[M]` its log stays at **zero bytes** |
 | B8 | the **settings** are written: `Ctrl+Alt+F*` emptied, «Log Out…» on, automatic suspend off, screen locker off | `sessione.c` | logging out has no entry; the machine falls asleep under a live session |
 | B9 | the Shell's **drop-in** is written (`--headless --no-x11`, ⛔ **without `--virtual-monitor`**) | `sessione.c` | with a monitor of its own the session is «healthy» for v1 and **black** for us |
 | B10 | `gnome-session` is **started**, and ⛔ **not waited for**: the answer is the frame | `sessione.c` + the retry loop | a child that waits 40 s is a child that does not answer the parent |
-| B11 | the child **says «ATTENDI»** until the stage is there, and retries at once | `figlio.c` | the parent **deduces** a failure from the silence and answers `NON_ORA`: from there the two sides never agree again |
+| B11 | the child **says «ATTENDI»** until the stage is there, and retries at once | `figlio.c` | the parent **deduces** a failure from the silence and answers `NOT_NOW`: from there the two sides never agree again |
 | B12 | it mounts the **stage**: `RecordVirtual` → PipeWire → the monitor | `mutter.c`, `cattura.c` | no pixels |
 | B13 | it opens the **input channel** (`libei`) on the canvas | `input.c` | the desktop is seen and cannot be controlled |
 | B14 | it **inhibits** suspend and idleness (`SUSPEND\|IDLE`, ⛔ never `LOGOUT`) | `sessione.c` | the «Automatic Suspend» notification, and the machine falling asleep |
@@ -633,7 +633,7 @@ symptom, find the step, and look at **who** had to do it. ⛔ Never start from t
 | C2 | **«Log Out»** — from the menu or with `Ctrl+Alt+Fine` ⇒ the session ends and the programs are closed | — |
 | C3 | ⛔ the farewell **`0x10`** leaves **BEFORE** the session dies, and goes to **all** the clients of that user | whoever is watching stays on a frozen screen for thirty seconds and reads «network error» (finding B-7) |
 | C4 | ⛔ the child does **not** redo the session after a logout: it waits for a new attach | the desktop the user has just closed **reappears by itself** |
-| C5 | the page goes back to the **sign-in form**, and undresses again: away `data-schermo`, away the Pointer Lock, away full screen | a sign-in form inside the desktop's clothes, with the mouse still captured |
+| C5 | the page goes back to the **sign-in form**, and undresses again: away `data-viewer`, away the Pointer Lock, away full screen | a sign-in form inside the desktop's clothes, with the mouse still captured |
 
 ---
 
@@ -685,9 +685,9 @@ perfetto»).*
 
 | moment | what really happens | `[M]` |
 |---|---|---|
-| **attach** | the page sends `ADATTA_TELA` with the size of its own window, and the canvas becomes that | canvas **1264×800** in a 1265×800 window, drawing scale **1.000** |
+| **attach** | the page sends `FIT_CANVAS` with the size of its own window, and the canvas becomes that | canvas **1264×800** in a 1265×800 window, drawing scale **1.000** |
 | **during the session** | ⛔ the client rescales, and the desktop **is never touched** — since 17 Aug 2026 there is not even the switch that did it any more (`DECISIONI.md` §5.1-bis) | ~~hot resizing~~ — measured, and removed all the same: it cost little on Mutter and **could not be done** on KWin ≤ 6.7.4 |
-| **reattach from another device** | `SESSIONE` grants **the canvas the stage already has** (§4.5), so the pixels arrive at once, and then the page asks for its own | **0 frames discarded** |
+| **reattach from another device** | `SESSION` grants **the canvas the stage already has** (§4.5), so the pixels arrive at once, and then the page asks for its own | **0 frames discarded** |
 
 ⛔ **And the line «It is 1:1» became true in a narrower sense than it seemed**: not «one
 desktop pixel per screen pixel», but **one desktop pixel per window
@@ -701,7 +701,7 @@ inside a screen**, and the two sizes are different — sometimes very.*
 
 | | What it is | Who uses it |
 |---|---|---|
-| **the canvas** | ⛔ ~~the device's screen~~ → ⭐ **the WINDOW, in physical pixels** — corrected on 15 Aug 2026, see the box below | it is fixed **at attach and at reattach**, with `ADATTA_TELA`, and ⛔ **no longer changes for the whole session** (§5.1-bis, 17 Aug 2026) |
+| **the canvas** | ⛔ ~~the device's screen~~ → ⭐ **the WINDOW, in physical pixels** — corrected on 15 Aug 2026, see the box below | it is fixed **at attach and at reattach**, with `FIT_CANVAS`, and ⛔ **no longer changes for the whole session** (§5.1-bis, 17 Aug 2026) |
 | **the view** | **the window**, that is how much the page really has to draw, always in physical pixels | it is renegotiated at every resize |
 
 > ## ⛔⛔ CORRECTED ON 15 AUG 2026 — the canvas is the WINDOW, not the screen
@@ -829,7 +829,7 @@ for GNOME, wlroots and KDE ≥ 6.8, which on KDE switches on by itself at the up
 > resizing an output cannot be done at all, and where it can it rearranges the user's windows.
 >
 > ⚠ **And «where the compositor cannot do it the entry is off» applies in full**: the server answers
-> `TELA(RIFIUTATA, COMPOSITORE_INCAPACE)` and the client **MUST** show it off (`RCP.md` §7.1).
+> `CANVAS(REFUSED, COMPOSITOR_UNABLE)` and the client **MUST** show it off (`RCP.md` §7.1).
 > We do not pretend it succeeded.
 
 ### 6.5 Multi-monitor
@@ -970,7 +970,7 @@ two ways of pushing it. Acceleration is applied by the **client**: applied by bo
 add up.
 
 > ⛔ **Superseded since 14-15 Aug 2026**: pointer capture no longer triggers by itself (it stays
-> manual, `REMOTIX.input_classico.aggancia()`), the pointer is **absolute** and every event carries
+> manual, `REMOTIX.classic_input.hook()`), the pointer is **absolute** and every event carries
 > its own position (`DECISIONI.md` §5.0-sexies). ⭐ **Since 2 Oct 2026 clicks too** come from
 > pointer events (`pointerdown`/`pointerup`), like movements: on Chrome for Android the compatibility `mousedown`s
 > are born only after a recognised touch, and a long click or a drag did not
@@ -1109,7 +1109,7 @@ slider says, **mute included**. The property that moves the tap exists but is of
 
 ### 10.1 ⛔⭐⭐ When the window narrows, **audio goes ahead of video** — *24 Aug 2026*
 
-⚠ **This line comes late**: the decision was taken **in the code** from the start (`wt_scrivi()`) and
+⚠ **This line comes late**: the decision was taken **in the code** from the start (`wt_write()`) and
 **was written nowhere** — not here, not in `RCP.md` §6.3, not in `DECISIONI.md`, not in
 `CODER.md`. It was found while looking for the cause of audio refused on a bad network
 (`fasi/09` §20.2-quater), and it is precisely the kind of thing a measurement phase exists to
@@ -1129,7 +1129,7 @@ discover: **a product policy that no document declared.**
 **by construction**: the datagram queue is **eight** long, so at most eight packets go
 ahead.
 
-*(The decision is written in full, discarded alternative included, in the box of `wt_scrivi()`.)*
+*(The decision is written in full, discarded alternative included, in the box of `wt_write()`.)*
 
 ---
 
@@ -1175,7 +1175,7 @@ GNOME's road nor wlroots'. Feasibility depends on a single measurement, and the 
 |---|---|
 | **init** | systemd |
 | **distributions** | capability detection and declared degradation; **Debian and Ubuntu** as reference |
-| ⛔ **shutdown, restart, suspend, hibernate** | ⭐ **taken away from everyone** — *decided by the user on 15 Aug 2026, `DECISIONI.md` §4.7*. ⛔ **Not only from the remote session**: not even from whoever is physically in front of the machine, because shutting down is the only gesture that takes away **all** sessions together and whoever does it does not see who is connected. ⭐ **Inside the remote desktop the user has a single gesture that ends something: logging out** (§5.2-bis); what they do on **their own** PC is their business, and for us it is the wire dropping. ⚠ It stays possible for **root**, and it must stay so: the machine must be administered, and the attached clients learn about it with `SERVER_IN_CHIUSURA` (`RCP.md` §8.2 `0x0C`) |
+| ⛔ **shutdown, restart, suspend, hibernate** | ⭐ **taken away from everyone** — *decided by the user on 15 Aug 2026, `DECISIONI.md` §4.7*. ⛔ **Not only from the remote session**: not even from whoever is physically in front of the machine, because shutting down is the only gesture that takes away **all** sessions together and whoever does it does not see who is connected. ⭐ **Inside the remote desktop the user has a single gesture that ends something: logging out** (§5.2-bis); what they do on **their own** PC is their business, and for us it is the wire dropping. ⚠ It stays possible for **root**, and it must stay so: the machine must be administered, and the attached clients learn about it with `SERVER_CLOSING` (`RCP.md` §8.2 `0x0C`) |
 | **GPU** | chosen by **PCI id** with a udev rule. ⚠ Denying the node denies it to **the user's whole session**: whoever uses the other card for something else must be put in the rule's group |
 
 ### 11.4 Hardware acceleration
@@ -1191,9 +1191,9 @@ The ladder:
    §10.27): *«niente cpu senza scheda»*. The software fallback (OpenH264, SVT-AV1) is **out** of the
    product, the packages and the installer. Without a card able to encode:
    - the **server** declares it at start-up in the log (*«QUESTO SERVER NON SA CODIFICARE VIDEO»*,
-     with the reason for each codec) and `ECCOMI` offers no codecs: every `CIAO` ends in
-     `NIENTE_IN_COMUNE`, with the reason;
-   - `remotix --prova-codifica` exits with **3** (*no card can encode*), distinct from 0
+     with the reason for each codec) and `HERE_I_AM` offers no codecs: every `HELLO` ends in
+     `NOTHING_IN_COMMON`, with the reason;
+   - `remotix --encoding-test` exits with **3** (*no card can encode*), distinct from 0
      (the card encodes), 1 (it opens but the frame does not come out) and 2 (usage error);
    - the **installer** already refuses in the preliminary check, with the reason: **RX-GPU-003**
      no card · **RX-GPU-004** only NVIDIA with the proprietary driver **without its Vulkan
@@ -1204,14 +1204,14 @@ The ladder:
      driver of the AMD card, where the distribution's one encodes (Debian, Ubuntu, Arch), is
      installed by the installer (on Arch it is only an optional package). A card that encodes with the driver of a third-party
      repository stays a warning with consent (D5). ⚠ The preliminary check does not open the card: it reads the
-     VA drivers and the Vulkan ICDs on disk; the real test is `--prova-codifica` after installation
+     VA drivers and the Vulkan ICDs on disk; the real test is `--encoding-test` after installation
 3. ⛔ **No GPL dependencies**: all the server's libraries are permissive (MIT, BSD, Apache),
    a condition of the licence (`DECISIONI.md` §10.22)
 
 ⭐ The **Vulkan Video** route (AMD, NVIDIA) is phase 19 (`fasi/19-nvidia.md`), ✅ grafted in on
-1 Oct 2026: it is chosen by capability when each encoder opens (`h264_scheda`/`hevc_scheda`,
-`src/codificatore.c`), Vulkan first and VA-API where Vulkan is not there; `--codifica vulkan|vaapi` forces it
-for tests, and `--prova-codifica` says which one encoded (`strada`). `[M]` 1 Oct 2026 on the server:
+1 Oct 2026: it is chosen by capability when each encoder opens (`h264_card`/`hevc_card`,
+`src/codificatore.c`), Vulkan first and VA-API where Vulkan is not there; `--encoding-route vulkan|vaapi` forces it
+for tests, and `--encoding-test` says which one encoded (`route`). `[M]` 1 Oct 2026 on the server:
 Intel UHD 770 → `vaapi` (H.264 and HEVC), Radeon RX 6800 → `vulkan` (H.264 and HEVC).
 
 ⚠ On the reference hardware **neither of the two cards encodes AV1** `[M]` 9 Aug: the desired
@@ -1706,7 +1706,7 @@ the code. Everything travels over HTTPS; the service's answers are **signed** wi
 | # | from REMOTIX to the service | from the service to REMOTIX | when |
 |---|---|---|---|
 | 1 | **ATTIVA**: `LICENSE_KEY`, machine name | signed **ATTESTATO** + first ticket (and, if the licence already runs elsewhere, the short name of the copy: it is a duplication) · or **RIFIUTATA** with the reason (unknown or revoked key) | at installation, or with `remotix licenza attiva` |
-| 2 | **CONTROLLO**: ticket, request code, machine name | signed **ATTESTATO** (type, state, expiry, end of tolerance, «valid until», warnings to show) + new ticket · or **FERMATI** (copy replaced or not chosen) · **SDOPPIATA** (ticket already consumed) | every hour, and with `remotix licenza controlla` |
+| 2 | **CHECK**: ticket, request code, machine name | signed **ATTESTATO** (type, state, expiry, end of tolerance, «valid until», warnings to show) + new ticket · or **FERMATI** (copy replaced or not chosen) · **SDOPPIATA** (ticket already consumed) | every hour, and with `remotix licenza controlla` |
 | 3 | asks for the **list** | **ELENCO** signed by the master key: service addresses, valid VPS keys, revocations | at start-up and once a day |
 
 - **Inside REMOTIX**, hidden: where it keeps the ticket, how it shows the warnings, how it closes the connections. Only what

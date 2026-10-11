@@ -1,4 +1,4 @@
-package motore
+package engine
 
 import (
 	"os"
@@ -16,7 +16,7 @@ func TestScript(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, v := range []string{"PAYLOAD_SHA256", "VERSIONE"} {
+	for _, v := range []string{"PAYLOAD_SHA256", "VERSION"} {
 		if !regexp.MustCompile(`(?m)^` + v + `=''$`).Match(b) {
 			t.Errorf("run.sh: the line %s='' is missing (the release command fills it)", v)
 		}

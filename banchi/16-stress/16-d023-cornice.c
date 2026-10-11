@@ -11,8 +11,8 @@
  * stream.  The judgement is given by `ffprobe` (the declared size) and by the PSNR
  * against the source (the image inside is that one, 1:1): `16-d023-cornice.sh`.
  *
- *   16-d023-cornice --codec hevc|h264 --misura LxA --nodo /dev/dri/renderD128 \
- *       --sorgente F.bgrx --uscita F [--fotogrammi N]
+ *   16-d023-cornice --codec hevc|h264 --size LxA --node /dev/dri/renderD128 \
+ *       --source F.bgrx --output F [--frames N]
  */
 #include "../../src/codificatore.h"
 
@@ -22,7 +22,7 @@
 
 int main(int argc, char **argv)
 {
-	const char *sorgente = NULL, *uscita = NULL, *nodo = "/dev/dri/renderD128";
+	const char *source = NULL, *output = NULL, *node = "/dev/dri/renderD128";
 	CodecVideo codec = CODIFICATORE_HEVC;
 	uint32_t l = 0, a = 0, n = 10;
 
@@ -30,28 +30,28 @@ int main(int argc, char **argv)
 		const char *k = argv[i], *v = argv[i + 1];
 		if (!strcmp(k, "--codec"))
 			codec = strcmp(v, "h264") == 0 ? CODIFICATORE_H264 : CODIFICATORE_HEVC;
-		else if (!strcmp(k, "--misura"))
+		else if (!strcmp(k, "--size"))
 			sscanf(v, "%ux%u", &l, &a);
-		else if (!strcmp(k, "--nodo"))
-			nodo = v;
-		else if (!strcmp(k, "--sorgente"))
-			sorgente = v;
-		else if (!strcmp(k, "--uscita"))
-			uscita = v;
-		else if (!strcmp(k, "--fotogrammi"))
+		else if (!strcmp(k, "--node"))
+			node = v;
+		else if (!strcmp(k, "--source"))
+			source = v;
+		else if (!strcmp(k, "--output"))
+			output = v;
+		else if (!strcmp(k, "--frames"))
 			n = (uint32_t) strtoul(v, NULL, 10);
 	}
-	if (!sorgente || !uscita || !l || !a) {
-		fprintf(stderr, "usage: 16-d023-cornice --codec hevc|h264 --misura LxA "
-		                "--sorgente F.bgrx --uscita F [--nodo N] [--fotogrammi N]\n");
+	if (!source || !output || !l || !a) {
+		fprintf(stderr, "usage: 16-d023-cornice --codec hevc|h264 --size LxA "
+		                "--source F.bgrx --output F [--node N] [--frames N]\n");
 		return 2;
 	}
 
 	size_t byte = (size_t) l * a * 4;
 	uint8_t *pixel = malloc(byte);
-	FILE *f = fopen(sorgente, "rb");
+	FILE *f = fopen(source, "rb");
 	if (!pixel || !f || fread(pixel, 1, byte, f) != byte) {
-		fprintf(stderr, "⛔ %s: there are not %zu bytes of BGRx %ux%u\n", sorgente, byte, l, a);
+		fprintf(stderr, "⛔ %s: there are not %zu bytes of BGRx %ux%u\n", source, byte, l, a);
 		return 2;
 	}
 	fclose(f);
@@ -59,44 +59,44 @@ int main(int argc, char **argv)
 	CodificatoreRichiesta r = {
 		.codec = codec,
 		.componente = codec == CODIFICATORE_H264 ? "h264_vaapi" : "hevc_vaapi",
-		.nodo_rendering = nodo,
-		.potenza = CODIFICATORE_POTENZA_LA_DICHIARATA,
-		.larghezza = l,
-		.altezza = a,
+		.nodo_rendering = node,
+		.power = ENCODER_POWER_DECLARED,
+		.width = l,
+		.height = a,
 		.fotogrammi_al_secondo = 30,
-		.modo = CODIFICATORE_QUALITA_QP,
-		.qualita = 26,
-		.profondita = 8,
-		.formato = CODIFICATORE_PIXEL_BGRX,
+		.mode = CODIFICATORE_QUALITA_QP,
+		.quality = 26,
+		.depth = 8,
+		.fmt = ENCODER_PIXEL_BGRX,
 	};
-	char errore[512] = { 0 };
-	Codificatore *cod = codificatore_nuovo(&r, errore, sizeof(errore));
+	char error[512] = { 0 };
+	Encoder *cod = codificatore_nuovo(&r, error, sizeof(error));
 	if (!cod) {
-		fprintf(stderr, "⛔ the encoder did not open: %s\n", errore);
+		fprintf(stderr, "⛔ the encoder did not open: %s\n", error);
 		return 1;
 	}
-	FILE *u = fopen(uscita, "wb");
+	FILE *u = fopen(output, "wb");
 	if (!u)
 		return 2;
-	uint32_t spediti = 0, chiavi = 0;
+	uint32_t shipped = 0, keys = 0;
 	for (uint32_t k = 0; k < n; k++) {
 		if (k == n / 2)
 			codificatore_chiedi_chiave(cod);
-		CodificatoreFotogramma fg;
+		EncoderFrame fg;
 		if (!codificatore_comprimi(cod, pixel, l * 4, &fg)) {
 			fprintf(stderr, "⛔ frame %u not produced (see the log)\n", k);
 			break;
 		}
-		fwrite(fg.dati, 1, fg.byte, u);
-		spediti++;
-		chiavi += fg.chiave;
+		fwrite(fg.data, 1, fg.byte, u);
+		shipped++;
+		keys += fg.key;
 		codificatore_rilascia(cod);
 	}
 	fclose(u);
 	printf("%s %ux%u: %u frames of %u, %u keyframes · %s\n",
-	       codec == CODIFICATORE_H264 ? "h264" : "hevc", l, a, spediti, n, chiavi,
-	       codificatore_nome(cod));
+	       codec == CODIFICATORE_H264 ? "h264" : "hevc", l, a, shipped, n, keys,
+	       encoder_name(cod));
 	codificatore_libera(cod);
 	free(pixel);
-	return spediti == n ? 0 : 1;
+	return shipped == n ? 0 : 1;
 }

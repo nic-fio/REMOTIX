@@ -46,202 +46,202 @@ const (
 	stateCol  = 12 // the column of the state labels
 )
 
-// tema: the mockup's colours. lipgloss brings them down by itself to 256 or 16 colours depending on the terminal, and to
+// theme: the mockup's colours. lipgloss brings them down by itself to 256 or 16 colours depending on the terminal, and to
 // none with NO_COLOR (termenv.EnvColorProfile).
-type tema struct {
-	blu, verde, ambra, rosso, grigio, cornice, forte, campo lipgloss.Style
+type theme struct {
+	blue, green, amber, red, gray, border, strong, field lipgloss.Style
 }
 
-func newTheme(r *lipgloss.Renderer) tema {
+func newTheme(r *lipgloss.Renderer) theme {
 	c := func(hex string) lipgloss.Style { return r.NewStyle().Foreground(lipgloss.Color(hex)) }
-	return tema{
-		blu:     c("#5A9BFF").Bold(true),
-		verde:   c("#3EC27E").Bold(true),
-		ambra:   c("#E3A82F").Bold(true),
-		rosso:   c("#F0625A").Bold(true),
-		grigio:  c("#7D889C"),
-		cornice: c("#3A4457"),
-		forte:   r.NewStyle().Bold(true),
-		campo:   r.NewStyle().Reverse(true),
+	return theme{
+		blue:   c("#5A9BFF").Bold(true),
+		green:  c("#3EC27E").Bold(true),
+		amber:  c("#E3A82F").Bold(true),
+		red:    c("#F0625A").Bold(true),
+		gray:   c("#7D889C"),
+		border: c("#3A4457"),
+		strong: r.NewStyle().Bold(true),
+		field:  r.NewStyle().Reverse(true),
 	}
 }
 
 type (
 	msgCheck struct {
-		c   *interfaccia.Controllo
+		c   *interfaccia.CheckReport
 		err error
 	}
 	msgPiano struct {
-		p   *motore.Piano
+		p   *engine.Piano
 		err error
 	}
-	msgEvent   struct{ ev motore.PublicEvent }
+	msgEvent   struct{ ev engine.PublicEvent }
 	msgOutcome struct {
-		es  *interfaccia.Esito
+		es  *interfaccia.Outcome
 		err error
 	}
 )
 
-type modello struct {
-	mot      interfaccia.Motore
-	prog     *tea.Program
-	t        tema
-	schermo  int
-	passo    int  // the step of the top line
-	fallito  bool // the step stopped (red ✗)
-	attesa   string
-	ctrl     *interfaccia.Controllo
-	vc       *interfaccia.CheckView
-	vp       *interfaccia.VistaPiano
-	piano    *motore.Piano
-	av       *interfaccia.Avanzamento
-	eventi   []motore.PublicEvent
-	pronto   *interfaccia.ReadyView
-	fine     *interfaccia.BlockedView
-	porta    string
-	modPort  bool   // the port is being typed
-	vecchia  string // the previous port, for esc
-	dett     bool
-	reg      bool
-	fermando bool
-	nota     string
-	larg     int
-	alt      int
-	scorri   int
-	esito    *interfaccia.Esito
+type model struct {
+	rsn        interfaccia.Engine
+	prog       *tea.Program
+	t          theme
+	screen     int
+	step       int  // the step of the top line
+	has_failed bool // the step stopped (red ✗)
+	wait       string
+	ctrl       *interfaccia.CheckReport
+	vc         *interfaccia.CheckView
+	vp         *interfaccia.VistaPiano
+	piano      *engine.Piano
+	av         *interfaccia.Progress
+	events     []engine.PublicEvent
+	ready      *interfaccia.ReadyView
+	fine       *interfaccia.BlockedView
+	port       string
+	modPort    bool   // the port is being typed
+	old        string // the previous port, for esc
+	details    bool
+	reg        bool
+	stopping   bool
+	note       string
+	wid        int
+	h          int
+	scroll     int
+	outcome    *interfaccia.Outcome
 }
 
 // Avvia: the TUI on the engine's session, starting from the port given with --port (the check
 // examines that one; tab still changes it in the plan). The exit code follows the CLI's (0 if
-// the installation is CONFERMATA).
-func Launch(mot interfaccia.Motore, porta int) (int, error) {
-	m := newModel(mot, lipgloss.DefaultRenderer())
-	m.iniziale(porta)
+// the installation is CONFIRMED).
+func Launch(rsn interfaccia.Engine, port int) (int, error) {
+	m := newModel(rsn, lipgloss.DefaultRenderer())
+	m.initial(port)
 	p := tea.NewProgram(m, tea.WithAltScreen())
 	m.prog = p
 	if _, err := p.Run(); err != nil {
 		return 1, err
 	}
-	if m.esito != nil {
-		fmt.Printf("%s\n  %s\n", motore.T("cli.operazione", m.esito.Operazione, m.esito.Stato), m.esito.Cartella)
-		if m.esito.Stato == motore.CONFERMATA || m.esito.Stato == motore.CONFERMATA_A_CONDIZIONI {
+	if m.outcome != nil {
+		fmt.Printf("%s\n  %s\n", engine.T("cli.operazione", m.outcome.Operation, m.outcome.State), m.outcome.Folder)
+		if m.outcome.State == engine.CONFIRMED || m.outcome.State == engine.CONFIRMED_WITH_CONDITIONS {
 			return 0, nil
 		}
 	}
 	return 1, nil
 }
 
-func newModel(mot interfaccia.Motore, r *lipgloss.Renderer) *modello {
-	return &modello{mot: mot, t: newTheme(r), schermo: sWait, passo: pCheck,
-		attesa: interfaccia.T("attendi.controllo"), porta: "7447", larg: minWidth, alt: 24}
+func newModel(rsn interfaccia.Engine, r *lipgloss.Renderer) *model {
+	return &model{rsn: rsn, t: newTheme(r), screen: sWait, step: pCheck,
+		wait: interfaccia.T("attendi.controllo"), port: "7447", wid: minWidth, h: 24}
 }
 
-// iniziale: the starting port (--port); 0 or out of range keeps 7447.
-func (m *modello) iniziale(porta int) {
-	if porta > 0 && porta <= 65535 {
-		m.porta = strconv.Itoa(porta)
+// initial: the starting port (--port); 0 or out of range keeps 7447.
+func (m *model) initial(port int) {
+	if port > 0 && port <= 65535 {
+		m.port = strconv.Itoa(port)
 	}
 }
 
-func (m *modello) Init() tea.Cmd {
-	porta, _ := strconv.Atoi(m.porta)
+func (m *model) Init() tea.Cmd {
+	port, _ := strconv.Atoi(m.port)
 	return func() tea.Msg {
-		c, err := m.mot.Controlla(porta)
+		c, err := m.rsn.Check(port)
 		return msgCheck{c, err}
 	}
 }
 
-func messaggio(err error) *motore.Messaggio {
-	if e, ok := err.(*motore.ErrorRX); ok {
+func message(err error) *engine.Message {
+	if e, ok := err.(*engine.ErrorRX); ok {
 		return &e.M
 	}
-	x := motore.Msg("RX-UI-005", err.Error())
+	x := engine.Msg("RX-UI-005", err.Error())
 	return &x
 }
 
-func (m *modello) vai(schermo int) {
-	m.schermo, m.scorri = schermo, 0
+func (m *model) navigate(screen int) {
+	m.screen, m.scroll = screen, 0
 }
 
-func (m *modello) finisci(es *interfaccia.Esito) {
-	m.esito = es
-	if es.Stato == motore.CONFERMATA || es.Stato == motore.CONFERMATA_A_CONDIZIONI {
-		porta, _ := strconv.Atoi(m.porta)
-		m.pronto = interfaccia.NewReadyView(es, m.vp, porta)
-		m.passo = pReady
-		m.vai(sReady)
+func (m *model) finish(es *interfaccia.Outcome) {
+	m.outcome = es
+	if es.State == engine.CONFIRMED || es.State == engine.CONFIRMED_WITH_CONDITIONS {
+		port, _ := strconv.Atoi(m.port)
+		m.ready = interfaccia.NewReadyView(es, m.vp, port)
+		m.step = pReady
+		m.navigate(sReady)
 		return
 	}
-	if es.Errore == nil {
-		es.Errore = interfaccia.LastMessage(m.eventi)
+	if es.Error == nil {
+		es.Error = interfaccia.LastMessage(m.events)
 	}
-	m.fine, m.fallito = interfaccia.NewEndView(es, nil), true
-	m.vai(sFine)
+	m.fine, m.has_failed = interfaccia.NewEndView(es, nil), true
+	m.navigate(sFine)
 }
 
 // askPlan: the plan for the typed port (the engine re-examines the machine if it changes).
-func (m *modello) askPlan() tea.Cmd {
-	voci := map[string]string{"port": m.porta}
-	m.passo, m.attesa = pPlan, interfaccia.T("attendi.piano")
-	m.vai(sWait)
+func (m *model) askPlan() tea.Cmd {
+	entries := map[string]string{"port": m.port}
+	m.step, m.wait = pPlan, interfaccia.T("attendi.piano")
+	m.navigate(sWait)
 	return func() tea.Msg {
-		p, err := m.mot.Piano(voci)
+		p, err := m.rsn.Piano(entries)
 		return msgPiano{p, err}
 	}
 }
 
-func (m *modello) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch x := msg.(type) {
 	case tea.WindowSizeMsg:
-		m.larg, m.alt = x.Width, x.Height
+		m.wid, m.h = x.Width, x.Height
 	case msgCheck:
 		if x.err != nil {
-			m.finisci(&interfaccia.Esito{Errore: messaggio(x.err)})
+			m.finish(&interfaccia.Outcome{Error: message(x.err)})
 			return m, nil
 		}
 		m.ctrl = x.c
 		m.vc = interfaccia.NewCheckView(x.c)
-		if x.c.Domande != nil {
-			m.porta = strconv.Itoa(x.c.Domande.Porta)
+		if x.c.Questions != nil {
+			m.port = strconv.Itoa(x.c.Questions.Porta)
 		}
-		if m.vc.Esito == interfaccia.BLOCCATA && len(m.vc.Righe) == 0 {
-			m.fine, m.fallito = m.vc.Bloccata, true
-			m.vai(sFine)
+		if m.vc.Outcome == interfaccia.BLOCKED && len(m.vc.Righe) == 0 {
+			m.fine, m.has_failed = m.vc.Blocked, true
+			m.navigate(sFine)
 			return m, nil
 		}
-		m.fallito = m.vc.Esito == interfaccia.BLOCCATA
-		m.vai(sCheck)
+		m.has_failed = m.vc.Outcome == interfaccia.BLOCKED
+		m.navigate(sCheck)
 	case msgPiano:
 		if x.err != nil {
-			m.finisci(&interfaccia.Esito{Errore: messaggio(x.err)})
+			m.finish(&interfaccia.Outcome{Error: message(x.err)})
 			return m, nil
 		}
-		if b := interfaccia.BloccoNelPiano(x.p); b != nil {
-			m.finisci(&interfaccia.Esito{Errore: b})
+		if b := interfaccia.BlockInPlan(x.p); b != nil {
+			m.finish(&interfaccia.Outcome{Error: b})
 			return m, nil
 		}
 		m.piano = x.p
 		m.vp = interfaccia.VistaDelPiano(x.p)
-		m.vai(sPiano)
+		m.navigate(sPiano)
 	case msgEvent:
-		m.eventi = append(m.eventi, x.ev)
-		m.av.Evento(x.ev)
+		m.events = append(m.events, x.ev)
+		m.av.Event(x.ev)
 	case msgOutcome:
 		if x.err != nil {
-			m.finisci(&interfaccia.Esito{Errore: messaggio(x.err)})
+			m.finish(&interfaccia.Outcome{Error: message(x.err)})
 			return m, nil
 		}
-		m.finisci(x.es)
+		m.finish(x.es)
 	case tea.KeyMsg:
-		return m.tasto(x)
+		return m.keystroke(x)
 	}
 	return m, nil
 }
 
-func (m *modello) tasto(k tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m *model) keystroke(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	s := k.String()
 	if s == "ctrl+c" {
-		if m.schermo == sProgress {
+		if m.screen == sProgress {
 			return m, nil // while it works one cannot quit: it is stopped with «a», which puts things back as they were
 		}
 		return m, tea.Quit
@@ -251,33 +251,33 @@ func (m *modello) tasto(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 	switch s {
 	case "up", "k":
-		m.scorri--
+		m.scroll--
 		return m, nil
 	case "down", "j":
-		m.scorri++
+		m.scroll++
 		return m, nil
 	case "pgup":
-		m.scorri -= m.bodyHeight() - 1
+		m.scroll -= m.bodyHeight() - 1
 		return m, nil
 	case "pgdown", " ":
-		m.scorri += m.bodyHeight() - 1
+		m.scroll += m.bodyHeight() - 1
 		return m, nil
 	case "home":
-		m.scorri = 0
+		m.scroll = 0
 		return m, nil
 	case "end":
-		m.scorri = 1 << 20
+		m.scroll = 1 << 20
 		return m, nil
 	case "d":
-		m.dett = !m.dett
+		m.details = !m.details
 		return m, nil
 	case "r":
-		if m.schermo == sProgress || m.schermo == sReady || m.schermo == sFine {
+		if m.screen == sProgress || m.screen == sReady || m.screen == sFine {
 			m.reg = !m.reg
 			return m, nil
 		}
 	}
-	switch m.schermo {
+	switch m.screen {
 	case sWait:
 		if s == "q" {
 			return m, tea.Quit
@@ -287,7 +287,7 @@ func (m *modello) tasto(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case "q":
 			return m, tea.Quit
 		case "enter":
-			if m.vc.Esito != interfaccia.BLOCCATA {
+			if m.vc.Outcome != interfaccia.BLOCKED {
 				return m, m.askPlan()
 			}
 		}
@@ -295,30 +295,30 @@ func (m *modello) tasto(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		switch s {
 		case "y", "Y":
 			m.av = interfaccia.NewProgress(m.vp)
-			m.passo = pInstall
-			m.vai(sProgress)
+			m.step = pInstall
+			m.navigate(sProgress)
 			digest := m.piano.Digest()
 			return m, func() tea.Msg {
-				es, err := m.mot.Applica(digest, func(ev motore.PublicEvent) { m.prog.Send(msgEvent{ev}) })
+				es, err := m.rsn.Apply(digest, func(ev engine.PublicEvent) { m.prog.Send(msgEvent{ev}) })
 				return msgOutcome{es, err}
 			}
 		case "n", "N", "q":
 			return m, tea.Quit // nothing has been touched
 		case "tab":
-			m.modPort, m.vecchia = true, m.porta
+			m.modPort, m.old = true, m.port
 		}
 	case sProgress:
-		if s == "a" && !m.fermando {
-			m.fermando = true
-			go m.mot.Ferma()
+		if s == "a" && !m.stopping {
+			m.stopping = true
+			go m.rsn.Stop()
 		}
 	case sReady, sFine:
 		switch s {
 		case "enter", "q":
 			return m, tea.Quit
 		case "s":
-			if m.schermo == sFine {
-				m.salva("remotix-report.json", map[string]any{"end": m.fine, "check": m.ctrl, "events": m.eventi})
+			if m.screen == sFine {
+				m.save("remotix-report.json", map[string]any{"end": m.fine, "check": m.ctrl, "events": m.events})
 			}
 		}
 	}
@@ -326,53 +326,53 @@ func (m *modello) tasto(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 // portKey: the port box, in the plan.
-func (m *modello) portKey(s string) (tea.Model, tea.Cmd) {
+func (m *model) portKey(s string) (tea.Model, tea.Cmd) {
 	switch s {
 	case "esc":
-		m.modPort, m.porta = false, m.vecchia
+		m.modPort, m.port = false, m.old
 	case "backspace":
-		if len(m.porta) > 0 {
-			m.porta = m.porta[:len(m.porta)-1]
+		if len(m.port) > 0 {
+			m.port = m.port[:len(m.port)-1]
 		}
 	case "enter", "tab":
-		p, ok := interfaccia.ValidPort(m.porta)
+		p, ok := interfaccia.ValidPort(m.port)
 		if !ok {
 			return m, nil
 		}
-		m.modPort, m.porta = false, strconv.Itoa(p)
-		if m.porta != m.vecchia {
+		m.modPort, m.port = false, strconv.Itoa(p)
+		if m.port != m.old {
 			return m, m.askPlan()
 		}
 	default:
-		if len(s) == 1 && s[0] >= '0' && s[0] <= '9' && len(m.porta) < 5 {
-			m.porta += s
+		if len(s) == 1 && s[0] >= '0' && s[0] <= '9' && len(m.port) < 5 {
+			m.port += s
 		}
 	}
 	return m, nil
 }
 
-func (m *modello) salva(nome string, v any) {
+func (m *model) save(name string, v any) {
 	dir := "."
 	if h, err := os.UserHomeDir(); err == nil {
 		dir = h
 	}
-	p := filepath.Join(dir, nome)
+	p := filepath.Join(dir, name)
 	b, _ := json.MarshalIndent(v, "", "  ")
 	if err := os.WriteFile(p, b, 0o600); err != nil {
-		m.nota = err.Error()
+		m.note = err.Error()
 		return
 	}
-	m.nota = interfaccia.T("salvato", p)
+	m.note = interfaccia.T("salvato", p)
 }
 
 // ---- the frame -------------------------------------------------------------------------------
 
-func (m *modello) interna() int { return m.larg - 4 } // «│ » and « │»
+func (m *model) internal() int { return m.wid - 4 } // «│ » and « │»
 
-func (m *modello) bodyHeight() int { return m.alt - 6 } // head, steps, two separators, keys, bottom
+func (m *model) bodyHeight() int { return m.h - 6 } // head, steps, two separators, keys, bottom
 
-// riempi: a line exactly n columns long (cut with «…» if longer).
-func riempi(s string, n int) string {
+// fill: a line exactly n columns long (cut with «…» if longer).
+func fill(s string, n int) string {
 	w := ansi.StringWidth(s)
 	if w > n {
 		s = ansi.Truncate(s, n, "…")
@@ -381,420 +381,420 @@ func riempi(s string, n int) string {
 	return s + strings.Repeat(" ", n-w)
 }
 
-func (m *modello) View() string {
-	if m.larg < minWidth {
-		return riempi(interfaccia.T("tui.stretto", minWidth), m.larg)
+func (m *model) View() string {
+	if m.wid < minWidth {
+		return fill(interfaccia.T("tui.stretto", minWidth), m.wid)
 	}
-	if m.alt < minHeight {
-		return riempi(interfaccia.T("tui.basso", minHeight), m.larg)
+	if m.h < minHeight {
+		return fill(interfaccia.T("tui.basso", minHeight), m.wid)
 	}
-	corpo, tasti := m.contenuto()
-	return m.cornice(corpo, tasti)
+	body, keys := m.content()
+	return m.border(body, keys)
 }
 
-func (m *modello) cornice(corpo []string, tasti string) string {
-	t, w, in := m.t, m.larg, m.interna()
-	bordo := t.cornice.Render
+func (m *model) border(body []string, keys string) string {
+	t, w, in := m.t, m.wid, m.internal()
+	edge := t.border.Render
 	var r []string
 	// the head: «╭─ REMOTIX 1.0 · Installation ───── Debian 13 · GNOME 48 ─╮»
-	sx := t.blu.Render("REMOTIX") + t.forte.Render(" "+motore.VersioneMotore+" · "+interfaccia.T("intestazione"))
+	sx := t.blue.Render("REMOTIX") + t.strong.Render(" "+engine.EngineVersion+" · "+interfaccia.T("intestazione"))
 	dx := ""
 	if m.vc != nil {
-		dx = m.vc.Intestazione
+		dx = m.vc.Header
 	}
-	resto := w - 6 - ansi.StringWidth(sx) // «╭─ » sx « » … «─╮»
+	rest := w - 6 - ansi.StringWidth(sx) // «╭─ » sx « » … «─╮»
 	if dx != "" {
-		dx = ansi.Truncate(dx, resto-4, "…")
-		resto -= ansi.StringWidth(dx) + 2
-		r = append(r, bordo("╭─ ")+sx+bordo(" "+strings.Repeat("─", resto)+" ")+t.grigio.Render(dx)+bordo(" ─╮"))
+		dx = ansi.Truncate(dx, rest-4, "…")
+		rest -= ansi.StringWidth(dx) + 2
+		r = append(r, edge("╭─ ")+sx+edge(" "+strings.Repeat("─", rest)+" ")+t.gray.Render(dx)+edge(" ─╮"))
 	} else {
-		r = append(r, bordo("╭─ ")+sx+bordo(" "+strings.Repeat("─", resto+1)+"╮"))
+		r = append(r, edge("╭─ ")+sx+edge(" "+strings.Repeat("─", rest+1)+"╮"))
 	}
-	riga := func(s string) string { return bordo("│") + " " + riempi(s, in) + " " + bordo("│") }
-	sep := bordo("├" + strings.Repeat("─", w-2) + "┤")
-	r = append(r, riga(m.passi()), sep)
+	line := func(s string) string { return edge("│") + " " + fill(s, in) + " " + edge("│") }
+	sep := edge("├" + strings.Repeat("─", w-2) + "┤")
+	r = append(r, line(m.steps()), sep)
 	// the body, which scrolls
 	h := m.bodyHeight()
-	massimo := len(corpo) - h
-	if massimo < 0 {
-		massimo = 0
+	maximum := len(body) - h
+	if maximum < 0 {
+		maximum = 0
 	}
-	if m.scorri > massimo {
-		m.scorri = massimo
+	if m.scroll > maximum {
+		m.scroll = maximum
 	}
-	if m.scorri < 0 {
-		m.scorri = 0
+	if m.scroll < 0 {
+		m.scroll = 0
 	}
 	for i := 0; i < h; i++ {
 		s := ""
-		if j := m.scorri + i; j < len(corpo) {
-			s = corpo[j]
+		if j := m.scroll + i; j < len(body) {
+			s = body[j]
 		}
-		r = append(r, riga(s))
+		r = append(r, line(s))
 	}
 	// the keys, and on the right where we are if the body is longer than the screen
-	if massimo > 0 {
-		pos := t.grigio.Render(fmt.Sprintf("↑↓ %d–%d / %d", m.scorri+1, m.scorri+h, len(corpo)))
-		spazio := in - ansi.StringWidth(pos) - 1
-		tasti = riempi(tasti, spazio) + " " + pos
+	if maximum > 0 {
+		pos := t.gray.Render(fmt.Sprintf("↑↓ %d–%d / %d", m.scroll+1, m.scroll+h, len(body)))
+		space := in - ansi.StringWidth(pos) - 1
+		keys = fill(keys, space) + " " + pos
 	}
-	r = append(r, sep, riga(tasti), bordo("╰"+strings.Repeat("─", w-2)+"╯"))
+	r = append(r, sep, line(keys), edge("╰"+strings.Repeat("─", w-2)+"╯"))
 	return strings.Join(r, "\n")
 }
 
-func (m *modello) passi() string {
+func (m *model) steps() string {
 	t := m.t
-	nomi := []string{interfaccia.T("passo.1"), interfaccia.T("passo.2"), interfaccia.T("passo.3"), interfaccia.T("passo.4")}
+	names := []string{interfaccia.T("passo.1"), interfaccia.T("passo.2"), interfaccia.T("passo.3"), interfaccia.T("passo.4")}
 	var ps []string
-	for i, n := range nomi {
+	for i, n := range names {
 		switch {
-		case i < m.passo:
-			ps = append(ps, t.verde.Render("✓ "+n))
-		case i == m.passo && m.fallito:
-			ps = append(ps, t.rosso.Render("✗ "+n))
-		case i == m.passo && m.schermo == sReady:
-			ps = append(ps, t.verde.Render("✓ "+n))
-		case i == m.passo:
-			ps = append(ps, t.blu.Render("● "+n))
+		case i < m.step:
+			ps = append(ps, t.green.Render("✓ "+n))
+		case i == m.step && m.has_failed:
+			ps = append(ps, t.red.Render("✗ "+n))
+		case i == m.step && m.screen == sReady:
+			ps = append(ps, t.green.Render("✓ "+n))
+		case i == m.step:
+			ps = append(ps, t.blue.Render("● "+n))
 		default:
-			ps = append(ps, t.grigio.Render("○ "+n))
+			ps = append(ps, t.gray.Render("○ "+n))
 		}
 	}
-	return strings.Join(ps, t.grigio.Render("  ›  "))
+	return strings.Join(ps, t.gray.Render("  ›  "))
 }
 
-// tasti: «enter continue · d details · q quit», the key in bold and the rest grey.
-func (m *modello) tasti(coppie ...string) string {
+// keys: «enter continue · d details · q quit», the key in bold and the rest grey.
+func (m *model) keys(pairs ...string) string {
 	var r []string
-	for i := 0; i+1 < len(coppie); i += 2 {
-		r = append(r, m.t.forte.Render(coppie[i])+m.t.grigio.Render(" "+coppie[i+1]))
+	for i := 0; i+1 < len(pairs); i += 2 {
+		r = append(r, m.t.strong.Render(pairs[i])+m.t.gray.Render(" "+pairs[i+1]))
 	}
-	return strings.Join(r, m.t.grigio.Render(" · "))
+	return strings.Join(r, m.t.gray.Render(" · "))
 }
 
 // ---- the body lines --------------------------------------------------------------------------
 
 // par: a text wrapped inside the frame, indented, all in one style.
-func (m *modello) par(testo string, st lipgloss.Style, rientro int) []string {
-	if testo == "" {
+func (m *model) par(text string, st lipgloss.Style, reentry int) []string {
+	if text == "" {
 		return nil
 	}
-	w := m.interna() - rientro
+	w := m.internal() - reentry
 	var r []string
-	for _, l := range strings.Split(ansi.Wrap(testo, w, ""), "\n") {
-		r = append(r, strings.Repeat(" ", rientro)+st.Render(l))
+	for _, l := range strings.Split(ansi.Wrap(text, w, ""), "\n") {
+		r = append(r, strings.Repeat(" ", reentry)+st.Render(l))
 	}
 	return r
 }
 
-// colonne: label, text (wrapped in its column) and state label on the right.
-func (m *modello) colonne(et, testo, cart string, st lipgloss.Style) []string {
-	tw := m.interna() - labelCol - stateCol - 1
-	ls := strings.Split(ansi.Wrap(testo, tw, ""), "\n")
+// columns: label, text (wrapped in its column) and state label on the right.
+func (m *model) columns(et, text, cart string, st lipgloss.Style) []string {
+	tw := m.internal() - labelCol - stateCol - 1
+	ls := strings.Split(ansi.Wrap(text, tw, ""), "\n")
 	var r []string
 	for i, l := range ls {
 		e, c := "", ""
 		if i == 0 {
 			e, c = et, st.Render(cart)
 		}
-		r = append(r, riempi(e, labelCol)+riempi(l, tw)+" "+c)
+		r = append(r, fill(e, labelCol)+fill(l, tw)+" "+c)
 	}
 	return r
 }
 
-func (m *modello) styleState(s interfaccia.Stato) lipgloss.Style {
+func (m *model) styleState(s interfaccia.State) lipgloss.Style {
 	switch s {
 	case interfaccia.OK:
-		return m.t.verde
-	case interfaccia.AVVISO, interfaccia.CONSENSO:
-		return m.t.ambra
-	case interfaccia.SISTEMO:
-		return m.t.blu
-	case interfaccia.MALE, interfaccia.MANCA:
-		return m.t.rosso
+		return m.t.green
+	case interfaccia.WARNING, interfaccia.CONSENT:
+		return m.t.amber
+	case interfaccia.FIX:
+		return m.t.blue
+	case interfaccia.MALE, interfaccia.MISSING:
+		return m.t.red
 	}
-	return m.t.grigio
+	return m.t.gray
 }
 
-// contenuto: the body of the current screen and the keys line.
-func (m *modello) contenuto() ([]string, string) {
+// content: the body of the current screen and the keys line.
+func (m *model) content() ([]string, string) {
 	T := interfaccia.T
 	c := []string{""}
-	var tasti string
-	switch m.schermo {
+	var keys string
+	switch m.screen {
 	case sWait:
-		c = append(c, m.par(m.attesa, m.t.forte, 0)...)
-		tasti = m.tasti("q", T("k.esci"))
+		c = append(c, m.par(m.wait, m.t.strong, 0)...)
+		keys = m.keys("q", T("k.esci"))
 	case sCheck:
 		c = append(c, m.bodyCheck()...)
-		if m.vc.Esito == interfaccia.BLOCCATA {
-			tasti = m.tasti("q", T("k.esci"), "d", T("k.dettagli"))
+		if m.vc.Outcome == interfaccia.BLOCKED {
+			keys = m.keys("q", T("k.esci"), "d", T("k.dettagli"))
 		} else {
-			tasti = m.tasti("enter", T("k.avanti"), "d", T("k.dettagli"), "q", T("k.esci"))
+			keys = m.keys("enter", T("k.avanti"), "d", T("k.dettagli"), "q", T("k.esci"))
 		}
 	case sPiano:
 		c = append(c, m.bodyPlan()...)
 		if m.modPort {
-			tasti = m.tasti("enter", T("k.porta.ok"), "esc", T("k.porta.no"))
+			keys = m.keys("enter", T("k.porta.ok"), "esc", T("k.porta.no"))
 		} else {
-			tasti = m.t.forte.Render(T("k.procedi")) + " " + m.t.verde.Render("y") + m.t.grigio.Render(" "+T("k.si")+" · ") +
-				m.t.rosso.Render("n") + m.t.grigio.Render(" "+T("k.no")+" · ") + m.tasti("tab", T("k.porta"), "d", T("k.dettagli"))
+			keys = m.t.strong.Render(T("k.procedi")) + " " + m.t.green.Render("y") + m.t.gray.Render(" "+T("k.si")+" · ") +
+				m.t.red.Render("n") + m.t.gray.Render(" "+T("k.no")+" · ") + m.keys("tab", T("k.porta"), "d", T("k.dettagli"))
 		}
 	case sProgress:
 		c = append(c, m.bodyProgress()...)
-		if m.fermando {
-			tasti = m.t.ambra.Render(T("btn.fermando"))
+		if m.stopping {
+			keys = m.t.amber.Render(T("btn.fermando"))
 		} else {
-			tasti = m.tasti("a", T("k.ferma"), "r", T("k.registro"))
+			keys = m.keys("a", T("k.ferma"), "r", T("k.registro"))
 		}
 	case sReady:
 		c = append(c, m.bodyReady()...)
-		tasti = m.tasti("enter", T("k.chiudi"), "r", T("k.registro"), "d", T("k.dettagli"))
+		keys = m.keys("enter", T("k.chiudi"), "r", T("k.registro"), "d", T("k.dettagli"))
 	case sFine:
 		c = append(c, m.bodyEnd()...)
-		tasti = m.tasti("enter", T("k.chiudi"), "s", T("k.salva"), "d", T("k.dettagli"))
+		keys = m.keys("enter", T("k.chiudi"), "s", T("k.salva"), "d", T("k.dettagli"))
 	}
-	if m.nota != "" {
+	if m.note != "" {
 		c = append(c, "")
-		c = append(c, m.par(m.nota, m.t.grigio, 0)...)
+		c = append(c, m.par(m.note, m.t.gray, 0)...)
 	}
-	return append(c, ""), tasti
+	return append(c, ""), keys
 }
 
-func (m *modello) bodyCheck() []string {
+func (m *model) bodyCheck() []string {
 	T := interfaccia.T
 	v := m.vc
 	var c []string
 	for _, r := range v.Righe {
-		c = append(c, m.colonne(r.Etichetta, r.Testo, r.Stato.Tag(), m.styleState(r.Stato))...)
+		c = append(c, m.columns(r.Etichetta, r.Testo, r.State.Tag(), m.styleState(r.State))...)
 	}
 	c = append(c, "")
-	if v.Esito == interfaccia.BLOCCATA {
-		c = append(c, m.par(v.Banner, m.t.rosso, 0)...)
-		c = append(c, m.par(v.Sotto, lipgloss.NewStyle(), 0)...)
-		c = append(c, m.par(strings.Join(v.Codici, " "), m.t.grigio, 0)...)
+	if v.Outcome == interfaccia.BLOCKED {
+		c = append(c, m.par(v.Banner, m.t.red, 0)...)
+		c = append(c, m.par(v.Below, lipgloss.NewStyle(), 0)...)
+		c = append(c, m.par(strings.Join(v.Codes, " "), m.t.gray, 0)...)
 	} else {
-		c = append(c, m.par(v.Banner, m.t.forte, 0)...)
-		c = append(c, m.par(v.Sotto, m.t.grigio, 0)...)
+		c = append(c, m.par(v.Banner, m.t.strong, 0)...)
+		c = append(c, m.par(v.Below, m.t.gray, 0)...)
 	}
-	if m.dett {
-		c = append(c, "", m.t.forte.Render(T("h.dettagli")))
-		c = append(c, m.par(v.Dettagli, m.t.grigio, 2)...)
+	if m.details {
+		c = append(c, "", m.t.strong.Render(T("h.dettagli")))
+		c = append(c, m.par(v.Dettagli, m.t.gray, 2)...)
 	}
 	return c
 }
 
-func (m *modello) bodyPlan() []string {
+func (m *model) bodyPlan() []string {
 	T := interfaccia.T
 	t, v := m.t, m.vp
 	var c []string
 	// the port, the only choice
-	campo := "[ " + m.porta + " ]"
+	field := "[ " + m.port + " ]"
 	if m.modPort {
-		campo = "[ " + m.porta + "▏]"
+		field = "[ " + m.port + "▏]"
 	}
-	c = append(c, t.forte.Render(riempi(T("p.porta"), 10))+t.campo.Render(campo)+t.grigio.Render("   "+T("p.porta.t")))
-	if _, ok := interfaccia.ValidPort(m.porta); !ok {
-		c = append(c, t.rosso.Render(T("sc.porta.errata")))
+	c = append(c, t.strong.Render(fill(T("p.porta"), 10))+t.field.Render(field)+t.gray.Render("   "+T("p.porta.t")))
+	if _, ok := interfaccia.ValidPort(m.port); !ok {
+		c = append(c, t.red.Render(T("sc.porta.errata")))
 	}
 	// the exact packages, from the manager's simulation: REMOTIX (from the .run), then its dependencies
 	// (from the distribution's repositories; labwc, wlr-randr and the font with the desktop requiring them)
-	nuovi, aggiornati, presenti := 0, 0, 0
-	var nostri, dip []string
+	newcomers, updated, present := 0, 0, 0
+	var our, dip []string
 	for _, a := range v.Pacchetti {
-		nota := a.Origine
+		note := a.Origine
 		if a.Origine == "file" {
-			nota = ""
+			note = ""
 		}
 		if why, ok := v.Dipendenze[a.Nome]; ok {
-			nota = T("p.per", why)
+			note = T("p.per", why)
 		}
 		var r string
-		switch a.Esito {
+		switch a.Outcome {
 		case "new":
-			nuovi++
-			r = "  " + t.verde.Render("+") + " " + riempi(a.Nome, 22) + riempi(a.Ver, 18) + t.grigio.Render(nota)
+			newcomers++
+			r = "  " + t.green.Render("+") + " " + fill(a.Nome, 22) + fill(a.Ver, 18) + t.gray.Render(note)
 		case "upgraded":
-			aggiornati++
-			r = "  " + t.blu.Render("↑") + " " + riempi(a.Nome, 22) + riempi(a.Ver, 18) + t.grigio.Render(T("p.da.prima", a.Prima))
+			updated++
+			r = "  " + t.blue.Render("↑") + " " + fill(a.Nome, 22) + fill(a.Ver, 18) + t.gray.Render(T("p.da.prima", a.Before))
 		default:
-			presenti++
+			present++
 			continue
 		}
 		if a.Origine == "file" {
-			nostri = append(nostri, r)
+			our = append(our, r)
 		} else {
 			dip = append(dip, r)
 		}
 	}
-	if len(nostri) > 0 {
-		c = append(c, "", t.forte.Render("REMOTIX")+t.grigio.Render("   "+T("p.da.run")))
-		c = append(c, nostri...)
+	if len(our) > 0 {
+		c = append(c, "", t.strong.Render("REMOTIX")+t.gray.Render("   "+T("p.da.run")))
+		c = append(c, our...)
 	}
 	if len(dip) > 0 {
-		c = append(c, "", t.forte.Render(T("p.dipendenze"))+t.grigio.Render("   "+T("p.dipendenze.t")))
+		c = append(c, "", t.strong.Render(T("p.dipendenze"))+t.gray.Render("   "+T("p.dipendenze.t")))
 		c = append(c, dip...)
 	}
 	if len(v.Pacchetti) > 0 {
-		c = append(c, t.grigio.Render("    "+T("p.totale", nuovi, aggiornati, presenti)))
+		c = append(c, t.gray.Render("    "+T("p.totale", newcomers, updated, present)))
 	}
 	// the people in the card's groups, the service, the other steps
-	var altri []string
-	irreversibili := []string{}
-	for _, p := range v.Passi {
+	var others []string
+	irreversible := []string{}
+	for _, p := range v.Steps {
 		if p.Rev == interfaccia.MALE {
-			irreversibili = append(irreversibili, p.Titolo)
+			irreversible = append(irreversible, p.Titolo)
 		}
-		switch p.Tipo {
+		switch p.Type {
 		case "groups":
 			g := T("p.gruppi", strings.Join(v.Gruppi, ", "))
 			if len(v.Gruppi) > 1 {
 				g = T("p.gruppi.n", strings.Join(v.Gruppi, ", "))
 			}
-			c = append(c, "", t.forte.Render(g)+"   "+strings.Join(v.Utenti, ", "))
+			c = append(c, "", t.strong.Render(g)+"   "+strings.Join(v.Utenti, ", "))
 		case "service":
-			c = append(c, "", t.forte.Render(T("p.servizio"))+"   "+T("p.servizio.t"))
+			c = append(c, "", t.strong.Render(T("p.servizio"))+"   "+T("p.servizio.t"))
 		case "other":
-			altri = append(altri, p.Titolo)
+			others = append(others, p.Titolo)
 		}
 	}
-	if len(altri) > 0 {
-		c = append(c, "", t.forte.Render(T("p.altro")))
-		for _, a := range altri {
+	if len(others) > 0 {
+		c = append(c, "", t.strong.Render(T("p.altro")))
+		for _, a := range others {
 			c = append(c, m.par("· "+a, lipgloss.NewStyle(), 2)...)
 		}
 	}
 	c = append(c, "")
-	if len(irreversibili) == 0 {
-		c = append(c, t.grigio.Render(T("p.annulla"))+t.blu.Render("remotix-install uninstall")+t.grigio.Render("."))
+	if len(irreversible) == 0 {
+		c = append(c, t.gray.Render(T("p.annulla"))+t.blue.Render("remotix-install uninstall")+t.gray.Render("."))
 	} else {
-		c = append(c, m.par(T("p.annulla.non", strings.Join(irreversibili, "; ")), t.ambra, 0)...)
+		c = append(c, m.par(T("p.annulla.non", strings.Join(irreversible, "; ")), t.amber, 0)...)
 	}
-	if m.dett {
-		c = append(c, "", t.forte.Render(T("h.dettagli")))
-		c = append(c, m.par(v.Dettagli, t.grigio, 2)...)
+	if m.details {
+		c = append(c, "", t.strong.Render(T("h.dettagli")))
+		c = append(c, m.par(v.Dettagli, t.gray, 2)...)
 	}
 	return c
 }
 
-func (m *modello) bodyProgress() []string {
+func (m *model) bodyProgress() []string {
 	T := interfaccia.T
 	t := m.t
-	punto, pc := m.av.Spot()
-	in := m.interna()
-	perc := fmt.Sprintf("%d %%", pc)
-	c := []string{riempi(t.forte.Render(punto), in-ansi.StringWidth(perc)) + perc}
+	spot, pc := m.av.Spot()
+	in := m.internal()
+	path := fmt.Sprintf("%d %%", pc)
+	c := []string{fill(t.strong.Render(spot), in-ansi.StringWidth(path)) + path}
 	pieni := in * pc / 100
-	c = append(c, t.blu.Render(strings.Repeat("█", pieni))+t.grigio.Render(strings.Repeat("░", in-pieni)), "")
+	c = append(c, t.blue.Render(strings.Repeat("█", pieni))+t.gray.Render(strings.Repeat("░", in-pieni)), "")
 	for _, r := range m.av.Righe {
-		switch r.Stato {
-		case interfaccia.FATTA:
-			c = append(c, "  "+t.verde.Render("✓")+" "+r.Testo)
+		switch r.State {
+		case interfaccia.DONE:
+			c = append(c, "  "+t.green.Render("✓")+" "+r.Testo)
 		case interfaccia.IN_PROGRESS:
-			c = append(c, "  "+t.blu.Render("◐ "+r.Testo))
-		case interfaccia.FALLITA:
-			c = append(c, "  "+t.rosso.Render("✗ "+r.Testo))
-		case interfaccia.ANNULLATA:
-			c = append(c, "  "+t.grigio.Render("↺ "+r.Testo))
+			c = append(c, "  "+t.blue.Render("◐ "+r.Testo))
+		case interfaccia.FAILED:
+			c = append(c, "  "+t.red.Render("✗ "+r.Testo))
+		case interfaccia.ROLLED_BACK:
+			c = append(c, "  "+t.gray.Render("↺ "+r.Testo))
 		default:
-			c = append(c, "  "+t.grigio.Render("○ "+r.Testo))
+			c = append(c, "  "+t.gray.Render("○ "+r.Testo))
 		}
 	}
 	if m.reg {
-		c = append(c, "", t.forte.Render(T("h.registro")))
-		for _, l := range ultime(m.av.Registro, 200) {
-			c = append(c, m.par(l, t.grigio, 2)...)
+		c = append(c, "", t.strong.Render(T("h.registro")))
+		for _, l := range last(m.av.Log, 200) {
+			c = append(c, m.par(l, t.gray, 2)...)
 		}
 	}
 	return c
 }
 
-func ultime(r []string, n int) []string {
+func last(r []string, n int) []string {
 	if len(r) > n {
 		r = r[len(r)-n:]
 	}
 	return r
 }
 
-func (m *modello) bodyReady() []string {
+func (m *model) bodyReady() []string {
 	T := interfaccia.T
-	t, v := m.t, m.pronto
-	c := []string{t.verde.Render("✓ " + T("pr.titolo")), ""}
-	c = append(c, t.forte.Render(T("h.apri")), "  "+t.blu.Render(v.Indirizzo))
-	if v.Impronta != "" {
-		c = append(c, m.par(T("pr.impronta", v.Impronta), t.grigio, 2)...)
+	t, v := m.t, m.ready
+	c := []string{t.green.Render("✓ " + T("pr.titolo")), ""}
+	c = append(c, t.strong.Render(T("h.apri")), "  "+t.blue.Render(v.Address))
+	if v.Fingerprint != "" {
+		c = append(c, m.par(T("pr.impronta", v.Fingerprint), t.gray, 2)...)
 	}
-	c = append(c, m.par(T("pr.apri.t"), t.grigio, 2)...)
-	c = append(c, "", t.forte.Render(T("h.dafare")))
+	c = append(c, m.par(T("pr.apri.t"), t.gray, 2)...)
+	c = append(c, "", t.strong.Render(T("h.dafare")))
 	for _, d := range v.DaFare {
 		c = append(c, m.pointWarning(d)...)
 	}
 	for _, d := range v.Condizioni {
 		c = append(c, m.pointWarning(d)...)
 	}
-	c = append(c, m.par(v.Router, t.grigio, 4)...)
-	c = append(c, "", t.forte.Render(T("h.chi")))
+	c = append(c, m.par(v.Router, t.gray, 4)...)
+	c = append(c, "", t.strong.Render(T("h.chi")))
 	c = append(c, m.par(T("pr.chi.t"), lipgloss.NewStyle(), 2)...)
-	c = append(c, "", t.forte.Render(T("h.prove")))
+	c = append(c, "", t.strong.Render(T("h.prove")))
 	for _, p := range v.Prove {
-		c = append(c, "  "+riempi(p.Etichetta, 36)+m.styleState(p.Stato).Render(p.Testo))
+		c = append(c, "  "+fill(p.Etichetta, 36)+m.styleState(p.State).Render(p.Testo))
 	}
-	if m.dett {
-		c = append(c, "", t.forte.Render(T("h.cambiato")))
+	if m.details {
+		c = append(c, "", t.strong.Render(T("h.cambiato")))
 		for _, x := range v.Cambiato {
 			c = append(c, m.par("· "+x, lipgloss.NewStyle(), 2)...)
 		}
-		c = append(c, "", t.forte.Render(T("h.dettagli")))
-		c = append(c, m.par(v.Dettagli, t.grigio, 2)...)
+		c = append(c, "", t.strong.Render(T("h.dettagli")))
+		c = append(c, m.par(v.Dettagli, t.gray, 2)...)
 	}
 	if m.reg && m.av != nil {
-		c = append(c, "", t.forte.Render(T("h.registro")))
-		for _, l := range ultime(m.av.Registro, 200) {
-			c = append(c, m.par(l, t.grigio, 2)...)
+		c = append(c, "", t.strong.Render(T("h.registro")))
+		for _, l := range last(m.av.Log, 200) {
+			c = append(c, m.par(l, t.gray, 2)...)
 		}
 	}
 	return c
 }
 
 // pointWarning: «  ! text» in amber, wrapped under the text.
-func (m *modello) pointWarning(s string) []string {
+func (m *model) pointWarning(s string) []string {
 	r := m.par(s, lipgloss.NewStyle(), 4)
 	if len(r) > 0 {
-		r[0] = "  " + m.t.ambra.Render("!") + " " + strings.TrimPrefix(r[0], "    ")
+		r[0] = "  " + m.t.amber.Render("!") + " " + strings.TrimPrefix(r[0], "    ")
 	}
 	return r
 }
 
-func (m *modello) bodyEnd() []string {
+func (m *model) bodyEnd() []string {
 	T := interfaccia.T
 	t, v := m.t, m.fine
-	st := t.rosso
+	st := t.red
 	if v.Toccata {
-		st = t.ambra
+		st = t.amber
 	}
 	c := m.par("✗ "+v.Titolo, st, 0)
-	c = append(c, m.par(v.Sotto, t.grigio, 0)...)
-	if v.Perche != "" {
-		c = append(c, "", t.forte.Render(T("h.perche")))
-		for _, l := range strings.Split(v.Perche, "\n") {
+	c = append(c, m.par(v.Below, t.gray, 0)...)
+	if v.Why != "" {
+		c = append(c, "", t.strong.Render(T("h.perche")))
+		for _, l := range strings.Split(v.Why, "\n") {
 			c = append(c, m.par(l, lipgloss.NewStyle(), 2)...)
 		}
-		if x := strings.TrimSpace(v.Serve + "  " + v.Codice); x != "" {
-			c = append(c, m.par(x, t.grigio, 2)...)
+		if x := strings.TrimSpace(v.Needs + "  " + v.Codice); x != "" {
+			c = append(c, m.par(x, t.gray, 2)...)
 		}
 	}
 	if v.CheFare != "" {
-		c = append(c, "", t.forte.Render(T("h.chefare")))
+		c = append(c, "", t.strong.Render(T("h.chefare")))
 		c = append(c, m.par(v.CheFare, lipgloss.NewStyle(), 2)...)
 	}
-	if m.dett && v.Dettagli != "" {
-		c = append(c, "", t.forte.Render(T("h.dettagli")))
-		c = append(c, m.par(v.Dettagli, t.grigio, 2)...)
+	if m.details && v.Dettagli != "" {
+		c = append(c, "", t.strong.Render(T("h.dettagli")))
+		c = append(c, m.par(v.Dettagli, t.gray, 2)...)
 	}
 	if m.reg && m.av != nil {
-		c = append(c, "", t.forte.Render(T("h.registro")))
-		for _, l := range ultime(m.av.Registro, 200) {
-			c = append(c, m.par(l, t.grigio, 2)...)
+		c = append(c, "", t.strong.Render(T("h.registro")))
+		for _, l := range last(m.av.Log, 200) {
+			c = append(c, m.par(l, t.gray, 2)...)
 		}
 	}
 	return c

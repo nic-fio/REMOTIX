@@ -2,12 +2,12 @@
 #
 # 01-b6-lancia.sh — runs ON THE SERVER.  B6: the three caps of the handshake.
 #
-#   BERSAGLIO=innesto  bash .../01-b6-lancia.sh          everything (two phases)
-#   BERSAGLIO=prodotto bash .../01-b6-lancia.sh sani     only the «sani» phase
-#   BERSAGLIO=prodotto bash .../01-b6-lancia.sh ping     only the «ping» phase
-#   BERSAGLIO=innesto  bash .../01-b6-lancia.sh elenco   the predictions
+#   TARGET=graft  bash .../01-b6-lancia.sh          everything (two phases)
+#   TARGET=product bash .../01-b6-lancia.sh healthy     only the «healthy» phase
+#   TARGET=product bash .../01-b6-lancia.sh ping     only the «ping» phase
+#   TARGET=graft  bash .../01-b6-lancia.sh list   the predictions
 #
-# ⛔ `BERSAGLIO` IS MANDATORY — see `01-b0-bersaglio.sh`.
+# ⛔ `TARGET` IS MANDATORY — see `01-b0-bersaglio.sh`.
 #
 # ---------------------------------------------------------------------------
 # ⛔⭐ WHAT CHANGES WHEN B6 IS POINTED AT THE PRODUCT — the prediction, written BEFORE
@@ -16,7 +16,7 @@
 # |---|---|---|---|
 # | the three caps (5 · 60 · 10 s) | same | same | they are the `#define TETTO_*` of `rcp.c`, **identical byte for byte** in the two servers |
 # | ⛔ **the TRANSPORT cap** | chosen: 120 s / 15 s | ⛔ **30 s fixed** | `#define IDLE_MS 30000` in `src/trasporto.c`, and no option touches it (no `getenv` in all of `src/`) |
-# | ⛔ **the two phases** | independent | ⛔ **NOT independent** | 30 s is below the 60 s of the credentials: `credenziali-tetto` (sani) and `credenziali-tetto-sotto-il-trasporto` (ping) measure THE SAME THING.  ⚠ CIAO (5 s) and ATTACCA (10 s) stay clean — 30 > 10.  ⛔ Counting them as two confirmations would be counting the same measurement twice |
+# | ⛔ **the two phases** | independent | ⛔ **NOT independent** | 30 s is below the 60 s of the credentials: `credenziali-tetto` (healthy) and `credenziali-tetto-sotto-il-trasporto` (ping) measure THE SAME THING.  ⚠ HELLO (5 s) and ATTACH (10 s) stay clean — 30 > 10.  ⛔ Counting them as two confirmations would be counting the same measurement twice |
 # | `cert-morte-silenziosa` | dies at 15 s | dies at **30 s** | it is the transport cap, read from the peer |
 # | `credenziali-presto` (silent for 42 s) | passes under a 120 s cap | ⭐ passes **only if the PINGs are there** | 42 s > 30 s: on the product this case becomes a **second test of the PINGs**, for free, and it is a gain — not a loss |
 # | the stopwatch of the first cap | armed from the opening of the channel | same | `src/webtransport.c` `rcp_avvia()` arms `regola_battito()` on the same line as `rcp_apri()`.  ⚠ The comment says *«in the graft this was missing»*: if `ciao-tetto` gave «nothing» on the graft and 5 s on the product, the difference is **this**, not §4.6 |
@@ -24,7 +24,7 @@
 # | the ban | lives in the process, dies with the restart | ⛔ lives **on file** | restarting is no longer enough (I7): B6's ban file is thrown away at the start, and unblocked BEFORE the run, declaring it |
 # | the log | ⛔ **did not exist** | ⛔ **did not exist** | ⚠ the three numbers of 10 August — 5.0 · 60.1 · 10.0 s — cannot be re-verified by anyone.  From this run there is `b6-esiti-<bersaglio>.jsonl` |
 #
-# ⛔ WITH A FILTER THE RUN IS PARTIAL, AND IT SAYS SO.  The «sani» phase measures the
+# ⛔ WITH A FILTER THE RUN IS PARTIAL, AND IT SAYS SO.  The «healthy» phase measures the
 #    three caps; the «ping» phase measures **the cure of §4.6**, that is that the
 #    server keeps the connection alive with the transport PINGs.  A green on only
 #    one of the two reads «that half passes», never «B6 passes».
@@ -34,8 +34,8 @@
 #
 # *«How long it takes to tell you it did not make it, instead of staying there
 # hanging.»*  `RCP.md` §4.6 puts three caps on the handshake — 5 s on the
-# `CIAO`, 60 s on the `CREDENZIALI`, 10 s on the `ATTACCA` — and once a cap has
-# expired the server MUST take leave with `TEMPO_SCADUTO` `0x0D`, by the two
+# `HELLO`, 60 s on the `CREDENTIALS`, 10 s on the `ATTACH` — and once a cap has
+# expired the server MUST take leave with `TIMED_OUT` `0x0D`, by the two
 # roads of §3.1.
 #
 # ⛔ **Not before, not after, and with the right reason**: the bench tests all
@@ -51,7 +51,7 @@
 # **silently, without a reason**, before the 60 s cap can expire.  The cure is
 # the server's: the **transport PINGs**.
 #
-#   «sani» phase  the transport cap is raised to **120 s**, above all three
+#   «healthy» phase  the transport cap is raised to **120 s**, above all three
 #                 protocol caps: here the three numbers read clean, because
 #                 only RCP can be the one closing.
 #                 ⚠ But with 120 s **even a server that sends no PING** would
@@ -61,7 +61,7 @@
 #
 #   «ping» phase  ⭐ the transport cap is brought **BELOW** the protocol cap:
 #                 `TETTO_PING`, that is 15 s against 60.  If the PINGs are
-#                 there, `TEMPO_SCADUTO` arrives **all the same at 60 s**, after
+#                 there, `TIMED_OUT` arrives **all the same at 60 s**, after
 #                 having crossed the transport cap four times.  If they are
 #                 not, the connection dies around 15 s **without a reason** —
 #                 the signature §4.6 describes, with a number that cannot be
@@ -109,7 +109,7 @@
 #    Aug 2026 the count of §4.4-bis is **a single one, on the address only**,
 #    and leads to a **twelve-hour ban** (B0.3).  ⚠ The old line said «per name
 #    and per address», and it was the previous shape.  The first check of
-#    `01-b6-tetti.py` is a whole handshake: if `TROPPI_TENTATIVI` comes back,
+#    `01-b6-tetti.py` is a whole handshake: if `TOO_MANY_ATTEMPTS` comes back,
 #    the bench **stops with exit 5** and says the ban belongs to another bench,
 #    instead of giving red to the caps.
 #
@@ -118,7 +118,7 @@
 #
 #      ⛔ **B6 does not call the unblock command, and says why.**  The command
 #         exists — `01-b8-sblocca.py`, which talks to the server on a command
-#         socket (`--comando-socket`) — but it wants a server **started with
+#         socket (`--command-socket`) — but it wants a server **started with
 #         that option**, and B6 starts its own without it.  ⭐ The cure B6 uses
 #         is stronger: **it restarts the server at every phase**, and the count
 #         of §4.4-bis lives in the process, so it starts again from zero.
@@ -127,7 +127,7 @@
 #         form **E5**, a fact that was a deduction never re-verified.*
 #
 #      ⭐ **And B6 never fails an authentication**: all its cases use the good
-#         credentials, or stop before `CREDENZIALI`.  So it **does not consume
+#         credentials, or stop before `CREDENTIALS`.  So it **does not consume
 #         the count** and does not leave a ban on the benches that come after.
 #         It is the only way this bench has to respect B0.3 without a cure that
 #         does not exist.
@@ -143,17 +143,17 @@
 # ---------------------------------------------------------------------------
 set -uo pipefail
 
-ENTRA=/media/REMOTIX/enter.sh
-FUORI=/media/REMOTIX/src
-DENTRO=/srv/src
-UTENTE=prova
-PAROLA=parola-di-prova
+ENTER=/media/REMOTIX/enter.sh
+OUT=/media/REMOTIX/src
+INSIDE=/srv/src
+ACCOUNT=prova
+PASSWORD=parola-di-prova
 
 # ---------------------------------------------------------------------------
 # ⛔ THE PASSWORD NO LONGER GOES THROUGH THE COMMAND LINE — defect **D12**,
 #    cured on 12 Aug 2026.
 #
-# ⛔ HERE THE PASSWORD ended up inside the string that `bash $ENTRA --root "…"`
+# ⛔ HERE THE PASSWORD ended up inside the string that `bash $ENTER --root "…"`
 #    receives as an argument: that is in the `argv` of `bash`, in that of `sudo`
 #    and in that of `python3`.  `/proc/<pid>/cmdline` on Linux is **readable by
 #    anyone**, and a `ps` launched by another user during the run printed it in
@@ -163,32 +163,32 @@ PAROLA=parola-di-prova
 # ⭐ THE ROAD IS THE ONE ALREADY IN THE HOUSE (`banchi/01-b10-lancia.sh`), and not
 #    a second way: a `0600` file written with `printf` — a shell **builtin**, so
 #    not even the writing goes through a process with the password in `argv` —
-#    passed to the bench as `--parola-file`, and deleted with a `trap` even if
+#    passed to the bench as `--password-file`, and deleted with a `trap` even if
 #    the run dies halfway.
 #
 # ⚠ What ends up in the `cmdline` is the PATH, not the password, and the file is
 #   `0600`: whoever is not us does not open it.
 # ⚠ And the name carries the bench's tag: two runs writing the same file would
 #   delete each other's password — the same shape that gave birth to the
-#   `PREFISSO` of `01-p5-accendi.sh`.
-PAROLA_FUORI=$FUORI/tmp/b6-parola
-PAROLA_DENTRO=$DENTRO/tmp/b6-parola
+#   `PREFIX` of `01-p5-accendi.sh`.
+PAROLA_FUORI=$OUT/tmp/b6-parola
+PAROLA_DENTRO=$INSIDE/tmp/b6-parola
 
 ripulisci_parola() { rm -f "$PAROLA_FUORI"; }
-trap ripulisci_parola EXIT
+trap clean_up_password EXIT
 
 # ⛔ `umask` IN A SUBSHELL — the line B10 paid for with a whole run:
 #    a bare `umask 077` stays on everything that comes after, including the
 #    commands sent inside the container, and there it makes root write files
 #    that `nicfio` can then no longer read.
-mkdir -p "$FUORI/tmp" \
+mkdir -p "$OUT/tmp" \
 	&& ( umask 077; : > "$PAROLA_FUORI" ) \
 	&& chmod 600 "$PAROLA_FUORI" \
 	|| { printf '    ⛔ cannot write %s: the run does not start\n' "$PAROLA_FUORI"; exit 2; }
-printf '%s\n' "$PAROLA" > "$PAROLA_FUORI"
+printf '%s\n' "$PASSWORD" > "$PAROLA_FUORI"
 
 # ⛔ The target: a single shape for the four benches, in a single file.
-SIGLA=b6
+TAG=b6
 
 log()  { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 ok()   { printf '    \033[1;32mOK\033[0m  %s\n' "$*"; }
@@ -196,9 +196,9 @@ ko()   { printf '    \033[1;31mNO\033[0m  %s\n' "$*"; }
 inf()  { printf '    --  %s\n' "$*"; }
 
 # shellcheck source=01-b0-bersaglio.sh
-. "$FUORI/01-b0-bersaglio.sh"
-IND=$B_IND
-PORTA=$B_PORTA
+. "$OUT/01-b0-bersaglio.sh"
+ADDR=$B_IND
+PORT=$B_PORTA
 # ⛔ The two transport caps come from the PROFILE, not from here.  On the graft
 #    they are 120 000 and 15 000 ms; on the product they are both 30 000,
 #    because `IDLE_MS` does not move — and when they coincide the two phases are
@@ -206,21 +206,21 @@ PORTA=$B_PORTA
 TETTO_SANI=$B_IDLE_LUNGO
 TETTO_PING=$B_IDLE_CORTO
 
-AZIONE=${1:-tutto}
+AZIONE=${1:-all}
 case "$AZIONE" in
-	tutto|sani|ping|elenco) ;;
-	*) ko "unknown action: $AZIONE  (tutto | sani | ping | elenco)"; exit 2 ;;
+	all|healthy|ping|list) ;;
+	*) ko "unknown action: $AZIONE  (all | healthy | ping | list)"; exit 2 ;;
 esac
 
 log "Credentials for the container"
-bash "$ENTRA" --root "true" || { ko "cannot enter the container"; exit 2; }
+bash "$ENTER" --root "true" || { ko "cannot enter the container"; exit 2; }
 ok "sudo validated"
 
 # ---------------------------------------------------------------------------
 # ⛔ THE SENTINEL: «empty» is not «zero» — findings R12-A.7 and R12-A.23, and the
 #    cure was already written in the same folder, in `01-b11-guasto.sh:92-129`.
 #
-# `CHI=$(bash "$ENTRA" --root "ss -ulnp | grep ':$PORTA '")` said «port free»
+# `CHI=$(bash "$ENTER" --root "ss -ulnp | grep ':$PORT '")` said «port free»
 # in three opposite cases: the port really is free · `ss` is not in the
 # container · `enter.sh` did not run the command.  ⛔ And here the aggravating
 # factor was that that reading happened **only once, at the start**: B6 was
@@ -234,13 +234,13 @@ ok "sudo validated"
 #   `--root "true"` above is the one that takes the password prompt.  The ban
 #   at the top of this file concerns the REDIRECTIONS around `enter.sh`, which
 #   would take that question away.
-USCITA=""
-dentro() # $1 = remote command.  Output in $USCITA, status = the command's
+OUTPUT=""
+dentro() # $1 = remote command.  Output in $OUTPUT, status = the command's
 {
 	local tutto stato
-	tutto=$(bash "$ENTRA" --root "$1"'; printf "\nB6-FINE=%s\n" $?')
+	tutto=$(bash "$ENTER" --root "$1"'; printf "\nB6-FINE=%s\n" $?')
 	stato=$(printf '%s\n' "$tutto" | sed -n 's/^B6-FINE=\([0-9][0-9]*\)$/\1/p' | tail -1)
-	USCITA=$(printf '%s\n' "$tutto" | grep -v '^B6-FINE=')
+	OUTPUT=$(printf '%s\n' "$tutto" | grep -v '^B6-FINE=')
 	if [ -z "$stato" ]; then
 		return 125   # it did not get to the end: it is not a zero
 	fi
@@ -257,20 +257,20 @@ chi_tiene_la_porta()
 	st=$?
 	if [ "$st" -ne 0 ]; then
 		ko "⛔ «ss -ulnp» did not answer inside the container (exit $st):"
-		printf '%s\n' "$USCITA" | tail -5 | sed 's/^/        /'
+		printf '%s\n' "$OUTPUT" | tail -5 | sed 's/^/        /'
 		return 2
 	fi
-	if [ -z "$USCITA" ]; then
+	if [ -z "$OUTPUT" ]; then
 		ko "⛔ «ss -ulnp» printed NOTHING, not even the header:"
 		ko "   the tool is mute, and its silence is not a free port"
 		return 2
 	fi
-	CHI=$(printf '%s\n' "$USCITA" | grep ":$PORTA ")
+	CHI=$(printf '%s\n' "$OUTPUT" | grep ":$PORT ")
 	[ -n "$CHI" ]
 }
 
-if [ "$AZIONE" = elenco ]; then
-	bash "$ENTRA" --root "python3 $DENTRO/01-b6-tetti.py --bersaglio $B_NOME --elenco"
+if [ "$AZIONE" = list ]; then
+	bash "$ENTER" --root "python3 $INSIDE/01-b6-tetti.py --target $B_NOME --list"
 	exit 0
 fi
 
@@ -283,11 +283,11 @@ fi
 #    `main.c` loop always calls: there is no graft that could be missing.
 bersaglio_pronto || exit 3
 
-if [ "$B_NOME" = innesto ]; then
-	SORG=$DENTRO/b2/ngtcp2/examples/http3_server_proto_codec.cc
-	QUANTI=$(bash "$ENTRA" --root "grep -c 'rcp_tempo(rcp_' $SORG" | tr -cd '0-9')
-	if [ "${QUANTI:-0}" -ge 1 ]; then
-		ok "the call to rcp_tempo() is in the source ($QUANTI)"
+if [ "$B_NOME" = graft ]; then
+	SRC=$INSIDE/b2/ngtcp2/examples/http3_server_proto_codec.cc
+	COUNT=$(bash "$ENTER" --root "grep -c 'rcp_time(rcp_' $SRC" | tr -cd '0-9')
+	if [ "${COUNT:-0}" -ge 1 ]; then
+		ok "the call to rcp_tempo() is in the source ($COUNT)"
 	else
 		ko "⛔ the call to rcp_tempo() is NOT in the source: RCP's time"
 		ko "   would not flow, no cap would expire, and the three reds"
@@ -296,9 +296,9 @@ if [ "$B_NOME" = innesto ]; then
 	fi
 else
 	# ⭐ The equivalent check on the product, and it is MEASURED like the other.
-	QUANTI=$(bash "$ENTRA" --root "grep -c 'wt_batti(' $DENTRO/remotix/trasporto.c" | tr -cd '0-9')
-	if [ "${QUANTI:-0}" -ge 1 ]; then
-		ok "the product loop calls wt_batti() ($QUANTI): RCP's time flows"
+	COUNT=$(bash "$ENTER" --root "grep -c 'wt_beat(' $INSIDE/remotix/trasporto.c" | tr -cd '0-9')
+	if [ "${COUNT:-0}" -ge 1 ]; then
+		ok "the product loop calls wt_batti() ($COUNT): RCP's time flows"
 	else
 		ko "⛔ `wt_batti()` does not appear in trasporto.c: without it, RCP's"
 		ko "   clock does not advance and no cap of §4.6 ever expires.  The three reds"
@@ -311,7 +311,7 @@ fi
 # ⛔ 1-bis. THE INITIAL STATE OF THE BAN — B0.1, B0.2, B0.3.
 #
 # ⭐ B6 NEVER fails an authentication: all its cases use the good credentials
-#    or stop before `CREDENZIALI`.  So it does not consume the count and does
+#    or stop before `CREDENTIALS`.  So it does not consume the count and does
 #    not leave a ban on whoever comes after.
 # ⛔ But it can FIND one: the product's ban is on file and survives the restart
 #    (I7), so «restarting the server» — which was B6's cure — is no longer
@@ -353,16 +353,16 @@ log "2. The caps written in the CODE — and the number changed on 10 August"
 #             `banchi/rcp/rcp.c` — which MUST stay identical byte for byte
 #             (md5 `cb7af778…`): the day they diverged, the benches and the
 #             product would measure two different protocols with the same name.
-if [ "$B_NOME" = innesto ]; then
-	SORGENTE_RCP=$FUORI/rcp/rcp.c
-	COMPILATO_RCP=$FUORI/b2/ngtcp2/examples/rcp.c
+if [ "$B_NOME" = graft ]; then
+	SORGENTE_RCP=$OUT/rcp/rcp.c
+	COMPILATO_RCP=$OUT/b2/ngtcp2/examples/rcp.c
 else
-	SORGENTE_RCP=$FUORI/rcp/rcp.c
-	COMPILATO_RCP=$FUORI/remotix/rcp.c
+	SORGENTE_RCP=$OUT/rcp/rcp.c
+	COMPILATO_RCP=$OUT/remotix/rcp.c
 fi
-TETTI_CODICE=""
+CODE_CAPS=""
 LETTURA_OK=si
-for coppia in "CIAO:TETTO_CIAO" "CREDENZIALI:TETTO_CREDENZIALI" "ATTACCA:TETTO_ATTACCA"; do
+for coppia in "HELLO:CAP_HELLO" "CREDENTIALS:CAP_CREDENTIALS" "ATTACH:CAP_ATTACH"; do
 	NOME=${coppia%%:*}
 	DEF=${coppia##*:}
 	A=$(leggi_tetto "$SORGENTE_RCP" "$DEF") || A=""
@@ -375,7 +375,7 @@ for coppia in "CIAO:TETTO_CIAO" "CREDENZIALI:TETTO_CREDENZIALI" "ATTACCA:TETTO_A
 	fi
 	if [ "$A" != "$B" ]; then
 		ko "⛔ $DEF: «$SORGENTE_RCP» says $A and «$COMPILATO_RCP» says $B"
-		if [ "$B_NOME" = innesto ]; then
+		if [ "$B_NOME" = graft ]; then
 			ko "   The graft did not recopy rcp.c: the binary does not have the"
 			ko "   number you believe you changed."
 		else
@@ -388,7 +388,7 @@ for coppia in "CIAO:TETTO_CIAO" "CREDENZIALI:TETTO_CREDENZIALI" "ATTACCA:TETTO_A
 		continue
 	fi
 	ok "$DEF = $B ms  (source and compiled copy match)"
-	TETTI_CODICE="$TETTI_CODICE${TETTI_CODICE:+,}$NOME=$B"
+	CODE_CAPS="$CODE_CAPS${CODE_CAPS:+,}$NOME=$B"
 done
 if [ "$LETTURA_OK" != si ]; then
 	ko "⛔ without the numbers of the code the bench would measure against the"
@@ -403,12 +403,12 @@ inf "  its first witness"
 # ⛔ THE BUILD LOG IS DELETED BEFORE, not after: if the build does not start at
 #    all, a `tail` would show the previous run's log and the diagnosis would
 #    start from an error that did not happen today.
-rm -f "$FUORI/b6-compila.log"
-if ! bash "$ENTRA" --root \
-	"ninja -C $DENTRO/b2/ngtcp2/build bsslserver > $DENTRO/b6-compila.log 2>&1"; then
+rm -f "$OUT/b6-compila.log"
+if ! bash "$ENTER" --root \
+	"ninja -C $INSIDE/b2/ngtcp2/build bsslserver > $INSIDE/b6-compila.log 2>&1"; then
 	ko "the build failed:"
-	if [ -f "$FUORI/b6-compila.log" ]; then
-		tail -25 "$FUORI/b6-compila.log" | sed 's/^/        /'
+	if [ -f "$OUT/b6-compila.log" ]; then
+		tail -25 "$OUT/b6-compila.log" | sed 's/^/        /'
 	else
 		ko "   ⛔ and the build log DOES NOT EXIST: it is not ninja that"
 		ko "      kept quiet, it is that it never got as far as launching it"
@@ -459,7 +459,7 @@ spegni()
 	#    disappear from `/proc` AND for the port to be freed, which are two
 	#    different things (finding R12-A.24).  ⚠ On the product it counts double:
 	#    `SIGTERM` is not the end but the START of a path — `main.c` says farewell
-	#    to all the sessions with `SERVER_IN_CHIUSURA` and waits up to two
+	#    to all the sessions with `SERVER_CLOSING` and waits up to two
 	#    seconds for the bytes to go out.  A bench that demanded immediate death
 	#    would read «it does not die» on a server that is doing its job.
 	bersaglio_spegni
@@ -469,7 +469,7 @@ spegni()
 #    B2's probe takes the transport parameters **where they arrive**, that is
 #    from the peer, instead of from the configuration of whoever sends them.
 #
-# ⛔ AND `--bersaglio` IS MANDATORY — seam broken and repaired on 11 Aug 2026.
+# ⛔ AND `--target` IS MANDATORY — seam broken and repaired on 11 Aug 2026.
 #    This line called the probe without telling it against whom it was
 #    measuring, while the same day the probe made that argument mandatory and
 #    without a default, precisely so that a run could not measure the wrong
@@ -485,18 +485,18 @@ spegni()
 tetto_dal_pari() # $1 = expected in ms, $2 = label
 {
 	local atteso=$1 et=$2 letto=""
-	rm -f "$FUORI/b6-$B_NOME-$et-tetto.log"
-	bash "$ENTRA" --root \
-		"python3 $DENTRO/01-b2-sonda-trasporto.py --bersaglio $B_NOME --indirizzo $IND --porta $PORTA --etichetta b6-$et --idle-atteso $atteso > $DENTRO/b6-$B_NOME-$et-tetto.log 2>&1"
-	if [ ! -f "$FUORI/b6-$B_NOME-$et-tetto.log" ]; then
+	rm -f "$OUT/b6-$B_NOME-$et-tetto.log"
+	bash "$ENTER" --root \
+		"python3 $INSIDE/01-b2-sonda-trasporto.py --target $B_NOME --address $ADDR --port $PORT --label b6-$et --expected-idle $atteso > $INSIDE/b6-$B_NOME-$et-tetto.log 2>&1"
+	if [ ! -f "$OUT/b6-$B_NOME-$et-tetto.log" ]; then
 		ko "the probe wrote nothing: it could not be looked at"
 		return 2
 	fi
-	letto=$(grep -m1 'max_idle_timeout *=' "$FUORI/b6-$B_NOME-$et-tetto.log" | tr -dc '0-9')
+	letto=$(grep -m1 'max_idle_timeout *=' "$OUT/b6-$B_NOME-$et-tetto.log" | tr -dc '0-9')
 	if [ -z "$letto" ]; then
 		ko "I could not read max_idle_timeout from the peer: the phase does not start"
 		ko "   (without the cap one does not know who will close — R8.3)"
-		tail -6 "$FUORI/b6-$B_NOME-$et-tetto.log" | sed 's/^/        /'
+		tail -6 "$OUT/b6-$B_NOME-$et-tetto.log" | sed 's/^/        /'
 		return 2
 	fi
 	if [ "$letto" -ne "$atteso" ]; then
@@ -509,16 +509,16 @@ tetto_dal_pari() # $1 = expected in ms, $2 = label
 	return 0
 }
 
-ESITO=0
-FATTE=""
+OUTCOME=0
+DONE=""
 
-fase() # $1 = name (sani|ping), $2 = transport cap in ms
+fase() # $1 = name (healthy|ping), $2 = transport cap in ms
 {
 	local nome=$1 tms=$2 e=0
 	log "Phase «$nome» — transport cap ${tms} ms"
 	if [ "$nome" = ping ]; then
 		inf "⭐ the TRANSPORT cap is BELOW the PROTOCOL cap"
-		inf "  (${tms} ms against 60 000): if TEMPO_SCADUTO arrives all the same at"
+		inf "  (${tms} ms against 60 000): if TIMED_OUT arrives all the same at"
 		inf "  60 s, the PINGs of §4.6 are there; if it dies around ${tms} ms"
 		inf "  without a reason, they are missing — and it is the signature §4.6 describes"
 	else
@@ -526,14 +526,14 @@ fase() # $1 = name (sani|ping), $2 = transport cap in ms
 		inf "protocol caps: here only RCP can be the one closing"
 		inf "⚠ and that is why this phase, ALONE, does not test the PINGs"
 	fi
-	accendi "$tms" "$nome" || { ESITO=4; return 4; }
+	accendi "$tms" "$nome" || { OUTCOME=4; return 4; }
 	if ! tetto_dal_pari "$tms" "$nome"; then
 		spegni
-		ESITO=5
+		OUTCOME=5
 		return 5
 	fi
-	bash "$ENTRA" --root \
-		"python3 -u $DENTRO/01-b6-tetti.py --indirizzo $IND $(bersaglio_opzioni_python) --utente $UTENTE --parola-file $PAROLA_DENTRO --fase $nome --idle $tms --tetti-codice $TETTI_CODICE"
+	bash "$ENTER" --root \
+		"python3 -u $INSIDE/01-b6-tetti.py --address $ADDR $(bersaglio_opzioni_python) --user $ACCOUNT --password-file $PAROLA_DENTRO --phase $nome --idle $tms --code-caps $CODE_CAPS"
 	e=$?
 
 	# ⛔ B0.5, from outside.  The bench asks it at every case by opening a new
@@ -573,13 +573,13 @@ fase() # $1 = name (sani|ping), $2 = transport cap in ms
 		ko "⛔ phase «$nome» did not leave the machine as it found it"
 		if [ "$e" -eq 0 ]; then e=5; fi
 	fi
-	FATTE="$FATTE $nome"
+	DONE="$DONE $nome"
 	# ⛔ Three different outcomes from the bench, and they are kept: 1 = the
 	#    server is wrong, 3 = the server does what the CODE says but the
 	#    DOCUMENT says something else, 5 = the initial state was not clean (B0.3).
 	if [ "$e" -ne 0 ]; then
-		if [ "$ESITO" -eq 0 ] || [ "$e" -eq 1 ]; then
-			ESITO=$e
+		if [ "$OUTCOME" -eq 0 ] || [ "$e" -eq 1 ]; then
+			OUTCOME=$e
 		fi
 	fi
 	return "$e"
@@ -594,18 +594,18 @@ if [ "$TETTO_SANI" = "$TETTO_PING" ]; then
 	log "⛔ The two phases against «$B_NOME» are NOT independent"
 	inf "the transport cap is $TETTO_SANI ms in both: it is IDLE_MS"
 	inf "in src/trasporto.c, and no option touches it."
-	inf "⚠ CIAO (5 s) and ATTACCA (10 s) stay clean — 30 s > 10 s — and their"
+	inf "⚠ HELLO (5 s) and ATTACH (10 s) stay clean — 30 s > 10 s — and their"
 	inf "  two numbers are worth what they were worth."
-	inf "⛔ CREDENZIALI (60 s) does not: 30 s < 60 s, so in the «sani» phase what"
+	inf "⛔ CREDENTIALS (60 s) does not: 30 s < 60 s, so in the «healthy» phase what"
 	inf "  keeps the connection alive is already the PINGs, exactly as in «ping»."
 	inf "⭐ The gain: «credenziali-presto», which keeps quiet for 42 s, becomes a"
 	inf "  SECOND test of the PINGs instead of a check that passes anyway."
 fi
 
-if [ "$AZIONE" = tutto ] || [ "$AZIONE" = sani ]; then
+if [ "$AZIONE" = all ] || [ "$AZIONE" = healthy ]; then
 	fase sani "$TETTO_SANI"
 fi
-if [ "$AZIONE" = tutto ] || [ "$AZIONE" = ping ]; then
+if [ "$AZIONE" = all ] || [ "$AZIONE" = ping ]; then
 	fase ping "$TETTO_PING"
 fi
 
@@ -615,7 +615,7 @@ fi
 # ⚠ This section said «B6 does not call the unblock command, and says why»,
 #   and the reason was that the command «wants a server started with that
 #   option, and B6 starts its own without it».  ⭐ Now it starts it WITH it:
-#   `bersaglio_accendi` always passes `--comando-socket`, and the socket is
+#   `bersaglio_accendi` always passes `--command-socket`, and the socket is
 #   B6's only.
 # ⛔ B6 in any case unblocks nothing INSIDE the run, and does not need to: it
 #    never fails an authentication.  Here it is only said that the machine stays
@@ -627,10 +627,10 @@ inf "⛔ and its ban file is «$B_BAN», which no other bench reads"
 
 log "Outcome"
 inf "target: $B_NOME  ·  binary md5 ${B_MD5:-unknown}"
-inf "phases run:${FATTE:- none}"
-case "$ESITO" in
+inf "phases run:${DONE:- none}"
+case "$OUTCOME" in
 0)
-	if [ "$AZIONE" = tutto ]; then
+	if [ "$AZIONE" = all ]; then
 		ok "⭐ B6 passes: the three caps expire with the right reason, not before and"
 		ok "   not after, and the PINGs of §4.6 hold under a transport shorter"
 		ok "   than the protocol"
@@ -667,8 +667,8 @@ case "$ESITO" in
 	ko "⛔ B6: something does not pass"
 	;;
 esac
-inf "the server logs: $FUORI/b6-$B_NOME-sani.log and $FUORI/b6-$B_NOME-ping.log"
+inf "the server logs: $OUT/b6-$B_NOME-sani.log and $OUT/b6-$B_NOME-ping.log"
 inf "⭐ and the FACTS of this run, one per line: $B_ESITI_FUORI"
 inf "   (until 11 Aug 2026 B6 had no log, and its three"
 inf "    numbers — 5.0 · 60.1 · 10.0 s — cannot be re-verified by anyone)"
-exit "$ESITO"
+exit "$OUTCOME"

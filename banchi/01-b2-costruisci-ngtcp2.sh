@@ -3,7 +3,7 @@
 # 01-b2-costruisci-ngtcp2.sh — the second candidate of B2.
 #
 #   bash 01-b2-costruisci-ngtcp2.sh          builds
-#   bash 01-b2-costruisci-ngtcp2.sh controlla only says what is already there
+#   bash 01-b2-costruisci-ngtcp2.sh check only says what is already there
 #
 # ---------------------------------------------------------------------------
 # WHY FROM THEIR EXAMPLE AND NOT FROM A BLANK PAGE
@@ -47,7 +47,7 @@ ok()   { printf '    \033[1;32mOK\033[0m  %s\n' "$*"; }
 ko()   { printf '    \033[1;31mNO\033[0m  %s\n' "$*"; }
 inf()  { printf '    --  %s\n' "$*"; }
 
-AZIONE=${1:-costruisci}
+ACTION=${1:-build}
 
 log "Starting state"
 inf "sources   $SRC"
@@ -60,7 +60,7 @@ if [ ! -f "$BSSL/build/libssl.a" ]; then
 fi
 ok "BoringSSL reused from lsquic (same TLS stack for all candidates)"
 
-[ "$AZIONE" = controlla ] && exit 0
+[ "$ACTION" = check ] && exit 0
 
 # ---------------------------------------------------------------------------
 # 1. nghttp3 — HTTP/3, that is the half that brings the extended CONNECT
@@ -143,26 +143,26 @@ if [ "$FILE_TOT" -lt 100 ]; then
 	exit 5
 fi
 
-cerca()
+search()
 {
-	local etichetta=$1 modello=$2
+	local label=$1 model=$2
 	local n
 	# ⚠ No `2>/dev/null`: if grep complains, it must be seen.
 	n=$(grep -rIl --include='*.c' --include='*.h' --include='*.cc' --include='*.hh' \
-		-e "$modello" "${TREES[@]}" | wc -l)
-	printf '    --  %-34s %s files\n' "$etichetta" "$n" >&2
+		-e "$model" "${TREES[@]}" | wc -l)
+	printf '    --  %-34s %s files\n' "$label" "$n" >&2
 	echo "$n"
 }
 
-N1=$(cerca "SETTINGS_WT_MAX_SESSIONS (0xc671706a)" "c671706a")
-N2=$(cerca "the token 'webtransport'"              "webtransport")
-N3=$(cerca "the extended CONNECT (:protocol)"      "ENABLE_CONNECT_PROTOCOL\|:protocol")
+N1=$(search "SETTINGS_WT_MAX_SESSIONS (0xc671706a)" "c671706a")
+N2=$(search "the token 'webtransport'"              "webtransport")
+N3=$(search "the extended CONNECT (:protocol)"      "ENABLE_CONNECT_PROTOCOL\|:protocol")
 
 # ⛔ AND THE POSITIVE CONTROL OF THE SEARCH ITSELF: we look for something that
 #    MUST be there.  If this too gives zero, it is not the library that is
 #    missing: it is the grep that is not reading anything, and that is the
 #    error this box tells about.
-CTRL=$(cerca "control: the word 'nghttp3'"         "nghttp3")
+CTRL=$(search "control: the word 'nghttp3'"         "nghttp3")
 if [ "$CTRL" -eq 0 ]; then
 	ko "⛔ the positive control of the search FAILED: zero files name 'nghttp3'"
 	ko "   the search is not looking at anything. No number below is valid."

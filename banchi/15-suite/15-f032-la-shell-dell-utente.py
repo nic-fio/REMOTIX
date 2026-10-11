@@ -3,8 +3,8 @@
 """
 15-f032 — F-032 THE TERMINAL OPENS THE USER'S SHELL (D-022, phase 16)
 
-    python3 15-f032-la-shell-dell-utente.py --scatola lxqt --browser firefox [--guasto]
-    python3 15-f032-la-shell-dell-utente.py --certifica
+    python3 15-f032-la-shell-dell-utente.py --box lxqt --browser firefox [--fault]
+    python3 15-f032-la-shell-dell-utente.py --certify
 
 EXPECTED: outside GNOME the session carries `SHELL` = the shell of the user's passwd
         line (read in the environment of the desktop's panel); on GNOME
@@ -26,29 +26,29 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import suite as S                                                     # noqa: E402
 
-G1B = S._carica("g1b", os.path.join(S.QUI, "15-g1b-comune.py"))
-FUNZIONI = ("F-032",)
-PANNELLO = {"gnome": "gnome-shell", "kde": "plasmashell", "xfce": "xfce4-panel",
+G1B = S._load("g1b", os.path.join(S.HERE, "15-g1b-comune.py"))
+FUNCTIONS = ("F-032",)
+PANEL = {"gnome": "gnome-shell", "kde": "plasmashell", "xfce": "xfce4-panel",
             "lxqt": "lxqt-panel"}
 
 
-def giudica(desktop, shell_passwd, amb_shell, figlio_terminale):
-    """(outcome, reason).  `amb_shell` None = variable ABSENT; `figlio_terminale`
+def judge(desktop, shell_passwd, env_shell, child_terminal):
+    """(outcome, reason).  `env_shell` None = variable ABSENT; `child_terminal`
     None = not looked at (desktop other than LXQt)."""
     if desktop == "gnome":
-        if amb_shell == "":
+        if env_shell == "":
             return S.PASS, "GNOME: SHELL empty, as the cure of the gnome-session trap wants"
-        return S.FAIL, "GNOME: SHELL=%r, expected EMPTY (gnome-session trap)" % (amb_shell,)
-    if amb_shell != shell_passwd:
-        return S.FAIL, "the session's SHELL %r, passwd says %r" % (amb_shell, shell_passwd)
-    if figlio_terminale is not None and figlio_terminale != os.path.basename(shell_passwd):
-        return S.FAIL, "qterminal opened %r, passwd says %r" % (figlio_terminale, shell_passwd)
-    return S.PASS, "SHELL=%s%s" % (shell_passwd, "" if figlio_terminale is None
-                                   else ", qterminal opens %s" % figlio_terminale)
+        return S.FAIL, "GNOME: SHELL=%r, expected EMPTY (gnome-session trap)" % (env_shell,)
+    if env_shell != shell_passwd:
+        return S.FAIL, "the session's SHELL %r, passwd says %r" % (env_shell, shell_passwd)
+    if child_terminal is not None and child_terminal != os.path.basename(shell_passwd):
+        return S.FAIL, "qterminal opened %r, passwd says %r" % (child_terminal, shell_passwd)
+    return S.PASS, "SHELL=%s%s" % (shell_passwd, "" if child_terminal is None
+                                   else ", qterminal opens %s" % child_terminal)
 
 
-def certifica():
-    casi = [
+def certify():
+    cases = [
         (("lxqt", "/bin/bash", "/bin/bash", "bash"), S.PASS),
         (("lxqt", "/bin/bash", None, "sh"), S.FAIL),
         (("lxqt", "/bin/bash", "/bin/bash", "dash"), S.FAIL),
@@ -58,71 +58,71 @@ def certifica():
         (("gnome", "/bin/bash", "/bin/bash", None), S.FAIL),
     ]
     ko = 0
-    for a, atteso in casi:
-        e, r = giudica(*a)
-        ok = e == atteso
+    for a, expected in cases:
+        e, r = judge(*a)
+        ok = e == expected
         ko += not ok
         print("  %s %s → %s (%s)" % ("✅" if ok else "⛔", a, e, r))
-    print("CERTIFICA %s — %d of %d" % ("PASS" if not ko else "FAIL", len(casi) - ko, len(casi)))
+    print("CERTIFICA %s — %d of %d" % ("PASS" if not ko else "FAIL", len(cases) - ko, len(cases)))
     return 1 if ko else 0
 
 
-def corpo(o, E):
-    with S.Sessione(o, "032", E) as s:
-        ok, perche = s.entra()
+def body(o, E):
+    with S.Session(o, "032", E) as s:
+        ok, why = s.enter()
         if not ok:
-            raise S.Bloccata("the session was not born: %s" % perche)
-        c, t = s.sc.dentro("getent passwd %s | cut -d: -f7" % s.chi, 30)
+            raise S.Blocked("the session was not born: %s" % why)
+        c, t = s.sc.inside("getent passwd %s | cut -d: -f7" % s.chi, 30)
         shell = t.strip()
         if c != 0 or not shell:
-            raise S.Bloccata("the tenant's passwd line cannot be read: %s" % t[-200:])
-        processo = PANNELLO[o.scatola]
-        amb = {}
+            raise S.Blocked("the tenant's passwd line cannot be read: %s" % t[-200:])
+        process = PANEL[o.box]
+        env = {}
         for _ in range(30):                     # the panel is born a few seconds later
-            amb = G1B.environment_of(s, processo)
-            if amb:
+            env = G1B.environment_of(s, process)
+            if env:
                 break
             time.sleep(1)
-        if not amb:
-            raise S.Bloccata("no «%s» process of the tenant to read" % processo)
-        amb_shell = amb.get("SHELL")
-        figlio = None
-        if o.scatola == "lxqt":
+        if not env:
+            raise S.Blocked("no «%s» process of the tenant to read" % process)
+        env_shell = env.get("SHELL")
+        child = None
+        if o.box == "lxqt":
             # ⛔ as from the MENU: qterminal with the panel's environment (the process from which
-            #    the user launches it), not with that of `nella_sessione` — which is the bench's
+            #    the user launches it), not with that of `in_session` — which is the bench's
             #    and would have measured the bench (the first version of this test did so).
-            s.sc.dentro("p=$(pgrep -u %(c)s -x lxqt-panel | head -1); [ -n \"$p\" ] || exit 4; "
+            s.sc.inside("p=$(pgrep -u %(c)s -x lxqt-panel | head -1); [ -n \"$p\" ] || exit 4; "
                         "setsid runuser -u %(c)s -- xargs -0 -a /proc/$p/environ "
                         "sh -c 'exec env -i \"$@\" qterminal' sh </dev/null >/dev/null 2>&1 &"
                         % {"c": s.chi}, 30)
             for _ in range(20):
                 time.sleep(1)
-                c, t = s.sc.dentro("p=$(pgrep -u %s -x qterminal | head -1); [ -n \"$p\" ] || exit 4; "
+                c, t = s.sc.inside("p=$(pgrep -u %s -x qterminal | head -1); [ -n \"$p\" ] || exit 4; "
                                    "for k in $(pgrep -P $p); do ps -o comm= -p $k; done" % s.chi, 30)
-                nomi = [x.strip() for x in t.splitlines() if x.strip()]
-                if c == 0 and nomi:
-                    figlio = nomi[0]
+                names = [x.strip() for x in t.splitlines() if x.strip()]
+                if c == 0 and names:
+                    child = names[0]
                     break
-            s.foto("qterminal")
-            s.sc.dentro("pkill -u %s -x qterminal" % s.chi, 30)
-            if figlio is None:
-                raise S.Bloccata("qterminal did not open any child process in 20 s")
-        esito, ragione = giudica(o.scatola, shell, amb_shell, figlio)
-        E.metti("F-032", esito, ragione if esito != S.PASS else "",
-                atteso="the session's SHELL = passwd (%s) outside GNOME, empty on GNOME; "
+            s.photo("qterminal")
+            s.sc.inside("pkill -u %s -x qterminal" % s.chi, 30)
+            if child is None:
+                raise S.Blocked("qterminal did not open any child process in 20 s")
+        outcome, rationale = judge(o.box, shell, env_shell, child)
+        E.put("F-032", outcome, rationale if outcome != S.PASS else "",
+                expected="the session's SHELL = passwd (%s) outside GNOME, empty on GNOME; "
                        "on LXQt qterminal opens %s" % (shell, os.path.basename(shell)),
-                osservato=ragione, evidenze=[s.save_console()])
-        if o.guasto:
+                observed=rationale, evidence=[s.save_console()])
+        if o.fault:
             # the fault: the judge with the wrong expectation — /bin/sh outside GNOME, and on
             # GNOME another desktop's judge (which wants the shell, not the empty one)
-            if o.scatola == "gnome":
-                eg, rg = giudica("xfce", shell, amb_shell, figlio)
+            if o.box == "gnome":
+                eg, rg = judge("xfce", shell, env_shell, child)
             else:
-                eg, rg = giudica(o.scatola, "/bin/sh", amb_shell, figlio)
-            E.guasto("F-032", eg == S.FAIL,
+                eg, rg = judge(o.box, "/bin/sh", env_shell, child)
+            E.fault("F-032", eg == S.FAIL,
                      "with the wrong judge: %s — %s" % (eg, rg),
-                     atteso="red", osservato=eg)
+                     expected="red", observed=eg)
 
 
 if __name__ == "__main__":
-    sys.exit(S.esegui(__doc__, FUNZIONI, corpo, certifica))
+    sys.exit(S.run(__doc__, FUNCTIONS, body, certify))

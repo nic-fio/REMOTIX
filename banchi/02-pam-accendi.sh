@@ -4,10 +4,10 @@
 # TARGET: a copy of the product on port 7531, with ban, socket,
 # certificates, log and pid file all of its own.
 #
-#   bash /srv/src/02-pam-accendi.sh copia     remakes the copy and rebuilds it
-#   bash /srv/src/02-pam-accendi.sh accendi
-#   bash /srv/src/02-pam-accendi.sh spegni
-#   bash /srv/src/02-pam-accendi.sh registro  prints the target's log
+#   bash /srv/src/02-pam-accendi.sh copy     remakes the copy and rebuilds it
+#   bash /srv/src/02-pam-accendi.sh start
+#   bash /srv/src/02-pam-accendi.sh stop
+#   bash /srv/src/02-pam-accendi.sh log  prints the target's log
 #
 # ---------------------------------------------------------------------------
 # ⛔ WHY A TARGET OF MY OWN AND NOT THE HOUSE ONE
@@ -20,17 +20,17 @@
 # from the same address — whoever shares a ban file with another round locks
 # that one out for twelve hours too.
 #
-# ⭐ The perimeter sits in ONE variable (`PREFISSO`), as in `01-p5-accendi.sh`:
+# ⭐ The perimeter sits in ONE variable (`PREFIX`), as in `01-p5-accendi.sh`:
 #    so no piece of it can be forgotten.  It is the cure born on 12 Aug
 #    2026 when ban, socket, log, certificate and **pid file** were
 #    written out literally, and a second target would have deleted those of the
-#    first — including the `.pid`, that is `spegni` would have killed the wrong
+#    first — including the `.pid`, that is `stop` would have killed the wrong
 #    process.
 #
 # ---------------------------------------------------------------------------
 # ⛔ THE FAULT IS INJECTED INTO THE COPY, NEVER INTO THE HOUSE PRODUCT
 #
-# The certification of this bench wants the round `sano -> guasto -> risanato`,
+# The certification of this bench wants the round `healthy -> fault -> healed`,
 # and the fault is **the cure removed**: the asynchronous hook not connected, that is
 # exactly the state of the server before 12 Aug 2026.  ⛔ Injecting it into the
 # product of `/srv/src/remotix` would put it under the feet of anyone else
@@ -40,24 +40,24 @@
 #    are two different facts, and the measurement needs the second.
 set -uo pipefail
 
-SORG=${SORG:-/srv/src/02-pam-src}
+SRC=${SRC:-/srv/src/02-pam-src}
 D=${D:-/srv/src/02-pam-bersaglio}
-GEMELLO=${GEMELLO:-/srv/src/rcp}
+TWIN=${TWIN:-/srv/src/rcp}
 TMP=/srv/src/tmp
-PORTA=${PORTA:-7531}
-IND=${IND:-192.168.0.2}
-PREFISSO=${PREFISSO:-pam2-7531}
+PORT=${PORT:-7531}
+ADDR=${ADDR:-192.168.0.2}
+PREFIX=${PREFIX:-pam2-7531}
 
-CERT=$TMP/$PREFISSO-cert
-BAN=$TMP/$PREFISSO-ban
-SOCK=$TMP/$PREFISSO.sock
-LOG=$TMP/$PREFISSO.log
-PIDF=$TMP/$PREFISSO.pid
+CERT=$TMP/$PREFIX-cert
+BAN=$TMP/$PREFIX-ban
+SOCK=$TMP/$PREFIX.sock
+LOG=$TMP/$PREFIX.log
+PIDF=$TMP/$PREFIX.pid
 
 mkdir -p "$TMP"
 
-case "${1:-accendi}" in
-spegni)
+case "${1:-start}" in
+stop)
 	if [ -f "$PIDF" ]; then
 		pid=$(cat "$PIDF")
 		# ⛔ By PID and only its own: `pkill -f remotix` would take away
@@ -73,11 +73,11 @@ spegni)
 	fi
 	rm -f "$SOCK"
 	exit 0 ;;
-registro)
+log)
 	[ -f "$LOG" ] || { echo "NO  ⛔ $LOG is not there"; exit 2; }
 	cat "$LOG"
 	exit 0 ;;
-ammazza-aiutante)
+kill-helper)
 	# ⛔⭐ IT SITS IN A FILE, AND NOT INSIDE THREE LEVELS OF QUOTES — 12 Aug
 	#     2026, and the lesson was already written in `01-p5-accendi.sh`: «a file
 	#     has no levels of quotes».  ⚠ Written inside `ssh → enter.sh →
@@ -104,39 +104,39 @@ ammazza-aiutante)
 	# alive after SIGKILL» while it had been dead for a second, and the diagnosis pointed
 	# at the product.  ⭐ The real state is in the third field of /proc/<pid>/stat:
 	# `Z` is a zombie, that is dead.
-	vivo() # $1 = pid.  0 = really alive, 1 = dead (absent or zombie)
+	alive() # $1 = pid.  0 = really alive, 1 = dead (absent or zombie)
 	{
 		[ -r "/proc/$1/stat" ] || return 1
 		s=$(awk '{print $3}' "/proc/$1/stat" 2>/dev/null)
 		[ "$s" = Z ] && return 1
 		return 0
 	}
-	if ! vivo "$p"; then
+	if ! alive "$p"; then
 		echo "NO  ⛔ pid $p is not alive ALREADY NOW: the case that follows"
 		echo "    would measure a scene I did not prepare."
 		exit 2
 	fi
 	kill -9 "$p"
 	sleep 1
-	if vivo "$p"; then
+	if alive "$p"; then
 		echo "NO  ⛔ pid $p is still ALIVE after SIGKILL (state $(awk '{print $3}' "/proc/$p/stat"))"
 		exit 3
 	fi
 	echo "OK  helper $p killed with SIGKILL: it could not write anything,"
 	echo "    and no handler could answer in its place"
 	exit 0 ;;
-copia)
-	[ -d "$SORG" ] || { echo "NO  ⛔ $SORG is not there"; exit 2; }
+copy)
+	[ -d "$SRC" ] || { echo "NO  ⛔ $SRC is not there"; exit 2; }
 	# ⛔ The copy is remade from scratch: an old copy answers «I exist» just like
 	#    a current one (LEZIONI.md §1.9 point 8).
 	rm -rf "$D"
 	mkdir -p "$(dirname "$D")"
-	cp -a "$SORG" "$D"
+	cp -a "$SRC" "$D"
 	rm -f "$D"/*.o "$D/remotix"
-	printf -- '--  copy: %s → %s\n' "$SORG" "$D"
-	GEMELLO="$GEMELLO" bash "$D/costruisci.sh" || exit 3
+	printf -- '--  copy: %s → %s\n' "$SRC" "$D"
+	TWIN="$TWIN" bash "$D/costruisci.sh" || exit 3
 	exit 0 ;;
-guasto)
+fault)
 	# ⛔⭐ THE FAULT IS THE CURE REMOVED, AND NOT AN INVENTED DEFECT — 12 Aug
 	#     2026.  It is the best form an injected fault can have: the
 	#     state of the server BEFORE §1.10, that is a defect that really
@@ -168,7 +168,7 @@ open(p, "w").write(t.replace(appiglio, guasto, 1))
 print("OK  fault injected: the asynchronous hook is no longer connected")
 FINE
 	[ $? -eq 0 ] || exit 3
-	GEMELLO="$GEMELLO" bash "$D/costruisci.sh" >/dev/null 2>&1 \
+	TWIN="$TWIN" bash "$D/costruisci.sh" >/dev/null 2>&1 \
 		|| { echo "NO  ⛔ the rebuild with the fault failed"; exit 3; }
 	# ⛔ And it is CHECKED that the fault is in the binary, not only in the source:
 	#    «I wrote it» and «it is inside what runs» are two different facts, and
@@ -181,14 +181,14 @@ FINE
 		exit 3
 	fi
 	exit 0 ;;
-accendi) TIENI_BAN=0 ;;
-riaccendi)
+start) KEEP_BAN=0 ;;
+restart)
 	# ⛔⭐ AND THIS STEP EXISTS BECAUSE OF A RED THE BENCH HAD GIVEN ITSELF
 	#     — 12 Aug 2026, and the first suspect was the bench (`REVIEWER.md` §1).
 	#
-	# `accendi` deletes the ban file, and rightly so: a round must start from
+	# `start` deletes the ban file, and rightly so: a round must start from
 	# a KNOWN state, and a ban inherited from the previous round would make it measure
-	# `TROPPI_TENTATIVI` where PAM was meant to be measured.  ⛔ But the case
+	# `TOO_MANY_ATTEMPTS` where PAM was meant to be measured.  ⛔ But the case
 	# «the ban survives the restart» (invariant **I7**) is proved by SWITCHING OFF AND
 	# ON AGAIN, and with that `rm` it always said no — **full red on a
 	# product that does keep the ban**.
@@ -196,45 +196,45 @@ riaccendi)
 	# ⚠ It is the form of `LEZIONI.md` §1.9: the bench was measuring its own leg and
 	#   the diagnosis pointed at the server.  ⭐ Now the two steps are two, and the
 	#   name says which state is being asked for.
-	TIENI_BAN=1 ;;
-*) echo "usage: $0 [copia|guasto|accendi|riaccendi|spegni|registro|ammazza-aiutante]"; exit 2 ;;
+	KEEP_BAN=1 ;;
+*) echo "usage: $0 [copy|fault|start|restart|stop|log|kill-helper]"; exit 2 ;;
 esac
 
 command -v ss >/dev/null || { echo "NO  ⛔ «ss» is not there: I did not look at the port, and I do not call it free"; exit 2; }
-n=$(ss -tuln 2>/dev/null | grep -c ":$PORTA\b")
+n=$(ss -tuln 2>/dev/null | grep -c ":$PORT\b")
 if [ "$n" -ne 0 ]; then
-	echo "NO  ⛔ port $PORTA is already taken ($n lines): it is not mine, I do not touch it"
-	ss -tuln | grep ":$PORTA\b"
+	echo "NO  ⛔ port $PORT is already taken ($n lines): it is not mine, I do not touch it"
+	ss -tuln | grep ":$PORT\b"
 	exit 2
 fi
-echo "OK  port $PORTA free (ss looked and printed $n lines about it)"
+echo "OK  port $PORT free (ss looked and printed $n lines about it)"
 
-[ -x "$D/remotix" ] || { echo "NO  ⛔ $D/remotix is not there or not executable — the «copia» step is missing"; exit 2; }
+[ -x "$D/remotix" ] || { echo "NO  ⛔ $D/remotix is not there or not executable — the «copy» step is missing"; exit 2; }
 [ -f "$D/pagina.html" ] || { echo "NO  ⛔ $D/pagina.html is not there: the server would serve nothing"; exit 2; }
 echo "--  binary   : $(sha256sum "$D/remotix" | cut -c1-16)…  $(stat -c '%y' "$D/remotix")"
 
 # ⛔ AND BEFORE DELETING ANYTHING, IT CHECKS WHETHER IT BELONGS TO SOMEONE ELSE ALIVE.
 if [ -f "$PIDF" ] && [ -d "/proc/$(cat "$PIDF" 2>/dev/null)" ]; then
 	echo "NO  ⛔ «$PIDF» says pid $(cat "$PIDF"), and it is ALIVE: another target"
-	echo "    with this same prefix («$PREFISSO») is already on."
+	echo "    with this same prefix («$PREFIX») is already on."
 	exit 2
 fi
-if [ "${TIENI_BAN:-0}" = 1 ]; then
+if [ "${KEEP_BAN:-0}" = 1 ]; then
 	rm -f "$LOG" "$PIDF" "$SOCK"
-	echo "--  ⚠ the ban file is NOT deleted: it is the «riaccendi» step, and"
+	echo "--  ⚠ the ban file is NOT deleted: it is the «restart» step, and"
 	echo "    that file IS the thing to prove (I7, §4.4-bis)"
 	[ -f "$BAN" ] && echo "--  bans before the restart: $(wc -l < "$BAN") lines in $BAN" \
 	              || echo "--  ⛔ $BAN IS NOT THERE: it is not «zero bans», it is «there was nothing to keep»"
 else
-	rm -f "$LOG" "$PIDF" "$SOCK" "$BAN" "$BAN.nuovo"
+	rm -f "$LOG" "$PIDF" "$SOCK" "$BAN" "$BAN.new"
 fi
 mkdir -p "$CERT"
 # ⭐ It is started FROM INSIDE its folder: the product looks for `pagina.html`
 #    next to itself.
 cd "$D" || exit 3
-nohup ./remotix --indirizzo 0.0.0.0 --nome "$IND" --porta "$PORTA" \
-      --certificati "$CERT" \
-      --ban-file "$BAN" --comando-socket "$SOCK" --parlantina \
+nohup ./remotix --address 0.0.0.0 --name "$ADDR" --port "$PORT" \
+      --certificates "$CERT" \
+      --ban-file "$BAN" --command-socket "$SOCK" --verbose \
       > "$LOG" 2>&1 &
 pid=$!
 echo "$pid" > "$PIDF"
@@ -242,7 +242,7 @@ echo "$pid" > "$PIDF"
 g=0
 while [ "$g" -lt 60 ]; do
 	[ -d "/proc/$pid" ] || break
-	[ "$(ss -tuln 2>/dev/null | grep -c ":$PORTA\b")" -ge 2 ] && break
+	[ "$(ss -tuln 2>/dev/null | grep -c ":$PORT\b")" -ge 2 ] && break
 	sleep 0.5; g=$((g+1))
 done
 if [ ! -d "/proc/$pid" ]; then
@@ -250,9 +250,9 @@ if [ ! -d "/proc/$pid" ]; then
 	sed 's/^/        /' "$LOG"
 	exit 3
 fi
-righe=$(ss -tuln 2>/dev/null | grep -c ":$PORTA\b")
-if [ "$righe" -lt 2 ]; then
-	echo "NO  ⛔ process $pid is alive but on :$PORTA there are $righe listeners."
+lines=$(ss -tuln 2>/dev/null | grep -c ":$PORT\b")
+if [ "$lines" -lt 2 ]; then
+	echo "NO  ⛔ process $pid is alive but on :$PORT there are $lines listeners."
 	echo "    §2.4 wants TWO — UDP for RCP, TCP for the page."
 	sed 's/^/        /' "$LOG"
 	exit 3
@@ -266,5 +266,5 @@ if grep -q "DOES NOT EXIST" "$LOG"; then
 	echo "    password would be refused, and this bench's scene does not exist."
 	exit 3
 fi
-echo "OK  on, pid $pid, $righe listeners on :$PORTA after $((g/2)) s of waiting"
+echo "OK  on, pid $pid, $lines listeners on :$PORT after $((g/2)) s of waiting"
 echo "--  log: $LOG · ban: $BAN · socket: $SOCK"

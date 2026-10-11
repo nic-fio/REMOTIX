@@ -8,17 +8,17 @@
 # ⚠ The path is NOT fixed, and it changed on the night of 10 August 2026 (finding
 #   R12.8): the line above said `/srv/src/remotix/costruisci.sh`, and
 #   `/srv/src` is the BENCHES' folder — no script in the repo copies anything
-#   into `/srv/src/remotix`.  Everything it needs it derives from `$QUI`, that is from
+#   into `/srv/src/remotix`.  Everything it needs it derives from `$HERE`, that is from
 #   where this file is: put the `src/` folder wherever you like and launch it.
 #
 # ⛔ AND THE ENVIRONMENT VARIABLES IT ACCEPTS, because a guessed path is
 #    a path that one day changes:
 #
-#      PREFISSO   where ngtcp2/nghttp3 are installed       (def. /srv/src/b2/prefisso)
+#      DEPS_PREFIX   where ngtcp2/nghttp3 are installed       (def. /srv/src/b2/prefix)
 #      NGTCP2     the ngtcp2 source tree                   (def. /srv/src/b2/ngtcp2)
 #      NGHTTP3    the nghttp3 source tree                  (def. /srv/src/b2/nghttp3)
-#      GEMELLO    the twin copy of rcp.c/rcp.h/autenticazione.c to compare
-#                 (def. <QUI>/../banchi/rcp, and `nessuno` to DECLARE not
+#      TWIN    the twin copy of rcp.c/rcp.h/autenticazione.c to compare
+#                 (def. <HERE>/../banchi/rcp, and `none` to DECLARE not
 #                  comparing — see the Makefile, finding R12.3)
 #
 # -----------------------------------------------------------------------------
@@ -37,8 +37,8 @@
 # -----------------------------------------------------------------------------
 set -uo pipefail
 
-QUI=$(cd -- "$(dirname -- "$0")" && pwd)
-PREFISSO=${PREFISSO:-/srv/src/b2/prefisso}
+HERE=$(cd -- "$(dirname -- "$0")" && pwd)
+DEPS_PREFIX=${DEPS_PREFIX:-/srv/src/b2/prefisso}
 NGTCP2=${NGTCP2:-/srv/src/b2/ngtcp2}
 NGHTTP3=${NGHTTP3:-/srv/src/b2/nghttp3}
 
@@ -58,7 +58,7 @@ search_ngtcp2()
 {
 	local i h
 	for i in "$NGTCP2/build/lib/includes" "$NGTCP2/lib/includes" \
-	         "$PREFISSO/include"; do
+	         "$DEPS_PREFIX/include"; do
 		[ -f "$i/ngtcp2/ngtcp2.h" ] || [ -f "$i/ngtcp2/version.h" ] && \
 			INC="$INC -I$i"
 	done
@@ -66,7 +66,7 @@ search_ngtcp2()
 	h="$NGTCP2/crypto/includes"
 	[ -f "$h/ngtcp2/ngtcp2_crypto_ossl.h" ] && INC="$INC -I$h"
 
-	for i in "$NGTCP2/build/lib" "$NGTCP2/build/crypto/ossl" "$PREFISSO/lib" "$PREFISSO/lib64"; do
+	for i in "$NGTCP2/build/lib" "$NGTCP2/build/crypto/ossl" "$DEPS_PREFIX/lib" "$DEPS_PREFIX/lib64"; do
 		[ -d "$i" ] && LIB="$LIB -L$i -Wl,-rpath,$i"
 	done
 }
@@ -75,11 +75,11 @@ search_nghttp3()
 {
 	local i
 	for i in "$NGHTTP3/lib/includes" "$NGHTTP3/build/lib/includes" \
-	         "$PREFISSO/include"; do
+	         "$DEPS_PREFIX/include"; do
 		[ -f "$i/nghttp3/nghttp3.h" ] || [ -f "$i/nghttp3/version.h" ] && \
 			INC="$INC -I$i"
 	done
-	for i in "$NGHTTP3/build/lib" "$PREFISSO/lib" "$PREFISSO/lib64"; do
+	for i in "$NGHTTP3/build/lib" "$DEPS_PREFIX/lib" "$DEPS_PREFIX/lib64"; do
 		[ -d "$i" ] && LIB="$LIB -L$i -Wl,-rpath,$i"
 	done
 }
@@ -88,7 +88,7 @@ search_ngtcp2
 search_nghttp3
 
 printf '    --  I looked in:\n'
-printf '        %s\n' "$NGTCP2" "$NGHTTP3" "$PREFISSO"
+printf '        %s\n' "$NGTCP2" "$NGHTTP3" "$DEPS_PREFIX"
 printf '    --  headers:      %s\n' "${INC:-(none)}"
 printf '    --  libraries:    %s\n' "${LIB:-(none)}"
 
@@ -107,8 +107,8 @@ esac
 
 # -----------------------------------------------------------------------------
 log "The old binary is thrown away BEFORE building"
-rm -f "$QUI/remotix" "$QUI"/*.o
-if [ -e "$QUI/remotix" ]; then
+rm -f "$HERE/remotix" "$HERE"/*.o
+if [ -e "$HERE/remotix" ]; then
 	ko "the old binary cannot be deleted: it could not be told apart from the new one"
 	exit 2
 fi
@@ -120,48 +120,48 @@ ok "old one gone"
 #
 # `rcp.c`, `rcp.h` and `autenticazione.c` live in two folders of this repo,
 # because they are the same module mounted on two hosts.  The comparison is done by the
-# `impronte` target of the Makefile, and the Makefile STOPS the build if they
+# `fingerprints` target of the Makefile, and the Makefile STOPS the build if they
 # diverge.  ⚠ Here we only choose WHERE to look, and DECLARE if we could
 # not look: "I found no differences" and "I did not look" are two
 # different facts.
 log "The twin copy of rcp.c"
-if [ -z "${GEMELLO:-}" ]; then
-	for c in "$QUI/../banchi/rcp" "$QUI/rcp-gemello" /srv/src/rcp; do
-		if [ -f "$c/rcp.c" ]; then GEMELLO=$c; break; fi
+if [ -z "${TWIN:-}" ]; then
+	for c in "$HERE/../banchi/rcp" "$HERE/rcp-gemello" /srv/src/rcp; do
+		if [ -f "$c/rcp.c" ]; then TWIN=$c; break; fi
 	done
 fi
-if [ -z "${GEMELLO:-}" ]; then
+if [ -z "${TWIN:-}" ]; then
 	ko "⛔ no twin copy found: I looked in"
-	printf '        %s\n' "$QUI/../banchi/rcp" "$QUI/rcp-gemello" /srv/src/rcp
+	printf '        %s\n' "$HERE/../banchi/rcp" "$HERE/rcp-gemello" /srv/src/rcp
 	ko "   It is NOT «the copies match»: it is «I could not look».  We"
 	ko "   build anyway, and this line is the declaration (R12.3)."
-	GEMELLO=nessuno
+	TWIN=none
 else
-	ok "comparing against «$GEMELLO»"
+	ok "comparing against «$TWIN»"
 fi
 
 # -----------------------------------------------------------------------------
 log "make"
 # ⚠ make's output goes to the terminal as it comes: no pipes, or the status that is
 #   read would be that of the last command of the pipe (`LEZIONI.md` §1.9).
-make -C "$QUI" \
-	GEMELLO="$GEMELLO" \
+make -C "$HERE" \
+	TWIN="$TWIN" \
 	CFLAGS="-O2 -g -std=gnu11 -Wall -Wextra -Wno-unused-parameter $INC" \
 	LDFLAGS="$LIB" \
 	tutto
-ESITO=$?
+OUTCOME=$?
 
-if [ "$ESITO" -ne 0 ]; then
-	ko "⛔ the build has FAILED (exit $ESITO).  The binary was NOT"
+if [ "$OUTCOME" -ne 0 ]; then
+	ko "⛔ the build has FAILED (exit $OUTCOME).  The binary was NOT"
 	ko "   built, and whatever may be on disk is not from now."
-	exit "$ESITO"
+	exit "$OUTCOME"
 fi
 ok "make exited 0"
 
 # -----------------------------------------------------------------------------
 # ⛔ And now the right question: is what should be in it inside?
 log "The mark inside the binary"
-if [ ! -x "$QUI/remotix" ]; then
+if [ ! -x "$HERE/remotix" ]; then
 	ko "make exited 0 and the binary is not there: something does not add up"
 	exit 3
 fi
@@ -171,44 +171,44 @@ fi
 #   marks absent because the TOOL was not there.  It is `LEZIONI.md` §1.9
 #   second rule: it was the positive control that said so, not the five red
 #   lines.
-cerca() # $1 = file, $2 = text
+search() # $1 = file, $2 = text
 {
 	grep -a -F -q -e "$2" -- "$1"
 }
 
-MANCA=0
+MISSING=0
 # ⚠ The last three marks are from the night of 10 August 2026, and each answers
 #   a question a successful `make` does NOT answer:
-#     NON-BANNATO         the unblock command on the socket really is there (R12.1)
+#     NOT-BANNED         the unblock command on the socket really is there (R12.1)
 #     transport PINGs ON  the cure of §4.6 is inside this binary (B-2)
 #     pam.d/remotix       the PAM service is that of SPECIFICHE.md §4.2 (B-11)
-for marca in "REMOTIX — phase 1, the bare wire" "Cross-Origin-Embedder-Policy" \
-             "Cross-Origin-Opener-Policy" "/rcp/1" "/impronta" \
-             "NON-BANNATO" "transport PINGs ON" "/etc/pam.d/remotix"; do
-	if cerca "$QUI/remotix" "$marca"; then
-		ok "«$marca» is in the binary"
+for mark in "REMOTIX — phase 1, the bare wire" "Cross-Origin-Embedder-Policy" \
+             "Cross-Origin-Opener-Policy" "/rcp/1" "/fingerprint" \
+             "NOT-BANNED" "transport PINGs ON" "/etc/pam.d/remotix"; do
+	if search "$HERE/remotix" "$mark"; then
+		ok "«$mark» is in the binary"
 	else
-		ko "«$marca» is NOT in the binary"
-		MANCA=1
+		ko "«$mark» is NOT in the binary"
+		MISSING=1
 	fi
 done
 
 # ⛔ And the markers the server replaces in the page are in the PAGE, not
-#    in the binary: it is the check `pagina_apri()` redoes at startup, and without
-#    which the server would forever serve a page without fingerprint — or a
+#    in the binary: it is the check `page_open()` redoes at startup, and without
+#    which the server would forever needs a page without fingerprint — or a
 #    page that does not say whether the address is banned (R12.2).
-for segno in "__IMPRONTA__" "__AVVISO__" "__BANNATO__" "__RESTANO_MS__"; do
-	if cerca "$QUI/pagina.html" "$segno"; then
-		ok "«$segno» is in pagina.html"
+for sign in "__FINGERPRINT__" "__WARNING__" "__BANNED__" "__REMAINING_MS__"; do
+	if search "$HERE/pagina.html" "$sign"; then
+		ok "«$sign» is in pagina.html"
 	else
-		ko "«$segno» is NOT in pagina.html: the server will refuse to start"
-		MANCA=1
+		ko "«$sign» is NOT in pagina.html: the server will refuse to start"
+		MISSING=1
 	fi
 done
 
 # The positive control of the tool: can it find something that is certainly there?
 # Without it, "I did not find it" and "I cannot search" have the same face.
-if cerca "$QUI/remotix" "GCC:" || cerca "$QUI/remotix" "main.c"; then
+if search "$HERE/remotix" "GCC:" || search "$HERE/remotix" "main.c"; then
 	ok "positive control: the tool can find what is certainly there"
 else
 	ko "⛔ the tool does NOT even find the compiler's mark: the NOs"
@@ -216,7 +216,7 @@ else
 	exit 3
 fi
 
-[ "$MANCA" -eq 0 ] || exit 3
+[ "$MISSING" -eq 0 ] || exit 3
 
 # -----------------------------------------------------------------------------
 # ⛔⭐ THE PAM SERVICE — `SPECIFICHE.md` §4.2, finding B-11.
@@ -231,30 +231,30 @@ fi
 #   have modified it, and rewriting it at every build would be a
 #   configuration that loses itself.
 log "The PAM service"
-# ⭐ PHASE 17: the PAM file excludes whoever is in /etc/remotix/utenti-negati, with
+# ⭐ PHASE 17: the PAM file excludes whoever is in /etc/remotix/denied-users, with
 #    onerr=fail ⇒ without the file nobody gets in.  The file first, and it is not
 #    rewritten if it is there.
-if [ -f /etc/remotix/utenti-negati ]; then
-	ok "/etc/remotix/utenti-negati is already there (not touching it)"
-elif install -D -m 644 /dev/null /etc/remotix/utenti-negati 2>/dev/null \
-     && echo root > /etc/remotix/utenti-negati; then
-	ok "written /etc/remotix/utenti-negati: root"
+if [ -f /etc/remotix/denied-users ]; then
+	ok "/etc/remotix/denied-users is already there (not touching it)"
+elif install -D -m 644 /dev/null /etc/remotix/denied-users 2>/dev/null \
+     && echo root > /etc/remotix/denied-users; then
+	ok "written /etc/remotix/denied-users: root"
 else
-	ko "⛔ /etc/remotix/utenti-negati is NOT there and I could not write it (root needed):"
-	ko "   with the new PAM NOBODY will get in.  By hand:  echo root > /etc/remotix/utenti-negati"
+	ko "⛔ /etc/remotix/denied-users is NOT there and I could not write it (root needed):"
+	ko "   with the new PAM NOBODY will get in.  By hand:  echo root > /etc/remotix/denied-users"
 fi
 if [ -f /etc/pam.d/remotix ]; then
 	ok "/etc/pam.d/remotix is already there (not touching it)"
-elif cp "$QUI/remotix.pam" /etc/pam.d/remotix 2>/dev/null; then
-	ok "installed /etc/pam.d/remotix from $QUI/remotix.pam"
+elif cp "$HERE/remotix.pam" /etc/pam.d/remotix 2>/dev/null; then
+	ok "installed /etc/pam.d/remotix from $HERE/remotix.pam"
 else
 	ko "⛔ /etc/pam.d/remotix is NOT there and I could not install it (root needed)."
 	ko "   The server will start and will REFUSE every password, saying it is"
-	ko "   wrong.  Copy it by hand:  cp $QUI/remotix.pam /etc/pam.d/remotix"
+	ko "   wrong.  Copy it by hand:  cp $HERE/remotix.pam /etc/pam.d/remotix"
 fi
 
 log "The libraries it really depends on"
-ldd "$QUI/remotix" | grep -E 'ngtcp2|nghttp3|ssl|crypto|pam' || true
+ldd "$HERE/remotix" | grep -E 'ngtcp2|nghttp3|ssl|crypto|pam' || true
 
 printf '\n'
-ok "⭐ built: $QUI/remotix"
+ok "⭐ built: $HERE/remotix"

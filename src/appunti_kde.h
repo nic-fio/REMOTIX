@@ -1,7 +1,7 @@
 /*
  * appunti_kde — the clipboard on KDE Plasma, behind the same door as
  * `appunti.h`.  Clipboard users do not call it: they call `appunti_*()`, and
- * `appunti.c` passes here when the stage is KWin's (`appunti_apri_kde()`).
+ * `appunti.c` passes here when the stage is KWin's (`clipboard_open_kde()`).
  *
  * ⛔ CARRIED OVER FROM v1's `fondamenta/remotix-c/src/appunti_wlr.c` (796 lines),
  *    green on 8 August 2026 in both directions with «àèìòù» (`STUDI.md` §kde): the
@@ -10,28 +10,28 @@
  *    `.desktop` gate (`wayland_server.cpp:386`).
  * ⭐ The shape is that of `appunti.c` and NOT that of v1: TEXT ONLY
  *    (`DECISIONI.md` §5-ter.1), read here and handed over already read, the same
- *    ceiling (`APPUNTI_TETTO`), the same row of types, the same memory
+ *    ceiling (`CLIPBOARD_CAP`), the same row of types, the same memory
  *    of the last text.
  */
-#ifndef REMOTIX_APPUNTI_KDE_H
-#define REMOTIX_APPUNTI_KDE_H
+#ifndef REMOTIX_CLIPBOARD_KDE_H
+#define REMOTIX_CLIPBOARD_KDE_H
 
 #include "appunti.h"
 
-typedef struct AppuntiKde AppuntiKde;
+typedef struct ClipboardKde ClipboardKde;
 
-AppuntiKde *appunti_kde_apri(GError **sbaglio);
+ClipboardKde *clipboard_kde_open(GError **mistake);
 /* ⭐ PHASE 13 — the same protocol on labwc (XFCE): `zwlr_data_control_manager_v1`
  *    belongs to wlroots, and there we are in its home (`STUDI.md` §xfce §8).  Only
  *    the compositor's name in the log lines changes. */
-AppuntiKde *appunti_kde_apri_wlroots(GError **sbaglio);
-void clipboard_kde_close(AppuntiKde *appunti);
-void clipboard_kde_listen(AppuntiKde *appunti, ClipboardOnText on_text,
-                         ClipboardOnRequest on_request, void *dati);
-char *clipboard_kde_last_text(AppuntiKde *appunti, size_t *byte);
-void clipboard_kde_read_now(AppuntiKde *appunti);
-gboolean clipboard_kde_offer(AppuntiKde *appunti, GError **sbaglio);
-void clipboard_kde_reply(AppuntiKde *appunti, uint32_t serial, const char *testo,
+ClipboardKde *clipboard_kde_open_wlroots(GError **mistake);
+void clipboard_kde_close(ClipboardKde *clipboard);
+void clipboard_kde_listen(ClipboardKde *clipboard, ClipboardOnText on_text,
+                         ClipboardOnRequest on_request, void *data);
+char *clipboard_kde_last_text(ClipboardKde *clipboard, size_t *byte);
+void clipboard_kde_read_now(ClipboardKde *clipboard);
+gboolean clipboard_kde_offer(ClipboardKde *clipboard, GError **mistake);
+void clipboard_kde_reply(ClipboardKde *clipboard, uint32_t serial, const char *text,
                           size_t byte);
 
 #endif

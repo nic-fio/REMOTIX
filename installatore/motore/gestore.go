@@ -1,4 +1,4 @@
-package motore
+package engine
 
 import (
 	"errors"
@@ -16,10 +16,10 @@ import (
 // list (ambiente.go), never a shell.
 //
 // The set (§6.6.6, simplified on 10 Oct 2026, DECISIONI §10.36: «don't reinvent the wheel»):
-// Simula asks the manager what it would do — the exact list (name, version, architecture,
+// Simulate asks the manager what it would do — the exact list (name, version, architecture,
 // origin, and what happens: new, upgraded from…, already present), which the plan shows BEFORE the
-// question. Installa lets the manager work as always: it resolves, downloads from the repositories the
-// machine has, verifies the signatures. The engine has no cache and no sha256 of its own for the packages. Togli simulates
+// question. Install lets the manager work as always: it resolves, downloads from the repositories the
+// machine has, verifies the signatures. The engine has no cache and no sha256 of its own for the packages. Remove simulates
 // first and refuses if it would remove something not in the list (someone else's package that in the
 // meantime depends on it): the managers' autoremove would also remove earlier orphans, belonging to others.
 //
@@ -28,40 +28,40 @@ import (
 // Tried on the VMs: apt (Debian 13) and dnf (Alma 10). zypper and pacman are written in the same
 // shape but NOT yet tried on a real machine.
 
-// Artefatto: a line of the resolved set.
-type Artefatto struct {
+// Artifact: a line of the resolved set.
+type Artifact struct {
 	Nome    string `json:"name"`
 	Ver     string `json:"version"`
 	Arch    string `json:"arch,omitempty"`
 	Origine string `json:"origin"`           // "file" (from the single package) or the machine's repository
-	Esito   string `json:"result"`           // "new" · "upgraded" · "present"
-	Prima   string `json:"before,omitempty"` // the previous version, if upgraded
+	Outcome string `json:"result"`           // "new" · "upgraded" · "present"
+	Before  string `json:"before,omitempty"` // the previous version, if upgraded
 }
 
-// Gestore: the family's package manager.
-type Gestore interface {
+// Manager: the family's package manager.
+type Manager interface {
 	Nome() string
 	// Versioni: the installed version for every name ("" = not installed).
-	Vers(nomi []string) (map[string]string, error)
-	// Simula: what the manager would install, without touching anything. file = local packages (from the
-	// single package), nomi = packages from the machine's repositories.
-	Simula(file, nomi []string) ([]Artefatto, error)
-	// Installa: the manager installs, with the dependencies from the machine's repositories.
-	Installa(file, nomi []string) error
-	// SimulaTogli: what the manager would remove BEYOND the given names (whoever depends on them), without
+	Vers(names []string) (map[string]string, error)
+	// Simulate: what the manager would install, without touching anything. file = local packages (from the
+	// single package), names = packages from the machine's repositories.
+	Simulate(file, names []string) ([]Artifact, error)
+	// Install: the manager installs, with the dependencies from the machine's repositories.
+	Install(file, names []string) error
+	// SimulateRemove: what the manager would remove BEYOND the given names (whoever depends on them), without
 	// touching anything.
-	SimulaTogli(nomi []string, purge bool) ([]string, error)
-	// Togli the given names, and only those (purge: the configuration too): if it would remove others,
+	SimulateRemove(names []string, purge bool) ([]string, error)
+	// Remove the given names, and only those (purge: the configuration too): if it would remove others,
 	// RX-PACCHETTI-002 and nothing removed.
-	Togli(nomi []string, purge bool) error
+	Remove(names []string, purge bool) error
 	// Integro: the manager is not halfway through a transaction.
 	Intact() (bool, string, error)
-	// Ripara: the manager's own remedy after an interruption (§6.6.3).
-	Ripara() error
+	// Repair: the manager's own remedy after an interruption (§6.6.3).
+	Repair() error
 }
 
-// ScegliGestore: the family's one.
-func ScegliGestore(a *Ambiente, fam string) Gestore {
+// ChooseHandler: the family's one.
+func ChooseHandler(a *Environment, fam string) Manager {
 	switch fam {
 	case "debian":
 		return &aptManager{a}
@@ -75,13 +75,13 @@ func ScegliGestore(a *Ambiente, fam string) Gestore {
 	return nil
 }
 
-func esegui(a *Ambiente, tempo time.Duration, nome string, arg ...string) (string, error) {
-	out, c, err := a.Esegui(tempo, nome, arg...)
+func run(a *Environment, time_limit time.Duration, name string, arg ...string) (string, error) {
+	out, c, err := a.Run(time_limit, name, arg...)
 	if err != nil {
 		return out, err
 	}
 	if c != 0 {
-		return out, fmt.Errorf("%s %s: exit %d: %s", nome, strings.Join(arg, " "), c, lastLines(out, 6))
+		return out, fmt.Errorf("%s %s: exit %d: %s", name, strings.Join(arg, " "), c, lastLines(out, 6))
 	}
 	return out, nil
 }
@@ -98,21 +98,21 @@ const managerTimeout = 45 * time.Minute
 
 // ---------------------------------------------------------------- apt (Debian, Ubuntu)
 
-type aptManager struct{ a *Ambiente }
+type aptManager struct{ a *Environment }
 
 func (g *aptManager) Nome() string { return "apt" }
 
 var aptOptions = []string{"-o", "Dpkg::Options::=--force-confdef", "-o", "Dpkg::Options::=--force-confold", "-o", "APT::Get::Assume-Yes=true",
 	"-o", "DPkg::Lock::Timeout=" + strconv.Itoa(int(BusyCap.Seconds()))}
 
-func (g *aptManager) Vers(nomi []string) (map[string]string, error) {
-	pk := PackageArchive(g.a, "debian", nomi)
-	if !pk.letto {
+func (g *aptManager) Vers(names []string) (map[string]string, error) {
+	pk := PackageArchive(g.a, "debian", names)
+	if !pk.read {
 		return nil, errors.New("the dpkg database cannot be read")
 	}
 	r := map[string]string{}
-	for _, n := range nomi {
-		r[n] = pk.versioni[n]
+	for _, n := range names {
+		r[n] = pk.versions[n]
 	}
 	return r, nil
 }
@@ -120,46 +120,46 @@ func (g *aptManager) Vers(nomi []string) (map[string]string, error) {
 // «Inst name [old] (new repository [arch])»
 var aptInst = regexp.MustCompile(`^Inst (\S+)(?: \[(\S+)\])? \((\S+) (.*?) \[(\S+)\]\)`)
 
-func (g *aptManager) argomenti(file, nomi []string) []string {
-	return append(append([]string{}, file...), nomi...)
+func (g *aptManager) call_args(file, names []string) []string {
+	return append(append([]string{}, file...), names...)
 }
 
-func (g *aptManager) Simula(file, nomi []string) ([]Artefatto, error) {
+func (g *aptManager) Simulate(file, names []string) ([]Artifact, error) {
 	if err := waitPackageManager(g.a, "debian"); err != nil {
 		return nil, err
 	}
 	sim := func() (string, error) {
-		return esegui(g.a, managerTimeout, "apt-get", append(append([]string{"-s", "install"}, aptOptions...), g.argomenti(file, nomi)...)...)
+		return run(g.a, managerTimeout, "apt-get", append(append([]string{"-s", "install"}, aptOptions...), g.call_args(file, names)...)...)
 	}
 	out, err := sim()
 	if err != nil { // stale lists: they are refreshed (the repositories' signed metadata) and it is retried
-		if _, e2 := esegui(g.a, managerTimeout, "apt-get", "update"); e2 != nil {
+		if _, e2 := run(g.a, managerTimeout, "apt-get", "update"); e2 != nil {
 			return nil, err
 		}
 		if out, err = sim(); err != nil {
 			return nil, err
 		}
 	}
-	locali := map[string]bool{}
+	local := map[string]bool{}
 	for _, f := range file {
-		if n, v, e := g.intestazione(f); e == nil {
-			locali[n+" "+v] = true
+		if n, v, e := g.header(f); e == nil {
+			local[n+" "+v] = true
 		}
 	}
-	var r []Artefatto
-	for _, riga := range strings.Split(out, "\n") {
-		if strings.HasPrefix(riga, "Remv ") || strings.HasPrefix(riga, "Purg ") {
-			return nil, fmt.Errorf("the transaction would remove a package: %s", riga)
+	var r []Artifact
+	for _, line := range strings.Split(out, "\n") {
+		if strings.HasPrefix(line, "Remv ") || strings.HasPrefix(line, "Purg ") {
+			return nil, fmt.Errorf("the transaction would remove a package: %s", line)
 		}
-		m := aptInst.FindStringSubmatch(riga)
+		m := aptInst.FindStringSubmatch(line)
 		if m == nil {
 			continue
 		}
-		a := Artefatto{Nome: m[1], Ver: m[3], Arch: m[5], Origine: m[4], Esito: "new"}
+		a := Artifact{Nome: m[1], Ver: m[3], Arch: m[5], Origine: m[4], Outcome: "new"}
 		if m[2] != "" {
-			a.Esito, a.Prima = "upgraded", m[2]
+			a.Outcome, a.Before = "upgraded", m[2]
 		}
-		if locali[a.Nome+" "+a.Ver] {
+		if local[a.Nome+" "+a.Ver] {
 			a.Origine = "file"
 		}
 		r = append(r, a)
@@ -169,8 +169,8 @@ func (g *aptManager) Simula(file, nomi []string) ([]Artefatto, error) {
 }
 
 // header of a local .deb (name, version), read with dpkg-deb.
-func (g *aptManager) intestazione(f string) (string, string, error) {
-	out, err := esegui(g.a, time.Minute, "dpkg-deb", "-W", "--showformat=${Package} ${Version}", f)
+func (g *aptManager) header(f string) (string, string, error) {
+	out, err := run(g.a, time.Minute, "dpkg-deb", "-W", "--showformat=${Package} ${Version}", f)
 	if err != nil {
 		return "", "", err
 	}
@@ -181,12 +181,12 @@ func (g *aptManager) intestazione(f string) (string, string, error) {
 	return c[0], c[1], nil
 }
 
-// Installa: apt installs the local files and downloads the dependencies from the machine's repositories.
-func (g *aptManager) Installa(file, nomi []string) error {
+// Install: apt installs the local files and downloads the dependencies from the machine's repositories.
+func (g *aptManager) Install(file, names []string) error {
 	if err := waitPackageManager(g.a, "debian"); err != nil {
 		return err
 	}
-	_, err := esegui(g.a, managerTimeout, "apt-get", append(append([]string{"install"}, aptOptions...), g.argomenti(file, nomi)...)...)
+	_, err := run(g.a, managerTimeout, "apt-get", append(append([]string{"install"}, aptOptions...), g.call_args(file, names)...)...)
 	return err
 }
 
@@ -199,65 +199,65 @@ func aptVerb(purge bool) string {
 	return "remove"
 }
 
-func (g *aptManager) SimulaTogli(nomi []string, purge bool) ([]string, error) {
+func (g *aptManager) SimulateRemove(names []string, purge bool) ([]string, error) {
 	if err := waitPackageManager(g.a, "debian"); err != nil {
 		return nil, err
 	}
-	out, err := esegui(g.a, managerTimeout, "apt-get", append(append([]string{"-s", aptVerb(purge)}, aptOptions...), nomi...)...)
+	out, err := run(g.a, managerTimeout, "apt-get", append(append([]string{"-s", aptVerb(purge)}, aptOptions...), names...)...)
 	if err != nil {
 		return nil, err
 	}
-	var altri []string
-	for _, riga := range strings.Split(out, "\n") {
-		if m := aptRemove.FindStringSubmatch(riga); m != nil {
-			altri = append(altri, m[1])
+	var others []string
+	for _, line := range strings.Split(out, "\n") {
+		if m := aptRemove.FindStringSubmatch(line); m != nil {
+			others = append(others, m[1])
 		}
 	}
-	return notIn(altri, nomi), nil
+	return notIn(others, names), nil
 }
 
-func (g *aptManager) Togli(nomi []string, purge bool) error {
-	if err := onlyThese(g, nomi, purge); err != nil {
+func (g *aptManager) Remove(names []string, purge bool) error {
+	if err := onlyThese(g, names, purge); err != nil {
 		return err
 	}
-	_, err := esegui(g.a, managerTimeout, "apt-get", append(append([]string{aptVerb(purge)}, aptOptions...), nomi...)...)
+	_, err := run(g.a, managerTimeout, "apt-get", append(append([]string{aptVerb(purge)}, aptOptions...), names...)...)
 	return err
 }
 
-// notIn: the names of «tutti» that are not in «nomi» (without repetitions). An rpm key is removed
+// notIn: the names of «all_items» that are not in «names» (without repetitions). An rpm key is removed
 // by version (gpg-pubkey-…), and dnf shows it by name.
-func notIn(tutti, nomi []string) []string {
-	nostri := map[string]bool{}
-	for _, n := range nomi {
-		nostri[n] = true
+func notIn(all_items, names []string) []string {
+	our := map[string]bool{}
+	for _, n := range names {
+		our[n] = true
 		if strings.HasPrefix(n, "gpg-pubkey-") {
-			nostri["gpg-pubkey"] = true
+			our["gpg-pubkey"] = true
 		}
 	}
 	var r []string
-	for _, n := range tutti {
-		if !nostri[n] {
-			nostri[n] = true
+	for _, n := range all_items {
+		if !our[n] {
+			our[n] = true
 			r = append(r, n)
 		}
 	}
 	return r
 }
 
-// onlyThese: the guard of Togli — the manager would remove only the given names.
-func onlyThese(g Gestore, nomi []string, purge bool) error {
-	altri, err := g.SimulaTogli(nomi, purge)
+// onlyThese: the guard of Remove — the manager would remove only the given names.
+func onlyThese(g Manager, names []string, purge bool) error {
+	others, err := g.SimulateRemove(names, purge)
 	if err != nil {
 		return err
 	}
-	if len(altri) > 0 {
-		return Errore("RX-PACCHETTI-002", strings.Join(altri, ", "))
+	if len(others) > 0 {
+		return Error("RX-PACCHETTI-002", strings.Join(others, ", "))
 	}
 	return nil
 }
 
 func (g *aptManager) Intact() (bool, string, error) {
-	out, c, err := g.a.Esegui(time.Minute, "dpkg", "--audit")
+	out, c, err := g.a.Run(time.Minute, "dpkg", "--audit")
 	if err != nil {
 		return false, "", err
 	}
@@ -267,17 +267,17 @@ func (g *aptManager) Intact() (bool, string, error) {
 	return true, "", nil
 }
 
-func (g *aptManager) Ripara() error {
+func (g *aptManager) Repair() error {
 	if err := waitPackageManager(g.a, "debian"); err != nil {
 		return err
 	}
-	_, err := esegui(g.a, managerTimeout, "dpkg", "--configure", "-a")
+	_, err := run(g.a, managerTimeout, "dpkg", "--configure", "-a")
 	return err
 }
 
 // ---------------------------------------------------------------- dnf (Fedora, RHEL, Alma)
 
-type dnfManager struct{ a *Ambiente }
+type dnfManager struct{ a *Environment }
 
 func (g *dnfManager) Nome() string { return "dnf" }
 
@@ -287,106 +287,106 @@ func (g *dnfManager) Nome() string { return "dnf" }
 // the 8 missing exactly libglvnd ×4, libogg, libtheora, libvisual, libvorbis.
 const rpmEVR = `%|EPOCH?{%{EPOCH}:}|%{VERSION}-%{RELEASE}`
 
-func rpmVersions(a *Ambiente, nomi []string) (map[string]string, error) {
+func rpmVersions(a *Environment, names []string) (map[string]string, error) {
 	r := map[string]string{}
-	if len(nomi) == 0 {
+	if len(names) == 0 {
 		return r, nil
 	}
-	out, _, err := a.Esegui(time.Minute, "rpm", append([]string{"-q", "--qf", `%{NAME} ` + rpmEVR + `\n`}, nomi...)...)
+	out, _, err := a.Run(time.Minute, "rpm", append([]string{"-q", "--qf", `%{NAME} ` + rpmEVR + `\n`}, names...)...)
 	if err != nil {
 		return nil, err
 	}
-	for _, n := range nomi {
+	for _, n := range names {
 		r[n] = ""
 	}
-	for _, riga := range strings.Split(out, "\n") {
-		c := strings.Fields(riga)
-		if len(c) == 2 && !strings.HasPrefix(riga, "package ") {
+	for _, line := range strings.Split(out, "\n") {
+		c := strings.Fields(line)
+		if len(c) == 2 && !strings.HasPrefix(line, "package ") {
 			r[c[0]] = c[1]
 		}
 	}
 	return r, nil
 }
 
-func (g *dnfManager) Vers(nomi []string) (map[string]string, error) {
-	return rpmVersions(g.a, nomi)
+func (g *dnfManager) Vers(names []string) (map[string]string, error) {
+	return rpmVersions(g.a, names)
 }
 
-// Simula: dnf's transaction with --assumeno (dnf 4 and dnf 5 write the table in the same
+// Simulate: dnf's transaction with --assumeno (dnf 4 and dnf 5 write the table in the same
 // order: name, architecture, version, repository). What gets installed, upgraded or
 // DOWNGRADED is taken (a downgrade is an INDIRECT change like an upgrade); «@commandline» is a
 // file of the single package.
-func (g *dnfManager) Simula(file, nomi []string) ([]Artefatto, error) {
+func (g *dnfManager) Simulate(file, names []string) ([]Artifact, error) {
 	if err := waitPackageManager(g.a, "fedora"); err != nil {
 		return nil, err
 	}
-	out, c, err := g.a.Esegui(managerTimeout, "dnf", append([]string{"install", "--assumeno", "--setopt=localpkg_gpgcheck=0"}, append(append([]string{}, file...), nomi...)...)...)
+	out, c, err := g.a.Run(managerTimeout, "dnf", append([]string{"install", "--assumeno", "--setopt=localpkg_gpgcheck=0"}, append(append([]string{}, file...), names...)...)...)
 	if err != nil {
 		return nil, err
 	}
 	if !strings.Contains(out, "Transaction Summary") {
 		if strings.Contains(out, "Nothing to do") {
-			return g.presenti(file, nomi)
+			return g.present(file, names)
 		}
 		return nil, fmt.Errorf("dnf install --assumeno: exit %d: %s", c, lastLines(out, 6))
 	}
-	var r []Artefatto
+	var r []Artifact
 	in := false
-	visti := map[string]bool{}
-	for _, riga := range strings.Split(out, "\n") {
-		t := strings.TrimSpace(riga)
-		if strings.HasSuffix(t, ":") && !strings.HasPrefix(riga, " ") {
+	seen_items := map[string]bool{}
+	for _, line := range strings.Split(out, "\n") {
+		t := strings.TrimSpace(line)
+		if strings.HasSuffix(t, ":") && !strings.HasPrefix(line, " ") {
 			in = strings.HasPrefix(t, "Installing") || strings.HasPrefix(t, "Upgrading") || strings.HasPrefix(t, "Downgrading")
 			continue
 		}
 		f := strings.Fields(t)
-		if !in || len(f) < 4 || !archi[f[1]] || visti[f[0]] {
+		if !in || len(f) < 4 || !arcs[f[1]] || seen_items[f[0]] {
 			continue
 		}
-		visti[f[0]] = true
+		seen_items[f[0]] = true
 		ver := strings.TrimPrefix(f[2], "0:")
-		a := Artefatto{Nome: f[0], Ver: ver, Arch: f[1], Origine: f[3], Esito: "new"}
+		a := Artifact{Nome: f[0], Ver: ver, Arch: f[1], Origine: f[3], Outcome: "new"}
 		if f[3] == "@commandline" {
 			a.Origine = "file"
 		}
 		r = append(r, a)
 	}
-	prima, err := rpmVersions(g.a, namesOf(r))
+	before, err := rpmVersions(g.a, namesOf(r))
 	if err != nil {
 		return nil, err
 	}
 	for i := range r {
-		if p := prima[r[i].Nome]; p != "" {
-			r[i].Esito, r[i].Prima = "upgraded", p
+		if p := before[r[i].Nome]; p != "" {
+			r[i].Outcome, r[i].Before = "upgraded", p
 		}
 	}
 	sort.Slice(r, func(i, j int) bool { return r[i].Nome < r[j].Nome })
 	return r, nil
 }
 
-var archi = map[string]bool{"x86_64": true, "noarch": true, "i686": true, "aarch64": true}
+var arcs = map[string]bool{"x86_64": true, "noarch": true, "i686": true, "aarch64": true}
 
-// presenti: nothing to do — the files' packages, already installed at the same version.
-func (g *dnfManager) presenti(file, nomi []string) ([]Artefatto, error) {
-	var r []Artefatto
+// present: nothing to do — the files' packages, already installed at the same version.
+func (g *dnfManager) present(file, names []string) ([]Artifact, error) {
+	var r []Artifact
 	for _, f := range file {
-		out, err := esegui(g.a, time.Minute, "rpm", "-qp", "--qf", `RX %{NAME} `+rpmEVR+` %{ARCH}\n`, f)
+		out, err := run(g.a, time.Minute, "rpm", "-qp", "--qf", `RX %{NAME} `+rpmEVR+` %{ARCH}\n`, f)
 		if err != nil {
 			return nil, err
 		}
-		for _, riga := range strings.Split(out, "\n") {
-			if c := strings.Fields(riga); len(c) == 4 && c[0] == "RX" {
-				r = append(r, Artefatto{Nome: c[1], Ver: c[2], Arch: c[3], Origine: "file", Esito: "present"})
+		for _, line := range strings.Split(out, "\n") {
+			if c := strings.Fields(line); len(c) == 4 && c[0] == "RX" {
+				r = append(r, Artifact{Nome: c[1], Ver: c[2], Arch: c[3], Origine: "file", Outcome: "present"})
 			}
 		}
 	}
-	for _, n := range nomi {
-		r = append(r, Artefatto{Nome: n, Origine: "repo", Esito: "present"})
+	for _, n := range names {
+		r = append(r, Artifact{Nome: n, Origine: "repo", Outcome: "present"})
 	}
 	return r, nil
 }
 
-func namesOf(r []Artefatto) []string {
+func namesOf(r []Artifact) []string {
 	var n []string
 	for _, a := range r {
 		n = append(n, a.Nome)
@@ -394,22 +394,22 @@ func namesOf(r []Artefatto) []string {
 	return n
 }
 
-// Installa: dnf installs the files of the single package (without an rpm signature: the .run's sha256
+// Install: dnf installs the files of the single package (without an rpm signature: the .run's sha256
 // guarantees them) and takes the dependencies from the machine's repositories, with their signatures.
-func (g *dnfManager) Installa(file, nomi []string) error {
+func (g *dnfManager) Install(file, names []string) error {
 	if err := waitPackageManager(g.a, "fedora"); err != nil {
 		return err
 	}
-	_, err := esegui(g.a, managerTimeout, "dnf", append([]string{"install", "-y", "--setopt=localpkg_gpgcheck=0"}, append(append([]string{}, file...), nomi...)...)...)
+	_, err := run(g.a, managerTimeout, "dnf", append([]string{"install", "-y", "--setopt=localpkg_gpgcheck=0"}, append(append([]string{}, file...), names...)...)...)
 	return err
 }
 
-func (g *dnfManager) SimulaTogli(nomi []string, purge bool) ([]string, error) {
+func (g *dnfManager) SimulateRemove(names []string, purge bool) ([]string, error) {
 	if err := waitPackageManager(g.a, "fedora"); err != nil {
 		return nil, err
 	}
 	// dnf remove also removes whoever depends on these: it is checked with --assumeno
-	out, _, err := g.a.Esegui(managerTimeout, "dnf", append([]string{"remove", "--assumeno", "--setopt=clean_requirements_on_remove=0"}, nomi...)...)
+	out, _, err := g.a.Run(managerTimeout, "dnf", append([]string{"remove", "--assumeno", "--setopt=clean_requirements_on_remove=0"}, names...)...)
 	if err != nil {
 		return nil, err
 	}
@@ -420,16 +420,16 @@ func (g *dnfManager) SimulaTogli(nomi []string, purge bool) ([]string, error) {
 	// fedora44-gnome-iso (phase 18, with the Cisco repository): openh264 ← libheif ← glycin-loaders ← gdk-pixbuf2 ← gnome-shell (protected);
 	// before, «no dependents» was read and `dnf remove -y` failed.
 	if strings.Contains(out, "Failed to resolve the transaction") || strings.Contains(out, "Impossibile risolvere la transazione") {
-		altri := notIn(problemiDnf(out), nomi)
-		if len(altri) == 0 {
-			return nil, fmt.Errorf("dnf remove --assumeno %s: %s", strings.Join(nomi, " "), lastLines(out, 6))
+		others := notIn(dnfProblems(out), names)
+		if len(others) == 0 {
+			return nil, fmt.Errorf("dnf remove --assumeno %s: %s", strings.Join(names, " "), lastLines(out, 6))
 		}
-		return altri, nil
+		return others, nil
 	}
-	var tutti []string
+	var all_items []string
 	in := false
-	for _, riga := range strings.Split(out, "\n") {
-		t := strings.TrimSpace(riga)
+	for _, line := range strings.Split(out, "\n") {
+		t := strings.TrimSpace(line)
 		if strings.HasPrefix(t, "Removing") || strings.HasPrefix(t, "Rimozione") {
 			in = true
 			continue
@@ -438,31 +438,31 @@ func (g *dnfManager) SimulaTogli(nomi []string, purge bool) ([]string, error) {
 			in = false
 		}
 		if c := strings.Fields(t); in && len(c) >= 3 && !strings.HasSuffix(c[0], ":") {
-			tutti = append(tutti, c[0])
+			all_items = append(all_items, c[0])
 		}
 	}
-	return notIn(tutti, nomi), nil
+	return notIn(all_items, names), nil
 }
 
-// problemiDnf: the packages named in the «Problem» lines of a dnf solver that does not resolve — the protected ones
+// dnfProblems: the packages named in the «Problem» lines of a dnf solver that does not resolve — the protected ones
 // («protected packages: a, b») and the installed ones that need what is being removed («installed
 // package NEVRA requires …»); the NEVRA goes back to a name.
-func problemiDnf(out string) []string {
+func dnfProblems(out string) []string {
 	var r []string
-	for _, riga := range strings.Split(out, "\n") {
-		t := strings.TrimSpace(riga)
-		if _, dopo, ok := strings.Cut(t, "protected packages: "); ok {
-			for _, n := range strings.Split(dopo, ",") {
+	for _, line := range strings.Split(out, "\n") {
+		t := strings.TrimSpace(line)
+		if _, after, ok := strings.Cut(t, "protected packages: "); ok {
+			for _, n := range strings.Split(after, ",") {
 				if n = strings.TrimSpace(n); n != "" {
 					r = append(r, n)
 				}
 			}
 			continue
 		}
-		for _, marca := range []string{"installed package ", "il pacchetto installato "} {
-			if _, dopo, ok := strings.Cut(t, marca); ok {
-				if f := strings.Fields(dopo); len(f) > 0 {
-					r = append(r, nomeDaNevra(f[0]))
+		for _, mark := range []string{"installed package ", "il pacchetto installato "} {
+			if _, after, ok := strings.Cut(t, mark); ok {
+				if f := strings.Fields(after); len(f) > 0 {
+					r = append(r, nameFromNevra(f[0]))
 				}
 			}
 		}
@@ -470,8 +470,8 @@ func problemiDnf(out string) []string {
 	return notIn(r, nil)
 }
 
-// nomeDaNevra: «libheif-1.23.5-3.fc44.x86_64» → «libheif» (strip the architecture, then version and release).
-func nomeDaNevra(nevra string) string {
+// nameFromNevra: «libheif-1.23.5-3.fc44.x86_64» → «libheif» (strip the architecture, then version and release).
+func nameFromNevra(nevra string) string {
 	s := nevra
 	if i := strings.LastIndex(s, "."); i > 0 {
 		s = s[:i]
@@ -484,46 +484,46 @@ func nomeDaNevra(nevra string) string {
 	return s
 }
 
-func (g *dnfManager) Togli(nomi []string, purge bool) error {
-	if err := onlyThese(g, nomi, purge); err != nil {
+func (g *dnfManager) Remove(names []string, purge bool) error {
+	if err := onlyThese(g, names, purge); err != nil {
 		return err
 	}
-	_, err := esegui(g.a, managerTimeout, "dnf", append([]string{"remove", "-y", "--setopt=clean_requirements_on_remove=0"}, nomi...)...)
+	_, err := run(g.a, managerTimeout, "dnf", append([]string{"remove", "-y", "--setopt=clean_requirements_on_remove=0"}, names...)...)
 	return err
 }
 
 func (g *dnfManager) Intact() (bool, string, error) {
 	// a half-done rpm transaction leaves duplicate packages (two versions of the same one)
-	out, c, err := g.a.Esegui(time.Minute, "rpm", "-qa", "--qf", `%{NAME}.%{ARCH}\n`)
+	out, c, err := g.a.Run(time.Minute, "rpm", "-qa", "--qf", `%{NAME}.%{ARCH}\n`)
 	if err != nil {
 		return false, "", err
 	}
 	if c != 0 {
 		return false, lastLines(out, 3), nil
 	}
-	visti := map[string]bool{}
+	seen_items := map[string]bool{}
 	for _, n := range strings.Fields(out) {
-		if visti[n] && !strings.HasPrefix(n, "gpg-pubkey") && !strings.HasPrefix(n, "kernel") {
+		if seen_items[n] && !strings.HasPrefix(n, "gpg-pubkey") && !strings.HasPrefix(n, "kernel") {
 			return false, "duplicate: " + n, nil
 		}
-		visti[n] = true
+		seen_items[n] = true
 	}
 	return true, "", nil
 }
 
-// Ripara: dnf repeats the transaction; here we go back to a coherent state by removing the duplicates.
-func (g *dnfManager) Ripara() error {
+// Repair: dnf repeats the transaction; here we go back to a coherent state by removing the duplicates.
+func (g *dnfManager) Repair() error {
 	if err := waitPackageManager(g.a, "fedora"); err != nil {
 		return err
 	}
-	_, err := esegui(g.a, managerTimeout, "dnf", "remove", "-y", "--duplicates")
+	_, err := run(g.a, managerTimeout, "dnf", "remove", "-y", "--duplicates")
 	return err
 }
 
 // ---------------------------------------------------------------- zypper (openSUSE) — not tried
 
 type zypperManager struct {
-	a *Ambiente
+	a *Environment
 }
 
 // fileArg: the files of the single package have no rpm signature (the .run's sha256 guarantees them):
@@ -538,156 +538,156 @@ func (g *zypperManager) fileArg(file []string) []string {
 
 func (g *zypperManager) Nome() string { return "zypper" }
 
-func (g *zypperManager) Vers(nomi []string) (map[string]string, error) {
-	return rpmVersions(g.a, nomi)
+func (g *zypperManager) Vers(names []string) (map[string]string, error) {
+	return rpmVersions(g.a, names)
 }
 
-func (g *zypperManager) Simula(file, nomi []string) ([]Artefatto, error) {
+func (g *zypperManager) Simulate(file, names []string) ([]Artifact, error) {
 	if err := waitPackageManager(g.a, "suse"); err != nil {
 		return nil, err
 	}
-	out, err := esegui(g.a, managerTimeout, "zypper", append([]string{"--non-interactive", "--xmlout", "install", "--dry-run"}, append(append(g.fileArg(file), file...), nomi...)...)...)
+	out, err := run(g.a, managerTimeout, "zypper", append([]string{"--non-interactive", "--xmlout", "install", "--dry-run"}, append(append(g.fileArg(file), file...), names...)...)...)
 	if err != nil {
 		return nil, err
 	}
-	var r []Artefatto
+	var r []Artifact
 	re := regexp.MustCompile(`<solvable type="package" name="([^"]+)" edition="([^"]+)" arch="([^"]+)"`)
 	for _, m := range re.FindAllStringSubmatch(out, -1) {
-		r = append(r, Artefatto{Nome: m[1], Ver: m[2], Arch: m[3], Origine: "repo", Esito: "new"})
+		r = append(r, Artifact{Nome: m[1], Ver: m[2], Arch: m[3], Origine: "repo", Outcome: "new"})
 	}
-	prima, err := rpmVersions(g.a, namesOf(r))
+	before, err := rpmVersions(g.a, namesOf(r))
 	if err != nil {
 		return nil, err
 	}
 	for i := range r {
-		if p := prima[r[i].Nome]; p != "" {
-			r[i].Esito, r[i].Prima = "upgraded", p
+		if p := before[r[i].Nome]; p != "" {
+			r[i].Outcome, r[i].Before = "upgraded", p
 		}
 	}
 	return r, nil
 }
 
-func (g *zypperManager) Installa(file, nomi []string) error {
+func (g *zypperManager) Install(file, names []string) error {
 	if err := waitPackageManager(g.a, "suse"); err != nil {
 		return err
 	}
-	_, err := esegui(g.a, managerTimeout, "zypper", append([]string{"--non-interactive", "install"}, append(append(g.fileArg(file), file...), nomi...)...)...)
+	_, err := run(g.a, managerTimeout, "zypper", append([]string{"--non-interactive", "install"}, append(append(g.fileArg(file), file...), names...)...)...)
 	return err
 }
 
 var zypperSolvable = regexp.MustCompile(`<solvable type="package" name="([^"]+)"`)
 
-func (g *zypperManager) SimulaTogli(nomi []string, purge bool) ([]string, error) {
+func (g *zypperManager) SimulateRemove(names []string, purge bool) ([]string, error) {
 	if err := waitPackageManager(g.a, "suse"); err != nil {
 		return nil, err
 	}
-	out, err := esegui(g.a, managerTimeout, "zypper", append([]string{"--non-interactive", "--xmlout", "remove", "--dry-run"}, nomi...)...)
+	out, err := run(g.a, managerTimeout, "zypper", append([]string{"--non-interactive", "--xmlout", "remove", "--dry-run"}, names...)...)
 	if err != nil {
 		return nil, err
 	}
-	var tutti []string
+	var all_items []string
 	for _, m := range zypperSolvable.FindAllStringSubmatch(out, -1) {
-		tutti = append(tutti, m[1])
+		all_items = append(all_items, m[1])
 	}
-	return notIn(tutti, nomi), nil
+	return notIn(all_items, names), nil
 }
 
-func (g *zypperManager) Togli(nomi []string, purge bool) error {
-	if err := onlyThese(g, nomi, purge); err != nil {
+func (g *zypperManager) Remove(names []string, purge bool) error {
+	if err := onlyThese(g, names, purge); err != nil {
 		return err
 	}
-	_, err := esegui(g.a, managerTimeout, "zypper", append([]string{"--non-interactive", "remove"}, nomi...)...)
+	_, err := run(g.a, managerTimeout, "zypper", append([]string{"--non-interactive", "remove"}, names...)...)
 	return err
 }
 
 func (g *zypperManager) Intact() (bool, string, error) {
-	out, c, err := g.a.Esegui(managerTimeout, "zypper", "--non-interactive", "verify", "--dry-run")
+	out, c, err := g.a.Run(managerTimeout, "zypper", "--non-interactive", "verify", "--dry-run")
 	if err != nil {
 		return false, "", err
 	}
 	return c == 0, lastLines(out, 2), nil
 }
 
-func (g *zypperManager) Ripara() error {
+func (g *zypperManager) Repair() error {
 	if err := waitPackageManager(g.a, "suse"); err != nil {
 		return err
 	}
-	_, err := esegui(g.a, managerTimeout, "zypper", "--non-interactive", "verify")
+	_, err := run(g.a, managerTimeout, "zypper", "--non-interactive", "verify")
 	return err
 }
 
 // ---------------------------------------------------------------- pacman (Arch) — not tried
 
-type pacmanManager struct{ a *Ambiente }
+type pacmanManager struct{ a *Environment }
 
 func (g *pacmanManager) Nome() string { return "pacman" }
 
-func (g *pacmanManager) Vers(nomi []string) (map[string]string, error) {
-	pk := PackageArchive(g.a, "arch", nomi)
-	if !pk.letto {
+func (g *pacmanManager) Vers(names []string) (map[string]string, error) {
+	pk := PackageArchive(g.a, "arch", names)
+	if !pk.read {
 		return nil, errors.New("the pacman database cannot be read")
 	}
 	r := map[string]string{}
-	for _, n := range nomi {
-		r[n] = pk.versioni[n]
+	for _, n := range names {
+		r[n] = pk.versions[n]
 	}
 	return r, nil
 }
 
-func (g *pacmanManager) Simula(file, nomi []string) ([]Artefatto, error) {
+func (g *pacmanManager) Simulate(file, names []string) ([]Artifact, error) {
 	if err := waitPackageManager(g.a, "arch"); err != nil {
 		return nil, err
 	}
 	// the whole transaction (the files of the single package and the repositories' packages, with the
 	// dependencies): pacman -U/-S --print says what it would install, without touching anything
-	var righe []string
+	var lines []string
 	if len(file) > 0 {
-		out, err := esegui(g.a, managerTimeout, "pacman", append([]string{"-U", "--needed", "--print", "--print-format", "%n %v %a %r %l"}, file...)...)
+		out, err := run(g.a, managerTimeout, "pacman", append([]string{"-U", "--needed", "--print", "--print-format", "%n %v %a %r %l"}, file...)...)
 		if err != nil {
 			return nil, err
 		}
-		righe = append(righe, strings.Split(out, "\n")...)
+		lines = append(lines, strings.Split(out, "\n")...)
 	}
-	if len(nomi) > 0 {
-		out, err := esegui(g.a, managerTimeout, "pacman", append([]string{"-S", "--needed", "--print", "--print-format", "%n %v %a %r %l"}, nomi...)...)
+	if len(names) > 0 {
+		out, err := run(g.a, managerTimeout, "pacman", append([]string{"-S", "--needed", "--print", "--print-format", "%n %v %a %r %l"}, names...)...)
 		if err != nil {
 			return nil, err
 		}
-		righe = append(righe, strings.Split(out, "\n")...)
+		lines = append(lines, strings.Split(out, "\n")...)
 	}
-	var r []Artefatto
-	visti := map[string]bool{}
-	for _, riga := range righe {
-		c := strings.Fields(riga)
-		if len(c) != 5 || visti[c[0]] {
+	var r []Artifact
+	seen_items := map[string]bool{}
+	for _, line := range lines {
+		c := strings.Fields(line)
+		if len(c) != 5 || seen_items[c[0]] {
 			continue
 		}
-		visti[c[0]] = true
-		a := Artefatto{Nome: c[0], Ver: c[1], Arch: c[2], Origine: c[3], Esito: "new"}
+		seen_items[c[0]] = true
+		a := Artifact{Nome: c[0], Ver: c[1], Arch: c[2], Origine: c[3], Outcome: "new"}
 		if strings.HasPrefix(c[4], "file://") || strings.HasPrefix(c[4], "/") {
 			a.Origine = "file"
 		}
 		r = append(r, a)
 	}
-	prima, err := g.Vers(namesOf(r))
+	before, err := g.Vers(namesOf(r))
 	if err != nil {
 		return nil, err
 	}
 	for i := range r {
-		if p := prima[r[i].Nome]; p != "" {
-			r[i].Esito, r[i].Prima = "upgraded", p
+		if p := before[r[i].Nome]; p != "" {
+			r[i].Outcome, r[i].Before = "upgraded", p
 		}
 	}
 	sort.Slice(r, func(i, j int) bool { return r[i].Nome < r[j].Nome })
 	return r, nil
 }
 
-func (g *pacmanManager) Installa(file, nomi []string) error {
+func (g *pacmanManager) Install(file, names []string) error {
 	if err := waitPackageManager(g.a, "arch"); err != nil {
 		return err
 	}
-	if len(nomi) > 0 {
-		if _, err := esegui(g.a, managerTimeout, "pacman", append([]string{"-S", "--needed", "--noconfirm"}, nomi...)...); err != nil {
+	if len(names) > 0 {
+		if _, err := run(g.a, managerTimeout, "pacman", append([]string{"-S", "--needed", "--noconfirm"}, names...)...); err != nil {
 			return err
 		}
 	}
@@ -695,17 +695,17 @@ func (g *pacmanManager) Installa(file, nomi []string) error {
 		return nil
 	}
 	// -U takes the files' dependencies from the machine's repositories
-	_, err := esegui(g.a, managerTimeout, "pacman", append([]string{"-U", "--needed", "--noconfirm"}, file...)...)
+	_, err := run(g.a, managerTimeout, "pacman", append([]string{"-U", "--needed", "--noconfirm"}, file...)...)
 	return err
 }
 
-func (g *pacmanManager) SimulaTogli(nomi []string, purge bool) ([]string, error) {
+func (g *pacmanManager) SimulateRemove(names []string, purge bool) ([]string, error) {
 	if err := waitPackageManager(g.a, "arch"); err != nil {
 		return nil, err
 	}
 	// ⚠ pacman -R does not remove whoever depends: if someone depends, the simulation FAILS and says so
 	// («removing X breaks dependency 'X' required by Y»): whoever depends is Y
-	out, c, err := g.a.Esegui(managerTimeout, "pacman", append([]string{"-R", "--print", "--print-format", "%n"}, nomi...)...)
+	out, c, err := g.a.Run(managerTimeout, "pacman", append([]string{"-R", "--print", "--print-format", "%n"}, names...)...)
 	if err != nil {
 		return nil, err
 	}
@@ -717,22 +717,22 @@ func (g *pacmanManager) SimulaTogli(nomi []string, purge bool) ([]string, error)
 		if len(r) == 0 {
 			return nil, fmt.Errorf("pacman -R --print: exit %d: %s", c, lastLines(out, 6))
 		}
-		return notIn(r, nomi), nil
+		return notIn(r, names), nil
 	}
-	return notIn(strings.Fields(out), nomi), nil
+	return notIn(strings.Fields(out), names), nil
 }
 
 var pacmanBreaks = regexp.MustCompile(`required by (\S+)`)
 
-func (g *pacmanManager) Togli(nomi []string, purge bool) error {
-	if err := onlyThese(g, nomi, purge); err != nil {
+func (g *pacmanManager) Remove(names []string, purge bool) error {
+	if err := onlyThese(g, names, purge); err != nil {
 		return err
 	}
 	arg := []string{"-R", "--noconfirm"}
 	if purge {
 		arg = []string{"-Rn", "--noconfirm"}
 	}
-	_, err := esegui(g.a, managerTimeout, "pacman", append(arg, nomi...)...)
+	_, err := run(g.a, managerTimeout, "pacman", append(arg, names...)...)
 	return err
 }
 
@@ -747,13 +747,13 @@ func (g *pacmanManager) Intact() (bool, string, error) {
 	return true, "", nil
 }
 
-// Ripara: the lock file left by a killed pacman is removed (no program has it open: waitPackageManager
+// Repair: the lock file left by a killed pacman is removed (no program has it open: waitPackageManager
 // waited for it), then pacman -Dk checks the database.
-func (g *pacmanManager) Ripara() error {
+func (g *pacmanManager) Repair() error {
 	if err := waitPackageManager(g.a, "arch"); err != nil {
 		return err
 	}
 	os.Remove(g.a.P("/var/lib/pacman/db.lck"))
-	_, err := esegui(g.a, managerTimeout, "pacman", "-Dk")
+	_, err := run(g.a, managerTimeout, "pacman", "-Dk")
 	return err
 }

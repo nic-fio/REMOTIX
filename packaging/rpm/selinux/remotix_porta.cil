@@ -1,7 +1,7 @@
 ; remotix_porta.cil — the REMOTIX port, 7447 TCP and UDP, with type remotix_port_t
 ; (declared in remotix.te).  A separate module because `portcon` cannot be written in a
 ; .te module; in CIL it can, and it goes away with the module (no `semanage port` in the scriptlets).
-; ⚠ With a different port (REMOTIX_PORTA in /etc/remotix/remotix.conf.d/) the administrator
+; ⚠ With a different port (REMOTIX_PORT in /etc/remotix/remotix.conf.d/) the administrator
 ;   declares it:  semanage port -a -t remotix_port_t -p tcp N  (and -p udp N).
 (portcon tcp 7447 (system_u object_r remotix_port_t ((s0) (s0))))
 (portcon udp 7447 (system_u object_r remotix_port_t ((s0) (s0))))

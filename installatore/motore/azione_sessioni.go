@@ -1,4 +1,4 @@
-package motore
+package engine
 
 import (
 	"encoding/json"
@@ -19,31 +19,31 @@ import (
 // reopens nothing.
 
 func init() {
-	registraTipo("close-sessions", func(AzionePiano) (Azione, error) { return closeSessions{}, nil })
+	registerType("close-sessions", func(PlanAction) (Action, error) { return closeSessions{}, nil })
 }
 
 // PAMService: the name of REMOTIX's PAM service (/etc/pam.d/remotix).
 const PAMService = "remotix"
 
 // PlanCloseSessions prepares the step, saying how many sessions there are now.
-func PlanCloseSessions(id string, n int, utenti []string) AzionePiano {
+func PlanCloseSessions(id string, n int, users []string) PlanAction {
 	d := T("az.sessioni.nessuna") // the step stays: one may open before it runs
 	if n > 0 {
-		d = T("az.sessioni", n, strings.Join(utenti, ", "))
+		d = T("az.sessioni", n, strings.Join(users, ", "))
 	}
-	return AzionePiano{
-		ID: id, Tipo: "close-sessions",
-		Parametri:     map[string]string{"service": PAMService},
-		Descrizione:   d,
+	return PlanAction{
+		ID: id, Type: "close-sessions",
+		Parameters:    map[string]string{"service": PAMService},
+		Description:   d,
 		ComeSiFa:      T("az.sessioni.fa"),
 		HowToVerify:   T("az.sessioni.verifica"),
 		HowToUndo:     T("az.sessioni.annulla"),
-		Reversibilita: IRREVERSIBILE,
+		Reversibility: IRREVERSIBLE,
 	}
 }
 
 // RemotixSessions: logind's sessions with the PAM service remotix.
-func RemotixSessions(a *Ambiente) ([]Sessione, error) {
+func RemotixSessions(a *Environment) ([]Session, error) {
 	if a.Sessioni == nil {
 		return nil, nil
 	}
@@ -51,9 +51,9 @@ func RemotixSessions(a *Ambiente) ([]Sessione, error) {
 	if err != nil {
 		return nil, err
 	}
-	var r []Sessione
+	var r []Session
 	for _, s := range l {
-		if s.Servizio == PAMService {
+		if s.Service == PAMService {
 			r = append(r, s)
 		}
 	}
@@ -72,75 +72,75 @@ type beforeSessions struct {
 	Gfx []string `json:"graphical"`
 }
 
-func (closeSessions) Vincoli(*Contesto) ([]string, error) { return nil, nil } // they change by themselves: they do not bind
+func (closeSessions) Constraints(*Context) ([]string, error) { return nil, nil } // they change by themselves: they do not bind
 
-func (closeSessions) Fotografa(c *Contesto) (json.RawMessage, Origine, error) {
-	l, err := RemotixSessions(c.Amb)
+func (closeSessions) Snapshot(c *Context) (json.RawMessage, Origine, error) {
+	l, err := RemotixSessions(c.Env)
 	if err != nil {
 		return nil, "", err
 	}
-	p := beforeSessions{Origine: DIRETTA, Sessioni: []string{}, Utenti: []string{}}
+	p := beforeSessions{Origine: DIRECT, Sessioni: []string{}, Utenti: []string{}}
 	for _, s := range l {
 		p.Sessioni = append(p.Sessioni, s.ID)
-		p.Utenti = append(p.Utenti, s.Utente)
+		p.Utenti = append(p.Utenti, s.User)
 	}
-	tutte, err := c.Amb.Sessioni.Listing()
+	all_of, err := c.Env.Sessioni.Listing()
 	if err != nil {
 		return nil, "", err
 	}
-	visti := map[string]bool{}
+	seen_items := map[string]bool{}
 	for _, s := range l {
-		if visti[s.Utente] {
+		if seen_items[s.User] {
 			continue
 		}
-		visti[s.Utente] = true
-		altra := false
-		for _, x := range tutte {
-			if x.Utente == s.Utente && x.Servizio != PAMService && (x.Tipo == "wayland" || x.Tipo == "x11") {
-				altra = true
+		seen_items[s.User] = true
+		another := false
+		for _, x := range all_of {
+			if x.User == s.User && x.Service != PAMService && (x.Type == "wayland" || x.Type == "x11") {
+				another = true
 			}
 		}
-		if !altra {
-			p.Gfx = append(p.Gfx, s.Utente)
+		if !another {
+			p.Gfx = append(p.Gfx, s.User)
 		}
 	}
 	if len(l) == 0 {
-		p.Origine = PREESISTENTE // nothing to close
+		p.Origine = PREEXISTING // nothing to close
 	}
 	return jsonDi(p), p.Origine, nil
 }
 
 // remainingGraphical: the desktop processes still alive in the user manager of the people in Grafica.
-func (closeSessions) remainingGraphical(c *Contesto, p beforeSessions) int {
+func (closeSessions) remainingGraphical(c *Context, p beforeSessions) int {
 	n := 0
 	for _, u := range p.Gfx {
-		if k, err := c.Amb.Sessioni.Charts(u); err == nil {
+		if k, err := c.Env.Sessioni.Charts(u); err == nil {
 			n += k
 		}
 	}
 	return n
 }
 
-// rimaste: the earlier sessions still open. A «closing» session whose scope has no more
+// left: the earlier sessions still open. A «closing» session whose scope has no more
 // processes is closed (logind removes it from the list when it likes): cgroup.procs is looked at,
 // read-only. ⚠ [M] 30 Sep, debian13-gnome: the session of REMOTIX's child is «closing» from
 // birth (§5.2) and the GNOME desktop lives in the user manager (user@<uid>.service), NOT in the
 // session's scope: TerminateSession takes away the scope, not the desktop (noted in §13.1).
-func (closeSessions) rimaste(c *Contesto, p beforeSessions) (int, error) {
-	l, err := RemotixSessions(c.Amb)
+func (closeSessions) left(c *Context, p beforeSessions) (int, error) {
+	l, err := RemotixSessions(c.Env)
 	if err != nil {
 		return 0, err
 	}
-	nostre := map[string]bool{}
+	owned := map[string]bool{}
 	for _, id := range p.Sessioni {
-		nostre[id] = true
+		owned[id] = true
 	}
 	n := 0
 	for _, s := range l {
-		if !nostre[s.ID] {
+		if !owned[s.ID] {
 			continue
 		}
-		if s.Stato == "closing" && emptyScope(c.Amb, s.ID) {
+		if s.State == "closing" && emptyScope(c.Env, s.ID) {
 			continue
 		}
 		n++
@@ -149,7 +149,7 @@ func (closeSessions) rimaste(c *Contesto, p beforeSessions) (int, error) {
 }
 
 // emptyScope: no process in session-<id>.scope.
-func emptyScope(a *Ambiente, id string) bool {
+func emptyScope(a *Environment, id string) bool {
 	v, _ := filepath.Glob(a.P("/sys/fs/cgroup/user.slice") + "/user-*.slice/session-" + id + ".scope/cgroup.procs")
 	if len(v) == 0 {
 		return true
@@ -158,13 +158,13 @@ func emptyScope(a *Ambiente, id string) bool {
 	return err == nil && strings.TrimSpace(string(b)) == ""
 }
 
-func (a closeSessions) Fai(c *Contesto, prima json.RawMessage) error {
+func (a closeSessions) Do(c *Context, before json.RawMessage) error {
 	var p beforeSessions
-	if err := json.Unmarshal(prima, &p); err != nil {
+	if err := json.Unmarshal(before, &p); err != nil {
 		return err
 	}
 	for _, id := range p.Sessioni {
-		if err := c.Amb.Sessioni.Terminate(id); err != nil && !strings.Contains(err.Error(), "No session") {
+		if err := c.Env.Sessioni.Terminate(id); err != nil && !strings.Contains(err.Error(), "No session") {
 			return err
 		}
 	}
@@ -173,7 +173,7 @@ func (a closeSessions) Fai(c *Contesto, prima json.RawMessage) error {
 	// s. ⇒ after 10 s SIGTERM to the session's processes (KillSession, always inside the session:
 	// never the whole user), after 20 s SIGKILL; up to 60 s.
 	for i := 0; i < 120; i++ {
-		n, err := a.rimaste(c, p)
+		n, err := a.left(c, p)
 		if err != nil {
 			return err
 		}
@@ -186,53 +186,53 @@ func (a closeSessions) Fai(c *Contesto, prima json.RawMessage) error {
 				sg = 9
 			}
 			for _, id := range p.Sessioni {
-				c.Amb.Sessioni.Segnale(id, sg)
+				c.Env.Sessioni.Signal(id, sg)
 			}
 		}
 		time.Sleep(500 * time.Millisecond)
 	}
 	// the desktop in the user manager (§10.16: «REMOTIX sessions and their processes»)
 	for _, u := range p.Gfx {
-		if _, err := c.Amb.Sessioni.CloseGraphical(u); err != nil {
+		if _, err := c.Env.Sessioni.CloseGraphical(u); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (a closeSessions) Controlla(c *Contesto, prima json.RawMessage) (Esito, string, error) {
+func (a closeSessions) Check(c *Context, before json.RawMessage) (Outcome, string, error) {
 	var p beforeSessions
-	if err := json.Unmarshal(prima, &p); err != nil {
+	if err := json.Unmarshal(before, &p); err != nil {
 		return "", "", err
 	}
-	n, err := a.rimaste(c, p)
+	n, err := a.left(c, p)
 	if err != nil {
 		return "", "", err
 	}
 	g := a.remainingGraphical(c, p)
 	switch {
 	case n == 0 && g == 0:
-		return COMPLETO, "none of the REMOTIX sessions is still open, no desktop process", nil
+		return COMPLETE, "none of the REMOTIX sessions is still open, no desktop process", nil
 	case n == 0:
 		return A_META, fmt.Sprintf("%d desktop processes still alive in the user manager", g), nil
 	case n == len(p.Sessioni):
-		return ASSENTE, "all still open", nil
+		return ABSENT, "all still open", nil
 	}
 	return A_META, "some still open", nil
 }
 
-func (closeSessions) Annulla(*Contesto, json.RawMessage) error {
-	return Errore("RX-AZIONE-005", "close-sessions")
+func (closeSessions) Rollback(*Context, json.RawMessage) error {
+	return Error("RX-AZIONE-005", "close-sessions")
 }
 
-func (a closeSessions) Annullata(c *Contesto, prima json.RawMessage) (bool, string, error) {
+func (a closeSessions) RolledBack(c *Context, before json.RawMessage) (bool, string, error) {
 	var p beforeSessions
-	json.Unmarshal(prima, &p)
+	json.Unmarshal(before, &p)
 	if len(p.Sessioni) == 0 {
 		return true, "there was nothing to close", nil
 	}
 	// if none was really closed, there is nothing irreversible to declare
-	if n, err := a.rimaste(c, p); err == nil && n == len(p.Sessioni) {
+	if n, err := a.left(c, p); err == nil && n == len(p.Sessioni) {
 		return true, "no session was closed", nil
 	}
 	return false, "IRREVERSIBLE: closed sessions are not reopened", nil

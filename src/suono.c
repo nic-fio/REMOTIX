@@ -8,7 +8,7 @@
  *       whoever fails returns `false`/NULL after writing the reason;
  *     · the format is no longer negotiated (§5.3): it comes from `audio.h`;
  *     · the realtime thread no longer prints anything (see `suono.h`);
- *     · the wait promised by `suono_ascolto_ferma()` is really done — v1
+ *     · the wait promised by `sound_listen_stop()` is really done — v1
  *       promised it and did not do it (the box is next to the function).
  */
 #include "suono.h"
@@ -33,8 +33,8 @@
  *   `REG_AUDIO` lives in `audio.c`: this file is not yet in the `Makefile`, and
  *   a constant put in the shared header before the seam is a line that names
  *   a module the product does not compile.  ⇒ At assembly it moves, as was
- *   done with `REG_SESSIONE`. */
-#define REG_SUONO "suono"
+ *   done with `LOG_SESSION`. */
+#define LOG_SOUND "sound"
 
 /* How long we wait for the server to register the sink's node.  It is a local
  * answer on a socket: if it does not arrive in five seconds it will not arrive. */
@@ -48,7 +48,7 @@
 #define WAIT_LISTEN_MS 5000
 
 /* How long we wait, at most, for a realtime callback already started to
- * exit (see `suono_ascolto_ferma`).  ⚠ In health it costs zero or one quantum —
+ * exit (see `sound_listen_stop`).  ⚠ In health it costs zero or one quantum —
  * `[?]` 5-6 ms: the ceiling is wide on purpose, because exceeding it means
  * PipeWire is stuck and the line saying so is worth more than the time it costs. */
 #define WAIT_BARRIER_MS 2000
@@ -78,28 +78,28 @@
  */
 #define FORCED_QUANTUM "256"
 
-struct suono
+struct sound
 {
-	struct pw_thread_loop *ciclo;
-	struct pw_context *contesto;
-	struct pw_core *nucleo;
+	struct pw_thread_loop *cycle;
+	struct pw_context *context;
+	struct pw_core *core;
 
 	struct pw_proxy *sink;
 	struct spa_hook hook_sink;
-	uint32_t nodo;
+	uint32_t node;
 
-	struct pw_stream *flusso;
+	struct pw_stream *stream;
 	struct spa_hook hook_stream;
-	enum pw_stream_state stato;
-	char *guasto;
+	enum pw_stream_state state;
+	char *fault;
 
 	/* --- what the realtime thread touches -------------------------------- *
 	 *
-	 * ⛔ `consegna` and `in_callback` are ATOMIC and not plain `bool`s: they are
-	 *    the two halves of the barrier of `suono_ascolto_ferma()`, and a barrier
+	 * ⛔ `delivery` and `in_callback` are ATOMIC and not plain `bool`s: they are
+	 *    the two halves of the barrier of `sound_listen_stop()`, and a barrier
 	 *    built on reads the compiler can move is not a barrier.  The reason for
 	 *    the design is next to that function. */
-	atomic_bool consegna;
+	atomic_bool delivery;
 	atomic_bool in_callback;
 	sound_samples on_samples;
 	void *chi;
@@ -107,46 +107,46 @@ struct suono
 	/* The counts.  ⚠ The realtime thread increments them and whoever wants reads
 	 *   them: atomic for the same reason as above, and `relaxed` would do —
 	 *   they are numbers for the log, not a synchronisation. */
-	atomic_ullong blocchi;
-	atomic_ullong fotogrammi;
-	atomic_ullong scartati;
+	atomic_ullong blocks;
+	atomic_ullong frames;
+	atomic_ullong discarded;
 	/* ⭐ The loudest sample seen, in absolute value.  See the box in
-	 *    `su_processo`: it is what tells "nobody was playing" from
+	 *    `on_process`: it is what tells "nobody was playing" from
 	 *    "PipeWire hands us empty buffers". */
-	atomic_ullong picco;
+	atomic_ullong peak;
 };
 
 /* ------------------------------------------------------------------ *
  * The virtual sink
  * ------------------------------------------------------------------ */
-static void on_sink_bound(void *dati, uint32_t global_id)
+static void on_sink_bound(void *data, uint32_t global_id)
 {
-	suono *s = dati;
+	sound *s = data;
 
-	s->nodo = global_id;
-	pw_thread_loop_signal(s->ciclo, false);
+	s->node = global_id;
+	pw_thread_loop_signal(s->cycle, false);
 }
 
-static void on_sink_removed(void *dati)
+static void on_sink_removed(void *data)
 {
-	suono *s = dati;
+	sound *s = data;
 
 	/* The server pulled the node from under our feet.  There is nothing to redo
 	 * here: we say so, and the capturer will see the stream detach.  ⚠ It runs on
 	 * the LOOP thread, not the realtime one: here we may write. */
-	registro_dice(REG_SUONO, "⛔ the session's audio sink was REMOVED: no more sound "
-	                         "(node %u)", s->nodo);
-	s->nodo = 0;
-	pw_thread_loop_signal(s->ciclo, false);
+	registro_dice(LOG_SOUND, "⛔ the session's audio sink was REMOVED: no more sound "
+	                         "(node %u)", s->node);
+	s->node = 0;
+	pw_thread_loop_signal(s->cycle, false);
 }
 
-static void on_sink_error(void *dati, int seq, int res, const char *messaggio)
+static void on_sink_error(void *data, int seq, int res, const char *message)
 {
-	suono *s = dati;
+	sound *s = data;
 
-	registro_dice(REG_SUONO, "⛔ the audio sink was not created: %s (%d, %s)",
-	              messaggio ? messaggio : "no explanation", res, spa_strerror(res));
-	pw_thread_loop_signal(s->ciclo, false);
+	registro_dice(LOG_SOUND, "⛔ the audio sink was not created: %s (%d, %s)",
+	              message ? message : "no explanation", res, spa_strerror(res));
+	pw_thread_loop_signal(s->cycle, false);
 }
 
 static const struct pw_proxy_events events_sink = {
@@ -159,41 +159,41 @@ static const struct pw_proxy_events events_sink = {
 /* ------------------------------------------------------------------ *
  * The monitor capture
  * ------------------------------------------------------------------ */
-static void on_state(void *dati, enum pw_stream_state vecchio, enum pw_stream_state nuovo,
-                     const char *sbaglio)
+static void on_state(void *data, enum pw_stream_state old, enum pw_stream_state fresh,
+                     const char *mistake)
 {
-	suono *s = dati;
+	sound *s = data;
 
-	registro_dettaglio(REG_SUONO, "audio capture state: %s → %s%s%s",
-	                   pw_stream_state_as_string(vecchio), pw_stream_state_as_string(nuovo),
-	                   sbaglio ? " — " : "", sbaglio ? sbaglio : "");
-	s->stato = nuovo;
-	if (sbaglio)
+	log_detail(LOG_SOUND, "audio capture state: %s → %s%s%s",
+	                   pw_stream_state_as_string(old), pw_stream_state_as_string(fresh),
+	                   mistake ? " — " : "", mistake ? mistake : "");
+	s->state = fresh;
+	if (mistake)
 	{
-		free(s->guasto);
-		s->guasto = strdup(sbaglio);
+		free(s->fault);
+		s->fault = strdup(mistake);
 	}
 
 	/* ⛔ The detachment is SAID, and not left to be deduced from silence: from here
 	 *    on not a sample arrives, and without this line whoever looks for "why can
 	 *    nothing be heard" has no way to tell it from "nobody is playing".
-	 *    ⚠ Whoever wants to notice it in code calls `suono_ascolto_vivo()`. */
-	if ((vecchio == PW_STREAM_STATE_PAUSED || vecchio == PW_STREAM_STATE_STREAMING) &&
-	    (nuovo == PW_STREAM_STATE_UNCONNECTED || nuovo == PW_STREAM_STATE_ERROR))
-		registro_dice(REG_SUONO, "⛔ the audio capture detached (%s)%s%s",
-		              pw_stream_state_as_string(nuovo), sbaglio ? " — " : "",
-		              sbaglio ? sbaglio : "");
+	 *    ⚠ Whoever wants to notice it in code calls `sound_listen_alive()`. */
+	if ((old == PW_STREAM_STATE_PAUSED || old == PW_STREAM_STATE_STREAMING) &&
+	    (fresh == PW_STREAM_STATE_UNCONNECTED || fresh == PW_STREAM_STATE_ERROR))
+		registro_dice(LOG_SOUND, "⛔ the audio capture detached (%s)%s%s",
+		              pw_stream_state_as_string(fresh), mistake ? " — " : "",
+		              mistake ? mistake : "");
 
-	pw_thread_loop_signal(s->ciclo, false);
+	pw_thread_loop_signal(s->cycle, false);
 }
 
-static void su_parametri(void *dati, uint32_t id, const struct spa_pod *param)
+static void on_parameters(void *data, uint32_t id, const struct spa_pod *param)
 {
-	suono *s = dati;
-	uint8_t spazio[256];
-	struct spa_pod_builder costruttore = SPA_POD_BUILDER_INIT(spazio, sizeof spazio);
-	const struct spa_pod *parametri[1];
-	struct spa_audio_info_raw negoziato = { 0 };
+	sound *s = data;
+	uint8_t space[256];
+	struct spa_pod_builder builder = SPA_POD_BUILDER_INIT(space, sizeof space);
+	const struct spa_pod *parameters[1];
+	struct spa_audio_info_raw negotiated = { 0 };
 
 	if (!param || id != SPA_PARAM_Format)
 		return;
@@ -214,31 +214,31 @@ static void su_parametri(void *dati, uint32_t id, const struct spa_pod *param)
 	 *     PipeWire granted another one, the sound would come out out of tune and
 	 *     over the wrong time, **without an error anywhere**.
 	 */
-	if (spa_format_audio_raw_parse(param, &negoziato) >= 0)
+	if (spa_format_audio_raw_parse(param, &negotiated) >= 0)
 	{
-		bool giusto = negoziato.format == SPA_AUDIO_FORMAT_S16 &&
-		              negoziato.rate == AUDIO_FREQUENZA && negoziato.channels == AUDIO_CANALI;
+		bool correct = negotiated.format == SPA_AUDIO_FORMAT_S16 &&
+		              negotiated.rate == AUDIO_FREQUENCY && negotiated.channels == AUDIO_CHANNELS;
 		/* ⚠ The name may be missing — `spa_debug_type_find_short_name()` returns
 		 *   NULL for an id its table does not know — and then the bare NUMBER is
 		 *   printed: it is the same rule as `cattura.c` (`first_raw_type`),
 		 *   because "(null)" in a log cannot be searched for anywhere. */
-		const char *nome = negoziato.format == SPA_AUDIO_FORMAT_S16
+		const char *name = negotiated.format == SPA_AUDIO_FORMAT_S16
 		                       ? "S16"
 		                       : spa_debug_type_find_short_name(spa_type_audio_format,
-		                                                        negoziato.format);
+		                                                        negotiated.format);
 
-		registro_dice(REG_SUONO,
+		registro_dice(LOG_SOUND,
 		              "audio format negotiated with PipeWire: %s (SPA %u), %u Hz, %u channels%s",
-		              nome ? nome : "NO NAME", negoziato.format, negoziato.rate,
-		              negoziato.channels, giusto ? "" : "  ⛔ IT IS NOT WHAT WAS ASKED");
+		              name ? name : "NO NAME", negotiated.format, negotiated.rate,
+		              negotiated.channels, correct ? "" : "  ⛔ IT IS NOT WHAT WAS ASKED");
 
-		if (!giusto)
+		if (!correct)
 		{
-			registro_dice(REG_SUONO,
+			registro_dice(LOG_SOUND,
 			              "⛔ §5.3 wants S16 at %d Hz on %d channels: the samples would be read "
 			              "wrong and the audio would be NOISE, not an error.  Switching off delivery",
-			              (int) AUDIO_FREQUENZA, (int) AUDIO_CANALI);
-			atomic_store(&s->consegna, false);
+			              (int) AUDIO_FREQUENCY, (int) AUDIO_CHANNELS);
+			atomic_store(&s->delivery, false);
 		}
 	}
 	else
@@ -247,18 +247,18 @@ static void su_parametri(void *dati, uint32_t id, const struct spa_pod *param)
 		 *    blindly") and it is the silent fallback `CODER.md` §4.2 forbids:
 		 *    a format we cannot read is exactly the case in which the
 		 *    samples can be anything. */
-		registro_dice(REG_SUONO, "⛔ audio format not interpretable: switching off delivery instead "
+		registro_dice(LOG_SOUND, "⛔ audio format not interpretable: switching off delivery instead "
 		                         "of reading samples I know nothing about");
-		atomic_store(&s->consegna, false);
+		atomic_store(&s->delivery, false);
 	}
 
 	/* The samples are wanted in ordinary, mapped memory: the zero-copy path has
 	 * nothing to do with audio, and asking for it here only means handling
 	 * buffers that cannot be read directly. */
-	parametri[0] = spa_pod_builder_add_object(&costruttore, SPA_TYPE_OBJECT_ParamBuffers,
+	parameters[0] = spa_pod_builder_add_object(&builder, SPA_TYPE_OBJECT_ParamBuffers,
 	                                          SPA_PARAM_Buffers, SPA_PARAM_BUFFERS_dataType,
 	                                          SPA_POD_Int(1 << SPA_DATA_MemPtr));
-	pw_stream_update_params(s->flusso, parametri, 1);
+	pw_stream_update_params(s->stream, parameters, 1);
 }
 
 /*
@@ -269,22 +269,22 @@ static void su_parametri(void *dati, uint32_t id, const struct spa_pod *param)
  * the first block from here, and a `write` at this point makes the whole graph
  * miss its quantum, desktop capture included.
  */
-static void su_processo(void *dati)
+static void on_process(void *data)
 {
-	suono *s = dati;
-	struct pw_stream *flusso = s->flusso;
-	struct pw_buffer *pacco;
+	sound *s = data;
+	struct pw_stream *stream = s->stream;
+	struct pw_buffer *bundle;
 
 	/*
 	 * ⛔ THE FIRST HALF OF THE BARRIER, and the order is everything: we declare
-	 *    we are inside BEFORE reading `consegna`.  Whoever stops does the opposite —
-	 *    switches off `consegna` and then reads `in_callback` — and with two
+	 *    we are inside BEFORE reading `delivery`.  Whoever stops does the opposite —
+	 *    switches off `delivery` and then reads `in_callback` — and with two
 	 *    sequentially consistent writes at least one of the two sees the other.  It
-	 *    is Dekker, and it is what makes the promise of `suono_ascolto_ferma()` true.
+	 *    is Dekker, and it is what makes the promise of `sound_listen_stop()` true.
 	 */
 	atomic_store(&s->in_callback, true);
 
-	if (!flusso)
+	if (!stream)
 	{
 		atomic_store(&s->in_callback, false);
 		return;
@@ -301,23 +301,23 @@ static void su_processo(void *dati)
 	 * downstream — whoever queues the samples knows how many it can keep — not
 	 * in a silent loss here.
 	 */
-	while ((pacco = pw_stream_dequeue_buffer(flusso)))
+	while ((bundle = pw_stream_dequeue_buffer(stream)))
 	{
-		struct spa_data *piano = &pacco->buffer->datas[0];
+		struct spa_data *piano = &bundle->buffer->datas[0];
 
-		if (pacco->buffer->n_datas > 0 && piano->data && piano->chunk && piano->chunk->size > 0)
+		if (bundle->buffer->n_datas > 0 && piano->data && piano->chunk && piano->chunk->size > 0)
 		{
-			const int16_t *campioni =
+			const int16_t *samples =
 			    (const int16_t *) ((const uint8_t *) piano->data + piano->chunk->offset);
-			uint32_t fotogrammi =
-			    (uint32_t) (piano->chunk->size / (sizeof(int16_t) * AUDIO_CANALI));
+			uint32_t frames =
+			    (uint32_t) (piano->chunk->size / (sizeof(int16_t) * AUDIO_CHANNELS));
 
-			if (fotogrammi > 0)
+			if (frames > 0)
 			{
-				/* ⛔ `consegna` is read only once and kept: reading it twice
+				/* ⛔ `delivery` is read only once and kept: reading it twice
 				 *    would mean possibly finding it on in the check and
 				 *    off in the callback. */
-				if (atomic_load(&s->consegna) && s->on_samples)
+				if (atomic_load(&s->delivery) && s->on_samples)
 				{
 					/*
 					 * ⭐ THE PEAK, AND IT IS THE ONLY NUMBER THAT TELLS THE TWO
@@ -342,29 +342,29 @@ static void su_processo(void *dati)
 					uint32_t i;
 					unsigned long long pk = 0;
 
-					for (i = 0; i < fotogrammi * AUDIO_CANALI; i++)
+					for (i = 0; i < frames * AUDIO_CHANNELS; i++)
 					{
-						int v = campioni[i] < 0 ? -campioni[i] : campioni[i];
+						int v = samples[i] < 0 ? -samples[i] : samples[i];
 						if ((unsigned long long) v > pk)
 							pk = (unsigned long long) v;
 					}
-					if (pk > atomic_load(&s->picco))
-						atomic_store(&s->picco, pk);
+					if (pk > atomic_load(&s->peak))
+						atomic_store(&s->peak, pk);
 
-					atomic_fetch_add(&s->blocchi, 1u);
-					atomic_fetch_add(&s->fotogrammi, fotogrammi);
-					s->on_samples(campioni, fotogrammi, s->chi);
+					atomic_fetch_add(&s->blocks, 1u);
+					atomic_fetch_add(&s->frames, frames);
+					s->on_samples(samples, frames, s->chi);
 				}
 				else
 				{
 					/* ⛔ "Arrived and dropped" is NOT "not arrived": `CODER.md`
 					 *    §3.10.  Without this count, a refused format and a
 					 *    mute desktop have the same face. */
-					atomic_fetch_add(&s->scartati, fotogrammi);
+					atomic_fetch_add(&s->discarded, frames);
 				}
 			}
 		}
-		pw_stream_queue_buffer(flusso, pacco);
+		pw_stream_queue_buffer(stream, bundle);
 	}
 
 	atomic_store(&s->in_callback, false);
@@ -373,8 +373,8 @@ static void su_processo(void *dati)
 static const struct pw_stream_events events_stream = {
 	PW_VERSION_STREAM_EVENTS,
 	.state_changed = on_state,
-	.param_changed = su_parametri,
-	.process = su_processo,
+	.param_changed = on_parameters,
+	.process = on_process,
 };
 
 /* ------------------------------------------------------------------ *
@@ -401,22 +401,22 @@ static const struct pw_stream_events events_stream = {
  *   audio.
  */
 /* The real command.  ⚠ Called by whoever ALREADY HOLDS the loop lock. */
-static void alza(suono *s)
+static void turn_up(sound *s)
 {
-	uint8_t memoria[512];
-	struct spa_pod_builder costruttore = SPA_POD_BUILDER_INIT(memoria, sizeof memoria);
-	float volumi[AUDIO_CANALI];
+	uint8_t mem_buf[512];
+	struct spa_pod_builder builder = SPA_POD_BUILDER_INIT(mem_buf, sizeof mem_buf);
+	float volumes[AUDIO_CHANNELS];
 	const struct spa_pod *props;
 	int seq;
 	int i;
 
-	for (i = 0; i < AUDIO_CANALI; i++)
-		volumi[i] = 1.0f;
+	for (i = 0; i < AUDIO_CHANNELS; i++)
+		volumes[i] = 1.0f;
 
 	props = spa_pod_builder_add_object(
-	    &costruttore, SPA_TYPE_OBJECT_Props, SPA_PARAM_Props, SPA_PROP_mute, SPA_POD_Bool(false),
+	    &builder, SPA_TYPE_OBJECT_Props, SPA_PARAM_Props, SPA_PROP_mute, SPA_POD_Bool(false),
 	    SPA_PROP_channelVolumes,
-	    SPA_POD_Array(sizeof(float), SPA_TYPE_Float, SPA_N_ELEMENTS(volumi), volumi));
+	    SPA_POD_Array(sizeof(float), SPA_TYPE_Float, SPA_N_ELEMENTS(volumes), volumes));
 
 	seq = pw_node_set_param((struct pw_node *) s->sink, SPA_PARAM_Props, 0, props);
 
@@ -427,8 +427,8 @@ static void alza(suono *s)
 	 *   and `CODER.md` §3.8 wants the level checked from the side that
 	 *   consumes it (a `wpctl get-volume`, not this line).
 	 */
-	registro_dettaglio(REG_SUONO, "sink volume: maximum ASKED of node %u (seq %d) — asked, "
-	                              "not verified", s->nodo, seq);
+	log_detail(LOG_SOUND, "sink volume: maximum ASKED of node %u (seq %d) — asked, "
+	                              "not verified", s->node, seq);
 }
 
 /*
@@ -446,24 +446,24 @@ static void alza(suono *s)
  *    disconnects, reconnects — and finds the silence again.  The bench missed it
  *    because it muted with the client connected, that is it DID NOT REPRODUCE (`CODER.md` §3.4).
  */
-void suono_volume_massimo(suono *s)
+void sound_max_volume(sound *s)
 {
-	if (!s || !s->ciclo || !s->sink)
+	if (!s || !s->cycle || !s->sink)
 		return;
-	pw_thread_loop_lock(s->ciclo);
-	alza(s);
-	pw_thread_loop_unlock(s->ciclo);
+	pw_thread_loop_lock(s->cycle);
+	turn_up(s);
+	pw_thread_loop_unlock(s->cycle);
 }
 
 /* ------------------------------------------------------------------ *
  * Life cycle
  * ------------------------------------------------------------------ */
-static bool create_sink(suono *s)
+static bool create_sink(sound *s)
 {
-	struct pw_properties *proprieta;
-	uint64_t scadenza;
+	struct pw_properties *property;
+	uint64_t expiry;
 
-	proprieta = pw_properties_new(
+	property = pw_properties_new(
 	    PW_KEY_FACTORY_NAME, "support.null-audio-sink", PW_KEY_NODE_NAME, SINK_NAME,
 	    PW_KEY_NODE_DESCRIPTION, "REMOTIX", PW_KEY_MEDIA_CLASS, "Audio/Sink", "audio.position",
 	    "[FL,FR]",
@@ -520,19 +520,19 @@ static bool create_sink(suono *s)
 	     * `target.object` would become ambiguous. */
 	    PW_KEY_OBJECT_LINGER, "false", NULL);
 
-	if (!proprieta)
+	if (!property)
 	{
-		registro_dice(REG_SUONO, "⛔ sink properties not allocated");
+		registro_dice(LOG_SOUND, "⛔ sink properties not allocated");
 		return false;
 	}
 
-	s->sink = pw_core_create_object(s->nucleo, "adapter", PW_TYPE_INTERFACE_Node, PW_VERSION_NODE,
-	                                &proprieta->dict, 0);
-	pw_properties_free(proprieta);
+	s->sink = pw_core_create_object(s->core, "adapter", PW_TYPE_INTERFACE_Node, PW_VERSION_NODE,
+	                                &property->dict, 0);
+	pw_properties_free(property);
 
 	if (!s->sink)
 	{
-		registro_dice(REG_SUONO, "⛔ PipeWire did not create the virtual sink «%s»", SINK_NAME);
+		registro_dice(LOG_SOUND, "⛔ PipeWire did not create the virtual sink «%s»", SINK_NAME);
 		return false;
 	}
 	pw_proxy_add_listener(s->sink, &s->hook_sink, &events_sink, s);
@@ -541,17 +541,17 @@ static bool create_sink(suono *s)
 	 *   server REALLY registered the object.  Whoever returned earlier would hold
 	 *   a proxy that could still fail, and the refusal would show up later as
 	 *   silence. */
-	scadenza = registro_ora_ms() + WAIT_SINK_MS;
-	while (s->nodo == 0 && registro_ora_ms() < scadenza)
-		pw_thread_loop_timed_wait(s->ciclo, 1);
+	expiry = log_now_ms() + WAIT_SINK_MS;
+	while (s->node == 0 && log_now_ms() < expiry)
+		pw_thread_loop_timed_wait(s->cycle, 1);
 
-	if (s->nodo == 0)
+	if (s->node == 0)
 	{
-		registro_dice(REG_SUONO, "⛔ the virtual sink was not registered within %d ms",
+		registro_dice(LOG_SOUND, "⛔ the virtual sink was not registered within %d ms",
 		              WAIT_SINK_MS);
 		return false;
 	}
-	alza(s);
+	turn_up(s);
 	return true;
 }
 
@@ -566,81 +566,81 @@ static void init_pipewire(void)
 	pw_init(NULL, NULL);
 }
 
-suono *suono_apri(void)
+sound *sound_open(void)
 {
-	suono *s = calloc(1, sizeof *s);
+	sound *s = calloc(1, sizeof *s);
 
 	if (!s)
 		return NULL;
 	pthread_once(&init_once, init_pipewire);
 
-	atomic_init(&s->consegna, false);
+	atomic_init(&s->delivery, false);
 	atomic_init(&s->in_callback, false);
-	atomic_init(&s->blocchi, 0);
-	atomic_init(&s->fotogrammi, 0);
-	atomic_init(&s->scartati, 0);
-	atomic_init(&s->picco, 0);
+	atomic_init(&s->blocks, 0);
+	atomic_init(&s->frames, 0);
+	atomic_init(&s->discarded, 0);
+	atomic_init(&s->peak, 0);
 
-	s->ciclo = pw_thread_loop_new("remotix-suono", NULL);
-	if (!s->ciclo)
+	s->cycle = pw_thread_loop_new("remotix-suono", NULL);
+	if (!s->cycle)
 	{
-		registro_dice(REG_SUONO, "⛔ PipeWire loop not created");
-		goto guasto;
+		registro_dice(LOG_SOUND, "⛔ PipeWire loop not created");
+		goto fault;
 	}
-	s->contesto = pw_context_new(pw_thread_loop_get_loop(s->ciclo), NULL, 0);
-	if (!s->contesto)
+	s->context = pw_context_new(pw_thread_loop_get_loop(s->cycle), NULL, 0);
+	if (!s->context)
 	{
-		registro_dice(REG_SUONO, "⛔ PipeWire context not created");
-		goto guasto;
-	}
-
-	pw_thread_loop_lock(s->ciclo);
-	if (pw_thread_loop_start(s->ciclo) < 0)
-	{
-		pw_thread_loop_unlock(s->ciclo);
-		registro_dice(REG_SUONO, "⛔ PipeWire thread not started");
-		goto guasto;
+		registro_dice(LOG_SOUND, "⛔ PipeWire context not created");
+		goto fault;
 	}
 
-	s->nucleo = pw_context_connect(s->contesto, NULL, 0);
-	if (!s->nucleo)
+	pw_thread_loop_lock(s->cycle);
+	if (pw_thread_loop_start(s->cycle) < 0)
 	{
-		pw_thread_loop_unlock(s->ciclo);
+		pw_thread_loop_unlock(s->cycle);
+		registro_dice(LOG_SOUND, "⛔ PipeWire thread not started");
+		goto fault;
+	}
+
+	s->core = pw_context_connect(s->context, NULL, 0);
+	if (!s->core)
+	{
+		pw_thread_loop_unlock(s->cycle);
 		/* ⚠ The normal case in which this fails: `PIPEWIRE_RUNTIME_DIR` /
 		 *   `XDG_RUNTIME_DIR` not pointing to the served session.  It is said
 		 *   by name, or the diagnosis starts over from zero (`CODER.md` §3.7). */
-		registro_dice(REG_SUONO, "⛔ connection to PipeWire failed: check XDG_RUNTIME_DIR "
+		registro_dice(LOG_SOUND, "⛔ connection to PipeWire failed: check XDG_RUNTIME_DIR "
 		                         "and whether the service runs in the session");
-		goto guasto;
+		goto fault;
 	}
 
 	if (!create_sink(s))
 	{
-		pw_thread_loop_unlock(s->ciclo);
-		goto guasto;
+		pw_thread_loop_unlock(s->cycle);
+		goto fault;
 	}
-	pw_thread_loop_unlock(s->ciclo);
+	pw_thread_loop_unlock(s->cycle);
 
-	registro_dice(REG_SUONO, "⭐ audio sink «%s» mounted in the session: node %u, %d Hz, %d channels "
+	registro_dice(LOG_SOUND, "⭐ audio sink «%s» mounted in the session: node %u, %d Hz, %d channels "
 	                         "— it belongs to the SESSION, it survives detach (I4)",
-	              SINK_NAME, s->nodo, (int) AUDIO_FREQUENZA, (int) AUDIO_CANALI);
+	              SINK_NAME, s->node, (int) AUDIO_FREQUENCY, (int) AUDIO_CHANNELS);
 	return s;
 
-guasto:
+fault:
 	sound_close(s);
 	return NULL;
 }
 
-bool sound_listen_start(suono *s, sound_samples on_samples, void *chi)
+bool sound_listen_start(sound *s, sound_samples on_samples, void *chi)
 {
-	uint8_t spazio[1024];
-	struct spa_pod_builder costruttore = SPA_POD_BUILDER_INIT(spazio, sizeof spazio);
-	const struct spa_pod *parametri[1];
-	struct spa_audio_info_raw formato = { 0 };
-	struct pw_properties *proprieta;
-	uint64_t scadenza;
+	uint8_t space[1024];
+	struct spa_pod_builder builder = SPA_POD_BUILDER_INIT(space, sizeof space);
+	const struct spa_pod *parameters[1];
+	struct spa_audio_info_raw fmt = { 0 };
+	struct pw_properties *property;
+	uint64_t expiry;
 
-	if (!s || !s->nucleo || !on_samples)
+	if (!s || !s->core || !on_samples)
 		return false;
 
 	/*
@@ -650,44 +650,44 @@ bool sound_listen_start(suono *s, sound_samples on_samples, void *chi)
 	 *    arrives mute.  The capture start is the latest moment we have
 	 *    available, and by then the race is over.  `[M]` 8 August 2026.
 	 */
-	suono_volume_massimo(s);
+	sound_max_volume(s);
 
-	pw_thread_loop_lock(s->ciclo);
+	pw_thread_loop_lock(s->cycle);
 
-	if (s->flusso)
+	if (s->stream)
 	{
-		pw_thread_loop_unlock(s->ciclo);
-		registro_dice(REG_SUONO, "⛔ the audio capture is already on: the second one does not open");
+		pw_thread_loop_unlock(s->cycle);
+		registro_dice(LOG_SOUND, "⛔ the audio capture is already on: the second one does not open");
 		return false;
 	}
 
 	s->on_samples = on_samples;
 	s->chi = chi;
-	s->stato = PW_STREAM_STATE_UNCONNECTED;
-	atomic_store(&s->blocchi, 0);
-	atomic_store(&s->fotogrammi, 0);
-	atomic_store(&s->scartati, 0);
-	atomic_store(&s->picco, 0);
-	/* ⚠ On BEFORE connecting the stream, and switched off by `su_parametri` if the
+	s->state = PW_STREAM_STATE_UNCONNECTED;
+	atomic_store(&s->blocks, 0);
+	atomic_store(&s->frames, 0);
+	atomic_store(&s->discarded, 0);
+	atomic_store(&s->peak, 0);
+	/* ⚠ On BEFORE connecting the stream, and switched off by `on_parameters` if the
 	 *   negotiated format is not that of §5.3: the first callback may arrive
 	 *   before this function returns. */
-	atomic_store(&s->consegna, true);
+	atomic_store(&s->delivery, true);
 
-	proprieta = pw_properties_new(PW_KEY_MEDIA_TYPE, "Audio", PW_KEY_MEDIA_CATEGORY, "Capture",
+	property = pw_properties_new(PW_KEY_MEDIA_TYPE, "Audio", PW_KEY_MEDIA_CATEGORY, "Capture",
 	                              /* The two lines that decide WHERE we capture from: the
 	                               * MONITOR (the output) of our sink, and not
 	                               * the input of a microphone that does not exist here. */
 	                              PW_KEY_STREAM_CAPTURE_SINK, "true", PW_KEY_TARGET_OBJECT,
 	                              SINK_NAME, PW_KEY_NODE_FORCE_QUANTUM, FORCED_QUANTUM, NULL);
-	s->flusso = proprieta ? pw_stream_new(s->nucleo, "remotix-suono", proprieta) : NULL;
-	if (!s->flusso)
+	s->stream = property ? pw_stream_new(s->core, "remotix-suono", property) : NULL;
+	if (!s->stream)
 	{
-		atomic_store(&s->consegna, false);
-		pw_thread_loop_unlock(s->ciclo);
-		registro_dice(REG_SUONO, "⛔ PipeWire stream not created");
+		atomic_store(&s->delivery, false);
+		pw_thread_loop_unlock(s->cycle);
+		registro_dice(LOG_SOUND, "⛔ PipeWire stream not created");
 		return false;
 	}
-	pw_stream_add_listener(s->flusso, &s->hook_stream, &events_stream, s);
+	pw_stream_add_listener(s->stream, &s->hook_stream, &events_stream, s);
 
 	/*
 	 * ⛔ THE FORMAT IS ASKED FIXED, and it is not a preference: `RCP.md` §5.3.
@@ -699,57 +699,57 @@ bool sound_listen_start(suono *s, sound_samples on_samples, void *chi)
 	 *    since phase 18 libavcodec is gone, and `libopus` (`audio.c`)
 	 *    has no resamplers — ⇒ the reason counts even more.
 	 */
-	formato.format = SPA_AUDIO_FORMAT_S16;
-	formato.rate = AUDIO_FREQUENZA;
-	formato.channels = AUDIO_CANALI;
-	formato.position[0] = SPA_AUDIO_CHANNEL_FL;
-	formato.position[1] = SPA_AUDIO_CHANNEL_FR;
-	parametri[0] = spa_format_audio_raw_build(&costruttore, SPA_PARAM_EnumFormat, &formato);
+	fmt.format = SPA_AUDIO_FORMAT_S16;
+	fmt.rate = AUDIO_FREQUENCY;
+	fmt.channels = AUDIO_CHANNELS;
+	fmt.position[0] = SPA_AUDIO_CHANNEL_FL;
+	fmt.position[1] = SPA_AUDIO_CHANNEL_FR;
+	parameters[0] = spa_format_audio_raw_build(&builder, SPA_PARAM_EnumFormat, &fmt);
 
 	/* ⛔ `PW_STREAM_FLAG_RT_PROCESS`: the callback runs on the realtime
 	 *    thread.  It is wanted — a hop through the main loop would be one more
 	 *    quantum of latency on a link that has 50 in all — and the
 	 *    price is the contract written in `suono.h`: inside one copies and returns. */
-	if (pw_stream_connect(s->flusso, PW_DIRECTION_INPUT, PW_ID_ANY,
+	if (pw_stream_connect(s->stream, PW_DIRECTION_INPUT, PW_ID_ANY,
 	                      PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_MAP_BUFFERS |
 	                          PW_STREAM_FLAG_RT_PROCESS,
-	                      parametri, 1) < 0)
+	                      parameters, 1) < 0)
 	{
-		pw_stream_destroy(s->flusso);
-		s->flusso = NULL;
-		atomic_store(&s->consegna, false);
-		pw_thread_loop_unlock(s->ciclo);
-		registro_dice(REG_SUONO, "⛔ attaching to the monitor of sink «%s» failed", SINK_NAME);
+		pw_stream_destroy(s->stream);
+		s->stream = NULL;
+		atomic_store(&s->delivery, false);
+		pw_thread_loop_unlock(s->cycle);
+		registro_dice(LOG_SOUND, "⛔ attaching to the monitor of sink «%s» failed", SINK_NAME);
 		return false;
 	}
 
 	/* ⛔ We wait for `paused`: it is the moment the format was negotiated,
 	 *    that is the only one in which a refusal shows at once. */
-	scadenza = registro_ora_ms() + WAIT_LISTEN_MS;
-	while (s->stato != PW_STREAM_STATE_PAUSED && s->stato != PW_STREAM_STATE_STREAMING &&
-	       s->stato != PW_STREAM_STATE_ERROR && registro_ora_ms() < scadenza)
-		pw_thread_loop_timed_wait(s->ciclo, 1);
-	pw_thread_loop_unlock(s->ciclo);
+	expiry = log_now_ms() + WAIT_LISTEN_MS;
+	while (s->state != PW_STREAM_STATE_PAUSED && s->state != PW_STREAM_STATE_STREAMING &&
+	       s->state != PW_STREAM_STATE_ERROR && log_now_ms() < expiry)
+		pw_thread_loop_timed_wait(s->cycle, 1);
+	pw_thread_loop_unlock(s->cycle);
 
-	if (s->stato == PW_STREAM_STATE_ERROR)
+	if (s->state == PW_STREAM_STATE_ERROR)
 	{
-		registro_dice(REG_SUONO, "⛔ audio capture refused: %s",
-		              s->guasto ? s->guasto : "no explanation");
-		suono_ascolto_ferma(s);
+		registro_dice(LOG_SOUND, "⛔ audio capture refused: %s",
+		              s->fault ? s->fault : "no explanation");
+		sound_listen_stop(s);
 		return false;
 	}
-	if (s->stato != PW_STREAM_STATE_PAUSED && s->stato != PW_STREAM_STATE_STREAMING)
+	if (s->state != PW_STREAM_STATE_PAUSED && s->state != PW_STREAM_STATE_STREAMING)
 	{
-		registro_dice(REG_SUONO, "⛔ the audio capture gave no sign of life within %d ms",
+		registro_dice(LOG_SOUND, "⛔ the audio capture gave no sign of life within %d ms",
 		              WAIT_LISTEN_MS);
-		suono_ascolto_ferma(s);
+		sound_listen_stop(s);
 		return false;
 	}
 
-	registro_dice(REG_SUONO,
+	registro_dice(LOG_SOUND,
 	              "⭐ audio capture started from the monitor of «%s»: %d Hz, %d channels, s16, quantum %s "
 	              "— ⚠ blocks have VARIABLE size, the listener accumulates (suono.h)",
-	              SINK_NAME, (int) AUDIO_FREQUENZA, (int) AUDIO_CANALI, FORCED_QUANTUM);
+	              SINK_NAME, (int) AUDIO_FREQUENCY, (int) AUDIO_CHANNELS, FORCED_QUANTUM);
 	return true;
 }
 
@@ -757,7 +757,7 @@ bool sound_listen_start(suono *s, sound_samples on_samples, void *chi)
  * ⛔⛔ THE PROMISED WAIT, AND DONE — v1 promised it and did NOT do it.
  *
  * v1's comment said: "The loop lock IS the wait promised in the header:
- * PipeWire holds it while it calls `su_processo`".  ⛔ It is FALSE
+ * PipeWire holds it while it calls `on_process`".  ⛔ It is FALSE
  * when the stream is connected with `PW_STREAM_FLAG_RT_PROCESS`, which is
  * precisely our case: `[R]` `pipewire/stream.h:150` and `:466` — the
  * callback comes from the **data thread**, which is another thread, and the
@@ -772,10 +772,10 @@ bool sound_listen_start(suono *s, sound_samples on_samples, void *chi)
  * ⇒ The wait is in two steps, and the first does NOT depend on how
  *   `pw_stream_destroy()` is made inside:
  *
- *   1. `consegna` is switched off and we wait for `in_callback` to go back false.
+ *   1. `delivery` is switched off and we wait for `in_callback` to go back false.
  *      From here on no listener callback is in flight, and none will start
  *      again (the two sequentially consistent writes see each other: see
- *      `su_processo`).  ⭐ This, and only this, is what entitles the
+ *      `on_process`).  ⭐ This, and only this, is what entitles the
  *      caller to free its context;
  *   2. the stream is destroyed holding the loop lock.  ⚠ That no
  *      `dequeue` is half way when the stream dies is the responsibility of
@@ -787,16 +787,16 @@ bool sound_listen_start(suono *s, sound_samples on_samples, void *chi)
  *   data thread would be the way to end up in the middle of a deadlock
  *   the day PipeWire changed its mind about who holds what.
  */
-static void wait_callback(suono *s)
+static void wait_callback(sound *s)
 {
-	uint64_t inizio = registro_ora_ms();
+	uint64_t start = log_now_ms();
 
 	while (atomic_load(&s->in_callback))
 	{
-		struct timespec pausa = { 0, 200 * 1000 }; /* 200 µs: a quantum is 5 ms */
+		struct timespec delay = { 0, 200 * 1000 }; /* 200 µs: a quantum is 5 ms */
 
-		nanosleep(&pausa, NULL);
-		if (registro_ora_ms() - inizio > WAIT_BARRIER_MS)
+		nanosleep(&delay, NULL);
+		if (log_now_ms() - start > WAIT_BARRIER_MS)
 		{
 			/* ⛔ We exit anyway, and it IS DECLARED.  Staying here forever
 			 *    would mean a frozen session, and "an ugly session
@@ -804,7 +804,7 @@ static void wait_callback(suono *s)
 			 *    to "a hung session".  ⚠ But whoever reads this line knows that
 			 *    the connection's context must NOT be freed: PipeWire has been
 			 *    stuck inside a callback for two seconds. */
-			registro_dice(REG_SUONO,
+			registro_dice(LOG_SOUND,
 			              "⛔⛔ the realtime thread did not leave the callback within %d ms: "
 			              "do NOT free the listening context — PipeWire is blocked",
 			              WAIT_BARRIER_MS);
@@ -813,26 +813,26 @@ static void wait_callback(suono *s)
 	}
 }
 
-void suono_ascolto_ferma(suono *s)
+void sound_listen_stop(sound *s)
 {
-	if (!s || !s->ciclo)
+	if (!s || !s->cycle)
 		return;
 
 	/* 1. the barrier towards the listener (see the box). */
-	atomic_store(&s->consegna, false);
+	atomic_store(&s->delivery, false);
 	wait_callback(s);
 
 	/* 2. the stream, under the loop lock. */
-	pw_thread_loop_lock(s->ciclo);
-	if (s->flusso)
+	pw_thread_loop_lock(s->cycle);
+	if (s->stream)
 	{
-		struct pw_stream *flusso = s->flusso;
-		uint64_t blocchi = atomic_load(&s->blocchi);
-		uint64_t fotogrammi = atomic_load(&s->fotogrammi);
-		uint64_t scartati = atomic_load(&s->scartati);
+		struct pw_stream *stream = s->stream;
+		uint64_t blocks = atomic_load(&s->blocks);
+		uint64_t frames = atomic_load(&s->frames);
+		uint64_t discarded = atomic_load(&s->discarded);
 
-		s->flusso = NULL;
-		pw_stream_destroy(flusso);
+		s->stream = NULL;
+		pw_stream_destroy(stream);
 		/* ⭐ The summary is printed HERE, from the stopper's thread, and not from
 		 *    the realtime thread that counted it.  ⚠ "zero blocks" is a
 		 *    fact, not a void: it says the monitor delivered nothing,
@@ -849,73 +849,73 @@ void suono_ascolto_ferma(suono *s)
 		 *         datagrams).  `[M]` 17 August 2026: 16383 of 32767 with a 440 Hz
 		 *         tone — that is exactly what `pw-record` reads from the
 		 *         same monitor at the same instant. */
-		registro_dice(REG_SUONO,
+		registro_dice(LOG_SOUND,
 		              "audio capture stopped: %llu blocks, %llu frames delivered "
 		              "(%llu s of sound), %llu frames discarded, PEAK %llu of 32767",
-		              (unsigned long long) blocchi, (unsigned long long) fotogrammi,
-		              (unsigned long long) (fotogrammi / AUDIO_FREQUENZA),
-		              (unsigned long long) scartati,
-		              (unsigned long long) atomic_load(&s->picco));
+		              (unsigned long long) blocks, (unsigned long long) frames,
+		              (unsigned long long) (frames / AUDIO_FREQUENCY),
+		              (unsigned long long) discarded,
+		              (unsigned long long) atomic_load(&s->peak));
 	}
 	s->on_samples = NULL;
 	s->chi = NULL;
-	pw_thread_loop_unlock(s->ciclo);
+	pw_thread_loop_unlock(s->cycle);
 }
 
-uint32_t sound_node(const suono *s)
+uint32_t sound_node(const sound *s)
 {
-	return s ? s->nodo : 0;
+	return s ? s->node : 0;
 }
 
-bool suono_ascolto_vivo(const suono *s)
+bool sound_listen_alive(const sound *s)
 {
-	bool vivo;
+	bool alive;
 
-	if (!s || !s->ciclo || !s->flusso)
+	if (!s || !s->cycle || !s->stream)
 		return false;
-	/* ⚠ Under the lock because `stato` is written by the loop thread.  The
-	 *   `const` is on the pointer to `suono`, not on the PipeWire loop: nothing
+	/* ⚠ Under the lock because `state` is written by the loop thread.  The
+	 *   `const` is on the pointer to `sound`, not on the PipeWire loop: nothing
 	 *   of ours changes here. */
-	pw_thread_loop_lock(s->ciclo);
-	vivo = s->flusso && (s->stato == PW_STREAM_STATE_PAUSED ||
-	                     s->stato == PW_STREAM_STATE_STREAMING);
-	pw_thread_loop_unlock(s->ciclo);
-	return vivo;
+	pw_thread_loop_lock(s->cycle);
+	alive = s->stream && (s->state == PW_STREAM_STATE_PAUSED ||
+	                     s->state == PW_STREAM_STATE_STREAMING);
+	pw_thread_loop_unlock(s->cycle);
+	return alive;
 }
 
-void suono_conti(const suono *s, uint64_t *blocchi, uint64_t *fotogrammi, uint64_t *scartati)
+void sound_counts(const sound *s, uint64_t *blocks, uint64_t *frames, uint64_t *discarded)
 {
-	if (blocchi)
-		*blocchi = s ? atomic_load(&s->blocchi) : 0;
-	if (fotogrammi)
-		*fotogrammi = s ? atomic_load(&s->fotogrammi) : 0;
-	if (scartati)
-		*scartati = s ? atomic_load(&s->scartati) : 0;
+	if (blocks)
+		*blocks = s ? atomic_load(&s->blocks) : 0;
+	if (frames)
+		*frames = s ? atomic_load(&s->frames) : 0;
+	if (discarded)
+		*discarded = s ? atomic_load(&s->discarded) : 0;
 }
 
-void sound_close(suono *s)
+void sound_close(sound *s)
 {
 	if (!s)
 		return;
 
 	/* ⛔ First the barrier and the stream, then the thread, then the rest — and the
 	 *    order is that of `cattura.c`, for the same reason: so nothing a
-	 *    callback is using is touched.  ⚠ `suono_ascolto_ferma()` copes with the
-	 *    half-built object (the `goto guasto` case of `suono_apri`) because it
-	 *    looks at `ciclo` and `flusso` before anything else. */
-	suono_ascolto_ferma(s);
+	 *    callback is using is touched.  ⚠ `sound_listen_stop()` copes with the
+	 *    half-built object (the `goto fault` case of `sound_open`) because it
+	 *    looks at `cycle` and `stream` before anything else. */
+	sound_listen_stop(s);
 
-	if (s->ciclo)
-		pw_thread_loop_stop(s->ciclo);
+	if (s->cycle)
+		pw_thread_loop_stop(s->cycle);
 	if (s->sink)
 		pw_proxy_destroy(s->sink);
-	if (s->nucleo)
-		pw_core_disconnect(s->nucleo);
-	if (s->contesto)
-		pw_context_destroy(s->contesto);
-	if (s->ciclo)
-		pw_thread_loop_destroy(s->ciclo);
+	if (s->core)
+		pw_core_disconnect(s->core);
+	if (s->context)
+		pw_context_destroy(s->context);
+	if (s->cycle)
+		pw_thread_loop_destroy(s->cycle);
 
-	free(s->guasto);
+	free(s->fault);
 	free(s);
 }

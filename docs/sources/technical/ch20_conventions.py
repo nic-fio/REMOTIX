@@ -9,8 +9,8 @@ S1 = p("REMOTIX is fully English (" + c("DECISIONI.md") + " §10.38, 10 Oct 2026
          + c("DECISIONI.md") + " (decisions), " + c("LEZIONI.md") + " (lessons), " + c("FASI.md") + " (phases), "
          "phase documents, studies", "English; the user's «…» quotes stay Italian", "§10.38"],
         ["comments, log lines, messages of the server", "English", "§10.38"],
-        ["identifiers, file and folder names, options, RCP message and capability names: " + c("palco")
-         + " (stage), " + c("cattura") + " (capture), " + c("figlio") + " (child)…",
+        ["identifiers, file and folder names, options, RCP message and capability names: " + c("stage")
+         + " (stage), " + c("capture") + " (capture), " + c("child") + " (child)…",
          "being renamed to English mechanically, from one glossary; until then the Italian names are the real "
          "ones", "§10.38"],
         ["the browser page: login, warnings, errors, farewell reasons", "English", "§10.32, §10.38"],
@@ -232,14 +232,14 @@ S7 = p("Every commit leaves the project built, checked and documented. The list 
        "it runs by itself; what does not run by itself is the part that is forgotten.", lead=True) + steps([
     "<b>The product builds</b>: " + c("make") + " in " + c("src/") + " (inside the build container — see "
     + rif("Build and release") + "). The build first compares the twin RCP files with " + c("banchi/rcp/")
-    + " and stops if they differ; " + c("GEMELLO=nessuno") + " (twin = none) builds without the comparison only when declared.",
+    + " and stops if they differ; " + c("TWIN=none") + " (twin = none) builds without the comparison only when declared.",
     "<b>The installer's tests</b>, if " + c("installatore/") + " (the installer) changed: "
-    + c("installatore/costruisci.sh prove") + " (gofmt, go vet and go test: state machine, register, resume, "
+    + c("installatore/costruisci.sh test") + " (gofmt, go vet and go test: state machine, register, resume, "
     "codes, English texts).",
     "<b>The documents are updated in the same commit</b> as the change they describe: the phase document "
     "(a measurement with its date and scene), " + c("DECISIONI.md") + " if something was decided, the chapter of "
     "this manual that describes the behaviour.",
-    "<b>The manual</b>, if " + c("docs/sources/") + " changed: " + c("python3 docs/sources/build.py --controlla")
+    "<b>The manual</b>, if " + c("docs/sources/") + " changed: " + c("python3 docs/sources/build.py --check")
     + ", then " + c("python3 docs/sources/build.py") + " to regenerate the published page in " + c("docs/") + ". "
     "The check fails on cited files, functions, " + c("REMOTIX_*") + " variables or " + c("RX-") + " codes that do "
     "not exist, on undocumented " + c("REMOTIX_*") + " variables read by the product, on broken internal links, "
@@ -250,7 +250,7 @@ S7 = p("Every commit leaves the project built, checked and documented. The list 
     "change; " + c("src/") + " runs the fast family under its 180 s ceiling; a new box recipe runs everything on "
     "the new desktop — and appends its line to the hook's register (" + c("11-gancio-registro.jsonl")
     + "), which is committed like any file.",
-    "<b>Before closing a phase</b>, by name: " + c("--famiglia tutto") + " (the “all” family) or the functional suite, which no path "
+    "<b>Before closing a phase</b>, by name: " + c("--family all") + " (the “all” family) or the functional suite, which no path "
     "can infer.",
 ]) + \
     table(["Prefix", "Used for"], [

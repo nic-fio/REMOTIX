@@ -1,6 +1,6 @@
 from build import VERSION, arrow, box, path, c, conta, dl, fig, note, numeri, p, righe, rif, table, text, tree, warn, zone
 
-INSIEME = fig(
+OVERVIEW = fig(
     zone(20, 12, 250, 250, "Any device (a browser)")
     + box(40, 46, 210, 54, "The page", "src/pagina.html, served by the server", "navy")
     + box(40, 116, 210, 54, "WebCodecs + canvas", "decodes and draws the video", "blue")
@@ -24,7 +24,7 @@ S1 = p("<b>REMOTIX</b> is a remote desktop for Linux. A server runs on the Linux
        "WebTransport, that is HTTP/3 on QUIC. There is nothing to install on the device the user connects from: a "
        "browser with WebTransport and WebCodecs is the client. " + c("SPECIFICHE.md") + " says what the product "
        "promises, " + c("RCP.md") + " defines the protocol, " + c("DECISIONI.md") + " records why; this manual "
-       "explains how the code does it.", lead=True) + INSIEME + \
+       "explains how the code does it.", lead=True) + OVERVIEW + \
     p("Every user who logs in gets <b>their own graphical session</b> on the machine — GNOME, KDE Plasma, XFCE or "
       "LXQt, whichever desktop the machine has — started headless by REMOTIX, with one virtual monitor as large as "
       "the browser window. The session belongs to the user, not to the connection: closing the tab, losing the "
@@ -32,7 +32,7 @@ S1 = p("<b>REMOTIX</b> is a remote desktop for Linux. A server runs on the Linux
       "it, with “Log out” from the desktop menu or " + c("Ctrl+Alt+End") + " in the page, or the server closes it "
       "after 60 minutes without input.") + \
     p("Several users can work on the same machine at once, each in their own desktop (10 by default, set with "
-      + c("--tetto-sessioni") + ", the session cap). The video is encoded only on the graphics card (VA-API on Intel and AMD, Vulkan "
+      + c("--session-cap") + ", the session cap). The video is encoded only on the graphics card (VA-API on Intel and AMD, Vulkan "
       "Video on AMD and NVIDIA) in H.264 or HEVC; the audio travels as Opus in QUIC datagrams; keyboard, pointer, "
       "touch and the text clipboard travel in both directions.") + \
     table(["Item", "Value"], [
@@ -95,26 +95,26 @@ S2 = p("A few concepts recur in every chapter. Most of them still have an Italia
         ["<b>PAM helper</b>", "A dispatcher process started at boot, which forks one short-lived process per "
          "password check, so that PAM never blocks the server's loop", c("aiutante.c") + ", "
          + c("autenticazione.c"), rif("The PAM helper process")],
-        ["<b>Child</b> (" + c("figlio") + ")", "One process per admitted user, running as that user: it opens the "
+        ["<b>Child</b> (" + c("child") + ")", "One process per admitted user, running as that user: it opens the "
          "user's logind session, starts the desktop and holds capture, encoding, input, audio and clipboard. In "
-         + c("ps") + " it appears as " + c("remotix-figlio --figlio-interno"), c("figlio.c"),
+         + c("ps") + " it appears as " + c("remotix-child --internal-child"), c("figlio.c"),
          rif("The per-user child process")],
-        ["<b>Stage</b> (" + c("palco") + ")", "What the child mounts on the user's desktop: the virtual monitor, the "
+        ["<b>Stage</b> (" + c("stage") + ")", "What the child mounts on the user's desktop: the virtual monitor, the "
          "capture stream, the input channel, the clipboard and the cursor. It belongs to the session, not to the "
-         "connection (invariant I4)", c("prendi_il_palco()") + " (take the stage)", rif("The stage and the virtual monitor")],
+         "connection (invariant I4)", c("take_stage()") + " (take the stage)", rif("The stage and the virtual monitor")],
         ["<b>Graphical session</b>", "The user's desktop, started by the child with " + c("setsid --fork")
          + " inside the user's logind session and therefore outside the service's unit", c("sessione.c"),
          rif("Birth of a session")],
-        ["<b>Canvas</b> (" + c("tela") + ")", "The size of the remote desktop: the browser window's size at attach "
-         "time, at most 4096×2304; it does not change while the client stays", c("ATTACCA") + " (attach), " + c("TELA"),
+        ["<b>Canvas</b> (" + c("canvas") + ")", "The size of the remote desktop: the browser window's size at attach "
+         "time, at most 4096×2304; it does not change while the client stays", c("ATTACH") + " (attach), " + c("CANVAS"),
          rif("The RCP/1 protocol")],
-        ["<b>View</b> (" + c("vista") + ")", "The size at which the page draws the canvas; it follows the window "
-         "without touching the desktop", c("VISTA"), rif("The browser page")],
-        ["<b>Tenant</b> (" + c("inquilino") + ")", "A user being served. The cap (" + c("--tetto-sessioni")
-         + ", 10) counts stages, not connections", c("rcp_tetto()"), rif("Where state lives")],
+        ["<b>View</b> (" + c("view") + ")", "The size at which the page draws the canvas; it follows the window "
+         "without touching the desktop", c("VIEW"), rif("The browser page")],
+        ["<b>Tenant</b> (" + c("tenant") + ")", "A user being served. The cap (" + c("--session-cap")
+         + ", 10) counts stages, not connections", c("rcp_cap()"), rif("Where state lives")],
         ["<b>Attach slot</b> (" + c("posto") + ")", "The place of a user's connection in RCP's registry: one per "
          "user; freed when the client detaches or falls silent for 30 s", c("rcp.c"), rif("Detach and reattach")],
-        ["<b>Farewell</b> (" + c("CONGEDO") + ")", "The message that closes an RCP session, always with a reason "
+        ["<b>Farewell</b> (" + c("FAREWELL") + ")", "The message that closes an RCP session, always with a reason "
          "code and a sentence: the server never closes without saying why (DECISIONI.md §4.1-bis)", c("rcp.h"),
          rif("The RCP/1 protocol")],
         ["<b>Sentinel</b> (" + c("sentinella") + ")", "The code that asks logind whether a user has a local "
@@ -125,14 +125,14 @@ S2 = p("A few concepts recur in every chapter. Most of them still have an Italia
          rif("Desktops found again after a restart")],
         ["<b>Budget</b>", "An optional admission check in megapixels per second of composition; off by default",
          c("budget.c"), rif("Quality, degradation and budget")],
-        ["<b>Belts</b> (" + c("cinture") + ")", "The three system settings that forbid power-off, reboot and "
+        ["<b>Belts</b> (" + c("belts") + ")", "The three system settings that forbid power-off, reboot and "
          "suspend to every user: a polkit rule, logind settings for the power key and lid, and sleep settings. "
          "The packages ship them disabled", c("remotix-niente-spegnimento.rules") + " (no power-off)",
          rif("Files on the machine")],
     ], "«TAB» — Basic concepts") + \
     p("The design is held together by eight <b>invariants</b>, numbered in " + c("CODER.md") + " §2 and quoted "
       "throughout the code comments as I1…I8; they are listed in " + rif("Architectural principles") + ".") + \
-    note("REMOTIX recognises the desktop from what is installed (" + c("riconosci_desktop()") + " looks for "
+    note("REMOTIX recognises the desktop from what is installed (" + c("recognize_desktop()") + " looks for "
          + c("gnome-session") + ", " + c("startplasma-wayland") + ", " + c("xfce4-session") + " and "
          + c("lxqt-session") + " in the " + c("PATH") + "). Machines with more than one desktop are out of scope "
          "(DECISIONI.md §0.6): if two are present, one is chosen — GNOME before KDE, XFCE before LXQt — and the "
@@ -188,7 +188,7 @@ S4 = p("The " + c("nic-fio/REMOTIX") + " repository on GitHub (private) holds ev
        "installer, the packages, the test benches, the measurements and the documents. Since " + c("DECISIONI.md")
        + " §10.38 (10 Oct 2026) everything is in English — documents, comments, the manual and what the user and "
        "the administrator read: the page, "
-       "including the reasons of a farewell (" + c("MOTIVO") + " in " + c("pagina.html") + ") and the ban notice, "
+       "including the reasons of a farewell (" + c("REASON_TEXT") + " in " + c("pagina.html") + ") and the ban notice, "
        "and the server's log lines.", lead=True) + tree([
     "REMOTIX/",
     "├── src/  # the product: the server in C, the page, PAM files, build scripts",
@@ -258,7 +258,7 @@ S4 = p("The " + c("nic-fio/REMOTIX") + " repository on GitHub (private) holds ev
          "sections of " + c("DECISIONI.md") + " win; " + rif("Conventions") + " explains how the documents are "
          "kept.", "Old headers.")
 
-PARTI = [
+PARTS = [
     ("Server", c("src/*.c") + ", " + c("src/*.h"),
      "parent, children, transport, RCP, capture, encoding, input, audio, clipboard, desktops",
      lambda f: f.startswith("src/") and f.count("/") == 1 and f.endswith((".c", ".h")) and not f.endswith("_spv.h")),
@@ -290,7 +290,7 @@ S5 = p("How big REMOTIX is, part by part. The lines are counted from the sources
        "files kept by git under " + c("src/") + ", " + c("installatore/") + " and " + c("packaging/")
        + ", plus the manual's own sources; the vendored Go modules, the protocol headers generated at build time and "
        "binary files are left out. The test benches (" + c("banchi/") + ", about 1,800 files) are not counted.",
-       lead=True) + numeri(PARTI, "«TAB» — The project's parts and their line counts") + \
+       lead=True) + numeri(PARTS, "«TAB» — The project's parts and their line counts") + \
     p("A large share of the C is comment: by the project's rules every non-obvious line carries the reason, the "
       "measurement or the decision behind it, often with the date. The counts in this table and in the file map "
       "are never written by hand.")

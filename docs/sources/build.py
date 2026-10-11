@@ -15,7 +15,7 @@ here; REMOTIX's only additions live in EXTRA_CSS, below.
 The file map and the numbers table are counted from the sources at every generation.
 
     python3 docs/sources/build.py              regenerates the manual
-    python3 docs/sources/build.py --controlla  checks that it is aligned with the code
+    python3 docs/sources/build.py --check  checks that it is aligned with the code
 
 It needs the pygments and Pillow libraries (packages python3-pygments and python3-pil).
 """
@@ -31,7 +31,7 @@ HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
 DATE = "October 2026"
 # REMOTIX's version: the same one goes to all packages (packaging/rilascio.sh); the default one lives in the rpm recipe.
-VERSION = re.search(r"rx_versione}%{!\?rx_versione:([0-9.]+)}", (ROOT / "packaging" / "rpm" / "remotix.spec").read_text()).group(1)
+VERSION = re.search(r"rx_version}%{!\?rx_version:([0-9.]+)}", (ROOT / "packaging" / "rpm" / "remotix.spec").read_text()).group(1)
 
 MANUALS = {
     "tecnico": dict(dir="technical", file="Technical Manual.html", title="Technical Manual — REMOTIX",
@@ -170,7 +170,7 @@ def term(text, title=""):
             cmd, _, comment = m.group(2).partition("   #")
             lines.append(f'<span class="pr">{esc(m.group(1))}</span><span class="cmd">{esc(cmd)}</span>'
                          + (f'<span class="dim">   #{esc(comment)}</span>' if comment else ""))
-        elif line.startswith("errore") or line.startswith("Error"):
+        elif line.startswith("error") or line.startswith("Error"):
             lines.append(f'<span class="er">{esc(line)}</span>')
         elif line.startswith("["):
             lines.append(f'<span class="am">{esc(line)}</span>')
@@ -292,7 +292,7 @@ def flow(nodes, cap, title="", width=900):
 def seq(actors, events, cap, title="", width=900):
     """Sequence diagram.
     actors = [(name, subtitle, colour)];
-    events = (from, to, text[, dashed]) for a message, ("nota", i, text) for a note,
+    events = (from, to, text[, dashed]) for a message, ("note", i, text) for a note,
              ("sep", text) for a separator with text."""
     n = len(actors)
     top = 50 if title else 22
@@ -302,7 +302,7 @@ def seq(actors, events, cap, title="", width=900):
     y = top + bh + 34
     body = []
     for ev in events:
-        if ev[0] == "nota":
+        if ev[0] == "note":
             _, i, t = ev
             tw = max(len(t) * 6.6 + 24, 90)
             body.append(f'<rect x="{xs[i] - tw / 2}" y="{y - 15}" width="{tw}" height="26" rx="6" fill="#fff7ed" stroke="#fdba74"/>')
@@ -546,7 +546,7 @@ def italian_sentences(pagina):
     for svg in re.findall(r"<svg.*?</svg>", t, flags=re.S):
         for x in re.findall(r"<text[^>]*>(.*?)</text>", svg, flags=re.S):
             x = html.unescape(x)
-            # Options, paths and code names (--prova-codifica, figlio.c, REMOTIX_AREA) are real names, not Italian.
+            # Options, paths and code names (--encoding-test, figlio.c, REMOTIX_AREA) are real names, not Italian.
             parole = re.sub(r"(?<!\w)(--?[\w-]+|[\w./-]*[_/.][\w./-]*)", " ", x)
             if ITALIAN_CHART_WORDS.search(parole):
                 frasi.append("diagram: " + x)
@@ -632,7 +632,7 @@ def subprocess_ls():
 
 
 # Files of the machine REMOTIX runs on, not of the repository: they may be cited.
-SYSTEM_FILES = {"remotix.conf", "sessione.log", "porta.conf"}
+SYSTEM_FILES = {"remotix.conf", "session.log", "port.conf"}
 
 # System headers: those the sources include between < >.
 SYSTEM_HEADERS = set(re.findall(r"#\s*include\s*<([^>]+)>", "\n".join(
@@ -644,7 +644,7 @@ NON_FUNCTION_NAMES = {"bundled"}
 
 
 if __name__ == "__main__":
-    if "--controlla" in sys.argv[1:]:
+    if "--check" in sys.argv[1:]:
         errori = controlla()
         for e in errori:
             print("manual:", e)

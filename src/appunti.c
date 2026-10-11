@@ -10,7 +10,7 @@
  *
  *      · **text only**: v1 exchanged lists of MIME types with the stitcher and
  *        also carried images and `text/html` (`fondamenta/…/scambio.c`).  Here the types
- *        live in `TIPI_TESTO` and do not leave this file;
+ *        live in `TEXT_TYPES` and do not leave this file;
  *      · **it is read here**, on the clipboard thread, instead of handing over the
  *        types and being called back: the §7.4 announcement carries the length, and the
  *        length is not known without reading;
@@ -30,9 +30,9 @@
 #include "registro.h"
 
 #define REMOTE_NAME "org.gnome.Mutter.RemoteDesktop"
-#define IFACE_SESSIONE "org.gnome.Mutter.RemoteDesktop.Session"
+#define IFACE_SESSION "org.gnome.Mutter.RemoteDesktop.Session"
 
-#define ATTESA_CHIAMATA_MS 5000
+#define WAIT_CALL_MS 5000
 
 /* How long we wait for a chunk from the descriptor before declaring it lost: the
  * writer at the other end may be slow, but not mute. */
@@ -52,32 +52,32 @@
  *   is not a guarantee, and non-UTF-8 text sent as UTF-8 is a
  *   violation of §5.4 on our side of the wire.
  */
-static const char *const TIPI_TESTO[] = {
+static const char *const TEXT_TYPES[] = {
 	"text/plain;charset=utf-8",
 	"UTF8_STRING",
 	"text/plain",
 	NULL,
 };
 
-struct Appunti
+struct Clipboard
 {
 	/* ⭐ PHASE 12 — on KDE all the work is done by `appunti_kde.c`, and this
 	 *    shell hands over at the top of every public function: the GNOME branch
 	 *    below stays as it was, line by line. */
-	AppuntiKde *kde;
+	ClipboardKde *kde;
 
 	GDBusConnection *bus;
-	char *controllo;
+	char *check;
 
-	GMainContext *contesto;
-	GMainLoop *ciclo;
+	GMainContext *context;
+	GMainLoop *cycle;
 	GThread *thread;
 
 	/* ⛔ The last text the session copied, kept HERE because it must
 	 *    survive the connection: whoever reconnects receives no new
-	 *    signal (`appunti.h`, `appunti_ultimo_testo`). */
-	char *ultimo;
-	size_t ultimo_byte;
+	 *    signal (`appunti.h`, `clipboard_last_text`). */
+	char *last;
+	size_t last_byte;
 
 	guint subscription_offer;
 	guint subscription_request;
@@ -85,39 +85,39 @@ struct Appunti
 	/* The callbacks and their owner.  The lock is held while a callback
 	 * runs, so `clipboard_listen(NULL, NULL, NULL)` waits for whoever is
 	 * half way instead of freeing the context under their feet. */
-	GMutex lucchetto;
+	GMutex lock;
 	ClipboardOnText on_text;
 	ClipboardOnRequest on_request;
-	void *dati;
+	void *data;
 };
 
-static GVariant *chiama(Appunti *appunti, const char *metodo, GVariant *argomenti,
-                        const GVariantType *tipo, GError **sbaglio)
+static GVariant *call(Clipboard *clipboard, const char *method, GVariant *call_args,
+                        const GVariantType *kind, GError **mistake)
 {
-	return g_dbus_connection_call_sync(appunti->bus, REMOTE_NAME,
-	                                   appunti->controllo, IFACE_SESSIONE,
-	                                   metodo, argomenti, tipo,
+	return g_dbus_connection_call_sync(clipboard->bus, REMOTE_NAME,
+	                                   clipboard->check, IFACE_SESSION,
+	                                   method, call_args, kind,
 	                                   G_DBUS_CALL_FLAGS_NONE,
-	                                   ATTESA_CHIAMATA_MS, NULL, sbaglio);
+	                                   WAIT_CALL_MS, NULL, mistake);
 }
 
 /* As above, but the answer carries a descriptor. */
-static int call_for_fd(Appunti *appunti, const char *metodo,
-                                  GVariant *argomenti, GError **sbaglio)
+static int call_for_fd(Clipboard *clipboard, const char *method,
+                                  GVariant *call_args, GError **mistake)
 {
-	g_autoptr(GUnixFDList) elenco = NULL;
-	g_autoptr(GVariant) risposta = NULL;
-	gint32 indice = -1;
+	g_autoptr(GUnixFDList) listing = NULL;
+	g_autoptr(GVariant) response = NULL;
+	gint32 idx = -1;
 
-	risposta = g_dbus_connection_call_with_unix_fd_list_sync(
-	    appunti->bus, REMOTE_NAME, appunti->controllo, IFACE_SESSIONE, metodo,
-	    argomenti, G_VARIANT_TYPE("(h)"), G_DBUS_CALL_FLAGS_NONE,
-	    ATTESA_CHIAMATA_MS, NULL, &elenco, NULL, sbaglio);
-	if (!risposta)
+	response = g_dbus_connection_call_with_unix_fd_list_sync(
+	    clipboard->bus, REMOTE_NAME, clipboard->check, IFACE_SESSION, method,
+	    call_args, G_VARIANT_TYPE("(h)"), G_DBUS_CALL_FLAGS_NONE,
+	    WAIT_CALL_MS, NULL, &listing, NULL, mistake);
+	if (!response)
 		return -1;
 
-	g_variant_get(risposta, "(h)", &indice);
-	return g_unix_fd_list_get(elenco, indice, sbaglio);
+	g_variant_get(response, "(h)", &idx);
+	return g_unix_fd_list_get(listing, idx, mistake);
 }
 
 /* ------------------------------------------------------------------ *
@@ -127,60 +127,60 @@ static int call_for_fd(Appunti *appunti, const char *metodo,
 /* Reads a descriptor to the end, with a ceiling and without hanging.
  *
  * ⛔ The ceiling is that of §5.4 **plus one**: reading exactly
- *    `APPUNTI_TETTO` one cannot tell "a text as large as the ceiling", which is
+ *    `CLIPBOARD_CAP` one cannot tell "a text as large as the ceiling", which is
  *    LAWFUL, from "a larger text", which must be refused.  One more byte and the
  *    two cases separate.  ⚠ It is the same form as §5.4's 1 000 000 versus 1 MiB:
  *    a ceiling that makes the borderline case illegal is not that ceiling. */
-static GBytes *slurp_fd(int fd, GError **sbaglio)
+static GBytes *slurp_fd(int fd, GError **mistake)
 {
-	GByteArray *raccolto = g_byte_array_new();
-	guint8 pezzo[16384];
+	GByteArray *collected = g_byte_array_new();
+	guint8 piece[16384];
 
 	while (TRUE)
 	{
-		GPollFD sonda = { .fd = fd, .events = G_IO_IN | G_IO_HUP | G_IO_ERR };
-		gssize letti;
+		GPollFD probe = { .fd = fd, .events = G_IO_IN | G_IO_HUP | G_IO_ERR };
+		gssize readings;
 
-		if (g_poll(&sonda, 1, WAIT_READ_MS) <= 0)
+		if (g_poll(&probe, 1, WAIT_READ_MS) <= 0)
 		{
-			g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_TIMED_OUT,
+			g_set_error(mistake, G_IO_ERROR, G_IO_ERROR_TIMED_OUT,
 			            "whoever had to deliver the clipboard wrote "
 			            "nothing for %d ms",
 			            WAIT_READ_MS);
-			g_byte_array_free(raccolto, TRUE);
+			g_byte_array_free(collected, TRUE);
 			return NULL;
 		}
 
-		letti = read(fd, pezzo, sizeof pezzo);
-		if (letti == 0)
+		readings = read(fd, piece, sizeof piece);
+		if (readings == 0)
 			break; /* end */
-		if (letti < 0)
+		if (readings < 0)
 		{
 			if (errno == EINTR)
 				continue;
-			g_set_error(sbaglio, G_IO_ERROR, g_io_error_from_errno(errno),
+			g_set_error(mistake, G_IO_ERROR, g_io_error_from_errno(errno),
 			            "clipboard read failed: %s", g_strerror(errno));
-			g_byte_array_free(raccolto, TRUE);
+			g_byte_array_free(collected, TRUE);
 			return NULL;
 		}
 
-		if (raccolto->len + (guint)letti > APPUNTI_TETTO)
+		if (collected->len + (guint)readings > CLIPBOARD_CAP)
 		{
-			g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_NO_SPACE,
+			g_set_error(mistake, G_IO_ERROR, G_IO_ERROR_NO_SPACE,
 			            "clipboard over the ceiling of %u bytes (§5.4): left "
 			            "where it is, and NOT truncated",
-			            APPUNTI_TETTO);
-			g_byte_array_free(raccolto, TRUE);
+			            CLIPBOARD_CAP);
+			g_byte_array_free(collected, TRUE);
 			return NULL;
 		}
-		g_byte_array_append(raccolto, pezzo, (guint)letti);
+		g_byte_array_append(collected, piece, (guint)readings);
 	}
 
-	return g_byte_array_free_to_bytes(raccolto);
+	return g_byte_array_free_to_bytes(collected);
 }
 
 /*
- * Tries the row of `TIPI_TESTO` and returns the first text that holds, already
+ * Tries the row of `TEXT_TYPES` and returns the first text that holds, already
  * validated.  NULL if there is none — and the reason is in the log.
  *
  * ⛔ And the reasons are THREE and stay distinct: there was no text type ·
@@ -188,53 +188,53 @@ static GBytes *slurp_fd(int fd, GError **sbaglio)
  *    A single `NULL` for all three would be `LEZIONI.md` §1.9 — "empty and
  *    forbidden with the same face".
  */
-static char *read_text(Appunti *appunti, size_t *quanti)
+static char *read_text(Clipboard *clipboard, size_t *amount)
 {
-	for (int i = 0; TIPI_TESTO[i]; i++)
+	for (int i = 0; TEXT_TYPES[i]; i++)
 	{
-		g_autoptr(GError) sbaglio = NULL;
-		g_autoptr(GBytes) dati = NULL;
-		const char *inizio;
+		g_autoptr(GError) mistake = NULL;
+		g_autoptr(GBytes) data = NULL;
+		const char *start;
 		gsize byte = 0;
 		int fd;
 
-		fd = call_for_fd(appunti, "SelectionRead",
-		                            g_variant_new("(s)", TIPI_TESTO[i]),
-		                            &sbaglio);
+		fd = call_for_fd(clipboard, "SelectionRead",
+		                            g_variant_new("(s)", TEXT_TYPES[i]),
+		                            &mistake);
 		if (fd < 0)
 		{
 			/* ⚠ In detail and not in plain: the row is tried on purpose, and a
 			 *   type the session does not have is the NORMAL outcome of the first rounds —
 			 *   one line for each would cover the log with noise. */
-			registro_dettaglio(REG_APPUNTI,
+			log_detail(LOG_CLIPBOARD,
 			                   "«%s» cannot be read from the session (%s): trying the "
 			                   "next type",
-			                   TIPI_TESTO[i],
-			                   sbaglio ? sbaglio->message : "no detail");
+			                   TEXT_TYPES[i],
+			                   mistake ? mistake->message : "no detail");
 			continue;
 		}
 
-		dati = slurp_fd(fd, &sbaglio);
+		data = slurp_fd(fd, &mistake);
 		close(fd);
-		if (!dati)
+		if (!data)
 		{
-			registro_dice(REG_APPUNTI,
+			registro_dice(LOG_CLIPBOARD,
 			              "⛔ «%s»: the read did not succeed — %s",
-			              TIPI_TESTO[i],
-			              sbaglio ? sbaglio->message : "no detail");
+			              TEXT_TYPES[i],
+			              mistake ? mistake->message : "no detail");
 			continue;
 		}
 
-		inizio = (const char *)g_bytes_get_data(dati, &byte);
+		start = (const char *)g_bytes_get_data(data, &byte);
 		if (byte == 0)
 		{
 			/* ⚠ Zero bytes is NOT a fault: it is an emptied clipboard, and it is
 			 *   exactly what the bench does at the start of every round
 			 *   (`LEZIONI.md` §2.3-quinquies).  It is declared and we go on. */
-			registro_dettaglio(REG_APPUNTI,
+			log_detail(LOG_CLIPBOARD,
 			                   "«%s» delivered zero bytes: the clipboard is "
 			                   "empty, not broken",
-			                   TIPI_TESTO[i]);
+			                   TEXT_TYPES[i]);
 			continue;
 		}
 
@@ -243,14 +243,14 @@ static char *read_text(Appunti *appunti, size_t *quanti)
 		 *    wire a violation **of ours**, and letting the client discover it — which
 		 *    per §3 would have to close the session.  ⇒ The symptom would be "the
 		 *    session drops when I copy from that program". */
-		if (!g_utf8_validate_len(inizio, byte, NULL))
+		if (!g_utf8_validate_len(start, byte, NULL))
 		{
-			registro_dice(REG_APPUNTI,
+			registro_dice(LOG_CLIPBOARD,
 			              "⛔ «%s» delivered %zu bytes that are NOT valid "
 			              "UTF-8: not announced (§5.4).  ⚠ It is not a defect "
 			              "of ours nor of the client — it is a program that keeps "
 			              "bytes in the clipboard that RCP/1 cannot carry",
-			              TIPI_TESTO[i], (size_t)byte);
+			              TEXT_TYPES[i], (size_t)byte);
 			continue;
 		}
 
@@ -260,21 +260,21 @@ static char *read_text(Appunti *appunti, size_t *quanti)
 		 *    gets pasted would be shorter than what was copied, and the
 		 *    announcement would state the whole length.  ⇒ Two truths about the
 		 *    same thing, which is the defect §2.2 forbids in those words. */
-		if (memchr(inizio, 0, byte))
+		if (memchr(start, 0, byte))
 		{
-			registro_dice(REG_APPUNTI,
+			registro_dice(LOG_CLIPBOARD,
 			              "⛔ «%s»: %zu bytes with a zero in the middle — not "
 			              "announced.  Truncating here would give a text shorter "
 			              "than the announcement, that is an announcement that lies",
-			              TIPI_TESTO[i], (size_t)byte);
+			              TEXT_TYPES[i], (size_t)byte);
 			continue;
 		}
 
-		registro_dettaglio(REG_APPUNTI, "read %zu bytes of «%s» from the session",
-		                   (size_t)byte, TIPI_TESTO[i]);
-		if (quanti)
-			*quanti = byte;
-		return g_strndup(inizio, byte);
+		log_detail(LOG_CLIPBOARD, "read %zu bytes of «%s» from the session",
+		                   (size_t)byte, TEXT_TYPES[i]);
+		if (amount)
+			*amount = byte;
+		return g_strndup(start, byte);
 	}
 
 	return NULL;
@@ -283,27 +283,27 @@ static char *read_text(Appunti *appunti, size_t *quanti)
 /* ------------------------------------------------------------------ *
  * The two signals
  * ------------------------------------------------------------------ */
-static void on_owner_changed(GDBusConnection *bus, const char *mittente,
-                                const char *percorso, const char *interfaccia,
-                                const char *segnale, GVariant *parametri,
-                                gpointer dati)
+static void on_owner_changed(GDBusConnection *bus, const char *sender,
+                                const char *fpath, const char *interfaccia,
+                                const char *send_signal, GVariant *parameters,
+                                gpointer data)
 {
-	Appunti *appunti = dati;
-	g_autoptr(GVariant) opzioni = NULL;
-	g_autoptr(GVariant) tipi = NULL;
+	Clipboard *clipboard = data;
+	g_autoptr(GVariant) options = NULL;
+	g_autoptr(GVariant) types = NULL;
 	g_autofree const char **mime = NULL;
-	g_autofree char *testo = NULL;
-	gboolean nostro = FALSE;
+	g_autofree char *text = NULL;
+	gboolean our = FALSE;
 	gboolean has_text = FALSE;
 	size_t byte = 0;
 
 	(void)bus;
-	(void)mittente;
-	(void)percorso;
+	(void)sender;
+	(void)fpath;
 	(void)interfaccia;
-	(void)segnale;
+	(void)send_signal;
 
-	g_variant_get(parametri, "(@a{sv})", &opzioni);
+	g_variant_get(parameters, "(@a{sv})", &options);
 
 	/*
 	 * ⛔ THE RETURN IS RECOGNISED HERE, and it is the first thing to look at —
@@ -313,9 +313,9 @@ static void on_owner_changed(GDBusConnection *bus, const char *mittente,
 	 * ⭐ And on GNOME it is **labelled**, not to be guessed: `STUDI.md` §gnome §10
 	 *    corrects our old line that spoke of "a heuristic".
 	 */
-	if (g_variant_lookup(opzioni, "session-is-owner", "b", &nostro) && nostro)
+	if (g_variant_lookup(options, "session-is-owner", "b", &our) && our)
 	{
-		registro_dettaglio(REG_APPUNTI,
+		log_detail(LOG_CLIPBOARD,
 		                   "it is the return of our own offer, not a new "
 		                   "copy: not announced");
 		return;
@@ -335,26 +335,26 @@ static void on_owner_changed(GDBusConnection *bus, const char *mittente,
 	 *      of the clipboard.  The reference works around it too (`grd-session.c`), which
 	 *      says it is not a fantasy of ours.
 	 */
-	tipi = g_variant_lookup_value(opzioni, "mime-types",
+	types = g_variant_lookup_value(options, "mime-types",
 	                              G_VARIANT_TYPE_STRING_ARRAY);
-	if (!tipi)
+	if (!types)
 	{
 		g_autoptr(GVariant) tuple =
-		    g_variant_lookup_value(opzioni, "mime-types", G_VARIANT_TYPE("(as)"));
+		    g_variant_lookup_value(options, "mime-types", G_VARIANT_TYPE("(as)"));
 
 		if (tuple)
-			tipi = g_variant_get_child_value(tuple, 0);
+			types = g_variant_get_child_value(tuple, 0);
 	}
-	if (!tipi)
+	if (!types)
 	{
-		registro_dice(REG_APPUNTI,
+		registro_dice(LOG_CLIPBOARD,
 		              "⛔ the session announced a copy without readable "
 		              "types: neither `as` nor `(as)`.  ⚠ If it is a third "
 		              "form, the clipboard from here on goes one way only "
 		              "and this line is the only place where it shows");
 		return;
 	}
-	mime = g_variant_get_strv(tipi, NULL);
+	mime = g_variant_get_strv(types, NULL);
 
 	/* ⛔ IS THERE TEXT AMONG THE TYPES?  And if not, we say WHAT there was.
 	 *
@@ -363,43 +363,43 @@ static void on_owner_changed(GDBusConnection *bus, const char *mittente,
 	 *   phone.  Without it, the symptom would be "the clipboard sometimes does not
 	 *   work" — that is the most expensive defect to diagnose there is. */
 	for (int i = 0; mime && mime[i] && !has_text; i++)
-		for (int k = 0; TIPI_TESTO[k]; k++)
-			if (g_ascii_strcasecmp(mime[i], TIPI_TESTO[k]) == 0)
+		for (int k = 0; TEXT_TYPES[k]; k++)
+			if (g_ascii_strcasecmp(mime[i], TEXT_TYPES[k]) == 0)
 			{
 				has_text = TRUE;
 				break;
 			}
 	if (!has_text)
 	{
-		g_autofree char *elenco = mime ? g_strjoinv(", ", (GStrv)mime) : NULL;
+		g_autofree char *listing = mime ? g_strjoinv(", ", (GStrv)mime) : NULL;
 
-		registro_dice(REG_APPUNTI,
+		registro_dice(LOG_CLIPBOARD,
 		              "the session copied something that is not text (%s): "
 		              "not announced.  ⚠ `DECISIONI.md` §5-ter.1 — text "
 		              "only, and it is a decision, not a technical limit",
-		              elenco && *elenco ? elenco : "no type");
+		              listing && *listing ? listing : "no type");
 		return;
 	}
 
-	testo = read_text(appunti, &byte);
-	if (!testo)
+	text = read_text(clipboard, &byte);
+	if (!text)
 	{
 		/* ⚠ `read_text` has already written WHICH of the three reasons it was: here
 		 *   we only say that the announcement does not leave, or "I read and kept quiet"
 		 *   would have the face of "nothing happened". */
-		registro_dice(REG_APPUNTI,
+		registro_dice(LOG_CLIPBOARD,
 		              "⛔ the session copied some text but no type of it could be "
 		              "read: no announcement to the client");
 		return;
 	}
 
-	g_mutex_lock(&appunti->lucchetto);
-	g_free(appunti->ultimo);
-	appunti->ultimo = g_strdup(testo);
-	appunti->ultimo_byte = byte;
-	if (appunti->on_text)
-		appunti->on_text(testo, byte, appunti->dati);
-	g_mutex_unlock(&appunti->lucchetto);
+	g_mutex_lock(&clipboard->lock);
+	g_free(clipboard->last);
+	clipboard->last = g_strdup(text);
+	clipboard->last_byte = byte;
+	if (clipboard->on_text)
+		clipboard->on_text(text, byte, clipboard->data);
+	g_mutex_unlock(&clipboard->lock);
 }
 
 /*
@@ -426,107 +426,107 @@ static void on_owner_changed(GDBusConnection *bus, const char *mittente,
  *    any other copy; if there is nobody, `read_text` says so in the
  *    log and nothing happens.
  */
-void appunti_leggi_adesso(Appunti *appunti)
+void clipboard_read_now(Clipboard *clipboard)
 {
-	g_autofree char *testo = NULL;
+	g_autofree char *text = NULL;
 	size_t byte = 0;
 
-	if (!appunti)
+	if (!clipboard)
 		return;
-	if (appunti->kde) {
-		clipboard_kde_read_now(appunti->kde);
+	if (clipboard->kde) {
+		clipboard_kde_read_now(clipboard->kde);
 		return;
 	}
 
-	testo = read_text(appunti, &byte);
-	if (!testo)
+	text = read_text(clipboard, &byte);
+	if (!text)
 	{
-		registro_dettaglio(REG_APPUNTI,
+		log_detail(LOG_CLIPBOARD,
 		                   "the session had no clipboard to give us at the time "
 		                   "of switching on: it is not a fault");
 		return;
 	}
 
-	registro_dice(REG_APPUNTI,
+	registro_dice(LOG_CLIPBOARD,
 	              "⭐ the clipboard that was ALREADY in the session: %zu bytes, "
 	              "read at switch-on.  ⚠ Whoever connects must not lose "
 	              "what they had copied",
 	              byte);
 
-	g_mutex_lock(&appunti->lucchetto);
-	g_free(appunti->ultimo);
-	appunti->ultimo = g_strdup(testo);
-	appunti->ultimo_byte = byte;
-	if (appunti->on_text)
-		appunti->on_text(testo, byte, appunti->dati);
-	g_mutex_unlock(&appunti->lucchetto);
+	g_mutex_lock(&clipboard->lock);
+	g_free(clipboard->last);
+	clipboard->last = g_strdup(text);
+	clipboard->last_byte = byte;
+	if (clipboard->on_text)
+		clipboard->on_text(text, byte, clipboard->data);
+	g_mutex_unlock(&clipboard->lock);
 }
 
-static void on_transfer(GDBusConnection *bus, const char *mittente,
-                             const char *percorso, const char *interfaccia,
-                             const char *segnale, GVariant *parametri,
-                             gpointer dati)
+static void on_transfer(GDBusConnection *bus, const char *sender,
+                             const char *fpath, const char *interfaccia,
+                             const char *send_signal, GVariant *parameters,
+                             gpointer data)
 {
-	Appunti *appunti = dati;
+	Clipboard *clipboard = data;
 	const char *mime = NULL;
 	guint32 serial = 0;
 
 	(void)bus;
-	(void)mittente;
-	(void)percorso;
+	(void)sender;
+	(void)fpath;
 	(void)interfaccia;
-	(void)segnale;
+	(void)send_signal;
 
-	g_variant_get(parametri, "(&su)", &mime, &serial);
-	registro_dettaglio(REG_APPUNTI,
+	g_variant_get(parameters, "(&su)", &mime, &serial);
+	log_detail(LOG_CLIPBOARD,
 	                   "the session wants to paste «%s» (request %u)", mime,
 	                   serial);
 
-	g_mutex_lock(&appunti->lucchetto);
-	if (appunti->on_request)
+	g_mutex_lock(&clipboard->lock);
+	if (clipboard->on_request)
 	{
-		appunti->on_request((uint32_t)serial, appunti->dati);
-		g_mutex_unlock(&appunti->lucchetto);
+		clipboard->on_request((uint32_t)serial, clipboard->data);
+		g_mutex_unlock(&clipboard->lock);
 		return;
 	}
-	g_mutex_unlock(&appunti->lucchetto);
+	g_mutex_unlock(&clipboard->lock);
 
 	/* ⛔ Nobody is listening: we answer NO anyway.  A request without an
 	 *    answer leaves the pasting application waiting
 	 *    indefinitely, and what the user sees is a hung desktop
 	 *    (`appunti.h`, `ClipboardOnRequest`). */
-	appunti_rispondi(appunti, (uint32_t)serial, NULL, 0);
+	clipboard_reply(clipboard, (uint32_t)serial, NULL, 0);
 }
 
 /* ------------------------------------------------------------------ *
  * The thread that runs the context
  * ------------------------------------------------------------------ */
-static gpointer thread_clipboard(gpointer dati)
+static gpointer thread_clipboard(gpointer data)
 {
-	Appunti *appunti = dati;
+	Clipboard *clipboard = data;
 
-	g_main_context_push_thread_default(appunti->contesto);
-	g_main_loop_run(appunti->ciclo);
-	g_main_context_pop_thread_default(appunti->contesto);
+	g_main_context_push_thread_default(clipboard->context);
+	g_main_loop_run(clipboard->cycle);
+	g_main_context_pop_thread_default(clipboard->context);
 	return NULL;
 }
 
-Appunti *appunti_apri(GDBusConnection *bus, const char *check_path,
-                      GError **sbaglio)
+Clipboard *clipboard_open(GDBusConnection *bus, const char *check_path,
+                      GError **mistake)
 {
-	Appunti *appunti;
+	Clipboard *clipboard;
 
 	if (!bus || !check_path)
 	{
-		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT,
+		g_set_error(mistake, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT,
 		            "the clipboard wants a bus and the control session");
 		return NULL;
 	}
 
-	appunti = g_new0(Appunti, 1);
-	appunti->bus = g_object_ref(bus);
-	appunti->controllo = g_strdup(check_path);
-	g_mutex_init(&appunti->lucchetto);
+	clipboard = g_new0(Clipboard, 1);
+	clipboard->bus = g_object_ref(bus);
+	clipboard->check = g_strdup(check_path);
+	g_mutex_init(&clipboard->lock);
 
 	/*
 	 * ⛔ The context is created and SUBSCRIBED here, on the calling thread, with the
@@ -536,17 +536,17 @@ Appunti *appunti_apri(GDBusConnection *bus, const char *check_path,
 	 *    obvious way, and would leave a window in which signals
 	 *    would arrive before the thread is ready.
 	 */
-	appunti->contesto = g_main_context_new();
-	g_main_context_push_thread_default(appunti->contesto);
+	clipboard->context = g_main_context_new();
+	g_main_context_push_thread_default(clipboard->context);
 
-	appunti->subscription_offer = g_dbus_connection_signal_subscribe(
-	    bus, NULL, IFACE_SESSIONE, "SelectionOwnerChanged", check_path,
-	    NULL, G_DBUS_SIGNAL_FLAGS_NONE, on_owner_changed, appunti, NULL);
-	appunti->subscription_request = g_dbus_connection_signal_subscribe(
-	    bus, NULL, IFACE_SESSIONE, "SelectionTransfer", check_path, NULL,
-	    G_DBUS_SIGNAL_FLAGS_NONE, on_transfer, appunti, NULL);
+	clipboard->subscription_offer = g_dbus_connection_signal_subscribe(
+	    bus, NULL, IFACE_SESSION, "SelectionOwnerChanged", check_path,
+	    NULL, G_DBUS_SIGNAL_FLAGS_NONE, on_owner_changed, clipboard, NULL);
+	clipboard->subscription_request = g_dbus_connection_signal_subscribe(
+	    bus, NULL, IFACE_SESSION, "SelectionTransfer", check_path, NULL,
+	    G_DBUS_SIGNAL_FLAGS_NONE, on_transfer, clipboard, NULL);
 
-	g_main_context_pop_thread_default(appunti->contesto);
+	g_main_context_pop_thread_default(clipboard->context);
 
 	/*
 	 * ⛔ The loop and the thread start BEFORE `EnableClipboard`, and the order is
@@ -556,112 +556,112 @@ Appunti *appunti_apri(GDBusConnection *bus, const char *check_path,
 	 *   whoever reconnects find the clipboard again": **it is false**, measured on 21
 	 *   August 2026 — Mutter tells the CHANGES, not the owner that was there.
 	 *   The clipboard that was already there is asked for, and
-	 *   `appunti_leggi_adesso()` does it.  Switching on the
+	 *   `clipboard_read_now()` does it.  Switching on the
 	 *    clipboard first and then the thread, that signal would fall in the window in which
 	 *    nobody runs the context — ⚠ and the symptom would be "the clipboard
 	 *    works only from the second copy on", which nobody connects
 	 *    to the order of two lines.
 	 */
-	appunti->ciclo = g_main_loop_new(appunti->contesto, FALSE);
-	appunti->thread = g_thread_new("remotix-appunti", thread_clipboard, appunti);
+	clipboard->cycle = g_main_loop_new(clipboard->context, FALSE);
+	clipboard->thread = g_thread_new("remotix-appunti", thread_clipboard, clipboard);
 
 	{
-		GVariantBuilder vuote;
-		g_autoptr(GVariant) risposta = NULL;
+		GVariantBuilder blanks;
+		g_autoptr(GVariant) response = NULL;
 
 		/*
 		 * ⭐ Without `mime-types`: so Mutter makes us owners of nothing and
 		 *    tells us instead who is the owner now.  See `appunti.h`.
 		 */
-		g_variant_builder_init(&vuote, G_VARIANT_TYPE("a{sv}"));
-		risposta = chiama(appunti, "EnableClipboard",
-		                  g_variant_new("(a{sv})", &vuote), NULL, sbaglio);
-		if (!risposta)
+		g_variant_builder_init(&blanks, G_VARIANT_TYPE("a{sv}"));
+		response = call(clipboard, "EnableClipboard",
+		                  g_variant_new("(a{sv})", &blanks), NULL, mistake);
+		if (!response)
 		{
-			g_prefix_error(sbaglio, "Mutter does not grant the clipboard: ");
-			clipboard_close(appunti);
+			g_prefix_error(mistake, "Mutter does not grant the clipboard: ");
+			clipboard_close(clipboard);
 			return NULL;
 		}
 	}
 
-	registro_dice(REG_APPUNTI,
+	registro_dice(LOG_CLIPBOARD,
 	              "⭐ session clipboard switched on (text only, in both directions) "
 	              "on %s",
 	              check_path);
-	return appunti;
+	return clipboard;
 }
 
-Appunti *appunti_apri_kde(GError **sbaglio)
+Clipboard *clipboard_open_kde(GError **mistake)
 {
-	AppuntiKde *kde = appunti_kde_apri(sbaglio);
-	Appunti *appunti;
+	ClipboardKde *kde = clipboard_kde_open(mistake);
+	Clipboard *clipboard;
 
 	if (!kde)
 		return NULL;
-	appunti = g_new0(Appunti, 1);
-	appunti->kde = kde;
-	return appunti;
+	clipboard = g_new0(Clipboard, 1);
+	clipboard->kde = kde;
+	return clipboard;
 }
 
-/* ⭐ PHASE 13 — the same wrapper as `appunti_apri_kde()`: from here on every
+/* ⭐ PHASE 13 — the same wrapper as `clipboard_open_kde()`: from here on every
  *    function hands over to `appunti_kde_*` as on KDE. */
-Appunti *appunti_apri_wlroots(GError **sbaglio)
+Clipboard *clipboard_open_wlroots(GError **mistake)
 {
-	AppuntiKde *wlr = appunti_kde_apri_wlroots(sbaglio);
-	Appunti *appunti;
+	ClipboardKde *wlr = clipboard_kde_open_wlroots(mistake);
+	Clipboard *clipboard;
 
 	if (!wlr)
 		return NULL;
-	appunti = g_new0(Appunti, 1);
-	appunti->kde = wlr;
-	return appunti;
+	clipboard = g_new0(Clipboard, 1);
+	clipboard->kde = wlr;
+	return clipboard;
 }
 
-char *appunti_ultimo_testo(Appunti *appunti, size_t *byte)
+char *clipboard_last_text(Clipboard *clipboard, size_t *byte)
 {
-	char *copia;
+	char *copied;
 
-	if (!appunti)
+	if (!clipboard)
 		return NULL;
-	if (appunti->kde)
-		return clipboard_kde_last_text(appunti->kde, byte);
-	g_mutex_lock(&appunti->lucchetto);
-	copia = appunti->ultimo ? g_strdup(appunti->ultimo) : NULL;
+	if (clipboard->kde)
+		return clipboard_kde_last_text(clipboard->kde, byte);
+	g_mutex_lock(&clipboard->lock);
+	copied = clipboard->last ? g_strdup(clipboard->last) : NULL;
 	if (byte)
-		*byte = copia ? appunti->ultimo_byte : 0;
-	g_mutex_unlock(&appunti->lucchetto);
-	return copia;
+		*byte = copied ? clipboard->last_byte : 0;
+	g_mutex_unlock(&clipboard->lock);
+	return copied;
 }
 
-void clipboard_listen(Appunti *appunti, ClipboardOnText on_text,
-                     ClipboardOnRequest on_request, void *dati)
+void clipboard_listen(Clipboard *clipboard, ClipboardOnText on_text,
+                     ClipboardOnRequest on_request, void *data)
 {
-	if (!appunti)
+	if (!clipboard)
 		return;
-	if (appunti->kde) {
-		clipboard_kde_listen(appunti->kde, on_text, on_request, dati);
+	if (clipboard->kde) {
+		clipboard_kde_listen(clipboard->kde, on_text, on_request, data);
 		return;
 	}
-	g_mutex_lock(&appunti->lucchetto);
-	appunti->on_text = on_text;
-	appunti->on_request = on_request;
-	appunti->dati = dati;
-	g_mutex_unlock(&appunti->lucchetto);
+	g_mutex_lock(&clipboard->lock);
+	clipboard->on_text = on_text;
+	clipboard->on_request = on_request;
+	clipboard->data = data;
+	g_mutex_unlock(&clipboard->lock);
 }
 
-void clipboard_close(Appunti *appunti)
+void clipboard_close(Clipboard *clipboard)
 {
-	if (!appunti)
+	if (!clipboard)
 		return;
-	if (appunti->kde) {
-		clipboard_kde_close(appunti->kde);
-		g_free(appunti);
+	if (clipboard->kde) {
+		clipboard_kde_close(clipboard->kde);
+		g_free(clipboard);
 		return;
 	}
 
 	/* First we stop listening — and the call waits for whoever is half
 	 * way — then the loop is stopped, then the subscriptions are removed. */
-	clipboard_listen(appunti, NULL, NULL, NULL);
+	clipboard_listen(clipboard, NULL, NULL, NULL);
 
 	/*
 	 * ⛔ NO `DisableClipboard`, EVER — not even here, and it is trap 1 of
@@ -672,73 +672,73 @@ void clipboard_close(Appunti *appunti)
 	 *    ⇒ Closing the control session everything goes away together.
 	 */
 
-	if (appunti->ciclo)
-		g_main_loop_quit(appunti->ciclo);
-	if (appunti->thread)
-		g_thread_join(appunti->thread);
-	g_clear_pointer(&appunti->ciclo, g_main_loop_unref);
+	if (clipboard->cycle)
+		g_main_loop_quit(clipboard->cycle);
+	if (clipboard->thread)
+		g_thread_join(clipboard->thread);
+	g_clear_pointer(&clipboard->cycle, g_main_loop_unref);
 
-	if (appunti->bus)
+	if (clipboard->bus)
 	{
-		if (appunti->subscription_offer)
+		if (clipboard->subscription_offer)
 			g_dbus_connection_signal_unsubscribe(
-			    appunti->bus, appunti->subscription_offer);
-		if (appunti->subscription_request)
+			    clipboard->bus, clipboard->subscription_offer);
+		if (clipboard->subscription_request)
 			g_dbus_connection_signal_unsubscribe(
-			    appunti->bus, appunti->subscription_request);
+			    clipboard->bus, clipboard->subscription_request);
 	}
 
-	g_clear_pointer(&appunti->contesto, g_main_context_unref);
-	g_free(appunti->ultimo);
-	g_clear_object(&appunti->bus);
-	g_mutex_clear(&appunti->lucchetto);
-	g_free(appunti->controllo);
-	g_free(appunti);
+	g_clear_pointer(&clipboard->context, g_main_context_unref);
+	g_free(clipboard->last);
+	g_clear_object(&clipboard->bus);
+	g_mutex_clear(&clipboard->lock);
+	g_free(clipboard->check);
+	g_free(clipboard);
 }
 
 /* ------------------------------------------------------------------ *
  * The two directions
  * ------------------------------------------------------------------ */
-gboolean clipboard_offer(Appunti *appunti, GError **sbaglio)
+gboolean clipboard_offer(Clipboard *clipboard, GError **mistake)
 {
-	GVariantBuilder opzioni;
-	g_autoptr(GVariant) risposta = NULL;
+	GVariantBuilder options;
+	g_autoptr(GVariant) response = NULL;
 
-	if (!appunti)
+	if (!clipboard)
 		return FALSE;
-	if (appunti->kde)
-		return clipboard_kde_offer(appunti->kde, sbaglio);
+	if (clipboard->kde)
+		return clipboard_kde_offer(clipboard->kde, mistake);
 
 	/* ⛔ `as` and not `(as)`: in METHODS the types are not in a tuple — the other
 	 *    half of trap 2, and this is the half that goes wrong silently
 	 *    on the other side. */
-	g_variant_builder_init(&opzioni, G_VARIANT_TYPE("a{sv}"));
-	g_variant_builder_add(&opzioni, "{sv}", "mime-types",
-	                      g_variant_new_strv(TIPI_TESTO, -1));
+	g_variant_builder_init(&options, G_VARIANT_TYPE("a{sv}"));
+	g_variant_builder_add(&options, "{sv}", "mime-types",
+	                      g_variant_new_strv(TEXT_TYPES, -1));
 
-	risposta = chiama(appunti, "SetSelection", g_variant_new("(a{sv})", &opzioni),
-	                  NULL, sbaglio);
-	if (!risposta)
+	response = call(clipboard, "SetSelection", g_variant_new("(a{sv})", &options),
+	                  NULL, mistake);
+	if (!response)
 		return FALSE;
 
-	registro_dettaglio(REG_APPUNTI,
+	log_detail(LOG_CLIPBOARD,
 	                   "offered the client's text to the session (%d types)",
-	                   (int)(sizeof TIPI_TESTO / sizeof *TIPI_TESTO) - 1);
+	                   (int)(sizeof TEXT_TYPES / sizeof *TEXT_TYPES) - 1);
 	return TRUE;
 }
 
-void appunti_rispondi(Appunti *appunti, uint32_t serial, const char *testo,
+void clipboard_reply(Clipboard *clipboard, uint32_t serial, const char *text,
                       size_t byte)
 {
-	g_autoptr(GError) sbaglio = NULL;
-	g_autofree char *ripiego = NULL;
-	gboolean riuscito = FALSE;
+	g_autoptr(GError) mistake = NULL;
+	g_autofree char *fallback = NULL;
+	gboolean succeeded = FALSE;
 	int fd;
 
-	if (!appunti)
+	if (!clipboard)
 		return;
-	if (appunti->kde) {
-		clipboard_kde_reply(appunti->kde, serial, testo, byte);
+	if (clipboard->kde) {
+		clipboard_kde_reply(clipboard->kde, serial, text, byte);
 		return;
 	}
 
@@ -761,87 +761,87 @@ void appunti_rispondi(Appunti *appunti, uint32_t serial, const char *testo,
 	 *    the user had copied on this side.
 	 * ⚠ And it is declared in the log: a silent fallback would have the face of
 	 *   a successful delivery. */
-	if (!testo || byte == 0)
+	if (!text || byte == 0)
 	{
-		size_t quanti = 0;
+		size_t amount = 0;
 
-		ripiego = appunti_ultimo_testo(appunti, &quanti);
-		if (ripiego && quanti > 0)
+		fallback = clipboard_last_text(clipboard, &amount);
+		if (fallback && amount > 0)
 		{
-			registro_dice(REG_APPUNTI,
+			registro_dice(LOG_CLIPBOARD,
 			              "⭐ the client has no clipboard to give for request "
 			              "%u: giving back to the session the %zu bytes IT had.  "
 			              "⚠ Connecting must not erase the desktop "
 			              "clipboard",
-			              serial, quanti);
-			testo = ripiego;
-			byte = quanti;
+			              serial, amount);
+			text = fallback;
+			byte = amount;
 		}
 	}
 
-	if (!testo || byte == 0)
+	if (!text || byte == 0)
 	{
 		/* Nothing to deliver, and we say so: it is an answer anyway, and it is
 		 * what unblocks whoever is pasting. */
-		g_autoptr(GVariant) risposta =
-		    chiama(appunti, "SelectionWriteDone",
-		           g_variant_new("(ub)", (guint32)serial, FALSE), NULL, &sbaglio);
-		if (!risposta)
-			registro_dice(REG_APPUNTI,
+		g_autoptr(GVariant) response =
+		    call(clipboard, "SelectionWriteDone",
+		           g_variant_new("(ub)", (guint32)serial, FALSE), NULL, &mistake);
+		if (!response)
+			registro_dice(LOG_CLIPBOARD,
 			              "⛔ SelectionWriteDone(no) for request %u did not "
 			              "succeed (%s): whoever pastes may stay hung",
-			              serial, sbaglio->message);
+			              serial, mistake->message);
 		else
-			registro_dettaglio(REG_APPUNTI,
+			log_detail(LOG_CLIPBOARD,
 			                   "request %u closed with «I do not have it»", serial);
 		return;
 	}
 
-	fd = call_for_fd(appunti, "SelectionWrite",
-	                            g_variant_new("(u)", (guint32)serial), &sbaglio);
+	fd = call_for_fd(clipboard, "SelectionWrite",
+	                            g_variant_new("(u)", (guint32)serial), &mistake);
 	if (fd < 0)
 	{
-		registro_dice(REG_APPUNTI,
+		registro_dice(LOG_CLIPBOARD,
 		              "⛔ SelectionWrite for request %u was refused "
 		              "(%s)",
-		              serial, sbaglio->message);
+		              serial, mistake->message);
 		return;
 	}
 
 	/* ⭐ And the cache becomes what the session REALLY holds: from here on
 	 *    the fallback above gives back this, not an earlier text. */
-	g_mutex_lock(&appunti->lucchetto);
-	if (!ripiego)
+	g_mutex_lock(&clipboard->lock);
+	if (!fallback)
 	{
-		g_free(appunti->ultimo);
-		appunti->ultimo = g_strndup(testo, byte);
-		appunti->ultimo_byte = byte;
+		g_free(clipboard->last);
+		clipboard->last = g_strndup(text, byte);
+		clipboard->last_byte = byte;
 	}
-	g_mutex_unlock(&appunti->lucchetto);
+	g_mutex_unlock(&clipboard->lock);
 
 	{
-		size_t scritti = 0;
+		size_t written = 0;
 
-		riuscito = TRUE;
-		while (scritti < byte)
+		succeeded = TRUE;
+		while (written < byte)
 		{
-			gssize adesso = write(fd, testo + scritti, byte - scritti);
+			gssize t_now = write(fd, text + written, byte - written);
 
-			if (adesso < 0)
+			if (t_now < 0)
 			{
 				if (errno == EINTR)
 					continue;
-				registro_dice(REG_APPUNTI,
+				registro_dice(LOG_CLIPBOARD,
 				              "⛔ write to the session failed at %zu of "
 				              "%zu bytes: %s",
-				              scritti, byte, g_strerror(errno));
-				riuscito = FALSE;
+				              written, byte, g_strerror(errno));
+				succeeded = FALSE;
 				break;
 			}
-			scritti += (size_t)adesso;
+			written += (size_t)t_now;
 		}
-		if (riuscito)
-			registro_dettaglio(REG_APPUNTI,
+		if (succeeded)
+			log_detail(LOG_CLIPBOARD,
 			                   "delivered %zu bytes to the session (request %u)",
 			                   byte, serial);
 	}
@@ -852,14 +852,14 @@ void appunti_rispondi(Appunti *appunti, uint32_t serial, const char *testo,
 	close(fd);
 
 	{
-		g_autoptr(GVariant) risposta =
-		    chiama(appunti, "SelectionWriteDone",
-		           g_variant_new("(ub)", (guint32)serial, riuscito), NULL,
-		           &sbaglio);
-		if (!risposta)
-			registro_dice(REG_APPUNTI,
+		g_autoptr(GVariant) response =
+		    call(clipboard, "SelectionWriteDone",
+		           g_variant_new("(ub)", (guint32)serial, succeeded), NULL,
+		           &mistake);
+		if (!response)
+			registro_dice(LOG_CLIPBOARD,
 			              "⛔ SelectionWriteDone for request %u did not "
 			              "succeed: %s",
-			              serial, sbaglio->message);
+			              serial, mistake->message);
 	}
 }

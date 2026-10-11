@@ -14,12 +14,12 @@
 #    fails and the bench exits **2** instead of stating a false number.
 set -uo pipefail
 
-QUI=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-ALBERO=$(cd "$QUI/.." && pwd)
-LAVORO=${LAVORO:-/tmp/06-b5-esiti}
+HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+TREE=$(cd "$HERE/.." && pwd)
+WORKDIR=${WORKDIR:-/tmp/06-b5-esiti}
 CC=${CC:-gcc}
 
-mkdir -p "$LAVORO" || exit 2
+mkdir -p "$WORKDIR" || exit 2
 
 # ⛔ Dependencies are ASKED for, and their absence is one line that names the
 #    package — not a thirty-line `gcc` error.
@@ -40,10 +40,10 @@ pgrep -x pipewire >/dev/null || {
 }
 
 $CC -O1 -g -std=gnu11 -D_GNU_SOURCE -Wall -Wextra -Wno-unused-parameter \
-    -o "$LAVORO/esiti-cattura" \
-    "$QUI/06-b5-esiti-cattura.c" \
-    "$ALBERO/src/cattura.c" "$ALBERO/src/registro.c" "$ALBERO/src/cursore.c" \
+    -o "$WORKDIR/esiti-cattura" \
+    "$HERE/06-b5-esiti-cattura.c" \
+    "$TREE/src/cattura.c" "$TREE/src/registro.c" "$TREE/src/cursore.c" \
     $(pkg-config --cflags --libs libpipewire-0.3 gio-2.0 libdrm) \
     || { printf '  ⛔ does not compile\n'; exit 2; }
 
-"$LAVORO/esiti-cattura" "${1:-}"
+"$WORKDIR/esiti-cattura" "${1:-}"

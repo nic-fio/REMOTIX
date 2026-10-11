@@ -37,7 +37,7 @@
  *      and the server itself serves the page precisely so that it can write
  *      the current fingerprint into it;
  *
- *   2. **the endpoint from which the page fetches the updated fingerprint** (`/impronta`).
+ *   2. **the endpoint from which the page fetches the updated fingerprint** (`/fingerprint`).
  *      ⛔ «A tab left open for two weeks holds the fingerprint of a certificate
  *      that has been rotated in the meantime: on reconnection the browser
  *      refuses, and the symptom is *it no longer connects and does not say
@@ -51,8 +51,8 @@
  * exhausted.  ⛔ Never a silence: whoever is banned by mistake is almost always
  * the owner».
  */
-#ifndef REMOTIX_PAGINA_H
-#define REMOTIX_PAGINA_H
+#ifndef REMOTIX_PAGE_H
+#define REMOTIX_PAGE_H
 
 #include "certificati.h"
 
@@ -61,17 +61,17 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-typedef struct pagina pagina;
+typedef struct page page;
 
-pagina *pagina_apri(const char *indirizzo, const char *porta, SSL_CTX *ctx,
-                    const char *file_html, const certificati *cert);
-void page_close(pagina *p);
+page *page_open(const char *address, const char *port, SSL_CTX *ctx,
+                    const char *file_html, const certificates *cert);
+void page_close(page *p);
 
-void page_context(pagina *p, SSL_CTX *ctx);
+void page_context(page *p, SSL_CTX *ctx);
 
 /* The descriptors to watch.  Returns how many it put in. */
-size_t page_descriptors(pagina *p, struct pollfd *dove, size_t cap);
+size_t page_descriptors(page *p, struct pollfd *dove, size_t cap);
 /* To be called after the `poll`, with the same array. */
-void pagina_muovi(pagina *p, struct pollfd *dove, size_t quanti);
+void page_move(page *p, struct pollfd *dove, size_t amount);
 
 #endif

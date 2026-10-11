@@ -6,7 +6,7 @@
  *
  * Until today the product **had no budget: it accepted everyone and starved
  * everyone together**.  `[M]` `fasi/10-…md` §S.2: on the saturated scene the
- * eleventh gets in with **`negati 0`**, and the first session goes from **39.60
+ * eleventh gets in with **`denied 0`**, and the first session goes from **39.60
  * to 0.96 fps** — **−97.6 %** — with **104 paired reds** against invariant
  * **I1** (*«the rate falls only on measure, and never disconnect»*) and against
  * `DECISIONI.md` §4.6-bis.
@@ -42,7 +42,7 @@
  *    it **would overrate a 480p canvas by a factor of two**.
  *
  * ⭐ And the ingredients were all already in the parent's hands:
- *    `deposita_fotogramma()` (`main.c`) receives **every** frame with width,
+ *    `deposit_frame()` (`main.c`) receives **every** frame with width,
  *    height, instant and bytes, and the child calls it **without guards** on
  *    «someone is watching» ⇒ ⭐⭐ **the parent also sees the GHOSTS** — the
  *    sessions that encode without anyone watching (§3.2), which cost the GPU
@@ -77,8 +77,8 @@
  *     measures is an **upper bound** of the compositor's buffer hold time —
  *     prudent in the right direction, but not the same thing.
  *   ⛔ And the second half of the yardstick **does not cross the process
- *     boundary**: the compositor's «runway» is `(buffer_distinti − 2) × 16.67
- *     ms`, and `buffer_distinti` (`cattura.h`) lives **in the child**.  §6.9
+ *     boundary**: the compositor's «runway» is `(distinct_buffers − 2) × 16.67
+ *     ms`, and `distinct_buffers` (`cattura.h`) lives **in the child**.  §6.9
  *     keeps the more prudent of the measurement and the runway; here we have
  *     the measurement only, and it is declared instead of pretending they are
  *     the same thing.
@@ -112,7 +112,7 @@
  * ⭐ **The TEN of `SPECIFICHE.md` §5.5 found again by MEASUREMENT instead of by
  *    promise** — and the overshoot on wake-up goes from **1 640×** to **2×**.
  * ⭐ `F = 0` is the «delivered» rule, `F = 1` is the «worst» rule: **it is the
- *    same rule with the knob in the director's hand** (`--riserva`).
+ *    same rule with the knob in the director's hand** (`--reserve`).
  *
  * ─────────────────────────────────────────────────────────────────────────────
  * ⛔ 4 · THE MARGIN IS WRITTEN ON BOTH SIDES, AND THE TWO ERRORS DO NOT COST THE SAME
@@ -178,17 +178,17 @@
  *
  * ⚠ And it is used ONLY for the worst case, never for the delivered: the
  *   delivered is MEASURED, frame by frame, and never estimated. */
-#define BUDGET_RITMO_MAX_FOT_S 39.54
+#define BUDGET_MAX_FPS 39.54
 
 /* ⛔⭐ THE DELAY THRESHOLD — `[M]` **22.9 ms**, geometric mean between the worst
  *     13.1 ms of the HEALTHY steps and the best 39.9 ms of the BROKEN ones,
  *     which ⭐ **do not overlap** (§6.9).  ⚠ It belongs to **that scene**: see
  *     the box at the top, point 2. */
-#define BUDGET_RITARDO_AFFANNO_MS 22.9
+#define BUDGET_STRAIN_DELAY_MS 22.9
 
-/* ⭐ The knob of `--riserva`, and its measured default (§6.9): at 0.5 the
+/* ⭐ The knob of `--reserve`, and its measured default (§6.9): at 0.5 the
  *    predictor makes **0 false yes and 0 false no** on the data available. */
-#define BUDGET_RISERVA_PREDEFINITA 0.5
+#define BUDGET_DEFAULT_RESERVE 0.5
 
 /* ⛔ The tolerance on the comparison, and it has a precise reason: the capacity
  *    is the **MEASURED peak**, that is a state that was seen to hold.
@@ -198,88 +198,88 @@
  *    and it is **seventeen times smaller** than the gap between the peak and
  *    the first point that gave way (+17 %): the margin stays entirely on the
  *    prudent side. */
-#define BUDGET_TOLLERANZA 0.01
+#define BUDGET_TOLERANCE 0.01
 
-/* ⛔ The outcome, and there are THREE.  ⚠ `BUDGET_NON_SO` is not
+/* ⛔ The outcome, and there are THREE.  ⚠ `BUDGET_UNKNOWN` is not
  *    `BUDGET_DOES_NOT_HOLD`: it is «I could not measure», and whoever receives it
  *    **admits** and writes the line.  A budget that refused for not having
  *    been able to measure would make the user pay for a fault of ours. */
-enum budget_esito {
+enum budget_outcome {
 	BUDGET_HOLDS,
 	BUDGET_DOES_NOT_HOLD,
-	BUDGET_NON_SO,
+	BUDGET_UNKNOWN,
 };
 
 /* ⭐ It is turned on once only, at startup, with the numbers of the command line.
  *
  *   `capacity_mpixel_s`  `--budget-mpixel-s`, **0 = OFF** (I6);
- *   `riserva`            `--riserva`, 0..1 (§6.9);
- *   `tela_l`, `tela_a`   the stage canvas, that is the **upper bound** of the
+ *   `reserve`            `--reserve`, 0..1 (§6.9);
+ *   `canvas_w`, `canvas_h`   the stage canvas, that is the **upper bound** of the
  *                        canvas any session can obtain: it serves as a declared
  *                        fallback for whoever has not delivered anything yet,
  *                        and goes in the uncomfortable direction. */
-void budget_turn_on(double capacity_mpixel_s, double riserva, uint32_t tela_l,
-                    uint32_t tela_a);
+void budget_turn_on(double capacity_mpixel_s, double reserve, uint32_t canvas_w,
+                    uint32_t canvas_h);
 
 /* ⛔ How many slots the tenant table will have — called **before**
  *    `budget_turn_on()`, with the session cap in force.  ⚠ After switch-on it
  *    does nothing: the table is already allocated, and changing its size on
  *    the fly would mean losing the delivered of whoever is there. */
-void budget_cells(int quante);
+void budget_cells(int how_many);
 
 /* ⭐⭐ THE STARTUP LINE, and it is written **ON AND OFF**.
  *
  * ⛔ And it carries the THREE values in force with the **option name next to
- *    the number** — `--budget-mpixel-s N`, `--tetto-sessioni N`, `--riserva F` —
+ *    the number** — `--budget-mpixel-s N`, `--session-cap N`, `--reserve F` —
  *    and it is not pedantry of form: whoever reads the log after a `0x06` must
  *    be able to know **on which numbers** that no was decided, and a bench that
  *    tuned its own oracle on a number different from the one in force would
  *    produce false yeses and false noes **of its own**, not of the product.
- * ⚠ The cap comes from outside (`rcp_tetto()`) because it is not the budget's:
+ * ⚠ The cap comes from outside (`rcp_cap()`) because it is not the budget's:
  *   it is the administrative limit, and it sits in the same line only because
  *   the reader needs the three together. */
-void budget_riga_avvio(int tetto_sessioni);
+void budget_startup_line(int session_cap);
 
 /* ⛔⭐ THE COUNT OF THE DENIED, and it is written at EVERY verdict — even when
  *     the budget is OFF, and that is precisely the case that matters.
  *
  *     `[M]` §S.2: the defect can be read in two words — *«the eleventh gets in
- *     with **`negati 0`**»*.  ⇒ A bench must be able to read that number **at
+ *     with **`denied 0`**»*.  ⇒ A bench must be able to read that number **at
  *     every step**, and reading it **zero** is the fact that proves **I6**:
  *     with the budget off the product behaves as yesterday, and denies nobody.
  *
- * ⚠ The counts are TWO and not one: `negati` are all the noes said at this
+ * ⚠ The counts are TWO and not one: `denied` are all the noes said at this
  *   door (full table included), `denied_budget` are the `0x06` only.  Adding
  *   them up would pass off a configuration fault as capacity. */
-void budget_verdict_line(const char *utente, bool ammesso, uint8_t motivo,
-                          int tetto_sessioni, const char *perche);
+void budget_verdict_line(const char *user, bool admitted, uint8_t reason,
+                          int session_cap, const char *why);
 
 bool budget_on(void);
 
 /* ⭐⭐ THE ACCUMULATOR — called for **every** frame of **every** child, from
- *     `deposita_fotogramma()`.  ⛔ Without guards on «someone is watching»: it
+ *     `deposit_frame()`.  ⛔ Without guards on «someone is watching»: it
  *     is precisely how the count sees the **ghosts** of §3.2.
  *
- * `istante_us` is the `CLOCK_MONOTONIC` stamped **by the child at the instant
+ * `instant_us` is the `CLOCK_MONOTONIC` stamped **by the child at the instant
  * of capture** — the clock is machine-wide, so comparable here.  ⚠ The delay
  * that comes out of it is *capture → parent*, that is an **upper bound** of
  * the hold time: prudent in the right direction. */
-void budget_deposita(const char *utente, uint32_t larghezza, uint32_t altezza,
-                     uint64_t istante_us);
+void budget_deposit(const char *user, uint32_t width, uint32_t height,
+                     uint64_t instant_us);
 
 /* ⛔ The count is opened, filled with **whoever is inside**, and closed with the
  *    verdict on the newcomer.  ⚠ Three calls and not one because «whoever is
  *    inside» is known by the **stage** table (`figlio.c`), not by this module:
  *    tying them together would mean the budget knows the children, and then
  *    one day it would decide something about them. */
-struct budget_conto {
+struct budget_count {
 	uint64_t now_us;
-	bool orologio;          /* ⛔ false = I did not read the time: I do not judge */
-	double domanda;         /* Mpixel/s already committed */
-	int quanti;
+	bool clock;          /* ⛔ false = I did not read the time: I do not judge */
+	double question;         /* Mpixel/s already committed */
+	int amount;
 	/* ⛔ The first throttled one found: it is the delay gate, and it closes
 	 *    the count **before** the sum. */
-	char strozzato[257];
+	char throttled[257];
 	double throttled_ms;
 	/* ⚠ How many of those inside were counted at the worst case because they
 	 *   had not delivered yet: it goes into the line, or the demand number
@@ -287,19 +287,19 @@ struct budget_conto {
 	int at_worst;
 };
 
-void budget_count_open(struct budget_conto *c);
-void budget_count_inside(struct budget_conto *c, const char *utente);
+void budget_count_open(struct budget_count *c);
+void budget_count_inside(struct budget_count *c, const char *user);
 
-/* ⭐ The verdict on the newcomer.  `tela_l`/`tela_a` are the **ceiling** of the
- *    canvas it will obtain — `min(stage canvas, the client's video.misura_massima)`
- *    — and the real canvas is decided only at `SESSIONE`, that is later.
+/* ⭐ The verdict on the newcomer.  `canvas_w`/`canvas_h` are the **ceiling** of the
+ *    canvas it will obtain — `min(stage canvas, the client's video.max_size)`
+ *    — and the real canvas is decided only at `SESSION`, that is later.
  *    ⇒ The ceiling is counted: uncomfortable direction.
  *
- * `perche` receives the sentence that goes into the **body of the CONGEDO** and
+ * `why` receives the sentence that goes into the **body of the FAREWELL** and
  * into the log: it must be readable by a user, not by whoever wrote the code. */
-enum budget_esito budget_count_verdict(struct budget_conto *c,
-                                        const char *nuovo, uint32_t tela_l,
-                                        uint32_t tela_a, char *perche,
+enum budget_outcome budget_count_verdict(struct budget_count *c,
+                                        const char *fresh, uint32_t canvas_w,
+                                        uint32_t canvas_h, char *why,
                                         size_t why_cap);
 
 #endif /* BUDGET_H */

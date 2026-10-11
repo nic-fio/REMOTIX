@@ -5,7 +5,7 @@
 # colour: (0,136,0) = all-zero YUV frame (the green of F-002, 1 Oct 2026).
 # Expects in $D a labwc of its own (wayland-0 in $D/run, WLR_BACKENDS=headless,
 # WLR_RENDER_DRM_DEVICE=/dev/dri/renderD128 — NEVER the suite's compositors) and
-# `python3 19-chrome-servi.py 9401 $D $D/esito.tmp` with the page and the streams in $D.
+# `python3 19-chrome-servi.py 9401 $D $D/outcome.tmp` with the page and the streams in $D.
 D=/media/REMOTIX/src/f19-chrome
 export XDG_RUNTIME_DIR=$D/run WAYLAND_DISPLAY=wayland-0
 F=$1; C=${2:-hev1.1.6.L153.B0}; HW=${3:-no-preference}; L=${4:-3840}; A=${5:-2160}

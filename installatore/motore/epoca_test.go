@@ -1,4 +1,4 @@
-package motore
+package engine
 
 import (
 	"encoding/json"
@@ -11,8 +11,8 @@ import (
 // %{VERSION}, %{RELEASE}, %{ARCH} and the conditional %|EPOCH?{%{EPOCH}:}|, which prints nothing
 // for a package without an epoch. The other commands (rpm -qa, zypper verify) answer «all fine».
 func rpmFake(db map[string][3]string) func(time.Duration, string, ...string) (string, int, error) {
-	return func(_ time.Duration, nome string, arg ...string) (string, int, error) {
-		if nome != "rpm" || len(arg) < 3 || arg[0] != "-q" || arg[1] != "--qf" {
+	return func(_ time.Duration, name string, arg ...string) (string, int, error) {
+		if name != "rpm" || len(arg) < 3 || arg[0] != "-q" || arg[1] != "--qf" {
 			return "", 0, nil
 		}
 		var b strings.Builder
@@ -22,11 +22,11 @@ func rpmFake(db map[string][3]string) func(time.Duration, string, ...string) (st
 				b.WriteString("package " + n + " is not installed\n")
 				continue
 			}
-			epoca := ""
+			epoch := ""
 			if p[0] != "" {
-				epoca = p[0] + ":"
+				epoch = p[0] + ":"
 			}
-			r := strings.NewReplacer("%|EPOCH?{%{EPOCH}:}|", epoca, "%{EPOCH}", p[0], "%{NAME}", n,
+			r := strings.NewReplacer("%|EPOCH?{%{EPOCH}:}|", epoch, "%{EPOCH}", p[0], "%{NAME}", n,
 				"%{VERSION}", p[1], "%{RELEASE}", p[2], "%{ARCH}", "x86_64", `\n`, "\n")
 			b.WriteString(r.Replace(arg[2]))
 		}
@@ -47,43 +47,43 @@ func TestEpochRpm(t *testing.T) {
 		"nettle":       {"", "3.10.1", "1.fc44"},
 		"zlib-ng":      {"0", "2.2.4", "3.fc44"},
 	}
-	insieme := []Artefatto{
-		{Nome: "libglvnd", Ver: "1:1.7.0-9.fc44", Esito: "new"},
-		{Nome: "libglvnd-egl", Ver: "1:1.7.0-9.fc44", Esito: "new"},
-		{Nome: "libogg", Ver: "2:1.3.6-2.fc44", Esito: "new"},
-		{Nome: "libvorbis", Ver: "1:1.3.7-14.fc44", Esito: "new"},
-		{Nome: "nettle", Ver: "3.10.1-1.fc44", Esito: "new"},
-		{Nome: "zlib-ng", Ver: "2.2.4-3.fc44", Esito: "new"},
+	together := []Artifact{
+		{Nome: "libglvnd", Ver: "1:1.7.0-9.fc44", Outcome: "new"},
+		{Nome: "libglvnd-egl", Ver: "1:1.7.0-9.fc44", Outcome: "new"},
+		{Nome: "libogg", Ver: "2:1.3.6-2.fc44", Outcome: "new"},
+		{Nome: "libvorbis", Ver: "1:1.3.7-14.fc44", Outcome: "new"},
+		{Nome: "nettle", Ver: "3.10.1-1.fc44", Outcome: "new"},
+		{Nome: "zlib-ng", Ver: "2.2.4-3.fc44", Outcome: "new"},
 	}
 	for _, fam := range []string{"fedora", "suse"} {
-		a := &Ambiente{Radice: t.TempDir(), Famiglia: fam, Esegui: rpmFake(db)}
-		a.Pacchetti = ScegliGestore(a, fam)
+		a := &Environment{Root: t.TempDir(), Famiglia: fam, Run: rpmFake(db)}
+		a.Pacchetti = ChooseHandler(a, fam)
 
 		v, err := a.Pacchetti.Vers([]string{"libglvnd", "nettle", "zlib-ng", "absent"})
 		if err != nil {
 			t.Fatal(err)
 		}
-		for n, atteso := range map[string]string{"libglvnd": "1:1.7.0-9.fc44", "nettle": "3.10.1-1.fc44", "zlib-ng": "0:2.2.4-3.fc44", "absent": ""} {
-			if v[n] != atteso {
-				t.Errorf("%s: %s installed as %q, want %q", fam, n, v[n], atteso)
+		for n, expected := range map[string]string{"libglvnd": "1:1.7.0-9.fc44", "nettle": "3.10.1-1.fc44", "zlib-ng": "0:2.2.4-3.fc44", "absent": ""} {
+			if v[n] != expected {
+				t.Errorf("%s: %s installed as %q, want %q", fam, n, v[n], expected)
 			}
 		}
 
-		prima, _ := json.Marshal(beforePackages{Origine: DIRETTA, Gestore: a.Pacchetti.Nome(), ResolvedSet: insieme})
-		c := &Contesto{Amb: a, Cartella: t.TempDir() + "/ops/op1"}
-		es, det, err := (&pacchetti{}).Controlla(c, prima)
-		if err != nil || es != COMPLETO {
+		before, _ := json.Marshal(beforePackages{Origine: DIRECT, Manager: a.Pacchetti.Nome(), ResolvedSet: together})
+		c := &Context{Env: a, Folder: t.TempDir() + "/ops/op1"}
+		es, det, err := (&packets{}).Check(c, before)
+		if err != nil || es != COMPLETE {
 			t.Errorf("%s: every package at the resolved version: %s %q %v, want COMPLETE", fam, es, det, err)
 		}
 
 		// a different epoch is a different version: an older epoch is not complete
-		vecchio := map[string][3]string{}
+		old := map[string][3]string{}
 		for k, x := range db {
-			vecchio[k] = x
+			old[k] = x
 		}
-		vecchio["libogg"] = [3]string{"1", "1.3.6", "2.fc44"}
-		a.Esegui = rpmFake(vecchio)
-		if es, det, _ := (&pacchetti{}).Controlla(c, prima); es != A_META || det != "5 of 6" {
+		old["libogg"] = [3]string{"1", "1.3.6", "2.fc44"}
+		a.Run = rpmFake(old)
+		if es, det, _ := (&packets{}).Check(c, before); es != A_META || det != "5 of 6" {
 			t.Errorf("%s: libogg at an older epoch: %s %q, want HALF_DONE 5 of 6", fam, es, det)
 		}
 	}
@@ -99,8 +99,8 @@ func TestSameVersion(t *testing.T) {
 		{"1.7.0-9.fc44", "1:1.7.0-9.fc44", false},
 		{"2:1.3.6-2", "1:1.3.6-2", false},
 	} {
-		if versioneUguale(c.a, c.b) != c.ok {
-			t.Errorf("versioneUguale(%q, %q) = %v", c.a, c.b, !c.ok)
+		if versionEqual(c.a, c.b) != c.ok {
+			t.Errorf("versionEqual(%q, %q) = %v", c.a, c.b, !c.ok)
 		}
 	}
 }

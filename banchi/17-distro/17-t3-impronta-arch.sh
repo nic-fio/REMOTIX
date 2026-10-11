@@ -12,7 +12,7 @@
 #   G <group>:<gid>:<members>                                   /etc/group
 #   U <user>:<uid>:<shell>                                      /etc/passwd
 #   S <unit> <state>                                            system units
-#   P <package> <version> <esplicito|dipendenza>                packages
+#   P <package> <version> <explicit|dipendenza>                packages
 #   H <path>                                                    under /home (names only)
 #
 # ⚠ /etc and the configuration folders of systemd, polkit, PAM with content

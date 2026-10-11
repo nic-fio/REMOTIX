@@ -22,7 +22,7 @@
  * layouts that on that character **are the same**, and a bench that does not
  * discriminate is not a bench.
  *
- * ⇒ The tests serve two different purposes, and must be kept separate:
+ * ⇒ The tests needs two different purposes, and must be kept separate:
  *
  *   `it` → `us`   discriminates on the **accented letters** and the **symbols**: `è`
  *                 exists on `it` and **does not exist at all** on `us`; the `@` is
@@ -51,7 +51,7 @@ static const struct
 {
 	unsigned cp;
 	const char *utf8;
-	const char *perche;
+	const char *why;
 } PROVE[] = {
 	{0x0061, "a", "⭐ THE CANARY: it is on key 30 in all three. If it does NOT arrive, "
 	              "the test is not red: it is INVALID (the focus is not on the witness)"},
@@ -75,11 +75,11 @@ static const char *LAYOUTS[] = {"it", "us", "de", "de(neo)", NULL};
  * ⛔ The source of truth is not a hand-written list — neither mine nor the one
  *    in `rcp.c` — but the system: `xkeyboard-config` under `libxkbcommon`.  Here
  *    the question is passed to `src/tastiera.c`, which is the same file that in
- *    the product answers the `disposizione_esiste` hook (`webtransport.c:1626`).
+ *    the product answers the `layout_exists` hook (`webtransport.c:1626`).
  *    ⇒ What comes out of here **is what the product will answer**, and it is not
  *      my opinion.
  *
- *   `06-b34-tabella elenco < <list of names>`   one line per name, «SI»/«NO»
+ *   `06-b34-tabella list < <list of names>`   one line per name, «SI»/«NO»
  *
  * ⚠ It serves two different purposes, and they must be kept separate:
  *    · building the expected result of case 7 (the exotic layouts);
@@ -91,32 +91,32 @@ static const char *LAYOUTS[] = {"it", "us", "de", "de(neo)", NULL};
  *      hook a second hand-written list remained — the alphabet allowed
  *      in the name.
  */
-static int elenco(void)
+static int list(void)
 {
-	char riga[256];
+	char line[256];
 
-	while (fgets(riga, sizeof riga, stdin))
+	while (fgets(line, sizeof line, stdin))
 	{
-		char *fine = riga + strlen(riga);
-		char *sbaglio = NULL;
-		Tastiera *t;
+		char *fine = line + strlen(line);
+		char *mistake = NULL;
+		Keyboard *t;
 
-		while (fine > riga && (fine[-1] == '\n' || fine[-1] == '\r' || fine[-1] == ' '))
+		while (fine > line && (fine[-1] == '\n' || fine[-1] == '\r' || fine[-1] == ' '))
 			*--fine = 0;
-		if (!riga[0] || riga[0] == '#')
+		if (!line[0] || line[0] == '#')
 			continue;
 
-		t = tastiera_apri(riga, &sbaglio);
+		t = keyboard_open(line, &mistake);
 		if (t)
 		{
-			printf("SI  %-32s %s\n", riga, kbd_layout(t));
+			printf("SI  %-32s %s\n", line, kbd_layout(t));
 			keyboard_close(t);
 		}
 		else
 		{
-			printf("NO  %-32s %s\n", riga, sbaglio ? sbaglio : "no reason given");
+			printf("NO  %-32s %s\n", line, mistake ? mistake : "no reason given");
 		}
-		free(sbaglio);
+		free(mistake);
 		fflush(stdout);
 	}
 	return 0;
@@ -129,11 +129,11 @@ static int elenco(void)
  *    layout is chosen by this program, by asking the layout. */
 static const struct
 {
-	const char *disp;
+	const char *avail;
 	unsigned cp;
-	const char *nome;
-	const char *perche;
-} ESOTICHE[] = {
+	const char *name;
+	const char *why;
+} EXOTIC[] = {
 	{"hu", 0x0171, "u-double-acute (ű)", "⛔ hu: was REJECTED by the fixed list. Does not exist on it/us/de"},
 	{"hu", 0x0151, "o-double-acute (ő)", "the twin of the ű"},
 	{"hu", 0x007A, "z", "⛔ hu is QWERTZ like de: the z moves relative to it"},
@@ -149,30 +149,30 @@ static const struct
 /* The canary candidates, in order: the first one the layout can produce. */
 static const unsigned CANARIES[] = {0x0061, 0x0031, 0x0020, 0};
 
-static int esotiche(void)
+static int exotic(void)
 {
 	printf("# 06-b34 case 7 — the expected result of the EXOTIC layouts\n");
 	printf("# computed by `src/tastiera.c`, that is by the product (CODER.md §3.3 and §3.6)\n\n");
-	for (int i = 0; ESOTICHE[i].disp; i++)
+	for (int i = 0; EXOTIC[i].avail; i++)
 	{
-		char *sbaglio = NULL;
-		Tastiera *t = tastiera_apri(ESOTICHE[i].disp, &sbaglio);
-		uint16_t codici[TASTIERA_MAX_POSIZIONI];
+		char *mistake = NULL;
+		Keyboard *t = keyboard_open(EXOTIC[i].avail, &mistake);
+		uint16_t codes[KEYBOARD_MAX_POSITIONS];
 		size_t n = 0;
-		int esito;
+		int outcome;
 
 		if (!t)
 		{
 			printf("%-4s U+%04X %-20s ⛔ LAYOUT NOT OPENED: %s\n",
-			       ESOTICHE[i].disp, ESOTICHE[i].cp, ESOTICHE[i].nome,
-			       sbaglio ? sbaglio : "no reason given");
-			free(sbaglio);
+			       EXOTIC[i].avail, EXOTIC[i].cp, EXOTIC[i].name,
+			       mistake ? mistake : "no reason given");
+			free(mistake);
 			continue;
 		}
-		esito = tastiera_posizioni_per(t, ESOTICHE[i].cp, codici, &n);
-		printf("%-4s U+%04X %-20s ", ESOTICHE[i].disp, ESOTICHE[i].cp,
-		       ESOTICHE[i].nome);
-		if (esito != 1 || n == 0)
+		outcome = keyboard_positions_for(t, EXOTIC[i].cp, codes, &n);
+		printf("%-4s U+%04X %-20s ", EXOTIC[i].avail, EXOTIC[i].cp,
+		       EXOTIC[i].name);
+		if (outcome != 1 || n == 0)
 			printf("-        ");
 		else
 		{
@@ -180,7 +180,7 @@ static int esotiche(void)
 			int p = 0;
 			for (size_t k = 0; k < n; k++)
 				p += snprintf(buf + p, sizeof buf - (size_t)p, "%s%u", k ? "+" : "",
-				              (unsigned) codici[k]);
+				              (unsigned) codes[k]);
 			printf("%-9s", buf);
 		}
 		/* ⛔ And the canary is chosen HERE, by asking: a canary that the
@@ -190,7 +190,7 @@ static int esotiche(void)
 			for (int c = 0; CANARIES[c]; c++)
 			{
 				size_t m = 0;
-				if (tastiera_posizioni_per(t, CANARIES[c], codici, &m) == 1 && m)
+				if (keyboard_positions_for(t, CANARIES[c], codes, &m) == 1 && m)
 				{
 					can = CANARIES[c];
 					break;
@@ -201,43 +201,43 @@ static int esotiche(void)
 			else
 				printf(" ⛔ NO CANARY");
 		}
-		printf("   %s\n", ESOTICHE[i].perche);
+		printf("   %s\n", EXOTIC[i].why);
 		keyboard_close(t);
 	}
 	return 0;
 }
 
-/* ⛔ `posizione <layout> <U+xxxx> …` — the plain question, to build
+/* ⛔ `position <layout> <U+xxxx> …` — the plain question, to build
  *    the expected result of a new test without recompiling anything.  ⚠ It serves to
  *    CHOOSE the character that discriminates: between `de` and `de(T3)` most
  *    characters are the same, and a test on a common character
  *    would be green even with the variant thrown away. */
-static int posizione(int argc, char **argv)
+static int position(int argc, char **argv)
 {
-	char *sbaglio = NULL;
-	Tastiera *t = tastiera_apri(argv[2], &sbaglio);
+	char *mistake = NULL;
+	Keyboard *t = keyboard_open(argv[2], &mistake);
 
 	if (!t)
 	{
-		printf("⛔ %s NOT OPENED: %s\n", argv[2], sbaglio ? sbaglio : "no reason given");
-		free(sbaglio);
+		printf("⛔ %s NOT OPENED: %s\n", argv[2], mistake ? mistake : "no reason given");
+		free(mistake);
 		return 1;
 	}
 	printf("# %s (%s)\n", argv[2], kbd_layout(t));
 	for (int i = 3; i < argc; i++)
 	{
-		uint16_t codici[TASTIERA_MAX_POSIZIONI];
+		uint16_t codes[KEYBOARD_MAX_POSITIONS];
 		size_t n = 0;
 		unsigned cp = (unsigned) strtoul(argv[i], NULL, 16);
-		int esito = tastiera_posizioni_per(t, cp, codici, &n);
+		int outcome = keyboard_positions_for(t, cp, codes, &n);
 
 		printf("U+%04X  ", cp);
-		if (esito != 1 || n == 0)
+		if (outcome != 1 || n == 0)
 			printf("-\n");
 		else
 		{
 			for (size_t k = 0; k < n; k++)
-				printf("%s%u", k ? "+" : "", (unsigned) codici[k]);
+				printf("%s%u", k ? "+" : "", (unsigned) codes[k]);
 			printf("\n");
 		}
 	}
@@ -247,12 +247,12 @@ static int posizione(int argc, char **argv)
 
 int main(int argc, char **argv)
 {
-	if (argc > 1 && strcmp(argv[1], "elenco") == 0)
-		return elenco();
-	if (argc > 1 && strcmp(argv[1], "esotiche") == 0)
-		return esotiche();
-	if (argc > 3 && strcmp(argv[1], "posizione") == 0)
-		return posizione(argc, argv);
+	if (argc > 1 && strcmp(argv[1], "list") == 0)
+		return list();
+	if (argc > 1 && strcmp(argv[1], "exotic") == 0)
+		return exotic();
+	if (argc > 3 && strcmp(argv[1], "position") == 0)
+		return position(argc, argv);
 
 	printf("# 06-b34 — the expected result, computed by `src/tastiera.c` (CODER.md §3.3)\n");
 	printf("# position = the EVDEV codes the product would send, in order\n");
@@ -260,30 +260,30 @@ int main(int argc, char **argv)
 
 	for (int d = 0; LAYOUTS[d]; d++)
 	{
-		char *sbaglio = NULL;
-		Tastiera *t = tastiera_apri(LAYOUTS[d], &sbaglio);
+		char *mistake = NULL;
+		Keyboard *t = keyboard_open(LAYOUTS[d], &mistake);
 
 		if (!t)
 		{
 			printf("LAYOUT %-9s ⛔ NOT OPENED: %s\n", LAYOUTS[d],
-			       sbaglio ? sbaglio : "no reason given");
-			free(sbaglio);
+			       mistake ? mistake : "no reason given");
+			free(mistake);
 			continue;
 		}
 		printf("LAYOUT %-9s (%s)\n", LAYOUTS[d], kbd_layout(t));
 		for (int i = 0; PROVE[i].utf8; i++)
 		{
-			uint16_t codici[TASTIERA_MAX_POSIZIONI];
+			uint16_t codes[KEYBOARD_MAX_POSITIONS];
 			size_t n = 0;
-			int esito = tastiera_posizioni_per(t, PROVE[i].cp, codici, &n);
+			int outcome = keyboard_positions_for(t, PROVE[i].cp, codes, &n);
 
 			printf("    U+%04X %-12s ", PROVE[i].cp, PROVE[i].utf8);
-			if (esito != 1 || n == 0)
+			if (outcome != 1 || n == 0)
 				printf("-\n");
 			else
 			{
 				for (size_t k = 0; k < n; k++)
-					printf("%s%u", k ? "+" : "", (unsigned) codici[k]);
+					printf("%s%u", k ? "+" : "", (unsigned) codes[k]);
 				printf("\n");
 			}
 		}
@@ -293,6 +293,6 @@ int main(int argc, char **argv)
 
 	printf("# the reasons for the tests\n");
 	for (int i = 0; PROVE[i].utf8; i++)
-		printf("#   %-12s %s\n", PROVE[i].utf8, PROVE[i].perche);
+		printf("#   %-12s %s\n", PROVE[i].utf8, PROVE[i].why);
 	return 0;
 }

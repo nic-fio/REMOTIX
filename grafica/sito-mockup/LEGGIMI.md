@@ -34,7 +34,7 @@ It opens directly from disk: `xdg-open grafica/sito-mockup/index.html`.
 `stile.css` + `icone/` (Simple Icons 13.21.0, local copies) + `schermate-vere/`; the file to publish is regenerated with
 
     python3 grafica/sito-mockup/autocontenuta.py                 # pubblica/index.html, with the «Mockup» ribbon
-    python3 grafica/sito-mockup/autocontenuta.py --senza-nastro  # the one to put online
+    python3 grafica/sito-mockup/autocontenuta.py --no-ribbon  # the one to put online
 
 It inlines CSS, icons (SVG) and screenshots (WebP, at most 1600 px, quality 82): **~420 KB, no requests to
 third parties** (no CDN or external fonts). The script refuses to write if a link to an external file remains.
@@ -44,7 +44,7 @@ third parties** (no CDN or external fonts). The script refuses to write if a lin
 ✅ User: *«ormai la homepage di remotix direi che è ok»* ⇒ published at **https://remotix.nicfio.it** (DNS A at
 OVH, Caddy block with `~/Documenti/VPS/add-site.sh`, Let's Encrypt certificate). It is republished with
 
-    python3 grafica/sito-mockup/autocontenuta.py --senza-nastro
+    python3 grafica/sito-mockup/autocontenuta.py --no-ribbon
     scp grafica/sito-mockup/pubblica/index.html progetti@57.131.27.241:/srv/www/remotix.nicfio.it/index.html
 
 The button that pointed to the `.run` is «Coming soon» until the first release is in `/download/` on the VPS.

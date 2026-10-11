@@ -1,4 +1,4 @@
-package motore
+package engine
 
 import (
 	"sort"
@@ -9,86 +9,86 @@ import (
 type StateDone string
 
 const (
-	RILEVATO    StateDone = "DETECTED"
-	VERIFICATO  StateDone = "VERIFIED"
-	SCONOSCIUTO StateDone = "UNKNOWN"
+	DETECTED      StateDone = "DETECTED"
+	VERIFIED_DONE StateDone = "VERIFIED"
+	UNKNOWN       StateDone = "UNKNOWN"
 )
 
 // Fatto is a thing the PREFLIGHT knows (or knows it does not know) about the machine.
 type Fatto struct {
-	KeyId string    `json:"key"`
-	Val   string    `json:"value"`
-	Stato StateDone `json:"state"`
-	Fonte string    `json:"source,omitempty"` // where it comes from: a file, a command
-	Nota  string    `json:"note,omitempty"`
+	KeyId  string    `json:"key"`
+	Val    string    `json:"value"`
+	State  StateDone `json:"state"`
+	Source string    `json:"source,omitempty"` // where it comes from: a file, a command
+	Nota   string    `json:"note,omitempty"`
 }
 
 // Profilo of the machine: the first of the seven objects (§6.6.1).
 type ProfileV struct {
-	Formato  string      `json:"format"`
-	Obj      string      `json:"object"` // "profile"
-	Motore   string      `json:"engine"`
-	Made     string      `json:"created"`
-	Porta    int         `json:"port"`
-	Fatti    []Fatto     `json:"facts"`
-	Messages []Messaggio `json:"messages"`
-	Comandi  []string    `json:"commands"` // the programs launched to find out (R41): closed list
+	Schema   string    `json:"format"`
+	Obj      string    `json:"object"` // "profile"
+	Engine   string    `json:"engine"`
+	Made     string    `json:"created"`
+	Porta    int       `json:"port"`
+	Facts    []Fatto   `json:"facts"`
+	Messages []Message `json:"messages"`
+	Commands []string  `json:"commands"` // the programs launched to find out (R41): closed list
 }
 
 // NewProfile is an empty profile with its header.
-func NewProfile(porta int) *ProfileV {
-	return &ProfileV{Formato: Formato, Obj: "profile", Motore: VersioneMotore, Made: ora(), Porta: porta, Comandi: []string{}}
+func NewProfile(port int) *ProfileV {
+	return &ProfileV{Schema: Schema, Obj: "profile", Engine: EngineVersion, Made: now(), Porta: port, Commands: []string{}}
 }
 
 // Metti adds or replaces a fact.
 func (p *ProfileV) Place(f Fatto) {
-	for i := range p.Fatti {
-		if p.Fatti[i].KeyId == f.KeyId {
-			p.Fatti[i] = f
+	for i := range p.Facts {
+		if p.Facts[i].KeyId == f.KeyId {
+			p.Facts[i] = f
 			return
 		}
 	}
-	p.Fatti = append(p.Fatti, f)
+	p.Facts = append(p.Facts, f)
 }
 
-// Rilevato, Verificato, Sconosciuto: shortcuts for Metti.
-func (p *ProfileV) Rilevato(chiave, valore, fonte string) {
-	p.Place(Fatto{KeyId: chiave, Val: valore, Stato: RILEVATO, Fonte: fonte})
+// Detected, Verified, Unknown: shortcuts for Metti.
+func (p *ProfileV) Detected(key, value, source string) {
+	p.Place(Fatto{KeyId: key, Val: value, State: DETECTED, Source: source})
 }
-func (p *ProfileV) Verificato(chiave, valore, fonte string) {
-	p.Place(Fatto{KeyId: chiave, Val: valore, Stato: VERIFICATO, Fonte: fonte})
+func (p *ProfileV) Verified(key, value, source string) {
+	p.Place(Fatto{KeyId: key, Val: value, State: VERIFIED_DONE, Source: source})
 }
-func (p *ProfileV) Sconosciuto(chiave, nota string) {
-	p.Place(Fatto{KeyId: chiave, Val: "", Stato: SCONOSCIUTO, Nota: nota})
+func (p *ProfileV) Unknown(key, note string) {
+	p.Place(Fatto{KeyId: key, Val: "", State: UNKNOWN, Nota: note})
 }
 
 // F returns a fact.
-func (p *ProfileV) F(chiave string) (Fatto, bool) {
-	for _, f := range p.Fatti {
-		if f.KeyId == chiave {
+func (p *ProfileV) F(key string) (Fatto, bool) {
+	for _, f := range p.Facts {
+		if f.KeyId == key {
 			return f, true
 		}
 	}
 	return Fatto{}, false
 }
 
-// V is the value of a known fact (RILEVATO or VERIFICATO); "" if missing or SCONOSCIUTO.
-func (p *ProfileV) V(chiave string) string {
-	f, ok := p.F(chiave)
-	if !ok || f.Stato == SCONOSCIUTO {
+// V is the value of a known fact (DETECTED or VERIFIED_DONE); "" if missing or UNKNOWN.
+func (p *ProfileV) V(key string) string {
+	f, ok := p.F(key)
+	if !ok || f.State == UNKNOWN {
 		return ""
 	}
 	return f.Val
 }
 
 // Con adds a message to the profile.
-func (p *ProfileV) Con(codice, dettaglio string) {
-	p.Messages = append(p.Messages, Msg(codice, dettaglio))
+func (p *ProfileV) Con(code, detail string) {
+	p.Messages = append(p.Messages, Msg(code, detail))
 }
 
 // Ordina puts facts in key order: the same profile always gives the same text.
 func (p *ProfileV) Sort() {
-	sort.Slice(p.Fatti, func(i, j int) bool { return p.Fatti[i].KeyId < p.Fatti[j].KeyId })
+	sort.Slice(p.Facts, func(i, j int) bool { return p.Facts[i].KeyId < p.Facts[j].KeyId })
 }
 
 // CompareVersions compares two «dotted» versions (1.25.0, 6.3.6, 3.5.1): -1, 0, 1. It strips
@@ -123,9 +123,9 @@ func versionNumbers(v string) []int {
 		}
 	}
 	var r []int
-	for _, pezzo := range strings.Split(v, ".") {
+	for _, piece := range strings.Split(v, ".") {
 		n := 0
-		for _, c := range pezzo {
+		for _, c := range piece {
 			if c < '0' || c > '9' {
 				break
 			}
@@ -139,8 +139,8 @@ func versionNumbers(v string) []int {
 // DESKTOP are REMOTIX's four desktops, in the order they are written everywhere.
 var DESKTOP = []string{"gnome", "kde", "xfce", "lxqt"}
 
-// NomeDesktop is the name to display.
-func NomeDesktop(d string) string {
+// DesktopName is the name to display.
+func DesktopName(d string) string {
 	switch d {
 	case "gnome":
 		return "GNOME"

@@ -12,7 +12,7 @@
  *                 `mutter.c`.  ⛔ It knows NEITHER QUIC nor the message
  *                 format;
  *   · `figlio.c`— ⭐ **stitches the two together**: it is the one that includes this file, writes the
- *                 six adapters and hangs them on the hooks of `rcp_ganci`.
+ *                 six adapters and hangs them on the hooks of `rcp_hooks`.
  *
  * ⛔⛔ AND HERE THERE WAS A WRONG LINE, corrected on 14 August 2026 on a finding
  *      of the link that implemented the wire — which tested it instead of believing it.
@@ -26,7 +26,7 @@
  * the graft ⇒ **it switches off B3, B5, B6, B8 and B11 in one blow**.
  *
  * ⇒ The right form is the one `rcp.h` already uses for PAM and for the streams:
- *   **six hooks in `rcp_ganci`**, with the signatures of this file field by field.
+ *   **six hooks in `rcp_hooks`**, with the signatures of this file field by field.
  *   ⛔ They are connected **all six or none**: a channel that could move the
  *   pointer and could not release a button would leave the desktop
  *   **worse than it found it**.
@@ -35,7 +35,7 @@
  *      ERROR — asked for by the link that implemented this file, 14 Aug 2026.
  *
  *      **`libei` is not reentrant.**  ALL functions of this file must be
- *      called from the **same thread** that calls `input_gira()`.  Two threads
+ *      called from the **same thread** that calls `input_run()`.  Two threads
  *      on one `struct ei` do not give an error: they give a program that at some
  *      point misbehaves, and nobody connects the two things.
  * ⚠ In the product it is the child's loop (`figlio.c`), which is single-threaded.
@@ -58,20 +58,20 @@ typedef struct input Input;
  * path of the `RemoteDesktop` session already started by `mutter.c`, from which
  * `ConnectToEIS` is requested (see the comment of `src/mutter.c:402`).
  *
- * `tela_l`/`tela_a` are the CANVAS of `RCP.md` §4.5 — not the view.  They serve to
+ * `canvas_w`/`canvas_h` are the CANVAS of `RCP.md` §4.5 — not the view.  They needs to
  * map the region of the absolute pointer.
  *
- * ⛔ Returns NULL and fills `*errore` (to be freed with free) if it does not open.
+ * ⛔ Returns NULL and fills `*error` (to be freed with free) if it does not open.
  *    No silent fallback: `CODER.md` §4.2.
  */
-Input *input_apri(void *session_mutter, uint32_t tela_l, uint32_t tela_a,
-                  char **errore);
+Input *input_open(void *session_mutter, uint32_t canvas_w, uint32_t canvas_h,
+                  char **error);
 
 /* ⭐ PHASE 12 — the same, with the channel asked of KWin (`kwin_eis_fd()`).
- *    `tela_l`/`tela_a` are the size of KWin's output. */
-struct KwinSessione;
-Input *input_apri_kwin(struct KwinSessione *kwin, uint32_t tela_l, uint32_t tela_a,
-                       char **errore);
+ *    `canvas_w`/`canvas_h` are the size of KWin's output. */
+struct KwinSession;
+Input *input_open_kwin(struct KwinSession *kwin, uint32_t canvas_w, uint32_t canvas_h,
+                       char **error);
 
 /*
  * ⭐ PHASE 13, INCREMENT 3 — the same contract on wlroots (labwc, XFCE).
@@ -83,16 +83,16 @@ Input *input_apri_kwin(struct KwinSessione *kwin, uint32_t tela_l, uint32_t tela
  *
  * ⭐ The other functions of this file do NOT change signature: the stitcher (`figlio.c`)
  *    changes in one place only, the constructor.  Inside, the public functions
- *    hand over at the top, as the clipboard does with `appunti_apri_kde()`.
+ *    hand over at the top, as the clipboard does with `clipboard_open_kde()`.
  *
  * ⚠ And the two differences in behaviour the stitcher must know:
- *   · `input_disposizione()` does NOT touch the session's settings: the
+ *   · `input_layout()` does NOT touch the session's settings: the
  *     layout becomes the keymap of OUR virtual keyboard, which labwc
  *     hands to the applications together with our keys (§7.4);
  *   · there are no device replacements nor orphans: on wlroots the devices
  *     are ours, and the compositor does not recreate them.
  */
-Input *input_apri_wlr(uint32_t tela_l, uint32_t tela_a, char **errore);
+Input *input_open_wlr(uint32_t canvas_w, uint32_t canvas_h, char **error);
 
 /*
  * ⛔ The silent replacements of `libei`, which `STUDI.md` §gnome §9 measures: a keymap
@@ -102,13 +102,13 @@ Input *input_apri_wlr(uint32_t tela_l, uint32_t tela_a, char **errore);
  *    at every round: inside it rereads keymap and regions at every `DEVICE_ADDED`.
  *    Returns the number of events served, or -1.
  */
-int input_gira(Input *);
+int input_run(Input *);
 
 /*
  * ⛔⭐ THE DESCRIPTOR TO PUT IN THE `poll()`, and it is not a convenience: it is
  *     milliseconds on the input path.
  *
- *     Without it, the only way is to call `input_gira()` at intervals — that is
+ *     Without it, the only way is to call `input_run()` at intervals — that is
  *     **latency added right where the third number of `CODER.md` §1-bis
  *     counts it** (ceiling 50 ms).  ⚠ A bench that polls every 50 ms measures fine;
  *     a product that does it gives away up to 50 ms to the user on every gesture.
@@ -122,28 +122,28 @@ int input_descriptor(Input *);
  * The five actions of `RCP.md` §7.3.  All return 0 if the action was
  * delivered to the compositor, -1 if not.
  *
- * ⛔ `x`/`y` are PIXEL INDICES ON THE CANVAS: `0 <= x < tela_l`.  The caller has
+ * ⛔ `x`/`y` are PIXEL INDICES ON THE CANVAS: `0 <= x < canvas_w`.  The caller has
  *    already refused out-of-range coordinates (it is `rcp.c`): here NO
  *    transformation is applied.
  */
 int input_pointer(Input *, uint32_t x, uint32_t y);
 
 /*
- * ⛔ THE CANVAS IN FORCE HAS CHANGED (`RCP.md` §7.1, `TELA(ADATTATA)`).  Remaps
+ * ⛔ THE CANVAS IN FORCE HAS CHANGED (`RCP.md` §7.1, `CANVAS(FITTED)`).  Remaps
  *    the region of the absolute pointer.  0 if done, -1 if not.
  *
  * ⚠ Added on 14 August 2026, and the reason is a defect *between* two pieces —
- *   the same form phase 3 has already paid for.  `input_apri()` takes the
- *   canvas **once only**; after a `TELA(ADATTATA)` `rcp.c` saturates the
+ *   the same form phase 3 has already paid for.  `input_open()` takes the
+ *   canvas **once only**; after a `CANVAS(FITTED)` `rcp.c` saturates the
  *   coordinates to the NEW canvas while `input.c` stays mapped on the OLD one:
  *   ⛔ two sides with two truths, and no error anywhere.
  *
- * ⚠ `[?]` Maybe `input_gira()` would already suffice, because it rereads the regions at
+ * ⚠ `[?]` Maybe `input_run()` would already suffice, because it rereads the regions at
  *   every `DEVICE_ADDED` — ⛔ but **it is not measured**, and the moment of the
- *   `DEVICE_ADDED` is not the moment of the `TELA`.  As long as it stays `[?]`, the
+ *   `DEVICE_ADDED` is not the moment of the `CANVAS`.  As long as it stays `[?]`, the
  *   explicit call is the way.
  */
-int input_recanvas(Input *, uint32_t tela_l, uint32_t tela_a);
+int input_recanvas(Input *, uint32_t canvas_w, uint32_t canvas_h);
 
 /*
  * ⭐ PHASE 15, D-007 — AFTER A CHANGE OF THE OUTPUT'S SIZE, THE WINDOWS ARE
@@ -152,14 +152,14 @@ int input_recanvas(Input *, uint32_t tela_l, uint32_t tela_a);
  *
  * On GNOME and KDE the compositor does it by itself ⇒ here nothing is done, and
  * 0 is returned.  On labwc (XFCE, LXQt) we TYPE the shortcut
- * `SESSIONE_LABWC_TASTO` that the session wrote into labwc's
- * configuration (`sessione.h`, the box of `SESSIONE_LABWC_TASTIERA`), and then
+ * `SESSION_LABWC_KEY` that the session wrote into labwc's
+ * configuration (`sessione.h`, the box of `SESSION_LABWC_KEYBOARD`), and then
  * put the pointer back where the user had left it.
  * ⚠ Harmless if there is nothing to bring back: a window already inside stays
  *   where it is, to the pixel.
  * Returns 1 if it typed the shortcut, 0 if not needed, -1 if sending fails.
  */
-int input_riporta_dentro(Input *);
+int input_bring_back_inside(Input *);
 
 /*
  * ⛔⭐⭐ THE NEGOTIATED LAYOUT ENTERS THE SESSION — `DECISIONI.md`
@@ -177,7 +177,7 @@ int input_riporta_dentro(Input *);
  *   `libei` as has always been done.  ⭐ That this trip holds is not a
  *   hope: `[M]` 16 August 2026, bench `06-b34` case 2s — with the session's layout
  *   changed, Mutter destroys and recreates the keyboard
- *   device, `leggi_keymap()` rereads, and the witness inside the session
+ *   device, `read_keymap()` rereads, and the witness inside the session
  *   receives the RIGHT character.
  *
  * ⛔⛔ AND THE DAMAGE THIS FUNCTION CURES IS NOT THE CONVENIENCE OF TWO ACCENTS.
@@ -189,17 +189,17 @@ int input_riporta_dentro(Input *);
  *     ⚠ The symptom the user describes is "undo does not work", and nobody
  *       connects it to the layout.
  *
- * `nome` is the string of `RCP.md` §4.5: `it`, `us`, `de(neo)`.
+ * `name` is the string of `RCP.md` §4.5: `it`, `us`, `de(neo)`.
  *
  *   returns  0  the request has LEFT.  ⚠ NOT "it is in force": the compositor
  *               takes its time, and whoever ascertains it is the line of
- *               `leggi_keymap()` at the `DEVICE_ADDED` that follows;
+ *               `read_keymap()` at the `DEVICE_ADDED` that follows;
  *   returns -1  it has not left, and it is already declared in the log.
  */
-int input_disposizione(Input *, const char *nome);
+int input_layout(Input *, const char *name);
 
-/* `codice` is evdev: `BTN_LEFT` = 0x110.  `premuto` 1 or 0. */
-int input_button(Input *, uint16_t codice, int premuto);
+/* `code` is evdev: `BTN_LEFT` = 0x110.  `pressed` 1 or 0. */
+int input_button(Input *, uint16_t code, int pressed);
 
 /*
  * ⛔ Units of 120 per notch, and THE SIGN OF THE VERTICAL AXIS IS INVERTED IN
@@ -210,7 +210,7 @@ int input_button(Input *, uint16_t codice, int premuto);
  *   that `ei_device_scroll_discrete` does an integer division by 120 and
  *   eats them: the way is `scroll_delta`, where the real threshold is 60.
  */
-int input_rotella(Input *, int32_t asse_x, int32_t asse_y);
+int input_wheel(Input *, int32_t axis_x, int32_t axis_y);
 
 /*
  * A letter, as a Unicode scalar value.  Goes through `tastiera.h`.
@@ -225,15 +225,15 @@ int input_rotella(Input *, int32_t asse_x, int32_t asse_y);
  *   know.  ⛔ Hence: **`rcp.c` MUST NOT duplicate it**, or the same characters
  *   are counted twice.
  *
- * ⚠ And for the same reason `input_apri()` does NOT take the layout: the
+ * ⚠ And for the same reason `input_open()` does NOT take the layout: the
  *   keymap arrives from `libei` inside `input.c`, at every `DEVICE_ADDED`
  *   (`keyboard_open_from_keymap()`).  It is not an oversight: it is the right
  *   direction.
  */
-int input_lettera(Input *, uint32_t carattere);
+int input_letter(Input *, uint32_t character);
 
-/* A key position, in evdev: `KEY_A` = 30.  `premuto` 1 or 0. */
-int input_position(Input *, uint16_t codice, int premuto);
+/* A key position, in evdev: `KEY_A` = 30.  `pressed` 1 or 0. */
+int input_position(Input *, uint16_t code, int pressed);
 
 /*
  * ⛔⛔ THE RELEASE AT DETACH — `RCP.md` §11 calls it "the rule with the highest
@@ -244,7 +244,7 @@ int input_position(Input *, uint16_t codice, int premuto);
  * ⇒ Hence the obligation, for the implementer: the count of what is pressed is KEPT.
  *   Returns how many it released, so that the bench can count them.
  */
-int input_rilascia_tutto(Input *);
+int input_release_all(Input *);
 
 /*
  * ⛔⛔ HOW MUCH IS DOWN NOW — between keys and buttons, in a single number.
@@ -254,24 +254,24 @@ int input_rilascia_tutto(Input *);
  *   must know what it prevents.
  *
  * ⛔ THE FACT, `[M]` 21 August 2026 (bench `banchi/06-b33-risveglio.*`): every
- *    `cattura_risveglia()` makes Mutter recreate the absolute devices — **3
+ *    `capture_wake()` makes Mutter recreate the absolute devices — **3
  *    wake-ups, 3 replacements, with ZERO canvas changes**.  And if at that moment a
  *    button is pressed, that button stays down **in the seat** and ⛔ **the
  *    desktop no longer takes a click for the whole session**.
  *
- * ⛔ And the moment `figlio.c` calls `cattura_risveglia()` is *"the scene
+ * ⛔ And the moment `figlio.c` calls `capture_wake()` is *"the scene
  *    is still and a keyframe is owed"*, that is **exactly** the moment the
  *    user may hold the mouse down on a desktop that does not move.
  *
  * ⇒ Whoever is about to do something that recreates the devices looks here first.
  *
- * ⚠ And the cure of `figlio.c:3964` — releasing before `cattura_ridimensiona()`
+ * ⚠ And the cure of `figlio.c:3964` — releasing before `capture_resize()`
  *   — **does not cover this path**: there the release can be done because it is the
  *   client that asked for the change; here not, because the user is
  *   dragging and nobody asked them anything.
  */
-unsigned input_premuti(const Input *);
+unsigned input_pressed(const Input *);
 
-void input_chiudi(Input *);
+void input_close(Input *);
 
 #endif /* REMOTIX_INPUT_H */

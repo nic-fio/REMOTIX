@@ -30,10 +30,10 @@ def ocr_available():
     return os.path.exists(os.path.join(TESSERACT, "usr", "bin", "tesseract"))
 
 
-def ocr(png, riquadro=None, ingrandisci=2, psm=11, soglia=None):
+def ocr(png, rect=None, zoom_in=2, psm=11, threshold=None):
     """The words read in the photo: [(text, x, y, w, h, confidence)] in pixels
     of the PHOTO (not of the crop).  None if tesseract is not there.
-    `soglia`: the crop is brought to DARK text on a light background (it is inverted
+    `threshold`: the crop is brought to DARK text on a light background (it is inverted
     if it is dark on average) and binarised — `[M]` 24 Sep 2026: GNOME's dark menu
     in grey cannot be read, binarised at 110 it can."""
     if not ocr_available():
@@ -41,19 +41,19 @@ def ocr(png, riquadro=None, ingrandisci=2, psm=11, soglia=None):
     from PIL import Image, ImageOps, ImageStat
     im = Image.open(io.BytesIO(png)).convert("L")
     ox, oy = 0, 0
-    if riquadro:
-        x0, y0, x1, y1 = [int(v) for v in riquadro]
+    if rect:
+        x0, y0, x1, y1 = [int(v) for v in rect]
         x0, y0 = max(0, x0), max(0, y0)
         x1, y1 = min(im.size[0], x1), min(im.size[1], y1)
         im = im.crop((x0, y0, x1, y1))
         ox, oy = x0, y0
-    if ingrandisci != 1:
-        im = im.resize((im.size[0] * ingrandisci, im.size[1] * ingrandisci), Image.LANCZOS)
-    if soglia is not None:
+    if zoom_in != 1:
+        im = im.resize((im.size[0] * zoom_in, im.size[1] * zoom_in), Image.LANCZOS)
+    if threshold is not None:
         if ImageStat.Stat(im).mean[0] < 128:
             im = ImageOps.invert(im)
-        im = im.point(lambda v: 0 if v < soglia else 255)
-    amb = dict(os.environ,
+        im = im.point(lambda v: 0 if v < threshold else 255)
+    env = dict(os.environ,
                LD_LIBRARY_PATH=os.path.join(TESSERACT, "usr", "lib", "x86_64-linux-gnu"),
                TESSDATA_PREFIX=os.path.join(TESSERACT, "usr", "share", "tesseract-ocr", "5",
                                             "tessdata"),
@@ -63,50 +63,50 @@ def ocr(png, riquadro=None, ingrandisci=2, psm=11, soglia=None):
         im.save(f)
         r = subprocess.run([os.path.join(TESSERACT, "usr", "bin", "tesseract"), f, "stdout",
                             "-l", "eng+ita", "--psm", str(psm), "tsv"],
-                           capture_output=True, text=True, env=amb, timeout=120)
-    parole = []
-    for riga in r.stdout.splitlines()[1:]:
-        c = riga.split("\t")
+                           capture_output=True, text=True, env=env, timeout=120)
+    words = []
+    for line in r.stdout.splitlines()[1:]:
+        c = line.split("\t")
         if len(c) < 12 or not c[11].strip():
             continue
         try:
             conf = float(c[10])
         except ValueError:
             conf = -1
-        x, y, w, h = [int(v) / ingrandisci for v in c[6:10]]
-        parole.append((c[11].strip(), ox + x, oy + y, w, h, conf))
-    return parole
+        x, y, w, h = [int(v) / zoom_in for v in c[6:10]]
+        words.append((c[11].strip(), ox + x, oy + y, w, h, conf))
+    return words
 
 
-def text_of(parole):
-    return " ".join(p[0] for p in parole or [])
+def text_of(words):
+    return " ".join(p[0] for p in words or [])
 
 
-def cerca_parola(parole, modello):
-    """The first word (text, x, y, w, h, conf) that matches `modello`
+def search_word(words, model):
+    """The first word (text, x, y, w, h, conf) that matches `model`
     (regex, case-insensitive)."""
-    rx = re.compile(modello, re.I)
-    for p in parole or []:
+    rx = re.compile(model, re.I)
+    for p in words or []:
         if rx.search(p[0]):
             return p
     return None
 
 
-def search_phrase(parole, modello):
-    """Like `cerca_parola` but on rebuilt lines: returns (sentence, x, y) of the
+def search_phrase(words, model):
+    """Like `search_word` but on rebuilt lines: returns (sentence, x, y) of the
     first group of close words (same line) that matches."""
-    rx = re.compile(modello, re.I)
-    righe = []
-    for p in sorted(parole or [], key=lambda q: (round(q[2] / 12), q[1])):
-        if righe and abs(righe[-1][-1][2] - p[2]) < 10 and \
-                p[1] - (righe[-1][-1][1] + righe[-1][-1][3]) < 40:
-            righe[-1].append(p)
+    rx = re.compile(model, re.I)
+    lines = []
+    for p in sorted(words or [], key=lambda q: (round(q[2] / 12), q[1])):
+        if lines and abs(lines[-1][-1][2] - p[2]) < 10 and \
+                p[1] - (lines[-1][-1][1] + lines[-1][-1][3]) < 40:
+            lines[-1].append(p)
         else:
-            righe.append([p])
-    for r in righe:
-        frase = " ".join(q[0] for q in r)
-        if rx.search(frase):
-            return frase, r[0][1], r[0][2] + r[0][4] / 2
+            lines.append([p])
+    for r in lines:
+        sentence = " ".join(q[0] for q in r)
+        if rx.search(sentence):
+            return sentence, r[0][1], r[0][2] + r[0][4] / 2
     return None
 
 
@@ -123,38 +123,38 @@ def from_photo_to_desktop(geo, pw, ph, px, py):
             (py * geo["bh"] / ph - geo["by0"]) / geo["sy"])
 
 
-def click_desktop(s, geo, X, Y, bottone=0):
+def click_desktop(s, geo, X, Y, button_code=0):
     """A real click at the point (X, Y) of the desktop.  bottone 0 left, 2 right."""
     g = s.g
     x, y = desktop_to_glass(geo, X, Y)
     if hasattr(g, "cdp"):
-        nome = {0: "left", 1: "middle", 2: "right"}[bottone]
+        name = {0: "left", 1: "middle", 2: "right"}[button_code]
         try:
-            g.cdp.chiama("Input.dispatchMouseEvent", type="mouseMoved", x=x, y=y)
+            g.cdp.call("Input.dispatchMouseEvent", type="mouseMoved", x=x, y=y)
         except RuntimeError:
             # ⚠ `[M]` 24 Sep 2026, server at load 40: «Internal error» on the
             #   first event; the second goes through
             time.sleep(1.5)
-            g.cdp.chiama("Input.dispatchMouseEvent", type="mouseMoved", x=x, y=y)
+            g.cdp.call("Input.dispatchMouseEvent", type="mouseMoved", x=x, y=y)
         time.sleep(0.15)
-        g.cdp.chiama("Input.dispatchMouseEvent", type="mousePressed", x=x, y=y,
-                     button=nome, clickCount=1)
+        g.cdp.call("Input.dispatchMouseEvent", type="mousePressed", x=x, y=y,
+                     button=name, clickCount=1)
         time.sleep(0.08)
-        g.cdp.chiama("Input.dispatchMouseEvent", type="mouseReleased", x=x, y=y,
-                     button=nome, clickCount=1)
+        g.cdp.call("Input.dispatchMouseEvent", type="mouseReleased", x=x, y=y,
+                     button=name, clickCount=1)
         return
     g._actions([{"type": "pointer", "id": "topo", "parameters": {"pointerType": "mouse"},
                 "actions": [{"type": "pointerMove", "x": int(x), "y": int(y),
                              "origin": "viewport", "duration": 0},
                             {"type": "pause", "duration": 150},
-                            {"type": "pointerDown", "button": bottone},
+                            {"type": "pointerDown", "button": button_code},
                             {"type": "pause", "duration": 80},
-                            {"type": "pointerUp", "button": bottone}]}])
+                            {"type": "pointerUp", "button": button_code}]}])
 
 
 def move_desktop(s, geo, X, Y):
     x, y = desktop_to_glass(geo, X, Y)
-    s.g.muovi(x, y)
+    s.g.move_to(x, y)
 
 
 #  name: (key, code, vk, WebDriver, CDP modifier bit)
@@ -176,44 +176,44 @@ KEY_LIST = {
 }
 
 
-def _key(nome):
-    if nome in KEY_LIST:
-        return KEY_LIST[nome]
-    if len(nome) == 1 and nome.isalnum():
-        c = nome.lower()
+def _key(name):
+    if name in KEY_LIST:
+        return KEY_LIST[name]
+    if len(name) == 1 and name.isalnum():
+        c = name.lower()
         code = ("Key" + c.upper()) if c.isalpha() else ("Digit" + c)
         return (c, code, ord(c.upper()), c, 0)
-    raise KeyError(nome)
+    raise KeyError(name)
 
 
-def combinazione(g, nomi, keep_ms=120):
+def combination(g, names, keep_ms=120):
     """Presses the keys in order, holds them, releases them in reverse (a
     real combination: Alt down, Tab down, Tab up, Alt up)."""
-    tasti = [_key(n) for n in nomi]
+    keys = [_key(n) for n in names]
     if hasattr(g, "cdp"):
         mod = 0
-        for key, code, vk, _w, bit in tasti:
+        for key, code, vk, _w, bit in keys:
             mod |= bit
             p = dict(type="rawKeyDown", key=key, code=code, windowsVirtualKeyCode=vk,
                      modifiers=mod)
-            g.cdp.chiama("Input.dispatchKeyEvent", **p)
+            g.cdp.call("Input.dispatchKeyEvent", **p)
             time.sleep(0.06)
         time.sleep(keep_ms / 1000.0)
-        for key, code, vk, _w, bit in reversed(tasti):
+        for key, code, vk, _w, bit in reversed(keys):
             mod &= ~bit
-            g.cdp.chiama("Input.dispatchKeyEvent", type="keyUp", key=key, code=code,
+            g.cdp.call("Input.dispatchKeyEvent", type="keyUp", key=key, code=code,
                          windowsVirtualKeyCode=vk, modifiers=mod)
             time.sleep(0.06)
         return
     az = []
-    for t in tasti:
+    for t in keys:
         az += [{"type": "keyDown", "value": t[3]}, {"type": "pause", "duration": 60}]
     az.append({"type": "pause", "duration": keep_ms})
-    for t in reversed(tasti):
+    for t in reversed(keys):
         az += [{"type": "keyUp", "value": t[3]}, {"type": "pause", "duration": 60}]
-    g.m.chiama("WebDriver:PerformActions",
+    g.m.call("WebDriver:PerformActions",
                {"actions": [{"type": "key", "id": "tastiera", "actions": az}]})
-    g.m.chiama("WebDriver:ReleaseActions")
+    g.m.call("WebDriver:ReleaseActions")
 
 
 def focus_on_canvas(s, geo):
@@ -222,7 +222,7 @@ def focus_on_canvas(s, geo):
     try:
         s.g.js("if (document.activeElement && document.activeElement.blur) "
                "document.activeElement.blur(); "
-               "const t=document.getElementById('schermo'); if (t && t.focus) t.focus(); "
+               "const t=document.getElementById('viewer'); if (t && t.focus) t.focus(); "
                "return 1;")
     except Exception:                            # noqa: BLE001
         pass
@@ -233,35 +233,35 @@ def focus_on_canvas(s, geo):
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE PHOTOS
 # ═══════════════════════════════════════════════════════════════════════════
-def immagine(png):
+def bitmap(png):
     from PIL import Image
     return Image.open(io.BytesIO(png)).convert("RGB")
 
 
-def differenza(png_a, png_b, riquadro=None, passo=4, soglia=40):
+def difference(png_a, png_b, rect=None, step=4, threshold=40):
     """The fraction of the sampled pixels that changes between two photos (0..1)."""
-    a, b = immagine(png_a), immagine(png_b)
+    a, b = bitmap(png_a), bitmap(png_b)
     if a.size != b.size:
         return 1.0
-    if riquadro:
-        a, b = a.crop(riquadro), b.crop(riquadro)
+    if rect:
+        a, b = a.crop(rect), b.crop(rect)
     pa, pb = a.load(), b.load()
-    n = cambiati = 0
-    for y in range(0, a.size[1], passo):
-        for x in range(0, a.size[0], passo):
+    n = changed = 0
+    for y in range(0, a.size[1], step):
+        for x in range(0, a.size[0], step):
             n += 1
             p, q = pa[x, y], pb[x, y]
-            if abs(p[0] - q[0]) + abs(p[1] - q[1]) + abs(p[2] - q[2]) > soglia:
-                cambiati += 1
-    return cambiati / max(1, n)
+            if abs(p[0] - q[0]) + abs(p[1] - q[1]) + abs(p[2] - q[2]) > threshold:
+                changed += 1
+    return changed / max(1, n)
 
 
-def mean_luminance(png, passo=8):
-    im = immagine(png)
+def mean_luminance(png, step=8):
+    im = bitmap(png)
     px = im.load()
     t = n = 0
-    for y in range(0, im.size[1], passo):
-        for x in range(0, im.size[0], passo):
+    for y in range(0, im.size[1], step):
+        for x in range(0, im.size[0], step):
             r, g, b = px[x, y]
             t += 0.299 * r + 0.587 * g + 0.114 * b
             n += 1
@@ -271,14 +271,14 @@ def mean_luminance(png, passo=8):
 def png_nero(w, h):
     import struct
     import zlib
-    riga = b"\x00" + b"\x00\x00\x00" * w
-    dati = zlib.compress(riga * h, 9)
+    line = b"\x00" + b"\x00\x00\x00" * w
+    data = zlib.compress(line * h, 9)
 
-    def pezzo(t, d):
+    def piece(t, d):
         return (struct.pack(">I", len(d)) + t + d
                 + struct.pack(">I", zlib.crc32(t + d) & 0xffffffff))
-    return (b"\x89PNG\r\n\x1a\n" + pezzo(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0))
-            + pezzo(b"IDAT", dati) + pezzo(b"IEND", b""))
+    return (b"\x89PNG\r\n\x1a\n" + piece(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0))
+            + piece(b"IDAT", data) + piece(b"IEND", b""))
 
 
 def png_size(png):
@@ -289,128 +289,128 @@ def png_size(png):
 # ═══════════════════════════════════════════════════════════════════════════
 #  INSIDE THE SESSION
 # ═══════════════════════════════════════════════════════════════════════════
-def nella_sessione(s, comando, secondi=60):
-    """(code, output) of `comando` executed as the tenant, with
+def in_session(s, command, seconds=60):
+    """(code, output) of `command` executed as the tenant, with
     the environment of their graphical session (and the XDG_CONFIG_DIRS of their
     compositor, which on KDE carries REMOTIX's KIOSK)."""
-    return s.nella_sessione(comando, secondi, fondo=False)
+    return s.in_session(command, seconds, background=False)
 
 
-def environment_of(s, processo):
+def environment_of(s, process):
     """An environment variable by name, read from /proc/<pid>/environ of the
-    tenant's first process named `processo`: {name: value}."""
-    c, t = s.sc.dentro(
+    tenant's first process named `process`: {name: value}."""
+    c, t = s.sc.inside(
         "p=$(pgrep -u %s -x %s | head -1); [ -n \"$p\" ] || exit 4; "
-        "tr '\\0' '\\n' < /proc/$p/environ" % (s.chi, processo), 30)
+        "tr '\\0' '\\n' < /proc/$p/environ" % (s.chi, process), 30)
     if c != 0:
         return {}
-    amb = {}
-    for riga in t.splitlines():
-        k, _, v = riga.partition("=")
+    env = {}
+    for line in t.splitlines():
+        k, _, v = line.partition("=")
         if k:
-            amb[k] = v
-    return amb
+            env[k] = v
+    return env
 
 
-def changed_rect(png_a, png_b, cella=8, soglia=60, margine=24, minimo=3, vicino=None):
+def changed_rect(png_a, png_b, cell=8, threshold=60, margin=24, minimum=3, near=None):
     """⭐ Where something opened: the box (x0, y0, x1, y1) of the LARGEST BLOB
-    of changed cells between two photos (cells of `cella` px, one pixel
+    of changed cells between two photos (cells of `cell` px, one pixel
     per cell, 8-neighbours with one step of tolerance).  It serves to crop
     the open menu for the OCR: tesseract on a crop wide with background gets the
     threshold wrong and reads nothing (`[M]` 24 Sep 2026, GNOME: «Log Out…» read in the
     narrow crop, lost in the wide one).  None if nothing changes."""
-    a, b = immagine(png_a), immagine(png_b)
+    a, b = bitmap(png_a), bitmap(png_b)
     if a.size != b.size:
         return None
     pa, pb = a.load(), b.load()
     W, H = a.size
-    cw, ch = W // cella, H // cella
-    acceso = set()
+    cw, ch = W // cell, H // cell
+    is_on = set()
     for j in range(ch):
-        y = j * cella + cella // 2
+        y = j * cell + cell // 2
         for i in range(cw):
-            x = i * cella + cella // 2
-            if vicino and (x - vicino[0]) ** 2 + (y - vicino[1]) ** 2 > vicino[2] ** 2:
+            x = i * cell + cell // 2
+            if near and (x - near[0]) ** 2 + (y - near[1]) ** 2 > near[2] ** 2:
                 continue
             p, q = pa[x, y], pb[x, y]
-            if abs(p[0] - q[0]) + abs(p[1] - q[1]) + abs(p[2] - q[2]) > soglia:
-                acceso.add((i, j))
-    visti, migliore = set(), None
-    for c in acceso:
-        if c in visti:
+            if abs(p[0] - q[0]) + abs(p[1] - q[1]) + abs(p[2] - q[2]) > threshold:
+                is_on.add((i, j))
+    seen_items, best = set(), None
+    for c in is_on:
+        if c in seen_items:
             continue
-        pila, blob = [c], []
-        visti.add(c)
-        while pila:
-            i, j = pila.pop()
+        stack, blob = [c], []
+        seen_items.add(c)
+        while stack:
+            i, j = stack.pop()
             blob.append((i, j))
             for di in (-2, -1, 0, 1, 2):
                 for dj in (-2, -1, 0, 1, 2):
                     v = (i + di, j + dj)
-                    if v in acceso and v not in visti:
-                        visti.add(v)
-                        pila.append(v)
-        if migliore is None or len(blob) > len(migliore):
-            migliore = blob
-    if not migliore or len(migliore) < minimo:
+                    if v in is_on and v not in seen_items:
+                        seen_items.add(v)
+                        stack.append(v)
+        if best is None or len(blob) > len(best):
+            best = blob
+    if not best or len(best) < minimum:
         return None
-    xs = [c[0] for c in migliore]
-    ys = [c[1] for c in migliore]
-    return (max(0, min(xs) * cella - margine), max(0, min(ys) * cella - margine),
-            min(W, (max(xs) + 1) * cella + margine), min(H, (max(ys) + 1) * cella + margine))
+    xs = [c[0] for c in best]
+    ys = [c[1] for c in best]
+    return (max(0, min(xs) * cell - margin), max(0, min(ys) * cell - margin),
+            min(W, (max(xs) + 1) * cell + margin), min(H, (max(ys) + 1) * cell + margin))
 
 
-def leggi_riquadro(png, riquadro, ingrandisci=3):
+def read_rect(png, rect, zoom_in=3):
     """OCR of the box in three readings (grey psm 11; binarised at 110 psm 6;
     at 150 psm 11).  Returns (lines, text): the LINES of each reading, put
     together — an entry read by only one of the three counts (for the forbidden ones
     the most sensitive is wanted).  (None, reason) if tesseract is not there."""
     if not ocr_available():
         return None, "tesseract is not in %s" % TESSERACT
-    tutte = []
-    for psm, soglia in ((11, None), (6, 110), (11, 150)):
-        p = ocr(png, riquadro, ingrandisci=ingrandisci, psm=psm, soglia=soglia) or []
-        tutte += lines_of(p)
-        leggi_riquadro.parole = getattr(leggi_riquadro, "parole", []) + p
-    return tutte, " | ".join(r[0] for r in tutte)
+    all_of = []
+    for psm, threshold in ((11, None), (6, 110), (11, 150)):
+        p = ocr(png, rect, zoom_in=zoom_in, psm=psm, threshold=threshold) or []
+        all_of += lines_of(p)
+        read_rect.words = getattr(read_rect, "words", []) + p
+    return all_of, " | ".join(r[0] for r in all_of)
 
 
 def words_read():
-    """The words (with the position) of the readings made by `leggi_riquadro`
-    since the last `azzera_parole()`."""
-    return list(getattr(leggi_riquadro, "parole", []))
+    """The words (with the position) of the readings made by `read_rect`
+    since the last `reset_words()`."""
+    return list(getattr(read_rect, "words", []))
 
 
-def azzera_parole():
-    leggi_riquadro.parole = []
+def reset_words():
+    read_rect.words = []
 
 
-def lines_of(parole, passo_y=14):
+def lines_of(words, stride_y=14):
     """The words put back into lines: [(sentence, x, y)] sorted from the top.  A
-    line = the words with the centre at the same height (±passo_y), in x order.
+    line = the words with the centre at the same height (±stride_y), in x order.
     The three readings give duplicates: within a line the words overlapping one
     already taken are removed, and equal close lines are removed.
     ⚠ Two side-by-side menus at the same height end up in the same line: for
       the judgment that is fine (words are looked for, entries are not counted)."""
-    righe = []
-    for p in sorted(parole or [], key=lambda q: q[2] + q[4] / 2):
+    lines = []
+    for p in sorted(words or [], key=lambda q: q[2] + q[4] / 2):
         cy = p[2] + p[4] / 2
-        for r in righe:
-            if abs(r["y"] - cy) < passo_y:
+        for r in lines:
+            if abs(r["y"] - cy) < stride_y:
                 r["p"].append(p)
                 break
         else:
-            righe.append({"y": cy, "p": [p]})
-    fuori = []
-    for r in sorted(righe, key=lambda r: r["y"]):
-        prese = []
+            lines.append({"y": cy, "p": [p]})
+    report = []
+    for r in sorted(lines, key=lambda r: r["y"]):
+        grips = []
         for p in sorted(r["p"], key=lambda q: (-q[5], q[1])):
-            if any(p[1] < q[1] + q[3] and q[1] < p[1] + p[3] for q in prese):
+            if any(p[1] < q[1] + q[3] and q[1] < p[1] + p[3] for q in grips):
                 continue
-            prese.append(p)
-        prese.sort(key=lambda q: q[1])
-        fuori.append((" ".join(q[0] for q in prese), prese[0][1], r["y"]))
-    return fuori
+            grips.append(p)
+        grips.sort(key=lambda q: q[1])
+        report.append((" ".join(q[0] for q in grips), grips[0][1], r["y"]))
+    return report
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -464,64 +464,64 @@ def put_window(s):
     """Writes the window's program in the tenant's home."""
     import base64
     b = base64.b64encode(WINDOW_GTK.encode()).decode()
-    return s.sc.dentro("echo %s | base64 -d > /home/%s/.c15-finestra.py && chown %s: "
+    return s.sc.inside("echo %s | base64 -d > /home/%s/.c15-finestra.py && chown %s: "
                        "/home/%s/.c15-finestra.py && echo scritta"
                        % (b, s.chi, s.chi, s.chi), 60)
 
 
-def open_window(s, nome, colore, largo, alto, altro=None, periodo=30):
-    coda = " '%s' %d" % (altro, periodo) if altro else ""
-    return s.nella_sessione("python3 /home/%s/.c15-finestra.py %s '%s' %d %d%s"
-                            % (s.chi, nome, colore, largo, alto, coda), 60, fondo=True)
+def open_window(s, name, color, largo, alto, other=None, period=30):
+    queue = " '%s' %d" % (other, period) if other else ""
+    return s.in_session("python3 /home/%s/.c15-finestra.py %s '%s' %d %d%s"
+                            % (s.chi, name, color, largo, alto, queue), 60, background=True)
 
 
-CIANO = (0, 255, 255)
+CYAN = (0, 255, 255)
 MAGENTA = (255, 0, 255)
 
 
-def count_colors(png, colori, passo=6, toll=50):
+def count_colors(png, colors, step=6, toll=50):
     """{colour: fraction of the sampled pixels close to that colour}."""
-    im = immagine(png)
+    im = bitmap(png)
     px = im.load()
     n = 0
-    conti = {c: 0 for c in colori}
-    for y in range(0, im.size[1], passo):
-        for x in range(0, im.size[0], passo):
+    counts = {c: 0 for c in colors}
+    for y in range(0, im.size[1], step):
+        for x in range(0, im.size[0], step):
             p = px[x, y]
             n += 1
-            for c in colori:
+            for c in colors:
                 if abs(p[0] - c[0]) + abs(p[1] - c[1]) + abs(p[2] - c[2]) < toll:
-                    conti[c] += 1
+                    counts[c] += 1
                     break
-    return {c: v / max(1, n) for c, v in conti.items()}
+    return {c: v / max(1, n) for c, v in counts.items()}
 
 
-def vivi(png, passo=6, soglia=24):
+def living(png, step=6, threshold=24):
     """The fraction of NOT nearly black pixels: a turned-off screen is all black,
     even where the desktop was already dark (XFCE is born with a black background)."""
-    im = immagine(png)
+    im = bitmap(png)
     px = im.load()
     n = v = 0
-    for y in range(0, im.size[1], passo):
-        for x in range(0, im.size[0], passo):
+    for y in range(0, im.size[1], step):
+        for x in range(0, im.size[0], step):
             r, g, b = px[x, y]
             n += 1
-            v += (0.299 * r + 0.587 * g + 0.114 * b) > soglia
+            v += (0.299 * r + 0.587 * g + 0.114 * b) > threshold
     return v / max(1, n)
 
 
-def wait_open(s, png_prima, nome, vicino, tetto_s=10.0, lato_min=120):
+def wait_open(s, png_before, name, near, cap_s=10.0, min_side=120):
     """Photographs until near the click something of at least
-    `lato_min` x `lato_min` px opens (a menu, not a button's highlight).
+    `min_side` x `min_side` px opens (a menu, not a button's highlight).
     Returns (png, path, box | None)."""
-    fine = time.time() + tetto_s
+    fine = time.time() + cap_s
     png, dove, r = None, "", None
     while True:
         time.sleep(1.5)
-        png, dove = foto(s, nome)
+        png, dove = photo(s, name)
         if png:
-            r = changed_rect(png_prima, png, vicino=vicino)
-            if r and r[2] - r[0] >= lato_min and r[3] - r[1] >= lato_min:
+            r = changed_rect(png_before, png, near=near)
+            if r and r[2] - r[0] >= min_side and r[3] - r[1] >= min_side:
                 return png, dove, r
         if time.time() > fine:
             return png, dove, r
@@ -551,51 +551,51 @@ def prod(s):
         pass
 
 
-def foto(s, nome, scala=1.0, tentativi=3):
+def photo(s, name, scale_factor=1.0, attempts=3):
     """The photo of the canvas, RETRIED (`[M]` 24 Sep 2026: with the server at load
-    25-50 Chrome's 4K capture times out).  `scala` < 1 only on Chrome (CDP
+    25-50 Chrome's 4K capture times out).  `scale_factor` < 1 only on Chrome (CDP
     can reduce it; Marionette cannot): for the colour judgments half is enough,
     for the OCR scale 1 is needed.  Returns (png | None, path | reason)."""
     import base64
-    ultimo = ""
-    for _ in range(tentativi):
+    last = ""
+    for _ in range(attempts):
         prod(s)
-        if scala < 1 and hasattr(s.g, "cdp"):
+        if scale_factor < 1 and hasattr(s.g, "cdp"):
             try:
-                r = s.g.js("const t=document.getElementById('schermo');"
+                r = s.g.js("const t=document.getElementById('viewer');"
                            "if(!t) return null; const b=t.getBoundingClientRect();"
                            "return [b.left, b.top, b.width, b.height];")
                 if not r:
-                    ultimo = "the canvas is not there"
+                    last = "the canvas is not there"
                     time.sleep(2)
                     continue
-                c = s.g.cdp.chiama("Page.captureScreenshot", format="png",
+                c = s.g.cdp.call("Page.captureScreenshot", format="png",
                                    clip={"x": r[0], "y": r[1], "width": r[2],
-                                         "height": r[3], "scale": scala})
+                                         "height": r[3], "scale": scale_factor})
                 png = base64.b64decode(c["data"])
                 s._photo += 1
                 dove = ""
-                if s.o.evidenze:
-                    dove = os.path.join(s.o.evidenze, "%02d-%s.png" % (s._photo, nome))
+                if s.o.evidence:
+                    dove = os.path.join(s.o.evidence, "%02d-%s.png" % (s._photo, name))
                     with open(dove, "wb") as f:
                         f.write(png)
                 return png, dove
             except Exception as e:               # noqa: BLE001
-                ultimo = "photo failed: %s" % str(e)[:200]
-                passo("⚠ photo %s: %s" % (nome, ultimo))
+                last = "photo failed: %s" % str(e)[:200]
+                step("⚠ photo %s: %s" % (name, last))
         else:
-            png, dove = s.foto(nome)
+            png, dove = s.photo(name)
             if png:
                 return png, dove
-            ultimo = dove
-            passo("⚠ photo %s: %s" % (nome, ultimo))
+            last = dove
+            step("⚠ photo %s: %s" % (name, last))
         time.sleep(3)
-    return None, ultimo
+    return None, last
 
 
 _T0 = time.time()
 
 
-def passo(testo):
+def step(text):
     """A line with the time elapsed since the start: where the test's time goes."""
-    print("   [%5.0f s] %s" % (time.time() - _T0, testo), flush=True)
+    print("   [%5.0f s] %s" % (time.time() - _T0, text), flush=True)

@@ -19,7 +19,7 @@
   1. ⭐ **THE BACKGROUND CHANGES COLOUR** between `#0000FF` (blue) and `#FFFF00` (yellow) every
      3 animation frames.  ⛔ The two colours are at opposite ends on all
      three channels: after an H.264 encoding in 4:2:0 — which subsamples the chroma —
-     they stay distinguishable with a wide tolerance.  ⚠ And they also serve C3 to
+     they stay distinguishable with a wide tolerance.  ⚠ And they also needs C3 to
      answer the question *«is the scene I declared really the one on the
      screen?»*: if neither of the two colours covers a wide slice, C3 says «I could not
      look» instead of judging a scene that is not its own.
@@ -45,7 +45,7 @@
      **a single step** away from it.
      ⭐ With 3 % the period becomes 100 animation frames, i.e. a
        rate of 0.6 per second: ⇒ the case is four times away from the
-       floor instead of close to it, and whoever lowered `--ritmo-minimo` tomorrow
+       floor instead of close to it, and whoever lowered `--minimum-rate` tomorrow
        would have much more margin before opening that door.
 
   ---------------------------------------------------------------------------
@@ -61,13 +61,13 @@
 <style>
   html, body { margin:0; padding:0; width:100%; height:100%; overflow:hidden; }
   body { background:#0000FF; }
-  #banda { position:absolute; top:0; bottom:0; width:20%; background:#000;
+  #bandwidth { position:absolute; top:0; bottom:0; width:20%; background:#000;
            opacity:0.85; }
   #targa { position:absolute; left:0; right:0; top:45%;
            text-align:center; font-family:monospace; font-size:5vw;
            color:#000; }
 </style>
-<div id="banda"></div>
+<div id="bandwidth"></div>
 <div id="targa">REMOTIX C3</div>
 <script>
   // ⭐ The two colours are DECLARED here and repeated in the bench: if someone
@@ -75,8 +75,8 @@
   //    on the screen» ⇒ ⛔ «I could not look», not a red for the product.
   var COLORS = ['#0000FF', '#FFFF00'];
   var n = 0, x = 0;
-  var banda = document.getElementById('banda');
-  function giro() {
+  var bandwidth = document.getElementById('bandwidth');
+  function round_trip() {
     // the background changes every 3 frames
     if (n % 3 === 0) document.body.style.background = COLORS[(n / 3 | 0) % 2];
     // the band advances by 3 % at EVERY frame, and re-enters from the other side.
@@ -84,9 +84,9 @@
     //    every 25 frames, and at a rate of 2.4/s C3 would see two identical
     //    frames on a perfectly healthy scene.
     x = (x + 3) % 100;
-    banda.style.left = x + '%';
+    bandwidth.style.left = x + '%';
     n++;
-    requestAnimationFrame(giro);
+    requestAnimationFrame(round_trip);
   }
-  requestAnimationFrame(giro);
+  requestAnimationFrame(round_trip);
 </script>

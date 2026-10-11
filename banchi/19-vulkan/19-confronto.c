@@ -2,14 +2,14 @@
  * 19-confronto.c — the SAME desktop sequence (the generator of bench 18)
  * encoded by TWO engines on the SAME card:
  *
- *   --motore vaapi    the PRODUCT's encoder (`src/codificatore.c` +
+ *   --engine vaapi    the PRODUCT's encoder (`src/codificatore.c` +
  *                     `src/vadiretta.c`) with the VA-API path requested by name
  *                     (`h264_vaapi`), memory path or card path;
- *   --motore vulkan   the new module `src/vulkanvideo.c`, on its own: from
+ *   --engine vulkan   the new module `src/vulkanvideo.c`, on its own: from
  *                     memory (`vulkanvideo_encode_memory`) or from DMA-BUF
  *                     (`vulkanvideo_encode_dmabuf`, zero copy via GBM);
- *   --motore scheda   ⭐ the INTEGRATED PRODUCT (since the graft, 1 Oct 2026):
- *                     `h264_scheda`/`hevc_scheda`, the path chosen by
+ *   --engine card   ⭐ the INTEGRATED PRODUCT (since the graft, 1 Oct 2026):
+ *                     `h264_card`/`hevc_card`, the path chosen by
  *                     capability — on the Radeon it is Vulkan inside codificatore.c,
  *                     with all the cures downstream of the bytes (cap, frame,
  *                     shape).  The JSON says which path came out.
@@ -17,8 +17,8 @@
  * The shell is that of `18-confronto.c` (retired, DECISIONI §10.44): fake but
  * realistic desktop (text, windows, scrolling, dragging, cursor), one CSV
  * line per frame, at the end one JSON line with the confession.  In addition:
- *   --qualita-a N:QP   the HOT quality change at frame N
- *   --capacita NODO    the discovery of the node's Vulkan capabilities, in JSON
+ *   --quality-at N:QP   the HOT quality change at frame N
+ *   --capabilities NODE    the discovery of the node's Vulkan capabilities, in JSON
  *
  * The judgement is in `19-confronto.sh` (ffmpeg as measuring tool, ffprobe,
  * PSNR/SSIM) and in `19-decodifica-chrome.sh` (real Chrome, WebCodecs).
@@ -38,20 +38,20 @@
 #include <vulkan/vulkan.h>
 
 /* ─── a deterministic generator: xorshift32 ──────────────────────────────── */
-static uint32_t seme = 0x9E3779B9u;
-static uint32_t caso(void)
+static uint32_t seed = 0x9E3779B9u;
+static uint32_t test_case(void)
 {
-	seme ^= seme << 13;
-	seme ^= seme >> 17;
-	seme ^= seme << 5;
-	return seme;
+	seed ^= seed << 13;
+	seed ^= seed >> 17;
+	seed ^= seed << 5;
+	return seed;
 }
 
 /* A "stable" 5x7 glyph: it depends only on (row, column) of the text, so the
  * text does not change from one frame to the next unless it scrolls. */
-static uint32_t glyph(uint32_t riga, uint32_t colonna)
+static uint32_t glyph(uint32_t line, uint32_t column)
 {
-	uint32_t h = riga * 2654435761u ^ colonna * 40503u ^ 0xA5A5A5A5u;
+	uint32_t h = line * 2654435761u ^ column * 40503u ^ 0xA5A5A5A5u;
 	h ^= h >> 15;
 	h *= 2246822519u;
 	h ^= h >> 13;
@@ -60,105 +60,105 @@ static uint32_t glyph(uint32_t riga, uint32_t colonna)
 
 typedef struct {
 	uint8_t *pixel;
-	uint32_t l, a, passo;
-} Tela;
+	uint32_t l, a, step;
+} Canvas;
 
-static void rettangolo(Tela *t, int x0, int y0, int l, int a, uint8_t b, uint8_t g, uint8_t r)
+static void rectangle(Canvas *t, int x0, int y0, int l, int a, uint8_t b, uint8_t g, uint8_t r)
 {
 	for (int y = y0; y < y0 + a; y++) {
 		if (y < 0 || y >= (int) t->a)
 			continue;
-		uint8_t *riga = t->pixel + (size_t) y * t->passo;
+		uint8_t *line = t->pixel + (size_t) y * t->step;
 		for (int x = x0; x < x0 + l; x++) {
 			if (x < 0 || x >= (int) t->l)
 				continue;
-			riga[x * 4 + 0] = b;
-			riga[x * 4 + 1] = g;
-			riga[x * 4 + 2] = r;
-			riga[x * 4 + 3] = 0;
+			line[x * 4 + 0] = b;
+			line[x * 4 + 1] = g;
+			line[x * 4 + 2] = r;
+			line[x * 4 + 3] = 0;
 		}
 	}
 }
 
 /* Lines of text: 5x7 glyphs in cells of (scale·6)x(scale·10), from pixel
- * `scorrimento` downwards (to make the terminal scroll). */
-static void testo(Tela *t, int x0, int y0, int l, int a, int scala, uint32_t first_row,
-                  int scorrimento, uint8_t b, uint8_t g, uint8_t r)
+ * `scroll` downwards (to make the terminal scroll). */
+static void text(Canvas *t, int x0, int y0, int l, int a, int scale_factor, uint32_t first_row,
+                  int scroll, uint8_t b, uint8_t g, uint8_t r)
 {
-	int cell_w = 6 * scala, cell_h = 10 * scala;
-	int colonne = l / cell_w;
+	int cell_w = 6 * scale_factor, cell_h = 10 * scale_factor;
+	int columns = l / cell_w;
 	for (int y = 0; y < a; y++) {
-		int yy = y + scorrimento;
-		int text_line = yy / cell_h, inside_y = (yy % cell_h) / scala;
+		int yy = y + scroll;
+		int text_line = yy / cell_h, inside_y = (yy % cell_h) / scale_factor;
 		if (inside_y >= 7)
 			continue;
 		int py = y0 + y;
 		if (py < 0 || py >= (int) t->a)
 			continue;
-		uint8_t *riga = t->pixel + (size_t) py * t->passo;
-		for (int c = 0; c < colonne; c++) {
+		uint8_t *line = t->pixel + (size_t) py * t->step;
+		for (int c = 0; c < columns; c++) {
 			uint32_t gl = glyph(first_row + (uint32_t) text_line, (uint32_t) c);
 			if ((gl & 7) == 0)
 				continue; /* one space every eight */
-			for (int dx = 0; dx < 5 * scala; dx++) {
-				int bitx = dx / scala;
+			for (int dx = 0; dx < 5 * scale_factor; dx++) {
+				int bitx = dx / scale_factor;
 				if (!((gl >> (inside_y * 5 + bitx + 3)) & 1u))
 					continue;
 				int px = x0 + c * cell_w + dx;
 				if (px < 0 || px >= (int) t->l)
 					continue;
-				riga[px * 4 + 0] = b;
-				riga[px * 4 + 1] = g;
-				riga[px * 4 + 2] = r;
+				line[px * 4 + 0] = b;
+				line[px * 4 + 1] = g;
+				line[px * 4 + 2] = r;
 			}
 		}
 	}
 }
 
-static void finestra(Tela *t, int x, int y, int l, int a, int scala, uint32_t id,
-                     int scorrimento, bool scura)
+static void window(Canvas *t, int x, int y, int l, int a, int scale_factor, uint32_t id,
+                     int scroll, bool dark)
 {
-	int barra = 28 * scala;
-	rettangolo(t, x - 1, y - 1, l + 2, a + 2, 60, 60, 60);           /* border */
-	rettangolo(t, x, y, l, barra, 0x3a, 0x4a, 0x5e);                 /* title bar */
-	rettangolo(t, x + 10 * scala, y + 8 * scala, 12 * scala, 12 * scala, 0x38, 0x38, 0xe0); /* button */
-	rettangolo(t, x + 26 * scala, y + 8 * scala, 12 * scala, 12 * scala, 0x38, 0xc0, 0xe0);
-	testo(t, x + 50 * scala, y + 8 * scala, l / 2, 14 * scala, scala, id * 1000u, 0, 240, 240, 240);
-	if (scura) {
-		rettangolo(t, x, y + barra, l, a - barra, 0x1e, 0x1e, 0x1e);
-		testo(t, x + 8 * scala, y + barra + 4 * scala, l - 16 * scala, a - barra - 8 * scala, scala,
-		      id * 7919u, scorrimento, 0x60, 0xe0, 0x90);
+	int bar = 28 * scale_factor;
+	rectangle(t, x - 1, y - 1, l + 2, a + 2, 60, 60, 60);           /* border */
+	rectangle(t, x, y, l, bar, 0x3a, 0x4a, 0x5e);                 /* title bar */
+	rectangle(t, x + 10 * scale_factor, y + 8 * scale_factor, 12 * scale_factor, 12 * scale_factor, 0x38, 0x38, 0xe0); /* button */
+	rectangle(t, x + 26 * scale_factor, y + 8 * scale_factor, 12 * scale_factor, 12 * scale_factor, 0x38, 0xc0, 0xe0);
+	text(t, x + 50 * scale_factor, y + 8 * scale_factor, l / 2, 14 * scale_factor, scale_factor, id * 1000u, 0, 240, 240, 240);
+	if (dark) {
+		rectangle(t, x, y + bar, l, a - bar, 0x1e, 0x1e, 0x1e);
+		text(t, x + 8 * scale_factor, y + bar + 4 * scale_factor, l - 16 * scale_factor, a - bar - 8 * scale_factor, scale_factor,
+		      id * 7919u, scroll, 0x60, 0xe0, 0x90);
 	} else {
-		rettangolo(t, x, y + barra, l, a - barra, 0xf4, 0xf4, 0xf4);
-		testo(t, x + 12 * scala, y + barra + 10 * scala, l - 24 * scala, a - barra - 20 * scala, scala,
-		      id * 104729u, scorrimento, 0x20, 0x20, 0x20);
+		rectangle(t, x, y + bar, l, a - bar, 0xf4, 0xf4, 0xf4);
+		text(t, x + 12 * scale_factor, y + bar + 10 * scale_factor, l - 24 * scale_factor, a - bar - 20 * scale_factor, scale_factor,
+		      id * 104729u, scroll, 0x20, 0x20, 0x20);
 	}
 }
 
-static void disegna(Tela *t, uint32_t n)
+static void draw(Canvas *t, uint32_t n)
 {
-	int scala = (t->l >= 3000) ? 2 : 1;
+	int scale_factor = (t->l >= 3000) ? 2 : 1;
 	/* background: diagonal gradient with a "wallpaper" band */
 	for (uint32_t y = 0; y < t->a; y++) {
-		uint8_t *riga = t->pixel + (size_t) y * t->passo;
+		uint8_t *line = t->pixel + (size_t) y * t->step;
 		for (uint32_t x = 0; x < t->l; x++) {
 			uint32_t v = (x * 96 / t->l) + (y * 96 / t->a);
-			riga[x * 4 + 0] = (uint8_t) (60 + v);
-			riga[x * 4 + 1] = (uint8_t) (30 + v / 2);
-			riga[x * 4 + 2] = (uint8_t) (20 + v / 3);
-			riga[x * 4 + 3] = 0;
+			line[x * 4 + 0] = (uint8_t) (60 + v);
+			line[x * 4 + 1] = (uint8_t) (30 + v / 2);
+			line[x * 4 + 2] = (uint8_t) (20 + v / 3);
+			line[x * 4 + 3] = 0;
 		}
 	}
 	/* the bottom bar (panel) with "icons" */
-	rettangolo(t, 0, (int) t->a - 40 * scala, (int) t->l, 40 * scala, 0x28, 0x28, 0x28);
+	rectangle(t, 0, (int) t->a - 40 * scale_factor, (int) t->l, 40 * scale_factor, 0x28, 0x28, 0x28);
 	for (int i = 0; i < 12; i++)
-		rettangolo(t, 12 * scala + i * 48 * scala, (int) t->a - 34 * scala, 28 * scala, 28 * scala,
+		rectangle(t, 12 * scale_factor + i * 48 * scale_factor, (int) t->a - 34 * scale_factor, 28 * scale_factor, 28 * scale_factor,
 		           (uint8_t) (80 + i * 13), (uint8_t) (120 + i * 9), (uint8_t) (200 - i * 11));
 	int L = (int) t->l, A = (int) t->a;
 	/* window 1: a light editor, still */
-	finestra(t, L / 20, A / 12, L * 9 / 20, A * 6 / 10, scala, 1, 0, false);
+	window(t, L / 20, A / 12, L * 9 / 20, A * 6 / 10, scale_factor, 1, 0, false);
 	/* window 2: a dark terminal that SCROLLS by 3 px per frame */
-	finestra(t, L * 11 / 20, A / 8, L * 8 / 20, A * 5 / 10, scala, 2, (int) n * 3 * scala, true);
+	window(t, L * 11 / 20, A / 8, L * 8 / 20, A * 5 / 10, scale_factor, 2, (int) n * 3 * scale_factor, true);
 	/* window 3: small, DRAGGED between frames 30 and 90 */
 	int dx = 0, dy = 0;
 	if (n >= 30 && n < 90) {
@@ -168,16 +168,16 @@ static void disegna(Tela *t, uint32_t n)
 		dx = 60 * (L / 240);
 		dy = 60 * (A / 480);
 	}
-	finestra(t, L / 8 + dx, A * 6 / 10 + dy, L * 3 / 10, A * 3 / 10, scala, 3, 0, false);
+	window(t, L / 8 + dx, A * 6 / 10 + dy, L * 3 / 10, A * 3 / 10, scale_factor, 3, 0, false);
 	/* the cursor: a little arrow going round */
 	double ang = n * 0.11;
 	int cx = L / 2 + (int) (L / 3 * __builtin_cos(ang));
 	int cy = A / 2 + (int) (A / 3 * __builtin_sin(ang * 1.3));
-	for (int i = 0; i < 16 * scala; i++)
-		rettangolo(t, cx, cy + i, (16 * scala - i) / 2 + 1, 1, 0xff, 0xff, 0xff);
-	for (int i = 0; i < 16 * scala; i++)
-		rettangolo(t, cx - 1, cy + i, 1, 1, 0, 0, 0);
-	(void) caso;
+	for (int i = 0; i < 16 * scale_factor; i++)
+		rectangle(t, cx, cy + i, (16 * scale_factor - i) / 2 + 1, 1, 0xff, 0xff, 0xff);
+	for (int i = 0; i < 16 * scale_factor; i++)
+		rectangle(t, cx - 1, cy + i, 1, 1, 0, 0, 0);
+	(void) test_case;
 }
 
 /* ─── the DMA-BUF with GBM, for the card path ───────────────────────────── */
@@ -185,11 +185,11 @@ typedef struct {
 	struct gbm_bo *bo;
 	int fd;
 	uint32_t stride;
-	uint64_t modificatore;
+	uint64_t modifier;
 } Buffer;
 
 /* ⭐ 5 Oct 2026, NVIDIA: its GBM refuses LINEAR + RENDERING. */
-static struct gbm_bo *bo_come_il_prodotto(struct gbm_device *g, uint32_t l, uint32_t a, uint64_t *mod)
+static struct gbm_bo *bo_like_product(struct gbm_device *g, uint32_t l, uint32_t a, uint64_t *mod)
 {
 	struct gbm_bo *bo = gbm_bo_create(g, l, a, GBM_FORMAT_XRGB8888, GBM_BO_USE_LINEAR | GBM_BO_USE_RENDERING);
 	*mod = DRM_FORMAT_MOD_LINEAR;
@@ -218,40 +218,40 @@ static const char *codec_name_arg(CodecVideo c)
  * is not exposed; here the profile/level read with ffprobe in the .sh is enough, and the
  * string is composed from the level the module DECLARES (the Chrome bench
  * verifies it: if Chrome refuses it, it is a real red). */
-static void stringa_codec(CodecVideo codec, int profondita, int livello_idc, char *fuori, size_t n)
+static void codec_string(CodecVideo codec, int depth, int level_idc, char *report, size_t n)
 {
 	if (codec == CODIFICATORE_H264)
-		snprintf(fuori, n, "avc1.6400%02x", livello_idc);
+		snprintf(report, n, "avc1.6400%02x", level_idc);
 	else
-		snprintf(fuori, n, "hev1.%d.%s.L%d.B0", profondita == 10 ? 2 : 1, profondita == 10 ? "4" : "6", livello_idc);
+		snprintf(report, n, "hev1.%d.%s.L%d.B0", depth == 10 ? 2 : 1, depth == 10 ? "4" : "6", level_idc);
 }
 
-static int capacita(const char *nodo)
+static int capabilities(const char *node)
 {
 	VulkanVideoCapabilities c;
-	char errore[256] = { 0 };
-	const struct { const char *nome; const VulkanVideoProfileCapabilities *p; } tre[3] = {
+	char error[256] = { 0 };
+	const struct { const char *name; const VulkanVideoProfileCapabilities *p; } tre[3] = {
 		{ "h264", &c.h264 }, { "hevc", &c.hevc }, { "hevc10", &c.hevc10 } };
 
-	vulkanvideo_capacita(nodo, &c, errore, sizeof errore);
-	printf("{\"nodo\":\"%s\",\"vulkan\":%s,\"perche\":\"%s\",\"scheda\":\"%s\",\"driver\":\"%s\","
+	vulkanvideo_capabilities(node, &c, error, sizeof error);
+	printf("{\"nodo\":\"%s\",\"vulkan\":%s,\"why\":\"%s\",\"card\":\"%s\",\"driver\":\"%s\","
 	       "\"api\":\"%u.%u.%u\",\"dmabuf\":%s",
-	       nodo, c.vulkan_c_e ? "true" : "false", c.vulkan_c_e ? "" : c.perche, c.card_name, c.driver,
+	       node, c.vulkan_c_e ? "true" : "false", c.vulkan_c_e ? "" : c.why, c.card_name, c.driver,
 	       VK_API_VERSION_MAJOR(c.api_version), VK_API_VERSION_MINOR(c.api_version),
 	       VK_API_VERSION_PATCH(c.api_version), c.dmabuf ? "true" : "false");
 	for (int i = 0; i < 3; i++) {
 		const VulkanVideoProfileCapabilities *p = tre[i].p;
-		printf(",\"%s\":{\"codifica\":%s", tre[i].nome, p->codifica ? "true" : "false");
-		if (p->codifica)
+		printf(",\"%s\":{\"encode\":%s", tre[i].name, p->encode ? "true" : "false");
+		if (p->encode)
 			printf(",\"misura_massima\":\"%ux%u\",\"misura_minima\":\"%ux%u\",\"modi_bitrate\":%u,"
 			       "\"qp\":[%d,%d],\"livello_massimo\":%d,\"slot_dpb\":%u,\"riferimenti\":%u,"
-			       "\"livelli_qualita\":%u,\"granularita\":\"%ux%u\",\"formato\":\"%s\",\"shader_diretto\":%s,"
+			       "\"livelli_qualita\":%u,\"granularita\":\"%ux%u\",\"format\":\"%s\",\"shader_diretto\":%s,"
 			       "\"sintassi\":\"0x%x\",\"cabac\":%s,\"transform_8x8\":%s",
-			       p->misura_massima_l, p->misura_massima_a, p->min_size_w, p->min_size_h,
-			       p->modi_bitrate, p->qp_minimo, p->qp_massimo, p->max_level_idc, p->slot_dpb,
-			       p->active_references, p->livelli_qualita, p->granularity_w, p->granularity_h,
-			       p->formato_ingresso, p->input_writable_by_shader ? "true" : "false",
-			       p->sintassi, p->cabac ? "true" : "false", p->transform_8x8 ? "true" : "false");
+			       p->max_size_w, p->max_size_h, p->min_size_w, p->min_size_h,
+			       p->bitrate_modes, p->qp_min, p->qp_max, p->max_level_idc, p->slot_dpb,
+			       p->active_references, p->quality_levels, p->granularity_w, p->granularity_h,
+			       p->input_format, p->input_writable_by_shader ? "true" : "false",
+			       p->syntax, p->cabac ? "true" : "false", p->transform_8x8 ? "true" : "false");
 		printf("}");
 	}
 	printf("}\n");
@@ -260,14 +260,14 @@ static int capacita(const char *nodo)
 
 int main(int argc, char **argv)
 {
-	const char *uscita = NULL, *nodo = "/dev/dri/renderD128", *strada = "memoria", *motore = "vulkan";
-	const char *sorgente_out = NULL;
+	const char *output = NULL, *node = "/dev/dri/renderD128", *route = "memory", *engine = "vulkan";
+	const char *source_out = NULL;
 	CodecVideo codec = CODIFICATORE_H264;
-	uint32_t l = 1920, a = 1080, n = 120, fps = 60, qp = 26, tetto = 0;
-	int profondita = 8;
-	int chiave_a = -1, ridimensiona_a = -1, qualita_a = -1, quality_qp = 0;
+	uint32_t l = 1920, a = 1080, n = 120, fps = 60, qp = 26, cap = 0;
+	int depth = 8;
+	int key_at = -1, resize_at = -1, quality_at = -1, quality_qp = 0;
 	uint32_t resize_w = 0, resize_h = 0;
-	/* ⭐ --ciclo K:LxA,LxA,... — every K frames the next size in the
+	/* ⭐ --cycle K:LxA,LxA,... — every K frames the next size in the
 	 *    list (round robin): the repeated canvas change, as F-018 does it in the
 	 *    product, but without a browser (the hunt for the GPU hang of 1 Oct 2026) */
 	uint32_t cycle_every = 0, cycle_n = 0, cycle_w[16], cycle_h[16], cycle_i = 0;
@@ -275,20 +275,20 @@ int main(int argc, char **argv)
 	for (int i = 1; i < argc; i++) {
 		const char *k = argv[i];
 		const char *v = (i + 1 < argc) ? argv[i + 1] : "";
-		if (!strcmp(k, "--capacita")) { return capacita(v); }
+		if (!strcmp(k, "--capabilities")) { return capabilities(v); }
 		else if (!strcmp(k, "--codec")) { codec = strcmp(v, "h264") == 0 ? CODIFICATORE_H264 : CODIFICATORE_HEVC; i++; }
-		else if (!strcmp(k, "--profondita")) { profondita = atoi(v); i++; }
-		else if (!strcmp(k, "--misura")) { sscanf(v, "%ux%u", &l, &a); i++; }
-		else if (!strcmp(k, "--nodo")) { nodo = v; i++; }
-		else if (!strcmp(k, "--strada")) { strada = v; i++; }
-		else if (!strcmp(k, "--motore")) { motore = v; i++; }
-		else if (!strcmp(k, "--uscita")) { uscita = v; i++; }
-		else if (!strcmp(k, "--fotogrammi")) { n = (uint32_t) atoi(v); i++; }
+		else if (!strcmp(k, "--depth")) { depth = atoi(v); i++; }
+		else if (!strcmp(k, "--size")) { sscanf(v, "%ux%u", &l, &a); i++; }
+		else if (!strcmp(k, "--node")) { node = v; i++; }
+		else if (!strcmp(k, "--route")) { route = v; i++; }
+		else if (!strcmp(k, "--engine")) { engine = v; i++; }
+		else if (!strcmp(k, "--output")) { output = v; i++; }
+		else if (!strcmp(k, "--frames")) { n = (uint32_t) atoi(v); i++; }
 		else if (!strcmp(k, "--fps")) { fps = (uint32_t) atoi(v); i++; }
 		else if (!strcmp(k, "--qp")) { qp = (uint32_t) atoi(v); i++; }
-		else if (!strcmp(k, "--chiave-a")) { chiave_a = atoi(v); i++; }
-		else if (!strcmp(k, "--ridimensiona-a")) { sscanf(v, "%d:%ux%u", &ridimensiona_a, &resize_w, &resize_h); i++; }
-		else if (!strcmp(k, "--ciclo")) {
+		else if (!strcmp(k, "--key-at")) { key_at = atoi(v); i++; }
+		else if (!strcmp(k, "--resize-at")) { sscanf(v, "%d:%ux%u", &resize_at, &resize_w, &resize_h); i++; }
+		else if (!strcmp(k, "--cycle")) {
 			const char *q = strchr(v, ':');
 			cycle_every = (uint32_t) atoi(v);
 			while (q && cycle_n < 16 && sscanf(q + 1, "%ux%u", &cycle_w[cycle_n], &cycle_h[cycle_n]) == 2) {
@@ -297,121 +297,121 @@ int main(int argc, char **argv)
 			}
 			i++;
 		}
-		else if (!strcmp(k, "--qualita-a")) { sscanf(v, "%d:%d", &qualita_a, &quality_qp); i++; }
-		else if (!strcmp(k, "--tetto")) { tetto = (uint32_t) atoi(v); i++; }
-		else if (!strcmp(k, "--sorgente-out")) { sorgente_out = v; i++; }
+		else if (!strcmp(k, "--quality-at")) { sscanf(v, "%d:%d", &quality_at, &quality_qp); i++; }
+		else if (!strcmp(k, "--cap")) { cap = (uint32_t) atoi(v); i++; }
+		else if (!strcmp(k, "--source-out")) { source_out = v; i++; }
 		else { fprintf(stderr, "unknown argument: %s\n", k); return 2; }
 	}
-	if (!uscita || !l || !a) {
-		fprintf(stderr, "usage: 19-confronto --motore vulkan|vaapi|scheda --codec h264|hevc --misura LxA --uscita F [...]\n"
-		                "     19-confronto --capacita /dev/dri/renderDNNN\n");
+	if (!output || !l || !a) {
+		fprintf(stderr, "usage: 19-confronto --engine vulkan|vaapi|scheda --codec h264|hevc --size LxA --output F [...]\n"
+		                "     19-confronto --capabilities /dev/dri/renderDNNN\n");
 		return 2;
 	}
-	bool scheda = strcmp(strada, "scheda") == 0;
-	bool vulkan = strcmp(motore, "vulkan") == 0;
-	char errore[512] = { 0 };
+	bool card = strcmp(route, "card") == 0;
+	bool vulkan = strcmp(engine, "vulkan") == 0;
+	char error[512] = { 0 };
 
 	/* ── the engine: the PRODUCT (codificatore.c + vadiretta) or the Vulkan module ── */
-	Codificatore *cod = NULL;
+	Encoder *cod = NULL;
 	VulkanVideoDevice *vd = NULL;
 	VulkanVideo *vv = NULL;
 	int vulkan_level = 0;
 	if (vulkan) {
-		VulkanVideoRichiesta r = {
+		VulkanVideoRequest r = {
 			.codec = codec == CODIFICATORE_H264 ? VULKANVIDEO_H264 : VULKANVIDEO_HEVC,
-			.profondita = profondita,
-			.larghezza = l, .altezza = a,
+			.depth = depth,
+			.width = l, .height = a,
 			.fotogrammi_al_secondo = fps,
 			.qp = (int) qp,
 			.chiavi_ogni = 0,
 		};
-		if (tetto) {
+		if (cap) {
 			/* the same three numbers as `codificatore_tetto_banda()`: wire 80 %,
 			 * target 75 % of the wire, reservoir 40 ms */
-			r.banda_filo = (int64_t) tetto * 1000000 * 80 / 100;
-			r.banda_punto = r.banda_filo * 75 / 100;
-			r.reservoir_bit = (int) (r.banda_filo * 40 / 1000);
+			r.bandwidth_wire = (int64_t) cap * 1000000 * 80 / 100;
+			r.bandwidth_point = r.bandwidth_wire * 75 / 100;
+			r.reservoir_bit = (int) (r.bandwidth_wire * 40 / 1000);
 		}
-		vd = vulkanvideo_apri_dispositivo(nodo, errore, sizeof errore);
+		vd = vulkanvideo_open_device(node, error, sizeof error);
 		if (!vd) {
-			fprintf(stderr, "⛔ the Vulkan device did not open: %s\n", errore);
-			printf("{\"esito\":\"non aperto\",\"errore\":\"%s\"}\n", errore);
+			fprintf(stderr, "⛔ the Vulkan device did not open: %s\n", error);
+			printf("{\"outcome\":\"non aperto\",\"error\":\"%s\"}\n", error);
 			return 1;
 		}
-		vv = vulkanvideo_open(vd, &r, errore, sizeof errore);
+		vv = vulkanvideo_open(vd, &r, error, sizeof error);
 		if (!vv) {
-			fprintf(stderr, "⛔ the Vulkan encoder did not open: %s\n", errore);
-			printf("{\"esito\":\"non aperto\",\"errore\":\"%s\"}\n", errore);
+			fprintf(stderr, "⛔ the Vulkan encoder did not open: %s\n", error);
+			printf("{\"outcome\":\"non aperto\",\"error\":\"%s\"}\n", error);
 			return 1;
 		}
-		vulkan_level = vulkanvideo_declaration(vv)->livello_idc;
+		vulkan_level = vulkanvideo_declaration(vv)->level_idc;
 	} else {
-		if (tetto)
-			codificatore_tetto_banda(tetto);
+		if (cap)
+			codificatore_tetto_banda(cap);
 		CodificatoreRichiesta r = {
 			.codec = codec,
-			.componente = strcmp(motore, "scheda") == 0
-			                  ? (codec == CODIFICATORE_H264 ? "h264_scheda" : "hevc_scheda")
+			.componente = strcmp(engine, "card") == 0
+			                  ? (codec == CODIFICATORE_H264 ? "h264_card" : "hevc_card")
 			                  : (codec == CODIFICATORE_H264 ? "h264_vaapi" : "hevc_vaapi"),
-			.nodo_rendering = nodo,
-			.potenza = CODIFICATORE_POTENZA_LA_DICHIARATA,
-			.larghezza = l, .altezza = a,
+			.nodo_rendering = node,
+			.power = ENCODER_POWER_DECLARED,
+			.width = l, .height = a,
 			.fotogrammi_al_secondo = fps,
-			.modo = CODIFICATORE_QUALITA_QP,
-			.qualita = (int) qp,
-			.profondita = profondita,
-			.formato = CODIFICATORE_PIXEL_BGRX,
+			.mode = CODIFICATORE_QUALITA_QP,
+			.quality = (int) qp,
+			.depth = depth,
+			.fmt = ENCODER_PIXEL_BGRX,
 			.chiavi_ogni = 0,
 		};
-		cod = codificatore_nuovo(&r, errore, sizeof errore);
+		cod = codificatore_nuovo(&r, error, sizeof error);
 		if (!cod) {
-			fprintf(stderr, "⛔ the encoder did not open: %s\n", errore);
-			printf("{\"esito\":\"non aperto\",\"errore\":\"%s\"}\n", errore);
+			fprintf(stderr, "⛔ the encoder did not open: %s\n", error);
+			printf("{\"outcome\":\"non aperto\",\"error\":\"%s\"}\n", error);
 			return 1;
 		}
-		if (scheda && !codificatore_in_hardware(cod)) {
+		if (card && !codificatore_in_hardware(cod)) {
 			fprintf(stderr, "⛔ card path requested, but the encoder is in software\n");
 			return 1;
 		}
 	}
 
-	FILE *fu = fopen(uscita, "wb");
-	FILE *fs = sorgente_out ? fopen(sorgente_out, "wb") : NULL;
-	if (!fu || (sorgente_out && !fs)) {
+	FILE *fu = fopen(output, "wb");
+	FILE *fs = source_out ? fopen(source_out, "wb") : NULL;
+	if (!fu || (source_out && !fs)) {
 		fprintf(stderr, "⛔ cannot open the output files\n");
 		return 1;
 	}
 
-	Tela t = { .l = l, .a = a, .passo = l * 4 };
-	t.pixel = malloc((size_t) t.passo * a);
+	Canvas t = { .l = l, .a = a, .step = l * 4 };
+	t.pixel = malloc((size_t) t.step * a);
 	struct gbm_device *gbm = NULL;
 	Buffer buffer[BUFFER_COUNT];
 	int drm_fd = -1;
 	memset(buffer, 0, sizeof buffer);
-	if (scheda) {
-		drm_fd = open(nodo, O_RDWR | O_CLOEXEC);
+	if (card) {
+		drm_fd = open(node, O_RDWR | O_CLOEXEC);
 		gbm = drm_fd >= 0 ? gbm_create_device(drm_fd) : NULL;
 		if (!gbm) {
-			fprintf(stderr, "⛔ GBM does not open on %s\n", nodo);
+			fprintf(stderr, "⛔ GBM does not open on %s\n", node);
 			return 1;
 		}
 	}
 
-	uint64_t byte_totali = 0;
-	uint32_t chiavi = 0, falliti = 0;
+	uint64_t total_bytes = 0;
+	uint32_t keys = 0, failed = 0;
 	uint32_t current_width = l, current_height = a;
-	uint64_t generazione = 1;
+	uint64_t generation = 1;
 	bool next_key = true;
 	printf("n,chiave,byte,us_conversione,us_caricamento,us_codifica,ricodifiche\n");
 	for (uint32_t i = 0; i < n; i++) {
 		if (cycle_every && cycle_n && i && i % cycle_every == 0) {
 			cycle_i = (cycle_i + 1) % cycle_n;
-			ridimensiona_a = (int) i;
+			resize_at = (int) i;
 			resize_w = cycle_w[cycle_i];
 			resize_h = cycle_h[cycle_i];
 			fprintf(stderr, "⭐ cycle: frame %u, canvas %ux%u\n", i, resize_w, resize_h);
 		}
-		if (ridimensiona_a >= 0 && (int) i == ridimensiona_a && getenv("ORDINE_PRODOTTO")) {
+		if (resize_at >= 0 && (int) i == resize_at && getenv("PRODUCT_ORDER")) {
 			/* ⭐ the PRODUCT's order: the capture (`wlroots.c`) throws away its
 			 *    GBM slabs and makes the new ones BEFORE the encoder reopens */
 			for (int b = 0; b < BUFFER_COUNT; b++)
@@ -421,16 +421,16 @@ int main(int argc, char **argv)
 					buffer[b].bo = NULL;
 				}
 			for (int b = 0; b < BUFFER_COUNT; b++) {
-				buffer[b].bo = bo_come_il_prodotto(gbm, resize_w, resize_h, &buffer[b].modificatore);
+				buffer[b].bo = bo_like_product(gbm, resize_w, resize_h, &buffer[b].modifier);
 				buffer[b].fd = gbm_bo_get_fd(buffer[b].bo);
 				buffer[b].stride = gbm_bo_get_stride(buffer[b].bo);
 			}
 		}
-		if (ridimensiona_a >= 0 && (int) i == ridimensiona_a) {
-			bool ok = vulkan ? vulkanvideo_resize(vv, resize_w, resize_h, errore, sizeof errore)
-			                 : codificatore_ridimensiona(cod, resize_w, resize_h, errore, sizeof errore);
+		if (resize_at >= 0 && (int) i == resize_at) {
+			bool ok = vulkan ? vulkanvideo_resize(vv, resize_w, resize_h, error, sizeof error)
+			                 : codificatore_ridimensiona(cod, resize_w, resize_h, error, sizeof error);
 			if (!ok) {
-				fprintf(stderr, "⛔ ridimensiona: %s\n", errore);
+				fprintf(stderr, "⛔ ridimensiona: %s\n", error);
 				return 1;
 			}
 			next_key = true;
@@ -438,49 +438,49 @@ int main(int argc, char **argv)
 			current_height = resize_h;
 			t.l = resize_w;
 			t.a = resize_h;
-			t.passo = resize_w * 4;
+			t.step = resize_w * 4;
 			free(t.pixel);
-			t.pixel = malloc((size_t) t.passo * resize_h);
-			if (!getenv("ORDINE_PRODOTTO"))
+			t.pixel = malloc((size_t) t.step * resize_h);
+			if (!getenv("PRODUCT_ORDER"))
 				for (int b = 0; b < BUFFER_COUNT; b++)
 					if (buffer[b].bo) {
 						close(buffer[b].fd);
 						gbm_bo_destroy(buffer[b].bo);
 						buffer[b].bo = NULL;
 					}
-			generazione++;
+			generation++;
 		}
-		if (qualita_a >= 0 && (int) i == qualita_a) {
+		if (quality_at >= 0 && (int) i == quality_at) {
 			if (vulkan) {
-				if (!vulkanvideo_qualita(vv, quality_qp, errore, sizeof errore)) {
-					fprintf(stderr, "⛔ quality: %s\n", errore);
+				if (!vulkanvideo_quality(vv, quality_qp, error, sizeof error)) {
+					fprintf(stderr, "⛔ quality: %s\n", error);
 					return 1;
 				}
-				next_key = true; /* as `cambia_qualita()` does in the product */
+				next_key = true; /* as `change_quality()` does in the product */
 			} else {
-				fprintf(stderr, "⚠ --qualita-a applies only to the vulkan engine (in the product it is triggered by the 16 MiB cap)\n");
+				fprintf(stderr, "⚠ --quality-at applies only to the vulkan engine (in the product it is triggered by the 16 MiB cap)\n");
 			}
 		}
-		if (chiave_a >= 0 && (int) i == chiave_a) {
+		if (key_at >= 0 && (int) i == key_at) {
 			if (vulkan)
 				next_key = true;
 			else
 				codificatore_chiedi_chiave(cod);
 		}
 
-		disegna(&t, i);
+		draw(&t, i);
 		if (fs)
-			fwrite(t.pixel, 1, (size_t) t.passo * t.a, fs);
+			fwrite(t.pixel, 1, (size_t) t.step * t.a, fs);
 
-		CodificatoreFotogramma fg;
+		EncoderFrame fg;
 		memset(&fg, 0, sizeof fg);
 		bool ok;
-		CodificatoreSuperficie s;
+		EncoderSurface s;
 		memset(&s, 0, sizeof s);
-		if (scheda) {
+		if (card) {
 			Buffer *b = &buffer[i % BUFFER_COUNT];
 			if (!b->bo) {
-				b->bo = bo_come_il_prodotto(gbm, current_width, current_height, &b->modificatore);
+				b->bo = bo_like_product(gbm, current_width, current_height, &b->modifier);
 				if (!b->bo) {
 					fprintf(stderr, "⛔ gbm_bo_create\n");
 					return 1;
@@ -488,67 +488,67 @@ int main(int argc, char **argv)
 				b->fd = gbm_bo_get_fd(b->bo);
 				b->stride = gbm_bo_get_stride(b->bo);
 			}
-			uint32_t stride_mappa = 0;
+			uint32_t stride_map = 0;
 			void *map_data = NULL;
-			void *mappa = gbm_bo_map(b->bo, 0, 0, current_width, current_height,
-			                         GBM_BO_TRANSFER_WRITE, &stride_mappa, &map_data);
-			if (!mappa) {
+			void *map = gbm_bo_map(b->bo, 0, 0, current_width, current_height,
+			                         GBM_BO_TRANSFER_WRITE, &stride_map, &map_data);
+			if (!map) {
 				fprintf(stderr, "⛔ gbm_bo_map\n");
 				return 1;
 			}
 			for (uint32_t y = 0; y < current_height; y++)
-				memcpy((uint8_t *) mappa + (size_t) y * stride_mappa, t.pixel + (size_t) y * t.passo,
+				memcpy((uint8_t *) map + (size_t) y * stride_map, t.pixel + (size_t) y * t.step,
 				       (size_t) current_width * 4);
 			gbm_bo_unmap(b->bo, map_data);
-			s = (CodificatoreSuperficie){
+			s = (EncoderSurface){
 				.fd = b->fd, .offset = 0, .stride = b->stride,
-				.larghezza = current_width, .altezza = current_height,
-				.formato_drm = DRM_FORMAT_XRGB8888, .modificatore = b->modificatore,
-				.generazione = generazione,
+				.width = current_width, .height = current_height,
+				.formato_drm = DRM_FORMAT_XRGB8888, .modifier = b->modifier,
+				.generation = generation,
 			};
 		}
 		if (vulkan) {
-			VulkanVideoTimings tempi;
-			const uint8_t *dati = NULL;
+			VulkanVideoTimings times;
+			const uint8_t *data = NULL;
 			size_t byte = 0;
-			if (scheda) {
+			if (card) {
 				VulkanVideoSurface vs = { .fd = s.fd, .offset = s.offset, .stride = s.stride,
-					                         .larghezza = s.larghezza, .altezza = s.altezza,
-					                         .formato_drm = s.formato_drm, .modificatore = s.modificatore,
-					                         .generazione = s.generazione };
-				ok = vulkanvideo_encode_dmabuf(vv, &vs, next_key, &dati, &byte, &tempi, errore, sizeof errore);
+					                         .width = s.width, .height = s.height,
+					                         .formato_drm = s.formato_drm, .modifier = s.modifier,
+					                         .generation = s.generation };
+				ok = vulkanvideo_encode_dmabuf(vv, &vs, next_key, &data, &byte, &times, error, sizeof error);
 			} else {
-				ok = vulkanvideo_encode_memory(vv, t.pixel, t.passo, VULKANVIDEO_BGRX, next_key, &dati, &byte,
-				                                  &tempi, errore, sizeof errore);
+				ok = vulkanvideo_encode_memory(vv, t.pixel, t.step, VULKANVIDEO_BGRX, next_key, &data, &byte,
+				                                  &times, error, sizeof error);
 			}
 			if (ok) {
-				fg.dati = dati;
+				fg.data = data;
 				fg.byte = byte;
-				fg.chiave = next_key;
-				fg.us_conversione = tempi.us_conversione;
-				fg.us_caricamento = tempi.us_caricamento;
-				fg.us_codifica = tempi.us_codifica;
+				fg.key = next_key;
+				fg.us_conversione = times.us_conversione;
+				fg.upload_us = times.upload_us;
+				fg.us_codifica = times.us_codifica;
 				next_key = false;
 			} else {
-				fprintf(stderr, "⛔ frame %u: %s\n", i, errore);
+				fprintf(stderr, "⛔ frame %u: %s\n", i, error);
 			}
-		} else if (scheda) {
+		} else if (card) {
 			ok = codificatore_comprimi_scheda(cod, &s, &fg);
 		} else {
-			ok = codificatore_comprimi(cod, t.pixel, t.passo, &fg);
+			ok = codificatore_comprimi(cod, t.pixel, t.step, &fg);
 		}
 		if (!ok) {
-			falliti++;
+			failed++;
 			printf("%u,-,0,0,0,0,0\n", i);
 			continue;
 		}
-		fwrite(fg.dati, 1, fg.byte, fu);
-		byte_totali += fg.byte;
-		if (fg.chiave)
-			chiavi++;
-		printf("%u,%d,%zu,%llu,%llu,%llu,%u\n", i, fg.chiave ? 1 : 0, fg.byte,
-		       (unsigned long long) fg.us_conversione, (unsigned long long) fg.us_caricamento,
-		       (unsigned long long) fg.us_codifica, fg.ricodifiche);
+		fwrite(fg.data, 1, fg.byte, fu);
+		total_bytes += fg.byte;
+		if (fg.key)
+			keys++;
+		printf("%u,%d,%zu,%llu,%llu,%llu,%u\n", i, fg.key ? 1 : 0, fg.byte,
+		       (unsigned long long) fg.us_conversione, (unsigned long long) fg.upload_us,
+		       (unsigned long long) fg.us_codifica, fg.reencodes);
 		if (!vulkan)
 			codificatore_rilascia(cod);
 	}
@@ -559,38 +559,38 @@ int main(int argc, char **argv)
 	if (vulkan) {
 		const VulkanVideoDeclaration *d = vulkanvideo_declaration(vv);
 		char sc[64];
-		stringa_codec(codec, profondita, d->livello_idc, sc, sizeof sc);
-		printf("{\"esito\":\"%s\",\"codec\":\"%s\",\"strada\":\"%s\",\"codificatore\":\"vulkanvideo\","
-		       "\"in_hardware\":true,\"stringa_codec\":\"%s\",\"profondita_flusso\":%d,"
+		codec_string(codec, depth, d->level_idc, sc, sizeof sc);
+		printf("{\"outcome\":\"%s\",\"codec\":\"%s\",\"route\":\"%s\",\"codificatore\":\"vulkanvideo\","
+		       "\"in_hardware\":true,\"codec_string\":\"%s\",\"profondita_flusso\":%d,"
 		       "\"profilo_flusso\":%d,\"livello_flusso\":%d,\"misura_flusso\":\"%ux%u\","
-		       "\"bassa_potenza\":false,\"modo_bitrate\":%d,\"fotogrammi\":%u,\"chiavi\":%u,"
-		       "\"falliti\":%u,\"byte\":%llu,\"scheda\":\"%s\",\"driver\":\"%s\",\"codificata\":\"%ux%u\","
+		       "\"bassa_potenza\":false,\"modo_bitrate\":%d,\"frames\":%u,\"chiavi\":%u,"
+		       "\"falliti\":%u,\"byte\":%llu,\"card\":\"%s\",\"driver\":\"%s\",\"codificata\":\"%ux%u\","
 		       "\"conversione_diretta\":%s,\"driver_ha_cambiato_parametri\":%s,\"ritardo_minimo\":%s,"
 		       "\"intestazioni_byte\":%zu,\"formato_ingresso\":\"%s\"}\n",
-		       falliti ? "con fallimenti" : "ok", codec_name_arg(codec), strada, sc, profondita,
-		       codec == CODIFICATORE_H264 ? 100 : (profondita == 10 ? 2 : 1), d->livello_idc, l, a,
-		       d->modo_rc == VULKANVIDEO_RC_CQP ? 1 : 2, n, chiavi, falliti, (unsigned long long) byte_totali,
-		       vulkanvideo_card_name(vd), vulkanvideo_nome_driver(vd), d->larghezza_codificata, d->altezza_codificata,
-		       d->conversione_diretta ? "true" : "false", d->driver_ha_cambiato_parametri ? "true" : "false",
-		       d->ritardo_minimo_chiesto ? "true" : "false", d->intestazioni_byte, d->formato_ingresso);
+		       failed ? "con fallimenti" : "ok", codec_name_arg(codec), route, sc, depth,
+		       codec == CODIFICATORE_H264 ? 100 : (depth == 10 ? 2 : 1), d->level_idc, l, a,
+		       d->rate_control == VULKANVIDEO_RC_CQP ? 1 : 2, n, keys, failed, (unsigned long long) total_bytes,
+		       vulkanvideo_card_name(vd), vulkanvideo_driver_name(vd), d->encoded_width, d->encoded_height,
+		       d->direct_conversion ? "true" : "false", d->driver_has_changed_parameters ? "true" : "false",
+		       d->low_latency_requested ? "true" : "false", d->headers_byte, d->input_format);
 		(void) vulkan_level;
 		vulkanvideo_close(vv);
 		vulkanvideo_close_device(vd);
 	} else {
-		const CodificatoreConfessione *c = codificatore_confessione(cod);
-		printf("{\"esito\":\"%s\",\"codec\":\"%s\",\"strada\":\"%s\",\"codificatore\":\"%s\","
+		const EncoderConfession *c = codificatore_confessione(cod);
+		printf("{\"outcome\":\"%s\",\"codec\":\"%s\",\"route\":\"%s\",\"codificatore\":\"%s\","
 		       "\"strada_scheda\":\"%s\","
-		       "\"in_hardware\":%s,\"stringa_codec\":\"%s\",\"profondita_flusso\":%d,"
+		       "\"in_hardware\":%s,\"codec_string\":\"%s\",\"profondita_flusso\":%d,"
 		       "\"profilo_flusso\":%d,\"livello_flusso\":%d,\"misura_flusso\":\"%ux%u\","
-		       "\"bassa_potenza\":%s,\"modo_bitrate\":%d,\"fotogrammi\":%u,\"chiavi\":%u,"
+		       "\"bassa_potenza\":%s,\"modo_bitrate\":%d,\"frames\":%u,\"chiavi\":%u,"
 		       "\"falliti\":%u,\"byte\":%llu}\n",
-		       falliti ? "con fallimenti" : "ok", codec_name_arg(codec), strada,
-		       c && c->componente ? c->componente : "", codificatore_strada(cod),
+		       failed ? "con fallimenti" : "ok", codec_name_arg(codec), route,
+		       c && c->componente ? c->componente : "", encoder_route(cod),
 		       codificatore_in_hardware(cod) ? "true" : "false",
-		       c ? c->stringa_codec : "", c ? c->profondita_flusso : 0, c ? c->profilo_flusso : 0,
-		       c ? c->livello_flusso : 0, c ? c->larghezza_flusso : 0, c ? c->altezza_flusso : 0,
-		       c && c->bassa_potenza ? "true" : "false", c ? c->modo_bitrate : 0, n, chiavi, falliti,
-		       (unsigned long long) byte_totali);
+		       c ? c->codec_string : "", c ? c->stream_depth : 0, c ? c->stream_profile : 0,
+		       c ? c->stream_level : 0, c ? c->stream_width : 0, c ? c->stream_height : 0,
+		       c && c->low_power ? "true" : "false", c ? c->bitrate_mode : 0, n, keys, failed,
+		       (unsigned long long) total_bytes);
 		codificatore_libera(cod);
 	}
 	for (int b = 0; b < BUFFER_COUNT; b++)
@@ -603,5 +603,5 @@ int main(int argc, char **argv)
 	if (drm_fd >= 0)
 		close(drm_fd);
 	free(t.pixel);
-	return falliti ? 1 : 0;
+	return failed ? 1 : 0;
 }

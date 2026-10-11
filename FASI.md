@@ -784,7 +784,7 @@ single sample.
 
 #### ⚠ What is still crooked, and must be said
 
-⛔ **The benches take the password on the command line** (`--parola …`), so it ends up in
+⛔ **The benches take the password on the command line** (`--password …`), so it ends up in
 `ps` and in every log that captures the command. For `parola-di-prova` it is the compromise mentioned above;
 ⛔ **for the generated password of `prova2` it is not**, and it is the same shape cured today on `sonda/`
 (R12-A.34). Whoever uses `prova2` in a bench must make it take another path.
@@ -826,7 +826,7 @@ exactly how much of this folder has been replaced and how much has not.*
 | `check-env.sh` | ✅ **yes** | what is in the container is declared by the bench, line by line, instead of just printing it |
 | `b11-fumo.py` | — | it belongs to B11, not to the product |
 | ⛔ `filo.sh` | ❌ **no** | it is the **RCP handshake** with the B3 test client and the B4 referee. `01-p1-` stops before the wire, and declares it: it would authenticate, and three wrong passwords put the address out for 12 hours (B0.3) |
-| ⛔ `resto.sh` | ❌ **no** | certificate rotation, administrator certificate, ban + page + unban. ⚠ **And one of its legs is already dead**: line 83 calls `remotix --ban … --sblocca <ind>`, and that option **no longer exists** since finding R12.1 — `[M]` 11 Aug 2026: it prints the explanation and exits **2**, and `resto.sh` does not look at the exit status |
+| ⛔ `resto.sh` | ❌ **no** | certificate rotation, administrator certificate, ban + page + unban. ⚠ **And one of its legs is already dead**: line 83 calls `remotix --ban … --unblock <ind>`, and that option **no longer exists** since finding R12.1 — `[M]` 11 Aug 2026: it prints the explanation and exits **2**, and `resto.sh` does not look at the exit status |
 
 ⛔ **So this folder is not thrown away**: `filo.sh` and `resto.sh` remain the only trace of how
 the wire and the ban are tested against the **product**, and until the benches that redo them exist,
@@ -836,7 +836,7 @@ throwing them away would remove a description without replacing it.
 
 | file | what it does | date |
 |---|---|---|
-| `avvia-server.sh` | ⭐ **how the product was powered on**: `remotix --indirizzo 0.0.0.0 --nome 192.168.0.2 --porta 7448 --certificati /srv/src/remotix-cert --pagina …/pagina.html --ban /srv/src/remotix-ban`, inside the container, with the pid in a file. ⛔ **Port 7448**, that is not the graft's one: the two servers can be on together | 10 Aug 23:05 |
+| `avvia-server.sh` | ⭐ **how the product was powered on**: `remotix --address 0.0.0.0 --name 192.168.0.2 --port 7448 --certificati /srv/src/remotix-cert --page …/pagina.html --ban /srv/src/remotix-ban`, inside the container, with the pid in a file. ⛔ **Port 7448**, that is not the graft's one: the two servers can be on together | 10 Aug 23:05 |
 | `spegni.sh` | shuts it down from the pid file | 10 Aug 23:07 |
 | `filo.sh` (57 lines) | a wire round against the product | 10 Aug 22:58 |
 | `fumo.sh` (74) | the smoke test | 10 Aug 22:52 |
@@ -1022,7 +1022,7 @@ one test and the next falsifies the following test.*
 |---|---|---|
 | **0.1** | ⛔ **every bench declares and VERIFIES its own initial state** before starting, as `00-c1-kwin.sh` verifies that KWin's socket is no longer there. A bench that does not know what state it starts from **measures the history of the machine** | R3.16 |
 | **0.2** | ⛔ **and the state that survives is more than one**: the exception granted on the page certificate *(which S1a and S1b **measure**)*, the session certificate already rotated by B3, **the session created in the previous round** *(which at less than 30 s makes the first connection of the new round get `GIA_ATTIVA_REMOTA` — red on correct code)*, the `clipboard-read` permission, and ⛔ **the ban of §4.4-bis, which since 10 Aug 2026 lives in a file and so survives even a server restart** — that is, the state that survives longest of all | R3.16 |
-| **0.3** | ⛔ **isolation between benches, and since 10 Aug 2026 it is the hardest constraint of the chapter**: the attempt count is **per address**, and all benches start from the same address. B7 fails one attempt, B8 fails three, **and from then on every bench on that machine is out for twelve hours** — including B10, B11 and whoever is developing. ⚠ *The old line said «the counters are per name and per address … it is cured by changing address or **declaring the wait**»: with the ban of `DECISIONI.md` §1.9 the wait is half a day, and that cure is dead.* ⛔ **The cure is the unban command** (§4.4-bis), called between one bench and the next — ⛔ **never inside B8's round**, or B8 no longer tests anything. And every bench that calls it **declares it**, or «the ban did not trigger» and «someone removed it» look the same. ⭐ **The tool is `banchi/01-b8-sblocca.py`** — it is not a piece of B8 — and it speaks a **Unix socket `0600`**: `SBLOCCA <indirizzo>` → `TOLTO` / `NON-BANNATO`, `PING` → `PONG`. ⛔ The `PING` **is the denominator of this rule**: without it, «the ban did not trigger» and «the unban never reached anyone» again look the same. ⚠ *Since the night of 10 Aug 2026 **the two servers speak the same protocol**: before, the product had an option `remotix --sblocca IND`, that is a second process that rewrote the file while the ban lives in the memory of the serving process — **it exited with 0 saying it had worked**, and at the next ban of anyone else the removed ban **came back on disk too** (finding **R12.1** of `fasi/rapporti/R12-D-cuciture.md`, and the analysis had been written out in full in `01-b3-rcp-innesta.py` for months before the defect was born). Cured in the code the same night: `src/comando.c`.* ⛔ **And the half nobody has done remains to be done**: pointing `01-b8-sblocca.py` at the product, which today has never been tested | R3.8 |
+| **0.3** | ⛔ **isolation between benches, and since 10 Aug 2026 it is the hardest constraint of the chapter**: the attempt count is **per address**, and all benches start from the same address. B7 fails one attempt, B8 fails three, **and from then on every bench on that machine is out for twelve hours** — including B10, B11 and whoever is developing. ⚠ *The old line said «the counters are per name and per address … it is cured by changing address or **declaring the wait**»: with the ban of `DECISIONI.md` §1.9 the wait is half a day, and that cure is dead.* ⛔ **The cure is the unban command** (§4.4-bis), called between one bench and the next — ⛔ **never inside B8's round**, or B8 no longer tests anything. And every bench that calls it **declares it**, or «the ban did not trigger» and «someone removed it» look the same. ⭐ **The tool is `banchi/01-b8-sblocca.py`** — it is not a piece of B8 — and it speaks a **Unix socket `0600`**: `SBLOCCA <indirizzo>` → `TOLTO` / `NON-BANNATO`, `PING` → `PONG`. ⛔ The `PING` **is the denominator of this rule**: without it, «the ban did not trigger» and «the unban never reached anyone» again look the same. ⚠ *Since the night of 10 Aug 2026 **the two servers speak the same protocol**: before, the product had an option `remotix --unblock IND`, that is a second process that rewrote the file while the ban lives in the memory of the serving process — **it exited with 0 saying it had worked**, and at the next ban of anyone else the removed ban **came back on disk too** (finding **R12.1** of `fasi/rapporti/R12-D-cuciture.md`, and the analysis had been written out in full in `01-b3-rcp-innesta.py` for months before the defect was born). Cured in the code the same night: `src/comando.c`.* ⛔ **And the half nobody has done remains to be done**: pointing `01-b8-sblocca.py` at the product, which today has never been tested | R3.8 |
 | **0.4** | ⛔ **the expected value is compared by the bench, not by the reader**: it is printed *and* compared, and the exit status is that of the **comparison**. ⚠ And watch out for the point versus the comma: `"60"` versus `"60,0"` gives red on correct code, and it is the still-open defect of `00-c1-kwin.sh` | R3.18, R3.23 |
 | **0.5** | ⛔ **after every test that must drop the connection, the server must still be there**: a new connection that gets as far as `SESSIONE`. «It always drops» is also satisfied by a server **killed by the kernel** | R3.3 |
 | **0.6** | ⛔ **the exact browser version is noted**, every time. *«A result without a version, six months from now, is worth nothing»* (S1 §4.5) — and this is the chapter that ages in months | R3.16 |
@@ -1512,7 +1512,7 @@ in v1, **it contradicts the multi-tenancy** of `SPECIFICHE.md` §5.5.
 > | ⭐ **the check that costs ten seconds, and its negative** | `pamtester remotix prova2 authenticate` **succeeds** — ⛔ on the **`remotix`** service, not `login` — and with the wrong password it **fails**: without the second, the first would be worth nothing |
 > | ⭐⭐ **and the `[?]` R3.26 is MEASURED** | from an **unprivileged** user, verifying the password of **another** user **fails**; from **root it succeeds**. ⇒ **the PAM stack judges another user only if the process is privileged**. The server today runs as root and succeeds; ⛔ a system service that **dropped privileges** would see cause (3), and the symptom would again be *«wrong credentials»* — it is the question phase 2 carries with it |
 > | ⭐ **two users, not one** | after the refusal, **`prova`** reaches `SESSIONE`: it is at once **B0.5** (the server is still there) and §5.5 (two different users, **neither of them** owner of the process) |
-> | ⛔ **the generated password does not pass through any command line** | the compromise the `README.md` declared **not accepted** is closed: the password is read from `credenziali-banchi`, written with a **builtin** into a `0600` file, arrives as `--parola-file`, and a `trap` deletes it. ⚠ A copy remains on disk for the duration of the round, and it is declared |
+> | ⛔ **the generated password does not pass through any command line** | the compromise the `README.md` declared **not accepted** is closed: the password is read from `credenziali-banchi`, written with a **builtin** into a `0600` file, arrives as `--password-file`, and a `trap` deletes it. ⚠ A copy remains on disk for the duration of the round, and it is declared |
 >
 > ⭐ **CERTIFIED — `0 → 1 → 0`** `[M]` 11 Aug, **15:09 UTC**. The fault **puts back v1's
 > guard** — `getpwuid(geteuid())` and the comparison with the name, **before** `pam_start` — on a **whole
@@ -1527,7 +1527,7 @@ in v1, **it contradicts the multi-tenancy** of `SPECIFICHE.md` §5.5.
 > costs the most, because the round *looks* like a successful certification.
 >
 > ⚠ **B10 does not go through `01-b12-lancia.sh`**: its fault is rebuilt with
-> `GEMELLO=nessuno <copia>/costruisci.sh`, while `attrezzi-misura-marca.sh` can only do
+> `GEMELLO=none <copia>/costruisci.sh`, while `attrezzi-misura-marca.sh` can only do
 > `ninja … bsslserver`, that is **the graft**. Until `gira()` learns to build the **product**,
 > certification is done from the bench's launcher — and it is the same gap as point 4 of the list.
 >
@@ -1649,7 +1649,7 @@ the two uncovered were the benches of v1's two costliest defects (R3.7, R4.6).*
 > hand. ⚠ And it must be said what this certification does **not** cover: it certifies `01-b6-tetti.py`, not the
 > source/binary comparison that sits in the launcher.
 >
-> **R12-A.33 — `--bersaglio` became mandatory and the callers were left behind. Three times
+> **R12-A.33 — `--target` became mandatory and the callers were left behind. Three times
 > in two days.** On 10 Aug on `01-b6-lancia.sh` and `01-b3-quarto-giro.sh`; today on
 > `01-b12-lancia.sh`, which called B7 **without `--bersaglio`** and with a `--sorgente` that no longer
 > exists: the round wrote **«B7 NOT certified»** on a healthy bench.
@@ -1658,7 +1658,7 @@ the two uncovered were the benches of v1's two costliest defects (R3.7, R4.6).*
 > the bench demands?* It reads the `add_argument` calls with the AST, resolves the shell variables defined in the
 > file, and distinguishes **three** outcomes: approved · broken · **UNKNOWN** (a variable that could
 > hide the name of an option). It immediately found **R12-A.33-bis**: `01-b8-lancia.sh` called
-> the stopwatch without `--bersaglio` or `--porta`, so the step *«what I expect, before
+> the stopwatch without `--target` or `--port`, so the step *«what I expect, before
 > measuring»* had for days been printing **an argparse usage message** — and made nothing fail.
 >
 > ⛔ **And writing it taught four things, all measured, all on the same theme:**
@@ -1672,14 +1672,14 @@ the two uncovered were the benches of v1's two costliest defects (R3.7, R4.6).*
 >   name of an option?»**;
 > · ⭐⭐ and the most instructive: merging the options of the shared module I had taken the **allowed** ones and
 >   not the **demanded** ones. Result: the line for B6 I had just written — **without
->   `--bersaglio`** — the check declared **approved**, and the certification round
+>   `--target`** — the check declared **approved**, and the certification round
 >   wrote «B6 NOT certified» on a mistake of mine that the tool born to find it had looked at and
 >   promoted. ⛔ **Widening the mesh to silence the false ones takes away the true ones in the same
 >   move**, and it does not show, because the count of reds goes down — which is precisely what
 >   progress looks like.
 >
 > ⚠ And the three surviving accusations **I actually launched** instead of deducing them: two were false (B7 has
-> an `--elenco` shortcut before `parse_args`) and one true. Curing all three would have broken two
+> an `--list` shortcut before `parse_args`) and one true. Curing all three would have broken two
 > working calls to silence my own tool.
 >
 > ##### ⭐⭐ B11: certified — and the defect was a RACE, not a divergence
@@ -1783,7 +1783,7 @@ the two uncovered were the benches of v1's two costliest defects (R3.7, R4.6).*
 >
 > ⭐⭐ **And B13 is certified** `[M]` **11 Aug 2026, 15:19**, NIC-OS: **healthy 3 → fault 1 → healed
 > 3**, with B12's fault (`pagina.pem` replaced by `sessione.pem`) and the mark *«LE IMPRONTE
-> COMBACIANO»* **in its place** — plus the **14 hand-built faults** of `--certifica`: **14 out of
+> COMBACIANO»* **in its place** — plus the **14 hand-built faults** of `--certify`: **14 out of
 > 14** ⚠ **as a normal user**, and **13 out of 14 as root**, because `0000` permissions do not stop root and
 > ⛔ **a skipped fault is not a passed fault**. ⚠ **Three deviations from B12, written inside the log
 > line**: port **7481** instead of 7447 · target the **product** and not the graft · the
@@ -2071,7 +2071,7 @@ the two uncovered were the benches of v1's two costliest defects (R3.7, R4.6).*
 > on the **only** tab.
 > ⭐ *Update from the same night: the scene is cured, and **P5's re-certification no longer passes
 > to phase 2 — it is done**, above. ⛔ What passes to phase 2 instead is the **re-run of
-> seven expired certifications**: the §1.12 cure touched `rcp.c` and `RCP.md`, and `--registro` counts them
+> seven expired certifications**: the §1.12 cure touched `rcp.c` and `RCP.md`, and `--log` counts them
 > as not certified — B3, B5, B6, B7, B8, B13 and B9. The count is in `README.md`.*
 >
 > ⚠ *One round was **cancelled**, and it is written in `01-p5-ff-esiti.jsonl`: the **browsers' PC
@@ -2123,7 +2123,7 @@ the two uncovered were the benches of v1's two costliest defects (R3.7, R4.6).*
 >
 > ⚠ **And P1's certification cannot be re-verified from CHUWI**: its line lists `remotix/pagina.c`,
 > which from `banchi/` exists **only on the server** — here the product is in `../src/`. ⛔ So
-> `--registro` classifies it *«non si può dire se valga oggi»*, and it is **B9's scene in reverse**
+> `--log` classifies it *«non si può dire se valga oggi»*, and it is **B9's scene in reverse**
 > (there `RCP.md` was missing on the server). ⭐ *«Non riverificabile da questa macchina»* is not
 > *«non certificato»*, and the tool does well not to merge them — but the count **still depends on where
 > one asks for it**, and it is the same `[?]` as the afternoon, not cured.
@@ -2202,9 +2202,9 @@ measured I say so.*
 
 | | |
 |---|---|
-| ⛔ **the whole server has never been run by a reviewer** | the reviewer's machine lacks `ngtcp2`, `nghttp3`, `libssl-dev` and `libpam0g-dev` (`make dipendenze` gives **five NOs**). ⇒ everything concerning `trasporto.c`, `webtransport.c`, `pagina.c`, `certificati.c` is **read, not measured**. ⭐ The only execution is `src/rcp.c` **compiled in isolation** with `-Wall -Wextra` — **zero warnings** — against a reviewer's driver, six inputs byte by byte |
+| ⛔ **the whole server has never been run by a reviewer** | the reviewer's machine lacks `ngtcp2`, `nghttp3`, `libssl-dev` and `libpam0g-dev` (`make deps` gives **five NOs**). ⇒ everything concerning `trasporto.c`, `webtransport.c`, `pagina.c`, `certificati.c` is **read, not measured**. ⭐ The only execution is `src/rcp.c` **compiled in isolation** with `-Wall -Wextra` — **zero warnings** — against a reviewer's driver, six inputs byte by byte |
 | ⛔ **ONE ENGINE ONLY** | the only trace of a round with a **real browser** against this server is a comment inside `src/pagina.html`: `[M]` night of 10 Aug, **Firefox** — and that round found a real defect (the page sent `disposizione = en`, which **is not** an XKB name, and the server bid farewell with `SESSIONE_NON_SERVIBILE`, doing exactly its job). ⛔ **Of Chrome against this server there is no trace at all**, and the B2 criterion wants **two engines out of two** |
-| ⛔ **and that round cannot be re-verified from this side** | `[M]` 11 Aug 2026, **morning**: in `src/` there is neither the `remotix` binary nor a `.o`; no `.jsonl`; `git status` gives `src/` **untracked**, never committed. And **none of the 14 `01-*-lancia.sh` scripts starts the product**: `bsslserver` appears in **11** of them, the `remotix` binary in **zero** (the only occurrence of the word is `remotix.prova`, an SNI name in `01-b2-lancia-sni.sh`). ⚠ ⛔ **And this line EXPIRED on the evening of the same day, and must be read with its date on**: `[M]` 11 Aug **evening** — `git ls-files src/` gives **22 files** (commit `ffeb341`), the launch scripts are **16** and **11 of them can point at `BERSAGLIO=prodotto`**, three start the binary by name. ⭐ *A line that declares an absence ages in the worst direction: it stays true in appearance and false in fact, and whoever reads it has no reason to suspect it* |
+| ⛔ **and that round cannot be re-verified from this side** | `[M]` 11 Aug 2026, **morning**: in `src/` there is neither the `remotix` binary nor a `.o`; no `.jsonl`; `git status` gives `src/` **untracked**, never committed. And **none of the 14 `01-*-lancia.sh` scripts starts the product**: `bsslserver` appears in **11** of them, the `remotix` binary in **zero** (the only occurrence of the word is `remotix.prova`, an SNI name in `01-b2-lancia-sni.sh`). ⚠ ⛔ **And this line EXPIRED on the evening of the same day, and must be read with its date on**: `[M]` 11 Aug **evening** — `git ls-files src/` gives **22 files** (commit `ffeb341`), the launch scripts are **16** and **11 of them can point at `BERSAGLIO=product`**, three start the binary by name. ⭐ *A line that declares an absence ages in the worst direction: it stays true in appearance and false in fact, and whoever reads it has no reason to suspect it* |
 | ⛔ **the transport properties have not been re-measured against this server** | the six of B2 — 30 s cap · datagrams · uni credit · migration · no 0-RTT · `allowPooling` — are `[M]` **on the graft**, read from the peer. `src/trasporto.c` today declares **19** uni streams where the B2 measurement read 16: it is a different number, and it is **the probe `01-b2-sonda-trasporto.py` pointed at the product** that would tell |
 | `[?]` **the renewal of the stream credit** | the product declares it **on its own** (`src/trasporto.c`): ngtcp2 does not raise the cap by itself *«except when a stream is closed without `stream_open` having been called»*, and this code **probably** falls into that exception. Nobody has measured it. ⛔ It is measured at **phase 4**, when the clipboard will open one stream per transfer: before then no client opens more than four, and a measurement without the load that triggers it is not a measurement |
 | ⚠ **the product's page and the graft's page are two different documents** | and **B8 measures the markers that only the graft produced**. Cured in the product on the night of the 10th (`data-bannato` and `data-restano-ms` are there, one occurrence each, and the server refuses to start if there were two) — ⛔ **but nobody has pointed B8 at the product to verify it**: until that is done, «cured» is read and not measured |
@@ -2258,7 +2258,7 @@ phase declares its own boundaries.*
 | ⭐ `banchi/01-b2-sonda-impostazioni.py` | **new, 10 Aug**: reads **on the wire** which settings an HTTP/3 server declares (`received_settings` of `aioquic`), and says whether WebTransport is there. ⛔ It is the test that closed §6.4, and it prints **all** the settings: an empty list and one without the two that matter are two different facts |
 | `banchi/01-b2-quiche-wt-innesta.py` + `01-b2-lancia-impostazioni.sh` | **new, 10 Aug**: they switch on in `quiche` everything its C API allows (3 lines of code), and run the comparison with `ngtcp2` as the **positive control** |
 | ⭐⭐ `banchi/01-b2-ngtcp2-wt-innesta.py` | **new, 10 Aug**: ⭐ **the minimal server** — grafts the WebTransport layer into the example server of `ngtcp2`. ⛔ Every graft has an **anchor that must appear exactly once**: zero or two, and the script stops saying how many it found. And it **counts our lines** from `git diff`, which is the figure for §6.4 |
-| ⭐ `banchi/01-b2-lancia-wt.sh` | **new, 10 Aug**: measures the minimal server with the test client, ⛔ **and with the check that says no** — `/rcp/9` must be refused (`RCP.md` §2.2). `accendi`/`spegni` serve the measurement with the browser |
+| ⭐ `banchi/01-b2-lancia-wt.sh` | **new, 10 Aug**: measures the minimal server with the test client, ⛔ **and with the check that says no** — `/rcp/9` must be refused (`RCP.md` §2.2). `start`/`stop` serve the measurement with the browser |
 | ⭐ `banchi/01-b2-lancia-sonda.sh` | **new, 10 Aug**: ⚠ **runs on the watcher's machine, not on the server** — that is where the browsers are. It starts the server on the other side, serves the page from `127.0.0.1`, launches the two engines under `xvfb` and waits for the **log to grow**, not for a fixed time |
 | `banchi/01-b2-sonda.html` | **corrected**: `?avvia=1` starts the test by itself. ⛔ A bench that needs a hand **cannot be redone identically**, and redoing it identically is the only way to know whether a measurement changed because the server changed |
 | `banchi/01-b2-raccogli.py` | **corrected**: logs **every request**. Before it was silent, «the noise is no use» — and it is that silence that made «the browser did not load the page» and «it loaded it and the test failed» indistinguishable |
@@ -2281,7 +2281,7 @@ phase declares its own boundaries.*
 > | `banchi/01-b7-lancia.sh` + `01-b7-congedo.py` | **B7**, the farewell from the receiving side. ⛔ It declares the **true denominator**: §8.2 has **fifteen** reasons, those that can be provoked in this phase are **seven**, and the other eight are in an `ESCLUSI` table with the reason for each |
 > | `banchi/01-b8-lancia.sh` + `01-b8-cronometro.py` + `01-b8-prova-ban.c` + ⭐ `01-b8-sblocca.py` | **B8**, the fixed second and the ban. ⭐ `01-b8-sblocca.py` **is not a piece of B8**: it is the tool of rule **B0.3**, and it speaks the command socket of §4.4-bis with three distinct outcomes (`TOLTO` · `NON-BANNATO` · «I spoke to nobody», which exits **3**) |
 > | ⭐ `banchi/01-b9-letture.py` | **B9**, the second reader set against the arbiter: **twelve** points where `RCP.md` admits two readings, each with **the bytes that change on the wire**. The list is in «What did NOT work» |
-> | `banchi/01-b11-lancia.sh` + `01-b11-pagina.html` + `01-b11-guasto.sh` + `01-b11-guasto-innesta.py` | **B11**, the violations towards the **page**, with the server faulty on purpose and `ricostruisci()` putting the healthy one back with the two `--togli` in order |
+> | `banchi/01-b11-lancia.sh` + `01-b11-pagina.html` + `01-b11-guasto.sh` + `01-b11-guasto-innesta.py` | **B11**, the violations towards the **page**, with the server faulty on purpose and `ricostruisci()` putting the healthy one back with the two `--remove` in order |
 > | `banchi/01-b12-guasti.py` + `01-b12-lancia.sh` + `01-b12-copie/` + `01-b12-registro.jsonl` | **B12**, the bench that certifies the others: a fault built by hand for each bench, and the log of the certifications with the date and the fingerprints. ⛔ What it really certified is further below, and it is **3 out of 12** |
 > | `banchi/01-b13-lancia.sh` + `01-b13-proprieta.py` | **B13**, the six things no other bench was looking at |
 > | `banchi/01-c2-lancia.sh` + `01-c2-diagnosi.py` | **C2**, the three diagnoses of the broken connection — nobody listening · UDP filtered with TCP answering · fingerprint not current |
@@ -2367,7 +2367,7 @@ the only one with real browsers, and their versions are inside the row.
 | ⛔ **B2** — ⭐ **two defects found precisely by these measurements** | *none was expected* | ⛔ the server offered **0-RTT** (2 tickets, `max_early_data_size` 0xffffffff) and granted **3** unidirectional streams instead of 16. **Neither of the two has a functional symptom**: the session opened all the same | 10 Aug |
 | ⛔⭐ **B2** — **can `quiche` declare WebTransport from C?** | **no** (prediction written beforehand: `set_additional_settings` exists in Rust, **not in the FFI**) | ⛔ **no** `[M]`: 4 settings on the wire, **neither** of the two WebTransport ones. The positive control (`ngtcp2`) declares 7 | 10 Aug |
 | **B2** — the session opens, **per candidate** | 2 engines of 2, **and the six properties** | ⭐ **done on `ngtcp2`**; on `quiche` **it never gets as far as testing it**: it falls at the gate before | 10 Aug |
-| ⭐ **B2** — glue lines **for the WebTransport layer** | *counted, not estimated* | ⭐ **`ngtcp2`, the B2 layer alone: 553 lines added — 373 of CODE, 134 of comment, 46 blank** `[M]` **16:30**, on a clean tree after the two `--togli` and reapplying only the B2 graft. ⚠ *At 08:00 the same measurement gave **456 / 329**: the reading of the close capsule grew in there. The sequence is in `DECISIONI.md` §6.4, not here.* ⛔ **The 972 / 618 of the two grafts together do not belong in this row.** ⚠ On `quiche` the number **does not exist and will not exist**: the candidate falls earlier, and it is the work we did not spend | 10 Aug |
+| ⭐ **B2** — glue lines **for the WebTransport layer** | *counted, not estimated* | ⭐ **`ngtcp2`, the B2 layer alone: 553 lines added — 373 of CODE, 134 of comment, 46 blank** `[M]` **16:30**, on a clean tree after the two `--remove` and reapplying only the B2 graft. ⚠ *At 08:00 the same measurement gave **456 / 329**: the reading of the close capsule grew in there. The sequence is in `DECISIONI.md` §6.4, not here.* ⛔ **The 972 / 618 of the two grafts together do not belong in this row.** ⚠ On `quiche` the number **does not exist and will not exist**: the candidate falls earlier, and it is the work we did not spend | 10 Aug |
 | **B2** — how much their example weighs (the starting point) | *counted* | `ngtcp2` **7.041 lines** (full HTTP/3, C++, 13 files) · `quiche` **614** (minimal example, C, 1 file) `[M]`. ⛔ Two different labels: they are not subtracted | 10 Aug |
 | ⭐ **B3** — the **1st** connection, up to `SESSIONE` | passes | ⭐ **passes** `[M]` 10 Aug: `CIAO`→`ECCOMI`→`CREDENZIALI`(PAM)→`AMMESSO`→`ATTACCA`→`SESSIONE`, and ⛔ **the trace is declared CONFORMING by the B4 validator** | 10 Aug |
 | ⭐ **B3** — the **2nd after the 1st is closed** | **identical to the first** | ⭐ **passes** `[M]`, and its trace is conforming too. ⛔ **It was not on the first round**: see the defect below | 10 Aug |
@@ -3159,7 +3159,7 @@ would have been the capture.
   Mutter attempt a 0×0 texture; with `OnFailure=gnome-session-shutdown.target` **the whole session falls**.
   `[M]`, tested involuntarily and declared.
 - ⛔ **Today's cure does not survive a reboot**: the drop-in lives in `$XDG_RUNTIME_DIR`. It is
-  put back with `bash banchi/02-sessione-lancia.sh sano`.
+  put back with `bash banchi/02-sessione-lancia.sh healthy`.
 - ⛔ **And the real cure belongs to the product**: `fondamenta/remotix-c/src/sessione.c:671` is
   `if (tipo == COMPOSITORE_KWIN && …)` — on the GNOME branch `larghezza` and `altezza` **enter the
   function and get lost**. That the virtual monitor sits in `provision-server.sh` instead of in the
@@ -3297,8 +3297,8 @@ measurement of F2.3 (**0.25** on a healthy chain against **1.000** on a stream t
 | ✅ **that a frame really arrives on the wire** | ⭐ **closed on 13 Aug**: the user looked at it, and the server log writes it — `fotogramma 1 SPEDITO: CHIAVE 0x0301, codec 2, 1920x1080, 9746 byte, FIN` |
 | ⛔ **M5 — the chroma gap between two decoders** | 0.9791 against a limit of 0.98: it is **the only red left on a healthy chain** — M0 and M1 were red in the rounds of 09:19-09:20, before the rescaling cure. ⛔ **It does not reproduce on the target pattern**, and **the threshold was not widened**: the red was not cured, **it disappeared when the scene changed** |
 | ⛔ **P15** | `RCP.md` §7.1, the grace second on the coordinates: **the last place in the phase where a clock decides**. It is set out in full in `rapporti/F2-4-filo.md` |
-| ⛔⛔ **«due utenti con due sessioni vere, ciascuno vede LA PROPRIA»** | ⛔ **no bench covers it**, and it is the phase's biggest hole. `[M]` 13 Aug: the `senza-palco` case of `02-figlio-prova.py` tests **the negative half** — `prova` (uid 1001, all four fields asked of the kernel) does **not** see the desktop of `nicfio`, and the independent RCP client counts **zero** frames where on 12 Aug it counted one conformant. ⛔ **But not the positive half**: on that machine `prova` has never logged in — no `/run/user/1001`, no bus, no stage — so **a product that delivered nothing to anyone would pass the same way**. The positive half holds today **only for uid 1000**. ⚠ Looked at and discarded: `01-b10-secondo-utente.py`, `attrezzi-prova2.sh`, `02-pam-i3.py --caso secondo` all stop **at authentication**, not at seeing |
-| ⚠ **`02-figlio-accendi.sh` counts everyone's children** | `pgrep -f -- "--figlio-interno" \| wc -l` does not look at **whose** they are: at shutdown it accused two orphans that were live children of live parents (the 7693 of another bench and ⛔ **the user's 7561**). It is the same shape the file **forbids thirty lines higher up** for the `stato` action. ⚠ It does not cure, it stops no one (`spegni` exits 0 anyway) — it only fires when two benches run in parallel, and indeed on 12 Aug it was silent. ⇒ ✅ **Cured in phase 3** (13 Aug 2026) — ⛔ **`[R]`, not executed**: the cure is read in the code and **has not been run**, so it does not carry the `[M]` mark |
+| ⛔⛔ **«due utenti con due sessioni vere, ciascuno vede LA PROPRIA»** | ⛔ **no bench covers it**, and it is the phase's biggest hole. `[M]` 13 Aug: the `senza-palco` case of `02-figlio-prova.py` tests **the negative half** — `prova` (uid 1001, all four fields asked of the kernel) does **not** see the desktop of `nicfio`, and the independent RCP client counts **zero** frames where on 12 Aug it counted one conformant. ⛔ **But not the positive half**: on that machine `prova` has never logged in — no `/run/user/1001`, no bus, no stage — so **a product that delivered nothing to anyone would pass the same way**. The positive half holds today **only for uid 1000**. ⚠ Looked at and discarded: `01-b10-secondo-utente.py`, `attrezzi-prova2.sh`, `02-pam-i3.py --caso second` all stop **at authentication**, not at seeing |
+| ⚠ **`02-figlio-accendi.sh` counts everyone's children** | `pgrep -f -- "--figlio-interno" \| wc -l` does not look at **whose** they are: at shutdown it accused two orphans that were live children of live parents (the 7693 of another bench and ⛔ **the user's 7561**). It is the same shape the file **forbids thirty lines higher up** for the `status` action. ⚠ It does not cure, it stops no one (`stop` exits 0 anyway) — it only fires when two benches run in parallel, and indeed on 12 Aug it was silent. ⇒ ✅ **Cured in phase 3** (13 Aug 2026) — ⛔ **`[R]`, not executed**: the cure is read in the code and **has not been run**, so it does not carry the `[M]` mark |
 | ⛔ **the desktop resolution, `1920×1080`** | ⛔ **inherited from a bench's scene, with neither decision nor measurement** — `grep 1920 DECISIONI.md` finds no decision fixing it, and in v1 it was **2560×1080**. ⚠ It is the canvas the user will see: `LEZIONI.md` §2.3-quater wants it written as **provisional**, and that is what this row does. ⇒ ✅ **CLOSED on 13 Aug 2026, and decided by the user**: **1920×1080 stays**, with the measured price alongside (canvas painted at **86 %**, **912 px of black**) and the method reason written — `DECISIONI.md` §5.0-quinquies. ⛔ And the black bands **are not the resolution**: they are the shape of the window |
 | ⚠ **`VideoEncoder.flush()` in headless** | worked around, not understood |
 | ⚠ **the yardstick's M1b and M3 thresholds** | **computed**, not calibrated in the field |
@@ -4000,7 +4000,7 @@ more loaded compositor — **what happens when a capture runs alongside**.
 | draws/s at 60 Hz | 60 | **461.7** (up to 1034) | 60 |
 
 ⭐ **And the two symptoms were the same defect**: a scene running idle does not return to the main
-loop ⇒ it ignores `--secondi` (**6 asked, 146 lived**) ⇒ the bench **kills** it ⇒ the death falls
+loop ⇒ it ignores `--seconds` (**6 asked, 146 lived**) ⇒ the bench **kills** it ⇒ the death falls
 mid-write ⇒ the seqlock's `seq` stays **odd forever**. The old reader failed **3 out of
 3**, not «now and then».
 ⭐ **The detector measures the CAUSE, not the rate**: *«i `wl_surface.frame` in volo non possono mai
@@ -6794,7 +6794,7 @@ non va bene se i secondi diventano 18»*.
   the child did not have verbosity.**
 
   `[M]` The child **is not a `fork`**: it is an `execve` of `remotix-figlio`. ⇒ It did not inherit the
-  `--parlantina` flag, and **every `registro_dettaglio()` of `figlio.c` ended in nothing, silently,
+  `--verbose` flag, and **every `registro_dettaglio()` of `figlio.c` ended in nothing, silently,
   without an error.** ⚠ Half the instrumentation of that file never reached the log.
 
   ⭐ And it lied in the worst direction: hunting the tail, I concluded for hours that certain branches

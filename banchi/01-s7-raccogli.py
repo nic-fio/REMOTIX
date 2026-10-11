@@ -32,40 +32,40 @@ from datetime import datetime
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-QUI = Path(__file__).resolve().parent
-REGISTRO = QUI / "01-s7-esiti.jsonl"
+HERE = Path(__file__).resolve().parent
+LOG = HERE / "01-s7-esiti.jsonl"
 
 
 class Collector(SimpleHTTPRequestHandler):
     def __init__(self, *a, **kw):
-        super().__init__(*a, directory=str(QUI), **kw)
+        super().__init__(*a, directory=str(HERE), **kw)
 
     def do_POST(self):
-        if self.path != "/esito":
+        if self.path != "/outcome":
             self.send_error(404)
             return
         n = int(self.headers.get("Content-Length", 0))
-        corpo = self.rfile.read(n).decode("utf-8", "replace")
+        body = self.rfile.read(n).decode("utf-8", "replace")
         try:
-            dati = json.loads(corpo)
+            data = json.loads(body)
         except Exception:
-            dati = {"grezzo": corpo}
-        dati["ora"] = datetime.now().isoformat(timespec="milliseconds")
-        with REGISTRO.open("a") as f:
-            f.write(json.dumps(dati, ensure_ascii=False) + "\n")
-        print(f"=== {dati['ora']}  {dati.get('tipo')}  "
-              f"deltaY={dati.get('deltaY')}  scorrimento={dati.get('scorrimento')}", flush=True)
+            data = {"grezzo": body}
+        data["time"] = datetime.now().isoformat(timespec="milliseconds")
+        with LOG.open("a") as f:
+            f.write(json.dumps(data, ensure_ascii=False) + "\n")
+        print(f"=== {data['time']}  {data.get('type')}  "
+              f"deltaY={data.get('deltaY')}  scroll={data.get('scroll')}", flush=True)
         self.send_response(204)
         self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
 
-    def log_message(self, formato, *a):
-        sys.stderr.write("request: " + (formato % a) + "\n")
+    def log_message(self, fmt, *a):
+        sys.stderr.write("request: " + (fmt % a) + "\n")
         sys.stderr.flush()
 
 
 if __name__ == "__main__":
-    porta = int(sys.argv[1]) if len(sys.argv) > 1 else 8877
-    print(f"== S7: page on http://127.0.0.1:{porta}/01-s7-pagina.html")
-    print(f"   the log accumulates in {REGISTRO}", flush=True)
-    ThreadingHTTPServer(("127.0.0.1", porta), Collector).serve_forever()
+    port = int(sys.argv[1]) if len(sys.argv) > 1 else 8877
+    print(f"== S7: page on http://127.0.0.1:{port}/01-s7-pagina.html")
+    print(f"   the log accumulates in {LOG}", flush=True)
+    ThreadingHTTPServer(("127.0.0.1", port), Collector).serve_forever()

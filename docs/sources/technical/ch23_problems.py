@@ -4,7 +4,7 @@ S1 = p("Defects found while this manual was written (10 October 2026), by readin
        "Each one was checked in the source. They are recorded here so that a maintainer meets them before a user does; "
        "a defect leaves this table in the commit that cures it.", lead=True) + \
     table(["Defect", "Where", "Consequence"], [
-        ["<b>No way to lift an address ban on an installed machine.</b> The unlock socket " + c("--comando-socket")
+        ["<b>No way to lift an address ban on an installed machine.</b> The unlock socket " + c("--command-socket")
          + " is treated as a bench option, and none of the three packaged units passes it.",
          c("packaging/debian/remotix.service") + ", " + c("packaging/rpm/remotix.service") + ", "
          + c("packaging/arch/remotix.service"),
@@ -12,15 +12,15 @@ S1 = p("Defects found while this manual was written (10 October 2026), by readin
          "does not exist there; the directory " + c("/run/remotix") + " is created for a socket nobody opens."],
         ["<b>The first enrolment in the graphics card groups ends every session of that user.</b> After adding the "
          "user to the groups of the " + c("/dev/dri") + " nodes, the parent (before the fork) runs " + c("loginctl terminate-user")
-         + " so that the new groups reach the compositor. It spares a live REMOTIX desktop (" + c("ritrovo_vivo()")
+         + " so that the new groups reach the compositor. It spares a live REMOTIX desktop (" + c("finding_again_alive()")
          + ", the found-again check), but nothing else.",
-         c("iscrivi_ai_gruppi_della_scheda()") + " (enrol in the card groups) in " + c("src/figlio.c"),
+         c("enroll_in_card_groups()") + " (enrol in the card groups) in " + c("src/figlio.c"),
          "The first REMOTIX login of a user who is not yet in the group closes that user's SSH and local sessions "
          "without warning. It happens once per user."],
         ["<b>The groups are all those of the card nodes</b>, usually " + c("video") + " and " + c("render")
          + ", while DECISIONI.md §10.36 asks for " + c("render") + " alone, if it holds on the four desktops (still to "
          "be tried there).",
-         c("iscrivi_ai_gruppi_della_scheda()"),
+         c("enroll_in_card_groups()"),
          c("video") + " also grants " + c("/dev/fb*") + " and webcams."],
         ["<b>The installer knows no derivative distribution by name.</b> " + c("Bersaglio()")
          + " (target) builds the package folder from " + c("ID") + " and " + c("VERSION_ID") + " (for example "
@@ -33,20 +33,20 @@ S1 = p("Defects found while this manual was written (10 October 2026), by readin
          + c("installation.json") + ", which only an installation writes, never an upgrade.",
          c("installatore/motore/disinstalla.go") + ", " + c("installatore/motore/operazione.go"),
          "Packages that a later upgrade brought in as new stay on the machine."],
-        ["<b>The server would reject its own farewell reason from the client.</b> " + c("motivo_di_82()")
+        ["<b>The server would reject its own farewell reason from the client.</b> " + c("reason_for_82()")
          + " (the reasons of RCP.md §8.2) accepts 0x01–0x0F, while RCP/1 defines 0x10 ("
-         + c("SESSIONE_TERMINATA") + ", session ended).",
+         + c("SESSION_TERMINATED") + ", session ended).",
          c("src/rcp.c"),
-         "Harmless today, because only the server sends 0x10; a client " + c("CONGEDO") + " (farewell) with 0x10 would be answered with "
-         + c("ERRORE_PROTOCOLLO") + " (protocol error)."],
-        ["<b>Bench messages are compiled into the product.</b> " + c("BANCO_MARCA") + " (bench marker) is present, "
+         "Harmless today, because only the server sends 0x10; a client " + c("FAREWELL") + " (farewell) with 0x10 would be answered with "
+         + c("PROTOCOL_ERROR") + " (protocol error)."],
+        ["<b>Bench messages are compiled into the product.</b> " + c("BENCH_MARK") + " (bench marker) is present, "
          "switched off with " + c("BANCO_ACCESO") + " (bench switch) set to 0, whereas RCP.md §7.5 says it must be "
          "absent from the installed binary, not merely off.",
          c("src/rcp.c"),
-         "The server answers it with " + c("BANCO_ESITO") + " " + c("FUNZIONE_SPENTA") + " (function off) instead of "
+         "The server answers it with " + c("BENCH_OUTCOME") + " " + c("FEATURE_OFF") + " (function off) instead of "
          "not knowing it. (RCP.md's own test table asks for that answer, so the specification contradicts itself.)"],
         ["<b>Retired installer codes are still raised.</b> " + c("RX-H264-003") + " and " + c("RX-H264-004")
-         + " are marked retired in " + c("codici.go") + " but " + c("codiceH264()") + " still returns them for "
+         + " are marked retired in " + c("codici.go") + " but " + c("codeH264()") + " still returns them for "
          "Fedora and openSUSE; " + c("RX-FW-004") + " is still returned by the firewall stub for nftables or no "
          "firewall.",
          c("installatore/motore/preflight.go") + ", " + c("installatore/motore/ambiente.go"),
@@ -62,7 +62,7 @@ S2 = p("Comments and log lines in the code that no longer describe what the code
          "fallback keeps its CRF", "no software path since phase 19; the ceiling also applies to Vulkan Video, as VBR"],
         [c("src/cattura.h"), "canvas limits 200..8192", "320×240 to 4096×2304 (" + c("rcp.h") + "), larger "
          "requests reduced to the maximum"],
-        [c("src/cursore.c"), "encoded cursor colours 0x40..0x83", "0x40..0x8D: " + c("FORMA_QUANTE") + " is 78 "
+        [c("src/cursore.c"), "encoded cursor colours 0x40..0x83", "0x40..0x8D: " + c("SHAPE_COUNT") + " is 78 "
          "shapes (" + c("src/forma.h") + ")"],
         [c("src/sessione.h"), "the GNOME session is born with a monitor",
          "it starts headless without " + c("--virtual-monitor") + " (removed on 14 Aug 2026, " + c("sessione.c")
@@ -71,15 +71,15 @@ S2 = p("Comments and log lines in the code that no longer describe what the code
          "set by both the PAM check (" + c("autenticazione.c") + ") and the child's PAM session (" + c("figlio.c") + ")"],
         [c("src/input.c"), "line references " + c("figlio.c:3964") + " and " + c("figlio.c:6365"),
          "the lines have moved"],
-        [c("src/figlio.c") + ", " + c("struct corpo_video"), "codec 1 = HEVC, 2 = AV1, 0 = off",
+        [c("src/figlio.c") + ", " + c("struct body_video"), "codec 1 = HEVC, 2 = AV1, 0 = off",
          "AV1 is retired; H.264 is 3 (" + c("RCP_CODEC_VIDEO_MAX") + " in " + c("rcp.h") + ")"],
         [c("src/pagina.html"), "WebGL2 is a candidate path, not the default; a message naming the codecs (HEVC, AV1)",
          "WebGL2 has been the default since 26 Sep 2026; the codecs are HEVC and H.264"],
         [c("src/main.c"), "the program is at phase 1, with no video (header, usage line, first log line); 0x06 "
          "means no encoding capacity left", "0x06 is composition capacity since DECISIONI.md §4.6-nonies"],
-        [c("src/main.c"), "the help of " + c("--journal") + ": " + c("--parlantina") + " (chatter) lines go to "
+        [c("src/main.c"), "the help of " + c("--journal") + ": " + c("--verbose") + " (chatter) lines go to "
          "the journal with PRIORITY 7", "detail lines never reach the journal (" + c("src/registro.c") + ")"],
-        [c("WT_PAVIMENTO_BYTE_MS") + " in " + c("src/webtransport.c") + ", the help of " + c("--tetto-banda-mbit")
+        [c("WT_FLOOR_BYTE_MS") + " in " + c("src/webtransport.c") + ", the help of " + c("--bandwidth-cap-mbit")
          + " in " + c("src/main.c"), "a 20 Mbit/s floor",
          "the decided floor is 30 Mbit/s since 23 Aug 2026 (DECISIONI.md §3.1-sexies)"],
         [c("packaging/debian/remotix.service") + ", " + c("packaging/rpm/remotix.service"),

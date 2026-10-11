@@ -1,15 +1,15 @@
 # The ISO state: what changes compared with cloud + DESKTOP (fasi/17 §7.2)
 
 The ISO machine is installed **from the official ISO**, with the distribution's automatic
-installer (`17-vm.sh da-iso <machine>-iso`, answers in `iso-risposte/`), on a new disk
+installer (`17-vm.sh from-iso <machine>-iso`, answers in `iso-risposte/`), on a new disk
 and with UEFI firmware. Compared with the default choices, the answers add only three things, all
 inside the installation: the ssh server where there is none by default, the bench key and passwordless
 sudo (`/etc/sudoers.d/90-banco`). Italian language, it keyboard, Europe/Rome time zone: like an
 Italian customer.
 
-The comparison is made with `17-vm.sh impronta <machine> cliente` and `impronta <machine>-iso iso`.
+The comparison is made with `17-vm.sh fingerprint <machine> cliente` and `fingerprint <machine>-iso iso`.
 The machine starts from the read-only snapshot (`-snapshot`) and on its own ports (k=6). The files are
-on the server: `…/<machine>{,-iso}/{impronta,pacchetti,unita}-{cliente,iso}.txt`. All measured
+on the server: `…/<machine>{,-iso}/{impronta,packets,unita}-{cliente,iso}.txt`. All measured
 on 29 Sep 2026 `[M]`.
 
 ## The machines
@@ -28,7 +28,7 @@ ssh answered, sudo works and `graphical.target` is active.
 
 ## The differences that matter for the installer
 
-| | cloud + DESKTOP (`cliente` snapshot) | ISO (`iso` snapshot) |
+| | cloud + DESKTOP (`client` snapshot) | ISO (`iso` snapshot) |
 |---|---|---|
 | **user's groups** | only their own group, everywhere (cloud-init) | Debian: `cdrom floppy sudo audio dip video plugdev users netdev scanner bluetooth lpadmin`, i.e. **`video` is already there**; Ubuntu: `adm cdrom sudo dip plugdev users lpadmin lxd`, without `video`; Fedora, Alma and Arch: `wheel`; Tumbleweed: none. **`render` is never there.** |
 | **firewall** | Fedora: zone `public` (ssh mdns dhcpv6); Alma: `public` (ssh cockpit dhcpv6); **Tumbleweed: no firewall**; Debian and Arch: none; Ubuntu: ufw installed but off | **Fedora: zone `FedoraWorkstation`, with 1025-65535 tcp/udp OPEN** (7447 passes without doing anything); Alma: `public` (ssh cockpit dhcpv6) like the cloud one, so 7447 is closed; **Tumbleweed: firewalld on, `public` with only dhcpv6 and ssh (ssh opened by us), so 7447 is closed**; Debian and Arch: none; Ubuntu: ufw off |

@@ -27,27 +27,27 @@ evidence. (`fasi/19-nvidia.md` §2.4.)
 
 From the REMOTIX folder, on the `fase-19` branch:
 
-    bash banchi/19-nvidia/19-nvidia.sh prepara
+    bash banchi/19-nvidia/19-nvidia.sh prepare
 
 It builds the REMOTIX packages and the installer, and puts everything in a "suitcase". About twenty
 minutes.
 
 ## The rental day
 
-    bash banchi/19-nvidia/19-nvidia.sh tutto ADDRESS
+    bash banchi/19-nvidia/19-nvidia.sh all ADDRESS
 
-(with a user other than root: `UTENTE=ubuntu bash banchi/19-nvidia/19-nvidia.sh tutto ADDRESS`;
-with a particular ssh key: `CHIAVE=~/.ssh/noleggio`.)
+(with a user other than root: `ACCOUNT=ubuntu bash banchi/19-nvidia/19-nvidia.sh all ADDRESS`;
+with a particular ssh key: `SSH_KEY=~/.ssh/noleggio`.)
 
 The bench, in order: brings Ubuntu to 26.04 if it is older · looks at the card and the driver · installs the driver if missing · installs the light
 desktop (XFCE) and the two browsers · installs REMOTIX **with its installer** · checks that it encodes
 H.264 and HEVC on the NVIDIA · runs the encoding comparison bench · runs the suite's
 tests (login, first image, screen update, canvas at attach, video, detach and
 reattach, reattach at a different size) with real Firefox and Chrome · packs the evidence and brings it
-to the laptop, in `misure/19-nvidia/`.
+to the laptop, in `measurements/19-nvidia/`.
 
 You do not need to stay in front of it: if the connection drops the bench goes on, and you find it again with
-`bash banchi/19-nvidia/19-nvidia.sh segui ADDRESS`.
+`bash banchi/19-nvidia/19-nvidia.sh follow ADDRESS`.
 
 **How long it takes, roughly:** half a day. Driver and programs from half an hour to an hour (it depends on the machine's
 network), the encoding comparison up to an hour, the suite a couple of hours. One day of
@@ -55,16 +55,16 @@ rental is enough; the second is margin.
 
 ## At the end
 
-1. The evidence is already on the laptop (`misure/19-nvidia/remotix-nv-….tar.gz`); inside, `passi.txt`
+1. The evidence is already on the laptop (`measurements/19-nvidia/remotix-nv-….tar.gz`); inside, `passi.txt`
    says in one line per step what is green and what is not.
-2. `bash banchi/19-nvidia/19-nvidia.sh pulisci ADDRESS` — removes REMOTIX, the bench users,
+2. `bash banchi/19-nvidia/19-nvidia.sh clean ADDRESS` — removes REMOTIX, the bench users,
    all the programs the bench installed (driver included, if it installed it) and puts the repositories back
    as they were. It refuses if the evidence has not been taken away yet.
 3. Return the machine.
 
 ## If something goes wrong
 
-- `bash banchi/19-nvidia/19-nvidia.sh stato ADDRESS` says which step was reached.
-- Resume with `tutto` again: steps already done are skipped.
+- `bash banchi/19-nvidia/19-nvidia.sh status ADDRESS` says which step was reached.
+- Resume with `all` again: steps already done are skipped.
 - Red initial checks stop everything (for example: the card has no encoder, or the system
   is not Debian 13 / Ubuntu 22.04-26.04). The reason is in `controlli.txt`, inside the evidence.

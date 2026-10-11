@@ -92,7 +92,7 @@
         <filename>rx-banco.sh</filename>
         <interpreter>shell</interpreter>
         <source><![CDATA[
-# [banco] passwordless sudo, and ssh opened in the firewall (closed by default)
+# [bench] passwordless sudo, and ssh opened in the firewall (closed by default)
 echo '@UTENTE@ ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/90-banco
 chmod 440 /etc/sudoers.d/90-banco
 firewall-offline-cmd --zone=public --add-service=ssh

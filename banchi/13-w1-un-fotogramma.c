@@ -7,9 +7,9 @@
  *    (`/run/user/<uid>` is `drwx------`).
  *
  *   13-w1 [count] [wait_s] [width height]
- *   W1_STRADA=scheda 13-w1 …     ⭐ the CARD route (21 Sep 2026)
+ *   W1_ROUTE=card 13-w1 …     ⭐ the CARD route (21 Sep 2026)
  *
- * ⭐ With `W1_STRADA=scheda` the frame is taken into a DMA-BUF slab of ours
+ * ⭐ With `W1_ROUTE=card` the frame is taken into a DMA-BUF slab of ours
  *    (`wlroots.c`, the card section), and the time per frame is the one to set
  *    against the 8.8-14.9 ms of the memory route (`fasi/13-xfce.md`).  ⛔ The
  *    CONTENT is checked all the same, by mapping the slab: a nice time on a
@@ -45,7 +45,7 @@
 #define DRM_XBGR8888 FOURCC('X', 'B', '2', '4')
 #define DRM_ABGR8888 FOURCC('A', 'B', '2', '4')
 
-static const char *nome_formato(uint32_t f)
+static const char *format_name(uint32_t f)
 {
 	static char buf[8];
 
@@ -66,29 +66,29 @@ static const char *nome_formato(uint32_t f)
  *    the capture being measured, and would skew the times this bench
  *    reports.
  */
-static void look_pixels(const WlrFotogramma *f, guint *colori, double *non_zero)
+static void look_pixels(const WlrFrame *f, guint *colors, double *not_zero)
 {
-	GHashTable *visti = g_hash_table_new(g_direct_hash, g_direct_equal);
-	gsize pixel_totali = (gsize)f->larghezza * f->altezza;
-	gsize diversi = 0, guardati = 0;
+	GHashTable *seen_items = g_hash_table_new(g_direct_hash, g_direct_equal);
+	gsize total_pixels = (gsize)f->width * f->height;
+	gsize different = 0, watched = 0;
 
-	for (gsize y = 0; y < f->altezza; y++) {
-		const uint8_t *riga = f->pixel + (gsize)y * f->stride;
+	for (gsize y = 0; y < f->height; y++) {
+		const uint8_t *line = f->pixel + (gsize)y * f->stride;
 
-		for (gsize x = 0; x < f->larghezza; x += 37) {
-			uint32_t c = ((uint32_t)riga[x * 4 + 0]) | ((uint32_t)riga[x * 4 + 1] << 8) |
-			             ((uint32_t)riga[x * 4 + 2] << 16);
+		for (gsize x = 0; x < f->width; x += 37) {
+			uint32_t c = ((uint32_t)line[x * 4 + 0]) | ((uint32_t)line[x * 4 + 1] << 8) |
+			             ((uint32_t)line[x * 4 + 2] << 16);
 
-			g_hash_table_add(visti, GUINT_TO_POINTER(c));
+			g_hash_table_add(seen_items, GUINT_TO_POINTER(c));
 			if (c)
-				diversi++;
-			guardati++;
+				different++;
+			watched++;
 		}
 	}
-	*colori = g_hash_table_size(visti);
-	*non_zero = guardati ? (double)diversi * 100.0 / guardati : 0.0;
-	g_hash_table_destroy(visti);
-	(void)pixel_totali;
+	*colors = g_hash_table_size(seen_items);
+	*not_zero = watched ? (double)different * 100.0 / watched : 0.0;
+	g_hash_table_destroy(seen_items);
+	(void)total_pixels;
 }
 
 /*
@@ -104,35 +104,35 @@ static void look_pixels(const WlrFotogramma *f, guint *colori, double *non_zero)
  *   gives a **plausible** result is not a check. Here the fact is asked of
  *   the format, which states it, instead of deduced from how it looks.
  */
-static void canali(uint32_t formato, int *ir, int *ig, int *ib)
+static void channels(uint32_t fmt, int *ir, int *ig, int *ib)
 {
-	if (formato == DRM_XBGR8888 || formato == DRM_ABGR8888) {
+	if (fmt == DRM_XBGR8888 || fmt == DRM_ABGR8888) {
 		*ir = 0; *ig = 1; *ib = 2;   /* R G B X in memory */
 	} else {
 		*ir = 2; *ig = 1; *ib = 0;   /* B G R X — XRGB/ARGB8888 */
 	}
 }
 
-static bool write_ppm(const WlrFotogramma *f, const char *dove)
+static bool write_ppm(const WlrFrame *f, const char *dove)
 {
 	FILE *out = fopen(dove, "wb");
 	int ir, ig, ib;
 
-	canali(f->formato, &ir, &ig, &ib);
+	channels(f->fmt, &ir, &ig, &ib);
 	if (!out)
 		return false;
-	fprintf(out, "P6\n%u %u\n255\n", f->larghezza, f->altezza);
-	for (uint32_t y = 0; y < f->altezza; y++) {
-		/* ⛔ `y_invertita`: if the compositor says the rows are to be read from
+	fprintf(out, "P6\n%u %u\n255\n", f->width, f->height);
+	for (uint32_t y = 0; y < f->height; y++) {
+		/* ⛔ `y_inverted`: if the compositor says the rows are to be read from
 		 *    the bottom, and that is not done, the image comes out upside down —
 		 *    a fault that looks like an encoder fault. */
-		uint32_t vera = f->y_invertita ? (f->altezza - 1 - y) : y;
-		const uint8_t *riga = f->pixel + (gsize)vera * f->stride;
+		uint32_t real = f->y_inverted ? (f->height - 1 - y) : y;
+		const uint8_t *line = f->pixel + (gsize)real * f->stride;
 
-		for (uint32_t x = 0; x < f->larghezza; x++) {
-			fputc(riga[x * 4 + ir], out);
-			fputc(riga[x * 4 + ig], out);
-			fputc(riga[x * 4 + ib], out);
+		for (uint32_t x = 0; x < f->width; x++) {
+			fputc(line[x * 4 + ir], out);
+			fputc(line[x * 4 + ig], out);
+			fputc(line[x * 4 + ib], out);
 		}
 	}
 	fclose(out);
@@ -144,7 +144,7 @@ static bool write_ppm(const WlrFotogramma *f, const char *dove)
  *    around it (`wlr_cpu_read`), and the mapping is taken down with
  *    `lend_end()`: frame `f` goes back to having no `pixel`.
  */
-static void *lend_start(WlrFotogramma *f)
+static void *lend_start(WlrFrame *f)
 {
 	void *m;
 
@@ -158,7 +158,7 @@ static void *lend_start(WlrFotogramma *f)
 	return m;
 }
 
-static void lend_end(WlrFotogramma *f, void *m)
+static void lend_end(WlrFrame *f, void *m)
 {
 	if (!m)
 		return;
@@ -169,48 +169,48 @@ static void lend_end(WlrFotogramma *f, void *m)
 
 int main(int argc, char **argv)
 {
-	int quanti = argc > 1 ? atoi(argv[1]) : 10;
-	double attesa = argc > 2 ? atof(argv[2]) : 2.0;
-	g_autoptr(GError) sbaglio = NULL;
-	WlrPalco *palco;
-	WlrFotogramma f;
+	int amount = argc > 1 ? atoi(argv[1]) : 10;
+	double wait = argc > 2 ? atof(argv[2]) : 2.0;
+	g_autoptr(GError) mistake = NULL;
+	WlrStage *stage;
+	WlrFrame f;
 	uint32_t l = 0, a = 0;
 	gint64 first_us = 0;
-	int presi = 0, on_card = 0;
-	double peggiore = 0, totale = 0, wait_gpu = 0;
-	bool scheda = g_strcmp0(g_getenv("W1_STRADA"), "scheda") == 0;
+	int grabbed = 0, on_card = 0;
+	double worst = 0, total = 0, wait_gpu = 0;
+	bool card = g_strcmp0(g_getenv("W1_ROUTE"), "card") == 0;
 	bool last_held = false;
 	/* ⭐ The two "refute it" tests of the port onto the PENDING frame:
-	 *   W1_RIPRENDI=1  a timeout is NOT a lost frame: it is called again and
+	 *   W1_RESUME=1  a timeout is NOT a lost frame: it is called again and
 	 *                  the same one is resumed (it is the child's loop at 8 ms);
-	 *   W1_TIENI=1     the previous slab is kept IN HAND while the next is
+	 *   W1_KEEP=1     the previous slab is kept IN HAND while the next is
 	 *                  taken, like the encoder that has not finished yet, and
 	 *                  it is checked that the next is ANOTHER slab — plus a
 	 *                  double return, which must stay without effect. */
-	bool riprendi = g_strcmp0(g_getenv("W1_RIPRENDI"), "1") == 0;
-	bool tieni = g_strcmp0(g_getenv("W1_TIENI"), "1") == 0;
-	int riprese = 0, same_slab = 0;
+	bool resume = g_strcmp0(g_getenv("W1_RESUME"), "1") == 0;
+	bool keep = g_strcmp0(g_getenv("W1_KEEP"), "1") == 0;
+	int resumed = 0, same_slab = 0;
 	gint64 frame_start = 0;
 
 	printf("== 13-w1 — the first frame pulled from wlroots ==\n");
-	printf("   %d frames, wait %.1f s each\n\n", quanti, attesa);
+	printf("   %d frames, wait %.1f s each\n\n", amount, wait);
 
-	palco = wlr_apri(&sbaglio);
-	if (!palco) {
-		printf("  ⛔ could not open the capture: %s\n", sbaglio->message);
+	stage = wlr_open(&mistake);
+	if (!stage) {
+		printf("  ⛔ could not open the capture: %s\n", mistake->message);
 		printf("\n  ⛔⛔ ROSSO\n");
 		return 1;
 	}
-	wlr_measure(palco, &l, &a);
-	printf("   output «%s», %ux%u\n", wlr_output_name(palco), l, a);
-	if (scheda) {
-		if (wlr_chiedi_la_scheda(palco, &sbaglio))
+	wlr_measure(stage, &l, &a);
+	printf("   output «%s», %ux%u\n", wlr_output_name(stage), l, a);
+	if (card) {
+		if (wlr_ask_card(stage, &mistake))
 			printf("   ⭐ CARD route on\n");
 		else
 			printf("   ⛔ CARD route DENIED: %s — the MEMORY route is measured, "
 			       "and this line says so\n",
-			       sbaglio->message);
-		g_clear_error(&sbaglio);
+			       mistake->message);
+		g_clear_error(&mistake);
 	}
 
 	/*
@@ -223,160 +223,160 @@ int main(int argc, char **argv)
 	 */
 	if (argc > 4) {
 		uint32_t vl = (uint32_t)atoi(argv[3]), va = (uint32_t)atoi(argv[4]);
-		uint32_t after_w = 0, dopo_a = 0;
-		WlrSizeOutcome e = wlr_misura_chiedi(palco, vl, va, 3.0, &sbaglio);
+		uint32_t after_w = 0, after_h = 0;
+		WlrSizeOutcome e = wlr_ask_size(stage, vl, va, 3.0, &mistake);
 
-		wlr_measure(palco, &after_w, &dopo_a);
+		wlr_measure(stage, &after_w, &after_h);
 		printf("   size asked %ux%u — outcome of the REQUEST: %s\n", vl, va,
-		       e == WLR_MISURA_CHIESTA       ? "accepted"
-		       : e == WLR_MISURA_GIA_COSI    ? "it already was"
-		       : e == WLR_MISURA_RIFIUTATA   ? "refused"
-		       : e == WLR_MISURA_ANNULLATA   ? "cancelled (old serial)"
+		       e == WLR_SIZE_REQUESTED       ? "accepted"
+		       : e == WLR_SIZE_UNCHANGED    ? "it already was"
+		       : e == WLR_SIZE_REFUSED   ? "refused"
+		       : e == WLR_SIZE_CANCELLED   ? "cancelled (old serial)"
 		                                     : "the compositor cannot change it");
-		g_clear_error(&sbaglio);
-		if (after_w == vl && dopo_a == va)
+		g_clear_error(&mistake);
+		if (after_w == vl && after_h == va)
 			printf("   ⭐ and the output READ BACK is %ux%u: the size really changed\n",
-			       after_w, dopo_a);
+			       after_w, after_h);
 		else
 			printf("   ⛔ but the output READ BACK is %ux%u: it did NOT change\n", after_w,
-			       dopo_a);
+			       after_h);
 		l = after_w;
-		a = dopo_a;
+		a = after_h;
 	}
 
-	for (int i = 0; i < quanti; i++) {
-		gint64 prima;
+	for (int i = 0; i < amount; i++) {
+		gint64 before;
 		WlrOutcome e;
 		double ms;
 
 		/* ⛔ The previous slab is RETURNED before asking for the next: it is what
-		 *    the product does (`cattura_fermo_libera()`), and a bench that kept
+		 *    the product does (`capture_stopped_free()`), and a bench that kept
 		 *    them all would run out of slabs and measure its own defect. */
-		WlrFotogramma tenuto = f;
+		WlrFrame kept = f;
 
-		if (last_held && !tieni) {
-			wlr_rendi(palco, f.lastra);
+		if (last_held && !keep) {
+			wlr_release(stage, f.slab);
 			last_held = false;
 		}
-		prima = g_get_monotonic_time();
+		before = g_get_monotonic_time();
 		if (!frame_start)
-			frame_start = prima;
-		e = wlr_fotogramma(palco, attesa, &f, &sbaglio);
+			frame_start = before;
+		e = wlr_frame(stage, wait, &f, &mistake);
 		/* ⚠ With resuming, the time of a frame is from the FIRST call,
 		 *   not from the last: the timeouts are inside it. */
 		ms = (g_get_monotonic_time() - frame_start) / 1000.0;
 
 		/* ⚠ With a ceiling: a mute compositor must not stop the bench. */
-		if (e == WLR_FOTOGRAMMA_SCADUTO && riprendi && riprese < quanti * 1000) {
-			riprese++;
-			g_clear_error(&sbaglio);
+		if (e == WLR_FRAME_EXPIRED && resume && resumed < amount * 1000) {
+			resumed++;
+			g_clear_error(&mistake);
 			i--;
 			continue;
 		}
 		frame_start = 0;
-		if (tieni && last_held) {
+		if (keep && last_held) {
 			/* ⛔ The slab kept must not be the one just filled: it would
 			 *    mean labwc copied into it while it was "in hand".  Then it is
 			 *    returned TWICE: the second does nothing. */
-			if (e == WLR_FOTOGRAMMA_PRESO && f.on_card && f.lastra == tenuto.lastra)
+			if (e == WLR_FRAME_TAKEN && f.on_card && f.slab == kept.slab)
 				same_slab++;
-			wlr_rendi(palco, tenuto.lastra);
-			wlr_rendi(palco, tenuto.lastra);
+			wlr_release(stage, kept.slab);
+			wlr_release(stage, kept.slab);
 			last_held = false;
 		}
 
-		if (e != WLR_FOTOGRAMMA_PRESO) {
+		if (e != WLR_FRAME_TAKEN) {
 			printf("  ⛔ frame %d: %s — %s\n", i + 1,
-			       e == WLR_FOTOGRAMMA_FALLITO  ? "the compositor said NO"
-			       : e == WLR_FOTOGRAMMA_SCADUTO ? "timed out"
+			       e == WLR_FRAME_FAILED  ? "the compositor said NO"
+			       : e == WLR_FRAME_EXPIRED ? "timed out"
 			                                     : "the wire dropped",
-			       sbaglio ? sbaglio->message : "no reason");
-			g_clear_error(&sbaglio);
+			       mistake ? mistake->message : "no reason");
+			g_clear_error(&mistake);
 			continue;
 		}
-		presi++;
+		grabbed++;
 		if (f.on_card) {
 			on_card++;
-			wait_gpu += f.us_attesa_gpu / 1000.0;
+			wait_gpu += f.gpu_wait_us / 1000.0;
 			last_held = true;
 		}
-		totale += ms;
-		if (ms > peggiore)
-			peggiore = ms;
+		total += ms;
+		if (ms > worst)
+			worst = ms;
 		if (i == 0) {
-			guint colori = 0;
-			double non_zero = 0;
+			guint colors = 0;
+			double not_zero = 0;
 
 			void *m = lend_start(&f);
 
 			first_us = g_get_monotonic_time();
 			if (f.pixel)
-				look_pixels(&f, &colori, &non_zero);
+				look_pixels(&f, &colors, &not_zero);
 			lend_end(&f, m);
 			printf("   first frame: %ux%u stride %u format %s%s — %s\n",
-			       f.larghezza, f.altezza, f.stride, nome_formato(f.formato),
-			       f.y_invertita ? " ⚠ Y INVERTED" : "",
+			       f.width, f.height, f.stride, format_name(f.fmt),
+			       f.y_inverted ? " ⚠ Y INVERTED" : "",
 			       f.on_card ? (f.explicit_wait
 			                             ? "on the CARD (linear slab, fence extracted)"
 			                             : "on the CARD (⚠ no fence: implicit)")
 			                      : "in MEMORY");
 			printf("   ⭐ the CONTENT: %u distinct colours, %.1f%% of the samples are not "
 			       "black\n",
-			       colori, non_zero);
+			       colors, not_zero);
 			(void)first_us;
 		}
 	}
 
-	if (presi && (!f.on_card || last_held)) {
-		guint colori = 0;
-		double non_zero = 0;
+	if (grabbed && (!f.on_card || last_held)) {
+		guint colors = 0;
+		double not_zero = 0;
 		void *m = lend_start(&f);
 
 		if (f.pixel) {
-			look_pixels(&f, &colori, &non_zero);
+			look_pixels(&f, &colors, &not_zero);
 			write_ppm(&f, "/tmp/13-w1.ppm");
 		}
 		lend_end(&f, m);
 		if (last_held) {
-			wlr_rendi(palco, f.lastra);
+			wlr_release(stage, f.slab);
 			last_held = false;
 		}
 		printf("\n   last frame: %u distinct colours, %.1f%% not black "
 		       "⇒ /tmp/13-w1.ppm\n",
-		       colori, non_zero);
+		       colors, not_zero);
 	}
 
 	WlrCounts c;
 
-	wlr_counts(palco, &c);
+	wlr_counts(stage, &c);
 	printf("\n   asked %" G_GUINT64_FORMAT " · taken %" G_GUINT64_FORMAT
 	       " · failed %" G_GUINT64_FORMAT " · timed out %" G_GUINT64_FORMAT "\n",
-	       c.chiesti, c.presi, c.falliti, c.scaduti);
-	if (presi)
+	       c.requested, c.grabbed, c.failed, c.expired);
+	if (grabbed)
 		printf("   time per frame: %.1f ms on average, %.1f ms the worst\n",
-		       totale / presi, peggiore);
+		       total / grabbed, worst);
 	/* ⛔ The route is stated NEXT TO the number: a time without its route is
 	 *    a time that will lie. */
-	printf("   route: %d on the CARD, %d in MEMORY", on_card, presi - on_card);
+	printf("   route: %d on the CARD, %d in MEMORY", on_card, grabbed - on_card);
 	if (on_card)
 		printf(" — GPU wait after `ready` %.2f ms on average", wait_gpu / on_card);
 	printf("\n");
-	if (riprendi)
-		printf("   resumed after a timeout: %d (the PENDING frame)\n", riprese);
-	if (tieni)
+	if (resume)
+		printf("   resumed after a timeout: %d (the PENDING frame)\n", resumed);
+	if (keep)
 		printf("   slab kept in hand and filled again: %d %s\n", same_slab,
 		       same_slab ? "⛔⛔ labwc wrote into a slab IN HAND" : "⭐");
 
-	wlr_close(palco);
+	wlr_close(stage);
 
 	if (same_slab) {
 		printf("\n  ⛔⛔ ROSSO — a slab in hand was reused %d times\n", same_slab);
 		return 1;
 	}
-	if (presi != quanti) {
-		printf("\n  ⛔⛔ ROSSO — %d frames of %d\n", presi, quanti);
+	if (grabbed != amount) {
+		printf("\n  ⛔⛔ ROSSO — %d frames of %d\n", grabbed, amount);
 		return 1;
 	}
-	printf("\n  ⭐ VERDE — %d frames of %d, pulled one by one\n", presi, quanti);
+	printf("\n  ⭐ VERDE — %d frames of %d, pulled one by one\n", grabbed, amount);
 	return 0;
 }

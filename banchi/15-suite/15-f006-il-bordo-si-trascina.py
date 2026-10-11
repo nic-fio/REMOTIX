@@ -3,18 +3,18 @@
 """
 15-f006 — F-006 RESIZING FROM THE EDGE (the C22 mesh inside the suite)
 
-    python3 15-f006-il-bordo-si-trascina.py --scatola lxqt --browser firefox [--guasto]
-    python3 15-f006-il-bordo-si-trascina.py --certifica
+    python3 15-f006-il-bordo-si-trascina.py --box lxqt --browser firefox [--fault]
+    python3 15-f006-il-bordo-si-trascina.py --certify
 
 expected: in the session a real `firefox-esr` window (C21's known
         page); with the left button pressed on the right edge and dragged by
         150 px, at one of the grip points from -2 to +6 px from the last cyan pixel,
         the right edge moves by at least 100 px and the left and the top
         stay still (±4 px): RESIZED, not moved.
-judgment: `C22.prova_browser` (healthy) — IMPORTED: the window measured in the
+judgment: `C22.test_browser` (healthy) — IMPORTED: the window measured in the
         PHOTO of the canvas before and after each grip.
 
-FAULT (C22's, `--senza-pulsante`): in the same session, after the
+FAULT (C22's, `--no-button`): in the same session, after the
         healthy pass, the same gesture at the same points with the button UP
         (`C22.scansiona(..., premi=False)`) ⇒ the window must not change,
         and the test must give red.  The healthy control is the healthy pass
@@ -26,62 +26,62 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import suite as S                                                     # noqa: E402
 
-G3 = S._carica("g3", os.path.join(S.QUI, "15-g3-comune.py"))
-C22 = G3.carica_maglia("c22", "11-c22-il-bordo-si-trascina.py")
-G3.traccia_la_ricerca(C22.C21)
-FUNZIONI = ("F-006",)
+G3 = S._load("g3", os.path.join(S.HERE, "15-g3-comune.py"))
+C22 = G3.load_mesh("c22", "11-c22-il-bordo-si-trascina.py")
+G3.trace_search(C22.C21)
+FUNCTIONS = ("F-006",)
 ATTESO = ("dragging the right edge by %d px with the button pressed the right edge "
           "moves by at least %d px, the left and the top still (±%d px)"
-          % (C22.SPINTA, C22.SOGLIA, C22.FERMO))
+          % (C22.PUSH, C22.THRESHOLD, C22.STOPPED))
 
 
-def certifica():
-    return C22.certifica()
+def certify():
+    return C22.certify()
 
 
-def corpo(o, E):
-    o.senza_pulsante = False
-    with S.Sessione(o, "006", E) as s:
-        G3.prepara_o(o, s)
-        oom0 = G3.uccisi_dal_server()
-        segno = s.log_mark()
-        prima = G3.evidenze_ora(o)
+def body(o, E):
+    o.no_button = False
+    with S.Session(o, "006", E) as s:
+        G3.prepare_o(o, s)
+        oom0 = G3.killed_by_server()
+        sign = s.log_mark()
+        before = G3.evidence_now(o)
         # ⚠ the mesh uses ITS OWN `12-client-veri` (C22 → C21 → C20V → VERI)
-        with G3.guida_prestata(C22.VERI, s.g):
-            riga = C22.prova_browser(o.browser, o, s.sc, s.chi)
-        if riga.get("esito") == S.CIECO:
-            s.foto("quando-non-si-guarda")        # what was on the canvas
-            riga["perche"] = riga.get("perche", "") + G3.spiega_cieco(oom0)
-        server = s.registro_da(segno) if segno is not None else []
-        ev = G3.evidenze_nuove(o, prima) + [s.save_text("server-f006.txt", server),
+        with G3.borrowed_driver(C22.VERI, s.g):
+            line = C22.test_browser(o.browser, o, s.sc, s.chi)
+        if line.get("outcome") == S.BLIND:
+            s.photo("quando-non-si-guarda")        # what was on the canvas
+            line["why"] = line.get("why", "") + G3.explain_blind(oom0)
+        server = s.log_from(sign) if sign is not None else []
+        ev = G3.new_evidence(o, before) + [s.save_text("server-f006.txt", server),
                                              s.save_console()]
-        prese = "; ".join(m for _k, _e, m in riga.get("prese", []))
-        E.metti("F-006", riga["esito"], riga.get("perche", ""), atteso=ATTESO,
-                osservato=prese or riga.get("perche", ""), evidenze=[e for e in ev if e],
-                finestra=riga.get("finestra"), presa_px=riga.get("presa_px"),
-                spostamento_px=riga.get("spostamento_px"))
+        prese = "; ".join(m for _k, _e, m in line.get("prese", []))
+        E.put("F-006", line["outcome"], line.get("why", ""), expected=ATTESO,
+                observed=prese or line.get("why", ""), evidence=[e for e in ev if e],
+                window=line.get("window"), presa_px=line.get("presa_px"),
+                spostamento_px=line.get("spostamento_px"))
 
-        if o.guasto:
-            if "prese" not in riga:
-                E.guasto("F-006", None, "the healthy pass did not drag anything (%s): the "
-                         "fault cannot be injected" % riga.get("perche"))
+        if o.fault:
+            if "prese" not in line:
+                E.fault("F-006", None, "the healthy pass did not drag anything (%s): the "
+                         "fault cannot be injected" % line.get("why"))
                 return
-            sano = (riga["esito"], riga.get("perche", ""),
-                    (riga["presa_px"], riga["spostamento_px"]) if "presa_px" in riga
+            healthy = (line["outcome"], line.get("why", ""),
+                    (line["presa_px"], line["spostamento_px"]) if "presa_px" in line
                     else None)
-            geo = s.geometria()
-            prima = G3.evidenze_ora(o)
+            geo = s.geometry()
+            before = G3.evidence_now(o)
             print("   ── FAULT: the same gesture with the button UP ──", flush=True)
-            senza = C22.scansiona(s.g, geo, o, o.browser + "-guasto", False)
-            if senza[0] == S.CIECO:
-                s.foto("guasto-quando-non-si-guarda")
-                senza = (senza[0], senza[1] + G3.spiega_cieco(oom0)) + tuple(senza[2:])
-            eg, mg = C22.verdetto_col_guasto(senza[:3], sano)
-            E.guasto("F-006", G3.DA_ESITO_GUASTO[eg], mg,
-                     atteso="with the button up no grip point resizes",
-                     osservato="; ".join(r[2] for r in senza[3]),
-                     evidenze=G3.evidenze_nuove(o, prima))
+            without = C22.scan_edge(s.g, geo, o, o.browser + "-guasto", False)
+            if without[0] == S.BLIND:
+                s.photo("guasto-quando-non-si-guarda")
+                without = (without[0], without[1] + G3.explain_blind(oom0)) + tuple(without[2:])
+            eg, mg = C22.verdict_with_fault(without[:3], healthy)
+            E.fault("F-006", G3.FAULT_FROM_OUTCOME[eg], mg,
+                     expected="with the button up no grip point resizes",
+                     observed="; ".join(r[2] for r in without[3]),
+                     evidence=G3.new_evidence(o, before))
 
 
 if __name__ == "__main__":
-    sys.exit(S.esegui(__doc__, FUNZIONI, corpo, certifica, G3.argomenti_g3))
+    sys.exit(S.run(__doc__, FUNCTIONS, body, certify, G3.arguments_g3))

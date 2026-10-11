@@ -3,7 +3,7 @@
 # decodes with WebCodecs every stream of the matrix, VA-API and Vulkan, and the two
 # outcomes are put side by side: same decoded frames, same fingerprints.
 #
-#   bash 19-decodifica-chrome.sh /media/REMOTIX/src/f19-vulkan/tmp/confronto [Chrome flags…]
+#   bash 19-decodifica-chrome.sh /media/REMOTIX/src/f19-vulkan/tmp/comparison [Chrome flags…]
 #
 # ⚠ The page writes the outcome with `console.log`, and it is read from Chrome's
 #   log (`--enable-logging=stderr`): `--dump-dom` with virtual time does not
@@ -13,33 +13,33 @@
 #   says no for both versions, and a "0 = 0" is not a PASS — the
 #   table writes it as NOT TESTED.
 set -u
-CARTELLA=${1:?folder with the *.bin streams and esiti.jsonl}; shift
-PAGINA=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../18-scheda/18-decodifica-chrome.html
+FOLDER=${1:?folder with the *.bin streams and esiti.jsonl}; shift
+PAGE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../18-scheda/18-decodifica-chrome.html
 CHROME=${CHROME:-google-chrome}
-PROFILO=$(mktemp -d)
+PROFILE=$(mktemp -d)
 trap 'rm -rf "$PROFILO"' EXIT
-python3 - "$CARTELLA/esiti.jsonl" <<'EOF' > "$PROFILO/lista"
+python3 - "$FOLDER/esiti.jsonl" <<'EOF' > "$PROFILE/lista"
 import json, sys
 for r in open(sys.argv[1]):
     r = r.strip()
     if not r: continue
     e = json.loads(r)
-    b = e.get("banco", {})
-    print(e["prova"], e["versione"], b.get("stringa_codec", ""))
+    b = e.get("bench", {})
+    print(e["prova"], e["version"], b.get("codec_string", ""))
 EOF
-while read -r prova versione codec; do
+while read -r prova version codec; do
 	[ -n "$codec" ] || continue
-	f="$CARTELLA/$prova-$versione.bin"
+	f="$FOLDER/$prova-$version.bin"
 	[ -f "$f" ] || continue
-	rm -rf "$PROFILO/p"
-	riga=$(timeout --foreground 90 "$CHROME" --headless=new --no-sandbox --user-data-dir="$PROFILO/p" \
+	rm -rf "$PROFILE/p"
+	line=$(timeout --foreground 90 "$CHROME" --headless=new --no-sandbox --user-data-dir="$PROFILE/p" \
 		--allow-file-access-from-files --enable-logging=stderr --v=0 "$@" \
-		"file://$PAGINA?flusso=file://$f&codec=$codec" 2>&1 \
+		"file://$PAGE?stream=file://$f&codec=$codec" 2>&1 \
 		| grep -o 'ESITO {[^"]*"[^}]*}' | head -1)
-	echo "$prova $versione $codec ${riga#ESITO }"
-done < "$PROFILO/lista" | tee "$CARTELLA/chrome.txt"
+	echo "$prova $version $codec ${line#ESITO }"
+done < "$PROFILE/lista" | tee "$FOLDER/chrome.txt"
 # VA-API against Vulkan: same decoded?  (DIFFERENT fingerprints are expected here: two different encoders)
-python3 - "$CARTELLA/chrome.txt" <<'EOF'
+python3 - "$FOLDER/chrome.txt" <<'EOF'
 import json, sys
 per = {}
 for r in open(sys.argv[1]):
@@ -51,10 +51,10 @@ for prova, v in sorted(per.items()):
     a, b = v.get("vaapi"), v.get("vulkan")
     if not a or not b:
         print(f"FAIL {prova}: one version is missing"); rossi += 1; continue
-    if not a.get("supportato") and not b.get("supportato"):
+    if not a.get("supported") and not b.get("supported"):
         print(f"NOT TESTED {prova}: Chrome does not decode {b.get('codec')} here (the GPU is needed)"); non_provati += 1; continue
-    uguali = a["decodificati"] > 0 and a["decodificati"] == b["decodificati"] and not b["errori"] and b.get("supportato")
-    print(f"{'PASS' if uguali else 'FAIL'} {prova}: vaapi {a['decodificati']}/{a['chunk']} vulkan {b['decodificati']}/{b['chunk']} · size {b.get('misura')} · errors {b['errori']} · fingerprints {'equal' if a['impronte']==b['impronte'] else 'DIFFERENT'}")
+    uguali = a["decoded"] > 0 and a["decoded"] == b["decoded"] and not b["errors"] and b.get("supported")
+    print(f"{'PASS' if uguali else 'FAIL'} {prova}: vaapi {a['decoded']}/{a['chunk']} vulkan {b['decoded']}/{b['chunk']} · size {b.get('size')} · errors {b['errors']} · fingerprints {'equal' if a['fingerprints']==b['fingerprints'] else 'DIFFERENT'}")
     rossi += 0 if uguali else 1
     passati += 1 if uguali else 0
 print(f"{passati} PASS · {rossi} FAIL · {non_provati} not tested")

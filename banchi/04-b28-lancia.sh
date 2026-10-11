@@ -3,7 +3,7 @@
 # 04-b28-lancia.sh — the bench for TOUCH MODE (link A8 of phase 4).
 #
 #   bash banchi/04-b28-lancia.sh              certifies the judge, then runs
-#   bash banchi/04-b28-lancia.sh --solo-certifica
+#   bash banchi/04-b28-lancia.sh --certify-only
 #
 # ---------------------------------------------------------------------------
 # ⚠ THE SCENE, DECLARED — and it is verified from the other end, not here
@@ -31,23 +31,23 @@
 # ---------------------------------------------------------------------------
 set -u
 
-QUI="$(cd "$(dirname "$0")" && pwd)"
-RADICE="$(dirname "$QUI")"
-PORTA=7671
-DIAGNOSI=7672
-PROFILO="/tmp/04-b28-profilo"
-REGISTRO="$QUI/04-b28-registro.jsonl"
+HERE="$(cd "$(dirname "$0")" && pwd)"
+ROOT="$(dirname "$HERE")"
+PORT=7671
+DIAGNOSIS=7672
+PROFILE="/tmp/04-b28-profilo"
+LOG="$HERE/04-b28-registro.jsonl"
 
-cd "$RADICE" || exit 2
+cd "$ROOT" || exit 2
 
 echo "══ 1. THE JUDGE IS CERTIFIED BEFORE THE MEASUREMENT (CODER.md §3.3) ══"
-python3 "$QUI/04-b28-gesti.py" --certifica
+python3 "$HERE/04-b28-gesti.py" --certify
 CERT=$?
 if [ "$CERT" -ne 0 ]; then
   echo "⛔ the judge is not certified: nothing is measured."
   exit 3
 fi
-if [ "${1:-}" = "--solo-certifica" ]; then exit 0; fi
+if [ "${1:-}" = "--certify-only" ]; then exit 0; fi
 
 echo
 echo "══ 2. THE SCENE ══"
@@ -58,7 +58,7 @@ echo "  browser       $(google-chrome --version 2>&1)"
 echo "  ⚠ the window opens on the REAL desktop, and touch is DECLARED by the"
 echo "    bench (CDP): what is measured are the boundaries of the recogniser."
 
-for p in "$PORTA" "$DIAGNOSI"; do
+for p in "$PORT" "$DIAGNOSIS"; do
   if ss -ltn 2>/dev/null | grep -q ":$p "; then
     echo "⛔ port $p is already taken: I stop instead of measuring"
     echo "   someone else's page."
@@ -66,21 +66,21 @@ for p in "$PORTA" "$DIAGNOSI"; do
   fi
 done
 
-rm -rf "$PROFILO"
-mkdir -p "$PROFILO"
+rm -rf "$PROFILE"
+mkdir -p "$PROFILE"
 
 echo
 echo "══ 3. CHROME ══"
 google-chrome \
-  --user-data-dir="$PROFILO" \
-  --remote-debugging-port="$DIAGNOSI" \
+  --user-data-dir="$PROFILE" \
+  --remote-debugging-port="$DIAGNOSIS" \
   --remote-allow-origins='*' \
   --no-first-run --no-default-browser-check \
   --disable-features=Translate,MediaRouter \
   --window-size=1500,900 \
-  "about:blank" >"$PROFILO/chrome.log" 2>&1 &
+  "about:blank" >"$PROFILE/chrome.log" 2>&1 &
 CHROME=$!
-echo "  chrome pid $CHROME, debugging on $DIAGNOSI, profile $PROFILO"
+echo "  chrome pid $CHROME, debugging on $DIAGNOSIS, profile $PROFILE"
 
 # ⛔ The coup de grâce is registered: if the bench dies, the window does not stay
 #    open on the user's desktop.
@@ -90,13 +90,13 @@ sleep 3
 
 echo
 echo "══ 4. THE MEASUREMENT ══"
-python3 "$QUI/04-b28-gesti.py" --gira --porta "$PORTA" \
-        --diagnosi "$DIAGNOSI" --registro "$REGISTRO"
-ESITO=$?
+python3 "$HERE/04-b28-gesti.py" --run --port "$PORT" \
+        --diagnosis "$DIAGNOSIS" --log "$LOG"
+OUTCOME=$?
 
 echo
 echo "══ 5. WHERE TO RECHECK ══"
-echo "  outcomes  $QUI/04-b28-esiti.jsonl"
-echo "  log       $REGISTRO   (the bytes, in hexadecimal, gesture by gesture)"
-echo "  rejudge   python3 banchi/04-b28-gesti.py --verdetto $REGISTRO"
-exit "$ESITO"
+echo "  outcomes  $HERE/04-b28-esiti.jsonl"
+echo "  log       $LOG   (the bytes, in hexadecimal, gesture by gesture)"
+echo "  rejudge   python3 banchi/04-b28-gesti.py --verdict $LOG"
+exit "$OUTCOME"

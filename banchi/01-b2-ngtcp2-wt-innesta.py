@@ -2,7 +2,7 @@
 """01-b2-ngtcp2-wt-innesta.py — grafts the WebTransport layer into the ngtcp2 example.
 
     python3 01-b2-ngtcp2-wt-innesta.py            grafts (or says it is already there)
-    python3 01-b2-ngtcp2-wt-innesta.py --togli    puts the example back as it was
+    python3 01-b2-ngtcp2-wt-innesta.py --remove    puts the example back as it was
 
 ---------------------------------------------------------------------------
 ⛔ WHY A GRAFT AND NOT A SERVER OF OUR OWN
@@ -71,11 +71,11 @@ import sys
 
 ALBERO = "/srv/src/b2/ngtcp2"
 EXAMPLES = "/srv/src/b2/ngtcp2/examples"
-MARCA = "REMOTIX B2"
+MARK = "REMOTIX B2"
 MARK_B3 = "REMOTIX B3"
 MARK_B11 = "REMOTIX B11 GUASTO"
 
-# ⛔ The files this graft touches.  `--togli` needs them to VERIFY that it
+# ⛔ The files this graft touches.  `--remove` needs them to VERIFY that it
 #    removed: the exit status of `git` says git did not complain, not
 #    that the mark is gone.
 TOUCHED_FILES = [
@@ -87,7 +87,7 @@ TOUCHED_FILES = [
 ]
 
 # ⛔ The files B3 copies into `examples/`.  Git does not touch untracked
-#    files, so after `--togli` they stay there and nobody says so.
+#    files, so after `--remove` they stay there and nobody says so.
 FILE_DI_B3 = ["rcp.c", "rcp.h", "autenticazione.c"]
 
 # ---------------------------------------------------------------------------
@@ -96,7 +96,7 @@ FILE_DI_B3 = ["rcp.c", "rcp.h", "autenticazione.c"]
 # ---------------------------------------------------------------------------
 
 
-def innesti():
+def grafts():
     return [
         # ── 1. The headers the new types need ───────────────────────────────
         (
@@ -284,7 +284,7 @@ def innesti():
     //      would never leave the machine.
     std::array<nghttp3_vec, 1> wt_vec;
     size_t wt_orig = 0;
-    bool wt_mio = false;
+    bool wt_mine = false;
 
     if (sveccnt > 0 && stream_id == wt_ctrl_id_ && !wt_impostazioni_scritte_) {
       // ⛔ The rewriting is done ONCE ONLY.  If the previous pass sent
@@ -306,7 +306,7 @@ def innesti():
       fin = 0;
       wt_vec[0].base = u.dati.data() + u.off;
       wt_vec[0].len = u.dati.size() - u.off;
-      wt_mio = true;
+      wt_mine = true;
     }
 
     ngtcp2_ssize ndatalen;
@@ -318,7 +318,7 @@ def innesti():
       wt_vec[0].len = wt_impbuf_len_ - wt_impbuf_off_;
       v = wt_vec.data();
       vcnt = 1;
-    } else if (wt_mio) {
+    } else if (wt_mine) {
       v = wt_vec.data();
       vcnt = 1;
     }
@@ -371,7 +371,7 @@ def innesti():
     };
 
     auto wt_avanza = [&](ngtcp2_ssize n) -> int {
-      if (wt_mio) {
+      if (wt_mine) {
         auto &u = wt_uscita_.front();
         u.off += static_cast<size_t>(n);
         if (u.off >= u.dati.size()) {
@@ -407,8 +407,8 @@ def innesti():
             "        //    including the case `u.off > 0`, that is when a part had\n"
             "        //    already gone out on the wire.  The next message welded itself to those\n"
             "        //    truncated bytes, and the client read an invented\n"
-            "        //    `tipo`/`lunghezza`: RCP.md §6.1 requires it to close with\n"
-            "        //    ERRORE_PROTOCOLLO.  ⛔ It was the SERVER fabricating the\n"
+            "        //    `kind`/`length`: RCP.md §6.1 requires it to close with\n"
+            "        //    PROTOCOL_ERROR.  ⛔ It was the SERVER fabricating the\n"
             "        //    client's violation, and the log said \"bytes\n"
             "        //    thrown away\" — which described the loss without saying it had\n"
             "        //    corrupted the stream, and without warning RCP of anything.\n"
@@ -418,7 +418,7 @@ def innesti():
             "        //   MAX_STREAM_DATA.  Our queue is skipped for this\n"
             "        //   pass and retried at the next — which comes with the\n"
             "        //   packet that carries the credit.\n"
-            "        if (wt_mio) {\n"
+            "        if (wt_mine) {\n"
             "          auto &u = wt_uscita_.front();\n"
             "          std::println(stderr,\n"
             "                       \"REMOTIX B2: stream {} blocked: {} bytes STAY \"\n"
@@ -432,7 +432,7 @@ def innesti():
             "        continue;\n"
             "      case NGTCP2_ERR_STREAM_SHUT_WR:\n"
             "        assert(ndatalen == -1);\n"
-            "        if (wt_mio) {\n"
+            "        if (wt_mine) {\n"
             "          wt_uscita_.pop_front();\n"
             "          continue;\n"
             "        }\n"
@@ -505,7 +505,7 @@ def innesti():
         #    precisely from there.
         #
         # ⭐ Found by bench B11 on 10 Aug 2026: Firefox **resets** the
-        #    control stream throwing away the `CONGEDO` already queued, and the
+        #    control stream throwing away the `FAREWELL` already queued, and the
         #    reason arrives only inside the capsule.  Without reading it, of that
         #    engine one would have said "it does not say farewell" — which is false.
         (
@@ -554,7 +554,7 @@ def innesti():
         (
             "http3_server_proto_codec.cc",
             "std::expected<void, Error> ProtoCodec::setup_httpconn() {\n",
-            None,  # filled below from CORPO
+            None,  # filled below from BODY
             "the body of the WebTransport layer",
         ),
         # ── 13. The :protocol field in the Stream ───────────────────────────
@@ -618,7 +618,7 @@ def innesti():
             "  // ⛔ REMOTIX B2 — RCP.md §2.3: the server MUST NOT offer 0-RTT.\n"
             "  //\n"
             "  //    0-RTT data can be REPLAYED, and the second message of\n"
-            "  //    RCP is `CREDENZIALI`.  The gain would be one network round trip on\n"
+            "  //    RCP is `CREDENTIALS`.  The gain would be one network round trip on\n"
             "  //    a session that lasts hours.\n"
             "  //\n"
             "  // ⚠ Their example turns it on, and it is the norm: `FASI.md` §01-filo-nudo\n"
@@ -634,7 +634,7 @@ def innesti():
     ]
 
 
-CORPO = r'''namespace {
+BODY = r'''namespace {
 // ⭐ REMOTIX B2 — a QUIC variable-length integer (RFC 9000 §16).  It is needed three times
 //    and is in neither of the two libraries: nghttp3 keeps its own for
 //    itself.  Sixteen lines that are already glue.
@@ -705,7 +705,7 @@ constexpr uint64_t WT_MAX_SESSIONS = 0xc671706aULL;
 // `CLOSE_WEBTRANSPORT_SESSION` carries a 32-bit code and a reason that
 // WebTransport limits to **1024 bytes**.  Plus the two variable-length integers at the head,
 // which are at most eight each.
-constexpr uint64_t WT_CAPSULA_MAX = 1024 + 4;
+constexpr uint64_t WT_CAPSULE_MAX = 1024 + 4;
 
 nghttp3_ssize wt_niente_dati(nghttp3_conn *conn, int64_t stream_id,
                              nghttp3_vec *vec, size_t veccnt, uint32_t *pflags,
@@ -736,22 +736,22 @@ size_t ProtoCodec::wt_riscrivi_impostazioni(const nghttp3_vec *vec,
     return 0;
   }
 
-  uint64_t tipo_stream = 0;
-  auto n = wt_leggi_varint(&tipo_stream, orig.data(), orig.size());
-  if (n == 0 || tipo_stream != 0x00) {
+  uint64_t stream_type = 0;
+  auto n = wt_leggi_varint(&stream_type, orig.data(), orig.size());
+  if (n == 0 || stream_type != 0x00) {
     std::println(stderr,
                  "REMOTIX B2: the control stream does not start with 0x00 "
                  "(it is {}): touching nothing",
-                 tipo_stream);
+                 stream_type);
     return 0;
   }
   auto p = n;
 
-  uint64_t tipo_frame = 0;
-  n = wt_leggi_varint(&tipo_frame, orig.data() + p, orig.size() - p);
-  if (n == 0 || tipo_frame != 0x04) {
+  uint64_t frame_type = 0;
+  n = wt_leggi_varint(&frame_type, orig.data() + p, orig.size() - p);
+  if (n == 0 || frame_type != 0x04) {
     std::println(stderr, "REMOTIX B2: the first frame is not SETTINGS (it is {})",
-                 tipo_frame);
+                 frame_type);
     return 0;
   }
   p += n;
@@ -868,12 +868,12 @@ void ProtoCodec::wt_capsula(int64_t stream_id, std::span<const uint8_t> dati) {
     //   but unknown capsule of half a gigabyte was buffered ENTIRELY only to
     //   be discarded.  RFC 9297 §3.2 allows skipping it without keeping it, and
     //   that is what is done now.
-    if (lung > WT_CAPSULA_MAX) {
+    if (lung > WT_CAPSULE_MAX) {
       std::println(stderr,
                    "REMOTIX B2: capsule {:#x} {} bytes long, beyond the cap of "
                    "{}: SKIPPED without keeping it (RFC 9297 §3.2; RCP.md §6.1, the "
                    "length is checked before allocating)",
-                   tipo, lung, WT_CAPSULA_MAX);
+                   tipo, lung, WT_CAPSULE_MAX);
       uint64_t qui = wt_capsbuf_.size() - a - b;
       uint64_t presi = qui < lung ? qui : lung;
       wt_capsalta_ = lung - presi;
@@ -1041,17 +1041,17 @@ std::expected<void, Error> ProtoCodec::wt_apri_sessione(Stream *stream) {
 '''
 
 
-def leggi(percorso):
-    with open(percorso, encoding="utf-8") as f:
+def load(fpath):
+    with open(fpath, encoding="utf-8") as f:
         return f.read()
 
 
-def scrivi(percorso, testo):
-    with open(percorso, "w", encoding="utf-8") as f:
-        f.write(testo)
+def write(fpath, text):
+    with open(fpath, "w", encoding="utf-8") as f:
+        f.write(text)
 
 
-def comment_lines(righe):
+def comment_lines(lines):
     """⛔ A SINGLE RULE FOR COMMENTS, AND THE SAME IN THE THREE GRAFTS.
 
     On 10 Aug 2026 the three scripts had three different ones for the same
@@ -1066,12 +1066,12 @@ def comment_lines(righe):
       a comment only when it is the continuation of a `/* … */` block, that is
       when it is followed by a space or when it closes the block.
     """
-    return sum(1 for r in righe
+    return sum(1 for r in lines
                if r.strip().startswith(("//", "/*", "* ", "*/"))
                or r.strip() == "*")
 
 
-def togli():
+def remove():
     # ⛔ AND WE SAY WHAT WE TAKE AWAY.
     #
     #    `git checkout -- examples` puts back the WHOLE folder: if on top
@@ -1079,15 +1079,15 @@ def togli():
     #    those disappear too.  The message before said only "the example
     #    is put back as it was", that is less than what the command does.
     print("== Putting the example back as it was")
-    prima = ""
+    before = ""
     for f in TOUCHED_FILES:
         try:
-            prima += leggi(f"{EXAMPLES}/{f}")
+            before += load(f"{EXAMPLES}/{f}")
         except FileNotFoundError:
             pass
-    for marca, chi in ((MARK_B3, "the B3 graft"),
+    for mark, chi in ((MARK_B3, "the B3 graft"),
                        (MARK_B11, "the B11 faults")):
-        if marca in prima:
+        if mark in before:
             print(f"   ⚠ {chi} is there too: it disappears together with this one.")
     r = subprocess.run(["git", "-C", ALBERO, "checkout", "--", "examples"])
     if r.returncode != 0:
@@ -1102,50 +1102,50 @@ def togli():
     #    "I failed" must not have the same face.  The only reading that
     #    counts is rereading the files.  `01-b11-guasto.sh` already does this check
     #    for its own mark; here it was missing.
-    resta = 0
+    stays = 0
     for f in TOUCHED_FILES:
         try:
-            n = leggi(f"{EXAMPLES}/{f}").count(MARCA)
+            n = load(f"{EXAMPLES}/{f}").count(MARK)
         except FileNotFoundError:
             n = 0
         if n:
-            print(f"   NO  {n} lines with «{MARCA}» remain in {f}")
-            resta += n
-    if resta:
-        print(f"   ⛔ {resta} traces of «{MARCA}» survive:"
+            print(f"   NO  {n} lines with «{MARK}» remain in {f}")
+            stays += n
+    if stays:
+        print(f"   ⛔ {stays} traces of «{MARK}» survive:"
               " the example is NOT as it was.")
         return 3
-    print(f"   OK  no trace of «{MARCA}» in the {len(TOUCHED_FILES)}"
+    print(f"   OK  no trace of «{MARK}» in the {len(TOUCHED_FILES)}"
           " files touched")
 
     # ⚠ And git does not touch UNTRACKED files: if B3 has been here, its
     #   three files stay orphaned inside an example "as it was".
-    orfani = [f for f in FILE_DI_B3 if os.path.exists(f"{EXAMPLES}/{f}")]
-    if orfani:
-        print(f"   ⚠ the B3 files remain in examples/: {', '.join(orfani)}")
+    orphans = [f for f in FILE_DI_B3 if os.path.exists(f"{EXAMPLES}/{f}")]
+    if orphans:
+        print(f"   ⚠ the B3 files remain in examples/: {', '.join(orphans)}")
         print("     git checkout does not touch untracked files;"
-              " 01-b3-rcp-innesta.py --togli takes them away")
+              " 01-b3-rcp-innesta.py --remove takes them away")
     return 0
 
 
 def main():
-    if "--togli" in sys.argv:
-        return togli()
+    if "--remove" in sys.argv:
+        return remove()
 
-    lista = innesti()
+    items = grafts()
     # Piece 12 is the body, which is in a separate constant for readability.
-    lista = [
-        (f, a, (CORPO + a) if s is None else s, n) for (f, a, s, n) in lista
+    items = [
+        (f, a, (BODY + a) if s is None else s, n) for (f, a, s, n) in items
     ]
 
     print("== Grafting the WebTransport layer into the ngtcp2 example")
     print(f"   tree: {EXAMPLES}")
-    print(f"   {len(lista)} grafts to apply\n")
+    print(f"   {len(items)} grafts to apply\n")
 
     # Already done?
-    if MARCA in leggi(f"{EXAMPLES}/http3_server_proto_codec.cc"):
+    if MARK in load(f"{EXAMPLES}/http3_server_proto_codec.cc"):
         print("   ⚠ the graft is already there: touching nothing.")
-        print("     to redo it from scratch: --togli, then this command again")
+        print("     to redo it from scratch: --remove, then this command again")
         return 0
 
     # ⛔ THE DENOMINATOR OF THE LINE COUNT, READ BEFORE TOUCHING ANYTHING.
@@ -1156,37 +1156,37 @@ def main():
     #    change it is in there and can no longer be told apart.
     #    ⚠ Untracked files (`??`) do not enter the diff, so they do not
     #      dirty the count: they are ignored here.
-    sporchi = [
+    dirty = [
         r for r in subprocess.run(
             ["git", "-C", ALBERO, "status", "--porcelain", "--", "examples"],
             capture_output=True, text=True).stdout.splitlines()
         if not r.startswith("??")
     ]
 
-    testi = {}
-    guasti = 0
-    for percorso, appiglio, sostituto, nome in lista:
-        if percorso not in testi:
-            testi[percorso] = leggi(f"{EXAMPLES}/{percorso}")
+    texts = {}
+    faults = 0
+    for fpath, foothold, substitute, name in items:
+        if fpath not in texts:
+            texts[fpath] = load(f"{EXAMPLES}/{fpath}")
         # ⛔ THE CHECK THAT MAKES ALL THE REST HONEST: the foothold must
         #    appear ONCE ONLY.  Zero means their example has
         #    changed under us; two, that we are grafting blindly.
-        n = testi[percorso].count(appiglio)
-        stato = "OK " if n == 1 else "NO "
-        print(f"   {stato} {nome:38s} foothold found {n} time(s)  [{percorso}]")
+        n = texts[fpath].count(foothold)
+        state = "OK " if n == 1 else "NO "
+        print(f"   {state} {name:38s} foothold found {n} time(s)  [{fpath}]")
         if n != 1:
-            guasti += 1
+            faults += 1
             continue
-        testi[percorso] = testi[percorso].replace(appiglio, sostituto, 1)
+        texts[fpath] = texts[fpath].replace(foothold, substitute, 1)
 
-    if guasti:
-        print(f"\n   ⛔ {guasti} footholds of {len(lista)} are not ONE: writing nothing.")
+    if faults:
+        print(f"\n   ⛔ {faults} footholds of {len(items)} are not ONE: writing nothing.")
         print("      The ngtcp2 example has changed: the grafts must be reread.")
         return 2
 
-    for percorso, testo in testi.items():
-        scrivi(f"{EXAMPLES}/{percorso}", testo)
-    print(f"\n   OK  {len(lista)} grafts of {len(lista)}, in {len(testi)} files")
+    for fpath, text in texts.items():
+        write(f"{EXAMPLES}/{fpath}", text)
+    print(f"\n   OK  {len(items)} grafts of {len(items)}, in {len(texts)} files")
 
     # ⭐ The line count, which is the datum of §6.4 and not an estimate.
     #
@@ -1203,19 +1203,19 @@ def main():
         capture_output=True,
         text=True,
     ).stdout.splitlines()
-    agg = [r[1:] for r in d if r.startswith("+") and not r.startswith("+++")]
-    vuote = sum(1 for r in agg if not r.strip())
-    comm = comment_lines(agg)
-    print(f"\n   added lines    : {len(agg)}")
-    print(f"     blank        : {vuote}")
+    add = [r[1:] for r in d if r.startswith("+") and not r.startswith("+++")]
+    blanks = sum(1 for r in add if not r.strip())
+    comm = comment_lines(add)
+    print(f"\n   added lines    : {len(add)}")
+    print(f"     blank        : {blanks}")
     print(f"     comment      : {comm}")
-    print(f"     ⭐ CODE       : {len(agg) - vuote - comm}")
+    print(f"     ⭐ CODE       : {len(add) - blanks - comm}")
 
     # ⛔ AND THE DENOMINATOR IS PRINTED NEXT TO THE NUMBER, not implied.
-    if sporchi:
+    if dirty:
         print("\n   ⛔ AND THIS COUNT CANNOT BE ATTRIBUTED TO US: before")
         print("      the graft these files were already modified —")
-        for r in sporchi:
+        for r in dirty:
             print(f"        {r}")
         print("      git diff does not know whose a line is: it measures the folder.")
     else:

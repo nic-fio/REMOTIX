@@ -1,8 +1,8 @@
-package motore
+package engine
 
-// testi: the catalogue of the texts of the engine and of the command line, in English (DECISIONI §10.35).
+// texts: the catalogue of the texts of the engine and of the command line, in English (DECISIONI §10.35).
 // The keys are stable; the %s and %d follow fmt.Sprintf.
-var testi = map[string]string{
+var texts = map[string]string{
 	// states (§6.6.2), as the progress reports them
 	"state.NEW":                       "new",
 	"state.TRUSTED":                   "trust checked",
@@ -50,14 +50,14 @@ var testi = map[string]string{
 	"az.file.fa":           "the existing file (if any) is saved, the new one is written to «%s» next to it, fsync, and renamed over it",
 	"az.file.verifica":     "file sha256 and permissions equal to the plan's",
 	"az.file.annulla":      "the saved file is put back (or removed, if it was not there), and created directories if left empty",
-	"az.gruppo":            "add %s to the %s group",
-	"az.gruppo.fa":         "gpasswd -a %s %s (unless already there: then nothing, recorded as PRE-EXISTING)",
-	"az.gruppo.verifica":   "%s among the members of %s",
-	"az.gruppo.annulla":    "gpasswd -d %s %s, only if REMOTIX added them",
-	"az.unita":             "enable the unit %s",
-	"az.unita.fa":          "EnableUnitFiles %s on systemd's D-Bus (without starting it)",
-	"az.unita.verifica":    "unit file state of %s = enabled",
-	"az.unita.annulla":     "DisableUnitFiles %s, if it was not enabled before",
+	"az.group":             "add %s to the %s group",
+	"az.group.fa":          "gpasswd -a %s %s (unless already there: then nothing, recorded as PRE-EXISTING)",
+	"az.group.verifica":    "%s among the members of %s",
+	"az.group.annulla":     "gpasswd -d %s %s, only if REMOTIX added them",
+	"az.unit":              "enable the unit %s",
+	"az.unit.fa":           "EnableUnitFiles %s on systemd's D-Bus (without starting it)",
+	"az.unit.verifica":     "unit file state of %s = enabled",
+	"az.unit.annulla":      "DisableUnitFiles %s, if it was not enabled before",
 	"az.servizio":          "enable and start remotix.service",
 	"az.servizio.fa":       "EnableUnitFiles and StartUnit of remotix.service, after the checks with the service stopped (7a)",
 	"az.servizio.verifica": "active, the port answers on TCP and UDP (7b)",
@@ -75,7 +75,7 @@ var testi = map[string]string{
 	"az.disfa":                "undo: %s",
 	"az.disfa.verifica":       "as it was before the installation",
 	"np.nessun_gruppo":        "no card node with a group: nobody to add",
-	"np.gruppi":               "the people of this machine are added to the graphics card groups (%s), and so is everyone who logs in to REMOTIX for the first time: without them a remote desktop cannot use the card",
+	"np.groups":               "the people of this machine are added to the graphics card groups (%s), and so is everyone who logs in to REMOTIX for the first time: without them a remote desktop cannot use the card",
 	"np.firewall":             "the firewall (%s) is on: port %s TCP and UDP must be reachable from the other machines — opening it is up to the administrator",
 	"np.sospensione":          "REMOTIX does not change how this machine suspends or powers off: a machine that suspends when idle disconnects everyone",
 	"manca.carattere":         "a scalable font (labwc does not start without one)",
@@ -87,13 +87,13 @@ var testi = map[string]string{
 	"az.iscrizione.verifica":  "no longer in the group",
 	"az.iscrizione.annulla":   "gpasswd -a (added back)",
 	"az.registri":             "remove the REMOTIX session log (%s) from every user's home — now: %s",
-	"az.registri.fa":          "only sessione.log is removed, and the %s folder if left empty; nothing else in the homes",
+	"az.registri.fa":          "only session.log is removed, and the %s folder if left empty; nothing else in the homes",
 	"az.registri.verifica":    "none of those files is left",
 	"az.registri.annulla":     "put back byte for byte, with permissions and owner (copies in the operation folder)",
-	"az.registri.dichiarata":  "uninstalling removes ~/.local/state/remotix/sessione.log from every home (and the folder if left empty) — %s",
+	"az.registri.dichiarata":  "uninstalling removes ~/.local/state/remotix/session.log from every home (and the folder if left empty) — %s",
 	"az.registri.nessuno":     "no session log in any home",
-	"az.registri.tolti":       "removed: %s",
-	"az.registri.ancora":      "still in the homes: %s",
+	"az.registri.removed":     "removed: %s",
+	"az.registri.still":       "still in the homes: %s",
 	"az.registri.non_rimesso": "not back as it was",
 	"az.registri.rimessi":     "the session logs are back",
 	"ver.pam":                 "the REMOTIX login stack resolves (files, includes, modules)",
@@ -123,7 +123,7 @@ var testi = map[string]string{
 	"cert.fiducia_no":     "the catalogue could NOT be used: the operation stopped at phase 0",
 
 	// command line
-	"cli.uso": `remotix-install — the REMOTIX installation engine (version %s, format %s)
+	"cli.usage": `remotix-install — the REMOTIX installation engine (version %s, format %s)
 
 REMOTIX comes as one file: sudo sh remotix-VERSION.run   (it runs «install»; «check» and «tui» too)
 REMOTIX does not change the system: what is missing is said, and providing it is up to the administrator.
@@ -163,7 +163,7 @@ REMOTIX does not change the system: what is missing is said, and providing it is
 	"fid.pacchetto":          "the catalogue of the installed remotix-install package",
 	"fid.scaricato":          "the catalogue of the engine %s (from the REMOTIX .run file, whose sha256 is published)",
 	"fid.a_mano":             "the catalogue given by hand: %s (the administrator's)",
-	"cli.aperta":             "  ← open: remotix-install install rolls it back",
+	"cli.is_open":            "  ← open: remotix-install install rolls it back",
 	"cli.mancano":            "MISSING — REMOTIX does not install it: providing it is up to the administrator:",
 	"cli.root":               "run as administrator (root): sudo",
 	"cli.aperta_annulla":     "An unfinished operation was found (%s): it is rolled back first, so the system is never left half way.",

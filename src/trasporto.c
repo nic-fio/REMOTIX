@@ -23,7 +23,7 @@
 #include <openssl/rand.h>
 
 #define SCIDLEN 18
-#define MAX_PACCHETTI_PER_GIRO 64
+#define MAX_PACKETS_PER_ROUND 64
 
 /* ⛔ 30 s, imposed by the server (`RCP.md` §2.2): «it is the silence clock:
  *    when it expires, the client is disconnected».  ⚠ It is the TRANSPORT
@@ -56,18 +56,18 @@
  *         would fall at the same instant, and chance would decide who wins.
  *
  * ⇒ WHERE THE USER'S 10 s GO: in `webtransport.c`, inside
- *   `linea_morta_giudica()`, where the quantity is *«how many of OUR packets
+ *   `dead_line_judge()`, where the quantity is *«how many of OUR packets
  *   went out without one coming back»* and time is only the window in which
  *   one looks.  ⭐ There it is UNILATERAL — it disconnects us, it does not
  *   teach the client to drop — ⭐ since 24 Aug 2026 it is ON by default (the
- *   user's decision; it is turned off with `--niente-linea-morta`), and it
+ *   user's decision; it is turned off with `--no-dead-line`), and it
  *   writes in the log the numbers on which it decided.
  *   ⚠ And the OTHER cause of that cure is no longer packet loss: since 23 Aug
  *     2026 it is the OUTPUT STALL — «how long since a frame went out while
  *     having some to send».  The fraction `pkt_lost/pkt_sent` was refuted by
  *     its bench (on a line that reorders it measures the reordering) and stays
  *     only as a witness in the log; the full refutation is in the box above
- *     `WT_LM_STALLO_MS` in `webtransport.c`.
+ *     `WT_LM_STALL_MS` in `webtransport.c`.
  *   Case A5 of the plan (the tab in the background) stays served: the browser
  *   answers our PINGs from the network process even when the page is
  *   throttled, and `[M]` on 11 Aug 2026 eleven minutes in the background were
@@ -75,9 +75,9 @@
  */
 #define IDLE_MS 30000
 
-typedef struct connessione {
-	struct connessione *prossima;
-	struct trasporto *t;
+typedef struct connection {
+	struct connection *upcoming;
+	struct transport *t;
 
 	ngtcp2_conn *conn;
 	ngtcp2_crypto_conn_ref ref;
@@ -87,44 +87,44 @@ typedef struct connessione {
 	wt *w;
 
 	ngtcp2_cid scid;
-	struct sockaddr_storage remoto;
+	struct sockaddr_storage remote;
 	socklen_t remotelen;
-	struct sockaddr_storage locale;
+	struct sockaddr_storage local;
 	socklen_t localelen;
 
-	char provenienza[80];
-	bool morta;
+	char provenance[80];
+	bool dead_run;
 	/* ⛔ The datagrams that arrive and that in phase 1 are discarded: they are
 	 *    COUNTED, or «the audio does not arrive» and «the audio arrives and I
 	 *    throw it away» look the same (§6.3, finding B-10). */
 	uint64_t datagrams_seen, datagram_byte;
-} connessione;
+} connection;
 
 /* The map of connection ids.  ⚠ A connection has more than one (the client
  * asks for up to `active_connection_id_limit`), and each must lead to the same
  * connection: this is the reason this map is not a field of the connection. */
 typedef struct {
 	ngtcp2_cid cid;
-	connessione *c;
-	bool usata;
-} voce_cid;
+	connection *c;
+	bool used;
+} entry_cid;
 
-struct trasporto {
+struct transport {
 	int fd;
-	int famiglia;
+	int family;
 	SSL_CTX *ctx;
-	connessione *prime;
-	size_t quante;
+	connection *prime;
+	size_t how_many;
 
-	voce_cid *cids;
+	entry_cid *cids;
 	size_t ncids, capcids;
 
-	uint8_t segreto[32];
+	uint8_t secret[32];
 
 	/* ⭐ The PAM helper (`DECISIONI.md` §1.10): it is not this module's, it is
 	 *    passed in by `main.c`.  It only serves to hand it to every `wt` that
 	 *    is born. */
-	aiutante *aiuto;
+	helper *help;
 };
 
 /* ------------------------------------------------------------------------ */
@@ -136,20 +136,20 @@ static ngtcp2_tstamp now_ns(void)
 	return (ngtcp2_tstamp)ts.tv_sec * NGTCP2_SECONDS + (ngtcp2_tstamp)ts.tv_nsec;
 }
 
-static void address_text(const struct sockaddr *sa, socklen_t len, char *fuori,
+static void address_text(const struct sockaddr *sa, socklen_t len, char *report,
                             size_t cap)
 {
 	char host[NI_MAXHOST], serv[NI_MAXSERV];
 	if (getnameinfo(sa, len, host, sizeof host, serv, sizeof serv,
 	                NI_NUMERICHOST | NI_NUMERICSERV) != 0) {
-		snprintf(fuori, cap, "?");
+		snprintf(report, cap, "?");
 		return;
 	}
 	/* ⛔⭐ THE BRACKETS GO ON FOR IPv4 TOO, AND IT IS NOT AESTHETICS.
 	 *
-	 *     This string becomes the PROVENANCE of `rcp_apri()`, and from there
+	 *     This string becomes the PROVENANCE of `rcp_open()`, and from there
 	 *     the KEY of the ban of §4.4-bis: `rcp.c` derives it by removing the
-	 *     port, and `rcp_chiave_indirizzo()` — which the unblock command MUST
+	 *     port, and `rcp_key_address()` — which the unblock command MUST
 	 *     use — normalises everything to `[address]`.  ⚠ If `192.168.0.2:5218`
 	 *     were written here, the key written in the ban file would be
 	 *     `192.168.0.2` and the one looked up by the unblock `[192.168.0.2]`:
@@ -163,7 +163,7 @@ static void address_text(const struct sockaddr *sa, socklen_t len, char *fuori,
 	 *
 	 * ⚠ The precisions are not ornament: `NI_MAXHOST` is 1025, and without
 	 *   them the compiler is right to say the text may not fit. */
-	snprintf(fuori, cap, "[%.60s]:%.7s", host, serv);
+	snprintf(report, cap, "[%.60s]:%.7s", host, serv);
 }
 
 /* ------------------------------------------------------------------------ */
@@ -174,10 +174,10 @@ static bool cid_equal(const ngtcp2_cid *a, const ngtcp2_cid *b)
 	return a->datalen == b->datalen && memcmp(a->data, b->data, a->datalen) == 0;
 }
 
-static connessione *cid_find(trasporto *t, const uint8_t *dcid, size_t len)
+static connection *cid_find(transport *t, const uint8_t *dcid, size_t len)
 {
 	for (size_t i = 0; i < t->ncids; i++) {
-		if (!t->cids[i].usata)
+		if (!t->cids[i].used)
 			continue;
 		if (t->cids[i].cid.datalen == len &&
 		    memcmp(t->cids[i].cid.data, dcid, len) == 0)
@@ -186,18 +186,18 @@ static connessione *cid_find(trasporto *t, const uint8_t *dcid, size_t len)
 	return NULL;
 }
 
-static void cid_bind(trasporto *t, const ngtcp2_cid *cid, connessione *c)
+static void cid_bind(transport *t, const ngtcp2_cid *cid, connection *c)
 {
 	for (size_t i = 0; i < t->ncids; i++)
-		if (!t->cids[i].usata) {
+		if (!t->cids[i].used) {
 			t->cids[i].cid = *cid;
 			t->cids[i].c = c;
-			t->cids[i].usata = true;
+			t->cids[i].used = true;
 			return;
 		}
 	if (t->ncids == t->capcids) {
 		size_t nc = t->capcids ? t->capcids * 2 : 32;
-		voce_cid *n = realloc(t->cids, nc * sizeof *n);
+		entry_cid *n = realloc(t->cids, nc * sizeof *n);
 		if (!n) {
 			registro_dice(REG_QUIC, "⛔ out of memory in the CID map");
 			return;
@@ -207,22 +207,22 @@ static void cid_bind(trasporto *t, const ngtcp2_cid *cid, connessione *c)
 	}
 	t->cids[t->ncids].cid = *cid;
 	t->cids[t->ncids].c = c;
-	t->cids[t->ncids].usata = true;
+	t->cids[t->ncids].used = true;
 	t->ncids++;
 }
 
-static void cid_unbind(trasporto *t, const ngtcp2_cid *cid)
+static void cid_unbind(transport *t, const ngtcp2_cid *cid)
 {
 	for (size_t i = 0; i < t->ncids; i++)
-		if (t->cids[i].usata && cid_equal(&t->cids[i].cid, cid))
-			t->cids[i].usata = false;
+		if (t->cids[i].used && cid_equal(&t->cids[i].cid, cid))
+			t->cids[i].used = false;
 }
 
-static void cid_unbind_all(trasporto *t, connessione *c)
+static void cid_unbind_all(transport *t, connection *c)
 {
 	for (size_t i = 0; i < t->ncids; i++)
-		if (t->cids[i].usata && t->cids[i].c == c)
-			t->cids[i].usata = false;
+		if (t->cids[i].used && t->cids[i].c == c)
+			t->cids[i].used = false;
 }
 
 /* ------------------------------------------------------------------------ */
@@ -230,7 +230,7 @@ static void cid_unbind_all(trasporto *t, connessione *c)
 
 static ngtcp2_conn *give_me_conn(ngtcp2_crypto_conn_ref *ref)
 {
-	connessione *c = ref->user_data;
+	connection *c = ref->user_data;
 	return c->conn;
 }
 
@@ -247,13 +247,13 @@ static int cb_get_new_cid(ngtcp2_conn *conn, ngtcp2_cid *cid,
                           ngtcp2_stateless_reset_token *token, size_t cidlen,
                           void *user_data)
 {
-	connessione *c = user_data;
+	connection *c = user_data;
 	(void)conn;
 	if (RAND_bytes(cid->data, (int)cidlen) != 1)
 		return NGTCP2_ERR_CALLBACK_FAILURE;
 	cid->datalen = cidlen;
 	if (ngtcp2_crypto_generate_stateless_reset_token(
-		    token->data, c->t->segreto, sizeof c->t->segreto, cid) != 0)
+		    token->data, c->t->secret, sizeof c->t->secret, cid) != 0)
 		return NGTCP2_ERR_CALLBACK_FAILURE;
 	cid_bind(c->t, cid, c);
 	return 0;
@@ -262,7 +262,7 @@ static int cb_get_new_cid(ngtcp2_conn *conn, ngtcp2_cid *cid,
 static int cb_remove_cid(ngtcp2_conn *conn, const ngtcp2_cid *cid,
                          void *user_data)
 {
-	connessione *c = user_data;
+	connection *c = user_data;
 	(void)conn;
 	cid_unbind(c->t, cid);
 	return 0;
@@ -273,7 +273,7 @@ static int cb_recv_stream_data(ngtcp2_conn *conn, uint32_t flags,
                                const uint8_t *data, size_t datalen,
                                void *user_data, void *sud)
 {
-	connessione *c = user_data;
+	connection *c = user_data;
 	(void)conn;
 	(void)offset;
 	(void)sud;
@@ -283,7 +283,7 @@ static int cb_recv_stream_data(ngtcp2_conn *conn, uint32_t flags,
 static int cb_acked(ngtcp2_conn *conn, int64_t stream_id, uint64_t offset,
                     uint64_t datalen, void *user_data, void *sud)
 {
-	connessione *c = user_data;
+	connection *c = user_data;
 	(void)conn;
 	(void)offset;
 	(void)sud;
@@ -294,10 +294,10 @@ static int cb_stream_close(ngtcp2_conn *conn, uint32_t flags, int64_t stream_id,
                            uint64_t rx_code, uint64_t tx_code, void *user_data,
                            void *sud)
 {
-	connessione *c = user_data;
+	connection *c = user_data;
 	bool with_code = (flags & NGTCP2_STREAM_CLOSE2_FLAG_RX_APP_ERROR_CODE_SET) ||
 	                  (flags & NGTCP2_STREAM_CLOSE2_FLAG_TX_APP_ERROR_CODE_SET);
-	uint64_t codice =
+	uint64_t code =
 		(flags & NGTCP2_STREAM_CLOSE2_FLAG_RX_APP_ERROR_CODE_SET) ? rx_code
 	                                                                  : tx_code;
 	(void)sud;
@@ -320,27 +320,27 @@ static int cb_stream_close(ngtcp2_conn *conn, uint32_t flags, int64_t stream_id,
 		else
 			ngtcp2_conn_extend_max_streams_uni(conn, 1);
 	}
-	return wt_stream_chiuso(c->w, stream_id, codice, with_code);
+	return wt_stream_closed(c->w, stream_id, code, with_code);
 }
 
 static int cb_stream_reset(ngtcp2_conn *conn, int64_t stream_id,
-                           uint64_t final_size, uint64_t codice, void *user_data,
+                           uint64_t final_size, uint64_t code, void *user_data,
                            void *sud)
 {
-	connessione *c = user_data;
+	connection *c = user_data;
 	(void)conn;
 	(void)final_size;
-	(void)codice;
+	(void)code;
 	(void)sud;
 	return wt_stream_reset(c->w, stream_id);
 }
 
-static int cb_stop_sending(ngtcp2_conn *conn, int64_t stream_id, uint64_t codice,
+static int cb_stop_sending(ngtcp2_conn *conn, int64_t stream_id, uint64_t code,
                            void *user_data, void *sud)
 {
-	connessione *c = user_data;
+	connection *c = user_data;
 	(void)conn;
-	(void)codice;
+	(void)code;
 	(void)sud;
 	return wt_stream_stop_sending(c->w, stream_id);
 }
@@ -348,7 +348,7 @@ static int cb_stop_sending(ngtcp2_conn *conn, int64_t stream_id, uint64_t codice
 static int cb_extend_bidi(ngtcp2_conn *conn, uint64_t max_streams,
                           void *user_data)
 {
-	connessione *c = user_data;
+	connection *c = user_data;
 	(void)conn;
 	return wt_extend_max_streams_bidi(c->w, max_streams);
 }
@@ -356,7 +356,7 @@ static int cb_extend_bidi(ngtcp2_conn *conn, uint64_t max_streams,
 static int cb_extend_stream_data(ngtcp2_conn *conn, int64_t stream_id,
                                  uint64_t max_data, void *user_data, void *sud)
 {
-	connessione *c = user_data;
+	connection *c = user_data;
 	(void)conn;
 	(void)max_data;
 	(void)sud;
@@ -366,19 +366,19 @@ static int cb_extend_stream_data(ngtcp2_conn *conn, int64_t stream_id,
 static int cb_recv_tx_key(ngtcp2_conn *conn, ngtcp2_encryption_level level,
                           void *user_data)
 {
-	connessione *c = user_data;
+	connection *c = user_data;
 	(void)conn;
 	if (level != NGTCP2_ENCRYPTION_LEVEL_1RTT)
 		return 0;
-	return wt_app_pronta(c->w);
+	return wt_app_ready(c->w);
 }
 
 static int cb_handshake_completed(ngtcp2_conn *conn, void *user_data)
 {
-	connessione *c = user_data;
+	connection *c = user_data;
 	(void)conn;
-	registro_dettaglio(REG_QUIC, "TLS handshake completed with %s",
-	                   c->provenienza);
+	log_detail(REG_QUIC, "TLS handshake completed with %s",
+	                   c->provenance);
 	return 0;
 }
 
@@ -392,7 +392,7 @@ static int cb_handshake_completed(ngtcp2_conn *conn, void *user_data)
  *     `ngtcp2_callbacks` `recv_datagram` WAS NOT THERE: the packet ended up in
  *     an unregistered callback and vanished, and nothing appeared in the log.
  *
- * ⛔ §6.3 says «a datagram shorter than 12 bytes, or with a `tipo` other than
+ * ⛔ §6.3 says «a datagram shorter than 12 bytes, or with a `kind` other than
  *    `0x0401`, is discarded **writing it in the log**», and §3 closes the list
  *    of the five exceptions with «and every tolerance must be written in the
  *    log: a silent tolerance is indistinguishable from a defect».  The second
@@ -408,9 +408,9 @@ static int cb_handshake_completed(ngtcp2_conn *conn, void *user_data)
  *   thousand datagrams per second would fill the log, which is another way of
  *   losing the information.  The total count is always there. */
 static int cb_recv_datagram(ngtcp2_conn *conn, uint32_t flags,
-                            const uint8_t *dati, size_t len, void *user_data)
+                            const uint8_t *data, size_t len, void *user_data)
 {
-	connessione *c = user_data;
+	connection *c = user_data;
 	(void)conn;
 	(void)flags;
 	c->datagrams_seen++;
@@ -421,7 +421,7 @@ static int cb_recv_datagram(ngtcp2_conn *conn, uint32_t flags,
 		              "bytes from %s DISCARDED — in phase 1 there is no audio and "
 		              "no type of §6.3 can be served.  In all: %llu "
 		              "datagrams, %llu bytes",
-		              len, c->provenienza,
+		              len, c->provenance,
 		              (unsigned long long)c->datagrams_seen,
 		              (unsigned long long)c->datagram_byte);
 	return 0;
@@ -430,12 +430,12 @@ static int cb_recv_datagram(ngtcp2_conn *conn, uint32_t flags,
 /* ------------------------------------------------------------------------ */
 /* Sending.                                                                  */
 
-static void manda(trasporto *t, const struct sockaddr *sa, socklen_t salen,
-                  const uint8_t *dati, size_t len)
+static void send_msg(transport *t, const struct sockaddr *sa, socklen_t salen,
+                  const uint8_t *data, size_t len)
 {
 	ssize_t n;
 	do {
-		n = sendto(t->fd, dati, len, 0, sa, salen);
+		n = sendto(t->fd, data, len, 0, sa, salen);
 	} while (n < 0 && errno == EINTR);
 	if (n < 0) {
 		/* ⚠ DECLARED FALLBACK (`CODER.md` §4.2): if the socket is full the
@@ -450,22 +450,22 @@ static void manda(trasporto *t, const struct sockaddr *sa, socklen_t salen,
 
 /* ⛔ The callback ngtcp2 invokes for every packet, and the `user_data` it
  *    passes is the CONNECTION's — not the WebTransport layer's.
- *    ⚠ This two-line detour exists on purpose: passing `wt_scrivi` directly to
+ *    ⚠ This two-line detour exists on purpose: passing `wt_write` directly to
  *    ngtcp2 would compile (they are two `void *`) and would make the
- *    WebTransport layer read the fields of `connessione`.  `[M]` 10 Aug 2026:
+ *    WebTransport layer read the fields of `connection`.  `[M]` 10 Aug 2026:
  *    the server opened HTTP/3 and died at the first write with
  *    `ERR_CALLBACK_FAILURE`, without any of its log lines naming the cause. */
 static ngtcp2_ssize put_out_pkt(ngtcp2_conn *conn, ngtcp2_path *path,
                                ngtcp2_pkt_info *pi, uint8_t *dest, size_t destlen,
                                ngtcp2_tstamp ts, void *user_data)
 {
-	connessione *c = user_data;
+	connection *c = user_data;
 	(void)conn;
-	return wt_scrivi(c->w, path, pi, dest, destlen, ts);
+	return wt_write(c->w, path, pi, dest, destlen, ts);
 }
 
 /* Writes everything this connection has to send. */
-static void scrivi_connessione(connessione *c)
+static void write_connection(connection *c)
 {
 	uint8_t buf[64 * 1024];
 	ngtcp2_path_storage ps;
@@ -474,7 +474,7 @@ static void scrivi_connessione(connessione *c)
 	ngtcp2_tstamp ts = now_ns();
 	ngtcp2_ssize n;
 
-	if (c->morta)
+	if (c->dead_run)
 		return;
 	if (ngtcp2_conn_in_closing_period2(c->conn) ||
 	    ngtcp2_conn_in_draining_period2(c->conn))
@@ -487,8 +487,8 @@ static void scrivi_connessione(connessione *c)
 	                                     &gso, put_out_pkt, 0, ts);
 	if (n < 0) {
 		registro_dice(REG_QUIC, "⛔ write failed for %s: %s",
-		              c->provenienza, ngtcp2_strerror((int)n));
-		c->morta = true;
+		              c->provenance, ngtcp2_strerror((int)n));
+		c->dead_run = true;
 		return;
 	}
 	ngtcp2_conn_update_pkt_tx_time(c->conn, ts);
@@ -503,24 +503,24 @@ static void scrivi_connessione(connessione *c)
 		gso = (size_t)n;
 	{
 		const uint8_t *p = buf;
-		size_t resto = (size_t)n;
-		while (resto > 0) {
-			size_t q = resto < gso ? resto : gso;
-			manda(c->t, (const struct sockaddr *)&c->remoto, c->remotelen, p,
+		size_t rest = (size_t)n;
+		while (rest > 0) {
+			size_t q = rest < gso ? rest : gso;
+			send_msg(c->t, (const struct sockaddr *)&c->remote, c->remotelen, p,
 			      q);
 			p += q;
-			resto -= q;
+			rest -= q;
 		}
 	}
 }
 
 /* ------------------------------------------------------------------------ */
 
-static void connection_free(trasporto *t, connessione *c)
+static void connection_free(transport *t, connection *c)
 {
 	cid_unbind_all(t, c);
 	if (c->w)
-		wt_libera(c->w);
+		wt_free(c->w);
 	if (c->conn)
 		ngtcp2_conn_del(c->conn);
 	if (c->ossl)
@@ -530,20 +530,20 @@ static void connection_free(trasporto *t, connessione *c)
 	free(c);
 }
 
-static void reap_dead(trasporto *t)
+static void reap_dead(transport *t)
 {
-	connessione **p = &t->prime;
+	connection **p = &t->prime;
 	while (*p) {
-		connessione *c = *p;
-		if (c->morta) {
-			*p = c->prossima;
+		connection *c = *p;
+		if (c->dead_run) {
+			*p = c->upcoming;
 			registro_dice(REG_QUIC, "connection with %s closed (%zu left)",
-			              c->provenienza, t->quante - 1);
+			              c->provenance, t->how_many - 1);
 			connection_free(t, c);
-			t->quante--;
+			t->how_many--;
 			continue;
 		}
-		p = &c->prossima;
+		p = &c->upcoming;
 	}
 }
 
@@ -566,31 +566,31 @@ static void reap_dead(trasporto *t)
  *   the MEASURE OF REORDERING, and on reordering ngtcp2 gives nothing else.
  *
  * ⚠ They decide nothing: they count.  The `dgram_id` is the one
- *   `dgram_scrivi_uno()` increments in `webtransport.c`.
+ *   `dgram_write_one()` increments in `webtransport.c`.
  */
 static int cb_lost_datagram(ngtcp2_conn *conn, uint64_t dgram_id,
                             void *user_data)
 {
-	connessione *c = user_data;
+	connection *c = user_data;
 	(void)conn;
-	wt_dgram_perso(c->w, dgram_id);
+	wt_dgram_lost(c->w, dgram_id);
 	return 0;
 }
 
 static int cb_ack_datagram(ngtcp2_conn *conn, uint64_t dgram_id,
                            void *user_data)
 {
-	connessione *c = user_data;
+	connection *c = user_data;
 	(void)conn;
-	wt_dgram_riscontrato(c->w, dgram_id);
+	wt_dgram_acked(c->w, dgram_id);
 	return 0;
 }
 
-static connessione *accetta(trasporto *t, const ngtcp2_pkt_hd *hd,
-                            const struct sockaddr *locale, socklen_t localelen,
-                            const struct sockaddr *remoto, socklen_t remotelen)
+static connection *accept_conn(transport *t, const ngtcp2_pkt_hd *hd,
+                            const struct sockaddr *local, socklen_t localelen,
+                            const struct sockaddr *remote, socklen_t remotelen)
 {
-	connessione *c;
+	connection *c;
 	ngtcp2_settings settings;
 	ngtcp2_transport_params params;
 	ngtcp2_path path;
@@ -637,11 +637,11 @@ static connessione *accetta(trasporto *t, const ngtcp2_pkt_hd *hd,
 	c->ref.user_data = c;
 	ngtcp2_ccerr_default(&c->last_error);
 
-	memcpy(&c->remoto, remoto, remotelen);
+	memcpy(&c->remote, remote, remotelen);
 	c->remotelen = remotelen;
-	memcpy(&c->locale, locale, localelen);
+	memcpy(&c->local, local, localelen);
 	c->localelen = localelen;
-	address_text(remoto, remotelen, c->provenienza, sizeof c->provenienza);
+	address_text(remote, remotelen, c->provenance, sizeof c->provenance);
 
 	c->scid.datalen = SCIDLEN;
 	if (RAND_bytes(c->scid.data, SCIDLEN) != 1)
@@ -714,14 +714,14 @@ static connessione *accetta(trasporto *t, const ngtcp2_pkt_hd *hd,
 	 *    oversight. */
 
 	if (ngtcp2_crypto_generate_stateless_reset_token(
-		    params.stateless_reset_token, t->segreto, sizeof t->segreto,
+		    params.stateless_reset_token, t->secret, sizeof t->secret,
 		    &c->scid) != 0)
 		goto male;
 
 	memset(&path, 0, sizeof path);
-	path.local.addr = (ngtcp2_sockaddr *)&c->locale;
+	path.local.addr = (ngtcp2_sockaddr *)&c->local;
 	path.local.addrlen = c->localelen;
-	path.remote.addr = (ngtcp2_sockaddr *)&c->remoto;
+	path.remote.addr = (ngtcp2_sockaddr *)&c->remote;
 	path.remote.addrlen = c->remotelen;
 
 	rv = ngtcp2_conn_server_new(&c->conn, &hd->scid, &c->scid, &path,
@@ -754,17 +754,17 @@ static connessione *accetta(trasporto *t, const ngtcp2_pkt_hd *hd,
 	 *    oversight. */
 	ngtcp2_conn_set_tls_native_handle(c->conn, c->ossl);
 
-	c->w = wt_new(c->conn, &c->last_error, c->provenienza, t->aiuto);
+	c->w = wt_new(c->conn, &c->last_error, c->provenance, t->help);
 	if (!c->w)
 		goto male;
 
-	c->prossima = t->prime;
+	c->upcoming = t->prime;
 	t->prime = c;
-	t->quante++;
+	t->how_many++;
 	cid_bind(t, &c->scid, c);
 
 	registro_dice(REG_QUIC, "new connection from %s (%zu in all)",
-	              c->provenienza, t->quante);
+	              c->provenance, t->how_many);
 	return c;
 
 male:
@@ -774,11 +774,11 @@ male:
 
 /* ------------------------------------------------------------------------ */
 
-static void nego_version(trasporto *t, const ngtcp2_version_cid *vc,
-                          const struct sockaddr *remoto, socklen_t remotelen)
+static void nego_version(transport *t, const ngtcp2_version_cid *vc,
+                          const struct sockaddr *remote, socklen_t remotelen)
 {
 	uint8_t buf[NGTCP2_MAX_UDP_PAYLOAD_SIZE];
-	uint32_t versioni[1] = {NGTCP2_PROTO_VER_V1};
+	uint32_t versions[1] = {NGTCP2_PROTO_VER_V1};
 	uint8_t random_byte;
 	ngtcp2_ssize n;
 
@@ -786,31 +786,31 @@ static void nego_version(trasporto *t, const ngtcp2_version_cid *vc,
 		return;
 	n = ngtcp2_pkt_write_version_negotiation(
 		buf, sizeof buf, random_byte, vc->scid, vc->scidlen, vc->dcid,
-		vc->dcidlen, versioni, 1);
+		vc->dcidlen, versions, 1);
 	if (n < 0)
 		return;
 	registro_dice(REG_QUIC, "QUIC version not ours: negotiation towards %s",
 	              "the client");
-	manda(t, remoto, remotelen, buf, (size_t)n);
+	send_msg(t, remote, remotelen, buf, (size_t)n);
 }
 
-static void read_packet(trasporto *t, const struct sockaddr *locale,
-                            socklen_t localelen, const struct sockaddr *remoto,
+static void read_packet(transport *t, const struct sockaddr *local,
+                            socklen_t localelen, const struct sockaddr *remote,
                             socklen_t remotelen, const ngtcp2_pkt_info *pi,
-                            const uint8_t *dati, size_t len)
+                            const uint8_t *data, size_t len)
 {
 	ngtcp2_version_cid vc;
-	connessione *c;
+	connection *c;
 	ngtcp2_path path;
 	int rv;
 
-	rv = ngtcp2_pkt_decode_version_cid(&vc, dati, len, SCIDLEN);
+	rv = ngtcp2_pkt_decode_version_cid(&vc, data, len, SCIDLEN);
 	if (rv == NGTCP2_ERR_VERSION_NEGOTIATION) {
-		nego_version(t, &vc, remoto, remotelen);
+		nego_version(t, &vc, remote, remotelen);
 		return;
 	}
 	if (rv != 0) {
-		registro_dettaglio(REG_QUIC, "unreadable header: %s",
+		log_detail(REG_QUIC, "unreadable header: %s",
 		                   ngtcp2_strerror(rv));
 		return;
 	}
@@ -818,14 +818,14 @@ static void read_packet(trasporto *t, const struct sockaddr *locale,
 	c = cid_find(t, vc.dcid, vc.dcidlen);
 	if (!c) {
 		ngtcp2_pkt_hd hd;
-		if (ngtcp2_accept(&hd, dati, len) != 0) {
+		if (ngtcp2_accept(&hd, data, len) != 0) {
 			/* ⚠ No connection and it is not an Initial.  ⛔ DECLARED
 			 *   FALLBACK: here the product should send a Stateless Reset,
 			 *   which is the way to tell a client with old state «that
 			 *   connection no longer exists» instead of making it wait the
 			 *   30 s of inactivity.  It is not there: it is ignored, and the
 			 *   line below is what tells «ignored» from «never arrived». */
-			registro_dettaglio(REG_QUIC,
+			log_detail(REG_QUIC,
 			                   "packet of %zu bytes for a connection "
 			                   "that does not exist: ignored",
 			                   len);
@@ -835,7 +835,7 @@ static void read_packet(trasporto *t, const struct sockaddr *locale,
 		 *   own network or VPN (`SPECIFICHE.md` §4.1).  ⛔ It must be put
 		 *   back before exposing it, and it is declared here so that it does
 		 *   not look like an oversight. */
-		c = accetta(t, &hd, locale, localelen, remoto, remotelen);
+		c = accept_conn(t, &hd, local, localelen, remote, remotelen);
 		if (!c)
 			return;
 	}
@@ -844,14 +844,14 @@ static void read_packet(trasporto *t, const struct sockaddr *locale,
 		return;
 
 	memset(&path, 0, sizeof path);
-	path.local.addr = (ngtcp2_sockaddr *)&c->locale;
+	path.local.addr = (ngtcp2_sockaddr *)&c->local;
 	path.local.addrlen = c->localelen;
-	path.remote.addr = (ngtcp2_sockaddr *)&c->remoto;
+	path.remote.addr = (ngtcp2_sockaddr *)&c->remote;
 	path.remote.addrlen = c->remotelen;
 
 	{
-		ngtcp2_tstamp ora = now_ns();
-		rv = ngtcp2_conn_read_pkt(c->conn, &path, pi, dati, len, ora);
+		ngtcp2_tstamp now = now_ns();
+		rv = ngtcp2_conn_read_pkt(c->conn, &path, pi, data, len, now);
 		/* ⛔⭐ §5.3 — AND HERE, AND ONLY IF `rv == 0`: the packet has been
 		 *     DECRYPTED AND AUTHENTICATED.  ⚠ A datagram arriving is not
 		 *     enough — anyone can send one with someone else's address, and
@@ -863,15 +863,15 @@ static void read_packet(trasporto *t, const struct sockaddr *locale,
 		 *    enough to declare a live client gone.  ⛔ The price, measured: a
 		 *    second device came in and took the first one's desktop. */
 		if (rv == 0 && c->w)
-			wt_sign_of_life(c->w, ora);
+			wt_sign_of_life(c->w, now);
 	}
 	if (rv != 0) {
 		if (rv == NGTCP2_ERR_DRAINING || rv == NGTCP2_ERR_IDLE_CLOSE ||
 		    rv == NGTCP2_ERR_CLOSING) {
-			c->morta = true;
+			c->dead_run = true;
 			return;
 		}
-		registro_dice(REG_QUIC, "read failed from %s: %s", c->provenienza,
+		registro_dice(REG_QUIC, "read failed from %s: %s", c->provenance,
 		              ngtcp2_strerror(rv));
 		/* ⚠ DECLARED FALLBACK: here the product should enter the closing
 		 *   period and retransmit the CONNECTION_CLOSE for three RTTs.  It
@@ -891,17 +891,17 @@ static void read_packet(trasporto *t, const struct sockaddr *locale,
 				c->conn, &ps.path, &opi, buf, sizeof buf, &c->last_error,
 				now_ns());
 			if (n > 0)
-				manda(t, (const struct sockaddr *)&c->remoto, c->remotelen,
+				send_msg(t, (const struct sockaddr *)&c->remote, c->remotelen,
 				      buf, (size_t)n);
 		}
-		c->morta = true;
+		c->dead_run = true;
 		return;
 	}
 }
 
 /* ------------------------------------------------------------------------ */
 
-void trasporto_leggi(trasporto *t)
+void transport_read(transport *t)
 {
 	uint8_t buf[64 * 1024];
 	uint8_t ctrl[256];
@@ -909,10 +909,10 @@ void trasporto_leggi(trasporto *t)
 	struct iovec iov;
 	struct msghdr msg;
 	ngtcp2_pkt_info pi;
-	int giri = 0;
+	int rounds = 0;
 
-	for (; giri < MAX_PACCHETTI_PER_GIRO; giri++) {
-		struct sockaddr_storage locale;
+	for (; rounds < MAX_PACKETS_PER_ROUND; rounds++) {
+		struct sockaddr_storage local;
 		socklen_t localelen = 0;
 		ssize_t n;
 
@@ -942,13 +942,13 @@ void trasporto_leggi(trasporto *t)
 		 * a server bound to `0.0.0.0` would give ngtcp2 a path with a wrong
 		 * end, and path validation would fail as soon as the client changes
 		 * network. */
-		memset(&locale, 0, sizeof locale);
+		memset(&local, 0, sizeof local);
 		for (struct cmsghdr *cm = CMSG_FIRSTHDR(&msg); cm;
 		     cm = CMSG_NXTHDR(&msg, cm)) {
 			if (cm->cmsg_level == IPPROTO_IP &&
 			    cm->cmsg_type == IP_PKTINFO) {
 				struct in_pktinfo pk;
-				struct sockaddr_in *s4 = (struct sockaddr_in *)&locale;
+				struct sockaddr_in *s4 = (struct sockaddr_in *)&local;
 				memcpy(&pk, CMSG_DATA(cm), sizeof pk);
 				s4->sin_family = AF_INET;
 				s4->sin_addr = pk.ipi_addr;
@@ -956,7 +956,7 @@ void trasporto_leggi(trasporto *t)
 			} else if (cm->cmsg_level == IPPROTO_IPV6 &&
 			           cm->cmsg_type == IPV6_PKTINFO) {
 				struct in6_pktinfo pk;
-				struct sockaddr_in6 *s6 = (struct sockaddr_in6 *)&locale;
+				struct sockaddr_in6 *s6 = (struct sockaddr_in6 *)&local;
 				memcpy(&pk, CMSG_DATA(cm), sizeof pk);
 				s6->sin6_family = AF_INET6;
 				s6->sin6_addr = pk.ipi6_addr;
@@ -968,10 +968,10 @@ void trasporto_leggi(trasporto *t)
 			 *    §1.9): if the kernel did not put the ancillary message,
 			 *    it is SAID instead of pretending the local address is
 			 *    zero. */
-			socklen_t l = sizeof locale;
-			if (getsockname(t->fd, (struct sockaddr *)&locale, &l) == 0) {
+			socklen_t l = sizeof local;
+			if (getsockname(t->fd, (struct sockaddr *)&local, &l) == 0) {
 				localelen = l;
-				registro_dettaglio(REG_QUIC,
+				log_detail(REG_QUIC,
 				                   "no IP_PKTINFO: using the socket's "
 				                   "address");
 			} else {
@@ -984,20 +984,20 @@ void trasporto_leggi(trasporto *t)
 		}
 		/* The port does not travel in the `pktinfo`: it is the socket's. */
 		{
-			struct sockaddr_storage mia;
-			socklen_t l = sizeof mia;
-			if (getsockname(t->fd, (struct sockaddr *)&mia, &l) == 0) {
-				if (locale.ss_family == AF_INET)
-					((struct sockaddr_in *)&locale)->sin_port =
-						((struct sockaddr_in *)&mia)->sin_port;
-				else if (locale.ss_family == AF_INET6)
-					((struct sockaddr_in6 *)&locale)->sin6_port =
-						((struct sockaddr_in6 *)&mia)->sin6_port;
+			struct sockaddr_storage my;
+			socklen_t l = sizeof my;
+			if (getsockname(t->fd, (struct sockaddr *)&my, &l) == 0) {
+				if (local.ss_family == AF_INET)
+					((struct sockaddr_in *)&local)->sin_port =
+						((struct sockaddr_in *)&my)->sin_port;
+				else if (local.ss_family == AF_INET6)
+					((struct sockaddr_in6 *)&local)->sin6_port =
+						((struct sockaddr_in6 *)&my)->sin6_port;
 			}
 		}
 
 		memset(&pi, 0, sizeof pi);
-		read_packet(t, (const struct sockaddr *)&locale, localelen,
+		read_packet(t, (const struct sockaddr *)&local, localelen,
 		                (const struct sockaddr *)&da, msg.msg_namelen, &pi,
 		                buf, (size_t)n);
 	}
@@ -1005,35 +1005,35 @@ void trasporto_leggi(trasporto *t)
 	transport_write(t);
 }
 
-void transport_write(trasporto *t)
+void transport_write(transport *t)
 {
-	for (connessione *c = t->prime; c; c = c->prossima)
-		scrivi_connessione(c);
+	for (connection *c = t->prime; c; c = c->upcoming)
+		write_connection(c);
 	reap_dead(t);
 }
 
-int trasporto_attesa_ms(const trasporto *t)
+int transport_wait_ms(const transport *t)
 {
-	ngtcp2_tstamp prima = UINT64_MAX;
-	ngtcp2_tstamp ora = now_ns();
+	ngtcp2_tstamp before = UINT64_MAX;
+	ngtcp2_tstamp now = now_ns();
 
-	for (connessione *c = t->prime; c; c = c->prossima) {
+	for (connection *c = t->prime; c; c = c->upcoming) {
 		ngtcp2_tstamp e;
-		if (c->morta)
+		if (c->dead_run)
 			return 0;
 		e = ngtcp2_conn_get_expiry2(c->conn);
-		if (e < prima)
-			prima = e;
-		e = wt_battito_ns(c->w);
-		if (e < prima)
-			prima = e;
+		if (e < before)
+			before = e;
+		e = wt_heartbeat_ns(c->w);
+		if (e < before)
+			before = e;
 	}
-	if (prima == UINT64_MAX)
+	if (before == UINT64_MAX)
 		return -1;
-	if (prima <= ora)
+	if (before <= now)
 		return 0;
 	{
-		uint64_t d = (prima - ora) / NGTCP2_MILLISECONDS;
+		uint64_t d = (before - now) / NGTCP2_MILLISECONDS;
 		if (d > 1000)
 			d = 1000;
 		return (int)d;
@@ -1052,19 +1052,19 @@ int trasporto_attesa_ms(const trasporto *t)
  * ⭐ And if nobody takes it, it is WRITTEN: «the connection died while PAM was
  *    answering» and «the verdict ended up nowhere because of a defect of ours»
  *    look the same, and without this line they would be indistinguishable. */
-void trasporto_verdetto(trasporto *t, uint64_t pratica, bool ammesso,
-                        bool ripresa)
+void transport_verdict(transport *t, uint64_t ticket, bool admitted,
+                        bool resumed)
 {
-	for (connessione *c = t->prime; c; c = c->prossima) {
-		if (c->morta || !c->w)
+	for (connection *c = t->prime; c; c = c->upcoming) {
+		if (c->dead_run || !c->w)
 			continue;
-		if (wt_verdict(c->w, pratica, ammesso, ripresa)) {
+		if (wt_verdict(c->w, ticket, admitted, resumed)) {
 			/* ⛔ And it is written again AT ONCE: the verdict may have made
-			 *    the `AMMESSO`/`RESPINTO` ripe, and waiting for the next beat
+			 *    the `ADMITTED`/`REJECTED` ripe, and waiting for the next beat
 			 *    would add up to 100 ms for whoever authenticates — that is,
 			 *    it would worsen the number this cure must not touch. */
-			if (wt_battito_ns(c->w) != UINT64_MAX)
-				wt_batti(c->w, now_ns());
+			if (wt_heartbeat_ns(c->w) != UINT64_MAX)
+				wt_beat(c->w, now_ns());
 			transport_write(t);
 			return;
 		}
@@ -1072,22 +1072,22 @@ void trasporto_verdetto(trasporto *t, uint64_t pratica, bool ammesso,
 	registro_dice(REG_RCP,
 	              "⚠ the verdict of request %llu (%s) was taken by "
 	              "nobody: the connection waiting for it is gone",
-	              (unsigned long long)pratica, ammesso ? "admitted" : "rejected");
+	              (unsigned long long)ticket, admitted ? "admitted" : "rejected");
 }
 
-void trasporto_scaduti(trasporto *t)
+void transport_expired(transport *t)
 {
-	ngtcp2_tstamp ora = now_ns();
+	ngtcp2_tstamp now = now_ns();
 
-	for (connessione *c = t->prime; c; c = c->prossima) {
-		if (c->morta)
+	for (connection *c = t->prime; c; c = c->upcoming) {
+		if (c->dead_run)
 			continue;
 		/* ⭐ OUR clock, before QUIC's: it is the one that makes the ceilings
 		 *    of `RCP.md` §4.6 expire and the closing capsule ripen.  In the
 		 *    graft the keep-alive did it, that is bytes on the wire; here
 		 *    nothing goes out. */
-		if (wt_battito_ns(c->w) <= ora)
-			wt_batti(c->w, ora);
+		if (wt_heartbeat_ns(c->w) <= now)
+			wt_beat(c->w, now);
 
 		/* ⛔⭐⭐ PHASE 9 — THE DEAD LINE, and it is dropped HERE because the
 		 *      QUIC connection belongs to this file: `webtransport.c` has the
@@ -1115,32 +1115,32 @@ void trasporto_scaduti(trasporto *t)
 			memset(&opi, 0, sizeof opi);
 			n = ngtcp2_conn_write_connection_close(
 				c->conn, &ps.path, &opi, buf, sizeof buf, &c->last_error,
-				ora);
+				now);
 			if (n > 0)
-				manda(t, (const struct sockaddr *)&c->remoto, c->remotelen, buf,
+				send_msg(t, (const struct sockaddr *)&c->remote, c->remotelen, buf,
 				      (size_t)n);
 			registro_dice(REG_QUIC,
 			              "⛔ %s: DEAD LINE — the QUIC connection is closing "
 			              "(one single CONNECTION_CLOSE, %s).  The why, with the "
-			              "numbers, is in the `linea-morta` line above",
-			              c->provenienza,
+			              "numbers, is in the `dead-line` line above",
+			              c->provenance,
 			              n > 0 ? "sent" : "⚠ not even sent");
-			c->morta = true;
+			c->dead_run = true;
 			continue;
 		}
 
-		if (ngtcp2_conn_get_expiry2(c->conn) <= ora) {
-			int rv = ngtcp2_conn_handle_expiry(c->conn, ora);
+		if (ngtcp2_conn_get_expiry2(c->conn) <= now) {
+			int rv = ngtcp2_conn_handle_expiry(c->conn, now);
 			if (rv != 0) {
 				if (rv == NGTCP2_ERR_IDLE_CLOSE)
 					registro_dice(REG_QUIC,
 					              "%s: thirty seconds of silence, "
 					              "disconnected (§2.2)",
-					              c->provenienza);
+					              c->provenance);
 				else
 					registro_dice(REG_QUIC, "%s: timer expired: %s",
-					              c->provenienza, ngtcp2_strerror(rv));
-				c->morta = true;
+					              c->provenance, ngtcp2_strerror(rv));
+				c->dead_run = true;
 			}
 		}
 	}
@@ -1153,65 +1153,65 @@ void trasporto_scaduti(trasporto *t)
  *     Before tonight `systemctl stop` (or Ctrl-C) with an active session did
  *     this: the loop exited, «shutdown requested: 1 live QUIC connections» was
  *     written, and `transport_close()` freed everything.  ⛔ No
- *     `CONGEDO(0x0C)`, no closing capsule with `0x0C`, and not even a QUIC
+ *     `FAREWELL(0x0C)`, no closing capsule with `0x0C`, and not even a QUIC
  *     `CONNECTION_CLOSE`: the client was left waiting the 30 seconds of
  *     inactivity and showed «network error».
  *
- *     ⚠ The reason `0x0C SERVER_IN_CHIUSURA` exists in §8.2 on purpose, and it
+ *     ⚠ The reason `0x0C SERVER_CLOSING` exists in §8.2 on purpose, and it
  *       was defined in `rcp.h` without any line of the product emitting it.
  *
  * ⭐ Returns how many connections still have something to get out: whoever
  *    shuts down runs the loop until it is zero, instead of counting rounds —
  *    «handed to ngtcp2» is not «out on the wire». */
-size_t trasporto_congeda_tutte(trasporto *t, uint8_t motivo, const char *perche)
+size_t transport_dismiss_all(transport *t, uint8_t reason, const char *why)
 {
-	size_t restano = 0;
-	for (connessione *c = t->prime; c; c = c->prossima) {
-		if (c->morta || !c->w)
+	size_t remain = 0;
+	for (connection *c = t->prime; c; c = c->upcoming) {
+		if (c->dead_run || !c->w)
 			continue;
-		wt_dismiss(c->w, motivo, perche);
+		wt_dismiss(c->w, reason, why);
 	}
 	transport_write(t);
-	for (connessione *c = t->prime; c; c = c->prossima)
-		if (!c->morta && c->w && wt_ha_da_dire(c->w))
-			restano++;
-	return restano;
+	for (connection *c = t->prime; c; c = c->upcoming)
+		if (!c->dead_run && c->w && wt_ha_da_dire(c->w))
+			remain++;
+	return remain;
 }
 
 /* ⛔ What holds back whoever has not finished yet — for the shutdown log.
  *    Returns the first reason found, which is enough to send the diagnosis
  *    the right way. */
-const char *transport_remain_reason(const trasporto *t)
+const char *transport_remain_reason(const transport *t)
 {
-	for (connessione *c = t->prime; c; c = c->prossima)
-		if (!c->morta && c->w && wt_ha_da_dire(c->w))
+	for (connection *c = t->prime; c; c = c->upcoming)
+		if (!c->dead_run && c->w && wt_ha_da_dire(c->w))
 			return wt_pending_reason(c->w);
 	return "nothing";
 }
 
-size_t transport_count(const trasporto *t) { return t->quante; }
-int transport_fd(const trasporto *t) { return t->fd; }
-void transport_context(trasporto *t, SSL_CTX *ctx) { t->ctx = ctx; }
+size_t transport_count(const transport *t) { return t->how_many; }
+int transport_fd(const transport *t) { return t->fd; }
+void transport_context(transport *t, SSL_CTX *ctx) { t->ctx = ctx; }
 
 /* ------------------------------------------------------------------------ */
 
-trasporto *trasporto_apri(const char *indirizzo, const char *porta, SSL_CTX *ctx,
-                          aiutante *aiuto)
+transport *transport_open(const char *address, const char *port, SSL_CTX *ctx,
+                          helper *help)
 {
-	struct addrinfo suggerimenti, *ris = NULL, *r;
-	trasporto *t;
+	struct addrinfo hints, *result = NULL, *r;
+	transport *t;
 	int fd = -1, uno = 1;
 
-	memset(&suggerimenti, 0, sizeof suggerimenti);
-	suggerimenti.ai_family = AF_UNSPEC;
-	suggerimenti.ai_socktype = SOCK_DGRAM;
-	suggerimenti.ai_flags = AI_PASSIVE;
+	memset(&hints, 0, sizeof hints);
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_DGRAM;
+	hints.ai_flags = AI_PASSIVE;
 
-	if (getaddrinfo(indirizzo, porta, &suggerimenti, &ris) != 0) {
-		registro_dice(REG_QUIC, "⛔ %s:%s does not resolve", indirizzo, porta);
+	if (getaddrinfo(address, port, &hints, &result) != 0) {
+		registro_dice(REG_QUIC, "⛔ %s:%s does not resolve", address, port);
 		return NULL;
 	}
-	for (r = ris; r; r = r->ai_next) {
+	for (r = result; r; r = r->ai_next) {
 		fd = socket(r->ai_family, r->ai_socktype | SOCK_NONBLOCK, r->ai_protocol);
 		if (fd < 0)
 			continue;
@@ -1242,25 +1242,25 @@ trasporto *trasporto_apri(const char *indirizzo, const char *porta, SSL_CTX *ctx
 		fd = -1;
 	}
 	if (fd < 0) {
-		registro_dice(REG_QUIC, "⛔ cannot bind to %s:%s over UDP: %s", indirizzo,
-		              porta, strerror(errno));
-		freeaddrinfo(ris);
+		registro_dice(REG_QUIC, "⛔ cannot bind to %s:%s over UDP: %s", address,
+		              port, strerror(errno));
+		freeaddrinfo(result);
 		return NULL;
 	}
 
 	t = calloc(1, sizeof *t);
 	if (!t) {
 		close(fd);
-		freeaddrinfo(ris);
+		freeaddrinfo(result);
 		return NULL;
 	}
 	t->fd = fd;
-	t->famiglia = r->ai_family;
+	t->family = r->ai_family;
 	t->ctx = ctx;
-	t->aiuto = aiuto;
-	freeaddrinfo(ris);
+	t->help = help;
+	freeaddrinfo(result);
 
-	if (RAND_bytes(t->segreto, sizeof t->segreto) != 1) {
+	if (RAND_bytes(t->secret, sizeof t->secret) != 1) {
 		registro_dice(REG_QUIC, "⛔ cannot generate the static secret");
 		transport_close(t);
 		return NULL;
@@ -1276,18 +1276,18 @@ trasporto *trasporto_apri(const char *indirizzo, const char *porta, SSL_CTX *ctx
 	              "listening over UDP on %s:%s — max_idle_timeout=%d ms, datagrams "
 	              "enabled and discarded with a line (§6.3), %d unidirectional "
 	              "streams granted = 16 of §2.3 + the 3 of HTTP/3",
-	              indirizzo, porta, IDLE_MS, 19);
+	              address, port, IDLE_MS, 19);
 	return t;
 }
 
-void transport_close(trasporto *t)
+void transport_close(transport *t)
 {
-	connessione *c;
+	connection *c;
 	if (!t)
 		return;
 	c = t->prime;
 	while (c) {
-		connessione *p = c->prossima;
+		connection *p = c->upcoming;
 		connection_free(t, c);
 		c = p;
 	}

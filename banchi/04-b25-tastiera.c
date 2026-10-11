@@ -4,7 +4,7 @@
  * ⛔ Written BEFORE the code it tests, and CERTIFIED before being believed
  *    (`CODER.md` §3.3 and §3.4): `04-b25-lancia.sh` also points it at
  *    FOUR implementations wrong on purpose (`04-b25-guasti.c`) and
- *    DEMANDS that it says ROSSO on each, and ON THE RIGHT TEST.  A bench that has never seen the defect is not
+ *    DEMANDS that it says RED on each, and ON THE RIGHT TEST.  A bench that has never seen the defect is not
  *    a test.
  *
  * ---------------------------------------------------------------------------
@@ -53,7 +53,7 @@
  *   5. ⛔⛔ **the layout is handed over by the SESSION**, not chosen by the
  *      negotiated name: session `it` + client `us` + the `[` ⇒ «è» must not come out.
  *      It is the case for which the contract changed on 14 Aug 2026;
- *   6. ⛔ a layout that does not exist: `tastiera_apri` MUST fail and
+ *   6. ⛔ a layout that does not exist: `keyboard_open` MUST fail and
  *      say so.  If it fell back to `us` silently, the symptom for the user
  *      would be «it types the wrong letters» and nobody would connect the two
  *      things (`CODER.md` §4.2).
@@ -61,7 +61,7 @@
  * ---------------------------------------------------------------------------
  * HOW TO READ THE OUTCOME
  *
- *   exit 0 = VERDE, 1 = ROSSO, 2 = the bench itself could not measure
+ *   exit 0 = GREEN, 1 = RED, 2 = the bench itself could not measure
  *   (which is NOT green: it is «I could not look»).
  *   The lines also go to JSONL, to recheck without rerunning.
  */
@@ -127,16 +127,16 @@ static const char *utf8(uint32_t c, char buf[8])
 	return buf;
 }
 
-static void esito(const char *prova, int verde, const char *dettaglio)
+static void outcome(const char *prova, int green, const char *detail)
 {
 	how_many_tests++;
-	if (!verde)
+	if (!green)
 		how_many_red++;
-	printf("  %s  %-46s  %s\n", verde ? "✅" : "⛔ ROSSO", prova, dettaglio);
+	printf("  %s  %-46s  %s\n", green ? "✅" : "⛔ ROSSO", prova, detail);
 	fprintf(jsonl, "{\"prova\":");
 	jstr(prova);
-	fprintf(jsonl, ",\"esito\":\"%s\",\"dettaglio\":", verde ? "verde" : "rosso");
-	jstr(dettaglio);
+	fprintf(jsonl, ",\"outcome\":\"%s\",\"detail\":", green ? "green" : "red");
+	jstr(detail);
 	fprintf(jsonl, "}\n");
 	fflush(jsonl);
 }
@@ -152,7 +152,7 @@ typedef struct
 {
 	struct xkb_context *ctx;
 	struct xkb_keymap *km;
-	char nome[128];
+	char name[128];
 } Simulator;
 
 static void sim_quiet(struct xkb_context *c, enum xkb_log_level l, const char *f, va_list a)
@@ -163,46 +163,46 @@ static void sim_quiet(struct xkb_context *c, enum xkb_log_level l, const char *f
 	(void)a;
 }
 
-static int sim_open(Simulator *s, const char *disposizione)
+static int sim_open(Simulator *s, const char *kb_layout)
 {
-	char layout[64] = {0}, variante[64] = {0};
+	char layout[64] = {0}, variant[64] = {0};
 	const char *par;
-	struct xkb_rule_names nomi;
+	struct xkb_rule_names names;
 
 	memset(s, 0, sizeof *s);
-	par = strchr(disposizione, '(');
+	par = strchr(kb_layout, '(');
 	if (par)
 	{
-		size_t n = (size_t)(par - disposizione);
+		size_t n = (size_t)(par - kb_layout);
 		if (n >= sizeof layout)
 			return 0;
-		memcpy(layout, disposizione, n);
-		snprintf(variante, sizeof variante, "%s", par + 1);
-		char *chiusa = strchr(variante, ')');
-		if (chiusa)
-			*chiusa = 0;
+		memcpy(layout, kb_layout, n);
+		snprintf(variant, sizeof variant, "%s", par + 1);
+		char *is_closed = strchr(variant, ')');
+		if (is_closed)
+			*is_closed = 0;
 	}
 	else
-		snprintf(layout, sizeof layout, "%s", disposizione);
+		snprintf(layout, sizeof layout, "%s", kb_layout);
 
 	s->ctx = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
 	if (!s->ctx)
 		return 0;
 	xkb_context_set_log_fn(s->ctx, sim_quiet);
 
-	nomi.rules = "evdev";
-	nomi.model = "pc105";
-	nomi.layout = layout;
-	nomi.variant = variante;
-	nomi.options = "";
-	s->km = xkb_keymap_new_from_names(s->ctx, &nomi, XKB_KEYMAP_COMPILE_NO_FLAGS);
+	names.rules = "evdev";
+	names.model = "pc105";
+	names.layout = layout;
+	names.variant = variant;
+	names.options = "";
+	s->km = xkb_keymap_new_from_names(s->ctx, &names, XKB_KEYMAP_COMPILE_NO_FLAGS);
 	if (!s->km)
 	{
 		xkb_context_unref(s->ctx);
 		s->ctx = NULL;
 		return 0;
 	}
-	snprintf(s->nome, sizeof s->nome, "%s", xkb_keymap_layout_get_name(s->km, 0));
+	snprintf(s->name, sizeof s->name, "%s", xkb_keymap_layout_get_name(s->km, 0));
 	return 1;
 }
 
@@ -224,10 +224,10 @@ static void sim_close(Simulator *s)
  *   a sequence that leaves a modifier down is trap 11 of
  *   `LEZIONI.md` §4, and here seeing it costs two lines.
  */
-static uint32_t sim_beat(Simulator *s, const uint16_t *codici, size_t n, int *dirty_state)
+static uint32_t sim_beat(Simulator *s, const uint16_t *codes, size_t n, int *dirty_state)
 {
 	struct xkb_state *st = xkb_state_new(s->km);
-	uint32_t fuori;
+	uint32_t report;
 	size_t i;
 
 	*dirty_state = 0;
@@ -238,21 +238,21 @@ static uint32_t sim_beat(Simulator *s, const uint16_t *codici, size_t n, int *di
 		return 0;
 	}
 	for (i = 0; i + 1 < n; i++)
-		xkb_state_update_key(st, XKB_DA_EVDEV(codici[i]), XKB_KEY_DOWN);
+		xkb_state_update_key(st, XKB_DA_EVDEV(codes[i]), XKB_KEY_DOWN);
 
-	fuori = xkb_state_key_get_utf32(st, XKB_DA_EVDEV(codici[n - 1]));
+	report = xkb_state_key_get_utf32(st, XKB_DA_EVDEV(codes[n - 1]));
 
 	/* the real key: down and up */
-	xkb_state_update_key(st, XKB_DA_EVDEV(codici[n - 1]), XKB_KEY_DOWN);
-	xkb_state_update_key(st, XKB_DA_EVDEV(codici[n - 1]), XKB_KEY_UP);
+	xkb_state_update_key(st, XKB_DA_EVDEV(codes[n - 1]), XKB_KEY_DOWN);
+	xkb_state_update_key(st, XKB_DA_EVDEV(codes[n - 1]), XKB_KEY_UP);
 	for (i = n - 1; i-- > 0;)
-		xkb_state_update_key(st, XKB_DA_EVDEV(codici[i]), XKB_KEY_UP);
+		xkb_state_update_key(st, XKB_DA_EVDEV(codes[i]), XKB_KEY_UP);
 
 	if (xkb_state_serialize_mods(st, XKB_STATE_MODS_EFFECTIVE) != 0)
 		*dirty_state = 1;
 
 	xkb_state_unref(st);
-	return fuori;
+	return report;
 }
 
 /* The readable name of an evdev code, for the report. */
@@ -272,18 +272,18 @@ static const char *modifier_name(uint16_t evdev)
 	}
 }
 
-static void descrivi(char *fuori, size_t n, const uint16_t *codici, size_t quanti)
+static void describe(char *report, size_t n, const uint16_t *codes, size_t amount)
 {
 	size_t i;
-	int scritti = 0;
-	fuori[0] = 0;
-	for (i = 0; i < quanti; i++)
+	int written = 0;
+	report[0] = 0;
+	for (i = 0; i < amount; i++)
 	{
-		const char *nome = modifier_name(codici[i]);
-		scritti += snprintf(fuori + scritti, (int)n - scritti > 0 ? n - (size_t)scritti : 0,
-		                    "%s%u%s%s%s", i ? "+" : "", codici[i], nome ? "(" : "",
-		                    nome ? nome : "", nome ? ")" : "");
-		if (scritti < 0 || (size_t)scritti >= n)
+		const char *name = modifier_name(codes[i]);
+		written += snprintf(report + written, (int)n - written > 0 ? n - (size_t)written : 0,
+		                    "%s%u%s%s%s", i ? "+" : "", codes[i], name ? "(" : "",
+		                    name ? name : "", name ? ")" : "");
+		if (written < 0 || (size_t)written >= n)
 			break;
 	}
 }
@@ -297,110 +297,110 @@ typedef enum
 	AWAITED_NO
 } Awaited;
 
-static void test_character(const char *disposizione, uint32_t carattere, Awaited atteso,
-                            const char *perche)
+static void test_character(const char *kb_layout, uint32_t character, Awaited expected,
+                            const char *why)
 {
-	Tastiera *t = NULL;
+	Keyboard *t = NULL;
 	Simulator sim;
-	char *errore = NULL;
-	uint16_t codici[TASTIERA_MAX_POSIZIONI];
+	char *error = NULL;
+	uint16_t codes[KEYBOARD_MAX_POSITIONS];
 	size_t n = 0;
 	int ret;
-	char nome[160], dett[320], simbolo[8], exited8[8];
-	uint32_t uscito;
-	int sporco = 0;
+	char name[160], details[320], symbol[8], exited8[8];
+	uint32_t has_exited;
+	int dirty = 0;
 
-	utf8(carattere, simbolo);
-	snprintf(nome, sizeof nome, "«%s» (U+%04X) on «%s» %s", simbolo, carattere, disposizione,
-	         atteso == AWAITED_PRODUCIBLE ? "⇒ must come out" : "⇒ NOT producible");
+	utf8(character, symbol);
+	snprintf(name, sizeof name, "«%s» (U+%04X) on «%s» %s", symbol, character, kb_layout,
+	         expected == AWAITED_PRODUCIBLE ? "⇒ must come out" : "⇒ NOT producible");
 
-	if (!sim_open(&sim, disposizione))
+	if (!sim_open(&sim, kb_layout))
 	{
-		esito(nome, 0, "the SIMULATOR did not compile the layout — I could not look");
+		outcome(name, 0, "the SIMULATOR did not compile the layout — I could not look");
 		return;
 	}
 
-	t = tastiera_apri(disposizione, &errore);
+	t = keyboard_open(kb_layout, &error);
 	if (!t)
 	{
-		snprintf(dett, sizeof dett, "tastiera_apri(\"%s\") said NULL: %s", disposizione,
-		         errore ? errore : "(no reason)");
-		esito(nome, 0, dett);
-		free(errore);
+		snprintf(details, sizeof details, "keyboard_open(\"%s\") said NULL: %s", kb_layout,
+		         error ? error : "(no reason)");
+		outcome(name, 0, details);
+		free(error);
 		sim_close(&sim);
 		return;
 	}
 
-	memset(codici, 0, sizeof codici);
-	ret = tastiera_posizioni_per(t, carattere, codici, &n);
+	memset(codes, 0, sizeof codes);
+	ret = keyboard_positions_for(t, character, codes, &n);
 
 	if (ret < 0)
 	{
-		snprintf(dett, sizeof dett, "returned -1 (error) instead of %d",
-		         atteso == AWAITED_PRODUCIBLE ? 1 : 0);
-		esito(nome, 0, dett);
+		snprintf(details, sizeof details, "returned -1 (error) instead of %d",
+		         expected == AWAITED_PRODUCIBLE ? 1 : 0);
+		outcome(name, 0, details);
 		goto fine;
 	}
 
-	if (atteso == AWAITED_NO)
+	if (expected == AWAITED_NO)
 	{
 		if (ret == 0 && n == 0)
 		{
-			snprintf(dett, sizeof dett,
+			snprintf(details, sizeof details,
 			         "said NO and sent nothing — it is the case to write in the log");
-			esito(nome, 1, dett);
+			outcome(name, 1, details);
 			goto fine;
 		}
 		/* ⛔ The heart of the test: what would have COME OUT if we had typed? */
-		uscito = sim_beat(&sim, codici, n, &sporco);
-		utf8(uscito, exited8);
+		has_exited = sim_beat(&sim, codes, n, &dirty);
+		utf8(has_exited, exited8);
 		{
-			char strada[128];
-			descrivi(strada, sizeof strada, codici, n);
-			snprintf(dett, sizeof dett,
+			char route[128];
+			describe(route, sizeof route, codes, n);
+			snprintf(details, sizeof details,
 			         "⛔ said YES (%s) and «%s» (U+%04X) would have come out instead of «%s»: "
 			         "a DIFFERENT LETTER, which RCP.md §7.3 forbids",
-			         strada, exited8, uscito, simbolo);
+			         route, exited8, has_exited, symbol);
 		}
-		esito(nome, 0, dett);
+		outcome(name, 0, details);
 		goto fine;
 	}
 
 	/* expected producible */
 	if (ret == 0)
 	{
-		esito(nome, 0, "⛔ said «not producible» for a character that layout has");
+		outcome(name, 0, "⛔ said «not producible» for a character that layout has");
 		goto fine;
 	}
-	if (n == 0 || n > TASTIERA_MAX_POSIZIONI)
+	if (n == 0 || n > KEYBOARD_MAX_POSITIONS)
 	{
-		snprintf(dett, sizeof dett, "said YES but with n=%zu positions (the maximum is %d)", n,
-		         TASTIERA_MAX_POSIZIONI);
-		esito(nome, 0, dett);
+		snprintf(details, sizeof details, "said YES but with n=%zu positions (the maximum is %d)", n,
+		         KEYBOARD_MAX_POSITIONS);
+		outcome(name, 0, details);
 		goto fine;
 	}
 
-	uscito = sim_beat(&sim, codici, n, &sporco);
-	utf8(uscito, exited8);
+	has_exited = sim_beat(&sim, codes, n, &dirty);
+	utf8(has_exited, exited8);
 	{
-		char strada[128];
-		descrivi(strada, sizeof strada, codici, n);
-		if (uscito == carattere && !sporco)
-			snprintf(dett, sizeof dett, "typing %s gives «%s» — the route is %s%s", strada,
+		char route[128];
+		describe(route, sizeof route, codes, n);
+		if (has_exited == character && !dirty)
+			snprintf(details, sizeof details, "typing %s gives «%s» — the route is %s%s", route,
 			         exited8, n > 1 ? "with modifier" : "direct",
-			         perche ? perche : "");
-		else if (sporco)
-			snprintf(dett, sizeof dett,
+			         why ? why : "");
+		else if (dirty)
+			snprintf(details, sizeof details,
 			         "⛔ «%s» comes out but the sequence %s LEAVES A MODIFIER PRESSED", exited8,
-			         strada);
+			         route);
 		else
-			snprintf(dett, sizeof dett, "⛔ typing %s gives «%s» (U+%04X), not «%s» (U+%04X)",
-			         strada, exited8, uscito, simbolo, carattere);
-		esito(nome, uscito == carattere && !sporco, dett);
+			snprintf(details, sizeof details, "⛔ typing %s gives «%s» (U+%04X), not «%s» (U+%04X)",
+			         route, exited8, has_exited, symbol, character);
+		outcome(name, has_exited == character && !dirty, details);
 	}
 
 fine:
-	free(errore);
+	free(error);
 	keyboard_close(t);
 	sim_close(&sim);
 }
@@ -408,14 +408,14 @@ fine:
 /* ------------------------------------------------------------------ *
  * THE TOOL'S CONTROLS — they are done FIRST, and if they fail the exit is 2
  * ------------------------------------------------------------------ */
-static int controlli_dello_strumento(void)
+static int instrument_checks(void)
 {
 	Simulator sim;
 	uint16_t solo_a[1] = {30};      /* KEY_A */
 	uint16_t solo_ac11[1] = {26};   /* KEY_LEFTBRACE: on `it` it is the «e` » */
 	uint16_t with_shift[2] = {42, 26};
 	uint32_t c;
-	int sporco;
+	int dirty;
 	char b[8];
 	int ok = 1;
 
@@ -424,32 +424,32 @@ static int controlli_dello_strumento(void)
 
 	if (!sim_open(&sim, "it"))
 	{
-		esito("positive control: the simulator compiles «it»", 0,
+		outcome("positive control: the simulator compiles «it»", 0,
 		      "no — the bench cannot measure anything");
 		return 0;
 	}
 
-	c = sim_beat(&sim, solo_a, 1, &sporco);
-	esito("⭐ positive: the simulator sees a letter that surely COMES OUT",
-	      c == 'a' && !sporco,
+	c = sim_beat(&sim, solo_a, 1, &dirty);
+	outcome("⭐ positive: the simulator sees a letter that surely COMES OUT",
+	      c == 'a' && !dirty,
 	      c == 'a' ? "typed key 30 on «it», «a» came out" : "typed key 30, an «a» did NOT come out");
 	ok = ok && (c == 'a');
 
-	c = sim_beat(&sim, solo_ac11, 1, &sporco);
+	c = sim_beat(&sim, solo_ac11, 1, &dirty);
 	utf8(c, b);
 	{
 		char d[128];
 		snprintf(d, sizeof d, "key 26 without Shift ⇒ «%s» (U+%04X), and it is NOT the accented «e'»", b, c);
-		esito("⭐ negative: the simulator DISTINGUISHES the levels", c == 0x00E8, d);
+		outcome("⭐ negative: the simulator DISTINGUISHES the levels", c == 0x00E8, d);
 	}
 	ok = ok && (c == 0x00E8);
 
-	c = sim_beat(&sim, with_shift, 2, &sporco);
+	c = sim_beat(&sim, with_shift, 2, &dirty);
 	utf8(c, b);
 	{
 		char d[160];
 		snprintf(d, sizeof d, "Shift+26 ⇒ «%s» (U+%04X): the simulator APPLIES the modifiers", b, c);
-		esito("⭐ the simulator applies the modifiers", c == 0x00E9 && !sporco, d);
+		outcome("⭐ the simulator applies the modifiers", c == 0x00E9 && !dirty, d);
 	}
 	ok = ok && (c == 0x00E9);
 
@@ -462,44 +462,44 @@ static int controlli_dello_strumento(void)
  * ------------------------------------------------------------------ */
 static void test_silent_fallback(void)
 {
-	static const char *inesistenti[] = {"zz_non_esiste", "it(variante_che_non_esiste)"};
+	static const char *nonexistent_names[] = {"zz_non_esiste", "it(variante_che_non_esiste)"};
 	size_t i;
 
-	for (i = 0; i < sizeof inesistenti / sizeof *inesistenti; i++)
+	for (i = 0; i < sizeof nonexistent_names / sizeof *nonexistent_names; i++)
 	{
-		char *errore = NULL;
-		char nome[160], dett[320];
-		Tastiera *t;
+		char *error = NULL;
+		char name[160], details[320];
+		Keyboard *t;
 
-		snprintf(nome, sizeof nome, "⛔ «%s» does not load ⇒ MUST fail and SAY SO", inesistenti[i]);
-		t = tastiera_apri(inesistenti[i], &errore);
+		snprintf(name, sizeof name, "⛔ «%s» does not load ⇒ MUST fail and SAY SO", nonexistent_names[i]);
+		t = keyboard_open(nonexistent_names[i], &error);
 		if (!t)
 		{
-			if (errore && *errore)
+			if (error && *error)
 			{
-				snprintf(dett, sizeof dett, "NULL, with the reason: «%s»", errore);
-				esito(nome, 1, dett);
+				snprintf(details, sizeof details, "NULL, with the reason: «%s»", error);
+				outcome(name, 1, details);
 			}
 			else
-				esito(nome, 0, "NULL but WITHOUT a reason: whoever reads the log does not know why");
-			free(errore);
+				outcome(name, 0, "NULL but WITHOUT a reason: whoever reads the log does not know why");
+			free(error);
 			continue;
 		}
 
 		/* It returned a keyboard.  Did it fall back?  Ask the `e'`. */
 		{
-			uint16_t codici[TASTIERA_MAX_POSIZIONI];
+			uint16_t codes[KEYBOARD_MAX_POSITIONS];
 			size_t n = 0;
-			int r = tastiera_posizioni_per(t, 'a', codici, &n);
-			snprintf(dett, sizeof dett,
+			int r = keyboard_positions_for(t, 'a', codes, &n);
+			snprintf(details, sizeof details,
 			         "⛔ SILENT FALLBACK: it returned a keyboard («%s») for a layout "
 			         "that does not exist%s. The symptom for the user is «it types the wrong letters», and "
 			         "nobody connects the two things (CODER.md §4.2)",
 			         kbd_layout(t) ? kbd_layout(t) : "(no name)",
 			         r == 1 ? " — and it even types" : "");
-			esito(nome, 0, dett);
+			outcome(name, 0, details);
 		}
-		free(errore);
+		free(error);
 		keyboard_close(t);
 	}
 }
@@ -511,25 +511,25 @@ static void test_silent_fallback(void)
  */
 static void test_distinct_names(void)
 {
-	Tastiera *a = tastiera_apri("it", NULL);
-	Tastiera *b = tastiera_apri("us", NULL);
-	char dett[320];
+	Keyboard *a = keyboard_open("it", NULL);
+	Keyboard *b = keyboard_open("us", NULL);
+	char details[320];
 
 	if (!a || !b)
 	{
-		esito("the names of the two layouts are distinguishable", 0,
+		outcome("the names of the two layouts are distinguishable", 0,
 		      "one of the two did not open: the test could not be done");
 		keyboard_close(a);
 		keyboard_close(b);
 		return;
 	}
-	snprintf(dett, sizeof dett, "«%s» contro «%s»",
+	snprintf(details, sizeof details, "«%s» contro «%s»",
 	         kbd_layout(a) ? kbd_layout(a) : "(NULL)",
 	         kbd_layout(b) ? kbd_layout(b) : "(NULL)");
-	esito("⭐ the names of the two layouts are DISTINGUISHABLE",
+	outcome("⭐ the names of the two layouts are DISTINGUISHABLE",
 	      kbd_layout(a) && kbd_layout(b) &&
 	          strcmp(kbd_layout(a), kbd_layout(b)) != 0,
-	      dett);
+	      details);
 	keyboard_close(a);
 	keyboard_close(b);
 }
@@ -538,30 +538,30 @@ static void test_distinct_names(void)
  * surrogates.  They are not «not producible»: they are an error. */
 static void test_illegal_inputs(void)
 {
-	Tastiera *t = tastiera_apri("it", NULL);
-	uint16_t codici[TASTIERA_MAX_POSIZIONI];
+	Keyboard *t = keyboard_open("it", NULL);
+	uint16_t codes[KEYBOARD_MAX_POSITIONS];
 	size_t n = 1;
-	char dett[160];
+	char details[160];
 	int r1, r2;
 
 	if (!t)
 	{
-		esito("illegal inputs are distinguished from «not producible»", 0,
+		outcome("illegal inputs are distinguished from «not producible»", 0,
 		      "«it» did not open");
 		return;
 	}
-	r1 = tastiera_posizioni_per(t, 0xD800, codici, &n);
-	r2 = tastiera_posizioni_per(t, 0x110000, codici, &n);
-	snprintf(dett, sizeof dett, "surrogate ⇒ %d, out of range ⇒ %d (expected -1 and -1)", r1, r2);
-	esito("illegal inputs are NOT confused with «not producible»", r1 == -1 && r2 == -1,
-	      dett);
+	r1 = keyboard_positions_for(t, 0xD800, codes, &n);
+	r2 = keyboard_positions_for(t, 0x110000, codes, &n);
+	snprintf(details, sizeof details, "surrogate ⇒ %d, out of range ⇒ %d (expected -1 and -1)", r1, r2);
+	outcome("illegal inputs are NOT confused with «not producible»", r1 == -1 && r2 == -1,
+	      details);
 	keyboard_close(t);
 }
 
 /* ------------------------------------------------------------------ *
  * ⛔⛔ THE TEST FOR WHICH THE CONTRACT CHANGED
  *
- * `tastiera_apri()` compiles the layout FROM THE NAME the client
+ * `keyboard_open()` compiles the layout FROM THE NAME the client
  * negotiated.  But the one with which the compositor will interpret our codes is
  * ITS OWN, the one `libei` hands over with the device.
  *
@@ -579,98 +579,98 @@ static void test_illegal_inputs(void)
  * ⚠ The simulator, here, is built on THE SESSION'S layout: it is
  *   the only one that counts, because it is the only one the compositor applies.
  * ------------------------------------------------------------------ */
-static char *layout_text(const char *disposizione)
+static char *layout_text(const char *kb_layout)
 {
 	Simulator s;
-	char *testo;
+	char *text;
 
-	if (!sim_open(&s, disposizione))
+	if (!sim_open(&s, kb_layout))
 		return NULL;
-	testo = xkb_keymap_get_as_string(s.km, XKB_KEYMAP_FORMAT_TEXT_V1);
+	text = xkb_keymap_get_as_string(s.km, XKB_KEYMAP_FORMAT_TEXT_V1);
 	sim_close(&s);
-	return testo;
+	return text;
 }
 
-static void test_session_keymap(const char *session_layout, const char *negoziata,
-                                        uint32_t carattere, Awaited atteso)
+static void test_session_keymap(const char *session_layout, const char *negotiated,
+                                        uint32_t character, Awaited expected)
 {
-	char *testo = layout_text(session_layout);
+	char *text = layout_text(session_layout);
 	Simulator sim;
-	Tastiera *t = NULL;
-	char *errore = NULL;
-	uint16_t codici[TASTIERA_MAX_POSIZIONI];
+	Keyboard *t = NULL;
+	char *error = NULL;
+	uint16_t codes[KEYBOARD_MAX_POSITIONS];
 	size_t n = 0;
-	int ret, sporco = 0;
-	char nome[256], dett[448], simbolo[8], exited8[8], strada[128];
-	uint32_t uscito;
+	int ret, dirty = 0;
+	char name[256], details[448], symbol[8], exited8[8], route[128];
+	uint32_t has_exited;
 
-	utf8(carattere, simbolo);
-	snprintf(nome, sizeof nome, "session «%s» + negotiated «%s», «%s» (U+%04X) %s",
-	         session_layout, negoziata ? negoziata : "(none)", simbolo, carattere,
-	         atteso == AWAITED_PRODUCIBLE ? "⇒ must come out" : "⇒ NOT producible");
+	utf8(character, symbol);
+	snprintf(name, sizeof name, "session «%s» + negotiated «%s», «%s» (U+%04X) %s",
+	         session_layout, negotiated ? negotiated : "(none)", symbol, character,
+	         expected == AWAITED_PRODUCIBLE ? "⇒ must come out" : "⇒ NOT producible");
 
-	if (!testo || !sim_open(&sim, session_layout))
+	if (!text || !sim_open(&sim, session_layout))
 	{
-		esito(nome, 0, "I could not build the session's layout: I DID NOT MEASURE");
-		free(testo);
+		outcome(name, 0, "I could not build the session's layout: I DID NOT MEASURE");
+		free(text);
 		return;
 	}
 
-	t = keyboard_open_from_keymap(testo, strlen(testo), negoziata, &errore);
+	t = keyboard_open_from_keymap(text, strlen(text), negotiated, &error);
 	if (!t)
 	{
-		snprintf(dett, sizeof dett, "the session's keymap did not open: %s",
-		         errore ? errore : "(no reason)");
-		esito(nome, 0, dett);
+		snprintf(details, sizeof details, "the session's keymap did not open: %s",
+		         error ? error : "(no reason)");
+		outcome(name, 0, details);
 		goto fine;
 	}
 
-	memset(codici, 0, sizeof codici);
-	ret = tastiera_posizioni_per(t, carattere, codici, &n);
+	memset(codes, 0, sizeof codes);
+	ret = keyboard_positions_for(t, character, codes, &n);
 
-	if (atteso == AWAITED_NO)
+	if (expected == AWAITED_NO)
 	{
 		if (ret == 0 && n == 0)
-			esito(nome, 1, "said NO and sent nothing");
+			outcome(name, 1, "said NO and sent nothing");
 		else
 		{
-			uscito = sim_beat(&sim, codici, n, &sporco);
-			utf8(uscito, exited8);
-			descrivi(strada, sizeof strada, codici, n);
-			snprintf(dett, sizeof dett, "⛔ said YES (%s): «%s» would appear", strada, exited8);
-			esito(nome, 0, dett);
+			has_exited = sim_beat(&sim, codes, n, &dirty);
+			utf8(has_exited, exited8);
+			describe(route, sizeof route, codes, n);
+			snprintf(details, sizeof details, "⛔ said YES (%s): «%s» would appear", route, exited8);
+			outcome(name, 0, details);
 		}
 		goto fine;
 	}
 
 	if (ret != 1 || n == 0)
 	{
-		snprintf(dett, sizeof dett,
+		snprintf(details, sizeof details,
 		         "⛔ said «not producible» (%d) for a character THE SESSION has: it "
 		         "trusted the negotiated name instead of the real layout",
 		         ret);
-		esito(nome, 0, dett);
+		outcome(name, 0, details);
 		goto fine;
 	}
 
-	uscito = sim_beat(&sim, codici, n, &sporco);
-	utf8(uscito, exited8);
-	descrivi(strada, sizeof strada, codici, n);
-	if (uscito == carattere && !sporco)
-		snprintf(dett, sizeof dett, "typing %s on THE SESSION'S layout gives «%s»",
-		         strada, exited8);
+	has_exited = sim_beat(&sim, codes, n, &dirty);
+	utf8(has_exited, exited8);
+	describe(route, sizeof route, codes, n);
+	if (has_exited == character && !dirty)
+		snprintf(details, sizeof details, "typing %s on THE SESSION'S layout gives «%s»",
+		         route, exited8);
 	else
-		snprintf(dett, sizeof dett,
+		snprintf(details, sizeof details,
 		         "⛔ typing %s on THE SESSION'S layout gives «%s» (U+%04X), not «%s»: "
 		         "A DIFFERENT LETTER",
-		         strada, exited8, uscito, simbolo);
-	esito(nome, uscito == carattere && !sporco, dett);
+		         route, exited8, has_exited, symbol);
+	outcome(name, has_exited == character && !dirty, details);
 
 fine:
-	free(errore);
+	free(error);
 	keyboard_close(t);
 	sim_close(&sim);
-	free(testo);
+	free(text);
 }
 
 /*
@@ -684,34 +684,34 @@ static void test_reopenings(void)
 {
 	char *ti = layout_text("it");
 	char *tu = layout_text("us");
-	Tastiera *a = NULL, *b = NULL;
-	uint16_t ca[TASTIERA_MAX_POSIZIONI], cb[TASTIERA_MAX_POSIZIONI];
+	Keyboard *a = NULL, *b = NULL;
+	uint16_t ca[KEYBOARD_MAX_POSITIONS], cb[KEYBOARD_MAX_POSITIONS];
 	size_t na = 0, nb = 0, na2 = 0;
-	uint16_t ca2[TASTIERA_MAX_POSIZIONI];
-	char dett[320];
+	uint16_t ca2[KEYBOARD_MAX_POSITIONS];
+	char details[320];
 	int r1, r2, r3;
 
 	if (!ti || !tu)
 	{
-		esito("⭐ it can be reopened several times without losing anything", 0, "I DID NOT MEASURE");
+		outcome("⭐ it can be reopened several times without losing anything", 0, "I DID NOT MEASURE");
 		goto fine;
 	}
 	a = keyboard_open_from_keymap(ti, strlen(ti), NULL, NULL);
-	r1 = a ? tastiera_posizioni_per(a, 0x00E9, ca, &na) : -1; /* é on it */
+	r1 = a ? keyboard_positions_for(a, 0x00E9, ca, &na) : -1; /* é on it */
 
 	b = keyboard_open_from_keymap(tu, strlen(tu), NULL, NULL);
-	r2 = b ? tastiera_posizioni_per(b, 0x00E9, cb, &nb) : -1; /* é on us */
+	r2 = b ? keyboard_positions_for(b, 0x00E9, cb, &nb) : -1; /* é on us */
 
 	/* ⛔ and now the FIRST one again, which is still alive */
-	r3 = a ? tastiera_posizioni_per(a, 0x00E9, ca2, &na2) : -1;
+	r3 = a ? keyboard_positions_for(a, 0x00E9, ca2, &na2) : -1;
 
-	snprintf(dett, sizeof dett,
+	snprintf(details, sizeof details,
 	         "it⇒%d (%zu pos.), then us⇒%d (%zu pos.), then AGAIN it⇒%d (%zu pos.)", r1, na, r2, nb,
 	         r3, na2);
-	esito("⭐ two layouts alive together do not get mixed up",
+	outcome("⭐ two layouts alive together do not get mixed up",
 	      r1 == 1 && r2 == 0 && r3 == 1 && na == na2 && na > 0 &&
 	          memcmp(ca, ca2, na * sizeof *ca) == 0,
-	      dett);
+	      details);
 
 fine:
 	keyboard_close(a);
@@ -739,78 +739,78 @@ fine:
  * call, and then read.  It is `CODER.md` §3.8 — verify from the receiving
  * side, and whoever receives this line is a log file.
  * ------------------------------------------------------------------ */
-static void test_declaration(const char *session_layout, const char *negoziata,
+static void test_declaration(const char *session_layout, const char *negotiated,
                                 int must_declare)
 {
-	char *testo = layout_text(session_layout);
-	char nome[256], dett[384], riga[4096];
-	int salvato = -1, tmp = -1;
+	char *text = layout_text(session_layout);
+	char name[256], details[384], line[4096];
+	int saved = -1, tmp = -1;
 	FILE *f = NULL;
-	Tastiera *t = NULL;
-	long letti = 0;
-	int dichiarato = 0;
-	char modello[] = "/tmp/04-b25-reg-XXXXXX";
+	Keyboard *t = NULL;
+	long readings = 0;
+	int claimed = 0;
+	char model[] = "/tmp/04-b25-reg-XXXXXX";
 
-	snprintf(nome, sizeof nome, "the log: session «%s» + negotiated «%s» ⇒ %s",
-	         session_layout, negoziata ? negoziata : "(none)",
+	snprintf(name, sizeof name, "the log: session «%s» + negotiated «%s» ⇒ %s",
+	         session_layout, negotiated ? negotiated : "(none)",
 	         must_declare ? "MUST declare the fallback" : "must NOT cry fallback");
 
-	if (!testo)
+	if (!text)
 	{
-		esito(nome, 0, "I did not build the layout: I DID NOT MEASURE");
+		outcome(name, 0, "I did not build the layout: I DID NOT MEASURE");
 		return;
 	}
 
-	tmp = mkstemp(modello);
+	tmp = mkstemp(model);
 	if (tmp < 0)
 	{
-		esito(nome, 0, "I could not redirect the log: I DID NOT MEASURE");
-		free(testo);
+		outcome(name, 0, "I could not redirect the log: I DID NOT MEASURE");
+		free(text);
 		return;
 	}
 	fflush(stderr);
-	salvato = dup(STDERR_FILENO);
+	saved = dup(STDERR_FILENO);
 	dup2(tmp, STDERR_FILENO);
 
-	t = keyboard_open_from_keymap(testo, strlen(testo), negoziata, NULL);
+	t = keyboard_open_from_keymap(text, strlen(text), negotiated, NULL);
 
 	fflush(stderr);
-	dup2(salvato, STDERR_FILENO);
-	close(salvato);
+	dup2(saved, STDERR_FILENO);
+	close(saved);
 
 	f = fdopen(tmp, "r");
 	if (f)
 	{
 		rewind(f);
-		while (fgets(riga, sizeof riga, f))
+		while (fgets(line, sizeof line, f))
 		{
-			letti++;
-			if (strstr(riga, "DECLARED FALLBACK"))
-				dichiarato = 1;
+			readings++;
+			if (strstr(line, "DECLARED FALLBACK"))
+				claimed = 1;
 		}
 		fclose(f);
 	}
-	unlink(modello);
+	unlink(model);
 
 	/*
 	 * ⛔ The TOOL's positive control: if I had read no line
 	 *    at all, «it did not declare» and «I could not read the log»
 	 *    would look the same (`CODER.md` §3.10).
 	 */
-	if (letti == 0)
+	if (readings == 0)
 	{
-		esito(nome, 0, "⛔ I read NO log line at all: I cannot tell "
+		outcome(name, 0, "⛔ I read NO log line at all: I cannot tell "
 		               "silence from not having looked");
 		goto fine;
 	}
 
-	snprintf(dett, sizeof dett, "%ld log lines, «DECLARED FALLBACK» %s", letti,
-	         dichiarato ? "present" : "absent");
-	esito(nome, dichiarato == must_declare, dett);
+	snprintf(details, sizeof details, "%ld log lines, «DECLARED FALLBACK» %s", readings,
+	         claimed ? "present" : "absent");
+	outcome(name, claimed == must_declare, details);
 
 fine:
 	keyboard_close(t);
-	free(testo);
+	free(text);
 }
 
 /* ------------------------------------------------------------------ *
@@ -831,7 +831,7 @@ int main(int argc, char **argv)
 	printf("   the yardstick is THE CHARACTER THAT COMES OUT of an independent `xkb_state`,\n"
 	       "   not the code the module says it chose.\n");
 
-	if (!controlli_dello_strumento())
+	if (!instrument_checks())
 	{
 		printf("\n⛔ THE TOOL IS NOT CERTIFIED: I measure nothing.\n");
 		fclose(jsonl);
@@ -881,8 +881,8 @@ int main(int argc, char **argv)
 
 	printf("\n== %d tests, %d RED  ⇒  %s\n\n", how_many_tests, how_many_red,
 	       how_many_red ? "⛔ ROSSO" : "✅ VERDE");
-	fprintf(jsonl, "{\"totale\":%d,\"rosse\":%d,\"esito\":\"%s\"}\n", how_many_tests, how_many_red,
-	        how_many_red ? "rosso" : "verde");
+	fprintf(jsonl, "{\"total\":%d,\"red_count\":%d,\"outcome\":\"%s\"}\n", how_many_tests, how_many_red,
+	        how_many_red ? "red" : "green");
 	fclose(jsonl);
 	return how_many_red ? 1 : 0;
 }

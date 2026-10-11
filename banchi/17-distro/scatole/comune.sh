@@ -4,11 +4,11 @@
 # boot into multi-user (no display manager: the box has no monitor), sshd on 127.0.0.1 and
 # on the box's port, the key folder, the alignment of the GPU groups.
 set -eu
-PORTA=$1; SSHD=$2
+PORT=$1; SSHD=$2
 systemctl set-default multi-user.target
 mkdir -p /etc/ssh/sshd_config.d /root/.ssh
 chmod 700 /root/.ssh
-printf 'Port %s\nListenAddress 127.0.0.1\nPermitRootLogin prohibit-password\n' "$PORTA" > /etc/ssh/sshd_config.d/t17.conf
+printf 'Port %s\nListenAddress 127.0.0.1\nPermitRootLogin prohibit-password\n' "$PORT" > /etc/ssh/sshd_config.d/t17.conf
 # Arch and openSUSE do not have the sshd_config.d Include in all versions: it is added if missing
 grep -q '^Include /etc/ssh/sshd_config.d/\*.conf' /etc/ssh/sshd_config 2>/dev/null \
 	|| { [ -f /etc/ssh/sshd_config ] && sed -i '1i Include /etc/ssh/sshd_config.d/*.conf' /etc/ssh/sshd_config; } \

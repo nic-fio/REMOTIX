@@ -581,9 +581,9 @@ static void case3(void)
  *      cannot program a race»*.
  *
  *  ⛔ The hypothesis to disprove.  The scene is not a laboratory race: it is
- *     **two chained `ADATTA_TELA`**, that is the user DRAGGING the edge
+ *     **two chained `FIT_CANVAS`**, that is the user DRAGGING the edge
  *     of the window — the same scene that `DECISIONI.md` §5.0-sexies names
- *     («among which two chained `ADATTA_TELA`»).
+ *     («among which two chained `FIT_CANVAS`»).
  *
  *  THE MECHANICS, and that is why it is programmable rather than random:
  *    · `cattura_ridimensiona(A)` writes `chiesta_* = A` **on the caller's
@@ -879,7 +879,7 @@ int main(int argc, char **argv)
 	void (*casi[])(void) = {case1, case2, case3, case4, case5, case6};
 	const int quanti = (int)(sizeof casi / sizeof casi[0]);
 
-	parlantina = getenv("PARLANTINA") != NULL;
+	parlantina = getenv("VERBOSE") != NULL;
 	pw_init(&argc, &argv);
 	/* ⛔ The LOG's verbosity is ALWAYS switched on: «stream state: paused
 	 *    → error» is `registro_dettaglio()` (`cattura.c:318`) and with verbosity

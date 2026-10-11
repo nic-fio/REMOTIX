@@ -3,14 +3,14 @@
 # 02-pam-lancia.sh — ⛔ IT RUNS ON CHUWI.  The bench «how long whoever is NOT
 # authenticating stands still» — `DECISIONI.md` §1.10.
 #
-#   bash banchi/02-pam-lancia.sh previsione     the expectation, BEFORE the round
-#   bash banchi/02-pam-lancia.sh porta          copies src/ and the benches to NIC-OS
-#   bash banchi/02-pam-lancia.sh costruisci     copy + `make` in the container
-#   bash banchi/02-pam-lancia.sh accendi
-#   bash banchi/02-pam-lancia.sh misura <bloccato|libero|nessuna> [giri]
-#   bash banchi/02-pam-lancia.sh registro
-#   bash banchi/02-pam-lancia.sh spegni
-#   bash banchi/02-pam-lancia.sh porte          counts 7448 and 7501
+#   bash banchi/02-pam-lancia.sh prediction     the expectation, BEFORE the round
+#   bash banchi/02-pam-lancia.sh ship          copies src/ and the benches to NIC-OS
+#   bash banchi/02-pam-lancia.sh build     copy + `make` in the container
+#   bash banchi/02-pam-lancia.sh start
+#   bash banchi/02-pam-lancia.sh measure <blocked|free|none> [rounds]
+#   bash banchi/02-pam-lancia.sh log
+#   bash banchi/02-pam-lancia.sh stop
+#   bash banchi/02-pam-lancia.sh ports          counts 7448 and 7501
 #
 # ---------------------------------------------------------------------------
 # ⛔ WHY THIS FILE EXISTS, AND NOT A RECIPE IN PROSE
@@ -34,22 +34,22 @@
 #     socket, log, certificates and pid file carry the prefix
 #     `pam2-7531`;
 #   · **7448** and **7501** (and **7522** from another round) are not touched:
-#     they are COUNTED before and after, with the `porte` step;
+#     they are COUNTED before and after, with the `ports` step;
 #   · the benches' password never goes through `argv` (defect **D12**):
 #     a `0600` file written with `printf`, which is a shell builtin.
 set -uo pipefail
 
-QUI=$(cd -- "$(dirname -- "$0")" && pwd)
-RADICE=$(cd -- "$QUI/.." && pwd)
+HERE=$(cd -- "$(dirname -- "$0")" && pwd)
+ROOT=$(cd -- "$HERE/.." && pwd)
 SERVER=nicfio@192.168.0.2
-ENTRA=/media/REMOTIX/enter.sh
-FUORI=/media/REMOTIX/src
-DENTRO=/srv/src
-PORTA=7531
-PREFISSO=pam2-7531
-UTENTE=prova
+ENTER=/media/REMOTIX/enter.sh
+OUT=/media/REMOTIX/src
+INSIDE=/srv/src
+PORT=7531
+PREFIX=pam2-7531
+ACCOUNT=prova
 BAD_USER=prova2
-ESITI_DENTRO=$DENTRO/02-pam-esiti.jsonl
+OUTCOMES_INSIDE=$INSIDE/02-pam-esiti.jsonl
 
 log()  { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 ok()   { printf '    \033[1;32mOK\033[0m  %s\n' "$*"; }
@@ -68,118 +68,118 @@ fi
 
 # ⭐ A single function for getting in, so the form is not written twice in
 #    two different ways.  ⚠ The password enters through ssh's STDIN, NEVER through argv.
-dentro() { printf '%s\n' "$PW" | ssh "$SERVER" "bash $ENTRA --root \"$1\""; }
-fuori()  { ssh "$SERVER" "$1"; }
+inside() { printf '%s\n' "$PW" | ssh "$SERVER" "bash $ENTER --root \"$1\""; }
+report()  { ssh "$SERVER" "$1"; }
 
-AZIONE=${1:-}
+ACTION=${1:-}
 
-case "$AZIONE" in
-previsione)
-	python3 "$QUI/02-pam-fermo.py" --previsione
+case "$ACTION" in
+prediction)
+	python3 "$HERE/02-pam-fermo.py" --prediction
 	exit 0 ;;
 
-porte)
+ports)
 	# ⛔ They are COUNTED, not touched.  And counted BEFORE and AFTER: «they were on»
 	#    and «I left them on» are two different facts.
 	log "The others' ports, counted"
-	fuori "ss -tuln | grep -E ':(7447|7448|7501|7511|7522|7531)\b' | sort"
+	report "ss -tuln | grep -E ':(7447|7448|7501|7511|7522|7531)\b' | sort"
 	exit 0 ;;
 
-porta)
+ship)
 	log "1. This bench's files go to NIC-OS"
-	scp -q "$QUI"/02-pam-fermo.py "$QUI"/02-pam-i3.py "$QUI"/02-pam-accendi.sh \
-	       "$SERVER:$FUORI/" \
+	scp -q "$HERE"/02-pam-fermo.py "$HERE"/02-pam-i3.py "$HERE"/02-pam-accendi.sh \
+	       "$SERVER:$OUT/" \
 		|| { ko "scp of the benches failed"; exit 2; }
-	ok "02-pam-fermo.py and 02-pam-accendi.sh → $FUORI/"
+	ok "02-pam-fermo.py and 02-pam-accendi.sh → $OUT/"
 	log "2. And the product sources, in a folder of MINE"
 	# ⛔ The folder is DELETED before copying it again: a file from yesterday left
 	#    in there answers «I exist» just like a current one (LEZIONI.md §1.9
 	#    point 8), and `scp` alone removes nothing.  ⚠ And `rsync` on CHUWI
 	#    IS NOT THERE — measured, not assumed: what is there gets used.
-	fuori "rm -rf $FUORI/02-pam-src && mkdir -p $FUORI/02-pam-src" \
-		|| { ko "I could not remake $FUORI/02-pam-src"; exit 2; }
-	scp -q "$RADICE"/src/* "$SERVER:$FUORI/02-pam-src/" \
+	report "rm -rf $OUT/02-pam-src && mkdir -p $OUT/02-pam-src" \
+		|| { ko "I could not remake $OUT/02-pam-src"; exit 2; }
+	scp -q "$ROOT"/src/* "$SERVER:$OUT/02-pam-src/" \
 		|| { ko "scp of src/ failed"; exit 2; }
-	ok "src/ → $FUORI/02-pam-src/  ($(ls "$RADICE"/src | wc -l) files)"
+	ok "src/ → $OUT/02-pam-src/  ($(ls "$ROOT"/src | wc -l) files)"
 	log "3. And the twin copy of rcp.c, which the Makefile compares (R12.3)"
-	scp -q "$RADICE"/banchi/rcp/* "$SERVER:$FUORI/rcp/" \
+	scp -q "$ROOT"/banchi/rcp/* "$SERVER:$OUT/rcp/" \
 		|| { ko "scp of banchi/rcp/ failed"; exit 2; }
-	ok "banchi/rcp/ → $FUORI/rcp/  (⛔ and if it diverged from src/, make stops)"
+	ok "banchi/rcp/ → $OUT/rcp/  (⛔ and if it diverged from src/, make stops)"
 	exit 0 ;;
 
-costruisci)
+build)
 	log "Copy and build, inside the container"
-	dentro "bash $DENTRO/02-pam-accendi.sh copia"
+	inside "bash $INSIDE/02-pam-accendi.sh copy"
 	exit $? ;;
 
-guasto)
+fault)
 	# ⛔ The fault is THE CURE REMOVED, and it is injected into the copy.  ⭐ It is healed with
-	#    `costruisci`, which remakes the copy from scratch from the real sources.
+	#    `build`, which remakes the copy from scratch from the real sources.
 	log "Injecting the fault: the asynchronous hook NOT connected"
-	dentro "bash $DENTRO/02-pam-accendi.sh guasto"
+	inside "bash $INSIDE/02-pam-accendi.sh fault"
 	exit $? ;;
 
-accendi)
-	log "This bench's target, on $PORTA"
-	dentro "bash $DENTRO/02-pam-accendi.sh accendi"
+start)
+	log "This bench's target, on $PORT"
+	inside "bash $INSIDE/02-pam-accendi.sh start"
 	exit $? ;;
 
-riaccendi)
+restart)
 	# ⛔ Switches on again WITHOUT deleting the ban file: it is the step that
 	#    proves invariant I7 (the ban survives the restart).
 	log "Switching the target on again KEEPING the ban file (I7)"
-	dentro "bash $DENTRO/02-pam-accendi.sh riaccendi"
+	inside "bash $INSIDE/02-pam-accendi.sh restart"
 	exit $? ;;
 
-spegni)
+stop)
 	log "Switching off MY target (and only that one)"
-	dentro "bash $DENTRO/02-pam-accendi.sh spegni"
+	inside "bash $INSIDE/02-pam-accendi.sh stop"
 	exit $? ;;
 
-registro)
-	dentro "bash $DENTRO/02-pam-accendi.sh registro"
+log)
+	inside "bash $INSIDE/02-pam-accendi.sh log"
 	exit $? ;;
 
-misura)
-	ATTESA=${2:-nessuna}
-	GIRI=${3:-5}
-	NOTA=${4:-}
-	log "The measurement: expectation «$ATTESA», $GIRI rounds"
+measure)
+	WAIT=${2:-nessuna}
+	ROUNDS=${3:-5}
+	NOTE=${4:-}
+	log "The measurement: expectation «$WAIT», $ROUNDS rounds"
 	# ⛔ D12: the password in a 0600 file, written with `printf` (a builtin), and
 	#    deleted right after.  Never in `argv`, which `/proc/<pid>/cmdline`
 	#    shows to anyone.
-	dentro "umask 077; printf '%s\n' 'parola-di-prova' > $DENTRO/tmp/$PREFISSO-parola; chmod 600 $DENTRO/tmp/$PREFISSO-parola"
-	dentro "python3 $DENTRO/02-pam-fermo.py --porta $PORTA \
-	        --utente $UTENTE --parola-file $DENTRO/tmp/$PREFISSO-parola \
-	        --utente-cattivo $BAD_USER \
-	        --socket $DENTRO/tmp/$PREFISSO.sock \
-	        --giri $GIRI --attesa $ATTESA --esiti $ESITI_DENTRO --nota '$NOTA'"
-	ESITO=$?
-	dentro "rm -f $DENTRO/tmp/$PREFISSO-parola"
-	exit $ESITO ;;
+	inside "umask 077; printf '%s\n' 'parola-di-prova' > $INSIDE/tmp/$PREFIX-parola; chmod 600 $INSIDE/tmp/$PREFIX-parola"
+	inside "python3 $INSIDE/02-pam-fermo.py --port $PORT \
+	        --user $ACCOUNT --password-file $INSIDE/tmp/$PREFIX-parola \
+	        --bad-user $BAD_USER \
+	        --socket $INSIDE/tmp/$PREFIX.sock \
+	        --rounds $ROUNDS --wait $WAIT --outcomes $OUTCOMES_INSIDE --note '$NOTE'"
+	OUTCOME=$?
+	inside "rm -f $INSIDE/tmp/$PREFIX-parola"
+	exit $OUTCOME ;;
 
 i3)
-	CASO=${2:?the case is needed: secondo|ban|ban-dopo-riavvio|morto|insieme|libera}
-	log "I3 and §4.4-bis: the case «$CASO»"
-	dentro "umask 077; printf '%s\n' 'parola-di-prova' > $DENTRO/tmp/$PREFISSO-parola; chmod 600 $DENTRO/tmp/$PREFISSO-parola"
-	dentro "python3 $DENTRO/02-pam-i3.py --porta $PORTA --utente $UTENTE \
-	        --parola-file $DENTRO/tmp/$PREFISSO-parola \
-	        --socket $DENTRO/tmp/$PREFISSO.sock --caso $CASO"
-	ESITO=$?
-	dentro "rm -f $DENTRO/tmp/$PREFISSO-parola"
-	exit $ESITO ;;
+	CASE=${2:?the case is needed: secondo|ban|ban-dopo-riavvio|morto|insieme|libera}
+	log "I3 and §4.4-bis: the case «$CASE»"
+	inside "umask 077; printf '%s\n' 'parola-di-prova' > $INSIDE/tmp/$PREFIX-parola; chmod 600 $INSIDE/tmp/$PREFIX-parola"
+	inside "python3 $INSIDE/02-pam-i3.py --port $PORT --user $ACCOUNT \
+	        --password-file $INSIDE/tmp/$PREFIX-parola \
+	        --socket $INSIDE/tmp/$PREFIX.sock --case $CASE"
+	OUTCOME=$?
+	inside "rm -f $INSIDE/tmp/$PREFIX-parola"
+	exit $OUTCOME ;;
 
-ammazza-aiutante)
+kill-helper)
 	# ⛔ The real work sits in `02-pam-accendi.sh`, which is a FILE inside the
 	#    container: no `$(...)` passes through here, and the piece cannot
 	#    die on the quotes while letting you believe it worked.
 	log "Killing the target's PAM helper (and only its own)"
-	dentro "bash $DENTRO/02-pam-accendi.sh ammazza-aiutante"
+	inside "bash $INSIDE/02-pam-accendi.sh kill-helper"
 	exit $? ;;
 
-ritira-esiti)
-	scp -q "$SERVER:$FUORI/02-pam-esiti.jsonl" "$QUI/02-pam-esiti.jsonl" \
-		&& ok "outcomes collected in $QUI/02-pam-esiti.jsonl" \
+fetch-outcomes)
+	scp -q "$SERVER:$OUT/02-pam-esiti.jsonl" "$HERE/02-pam-esiti.jsonl" \
+		&& ok "outcomes collected in $HERE/02-pam-esiti.jsonl" \
 		|| { ko "I did not collect the outcomes"; exit 2; }
 	exit 0 ;;
 

@@ -11,8 +11,8 @@
 #      `make` writes .o files and the binary next to the sources, and eight targets on the
 #      same src/ would tread on each other's toes — and would dirty the src/remotix
 #      of whoever is working;
-#   3. `make pulisci tutto` inside the container;
-#   4. in the output folder $USCITA/<target>/:
+#   3. `make clean all` inside the container;
+#   4. in the output folder $OUTPUT/<target>/:
 #        remotix          the binary (if it compiles)
 #        immagine.log     the log of the image build
 #        compilazione.log the make log
@@ -21,31 +21,31 @@
 #        esito.txt        one line: compiles yes/no, ldd clean yes/no
 #
 # ⚠ No /tmp: on the laptop it is almost full.  podman's TMPDIR and copies
-#   of the tree live in $CACHE (default $USCITA/.lavoro, on disk):
+#   of the tree live in $CACHE (default $OUTPUT/.work, on disk):
 #   on this laptop ~/.cache is a link to /tmp.
 set -uo pipefail
 
-QUI=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-ALBERO=$(cd "$QUI/../.." && pwd)
-USCITA=${USCITA:-$ALBERO/costruzione-uscita}
-CACHE=${CACHE:-$USCITA/.lavoro}
-TUTTI=(debian13 ubuntu2604 ubuntu2404 fedora44 alma10 arch tumbleweed leap16)
+HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+TREE=$(cd "$HERE/../.." && pwd)
+OUTPUT=${OUTPUT:-$TREE/costruzione-uscita}
+CACHE=${CACHE:-$OUTPUT/.lavoro}
+ALL=(debian13 ubuntu2604 ubuntu2404 fedora44 alma10 arch tumbleweed leap16)
 
 command -v podman >/dev/null 2>&1 || { echo "⛔ podman is not there"; exit 2; }
-mkdir -p "$CACHE/tmp" "$USCITA"
+mkdir -p "$CACHE/tmp" "$OUTPUT"
 export TMPDIR="$CACHE/tmp"
 
-if [ $# -eq 0 ] || [ "$1" = tutti ]; then set -- "${TUTTI[@]}"; fi
+if [ $# -eq 0 ] || [ "$1" = all-targets ]; then set -- "${ALL[@]}"; fi
 
 build_one()
 {
-	local b=$1 imm="localhost/remotix-costruzione-$1" u="$USCITA/$1" copia="$CACHE/albero-$1"
-	local compila=no ldd_ok=- nota=""
+	local b=$1 imm="localhost/remotix-costruzione-$1" u="$OUTPUT/$1" copied="$CACHE/albero-$1"
+	local compile=no ldd_ok=- note=""
 
-	[ -f "$QUI/Contenitore.$b" ] || { echo "⛔ $b: Contenitore.$b is missing"; return 2; }
+	[ -f "$HERE/Contenitore.$b" ] || { echo "⛔ $b: Contenitore.$b is missing"; return 2; }
 	rm -rf "$u"; mkdir -p "$u"
 	printf '== %s: image\n' "$b"
-	if ! podman build -t "$imm" -f "$QUI/Contenitore.$b" "$QUI" >"$u/immagine.log" 2>&1; then
+	if ! podman build -t "$imm" -f "$HERE/Contenitore.$b" "$HERE" >"$u/immagine.log" 2>&1; then
 		echo "$b compila=no immagine=NO (see immagine.log)" | tee "$u/esito.txt"
 		return 1
 	fi
@@ -60,32 +60,32 @@ build_one()
 	' >"$u/versioni.txt" 2>&1
 
 	printf '== %s: build\n' "$b"
-	rm -rf "$copia"; mkdir -p "$copia/banchi"
-	cp -a "$ALBERO/src" "$copia/src"
-	cp -a "$ALBERO/banchi/rcp" "$copia/banchi/rcp"
-	rm -f "$copia/src/remotix" "$copia/src"/*.o
-	podman run --rm --userns=keep-id -v "$copia:/albero" -w /albero/src "$imm" \
-		sh -c 'make pulisci >/dev/null && make tutto' >"$u/compilazione.log" 2>&1
-	if [ -x "$copia/src/remotix" ]; then
-		compila=si
-		cp "$copia/src/remotix" "$u/remotix"
+	rm -rf "$copied"; mkdir -p "$copied/banchi"
+	cp -a "$TREE/src" "$copied/src"
+	cp -a "$TREE/banchi/rcp" "$copied/banchi/rcp"
+	rm -f "$copied/src/remotix" "$copied/src"/*.o
+	podman run --rm --userns=keep-id -v "$copied:/albero" -w /albero/src "$imm" \
+		sh -c 'make clean >/dev/null && make all' >"$u/compilazione.log" 2>&1
+	if [ -x "$copied/src/remotix" ]; then
+		compile=si
+		cp "$copied/src/remotix" "$u/remotix"
 		podman run --rm -v "$u:/u:ro" "$imm" ldd /u/remotix >"$u/ldd.txt" 2>&1
 		ldd_ok=si
-		grep -q 'not found' "$u/ldd.txt" && { ldd_ok=no; nota="$nota librerie-mancanti"; }
-		grep -qE 'ngtcp2|nghttp3' "$u/ldd.txt" && { ldd_ok=no; nota="$nota ngtcp2/nghttp3-dinamiche"; }
+		grep -q 'not found' "$u/ldd.txt" && { ldd_ok=no; note="$note librerie-mancanti"; }
+		grep -qE 'ngtcp2|nghttp3' "$u/ldd.txt" && { ldd_ok=no; note="$note ngtcp2/nghttp3-dinamiche"; }
 		# ⛔ phase 18: ffmpeg must NOT appear — neither linked nor in a symbol
-		grep -qE 'libav|libswscale|libx26[45]' "$u/ldd.txt" && { ldd_ok=no; nota="$nota ffmpeg-collegato"; }
+		grep -qE 'libav|libswscale|libx26[45]' "$u/ldd.txt" && { ldd_ok=no; note="$note ffmpeg-collegato"; }
 		# ⛔ phase 19: nor the software fallback
-		grep -qiE 'openh264|SvtAv1' "$u/ldd.txt" && { ldd_ok=no; nota="$nota ripiego-software-collegato"; }
+		grep -qiE 'openh264|SvtAv1' "$u/ldd.txt" && { ldd_ok=no; note="$note ripiego-software-collegato"; }
 	else
-		nota=" errors: $(grep -cE 'error:|Error [0-9]' "$u/compilazione.log") lines (see compilazione.log)"
+		note=" errors: $(grep -cE 'error:|Error [0-9]' "$u/compilazione.log") lines (see compilazione.log)"
 	fi
-	echo "$b compila=$compila ldd-pulito=$ldd_ok$nota" | tee "$u/esito.txt"
-	[ $compila = si ] && [ $ldd_ok = si ]
+	echo "$b compile=$compile ldd-pulito=$ldd_ok$note" | tee "$u/esito.txt"
+	[ $compile = si ] && [ $ldd_ok = si ]
 }
 
-stato=0
-for b in "$@"; do build_one "$b" || stato=1; done
-printf '\n== summary (%s)\n' "$USCITA"
-for b in "$@"; do cat "$USCITA/$b/esito.txt" 2>/dev/null || echo "$b (no outcome)"; done
-exit $stato
+state=0
+for b in "$@"; do build_one "$b" || state=1; done
+printf '\n== summary (%s)\n' "$OUTPUT"
+for b in "$@"; do cat "$OUTPUT/$b/esito.txt" 2>/dev/null || echo "$b (no outcome)"; done
+exit $state

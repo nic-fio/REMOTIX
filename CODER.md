@@ -163,7 +163,7 @@ would be tuning on a case the product **no longer serves**.
 > **still** scene, which is the condition in which one clicks. No bench was looking at it.
 >
 > `[M]` Measured on the user's real clicks: **median 136 ms, worst 502**. The cause was a single
-> line (`MOVIMENTO_ATTESA_S 0.25`): the child's loop reads the parent's messages **before**
+> line (`MOTION_WAIT_S 0.25`): the child's loop reads the parent's messages **before**
 > the frame wait, and whatever arrives during the wait pays all of it.
 > ⇒ Brought to 8 ms: **median 41 ms, worst 47** — inside the ceiling.
 >
@@ -200,11 +200,11 @@ behaviours are the default**, not a bench option:
 
 | cure | default | turned off **only** with |
 |---|---|---|
-| audio silence | on | `--niente-audio-silenzio` |
-| threshold on the video queue | **100 ms** | `--sgombra-soglia-ms 0` |
-| rate regulator | on | `--niente-ritmo-adattivo` |
-| dead line | on (stall 5 s · silence 10 s) | `--niente-linea-morta` |
-| eviction of the ghost | **15 000 ms** | `--sfratto-ms 0` |
+| audio silence | on | `--no-audio-silence` |
+| threshold on the video queue | **100 ms** | `--clear-threshold-ms 0` |
+| rate regulator | on | `--no-adaptive-rate` |
+| dead line | on (stall 5 s · silence 10 s) | `--no-dead-line` |
+| eviction of the ghost | **15 000 ms** | `--eviction-ms 0` |
 
 ⛔ **One road only for each**: no environment variables, no compile-time
 switches. Two ways of turning on the same cure are **two numbers that diverge**, and this
@@ -238,7 +238,7 @@ and «the bench was not working».
 ### 3.3-bis ⭐⭐ A bench is not finished until it has been seen giving RED
 
 ⛔ `[M]` Phase 9, 23-24 Aug 2026: **nine bench defects, and none of them made a bench fail** —
-all nine made it **stay silent or give green**. ⇒ Every predicate must have in `--certifica` the
+all nine made it **stay silent or give green**. ⇒ Every predicate must have in `--certify` the
 case that makes it **fail**, and that case must be **run**, not imagined.
 
 And three corollaries, each one paid for:

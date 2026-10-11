@@ -29,10 +29,10 @@
  * ===========================================================================
  * ⛔ WHAT THIS PROGRAM DOES **NOT** PROVE (form E1, `REVIEWER.md` §2)
  *
- *   `tipo = MemFd`   ⛔ says nothing about where Mutter renders: here memory is
+ *   `kind = MemFd`   ⛔ says nothing about where Mutter renders: here memory is
  *                    ASKED FOR, because phase 2 wants readable pixels.  It is the
  *                    answer to a question of ours, not a discovery
- *   `tipo = DMA-BUF` does not prove rendering on the GPU: an open render node is
+ *   `kind = DMA-BUF` does not prove rendering on the GPU: an open render node is
  *                    necessary, not sufficient
  *
  * ⚠ And it does not measure RATE, and must not: it copies 8 MB frames inside (and
@@ -56,23 +56,23 @@
 
 typedef struct
 {
-	gboolean preso;
-	CatturaFermo fermo;
-	const char *danno; /* "pieno" | "parziale" | "assente" — the bench's words */
-} Voce;
+	gboolean taken;
+	CaptureStopped stopped;
+	const char *damage; /* "full" | "partial" | "assente" — the bench's words */
+} Entry;
 
-static const char *damage_name(const CatturaFermo *f)
+static const char *damage_name(const CaptureStopped *f)
 {
 	if (!f->declared_damage)
 		return "assente";
-	return f->damage_covers_all ? "pieno" : "parziale";
+	return f->damage_covers_all ? "pieno" : "partial";
 }
 
-static void manifest_entry(GString *s, const char *chiave, const Voce *v, const char *file)
+static void manifest_entry(GString *s, const char *key, const Entry *v, const char *file)
 {
-	if (!v->preso)
+	if (!v->taken)
 	{
-		g_string_append_printf(s, "  \"%s\": null,\n", chiave);
+		g_string_append_printf(s, "  \"%s\": null,\n", key);
 		return;
 	}
 	g_string_append_printf(s,
@@ -82,88 +82,88 @@ static void manifest_entry(GString *s, const char *chiave, const Voce *v, const 
 	                       "    \"stride\": %u,\n"
 	                       "    \"offset\": 0,\n"
 	                       "    \"dimensione_chunk\": %" G_GUINT64_FORMAT ",\n"
-	                       "    \"tipo_dichiarato\": \"%s\",\n"
-	                       "    \"danno\": \"%s\",\n"
+	                       "    \"type_declared\": \"%s\",\n"
+	                       "    \"damage\": \"%s\",\n"
 	                       "    \"indice_fra_gli_arrivati\": %" G_GUINT64_FORMAT ",\n"
 	                       "    \"seq\": %" G_GUINT64_FORMAT ",\n"
 	                       "    \"pts\": %" G_GINT64_FORMAT ",\n"
 	                       "    \"seq_nota\": %s,\n"
 	                       /* ⭐ The measurement the producer does NOT declare, made by us
 	                        *    on the delivered pixels — and written as a measurement. */
-	                       "    \"range_misurato\": {\"min\": [%u, %u, %u], "
-	                       "\"max\": [%u, %u, %u], \"esito\": \"%s\"},\n"
+	                       "    \"measured_range\": {\"min\": [%u, %u, %u], "
+	                       "\"max\": [%u, %u, %u], \"outcome\": \"%s\"},\n"
 	                       "    \"nero\": %s,\n"
 	                       "    \"uniforme\": %s\n"
 	                       "  },\n",
-	                       chiave, file, v->fermo.byte, v->fermo.stride, v->fermo.byte,
-	                       capture_buffer_name(v->fermo.consegna.buffer_dichiarato), v->danno,
-	                       v->fermo.indice, v->fermo.seq, v->fermo.pts,
-	                       v->fermo.seq_nota ? "true" : "false", v->fermo.consegna.minimo[0],
-	                       v->fermo.consegna.minimo[1], v->fermo.consegna.minimo[2],
-	                       v->fermo.consegna.massimo[0], v->fermo.consegna.massimo[1],
-	                       v->fermo.consegna.massimo[2],
-	                       capture_range_measured_name(v->fermo.consegna.range_misurato),
-	                       v->fermo.consegna.nero ? "true" : "false",
-	                       v->fermo.consegna.uniforme ? "true" : "false");
+	                       key, file, v->stopped.byte, v->stopped.stride, v->stopped.byte,
+	                       capture_buffer_name(v->stopped.delivery.buffer_declared), v->damage,
+	                       v->stopped.idx, v->stopped.seq, v->stopped.pts,
+	                       v->stopped.seq_known ? "true" : "false", v->stopped.delivery.minimum[0],
+	                       v->stopped.delivery.minimum[1], v->stopped.delivery.minimum[2],
+	                       v->stopped.delivery.maximum[0], v->stopped.delivery.maximum[1],
+	                       v->stopped.delivery.maximum[2],
+	                       capture_range_measured_name(v->stopped.delivery.measured_range),
+	                       v->stopped.delivery.nero ? "true" : "false",
+	                       v->stopped.delivery.uniform ? "true" : "false");
 }
 
 int main(int argc, char **argv)
 {
-	uint32_t larghezza = 1920, altezza = 1080, fps = 60, nodo = 0;
-	double dopo_scena = 3.0, durata = 12.0, attesa_scena = 25.0;
-	guint64 scarta = 10, minimo_dopo_scena = 1;
-	CaptureRoute strada = CATTURA_STRADA_MEMORIA;
-	CaptureColor colore = CATTURA_COLORE_BGRX;
-	const char *etichetta = "senza-nome";
-	const char *uscita = NULL, *pronto = NULL, *segnale_scena = NULL;
+	uint32_t width = 1920, height = 1080, fps = 60, node = 0;
+	double post_scene = 3.0, duration = 12.0, wait_scene = 25.0;
+	guint64 discard = 10, min_after_scene = 1;
+	CaptureRoute route = CAPTURE_ROUTE_MEMORY;
+	CaptureColor color = CAPTURE_COLOR_BGRX;
+	const char *label = "senza-nome";
+	const char *output = NULL, *ready = NULL, *scene_signal = NULL;
 	const char *requested_color_name = "BGRx";
-	MutterSessione *sessione = NULL;
-	Cattura *cattura = NULL;
-	Voce primo = { 0 }, regime = { 0 };
-	CatturaConsegna consegna;
-	CatturaConteggi conto;
-	guint64 prima_della_scena = 0, dopo_la_scena = 0;
-	g_autoptr(GError) sbaglio = NULL;
+	MutterSession *session = NULL;
+	Capture *capture = NULL;
+	Entry first = { 0 }, regime = { 0 };
+	CaptureDelivery delivery;
+	CaptureCounts tally;
+	guint64 before_scene = 0, after_scene = 0;
+	g_autoptr(GError) mistake = NULL;
 	g_autofree char *first_file = NULL, *file_regime = NULL, *file_json = NULL;
 	GString *manifesto;
-	gint64 scadenza, fine;
-	int codice = 0, i;
-	const char *esito;
-	char quando[64];
+	gint64 expiry, fine;
+	int code = 0, i;
+	const char *outcome;
+	char when[64];
 	time_t now_epoch;
 	struct tm now_tm;
 
 	for (i = 1; i < argc; i++)
 	{
-		if (!strcmp(argv[i], "--uscita") && i + 1 < argc)
-			uscita = argv[++i];
-		else if (!strcmp(argv[i], "--pronto") && i + 1 < argc)
-			pronto = argv[++i];
-		else if (!strcmp(argv[i], "--segnale-scena") && i + 1 < argc)
-			segnale_scena = argv[++i];
-		else if (!strcmp(argv[i], "--nodo") && i + 1 < argc)
-			nodo = (uint32_t) atoi(argv[++i]);
-		else if (!strcmp(argv[i], "--larghezza") && i + 1 < argc)
-			larghezza = (uint32_t) atoi(argv[++i]);
-		else if (!strcmp(argv[i], "--altezza") && i + 1 < argc)
-			altezza = (uint32_t) atoi(argv[++i]);
+		if (!strcmp(argv[i], "--output") && i + 1 < argc)
+			output = argv[++i];
+		else if (!strcmp(argv[i], "--ready") && i + 1 < argc)
+			ready = argv[++i];
+		else if (!strcmp(argv[i], "--scene-signal") && i + 1 < argc)
+			scene_signal = argv[++i];
+		else if (!strcmp(argv[i], "--node") && i + 1 < argc)
+			node = (uint32_t) atoi(argv[++i]);
+		else if (!strcmp(argv[i], "--width") && i + 1 < argc)
+			width = (uint32_t) atoi(argv[++i]);
+		else if (!strcmp(argv[i], "--height") && i + 1 < argc)
+			height = (uint32_t) atoi(argv[++i]);
 		else if (!strcmp(argv[i], "--fps") && i + 1 < argc)
 			fps = (uint32_t) atoi(argv[++i]);
-		else if (!strcmp(argv[i], "--dopo-scena") && i + 1 < argc)
-			dopo_scena = atof(argv[++i]);
-		else if (!strcmp(argv[i], "--attesa-scena") && i + 1 < argc)
-			attesa_scena = atof(argv[++i]);
-		else if (!strcmp(argv[i], "--durata") && i + 1 < argc)
-			durata = atof(argv[++i]);
-		else if (!strcmp(argv[i], "--scarta") && i + 1 < argc)
-			scarta = (guint64) atoll(argv[++i]);
-		else if (!strcmp(argv[i], "--minimo-dopo-scena") && i + 1 < argc)
-			minimo_dopo_scena = (guint64) atoll(argv[++i]);
+		else if (!strcmp(argv[i], "--post-scene") && i + 1 < argc)
+			post_scene = atof(argv[++i]);
+		else if (!strcmp(argv[i], "--wait-scene") && i + 1 < argc)
+			wait_scene = atof(argv[++i]);
+		else if (!strcmp(argv[i], "--duration") && i + 1 < argc)
+			duration = atof(argv[++i]);
+		else if (!strcmp(argv[i], "--discard") && i + 1 < argc)
+			discard = (guint64) atoll(argv[++i]);
+		else if (!strcmp(argv[i], "--min-after-scene") && i + 1 < argc)
+			min_after_scene = (guint64) atoll(argv[++i]);
 		else if (!strcmp(argv[i], "--dmabuf"))
-			strada = CATTURA_STRADA_SCHEDA;
+			route = CAPTURE_ROUTE_CARD;
 		else if (!strcmp(argv[i], "--bgra"))
 		{
-			colore = CAPTURE_COLOR_BGRA;
+			color = CAPTURE_COLOR_BGRA;
 			requested_color_name = "BGRA";
 		}
 		else if (!strcmp(argv[i], "--10bit"))
@@ -174,89 +174,89 @@ int main(int argc, char **argv)
 			 * Asking for a ten-bit format and receiving a refusal turns
 			 * that reading into a MEASUREMENT — and the refusal must be written, not
 			 * deduced (`LEZIONI.md` §1.11). */
-			colore = CAPTURE_COLOR_10BIT;
+			color = CAPTURE_COLOR_10BIT;
 			requested_color_name = "10 bits (xBGR_210LE and companions)";
 		}
-		else if (!strcmp(argv[i], "--etichetta") && i + 1 < argc)
-			etichetta = argv[++i];
-		else if (!strcmp(argv[i], "--parlantina"))
-			registro_parlantina(TRUE);
+		else if (!strcmp(argv[i], "--label") && i + 1 < argc)
+			label = argv[++i];
+		else if (!strcmp(argv[i], "--verbose"))
+			log_chatter(TRUE);
 		else
 		{
 			/* ⛔ And it says WHICH argument was not understood.  The first draft
 			 *    printed only the usage line, and on 12 Aug 2026 it cost a
-			 *    whole round: `--etichetta` was missing, the bench read «exit 2»
+			 *    whole round: `--label` was missing, the bench read «exit 2»
 			 *    and the help line, and from outside it looked like a producer
 			 *    that does not start.  It is `FASI.md` §00-ambiente B3 point 2 — *an option
 			 *    refused is not a defect of the target*. */
 			fprintf(stderr,
 			        "⛔ I do not understand the argument «%s».\n"
-			        "usage: %s --uscita PREFISSO --pronto FILE --segnale-scena FILE\n"
-			        "        [--larghezza W] [--altezza H] [--fps N] [--bgra] [--dmabuf]\n"
-			        "        [--10bit] [--dopo-scena S] [--scarta N] [--durata S]\n"
-			        "        [--attesa-scena S] [--minimo-dopo-scena N] [--etichetta T]\n"
-			        "        [--nodo N] [--parlantina]\n",
+			        "usage: %s --output PREFISSO --ready FILE --scene-signal FILE\n"
+			        "        [--width W] [--height H] [--fps N] [--bgra] [--dmabuf]\n"
+			        "        [--10bit] [--post-scene S] [--discard N] [--duration S]\n"
+			        "        [--wait-scene S] [--min-after-scene N] [--label T]\n"
+			        "        [--node N] [--verbose]\n",
 			        argv[i], argv[0]);
 			return 2;
 		}
 	}
-	if (!uscita || !pronto || !segnale_scena)
+	if (!output || !ready || !scene_signal)
 	{
-		fprintf(stderr, "⛔ --uscita, --pronto and --segnale-scena are needed: the order between the "
+		fprintf(stderr, "⛔ --output, --ready and --scene-signal are needed: the order between the "
 		                "monitor and the scene is an EVENT, not a timed wait.\n");
 		return 2;
 	}
 
-	first_file = g_strdup_printf("%s-primo.raw", uscita);
-	file_regime = g_strdup_printf("%s-regime.raw", uscita);
-	file_json = g_strdup_printf("%s.json", uscita);
+	first_file = g_strdup_printf("%s-primo.raw", output);
+	file_regime = g_strdup_printf("%s-regime.raw", output);
+	file_json = g_strdup_printf("%s.json", output);
 
 	now_epoch = time(NULL);
 	gmtime_r(&now_epoch, &now_tm);
-	strftime(quando, sizeof quando, "%Y-%m-%dT%H:%M:%SZ", &now_tm);
+	strftime(when, sizeof when, "%Y-%m-%dT%H:%M:%SZ", &now_tm);
 
-	fprintf(stderr, "== %s: requested %ux%u, %s, ceiling %u fps, road %s ==\n", etichetta, larghezza,
-	        altezza, requested_color_name, fps,
-	        strada == CATTURA_STRADA_SCHEDA ? "card (DMA-BUF)" : "memory");
+	fprintf(stderr, "== %s: requested %ux%u, %s, ceiling %u fps, road %s ==\n", label, width,
+	        height, requested_color_name, fps,
+	        route == CAPTURE_ROUTE_CARD ? "card (DMA-BUF)" : "memory");
 	fprintf(stderr, "   the producer is THE PRODUCT: src/cattura.c + src/mutter.c\n");
 
 	/* --- the stage ------------------------------------------------------- */
-	if (nodo == 0)
+	if (node == 0)
 	{
-		sessione = mutter_apri(&sbaglio);
-		if (!sessione)
+		session = mutter_open(&mistake);
+		if (!session)
 		{
-			fprintf(stderr, "⛔ virtual monitor not mounted: %s\n", sbaglio->message);
+			fprintf(stderr, "⛔ virtual monitor not mounted: %s\n", mistake->message);
 			return 1;
 		}
-		nodo = mutter_nodo(sessione);
+		node = mutter_node(session);
 	}
 
 	/* --- the capture ----------------------------------------------------- */
-	cattura = cattura_avvia(nodo, larghezza, altezza, fps, strada, colore, NULL, NULL, NULL,
-	                        &sbaglio);
-	if (!cattura)
+	capture = capture_start(node, width, height, fps, route, color, NULL, NULL, NULL,
+	                        &mistake);
+	if (!capture)
 	{
-		printf("GUASTO\t%s\t%s\n", etichetta, sbaglio->message);
-		fprintf(stderr, "⛔ FAILED: %s\n", sbaglio->message);
-		mutter_chiudi(sessione);
+		printf("GUASTO\t%s\t%s\n", label, mistake->message);
+		fprintf(stderr, "⛔ FAILED: %s\n", mistake->message);
+		mutter_close(session);
 		return 2;
 	}
 
-	/* The stream is waited for to be really ACTIVE before saying «pronto»:
+	/* The stream is waited for to be really ACTIVE before saying «ready»:
 	 * writing it before would mean switching the scene on on a monitor that does not
 	 * exist yet. */
-	scadenza = g_get_monotonic_time() + 10 * G_USEC_PER_SEC;
-	while (!capture_active(cattura) && g_get_monotonic_time() < scadenza)
+	expiry = g_get_monotonic_time() + 10 * G_USEC_PER_SEC;
+	while (!capture_active(capture) && g_get_monotonic_time() < expiry)
 		g_usleep(20000);
-	if (!capture_active(cattura))
+	if (!capture_active(capture))
 	{
-		printf("GUASTO\t%s\tstream never active\n", etichetta);
+		printf("GUASTO\t%s\tstream never active\n", label);
 		fprintf(stderr, "⛔ FAILED (not «zero»): the stream never became active%s%s.\n",
-		        capture_fault(cattura) ? " — " : "",
-		        capture_fault(cattura) ? capture_fault(cattura) : "");
-		cattura_ferma(cattura);
-		mutter_chiudi(sessione);
+		        capture_fault(capture) ? " — " : "",
+		        capture_fault(capture) ? capture_fault(capture) : "");
+		capture_stop(capture);
+		mutter_close(session);
 		return 2;
 	}
 
@@ -264,121 +264,121 @@ int main(int argc, char **argv)
 	 *    The virtual monitor appears when the consumer hooks on, `[M]`, and
 	 *    this is also the moment the name is needed: the scene opens after,
 	 *    and must be sent to THIS screen by name (`CODER.md` §3.9). */
-	if (sessione)
+	if (session)
 	{
-		mutter_monitor_cerca(sessione);
+		mutter_find_monitor(session);
 		fprintf(stderr, "   our monitor: %s («%s»)\n",
-		        mutter_our_monitor(sessione) ? mutter_our_monitor(sessione) : "I DO NOT KNOW",
-		        mutter_monitor_prodotto(sessione) ? mutter_monitor_prodotto(sessione) : "—");
+		        mutter_our_monitor(session) ? mutter_our_monitor(session) : "I DO NOT KNOW",
+		        mutter_monitor_product(session) ? mutter_monitor_product(session) : "—");
 	}
 
-	/* --- the «primo» frame: before the scene exists ---------------------- *
+	/* --- the «first» frame: before the scene exists ---------------------- *
 	 * ⛔ E9 (`CODER.md` §3.5) for a still image: the start-up sample is not
 	 *    a defect — it is the PRODUCT, what whoever connects now sees. The
 	 *    defect would be measuring it and writing the number in a column that
 	 *    phase 3 will read as steady state.  ⇒ Two frames, two files, and the manifest
 	 *    says for each which it was among those arrived. */
 	{
-		CaptureTake p = cattura_prendi(cattura, 3.0, &primo.fermo, &sbaglio);
+		CaptureTake p = capture_take(capture, 3.0, &first.stopped, &mistake);
 
-		if (p == CATTURA_PRESA_FATTA)
+		if (p == CAPTURE_TAKE_DONE)
 		{
-			primo.preso = TRUE;
-			primo.danno = damage_name(&primo.fermo);
+			first.taken = TRUE;
+			first.damage = damage_name(&first.stopped);
 		}
-		else if (p == CATTURA_PRESA_GUASTO)
+		else if (p == CAPTURE_TAKE_FAULT)
 		{
-			printf("GUASTO\t%s\t%s\n", etichetta, sbaglio->message);
-			fprintf(stderr, "⛔ FAILED on the «primo»: %s\n", sbaglio->message);
-			cattura_ferma(cattura);
-			mutter_chiudi(sessione);
+			printf("GUASTO\t%s\t%s\n", label, mistake->message);
+			fprintf(stderr, "⛔ FAILED on the «primo»: %s\n", mistake->message);
+			capture_stop(capture);
+			mutter_close(session);
 			return 2;
 		}
-		else if (p == CATTURA_PRESA_PIXEL_ALTROVE)
+		else if (p == CAPTURE_TAKE_PIXEL_ELSEWHERE)
 		{
-			primo.preso = FALSE; /* the pixels live on the card: it is said, not faked */
+			first.taken = FALSE; /* the pixels live on the card: it is said, not faked */
 		}
-		g_clear_error(&sbaglio);
+		g_clear_error(&mistake);
 	}
 
-	if (!g_file_set_contents(pronto, "pronto\n", -1, &sbaglio))
+	if (!g_file_set_contents(ready, "ready\n", -1, &mistake))
 	{
-		fprintf(stderr, "⛔ I cannot write %s: %s\n", pronto, sbaglio->message);
-		cattura_ferma(cattura);
-		mutter_chiudi(sessione);
+		fprintf(stderr, "⛔ I cannot write %s: %s\n", ready, mistake->message);
+		capture_stop(capture);
+		mutter_close(session);
 		return 1;
 	}
 	fprintf(stderr, "  pronto: the scene can be switched on now\n");
 
 	/* --- wait for the launcher to declare the scene on ------------------- */
-	scadenza = g_get_monotonic_time() + (gint64) (attesa_scena * G_USEC_PER_SEC);
-	while (!g_file_test(segnale_scena, G_FILE_TEST_EXISTS) && g_get_monotonic_time() < scadenza)
+	expiry = g_get_monotonic_time() + (gint64) (wait_scene * G_USEC_PER_SEC);
+	while (!g_file_test(scene_signal, G_FILE_TEST_EXISTS) && g_get_monotonic_time() < expiry)
 		g_usleep(50000);
-	if (!g_file_test(segnale_scena, G_FILE_TEST_EXISTS))
+	if (!g_file_test(scene_signal, G_FILE_TEST_EXISTS))
 	{
-		printf("GUASTO\t%s\tthe scene was never declared on\n", etichetta);
+		printf("GUASTO\t%s\tthe scene was never declared on\n", label);
 		fprintf(stderr, "⛔ FAILED: after %.1f s nobody declared the scene on.\n",
-		        attesa_scena);
-		cattura_ferma(cattura);
-		mutter_chiudi(sessione);
+		        wait_scene);
+		capture_stop(capture);
+		mutter_close(session);
 		return 2;
 	}
-	cattura_conteggi(cattura, &conto);
-	prima_della_scena = conto.arrivati;
-	fine = g_get_monotonic_time() + (gint64) (durata * G_USEC_PER_SEC);
+	capture_counts(capture, &tally);
+	before_scene = tally.incoming;
+	fine = g_get_monotonic_time() + (gint64) (duration * G_USEC_PER_SEC);
 	fprintf(stderr, "  scene on: %" G_GUINT64_FORMAT " frames had already arrived\n",
-	        prima_della_scena);
+	        before_scene);
 
 	/* --- the «regime» frame ---------------------------------------------- *
-	 * `--dopo-scena` is let pass, `--scarta` frames are thrown away (they are
+	 * `--post-scene` is let pass, `--discard` frames are thrown away (they are
 	 * the switching on of the scene, not the steady state), and then **the last one of the
 	 * window** is taken: so the damage it carries is the steady-state one. */
-	g_usleep((gulong) (dopo_scena * G_USEC_PER_SEC));
-	for (i = 0; (guint64) i < scarta && g_get_monotonic_time() < fine; i++)
+	g_usleep((gulong) (post_scene * G_USEC_PER_SEC));
+	for (i = 0; (guint64) i < discard && g_get_monotonic_time() < fine; i++)
 	{
-		CatturaFermo buttato = { 0 };
+		CaptureStopped discarded = { 0 };
 
-		if (cattura_prendi(cattura, 0.5, &buttato, &sbaglio) == CATTURA_PRESA_GUASTO)
+		if (capture_take(capture, 0.5, &discarded, &mistake) == CAPTURE_TAKE_FAULT)
 			break;
-		cattura_fermo_libera(&buttato);
-		g_clear_error(&sbaglio);
+		capture_stopped_free(&discarded);
+		g_clear_error(&mistake);
 	}
-	g_clear_error(&sbaglio);
+	g_clear_error(&mistake);
 
 	while (g_get_monotonic_time() < fine - (gint64) (0.7 * G_USEC_PER_SEC))
 		g_usleep(50000);
 
 	{
-		CaptureTake p = cattura_prendi(cattura, 1.5, &regime.fermo, &sbaglio);
+		CaptureTake p = capture_take(capture, 1.5, &regime.stopped, &mistake);
 
-		if (p == CATTURA_PRESA_FATTA)
+		if (p == CAPTURE_TAKE_DONE)
 		{
-			regime.preso = TRUE;
-			regime.danno = damage_name(&regime.fermo);
+			regime.taken = TRUE;
+			regime.damage = damage_name(&regime.stopped);
 		}
-		else if (p == CATTURA_PRESA_GUASTO)
+		else if (p == CAPTURE_TAKE_FAULT)
 		{
-			printf("GUASTO\t%s\t%s\n", etichetta, sbaglio->message);
-			fprintf(stderr, "⛔ FAILED on the «regime»: %s\n", sbaglio->message);
-			cattura_fermo_libera(&primo.fermo);
-			cattura_ferma(cattura);
-			mutter_chiudi(sessione);
+			printf("GUASTO\t%s\t%s\n", label, mistake->message);
+			fprintf(stderr, "⛔ FAILED on the «regime»: %s\n", mistake->message);
+			capture_stopped_free(&first.stopped);
+			capture_stop(capture);
+			mutter_close(session);
 			return 2;
 		}
-		g_clear_error(&sbaglio);
+		g_clear_error(&mistake);
 	}
 
 	/* --- the guards, BEFORE writing any number --------------------------- */
-	if (!capture_active(cattura))
+	if (!capture_active(capture))
 	{
-		printf("GUASTO\t%s\tstream dropped during the take\n", etichetta);
+		printf("GUASTO\t%s\tstream dropped during the take\n", label);
 		fprintf(stderr, "⛔ FAILED (not «zero»): the stream was active and dropped.\n");
-		cattura_ferma(cattura);
-		mutter_chiudi(sessione);
+		capture_stop(capture);
+		mutter_close(session);
 		return 2;
 	}
-	cattura_conteggi(cattura, &conto);
-	dopo_la_scena = conto.arrivati - prima_della_scena;
+	capture_counts(capture, &tally);
+	after_scene = tally.incoming - before_scene;
 
 	/*
 	 * ⛔ A LIVE SCENE AND ZERO FRAMES IS NOT A ZERO: IT IS A FAULT.
@@ -389,10 +389,10 @@ int main(int argc, char **argv)
 	 * moving, zero frames is the proof that we are looking at a screen
 	 * different from the one the scene paints on.
 	 */
-	if (dopo_la_scena < minimo_dopo_scena)
+	if (after_scene < min_after_scene)
 	{
-		printf("GUASTO\t%s\tlive scene and %" G_GUINT64_FORMAT " frames after\n", etichetta,
-		       dopo_la_scena);
+		printf("GUASTO\t%s\tlive scene and %" G_GUINT64_FORMAT " frames after\n", label,
+		       after_scene);
 		fprintf(stderr,
 		        "⛔ FAILED (not «zero»): the scene was declared alive and there arrived\n"
 		        "   %" G_GUINT64_FORMAT " frames after it (minimum required %" G_GUINT64_FORMAT
@@ -400,67 +400,67 @@ int main(int argc, char **argv)
 		        " had arrived: the stream works.\n"
 		        "   ⇒ It is not the still desktop: it is that the scene paints on a DIFFERENT SCREEN\n"
 		        "     from the one we are capturing (ours is %s).\n",
-		        dopo_la_scena, minimo_dopo_scena, prima_della_scena,
-		        sessione && mutter_our_monitor(sessione) ? mutter_our_monitor(sessione)
+		        after_scene, min_after_scene, before_scene,
+		        session && mutter_our_monitor(session) ? mutter_our_monitor(session)
 		                                                    : "unknown");
-		cattura_fermo_libera(&primo.fermo);
-		cattura_fermo_libera(&regime.fermo);
-		cattura_ferma(cattura);
-		mutter_chiudi(sessione);
+		capture_stopped_free(&first.stopped);
+		capture_stopped_free(&regime.stopped);
+		capture_stop(capture);
+		mutter_close(session);
 		return 2;
 	}
 
 	/* --- the writing ----------------------------------------------------- */
-	if (!cattura_consegna(cattura, &consegna))
+	if (!capture_delivery(capture, &delivery))
 	{
-		printf("GUASTO\t%s\tno format negotiated\n", etichetta);
+		printf("GUASTO\t%s\tno format negotiated\n", label);
 		fprintf(stderr, "⛔ FAILED: no format was negotiated: there is nothing to "
 		                "declare, and I do not write zeros in its place.\n");
-		cattura_ferma(cattura);
-		mutter_chiudi(sessione);
+		capture_stop(capture);
+		mutter_close(session);
 		return 2;
 	}
 
-	if (conto.arrivati == 0)
+	if (tally.incoming == 0)
 	{
-		esito = "ZERO FRAMES";
-		codice = 3;
+		outcome = "ZERO FRAMES";
+		code = 3;
 	}
-	else if (strada == CATTURA_STRADA_SCHEDA)
+	else if (route == CAPTURE_ROUTE_CARD)
 	{
-		esito = "TYPE DECLARED, PIXELS NOT READ (dmabuf)";
-		codice = 0;
+		outcome = "TYPE DECLARED, PIXELS NOT READ (dmabuf)";
+		code = 0;
 	}
-	else if (!primo.preso && !regime.preso)
+	else if (!first.taken && !regime.taken)
 	{
-		printf("GUASTO\t%s\tframes arrived but none copyable\n", etichetta);
+		printf("GUASTO\t%s\tframes arrived but none copyable\n", label);
 		fprintf(stderr, "⛔ FAILED: %" G_GUINT64_FORMAT " frames arrived and none "
 		                "had readable pixels.\n",
-		        conto.arrivati);
-		cattura_ferma(cattura);
-		mutter_chiudi(sessione);
+		        tally.incoming);
+		capture_stop(capture);
+		mutter_close(session);
 		return 2;
 	}
 	else
 	{
-		esito = "ONE FRAME";
-		codice = 0;
-		if (primo.preso &&
-		    !g_file_set_contents(first_file, (const char *) primo.fermo.pixel,
-		                         (gssize) primo.fermo.byte, &sbaglio))
+		outcome = "ONE FRAME";
+		code = 0;
+		if (first.taken &&
+		    !g_file_set_contents(first_file, (const char *) first.stopped.pixel,
+		                         (gssize) first.stopped.byte, &mistake))
 		{
-			fprintf(stderr, "⛔ I cannot write %s: %s\n", first_file, sbaglio->message);
-			cattura_ferma(cattura);
-			mutter_chiudi(sessione);
+			fprintf(stderr, "⛔ I cannot write %s: %s\n", first_file, mistake->message);
+			capture_stop(capture);
+			mutter_close(session);
 			return 1;
 		}
-		if (regime.preso &&
-		    !g_file_set_contents(file_regime, (const char *) regime.fermo.pixel,
-		                         (gssize) regime.fermo.byte, &sbaglio))
+		if (regime.taken &&
+		    !g_file_set_contents(file_regime, (const char *) regime.stopped.pixel,
+		                         (gssize) regime.stopped.byte, &mistake))
 		{
-			fprintf(stderr, "⛔ I cannot write %s: %s\n", file_regime, sbaglio->message);
-			cattura_ferma(cattura);
-			mutter_chiudi(sessione);
+			fprintf(stderr, "⛔ I cannot write %s: %s\n", file_regime, mistake->message);
+			capture_stop(capture);
+			mutter_close(session);
 			return 1;
 		}
 	}
@@ -470,135 +470,135 @@ int main(int argc, char **argv)
 	g_string_append_printf(manifesto,
 	                       "  \"strumento\": \"02-cattura-prodotto (src/cattura.c + "
 	                       "src/mutter.c)\",\n"
-	                       "  \"etichetta\": \"%s\",\n"
-	                       "  \"quando_utc\": \"%s\",\n"
+	                       "  \"label\": \"%s\",\n"
+	                       "  \"when_utc\": \"%s\",\n"
 	                       "  \"nodo_pipewire\": %u,\n"
-	                       "  \"esito\": \"%s\",\n"
-	                       "  \"uscita\": %d,\n",
-	                       etichetta, quando, nodo, esito, codice);
+	                       "  \"outcome\": \"%s\",\n"
+	                       "  \"exit\": %d,\n",
+	                       label, when, node, outcome, code);
 	g_string_append_printf(manifesto,
-	                       "  \"chiesto\": {\n"
-	                       "    \"larghezza\": %u, \"altezza\": %u, \"fps_massimi\": %u,\n"
-	                       "    \"colore\": \"%s\", \"strada\": \"%s\",\n"
+	                       "  \"requested\": {\n"
+	                       "    \"width\": %u, \"height\": %u, \"fps_massimi\": %u,\n"
+	                       "    \"color\": \"%s\", \"route\": \"%s\",\n"
 	                       "    \"cadenza\": \"0/1 with maxFramerate at %u — «send me a "
 	                       "frame when something changes»\"\n"
 	                       "  },\n",
-	                       larghezza, altezza, fps,
-	                       colore == CAPTURE_COLOR_BGRA ? "BGRA"
-	                       : colore == CAPTURE_COLOR_10BIT ? "10bit"
+	                       width, height, fps,
+	                       color == CAPTURE_COLOR_BGRA ? "BGRA"
+	                       : color == CAPTURE_COLOR_10BIT ? "10bit"
 	                                                        : "BGRx",
-	                       strada == CATTURA_STRADA_SCHEDA ? "dmabuf" : "memoria", fps);
+	                       route == CAPTURE_ROUTE_CARD ? "dmabuf" : "memory", fps);
 	g_string_append_printf(manifesto,
-	                       "  \"negoziato\": {\n"
-	                       "    \"noto\": %s,\n"
-	                       "    \"larghezza\": %u, \"altezza\": %u,\n"
-	                       "    \"colore\": \"%s\",\n"
-	                       "    \"modificatore\": \"0x%" G_GINT64_MODIFIER "x\",\n"
-	                       "    \"chi_lo_dice\": \"PipeWire, SPA_PARAM_Format in the param_changed "
+	                       "  \"negotiated\": {\n"
+	                       "    \"known\": %s,\n"
+	                       "    \"width\": %u, \"height\": %u,\n"
+	                       "    \"color\": \"%s\",\n"
+	                       "    \"modifier\": \"0x%" G_GINT64_MODIFIER "x\",\n"
+	                       "    \"claimed_by\": \"PipeWire, SPA_PARAM_Format in the param_changed "
 	                       "callback — it is not the label we gave it\"\n"
 	                       "  },\n",
-	                       consegna.noto ? "true" : "false", consegna.larghezza, consegna.altezza,
-	                       consegna.formato, (guint64) consegna.modificatore);
+	                       delivery.known ? "true" : "false", delivery.width, delivery.height,
+	                       delivery.fmt, (guint64) delivery.modifier);
 
 	g_string_append_printf(
 	    manifesto,
-	    "  \"consegna_a_F2_3\": {\n"
-	    "    \"bit_per_canale\": %d,\n"
-	    "    \"bit_per_canale_chi_lo_dice\": \"the negotiated FORMAT (%s), %s. STUDI.md §gnome §8.3 "
+	    "  \"delivery_to_F2_3\": {\n"
+	    "    \"bits_per_channel\": %d,\n"
+	    "    \"bits_per_channel_claimed_by\": \"the negotiated FORMAT (%s), %s. STUDI.md §gnome §8.3 "
 	    "[R]: supported_formats[] of Mutter 48.7 has TWO entries, BGRx and BGRA — from this "
 	    "capture ten real bits do NOT come out\",\n"
 	    "    \"⛔ F2.3-A\": \"an HEVC Main10 fed from here carries 8 bits promoted to 10: "
 	    "the label says Main10, the image comes out fine anyway, and the defendant is THE "
 	    "CAPTURE, not the encoder\",\n"
 	    "    \"stride\": %u,\n"
-	    "    \"stride_chi_lo_dice\": \"⛔ READ from the buffer chunk, never computed as "
+	    "    \"stride_claimed_by\": \"⛔ READ from the buffer chunk, never computed as "
 	    "width×4 — today it coincides, and precisely for this the rule must be written\",\n"
-	    "    \"byte_per_fotogramma\": %" G_GUINT64_FORMAT ",\n"
+	    "    \"bytes_per_frame\": %" G_GUINT64_FORMAT ",\n"
 	    "    \"range\": \"%s\",\n"
-	    "    \"matrice\": \"%s\",\n"
-	    "    \"trasferimento\": \"%s\",\n"
-	    "    \"primari\": \"%s\",\n"
-	    "    \"chi_lo_dice\": \"spa_video_info_raw.color_range / .color_matrix / "
+	    "    \"matrix\": \"%s\",\n"
+	    "    \"transfer\": \"%s\",\n"
+	    "    \"primaries\": \"%s\",\n"
+	    "    \"claimed_by\": \"spa_video_info_raw.color_range / .color_matrix / "
 	    ".transfer_function / .color_primaries, filled by spa_format_video_raw_parse on the "
 	    "producer's SPA_PARAM_Format\",\n"
 	    "    \"⚠ sulla matrice\": \"at capture the pixels are RGB: no 601/709 matrix "
 	    "was applied by us. The matrix is CHOSEN by F2.3 when converting to YCbCr, and "
 	    "F2.6 must compare with the same one — a comparison made with the wrong matrix "
 	    "measures the matrix\",\n"
-	    "    \"range_misurato_dal_prodotto\": \"%s\",\n"
-	    "    \"valori_grezzi\": {\"color_range\": %u, \"color_matrix\": %u, "
+	    "    \"range_measured_by_product\": \"%s\",\n"
+	    "    \"raw_values\": {\"color_range\": %u, \"color_matrix\": %u, "
 	    "\"transfer_function\": %u, \"color_primaries\": %u}\n"
 	    "  },\n",
-	    consegna.bit_per_canale, consegna.formato, capture_source_name(consegna.source_bit),
+	    delivery.bit_per_channel, delivery.fmt, capture_source_name(delivery.source_bit),
 	    /* ⛔ The stride is read from WHATEVER frame arrived, even from one
 	     *    without pixels: on the card road the pixels are not here, but the
 	     *    stride is a fact of the chunk, and it is one of the four that are
 	     *    declared downstream.  Writing 0 there would be a silence passed off
 	     *    as a number. */
-	    regime.fermo.stride ? regime.fermo.stride : primo.fermo.stride,
-	    regime.fermo.byte ? regime.fermo.byte
-	                      : (guint64) (regime.fermo.stride ? regime.fermo.stride
-	                                                       : primo.fermo.stride) *
-	                            consegna.altezza,
-	    capture_range_name(consegna.raw_range), capture_matrix_name(consegna.raw_matrix),
-	    capture_transfer_name(consegna.raw_transfer),
-	    capture_primaries_name(consegna.raw_primaries),
-	    capture_range_measured_name(regime.preso ? regime.fermo.consegna.range_misurato
+	    regime.stopped.stride ? regime.stopped.stride : first.stopped.stride,
+	    regime.stopped.byte ? regime.stopped.byte
+	                      : (guint64) (regime.stopped.stride ? regime.stopped.stride
+	                                                       : first.stopped.stride) *
+	                            delivery.height,
+	    capture_range_name(delivery.raw_range), capture_matrix_name(delivery.raw_matrix),
+	    capture_transfer_name(delivery.raw_transfer),
+	    capture_primaries_name(delivery.raw_primaries),
+	    capture_range_measured_name(regime.taken ? regime.stopped.delivery.measured_range
 	                                             : CAPTURE_RANGE_UNMEASURED),
-	    consegna.raw_range, consegna.raw_matrix, consegna.raw_transfer,
-	    consegna.raw_primaries);
+	    delivery.raw_range, delivery.raw_matrix, delivery.raw_transfer,
+	    delivery.raw_primaries);
 
-	g_string_append(manifesto, "  \"buffer\": {\n    \"tipi_visti\": [");
-	for (i = 0; (guint) i < conto.how_many_types; i++)
+	g_string_append(manifesto, "  \"buffer\": {\n    \"types_seen\": [");
+	for (i = 0; (guint) i < tally.how_many_types; i++)
 		g_string_append_printf(manifesto, "%s\"%s\"", i ? ", " : "",
-		                       capture_buffer_name(conto.tipi_visti[i]));
+		                       capture_buffer_name(tally.seen_types[i]));
 	g_string_append_printf(manifesto,
 	                       "],\n"
-	                       "    \"chiesto\": \"%s\",\n"
-	                       "    \"distinti_riciclati\": %u,\n"
-	                       "    \"chi_lo_dice\": \"PipeWire, spa_data.type of plane 0 of every "
+	                       "    \"requested\": \"%s\",\n"
+	                       "    \"distinct_recycled\": %u,\n"
+	                       "    \"claimed_by\": \"PipeWire, spa_data.type of plane 0 of every "
 	                       "buffer — asked for in TWO places (the modifier in the format and "
 	                       "SPA_PARAM_BUFFERS_dataType)\"\n"
 	                       "  },\n",
-	                       capture_buffer_name(consegna.buffer_chiesto), conto.buffer_distinti);
+	                       capture_buffer_name(delivery.buffer_requested), tally.distinct_buffers);
 
 	g_string_append_printf(manifesto,
-	                       "  \"fotogrammi\": {\n"
-	                       "    \"minimo_dopo_la_scena_preteso\": %" G_GUINT64_FORMAT ",\n"
-	                       "    \"arrivati_in_tutto\": %" G_GUINT64_FORMAT ",\n"
-	                       "    \"prima_della_scena\": %" G_GUINT64_FORMAT ",\n"
-	                       "    \"dopo_la_scena\": %" G_GUINT64_FORMAT ",\n"
-	                       "    \"danno_pieno\": %" G_GUINT64_FORMAT ",\n"
-	                       "    \"danno_parziale\": %" G_GUINT64_FORMAT ",\n"
-	                       "    \"danno_assente\": %" G_GUINT64_FORMAT ",\n"
-	                       "    \"senza_header\": %" G_GUINT64_FORMAT ",\n"
-	                       "    \"solo_cursore_scartati\": %" G_GUINT64_FORMAT ",\n"
-	                       "    \"stride_zero_scartati\": %" G_GUINT64_FORMAT ",\n"
-	                       "    \"senza_pixel_scartati\": %" G_GUINT64_FORMAT "\n"
+	                       "  \"frames\": {\n"
+	                       "    \"required_minimum_after_scene\": %" G_GUINT64_FORMAT ",\n"
+	                       "    \"arrived_total\": %" G_GUINT64_FORMAT ",\n"
+	                       "    \"before_scene\": %" G_GUINT64_FORMAT ",\n"
+	                       "    \"after_scene\": %" G_GUINT64_FORMAT ",\n"
+	                       "    \"full_damage\": %" G_GUINT64_FORMAT ",\n"
+	                       "    \"partial_damage\": %" G_GUINT64_FORMAT ",\n"
+	                       "    \"missing_damage\": %" G_GUINT64_FORMAT ",\n"
+	                       "    \"without_header\": %" G_GUINT64_FORMAT ",\n"
+	                       "    \"cursor_only_discarded\": %" G_GUINT64_FORMAT ",\n"
+	                       "    \"zero_stride_discarded\": %" G_GUINT64_FORMAT ",\n"
+	                       "    \"no_pixel_discarded\": %" G_GUINT64_FORMAT "\n"
 	                       "  },\n",
-	                       minimo_dopo_scena, conto.arrivati, prima_della_scena, dopo_la_scena,
-	                       conto.danno_pieno, conto.danno_parziale, conto.danno_assente,
-	                       conto.without_header, conto.solo_cursore, conto.stride_zero,
-	                       conto.without_pixel);
+	                       min_after_scene, tally.incoming, before_scene, after_scene,
+	                       tally.full_damage, tally.partial_damage, tally.missing_damage,
+	                       tally.without_header, tally.cursor_only, tally.stride_zero,
+	                       tally.without_pixel);
 
 	g_string_append_printf(manifesto,
-	                       "  \"schermo\": {\n"
-	                       "    \"connettore\": \"%s\",\n"
-	                       "    \"prodotto\": \"%s\",\n"
-	                       "    \"chi_lo_dice\": \"DisplayConfig.GetCurrentState before and after "
+	                       "  \"screen\": {\n"
+	                       "    \"connector\": \"%s\",\n"
+	                       "    \"product\": \"%s\",\n"
+	                       "    \"claimed_by\": \"DisplayConfig.GetCurrentState before and after "
 	                       "RecordVirtual, plus the PRODUCT name: two independent roads "
 	                       "that must agree, because the two virtual monitors of the server "
 	                       "are BOTH 1920×1080@60\"\n"
 	                       "  },\n",
-	                       sessione && mutter_our_monitor(sessione)
-	                           ? mutter_our_monitor(sessione)
+	                       session && mutter_our_monitor(session)
+	                           ? mutter_our_monitor(session)
 	                           : "I DO NOT KNOW",
-	                       sessione && mutter_monitor_prodotto(sessione)
-	                           ? mutter_monitor_prodotto(sessione)
+	                       session && mutter_monitor_product(session)
+	                           ? mutter_monitor_product(session)
 	                           : "—");
 
-	manifest_entry(manifesto, "primo", &primo, first_file);
-	manifest_entry(manifesto, "regime", &regime, file_regime);
+	manifest_entry(manifesto, "first", &first, first_file);
+	manifest_entry(manifesto, "steady", &steady, file_regime);
 
 	g_string_append(manifesto,
 	                "  \"avvertenze\": [\n"
@@ -619,19 +619,19 @@ int main(int argc, char **argv)
 	                "round would NOT see it.\"\n"
 	                "  ]\n}\n");
 
-	if (!g_file_set_contents(file_json, manifesto->str, -1, &sbaglio))
+	if (!g_file_set_contents(file_json, manifesto->str, -1, &mistake))
 	{
-		fprintf(stderr, "⛔ I cannot write %s: %s\n", file_json, sbaglio->message);
+		fprintf(stderr, "⛔ I cannot write %s: %s\n", file_json, mistake->message);
 		g_string_free(manifesto, TRUE);
-		cattura_ferma(cattura);
-		mutter_chiudi(sessione);
+		capture_stop(capture);
+		mutter_close(session);
 		return 1;
 	}
 	g_string_free(manifesto, TRUE);
 
-	printf("PRESA\t%s\t%s\t%s\t%" G_GUINT64_FORMAT "\t%" G_GUINT64_FORMAT "\t%s\n", etichetta,
-	       esito, file_json, conto.arrivati, dopo_la_scena,
-	       capture_buffer_name(consegna.buffer_dichiarato));
+	printf("PRESA\t%s\t%s\t%s\t%" G_GUINT64_FORMAT "\t%" G_GUINT64_FORMAT "\t%s\n", label,
+	       outcome, file_json, tally.incoming, after_scene,
+	       capture_buffer_name(delivery.buffer_declared));
 	fprintf(stderr,
 	        "  outcome: %s\n"
 	        "  arrived %" G_GUINT64_FORMAT " (before the scene %" G_GUINT64_FORMAT ", after %"
@@ -641,15 +641,15 @@ int main(int argc, char **argv)
 	        "  distinct recycled buffers: %u · declared type: %s\n"
 	        "  stride READ: %u · bytes: %" G_GUINT64_FORMAT "\n"
 	        "  manifest: %s\n",
-	        esito, conto.arrivati, prima_della_scena, dopo_la_scena, conto.danno_pieno,
-	        conto.danno_parziale, conto.danno_assente, conto.buffer_distinti,
-	        capture_buffer_name(consegna.buffer_dichiarato),
-	        regime.fermo.stride ? regime.fermo.stride : primo.fermo.stride, regime.fermo.byte,
+	        outcome, tally.incoming, before_scene, after_scene, tally.full_damage,
+	        tally.partial_damage, tally.missing_damage, tally.distinct_buffers,
+	        capture_buffer_name(delivery.buffer_declared),
+	        regime.stopped.stride ? regime.stopped.stride : first.stopped.stride, regime.stopped.byte,
 	        file_json);
 
-	cattura_fermo_libera(&primo.fermo);
-	cattura_fermo_libera(&regime.fermo);
-	cattura_ferma(cattura);
-	mutter_chiudi(sessione);
-	return codice;
+	capture_stopped_free(&first.stopped);
+	capture_stopped_free(&regime.stopped);
+	capture_stop(capture);
+	mutter_close(session);
+	return code;
 }

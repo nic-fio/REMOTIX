@@ -29,12 +29,12 @@
 #include "sessione.h"
 #include "wlroots.h"
 
-#define AREA "cattura"
+#define AREA "capture"
 
 /* How long to wait for KWin to answer `created` or `failed`.  A ceiling is needed:
  * `failed` is sent SYNCHRONOUSLY inside the request handler
  * (`screencastmanager.cpp:82`), so whoever misses it waits forever. */
-#define ATTESA_NODO_MS 5000
+#define WAIT_NODE_MS 5000
 
 /* The cursor mode, from the protocol's enum: 1 hidden, 2 drawn into the
  * buffer, 4 as metadata.
@@ -45,107 +45,107 @@
  * ⛔ THE PRICE IS IN `cattura.c`: every pointer movement produces a
  *    buffer with no new pixels marked `SPA_CHUNK_FLAG_CORRUPTED` (`kde.md`
  *    §4.7), and `cattura.c` already discards them. */
-#define PUNTATORE_METADATO 4
+#define POINTER_METADATA 4
 
 #define MAX_OUTPUTS 8
 
 /* The path of the permission: system-wide, because it applies to every user, and
  * KWin looks in `XDG_DATA_DIRS` (which contains `/usr/share`).  Since phase 17 the
- * package ships it and REMOTIX only checks it (`kwin_verifica_permesso`). */
+ * package ships it and REMOTIX only checks it (`kwin_check_permission`). */
 #define PERMISSION_DESKTOP_FILE "/usr/share/applications/org.kde.remotix.desktop"
 
 typedef struct
 {
-	struct wl_output *oggetto;
+	struct wl_output *object;
 	uint32_t global_name;
-	uint32_t versione;
-	char *nome; /* "WL-0" nested (`[M]` 11 Oct 2026), "Virtual-0" with `--virtual` */
-	uint32_t larghezza, altezza; /* of the CURRENT mode, in pixels */
+	uint32_t version;
+	char *name; /* "WL-0" nested (`[M]` 11 Oct 2026), "Virtual-0" with `--virtual` */
+	uint32_t width, height; /* of the CURRENT mode, in pixels */
 } OutDir;
 
-struct KwinSessione
+struct KwinSession
 {
 	struct wl_display *display;
-	struct wl_registry *registro;
+	struct wl_registry *registry;
 	struct zkde_screencast_unstable_v1 *screencast;
-	struct zkde_screencast_stream_unstable_v1 *flusso;
+	struct zkde_screencast_stream_unstable_v1 *stream;
 	uint32_t screencast_version;
 
-	OutDir uscite[MAX_OUTPUTS];
+	OutDir outputs[MAX_OUTPUTS];
 	unsigned how_many_outputs;
-	const OutDir *scelta;
+	const OutDir *choice;
 
-	uint32_t nodo;
+	uint32_t node;
 	bool node_arrived;
-	bool rifiutato;
+	bool refused;
 	char *refusal_reason;
-	volatile bool chiuso;
+	volatile bool closed;
 
 	/* ⛔ THE LOOP THAT KEEPS THE CONNECTION ALIVE IS NOT A LUXURY: the stream lives
 	 *    as long as the Wayland connection (`screencast_v1.cpp:28-35`), and a
 	 *    connection nobody serves does not deliver `closed`. */
-	GThread *pompa;
-	int sveglia[2];
+	GThread *pump;
+	int wake[2];
 
 	/* The input channel: the descriptor and the token of `connectToEIS`. */
 	int eis;
 	gint eis_token;
 	bool known_token;
 
-	/* The pixel that keeps full-screen windows composited (`metti_il_pixel()`). */
+	/* The pixel that keeps full-screen windows composited (`put_pixel()`). */
 	struct wl_compositor *compositor;
 	struct wl_shm *shm;
-	struct zwlr_layer_shell_v1 *strati;
-	struct wl_surface *pixel_sup;
-	struct zwlr_layer_surface_v1 *pixel_strato;
+	struct zwlr_layer_shell_v1 *layers;
+	struct wl_surface *pixel_surface;
+	struct zwlr_layer_surface_v1 *pixel_layer;
 	struct wl_buffer *pixel_buf;
-	bool pixel_configurato;
+	bool pixel_configured;
 };
 
 /* ------------------------------------------------------------------ *
  * The registry
  * ------------------------------------------------------------------ */
-static void on_output_geometry(void *dati, struct wl_output *uscita, int32_t x, int32_t y,
+static void on_output_geometry(void *data, struct wl_output *output, int32_t x, int32_t y,
                                 int32_t width_mm, int32_t height_mm, int32_t subpixel,
-                                const char *costruttore, const char *modello,
-                                int32_t trasformazione)
+                                const char *builder, const char *model,
+                                int32_t transform)
 {
 }
 
-static void on_output_mode(void *dati, struct wl_output *oggetto, uint32_t flag,
-                           int32_t larghezza, int32_t altezza, int32_t aggiornamento)
+static void on_output_mode(void *data, struct wl_output *object, uint32_t flag,
+                           int32_t width, int32_t height, int32_t update)
 {
-	OutDir *uscita = dati;
+	OutDir *output = data;
 
 	if (!(flag & WL_OUTPUT_MODE_CURRENT))
 		return;
-	uscita->larghezza = (uint32_t)MAX(0, larghezza);
-	uscita->altezza = (uint32_t)MAX(0, altezza);
+	output->width = (uint32_t)MAX(0, width);
+	output->height = (uint32_t)MAX(0, height);
 }
 
-static void on_output_end(void *dati, struct wl_output *oggetto)
+static void on_output_end(void *data, struct wl_output *object)
 {
 }
 
-static void on_output_scale(void *dati, struct wl_output *oggetto, int32_t scala)
+static void on_output_scale(void *data, struct wl_output *object, int32_t scale_factor)
 {
 	/* The scale does not touch the buffer's pixels (`core/output.cpp:457-459`), but
 	 * it shifts the input coordinate space: it is logged. */
-	if (scala != 1)
+	if (scale_factor != 1)
 		registro_dice(AREA, "⚠ KWin's output has scale %d: the logical desktop is "
-		                    "smaller than the captured buffer", scala);
+		                    "smaller than the captured buffer", scale_factor);
 }
 
-static void on_output_name(void *dati, struct wl_output *oggetto, const char *nome)
+static void on_output_name(void *data, struct wl_output *object, const char *name)
 {
-	OutDir *uscita = dati;
+	OutDir *output = data;
 
-	g_free(uscita->nome);
-	uscita->nome = g_strdup(nome);
+	g_free(output->name);
+	output->name = g_strdup(name);
 }
 
-static void on_output_description(void *dati, struct wl_output *oggetto,
-                                  const char *descrizione)
+static void on_output_description(void *data, struct wl_output *object,
+                                  const char *description)
 {
 }
 
@@ -154,52 +154,52 @@ static const struct wl_output_listener kwin_output_listener = {
 	on_output_scale,     on_output_name, on_output_description,
 };
 
-static void on_global(void *dati, struct wl_registry *registro, uint32_t nome,
-                       const char *interfaccia, uint32_t versione)
+static void on_global(void *data, struct wl_registry *registry, uint32_t name,
+                       const char *interfaccia, uint32_t version)
 {
-	KwinSessione *sessione = dati;
+	KwinSession *session = data;
 
 	if (!strcmp(interfaccia, zkde_screencast_unstable_v1_interface.name)) {
 		/* KWin 6.3.6 announces 5; the clamp because a newer KWin would
 		 * announce one our XML does not describe. */
-		sessione->screencast_version = MIN(versione, 5u);
-		sessione->screencast =
-		    wl_registry_bind(registro, nome, &zkde_screencast_unstable_v1_interface,
-		                     sessione->screencast_version);
+		session->screencast_version = MIN(version, 5u);
+		session->screencast =
+		    wl_registry_bind(registry, name, &zkde_screencast_unstable_v1_interface,
+		                     session->screencast_version);
 	} else if (!strcmp(interfaccia, wl_compositor_interface.name)) {
-		sessione->compositor = wl_registry_bind(registro, nome, &wl_compositor_interface,
-		                                        MIN(versione, 4u));
+		session->compositor = wl_registry_bind(registry, name, &wl_compositor_interface,
+		                                        MIN(version, 4u));
 	} else if (!strcmp(interfaccia, wl_shm_interface.name)) {
-		sessione->shm = wl_registry_bind(registro, nome, &wl_shm_interface, 1);
+		session->shm = wl_registry_bind(registry, name, &wl_shm_interface, 1);
 	} else if (!strcmp(interfaccia, zwlr_layer_shell_v1_interface.name)) {
-		sessione->strati = wl_registry_bind(registro, nome, &zwlr_layer_shell_v1_interface,
-		                                    MIN(versione, 1u));
+		session->layers = wl_registry_bind(registry, name, &zwlr_layer_shell_v1_interface,
+		                                    MIN(version, 1u));
 	} else if (!strcmp(interfaccia, wl_output_interface.name)) {
-		OutDir *uscita;
+		OutDir *output;
 
-		if (sessione->how_many_outputs >= MAX_OUTPUTS) {
+		if (session->how_many_outputs >= MAX_OUTPUTS) {
 			registro_dice(AREA, "⚠ more than %d outputs: the others are ignored",
 			              MAX_OUTPUTS);
 			return;
 		}
-		uscita = &sessione->uscite[sessione->how_many_outputs++];
-		uscita->global_name = nome;
+		output = &session->outputs[session->how_many_outputs++];
+		output->global_name = name;
 		/* Version 4: the one that carries the `name` event. */
-		uscita->versione = MIN(versione, 4u);
-		uscita->oggetto =
-		    wl_registry_bind(registro, nome, &wl_output_interface, uscita->versione);
-		wl_output_add_listener(uscita->oggetto, &kwin_output_listener, uscita);
+		output->version = MIN(version, 4u);
+		output->object =
+		    wl_registry_bind(registry, name, &wl_output_interface, output->version);
+		wl_output_add_listener(output->object, &kwin_output_listener, output);
 	}
 }
 
-static void on_global_away(void *dati, struct wl_registry *registro, uint32_t nome)
+static void on_global_away(void *data, struct wl_registry *registry, uint32_t name)
 {
-	KwinSessione *sessione = dati;
+	KwinSession *session = data;
 
-	for (unsigned i = 0; i < sessione->how_many_outputs; i++)
-		if (sessione->uscite[i].global_name == nome)
+	for (unsigned i = 0; i < session->how_many_outputs; i++)
+		if (session->outputs[i].global_name == name)
 			registro_dice(AREA, "⚠ output «%s» has disappeared from the compositor",
-			              sessione->uscite[i].nome ? sessione->uscite[i].nome
+			              session->outputs[i].name ? session->outputs[i].name
 			                                       : "unnamed");
 }
 
@@ -208,36 +208,36 @@ static const struct wl_registry_listener registry_listener = { on_global, on_glo
 /* ------------------------------------------------------------------ *
  * The stream
  * ------------------------------------------------------------------ */
-static void on_stream_closed(void *dati, struct zkde_screencast_stream_unstable_v1 *flusso)
+static void on_stream_closed(void *data, struct zkde_screencast_stream_unstable_v1 *stream)
 {
-	KwinSessione *sessione = dati;
+	KwinSession *session = data;
 
 	/* Just mark it: the stage notices on its own, because the
 	 * PipeWire node disappears and the capture goes to `UNCONNECTED`. */
-	sessione->chiuso = true;
+	session->closed = true;
 	registro_dice(AREA, "KWin closed the capture stream");
 }
 
-static void on_stream_created(void *dati, struct zkde_screencast_stream_unstable_v1 *flusso,
-                             uint32_t nodo)
+static void on_stream_created(void *data, struct zkde_screencast_stream_unstable_v1 *stream,
+                             uint32_t node)
 {
-	KwinSessione *sessione = dati;
+	KwinSession *session = data;
 
-	sessione->nodo = nodo;
-	sessione->node_arrived = true;
+	session->node = node;
+	session->node_arrived = true;
 }
 
-static void on_stream_fault(void *dati, struct zkde_screencast_stream_unstable_v1 *flusso,
-                             const char *errore)
+static void on_stream_fault(void *data, struct zkde_screencast_stream_unstable_v1 *stream,
+                             const char *error)
 {
-	KwinSessione *sessione = dati;
+	KwinSession *session = data;
 
-	sessione->rifiutato = true;
-	g_free(sessione->refusal_reason);
-	sessione->refusal_reason = g_strdup(errore);
+	session->refused = true;
+	g_free(session->refusal_reason);
+	session->refusal_reason = g_strdup(error);
 }
 
-static const struct zkde_screencast_stream_unstable_v1_listener ascolto_flusso = {
+static const struct zkde_screencast_stream_unstable_v1_listener screencast_listener = {
 	on_stream_closed, on_stream_created, on_stream_fault
 };
 
@@ -246,60 +246,60 @@ static const struct zkde_screencast_stream_unstable_v1_listener ascolto_flusso =
  * ------------------------------------------------------------------ */
 /* One round of events with a deadline: `wl_display_dispatch` alone would block
  * without a ceiling.  false if the connection dropped or we were stopped. */
-static bool gira(KwinSessione *sessione, int attesa_ms)
+static bool runs(KwinSession *session, int wait_ms)
 {
-	struct pollfd sonda[2];
-	int quanti = 1;
+	struct pollfd probe[2];
+	int amount = 1;
 
-	while (wl_display_prepare_read(sessione->display) != 0)
-		if (wl_display_dispatch_pending(sessione->display) < 0)
+	while (wl_display_prepare_read(session->display) != 0)
+		if (wl_display_dispatch_pending(session->display) < 0)
 			return false;
-	if (wl_display_flush(sessione->display) < 0 && errno != EAGAIN) {
-		wl_display_cancel_read(sessione->display);
+	if (wl_display_flush(session->display) < 0 && errno != EAGAIN) {
+		wl_display_cancel_read(session->display);
 		return false;
 	}
 
-	sonda[0].fd = wl_display_get_fd(sessione->display);
-	sonda[0].events = POLLIN;
-	sonda[0].revents = 0;
-	if (sessione->sveglia[0] >= 0) {
-		sonda[1].fd = sessione->sveglia[0];
-		sonda[1].events = POLLIN;
-		sonda[1].revents = 0;
-		quanti = 2;
+	probe[0].fd = wl_display_get_fd(session->display);
+	probe[0].events = POLLIN;
+	probe[0].revents = 0;
+	if (session->wake[0] >= 0) {
+		probe[1].fd = session->wake[0];
+		probe[1].events = POLLIN;
+		probe[1].revents = 0;
+		amount = 2;
 	}
 
-	if (poll(sonda, (nfds_t)quanti, attesa_ms) <= 0) {
-		wl_display_cancel_read(sessione->display);
+	if (poll(probe, (nfds_t)amount, wait_ms) <= 0) {
+		wl_display_cancel_read(session->display);
 		return true;
 	}
-	if (quanti == 2 && (sonda[1].revents & POLLIN)) {
-		wl_display_cancel_read(sessione->display);
+	if (amount == 2 && (probe[1].revents & POLLIN)) {
+		wl_display_cancel_read(session->display);
 		return false;
 	}
-	if (!(sonda[0].revents & POLLIN)) {
-		wl_display_cancel_read(sessione->display);
-		return !(sonda[0].revents & (POLLERR | POLLHUP));
+	if (!(probe[0].revents & POLLIN)) {
+		wl_display_cancel_read(session->display);
+		return !(probe[0].revents & (POLLERR | POLLHUP));
 	}
 
-	if (wl_display_read_events(sessione->display) < 0)
+	if (wl_display_read_events(session->display) < 0)
 		return false;
-	return wl_display_dispatch_pending(sessione->display) >= 0;
+	return wl_display_dispatch_pending(session->display) >= 0;
 }
 
-static gpointer thread_pump(gpointer dati)
+static gpointer thread_pump(gpointer data)
 {
-	KwinSessione *sessione = dati;
+	KwinSession *session = data;
 
-	while (gira(sessione, -1))
+	while (runs(session, -1))
 		;
 	/* ⛔ AND IT IS MARKED — `[M]` 19 Sep 2026, the user's logout on KDE: KWin
 	 *    dies with the session WITHOUT closing the stream gracefully, so
 	 *    `on_stream_closed` does not arrive; and the PipeWire node disappearing does NOT
 	 *    put the capture in error — the grab returns "zero" forever, like
 	 *    a still scene.  ⇒ The connection dropping is the only sign, and
-	 *    the child reads it with `kwin_chiuso()`. */
-	sessione->chiuso = true;
+	 *    the child reads it with `kwin_closed()`. */
+	session->closed = true;
 	registro_dice(AREA, "the Wayland connection to KWin has closed: the compositor "
 	                    "is gone");
 	return NULL;
@@ -311,32 +311,32 @@ static gpointer thread_pump(gpointer dati)
 /* ⛔ The socket cannot be remembered: it is the first free `wayland-N`, and the
  *    child is born with an environment built from scratch (`WAYLAND_DISPLAY` is absent).
  *    ⇒ They are tried in order inside `XDG_RUNTIME_DIR`. */
-struct wl_display *kwin_display_apri(char *quale, size_t quanto)
+struct wl_display *kwin_display_open(char *which, size_t how_much)
 {
-	const char *dichiarato = getenv("WAYLAND_DISPLAY");
+	const char *claimed = getenv("WAYLAND_DISPLAY");
 	const char *runtime = getenv("XDG_RUNTIME_DIR");
 
-	if (dichiarato && *dichiarato) {
-		struct wl_display *display = wl_display_connect(dichiarato);
+	if (claimed && *claimed) {
+		struct wl_display *display = wl_display_connect(claimed);
 
 		if (display) {
-			snprintf(quale, quanto, "%s", dichiarato);
+			snprintf(which, how_much, "%s", claimed);
 			return display;
 		}
 	}
 	for (int i = 0; i < 10; i++) {
-		char nome[32], percorso[512];
+		char name[32], fpath[512];
 		struct wl_display *display;
 
-		snprintf(nome, sizeof nome, "wayland-%d", i);
+		snprintf(name, sizeof name, "wayland-%d", i);
 		if (runtime) {
-			snprintf(percorso, sizeof percorso, "%s/%s", runtime, nome);
-			if (access(percorso, F_OK) != 0)
+			snprintf(fpath, sizeof fpath, "%s/%s", runtime, name);
+			if (access(fpath, F_OK) != 0)
 				continue;
 		}
-		display = wl_display_connect(nome);
+		display = wl_display_connect(name);
 		if (display) {
-			snprintf(quale, quanto, "%s", nome);
+			snprintf(which, how_much, "%s", name);
 			return display;
 		}
 	}
@@ -344,20 +344,20 @@ struct wl_display *kwin_display_apri(char *quale, size_t quanto)
 }
 
 /* There is a single output (nested or `--virtual`); the first that has a mode is taken. */
-static const OutDir *choose_output(const KwinSessione *sessione)
+static const OutDir *choose_output(const KwinSession *session)
 {
-	for (unsigned i = 0; i < sessione->how_many_outputs; i++)
-		if (sessione->uscite[i].larghezza && sessione->uscite[i].altezza)
-			return &sessione->uscite[i];
+	for (unsigned i = 0; i < session->how_many_outputs; i++)
+		if (session->outputs[i].width && session->outputs[i].height)
+			return &session->outputs[i];
 	return NULL;
 }
 
 /* The gate is closed: say WHY, because the symptom does not say it.  The
  * missing global has two causes with opposite cures, and KWin tells them apart only in
  * its own log (`QT_LOGGING_RULES='KWIN_UTILS.debug=true'`). */
-static void explain_gate(GError **sbaglio)
+static void explain_gate(GError **mistake)
 {
-	g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_PERMISSION_DENIED,
+	g_set_error(mistake, G_IO_ERROR, G_IO_ERROR_PERMISSION_DENIED,
 	            "KWin does not announce zkde_screencast_unstable_v1: the capture permission "
 	            "is denied, it is not the protocol that is missing. Our .desktop %s (%s). And "
 	            "KWin's environment must have XDG_MENU_PREFIX=plasma-, or the service "
@@ -386,15 +386,15 @@ static void explain_gate(GError **sbaglio)
 static void pixel_configure(void *d, struct zwlr_layer_surface_v1 *s, uint32_t serial,
                             uint32_t l, uint32_t a)
 {
-	KwinSessione *sessione = d;
+	KwinSession *session = d;
 
 	zwlr_layer_surface_v1_ack_configure(s, serial);
-	if (!sessione->pixel_configurato && sessione->pixel_buf) {
-		wl_surface_attach(sessione->pixel_sup, sessione->pixel_buf, 0, 0);
-		wl_surface_damage_buffer(sessione->pixel_sup, 0, 0, 1, 1);
+	if (!session->pixel_configured && session->pixel_buf) {
+		wl_surface_attach(session->pixel_surface, session->pixel_buf, 0, 0);
+		wl_surface_damage_buffer(session->pixel_surface, 0, 0, 1, 1);
 	}
-	wl_surface_commit(sessione->pixel_sup);
-	sessione->pixel_configurato = true;
+	wl_surface_commit(session->pixel_surface);
+	session->pixel_configured = true;
 }
 static void pixel_closed(void *d, struct zwlr_layer_surface_v1 *s)
 {
@@ -404,16 +404,16 @@ static void pixel_closed(void *d, struct zwlr_layer_surface_v1 *s)
 static const struct zwlr_layer_surface_v1_listener PIXEL_LISTENER = { pixel_configure,
 	                                                              pixel_closed };
 
-static void metti_il_pixel(KwinSessione *sessione)
+static void put_pixel(KwinSession *session)
 {
 	struct wl_shm_pool *pool;
-	struct wl_region *vuota;
+	struct wl_region *blank;
 	int fd;
 
-	if (!sessione->compositor || !sessione->shm || !sessione->strati) {
+	if (!session->compositor || !session->shm || !session->layers) {
 		registro_dice(AREA, "⚠ KWin does not announce %s: no pixel on top — a "
 		                    "full-screen window with the pointer hidden may freeze",
-		              !sessione->strati ? "zwlr_layer_shell_v1" : "wl_compositor/wl_shm");
+		              !session->layers ? "zwlr_layer_shell_v1" : "wl_compositor/wl_shm");
 		return;
 	}
 	fd = memfd_create("remotix-pixel", MFD_CLOEXEC);
@@ -422,159 +422,159 @@ static void metti_il_pixel(KwinSessione *sessione)
 			close(fd);
 		return;
 	}
-	pool = wl_shm_create_pool(sessione->shm, fd, 4);
-	sessione->pixel_buf = wl_shm_pool_create_buffer(pool, 0, 1, 1, 4, WL_SHM_FORMAT_ARGB8888);
+	pool = wl_shm_create_pool(session->shm, fd, 4);
+	session->pixel_buf = wl_shm_pool_create_buffer(pool, 0, 1, 1, 4, WL_SHM_FORMAT_ARGB8888);
 	wl_shm_pool_destroy(pool);
 	close(fd);
-	sessione->pixel_sup = wl_compositor_create_surface(sessione->compositor);
-	vuota = wl_compositor_create_region(sessione->compositor);
-	wl_surface_set_input_region(sessione->pixel_sup, vuota);
-	wl_region_destroy(vuota);
-	sessione->pixel_strato = zwlr_layer_shell_v1_get_layer_surface(
-	    sessione->strati, sessione->pixel_sup, NULL, ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY,
+	session->pixel_surface = wl_compositor_create_surface(session->compositor);
+	blank = wl_compositor_create_region(session->compositor);
+	wl_surface_set_input_region(session->pixel_surface, blank);
+	wl_region_destroy(blank);
+	session->pixel_layer = zwlr_layer_shell_v1_get_layer_surface(
+	    session->layers, session->pixel_surface, NULL, ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY,
 	    "remotix-pixel");
-	zwlr_layer_surface_v1_add_listener(sessione->pixel_strato, &PIXEL_LISTENER, sessione);
-	zwlr_layer_surface_v1_set_size(sessione->pixel_strato, 1, 1);
-	zwlr_layer_surface_v1_set_anchor(sessione->pixel_strato, ZWLR_LAYER_SURFACE_V1_ANCHOR_TOP |
+	zwlr_layer_surface_v1_add_listener(session->pixel_layer, &PIXEL_LISTENER, session);
+	zwlr_layer_surface_v1_set_size(session->pixel_layer, 1, 1);
+	zwlr_layer_surface_v1_set_anchor(session->pixel_layer, ZWLR_LAYER_SURFACE_V1_ANCHOR_TOP |
 	                                                             ZWLR_LAYER_SURFACE_V1_ANCHOR_LEFT);
-	zwlr_layer_surface_v1_set_exclusive_zone(sessione->pixel_strato, -1);
-	wl_surface_commit(sessione->pixel_sup);
+	zwlr_layer_surface_v1_set_exclusive_zone(session->pixel_layer, -1);
+	wl_surface_commit(session->pixel_surface);
 }
 
-KwinSessione *kwin_apri(GError **sbaglio)
+KwinSession *kwin_open(GError **mistake)
 {
-	KwinSessione *sessione = g_new0(KwinSessione, 1);
+	KwinSession *session = g_new0(KwinSession, 1);
 	char socket[64] = "";
-	gint64 scadenza;
+	gint64 expiry;
 
-	sessione->sveglia[0] = sessione->sveglia[1] = -1;
-	sessione->eis = -1;
+	session->wake[0] = session->wake[1] = -1;
+	session->eis = -1;
 
-	sessione->display = kwin_display_apri(socket, sizeof socket);
-	if (!sessione->display) {
-		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_NOT_FOUND,
+	session->display = kwin_display_open(socket, sizeof socket);
+	if (!session->display) {
+		g_set_error(mistake, G_IO_ERROR, G_IO_ERROR_NOT_FOUND,
 		            "no Wayland compositor reachable in XDG_RUNTIME_DIR=%s",
 		            getenv("XDG_RUNTIME_DIR") ? getenv("XDG_RUNTIME_DIR") : "(not set)");
-		goto guasto;
+		goto fault;
 	}
 
-	sessione->registro = wl_display_get_registry(sessione->display);
-	wl_registry_add_listener(sessione->registro, &registry_listener, sessione);
+	session->registry = wl_display_get_registry(session->display);
+	wl_registry_add_listener(session->registry, &registry_listener, session);
 	/* Two rounds: the globals, then the events of the globals just bound (mode, name). */
-	wl_display_roundtrip(sessione->display);
-	wl_display_roundtrip(sessione->display);
+	wl_display_roundtrip(session->display);
+	wl_display_roundtrip(session->display);
 
-	if (!sessione->screencast) {
-		explain_gate(sbaglio);
-		goto guasto;
+	if (!session->screencast) {
+		explain_gate(mistake);
+		goto fault;
 	}
 
-	sessione->scelta = choose_output(sessione);
-	if (!sessione->scelta) {
-		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_NOT_FOUND,
+	session->choice = choose_output(session);
+	if (!session->choice) {
+		g_set_error(mistake, G_IO_ERROR, G_IO_ERROR_NOT_FOUND,
 		            "KWin has no output with a mode (%u announced): without a "
 		            "virtual screen KWin swallows the input too (kde.md §10.3)",
-		            sessione->how_many_outputs);
-		goto guasto;
+		            session->how_many_outputs);
+		goto fault;
 	}
 
 	/* ⛔ THE LISTENER RIGHT AFTER THE REQUEST AND BEFORE ANY ROUND: `failed`
 	 *    is sent synchronously, and whoever is not listening misses it (`kde.md` §4.4). */
-	sessione->flusso = zkde_screencast_unstable_v1_stream_output(
-	    sessione->screencast, sessione->scelta->oggetto, PUNTATORE_METADATO);
-	if (!sessione->flusso) {
-		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_FAILED,
+	session->stream = zkde_screencast_unstable_v1_stream_output(
+	    session->screencast, session->choice->object, POINTER_METADATA);
+	if (!session->stream) {
+		g_set_error(mistake, G_IO_ERROR, G_IO_ERROR_FAILED,
 		            "capture request to KWin not created");
-		goto guasto;
+		goto fault;
 	}
-	zkde_screencast_stream_unstable_v1_add_listener(sessione->flusso, &ascolto_flusso,
-	                                                sessione);
+	zkde_screencast_stream_unstable_v1_add_listener(session->stream, &screencast_listener,
+	                                                session);
 
-	scadenza = g_get_monotonic_time() + (gint64)ATTESA_NODO_MS * 1000;
-	while (!sessione->node_arrived && !sessione->rifiutato && !sessione->chiuso) {
-		gint64 resta = (scadenza - g_get_monotonic_time()) / 1000;
+	expiry = g_get_monotonic_time() + (gint64)WAIT_NODE_MS * 1000;
+	while (!session->node_arrived && !session->refused && !session->closed) {
+		gint64 stays = (expiry - g_get_monotonic_time()) / 1000;
 
-		if (resta <= 0)
+		if (stays <= 0)
 			break;
-		if (!gira(sessione, (int)resta))
+		if (!runs(session, (int)stays))
 			break;
 	}
 
-	if (sessione->rifiutato) {
-		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_FAILED, "KWin refused the capture: %s",
-		            sessione->refusal_reason ? sessione->refusal_reason : "no explanation");
-		goto guasto;
+	if (session->refused) {
+		g_set_error(mistake, G_IO_ERROR, G_IO_ERROR_FAILED, "KWin refused the capture: %s",
+		            session->refusal_reason ? session->refusal_reason : "no explanation");
+		goto fault;
 	}
-	if (!sessione->node_arrived) {
-		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_TIMED_OUT,
-		            "KWin did not announce the PipeWire node within %d ms", ATTESA_NODO_MS);
-		goto guasto;
+	if (!session->node_arrived) {
+		g_set_error(mistake, G_IO_ERROR, G_IO_ERROR_TIMED_OUT,
+		            "KWin did not announce the PipeWire node within %d ms", WAIT_NODE_MS);
+		goto fault;
 	}
 
-	metti_il_pixel(sessione);
+	put_pixel(session);
 	{
-		gint64 fine = g_get_monotonic_time() + 1000 * 1000;
+		gint64 deadline = g_get_monotonic_time() + 1000 * 1000;
 
-		while (sessione->pixel_strato && !sessione->pixel_configurato &&
-		       g_get_monotonic_time() < fine)
-			if (!gira(sessione, 100))
+		while (session->pixel_layer && !session->pixel_configured &&
+		       g_get_monotonic_time() < deadline)
+			if (!runs(session, 100))
 				break;
 	}
-	if (!g_unix_open_pipe(sessione->sveglia, O_CLOEXEC, NULL)) {
-		sessione->sveglia[0] = sessione->sveglia[1] = -1;
+	if (!g_unix_open_pipe(session->wake, O_CLOEXEC, NULL)) {
+		session->wake[0] = session->wake[1] = -1;
 		registro_dice(AREA, "⚠ wake-up pipe not created: closing the capture "
 		                    "will be less clean");
 	}
-	sessione->pompa = g_thread_new("remotix-kwin", thread_pump, sessione);
+	session->pump = g_thread_new("remotix-kwin", thread_pump, session);
 
 	registro_dice(AREA,
 	              "⭐ KWin: zkde_screencast v%u on socket «%s», output «%s» %ux%u (%u in "
 	              "all), PipeWire node %u; pixel on top %s",
-	              sessione->screencast_version, socket,
-	              sessione->scelta->nome ? sessione->scelta->nome : "unnamed",
-	              sessione->scelta->larghezza, sessione->scelta->altezza,
-	              sessione->how_many_outputs, sessione->nodo,
-	              sessione->pixel_configurato ? "ON" : "⛔ NOT there");
-	return sessione;
+	              session->screencast_version, socket,
+	              session->choice->name ? session->choice->name : "unnamed",
+	              session->choice->width, session->choice->height,
+	              session->how_many_outputs, session->node,
+	              session->pixel_configured ? "ON" : "⛔ NOT there");
+	return session;
 
-guasto:
-	kwin_close(sessione);
+fault:
+	kwin_close(session);
 	return NULL;
 }
 
-uint32_t kwin_node(const KwinSessione *sessione)
+uint32_t kwin_node(const KwinSession *session)
 {
-	return sessione ? sessione->nodo : 0;
+	return session ? session->node : 0;
 }
 
-void kwin_misura(const KwinSessione *sessione, uint32_t *larghezza, uint32_t *altezza)
+void kwin_measure(const KwinSession *session, uint32_t *width, uint32_t *height)
 {
-	*larghezza = (sessione && sessione->scelta) ? sessione->scelta->larghezza : 0;
-	*altezza = (sessione && sessione->scelta) ? sessione->scelta->altezza : 0;
+	*width = (session && session->choice) ? session->choice->width : 0;
+	*height = (session && session->choice) ? session->choice->height : 0;
 }
 
-const char *kwin_output_name(const KwinSessione *sessione)
+const char *kwin_output_name(const KwinSession *session)
 {
-	if (!sessione || !sessione->scelta)
+	if (!session || !session->choice)
 		return NULL;
-	return sessione->scelta->nome;
+	return session->choice->name;
 }
 
-unsigned kwin_output_count(const KwinSessione *sessione)
+unsigned kwin_output_count(const KwinSession *session)
 {
 	unsigned n = 0;
 
-	if (!sessione)
+	if (!session)
 		return 0;
-	for (unsigned i = 0; i < sessione->how_many_outputs; i++)
-		if (sessione->uscite[i].larghezza && sessione->uscite[i].altezza)
+	for (unsigned i = 0; i < session->how_many_outputs; i++)
+		if (session->outputs[i].width && session->outputs[i].height)
 			n++;
 	return n;
 }
 
-bool kwin_chiuso(const KwinSessione *sessione)
+bool kwin_closed(const KwinSession *session)
 {
-	return sessione ? sessione->chiuso : true;
+	return session ? session->closed : true;
 }
 
 /* ------------------------------------------------------------------ *
@@ -582,143 +582,143 @@ bool kwin_chiuso(const KwinSessione *sessione)
  * ------------------------------------------------------------------ */
 /* Keyboard 1, pointer 2, touch 4 — the xdg portal's mask
  * (`xdg-desktop-portal-kde/src/remotedesktop.cpp:457-460`). */
-#define EIS_CAPACITA 7
+#define KWIN_EIS_CAPABILITIES 7
 
-static void detach_eis(KwinSessione *sessione)
+static void detach_eis(KwinSession *session)
 {
 	/* ⛔ With the token: KWin ties the EIS context to the life of the caller's D-Bus
 	 *    NAME, so letting it go only works while the process lives — and
 	 *    in a recovery the process stays alive, with one device too many. */
-	if (sessione->known_token) {
+	if (session->known_token) {
 		GDBusConnection *bus = sess_bus(NULL);
 
 		if (bus) {
 			GVariant *r = g_dbus_connection_call_sync(
 			    bus, "org.kde.KWin", "/org/kde/KWin/EIS/RemoteDesktop",
 			    "org.kde.KWin.EIS.RemoteDesktop", "disconnect",
-			    g_variant_new("(i)", sessione->eis_token), NULL,
+			    g_variant_new("(i)", session->eis_token), NULL,
 			    G_DBUS_CALL_FLAGS_NONE, 2000, NULL, NULL);
 			if (r)
 				g_variant_unref(r);
 			g_object_unref(bus);
 		}
-		sessione->known_token = false;
+		session->known_token = false;
 	}
-	if (sessione->eis >= 0) {
-		close(sessione->eis);
-		sessione->eis = -1;
+	if (session->eis >= 0) {
+		close(session->eis);
+		session->eis = -1;
 	}
 }
 
-static int ask_eis(KwinSessione *sessione, GError **sbaglio)
+static int ask_eis(KwinSession *session, GError **mistake)
 {
 	GDBusConnection *bus;
-	GUnixFDList *descrittori = NULL;
-	GVariant *risposta;
-	gint indice = -1;
+	GUnixFDList *descriptors = NULL;
+	GVariant *response;
+	gint idx = -1;
 
-	bus = sess_bus(sbaglio);
+	bus = sess_bus(mistake);
 	if (!bus)
 		return -1;
 	/* ⛔ THE DESCRIPTOR TRAVELS IN A SEPARATE LIST: `h` is an INDEX into
 	 *    that list, and the zero read from the body would be standard input. */
-	risposta = g_dbus_connection_call_with_unix_fd_list_sync(
+	response = g_dbus_connection_call_with_unix_fd_list_sync(
 	    bus, "org.kde.KWin", "/org/kde/KWin/EIS/RemoteDesktop",
-	    "org.kde.KWin.EIS.RemoteDesktop", "connectToEIS", g_variant_new("(i)", EIS_CAPACITA),
-	    G_VARIANT_TYPE("(hi)"), G_DBUS_CALL_FLAGS_NONE, 5000, NULL, &descrittori, NULL,
-	    sbaglio);
+	    "org.kde.KWin.EIS.RemoteDesktop", "connectToEIS", g_variant_new("(i)", KWIN_EIS_CAPABILITIES),
+	    G_VARIANT_TYPE("(hi)"), G_DBUS_CALL_FLAGS_NONE, 5000, NULL, &descriptors, NULL,
+	    mistake);
 	g_object_unref(bus);
-	if (!risposta)
+	if (!response)
 		return -1;
-	g_variant_get(risposta, "(hi)", &indice, &sessione->eis_token);
-	g_variant_unref(risposta);
-	sessione->eis = g_unix_fd_list_get(descrittori, indice, sbaglio);
-	g_object_unref(descrittori);
-	if (sessione->eis < 0)
+	g_variant_get(response, "(hi)", &idx, &session->eis_token);
+	g_variant_unref(response);
+	session->eis = g_unix_fd_list_get(descriptors, idx, mistake);
+	g_object_unref(descriptors);
+	if (session->eis < 0)
 		return -1;
-	sessione->known_token = true;
+	session->known_token = true;
 	registro_dice(AREA, "⭐ KWin granted the input channel (connectToEIS, token %d, "
-	                    "descriptor %d)", sessione->eis_token, sessione->eis);
-	return sessione->eis;
+	                    "descriptor %d)", session->eis_token, session->eis);
+	return session->eis;
 }
 
-int kwin_eis_fd(KwinSessione *sessione, GError **sbaglio)
+int kwin_eis_fd(KwinSession *session, GError **mistake)
 {
-	if (!sessione) {
-		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT, "no KWin stage");
+	if (!session) {
+		g_set_error(mistake, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT, "no KWin stage");
 		return -1;
 	}
-	if (sessione->eis >= 0)
-		return sessione->eis;
-	return ask_eis(sessione, sbaglio);
+	if (session->eis >= 0)
+		return session->eis;
+	return ask_eis(session, mistake);
 }
 
-int kwin_eis_riattacca(KwinSessione *sessione, GError **sbaglio)
+int kwin_eis_reattach(KwinSession *session, GError **mistake)
 {
-	if (!sessione) {
-		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT, "no KWin stage");
+	if (!session) {
+		g_set_error(mistake, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT, "no KWin stage");
 		return -1;
 	}
-	detach_eis(sessione);
-	return ask_eis(sessione, sbaglio);
+	detach_eis(session);
+	return ask_eis(session, mistake);
 }
 
-void kwin_close(KwinSessione *sessione)
+void kwin_close(KwinSession *session)
 {
-	if (!sessione)
+	if (!session)
 		return;
 
 	/* First stop the pump, then touch the display: they are the same object
 	 * seen from two threads. */
-	if (sessione->pompa) {
-		if (sessione->sveglia[1] >= 0) {
-			ssize_t ignoto = write(sessione->sveglia[1], "x", 1);
+	if (session->pump) {
+		if (session->wake[1] >= 0) {
+			ssize_t unknown = write(session->wake[1], "x", 1);
 
-			(void)ignoto;
+			(void)unknown;
 		}
-		g_thread_join(sessione->pompa);
-		sessione->pompa = NULL;
+		g_thread_join(session->pump);
+		session->pump = NULL;
 	}
-	if (sessione->sveglia[0] >= 0)
-		close(sessione->sveglia[0]);
-	if (sessione->sveglia[1] >= 0)
-		close(sessione->sveglia[1]);
+	if (session->wake[0] >= 0)
+		close(session->wake[0]);
+	if (session->wake[1] >= 0)
+		close(session->wake[1]);
 
-	detach_eis(sessione);
-	if (sessione->pixel_strato)
-		zwlr_layer_surface_v1_destroy(sessione->pixel_strato);
-	if (sessione->pixel_sup)
-		wl_surface_destroy(sessione->pixel_sup);
-	if (sessione->pixel_buf)
-		wl_buffer_destroy(sessione->pixel_buf);
-	if (sessione->strati)
-		zwlr_layer_shell_v1_destroy(sessione->strati);
-	if (sessione->shm)
-		wl_shm_destroy(sessione->shm);
-	if (sessione->compositor)
-		wl_compositor_destroy(sessione->compositor);
-	if (sessione->flusso)
-		zkde_screencast_stream_unstable_v1_close(sessione->flusso);
-	if (sessione->screencast)
-		zkde_screencast_unstable_v1_destroy(sessione->screencast);
-	for (unsigned i = 0; i < sessione->how_many_outputs; i++) {
-		if (sessione->uscite[i].oggetto) {
+	detach_eis(session);
+	if (session->pixel_layer)
+		zwlr_layer_surface_v1_destroy(session->pixel_layer);
+	if (session->pixel_surface)
+		wl_surface_destroy(session->pixel_surface);
+	if (session->pixel_buf)
+		wl_buffer_destroy(session->pixel_buf);
+	if (session->layers)
+		zwlr_layer_shell_v1_destroy(session->layers);
+	if (session->shm)
+		wl_shm_destroy(session->shm);
+	if (session->compositor)
+		wl_compositor_destroy(session->compositor);
+	if (session->stream)
+		zkde_screencast_stream_unstable_v1_close(session->stream);
+	if (session->screencast)
+		zkde_screencast_unstable_v1_destroy(session->screencast);
+	for (unsigned i = 0; i < session->how_many_outputs; i++) {
+		if (session->outputs[i].object) {
 			/* `release` exists since version 3. */
-			if (sessione->uscite[i].versione >= 3)
-				wl_output_release(sessione->uscite[i].oggetto);
+			if (session->outputs[i].version >= 3)
+				wl_output_release(session->outputs[i].object);
 			else
-				wl_output_destroy(sessione->uscite[i].oggetto);
+				wl_output_destroy(session->outputs[i].object);
 		}
-		g_free(sessione->uscite[i].nome);
+		g_free(session->outputs[i].name);
 	}
-	if (sessione->registro)
-		wl_registry_destroy(sessione->registro);
-	if (sessione->display) {
-		wl_display_flush(sessione->display);
-		wl_display_disconnect(sessione->display);
+	if (session->registry)
+		wl_registry_destroy(session->registry);
+	if (session->display) {
+		wl_display_flush(session->display);
+		wl_display_disconnect(session->display);
 	}
-	g_free(sessione->refusal_reason);
-	g_free(sessione);
+	g_free(session->refusal_reason);
+	g_free(session);
 }
 
 /* ------------------------------------------------------------------ *
@@ -741,82 +741,82 @@ void kwin_close(KwinSessione *sessione)
  *               `/usr/lib/remotix/remotix` on Arch, something else in a bench);
  *   RX-KDE-003  `zkde_screencast_unstable_v1` is missing from X-KDE-Wayland-Interfaces.
  */
-static bool exec_leads_to(const char *exec, const char *canonico, char **visto)
+static bool exec_leads_to(const char *exec, const char *canonical, char **seen)
 {
 	char **argv = NULL;
-	char *vero;
-	bool uguale;
+	char *real;
+	bool eq_sign;
 
 	if (!g_shell_parse_argv(exec, NULL, &argv, NULL) || !argv || !argv[0]) {
 		g_strfreev(argv);
-		*visto = g_strdup(exec);
+		*seen = g_strdup(exec);
 		return false;
 	}
-	*visto = g_strdup(argv[0]);
+	*seen = g_strdup(argv[0]);
 	/* CANONICAL paths on both sides, as KWin does: a link
 	 * leading to the binary counts as much as the binary. */
-	vero = realpath(argv[0], NULL);
-	uguale = vero && strcmp(vero, canonico) == 0;
-	free(vero);
+	real = realpath(argv[0], NULL);
+	eq_sign = real && strcmp(real, canonical) == 0;
+	free(real);
 	g_strfreev(argv);
-	return uguale;
+	return eq_sign;
 }
 
-bool kwin_verifica_permesso(char *perche, size_t quanto)
+bool kwin_check_permission(char *why, size_t how_much)
 {
-	char *canonico = realpath("/proc/self/exe", NULL);
-	GKeyFile *chiavi = g_key_file_new();
-	GError *sbaglio = NULL;
-	char *exec = NULL, *interfacce = NULL, *visto = NULL;
+	char *canonical = realpath("/proc/self/exe", NULL);
+	GKeyFile *keys = g_key_file_new();
+	GError *mistake = NULL;
+	char *exec = NULL, *interfaces = NULL, *seen = NULL;
 	bool va = false;
 
-	if (!canonico) {
-		snprintf(perche, quanto, "I do not know which binary I am running: %s", strerror(errno));
+	if (!canonical) {
+		snprintf(why, how_much, "I do not know which binary I am running: %s", strerror(errno));
 		goto fine;
 	}
-	if (!g_key_file_load_from_file(chiavi, PERMISSION_DESKTOP_FILE, G_KEY_FILE_NONE, &sbaglio)) {
-		snprintf(perche, quanto,
+	if (!g_key_file_load_from_file(keys, PERMISSION_DESKTOP_FILE, G_KEY_FILE_NONE, &mistake)) {
+		snprintf(why, how_much,
 		         "RX-KDE-001: %s %s (%s). Remedy: reinstall REMOTIX with the installer",
 		         PERMISSION_DESKTOP_FILE,
-		         g_error_matches(sbaglio, G_FILE_ERROR, G_FILE_ERROR_NOENT) ? "is missing"
+		         g_error_matches(mistake, G_FILE_ERROR, G_FILE_ERROR_NOENT) ? "is missing"
 		                                                                  : "cannot be read",
-		         sbaglio->message);
+		         mistake->message);
 		goto fine;
 	}
-	exec = g_key_file_get_string(chiavi, "Desktop Entry", "Exec", NULL);
-	if (!exec || !exec_leads_to(exec, canonico, &visto)) {
-		snprintf(perche, quanto,
+	exec = g_key_file_get_string(keys, "Desktop Entry", "Exec", NULL);
+	if (!exec || !exec_leads_to(exec, canonical, &seen)) {
+		snprintf(why, how_much,
 		         "RX-KDE-002: in %s Exec=%s, but the running binary is %s. Remedy: "
 		         "reinstall REMOTIX with the installer",
-		         PERMISSION_DESKTOP_FILE, visto ? visto : "(missing)", canonico);
+		         PERMISSION_DESKTOP_FILE, seen ? seen : "(missing)", canonical);
 		goto fine;
 	}
-	interfacce = g_key_file_get_string(chiavi, "Desktop Entry", "X-KDE-Wayland-Interfaces",
+	interfaces = g_key_file_get_string(keys, "Desktop Entry", "X-KDE-Wayland-Interfaces",
 	                                   NULL);
-	if (interfacce) {
-		char **voci = g_strsplit_set(interfacce, ",; \t", -1);
+	if (interfaces) {
+		char **entries = g_strsplit_set(interfaces, ",; \t", -1);
 
-		for (char **v = voci; *v; v++)
+		for (char **v = entries; *v; v++)
 			if (strcmp(*v, "zkde_screencast_unstable_v1") == 0)
 				va = true;
-		g_strfreev(voci);
+		g_strfreev(entries);
 	}
 	if (!va) {
-		snprintf(perche, quanto,
+		snprintf(why, how_much,
 		         "RX-KDE-003: in %s X-KDE-Wayland-Interfaces=%s, without "
 		         "zkde_screencast_unstable_v1. Remedy: reinstall REMOTIX with the installer",
-		         PERMISSION_DESKTOP_FILE, interfacce ? interfacce : "(missing)");
+		         PERMISSION_DESKTOP_FILE, interfaces ? interfaces : "(missing)");
 		goto fine;
 	}
-	snprintf(perche, quanto, "%s checked (it belongs to the package: I do not write it), Exec=%s",
-	         PERMISSION_DESKTOP_FILE, canonico);
+	snprintf(why, how_much, "%s checked (it belongs to the package: I do not write it), Exec=%s",
+	         PERMISSION_DESKTOP_FILE, canonical);
 fine:
-	g_clear_error(&sbaglio);
-	g_key_file_unref(chiavi);
+	g_clear_error(&mistake);
+	g_key_file_unref(keys);
 	g_free(exec);
-	g_free(interfacce);
-	g_free(visto);
-	free(canonico);
+	g_free(interfaces);
+	g_free(seen);
+	free(canonical);
 	return va;
 }
 
@@ -827,7 +827,7 @@ fine:
 /*
  * ⭐ PHASE 15, D-008 — `[M]` round 1, 15-f009 on KDE: with the browser in Italian
  *    "è à ò ù é ç ° §" did not come out, the session stayed "English (US)".
- *    `input_disposizione()` had the GNOME road and the wlroots one, for
+ *    `input_layout()` had the GNOME road and the wlroots one, for
  *    KWin none (`STUDI.md` §kde §6.7 listed it, nobody had written it).
  *
  * `[R]` KWin 6.3.6 — road 3 of §6.7, the only one that REALLY changes the
@@ -840,12 +840,12 @@ fine:
  *     `Xkb::reconfigure()` (`keyboard_layout.cpp:62-68,112-125`);
  *   · and `layoutsReconfigured` rebuilds the EIS keyboard device with the new
  *     keymap (`plugins/eis/eisbackend.cpp:58-67`, `eiscontext.cpp:95-101`)
- *     ⇒ `leggi_keymap()` in `input.c` rereads it and writes "KEYMAP CAMBIATA",
+ *     ⇒ `read_keymap()` in `input.c` rereads it and writes "KEYMAP CAMBIATA",
  *     as on GNOME.  "In force" is said by that line, not this one.
  *   ⛔ Road 1 (`XKB_DEFAULT_*` at KWin start) only applies to the first
  *     login; road 2 (`setLayout`) only chooses among the loaded layouts.
  *
- * ⭐ WHERE: in the session folder (`sessione_cartella_kde()`, already at the
+ * ⭐ WHERE: in the session folder (`session_folder_kde()`, already at the
  *    head of `XDG_CONFIG_DIRS`), not in `~/.config/kxkbrc`: it applies to the
  *    remote session and disappears with it, and ⛔ it does not change the keyboard
  *    of whoever sits at the monitor with the same user.
@@ -864,67 +864,67 @@ static bool clean_xkb_name(const char *s, size_t n)
 	return true;
 }
 
-int kwin_disposizione(const char *nome, GError **sbaglio)
+int kwin_layout(const char *name, GError **mistake)
 {
-	g_autofree char *cartella = sessione_cartella_kde();
-	g_autofree char *disposizione = NULL;
-	g_autofree char *variante = NULL;
-	g_autofree char *percorso = NULL;
-	g_autofree char *testo = NULL;
+	g_autofree char *folder = session_folder_kde();
+	g_autofree char *kb_layout = NULL;
+	g_autofree char *variant = NULL;
+	g_autofree char *fpath = NULL;
+	g_autofree char *text = NULL;
 	g_autoptr(GDBusConnection) bus = NULL;
-	const char *par = nome ? strchr(nome, '(') : NULL;
+	const char *par = name ? strchr(name, '(') : NULL;
 
-	if (!nome || !*nome) {
-		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT, "no name");
+	if (!name || !*name) {
+		g_set_error(mistake, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT, "no name");
 		return -1;
 	}
 	/* `RCP.md` §4.5: `de(neo)` ⇒ LayoutList=de, VariantList=neo.
 	 * ⛔ The name ends up inside an INI file: no newline, no `[`. */
 	if (par) {
-		const char *chiusa = strchr(par + 1, ')');
+		const char *is_closed = strchr(par + 1, ')');
 
-		if (!chiusa || chiusa[1] != '\0' ||
-		    !clean_xkb_name(nome, (size_t) (par - nome)) ||
-		    !clean_xkb_name(par + 1, (size_t) (chiusa - par - 1))) {
-			g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT,
-			            "invalid name «%s»", nome);
+		if (!is_closed || is_closed[1] != '\0' ||
+		    !clean_xkb_name(name, (size_t) (par - name)) ||
+		    !clean_xkb_name(par + 1, (size_t) (is_closed - par - 1))) {
+			g_set_error(mistake, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT,
+			            "invalid name «%s»", name);
 			return -1;
 		}
-		disposizione = g_strndup(nome, (size_t) (par - nome));
-		variante = g_strndup(par + 1, (size_t) (chiusa - par - 1));
+		kb_layout = g_strndup(name, (size_t) (par - name));
+		variant = g_strndup(par + 1, (size_t) (is_closed - par - 1));
 	} else {
-		if (!clean_xkb_name(nome, strlen(nome))) {
-			g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT,
-			            "invalid name «%s»", nome);
+		if (!clean_xkb_name(name, strlen(name))) {
+			g_set_error(mistake, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT,
+			            "invalid name «%s»", name);
 			return -1;
 		}
-		disposizione = g_strdup(nome);
-		variante = g_strdup("");
+		kb_layout = g_strdup(name);
+		variant = g_strdup("");
 	}
 
-	/* ⛔ Only if the folder is there: `componi_ambiente()` creates it and
+	/* ⛔ Only if the folder is there: `compose_environment()` creates it and
 	 *    puts it in `XDG_CONFIG_DIRS`.  If it is not there, KWin does not read it — and
 	 *    writing into it would be a false "fact". */
-	if (!cartella || !g_file_test(cartella, G_FILE_TEST_IS_DIR)) {
-		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_NOT_FOUND,
+	if (!folder || !g_file_test(folder, G_FILE_TEST_IS_DIR)) {
+		g_set_error(mistake, G_IO_ERROR, G_IO_ERROR_NOT_FOUND,
 		            "the session's configuration folder (%s) is missing: KWin "
 		            "does not look at it",
-		            cartella ? cartella : "XDG_RUNTIME_DIR missing");
+		            folder ? folder : "XDG_RUNTIME_DIR missing");
 		return -1;
 	}
-	percorso = g_build_filename(cartella, "kxkbrc", NULL);
-	testo = g_strdup_printf("[Layout]\n"
+	fpath = g_build_filename(folder, "kxkbrc", NULL);
+	text = g_strdup_printf("[Layout]\n"
 	                        "LayoutList[$i]=%s\n"
 	                        "VariantList[$i]=%s\n",
-	                        disposizione, variante);
-	if (!g_file_set_contents(percorso, testo, -1, sbaglio))
+	                        kb_layout, variant);
+	if (!g_file_set_contents(fpath, text, -1, mistake))
 		return -1;
 
-	bus = sess_bus(sbaglio);
+	bus = sess_bus(mistake);
 	if (!bus)
 		return -1;
 	if (!g_dbus_connection_emit_signal(bus, NULL, "/Layouts", "org.kde.keyboard",
-	                                   "reloadConfig", NULL, sbaglio))
+	                                   "reloadConfig", NULL, mistake))
 		return -1;
 	/* ⛔ `[M]` 6 Oct 2026, KWin 6.6.6 (Ubuntu 26.04): nobody listens to
 	 *    `reloadConfig` ANY MORE — `KeyboardLayout::init()` watches kxkbrc with a
@@ -934,18 +934,18 @@ int kwin_disposizione(const char *nome, GError **sbaglio)
 	 *    session stayed `English (US)` (F-009 red).  Both are sent:
 	 *    the old one for KWin up to 6.3, this one for the newer ones. */
 	{
-		GVariantBuilder gruppi;
-		const char *chiavi[] = { "LayoutList", "VariantList" };
-		GVariantBuilder nomi;
+		GVariantBuilder groups;
+		const char *keys[] = { "LayoutList", "VariantList" };
+		GVariantBuilder names;
 
-		g_variant_builder_init(&nomi, G_VARIANT_TYPE("aay"));
-		for (size_t i = 0; i < G_N_ELEMENTS(chiavi); i++)
-			g_variant_builder_add_value(&nomi, g_variant_new_bytestring(chiavi[i]));
-		g_variant_builder_init(&gruppi, G_VARIANT_TYPE("a{saay}"));
-		g_variant_builder_add(&gruppi, "{saay}", "Layout", &nomi);
+		g_variant_builder_init(&names, G_VARIANT_TYPE("aay"));
+		for (size_t i = 0; i < G_N_ELEMENTS(keys); i++)
+			g_variant_builder_add_value(&names, g_variant_new_bytestring(keys[i]));
+		g_variant_builder_init(&groups, G_VARIANT_TYPE("a{saay}"));
+		g_variant_builder_add(&groups, "{saay}", "Layout", &names);
 		if (!g_dbus_connection_emit_signal(bus, NULL, "/kxkbrc", "org.kde.kconfig.notify",
 		                                   "ConfigChanged",
-		                                   g_variant_new("(a{saay})", &gruppi), sbaglio))
+		                                   g_variant_new("(a{saay})", &groups), mistake))
 			return -1;
 	}
 	/* ⚠ The signal has no reply: the queue is flushed so it leaves NOW. */
@@ -957,19 +957,19 @@ int kwin_disposizione(const char *nome, GError **sbaglio)
  * ⭐⭐ THE NESTED KWIN — see `kwin.h`
  * ------------------------------------------------------------------ */
 
-#define OSPITE_CARTELLA "remotix-kwin-ospite"
+#define HOST_FOLDER "remotix-kwin-host"
 /* How long the helper waits for labwc's socket.  `[M]` labwc is up in about
  * a tenth of a second on the test machine: the ceiling is for a loaded
  * machine, not a guess at the normal case. */
-#define OSPITE_NASCITA_MS 10000
+#define HOST_BIRTH_MS 10000
 /* The refresh of labwc's screenless output.  KWin nested draws its next frame
  * only when labwc says the previous one was presented, and labwc presents on
  * ITS clock: at 60 Hz the two clocks drift and frames are lost — `[M]` 11 Oct
  * 2026, 60 fps animation at 3824x2064: 59 fps with KWin --virtual, 52-55
  * nested at 60 Hz.  A faster host clock answers sooner; KWin keeps its own
  * 60 (the host reports no refresh, `wayland_output.cpp` falls back to 60). */
-#ifndef OSPITE_MHZ
-#define OSPITE_MHZ 240000
+#ifndef HOST_MHZ
+#define HOST_MHZ 240000
 #endif
 
 /*
@@ -1005,7 +1005,7 @@ int kwin_disposizione(const char *nome, GError **sbaglio)
  *     ⛔ The key must be a VALID keysym: an unknown one creates no binding,
  *     and the defaults come back.
  */
-static const char OSPITE_RC[] =
+static const char HOST_RC[] =
     "<?xml version=\"1.0\"?>\n"
     "<!-- REMOTIX: the screenless labwc that hosts KWin (kwin.c, «nested KWin»).\n"
     "     Rewritten at every birth: do not edit. -->\n"
@@ -1021,25 +1021,25 @@ static const char OSPITE_RC[] =
     "<action name=\"None\"/></mousebind></context></mouse>\n"
     "</labwc_config>\n";
 
-static char *ospite_cartella(void)
+static char *host_folder(void)
 {
 	const char *runtime = g_getenv("XDG_RUNTIME_DIR");
 
 	if (!runtime || !*runtime)
 		return NULL;
-	return g_build_filename(runtime, OSPITE_CARTELLA, NULL);
+	return g_build_filename(runtime, HOST_FOLDER, NULL);
 }
 
-char *kwin_ospite_display(void)
+char *kwin_host_display(void)
 {
-	g_autofree char *cartella = ospite_cartella();
+	g_autofree char *folder = host_folder();
 
-	return cartella ? g_build_filename(cartella, "wayland-0", NULL) : NULL;
+	return folder ? g_build_filename(folder, "wayland-0", NULL) : NULL;
 }
 
-bool kwin_ospite_c_e(void)
+bool kwin_host_exists(void)
 {
-	g_autofree char *display = kwin_ospite_display();
+	g_autofree char *display = kwin_host_display();
 	struct wl_display *d;
 
 	if (!display || access(display, F_OK) != 0)
@@ -1053,30 +1053,30 @@ bool kwin_ospite_c_e(void)
 
 /* ⛔ The size is read back from labwc, not believed from the answer
  *    (`wlroots.h`: «the truth is told by the frame»). */
-static bool ospite_chiedi(const char *display, uint32_t larghezza, uint32_t altezza,
-                          GError **sbaglio)
+static bool host_ask_size(const char *display, uint32_t width, uint32_t height,
+                          GError **mistake)
 {
-	WlrPalco *ospite = wlr_apri_su(display, sbaglio);
+	WlrStage *host = wlr_open_on(display, mistake);
 	uint32_t l = 0, a = 0;
 	WlrSizeOutcome e;
 
-	if (!ospite)
+	if (!host)
 		return false;
-	e = wlr_misura_chiedi_hz(ospite, larghezza, altezza, OSPITE_MHZ, 2.0, sbaglio);
-	if (e == WLR_MISURA_ANNULLATA) {
+	e = wlr_ask_size_hz(host, width, height, HOST_MHZ, 2.0, mistake);
+	if (e == WLR_SIZE_CANCELLED) {
 		/* an old serial: one more try, as `wlroots.h` allows */
-		g_clear_error(sbaglio);
-		e = wlr_misura_chiedi_hz(ospite, larghezza, altezza, OSPITE_MHZ, 2.0, sbaglio);
+		g_clear_error(mistake);
+		e = wlr_ask_size_hz(host, width, height, HOST_MHZ, 2.0, mistake);
 	}
-	wlr_measure(ospite, &l, &a);
-	wlr_close(ospite);
-	if (l == larghezza && a == altezza)
+	wlr_measure(host, &l, &a);
+	wlr_close(host);
+	if (l == width && a == height)
 		return true;
-	if (sbaglio && !*sbaglio)
-		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_FAILED,
+	if (mistake && !*mistake)
+		g_set_error(mistake, G_IO_ERROR, G_IO_ERROR_FAILED,
 		            "labwc (KWin's host) was asked for %ux%u and its output is %ux%u "
 		            "(outcome %d)",
-		            larghezza, altezza, l, a, (int)e);
+		            width, height, l, a, (int)e);
 	return false;
 }
 
@@ -1108,21 +1108,21 @@ typedef struct
 {
 	struct wl_compositor *compositor;
 	struct wl_shm *shm;
-	struct zwlr_layer_shell_v1 *strati;
-	bool configurata, chiusa;
+	struct zwlr_layer_shell_v1 *layers;
+	bool configured, is_closed;
 } Ticker;
 
-static void ticker_global(void *d, struct wl_registry *r, uint32_t nome, const char *iface,
+static void ticker_global(void *d, struct wl_registry *r, uint32_t name, const char *iface,
                           uint32_t v)
 {
 	Ticker *t = d;
 
 	if (strcmp(iface, wl_compositor_interface.name) == 0)
-		t->compositor = wl_registry_bind(r, nome, &wl_compositor_interface, MIN(v, 4u));
+		t->compositor = wl_registry_bind(r, name, &wl_compositor_interface, MIN(v, 4u));
 	else if (strcmp(iface, wl_shm_interface.name) == 0)
-		t->shm = wl_registry_bind(r, nome, &wl_shm_interface, 1);
+		t->shm = wl_registry_bind(r, name, &wl_shm_interface, 1);
 	else if (strcmp(iface, zwlr_layer_shell_v1_interface.name) == 0)
-		t->strati = wl_registry_bind(r, nome, &zwlr_layer_shell_v1_interface, MIN(v, 1u));
+		t->layers = wl_registry_bind(r, name, &zwlr_layer_shell_v1_interface, MIN(v, 1u));
 }
 static void ticker_global_away(void *d, struct wl_registry *r, uint32_t n) {}
 static const struct wl_registry_listener TICKER_REGISTRY = { ticker_global, ticker_global_away };
@@ -1133,11 +1133,11 @@ static void ticker_configure(void *d, struct zwlr_layer_surface_v1 *s, uint32_t 
 	Ticker *t = d;
 
 	zwlr_layer_surface_v1_ack_configure(s, serial);
-	t->configurata = true;
+	t->configured = true;
 }
 static void ticker_closed(void *d, struct zwlr_layer_surface_v1 *s)
 {
-	((Ticker *)d)->chiusa = true;
+	((Ticker *)d)->is_closed = true;
 }
 static const struct zwlr_layer_surface_v1_listener TICKER_LAYER = { ticker_configure,
 	                                                            ticker_closed };
@@ -1145,14 +1145,14 @@ static const struct zwlr_layer_surface_v1_listener TICKER_LAYER = { ticker_confi
 /* It runs in its own process, child of the start-line helper: it ends when
  * labwc ends (the connection drops) or when its parent — which has become
  * the KWin wrapper — dies. */
-static void ticker_vive(const char *display)
+static void ticker_alive(const char *display)
 {
 	Ticker t = { 0 };
 	struct wl_display *d;
 	struct wl_registry *reg;
-	struct wl_surface *sup;
-	struct zwlr_layer_surface_v1 *strato;
-	struct wl_region *vuota;
+	struct wl_surface *surface;
+	struct zwlr_layer_surface_v1 *layer;
+	struct wl_region *blank;
 	struct wl_shm_pool *pool;
 	struct wl_buffer *pixel;
 	int fd;
@@ -1164,9 +1164,9 @@ static void ticker_vive(const char *display)
 	reg = wl_display_get_registry(d);
 	wl_registry_add_listener(reg, &TICKER_REGISTRY, &t);
 	wl_display_roundtrip(d);
-	if (!t.compositor || !t.shm || !t.strati) {
-		g_printerr("remotix --kwin-annidato: ⛔ ticker: labwc lacks %s\n",
-		           !t.strati ? "zwlr_layer_shell_v1" : "wl_compositor/wl_shm");
+	if (!t.compositor || !t.shm || !t.layers) {
+		g_printerr("remotix --kwin-nested: ⛔ ticker: labwc lacks %s\n",
+		           !t.layers ? "zwlr_layer_shell_v1" : "wl_compositor/wl_shm");
 		_exit(1);
 	}
 	fd = memfd_create("remotix-ticker", MFD_CLOEXEC);
@@ -1175,40 +1175,40 @@ static void ticker_vive(const char *display)
 	pool = wl_shm_create_pool(t.shm, fd, 4);
 	/* one ARGB pixel, all zero: fully transparent */
 	pixel = wl_shm_pool_create_buffer(pool, 0, 1, 1, 4, WL_SHM_FORMAT_ARGB8888);
-	sup = wl_compositor_create_surface(t.compositor);
-	vuota = wl_compositor_create_region(t.compositor);
-	wl_surface_set_input_region(sup, vuota); /* no pointer, ever */
-	strato = zwlr_layer_shell_v1_get_layer_surface(t.strati, sup, NULL,
+	surface = wl_compositor_create_surface(t.compositor);
+	blank = wl_compositor_create_region(t.compositor);
+	wl_surface_set_input_region(surface, blank); /* no pointer, ever */
+	layer = zwlr_layer_shell_v1_get_layer_surface(t.layers, surface, NULL,
 	                                                ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY,
 	                                                "remotix-ticker");
-	zwlr_layer_surface_v1_add_listener(strato, &TICKER_LAYER, &t);
-	zwlr_layer_surface_v1_set_size(strato, 1, 1);
-	zwlr_layer_surface_v1_set_anchor(strato, ZWLR_LAYER_SURFACE_V1_ANCHOR_TOP |
+	zwlr_layer_surface_v1_add_listener(layer, &TICKER_LAYER, &t);
+	zwlr_layer_surface_v1_set_size(layer, 1, 1);
+	zwlr_layer_surface_v1_set_anchor(layer, ZWLR_LAYER_SURFACE_V1_ANCHOR_TOP |
 	                                             ZWLR_LAYER_SURFACE_V1_ANCHOR_LEFT);
-	zwlr_layer_surface_v1_set_exclusive_zone(strato, -1);
-	wl_surface_commit(sup);
-	while (!t.configurata && !t.chiusa)
+	zwlr_layer_surface_v1_set_exclusive_zone(layer, -1);
+	wl_surface_commit(surface);
+	while (!t.configured && !t.is_closed)
 		if (wl_display_dispatch(d) < 0)
 			_exit(0);
 	/* ⛔ The tick is a CLOCK, not «after every event»: labwc answers each
 	 *    commit (release, frame), and a loop that commits again on the answer
 	 *    makes labwc repaint as fast as it can — `[M]` the first draft: labwc
 	 *    at 85 % of a core, the ticker at 17 %. */
-	for (gint64 prossimo = g_get_monotonic_time(); !t.chiusa;) {
-		gint64 ora = g_get_monotonic_time();
+	for (gint64 upcoming = g_get_monotonic_time(); !t.is_closed;) {
+		gint64 now = g_get_monotonic_time();
 		struct pollfd p = { wl_display_get_fd(d), POLLIN, 0 };
 
-		if (ora >= prossimo) {
-			wl_surface_attach(sup, pixel, 0, 0);
-			wl_surface_damage_buffer(sup, 0, 0, 1, 1);
-			wl_surface_commit(sup);
-			prossimo += (gint64)TICKER_MS * 1000;
-			if (prossimo < ora)
-				prossimo = ora + (gint64)TICKER_MS * 1000;
+		if (now >= upcoming) {
+			wl_surface_attach(surface, pixel, 0, 0);
+			wl_surface_damage_buffer(surface, 0, 0, 1, 1);
+			wl_surface_commit(surface);
+			upcoming += (gint64)TICKER_MS * 1000;
+			if (upcoming < now)
+				upcoming = now + (gint64)TICKER_MS * 1000;
 		}
 		if (wl_display_flush(d) < 0 || wl_display_dispatch_pending(d) < 0)
 			break;
-		if (poll(&p, 1, (int)MAX(1, (prossimo - g_get_monotonic_time()) / 1000)) > 0) {
+		if (poll(&p, 1, (int)MAX(1, (upcoming - g_get_monotonic_time()) / 1000)) > 0) {
 			if (p.revents & (POLLERR | POLLHUP))
 				break;
 			if (wl_display_dispatch(d) < 0)
@@ -1218,36 +1218,36 @@ static void ticker_vive(const char *display)
 	_exit(0);
 }
 
-int kwin_annidato_vive(int argc, char **argv)
+int kwin_nested_alive(int argc, char **argv)
 {
-	g_autofree char *cartella = ospite_cartella();
+	g_autofree char *folder = host_folder();
 	g_autofree char *config = NULL;
 	g_autofree char *rc = NULL;
 	g_autofree char *display = NULL;
-	g_autoptr(GError) sbaglio = NULL;
-	g_autoptr(GPtrArray) riga = NULL;
-	g_autofree char *labwc_c_e = NULL;
-	unsigned long larghezza, altezza;
-	const char *nodo;
+	g_autoptr(GError) mistake = NULL;
+	g_autoptr(GPtrArray) line = NULL;
+	g_autofree char *labwc_path = NULL;
+	unsigned long width, height;
+	const char *node;
 	pid_t labwc;
-	gint64 t0 = g_get_monotonic_time(), scadenza;
-	bool pronto = false;
+	gint64 t0 = g_get_monotonic_time(), expiry;
+	bool ready = false;
 
-	/* argv: remotix --kwin-annidato W H NODE -- wrapper args… */
+	/* argv: remotix --kwin-nested W H NODE -- wrapper args… */
 	if (argc < 7 || strcmp(argv[5], "--") != 0) {
-		g_printerr("remotix --kwin-annidato W H NODE -- <kwin_wayland_wrapper> [args]\n");
+		g_printerr("remotix --kwin-nested W H NODE -- <kwin_wayland_wrapper> [args]\n");
 		return 2;
 	}
-	larghezza = strtoul(argv[2], NULL, 10);
-	altezza = strtoul(argv[3], NULL, 10);
-	nodo = argv[4];
-	if (larghezza < 200 || altezza < 200 || larghezza > 8192 || altezza > 8192) {
-		g_printerr("remotix --kwin-annidato: size %lux%lu out of range\n", larghezza,
-		           altezza);
+	width = strtoul(argv[2], NULL, 10);
+	height = strtoul(argv[3], NULL, 10);
+	node = argv[4];
+	if (width < 200 || height < 200 || width > 8192 || height > 8192) {
+		g_printerr("remotix --kwin-nested: size %lux%lu out of range\n", width,
+		           height);
 		return 2;
 	}
-	if (!cartella) {
-		g_printerr("remotix --kwin-annidato: XDG_RUNTIME_DIR is not set\n");
+	if (!folder) {
+		g_printerr("remotix --kwin-nested: XDG_RUNTIME_DIR is not set\n");
 		return 1;
 	}
 	/* ⭐ Which labwc is a BUILD-TIME choice of the package, not a runtime
@@ -1259,45 +1259,45 @@ int kwin_annidato_vive(int argc, char **argv)
 	 *    before 11 Oct 2026, and SAID — the desktop keeps the size it is born
 	 *    with (the page centres it). */
 #ifdef REMOTIX_LABWC
-	labwc_c_e = access(REMOTIX_LABWC, X_OK) == 0 ? g_strdup(REMOTIX_LABWC) : NULL;
+	labwc_path = access(REMOTIX_LABWC, X_OK) == 0 ? g_strdup(REMOTIX_LABWC) : NULL;
 #else
-	labwc_c_e = g_find_program_in_path("labwc");
+	labwc_path = g_find_program_in_path("labwc");
 #endif
-	if (!labwc_c_e) {
-		riga = g_ptr_array_new();
+	if (!labwc_path) {
+		line = g_ptr_array_new();
 		for (int i = 6; i < argc; i++)
-			g_ptr_array_add(riga, argv[i]);
-		g_ptr_array_add(riga, (char *)"--virtual");
-		g_ptr_array_add(riga, NULL);
-		g_printerr("remotix --kwin-annidato: ⛔ labwc is not installed: KWin --virtual, "
+			g_ptr_array_add(line, argv[i]);
+		g_ptr_array_add(line, (char *)"--virtual");
+		g_ptr_array_add(line, NULL);
+		g_printerr("remotix --kwin-nested: ⛔ labwc is not installed: KWin --virtual, "
 		           "and the desktop will NOT take the window's size at reattach "
 		           "(DECLARED FALLBACK)\n");
-		execvp(argv[6], (char **)riga->pdata);
-		g_printerr("remotix --kwin-annidato: %s does not start: %s\n", argv[6],
+		execvp(argv[6], (char **)line->pdata);
+		g_printerr("remotix --kwin-nested: %s does not start: %s\n", argv[6],
 		           strerror(errno));
 		return 1;
 	}
-	config = g_build_filename(cartella, "labwc", NULL);
+	config = g_build_filename(folder, "labwc", NULL);
 	rc = g_build_filename(config, "rc.xml", NULL);
-	display = g_build_filename(cartella, "wayland-0", NULL);
+	display = g_build_filename(folder, "wayland-0", NULL);
 	g_mkdir_with_parents(config, 0700);
-	if (!g_file_set_contents(rc, OSPITE_RC, -1, &sbaglio)) {
-		g_printerr("remotix --kwin-annidato: %s\n", sbaglio->message);
+	if (!g_file_set_contents(rc, HOST_RC, -1, &mistake)) {
+		g_printerr("remotix --kwin-nested: %s\n", mistake->message);
 		return 1;
 	}
 
 	labwc = fork();
 	if (labwc < 0) {
-		g_printerr("remotix --kwin-annidato: fork: %s\n", strerror(errno));
+		g_printerr("remotix --kwin-nested: fork: %s\n", strerror(errno));
 		return 1;
 	}
 	if (labwc == 0) {
 		/* ⛔ labwc gets a RUNTIME FOLDER OF ITS OWN: its socket is then
-		 *    `<runtime>/remotix-kwin-ospite/wayland-0`, and KWin's `wayland-N`
+		 *    `<runtime>/remotix-kwin-host/wayland-0`, and KWin's `wayland-N`
 		 *    stays the only one in `XDG_RUNTIME_DIR` — whoever scans it
-		 *    (`kwin_display_apri()`, the clipboard) can never land on the
+		 *    (`kwin_display_open()`, the clipboard) can never land on the
 		 *    host by mistake. */
-		g_setenv("XDG_RUNTIME_DIR", cartella, TRUE);
+		g_setenv("XDG_RUNTIME_DIR", folder, TRUE);
 		g_unsetenv("WAYLAND_DISPLAY");
 		g_unsetenv("WAYLAND_SOCKET");
 		g_unsetenv("DISPLAY");
@@ -1308,27 +1308,27 @@ int kwin_annidato_vive(int argc, char **argv)
 		g_setenv("LABWC_UPDATE_ACTIVATION_ENV", "0", TRUE);
 		g_setenv("WLR_BACKENDS", "headless", TRUE);
 		g_setenv("WLR_LIBINPUT_NO_DEVICES", "1", TRUE);
-		if (strcmp(nodo, "pixman") == 0)
+		if (strcmp(node, "pixman") == 0)
 			g_setenv("WLR_RENDERER", "pixman", TRUE);
-		else if (strcmp(nodo, "-") != 0)
-			g_setenv("WLR_RENDER_DRM_DEVICE", nodo, TRUE);
+		else if (strcmp(node, "-") != 0)
+			g_setenv("WLR_RENDER_DRM_DEVICE", node, TRUE);
 #ifdef REMOTIX_LABWC
-		execl(labwc_c_e, "labwc", "-C", config, (char *)NULL);
+		execl(labwc_path, "labwc", "-C", config, (char *)NULL);
 #else
 		execlp("labwc", "labwc", "-C", config, (char *)NULL);
 #endif
-		g_printerr("remotix --kwin-annidato: labwc does not start: %s\n", strerror(errno));
+		g_printerr("remotix --kwin-nested: labwc does not start: %s\n", strerror(errno));
 		_exit(127);
 	}
 
-	scadenza = t0 + (gint64)OSPITE_NASCITA_MS * 1000;
-	while (g_get_monotonic_time() < scadenza) {
-		int stato;
+	expiry = t0 + (gint64)HOST_BIRTH_MS * 1000;
+	while (g_get_monotonic_time() < expiry) {
+		int status;
 
-		if (waitpid(labwc, &stato, WNOHANG) == labwc) {
-			g_printerr("remotix --kwin-annidato: ⛔ labwc (KWin's host) exited at "
+		if (waitpid(labwc, &status, WNOHANG) == labwc) {
+			g_printerr("remotix --kwin-nested: ⛔ labwc (KWin's host) exited at "
 			           "birth (status %d)\n",
-			           stato);
+			           status);
 			return 1;
 		}
 		if (access(display, F_OK) == 0) {
@@ -1336,25 +1336,25 @@ int kwin_annidato_vive(int argc, char **argv)
 
 			if (d) {
 				wl_display_disconnect(d);
-				pronto = true;
+				ready = true;
 				break;
 			}
 		}
 		g_usleep(20000);
 	}
-	if (!pronto) {
-		g_printerr("remotix --kwin-annidato: ⛔ labwc's socket %s did not appear "
+	if (!ready) {
+		g_printerr("remotix --kwin-nested: ⛔ labwc's socket %s did not appear "
 		           "within %d ms\n",
-		           display, OSPITE_NASCITA_MS);
+		           display, HOST_BIRTH_MS);
 		kill(labwc, SIGTERM);
 		return 1;
 	}
 	/* labwc's headless output is born 1280x720 hard-wired (`wlroots.h`): it is
 	 * brought to the client's size BEFORE KWin opens its window, so the
 	 * desktop is born at the right size and is not resized at birth. */
-	if (!ospite_chiedi(display, (uint32_t)larghezza, (uint32_t)altezza, &sbaglio)) {
-		g_printerr("remotix --kwin-annidato: ⛔ %s\n",
-		           sbaglio ? sbaglio->message : "the host's size was not set");
+	if (!host_ask_size(display, (uint32_t)width, (uint32_t)height, &mistake)) {
+		g_printerr("remotix --kwin-nested: ⛔ %s\n",
+		           mistake ? mistake->message : "the host's size was not set");
 		kill(labwc, SIGTERM);
 		return 1;
 	}
@@ -1362,14 +1362,14 @@ int kwin_annidato_vive(int argc, char **argv)
 		pid_t ticker = fork();
 
 		if (ticker == 0)
-			ticker_vive(display);
+			ticker_alive(display);
 		if (ticker < 0)
-			g_printerr("remotix --kwin-annidato: ⛔ the ticker did not start (%s): KWin "
+			g_printerr("remotix --kwin-nested: ⛔ the ticker did not start (%s): KWin "
 			           "may freeze on a frame without damage\n", strerror(errno));
 	}
-	g_printerr("remotix --kwin-annidato: ⭐ labwc (pid %d, node %s) at %lux%lu on %s in "
+	g_printerr("remotix --kwin-nested: ⭐ labwc (pid %d, node %s) at %lux%lu on %s in "
 	           "%lld ms; now KWin, nested in it\n",
-	           (int)labwc, nodo, larghezza, altezza, display,
+	           (int)labwc, node, width, height, display,
 	           (long long)((g_get_monotonic_time() - t0) / 1000));
 
 	/*
@@ -1384,14 +1384,14 @@ int kwin_annidato_vive(int argc, char **argv)
 	 *    that road — the only switch, `KWIN_FORCE_SW_CURSOR`.
 	 */
 	g_setenv("KWIN_FORCE_SW_CURSOR", "1", TRUE);
-	riga = g_ptr_array_new();
+	line = g_ptr_array_new();
 	for (int i = 6; i < argc; i++)
-		g_ptr_array_add(riga, argv[i]);
-	g_ptr_array_add(riga, (char *)"--wayland-display");
-	g_ptr_array_add(riga, display);
-	g_ptr_array_add(riga, NULL);
-	execvp(argv[6], (char **)riga->pdata);
-	g_printerr("remotix --kwin-annidato: %s does not start: %s\n", argv[6], strerror(errno));
+		g_ptr_array_add(line, argv[i]);
+	g_ptr_array_add(line, (char *)"--wayland-display");
+	g_ptr_array_add(line, display);
+	g_ptr_array_add(line, NULL);
+	execvp(argv[6], (char **)line->pdata);
+	g_printerr("remotix --kwin-nested: %s does not start: %s\n", argv[6], strerror(errno));
 	kill(labwc, SIGTERM);
 	return 1;
 }
@@ -1422,94 +1422,94 @@ static void mode_scale(void *d, struct wl_output *o, int32_t s) {}
 static const struct wl_output_listener MODE_LISTENER = { mode_geometry, mode_mode, mode_done,
 	                                                     mode_scale, NULL, NULL };
 
-static void mode_global(void *d, struct wl_registry *r, uint32_t nome, const char *iface,
+static void mode_global(void *d, struct wl_registry *r, uint32_t name, const char *iface,
                         uint32_t v)
 {
 	struct wl_output **o = d;
 
 	/* version 2: `done` and `scale`, and no `name`/`description` to listen to */
 	if (!*o && strcmp(iface, wl_output_interface.name) == 0)
-		*o = wl_registry_bind(r, nome, &wl_output_interface, MIN(v, 2u));
+		*o = wl_registry_bind(r, name, &wl_output_interface, MIN(v, 2u));
 }
-static void mode_global_away(void *d, struct wl_registry *r, uint32_t nome) {}
+static void mode_global_away(void *d, struct wl_registry *r, uint32_t name) {}
 static const struct wl_registry_listener MODE_REGISTRY = { mode_global, mode_global_away };
 
-bool kwin_ospite_misura(uint32_t larghezza, uint32_t altezza, double attesa_s,
-                        GError **sbaglio)
+bool kwin_host_resize(uint32_t width, uint32_t height, double wait_s,
+                        GError **mistake)
 {
-	g_autofree char *display = kwin_ospite_display();
+	g_autofree char *display = kwin_host_display();
 	struct wl_display *kwin;
 	struct wl_registry *reg;
-	struct wl_output *uscita = NULL;
+	struct wl_output *output = NULL;
 	Mode m = { 0, 0 };
 	char socket[64];
-	gint64 t0 = g_get_monotonic_time(), scadenza;
+	gint64 t0 = g_get_monotonic_time(), expiry;
 
-	if (!kwin_ospite_c_e()) {
-		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_NOT_FOUND,
+	if (!kwin_host_exists()) {
+		g_set_error(mistake, G_IO_ERROR, G_IO_ERROR_NOT_FOUND,
 		            "no host for KWin (%s): this Plasma session was born with KWin "
 		            "--virtual, which cannot change size",
 		            display ? display : "XDG_RUNTIME_DIR missing");
 		return false;
 	}
-	if (!ospite_chiedi(display, larghezza, altezza, sbaglio))
+	if (!host_ask_size(display, width, height, mistake))
 		return false;
 
-	kwin = kwin_display_apri(socket, sizeof socket);
+	kwin = kwin_display_open(socket, sizeof socket);
 	if (!kwin) {
-		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_NOT_FOUND,
+		g_set_error(mistake, G_IO_ERROR, G_IO_ERROR_NOT_FOUND,
 		            "the host is at %ux%u but KWin cannot be reached to read it back",
-		            larghezza, altezza);
+		            width, height);
 		return false;
 	}
 	reg = wl_display_get_registry(kwin);
-	wl_registry_add_listener(reg, &MODE_REGISTRY, &uscita);
+	wl_registry_add_listener(reg, &MODE_REGISTRY, &output);
 	wl_display_roundtrip(kwin);
-	if (uscita)
-		wl_output_add_listener(uscita, &MODE_LISTENER, &m);
+	if (output)
+		wl_output_add_listener(output, &MODE_LISTENER, &m);
 	/* ⚠ KWin throttles the host's configure by one refresh period
 	 *   (`wayland_output.cpp`, `m_configureThrottleTimer`): the new mode
 	 *   arrives a few milliseconds after labwc's, and it is waited for. */
-	scadenza = t0 + (gint64)(attesa_s * 1e6);
-	while (uscita && wl_display_roundtrip(kwin) >= 0) {
-		if (m.l == larghezza && m.a == altezza)
+	expiry = t0 + (gint64)(wait_s * 1e6);
+	while (output && wl_display_roundtrip(kwin) >= 0) {
+		if (m.l == width && m.a == height)
 			break;
-		if (g_get_monotonic_time() >= scadenza)
+		if (g_get_monotonic_time() >= expiry)
 			break;
 		g_usleep(5000);
 	}
-	if (uscita)
-		wl_output_destroy(uscita);
+	if (output)
+		wl_output_destroy(output);
 	wl_registry_destroy(reg);
 	wl_display_disconnect(kwin);
-	if (m.l != larghezza || m.a != altezza) {
-		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_TIMED_OUT,
+	if (m.l != width || m.a != height) {
+		g_set_error(mistake, G_IO_ERROR, G_IO_ERROR_TIMED_OUT,
 		            "the host is at %ux%u but KWin's output is %ux%u after %.1f s",
-		            larghezza, altezza, m.l, m.a, attesa_s);
+		            width, height, m.l, m.a, wait_s);
 		return false;
 	}
 	registro_dice(AREA,
 	              "⭐ nested KWin: the host and KWin's output are at %ux%u after %lld ms "
 	              "(read back from KWin on «%s», not believed)",
-	              larghezza, altezza, (long long)((g_get_monotonic_time() - t0) / 1000),
+	              width, height, (long long)((g_get_monotonic_time() - t0) / 1000),
 	              socket);
 	return true;
 }
 
 
-bool kwin_ospite_assesta(double attesa_s, GError **sbaglio)
+bool kwin_host_settle(double wait_s, GError **mistake)
 {
-	g_autofree char *display = kwin_ospite_display();
-	WlrPalco *ospite;
+	g_autofree char *display = kwin_host_display();
+	WlrStage *host;
 	uint32_t l = 0, a = 0;
 
-	if (!kwin_ospite_c_e())
+	if (!kwin_host_exists())
 		return true; /* no host: nothing to wait for */
-	ospite = wlr_apri_su(display, sbaglio);
-	if (!ospite)
+	host = wlr_open_on(display, mistake);
+	if (!host)
 		return false;
-	wlr_measure(ospite, &l, &a);
-	wlr_close(ospite);
-	/* same size ⇒ no request leaves (`wlr_misura_chiedi`: GIA_COSI); only the wait */
-	return kwin_ospite_misura(l, a, attesa_s, sbaglio);
+	wlr_measure(host, &l, &a);
+	wlr_close(host);
+	/* same size ⇒ no request leaves (`wlr_ask_size`: UNCHANGED); only the wait */
+	return kwin_host_resize(l, a, wait_s, mistake);
 }

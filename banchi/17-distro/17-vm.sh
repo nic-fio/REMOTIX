@@ -14,28 +14,28 @@
 # libvirt and without root; user-mode networking with port forwarding; disk
 # as an overlay on the base image, which stays untouched.
 #
-#   bash 17-vm.sh elenco                  the known distributions and their state
-#   bash 17-vm.sh crea      <distro>      downloads the image, prepares disk and cloud-init
-#   bash 17-vm.sh avvia     <distro>      in the background; waits for ssh and cloud-init
-#   bash 17-vm.sh vesti     <macchina>    the desktop, with the official group (like the customer)
+#   bash 17-vm.sh list                  the known distributions and their state
+#   bash 17-vm.sh create      <distro>      downloads the image, prepares disk and cloud-init
+#   bash 17-vm.sh boot     <distro>      in the background; waits for ssh and cloud-init
+#   bash 17-vm.sh dress     <machine>    the desktop, with the official group (like the customer)
 #   bash 17-vm.sh ssh       <distro> [cmd]
-#   bash 17-vm.sh ferma     <distro>      orderly shutdown (then forced)
-#   bash 17-vm.sh riavvia   <distro>      REAL reboot of the guest, and waits for ssh
-#   bash 17-vm.sh fotografa <distro> <nome>   copy of the disk with the machine stopped
-#   bash 17-vm.sh torna     <distro> <nome>   puts back the disk of the photo
-#   bash 17-vm.sh azzera    <distro>      new disk from the image (cloud-init redone)
-#   bash 17-vm.sh da-iso    <macchina>-iso    the ISO state: from the official ISO with the
+#   bash 17-vm.sh shutdown     <distro>      orderly shutdown (then forced)
+#   bash 17-vm.sh reboot   <distro>      REAL reboot of the guest, and waits for ssh
+#   bash 17-vm.sh snapshot <distro> <name>   copy of the disk with the machine stopped
+#   bash 17-vm.sh revert     <distro> <name>   puts back the disk of the photo
+#   bash 17-vm.sh reset    <distro>      new disk from the image (cloud-init redone)
+#   bash 17-vm.sh from-iso    <machine>-iso    the ISO state: from the official ISO with the
 #                                         automatic installer, new disk, UEFI; at the end the «iso» photo
-#   bash 17-vm.sh impronta  <macchina> [foto] how the machine is made (firewall, SELinux, display
+#   bash 17-vm.sh fingerprint  <machine> [foto] how the machine is made (firewall, SELinux, display
 #                                         manager, network, packages); with [foto] it boots it from that
 #                                         photo read-only, on its own ports (k=6)
-#   bash 17-vm.sh schermo   <macchina> [file.png]  screenshot of the screen (from the QEMU monitor)
-#   bash 17-vm.sh hmp       <macchina> "<comando>"  a monitor command (sendkey, mouse_move…)
+#   bash 17-vm.sh screenshot   <machine> [file.png]  screenshot of the screen (from the QEMU monitor)
+#   bash 17-vm.sh hmp       <machine> "<command>"  a monitor command (sendkey, mouse_move…)
 #
 # The machines are named <distro>-<desktop> (fedora44-kde; <distro> alone =
-# «nudo», without desktop).  Everything lives under /media/REMOTIX/vm17/<macchina>/;
+# «bare», without desktop).  Everything lives under /media/REMOTIX/vm17/<machine>/;
 # the official image in /media/REMOTIX/vm17/<distro>/base.qcow2, shared.
-# Ports on the server, for distribution N and desktop k (nudo 0, gnome 1,
+# Ports on the server, for distribution N and desktop k (bare 0, gnome 1,
 # kde 2, xfce 3, lxqt 4): ssh 2300+10N+k, REMOTIX 7500+10N+k (TCP and UDP).
 # The ISO state (fasi/17 §7.2) is a separate machine, <distro>-<desktop>-iso, with
 # k=5, folder /media/REMOTIX/vm17/<distro>-<desktop>-iso/ and UEFI firmware.
@@ -44,16 +44,16 @@ set -euo pipefail
 export LC_ALL=C
 
 BASE=/media/REMOTIX
-RADICE="$BASE/vm17"
-CHIAVE="$RADICE/ssh/id_ed25519"
-UTENTE=nicfio
+ROOT="$BASE/vm17"
+SSH_KEY="$ROOT/ssh/id_ed25519"
+ACCOUNT=nicfio
 CPU=${RX_VM_CPU:-4}
 RAM=${RX_VM_RAM:-6144}   # MB; the load test with 8 decides whether to go down to 4096
-DISCO_GRANDE=40G
+DISK_SIZE=40G
 OVMF_CODE=/usr/share/OVMF/OVMF_CODE_4M.fd
 OVMF_VARS=/usr/share/OVMF/OVMF_VARS_4M.fd
-ISO_DIR="$RADICE/iso"
-RISPOSTE="$(dirname "$(readlink -f "$0")")/iso-risposte"
+ISO_DIR="$ROOT/iso"
+REPLIES="$(dirname "$(readlink -f "$0")")/iso-risposte"
 
 log() { printf '\n\033[1;34m==> %s\033[0m\n' "$*"; }
 ok()  { printf '    \033[1;32mOK\033[0m  %s\n' "$*"; }
@@ -78,65 +78,65 @@ fedora43   | 9 | https://download.fedoraproject.org/pub/fedora/linux/releases/43
 
 # The desktops: one machine per desktop (user's decision, 29 Sep: a customer usually has
 #   ONE, and four together would hide the package forgotten for one of them).
-#   `nudo` = the distribution as downloaded, without desktop.
+#   `bare` = the distribution as downloaded, without desktop.
 #   ⚠ the order is NOT changed: it decides the ports.
 DESKTOP="nudo gnome kde xfce lxqt"
 
-riga() {  # riga <distro>[-<desktop>][-iso] -> NUM, URL, ESPR, DE, D, porte
-	local nome=$1 dis de=nudo k=0 x r
+line() {  # line <distro>[-<desktop>][-iso] -> NUM, URL, ESPR, DE, D, ports
+	local name=$1 dis de=bare k=0 x r
 	ISO=
-	case "$nome" in *-iso) ISO=1; nome=${nome%-iso} ;; esac
-	dis=${nome%%-*}
+	case "$name" in *-iso) ISO=1; name=${name%-iso} ;; esac
+	dis=${name%%-*}
 	DIS=$dis
-	[ "$dis" != "$nome" ] && de=${nome#*-}
+	[ "$dis" != "$name" ] && de=${name#*-}
 	for x in $DESKTOP; do [ "$x" = "$de" ] && break; k=$((k + 1)); done
 	[ "$k" -lt 5 ] || die "unknown desktop: $de (one of: $DESKTOP)"
 	r=$(printf '%s\n' "$DISTRO_TAB" | awk -F'|' -v OFS='|' -v d="$dis" '{gsub(/ /,"",$1)} $1==d')
-	[ -n "$r" ] || die "unknown distribution: $dis (see: 17-vm.sh elenco)"
+	[ -n "$r" ] || die "unknown distribution: $dis (see: 17-vm.sh list)"
 	NUM=$(printf '%s' "$r" | cut -d'|' -f2 | tr -d ' ')
 	URL=$(printf '%s' "$r" | cut -d'|' -f3 | tr -d ' ')
 	EXPR=$(printf '%s' "$r" | cut -d'|' -f4 | tr -d ' ')
-	DE=$de; D=$dis; [ "$de" = nudo ] || D="$dis-$de"
+	DE=$de; D=$dis; [ "$de" = bare ] || D="$dis-$de"
 	if [ -n "$ISO" ]; then
-		[ "$de" != nudo ] || die "the ISO state wants a desktop: <distro>-<desktop>-iso"
+		[ "$de" != bare ] || die "the ISO state wants a desktop: <distro>-<desktop>-iso"
 		k=5; D="$D-iso"
 	fi
 	# the official image is ONE per distribution; the disk is one per machine
-	BASE_IMG="$RADICE/$dis/base.qcow2"
-	DIR="$RADICE/$D"; DISCO="$DIR/disco.qcow2"; SEME="${RX_VM_SEME:-$DIR/seme.iso}"
+	BASE_IMG="$ROOT/$dis/base.qcow2"
+	DIR="$ROOT/$D"; DISK="$DIR/disco.qcow2"; SEED="${RX_VM_SEED:-$DIR/seme.iso}"
 	PID="$DIR/qemu.pid"; MONITOR="$DIR/monitor.sock"; CONSOLE="$DIR/console.log"
 	VARS="$DIR/ovmf-vars.fd"   # the UEFI NVRAM: it exists only for the machines that use it
-	PORTA_SSH=$((2300 + 10 * NUM + k)); PORTA_RX=$((7500 + 10 * NUM + k))
+	SSH_PORT=$((2300 + 10 * NUM + k)); RX_PORT=$((7500 + 10 * NUM + k))
 }
 
-AVVIA_EXTRA=()   # extra arguments for QEMU in cmd_avvia (impronta: -snapshot)
+START_EXTRA=()   # extra arguments for QEMU in cmd_boot (fingerprint: -snapshot)
 # For the tests of installation without questions and without network (phase 17, T9), at boot only:
-#   RX_VM_SEME=file.iso     a different cloud-init seed (the test's user-data, new instance-id)
-#   RX_VM_RETE=,restrict=on the network REMOVED: the VM reaches nothing outside (the forwards towards it
+#   RX_VM_SEED=file.iso     a different cloud-init seed (the test's user-data, new instance-id)
+#   RX_VM_NET=,restrict=on the network REMOVED: the VM reaches nothing outside (the forwards towards it
 #                           stay: ssh and the REMOTIX port)
-#   RX_VM_CATTURA=file.pcap every packet of the VM's network card, in both directions (filter-dump)
-RETE_EXTRA=${RX_VM_RETE:-}
-[ -n "${RX_VM_CATTURA:-}" ] && AVVIA_EXTRA+=(-object "filter-dump,id=cattura0,netdev=n0,file=$RX_VM_CATTURA")
-#   RX_VM_CHI=nome          who turns it on (written in <dir>/chi; by default «pid <n>»): «avvia» on a VM
-#                           turned on by SOMEONE ELSE stops with an error; RX_VM_CONDIVIDI=1 to do it on purpose
-#   RX_VM_TAVOLETTA=1       a USB tablet (ABSOLUTE pointer) and a QMP monitor in <dir>/qmp.sock:
+#   RX_VM_CAPTURE=file.pcap every packet of the VM's network card, in both directions (filter-dump)
+NETWORK_EXTRA=${RX_VM_NET:-}
+[ -n "${RX_VM_CAPTURE:-}" ] && START_EXTRA+=(-object "filter-dump,id=cattura0,netdev=n0,file=$RX_VM_CAPTURE")
+#   RX_VM_OWNER=name          who turns it on (written in <dir>/chi; by default «pid <n>»): «boot» on a VM
+#                           turned on by SOMEONE ELSE stops with an error; RX_VM_SHARE=1 to do it on purpose
+#   RX_VM_TABLET=1       a USB tablet (ABSOLUTE pointer) and a QMP monitor in <dir>/qmp.sock:
 #                           «input-send-event» brings the pointer to the wanted pixel (T9, the installer
 #                           window). ⚠ «mouse_move» of the HMP monitor sends only RELATIVE
 #                           movements, which the tablet discards (`[M]` 30 Sep: no ABS event in the guest)
-[ -n "${RX_VM_TAVOLETTA:-}" ] && AVVIA_EXTRA+=(-device qemu-xhci -device usb-tablet)
+[ -n "${RX_VM_TABLET:-}" ] && START_EXTRA+=(-device qemu-xhci -device usb-tablet)
 
-accesa() { [ -f "$PID" ] && kill -0 "$(cat "$PID")" 2>/dev/null; }
+enabled() { [ -f "$PID" ] && kill -0 "$(cat "$PID")" 2>/dev/null; }
 
 ssh_vm() {
-	ssh -i "$CHIAVE" -p "$PORTA_SSH" -o BatchMode=yes -o ConnectTimeout=5 \
+	ssh -i "$SSH_KEY" -p "$SSH_PORT" -o BatchMode=yes -o ConnectTimeout=5 \
 		-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR \
-		"$UTENTE@localhost" "$@"
+		"$ACCOUNT@localhost" "$@"
 }
 
-aspetta_ssh() {  # aspetta_ssh <secondi>
+wait_ssh() {  # wait_ssh <seconds>
 	local t=0
 	until ssh_vm true 2>/dev/null; do
-		accesa || die "the VM has stopped (console: $CONSOLE)"
+		enabled || die "the VM has stopped (console: $CONSOLE)"
 		sleep 3; t=$((t + 3))
 		[ "$t" -lt "$1" ] || die "ssh does not answer after $1 s (console: $CONSOLE)"
 	done
@@ -144,20 +144,20 @@ aspetta_ssh() {  # aspetta_ssh <secondi>
 }
 
 # ---------------------------------------------------------------------------
-cmd_elenco() {
+cmd_list() {
 	printf '%-11s %-3s %-6s %-6s %s\n' distro num ssh remotix state
 	printf '%s\n' "$DISTRO_TAB" | awk -F'|' 'NF>2{gsub(/ /,"",$1); print $1}' | while read -r d; do
-		riga "$d"
+		line "$d"
 		local s="-"
-		[ -f "$DISCO" ] && s="created"
-		accesa && s="ON (pid $(cat "$PID"))"
-		printf '%-11s %-3s %-6s %-6s %s\n' "$d" "$NUM" "$PORTA_SSH" "$PORTA_RX" "$s"
+		[ -f "$DISK" ] && s="created"
+		enabled && s="ON (pid $(cat "$PID"))"
+		printf '%-11s %-3s %-6s %-6s %s\n' "$d" "$NUM" "$SSH_PORT" "$RX_PORT" "$s"
 	done
 }
 
-cmd_crea() {
-	mkdir -p "$DIR" "$RADICE/ssh" "$(dirname "$BASE_IMG")"
-	[ -f "$CHIAVE" ] || ssh-keygen -q -t ed25519 -N '' -C remotix-vm17 -f "$CHIAVE"
+cmd_create() {
+	mkdir -p "$DIR" "$ROOT/ssh" "$(dirname "$BASE_IMG")"
+	[ -f "$SSH_KEY" ] || ssh-keygen -q -t ed25519 -N '' -C remotix-vm17 -f "$SSH_KEY"
 
 	log "$D: official image"
 	if [ -f "$BASE_IMG" ]; then
@@ -188,64 +188,64 @@ cmd_crea() {
 #cloud-config
 hostname: rx-$D
 users:
-  - name: $UTENTE
+  - name: $ACCOUNT
     shell: /bin/bash
     sudo: ["ALL=(ALL) NOPASSWD:ALL"]
     lock_passwd: false
     ssh_authorized_keys:
-      - $(cat "$CHIAVE.pub")
+      - $(cat "$SSH_KEY.pub")
 chpasswd:
   expire: false
   users:
-    - {name: $UTENTE, password: $UTENTE, type: text}
+    - {name: $ACCOUNT, password: $ACCOUNT, type: text}
 ssh_pwauth: false
 growpart: {mode: auto, devices: ['/']}
 final_message: "rx-$D ready after \$UPTIME s"
 UD
-	genisoimage -quiet -output "$SEME" -volid cidata -joliet -rock \
+	genisoimage -quiet -output "$SEED" -volid cidata -joliet -rock \
 		"$DIR/seme/user-data" "$DIR/seme/meta-data" || die "seme.iso not built"
 	ok "seme.iso"
 
 	log "$D: disk"
-	if [ -f "$DISCO" ]; then
-		ok "already present ($(du -h "$DISCO" | cut -f1) used)"
+	if [ -f "$DISK" ]; then
+		ok "already present ($(du -h "$DISK" | cut -f1) used)"
 	else
-		qemu-img create -q -f qcow2 -F qcow2 -b "$BASE_IMG" "$DISCO" "$DISCO_GRANDE"
-		ok "overlay on the base image ($DISCO_GRANDE)"
+		qemu-img create -q -f qcow2 -F qcow2 -b "$BASE_IMG" "$DISK" "$DISK_SIZE"
+		ok "overlay on the base image ($DISK_SIZE)"
 	fi
 }
 
-# who turned the machine on: RX_VM_CHI, otherwise «pid <whoever launched this script>». ⛔ A VM
+# who turned the machine on: RX_VM_OWNER, otherwise «pid <whoever launched this script>». ⛔ A VM
 # turned on by SOMEONE ELSE is not used by two: `[M]` 30 Sep, an agent found another's VM on and
-# installed on it for a few moments (before, «avvia» said «already on» and went ahead)
-CHI_IO=${RX_VM_CHI:-pid $PPID}
+# installed on it for a few moments (before, «boot» said «already on» and went ahead)
+CHI_IO=${RX_VM_OWNER:-pid $PPID}
 
-cmd_avvia() {
-	if accesa; then
-		local tiene
-		tiene=$(cat "$DIR/chi" 2>/dev/null || echo "unknown (turned on before the guard)")
-		if [ "$tiene" = "$CHI_IO" ] || [ -n "${RX_VM_CONDIVIDI:-}" ]; then
-			ok "$D already on (pid $(cat "$PID"), by «$tiene»)"
+cmd_boot() {
+	if enabled; then
+		local holds
+		holds=$(cat "$DIR/chi" 2>/dev/null || echo "unknown (turned on before the guard)")
+		if [ "$holds" = "$CHI_IO" ] || [ -n "${RX_VM_SHARE:-}" ]; then
+			ok "$D already on (pid $(cat "$PID"), by «$holds»)"
 			return
 		fi
-		die "$D is already on and «$tiene» holds it: it is not used by two (RX_VM_CONDIVIDI=1 only if wanted)"
+		die "$D is already on and «$holds» holds it: it is not used by two (RX_VM_SHARE=1 only if wanted)"
 	fi
-	[ -f "$DISCO" ] || die "disk missing: 17-vm.sh crea $D"
+	[ -f "$DISK" ] || die "disk missing: 17-vm.sh create $D"
 	[ -w /dev/kvm ] || die "/dev/kvm not writable: usermod -aG kvm $USER and log in again"
-	log "$D: boot (ssh :$PORTA_SSH, REMOTIX :$PORTA_RX)"
+	log "$D: boot (ssh :$SSH_PORT, REMOTIX :$RX_PORT)"
 	rm -f "$MONITOR"
 	: > "$CONSOLE"
 	local extra=()
 	[ -f "$VARS" ] && extra+=(-drive "if=pflash,format=raw,readonly=on,file=$OVMF_CODE" \
 		-drive "if=pflash,format=raw,file=$VARS")
-	[ -f "$SEME" ] && extra+=(-drive "file=$SEME,if=virtio,format=raw,readonly=on")
-	[ -n "${RX_VM_TAVOLETTA:-}" ] && extra+=(-qmp "unix:$DIR/qmp.sock,server=on,wait=off")
+	[ -f "$SEED" ] && extra+=(-drive "file=$SEED,if=virtio,format=raw,readonly=on")
+	[ -n "${RX_VM_TABLET:-}" ] && extra+=(-qmp "unix:$DIR/qmp.sock,server=on,wait=off")
 	qemu-system-x86_64 \
 		-name "rx-$D" -machine q35,accel=kvm -cpu host -smp "$CPU" -m "$RAM" \
 		-device virtio-vga -display none \
-		-drive "file=$DISCO,if=virtio,format=qcow2,discard=unmap" \
-		"${extra[@]}" "${AVVIA_EXTRA[@]}" \
-		-netdev "user,id=n0,hostfwd=tcp::$PORTA_SSH-:22,hostfwd=tcp::$PORTA_RX-:7447,hostfwd=udp::$PORTA_RX-:7447$RETE_EXTRA" \
+		-drive "file=$DISK,if=virtio,format=qcow2,discard=unmap" \
+		"${extra[@]}" "${START_EXTRA[@]}" \
+		-netdev "user,id=n0,hostfwd=tcp::$SSH_PORT-:22,hostfwd=tcp::$RX_PORT-:7447,hostfwd=udp::$RX_PORT-:7447$NETWORK_EXTRA" \
 		-device virtio-net-pci,netdev=n0 \
 		-device virtio-rng-pci \
 		-serial "file:$CONSOLE" \
@@ -253,58 +253,58 @@ cmd_avvia() {
 		-pidfile "$PID" -daemonize
 	printf '%s\n' "$CHI_IO" >"$DIR/chi"
 	ok "qemu pid $(cat "$PID"), of «$CHI_IO»"
-	aspetta_ssh 600
+	wait_ssh 600
 	# cloud-init all the way through, or the tests start on a half-made machine
 	ssh_vm 'command -v cloud-init >/dev/null && sudo cloud-init status --wait >/dev/null 2>&1; true'
 	ok "$(ssh_vm '. /etc/os-release; printf "%s · kernel %s" "$PRETTY_NAME" "$(uname -r)"')"
 }
 
-cmd_ferma() {
-	accesa || { ok "$D already off"; return; }
+cmd_shutdown() {
+	enabled || { ok "$D already off"; return; }
 	log "$D: shutdown"
 	printf 'system_powerdown\n' | socat - "UNIX-CONNECT:$MONITOR" >/dev/null 2>&1 \
 		|| ssh_vm 'sudo systemctl poweroff' 2>/dev/null || true
 	local t=0
-	while accesa && [ "$t" -lt 90 ]; do sleep 2; t=$((t + 2)); done
-	if accesa; then kill "$(cat "$PID")"; sleep 2; inf "forced after 90 s"; fi
+	while enabled && [ "$t" -lt 90 ]; do sleep 2; t=$((t + 2)); done
+	if enabled; then kill "$(cat "$PID")"; sleep 2; inf "forced after 90 s"; fi
 	rm -f "$PID" "$DIR/chi"
 	ok "off"
 }
 
-cmd_riavvia() {
-	accesa || die "$D is off"
+cmd_reboot() {
+	enabled || die "$D is off"
 	log "$D: real reboot of the guest"
 	local b0; b0=$(ssh_vm 'cat /proc/sys/kernel/random/boot_id')
 	ssh_vm 'sudo systemctl reboot' 2>/dev/null || true
 	sleep 5
-	# RX_VM_RIAVVIA_S: the reboot patience (default 300 s); with several VMs together the
+	# RX_VM_REBOOT_S: the reboot patience (default 300 s); with several VMs together the
 	# shutdown+reboot gets longer from contention (T10, 30 Sep: Fedora under load > 300 s)
-	aspetta_ssh "${RX_VM_RIAVVIA_S:-300}"
+	wait_ssh "${RX_VM_REBOOT_S:-300}"
 	local b1; b1=$(ssh_vm 'cat /proc/sys/kernel/random/boot_id')
 	[ "$b0" != "$b1" ] || die "boot_id unchanged: the machine did not reboot"
 	ok "rebooted (boot_id changed)"
 }
 
-cmd_fotografa() {
+cmd_snapshot() {
 	[ -n "${1:-}" ] || die "the photo name is missing"
-	accesa && die "first: 17-vm.sh ferma $D (the photo is taken with the machine stopped)"
-	cp --sparse=always "$DISCO" "$DIR/foto-$1.qcow2"
+	enabled && die "first: 17-vm.sh shutdown $D (the photo is taken with the machine stopped)"
+	cp --sparse=always "$DISK" "$DIR/foto-$1.qcow2"
 	[ -f "$VARS" ] && cp "$VARS" "$DIR/foto-$1.vars.fd"
 	ok "photo «$1» ($(du -h "$DIR/foto-$1.qcow2" | cut -f1))"
 }
 
-cmd_torna() {
+cmd_revert() {
 	[ -f "$DIR/foto-${1:-}.qcow2" ] || die "no photo «${1:-}» for $D"
-	accesa && die "first: 17-vm.sh ferma $D"
-	cp --sparse=always "$DIR/foto-$1.qcow2" "$DISCO"
+	enabled && die "first: 17-vm.sh shutdown $D"
+	cp --sparse=always "$DIR/foto-$1.qcow2" "$DISK"
 	[ -f "$DIR/foto-$1.vars.fd" ] && cp "$DIR/foto-$1.vars.fd" "$VARS"
 	ok "$D is back to the photo «$1»"
 }
 
-cmd_azzera() {
-	accesa && die "first: 17-vm.sh ferma $D"
-	rm -f "$DISCO"
-	cmd_crea
+cmd_reset() {
+	enabled && die "first: 17-vm.sh shutdown $D"
+	rm -f "$DISK"
+	cmd_create
 }
 
 # ---------------------------------------------------------------------------
@@ -313,7 +313,7 @@ cmd_azzera() {
 #   XFCE and LXQt under Wayland, video/render groups, codecs): that is the
 #   installer's job, and the test must see it missing if it forgets it.
 # ---------------------------------------------------------------------------
-comando_desktop() {  # prints the command for $D0 (distro) and $DE
+desktop_command() {  # prints the command for $D0 (distro) and $DE
 	local fam=$1
 	case "$fam:$DE" in
 	debian13:*)       echo "sudo DEBIAN_FRONTEND=noninteractive apt-get update -q && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -q task-$DE-desktop" ;;
@@ -338,11 +338,11 @@ comando_desktop() {  # prints the command for $D0 (distro) and $DE
 	esac
 }
 
-cmd_vesti() {
+cmd_dress() {
 	[ "$DE" != nudo ] || die "$D has no desktop to dress (use <distro>-<desktop>)"
 	local c
-	c=$(comando_desktop "${D%%-*}") || die "$D: this distribution does not offer $DE (outside the matrix)"
-	accesa || die "$D is off"
+	c=$(desktop_command "${D%%-*}") || die "$D: this distribution does not offer $DE (outside the matrix)"
+	enabled || die "$D is off"
 	log "$D: installing the desktop like the customer"
 	inf "$c"
 	local t0=$SECONDS
@@ -374,76 +374,76 @@ tumbleweed | https://download.opensuse.org/tumbleweed/iso/ | openSUSE-Tumbleweed
 alma10     | https://repo.almalinux.org/almalinux/10/isos/x86_64/ | CHECKSUM | AlmaLinux-10\.[0-9]*-x86_64-boot\.iso | /images/pxeboot/vmlinuz | /images/pxeboot/initrd.img
 '
 # The combinations that have written answers: one per family (§7.2)
-ISO_MACCHINE="debian13-gnome ubuntu2604-gnome fedora44-gnome arch-kde tumbleweed-kde alma10-gnome"
+ISO_MACHINES="debian13-gnome ubuntu2604-gnome fedora44-gnome arch-kde tumbleweed-kde alma10-gnome"
 
-riga_iso() {  # -> ISO_URL ISO_SOMME ISO_ESPR ISO_KERNEL ISO_INITRD
+line_iso() {  # -> ISO_URL ISO_SUMS ISO_EXPR ISO_KERNEL ISO_INITRD
 	local r
 	r=$(printf '%s\n' "$ISO_TAB" | awk -F'|' -v OFS='|' -v d="$DIS" '{gsub(/ /,"",$1)} $1==d')
 	[ -n "$r" ] || die "$DIS: no ISO in the table"
 	ISO_URL=$(printf '%s' "$r" | cut -d'|' -f2 | tr -d ' ')
-	ISO_SOMME=$(printf '%s' "$r" | cut -d'|' -f3 | tr -d ' ')
-	ISO_ESPR=$(printf '%s' "$r" | cut -d'|' -f4 | tr -d ' ')
+	ISO_SUMS=$(printf '%s' "$r" | cut -d'|' -f3 | tr -d ' ')
+	ISO_EXPR=$(printf '%s' "$r" | cut -d'|' -f4 | tr -d ' ')
 	ISO_KERNEL=$(printf '%s' "$r" | cut -d'|' -f5 | tr -d ' ')
 	ISO_INITRD=$(printf '%s' "$r" | cut -d'|' -f6 | tr -d ' ')
 }
 
-scarica_iso() {  # -> ISO_FILE, downloaded and VERIFIED with the sha256 of the official site
-	local somme nome atteso
+download_iso() {  # -> ISO_FILE, downloaded and VERIFIED with the sha256 of the official site
+	local sums name expected
 	mkdir -p "$ISO_DIR"
 	log "$D: the official ISO"
-	somme=$(curl -fsSL "$ISO_URL" | grep -oE "$ISO_SOMME" | sort -V | tail -1)
-	[ -n "$somme" ] || die "no checksum file «$ISO_SOMME» in $ISO_URL"
+	sums=$(curl -fsSL "$ISO_URL" | grep -oE "$ISO_SUMS" | sort -V | tail -1)
+	[ -n "$sums" ] || die "no checksum file «$ISO_SUMS» in $ISO_URL"
 	# two forms: «HASH  file» (or «HASH *file») and «SHA256 (file) = HASH»
-	read -r atteso nome < <(curl -fsSL "${ISO_URL%/}/$somme" | awk '
+	read -r expected name < <(curl -fsSL "${ISO_URL%/}/$sums" | awk '
 		/^SHA256 \(/ { f=$2; gsub(/[()]/, "", f); print $4, f; next }
 		length($1) == 64 && NF == 2 { f=$2; sub(/^\*/, "", f); print $1, f }' |
-		grep -E " $ISO_ESPR\$" | sort -k2 -V | tail -1) || true
-	[ -n "${nome:-}" ] || die "no ISO «$ISO_ESPR» in $somme"
-	ISO_FILE="$ISO_DIR/$nome"
-	if [ -f "$ISO_FILE" ] && [ "$(cat "$ISO_FILE.sha256-ok" 2>/dev/null)" = "$atteso" ]; then
-		ok "$nome (already verified)"; return
+		grep -E " $ISO_EXPR\$" | sort -k2 -V | tail -1) || true
+	[ -n "${name:-}" ] || die "no ISO «$ISO_EXPR» in $sums"
+	ISO_FILE="$ISO_DIR/$name"
+	if [ -f "$ISO_FILE" ] && [ "$(cat "$ISO_FILE.sha256-ok" 2>/dev/null)" = "$expected" ]; then
+		ok "$name (already verified)"; return
 	fi
 	if [ ! -f "$ISO_FILE" ]; then
-		inf "downloading ${ISO_URL%/}/$nome"
-		curl -fL -sS -o "$ISO_FILE.parte" "${ISO_URL%/}/$nome" || die "download failed"
+		inf "downloading ${ISO_URL%/}/$name"
+		curl -fL -sS -o "$ISO_FILE.parte" "${ISO_URL%/}/$name" || die "download failed"
 		mv "$ISO_FILE.parte" "$ISO_FILE"
 	fi
-	inf "verifying the sha256 ($somme)"
-	[ "$(sha256sum "$ISO_FILE" | cut -d' ' -f1)" = "$atteso" ] || {
-		mv "$ISO_FILE" "$ISO_FILE.sbagliata"; die "$nome: sha256 different from the official one"; }
-	printf '%s\n' "$atteso" > "$ISO_FILE.sha256-ok"
-	printf '%s\n' "${ISO_URL%/}/$nome" > "$ISO_FILE.origine"
-	ok "$nome, sha256 ${atteso:0:16}… as per $somme"
+	inf "verifying the sha256 ($sums)"
+	[ "$(sha256sum "$ISO_FILE" | cut -d' ' -f1)" = "$expected" ] || {
+		mv "$ISO_FILE" "$ISO_FILE.sbagliata"; die "$name: sha256 different from the official one"; }
+	printf '%s\n' "$expected" > "$ISO_FILE.sha256-ok"
+	printf '%s\n' "${ISO_URL%/}/$name" > "$ISO_FILE.origine"
+	ok "$name, sha256 ${expected:0:16}… as per $sums"
 }
 
-prepara_risposte() {  # the installer's answers in $DIR/risposte, served over HTTP
-	local r="$DIR/risposte" hash chiave
+prepare_replies() {  # the installer's answers in $DIR/replies, served over HTTP
+	local r="$DIR/risposte" hash key
 	rm -rf "$r"; mkdir -p "$r"
-	hash=$(openssl passwd -6 "$UTENTE")
-	chiave=$(cat "$CHIAVE.pub")
-	riempi() {
-		[ -f "$RISPOSTE/$1" ] || die "$RISPOSTE/$1 is missing"
-		sed -e "s|@UTENTE@|$UTENTE|g" -e "s|@HASH@|$hash|g" -e "s|@CHIAVE@|$chiave|g" \
-			-e "s|@NOME@|rx-$D|g" -e "s|@WEB@|$WEB|g" "$RISPOSTE/$1" > "$r/$2"
+	hash=$(openssl passwd -6 "$ACCOUNT")
+	key=$(cat "$SSH_KEY.pub")
+	fill() {
+		[ -f "$REPLIES/$1" ] || die "$REPLIES/$1 is missing"
+		sed -e "s|@UTENTE@|$UTENTE|g" -e "s|@HASH@|$hash|g" -e "s|@CHIAVE@|$key|g" \
+			-e "s|@NOME@|rx-$D|g" -e "s|@WEB@|$WEB|g" "$REPLIES/$1" > "$r/$2"
 	}
 	case "$DIS" in
-	debian13)   riempi debian13.preseed preseed.cfg ;;
-	ubuntu2604) riempi ubuntu2604.user-data user-data; : > "$r/meta-data"; : > "$r/vendor-data" ;;
-	fedora44)   riempi fedora44.ks ks.cfg ;;
-	alma10)     riempi alma10.ks ks.cfg ;;
-	arch)       riempi arch.sh installa.sh; riempi arch.config.json config.json
-	            riempi arch.creds.json creds.json ;;
-	tumbleweed) riempi tumbleweed.xml autoinst.xml ;;
+	debian13)   fill debian13.preseed preseed.cfg ;;
+	ubuntu2604) fill ubuntu2604.user-data user-data; : > "$r/meta-data"; : > "$r/vendor-data" ;;
+	fedora44)   fill fedora44.ks ks.cfg ;;
+	alma10)     fill alma10.ks ks.cfg ;;
+	arch)       fill arch.sh installa.sh; fill arch.config.json config.json
+	            fill arch.creds.json creds.json ;;
+	tumbleweed) fill tumbleweed.xml autoinst.xml ;;
 	*) die "$DIS: no written answers" ;;
 	esac
 	ok "answers: $(ls "$r" | tr '\n' ' ')"
 }
 
-comando_iso() {  # the installer's kernel line (no serial: it would stay in the system)
+iso_command() {  # the installer's kernel line (no serial: it would stay in the system)
 	case "$DIS" in
 	debian13)   echo "auto=true priority=critical url=$WEB/preseed.cfg locale=it_IT.UTF-8 keymap=it hostname=rx-$D domain= ---" ;;
 	ubuntu2604) echo "autoinstall ds=nocloud;s=$WEB/ noprompt --- quiet splash" ;;
-	fedora44|alma10) echo "inst.stage2=hd:LABEL=$ETICHETTA inst.ks=$WEB/ks.cfg" ;;
+	fedora44|alma10) echo "inst.stage2=hd:LABEL=$RUN_LABEL inst.ks=$WEB/ks.cfg" ;;
 	arch)       echo "archisobasedir=arch archisosearchuuid=$ARCH_UUID script=$WEB/installa.sh" ;;
 	tumbleweed) echo "autoyast=$WEB/autoinst.xml splash=silent" ;;
 	esac
@@ -463,12 +463,12 @@ PY
 }
 
 cmd_hmp() {  # a QEMU monitor command (sendkey, mouse_move, mouse_button…)
-	accesa || die "$D is off"
+	enabled || die "$D is off"
 	monitor "$*"
 }
 
-cmd_schermo() {
-	accesa || die "$D is off"
+cmd_screenshot() {
+	enabled || die "$D is off"
 	local f=${1:-$DIR/schermo.png}
 	rm -f "$f"
 	monitor "screendump $f -f png" >/dev/null
@@ -476,71 +476,71 @@ cmd_schermo() {
 	ok "screenshot: $f"
 }
 
-cmd_da_iso() {
-	[ -n "$ISO" ] || die "usage: 17-vm.sh da-iso <distro>-<desktop>-iso (one of: $ISO_MACCHINE)"
-	case " $ISO_MACCHINE " in *" ${D%-iso} "*) ;; *) die "${D%-iso}: no written answers (one of: $ISO_MACCHINE)" ;; esac
-	accesa && die "$D is on: first 17-vm.sh ferma $D"
+cmd_from_iso() {
+	[ -n "$ISO" ] || die "usage: 17-vm.sh from-iso <distro>-<desktop>-iso (one of: $ISO_MACHINES)"
+	case " $ISO_MACHINES " in *" ${D%-iso} "*) ;; *) die "${D%-iso}: no written answers (one of: $ISO_MACHINES)" ;; esac
+	enabled && die "$D is on: first 17-vm.sh shutdown $D"
 	[ -w /dev/kvm ] || die "/dev/kvm not writable: usermod -aG kvm $USER and log in again"
 	local t0=$SECONDS
-	mkdir -p "$DIR" "$RADICE/ssh"
-	[ -f "$CHIAVE" ] || ssh-keygen -q -t ed25519 -N '' -C remotix-vm17 -f "$CHIAVE"
-	riga_iso
-	scarica_iso
+	mkdir -p "$DIR" "$ROOT/ssh"
+	[ -f "$SSH_KEY" ] || ssh-keygen -q -t ed25519 -N '' -C remotix-vm17 -f "$SSH_KEY"
+	line_iso
+	download_iso
 
 	log "$D: kernel and initrd of the installer, from the ISO"
 	isoinfo -R -i "$ISO_FILE" -x "$ISO_KERNEL" > "$DIR/iso-kernel"
 	isoinfo -R -i "$ISO_FILE" -x "$ISO_INITRD" > "$DIR/iso-initrd"
 	[ -s "$DIR/iso-kernel" ] && [ -s "$DIR/iso-initrd" ] || die "kernel or initrd not found in the ISO"
-	ETICHETTA=$(isoinfo -d -i "$ISO_FILE" | sed -n 's/^Volume id: //p')
+	RUN_LABEL=$(isoinfo -d -i "$ISO_FILE" | sed -n 's/^Volume id: //p')
 	ARCH_UUID=$(isoinfo -R -f -i "$ISO_FILE" | sed -n 's|^/boot/\(.*\)\.uuid$|\1|p' | head -1)
-	ok "label «$ETICHETTA»"
-	PORTA_WEB=$((18300 + 10 * NUM + 5))
-	WEB="http://10.0.2.2:$PORTA_WEB"     # 10.0.2.2 is the server as seen from QEMU's user network
-	prepara_risposte
-	local riga_k; riga_k=$(comando_iso)
-	inf "kernel: $riga_k"
-	if [ -n "${RX_ISO_SOLO_PREPARA:-}" ]; then
-		ok "prepared without turning anything on (RX_ISO_SOLO_PREPARA)"; return
+	ok "label «$RUN_LABEL»"
+	WEB_PORT=$((18300 + 10 * NUM + 5))
+	WEB="http://10.0.2.2:$WEB_PORT"     # 10.0.2.2 is the server as seen from QEMU's user network
+	prepare_replies
+	local line_k; line_k=$(iso_command)
+	inf "kernel: $line_k"
+	if [ -n "${RX_ISO_PREPARE_ONLY:-}" ]; then
+		ok "prepared without turning anything on (RX_ISO_PREPARE_ONLY)"; return
 	fi
 
-	log "$D: NEW disk ($DISCO_GRANDE) and new UEFI NVRAM"
-	rm -f "$DISCO" "$VARS" "$PID"
-	qemu-img create -q -f qcow2 "$DISCO" "$DISCO_GRANDE"
+	log "$D: NEW disk ($DISK_SIZE) and new UEFI NVRAM"
+	rm -f "$DISK" "$VARS" "$PID"
+	qemu-img create -q -f qcow2 "$DISK" "$DISK_SIZE"
 	cp "$OVMF_VARS" "$VARS"
 	ok "done"
 
-	python3 -m http.server "$PORTA_WEB" --bind 127.0.0.1 --directory "$DIR/risposte" \
+	python3 -m http.server "$WEB_PORT" --bind 127.0.0.1 --directory "$DIR/risposte" \
 		> "$DIR/web.log" 2>&1 &
 	local web=$!
 	# shellcheck disable=SC2064
 	trap "kill $web 2>/dev/null" EXIT
 	sleep 1
-	kill -0 "$web" 2>/dev/null || die "the answer server does not start (port $PORTA_WEB busy? another da-iso?): $DIR/web.log"
+	kill -0 "$web" 2>/dev/null || die "the answer server does not start (port $WEB_PORT busy? another from-iso?): $DIR/web.log"
 
-	log "$D: automatic installation from the ISO (without screen; to watch: 17-vm.sh schermo $D)"
+	log "$D: automatic installation from the ISO (without screen; to watch: 17-vm.sh screenshot $D)"
 	: > "$CONSOLE"; rm -f "$MONITOR"
 	qemu-system-x86_64 \
 		-name "rx-$D" -machine q35,accel=kvm -cpu host -smp "$CPU" -m "$RAM" \
 		-device virtio-vga -display none \
 		-drive "if=pflash,format=raw,readonly=on,file=$OVMF_CODE" \
 		-drive "if=pflash,format=raw,file=$VARS" \
-		-drive "file=$DISCO,if=virtio,format=qcow2,discard=unmap" \
-		-drive "file=$ISO_FILE,media=cdrom,readonly=on" \
-		-kernel "$DIR/iso-kernel" -initrd "$DIR/iso-initrd" -append "$riga_k" \
-		-netdev "user,id=n0,hostfwd=tcp::$PORTA_SSH-:22" \
+		-drive "file=$DISK,if=virtio,format=qcow2,discard=unmap" \
+		-drive "file=$ISO_FILE,mean=cdrom,readonly=on" \
+		-kernel "$DIR/iso-kernel" -initrd "$DIR/iso-initrd" -append "$line_k" \
+		-netdev "user,id=n0,hostfwd=tcp::$SSH_PORT-:22" \
 		-device virtio-net-pci,netdev=n0 \
 		-device virtio-rng-pci \
 		-serial "file:$CONSOLE" \
 		-monitor "unix:$MONITOR,server,nowait" \
 		-no-reboot -pidfile "$PID" -daemonize
 	ok "qemu pid $(cat "$PID"); at the end of installation the installer reboots and QEMU exits (-no-reboot)"
-	local limite=${RX_ISO_ATTESA:-10800} t=0
-	while accesa; do
+	local limit=${RX_ISO_WAIT:-10800} t=0
+	while enabled; do
 		sleep 30; t=$((t + 30))
-		[ $((t % 600)) -ne 0 ] || inf "$((t / 60)) min: disk $(du -h "$DISCO" | cut -f1)"
-		if [ "$t" -ge "$limite" ]; then
-			cmd_schermo "$DIR/schermo-scaduto.png" || true
-			kill "$(cat "$PID")"; die "installation not finished in $limite s (screenshot: $DIR/schermo-scaduto.png)"
+		[ $((t % 600)) -ne 0 ] || inf "$((t / 60)) min: disk $(du -h "$DISK" | cut -f1)"
+		if [ "$t" -ge "$limit" ]; then
+			cmd_screenshot "$DIR/schermo-scaduto.png" || true
+			kill "$(cat "$PID")"; die "installation not finished in $limit s (screenshot: $DIR/schermo-scaduto.png)"
 		fi
 	done
 	rm -f "$PID"
@@ -548,11 +548,11 @@ cmd_da_iso() {
 	local t_inst=$((SECONDS - t0))
 	grep -q '" 200 ' "$DIR/web.log" || die "the installer never asked for the answers (web.log)"
 	! grep -q 'RX-ESITO: FALLITA' "$CONSOLE" || die "the installer says FALLITA (console: $CONSOLE)"
-	[ "$(du -k "$DISCO" | cut -f1)" -gt 1500000 ] || die "disk almost empty ($(du -h "$DISCO" | cut -f1)): installation not done"
-	ok "installation finished in $((t_inst / 60)) min ($(du -h "$DISCO" | cut -f1) on the disk)"
+	[ "$(du -k "$DISK" | cut -f1)" -gt 1500000 ] || die "disk almost empty ($(du -h "$DISK" | cut -f1)): installation not done"
+	ok "installation finished in $((t_inst / 60)) min ($(du -h "$DISK" | cut -f1) on the disk)"
 
 	log "$D: first boot from the installed disk"
-	cmd_avvia
+	cmd_boot
 	ssh_vm 'sudo -n true' || die "passwordless sudo does not work"
 	ok "passwordless sudo"
 	# that the machine got to the end of boot, desktop included
@@ -561,20 +561,20 @@ cmd_da_iso() {
 	else
 		inf "⚠ graphical.target NOT active"
 	fi
-	cmd_impronta
-	cmd_ferma
-	cmd_fotografa iso
+	cmd_fingerprint
+	cmd_shutdown
+	cmd_snapshot iso
 	printf 'date %s\nISO %s\ninstallation %s s\nin all %s s\n' "$(date -Is)" \
 		"$(basename "$ISO_FILE")" "$t_inst" "$((SECONDS - t0))" > "$DIR/da-iso.txt"
 	ok "$D ready, photo «iso», in all $(((SECONDS - t0) / 60)) min"
 }
 
 # ---------------------------------------------------------------------------
-# impronta: how the machine is made, to compare ISO and DESKTOP (§7.2).
+# fingerprint: how the machine is made, to compare ISO and DESKTOP (§7.2).
 #   With a photo the machine boots FROM THAT PHOTO with -snapshot (the disk is not
 #   touched, nor is the machine of whoever is using it) and on its own ports (k=6).
 # ---------------------------------------------------------------------------
-IMPRONTA='
+FINGERPRINT='
 set +e
 . /etc/os-release
 v() { printf "%-18s %s\n" "$1:" "$2"; }
@@ -617,30 +617,30 @@ v "video/render groups" "$(getent group video render | cut -d: -f1,4 | tr "\n" "
 v "listening" "$(sudo ss -Hltnu 2>/dev/null | awk "{print \$1\"/\"\$5}" | sort -u | tr "\n" " ")"
 '
 
-cmd_impronta() {
-	local foto=${1:-} nome=attuale
+cmd_fingerprint() {
+	local foto=${1:-} name=attuale
 	if [ -n "$foto" ]; then
 		[ -f "$DIR/foto-$foto.qcow2" ] || die "no photo «$foto» for $D"
-		nome=$foto
-		DISCO="$DIR/foto-$foto.qcow2"; PID="$DIR/impronta.pid"; MONITOR="$DIR/impronta.sock"
+		name=$foto
+		DISK="$DIR/foto-$foto.qcow2"; PID="$DIR/fingerprint.pid"; MONITOR="$DIR/fingerprint.sock"
 		CONSOLE="$DIR/impronta-console.log"
 		if [ -f "$DIR/foto-$foto.vars.fd" ]; then
 			cp "$DIR/foto-$foto.vars.fd" "$DIR/impronta-vars.fd"; VARS="$DIR/impronta-vars.fd"
 		fi
-		PORTA_SSH=$((2300 + 10 * NUM + 6)); PORTA_RX=$((7500 + 10 * NUM + 6))
+		SSH_PORT=$((2300 + 10 * NUM + 6)); RX_PORT=$((7500 + 10 * NUM + 6))
 		D="$D-impronta"
-		AVVIA_EXTRA=(-snapshot)
-		cmd_avvia
+		START_EXTRA=(-snapshot)
+		cmd_boot
 		# shellcheck disable=SC2064
 		trap "kill \$(cat '$PID') 2>/dev/null; rm -f '$PID'" EXIT
 	fi
-	accesa || die "$D is off"
-	log "$D: fingerprint ($nome)"
-	ssh_vm "$IMPRONTA" | tee "$DIR/impronta-$nome.txt"
+	enabled || die "$D is off"
+	log "$D: fingerprint ($name)"
+	ssh_vm "$FINGERPRINT" | tee "$DIR/impronta-$name.txt"
 	ssh_vm '(dpkg-query -W -f="\${Package}\n" 2>/dev/null || rpm -qa --qf "%{NAME}\n" 2>/dev/null || pacman -Qq) | sort -u' \
-		> "$DIR/pacchetti-$nome.txt"
-	ssh_vm 'systemctl list-unit-files --state=enabled --no-legend | cut -d" " -f1 | sort' > "$DIR/unita-$nome.txt"
-	ok "in $DIR/{impronta,pacchetti,unita}-$nome.txt"
+		> "$DIR/pacchetti-$name.txt"
+	ssh_vm 'systemctl list-unit-files --state=enabled --no-legend | cut -d" " -f1 | sort' > "$DIR/unita-$name.txt"
+	ok "in $DIR/{impronta,pacchetti,unita}-$name.txt"
 	if [ -n "$foto" ]; then
 		kill "$(cat "$PID")" 2>/dev/null; rm -f "$PID"; trap - EXIT
 		ok "off (the -snapshot changes go away with it)"
@@ -650,16 +650,16 @@ cmd_impronta() {
 # ---------------------------------------------------------------------------
 c=${1:-}; shift || true
 case "$c" in
-elenco) cmd_elenco ;;
-crea|avvia|ferma|riavvia|azzera|vesti)
-	riga "${1:?the distribution is missing}"; shift; "cmd_$c" "$@" ;;
-fotografa|torna)
-	riga "${1:?the distribution is missing}"; shift; "cmd_$c" "$@" ;;
+list) cmd_list ;;
+create|boot|shutdown|reboot|reset|dress)
+	line "${1:?the distribution is missing}"; shift; "cmd_$c" "$@" ;;
+snapshot|revert)
+	line "${1:?the distribution is missing}"; shift; "cmd_$c" "$@" ;;
 ssh)
-	riga "${1:?the distribution is missing}"; shift; ssh_vm "$@" ;;
-da-iso)
-	riga "${1:?the machine is missing (<distro>-<desktop>-iso)}"; shift; cmd_da_iso "$@" ;;
-impronta|schermo|hmp)
-	riga "${1:?the machine is missing}"; shift; "cmd_$c" "$@" ;;
+	line "${1:?the distribution is missing}"; shift; ssh_vm "$@" ;;
+from-iso)
+	line "${1:?the machine is missing (<distro>-<desktop>-iso)}"; shift; cmd_from_iso "$@" ;;
+fingerprint|screenshot|hmp)
+	line "${1:?the machine is missing}"; shift; "cmd_$c" "$@" ;;
 *) sed -n '2,42p' "$0"; exit 2 ;;
 esac

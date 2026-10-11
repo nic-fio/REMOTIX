@@ -1,8 +1,8 @@
 #!/bin/sh
-# riassunto.sh DIR — the pieces of the stage in prima/dopo/riattacco
+# riassunto.sh DIR — the pieces of the stage in before/after/riattacco
 cd /media/REMOTIX/tmp/t2/$1 || exit 1
 # «### process» matches both headers: «processes of the user» (t2box.py
-# today) and «processi dell'utente» (captures taken before 10 Oct 2026)
+# today) and «processes dell'user» (captures taken before 10 Oct 2026)
 for f in prima.txt dopo.txt riattacco.txt; do
   echo "##### $f"
   sed -n '/### loginctl list-sessions/,/### loginctl show-session/p' $f | grep -v "^###"

@@ -2,7 +2,7 @@
 """01-b11-guasto-innesta.py — ⛔ THE SERVER FAULTY ON PURPOSE, for B11.
 
     python3 01-b11-guasto-innesta.py            grafts the faults
-    python3 01-b11-guasto-innesta.py --togli    removes them
+    python3 01-b11-guasto-innesta.py --remove    removes them
 
 ⚠ Runs INSIDE the container, AFTER `01-b3-rcp-innesta.py`: it touches the COPY of
   `rcp.c` that sits in `examples/`, not the original in `banchi/rcp/`.
@@ -18,13 +18,13 @@ wrong**, and the only one who can do it is a server that gets it wrong on purpos
 
 ⛔ And these lines **do not stay**: a switch that makes the server lie, if it
    survives the phase, will one day be found turned on by someone who did not know
-   it existed.  They are here, in a graft that is removed, and `--togli` takes
+   it existed.  They are here, in a graft that is removed, and `--remove` takes
    them all away.
 
 ===========================================================================
-⭐ HOW THE FAULT IS CHOSEN: FROM THE `CIAO`, NOT FROM THE COMMAND LINE
+⭐ HOW THE FAULT IS CHOSEN: FROM THE `HELLO`, NOT FROM THE COMMAND LINE
 
-The fault arrives in the **`banco.guasto`** capability of the `CIAO`.  ⭐ This way the
+The fault arrives in the **`banco.guasto`** capability of the `HELLO`.  ⭐ This way the
 twelve cases run on **a single server turned on** and in **a single load
 of the page**: without it, every case would want a restart, and twelve restarts for two
 engines are twenty-four chances of measuring a server different from the one
@@ -40,9 +40,9 @@ import subprocess
 import sys
 
 EXAMPLES = "/srv/src/b2/ngtcp2/examples"
-MARCA = "REMOTIX B11 GUASTO"
+MARK = "REMOTIX B11 GUASTO"
 
-INNESTI = [
+GRAFTS = [
     # ── 1. The field that holds the name of the fault ──────────────────────
     (
         "rcp.c",
@@ -53,11 +53,11 @@ INNESTI = [
         "\tchar guasto[64];\n",
         "the fault field",
     ),
-    # ── 2. The capture, from the CIAO ──────────────────────────────────────
+    # ── 2. The capture, from the HELLO ──────────────────────────────────────
     (
         "rcp.c",
         '\t\tif (strcmp(nome, "video.codec") == 0)\n',
-        '\t\t/* ⚠ REMOTIX B11 GUASTO — `banco.guasto` does not exist in RCP/1: a healthy\n'
+        '\t\t/* ⚠ REMOTIX B11 GUASTO — `bench.guasto` does not exist in RCP/1: a healthy\n'
         '\t\t * server ignores it like any unknown name (§4.3). */\n'
         '\t\tif (strcmp(nome, "banco.guasto") == 0) {\n'
         '\t\t\tsnprintf(s->guasto, sizeof s->guasto, "%s", valore);\n'
@@ -66,121 +66,121 @@ INNESTI = [
         '\t\tif (strcmp(nome, "video.codec") == 0)\n',
         "the capture of the fault",
     ),
-    # ── 3. ECCOMI, in its three crooked guises ─────────────────────────────
+    # ── 3. HERE_I_AM, in its three crooked guises ─────────────────────────────
     (
         "rcp.c",
-        "\tsc_u16(&w, RCP_VERSIONE);\n\tsc_u16(&w, 5); /* how many capabilities */\n",
-        "\t/* ⚠ REMOTIX B11 GUASTO — three faults inside ECCOMI:\n"
+        "\tsc_u16(&w, RCP_VERSION);\n\tsc_u16(&w, 5); /* how many capabilities */\n",
+        "\t/* ⚠ REMOTIX B11 GUASTO — three faults inside HERE_I_AM:\n"
         "\t *   eccomi-versione-2         a HIGHER version than the one\n"
         "\t *                             requested: §9 obliges the CLIENT to\n"
-        "\t *                             say farewell with VERSIONE_INCOMPATIBILE\n"
+        "\t *                             say farewell with INCOMPATIBLE_VERSION\n"
         "\t *   capacita-sconosciuta      a name that does not exist: the page\n"
         "\t *                             MUST ignore it and go on\n"
         "\t *   misura-massima-in-eccomi  a CLIENT capability sent by the\n"
         "\t *                             SERVER: known name, wrong\n"
-        "\t *                             side, ERRORE_PROTOCOLLO */\n"
-        "\tbool g_ver = strcmp(s->guasto, \"eccomi-versione-2\") == 0;\n"
-        "\tbool g_ign = strcmp(s->guasto, \"capacita-sconosciuta\") == 0;\n"
-        "\tbool g_lato = strcmp(s->guasto, \"misura-massima-in-eccomi\") == 0;\n"
-        "\tsc_u16(&w, g_ver ? 2 : RCP_VERSIONE);\n"
+        "\t *                             side, PROTOCOL_ERROR */\n"
+        "\tbool g_ver = strcmp(s->guasto, \"here-i-am-version-2\") == 0;\n"
+        "\tbool g_ign = strcmp(s->guasto, \"capabilities-unknown\") == 0;\n"
+        "\tbool g_lato = strcmp(s->guasto, \"max-size-in-here-i-am\") == 0;\n"
+        "\tsc_u16(&w, g_ver ? 2 : RCP_VERSION);\n"
         "\tsc_u16(&w, 5 + (g_ign ? 1 : 0) + (g_lato ? 1 : 0));\n",
-        "the three faults of ECCOMI",
+        "the three faults of HERE_I_AM",
     ),
     (
         "rcp.c",
         # ⚠ The foothold changed on 10 Aug 2026, with the cure of finding
-        #   R9.14: `ECCOMI` no longer declares `banco.marca=no` written by hand,
-        #   but reads `BANCO_ACCESO`.  ⛔ And the bench noticed by itself: it
+        #   R9.14: `HERE_I_AM` no longer declares `bench.mark=no` written by hand,
+        #   but reads `BENCH_ON`.  ⛔ And the bench noticed by itself: it
         #   counted ZERO occurrences and refused to build a half-faulty
         #   server — which is exactly what the cure of R5.17 added
         #   so that it would happen.
-        '\tsc_str(&w, "banco.marca");\n\tsc_str(&w, BANCO_ACCESO ? "si" : "no");\n',
-        '\tsc_str(&w, "banco.marca");\n\tsc_str(&w, BANCO_ACCESO ? "si" : "no");\n'
+        '\tsc_str(&w, "bench.mark");\n\tsc_str(&w, BANCO_ACCESO ? "yes" : "no");\n',
+        '\tsc_str(&w, "bench.mark");\n\tsc_str(&w, BANCO_ACCESO ? "yes" : "no");\n'
         '\tif (g_ign) {\n'
         '\t\tsc_str(&w, "questa.non.esiste");\n'
         '\t\tsc_str(&w, "boh");\n'
         '\t}\n'
         '\tif (g_lato) {\n'
-        '\t\tsc_str(&w, "video.misura_massima");\n'
+        '\t\tsc_str(&w, "video.max_size");\n'
         '\t\tsc_str(&w, "3840x2160");\n'
         '\t}\n',
         "the two crooked capabilities",
     ),
-    # ── 4. A type that does not exist, right after ECCOMI ──────────────────
+    # ── 4. A type that does not exist, right after HERE_I_AM ──────────────────
     (
         "rcp.c",
-        "\tmanda_eccomi(s);\n\ts->stato = S_ATTESA_CREDENZIALI;\n",
+        "\tmanda_eccomi(s);\n\ts->stato = S_WAIT_CREDENTIALS;\n",
         "\tmanda_eccomi(s);\n"
         "\t/* ⚠ REMOTIX B11 GUASTO — an unknown type on the control channel: §3\n"
         "\t *   forbids ignoring it, and the page must close. */\n"
-        "\tif (strcmp(s->guasto, \"tipo-sconosciuto\") == 0) {\n"
+        "\tif (strcmp(s->guasto, \"type-unknown\") == 0) {\n"
         "\t\tuint8_t niente[1] = {0};\n"
         "\t\tmanda_messaggio(s, 0x00FF, niente, 0);\n"
         "\t}\n"
-        "\ts->stato = S_ATTESA_CREDENZIALI;\n",
+        "\ts->stato = S_WAIT_CREDENTIALS;\n",
         "the unknown type",
     ),
-    # ── 5. SESSIONE: odd canvas and lying desktop ──────────────────────────
+    # ── 5. SESSION: odd canvas and lying desktop ──────────────────────────
     #
     # ⚠ The foothold changed on 10 Oct 2026.  It was the phase-1 line
-    #   `sc_str(&w, "sconosciuto"); /* il desktop: in fase 1 … */`, which
+    #   `sc_str(&w, "sconosciuto"); /* il desktop: in phase 1 … */`, which
     #   D-001 (phase 15) removed: `rcp.c` now sends the REAL desktop given by
     #   the host hook, and «unknown» only when there is no hook.  ⛔ The purpose
     #   of the graft did not change — an odd canvas the page must refuse, a
-    #   desktop the page must not act on (§4.5), a CONGEDO with reason 0x00
+    #   desktop the page must not act on (§4.5), a FAREWELL with reason 0x00
     #   (§3.1) — so it is re-anchored, not retired.  ⭐ It is split in two
-    #   footholds that carry no log text: the SESSIONE body (canvas and
-    #   desktop) and the sending of SESSIONE (the CONGEDO right behind it).
+    #   footholds that carry no log text: the SESSION body (canvas and
+    #   desktop) and the sending of SESSION (the FAREWELL right behind it).
     #   The lying desktop overrides `desktop` BEFORE the `reg`, so the server
     #   log says what really went on the wire.
     (
         "rcp.c",
         '\tsc_u32(&w, tl);\n\tsc_u32(&w, ta);\n\tsc_str(&w, desktop);\n',
-        '\t/* ⚠ REMOTIX B11 GUASTO — two faults inside SESSIONE:\n'
+        '\t/* ⚠ REMOTIX B11 GUASTO — two faults inside SESSION:\n'
         '\t *   sessione-tela-dispari   the GRANTED canvas is odd: the page\n'
         '\t *                           must REFUSE, not adapt\n'
         '\t *   sessione-desktop-*      a desktop that is not the real one: §4.5\n'
         '\t *                           forbids the page to change\n'
         '\t *                           behaviour based on this field */\n'
-        '\tbool g_disp = strcmp(s->guasto, "sessione-tela-dispari") == 0;\n'
-        '\tif (strcmp(s->guasto, "sessione-desktop-kde") == 0)\n'
+        '\tbool g_disp = strcmp(s->guasto, "session-canvas-odd") == 0;\n'
+        '\tif (strcmp(s->guasto, "session-desktop-kde") == 0)\n'
         '\t\tdesktop = "kde";\n'
-        '\telse if (strcmp(s->guasto, "sessione-desktop-gnome") == 0)\n'
+        '\telse if (strcmp(s->guasto, "session-desktop-gnome") == 0)\n'
         '\t\tdesktop = "gnome";\n'
         '\tsc_u32(&w, g_disp ? tl + 1 : tl);\n'
         '\tsc_u32(&w, g_disp ? ta + 1 : ta);\n'
         '\tsc_str(&w, desktop);\n',
-        "the faults of SESSIONE",
+        "the faults of SESSION",
     ),
     (
         "rcp.c",
-        '\t\tmanda_messaggio(s, T_SESSIONE, corpo, w.len);\n',
-        '\t\tmanda_messaggio(s, T_SESSIONE, corpo, w.len);\n'
-        '\t\t/* ⚠ REMOTIX B11 GUASTO — a CONGEDO with reason 0x00, which §3.1 forbids. */\n'
-        '\t\tif (strcmp(s->guasto, "congedo-motivo-zero") == 0) {\n'
+        '\t\tmanda_messaggio(s, T_SESSION, corpo, w.len);\n',
+        '\t\tmanda_messaggio(s, T_SESSION, corpo, w.len);\n'
+        '\t\t/* ⚠ REMOTIX B11 GUASTO — a FAREWELL with reason 0x00, which §3.1 forbids. */\n'
+        '\t\tif (strcmp(s->guasto, "farewell-reason-zero") == 0) {\n'
         '\t\t\tuint8_t c0[8];\n'
         '\t\t\tscrittore w0 = {c0, sizeof c0, 0, false};\n'
         '\t\t\tsc_byte(&w0, 0);\n'
         '\t\t\tsc_str(&w0, "");\n'
-        '\t\t\tmanda_messaggio(s, T_CONGEDO, c0, w0.len);\n'
+        '\t\t\tmanda_messaggio(s, T_FAREWELL, c0, w0.len);\n'
         '\t\t}\n',
-        "the CONGEDO with reason zero",
+        "the FAREWELL with reason zero",
     ),
-    # ── 6. A CONGEDO after RESPINTO, which §4.4 forbids ────────────────────
+    # ── 6. A FAREWELL after REJECTED, which §4.4 forbids ────────────────────
     (
         "rcp.c",
-        "\tmanda_messaggio(s, T_RESPINTO, corpo, 1);\n"
-        "\ts->stato = S_FINITA;\n"
+        "\tmanda_messaggio(s, T_REJECTED, corpo, 1);\n"
+        "\ts->stato = S_FINISHED;\n"
         "\ts->g.chiudi(s->g.ctx, motivo);\n",
-        "\tmanda_messaggio(s, T_RESPINTO, corpo, 1);\n"
-        "\t/* ⚠ REMOTIX B11 GUASTO — §4.4: after RESPINTO nothing else arrives.  Here\n"
+        "\tmanda_messaggio(s, T_REJECTED, corpo, 1);\n"
+        "\t/* ⚠ REMOTIX B11 GUASTO — §4.4: after REJECTED nothing else arrives.  Here\n"
         "\t *   something does, and the page must notice. */\n"
-        "\tif (strcmp(s->guasto, \"respinto-poi-congedo\") == 0) {\n"
+        "\tif (strcmp(s->guasto, \"rejected-then-farewell\") == 0) {\n"
         "\t\tuint8_t c1[8];\n"
         "\t\tscrittore w1 = {c1, sizeof c1, 0, false};\n"
-        "\t\tsc_byte(&w1, RCP_ERRORE_PROTOCOLLO);\n"
+        "\t\tsc_byte(&w1, RCP_PROTOCOL_ERROR);\n"
         "\t\tsc_str(&w1, \"\");\n"
-        "\t\tmanda_messaggio(s, T_CONGEDO, c1, w1.len);\n"
+        "\t\tmanda_messaggio(s, T_FAREWELL, c1, w1.len);\n"
         "\t\t/* ⛔⭐ AND HERE THE FAULT DOES NOT CLOSE, AND IT IS THE DIFFERENCE BETWEEN A\n"
         "\t\t *   MEASUREMENT AND A COIN TOSS.\n"
         "\t\t *\n"
@@ -194,72 +194,72 @@ INNESTI = [
         "\t\t * ⭐ What this case wants to see is the page's REACTION\n"
         "\t\t *    to a message that §4.4 forbids — and to see it one must\n"
         "\t\t *    leave it the time to have it.  It will be the page that closes, with its\n"
-        "\t\t *    `CONGEDO`; if it does not, the silence of §2.2 remains. */\n"
-        "\t\ts->stato = S_FINITA;\n"
+        "\t\t *    `FAREWELL`; if it does not, the silence of §2.2 remains. */\n"
+        "\t\ts->stato = S_FINISHED;\n"
         "\t\treturn;\n"
         "\t}\n"
         "\t/* ⛔⭐ AND THE SAME HOLDS FOR `respinto-non-riprovare` — finding\n"
         "\t *   R12-A.47, 11 Aug 2026, and the reason is written two lines\n"
-        "\t *   above: the closing starts right behind the RESPINTO and RACES\n"
+        "\t *   above: the closing starts right behind the REJECTED and RACES\n"
         "\t *   against the page's reader.\n"
         "\t *\n"
         "\t *   `[M]` 11 Aug, Firefox 140.13.0esr: the page did not even\n"
-        "\t *   reach the RESPINTO branch — it saw the stream fall and\n"
-        "\t *   declared `canale-rotto` where the expected says `muta`.  ⚠ And the\n"
+        "\t *   reach the REJECTED branch — it saw the stream fall and\n"
+        "\t *   declared `canale-rotto` where the expected says `gone_mute`.  ⚠ And the\n"
         "\t *   page was RIGHT: telling a FIN from a fall is the\n"
         "\t *   cure of finding R6.12, and here the server sends no FIN —\n"
         "\t *   it closes the SESSION with CLOSE_WEBTRANSPORT_SESSION.\n"
         "\t *\n"
-        "\t * ⭐ What this case wants to see is that after `RESPINTO` the\n"
+        "\t * ⭐ What this case wants to see is that after `REJECTED` the\n"
         "\t *    page DOES NOT RETRY (§4.4).  To see it one must leave it the\n"
         "\t *    time not to do it: we keep quiet, and it will be the page that closes.\n"
-        "\t * ⛔ It is not widening the expected: the expected stays `muta`, and the case\n"
+        "\t * ⛔ It is not widening the expected: the expected stays `gone_mute`, and the case\n"
         "\t *    can still say no — if the page retried, the extra bytes\n"
         "\t *    would be seen by the SERVER log, which is the witness\n"
         "\t *    this case has always declared (§8.1). */\n"
-        "\tif (strcmp(s->guasto, \"respinto-non-riprovare\") == 0) {\n"
-        "\t\ts->stato = S_FINITA;\n"
+        "\tif (strcmp(s->guasto, \"rejected-not-retry\") == 0) {\n"
+        "\t\ts->stato = S_FINISHED;\n"
         "\t\treturn;\n"
         "\t}\n"
-        "\ts->stato = S_FINITA;\n"
+        "\ts->stato = S_FINISHED;\n"
         "\ts->g.chiudi(s->g.ctx, motivo);\n",
         "the farewell after the refusal",
     ),
     # ── 7. The accessor for the host: two faults live in the STREAMS ───────
     (
         "rcp.c",
-        "const char *rcp_utente(const rcp_sessione *s) { return s ? s->utente : \"\"; }\n",
-        "const char *rcp_utente(const rcp_sessione *s) { return s ? s->utente : \"\"; }\n"
+        "const char *rcp_user(const rcp_session *s) { return s ? s->utente : \"\"; }\n",
+        "const char *rcp_user(const rcp_session *s) { return s ? s->utente : \"\"; }\n"
         "/* ⚠ REMOTIX B11 GUASTO — two faults out of twelve are not in the messages but\n"
         " *   in the STREAMS: a FIN on the control channel and a bidirectional\n"
         " *   stream opened by the server.  Only the host can do those,\n"
         " *   and this line is the only thing it needs to know. */\n"
-        "const char *rcp_guasto(const rcp_sessione *s) { return s ? s->guasto : \"\"; }\n",
+        "const char *rcp_guasto(const rcp_session *s) { return s ? s->guasto : \"\"; }\n",
         "the fault accessor",
     ),
     # ── 8. The host: the FIN and the bidirectional stream ──────────────────
     (
         "http3_server_proto_codec.cc",
-        "bool rcp_autentica(const char *utente, const char *parola);\n}\n",
-        "bool rcp_autentica(const char *utente, const char *parola);\n"
-        # ⚠ `const rcp_sessione *`, not `const struct rcp_sessione *`: rcp.h already
+        "bool rcp_authenticate(const char *utente, const char *parola);\n}\n",
+        "bool rcp_authenticate(const char *utente, const char *parola);\n"
+        # ⚠ `const rcp_session *`, not `const struct rcp_session *`: rcp.h already
         #   declares it with a typedef, and in C++ repeating `struct` on a
         #   typedef is an error.  The first round of 10 Aug 2026 died
         #   here — and ⛔ the bench did not notice, because it checked that the
         #   binary EXISTED instead of that it was NEW.
-        "const char *rcp_guasto(const rcp_sessione *s); // REMOTIX B11 GUASTO\n"
+        "const char *rcp_guasto(const rcp_session *s); // REMOTIX B11 GUASTO\n"
         "}\n",
         "the declaration of the fault",
     ),
     (
         "http3_server_proto_codec.cc",
-        "  auto stato = std::string_view{rcp_stato_nome(rcp_)};\n",
+        "  auto stato = std::string_view{rcp_state_name(rcp_)};\n",
         "  // ⚠ REMOTIX B11 GUASTO — the two faults that live in the streams, and\n"
         "  //   arm themselves when the session is open.\n"
-        "  if (rcp_ && std::string_view{rcp_stato_nome(rcp_)} == \"attiva\" &&\n"
+        "  if (rcp_ && std::string_view{rcp_state_name(rcp_)} == \"active\" &&\n"
         "      !b11_fatto_) {\n"
         "    auto g = std::string_view{rcp_guasto(rcp_)};\n"
-        "    if (g == \"fin-sul-controllo\") {\n"
+        "    if (g == \"fin-on-check\") {\n"
         "      // ⛔ §4.2: the FIN on the control channel IS the end of the\n"
         "      //    session, and the page must no longer send on ANY\n"
         "      //    channel.  Here the WebTransport session is not closed: only\n"
@@ -268,7 +268,7 @@ INNESTI = [
         "      b11_fatto_ = true;\n"
         "      std::println(stderr, \"REMOTIX B11 GUASTO: FIN on the control channel\");\n"
         "      wt_uscita_.push_back(WtUscita{rcp_stream_, {}, 0, true});\n"
-        "    } else if (g == \"bidi-dal-server\") {\n"
+        "    } else if (g == \"bidi-from-server\") {\n"
         "      // ⛔ §2.5: \"the server MUST NOT open bidirectional streams\".\n"
         "      b11_fatto_ = true;\n"
         "      int64_t sid = -1;\n"
@@ -283,7 +283,7 @@ INNESTI = [
         "      }\n"
         "    }\n"
         "  }\n"
-        "  auto stato = std::string_view{rcp_stato_nome(rcp_)};\n",
+        "  auto stato = std::string_view{rcp_state_name(rcp_)};\n",
         "the two faults of the streams",
     ),
     (
@@ -296,24 +296,24 @@ INNESTI = [
 ]
 
 
-def leggi(percorso):
+def load(fpath):
     """The text of a file of `examples/`, or `None` if it is not there.
 
     ⛔ "It is not there" and "I could not read it" are not the same thing.  The
-       first is a legitimate fact — `01-b3-rcp-innesta.py --togli` deletes
+       first is a legitimate fact — `01-b3-rcp-innesta.py --remove` deletes
        `rcp.c` from `examples/` — the second is an error, and must reach the
        bench instead of looking like a zero.
     """
     try:
-        with open(os.path.join(EXAMPLES, percorso), encoding="utf-8") as f:
+        with open(os.path.join(EXAMPLES, fpath), encoding="utf-8") as f:
             return f.read()
     except FileNotFoundError:
         return None
 
 
-def scrivi(percorso, testo):
-    with open(os.path.join(EXAMPLES, percorso), "w", encoding="utf-8") as f:
-        f.write(testo)
+def write(fpath, text):
+    with open(os.path.join(EXAMPLES, fpath), "w", encoding="utf-8") as f:
+        f.write(text)
 
 
 def expected_marks():
@@ -324,134 +324,134 @@ def expected_marks():
        compilation, and a denominator written by hand ages with the first
        graft someone adds.
     """
-    conto = {}
-    for percorso, _foothold, sostituto, _name in INNESTI:
-        conto[percorso] = conto.get(percorso, 0) + sostituto.count(MARCA)
-    return conto
+    tally = {}
+    for fpath, _foothold, substitute, _name in GRAFTS:
+        tally[fpath] = tally.get(fpath, 0) + substitute.count(MARK)
+    return tally
 
 
-def togli():
+def remove():
     """⛔ AND IT REALLY REMOVES.
 
     Until 10 Aug 2026 this branch printed three lines and returned **0**
-    without opening a file: `--togli && grep -c 'REMOTIX B11 GUASTO'
+    without opening a file: `--remove && grep -c 'REMOTIX B11 GUASTO'
     examples/rcp.c` exited 0 and printed 7.  ⚠ It is the defect already paid for on
-    `01-b3-rcp-innesta.py --togli` — a command that declares it removes, does not
+    `01-b3-rcp-innesta.py --remove` — a command that declares it removes, does not
     remove, and returns success — rewritten here in pure form.  That nobody
     called it did not make it harmless: the usage line at the top of this file is
     what whoever finds it six months from now will read.
     """
     print("== Removing the B11 faults")
-    testi, originals, tolti = {}, {}, 0
+    texts, originals, removed = {}, {}, 0
     # ⛔ In REVERSE order to how they were put in: a substitute can contain
     #    the foothold of another, and undoing backwards is the only order that
     #    leaves no half grafts.
-    for percorso, appiglio, sostituto, nome in reversed(INNESTI):
-        if percorso not in testi:
-            testi[percorso] = originals[percorso] = leggi(percorso)
-        if testi[percorso] is None:
-            print(f"   --  {nome:32s} {percorso} is not there: nothing to remove")
+    for fpath, foothold, substitute, name in reversed(GRAFTS):
+        if fpath not in texts:
+            texts[fpath] = originals[fpath] = load(fpath)
+        if texts[fpath] is None:
+            print(f"   --  {name:32s} {fpath} is not there: nothing to remove")
             continue
-        n = testi[percorso].count(sostituto)
+        n = texts[fpath].count(substitute)
         if n == 0:
-            print(f"   --  {nome:32s} was not there")
+            print(f"   --  {name:32s} was not there")
             continue
-        testi[percorso] = testi[percorso].replace(sostituto, appiglio)
-        tolti += 1
-        print(f"   OK  {nome:32s} removed {n} time(s)  [{percorso}]")
+        texts[fpath] = texts[fpath].replace(substitute, foothold)
+        removed += 1
+        print(f"   OK  {name:32s} removed {n} time(s)  [{fpath}]")
 
-    scritti = 0
-    for percorso, testo in testi.items():
-        if testo is not None and testo != originals[percorso]:
-            scrivi(percorso, testo)
-            scritti += 1
+    written = 0
+    for fpath, text in texts.items():
+        if text is not None and text != originals[fpath]:
+            write(fpath, text)
+            written += 1
 
     # ⛔ AND IT IS VERIFIED FROM THE SIDE THAT COUNTS: the file on disk, not the intention
     #    of whoever wrote the substitution.
-    resti = {}
-    for percorso in testi:
-        testo = leggi(percorso)
-        if testo and MARCA in testo:
-            resti[percorso] = testo.count(MARCA)
-    print(f"\n   {tolti} grafts removed, {scritti} files rewritten")
-    if resti:
-        for percorso, n in resti.items():
-            print(f"   NO  {percorso}: {n} marks «{MARCA}» remain")
+    remainders = {}
+    for fpath in texts:
+        text = load(fpath)
+        if text and MARK in text:
+            remainders[fpath] = text.count(MARK)
+    print(f"\n   {removed} grafts removed, {written} files rewritten")
+    if remainders:
+        for fpath, n in remainders.items():
+            print(f"   NO  {fpath}: {n} marks «{MARK}» remain")
         print("   ⛔ a server that lies on purpose must NOT survive")
         print("      the phase: put back the B2 and B3 grafts from scratch.")
         return 1
-    print(f"   ⭐ no mark «{MARCA}» in the files of examples/")
+    print(f"   ⭐ no mark «{MARK}» in the files of examples/")
     return 0
 
 
-def innesta():
+def graft():
     print("== The B11 faults — lines that must NOT survive the phase")
-    testi = {}
-    for percorso in dict.fromkeys(p for p, *_ in INNESTI):
-        testi[percorso] = leggi(percorso)
-        if testi[percorso] is None:
-            print(f"   ⛔ {percorso} is not in {EXAMPLES}: the B2 and")
+    texts = {}
+    for fpath in dict.fromkeys(p for p, *_ in GRAFTS):
+        texts[fpath] = load(fpath)
+        if texts[fpath] is None:
+            print(f"   ⛔ {fpath} is not in {EXAMPLES}: the B2 and")
             print("      B3 grafts must be applied BEFORE this one.")
             return 1
-    originals = dict(testi)
+    originals = dict(texts)
 
-    applicati, gia, guasti = 0, 0, 0
-    for percorso, appiglio, sostituto, nome in INNESTI:
+    applied, already, faults = 0, 0, 0
+    for fpath, foothold, substitute, name in GRAFTS:
         # ⛔ THE GUARD ASKS WHETHER THIS GRAFT IS THERE, not whether there is A mark.
         #
-        #    It was `MARCA in testo and appiglio not in testo`, and three grafts out of
+        #    It was `MARK in text and foothold not in text`, and three grafts out of
         #    eleven keep their own foothold INSIDE the substitute, by
-        #    construction: the fault field, the capture from the `CIAO` and
+        #    construction: the fault field, the capture from the `HELLO` and
         #    the `rcp_guasto` accessor.  On an already faulty `rcp.c` the foothold
         #    was still there, the guard was false, `n` was 1 and the graft **was
-        #    reapplied**: `char guasto[64];` declared twice (compilation
+        #    reapplied**: `char fault[64];` declared twice (compilation
         #    error, that is a red without a name), or — if it passed — the
         #    line "fault requested by the client" written twice by chance, which
         #    doubles the counts of `01-b11-lancia.sh` and pins on the PAGE
         #    a red that belongs to the graft.
         # ⭐ The substitute is the only thing that can say "this graft is
         #    already there", because it is exactly what was written on disk.
-        if sostituto in testi[percorso]:
-            gia += 1
-            print(f"   ⚠  {nome:32s} already there  [{percorso}]")
+        if substitute in texts[fpath]:
+            already += 1
+            print(f"   ⚠  {name:32s} already there  [{fpath}]")
             continue
-        n = testi[percorso].count(appiglio)
-        stato = "OK " if n == 1 else "NO "
-        print(f"   {stato} {nome:32s} foothold found {n} time(s)  [{percorso}]")
+        n = texts[fpath].count(foothold)
+        state = "OK " if n == 1 else "NO "
+        print(f"   {state} {name:32s} foothold found {n} time(s)  [{fpath}]")
         if n != 1:
-            guasti += 1
+            faults += 1
             continue
-        testi[percorso] = testi[percorso].replace(appiglio, sostituto, 1)
-        applicati += 1
+        texts[fpath] = texts[fpath].replace(foothold, substitute, 1)
+        applied += 1
 
-    if guasti:
-        print(f"\n   ⛔ {guasti} footholds not found: NOTHING is written.")
+    if faults:
+        print(f"\n   ⛔ {faults} footholds not found: NOTHING is written.")
         print("      A half graft produces a server that gets it wrong in a")
         print("      way different from the one the bench believes it is measuring.")
         return 1
 
-    scritti = [p for p in testi if testi[p] != originals[p]]
-    for percorso in scritti:
-        scrivi(percorso, testi[percorso])
+    written = [p for p in texts if texts[p] != originals[p]]
+    for fpath in written:
+        write(fpath, texts[fpath])
 
     # ⛔ AND WHAT IS ON DISK IS COUNTED, not what the table says.
     #
-    #    `print(f"OK {len(INNESTI)} guasti innestati in {len(testi)} file")`
+    #    `print(f"OK {len(GRAFTS)} faults grafted in {len(texts)} file")`
     #    printed a CONSTANT (11) and the number of files **read**: on a tree
     #    where all the grafts took the "already there" branch it declared "OK
-    #    11 guasti innestati in 3 file" with zero substitutions, and returned 0.
+    #    11 faults grafted in 3 file" with zero substitutions, and returned 0.
     #    ⚠ A count that cannot be zero is not a count: it is a
     #      caption (`LEZIONI.md` §1.9).
-    attese = expected_marks()
+    waits = expected_marks()
     male = 0
-    for percorso, atteso in attese.items():
-        vero = (leggi(percorso) or "").count(MARCA)
-        stato = "OK " if vero == atteso else "NO "
-        print(f"   {stato} {percorso:34s} marks on disk: {vero}  (expected {atteso})")
-        if vero != atteso:
+    for fpath, expected in waits.items():
+        real = (load(fpath) or "").count(MARK)
+        state = "OK " if real == expected else "NO "
+        print(f"   {state} {fpath:34s} marks on disk: {real}  (expected {expected})")
+        if real != expected:
             male += 1
-    print(f"\n   {applicati} grafts applied, {gia} were already there, out of"
-          f" {len(INNESTI)}; {len(scritti)} files rewritten")
+    print(f"\n   {applied} grafts applied, {already} were already there, out of"
+          f" {len(GRAFTS)}; {len(written)} files rewritten")
     if male:
         print("   ⛔ the disk does not say what the table declares: nothing")
         print("      is turned on, or a server is measured different from the one")
@@ -459,15 +459,15 @@ def innesta():
         return 1
     # ⭐ The number that `01-b11-guasto.sh` compares with the disk after the
     #    compilation: computed here, printed here, and never written by hand over there.
-    print(f"== B11-MARCHE-ATTESE: {sum(attese.values())}")
-    print("   ⛔ and they are removed with --togli, or by putting back the B2 and B3 grafts")
+    print(f"== B11-MARCHE-ATTESE: {sum(waits.values())}")
+    print("   ⛔ and they are removed with --remove, or by putting back the B2 and B3 grafts")
     return 0
 
 
 def main():
-    if "--togli" in sys.argv:
-        return togli()
-    return innesta()
+    if "--remove" in sys.argv:
+        return remove()
+    return graft()
 
 
 if __name__ == "__main__":

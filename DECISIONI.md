@@ -1927,8 +1927,8 @@ it is a broken line**, and it must be called by its name.
 **What it entails, and the hard part is not the code:**
 
 1. ⛔ **«copious» is a word and must become a number, with the reason and the two margins.** The
-   measured boundaries: **1.71 %** (`casa-cattiva`) is a line that **holds** and must not be declared dead;
-   **11.10 %** (`raffica-forte`) serves nobody. ⚠ And the rule of the P8→P20 family holds here more
+   measured boundaries: **1.71 %** (`bad-home`) is a line that **holds** and must not be declared dead;
+   **11.10 %** (`burst-heavy`) serves nobody. ⚠ And the rule of the P8→P20 family holds here more
    than anywhere: the quantity must be an **observable fact**, never a clock — and a fraction
    computed on few packets **is not a fraction, it is noise**: below a minimum of packets in the
    window, the code **decides nothing**;
@@ -2529,7 +2529,7 @@ budget». The boundary, decided:
 configurable**. Today it does not bite — 16 > 10 — and its deadline is phase 10.~~
 > ✅ **PAID on 25 Aug 2026, evening — phase 10** *(realigned to the code on 28 Aug)*. The number
 > is now **a single one**: `RCP_TETTO_SESSIONI` in `src/rcp.h`, it is **10**, and it is changed with
-> **`--tetto-sessioni N`**. The `#define` is the default; the value in force is given by `rcp_tetto()`.
+> **`--session-cap N`**. The `#define` is the default; the value in force is given by `rcp_tetto()`.
 > ⭐ And the four tables (`MAX_ATTACCATE`, `MAX_FIGLI`, `QUANTI_PRESENTI`, `WT_PALCHI`) are now
 > **allocated** on that number instead of being four hand-made copies that diverge silently —
 > the defect that `src/rcp.h` recounts at length, and that `[M]` §6.4 had proved in the field.
@@ -3038,7 +3038,7 @@ Two things that were seen only while wiring, and neither of them was foreseen:
 2. ⭐⭐ **The half of the hook that lives on the laptop grafted no fault** (§4.6-novemdecies:
    the two halves sit on two machines). ⇒ C13, there, could **never** have turned green:
    it would have said forever *«nessun guasto è mai stato iniettato»*, which from outside looks the same
-   as a broken net. ⇒ C10 now has a `--guasto-innestato` that copies the **real** files into
+   as a broken net. ⇒ C10 now has a `--grafted-fault` that copies the **real** files into
    a temporary folder, changes **one byte** of them and demands red. It costs `[M]` **0.1 s**.
 
 `[M]` And the result is measured: on the laptop the `rete` family gives **C10 green · C12 green · C13
@@ -3323,7 +3323,7 @@ explain to whoever is subject to it.
 - the reason `0x03 SESSIONE_ABBANDONATA` of `RCP.md` §8.2 **has always existed and nobody had ever
   sent it**: now it is its own. ⚠ Usually nobody will receive it — if the cap expires it is because
   nobody was there any more — but whoever is there reads a sentence instead of looking at a frozen screen;
-- **configurable** (`--abbandono-s`), `0` = off, and the value in force **is written in the log
+- **configurable** (`--abandon-s`), `0` = off, and the value in force **is written in the log
   at startup** together with the other two: nobody verifies a one-hour cap by waiting an hour.
 
 ---
@@ -4988,7 +4988,7 @@ with a bench in front, not on paper.
 > | ⭐ **16:30** | B2's WebTransport layer **alone**, after reading the close capsule | **553** | **373** | **134** | **46** |
 >
 > ⭐ **How the 16:30 one was taken, and it is the point that makes it repeatable**: on a clean tree, after
-> `01-b3-rcp-innesta.py --togli` and `01-b2-ngtcp2-wt-innesta.py --togli`, reapplying **only**
+> `01-b3-rcp-innesta.py --remove` and `01-b2-ngtcp2-wt-innesta.py --remove`, reapplying **only**
 > `01-b2-ngtcp2-wt-innesta.py`. It is the sequence that `ricostruisci()` of `banchi/01-b11-guasto.sh`
 > already runs.
 >
@@ -5704,7 +5704,7 @@ server, `provisiona.sh` enrolled **3 people** and `nicfio` went from `nicfio sud
 DE, non solo per KDE»*) and measured on the 22nd. ⚠ There was nothing to extend: the enrolment sits in the
 **parent**, before the `fork`, and the compositor does not even know about it — it was the **measurement** that stopped at
 kde. `[M]` 22 Sep 2026, tenants without groups, **real browsers** with a real window
-(`banchi/12-client-veri.py --visibile`):
+(`banchi/12-client-veri.py --visible`):
 
 | box | Firefox 140 | Chrome 153 | what the product did |
 |---|---|---|---|
@@ -5715,7 +5715,7 @@ kde. `[M]` 22 Sep 2026, tenants without groups, **real browsers** with a real wi
 (`garantisci_i_gruppi`): when the client arrives, the product has nothing left to enrol ⇒ the
 safety net could be all green with this piece broken. ⇒ Mesh **C18**
 (`banchi/11-scatole/11-c18-i-gruppi-li-mette-il-prodotto.py`), the only one that arrives **without** groups;
-grafted fault `--senza-usermod`. `[M]` 22 Sep 2026: GREEN and fault SEEN on gnome and xfce.
+grafted fault `--no-usermod`. `[M]` 22 Sep 2026: GREEN and fault SEEN on gnome and xfce.
 
 ---
 
@@ -5811,7 +5811,7 @@ with both browsers, with this expectation.
 ### 9.1 ✅ The log goes into the system journal
 
 With `--journal` the product also writes its **events** to the journal (`journalctl -t remotix`), with the
-fields `REMOTIX_AREA`, `REMOTIX_INQUILINO`, `CODE_FILE`, `CODE_LINE` and the severity taken from the sign at the
+fields `REMOTIX_AREA`, `REMOTIX_TENANT`, `CODE_FILE`, `CODE_LINE` and the severity taken from the sign at the
 head of the line (⛔ = error, ⚠ = warning). The **chatter** stays only in the file. The file stays for whoever
 administers.
 
@@ -6455,7 +6455,7 @@ attraverso una TUI sofisticata»*. ⛔ **Supersedes** §10.5 for the GUI part an
   the second build with cgo on Debian 12's glibc (`Contenitore.gui`), the graphics libraries, polkit and
   the differences between Wayland and X11.
 - ⚠ **The work that follows** (the installer's phase): remove `installatore/interfaccia/gui`,
-  `Contenitore.gui`, `remotix-install-gui`, `install.sh --finestra` and the code `RX-UI-001`, and the dependency
+  `Contenitore.gui`, `remotix-install-gui`, `install.sh --window` and the code `RX-UI-001`, and the dependency
   on Gio in `go.mod`; update `fasi/17-l-installatore.md` §6.6.1 and §6.6.14 and `SPECIFICHE.md`. ⛔ The interface
   code contains no installation logic (§6.6.1), so removing it does not touch the engine.
 - ✅ **Done on 10 Oct 2026**, commit `129e315`: GUI removed from the code, from the release and from the archive; a single
@@ -6519,7 +6519,7 @@ esigenze e le specifiche, e chi vuole usare il prodotto installa quello che serv
   distribution: NVIDIA is **certified on Ubuntu 26.04** (phase 19) and, elsewhere, the requirement holds.
 - **What stays ours**: saying **clearly and first** what is missing. The engine already does it: the preliminary
   check stops the machine without a driver that encodes (RX-GPU-003…006, with the package to install
-  in the remedy), and at the end `remotix --prova-codifica` really encodes on the card. A driver too old
+  in the remedy), and at the end `remotix --encoding-test` really encodes on the card. A driver too old
   for Vulkan Video stops there, with a message, and not with an installed REMOTIX that does not work.
 - Consistent with §10.27 (no encoding on the processor) and with [*no exceptions per compositor*]: what the
   system does not give, REMOTIX does not patch.
@@ -6560,8 +6560,8 @@ dei sysadmin, non agli utenti normali»*.
   names of the facts, step types, JSON fields, files in `/var/lib/remotix` and in the published archive, in English. The
   old → new table is in `fasi/17-l-installatore.md` §6.6.15. Formats: `remotix-install/2` and
   `remotix-answers/2`. What remains: the `RX-…` and `C-…` codes (identifiers), the catalogue format and what the
-  C product writes. ⚠ The product command `remotix` still has its options in Italian (`--porta`,
-  `--indirizzo`, `--certificati`, `--prova-codifica`…): a job of its own.
+  C product writes. ⚠ The product command `remotix` still has its options in Italian (`--port`,
+  `--address`, `--certificates`, `--encoding-test`…): a job of its own.
 
 ### 10.36 ✅ The simple installer, and REMOTIX that does not modify the system (10 Oct 2026)
 
@@ -6615,7 +6615,7 @@ REMOTIX) and the parts of §10.12, §10.21 and §10.23 that contradict what foll
   simulation shows them in the plan, in the group «Dependencies of REMOTIX» with «needed by REMOTIX for XFCE». The same
   holds for the other piece of the catalogue, breeze6-wallpapers (KDE on Tumbleweed). If the distribution does not have the
   package, the simulation fails and stops there (RX-PACCHETTI-005). The font per family comes back into the catalogue
-  (`carattere_scalabile`, 2026.10.10.14). Done on 10 Oct, commit `facc27a` (with the TUI redone: fasi/17 §6.6.16).
+  (`scalable_font`, 2026.10.10.14). Done on 10 Oct, commit `facc27a` (with the TUI redone: fasi/17 §6.6.16).
 
 
 ### 10.37 ✅ The technical manual: in English, on the model of Phonestra (10 Oct 2026)
@@ -6630,7 +6630,7 @@ The user's choices (10 Oct 2026):
 
 🔸 Derived by me, correctable: as in Phonestra the manual is **generated** — `docs/sources/technical/chNN_*.py`, one
 file per chapter, ⇒ `docs/Technical Manual.html` with `python3 docs/sources/build.py`; `style.css` and `manual.js` are
-the **common canon** copied byte for byte from Phonestra (which is not modified in a single project); `--controlla`
+the **common canon** copied byte for byte from Phonestra (which is not modified in a single project); `--check`
 checks that the files, functions, `REMOTIX_*` variables and `RX-` codes cited exist in the code, and that no Italian
 is left. Performance and capacity wait for the xrdp campaign.
 
@@ -6652,7 +6652,7 @@ and on the counter-proposal to keep the project diary in Italian: *«no, remotix
   same word never becomes two different English words in two files.
 - **Nothing reaches the test server until the xrdp campaign has finished**; the rename is built and checked on the
   laptop, then the whole suite runs on the server.
-- The technical manual (§10.37) is regenerated after the rename, and `--controlla` then rejects Italian
+- The technical manual (§10.37) is regenerated after the rename, and `--check` then rejects Italian
   everywhere, `<code>` spans included.
 
 ---

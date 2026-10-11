@@ -70,7 +70,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 #                    ANNOUNCES.  ⛔ It is the exact yardstick of the 25 August fault:
 #                    the session that is born without any `wl_output`.
 #   `weston`         gives the minimal clients (`weston-simple-shm`, `weston-terminal`):
-#                    they serve the test «a window opens», ⛔ which must be
+#                    they needs the test «a window opens», ⛔ which must be
 #                    looked at in the PIXEL, not in the count of processes.
 #   `pipewire`       the capture path.
 #   `python3-aioquic` ⛔ THE TEST CLIENT, which is the SECOND READER of the
@@ -99,7 +99,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 #   and the fault arrives months later, in a phase that has nothing to do with it.
 # ⇒ They are those of the `Makefile`, line by line.  ⛔ `libngtcp2` and `libnghttp3`
 #   are NOT here: those are built and copied inside with the product
-#   (`11-accendi.sh prodotto`), because they are not in Debian.
+#   (`11-accendi.sh product`), because they are not in Debian.
 # ⭐ Phase 19 (1 Oct 2026, `DECISIONI.md` §10.27): `libvulkan1` (the loader the
 #   binary links) and `mesa-vulkan-drivers` (Mesa's ICDs: RADV for the
 #   Radeon — the Vulkan Video road, tried BEFORE VA-API; ANV for the Intel,
@@ -155,7 +155,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 #   that C11 goes looking for.
 # ---------------------------------------------------------------------------
 # ⭐ phase 18 (1 Oct 2026): `firefox-esr` NOT from the repository but from the HOST's .deb
-#   (`pacchetti/`, which `11-accendi.sh costruisci` takes from
+#   (`packets/`, which `11-accendi.sh build` takes from
 #   /media/REMOTIX/cache/apt-host).  `[M]` 30 Sep: the trixie security repository
 #   moved to 153.4.0esr while the host, and the boxes of ALL the
 #   measurements of phases 15-18, have 140.16.0esr — it is rule R2 (§3): the

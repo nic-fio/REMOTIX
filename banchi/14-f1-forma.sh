@@ -16,10 +16,10 @@
 #   Adwaita in /usr/share/icons: they are on the laptop and in the four boxes.
 set -uo pipefail
 
-QUI=$(cd -- "$(dirname -- "$0")" && pwd)
-SRC=$QUI/../src
+HERE=$(cd -- "$(dirname -- "$0")" && pwd)
+SRC=$HERE/../src
 THEMES=${1:-/usr/share/icons}
-LAV=$(mktemp -d "${TMPDIR:-/tmp}/14-f1.XXXXXX")
+WORKDIR=$(mktemp -d "${TMPDIR:-/tmp}/14-f1.XXXXXX")
 
 read -r L A X Y < <(python3 - "$THEMES/Adwaita/cursors/ew-resize" <<'EOF'
 import struct, sys
@@ -34,24 +34,24 @@ EOF
 ) || { echo "⛔ the Python parser cannot read ew-resize in $THEMES/Adwaita"; exit 2; }
 
 # fault G1: Adwaita with the corrupted index (and breeze_cursors absent)
-mkdir -p "$LAV/guasti" "$LAV/vuota" "$LAV/misti/breeze_cursors/cursors"
+mkdir -p "$WORKDIR/guasti" "$WORKDIR/vuota" "$WORKDIR/misti/breeze_cursors/cursors"
 # T3b: real Adwaita + a FAKE breeze_cursors that has `size_hor` (with the arrow
 # drawing, so one can tell if the module takes it)
-ln -s "$THEMES/Adwaita" "$LAV/misti/Adwaita"
-printf '[Icon Theme]\nName=finto\n' > "$LAV/misti/breeze_cursors/index.theme"
-cp -L "$THEMES/Adwaita/cursors/default" "$LAV/misti/breeze_cursors/cursors/size_hor"
-cp -rL "$THEMES/Adwaita" "$LAV/guasti/Adwaita" 2>/dev/null
-printf '\x00\x13garbage that is not an index\n' > "$LAV/guasti/Adwaita/index.theme"
+ln -s "$THEMES/Adwaita" "$WORKDIR/misti/Adwaita"
+printf '[Icon Theme]\nName=finto\n' > "$WORKDIR/misti/breeze_cursors/index.theme"
+cp -L "$THEMES/Adwaita/cursors/default" "$WORKDIR/misti/breeze_cursors/cursors/size_hor"
+cp -rL "$THEMES/Adwaita" "$WORKDIR/guasti/Adwaita" 2>/dev/null
+printf '\x00\x13garbage that is not an index\n' > "$WORKDIR/guasti/Adwaita/index.theme"
 
-gcc -O1 -g -Wall -Wextra -Wno-unused-parameter -D_GNU_SOURCE -I"$SRC" -o "$LAV/banco" \
-	"$QUI/14-f1-forma.c" "$SRC/forma.c" "$SRC/cursore.c" "$SRC/registro.c" \
+gcc -O1 -g -Wall -Wextra -Wno-unused-parameter -D_GNU_SOURCE -I"$SRC" -o "$WORKDIR/banco" \
+	"$HERE/14-f1-forma.c" "$SRC/forma.c" "$SRC/cursore.c" "$SRC/registro.c" \
 	$(pkg-config --cflags --libs glib-2.0 libpipewire-0.3) || exit 2
 
 echo "expected by the Python parser: ew-resize ${L}x${A} hotspot ${X},${Y}"
-"$LAV/banco" "$LAV" "$THEMES" "$L" "$A" "$X" "$Y" "$LAV/guasti" "$LAV/vuota" \
-	"$LAV/misti" 2> "$LAV/registro.txt"
-ESITO=$?
+"$WORKDIR/banco" "$WORKDIR" "$THEMES" "$L" "$A" "$X" "$Y" "$WORKDIR/guasti" "$WORKDIR/vuota" \
+	"$WORKDIR/misti" 2> "$WORKDIR/registro.txt"
+OUTCOME=$?
 echo "----- module log"
-cat "$LAV/registro.txt"
-echo "(working folder: $LAV)"
-exit $ESITO
+cat "$WORKDIR/registro.txt"
+echo "(working folder: $WORKDIR)"
+exit $OUTCOME
