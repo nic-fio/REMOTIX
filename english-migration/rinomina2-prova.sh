@@ -36,8 +36,9 @@ done
 FB_TABLE=${FASE_B_TABLE:-$QUI/fase-b-tabella.tsv}
 fb() { python3 "$QUI/fase_b.py" "$@"; }
 # the phase-B spelling of a public name (the name itself when the table does not rename it)
-fbnew() { if [ "$FASEB" = 1 ]; then fb new "$1" --table "$FB_TABLE"; else echo "$1"; fi; }
+fbnew() { if [ "$FASEB" = 1 ]; then fb new --table "$FB_TABLE" -- "$1"; else echo "$1"; fi; }
 export CONTAINERS_CONF=${CONTAINERS_CONF:-/media/REMOTIX/src/full-english-uscite/rilascio-finale/rete-host.conf}
+[ -f "$CONTAINERS_CONF" ] || { echo "⚠ $CONTAINERS_CONF is missing: podman's own configuration"; unset CONTAINERS_CONF; }
 ROSSI=0
 rosso() { echo "⛔ $*"; ROSSI=$((ROSSI + 1)); }
 verde() { echo "✅ $*"; }
@@ -179,13 +180,14 @@ fi
 # 5b. phase A changes no string: the server's read-only data (.rodata: every literal, every format, the
 # names assert() and g_return_if_fail() print) must be byte-identical to the binary built before the rename.
 # Phase B renames strings, so there the .rodata legitimately differs: the strings of the two binaries,
-# each mapped through the table to one canonical spelling, must be the same multiset
+# each mapped through the table to one canonical spelling, must be the same multiset (the strings of
+# .rodata only: the rest of the binary holds the build directory)
 R=$(mktemp -d); mkdir -p "$R/a"; git archive HEAD src banchi/rcp | tar -x -C "$R/a"
 podman run --rm --network=none --userns=keep-id -v "$COPIA:/n" -v "$R:/r" localhost/remotix-costruzione-debian13 \
 	sh -c 'cd /r/a/src && make -j8 GEMELLO=../banchi/rcp >/dev/null 2>&1;
 	       objcopy -O binary --only-section=.rodata /r/a/src/remotix /r/prima.rodata &&
 	       objcopy -O binary --only-section=.rodata /n/src/remotix /r/dopo.rodata &&
-	       strings -a -n 4 /r/a/src/remotix >/r/prima.str && strings -a -n 4 /n/src/remotix >/r/dopo.str' >/dev/null 2>&1
+	       strings -a -n 4 /r/prima.rodata >/r/prima.str && strings -a -n 4 /r/dopo.rodata >/r/dopo.str' >/dev/null 2>&1
 if [ "$FASEB" = 1 ]; then
 	if [ -s "$R/prima.str" ] && [ -s "$R/dopo.str" ]; then
 		fb map --side before --table "$FB_TABLE" <"$R/prima.str" | sort >"$R/prima.map"

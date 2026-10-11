@@ -35,9 +35,11 @@ lines and a header line starting `old<TAB>` are ignored.
                                               and after phase B compares equal when only names changed
 
 Token boundaries: a token is not glued to a letter, digit or «_»; a «-» glued to a word on the far side
-extends it too (`--nome` is not inside `--nome-file`, `nome` not inside `x-nome`), except `->`, and a
-«-digit» after an identifier-kind name (`n-1`).  Path kinds (path, file, dir, unit) also take «.ext»:
-`pagina` is not inside `pagina.pem`, while a sentence's final dot is not part of the name.
+extends it too (`--nome` is not inside `--nome-file`, `nome` not inside `x-nome`), except `->`, a
+«-digit» after an identifier-kind name (`n-1`), a shell reference (`$X-y` holds `X`) and a name right
+after a printf escape (`\nNAME`).  A dot never extends a name after it (`pagina.pem` holds the stem
+`pagina`: the longer row `pagina.pem` wins where both are listed); before it, in path kinds, it does
+(`pem` is not inside `pagina.pem`).
 """
 import argparse
 import collections
@@ -73,7 +75,7 @@ def is_history(f):
 
 
 def kind_words(kind):
-    return set(re.split(r"[-_/ ]+", kind.lower()))
+    return set(re.split(r"[-_/+,;() ]+", kind.lower()))
 
 
 def token_rx(old, kind):
@@ -81,18 +83,25 @@ def token_rx(old, kind):
     w = kind_words(kind)
     path = bool(w & PATH_KINDS)
     ident = bool(w & IDENT_KINDS) and not path
-    before, after = "", ""
+    esc = re.escape(old)
     if re.match(r"[A-Za-z0-9_]", old):
-        before = r"(?<![A-Za-z0-9_])(?<![A-Za-z0-9_]-)(?<!--)"
-        if path:
-            before += r"(?<![A-Za-z0-9_]\.)"
+        glued = r"(?<![A-Za-z0-9_])(?<![A-Za-z0-9_]-)(?<!--)" + (r"(?<![A-Za-z0-9_]\.)" if path else "")
+        # after a C/printf escape (\nNAME) or a shell «$» the name starts there whatever comes before
+        before = r"(?:(?<=\\[ntrfvab0e])|(?<=\$)|%s)" % glued
     elif old.startswith("-"):
         before = r"(?<![A-Za-z0-9_-])"
+    else:
+        before = ""
     if re.search(r"[A-Za-z0-9_]$", old):
-        after = r"(?![A-Za-z0-9_])" + (r"(?!-[A-Za-z_])" if ident else r"(?!-[A-Za-z0-9_])")
-        if path:
-            after += r"(?!\.[A-Za-z0-9_])"
-    return re.compile(before + re.escape(old) + after)
+        after = r"(?![A-Za-z0-9_])"
+        kebab = r"(?!-[A-Za-z_])" if ident else r"(?!-[A-Za-z0-9_])"
+        if re.match(r"[A-Za-z_]", old):
+            # a shell reference ends at the first character that cannot be in a name: $X-y is $X then -y
+            return re.compile(r"(?:(?<=\$)%s%s|%s%s%s%s)" % (esc, after, before, esc, after, kebab))
+        after += kebab
+    else:
+        after = ""
+    return re.compile(before + esc + after)
 
 
 # ═══ reading the tables ══════════════════════════════════════════════════════
@@ -111,16 +120,23 @@ class Row:
 
 
 def parse_places(s):
-    """'a.c:3, b.py:7-9; c.md:*' → ([(file, line or None)], [malformed pieces])"""
-    out, bad = [], []
-    for p in re.split(r"[,;]\s*|\s+", s.strip()):
+    """'a.c:3, b.py:7-9,12; c.md:* d.sh:4[string]' → ([(file, line or None)], [malformed pieces]).
+    Separators: «,», «;», blanks; a bare number (or range) belongs to the file before it; a note in
+    [brackets] or (parentheses) after a place is dropped."""
+    out, bad, last = [], [], None
+    s = re.sub(r"\[[^\]]*\]|\([^)]*\)", " ", s)
+    for p in re.split(r"[,;\s]+", s.strip()):
         if not p:
             continue
         m = PLACE_RX.match(p)
-        if not m:
+        if m:
+            last, l = m.group(1), m.group(2)
+        elif last and re.fullmatch(r"\d+(?:-\d+)?", p):
+            l = p
+        else:
             bad.append(p)
             continue
-        f, l = m.group(1), m.group(2)
+        f = last
         if l == "*":
             out.append((f, None))
         elif "-" in l:
@@ -381,17 +397,16 @@ def merge(tables_dir, root, out, window):
     for r in live:
         twins[words(r.old)].append(r)
     for w, rs in sorted(twins.items()):
-        spellings = {r.old for r in rs}
-        if len(spellings) < 2:
-            continue
-        nw = collections.defaultdict(list)
+        rs = [r for r in rs if "not a twin" not in r.why.lower()]
+        per = collections.defaultdict(set)
         for r in rs:
-            if "not a twin" in r.why.lower():
-                continue
-            nw[words(r.new)].append(r)
-        if len(nw) > 1:
-            errors.append("casing twins disagree: " + "; ".join(
-                "%s → %s" % (r.old, r.new) for x in sorted(nw) for r in nw[x]))
+            per[r.old].add(words(r.new))
+        if len(per) < 2:
+            continue
+        sp = sorted(per)
+        if any(not (per[x] & per[y]) for i, x in enumerate(sp) for y in sp[i + 1:]):
+            errors.append("casing twins disagree (or say «not a twin» in why): " + "; ".join(
+                "%s → %s" % (r.old, r.new) for r in sorted(rs, key=lambda r: (r.old, r.new))))
     for r in live:
         if style(r.old) != style(r.new) and "style" not in r.why.lower():
             warnings.append("%s → %s: style %s becomes %s" % (r.old, r.new, style(r.old), style(r.new)))
@@ -399,6 +414,25 @@ def merge(tables_dir, root, out, window):
     # 5. stale places, and a new already in a place file
     hits, misses = locate(tree, live, window)
     errors += ["stale: " + m for m in misses]
+    # a non-path name at a place where it looks like a file name (x/old, old.ext): phase B renames no
+    # file of the tree, and a mention of a file that keeps its name must not change
+    looks = set()
+    for r, f, i in hits:
+        if kind_words(r.kind) & PATH_KINDS:
+            continue
+        s = tree.lines(f)[i]
+        for m in r.rx().finditer(s):
+            if s[max(0, m.start() - 1):m.start()] == "/" or re.match(r"\.[A-Za-z0-9]{1,5}\b", s[m.end():]):
+                looks.add((r.old, r.kind, f, i + 1))
+    for o, k, f, l in sorted(looks):
+        warnings.append("%s (%s) at %s:%d looks like part of a file name" % (o, k, f, l))
+    tracked = tree.tracked() if os.path.isdir(os.path.join(root, ".git")) or os.path.isfile(os.path.join(root, ".git")) else []
+    for r in live:
+        rx = re.compile(r"(?<![A-Za-z0-9_-])" + re.escape(r.old.lstrip("-")) + r"(?![A-Za-z0-9_-])")
+        named = [f for f in tracked if not is_history(f) and rx.search(f)]
+        if named:
+            warnings.append("%s: tree files carry this name (%s): phase B renames no file — git mv by hand,"
+                            " or keep" % (r.old, ", ".join(named[:3]) + (" …" if len(named) > 3 else "")))
     for r in live:
         rx = token_rx(r.new, r.kind)
         for f in sorted({f for f, _ in r.places}):

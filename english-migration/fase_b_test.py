@@ -122,7 +122,7 @@ class Boundaries(unittest.TestCase):
     def test_path(self):
         self.assertTrue(self.m("pagina", "path", "/var/lib/pagina/x"))
         self.assertTrue(self.m("pagina", "path", "is in pagina."))
-        self.assertFalse(self.m("pagina", "path", "pagina.pem"))
+        self.assertTrue(self.m("pagina", "path", "pagina.pem"))         # the stem; pagina.pem's own row wins
         self.assertFalse(self.m("pem", "path", "pagina.pem"))
         self.assertFalse(self.m("pagina", "path", "pagina-ban.html"))
 
@@ -132,9 +132,22 @@ class Boundaries(unittest.TestCase):
         self.assertTrue(self.m("avvia", "case-label", "avvia) x"))
         self.assertFalse(self.m("avvia", "case-label", "avvia-tutto) x"))
 
+    def test_shell_and_escapes(self):
+        self.assertTrue(self.m("PREFISSO", "make-var+env", "R=$PREFISSO-regime.raw"))
+        self.assertFalse(self.m("PREFISSO", "make-var+env", "R=PREFISSO-regime"))
+        self.assertTrue(self.m("REMOTIX_OPZIONI", "conf-key", r"printf 'A=1\nREMOTIX_OPZIONI=x'"))
+        self.assertTrue(self.m("nome", "option", "$nome-x"))
+
     def test_log_key(self):
         self.assertTrue(self.m("esito", "log-key", "esito=%s"))
         self.assertTrue(self.m("esito", "json-key", '{"esito":'))
+
+    def test_places(self):
+        pl, bad = fase_b.parse_places("a.c:3,5; b.py:7-9 c.md:*, d.sh:4[via import], e.go:2 (struct)")
+        self.assertEqual(bad, [])
+        self.assertEqual(pl, [("a.c", 3), ("a.c", 5), ("b.py", 7), ("b.py", 8), ("b.py", 9), ("c.md", None),
+                              ("d.sh", 4), ("e.go", 2)])
+        self.assertEqual(fase_b.parse_places("12, x")[1], ["12", "x"])
 
     def test_words_and_style(self):
         self.assertEqual(fase_b.words("--prova-esce"), ("prova", "esce"))
@@ -212,6 +225,12 @@ class Merge(Base):
         self.table("A.tsv", "nodo\tesito\tlog-key\tsrc/main.c:5\t\n")
         rc, out = self.merge()
         self.assertIn("esito already occurs in src/main.c:5", out)
+
+    def test_file_name_hazards(self):
+        self.table("A.tsv", "pagina\tpage\tc-identifier\tpackaging/rx.sh:7\t\n")
+        rc, out = self.merge()
+        self.assertIn("pagina (c-identifier) at packaging/rx.sh:7 looks like part of a file name", out)
+        self.assertIn("pagina: tree files carry this name (src/pagina.html)", out)
 
 
 class Apply(Base):
