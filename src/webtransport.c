@@ -5312,7 +5312,7 @@ static void dead_line_fires(wt *w, const ngtcp2_conn_info *in,
                                uint64_t video_queue, uint64_t silence_ms,
                                uint64_t prove, const char *said)
 {
-	static const uint8_t reason[] = "linea morta";
+	static const uint8_t reason[] = "dead line";
 
 	w->lm_fired = true;
 	log_says_of(REG_WT, wt_chi(w),
