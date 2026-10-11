@@ -1665,7 +1665,7 @@ static bool run_as_root(const char *which, char *const argv[], const char *user)
  *
  *    {"format":"remotix-enrollments/1","time":"2026-09-30T10:11:12Z","user":"mario",
  *     "uid":1005,"group":"render","gid":989,"origin":"DIRECT",
- *     "by":"REMOTIX alla before connection"}
+ *     "by":"REMOTIX at first connection"}
  *
  * ⛔ The file is opened append-only (`O_APPEND`), never rewritten nor
  *    truncated; the folder is opened without following links and must be
@@ -1776,7 +1776,7 @@ static bool groups_annotate(int fd, const char *user, uid_t uid, const char *gro
 	n = snprintf(line, sizeof line,
 	             "{\"format\":\"remotix-enrollments/1\",\"time\":\"%s\",\"user\":\"%s\","
 	             "\"uid\":%lu,\"group\":\"%s\",\"gid\":%lu,\"origin\":\"DIRECT\","
-	             "\"by\":\"REMOTIX alla prima connessione\"}\n",
+	             "\"by\":\"REMOTIX at first connection\"}\n",
 	             when, u, (unsigned long)uid, g, (unsigned long)gid);
 	if (n <= 0 || (size_t)n >= sizeof line) {
 		snprintf(why, how_much, "the line does not fit");
