@@ -682,3 +682,50 @@ per desktop is in §8.1):
 | | | 3K | 4-15 | 9-15 |
 | | | 2K | 11-15 | 11-15 |
 | | | Full HD | 11-15 | 11-15 |
+
+## 9. The KasmVNC bench: ready, NOT run (11 Oct 2026)
+
+*The user tried KasmVNC's trial for two minutes and found it slow; he wants numbers. ⛔ Time box: the whole
+comparison ≤ ~2 hours (preparation ≤ 1, campaign ≤ 1). ⇒ **Not the climb of §7** (~2 days of work): one user,
+two scenes, the measures of §7.3 «from the watcher's side». ⛔ The campaign is NOT run: the server was busy
+with builds, and the numbers are taken on a quiet server.*
+
+**What there is** (branch `fix-kasmvnc`, `banchi/16-stress/`):
+- `Contenitore.kasmvnc`: Debian 13 + **KasmVNC 1.5.0** from its official release package
+  (`kasmvncserver_trixie_1.5.0_amd64.deb`) + **KDE Plasma 6.3 on X11** (`kwin-x11`, as the xrdp box of §7.0:
+  KDE X11 is in Debian 13, so XFCE was not needed) + `mpv`. Image `localhost/kasm-kde:1.5.0`, **rootless podman**
+  of nicfio, storage on `/media/REMOTIX/kasm/storage` (`CONTAINERS_STORAGE_CONF=/media/REMOTIX/kasm/storage.conf`:
+  the root is small); box `kasm-kde`.
+- `16-kasmvnc.py`: `costruisci | accendi | spegni | stato | misura | campagna | certifica`. Client = KasmVNC's
+  **own web client**, Chrome 155 and Firefox 153.4 ESR **headless** (the drivers of `12-client-veri.py`), viewport
+  = the remote screen (`resize=remote`, checked with `xdpyinfo` at the end of every measure). Scenes:
+  **video** (the 4K 30 fps film of profile D in `mpv --fs`) and **tasti** (`konsole -e cat`, one key every
+  0.3-0.5 s typed in the browser). Measures: paints/s delivered (probe on the page's canvas, bursts > 5 ms
+  apart, as XDamage in §7.3), key → first paint p50/p95, cores of the box (cgroup: Xvnc + KDE + player) and of
+  Xvnc alone, bandwidth = `bytes_sent` of KasmVNC's TCP connections (`ss -ti`, TLS included). Guard of §7.7
+  (3 GiB). Rows in `registro-kasmvnc.jsonl`. Sizes: **Full HD (reference), 2K 2560×1440, 3K 2880×1620**
+  (the user's ruling, 11 Oct: no 4K).
+- Configuration = the package's, except: the size (`~/.vnc/kasmvnc.yaml` with only `desktop.resolution`:
+  `-geometry` is ignored), `-disableBasicAuth` (Xvnc on **127.0.0.1:8701** only; a headless Firefox cannot
+  answer the auth dialog), and ⭐ **`-hw3d -drinode /dev/dri/renderD128`**, KasmVNC's documented GPU acceleration:
+  the twin of xorgxrdp's glamor (§7.5). Without it the session draws in software and mpv alone costs ~2.4
+  cores `[M]`; `REMOTIX_KASM_GPU=0` gives the pure default. ⚠ The default `kasmvnc.yaml` has a **video mode**
+  (`max_resolution` 1920×1080): it stays as shipped, and it is part of what is measured.
+- ⚠ The box is `--network host`: the host has neither `pasta` nor `slirp4netns` for rootless networking.
+  Display `:87` (the abstract X socket is the host's), no other port opened (no 59xx).
+
+**Dry run** `[M]` (11 Oct ~07:15 UTC, server NOT quiet ⇒ the numbers do not count, only the chain): Full HD,
+30 s — Chrome/video **24.4 paints/s**, 62 Mbit/s, box 0.56 cores, Xvnc 0.12; Firefox/tasti p95 **76 ms**, 0 keys
+lost out of ~68; the photos looked at (the film full screen; the letters in konsole). ⚠ Xvnc at ~0.1 cores for
+24 fps at 60+ Mbit/s is low: to be looked at in the campaign (`top` in the box) before writing it.
+
+**The campaign** (on a quiet server, as nicfio, no sudo): 12 measures (3 sizes × 2 browsers × 2 scenes) of
+120 s, ~29 minutes:
+
+    cd /media/REMOTIX/src/remotix-wt-kasmvnc/banchi/16-stress && \
+    nohup python3 16-kasmvnc.py campagna --secondi 120 \
+        --dir /media/REMOTIX/misure/fase20-kasmvnc/k20-$(date +%Y%m%d-%H%M) > ~/k20-campagna.log 2>&1 &
+
+Stop: `touch <dir>/FERMA` (between measures). ⛔ **The REMOTIX side is not in this bench**: §8 has REMOTIX at 1
+user, KDE, Intel (delay p95 39 ms Full HD / 43 ms 2K, video 29-30 paints/s) but **not** at 2880×1620 (§8 was
+3200×1800) and **without bandwidth**: for a row-by-row comparison REMOTIX needs a twin run.
