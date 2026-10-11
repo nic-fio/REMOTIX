@@ -271,7 +271,7 @@ def main():
     o = a.parse_args()
     lines = load(o.log)
     rounds = [str(r.get("round")) for r in lines]
-    round_id = o.round_id or (rounds[-1] if rounds else "?")
+    round_id = o.round or (rounds[-1] if rounds else "?")
     lines = [r for r in lines if str(r.get("round")) == round_id]
     defects = load(o.defects)
     if o.html:
