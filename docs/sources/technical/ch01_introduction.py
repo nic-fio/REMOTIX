@@ -36,7 +36,8 @@ S1 = p("<b>REMOTIX</b> is a remote desktop for Linux. A server runs on the Linux
       "Video on AMD and NVIDIA) in H.264 or HEVC; the audio travels as Opus in QUIC datagrams; keyboard, pointer, "
       "touch and the text clipboard travel in both directions.") + \
     table(["Item", "Value"], [
-        ["Version", c(VERSION) + " (the one in " + c("packaging/rpm/remotix.spec") + ", shared by all packages)"],
+        ["Version", c(VERSION) + ", the first installable release: the number given to " + c("packaging/rilascio.sh")
+         + ", the same for every package and for " + c("remotix-install")],
         ["Server", "C (" + c("-std=gnu11") + "), Linux only, systemd, runs as root as " + c("remotix.service")],
         ["Client", "The page " + c("src/pagina.html") + " (HTML and JavaScript in one file), served by the server "
          "itself; a small Opus decoder in WebAssembly (" + c("src/opus-wasm/") + ")"],
@@ -45,13 +46,15 @@ S1 = p("<b>REMOTIX</b> is a remote desktop for Linux. A server runs on the Linux
          "and on UDP (QUIC)"],
         ["Video", "H.264 and HEVC, negotiated with the browser, encoded only on the GPU (no CPU encoder since 1 Oct "
          "2026, DECISIONI.md §10.27); no ffmpeg"],
-        ["Desktops", "GNOME, KDE Plasma, XFCE and LXQt (the last two on the labwc compositor); one desktop per "
-         "machine (DECISIONI.md §0.6)"],
+        ["Desktops", "GNOME, KDE Plasma, XFCE and LXQt (the last two on the labwc compositor; on KDE, KWin runs "
+         "nested inside a labwc without a screen, DECISIONI.md §10.40); one desktop per machine (DECISIONI.md §0.6)"],
         ["Sessions", "Wayland only; X11 applications run through XWayland"],
         ["Size", f"{righe(conta('.c') + conta('.h'))} lines of C, {righe(conta('pagina.html'))} lines of page, "
          f"{righe(conta('.go'))} lines of Go"],
         ["Licence", "Our own text, " + c("LICENSE.md") + " (DECISIONI.md §10.39): free for personal and "
-         "non-profit use, source readable, no modifications, no redistribution; not open source"],
+         "non-profit use, source readable, no modifications, no redistribution; not open source. The RHEL / Alma 10 "
+         "package also carries labwc 0.8.4 as a separate program under its own licence, GPL-2.0 (" + c("THIRD-PARTY-LICENSES")
+         + ", DECISIONI.md §10.43)"],
     ], "«TAB» — REMOTIX at a glance") + \
     p("<b>Why a protocol of our own, and why a browser.</b> REMOTIX v1 spoke RDP and stopped at its phase 11, after "
       "serving GNOME and KDE: the three walls it hit — the H.264 ceiling, an Android client decoding in software and "
@@ -85,9 +88,11 @@ S1 = p("<b>REMOTIX</b> is a remote desktop for Linux. A server runs on the Linux
          "much on the hardware. The parameters the product really uses — session cap, clocks, ban, minimum "
          "bandwidth — are configuration and hold as written.", "Goals, not promises.")
 
-S2 = p("A few concepts recur in every chapter. Most of them still have an Italian name in the code, which the "
-       "manual keeps inside code spans so that it can be searched for; the names are being renamed to English "
-       "(" + c("DECISIONI.md") + " §10.38).", lead=True) + \
+S2 = p("A few concepts recur in every chapter. The manual writes their names in the code inside code spans, so "
+       "that they can be searched for. Identifiers, options, environment variables and the names on the wire are "
+       "in English (" + c("DECISIONI.md") + " §10.38, §10.45); most source files and folders still have their "
+       "Italian names (" + c("figlio.c") + ", " + c("sentinella.c") + ", " + c("banchi/") + "), which are renamed in a "
+       "later step.", lead=True) + \
     table(["Concept", "What it is", "In the code", "More"], [
         ["<b>Server</b> (the parent)", "The process started by systemd, as root, one per machine: it listens on the "
          "two ports, speaks TLS, QUIC and RCP, and owns every connection. It never touches GLib, PipeWire or D-Bus "
@@ -95,25 +100,25 @@ S2 = p("A few concepts recur in every chapter. Most of them still have an Italia
         ["<b>PAM helper</b>", "A dispatcher process started at boot, which forks one short-lived process per "
          "password check, so that PAM never blocks the server's loop", c("aiutante.c") + ", "
          + c("autenticazione.c"), rif("The PAM helper process")],
-        ["<b>Child</b> (" + c("child") + ")", "One process per admitted user, running as that user: it opens the "
+        ["<b>Child</b>", "One process per admitted user, running as that user: it opens the "
          "user's logind session, starts the desktop and holds capture, encoding, input, audio and clipboard. In "
          + c("ps") + " it appears as " + c("remotix-child --internal-child"), c("figlio.c"),
          rif("The per-user child process")],
-        ["<b>Stage</b> (" + c("stage") + ")", "What the child mounts on the user's desktop: the virtual monitor, the "
+        ["<b>Stage</b>", "What the child mounts on the user's desktop: the virtual monitor, the "
          "capture stream, the input channel, the clipboard and the cursor. It belongs to the session, not to the "
-         "connection (invariant I4)", c("take_stage()") + " (take the stage)", rif("The stage and the virtual monitor")],
+         "connection (invariant I4)", c("take_stage()"), rif("The stage and the virtual monitor")],
         ["<b>Graphical session</b>", "The user's desktop, started by the child with " + c("setsid --fork")
          + " inside the user's logind session and therefore outside the service's unit", c("sessione.c"),
          rif("Birth of a session")],
-        ["<b>Canvas</b> (" + c("canvas") + ")", "The size of the remote desktop: the browser window's size at attach "
-         "time, at most 4096×2304; it does not change while the client stays", c("ATTACH") + " (attach), " + c("CANVAS"),
+        ["<b>Canvas</b>", "The size of the remote desktop: the browser window's size at attach "
+         "time, at most 4096×2304; it does not change while the client stays", c("ATTACH") + ", " + c("CANVAS"),
          rif("The RCP/1 protocol")],
-        ["<b>View</b> (" + c("view") + ")", "The size at which the page draws the canvas; it follows the window "
+        ["<b>View</b>", "The size at which the page draws the canvas; it follows the window "
          "without touching the desktop", c("VIEW"), rif("The browser page")],
-        ["<b>Tenant</b> (" + c("tenant") + ")", "A user being served. The cap (" + c("--session-cap")
+        ["<b>Tenant</b>", "A user being served. The cap (" + c("--session-cap")
          + ", 10) counts stages, not connections", c("rcp_cap()"), rif("Where state lives")],
-        ["<b>Attach slot</b> (" + c("posto") + ")", "The place of a user's connection in RCP's registry: one per "
-         "user; freed when the client detaches or falls silent for 30 s", c("rcp.c"), rif("Detach and reattach")],
+        ["<b>Attach slot</b>", "The place of a user's connection in RCP's registry: one per "
+         "user; freed when the client detaches or falls silent for 30 s", c("struct slot") + " in " + c("rcp.c"), rif("Detach and reattach")],
         ["<b>Farewell</b> (" + c("FAREWELL") + ")", "The message that closes an RCP session, always with a reason "
          "code and a sentence: the server never closes without saying why (DECISIONI.md §4.1-bis)", c("rcp.h"),
          rif("The RCP/1 protocol")],
@@ -125,9 +130,9 @@ S2 = p("A few concepts recur in every chapter. Most of them still have an Italia
          rif("Desktops found again after a restart")],
         ["<b>Budget</b>", "An optional admission check in megapixels per second of composition; off by default",
          c("budget.c"), rif("Quality, degradation and budget")],
-        ["<b>Belts</b> (" + c("belts") + ")", "The three system settings that forbid power-off, reboot and "
+        ["<b>Belts</b>", "The three system settings that forbid power-off, reboot and "
          "suspend to every user: a polkit rule, logind settings for the power key and lid, and sleep settings. "
-         "The packages ship them disabled", c("remotix-no-poweroff.rules") + " (no power-off)",
+         "The packages ship them disabled", c("remotix-no-poweroff.rules"),
          rif("Files on the machine")],
     ], "«TAB» — Basic concepts") + \
     p("The design is held together by eight <b>invariants</b>, numbered in " + c("CODER.md") + " §2 and quoted "
@@ -153,7 +158,8 @@ S3 = p("The server's code is split by job. This is the map the manual follows ch
      + rif("The RCP/1 protocol") + ")."),
     (c("mutter.c") + ", " + c("kwin.c") + ", " + c("wlroots.c") + ", " + c("cattura.c") + ", " + c("cursore.c")
      + ", " + c("forma.c"),
-     "The virtual monitor and the capture on Mutter, KWin and labwc, PipeWire, dmabuf, the cursor ("
+     "The virtual monitor and the capture on Mutter, KWin and labwc, the labwc without a screen that hosts KWin, "
+     "PipeWire, dmabuf, the cursor ("
      + rif("Screen capture per compositor") + ")."),
     (c("codificatore.c") + ", " + c("vadiretta.c") + ", " + c("vulkanvideo.c") + ", " + c("colori709.c") + ", "
      + c("scrittore_bit.c"),
@@ -202,7 +208,7 @@ S4 = p("The " + c("nic-fio/REMOTIX") + " repository on GitHub (private) holds ev
     "│   ├── catalogo/  # the catalogue of distributions, desktops and GPUs",
     "│   └── vendor/  # the Go dependencies, vendored",
     "├── packaging/  # debian/, rpm/, arch/, motore/ (packages of the installer), rilascio.sh",
-    "├── banchi/  # the test benches, one prefix per phase (00-…, 01-…, 11-scatole/, 15-suite/, 17-distro/)",
+    "├── banchi/  # the test benches still alive, one prefix per phase (00-…, 01-…, 11-scatole/, 15-suite/, 17-distro/)",
     "├── docs/  # this manual, generated, and its sources (docs/sources/)",
     "├── misure/  # raw measurements kept with the code",
     "├── fasi/  # the documents of the phases (one per phase, from 06 to 21)",
@@ -234,8 +240,11 @@ S4 = p("The " + c("nic-fio/REMOTIX") + " repository on GitHub (private) holds ev
          + c("run.sh") + " (the self-extracting " + c(".run") + ")."],
         [c("packaging/"), "The " + c(".deb") + ", " + c(".rpm") + " and Arch recipes, the systemd unit, "
          + c("tmpfiles") + ", firewall descriptions, the disabled belts, the packages of the installer itself, the "
-         "release script and the third-party licence tools (" + c("archivio/") + ")."],
-        [c("banchi/"), "About 1,800 files: one script or folder per bench, named after the phase that wrote it. "
+         "release script, the third-party licence tools (" + c("archivio/") + ") and, in " + c("rpm/labwc/") + ", the "
+         "recipe that fetches and verifies (by sha256) the labwc built for RHEL / Alma 10."],
+        [c("banchi/"), "About 350 files: one script or folder per bench, named after the phase that wrote it. The "
+         "benches of closed phases and those that can no longer run left the tree on 10 and 11 October 2026 "
+         "(DECISIONI.md §10.44); their measurements stay where they were recorded, the files in git history. "
          + c("banchi/rcp/") + " is a twin copy of the RCP code used by the early benches; " + c("banchi/prodotto/")
          + " starts and probes the real server in a container."],
         [c("docs/"), "The generated HTML manual and " + c("docs/sources/") + ": " + c("build.py") + ", "
@@ -289,7 +298,7 @@ PARTS = [
 S5 = p("How big REMOTIX is, part by part. The lines are counted from the sources every time the manual is generated: "
        "files kept by git under " + c("src/") + ", " + c("installatore/") + " and " + c("packaging/")
        + ", plus the manual's own sources; the vendored Go modules, the protocol headers generated at build time and "
-       "binary files are left out. The test benches (" + c("banchi/") + ", about 1,800 files) are not counted.",
+       "binary files are left out. The test benches (" + c("banchi/") + ", about 350 files) are not counted.",
        lead=True) + numeri(PARTS, "«TAB» — The project's parts and their line counts") + \
     p("A large share of the C is comment: by the project's rules every non-obvious line carries the reason, the "
       "measurement or the decision behind it, often with the date. The counts in this table and in the file map "

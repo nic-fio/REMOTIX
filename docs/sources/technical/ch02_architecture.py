@@ -20,8 +20,10 @@ S1 = p("REMOTIX grew out of a few rules, most of them written before the code an
          + c("xdg-desktop-portal") + ": a portal asks a person in front of the screen for permission, and an "
          "unattended server has nobody to click", "SPECIFICHE.md §2.5"],
         ["<b>No exceptions per compositor</b>", "A feature that works on one desktop and not on another leaves the "
-         "product instead of hiding behind a switch (live resizing left on 17 August 2026 for this reason)",
-         "DECISIONI.md §0.1, §5.1-bis"],
+         "product instead of hiding behind a switch (live resizing left on 17 August 2026 for this reason). The "
+         "other way round: the resize at reattach, missing on KDE, was made to work there too — KWin nested in a "
+         "labwc without a screen — rather than declared an exception",
+         "DECISIONI.md §0.1, §5.1-bis, §10.40"],
         ["<b>On the user's screen, their desktop and nothing else</b>", "No marks, no service boxes; test functions "
          "are not in the installed binary", "SPECIFICHE.md §2.6, DECISIONI.md §7.16"],
         ["<b>One job per process</b>", "The server checks passwords through a helper process and captures through "
@@ -34,7 +36,13 @@ S1 = p("REMOTIX grew out of a few rules, most of them written before the code an
         ["<b>REMOTIX does not modify the system</b>", "It says what it needs; the administrator provides it. The "
          "one deliberate exception: adding users to the GPU's groups, so that their session is not blind",
          "DECISIONI.md §10.36, §7.21"],
-        ["<b>No GPL dependencies</b>", "All the server's libraries are MIT, BSD or Apache", "SPECIFICHE.md §11.4"],
+        ["<b>No GPL dependencies</b>", "No GPL library is linked into the server; what REMOTIX links in itself "
+         "(ngtcp2, nghttp3) is MIT. labwc, GPL-2.0, is a separate program REMOTIX starts, never linked: the "
+         "distribution's, or on RHEL / Alma 10 the one the package builds unmodified", "SPECIFICHE.md §11.4, "
+         "DECISIONI.md §10.43"],
+        ["<b>Build only what the distribution gets wrong</b>", "REMOTIX uses what the customer's distribution "
+         "ships; a component is built by REMOTIX only for a measured problem: ngtcp2 and nghttp3 (no distribution "
+         "ships the version needed) and labwc on RHEL / Alma 10 (EPEL has none)", "DECISIONI.md §10.43, §10.46"],
     ], "«TAB» — The principles that shaped REMOTIX") + \
     p("Eight <b>invariants</b>, inherited from v1 and renumbered in " + c("CODER.md") + " §2, are quoted in the "
       "comments next to the lines that keep them. A change that breaks one of them is a defect even if every test "
@@ -45,7 +53,7 @@ S1 = p("REMOTIX grew out of a few rules, most of them written before the code an
          "resolution, and never the connection", rif("Quality, degradation and budget")],
         ["I2", "One graphical session per user; a local session wins over the remote one; a second remote "
          "connection is refused with an explicit reason", c("children_ensure()") + " looks before forking; "
-         + c("ALREADY_ACTIVE_REMOTELY") + " (already active remotely) in " + c("rcp.c")],
+         + c("ALREADY_ACTIVE_REMOTELY") + " in " + c("rcp.c")],
         ["I3", "The authentication guard starts from “denied”: whoever has not passed the validator receives no "
          "pixel and controls nothing", "the single " + c("1") + " byte of the PAM helper; the kernel-stamped "
          "credentials on every child message"],
@@ -82,8 +90,9 @@ PROCESSES = fig(
     900, 314, "«FIG» — The processes: the server's tree, and one child per user (fork, PAM session, execve) in that user's logind session")
 
 S2 = p("REMOTIX is one binary, " + c("/usr/libexec/remotix/remotix") + ", that plays several roles. The server "
-       "forks the others; the children re-execute the same binary with " + c("--internal-child") + " (internal child) so that they "
-       "start from a clean process image, as a different user.", lead=True) + PROCESSES + \
+       "forks the others; the children re-execute the same binary with " + c("--internal-child") + " so that they "
+       "start from a clean process image, as a different user. On KDE the user's own KWin unit runs it once more, "
+       "with " + c("--kwin-nested") + ", to host KWin.", lead=True) + PROCESSES + \
     table(["Process", "Runs as", "Born", "Dies", "Job"], [
         [c("remotix") + " (the server)", "root", "started by systemd (" + c("ExecStart") + ")",
          "on " + c("SIGTERM") + "/" + c("SIGINT") + ", after saying farewell to every client",
@@ -100,6 +109,11 @@ S2 = p("REMOTIX is one binary, " + c("/usr/libexec/remotix/remotix") + ", that p
         [c("remotix-child --internal-child"), "the user", "when PAM says yes and the user has no child yet "
          "(" + c("children_ensure_from()") + ")", "when their graphical session ends, when the server stops, or as soon "
          "as its identity does not match", "opens the user's logind session, starts the desktop, holds the stage"],
+        ["KWin's host (KDE only)", "the user", "by KWin's user unit (" + c("plasma-kwin_wayland") + "), through the drop-in "
+         "the child wrote: " + c("remotix --kwin-nested W H NODE -- kwin_wayland_wrapper …"), "with the KWin unit",
+         "starts a labwc without a screen (its own runtime folder, its configuration passed with " + c("-C")
+         + ", zero key and mouse bindings) and a small “ticker” process, then becomes the KWin wrapper with "
+         + c("--wayland-display") + " (" + rif("Birth of a session") + ")"],
         [c("usermod") + ", " + c("loginctl"), "root", "at a user's first login, if they are not in the GPU's groups",
          "when the command ends", "adds the user to the groups of " + c("/dev/dri") + " (" + rif("Birth of a session")
          + ")"],
@@ -151,7 +165,7 @@ S3 = p("The server is a single thread around one " + c("poll()") + " in " + c("m
       "i5-13500T), 1.0 to 2.2 s per attempt, most of it added by " + c("pam_faildelay") + " on failed attempts. "
       "With video that would have frozen every user's screen whenever someone else logged in (DECISIONI.md §1.10).") + \
     p("<b>The bridge.</b> " + c("main.c") + " is the only file that knows both the transport and the children. A "
-      "small " + c("struct ponte") + " carries the two, and " + c("webtransport.c") + " and " + c("figlio.c")
+      "small " + c("struct bridge") + " carries the two, and " + c("webtransport.c") + " and " + c("figlio.c")
       + " call each other only through hooks registered at startup:") + \
     table(["Direction", "Hook in main.c", "What crosses"], [
         ["child → clients", c("deposit_frame()"), "an encoded frame: counted by the budget, then sent to "
@@ -185,10 +199,10 @@ S4 = p("Checking a password is the only thing the server needs root for besides 
          "copy of the password; " + c("SIGCHLD") + " ignored so the kernel reaps the grandchildren",
          "it never calls PAM, so it can never hang"],
         ["the grandchild", "arms " + c("alarm(20)") + ", calls " + c("rcp_authenticate_from()") + " once, sends "
-         "back the request number and one byte, exits", "no process ever touches libpam twice: reentrancy is not "
+         "back the ticket number and one byte, exits", "no process ever touches libpam twice: reentrancy is not "
          "at stake, and ten users logging in together do not queue"],
     ], "«TAB» — The three tiers of the PAM helper") + \
-    p("The request carries the case number (" + c("pratica") + ", 64 bits), the user name (up to 256 bytes), the "
+    p("The request carries the ticket number (" + c("ticket") + ", 64 bits), the user name (up to 256 bytes), the "
       "password (up to 1024) and the client's bare address for " + c("PAM_RHOST") + " (taken from the "
       + c("[address]:port") + " form, with an IPv4-mapped prefix removed). The grandchild runs the service "
       + c("remotix") + " with " + c("PAM_TTY") + " set to " + c("remotix") + ", a conversation that answers only "
@@ -248,9 +262,10 @@ S5 = p("For every admitted user the server forks one child that becomes that use
     ], "«TAB» — How a child becomes its user") + \
     p("The child's command line is " + c("remotix-child --internal-child <user> <uid> <gid> <width> <height> "
       "<serial> <dir|->") + ", followed by the switches the child must share with the server: " + c("--verbose")
-      + " (verbose log), " + c("--journal") + ", " + c("--quality-recovery") + " (let the quality climb back), "
+      + ", " + c("--journal") + ", " + c("--quality-recovery") + " (let the quality climb back), "
       + c("--bandwidth-cap-mbit N") + " (the bandwidth floor in Mbit/s), " + c("--no-audio-silence")
-      + " (do not suppress silent audio blocks) and " + c("--encoding-route vulkan|vaapi") + " (the encoding path). They travel on the command "
+      + " (do not suppress silent audio blocks) and " + c("--encoding-route vulkan|vaapi") + " (only when the route was forced; the default, " + c("card")
+      + ", is not passed). They travel on the command "
       "line because the environment is rebuilt from nothing. The server refuses to fork children if its own "
       "binary was replaced on disk (" + c("/proc/self/exe") + " ends with " + c("(deleted)") + ").") + \
     p("<b>Identity is a fact of the kernel, not a promise of the code.</b> Once running, " + c("child_alive()")
@@ -280,13 +295,13 @@ S6 = p("Server and children talk over the " + c("SOCK_SEQPACKET") + " pair creat
        "message boundaries, so a message can neither arrive in halves nor merge with the next one. Every message "
        "starts with the same header.", lead=True) + \
     table(["Field", "Type", "Value"], [
-        [c("magic") + " (magic)", "4 bytes", c("FIG1")],
-        [c("type") + " (type)", "u16", "the message type, below"],
+        [c("magic"), "4 bytes", c("FIG1")],
+        [c("kind"), "u16", "the message type, below"],
         [c("version"), "u16", c("CHILD_VERSION") + " = 1"],
-        [c("matricola") + " (serial)", "u64", "the child's serial number, given by the server at the fork"],
-        [c("declared_uid") + " (declared uid)", "u32", "the uid the sender claims; checked against the kernel's credentials"],
+        [c("serial"), "u64", "the child's serial number, given by the server at the fork"],
+        [c("declared_uid"), "u32", "the uid the sender claims; checked against the kernel's credentials"],
         [c("byte"), "u32", "bytes of body after the header"],
-    ], "«TAB» — The header of a server–child message (struct testa)") + \
+    ], "«TAB» — The header of a server–child message (struct head)") + \
     table(["Type", "Name", "Direction", "Body"], [
         ["1", c("MSG_CHI_SEI"), "server → child", "none: “who are you”, every 60 s"],
         ["2", c("MSG_SHUT_DOWN"), "server → child", "none: stop"],
@@ -322,9 +337,9 @@ S7 = p("The sentinel answers three questions for which logind is the authority, 
        "and a mutex in a server that has one thread on purpose.", lead=True) + \
     table(["Question", "Function", "Asked by", "Used for"], [
         ["Does this user have a local graphical session now?", c("sentinel_local()"), "the server, at "
-         + c("ATTACH"), "refusing the attach with " + c("0x05 ALREADY_ACTIVE_LOCALLY") + " (already active locally)"],
+         + c("ATTACH"), "refusing the attach with " + c("0x05 ALREADY_ACTIVE_LOCALLY")],
         ["Which of these users have one?", c("sentinel_locals()"), "the server, every 2 s",
-         "dismissing a remote client with " + c("0x04 LOCAL_SESSION_PREVAILED") + " (the local session prevailed)"],
+         "dismissing a remote client with " + c("0x04 LOCAL_SESSION_PREVAILED")],
         ["Is my session without a seat?", c("sentinel_without_seat()"), "the child, once, after the first stage",
          "proving the session is headless (DECISIONI.md §4.3-bis)"],
         ["Is power-off really forbidden?", c("sentinel_shutdown_forbidden()"), "the child, once",
@@ -367,7 +382,8 @@ S8 = p("Each process has its own loop. Only the child has threads, and they are 
          "48,000 frames that the child's loop drains"],
         [c("remotix-appunti"), c("appunti.c") + " (GNOME), " + c("appunti_kde.c") + " (KDE, XFCE, LXQt)",
          "the clipboard: a GLib main loop on GNOME, a Wayland data-control pump elsewhere"],
-        [c("remotix-kwin"), c("kwin.c"), "pumps KWin's Wayland connection"],
+        [c("remotix-kwin"), c("kwin.c"), "pumps KWin's Wayland connection; at a reattach of another size the "
+         "child itself resizes the labwc that hosts KWin and reads KWin's output back"],
         [c("powerdevil"), c("sessione.c"), "on KDE, waits up to 120 s for PowerDevil to appear and asks it to "
          "inhibit"],
         [c("pannello-xfce"), c("sessione.c"), "on XFCE, watches the panel to remove lock, suspend, reboot and "
@@ -382,7 +398,7 @@ S9 = p("Each piece of state has one owner and one lifetime. The rule in the code
        "where something can be alive or dead, so shared things travel in structures (" + c("struct ponte")
        + ") and each table is sized once, at startup.", lead=True) + \
     table(["State", "Owner", "Lives", "Notes"], [
-        ["certificates and their fingerprint", c("certificates.c"), "files in " + c("/var/lib/remotix/certificates")
+        ["certificates and their fingerprint", c("certificati.c"), "files in " + c("/var/lib/remotix/certificates")
          + ", rotated while running", rif("Transport: QUIC, HTTP/3, WebTransport")],
         ["the address ban", c("rcp.c"), "in memory and in " + c("/var/lib/remotix/ban") + ": survives restarts",
          "lifted early only through the unblock socket of the running server"],
@@ -412,8 +428,7 @@ S9 = p("Each piece of state has one owner and one lifetime. The rule in the code
       "these were five hand copies of 16 (one of them 8) while SPECIFICHE.md promised 10.") + \
     tip("the cap counts <b>stages</b>, not connections: a user who closed their browser still holds a stage until "
         "logout or abandonment. " + c("stage_count()") + " adds the children and the found-again desktops; a new "
-        "user who finds them all taken is refused with " + c("0x0E SESSION_UNSERVABLE") + " (the session cannot be "
-        "served) before any process "
+        "user who finds them all taken is refused with " + c("0x0E SESSION_UNSERVABLE") + " before any process "
         "is forked.", "Stages, not connections.")
 
 CHAPTER = ("Overall architecture", [

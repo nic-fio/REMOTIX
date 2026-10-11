@@ -4,10 +4,15 @@ S1 = p("The server starts from " + c("main()") + " in " + c("main.c") + ". Befor
        "the machine can do and writes it in the log, so that a missing piece is read at startup rather than "
        "discovered by the first user.", lead=True) + steps([
     "<b>Role.</b> With " + c("--internal-child") + " as first argument the process is a child and goes to "
-    + c("child_alive()") + "; with " + c("--encoding-test") + " (encoding test) it encodes one frame on the GPU, prints one JSON "
-    "line and exits (0 the GPU encodes, 1 it opens but no frame comes out, 2 usage error, 3 no GPU can encode).",
-    "<b>Options.</b> The command line is read; an unknown option prints the usage and exits with 2. Without a real "
-    + c("--name") + " (the name; empty, " + c("0.0.0.0") + " or " + c("::") + ") the server refuses to start: the "
+    + c("child_alive()") + "; with " + c("--encoding-test") + " it encodes one frame on the GPU, prints one JSON "
+    "line and exits (0 the GPU encodes, 1 it opens but no frame comes out, 2 usage error, 3 no GPU can encode); "
+    "with " + c("--kwin-nested") + " it is the host of a KDE user's KWin (" + c("kwin_nested_alive()") + ", "
+    + rif("Birth of a session") + ") and opens nothing of the server.",
+    "<b>Options.</b> The command line is read; an unknown option prints the usage and exits with 2. Options "
+    "retired before the first release (" + c("--ritmo-adattivo") + ", " + c("--linea-morta") + ", "
+    + c("--linea-morta-permille") + ", " + c("--sblocca") + ", the " + c("--ban") + " alias of " + c("--ban-file")
+    + ") are simply unknown: REMOTIX was never released before 0.19.0, so no old name is kept (DECISIONI.md §10.45). Without a real "
+    + c("--name") + " (not empty, " + c("0.0.0.0") + " or " + c("::") + ") the server refuses to start: the "
     "certificate must carry the name the browser will use.",
     "<b>Signals.</b> " + c("SIGINT") + " and " + c("SIGTERM") + " only set a flag that ends the loop; "
     + c("SIGPIPE") + " is ignored. With " + c("--journal") + " every log line also goes to the systemd journal ("
@@ -16,8 +21,8 @@ S1 = p("The server starts from " + c("main()") + " in " + c("main.c") + ". Befor
     + "); its answer, or its silence after 30 s, decides the codecs that the " + c("HERE_I_AM") + " will offer. In a "
     "separate process because a driver that crashes must not take the server down before it has a port. With no "
     "GPU that encodes, the log says so with the reason for each codec and every " + c("HELLO") + " (the client's "
-    "hello) will end in " + c("NOTHING_IN_COMMON") + " (nothing in common).",
-    "<b>The desktop.</b> " + c("sessione_desktop()") + " recognises the desktop from the programs in the "
+    "hello) will end in " + c("NOTHING_IN_COMMON") + ".",
+    "<b>The desktop.</b> " + c("session_desktop_explain()") + " recognises the desktop from the programs in the "
     + c("PATH") + " and the log says which, and why; on KDE " + c("kwin_check_permission()") + " checks that the "
     + c(".desktop") + " file that lets KWin offer screen capture to this binary is in place.",
     "<b>Clocks and switches.</b> The three session clocks, the five network cures of phase 9, the session cap "
@@ -47,7 +52,8 @@ S1 = p("The server starts from " + c("main()") + " in " + c("main.c") + ". Befor
     table(["Exit", "When"], [
         ["0", "orderly shutdown after " + c("SIGTERM") + " or " + c("SIGINT")],
         ["1", "the ban file cannot be read; certificates, TLS contexts, UDP port or TCP port cannot be prepared"],
-        ["2", "usage error: unknown or retired option, missing " + c("--name") + ", wrong " + c("--encoding-route")],
+        ["2", "usage error: unknown option (the retired ones included), missing " + c("--name") + ", wrong "
+         + c("--encoding-route")],
     ], "«TAB» — The server's exit codes") + \
     note("the server goes on when the PAM helper, the children table, the unblock socket, the sentinel or the "
          "codec probe fail, because the ban, the page and the certificates still work and stopping everything "
@@ -76,7 +82,7 @@ RestartSec=2""", "text", "packaging/debian/remotix.service (excerpt, without the
          + " (the last " + c("--name") + " wins)"],
         [c("EnvironmentFile"), "two of them: " + c("/usr/share/remotix/remotix.conf") + ", and the optional "
          "(leading " + c("-") + ") " + c("/etc/remotix/remotix.conf.d/*.conf") + "; they define "
-         + c("REMOTIX_PORT") + " (the port) and " + c("REMOTIX_OPTIONS") + " (extra options)"],
+         + c("REMOTIX_PORT") + " and " + c("REMOTIX_OPTIONS")],
         [c("REMOTIX_PORT"), "7447 by default, in " + c("/usr/share/remotix/remotix.conf") + "; the package's "
          "defaults are never edited, the administrator's choices go in " + c("/etc/remotix/remotix.conf.d/")],
         [c("/bin/sh -c 'exec …'"), "only to expand the variables; " + c("exec") + " keeps the server as the main "
@@ -89,7 +95,7 @@ RestartSec=2""", "text", "packaging/debian/remotix.service (excerpt, without the
         [c("Restart=on-failure") + ", " + c("RestartSec=2"), "a crash restarts the server in 2 s; the desktops are "
          "found again"],
         ["no test options", c("--survey") + " (frame dump), " + c("--command-socket") + " (unblock socket), "
-         + c("--audio-test") + " (test tone), " + c("--verbose") + " (verbose log)"
+         + c("--audio-test") + " (test tone), " + c("--verbose")
          + " are not in the packaged command line; the rpm build script (" + c("costruisci-rpm.sh")
          + ") refuses them"],
     ], "«TAB» — The unit's settings") + \
@@ -131,9 +137,9 @@ LOGIN = seq([("Page", "browser", "light"), ("Server", "root", "navy"), ("PAM hel
 
 S3 = p("A login crosses three processes. The page proves nothing until the server has shown its certificate; the "
        "password goes to a PAM process; the yes produces a child; only then does the client attach. The message names "
-       "are those of " + c("RCP.md") + ": " + c("HELLO") + " (hello) and " + c("HERE_I_AM") + " (here I am), "
-       + c("CREDENTIALS") + " (credentials), " + c("ADMITTED") + " (admitted), " + c("ATTACH") + " (attach) and "
-       + c("SESSION") + " (session).", lead=True) + \
+       "are those of " + c("RCP.md") + ": " + c("HELLO") + " and " + c("HERE_I_AM") + ", "
+       + c("CREDENTIALS") + ", " + c("ADMITTED") + ", " + c("ATTACH") + " and "
+       + c("SESSION") + ".", lead=True) + \
     LOGIN + \
     p("<b>The verdict.</b> The server writes the request to the PAM helper and goes back to its loop ("
       + rif("The PAM helper process") + "). Every answer to " + c("CREDENTIALS") + " — admitted or refused — leaves "
@@ -148,9 +154,9 @@ S3 = p("A login crosses three processes. The page proves nothing until the serve
       "a " + c("gnome-shell") + "):") + \
     table(["Question", "If not", "Reason code"], [
         ["Does a stage still fit? Children plus found-again desktops below the cap", "no child; farewell",
-         c("0x0E SESSION_UNSERVABLE") + " (the session cannot be served) — an administrative limit"],
+         c("0x0E SESSION_UNSERVABLE") + " — an administrative limit"],
         ["Does the composition budget allow one more canvas? (only with " + c("--budget-mpixel-s") + ")",
-         "no child; farewell", c("0x06 BUDGET_FULL") + " (budget full) — a physical limit"],
+         "no child; farewell", c("0x06 BUDGET_FULL") + " — a physical limit"],
         ["Was the child born? (" + c("children_ensure_from()") + ")", "the reason is in the line above in the log; "
          "farewell", c("0x0E")],
     ], "«TAB» — The checks between PAM's yes and the child") + \
@@ -209,7 +215,7 @@ S4 = p("The child is born before it knows the canvas, and it must not start the 
          "session)", "programs that play through PulseAudio would be mute"],
         ["6", "resets REMOTIX's dconf database (GNOME) and writes the session settings: power-off, reboot, "
          "suspend and lock removed, “Log out” present", rif("The four desktops")],
-        ["7", c("avvia()") + ": " + c("setsid --fork sh -c 'exec >>LOG 2>&1; exec COMMAND'") + " with an "
+        ["7", c("start()") + ": " + c("setsid --fork sh -c 'exec >>LOG 2>&1; exec COMMAND'") + " with an "
          "environment built for the desktop", "the session's own output goes to "
          + c("~/.local/state/remotix/session.log")],
     ], "«TAB» — How a graphical session is started") + \
@@ -218,17 +224,36 @@ S4 = p("The child is born before it knows the canvas, and it must not start the 
          "sessions the display manager offers), whose Shell unit gets a drop-in: " + c("gnome-shell --headless "
          "--no-x11") + " (plus " + c("--mode=%i") + " from GNOME 50), never " + c("--virtual-monitor"),
          "Mutter starts with no monitor; " + c("RecordVirtual") + " creates one at the canvas size"],
-        ["KDE Plasma", c("exec startplasma-wayland") + "; the KWin unit's drop-in runs "
-         + c("kwin_wayland_wrapper --xwayland --virtual --width W --height H --no-lockscreen"),
-         "the virtual output is born at the canvas size"],
+        ["KDE Plasma", c("exec startplasma-wayland") + "; the drop-in of KWin's user unit (" + c("plasma-kwin_wayland")
+         + ") runs " + c("remotix --kwin-nested W H NODE -- kwin_wayland_wrapper --xwayland --width W --height H "
+         "--no-lockscreen") + ": a labwc without a screen at W×H, then KWin nested in it",
+         "KWin's output is the size of its window, full screen on labwc's output; REMOTIX sets labwc's output "
+         "(at birth and at every reattach of another size) and KWin follows"],
         ["XFCE", c("exec labwc -m --session") + " with " + c("xfce4-session") + " as primary client",
          "a small script runs " + c("wlr-randr --custom-mode") + " on the output before the session starts"],
         ["LXQt", c("exec labwc -C DIR -S") + " with " + c("lxqt-session") + ", DIR being REMOTIX's labwc "
          "configuration in the runtime directory", "the same " + c("wlr-randr") + " script"],
     ], "«TAB» — The four desktops, started (details in the chapter on the four desktops)") + \
+    p("<b>KDE: KWin inside a labwc nobody sees.</b> KWin up to 6.7, with its " + c("--virtual") + " backend, "
+      "cannot change the size of its output nor create a second one, and restarting KWin at another size kills "
+      "every program that is not Qt. So since 11 October 2026 KWin is born <b>nested</b>, as the only window of "
+      "a labwc without a screen (DECISIONI.md §10.40). " + c("kwin_nested_alive()") + ", in the user's KWin unit, "
+      "gives labwc a runtime folder of its own (" + c("$XDG_RUNTIME_DIR/remotix-kwin-host/") + ", 0700, so its "
+      "socket can never be taken for KWin's), the headless backend, no input device, the card the child chose (or "
+      + c("pixman") + "), and a configuration of REMOTIX's passed with " + c("-C") + ": every window full screen and "
+      "undecorated, and <b>zero</b> key and mouse bindings — without them labwc would "
+      "load its default bindings, which start programs (DECISIONI.md §10.43). It sets labwc's output to W×H at 240 Hz (on its own 60 Hz clock "
+      "KWin lost frames), starts "
+      "a “ticker” process that touches a 1×1 transparent surface every 16 ms (KWin waits for labwc's answer to "
+      "draw again, and labwc answers only when it repaints), and then becomes the KWin wrapper with "
+      + c("KWIN_FORCE_SW_CURSOR=1") + " and " + c("--wayland-display") + ". Which labwc is a build-time choice of "
+      "the package: the distribution's from the " + c("PATH") + ", or on RHEL / Alma 10, whose EPEL has none, "
+      + c("/usr/lib/remotix/labwc") + " (" + c("make LABWC=…") + "). Without labwc the session is still born, "
+      "with KWin " + c("--virtual") + " as before, and keeps its birth size at reattach: said in the user's "
+      "journal and, at the first reattach of another size, in REMOTIX's log.") + \
     p("<b>The child does not wait for the desktop.</b> A child that waits 40 s does not answer the server, and the "
       "server would deduce a failure from its silence. Instead it tells the server “wait” (" + c("MSG_CANVAS")
-      + " with " + c("attendi") + "), which postpones the answer to the client, and retries. While the desktop is "
+      + " with " + c("should_wait") + "), which postpones the answer to the client, and retries. While the desktop is "
       "being born — up to 12 s after asking (" + c("BIRTH_REIN_MS") + ") — it retries every 200 ms ("
       + c("STAGE_BIRTH_RETRY_MS") + "); after that the wait doubles from 1 s to 30 s ("
       + c("STAGE_RETRY_MIN_MS") + ", " + c("STAGE_RETRY_MAX_MS") + "). Both numbers were paid for: on 14 August "
@@ -259,9 +284,10 @@ S5 = p("The stage is what the child mounts on the user's desktop: a virtual moni
     table(["", "GNOME (Mutter)", "KDE Plasma (KWin)", "XFCE, LXQt (labwc)"], [
         ["Virtual monitor", c("RemoteDesktop.CreateSession") + ", " + c("ScreenCast.CreateSession") + ", "
          + c("Session.Start") + ", " + c("RecordVirtual") + ", " + c("Stream.Start") + " — in this order",
-         "the " + c("Virtual-0") + " output KWin was started with", "labwc's headless output"],
+         "KWin's one output (" + c("WL-0") + " nested; " + c("Virtual-0") + " in the fallback without labwc)",
+         "labwc's headless output"],
         ["Capture", "PipeWire node announced during " + c("Stream.Start"), c("zkde_screencast_unstable_v1")
-         + " on " + c("Virtual-0") + ", then PipeWire", "wlr-screencopy, on the child's own loop"],
+         + " on that output, then PipeWire", "wlr-screencopy, on the child's own loop"],
         ["Input", "libei through " + c("ConnectToEIS"), "libei through " + c("org.kde.KWin.EIS.RemoteDesktop"),
          "wlr virtual pointer and virtual keyboard"],
         ["Clipboard", "Mutter's RemoteDesktop session", "Wayland data control", "Wayland data control"],
@@ -290,9 +316,8 @@ S5 = p("The stage is what the child mounts on the user's desktop: a virtual moni
 S6 = p("Detaching is the normal end of a connection, and it ends nothing else: the slot frees, the stage stays.",
        lead=True) + \
     table(["How the client goes", "What the server sees", "Reason"], [
-        ["the tab or the browser closes, the device is switched off", c("FAREWELL") + " (farewell) from the page if it "
-         "is in time, otherwise the QUIC connection dies", c("0x01 CLOSED_BY_USER") + " (closed by the user), or "
-         "none"],
+        ["the tab or the browser closes, the device is switched off", c("FAREWELL") + " from the page if it "
+         "is in time, otherwise the QUIC connection dies", c("0x01 CLOSED_BY_USER") + ", or none"],
         ["the network drops", "no packet for 30 s: the client is detached and its slot is free", "none"],
         ["no input for 30 minutes", "the server detaches the client; logging in again is needed",
          c("0x02 INACTIVITY")],
@@ -307,18 +332,26 @@ S6 = p("Detaching is the normal end of a connection, and it ends nothing else: t
     p("<b>Reattaching.</b> When the same user logs in again, " + c("children_pid_of()") + " finds their child: no fork, "
       + c("SESSION") + " says <i>resumed</i>, and the server sends " + c("MSG_RESEND_STAGE") + " so that the "
       "child resends the last keyframe it kept for each codec — the user sees their desktop at once — and owes a new "
-      "keyframe. The page then asks for its own canvas with " + c("FIT_CANVAS") + " (fit the canvas; " + rif("The browser page")
-      + "). A reattach does not renew the abandonment clock: only input does.") + \
+      "keyframe. The page then asks for its own canvas with " + c("FIT_CANVAS") + " (" + rif("The browser page")
+      + "): on all four desktops the desktop takes the size of the new window, and a reattach at the same size "
+      "changes nothing. On KDE the child unmounts the stage, sets the size of the labwc that hosts KWin, reads "
+      "KWin's output back at the new size and mounts the stage again: the monitor changes under the session and the "
+      "programs stay (measured 11 October 2026: 18 to 31 ms per resize). A reattach does not renew the abandonment "
+      "clock: only input does.") + \
+    note("measured on 11 October 2026 on the Intel UHD 770 of the test machine (openSUSE Leap 16, KWin 6.4.2, "
+         "H.264 VA-API, a 60 fps animation), nested against the old " + c("--virtual") + ": at 1080p and 2K nothing is "
+         "lost in frame rate or delay; at 3K the rate goes from 58 to 54–55 fps; at 4K from 58 to 44–49 fps, with "
+         "14 ms more. labwc takes 2.4–3.2 % of one core while drawing. On an AMD Radeon RX 6800 the same 4K "
+         "animation stays at 59 fps (DECISIONI.md §10.40).", "The price of the nesting.") + \
     table(["Situation", "Result"], [
         ["the user's previous client is alive and attached", "the new one is refused, " + c("0x0F ALREADY_ACTIVE_REMOTELY")
-         + " (already active remotely; I2)"],
+         + " (I2)"],
         ["the previous client has been silent for more than 15 s and the new one is the same user",
-         "the slot is taken from the ghost and given to the newcomer (" + c("--eviction-ms") + " — eviction —, default 15000, "
+         "the slot is taken from the ghost and given to the newcomer (" + c("--eviction-ms") + ", default 15000, "
          "half the silence clock: the browser's keep-alive is silent for up to 15 s, measured)"],
-        ["the user has a local graphical session", "the attach is refused, " + c("0x05 ALREADY_ACTIVE_LOCALLY")
-         + " (already active locally)"],
+        ["the user has a local graphical session", "the attach is refused, " + c("0x05 ALREADY_ACTIVE_LOCALLY")],
         ["the user opens a local session while attached remotely", "the remote client is dismissed at the next sweep (every 2 s), "
-         + c("0x04 LOCAL_SESSION_PREVAILED") + " (the local session prevailed; " + c("wt_watch_locals()") + ")"],
+         + c("0x04 LOCAL_SESSION_PREVAILED") + " (" + c("wt_watch_locals()") + ")"],
     ], "«TAB» — One graphical session per user") + \
     note("SPECIFICHE.md §5.1 says that when a local session starts “the remote one is closed”. The code dismisses the "
          "remote <i>client</i>; the remote desktop is not ended and, if nobody touches it, ends with the abandonment "
@@ -351,13 +384,12 @@ S7 = p("Stopping the server does not stop the desktops: the server, the PAM help
       "and desktops are closed, not killed.") + \
     tip("a package upgrade restarts the server with " + c("try-restart") + " only if it was running; the users' "
         "desktops survive and the new server finds them again. Before stopping the service by hand, look at who is "
-        "connected anyway: their clients are dismissed with " + c("0x0C SERVER_CLOSING") + " (server shutting "
-        "down).", "Upgrades.")
+        "connected anyway: their clients are dismissed with " + c("0x0C SERVER_CLOSING") + ".", "Upgrades.")
 
 S8 = p("Three clocks run on different scales — seconds, minutes, an hour — and each ends something different.",
        lead=True) + \
     table(["Clock", "Default", "Option", "What happens", "Reason"], [
-        ["client silence", "30 s", "fixed (" + c("SILENZIO") + ", silence)", "the client counts as detached: its slot is "
+        ["client silence", "30 s", "fixed (" + c("SILENCE") + " in " + c("rcp.c") + ")", "the client counts as detached: its slot is "
          "free and the next device enters", "none"],
         ["user inactivity", "30 min", c("--inactivity-s") + " (0 = off)", "the client is detached; the desktop "
          "stays; user and password are needed again", c("0x02 INACTIVITY")],
@@ -381,7 +413,7 @@ S8 = p("Three clocks run on different scales — seconds, minutes, an hour — a
       + c("gnome-shell") + ", 116 MB the child — and about 0.017 % of a core, without growing over time. Not a "
       "leak, a fixed cost; the user chose to pay it for an hour rather than six.") + \
     note("all three values are written in one log line at startup; a clock set to 0 is marked "
-         + c("(SPENTA)") + " or " + c("(SPENTO)") + " (off).", "Logged at startup.")
+         + c("(OFF)") + ".", "Logged at startup.")
 
 USCITA = seq([("Page", "browser", "light"), ("Server", "root", "navy"), ("Child", "the user", "blue"),
               ("Desktop", "compositor", "grey")], [
@@ -402,13 +434,12 @@ S9 = p("Only the user ends their session; the server ends it only when it is aba
         ["“Log out” from the desktop's menu", "logind ends the session and with it the child, its leader; the "
          "server reaps the child and " + c("dismiss_child()") + " dismisses the clients. If the child sees the "
          "session die first, it sends " + c("MSG_SESSION_FINISHED") + " and the server does the same",
-         c("0x10 SESSION_TERMINATED") + " (session ended)"],
-        [c("Ctrl+Alt+End") + " in the page, after a confirmation", c("TERMINATE_SESSION") + " (end the session) → "
+         c("0x10 SESSION_TERMINATED")],
+        [c("Ctrl+Alt+End") + " in the page, after a confirmation", c("TERMINATE_SESSION") + " → "
          + c("terminate_in_child()") + ": the user's other clients are dismissed, the child receives "
          + c("CHILDREN_INPUT_TERMINATE") + " and calls " + c("session_terminate()"), c("0x10")],
         ["60 minutes without input", c("abandon_expired()") + ": clients dismissed, then the same request to the "
-         "child; for a desktop found again, a child is forked to close it", c("0x03 SESSION_ABANDONED")
-         + " (session abandoned)"],
+         "child; for a desktop found again, a child is forked to close it", c("0x03 SESSION_ABANDONED")],
     ], "«TAB» — The ways a graphical session ends") + USCITA + \
     p(c("session_terminate()") + " asks politely, then insists: on GNOME " + c("Logout") + " with mode 1, then mode 2 "
       "(forced); on KDE an orderly logout, then forced; on XFCE and LXQt the session manager's exit, then killing "
@@ -467,6 +498,9 @@ S11 = p("What REMOTIX puts on the machine, and who puts it there. Paths are thos
          + " on openSUSE)"],
         [c("/usr/share/applications/org.kde.remotix.desktop"), "package", "lets KWin offer screen capture to the "
          "binary"],
+        [c("/usr/lib/remotix/labwc"), "package (RHEL / Alma 10 only)", "labwc 0.8.4, built unmodified against "
+         "EPEL's wlroots 0.18 to host KWin; GPL-2.0, its text in " + c("/usr/share/doc/remotix/THIRD-PARTY-LICENSES")
+         + ", its source next to every release (DECISIONI.md §10.43)"],
         [c("/etc/ufw/applications.d/remotix"), "package (Debian)", "a firewall profile for 7447 TCP and UDP, defined "
          "but not opened"],
         ["the unit " + c("remotix.service"), "package", "installed, neither enabled nor started by the package"],
@@ -486,8 +520,11 @@ S11 = p("What REMOTIX puts on the machine, and who puts it there. Paths are thos
          + c("manager-before") + "), the dconf profile, KDE's " + c("kdeglobals") + "/" + c("kwinrc") + " overlay, "
          "labwc configurations for XFCE and LXQt, LXQt's panel overlay, a cursor theme", "until the user's last "
          "session ends (tmpfs)"],
-        [c("$XDG_RUNTIME_DIR/systemd/user.control/"), "drop-ins: the GNOME Shell unit's or KWin's (to start "
-         "headless or virtual), " + c("xfconfd") + "'s on XFCE", "removed by the cleanup"],
+        [c("$XDG_RUNTIME_DIR/remotix-kwin-host/"), "KDE only: the runtime folder of the labwc that hosts KWin, "
+         "0700 — its socket " + c("wayland-0") + " and its configuration " + c("labwc/rc.xml"),
+         "until the user's last session ends (tmpfs)"],
+        [c("$XDG_RUNTIME_DIR/systemd/user.control/"), "drop-ins: the GNOME Shell unit's (to start headless) or "
+         "KWin's (to start nested), " + c("xfconfd") + "'s on XFCE", "removed by the cleanup"],
         ["the user manager's environment", "variables REMOTIX sets for the desktop (" + c("XDG_CURRENT_DESKTOP")
          + ", " + c("DCONF_PROFILE") + ", " + c("QT_QPA_PLATFORM") + "…)", "restored by the cleanup"],
         ["dconf " + c("service-db:shm/remotix"), "GNOME settings REMOTIX imposes for the session", "reset at every "
@@ -517,6 +554,9 @@ S12 = p("A defect in this chain rarely names its cause: the user sees “black�
          c("session") + " area: " + c("the PREVIOUS graphical session has not ended yet")],
         ["black bands, a “broken” desktop, clicks in the wrong place", "the canvas: the stage was born at a size "
          "nobody asked for", c("MSG_CANVAS") + " lines, chosen and obtained"],
+        ["on KDE the desktop keeps its old size after a reattach", "KWin's host: labwc missing, so KWin runs "
+         + c("--virtual"), "the user's journal (" + c("remotix --kwin-nested") + " lines); the child's "
+         + c("§7.1 KDE") + " line"],
         ["everything is slow, even typing in a terminal", "the GPU's groups: the compositor renders with llvmpipe",
          "first-login lines of the " + c("child") + " area"],
         ["the desktop shows but does not react", "the input channel (libei, KWin EIS, wlr virtual devices)",
