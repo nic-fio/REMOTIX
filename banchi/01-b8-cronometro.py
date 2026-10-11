@@ -2041,8 +2041,16 @@ def _guasti_possibili():
                 if x.get("etichetta") != "bannato-dopo-riavvio"], reg
 
     def registro_smemorato(d, reg):
-        return d, [r.replace("bans loaded: 1", "bans loaded: 0")
-                    .replace("ban caricati: 1", "ban caricati: 0") for r in reg]
+        # ⛔ BOTH servers' forms, as the reader above reads them: the graft
+        #    «bans loaded: N» and the product «ban: <file>, N addresses loaded»
+        #    (and their spellings before 10 Oct 2026).  ⚠ Until 11 Oct 2026 only
+        #    the graft's was broken here: against the product this fault touched
+        #    nothing, and the certification failed on a healthy judge — in every
+        #    run against `src/` since 11 Aug 2026 (review A-12, track en-50).
+        return d, [re.sub(r"\b1 (addresses loaded|indirizzi caricati)",
+                          r"0 \1", r)
+                   .replace("bans loaded: 1", "bans loaded: 0")
+                   .replace("ban caricati: 1", "ban caricati: 0") for r in reg]
 
     def imputato_nostro(d, reg):
         # ⛔ The fault that certifies the cure of A18: the delay is put on the
@@ -2280,7 +2288,21 @@ def certifica(a):
           f"denominator: a list of OKs without it is not a measurement")
     falliti = 0
     for nome, rompi, frase in prove:
-        dati, reg = rompi(_copy.deepcopy(sani), list(reg_sano))
+        # ⛔ A fault is built ON a fact of the healthy run: if that fact is not
+        #    there — a run without `--ban dopo`, without the unblock on a real
+        #    ban — the fault cannot be built, and until 11 Oct 2026 this line
+        #    died with a TypeError (review A-12).  ⚠ It is counted as a fault
+        #    NOT seen, never skipped: a certification on a partial run certifies
+        #    nothing, and the line says which fact was missing.
+        try:
+            dati, reg = rompi(_copy.deepcopy(sani), list(reg_sano))
+        except (TypeError, IndexError, KeyError) as e:
+            print(f"    {ROSSO}NO{GRIGIO}  {nome}  ⛔ the fault could not be "
+                  f"built: the healthy run lacks the fact it breaks "
+                  f"({type(e).__name__}) — certify on a COMPLETE run "
+                  f"(`01-b8-lancia.sh`)")
+            falliti += 1
+            continue
         esito, testo = gira(dati, reg)
         vede = frase in testo
         # ⛔ and the second half of the criterion: the healthy verdict must NOT

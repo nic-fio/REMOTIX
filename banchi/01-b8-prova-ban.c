@@ -519,11 +519,16 @@ int main(void)
 		 *   place: the expected number is different, and it is declared instead
 		 *   of being widened when it does not add up. */
 		/* ⚠ The two numbers are counted by hand, section by section: 6 + 7 + 8 +
-		 *   (5 as a normal user, 3 as root) + 7.  ⛔ Whoever adds an `esige()`
+		 *   (5 as a normal user; as root 4 — the 3 that run plus the skipped
+		 *   one counted failed, which is still a check in the denominator) + 7.
+		 *   ⚠ Until 11 Oct 2026 the root number here was 31, from «3 as root»:
+		 *     it forgot the skipped one, and as root the bench said «did not get
+		 *     to the end» (exit 3) instead of its real red (exit 1) — found by
+		 *     review A-12.  ⛔ Whoever adds an `esige()`
 		 *   updates this line in the same commit: it is the price of the
 		 *   denominator, and it is lower than a green on an empty set. */
 		const int SEZIONI_ATTESE = 5;
-		const int CONTROLLI_ATTESI = da_root_qui ? 31 : 33;
+		const int CONTROLLI_ATTESI = da_root_qui ? 32 : 33;
 		printf("\n  == the denominator of THIS verdict\n");
 		printf("    sections that got to the end : %d (expected %d)\n",
 		       sezioni_prova, SEZIONI_ATTESE);
