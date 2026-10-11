@@ -45,7 +45,7 @@ coordinate became false **without anybody having touched it**.
   3  no **markdown link** `[text](path)` that leads
      nowhere.  ⚠ A broken link is worse than a citation: it promises to open.
 
-  4  ⛔ **one single** «DA QUI SI RIPRENDE» heading in the whole
+  4  ⛔ **one single** «RESUME FROM HERE» heading in the whole
      documentation.  It had six, with six different dates.
 
 ---------------------------------------------------------------------------
@@ -120,7 +120,10 @@ RX_RIGA  = re.compile(r'`([A-Za-z0-9_./-]+\.(?:c|h|py|sh|html)):([0-9]+)`')
 CONGELATO = ("fondamenta/",)
 RX_PERC  = re.compile(r'`([A-Za-z0-9_][A-Za-z0-9_./-]*\.(?:c|h|py|sh|md|html|json|jsonl|pam|rs))`')
 RX_LINK  = re.compile(r'\[[^\]]+\]\(([A-Za-z0-9_][A-Za-z0-9_./-]*\.(?:md|png|jpg|sh|py|c|h))\)')
-RX_RIPR  = re.compile(r'DA QUI SI RIPRENDE')
+# ⚠ 11 Oct 2026: the documents went to English (§10.38) and the heading with them,
+#   «DA QUI SI RIPRENDE» → «RESUME FROM HERE»: looking only for the Italian one, rule 4
+#   could no longer turn red.  Both spellings count, so old texts are judged too.
+RX_RIPR  = re.compile(r'RESUME FROM HERE|DA QUI SI RIPRENDE')
 
 
 def documenti(radice):
@@ -222,7 +225,7 @@ def giro(radice, silenzioso=False, eccezioni=None):
                "the document points to a file that is not in the repository"),
         stampa("no broken markdown link", rotti, 8,
                "a broken link is worse than a citation: it promises to open"),
-        stampa("one single «DA QUI SI RIPRENDE» heading",
+        stampa("one single «RESUME FROM HERE» heading",
                riprese if len(riprese) > 1 else [], 8,
                "more than one, and whoever reopens does not know which one holds"),
     ]
@@ -247,7 +250,7 @@ def certifica():
         "a line coordinate":           ("g1.md", "see `src/main.c:111` for the rest.\n"),
         "a path that does not exist":  ("g2.md", "it is in `src/inventato_dal_nulla.c`.\n"),
         "a broken markdown link":      ("g3.md", "the report is [here](fasi/rapporti/mai-esistito.md).\n"),
-        "two «DA QUI SI RIPRENDE»":    ("g4.md", "# DA QUI SI RIPRENDE — ieri\n\n# DA QUI SI RIPRENDE — oggi\n"),
+        "two «RESUME FROM HERE»":      ("g4.md", "# RESUME FROM HERE — yesterday\n\n# DA QUI SI RIPRENDE — today\n"),
     }
     esiti = []
     for nome, (file, testo) in guasti.items():

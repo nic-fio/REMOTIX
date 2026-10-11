@@ -366,22 +366,14 @@ fi
 
 # ---------------------------------------------------------------------------
 log "3. ⛔ Is there a grafted fault in one of the two trees?"
-# ⚠ The mark is asked of the catalogue, not copied: if `01-b12-guasti.py`
-#   changes it, a needle copied here would stop finding anything and this
-#   check would turn GREEN.  It is the cure of gap L2 of the terrain.
-MARCA12=$(python3 - "$QUI/01-b12-guasti.py" <<'PY'
-import importlib.util, sys
-s = importlib.util.spec_from_file_location("b12", sys.argv[1])
-m = importlib.util.module_from_spec(s)
-s.loader.exec_module(m)
-print(m.MARCA)
-PY
-)
-if [ -z "$MARCA12" ]; then
-	dub "⛔ I could not read the mark from 01-b12-guasti.py: I do NOT say that"
-	dub "   there are no faults — I say I did not look"
-	exit 2
-fi
+# ⚠ The mark was asked of the catalogue, not copied, so that a change of it in
+#   `01-b12-guasti.py` could not turn this check GREEN (gap L2 of the terrain).
+#   ⛔ 11 Oct 2026: the catalogue left the tree on 10 Oct (bde27c5, B12 retired
+#   with the closed phases) and this step stopped at «mark not read» every time.
+#   A retired catalogue can no longer change its mark: it is the one of its last
+#   version (`git show bde27c5^:banchi/01-b12-guasti.py`), and grafts made with
+#   it may still sit in old copies, so the needle stays.
+MARCA12="REMOTIX B12 GUASTO"
 MARCA11=$(grep -m1 '^MARCA = ' "$QUI/01-b11-guasto-innesta.py" | cut -d'"' -f2)
 [ -n "$MARCA11" ] || { dub "⛔ B11 mark not read: I do not look halfway"; exit 2; }
 inf "needles read from the catalogues: «$MARCA12» · «$MARCA11»"

@@ -221,6 +221,7 @@ GRUPPI = [
         (M + "testi.go", t("texts") + "The engine's and command line's texts, in English"),
         (M + "certifica_test.go", "Certification on a deliberately broken machine never says green"),
         (M + "disinstalla_test.go", "Uninstall on the fake machine"),
+        (M + "epoca_test.go", t("epoch") + "RPM epochs: an installed package with an epoch is not «missing»"),
         (M + "occupato_test.go", "Who holds the package manager's lock, and the wait"),
         (M + "fiducia_test.go", "Phase 0 TRUST: the catalogue reads, this engine understands it"),
         (M + "finti_test.go", t("fakes") + "A fake machine under a folder: passwd, group, systemd and firewalld as JSON"),

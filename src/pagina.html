@@ -4767,7 +4767,7 @@ class Schermo {
       nota("MISURA §7.18 MSE: delivered " + this.conti.consegnati + " · painted "
          + this.conti.dipinti + " · paused=" + v.paused + " seeking=" + v.seeking
          + " ready=" + v.readyState + " time=" + (+v.currentTime).toFixed(2)
-         + " buffer=" + b + " jumps=" + (this.conti.salti_mse || 0)
+         + " buffer=" + b + " hurries=" + (this.conti.fretta_mse || 0)
          + " error=" + (v.error ? v.error.code : "no"));
     }, 5000);
   }
