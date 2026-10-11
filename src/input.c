@@ -1620,7 +1620,7 @@ int input_bring_back_inside(Input *in)
 	static const uint16_t combination[] = { RETURN_SUPER, RETURN_CTRL, RETURN_ALT,
 		                                 RETURN_SHIFT, RETURN_F12 };
 	const size_t amount = G_N_ELEMENTS(combination);
-	size_t giu = 0;
+	size_t down = 0;
 	int outcome = 1;
 
 	/* GNOME and KDE: the compositor brings the windows back inside by itself. */
@@ -1630,15 +1630,15 @@ int input_bring_back_inside(Input *in)
 	/* ⛔ We start from an EMPTY keyboard: a modifier left down would make
 	 *    a combination labwc does not recognise (or, worse, another one). */
 	input_release_all(in);
-	for (giu = 0; giu < amount; giu++)
-		if (send_key(in, combination[giu], 1) < 0) {
+	for (down = 0; down < amount; down++)
+		if (send_key(in, combination[down], 1) < 0) {
 			outcome = -1;
 			break;
 		}
 	/* ⛔ And EVERYTHING that left is released in reverse, even if the
 	 *    combination stayed half way. */
-	while (giu > 0)
-		send_key(in, combination[--giu], 0);
+	while (down > 0)
+		send_key(in, combination[--down], 0);
 
 	/* The pointer goes back where the user had it, on the canvas of NOW. */
 	if (in->wlr_pointer_known && in->wlr_pl && in->wlr_pa && in->canvas_w && in->canvas_h) {
