@@ -100,9 +100,11 @@ LOG = os.path.join(HERE, "11-gancio-registro.jsonl")
 #    order in both, one word per position.  Only the words this file reads from a run.
 _OLD_WORDS = (
     "istante", "secco", "maglie", "guasto_innestato", "nome",
+    "ha_visto_il_guasto",
 )  # end of the old words
 _WORDS_NOW = (
     "instant", "dry", "meshes", "fault_grafted", "name",
+    "saw_the_fault",
 )
 OLD_SPELLING = {a: b for a, b in zip(_OLD_WORDS, _WORDS_NOW) if a != b}
 
