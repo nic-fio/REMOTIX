@@ -152,7 +152,15 @@ Proof of phase A, 11 Oct 2026, on `4c79004` (copy `remotix-wt-en-45-prova`, `--r
 fault of R01–R12 re-checked on the renamed copy (`full-english-uscite/revisione-rinomina/fase-A-verifica.md`):
 128 gone, 0 still there, 3 procedure items phase A does not trigger, 1 not a rename fault.  The two the
 reviewers still found (R10 F8, F9: benches that compile git-history sources with today's files) are now
-frozen by `fase_a.HISTORY_SOURCES`.  `gofmt -w` on the changed Go files remains part of applying (§7 step 4):
+frozen by `fase_a.HISTORY_SOURCES`.
+
+Proof of phase A round 3, 11 Oct 2026, on `4a409ca` (branch `en-49`, copy `en49-prova`, `--rilascio`), after
+the fixes of reviews A-01…A-12: 346 files, 24,199 replacements, **4,601 names renamed (was 5,193), 5,290
+frozen (was 5,195), 499 kept** (458 because the new name occurs in text the tool does not rename, 32 in a
+reserved C family); every check green — strings 0 of 346, `bash -n` 154, Python 183, `node --check` 12,
+installer 3 packages, C 42 objects, `.rodata` byte-identical, 82 benches `--certifica` same exit code and
+same output, `rilascio.sh` debian13.  Every confirmed fault of A-01…A-12 re-checked on the renamed copy
+(`revisione-rinomina/fase-A3-verifica.md`): gone.  `gofmt -w` on the changed Go files remains part of applying (§7 step 4):
 renamed fields change gofmt's alignment, and `rilascio.sh` stops on an unformatted file.
 
 ### 0.4 Phase B — later, with Nic
