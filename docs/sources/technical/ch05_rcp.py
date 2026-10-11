@@ -663,8 +663,9 @@ S17 = p(c("TERMINATE_SESSION") + " (" + c("0x0011") + ", empty body) is the only
         "the connection and leaves the session alive (invariant I4). The two exits are DECISIONS.md §4.1-ter; a client "
         "with a single way out would force the user to choose between never leaving and losing their work.", lead=True) + \
     ul([
-        "The page sends it only after an explicit gesture: the " + c("Ctrl+Alt+End") + " shortcut and its confirmation. "
-        "«Log out» from the desktop's own menu does not pass through here; the child reports it and the parent dismisses "
+        "The page no longer sends it: its only gesture, the " + c("Ctrl+Alt+End") + " shortcut, was removed on 17 Aug "
+        "2026 (the local desktop took the combination first), and the message stays in the protocol for a client that "
+        "has a gesture for it. «Log out» from the desktop's own menu does not pass through here; the child reports it and the parent dismisses "
         "every client of that user with " + c("SESSION_TERMINATED") + ".",
         "Valid only in states " + c("active") + " or " + c("detached-by-silence") + "; elsewhere " + c("PROTOCOL_ERROR") + ".",
         "The answer is " + c("FAREWELL(0x10 SESSION_TERMINATED)") + ", sent <i>before</i> the session finishes dying — when "
