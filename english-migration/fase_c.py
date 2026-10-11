@@ -939,7 +939,7 @@ def cmd_check(a):
         for no, line in enumerate(text.split("\n"), 1):
             for m in rx.finditer(line):
                 pre = line[:m.start()]
-                if GITSHOW.search(pre) or re.search(r"(/(etc|usr|var|run|lib)/|\{_?\w+\}|"
+                if GITSHOW.search(pre) or re.search(r"((?:^|(?<=[\s\[\"'=()]))/?(etc|usr|var|run|lib)/|\{_?\w+\}|"
                                                    r"\$\{?(pkgdir|DESTDIR|buildroot)\}?)[^\s\"']*$", pre) \
                         or re.search(r"(fondamenta|misure|memoria|english-migration)/\S*$", pre):
                     continue
@@ -987,9 +987,9 @@ class Mapper:
                 self.full[o + "/"] = n + "/"
         self.words = words
         alts = sorted(self.full, key=len, reverse=True)
-        self.rx_full = re.compile(r"(?<![\w.-])(" + "|".join(map(re.escape, alts)) + r")(?![\w-])") if alts else None
+        self.rx_full = re.compile(r"(?<![\w.-])(" + "|".join(map(re.escape, alts)) + r")(?:(?<=/)|(?![\w-]))") if alts else None
         alts = sorted(words, key=len, reverse=True)
-        self.rx_word = re.compile(r"(?<![\w-])(" + "|".join(map(re.escape, alts)) + r")(?![\w-])") if alts else None
+        self.rx_word = re.compile(r"(?<![\w-])(" + "|".join(map(re.escape, alts)) + r")(?:(?<=/)|(?![\w-]))") if alts else None
 
     def text(self, t):
         if self.rx_full:
