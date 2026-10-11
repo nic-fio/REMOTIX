@@ -144,7 +144,7 @@ func examples() []example {
 		}},
 		{"stopped", func(m *model) {
 			m.fine = &ui.BlockedView{Title: ui.T("b.titolo.annullata"), Below: ui.T("b.sotto.annullata"),
-				Why: "The package manager could not install labwc: no repository of this machine provides it.",
+				Why:  "The package manager could not install labwc: no repository of this machine provides it.",
 				Code: "RX-PACCHETTI-005", Touched: true}
 			m.screen, m.step, m.has_failed = sFine, pInstall, true
 		}},
