@@ -4,8 +4,8 @@ import "fmt"
 
 // The screens' texts, in English (DECISIONI §10.35), from the approved mockup
 // (grafica/tui-mockup/index.html, 10 Oct 2026): plain words, short sentences, the technical details
-// apart. Missing keys come out as ⟨key⟩ (TestTestiInterfaccia finds them).
-var testi = map[string]string{
+// apart. Missing keys come out as ⟨key⟩ (TestInterfaceTexts finds them).
+var texts = map[string]string{
 	"intestazione":      "Installation",
 	"passo.1":           "Check",
 	"passo.2":           "Plan",
@@ -186,7 +186,7 @@ var testi = map[string]string{
 	"pr.k.h264":             "Encoding on the graphics card",
 	"pr.k.pam":              "Sign-in with name and password",
 	"pr.k.porta":            "Firewall port",
-	"pr.k.passi":            "Plan steps re-checked (%d of %d)",
+	"pr.k.steps":            "Plan steps re-checked (%d of %d)",
 	"pr.k.audio":            "Audio",
 
 	// outcomes other than ready
@@ -212,10 +212,10 @@ var testi = map[string]string{
 }
 
 // T: a text of the interface.
-func T(chiave string, args ...any) string {
-	t, ok := testi[chiave]
+func T(key string, args ...any) string {
+	t, ok := texts[key]
 	if !ok {
-		return "⟨" + chiave + "⟩"
+		return "⟨" + key + "⟩"
 	}
 	if len(args) == 0 {
 		return t

@@ -12,50 +12,50 @@
  * ⚠ The typewriter: the wire carries the printed LETTER, `libei` wants
  *   the HAMMER to strike.  This file finds the hammer.
  */
-#ifndef REMOTIX_TASTIERA_H
-#define REMOTIX_TASTIERA_H
+#ifndef REMOTIX_KEYBOARD_H
+#define REMOTIX_KEYBOARD_H
 
 #include <stdint.h>
 #include <stddef.h>
 
-typedef struct tastiera Tastiera;
+typedef struct keyboard Keyboard;
 
 /*
- * Opens the session's layout with `xkbcommon`.  `disposizione` is the
+ * Opens the session's layout with `xkbcommon`.  `kb_layout` is the
  * string negotiated at attach (`RCP.md` §4.5, `DECISIONI.md` §5-bis.7): for
  * example "it" or "us".  NULL = the one in force in the session.
  *
- * ⛔ Returns NULL and fills `*errore` if the layout does not load.  ⛔ It does NOT
+ * ⛔ Returns NULL and fills `*error` if the layout does not load.  ⛔ It does NOT
  *    fall back to "us" silently: it would be the silent fallback
  *    `CODER.md` §4.2 forbids, and the symptom would be "it types the wrong letters".
  */
-Tastiera *tastiera_apri(const char *disposizione, char **errore);
+Keyboard *keyboard_open(const char *kb_layout, char **error);
 
 /*
  * ⭐⭐ THE SAME OPENING, BUT SAYING WHOSE IT IS — 27 August 2026, the red of
  *     C9 (`banchi/11-scatole/11-c9-il-registro-dice-di-chi.py`).
  *
  * ⛔ THE DEFECT, `[M]` with TWO tenants alive together: `webtransport.c` calls
- *    `tastiera_apri()` in the PARENT, to answer "does this layout
- *    exist?" during ATTACCA.  The lines coming out of it — «modificatore N:
- *    si preferisce…» and «disposizione in vigore: it [Italian]» — were
+ *    `keyboard_open()` in the PARENT, to answer "does this layout
+ *    exist?" during ATTACH.  The lines coming out of it — «modifier N:
+ *    yes preferisce…» and «kb_layout in effect: it [Italian]» — were
  *    **identical word for word, one per tenant**, and there was no way to
  *    tell which was whose.  ⇒ With a single tenant they were attributed by
  *    exclusion; with the second the diagnosis became guessing.
  *
  * ⭐ `chi` is the name PAM admitted on THIS session — in the parent it is
- *    carried by `rcp_utente()`, and it is the same that ends up in the `rcp` line two
+ *    carried by `rcp_user()`, and it is the same that ends up in the `rcp` line two
  *    milliseconds later.  ⚠ NULL or "" ⇒ the PROCESS identity applies
  *    (`registro.h`), which is the right answer in the child; and if there is not
  *    even that the line comes out bare, ⛔ which is the truth.
  *
  * ⚠ And the old signature STAYS, instead of growing a parameter: it is used by
  *   `banchi/04-b25-tastiera.c`, and in this module by the two internal
- *   comparison openings (`keyboard_open_from_keymap`, `tastiera_e_questa`) that
+ *   comparison openings (`keyboard_open_from_keymap`, `keyboard_is_this`) that
  *   run only in the child.  ⇒ Whoever has no tenant to name should not have to
  *   write `NULL` to say so.
  */
-Tastiera *tastiera_apri_per(const char *disposizione, const char *chi, char **errore);
+Keyboard *keyboard_open_for(const char *kb_layout, const char *chi, char **error);
 
 /*
  * ⛔⛔ AND THIS IS THE GOOD WAY — added on 14 August 2026, and it is not an
@@ -85,9 +85,9 @@ Tastiera *tastiera_apri_per(const char *disposizione, const char *chi, char **er
  * ⭐ And v1 already did it this way (`fondamenta/remotix-c/src/tastiera.c:69`): it is the only
  *    piece of v1 the first V2 contract had not taken over.
  *
- * `testo`/`lunghezza` are the keymap `libei` carries with the keyboard device
+ * `text`/`length` are the keymap `libei` carries with the keyboard device
  * (`ei_device_keyboard_get_keymap`, `XKB_KEYMAP_FORMAT_TEXT_V1`).
- * `negoziata` is the name declared by the client in `ATTACCA` (`RCP.md` §4.5), or
+ * `negotiated` is the name declared by the client in `ATTACH` (`RCP.md` §4.5), or
  * NULL.  ⛔ If it does not match the session's, **the session's** is used
  * — it is the truth, and with the other wrong letters would come out — and
  * the fallback is DECLARED in the log (`CODER.md` §4.2).
@@ -96,19 +96,19 @@ Tastiera *tastiera_apri_per(const char *disposizione, const char *chi, char **er
  *    measures that a keymap change destroys and recreates the keyboard device,
  *    and the old one stops working **without an error**.
  */
-Tastiera *keyboard_open_from_keymap(const char *testo, size_t lunghezza,
-                                  const char *negoziata, char **errore);
+Keyboard *keyboard_open_from_keymap(const char *text, size_t length,
+                                  const char *negotiated, char **error);
 
 /* How many key positions at most a letter needs (with the modifiers). */
-#define TASTIERA_MAX_POSIZIONI 4
+#define KEYBOARD_MAX_POSITIONS 4
 
 /*
  * ⛔ The question this module exists to answer.
  *
  * Searches, across the whole layout, for a key that with some combination of
- * modifiers produces `carattere`.
+ * modifiers produces `character`.
  *
- *   returns  1  producible: `codici[0..n)` are the EVDEV codes to press in
+ *   returns  1  producible: `codes[0..n)` are the EVDEV codes to press in
  *               order (the modifiers first, the key last) and they are
  *               released in reverse; `*n` is how many they are;
  *   returns  0  ⛔ NOT producible with this layout — it is the case that
@@ -117,25 +117,25 @@ Tastiera *keyboard_open_from_keymap(const char *testo, size_t lunghezza,
  *               session with the wrong layout;
  *   returns -1  error.
  *
- * ⚠ Shift and AltGr are NOT commands: they serve to MAKE the letter, and live in
+ * ⚠ Shift and AltGr are NOT commands: they needs to MAKE the letter, and live in
  *   here (`SPECIFICHE.md` §7.3).  Ctrl, Alt and Super never pass through here:
  *   those already travel as key positions on the wire.
  */
-int tastiera_posizioni_per(Tastiera *, uint32_t carattere,
-                           uint16_t codici[TASTIERA_MAX_POSIZIONI], size_t *n);
+int keyboard_positions_for(Keyboard *, uint32_t character,
+                           uint16_t codes[KEYBOARD_MAX_POSITIONS], size_t *n);
 
 /*
  * The name of the layout actually in force, for the log and for
  * the answer to the client.  Never NULL after a successful opening.
  */
-const char *kbd_layout(Tastiera *);
+const char *kbd_layout(Keyboard *);
 
 /*
- * ⛔⭐ "DOES THIS KEYMAP DO WHAT `nome` WOULD DO?" — and it serves not to ask twice
+ * ⛔⭐ "DOES THIS KEYMAP DO WHAT `name` WOULD DO?" — and it serves not to ask twice
  *     for the same layout.
  *
  * ⚠ It comes from a defect MEASURED on 16 August 2026, and the defect was **the
- *   wrong memory**: `input_disposizione()` remembered *what it had
+ *   wrong memory**: `input_layout()` remembered *what it had
  *   asked for* and skipped the request if it matched.  ⛔ But between one request and
  *   the next the session's layout can change **at the hand of
  *   someone else** — the user from GNOME's settings, or `gsd-keyboard`.
@@ -152,13 +152,13 @@ const char *kbd_layout(Tastiera *);
  *   **they produce the same characters on the same keys**, not if they are called
  *   the same way (see the box of `do_the_same` in the `.c`).
  *
- *   returns  1  yes, this keymap does what `nome` would do
+ *   returns  1  yes, this keymap does what `name` would do
  *   returns  0  no
  *   returns -1  ⛔ it could not be said (a name that does not compile, or NULL) —
  *               and it is NOT "no": the caller must be able to tell them apart.
  */
-int tastiera_e_questa(Tastiera *, const char *nome);
+int keyboard_is_this(Keyboard *, const char *name);
 
-void keyboard_close(Tastiera *);
+void keyboard_close(Keyboard *);
 
-#endif /* REMOTIX_TASTIERA_H */
+#endif /* REMOTIX_KEYBOARD_H */

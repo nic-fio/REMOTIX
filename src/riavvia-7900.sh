@@ -26,7 +26,7 @@
 # ⭐ The extra options go at the end of the fixed ones, and that is what makes
 #    the long ceilings of §5.3 testable WITHOUT waiting for them:
 #
-#      bash riavvia-7900.sh --inattivita-s 10
+#      bash riavvia-7900.sh --inactivity-s 10
 #
 #    exercises the thirty-minute clock in ten seconds.  ⛔ And the value IN
 #    FORCE is written by the server at startup, so one does not test a ceiling believing
@@ -83,34 +83,34 @@
 #         not in force"): the cgroup of the live process must not contain
 #         `user@` nor `session-`.
 set -e
-LAV=/media/REMOTIX/tmp/09
+WORKDIR=/media/REMOTIX/tmp/09
 SRC=/media/REMOTIX/src/09-src/src
 B2=/media/REMOTIX/src/b2
-UNITA=remotix-7900
+UNIT=remotix-7900
 
-mkdir -p "$LAV"
+mkdir -p "$WORKDIR"
 
 LD_LIBRARY_PATH="$B2/ngtcp2/build/lib:$B2/prefisso/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export LD_LIBRARY_PATH
 
-MANCA=$(ldd "$SRC/remotix" | grep -E 'ngtcp2|nghttp3' | grep -vc "$B2" || true)
-if [ "$MANCA" != "0" ]; then
+MISSING=$(ldd "$SRC/remotix" | grep -E 'ngtcp2|nghttp3' | grep -vc "$B2" || true)
+if [ "$MISSING" != "0" ]; then
   echo "⛔ NOT starting: ngtcp2/nghttp3 would not come from $B2 —"
   ldd "$SRC/remotix" | grep -E 'ngtcp2|nghttp3'
   exit 1
 fi
 
 # ── what is there is stopped, in both the ways it may have been started ──
-systemctl stop "$UNITA.service" 2>/dev/null || true
-systemctl reset-failed "$UNITA.service" 2>/dev/null || true
-if [ -f "$LAV/pid" ]; then
-  VECCHIO=$(cat "$LAV/pid")
-  if kill -0 "$VECCHIO" 2>/dev/null; then
-    echo "stopping server $VECCHIO (old-style start)"
-    kill "$VECCHIO"
+systemctl stop "$UNIT.service" 2>/dev/null || true
+systemctl reset-failed "$UNIT.service" 2>/dev/null || true
+if [ -f "$WORKDIR/pid" ]; then
+  OLD=$(cat "$WORKDIR/pid")
+  if kill -0 "$OLD" 2>/dev/null; then
+    echo "stopping server $OLD (old-style start)"
+    kill "$OLD"
     i=0
-    while kill -0 "$VECCHIO" 2>/dev/null && [ $i -lt 50 ]; do i=$((i+1)); sleep 0.1; done
-    kill -0 "$VECCHIO" 2>/dev/null && { echo "it does not stop: forcing it"; kill -9 "$VECCHIO"; sleep 1; }
+    while kill -0 "$OLD" 2>/dev/null && [ $i -lt 50 ]; do i=$((i+1)); sleep 0.1; done
+    kill -0 "$OLD" 2>/dev/null && { echo "it does not stop: forcing it"; kill -9 "$OLD"; sleep 1; }
   fi
 fi
 # ⚠ And we wait for the port to really free up: `[M]` 16 August, a start
@@ -121,37 +121,37 @@ while ss -uln 2>/dev/null | grep -q ':7900 ' && [ $i -lt 50 ]; do i=$((i+1)); sl
 
 # ── ⭐ started as a SYSTEM UNIT, outside any user session ────────────────────
 systemd-run \
-  --unit="$UNITA" --collect --description="REMOTIX, port 7900 bench — phase 9" \
+  --unit="$UNIT" --collect --description="REMOTIX, port 7900 bench — phase 9" \
   --working-directory="$SRC" \
   --setenv=LD_LIBRARY_PATH="$LD_LIBRARY_PATH" \
-  --property=StandardOutput=append:"$LAV/registro.log" \
-  --property=StandardError=append:"$LAV/registro.log" \
+  --property=StandardOutput=append:"$WORKDIR/registro.log" \
+  --property=StandardError=append:"$WORKDIR/registro.log" \
   --property=KillMode=mixed \
   --property=LimitRTPRIO=20 \
   --property=LimitNICE=-11 \
   "$SRC/remotix" \
-  --indirizzo 0.0.0.0 --nome 192.168.0.2 --porta 7900 \
-  --certificati "$LAV/certificati" \
-  --pagina "$SRC/pagina.html" \
-  --ban-file "$LAV/ban" \
-  --comando-socket "$LAV/comando.sock" \
-  --rilievo "$LAV/rilievo" \
-  --parlantina "$@" >/dev/null
+  --address 0.0.0.0 --name 192.168.0.2 --port 7900 \
+  --certificates "$WORKDIR/certificati" \
+  --page "$SRC/pagina.html" \
+  --ban-file "$WORKDIR/ban" \
+  --command-socket "$WORKDIR/command.sock" \
+  --survey "$WORKDIR/rilievo" \
+  --verbose "$@" >/dev/null
 
 i=0
-NUOVO=""
+NEW=""
 while [ $i -lt 50 ]; do
-  NUOVO=$(systemctl show -p MainPID --value "$UNITA.service" 2>/dev/null || echo 0)
-  [ -n "$NUOVO" ] && [ "$NUOVO" != "0" ] && break
+  NEW=$(systemctl show -p MainPID --value "$UNIT.service" 2>/dev/null || echo 0)
+  [ -n "$NEW" ] && [ "$NEW" != "0" ] && break
   i=$((i+1)); sleep 0.1
 done
-if [ -z "$NUOVO" ] || [ "$NUOVO" = "0" ]; then
+if [ -z "$NEW" ] || [ "$NEW" = "0" ]; then
   echo "⛔ the server did not start — the last lines of the log:"
-  tail -15 "$LAV/registro.log"
+  tail -15 "$WORKDIR/registro.log"
   exit 1
 fi
-echo "$NUOVO" > "$LAV/pid"
-echo "server $NUOVO, unit $UNITA.service"
+echo "$NEW" > "$WORKDIR/pid"
+echo "server $NEW, unit $UNIT.service"
 
 # ── ⭐ THE CHECKS, and they are two different facts ──────────────────────────
 #
@@ -169,7 +169,7 @@ echo "libraries the LIVE process has really opened:"
 i=0
 LIBS=""
 while [ $i -lt 50 ]; do
-  LIBS=$(grep -oE '/[^ ]*(libngtcp2|libnghttp3)[^ ]*' "/proc/$NUOVO/maps" 2>/dev/null | sort -u)
+  LIBS=$(grep -oE '/[^ ]*(libngtcp2|libnghttp3)[^ ]*' "/proc/$NEW/maps" 2>/dev/null | sort -u)
   # ⛔ BOTH: only one would mean the loader is half way.
   if echo "$LIBS" | grep -q libngtcp2 && echo "$LIBS" | grep -q libnghttp3; then
     break
@@ -189,7 +189,7 @@ echo "⭐ they are those of $B2: testing can start"
 
 # ⛔ A6: the server must not be inside ANY user session, or its children
 #    will be born without runtime, without bus and without desktop.
-CG=$(cat "/proc/$NUOVO/cgroup" 2>/dev/null || echo "")
+CG=$(cat "/proc/$NEW/cgroup" 2>/dev/null || echo "")
 case "$CG" in
   *user@*|*session-*)
     echo "⛔⛔ THE SERVER IS INSIDE A USER SESSION (A6 of SESSIONE.md):"

@@ -1,5 +1,5 @@
 /*
- * cursore.c — from `struct spa_meta_cursor` (PipeWire) to `CursoreForma` (RCP §7.2).
+ * cursore.c — from `struct spa_meta_cursor` (PipeWire) to `CursorShape` (RCP §7.2).
  *
  * ⛔ The contract is in `cursore.h`, which belongs to the coordinator: here it is
  *    IMPLEMENTED, the seam is not changed.  Whoever finds the contract wrong SAYS so
@@ -13,13 +13,13 @@
  *      NOT RECEIVED    the metadata is not there at all ⇒ this function is not
  *                      even called, and `cattura.c` COUNTS it.  Nothing leaves
  *                      on the wire: the client keeps its own pointer.
- *      HIDDEN          the pointer is there and must not be seen ⇒ `CURSORE_FORMA`
+ *      HIDDEN          the pointer is there and must not be seen ⇒ `CURSOR_SHAPE`
  *                      with 0x0 and hotspot 0,0 (RCP §5.5).
  *      UNCHANGED       the metadata arrives with EVERY buffer, and is almost always
  *                      the same as before ⇒ nothing is sent.
  *
  * 2. enforcing the limits of RCP §7.2 **on this side**: beyond 256 nothing is
- *    sent, or the receiver closes the session with `ERRORE_PROTOCOLLO` — that is,
+ *    sent, or the receiver closes the session with `PROTOCOL_ERROR` — that is,
  *    an error of ours here drops the client's session;
  *
  * 3. turning the bytes around: Mutter delivers **premultiplied RGBA**, the wire wants
@@ -72,10 +72,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define AREA "cursore"
+#define AREA "cursor"
 
 /* The most bytes an image delivered on the wire can take. */
-#define BYTE_MAX ((size_t) CURSORE_MAX_LATO * (size_t) CURSORE_MAX_LATO * 4u)
+#define BYTE_MAX ((size_t) CURSOR_MAX_SIDE * (size_t) CURSOR_MAX_SIDE * 4u)
 
 /* ⚠ A sanity ceiling BEFORE multiplying: an absurd size read from someone
  *   else's memory must not turn into a multiplication that overflows.  It is
@@ -83,15 +83,15 @@
  *   "malformed" instead of "cut". */
 #define ABSURD_SIDE 8192u
 
-struct cursore
+struct cursor
 {
 	CursorArrived when_changes;
 	void *chi;
 
-	uint32_t serie;
+	uint32_t serial;
 
-	int consegnata; /* has anything been delivered yet?            */
-	int nascosto;   /* the last one delivered was 0x0               */
+	int delivered; /* has anything been delivered yet?            */
+	int hidden;   /* the last one delivered was 0x0               */
 	int never_hide; /* §kde: the theme is invisible, see cursore.h  */
 	int logged_never;      /* the log line is written only once           */
 
@@ -100,9 +100,9 @@ struct cursore
 	 * purpose: Mutter turns the pointer back on without resending the bitmap.
 	 */
 	int has_shape;
-	uint16_t larghezza, altezza;
-	int16_t attivo_x, attivo_y;
-	uint8_t *immagine; /* the DELIVERED one: lives until the next call */
+	uint16_t width, height;
+	int16_t active_x, active_y;
+	uint8_t *bitmap; /* the DELIVERED one: lives until the next call */
 	uint8_t *scratch;  /* where the new one is turned around, so it can be COMPARED */
 	size_t byte;
 
@@ -110,20 +110,20 @@ struct cursore
 	 * six hours later, and they are the number the bench compares with its own. */
 	struct
 	{
-		uint64_t visti;        /* calls to cursor_metadata              */
+		uint64_t seen_items;        /* calls to cursor_metadata              */
 		uint64_t id_zero;      /* the producer says "no cursor"          */
 		uint64_t without_bitmap; /* id != 0 but bitmap_offset == 0         */
 		uint64_t con_bitmap;   /* a bitmap was there                     */
-		uint64_t vuote;        /* bitmap that means "hidden"             */
-		uint64_t uguali;       /* bitmap identical to the previous one   */
-		uint64_t cambi;        /* CursoreForma delivered                 */
-		uint64_t tagliate;     /* larger than 256: ⛔ fallback          */
+		uint64_t blanks;        /* bitmap that means "hidden"             */
+		uint64_t equal;       /* bitmap identical to the previous one   */
+		uint64_t changes;        /* CursorShape delivered                 */
+		uint64_t cut;     /* larger than 256: ⛔ fallback          */
 		uint64_t hotspot_outside;  /* hotspot outside the image             */
-		uint64_t malformate;
+		uint64_t malformed;
 		uint64_t unknown_shape; /* visible, but we have never seen the shape */
-		uint64_t rifiutate;    /* the receiver said no                   */
-		uint64_t codificate;   /* a colour of the encoded theme (forma.h) */
-	} conto;
+		uint64_t refused;    /* the receiver said no                   */
+		uint64_t encoded;   /* a colour of the encoded theme (forma.h) */
+	} tally;
 
 	int last_index;     /* the last encoded shape seen, for the log */
 
@@ -139,21 +139,21 @@ struct cursore
  *  Delivery
  * ------------------------------------------------------------------ */
 
-static int consegna(Cursore *c, const CursoreForma *forma)
+static int delivery(Cursor *c, const CursorShape *shape)
 {
-	int esito;
+	int outcome;
 
-	c->conto.cambi++;
-	c->consegnata = 1;
+	c->tally.changes++;
+	c->delivered = 1;
 	if (!c->when_changes)
 		return 1;
-	esito = c->when_changes(c->chi, forma);
-	if (esito < 0)
+	outcome = c->when_changes(c->chi, shape);
+	if (outcome < 0)
 	{
-		c->conto.rifiutate++;
+		c->tally.refused++;
 		registro_dice(AREA, "⛔ the receiver REFUSED shape %ux%u (series %u): it was not sent",
-		              (unsigned) forma->larghezza, (unsigned) forma->altezza,
-		              (unsigned) forma->serie);
+		              (unsigned) shape->width, (unsigned) shape->height,
+		              (unsigned) shape->serial);
 		return -1;
 	}
 	return 1;
@@ -164,9 +164,9 @@ static int consegna(Cursore *c, const CursoreForma *forma)
  *    (RCP §5.5), and sent ONCE only — not on every buffer in which the
  *    pointer is still not there.
  */
-static int delivery_hidden(Cursore *c, const char *motivo)
+static int delivery_hidden(Cursor *c, const char *reason)
 {
-	CursoreForma forma;
+	CursorShape shape;
 
 	if (c->never_hide) {
 		if (!c->logged_never) {
@@ -175,46 +175,46 @@ static int delivery_hidden(Cursore *c, const char *motivo)
 			              "the pointer would be HIDDEN (%s) and I do NOT deliver it: on "
 			              "this desktop the cursor theme is invisible on purpose, and "
 			              "the viewer must keep their own pointer (cursore.h)",
-			              motivo);
+			              reason);
 		}
 		return 0;
 	}
-	if (c->consegnata && c->nascosto)
+	if (c->delivered && c->hidden)
 		return 0;
 
-	c->serie++;
-	c->nascosto = 1;
+	c->serial++;
+	c->hidden = 1;
 
-	memset(&forma, 0, sizeof forma);
-	forma.serie = c->serie;
-	forma.immagine = NULL;
+	memset(&shape, 0, sizeof shape);
+	shape.serial = c->serial;
+	shape.bitmap = NULL;
 
-	registro_dice(AREA, "the pointer HIDES (%s) — CURSORE_FORMA 0x0, series %u", motivo,
-	              (unsigned) c->serie);
-	return consegna(c, &forma);
+	registro_dice(AREA, "the pointer HIDES (%s) — CURSOR_SHAPE 0x0, series %u", reason,
+	              (unsigned) c->serial);
+	return delivery(c, &shape);
 }
 
 /* The pointer returns and Mutter does not resend the bitmap: the last known one is resent. */
-static int delivery_shape_kept(Cursore *c)
+static int delivery_shape_kept(Cursor *c)
 {
-	CursoreForma forma;
+	CursorShape shape;
 
-	c->serie++;
-	c->nascosto = 0;
+	c->serial++;
+	c->hidden = 0;
 
-	memset(&forma, 0, sizeof forma);
-	forma.larghezza = c->larghezza;
-	forma.altezza = c->altezza;
-	forma.attivo_x = c->attivo_x;
-	forma.attivo_y = c->attivo_y;
-	forma.serie = c->serie;
-	forma.immagine = c->immagine;
+	memset(&shape, 0, sizeof shape);
+	shape.width = c->width;
+	shape.height = c->height;
+	shape.active_x = c->active_x;
+	shape.active_y = c->active_y;
+	shape.serial = c->serial;
+	shape.bitmap = c->bitmap;
 
 	registro_dice(AREA,
 	              "the pointer RETURNS and Mutter does not resend the shape: the last known one "
 	              "is resent (%ux%u, series %u)",
-	              (unsigned) c->larghezza, (unsigned) c->altezza, (unsigned) c->serie);
-	return consegna(c, &forma);
+	              (unsigned) c->width, (unsigned) c->height, (unsigned) c->serial);
+	return delivery(c, &shape);
 }
 
 /* ------------------------------------------------------------------ *
@@ -233,10 +233,10 @@ static int delivery_shape_kept(Cursore *c)
  * Returns 1 if red and blue must be swapped, 0 if copied straight, -1 if the
  * format cannot be read.
  */
-static int cursor_byte_order(uint32_t formato, int *alpha_full)
+static int cursor_byte_order(uint32_t fmt, int *alpha_full)
 {
 	*alpha_full = 0;
-	switch (formato)
+	switch (fmt)
 	{
 	case SPA_VIDEO_FORMAT_RGBA:
 		return 1;
@@ -257,17 +257,17 @@ static int cursor_byte_order(uint32_t formato, int *alpha_full)
  *  The calls
  * ------------------------------------------------------------------ */
 
-Cursore *cursor_open(CursorArrived when_changes, void *chi)
+Cursor *cursor_open(CursorArrived when_changes, void *chi)
 {
-	Cursore *c = calloc(1, sizeof *c);
+	Cursor *c = calloc(1, sizeof *c);
 
 	if (!c)
 		return NULL;
-	c->immagine = malloc(BYTE_MAX);
+	c->bitmap = malloc(BYTE_MAX);
 	c->scratch = malloc(BYTE_MAX);
-	if (!c->immagine || !c->scratch)
+	if (!c->bitmap || !c->scratch)
 	{
-		free(c->immagine);
+		free(c->bitmap);
 		free(c->scratch);
 		free(c);
 		return NULL;
@@ -278,49 +278,49 @@ Cursore *cursor_open(CursorArrived when_changes, void *chi)
 	return c;
 }
 
-int cursor_metadata(Cursore *c, const void *spa_meta_cursor, size_t dimensione)
+int cursor_metadata(Cursor *c, const void *spa_meta_cursor, size_t size)
 {
 	const struct spa_meta_cursor *m = spa_meta_cursor;
 	const struct spa_meta_bitmap *b;
 	const uint8_t *base = spa_meta_cursor;
-	size_t pixel_start, servono, byte;
-	uint32_t sorgente_l, sorgente_a;
-	uint16_t larghezza, altezza;
-	int16_t attivo_x, attivo_y;
-	int inverti, alpha_full;
+	size_t pixel_start, needed, byte;
+	uint32_t source_w, source_h;
+	uint16_t width, height;
+	int16_t active_x, active_y;
+	int invert, alpha_full;
 	uint32_t y;
-	uint8_t *scambio;
-	CursoreForma forma;
+	uint8_t *swap;
+	CursorShape shape;
 
 	if (!c)
 		return -1;
-	c->conto.visti++;
+	c->tally.seen_items++;
 
 	/*
 	 * ⛔ "Too short" is NOT "hidden": it is metadata that cannot be
 	 *    read, and it is declared instead of producing a cursor made of someone
 	 *    else's memory — which is exactly the defect RCP §7.2 names.
 	 */
-	if (!m || dimensione < sizeof *m)
+	if (!m || size < sizeof *m)
 	{
-		c->conto.malformate++;
+		c->tally.malformed++;
 		registro_dice(AREA, "⛔ cursor metadata too short: %zu bytes, %zu needed",
-		              dimensione, sizeof *m);
+		              size, sizeof *m);
 		return -1;
 	}
 
 	/* --- 1. the producer says "no cursor" ------------------------------ */
 	if (!spa_meta_cursor_is_valid(m))
 	{
-		c->conto.id_zero++;
+		c->tally.id_zero++;
 		return delivery_hidden(c, "id = 0");
 	}
 
 	/* --- 2. the shape has not changed ----------------------------------- */
 	if (m->bitmap_offset == 0)
 	{
-		c->conto.without_bitmap++;
-		if (!c->nascosto && c->consegnata)
+		c->tally.without_bitmap++;
+		if (!c->hidden && c->delivered)
 			return 0;
 		if (c->has_shape)
 			return delivery_shape_kept(c);
@@ -329,7 +329,7 @@ int cursor_metadata(Cursore *c, const void *spa_meta_cursor, size_t dimensione)
 		 *    "hidden" and not "unchanged".  Nothing is invented — it is
 		 *    declared and the first bitmap is awaited.
 		 */
-		c->conto.unknown_shape++;
+		c->tally.unknown_shape++;
 		if (!c->logged_unknown)
 		{
 			c->logged_unknown = 1;
@@ -341,16 +341,16 @@ int cursor_metadata(Cursore *c, const void *spa_meta_cursor, size_t dimensione)
 	}
 
 	/* --- 3. there is a bitmap: first check that it fits ---------------- */
-	if (m->bitmap_offset < sizeof *m || m->bitmap_offset > dimensione ||
-	    dimensione - m->bitmap_offset < sizeof *b)
+	if (m->bitmap_offset < sizeof *m || m->bitmap_offset > size ||
+	    size - m->bitmap_offset < sizeof *b)
 	{
-		c->conto.malformate++;
+		c->tally.malformed++;
 		registro_dice(AREA, "⛔ bitmap_offset %u outside the metadata (%zu bytes): discarded",
-		              (unsigned) m->bitmap_offset, dimensione);
+		              (unsigned) m->bitmap_offset, size);
 		return -1;
 	}
 	b = (const struct spa_meta_bitmap *) (base + m->bitmap_offset);
-	c->conto.con_bitmap++;
+	c->tally.con_bitmap++;
 
 	/*
 	 * --- 4. the bitmap that means "hidden" ------------------------------
@@ -360,38 +360,38 @@ int cursor_metadata(Cursore *c, const void *spa_meta_cursor, size_t dimensione)
 	 */
 	if (b->format == 0 || b->offset == 0 || b->size.width == 0 || b->size.height == 0)
 	{
-		c->conto.vuote++;
+		c->tally.blanks++;
 		return delivery_hidden(c, "empty bitmap (the pointer has no image)");
 	}
 
-	sorgente_l = b->size.width;
-	sorgente_a = b->size.height;
-	if (sorgente_l > ABSURD_SIDE || sorgente_a > ABSURD_SIDE || b->stride <= 0 ||
-	    (uint32_t) b->stride < sorgente_l * 4u || b->offset < sizeof *b)
+	source_w = b->size.width;
+	source_h = b->size.height;
+	if (source_w > ABSURD_SIDE || source_h > ABSURD_SIDE || b->stride <= 0 ||
+	    (uint32_t) b->stride < source_w * 4u || b->offset < sizeof *b)
 	{
-		c->conto.malformate++;
+		c->tally.malformed++;
 		registro_dice(AREA, "⛔ bitmap cannot be interpreted: %ux%u, stride %d, offset %u",
-		              (unsigned) sorgente_l, (unsigned) sorgente_a, (int) b->stride,
+		              (unsigned) source_w, (unsigned) source_h, (int) b->stride,
 		              (unsigned) b->offset);
 		return -1;
 	}
 
 	pixel_start = (size_t) m->bitmap_offset + (size_t) b->offset;
-	servono = (size_t) b->stride * (size_t) (sorgente_a - 1) + (size_t) sorgente_l * 4u;
-	if (pixel_start > dimensione || dimensione - pixel_start < servono)
+	needed = (size_t) b->stride * (size_t) (source_h - 1) + (size_t) source_w * 4u;
+	if (pixel_start > size || size - pixel_start < needed)
 	{
-		c->conto.malformate++;
+		c->tally.malformed++;
 		registro_dice(AREA,
 		              "⛔ the cursor pixels do not fit: %zu bytes needed from %zu, the metadata "
 		              "has %zu",
-		              servono, pixel_start, dimensione);
+		              needed, pixel_start, size);
 		return -1;
 	}
 
-	inverti = cursor_byte_order(b->format, &alpha_full);
-	if (inverti < 0)
+	invert = cursor_byte_order(b->format, &alpha_full);
+	if (invert < 0)
 	{
-		c->conto.malformate++;
+		c->tally.malformed++;
 		if (!c->logged_format || c->seen_format != b->format)
 		{
 			c->logged_format = 1;
@@ -407,7 +407,7 @@ int cursor_metadata(Cursore *c, const void *spa_meta_cursor, size_t dimensione)
 	/*
 	 * --- 5. ⛔ THE LIMIT OF RCP §7.2 IS ENFORCED HERE --------------------
 	 *
-	 * Beyond 256 the receiver closes the session with `ERRORE_PROTOCOLLO`: it is
+	 * Beyond 256 the receiver closes the session with `PROTOCOL_ERROR`: it is
 	 * our defect that drops the client.  ⇒ It is CUT (the verb is
 	 * `cursore.h`'s), and ⛔ the fallback is DECLARED — `CODER.md` §4.2.
 	 *
@@ -417,19 +417,19 @@ int cursor_metadata(Cursore *c, const void *spa_meta_cursor, size_t dimensione)
 	 *   384x384, but GNOME themes go up to 64-96).  If one day it really
 	 *   triggered, the thing to measure is whether **downsampling** is better instead.
 	 */
-	larghezza = sorgente_l > CURSORE_MAX_LATO ? (uint16_t) CURSORE_MAX_LATO : (uint16_t) sorgente_l;
-	altezza = sorgente_a > CURSORE_MAX_LATO ? (uint16_t) CURSORE_MAX_LATO : (uint16_t) sorgente_a;
-	if (larghezza != sorgente_l || altezza != sorgente_a)
+	width = source_w > CURSOR_MAX_SIDE ? (uint16_t) CURSOR_MAX_SIDE : (uint16_t) source_w;
+	height = source_h > CURSOR_MAX_SIDE ? (uint16_t) CURSOR_MAX_SIDE : (uint16_t) source_h;
+	if (width != source_w || height != source_h)
 	{
-		c->conto.tagliate++;
+		c->tally.cut++;
 		if (!c->logged_cut)
 		{
 			c->logged_cut = 1;
 			registro_dice(AREA,
 			              "⛔ FALLBACK: the cursor is %ux%u, the wire stops at %u (RCP §7.2) — "
 			              "sending the %ux%u corner",
-			              (unsigned) sorgente_l, (unsigned) sorgente_a,
-			              (unsigned) CURSORE_MAX_LATO, (unsigned) larghezza, (unsigned) altezza);
+			              (unsigned) source_w, (unsigned) source_h,
+			              (unsigned) CURSOR_MAX_SIDE, (unsigned) width, (unsigned) height);
 		}
 	}
 
@@ -437,56 +437,56 @@ int cursor_metadata(Cursore *c, const void *spa_meta_cursor, size_t dimensione)
 	 * ⛔ AND THE HOTSPOT MUST LIE INSIDE THE IMAGE (RCP §5.5), or the
 	 *    receiver closes.  If outside it is brought back inside, and declared.
 	 */
-	if (m->hotspot.x < 0 || m->hotspot.x >= (int32_t) larghezza || m->hotspot.y < 0 ||
-	    m->hotspot.y >= (int32_t) altezza)
+	if (m->hotspot.x < 0 || m->hotspot.x >= (int32_t) width || m->hotspot.y < 0 ||
+	    m->hotspot.y >= (int32_t) height)
 	{
-		c->conto.hotspot_outside++;
+		c->tally.hotspot_outside++;
 		if (!c->logged_point)
 		{
 			c->logged_point = 1;
 			registro_dice(AREA,
 			              "⛔ FALLBACK: hotspot %d,%d outside %ux%u — brought back inside "
 			              "(RCP §5.5)",
-			              (int) m->hotspot.x, (int) m->hotspot.y, (unsigned) larghezza,
-			              (unsigned) altezza);
+			              (int) m->hotspot.x, (int) m->hotspot.y, (unsigned) width,
+			              (unsigned) height);
 		}
-		attivo_x = m->hotspot.x < 0
+		active_x = m->hotspot.x < 0
 		               ? 0
-		               : (m->hotspot.x >= (int32_t) larghezza ? (int16_t) (larghezza - 1)
+		               : (m->hotspot.x >= (int32_t) width ? (int16_t) (width - 1)
 		                                                      : (int16_t) m->hotspot.x);
-		attivo_y = m->hotspot.y < 0
+		active_y = m->hotspot.y < 0
 		               ? 0
-		               : (m->hotspot.y >= (int32_t) altezza ? (int16_t) (altezza - 1)
+		               : (m->hotspot.y >= (int32_t) height ? (int16_t) (height - 1)
 		                                                    : (int16_t) m->hotspot.y);
 	}
 	else
 	{
-		attivo_x = (int16_t) m->hotspot.x;
-		attivo_y = (int16_t) m->hotspot.y;
+		active_x = (int16_t) m->hotspot.x;
+		active_y = (int16_t) m->hotspot.y;
 	}
 
 	/* --- 6. the bytes, turned around row by row in the work buffer ------ */
-	byte = (size_t) larghezza * (size_t) altezza * 4u;
-	for (y = 0; y < altezza; y++)
+	byte = (size_t) width * (size_t) height * 4u;
+	for (y = 0; y < height; y++)
 	{
-		const uint8_t *riga = base + pixel_start + (size_t) y * (size_t) b->stride;
-		uint8_t *fuori = c->scratch + (size_t) y * (size_t) larghezza * 4u;
+		const uint8_t *line = base + pixel_start + (size_t) y * (size_t) b->stride;
+		uint8_t *report = c->scratch + (size_t) y * (size_t) width * 4u;
 		uint32_t x;
 
-		if (!inverti && !alpha_full)
+		if (!invert && !alpha_full)
 		{
-			memcpy(fuori, riga, (size_t) larghezza * 4u);
+			memcpy(report, line, (size_t) width * 4u);
 			continue;
 		}
-		for (x = 0; x < larghezza; x++)
+		for (x = 0; x < width; x++)
 		{
-			uint8_t r0 = riga[x * 4 + 0], r1 = riga[x * 4 + 1];
-			uint8_t r2 = riga[x * 4 + 2], r3 = riga[x * 4 + 3];
+			uint8_t r0 = line[x * 4 + 0], r1 = line[x * 4 + 1];
+			uint8_t r2 = line[x * 4 + 2], r3 = line[x * 4 + 3];
 
-			fuori[x * 4 + 0] = inverti ? r2 : r0;
-			fuori[x * 4 + 1] = r1;
-			fuori[x * 4 + 2] = inverti ? r0 : r2;
-			fuori[x * 4 + 3] = alpha_full ? 0xFF : r3;
+			report[x * 4 + 0] = invert ? r2 : r0;
+			report[x * 4 + 1] = r1;
+			report[x * 4 + 2] = invert ? r0 : r2;
+			report[x * 4 + 3] = alpha_full ? 0xFF : r3;
 		}
 	}
 
@@ -514,7 +514,7 @@ int cursor_metadata(Cursore *c, const void *spa_meta_cursor, size_t dimensione)
 	 *      send — it is the NAME of the shape.  The REAL image taken from the real
 	 *      theme is put into the work buffer, and we go on to the comparison
 	 *      of step 7 as for any bitmap.
-	 * ⛔ If the real theme is missing (`forma_immagine` FALSE, already said in the
+	 * ⛔ If the real theme is missing (`shape_image` FALSE, already said in the
 	 *    log) we fall through to the check below, which on an opaque pixel does NOT
 	 *    trigger: the client would receive the coloured pixel.  ⇒ In that case it
 	 *    is treated like the invisible theme of before — "hidden", that is, with
@@ -528,37 +528,37 @@ int cursor_metadata(Cursore *c, const void *spa_meta_cursor, size_t dimensione)
 	 */
 	{
 		size_t i;
-		int indice = forma_da_pixel(c->scratch[0], c->scratch[1], c->scratch[2],
+		int idx = shape_from_pixel(c->scratch[0], c->scratch[1], c->scratch[2],
 		                            c->scratch[3]);
 
-		for (i = 4; indice >= 0 && i < byte; i += 4)
+		for (i = 4; idx >= 0 && i < byte; i += 4)
 			if (memcmp(c->scratch + i, c->scratch, 4) != 0)
-				indice = -1;
-		if (indice >= 0) {
-			CursoreForma vera;
+				idx = -1;
+		if (idx >= 0) {
+			CursorShape real;
 
-			c->conto.codificate++;
-			memset(&vera, 0, sizeof vera);
-			if (!forma_immagine(indice, &vera)) {
-				c->conto.vuote++;
+			c->tally.encoded++;
+			memset(&real, 0, sizeof real);
+			if (!shape_image(idx, &real)) {
+				c->tally.blanks++;
 				return delivery_hidden(c, "encoded shape but real theme missing");
 			}
-			larghezza = vera.larghezza;
-			altezza = vera.altezza;
-			attivo_x = vera.attivo_x;
-			attivo_y = vera.attivo_y;
-			byte = (size_t) larghezza * (size_t) altezza * 4u;
-			memcpy(c->scratch, vera.immagine, byte);
-			if (indice != c->last_index) {
-				c->last_index = indice;
+			width = real.width;
+			height = real.height;
+			active_x = real.active_x;
+			active_y = real.active_y;
+			byte = (size_t) width * (size_t) height * 4u;
+			memcpy(c->scratch, real.bitmap, byte);
+			if (idx != c->last_index) {
+				c->last_index = idx;
 				/* ⚠ One line per shape CHANGE, not per buffer: it is the pace of
 				 *   the hand of whoever uses the desktop, and the proof that the
 				 *   dictionary works can only be read here. */
 				registro_dice(AREA, "encoded shape %d «%s» ⇒ %ux%u, hotspot %d,%d",
-				              indice, shape_name(indice), (unsigned) larghezza,
-				              (unsigned) altezza, (int) attivo_x, (int) attivo_y);
+				              idx, shape_name(idx), (unsigned) width,
+				              (unsigned) height, (int) active_x, (int) active_y);
 			}
-			goto confronto;
+			goto comparison;
 		}
 	}
 	{
@@ -571,13 +571,13 @@ int cursor_metadata(Cursore *c, const void *spa_meta_cursor, size_t dimensione)
 				break;
 			}
 		if (!is_visible) {
-			c->conto.vuote++;
+			c->tally.blanks++;
 			return delivery_hidden(c, "all pixels transparent (the cursor "
 			                            "theme is invisible: the client draws it)");
 		}
 	}
 
-confronto:
+comparison:
 	/*
 	 * --- 7. ⛔ HAS IT REALLY CHANGED? -----------------------------------
 	 *
@@ -592,73 +592,73 @@ confronto:
 	 *   client has nothing left to draw, so the same shape must be
 	 *   resent even if identical.
 	 */
-	if (!c->nascosto && c->consegnata && c->has_shape && c->larghezza == larghezza &&
-	    c->altezza == altezza && c->attivo_x == attivo_x && c->attivo_y == attivo_y &&
-	    c->byte == byte && memcmp(c->immagine, c->scratch, byte) == 0)
+	if (!c->hidden && c->delivered && c->has_shape && c->width == width &&
+	    c->height == height && c->active_x == active_x && c->active_y == active_y &&
+	    c->byte == byte && memcmp(c->bitmap, c->scratch, byte) == 0)
 	{
-		c->conto.uguali++;
+		c->tally.equal++;
 		return 0;
 	}
 
-	scambio = c->immagine;
-	c->immagine = c->scratch;
-	c->scratch = scambio;
+	swap = c->bitmap;
+	c->bitmap = c->scratch;
+	c->scratch = swap;
 
-	c->larghezza = larghezza;
-	c->altezza = altezza;
-	c->attivo_x = attivo_x;
-	c->attivo_y = attivo_y;
+	c->width = width;
+	c->height = height;
+	c->active_x = active_x;
+	c->active_y = active_y;
 	c->byte = byte;
 	c->has_shape = 1;
-	c->nascosto = 0;
-	c->serie++;
+	c->hidden = 0;
+	c->serial++;
 
-	memset(&forma, 0, sizeof forma);
-	forma.larghezza = larghezza;
-	forma.altezza = altezza;
-	forma.attivo_x = attivo_x;
-	forma.attivo_y = attivo_y;
-	forma.serie = c->serie;
-	forma.immagine = c->immagine;
+	memset(&shape, 0, sizeof shape);
+	shape.width = width;
+	shape.height = height;
+	shape.active_x = active_x;
+	shape.active_y = active_y;
+	shape.serial = c->serial;
+	shape.bitmap = c->bitmap;
 
-	return consegna(c, &forma);
+	return delivery(c, &shape);
 }
 
-void cursore_mai_nascondere(Cursore *c, const char *perche)
+void cursor_never_hide(Cursor *c, const char *why)
 {
 	if (!c || c->never_hide)
 		return;
 	c->never_hide = 1;
 	registro_dice(AREA, "pointer hiding will NOT be delivered any more: %s",
-	              perche ? perche : "no reason given");
+	              why ? why : "no reason given");
 	/* ⭐ PHASE 14 — and the dictionary is loaded NOW, outside the PipeWire
 	 *    thread: it is 68 files of the real theme read from disk, and doing it at
 	 *    the first encoded shape would mean doing it on the real-time thread
 	 *    of the capture.  ⚠ It is called only on KDE (the one using the encoded theme
 	 *    with the metadata), so GNOME does not pay for this read. */
 	{
-		CursoreForma prima;
+		CursorShape before;
 
-		memset(&prima, 0, sizeof prima);
-		(void) forma_immagine(0, &prima);
+		memset(&before, 0, sizeof before);
+		(void) shape_image(0, &before);
 	}
 }
 
-void cursor_close(Cursore *c)
+void cursor_close(Cursor *c)
 {
 	if (!c)
 		return;
 	registro_dice(AREA,
 	              "metadata %" PRIu64 ": id=0 %" PRIu64 ", position only %" PRIu64
 	              ", with bitmap %" PRIu64 " (identical %" PRIu64 ", empty %" PRIu64
-	              ") ⇒ CURSORE_FORMA delivered %" PRIu64 "; cut %" PRIu64
+	              ") ⇒ CURSOR_SHAPE delivered %" PRIu64 "; cut %" PRIu64
 	              ", hotspot outside %" PRIu64 ", malformed %" PRIu64 ", refused %" PRIu64
 	              ", unknown shape %" PRIu64 ", encoded %" PRIu64,
-	              c->conto.visti, c->conto.id_zero, c->conto.without_bitmap, c->conto.con_bitmap,
-	              c->conto.uguali, c->conto.vuote, c->conto.cambi, c->conto.tagliate,
-	              c->conto.hotspot_outside, c->conto.malformate, c->conto.rifiutate,
-	              c->conto.unknown_shape, c->conto.codificate);
-	free(c->immagine);
+	              c->tally.seen_items, c->tally.id_zero, c->tally.without_bitmap, c->tally.con_bitmap,
+	              c->tally.equal, c->tally.blanks, c->tally.changes, c->tally.cut,
+	              c->tally.hotspot_outside, c->tally.malformed, c->tally.refused,
+	              c->tally.unknown_shape, c->tally.encoded);
+	free(c->bitmap);
 	free(c->scratch);
 	free(c);
 }

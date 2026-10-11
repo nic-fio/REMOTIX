@@ -7,14 +7,14 @@
  * §5.2, and it is `[R]`: we ask Mutter for `cursor-mode=2`, that is "give me the
  * cursor as METADATA instead of in the pixels", ⛔ but we do NOT ask for
  * `SPA_META_Cursor` ⇒ shape, position and hotspot do not arrive at all, and
- * `CURSORE_FORMA` (`RCP.md` §7.2) is a channel without a source.
+ * `CURSOR_SHAPE` (`RCP.md` §7.2) is a channel without a source.
  *
  * ⭐ And the direction is the right one for us: clean pixels in the image (so
  *    two are not seen, `SPECIFICHE.md` §7.1) AND the shape in a side band, which
  *    is exactly what the pointer drawn by the client needs.
  */
-#ifndef REMOTIX_CURSORE_H
-#define REMOTIX_CURSORE_H
+#ifndef REMOTIX_CURSOR_H
+#define REMOTIX_CURSOR_H
 
 #include <stdint.h>
 #include <stddef.h>
@@ -23,21 +23,21 @@
  * A cursor shape, as it arrives from PipeWire metadata and as it leaves on the
  * wire.  ⛔ The limits are those of `RCP.md` §5.5 and §7.2, and they are enforced HERE:
  * whoever sends a cursor larger than 256 brings the session down on the other
- * side with `ERRORE_PROTOCOLLO`.
+ * side with `PROTOCOL_ERROR`.
  */
-#define CURSORE_MAX_LATO 256
+#define CURSOR_MAX_SIDE 256
 
 typedef struct {
-	uint16_t larghezza;   /* 0 with height 0 = HIDDEN cursor (§5.5)       */
-	uint16_t altezza;
-	int16_t  attivo_x;    /* the point that "points" ⛔ 0 if hidden        */
-	int16_t  attivo_y;
-	uint32_t serie;       /* grows at every shape change; so as not to resend
+	uint16_t width;   /* 0 with height 0 = HIDDEN cursor (§5.5)       */
+	uint16_t height;
+	int16_t  active_x;    /* the point that "points" ⛔ 0 if hidden        */
+	int16_t  active_y;
+	uint32_t serial;       /* grows at every shape change; so as not to resend
 	                       * the same image a thousand times              */
-	const uint8_t *immagine;  /* width x height x 4, PREMULTIPLIED BGRA.
+	const uint8_t *bitmap;  /* width x height x 4, PREMULTIPLIED BGRA.
 	                           * Lives until the next callback: whoever wants
 	                           * to keep it copies it.  NULL if hidden.    */
-} CursoreForma;
+} CursorShape;
 
 /*
  * The call `cattura.c` makes when the cursor metadata changes inside
@@ -45,7 +45,7 @@ typedef struct {
  * Returns 0 if the shape was accepted, -1 if it is malformed (and then it is
  * DECLARED in the log, nothing is sent).
  */
-typedef int (*CursorArrived)(void *chi, const CursoreForma *);
+typedef int (*CursorArrived)(void *chi, const CursorShape *);
 
 /*
  * ⛔ Why there is a module and not a direct call: between PipeWire and the
@@ -55,16 +55,16 @@ typedef int (*CursorArrived)(void *chi, const CursoreForma *);
  *    work ends up half in `cattura.c` and half in `rcp.c`, which is the shape
  *    of the phase 3 defect.
  */
-typedef struct cursore Cursore;
+typedef struct cursor Cursor;
 
-Cursore *cursor_open(CursorArrived when_changes, void *chi);
+Cursor *cursor_open(CursorArrived when_changes, void *chi);
 
 /*
  * To be called with PipeWire's raw metadata (`struct spa_meta_cursor`).
  * Returns 1 if the shape CHANGED (and then `when_changes` has already been
  * called), 0 if it is the same as before, -1 if it is malformed.
  */
-int cursor_metadata(Cursore *, const void *spa_meta_cursor, size_t dimensione);
+int cursor_metadata(Cursor *, const void *spa_meta_cursor, size_t size);
 
 /*
  * ⛔⭐ "NEVER HIDE HERE" — phase 12, 20 September 2026, on Plasma.
@@ -81,8 +81,8 @@ int cursor_metadata(Cursore *, const void *spa_meta_cursor, size_t dimensione);
  *   (a game, a full-screen player) does not hide it from the viewer — it
  *   cannot be told apart from our invisible theme, which is always in force.
  */
-void cursore_mai_nascondere(Cursore *, const char *perche);
+void cursor_never_hide(Cursor *, const char *why);
 
-void cursor_close(Cursore *);
+void cursor_close(Cursor *);
 
-#endif /* REMOTIX_CURSORE_H */
+#endif /* REMOTIX_CURSOR_H */

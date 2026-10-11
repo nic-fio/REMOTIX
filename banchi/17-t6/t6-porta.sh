@@ -9,18 +9,18 @@
 #
 #   (on the laptop)   bash banchi/17-t6/t6-porta.sh [packages-folder]
 #
-#   /media/REMOTIX/vm17/t6/              t6-vm.sh, t6-leggi-pam.sh, 17-t1c-guarda.sh (with T1C_UTENTE),
+#   /media/REMOTIX/vm17/t6/              t6-vm.sh, t6-leggi-pam.sh, 17-t1c-guarda.sh (with T1C_USER),
 #                                        17-t1c-browser.py, remotix-install
-#   /media/REMOTIX/vm17/t6/pacchetti/    the packages (.rpm, .deb, .pkg.tar.zst), one folder per target
+#   /media/REMOTIX/vm17/t6/packets/    the packages (.rpm, .deb, .pkg.tar.zst), one folder per target
 set -euo pipefail
-QUI=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-ALBERO=$(cd "$QUI/../.." && pwd)
-P=${1:-$ALBERO/costruzione-uscita}
+HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+TREE=$(cd "$HERE/../.." && pwd)
+P=${1:-$TREE/costruzione-uscita}
 S=nicfio@192.168.0.2
 T=/media/REMOTIX/vm17/t6
 ssh -o BatchMode=yes $S "mkdir -p $T/pacchetti" 2>&1 | grep -v tput || true
-scp -q "$QUI/t6-vm.sh" "$QUI/t6-leggi-pam.sh" "$ALBERO/banchi/17-distro/17-t1c-guarda.sh" \
-	"$ALBERO/banchi/17-distro/17-t1c-browser.py" "$ALBERO/installatore/uscita/remotix-install" $S:$T/
+scp -q "$HERE/t6-vm.sh" "$HERE/t6-leggi-pam.sh" "$TREE/banchi/17-distro/17-t1c-guarda.sh" \
+	"$TREE/banchi/17-distro/17-t1c-browser.py" "$TREE/installatore/uscita/remotix-install" $S:$T/
 shopt -s nullglob
 for d in "$P"/rpm/* "$P"/deb-* "$P"/pacchetto-arch; do
 	[ -d "$d" ] || continue

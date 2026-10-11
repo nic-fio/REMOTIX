@@ -1,12 +1,12 @@
-// impronta: the fingerprint of a folder for test R1 (the preliminary check touches
+// fingerprint: the fingerprint of a folder for test R1 (the preliminary check touches
 // nothing). One line per entry: path, type, permissions, owner, size, modification time
 // in nanoseconds, link target, sha256 of the files. Independent of the engine (it does not
 // import anything of its own): whoever measures must not be whoever is measured.
 //
-//	impronta /etc > prima.txt
-//	impronta -contenuti /etc > prima.txt   (without the modification time of FOLDERS: adding and
+//	fingerprint /etc > prima.txt
+//	fingerprint -contents /etc > prima.txt   (without the modification time of FOLDERS: adding and
 //	                                        removing a file changes it, even if then everything goes back as it was)
-//	impronta -confronta prima.txt dopo.txt
+//	fingerprint -compare prima.txt dopo.txt
 package main
 
 import (
@@ -22,19 +22,19 @@ import (
 )
 
 func main() {
-	if len(os.Args) == 4 && os.Args[1] == "-confronta" {
-		os.Exit(confronta(os.Args[2], os.Args[3]))
+	if len(os.Args) == 4 && os.Args[1] == "-compare" {
+		os.Exit(compare(os.Args[2], os.Args[3]))
 	}
-	radice := "/etc"
+	root := "/etc"
 	args := os.Args[1:]
-	contenuti := false
-	if len(args) > 0 && args[0] == "-contenuti" {
-		contenuti, args = true, args[1:]
+	contents := false
+	if len(args) > 0 && args[0] == "-contents" {
+		contents, args = true, args[1:]
 	}
 	if len(args) > 0 {
-		radice = args[0]
+		root = args[0]
 	}
-	err := filepath.WalkDir(radice, func(p string, d fs.DirEntry, err error) error {
+	err := filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
 			fmt.Printf("%s ERROR %v\n", p, err)
 			return nil
@@ -45,26 +45,26 @@ func main() {
 			return nil
 		}
 		st := info.Sys().(*syscall.Stat_t)
-		riga := fmt.Sprintf("%s %s %d:%d %d %d", p, info.Mode(), st.Uid, st.Gid, info.Size(), info.ModTime().UnixNano())
-		if info.IsDir() && contenuti {
-			riga = fmt.Sprintf("%s %s %d:%d", p, info.Mode(), st.Uid, st.Gid)
+		line := fmt.Sprintf("%s %s %d:%d %d %d", p, info.Mode(), st.Uid, st.Gid, info.Size(), info.ModTime().UnixNano())
+		if info.IsDir() && contents {
+			line = fmt.Sprintf("%s %s %d:%d", p, info.Mode(), st.Uid, st.Gid)
 		}
 		switch {
 		case info.Mode()&fs.ModeSymlink != 0:
 			l, _ := os.Readlink(p)
-			riga += " -> " + l
+			line += " -> " + l
 		case info.Mode().IsRegular():
 			f, err := os.Open(p)
 			if err == nil {
 				h := sha256.New()
 				io.Copy(h, f)
 				f.Close()
-				riga += " " + hex.EncodeToString(h.Sum(nil))
+				line += " " + hex.EncodeToString(h.Sum(nil))
 			} else {
-				riga += " unreadable"
+				line += " unreadable"
 			}
 		}
-		fmt.Println(riga)
+		fmt.Println(line)
 		return nil
 	})
 	if err != nil {
@@ -73,33 +73,33 @@ func main() {
 	}
 }
 
-// confronta two fingerprints: prints the differing lines, exits 1 if there are any (the minimal containers
+// compare two fingerprints: prints the differing lines, exits 1 if there are any (the minimal containers
 // have no diff).
-func confronta(a, b string) int {
+func compare(a, b string) int {
 	ra, _ := os.ReadFile(a)
 	rb, _ := os.ReadFile(b)
-	insieme := func(t []byte) map[string]bool {
+	together := func(t []byte) map[string]bool {
 		m := map[string]bool{}
 		for _, r := range strings.Split(string(t), "\n") {
 			m[r] = true
 		}
 		return m
 	}
-	ma, mb := insieme(ra), insieme(rb)
-	diversi := 0
+	ma, mb := together(ra), together(rb)
+	different := 0
 	for r := range ma {
 		if !mb[r] {
 			fmt.Println("- " + r)
-			diversi++
+			different++
 		}
 	}
 	for r := range mb {
 		if !ma[r] {
 			fmt.Println("+ " + r)
-			diversi++
+			different++
 		}
 	}
-	if diversi > 0 {
+	if different > 0 {
 		return 1
 	}
 	return 0

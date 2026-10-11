@@ -1809,7 +1809,7 @@ binaries already compiled, outside the product:
 | | |
 |---|---|
 | `misura-cattura` | a PipeWire consumer that counts the frames and reports buffer type, damage, recycled buffers, whether drawing was finished, and the distribution of the intervals. It can set up Mutter's virtual screen by itself, or hook onto any node |
-| `nodo-kwin` | a client of KWin's protocol; with `--elenca` it prints all the protocols a compositor announces |
+| `nodo-kwin` | a client of KWin's protocol; with `--dump` it prints all the protocols a compositor announces |
 | `misura-wlroots` | a `wlr-screencopy` client that makes the same measurement on the pull model |
 | `banco.sh`, `banco-altri.sh`, `banco-catena.sh` | capture alone, the other compositors, and the whole chain up to the client |
 
@@ -2281,7 +2281,7 @@ would ever have drawn attention by itself.*
 ⭐⭐ **The rule that comes out of it, and it is not «write better benches»:**
 
 > ⛔ **A bench is not finished until it has been seen giving RED.** Every predicate must have, in
-> `--certifica`, the case that makes it fail — and that case must be **run**, not imagined.
+> `--certify`, the case that makes it fail — and that case must be **run**, not imagined.
 
 And three corollaries, each one paid for:
 
@@ -2433,9 +2433,9 @@ because the eviction at least leaves a trace.
 *24-25 Aug 2026, phase 10. `[M]` **Six defects**, all in the layer that runs the benches, not
 in the benches.*
 
-⭐ The project certifies the benches with `--certifica`: a known fault is injected and it is verified that the
+⭐ The project certifies the benches with `--certify`: a known fault is injected and it is verified that the
 bench sees it. ⛔ **But the GPU lock, the terrain, the scripts that start the server and the
-module they share do NOT have a `--certifica`** — and they are **the floor on which every
+module they share do NOT have a `--certify`** — and they are **the floor on which every
 measurement rests**.
 
 `[M]` **What it cost, concretely:**
@@ -2734,7 +2734,7 @@ takes with mode `0700`. And it was already written, with its measurement, inside
 >
 > ⇒ ⭐ **The counter-test that would have caught it in ten seconds**: run the predicate **with the fault
 > grafted** and demand that it gives red. It is the same thing this phase asks of every mesh
-> (`--certifica`), ⛔ and it holds for the single predicate inside a mesh too, not only for the mesh.
+> (`--certify`), ⛔ and it holds for the single predicate inside a mesh too, not only for the mesh.
 
 ---
 
@@ -2749,7 +2749,7 @@ well exceeds the 25 s). ⛔ The first draft used **the same ceiling** for both.
 `[M]` Outcome: **red for both tenants, with the cure and without.**
 
 ⇒ ⛔⛔ **And the real damage is not the false red: it is that the ACCEPTANCE TEST stops being valid.** The meaning of
-`--senza-cura` is *«with the fault injected it must turn red»*; ⚠ if it is red **even without**, that
+`--no-fix` is *«with the fault injected it must turn red»*; ⚠ if it is red **even without**, that
 comparison no longer proves anything, and a mesh that cannot tell the fault from its own ceiling
 ⛔ **is indistinguishable from a broken mesh**.
 
@@ -2815,7 +2815,7 @@ forever. ⛔ Three checks out of thirteen were looking at nothing, and the green
 
 *26 Aug 2026, phase 11, the hook.*
 
-`11-gancio.sh installa pre-commit` ⛔ **installed `pre-push`**, and calmly printed that it had
+`11-gancio.sh install pre-commit` ⛔ **installed `pre-push`**, and calmly printed that it had
 gone well. The loop that reads the options consumed the argument and passed it to nobody; the
 confirmation message repeated **what had been asked**, not what had been done.
 
@@ -2848,7 +2848,7 @@ whoever is working»*.
 > ### ⭐ How it is caught, and it costs ten seconds
 >
 > ⛔ **Try to make the mesh turn GREEN.** A check must be switched on in both directions: you
-> graft the fault and demand red (which the project already does, `--certifica`), ⚠ **and you remove
+> graft the fault and demand red (which the project already does, `--certify`), ⚠ **and you remove
 > the fault and demand green**. The second half is forgotten, and it is the one that catches this.
 
 ---
@@ -2883,7 +2883,7 @@ false reds of §1.44–1.47 had noticed this, because they all looked at C8 **fr
 
 ### 1.51 ⛔⛔ **«Text file busy» — the red that comes from the ORDER of the commands, not from the product**
 
-`[M]` 26 Aug 2026, stitching the four new meshes into the net. The action `11-accendi.sh prodotto`
+`[M]` 26 Aug 2026, stitching the four new meshes into the net. The action `11-accendi.sh product`
 copies the binary into the box. With the **server running**, `cp` answers:
 
 ```
@@ -3052,7 +3052,7 @@ prove that the **product** holds on those desktops, because there the product do
 ### 1.57 ⚠ **The rebuilt binary wanted a library the bench did not carry — and the bench said so**
 
 `[M]` 27 Aug 2026. Having put back into the four boxes the product rebuilt with the day's
-cures, `11-accendi.sh prodotto` answered on all four:
+cures, `11-accendi.sh product` answered on all four:
 
 ```
   NO  1 librerie non si risolvono: il server morira e non si sapra perche

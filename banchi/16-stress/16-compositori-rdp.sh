@@ -2,9 +2,9 @@
 # 16-compositori-rdp.sh — ONE FAKE SCREEN (Xvfb) PER USER of the xrdp climb (fasi/20 §7.1).
 #
 #   (on the server, as nicfio)
-#   bash 16-compositori-rdp.sh accendi N MISURA    u00 (the short check) + u01…uNN
-#   bash 16-compositori-rdp.sh spegni              all those of this file
-#   bash 16-compositori-rdp.sh stato
+#   bash 16-compositori-rdp.sh start N MISURA    u00 (the short check) + u01…uNN
+#   bash 16-compositori-rdp.sh stop              all those of this file
+#   bash 16-compositori-rdp.sh status
 #
 #   MISURA = 4k · 3k · 2k · fhd (as 16-compositori.sh), or WIDTHxHEIGHT
 #
@@ -12,7 +12,7 @@
 #    labwc (where the browser runs) an Xvfb, where xfreerdp3 runs full screen.
 #    Each one its own, for the same reason: a client covered by another stops
 #    drawing.  The display of each (":2NN") is written in
-#    $XDG_RUNTIME_DIR/16-compositori-rdp/uNN; 16-salita.py --sistema xrdp reads it and
+#    $XDG_RUNTIME_DIR/16-compositori-rdp/uNN; 16-salita.py --system xrdp reads it and
 #    passes it to the actor (--display).
 # ⛔ fasi/20 §7.7: the Xvfb are born with oom_score_adj 800 — if the kernel has to kill
 #    something, it kills a client (a red rung), not sshd nor the queue.
@@ -24,7 +24,7 @@ C="$R/16-compositori-rdp"
 mkdir -p "$C"
 BASE_DISPLAY=${REMOTIX_16_DISPLAY_BASE:-200}
 
-misura() {
+measure() {
 	case "$1" in
 	4k|4K) echo 3840x2160 ;;
 	3k|3K) echo 3200x1800 ;;
@@ -35,7 +35,7 @@ misura() {
 	esac
 }
 
-vivo() { [ -f "$C/$1.pid" ] && kill -0 "$(cat "$C/$1.pid")" 2>/dev/null; }
+alive() { [ -f "$C/$1.pid" ] && kill -0 "$(cat "$C/$1.pid")" 2>/dev/null; }
 
 size_of() {  # :N ⇒ WIDTHxHEIGHT
 	DISPLAY=$1 xdpyinfo 2>/dev/null | awk '/dimensions:/{print $2; exit}'
@@ -45,7 +45,7 @@ turn_on_one() {  # uNN WxH
 	local n=$1 m=$2 k d
 	k=$((10#${n#u}))
 	d=":$((BASE_DISPLAY + k))"
-	if vivo "$n"; then
+	if alive "$n"; then
 		if [ "$(size_of "$d")" = "$m" ]; then
 			echo "$n: already on at $d ($m)"
 			return 0
@@ -72,18 +72,18 @@ turn_on_one() {  # uNN WxH
 	echo "$n: ⭐ Xvfb $d ($m), pid $(cat "$C/$n.pid")"
 }
 
-accendi() {
+start() {
 	local N=${1:-} M
-	case "$N" in ''|*[!0-9]*) echo "usage: $0 accendi N MISURA"; exit 2 ;; esac
-	M=$(misura "${2:-4k}") || { echo "unknown size: ${2:-}"; exit 2; }
-	esito=0
+	case "$N" in ''|*[!0-9]*) echo "usage: $0 start N MISURA"; exit 2 ;; esac
+	M=$(measure "${2:-4k}") || { echo "unknown size: ${2:-}"; exit 2; }
+	outcome=0
 	for i in $(seq 0 "$N"); do
-		turn_on_one "$(printf 'u%02d' "$i")" "$M" || esito=1
+		turn_on_one "$(printf 'u%02d' "$i")" "$M" || outcome=1
 	done
-	return $esito
+	return $outcome
 }
 
-spegni() {
+stop() {
 	for f in "$C"/u[0-9][0-9].pid; do
 		[ -e "$f" ] || continue
 		n=$(basename "$f" .pid)
@@ -94,24 +94,24 @@ spegni() {
 	true
 }
 
-stato() {
-	local quanti=0
+status() {
+	local amount=0
 	for f in "$C"/u[0-9][0-9]; do
 		[ -e "$f" ] || continue
 		n=$(basename "$f")
-		if vivo "$n"; then
+		if alive "$n"; then
 			echo "$n: on at $(cat "$f") — $(size_of "$(cat "$f")")"
-			quanti=$((quanti + 1))
+			amount=$((amount + 1))
 		else
 			echo "$n: ⚠ off (the file is left)"
 		fi
 	done
-	echo "on: $quanti"
+	echo "on: $amount"
 }
 
-case "${1:-stato}" in
-accendi) accendi "${2:-}" "${3:-4k}" ;;
-spegni) spegni ;;
-stato) stato ;;
-*) echo "usage: $0 accendi N MISURA | spegni | stato"; exit 2 ;;
+case "${1:-status}" in
+start) start "${2:-}" "${3:-4k}" ;;
+stop) stop ;;
+status) status ;;
+*) echo "usage: $0 start N MISURA | stop | status"; exit 2 ;;
 esac

@@ -1,8 +1,8 @@
 #cloud-config
 # REMOTIX phase 17 — Ubuntu 26.04 from the DESKTOP ISO, automatic installation (autoinstall).
 # The source is the ISO's default (ubuntu-desktop-minimal, "Selezione predefinita");
-# the only additions of the bench are marked with [banco].
-# Placeholders filled in by 17-vm.sh: @UTENTE@ @HASH@ @CHIAVE@ @NOME@
+# the only additions of the bench are marked with [bench].
+# Placeholders filled in by 17-vm.sh: @UTENTE@ @HASH@ @CHIAVE@ @NAME@
 autoinstall:
   version: 1
   locale: it_IT.UTF-8
@@ -14,7 +14,7 @@ autoinstall:
     realname: @UTENTE@
     username: @UTENTE@
     password: '@HASH@'
-  # [banco] openssh-server: not there by default on the desktop
+  # [bench] openssh-server: not there by default on the desktop
   ssh:
     install-server: true
     allow-pw: false
@@ -24,6 +24,6 @@ autoinstall:
     layout:
       name: direct
   late-commands:
-    # [banco] passwordless sudo (the user is already in the sudo group, like the default first user)
+    # [bench] passwordless sudo (the user is already in the sudo group, like the default first user)
     - "echo '@UTENTE@ ALL=(ALL) NOPASSWD:ALL' > /target/etc/sudoers.d/90-banco && chmod 440 /target/etc/sudoers.d/90-banco"
   shutdown: reboot

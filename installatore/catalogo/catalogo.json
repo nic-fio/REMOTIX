@@ -1,68 +1,68 @@
 {
-  "formato": "remotix-catalogo/1",
-  "versione": "2026.10.10.14",
-  "sequenza": 14,
-  "emesso": "2026-10-10",
-  "motore_minimo": "0.1.0",
-  "fonte": "fasi/17-l-installatore.md §3 and §3.1 (matrix and versions), §4 (survey), §11.1 (outcomes of T1), DECISIONI §10.6-10.8 (D2 and D7 closed, the machine without a desktop), fasi/18-senza-ffmpeg.md (no ffmpeg: libva, libopus; packages and repositories [M] 30 Sep in the podman images), DECISIONI §10.27 and fasi/19-nvidia.md (no encoding on the processor: OpenH264, SVT-AV1 and Cisco's repository gone; without a capable card REMOTIX is not installed; the card's Vulkan driver, vulkan_scheda and vulkan_nvidia, [M] 1 Oct in the podman images): what the documents know on 1 Oct 2026. No combination has a green full run yet (T10): this is why they are all COMPATIBLE and none CERTIFIED.",
-  "requisiti": {
-    "openssl_minima": "3.5.0",
-    "kde_minima": "6.1",
+  "format": "remotix-catalog/1",
+  "version": "2026.10.10.14",
+  "sequence": 14,
+  "issued": "2026-10-10",
+  "engine_minimum": "0.1.0",
+  "source": "fasi/17-l-installatore.md §3 and §3.1 (matrix and versions), §4 (survey), §11.1 (outcomes of T1), DECISIONI §10.6-10.8 (D2 and D7 closed, the machine without a desktop), fasi/18-senza-ffmpeg.md (no ffmpeg: libva, libopus; packages and repositories [M] 30 Sep in the podman images), DECISIONI §10.27 and fasi/19-nvidia.md (no encoding on the processor: OpenH264, SVT-AV1 and Cisco's repository gone; without a capable card REMOTIX is not installed; the card's Vulkan driver, vulkan_scheda and vulkan_nvidia, [M] 1 Oct in the podman images): what the documents know on 1 Oct 2026. No combination has a green full run yet (T10): this is why they are all COMPATIBLE and none CERTIFIED.",
+  "requirements": {
+    "openssl_minimum": "3.5.0",
+    "kde_minimum": "6.1",
     "systemd": true,
-    "xfce_minima": "4.20",
-    "lxqt_minima": "2.0",
-    "gnome_minima": "46"
+    "xfce_minimum": "4.20",
+    "lxqt_minimum": "2.0",
+    "gnome_minimum": "46"
   },
-  "depositi": {
+  "repositories": {
     "rpmfusion": {
-      "nome": "RPM Fusion"
+      "name": "RPM Fusion"
     },
     "packman": {
-      "nome": "Packman"
+      "name": "Packman"
     },
     "epel": {
-      "nome": "EPEL (with CRB)"
+      "name": "EPEL (with CRB)"
     }
   },
-  "piattaforme": [
+  "platforms": [
     {
       "id": "debian",
-      "distribuzione": "Debian",
-      "versioni": [
+      "distribution": "Debian",
+      "versions": [
         "13"
       ],
-      "etichetta_versione": "13 (Trixie)",
-      "nome": "Debian 13",
-      "famiglia": "debian",
-      "matrice": true,
-      "giro_intero": "",
+      "version_label": "13 (Trixie)",
+      "name": "Debian 13",
+      "family": "debian",
+      "matrix": true,
+      "full_run": "",
       "h264": {
-        "vulkan_codifica": [
+        "vulkan_encoding": [
           "AMD"
         ]
       },
       "desktop": {
         "gnome": {
-          "supportato": true
+          "supported": true
         },
         "kde": {
-          "supportato": true
+          "supported": true
         },
         "xfce": {
-          "supportato": true,
-          "componenti": [
+          "supported": true,
+          "components": [
             "labwc",
             "wlr-randr"
           ],
-          "serve_carattere": true
+          "needs_font": true
         },
         "lxqt": {
-          "supportato": true,
-          "componenti": [
+          "supported": true,
+          "components": [
             "labwc",
             "wlr-randr"
           ],
-          "serve_carattere": true
+          "needs_font": true
         }
       },
       "note": [
@@ -71,96 +71,96 @@
     },
     {
       "id": "ubuntu",
-      "distribuzione": "Ubuntu",
-      "versioni": [
+      "distribution": "Ubuntu",
+      "versions": [
         "26.04"
       ],
-      "etichetta_versione": "26.04 LTS",
-      "nome": "Ubuntu 26.04 LTS",
-      "famiglia": "debian",
-      "matrice": true,
-      "giro_intero": "",
-      "derivate": [
+      "version_label": "26.04 LTS",
+      "name": "Ubuntu 26.04 LTS",
+      "family": "debian",
+      "matrix": true,
+      "full_run": "",
+      "derivatives": [
         {
           "id": "linuxmint",
-          "versioni": [
+          "versions": [
             "23"
           ],
-          "nome": "Linux Mint"
+          "name": "Linux Mint"
         }
       ],
       "h264": {
-        "vulkan_codifica": [
+        "vulkan_encoding": [
           "AMD"
         ]
       },
       "desktop": {
         "gnome": {
-          "supportato": true,
+          "supported": true,
           "note": [
             "GNOME 50 (§5.1); whoever connects sees the distribution's default GNOME session, on Ubuntu the «ubuntu» session (D8)"
           ]
         },
         "kde": {
-          "supportato": true
+          "supported": true
         },
         "xfce": {
-          "supportato": true,
-          "componenti": [
+          "supported": true,
+          "components": [
             "labwc",
             "wlr-randr"
           ],
-          "serve_carattere": true
+          "needs_font": true
         },
         "lxqt": {
-          "supportato": true,
-          "componenti": [
+          "supported": true,
+          "components": [
             "labwc",
             "wlr-randr"
           ],
-          "serve_carattere": true
+          "needs_font": true
         }
       }
     },
     {
       "id": "fedora",
-      "distribuzione": "Fedora",
-      "versioni": [
+      "distribution": "Fedora",
+      "versions": [
         "44"
       ],
-      "etichetta_versione": "44",
-      "nome": "Fedora 44",
-      "famiglia": "fedora",
-      "matrice": true,
-      "giro_intero": "",
+      "version_label": "44",
+      "name": "Fedora 44",
+      "family": "fedora",
+      "matrix": true,
+      "full_run": "",
       "h264": {
-        "senza_h264_di_serie": [
+        "no_stock_h264": [
           "AMD",
           "Intel"
         ]
       },
       "desktop": {
         "gnome": {
-          "supportato": true
+          "supported": true
         },
         "kde": {
-          "supportato": true
+          "supported": true
         },
         "xfce": {
-          "supportato": true,
-          "componenti": [
+          "supported": true,
+          "components": [
             "labwc",
             "wlr-randr"
           ],
-          "serve_carattere": true
+          "needs_font": true
         },
         "lxqt": {
-          "supportato": true,
-          "componenti": [
+          "supported": true,
+          "components": [
             "labwc",
             "wlr-randr"
           ],
-          "serve_carattere": true
+          "needs_font": true
         }
       },
       "note": [
@@ -169,43 +169,43 @@
     },
     {
       "id": "fedora",
-      "distribuzione": "Fedora",
-      "versioni": [
+      "distribution": "Fedora",
+      "versions": [
         "43"
       ],
-      "etichetta_versione": "43",
-      "nome": "Fedora 43",
-      "famiglia": "fedora",
-      "matrice": false,
-      "giro_intero": "",
+      "version_label": "43",
+      "name": "Fedora 43",
+      "family": "fedora",
+      "matrix": false,
+      "full_run": "",
       "h264": {
-        "senza_h264_di_serie": [
+        "no_stock_h264": [
           "AMD",
           "Intel"
         ]
       },
       "desktop": {
         "gnome": {
-          "supportato": true
+          "supported": true
         },
         "kde": {
-          "supportato": true
+          "supported": true
         },
         "xfce": {
-          "supportato": true,
-          "componenti": [
+          "supported": true,
+          "components": [
             "labwc",
             "wlr-randr"
           ],
-          "serve_carattere": true
+          "needs_font": true
         },
         "lxqt": {
-          "supportato": true,
-          "componenti": [
+          "supported": true,
+          "components": [
             "labwc",
             "wlr-randr"
           ],
-          "serve_carattere": true
+          "needs_font": true
         }
       },
       "note": [
@@ -214,59 +214,59 @@
     },
     {
       "id": "almalinux",
-      "distribuzione": "AlmaLinux",
-      "versioni": [
+      "distribution": "AlmaLinux",
+      "versions": [
         "10"
       ],
-      "versione_minima": "10.1",
-      "etichetta_versione": "10.1 (OpenSSL 3.5)",
-      "nome": "AlmaLinux 10",
-      "famiglia": "fedora",
-      "matrice": true,
-      "giro_intero": "",
-      "derivate": [
+      "min_version": "10.1",
+      "version_label": "10.1 (OpenSSL 3.5)",
+      "name": "AlmaLinux 10",
+      "family": "fedora",
+      "matrix": true,
+      "full_run": "",
+      "derivatives": [
         {
           "id": "rocky",
-          "versioni": [
+          "versions": [
             "10"
           ],
-          "nome": "Rocky Linux",
-          "versione_minima": "10.1"
+          "name": "Rocky Linux",
+          "min_version": "10.1"
         },
         {
           "id": "rhel",
-          "versioni": [
+          "versions": [
             "10"
           ],
-          "nome": "RHEL",
-          "versione_minima": "10.1"
+          "name": "RHEL",
+          "min_version": "10.1"
         }
       ],
       "h264": {
-        "amd_senza_vaapi": true,
-        "senza_h264_di_serie": [
+        "amd_without_vaapi": true,
+        "no_stock_h264": [
           "Intel"
         ]
       },
-      "depositi": [
+      "repositories": [
         "epel"
       ],
       "desktop": {
         "gnome": {
-          "supportato": true
+          "supported": true
         },
         "kde": {
-          "supportato": true
+          "supported": true
         },
         "xfce": {
-          "supportato": false,
-          "codice": "RX-COMPAT-005",
-          "motivo": "neither labwc nor XFCE in RHEL/EPEL 10"
+          "supported": false,
+          "code": "RX-COMPAT-005",
+          "reason": "neither labwc nor XFCE in RHEL/EPEL 10"
         },
         "lxqt": {
-          "supportato": false,
-          "codice": "RX-COMPAT-005",
-          "motivo": "neither labwc nor LXQt in RHEL/EPEL 10"
+          "supported": false,
+          "code": "RX-COMPAT-005",
+          "reason": "neither labwc nor LXQt in RHEL/EPEL 10"
         }
       },
       "note": [
@@ -278,59 +278,59 @@
     },
     {
       "id": "arch",
-      "distribuzione": "Arch Linux",
-      "versioni": [
+      "distribution": "Arch Linux",
+      "versions": [
         "*"
       ],
-      "etichetta_versione": "rolling (since Sep 2026)",
-      "nome": "Arch Linux",
-      "famiglia": "arch",
-      "matrice": true,
-      "giro_intero": "",
-      "derivate": [
+      "version_label": "rolling (since Sep 2026)",
+      "name": "Arch Linux",
+      "family": "arch",
+      "matrix": true,
+      "full_run": "",
+      "derivatives": [
         {
           "id": "manjaro",
-          "versioni": [
+          "versions": [
             "*"
           ],
-          "nome": "Manjaro",
-          "nota": "a few weeks behind Arch"
+          "name": "Manjaro",
+          "note": "a few weeks behind Arch"
         },
         {
           "id": "endeavouros",
-          "versioni": [
+          "versions": [
             "*"
           ],
-          "nome": "EndeavourOS"
+          "name": "EndeavourOS"
         }
       ],
       "h264": {
-        "vulkan_codifica": [
+        "vulkan_encoding": [
           "AMD"
         ]
       },
       "desktop": {
         "gnome": {
-          "supportato": true
+          "supported": true
         },
         "kde": {
-          "supportato": true
+          "supported": true
         },
         "xfce": {
-          "supportato": true,
-          "componenti": [
+          "supported": true,
+          "components": [
             "labwc",
             "wlr-randr"
           ],
-          "serve_carattere": true
+          "needs_font": true
         },
         "lxqt": {
-          "supportato": true,
-          "componenti": [
+          "supported": true,
+          "components": [
             "labwc",
             "wlr-randr"
           ],
-          "serve_carattere": true
+          "needs_font": true
         }
       },
       "note": [
@@ -340,27 +340,27 @@
     },
     {
       "id": "opensuse-tumbleweed",
-      "distribuzione": "openSUSE Tumbleweed",
-      "versioni": [
+      "distribution": "openSUSE Tumbleweed",
+      "versions": [
         "*"
       ],
-      "etichetta_versione": "rolling (since Sep 2026)",
-      "nome": "openSUSE Tumbleweed",
-      "famiglia": "suse",
-      "matrice": true,
-      "giro_intero": "",
+      "version_label": "rolling (since Sep 2026)",
+      "name": "openSUSE Tumbleweed",
+      "family": "suse",
+      "matrix": true,
+      "full_run": "",
       "h264": {
-        "senza_h264_di_serie": [
+        "no_stock_h264": [
           "AMD"
         ]
       },
       "desktop": {
         "gnome": {
-          "supportato": true
+          "supported": true
         },
         "kde": {
-          "supportato": true,
-          "componenti": [
+          "supported": true,
+          "components": [
             "breeze6-wallpapers"
           ],
           "note": [
@@ -368,20 +368,20 @@
           ]
         },
         "xfce": {
-          "supportato": true,
-          "componenti": [
+          "supported": true,
+          "components": [
             "labwc",
             "wlr-randr"
           ],
-          "serve_carattere": true
+          "needs_font": true
         },
         "lxqt": {
-          "supportato": true,
-          "componenti": [
+          "supported": true,
+          "components": [
             "labwc",
             "wlr-randr"
           ],
-          "serve_carattere": true,
+          "needs_font": true,
           "note": [
             "on openSUSE the lxqt pattern brings the scalable font (google-droid-fonts) only as recommended: without it, labwc dies (labwc #2525, §11.1)"
           ]
@@ -393,52 +393,52 @@
     },
     {
       "id": "opensuse-leap",
-      "distribuzione": "openSUSE Leap",
-      "versioni": [
+      "distribution": "openSUSE Leap",
+      "versions": [
         "16"
       ],
-      "etichetta_versione": "16.0",
-      "nome": "openSUSE Leap 16",
-      "famiglia": "suse",
-      "matrice": true,
-      "giro_intero": "",
+      "version_label": "16.0",
+      "name": "openSUSE Leap 16",
+      "family": "suse",
+      "matrix": true,
+      "full_run": "",
       "h264": {
-        "senza_h264_di_serie": [
+        "no_stock_h264": [
           "AMD"
         ]
       },
       "desktop": {
         "gnome": {
-          "supportato": true
+          "supported": true
         },
         "kde": {
-          "supportato": true,
-          "richiede_3d": "Plasma on Leap 16 (KWin 6.4) hangs as soon as REMOTIX captures the screen if the card has no 3D acceleration (see KDE bug 487217): a real card is needed, or virgl in a virtual machine; XFCE and LXQt work without it"
+          "supported": true,
+          "requires_3d": "Plasma on Leap 16 (KWin 6.4) hangs as soon as REMOTIX captures the screen if the card has no 3D acceleration (see KDE bug 487217): a real card is needed, or virgl in a virtual machine; XFCE and LXQt work without it"
         },
         "xfce": {
-          "supportato": true,
-          "componenti": [
+          "supported": true,
+          "components": [
             "labwc",
             "wlr-randr"
           ],
-          "limiti": [
+          "limits": [
             "XFCE on Wayland is «experimental» for SUSE"
           ],
-          "serve_carattere": true
+          "needs_font": true
         },
         "lxqt": {
-          "supportato": true,
-          "componenti": [
+          "supported": true,
+          "components": [
             "labwc",
             "wlr-randr"
           ],
-          "limiti": [
+          "limits": [
             "LXQt on Wayland is «experimental» for SUSE"
           ],
           "note": [
             "on openSUSE the lxqt pattern brings the scalable font (google-droid-fonts) only as recommended: without it, labwc dies (labwc #2525, §11.1)"
           ],
-          "serve_carattere": true
+          "needs_font": true
         }
       },
       "note": [
@@ -446,160 +446,160 @@
       ]
     }
   ],
-  "escluse": [
+  "excluded": [
     {
       "id": "debian",
-      "versioni": [
+      "versions": [
         "12"
       ],
-      "motivo": "mutter 43 / GNOME 43, no libei, no labwc: the base is too old"
+      "reason": "mutter 43 / GNOME 43, no libei, no labwc: the base is too old"
     },
     {
       "id": "ubuntu",
-      "versioni": [
+      "versions": [
         "24.04"
       ],
-      "motivo": "Ubuntu 24.04 excluded (D7, 29 Sep): support starts from 26.04; KDE 5.27, XFCE 4.18 and LXQt 1.4 do not run on Wayland"
+      "reason": "Ubuntu 24.04 excluded (D7, 29 Sep): support starts from 26.04; KDE 5.27, XFCE 4.18 and LXQt 1.4 do not run on Wayland"
     },
     {
       "id": "linuxmint",
-      "versioni": [
+      "versions": [
         "22"
       ],
-      "motivo": "Mint 22 is based on Ubuntu 24.04 (D7)"
+      "reason": "Mint 22 is based on Ubuntu 24.04 (D7)"
     },
     {
       "id": "almalinux",
-      "versioni": [
+      "versions": [
         "9"
       ],
-      "motivo": "RHEL 9: GNOME 40, no libei, no labwc"
+      "reason": "RHEL 9: GNOME 40, no libei, no labwc"
     },
     {
       "id": "rocky",
-      "versioni": [
+      "versions": [
         "9"
       ],
-      "motivo": "RHEL 9: GNOME 40, no libei, no labwc"
+      "reason": "RHEL 9: GNOME 40, no libei, no labwc"
     },
     {
       "id": "rhel",
-      "versioni": [
+      "versions": [
         "9"
       ],
-      "motivo": "RHEL 9: GNOME 40, no libei, no labwc"
+      "reason": "RHEL 9: GNOME 40, no libei, no labwc"
     },
     {
       "id": "centos",
-      "versioni": [
+      "versions": [
         "9"
       ],
-      "motivo": "RHEL 9: GNOME 40, no libei, no labwc"
+      "reason": "RHEL 9: GNOME 40, no libei, no labwc"
     },
     {
       "id": "opensuse-leap",
-      "versioni": [
+      "versions": [
         "15"
       ],
-      "motivo": "Leap 15.6: end of life on 30 April 2026"
+      "reason": "Leap 15.6: end of life on 30 April 2026"
     },
     {
       "id": "sles",
-      "versioni": [
+      "versions": [
         "16"
       ],
-      "motivo": "SLES 16: GNOME only, no Packman — to be reconsidered if a customer asks for it"
+      "reason": "SLES 16: GNOME only, no Packman — to be reconsidered if a customer asks for it"
     }
   ],
-  "carattere_scalabile": {
+  "scalable_font": {
     "debian": "fonts-dejavu-core",
     "fedora": "dejavu-sans-fonts",
     "arch": "ttf-dejavu",
     "suse": "google-droid-fonts"
   },
-  "componenti_minimi": [
+  "min_components": [
     {
-      "componente": "Linux kernel",
-      "minimo": "6.12",
-      "perche": "the one of the oldest certified distribution: i915/xe and amdgpu drivers, DMA-BUF"
+      "component": "Linux kernel",
+      "minimum": "6.12",
+      "why": "the one of the oldest certified distribution: i915/xe and amdgpu drivers, DMA-BUF"
     },
     {
-      "componente": "systemd / logind",
-      "minimo": "with systemctl --user and Remote=yes sessions",
-      "perche": "the per-user sessions"
+      "component": "systemd / logind",
+      "minimum": "with systemctl --user and Remote=yes sessions",
+      "why": "the per-user sessions"
     },
     {
-      "componente": "OpenSSL",
-      "minimo": "3.5",
-      "perche": "the QUIC API of the ngtcp2_crypto_ossl bridge"
+      "component": "OpenSSL",
+      "minimum": "3.5",
+      "why": "the QUIC API of the ngtcp2_crypto_ossl bridge"
     },
     {
-      "componente": "ngtcp2 / nghttp3",
-      "minimo": "1.25.0 / 1.18.0",
-      "perche": "built into the binary (DECISIONS §10.6)"
+      "component": "ngtcp2 / nghttp3",
+      "minimum": "1.25.0 / 1.18.0",
+      "why": "built into the binary (DECISIONS §10.6)"
     },
     {
-      "componente": "libva (VA-API)",
-      "minimo": "2.22",
-      "perche": "encoding on the graphics card, without ffmpeg (phase 18); the oldest in the matrix: Debian 13, Alma 10, Leap 16 [M] 30 Sep"
+      "component": "libva (VA-API)",
+      "minimum": "2.22",
+      "why": "encoding on the graphics card, without ffmpeg (phase 18); the oldest in the matrix: Debian 13, Alma 10, Leap 16 [M] 30 Sep"
     },
     {
-      "componente": "libopus",
-      "minimo": "1.4",
-      "perche": "audio, without ffmpeg; Alma 10 has 1.4"
+      "component": "libopus",
+      "minimum": "1.4",
+      "why": "audio, without ffmpeg; Alma 10 has 1.4"
     },
     {
-      "componente": "libei",
-      "minimo": "1.3",
-      "perche": "ei_disconnect"
+      "component": "libei",
+      "minimum": "1.3",
+      "why": "ei_disconnect"
     },
     {
-      "componente": "PipeWire",
-      "minimo": "0.3.48",
-      "perche": "screen capture on GNOME and KDE"
+      "component": "PipeWire",
+      "minimum": "0.3.48",
+      "why": "screen capture on GNOME and KDE"
     },
     {
-      "componente": "GNOME (mutter)",
-      "minimo": "46 (ConnectToEIS API, --headless); from 50 the @user unit",
-      "perche": "sessione.c"
+      "component": "GNOME (mutter)",
+      "minimum": "46 (ConnectToEIS API, --headless); from 50 the @user unit",
+      "why": "sessione.c"
     },
     {
-      "componente": "KDE Plasma (KWin)",
-      "minimo": "6.1 (connectToEIS)",
-      "perche": "kwin.c"
+      "component": "KDE Plasma (KWin)",
+      "minimum": "6.1 (connectToEIS)",
+      "why": "kwin.c"
     },
     {
-      "componente": "XFCE",
-      "minimo": "4.20 (Wayland)",
-      "perche": "the session under labwc"
+      "component": "XFCE",
+      "minimum": "4.20 (Wayland)",
+      "why": "the session under labwc"
     },
     {
-      "componente": "LXQt",
-      "minimo": "2.0 (Wayland)",
-      "perche": "the session under labwc"
+      "component": "LXQt",
+      "minimum": "2.0 (Wayland)",
+      "why": "the session under labwc"
     },
     {
-      "componente": "labwc / wlroots",
-      "minimo": "labwc 0.8 with -m/-C/-S; wlroots 0.18",
-      "perche": "wlroots.c, sessione.c"
+      "component": "labwc / wlroots",
+      "minimum": "labwc 0.8 with -m/-C/-S; wlroots 0.18",
+      "why": "wlroots.c, sessione.c"
     },
     {
-      "componente": "a scalable font",
-      "minimo": "any (DejaVu, Noto, Droid…)",
-      "perche": "without one, labwc dies (labwc #2525)"
+      "component": "a scalable font",
+      "minimum": "any (DejaVu, Noto, Droid…)",
+      "why": "without one, labwc dies (labwc #2525)"
     },
     {
-      "componente": "VA-API",
-      "minimo": "a driver with H.264 encoding (iHD Intel, radeonsi AMD with the codecs); not the proprietary NVIDIA one (it goes through Vulkan Video)",
-      "perche": "encoding on the graphics card: without a capable card REMOTIX is not installed (DECISIONS §10.27)"
+      "component": "VA-API",
+      "minimum": "a driver with H.264 encoding (iHD Intel, radeonsi AMD with the codecs); not the proprietary NVIDIA one (it goes through Vulkan Video)",
+      "why": "encoding on the graphics card: without a capable card REMOTIX is not installed (DECISIONS §10.27)"
     },
     {
-      "componente": "Vulkan Video",
-      "minimo": "loader 1.3.274; a driver with VK_KHR_video_encode_h264/h265: RADV from a Mesa built with the codecs (AMD), the proprietary NVIDIA driver with its ICD [?] not tested",
-      "perche": "the path tried first (phase 19, DECISIONS §10.27); without it, the card goes through VA-API"
+      "component": "Vulkan Video",
+      "minimum": "loader 1.3.274; a driver with VK_KHR_video_encode_h264/h265: RADV from a Mesa built with the codecs (AMD), the proprietary NVIDIA driver with its ICD [?] not tested",
+      "why": "the path tried first (phase 19, DECISIONS §10.27); without it, the card goes through VA-API"
     }
   ],
-  "fuori_sempre": [
+  "always_out": [
     "distributions without systemd (Alpine, Devuan, Artix with OpenRC…): REMOTIX uses logind and the user manager",
     "immutable ones (Silverblue/Kinoite, Aeon/Kalpa, Ubuntu Core, SteamOS): postponed (D9)",
     "Linux Mint Cinnamon: Cinnamon is not one of the four desktops"

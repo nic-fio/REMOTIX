@@ -1,4 +1,4 @@
-package motore
+package engine
 
 import (
 	"bytes"
@@ -23,78 +23,78 @@ const (
 	EvCommand        EventType = "COMMAND" // a program of the closed list launched (R41)
 )
 
-// Evento is a line of the log (registro.jsonl).
-type Evento struct {
+// Event is a line of the log (log.jsonl).
+type Event struct {
 	N         int             `json:"n"`
-	Ora       string          `json:"time"`
-	Tipo      EventType       `json:"type"`
-	Azione    string          `json:"action,omitempty"`
-	Da        Stato           `json:"from,omitempty"`
-	A         Stato           `json:"to,omitempty"`
-	Prima     json.RawMessage `json:"state_before,omitempty"`
-	Dopo      json.RawMessage `json:"state_after,omitempty"`
+	At       string          `json:"time"`
+	Type      EventType       `json:"type"`
+	Action    string          `json:"action,omitempty"`
+	Da        State           `json:"from,omitempty"`
+	A         State           `json:"to,omitempty"`
+	Before     json.RawMessage `json:"state_before,omitempty"`
+	After      json.RawMessage `json:"state_after,omitempty"`
 	Origine   Origine         `json:"origin,omitempty"`
 	Codice    string          `json:"code,omitempty"`
-	Dettaglio string          `json:"detail,omitempty"`
+	Detail string          `json:"detail,omitempty"`
 }
 
-// Registro: the write-ahead log. Every line is written with fsync of the file (and of the
+// Log: the write-ahead log. Every line is written with fsync of the file (and of the
 // folder on creation) BEFORE the engine takes the next step.
-type Registro struct {
-	percorso string
+type Log struct {
+	fpath string
 	f        *os.File
-	Eventi   []Evento
+	Events   []Event
 }
 
 // OpenLog reads the existing log (or creates one) and opens it for appending. A final line
 // written halfway (the process killed while writing) is removed and reported: lines are
 // written whole or not at all, and without its line the thing did not happen.
-func OpenLog(percorso string) (*Registro, []Messaggio, error) {
-	var avvisi []Messaggio
-	r := &Registro{percorso: percorso}
-	b, err := os.ReadFile(percorso)
-	nuovo := os.IsNotExist(err)
-	if err != nil && !nuovo {
+func OpenLog(fpath string) (*Log, []Message, error) {
+	var warnings []Message
+	r := &Log{fpath: fpath}
+	b, err := os.ReadFile(fpath)
+	fresh := os.IsNotExist(err)
+	if err != nil && !fresh {
 		return nil, nil, err
 	}
 	if len(b) > 0 && b[len(b)-1] != '\n' {
-		taglio := bytes.LastIndexByte(b, '\n') + 1
-		if err := os.Truncate(percorso, int64(taglio)); err != nil {
+		cut := bytes.LastIndexByte(b, '\n') + 1
+		if err := os.Truncate(fpath, int64(cut)); err != nil {
 			return nil, nil, err
 		}
-		avvisi = append(avvisi, Msg("RX-RIPRESA-003", fmt.Sprintf("%d bytes removed", len(b)-taglio)))
-		b = b[:taglio]
+		warnings = append(warnings, Msg("RX-RIPRESA-003", fmt.Sprintf("%d bytes removed", len(b)-cut)))
+		b = b[:cut]
 	}
-	for i, riga := range bytes.Split(bytes.TrimSuffix(b, []byte("\n")), []byte("\n")) {
-		if len(riga) == 0 {
+	for i, line := range bytes.Split(bytes.TrimSuffix(b, []byte("\n")), []byte("\n")) {
+		if len(line) == 0 {
 			continue
 		}
-		var e Evento
-		if err := json.Unmarshal(riga, &e); err != nil {
-			return nil, nil, fmt.Errorf("%s: line %d broken: %w", percorso, i+1, err)
+		var e Event
+		if err := json.Unmarshal(line, &e); err != nil {
+			return nil, nil, fmt.Errorf("%s: line %d broken: %w", fpath, i+1, err)
 		}
-		r.Eventi = append(r.Eventi, e)
+		r.Events = append(r.Events, e)
 	}
-	f, err := os.OpenFile(percorso, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0o600)
+	f, err := os.OpenFile(fpath, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0o600)
 	if err != nil {
 		return nil, nil, err
 	}
 	r.f = f
-	if nuovo {
+	if fresh {
 		if err := f.Sync(); err != nil {
 			return nil, nil, err
 		}
-		if err := SyncFolder(filepath.Dir(percorso)); err != nil {
+		if err := SyncFolder(filepath.Dir(fpath)); err != nil {
 			return nil, nil, err
 		}
 	}
-	return r, avvisi, nil
+	return r, warnings, nil
 }
 
-// Scrivi appends a line and makes it durable before returning.
-func (r *Registro) Scrivi(e Evento) error {
-	e.N = len(r.Eventi) + 1
-	e.Ora = ora()
+// Record appends a line and makes it durable before returning.
+func (r *Log) Record(e Event) error {
+	e.N = len(r.Events) + 1
+	e.At = now()
 	b, err := json.Marshal(e)
 	if err != nil {
 		return err
@@ -105,25 +105,25 @@ func (r *Registro) Scrivi(e Evento) error {
 	if err := r.f.Sync(); err != nil {
 		return err
 	}
-	r.Eventi = append(r.Eventi, e)
+	r.Events = append(r.Events, e)
 	return nil
 }
 
-// Chiudi closes the file.
-func (r *Registro) Chiudi() error { return r.f.Close() }
+// Close closes the file.
+func (r *Log) Close() error { return r.f.Close() }
 
-// Ultimo: the last line of an action among the given types (all if none).
-func (r *Registro) Ultimo(azione string, tipi ...EventType) *Evento {
-	for i := len(r.Eventi) - 1; i >= 0; i-- {
-		e := &r.Eventi[i]
-		if e.Azione != azione {
+// Last: the last line of an action among the given types (all if none).
+func (r *Log) Last(action string, types ...EventType) *Event {
+	for i := len(r.Events) - 1; i >= 0; i-- {
+		e := &r.Events[i]
+		if e.Action != action {
 			continue
 		}
-		if len(tipi) == 0 {
+		if len(types) == 0 {
 			return e
 		}
-		for _, t := range tipi {
-			if e.Tipo == t {
+		for _, t := range types {
+			if e.Type == t {
 				return e
 			}
 		}
@@ -131,22 +131,22 @@ func (r *Registro) Ultimo(azione string, tipi ...EventType) *Evento {
 	return nil
 }
 
-// Intenzione: the FIRST intention of an action. The before-state that counts is that one: if
+// Intent: the FIRST intention of an action. The before-state that counts is that one: if
 // resume re-photographed the machine after an effect had already happened, it would mistake a change
 // of ours for a PRE-EXISTING one and would never undo it (§6.6.4).
-func (r *Registro) Intenzione(azione string) *Evento {
-	for i := range r.Eventi {
-		if r.Eventi[i].Azione == azione && r.Eventi[i].Tipo == EvIntent {
-			return &r.Eventi[i]
+func (r *Log) Intent(action string) *Event {
+	for i := range r.Events {
+		if r.Events[i].Action == action && r.Events[i].Type == EvIntent {
+			return &r.Events[i]
 		}
 	}
 	return nil
 }
 
 // Toccata: the log has at least one intention, that is the machine may have been changed.
-func (r *Registro) Toccata() bool {
-	for _, e := range r.Eventi {
-		if e.Tipo == EvIntent {
+func (r *Log) Toccata() bool {
+	for _, e := range r.Events {
+		if e.Type == EvIntent {
 			return true
 		}
 	}

@@ -13,38 +13,38 @@
 #     e.g. bash 17-t4-motore.sh debian13-gnome $T4/remotix-install $T4/remotix_…+deb13_amd64.deb
 #
 # The script of §7.3 with the ENGINE in place of the manual steps of T3 (17-t3-prova.sh):
-#   0. "cliente" snapshot, power on; the person "prova", ALREADY in the card node's group (R33);
-#   1. fingerprint "prima" (17-t3-impronta.sh);
+#   0. "client" snapshot, power on; the person "prova", ALREADY in the card node's group (R33);
+#   1. fingerprint "before" (17-t3-impronta.sh);
 #   2. remotix-install check; plan --install --package; approve; apply: the engine has the
 #      manager install the package (resolved set, from the cache), enrolls in the groups, turns on
-#      the belts, starts the service via D-Bus, and verifies; fingerprint "installato";
+#      the belts, starts the service via D-Bus, and verifies; fingerprint "installed";
 #   3. a REAL browser enters and sees the desktop (17-t1c-guarda.sh, Chrome);
 #   4. R43: "prova" also opens an ssh session with a process that writes the time every second;
 #   5. remotix-install uninstall --purge; approve; apply: the REMOTIX sessions are closed (only
-#      those), the log is walked back; fingerprint "disinstallato" and comparison with "prima";
+#      those), the log is walked back; fingerprint "disinstallato" and comparison with "before";
 #      the ssh session's process must still be alive;
-#   6. power off and back to "cliente" (even if the test crashes).
-# Evidence in $T4/esiti/<machine>/.
+#   6. power off and back to "client" (even if the test crashes).
+# Evidence in $T4/outcomes/<machine>/.
 set -uo pipefail
-m=${1:?machine}; MOT=${2:?remotix-install}; PKG=${3:?package}
+m=${1:?machine}; REASON=${2:?remotix-install}; PKG=${3:?package}
 R=/media/REMOTIX/vm17
 T4=${T4:-$R/t4}
-QUI=$(cd "$(dirname "$0")" && pwd)
+HERE=$(cd "$(dirname "$0")" && pwd)
 E=$T4/esiti/$m
 V="bash $R/17-vm.sh"
-PAROLA=${REMOTIX_PAROLA_PROVA:-prova2026}
-# the family decides the fingerprint; PIANO_OPZ adds to the plan (e.g. --deposito packman on openSUSE)
-IMPRONTA=17-t3-impronta.sh
+PASSWORD=${REMOTIX_TEST_PASSWORD:-prova2026}
+# the family decides the fingerprint; PLAN_OPTS adds to the plan (e.g. --deposito packman on openSUSE)
+FINGERPRINT=17-t3-impronta.sh
 case $m in
 debian13|debian13-*) n=1;; ubuntu2604|ubuntu2604-*) n=2;;
-fedora44|fedora44-*) n=3; IMPRONTA=17-t3-impronta-rpm.sh;;
-arch|arch-*) n=4; IMPRONTA=17-t3-impronta-arch.sh;;
-tumbleweed|tumbleweed-*) n=5; IMPRONTA=17-t3-impronta-rpm.sh;;
-leap16|leap16-*) n=6; IMPRONTA=17-t3-impronta-rpm.sh;;
-alma10|alma10-*) n=7; IMPRONTA=17-t3-impronta-rpm.sh;;
+fedora44|fedora44-*) n=3; FINGERPRINT=17-t3-impronta-rpm.sh;;
+arch|arch-*) n=4; FINGERPRINT=17-t3-impronta-arch.sh;;
+tumbleweed|tumbleweed-*) n=5; FINGERPRINT=17-t3-impronta-rpm.sh;;
+leap16|leap16-*) n=6; FINGERPRINT=17-t3-impronta-rpm.sh;;
+alma10|alma10-*) n=7; FINGERPRINT=17-t3-impronta-rpm.sh;;
 *) echo "unknown machine: $m"; exit 2;;
 esac
-PIANO_OPZ=${PIANO_OPZ:-}
+PLAN_OPTS=${PLAN_OPTS:-}
 k=0  # the "bare" machine, without desktop: R38, the engine installs it (DESKTOP=lxqt … in the environment)
 case $m in *-*) case ${m#*-} in gnome) k=1;; kde) k=2;; xfce) k=3;; lxqt) k=4;; esac ;; esac
 DESKTOP=${DESKTOP:-}
@@ -52,24 +52,24 @@ PSSH=$((2300 + 10 * n + k)); PRX=$((7500 + 10 * n + k))
 CH=$R/ssh/id_ed25519
 O="-i $CH -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR"
 vm() { $V ssh "$m" "$@"; }
-impronta() { vm 'sudo bash -s' <"$QUI/$IMPRONTA" >"$E/impronta-$1.txt" 2>"$E/impronta-$1.err"
+impronta() { vm 'sudo bash -s' <"$HERE/$FINGERPRINT" >"$E/impronta-$1.txt" 2>"$E/impronta-$1.err"
              echo "   fingerprint \"$1\": $(wc -l <"$E/impronta-$1.txt") lines"; }
-# the "bare" machine has no "cliente" snapshot: it is rebuilt from the image (azzera), before and after
-torna() { if [ "$k" = 0 ]; then $V azzera "$m"; else $V torna "$m" cliente; fi; }
-fine() { [ -n "${OROLOGIO:-}" ] && kill "$OROLOGIO" 2>/dev/null
-         echo "==> powering off and back to how it was"; $V ferma "$m" >/dev/null 2>&1; torna >/dev/null 2>&1; }
+# the "bare" machine has no "client" snapshot: it is rebuilt from the image (reset), before and after
+revert() { if [ "$k" = 0 ]; then $V reset "$m"; else $V revert "$m" cliente; fi; }
+fine() { [ -n "${CLOCK:-}" ] && kill "$CLOCK" 2>/dev/null
+         echo "==> powering off and back to how it was"; $V shutdown "$m" >/dev/null 2>&1; revert >/dev/null 2>&1; }
 
 mkdir -p "$E"; rm -f "$E"/*
 if pgrep -f "qemu-system.*-name rx-$m " >/dev/null; then echo "⛔ $m is already running: someone else is using it"; exit 2; fi
 [ "$(pgrep -c '^qemu-system')" -lt 4 ] || { echo "⛔ 4 VMs already running"; exit 2; }
 trap fine EXIT
 echo "==> $m: \"cliente\" snapshot, power on"
-torna || exit 1
-$V avvia "$m" >"$E/avvia.log" 2>&1 || { tail "$E/avvia.log"; exit 1; }
+revert || exit 1
+$V boot "$m" >"$E/boot.log" 2>&1 || { tail "$E/boot.log"; exit 1; }
 
 echo "==> the person \"prova\", already in the card node's group (R33); their ssh key for R43"
 vm "id -u prova >/dev/null 2>&1 || sudo useradd -m -s /bin/bash prova
-echo 'prova:$PAROLA' | sudo chpasswd
+echo 'prova:$PASSWORD' | sudo chpasswd
 G=\$(for x in /dev/dri/card[0-9]*; do [ -e \$x ] && getent group \$(stat -c %g \$x) | cut -d: -f1; done | sort -u | head -1)
 [ -n \"\$G\" ] && sudo gpasswd -a prova \"\$G\" >/dev/null
 sudo install -d -m 700 -o prova -g prova ~prova/.ssh
@@ -79,13 +79,13 @@ impronta prima
 
 echo "==> the engine and the package into the VM"
 # shellcheck disable=SC2086
-scp -q $O -P "$PSSH" "$MOT" "$PKG" nicfio@localhost:/tmp/ || exit 1
+scp -q $O -P "$PSSH" "$REASON" "$PKG" nicfio@localhost:/tmp/ || exit 1
 D=/tmp/$(basename "$PKG")
 vm "sudo install -m 755 /tmp/remotix-install /root/remotix-install"
 
 echo "==> 2. check, plan, approve, apply (as root)"
 vm "sudo /root/remotix-install check" >"$E/verifica.txt" 2>&1; echo "   check: exit $?"
-vm "cd /tmp && sudo /root/remotix-install plan --install --package $D --users prova $PIANO_OPZ --output /root/piano.json" >"$E/piano.txt" 2>&1
+vm "cd /tmp && sudo /root/remotix-install plan --install --package $D --users prova $PLAN_OPTS --output /root/piano.json" >"$E/piano.txt" 2>&1
 echo "   plan: exit $? — $(grep -c '^[0-9]*\. ' "$E/piano.txt") steps"
 vm "sudo /root/remotix-install approve /root/piano.json ${DESKTOP:+--desktop $DESKTOP}" >>"$E/piano.txt" 2>&1
 [ -n "$DESKTOP" ] && vm "echo target: \$(systemctl get-default); echo display manager: \$(systemctl is-enabled display-manager.service 2>&1) \$(systemctl is-active display-manager.service 2>&1)" | sed 's/^/   before: /' 
@@ -129,7 +129,7 @@ echo "   exit $? — $(grep -E '^T1C ' "$E/browser.log" | cut -c1-300)"
 echo "==> 4. R43: an ssh session of \"prova\" with a clock"
 # shellcheck disable=SC2086
 ssh $O -p "$PSSH" prova@localhost 'while :; do date +%s >> ~/orologio.txt; sleep 1; done' &
-OROLOGIO=$!
+CLOCK=$!
 sleep 4
 vm "loginctl list-sessions --no-legend; for s in \$(loginctl list-sessions --no-legend | awk '{print \$1}'); do echo \"\$s \$(loginctl show-session \$s -p Service -p Name -p State --value | tr '\n' ' ')\"; done
 echo processes of prova: \$(pgrep -u prova | wc -l)
@@ -153,8 +153,8 @@ echo service: \$(systemctl is-enabled remotix 2>&1) \$(systemctl is-active remot
 (dpkg -l remotix 2>/dev/null | tail -1 || true; rpm -q remotix 2>/dev/null; pacman -Q remotix 2>/dev/null); id prova
 sudo ls /var/lib/remotix /var/lib/remotix/operations; sudo sh -c 'cat /var/lib/remotix/operations/*/certificate.txt' | grep -A30 'final state: CONFIRMED\$' | tail -30" >"$E/dopo.txt" 2>&1
 sed 's/^/   /' "$E/dopo.txt" | head -60
-kill "$OROLOGIO" 2>/dev/null; OROLOGIO=
+kill "$CLOCK" 2>/dev/null; CLOCK=
 vm "sudo rm -f ~prova/orologio.txt"
 impronta disinstallato
 diff "$E/impronta-prima.txt" "$E/impronta-disinstallato.txt" >"$E/diff-R6.txt"
-echo "   R6: $(grep -c '^[<>]' "$E/diff-R6.txt") lines differ between \"prima\" and \"disinstallato\" (in $E/diff-R6.txt)"
+echo "   R6: $(grep -c '^[<>]' "$E/diff-R6.txt") lines differ between \"before\" and \"disinstallato\" (in $E/diff-R6.txt)"

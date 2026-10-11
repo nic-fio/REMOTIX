@@ -42,7 +42,7 @@
 # ===========================================================================
 # ⛔ THE EXPECTATIONS, WRITTEN BEFORE THE ROUND (B0.4)
 #
-#   the HEALTHY round exits 0 (VERDE) — and it is not a widened expectation: the frame
+#   the HEALTHY round exits 0 (GREEN) — and it is not a widened expectation: the frame
 #   is there, it is 1920×1080 as requested, and it contains the «bandiera» scene.
 #   ⚠ If the healthy round did NOT exit 0, the certification **stops**: no
 #     fault is injected on a bench already red, because the red afterwards would not
@@ -80,13 +80,13 @@
 # ===========================================================================
 set -uo pipefail
 
-QUI=${QUI:-/media/REMOTIX/tmp/02-cattura}
+HERE=${HERE:-/media/REMOTIX/tmp/02-cattura}
 SRC=${SRC:-/media/REMOTIX/src}
-GIUDICE=$SRC/02-cattura-giudica.py
+JUDGE=$SRC/02-cattura-giudica.py
 LAUNCH=$SRC/02-cattura-lancia.sh
-SCENA=${SCENA:-bandiera}
-mkdir -p "$QUI" || { echo "⛔ I cannot create $QUI" >&2; exit 2; }
-REGISTRO=$QUI/certificazione-$(date -u +%Y%m%d-%H%M%S).log
+SCENE=${SCENE:-flag}
+mkdir -p "$HERE" || { echo "⛔ I cannot create $HERE" >&2; exit 2; }
+LOG=$HERE/certificazione-$(date -u +%Y%m%d-%H%M%S).log
 
 ok()  { printf '    \033[1;32mOK\033[0m  %s\n' "$*"; }
 ko()  { printf '    \033[1;31mNO\033[0m  %s\n' "$*"; }
@@ -98,10 +98,10 @@ EXPECTED_HEALTHY=0
 # ---------------------------------------------------------------------------
 #  The injection: always on a copy, with the fingerprint before and after
 # ---------------------------------------------------------------------------
-innesta()
+graft()
 {
-	local che=$1 regime=$2 primo=$3
-	python3 - "$che" "$regime" "$primo" <<'FINE'
+	local desc=$1 regime=$2 first=$3
+	python3 - "$desc" "$regime" "$first" <<'FINE'
 import os, sys
 che, regime, primo = sys.argv[1:4]
 n = os.path.getsize(regime)
@@ -113,7 +113,7 @@ elif che == "grigio":
     dati = bytes([128, 128, 128, 255]) * (n // 4) + bytes(n % 4)
 elif che == "troncato":
     dati = open(regime, "rb").read()[: n - 40000]
-elif che == "copia":
+elif che == "copy":
     dati = open(primo, "rb").read()
     if len(dati) > n:
         dati = dati[:n]
@@ -128,48 +128,48 @@ FINE
 	return $?
 }
 
-impronta() { sha256sum "$1" | cut -d' ' -f1; }
+fingerprint() { sha256sum "$1" | cut -d' ' -f1; }
 
 # ---------------------------------------------------------------------------
 #  A round of the judge, and the comparison with the expectation written beforehand
 # ---------------------------------------------------------------------------
-giudica()
+judge()
 {
-	local prefisso=$1 dove=$2
-	python3 -u "$GIUDICE" --manifesto "$prefisso.json" --scena "$SCENA" \
+	local prefix=$1 dove=$2
+	python3 -u "$JUDGE" --manifest "$prefix.json" --scene "$SCENE" \
 	        --json "$dove.json" > "$dove.log" 2>&1
 	return $?
 }
 
 marks_of()
 {
-	# ⛔ Only the RED marks: a warning on the `primo` frame — where the scene
+	# ⛔ Only the RED marks: a warning on the `first` frame — where the scene
 	#    is not there yet — is not a finding, and counting it here would pass off as
 	#    «the fault was seen» a noise that was there in the healthy round too.
 	python3 -c '
 import json, sys
 v = json.load(open(sys.argv[1]))
-m = [r["marca"] for f in v.get("fotogrammi", {}).values()
-     for r in f.get("rilievi", []) if r.get("rosso", True)]
-m += [r["marca"] for r in v.get("confronto_primo_regime", {}).get("rilievi", [])]
+m = [r["mark"] for f in v.get("frames", {}).values()
+     for r in f.get("findings", []) if r.get("red", True)]
+m += [r["mark"] for r in v.get("confronto_primo_regime", {}).get("findings", [])]
 print(" ".join(sorted(set(m))))' "$1"
 }
 
-verifica()
+verify()
 {
-	local nome=$1 uscita=$2 atteso=$3 marche=$4 pretesa=$5 vietata=$6
-	local buono=si
-	if [ "$uscita" != "$atteso" ]; then
-		ko "$nome: exit $uscita, expected $atteso"; buono=
+	local name=$1 output=$2 expected=$3 marks=$4 claim=$5 forbidden=$6
+	local good=si
+	if [ "$output" != "$expected" ]; then
+		ko "$name: exit $output, expected $expected"; good=
 	fi
-	if [ -n "$pretesa" ] && [[ "$marche" != *"$pretesa"* ]]; then
-		ko "$nome: the REQUIRED mark «$pretesa» is missing — found: ${marche:-none}"; buono=
+	if [ -n "$claim" ] && [[ "$marks" != *"$claim"* ]]; then
+		ko "$name: the REQUIRED mark «$claim» is missing — found: ${marks:-none}"; good=
 	fi
-	if [ -n "$vietata" ] && [[ "$marche" == *"$vietata"* ]]; then
-		ko "$nome: the FORBIDDEN mark «$vietata» is there — the judge gets the diagnosis wrong"; buono=
+	if [ -n "$forbidden" ] && [[ "$marks" == *"$forbidden"* ]]; then
+		ko "$name: the FORBIDDEN mark «$forbidden» is there — the judge gets the diagnosis wrong"; good=
 	fi
-	if [ -n "$buono" ]; then
-		ok "$nome: exit $uscita as expected, marks: ${marche:-none}"
+	if [ -n "$good" ]; then
+		ok "$name: exit $output as expected, marks: ${marks:-none}"
 		return 0
 	fi
 	return 1
@@ -178,7 +178,7 @@ verifica()
 # ===========================================================================
 {
 log "0. THE INITIAL STATE — declared and checked (B0.1)"
-for f in "$GIUDICE" "$LAUNCH"; do
+for f in "$JUDGE" "$LAUNCH"; do
 	if [ ! -r "$f" ]; then ko "⛔ cannot read: $f"; exit 2; fi
 done
 ok "the two files of the bench can be read"
@@ -186,7 +186,7 @@ ok "the two files of the bench can be read"
 log "0-bis. THE JUDGE FIRST OF ALL: does it pass its own positive control?"
 inf "⛔ A bench is not certified with an uncertified tool: it would be measuring"
 inf "   with a ruler whose scale was never checked (LEZIONI.md §1.2)."
-python3 -u "$GIUDICE" --solo-controllo-positivo
+python3 -u "$JUDGE" --positive-check-only
 if [ $? -ne 0 ]; then
 	ko "⛔ the judge is NOT certified: the certification stops here"
 	exit 2
@@ -195,10 +195,10 @@ ok "the judge finds the flag, calls black the black, and does NOT call black the
 
 # ---------------------------------------------------------------------------
 log "1. THE HEALTHY ROUND — and the expectation is $EXPECTED_HEALTHY, written beforehand"
-PREFISSO=${1:-}
-if [ -z "$PREFISSO" ]; then
+PREFIX=${1:-}
+if [ -z "$PREFIX" ]; then
 	inf "no prefix given: I do a real round with $LAUNCH"
-	SCENA=$SCENA bash "$LAUNCH" misura
+	SCENE=$SCENE bash "$LAUNCH" measure
 	U_LAUNCH=$?
 	inf "the healthy round exited with $U_LAUNCH"
 	# ⛔ The exit is not enough: the PREFIX of the round is needed, and it is taken from the
@@ -207,100 +207,100 @@ if [ -z "$PREFISSO" ]; then
 	#    look the same in a chain of `|`, and it is item 3 of
 	#    `FASI.md` §00-ambiente — «no line found» was a denied read.
 	CANDIDATES=()
-	for m in "$QUI"/giro-*.json; do
+	for m in "$HERE"/giro-*.json; do
 		case "$m" in *-verdetto.json) continue ;; esac
 		[ -f "$m" ] && CANDIDATES+=("$m")
 	done
 	if [ ${#CANDIDATES[@]} -eq 0 ]; then
-		ko "⛔ no manifest in $QUI: the healthy round produced nothing."
+		ko "⛔ no manifest in $HERE: the healthy round produced nothing."
 		inf "⚠ It is not «the bench is broken»: it is «there was no round»."
 		exit 2
 	fi
-	PREFISSO=$(ls -t "${CANDIDATES[@]}" | head -1)
-	PREFISSO=${PREFISSO%.json}
+	PREFIX=$(ls -t "${CANDIDATES[@]}" | head -1)
+	PREFIX=${PREFIX%.json}
 fi
-if [ -z "$PREFISSO" ] || [ ! -f "$PREFISSO.json" ]; then
-	ko "⛔ I cannot find the manifest of the healthy round ($PREFISSO.json)"
+if [ -z "$PREFIX" ] || [ ! -f "$PREFIX.json" ]; then
+	ko "⛔ I cannot find the manifest of the healthy round ($PREFIX.json)"
 	exit 2
 fi
-ok "healthy round: $PREFISSO"
+ok "healthy round: $PREFIX"
 
-REGIME=$PREFISSO-regime.raw
-PRIMO=$PREFISSO-primo.raw
-if [ ! -f "$REGIME" ] || [ ! -f "$PRIMO" ]; then
+REGIME=$PREFIX-regime.raw
+FIRST=$PREFIX-primo.raw
+if [ ! -f "$REGIME" ] || [ ! -f "$FIRST" ]; then
 	ko "⛔ the two .raw of the healthy round are missing: there is nothing to break"
 	inf "⚠ and this is NOT a broken bench: it is a round that took no frames."
 	exit 2
 fi
 
 # ⛔ THE ORIGINAL IS PUT ASIDE BEFORE TOUCHING IT, with the fingerprint next to it.
-ORIGINALE=$QUI/originale-regime.raw
-cp -f "$REGIME" "$ORIGINALE" || exit 2
-IMP_ORIG=$(impronta "$ORIGINALE")
-inf "original put aside: $ORIGINALE"
+ORIGINAL=$HERE/originale-regime.raw
+cp -f "$REGIME" "$ORIGINAL" || exit 2
+IMP_ORIG=$(fingerprint "$ORIGINAL")
+inf "original put aside: $ORIGINAL"
 inf "fingerprint: $IMP_ORIG"
 
-giudica "$PREFISSO" "$QUI/cert-sano"; U_HEALTHY=$?
-M_HEALTHY=$(marks_of "$QUI/cert-sano.json")
-verifica "sano" "$U_HEALTHY" "$EXPECTED_HEALTHY" "$M_HEALTHY" "" ""
+judge "$PREFIX" "$HERE/cert-sano"; U_HEALTHY=$?
+M_HEALTHY=$(marks_of "$HERE/cert-sano.json")
+verify "healthy" "$U_HEALTHY" "$EXPECTED_HEALTHY" "$M_HEALTHY" "" ""
 if [ $? -ne 0 ]; then
 	ko "⛔ THE HEALTHY ROUND IS NOT HEALTHY: the certification stops."
 	inf "Injecting a fault on a bench already red would give a red that says nothing."
 	inf "The judge's log:"
-	sed 's/^/       /' "$QUI/cert-sano.log"
-	cp -f "$ORIGINALE" "$REGIME"
+	sed 's/^/       /' "$HERE/cert-sano.log"
+	cp -f "$ORIGINAL" "$REGIME"
 	exit 2
 fi
 
 # ---------------------------------------------------------------------------
-FALLITI=0
+FAILED=0
 #      name        expected  REQUIRED mark             FORBIDDEN mark
-GUASTI=(
+FAULTS=(
 	"nero|1|BLACK FRAME|"
 	"grigio|1|SCENE NOT RECOGNISED|BLACK FRAME"
 	"troncato|1|BYTES DO NOT ADD UP|"
 	"copia|1|THE BUFFER DID NOT CHANGE|BLACK FRAME"
 )
-for voce in "${GUASTI[@]}"; do
-	IFS='|' read -r NOME EXP PRETESA VIETATA <<< "$voce"
+for entry in "${FAULTS[@]}"; do
+	IFS='|' read -r NAME EXP CLAIM FORBIDDEN <<< "$entry"
 
-	log "2. FAULT «$NOME» — expected $EXP, required mark «$PRETESA», forbidden «${VIETATA:-none}»"
-	cp -f "$ORIGINALE" "$REGIME" || exit 2
-	innesta "$NOME" "$REGIME" "$PRIMO" || { ko "injection failed"; FALLITI=$((FALLITI+1)); continue; }
-	inf "fingerprint after the injection: $(impronta "$REGIME")"
+	log "2. FAULT «$NAME» — expected $EXP, required mark «$CLAIM», forbidden «${FORBIDDEN:-none}»"
+	cp -f "$ORIGINAL" "$REGIME" || exit 2
+	graft "$NAME" "$REGIME" "$FIRST" || { ko "injection failed"; FAILED=$((FAILED+1)); continue; }
+	inf "fingerprint after the injection: $(fingerprint "$REGIME")"
 
-	giudica "$PREFISSO" "$QUI/cert-guasto-$NOME"; U=$?
-	M=$(marks_of "$QUI/cert-guasto-$NOME.json")
-	verifica "guasto/$NOME" "$U" "$EXP" "$M" "$PRETESA" "$VIETATA" || FALLITI=$((FALLITI+1))
+	judge "$PREFIX" "$HERE/cert-guasto-$NAME"; U=$?
+	M=$(marks_of "$HERE/cert-guasto-$NAME.json")
+	verify "guasto/$NAME" "$U" "$EXP" "$M" "$CLAIM" "$FORBIDDEN" || FAILED=$((FAILED+1))
 
-	log "3. HEALED after «$NOME» — expected $EXPECTED_HEALTHY"
-	cp -f "$ORIGINALE" "$REGIME" || exit 2
-	IMP=$(impronta "$REGIME")
+	log "3. HEALED after «$NAME» — expected $EXPECTED_HEALTHY"
+	cp -f "$ORIGINAL" "$REGIME" || exit 2
+	IMP=$(fingerprint "$REGIME")
 	if [ "$IMP" != "$IMP_ORIG" ]; then
 		ko "⛔ the healing did not put the file back as it was: $IMP ≠ $IMP_ORIG"
-		FALLITI=$((FALLITI+1))
+		FAILED=$((FAILED+1))
 	else
 		ok "the fingerprint went back to the one before: $IMP"
 	fi
-	giudica "$PREFISSO" "$QUI/cert-risano-$NOME"; U=$?
-	M=$(marks_of "$QUI/cert-risano-$NOME.json")
-	verifica "risanato/$NOME" "$U" "$EXPECTED_HEALTHY" "$M" "" "" || FALLITI=$((FALLITI+1))
+	judge "$PREFIX" "$HERE/cert-risano-$NAME"; U=$?
+	M=$(marks_of "$HERE/cert-risano-$NAME.json")
+	verify "risanato/$NAME" "$U" "$EXPECTED_HEALTHY" "$M" "" "" || FAILED=$((FAILED+1))
 done
 
 # ---------------------------------------------------------------------------
 log "4. THE VERDICT OF THE CERTIFICATION"
-cp -f "$ORIGINALE" "$REGIME"
-if [ $FALLITI -eq 0 ]; then
+cp -f "$ORIGINAL" "$REGIME"
+if [ $FAILED -eq 0 ]; then
 	ok "⭐ THE F2.2 BENCH IS CERTIFIED: healthy $EXPECTED_HEALTHY → four faults → healed $EXPECTED_HEALTHY"
 	inf "⚠ And this does not say the bench is right: it says it can see THESE four"
 	inf "  defects. «I found nothing» is not «it is right» (REVIEWER.md §0)."
-	ESITO=0
+	OUTCOME=0
 else
-	ko "⛔ THE CERTIFICATION DOES NOT PASS: $FALLITI checks failed."
+	ko "⛔ THE CERTIFICATION DOES NOT PASS: $FAILED checks failed."
 	inf "Until it passes, no number of this bench counts."
-	ESITO=1
+	OUTCOME=1
 fi
-inf "the full log of this round: $REGISTRO"
+inf "the full log of this round: $LOG"
 
 # The catalogue, in the form of 01-b12-guasti.py, printed here so that it stays
 # next to the numbers instead of in a separate document.
@@ -320,6 +320,6 @@ cat <<FINE
                   LEZIONI.md §1.9 §4 trap 8 · REVIEWER.md §1 point 4, E1
 
 FINE
-exit $ESITO
-} 2>&1 | tee "$REGISTRO"
+exit $OUTCOME
+} 2>&1 | tee "$LOG"
 exit "${PIPESTATUS[0]}"

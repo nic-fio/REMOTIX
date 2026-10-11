@@ -20,12 +20,12 @@
 
 /* How long whoever reads or writes the clipboard waits: on the other side of the
  * pipe there is any application at all, and it may have hung. */
-#define ATTESA_TRASFERIMENTO_MS 5000
+#define WAIT_TRANSFER_MS 5000
 
 /* ⛔ THE MINIMUM STEP BETWEEN TWO `set_selection`s: klipper, beyond ten changes a
  *    second, considers the clipboard gone mad and stops following it
  *    (`klipper/systemclipboard.cpp:50`) — without an error. */
-#define PASSO_MINIMO_US 100000
+#define MIN_STEP_US 100000
 
 /* The same row as `appunti.c`, and in the same order: the first declares the
  * encoding.  ⛔ Never `application/x-kde-onlyReplaceEmpty`: KWin would silently
@@ -33,7 +33,7 @@
  * ⭐ PHASE 13 — on labwc that type does not exist at all (`STUDI.md` §xfce §8.3):
  *    and we never offer it nor read it (this row is the only one), ⇒
  *    no possible damage, `[R]`. */
-static const char *const TIPI_TESTO[] = {
+static const char *const TEXT_TYPES[] = {
 	"text/plain;charset=utf-8",
 	"UTF8_STRING",
 	"text/plain",
@@ -43,62 +43,62 @@ static const char *const TIPI_TESTO[] = {
 typedef struct {
 	struct zwlr_data_control_offer_v1 *proxy;
 	GPtrArray *mime;
-} Offerta;
+} Offer;
 
-struct AppuntiKde {
+struct ClipboardKde {
 	/* ⭐ PHASE 13 — who is on the other side, ONLY for the log lines:
 	 *    «KWin» on KDE (the lines stay those of before, letter for letter),
 	 *    «labwc» on XFCE.  ⛔ No branch of the protocol looks at it. */
-	const char *compositore;
+	const char *compositor;
 	struct wl_display *display;
 	char socket[64];
-	struct wl_registry *registro;
-	struct zwlr_data_control_manager_v1 *gestore;
+	struct wl_registry *registry;
+	struct zwlr_data_control_manager_v1 *handler;
 	struct wl_seat *seat;
 	uint32_t handler_version;
-	const char *protocollo; /* the name of the bound manager, for the log */
+	const char *protocol; /* the name of the bound manager, for the log */
 	uint32_t ext_name, ext_version; /* ext_data_control_manager_v1, if present */
-	struct zwlr_data_control_device_v1 *dispositivo;
+	struct zwlr_data_control_device_v1 *device;
 
-	GThread *pompa;
-	int sveglia[2];
+	GThread *pump;
+	int wake[2];
 
 	/* Protects the state below (Wayland proxies synchronise themselves,
 	 * our pointers do not). */
-	GMutex stato;
-	Offerta *corrente;  /* the session's selection, or NULL */
-	Offerta *in_arrivo; /* announced, not yet read */
-	struct zwlr_data_control_source_v1 *nostra;
+	GMutex state;
+	Offer *current;  /* the session's selection, or NULL */
+	Offer *incoming; /* announced, not yet read */
+	struct zwlr_data_control_source_v1 *our;
 	gint64 last_set;
-	GHashTable *richieste; /* serial → fd */
+	GHashTable *requests; /* serial → fd */
 	guint32 next_serial;
 
 	/* As in `appunti.c`: the lock is held while a callback runs. */
-	GMutex lucchetto;
-	char *ultimo;
-	size_t ultimo_byte;
+	GMutex lock;
+	char *last;
+	size_t last_byte;
 	ClipboardOnText on_text;
 	ClipboardOnRequest on_request;
-	void *dati;
+	void *data;
 };
 
 /* ------------------------------------------------------------------ *
  * The session's offers
  * ------------------------------------------------------------------ */
-static void offer_free(Offerta *offerta)
+static void offer_free(Offer *offer)
 {
-	if (!offerta)
+	if (!offer)
 		return;
-	if (offerta->proxy)
-		zwlr_data_control_offer_v1_destroy(offerta->proxy);
-	g_ptr_array_unref(offerta->mime);
-	g_free(offerta);
+	if (offer->proxy)
+		zwlr_data_control_offer_v1_destroy(offer->proxy);
+	g_ptr_array_unref(offer->mime);
+	g_free(offer);
 }
 
-static bool offer_has(const Offerta *offerta, const char *mime)
+static bool offer_has(const Offer *offer, const char *mime)
 {
-	for (guint i = 0; offerta && i < offerta->mime->len; i++)
-		if (g_ascii_strcasecmp(g_ptr_array_index(offerta->mime, i), mime) == 0)
+	for (guint i = 0; offer && i < offer->mime->len; i++)
+		if (g_ascii_strcasecmp(g_ptr_array_index(offer->mime, i), mime) == 0)
 			return true;
 	return false;
 }
@@ -110,7 +110,7 @@ static bool offer_has(const Offerta *offerta, const char *mime)
  *    · wlroots drops an `offer` only if it is `strcmp`-equal to one already given
  *      (`wlr_data_control_v1.c:38-45`, 0.18.2), and repeats the types at the offer
  *      without filtering (`:346-351`);
- *    · the types we offer are ALWAYS and ONLY `TIPI_TESTO`, three strings
+ *    · the types we offer are ALWAYS and ONLY `TEXT_TYPES`, three strings
  *      that differ even ignoring case: no duplicate to
  *      drop ⇒ the echo comes back with three types, and the `len == 3` count holds.
  *    The caveat was v1's, which passed on the CLIENT's list of types.
@@ -118,51 +118,51 @@ static bool offer_has(const Offerta *offerta, const char *mime)
  *      our own source from the pump that serves it delivers nothing (5 s of
  *      waiting, then "wrote nothing"), so no text goes back up to the client
  *      to be re-offered. */
-static bool our_types(const Offerta *offerta)
+static bool our_types(const Offer *offer)
 {
-	guint quanti = 0;
+	guint amount = 0;
 
-	for (int i = 0; TIPI_TESTO[i]; i++, quanti++)
-		if (!offer_has(offerta, TIPI_TESTO[i]))
+	for (int i = 0; TEXT_TYPES[i]; i++, amount++)
+		if (!offer_has(offer, TEXT_TYPES[i]))
 			return false;
-	return offerta && offerta->mime->len == quanti;
+	return offer && offer->mime->len == amount;
 }
 
-static void on_type_offered(void *dati, struct zwlr_data_control_offer_v1 *proxy,
+static void on_type_offered(void *data, struct zwlr_data_control_offer_v1 *proxy,
                             const char *mime)
 {
-	Offerta *offerta = dati;
+	Offer *offer = data;
 
 	if (mime && *mime)
-		g_ptr_array_add(offerta->mime, g_strdup(mime));
+		g_ptr_array_add(offer->mime, g_strdup(mime));
 }
 
 static const struct zwlr_data_control_offer_v1_listener offer_listener = { on_type_offered };
 
-static void on_new_offer(void *dati, struct zwlr_data_control_device_v1 *dispositivo,
+static void on_new_offer(void *data, struct zwlr_data_control_device_v1 *device,
                              struct zwlr_data_control_offer_v1 *proxy)
 {
-	Offerta *offerta = g_new0(Offerta, 1);
+	Offer *offer = g_new0(Offer, 1);
 
-	offerta->proxy = proxy;
-	offerta->mime = g_ptr_array_new_with_free_func(g_free);
+	offer->proxy = proxy;
+	offer->mime = g_ptr_array_new_with_free_func(g_free);
 	/* The offer hooks onto ITSELF: the `offer`s arrive before knowing
 	 * whether it is the selection or the primary, which arrive on the same device. */
-	zwlr_data_control_offer_v1_add_listener(proxy, &offer_listener, offerta);
+	zwlr_data_control_offer_v1_add_listener(proxy, &offer_listener, offer);
 }
 
-static Offerta *offer_of(struct zwlr_data_control_offer_v1 *proxy)
+static Offer *offer_of(struct zwlr_data_control_offer_v1 *proxy)
 {
 	return proxy ? wl_proxy_get_user_data((struct wl_proxy *)proxy) : NULL;
 }
 
-static void on_selection(void *dati, struct zwlr_data_control_device_v1 *dispositivo,
+static void on_selection(void *data, struct zwlr_data_control_device_v1 *device,
                          struct zwlr_data_control_offer_v1 *proxy)
 {
-	AppuntiKde *appunti = dati;
-	Offerta *offerta = offer_of(proxy);
+	ClipboardKde *clipboard = data;
+	Offer *offer = offer_of(proxy);
 
-	g_mutex_lock(&appunti->stato);
+	g_mutex_lock(&clipboard->state);
 	/*
 	 * ⛔ THE ECHO, which here is certain: KWin's `setSelection` notifies ALL data
 	 *    control devices, ours included (`seat.cpp:1257-1259`).  v1's criterion
@@ -177,42 +177,42 @@ static void on_selection(void *dati, struct zwlr_data_control_device_v1 *disposi
 	 *    signal, in the same function (`wlr_data_device.c`).  The two
 	 *    pieces of news travel on the same connection ⇒ they arrive in that order.
 	 * ⚠ When whoever had copied DIES, `selection(NULL)` arrives: below
-	 *   `corrente` becomes NULL and `in_arrivo` stays NULL ⇒ nothing is sent to
-	 *   the client, and `ultimo` stays the earlier text (it is what is
+	 *   `current` becomes NULL and `incoming` stays NULL ⇒ nothing is sent to
+	 *   the client, and `last` stays the earlier text (it is what is
 	 *   given back to the session if the client has nothing).  In XFCE on Wayland
 	 *   there is no clipboard manager: the desktop clipboard dies with
 	 *   whoever copied, and it is NOT our job to keep it alive.  OUR
 	 *   source instead lives as long as the child.
 	 */
-	if (appunti->nostra && our_types(offerta)) {
-		g_mutex_unlock(&appunti->stato);
-		registro_dettaglio(REG_APPUNTI, "return announcement after our own copy: ignored");
-		offer_free(offerta);
+	if (clipboard->our && our_types(offer)) {
+		g_mutex_unlock(&clipboard->state);
+		log_detail(LOG_CLIPBOARD, "return announcement after our own copy: ignored");
+		offer_free(offer);
 		return;
 	}
-	g_clear_pointer(&appunti->corrente, offer_free);
-	appunti->corrente = offerta;
+	g_clear_pointer(&clipboard->current, offer_free);
+	clipboard->current = offer;
 	/* We do not read from here: an `offer(mime)` may arrive AFTER `selection`
 	 * (`kde.md` §9).  The pump reads it, after a full roundtrip. */
-	appunti->in_arrivo = offerta;
-	g_mutex_unlock(&appunti->stato);
+	clipboard->incoming = offer;
+	g_mutex_unlock(&clipboard->state);
 }
 
 /* The primary selection (X11's middle button) has no counterpart
  * in the protocol: it is accepted and dropped. */
-static void on_primary_selection(void *dati, struct zwlr_data_control_device_v1 *dispositivo,
+static void on_primary_selection(void *data, struct zwlr_data_control_device_v1 *device,
                                   struct zwlr_data_control_offer_v1 *proxy)
 {
 	offer_free(offer_of(proxy));
 }
 
-static void on_finished(void *dati, struct zwlr_data_control_device_v1 *dispositivo)
+static void on_finished(void *data, struct zwlr_data_control_device_v1 *device)
 {
-	const AppuntiKde *appunti = dati;
+	const ClipboardKde *clipboard = data;
 
-	registro_dice(REG_APPUNTI, "⛔ %s closed the clipboard channel: no more "
+	registro_dice(LOG_CLIPBOARD, "⛔ %s closed the clipboard channel: no more "
 	                           "copy-paste in this session",
-	              appunti->compositore);
+	              clipboard->compositor);
 }
 
 static const struct zwlr_data_control_device_v1_listener device_listener = {
@@ -225,40 +225,40 @@ static const struct zwlr_data_control_device_v1_listener device_listener = {
 /* ------------------------------------------------------------------ *
  * Our source: the CLIENT's text
  * ------------------------------------------------------------------ */
-static void on_data_request(void *dati, struct zwlr_data_control_source_v1 *sorgente,
+static void on_data_request(void *data, struct zwlr_data_control_source_v1 *source,
                               const char *mime, int32_t fd)
 {
-	AppuntiKde *appunti = dati;
+	ClipboardKde *clipboard = data;
 	guint32 serial;
-	bool qualcuno;
+	bool someone;
 
 	/* ⛔ We do not write here: the text is on the client and must be asked for.  We put
 	 *    the descriptor aside and return at once — it is the event thread. */
-	g_mutex_lock(&appunti->stato);
-	serial = ++appunti->next_serial;
-	g_hash_table_insert(appunti->richieste, GUINT_TO_POINTER(serial), GINT_TO_POINTER(fd));
-	g_mutex_unlock(&appunti->stato);
+	g_mutex_lock(&clipboard->state);
+	serial = ++clipboard->next_serial;
+	g_hash_table_insert(clipboard->requests, GUINT_TO_POINTER(serial), GINT_TO_POINTER(fd));
+	g_mutex_unlock(&clipboard->state);
 
-	g_mutex_lock(&appunti->lucchetto);
-	qualcuno = appunti->on_request != NULL;
-	if (qualcuno)
-		appunti->on_request(serial, appunti->dati);
-	g_mutex_unlock(&appunti->lucchetto);
+	g_mutex_lock(&clipboard->lock);
+	someone = clipboard->on_request != NULL;
+	if (someone)
+		clipboard->on_request(serial, clipboard->data);
+	g_mutex_unlock(&clipboard->lock);
 
-	if (!qualcuno)
+	if (!someone)
 		/* Nobody is listening: we answer with what there is (or close). */
-		clipboard_kde_reply(appunti, serial, NULL, 0);
+		clipboard_kde_reply(clipboard, serial, NULL, 0);
 }
 
-static void on_cancelled(void *dati, struct zwlr_data_control_source_v1 *sorgente)
+static void on_cancelled(void *data, struct zwlr_data_control_source_v1 *source)
 {
-	AppuntiKde *appunti = dati;
+	ClipboardKde *clipboard = data;
 
-	g_mutex_lock(&appunti->stato);
-	if (appunti->nostra == sorgente)
-		appunti->nostra = NULL; /* from now on the announcements are real */
-	g_mutex_unlock(&appunti->stato);
-	zwlr_data_control_source_v1_destroy(sorgente);
+	g_mutex_lock(&clipboard->state);
+	if (clipboard->our == source)
+		clipboard->our = NULL; /* from now on the announcements are real */
+	g_mutex_unlock(&clipboard->state);
+	zwlr_data_control_source_v1_destroy(source);
 }
 
 static const struct zwlr_data_control_source_v1_listener source_listener = {
@@ -268,29 +268,29 @@ static const struct zwlr_data_control_source_v1_listener source_listener = {
 /* ------------------------------------------------------------------ *
  * The Wayland registry
  * ------------------------------------------------------------------ */
-static void on_global(void *dati, struct wl_registry *registro, uint32_t nome,
-                       const char *interfaccia, uint32_t versione)
+static void on_global(void *data, struct wl_registry *registry, uint32_t name,
+                       const char *interfaccia, uint32_t version)
 {
-	AppuntiKde *appunti = dati;
+	ClipboardKde *clipboard = data;
 
 	if (!g_strcmp0(interfaccia, zwlr_data_control_manager_v1_interface.name)) {
 		/* Version 2 adds the primary, which we do not need: we bind what there is. */
-		appunti->handler_version = MIN(versione, 2u);
-		appunti->protocollo = zwlr_data_control_manager_v1_interface.name;
-		appunti->gestore = wl_registry_bind(registro, nome,
+		clipboard->handler_version = MIN(version, 2u);
+		clipboard->protocol = zwlr_data_control_manager_v1_interface.name;
+		clipboard->handler = wl_registry_bind(registry, name,
 		                                    &zwlr_data_control_manager_v1_interface,
-		                                    appunti->handler_version);
+		                                    clipboard->handler_version);
 	} else if (!g_strcmp0(interfaccia, ext_data_control_manager_v1_interface.name)) {
 		/* Bound AFTER the registry roundtrip, and only if zwlr is missing: see
 		 * `bind_ext_if_needed`. */
-		appunti->ext_name = nome;
-		appunti->ext_version = versione;
-	} else if (!g_strcmp0(interfaccia, wl_seat_interface.name) && !appunti->seat) {
-		appunti->seat = wl_registry_bind(registro, nome, &wl_seat_interface, 1);
+		clipboard->ext_name = name;
+		clipboard->ext_version = version;
+	} else if (!g_strcmp0(interfaccia, wl_seat_interface.name) && !clipboard->seat) {
+		clipboard->seat = wl_registry_bind(registry, name, &wl_seat_interface, 1);
 	}
 }
 
-static void on_global_away(void *dati, struct wl_registry *registro, uint32_t nome)
+static void on_global_away(void *data, struct wl_registry *registry, uint32_t name)
 {
 }
 
@@ -308,14 +308,14 @@ static const struct wl_registry_listener registry_listener = { on_global, on_glo
  *    source, offer) are born from new_id, where the interface name does not
  *    travel.  One code for both, instead of 800 doubled lines.
  *    zwlr is preferred when both are present: it is the path already tested. */
-static void bind_ext_if_needed(AppuntiKde *appunti)
+static void bind_ext_if_needed(ClipboardKde *clipboard)
 {
-	if (appunti->gestore || !appunti->ext_name)
+	if (clipboard->handler || !clipboard->ext_name)
 		return;
-	appunti->handler_version = 1;
-	appunti->protocollo = ext_data_control_manager_v1_interface.name;
-	appunti->gestore = (struct zwlr_data_control_manager_v1 *)wl_registry_bind(
-	    appunti->registro, appunti->ext_name, &ext_data_control_manager_v1_interface, 1);
+	clipboard->handler_version = 1;
+	clipboard->protocol = ext_data_control_manager_v1_interface.name;
+	clipboard->handler = (struct zwlr_data_control_manager_v1 *)wl_registry_bind(
+	    clipboard->registry, clipboard->ext_name, &ext_data_control_manager_v1_interface, 1);
 }
 
 /* ------------------------------------------------------------------ *
@@ -324,225 +324,225 @@ static void bind_ext_if_needed(AppuntiKde *appunti)
 /* ⛔ `POLLHUP` on read counts as "ready": whoever writes and closes (the normal
  *    case) can make `poll` return with only `POLLHUP`, and the data is
  *    in the pipe (`[M]` v1, 8 August 2026). */
-static bool pronto(int fd, short cosa)
+static bool ready(int fd, short what)
 {
-	struct pollfd sonda = { .fd = fd, .events = cosa, .revents = 0 };
-	int esito;
+	struct pollfd probe = { .fd = fd, .events = what, .revents = 0 };
+	int outcome;
 
 	do
-		esito = poll(&sonda, 1, ATTESA_TRASFERIMENTO_MS);
-	while (esito < 0 && errno == EINTR);
-	if (esito <= 0)
+		outcome = poll(&probe, 1, WAIT_TRANSFER_MS);
+	while (outcome < 0 && errno == EINTR);
+	if (outcome <= 0)
 		return false;
-	if (sonda.revents & cosa)
+	if (probe.revents & what)
 		return true;
-	return (cosa & POLLIN) && (sonda.revents & POLLHUP);
+	return (what & POLLIN) && (probe.revents & POLLHUP);
 }
 
 /* One type, read to the end with the ceiling of `appunti.c` (ceiling PLUS ONE: a
- * text as large as the ceiling is lawful).  NULL with `perche` written. */
-static GBytes *read_type(AppuntiKde *appunti, struct zwlr_data_control_offer_v1 *proxy,
-                             const char *mime, const char **perche)
+ * text as large as the ceiling is lawful).  NULL with `why` written. */
+static GBytes *read_type(ClipboardKde *clipboard, struct zwlr_data_control_offer_v1 *proxy,
+                             const char *mime, const char **why)
 {
 	int pipe_fd[2];
-	GByteArray *raccolta;
+	GByteArray *collection;
 
 	if (pipe2(pipe_fd, O_CLOEXEC) != 0) {
-		*perche = "pipe not created";
+		*why = "pipe not created";
 		return NULL;
 	}
 	zwlr_data_control_offer_v1_receive(proxy, mime, pipe_fd[1]);
-	wl_display_flush(appunti->display);
+	wl_display_flush(clipboard->display);
 	/* ⛔ Our copy of the write end is closed AT ONCE, or the read
 	 *    never ends. */
 	close(pipe_fd[1]);
 
-	raccolta = g_byte_array_new();
+	collection = g_byte_array_new();
 	for (;;) {
-		guint8 pezzo[16384];
-		ssize_t quanti;
+		guint8 piece[16384];
+		ssize_t amount;
 
-		if (!pronto(pipe_fd[0], POLLIN)) {
+		if (!ready(pipe_fd[0], POLLIN)) {
 			close(pipe_fd[0]);
-			g_byte_array_unref(raccolta);
-			*perche = "whoever owns the clipboard wrote nothing for 5 s";
+			g_byte_array_unref(collection);
+			*why = "whoever owns the clipboard wrote nothing for 5 s";
 			return NULL;
 		}
-		quanti = read(pipe_fd[0], pezzo, sizeof pezzo);
-		if (quanti < 0 && errno == EINTR)
+		amount = read(pipe_fd[0], piece, sizeof piece);
+		if (amount < 0 && errno == EINTR)
 			continue;
-		if (quanti <= 0)
+		if (amount <= 0)
 			break;
-		if (raccolta->len + (guint)quanti > APPUNTI_TETTO) {
+		if (collection->len + (guint)amount > CLIPBOARD_CAP) {
 			close(pipe_fd[0]);
-			g_byte_array_unref(raccolta);
-			*perche = "clipboard over the ceiling (§5.4): left where it is, NOT truncated";
+			g_byte_array_unref(collection);
+			*why = "clipboard over the ceiling (§5.4): left where it is, NOT truncated";
 			return NULL;
 		}
-		g_byte_array_append(raccolta, pezzo, (guint)quanti);
+		g_byte_array_append(collection, piece, (guint)amount);
 	}
 	close(pipe_fd[0]);
-	return g_byte_array_free_to_bytes(raccolta);
+	return g_byte_array_free_to_bytes(collection);
 }
 
 /* The text of the current selection, along the row of types: the first that
  * delivers valid UTF-8.  NULL if there is no text (and it says so). */
-static char *read_text(AppuntiKde *appunti, size_t *byte)
+static char *read_text(ClipboardKde *clipboard, size_t *byte)
 {
 	struct zwlr_data_control_offer_v1 *proxy = NULL;
-	Offerta *offerta;
-	GPtrArray *tipi = NULL;
+	Offer *offer;
+	GPtrArray *types = NULL;
 
-	g_mutex_lock(&appunti->stato);
-	offerta = appunti->corrente;
-	if (offerta) {
-		proxy = offerta->proxy;
-		tipi = g_ptr_array_ref(offerta->mime);
+	g_mutex_lock(&clipboard->state);
+	offer = clipboard->current;
+	if (offer) {
+		proxy = offer->proxy;
+		types = g_ptr_array_ref(offer->mime);
 	}
-	g_mutex_unlock(&appunti->stato);
+	g_mutex_unlock(&clipboard->state);
 
-	if (!proxy || !tipi || tipi->len == 0) {
-		if (tipi)
-			g_ptr_array_unref(tipi);
-		registro_dettaglio(REG_APPUNTI, "the session has nothing in the clipboard");
+	if (!proxy || !types || types->len == 0) {
+		if (types)
+			g_ptr_array_unref(types);
+		log_detail(LOG_CLIPBOARD, "the session has nothing in the clipboard");
 		return NULL;
 	}
 
-	for (int i = 0; TIPI_TESTO[i]; i++) {
+	for (int i = 0; TEXT_TYPES[i]; i++) {
 		bool c_e = false;
-		const char *perche = NULL;
-		GBytes *dati;
-		gsize quanti = 0;
-		const char *inizio;
+		const char *why = NULL;
+		GBytes *data;
+		gsize amount = 0;
+		const char *start;
 
-		for (guint k = 0; k < tipi->len && !c_e; k++)
-			c_e = g_ascii_strcasecmp(g_ptr_array_index(tipi, k), TIPI_TESTO[i]) == 0;
+		for (guint k = 0; k < types->len && !c_e; k++)
+			c_e = g_ascii_strcasecmp(g_ptr_array_index(types, k), TEXT_TYPES[i]) == 0;
 		if (!c_e)
 			continue;
-		dati = read_type(appunti, proxy, TIPI_TESTO[i], &perche);
-		if (!dati) {
-			registro_dice(REG_APPUNTI, "⛔ «%s» cannot be read: %s", TIPI_TESTO[i], perche);
+		data = read_type(clipboard, proxy, TEXT_TYPES[i], &why);
+		if (!data) {
+			registro_dice(LOG_CLIPBOARD, "⛔ «%s» cannot be read: %s", TEXT_TYPES[i], why);
 			continue;
 		}
-		inizio = g_bytes_get_data(dati, &quanti);
-		if (!g_utf8_validate_len(inizio, (gssize)quanti, NULL)) {
-			registro_dice(REG_APPUNTI, "⛔ «%s» is not valid UTF-8 (%zu bytes): "
-			                           "skipping it", TIPI_TESTO[i], (size_t)quanti);
-			g_bytes_unref(dati);
+		start = g_bytes_get_data(data, &amount);
+		if (!g_utf8_validate_len(start, (gssize)amount, NULL)) {
+			registro_dice(LOG_CLIPBOARD, "⛔ «%s» is not valid UTF-8 (%zu bytes): "
+			                           "skipping it", TEXT_TYPES[i], (size_t)amount);
+			g_bytes_unref(data);
 			continue;
 		}
-		*byte = quanti;
+		*byte = amount;
 		{
-			char *testo = g_strndup(inizio, quanti);
+			char *text = g_strndup(start, amount);
 
-			g_bytes_unref(dati);
-			g_ptr_array_unref(tipi);
-			registro_dettaglio(REG_APPUNTI, "read %zu bytes of «%s» from the session",
-			                   (size_t)quanti, TIPI_TESTO[i]);
-			return testo;
+			g_bytes_unref(data);
+			g_ptr_array_unref(types);
+			log_detail(LOG_CLIPBOARD, "read %zu bytes of «%s» from the session",
+			                   (size_t)amount, TEXT_TYPES[i]);
+			return text;
 		}
 	}
 
 	{
-		GString *elenco = g_string_new(NULL);
+		GString *listing = g_string_new(NULL);
 
-		for (guint k = 0; k < tipi->len; k++)
-			g_string_append_printf(elenco, "%s%s", k ? ", " : "",
-			                       (const char *)g_ptr_array_index(tipi, k));
-		registro_dice(REG_APPUNTI,
+		for (guint k = 0; k < types->len; k++)
+			g_string_append_printf(listing, "%s%s", k ? ", " : "",
+			                       (const char *)g_ptr_array_index(types, k));
+		registro_dice(LOG_CLIPBOARD,
 		              "the session copied something that is not text (%s): not "
 		              "announced.  ⚠ `DECISIONI.md` §5-ter.1 — text only",
-		              elenco->str);
-		g_string_free(elenco, TRUE);
+		              listing->str);
+		g_string_free(listing, TRUE);
 	}
-	g_ptr_array_unref(tipi);
+	g_ptr_array_unref(types);
 	return NULL;
 }
 
 /* Hands the listener the text of the last announcement. */
-static void delivery_announcement(AppuntiKde *appunti)
+static void delivery_announcement(ClipboardKde *clipboard)
 {
-	char *testo;
+	char *text;
 	size_t byte = 0;
 	bool c_era;
 
-	g_mutex_lock(&appunti->stato);
-	c_era = appunti->in_arrivo != NULL;
-	appunti->in_arrivo = NULL;
-	g_mutex_unlock(&appunti->stato);
+	g_mutex_lock(&clipboard->state);
+	c_era = clipboard->incoming != NULL;
+	clipboard->incoming = NULL;
+	g_mutex_unlock(&clipboard->state);
 	if (!c_era)
 		return;
 
-	testo = read_text(appunti, &byte);
-	if (!testo)
+	text = read_text(clipboard, &byte);
+	if (!text)
 		return;
-	g_mutex_lock(&appunti->lucchetto);
-	g_free(appunti->ultimo);
-	appunti->ultimo = g_strdup(testo);
-	appunti->ultimo_byte = byte;
-	if (appunti->on_text)
-		appunti->on_text(testo, byte, appunti->dati);
-	g_mutex_unlock(&appunti->lucchetto);
-	registro_dice(REG_APPUNTI, "⭐ the session copied %zu bytes of text", byte);
-	g_free(testo);
+	g_mutex_lock(&clipboard->lock);
+	g_free(clipboard->last);
+	clipboard->last = g_strdup(text);
+	clipboard->last_byte = byte;
+	if (clipboard->on_text)
+		clipboard->on_text(text, byte, clipboard->data);
+	g_mutex_unlock(&clipboard->lock);
+	registro_dice(LOG_CLIPBOARD, "⭐ the session copied %zu bytes of text", byte);
+	g_free(text);
 }
 
 /* ------------------------------------------------------------------ *
  * The loop
  * ------------------------------------------------------------------ */
-static bool gira(AppuntiKde *appunti, int attesa_ms)
+static bool runs(ClipboardKde *clipboard, int wait_ms)
 {
-	struct pollfd sonda[2];
-	int quanti = 1;
+	struct pollfd probe[2];
+	int amount = 1;
 
-	while (wl_display_prepare_read(appunti->display) != 0)
-		if (wl_display_dispatch_pending(appunti->display) < 0)
+	while (wl_display_prepare_read(clipboard->display) != 0)
+		if (wl_display_dispatch_pending(clipboard->display) < 0)
 			return false;
-	if (wl_display_flush(appunti->display) < 0 && errno != EAGAIN) {
-		wl_display_cancel_read(appunti->display);
+	if (wl_display_flush(clipboard->display) < 0 && errno != EAGAIN) {
+		wl_display_cancel_read(clipboard->display);
 		return false;
 	}
-	sonda[0].fd = wl_display_get_fd(appunti->display);
-	sonda[0].events = POLLIN;
-	sonda[0].revents = 0;
-	if (appunti->sveglia[0] >= 0) {
-		sonda[1].fd = appunti->sveglia[0];
-		sonda[1].events = POLLIN;
-		sonda[1].revents = 0;
-		quanti = 2;
+	probe[0].fd = wl_display_get_fd(clipboard->display);
+	probe[0].events = POLLIN;
+	probe[0].revents = 0;
+	if (clipboard->wake[0] >= 0) {
+		probe[1].fd = clipboard->wake[0];
+		probe[1].events = POLLIN;
+		probe[1].revents = 0;
+		amount = 2;
 	}
-	if (poll(sonda, (nfds_t)quanti, attesa_ms) <= 0) {
-		wl_display_cancel_read(appunti->display);
+	if (poll(probe, (nfds_t)amount, wait_ms) <= 0) {
+		wl_display_cancel_read(clipboard->display);
 		return true;
 	}
-	if (quanti == 2 && (sonda[1].revents & POLLIN)) {
-		wl_display_cancel_read(appunti->display);
+	if (amount == 2 && (probe[1].revents & POLLIN)) {
+		wl_display_cancel_read(clipboard->display);
 		return false;
 	}
-	if (!(sonda[0].revents & POLLIN)) {
-		wl_display_cancel_read(appunti->display);
-		return !(sonda[0].revents & (POLLERR | POLLHUP));
+	if (!(probe[0].revents & POLLIN)) {
+		wl_display_cancel_read(clipboard->display);
+		return !(probe[0].revents & (POLLERR | POLLHUP));
 	}
-	if (wl_display_read_events(appunti->display) < 0)
+	if (wl_display_read_events(clipboard->display) < 0)
 		return false;
-	if (wl_display_dispatch_pending(appunti->display) < 0)
+	if (wl_display_dispatch_pending(clipboard->display) < 0)
 		return false;
 	/* ⛔ The full roundtrip BEFORE reading: the `offer(mime)`s may arrive
 	 *    after the `selection` they belong to. */
-	if (appunti->in_arrivo) {
-		wl_display_roundtrip(appunti->display);
-		delivery_announcement(appunti);
+	if (clipboard->incoming) {
+		wl_display_roundtrip(clipboard->display);
+		delivery_announcement(clipboard);
 	}
 	return true;
 }
 
-static gpointer thread_pump(gpointer dati)
+static gpointer thread_pump(gpointer data)
 {
-	AppuntiKde *appunti = dati;
+	ClipboardKde *clipboard = data;
 
-	while (gira(appunti, -1))
+	while (runs(clipboard, -1))
 		;
-	registro_dettaglio(REG_APPUNTI, "the clipboard's Wayland connection closed");
+	log_detail(LOG_CLIPBOARD, "the clipboard's Wayland connection closed");
 	return NULL;
 }
 
@@ -550,281 +550,281 @@ static gpointer thread_pump(gpointer dati)
  * The door
  * ------------------------------------------------------------------ */
 /* ⭐ PHASE 13 — the same opening for the two families: only the name in the
- *    lines changes.  ⚠ `kwin_display_apri()` stays, and on labwc it is fine as
+ *    lines changes.  ⚠ `kwin_display_open()` stays, and on labwc it is fine as
  *    it is: it takes `WAYLAND_DISPLAY` or the first `wayland-0..9` that answers,
  *    WITHOUT looking at who is behind it (`kwin.c`, `[R]`).  Moving it to a
  *    neutral file would mean touching `kwin.c`, which carries KDE's video, to
  *    gain only a name. */
-static AppuntiKde *apri_su(const char *compositore, GError **sbaglio)
+static ClipboardKde *open_on(const char *compositor, GError **mistake)
 {
-	AppuntiKde *appunti = g_new0(AppuntiKde, 1);
+	ClipboardKde *clipboard = g_new0(ClipboardKde, 1);
 
-	appunti->compositore = compositore;
-	appunti->sveglia[0] = appunti->sveglia[1] = -1;
-	g_mutex_init(&appunti->stato);
-	g_mutex_init(&appunti->lucchetto);
-	appunti->richieste = g_hash_table_new(NULL, NULL);
+	clipboard->compositor = compositor;
+	clipboard->wake[0] = clipboard->wake[1] = -1;
+	g_mutex_init(&clipboard->state);
+	g_mutex_init(&clipboard->lock);
+	clipboard->requests = g_hash_table_new(NULL, NULL);
 
-	appunti->display = kwin_display_apri(appunti->socket, sizeof appunti->socket);
-	if (!appunti->display) {
-		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_NOT_FOUND,
+	clipboard->display = kwin_display_open(clipboard->socket, sizeof clipboard->socket);
+	if (!clipboard->display) {
+		g_set_error(mistake, G_IO_ERROR, G_IO_ERROR_NOT_FOUND,
 		            "no Wayland compositor reachable for the clipboard");
-		goto guasto;
+		goto fault;
 	}
-	appunti->registro = wl_display_get_registry(appunti->display);
-	wl_registry_add_listener(appunti->registro, &registry_listener, appunti);
-	wl_display_roundtrip(appunti->display);
-	wl_display_roundtrip(appunti->display);
-	bind_ext_if_needed(appunti);
-	if (!appunti->gestore) {
-		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
+	clipboard->registry = wl_display_get_registry(clipboard->display);
+	wl_registry_add_listener(clipboard->registry, &registry_listener, clipboard);
+	wl_display_roundtrip(clipboard->display);
+	wl_display_roundtrip(clipboard->display);
+	bind_ext_if_needed(clipboard);
+	if (!clipboard->handler) {
+		g_set_error(mistake, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
 		            "%s exposes neither zwlr_data_control_manager_v1 nor "
-		            "ext_data_control_manager_v1", compositore);
-		goto guasto;
+		            "ext_data_control_manager_v1", compositor);
+		goto fault;
 	}
-	if (!appunti->seat) {
-		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_NOT_FOUND,
+	if (!clipboard->seat) {
+		g_set_error(mistake, G_IO_ERROR, G_IO_ERROR_NOT_FOUND,
 		            "no wl_seat: without it, there is no clipboard to ask for");
-		goto guasto;
+		goto fault;
 	}
-	appunti->dispositivo =
-	    zwlr_data_control_manager_v1_get_data_device(appunti->gestore, appunti->seat);
-	zwlr_data_control_device_v1_add_listener(appunti->dispositivo, &device_listener,
-	                                         appunti);
+	clipboard->device =
+	    zwlr_data_control_manager_v1_get_data_device(clipboard->handler, clipboard->seat);
+	zwlr_data_control_device_v1_add_listener(clipboard->device, &device_listener,
+	                                         clipboard);
 	/* ⭐ KWin sends the current selection AT ONCE (`seat.cpp:228-229`), even
-	 *    empty: it is the asymmetry that on Mutter must be asked for (`appunti_leggi_adesso`).
-	 *    Here we just take it: the read is done by `appunti_leggi_adesso`, as
+	 *    empty: it is the asymmetry that on Mutter must be asked for (`clipboard_read_now`).
+	 *    Here we just take it: the read is done by `clipboard_read_now`, as
 	 *    on GNOME, when `figlio.c` is ready to receive it. */
-	wl_display_roundtrip(appunti->display);
-	wl_display_roundtrip(appunti->display);
-	g_mutex_lock(&appunti->stato);
-	appunti->in_arrivo = NULL;
-	g_mutex_unlock(&appunti->stato);
+	wl_display_roundtrip(clipboard->display);
+	wl_display_roundtrip(clipboard->display);
+	g_mutex_lock(&clipboard->state);
+	clipboard->incoming = NULL;
+	g_mutex_unlock(&clipboard->state);
 
-	if (!g_unix_open_pipe(appunti->sveglia, O_CLOEXEC, NULL))
-		appunti->sveglia[0] = appunti->sveglia[1] = -1;
-	appunti->pompa = g_thread_new("remotix-appunti", thread_pump, appunti);
+	if (!g_unix_open_pipe(clipboard->wake, O_CLOEXEC, NULL))
+		clipboard->wake[0] = clipboard->wake[1] = -1;
+	clipboard->pump = g_thread_new("remotix-appunti", thread_pump, clipboard);
 
-	registro_dice(REG_APPUNTI, "⭐ clipboard hooked to %s on socket «%s» with "
+	registro_dice(LOG_CLIPBOARD, "⭐ clipboard hooked to %s on socket «%s» with "
 	                           "%s v%u",
-	              compositore, appunti->socket, appunti->protocollo,
-	              appunti->handler_version);
-	return appunti;
+	              compositor, clipboard->socket, clipboard->protocol,
+	              clipboard->handler_version);
+	return clipboard;
 
-guasto:
-	clipboard_kde_close(appunti);
+fault:
+	clipboard_kde_close(clipboard);
 	return NULL;
 }
 
-AppuntiKde *appunti_kde_apri(GError **sbaglio)
+ClipboardKde *clipboard_kde_open(GError **mistake)
 {
-	return apri_su("KWin", sbaglio);
+	return open_on("KWin", mistake);
 }
 
-AppuntiKde *appunti_kde_apri_wlroots(GError **sbaglio)
+ClipboardKde *clipboard_kde_open_wlroots(GError **mistake)
 {
-	return apri_su("labwc", sbaglio);
+	return open_on("labwc", mistake);
 }
 
-void clipboard_kde_close(AppuntiKde *appunti)
+void clipboard_kde_close(ClipboardKde *clipboard)
 {
-	GHashTableIter giro;
-	gpointer chiave, valore;
+	GHashTableIter cur_round;
+	gpointer key, value;
 
-	if (!appunti)
+	if (!clipboard)
 		return;
-	clipboard_kde_listen(appunti, NULL, NULL, NULL);
+	clipboard_kde_listen(clipboard, NULL, NULL, NULL);
 
-	if (appunti->sveglia[1] >= 0) {
-		ssize_t scritti = write(appunti->sveglia[1], "x", 1);
+	if (clipboard->wake[1] >= 0) {
+		ssize_t written = write(clipboard->wake[1], "x", 1);
 
-		(void)scritti;
+		(void)written;
 	}
-	if (appunti->pompa)
-		g_thread_join(appunti->pompa);
+	if (clipboard->pump)
+		g_thread_join(clipboard->pump);
 
 	/* Transfers left half way are closed: whoever waits sees an end. */
-	g_hash_table_iter_init(&giro, appunti->richieste);
-	while (g_hash_table_iter_next(&giro, &chiave, &valore))
-		close(GPOINTER_TO_INT(valore));
-	g_hash_table_unref(appunti->richieste);
+	g_hash_table_iter_init(&cur_round, clipboard->requests);
+	while (g_hash_table_iter_next(&cur_round, &key, &value))
+		close(GPOINTER_TO_INT(value));
+	g_hash_table_unref(clipboard->requests);
 
-	g_clear_pointer(&appunti->corrente, offer_free);
-	if (appunti->nostra)
-		zwlr_data_control_source_v1_destroy(appunti->nostra);
-	if (appunti->dispositivo)
-		zwlr_data_control_device_v1_destroy(appunti->dispositivo);
-	if (appunti->gestore)
-		zwlr_data_control_manager_v1_destroy(appunti->gestore);
-	if (appunti->seat)
-		wl_seat_destroy(appunti->seat);
-	if (appunti->registro)
-		wl_registry_destroy(appunti->registro);
-	if (appunti->display)
-		wl_display_disconnect(appunti->display);
+	g_clear_pointer(&clipboard->current, offer_free);
+	if (clipboard->our)
+		zwlr_data_control_source_v1_destroy(clipboard->our);
+	if (clipboard->device)
+		zwlr_data_control_device_v1_destroy(clipboard->device);
+	if (clipboard->handler)
+		zwlr_data_control_manager_v1_destroy(clipboard->handler);
+	if (clipboard->seat)
+		wl_seat_destroy(clipboard->seat);
+	if (clipboard->registry)
+		wl_registry_destroy(clipboard->registry);
+	if (clipboard->display)
+		wl_display_disconnect(clipboard->display);
 	for (int i = 0; i < 2; i++)
-		if (appunti->sveglia[i] >= 0)
-			close(appunti->sveglia[i]);
-	g_free(appunti->ultimo);
-	g_mutex_clear(&appunti->stato);
-	g_mutex_clear(&appunti->lucchetto);
-	g_free(appunti);
+		if (clipboard->wake[i] >= 0)
+			close(clipboard->wake[i]);
+	g_free(clipboard->last);
+	g_mutex_clear(&clipboard->state);
+	g_mutex_clear(&clipboard->lock);
+	g_free(clipboard);
 }
 
-void clipboard_kde_listen(AppuntiKde *appunti, ClipboardOnText on_text,
-                         ClipboardOnRequest on_request, void *dati)
+void clipboard_kde_listen(ClipboardKde *clipboard, ClipboardOnText on_text,
+                         ClipboardOnRequest on_request, void *data)
 {
-	if (!appunti)
+	if (!clipboard)
 		return;
-	g_mutex_lock(&appunti->lucchetto);
-	appunti->on_text = on_text;
-	appunti->on_request = on_request;
-	appunti->dati = dati;
-	g_mutex_unlock(&appunti->lucchetto);
+	g_mutex_lock(&clipboard->lock);
+	clipboard->on_text = on_text;
+	clipboard->on_request = on_request;
+	clipboard->data = data;
+	g_mutex_unlock(&clipboard->lock);
 }
 
-char *clipboard_kde_last_text(AppuntiKde *appunti, size_t *byte)
+char *clipboard_kde_last_text(ClipboardKde *clipboard, size_t *byte)
 {
-	char *copia;
+	char *copied;
 
-	if (!appunti)
+	if (!clipboard)
 		return NULL;
-	g_mutex_lock(&appunti->lucchetto);
-	copia = appunti->ultimo ? g_strdup(appunti->ultimo) : NULL;
+	g_mutex_lock(&clipboard->lock);
+	copied = clipboard->last ? g_strdup(clipboard->last) : NULL;
 	if (byte)
-		*byte = appunti->ultimo ? appunti->ultimo_byte : 0;
-	g_mutex_unlock(&appunti->lucchetto);
-	return copia;
+		*byte = clipboard->last ? clipboard->last_byte : 0;
+	g_mutex_unlock(&clipboard->lock);
+	return copied;
 }
 
-void clipboard_kde_read_now(AppuntiKde *appunti)
+void clipboard_kde_read_now(ClipboardKde *clipboard)
 {
-	char *testo;
+	char *text;
 	size_t byte = 0;
 
-	if (!appunti)
+	if (!clipboard)
 		return;
-	testo = read_text(appunti, &byte);
-	if (!testo) {
-		registro_dettaglio(REG_APPUNTI, "the session had no clipboard to give us at the "
+	text = read_text(clipboard, &byte);
+	if (!text) {
+		log_detail(LOG_CLIPBOARD, "the session had no clipboard to give us at the "
 		                                "time of switching on: it is not a fault");
 		return;
 	}
-	registro_dice(REG_APPUNTI, "⭐ the session already had %zu bytes in the clipboard: "
+	registro_dice(LOG_CLIPBOARD, "⭐ the session already had %zu bytes in the clipboard: "
 	                           "announcing them to the client", byte);
-	g_mutex_lock(&appunti->lucchetto);
-	g_free(appunti->ultimo);
-	appunti->ultimo = g_strdup(testo);
-	appunti->ultimo_byte = byte;
-	if (appunti->on_text)
-		appunti->on_text(testo, byte, appunti->dati);
-	g_mutex_unlock(&appunti->lucchetto);
-	g_free(testo);
+	g_mutex_lock(&clipboard->lock);
+	g_free(clipboard->last);
+	clipboard->last = g_strdup(text);
+	clipboard->last_byte = byte;
+	if (clipboard->on_text)
+		clipboard->on_text(text, byte, clipboard->data);
+	g_mutex_unlock(&clipboard->lock);
+	g_free(text);
 }
 
-gboolean clipboard_kde_offer(AppuntiKde *appunti, GError **sbaglio)
+gboolean clipboard_kde_offer(ClipboardKde *clipboard, GError **mistake)
 {
-	struct zwlr_data_control_source_v1 *sorgente;
-	gint64 adesso;
+	struct zwlr_data_control_source_v1 *source;
+	gint64 t_now;
 
-	if (!appunti || !appunti->gestore) {
-		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_NOT_INITIALIZED, "clipboard not open");
+	if (!clipboard || !clipboard->handler) {
+		g_set_error(mistake, G_IO_ERROR, G_IO_ERROR_NOT_INITIALIZED, "clipboard not open");
 		return FALSE;
 	}
 	/* The minimum step towards klipper: we wait, we do not skip. */
-	g_mutex_lock(&appunti->stato);
-	adesso = g_get_monotonic_time();
-	if (appunti->last_set && adesso - appunti->last_set < PASSO_MINIMO_US) {
-		gint64 resta = PASSO_MINIMO_US - (adesso - appunti->last_set);
+	g_mutex_lock(&clipboard->state);
+	t_now = g_get_monotonic_time();
+	if (clipboard->last_set && t_now - clipboard->last_set < MIN_STEP_US) {
+		gint64 stays = MIN_STEP_US - (t_now - clipboard->last_set);
 
-		g_mutex_unlock(&appunti->stato);
-		g_usleep((gulong)resta);
-		g_mutex_lock(&appunti->stato);
+		g_mutex_unlock(&clipboard->state);
+		g_usleep((gulong)stays);
+		g_mutex_lock(&clipboard->state);
 	}
-	appunti->last_set = g_get_monotonic_time();
-	g_mutex_unlock(&appunti->stato);
+	clipboard->last_set = g_get_monotonic_time();
+	g_mutex_unlock(&clipboard->state);
 
-	sorgente = zwlr_data_control_manager_v1_create_data_source(appunti->gestore);
-	zwlr_data_control_source_v1_add_listener(sorgente, &source_listener, appunti);
-	for (int i = 0; TIPI_TESTO[i]; i++)
-		zwlr_data_control_source_v1_offer(sorgente, TIPI_TESTO[i]);
+	source = zwlr_data_control_manager_v1_create_data_source(clipboard->handler);
+	zwlr_data_control_source_v1_add_listener(source, &source_listener, clipboard);
+	for (int i = 0; TEXT_TYPES[i]; i++)
+		zwlr_data_control_source_v1_offer(source, TEXT_TYPES[i]);
 
 	/* ⚠ The old source is NOT destroyed here: KWin sends it `cancelled`, and
 	 *   that callback destroys it. */
-	g_mutex_lock(&appunti->stato);
-	appunti->nostra = sorgente;
-	g_mutex_unlock(&appunti->stato);
+	g_mutex_lock(&clipboard->state);
+	clipboard->our = source;
+	g_mutex_unlock(&clipboard->state);
 
-	zwlr_data_control_device_v1_set_selection(appunti->dispositivo, sorgente);
-	wl_display_flush(appunti->display);
-	registro_dettaglio(REG_APPUNTI, "offered the client's text to the session (%d types)",
-	                   (int)(sizeof TIPI_TESTO / sizeof *TIPI_TESTO) - 1);
+	zwlr_data_control_device_v1_set_selection(clipboard->device, source);
+	wl_display_flush(clipboard->display);
+	log_detail(LOG_CLIPBOARD, "offered the client's text to the session (%d types)",
+	                   (int)(sizeof TEXT_TYPES / sizeof *TEXT_TYPES) - 1);
 	return TRUE;
 }
 
-void clipboard_kde_reply(AppuntiKde *appunti, uint32_t serial, const char *testo,
+void clipboard_kde_reply(ClipboardKde *clipboard, uint32_t serial, const char *text,
                           size_t byte)
 {
-	gpointer valore;
-	char *ripiego = NULL;
-	size_t scritti = 0;
+	gpointer value;
+	char *fallback = NULL;
+	size_t written = 0;
 	int fd;
 
-	if (!appunti)
+	if (!clipboard)
 		return;
-	g_mutex_lock(&appunti->stato);
-	if (!g_hash_table_steal_extended(appunti->richieste, GUINT_TO_POINTER(serial), NULL,
-	                                 &valore)) {
-		g_mutex_unlock(&appunti->stato);
-		registro_dice(REG_APPUNTI, "⚠ answer to a clipboard request that does not exist "
+	g_mutex_lock(&clipboard->state);
+	if (!g_hash_table_steal_extended(clipboard->requests, GUINT_TO_POINTER(serial), NULL,
+	                                 &value)) {
+		g_mutex_unlock(&clipboard->state);
+		registro_dice(LOG_CLIPBOARD, "⚠ answer to a clipboard request that does not exist "
 		                           "(serial %u)", serial);
 		return;
 	}
-	g_mutex_unlock(&appunti->stato);
-	fd = GPOINTER_TO_INT(valore);
+	g_mutex_unlock(&clipboard->state);
+	fd = GPOINTER_TO_INT(value);
 
 	/* ⭐ As on GNOME: if the client has nothing, the session gets back the
 	 *    text IT had — connecting does not erase the desktop clipboard. */
-	if (!testo || byte == 0) {
-		size_t quanti = 0;
+	if (!text || byte == 0) {
+		size_t amount = 0;
 
-		ripiego = clipboard_kde_last_text(appunti, &quanti);
-		if (ripiego && quanti > 0) {
-			registro_dice(REG_APPUNTI, "⭐ the client has no clipboard for request %u: "
+		fallback = clipboard_kde_last_text(clipboard, &amount);
+		if (fallback && amount > 0) {
+			registro_dice(LOG_CLIPBOARD, "⭐ the client has no clipboard for request %u: "
 			                           "giving back to the session the %zu bytes IT had",
-			              serial, quanti);
-			testo = ripiego;
-			byte = quanti;
+			              serial, amount);
+			text = fallback;
+			byte = amount;
 		}
 	} else {
-		g_mutex_lock(&appunti->lucchetto);
-		g_free(appunti->ultimo);
-		appunti->ultimo = g_strndup(testo, byte);
-		appunti->ultimo_byte = byte;
-		g_mutex_unlock(&appunti->lucchetto);
+		g_mutex_lock(&clipboard->lock);
+		g_free(clipboard->last);
+		clipboard->last = g_strndup(text, byte);
+		clipboard->last_byte = byte;
+		g_mutex_unlock(&clipboard->lock);
 	}
 
 	/* ⛔ It is ALWAYS closed, even without data: the end of the stream is the `close`. */
-	while (testo && scritti < byte) {
-		ssize_t fatti;
+	while (text && written < byte) {
+		ssize_t done_ones;
 
-		if (!pronto(fd, POLLOUT)) {
-			registro_dice(REG_APPUNTI, "⛔ whoever is pasting does not read: %zu bytes of %zu, "
-			                           "then I give up", scritti, byte);
+		if (!ready(fd, POLLOUT)) {
+			registro_dice(LOG_CLIPBOARD, "⛔ whoever is pasting does not read: %zu bytes of %zu, "
+			                           "then I give up", written, byte);
 			break;
 		}
-		fatti = write(fd, testo + scritti, byte - scritti);
-		if (fatti < 0 && (errno == EINTR || errno == EAGAIN))
+		done_ones = write(fd, text + written, byte - written);
+		if (done_ones < 0 && (errno == EINTR || errno == EAGAIN))
 			continue;
-		if (fatti <= 0)
+		if (done_ones <= 0)
 			break; /* EPIPE: whoever was pasting has gone */
-		scritti += (size_t)fatti;
+		written += (size_t)done_ones;
 	}
 	close(fd);
-	if (testo)
-		registro_dettaglio(REG_APPUNTI, "delivered %zu bytes to the session (request %u)",
-		                   scritti, serial);
+	if (text)
+		log_detail(LOG_CLIPBOARD, "delivered %zu bytes to the session (request %u)",
+		                   written, serial);
 	else
-		registro_dettaglio(REG_APPUNTI, "request %u closed with «I do not have it»", serial);
-	g_free(ripiego);
+		log_detail(LOG_CLIPBOARD, "request %u closed with «I do not have it»", serial);
+	g_free(fallback);
 }

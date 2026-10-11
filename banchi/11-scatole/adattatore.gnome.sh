@@ -11,9 +11,9 @@
 #    Every box carries a file like this one, at the SAME path —
 #    `/usr/local/lib/rete11/adattatore.sh` — that answers a few questions:
 #
-#       adattatore_nome            what this desktop is called
-#       adattatore_pacchetto       which package it comes from, for the fingerprint
-#       adattatore_avvia RTD LOG   start the compositor, return its pid
+#       adapter_name            what this desktop is called
+#       adapter_package       which package it comes from, for the fingerprint
+#       adapter_start RTD LOG   start the compositor, return its pid
 #
 # ⛔ THE BOUNDARY, and it must be defended: what goes in here is **how it is started and how
 #    it is watched**, NEVER the product's behaviour.  The day an
@@ -22,9 +22,9 @@
 #    (`DECISIONI.md` §5.1-bis).
 # ===========================================================================
 
-adattatore_nome() { printf 'GNOME (Mutter)'; }
+adapter_name() { printf 'GNOME (Mutter)'; }
 
-adattatore_pacchetto() { printf 'gnome-shell'; }
+adapter_package() { printf 'gnome-shell'; }
 
 # starts the compositor in the background, and prints its pid.
 #   $1 = the session's private directory
@@ -35,10 +35,10 @@ adattatore_pacchetto() { printf 'gnome-shell'; }
 #    (`src/sessione.c:735`): the session is born WITHOUT monitors of its own, and the only
 #    monitor is mounted by our capture.
 #    ⇒ Here the question is about the ENVIRONMENT — *«can a Wayland compositor
-#      live in this box and serve a client?»* — not about the product.
+#      live in this box and needs a client?»* — not about the product.
 #      ⛔ Asking the product's question without the product inside would mean
 #      answering a question different from the one written.
-adattatore_avvia() {
+adapter_start() {
 	_rtd=$1; _log=$2
 	runuser -u provanic -- env \
 		XDG_RUNTIME_DIR="$_rtd" \

@@ -14,17 +14,17 @@
 #
 #        XDG_RUNTIME_DIR=/run/user/1000 \
 #        DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus \
-#        ./misura 2133 772 1601 903 5
+#        ./measure 2133 772 1601 903 5
 #
 # ⛔⛔ AND A SIZE ABOVE 16384 IN EITHER OF THE TWO DIMENSIONS **KILLS
 #     GNOME-SHELL** (`[M]` 14 Aug 2026, see `F4-IN-8`): do not try it on a
 #     session someone needs.
 set -uo pipefail
-QUI=/srv/src/08-misura
+HERE=/srv/src/08-misura
 
-rm -f "$QUI/misura" "$QUI/parita"
-cc -O2 -Wall -o "$QUI/misura" "$QUI/04-in8-misura.c" \
+rm -f "$HERE/misura" "$HERE/parita"
+cc -O2 -Wall -o "$HERE/misura" "$HERE/04-in8-misura.c" \
    $(pkg-config --cflags --libs gio-2.0 libpipewire-0.3) 2>&1 | tail -30
-cc -O2 -Wall -o "$QUI/parita" "$QUI/04-in8-parita.c" \
+cc -O2 -Wall -o "$HERE/parita" "$HERE/04-in8-parita.c" \
    $(pkg-config --cflags --libs libavcodec libavutil) 2>&1 | tail -30
-ls -la "$QUI/misura" "$QUI/parita" 2>/dev/null || echo "⛔ NOT built"
+ls -la "$HERE/misura" "$HERE/parita" 2>/dev/null || echo "⛔ NOT built"

@@ -24,7 +24,7 @@
  *
  * ⇒ Hence the shape of this file: no lists of MIME types are exchanged with
  *   the stitcher, **text** is exchanged.  The types live in here and nowhere
- *   else (`TIPI_TESTO`).
+ *   else (`TEXT_TYPES`).
  *
  * ---------------------------------------------------------------------------
  * ⛔⛔ THE CLIPBOARD BELONGS TO THE COMPOSITOR, NOT TO THE REMOTE SESSION
@@ -73,8 +73,8 @@
  *   on the socket to the parent (`send` on a SEQPACKET is atomic per message),
  *   ⛔ but NOT to touch `libei`, which `input.h` declares non-reentrant.
  */
-#ifndef REMOTIX_APPUNTI_H
-#define REMOTIX_APPUNTI_H
+#ifndef REMOTIX_CLIPBOARD_H
+#define REMOTIX_CLIPBOARD_H
 
 #include <gio/gio.h>
 #include <glib.h>
@@ -82,9 +82,9 @@
 #include <stdint.h>
 
 /* ⭐ This module's log area.  It lives here and not in `registro.h` for
- *    the same reason as `REG_FIGLIO`: it belongs to the child, and `registro.h` is
+ *    the same reason as `LOG_CHILD`: it belongs to the child, and `registro.h` is
  *    shared with the parent. */
-#define REG_APPUNTI "appunti"
+#define LOG_CLIPBOARD "clipboard"
 
 /* ⛔ The ceiling of `RCP.md` §5.4, and it lives HERE because a larger text must
  *    be neither sent nor announced — that is, the decision is taken
@@ -98,31 +98,31 @@
  * ⛔ And beyond the ceiling we DO NOT TRUNCATE: §5.4 forbids it with the reason
  *    written — "a truncated text pasted into a terminal is worse than a missing
  *    text".  It is not announced at all, and it is written to the log. */
-#define APPUNTI_TETTO 1000000u
+#define CLIPBOARD_CAP 1000000u
 
-typedef struct Appunti Appunti;
+typedef struct Clipboard Clipboard;
 
 /*
  * ⭐ "THE SESSION HAS COPIED SOME TEXT", and it is already read and already validated.
  *
  * ⛔ The text arrives ALREADY READ, and it is not a convenience: the §7.4 announcement
- *    carries `u32 lunghezza`, and nobody can say how long a text is without
+ *    carries `u32 length`, and nobody can say how long a text is without
  *    having read it.  ⇒ The protocol's "announce and then pull" lives on the
  *    WIRE, where it is needed; on this side the text is already there.
  *
- * ⛔ And if the text exceeds `APPUNTI_TETTO` this callback is NOT called
+ * ⛔ And if the text exceeds `CLIPBOARD_CAP` this callback is NOT called
  *    at all (§5.4: "it is not announced"), and the line is in the log.  ⚠ So
  *    "nothing was copied" and "it was too large" do not have the same
  *    face — `CODER.md` §3.10.
  *
- * `testo` is valid UTF-8, zero-terminated, and valid ONLY inside the call.
+ * `text` is valid UTF-8, zero-terminated, and valid ONLY inside the call.
  * Runs on the clipboard thread.
  */
-typedef void (*ClipboardOnText)(const char *testo, size_t byte, void *dati);
+typedef void (*ClipboardOnText)(const char *text, size_t byte, void *data);
 
 /*
  * ⭐ "THE SESSION WANTS TO PASTE what the client has": ask the client,
- *    and when the answer arrives call `appunti_rispondi` with this
+ *    and when the answer arrives call `clipboard_reply` with this
  *    `serial`.
  *
  * ⛔⛔ IT MUST ALWAYS BE ANSWERED, even when failing, and even if the client never
@@ -134,7 +134,7 @@ typedef void (*ClipboardOnText)(const char *testo, size_t byte, void *dati);
  *
  * Runs on the clipboard thread.
  */
-typedef void (*ClipboardOnRequest)(uint32_t serial, void *dati);
+typedef void (*ClipboardOnRequest)(uint32_t serial, void *data);
 
 /*
  * Switches the clipboard on, on the given control session, and switches it on **once
@@ -152,22 +152,22 @@ typedef void (*ClipboardOnRequest)(uint32_t serial, void *dati);
  *    when the owner **changes**, and at a reconnection nothing
  *    changes (`STUDI.md` §gnome §10 — "it was our recipe that lost it").
  */
-Appunti *appunti_apri(GDBusConnection *bus, const char *check_path,
-                      GError **sbaglio);
+Clipboard *clipboard_open(GDBusConnection *bus, const char *check_path,
+                      GError **mistake);
 /* ⭐ PHASE 12 — the same clipboard on KDE Plasma (`appunti_kde.h`): no bus
  *    to pass, KWin is reached on the user's Wayland socket.  From there
  *    on the same functions below are used. */
-Appunti *appunti_apri_kde(GError **sbaglio);
+Clipboard *clipboard_open_kde(GError **mistake);
 /* ⭐ PHASE 13 — and on XFCE (labwc): the same module as KDE, which already speaks
  *    the wlroots protocol (`appunti_kde.h`). */
-Appunti *appunti_apri_wlroots(GError **sbaglio);
+Clipboard *clipboard_open_wlroots(GError **mistake);
 
-void clipboard_close(Appunti *appunti);
+void clipboard_close(Clipboard *clipboard);
 
 /* Who listens to the two callbacks.  With NULL callbacks listening stops,
  * and the call **waits** until no callback is in progress. */
-void clipboard_listen(Appunti *appunti, ClipboardOnText on_text,
-                     ClipboardOnRequest on_request, void *dati);
+void clipboard_listen(Clipboard *clipboard, ClipboardOnText on_text,
+                     ClipboardOnRequest on_request, void *data);
 
 /*
  * ⭐ The last text the SESSION copied, or NULL.
@@ -179,7 +179,7 @@ void clipboard_listen(Appunti *appunti, ClipboardOnText on_text,
  * Returns a copy to free with `g_free`; `byte` — if not NULL —
  * receives how many bytes it has.
  */
-char *appunti_ultimo_testo(Appunti *appunti, size_t *byte);
+char *clipboard_last_text(Clipboard *clipboard, size_t *byte);
 
 /*
  * "THE CLIENT HAS COPIED SOME TEXT": from now on the session can ask for it, and
@@ -193,19 +193,19 @@ char *appunti_ultimo_testo(Appunti *appunti, size_t *byte);
  *    Mutter does not tell a new session who owns the selection, and
  *    without this call the desktop clipboard is lost at connection.
  *    See the box in `appunti.c`. */
-void appunti_leggi_adesso(Appunti *appunti);
+void clipboard_read_now(Clipboard *clipboard);
 
-gboolean clipboard_offer(Appunti *appunti, GError **sbaglio);
+gboolean clipboard_offer(Clipboard *clipboard, GError **mistake);
 
 /*
- * Answers a request of the session.  With `testo` NULL it declares it does not
+ * Answers a request of the session.  With `text` NULL it declares it does not
  * have what was asked — ⛔ **which is an answer anyway**, and it is
  * the one that unblocks whoever is pasting.
  *
  * ⛔ IT WAITS: it opens a descriptor and writes into it.  It must be called from a
  *    thread that can afford it.
  */
-void appunti_rispondi(Appunti *appunti, uint32_t serial, const char *testo,
+void clipboard_reply(Clipboard *clipboard, uint32_t serial, const char *text,
                       size_t byte);
 
 #endif

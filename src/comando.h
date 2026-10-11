@@ -12,17 +12,17 @@
  *
  *   ⛔ a SECOND PROCESS with an option (`remotix --sblocca X`) — **it does not
  *      work**, and the way it does not work is silent: the ban lives in the
- *      memory of the serving process (`rcp.c`, `static … tentativi[]`), and a
+ *      memory of the serving process (`rcp.c`, `static … attempts[]`), and a
  *      second process can only rewrite the file.  The server would keep
- *      answering `TROPPI_TENTATIVI` until restart, and ⛔ the first
- *      `salva_ban()` — that is, the first ban of anyone else — would rewrite
+ *      answering `TOO_MANY_ATTEMPTS` until restart, and ⛔ the first
+ *      `save_ban()` — that is, the first ban of anyone else — would rewrite
  *      the file putting back in it the ban just removed.  ⚠ And whoever gave
  *      the command saw it **exit with zero**;
  *   ⛔ a SIGNAL — it carries no address, and above all it has no answer:
  *      §4.4-bis wants «was not banned» and «I removed it» to be told apart, and
  *      a delivered signal only says that it was delivered;
  *   ⭐ a CONTROL SOCKET — it carries the address, acts on the LIVE process
- *      (memory and file in the same line, by the hand of `rcp_sblocca()`), and
+ *      (memory and file in the same line, by the hand of `rcp_unblock()`), and
  *      **answers**, so the two answers really exist.  The key it asks for is a
  *      file with `0600` permissions on the machine's filesystem, that is
  *      exactly «access to the machine» — and it adds no surface reachable from
@@ -36,11 +36,11 @@
  * ---------------------------------------------------------------------------
  * ⛔ THE PROTOCOL IS ONE LINE, AND IT CAN BE READ WITHOUT TOOLS
  *
- *     SBLOCCA <address>    →  TOLTO <key>           the ban was there and is gone
- *                          →  NON-BANNATO <key>     there was nothing to remove
+ *     UNBLOCK <address>    →  REMOVED <key>           the ban was there and is gone
+ *                          →  NOT-BANNED <key>     there was nothing to remove
  *     PING                 →  PONG                  «does the command exist?», and
  *                                                   touches nothing
- *     (other)              →  NON-CAPITO <line>
+ *     (other)              →  NOT-UNDERSTOOD <line>
  *
  * ⭐ `PING` is not an ornament: it is the denominator of rule B0.3 of
  *    `FASI.md` §01-filo-nudo.  A bench that calls the unblock between one test
@@ -60,7 +60,7 @@
  *
  * On this machine there are **two** servers — the `bsslserver` graft on 7447
  * and this product on 7448 — and each has its own socket.  ⛔ Whoever picks the
- * wrong socket receives `PONG` and then `NON-BANNATO`, that is the two most
+ * wrong socket receives `PONG` and then `NOT-BANNED`, that is the two most
  * reassuring answers of the protocol, while the ban they wanted to remove is
  * alive in the other process.  It is the new face of the third outcome: **I
  * talked to a server, but not to THAT one** — and unlike the other three
@@ -84,35 +84,35 @@
  *    `getsockopt(SO_PEERCRED)` hands them to whoever connects — pid, uid, gid,
  *    from the kernel.  From there `/proc/<pid>/comm` says `remotix` or
  *    `bsslserver`.  `01-b8-sblocca.py` does it: it always prints who answered
- *    and can demand it (`--pretendi-chi`, `--pretendi-pid`).
+ *    and can demand it (`--expect-name`, `--expect-pid`).
  *
  * ⚠ And the other half of the ban — the **file** that survives restart — this
- *   module cannot look at: `rcp_sblocca()` calls `salva_ban(NULL, …)`, which
+ *   module cannot look at: `rcp_unblock()` calls `save_ban(NULL, …)`, which
  *   with the session at `NULL` stays silent on every fault, and `ban_path`
  *   is `static` inside `rcp.c`.  ⛔ So here it is never declared that the file
  *   was written: it is said that it was **requested**.  Whoever measures looks
  *   at it from outside — `01-b8-sblocca.py --ban-file`, which reads it before
- *   and after.  ⭐ The real cure would be in `rcp.c`: `rcp_sblocca()` must be
+ *   and after.  ⭐ The real cure would be in `rcp.c`: `rcp_unblock()` must be
  *   able to say whether it wrote the file.
  */
-#ifndef REMOTIX_COMANDO_H
-#define REMOTIX_COMANDO_H
+#ifndef REMOTIX_COMMAND_H
+#define REMOTIX_COMMAND_H
 
 #include <poll.h>
 #include <stddef.h>
 
-typedef struct comando comando;
+typedef struct command command;
 
 /* Opens the socket.  ⛔ Returns NULL on any fault, and WRITES it: without the
  * unblock command the protection of §4.4-bis is still there — the only way out
  * is the twelve hours — so whoever starts the server goes on, but the missing
  * half must be readable in the log. */
-comando *comando_apri(const char *percorso);
-void command_close(comando *k);
+command *command_open(const char *fpath);
+void command_close(command *k);
 
 /* Like `pagina_*`: the descriptor is put in the `poll` and whatever moved is
  * moved. */
-size_t comando_descrittori(comando *k, struct pollfd *dove, size_t cap);
-void comando_muovi(comando *k, struct pollfd *dove, size_t quanti);
+size_t command_descriptors(command *k, struct pollfd *dove, size_t cap);
+void command_move(command *k, struct pollfd *dove, size_t amount);
 
 #endif

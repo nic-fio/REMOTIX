@@ -8,59 +8,59 @@
  * `src/pagina.html` between the two markers, not from another copy), and compares them:
  *   · with the old one (libavcodec) decoded the same way, sample by
  *     sample;
- *   · with the server's NATIVE decoding (`opus_decode_float`, `nuovo.f32`).
- * The gesture and the block scheduling of `suona()` are NOT tested here:
+ *   · with the server's NATIVE decoding (`opus_decode_float`, `new.f32`).
+ * The gesture and the block scheduling of `plays()` are NOT tested here:
  * they do not depend on who encodes.
  */
-async function prendi(u) {
+async function take(u) {
   const r = await fetch(u);
   if (!r.ok) throw new Error(u + " " + r.status);
   return new Uint8Array(await r.arrayBuffer());
 }
-async function modulo() {
+async function wasm_module() {
   const s = atob(await (await fetch("wasm.b64")).text());
   const b = new Uint8Array(s.length);
   for (let i = 0; i < s.length; i++) b[i] = s.charCodeAt(i);
   const { instance } = await WebAssembly.instantiate(b, {});
   const x = instance.exports;
   if (typeof x._initialize === "function") x._initialize();
-  if (x.rx_apri() !== 0) throw new Error("rx_apri");
+  if (x.rx_open() !== 0) throw new Error("rx_open");
   return x;
 }
-async function decodifica(pkt) {
-  const x = await modulo();
-  const fuori = [];
-  let pacchetti = 0, taciuti = 0, rifiutati = 0, t = 0;
+async function decoding(pkt) {
+  const x = await wasm_module();
+  const out = [];
+  let packets = 0, silenced = 0, refused = 0, t = 0;
   for (let i = 0; i < pkt.length;) {
     const n = pkt[i] | (pkt[i + 1] << 8);
     i += 2;
-    if (n === 0) { taciuti++; continue; }
-    if (n > x.rx_pacchetto_max()) { rifiutati++; i += n; continue; }
-    new Uint8Array(x.memory.buffer, x.rx_pacchetto(), n).set(pkt.subarray(i, i + n));
+    if (n === 0) { silenced++; continue; }
+    if (n > x.rx_packet_max()) { refused++; i += n; continue; }
+    new Uint8Array(x.memory.buffer, x.rx_packet(), n).set(pkt.subarray(i, i + n));
     i += n;
     const t0 = performance.now();
-    const f = x.rx_decodifica(n);
+    const f = x.rx_decode(n);
     t += performance.now() - t0;
-    if (f <= 0) { rifiutati++; continue; }
-    pacchetti++;
-    fuori.push(new Float32Array(x.memory.buffer, x.rx_uscita(), f * 2).slice());
+    if (f <= 0) { refused++; continue; }
+    packets++;
+    out.push(new Float32Array(x.memory.buffer, x.rx_output(), f * 2).slice());
   }
-  return { pacchetti, taciuti, rifiutati, fuori, ms: t };
+  return { packets, silenced, refused, out, ms: t };
 }
 (async function () {
-  const esito = { ua: navigator.userAgent };
+  const outcome = { ua: navigator.userAgent };
   try {
-    const v = await decodifica(await prendi("vecchio.pkt"));
-    const n = await decodifica(await prendi("nuovo.pkt"));
-    const nat = new Float32Array((await prendi("nuovo.f32")).buffer);
-    esito.vecchio = { pacchetti: v.pacchetti, taciuti: v.taciuti, rifiutati: v.rifiutati };
-    esito.nuovo = { pacchetti: n.pacchetti, taciuti: n.taciuti, rifiutati: n.rifiutati,
-                    ms_per_pacchetto: n.ms / Math.max(1, n.pacchetti) };
-    let different_vn = 0, different_nat = 0, max_nat = 0, k = 0, campioni = 0, e = 0;
-    for (let b = 0; b < n.fuori.length; b++) {
-      const a = n.fuori[b], c = v.fuori[b];
+    const v = await decoding(await take("old.pkt"));
+    const n = await decoding(await take("new.pkt"));
+    const nat = new Float32Array((await take("new.f32")).buffer);
+    outcome.old = { packets: v.packets, silenced: v.silenced, refused: v.refused };
+    outcome.new = { packets: n.packets, silenced: n.silenced, refused: n.refused,
+                    ms_per_package: n.ms / Math.max(1, n.packets) };
+    let different_vn = 0, different_nat = 0, max_nat = 0, k = 0, samples = 0, e = 0;
+    for (let b = 0; b < n.out.length; b++) {
+      const a = n.out[b], c = v.out[b];
       for (let i = 0; i < a.length; i++, k++) {
-        campioni++;
+        samples++;
         if (!c || a[i] !== c[i]) different_vn++;
         const d = Math.abs(a[i] - nat[k]);
         if (d !== 0) different_nat++;
@@ -68,15 +68,15 @@ async function decodifica(pkt) {
         e += a[i] * a[i];
       }
     }
-    esito.campioni = campioni;
-    esito.diversi_vecchio_nuovo = different_vn;
-    esito.diversi_dal_nativo = different_nat;
-    esito.massimo_scarto_dal_nativo = max_nat;
-    esito.rms_dbfs = 10 * Math.log10(e / Math.max(1, campioni) + 1e-20);
+    outcome.samples = samples;
+    outcome.different_old_new = different_vn;
+    outcome.different_from_native = different_nat;
+    outcome.maximum_gap_from_native = max_nat;
+    outcome.rms_dbfs = 10 * Math.log10(e / Math.max(1, samples) + 1e-20);
   } catch (err) {
-    esito.errore = String(err);
+    outcome.error = String(err);
   }
-  await fetch("esito", { method: "POST", body: JSON.stringify(esito) });
-  document.title = "fatto";
+  await fetch("outcome", { method: "POST", body: JSON.stringify(outcome) });
+  document.title = "done";
 })();
 </script>

@@ -4,22 +4,22 @@
  * ⛔ They exist for one reason only: to CERTIFY the bench (`CODER.md` §3.3 and
  *    §4.6).  A bench that has never seen the defect is not a test — it is a
  *    green that gives false confidence.  `04-b25-lancia.sh` compiles `04-b25-tastiera.c`
- *    against each of these and DEMANDS that it says ROSSO.
+ *    against each of these and DEMANDS that it says RED.
  *
  * ⚠ None of these three is invented: they are the three ways this module
  *   really goes wrong, and each has a name in the real product.
  *
- *   GUASTO=1  «sends the letter without the accent».  It does not find the accented «e'» and
+ *   B25_FAULT=1  «sends the letter without the accent».  It does not find the accented «e'» and
  *             falls back on the «e».  ⇒ It is precisely what `RCP.md` §7.3
  *             forbids: «MUST NOT send a different character».  For the user
  *             it is the wrong letters in the password field.
  *
- *   GUASTO=2  «forgets the modifiers».  It finds the right key and hands over
+ *   B25_FAULT=2  «forgets the modifiers».  It finds the right key and hands over
  *             only that: on `it` out comes «e` » instead of «e'», on `us` out comes «2»
  *             instead of «@».  It is the defect that a bench comparing the
  *             CODES would never see — the key is the right one.
  *
- *   GUASTO=3  «falls back to us silently».  The requested layout does not
+ *   B25_FAULT=3  «falls back to us silently».  The requested layout does not
  *             load and `us` is loaded without saying so, still declaring the
  *             requested name.  It is the trap of `CODER.md` §4.2 in its worst
  *             form: the symptom is «it types the wrong letters» and nobody
@@ -33,20 +33,20 @@
 #include <string.h>
 #include <xkbcommon/xkbcommon.h>
 
-#ifndef GUASTO
-#define GUASTO 1
+#ifndef B25_FAULT
+#define B25_FAULT 1
 #endif
 
 #define XKB_A_EVDEV(k) ((uint16_t)((k) - 8))
 
-struct tastiera
+struct keyboard
 {
 	struct xkb_context *ctx;
 	struct xkb_keymap *km;
-	char nome[128];
+	char name[128];
 };
 
-static void zitto(struct xkb_context *c, enum xkb_log_level l, const char *f, va_list a)
+static void quiet(struct xkb_context *c, enum xkb_log_level l, const char *f, va_list a)
 {
 	(void)c;
 	(void)l;
@@ -54,41 +54,41 @@ static void zitto(struct xkb_context *c, enum xkb_log_level l, const char *f, va
 	(void)a;
 }
 
-static struct xkb_keymap *compila(struct xkb_context *ctx, const char *disposizione)
+static struct xkb_keymap *compile(struct xkb_context *ctx, const char *kb_layout)
 {
-	char layout[64] = {0}, variante[64] = {0};
-	const char *par = strchr(disposizione, '(');
-	struct xkb_rule_names nomi;
+	char layout[64] = {0}, variant[64] = {0};
+	const char *par = strchr(kb_layout, '(');
+	struct xkb_rule_names names;
 
 	if (par)
 	{
-		size_t n = (size_t)(par - disposizione);
+		size_t n = (size_t)(par - kb_layout);
 		if (n >= sizeof layout)
 			return NULL;
-		memcpy(layout, disposizione, n);
-		snprintf(variante, sizeof variante, "%s", par + 1);
-		char *ch = strchr(variante, ')');
+		memcpy(layout, kb_layout, n);
+		snprintf(variant, sizeof variant, "%s", par + 1);
+		char *ch = strchr(variant, ')');
 		if (ch)
 			*ch = 0;
 	}
 	else
-		snprintf(layout, sizeof layout, "%s", disposizione);
+		snprintf(layout, sizeof layout, "%s", kb_layout);
 
-	nomi.rules = "evdev";
-	nomi.model = "pc105";
-	nomi.layout = layout;
-	nomi.variant = variante;
-	nomi.options = "";
-	return xkb_keymap_new_from_names(ctx, &nomi, XKB_KEYMAP_COMPILE_NO_FLAGS);
+	names.rules = "evdev";
+	names.model = "pc105";
+	names.layout = layout;
+	names.variant = variant;
+	names.options = "";
+	return xkb_keymap_new_from_names(ctx, &names, XKB_KEYMAP_COMPILE_NO_FLAGS);
 }
 
-Tastiera *tastiera_apri(const char *disposizione, char **errore)
+Keyboard *keyboard_open(const char *kb_layout, char **error)
 {
-	Tastiera *t = calloc(1, sizeof *t);
-	const char *chiesta = disposizione ? disposizione : "us";
+	Keyboard *t = calloc(1, sizeof *t);
+	const char *asked_size = kb_layout ? kb_layout : "us";
 
-	if (errore)
-		*errore = NULL;
+	if (error)
+		*error = NULL;
 	if (!t)
 		return NULL;
 	t->ctx = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
@@ -97,29 +97,29 @@ Tastiera *tastiera_apri(const char *disposizione, char **errore)
 		free(t);
 		return NULL;
 	}
-	xkb_context_set_log_fn(t->ctx, zitto);
-	t->km = compila(t->ctx, chiesta);
+	xkb_context_set_log_fn(t->ctx, quiet);
+	t->km = compile(t->ctx, asked_size);
 
-#if GUASTO == 3
+#if B25_FAULT == 3
 	/* ⛔ THE SILENT FALLBACK: it does not load, `us` is loaded, and nobody is told. */
 	if (!t->km)
-		t->km = compila(t->ctx, "us");
+		t->km = compile(t->ctx, "us");
 #endif
 
 	if (!t->km)
 	{
-		if (errore)
-			*errore = strdup("the layout does not compile");
+		if (error)
+			*error = strdup("the layout does not compile");
 		xkb_context_unref(t->ctx);
 		free(t);
 		return NULL;
 	}
-	snprintf(t->nome, sizeof t->nome, "%s", chiesta);
+	snprintf(t->name, sizeof t->name, "%s", asked_size);
 	return t;
 }
 
 /*
- * GUASTO=4  ⛔ «trusts the negotiated name instead of the layout the
+ * B25_FAULT=4  ⛔ «trusts the negotiated name instead of the layout the
  *           session handed over».  It is THE DEFECT FOR WHICH THE CONTRACT
  *           CHANGED on 14 Aug 2026: the keymap arrives from `libei` and is
  *           thrown away, and the one the client asked for is compiled.
@@ -131,24 +131,24 @@ Tastiera *tastiera_apri(const char *disposizione, char **errore)
  * ⚠ For the other three faults this function is CORRECT: each must
  *   get one thing wrong only, or nobody knows what the bench has seen.
  */
-Tastiera *keyboard_open_from_keymap(const char *testo, size_t lunghezza, const char *negoziata,
-                                  char **errore)
+Keyboard *keyboard_open_from_keymap(const char *text, size_t length, const char *negotiated,
+                                  char **error)
 {
-	Tastiera *t;
+	Keyboard *t;
 
-	if (errore)
-		*errore = NULL;
+	if (error)
+		*error = NULL;
 
-#if GUASTO == 4
+#if B25_FAULT == 4
 	/* ⛔ the session's keymap is not even looked at. */
-	(void) testo;
-	(void) lunghezza;
-	return tastiera_apri(negoziata ? negoziata : "us", errore);
+	(void) text;
+	(void) length;
+	return keyboard_open(negotiated ? negotiated : "us", error);
 #else
-	(void) negoziata;
-	while (lunghezza > 0 && testo && testo[lunghezza - 1] == '\0')
-		lunghezza--;
-	if (!testo || lunghezza == 0)
+	(void) negotiated;
+	while (length > 0 && text && text[length - 1] == '\0')
+		length--;
+	if (!text || length == 0)
 		return NULL;
 	t = calloc(1, sizeof *t);
 	if (!t)
@@ -159,8 +159,8 @@ Tastiera *keyboard_open_from_keymap(const char *testo, size_t lunghezza, const c
 		free(t);
 		return NULL;
 	}
-	xkb_context_set_log_fn(t->ctx, zitto);
-	t->km = xkb_keymap_new_from_buffer(t->ctx, testo, lunghezza, XKB_KEYMAP_FORMAT_TEXT_V1,
+	xkb_context_set_log_fn(t->ctx, quiet);
+	t->km = xkb_keymap_new_from_buffer(t->ctx, text, length, XKB_KEYMAP_FORMAT_TEXT_V1,
 	                                   XKB_KEYMAP_COMPILE_NO_FLAGS);
 	if (!t->km)
 	{
@@ -168,14 +168,14 @@ Tastiera *keyboard_open_from_keymap(const char *testo, size_t lunghezza, const c
 		free(t);
 		return NULL;
 	}
-	snprintf(t->nome, sizeof t->nome, "%s", negoziata ? negoziata : "the session's");
+	snprintf(t->name, sizeof t->name, "%s", negotiated ? negotiated : "the session's");
 	return t;
 #endif
 }
 
-const char *kbd_layout(Tastiera *t) { return t ? t->nome : NULL; }
+const char *kbd_layout(Keyboard *t) { return t ? t->name : NULL; }
 
-void keyboard_close(Tastiera *t)
+void keyboard_close(Keyboard *t)
 {
 	if (!t)
 		return;
@@ -184,9 +184,9 @@ void keyboard_close(Tastiera *t)
 	free(t);
 }
 
-/* Looks for a key that produces `carattere`; returns the level in `*livello`. */
-static int cerca(struct xkb_keymap *km, uint32_t carattere, xkb_keycode_t *tasto,
-                 xkb_level_index_t *livello)
+/* Looks for a key that produces `character`; returns the level in `*level`. */
+static int search(struct xkb_keymap *km, uint32_t character, xkb_keycode_t *keystroke,
+                 xkb_level_index_t *level)
 {
 	xkb_keycode_t min = xkb_keymap_min_keycode(km), max = xkb_keymap_max_keycode(km);
 
@@ -196,12 +196,12 @@ static int cerca(struct xkb_keymap *km, uint32_t carattere, xkb_keycode_t *tasto
 		for (xkb_level_index_t l = 0; l < n; l++)
 		{
 			const xkb_keysym_t *sim = NULL;
-			int quanti = xkb_keymap_key_get_syms_by_level(km, k, 0, l, &sim);
-			for (int i = 0; i < quanti; i++)
-				if (xkb_keysym_to_utf32(sim[i]) == carattere)
+			int amount = xkb_keymap_key_get_syms_by_level(km, k, 0, l, &sim);
+			for (int i = 0; i < amount; i++)
+				if (xkb_keysym_to_utf32(sim[i]) == character)
 				{
-					*tasto = k;
-					*livello = l;
+					*keystroke = k;
+					*level = l;
 					return 1;
 				}
 		}
@@ -209,49 +209,49 @@ static int cerca(struct xkb_keymap *km, uint32_t carattere, xkb_keycode_t *tasto
 	return 0;
 }
 
-int tastiera_posizioni_per(Tastiera *t, uint32_t carattere, uint16_t codici[TASTIERA_MAX_POSIZIONI],
+int keyboard_positions_for(Keyboard *t, uint32_t character, uint16_t codes[KEYBOARD_MAX_POSITIONS],
                            size_t *n)
 {
-	xkb_keycode_t tasto;
-	xkb_level_index_t livello;
+	xkb_keycode_t keystroke;
+	xkb_level_index_t level;
 
-	if (!t || !codici || !n)
+	if (!t || !codes || !n)
 		return -1;
 	*n = 0;
-	if (carattere > 0x10FFFF || (carattere >= 0xD800 && carattere <= 0xDFFF))
+	if (character > 0x10FFFF || (character >= 0xD800 && character <= 0xDFFF))
 		return -1;
 
-	if (!cerca(t->km, carattere, &tasto, &livello))
+	if (!search(t->km, character, &keystroke, &level))
 	{
-#if GUASTO == 1
+#if B25_FAULT == 1
 		/* ⛔ «better something than nothing»: the accent is dropped and that
 		 *    letter is sent.  It is the falsification RCP.md §7.3 forbids. */
 		static const struct
 		{
-			uint32_t accentata, nuda;
+			uint32_t accented, bare;
 		} folds[] = {{0x00E0, 'a'}, {0x00E8, 'e'}, {0x00E9, 'e'}, {0x00EC, 'i'},
 		              {0x00F2, 'o'}, {0x00F9, 'u'}, {0x00E7, 'c'}};
 		for (size_t i = 0; i < sizeof folds / sizeof *folds; i++)
-			if (folds[i].accentata == carattere &&
-			    cerca(t->km, folds[i].nuda, &tasto, &livello))
-				goto trovato;
+			if (folds[i].accented == character &&
+			    search(t->km, folds[i].bare, &keystroke, &level))
+				goto found;
 #endif
 		return 0;
 	}
-#if GUASTO == 1
-trovato:
+#if B25_FAULT == 1
+found:
 #endif
 	{
 		size_t q = 0;
-#if GUASTO != 2
+#if B25_FAULT != 2
 		/* The naive little rule of v1: level 1 = Shift, 2 = AltGr, 3 = both. */
-		if (livello == 1 || livello == 3)
-			codici[q++] = 42;
-		if (livello == 2 || livello == 3)
-			codici[q++] = 100;
+		if (level == 1 || level == 3)
+			codes[q++] = 42;
+		if (level == 2 || level == 3)
+			codes[q++] = 100;
 #endif
-		/* ⛔ GUASTO=2: the modifiers are not added at all. */
-		codici[q++] = XKB_A_EVDEV(tasto);
+		/* ⛔ B25_FAULT=2: the modifiers are not added at all. */
+		codes[q++] = XKB_A_EVDEV(keystroke);
 		*n = q;
 	}
 	return 1;

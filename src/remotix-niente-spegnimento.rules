@@ -1,5 +1,5 @@
 /*
- * remotix-niente-spegnimento.rules — the first of the three belts of
+ * remotix-no-poweroff.rules — the first of the three belts of
  * `DECISIONI.md` §4.7: "nobody switches the server off".
  *
  * Installed in /etc/polkit-1/rules.d/.  Number 50 and not 49: it must win

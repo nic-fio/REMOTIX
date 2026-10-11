@@ -83,7 +83,7 @@
 #    written NOBODY gets in, and PAM's log says so.  With `succeed` the
 #    lost file would silently remove root's exclusion — a
 #    protection in a line that can be lost, that is what I7 forbids.
-auth       requisite    pam_listfile.so item=user sense=deny file=/etc/remotix/utenti-negati onerr=fail
+auth       requisite    pam_listfile.so item=user sense=deny file=/etc/remotix/denied-users onerr=fail
 #
 # ⭐ `pam_faillock`, if the administrator has put it in `common-auth`, comes
 #   with the stack: it holds for REMOTIX as for ssh (D3).

@@ -15,7 +15,7 @@ def manuale():
     """The manual's sources: the generator, the style, the script and one file per chapter, with its title."""
     righe = [
         ("docs/sources/build.py", "Generates the manual: text, table and SVG figure helpers, numbering, the "
-         "file map and project figures, and the " + c("--controlla") + " checks (Italian left, cited files, "
+         "file map and project figures, and the " + c("--check") + " checks (Italian left, cited files, "
          "functions, variables and codes)"),
         ("docs/sources/manual.js", "The script embedded in the page: sidebar, search, figure zoom"),
         ("docs/sources/style.css", "The common style sheet every manual page starts with"),
@@ -324,12 +324,12 @@ S1 = p("Every product file with its line count, recounted each time the manual i
        "page, the installer and its interface, the packaging of each family and the sources of this manual. "
        "The files kept out are the installer's vendored modules, the protocol headers generated at build time "
        "and binary images. If a file is missing from the map, or the map lists a file that no longer exists, "
-       "generation stops — and so does " + c("build.py --controlla") + ". The role of each file is taken from "
+       "generation stops — and so does " + c("build.py --check") + ". The role of each file is taken from "
        "its own header comment; for C modules the " + c(".h") + " carries the why and the " + c(".c")
        + " the how.",
        lead=True) + file_map(GRUPPI, "«TAB» — The project's files")
 
-BANCHI = table(["Folder or prefix", "What it tests"], [
+BENCHES = table(["Folder or prefix", "What it tests"], [
     "Root of " + c("banchi/") + ": one file per bench, results next to it",
     [c("00-*"), "The environment of phase 0: anchors, the first KWin and wlroots probes, atomic log, the GNOME "
      "session"],
@@ -347,8 +347,8 @@ BANCHI = table(["Folder or prefix", "What it tests"], [
     [c("12-*") + ", " + c("13-*") + ", " + c("14-*"), "The KDE, XFCE and LXQt increments; the real-browser "
      "drivers " + c("12-client-veri.py") + " and " + c("12-c20-veri.py") + " (" + c("veri") + " = real)"],
     [c("attrezzi-*.sh") + " (tools)", "Shared helpers: tenants, card groups, re-grafting the product into a bench"],
-    [c("b*-esiti*.jsonl") + ", " + c("flusso-*.json") + ", " + c("pagina-*.rgb24"), "Results (" + c("esiti") + "), "
-     "streams (" + c("flusso") + ") and decoded page pixels (" + c("pagina") + ") kept from phases 1–2"],
+    [c("b*-outcomes*.jsonl") + ", " + c("flusso-*.json") + ", " + c("pagina-*.rgb24"), "Results (" + c("outcomes") + "), "
+     "streams (" + c("flusso") + ") and decoded page pixels (" + c("page") + ") kept from phases 1–2"],
     "Folders of evidence (results only)",
     [c("01-p5-copie*/") + " (" + c("copie") + " = copies)", "Browser screenshots of the phase 1 login runs: healthy, faulty, repaired"],
     [c("02-filo-prove/") + " (wire tests)", "RCP recordings, good and broken, for the wire validator"],
@@ -370,7 +370,7 @@ BANCHI = table(["Folder or prefix", "What it tests"], [
     [c("17-t2/") + ", " + c("17-t6/") + ", " + c("17-t7/") + ", " + c("17-t8/") + ", " + c("17-t9/"),
      "Installer stage benches: desktops surviving a stop (T2), PAM and SELinux (T6), upgrading without closing the desktops, which the new parent finds again (T7), "
      "faults and third-party repositories (T8), the interface (T9). T8 and T9 are history"],
-    [c("18-a1/") + ", " + c("18-scheda/") + ", " + c("18-software/"), "Old vs new when ffmpeg left (" + c("scheda") + " = card): Opus "
+    [c("18-a1/") + ", " + c("18-scheda/") + ", " + c("18-software/"), "Old vs new when ffmpeg left (" + c("card") + " = card): Opus "
      "without ffmpeg, libva direct vs ffmpeg on the card, the software path"],
     [c("19-vulkan/"), "Vulkan Video vs VA-API, the shader build, Chrome decoding of the result"],
     [c("19-nvidia/"), "The rented NVIDIA machine: container test and suite"],
@@ -385,7 +385,7 @@ BANCHI = table(["Folder or prefix", "What it tests"], [
 S2 = p(c("banchi/") + " holds about 1,800 files and is described by folder, not file by file. The prefix of a "
        "file at the root is the number of the phase that wrote it; the folders with a name are either evidence "
        "kept next to a result or machinery that is still run. How to run them is in "
-       + rif("Running the benches") + ".", lead=True) + BANCHI
+       + rif("Running the benches") + ".", lead=True) + BENCHES
 
 CHAPTER = ("Appendix B — File map", [
     ("The project's files", S1),

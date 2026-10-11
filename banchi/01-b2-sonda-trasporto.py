@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """01-b2-sonda-trasporto.py — the transport parameters, read ON THE WIRE.
 
-    python3 01-b2-sonda-trasporto.py --bersaglio innesto  --porta 7447 --idle-atteso 30000
-    python3 01-b2-sonda-trasporto.py --bersaglio prodotto --porta 7448 --idle-atteso 30000
-    python3 01-b2-sonda-trasporto.py --bersaglio controllo --porta 7449 \\
-            --idle-atteso 60000 --credito-atteso 125 --bozze-attese 02
+    python3 01-b2-sonda-trasporto.py --target graft  --port 7447 --expected-idle 30000
+    python3 01-b2-sonda-trasporto.py --target product --port 7448 --expected-idle 30000
+    python3 01-b2-sonda-trasporto.py --target control --port 7449 \\
+            --expected-idle 60000 --expected-credit 125 --expected-drafts 02
 
 ---------------------------------------------------------------------------
 ⛔ WHAT IT MEASURES, AND WHY WHAT WAS THERE WAS NOT ENOUGH
@@ -40,11 +40,11 @@ The six properties are `[M]` **on the graft** (`bsslserver` + the B2
 grafts, port 7447).  The **product** (`remotix`, port 7448) is another server, and
 of five of the six nothing is known: ⛔ **six numbers read on two different
 servers, if the log does not say which, are six numbers that cannot be
-lined up.**  Hence `--bersaglio`, which is **mandatory**, and the JSONL
+lined up.**  Hence `--target`, which is **mandatory**, and the JSONL
 line that every round writes.
 
 ⚠ And next to the target goes **the fingerprint of what was measured**
-(`--impronta`): a rebuilt binary is another target with the same
+(`--fingerprint`): a rebuilt binary is another target with the same
 name.  If the launcher does not pass it, `ignota` ends up in the log — which is
 a piece of information, not a zero.
 
@@ -130,7 +130,7 @@ ENABLE_CONNECT_PROTOCOL = 0x08
 #    opened are COUNTED, and the measured number is the one that
 #    goes into the sum.  This only serves to say in the log what we
 #    expected to count.
-HTTP3_UNI_ATTESI = 3
+HTTP3_UNI_EXPECTED = 3
 
 # ---------------------------------------------------------------------------
 # The spy on the transport parameters.
@@ -138,23 +138,23 @@ SEEN_N = {}
 _original = mod_conn.pull_quic_transport_parameters
 
 
-def _spia(*a, **kw):
+def _spy(*a, **kw):
     p = _original(*a, **kw)
     SEEN_N["parametri"] = p
     return p
 
 
-mod_conn.pull_quic_transport_parameters = _spia
+mod_conn.pull_quic_transport_parameters = _spy
 
 # The session tickets, that is the 0-RTT.
 TICKETS = []
 
 
-def raccogli_biglietto(b):
+def collect_ticket(b):
     TICKETS.append(b)
 
 
-class Ascoltatore(QuicConnectionProtocol):
+class Listener(QuicConnectionProtocol):
     """⛔ It serves ONLY to read the HTTP/3 SETTINGS.
 
     The probe connected with the HTTP/3 ALPN and **built no
@@ -167,14 +167,14 @@ class Ascoltatore(QuicConnectionProtocol):
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
         self._http = H3Connection(self._quic, enable_webtransport=True)
-        self.arrivate = asyncio.get_event_loop().create_future()
+        self.arrived = asyncio.get_event_loop().create_future()
 
     def quic_event_received(self, event: QuicEvent) -> None:
         for _ in self._http.handle_event(event):
             pass
         imp = self._http.received_settings
-        if imp is not None and not self.arrivate.done():
-            self.arrivate.set_result(imp)
+        if imp is not None and not self.arrived.done():
+            self.arrived.set_result(imp)
 
     # ⛔ HOW MANY UNIDIRECTIONAL STREAMS HTTP/3 TOOK, COUNTED AND NOT BELIEVED.
     #
@@ -195,7 +195,7 @@ class Ascoltatore(QuicConnectionProtocol):
         return [i for i in ids if i is not None]
 
 
-async def principale(a) -> int:
+async def main(a) -> int:
     conf = QuicConfiguration(
         is_client=True,
         alpn_protocols=H3_ALPN,
@@ -203,48 +203,48 @@ async def principale(a) -> int:
     )
     conf.verify_mode = ssl.CERT_NONE
 
-    print(f"== the transport parameters of {a.indirizzo}:{a.porta}")
-    print(f"   ⛔ TARGET: {a.bersaglio}   ({a.etichetta})")
-    print(f"   fingerprint of the target: {a.impronta}")
+    print(f"== the transport parameters of {a.address}:{a.port}")
+    print(f"   ⛔ TARGET: {a.target}   ({a.label})")
+    print(f"   fingerprint of the target: {a.fingerprint}")
     print()
 
-    impostazioni = None
-    perche_niente_settings = None
+    settings = None
+    why_no_settings = None
     uni_h3 = []
     current_credit = None
     try:
         # ⚠ `session_ticket_handler` sits on `connect`, not on the
         #   configuration: they are two different places in two different modules.
-        async with connect(a.indirizzo, a.porta, configuration=conf,
-                           create_protocol=Ascoltatore,
-                           session_ticket_handler=raccogli_biglietto) as cliente:
-            await asyncio.wait_for(cliente.wait_connected(), timeout=a.attesa)
+        async with connect(a.address, a.port, configuration=conf,
+                           create_protocol=Listener,
+                           session_ticket_handler=collect_ticket) as client:
+            await asyncio.wait_for(client.wait_connected(), timeout=a.wait)
             # ⛔ The HTTP/3 SETTINGS is awaited and read: that is where
             #    `H3_DATAGRAM` (R8.11) and the two WebTransport declarations are.
             # ⚠ And "no SETTINGS arrived" remains a fact of its own, different
             #   from "it arrived and did not contain X": the why is kept, and further
             #   down it is printed instead of a number.
             try:
-                impostazioni = await asyncio.wait_for(cliente.arrivate,
-                                                      timeout=a.attesa)
+                settings = await asyncio.wait_for(client.arrived,
+                                                      timeout=a.wait)
             except Exception as e:  # noqa: BLE001
-                perche_niente_settings = f"{type(e).__name__}: {e}"
+                why_no_settings = f"{type(e).__name__}: {e}"
             # ⚠ The session ticket arrives AFTER the handshake: without
             #   this wait, "no 0-RTT" would only be "I did not wait".
-            await asyncio.sleep(a.attesa_biglietto)
-            uni_h3 = cliente.uni_di_http3()
+            await asyncio.sleep(a.wait_ticket)
+            uni_h3 = client.uni_di_http3()
             # ⛔ The credit AS IT STANDS NOW, and it comes from the peer: `aioquic` raises
             #    `_remote_max_streams_uni` at every `MAX_STREAMS_UNI` received.
             #    If the server renews, a number higher than the initial one is seen
             #    here; if it does not renew, the same one is seen.
-            current_credit = getattr(cliente._quic, "_remote_max_streams_uni",
+            current_credit = getattr(client._quic, "_remote_max_streams_uni",
                                        None)
     except Exception as e:  # noqa: BLE001
         print(f"   ⛔ cannot connect: {type(e).__name__}: {e}")
         print("   ⚠ verdict on the bench, not on the library.")
-        scrivi_registro(a, esito="NON-COLLEGATO",
-                        dettaglio=f"{type(e).__name__}: {e}", misure={},
-                        controlli=[])
+        write_log(a, outcome="NON-COLLEGATO",
+                        detail=f"{type(e).__name__}: {e}", measurements={},
+                        checks=[])
         return 3
 
     p = SEEN_N.get("parametri")
@@ -252,8 +252,8 @@ async def principale(a) -> int:
         print("   ⛔ the spy caught nothing: `aioquic` has moved")
         print("      `pull_quic_transport_parameters`.  No number below")
         print("      would be valid, so none is printed.")
-        scrivi_registro(a, esito="SPIA-CIECA", dettaglio="pull_quic_transport_"
-                        "parameters is no longer where it was", misure={}, controlli=[])
+        write_log(a, outcome="SPIA-CIECA", detail="pull_quic_transport_"
+                        "parameters is no longer where it was", measurements={}, checks=[])
         return 3
 
     idle = getattr(p, "max_idle_timeout", None)
@@ -271,8 +271,8 @@ async def principale(a) -> int:
     #
     #    §2.3 asks for "at least 16 AVAILABLE at any moment": the quantity
     #    it talks about is this one, not the total.
-    consumati = len(uni_h3)
-    disponibili = None if suni is None else suni - consumati
+    consumed = len(uni_h3)
+    available = None if suni is None else suni - consumed
 
     print("   what the server SENT:")
     print(f"      max_idle_timeout           = {idle}")
@@ -284,20 +284,20 @@ async def principale(a) -> int:
           "   (initial + any MAX_STREAMS_UNI)")
     print()
     print("   what is left of it to RCP, and the sum is written out:")
-    print(f"      uni streams taken by HTTP/3 = {consumati}   (counted: {uni_h3})")
-    print(f"      available to RCP           = {suni} - {consumati} = {disponibili}")
-    if impostazioni is None:
+    print(f"      uni streams taken by HTTP/3 = {consumed}   (counted: {uni_h3})")
+    print(f"      available to RCP           = {suni} - {consumed} = {available}")
+    if settings is None:
         print(f"      HTTP/3 SETTINGS            = none read"
-              f"  ({perche_niente_settings})")
+              f"  ({why_no_settings})")
     else:
-        print(f"      HTTP/3 SETTINGS            = {len(impostazioni)} settings")
-        for chiave, nome in ((H3_DATAGRAM, "H3_DATAGRAM        (0x33)"),
+        print(f"      HTTP/3 SETTINGS            = {len(settings)} settings")
+        for key, name in ((H3_DATAGRAM, "H3_DATAGRAM        (0x33)"),
                              (ENABLE_CONNECT_PROTOCOL,
                               "ENABLE_CONNECT_PROT (0x08)"),
                              (WT_DRAFT_02, "WT draft 02 (0x2b603742)"),
                              (WT_DRAFT_07, "WT draft 07 (0xc671706a)")):
-            v = impostazioni.get(chiave, "absent")
-            print(f"         {nome} = {v}")
+            v = settings.get(key, "absent")
+            print(f"         {name} = {v}")
     print(f"      session tickets            = {len(TICKETS)}")
     for b in TICKETS:
         print(f"         max_early_data_size = {getattr(b, 'max_early_data_size', None)}")
@@ -305,17 +305,17 @@ async def principale(a) -> int:
 
     # -----------------------------------------------------------------------
     # The checks, each with its expected value and its line of RCP.
-    esiti = []
+    outcomes = []
 
-    def prova(nome, dove, passa, visto, atteso):
-        esiti.append({"nome": nome, "dove": dove, "passa": bool(passa),
-                      "visto": str(visto), "atteso": str(atteso)})
-        segno = "OK " if passa else "NO "
-        print(f"   {segno} {nome:38s} {dove}")
-        print(f"       expected {atteso} · measured {visto}")
+    def prova(name, dove, passes, seen, expected):
+        outcomes.append({"name": name, "where": where, "passes": bool(passes),
+                      "seen": str(seen), "expected": str(expected)})
+        sign = "OK " if passes else "NO "
+        print(f"   {sign} {name:38s} {dove}")
+        print(f"       expected {expected} · measured {seen}")
 
     prova("max_idle_timeout", "RCP.md §2.2",
-          idle == a.idle_atteso, idle, a.idle_atteso)
+          idle == a.expected_idle, idle, a.expected_idle)
 
     # ⛔ TWO DIFFERENT THINGS, TWO DIFFERENT CHECKS — finding R8.11.
     #
@@ -327,19 +327,19 @@ async def principale(a) -> int:
     prova("datagrams on the QUIC transport", "RFC 9221 (the foundations)",
           bool(dgram), dgram, "> 0")
 
-    if impostazioni is None:
+    if settings is None:
         prova("datagrams on HTTP/3 (H3_DATAGRAM)", "RCP.md §2.2",
-              False, f"no SETTINGS read — {perche_niente_settings}",
+              False, f"no SETTINGS read — {why_no_settings}",
               "0x33 present and non-zero")
     else:
         prova("datagrams on HTTP/3 (H3_DATAGRAM)", "RCP.md §2.2",
-              bool(impostazioni.get(H3_DATAGRAM)),
-              impostazioni.get(H3_DATAGRAM, "absent"),
+              bool(settings.get(H3_DATAGRAM)),
+              settings.get(H3_DATAGRAM, "absent"),
               "0x33 present and non-zero")
 
     # ⛔⭐ THE TWO WEBTRANSPORT DRAFTS, AND HERE WE DECIDE WHAT A RED IS.
     #
-    #    `--bozze-attese` says which are demanded from THIS target:
+    #    `--expected-drafts` says which are demanded from THIS target:
     #      · on the product and on the graft there are TWO (02 and 07): a server that
     #        sent only one would open the session with half of the tools
     #        and not with the other half;
@@ -349,30 +349,30 @@ async def principale(a) -> int:
     #        at aioquic, draft 07 turned out present, the check would not
     #        be able to say no and the greens on the other two targets would
     #        be worth nothing.
-    attese = [b.strip() for b in a.bozze_attese.split(",") if b.strip()]
+    waits = [b.strip() for b in a.expected_drafts.split(",") if b.strip()]
     for draft_name in ("02", "07"):
-        chiave = DRAFTS[draft_name]
-        presente = bool(impostazioni.get(chiave)) if impostazioni else False
-        if draft_name in attese:
+        key = DRAFTS[draft_name]
+        is_present = bool(settings.get(key)) if settings else False
+        if draft_name in waits:
             prova(f"WebTransport declared — draft {draft_name}",
                   "RCP.md §2 (the graft sends two)",
-                  presente,
-                  impostazioni.get(chiave, "absent") if impostazioni
-                  else f"no SETTINGS — {perche_niente_settings}",
+                  is_present,
+                  settings.get(key, "absent") if settings
+                  else f"no SETTINGS — {why_no_settings}",
                   "present and non-zero")
         else:
             # It is not a check: it is a reading, and it is printed without a grade.
-            visto = (impostazioni.get(chiave, "absent") if impostazioni
+            seen = (settings.get(key, "absent") if settings
                      else "no SETTINGS")
             print(f"   --  draft {draft_name} not demanded from this target "
-                  f"· read: {visto}")
+                  f"· read: {seen}")
 
-    if impostazioni is not None:
+    if settings is not None:
         # ⚠ A reading, not a check: `RCP.md` does not name RFC 9220.  But its
         #   absence alone would explain a "the session does not open", and
         #   looking for it afterwards costs an evening.
         print(f"   --  ENABLE_CONNECT_PROTOCOL (RFC 9220, non-normative "
-              f"reading) = {impostazioni.get(ENABLE_CONNECT_PROTOCOL, 'absent')}")
+              f"reading) = {settings.get(ENABLE_CONNECT_PROTOCOL, 'absent')}")
 
     # ⛔ The credit of unidirectional streams: §2.3 imposes at least 16 "at
     #    any moment", because the client opens an input stream and one for
@@ -393,24 +393,24 @@ async def principale(a) -> int:
     #    declares 16 passed while 13 were left to RCP.  It is finding B-12,
     #    which `src/trasporto.c` has already cured by declaring 19: that 19 is
     #    READ here, and the verdict is given on the number §2.3 talks about.
-    if disponibili is None:
+    if available is None:
         prova("uni credit AVAILABLE to RCP at opening",
               "RCP.md §2.3 (opening only)",
               False, "the peer did not send initial_max_streams_uni",
-              f">= {a.credito_atteso}")
+              f">= {a.expected_credit}")
     else:
         prova("uni credit AVAILABLE to RCP at opening",
               "RCP.md §2.3 (opening only)",
-              disponibili >= a.credito_atteso,
-              f"{disponibili}  (= {suni} declared - {consumati} of HTTP/3)",
-              f">= {a.credito_atteso}")
+              available >= a.expected_credit,
+              f"{available}  (= {suni} declared - {consumed} of HTTP/3)",
+              f">= {a.expected_credit}")
 
     # ⚠ And a check on the TOOL, not on the server: if HTTP/3 had not
     #   taken the three streams we expect, the sum above would be made
     #   with a wrong denominator — and it would be a credible and false number.
     prova("the tool counted the HTTP/3 streams",
           "check of the PROBE, not of the server",
-          consumati == HTTP3_UNI_ATTESI, consumati, HTTP3_UNI_ATTESI)
+          consumed == HTTP3_UNI_EXPECTED, consumed, HTTP3_UNI_EXPECTED)
 
     # ⛔ Migration: it is the reason QUIC was chosen — the
     #    phone moving from WiFi to mobile network.  The parameter is a
@@ -419,7 +419,7 @@ async def principale(a) -> int:
           not migr, migr, "false or absent")
 
     # ⛔ 0-RTT: the data can be replayed, and the second RCP message is
-    #    `CREDENZIALI`.
+    #    `CREDENTIALS`.
     #
     # ⭐ And this check had its POSITIVE control right away, from the
     #    target itself: at the first round the ngtcp2 example server
@@ -445,7 +445,7 @@ async def principale(a) -> int:
     print("   ⚠ NOT measured here: `allowPooling: false` (§4.1-bis) — it does not")
     print("     go over the wire, it is in the page.  It is read in the source or in")
     print("     the browser, and this probe knows nothing about it.")
-    print(f"   ⚠ The {consumati} HTTP/3 streams are counted on THIS client")
+    print(f"   ⚠ The {consumed} HTTP/3 streams are counted on THIS client")
     print("     (aioquic).  A browser could open more of them — for example")
     print("     a \"grease\" stream — and then the available ones would be fewer")
     print("     than the ones read here.  Nobody has measured it: `[?]`")
@@ -461,65 +461,65 @@ async def principale(a) -> int:
         print("     The positive control of that line remains the one of 10")
         print("     Aug on the graft, not this round.")
 
-    falliti = [c["nome"] for c in esiti if not c["passa"]]
-    misure = {
+    failed = [c["name"] for c in outcomes if not c["passes"]]
+    measurements = {
         "max_idle_timeout": idle,
         "max_datagram_frame_size": dgram,
         "disable_active_migration": migr,
         "initial_max_streams_uni": suni,
         "initial_max_streams_bidi": sbidi,
-        "credito_uni_adesso": current_credit,
-        "uni_presi_da_http3": consumati,
-        "uni_disponibili_a_rcp": disponibili,
-        "settings_http3": (None if impostazioni is None
-                           else {hex(k): v for k, v in impostazioni.items()}),
-        "perche_niente_settings": perche_niente_settings,
-        "biglietti": len(TICKETS),
-        "biglietti_con_early_data": len(con_early),
+        "uni_credit_now": current_credit,
+        "uni_taken_by_http3": consumed,
+        "uni_available_to_rcp": available,
+        "settings_http3": (None if settings is None
+                           else {hex(k): v for k, v in settings.items()}),
+        "why_no_settings": why_no_settings,
+        "tickets": len(TICKETS),
+        "tickets_with_early_data": len(con_early),
     }
-    esito = "TUTTI" if not falliti else "ROSSO"
-    scrivi_registro(a, esito=esito,
-                    dettaglio=("all checks pass" if not falliti
-                               else "not passing: " + ", ".join(falliti)),
-                    misure=misure, controlli=esiti)
+    outcome = "ALL" if not failed else "RED"
+    write_log(a, outcome=outcome,
+                    detail=("all checks pass" if not failed
+                               else "not passing: " + ", ".join(failed)),
+                    measurements=measurements, checks=outcomes)
 
-    if not falliti:
-        print(f"   ⭐ {len(esiti)} checks of {len(esiti)}")
+    if not failed:
+        print(f"   ⭐ {len(outcomes)} checks of {len(outcomes)}")
         return 0
-    print(f"   ⛔ {len(falliti)} checks of {len(esiti)} do NOT pass:")
-    for n in falliti:
+    print(f"   ⛔ {len(failed)} checks of {len(outcomes)} do NOT pass:")
+    for n in failed:
         print(f"      - {n}")
     return 1
 
 
-def scrivi_registro(a, esito, dettaglio, misure, controlli):
+def write_log(a, outcome, detail, measurements, checks):
     """⛔ One line per round, and the TARGET is inside it.
 
     Without it, six numbers read on two different servers cannot be lined
     up — and that is precisely the job for which this probe was reopened
     on 11 Aug 2026.
     """
-    riga = {
-        "banco": "B2-trasporto",
-        "bersaglio": a.bersaglio,
-        "impronta_bersaglio": a.impronta,
-        "indirizzo": f"{a.indirizzo}:{a.porta}",
-        "etichetta": a.etichetta,
-        "attesi": {
-            "max_idle_timeout": a.idle_atteso,
-            "uni_disponibili_a_rcp": a.credito_atteso,
-            "bozze_webtransport": a.bozze_attese,
+    line = {
+        "bench": "B2-transport",
+        "target": a.target,
+        "target_fingerprint": a.fingerprint,
+        "address": f"{a.address}:{a.port}",
+        "label": a.label,
+        "expectations": {
+            "max_idle_timeout": a.expected_idle,
+            "uni_available_to_rcp": a.expected_credit,
+            "webtransport_drafts": a.expected_drafts,
         },
-        "esito": esito,
-        "dettaglio": dettaglio,
-        "misure": misure,
-        "controlli": controlli,
-        "ora": datetime.now().isoformat(timespec="seconds"),
+        "outcome": outcome,
+        "detail": detail,
+        "measurements": measurements,
+        "checks": checks,
+        "time": datetime.now().isoformat(timespec="seconds"),
     }
     try:
-        with Path(a.registro).open("a") as f:
-            f.write(json.dumps(riga, ensure_ascii=False, default=str) + "\n")
-        print(f"   ·· recorded in {a.registro}")
+        with Path(a.log).open("a") as f:
+            f.write(json.dumps(line, ensure_ascii=False, default=str) + "\n")
+        print(f"   ·· recorded in {a.log}")
     except Exception as e:  # noqa: BLE001
         # ⛔ A log that cannot be written is SAID.  A round without a line is a
         #    round that six months from now never happened.
@@ -531,31 +531,31 @@ if __name__ == "__main__":
     # ⛔ Mandatory, and deliberately without a default value: a round without a
     #    target produces a number that cannot be lined up with the
     #    others, and that is worse than no round.
-    p.add_argument("--bersaglio", required=True,
-                   choices=("innesto", "prodotto", "controllo"),
+    p.add_argument("--target", required=True,
+                   choices=("graft", "product", "control"),
                    help="innesto = bsslserver+B2 (7447) · prodotto = remotix "
                         "(7448) · controllo = aioquic acting as server")
-    p.add_argument("--indirizzo", default="192.168.0.2")
-    p.add_argument("--porta", type=int, default=7447)
-    p.add_argument("--etichetta", default="senza-etichetta")
-    p.add_argument("--impronta", default="ignota",
+    p.add_argument("--address", default="192.168.0.2")
+    p.add_argument("--port", type=int, default=7447)
+    p.add_argument("--label", default="senza-etichetta")
+    p.add_argument("--fingerprint", default="unknown",
                    help="the fingerprint of WHAT IS MEASURED (md5 of the binary): "
                         "a rebuilt binary is another target with the "
                         "same name")
-    p.add_argument("--idle-atteso", type=int, default=30000)
-    p.add_argument("--credito-atteso", type=int, default=16,
+    p.add_argument("--expected-idle", type=int, default=30000)
+    p.add_argument("--expected-credit", type=int, default=16,
                    help="uni streams AVAILABLE to RCP after the 3 of HTTP/3 "
                         "(RCP.md §2.3)")
-    p.add_argument("--bozze-attese", default="02,07",
+    p.add_argument("--expected-drafts", default="02,07",
                    help="which WebTransport declarations are demanded from "
                         "this target")
-    p.add_argument("--registro",
+    p.add_argument("--log",
                    default=str(Path(__file__).resolve().parent
                                / "b2-trasporto-esiti.jsonl"))
-    p.add_argument("--attesa", type=float, default=8.0)
-    p.add_argument("--attesa-biglietto", type=float, default=1.5)
+    p.add_argument("--wait", type=float, default=8.0)
+    p.add_argument("--wait-ticket", type=float, default=1.5)
     a = p.parse_args()
     try:
-        sys.exit(asyncio.run(principale(a)))
+        sys.exit(asyncio.run(main(a)))
     except KeyboardInterrupt:
         sys.exit(130)

@@ -53,8 +53,8 @@
  *    does not write) stays a rewrite AFTERWARDS, in `codificatore.c`.
  * ---------------------------------------------------------------------------
  */
-#ifndef REMOTIX_VADIRETTA_H
-#define REMOTIX_VADIRETTA_H
+#ifndef REMOTIX_VADIRECT_H
+#define REMOTIX_VADIRECT_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -66,46 +66,46 @@
 typedef struct {
 	VADisplay display;
 	int fd;
-	int maggiore, minore;      /* the libva version that answered */
-	char fornitore[128];       /* `vaQueryVendorString()` */
+	int greater, less;      /* the libva version that answered */
+	char vendor[128];       /* `vaQueryVendorString()` */
 } VaDevice;
 
 /* ⛔ The node is DECLARED (`codificatore.h`, `nodo_rendering`): none is
  *    guessed here.  It fails saying why. */
-bool vadirect_open_device(const char *nodo, VaDevice *d, char *errore,
-                                size_t errore_byte);
+bool vadirect_open_device(const char *node, VaDevice *d, char *error,
+                                size_t error_byte);
 void vadirect_close_device(VaDevice *d);
 
 typedef enum { VADIRECT_H264 = 3, VADIRECT_HEVC = 1 } VaDirectCodec; /* = CodecVideo */
 
 typedef struct {
 	VaDirectCodec codec;
-	int profondita;                /* 8 or 10 (10 HEVC only) */
-	uint32_t larghezza, altezza;   /* the CANVAS: what the stream shows */
+	int depth;                /* 8 or 10 (10 HEVC only) */
+	uint32_t width, height;   /* the CANVAS: what the stream shows */
 	uint32_t fotogrammi_al_secondo;
 	/* ⛔ Profile and entrypoint already CHOSEN AND VERIFIED by the caller with
 	 *    `vaQueryConfigEntrypoints`: here they are used, not discovered. */
-	VAProfile profilo;
+	VAProfile profile;
 	VAEntrypoint entrypoint;
 	int qp;                        /* 1..51: the fixed QP (CQP) or the quality factor (QVBR) */
 	/* The bandwidth ceiling (phase 9): all zeros = CQP.  Otherwise QVBR with
 	 * `bits_per_second` = wire, `target_percentage` = target/wire, buffer in
 	 * bits — exactly the three numbers that `codificatore.c` computes. */
-	int64_t banda_punto, banda_filo;
+	int64_t bandwidth_point, bandwidth_wire;
 	int reservoir_bit;
 	/* 0 = the level is COMPUTED as ffmpeg did (`ff_h264_guess_level`
 	 * / `ff_h265_guess_level`); >0 = imposed (`level_idc` or `general_level_idc`). */
-	int livello_idc;
+	int level_idc;
 	uint32_t chiavi_ogni;          /* 0 = keyframes on request only */
 	unsigned input_surfaces;   /* how many surfaces in the input pool */
-} VaDirettaRichiesta;
+} VaDirectRequest;
 
 /* ⭐ What was read from the driver and decided at opening: the confession. */
 typedef struct {
 	bool p_come_b;                     /* HEVC on iHD: P frames are «GPB» B slices */
-	uint32_t larghezza_superficie, altezza_superficie; /* aligned to the block */
-	uint32_t blocco;                   /* 16 (H.264) or the HEVC CTB */
-	int livello_idc;                   /* the one written in the SPS */
+	uint32_t surface_width, surface_height; /* aligned to the block */
+	uint32_t block;                   /* 16 (H.264) or the HEVC CTB */
+	int level_idc;                   /* the one written in the SPS */
 	unsigned packed_headers;           /* the mask in force */
 	unsigned packed_headers_driver;    /* the one declared by the driver */
 	bool hevc_attributes_read;         /* VAConfigAttribEncHEVCFeatures/BlockSizes */
@@ -114,29 +114,29 @@ typedef struct {
 	unsigned rt_format;               /* VA_RT_FORMAT_YUV420 / _YUV420_10BPP */
 	unsigned input_fourcc;          /* VA_FOURCC_NV12 / VA_FOURCC_P010 */
 	unsigned va_mode;                  /* VA_RC_CQP / VA_RC_QVBR */
-} VaDirettaDichiarazione;
+} VaDirectDeclaration;
 
-typedef struct VaDiretta VaDiretta;
+typedef struct VaDirect VaDirect;
 
-VaDiretta *vadirect_open(const VaDevice *d, const VaDirettaRichiesta *r,
-                          char *errore, size_t errore_byte);
-void vadirect_close(VaDiretta *v);
-const VaDirettaDichiarazione *vadirect_declaration(const VaDiretta *v);
+VaDirect *vadirect_open(const VaDevice *d, const VaDirectRequest *r,
+                          char *error, size_t error_byte);
+void vadirect_close(VaDirect *v);
+const VaDirectDeclaration *vadirect_declaration(const VaDirect *v);
 
 /* The next free input surface (NV12 or P010, at the size of the canvas).
  * ⚠ The pool goes round in a circle: after `input_surfaces` calls it
  * starts again from the first, and that is fine because every encode WAITS
  * for the end. */
-VASurfaceID vadirect_input_surface(VaDiretta *v);
+VASurfaceID vadirect_input_surface(VaDirect *v);
 
 /*
- * Encodes `ingresso`, as a keyframe (IDR) if `chiave`, and returns the bytes
+ * Encodes `ingress`, as a keyframe (IDR) if `key`, and returns the bytes
  * in Annex-B.  ⛔ The bytes belong to `v` until the next call.
- * ⚠ It WAITS for the card to finish: when it returns, `ingresso` can be
+ * ⚠ It WAITS for the card to finish: when it returns, `ingress` can be
  *   rewritten.
  */
-bool vadirect_encode(VaDiretta *v, VASurfaceID ingresso, bool chiave,
-                        const uint8_t **dati, size_t *byte, char *errore, size_t errore_byte);
+bool vadirect_encode(VaDirect *v, VASurfaceID ingress, bool key,
+                        const uint8_t **data, size_t *byte, char *error, size_t error_byte);
 
 /* ───────────────────────────────────────────────────────────────────────────
  * The route FROM MEMORY: the pixels go up to the card.
@@ -145,17 +145,17 @@ bool vadirect_encode(VaDiretta *v, VASurfaceID ingresso, bool chiave,
  *   `colori709.c` (BT.709 limited, yesterday's same matrix) into NV12 or P010
  *   and uploads them HERE into the input surface.  ⛔ RGB is not uploaded to
  *   have the VPP convert it: measured worse than the CPU conversion
- *   (`vadiretta.c`, the note on `vadiretta_carica_nv12`).  The VPP stays with
+ *   (`vadiretta.c`, the note on `vadirect_load_nv12`).  The VPP stays with
  *   zero copy, where the frame is already on the card.
  * - yuv420p10le (the bench): directly into the P010 input surface, with the
  *   shift of the 10 bits to the top of 16 done here.
  * Strides are in BYTES.
  */
-bool vadiretta_carica_nv12(VaDiretta *v, VASurfaceID dest, const uint8_t *y, uint32_t passo_y,
-                           const uint8_t *uv, uint32_t passo_uv, char *errore, size_t errore_byte);
-bool vadiretta_carica_p010(VaDiretta *v, VASurfaceID dest, const uint16_t *y, uint32_t passo_y,
-                           const uint16_t *uv, uint32_t passo_uv, char *errore, size_t errore_byte);
-bool vadirect_load_yuv420p10(VaDiretta *v, VASurfaceID dest, const uint8_t *pixel,
-                                uint32_t passo_y, char *errore, size_t errore_byte);
+bool vadirect_load_nv12(VaDirect *v, VASurfaceID dest, const uint8_t *y, uint32_t stride_y,
+                           const uint8_t *uv, uint32_t stride_uv, char *error, size_t error_byte);
+bool vadirect_load_p010(VaDirect *v, VASurfaceID dest, const uint16_t *y, uint32_t stride_y,
+                           const uint16_t *uv, uint32_t stride_uv, char *error, size_t error_byte);
+bool vadirect_load_yuv420p10(VaDirect *v, VASurfaceID dest, const uint8_t *pixel,
+                                uint32_t stride_y, char *error, size_t error_byte);
 
 #endif

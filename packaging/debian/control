@@ -56,7 +56,7 @@ Depends: ${shlibs:Depends},
          pipewire,
          wireplumber
 # Recommends (apt installs them by default; whoever uses --no-install-recommends loses them
-#   and `remotix verifica`, T4, will say so):
+#   and `remotix verify`, T4, will say so):
 #   · the GPU's VA driver: without it, NOTHING is encoded (phase 19: no
 #     software fallback; the server declares it at startup, and the installer's
 #     preliminary check refuses earlier).
@@ -72,7 +72,7 @@ Depends: ${shlibs:Depends},
 #     a .deb has no «only if XFCE is there».  One package per desktop is for T4;
 #   ⛔ NOT gnome-session (the «vanilla» session from universe): D8 (DECISIONI
 #     §10.20) — on Ubuntu REMOTIX starts the STOCK session, `ubuntu`, which
-#     is already there (ubuntu-session); the criterion lives in sessione.c, sessione_gnome().
+#     is already there (ubuntu-session); the criterion lives in sessione.c, gnome_session().
 #   · ⭐ phase 19 (`fasi/19-nvidia.md`): the GPU's VULKAN driver —
 #     `mesa-vulkan-drivers` brings the Mesa ICDs (RADV for AMD: the Vulkan
 #     Video road, tried BEFORE VA-API; ANV for Intel, which does not encode in
@@ -88,7 +88,7 @@ Description: Linux desktop in the browser, for several users
  REMOTIX shows a user's desktop (GNOME, KDE Plasma, Xfce, LXQt) in a
  browser, with video and audio over HTTP/3 and WebTransport.  Whoever connects
  logs in with the machine's user name and password (PAM, service «remotix»; root
- excluded by /etc/remotix/utenti-negati) and finds their own session.
+ excluded by /etc/remotix/denied-users) and finds their own session.
  .
  The remotix.service service listens on port 7447 (TCP for the page, UDP
  for QUIC).  The package only carries the pieces, switched off: the service is

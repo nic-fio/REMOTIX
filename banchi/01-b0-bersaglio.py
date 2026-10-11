@@ -12,9 +12,9 @@ target, this one **writes** it.  B5, B6, B7 and B8 include it.
 of two different things"* — and it is the form of error this project pays for
 most often, because it has no symptom: the numbers are all good, one by one.
 
-⛔ And the concrete case is already on disk.  `banchi/prodotto/b8-campioni.jsonl` and
-   `b8-fatti.jsonl` are the samples of the second fixed taken against the
-   **product** on the night of 10 Aug 2026; `b8-fatti.jsonl` in
+⛔ And the concrete case is already on disk.  `banchi/prodotto/b8-samples.jsonl` and
+   `b8-facts.jsonl` are the samples of the second fixed taken against the
+   **product** on the night of 10 Aug 2026; `b8-facts.jsonl` in
    `/media/REMOTIX/src/` are those taken against the **graft**.  They have the
    same name, the same shape, the same fields — and no line, in either
    of the two, says which server answered.  Whoever put them together to have
@@ -50,11 +50,11 @@ import time
 # Every line has the file and the reason next to it: whoever found it false must be
 # able to trace back in a minute to where we read it.
 # ===========================================================================
-PROFILO = {
+PROFILE = {
     "innesto": {
-        "porta": 7447,
+        "port": 7447,
         "eseguibile": "bsslserver (ngtcp2 example + the two grafts)",
-        # ⛔ B7: `RCP_SERVER_IN_CHIUSURA` (0x0C) cannot be produced.
+        # ⛔ B7: `RCP_SERVER_CLOSING` (0x0C) cannot be produced.
         #    `01-b3-rcp-innesta.py` has no shutdown path —
         #    grep: zero occurrences — so the reasons that can be provoked are SEVEN.
         "spegnimento": False,
@@ -74,7 +74,7 @@ PROFILO = {
         "ban_illeggibile_parte": True,
         # The fingerprint of every line of its log.
         "impronta": r"REMOTIX B[35]:",
-        "controllo": "REMOTIX B3",
+        "check": "REMOTIX B3",
         # ⛔⭐ THE B2 ECHO, and this line exists because of a trap already paid for
         #     TWICE.  The minimal server of B2 **sends back** the bytes
         #     received on the streams the client opens — it is the "byte that comes back"
@@ -88,7 +88,7 @@ PROFILO = {
         #
         # `[M]` 11 Aug 2026, measured by B6 in a certification round:
         # `ciao-senza-controllo` stays hung **20 s without anything happening**.
-        # ⭐ And the bench was right: the cure of §7.17 is `WT_TETTO_CANALE_NS`
+        # ⭐ And the bench was right: the cure of §7.17 is `WT_CAP_CHANNEL_NS`
         # in `src/webtransport.c`, that is in the PRODUCT.  The graft is the ngtcp2
         # example with the grafts on top, and it has no WebTransport layer of its
         # own — that cap has no place to live.
@@ -98,17 +98,17 @@ PROFILO = {
         #   and a bench that does not start from green proves nothing with the fault.
         "tetto_canale": False,
     },
-    "prodotto": {
-        "porta": 7448,
+    "product": {
+        "port": 7448,
         "eseguibile": "remotix (src/)",
-        # ⭐ `src/main.c` dismisses all sessions with `SERVER_IN_CHIUSURA`
+        # ⭐ `src/main.c` dismisses all sessions with `SERVER_CLOSING`
         #    before exiting, and waits up to two seconds for the bytes to leave:
         #    reason 0x0C CAN be provoked, and the provocable ones become EIGHT.
         "spegnimento": True,
         "motivi_provocabili": 8,
         # ⛔ And we do NOT search in `rcp.c`: `rcp.c` is identical in the two servers and does not
         #    know a process exists.  The path lives in `main.c`,
-        #    `trasporto.c` (`trasporto_congeda_tutte`) and `webtransport.c`
+        #    `trasporto.c` (`transport_dismiss_all`) and `webtransport.c`
         #    (`wt_dismiss`).  A denominator is read where the thing happens.
         "sorgenti_spegnimento": ("remotix/rcp.c", "remotix/main.c",
                                  "remotix/trasporto.c", "remotix/webtransport.c"),
@@ -124,8 +124,8 @@ PROFILO = {
         #     start (`src/main.c`), because "it is not "zero bans", it is the
         #     protection of §4.4-bis turned off".
         "ban_illeggibile_parte": False,
-        "impronta": r"^\d\d:\d\d:\d\d\.\d\d\d (avvio|quic|wt|rcp|pagina|cert) ",
-        "controllo": "REMOTIX — phase 1, the bare wire",
+        "impronta": r"^\d\d:\d\d:\d\d\.\d\d\d (startup|quic|wt|rcp|page|cert) ",
+        "check": "REMOTIX — phase 1, the bare wire",
         # ⛔ NO ECHO.  `src/webtransport.c`, `discard_extra_stream()`:
         #    "the bytes of a stream too many are thrown away, and NOT sent
         #    back".  ⚠ None of the four benches must **wait** for bytes
@@ -135,69 +135,69 @@ PROFILO = {
         #    waiting for it): here it is declared, because a tolerated absence and
         #    an absence that never happened must not look the same.
         "eco": False,
-        # ⭐ `WT_TETTO_CANALE_NS` in `src/webtransport.c`, armed
+        # ⭐ `WT_CAP_CHANNEL_NS` in `src/webtransport.c`, armed
         #    at the opening of the session (`cb_end_headers`) and
-        #    enforced in `wt_batti`.  `DECISIONI.md` §7.17.
+        #    enforced in `wt_beat`.  `DECISIONI.md` §7.17.
         "tetto_canale": True,
     },
 }
 
 
 # ⛔ And the verdict on the echo is not a note: it is a number the bench compares.
-def eco_attesa(bersaglio):
+def expected_echo(target):
     """How many streams must bring bytes back from the server.  0 on the product."""
-    return profilo(bersaglio)["eco"]
+    return profile(target)["eco"]
 
 
-def profilo(nome):
+def profile(name):
     """⛔ An unknown target does not fall back on «innesto»: it stops.
 
-    ⚠ `controllo` is in the grammar (`--bersaglio {innesto,prodotto,
-      controllo}`, the same as the transport probe) and **not** in this
+    ⚠ `check` is in the grammar (`--target {innesto,prodotto,
+      check}`, the same as the transport probe) and **not** in this
       table: for B5, B6, B7 and B8 the server faulty on purpose towards the wire
       does not exist yet.  ⛔ Letting it fall onto «innesto» would give a GREEN of the
       healthy case in place of a check that must turn red, which is worse than
       an absent check.
     """
-    if nome == "controllo":
+    if name == "check":
         raise SystemExit(
             "⛔ target «controllo»: the grammar provides for it, these four "
             "benches do not have it yet.  It would be the server FAULTY ON "
             "PURPOSE, the one against which the bench must turn red "
             "(LEZIONI.md §1.2); today it exists only towards the page "
             "(01-b11-guasto-innesta.py), not towards the wire.")
-    if nome not in PROFILO:
+    if name not in PROFILE:
         raise SystemExit(
-            f"⛔ unknown target «{nome}»: the values are "
-            f"{', '.join(PROFILO)} and «controllo».  Not falling back on any — "
+            f"⛔ unknown target «{name}»: the values are "
+            f"{', '.join(PROFILE)} and «controllo».  Not falling back on any — "
             f"I would measure one server while declaring another.")
-    return PROFILO[nome]
+    return PROFILE[name]
 
 
-def aggiungi_argomenti(p):
+def add_arguments(p):
     """⛔ The same four arguments in all four benches, and in one place
     only — so the day one is added it is added once.
 
-    ⛔ `--bersaglio` is **mandatory and without default**, and it is the same
+    ⛔ `--target` is **mandatory and without default**, and it is the same
        shape with which the transport probe chooses its own: two different
        conventions for the same thing are the defect of the seams.  ⚠ A
        default here would mean that a round can measure the wrong server
        by distraction, and the log would write it as if it were
        the right one.
     """
-    p.add_argument("--bersaglio", required=True,
-                   choices=("innesto", "prodotto", "controllo"),
+    p.add_argument("--target", required=True,
+                   choices=("graft", "product", "control"),
                    help="⛔ mandatory: which server is measured against")
-    p.add_argument("--uscita", default="",
+    p.add_argument("--output", default="",
                    help="the log of the facts of this round (.jsonl)")
-    p.add_argument("--giro", default="",
+    p.add_argument("--round", default="",
                    help="the identifier of the round, the same for all lines")
     p.add_argument("--md5", default="",
                    help="the md5 fingerprint of the measured BINARY, for the log")
     return p
 
 
-def sorgenti_spegnimento(bersaglio, dentro="/srv/src"):
+def sources_shutdown(target, inside="/srv/src"):
     """⛔ Where a shutdown path is searched for, for the denominator of B7.
 
     ⛔⭐ AND IT IS NOT `rcp.c`, which is identical byte for byte in the two servers and does not know
@@ -206,80 +206,80 @@ def sorgenti_spegnimento(bersaglio, dentro="/srv/src"):
         (`LEZIONI.md` §1.9, corollary 5).  On the product the path lives in
         `main.c`, `trasporto.c` and `webtransport.c`.
     """
-    return [f"{dentro}/{p}" for p in profilo(bersaglio)["sorgenti_spegnimento"]]
+    return [f"{inside}/{p}" for p in profile(target)["sorgenti_spegnimento"]]
 
 
-class Registro:
+class Log:
     """One line per fact, with the target inside, and synced at once.
 
-    ⚠ An empty `percorso` is NOT a silent error: the bench goes on
+    ⚠ An empty `fpath` is NOT a silent error: the bench goes on
       measuring and printing, but `dichiarato_senza_registro` becomes true and whoever
       reads the verdict sees it.  ⛔ An absent log and an empty log must not
       look the same.
     """
 
-    def __init__(self, percorso, bersaglio, porta, giro=None, md5=None):
-        self.percorso = percorso or ""
-        self.bersaglio = bersaglio
-        self.porta = porta
-        self.giro = giro or time.strftime("%Y%m%d-%H%M%S")
+    def __init__(self, fpath, target, port, round_id=None, md5=None):
+        self.fpath = fpath or ""
+        self.target = target
+        self.port = port
+        self.round_id = round_id or time.strftime("%Y%m%d-%H%M%S")
         # ⛔ The md5 fingerprint of the measured BINARY, not of the source: it is the only
         #    way of knowing, six hours later, whether two rounds measured the same
         #    program.  ⚠ `[M]` 11 Aug 2026: the product binary was
         #    an hour older than the sources, and the log of the last
         #    start carried a wording from two generations before.
-        self.md5 = md5 or "ignota"
-        self.scritte = 0
-        self.guasto = None
-        self.profilo = profilo(bersaglio)
+        self.md5 = md5 or "unknown"
+        self.written = 0
+        self.fault = None
+        self.profile = profile(target)
 
-    def open_round(self, banco, scena, impronta_vista=None, extra=None):
+    def open_round(self, bench, scene, fingerprint_seen=None, extra=None):
         """⛔ The first line of every round, and it carries the fingerprint SEEN.
 
-        `impronta_vista` is what the SERVER's log says it is; if
+        `fingerprint_seen` is what the SERVER's log says it is; if
         it is `None` it means "I did not look at it", which is not "it matches".
         """
-        rec = {"tipo": "giro", "banco": banco, "scena": scena,
-               "impronta_dichiarata": self.bersaglio,
-               "impronta_vista": impronta_vista,
-               "eseguibile": self.profilo["eseguibile"],
-               "spegnimento": self.profilo["spegnimento"],
-               "idle_scelta": self.profilo["idle_scelta"]}
+        rec = {"type": "round", "bench": bench, "scene": scene,
+               "impronta_dichiarata": self.target,
+               "fingerprint_seen": fingerprint_seen,
+               "eseguibile": self.profile["eseguibile"],
+               "spegnimento": self.profile["spegnimento"],
+               "idle_scelta": self.profile["idle_scelta"]}
         if extra:
             rec.update(extra)
-        return self.scrivi(rec)
+        return self.write(rec)
 
-    def scrivi(self, rec):
+    def write(self, rec):
         """⛔ The target, the port and the round go into EVERY line, and this
         function puts them there: a field that four benches must remember to
         add is a field that sooner or later is missing in one of the four."""
-        fuori = {"giro": self.giro, "bersaglio": self.bersaglio,
-                 "porta": self.porta, "md5": self.md5, "quando": time.time()}
-        fuori.update(rec)
-        if not self.percorso:
-            self.guasto = "no --uscita: this round leaves no log"
+        report = {"round": self.round, "target": self.target,
+                 "port": self.port, "md5": self.md5, "when": time.time()}
+        report.update(rec)
+        if not self.fpath:
+            self.fault = "no --output: this round leaves no log"
             return False
         try:
-            with open(self.percorso, "a") as f:
-                f.write(json.dumps(fuori, ensure_ascii=False) + "\n")
+            with open(self.fpath, "a") as f:
+                f.write(json.dumps(report, ensure_ascii=False) + "\n")
                 f.flush()
                 os.fsync(f.fileno())
         except OSError as e:
             # ⛔ And it is not kept quiet: a log that cannot be written and one that was not
             #    asked for are two different facts, and the second is the fault of whoever
             #    launches while the first is a disk.
-            self.guasto = f"the log «{self.percorso}» cannot be written: {e}"
+            self.fault = f"the log «{self.fpath}» cannot be written: {e}"
             return False
-        self.scritte += 1
+        self.written += 1
         return True
 
-    def riassunto(self):
+    def summary(self):
         """The line every bench prints at the end: how many it wrote and where.
 
         ⛔ With the denominator: "I wrote the log" without a number is
            true even when the lines are zero (`LEZIONI.md` §1.9, rule 6 —
            a verdict too has a denominator)."""
-        if self.guasto:
-            return f"⛔ LOG: {self.guasto}  ({self.scritte} lines written)"
-        return (f"log of round «{self.giro}» against «{self.bersaglio}»: "
-                f"{self.scritte} lines in {self.percorso}")
+        if self.fault:
+            return f"⛔ LOG: {self.fault}  ({self.written} lines written)"
+        return (f"log of round «{self.round_id}» against «{self.target}»: "
+                f"{self.written} lines in {self.fpath}")

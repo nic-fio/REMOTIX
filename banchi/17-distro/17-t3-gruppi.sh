@@ -2,7 +2,7 @@
 # 17-t3-gruppi.sh — phase 17, T3 line C: the ENGINE STEP "people in the
 # GPU groups", done by hand in the test VM, and its undo.
 #
-#   (INSIDE the VM, as root)  sh 17-t3-gruppi.sh iscrivi | annulla
+#   (INSIDE the VM, as root)  sh 17-t3-gruppi.sh enroll | undo
 #
 # ⭐ `DECISIONI.md` §10.12: the package does not touch groups; the engine does
 #    (`installatore/motore`, action `aggiungi-utente-a-gruppo`, with its
@@ -18,19 +18,19 @@
 # ⭐ `fasi/17-l-installatore.md` §6.4 and §6.6.4 (R6, R33): every
 #    person-group pair is recorded in the log with its ORIGIN:
 #        c-era  <person> <group>   was already there  ⇒ PRE-EXISTING, never touched
-#        messo  <person> <group>   the package put it ⇒ DIRECT, `annulla` removes it
+#        messo  <person> <group>   the package put it ⇒ DIRECT, `undo` removes it
 #    A pair already recorded is not recorded again: installing twice
 #    changes nothing (R5), and an upgrade does not turn a "messo" into a "c-era".
 #
 # ⚠ What this log does NOT see: the people the PRODUCT enrolls at
-#   their first connection (`figlio.c`, `iscrivi_ai_gruppi_della_scheda`).
+#   their first connection (`figlio.c`, `enroll_in_card_groups`).
 #   Today those go only to the journal; ⇒ uninstalling does not remove them.
 #   The same holds for the engine: noted in §13.1 as "to do".
 #
 # ⚠ Always exits with 0: a failed enrollment is SAID.
 set -u
 
-REGISTRO=/var/tmp/remotix-t3-gruppi.registro
+LOG=/var/tmp/remotix-t3-gruppi.registro
 
 # login.defs: on openSUSE it lives in /usr/etc (and /etc overrides it if present).
 read_defs()
@@ -44,7 +44,7 @@ read_defs()
 	printf '%s' "${v:-$2}"
 }
 
-gruppi_della_scheda()
+card_groups()
 {
 	for n in /dev/dri/card[0-9]* /dev/dri/renderD[0-9]*; do
 		[ -e "$n" ] || continue
@@ -55,35 +55,35 @@ gruppi_della_scheda()
 }
 
 # already there (as supplementary or primary group)?
-membro()
+member()
 {
 	id -nG "$1" 2>/dev/null | tr ' ' '\n' | grep -qx "$2"
 }
 
-annotata()
+annotated()
 {
-	[ -f "$REGISTRO" ] && grep -qE "^(c-era|messo) $1 $2\$" "$REGISTRO"
+	[ -f "$LOG" ] && grep -qE "^(c-era|messo) $1 $2\$" "$LOG"
 }
 
-iscrivi()
+enroll()
 {
 	min=$(read_defs UID_MIN 1000)
 	max=$(read_defs UID_MAX 60000)
-	gruppi=$(gruppi_della_scheda)
-	if [ -z "$gruppi" ]; then
+	groups=$(card_groups)
+	if [ -z "$groups" ]; then
 		echo "remotix: no /dev/dri node on this machine: no GPU group to give"
 		return 0
 	fi
-	[ -f "$REGISTRO" ] || { : >"$REGISTRO"; chmod 0600 "$REGISTRO"; }
-	persone=$(awk -F: -v a="$min" -v b="$max" \
+	[ -f "$LOG" ] || { : >"$LOG"; chmod 0600 "$LOG"; }
+	people=$(awk -F: -v a="$min" -v b="$max" \
 		'$3 >= a && $3 <= b && $7 !~ /(nologin|false)$/ { print $1 }' /etc/passwd)
-	for p in $persone; do
-		for g in $gruppi; do
-			annotata "$p" "$g" && continue
-			if membro "$p" "$g"; then
-				echo "c-era $p $g" >>"$REGISTRO"
+	for p in $people; do
+		for g in $groups; do
+			annotated "$p" "$g" && continue
+			if member "$p" "$g"; then
+				echo "c-era $p $g" >>"$LOG"
 			elif gpasswd -a "$p" "$g" >/dev/null 2>&1; then
-				echo "messo $p $g" >>"$REGISTRO"
+				echo "messo $p $g" >>"$LOG"
 				echo "remotix: $p enrolled in $g (the remote session has no seat: without it, blank page)"
 			else
 				echo "remotix: ⛔ $p NOT enrolled in $g (gpasswd refused)"
@@ -93,21 +93,21 @@ iscrivi()
 	return 0
 }
 
-annulla()
+undo()
 {
-	[ -f "$REGISTRO" ] || return 0
-	grep '^messo ' "$REGISTRO" | while read -r _ p g; do
+	[ -f "$LOG" ] || return 0
+	grep '^messo ' "$LOG" | while read -r _ p g; do
 		getent passwd "$p" >/dev/null || continue
-		if membro "$p" "$g" && gpasswd -d "$p" "$g" >/dev/null 2>&1; then
+		if member "$p" "$g" && gpasswd -d "$p" "$g" >/dev/null 2>&1; then
 			echo "remotix: $p removed from $g (the engine step had put it there)"
 		fi
 	done
-	rm -f "$REGISTRO"
+	rm -f "$LOG"
 	return 0
 }
 
 case ${1:-} in
-iscrivi) iscrivi ;;
-annulla) annulla ;;
-*) echo "usage: $0 iscrivi|annulla" >&2; exit 2 ;;
+enroll) enroll ;;
+undo) undo ;;
+*) echo "usage: $0 enroll|undo" >&2; exit 2 ;;
 esac

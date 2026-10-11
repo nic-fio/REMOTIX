@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """Builds the landing page as ONE self-contained file: pubblica/index.html.
 
-    python3 grafica/sito-mockup/autocontenuta.py [--senza-nastro]
+    python3 grafica/sito-mockup/autocontenuta.py [--no-ribbon]
 
 From index.html (the editable source) it inlines stile.css, the icons in icone/ (SVG as data URIs)
 and the screenshots in schermate-vere/ (converted to WebP, resized to what the page shows).
 The result makes no request to anyone: no CDN, no fonts, nothing but the file itself.
---senza-nastro drops the red «Mockup» ribbon, for the published version.
+--no-ribbon drops the red «Mockup» ribbon, for the published version.
 """
 import base64, io, re, sys
 from pathlib import Path
@@ -51,7 +51,7 @@ def costruisci(nome):
     pagina = pagina.replace('href="index.html"', 'href="/"')   # the logo goes home, wherever the file is served
     pagina = pagina.replace('href="index.html#', 'href="/#').replace('href="performance.html"', 'href="/performance.html"')
 
-    if "--senza-nastro" in sys.argv:
+    if "--no-ribbon" in sys.argv:
         pagina = pagina.replace('<div class="nastro">Mockup</div>\n', "")
 
     rimasti = re.findall(r"(?:src=\"|url\(|href=\")(?!data:|#|%23|/\"|/#|/performance\.html|https://github\.com|mailto:|download/)([^\"')]+)", pagina)

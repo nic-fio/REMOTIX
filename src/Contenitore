@@ -42,7 +42,7 @@ FROM docker.io/library/debian:13
 ENV DEBIAN_FRONTEND=noninteractive
 
 # ⛔ The dependencies are those DECLARED in the `Makefile`, line by line: if one
-#    is missing here, `make dipendenze` says so by name instead of making the
+#    is missing here, `make deps` says so by name instead of making the
 #    compiler fail on an `#include` nobody connects to the missing library.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential pkg-config git ca-certificates \

@@ -1,4 +1,4 @@
-package motore
+package engine
 
 import (
 	"fmt"
@@ -29,9 +29,9 @@ import (
 //     that nobody has open was left by a pacman that died: it is not a wait, and the engine does not
 //     remove it (Integro says so: RX-PACCHETTI-004).
 
-type lucchetto struct{ percorso, tipo string }
+type lock struct{ fpath, kind string }
 
-var lucchetti = map[string][]lucchetto{
+var locks = map[string][]lock{
 	"debian": {{"/var/lib/dpkg/lock-frontend", "lock"}, {"/var/lib/dpkg/lock", "lock"},
 		{"/var/lib/apt/lists/lock", "lock"}, {"/var/cache/apt/archives/lock", "lock"}},
 	// /var/lib/rpm is a link to /usr/lib/sysimage/rpm on the newer ones: the same inode, looked at twice
@@ -51,40 +51,40 @@ var busyStep = 2 * time.Second
 
 // waitPackageManager: while another program holds the family's manager, the engine says who (once for each
 // holder) and waits; beyond BusyCap, RX-PACCHETTI-008.
-func waitPackageManager(a *Ambiente, fam string) error {
+func waitPackageManager(a *Environment, fam string) error {
 	fine := time.Now().Add(BusyCap)
-	detto := ""
+	said := ""
 	for {
 		chi := whoHolds(a, fam)
 		if chi == "" {
 			return nil
 		}
 		if time.Now().After(fine) {
-			return Errore("RX-PACCHETTI-008", chi)
+			return Error("RX-PACCHETTI-008", chi)
 		}
-		if chi != detto {
+		if chi != said {
 			a.avvisa(Msg("RX-PACCHETTI-007", fmt.Sprintf("%s; waiting up to %s", chi, BusyCap)))
-			detto = chi
+			said = chi
 		}
 		time.Sleep(busyStep)
 	}
 }
 
 // whoHolds: «pid 1234 (unattended-upgr) holds /var/lib/dpkg/lock-frontend», or "" if the manager is free.
-func whoHolds(a *Ambiente, fam string) string {
-	for _, l := range lucchetti[fam] {
+func whoHolds(a *Environment, fam string) string {
+	for _, l := range locks[fam] {
 		var pid []int
-		switch l.tipo {
+		switch l.kind {
 		case "lock":
-			pid = lockHolderPids(a, l.percorso)
+			pid = lockHolderPids(a, l.fpath)
 		case "pid":
-			pid = pidDiFile(a, l.percorso)
+			pid = pidDiFile(a, l.fpath)
 		case "open":
-			pid = whoOpens(a, l.percorso)
+			pid = whoOpens(a, l.fpath)
 		}
 		for _, p := range pid {
 			if p > 0 && p != os.Getpid() {
-				return fmt.Sprintf("pid %d (%s) holds %s", p, processName(a, p), l.percorso)
+				return fmt.Sprintf("pid %d (%s) holds %s", p, processName(a, p), l.fpath)
 			}
 		}
 	}
@@ -94,8 +94,8 @@ func whoHolds(a *Ambiente, fam string) string {
 // lockHolderPids: the holders of a kernel lock on the file. /proc/locks: «3: POSIX ADVISORY WRITE 1234
 // 00:8a:858800 0 EOF»; the «->» lines are those waiting, not holding. Only the inode is compared: on
 // btrfs the device in stat is not the one in /proc/locks.
-func lockHolderPids(a *Ambiente, percorso string) []int {
-	st, err := os.Stat(a.P(percorso))
+func lockHolderPids(a *Environment, fpath string) []int {
+	st, err := os.Stat(a.P(fpath))
 	if err != nil {
 		return nil
 	}
@@ -109,8 +109,8 @@ func lockHolderPids(a *Ambiente, percorso string) []int {
 	}
 	ino := ":" + strconv.FormatUint(s.Ino, 10)
 	var r []int
-	for _, riga := range strings.Split(string(b), "\n") {
-		c := strings.Fields(riga)
+	for _, line := range strings.Split(string(b), "\n") {
+		c := strings.Fields(line)
 		if len(c) < 6 || c[1] == "->" || !strings.HasSuffix(c[5], ino) {
 			continue
 		}
@@ -122,8 +122,8 @@ func lockHolderPids(a *Ambiente, percorso string) []int {
 }
 
 // pidDiFile: the pid written in the file, if that process is alive.
-func pidDiFile(a *Ambiente, percorso string) []int {
-	b, err := os.ReadFile(a.P(percorso))
+func pidDiFile(a *Environment, fpath string) []int {
+	b, err := os.ReadFile(a.P(fpath))
 	if err != nil {
 		return nil
 	}
@@ -138,14 +138,14 @@ func pidDiFile(a *Ambiente, percorso string) []int {
 }
 
 // whoOpens: the processes that have the file open (its absolute path among their /proc/<pid>/fd).
-func whoOpens(a *Ambiente, percorso string) []int {
-	if _, err := os.Stat(a.P(percorso)); err != nil {
+func whoOpens(a *Environment, fpath string) []int {
+	if _, err := os.Stat(a.P(fpath)); err != nil {
 		return nil
 	}
 	fd, _ := filepath.Glob(a.P("/proc/[0-9]*/fd/*"))
 	var r []int
 	for _, f := range fd {
-		if l, err := os.Readlink(f); err == nil && l == percorso {
+		if l, err := os.Readlink(f); err == nil && l == fpath {
 			if p, err := strconv.Atoi(filepath.Base(filepath.Dir(filepath.Dir(f)))); err == nil {
 				r = append(r, p)
 			}
@@ -154,7 +154,7 @@ func whoOpens(a *Ambiente, percorso string) []int {
 	return r
 }
 
-func processName(a *Ambiente, pid int) string {
+func processName(a *Environment, pid int) string {
 	b, err := os.ReadFile(a.P("/proc/" + strconv.Itoa(pid) + "/comm"))
 	if err != nil {
 		return "?"

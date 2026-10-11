@@ -1,4 +1,4 @@
-package motore
+package engine
 
 import (
 	"encoding/json"
@@ -13,27 +13,27 @@ import (
 // (never half-written, §6.6.3). EXACT reversibility: the previous content is saved in the operation's
 // folder and put back byte by byte, with permissions and owner.
 //
-// parameters: percorso (absolute), contenuto, modo (octal, "0644"), uid and gid (default 0).
+// parameters: fpath (absolute), content, mode (octal, "0644"), uid and gid (default 0).
 
-func init() { registraTipo("write-file", newWriteFile) }
+func init() { registerType("write-file", newWriteFile) }
 
 // PlanWriteFile prepares the plan's step.
-func PlanWriteFile(id, percorso, contenuto, modo string) AzionePiano {
-	return AzionePiano{
-		ID: id, Tipo: "write-file",
-		Parametri:     map[string]string{"path": percorso, "content": contenuto, "mode": modo},
-		Descrizione:   T("az.file", percorso),
-		ComeSiFa:      T("az.file.fa", "."+filepath.Base(percorso)+".remotix-nuovo"),
+func PlanWriteFile(id, fpath, content, mode string) PlanAction {
+	return PlanAction{
+		ID: id, Type: "write-file",
+		Parameters:     map[string]string{"path": fpath, "content": content, "mode": mode},
+		Description:   T("az.file", fpath),
+		ComeSiFa:      T("az.file.fa", "."+filepath.Base(fpath)+".remotix-nuovo"),
 		HowToVerify:   T("az.file.verifica"),
 		HowToUndo:     T("az.file.annulla"),
-		Reversibilita: ESATTA,
+		Reversibility: EXACT,
 	}
 }
 
 type writeFile struct {
-	percorso  string
-	contenuto []byte
-	modo      os.FileMode
+	fpath  string
+	content []byte
+	mode      os.FileMode
 	uid, gid  int
 }
 
@@ -44,33 +44,33 @@ type beforeFile struct {
 	Modo        string   `json:"mode,omitempty"`
 	Uid         int      `json:"uid"`
 	Gid         int      `json:"gid"`
-	Salvataggio string   `json:"backup,omitempty"` // relative to the operation's folder
+	Save string   `json:"backup,omitempty"` // relative to the operation's folder
 	CreatedDirs []string `json:"created_dirs,omitempty"`
 }
 
-func newWriteFile(p AzionePiano) (Azione, error) {
-	s := &writeFile{percorso: p.Parametri["path"], contenuto: []byte(p.Parametri["content"])}
-	if !filepath.IsAbs(s.percorso) {
-		return nil, fmt.Errorf("scrivi-file: path not absolute: %q", s.percorso)
+func newWriteFile(p PlanAction) (Action, error) {
+	s := &writeFile{fpath: p.Parameters["path"], content: []byte(p.Parameters["content"])}
+	if !filepath.IsAbs(s.fpath) {
+		return nil, fmt.Errorf("scrivi-file: path not absolute: %q", s.fpath)
 	}
-	m, err := strconv.ParseUint(notEmpty(p.Parametri["mode"], "0644"), 8, 32)
+	m, err := strconv.ParseUint(notEmpty(p.Parameters["mode"], "0644"), 8, 32)
 	if err != nil {
-		return nil, fmt.Errorf("scrivi-file: modo %q: %w", p.Parametri["mode"], err)
+		return nil, fmt.Errorf("scrivi-file: modo %q: %w", p.Parameters["mode"], err)
 	}
-	s.modo = os.FileMode(m)
-	s.uid, _ = strconv.Atoi(notEmpty(p.Parametri["uid"], "0"))
-	s.gid, _ = strconv.Atoi(notEmpty(p.Parametri["gid"], "0"))
+	s.mode = os.FileMode(m)
+	s.uid, _ = strconv.Atoi(notEmpty(p.Parameters["uid"], "0"))
+	s.gid, _ = strconv.Atoi(notEmpty(p.Parameters["gid"], "0"))
 	return s, nil
 }
 
-func (s *writeFile) dest(c *Contesto) string { return c.Amb.P(s.percorso) }
-func (s *writeFile) tmp(c *Contesto) string {
-	return filepath.Join(filepath.Dir(s.dest(c)), "."+filepath.Base(s.percorso)+".remotix-nuovo")
+func (s *writeFile) dest(c *Context) string { return c.Env.P(s.fpath) }
+func (s *writeFile) tmp(c *Context) string {
+	return filepath.Join(filepath.Dir(s.dest(c)), "."+filepath.Base(s.fpath)+".remotix-nuovo")
 }
 
 // state of the file now: exists, sha, mode.
-func stateFile(percorso string) (bool, string, os.FileMode, int, int, error) {
-	st, err := os.Lstat(percorso)
+func stateFile(fpath string) (bool, string, os.FileMode, int, int, error) {
+	st, err := os.Lstat(fpath)
 	if os.IsNotExist(err) {
 		return false, "", 0, 0, 0, nil
 	}
@@ -78,9 +78,9 @@ func stateFile(percorso string) (bool, string, os.FileMode, int, int, error) {
 		return false, "", 0, 0, 0, err
 	}
 	if !st.Mode().IsRegular() {
-		return true, "", 0, 0, 0, Errore("RX-FILE-001", percorso+" is not a regular file (link or other): left untouched")
+		return true, "", 0, 0, 0, Error("RX-FILE-001", fpath+" is not a regular file (link or other): left untouched")
 	}
-	b, err := os.ReadFile(percorso)
+	b, err := os.ReadFile(fpath)
 	if err != nil {
 		return false, "", 0, 0, 0, err
 	}
@@ -91,45 +91,45 @@ func stateFile(percorso string) (bool, string, os.FileMode, int, int, error) {
 	return true, Sha256(b), st.Mode().Perm(), uid, gid, nil
 }
 
-func (s *writeFile) Vincoli(c *Contesto) ([]string, error) {
-	esiste, sha, _, _, _, err := stateFile(s.dest(c))
+func (s *writeFile) Constraints(c *Context) ([]string, error) {
+	path_exists, sha, _, _, _, err := stateFile(s.dest(c))
 	if err != nil {
 		return nil, err
 	}
-	if !esiste {
+	if !path_exists {
 		sha = "absent"
 	}
-	return []string{"file:" + s.percorso + "=" + sha}, nil
+	return []string{"file:" + s.fpath + "=" + sha}, nil
 }
 
-func (s *writeFile) Fotografa(c *Contesto) (json.RawMessage, Origine, error) {
-	esiste, sha, modo, uid, gid, err := stateFile(s.dest(c))
+func (s *writeFile) Snapshot(c *Context) (json.RawMessage, Origine, error) {
+	path_exists, sha, mode, uid, gid, err := stateFile(s.dest(c))
 	if err != nil {
 		return nil, "", err
 	}
-	p := beforeFile{Origine: DIRETTA, Existed: esiste, Sha: sha, Uid: uid, Gid: gid}
-	if esiste {
-		p.Modo = fmt.Sprintf("%04o", modo)
-		if sha == Sha256(s.contenuto) && modo == s.modo {
-			p.Origine = PREESISTENTE
+	p := beforeFile{Origine: DIRECT, Existed: path_exists, Sha: sha, Uid: uid, Gid: gid}
+	if path_exists {
+		p.Modo = fmt.Sprintf("%04o", mode)
+		if sha == Sha256(s.content) && mode == s.mode {
+			p.Origine = PREEXISTING
 			return jsonDi(p), p.Origine, nil
 		}
 		b, err := os.ReadFile(s.dest(c))
 		if err != nil {
 			return nil, "", err
 		}
-		cart := filepath.Join(c.Cartella, "backups")
+		cart := filepath.Join(c.Folder, "backups")
 		if err := os.MkdirAll(cart, 0o700); err != nil {
 			return nil, "", err
 		}
-		p.Salvataggio = filepath.Join("backups", c.P.ID+".before")
-		if err := ScriviAtomico(filepath.Join(c.Cartella, p.Salvataggio), b, 0o600); err != nil {
+		p.Save = filepath.Join("backups", c.P.ID+".before")
+		if err := WriteAtomic(filepath.Join(c.Folder, p.Save), b, 0o600); err != nil {
 			return nil, "", err
 		}
 	}
 	// the missing folders, from the highest
-	for d := filepath.Dir(s.percorso); d != "/" && d != "."; d = filepath.Dir(d) {
-		if _, err := os.Stat(c.Amb.P(d)); err == nil {
+	for d := filepath.Dir(s.fpath); d != "/" && d != "."; d = filepath.Dir(d) {
+		if _, err := os.Stat(c.Env.P(d)); err == nil {
 			break
 		}
 		p.CreatedDirs = append([]string{d}, p.CreatedDirs...)
@@ -137,18 +137,18 @@ func (s *writeFile) Fotografa(c *Contesto) (json.RawMessage, Origine, error) {
 	return jsonDi(p), p.Origine, nil
 }
 
-// writeInside: temporary with the fixed name (so «controlla» recognises it: half-done), fsync,
+// writeInside: temporary with the fixed name (so «check» recognises it: half-done), fsync,
 // permissions, owner, rename, fsync of the folder.
-func writeInside(c *Contesto, dest, tmp string, dati []byte, modo os.FileMode, uid, gid int, actionId string) error {
+func writeInside(c *Context, dest, tmp string, data []byte, mode os.FileMode, uid, gid int, actionId string) error {
 	f, err := os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
 		return err
 	}
-	if _, err := f.Write(dati); err != nil {
+	if _, err := f.Write(data); err != nil {
 		f.Close()
 		return err
 	}
-	if err := f.Chmod(modo); err != nil {
+	if err := f.Chmod(mode); err != nil {
 		f.Close()
 		return err
 	}
@@ -165,100 +165,100 @@ func writeInside(c *Contesto, dest, tmp string, dati []byte, modo os.FileMode, u
 	if err := f.Close(); err != nil {
 		return err
 	}
-	punto("file-a-meta", actionId)
+	spot("file-a-meta", actionId)
 	if err := os.Rename(tmp, dest); err != nil {
 		return err
 	}
 	return SyncFolder(filepath.Dir(dest))
 }
 
-func (s *writeFile) Fai(c *Contesto, prima json.RawMessage) error {
+func (s *writeFile) Do(c *Context, before json.RawMessage) error {
 	var p beforeFile
-	if err := json.Unmarshal(prima, &p); err != nil {
+	if err := json.Unmarshal(before, &p); err != nil {
 		return err
 	}
-	if p.Origine == PREESISTENTE {
+	if p.Origine == PREEXISTING {
 		return nil
 	}
 	for _, d := range p.CreatedDirs {
-		if err := os.Mkdir(c.Amb.P(d), 0o755); err != nil && !os.IsExist(err) {
+		if err := os.Mkdir(c.Env.P(d), 0o755); err != nil && !os.IsExist(err) {
 			return err
 		}
-		if err := SyncFolder(filepath.Dir(c.Amb.P(d))); err != nil {
+		if err := SyncFolder(filepath.Dir(c.Env.P(d))); err != nil {
 			return err
 		}
 	}
-	return writeInside(c, s.dest(c), s.tmp(c), s.contenuto, s.modo, s.uid, s.gid, c.P.ID)
+	return writeInside(c, s.dest(c), s.tmp(c), s.content, s.mode, s.uid, s.gid, c.P.ID)
 }
 
 // asBefore: is the file as it was before the action?
-func (s *writeFile) asBefore(c *Contesto, p beforeFile) (bool, error) {
-	esiste, sha, modo, _, _, err := stateFile(s.dest(c))
+func (s *writeFile) asBefore(c *Context, p beforeFile) (bool, error) {
+	path_exists, sha, mode, _, _, err := stateFile(s.dest(c))
 	if err != nil {
 		return false, err
 	}
 	if !p.Existed {
-		return !esiste, nil
+		return !path_exists, nil
 	}
-	return esiste && sha == p.Sha && fmt.Sprintf("%04o", modo) == p.Modo, nil
+	return path_exists && sha == p.Sha && fmt.Sprintf("%04o", mode) == p.Modo, nil
 }
 
-func (s *writeFile) Controlla(c *Contesto, prima json.RawMessage) (Esito, string, error) {
+func (s *writeFile) Check(c *Context, before json.RawMessage) (Outcome, string, error) {
 	var p beforeFile
-	if err := json.Unmarshal(prima, &p); err != nil {
+	if err := json.Unmarshal(before, &p); err != nil {
 		return "", "", err
 	}
-	esiste, sha, modo, _, _, err := stateFile(s.dest(c))
+	path_exists, sha, mode, _, _, err := stateFile(s.dest(c))
 	if err != nil {
 		return "", "", err
 	}
-	nostro := esiste && sha == Sha256(s.contenuto) && modo == s.modo
-	if p.Origine == PREESISTENTE {
-		if nostro {
-			return COMPLETO, "already there, identical", nil
+	our := path_exists && sha == Sha256(s.content) && mode == s.mode
+	if p.Origine == PREEXISTING {
+		if our {
+			return COMPLETE, "already there, identical", nil
 		}
-		return ESTRANEO, "the file that was already there has been changed", nil
+		return FOREIGN, "the file that was already there has been changed", nil
 	}
 	if _, err := os.Lstat(s.tmp(c)); err == nil {
 		return A_META, "the temporary file is there: " + filepath.Base(s.tmp(c)), nil
 	}
-	if nostro {
-		return COMPLETO, "sha256 " + sha[:12], nil
+	if our {
+		return COMPLETE, "sha256 " + sha[:12], nil
 	}
 	if ok, err := s.asBefore(c, p); err != nil {
 		return "", "", err
 	} else if ok {
-		return ASSENTE, "as it was before", nil
+		return ABSENT, "as it was before", nil
 	}
-	return ESTRANEO, "neither our content nor the previous one", nil
+	return FOREIGN, "neither our content nor the previous one", nil
 }
 
-func (s *writeFile) Annulla(c *Contesto, prima json.RawMessage) error {
+func (s *writeFile) Rollback(c *Context, before json.RawMessage) error {
 	var p beforeFile
-	if err := json.Unmarshal(prima, &p); err != nil {
+	if err := json.Unmarshal(before, &p); err != nil {
 		return err
 	}
-	if p.Origine == PREESISTENTE {
+	if p.Origine == PREEXISTING {
 		return nil
 	}
 	if err := os.Remove(s.tmp(c)); err != nil && !os.IsNotExist(err) {
 		return err
 	}
-	esiste, sha, modo, _, _, err := stateFile(s.dest(c))
+	path_exists, sha, mode, _, _, err := stateFile(s.dest(c))
 	if err != nil {
 		return err
 	}
-	nostro := esiste && sha == Sha256(s.contenuto) && modo == s.modo
+	our := path_exists && sha == Sha256(s.content) && mode == s.mode
 	alreadyBefore, err := s.asBefore(c, p)
 	if err != nil {
 		return err
 	}
 	switch {
 	case alreadyBefore:
-	case !nostro:
-		return Errore("RX-FILE-001", s.percorso)
+	case !our:
+		return Error("RX-FILE-001", s.fpath)
 	case p.Existed:
-		b, err := os.ReadFile(filepath.Join(c.Cartella, p.Salvataggio))
+		b, err := os.ReadFile(filepath.Join(c.Folder, p.Save))
 		if err != nil {
 			return err
 		}
@@ -275,7 +275,7 @@ func (s *writeFile) Annulla(c *Contesto, prima json.RawMessage) error {
 		}
 	}
 	for i := len(p.CreatedDirs) - 1; i >= 0; i-- {
-		d := c.Amb.P(p.CreatedDirs[i])
+		d := c.Env.P(p.CreatedDirs[i])
 		if err := os.Remove(d); err == nil {
 			SyncFolder(filepath.Dir(d))
 		}
@@ -283,12 +283,12 @@ func (s *writeFile) Annulla(c *Contesto, prima json.RawMessage) error {
 	return nil
 }
 
-func (s *writeFile) Annullata(c *Contesto, prima json.RawMessage) (bool, string, error) {
+func (s *writeFile) RolledBack(c *Context, before json.RawMessage) (bool, string, error) {
 	var p beforeFile
-	if err := json.Unmarshal(prima, &p); err != nil {
+	if err := json.Unmarshal(before, &p); err != nil {
 		return false, "", err
 	}
-	if p.Origine == PREESISTENTE {
+	if p.Origine == PREEXISTING {
 		return true, "already there: left untouched", nil
 	}
 	if _, err := os.Lstat(s.tmp(c)); err == nil {
@@ -299,7 +299,7 @@ func (s *writeFile) Annullata(c *Contesto, prima json.RawMessage) (bool, string,
 		return false, "the file is not as it was", err
 	}
 	for _, d := range p.CreatedDirs {
-		if voci, err := os.ReadDir(c.Amb.P(d)); err == nil && len(voci) == 0 {
+		if entries, err := os.ReadDir(c.Env.P(d)); err == nil && len(entries) == 0 {
 			return false, "the empty directory is still there: " + d, nil
 		}
 	}

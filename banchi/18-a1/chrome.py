@@ -2,7 +2,7 @@
 """
 18-a1 · chrome — the packets of the new `audio.c` inside a REAL CHROME.
 
-    python3 chrome.py CARTELLA [--porta 7621] [--pagina ../../src/pagina.html]
+    python3 chrome.py CARTELLA [--port 7621] [--page ../../src/pagina.html]
 
 CARTELLA is the folder where `costruisci.sh` wrote `vecchio.pkt`, `nuovo.pkt`
 and `nuovo.f32`.  `chrome.html` is served on http://127.0.0.1:PORTA (secure
@@ -37,86 +37,86 @@ import sys
 import tempfile
 import threading
 
-QUI = os.path.dirname(os.path.abspath(__file__))
+HERE = os.path.dirname(os.path.abspath(__file__))
 
 a = argparse.ArgumentParser()
-a.add_argument("cartella")
-a.add_argument("--porta", type=int, default=7621)
-a.add_argument("--pagina", default=os.path.join(QUI, "..", "..", "src", "pagina.html"))
+a.add_argument("folder")
+a.add_argument("--port", type=int, default=7621)
+a.add_argument("--page", default=os.path.join(HERE, "..", "..", "src", "pagina.html"))
 arg = a.parse_args()
 
-testo = open(arg.pagina, encoding="utf-8").read()
-m = re.search(r'/\*OPUS_WASM_INIZIO\*/"([A-Za-z0-9+/=]+)"', testo)
+text = open(arg.page, encoding="utf-8").read()
+m = re.search(r'/\*OPUS_WASM_INIZIO\*/"([A-Za-z0-9+/=]+)"', text)
 if not m:
-    print("⛔ NOTHING TO JUDGE: in %s I cannot find the module between the markers" % arg.pagina)
+    print("⛔ NOTHING TO JUDGE: in %s I cannot find the module between the markers" % arg.page)
     sys.exit(2)
 WASM_B64 = m.group(1).encode()
 
-esito = {}
-pronto = threading.Event()
+outcome = {}
+ready = threading.Event()
 
 
-class Gestore(http.server.BaseHTTPRequestHandler):
+class Manager(http.server.BaseHTTPRequestHandler):
     def log_message(self, *x):
         pass
 
-    def _manda(self, corpo, tipo):
+    def _send(self, body, kind):
         self.send_response(200)
-        self.send_header("Content-Type", tipo)
-        self.send_header("Content-Length", str(len(corpo)))
+        self.send_header("Content-Type", kind)
+        self.send_header("Content-Length", str(len(body)))
         self.end_headers()
-        self.wfile.write(corpo)
+        self.wfile.write(body)
 
     def do_GET(self):
         p = self.path.lstrip("/") or "chrome.html"
         if p == "chrome.html":
-            return self._manda(open(os.path.join(QUI, p), "rb").read(), "text/html")
+            return self._send(open(os.path.join(HERE, p), "rb").read(), "text/html")
         if p == "wasm.b64":
-            return self._manda(WASM_B64, "text/plain")
+            return self._send(WASM_B64, "text/plain")
         if p in ("vecchio.pkt", "nuovo.pkt", "nuovo.f32"):
-            return self._manda(open(os.path.join(arg.cartella, p), "rb").read(),
+            return self._send(open(os.path.join(arg.folder, p), "rb").read(),
                                "application/octet-stream")
         self.send_response(404)
         self.end_headers()
 
     def do_POST(self):
         n = int(self.headers.get("Content-Length", "0"))
-        esito.update(json.loads(self.rfile.read(n)))
-        self._manda(b"ok", "text/plain")
-        pronto.set()
+        outcome.update(json.loads(self.rfile.read(n)))
+        self._send(b"ok", "text/plain")
+        ready.set()
 
 
 socketserver.TCPServer.allow_reuse_address = True
-srv = socketserver.TCPServer(("127.0.0.1", arg.porta), Gestore)
+srv = socketserver.TCPServer(("127.0.0.1", arg.port), Manager)
 threading.Thread(target=srv.serve_forever, daemon=True).start()
 
 chrome = shutil.which("google-chrome") or shutil.which("google-chrome-stable")
 if not chrome:
     print("⛔ NOTHING TO JUDGE: google-chrome is not there")
     sys.exit(2)
-profilo = tempfile.mkdtemp(prefix="18-a1-chrome-")
+profile = tempfile.mkdtemp(prefix="18-a1-chrome-")
 p = subprocess.Popen([chrome, "--headless=new", "--no-first-run",
-                      "--no-default-browser-check", "--user-data-dir=" + profilo,
-                      "http://127.0.0.1:%d/chrome.html" % arg.porta],
+                      "--no-default-browser-check", "--user-data-dir=" + profile,
+                      "http://127.0.0.1:%d/chrome.html" % arg.port],
                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-arrivato = pronto.wait(90)
+arrived = ready.wait(90)
 p.terminate()
 try:
     p.wait(10)
 except subprocess.TimeoutExpired:
     p.kill()
 srv.shutdown()
-shutil.rmtree(profilo, ignore_errors=True)
+shutil.rmtree(profile, ignore_errors=True)
 
-if not arrivato:
+if not arrived:
     print("⛔ NOTHING TO JUDGE: the page did not answer within 90 s")
     sys.exit(2)
-print(json.dumps(esito, indent=2, ensure_ascii=False))
-buono = ("errore" not in esito
-         and esito["nuovo"]["rifiutati"] == 0 and esito["vecchio"]["rifiutati"] == 0
-         and esito["nuovo"]["pacchetti"] == esito["vecchio"]["pacchetti"]
-         and esito["diversi_vecchio_nuovo"] == 0
-         and esito["massimo_scarto_dal_nativo"] < 1e-3)
+print(json.dumps(outcome, indent=2, ensure_ascii=False))
+good = ("error" not in outcome
+         and outcome["new"]["refused"] == 0 and outcome["vecchio"]["refused"] == 0
+         and outcome["new"]["packets"] == outcome["vecchio"]["packets"]
+         and outcome["diversi_vecchio_nuovo"] == 0
+         and outcome["massimo_scarto_dal_nativo"] < 1e-3)
 print("⭐ VERDE — Chrome decodes the new one like the old one, and a whisker away from the server's native"
-      if buono else "⛔ ROSSO")
-sys.exit(0 if buono else 1)
+      if good else "⛔ ROSSO")
+sys.exit(0 if good else 1)

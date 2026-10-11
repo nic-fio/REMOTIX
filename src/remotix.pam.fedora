@@ -30,7 +30,7 @@
 # ⭐ ROOT EXCLUDED, and BEFORE the password: the reasons (requisite, in
 #    auth and not in account, onerr=fail) are written in `remotix.pam`.  The
 #    file lists one name per line and is installed with `root` in it.
-auth       requisite    pam_listfile.so item=user sense=deny file=/etc/remotix/utenti-negati onerr=fail
+auth       requisite    pam_listfile.so item=user sense=deny file=/etc/remotix/denied-users onerr=fail
 auth       substack     password-auth
 auth       include      postlogin
 

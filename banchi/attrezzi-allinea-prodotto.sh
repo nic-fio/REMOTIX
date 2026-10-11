@@ -5,12 +5,12 @@
 # REBUILDS.  It is the twin of `attrezzi-allinea-innesto.sh`, for the other
 # of the two servers.
 #
-#   bash banchi/attrezzi-allinea-prodotto.sh guarda   just tells
-#   bash banchi/attrezzi-allinea-prodotto.sh allinea  copy + build + terrain
-#   bash banchi/attrezzi-allinea-prodotto.sh prova    ⭐ the positive check:
+#   bash banchi/attrezzi-allinea-prodotto.sh inspect   just tells
+#   bash banchi/attrezzi-allinea-prodotto.sh align  copy + build + terrain
+#   bash banchi/attrezzi-allinea-prodotto.sh test    ⭐ the positive check:
 #                                                     builds a divergence
 #                                                     on a copy and demands
-#                                                     that `guarda` sees it
+#                                                     that `inspect` sees it
 #
 # Exits 0 if aligned · 1 if not (or if the alignment did not finish)
 # 2 if it could not look · 3 if a step failed.
@@ -86,14 +86,14 @@
 #     carry the date of now: a binary built before is old even if
 #     the content matches.  If the round stopped between the copy and the
 #     build — for whoever wrote the graft tool a `timeout`
-#     stopped it — a scene would remain in which the fingerprints match, `guarda`
+#     stopped it — a scene would remain in which the fingerprints match, `inspect`
 #     would say «aligned», and the terrain would still reject it.  ⇒ We look
 #     at the clock too.
 #
 #  2. ⛔ **the live process must be the one on disk.**  Aligned sources and a
 #     rebuilt binary still leave the 7448 server running
 #     on the old binary — which is **precisely** the thirteen-hour
-#     defect.  ⇒ `allinea` ends by asking `01-casa-7448.sh stato`, and if the
+#     defect.  ⇒ `align` ends by asking `01-casa-7448.sh status`, and if the
 #     answer is no **it does not declare itself finished**: it exits 1 and names the cure.
 #
 # ⛔ AND IT DOES NOT RESTART BY ITSELF.  On 7448 there may be other people's rounds, and
@@ -125,131 +125,131 @@
 #    just like one from now.
 set -uo pipefail
 
-QUI=$(cd "$(dirname "$0")" && pwd)
-RADICE=$(dirname "$QUI")
+HERE=$(cd "$(dirname "$0")" && pwd)
+ROOT=$(dirname "$HERE")
 
-IND=${IND:-192.168.0.2}
-UTE=${UTE:-nicfio}
+ADDR=${ADDR:-192.168.0.2}
+SSH_USER=${SSH_USER:-nicfio}
 
-# ⛔ The trees are DECLARED, like `SORG=` in `01-b0-terreno.sh`: there are five
+# ⛔ The trees are DECLARED, like `SRC=` in `01-b0-terreno.sh`: there are five
 #    `remotix` trees on that machine, and guessing which one is
 #    the house one is the question D5 already paid for.
-FONTE=${FONTE:-$RADICE/src}                    # here, on CHUWI
+SOURCE=${SOURCE:-$ROOT/src}                    # here, on CHUWI
 DEST=${DEST:-/media/REMOTIX/src/remotix}       # over there, seen from the HOST
-CASA=${CASA:-/srv/src/01-casa-7448.sh}         # inside the container
-TERRENO=${TERRENO:-/media/REMOTIX/src/01-b0-terreno.sh}
-ENTRA=${ENTRA:-/media/REMOTIX/enter.sh}
+HOME_DIR=${HOME_DIR:-/srv/src/01-casa-7448.sh}         # inside the container
+TERRAIN=${TERRAIN:-/media/REMOTIX/src/01-b0-terreno.sh}
+ENTER=${ENTER:-/media/REMOTIX/enter.sh}
 # ⚠ The build log has a name of ITS OWN: two tools that
 #   wrote the same file would read each other's outcome.  ⛔ And it is
 #   named TWICE, because the same file has two names: `/media/REMOTIX/src`
 #   on the host and `/srv/src` inside the container (`enter.sh` mounts it there).
 #   Deriving one from the other with a substitution would be a
 #   guessed path, and a guessed path changes one day.
-LOG_LA=${LOG_LA:-/media/REMOTIX/src/attrezzi-allinea-prodotto-costr.log}
-LOG_DENTRO=${LOG_DENTRO:-/srv/src/attrezzi-allinea-prodotto-costr.log}
+LOG_THERE=${LOG_THERE:-/media/REMOTIX/src/attrezzi-allinea-prodotto-costr.log}
+LOG_INSIDE=${LOG_INSIDE:-/srv/src/attrezzi-allinea-prodotto-costr.log}
 
-SSH="ssh -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new $UTE@$IND"
+SSH="ssh -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new $SSH_USER@$ADDR"
 SCP="scp -q -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new"
-SSH_ROOT=${SSH_ROOT:-python3 $RADICE/fondamenta/strumenti/sshpw.py}
+SSH_ROOT=${SSH_ROOT:-python3 $ROOT/fondamenta/strumenti/sshpw.py}
 
-VERDE=$'\033[1;32m'; ROSSO=$'\033[1;31m'; GIALLO=$'\033[1;33m'; GRIGIO=$'\033[0m'
-ok()  { printf '    %sOK%s  %s\n' "$VERDE" "$GRIGIO" "$*"; }
-ko()  { printf '    %sNO%s  %s\n' "$ROSSO" "$GRIGIO" "$*"; }
-dub() { printf '    %s??%s  %s\n' "$GIALLO" "$GRIGIO" "$*"; }
+GREEN=$'\033[1;32m'; RED=$'\033[1;31m'; YELLOW=$'\033[1;33m'; GRAY=$'\033[0m'
+ok()  { printf '    %sOK%s  %s\n' "$GREEN" "$GRAY" "$*"; }
+ko()  { printf '    %sNO%s  %s\n' "$RED" "$GRAY" "$*"; }
+dub() { printf '    %s??%s  %s\n' "$YELLOW" "$GRAY" "$*"; }
 inf() { printf '    --  %s\n' "$*"; }
 log() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 
-AZIONE=${1:-guarda}
-case "$AZIONE" in guarda|allinea|prova) ;;
-*) echo "usage: $0 [guarda|allinea|prova]"; exit 2 ;; esac
+ACTION=${1:-inspect}
+case "$ACTION" in inspect|align|test) ;;
+*) echo "usage: $0 [inspect|align|test]"; exit 2 ;; esac
 
 T=$(mktemp -d)
 trap 'rm -rf "$T"' EXIT
 
 # ===========================================================================
-# `prova` steps aside right away: it builds its own scene and calls `guarda` again
+# `test` steps aside right away: it builds its own scene and calls `inspect` again
 # on a COPY.  It sits at the bottom of the file, here there is only the jump.
-if [ "$AZIONE" = prova ]; then
-	PROVA=1
+if [ "$ACTION" = test ]; then
+	TEST=1
 else
-	PROVA=0
+	TEST=0
 fi
 
 # ---------------------------------------------------------------------------
 log "0. The trees, declared (B0.1: declare AND verify)"
-inf "source (CHUWI): $FONTE"
+inf "source (CHUWI): $SOURCE"
 inf "product (NIC-OS): $DEST"
-if [ ! -d "$FONTE" ]; then
-	ko "⛔ the source tree is not there: $FONTE"
+if [ ! -d "$SOURCE" ]; then
+	ko "⛔ the source tree is not there: $SOURCE"
 	exit 2
 fi
 # ⛔ The denominator: how many files I am about to compare.  «All the ones looked at
 #    match» is true even when the ones looked at are zero (LEZIONI.md §1.9
 #    rule 6).
-FILE=$(cd "$FONTE" && find . -maxdepth 1 -type f -printf '%f\n' | sort)
-N_QUI=$(printf '%s\n' "$FILE" | grep -c . )
+FILE=$(cd "$SOURCE" && find . -maxdepth 1 -type f -printf '%f\n' | sort)
+N_HERE=$(printf '%s\n' "$FILE" | grep -c . )
 # ⛔ And the same list with SPACES, so we can ask it «is it in there?».
 #    ⚠ The first draft queried the newline one with `case " $FILE " in *" $n "*`,
 #    which can never match: between one name and the next there is a newline, not a
 #    space.  ⇒ The date check skipped EVERY file and the declaration of the
 #    «only over there» files listed them ALL — two checks that checked
 #    nothing, i.e. the D5 shape.  The first real round found it.
-ELENCO=" $(printf '%s ' $FILE)"
-if [ "$N_QUI" -eq 0 ]; then
-	ko "⛔ there is no file in $FONTE: I align nothing and I do not say it is fine"
+LIST=" $(printf '%s ' $FILE)"
+if [ "$N_HERE" -eq 0 ]; then
+	ko "⛔ there is no file in $SOURCE: I align nothing and I do not say it is fine"
 	exit 2
 fi
-ok "$N_QUI files in the source tree"
+ok "$N_HERE files in the source tree"
 
-if [ "$PROVA" -eq 1 ]; then
+if [ "$TEST" -eq 1 ]; then
 	# --- the test scene is built before looking at anything
 	SCRATCH=${SCRATCH:-/media/REMOTIX/src/tmp/prova-allinea-prodotto}
-	SPORCA=${SPORCA:-Makefile}
+	DIRTY_FILE=${DIRTY_FILE:-Makefile}
 	log "P. ⭐ THE POSITIVE CHECK — «can this tool say NO?»"
 	inf "⛔ A tool that always said «aligned» would be worse than no"
 	inf "   tool: it would give confidence (CODER.md §4.6).  Here the divergence is"
 	inf "   BUILT, on a copy that belongs to nobody, and the expected result is"
 	inf "   compared by the program — not by whoever reads (B0.4)."
-	inf "test copy: $SCRATCH   ·   file to dirty: $SPORCA"
+	inf "test copy: $SCRATCH   ·   file to dirty: $DIRTY_FILE"
 
 	$SSH "rm -rf $SCRATCH && mkdir -p $(dirname "$SCRATCH") && cp -R --preserve=timestamps $DEST $SCRATCH" || {
 		ko "⛔ I could not make the test copy"; exit 2; }
 	ok "copy made"
 
 	printf '\n  ---- round 1: the two trees MATCH, and it is expected to stay silent\n'
-	DEST=$SCRATCH bash "$0" guarda
+	DEST=$SCRATCH bash "$0" inspect
 	G1=$?
 	printf '\n  ---- round 2: ONE file dirtied, and it is expected to say so\n'
-	$SSH "printf '\n# line added by the test of attrezzi-allinea-prodotto.sh\n' >> $SCRATCH/$SPORCA" || {
-		ko "⛔ I could not dirty $SPORCA"; $SSH "rm -rf $SCRATCH"; exit 2; }
-	DEST=$SCRATCH bash "$0" guarda > "$T/giro2.txt" 2>&1
+	$SSH "printf '\n# line added by the test of attrezzi-allinea-prodotto.sh\n' >> $SCRATCH/$DIRTY_FILE" || {
+		ko "⛔ I could not dirty $DIRTY_FILE"; $SSH "rm -rf $SCRATCH"; exit 2; }
+	DEST=$SCRATCH bash "$0" inspect > "$T/giro2.txt" 2>&1
 	G2=$?
 	cat "$T/giro2.txt"
 
 	$SSH "rm -rf $SCRATCH" || dub "⚠ the test copy was not deleted: $SCRATCH"
 
 	log "P. The verdict of the test"
-	FALLE=0
+	LEAKS=0
 	if [ "$G1" -eq 0 ]; then
 		ok "round 1: exit 0 — with identical trees it STAYS SILENT"
 	else
 		ko "⛔ round 1: exit $G1 instead of 0.  Either the trees were not aligned"
 		ko "   before the test, or the tool says no even when there is"
 		ko "   nothing to say — and then its «no»s are worth nothing."
-		FALLE=$((FALLE+1))
+		LEAKS=$((LEAKS+1))
 	fi
 	if [ "$G2" -eq 1 ]; then
 		ok "round 2: exit 1 — it saw the built divergence"
 	else
 		ko "⛔ round 2: exit $G2 instead of 1: it did NOT see a changed file"
-		FALLE=$((FALLE+1))
+		LEAKS=$((LEAKS+1))
 	fi
-	if grep -q "DIFFERENT" "$T/giro2.txt" && grep -q "^.*$SPORCA DIFFERENT" "$T/giro2.txt"; then
-		ok "and it says it of the RIGHT file: «$SPORCA DIFFERENT» appears in the output"
+	if grep -q "DIFFERENT" "$T/giro2.txt" && grep -q "^.*$DIRTY_FILE DIFFERENT" "$T/giro2.txt"; then
+		ok "and it says it of the RIGHT file: «$DIRTY_FILE DIFFERENT» appears in the output"
 	else
-		ko "⛔ it turned red but does not name «$SPORCA»: it is red for another"
+		ko "⛔ it turned red but does not name «$DIRTY_FILE»: it is red for another"
 		ko "   reason, and this is not a positive check"
-		FALLE=$((FALLE+1))
+		LEAKS=$((LEAKS+1))
 	fi
 	# ⛔ And ONLY ONE: a tool that declared ALL the files different would be
 	#    red all the same, and could not point at anything.
@@ -258,15 +258,15 @@ if [ "$PROVA" -eq 1 ]; then
 		ok "and it names ONLY ONE ($N_DIV): it can tell apart, not just protest"
 	else
 		ko "⛔ it declares $N_DIV different files, and I dirtied one: it does not tell apart"
-		FALLE=$((FALLE+1))
+		LEAKS=$((LEAKS+1))
 	fi
-	if [ "$FALLE" -eq 0 ]; then
-		printf '\n    %s⭐ THE POSITIVE CHECK PASSES: silent when they match, and when%s\n' "$VERDE" "$GRIGIO"
-		printf '    %s   they diverge it says so, and says which.%s\n' "$VERDE" "$GRIGIO"
+	if [ "$LEAKS" -eq 0 ]; then
+		printf '\n    %s⭐ THE POSITIVE CHECK PASSES: silent when they match, and when%s\n' "$GREEN" "$GRAY"
+		printf '    %s   they diverge it says so, and says which.%s\n' "$GREEN" "$GRAY"
 		exit 0
 	fi
-	printf '\n    %s⛔ THE POSITIVE CHECK DOES NOT PASS: %s things out of 4 do not add up.%s\n' "$ROSSO" "$FALLE" "$GRIGIO"
-	printf '    %s   ⇒ the verdicts of this tool are worthless until it adds up.%s\n' "$ROSSO" "$GRIGIO"
+	printf '\n    %s⛔ THE POSITIVE CHECK DOES NOT PASS: %s things out of 4 do not add up.%s\n' "$RED" "$LEAKS" "$GRAY"
+	printf '    %s   ⇒ the verdicts of this tool are worthless until it adds up.%s\n' "$RED" "$GRAY"
 	exit 1
 fi
 
@@ -289,38 +289,38 @@ fi
 $SSH "find $DEST -maxdepth 1 -type f -printf '%T@ %f\n'" > "$T/la-ore.txt" || {
 	dub "⛔ I could not read the dates over there"; exit 2; }
 
-DIVERSI=""
-NUOVI=""
-UGUALI=0
+DIFFERENT=""
+NEW=""
+EQUAL=0
 for f in $FILE; do
-	a=$(md5sum "$FONTE/$f" | cut -d' ' -f1)
+	a=$(md5sum "$SOURCE/$f" | cut -d' ' -f1)
 	b=$(awk -v n="$DEST/$f" '$2==n{print $1}' "$T/la-md5.txt")
 	if [ -z "$b" ]; then
 		ko "⛔ $f is NOT THERE over there — $a"
-		NUOVI="$NUOVI $f"
+		NEW="$NEW $f"
 		continue
 	fi
 	if [ "$a" = "$b" ]; then
-		UGUALI=$((UGUALI+1))
+		EQUAL=$((EQUAL+1))
 	else
 		ko "⛔ $f DIFFERENT — here $a · there $b"
 		# ⭐ And we say HOW MANY lines differ: «different» and «different by a whole
 		#    cure» send you to look in two different places.
-		if $SCP "$UTE@$IND:$DEST/$f" "$T/la-$f"; then
-			inf "   lines that change: $(diff "$FONTE/$f" "$T/la-$f" | grep -c '^[<>]')"
+		if $SCP "$SSH_USER@$ADDR:$DEST/$f" "$T/la-$f"; then
+			inf "   lines that change: $(diff "$SOURCE/$f" "$T/la-$f" | grep -c '^[<>]')"
 		else
 			inf "   ⚠ I could not bring back the copy from over there: I do not count the lines"
 		fi
-		DIVERSI="$DIVERSI $f"
+		DIFFERENT="$DIFFERENT $f"
 	fi
 done
-[ "$UGUALI" -gt 0 ] && ok "$UGUALI files out of $N_QUI already identical"
+[ "$EQUAL" -gt 0 ] && ok "$EQUAL files out of $N_HERE already identical"
 
 # ⛔ And what is over there and not over here is DECLARED — not deleted.
 SOLO_LA=""
 while read -r _imp per; do
 	n=$(basename "$per")
-	case "$ELENCO" in *" $n "*) continue ;; esac
+	case "$LIST" in *" $n "*) continue ;; esac
 	case "$n" in *.o|remotix) continue ;; esac   # the product of the build
 	SOLO_LA="$SOLO_LA $n"
 done < "$T/la-md5.txt"
@@ -331,36 +331,36 @@ fi
 
 # ---------------------------------------------------------------------------
 log "2. Is the binary newer than the sources?"
-BIN_ORA=$(awk '$2=="remotix"{print $1}' "$T/la-ore.txt")
-VECCHIO=""
-if [ -z "$BIN_ORA" ]; then
+BIN_TIME=$(awk '$2=="remotix"{print $1}' "$T/la-ore.txt")
+OLD=""
+if [ -z "$BIN_TIME" ]; then
 	ko "⛔ over there there is no «remotix» binary: the product has never been"
 	ko "   built in $DEST"
-	VECCHIO=" (binary missing)"
+	OLD=" (binary missing)"
 else
-	while read -r ora nome; do
-		[ "$nome" = remotix ] && continue
-		case "$nome" in *.o) continue ;; esac
-		case "$ELENCO" in *" $nome "*) ;; *) continue ;; esac
-		if awk -v a="$ora" -v b="$BIN_ORA" 'BEGIN{exit !(a>b)}'; then
-			VECCHIO="$VECCHIO $nome"
+	while read -r now name; do
+		[ "$name" = remotix ] && continue
+		case "$name" in *.o) continue ;; esac
+		case "$LIST" in *" $name "*) ;; *) continue ;; esac
+		if awk -v a="$now" -v b="$BIN_TIME" 'BEGIN{exit !(a>b)}'; then
+			OLD="$OLD $name"
 		fi
 	done < "$T/la-ore.txt"
 	# ⚠ And the files that are not over there yet count as «newer»: a
 	#   binary that never compiled them is old by definition.
-	[ -n "$NUOVI" ] && VECCHIO="$VECCHIO$NUOVI"
-	if [ -n "$VECCHIO" ]; then
-		ko "⛔ the binary is OLDER than:$VECCHIO"
-		inf "   remotix: $(date -d "@${BIN_ORA%.*}" '+%Y-%m-%d %H:%M:%S %Z')  (CHUWI clock)"
+	[ -n "$NEW" ] && OLD="$OLD$NEW"
+	if [ -n "$OLD" ]; then
+		ko "⛔ the binary is OLDER than:$OLD"
+		inf "   remotix: $(date -d "@${BIN_TIME%.*}" '+%Y-%m-%d %H:%M:%S %Z')  (CHUWI clock)"
 		inf "   ⇒ it must be rebuilt even if the fingerprints match"
 	else
-		ok "the binary is newer than all the sources ($(date -d "@${BIN_ORA%.*}" '+%Y-%m-%d %H:%M:%S %Z'), CHUWI clock)"
+		ok "the binary is newer than all the sources ($(date -d "@${BIN_TIME%.*}" '+%Y-%m-%d %H:%M:%S %Z'), CHUWI clock)"
 	fi
 fi
 
-if [ -z "$DIVERSI" ] && [ -z "$NUOVI" ] && [ -z "$VECCHIO" ]; then
+if [ -z "$DIFFERENT" ] && [ -z "$NEW" ] && [ -z "$OLD" ]; then
 	ok "⭐ the product over there is already aligned with the sources, and the binary comes after"
-	[ "$AZIONE" = guarda ] && exit 0
+	[ "$ACTION" = inspect ] && exit 0
 	inf "nothing to copy and nothing to rebuild: straight to the terrain"
 fi
 
@@ -374,27 +374,27 @@ log "3. ⛔ Is there a grafted fault in one of the two trees?"
 #   version (`git show bde27c5^:banchi/01-b12-guasti.py`), and grafts made with
 #   it may still sit in old copies, so the needle stays.
 MARK12="REMOTIX B12 GUASTO"
-MARK11=$(grep -m1 '^MARCA = ' "$QUI/01-b11-guasto-innesta.py" | cut -d'"' -f2)
+MARK11=$(grep -m1 '^MARCA = ' "$HERE/01-b11-guasto-innesta.py" | cut -d'"' -f2)
 [ -n "$MARK11" ] || { dub "⛔ B11 mark not read: I do not look halfway"; exit 2; }
 inf "needles read from the catalogues: «$MARK12» · «$MARK11»"
 
-TROVATI=0
+FOUND=0
 # --- over here (the tree we copy from): the direction that matters most
 # ⛔ The status of `grep` is THREE facts and not two — `LEZIONI.md` §1.9 rule 1:
 #    0 = found · 1 = not there (which is an ANSWER) · ≥2 = I could not
 #    look (which is not an answer).  Only the third is a «??».
 for m in "$MARK12" "$MARK11"; do
-	grep -rlF -e "$m" "$FONTE" > "$T/qua-guasti.txt"
+	grep -rlF -e "$m" "$SOURCE" > "$T/qua-guasti.txt"
 	s=$?
 	if [ "$s" -eq 0 ]; then
 		ko "⛔ «$m» appears IN THE SOURCE TREE:"
 		sed 's/^/        /' "$T/qua-guasti.txt"
-		TROVATI=$((TROVATI+1))
+		FOUND=$((FOUND+1))
 	elif [ "$s" -gt 1 ]; then
-		dub "⛔ I could not search for «$m» in $FONTE (grep: $s)"
+		dub "⛔ I could not search for «$m» in $SOURCE (grep: $s)"
 		exit 2
 	else
-		ok "no trace of «$m» in $FONTE"
+		ok "no trace of «$m» in $SOURCE"
 	fi
 done
 # --- over there (the tree we write on)
@@ -404,7 +404,7 @@ for m in "$MARK12" "$MARK11"; do
 	if [ "$s" -eq 0 ]; then
 		ko "⛔ «$m» appears IN THE PRODUCT over there:"
 		sed 's/^/        /' "$T/la-guasti.txt"
-		TROVATI=$((TROVATI+1))
+		FOUND=$((FOUND+1))
 	elif [ "$s" -gt 1 ]; then
 		dub "⛔ I could not search for «$m» in $DEST (exit $s)"
 		exit 2
@@ -412,29 +412,29 @@ for m in "$MARK12" "$MARK11"; do
 		ok "no trace of «$m» in $DEST"
 	fi
 done
-if [ "$TROVATI" -gt 0 ]; then
+if [ "$FOUND" -gt 0 ]; then
 	ko "⛔ I TOUCH NOTHING: there is a grafted fault."
 	ko "   If it is in the SOURCE tree, copying it would put it into the product that"
 	ko "   everybody queries; if it is in the PRODUCT, copying over it would"
 	ko "   remove it FROM UNDER whoever is measuring it — and that round would say «the"
 	ko "   bench did not turn red» of a bench whose"
 	ko "   accused was taken out of its hands."
-	ko "   ⇒ Wait for the round to finish, or remove it with «--togli»."
+	ko "   ⇒ Wait for the round to finish, or remove it with «--remove»."
 	exit 3
 fi
 
-if [ "$AZIONE" = guarda ]; then
-	inf "«guarda» stops here: to copy and rebuild, «allinea»"
+if [ "$ACTION" = inspect ]; then
+	inf "«inspect» stops here: to copy and rebuild, «align»"
 	exit 1
 fi
 
 # ---------------------------------------------------------------------------
-if [ -n "$DIVERSI" ] || [ -n "$NUOVI" ]; then
+if [ -n "$DIFFERENT" ] || [ -n "$NEW" ]; then
 	log "4. Copying the sources into the product"
-	for f in $DIVERSI $NUOVI; do
-		$SCP "$FONTE/$f" "$UTE@$IND:$DEST/$f" || {
+	for f in $DIFFERENT $NEW; do
+		$SCP "$SOURCE/$f" "$SSH_USER@$ADDR:$DEST/$f" || {
 			ko "⛔ copying «$f» failed"; exit 3; }
-		a=$(md5sum "$FONTE/$f" | cut -d' ' -f1)
+		a=$(md5sum "$SOURCE/$f" | cut -d' ' -f1)
 		$SSH "md5sum $DEST/$f" > "$T/dopo.txt" || {
 			ko "⛔ «$f» copied but I could not read it back"; exit 3; }
 		b=$(cut -d' ' -f1 < "$T/dopo.txt")
@@ -449,7 +449,7 @@ fi
 
 # ---------------------------------------------------------------------------
 log "5. Rebuilding — with the house file, and looking at the OUTCOME"
-# ⭐ The build is not rewritten: `01-casa-7448.sh costruisci` already does it,
+# ⭐ The build is not rewritten: `01-casa-7448.sh build` already does it,
 #    and it knows where the tree is, which twin to compare, and that the outcome is
 #    read from `costruisci.sh` and not from `test -x` (CODER.md §4.1, depending).
 #
@@ -458,15 +458,15 @@ log "5. Rebuilding — with the house file, and looking at the OUTCOME"
 #     swallows it: the command hangs forever, in silence — and the symptom
 #     is not an error, it is a «slow» tool.  `FASI.md` §00-ambiente B3.3,
 #     paid for five times, the last one right in the file taken as a model here.
-$SSH "rm -f $LOG_LA" || dub "⚠ I could not remove the old log: what I read might be from before"
-$SSH_ROOT "bash $ENTRA --root \"bash $CASA costruisci > $LOG_DENTRO 2>&1\""
-S_COSTR=$?
-$SCP "$UTE@$IND:$LOG_LA" "$T/costr.log" || dub "⚠ the build log could not be brought back"
-if [ "$S_COSTR" -eq 0 ]; then
+$SSH "rm -f $LOG_THERE" || dub "⚠ I could not remove the old log: what I read might be from before"
+$SSH_ROOT "bash $ENTER --root \"bash $HOME_DIR build > $LOG_INSIDE 2>&1\""
+BUILD_STATUS=$?
+$SCP "$SSH_USER@$ADDR:$LOG_THERE" "$T/costr.log" || dub "⚠ the build log could not be brought back"
+if [ "$BUILD_STATUS" -eq 0 ]; then
 	ok "⭐ remotix rebuilt"
 	[ -f "$T/costr.log" ] && tail -3 "$T/costr.log" | sed 's/^/        /'
 else
-	ko "⛔ the build FAILED (exit $S_COSTR): the binary that is there is"
+	ko "⛔ the build FAILED (exit $BUILD_STATUS): the binary that is there is"
 	ko "   the old one, and now the sources have changed under it —"
 	ko "   i.e. the WORST scene.  The error:"
 	if [ -f "$T/costr.log" ]; then
@@ -481,30 +481,30 @@ fi
 log "6. ⛔ And the terrain says it, not me"
 # ⚠ ON THE HOST, not inside the container: `01-b0-terreno.sh` reads
 #   `/media/REMOTIX/...`, which inside the chroot has another name.
-$SSH "bash $TERRENO prodotto"
+$SSH "bash $TERRAIN prodotto"
 S_TERR=$?
 
 # ---------------------------------------------------------------------------
 log "7. ⛔ And is the live process running the new binary?"
 inf "aligned sources and a rebuilt binary are NOT enough: the running server"
 inf "still runs the old one, and that is the thirteen-hour defect."
-$SSH_ROOT "bash $ENTRA --root \"bash $CASA stato\""
-S_STATO=$?
+$SSH_ROOT "bash $ENTER --root \"bash $HOME_DIR status\""
+S_STATE=$?
 
 printf '\n'
 if [ "$S_TERR" -ne 0 ]; then
-	printf '    %s⛔ the terrain does NOT hold (exit %s): do not launch benches.%s\n' "$ROSSO" "$S_TERR" "$GRIGIO"
+	printf '    %s⛔ the terrain does NOT hold (exit %s): do not launch benches.%s\n' "$RED" "$S_TERR" "$GRAY"
 	exit 1
 fi
-if [ "$S_STATO" -ne 0 ]; then
-	printf '    %s⛔ the SOURCES are aligned and the binary is from now, but the%s\n' "$ROSSO" "$GRIGIO"
-	printf '    %s   running server is NOT executing that binary (exit %s).%s\n' "$ROSSO" "$S_STATO" "$GRIGIO"
+if [ "$S_STATE" -ne 0 ]; then
+	printf '    %s⛔ the SOURCES are aligned and the binary is from now, but the%s\n' "$RED" "$GRAY"
+	printf '    %s   running server is NOT executing that binary (exit %s).%s\n' "$RED" "$S_STATE" "$GRAY"
 	printf '       ⇒ The cure, by whoever holds the port:\n'
-	printf '            bash %s --root "bash %s riaccendi"\n' "$ENTRA" "$CASA"
+	printf '            bash %s --root "bash %s riaccendi"\n' "$ENTER" "$HOME_DIR"
 	printf '       ⚠ I do not do it: on 7448 there may be rounds by other people,\n'
 	printf '         and shutting a server down under whoever is measuring it is the damage that\n'
 	printf '         this family of tools exists to avoid.\n'
 	exit 1
 fi
-printf '    %s⭐ product aligned: sources, binary and process say the same thing.%s\n' "$VERDE" "$GRIGIO"
+printf '    %s⭐ product aligned: sources, binary and process say the same thing.%s\n' "$GREEN" "$GRAY"
 exit 0

@@ -9,57 +9,57 @@ import json, os, shutil, socket, subprocess, tempfile, time
 
 
 class Marionette:
-    def __init__(self, porta=2828, host="127.0.0.1"):
-        self.s = socket.create_connection((host, porta), timeout=120)
+    def __init__(self, port=2828, host="127.0.0.1"):
+        self.s = socket.create_connection((host, port), timeout=120)
         self.s.settimeout(180)
         self.buf = b""
         self.n = 0
-        self._leggi()                      # the server's greeting
+        self._read()                      # the server's greeting
 
     # the frame is «length:json»
-    def _leggi(self):
+    def _read(self):
         while b":" not in self.buf:
             self.buf += self.s.recv(65536)
-        testa, resto = self.buf.split(b":", 1)
-        quanti = int(testa)
-        while len(resto) < quanti:
-            resto += self.s.recv(65536)
-        self.buf = resto[quanti:]
-        return json.loads(resto[:quanti])
+        head, rest = self.buf.split(b":", 1)
+        amount = int(head)
+        while len(rest) < amount:
+            rest += self.s.recv(65536)
+        self.buf = rest[amount:]
+        return json.loads(rest[:amount])
 
-    def chiama(self, comando, parametri=None):
+    def call(self, command, parameters=None):
         self.n += 1
-        corpo = json.dumps([0, self.n, comando, parametri or {}]).encode()
-        self.s.sendall(str(len(corpo)).encode() + b":" + corpo)
+        body = json.dumps([0, self.n, command, parameters or {}]).encode()
+        self.s.sendall(str(len(body)).encode() + b":" + body)
         while True:
-            m = self._leggi()
+            m = self._read()
             if isinstance(m, list) and len(m) == 4 and m[0] == 1 and m[1] == self.n:
                 if m[2] is not None:
-                    raise RuntimeError("%s: %s" % (comando, json.dumps(m[2])[:600]))
+                    raise RuntimeError("%s: %s" % (command, json.dumps(m[2])[:600]))
                 return m[3]
 
-    def sessione(self, insicuri=True):
-        return self.chiama("WebDriver:NewSession",
+    def session(self, insecure=True):
+        return self.call("WebDriver:NewSession",
                            {"capabilities": {"alwaysMatch":
-                            {"acceptInsecureCerts": insicuri}}})
+                            {"acceptInsecureCerts": insecure}}})
 
-    def vai(self, url):
-        return self.chiama("WebDriver:Navigate", {"url": url})
+    def navigate(self, url):
+        return self.call("WebDriver:Navigate", {"url": url})
 
-    def js(self, codice, args=None):
-        return self.chiama("WebDriver:ExecuteScript",
-                           {"script": codice, "args": args or []})
+    def js(self, code, args=None):
+        return self.call("WebDriver:ExecuteScript",
+                           {"script": code, "args": args or []})
 
-    def js_async(self, codice, args=None, timeout=120000):
-        self.chiama("WebDriver:SetTimeouts", {"script": timeout})
-        return self.chiama("WebDriver:ExecuteAsyncScript",
-                           {"script": codice, "args": args or []})
+    def js_async(self, code, args=None, timeout=120000):
+        self.call("WebDriver:SetTimeouts", {"script": timeout})
+        return self.call("WebDriver:ExecuteAsyncScript",
+                           {"script": code, "args": args or []})
 
-    def misura(self, l, a):
-        return self.chiama("WebDriver:SetWindowRect", {"width": l, "height": a})
+    def measure(self, l, a):
+        return self.call("WebDriver:SetWindowRect", {"width": l, "height": a})
 
-    def schermata(self):
-        return self.chiama("WebDriver:TakeScreenshot", {"full": False})
+    def screenshot(self):
+        return self.call("WebDriver:TakeScreenshot", {"full": False})
 
 
 def screen_in_foreground():
@@ -87,8 +87,8 @@ def screen_in_foreground():
       while the user «user» was in the foreground — four 20-minute sessions
       with Firefox and Chrome VISIBLE inside it, windows mapped and
       counters full.  ⇒ Whoever launches DECLARES it with
-      `REMOTIX_SCHERMO_ANNIDATO=1` (and `WAYLAND_DISPLAY` on its socket)."""
-    if os.environ.get("REMOTIX_SCHERMO_ANNIDATO") == "1" and os.environ.get("WAYLAND_DISPLAY"):
+      `REMOTIX_NESTED_SCREEN=1` (and `WAYLAND_DISPLAY` on its socket)."""
+    if os.environ.get("REMOTIX_NESTED_SCREEN") == "1" and os.environ.get("WAYLAND_DISPLAY"):
         return True, ""
     try:
         def _ask(*a):
@@ -96,22 +96,22 @@ def screen_in_foreground():
                                   stdout=subprocess.PIPE,
                                   stderr=subprocess.DEVNULL,
                                   timeout=5).stdout.decode().strip()
-        attiva = _ask("show-seat", "seat0", "-p", "ActiveSession")
-        if not attiva:
+        active = _ask("show-seat", "seat0", "-p", "ActiveSession")
+        if not active:
             return True, ""
-        di_chi = _ask("show-session", attiva, "-p", "User")
+        di_chi = _ask("show-session", active, "-p", "User")
         if not di_chi or di_chi == str(os.getuid()):
             return True, ""
-        nome = _ask("show-session", attiva, "-p", "Name") or di_chi
+        name = _ask("show-session", active, "-p", "Name") or di_chi
         return False, ("in the foreground is session %s of user «%s», "
-                       "not yours" % (attiva, nome))
+                       "not yours" % (active, name))
     except Exception:                          # noqa: BLE001
         return True, ""                        # I cannot tell: I do not get in the way
 
 
-def accendi(profile_prefs=None, headless=True, porta=2828, largo=1400, alto=1000,
-            schermo=None):
-    """⭐ `schermo=":99"` starts a REAL Firefox on a virtual screen.
+def turn_on(profile_prefs=None, headless=True, port=2828, largo=1400, alto=1000,
+            screen=None):
+    """⭐ `screen=":99"` starts a REAL Firefox on a virtual screen.
 
     ⛔ It is needed because `--headless` is NOT a real browser where it matters: `[M]` 20
     August 2026, the `paste` event arrives in headless even without an editable
@@ -121,34 +121,34 @@ def accendi(profile_prefs=None, headless=True, porta=2828, largo=1400, alto=1000
     # ⭐ The bench looks at the scene BEFORE starting: a real window on the
     #   user's desktop wants that desktop in the foreground.  Better a
     #   verdict in zero seconds than three minutes of blind waiting.
-    if not headless and not schermo:
-        ok, perche = screen_in_foreground()
+    if not headless and not screen:
+        ok, why = screen_in_foreground()
         if not ok:
             raise RuntimeError(
                 "⛔ VISIBLE Firefox cannot start: %s.  On Wayland the "
                 "window is not mapped and `WebDriver:NewSession` does not answer "
                 "(ceiling 180 s).  ⇒ three roads: go back to your graphical "
                 "session; or start a virtual screen (`Xvfb :99 "
-                "-screen 0 1600x1200x24` and then `schermo=\":99\"`); or "
-                "`headless=True` where it is enough." % perche)
-    profilo = tempfile.mkdtemp(prefix="remotix-ff-")
+                "-screen 0 1600x1200x24` and then `screen=\":99\"`); or "
+                "`headless=True` where it is enough." % why)
+    profile = tempfile.mkdtemp(prefix="remotix-ff-")
     prefs = {
         "browser.startup.homepage_override.mstone": "ignore",
         "datareporting.policy.firstRunURL": "",
         "browser.aboutwelcome.enabled": False,
         "browser.shell.checkDefaultBrowser": False,
-        "marionette.port": porta,
+        "marionette.port": port,
         # ⚠ the console log: it serves to collect the decoder
         #   faults the page does not carry to the server
         "devtools.console.stdout.content": True,
     }
     prefs.update(profile_prefs or {})
-    # ⭐ `REMOTIX_FF_PREFS='{"pref": valore}'`: extra preferences for the bench's
+    # ⭐ `REMOTIX_FF_PREFS='{"pref": value}'`: extra preferences for the bench's
     #   Firefox, without touching the guides (e.g. `media.hardware-video-decoding.
     #   enabled` to compare hardware and software decoding, phase 16).
     #   Empty or absent: no effect.
     prefs.update(json.loads(os.environ.get("REMOTIX_FF_PREFS") or "{}"))
-    with open(os.path.join(profilo, "user.js"), "w") as f:
+    with open(os.path.join(profile, "user.js"), "w") as f:
         for k, v in prefs.items():
             f.write('user_pref("%s", %s);\n' % (k, json.dumps(v)))
     # ⭐ `-remote-allow-system-access` opens the **chrome** context to Marionette:
@@ -156,32 +156,32 @@ def accendi(profile_prefs=None, headless=True, porta=2828, largo=1400, alto=1000
     #   the document, for example the little «Paste» button of §9 (`07-b56`).
     #   ⚠ It is a BENCH flag: no user's Firefox starts like this.
     cmd = ["firefox", "--marionette", "--no-remote", "-remote-allow-system-access",
-           "--profile", profilo, "--width", str(largo), "--height", str(alto)]
+           "--profile", profile, "--width", str(largo), "--height", str(alto)]
     if headless:
         cmd.append("--headless")
-    log = open(os.path.join(profilo, "uscita.log"), "wb")
-    amb = dict(os.environ)
-    if schermo:
-        amb["DISPLAY"] = schermo
+    log = open(os.path.join(profile, "uscita.log"), "wb")
+    env = dict(os.environ)
+    if screen:
+        env["DISPLAY"] = screen
         # ⛔ On a Wayland session, `DISPLAY` alone is not enough: Firefox
         #    would take Wayland anyway and ignore the virtual screen.
-        amb.pop("WAYLAND_DISPLAY", None)
-        amb["MOZ_ENABLE_WAYLAND"] = "0"
-    p = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT, env=amb)
+        env.pop("WAYLAND_DISPLAY", None)
+        env["MOZ_ENABLE_WAYLAND"] = "0"
+    p = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT, env=env)
     for _ in range(120):
         try:
-            m = Marionette(porta)
-            return p, m, profilo
+            m = Marionette(port)
+            return p, m, profile
         except OSError:
             time.sleep(0.5)
     p.kill()
-    raise RuntimeError("Marionette did not open port %d" % porta)
+    raise RuntimeError("Marionette did not open port %d" % port)
 
 
-def spegni(p, profilo):
+def turn_off(p, profile):
     try:
         p.terminate()
         p.wait(15)
     except Exception:
         p.kill()
-    shutil.rmtree(profilo, ignore_errors=True)
+    shutil.rmtree(profile, ignore_errors=True)

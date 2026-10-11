@@ -4,7 +4,7 @@
 
     python3 banchi/02-pagina-sonda-codec.py            builds and prints the JS
     python3 banchi/02-pagina-sonda-codec.py --json     prints them as JSON
-    python3 banchi/02-pagina-sonda-codec.py --certifica  healthy → fault → healed
+    python3 banchi/02-pagina-sonda-codec.py --certify  healthy → fault → healed
 
 ===========================================================================
 ⛔ WHY THE PRODUCT CARRIES FIVE REAL STREAMS AROUND
@@ -45,10 +45,10 @@ fill passes them.
 ===========================================================================
 ⛔ AND IT IS CERTIFIED, like every other tool of this bench
 
-    --certifica   healthy → fault → healed, with the expectation written beforehand:
+    --certify   healthy → fault → healed, with the expectation written beforehand:
 
       healthy    all the probes of `src/pagina.html` have two different colours and >= 200 bytes
-      fault      `GUASTO=una-tinta` builds the frame of ONE single colour
+      fault      `FAULT=una-tinta` builds the frame of ONE single colour
                  ⇒ the claim «two different colours» MUST fall.  Without this
                    round, «the probe has a negative control» would be just a sentence
       healed     like the healthy one
@@ -60,7 +60,7 @@ import re
 import subprocess
 import sys
 
-LARGHEZZA, ALTEZZA = 64, 48
+WIDTH, ALTEZZA = 64, 48
 
 # ⛔ The two colours are taken from the eight of `02-pagina-sequenze.py`, and the
 #    distance between them is over 180 per channel: `[M]` the RGB→YUV conversion,
@@ -70,52 +70,52 @@ LEFT_SIDE = (220, 32, 32)     # red
 RIGHT_SIDE = (48, 64, 220)       # blue
 
 
-def errore(testo, dettaglio=""):
-    print(f"\033[1;31mNO\033[0m  {testo}", file=sys.stderr)
-    if dettaglio:
-        print("    " + dettaglio.replace("\n", "\n    "), file=sys.stderr)
+def error(text, detail=""):
+    print(f"\033[1;31mNO\033[0m  {text}", file=sys.stderr)
+    if detail:
+        print("    " + detail.replace("\n", "\n    "), file=sys.stderr)
     sys.exit(2)
 
 
-def esegui(comando, entrata=b""):
-    p = subprocess.run(comando, input=entrata, stdout=subprocess.PIPE,
+def run(command, entry=b""):
+    p = subprocess.run(command, input=entry, stdout=subprocess.PIPE,
                        stderr=subprocess.PIPE)
     return p.returncode, p.stdout, p.stderr
 
 
-def grezzo(guasto=""):
+def raw(fault=""):
     """The source frame in RGB24: half and half.
 
     ⛔ With the `una-tinta` fault the two halves become the same: it is the fault
        that certifies the probe's negative control."""
-    destra = LEFT_SIDE if guasto == "una-tinta" else RIGHT_SIDE
-    riga = bytes(LEFT_SIDE) * (LARGHEZZA // 2) + bytes(destra) * (LARGHEZZA // 2)
-    return riga * ALTEZZA
+    right_edge = LEFT_SIDE if fault == "una-tinta" else RIGHT_SIDE
+    line = bytes(LEFT_SIDE) * (WIDTH // 2) + bytes(right_edge) * (WIDTH // 2)
+    return line * ALTEZZA
 
 
-def build_hevc(profondita, guasto=""):
+def build_hevc(depth, fault=""):
     """⛔ Pure Annex-B, NO `description` — `FASI.md` §02-primo-fotogramma D1,
     confirmed by the pixel in F2-5 §3: `hev1.` and `hvc1.` both work, and
     Chromium decides the stream form from the PRESENCE of the `description`, not
     from the prefix."""
-    pix = "yuv420p10le" if profondita == 10 else "yuv420p"
-    sorgente = "rgb48le" if profondita == 10 else "rgb24"
-    dati = grezzo(guasto)
-    if profondita == 10:
+    pix = "yuv420p10le" if depth == 10 else "yuv420p"
+    source = "rgb48le" if depth == 10 else "rgb24"
+    data = raw(fault)
+    if depth == 10:
         # ⚠ The source stays at 8 bits promoted: here the depth of the
         #   CONTENT is not measured (F2-5 §6 — that question is asked at the
         #   source or not at all), what is measured is whether the browser DECODES a
         #   Main10 and paints it.
-        dati = b"".join(bytes([b, b]) for b in dati)
-    comando = [
+        data = b"".join(bytes([b, b]) for b in data)
+    command = [
         "ffmpeg", "-hide_banner", "-nostdin", "-y",
-        "-f", "rawvideo", "-pix_fmt", sorgente,
-        "-s", f"{LARGHEZZA}x{ALTEZZA}", "-framerate", "30", "-i", "pipe:0",
+        "-f", "rawvideo", "-pix_fmt", source,
+        "-s", f"{WIDTH}x{ALTEZZA}", "-framerate", "30", "-i", "pipe:0",
         "-c:v", "libx265", "-pix_fmt", pix, "-frames:v", "1",
         # ⛔ The profile is ASKED FOR BY NAME and it is checked that it was given
         #    (`CODER.md` §3.9): x265 left to choose emits `Main 10 Intra`
         #    (Rext, profile_idc 4), which is not what the product configures.
-        "-profile:v", "main10" if profondita == 10 else "main",
+        "-profile:v", "main10" if depth == 10 else "main",
         # ⛔ `info=0` removes the x265 SEI that holds the command line: it is
         #    ~1.5 KB of text that would end up in base64 inside the product's
         #    page without telling anyone anything.
@@ -131,11 +131,11 @@ def build_hevc(profondita, guasto=""):
         #
         #    ⛔ And the damage was not in the bench: the two probes end up **in
         #    `src/pagina.html`**, and the page uses them to decide what to
-        #    put in the `CIAO`.  The declared string said `hev1.1.6` /
+        #    put in the `HELLO`.  The declared string said `hev1.1.6` /
         #    `hev1.2.4` — profiles 1 and 2 — and **the bytes said 4**.
         #    `isConfigSupported` answers to the STRING and said `true`; the
         #    decoder fell on the BYTES with `EncodingError`; the page
-        #    concluded «HEVC does not reach the pixel» and left it out of the `CIAO`;
+        #    concluded «HEVC does not reach the pixel» and left it out of the `HELLO`;
         #    and the server, which takes the first entry of the CLIENT's list,
         #    negotiated **AV1**.
         #
@@ -152,14 +152,14 @@ def build_hevc(profondita, guasto=""):
         "-colorspace", "bt709",
         "-f", "hevc", "pipe:1",
     ]
-    codice, uscita, errori = esegui(comando, entrata=dati)
-    if codice != 0 or len(uscita) < 64:
-        errore(f"libx265 did not produce the {profondita}-bit probe",
-               errori.decode("utf-8", "replace")[-800:])
-    return uscita
+    code, output, errors = run(command, entry=data)
+    if code != 0 or len(output) < 64:
+        error(f"libx265 did not produce the {depth}-bit probe",
+               errors.decode("utf-8", "replace")[-800:])
+    return output
 
 
-def build_h264(profondita, guasto=""):
+def build_h264(depth, fault=""):
     """⛔ Pure Annex-B, NO `description` — the same choice as HEVC, and for
     the same reason: without `description` the browser takes the stream as
     Annex-B, and it is the form our encoder emits.
@@ -168,13 +168,13 @@ def build_h264(profondita, guasto=""):
       machine carries `VAProfileH264High` and not 10 bit, so a 10-bit
       probe would measure a road the server **cannot produce in hardware** —
       and whoever saw it green would believe they had something they do not have."""
-    if profondita != 8:
+    if depth != 8:
         return None
-    dati = grezzo(guasto)
-    comando = [
+    data = raw(fault)
+    command = [
         "ffmpeg", "-hide_banner", "-nostdin", "-y",
         "-f", "rawvideo", "-pix_fmt", "rgb24",
-        "-s", f"{LARGHEZZA}x{ALTEZZA}", "-framerate", "30", "-i", "pipe:0",
+        "-s", f"{WIDTH}x{ALTEZZA}", "-framerate", "30", "-i", "pipe:0",
         "-c:v", "libx264", "-pix_fmt", "yuv420p", "-frames:v", "1",
         # ⛔ The profile is ASKED FOR BY NAME: `high` is what the
         #    `avc1.6400xx` string the page sends to `VideoDecoder` declares.  If
@@ -197,26 +197,26 @@ def build_h264(profondita, guasto=""):
         "-colorspace", "bt709",
         "-f", "h264", "pipe:1",
     ]
-    codice, uscita, errori = esegui(comando, entrata=dati)
-    if codice != 0 or len(uscita) < 64:
-        errore(f"libx264 did not produce the {profondita}-bit probe",
-               errori.decode("utf-8", "replace")[-800:])
-    return uscita
+    code, output, errors = run(command, entry=data)
+    if code != 0 or len(output) < 64:
+        error(f"libx264 did not produce the {depth}-bit probe",
+               errors.decode("utf-8", "replace")[-800:])
+    return output
 
 
-def build_av1(profondita, guasto=""):
+def build_av1(depth, fault=""):
     """⛔ No `description`: AV1 in WebCodecs takes the temporal units of
     OBUs as they are (F2-5, addition of 12 Aug).  Here IVF is gone through
     only to strip the frame."""
-    pix = "yuv420p10le" if profondita == 10 else "yuv420p"
-    sorgente = "rgb48le" if profondita == 10 else "rgb24"
-    dati = grezzo(guasto)
-    if profondita == 10:
-        dati = b"".join(bytes([b, b]) for b in dati)
-    comando = [
+    pix = "yuv420p10le" if depth == 10 else "yuv420p"
+    source = "rgb48le" if depth == 10 else "rgb24"
+    data = raw(fault)
+    if depth == 10:
+        data = b"".join(bytes([b, b]) for b in data)
+    command = [
         "ffmpeg", "-hide_banner", "-nostdin", "-y",
-        "-f", "rawvideo", "-pix_fmt", sorgente,
-        "-s", f"{LARGHEZZA}x{ALTEZZA}", "-framerate", "30", "-i", "pipe:0",
+        "-f", "rawvideo", "-pix_fmt", source,
+        "-s", f"{WIDTH}x{ALTEZZA}", "-framerate", "30", "-i", "pipe:0",
         "-c:v", "libaom-av1", "-pix_fmt", pix, "-frames:v", "1",
         "-crf", "20", "-b:v", "0", "-cpu-used", "8",
         "-color_primaries", "bt709", "-color_trc", "bt709",
@@ -228,71 +228,71 @@ def build_av1(profondita, guasto=""):
         #    browser that instead decodes perfectly well.
         "-f", "obu", "pipe:1",
     ]
-    codice, uscita, errori = esegui(comando, entrata=dati)
-    if codice != 0 or len(uscita) < 16:
-        errore(f"libaom-av1 did not produce the {profondita}-bit probe",
-               errori.decode("utf-8", "replace")[-800:])
-    return uscita
+    code, output, errors = run(command, entry=data)
+    if code != 0 or len(output) < 16:
+        error(f"libaom-av1 did not produce the {depth}-bit probe",
+               errors.decode("utf-8", "replace")[-800:])
+    return output
 
 
-def stream_tints(flusso, codec, profondita):
+def stream_tints(stream, codec, depth):
     """⛔ The positive control of the BUILDER: the stream just produced is
     re-decoded and it is checked that the two halves are still two different
     colours.  Without it, «the probe has two colours» would be a property of the
     SOURCE, not of the stream that will end up in the product."""
-    formato = {"hevc": "hevc", "h264": "h264"}.get(codec, "obu")
-    comando = ["ffmpeg", "-hide_banner", "-nostdin", "-v", "error",
-               "-f", formato, "-i", "pipe:0",
+    fmt = {"hevc": "hevc", "h264": "h264"}.get(codec, "obu")
+    command = ["ffmpeg", "-hide_banner", "-nostdin", "-v", "error",
+               "-f", fmt, "-i", "pipe:0",
                "-pix_fmt", "rgb24", "-f", "rawvideo", "pipe:1"]
-    codice, uscita, errori = esegui(comando, entrata=flusso)
-    if codice != 0 or len(uscita) < LARGHEZZA * ALTEZZA * 3:
-        return None, errori.decode("utf-8", "replace")[-400:]
+    code, output, errors = run(command, entry=stream)
+    if code != 0 or len(output) < WIDTH * ALTEZZA * 3:
+        return None, errors.decode("utf-8", "replace")[-400:]
 
     def media(x0, x1):
         r = g = b = n = 0
         for y in range(ALTEZZA // 4, ALTEZZA * 3 // 4):
             for x in range(x0, x1):
-                i = (y * LARGHEZZA + x) * 3
-                r += uscita[i]; g += uscita[i + 1]; b += uscita[i + 2]
+                i = (y * WIDTH + x) * 3
+                r += output[i]; g += output[i + 1]; b += output[i + 2]
                 n += 1
         return [r // n, g // n, b // n]
 
-    return (media(4, LARGHEZZA // 2 - 4), media(LARGHEZZA // 2 + 4,
-                                                LARGHEZZA - 4)), None
+    return (media(4, WIDTH // 2 - 4), media(WIDTH // 2 + 4,
+                                                WIDTH - 4)), None
 
 
-def costruisci_tutte(guasto=""):
-    fuori = {}
+def build_all(fault=""):
+    report = {}
     builders = {"hevc": build_hevc, "h264": build_h264,
                    "av1": build_av1}
     for codec in ("hevc", "h264", "av1"):
-        for profondita in (8, 10):
-            flusso = builders[codec](profondita, guasto)
+        for depth in (8, 10):
+            stream = builders[codec](depth, fault)
             # ⛔ «Not there» is SKIPPED by declaring it, and no empty entry is
             #    written: an empty probe in the page would say «tried and does not
             #    arrive» of something never tried (`LEZIONI.md` §1.9).
-            if flusso is None:
+            if stream is None:
                 continue
-            lette, guai = stream_tints(flusso, codec, profondita)
-            fuori[f"{codec}-{profondita}"] = {
-                "codec": codec, "profondita": profondita,
-                "larghezza": LARGHEZZA, "altezza": ALTEZZA,
-                "byte": len(flusso),
-                "dati": base64.b64encode(flusso).decode(),
+            read, troubles = stream_tints(stream, codec, depth)
+            report[f"{codec}-{depth}"] = {
+                "codec": codec, "depth": depth,
+                "width": WIDTH, "height": ALTEZZA,
+                "byte": len(stream),
+                "dati": base64.b64encode(stream).decode(),
                 "sinistra": list(LEFT_SIDE), "destra": list(RIGHT_SIDE),
-                "riletto": lette, "guai": guai,
+                "riletto": read, "troubles": troubles,
             }
-    return fuori
+    return report
 
 
-def print_js(sonde):
+def print_js(probes):
     print("/* ⛔ Generated by `banchi/02-pagina-sonda-codec.py` — not written by")
     print("      hand.  The two halves are red and blue, the canvas is first filled")
     print("      with magenta: two right readings AND DIFFERENT ones, or «it arrives» and «the canvas")
     print("      was already that colour» would look the same. */")
-    print("const SONDE = {")
-    for nome, s in sonde.items():
-        print(f'  "{nome}": {{ l: {s["larghezza"]}, a: {s["altezza"]}, '
+    print("const PROBES = {")
+    for name, s in probes.items():
+        print(f'  "{name}": {{ l: {s["width"]}, a: {s["height"]}, '
               f'profondita: {s["profondita"]},')
         print(f'    sinistra: {s["sinistra"]}, destra: {s["destra"]},')
         print(f'    dati: "{s["dati"]}" }},')
@@ -300,64 +300,64 @@ def print_js(sonde):
 
 
 def probes_of_page():
-    """⛔ The probes `src/pagina.html` CARRIES, read from its `const SONDE`.
+    """⛔ The probes `src/pagina.html` CARRIES, read from its `const PROBES`.
     `[M]` 11 Oct 2026: the expectation was a hand-written `4`, and since
     9cd6b9a (20 Aug 2026, `h264-8` added) the generator makes five — so
-    `--certifica` was red for seven weeks on a correct page.  ⇒ The count
+    `--certify` was red for seven weeks on a correct page.  ⇒ The count
     comes from the consumer, and a probe missing on either side is a NO."""
-    pagina = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+    page = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                           "..", "src", "pagina.html")
-    with open(pagina, encoding="utf-8") as f:
-        testo = f.read()
-    blocco = testo[testo.index("const SONDE = {"):]
-    blocco = blocco[:blocco.index("\n};")]
-    return re.findall(r'^  "([a-z0-9]+-[0-9]+)": \{', blocco, re.M)
+    with open(page, encoding="utf-8") as f:
+        text = f.read()
+    block = text[text.index("const PROBES = {"):]
+    block = block[:block.index("\n};")]
+    return re.findall(r'^  "([a-z0-9]+-[0-9]+)": \{', block, re.M)
 
 
-def certifica():
-    nomi = probes_of_page()
+def certify():
+    names = probes_of_page()
     print("\033[1m== the certification of the probe: healthy → fault → healed\033[0m")
     print(f"   expected, written BEFOREHAND: healthy and healed have two DIFFERENT colours in")
-    print(f"   all {len(nomi)} probes of src/pagina.html ({', '.join(nomi)}); with the")
+    print(f"   all {len(names)} probes of src/pagina.html ({', '.join(names)}); with the")
     print("   `una-tinta` fault the claim FALLS.")
-    esiti = []
-    for giro, guasto in (("sano", ""), ("guasto", "una-tinta"), ("risanato", "")):
-        sonde = costruisci_tutte(guasto)
+    outcomes = []
+    for cur_round, fault in (("healthy", ""), ("fault", "una-tinta"), ("healed", "")):
+        probes = build_all(fault)
         diverse = 0
-        for nome, s in sonde.items():
+        for name, s in probes.items():
             if s["riletto"] is None:
-                print(f"    \033[1;33m??\033[0m  {nome}: it could not be "
-                      f"re-decoded — {s['guai']}")
+                print(f"    \033[1;33m??\033[0m  {name}: it could not be "
+                      f"re-decoded — {s['troubles']}")
                 continue
             sx, dx = s["riletto"]
             d = sum((a - b) ** 2 for a, b in zip(sx, dx)) ** 0.5
             if d > 60:
                 diverse += 1
-            print(f"    {nome:10s} {s['byte']:5d} bytes · left {sx} · "
+            print(f"    {name:10s} {s['byte']:5d} bytes · left {sx} · "
                   f"right {dx} · distance {d:.0f}")
-        atteso = len(nomi) if guasto == "" else 0
-        ok = diverse == atteso and sorted(sonde) == sorted(nomi)
-        esiti.append(ok)
-        segno = "\033[1;32mOK\033[0m" if ok else "\033[1;31mNO\033[0m"
-        if sorted(sonde) != sorted(nomi):
-            print(f"    built {sorted(sonde)}, the page carries {sorted(nomi)}")
-        print(f"  {segno}  round «{giro}»: {diverse} probes out of {len(nomi)} with two "
-              f"different colours (expected {atteso})\n")
-    return 0 if all(esiti) else 1
+        expected = len(names) if fault == "" else 0
+        ok = diverse == expected and sorted(probes) == sorted(names)
+        outcomes.append(ok)
+        sign = "\033[1;32mOK\033[0m" if ok else "\033[1;31mNO\033[0m"
+        if sorted(probes) != sorted(names):
+            print(f"    built {sorted(probes)}, the page carries {sorted(names)}")
+        print(f"  {sign}  round «{cur_round}»: {diverse} probes out of {len(names)} with two "
+              f"different colours (expected {expected})\n")
+    return 0 if all(outcomes) else 1
 
 
 if __name__ == "__main__":
-    if "--certifica" in sys.argv:
-        sys.exit(certifica())
-    sonde = costruisci_tutte(os.environ.get("GUASTO", ""))
-    for nome, s in sonde.items():
+    if "--certify" in sys.argv:
+        sys.exit(certify())
+    probes = build_all(os.environ.get("GUASTO", ""))
+    for name, s in probes.items():
         if s["riletto"] is None:
-            errore(f"the probe {nome} does not re-decode: {s['guai']}")
+            error(f"the probe {name} does not re-decode: {s['troubles']}")
         sx, dx = s["riletto"]
         d = sum((a - b) ** 2 for a, b in zip(sx, dx)) ** 0.5
-        print(f"-- {nome:10s} {s['byte']:5d} bytes · {sx} / {dx} · "
+        print(f"-- {name:10s} {s['byte']:5d} bytes · {sx} / {dx} · "
               f"distance {d:.0f}", file=sys.stderr)
     if "--json" in sys.argv:
-        print(json.dumps(sonde, indent=1))
+        print(json.dumps(probes, indent=1))
     else:
-        print_js(sonde)
+        print_js(probes)

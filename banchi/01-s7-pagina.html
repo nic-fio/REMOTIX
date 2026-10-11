@@ -32,12 +32,12 @@
                font: 16px/1.5 system-ui, sans-serif; }
   #alto   { height: 20000px;
             background: repeating-linear-gradient(#1a1a22 0 40px, #202029 40px 80px); }
-  #targa  { position: fixed; top: 0; left: 0; right: 0; padding: 8px 12px;
+  #plate  { position: fixed; top: 0; left: 0; right: 0; padding: 8px 12px;
             background: #000; border-bottom: 1px solid #444; white-space: pre; }
 </style>
 </head>
 <body>
-<div id="targa">S7 — waiting</div>
+<div id="plate">S7 — waiting</div>
 <div id="alto"></div>
 <script>
 "use strict";
@@ -45,7 +45,7 @@
 const CENTER = 8000;        // where it starts again at every round
 const WAIT_READ = 250; // ms between the click and the reading of scrollY
 
-let numero = 0;             // grows inside THIS page load
+let number = 0;             // grows inside THIS page load
 let inProgress = false;
 
 // ⛔ THE MARK OF THE ROUND, and it is born from a real defect.
@@ -54,29 +54,29 @@ let inProgress = false;
 //    load, and the bench looked for «the line with n greater than the placeholder».
 //    At the second round the log already contained a line n=1, the placeholder
 //    was 1, and the NEW line — also n=1 — was never found: the
-//    bench printed «the page did not say PRONTA in 45 s» **while the
+//    bench printed «the page did not say READY in 45 s» **while the
 //    collector was writing it**.  Two different things, a single symptom.
 //
 //    The number alone is not enough to recognise a round: something that does
 //    not repeat is needed.  This.
-const GIRO = Math.random().toString(36).slice(2, 10);
+const ROUND = Math.random().toString(36).slice(2, 10);
 
-function spedisci(dati) {
-  dati.n = ++numero;
-  dati.giro = GIRO;
-  dati.motore = navigator.userAgent;     // ⛔ B0.6: the version, always
-  dati.schermo = screen.width + "x" + screen.height;
-  dati.finestra = innerWidth + "x" + innerHeight;
-  dati.dpr = devicePixelRatio;
-  navigator.sendBeacon("/esito", new Blob([JSON.stringify(dati)],
+function ship(data) {
+  data.n = ++number;
+  data.round = ROUND;
+  data.engine = navigator.userAgent;     // ⛔ B0.6: the version, always
+  data.screen = screen.width + "x" + screen.height;
+  data.window = innerWidth + "x" + innerHeight;
+  data.dpr = devicePixelRatio;
+  navigator.sendBeacon("/outcome", new Blob([JSON.stringify(data)],
                                           {type: "application/json"}));
-  targa(dati);
+  plate(data);
 }
 
-function targa(dati) {
-  document.getElementById("targa").textContent =
-    "S7 n." + dati.n + "  " + dati.tipo +
-    "  deltaY=" + dati.deltaY + "  scorrimento=" + dati.scorrimento;
+function plate(data) {
+  document.getElementById("plate").textContent =
+    "S7 n." + data.n + "  " + data.type +
+    "  deltaY=" + data.deltaY + "  scroll=" + data.scroll;
 }
 
 // ⛔ The `wheel` is listened to in capture and WITHOUT preventDefault: one wants
@@ -99,14 +99,14 @@ let base = CENTER;
 addEventListener("wheel", (e) => {
   if (inProgress) return;      // one click at a time: the rounds do not mix
   inProgress = true;
-  const prima = Math.round(scrollY);
+  const before = Math.round(scrollY);
   setTimeout(() => {
-    const dopo = Math.round(scrollY);
-    spedisci({
-      tipo: "SCATTO",
+    const after = Math.round(scrollY);
+    ship({
+      type: "SHOT",
       deltaY: e.deltaY, deltaX: e.deltaX, deltaMode: e.deltaMode,
       wheelDeltaY: e.wheelDeltaY,
-      base: base, prima: prima, dopo: dopo, scorrimento: dopo - base
+      base: base, before: before, after: after, scroll: after - base
     });
     // Back to the centre for the next round, and the reference is redone there.
     scrollTo(0, CENTER);
@@ -126,23 +126,23 @@ addEventListener("wheel", (e) => {
 //    instrument — put where it is needed instead of in words.
 let lastPointer = 0;
 addEventListener("pointermove", (e) => {
-  const ora = performance.now();
-  if (ora - lastPointer < 400) return;   // the log is not flooded
-  lastPointer = ora;
-  spedisci({tipo: "PUNTATORE", x: Math.round(e.clientX), y: Math.round(e.clientY),
-            deltaY: null, scorrimento: null});
+  const now = performance.now();
+  if (now - lastPointer < 400) return;   // the log is not flooded
+  lastPointer = now;
+  ship({type: "POINTER", x: Math.round(e.clientX), y: Math.round(e.clientY),
+            deltaY: null, scroll: null});
 }, {passive: true});
 
 addEventListener("mousedown", (e) => {
-  spedisci({tipo: "BOTTONE", bottone: e.button, x: Math.round(e.clientX),
-            y: Math.round(e.clientY), deltaY: null, scorrimento: null});
+  ship({type: "BUTTON", button: e.button, x: Math.round(e.clientX),
+            y: Math.round(e.clientY), deltaY: null, scroll: null});
 }, {passive: true});
 
 addEventListener("load", () => {
   scrollTo(0, CENTER);
   setTimeout(() => {
     base = Math.round(scrollY);
-    spedisci({tipo: "PRONTA", deltaY: null, scorrimento: null, partenza: base});
+    ship({type: "READY", deltaY: null, scroll: null, start_base: base});
   }, 200);
 });
 </script>

@@ -6,8 +6,8 @@
 
 # Maintainer: nicfio <nicfio@gmail.com>
 pkgname=remotix-install
-pkgver=${RX_VERSIONE:-0.1.0}
-pkgrel=${RX_RILASCIO:-1}
+pkgver=${RX_VERSION:-0.1.0}
+pkgrel=${RX_RELEASE:-1}
 pkgdesc='The REMOTIX installation engine (installs, checks, certifies, uninstalls)'
 arch=('x86_64')
 url='https://github.com/nic-fio/REMOTIX'

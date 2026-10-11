@@ -3,8 +3,8 @@
 """
 15-g1b-esplora — DIAGNOSIS TOOL of group G1b (it certifies nothing).
 
-    python3 15-g1b-esplora.py --scatola kde --browser chrome --evidenze DIR \
-        --passi 'foto:a;clic:100,2140;attendi:2;foto:b;tasti:Alt+Tab;dentro:comando'
+    python3 15-g1b-esplora.py --box kde --browser chrome --evidence DIR \
+        --steps 'foto:a;clic:100,2140;attendi:2;foto:b;tasti:Alt+Tab;dentro:comando'
 
 Logs into a new session (tenant c15099u<n>), runs the steps, photographs.
 Coordinates in DESKTOP pixels.
@@ -16,63 +16,63 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import suite as S                                                     # noqa: E402
 
-G1B = S._carica("g1b", os.path.join(S.QUI, "15-g1b-comune.py"))
+G1B = S._load("g1b", os.path.join(S.HERE, "15-g1b-comune.py"))
 
 
 def extra(a):
-    a.add_argument("--passi", default="foto:inizio")
+    a.add_argument("--steps", default="foto:inizio")
 
 
-def corpo(o, E):
-    with S.Sessione(o, "099", E) as s:
-        ok, m = s.entra()
+def body(o, E):
+    with S.Session(o, "099", E) as s:
+        ok, m = s.enter()
         print("login:", ok, m, flush=True)
         if not ok:
-            raise S.Bloccata(m)
+            raise S.Blocked(m)
         time.sleep(4)
-        geo = s.geometria()
+        geo = s.geometry()
         print("geo:", geo, flush=True)
-        passi = o.passi
-        if passi.startswith("b64:"):
+        steps = o.steps
+        if steps.startswith("b64:"):
             import base64
-            passi = base64.b64decode(passi[4:]).decode()
-        for p in passi.split(";"):
-            tipo, _, arg = p.partition(":")
-            G1B.passo("step %s" % p)
-            if tipo in ("foto", "foto1"):
-                png, dove = G1B.foto(s, arg, scala=0.5 if tipo == "foto" else 1)
+            steps = base64.b64decode(steps[4:]).decode()
+        for p in steps.split(";"):
+            kind, _, arg = p.partition(":")
+            G1B.step("step %s" % p)
+            if kind in ("photo", "foto1"):
+                png, dove = G1B.photo(s, arg, scale_factor=0.5 if kind == "photo" else 1)
                 print("photo", dove, flush=True)
-            elif tipo == "clic":
+            elif kind == "click":
                 x, y = [float(v) for v in arg.split(",")]
                 G1B.click_desktop(s, geo, x, y)
-            elif tipo == "destro":
+            elif kind == "destro":
                 x, y = [float(v) for v in arg.split(",")]
-                G1B.click_desktop(s, geo, x, y, bottone=2)
-            elif tipo == "muovi":
+                G1B.click_desktop(s, geo, x, y, button_code=2)
+            elif kind == "move_to":
                 x, y = [float(v) for v in arg.split(",")]
                 vx, vy = S.C21.desktop_to_glass(geo, x, y)
-                s.g.muovi(vx, vy)
-            elif tipo == "attendi":
+                s.g.move_to(vx, vy)
+            elif kind == "attendi":
                 time.sleep(float(arg))
-            elif tipo == "tasti":
-                G1B.combinazione(s.g, arg.split("+"))
-            elif tipo == "orologio":
+            elif kind == "keys":
+                G1B.combination(s.g, arg.split("+"))
+            elif kind == "orologio":
                 print(G1B.put_window(s), G1B.open_window(s, "orologio", "#00ffff", 1100, 600,
-                      altro="#ffff00", periodo=int(arg or 30)), flush=True)
-            elif tipo == "misura":
-                png, dove = G1B.foto(s, "m", scala=0.5)
-                k = G1B.count_colors(png, (G1B.CIANO, (255, 255, 0)))
-                st = s.pr.stato() or {}
+                      other="#ffff00", period=int(arg or 30)), flush=True)
+            elif kind == "size":
+                png, dove = G1B.photo(s, "m", scale_factor=0.5)
+                k = G1B.count_colors(png, (G1B.CYAN, (255, 255, 0)))
+                st = s.pr.state() or {}
                 print("measure", [round(v, 3) for v in k.values()],
-                      {x: st.get(x) for x in ("dipinti", "consegnati", "decodificati")}, flush=True)
-            elif tipo == "js":
+                      {x: st.get(x) for x in ("painted", "delivered", "decoded")}, flush=True)
+            elif kind == "js":
                 print(s.g.js(arg), flush=True)
-            elif tipo == "dentro":
-                print(s.sc.dentro(arg, 60), flush=True)
-            elif tipo == "sess":
-                print(s.nella_sessione(arg, 60, fondo=False), flush=True)
-        E.metti("F-099", S.PASS, "exploration")
+            elif kind == "inside":
+                print(s.sc.inside(arg, 60), flush=True)
+            elif kind == "sess":
+                print(s.in_session(arg, 60, background=False), flush=True)
+        E.put("F-099", S.PASS, "exploration")
 
 
 if __name__ == "__main__":
-    sys.exit(S.esegui(__doc__, ("F-099",), corpo, extra=extra))
+    sys.exit(S.run(__doc__, ("F-099",), body, extra=extra))

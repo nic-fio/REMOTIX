@@ -8,11 +8,11 @@
 
   C20 asks: *«after «Log out» and a new login, the screen does not flicker»*, and
   judges it on the MEAN LUMINANCE of the frames: on a healthy screen it is one only,
-  with the ghost it alternates between distant values.  ⇒ C3's scene cannot serve:
+  with the ghost it alternates between distant values.  ⇒ C3's scene cannot needs:
   it changes the background between blue and yellow ON PURPOSE, that is it flickers — ⛔ it is
   C20's INJECTED FAULT, not its healthy run.
 
-  ⚠ And the still desktop cannot serve either.  `[M]` 23 September 2026,
+  ⚠ And the still desktop cannot needs either.  `[M]` 23 September 2026,
   second login, same mesh, same binary:
 
     | box | compositor | frames delivered |
@@ -88,11 +88,11 @@
   var a = document.getElementById('a');
   var b = document.getElementById('b');
   var x = 0;
-  function giro() {
+  function round_trip() {
     x = (x + 3) % 100;
     a.style.left = x + '%';
     b.style.left = (x - 100) + '%';
-    requestAnimationFrame(giro);
+    requestAnimationFrame(round_trip);
   }
-  requestAnimationFrame(giro);
+  requestAnimationFrame(round_trip);
 </script>

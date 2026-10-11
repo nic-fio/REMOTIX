@@ -4,9 +4,9 @@
  * openSUSE: same names, no encoding.
  *
  *   gcc -shared -fPIC -o libopenh264.so.8 18-software-openh264-vuota.c
- *   LD_LIBRARY_PATH=. ./18-software-confronto rifiuti
+ *   LD_LIBRARY_PATH=. ./18-software-confronto refusals
  *
- * VUOTA=1 (default): WelsCreateSVCEncoder fails.  VUOTA=0: the symbols are missing.
+ * EMPTY=1 (default): WelsCreateSVCEncoder fails.  EMPTY=0: the symbols are missing.
  */
 #include <stddef.h>
 
@@ -14,11 +14,11 @@ typedef struct {
 	unsigned int uMajor, uMinor, uRevision, uReserved;
 } Ver;
 
-#ifndef VUOTA
-#define VUOTA 1
+#ifndef EMPTY
+#define EMPTY 1
 #endif
 
-#if VUOTA
+#if EMPTY
 int WelsCreateSVCEncoder(void **p)
 {
 	if (p)

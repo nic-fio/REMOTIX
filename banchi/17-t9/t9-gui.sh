@@ -10,29 +10,29 @@
 #
 #   (on the server, as nicfio)   sg kvm -c 'bash t9-gui.sh <machine> <step> [arguments]'
 #
-#   accendi               "cliente" snapshot, power on with the tablet; nicfio's password
-#                         (the administrator who installs) = $PAROLA
-#   accedi                from the login screen to nicfio's desktop (keyboard)
+#   start               "client" snapshot, power on with the tablet; nicfio's password
+#                         (the administrator who installs) = $PASSWORD
+#   login                from the login screen to nicfio's desktop (keyboard)
 #   password              types the password in the polkit dialog, and Enter
-#   foto <name>           the screen into <name>.png
-#   clic <x> <y>          a left click at pixel x,y (screen 1280×800)
-#   scrivi <text>         the text, key by key
-#   tasto <key>           one key (ret, tab, esc, ctrl-alt-t…)
-#   terminale [name]      opens the desktop's terminal (Super, "terminal", Enter)
-#   finestra [language]   types in the terminal "LANG=… sh install.sh --finestra" and Enter
+#   photo <name>           the screen into <name>.png
+#   click <x> <y>          a left click at pixel x,y (screen 1280×800)
+#   type <text>         the text, key by key
+#   key <key>           one key (ret, tab, esc, ctrl-alt-t…)
+#   terminal [name]      opens the desktop's terminal (Super, "terminal", Enter)
+#   window [language]   types in the terminal "LANG=… sh install.sh --finestra" and Enter
 #                         (LANG of the language: it_IT.UTF-8 · en_US.UTF-8 · de_DE.UTF-8)
-#   processi              who runs: the window (uid) and the root part (R37)
-#   spegni                powers off and goes back to "cliente"
+#   processes              who runs: the window (uid) and the root part (R37)
+#   stop                powers off and goes back to "client"
 set -uo pipefail
-m=${1:?machine}; passo=${2:?step}; shift 2
+m=${1:?machine}; step=${2:?step}; shift 2
 R=/media/REMOTIX/vm17
 F=$R/t9-gui/$m
 V="bash $R/17-vm.sh"
 ARCH=http://10.0.2.2:8727
-PAROLA=${REMOTIX_PAROLA_PROVA:-prova2026}
+PASSWORD=${REMOTIX_TEST_PASSWORD:-prova2026}
 mkdir -p "$F"
 vm() { $V ssh "$m" "$@"; }
-# the QEMU monitor commands, all in ONE connection (one per stdin line; "attendi S"
+# the QEMU monitor commands, all in ONE connection (one per stdin line; "should_wait S"
 # waits S seconds): one key per 17-vm.sh call cost a second and a half per character
 monitor() { # ⚠ the commands come from stdin: the program goes in -c, not in a heredoc (which is stdin)
 	python3 -c '
@@ -50,7 +50,7 @@ for riga in sys.stdin.read().splitlines():
 ' "$R/$m/monitor.sock"
 }
 # characters into key names (qcode; US keyboard)
-tasti_di() {
+keys_of() {
 	python3 -c '
 import sys
 m = {" ": "spc", ".": "dot", "-": "minus", "/": "slash", ":": "shift-semicolon", "_": "shift-minus", "=": "equal", ",": "comma", "|": "shift-backslash"}
@@ -60,31 +60,31 @@ for c in sys.argv[1]:
 ' "$1"
 }
 
-case $passo in
-accendi)
+case $step in
+start)
 	[ "$(pgrep -c '^qemu-system')" -lt 4 ] || { echo "⛔ 4 VMs already running"; exit 2; }
-	$V torna "$m" cliente >/dev/null || exit 1
-	RX_VM_TAVOLETTA=1 $V avvia "$m" >"$F/avvia.log" 2>&1 || { tail "$F/avvia.log"; exit 1; }
+	$V revert "$m" cliente >/dev/null || exit 1
+	RX_VM_TABLET=1 $V boot "$m" >"$F/boot.log" 2>&1 || { tail "$F/boot.log"; exit 1; }
 	# nicfio's password (logs into the desktop) and root's: the "administrator" the polkit
 	# dialog asks for where nicfio is not in the sudo/wheel group (the cloud images: sudo without group)
-	vm "echo 'nicfio:$PAROLA' | sudo chpasswd; echo 'root:$PAROLA' | sudo chpasswd; id nicfio; systemctl is-active display-manager"
+	vm "echo 'nicfio:$PASSWORD' | sudo chpasswd; echo 'root:$PASSWORD' | sudo chpasswd; id nicfio; systemctl is-active display-manager"
 	;;
-accedi)
+login)
 	# from the login screen, with the keyboard: Enter on the first user, the password, Enter; then
 	# Esc closes the distribution's welcome
 	printf 'sendkey ret\nattendi 2\n' | monitor
-	tasti_di "$PAROLA" | monitor
+	keys_of "$PASSWORD" | monitor
 	printf 'sendkey ret\nattendi 15\nsendkey esc\nattendi 1\nsendkey esc\n' | monitor
 	;;
 password)
 	# the polkit dialog: the password, Enter
-	tasti_di "$PAROLA" | monitor
+	keys_of "$PASSWORD" | monitor
 	echo "sendkey ret" | monitor
 	;;
-foto)
-	$V schermo "$m" "$F/${1:?name}.png" >/dev/null && echo "$F/$1.png"
+photo)
+	$V screenshot "$m" "$F/${1:?name}.png" >/dev/null && echo "$F/$1.png"
 	;;
-clic)
+click)
 	# QMP: absolute position (0..32767 over the whole screen, 1280×800) and the left button
 	python3 -c '
 import json, socket, sys, time
@@ -103,34 +103,34 @@ ev({"type": "abs", "data": {"axis": "x", "value": x * 32767 // (w - 1)}}, {"type
 time.sleep(0.3)
 ev({"type": "btn", "data": {"down": True, "button": "left"}}); time.sleep(0.12)
 ev({"type": "btn", "data": {"down": False, "button": "left"}})
-' "$R/$m/qmp.sock" "$1" "$2" "${SCHERMO_L:-1280}" "${SCHERMO_A:-800}"
+' "$R/$m/qmp.sock" "$1" "$2" "${SCREEN_W:-1280}" "${SCREEN_H:-800}"
 	;;
-scrivi)
-	tasti_di "$*" | monitor
+type)
+	keys_of "$*" | monitor
 	;;
-tasto)
+key)
 	echo "sendkey $1" | monitor
 	;;
-terminale)
+terminal)
 	# as a person would: the Super key, "terminal", Enter (GNOME; on KDE: "konsole")
 	printf 'sendkey meta_l\nattendi 1.5\n' | monitor
-	tasti_di "${1:-terminal}" | monitor
+	keys_of "${1:-terminal}" | monitor
 	printf 'attendi 1.5\nsendkey ret\n' | monitor
 	;;
-finestra)
+window)
 	# the window launched FROM THE DESKTOP'S TERMINAL (it must be in the foreground): that is where polkit
 	# finds the graphical session's agent. ⚠ Not from ssh: "No authentication agent found" (`[M]`)
 	case ${1:-it} in it) L=it_IT.UTF-8 ;; en) L=en_US.UTF-8 ;; de) L=de_DE.UTF-8 ;; *) L=$1 ;; esac
 	vm "curl -s -o /tmp/install.sh $ARCH/install.sh && chmod 644 /tmp/install.sh" || exit 1
-	tasti_di "LANG=$L LANGUAGE= sh /tmp/install.sh --archivio $ARCH --finestra" | monitor
+	keys_of "LANG=$L LANGUAGE= sh /tmp/install.sh --archivio $ARCH --finestra" | monitor
 	echo "sendkey ret" | monitor
 	;;
-processi)
+processes)
 	# R37: the window (the user's uid) and the root part (the systemd transient unit)
 	vm "ps -eo uid,user,pid,ppid,unit,args | grep -E '[r]emotix-install|[g]ui-prova' | cut -c1-220" | tee -a "$F/processi.txt"
 	;;
-spegni)
-	$V ferma "$m" >/dev/null 2>&1; $V torna "$m" cliente >/dev/null 2>&1; echo "   $m powered off, back to \"cliente\""
+stop)
+	$V shutdown "$m" >/dev/null 2>&1; $V revert "$m" cliente >/dev/null 2>&1; echo "   $m powered off, back to \"cliente\""
 	;;
 *) sed -n 3,24p "$0"; exit 2 ;;
 esac

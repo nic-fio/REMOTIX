@@ -5,10 +5,10 @@
 11-c7 — ⭐⭐ «EVERYTHING CLOSES, AND NOTHING REMAINS»
 ===========================================================================
 
-    python3 11-c7-si-chiude-e-non-resta-niente.py --porta 8513
-    python3 11-c7-si-chiude-e-non-resta-niente.py --porta 8513 --solo-distacco
-    python3 11-c7-si-chiude-e-non-resta-niente.py --porta 8513 --lascia-un-processo
-    python3 11-c7-si-chiude-e-non-resta-niente.py --certifica
+    python3 11-c7-si-chiude-e-non-resta-niente.py --port 8513
+    python3 11-c7-si-chiude-e-non-resta-niente.py --port 8513 --detach-only
+    python3 11-c7-si-chiude-e-non-resta-niente.py --port 8513 --leave-a-process
+    python3 11-c7-si-chiude-e-non-resta-niente.py --certify
 
 Line C7 of `fasi/11-la-rete-di-sicurezza.md` §4.1:
 
@@ -85,7 +85,7 @@ no mesh*, and it ends up switched off by whoever works.
   ⭐ And the certification could not catch it: the synthetic case used
     `staccato = vuota`, a **totally** empty fingerprint — the shape the
     author had imagined, not the shape the fault would have.  ⇒ Now
-    there is `SENZA_FIGLIO`, which is `VIVA` with `remotix` removed and nothing else.
+    there is `WITHOUT_CHILD`, which is `VIVA` with `remotix` removed and nothing else.
 
 ---------------------------------------------------------------------------
 ⭐ WHAT GOES INTO THE FINGERPRINT — and what does NOT, declared
@@ -174,12 +174,12 @@ Without these, «nothing remains» is green even when nothing happened
 
 ⚠ And a fourth, which is the forgotten half of §1.49: **we wait for the EVENT**.
   After the closing we look until the field is free again, up to a
-  DECLARED time (`--attesa-chiusura`), and ⭐ **we print how long it took**.  A
+  DECLARED time (`--wait-close`), and ⭐ **we print how long it took**.  A
   slow but complete closing is green; ⛔ a clock ceiling would have called it
   red.  `[M]` 26 Aug 2026, XFCE box, real round: **1.13 s**.
 
 ---------------------------------------------------------------------------
-⛔ THE GRAFTED FAULT — `--lascia-un-processo`
+⛔ THE GRAFTED FAULT — `--leave-a-process`
 ---------------------------------------------------------------------------
 
 §3.6: *«every test of the list has, mandatorily, its grafted fault, and
@@ -245,10 +245,10 @@ import time
 # ⭐⭐ «WAS THE CLIENT ADMITTED?» — ⛔ THE PREDICATE IS IMPORTED, NOT
 #     REWRITTEN.  Its home is `11-c1-nasce-e-si-vede.py`, and there is ONE (§1.47).
 #
-# ⛔ Until 27 August 2026 there was `"AMMESSO" in uscita` here, ⭐ and it could not
+# ⛔ Until 27 August 2026 there was `"ADMITTED" in output` here, ⭐ and it could not
 #    say no: `[R]` `01-b3-cliente.py` prints that word also in the **two
-#    refusal messages** — «CONGEDO instead of AMMESSO: reason …» (:1315) and
-#    «expected AMMESSO, arrived …» (:1322) — and prints them on **stdout**, which
+#    refusal messages** — «FAREWELL instead of ADMITTED: reason …» (:1315) and
+#    «expected ADMITTED, arrived …» (:1322) — and prints them on **stdout**, which
 #    is exactly where it looked.  ⇒ A predicate that cannot fail,
 #    `LEZIONI.md` §1.44: the mesh believed it had got in **even when it had been
 #    turned away**, and then judged the darkness that followed as a defect of the
@@ -263,7 +263,7 @@ _HERE_C1 = os.path.dirname(os.path.abspath(__file__))
 _C1 = None
 
 
-def _carica_c1():
+def _load_c1():
     """⛔ It is a LOADER, not a judge: it finds the file, it decides nothing.
 
     ⚠ It is looked for next to me (inside the box everything is in `/opt/remotix`) and
@@ -282,15 +282,15 @@ def _carica_c1():
             return None
         # ⛔ We VERIFY that what is needed is there, instead of trusting the name
         #    of the file (`CODER.md` §3.9).
-        if not callable(getattr(m, "e_stato_ammesso", None)):
+        if not callable(getattr(m, "was_admitted", None)):
             return None
-        if not callable(getattr(m, "certifica_ammissione", None)):
+        if not callable(getattr(m, "certify_admission", None)):
             return None
         # ⭐ And from C1 also comes the guarantee of the card's groups: same
         #    reason, same single place (§1.47).
-        for mestiere in ("garantisci_i_gruppi", "verdetto_gruppi",
-                         "certifica_gruppi"):
-            if not callable(getattr(m, mestiere, None)):
+        for duty in ("ensure_groups", "group_verdict",
+                         "certify_groups"):
+            if not callable(getattr(m, duty, None)):
                 return None
         return m
     return None
@@ -299,7 +299,7 @@ def _carica_c1():
 def admission_home():
     global _C1
     if _C1 is None:
-        _C1 = _carica_c1()
+        _C1 = _load_c1()
     if _C1 is None:
         print("⛔ I cannot find `11-c1-nasce-e-si-vede.py` next to me, and from there")
         print("   comes the predicate «was the client ADMITTED?» — which lives")
@@ -309,16 +309,16 @@ def admission_home():
     return _C1
 
 
-def e_stato_ammesso(coda):
+def was_admitted(queue):
     """⭐ `True` admitted · `False` **TURNED AWAY** · `None` said nothing.
 
     ⛔ `False` is not a product red: a client turned away is a client
        turned away, and the caller exits **3**.
     """
-    return admission_home().e_stato_ammesso(coda)
+    return admission_home().was_admitted(queue)
 
 
-def garantisci_i_gruppi(chi, prefisso="   "):
+def ensure_groups(chi, prefix="   "):
     """⭐⭐ THE CARD'S GROUPS — ⛔ and this too lives in one place only (C1).
 
     Returns `(esito, perche)`: `0` = the tenant sees and it can be measured,
@@ -333,27 +333,27 @@ def garantisci_i_gruppi(chi, prefisso="   "):
     ⭐ The work is done by `attrezzi-gruppi-scheda.sh`, which reads the gids from the NODES and
        reads back comparing the numbers.  ⛔ No copy of it is made here (§1.47).
     """
-    return admission_home().garantisci_i_gruppi(chi, prefisso)
+    return admission_home().ensure_groups(chi, prefix)
 
 # ---------------------------------------------------------------------------
 # ⛔ THE ENTRIES ARE DECLARED HERE and printed in every outcome: «nothing remains»
 #    is a verdict, and a verdict without its yardstick is an opinion (C11).
 # ---------------------------------------------------------------------------
-PROCESSI = "the tenant's processes"
+PROCESSES = "the tenant's processes"
 RUNTIME = "sockets and files in XDG_RUNTIME_DIR"
 LOCKS = "locks (*.lock)"
-SESSIONI = "loginctl sessions"
+SESSIONS = "loginctl sessions"
 UNITA = "user units"
-SCHEDA = "descriptors on /dev/dri"
+GPU = "descriptors on /dev/dri"
 HOME = "the home"
 TEMPORARY = "what it wrote in /tmp"
 
-GIUDICATE = (PROCESSI, RUNTIME, LOCKS, SESSIONI, UNITA, SCHEDA)
-STAMPATE = (HOME, TEMPORARY)
+JUDGED = (PROCESSES, RUNTIME, LOCKS, SESSIONS, UNITA, GPU)
+PRINTED = (HOME, TEMPORARY)
 
 # ⛔ The value that means «empty» — and it is not `None`.  `None` means «I could not
 #    look», and the two things must not have the same face.
-VUOTO = "(nothing)"
+EMPTY = "(nothing)"
 
 # ⭐⭐ THE CHILD'S NAME — and it is the entry on which the whole JUDGEMENT 1 rests.
 #
@@ -363,9 +363,9 @@ VUOTO = "(nothing)"
 #     there?»*.  ⚠ And after a detach SOMETHING always changes that is not the
 #     product — `user@<uid>.service` is `active`, the `loginctl` sessions
 #     are 2, `/run/user/<uid>` has its sockets.  ⇒ The predicate could not
-#     fail (`LEZIONI.md` §1.44): calling `giudica` with the real fingerprint
+#     fail (`LEZIONI.md` §1.44): calling `judge` with the real fingerprint
 #     **without `remotix`** — i.e. with I4 broken — the mesh answered
-#     `(0, 'regge')` in both the ways the hook runs it.
+#     `(0, 'holds')` in both the ways the hook runs it.
 #     ⛔ C7 said GREEN on a broken I4.
 #
 # ⇒ The right question is by NAME, and the name is the one the child carries in
@@ -376,33 +376,33 @@ VUOTO = "(nothing)"
 CHILD_NAME = "remotix"
 
 # ⛔ The process the GRAFTED FAULT leaves on the floor — see
-#    `--lascia-un-processo`.  It serves to distinguish «the injection bit» from
+#    `--leave-a-process`.  It serves to distinguish «the injection bit» from
 #    «there was already a leftover of its own» (§1.52, the same cure C9 already has).
 INJECTED_NAME = "sleep"
 
-CHILD_SIGNATURE = re.compile(r"figlio\s+\[(?P<chi>[^\]]+)\]")
+CHILD_SIGNATURE = re.compile(r"child\s+\[(?P<who>[^\]]+)\]")
 
 
-def process_names(valore):
+def process_names(value):
     """The names of the processes fingerprint, one by one.
 
     ⛔ The comparison is by WHOLE name: a `remotix-cliente` is not the child,
-       and a substring would let it pass.  ⚠ `None` and `VUOTO` give the
+       and a substring would let it pass.  ⚠ `None` and `EMPTY` give the
        empty list, and the caller tells the two cases apart by itself.
     """
-    if valore is None or valore == VUOTO:
+    if value is None or value == EMPTY:
         return []
-    return [n.strip() for n in valore.split("·")]
+    return [n.strip() for n in value.split("·")]
 
 
 # ---------------------------------------------------------------------------
 # COLLECTING THE FINGERPRINT
 # ---------------------------------------------------------------------------
-def corri(argv, tempo=30):
+def run_loop(argv, time_limit=30):
     """Runs and returns (code, output).  ⛔ No `sh -c` in the middle where it can be
        avoided: `LEZIONI.md` §1.46."""
     try:
-        p = subprocess.run(argv, capture_output=True, text=True, timeout=tempo)
+        p = subprocess.run(argv, capture_output=True, text=True, timeout=time_limit)
         return p.returncode, (p.stdout or "")
     except (OSError, subprocess.SubprocessError):
         return None, ""
@@ -425,93 +425,93 @@ def processes_of(uid):
     `/proc` could not be read.
     """
     try:
-        elenco = os.listdir("/proc")
+        listing = os.listdir("/proc")
     except OSError:
         return None, None, None
-    nomi, schede, pid = [], 0, []
-    for voce in elenco:
-        if not voce.isdigit():
+    names, cards, pid = [], 0, []
+    for entry in listing:
+        if not entry.isdigit():
             continue
         try:
-            if os.stat("/proc/%s" % voce).st_uid != uid:
+            if os.stat("/proc/%s" % entry).st_uid != uid:
                 continue
         except OSError:
             continue
         try:
-            with open("/proc/%s/comm" % voce) as f:
-                nomi.append(f.read().strip())
+            with open("/proc/%s/comm" % entry) as f:
+                names.append(f.read().strip())
         except OSError:
             continue
-        pid.append(voce)
-        if card_descriptors("/proc/%s/fd" % voce):
-            schede += 1
-    return sorted(nomi), schede, pid
+        pid.append(entry)
+        if card_descriptors("/proc/%s/fd" % entry):
+            cards += 1
+    return sorted(names), cards, pid
 
 
-def card_descriptors(cartella):
+def card_descriptors(folder):
     """How many descriptors of that process point to `/dev/dri`."""
-    quanti = 0
+    amount = 0
     try:
-        for fd in os.listdir(cartella):
+        for fd in os.listdir(folder):
             try:
-                if os.readlink(os.path.join(cartella, fd)).startswith("/dev/dri"):
-                    quanti += 1
+                if os.readlink(os.path.join(folder, fd)).startswith("/dev/dri"):
+                    amount += 1
             except OSError:
                 continue
     except OSError:
         return 0
-    return quanti
+    return amount
 
 
 def total_cards():
     """⚠ It is PRINTED and not judged: a global comparison would step on the toes of
        another bench working in the same box (phase 10 §7.3)."""
     try:
-        elenco = os.listdir("/proc")
+        listing = os.listdir("/proc")
     except OSError:
         return None
-    return sum(1 for v in elenco
+    return sum(1 for v in listing
                if v.isdigit() and card_descriptors("/proc/%s/fd" % v))
 
 
-def folder_entries(percorso):
+def folder_entries(fpath):
     try:
-        return sorted(os.listdir(percorso))
+        return sorted(os.listdir(fpath))
     except FileNotFoundError:
         return []
     except OSError:
         return None
 
 
-def count_files(percorso):
-    quanti = 0
-    for radice, cartelle, file in os.walk(percorso, onerror=lambda e: None):
-        quanti += len(cartelle) + len(file)
-        if quanti > 5000:
-            return quanti
-    return quanti
+def count_files(fpath):
+    amount = 0
+    for root, dirs, file in os.walk(fpath, onerror=lambda e: None):
+        amount += len(dirs) + len(file)
+        if amount > 5000:
+            return amount
+    return amount
 
 
-def file_di_uid(percorso, uid, tetto=2000):
-    """How many files of that uid there are under `percorso`. ⚠ Only for printing."""
-    quanti = 0
-    for radice, cartelle, file in os.walk(percorso, onerror=lambda e: None):
-        for nome in cartelle + file:
+def file_di_uid(fpath, uid, cap=2000):
+    """How many files of that uid there are under `fpath`. ⚠ Only for printing."""
+    amount = 0
+    for root, dirs, file in os.walk(fpath, onerror=lambda e: None):
+        for name in dirs + file:
             try:
-                if os.lstat(os.path.join(radice, nome)).st_uid == uid:
-                    quanti += 1
+                if os.lstat(os.path.join(root, name)).st_uid == uid:
+                    amount += 1
             except OSError:
                 continue
-            if quanti > tetto:
-                return quanti
-    return quanti
+            if amount > cap:
+                return amount
+    return amount
 
 
-def raccogli(chi):
+def collect(chi):
     """The tenant's fingerprint: {entry: value-as-string}.
 
     ⛔ An entry is `None` **only** when it could not be looked at; «there is
-       nothing» is `VUOTO`.  ⚠ It is lesson §1.47 applied before the comparison:
+       nothing» is `EMPTY`.  ⚠ It is lesson §1.47 applied before the comparison:
        two `None` are not «equal», they are **mute**.
     """
     uid = uid_di(chi)
@@ -519,44 +519,44 @@ def raccogli(chi):
         return None
     d = {"_uid": uid}
 
-    nomi, schede, _pid = processes_of(uid)
-    d[PROCESSI] = None if nomi is None else (
-        " · ".join(nomi) if nomi else VUOTO)
-    d[SCHEDA] = None if schede is None else (
-        "%d processes" % schede if schede else VUOTO)
+    names, cards, _pid = processes_of(uid)
+    d[PROCESSES] = None if names is None else (
+        " · ".join(names) if names else EMPTY)
+    d[GPU] = None if cards is None else (
+        "%d processes" % cards if cards else EMPTY)
 
     rtd = "/run/user/%d" % uid
-    voci = folder_entries(rtd)
-    if voci is None:
+    entries = folder_entries(rtd)
+    if entries is None:
         d[RUNTIME] = None
         d[LOCKS] = None
     else:
-        d[RUNTIME] = " · ".join(voci) if voci else VUOTO
-        lucchetti = [v for v in voci if v.endswith(".lock")]
-        d[LOCKS] = " · ".join(lucchetti) if lucchetti else VUOTO
+        d[RUNTIME] = " · ".join(entries) if entries else EMPTY
+        locks = [v for v in entries if v.endswith(".lock")]
+        d[LOCKS] = " · ".join(locks) if locks else EMPTY
 
-    codice, uscita = corri(["loginctl", "list-sessions", "--no-legend"])
-    if codice is None:
-        d[SESSIONI] = None
+    code, output = run_loop(["loginctl", "list-sessions", "--no-legend"])
+    if code is None:
+        d[SESSIONS] = None
     else:
         # ⚠ They are counted, not listed: the identifiers change at every
         #   round and comparing them would always give red (§1.49).
-        quante = sum(1 for riga in uscita.splitlines()
-                     if len(riga.split()) > 2 and riga.split()[2] == chi)
-        d[SESSIONI] = "%d" % quante if quante else VUOTO
+        how_many = sum(1 for line in output.splitlines()
+                     if len(line.split()) > 2 and line.split()[2] == chi)
+        d[SESSIONS] = "%d" % how_many if how_many else EMPTY
 
-    stati = []
-    for unita in ("user@%d.service" % uid, "user-runtime-dir@%d.service" % uid):
-        codice, uscita = corri(["systemctl", "is-active", unita])
-        stati.append(None if codice is None else (uscita.strip() or "?"))
-    if any(s is None for s in stati):
+    states = []
+    for unit in ("user@%d.service" % uid, "user-runtime-dir@%d.service" % uid):
+        code, output = run_loop(["systemctl", "is-active", unit])
+        states.append(None if code is None else (output.strip() or "?"))
+    if any(s is None for s in states):
         d[UNITA] = None
     else:
         # ⭐ «inactive» and «failed» are both «not running», and a user
         #   manager that failed is NOT a leftover: it is a unit that is off.
         #   ⛔ If they were told apart, the first round would dirty the second.
-        pulito = [("off" if s in ("inactive", "failed") else s) for s in stati]
-        d[UNITA] = VUOTO if all(s == "off" for s in pulito) else " · ".join(pulito)
+        clean = [("off" if s in ("inactive", "failed") else s) for s in states]
+        d[UNITA] = EMPTY if all(s == "off" for s in clean) else " · ".join(clean)
 
     d[HOME] = "%d entries" % count_files("/home/%s" % chi)
     d[TEMPORARY] = "%d entries" % file_di_uid("/tmp", uid)
@@ -565,10 +565,10 @@ def raccogli(chi):
 
 
 # ---------------------------------------------------------------------------
-# THE JUDGE — ⭐ it is a PURE function, so `--certifica` can test it without
+# THE JUDGE — ⭐ it is a PURE function, so `--certify` can test it without
 #              touching anything.
 # ---------------------------------------------------------------------------
-def differenze(a, b):
+def differences(a, b):
     """The judged entries in which `a` and `b` do not say the same thing.
 
     Returns `(diverse, mute)`: ⛔ an entry that one of the two could not
@@ -576,39 +576,39 @@ def differenze(a, b):
     would pass without having looked at anything (`LEZIONI.md` §1.47).
     """
     diverse, mute = [], []
-    for voce in GIUDICATE:
-        va, vb = a.get(voce), b.get(voce)
+    for entry in JUDGED:
+        va, vb = a.get(entry), b.get(entry)
         if va is None or vb is None:
-            mute.append(voce)
+            mute.append(entry)
             continue
         if va != vb:
-            diverse.append((voce, va, vb))
+            diverse.append((entry, va, vb))
     return diverse, mute
 
 
-def giudica(prima, staccato, dopo, solo_distacco=False,
-            ammesso=True, figlio_nato=True):
+def judge(before, detached, after, detach_only=False,
+            admitted=True, figlio_nato=True):
     """⭐ The judgement, all in here and without touching the world.
 
-    Returns `(esito, specie, motivi)`.  `specie` is a word for whoever reads:
+    Returns `(esito, kind, motivi)`.  `kind` is a word for whoever reads:
     «leftovers», «stage gone», «field occupied», «I do not know», «holds».
     """
     # ⛔ GUARD 1 — the field must be free BEFORE.
-    sporco = [(v, prima.get(v)) for v in GIUDICATE
-              if prima.get(v) not in (None, VUOTO)]
-    if sporco:
+    dirty = [(v, before.get(v)) for v in JUDGED
+              if before.get(v) not in (None, EMPTY)]
+    if dirty:
         return 2, "field occupied", [
             "the STARTING fingerprint was not empty: %s"
-            % ", ".join("%s = %s" % (v, x) for v, x in sporco),
+            % ", ".join("%s = %s" % (v, x) for v, x in dirty),
             "⛔ and a leftover that was already there is not charged to the session",
         ]
 
     # ⛔ GUARD 2 — the client must have been admitted.
     # ⭐ THREE states, and the two «no»s both lead to 3 but with different words:
     #   `False` = turned away by the server, `None` = it said nothing.
-    if ammesso is not True:
+    if admitted is not True:
         return 3, "I do not know", [
-            "the client was TURNED AWAY by the server" if ammesso is False
+            "the client was TURNED AWAY by the server" if admitted is False
             else "the client said nothing: I do not know whether it got in",
             "⇒ there is no session whose leftovers to judge, ⛔ and a "
             "client turned away is not a broken product"]
@@ -619,8 +619,8 @@ def giudica(prima, staccato, dopo, solo_distacco=False,
                                     "tenant: the session did not really start"]
 
     # ⛔ GUARD 4 — if NO entry can answer we do not judge.
-    _d, mute = differenze(prima, staccato)
-    if len(mute) == len(GIUDICATE):
+    _d, mute = differences(before, detached)
+    if len(mute) == len(JUDGED):
         return 3, "I do not know", ["no entry of the fingerprint could "
                                     "answer: I looked at nothing"]
 
@@ -631,7 +631,7 @@ def giudica(prima, staccato, dopo, solo_distacco=False,
     #     See `CHILD_NAME` at the top: until 27 Aug 2026 there was only the
     #     generic comparison here, and it was satisfied by `systemd` — not by the product.
     # ═══════════════════════════════════════════════════════════════════════
-    vive, _m = differenze(prima, staccato)
+    vive, _m = differences(before, detached)
     if not vive:
         return 1, "stage gone", [
             "after the client's DETACH nothing of the tenant remained,",
@@ -645,7 +645,7 @@ def giudica(prima, staccato, dopo, solo_distacco=False,
 
     # ⛔ And before saying «the child is not there» one must have been able to look at the
     #    processes: `None` is not «not there» (§4.5, question 8).
-    detached_processes = staccato.get(PROCESSI)
+    detached_processes = detached.get(PROCESSES)
     if detached_processes is None:
         return 3, "I do not know", [
             "after the detach the fingerprint could not say WHICH processes",
@@ -666,7 +666,7 @@ def giudica(prima, staccato, dopo, solo_distacco=False,
             "   27 Aug 2026.",
         ]
 
-    if solo_distacco:
+    if detach_only:
         return 0, "holds", [
             "the client detached and the «%s» CHILD is still alive "
             "(%d entries still different from the start)" % (CHILD_NAME, len(vive)),
@@ -675,25 +675,25 @@ def giudica(prima, staccato, dopo, solo_distacco=False,
 
     # ⭐ JUDGEMENT 2 — the closing must not have left anything.
     # ⛔ And if the final fingerprint could not be read at all, we do not judge:
-    #    without this line `differenze(prima, None)` made a traceback ⇒ Python
+    #    without this line `differences(before, None)` made a traceback ⇒ Python
     #    exited **1** ⇒ the hook read RED on a fault of the bench (§1.51).
-    if dopo is None:
+    if after is None:
         return 3, "I do not know", [
             "after the closing the fingerprint could not be read at all:",
             "⛔ I cannot say whether something remained — and it is not a green.",
         ]
-    residui, _m2 = differenze(prima, dopo)
-    if residui:
+    leftovers, _m2 = differences(before, after)
+    if leftovers:
         return 1, "leftovers", [
             "the session was CLOSED and %d entries did not go back as before:"
-            % len(residui)]
+            % len(leftovers)]
     return 0, "holds", [
         "the detach left the «%s» child standing (%d entries different "
         "from the start), and the closing put all the %d judged entries back "
-        "as it had found them" % (CHILD_NAME, len(vive), len(GIUDICATE))]
+        "as it had found them" % (CHILD_NAME, len(vive), len(JUDGED))]
 
 
-def guasto_visto(prima, dopo, nome=INJECTED_NAME):
+def fault_seen(before, after, name=INJECTED_NAME):
     """⛔⛔ §1.52 — with the grafted fault the COLOUR of the verdict is not enough.
 
     ⚠ A red is a red, but *«the fault was seen»* is another thing:
@@ -704,10 +704,10 @@ def guasto_visto(prima, dopo, nome=INJECTED_NAME):
     ⇒ It is demanded that among the leftovers there is precisely the injected process.
        ⭐ It is the same cure C9 already has (`LEZIONI.md` §1.52).
     """
-    if dopo is None:
+    if after is None:
         return False
-    for voce, _va, vb in differenze(prima, dopo)[0]:
-        if voce == PROCESSI and nome in process_names(vb):
+    for entry, _va, vb in differences(before, after)[0]:
+        if entry == PROCESSES and name in process_names(vb):
             return True
     return False
 
@@ -715,18 +715,18 @@ def guasto_visto(prima, dopo, nome=INJECTED_NAME):
 # ---------------------------------------------------------------------------
 # ⛔ THE CERTIFICATION — synthetic cases, and the judge does not touch the world.
 # ---------------------------------------------------------------------------
-def _fingerprint(**cambi):
-    d = {v: VUOTO for v in GIUDICATE}
+def _fingerprint(**changes):
+    d = {v: EMPTY for v in JUDGED}
     d.update({HOME: "5 entries", TEMPORARY: "0 entries"})
-    d.update(cambi)
+    d.update(changes)
     return d
 
 
 VIVA = _fingerprint(**{
-    PROCESSI: "dbus-daemon · pipewire · remotix · systemd",
+    PROCESSES: "dbus-daemon · pipewire · remotix · systemd",
     RUNTIME: "bus · pipewire-0 · pipewire-0.lock · systemd",
     LOCKS: "pipewire-0.lock",
-    SESSIONI: "2",
+    SESSIONS: "2",
     UNITA: "active · active",
     HOME: "9 entries",
 })
@@ -736,17 +736,17 @@ VIVA = _fingerprint(**{
 #     stays standing** because it is `systemd`'s and `logind`'s stuff — the user
 #     manager, the two sessions, the sockets in `/run/user/<uid>`.
 # ⇒ It is identical to `VIVA` with `remotix` removed.  Nothing else.
-SENZA_FIGLIO = _fingerprint(**{
-    PROCESSI: "dbus-daemon · pipewire · systemd",
+WITHOUT_CHILD = _fingerprint(**{
+    PROCESSES: "dbus-daemon · pipewire · systemd",
     RUNTIME: "bus · pipewire-0 · pipewire-0.lock · systemd",
     LOCKS: "pipewire-0.lock",
-    SESSIONI: "2",
+    SESSIONS: "2",
     UNITA: "active · active",
     HOME: "9 entries",
 })
 
 
-def certifica():
+def certify():
     """⛔ It proves that the judge can say green, red and «I do not know».
 
     ⚠ And it declares what it covers: the **decision**, i.e. the comparison between
@@ -756,113 +756,113 @@ def certifica():
       round with the grafted fault.  ⇒ A certification that declares itself wider
       than it is is worth less than no certification (C1).
     """
-    vuota = _fingerprint()
-    casi = [
+    blank = _fingerprint()
+    cases = [
         ("⭐ the healthy round: it opens, detaches, closes, nothing remains",
-         dict(prima=vuota, staccato=VIVA, dopo=vuota), (0, "holds")),
+         dict(before=blank, detached=VIVA, after=blank), (0, "holds")),
 
         ("⛔ THE GRAFTED FAULT: a process of the tenant remains",
-         dict(prima=vuota, staccato=VIVA,
-              dopo=_fingerprint(**{PROCESSI: "sleep", HOME: "9 entries"})),
+         dict(before=blank, detached=VIVA,
+              after=_fingerprint(**{PROCESSES: "sleep", HOME: "9 entries"})),
          (1, "leftovers")),
 
         ("⛔ the socket in XDG_RUNTIME_DIR was not removed",
-         dict(prima=vuota, staccato=VIVA,
-              dopo=_fingerprint(**{RUNTIME: "bus · pipewire-0"})),
+         dict(before=blank, detached=VIVA,
+              after=_fingerprint(**{RUNTIME: "bus · pipewire-0"})),
          (1, "leftovers")),
 
         ("⛔ a PipeWire lock left on the floor",
-         dict(prima=vuota, staccato=VIVA,
-              dopo=_fingerprint(**{RUNTIME: "pipewire-0.lock",
+         dict(before=blank, detached=VIVA,
+              after=_fingerprint(**{RUNTIME: "pipewire-0.lock",
                                 LOCKS: "pipewire-0.lock"})),
          (1, "leftovers")),
 
         ("⛔ ⭐ the graphics card did NOT go back to rest",
-         dict(prima=vuota, staccato=VIVA,
-              dopo=_fingerprint(**{PROCESSI: "remotix", SCHEDA: "1 processes"})),
+         dict(before=blank, detached=VIVA,
+              after=_fingerprint(**{PROCESSES: "remotix", GPU: "1 processes"})),
          (1, "leftovers")),
 
         ("⛔ the loginctl session stayed open",
-         dict(prima=vuota, staccato=VIVA, dopo=_fingerprint(**{SESSIONI: "1"})),
+         dict(before=blank, detached=VIVA, after=_fingerprint(**{SESSIONS: "1"})),
          (1, "leftovers")),
 
         # ⭐⭐ THE CASE THIS MESH EXISTS NOT TO GET WRONG (I4).
         ("⭐ it only detaches: the stage stays ⇒ ⛔ it is NOT a red",
-         dict(prima=vuota, staccato=VIVA, dopo=None, solo_distacco=True),
+         dict(before=blank, detached=VIVA, after=None, detach_only=True),
          (0, "holds")),
 
         ("⛔ the detach took away the stage ⇒ red of its own kind",
-         dict(prima=vuota, staccato=vuota, dopo=vuota), (1, "stage gone")),
+         dict(before=blank, detached=blank, after=blank), (1, "stage gone")),
 
         # ═══════════════════════════════════════════════════════════════════
         # ⛔⛔ THE CASES THAT WERE MISSING BEFORE TODAY — and they are the ones that would have caught
         #     the defect of 27 Aug 2026 (see `CHILD_NAME` at the top).
         #
-        # ⚠ The case above uses `staccato=vuota`: a TOTALLY empty
+        # ⚠ The case above uses `detached=blank`: a TOTALLY empty
         #   fingerprint, i.e. the shape the author had imagined.  ⛔ But the
         #   shape the fault would really have is another: the child dies
         #   with the wire and **everything else stays standing**, because that rest
         #   is `systemd`'s.  ⇒ Before this cure, these three cases
-        #   answered `(0, 'regge')`: C7 said GREEN on a broken I4.
+        #   answered `(0, 'holds')`: C7 said GREEN on a broken I4.
         # ═══════════════════════════════════════════════════════════════════
         ("⛔⛔ the CHILD dies with the detach and systemd stays ⇒ RED (I4)",
-         dict(prima=vuota, staccato=SENZA_FIGLIO, dopo=vuota),
+         dict(before=blank, detached=WITHOUT_CHILD, after=blank),
          (1, "stage gone")),
 
         ("⛔⛔ …and it says so also with the detach only (the hook's other mode)",
-         dict(prima=vuota, staccato=SENZA_FIGLIO, dopo=None,
-              solo_distacco=True), (1, "stage gone")),
+         dict(before=blank, detached=WITHOUT_CHILD, after=None,
+              detach_only=True), (1, "stage gone")),
 
         ("⛔ a process that RESEMBLES the child is not the child",
-         dict(prima=vuota, staccato=_fingerprint(**{
-             PROCESSI: "dbus-daemon · remotix-cliente · systemd",
-             RUNTIME: "bus · pipewire-0 · systemd", SESSIONI: "2",
-             UNITA: "active · active", HOME: "9 entries"}), dopo=vuota),
+         dict(before=blank, detached=_fingerprint(**{
+             PROCESSES: "dbus-daemon · remotix-cliente · systemd",
+             RUNTIME: "bus · pipewire-0 · systemd", SESSIONS: "2",
+             UNITA: "active · active", HOME: "9 entries"}), after=blank),
          (1, "stage gone")),
 
         # ⛔ `None` is not «not there»: if `/proc` could not be read one cannot
         #    say that the child died — and one cannot even say that it is
         #    alive.  ⚠ The other entries speak, so GUARD 4 does not fire.
         ("⛔ the processes could not be read ⇒ «I do not know», ⛔ NEVER green",
-         dict(prima=vuota, staccato=_fingerprint(**{
-             PROCESSI: None, RUNTIME: "bus · pipewire-0 · systemd",
-             SESSIONI: "2", UNITA: "active · active", HOME: "9 entries"}),
-              dopo=vuota), (3, "I do not know")),
+         dict(before=blank, detached=_fingerprint(**{
+             PROCESSES: None, RUNTIME: "bus · pipewire-0 · systemd",
+             SESSIONS: "2", UNITA: "active · active", HOME: "9 entries"}),
+              after=blank), (3, "I do not know")),
 
         # ⚠ The declared noise: the home grows, and it is its job.
         ("⚠ the home grew and /tmp too ⇒ ⛔ it is NOT a leftover",
-         dict(prima=vuota, staccato=VIVA,
-              dopo=_fingerprint(**{HOME: "41 entries", TEMPORARY: "12 entries"})),
+         dict(before=blank, detached=VIVA,
+              after=_fingerprint(**{HOME: "41 entries", TEMPORARY: "12 entries"})),
          (0, "holds")),
 
         ("⛔ the field was NOT free before starting ⇒ terrain",
-         dict(prima=_fingerprint(**{PROCESSI: "sleep"}), staccato=VIVA, dopo=vuota),
+         dict(before=_fingerprint(**{PROCESSES: "sleep"}), detached=VIVA, after=blank),
          (2, "field occupied")),
 
         ("⛔ the client was TURNED AWAY ⇒ I do not know, and it is NOT a red",
-         dict(prima=vuota, staccato=vuota, dopo=vuota, ammesso=False),
+         dict(before=blank, detached=blank, after=blank, admitted=False),
          (3, "I do not know")),
 
         # ⭐ The THIRD state, which before 27 Aug 2026 could not arrive
         #   here: the client said nothing.  ⛔ This too is a 3.
         ("⚠ the client said NOTHING (None) ⇒ I do not know, not a red",
-         dict(prima=vuota, staccato=vuota, dopo=vuota, ammesso=None),
+         dict(before=blank, detached=blank, after=blank, admitted=None),
          (3, "I do not know")),
 
         ("⛔ admitted but the child was not born ⇒ I do not know",
-         dict(prima=vuota, staccato=vuota, dopo=vuota, figlio_nato=False),
+         dict(before=blank, detached=blank, after=blank, figlio_nato=False),
          (3, "I do not know")),
 
         # ⛔ The final fingerprint could not be read ⇒ «I do not know», and ⛔ not
         #    a traceback the hook would read as a product red.
         ("⛔ the fingerprint AFTER CLOSING could not be read ⇒ «I do not know»",
-         dict(prima=vuota, staccato=VIVA, dopo=None), (3, "I do not know")),
+         dict(before=blank, detached=VIVA, after=None), (3, "I do not know")),
 
         # ⛔ §1.47: «I do not know» equal to «I do not know» WOULD PASS the comparison.
         ("⛔ no entry can answer ⇒ I do not know, ⛔ never green",
-         dict(prima={v: None for v in GIUDICATE},
-              staccato={v: None for v in GIUDICATE},
-              dopo={v: None for v in GIUDICATE}), (3, "I do not know")),
+         dict(before={v: None for v in JUDGED},
+              detached={v: None for v in JUDGED},
+              after={v: None for v in JUDGED}), (3, "I do not know")),
     ]
 
     # ═══════════════════════════════════════════════════════════════════════
@@ -871,177 +871,177 @@ def certifica():
     # ═══════════════════════════════════════════════════════════════════════
     fault_cases = [
         ("⭐ among the leftovers there is precisely the injected `sleep` ⇒ SEEN",
-         dict(prima=vuota, dopo=_fingerprint(**{PROCESSI: "sleep"})), True),
+         dict(before=blank, after=_fingerprint(**{PROCESSES: "sleep"})), True),
 
         ("⛔ a leftover is there, but it is NOT the injected one ⇒ it is NOT «seen»",
-         dict(prima=vuota, dopo=_fingerprint(**{RUNTIME: "bus · pipewire-0"})),
+         dict(before=blank, after=_fingerprint(**{RUNTIME: "bus · pipewire-0"})),
          False),
 
         ("⛔⛔ a `remotix` left on the floor is a defect of the PRODUCT,",
-         dict(prima=vuota, dopo=_fingerprint(**{PROCESSI: "remotix"})), False),
+         dict(before=blank, after=_fingerprint(**{PROCESSES: "remotix"})), False),
 
         ("⛔ the final fingerprint could not be read ⇒ it is NOT «seen»",
-         dict(prima=vuota, dopo=None), False),
+         dict(before=blank, after=None), False),
 
         ("⛔ nothing remained ⇒ it is NOT «seen»",
-         dict(prima=vuota, dopo=vuota), False),
+         dict(before=blank, after=blank), False),
     ]
 
     print("== certification of C7's judge ==")
     print("   ⛔ it covers the DECISION, not the collection of the fingerprint (see the top)\n")
-    guai = 0
-    for nome, arg, atteso in casi:
-        esito, specie, _reasons = giudica(**arg)
-        ok = (esito, specie) == atteso
+    troubles = 0
+    for name, arg, expected in cases:
+        outcome, kind, _reasons = judge(**arg)
+        ok = (outcome, kind) == expected
         print("  %s  %-62s  outcome=%s (%s)   expected %s (%s)"
-              % ("OK " if ok else "NO ", nome, esito, specie,
-                 atteso[0], atteso[1]))
+              % ("OK " if ok else "NO ", name, outcome, kind,
+                 expected[0], expected[1]))
         if not ok:
-            guai += 1
+            troubles += 1
     print()
     print("   ⛔ and the grafted fault is read on the DIFFERENCE, not on the colour:")
-    for nome, arg, atteso in fault_cases:
-        avuto = guasto_visto(**arg)
-        ok = avuto is atteso
+    for name, arg, expected in fault_cases:
+        got = fault_seen(**arg)
+        ok = got is expected
         print("  %s  %-62s  seen=%-5s  expected %s"
-              % ("OK " if ok else "NO ", nome, avuto, atteso))
+              % ("OK " if ok else "NO ", name, got, expected))
         if not ok:
-            guai += 1
+            troubles += 1
     # ⭐⭐ THE ADMISSION CASES — ⛔ the ones that were not there before today.
     #    The predicate lives in C1 and is certified with C1's cases: ⛔ a copy
     #    of the cases here would be a second place to diverge from (§1.47).
     print()
-    admission_troubles, how_many_admitted = admission_home().certifica_ammissione("C7")
-    guai += admission_troubles
+    admission_troubles, how_many_admitted = admission_home().certify_admission("C7")
+    troubles += admission_troubles
 
     # ⭐⭐ AND THE CARD GROUPS CASES — ⛔ the other case that was missing:
     #    a tenant without the groups of the nodes ⇒ «I could not look», ⛔
     #    never red.  They live in C1 with the step they certify.
     print()
-    group_troubles, how_many_groups = admission_home().certifica_gruppi("C7")
-    guai += group_troubles
+    group_troubles, how_many_groups = admission_home().certify_groups("C7")
+    troubles += group_troubles
 
-    quanti = len(casi) + len(fault_cases) + how_many_admitted + how_many_groups
+    amount = len(cases) + len(fault_cases) + how_many_admitted + how_many_groups
     print()
-    if guai:
+    if troubles:
         print("⛔ the judge is NOT reliable: %d cases out of %d wrong"
-              % (guai, quanti))
+              % (troubles, amount))
         return 1
     print("⭐ %d cases out of %d: the judge sees the leftover, ⛔ does not call a"
-          % (quanti, quanti))
+          % (amount, amount))
     print("   DETACH a leftover, ⛔ notices if the CHILD dies with the detach (I4), and does not")
     print("   say green when it has looked at nothing.")
     return 0
 
 
 # ---------------------------------------------------------------------------
-def print_fingerprint(titolo, d):
-    print("   %s" % titolo)
-    for voce in GIUDICATE:
-        v = d.get(voce)
-        print("     %-34s %s" % (voce, "⛔ unknown" if v is None else v))
-    for voce in STAMPATE:
-        print("     %-34s %s   ⚠ printed, NOT judged" % (voce, d.get(voce)))
+def print_fingerprint(title, d):
+    print("   %s" % title)
+    for entry in JUDGED:
+        v = d.get(entry)
+        print("     %-34s %s" % (entry, "⛔ unknown" if v is None else v))
+    for entry in PRINTED:
+        print("     %-34s %s   ⚠ printed, NOT judged" % (entry, d.get(entry)))
     print("     %-34s %s   ⚠ printed, NOT judged"
           % ("processes with /dev/dri, in all", d.get("_cards in all")))
     print()
 
 
-def leggi(percorso):
+def load(fpath):
     try:
-        with open(percorso, "r", errors="replace") as f:
+        with open(fpath, "r", errors="replace") as f:
             return f.read()
     except OSError:
         return None
 
 
-def sgombera(chi, cancella=True):
+def clear_out(chi, delete=True):
     """⭐ The BENCH's cleanup, which ⛔ is not the test.
 
     The tenant of THIS round is closed **by name**, never a global pattern
     (phase 10 §7.3).  ⚠ And it is done in a `finally`: a bench that leaves its
     leftovers makes the next bench red, and that red is not the product's.
     """
-    corri(["loginctl", "terminate-user", chi], tempo=30)
+    run_loop(["loginctl", "terminate-user", chi], time_limit=30)
     time.sleep(1.0)
-    corri(["pkill", "-KILL", "-u", chi], tempo=30)
+    run_loop(["pkill", "-KILL", "-u", chi], time_limit=30)
     time.sleep(0.5)
-    if cancella:
-        corri(["userdel", "-r", chi], tempo=60)
-        corri(["rm", "-rf", "/home/%s" % chi], tempo=30)
+    if delete:
+        run_loop(["userdel", "-r", chi], time_limit=60)
+        run_loop(["rm", "-rf", "/home/%s" % chi], time_limit=30)
 
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("--utente", default="c7u1",
+    p.add_argument("--user", default="c7u1",
                    help="the test tenant: it is created NEW and deleted")
-    p.add_argument("--parola", default="provanic2026")
-    p.add_argument("--porta", type=int, default=8511)
-    p.add_argument("--indirizzo", default="127.0.0.1")
-    p.add_argument("--registro", default="/var/lib/rete11/registro.log")
-    p.add_argument("--cliente", default="/opt/remotix/01-b3-cliente.py")
-    p.add_argument("--resta", type=float, default=20.0,
+    p.add_argument("--password", default="provanic2026")
+    p.add_argument("--port", type=int, default=8511)
+    p.add_argument("--address", default="127.0.0.1")
+    p.add_argument("--log", default="/var/lib/rete11/registro.log")
+    p.add_argument("--client", default="/opt/remotix/01-b3-cliente.py")
+    p.add_argument("--stay", type=float, default=20.0,
                    help="how long the client stays attached")
-    p.add_argument("--attesa-palco", type=float, default=45.0,
+    p.add_argument("--wait-stage", type=float, default=45.0,
                    help="how long to wait for the log to name the child. "
                         "Expired: «I do not know», ⛔ NEVER green")
-    p.add_argument("--attesa-chiusura", type=float, default=45.0,
+    p.add_argument("--wait-close", type=float, default=45.0,
                    help="how long to wait for the field to be free again AFTER the "
                         "closing. ⛔ We wait for the EVENT, and we print how long "
                         "it took: a slow but complete closing is green")
-    p.add_argument("--solo-distacco", action="store_true",
+    p.add_argument("--detach-only", action="store_true",
                    help="⭐ the client goes away and the session does NOT close: "
                         "it must stay GREEN (I4)")
-    p.add_argument("--lascia-un-processo", action="store_true",
+    p.add_argument("--leave-a-process", action="store_true",
                    help="⛔ the grafted fault: before closing a process of the tenant "
                         "is left on purpose ⇒ it must give red")
-    p.add_argument("--certifica", action="store_true")
+    p.add_argument("--certify", action="store_true")
     a = p.parse_args()
 
-    if a.certifica:
-        sys.exit(certifica())
+    if a.certify:
+        sys.exit(certify())
 
     if os.geteuid() != 0:
         print("⛔ it must be run as administrator: it creates and deletes a tenant")
         sys.exit(2)
-    if not os.path.exists(a.cliente):
-        print("⛔ I cannot find the test client: %s" % a.cliente)
+    if not os.path.exists(a.client):
+        print("⛔ I cannot find the test client: %s" % a.client)
         print("   ⇒ I could not look")
         sys.exit(3)
-    if leggi(a.registro) is None:
-        print("⛔ I cannot read the server log: %s" % a.registro)
+    if load(a.log) is None:
+        print("⛔ I cannot read the server log: %s" % a.log)
         print("   ⇒ I could not look")
         sys.exit(3)
 
-    chi = a.utente
+    chi = a.user
     print("== C7 — everything closes, and nothing remains ==")
-    print("   tenant «%s» · port %d" % (chi, a.porta))
+    print("   tenant «%s» · port %d" % (chi, a.port))
     print("   mode: %s" % (
         "⭐ DETACH ONLY — the client goes away and the session does NOT close: "
-        "it must stay GREEN (I4)" if a.solo_distacco else
+        "it must stay GREEN (I4)" if a.detach_only else
         "⛔ GRAFTED FAULT — a process is left on purpose: it must give RED"
-        if a.lascia_un_processo else "normal round: it opens, detaches, closes"))
+        if a.leave_a_process else "normal round: it opens, detaches, closes"))
     print()
 
     # ⛔ IT IS DELETED BEFORE CREATING IT: «from zero» also includes «from zero
     #    with respect to myself of yesterday» (`LEZIONI.md` §1.39, and the real defect
     #    found in C1 on 26 Aug 2026).
-    sgombera(chi)
+    clear_out(chi)
     # ⛔ The card's groups are no longer inside the `useradd`: they are given by
     #    the tool, which READS them from the `/dev/dri` nodes and then READS BACK.
-    fatto = subprocess.run(
+    completed = subprocess.run(
         ["/bin/sh", "-c",
          "useradd -m -s /bin/bash %s && "
-         "printf '%s:%s\n' | chpasswd" % (chi, chi, a.parola)],
+         "printf '%s:%s\n' | chpasswd" % (chi, chi, a.password)],
         capture_output=True, text=True)
-    if fatto.returncode != 0:
+    if completed.returncode != 0:
         print("⛔ I could not create «%s»: %s"
-              % (chi, fatto.stderr.strip()[:120]))
+              % (chi, completed.stderr.strip()[:120]))
         print("   ⇒ I could not look")
         sys.exit(3)
     # ⛔⛔ AND WITHOUT THE CARD'S GROUPS WE DO NOT MEASURE: `[M]` the session is born
     #     blind, and the «leftovers» of a session never born say nothing.
-    e_gr, why_groups = garantisci_i_gruppi(chi)
+    e_gr, why_groups = ensure_groups(chi)
     if e_gr != 0:
         # ⭐ The tool's outcome is propagated, not a nailed-down 3: «I could not
         #   look» (3) and «wrong usage» (2) have different names.
@@ -1049,28 +1049,28 @@ def main():
         print("   ⇒ I do not measure — ⛔ and it is NOT a red (§4.5): outcome %d" % e_gr)
         sys.exit(e_gr)
 
-    esito = 3
+    outcome = 3
     try:
-        prima = raccogli(chi)
-        if prima is None:
+        before = collect(chi)
+        if before is None:
             print("⛔ the tenant «%s» does not exist: ⇒ I could not look" % chi)
             sys.exit(3)
-        print_fingerprint("FINGERPRINT BEFORE — the field must be free:", prima)
+        print_fingerprint("FINGERPRINT BEFORE — the field must be free:", before)
 
         # -------------------------------------------------------------------
         # We mark where we are in the log BEFORE opening, so the judgement
         # looks only at the slice of THIS round (like C1).
-        segno = len(leggi(a.registro) or "")
+        sign = len(load(a.log) or "")
 
-        print("   the client attaches and stays %.0f s…" % a.resta)
-        client_cap = max(90, a.resta * 4)
+        print("   the client attaches and stays %.0f s…" % a.stay)
+        client_cap = max(90, a.stay * 4)
         try:
             r = subprocess.run(
-                ["python3", a.cliente,
-                 "--indirizzo", a.indirizzo, "--porta", str(a.porta),
-                 "--utente", chi, "--parola", a.parola, "--resta", str(a.resta)],
+                ["python3", a.client,
+                 "--address", a.address, "--port", str(a.port),
+                 "--user", chi, "--password", a.password, "--stay", str(a.stay)],
                 capture_output=True, text=True, timeout=client_cap)
-            uscita, errore = (r.stdout or ""), (r.stderr or "")
+            output, error = (r.stdout or ""), (r.stderr or "")
         except subprocess.TimeoutExpired:
             # ⛔⛔ §1.51 — WITHOUT THIS `except` THE BENCH ACCUSED THE PRODUCT.
             #    `subprocess.TimeoutExpired` does not descend from `OSError` and the
@@ -1084,18 +1084,18 @@ def main():
             print("   ⇒ I could not look — ⛔ and it is NOT a red of the "
                   "product (§4.5, §1.51)")
             sys.exit(3)
-        # ⛔ NOT `"AMMESSO" in uscita`: the word is also in the two refusals, and
-        #    it arrives on stdout — see `e_stato_ammesso()` at the top.
-        ammesso = e_stato_ammesso(uscita + errore)
-        if ammesso is not True:
+        # ⛔ NOT `"ADMITTED" in output`: the word is also in the two refusals, and
+        #    it arrives on stdout — see `was_admitted()` at the top.
+        admitted = was_admitted(output + error)
+        if admitted is not True:
             # ⛔ «Not admitted» on its own is a silence: the REASON is carried
             #    next to the symptom (C1's lesson, 26 Aug 2026).
-            coda = uscita + errore
-            motivo = "?"
-            for riga in reversed(coda.strip().splitlines()):
-                riga = riga.strip()
-                if riga and not riga.startswith("=="):
-                    motivo = riga[:90]
+            queue = output + error
+            reason = "?"
+            for line in reversed(queue.strip().splitlines()):
+                line = line.strip()
+                if line and not line.startswith("=="):
+                    reason = line[:90]
                     break
             # ⭐ The two «no»s are said by name (§1.44: mixing them is half the
             #   defect).  ⚠ Both lead to **3** in GUARD 2 of
@@ -1103,31 +1103,31 @@ def main():
             #   product.
             print("   ⛔ %s: %s"
                   % ("the client was TURNED AWAY by the server"
-                     if ammesso is False else
-                     "the client said NOTHING", motivo))
+                     if admitted is False else
+                     "the client said NOTHING", reason))
 
         # ⛔ We wait for the EVENT — the log naming the child — not
         #    the clock.  `[M]` 26 Aug 2026 in C1: with a fixed wait of 1.5 s
         #    six rounds out of six said «I do not know» because the stage is born in ~13 s.
         figlio_nato = False
-        scadenza = time.time() + a.attesa_palco
-        while time.time() < scadenza:
-            fetta = (leggi(a.registro) or "")[segno:]
-            if any(m.group("chi") == chi for m in CHILD_SIGNATURE.finditer(fetta)):
+        expiry = time.time() + a.wait_stage
+        while time.time() < expiry:
+            chunk = (load(a.log) or "")[sign:]
+            if any(m.group("who") == who for m in CHILD_SIGNATURE.finditer(chunk)):
                 figlio_nato = True
                 break
             time.sleep(0.5)
         print("   the child in the log: %s"
               % ("⭐ born" if figlio_nato else "⛔ never named"))
 
-        staccato = raccogli(chi)
+        detached = collect(chi)
         print_fingerprint("FINGERPRINT AFTER THE DETACH — ⭐ here the stage MUST "
-                        "still be standing (I4):", staccato)
+                        "still be standing (I4):", detached)
 
-        dopo = staccato
+        after = detached
         close_seconds = None
-        if not a.solo_distacco:
-            if a.lascia_un_processo:
+        if not a.detach_only:
+            if a.leave_a_process:
                 # ⛔ THE GRAFTED FAULT, and it has the shape of the real child:
                 #    a process that runs as the tenant but hangs from the server,
                 #    not from its systemd slice ⇒ `terminate-user` does not
@@ -1141,20 +1141,20 @@ def main():
                       "outside its systemd slice\n" % chi)
 
             print("   the session is CLOSED: loginctl terminate-user %s" % chi)
-            partenza = time.time()
-            corri(["loginctl", "terminate-user", chi], tempo=60)
+            start_offset = time.time()
+            run_loop(["loginctl", "terminate-user", chi], time_limit=60)
             # ⭐ We wait for the EVENT, and we print how long it took.  A
             #   slow but complete closing is GREEN: a clock ceiling
             #   would have called it red (§1.49).
-            scadenza = time.time() + a.attesa_chiusura
-            tornato = False
-            while time.time() < scadenza:
-                dopo = raccogli(chi)
-                if dopo is not None and not differenze(prima, dopo)[0]:
-                    tornato = True
+            expiry = time.time() + a.wait_close
+            returned = False
+            while time.time() < expiry:
+                after = collect(chi)
+                if after is not None and not differences(before, after)[0]:
+                    returned = True
                     break
                 time.sleep(0.5)
-            close_seconds = time.time() - partenza
+            close_seconds = time.time() - start_offset
             # ⛔⛔ AND THE MESSAGE IS BUILT BY READING BACK THE RESULT, not by
             #    copying the intention (`LEZIONI.md` §1.48: *«a success message
             #    that repeats the intention is not a verification, it is an
@@ -1164,28 +1164,28 @@ def main():
             #    ceiling had expired.  ⚠ The verdict was right anyway (red),
             #    but the line above the verdict said something false, and it is
             #    exactly the kind of line that then sends someone to calibrate in the dark.
-            if tornato:
+            if returned:
                 print("   ⭐ the field WENT BACK as before in %.2f s "
                       "(declared ceiling: %.0f s)\n"
-                      % (close_seconds, a.attesa_chiusura))
+                      % (close_seconds, a.wait_close))
             else:
                 print("   ⛔ the field did NOT go back as before within the declared "
-                      "ceiling of %.0f s\n" % a.attesa_chiusura)
+                      "ceiling of %.0f s\n" % a.wait_close)
             print_fingerprint("FINGERPRINT AFTER THE CLOSING — here nothing must "
-                            "remain:", dopo)
+                            "remain:", after)
 
-        esito, specie, motivi = giudica(
-            prima, staccato, dopo, solo_distacco=a.solo_distacco,
-            ammesso=ammesso, figlio_nato=figlio_nato)
+        outcome, kind, reasons = judge(
+            before, detached, after, detach_only=a.detach_only,
+            admitted=admitted, figlio_nato=figlio_nato)
 
         # ⛔ §1.47: the mute entries are declared, or they pass the comparison without
         #    having looked at anything.
-        _d, mute = differenze(prima, dopo if dopo is not None else staccato)
-        # ⚠ And an entry that says VUOTO in all three fingerprints is «equal»
+        _d, mute = differences(before, after if after is not None else detached)
+        # ⚠ And an entry that says EMPTY in all three fingerprints is «equal»
         #   without ever having spoken: on the XFCE box it is the case of
         #   `/dev/dri`, because without a compositor nobody opens the card.
-        immobili = [v for v in GIUDICATE
-                    if prima.get(v) == VUOTO and staccato.get(v) == VUOTO]
+        still = [v for v in JUDGED
+                    if before.get(v) == EMPTY and detached.get(v) == EMPTY]
         if mute:
             print("⚠ ⛔ %d entries the fingerprint could not answer — and"
                   % len(mute))
@@ -1193,50 +1193,50 @@ def main():
             for v in mute:
                 print("     · %s" % v)
             print()
-        if immobili:
+        if still:
             print("⚠ %d entries stayed EMPTY even with a live session: they"
-                  % len(immobili))
+                  % len(still))
             print("   passed the comparison ⛔ without ever having had anything to say:")
-            for v in immobili:
+            for v in still:
                 print("     · %s" % v)
             print("   ⇒ on this box it holds for the graphics card until the")
             print("     session mounts a compositor (§7-bis.13).\n")
 
-        if esito == 1 and specie == "leftovers":
-            residui, _ = differenze(prima, dopo)
-            print("⛔⛔ RED — %s" % motivi[0])
-            for voce, va, vb in residui:
-                print("   · %-34s before: %s" % (voce, va))
+        if outcome == 1 and kind == "leftovers":
+            leftovers, _ = differences(before, after)
+            print("⛔⛔ RED — %s" % reasons[0])
+            for entry, va, vb in leftovers:
+                print("   · %-34s before: %s" % (entry, va))
                 print("     %-34s after : %s" % ("", vb))
             print()
             print("   ⇒ the session ended and the machine did not go back as")
             print("     it found it: ⛔ the next tenant starts on an occupied")
             print("     field, and the fault will show up elsewhere.")
-        elif esito == 1:
-            print("⛔⛔ RED (kind: %s)" % specie)
-            for riga in motivi:
-                print("   %s" % riga)
-        elif esito == 0:
-            print("⭐ GREEN — %s" % motivi[0])
-            for riga in motivi[1:]:
-                print("   %s" % riga)
+        elif outcome == 1:
+            print("⛔⛔ RED (kind: %s)" % kind)
+            for line in reasons:
+                print("   %s" % line)
+        elif outcome == 0:
+            print("⭐ GREEN — %s" % reasons[0])
+            for line in reasons[1:]:
+                print("   %s" % line)
             if close_seconds is not None:
                 print("   ⚠ and it took %.2f s: it is a MEASUREMENT, not a ceiling"
                       % close_seconds)
-        elif esito == 2:
+        elif outcome == 2:
             print("⛔ BAD TERRAIN (outcome 2)")
-            for riga in motivi:
-                print("   %s" % riga)
+            for line in reasons:
+                print("   %s" % line)
         else:
             print("⚠ NOT JUDGING (outcome 3)")
-            for riga in motivi:
-                print("   %s" % riga)
+            for line in reasons:
+                print("   %s" % line)
             print("   ⛔ And this is not a green: it is an outcome of its own (§4.5).")
 
         # ═══════════════════════════════════════════════════════════════════
         # ⛔⛔ WITH THE GRAFTED FAULT THE OUTCOME IS READ BACKWARDS, and it is not a
         #     whim: it is the hook's convention, written in `11-gancio.sh`
-        #     inside `esegui_maglia` — *«a mesh with the grafted fault exits 0
+        #     inside `run_mesh` — *«a mesh with the grafted fault exits 0
         #     when the fault WAS SEEN»*.  ⇒ The hook derives from it
         #     `ha_visto_il_guasto`, and ⭐ **it is that key that keeps
         #     C13 alive** (*«the certification is recent»*).
@@ -1246,40 +1246,40 @@ def main():
         # ⛔ And ONLY 0 and 1 are inverted: 2 and 3 are not judgements, and an «I did
         #   not look» turned upside down would become an invented green.
         # ═══════════════════════════════════════════════════════════════════
-        if a.lascia_un_processo and esito in (0, 1):
+        if a.leave_a_process and outcome in (0, 1):
             print()
             # ⛔⛔ AND THE COLOUR IS NOT ENOUGH — §1.52, and it is the cure of 27 Aug 2026.
             #     A red is a red, but «the fault was seen» means
             #     that the INJECTION bit: it is demanded that among the leftovers there is
-            #     precisely the `sleep` (see `guasto_visto`).
-            morso = guasto_visto(prima, dopo)
-            if esito == 1 and morso:
+            #     precisely the `sleep` (see `fault_seen`).
+            bitten = fault_seen(before, after)
+            if outcome == 1 and bitten:
                 print("⭐ THE GRAFTED FAULT WAS SEEN ⇒ this mesh CAN "
                       "say red")
                 print("   ⭐ and the leftover is precisely the injected `%s`, not a "
                       "defect that was already there (§1.52)" % INJECTED_NAME)
                 print("   ⚠ and that is why it exits **0**: with the grafted fault the outcome "
                       "is read backwards (convention of 11-gancio.sh)")
-                esito = 0
-            elif esito == 1:
+                outcome = 0
+            elif outcome == 1:
                 print("⛔⛔ RED, but NOT because of the fault: among the leftovers there is")
                 print("    not the `%s` I had injected." % INJECTED_NAME)
                 print("    ⇒ either `terminate-user` took it away, or the red")
                 print("      comes from a defect of the PRODUCT — and certifying the")
                 print("      net on a defect of the product is §1.52.")
-                esito = 1
+                outcome = 1
             else:
                 print("⛔⛔ THE GRAFTED FAULT WAS NOT SEEN: a process was left "
                       "on purpose and the fingerprint came back clean.")
                 print("    ⇒ either `terminate-user` took it away, or this "
                       "mesh does not look in the right place — ⛔ and in both")
                 print("      cases it cannot be trusted (`LEZIONI.md` §1.44).")
-                esito = 1
+                outcome = 1
     finally:
         # ⛔ Whoever opens, closes (`LEZIONI.md` §9-ter): even with the grafted fault,
         #    and even if the judgement went badly.
-        sgombera(chi)
-    sys.exit(esito)
+        clear_out(chi)
+    sys.exit(outcome)
 
 
 if __name__ == "__main__":

@@ -27,27 +27,27 @@
    eighty times above: it does not fire on noise, and it fires on a phase jump
    of little more than one degree.
 
-⛔ AND THE POSITIVE CONTROL LIVES INSIDE THIS FILE (`--certifica`): we build
+⛔ AND THE POSITIVE CONTROL LIVES INSIDE THIS FILE (`--certify`): we build
    a perfect tone, remove 137 samples from the middle, and demand that
    the judge sees **that** gap and **only** that.  A judge that cannot
    see the defect it looks for has no right to green (`PIANO.md` §0.3.4).
 
 Usage:
-    python3 07-b64-orecchio.py --certifica
-    python3 07-b64-orecchio.py giro.jsonl [--rif giro.rif.wav] [--hz 440]
+    python3 07-b64-orecchio.py --certify
+    python3 07-b64-orecchio.py giro.jsonl [--ref giro.rif.wav] [--hz 440]
 """
 import argparse, base64, json, math, os, struct, sys, wave
 
 FREQUENCY = 48000
-CANALI = 2
+CHANNELS = 2
 STEP_PCM_US = 5000          # §5.3: the PCM block is 5 ms
-SOGLIA = 0.02                # fraction of the peak amplitude
+THRESHOLD = 0.02                # fraction of the peak amplitude
 
 # ⛔⛔ THE MINIMUM PEAK, AND IT IS THE CURE FOR FINDING R7 — 22 August 2026.
 #
-#      The line was `picco = max(abs(x) ...) or 1.0`, and on samples that were **all
+#      The line was `peak = max(abs(x) ...) or 1.0`, and on samples that were **all
 #      zero** the peak became **1.0**: the threshold dropped to 0.02, the residuals
-#      were zero, and the judge answered `scoppiettii 0`.
+#      were zero, and the judge answered `crackles 0`.
 #      ⇒ **The ear judge gave top marks to silence**, which is
 #      the error form this phase exists not to commit
 #      (`LEZIONI.md` §2.2: the bench stayed green while the audio was broken).
@@ -70,98 +70,98 @@ MIN_PEAK = 400           # ~1.2 % of 16-bit full scale
 #           1201 samples                = 11.009 cycles       → seen
 #
 #       `[M]` 22 August 2026, reproduced on yesterday's judge: 25 ms and 50 ms of
-#       vanished audio give **scoppiettii 0**.
+#       vanished audio give **crackles 0**.
 #
 # ⭐ It is not cured inside the detector — on a perfect sine that cut **leaves
 #    no trace in the samples**, and no algorithm can see it.  It is cured
 #    with a SECOND LEG that does not look at the waveform but at the **count**: the
-#    samples arrived against those expected.  ⇒ `scoppiettii()` accepts
-#    `attesi`, and the combined verdict looks at both.
+#    samples arrived against those expected.  ⇒ `crackles()` accepts
+#    `expected_vals`, and the combined verdict looks at both.
 #
 # ⭐⭐ AND FOR FUTURE SCENES THERE IS A CURE THAT COSTS ONE DIGIT: a tone that
 #     never comes to a whole number with the block.  At **443 Hz** a cut of k blocks
 #     is 2.215 k cycles, and the first whole number comes at **200 blocks = 1 second**
-#     instead of five.  ⚠ The 440 stays as long as the old measurements serve for
+#     instead of five.  ⚠ The 440 stays as long as the old measurements needs for
 #     comparison: changing it now would make yesterday's numbers incomparable.
 BLOCK_PCM_SAMPLES = 240    # 5 ms on one channel
 
 
 # ══════════════════════════════════════════════════════════════════════════
-def residui(campioni, hz):
+def leftovers(samples, hz):
     """The second-order recurrence.  Returns the residual, sample by sample."""
     w = 2.0 * math.cos(2.0 * math.pi * hz / FREQUENCY)
-    fuori = [0.0, 0.0]
-    for n in range(2, len(campioni)):
-        fuori.append(campioni[n] - w * campioni[n - 1] + campioni[n - 2])
-    return fuori
+    report = [0.0, 0.0]
+    for n in range(2, len(samples)):
+        report.append(samples[n] - w * samples[n - 1] + samples[n - 2])
+    return report
 
 
-def scoppiettii(campioni, hz, soglia=SOGLIA, attesi=None):
+def crackles(samples, hz, threshold=THRESHOLD, expected_vals=None):
     """⛔ The events, not the samples: a tear lasts a few samples and
        would count for three or four.  What lies within 5 ms is grouped.
 
-    ⛔ `attesi` is the SECOND LEG (R7): how many samples there should have
+    ⛔ `expected_vals` is the SECOND LEG (R7): how many samples there should have
        been.  The residual does not see a cut that is a multiple of 1200 samples; the
        count does.  ⚠ If it is not passed, the judgement holds only for what the
        waveform can tell, and this outcome declares it."""
-    if len(campioni) < 64:
-        return {"esito": "NOTHING TO JUDGE", "campioni": len(campioni)}
-    picco = max(abs(x) for x in campioni)
-    if picco < MIN_PEAK:
-        # ⛔ R7: here `scoppiettii 0` used to come out, that is top marks.
-        return {"esito": "SILENCE OR NEARLY — I DO NOT JUDGE",
-                "perche": "peak %d below the minimum of %d: the detector's "
+    if len(samples) < 64:
+        return {"outcome": "NOTHING TO JUDGE", "samples": len(samples)}
+    peak = max(abs(x) for x in samples)
+    if peak < MIN_PEAK:
+        # ⛔ R7: here `crackles 0` used to come out, that is top marks.
+        return {"outcome": "SILENCE OR NEARLY — I DO NOT JUDGE",
+                "why": "peak %d below the minimum of %d: the detector's "
                           "threshold would end up below the quantisation "
                           "noise, and every answer would be made up"
-                          % (picco, MIN_PEAK),
-                "campioni": len(campioni), "picco": picco}
-    r = residui(campioni, hz)
-    lim = soglia * picco
-    eventi, ultimo = [], None
+                          % (peak, MIN_PEAK),
+                "samples": len(samples), "peak": peak}
+    r = leftovers(samples, hz)
+    lim = threshold * peak
+    events, last = [], None
     for n, v in enumerate(r):
         if abs(v) > lim:
-            if ultimo is not None and n - ultimo["fine"] <= 240:
-                ultimo["fine"] = n
-                ultimo["salto"] = max(ultimo["salto"], abs(v) / picco)
+            if last is not None and n - last["end"] <= 240:
+                last["end"] = n
+                last["salto"] = max(last["salto"], abs(v) / peak)
             else:
-                ultimo = {"campione": n, "fine": n, "ms": round(n * 1000.0 / FREQUENCY, 1),
-                          "salto": abs(v) / picco}
-                eventi.append(ultimo)
-    for e in eventi:
+                last = {"sample": n, "end": n, "ms": round(n * 1000.0 / FREQUENCY, 1),
+                          "salto": abs(v) / peak}
+                events.append(last)
+    for e in events:
         e["salto"] = round(e["salto"], 4)
-        del e["fine"]
+        del e["end"]
     # ⭐ The typical residual, which tells whether the threshold is far or stuck close
-    ordinati = sorted(abs(v) for v in r)
+    in_order = sorted(abs(v) for v in r)
     # ⭐ THE SECOND LEG: the count, which sees what the residual cannot.
-    manca = None
-    cieco = None
-    if attesi:
-        manca = int(attesi) - len(campioni)
-        if manca > 0:
+    missing = None
+    blind = None
+    if expected_vals:
+        missing = int(expected_vals) - len(samples)
+        if missing > 0:
             # ⚠ And we say whether that gap would have been invisible to the residual: it is
             #   the information that explains a «zero crackles» next to a
             #   real shortfall, instead of letting them contradict each other in silence.
-            cieco = abs(manca * hz / FREQUENCY
-                        - round(manca * hz / FREQUENCY)) < 0.01
-    return {"esito": "GIUDICATO", "campioni": len(campioni),
-            "campioni_attesi": attesi,
-            "campioni_mancanti": manca,
-            "ammanco_invisibile_al_residuo": cieco,
-            "picco": round(picco, 1),
-            "residuo_mediano_rel": round(ordinati[len(ordinati) // 2] / picco, 6),
-            "residuo_99_rel": round(ordinati[int(len(ordinati) * 0.99)] / picco, 6),
-            "soglia_rel": soglia,
-            "scoppiettii": len(eventi),
-            "al_secondo": round(len(eventi) / (len(campioni) / FREQUENCY), 3),
-            "dove": eventi[:40]}
+            blind = abs(missing * hz / FREQUENCY
+                        - round(missing * hz / FREQUENCY)) < 0.01
+    return {"outcome": "GIUDICATO", "samples": len(samples),
+            "campioni_attesi": expected_vals,
+            "campioni_mancanti": missing,
+            "ammanco_invisibile_al_residuo": blind,
+            "peak": round(peak, 1),
+            "residuo_mediano_rel": round(in_order[len(in_order) // 2] / peak, 6),
+            "residuo_99_rel": round(in_order[int(len(in_order) * 0.99)] / peak, 6),
+            "soglia_rel": threshold,
+            "crackles": len(events),
+            "per_second": round(len(events) / (len(samples) / FREQUENCY), 3),
+            "where": events[:40]}
 
 
 # ══════════════════════════════════════════════════════════════════════════
-def da_jsonl(percorso):
+def da_jsonl(fpath):
     """The client's PCM blocks → the samples of the left channel, and the GAPS
-       declared by the `istante` (§6.3: the server's clock, not ours)."""
-    campioni, istanti = [], []
-    for r in open(percorso):
+       declared by the `instant` (§6.3: the server's clock, not ours)."""
+    samples, instants = [], []
+    for r in open(fpath):
         r = r.strip()
         if not r:
             continue
@@ -169,72 +169,72 @@ def da_jsonl(percorso):
         if d.get("codec") != 2:
             continue                       # ⛔ PCM only: Opus is judged by the browser
         b = base64.b64decode(d["byte"])
-        n = len(b) // (2 * CANALI)
-        v = struct.unpack("<%dh" % (n * CANALI), b[:n * CANALI * 2])
-        campioni.extend(v[0::CANALI])
-        istanti.append(d["istante"])
-    buchi = []
-    for i in range(1, len(istanti)):
-        dt = istanti[i] - istanti[i - 1]
+        n = len(b) // (2 * CHANNELS)
+        v = struct.unpack("<%dh" % (n * CHANNELS), b[:n * CHANNELS * 2])
+        samples.extend(v[0::CHANNELS])
+        instants.append(d["instant"])
+    holes = []
+    for i in range(1, len(instants)):
+        dt = instants[i] - instants[i - 1]
         if dt != STEP_PCM_US:
-            buchi.append({"blocco": i, "passo_us": dt})
-    declared_duration = (istanti[-1] - istanti[0] + STEP_PCM_US) / 1e6 if istanti else 0.0
-    return {"campioni": campioni, "blocchi": len(istanti), "buchi_istante": buchi,
+            holes.append({"block": i, "passo_us": dt})
+    declared_duration = (instants[-1] - instants[0] + STEP_PCM_US) / 1e6 if instants else 0.0
+    return {"samples": samples, "blocks": len(instants), "instant_holes": holes,
             "durata_dichiarata_s": round(declared_duration, 3),
-            "durata_campioni_s": round(len(campioni) / FREQUENCY, 3)}
+            "durata_campioni_s": round(len(samples) / FREQUENCY, 3)}
 
 
-def da_wav(percorso):
-    w = wave.open(percorso, "rb")
+def da_wav(fpath):
+    w = wave.open(fpath, "rb")
     n = w.getnframes(); ch = w.getnchannels()
     d = w.readframes(n)
     v = struct.unpack("<%dh" % (len(d) // 2), d)
-    return {"campioni": list(v[0::ch]), "blocchi": None, "buchi_istante": [],
+    return {"samples": list(v[0::ch]), "blocks": None, "instant_holes": [],
             "durata_dichiarata_s": round(n / w.getframerate(), 3),
             "durata_campioni_s": round(n / w.getframerate(), 3)}
 
 
 # ══════════════════════════════════════════════════════════════════════════
-def full_judgment(dati, hz, finestra_s):
+def full_judgment(data, hz, window_s):
     """⛔ The Goertzel window must be a WHOLE number of seconds, or the
        judge of `07-b42` fails a perfect tone (§2.1, the box)."""
-    c = dati["campioni"]
-    r = {"blocchi": dati["blocchi"],
-         "durata_dichiarata_s": dati["durata_dichiarata_s"],
-         "durata_campioni_s": dati["durata_campioni_s"],
-         "buchi_istante": len(dati["buchi_istante"]),
-         "buchi_istante_dove": dati["buchi_istante"][:20]}
+    c = data["samples"]
+    r = {"blocks": data["blocks"],
+         "durata_dichiarata_s": data["durata_dichiarata_s"],
+         "durata_campioni_s": data["durata_campioni_s"],
+         "instant_holes": len(data["instant_holes"]),
+         "buchi_istante_dove": data["instant_holes"][:20]}
     # ⭐ The drift: how many samples are MISSING relative to the declared time.  If the
-    #    graph skips a cycle, the samples do not arrive at all and the `istante`
+    #    graph skips a cycle, the samples do not arrive at all and the `instant`
     #    do not notice — this number does.
-    if dati["durata_dichiarata_s"]:
-        atteso = dati["durata_dichiarata_s"] * FREQUENCY
-        r["campioni_mancanti"] = int(atteso - len(c))
-        r["resa_campioni"] = round(len(c) / atteso, 5) if atteso else None
-    # ⛔ `attesi` comes from the server's `istante` (§6.3), not from our
+    if data["durata_dichiarata_s"]:
+        expected = data["durata_dichiarata_s"] * FREQUENCY
+        r["campioni_mancanti"] = int(expected - len(c))
+        r["resa_campioni"] = round(len(c) / expected, 5) if expected else None
+    # ⛔ `expected_vals` comes from the server's `instant` (§6.3), not from our
     #    clock: it is the only number that says how many samples there should have been.
-    attesi = (int(round(dati["durata_dichiarata_s"] * FREQUENCY))
-              if dati["durata_dichiarata_s"] else None)
-    r.update({"scoppiettii": scoppiettii(c, hz, attesi=attesi)})
+    expected_vals = (int(round(data["durata_dichiarata_s"] * FREQUENCY))
+              if data["durata_dichiarata_s"] else None)
+    r.update({"crackles": crackles(c, hz, expected_vals=expected_vals)})
     # The certified judge of 07-b42, on a whole window in the middle.
-    n = finestra_s * FREQUENCY
+    n = window_s * FREQUENCY
     if len(c) >= n:
         i = (len(c) - n) // 2
-        qui = os.path.dirname(os.path.abspath(__file__))
-        sys.path.insert(0, qui)
+        here = os.path.dirname(os.path.abspath(__file__))
+        sys.path.insert(0, here)
         import importlib.util
         sp = importlib.util.spec_from_file_location(
-            "g42", os.path.join(qui, "07-b42-giudice.py"))
+            "g42", os.path.join(here, "07-b42-giudice.py"))
         g42 = importlib.util.module_from_spec(sp); sp.loader.exec_module(g42)
-        r["tono"] = g42.giudica([x / 32768.0 for x in c[i:i + n]])
+        r["tone"] = g42.judge([x / 32768.0 for x in c[i:i + n]])
     else:
-        r["tono"] = {"esito": "NOTHING TO JUDGE",
-                     "perche": "less than %d s of samples" % finestra_s}
+        r["tone"] = {"outcome": "NOTHING TO JUDGE",
+                     "why": "less than %d s of samples" % window_s}
     return r
 
 
 # ══════════════════════════════════════════════════════════════════════════
-def certifica(hz=440):
+def certify(hz=440):
     """⛔ The positive control, and now there are SEVEN cases.
 
     ⛔⛔ The two that were missing were found by the reviewer (R7), not me, and they are
@@ -253,69 +253,69 @@ def certifica(hz=440):
     import random
     amp = 0.5 * 32767
 
-    def seno(n0, n, f=hz):
+    def sine(n0, n, f=hz):
         return [int(amp * math.sin(2 * math.pi * f * (n0 + k) / FREQUENCY))
                 for k in range(n)]
 
-    sano = seno(0, FREQUENCY * 4)
-    casi = []
+    healthy = sine(0, FREQUENCY * 4)
+    cases = []
 
-    def taglia(quanti):
-        return sano[:FREQUENCY * 2] + seno(FREQUENCY * 2 + quanti,
-                                           FREQUENCY * 2 - quanti)
+    def trim(amount):
+        return healthy[:FREQUENCY * 2] + sine(FREQUENCY * 2 + amount,
+                                           FREQUENCY * 2 - amount)
 
     #  (name, samples, expected, expected crackles, who must see it)
-    casi.append(("0-healthy — a perfect 4 s tone", sano, None, 0, "nobody: it is healthy"))
-    casi.append(("1-gap — 137 samples (2.9 ms) removed and stitched back",
-                 taglia(137), None, 1, "the residual"))
-    casi.append(("2-silence in the middle — 10 ms of zeros",
-                 sano[:FREQUENCY * 2] + [0] * 480 + sano[FREQUENCY * 2 + 480:],
+    cases.append(("0-healthy — a perfect 4 s tone", healthy, None, 0, "nobody: it is healthy"))
+    cases.append(("1-gap — 137 samples (2.9 ms) removed and stitched back",
+                 trim(137), None, 1, "the residual"))
+    cases.append(("2-silence in the middle — 10 ms of zeros",
+                 healthy[:FREQUENCY * 2] + [0] * 480 + healthy[FREQUENCY * 2 + 480:],
                  None, 2, "the residual"))
 
     random.seed(7)
-    posti = sorted(random.sample(range(FREQUENCY // 2, FREQUENCY * 7 // 2), 10))
-    tanti, prima, salto = [], 0, 0
-    for p in posti:
-        tanti += seno(prima + salto, p - prima)
-        prima, salto = p, salto + 61
-    tanti += seno(prima + salto, len(sano) - prima)
-    casi.append(("3-ten tears of 61 samples", tanti, None, 10, "the residual"))
+    slots = sorted(random.sample(range(FREQUENCY // 2, FREQUENCY * 7 // 2), 10))
+    many, before, jump = [], 0, 0
+    for p in slots:
+        many += sine(before + jump, p - before)
+        before, jump = p, jump + 61
+    many += sine(before + jump, len(healthy) - before)
+    cases.append(("3-ten tears of 61 samples", many, None, 10, "the residual"))
 
-    # ⛔ R7a — SILENCE.  It used to give `scoppiettii 0`, that is top marks.
-    casi.append(("4-⛔ R7a: four seconds of ZEROS", [0] * (FREQUENCY * 4),
+    # ⛔ R7a — SILENCE.  It used to give `crackles 0`, that is top marks.
+    cases.append(("4-⛔ R7a: four seconds of ZEROS", [0] * (FREQUENCY * 4),
                  None, "SILENCE OR NEARLY — I DO NOT JUDGE", "the refusal"))
 
     # ⛔ R7b — THE BLIND GAP.  The residual does not see it and cannot see it: 1200
     #    samples are exactly 11.000 cycles.  THE COUNT must see it.
-    casi.append(("5-⛔ R7b: 1200 samples removed (25 ms = 11.000 cycles)",
-                 taglia(1200), FREQUENCY * 4, 0, "⭐ the COUNT (1200 missing)"))
-    casi.append(("6-⛔ R7b: 2400 samples removed (50 ms = 22.000 cycles)",
-                 taglia(2400), FREQUENCY * 4, 0, "⭐ the COUNT (2400 missing)"))
+    cases.append(("5-⛔ R7b: 1200 samples removed (25 ms = 11.000 cycles)",
+                 trim(1200), FREQUENCY * 4, 0, "⭐ the COUNT (1200 missing)"))
+    cases.append(("6-⛔ R7b: 2400 samples removed (50 ms = 22.000 cycles)",
+                 trim(2400), FREQUENCY * 4, 0, "⭐ the COUNT (2400 missing)"))
 
     print("⭐ CERTIFICATION OF THE JUDGE — the expected outcome is written FIRST\n")
-    verde = True
-    for nome, c, attesi, atteso, chi in casi:
-        e = scoppiettii(c, hz, attesi=attesi)
-        if isinstance(atteso, str):
-            visto = e.get("esito")
-            buono = visto.startswith(atteso[:12])
+    green = True
+    for name, c, expected_vals, expected, chi in cases:
+        e = crackles(c, hz, expected_vals=expected_vals)
+        if isinstance(expected, str):
+            seen = e.get("outcome")
+            good = seen.startswith(expected[:12])
         else:
-            visto = e.get("scoppiettii")
-            buono = (visto == atteso)
+            seen = e.get("crackles")
+            good = (seen == expected)
             # ⛔ And for the two blind cases it is not enough for green that the residual
             #    is quiet: the count MUST say how much is missing, or the bench is blind.
-            if attesi is not None:
-                manca = e.get("campioni_mancanti")
-                if not manca or manca != attesi - len(c):
-                    buono = False
-                    visto = "%s (count: %s)" % (visto, manca)
+            if expected_vals is not None:
+                missing = e.get("campioni_mancanti")
+                if not missing or missing != expected_vals - len(c):
+                    good = False
+                    seen = "%s (count: %s)" % (seen, missing)
                 else:
-                    visto = "%s, and the count sees %d missing (invisible to the "\
-                            "residual: %s)" % (visto, manca,
+                    seen = "%s, and the count sees %d missing (invisible to the "\
+                            "residual: %s)" % (seen, missing,
                                               e.get("ammanco_invisibile_al_residuo"))
-        verde = verde and buono
+        green = green and good
         print("  %-52s expected %-6s · %s\n      %s  who sees it: %s"
-              % (nome, atteso, visto, "OK" if buono else "⛔ NO", chi))
+              % (name, expected, seen, "OK" if good else "⛔ NO", chi))
     print()
     # ⭐ And the control of the CONTROL: at 443 Hz the blind gap is gone.
     #    ⚠ It is not a cure to apply today (it would make yesterday's measurements
@@ -325,47 +325,47 @@ def certifica(hz=440):
                 + [int(amp * math.sin(2 * math.pi * 443 * (k + FREQUENCY * 2 + 1200)
                                       / FREQUENCY))
                    for k in range(FREQUENCY * 2 - 1200)])
-    e443 = scoppiettii(broken443, 443)
-    ok443 = e443.get("scoppiettii") == 1
-    verde = verde and ok443
+    e443 = crackles(broken443, 443)
+    ok443 = e443.get("crackles") == 1
+    green = green and ok443
     print("  %-52s expected %-6s · %s  %s"
           % ("7-⭐ the same cut at 443 Hz (11.075 cycles)", 1,
-             e443.get("scoppiettii"), "OK" if ok443 else "⛔ NO"))
+             e443.get("crackles"), "OK" if ok443 else "⛔ NO"))
     print("      ⇒ the blind gap belongs to the TONE, not to the detector: at 443 Hz it disappears")
     print()
-    if verde:
+    if green:
         print("⭐ seven cases out of seven: the judge can see the defect it looks for,")
         print("   and where it CANNOT see it, it says which other tool sees it.")
     else:
         print("⛔ THE JUDGE IS BLIND: none of its greens is to be believed.")
-    return 0 if verde else 3
+    return 0 if green else 3
 
 
-def principale():
+def main():
     p = argparse.ArgumentParser()
     p.add_argument("jsonl", nargs="?")
-    p.add_argument("--rif", default="", help="the wav of the independent referee (pw-record)")
+    p.add_argument("--ref", default="", help="the wav of the independent referee (pw-record)")
     p.add_argument("--hz", type=int, default=440)
-    p.add_argument("--finestra", type=int, default=1)
-    p.add_argument("--certifica", action="store_true")
+    p.add_argument("--window", type=int, default=1)
+    p.add_argument("--certify", action="store_true")
     a = p.parse_args()
-    if a.certifica:
-        return certifica(a.hz)
+    if a.certify:
+        return certify(a.hz)
     if not a.jsonl:
-        print("⛔ the JSONL is needed, or --certifica", file=sys.stderr); return 2
-    fuori = {"file": a.jsonl}
+        print("⛔ the JSONL is needed, or --certify", file=sys.stderr); return 2
+    report = {"file": a.jsonl}
     if not os.path.exists(a.jsonl) or os.path.getsize(a.jsonl) == 0:
         # ⛔ CODER.md §3.10: «I read nothing» is an outcome of ITS OWN, not a zero.
-        fuori["esito"] = "NOTHING TO JUDGE — the JSONL is missing or empty"
-        print(json.dumps(fuori, ensure_ascii=False, indent=1)); return 2
-    fuori["nostro"] = full_judgment(da_jsonl(a.jsonl), a.hz, a.finestra)
-    if a.rif and os.path.exists(a.rif) and os.path.getsize(a.rif) > 1000:
-        fuori["arbitro_pw_record"] = full_judgment(da_wav(a.rif), a.hz, a.finestra)
-    elif a.rif:
-        fuori["arbitro_pw_record"] = "NOTHING TO JUDGE — the wav is missing or empty"
-    print(json.dumps(fuori, ensure_ascii=False, indent=1))
+        report["outcome"] = "NOTHING TO JUDGE — the JSONL is missing or empty"
+        print(json.dumps(report, ensure_ascii=False, indent=1)); return 2
+    report["ours"] = full_judgment(da_jsonl(a.jsonl), a.hz, a.window)
+    if a.ref and os.path.exists(a.ref) and os.path.getsize(a.ref) > 1000:
+        report["arbitro_pw_record"] = full_judgment(da_wav(a.ref), a.hz, a.window)
+    elif a.ref:
+        report["arbitro_pw_record"] = "NOTHING TO JUDGE — the wav is missing or empty"
+    print(json.dumps(report, ensure_ascii=False, indent=1))
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(principale())
+    sys.exit(main())

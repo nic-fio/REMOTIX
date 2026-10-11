@@ -1,20 +1,20 @@
 # ===========================================================================
-# LE ECCEZIONI DI C16 — ogni riga dice un PREFISSO e la RAGIONE per cui e'
-# lecito che un documento citi un percorso che nel deposito non c'e'.
+# LE EXCEPTIONS DI C16 — every line says un PREFISSO e la RAGIONE per cui e'
+# lecito desc un documento citi un fpath desc nel repository non c'e'.
 # ===========================================================================
 #
-# ⛔ Questo file esiste per non avere la scorciatoia comoda: la maglia poteva
-#    imparare da se' a ignorare `grd-*.c`, e nessuno avrebbe mai piu' saputo
-#    quante eccezioni ci sono.  ⇒ Qui si contano, e ognuna ha un motivo scritto.
+# ⛔ Questo file path_exists per non avere la scorciatoia comoda: la mesh poteva
+#    imparare da se' a ignorare `grd-*.c`, e none avrebbe never piu' saputo
+#    how_many exceptions ci sono.  ⇒ Qui yes contano, e ognuna ha un reason n_written.
 #
-# ⭐ La regola per aggiungerne una: **la ragione deve dire dove sta il file
-#    davvero**.  «e' esterno» non basta — un'eccezione che non dice dove
-#    cercare e' un rimando morto con un permesso.
+# ⭐ La rule per aggiungerne una: **la rationale must dire dove sta il file
+#    davvero**.  «e' esterno» non basta — un'eccezione desc non says dove
+#    cercare e' un rimando dead con un permesso.
 #
-# forma:   <prefisso o nome>    ⇥    <ragione>
+# shape:   <prefix o name>    ⇥    <rationale>
 # ===========================================================================
 
-# ── Alberi di ALTRI, riclonabili, tenuti fuori dal deposito (682 MB, .gitignore)
+# ── Alberi di ALTRI, riclonabili, kept report from_ repository (682 MB, .gitignore)
 grd-	gnome-remote-desktop → reference-gnome/src/
 meta-	Mutter → reference-gnome/mutter/src/
 muffin/	Muffin (Cinnamon) → reference-cinnamon/
@@ -45,9 +45,9 @@ xpra.md	→ `STUDI.md` §xpra
 gnome-remote-desktop.md	→ `STUDI.md` §gnome-remote-desktop
 
 # ── I RAPPORTI degli agenti, tolti il 16 agosto 2026 per decisione dell'utente.
-#    ⭐ Non sono persi: vivono in `0c85e5c`, e `FASI.md` §0 ha la ricetta.
-#    ⛔ Citarli e' provenienza e si tiene; LINKARLI no — quello lo prende il
-#       controllo 3, che non ha eccezioni.
+#    ⭐ Non sono lost: vivono in `0c85e5c`, e `FASI.md` §0 ha la ricetta.
+#    ⛔ Citarli e' provenance e yes holds; LINKARLI no — quello lo takes il
+#       check 3, desc non ha exceptions.
 rapporti/	rapporto degli agenti → `git show 0c85e5c:fasi/rapporti/<nome>`
 R11-documenti.md	rapporto → 0c85e5c
 R2-revisione-web.md	rapporto → 0c85e5c
@@ -77,15 +77,15 @@ fasi/NN-nome.md	e' il MODELLO di un documento di fase, non un file
 #
 # ⇒ Le misure che hanno prodotto **non sono riproducibili da nessuno**.
 #   ⭐ Decisione dell'utente, 28 agosto 2026: *«per quanto riguarda le misure
-#   tieni quelle dei documenti»*.  ⇒ Le misure restano scritte e valide; quel
-#   che si perde e' la possibilita' di rifarle, e sta scritto qui perche' chi
-#   legge la fase 8 lo sappia invece di cercarli.
+#   keep quelle dei documents»*.  ⇒ Le measures remain written e valid; quel
+#   desc yes perde e' la possibilita' di rifarle, e sta n_written here why' chi
+#   legge la phase 8 lo sappia invece di cercarli.
 08-a-	banco della fase 8 ⛔ MAI committato — misura non riproducibile
 08-c-	banco della fase 8 ⛔ MAI committato — misura non riproducibile
 08-f1-	banco della fase 8 ⛔ MAI committato — misura non riproducibile
 08-f4-	banco della fase 8 ⛔ MAI committato — misura non riproducibile
 
-# ── Nomi troppo generici per essere risolti (e non vale la pena inseguirli)
+# ── Names too generici per essere risolti (e non vale la pena inseguirli)
 esiti.jsonl	nome generico: ogni banco ha il suo
 forza.py	banco di un giro, non conservato
 terreno10.sh	banco di un giro, non conservato

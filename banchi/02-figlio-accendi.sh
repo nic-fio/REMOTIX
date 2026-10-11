@@ -3,12 +3,12 @@
 # 02-figlio-accendi.sh — ⛔ IT RUNS ON THE SERVER (NIC-OS), **OUTSIDE** the container,
 # and **AS ROOT**.  It switches on the product of `DECISIONI.md` §1.10-bis on **7571**.
 #
-#   sudo bash /media/REMOTIX/src/02-figlio-accendi.sh stato
+#   sudo bash /media/REMOTIX/src/02-figlio-accendi.sh status
 #   sudo bash /media/REMOTIX/src/02-figlio-accendi.sh bus
-#   sudo bash /media/REMOTIX/src/02-figlio-accendi.sh accendi
-#   sudo bash /media/REMOTIX/src/02-figlio-accendi.sh spegni
-#   sudo bash /media/REMOTIX/src/02-figlio-accendi.sh riaccendi
-#   sudo bash /media/REMOTIX/src/02-figlio-accendi.sh guasto <uid|cieco|via>
+#   sudo bash /media/REMOTIX/src/02-figlio-accendi.sh start
+#   sudo bash /media/REMOTIX/src/02-figlio-accendi.sh stop
+#   sudo bash /media/REMOTIX/src/02-figlio-accendi.sh restart
+#   sudo bash /media/REMOTIX/src/02-figlio-accendi.sh fault <uid|blind|off>
 #
 # ===========================================================================
 # ⛔⭐ WHY AS ROOT, AND IT IS THE WHOLE MANDATE IN ONE LINE
@@ -38,27 +38,27 @@
 # servers sharing the ban file would ban each other.
 set -uo pipefail
 
-IND=${IND:-192.168.0.2}
-PORTA=${PORTA:-7571}
+ADDR=${ADDR:-192.168.0.2}
+PORT=${PORT:-7571}
 D=${D:-/media/REMOTIX/src/02-figlio-src/src}
-LAV=${LAV:-/media/REMOTIX/tmp/02-figlio}
+WORKDIR=${WORKDIR:-/media/REMOTIX/tmp/02-figlio}
 LIBS=${LIBS:-/media/REMOTIX/src/b2/ngtcp2/build/lib:/media/REMOTIX/src/b2/ngtcp2/build/crypto/ossl:/media/REMOTIX/src/b2/prefisso/lib}
 # ⛔ The survey folder is written by **the child**, that is the user: if it were
 #    root's the survey would not come out, and the log would say so.  It is made `0777`
 #    with the sticky bit, like /tmp, instead of guessing which user will get in.
-RILIEVO=$LAV/rilievo
-CERT=$LAV/certificati
-BAN=$LAV/ban
-SOCK=$LAV/comando.sock
-LOG=$LAV/registro.log
-PIDF=$LAV/pid
+SURVEY=$WORKDIR/rilievo
+CERT=$WORKDIR/certificati
+BAN=$WORKDIR/ban
+SOCK=$WORKDIR/command.sock
+LOG=$WORKDIR/registro.log
+PIDF=$WORKDIR/pid
 
 ok()  { printf '    \033[1;32mOK\033[0m  %s\n' "$*"; }
 ko()  { printf '    \033[1;31mNO\033[0m  %s\n' "$*"; }
 inf() { printf '    --  %s\n' "$*"; }
 log() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 
-impronta() { sha256sum "$1" 2>/dev/null | cut -c1-16; }
+fingerprint() { sha256sum "$1" 2>/dev/null | cut -c1-16; }
 
 my_pid()
 {
@@ -67,14 +67,14 @@ my_pid()
 		p=$(cat "$PIDF" 2>/dev/null)
 		[ -n "$p" ] && [ -d "/proc/$p" ] && { echo "$p"; return 0; }
 	fi
-	p=$(pgrep -f "remotix .*--porta $PORTA" | head -1)
+	p=$(pgrep -f "remotix .*--port $PORT" | head -1)
 	[ -n "$p" ] && { echo "$p"; return 0; }
 	return 1
 }
 
 # ⛔ The three ports that are NOT mine are counted before and after: if they drop, the round
 #    did damage, and damage nobody counts did not happen.
-vicini()
+neighbors()
 {
 	local a b c
 	a=$(ss -tuln 2>/dev/null | grep -c ':7448\b')
@@ -83,34 +83,34 @@ vicini()
 	printf '7448: %s · 7501: %s · 7561: %s listeners\n' "$a" "$b" "$c"
 }
 
-case "${1:-stato}" in
-stato)
-	log "The child server, on $PORTA"
-	inf "$(vicini)"
+case "${1:-status}" in
+status)
+	log "The child server, on $PORT"
+	inf "$(neighbors)"
 	if ! pid=$(my_pid); then
-		ko "no server on $PORTA"
-		[ -x "$D/remotix" ] && inf "on disk: $(impronta "$D/remotix")…"
+		ko "no server on $PORT"
+		[ -x "$D/remotix" ] && inf "on disk: $(fingerprint "$D/remotix")…"
 		exit 1
 	fi
 	inf "pid $pid, user $(ps -o user= -p "$pid" 2>/dev/null | tr -d ' ')"
-	inf "running: $(impronta "/proc/$pid/exe")  ·  on disk: $(impronta "$D/remotix")"
+	inf "running: $(fingerprint "/proc/$pid/exe")  ·  on disk: $(fingerprint "$D/remotix")"
 	log "⭐ The children alive now (asked of /proc, not deduced)"
-	# ⛔ They are looked up by their `argv[0]`, which is `remotix-figlio` and is written by
-	#    `figli_assicura()`: `pgrep remotix` would also catch the servers of the
+	# ⛔ They are looked up by their `argv[0]`, which is `remotix-child` and is written by
+	#    `children_ensure()`: `pgrep remotix` would also catch the servers of the
 	#    other benches, and a bench that counts someone else's processes measures
 	#    the machine, not the product.
-	trovati=0
+	matches=0
 	for f in $(pgrep -P "$pid" 2>/dev/null); do
-		riga=$(tr '\0' ' ' < "/proc/$f/cmdline" 2>/dev/null)
-		case "$riga" in
-		*--figlio-interno*)
+		line=$(tr '\0' ' ' < "/proc/$f/cmdline" 2>/dev/null)
+		case "$line" in
+		*--internal-child*)
 			u=$(awk '/^Uid:/{print $2" "$3" "$4" "$5}' "/proc/$f/status" 2>/dev/null)
 			g=$(awk '/^Gid:/{print $2" "$3" "$4" "$5}' "/proc/$f/status" 2>/dev/null)
-			inf "child pid $f · Uid: $u · Gid: $g · «$riga»"
-			trovati=$((trovati+1)) ;;
+			inf "child pid $f · Uid: $u · Gid: $g · «$line»"
+			matches=$((matches+1)) ;;
 		esac
 	done
-	[ "$trovati" -eq 0 ] && inf "no child (nobody has got in yet)"
+	[ "$matches" -eq 0 ] && inf "no child (nobody has got in yet)"
 	exit 0 ;;
 
 bus)
@@ -148,10 +148,10 @@ bus)
 	fi
 	exit "$outcome_bus" ;;
 
-spegni)
+stop)
 	log "Switching off"
-	inf "$(vicini)"
-	if ! pid=$(my_pid); then ok "nothing was on on $PORTA"; exit 0; fi
+	inf "$(neighbors)"
+	if ! pid=$(my_pid); then ok "nothing was on on $PORT"; exit 0; fi
 	# ⛔ The children are counted BEFORE switching off, to be able to say afterwards whether they
 	#    died with it: «the parent is off» and «the children are off» are two
 	#    different facts, and the second is the one that counts (no orphan
@@ -160,7 +160,7 @@ spegni)
 	# ⛔⛔ AND THE **PIDS** ARE TAKEN, NOT THEIR NUMBER — cure of 13 Aug 2026.
 	#
 	#    The previous line counted, after switching off,
-	#    `pgrep -f -- "--figlio-interno" | wc -l`: that is **EVERYBODY's children**.
+	#    `pgrep -f -- "--internal-child" | wc -l`: that is **EVERYBODY's children**.
 	#    ⇒ two defects in a single line, opposite to each other:
 	#      · another bench with a live child made this one come out RED with
 	#        zero orphans of its own — an accusation against the product that belonged to the neighbour;
@@ -179,11 +179,11 @@ spegni)
 	#      why it is not enough for `/proc/$f` to exist — it is rechecked that the command
 	#      line is still that of a child of ours.
 	my_children=""
-	prima=0
+	before=0
 	for f in $(pgrep -P "$pid" 2>/dev/null); do
-		riga=$(tr '\0' ' ' < "/proc/$f/cmdline" 2>/dev/null)
-		case "$riga" in
-		*--figlio-interno*) my_children="$my_children $f"; prima=$((prima+1)) ;;
+		line=$(tr '\0' ' ' < "/proc/$f/cmdline" 2>/dev/null)
+		case "$line" in
+		*--internal-child*) my_children="$my_children $f"; before=$((before+1)) ;;
 		esac
 	done
 	kill "$pid" 2>/dev/null
@@ -192,45 +192,45 @@ spegni)
 	[ -d "/proc/$pid" ] && { ko "pid $pid did not die"; exit 3; }
 	rm -f "$PIDF"
 
-	restano=0
-	orfani=""
+	remain=0
+	orphans=""
 	for f in $my_children; do
-		riga=$(tr '\0' ' ' < "/proc/$f/cmdline" 2>/dev/null) || continue
-		case "$riga" in
-		*--figlio-interno*) restano=$((restano+1)); orfani="$orfani $f" ;;
+		line=$(tr '\0' ' ' < "/proc/$f/cmdline" 2>/dev/null) || continue
+		case "$line" in
+		*--internal-child*) remain=$((remain+1)); orphans="$orphans $f" ;;
 		esac
 	done
-	ok "switched off (pid $pid, it had $prima children of MINE)"
-	if [ "$restano" -eq 0 ]; then
+	ok "switched off (pid $pid, it had $before children of MINE)"
+	if [ "$remain" -eq 0 ]; then
 		ok "⭐ and NO child of MINE was left orphaned"
 	else
-		ko "⛔ $restano children of MINE are still alive:$orfani — they are orphans"
+		ko "⛔ $remain children of MINE are still alive:$orphans — they are orphans"
 		ko "   attached to somebody's virtual monitor"
-		for f in $orfani; do
+		for f in $orphans; do
 			printf '        %s  %s\n' "$f" "$(tr '\0' ' ' < "/proc/$f/cmdline" 2>/dev/null)"
 		done
 	fi
 	# ⚠ The OTHERS' children are counted anyway, and printed as background:
 	#   they help understand the machine, and ⛔ do NOT enter the verdict.  Confusing them
 	#   with one's own is exactly the defect cured above.
-	altrui=$(( $(pgrep -f -- "--figlio-interno" 2>/dev/null | wc -l) ))
-	inf "on the machine $altrui «--figlio-interno» processes remain in all"\
-	    "(mine: $restano · of other benches: $((altrui - restano))) — ⚠ background, not verdict"
-	inf "$(vicini)"
-	[ "$restano" -eq 0 ] || exit 4
+	others=$(( $(pgrep -f -- "--internal-child" 2>/dev/null | wc -l) ))
+	inf "on the machine $others «--internal-child» processes remain in all"\
+	    "(mine: $remain · of other benches: $((altrui - remain))) — ⚠ background, not verdict"
+	inf "$(neighbors)"
+	[ "$remain" -eq 0 ] || exit 4
 	exit 0 ;;
 
-guasto)
+fault)
 	# ⛔⭐ THE FAULT IS A CHILD RUNNING AS THE WRONG USER, and it is injected
 	#     into the COPY of the sources, never into the house product.  ⭐ It is healed
-	#     by copying the real sources again (`02-figlio-lancia.sh porta`).
+	#     by copying the real sources again (`02-figlio-lancia.sh ship`).
 	#
 	#     They are TWO, and they go together, because the walls are two and independent:
 	#
 	#       `uid`    skips the `setuid()`: the child stays root.  ⛔ It must
 	#                notice BY ITSELF — `getresuid()` after the `exec` — and
 	#                exit 42 without touching anything;
-	#       `cieco`  skips the `setuid()` **and** the child's check.  ⛔ Here
+	#       `blind`  skips the `setuid()` **and** the child's check.  ⛔ Here
 	#                the only wall left is the PARENT, which reads the
 	#                credentials stamped by the kernel on every message and
 	#                takes down the child.  ⚠ Without this second case, «the parent
@@ -247,7 +247,7 @@ guasto)
 		ko "   ⚠ A fault that is not injected and a green bench look the"
 		ko "   same, and this exits 2 instead of letting you believe it measured."
 		exit 2 ;;
-	cieco)
+	blind)
 		log "Injecting: the child does not drop AND does not notice"
 		# ⛔ Two seds, each on ONE single line: a fault that must break an
 		#    `if` over two lines gets injected halfway and does not compile — and «does not
@@ -270,7 +270,7 @@ guasto)
 		fi
 		ko "⛔ the four faults were not all injected: I exit 2, not green"
 		exit 2 ;;
-	via)
+	off)
 		if grep -q 'GUASTO' "$F"; then
 			ko "⛔ there are still faults in $F: it is healed by copying the sources again"
 			grep -n 'GUASTO' "$F" | sed 's/^/        /'
@@ -278,45 +278,45 @@ guasto)
 		fi
 		ok "no fault in $F"
 		exit 0 ;;
-	*) echo "usage: $0 guasto <uid|cieco|via>"; exit 2 ;;
+	*) echo "usage: $0 fault <uid|blind|off>"; exit 2 ;;
 	esac ;;
 
-accendi) ;;
-riaccendi) bash "$0" spegni || exit 3 ;;
-*) echo "usage: $0 [stato|bus|accendi|spegni|riaccendi|guasto ...]"; exit 2 ;;
+start) ;;
+restart) bash "$0" stop || exit 3 ;;
+*) echo "usage: $0 [status|bus|start|stop|restart|fault ...]"; exit 2 ;;
 esac
 
-# --- accendi ---------------------------------------------------------------
+# --- start ---------------------------------------------------------------
 log "0. The terrain, declared before touching it"
-inf "$(vicini)"
+inf "$(neighbors)"
 [ "$(id -u)" -eq 0 ] || { ko "⛔ this must be launched AS ROOT: it is the whole point"; exit 2; }
 [ -x "$D/remotix" ] || { ko "⛔ $D/remotix is not there"; exit 2; }
 [ -f "$D/pagina.html" ] || { ko "⛔ $D/pagina.html is not there"; exit 2; }
-inf "binary: $D/remotix  ($(impronta "$D/remotix")…)"
+inf "binary: $D/remotix  ($(fingerprint "$D/remotix")…)"
 if grep -q 'GUASTO' "$D/figlio.c" 2>/dev/null; then
 	inf "⚠ WARNING: an injected FAULT is in the sources —"
 	grep -n 'GUASTO' "$D/figlio.c" | sed 's/^/        /'
 fi
 
 command -v ss >/dev/null || { ko "⛔ «ss» is not there: I did not look at the port"; exit 2; }
-n=$(ss -tuln 2>/dev/null | grep -c ":$PORTA\b")
-[ "$n" -eq 0 ] || { ko "⛔ port $PORTA is already taken ($n lines)"; exit 2; }
+n=$(ss -tuln 2>/dev/null | grep -c ":$PORT\b")
+[ "$n" -eq 0 ] || { ko "⛔ port $PORT is already taken ($n lines)"; exit 2; }
 
-mkdir -p "$CERT" "$RILIEVO" || { ko "⛔ I could not prepare $LAV"; exit 2; }
-chmod 1777 "$RILIEVO"
-inf "the survey is $RILIEVO, mode 1777: THE CHILD writes there, that is the user"
+mkdir -p "$CERT" "$SURVEY" || { ko "⛔ I could not prepare $WORKDIR"; exit 2; }
+chmod 1777 "$SURVEY"
+inf "the survey is $SURVEY, mode 1777: THE CHILD writes there, that is the user"
 
 log "1. The libraries: the built ones, not the packaged ones"
 export LD_LIBRARY_PATH="$LIBS${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-if ! ldd "$D/remotix" > "$LAV/ldd.txt" 2>&1; then
+if ! ldd "$D/remotix" > "$WORKDIR/ldd.txt" 2>&1; then
 	ko "⛔ ldd did not finish: I do not say the libraries are there"; exit 2
 fi
-grep -q 'not found' "$LAV/ldd.txt" && { ko "⛔ a library is missing:";
-	grep 'not found' "$LAV/ldd.txt" | sed 's/^/        /'; exit 2; }
+grep -q 'not found' "$WORKDIR/ldd.txt" && { ko "⛔ a library is missing:";
+	grep 'not found' "$WORKDIR/ldd.txt" | sed 's/^/        /'; exit 2; }
 for l in libngtcp2 libnghttp3; do
-	riga=$(grep -m1 "$l" "$LAV/ldd.txt")
-	case "$riga" in
-	*/media/REMOTIX/src/b2/*) ok "$l ← $(printf '%s' "$riga" | sed 's/^[[:space:]]*//')" ;;
+	line=$(grep -m1 "$l" "$WORKDIR/ldd.txt")
+	case "$line" in
+	*/media/REMOTIX/src/b2/*) ok "$l ← $(printf '%s' "$line" | sed 's/^[[:space:]]*//')" ;;
 	*)  ko "⛔ $l does NOT come from the built tree: same soname, another library"
 	    exit 2 ;;
 	esac
@@ -338,14 +338,14 @@ for u in 1000 1001; do
 	fi
 done
 
-log "4. Switching on — AS ROOT, on $PORTA"
+log "4. Switching on — AS ROOT, on $PORT"
 # ⛔ The log is opened in APPEND mode, never truncated.
-# ⛔ `--parlantina` on: the periodic recheck of the children's identity
-#    writes there, and without it nothing would be seen (`figlio.h`, `figli_ricontrolla`).
-nohup "$D/remotix" --indirizzo 0.0.0.0 --nome "$IND" --porta "$PORTA" \
-      --certificati "$CERT" --pagina "$D/pagina.html" \
-      --ban-file "$BAN" --comando-socket "$SOCK" \
-      --rilievo "$RILIEVO" --parlantina \
+# ⛔ `--verbose` on: the periodic recheck of the children's identity
+#    writes there, and without it nothing would be seen (`figlio.h`, `children_recheck`).
+nohup "$D/remotix" --address 0.0.0.0 --name "$ADDR" --port "$PORT" \
+      --certificates "$CERT" --page "$D/pagina.html" \
+      --ban-file "$BAN" --command-socket "$SOCK" \
+      --survey "$SURVEY" --verbose \
       >> "$LOG" 2>&1 &
 pid=$!
 echo "$pid" > "$PIDF"
@@ -356,7 +356,7 @@ echo "$pid" > "$PIDF"
 g=0
 while [ "$g" -lt 60 ]; do
 	[ -d "/proc/$pid" ] || break
-	[ "$(ss -tuln 2>/dev/null | grep -c ":$PORTA\b")" -ge 2 ] && break
+	[ "$(ss -tuln 2>/dev/null | grep -c ":$PORT\b")" -ge 2 ] && break
 	sleep 0.5; g=$((g+1))
 done
 if [ ! -d "/proc/$pid" ]; then
@@ -364,13 +364,13 @@ if [ ! -d "/proc/$pid" ]; then
 	tail -20 "$LOG" | sed 's/^/        /'
 	exit 3
 fi
-righe=$(ss -tuln 2>/dev/null | grep -c ":$PORTA\b")
-[ "$righe" -ge 2 ] || { ko "⛔ pid $pid alive but $righe listeners: §2.4 wants TWO"
+lines=$(ss -tuln 2>/dev/null | grep -c ":$PORT\b")
+[ "$lines" -ge 2 ] || { ko "⛔ pid $pid alive but $lines listeners: §2.4 wants TWO"
 	tail -20 "$LOG" | sed 's/^/        /'; exit 3; }
-ok "on, pid $pid, $righe listeners on :$PORTA after $((g/2)) s"
+ok "on, pid $pid, $lines listeners on :$PORT after $((g/2)) s"
 
 log "5. What it said at start-up — and this is the measurement, not the switching on"
-grep -E '^[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3} (avvio|figlio|video) ' "$LOG" \
+grep -E '^[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3} (startup|child|video) ' "$LOG" \
 	| tail -12 | sed 's/^/        /'
-inf "$(vicini)"
-exec bash "$0" stato
+inf "$(neighbors)"
+exec bash "$0" status

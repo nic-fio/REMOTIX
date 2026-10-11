@@ -3,7 +3,7 @@
 # 06-b33-costruisci.sh — ⛔ RUNS INSIDE THE CONTAINER.  Builds the witness
 # of sub-phase 6.1 and drops it in the work folder.
 #
-#   printf '<parola>\n' | bash /media/REMOTIX/enter.sh --root \
+#   printf '<password>\n' | bash /media/REMOTIX/enter.sh --root \
 #       'bash /srv/src/06-i-src/banchi/06-b33-costruisci.sh'
 #
 # ⛔ It exists because of the house rule «a file has no levels of quoting»: a
@@ -16,12 +16,12 @@
 #    the same between the healthy run and the faulty run (`CODER.md` §3.3).
 set -uo pipefail
 
-QUI=$(cd -- "$(dirname -- "$0")" && pwd)
-LAV=${LAV:-/srv/remotix/tmp/06-i}
+HERE=$(cd -- "$(dirname -- "$0")" && pwd)
+WORKDIR=${WORKDIR:-/srv/remotix/tmp/06-i}
 XDG=${XDG:-/usr/share/wayland-protocols/stable/xdg-shell/xdg-shell.xml}
 
-mkdir -p "$LAV"
-cd "$QUI" || exit 2
+mkdir -p "$WORKDIR"
+cd "$HERE" || exit 2
 
 echo "== the xdg-shell protocol"
 [ -f "$XDG" ] || { echo "⛔ $XDG is not there"; exit 2; }
@@ -33,11 +33,11 @@ echo
 echo "== the witness"
 # ⛔ It is thrown away BEFORE building: so «it is there» means «it is from now»,
 #    and not «there was one from yesterday» (`LEZIONI.md` §1.9 point 8).
-rm -f "$LAV/06-b33-testimone"
-gcc -O1 -g -Wall -o "$LAV/06-b33-testimone" 06-b33-testimone.c xdg-shell-protocol.c \
+rm -f "$WORKDIR/06-b33-testimone"
+gcc -O1 -g -Wall -o "$WORKDIR/06-b33-testimone" 06-b33-testimone.c xdg-shell-protocol.c \
 	$(pkg-config --cflags --libs wayland-client) || exit 2
-[ -x "$LAV/06-b33-testimone" ] || { echo "⛔ the witness was NOT built"; exit 2; }
-ls -la "$LAV/06-b33-testimone"
+[ -x "$WORKDIR/06-b33-testimone" ] || { echo "⛔ the witness was NOT built"; exit 2; }
+ls -la "$WORKDIR/06-b33-testimone"
 
 echo
 echo "== the mark: what is INSIDE the binary"
@@ -45,7 +45,7 @@ echo "== the mark: what is INSIDE the binary"
 #    compilation, and that is what we want to verify.  ⛔⛔ And NOT with
 #    `| grep -q`: with `pipefail` the early exit of `grep -q` gives SIGPIPE to
 #    `strings`, the pipeline exits 141 and the `if` takes the wrong branch.
-R=$(strings "$LAV/06-b33-testimone" | grep -c 'RITELA')
+R=$(strings "$WORKDIR/06-b33-testimone" | grep -c 'RITELA')
 echo "   «RITELA»: $R"
 if [ "$R" -gt 0 ]; then
 	echo "   ⭐ the line is there that says, FROM THE RECEIVING SIDE, that the canvas has changed"

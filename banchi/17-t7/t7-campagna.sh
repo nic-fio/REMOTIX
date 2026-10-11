@@ -4,11 +4,11 @@
 #
 #   bash t7-campagna.sh BINARY [DESKTOP...]   (default: gnome kde xfce lxqt)
 #     BINARY   the cured remotix (built for debian13)
-#   env: SUITE=0 skips the short suite · LASCIA=1 does not put 4fb3287d back at the end
-#        MODI="aggiornamento riavvio" (default)
+#   env: SUITE=0 skips the short suite · KEEP=1 does not put 4fb3287d back at the end
+#        MODES="update restart" (default)
 #
-# For each desktop: t7-aggiorna.py aggiornamento (desktops born with 4fb3287d, then
-# new binary and restart with --tetto-sessioni 2) and t7-aggiorna.py riavvio
+# For each desktop: t7-aggiorna.py update (desktops born with 4fb3287d, then
+# new binary and restart with --session-cap 2) and t7-aggiorna.py restart
 # (desktops born with the new one).  Then the short suite (f001 f003 f004 f011 f016 f018,
 # chrome and firefox) with the new binary; then the 4fb3287d binary and the previous PAM.
 # The boxes' lock is held for the whole round.
@@ -28,52 +28,52 @@ echo "$(date +%T) waiting for the lock (now: $(cat "$L"))"
 flock 9
 printf 't7-fase17 pid %d' $$ > "$L"
 echo "$(date +%T) lock TAKEN"
-export REMOTIX_SCATOLE_TENUTE=t7-fase17
+export REMOTIX_KEPT_BOXES=t7-fase17
 
 [ -f $P/remotix.4fb3287d ] || { echo "⛔ missing $P/remotix.4fb3287d"; exit 1; }
 [ -f $T/remotix.pam.prima ] || cp $P/remotix.pam $T/remotix.pam.prima
 [ "$(md5sum < $T/remotix.pam.prima | cut -c1-8)" = d1734958 ] || { echo "⛔ remotix.pam.prima is not d1734958"; exit 1; }
-NUOVO=$(md5sum < "$BIN" | cut -c1-8)
-cp "$BIN" $P/remotix.$NUOVO
-echo "new binary: $NUOVO"
-export T7_NUOVO=$NUOVO
+NEW=$(md5sum < "$BIN" | cut -c1-8)
+cp "$BIN" $P/remotix.$NEW
+echo "new binary: $NEW"
+export T7_NEW=$NEW
 
 u=$(id -u)
 declare -A WL
 for d in gnome kde xfce lxqt; do WL[$d]=$(cat /run/user/$u/15-compositori/$d); done
-ORDINE=(gnome kde xfce lxqt gnome kde)
+ORDER=(gnome kde xfce lxqt gnome kde)
 for d in $DESKTOP; do
-	for i in 0 1 2 3; do [ "${ORDINE[$i]}" = "$d" ] && k=$i; done
-	for m in ${MODI:-aggiornamento riavvio}; do
+	for i in 0 1 2 3; do [ "${ORDER[$i]}" = "$d" ] && k=$i; done
+	for m in ${MODES:-aggiornamento riavvio}; do
 		echo "$(date +%T) ===== $d $m"
-		env XDG_RUNTIME_DIR=/run/user/$u REMOTIX_SCHERMO_ANNIDATO=1 REMOTIX_SUL_SERVER=1 \
-			REMOTIX_CHROME_OPZIONI="--ozone-platform=wayland" MOZ_ENABLE_WAYLAND=1 \
-			T7_WL_FIREFOX=${WL[$d]} T7_WL_CHROME=${WL[${ORDINE[$((k+1))]}]} \
-			T7_WL_TERZO=${WL[${ORDINE[$((k+2))]}]} WAYLAND_DISPLAY=${WL[$d]} \
+		env XDG_RUNTIME_DIR=/run/user/$u REMOTIX_NESTED_SCREEN=1 REMOTIX_ON_SERVER=1 \
+			REMOTIX_CHROME_OPTIONS="--ozone-platform=wayland" MOZ_ENABLE_WAYLAND=1 \
+			T7_WL_FIREFOX=${WL[$d]} T7_WL_CHROME=${WL[${ORDER[$((k+1))]}]} \
+			T7_WL_THIRD=${WL[${ORDER[$((k+2))]}]} WAYLAND_DISPLAY=${WL[$d]} \
 			python3 -u $T/t7-aggiorna.py "$d" "$m" 2>&1 | tee $T/$d-$m.log | grep -a "^T7 \|re-enters\|found again:\|third\|⛔\|Traceback"
 	done
 done
 
 if [ "${SUITE:-1}" = 1 ]; then
-	echo "$(date +%T) ===== the short suite with the binary $NUOVO"
-	rm -f $P/remotix; cp $P/remotix.$NUOVO $P/remotix; cp $T/remotix.pam $P/remotix.pam
+	echo "$(date +%T) ===== the short suite with the binary $NEW"
+	rm -f $P/remotix; cp $P/remotix.$NEW $P/remotix; cp $T/remotix.pam $P/remotix.pam
 	for d in gnome kde xfce lxqt; do
-		S bash $R/11-accendi.sh prodotto $d 2>&1 | tail -1
+		S bash $R/11-accendi.sh product $d 2>&1 | tail -1
 		S bash $R/11-accendi.sh server $d 2>&1 | tail -1
 		S podman exec rete11-$d md5sum /opt/remotix/remotix /etc/pam.d/remotix
 	done
-	python3 /media/REMOTIX/src/controllo/banchi/15-suite/15-giro.py --giro 17-t7 \
-		--prove ${PROVE:-f001,f003,f004,f011,f016,f018} 2>&1 | tail -60 | tee $T/suite.log
+	python3 /media/REMOTIX/src/controllo/banchi/15-suite/15-giro.py --round 17-t7 \
+		--tests ${TESTS:-f001,f003,f004,f011,f016,f018} 2>&1 | tail -60 | tee $T/suite.log
 fi
 
-if [ "${LASCIA:-0}" != 1 ]; then
+if [ "${KEEP:-0}" != 1 ]; then
 	echo "$(date +%T) putting back the 4fb3287d binary and the d1734958 PAM"
 	rm -f $P/remotix; cp $P/remotix.4fb3287d $P/remotix
 	cp $T/remotix.pam.prima $P/remotix.pam
 	for d in gnome kde xfce lxqt; do
-		S bash $R/11-accendi.sh prodotto $d 2>&1 | tail -1
+		S bash $R/11-accendi.sh product $d 2>&1 | tail -1
 		S bash $R/11-accendi.sh server $d 2>&1 | tail -1
-		S podman exec rete11-$d sh -c 'md5sum /opt/remotix/remotix /etc/pam.d/remotix; cat /etc/remotix/utenti-negati'
+		S podman exec rete11-$d sh -c 'md5sum /opt/remotix/remotix /etc/pam.d/remotix; cat /etc/remotix/denied-users'
 	done
 fi
 echo "$(date +%T) END — the lock is released"

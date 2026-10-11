@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """01-b5-violazioni.py — ⛔ B5: strictness towards the server, tested by violating it.
 
-    python3 01-b5-violazioni.py --indirizzo 192.168.0.2 --porta 7447
-    python3 01-b5-violazioni.py --solo tela-1921          (a single case)
-    python3 01-b5-violazioni.py --elenco                  (the predictions, without measuring)
+    python3 01-b5-violazioni.py --address 192.168.0.2 --port 7447
+    python3 01-b5-violazioni.py --only tela-1921          (a single case)
+    python3 01-b5-violazioni.py --list                  (the predictions, without measuring)
 
 ⚠ It runs INSIDE the container: aioquic lives there.
 
@@ -22,7 +22,7 @@ there is no bench watching.
 ⛔ THE FIVE THINGS EVERY CASE VERIFIES, AND THE LAST TWO GET FORGOTTEN
 
   1. ⛔ **that the violation REALLY left.**  A case whose *preparation* fails —
-     the fixed `ATTACCA` refused, the `ECCOMI` that does not arrive — has tested
+     the fixed `ATTACH` refused, the `HERE_I_AM` that does not arrive — has tested
      nothing, and as long as the reason was scraped from the exception text it
      became **green** precisely because of that (finding R7.1).  Here every
      case carries `provocato`, and without it it is red;
@@ -31,12 +31,12 @@ there is no bench watching.
      the text of an exception**: `raccogli` takes it from a message that arrived
      on the wire, or does not take it;
   3. ⛔ **in which MESSAGE** it arrived.  §11 says it in full:
-     `CREDENZIALI_ERRATE` and `TROPPI_TENTATIVI` travel in `RESPINTO`, all the
-     others in `CONGEDO`, and §4.4 forbids sending both.  They are **two
-     different state machines** — after `RESPINTO` the client cannot retry —
+     `WRONG_CREDENTIALS` and `TOO_MANY_ATTEMPTS` travel in `REJECTED`, all the
+     others in `FAREWELL`, and §4.4 forbids sending both.  They are **two
+     different state machines** — after `REJECTED` the client cannot retry —
      and counting them under the same label is form E3 (finding R7.9);
   4. **the two roads of §3.1**, and ⛔ **they are not optional in the same way**:
-     **point 2** (the `CONGEDO`) is conditional — *«if the control channel is
+     **point 2** (the `FAREWELL`) is conditional — *«if the control channel is
      still usable»* — **point 3** (the reason code in the closing of the
      WebTransport session) is an **unconditional MUST**, and it is the one §3.1
      calls *«the one that saves the diagnoses»*.
@@ -48,7 +48,7 @@ there is no bench watching.
   5. ⛔ **and that the server is still there afterwards** (B0.5).  A server
      killed by the kernel *«drops the connection»* exactly like one that says
      farewell — and it takes away **all the other users' sessions**.  After every
-     case a new connection is opened and it gets as far as `ECCOMI`: it is the
+     case a new connection is opened and it gets as far as `HERE_I_AM`: it is the
      half of the bench nobody writes, and it is the one that tells strictness
      from collapse.
 
@@ -58,18 +58,18 @@ there is no bench watching.
 The cases with `atteso = None` are ⭐ **expected greens**, and they are not
 filler: they are the control that says *no* to «this server closes everything».
 
-  nome-con-trattino-basso    `video.misura_massima`: the `_` is LAWFUL (§4.3)
+  nome-con-trattino-basso    `video.max_size`: the `_` is LAWFUL (§4.3)
   capacita-sconosciuta       a NAME that does not exist is ignored (§3, exception 1)
   hevc-e-vp9                 an unknown entry INSIDE a list is DISCARDED
   vista-300x801              the view does not have the canvas constraints (§7.1, R4.10)
   vista-1x1                  likewise, at the limit
   disposizione-con-variante  `de(neo)`: the variant in parentheses is lawful
-  banco-spento               ⛔ `BANCO_ESITO(RIFIUTATA, FUNZIONE_SPENTA)`, not
+  banco-spento               ⛔ `BENCH_OUTCOME(REFUSED, FEATURE_OFF)`, not
                              a closing and not a silence (§7.5 rule 2)
-  banco-ritardo-20000        `RITARDO_FUORI_LIMITI`, and the session STAYS OPEN
+  banco-ritardo-20000        `DELAY_OUT_OF_RANGE`, and the session STAYS OPEN
 
 ⛔ **AND HOW MANY THERE ARE IS NOT WRITTEN HERE.**  The number is counted by
-`conta()` and printed by `--elenco` and by the final line, each with its
+`conta()` and printed by `--list` and by the final line, each with its
 denominator.  A number written by hand in a comment is the number nobody
 recomputes: finding R7.14 found **three** of them — «five cases in here»,
 «thirty-five greens out of thirty-five», «44 violations out of 44» — and **none
@@ -89,9 +89,9 @@ surprise would pass this bench in full.
 | exception of §3 | the missing case | why it is not here |
 |---|---|---|
 | 2 (§6.3) | a 4-byte datagram, or one with `tipo` != `0x0401`, is **discarded** | audio does not exist before **phase 7** |
-| 3 (§7.1) | the **grace second** on the old coordinates after `TELA(ADATTATA)` | `ADATTA_TELA` and input do not exist before **phase 6** |
-| 4 (§7.1) | a size **out of bounds** in `ADATTA_TELA` → `TELA(RIFIUTATA, MISURA_FUORI_LIMITI)` **with the session still open** | ⭐ **no longer true since 15 Aug 2026**: `ADATTA_TELA` is served, and the case is tested by `banchi/04-b31-tela.c` (cases 5 and 17). ⚠ And the example that was here — `1921×1081` — **was wrong**: it is WITHIN the limits of §4.5 and odd, so it is truncated to `1920×1080` and granted. Out of bounds is, for example, `1600×230` (the minimum height is 240) |
-| 5 (§5.2, §7.4) | two `RICHIEDI_CHIAVE` less than 200 ms apart: the second **may be ignored** | `RICHIEDI_CHIAVE` does not exist before **phase 3** |
+| 3 (§7.1) | the **grace second** on the old coordinates after `CANVAS(FITTED)` | `FIT_CANVAS` and input do not exist before **phase 6** |
+| 4 (§7.1) | a size **out of bounds** in `FIT_CANVAS` → `CANVAS(REFUSED, SIZE_OUT_OF_RANGE)` **with the session still open** | ⭐ **no longer true since 15 Aug 2026**: `FIT_CANVAS` is served, and the case is tested by `banchi/04-b31-tela.c` (cases 5 and 17). ⚠ And the example that was here — `1921×1081` — **was wrong**: it is WITHIN the limits of §4.5 and odd, so it is truncated to `1920×1080` and granted. Out of bounds is, for example, `1600×230` (the minimum height is 240) |
+| 5 (§5.2, §7.4) | two `REQUEST_KEY` less than 200 ms apart: the second **may be ignored** | `REQUEST_KEY` does not exist before **phase 3** |
 
 ⚠ **Writing them here today would give red on a message nobody has written
 yet**, that is on a rule the server never had the chance to apply — the
@@ -111,7 +111,7 @@ from aioquic.h3.connection import H3_ALPN
 from aioquic.quic.configuration import QuicConfiguration
 from aioquic.asyncio import connect
 
-QUI = os.path.dirname(os.path.abspath(__file__))
+HERE = os.path.dirname(os.path.abspath(__file__))
 
 # ⛔ The B3 client is IMPORTED, not copied.  Inside it is the line that
 #    prevents it from handing the control-channel events to aioquic's HTTP/3
@@ -119,7 +119,7 @@ QUI = os.path.dirname(os.path.abspath(__file__))
 #    Aug 2026), and a diverging copy would bring that defect back in here
 #    disguised as a server defect.
 _spec = importlib.util.spec_from_file_location(
-    "b3cliente", os.path.join(QUI, "01-b3-cliente.py"))
+    "b3cliente", os.path.join(HERE, "01-b3-cliente.py"))
 b3 = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(b3)
 
@@ -128,31 +128,31 @@ _spec.loader.exec_module(b3)
 #    discovering them all over again — or, worse, not discovering them and
 #    giving red.
 _spec_b0 = importlib.util.spec_from_file_location(
-    "b0bersaglio", os.path.join(QUI, "01-b0-bersaglio.py"))
+    "b0bersaglio", os.path.join(HERE, "01-b0-bersaglio.py"))
 b0 = importlib.util.module_from_spec(_spec_b0)
 _spec_b0.loader.exec_module(b0)
 
-s, inquadra, MOTIVI = b3.s, b3.inquadra, b3.MOTIVI
+s, wrap, REASONS = b3.s, b3.wrap, b3.REASONS
 
-ERRORE_PROTOCOLLO = 0x0B
-NIENTE_IN_COMUNE = 0x09
-VERSIONE_INCOMPATIBILE = 0x0A
-SESSIONE_NON_SERVIBILE = 0x0E
-TROPPI_TENTATIVI = 0x08
-CREDENZIALI_ERRATE = 0x07
-CONGEDO, RESPINTO, BANCO_ESITO = 0x000C, 0x0005, 0x0010
+PROTOCOL_ERROR = 0x0B
+NOTHING_IN_COMMON = 0x09
+INCOMPATIBLE_VERSION = 0x0A
+SESSION_UNSERVABLE = 0x0E
+TOO_MANY_ATTEMPTS = 0x08
+WRONG_CREDENTIALS = 0x07
+FAREWELL, REJECTED, BENCH_OUTCOME = 0x000C, 0x0005, 0x0010
 
 # ⛔ IN WHICH MESSAGE THE REASON MUST ARRIVE — `RCP.md` §11, line «the
-#    farewell»: «`CREDENZIALI_ERRATE` and `TROPPI_TENTATIVI` travel in
-#    `RESPINTO`», all the others in `CONGEDO`, and §4.4 forbids following
-#    `RESPINTO` with a `CONGEDO`.  ⚠ It is not a formality: after `RESPINTO` the
-#    client MUST NOT retry on the same connection (§4.4), after a `CONGEDO` the
+#    farewell»: «`WRONG_CREDENTIALS` and `TOO_MANY_ATTEMPTS` travel in
+#    `REJECTED`», all the others in `FAREWELL`, and §4.4 forbids following
+#    `REJECTED` with a `FAREWELL`.  ⚠ It is not a formality: after `REJECTED` the
+#    client MUST NOT retry on the same connection (§4.4), after a `FAREWELL` the
 #    connection is simply over — two different state machines under the same
 #    number (finding R7.9).
-CARRIER = {CREDENZIALI_ERRATE: "RESPINTO", TROPPI_TENTATIVI: "RESPINTO"}
+CARRIER = {WRONG_CREDENTIALS: "REJECTED", TOO_MANY_ATTEMPTS: "REJECTED"}
 
 
-class Cliente(b3.Cliente):
+class Client(b3.Client):
     """The B3 client, plus what is needed to violate (§2.5)."""
 
     def __init__(self, *a, **kw):
@@ -160,24 +160,24 @@ class Cliente(b3.Cliente):
         # ⛔ THE STREAMS THIS BENCH OPENS, and they must be kept away from
         #    aioquic's HTTP/3 layer: see `quic_event_received`.
         self.my_streams = set()
-        self.eco = {}
+        self.echo = {}
 
-    def apri_uni(self):
+    def open_uni(self):
         # aioquic writes by itself the header of the WebTransport
         # unidirectional stream: the type 0x54 and the session identifier.
         s_id = self._http.create_webtransport_stream(
-            self.sessione, is_unidirectional=True)
+            self.session, is_unidirectional=True)
         self.my_streams.add(s_id)
         return s_id
 
-    def apri_bidi(self):
+    def open_bidi(self):
         s_id = self._http.create_webtransport_stream(
-            self.sessione, is_unidirectional=False)
+            self.session, is_unidirectional=False)
         self.my_streams.add(s_id)
         return s_id
 
-    def manda_su(self, stream, dati, fine=False):
-        self._quic.send_stream_data(stream, dati, end_stream=fine)
+    def send_on(self, stream, data, fine=False):
+        self._quic.send_stream_data(stream, data, end_stream=fine)
         self.transmit()
 
     def quic_event_received(self, event):
@@ -191,17 +191,17 @@ class Cliente(b3.Cliente):
         #
         #       REMOTIX B5: ⛔ two bidirectional streams from the client inside
         #                     the session: control is 4, and 8 is one too many
-        #       REMOTIX B3: congedo motivo=0x0b …
+        #       REMOTIX B3: farewell reason=0x0b …
         #       REMOTIX B3: session closure DEFERRED, code 0x0b
         #                   (queued: 1; keep-alive at 100 ms …)
-        #       frm tx … STREAM id=0x4 len=71   ← the CONGEDO
+        #       frm tx … STREAM id=0x4 len=71   ← the FAREWELL
         #       frm tx … STREAM id=0x8 len=30   ← B2's echo on the extra stream
         #       frm rx … CONNECTION_CLOSE error_code=0x105
         #                reason=[DATA frame is not allowed in this state]
         #       ngtcp2_conn_read_pkt: ERR_DRAINING
         #
         # ⛔ The `CONNECTION_CLOSE` is RECEIVED by the server: it is the CLIENT
-        #    that leaves, one packet after the `CONGEDO` and half a second
+        #    that leaves, one packet after the `FAREWELL` and half a second
         #    before the five passes let the capsule mature.  Code 0x105 is
         #    aioquic's `H3_FRAME_UNEXPECTED`: the 30 bytes that came back on
         #    stream 8 ended up in `self._http.handle_event`, which knows nothing
@@ -217,8 +217,8 @@ class Cliente(b3.Cliente):
         #    Here they are discarded, DECLARING THEM (§3: no silent tolerance).
         if (type(event).__name__ == "StreamDataReceived"
                 and event.stream_id in self.my_streams):
-            if event.data and event.stream_id not in self.eco:
-                self.eco[event.stream_id] = len(event.data)
+            if event.data and event.stream_id not in self.echo:
+                self.echo[event.stream_id] = len(event.data)
                 print(f"   [wt]   ⚠ {len(event.data)} bytes came back from the server "
                       f"on stream {event.stream_id}, the one opened to "
                       f"violate: it is B2's echo on the bytes already in flight while "
@@ -231,194 +231,194 @@ class Cliente(b3.Cliente):
 
 # ---------------------------------------------------------------------------
 # The bodies, written by hand because they go crooked on purpose.
-def capacita(voci, versione=1):
-    out = struct.pack("!HH", versione, len(voci))
-    for n, v in voci:
+def capabilities(entries, version=1):
+    out = struct.pack("!HH", version, len(entries))
+    for n, v in entries:
         out += s(n) + s(v)
     return out
 
 
-BUONE = [("video.codec", "hevc,av1"), ("video.profondita", "8,10"),
-         ("audio.codec", "opus,pcm"), ("client.nome", "banco-b5 0.1.0")]
+GOOD = [("video.codec", "hevc,av1"), ("video.depth", "8,10"),
+         ("audio.codec", "opus,pcm"), ("client.name", "bench-b5 0.1.0")]
 
-# ⛔ `BUONE` without `client.nome`, for the cases that must violate **a single
-#    rule** on that name.  `BUONE + [("client.nome", ...)]` carries `client.nome`
+# ⛔ `GOOD` without `client.name`, for the cases that must violate **a single
+#    rule** on that name.  `GOOD + [("client.name", ...)]` carries `client.name`
 #    TWICE, and §4.3 gives two distinct reasons to close — the duplicate and
 #    the value — so a server that implemented only the first gave green
 #    without ever having looked at the length of a value (finding R7.6).
-WITHOUT_NAME = [v for v in BUONE if v[0] != "client.nome"]
+WITHOUT_NAME = [v for v in GOOD if v[0] != "client.name"]
 
 
-def ciao(voci=None, versione=1):
-    return inquadra(0x0001, capacita(BUONE if voci is None else voci, versione))
+def ciao(entries=None, version=1):
+    return wrap(0x0001, capabilities(GOOD if entries is None else entries, version))
 
 
-def attacca(tl=1920, ta=1080, vl=1920, va=1080, disp="it"):
-    return inquadra(0x0006, struct.pack("!IIII", tl, ta, vl, va) + s(disp))
+def attach(tl=1920, ta=1080, vl=1920, va=1080, avail="it"):
+    return wrap(0x0006, struct.pack("!IIII", tl, ta, vl, va) + s(avail))
 
 
-def banco_marca(id_=1, colore=0x00FF0000, ritardo=0):
-    return inquadra(0x000F, struct.pack("!III", id_, colore, ritardo))
+def bench_mark(id_=1, color=0x00FF0000, delay=0):
+    return wrap(0x000F, struct.pack("!III", id_, color, delay))
 
 
-async def banco_esito(cli, es, id_, esito, motivo):
-    """⛔ §7.5: `BANCO_ESITO` is verified FIELD BY FIELD.
+async def bench_outcome(cli, es, id_, outcome, reason):
+    """⛔ §7.5: `BENCH_OUTCOME` is verified FIELD BY FIELD.
 
-    A server that answered `BANCO_ESITO(ACCETTATA)` with the function off
+    A server that answered `BENCH_OUTCOME(ACCEPTED)` with the function off
     would pass a bench that only looks at «an answer arrived and the session
     holds» — and it would paint little squares on someone's desktop.
     """
-    nome, corpo, _ = await b3.attendi(cli, None, attesa=6)
-    if nome != "0x0010":
-        raise RuntimeError(f"expected BANCO_ESITO, arrived {nome}")
-    if len(corpo) < 14:
-        raise RuntimeError(f"BANCO_ESITO of {len(corpo)} bytes: §7.5 wants 14")
-    v_id, v_esito, v_reason = struct.unpack("!IBB", corpo[:6])
-    v_instant = struct.unpack("!Q", corpo[6:14])[0]
-    es.banco = f"id={v_id} esito={v_esito} motivo={v_reason} istante={v_instant}"
-    if (v_id, v_esito, v_reason) != (id_, esito, motivo):
+    name, body, _ = await b3.should_wait(cli, None, wait=6)
+    if name != "0x0010":
+        raise RuntimeError(f"expected BENCH_OUTCOME, arrived {name}")
+    if len(body) < 14:
+        raise RuntimeError(f"BENCH_OUTCOME of {len(body)} bytes: §7.5 wants 14")
+    v_id, v_outcome, v_reason = struct.unpack("!IBB", body[:6])
+    v_instant = struct.unpack("!Q", body[6:14])[0]
+    es.bench = f"id={v_id} outcome={v_outcome} reason={v_reason} instant={v_instant}"
+    if (v_id, v_outcome, v_reason) != (id_, outcome, reason):
         raise RuntimeError(
-            f"BANCO_ESITO {es.banco}, expected id={id_} esito={esito} "
-            f"motivo={motivo}")
-    # ⛔ «`istante`: 0 if refused, and it is the only meaning of *absent*
+            f"BENCH_OUTCOME {es.bench}, expected id={id_} outcome={outcome} "
+            f"reason={reason}")
+    # ⛔ «`instant`: 0 if refused, and it is the only meaning of *absent*
     #    for this field» (§7.5, §6.0).
-    if v_esito == 2 and v_instant != 0:
-        raise RuntimeError(f"refused, but `istante` is {v_instant} and not 0")
+    if v_outcome == 2 and v_instant != 0:
+        raise RuntimeError(f"refused, but `instant` is {v_instant} and not 0")
 
 
 # ---------------------------------------------------------------------------
-class Esito:
+class Outcome:
     """What happened, from the receiving side."""
 
     def __init__(self):
-        self.motivo = None        # from the CONGEDO / RESPINTO — NEVER deduced
-        self.tipo_motivo = None   # ⛔ IN WHICH message it arrived (§11, §4.4)
-        self.dettaglio = ""
-        self.codice_wt = None     # from the closing of the session (§3.1 point 3)
+        self.reason = None        # from the FAREWELL / REJECTED — NEVER deduced
+        self.reason_type = None   # ⛔ IN WHICH message it arrived (§11, §4.4)
+        self.detail = ""
+        self.code_wt = None     # from the closing of the session (§3.1 point 3)
         self.http_status = None    # for the path case
-        self.messaggi = []        # the types that arrived, in order
+        self.messages = []        # the types that arrived, in order
         self.viva = False         # the session is still open at the end
         # ⛔ Did the violation really leave?  See point 1 of the docstring:
         #    without this mark a case that falls in the PREPARATION counts as
         #    green (finding R7.1).
-        self.provocato = False
-        self.fase = "opening"     # where it stopped, if it stopped
-        self.errore = None
+        self.caused = False
+        self.phase = "opening"     # where it stopped, if it stopped
+        self.error = None
 
     def __str__(self):
         p = []
         if self.http_status and self.http_status != "200":
             p.append(f":status={self.http_status}")
-        if not self.provocato:
-            p.append(f"⛔ violation NEVER SENT (stopped in «{self.fase}»)")
-        if self.motivo is not None:
-            p.append(f"motivo={self.motivo:#04x}={MOTIVI.get(self.motivo, '?')}"
-                     f" in {self.tipo_motivo}")
-        elif self.tipo_motivo is not None:
-            p.append(f"{self.tipo_motivo} without a readable reason")
-        p.append("chiusura-wt=" + ("(absent)" if self.codice_wt is None
-                                   else f"{self.codice_wt:#04x}"))
+        if not self.caused:
+            p.append(f"⛔ violation NEVER SENT (stopped in «{self.phase}»)")
+        if self.reason is not None:
+            p.append(f"reason={self.reason:#04x}={REASONS.get(self.reason, '?')}"
+                     f" in {self.reason_type}")
+        elif self.reason_type is not None:
+            p.append(f"{self.reason_type} without a readable reason")
+        p.append("chiusura-wt=" + ("(absent)" if self.code_wt is None
+                                   else f"{self.code_wt:#04x}"))
         if self.viva:
             p.append("session ALIVE")
-        if self.errore:
-            p.append(f"errore={self.errore}")
+        if self.error:
+            p.append(f"error={self.error}")
         return "  ".join(p) if p else "nothing"
 
 
-async def raccogli(cli, es, attesa, grazia=1.5):
+async def collect(cli, es, wait, grace=1.5):
     """Waits for the farewell, or for the end of the wait if the session holds.
 
     ⛔ **This is the only place where `es.motivo` is written**, and it writes it
        from a message that arrived on the wire (§8.1: from the receiving side).
     """
-    scadenza = asyncio.get_event_loop().time() + attesa
+    expiry = asyncio.get_event_loop().time() + wait
     while True:
-        resta = scadenza - asyncio.get_event_loop().time()
-        if resta <= 0:
+        stays = expiry - asyncio.get_event_loop().time()
+        if stays <= 0:
             break
         try:
-            m = await asyncio.wait_for(cli.messaggi.get(), timeout=resta)
+            m = await asyncio.wait_for(cli.messages.get(), timeout=stays)
         except asyncio.TimeoutError:
             break
         if m is None:
             break
-        tipo, corpo, _ = m
-        es.messaggi.append(tipo)
-        if tipo in (CONGEDO, RESPINTO):
+        kind, body, _ = m
+        es.messages.append(kind)
+        if kind in (FAREWELL, REJECTED):
             # ⛔ It remembers WHICH of the two, because §4.4 and §11 tell them
             #    apart and the verdict asks for it (finding R7.9).
-            es.tipo_motivo = "CONGEDO" if tipo == CONGEDO else "RESPINTO"
+            es.reason_type = "FAREWELL" if kind == FAREWELL else "REJECTED"
             # ⛔ And an EMPTY body is not «no reason»: §7.1 wants `u8
-            #    motivo` (plus `stringa dettaglio` in the `CONGEDO`) and §3.1
-            #    forbids code 0.  With `corpo[0] if corpo else None` a server that
+            #    reason` (plus `string detail` in the `FAREWELL`) and §3.1
+            #    forbids code 0.  With `body[0] if body else None` a server that
             #    closes BADLY was easier to let through than one that closes
-            #    well, because it left `motivo = None` (finding R7.2).
-            if not corpo:
-                es.errore = (f"{es.tipo_motivo} with an EMPTY body: §7.1 wants "
+            #    well, because it left `reason = None` (finding R7.2).
+            if not body:
+                es.error = (f"{es.reason_type} with an EMPTY body: §7.1 wants "
                              "at least the reason byte")
                 break
-            es.motivo = corpo[0]
-            if tipo == CONGEDO and len(corpo) >= 3:
-                n = struct.unpack("!H", corpo[1:3])[0]
-                es.dettaglio = corpo[3:3 + n].decode("utf-8", "replace")
+            es.reason = body[0]
+            if kind == FAREWELL and len(body) >= 3:
+                n = struct.unpack("!H", body[1:3])[0]
+                es.detail = body[3:3 + n].decode("utf-8", "replace")
             break
-        if tipo == BANCO_ESITO:
+        if kind == BENCH_OUTCOME:
             break
     # ⛔ §3.1 POINT 3, AND WHY ONE WAITS.
     #
-    #    The `CONGEDO` travels on the control channel, the closing of the
+    #    The `FAREWELL` travels on the control channel, the closing of the
     #    session is a capsule on the session stream: they are two different
     #    roads and they arrive at two different moments.  Reading
-    #    `codice_chiusura` at the exact instant the `CONGEDO` was read would
+    #    `close_code` at the exact instant the `FAREWELL` was read would
     #    measure «the second road did not arrive» every time the server sends
     #    it a millisecond later — that is it would measure our hurry.
     #    ⚠ The window is DECLARED and bounded: if it expires, the value stays
     #      `None` and the verdict counts it as missed, it does not hide it.
-    if es.motivo is not None or es.errore is not None:
-        fine = asyncio.get_event_loop().time() + grazia
-        while (cli.codice_chiusura is None and not cli.finito
+    if es.reason is not None or es.error is not None:
+        fine = asyncio.get_event_loop().time() + grace
+        while (cli.close_code is None and not cli.finished
                and asyncio.get_event_loop().time() < fine):
             await asyncio.sleep(0.02)
-    es.codice_wt = cli.codice_chiusura
+    es.code_wt = cli.close_code
     # ⛔ «Alive» means alive.  Before, it was enough that no reason had
-    #    arrived, and a server that sent `ECCOMI` and then CLOSED the session
+    #    arrived, and a server that sent `HERE_I_AM` and then CLOSED the session
     #    without a farewell gave the line «the session holds» while it was dead
     #    (finding R7.2): the WebTransport closing and the `FIN` on the control
     #    channel enter the judgement, not only the printout.
-    es.viva = (not cli.finito and es.motivo is None
-               and es.codice_wt is None and es.errore is None)
+    es.viva = (not cli.finished and es.reason is None
+               and es.code_wt is None and es.error is None)
 
 
-async def apri(a, percorso="/rcp/1"):
+async def do_open(a, fpath="/rcp/1"):
     conf = QuicConfiguration(is_client=True, alpn_protocols=H3_ALPN,
                              max_datagram_frame_size=65536)
     conf.verify_mode = ssl.CERT_NONE
-    autorita = f"{a.indirizzo}:{a.porta}"
-    gestore = connect(a.indirizzo, a.porta, configuration=conf,
-                      create_protocol=Cliente)
-    cli = await gestore.__aenter__()
+    authority = f"{a.address}:{a.port}"
+    handler = connect(a.address, a.port, configuration=conf,
+                      create_protocol=Client)
+    cli = await handler.__aenter__()
     await asyncio.wait_for(cli.wait_connected(), timeout=8)
-    cli.apri_sessione(autorita, percorso)
-    stato = await asyncio.wait_for(cli.accettata, timeout=8)
-    return gestore, cli, stato
+    cli.open_session(authority, fpath)
+    state = await asyncio.wait_for(cli.accepted, timeout=8)
+    return handler, cli, state
 
 
-async def fino_a_eccomi(cli, corpo=None):
-    cli.apri_controllo()
-    cli.manda(corpo if corpo is not None else ciao())
-    return await b3.attendi(cli, "ECCOMI")
+async def until_here_i_am(cli, body=None):
+    cli.open_control()
+    cli.send_msg(body if body is not None else ciao())
+    return await b3.should_wait(cli, "HERE_I_AM")
 
 
-async def fino_ad_ammesso(cli, a):
-    await fino_a_eccomi(cli)
-    cli.manda(inquadra(0x0003, s(a.utente) + s(a.parola)))
-    return await b3.attendi(cli, "AMMESSO", attesa=20)
+async def until_admitted(cli, a):
+    await until_here_i_am(cli)
+    cli.send_msg(wrap(0x0003, s(a.user) + s(a.password)))
+    return await b3.should_wait(cli, "ADMITTED", wait=20)
 
 
-async def fino_a_sessione(cli, a):
-    await fino_ad_ammesso(cli, a)
-    cli.manda(attacca())
-    return await b3.attendi(cli, "SESSIONE")
+async def until_session(cli, a):
+    await until_admitted(cli, a)
+    cli.send_msg(attach())
+    return await b3.should_wait(cli, "SESSION")
 
 
 # ===========================================================================
@@ -426,330 +426,330 @@ async def fino_a_sessione(cli, a):
 #             «expected» column is a PREDICTION written in the file, not a
 #             comment on the result.
 # ===========================================================================
-CASI = []
+CASES = []
 
 
-def caso(nome, atteso, spiega, dove="prima"):
+def test_case(name, expected, explain, dove="before"):
     def dec(f):
-        CASI.append((nome, atteso, spiega, dove, f))
+        CASES.append((name, expected, explain, dove, f))
         return f
     return dec
 
 
 # ── The framing (§6.1) ─────────────────────────────────────────────────────
-@caso("tipo-sconosciuto", ERRORE_PROTOCOLLO,
+@test_case("type-unknown", PROTOCOL_ERROR,
       "a type that does not exist on the control channel: §3 forbids ignoring it")
 async def _(cli, a, es):
-    await fino_a_eccomi(cli)
-    cli.manda(inquadra(0x00FF, b""))
+    await until_here_i_am(cli)
+    cli.send_msg(wrap(0x00FF, b""))
 
 
-@caso("tipo-del-server", ERRORE_PROTOCOLLO,
-      "ECCOMI sent BY THE CLIENT: known type, wrong direction (§7.1)")
+@test_case("tipo-del-server", PROTOCOL_ERROR,
+      "HERE_I_AM sent BY THE CLIENT: known type, wrong direction (§7.1)")
 async def _(cli, a, es):
-    await fino_a_eccomi(cli)
-    cli.manda(inquadra(0x0002, capacita(BUONE)))
+    await until_here_i_am(cli)
+    cli.send_msg(wrap(0x0002, capabilities(GOOD)))
 
 
-@caso("lunghezza-in-piu", ERRORE_PROTOCOLLO,
-      "a good CIAO with four bytes of padding at the end (§6.0: no "
+@test_case("lunghezza-in-piu", PROTOCOL_ERROR,
+      "a good HELLO with four bytes of padding at the end (§6.0: no "
       "padding)")
 async def _(cli, a, es):
-    corpo = capacita(BUONE) + b"\x00\x00\x00\x00"
-    cli.apri_controllo()
-    cli.manda(inquadra(0x0001, corpo))
+    body = capabilities(GOOD) + b"\x00\x00\x00\x00"
+    cli.open_control()
+    cli.send_msg(wrap(0x0001, body))
 
 
-@caso("lunghezza-in-meno", ERRORE_PROTOCOLLO,
+@test_case("lunghezza-in-meno", PROTOCOL_ERROR,
       "a length shorter than the fields the type expects")
 async def _(cli, a, es):
-    corpo = capacita(BUONE)
-    cli.apri_controllo()
+    body = capabilities(GOOD)
+    cli.open_control()
     # half the body is declared, and only those bytes are sent: the list of
     # capabilities is truncated halfway through a string
-    cli.manda(struct.pack("!HI", 0x0001, len(corpo) // 2) + corpo[:len(corpo) // 2])
+    cli.send_msg(struct.pack("!HI", 0x0001, len(body) // 2) + body[:len(body) // 2])
 
 
-@caso("lunghezza-4gib", ERRORE_PROTOCOLLO,
+@test_case("lunghezza-4gib", PROTOCOL_ERROR,
       "⛔ an announced length of 4 GiB: §6.1 forbids allocating before "
       "checking, and a server killed by the kernel «drops the connection» "
       "all the same — taking away everyone else's sessions (R3.3)")
 async def _(cli, a, es):
-    cli.apri_controllo()
-    cli.manda(struct.pack("!HI", 0x0001, 0xFFFFFFFF))
+    cli.open_control()
+    cli.send_msg(struct.pack("!HI", 0x0001, 0xFFFFFFFF))
 
 
-@caso("lunghezza-oltre-1mib", ERRORE_PROTOCOLLO,
+@test_case("lunghezza-oltre-1mib", PROTOCOL_ERROR,
       "a message announcing more than 1 MiB (§6.1)")
 async def _(cli, a, es):
-    cli.apri_controllo()
-    cli.manda(struct.pack("!HI", 0x0001, 2 * 1024 * 1024))
+    cli.open_control()
+    cli.send_msg(struct.pack("!HI", 0x0001, 2 * 1024 * 1024))
 
 
-@caso("stato-sbagliato", ERRORE_PROTOCOLLO,
-      "CREDENZIALI as the first message, before CIAO")
+@test_case("stato-sbagliato", PROTOCOL_ERROR,
+      "CREDENTIALS as the first message, before HELLO")
 async def _(cli, a, es):
-    cli.apri_controllo()
-    cli.manda(inquadra(0x0003, s(a.utente) + s(a.parola)))
+    cli.open_control()
+    cli.send_msg(wrap(0x0003, s(a.user) + s(a.password)))
 
 
-@caso("ciao-due-volte", ERRORE_PROTOCOLLO,
-      "a second CIAO after ECCOMI: the same message, the wrong state")
+@test_case("ciao-due-volte", PROTOCOL_ERROR,
+      "a second HELLO after HERE_I_AM: the same message, the wrong state")
 async def _(cli, a, es):
-    await fino_a_eccomi(cli)
-    cli.manda(ciao())
+    await until_here_i_am(cli)
+    cli.send_msg(ciao())
 
 
 # ── The version (§2.4, §9) ─────────────────────────────────────────────────
-@caso("versione-2", VERSIONE_INCOMPATIBILE,
-      "⛔ CIAO(versione=2) on /rcp/1: §2.4 says the two MUST coincide. "
-      "⚠ §9 alone would say ECCOMI(1) — it is a contradiction of RCP.md")
+@test_case("versione-2", INCOMPATIBLE_VERSION,
+      "⛔ HELLO(version=2) on /rcp/1: §2.4 says the two MUST coincide. "
+      "⚠ §9 alone would say HERE_I_AM(1) — it is a contradiction of RCP.md")
 async def _(cli, a, es):
-    cli.apri_controllo()
-    cli.manda(ciao(versione=2))
+    cli.open_control()
+    cli.send_msg(ciao(version=2))
 
 
-@caso("versione-0", VERSIONE_INCOMPATIBILE,
-      "CIAO(versione=0) on /rcp/1: on the other side of the same boundary")
+@test_case("versione-0", INCOMPATIBLE_VERSION,
+      "HELLO(version=0) on /rcp/1: on the other side of the same boundary")
 async def _(cli, a, es):
-    cli.apri_controllo()
-    cli.manda(ciao(versione=0))
+    cli.open_control()
+    cli.send_msg(ciao(version=0))
 
 
 # ── The capabilities (§4.3) ────────────────────────────────────────────────
-@caso("nome-maiuscolo", ERRORE_PROTOCOLLO,
+@test_case("nome-maiuscolo", PROTOCOL_ERROR,
       "a capability name with capitals: §4.3 allows a-z 0-9 . _")
 async def _(cli, a, es):
-    cli.apri_controllo()
-    cli.manda(ciao(BUONE + [("Video.Codec", "hevc")]))
+    cli.open_control()
+    cli.send_msg(ciao(GOOD + [("Video.Codec", "hevc")]))
 
 
-@caso("nome-65-byte", ERRORE_PROTOCOLLO,
+@test_case("nome-65-byte", PROTOCOL_ERROR,
       "a 65-byte name: the limit of §4.3 is 64")
 async def _(cli, a, es):
-    cli.apri_controllo()
-    cli.manda(ciao(BUONE + [("x" * 65, "si")]))
+    cli.open_control()
+    cli.send_msg(ciao(GOOD + [("x" * 65, "yes")]))
 
 
-@caso("nome-con-trattino-basso", None,
-      "⭐ `video.misura_massima`: the underscore is LAWFUL, and it is the "
+@test_case("nome-con-trattino-basso", None,
+      "⭐ `video.max_size`: the underscore is LAWFUL, and it is the "
       "contradiction the B4 validator found in §4.3 on 10 August")
 async def _(cli, a, es):
-    cli.apri_controllo()
-    cli.manda(ciao(BUONE + [("video.misura_massima", "3840x2160")]))
-    await b3.attendi(cli, "ECCOMI")
+    cli.open_control()
+    cli.send_msg(ciao(GOOD + [("video.max_size", "3840x2160")]))
+    await b3.should_wait(cli, "HERE_I_AM")
 
 
-@caso("valore-vuoto", ERRORE_PROTOCOLLO,
+@test_case("valore-vuoto", PROTOCOL_ERROR,
       "an empty value: «whoever has nothing to say does not send the capability».  "
-      "⛔ ONE violation only: `client.nome` appears once and that is it")
+      "⛔ ONE violation only: `client.name` appears once and that is it")
 async def _(cli, a, es):
-    cli.apri_controllo()
-    cli.manda(ciao(WITHOUT_NAME + [("client.nome", "")]))
+    cli.open_control()
+    cli.send_msg(ciao(WITHOUT_NAME + [("client.name", "")]))
 
 
-@caso("valore-257-byte", ERRORE_PROTOCOLLO,
+@test_case("valore-257-byte", PROTOCOL_ERROR,
       "a 257-byte value: the limit of §4.3 is 256.  ⛔ ONE violation "
       "only, for the same reason as the case above")
 async def _(cli, a, es):
-    cli.apri_controllo()
-    cli.manda(ciao(WITHOUT_NAME + [("client.nome", "x" * 257)]))
+    cli.open_control()
+    cli.send_msg(ciao(WITHOUT_NAME + [("client.name", "x" * 257)]))
 
 
-@caso("capacita-ripetuta", ERRORE_PROTOCOLLO,
+@test_case("capacita-ripetuta", PROTOCOL_ERROR,
       "`video.codec` twice: «the last one wins» and «the first one wins» are two "
       "implementations of the same document")
 async def _(cli, a, es):
-    cli.apri_controllo()
-    cli.manda(ciao(BUONE + [("video.codec", "av1")]))
+    cli.open_control()
+    cli.send_msg(ciao(GOOD + [("video.codec", "av1")]))
 
 
-@caso("capacita-del-lato-sbagliato", ERRORE_PROTOCOLLO,
-      "`banco.marca` sent BY THE CLIENT: §4.3 declares it the server's, and the "
+@test_case("capacita-del-lato-sbagliato", PROTOCOL_ERROR,
+      "`bench.mark` sent BY THE CLIENT: §4.3 declares it the server's, and the "
       "name is known — the exception for unknown names does not cover it")
 async def _(cli, a, es):
-    cli.apri_controllo()
-    cli.manda(ciao(BUONE + [("banco.marca", "si")]))
+    cli.open_control()
+    cli.send_msg(ciao(GOOD + [("bench.mark", "yes")]))
 
 
-@caso("capacita-sconosciuta", None,
+@test_case("capabilities-unknown", None,
       "⭐ a NAME that does not exist: it is ignored and one carries on — exception 1 of §3")
 async def _(cli, a, es):
-    cli.apri_controllo()
-    cli.manda(ciao(BUONE + [("questa.non.esiste", "boh")]))
-    await b3.attendi(cli, "ECCOMI")
+    cli.open_control()
+    cli.send_msg(ciao(GOOD + [("questa.non.esiste", "boh")]))
+    await b3.should_wait(cli, "HERE_I_AM")
 
 
-@caso("solo-vp9", NIENTE_IN_COMUNE,
+@test_case("solo-vp9", NOTHING_IN_COMMON,
       "`video.codec = vp9` and nothing else: it did not misspell, it has nothing "
-      "to talk about — and the reason is NOT ERRORE_PROTOCOLLO")
+      "to talk about — and the reason is NOT PROTOCOL_ERROR")
 async def _(cli, a, es):
-    cli.apri_controllo()
-    cli.manda(ciao([("video.codec", "vp9"), ("video.profondita", "8"),
+    cli.open_control()
+    cli.send_msg(ciao([("video.codec", "vp9"), ("video.depth", "8"),
                     ("audio.codec", "pcm")]))
 
 
-@caso("hevc-e-vp9", None,
+@test_case("hevc-e-vp9", None,
       "⭐ `video.codec = hevc,vp9`: `hevc` is read and one carries on, and the "
       "DISCARD is written in the server log (§4.3)")
 async def _(cli, a, es):
-    cli.apri_controllo()
-    cli.manda(ciao([("video.codec", "hevc,vp9"), ("video.profondita", "8"),
+    cli.open_control()
+    cli.send_msg(ciao([("video.codec", "hevc,vp9"), ("video.depth", "8"),
                     ("audio.codec", "pcm")]))
-    await b3.attendi(cli, "ECCOMI")
+    await b3.should_wait(cli, "HERE_I_AM")
 
 
-@caso("senza-pcm", NIENTE_IN_COMUNE,
+@test_case("senza-pcm", NOTHING_IN_COMMON,
       "`audio.codec = opus` without `pcm`: §4.3 requires it of both, and whoever "
-      "does not declare it takes leave with NIENTE_IN_COMUNE — not with ERRORE_PROTOCOLLO")
+      "does not declare it takes leave with NOTHING_IN_COMMON — not with PROTOCOL_ERROR")
 async def _(cli, a, es):
-    cli.apri_controllo()
-    cli.manda(ciao([("video.codec", "hevc"), ("video.profondita", "8"),
+    cli.open_control()
+    cli.send_msg(ciao([("video.codec", "hevc"), ("video.depth", "8"),
                     ("audio.codec", "opus")]))
 
 
-@caso("senza-8", NIENTE_IN_COMUNE,
-      "`video.profondita = 10` without `8`: likewise")
+@test_case("senza-8", NOTHING_IN_COMMON,
+      "`video.depth = 10` without `8`: likewise")
 async def _(cli, a, es):
-    cli.apri_controllo()
-    cli.manda(ciao([("video.codec", "hevc"), ("video.profondita", "10"),
+    cli.open_control()
+    cli.send_msg(ciao([("video.codec", "hevc"), ("video.depth", "10"),
                     ("audio.codec", "pcm")]))
 
 
 # ── The credentials (§4.4) ─────────────────────────────────────────────────
-@caso("utente-vuoto", ERRORE_PROTOCOLLO,
+@test_case("utente-vuoto", PROTOCOL_ERROR,
       "⛔ zero-byte user: legal for §6.0, out of range for §4.4 — and "
       "without this check an attacker moves no counter")
 async def _(cli, a, es):
-    await fino_a_eccomi(cli)
-    cli.manda(inquadra(0x0003, s("") + s(a.parola)))
+    await until_here_i_am(cli)
+    cli.send_msg(wrap(0x0003, s("") + s(a.password)))
 
 
-@caso("parola-vuota", ERRORE_PROTOCOLLO,
+@test_case("parola-vuota", PROTOCOL_ERROR,
       "zero-byte password: likewise")
 async def _(cli, a, es):
-    await fino_a_eccomi(cli)
-    cli.manda(inquadra(0x0003, s(a.utente) + s("")))
+    await until_here_i_am(cli)
+    cli.send_msg(wrap(0x0003, s(a.user) + s("")))
 
 
-@caso("utente-257-byte", ERRORE_PROTOCOLLO,
+@test_case("utente-257-byte", PROTOCOL_ERROR,
       "257-byte user: the limit of §4.4 is 256")
 async def _(cli, a, es):
-    await fino_a_eccomi(cli)
-    cli.manda(inquadra(0x0003, s("u" * 257) + s(a.parola)))
+    await until_here_i_am(cli)
+    cli.send_msg(wrap(0x0003, s("u" * 257) + s(a.password)))
 
 
-@caso("parola-1025-byte", ERRORE_PROTOCOLLO,
+@test_case("parola-1025-byte", PROTOCOL_ERROR,
       "1025-byte password: the limit of §4.4 is 1024")
 async def _(cli, a, es):
-    await fino_a_eccomi(cli)
-    cli.manda(inquadra(0x0003, s(a.utente) + s("p" * 1025)))
+    await until_here_i_am(cli)
+    cli.send_msg(wrap(0x0003, s(a.user) + s("p" * 1025)))
 
 
-@caso("credenziali-due-volte", ERRORE_PROTOCOLLO,
+@test_case("credenziali-due-volte", PROTOCOL_ERROR,
       "§4.4: a single attempt per connection")
 async def _(cli, a, es):
-    await fino_ad_ammesso(cli, a)
-    cli.manda(inquadra(0x0003, s(a.utente) + s(a.parola)))
+    await until_admitted(cli, a)
+    cli.send_msg(wrap(0x0003, s(a.user) + s(a.password)))
 
 
-# ── ATTACCA (§4.5, §7.1) ───────────────────────────────────────────────────
-@caso("tela-1921x1080", ERRORE_PROTOCOLLO,
+# ── ATTACH (§4.5, §7.1) ───────────────────────────────────────────────────
+@test_case("tela-1921x1080", PROTOCOL_ERROR,
       "odd canvas: the encoder would round it silently — two different sizes "
       "under the same label, error form E2")
 async def _(cli, a, es):
-    await fino_ad_ammesso(cli, a)
-    cli.manda(attacca(tl=1921))
+    await until_admitted(cli, a)
+    cli.send_msg(attach(tl=1921))
 
 
-@caso("tela-319x240", ERRORE_PROTOCOLLO, "canvas below the minimum of §4.5")
+@test_case("tela-319x240", PROTOCOL_ERROR, "canvas below the minimum of §4.5")
 async def _(cli, a, es):
-    await fino_ad_ammesso(cli, a)
-    cli.manda(attacca(tl=319, ta=240))
+    await until_admitted(cli, a)
+    cli.send_msg(attach(tl=319, ta=240))
 
 
-@caso("tela-7682x4320", ERRORE_PROTOCOLLO, "canvas above the maximum of §4.5")
+@test_case("tela-7682x4320", PROTOCOL_ERROR, "canvas above the maximum of §4.5")
 async def _(cli, a, es):
-    await fino_ad_ammesso(cli, a)
-    cli.manda(attacca(tl=7682, ta=4320))
+    await until_admitted(cli, a)
+    cli.send_msg(attach(tl=7682, ta=4320))
 
 
-@caso("vista-300x801", None,
+@test_case("vista-300x801", None,
       "⭐ MUST PASS: §7.1 says the view does not have the canvas constraints — "
       "«any size from 1x1 up is legal, odd included» (R1.17)")
 async def _(cli, a, es):
-    await fino_ad_ammesso(cli, a)
-    cli.manda(attacca(vl=300, va=801))
-    await b3.attendi(cli, "SESSIONE")
+    await until_admitted(cli, a)
+    cli.send_msg(attach(vl=300, va=801))
+    await b3.should_wait(cli, "SESSION")
 
 
-@caso("vista-1x1", None,
+@test_case("vista-1x1", None,
       "⭐ MUST PASS: the lower limit declared by §7.1, to the letter")
 async def _(cli, a, es):
-    await fino_ad_ammesso(cli, a)
-    cli.manda(attacca(vl=1, va=1))
-    await b3.attendi(cli, "SESSIONE")
+    await until_admitted(cli, a)
+    cli.send_msg(attach(vl=1, va=1))
+    await b3.should_wait(cli, "SESSION")
 
 
-@caso("disposizione-malformata", ERRORE_PROTOCOLLO,
+@test_case("disposizione-malformata", PROTOCOL_ERROR,
       "`it!!` is not an XKB name: it misspelled")
 async def _(cli, a, es):
-    await fino_ad_ammesso(cli, a)
-    cli.manda(attacca(disp="it!!"))
+    await until_admitted(cli, a)
+    cli.send_msg(attach(avail="it!!"))
 
 
-@caso("disposizione-sconosciuta", SESSIONE_NON_SERVIBILE,
+@test_case("disposizione-sconosciuta", SESSION_UNSERVABLE,
       "⛔ `zz` is WELL FORMED and the machine does not have it: §4.5 wants TWO "
       "different faults, and the detail MUST be in the body (§8.2)")
 async def _(cli, a, es):
-    await fino_ad_ammesso(cli, a)
-    cli.manda(attacca(disp="zz"))
+    await until_admitted(cli, a)
+    cli.send_msg(attach(avail="zz"))
 
 
-@caso("disposizione-con-variante", None,
+@test_case("disposizione-con-variante", None,
       "⭐ `de(neo)`: the form with the variant in parentheses is lawful (§4.5)")
 async def _(cli, a, es):
-    await fino_ad_ammesso(cli, a)
-    cli.manda(attacca(disp="de(neo)"))
-    await b3.attendi(cli, "SESSIONE")
+    await until_admitted(cli, a)
+    cli.send_msg(attach(avail="de(neo)"))
+    await b3.should_wait(cli, "SESSION")
 
 
 # ── The bench function (§7.5) ──────────────────────────────────────────────
-@caso("banco-spento", None,
-      "⛔ `BANCO_MARCA` with the function off: there MUST arrive "
-      "`BANCO_ESITO(RIFIUTATA, FUNZIONE_SPENTA)` — not a silence and not a "
+@test_case("banco-spento", None,
+      "⛔ `BENCH_MARK` with the function off: there MUST arrive "
+      "`BENCH_OUTCOME(REFUSED, FEATURE_OFF)` — not a silence and not a "
       "closing.  It is the DEFAULT state of every server")
 async def _(cli, a, es):
-    await fino_a_sessione(cli, a)
-    cli.manda(banco_marca(id_=1, ritardo=0))
-    await banco_esito(cli, es, id_=1, esito=2, motivo=1)  # RIFIUTATA, SPENTA
+    await until_session(cli, a)
+    cli.send_msg(bench_mark(id_=1, delay=0))
+    await bench_outcome(cli, es, id_=1, outcome=2, reason=1)  # REFUSED, SPENTA
 
 
-@caso("banco-ritardo-20000", None,
-      "`ritardo_ms = 20000`: `RITARDO_FUORI_LIMITI`, and ⛔ **not** "
-      "ERRORE_PROTOCOLLO — dropping the session of the bench being calibrated "
+@test_case("banco-ritardo-20000", None,
+      "`delay_ms = 20000`: `DELAY_OUT_OF_RANGE`, and ⛔ **not** "
+      "PROTOCOL_ERROR — dropping the session of the bench being calibrated "
       "is the bad idea §7.1 avoids for out-of-bounds sizes")
 async def _(cli, a, es):
-    await fino_a_sessione(cli, a)
-    cli.manda(banco_marca(id_=7, ritardo=20000))
-    await banco_esito(cli, es, id_=7, esito=2, motivo=2)  # RIFIUTATA, RITARDO
+    await until_session(cli, a)
+    cli.send_msg(bench_mark(id_=7, delay=20000))
+    await bench_outcome(cli, es, id_=7, outcome=2, reason=2)  # REFUSED, DELAY
 
 
-@caso("banco-id-zero", ERRORE_PROTOCOLLO,
+@test_case("banco-id-zero", PROTOCOL_ERROR,
       "`id = 0`, which §7.5 declares reserved.  ⚠ The document does not say the outcome: "
       "here the drop is chosen, because it is a malformed message and not a "
       "wrong bench parameter")
 async def _(cli, a, es):
-    await fino_a_sessione(cli, a)
-    cli.manda(banco_marca(id_=0))
+    await until_session(cli, a)
+    cli.send_msg(bench_mark(id_=0))
 
 
-@caso("banco-prima-di-sessione", ERRORE_PROTOCOLLO,
-      "`BANCO_MARCA` before `SESSIONE`: there is no frame to "
+@test_case("banco-prima-di-sessione", PROTOCOL_ERROR,
+      "`BENCH_MARK` before `SESSION`: there is no frame to "
       "paint on")
 async def _(cli, a, es):
-    await fino_ad_ammesso(cli, a)
-    cli.manda(banco_marca())
+    await until_admitted(cli, a)
+    cli.send_msg(bench_mark())
 
 
 # ── The streams (§2.5) ─────────────────────────────────────────────────────
@@ -758,194 +758,194 @@ async def _(cli, a, es):
 #
 #    The violation these four cases test is **the stream**: how many there
 #    are, in which direction the channel goes, on which kind of stream it lives.
-#    If a crooked message is also put inside — a `CIAO` with a zero-byte body,
-#    a `tipo` that does not exist — a server that does not count the streams
+#    If a crooked message is also put inside — a `HELLO` with a zero-byte body,
+#    a `kind` that does not exist — a server that does not count the streams
 #    takes leave all the same, for the other reason, and the case is **green
 #    without having tested anything** (finding R7.7).  Every payload below is
 #    legal *in itself* and in the state in which it is sent: the only crooked
 #    thing is the stream.
-@caso("secondo-bidirezionale", ERRORE_PROTOCOLLO,
+@test_case("secondo-bidirezionale", PROTOCOL_ERROR,
       "⛔ «the client MUST NOT open bidirectional streams beyond 0»: the "
       "control channel is ONE ONLY for the whole session.  The payload is "
-      "a well-formed CREDENZIALI, which after ECCOMI is the right message: "
+      "a well-formed CREDENTIALS, which after HERE_I_AM is the right message: "
       "the only violation is the extra stream")
 async def _(cli, a, es):
-    await fino_a_eccomi(cli)
-    altro = cli.apri_bidi()
-    cli.manda_su(altro, inquadra(0x0003, s(a.utente) + s(a.parola)))
+    await until_here_i_am(cli)
+    other = cli.open_bidi()
+    cli.send_on(other, wrap(0x0003, s(a.user) + s(a.password)))
 
 
-@caso("uni-controllo", ERRORE_PROTOCOLLO,
+@test_case("uni-controllo", PROTOCOL_ERROR,
       "the CONTROL channel (high byte 0x00) on a unidirectional stream: "
-      "«control lives only on stream 0» (§2.5).  ⚠ CREDENZIALI and not "
-      "CIAO: a second CIAO would also be a wrong state, that is a "
+      "«control lives only on stream 0» (§2.5).  ⚠ CREDENTIALS and not "
+      "HELLO: a second HELLO would also be a wrong state, that is a "
       "second reason to take leave")
 async def _(cli, a, es):
-    await fino_a_eccomi(cli)
-    u = cli.apri_uni()
-    cli.manda_su(u, inquadra(0x0003, s(a.utente) + s(a.parola)))
+    await until_here_i_am(cli)
+    u = cli.open_uni()
+    cli.send_on(u, wrap(0x0003, s(a.user) + s(a.password)))
 
 
-@caso("uni-video", ERRORE_PROTOCOLLO,
+@test_case("uni-video", PROTOCOL_ERROR,
       "the VIDEO channel (0x03) FROM THE CLIENT: wrong direction — video goes from "
       "server to client (§2.5).  ⛔ `0x0301` = key frame, which §6.2 "
       "declares LEGAL: with `0x0300` the only applicable rule was «other "
-      "values: ERRORE_PROTOCOLLO», and the direction was never put to the test")
+      "values: PROTOCOL_ERROR», and the direction was never put to the test")
 async def _(cli, a, es):
-    await fino_a_eccomi(cli)
-    u = cli.apri_uni()
+    await until_here_i_am(cli)
+    u = cli.open_uni()
     # the exact 28-byte header of §6.2: type, codec, width, height,
     # number, instant, input — all values within the limits
-    cli.manda_su(u, struct.pack("!HHIIIQI", 0x0301, 1, 1920, 1080, 1, 0, 0))
+    cli.send_on(u, struct.pack("!HHIIIQI", 0x0301, 1, 1920, 1080, 1, 0, 0))
 
 
-@caso("uni-audio", ERRORE_PROTOCOLLO,
+@test_case("uni-audio", PROTOCOL_ERROR,
       "the AUDIO channel (0x04) on a STREAM: audio lives only on datagrams "
       "(§2.5, §6.3).  The payload is the well-formed header of §6.3 — "
       "`tipo = 0x0401`, `codec = 2` (PCM): the only violation is the stream")
 async def _(cli, a, es):
-    await fino_a_eccomi(cli)
-    u = cli.apri_uni()
-    cli.manda_su(u, struct.pack("!HHQ", 0x0401, 2, 0))
+    await until_here_i_am(cli)
+    u = cli.open_uni()
+    cli.send_on(u, struct.pack("!HHQ", 0x0401, 2, 0))
 
 
-@caso("uni-byte-alto-ignoto", ERRORE_PROTOCOLLO,
+@test_case("uni-byte-alto-ignoto", PROTOCOL_ERROR,
       "a high byte that is none of the five of §2.5")
 async def _(cli, a, es):
-    await fino_a_eccomi(cli)
-    u = cli.apri_uni()
-    cli.manda_su(u, struct.pack("!HI", 0x0900, 0))
+    await until_here_i_am(cli)
+    u = cli.open_uni()
+    cli.send_on(u, struct.pack("!HI", 0x0900, 0))
 
 
 # ===========================================================================
-async def gira_caso(a, nome, atteso, spiega, f):
-    es = Esito()
-    gestore = None
+async def run_case(a, name, expected, explain, f):
+    es = Outcome()
+    handler = None
     try:
-        gestore, cli, stato = await apri(a)
-        es.http_status = stato
-        if stato != "200":
-            es.errore = f"the extended CONNECT answered {stato}"
+        handler, cli, state = await do_open(a)
+        es.http_status = state
+        if state != "200":
+            es.error = f"the extended CONNECT answered {state}"
             return es
-        es.fase = "preparation+violation"
+        es.phase = "preparation+violation"
         await f(cli, a, es)
-        # ⛔ HERE, AND NOT BEFORE.  All the cases with an `atteso` end with
+        # ⛔ HERE, AND NOT BEFORE.  All the cases with an `expected` end with
         #    sending the crooked byte and wait for nothing afterwards: if `f`
         #    returns, the violation really left.  If instead it stopped earlier —
-        #    the fixed `ATTACCA` refused, the `ECCOMI` that does not arrive, PAM
-        #    saying no — the case tested nothing and `provocato` stays false,
+        #    the fixed `ATTACH` refused, the `HERE_I_AM` that does not arrive, PAM
+        #    saying no — the case tested nothing and `caused` stays false,
         #    which is what the verdict looks at (finding R7.1).
-        es.provocato = True
-        es.fase = "collection"
+        es.caused = True
+        es.phase = "collection"
         # ⚠ On the cases that MUST pass one waits anyway: «it did not drop
         #   immediately» is not «it did not drop».
-        await raccogli(cli, es, attesa=3.0 if atteso is None else 12.0)
+        await collect(cli, es, wait=3.0 if expected is None else 12.0)
     except Exception as e:  # noqa: BLE001 — the error type IS the measurement
-        es.errore = f"{type(e).__name__}: {e}"
+        es.error = f"{type(e).__name__}: {e}"
         # ⛔ AND THE REASON IS NOT SCRAPED FROM THE EXCEPTION TEXT.
         #
-        #    Here there was a loop over `MOTIVI` that looked for the name of a
+        #    Here there was a loop over `REASONS` that looked for the name of a
         #    §8.2 reason inside `str(e)` and took it as «reason arrived».  The
-        #    defect: `b3.attendi` raises `RuntimeError("CONGEDO invece di
-        #    SESSIONE: motivo 0x0b = ERRORE_PROTOCOLLO")` even when what drops
+        #    defect: `b3.should_wait` raises `RuntimeError("FAREWELL invece di
+        #    SESSION: reason 0x0b = PROTOCOL_ERROR")` even when what drops
         #    is the PREPARATION — and that string contains exactly the name of
         #    the expected reason.  R7.1 counted **twelve** that could be green
         #    with the crooked byte never sent, and ⚠ **it closed in on
         #    itself**: the more broken the server was upstream, the more those
         #    cases became green (finding R7.1, forms E6 and E7).
         #
-        # ⭐ The reason is read by `raccogli`, from a message that arrived on the
+        # ⭐ The reason is read by `collect`, from a message that arrived on the
         #    wire.  The exception text stays what it is: a diagnosis to print,
         #    not a verdict.
     finally:
-        if gestore is not None:
+        if handler is not None:
             try:
-                await gestore.__aexit__(None, None, None)
+                await handler.__aexit__(None, None, None)
             except Exception:  # noqa: BLE001
                 pass
     return es
 
 
-async def il_percorso(a):
+async def path(a):
     """⛔ §2.2: a WebTransport session on a different path is a 404.
 
     It stands apart because it is not an RCP violation: it is §3 applied **to
-    the first byte**, before RCP begins — and in fact there is no CONGEDO to
+    the first byte**, before RCP begins — and in fact there is no FAREWELL to
     wait for, because there is no control channel.
     """
-    fuori = []
-    for percorso, atteso in (("/rcp/2", "404"), ("/", "404"),
+    report = []
+    for fpath, expected in (("/rcp/2", "404"), ("/", "404"),
                              ("/rcp/1", "200")):
-        gestore = None
+        handler = None
         try:
-            gestore, cli, stato = await apri(a, percorso)
+            handler, cli, state = await do_open(a, fpath)
         except Exception as e:  # noqa: BLE001
-            stato = f"error {type(e).__name__}"
+            state = f"error {type(e).__name__}"
         finally:
-            if gestore is not None:
+            if handler is not None:
                 try:
-                    await gestore.__aexit__(None, None, None)
+                    await handler.__aexit__(None, None, None)
                 except Exception:  # noqa: BLE001
                     pass
-        fuori.append((percorso, atteso, stato, stato == atteso))
-    return fuori
+        report.append((fpath, expected, state, state == expected))
+    return report
 
 
-async def ancora_vivo(a):
+async def still_alive(a):
     """⛔ B0.5 — the half nobody writes.
 
     It is not enough that the connection dropped: **it must be the connection
     that dropped, not the server**.  Here a new connection is opened and it
-    gets as far as `ECCOMI`.
-    ⚠ Not as far as `SESSIONE`: it would cost the fixed second of §4.4-bis at
+    gets as far as `HERE_I_AM`.
+    ⚠ Not as far as `SESSION`: it would cost the fixed second of §4.4-bis at
       every case, that is forty seconds of bench for a property the full run
       at the end verifies once and well.
     """
-    gestore = None
+    handler = None
     try:
-        gestore, cli, stato = await apri(a)
-        if stato != "200":
-            return False, f":status {stato}"
-        await fino_a_eccomi(cli)
+        handler, cli, state = await do_open(a)
+        if state != "200":
+            return False, f":status {state}"
+        await until_here_i_am(cli)
         return True, ""
     except Exception as e:  # noqa: BLE001
         return False, f"{type(e).__name__}: {e}"
     finally:
-        if gestore is not None:
+        if handler is not None:
             try:
-                await gestore.__aexit__(None, None, None)
+                await handler.__aexit__(None, None, None)
             except Exception:  # noqa: BLE001
                 pass
 
 
-async def giro_completo(a):
+async def full_round(a):
     """The good handshake, whole: the check that says the server did not stay
     standing but useless."""
-    gestore = None
+    handler = None
     try:
-        gestore, cli, stato = await apri(a)
-        if stato != "200":
-            return False, f":status {stato}"
-        await fino_a_sessione(cli, a)
+        handler, cli, state = await do_open(a)
+        if state != "200":
+            return False, f":status {state}"
+        await until_session(cli, a)
         return True, ""
     except Exception as e:  # noqa: BLE001
         return False, f"{type(e).__name__}: {e}"
     finally:
-        if gestore is not None:
+        if handler is not None:
             try:
-                await gestore.__aexit__(None, None, None)
+                await handler.__aexit__(None, None, None)
             except Exception:  # noqa: BLE001
                 pass
 
 
-async def limitatore(a):
+async def limiter(a):
     """⛔ §4.4-bis, and the two halves that get forgotten.
 
-    a) MALFORMED messages move no counter: six out-of-range `CREDENZIALI`,
+    a) MALFORMED messages move no counter: six out-of-range `CREDENTIALS`,
        and then a good one that MUST pass;
     b) the **per-address** counter really exists: six failed attempts with
        SIX DIFFERENT NAMES from the same address, and the seventh — again a new
-       name — must receive `TROPPI_TENTATIVI`.
+       name — must receive `TOO_MANY_ATTEMPTS`.
 
     ⚠ **Prediction written before measuring**: (b) will be RED.  The key of
       the per-address counter is the `provenienza`, which contains **the port** —
@@ -954,75 +954,75 @@ async def limitatore(a):
       worst shape: code present, that looks right, and that does
       nothing.
     """
-    fuori = {}
+    report = {}
     # (a) six malformed, then a good one
     for i in range(6):
-        gestore, cli, _ = await apri(a)
+        handler, cli, _ = await do_open(a)
         try:
-            await fino_a_eccomi(cli)
-            cli.manda(inquadra(0x0003, s("") + s("x")))
+            await until_here_i_am(cli)
+            cli.send_msg(wrap(0x0003, s("") + s("x")))
             await asyncio.sleep(0.2)
         except Exception:  # noqa: BLE001
             pass
         finally:
-            await gestore.__aexit__(None, None, None)
-    ok, perche = await giro_completo(a)
-    fuori["malformati-non-contano"] = (ok, perche)
+            await handler.__aexit__(None, None, None)
+    ok, why = await full_round(a)
+    report["malformati-non-contano"] = (ok, why)
 
     # (b) seven failed with SEVEN DIFFERENT NAMES, from the same address
-    motivi = []
+    reasons = []
     for i in range(7):
-        gestore, cli, _ = await apri(a)
-        es = Esito()
+        handler, cli, _ = await do_open(a)
+        es = Outcome()
         try:
-            await fino_a_eccomi(cli)
-            cli.manda(inquadra(0x0003, s(f"nessuno{i}") + s("sbagliata")))
+            await until_here_i_am(cli)
+            cli.send_msg(wrap(0x0003, s(f"none{i}") + s("wrong")))
             # ⚠ The answer is AWAITED instead of sleeping for a time chosen by
             #   eye: PAM has its own delay on failures, and a `sleep` that is
             #   too short would measure a counter that has not been
             #   incremented yet.
-            await raccogli(cli, es, attesa=15)
+            await collect(cli, es, wait=15)
         except Exception:  # noqa: BLE001
             pass
         finally:
-            await gestore.__aexit__(None, None, None)
-        motivi.append(es.motivo)
-    # The first five are CREDENZIALI_ERRATE; from the sixth on the threshold of
+            await handler.__aexit__(None, None, None)
+        reasons.append(es.reason)
+    # The first five are WRONG_CREDENTIALS; from the sixth on the threshold of
     # §4.4-bis has passed, and the PER-ADDRESS counter must speak.
-    fuori["contatore-per-indirizzo"] = (
-        motivi[-1] == TROPPI_TENTATIVI,
+    report["contatore-per-indirizzo"] = (
+        reasons[-1] == TOO_MANY_ATTEMPTS,
         "reasons: " + " ".join(
-            MOTIVI.get(m, str(m)) if m is not None else "-" for m in motivi))
+            REASONS.get(m, str(m)) if m is not None else "-" for m in reasons))
 
     # ⛔ AND THE CHECK THAT TELLS A COUNTER FROM A BLOCK: now the RIGHT
-    #    password, from the same address, MUST receive TROPPI_TENTATIVI all
+    #    password, from the same address, MUST receive TOO_MANY_ATTEMPTS all
     #    the same.  A server that counted without blocking would give the same
     #    line as above and let in anyone who guessed at the sixth try.
-    gestore, cli, _ = await apri(a)
-    es = Esito()
+    handler, cli, _ = await do_open(a)
+    es = Outcome()
     try:
-        await fino_a_eccomi(cli)
-        cli.manda(inquadra(0x0003, s(a.utente) + s(a.parola)))
-        await raccogli(cli, es, attesa=15)
+        await until_here_i_am(cli)
+        cli.send_msg(wrap(0x0003, s(a.user) + s(a.password)))
+        await collect(cli, es, wait=15)
     except Exception:  # noqa: BLE001
         pass
     finally:
-        await gestore.__aexit__(None, None, None)
-    fuori["blocca-anche-la-parola-giusta"] = (
-        es.motivo == TROPPI_TENTATIVI,
-        f"with the GOOD credentials: {MOTIVI.get(es.motivo, es.motivo)}")
-    return fuori
+        await handler.__aexit__(None, None, None)
+    report["blocca-anche-la-parola-giusta"] = (
+        es.reason == TOO_MANY_ATTEMPTS,
+        f"with the GOOD credentials: {REASONS.get(es.reason, es.reason)}")
+    return report
 
 
-VERDE, ROSSO, GRIGIO = "\033[1;32m", "\033[1;31m", "\033[0m"
+GREEN, RED, GRAY = "\033[1;32m", "\033[1;31m", "\033[0m"
 
 
-def riga(ok, nome, testo):
-    print(f"    {VERDE if ok else ROSSO}{'OK' if ok else 'NO'}{GRIGIO}  "
-          f"{nome:26s} {testo}")
+def line(ok, name, text):
+    print(f"    {GREEN if ok else RED}{'OK' if ok else 'NO'}{GRAY}  "
+          f"{name:26s} {text}")
 
 
-def esito_finale(conti, guasti, parziale, reg=None):
+def final_outcome(counts, faults, partial, reg=None):
     """⛔ Every count with its denominator, and the denominator COMPUTED.
 
     The old line printed `N su N` — the same expression twice — and only when
@@ -1032,37 +1032,37 @@ def esito_finale(conti, guasti, parziale, reg=None):
     """
     print()
     print("    == what this run really looked at")
-    for che, (buoni, tot) in conti.items():
+    for desc, (good_n, tot) in counts.items():
         if tot == 0:
             # ⛔ A zero denominator is DECLARED: «nobody looked» and «all
             #    passed» look the same if one keeps quiet.
-            print(f"    --  {che:44s} no case triggered it")
+            print(f"    --  {desc:44s} no case triggered it")
             continue
-        col = VERDE if buoni == tot else ROSSO
-        print(f"    {col}{buoni:3d} out of {tot:3d}{GRIGIO}  {che}")
+        clr = GREEN if good_n == tot else RED
+        print(f"    {clr}{good_n:3d} out of {tot:3d}{GRAY}  {desc}")
     print()
     # ⛔ And the verdict goes into the log with the target inside, or in six
     #    months «B5 passes» will not say against which of the two servers.
     if reg is not None:
-        reg.scrivi({"tipo": "verdetto", "guasti": guasti, "parziale": parziale,
-                    "conti": {k: v for k, v in conti.items()}})
-        print(f"    --  {reg.riassunto()}")
-    if guasti:
-        print(f"    {ROSSO}⛔ B5: {guasti} points do not pass against "
-              f"«{reg.bersaglio if reg else '?'}»{GRIGIO}")
+        reg.write({"type": "verdict", "faults": faults, "partial": partial,
+                    "counts": {k: v for k, v in counts.items()}})
+        print(f"    --  {reg.summary()}")
+    if faults:
+        print(f"    {RED}⛔ B5: {faults} points do not pass against "
+              f"«{reg.target if reg else '?'}»{GRAY}")
         return 1
-    if parziale:
-        print(f"    {VERDE}⭐ the selected cases pass{GRIGIO} — ⚠ and this "
+    if partial:
+        print(f"    {GREEN}⭐ the selected cases pass{GRAY} — ⚠ and this "
               f"is NOT «B5 passes»: the run was partial")
         return 0
-    print(f"    {VERDE}⭐ B5 passes against «{reg.bersaglio if reg else '?'}», and the "
-          f"numbers above say on what{GRIGIO}")
+    print(f"    {GREEN}⭐ B5 passes against «{reg.target if reg else '?'}», and the "
+          f"numbers above say on what{GRAY}")
     print(f"    ⚠ and it is not «B5 passes»: the other target is another program, "
           f"and this run says nothing about it")
     return 0
 
 
-def conta(casi):
+def count(cases):
     """⛔ The two numbers, COMPUTED — and they are two, not one.
 
     «44 violations out of 44» printed the same expression as numerator and as
@@ -1071,37 +1071,37 @@ def conta(casi):
     R7.14).  From here on the number is produced by this function, and no
     comment rewrites it by hand.
     """
-    violazioni = sum(1 for c in casi if c[1] is not None)
-    return violazioni, len(casi) - violazioni
+    violations = sum(1 for c in cases if c[1] is not None)
+    return violations, len(cases) - violations
 
 
-async def principale(a):
-    casi = [c for c in CASI if not a.solo or a.solo in c[0]]
-    tot_v, total_green = conta(CASI)
-    if a.elenco:
-        print(f"== B5: {len(CASI)} cases — {tot_v} violations and {total_green} "
+async def main(a):
+    cases = [c for c in CASES if not a.only or a.only in c[0]]
+    tot_v, total_green = count(CASES)
+    if a.list:
+        print(f"== B5: {len(CASES)} cases — {tot_v} violations and {total_green} "
               f"⭐ expected greens.  Every line is a PREDICTION\n")
-        for nome, atteso, spiega, dove, _ in CASI:
-            att = (f"{atteso:#04x} {MOTIVI.get(atteso, '?')}" if atteso
+        for name, expected, explain, dove, _ in CASES:
+            expect = (f"{expected:#04x} {REASONS.get(expected, '?')}" if expected
                    else "⭐ MUST PASS")
-            print(f"  {nome:26s} {att}")
-            print(f"  {'':26s}   {spiega}")
+            print(f"  {name:26s} {expect}")
+            print(f"  {'':26s}   {explain}")
         return 0
 
     # ⛔ ZERO CASES IS NOT «ALL PASSED».
     #
-    #    `--solo pippo` matched no name, the loop did not run, and the bench
+    #    `--only pippo` matched no name, the loop did not run, and the bench
     #    printed «0 violations out of 0» and exited 0: a typo in the filter was
     #    indistinguishable from a green bench (finding R7.15).  ⭐ They are THREE
     #    outcomes — nothing to measure, does not pass, passes — and they want
     #    three different exit codes.
-    if not casi:
-        print(f"    {ROSSO}⛔ «--solo {a.solo}» selected ZERO cases out of "
-              f"{len(CASI)}: there is nothing to measure{GRIGIO}")
-        print("       This is NOT a green.  The names are read with --elenco.")
+    if not cases:
+        print(f"    {RED}⛔ «--only {a.only}» selected ZERO cases out of "
+              f"{len(CASES)}: there is nothing to measure{GRAY}")
+        print("       This is NOT a green.  The names are read with --list.")
         return 2
 
-    sel_v, sel_green = conta(casi)
+    sel_v, sel_green = count(cases)
 
     # ⛔ THE RUN'S LOG, AND THE FIRST LINE SAYS AGAINST WHAT ONE MEASURES.
     #
@@ -1109,15 +1109,15 @@ async def principale(a):
     #    screen.  ⚠ Which means that none of its forty-four outcomes is
     #    re-verifiable today, and that the day two runs say different things
     #    there will be no way of knowing which server answered which.
-    a.reg = b0.Registro(a.uscita, a.bersaglio, a.porta, a.giro or None,
+    a.reg = b0.Log(a.output, a.target, a.port, a.round or None,
                         a.md5 or None)
-    prof = a.reg.profilo
+    prof = a.reg.profile
     a.reg.open_round(
         "B5", "violations sent on a new connection per case; the "
               "server is started by 01-b5-lancia.sh and no moving scene "
               "is needed",
-        extra={"casi_selezionati": len(casi), "casi_totali": len(CASI),
-               "filtro": a.solo, "violazioni": sel_v, "verdi_attesi": sel_green,
+        extra={"casi_selezionati": len(cases), "cases_totals": len(CASES),
+               "filter": a.only, "violazioni": sel_v, "verdi_attesi": sel_green,
                # ⛔ THE ECHO: on the product it is not there, and the difference
                #    is written BEFORE measuring.  `src/webtransport.c`
                #    `discard_extra_stream()`: «the bytes are thrown away, and
@@ -1128,18 +1128,18 @@ async def principale(a):
                #    was supposed to arrive.
                "eco_attesa": prof["eco"]})
     print(f"== B5 — the violation tests against the server")
-    print(f"   ⛔ TARGET: {a.bersaglio} · port {a.porta} · binary md5 "
+    print(f"   ⛔ TARGET: {a.target} · port {a.port} · binary md5 "
           f"{(a.md5 or 'unknown')[:12]}…")
     print(f"      {prof['eseguibile']}")
     print(f"   ⚠ B2's echo on the streams opened by the bench: "
           f"{'expected' if prof['eco'] else '⛔ NOT expected on this target'}")
-    print(f"   this run's log: {a.uscita or '⛔ NONE'}")
-    print(f"   {len(casi)} cases out of {len(CASI)} selected: {sel_v} violations "
+    print(f"   this run's log: {a.output or '⛔ NONE'}")
+    print(f"   {len(cases)} cases out of {len(CASES)} selected: {sel_v} violations "
           f"and {sel_green} ⭐ expected greens")
     print("   ⛔ every case: the violation really sent, the right reason in the "
           "right message,")
     print("      the two roads of §3.1, and the server still alive afterwards\n")
-    if a.solo:
+    if a.only:
         print(f"    ⚠ PARTIAL RUN.  The path (§2.2), the full run and the")
         print(f"      limiter (§4.4-bis) are NOT run: they do not depend on the")
         print(f"      selected cases, and running them here would say «passes» on a")
@@ -1147,108 +1147,108 @@ async def principale(a):
 
     # ⛔ EVERY COUNT WITH ITS DENOMINATOR, and the denominators are different
     #    because the measured properties are different.
-    conti = {
+    counts = {
         "violations with the expected reason": [0, 0],
         "⭐ expected greens, session alive": [0, 0],
         "§3.1 point 3 — reason in the WT closing": [0, 0],
         "§11 — reason in the right message": [0, 0],
     }
-    guasti, morto = 0, False
-    for nome, atteso, spiega, dove, f in casi:
-        es = await gira_caso(a, nome, atteso, spiega, f)
-        if atteso is None:
-            conti["⭐ expected greens, session alive"][1] += 1
+    faults, dead = 0, False
+    for name, expected, explain, dove, f in cases:
+        es = await run_case(a, name, expected, explain, f)
+        if expected is None:
+            counts["⭐ expected greens, session alive"][1] += 1
             # ⛔ `viva` was COMPUTED and not looked at: it was enough that no
-            #    reason had arrived, so a server that sends ECCOMI and then
+            #    reason had arrived, so a server that sends HERE_I_AM and then
             #    closes the WebTransport session gave the line «the session
             #    holds» while the session was dead (finding R7.2).
-            ok = es.viva and es.errore is None
-            testo = ("the session holds" if ok else str(es))
-            conti["⭐ expected greens, session alive"][0] += int(ok)
+            ok = es.viva and es.error is None
+            text = ("the session holds" if ok else str(es))
+            counts["⭐ expected greens, session alive"][0] += int(ok)
         else:
-            conti["violations with the expected reason"][1] += 1
-            expected_in = CARRIER.get(atteso, "CONGEDO")
+            counts["violations with the expected reason"][1] += 1
+            expected_in = CARRIER.get(expected, "FAREWELL")
             # §11: «at least one of the two roads» must have carried the reason.
-            strade = []
-            if es.motivo == atteso and es.tipo_motivo == expected_in:
-                strade.append(expected_in)
-            if es.codice_wt == atteso:
-                strade.append("chiusura-WT")
-            ok = es.provocato and bool(strade)
-            conti["violations with the expected reason"][0] += int(ok)
-            testo = str(es)
-        riga(ok, nome, testo)
+            routes = []
+            if es.reason == expected and es.reason_type == expected_in:
+                routes.append(expected_in)
+            if es.code_wt == expected:
+                routes.append("chiusura-WT")
+            ok = es.caused and bool(routes)
+            counts["violations with the expected reason"][0] += int(ok)
+            text = str(es)
+        line(ok, name, text)
         # ⛔ And the fact goes to the log BEFORE any conclusion: a case that
         #    brings the bench down (the server dying) must have left its own
         #    line, or the log would only tell about the runs that went well.
-        a.reg.scrivi({"tipo": "caso", "nome": nome, "esito": bool(ok),
-                      "atteso": atteso, "motivo": es.motivo,
-                      "tipo_motivo": es.tipo_motivo, "codice_wt": es.codice_wt,
-                      "provocato": es.provocato, "fase": es.fase,
-                      "errore": es.errore, "dettaglio": es.dettaglio,
-                      "viva": es.viva})
+        a.reg.write({"type": "case", "name": name, "outcome": bool(ok),
+                      "expected": expected, "reason": es.reason,
+                      "reason_type": es.reason_type, "code_wt": es.code_wt,
+                      "caused": es.caused, "phase": es.phase,
+                      "error": es.error, "detail": es.detail,
+                      "alive": es.alive})
         if not ok:
-            guasti += 1
+            faults += 1
             print(f"        expected: "
-                  + (f"{atteso:#04x} {MOTIVI.get(atteso, '?')}" if atteso
+                  + (f"{expected:#04x} {REASONS.get(expected, '?')}" if expected
                      else "⭐ no drop"))
-            print(f"        {spiega}")
-            if atteso is not None and not es.provocato:
+            print(f"        {explain}")
+            if expected is not None and not es.caused:
                 print(f"        ⛔ and the violation NEVER LEFT: the case "
-                      f"stopped in «{es.fase}».  It is not a failed test, "
+                      f"stopped in «{es.phase}».  It is not a failed test, "
                       f"it is a test not done")
-        if es.dettaglio:
-            print(f"        detail from the body: «{es.dettaglio}»")
-        if getattr(es, "banco", None):
-            print(f"        BANCO_ESITO: {es.banco}")
-        if atteso is not None and es.provocato:
+        if es.detail:
+            print(f"        detail from the body: «{es.detail}»")
+        if getattr(es, "bench", None):
+            print(f"        BENCH_OUTCOME: {es.bench}")
+        if expected is not None and es.caused:
             # ⛔ §3.1 POINT 3 IS COUNTED, NOT PRINTED.
             #
             #    Here there was a line that said «the reason arrived via
-            #    CONGEDO» even when the second road had not arrived at all —
+            #    FAREWELL» even when the second road had not arrived at all —
             #    true, and capable of making one believe the opposite — and
-            #    `guasti` was not touched in any of the three branches: R7.3
+            #    `faults` was not touched in any of the three branches: R7.3
             #    showed that ALL the violations stayed green with point 3
             #    never implemented.
             #    Point 3 is an **unconditional** MUST: the condition of §3.1
             #    is on point 2, and it is point 3 that the document calls
             #    «the one that saves the diagnoses».
-            conti["§3.1 point 3 — reason in the WT closing"][1] += 1
-            if es.codice_wt == atteso:
-                conti["§3.1 point 3 — reason in the WT closing"][0] += 1
+            counts["§3.1 point 3 — reason in the WT closing"][1] += 1
+            if es.code_wt == expected:
+                counts["§3.1 point 3 — reason in the WT closing"][0] += 1
             else:
-                guasti += 1
-                visto = ("absent" if es.codice_wt is None
-                         else f"{es.codice_wt:#04x}")
-                riga(False, "", f"   §3.1 point 3 on «{nome}»: the closing "
-                                f"of the session carries {visto}, expected "
-                                f"{atteso:#04x}")
+                faults += 1
+                seen = ("absent" if es.code_wt is None
+                         else f"{es.code_wt:#04x}")
+                line(False, "", f"   §3.1 point 3 on «{name}»: the closing "
+                                f"of the session carries {seen}, expected "
+                                f"{expected:#04x}")
             # ⛔ AND IN WHICH MESSAGE (§11, §4.4).
-            if es.motivo is not None:
-                conti["§11 — reason in the right message"][1] += 1
-                if es.tipo_motivo == CARRIER.get(atteso, "CONGEDO"):
-                    conti["§11 — reason in the right message"][0] += 1
+            if es.reason is not None:
+                counts["§11 — reason in the right message"][1] += 1
+                if es.reason_type == CARRIER.get(expected, "FAREWELL"):
+                    counts["§11 — reason in the right message"][0] += 1
                 else:
-                    guasti += 1
-                    riga(False, "", f"   §11 on «{nome}»: the reason arrived "
-                                    f"in {es.tipo_motivo}, and §11 wants it in "
-                                    f"{CARRIER.get(atteso, 'CONGEDO')} — they are "
+                    faults += 1
+                    line(False, "", f"   §11 on «{name}»: the reason arrived "
+                                    f"in {es.reason_type}, and §11 wants it in "
+                                    f"{CARRIER.get(expected, 'FAREWELL')} — they are "
                                     f"two different state machines")
         # ⛔ and the server afterwards?
-        vivo, perche = await ancora_vivo(a)
-        if not vivo:
-            riga(False, "", f"⛔ THE SERVER NO LONGER ANSWERS after «{nome}»: {perche}")
-            guasti += 1
-            morto = True
+        alive_now, why = await still_alive(a)
+        if not alive_now:
+            line(False, "", f"⛔ THE SERVER NO LONGER ANSWERS after «{name}»: {why}")
+            faults += 1
+            dead = True
             break
 
-    if morto:
-        print(f"\n    {ROSSO}⛔ the bench stops: without a server there is "
-              f"nothing to measure{GRIGIO}")
+    if dead:
+        print(f"\n    {RED}⛔ the bench stops: without a server there is "
+              f"nothing to measure{GRAY}")
         # ⚠ And what had been looked at UP TO THERE is printed anyway: a bench
         #   that stops without saying how much it had covered lets one believe
         #   it had covered everything.
-        return esito_finale(conti, guasti, parziale=True, reg=a.reg)
+        return final_outcome(counts, faults, partial=True, reg=a.reg)
 
     # ⛔ UNDER A FILTER THESE THREE SECTIONS ARE NOT RUN, and it is declared.
     #
@@ -1257,66 +1257,66 @@ async def principale(a):
     #    and in the case of the limiter it blocks the address for thirty seconds
     #    for someone who was only retrying a case.  It is the twin of
     #    R7.15(b), which in the launch script gave red on a rule never triggered.
-    if a.solo:
+    if a.only:
         print(f"\n    ⚠ partial run: path, full run and limiter "
               f"skipped (see above)")
-        return esito_finale(conti, guasti, parziale=True, reg=a.reg)
+        return final_outcome(counts, faults, partial=True, reg=a.reg)
 
     print("\n== ⛔ The session path (§2.2), which comes before RCP")
-    for percorso, atteso, stato, ok in await il_percorso(a):
-        riga(ok, percorso, f":status = {stato}   (expected {atteso})")
+    for fpath, expected, state, ok in await path(a):
+        line(ok, fpath, f":status = {state}   (expected {expected})")
         if not ok:
-            guasti += 1
+            faults += 1
 
     # ⛔ THE FULL RUN COMES BEFORE THE LIMITER, and the order is a measurement.
     #
     #    The limiter of §4.4-bis, when it works, **blocks the address** — and
     #    from that moment even the right password receives
-    #    TROPPI_TENTATIVI, for a window that starts at thirty seconds.  ⚠ A
+    #    TOO_MANY_ATTEMPTS, for a window that starts at thirty seconds.  ⚠ A
     #    bench that put the good handshake AFTER would read that refusal as
     #    «the server is broken», that is it would give red precisely when the
     #    rule works.
     print("\n== ⭐ The good handshake, whole")
-    ok, perche = await giro_completo(a)
-    riga(ok, "giro-completo", perche or "CIAO → CREDENZIALI → ATTACCA → SESSIONE")
+    ok, why = await full_round(a)
+    line(ok, "giro-completo", why or "HELLO → CREDENTIALS → ATTACH → SESSION")
     if not ok:
-        guasti += 1
+        faults += 1
 
     print("\n== ⛔ The attempt limiter (§4.4-bis) — last, and it says why")
-    print(f"   ⚠ and on this target the ban lives in «{a.bersaglio}»: the ban")
+    print(f"   ⚠ and on this target the ban lives in «{a.target}»: the ban")
     print(f"     file belongs to B5 only, and the final unblock is done by the launch")
     print(f"     script, AFTER this section and declaring it (B0.3)")
     print("   ⚠ from here on this address stays BLOCKED for at least thirty")
     print("     seconds: it is the rule working, not a fault of the bench")
-    for nome, (ok, perche) in (await limitatore(a)).items():
-        riga(ok, nome, perche)
+    for name, (ok, why) in (await limiter(a)).items():
+        line(ok, name, why)
         if not ok:
-            guasti += 1
+            faults += 1
 
-    return esito_finale(conti, guasti, parziale=False, reg=a.reg)
+    return final_outcome(counts, faults, partial=False, reg=a.reg)
 
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser(description="B5 — the violations against the server")
-    p.add_argument("--indirizzo", default="192.168.0.2")
+    p.add_argument("--address", default="192.168.0.2")
     # ⛔ The port NO LONGER has a default that names a target: 7447 is the
     #    graft and 7448 the product, and a default here would mean that
-    #    `--bersaglio prodotto` without `--porta` measures the graft while
+    #    `--target product` without `--port` measures the graft while
     #    declaring the product.  It is passed by `01-b0-bersaglio.sh`, which is
     #    the only place where the two ports are written.
-    p.add_argument("--porta", type=int, required=True)
-    p.add_argument("--utente", default="prova")
-    p.add_argument("--parola", default="parola-di-prova")
-    p.add_argument("--solo", default="", help="run only the cases that contain this")
-    p.add_argument("--elenco", action="store_true",
+    p.add_argument("--port", type=int, required=True)
+    p.add_argument("--user", default="prova")
+    p.add_argument("--password", default="parola-di-prova")
+    p.add_argument("--only", default="", help="run only the cases that contain this")
+    p.add_argument("--list", action="store_true",
                    help="print the predictions without measuring")
-    b0.aggiungi_argomenti(p)
-    # ⚠ `--elenco` measures nothing and does not need a port: it is checked
+    b0.add_arguments(p)
+    # ⚠ `--list` measures nothing and does not need a port: it is checked
     #   before demanding it, or printing the predictions would require having
     #   already chosen a server.
     import sys as _s
-    if "--elenco" in _s.argv:
+    if "--list" in _s.argv:
         for _i, _az in enumerate(p._actions):
-            if _az.dest == "porta":
+            if _az.dest == "port":
                 _az.required = False
-    sys.exit(asyncio.run(principale(p.parse_args())))
+    sys.exit(asyncio.run(main(p.parse_args())))
