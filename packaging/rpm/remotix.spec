@@ -322,9 +322,6 @@ install -D -m 0644 src/page.html %{buildroot}%{_datadir}/remotix/page.html
 # The DEFAULTS (port, options): owned by the package, an upgrade rewrites them.
 # The administrator's choices in /etc/remotix/remotix.conf.d/*.conf (they win).
 install -D -m 0644 packaging/rpm/remotix.conf %{buildroot}%{_datadir}/remotix/remotix.conf
-# ⭐ DECISIONS.md §10.49: the GNOME Shell extension that hides Power Off, Restart and
-#   Suspend; inert here — only the REMOTIX session's dconf switches it on
-install -D -m 0644 -t %{buildroot}%{_datadir}/gnome-shell/extensions/remotix-session@remotix src/gnome-extension/remotix-session@remotix/metadata.json src/gnome-extension/remotix-session@remotix/extension.js
 # R24 (T8): the versions of the LINKED static libraries (pkg-config in the build
 # container), for the archive SBOM.
 printf '{"format":"remotix-linked/1","ngtcp2":"%s","nghttp3":"%s","source":"pkg-config of the linked .a files"}\n' \
@@ -431,7 +428,6 @@ fi
 %{_datadir}/remotix/page.html
 %{_datadir}/remotix/remotix.conf
 %{_datadir}/remotix/linked.json
-%{_datadir}/gnome-shell/extensions/remotix-session@remotix
 %dir %{_datadir}/remotix/belts
 %{_datadir}/remotix/belts/50-remotix-no-poweroff.rules
 %{_datadir}/remotix/belts/remotix-tasti.conf

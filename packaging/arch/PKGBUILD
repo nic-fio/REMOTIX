@@ -208,10 +208,6 @@ package() {
 	#    RX-KDE-001..003) — no writing as root into /usr.
 	install -Dm644 "$a/org.kde.remotix.desktop" \
 		"$pkgdir/usr/share/applications/org.kde.remotix.desktop"
-	# ⭐ DECISIONS.md §10.49: the GNOME Shell extension that hides Power Off, Restart and
-	#   Suspend; inert here — only the REMOTIX session's dconf switches it on
-	install -Dm644 -t "$pkgdir/usr/share/gnome-shell/extensions/remotix-session@remotix" \
-		"$s/gnome-extension/remotix-session@remotix/metadata.json" "$s/gnome-extension/remotix-session@remotix/extension.js"
 	# ⛔ DECISIONS.md §10.12 — the three belts are there but OFF: in a
 	#    folder nobody reads.  The engine mounts them with consent (D4) in the
 	#    active paths (polkit rules.d, logind.conf.d, sleep.conf.d) and

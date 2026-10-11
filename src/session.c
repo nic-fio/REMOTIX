@@ -4714,116 +4714,6 @@ static void xfce_session_xfconf(void)
 		              in_effect, how_many);
 }
 
-
-/*
- * ⛔⛔ «POWER OFF…», «RESTART…» AND «SUSPEND» ARE NOT IN THE MENU — `DECISIONS.md`
- *     §10.49, the director's ruling of 11 Oct 2026: *«quelle voci di menu non
- *     devono comparire. Questa e' una feature del prodotto»*.  «Log Out…» STAYS
- *     (§4.1-ter).
- *
- * `[R]` gnome-shell 48.7, `js/misc/systemActions.js:340-374`: power-off and
- * restart follow gnome-session's `CanShutdown`, suspend follows logind's
- * `CanSuspend`, and ⛔ NO key hides them in a user session:
- *   · `org.gnome.login-screen disable-restart-buttons` is read only in the
- *     GREETER mode (`Main.sessionMode.isGreeter`);
- *   · `org.gnome.desktop.lockdown disable-log-out` hides them, ⛔ but it hides
- *     «Log Out…» too (gnome-session's `CanShutdown` reads it as well).
- * `[M]` 11 Oct 2026, the director's tablet (Debian 13, GNOME, the package
- *   without the polkit belts of §4.7 — §10.36): logind answers «yes» and the
- *   three entries are THERE.  In the boxes they were not, because the boxes
- *   put the belts in and logind answered «no»/«na».
- *
- * ⭐ HOW: a tiny Shell extension, `remotix-session@remotix` (shipped in
- *   `/usr/share/gnome-shell/extensions/`, `src/gnome-extension/`), that forces the
- *   three actions to «not available».  ⭐ D-015: it is enabled ONLY in the
- *   session dconf — `enabled-extensions` here is the user's list PLUS ours, so
- *   the user's own extensions keep running; the user at the monitor never runs it.
- * ⚠ The price, declared: the extension is visible (off) in the Extensions app
- *   of the local users; switched on there, it hides the three entries for them
- *   too, and nothing else.
- * ⚠ If the user has `disable-user-extensions` on, in the SESSION it goes to
- *   off and the list becomes ours alone: the user's extensions stay off, as
- *   they wanted, and ours runs.
- */
-#define REMOTIX_SHELL_EXTENSION "remotix-session@remotix"
-
-static gboolean shell_extension_installed(void)
-{
-	const char *const *dirs = g_get_system_data_dirs();
-
-	for (int i = 0; dirs && dirs[i]; i++) {
-		g_autofree char *fpath = g_build_filename(dirs[i], "gnome-shell", "extensions",
-		                                          REMOTIX_SHELL_EXTENSION, "metadata.json",
-		                                          NULL);
-
-		if (g_file_test(fpath, G_FILE_TEST_EXISTS))
-			return TRUE;
-	}
-	return FALSE;
-}
-
-static void gnome_power_entries(struct schema_open *shell)
-{
-	const char *only_ours[] = { REMOTIX_SHELL_EXTENSION, NULL };
-
-	if (!shell_extension_installed()) {
-		registro_dice(LOG_SESSION,
-		              "⛔ §10.49: the extension %s is NOT installed (gnome-shell/extensions "
-		              "in the XDG_DATA_DIRS): «Power Off…», «Restart…» and «Suspend» "
-		              "STAY in the menu wherever logind allows them",
-		              REMOTIX_SHELL_EXTENSION);
-		return;
-	}
-	if (!schema_has_key(shell, "enabled-extensions", "org.gnome.shell") ||
-	    !schema_has_key(shell, "disable-user-extensions", "org.gnome.shell"))
-		return;
-
-	if (g_settings_get_boolean(shell->settings, "disable-user-extensions")) {
-		if (g_settings_set_strv(shell->settings, "enabled-extensions", only_ours) &&
-		    g_settings_set_boolean(shell->settings, "disable-user-extensions", FALSE))
-			registro_dice(LOG_SESSION,
-			              "⭐ §10.49: no «Power Off…», «Restart…», «Suspend» — extension %s "
-			              "on, in the SESSION (the user has extensions off: in the "
-			              "session only ours runs); «Log Out…» stays",
-			              REMOTIX_SHELL_EXTENSION);
-	} else {
-		g_auto(GStrv) enabled = g_settings_get_strv(shell->settings, "enabled-extensions");
-		g_autoptr(GStrvBuilder) list = g_strv_builder_new();
-		g_auto(GStrv) written = NULL;
-
-		g_strv_builder_addv(list, (const char **) enabled);
-		if (!g_strv_contains((const char *const *) enabled, REMOTIX_SHELL_EXTENSION))
-			g_strv_builder_add(list, REMOTIX_SHELL_EXTENSION);
-		written = g_strv_builder_end(list);
-		if (g_settings_set_strv(shell->settings, "enabled-extensions",
-		                        (const char *const *) written))
-			registro_dice(LOG_SESSION,
-			              "⭐ §10.49: no «Power Off…», «Restart…», «Suspend» — extension %s "
-			              "on, in the SESSION (with the user's %u); «Log Out…» stays",
-			              REMOTIX_SHELL_EXTENSION, g_strv_length(enabled));
-	}
-	if (schema_has_key(shell, "disabled-extensions", "org.gnome.shell")) {
-		g_auto(GStrv) disabled = g_settings_get_strv(shell->settings, "disabled-extensions");
-
-		/* ⚠ that list wins over the other: if the user switched ours off by hand,
-		 *   in the SESSION it is taken out of it */
-		if (g_strv_contains((const char *const *) disabled, REMOTIX_SHELL_EXTENSION)) {
-			g_autoptr(GStrvBuilder) list = g_strv_builder_new();
-			g_auto(GStrv) written = NULL;
-
-			for (int i = 0; disabled[i]; i++)
-				if (g_strcmp0(disabled[i], REMOTIX_SHELL_EXTENSION) != 0)
-					g_strv_builder_add(list, disabled[i]);
-			written = g_strv_builder_end(list);
-			if (g_settings_set_strv(shell->settings, "disabled-extensions",
-			                        (const char *const *) written))
-				registro_dice(LOG_SESSION,
-				              "⭐ §10.49: %s was in «disabled-extensions»: taken out, in "
-				              "the SESSION",
-				              REMOTIX_SHELL_EXTENSION);
-		}
-	}
-}
 void session_settings(void)
 {
 	/* ⛔ PHASE 12 — before opening a schema: on Plasma these keys do not
@@ -4977,7 +4867,7 @@ void session_settings(void)
 	if (!per_session)
 		registro_dice(LOG_SESSION,
 		              "⛔ D-015: the session dconf is NOT in force — the "
-		              "SESSION keys (Ctrl+Alt+F*, «Log Out…» always, «Switch User», no power entries) I do NOT "
+		              "SESSION keys (Ctrl+Alt+F*, «Log Out…» always, «Switch User») I do NOT "
 		              "write: they would end up in the user's settings.  The allowed ones "
 		              "(lock, suspend, standby) are written anyway");
 
@@ -5053,10 +4943,6 @@ void session_settings(void)
 		registro_dice(LOG_SESSION,
 		              "⭐ «Switch User» removed (disable-user-switching, in the SESSION): "
 		              "the only entry left is «Log Out…»");
-
-	/* ⛔ §10.49: no «Power Off…», «Restart…», «Suspend».  ⭐ D-015: SESSION. */
-	if (per_session)
-		gnome_power_entries(&shell);
 
 	g_settings_sync();
 	close_schema(&wayland);
