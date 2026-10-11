@@ -50,6 +50,14 @@ def write(P, contracts, out, root):
     plan["counts"]["merges_met_in_a_scope"] = sum(1 for e in P["collisions"] if e["kind"] == "collision")
     plan["counts"]["data_names_dati_tsv"] = len({o for d in P["dati_files"].values() for o in d})
     plan["contract_coverage"] = coverage(P, out)
+    # phase A: the frozen names, by the first reason found, and the fallback English (collision
+    # alternates, suffixes): acceptable only for internal names, and every renamed name is internal
+    frozen = {n: w for n, w in P.get("frozen_a", {}).items() if n in P["excluded"]}
+    cats = collections.Counter(phase_a_category(w) for w in frozen.values())
+    plan["counts"]["names_frozen_phase_a"] = len(frozen)
+    plan["phase_a_frozen_by_reason"] = dict(cats.most_common())
+    plan["fallback_names"] = [e for e in plan["table"] if is_fallback(e)]
+    plan["counts"]["fallback_names"] = len(plan["fallback_names"])
     with open(os.path.join(out, "rinomina2-plan.json"), "w", encoding="utf-8") as fh:
         json.dump(plan, fh, ensure_ascii=False, indent=1)
         fh.write("\n")
@@ -145,6 +153,24 @@ def file_moves(P, root):
     return moves
 
 
+def phase_a_category(why):
+    w = re.sub(r"\s*\(.*$", "", why)
+    w = re.sub(r":\s*\S+$", "", w)
+    return w.strip()
+
+
+SUFFIX = re.compile(r"_(v|n|fn|val|el|list|cmd|px|it)$")
+
+
+def is_fallback(e):
+    """A new name chosen to dodge a collision (sinonimi.tsv) or carrying a dodge suffix the old name did
+    not have (_v, label_name …)."""
+    if e["how"].startswith("sinonimi"):
+        return True
+    m = SUFFIX.search(e["new"])
+    return bool(m and not e["old"].endswith(m.group(0))) or e["new"] == "label_name"
+
+
 def generated_md(plan):
     L = []
     c = plan["counts"]
@@ -179,9 +205,18 @@ def generated_md(plan):
     L.append("\n### Names not renamed (to resolve in interi.tsv or sinonimi.tsv)\n\n")
     for k in plan["kept"]:
         L.append("- `%s` — %s\n" % (k["old"], k["why"]))
-    L.append("\n### Names left out on purpose\n\n")
+    L.append("\n### Phase A: frozen names, by reason (each name under the first reason found; every name and "
+             "its reason: rinomina2-plan.json → excluded)\n\n| reason | names |\n|---|---|\n")
+    for k, v in plan.get("phase_a_frozen_by_reason", {}).items():
+        L.append("| %s | %d |\n" % (k, v))
+    L.append("\n### Phase A: fallback names (collision alternates and dodge suffixes) — all internal\n\n"
+             "| old | new | languages | how |\n|---|---|---|---|\n")
+    for e in plan.get("fallback_names", []):
+        L.append("| `%s` | `%s` | %s | %s |\n" % (e["old"], e["new"], ",".join(e["langs"]), e["how"]))
+    L.append("\n### Names left out on purpose (other than frozen)\n\n")
     for k in plan["excluded"]:
-        L.append("- `%s` — %s\n" % (k["old"], k["why"]))
+        if not k["why"].startswith("frozen"):
+            L.append("- `%s` — %s\n" % (k["old"], k["why"]))
     L.append("\n### Cross-language contracts (every place: rinomina2-plan.json → contracts)\n\n")
     kinds = collections.Counter(k["kind"].split(" (")[0] for k in plan["contracts"])
     L.append("| kind | names |\n|---|---|\n")

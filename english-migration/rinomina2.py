@@ -22,6 +22,11 @@ Rules (RINOMINA.md says why):
     symbol, a well-known environment variable.  The loser of a collision is NOT renamed until
     interi.tsv (manual, with a comment) or sinonimi.tsv (an alternative English word) resolves it.
 The output is deterministic: same tree and same tables give the same plan, byte for byte.
+
+PHASE A (en-45, RINOMINA.md §0) overrides rules 1-2: no string literal and no document changes (only a
+Markdown span that is exactly one identifier), comments only for names holding «_» or a capital, shell
+only from the shfmt syntax tree, dati.tsv not applied; every name whose spelling occurs where the tool
+does not rename is frozen (fase_a.py).
 """
 import argparse
 import collections
@@ -36,6 +41,7 @@ import builtins
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import lessico  # noqa: E402
+import fase_a  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_ROOT = os.path.dirname(HERE)
@@ -875,6 +881,13 @@ def local_modules(infos):
     return used
 
 
+def origin_candidates(infos):
+    out = set()
+    for fi in infos.values():
+        out |= fi.defs
+    return out
+
+
 def plan(root):
     skips, keeps, gens = load_protected()
     files = git_files(root)
@@ -882,7 +895,7 @@ def plan(root):
         REPO_NAMES.update(f.split("/"))
     infos, skipped_files = scan(root, files, skips)
     c_macro, c_ident = load_externals()
-    dati = load_dati()
+    dati = {}       # phase A: data names wait for phase B (RINOMINA.md §0)
     sh_funcs, js_top = set(), set()
     for fi in infos.values():
         sh_funcs |= fi.funcs
@@ -909,6 +922,8 @@ def plan(root):
         lang_own[L] |= set(fi.code) | fi.massign
         lang_own["css"] |= fi.cssown
     scopes = build_scopes(infos)
+    # phase A: every name whose spelling something outside the renamed code can see is frozen
+    FA, shellfiles = fase_a.frozen(root, files, infos, scopes, set(origin_candidates(infos)))
     web_ext = load_web_externals()
     for fi in infos.values():
         web_ext |= fi.webplat
@@ -926,6 +941,10 @@ def plan(root):
     for name in sorted(origin):
         langs = origin[name]
         if name in INTOCCABILI:
+            continue
+        if name in FA:
+            if (INTERI.get(name) or traduci(name)) != name:
+                excluded[name] = "frozen (phase A): " + FA[name]
             continue
         if INTERI.get(name) == name:
             if traduci(name) != name:
@@ -988,6 +1007,12 @@ def plan(root):
                 r["member"] |= set(fi.member)
                 own |= set(fi.code) | fi.massign
                 r["sel"] |= fi.cssown | fi.attrdefs
+                # phase A: every token of the file's code, ours or not: two names may not become one
+                # anywhere in a file (an object literal's keys included), nor land on a member of
+                # someone else's object
+                r["anytok"] |= set(fi.code) | set(fi.member)
+                r["ext"] |= set(fi.member)
+            r["ext"] -= own
             r["member"] &= own
         roles[s] = {k: v for k, v in r.items() if v}
     # Go: a name that is only a field or a method (declared in a struct or as a method, used as a
@@ -1022,16 +1047,7 @@ def plan(root):
             roles["options:" + f] = {"plain": set(fi.opts)}
     roles["env:all"] = {"plain": envs}
     # data literals: per file, and per product program (the programs that exchange them)
-    lit_scopes = {}
-    for f, fi in infos.items():
-        if fi.datalit:
-            lit_scopes["lit:" + f] = set(fi.datalit)
-    for name, pre in (("lit:server", ("src/", "banchi/rcp/", "packaging/")),
-                      ("lit:installer", ("installatore/", "packaging/"))):
-        lit_scopes[name] = set()
-        for f, fi in infos.items():
-            if f.startswith(pre):
-                lit_scopes[name] |= set(fi.datalit)
+    lit_scopes = {}         # phase A: literals never change, so they never collide
     lit_toks = {}
     for lits in lit_scopes.values():
         for L in lits:
@@ -1148,6 +1164,8 @@ def plan(root):
                     new = final[x]
                     if new not in final and new in R:
                         inv.setdefault((new, (x,), "clash"), []).append(s)
+                    if role == "anytok" and new in roles[s].get("ext", ()):
+                        inv.setdefault((new, (x,), "clash"), []).append(s)   # someone else's member
             # a shell function may not take the name of a command the file runs
             for x in sorted(roles[s].get("funcs", set()) & set(final)):
                 new = final[x]
@@ -1373,7 +1391,7 @@ def plan(root):
             continue                    # the code already decides this name
         for f in fs:
             dati_files[f][old] = new
-    return {"dati_files": dati_files, "lang_own": lang_own, "frozen": frozen_registers(root, files), "infos": infos, "skipped": skipped_files, "M": final, "kept": kept, "excluded": excluded,
+    return {"frozen_a": FA, "shell": shellfiles, "dati_files": dati_files, "lang_own": lang_own, "frozen": frozen_registers(root, files), "infos": infos, "skipped": skipped_files, "M": final, "kept": kept, "excluded": excluded,
             "origin": origin, "files_of": files_of, "collisions": collisions_log, "resolved_by": resolved_by,
             "dati": dati, "keeps": keeps, "gens": gens, "occ": occ, "scopes": scopes}
 
@@ -1578,16 +1596,10 @@ def apply(root, P, verbose=False):
         # installed base, both sides change together)
         frozen = P["frozen"] if FREEZE_REGISTERS and f.startswith(("banchi/", "docs/sources/")) and "jsonl" in text \
             else None
-        M = P["M"]
-        if f in P["dati_files"]:
-            M = dict(M)
-            M.update(P["dati_files"][f])
-        elif fi.lang == "md" and P["dati_files"]:
-            M = dict(M)               # the documents follow every data name, in their code spans only
-            for d in P["dati_files"].values():
-                M.update(d)
-        new, n, ch = rewrite(text, fi.lang, regs, M, P["keeps"].get(f, []), f, frozen, P["lang_own"])
-        if n:
+        new, ch = fase_a.rewrite(f, text, fi.lang, regs, P["M"], P["keeps"].get(f, []), P["lang_own"],
+                                 P["shell"].get(f))
+        n = sum(ch.values())
+        if n and new != text:
             open(p, "w", encoding="utf-8").write(new)
             per_file[f] = n
             total.update(ch)

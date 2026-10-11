@@ -7,6 +7,11 @@
 > ⛔ **Nothing here has been applied to the tree.**  The tool, its tables and this plan are committed;
 > the rename itself is a separate, later act (§7).  The tool is deterministic: it is re-run on the final
 > tree after the other en-* branches have landed, and the plan below is regenerated from that tree.
+>
+> ⭐ **Since en-45 (11 Oct 2026) the rename is split in two phases (§0).**  Phase A — internal code
+> identifiers only, zero behaviour change — is what `rinomina2.py` does now.  Phase B — every name
+> someone outside the code can see — is a later, hand-curated step.  §1–§8 describe the first design
+> ("round 1"); where they say a string, a document, an option or a data name changes, §0 overrides them.
 
 | file | what it is |
 |---|---|
@@ -24,6 +29,122 @@
 
 The old `rinomina.py` stays for reference: it rewrote every word of every file, and its dry run
 gave 21,650 pairs, 1,346 collisions and 5,284 clashes — the reasons for this second tool.
+
+---
+
+## 0. Two phases: A (internal identifiers, now) and B (public and persisted names, later)
+
+**Why.**  Round 1 (`cd66e92`, branch `rinomina`) passed every static check of §8, yet ten adversarial
+reviews (`full-english-uscite/revisione-rinomina/R01…R10.md`) and two live tests (R11 release and
+upgrade on 7 distributions, R12 benches against a live server) found about 110 confirmed faults.  Nearly
+all of them came from renaming words **inside strings, comments that are commands, documents, and
+public or persisted names**: case labels and script actions (`prodotto)`), `-D` macros in shell
+strings, Makefile targets called through `sh -c`, page placeholders (`__IMPRONTA__`), log areas and
+their padding, fixed slicing (`r[9:]` after `"APERTURA "`), OCR words of the Italian desktop
+(«Esci»), substring greps (`FAULT` inside `DEFAULT`), English words rewritten (`serve` → `needs`),
+file names on disk (certificates, `gruppi-iscritti.jsonl` keys), variables in `/etc` conf files, CLI
+options with dodge names (`--label_name`, `--page_v`), wire strings (RCP capabilities, socket verbs),
+and — blocking every installation — an encoder name built at run time (`codec + "_" + "gpu_card"`)
+that no longer matched its table (R11 D1, R12 P1).  A rule per fault does not converge; the scope
+of the rename had to shrink.
+
+### 0.1 Phase A — what changes
+
+| place | phase A |
+|---|---|
+| string literals, any language | **never** (checked: `fase_a.py check`, §0.3) |
+| documents (`*.md`, the manual's chapters, `docs/*.html`) | **never**, except a Markdown code span that is **exactly** one renamed identifier holding `_` or an internal capital (`` `rcp_misura_ammessa` ``, optionally `()`), and never in `fasi/`, `memoria/`, `misure/` |
+| comments | only tokens that are renamed identifiers **and** hold `_` or an internal capital (so never `serve`, `accuse`, `nobody`); never inside `«…»`, never a path piece or an option; a comment line that is a command example (`bash …`, `python3 …`, `--x`, `VAR=…`, `make …`) is left whole |
+| C, Go, Python, page JavaScript | the identifiers of code regions (someone else's members excepted, as before) |
+| shell | from the **shfmt syntax tree** (`fase_a.ShellFile`): `$x`/`${x…}` references, assignments and `local`/`export`/`declare`/`readonly`, `for x in`, the names of `read`/`unset`/`mapfile`/`getopts`, function definitions, and command words that call a function of ours (defined in the file or a file it sources).  Every other word — arguments, case labels, `-DNAME`, `make X`, globs, paths, words inside quotes — never.  A file shfmt cannot parse is not touched (today `banchi/01-b6-lancia.sh`) |
+| Makefiles, unit/conf files, Containerfiles, spec, JSON, CSS, HTML outside `<script>`, GLSL shaders, data and history files | **never** |
+
+### 0.2 Frozen names
+
+A name is **frozen** — not renamed anywhere — when its exact spelling occurs as a whole token
+anywhere the tool does not rename.  Conservative by construction: when in doubt, frozen.  The sources
+(`fase_a.frozen()`):
+
+- every string literal of every language (Python docstrings, JS template literals, C/Go strings,
+  shell quoted words and heredocs — a `$x` inside double quotes is a reference, the rest is text);
+- every document (history included: `fasi/`, `memoria/`, `misure/`), outside the exact spans above;
+- every shell word that is not a reference (arguments, case labels, `-DNAME`, globs, `make X`), and
+  every word of a shell file shfmt cannot parse;
+- Makefiles, unit/conf/spec files, Containerfiles, JSON and JSONL, CSS, HTML attributes and text,
+  GLSL shaders, logs, the generated pages;
+- the components of every file name of the tree;
+- `REMOTIX_*`/`RX_*` (public environment);  a shell variable read with a default
+  (`${X:-…}`) on an upper-case name, or read and never assigned anywhere (an input from outside);
+- options and their argparse destinations (an option is a string, and `--x-y` freezes `x_y`);
+- JavaScript object-literal keys and shorthand properties (they become JSON, log lines, messages;
+  with `{a}` the variable's name *is* the key), `dataset.x` members;
+- Go fields without a JSON name in packages that use `encoding/json` (and their lower-case key);
+- Python keyword arguments that become data or go to someone else's function (`dict(x=…)`,
+  `.format(x=…)`, a keyword no function of ours declares), dataclass/NamedTuple/Enum fields, every
+  name of a file that reads names at run time (`locals()`, `vars()`, `__dict__`, `asdict`), class and
+  function names printed through `__name__`;
+- C arguments of a macro that stringifies (`#x`) or pastes (`##`) them;
+- names built at run time from a literal piece (`"cmd_" + x`, `fn_$1`) in files that look names up
+  at run time (`getattr`, `globals()`, `${!x}`, `eval`, `window[…]`).
+
+Two old names may never become one new name in a scope (§3 unchanged), and phase A adds a per-file
+role with **every** code token of the file: a new name may not land on any token already in the file,
+nor on someone else's member (the class of R07 F4: two keys of one JavaScript object merged).
+
+The number of renamed and frozen names, the frozen names by reason and the **fallback names**
+(collision alternates from `sinonimi.tsv` and dodge suffixes such as `_v`) are in the generated part
+(§9).  A fallback name is acceptable only for an internal name; in phase A every renamed name is
+internal by construction (anything public is frozen), and the list is there to be improved by hand.
+
+### 0.3 The proof of phase A
+
+`rinomina2-prova.sh <copy> --rilascio` (§8) with two changes:
+
+- **1b · strings** — `fase_a.py check --root <copy>`: for every changed file, against `HEAD`, (a) the
+  text with every identifier replaced by one placeholder is identical (only names changed), and (b)
+  the multiset of string-literal contents is identical — Python through `ast` (every `str`/`bytes`
+  constant, f-string pieces included), shell through the shfmt tree (every literal except the name
+  positions phase A may change), C/Go/JS/HTML through the lexers; a Markdown file may differ only in
+  its exact identifier spans; any other kind of file must not change at all.  On the round-1 tree the
+  same checker flags 497 of 576 changed files.
+- **5b · the binary's literals** — the server is also built from `HEAD` (before the rename) and the
+  `.rodata` sections of the two `remotix` binaries must be byte-identical: every literal and format of
+  the C program, and the function names that `assert()`/`g_return_if_fail()` print.  The first run of
+  phase A failed here on three names (`cattura_conteggi`, `wlr_fotogramma`,
+  `wlr_input_keymap_da_testo`: their `g_return_if_fail` prints the function's name), now frozen.
+- **6 · benches** — the list of benches is made **once, on the tree before the rename**, and the same
+  files run after it.  The old check grepped each tree for its own spelling of the option: the 15-suite
+  benches get `--certifica` from the shared runner (`S.esegui`), so they never appeared in the list —
+  that is why `15-f029 --certifica` (exit 0 before, 1 after on round 1) passed unseen as «62 same»
+  (R07 F1).  The comparison is now: same exit code, no new `Traceback` (R05 F2: a crash with the same
+  exit code), and the **same output** (digits and `/tmp` paths normalised; a traceback is compared by
+  its last line, since it quotes renamed source).  `12-client-veri.py` and `12-c20-veri.py` never run
+  here: their `--certifica` drives real browsers against a default URL on the rete11 box (R12 incident).
+
+Proof of phase A, 11 Oct 2026, on `4c79004` (copy `remotix-wt-en-45-prova`, `--rilascio`): 363 files,
+28,197 replacements, 5,186 names renamed, 5,195 frozen; every check green — quotes and protections,
+**strings: 0 of 363 changed files with a string or structure change**, `bash -n` 154, Python 183,
+`node --check` 12, installer 3 packages, C 42 objects and the link, **`.rodata` byte-identical**,
+**82 benches `--certifica`: same exit code and same output**, `rilascio.sh` debian13.  Every
+fault of R01–R12 re-checked on the renamed copy (`full-english-uscite/revisione-rinomina/fase-A-verifica.md`):
+128 gone, 0 still there, 3 procedure items phase A does not trigger, 1 not a rename fault.  The two the
+reviewers still found (R10 F8, F9: benches that compile git-history sources with today's files) are now
+frozen by `fase_a.HISTORY_SOURCES`.  `gofmt -w` on the changed Go files remains part of applying (§7 step 4):
+renamed fields change gofmt's alignment, and `rilascio.sh` stops on an unformatted file.
+
+### 0.4 Phase B — later, with Nic
+
+Everything frozen above that should still become English: options (`--nome`, `--pagina`, the benches'
+options), environment variables (`REMOTIX_PORTA`, `REMOTIX_OPZIONI`, …), conf keys, RCP capability
+names and socket verbs, log areas and log keys, page placeholders and ids, JSON keys of registers and
+of on-disk records (`gruppi-iscritti.jsonl`, the catalogue), directory and file names on installed
+machines (`/var/lib/remotix/certificati/pagina.pem` …), case labels and script actions, and the
+identifiers frozen because one of those spells them.  Phase B is **a hand-curated table** (one row
+per public name, its new spelling chosen by a person — no collision dodges), applied together with
+**an upgrade migration** where the name is persisted (conf rewrite, certificate move, old-key readers
+or a format version bump, hooks and boxes to reinstall, RCP version) and with the user's decision
+where §10.38 «no aliases» meets an installed base.  `dati.tsv`, `contratti/` and the R01–R12 reviews
+are its starting material; phase A does not read `dati.tsv`.
 
 ---
 
@@ -347,1131 +468,321 @@ Proof on the copy with the rules above (`rinomina2-prova.sh`): 576 files, 167,42
 <!-- generated by rinomina2.py plan: do not edit by hand -->
 | | |
 |---|---|
-| names renamed | 10367 |
-| kept unresolved | 11 |
-| excluded | 16 |
-| collisions handled | 148 |
-| contracts | 2717 |
+| names renamed | 5186 |
+| kept unresolved | 2 |
+| excluded | 5198 |
+| collisions handled | 18 |
+| contracts | 92 |
 | files scanned | 614 |
 | files skipped | 2584 |
 | frozen register words | 1095 |
-| shared new names | 284 |
-| merges met in a scope | 38 |
-| data names dati tsv | 73 |
+| shared new names | 33 |
+| merges met in a scope | 4 |
+| data names dati tsv | 0 |
+| names frozen phase a | 5195 |
+| fallback names | 33 |
 
 **Names by defining language** (a name defined in two languages counts twice)
 
 | language | names |
 |---|---|
-| c | 3990 |
-| css | 53 |
-| go | 1063 |
-| html | 1091 |
-| js | 7 |
-| make | 18 |
-| py | 4737 |
-| sh | 1104 |
+| c | 2148 |
+| go | 554 |
+| html | 304 |
+| py | 2027 |
+| sh | 228 |
 
 **Renamed names defined per directory**
 
 | directory | names |
 |---|---|
-| `src` | 7200 |
-| `banchi/11-scatole` | 2689 |
-| `banchi/15-suite` | 2437 |
-| `installatore/motore` | 2066 |
-| `banchi/16-stress` | 1292 |
-| `banchi/rcp` | 623 |
-| `banchi/09-b81-linea-morta.py` | 346 |
-| `installatore/interfaccia` | 337 |
-| `banchi/01-b3-cliente.py` | 251 |
-| `banchi/01-b8-cronometro.py` | 228 |
-| `banchi/19-android` | 222 |
-| `banchi/09-b76-rete-cattiva.py` | 217 |
-| `banchi/17-distro` | 213 |
-| `grafica` | 212 |
-| `banchi/09-b70-ritmo.py` | 196 |
-| `banchi/01-b7-congedo.py` | 178 |
-| `banchi/02-filo-fotogramma.py` | 162 |
-| `banchi/19-vulkan` | 161 |
-| `banchi/09-b79-cure.py` | 160 |
-| `docs/sources` | 154 |
-| `banchi/09-b77-audio-riordino.py` | 151 |
-| `banchi/18-software` | 141 |
-| `banchi/12-client-veri.py` | 139 |
-| `banchi/01-b4-validatore.py` | 138 |
-| `banchi/19-nvidia` | 136 |
-| `banchi/02-cattura-fotogramma.c` | 130 |
-| `banchi/02-filo-validatore.py` | 130 |
-| `banchi/01-b11-pagina.html` | 124 |
-| `banchi/18-scheda` | 124 |
-| `banchi/04-b28-gesti.py` | 122 |
-| `banchi/18-a1` | 116 |
-| `banchi/01-b6-tetti.py` | 115 |
-| `banchi/03-marca.py` | 110 |
-| `banchi/04-b31-tela.c` | 108 |
-| `banchi/01-b5-violazioni.py` | 106 |
-| `banchi/09-b84-audio-silenzio.py` | 103 |
-| `banchi/02-filo-cliente.py` | 98 |
-| `banchi/10-f1-testimone.py` | 93 |
-| `banchi/02-pam-fermo.py` | 88 |
-| `banchi/06-b5-esiti-cattura.c` | 88 |
-| `banchi/06-b33-testimone.c` | 87 |
-| `banchi/02-cattura-giudica.py` | 85 |
-| `banchi/09-b78-apertura.py` | 85 |
-| `banchi/01-b9-letture.py` | 82 |
-| `banchi/02-cattura-prodotto.c` | 82 |
-| `banchi/12-c20-veri.py` | 78 |
-| `banchi/07-b64-rete.py` | 75 |
-| `banchi/04-in8-misura.c` | 70 |
-| `banchi/01-b4-registrazioni.py` | 68 |
-| `banchi/17-t7` | 67 |
-| `banchi/01-b8-prova-ban.c` | 66 |
-| `banchi/06-b33-risveglio.c` | 64 |
-| `banchi/sonda` | 63 |
-| `banchi/04-b25-tastiera.c` | 62 |
-| `banchi/07-b64-scena.py` | 62 |
-| `banchi/02-figlio-prova.py` | 61 |
-| `banchi/02-codifica-immagine.py` | 60 |
-| `banchi/17-t9` | 59 |
-| `banchi/01-b0-bersaglio.sh` | 58 |
-| `banchi/02-sessione-stato.py` | 58 |
-| `banchi/13-w1-un-fotogramma.c` | 58 |
-| `banchi/02-codifica-lancia.sh` | 57 |
-| `banchi/02-cattura-lancia.sh` | 54 |
-| `banchi/14-f1-forma.c` | 53 |
-| `banchi/17-t8` | 51 |
-| `banchi/01-b2-sonda-trasporto.py` | 50 |
-| `banchi/01-b8-sblocca.py` | 50 |
-| `banchi/02-sessione-lancia.sh` | 49 |
-| `banchi/01-b8-lancia.sh` | 48 |
-| `banchi/06-b33-terreno.sh` | 48 |
-| `installatore/cmd` | 48 |
-| `banchi/01-b2-sonda.html` | 47 |
-| `banchi/01-b6-lancia.sh` | 47 |
-| `banchi/06-b33-risveglio-giudice.py` | 47 |
-| `banchi/07-b65-datagram.py` | 47 |
-| `banchi/07-b64-orecchio.py` | 46 |
-| `banchi/02-codifica-prova.c` | 44 |
-| `banchi/02-pagina-sonda-codec.py` | 41 |
-| `banchi/01-b0-terreno.sh` | 40 |
-| `banchi/01-b11-lancia.sh` | 37 |
-| `banchi/02-codifica-nal.py` | 37 |
-| `banchi/02-pagina-misura-cdp.py` | 37 |
-| `banchi/02-cattura-certifica.sh` | 36 |
-| `banchi/01-s7-rotella.sh` | 35 |
-| `banchi/01-b3-rcp-innesta.py` | 34 |
-| `banchi/01-s7-rotella.c` | 34 |
-| `banchi/01-b7-lancia.sh` | 31 |
-| `banchi/attrezzi-allinea-prodotto.sh` | 31 |
-| `banchi/02-codifica-obu.py` | 30 |
-| `banchi/02-pam-lancia.sh` | 30 |
-| `banchi/04-b25-guasti.c` | 30 |
-| `banchi/01-b2-ngtcp2-wt-innesta.py` | 29 |
-| `banchi/17-t6` | 29 |
-| `banchi/01-b11-guasto-innesta.py` | 28 |
-| `banchi/07-b64-terreno.sh` | 28 |
-| `banchi/02-figlio-lancia.sh` | 26 |
-| `banchi/06-b33-risveglio.sh` | 26 |
-| `banchi/07-b46-marionette.py` | 26 |
-| `banchi/17-t2` | 26 |
-| `packaging/archivio` | 26 |
-| `banchi/01-b11-guasto.sh` | 24 |
-| `banchi/02-sessione-dispositivi.py` | 24 |
-| `banchi/07-b42-giudice.py` | 24 |
-| `banchi/01-b0-bersaglio.py` | 22 |
-| `banchi/02-figlio-accendi.sh` | 21 |
-| `banchi/02-sessione-guardia.sh` | 21 |
-| `banchi/06-b33-risveglio-certifica.sh` | 20 |
-| `banchi/01-b2-lancia-wt.sh` | 19 |
-| `banchi/01-b5-lancia.sh` | 19 |
-| `banchi/01-s7-pagina.html` | 19 |
-| `banchi/02-filo-lancia.sh` | 19 |
-| `banchi/02-pam-i3.py` | 19 |
-| `banchi/06-b34-tabella.c` | 19 |
-| `banchi/09-lucchetto.py` | 19 |
-| `banchi/09-b81-terreno.sh` | 18 |
-| `banchi/01-b2-cliente-aioquic.py` | 17 |
-| `banchi/01-b4-lancia.py` | 17 |
-| `packaging/rpm` | 15 |
-| `banchi/00-sessione-gnome.sh` | 14 |
-| `banchi/02-pam-accendi.sh` | 14 |
-| `installatore/prove` | 14 |
-| `banchi/01-casa-7448.sh` | 13 |
-| `banchi/02-cattura-costruisci.sh` | 13 |
-| `banchi/09-b79-terreno.sh` | 13 |
-| `banchi/attrezzi-gruppi-scheda.sh` | 13 |
-| `banchi/06-b33-risveglio-guasti.py` | 12 |
-| `packaging/rilascio.sh` | 12 |
-| `banchi/attrezzi-allinea-innesto.sh` | 11 |
-| `banchi/attrezzi-utenti.sh` | 10 |
-| `packaging/arch` | 10 |
-| `banchi/01-b2-raccogli.py` | 8 |
-| `banchi/02-codifica-costruisci.sh` | 8 |
-| `banchi/04-b25-lancia.sh` | 8 |
-| `packaging/motore` | 8 |
-| `banchi/01-s7-raccogli.py` | 7 |
-| `banchi/04-b28-lancia.sh` | 7 |
-| `banchi/01-b2-costruisci-ngtcp2.sh` | 5 |
-| `installatore/run.sh` | 5 |
-| `banchi/01-b2-costruisci.sh` | 4 |
-| `banchi/06-b5-esiti-cattura.sh` | 3 |
-| `banchi/14-f1-forma.sh` | 3 |
-| `installatore/costruisci.sh` | 3 |
-| `banchi/06-b33-risveglio-costruisci.sh` | 2 |
-| `banchi/04-in8-costruisci.sh` | 1 |
-| `banchi/04-in8-parita.c` | 1 |
-| `banchi/06-b33-costruisci.sh` | 1 |
-| `installatore/catalogo` | 1 |
+| `src` | 2723 |
+| `installatore/motore` | 868 |
+| `banchi/15-suite` | 665 |
+| `banchi/11-scatole` | 610 |
+| `banchi/16-stress` | 313 |
+| `banchi/rcp` | 234 |
+| `banchi/09-b81-linea-morta.py` | 134 |
+| `installatore/interfaccia` | 116 |
+| `banchi/04-b31-tela.c` | 60 |
+| `banchi/19-android` | 58 |
+| `banchi/01-b3-cliente.py` | 57 |
+| `banchi/06-b33-testimone.c` | 47 |
+| `banchi/01-b4-validatore.py` | 42 |
+| `banchi/02-cattura-fotogramma.c` | 42 |
+| `banchi/19-vulkan` | 41 |
+| `banchi/09-b77-audio-riordino.py` | 40 |
+| `docs/sources` | 40 |
+| `banchi/02-filo-fotogramma.py` | 39 |
+| `banchi/09-b76-rete-cattiva.py` | 39 |
+| `banchi/06-b5-esiti-cattura.c` | 36 |
+| `banchi/02-filo-validatore.py` | 33 |
+| `banchi/04-in8-misura.c` | 33 |
+| `banchi/12-client-veri.py` | 32 |
+| `banchi/02-cattura-giudica.py` | 31 |
+| `banchi/03-marca.py` | 31 |
+| `banchi/04-b25-tastiera.c` | 30 |
+| `banchi/01-b11-pagina.html` | 25 |
+| `banchi/18-software` | 25 |
+| `banchi/01-b0-bersaglio.sh` | 23 |
+| `banchi/01-b7-congedo.py` | 23 |
+| `banchi/02-cattura-prodotto.c` | 23 |
+| `banchi/18-a1` | 22 |
+| `banchi/13-w1-un-fotogramma.c` | 20 |
+| `banchi/14-f1-forma.c` | 20 |
+| `banchi/02-codifica-immagine.py` | 19 |
+| `banchi/04-b28-gesti.py` | 19 |
+| `banchi/01-b6-tetti.py` | 18 |
+| `banchi/18-scheda` | 18 |
+| `banchi/01-b4-registrazioni.py` | 17 |
+| `banchi/01-b8-prova-ban.c` | 17 |
+| `banchi/07-b64-scena.py` | 17 |
+| `banchi/10-f1-testimone.py` | 17 |
+| `banchi/01-b8-lancia.sh` | 15 |
+| `banchi/02-sessione-stato.py` | 14 |
+| `banchi/06-b33-risveglio-giudice.py` | 13 |
+| `banchi/06-b33-risveglio.c` | 13 |
+| `banchi/01-b9-letture.py` | 12 |
+| `banchi/02-sessione-lancia.sh` | 12 |
+| `banchi/09-b84-audio-silenzio.py` | 12 |
+| `banchi/17-t7` | 12 |
+| `banchi/01-b3-rcp-innesta.py` | 11 |
+| `banchi/01-s7-rotella.c` | 11 |
+| `banchi/02-cattura-certifica.sh` | 11 |
+| `banchi/07-b64-orecchio.py` | 11 |
+| `banchi/17-distro` | 11 |
+| `banchi/01-b7-lancia.sh` | 10 |
+| `banchi/02-pam-fermo.py` | 10 |
+| `banchi/01-b0-terreno.sh` | 9 |
+| `banchi/01-b2-sonda-trasporto.py` | 9 |
+| `banchi/01-b5-violazioni.py` | 9 |
+| `banchi/02-figlio-prova.py` | 9 |
+| `banchi/02-pagina-sonda-codec.py` | 9 |
+| `banchi/12-c20-veri.py` | 9 |
+| `installatore/cmd` | 9 |
+| `banchi/01-b11-guasto-innesta.py` | 8 |
+| `banchi/01-b2-lancia-wt.sh` | 8 |
+| `banchi/02-filo-cliente.py` | 8 |
+| `banchi/09-b78-apertura.py` | 8 |
+| `banchi/attrezzi-gruppi-scheda.sh` | 8 |
+| `banchi/01-b2-ngtcp2-wt-innesta.py` | 7 |
+| `banchi/01-b2-sonda.html` | 7 |
+| `banchi/06-b33-terreno.sh` | 7 |
+| `banchi/01-b11-lancia.sh` | 6 |
+| `banchi/07-b64-rete.py` | 6 |
+| `banchi/07-b65-datagram.py` | 6 |
+| `banchi/19-nvidia` | 6 |
+| `banchi/01-b4-lancia.py` | 5 |
+| `banchi/01-b5-lancia.sh` | 5 |
+| `banchi/01-s7-pagina.html` | 5 |
+| `banchi/02-codifica-lancia.sh` | 5 |
+| `banchi/02-codifica-nal.py` | 5 |
+| `banchi/06-b33-risveglio-certifica.sh` | 5 |
+| `banchi/06-b34-tabella.c` | 5 |
+| `banchi/07-b42-giudice.py` | 5 |
+| `banchi/07-b46-marionette.py` | 5 |
+| `banchi/00-sessione-gnome.sh` | 4 |
+| `banchi/01-b11-guasto.sh` | 4 |
+| `banchi/02-pagina-misura-cdp.py` | 4 |
+| `banchi/04-b25-guasti.c` | 4 |
+| `banchi/06-b33-risveglio.sh` | 4 |
+| `banchi/sonda` | 4 |
+| `banchi/01-b8-sblocca.py` | 3 |
+| `banchi/02-figlio-accendi.sh` | 3 |
+| `banchi/09-lucchetto.py` | 3 |
+| `banchi/attrezzi-allinea-prodotto.sh` | 3 |
+| `grafica` | 3 |
+| `banchi/01-b2-costruisci.sh` | 2 |
+| `banchi/02-cattura-costruisci.sh` | 2 |
+| `banchi/02-cattura-lancia.sh` | 2 |
+| `banchi/02-codifica-obu.py` | 2 |
+| `banchi/02-codifica-prova.c` | 2 |
+| `banchi/02-pam-i3.py` | 2 |
+| `banchi/02-pam-lancia.sh` | 2 |
+| `banchi/02-sessione-dispositivi.py` | 2 |
+| `banchi/06-b33-risveglio-guasti.py` | 2 |
+| `banchi/17-t2` | 2 |
+| `banchi/17-t9` | 2 |
+| `banchi/attrezzi-allinea-innesto.sh` | 2 |
+| `packaging/archivio` | 2 |
+| `banchi/01-b0-bersaglio.py` | 1 |
+| `banchi/01-b2-cliente-aioquic.py` | 1 |
+| `banchi/01-b2-costruisci-ngtcp2.sh` | 1 |
+| `banchi/01-b2-raccogli.py` | 1 |
+| `banchi/01-casa-7448.sh` | 1 |
+| `banchi/01-s7-raccogli.py` | 1 |
+| `banchi/01-s7-rotella.sh` | 1 |
+| `banchi/02-filo-lancia.sh` | 1 |
+| `banchi/04-b28-lancia.sh` | 1 |
+| `banchi/14-f1-forma.sh` | 1 |
+| `banchi/attrezzi-utenti.sh` | 1 |
+| `packaging/rilascio.sh` | 1 |
+| `packaging/rpm` | 1 |
 
 ### Every collision and how it was resolved
 
 | target | old names | winner | others → | scopes (first) |
 |---|---|---|---|---|
 | `Unlock` | `Sblocca` | (forbidden: Go method onto a well-known interface method (String, Error, Write…)) | **kept** | |
-| `CARD` | `SCHEDA` | (name exists) | `GPU_CARD` | sh:banchi/17-distro/scatole/17-scatola.sh |
-| `COMMAND` | `COMANDO` | (name exists) | `CMD` | lit:installer |
-| `Check` | `Controlla`, `Controllo` | `Controllo` | `Controlla`→`Verify` | go-package:installatore/interfaccia; go-package:installatore/motore |
-| `REFUSED` | `RIFIUTATA` | (name exists) | **kept** | lit:server |
-| `SCENE` | `SCENA` | (name exists) | `SCENE_V` | py:banchi/04-b28-gesti.py |
-| `Type` | `Tipo` | (name exists) | `Kind` | go-package:installatore/interfaccia/tui |
-| `VERIFIED` | `VERIFICATA`, `VERIFICATO` | `VERIFICATA` | `VERIFICATO`→`CHECKED` | go-package:installatore/motore |
-| `absent` | `assenti` | (name exists) | **kept** | lit:server |
-| `actions` | `azioni` | (name exists) | `acts` | lit:banchi/16-stress/16-attore.py |
-| `active` | `attiva` | (name exists) | `live` | lit:server |
-| `add` | `agg`, `aggiungi` | `agg` | `aggiungi`→`insert` | go-package:installatore/motore |
-| `alive` | `vivi`, `vivo` | `vivo` | `vivi`→`living` | py:banchi/16-stress/16-salita.py |
-| `all` | `tutti` | (name exists) | `all_v` | py:banchi/01-b7-congedo.py; py:banchi/04-b28-gesti.py |
-| `alpha` | `alfa` | (name exists) | `alpha_ch` | lit:banchi/16-stress/16-lavori.py |
 | `app_requested` | `app_chiesti`, `app_chiesto` | `app_chiesto` | `app_chiesti`→`app_asked` | tu:banchi/rcp/rcp.c; tu:banchi/rcp/rcp.c |
-| `arrived` | `arrivati`, `arrivato` | `arrivati` | `arrivato`→`landed` | tu:src/cattura.c |
-| `body` | `corpo` | (name exists) | `body_el` | file:banchi/01-b11-pagina.html; file:banchi/01-b2-sonda.html |
-| `box` | `scatola` | (name exists) | `container_box` | lit:banchi/16-stress/16-salita.py |
-| `canvas` | `tela` | (name exists) | `canvas_size` | lit:server; lit:src/pagina.html |
-| `capture` | `cattura` | (name exists) | `capture_v` | lit:server |
-| `card` | `scheda` | (name exists) | `gpu_card` | lit:server; lit:src/figlio.c |
-| `cause` | `causa` | (name exists) | `reason_why` | lit:banchi/09-b81-linea-morta.py |
-| `chroma` | `croma` | (name exists) | `chroma_v` | tu:src/codificatore.c |
-| `clipboard` | `appunti` | (name exists) | `clipboard_text` | lit:server |
-| `code` | `codice` | (name exists) | `code_v` | file:src/pagina.html; file:src/pagina.html |
-| `compliant` | `conforme` | (name exists) | `conformant` | lit:banchi/01-b4-registrazioni.py |
-| `compute` | `calcolo` | (name exists) | `calc` | lit:banchi/16-stress/16-risorse.py |
-| `consumed` | `consumati` | (name exists) | `used_up` | tu:src/webtransport.c |
-| `copied` | `copia` | (name exists) | **kept** | lit:server |
-| `count` | `conta`, `conto` | `conto` | `conta`→`tally` | c-program:banchi/18-a1; py:banchi/09-b70-ritmo.py |
-| `cursor` | `cursore` | (name exists) | `pointer_shape` | lit:server |
-| `data` | `dati` | (name exists) | `data_v` | file:banchi/16-stress/16-banco-tela.html; file:banchi/18-software/18-software-webcodecs.html |
-| `delivered` | `consegnata` | (name exists) | `handed` | lit:server |
-| `depth` | `profondita` | (name exists) | `bit_depth` | file:src/pagina.html |
-| `drawing` | `disegno` | (name exists) | `drawing_v` | lit:banchi/16-stress/16-rapporto.py |
-| `empty` | `vuota`, `vuoto` | `vuota` | `vuoto`→`blank` | py:banchi/11-scatole/11-c2-una-finestra-si-apre.py; tu:src/sessione.c |
-| `env` | `amb` | (name exists) | `env_vars` | go-package:installatore/motore |
-| `error` | `errore` | (name exists) | `failure` | lit:banchi/12-client-veri.py |
-| `fake` | `finta`, `finto` | `finto` | `finta`→`mock` | lit:installatore/motore/finti_test.go; lit:installer |
-| `found` | `trovati`, `trovato` | `trovati` | `trovato`→`located` | go-package:installatore/motore; tu:src/sessione.c |
-| `full` | `pieni`, `pieno` | `pieno` | `pieni`→`filled` | py:banchi/11-scatole/11-c21-sul-bordo-la-forma-cambia.py |
-| `got` | `otten` | (name exists) | `obt` | py:banchi/11-scatole/11-c14-non-si-disturbano.py |
-| `green` | `verde` | (name exists) | `green_v` | lit:banchi/02-cattura-giudica.py |
-| `group` | `gruppo` | (name exists) | `grp` | tu:src/figlio.c |
-| `groups` | `gruppi` | (name exists) | `group_list` | lit:installatore/interfaccia/vista.go; lit:installer |
-| `height` | `alt`, `altezza` | `altezza` | `alt`→`alt_h` | tu:banchi/01-b8-prova-ban.c; tu:banchi/04-b31-tela.c |
-| `height` | `altezza` | (name exists) | `height_px` | file:src/pagina.html; file:src/pagina.html |
-| `hex` | `esa` | (name exists) | `hex_s` | go-package:installatore/motore |
-| `how_many` | `quante`, `quanti` | `quanti` | `quante`→`how_many_n` | file:banchi/01-b11-pagina.html; file:src/pagina.html |
-| `judge` | `giudica`, `giudice` | `giudica` | `giudice`→`assessor` | py:banchi/11-scatole/11-c2-una-finestra-si-apre.py; py:banchi/11-scatole/11-c4-il-tasto-arriva-allo-schermo.py |
-| `judged` | `giudicati`, `giudicato` | `giudicati` | `giudicato`→`assessed` | py:banchi/01-b4-validatore.py |
-| `key` | `chiave` | (name exists) | `key_id` | lit:banchi/19-vulkan/19-tabella.py; lit:server |
-| `last` | `ultima`, `ultimo` | `ultimo` | `ultima`→`latest` | py:banchi/09-b76-rete-cattiva.py; py:banchi/11-scatole/11-c8b-la-pagina-si-vede-dal-cliente.py |
-| `late` | `tardive`, `tardivi` | `tardivi` | `tardive`→`belated` | lit:banchi/16-stress/16-attore.py |
-| `layout` | `disposizione` | (name exists) | `arrangement` | tu:banchi/04-b25-guasti.c; tu:banchi/04-b25-tastiera.c |
-| `left` | `sx` | (name exists) | `left_side` | file:src/pagina.html; lit:banchi/11-scatole/11-c21-sul-bordo-la-forma-cambia.py |
+| `got` | `otten` | (name exists) | `obt` | py:banchi/11-scatole/11-c14-non-si-disturbano.py; py:banchi/11-scatole/11-c14-non-si-disturbano.py |
 | `level_idc` | `livello_idc` | (name exists) | `lvl_idc` | tu:src/vadiretta.c; tu:src/vadiretta.c |
-| `line` | `riga` | (name exists) | `row` | lit:server |
-| `lines` | `righe` | (name exists) | `line_list` | py:docs/sources/build.py; py:docs/sources/technical/ch01_introduction.py |
-| `list` | `elenco` | (name exists) | `listing` | py:banchi/02-figlio-prova.py; py:banchi/09-b76-rete-cattiva.py |
-| `locks` | `lucchetti` | (name exists) | `lock_set` | go-package:installatore/motore |
-| `log` | `registra` | (name exists) | `record` | sh:banchi/02-cattura-lancia.sh; sh:banchi/02-cattura-lancia.sh |
-| `log` | `registro` | (name exists) | `logbook` | sh:banchi/01-b11-guasto.sh; sh:banchi/02-figlio-lancia.sh |
-| `machine` | `macchina` | (name exists) | `host` | lit:banchi/16-stress/16-risorse.py |
-| `margin` | `margine` | (name exists) | `headroom` | lit:banchi/09-b81-linea-morta.py |
-| `measure` | `misura` | (name exists) | `gauge` | lit:banchi/15-suite/15-g1b-esplora.py |
-| `method` | `metodo` | (name exists) | `meth` | file:grafica/sito-mockup/performance.html |
-| `mode` | `modo` | (name exists) | `manner` | file:src/pagina.html |
-| `mute` | `muti`, `muto` | `muto` | `muti`→`muted` | lit:banchi/09-b84-audio-silenzio.py; py:banchi/09-b81-linea-morta.py |
-| `my_base` | `mia_base`, `mio_base` | `mio_base` | `mia_base`→`own_base` | py:banchi/11-scatole/11-c2-una-finestra-si-apre.py |
-| `name` | `nome` | (name exists) | `label_name` | lit:installer; py:docs/sources/build.py |
-| `network` | `rete` | (name exists) | `net` | lit:banchi/12-client-veri.py |
-| `next` | `prossimo` | (name exists) | `upcoming` | py:banchi/16-stress/16-salita.py |
-| `none` | `nessuno` | (name exists) | `nobody` | lit:server; lit:src/figlio.c |
-| `note` | `nota` | (name exists) | `remark` | file:banchi/sonda/sonda-rcp.html; file:src/pagina.html |
-| `now_ms` | `adesso_ms`, `ora_ms` | `ora_ms` | `adesso_ms`→`current_ms` | tu:src/figlio.c |
-| `now_us` | `adesso_us`, `ora_us` | `ora_us` | `adesso_us`→`current_us` | c-program:src |
-| `old` | `vecchio` | (name exists) | `prior` | lit:banchi/18-a1/18-a1-opus-senza-ffmpeg.c |
-| `on` | `accesa` | (name exists) | `lit` | lit:banchi/09-b81-linea-morta.py |
-| `on` | `accesa`, `acceso` | `acceso` | `accesa`→`lit` | lit:banchi/09-b81-linea-morta.py; py:banchi/09-b81-linea-morta.py |
-| `on` | `acceso` | (name exists) | `lit` | lit:banchi/09-b81-linea-morta.py; lit:banchi/12-client-veri.py |
-| `open` | `aperta` | (name exists) | `is_open` | lit:banchi/19-android/19-android.py; py:banchi/09-b79-cure.py |
-| `open` | `aperta`, `aperte` | `aperta` | `aperte`→`opened` | lit:banchi/09-b78-apertura.py |
-| `open` | `aperte` | (name exists) | `opened` | py:banchi/09-b78-apertura.py |
-| `open` | `aperti` | (name exists) | `opened` | py:banchi/16-stress/16-attore.py |
-| `other` | `altro` | (name exists) | `other_one` | lit:installer |
-| `our` | `nostri`, `nostro` | `nostro` | `nostri`→`ours` | go-package:installatore/motore |
-| `out` | `fuori` | (name exists) | `outside` | file:src/pagina.html; go-package:installatore/motore |
-| `output` | `uscita` | (name exists) | `out_dir` | file:banchi/16-stress/16-banco-tela.html |
-| `page` | `pagina` | (name exists) | `page_v` | py:docs/sources/build.py; py:docs/sources/technical/ch01_introduction.py |
-| `pause` | `pausa` | (name exists) | `pause_v` | lit:banchi/15-suite/15-g2-scena.py; lit:banchi/16-stress/16-attore.py |
-| `photo` | `foto` | (name exists) | `picture` | lit:banchi/15-suite/15-g1b-esplora.py |
-| `pipe` | `tubo` | (name exists) | `pipe_fd` | tu:src/figlio.c |
-| `pointer` | `puntatore` | (name exists) | `ptr` | lit:server |
-| `policy` | `politica` | (name exists) | `policy_v` | lit:banchi/07-b64-scena.py |
-| `print` | `stampa` | (name exists) | `print_out` | py:banchi/02-filo-validatore.py; py:banchi/04-b28-gesti.py |
-| `profile` | `profilo` | (name exists) | `profile_v` | lit:banchi/09-b77-audio-riordino.py; lit:banchi/09-b79-cure.py |
-| `r` | `erre` | (name exists) | `r_ch` | py:banchi/02-cattura-giudica.py |
-| `rc_mode` | `modo_rc` | (name exists) | `manner_rc` | tu:src/codificatore.c |
-| `reason` | `motivo` | (name exists) | `why_text` | file:banchi/01-b11-pagina.html; file:src/pagina.html |
-| `reborn` | `rinasce`, `rinate` | `rinasce` | `rinate`→`respawned` | py:banchi/11-scatole/11-c24-l-esci-chiude-sempre.py |
-| `received` | `ricevuti` | (name exists) | `received_n` | lit:banchi/07-b64-rete.py |
-| `requested` | `chiesti`, `chiesto` | `chiesto` | `chiesti`→`asked` | file:src/pagina.html |
-| `requests` | `richieste` | (name exists) | **kept** | lit:server |
-| `restart` | `riparti` | (name exists) | **kept** | lit:server |
-| `resume` | `riprendi` | (name exists) | `continue_it` | lit:installer |
-| `round` | `il_giro` | (name exists) | `the_round` | py:banchi/11-scatole/11-c4-il-tasto-arriva-allo-schermo.py |
-| `rule` | `regola` | (name exists) | `rule_v` | lit:banchi/09-b77-audio-riordino.py |
-| `run` | `esegui`, `gira` | `gira` | `esegui`→`execute` | c-program:src; py:banchi/01-b8-cronometro.py |
-| `said` | `detta`, `detto` | `detto` | `detta`→`stated` | py:banchi/11-scatole/11-c2-una-finestra-si-apre.py |
-| `said` | `detti`, `detto` | `detto` | `detti`→`stated` | go-package:installatore/motore |
-| `save` | `salva` | (name exists) | `store` | py:banchi/15-suite/15-f003-lo-schermo-si-aggiorna.py |
-| `scale` | `scala` | (name exists) | `scale_v` | py:banchi/02-sessione-stato.py |
-| `seen` | `visto` | (name exists) | `seen_v` | lit:banchi/02-filo-fotogramma.py; lit:banchi/15-suite/15-f008-modificatori.py |
-| `sent` | `mandati`, `spedite` | `spedite` | `mandati`→`dispatched` | file:src/pagina.html |
-| `serial` | `matricola` | (name exists) | `serial_no` | tu:src/figlio.c; tu:src/figlio.c |
-| `serial` | `matricola`, `serie` | `serie` | `matricola`→`serial_no` | tu:src/figlio.c |
-| `serial` | `serie` | (name exists) | `series` | tu:src/figlio.c; tu:src/wlroots.c |
-| `session` | `sessione` | (name exists) | `session_v` | lit:server |
-| `sorted` | `ordinata` | (name exists) | `ordered` | py:banchi/11-scatole/11-c20-la-rinascita-non-porta-fantasmi.py |
-| `sorted` | `ordinate` | (name exists) | `ordered` | py:banchi/09-b81-linea-morta.py |
-| `sorted` | `ordinati` | (name exists) | `ordered` | py:banchi/01-b3-cliente.py; py:banchi/07-b64-orecchio.py |
-| `start` | `inizio`, `partenza` | `inizio` | `partenza`→`departure` | lit:banchi/19-android/19-android.py |
-| `stop` | `ferma` | (name exists) | `halt` | py:banchi/15-suite/15-g8-comune.py |
-| `stopped` | `fermato`, `fermo` | `fermo` | `fermato`→`halted` | file:src/pagina.html |
-| `stream` | `flusso` | (name exists) | `flow` | file:src/pagina.html; sh:banchi/18-scheda/18-confronto.sh |
-| `streams` | `flussi` | (name exists) | `flows` | lit:banchi/02-filo-validatore.py |
-| `tag` | `sigla` | (name exists) | `code_tag` | py:banchi/15-suite/15-f014-appunti.py |
-| `taken` | `presi`, `preso` | `preso` | `presi`→`grabbed` | py:banchi/09-b81-linea-morta.py; tu:src/cattura.c |
-| `text` | `testo` | (name exists) | `body_text` | lit:banchi/12-client-veri.py; py:docs/sources/technical/ch15_installer.py |
-| `title` | `titolo` | (name exists) | `heading` | lit:banchi/02-pagina-misura-cdp.py; py:docs/sources/build.py |
-| `touch` | `tocco` | (name exists) | `tap` | lit:server; lit:src/pagina.html |
-| `unknown` | `ignote` | (name exists) | `unrecognized` | lit:banchi/02-sessione-stato.py |
-| `user` | `utente` | (name exists) | `username` | lit:server |
-| `value` | `valore` | (name exists) | `value_v` | file:src/pagina.html; file:src/pagina.html |
-| `version` | `versione` | (name exists) | `version_v` | lit:installer |
-| `versions` | `versioni` | (name exists) | `vers` | lit:installer |
-| `wait_stage` | `aspetta_il_palco`, `attesa_palco` | `attesa_palco` | `aspetta_il_palco`→`await_stage` | py:banchi/11-scatole/11-c8b-la-pagina-si-vede-dal-cliente.py |
-| `wanted` | `voluti`, `voluto` | `voluto` | `voluti`→`desired` | tu:src/vulkanvideo.c |
-| `wheel` | `rotella` | (name exists) | `scroll_wheel` | lit:banchi/16-stress/16-attore.py; lit:server |
-| `which` | `quale`, `quali` | `quale` | `quali`→`which_ones` | tu:src/figlio.c; tu:src/main.c |
-| `why` | `perche` | (name exists) | `reason_text` | lit:installer |
-| `width` | `larghezza` | (name exists) | `width_px` | file:src/pagina.html; file:src/pagina.html |
-| `window` | `finestra` | (name exists) | `win` | file:src/pagina.html; lit:banchi/16-stress/16-classifica.py |
-| `write` | `scrivi` | (name exists) | `put_out` | tu:src/figlio.c |
-| `yes` | `si` | (name exists) | **kept** | lit:server; lit:src/pagina.html |
-| `lit` | `accesa`, `acceso` | `acceso` | `accesa`→`switched_on` | lit:banchi/09-b81-linea-morta.py; py:banchi/09-b81-linea-morta.py |
+| `my_base` | `mia_base`, `mio_base` | `mio_base` | `mia_base`→`own_base` | py:banchi/11-scatole/11-c2-una-finestra-si-apre.py; py:banchi/11-scatole/11-c2-una-finestra-si-apre.py |
+| `now_ms` | `adesso_ms`, `ora_ms` | `ora_ms` | `adesso_ms`→`current_ms` | tu:src/figlio.c; tu:src/figlio.c |
+| `pipe` | `tubo` | (name exists) | `pipe_fd` | tu:src/figlio.c; tu:src/figlio.c |
+| `push` | `spingi` | (name exists) | `shove` | file:src/pagina.html; file:src/pagina.html |
+| `r` | `erre` | (name exists) | `r_ch` | py:banchi/02-cattura-giudica.py; py:banchi/02-cattura-giudica.py |
+| `rc_mode` | `modo_rc` | (name exists) | `manner_rc` | tu:src/codificatore.c; tu:src/codificatore.c |
+| `reborn` | `rinasce`, `rinate` | `rinasce` | `rinate`→`respawned` | py:banchi/11-scatole/11-c24-l-esci-chiude-sempre.py; py:banchi/11-scatole/11-c24-l-esci-chiude-sempre.py |
+| `replace` | `sostituisci` | (name exists) | **kept** | py:grafica/sito-mockup/autocontenuta.py; py:grafica/sito-mockup/autocontenuta.py |
+| `sampler` | `campionatore` | (name exists) | `sampler_obj` | tu:src/vulkanvideo.c; tu:src/vulkanvideo.c |
+| `sorted` | `ordinata` | (name exists) | `ordered` | py:banchi/11-scatole/11-c20-la-rinascita-non-porta-fantasmi.py; py:banchi/11-scatole/11-c20-la-rinascita-non-porta-fantasmi.py |
+| `sorted` | `ordinate` | (name exists) | `ordered` | py:banchi/09-b81-linea-morta.py; py:banchi/09-b81-linea-morta.py |
+| `sorted` | `ordinati` | (name exists) | `ordered` | py:banchi/01-b3-cliente.py; py:banchi/01-b3-cliente.py |
+| `stop` | `smetti` | (name exists) | `cease` | file:src/pagina.html; file:src/pagina.html |
+| `transform` | `trasf` | (name exists) | `xform` | file:src/pagina.html; tu:src/wlroots.c |
 
 ### One new name for several old names, never in one scope (checked per scope, §3)
 
-- `ALL` ← `TUTTE`, `TUTTI`
-- `Blocked` ← `Bloccata`, `Bloccato`
-- `CELLS` ← `CASELLE`, `CELLE`
-- `DIFFERENT` ← `DIVERSI`, `DIVERSO`
-- `DIRTY` ← `SPORCA`, `SPORCO`
-- `DONE` ← `FATTA`, `FATTE`, `FATTI`, `FATTO`
-- `EMPTY` ← `VUOTA`, `VUOTO`
-- `EXCLUDED` ← `ESCLUSE`, `ESCLUSI`
-- `EXPECTED` ← `ATT`, `ATTESO`
 - `Excluded` ← `Esclusa`, `Escluse`
-- `FAILED` ← `FALLITA`, `FALLITI`
-- `FORBIDDEN` ← `VIETATA`, `VIETATE`
-- `FOUND` ← `TROVATI`, `TROVATO`
-- `Fake` ← `Finta`, `Finto`
 - `Graphical` ← `Grafica`, `Grafici`
-- `HEALTHY` ← `SANI`, `SANO`
-- `HOW_MANY` ← `QUANTE`, `QUANTI`
-- `INSIDE_SRC` ← `DENTRO_SORG`, `DENTRO_SRC`
-- `LEFT` ← `SINISTRA`, `SINISTRO`
-- `LOCK` ← `LUCCHETTO`, `SERRATURA`
-- `MIN_FRAMES` ← `FOTOGRAMMI_MINIMI`, `MINIMO_FOTOGRAMMI`
-- `MISSING` ← `MANCA`, `MANCANO`, `MANCANTI`
-- `NEW` ← `NUOVA`, `NUOVE`, `NUOVI`, `NUOVO`
-- `OUR` ← `NOSTRE`, `NOSTRO`
-- `READY` ← `PRONTA`, `PRONTO`
-- `RIGHT` ← `DESTRA`, `DESTRO`
-- `SEEN` ← `VISTI`, `VISTO`
-- `SOURCE` ← `FONTE`, `SORGENTE`
-- `SOURCES` ← `FONTI`, `SORGENTI`
-- `STOPPED` ← `FERMATA`, `FERMO`
-- `Screen` ← `Schermata`, `Schermo`
-- `Stopped` ← `Fermata`, `Fermo`
-- `TREE` ← `ALB`, `ALBERO`
-- `TWIN` ← `GEMELLA`, `GEMELLO`
-- `UNKNOWN` ← `IGNOTI`, `IGNOTO`, `NONSO`, `SCONOSCIUTO`
-- `Unknown` ← `Ignota`, `Sconosciuto`
-- `WATCHED` ← `GUARDATI`, `SORVEGLIATE`
-- `_Fake` ← `_Finta`, `_Finto`
+- `NEW` ← `NUOVE`, `NUOVI`
 - `_empty` ← `_svuota`, `_vuoto`
-- `_limit` ← `_limita`, `_limite`
 - `_path` ← `_cammino`, `_perc`
 - `_read` ← `_leggi`, `_letta`
-- `_round` ← `_giro`, `_tondo`
-- `accepted` ← `accettata`, `accettato`, `amm`
-- `access` ← `accesso`, `un_accesso`
-- `active` ← `attivi`, `attivo`
-- `added` ← `aggiunta`, `aggiunti`
 - `app_log` ← `app_diario`, `registro_applicazione`
 - `app_received` ← `app_ricevuti`, `app_ricevuto`
-- `arrived` ← `arrivata`, `arrivate`, `arrivati`
-- `attached` ← `attaccate`, `attaccato`
-- `attempt` ← `tenta`, `tentativo`, `un_tentativo`
-- `backlog` ← `arretrati`, `arretrato`
-- `bad` ← `cattive`, `cattivo`
-- `bands` ← `bande`, `fasce`
-- `bare` ← `nuda`, `nudo`
-- `best` ← `migliore`, `migliori`
-- `blind` ← `cieca`, `ciechi`, `cieco`
-- `block` ← `blocca`, `blocco`
-- `blocked` ← `bloccata`, `bloccate`, `bloccati`, `bloccato`
-- `border` ← `cornice`, `incornicia`
-- `born` ← `nata`, `nate`, `nati`, `nato`
-- `broken` ← `guasta`, `rotta`, `rotte`, `rotti`, `rotto`
-- `call` ← `chiama`, `chiamata`
-- `canvases` ← `telate`, `tele`
-- `cards` ← `carte`, `schede`
-- `cell` ← `casella`, `cella`
-- `cells` ← `caselle`, `celle`
-- `changed` ← `cambiate`, `cambiati`, `cambiato`
-- `check` ← `controlla`, `controllo`
-- `checks` ← `controlli`, `verifiche`
-- `chosen` ← `scelti`, `scelto`
-- `clean` ← `pulisci`, `pulita`, `pulito`
-- `clear_out` ← `sgombera`, `sgombra`
-- `closed` ← `chiuse`, `chiuso`
-- `common` ← `comune`, `comuni`
-- `correct` ← `corretti`, `giusti`, `giusto`
-- `counts` ← `conteggi`, `conti`
-- `covered` ← `coperte`, `coperti`
-- `created` ← `creati`, `creato`
-- `cut` ← `tagliate`, `tagliati`, `taglio`
-- `dead` ← `morti`, `morto`
-- `declared` ← `dich`, `dichiarata`, `dichiarate`, `dichiarati`
-- `decoded` ← `decodificati`, `decodificato`
-- `delay` ← `rit`, `ritardo`
-- `delay_ms` ← `rit_ms`, `ritardo_ms`
-- `delivered` ← `consegnate`, `consegnati`, `consegnato`
-- `dirty` ← `sporca`, `sporche`, `sporchi`, `sporco`
-- `discarded` ← `buttato`, `scartate`, `scartati`
-- `dismissed` ← `congedate`, `congedato`
-- `divergent` ← `divergente`, `divergenti`
-- `drop` ← `butta`, `caduta`
-- `dropped` ← `buttati`, `caduto`
-- `due` ← `dovuti`, `esigibile`
-- `duplicates` ← `doppi`, `doppioni`, `duplicati`
+- `dirty` ← `sporca`, `sporche`
 - `elapsed` ← `trascorsi`, `trascorso`
-- `empty` ← `vuota`, `vuote`, `vuoti`
-- `enter` ← `entra`, `entrano`
-- `entered` ← `entrati`, `entrato`
-- `entry` ← `entrata`, `voce`
+- `empty` ← `vuote`, `vuoti`
 - `estimate` ← `preventivo`, `stima`
-- `exceeded` ← `sforato`, `superato`
-- `excluded` ← `esclusi`, `escluso`
 - `expected_s` ← `att_s`, `previsti_s`
 - `expected_v` ← `att_v`, `atteso_v`
-- `expired` ← `scaduta`, `scaduti`, `scaduto`
-- `explicit` ← `esplicita`, `esplicito`
-- `factor` ← `fatt`, `fattore`
-- `failed` ← `fallita`, `falliti`
-- `fake` ← `finte`, `finto`
-- `finished` ← `fatto`, `finiti`, `finito`
-- `first` ← `primi`, `primo`
-- `fit_canvas` ← `adatta_la_tela`, `adatta_tela`
-- `fixed` ← `fissa`, `sistemati`
-- `flat` ← `piatta`, `piatto`
-- `forbidden` ← `vietata`, `vietate`
-- `forced` ← `forzata`, `obbligate`
-- `found` ← `trovate`, `trovati`
-- `fourth` ← `quarta`, `quarto`
-- `fourth_admitted` ← `quarta_amm`, `quarto_ammesso`
-- `frame` ← `fot`, `fotogramma`
-- `frames` ← `fotogrammi`, `quadri`
-- `fresh` ← `fresco`, `nuovo`
-- `full` ← `piena`, `pieno`
-- `good` ← `buone`, `buono`
-- `got` ← `avuta`, `avuti`, `avuto`
-- `graft` ← `innesta`, `innesto`
-- `grafted` ← `innestati`, `innestato`
-- `graphical` ← `grafica`, `grafico`
-- `gray` ← `grigia`, `grigio`
-- `healed` ← `risanati`, `risanato`
-- `held` ← `trattenuti`, `trattenuto`
-- `here` ← `qua`, `qui`
-- `hidden` ← `nascoste`, `nascosto`
-- `hints` ← `sugg`, `suggerimenti`
-- `holds` ← `regge`, `tiene`
-- `hook` ← `aggancia`, `gancio`
-- `how_many_before` ← `quante_prima`, `quanti_prima`
-- `identifier` ← `identificativo`, `identificatore`
-- `installed` ← `installati`, `installato`
-- `internal` ← `interna`, `interno`
-- `is_visible` ← `si_vede`, `visibile`
-- `its` ← `sua`, `suo`
-- `judge` ← `giud`, `giudica`
-- `judge_exit` ← `giudica_uscita`, `uscita_giud`
-- `judge_round` ← `giudica_giro`, `giudica_il_giro`
-- `kept` ← `tenuti`, `tenuto`
-- `keys` ← `chiavi`, `tasti`
-- `killed` ← `uccisi`, `ucciso`
-- `kind` ← `specie`, `tipo`
-- `known` ← `noti`, `noto`
-- `last` ← `ultime`, `ultimo`
-- `late` ← `tardi`, `tardivi`, `tardo`
-- `left` ← `rimaste`, `rimasto`
-- `limit` ← `limita`, `limite`
-- `listen` ← `ascolta`, `ascolto`
-- `load` ← `carica`, `carico`
-- `loaded` ← `caricate`, `caricato`
-- `lock` ← `lucchetto`, `serratura`
-- `long` ← `lunga`, `lungo`
-- `lost` ← `perdute`, `perduti`, `perse`, `persi`
-- `low` ← `bassi`, `basso`
-- `mark` ← `marca`, `segna`
-- `measured` ← `misurati`, `misurato`
-- `missed` ← `mancate`, `mancati`
-- `missing` ← `manca`, `mancano`
-- `move` ← `mossa`, `sposta`
-- `moved` ← `mosso`, `spostati`, `spostato`
-- `my` ← `mia`, `mie`, `miei`, `mio`
-- `near` ← `vicine`, `vicino`
-- `needs` ← `esigenze`, `serve`
-- `negotiated` ← `negoziata`, `negoziato`
+- `got` ← `avuta`, `avuti`
+- `lost` ← `perduti`, `perse`
 - `next_ingress` ← `prossima_ingresso`, `prossimo_ingresso`
-- `next_key` ← `prossima_chiave`, `prossimo_chiave`
 - `next_serial` ← `prossima_matricola`, `prossimo_serial`
-- `observed` ← `osservati`, `osservato`
-- `obtained` ← `ottenuti`, `ottenuto`
-- `off` ← `spenti`, `spento`
-- `offer` ← `offerta`, `offri`
-- `opened` ← `aperte`, `aperti`
 - `ordered` ← `ordinata`, `ordinate`, `ordinati`
-- `others` ← `altri`, `altrui`
-- `our` ← `nostra`, `nostro`
-- `overall` ← `complessivo`, `tutto`
-- `overflowed` ← `traboccati`, `traboccato`
-- `passed` ← `passata`, `passati`
-- `path` ← `il_percorso`, `perc`
-- `pending` ← `pendenti`, `sospesi`
-- `placed` ← `messa`, `messi`
-- `possible` ← `possibile`, `possibili`
-- `prepare` ← `prepara`, `preparati`
-- `pressed` ← `premuti`, `premuto`
-- `prev` ← `prec`, `ult`
-- `primary` ← `primario`, `principale`
-- `queue` ← `coda`, `la_coda`
-- `quiet` ← `quiete`, `tranquillo`, `zitto`
-- `raw` ← `crudo`, `grezzo`
-- `read` ← `lette`, `letto`
-- `read_log` ← `leggi_il_registro`, `leggi_registro`
 - `read_notebook` ← `leggi_il_quaderno`, `leggi_quaderno`
 - `read_text` ← `leggi_il_testo`, `leggi_testo`
-- `readings` ← `letti`, `letture`
-- `ready` ← `pronta`, `pronti`, `pronto`
-- `real` ← `vera`, `vero`
-- `rearms` ← `riarma`, `riarmi`
-- `reasons` ← `motivi`, `ragioni`
 - `reborn` ← `rinasce`, `rinata`, `rinato`
-- `recovered` ← `recuperati`, `ritrovato`
-- `rect` ← `rett`, `riquadro`
-- `red` ← `rosse`, `rosso`
-- `refused` ← `rifiutata`, `rifiutate`, `rifiutati`, `rifiutato`
-- `remaining` ← `restanti`, `rimasti`
-- `removed` ← `tolta`, `tolte`, `tolti`
 - `requested_height` ← `chiesta_altezza`, `chiesto_altezza`
 - `requested_width` ← `chiesta_larghezza`, `chiesto_larghezza`
-- `reread` ← `riletta`, `riletto`
-- `resize` ← `ridim`, `ridimensiona`
-- `restart` ← `riavvio`, `ripartenza`
-- `restore` ← `rimetti`, `ripristina`
-- `restored` ← `rimessa`, `rimessi`, `rimesso`
-- `resumed` ← `ripresa`, `riprese`
-- `returned` ← `tornate`, `tornato`
-- `right` ← `destro`, `dx`
-- `run` ← `corsa`, `gira`
-- `sample` ← `campiona`, `campione`
-- `saved` ← `salvate`, `salvato`
-- `scroll` ← `scorri`, `scorrimento`
-- `search` ← `cerca`, `ricerca`
 - `search_window` ← `cerca_finestra`, `cerca_la_finestra`
-- `searched` ← `cercati`, `cercato`
-- `second` ← `seconda`, `secondo`
-- `send_button` ← `manda_bottone`, `manda_pulsante`
-- `shift` ← `maiusc`, `spost`
-- `short` ← `corta`, `corte`, `corti`
-- `silence` ← `silenzio`, `zittisci`
-- `skip` ← `salta`, `saltare`
-- `slow` ← `lente`, `lento`
-- `small` ← `piccola`, `piccoli`, `piccolo`
-- `snapshot` ← `fotografa`, `fotografia`
-- `source` ← `fonte`, `sorgente`
-- `sources` ← `fonti`, `sorgenti`
-- `start` ← `avvia`, `inizio`
-- `started` ← `avviato`, `partita`, `partito`
-- `starts` ← `comincia`, `inizi`
-- `stated` ← `detta`, `detti`
-- `still` ← `ancora`, `ancora_li`, `immobili`
-- `stop` ← `fermare`, `smetti`
-- `stopped` ← `fermate`, `ferme`, `fermo`
-- `succeeded` ← `riuscita`, `riuscito`
-- `summary` ← `riassunto`, `sommario`
-- `swap` ← `scambia`, `scambio`
-- `t_before` ← `t_prima`, `tprima`
-- `table` ← `tabella`, `tavola`
-- `take` ← `prendi`, `presa`
-- `taken` ← `prese`, `preso`
-- `tenant` ← `inquilino`, `un_inquilino`
-- `text_line` ← `linea`, `riga_testo`
-- `tight` ← `serrate`, `stretta`, `strette`, `stretto`
-- `times` ← `tempi`, `volte`
-- `tolerated` ← `tollerate`, `tollerato`
+- `still` ← `ancora_li`, `immobili`
+- `tight` ← `serrate`, `strette`
 - `tool` ← `arnese`, `attrezzo`
-- `touches` ← `tocca`, `tocchi`
-- `transform` ← `trasf`, `trasformazione`
-- `trusted` ← `fidati`, `fidato`
 - `turn_off_server` ← `spegni_server`, `spegni_servitore`
-- `turn_on_scene` ← `accendi_la_scena`, `accendi_scena`
 - `ugly` ← `brutte`, `brutti`
-- `unknown` ← `ignoti`, `ignoto`, `sconosciute`
-- `untried` ← `non_provate`, `non_provati`
 - `unwanted` ← `di_troppo`, `non_ci_vuole`
-- `updated` ← `aggiornati`, `aggiornato`
-- `used` ← `usata`, `usato`
-- `valid` ← `valida`, `valide`, `validi`, `valido`
-- `vendor` ← `fornitore`, `venditore`
-- `wait_canvas` ← `aspetta_tela`, `attendi_tela`, `attesa_tela`
-- `wait_line` ← `aspetta_la_riga`, `aspetta_riga`, `attendi_riga`
-- `wait_scene` ← `aspetta_la_scena`, `aspetta_scena`, `attesa_scena`
-- `watched` ← `guardati`, `sorvegliata`
-- `whole` ← `intero`, `tutta`
-- `without_header` ← `senza_header`, `senza_intestazione`
-- `worst` ← `peggiore`, `peggiori`
-- `write_log` ← `scrivi_reg`, `scrivi_registro`
-- `written` ← `scritta`, `scritte`, `scritti`
-- `wrong` ← `sbagliata`, `sbagliate`, `sbagliati`, `storti`, `storto`
+- `wait_canvas` ← `aspetta_tela`, `attendi_tela`
+- `wait_line` ← `aspetta_la_riga`, `aspetta_riga`
 
 ### Names not renamed (to resolve in interi.tsv or sinonimi.tsv)
 
-- `Amb` — untagged JSON field: its English is two words, the key cannot follow
-- `Motivo` — untagged JSON field: its English is two words, the key cannot follow
-- `RIFIUTATA` — target REFUSED already exists in lit:server
 - `Sblocca` — target Unlock is a Go method onto a well-known interface method (String, Error, Write…)
-- `amb` — untagged JSON field Amb: its English is two words
-- `assenti` — target absent already exists in lit:server
-- `copia` — target copied already exists in lit:server
-- `motivo` — untagged JSON field Motivo: its English is two words
-- `richieste` — target requests already exists in lit:server
-- `riparti` — target restart already exists in lit:server
-- `si` — target yes already exists in lit:server, lit:src/pagina.html
+- `sostituisci` — target replace already exists in py:grafica/sito-mockup/autocontenuta.py, py:grafica/sito-mockup/autocontenuta.py
 
-### Names left out on purpose
+### Phase A: frozen names, by reason (each name under the first reason found; every name and its reason: rinomina2-plan.json → excluded)
 
-- `AltLeft` — interi.tsv: kept as it is (KeyboardEvent.code "AltLeft" (key map), not Italian: must not change)
-- `AltRight` — interi.tsv: kept as it is (KeyboardEvent.code "AltRight" (key map), not Italian: must not change)
-- `DX` — interi.tsv: kept as it is (delta x in 15-f003 (and a mockup const), not destra: must not change)
+| reason | names |
+|---|---|
+| py string literal | 1242 |
+| document | 1091 |
+| data file | 967 |
+| Python file that reads names at run time | 322 |
+| a name a file builds at run time from a literal piece | 251 |
+| shell word that is not a reference | 190 |
+| a history source compiled with today's code | 190 |
+| shell: functions of a file that runs a command named by a variable | 168 |
+| shell: ${X:-…} on an upper-case name, an input from the environment | 148 |
+| Python class or function name printed through __name__ | 136 |
+| conf file | 123 |
+| c string literal | 89 |
+| html string literal | 64 |
+| JavaScript object key or shorthand property | 53 |
+| Go field without a JSON name: the key is the field | 50 |
+| shell file shfmt cannot parse | 34 |
+| REMOTIX_*/RX_* environment variable | 22 |
+| go string literal | 12 |
+| a file or directory name of the tree | 8 |
+| Python keyword argument that becomes data or goes to someone else's function | 8 |
+| C argument of a macro that stringifies or pastes it | 7 |
+| make file | 6 |
+| shell: read but never assigned in the tree, an input from the environment | 4 |
+| a shader source | 4 |
+| C function whose name reaches the binary | 3 |
+| json file | 2 |
+| shell local -n | 1 |
+
+### Phase A: fallback names (collision alternates and dodge suffixes) — all internal
+
+| old | new | languages | how |
+|---|---|---|---|
+| `PERCORSO` | `ROUTE_PATH` | sh | sinonimi.tsv: percorso → route_path (target was: well-known environment variable) |
+| `adesso_ms` | `current_ms` | c,html | sinonimi.tsv: adesso → current (lost now_ms to ora_ms) |
+| `app_chiesti` | `app_asked` | c,py | sinonimi.tsv: chiesti → asked (lost app_requested to app_chiesto) |
+| `campionatore` | `sampler_obj` | c,py | sinonimi.tsv: campionatore → sampler_obj (target sampler already exists) |
+| `casuale` | `randomized` | c | sinonimi.tsv: casuale → randomized (target was: C global onto a libc/glib/system symbol) |
+| `ci_vuole` | `required_cmd` | py | interi.tsv |
+| `disposizione_nell_elenco` | `layout_in_list` | c | vocabulary |
+| `dt_lista` | `dt_list` | py | vocabulary |
+| `elenco_client` | `client_list` | c | interi.tsv |
+| `elenco_dichiarato` | `declared_list` | py | interi.tsv |
+| `elenco_file` | `file_list` | py | interi.tsv |
+| `erre` | `r_ch` | py | sinonimi.tsv: erre → r_ch (target r already exists) |
+| `esclusi_lista` | `excluded_list` | py | vocabulary |
+| `g_chiudi` | `g_shut` | c | sinonimi.tsv: chiudi → shut (target was: C global onto a libc/glib/system symbol) |
+| `g_registra` | `g_record` | c | sinonimi.tsv: registra → record (target was: C global onto a libc/glib/system symbol) |
+| `ha_elenco` | `has_list` | py | vocabulary |
+| `liberi` | `free_n` | c | interi.tsv |
+| `livello_idc` | `lvl_idc` | c | sinonimi.tsv: livello → lvl (target level_idc already exists) |
+| `mia_base` | `own_base` | py | sinonimi.tsv: mia → own (lost my_base to mio_base) |
+| `modo_rc` | `manner_rc` | c | sinonimi.tsv: modo → manner (target rc_mode already exists) |
+| `ordinata` | `ordered` | py | sinonimi.tsv: ordinata → ordered (target sorted already exists) |
+| `ordinate` | `ordered` | py | sinonimi.tsv: ordinate → ordered (target sorted already exists) |
+| `ordinati` | `ordered` | py | sinonimi.tsv: ordinati → ordered (target sorted already exists) |
+| `otten` | `obt` | py | sinonimi.tsv: otten → obt (target got already exists) |
+| `restituisci` | `give_back` | c | sinonimi.tsv: restituisci → give_back (target was: C keyword or system macro) |
+| `rileggi` | `reread_cmd` | c | interi.tsv |
+| `rinate` | `respawned` | py | sinonimi.tsv: rinate → respawned (lost reborn to rinasce) |
+| `sincronizza` | `synchronize` | c | sinonimi.tsv: sincronizza → synchronize (target was: C global onto a libc/glib/system symbol) |
+| `smetti` | `cease` | html | sinonimi.tsv: smetti → cease (target stop already exists) |
+| `spingi` | `shove` | html | sinonimi.tsv: spingi → shove (target push already exists) |
+| `trasf` | `xform` | c,html | sinonimi.tsv: trasf → xform (target transform already exists) |
+| `tratti_quanti` | `stretches_n` | c | interi.tsv |
+| `tubo` | `pipe_fd` | c | sinonimi.tsv: tubo → pipe_fd (target pipe already exists) |
+
+### Names left out on purpose (other than frozen)
+
 - `NID_subject_alt_name` — defined outside the project (C headers)
-- `NonConvert` — a Web platform name (esterni-web.txt, or shown by a page: event member, .code/.key value, attribute)
 - `OPUS_SET_PACKET_LOSS_PERC` — defined outside the project (C headers)
-- `catalogo` — a Go package name: renamed with its directory (step 2)
-- `interfaccia` — a Go package name: renamed with its directory (step 2)
-- `locale` — a Web platform name (esterni-web.txt, or shown by a page: event member, .code/.key value, attribute)
 - `locale_t` — defined outside the project (C headers)
-- `motore` — a Go package name: renamed with its directory (step 2)
-- `rx_apri` — interi.tsv: kept as it is (wasm export of opus.wasm: the embedded blob keeps it until the wasm is rebuilt; the JS member is never "ours" so it would not follow)
-- `rx_decodifica` — interi.tsv: kept as it is (wasm export of opus.wasm (as rx_apri))
-- `rx_pacchetto` — interi.tsv: kept as it is (wasm export of opus.wasm (as rx_apri))
-- `rx_pacchetto_max` — interi.tsv: kept as it is (wasm export of opus.wasm (as rx_apri))
-- `rx_uscita` — interi.tsv: kept as it is (wasm export of opus.wasm (as rx_apri))
 
 ### Cross-language contracts (every place: rinomina2-plan.json → contracts)
 
 | kind | names |
 |---|---|
-| crosses languages | 2269 |
-| data name | 73 |
-| environment variable | 82 |
-| option / subcommand / kebab name | 293 |
+| crosses languages | 92 |
 
-The names below are the ones another program reads by spelling: data names, environment variables, options and kebab names.  The 2269 code names that merely occur in two languages are in the JSON only.
+The names below are the ones another program reads by spelling: data names, environment variables, options and kebab names.  The 92 code names that merely occur in two languages are in the JSON only.
 
 | old | new | kind | languages | places |
 |---|---|---|---|---|
-| `ACCETTATA` | `ACCEPTED` | data name (dati.tsv: log-text) | c,py | 5 |
-| `APPUNTI_ANNUNCIO` | `CLIPBOARD_ANNOUNCE` | data name (dati.tsv: log-text) | c,html,py | 24 |
-| `APPUNTI_CHIEDI` | `CLIPBOARD_ASK` | data name (dati.tsv: log-text) | c,html,py | 36 |
-| `APPUNTI_TESTO` | `CLIPBOARD_TEXT` | data name (dati.tsv: log-text) | c,html,py | 37 |
-| `BANCO_MARCA` | `BENCH_MARK` | data name (dati.tsv: log-text) | c,py | 34 |
-| `BOTTONE` | `BUTTON` | data name (dati.tsv: json-value) | c,py | 3 |
-| `BUCHI` | `HOLES` | data name (dati.tsv: log-marker) | html,py | 12 |
-| `BUDGET_PIENO` | `BUDGET_FULL` | data name (dati.tsv: reason) | c,html,py | 20 |
-| `COMPOSITORE_INCAPACE` | `COMPOSITOR_UNABLE` | data name (dati.tsv: log-text) | c,html,py | 36 |
-| `CONFORME` | `COMPLIANT` | data name (dati.tsv: json-value) | html,sh | 5 |
-| `DISPOSIZIONE` | `LAYOUT` | data name (dati.tsv: log-text) | c,py | 37 |
-| `F18ESITO` | `F18OUTCOME` | data name (dati.tsv: log-marker) | html,py | 4 |
-| `FUNZIONE_SPENTA` | `FUNCTION_OFF` | data name (dati.tsv: log-text) | c,py | 9 |
-| `GIA_ATTIVA_LOCALE` | `ALREADY_ACTIVE_LOCAL` | data name (dati.tsv: reason) | c,html,py | 16 |
-| `INATTIVITA` | `INACTIVITY` | data name (dati.tsv: reason) | c,html,py | 10 |
-| `MISURA_FUORI_LIMITI` | `SIZE_OUT_OF_LIMITS` | data name (dati.tsv: log-text) | c,html,py | 29 |
-| `NON-BANNATO` | `NOT-BANNED` | data name (dati.tsv: wire-string) | c,py,sh | 39 |
-| `NON-CAPITO` | `NOT-UNDERSTOOD` | data name (dati.tsv: socket-cmd) | c,py | 7 |
-| `NON-CONFORME` | `NON-COMPLIANT` | data name (dati.tsv: json-value) | html,sh | 11 |
-| `NON_ORA` | `NOT_NOW` | data name (dati.tsv: log-text) | c,html,py | 74 |
-| `REMOTIX_16_CHROME_IN_PIU` | `REMOTIX_16_CHROME_EXTRA` | environment variable | py | 2 |
-| `REMOTIX_16_DESKTOP_DOPO` | `REMOTIX_16_DESKTOP_AFTER` | environment variable | sh | 3 |
-| `REMOTIX_16_IN_PIU` | `REMOTIX_16_EXTRA` | environment variable | sh | 3 |
-| `REMOTIX_16_MISURE` | `REMOTIX_16_MEASURES` | environment variable | sh | 2 |
-| `REMOTIX_16_SISTEMA` | `REMOTIX_16_SYSTEM` | environment variable | py,sh | 3 |
-| `REMOTIX_AIUTANTE_H` | `REMOTIX_HELPER_H` | environment variable | c | 2 |
-| `REMOTIX_ANDROID_PACCHETTO` | `REMOTIX_ANDROID_PACKAGE` | environment variable | py | 2 |
-| `REMOTIX_APPUNTI_H` | `REMOTIX_CLIPBOARD_H` | environment variable | c | 2 |
-| `REMOTIX_APPUNTI_KDE_H` | `REMOTIX_CLIPBOARD_KDE_H` | environment variable | c | 2 |
-| `REMOTIX_ATTESA_CHIAMATA_S` | `REMOTIX_CALL_WAIT_S` | environment variable | py | 1 |
-| `REMOTIX_BANCHI` | `REMOTIX_BENCHES` | environment variable | py,sh | 3 |
-| `REMOTIX_BANCHI_VERI` | `REMOTIX_REAL_BENCHES` | environment variable | sh | 1 |
-| `REMOTIX_CATTURA_H` | `REMOTIX_CAPTURE_H` | environment variable | c | 2 |
-| `REMOTIX_CERTIFICATI_H` | `REMOTIX_CERTIFICATES_H` | environment variable | c | 2 |
-| `REMOTIX_CHROME_OPZIONI` | `REMOTIX_CHROME_OPTIONS` | environment variable | py,sh | 17 |
-| `REMOTIX_CLASSICO` | `REMOTIX_CLASSIC` | environment variable | html,py | 13 |
-| `REMOTIX_CODIFICATORE_H` | `REMOTIX_ENCODER_H` | environment variable | c | 2 |
-| `REMOTIX_COLORI709_H` | `REMOTIX_COLORS709_H` | environment variable | c | 2 |
-| `REMOTIX_COMANDO_H` | `REMOTIX_COMMAND_H` | environment variable | c | 2 |
-| `REMOTIX_CONTROLLO` | `REMOTIX_CHECK` | environment variable | py,sh | 7 |
-| `REMOTIX_CONTROLLO_ANDROID` | `REMOTIX_CHECK_ANDROID` | environment variable | py | 1 |
-| `REMOTIX_CURSORE_H` | `REMOTIX_CURSOR_H` | environment variable | c | 3 |
-| `REMOTIX_FIGLIO_H` | `REMOTIX_CHILD_H` | environment variable | c | 2 |
-| `REMOTIX_FORMA_H` | `REMOTIX_SHAPE_H` | environment variable | c | 3 |
-| `REMOTIX_INQUILINO` | `REMOTIX_TENANT` | environment variable | c,conf,py | 18 |
-| `REMOTIX_MISURE_15` | `REMOTIX_MEASURES_15` | environment variable | py | 2 |
-| `REMOTIX_MISURE_16` | `REMOTIX_MEASURES_16` | environment variable | py | 1 |
-| `REMOTIX_MISURE_ANDROID` | `REMOTIX_MEASURES_ANDROID` | environment variable | py | 1 |
-| `REMOTIX_OPZIONI` | `REMOTIX_OPTIONS` | environment variable | conf,py,sh | 28 |
-| `REMOTIX_PAGINA_H` | `REMOTIX_PAGE_H` | environment variable | c | 2 |
-| `REMOTIX_PAROLA` | `REMOTIX_PASSWORD` | environment variable | py | 6 |
-| `REMOTIX_PAROLA_PROVA` | `REMOTIX_TEST_PASSWORD` | environment variable | sh | 12 |
-| `REMOTIX_PAROLA_SUDO` | `REMOTIX_SUDO_PASSWORD` | environment variable | py,sh | 20 |
-| `REMOTIX_PASSAGGIO16` | `REMOTIX_HANDOFF16` | environment variable | py | 1 |
-| `REMOTIX_PORTA` | `REMOTIX_PORT` | environment variable | conf,go,py,sh | 25 |
-| `REMOTIX_PRODOTTO_16` | `REMOTIX_PRODUCT_16` | environment variable | py | 1 |
-| `REMOTIX_PROVA_FIGLIO` | `REMOTIX_TEST_CHILD` | environment variable | go,py | 5 |
-| `REMOTIX_PUNTATORE` | `REMOTIX_POINTER` | environment variable | html,py | 29 |
-| `REMOTIX_REGISTRO_H` | `REMOTIX_LOG_H` | environment variable | c | 2 |
-| `REMOTIX_RETE11` | `REMOTIX_NETWORK11` | environment variable | py | 1 |
-| `REMOTIX_RITROVO_H` | `REMOTIX_FINDING_AGAIN_H` | environment variable | c | 2 |
-| `REMOTIX_SCATOLE_TENUTE` | `REMOTIX_KEPT_BOXES` | environment variable | py,sh | 13 |
-| `REMOTIX_SCHEDA` | `REMOTIX_CARD` | environment variable | py,sh | 18 |
-| `REMOTIX_SCHERMO_ANNIDATO` | `REMOTIX_NESTED_SCREEN` | environment variable | py,sh | 14 |
-| `REMOTIX_SCORCIATOIE` | `REMOTIX_SHORTCUTS` | environment variable | html,py | 4 |
-| `REMOTIX_SCRITTORE_BIT_H` | `REMOTIX_WRITER_BIT_H` | environment variable | c | 2 |
-| `REMOTIX_SENTINELLA_H` | `REMOTIX_SENTINEL_H` | environment variable | c | 2 |
-| `REMOTIX_SESSIONE_H` | `REMOTIX_SESSION_H` | environment variable | c | 2 |
-| `REMOTIX_SGOMBRA_SOGLIA_MS` | `REMOTIX_CLEAR_THRESHOLD_MS` | environment variable | c,py | 3 |
-| `REMOTIX_SISTEMA_15` | `REMOTIX_SYSTEM_15` | environment variable | py | 2 |
-| `REMOTIX_SPORTELLO_PARLA` | `REMOTIX_ENDPOINT_SPEAKS` | environment variable | py | 1 |
-| `REMOTIX_SUL_SERVER` | `REMOTIX_ON_SERVER` | environment variable | py,sh | 25 |
-| `REMOTIX_SUONO_H` | `REMOTIX_SOUND_H` | environment variable | c | 2 |
-| `REMOTIX_TASTIERA_H` | `REMOTIX_KEYBOARD_H` | environment variable | c | 3 |
-| `REMOTIX_TELEFONO` | `REMOTIX_PHONE` | environment variable | py | 6 |
-| `REMOTIX_TELEFONO_A_SECCO` | `REMOTIX_PHONE_DRY_RUN` | environment variable | py | 2 |
-| `REMOTIX_TELEFONO_CDP` | `REMOTIX_PHONE_CDP` | environment variable | py | 3 |
-| `REMOTIX_TELEFONO_HOST` | `REMOTIX_PHONE_HOST` | environment variable | py | 4 |
-| `REMOTIX_TELEFONO_SPORTELLO` | `REMOTIX_PHONE_ENDPOINT` | environment variable | py | 3 |
-| `REMOTIX_TETTO` | `REMOTIX_CAP` | environment variable | py | 5 |
-| `REMOTIX_TETTO_SESSIONI` | `REMOTIX_SESSION_CAP` | environment variable | py,sh | 7 |
-| `REMOTIX_TRASPORTO_H` | `REMOTIX_TRANSPORT_H` | environment variable | c | 2 |
-| `REMOTIX_UTENTE_VERI` | `REMOTIX_REAL_USER` | environment variable | sh | 1 |
-| `REMOTIX_VADIRETTA_H` | `REMOTIX_VADIRECT_H` | environment variable | c | 2 |
-| `REMOTIX_VIVI` | `REMOTIX_ALIVE` | environment variable | sh | 1 |
-| `REMOTIX_VULKAN_CONVERSIONE` | `REMOTIX_VULKAN_CONVERSION` | environment variable | c,py | 5 |
-| `REMOTIX_WAYLAND_VERI` | `REMOTIX_REAL_WAYLAND` | environment variable | py,sh | 5 |
-| `RIPRESA` | `RESUMED` | data name (dati.tsv: log-text) | c,html,py | 19 |
-| `RITARDO_FUORI_LIMITI` | `DELAY_OUT_OF_LIMITS` | data name (dati.tsv: log-text) | c,py | 7 |
-| `RX_ISO_ATTESA` | `RX_ISO_WAIT` | environment variable | sh | 1 |
-| `RX_ISO_SOLO_PREPARA` | `RX_ISO_PREPARE_ONLY` | environment variable | sh | 2 |
-| `RX_PERC` | `RX_PATH` | environment variable | py | 2 |
-| `RX_REVISIONE` | `RX_REVISION` | environment variable | conf,py,sh | 15 |
-| `RX_RIGA` | `RX_LINE` | environment variable | py | 2 |
-| `RX_RILASCIO` | `RX_RELEASE` | environment variable | sh | 2 |
-| `RX_RIPR` | `RX_RESUME` | environment variable | py | 2 |
-| `RX_SELINUX_PERMISSIVO` | `RX_SELINUX_PERMISSIVE` | environment variable | conf,sh | 2 |
-| `RX_SPORCO` | `RX_DIRTY` | environment variable | py,sh | 5 |
-| `RX_VERSIONE` | `RX_VERSION` | environment variable | conf,py,sh | 25 |
-| `RX_VM_CATTURA` | `RX_VM_CAPTURE` | environment variable | sh | 4 |
-| `RX_VM_RETE` | `RX_VM_NETWORK` | environment variable | sh | 4 |
-| `RX_VM_RIAVVIA_S` | `RX_VM_RESTART_S` | environment variable | sh | 3 |
-| `RX_VM_SEME` | `RX_VM_SEED` | environment variable | sh | 4 |
-| `RX_VM_TAVOLETTA` | `RX_VM_TABLET` | environment variable | sh | 4 |
-| `SBLOCCA` | `UNBLOCK` | data name (dati.tsv: wire-string) | c,py,sh | 34 |
-| `SESSIONE_ABBANDONATA` | `SESSION_ABANDONED` | data name (dati.tsv: reason) | c,html,py | 9 |
-| `SESSIONE_LOCALE_PREVALSA` | `LOCAL_SESSION_PREVAILED` | data name (dati.tsv: reason) | c,html,py | 11 |
-| `SESSIONE_TERMINATA` | `SESSION_TERMINATED` | data name (dati.tsv: reason) | c,py | 13 |
-| `TASTO` | `KEY` | data name (dati.tsv: json-value) | c,py | 2 |
-| `TOLTO` | `REMOVED` | data name (dati.tsv: wire-string) | c,py,sh | 33 |
-| `__AVVISO__` | `__WARNING__` | data name (dati.tsv: kv-key) | c,html | 4 |
-| `__IMPRONTA__` | `__FINGERPRINT__` | data name (dati.tsv: kv-key) | c,html | 5 |
-| `abbandono-s` | `abandon-s` | option / subcommand / kebab name | c,py,sh | 15 |
-| `accento-scuro` | `accent-dark` | option / subcommand / kebab name | css,html | 4 |
-| `accesso-entra` | `access-enter` | option / subcommand / kebab name | html | 2 |
-| `accesso-gira` | `access-runs` | option / subcommand / kebab name | html | 2 |
-| `accesso-respira` | `access-breathes` | option / subcommand / kebab name | html | 2 |
-| `accesso-scuote` | `access-shakes` | option / subcommand / kebab name | html | 2 |
-| `algoritmo` | `algorithm` | data name (dati.tsv: json-key) | c | 1 |
-| `altro_scatola` | `other_box` | data name (dati.tsv: json-value) | py | 12 |
-| `ammazza-aiutante` | `kill-helper` | option / subcommand / kebab name | sh | 4 |
-| `anche-lo-sporco` | `dirty-too` | option / subcommand / kebab name | py | 6 |
-| `anche-se-non-vuoto` | `even-if-not-empty` | option / subcommand / kebab name | py | 2 |
-| `anche-se-qualcuno-e-dentro` | `even-if-someone-is-inside` | option / subcommand / kebab name | py | 1 |
-| `anticipo-foto-s` | `photo-lead-s` | option / subcommand / kebab name | py | 2 |
-| `applicazione-che-muore` | `dying-app` | option / subcommand / kebab name | py,sh | 8 |
-| `appunti-attendi` | `clipboard-wait` | option / subcommand / kebab name | py | 2 |
-| `appunti-copia` | `clipboard-copy` | option / subcommand / kebab name | py | 2 |
-| `appunti-scrivi` | `clipboard-write` | option / subcommand / kebab name | py | 3 |
-| `argomenti-ciechi` | `blind-arguments` | option / subcommand / kebab name | py | 1 |
-| `ascolto-s` | `listen-s` | option / subcommand / kebab name | py | 3 |
-| `assesta-s` | `settle-s` | option / subcommand / kebab name | py | 1 |
-| `attacco` | `attach` | data name (dati.tsv: wire-string) | html | 1 |
-| `attesa-ammesso` | `wait-admitted` | option / subcommand / kebab name | py | 1 |
-| `attesa-ammissione` | `wait-admission` | option / subcommand / kebab name | py | 1 |
-| `attesa-attacca` | `waiting-attach` | data name (dati.tsv: log-text) | c,py | 6 |
-| `attesa-avvio` | `wait-startup` | option / subcommand / kebab name | py | 1 |
-| `attesa-biglietto` | `wait-ticket` | option / subcommand / kebab name | py | 1 |
-| `attesa-browser` | `wait-browser` | option / subcommand / kebab name | py | 3 |
-| `attesa-chiusura` | `wait-closing` | option / subcommand / kebab name | py,sh | 6 |
-| `attesa-ciao` | `waiting-hello` | data name (dati.tsv: log-text) | c,py | 10 |
-| `attesa-compositore` | `wait-compositor` | option / subcommand / kebab name | py | 1 |
-| `attesa-credenziali` | `waiting-credentials` | data name (dati.tsv: log-text) | c,py | 7 |
-| `attesa-crollo` | `wait-collapse` | option / subcommand / kebab name | py | 1 |
-| `attesa-figlio` | `wait-child` | option / subcommand / kebab name | py | 1 |
-| `attesa-finestra` | `wait-window` | option / subcommand / kebab name | py | 5 |
-| `attesa-nascita` | `wait-birth` | option / subcommand / kebab name | py | 1 |
-| `attesa-nascita-s` | `wait-birth-s` | option / subcommand / kebab name | py | 1 |
-| `attesa-palco` | `wait-stage` | option / subcommand / kebab name | py,sh | 13 |
-| `attesa-primo-fotogramma` | `wait-first-frame` | option / subcommand / kebab name | py | 1 |
-| `attesa-rientro` | `wait-reentry` | option / subcommand / kebab name | py | 3 |
-| `attesa-s` | `wait-s` | option / subcommand / kebab name | py | 4 |
-| `attesa-scatto` | `wait-shot` | option / subcommand / kebab name | py | 6 |
-| `attesa-scena` | `wait-scene` | option / subcommand / kebab name | c,py | 13 |
-| `attesa-sessione` | `wait-session` | option / subcommand / kebab name | py | 1 |
-| `attesa-sgombero` | `wait-clearout` | option / subcommand / kebab name | py | 5 |
-| `attesa-sink` | `wait-sink` | option / subcommand / kebab name | py,sh | 3 |
-| `attesa-sveglia` | `wait-wake` | option / subcommand / kebab name | py | 1 |
-| `attesa-tasto` | `wait-key` | option / subcommand / kebab name | py | 1 |
-| `attesa-tela` | `wait-canvas` | option / subcommand / kebab name | py | 1 |
-| `attesa-uscita` | `wait-exit` | option / subcommand / kebab name | py | 2 |
-| `attesa-uscita-s` | `wait-exit-s` | option / subcommand / kebab name | py | 1 |
-| `attesa-verdetto` | `waiting-verdict` | data name (dati.tsv: log-text) | c,html,py | 21 |
-| `audio-decodifica-ms` | `audio-decoding-ms` | option / subcommand / kebab name | py | 2 |
-| `audio-passo-us` | `audio-step-us` | option / subcommand / kebab name | py | 2 |
-| `audio-prova` | `audio-test` | option / subcommand / kebab name | c,conf,py,sh | 20 |
-| `audio-regola` | `audio-rule` | option / subcommand / kebab name | py | 20 |
-| `audio-scrivi` | `audio-write` | option / subcommand / kebab name | py | 9 |
-| `avviso-muro` | `warning-wall` | option / subcommand / kebab name | html | 3 |
-| `banco-nel-binario` | `bench-in-binary` | data name (dati.tsv: kv-key) | sh | 1 |
-| `banco-w1` | `bench-w1` | option / subcommand / kebab name | conf,make,py | 4 |
-| `bordo-blu` | `edge-blue` | option / subcommand / kebab name | html | 3 |
-| `bozze-attese` | `expected-drafts` | option / subcommand / kebab name | py | 3 |
-| `browser-griglia` | `browser-grid` | option / subcommand / kebab name | html | 4 |
-| `browser-sez` | `browser-sect` | option / subcommand / kebab name | html | 1 |
-| `byte_persi` | `byte_lost` | data name (dati.tsv: log-marker) | c,py | 10 |
-| `byte_persi_d` | `byte_lost_d` | data name (dati.tsv: log-marker) | c,py | 5 |
-| `byte_spediti` | `byte_shipped` | data name (dati.tsv: log-marker) | c,py | 11 |
-| `caduta-s` | `drop-s` | option / subcommand / kebab name | py | 1 |
-| `campo-bordo` | `field-border` | option / subcommand / kebab name | css,html | 5 |
-| `campo-bordo-su` | `field-border-hover` | option / subcommand / kebab name | css,html | 5 |
-| `chiaro-fondo` | `light-background` | option / subcommand / kebab name | css,html | 13 |
-| `chiave-a` | `key-at` | option / subcommand / kebab name | c,sh | 6 |
-| `chiave-dopo` | `key-after` | option / subcommand / kebab name | py | 2 |
-| `chiavi-attese` | `expected-keys` | option / subcommand / kebab name | py,sh | 3 |
-| `chiavi-ogni` | `keys-every` | option / subcommand / kebab name | c | 3 |
-| `clic-dopo` | `click-after` | option / subcommand / kebab name | py | 3 |
-| `clic-ogni` | `click-every` | option / subcommand / kebab name | py | 2 |
-| `cliente-di-prova` | `test-client` | data name (dati.tsv: capability-value) | py | 4 |
-| `coda-scatto` | `shot-tail` | option / subcommand / kebab name | py | 1 |
-| `coda_rete_us` | `network_queue_us` | data name (dati.tsv: log-marker) | c,py | 3 |
-| `codice-evdev` | `code-evdev` | option / subcommand / kebab name | py | 1 |
-| `codificatore-fermo` | `stopped-encoder` | option / subcommand / kebab name | py,sh | 13 |
-| `comando-socket` | `command-socket` | option / subcommand / kebab name | c,conf,py,sh | 48 |
-| `come-al-riavvio` | `as-after-reboot` | option / subcommand / kebab name | sh | 4 |
-| `conferma-no` | `confirm-no` | option / subcommand / kebab name | html | 3 |
-| `conferma-si` | `confirm-yes` | option / subcommand / kebab name | html | 2 |
-| `conferma-testo` | `confirm-text` | option / subcommand / kebab name | html | 2 |
-| `continuita-s` | `continuity-s` | option / subcommand / kebab name | py | 2 |
-| `controllo-min` | `check-min` | option / subcommand / kebab name | py | 5 |
-| `controllo-rosso` | `check-red` | option / subcommand / kebab name | py | 1 |
-| `controllo-testimone` | `check-witness` | option / subcommand / kebab name | py | 3 |
-| `coppie-esaminate` | `examined-pairs` | option / subcommand / kebab name | py | 2 |
-| `costruisci-tutte` | `build-all` | option / subcommand / kebab name | sh | 2 |
-| `cpu-tutti` | `all-cpus` | option / subcommand / kebab name | py | 1 |
-| `credito-atteso` | `expected-credit` | option / subcommand / kebab name | py | 2 |
-| `da-scena` | `from-scene` | option / subcommand / kebab name | py | 3 |
-| `dal-bus` | `from-bus` | option / subcommand / kebab name | py,sh | 7 |
-| `data-agganciato` | `data-hooked` | option / subcommand / kebab name | html | 3 |
-| `data-bannato` | `data-banned` | option / subcommand / kebab name | c,html,py,sh | 24 |
-| `data-disposizione` | `data-arrangement` | option / subcommand / kebab name | html,py | 14 |
-| `data-puntatore` | `data-ptr` | option / subcommand / kebab name | html | 3 |
-| `data-restano-ms` | `data-remaining-ms` | option / subcommand / kebab name | c,html,py,sh | 12 |
-| `data-scheda` | `data-gpu_card` | option / subcommand / kebab name | html | 3 |
-| `data-schermo` | `data-display_screen` | option / subcommand / kebab name | html,py | 23 |
-| `deb-firma` | `deb-sign` | option / subcommand / kebab name | sh | 2 |
-| `desincronizzata` | `desynchronized` | data name (dati.tsv: wire-string) | c,html,py | 11 |
-| `desktop-nuovo` | `new-desktop` | option / subcommand / kebab name | py,sh | 13 |
-| `dgram_falsi_d` | `dgram_false_d` | data name (dati.tsv: log-marker) | c,py | 6 |
-| `dgram_persi_d` | `dgram_lost_d` | data name (dati.tsv: log-marker) | c,py | 4 |
-| `dipinto-dopo-reset` | `painted-after-reset` | option / subcommand / kebab name | py | 1 |
-| `distro-riga` | `distro-line` | option / subcommand / kebab name | html | 4 |
-| `dopo-scena` | `post-scene` | option / subcommand / kebab name | c,sh | 8 |
-| `due-col` | `two-col` | option / subcommand / kebab name | html | 3 |
-| `f-disp` | `f-avail` | option / subcommand / kebab name | html | 3 |
-| `figlio-interno` | `internal-child` | option / subcommand / kebab name | c,py,sh | 29 |
-| `file-del-banco` | `bench-files` | data name (dati.tsv: kv-key) | sh | 2 |
-| `fin-ricevuto` | `fin-received` | option / subcommand / kebab name | py | 1 |
-| `finestra-che-non-si-apre` | `window-that-does-not-open` | option / subcommand / kebab name | py,sh | 9 |
-| `finestra-guasto` | `fault-window` | option / subcommand / kebab name | py | 3 |
-| `finestra-s` | `window-s` | option / subcommand / kebab name | py | 8 |
-| `forma-sbagliata` | `wrong-shape` | option / subcommand / kebab name | py,sh | 10 |
-| `fotogramma-ripetuto` | `repeated-frame` | option / subcommand / kebab name | py,sh | 10 |
-| `fotogrammi-prima` | `frames-before` | option / subcommand / kebab name | py | 1 |
-| `frazione-coppie` | `pair-fraction` | option / subcommand / kebab name | py | 2 |
-| `frazione-minima` | `minimum-fraction` | option / subcommand / kebab name | py | 3 |
-| `fuori-linea` | `offline` | option / subcommand / kebab name | sh | 10 |
-| `fuso-log` | `merged-log` | option / subcommand / kebab name | py | 1 |
-| `giallo-b` | `yellow-b` | option / subcommand / kebab name | css | 3 |
-| `giallo-f` | `yellow-f` | option / subcommand / kebab name | css | 3 |
-| `giallo-t` | `yellow-t` | option / subcommand / kebab name | css | 3 |
-| `gid-atteso` | `expected-gid` | option / subcommand / kebab name | py | 1 |
-| `giornale-tutto` | `journal-all` | option / subcommand / kebab name | sh | 1 |
-| `giri_fermi` | `stopped_rounds` | data name (dati.tsv: log-marker) | c,py | 8 |
-| `giro_peggiore_ms` | `worst_round_ms` | data name (dati.tsv: log-marker) | c | 1 |
-| `grafico-cpu` | `chart-cpu` | option / subcommand / kebab name | html | 2 |
-| `grafico-video` | `chart-video` | option / subcommand / kebab name | html | 2 |
-| `griglia-f` | `grid-f` | option / subcommand / kebab name | html | 3 |
-| `guarda-s` | `look-s` | option / subcommand / kebab name | py | 2 |
-| `guasto-innestato` | `grafted-fault` | option / subcommand / kebab name | py,sh | 3 |
-| `h264_strada` | `h264_route` | data name (dati.tsv: json-key) | c,go | 3 |
-| `hevc_strada` | `hevc_route` | data name (dati.tsv: json-key) | c,go | 3 |
-| `i-portatile` | `i-laptop` | option / subcommand / kebab name | html | 3 |
-| `i-telefono` | `i-phone` | option / subcommand / kebab name | html | 3 |
-| `icona-d` | `icon-d` | option / subcommand / kebab name | html | 5 |
-| `idle-atteso` | `expected-idle` | option / subcommand / kebab name | py,sh | 5 |
-| `idr-attesi` | `expected-idr` | option / subcommand / kebab name | py,sh | 4 |
-| `inattivita-s` | `inactivity-s` | option / subcommand / kebab name | c,py,sh | 13 |
-| `incolla-nascosto` | `paste-hidden` | option / subcommand / kebab name | html,py | 6 |
-| `iniettore-accendi` | `injector-turn-on` | option / subcommand / kebab name | sh | 7 |
-| `iniettore-di` | `injector-of` | option / subcommand / kebab name | sh | 4 |
-| `iniettore-dice` | `injector-says` | option / subcommand / kebab name | sh | 4 |
-| `iniettore-registro` | `injector-log` | option / subcommand / kebab name | sh | 3 |
-| `iniettore-spegni` | `injector-turn-off` | option / subcommand / kebab name | sh | 6 |
-| `istante-us` | `instant-us` | option / subcommand / kebab name | py | 2 |
-| `journal-scatola` | `box-journal` | option / subcommand / kebab name | py | 8 |
-| `labwc_cliente` | `labwc_client` | data name (dati.tsv: json-value) | py | 11 |
-| `lascia-acceso` | `leave-on` | option / subcommand / kebab name | py | 1 |
-| `lascia-tetto` | `leave-cap` | option / subcommand / kebab name | py | 2 |
-| `lascia-un-inquilino` | `leave-a-tenant` | option / subcommand / kebab name | py,sh | 8 |
-| `lascia-un-processo` | `leave-a-process` | option / subcommand / kebab name | py,sh | 10 |
-| `lascia-una-casa` | `leave-a-home` | option / subcommand / kebab name | py,sh | 7 |
-| `ldd-pulito` | `ldd-clean` | data name (dati.tsv: kv-key) | sh | 1 |
-| `linea-morta` | `dead-line` | option / subcommand / kebab name | c,py,sh | 57 |
-| `linea-morta-silenzio-s` | `dead-line-silence-s` | option / subcommand / kebab name | c,py | 8 |
-| `linea-morta-stallo-ms` | `dead-line-stall-ms` | option / subcommand / kebab name | c,py,sh | 9 |
-| `livello-dir` | `level-dir` | option / subcommand / kebab name | py | 8 |
-| `marchio-grande` | `brand-large` | option / subcommand / kebab name | css | 1 |
-| `margine-filo` | `wire-margin` | option / subcommand / kebab name | py | 1 |
-| `margine-soglia` | `threshold-margin` | option / subcommand / kebab name | py | 1 |
-| `matrice-scorre` | `matrix-scrolls` | option / subcommand / kebab name | html | 2 |
-| `minimo-dopo-scena` | `min-after-scene` | option / subcommand / kebab name | c,sh | 6 |
-| `minimo_pacchetti` | `min_packets` | data name (dati.tsv: log-marker) | c,py | 3 |
-| `minimo_prove` | `min_tests` | data name (dati.tsv: log-marker) | c,py | 4 |
-| `minuti-ultimo` | `last-rung-minutes` | option / subcommand / kebab name | py | 4 |
-| `motore-annulla` | `engine-rollback` | option / subcommand / kebab name | sh | 3 |
-| `motore-cmd` | `engine-cmd` | option / subcommand / kebab name | sh | 2 |
-| `motore-monta` | `engine-mount` | option / subcommand / kebab name | sh | 2 |
-| `motore-smonta` | `engine-unmount` | option / subcommand / kebab name | sh | 2 |
-| `muore-dopo` | `dies-after` | option / subcommand / kebab name | py | 3 |
-| `niente-audio-silenzio` | `no-audio-silence` | option / subcommand / kebab name | c,py | 42 |
-| `niente-linea-morta` | `no-dead-line` | option / subcommand / kebab name | c,py | 17 |
-| `niente-ritmo-adattivo` | `no-adaptive-rate` | option / subcommand / kebab name | c,py,sh | 25 |
-| `nome-figlio` | `child-name` | option / subcommand / kebab name | py | 1 |
-| `non-collegare` | `no-connect` | option / subcommand / kebab name | py | 1 |
-| `non-rifare` | `no-rebuild` | option / subcommand / kebab name | py | 2 |
-| `nota-b` | `note-b` | option / subcommand / kebab name | html | 2 |
-| `notte-2` | `night-2` | option / subcommand / kebab name | css | 2 |
-| `notte-3` | `night-3` | option / subcommand / kebab name | css | 2 |
-| `ogni-s` | `every-s` | option / subcommand / kebab name | py | 3 |
-| `ombra-notte` | `ombra-night` | option / subcommand / kebab name | css | 2 |
-| `opzioni-di-banco-nell-unita` | `bench-options-in-unit` | data name (dati.tsv: kv-key) | sh | 2 |
-| `orologio-s` | `clock-s` | option / subcommand / kebab name | py | 1 |
-| `osserva-s` | `observe-s` | option / subcommand / kebab name | py | 1 |
-| `pacchetto-byte` | `package-bytes` | option / subcommand / kebab name | sh | 3 |
-| `pacman-firma` | `pacman-sign` | option / subcommand / kebab name | sh | 2 |
-| `pagina-b11` | `page-b11` | data name (dati.tsv: capability-value) | html | 1 |
-| `parola-cattiva` | `bad-password` | option / subcommand / kebab name | py | 1 |
-| `parola-file` | `password-file` | option / subcommand / kebab name | py,sh | 54 |
-| `parola-sudo` | `sudo-password` | option / subcommand / kebab name | py | 1 |
-| `passo-cpu` | `cpu-step` | option / subcommand / kebab name | py | 2 |
-| `passo-s` | `step-s` | option / subcommand / kebab name | py | 1 |
-| `passo-scena` | `scene-step` | option / subcommand / kebab name | py | 1 |
-| `pausa-staccato` | `detached-pause` | option / subcommand / kebab name | py | 1 |
-| `pausa-tasto` | `pause-key` | option / subcommand / kebab name | py | 1 |
-| `per-caso` | `per-case` | option / subcommand / kebab name | py,sh | 3 |
-| `piede-chiaro` | `foot-clear` | option / subcommand / kebab name | html | 16 |
-| `porte-base` | `base-ports` | option / subcommand / kebab name | py,sh | 35 |
-| `posa-scena` | `scene-settle` | option / subcommand / kebab name | py | 2 |
-| `pretendi-chi` | `require-who` | option / subcommand / kebab name | c,py | 10 |
-| `pretendi-pid` | `require-pid` | option / subcommand / kebab name | c,py | 4 |
-| `primo-s` | `first-s` | option / subcommand / kebab name | py | 1 |
-| `prova-codifica` | `encoding-test` | option / subcommand / kebab name | c,go,py,sh | 48 |
-| `pss-ogni` | `pss-every` | option / subcommand / kebab name | py | 3 |
-| `puntatore-di-ripiego` | `fallback-pointer` | option / subcommand / kebab name | html,py | 2 |
-| `puntatore-vecchia` | `old-pointer` | option / subcommand / kebab name | py | 3 |
-| `punti-v` | `points-v` | option / subcommand / kebab name | html | 7 |
-| `purezza-minima` | `minimum-purity` | option / subcommand / kebab name | py | 1 |
-| `qualita-a` | `quality-at` | option / subcommand / kebab name | c,sh | 4 |
-| `qualita-risale` | `quality-rises` | option / subcommand / kebab name | c,py | 16 |
-| `registro-byte` | `log-bytes` | option / subcommand / kebab name | sh | 1 |
-| `registro-cmd` | `log-cmd` | option / subcommand / kebab name | py | 6 |
-| `respiro-innesco` | `respite-trigger` | option / subcommand / kebab name | py | 2 |
-| `resta-dopo` | `stay-after` | option / subcommand / kebab name | py | 2 |
-| `resta-nascita` | `stay-birth` | option / subcommand / kebab name | py | 1 |
-| `resta-prima` | `stay-before` | option / subcommand / kebab name | py | 4 |
-| `rete-intera` | `whole-network` | option / subcommand / kebab name | py,sh | 9 |
-| `rete-quic` | `network-quic` | data name (dati.tsv: log-marker) | c,py | 66 |
-| `ricevuti_d` | `received_d` | data name (dati.tsv: log-marker) | c,py | 5 |
-| `ridimensiona-a` | `resize-at` | option / subcommand / kebab name | c,sh | 6 |
-| `rientra-subito` | `reenter-immediately` | option / subcommand / kebab name | py,sh | 9 |
-| `riprova-0f` | `retry-0f` | option / subcommand / kebab name | py | 5 |
-| `riprova-s` | `retry-s` | option / subcommand / kebab name | py | 1 |
-| `risorse-senza-root` | `resources-without-root` | option / subcommand / kebab name | py | 1 |
-| `ritira-esiti` | `fetch-outcomes` | option / subcommand / kebab name | sh | 1 |
-| `ritmo-adattivo` | `adaptive-rate` | option / subcommand / kebab name | c,py | 12 |
-| `ritmo-minimo` | `minimum-rate` | option / subcommand / kebab name | html,py | 8 |
-| `ritmo_arretrato` | `rate_backlog` | data name (dati.tsv: log-marker) | c,py | 5 |
-| `ritmo_posti` | `rate_slots` | data name (dati.tsv: log-marker) | c,py | 5 |
-| `riusa-utente` | `reuse-user` | option / subcommand / kebab name | py | 3 |
-| `rosso-b` | `red-b` | option / subcommand / kebab name | css | 4 |
-| `rosso-f` | `red-f` | option / subcommand / kebab name | css | 4 |
-| `rosso-t` | `red-t` | option / subcommand / kebab name | css | 4 |
-| `rpm-firma` | `rpm-sign` | option / subcommand / kebab name | sh | 2 |
-| `rpmbuild-esito` | `rpmbuild-outcome` | data name (dati.tsv: kv-key) | sh | 1 |
-| `rx_rilascio` | `rx_release` | data name (dati.tsv: kv-key) | conf,sh | 5 |
-| `rx_selinux_permissivo` | `rx_selinux_permissive` | data name (dati.tsv: kv-key) | conf,sh | 3 |
-| `rx_versione` | `rx_version` | data name (dati.tsv: kv-key) | conf,sh | 6 |
-| `salta-riaccensione` | `skip-restart` | option / subcommand / kebab name | py | 3 |
-| `salva-fetta` | `save-slice` | option / subcommand / kebab name | py | 1 |
-| `scala-s` | `scale-s` | option / subcommand / kebab name | py | 1 |
-| `scartati_d` | `discarded_d` | data name (dati.tsv: log-marker) | c,py | 3 |
-| `scarto-massimo` | `maximum-gap` | option / subcommand / kebab name | py | 3 |
-| `scena-che-lampeggia` | `flashing-scene` | option / subcommand / kebab name | py,sh | 11 |
-| `scena-ferma` | `still-scene` | option / subcommand / kebab name | py,sh | 15 |
-| `scena-guasta` | `broken-scene` | option / subcommand / kebab name | py | 1 |
-| `scena-s` | `scene-s` | option / subcommand / kebab name | py | 1 |
-| `scena-soglia-stretta-ms` | `scene-tight-threshold-ms` | option / subcommand / kebab name | py | 1 |
-| `scena-sorda` | `deaf-scene` | option / subcommand / kebab name | py,sh | 9 |
-| `scheda-b` | `card-b` | option / subcommand / kebab name | html | 5 |
-| `scorciatoie-apri` | `shortcuts-open` | option / subcommand / kebab name | html | 3 |
-| `scorciatoie-bottoni` | `shortcuts-buttons` | option / subcommand / kebab name | html | 1 |
-| `scorciatoie-elenco` | `shortcuts-list` | option / subcommand / kebab name | html | 1 |
-| `scorciatoie-riassunto` | `shortcuts-summary` | option / subcommand / kebab name | html | 2 |
-| `scorciatoie-stato` | `shortcuts-state` | option / subcommand / kebab name | html | 1 |
-| `scorciatoie-voci` | `shortcuts-entries` | option / subcommand / kebab name | html | 1 |
-| `segnale-scena` | `scene-signal` | option / subcommand / kebab name | c,sh | 8 |
-| `segni-browser` | `browser-marks` | option / subcommand / kebab name | py | 3 |
-| `seme-base` | `base-seed` | option / subcommand / kebab name | py | 3 |
-| `senza-clic` | `no-click` | option / subcommand / kebab name | py | 1 |
-| `senza-controllo` | `no-check` | option / subcommand / kebab name | py | 1 |
-| `senza-copia` | `no-copy` | option / subcommand / kebab name | py,sh | 11 |
-| `senza-coppia` | `no-pair` | option / subcommand / kebab name | py | 1 |
-| `senza-cura` | `no-fix` | option / subcommand / kebab name | py,sh | 24 |
-| `senza-eco` | `no-echo` | option / subcommand / kebab name | py | 7 |
-| `senza-guasto` | `no-fault` | option / subcommand / kebab name | py | 6 |
-| `senza-maiusc` | `no-shift` | option / subcommand / kebab name | py,sh | 7 |
-| `senza-pulsante` | `no-button` | option / subcommand / kebab name | py,sh | 10 |
-| `senza-riscaldamento` | `no-warmup` | option / subcommand / kebab name | py | 1 |
-| `senza-scheda` | `no-card` | option / subcommand / kebab name | py | 3 |
-| `senza-sessione` | `no-session` | option / subcommand / kebab name | py,sh | 9 |
-| `senza-sorgente` | `no-source` | option / subcommand / kebab name | py,sh | 11 |
-| `senza-sveglia` | `no-wake` | option / subcommand / kebab name | py | 2 |
-| `senza-tasto` | `no-key` | option / subcommand / kebab name | py,sh | 10 |
-| `senza-tela-minima` | `no-min-canvas` | option / subcommand / kebab name | py | 1 |
-| `senza-usermod` | `no-usermod` | option / subcommand / kebab name | py,sh | 11 |
-| `sessione-via` | `session-stop` | option / subcommand / kebab name | sh | 3 |
-| `sfratto-ms` | `eviction-ms` | option / subcommand / kebab name | c,py,sh | 27 |
-| `sgombra-soglia-ms` | `clear-threshold-ms` | option / subcommand / kebab name | c,py,sh | 38 |
-| `soglia-coppia` | `pair-threshold` | option / subcommand / kebab name | py | 2 |
-| `soglia-cpu` | `cpu-threshold` | option / subcommand / kebab name | py | 2 |
-| `soglia_silenzio_ms` | `silence_threshold_ms` | data name (dati.tsv: log-marker) | c,py | 4 |
-| `solo-controllo-positivo` | `positive-check-only` | option / subcommand / kebab name | py,sh | 4 |
-| `solo-distacco` | `detach-only` | option / subcommand / kebab name | py,sh | 8 |
-| `solo-esito` | `outcome-only` | option / subcommand / kebab name | py | 1 |
-| `solo-porte` | `ports-only` | option / subcommand / kebab name | py | 2 |
-| `solo-qui` | `here-only` | option / subcommand / kebab name | sh | 4 |
-| `solo-strato-tecnico` | `technical-layer-only` | option / subcommand / kebab name | py | 1 |
-| `sonda-b2` | `probe-b2` | data name (dati.tsv: capability-value) | html | 1 |
-| `sorgente-out` | `source-out` | option / subcommand / kebab name | c,sh | 5 |
-| `ssh-parola` | `ssh-password` | option / subcommand / kebab name | sh | 4 |
-| `staccata-per-silenzio` | `detached-for-silence` | data name (dati.tsv: log-text) | c,py | 10 |
-| `stato-iniziale` | `initial-state` | option / subcommand / kebab name | py,sh | 7 |
-| `strato-tecnico` | `technical-layer` | option / subcommand / kebab name | py,sh | 5 |
-| `tabella-capacita` | `capabilities-table` | option / subcommand / kebab name | html | 2 |
-| `taratura-s` | `calibration-s` | option / subcommand / kebab name | py | 1 |
-| `tastiera-comando` | `keyboard-command` | option / subcommand / kebab name | html,py | 5 |
-| `tela-altezza` | `canvas-height` | option / subcommand / kebab name | py | 1 |
-| `tela-larghezza` | `canvas-width` | option / subcommand / kebab name | py | 1 |
-| `tela-video` | `canvas-video` | option / subcommand / kebab name | html | 1 |
-| `tenue-fondo` | `faint-background` | option / subcommand / kebab name | css,html | 5 |
-| `terminale-via` | `terminal-away` | option / subcommand / kebab name | sh | 4 |
-| `testimone-via` | `witness-away` | option / subcommand / kebab name | sh | 5 |
-| `tetti-codice` | `code-caps` | option / subcommand / kebab name | py,sh | 7 |
-| `tetto-banda-mbit` | `bandwidth-cap-mbit` | option / subcommand / kebab name | c,py | 15 |
-| `tetto-controllo-s` | `check-cap-s` | option / subcommand / kebab name | py | 1 |
-| `tetto-foto-s` | `photo-cap-s` | option / subcommand / kebab name | py | 1 |
-| `tetto-prova` | `test-cap` | option / subcommand / kebab name | py | 1 |
-| `tetto-s` | `cap-s` | option / subcommand / kebab name | py | 12 |
-| `tetto-sessioni` | `session-cap` | option / subcommand / kebab name | c,py,sh | 36 |
-| `tieni-inquilino` | `keep-tenant` | option / subcommand / kebab name | py | 1 |
-| `togli-nome` | `remove-name` | option / subcommand / kebab name | py,sh | 11 |
-| `tolleranza-hz` | `tolerance-hz` | option / subcommand / kebab name | py | 1 |
-| `tui-lingua` | `tui-language` | option / subcommand / kebab name | sh | 2 |
-| `uccidi-la-sessione` | `kill-the-session` | option / subcommand / kebab name | py,sh | 10 |
-| `uid-atteso` | `expected-uid` | option / subcommand / kebab name | py | 1 |
-| `ultimo_numero` | `last_number` | data name (dati.tsv: log-text) | c,py | 17 |
-| `usciti_byte` | `exited_bytes` | data name (dati.tsv: log-marker) | c,py,sh | 26 |
-| `utente-base` | `base-user` | option / subcommand / kebab name | py | 5 |
-| `utente-cattivo` | `bad-user` | option / subcommand / kebab name | py,sh | 2 |
-| `verde-b` | `green-b` | option / subcommand / kebab name | css | 3 |
-| `verde-f` | `green-f` | option / subcommand / kebab name | css | 3 |
-| `verde-t` | `green-t` | option / subcommand / kebab name | css | 3 |
-| `verificato` | `verified` | data name (dati.tsv: json-value) | py | 3 |
-| `vetro-blu` | `glass-blue` | option / subcommand / kebab name | html | 4 |
-| `video-profondita` | `video-depth` | option / subcommand / kebab name | py | 1 |
-| `video-scrivi` | `video-write` | option / subcommand / kebab name | py | 11 |
-| `video_avanza` | `video_advances` | data name (dati.tsv: json-value) | py | 10 |
 
 ### Coverage of the contract analysis (contratti/*.tsv)
 
-**dati-contratto.tsv** — kept (unresolved collision): 4, left out on purpose (step 2): 2, no Italian word: 92, not renamed (path, product name, or not found by the analysis): 49, renamed by dati.tsv: 46, renamed by the table: 361
+**dati-contratto.tsv** — left out on purpose (step 2): 367, no Italian word: 92, not renamed (path, product name, or not found by the analysis): 95
 
-Not renamed: `#puntatore-di-ripiego` `#tastiera-comando` `al_secondo` `ammissione_s` `bit_per_canale_chi_lo_dice` `blocco_max_ms` `buchi_istante` `byte_flusso` `categorie` `chi_lo_dice` `cinture` `commit_cura` `consegna_a_F2_3` `cpu_macchina_pct` `distinti_riciclati` `durata_lavoro_s` `errori_decodifica` `giro_eco` `ha_visto_il_guasto` `inizio_finestra_t` `inizio_t` `latenza_ms` `legami_in_ingresso` `mem_totale_mb` `mem_usata_mb` `motivo` `nascita_ms` `nascita_s` `positivo` `primari` `primo_fotogramma_ms` `primo_non_degenere_s` `processi_gpu` `recinti` `remotix-appunti` `remotix-cattura` `remotix-figlio` `remotix-invisibile` `remotix-suono` `remotix_porta` `richieste` `ritardi_eco_ms` `ritardi_ms` `sessioni_durante` `sessioni_remotix` `si` `strozzatura_frazione` `tratti keys (strada, tela, dipinti, consegnati, fuori, dentro, coda_dec, saltati_coda, tardive, eta_ms, ric_ms, costo_disegno_ms, "8_decode_richiamo", "9a_richiamo_chiamata", "9b_conversione", "10_vetro", "9_10_richiamo_vetro", "11_vetro_prossimo_quadro")` `utenti-negati`
+Not renamed: `#puntatore-di-ripiego` `#tastiera-comando` `BOTTONE` `BUCHI` `CONFORME` `F18ESITO` `NON-BANNATO` `NON-CAPITO` `NON-CONFORME` `RIPRESA` `SBLOCCA` `TASTO` `TOLTO` `__AVVISO__` `__IMPRONTA__` `al_secondo` `algoritmo` `altro_scatola` `ammissione_s` `banco-nel-binario` `bit_per_canale_chi_lo_dice` `blocco_max_ms` `buchi_istante` `byte_flusso` `byte_persi` `byte_persi_d` `byte_spediti` `categorie` `chi_lo_dice` `cinture` `coda_rete_us` `commit_cura` `consegna_a_F2_3` `cpu_macchina_pct` `dgram_falsi_d` `dgram_persi_d` `distinti_riciclati` `durata_lavoro_s` `errori_decodifica` `file-del-banco` `giri_fermi` `giro_eco` `giro_peggiore_ms` `h264_strada` `ha_visto_il_guasto` `hevc_strada` `inizio_finestra_t` `inizio_t` `labwc_cliente` `latenza_ms` `ldd-pulito` `legami_in_ingresso` `mem_totale_mb` `mem_usata_mb` `minimo_pacchetti` `minimo_prove` `nascita_ms` `nascita_s` `opzioni-di-banco-nell-unita` `positivo` `primari` `primo_fotogramma_ms` `primo_non_degenere_s` `processi_gpu` `recinti` `remotix-appunti` `remotix-cattura` `remotix-figlio` `remotix-invisibile` `remotix-suono` `remotix_porta` `rete-quic` `ricevuti_d` `ritardi_eco_ms` `ritardi_ms` `ritmo_arretrato` `ritmo_posti` `rpmbuild-esito` `rx_rilascio` `rx_selinux_permissivo` `rx_versione` `scartati_d` `sessioni_durante` `sessioni_remotix` `soglia_silenzio_ms` `strozzatura_frazione` `tratti keys (strada, tela, dipinti, consegnati, fuori, dentro, coda_dec, saltati_coda, tardive, eta_ms, ric_ms, costo_disegno_ms, "8_decode_richiamo", "9a_richiamo_chiamata", "9b_conversione", "10_vetro", "9_10_richiamo_vetro", "11_vetro_prossimo_quadro")` `usciti_byte` `utenti-negati` `verificato` `video_avanza`
 
-**opzioni-contratto.tsv** — kept (unresolved collision): 1, left out on purpose (step 2): 2, no Italian word: 2, not renamed (path, product name, or not found by the analysis): 26, renamed by dati.tsv: 4, renamed by the table: 770
+**opzioni-contratto.tsv** — left out on purpose (step 2): 773, no Italian word: 2, not renamed (path, product name, or not found by the analysis): 30
 
-Not renamed: `B3_SPIA` `BRUCIATORI` `C15G4_TEMPI` `FINTO_CLASSE` `FINTO_MUORE` `G7_TRACCIA` `LIVELLO` `OPERAZIONI` `PARLANTINA` `PROFONDITA` `PUNTO` `QUALITA` `REMOTIX_NOME` `VECCHIA_X264_EXTRA` `W1_RIPRENDI` `W1_STRADA` `W1_TIENI` `a-secco` `con-guasti` `copia` `raffica` `remotix-figlio` `senza-nastro` `senza-rete` `solo-certifica` `sul-server` `un-verso`
+Not renamed: `B3_SPIA` `BRUCIATORI` `C15G4_TEMPI` `FINTO_CLASSE` `FINTO_MUORE` `G7_TRACCIA` `LIVELLO` `OPERAZIONI` `PARLANTINA` `PROFONDITA` `PUNTO` `QUALITA` `REMOTIX_NOME` `SBLOCCA` `VECCHIA_X264_EXTRA` `W1_RIPRENDI` `W1_STRADA` `W1_TIENI` `a-secco` `con-guasti` `raffica` `remotix-figlio` `rx_rilascio` `rx_selinux_permissivo` `rx_versione` `senza-nastro` `senza-rete` `solo-certifica` `sul-server` `un-verso`
 
-**rcp-contratto.tsv** — kept (unresolved collision): 3, no Italian word: 22, not renamed (path, product name, or not found by the analysis): 3, renamed by dati.tsv: 32, renamed by the table: 160
+**rcp-contratto.tsv** — left out on purpose (step 2): 127, no Italian word: 22, not renamed (path, product name, or not found by the analysis): 35, renamed by the table: 36
 
-Not renamed: `RCPREG` `RIFIUTATA` `motivo` `remotix-pagina` `restanoMs` `si`
+Not renamed: `ACCETTATA` `APPUNTI_ANNUNCIO` `APPUNTI_CHIEDI` `APPUNTI_TESTO` `BANCO_MARCA` `BUDGET_PIENO` `COMPOSITORE_INCAPACE` `DISPOSIZIONE` `FUNZIONE_SPENTA` `GIA_ATTIVA_LOCALE` `INATTIVITA` `MISURA_FUORI_LIMITI` `NON-BANNATO` `NON_ORA` `RCPREG` `RIPRESA` `RITARDO_FUORI_LIMITI` `SBLOCCA` `SESSIONE_ABBANDONATA` `SESSIONE_LOCALE_PREVALSA` `SESSIONE_TERMINATA` `TOLTO` `attacco` `attesa-attacca` `attesa-ciao` `attesa-credenziali` `attesa-verdetto` `cliente-di-prova` `desincronizzata` `pagina-b11` `remotix-pagina` `restanoMs` `sonda-b2` `staccata-per-silenzio` `ultimo_numero`
 
 
 ### Step 2 (later): file and directory moves (521)
