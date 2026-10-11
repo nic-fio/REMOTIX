@@ -125,7 +125,17 @@ def parse_places(s):
     [brackets] or (parentheses) after a place is dropped."""
     out, bad, last = [], [], None
     s = re.sub(r"\[[^\]]*\]|\([^)]*\)", " ", s)
-    for p in re.split(r"[,;\s]+", s.strip()):
+    pieces = []
+    for q in re.split(r"[,;]", s):
+        q = q.strip()
+        w = q.split()
+        # blanks separate places, unless the piece is one place whose file name holds a blank
+        if len(w) > 1 and not all(PLACE_RX.match(x) or re.fullmatch(r"\d+(?:-\d+)?|\*", x) for x in w) \
+                and PLACE_RX.match(q):
+            pieces.append(q)
+        else:
+            pieces += w
+    for p in pieces:
         if not p:
             continue
         m = PLACE_RX.match(p)
@@ -176,6 +186,9 @@ def read_tables(paths):
             old, new, kind, places = (x.strip() for x in c[:4])
             why = c[4].strip() if len(c) > 4 else ""
             pl, bad = parse_places(places)
+            # «key=» is the writers' notation for a log key: the name is the key (its readers spell it bare)
+            if old.endswith("=") and new.endswith("=") and re.fullmatch(r"[A-Za-z0-9_.-]+=", old):
+                old, new = old[:-1], new[:-1]
             if bad:
                 errors.append("%s: %s: malformed places %s" % (src, old, " ".join(bad[:5])))
             if not old or re.search(r"\s", old) or re.search(r"\s", new) or not kind:
@@ -408,7 +421,10 @@ def merge(tables_dir, root, out, window):
             errors.append("casing twins disagree (or say «not a twin» in why): " + "; ".join(
                 "%s → %s" % (r.old, r.new) for r in sorted(rs, key=lambda r: (r.old, r.new))))
     for r in live:
-        if style(r.old) != style(r.new) and "style" not in r.why.lower():
+        so, sn = style(r.old), style(r.new)
+        if "word" in (so.split("-")[-2], sn.split("-")[-2]):      # one word ↔ a compound: same style
+            so, sn = (x.rsplit("-", 1)[-1] + n[:len(n) - len(n.lstrip("-"))] for x, n in ((so, r.old), (sn, r.new)))
+        if so != sn and "style" not in r.why.lower():
             warnings.append("%s → %s: style %s becomes %s" % (r.old, r.new, style(r.old), style(r.new)))
 
     # 5. stale places, and a new already in a place file
@@ -479,7 +495,8 @@ def apply(root, table, window, since, dry):
         for m in misses:
             print("⛔ " + m)
         print("⛔ apply: %d places not found — the table is stale; nothing written" % len(misses))
-        return 1
+        if not dry:
+            return 1
     per = collections.defaultdict(lambda: collections.defaultdict(list))
     for r, f, i in hits:
         per[f][i].append(r)
@@ -502,9 +519,9 @@ def apply(root, table, window, since, dry):
                    if any(f.startswith(os.path.dirname(g) + "/sources/") for f in per))
     for g in regen:
         print("ℹ %s: its sources changed — regenerate it: %s" % (g, GENERATED[g]))
-    print("✅ apply%s: %d replacements in %d files (%d places)" %
-          (" (dry run, nothing written)" if dry else "", total, files, len(hits)))
-    return 0
+    print("%s apply%s: %d replacements in %d files (%d places)" %
+          ("⛔" if misses else "✅", " (dry run, nothing written)" if dry else "", total, files, len(hits)))
+    return 1 if misses else 0
 
 
 # ═══ check ════════════════════════════════════════════════════════════════════

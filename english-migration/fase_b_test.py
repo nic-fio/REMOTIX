@@ -148,6 +148,7 @@ class Boundaries(unittest.TestCase):
         self.assertEqual(pl, [("a.c", 3), ("a.c", 5), ("b.py", 7), ("b.py", 8), ("b.py", 9), ("c.md", None),
                               ("d.sh", 4), ("e.go", 2)])
         self.assertEqual(fase_b.parse_places("12, x")[1], ["12", "x"])
+        self.assertEqual(fase_b.parse_places("docs/Technical Manual.html:205")[0], [("docs/Technical Manual.html", 205)])
 
     def test_words_and_style(self):
         self.assertEqual(fase_b.words("--prova-esce"), ("prova", "esce"))
