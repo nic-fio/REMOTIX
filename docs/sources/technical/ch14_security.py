@@ -176,10 +176,10 @@ S3 = p("The server runs one " + c("poll") + " loop for every connected user, and
         ["One reason for every refusal", "The client gets " + c("0x07 CREDENZIALI_ERRATE") + " (wrong credentials) whether the user does "
          "not exist, the password is wrong, the account is expired, or PAM could not judge", "Telling the outside "
          "«your account is locked» is an oracle."],
-        ["Two facts in the log", c("PAM ha RIFIUTATO") + " (PAM REFUSED) for " + c("PAM_AUTH_ERR") + ", " + c("PAM_USER_UNKNOWN") + ", "
+        ["Two facts in the log", c("PAM REFUSED") + " for " + c("PAM_AUTH_ERR") + ", " + c("PAM_USER_UNKNOWN") + ", "
          + c("PAM_PERM_DENIED") + ", " + c("PAM_CRED_INSUFFICIENT") + ", " + c("PAM_ACCT_EXPIRED") + ", "
-         + c("PAM_NEW_AUTHTOK_REQD") + ", " + c("PAM_MAXTRIES") + "; " + c("⛔ PAM NON HA POTUTO GIUDICARE")
-         + " (PAM COULD NOT JUDGE) for anything else, naming the service file and " + c("/etc/remotix/utenti-negati")
+         + c("PAM_NEW_AUTHTOK_REQD") + ", " + c("PAM_MAXTRIES") + "; " + c("⛔ PAM COULD NOT JUDGE")
+         + " for anything else, naming the service file and " + c("/etc/remotix/utenti-negati")
          + " (the denied-users list)", "Otherwise a missing PAM file looks "
          "exactly like a thousand wrong passwords, and the diagnosis hunts the password for hours."],
         ["One attempt per connection", c("RCP.md") + " §4.4", "The ban counter must count attempts, not connections."],
@@ -314,7 +314,7 @@ S6 = p("The way out for whoever bans themselves from their own phone must ask «
          "administrator adds the option through " + c("REMOTIX_OPZIONI") + " (deb, rpm). " + c("SPECIFICHE.md")
          + " §4.2 promises the command as a way out. Not settled yet.", "Not in the packaged units.") + \
     note(c("rcp_sblocca()") + " (unlock) writes the file through " + c("salva_ban()") + " (save the bans) without a "
-         "session, which stays silent on a write failure: the line " + c("⛔ SBLOCCATO") + " (unlocked) therefore says the rewrite was <i>requested</i>, not done.",
+         "session, which stays silent on a write failure: the line " + c("⛔ UNBLOCKED") + " therefore says the rewrite was <i>requested</i>, not done.",
          "Requested, not confirmed.")
 
 # ── 14.7 Isolation between users ─────────────────────────────────────────
@@ -366,8 +366,7 @@ S7 = p("The parent stays root because only root can verify another user's passwo
          "that does not answer is not a stage, it is a forgotten process. After the first answer there is no "
          "deadline: the stage survives detachment (I4)."],
         ["The child re-checks itself", "At start " + c("figlio_vive()") + " (the child's main function) compares its "
-         "uid/gid with " + c("argv[3]") + "/" + c("argv[4]"), c("⛔⛔ NON SONO CHI DOVREI ESSERE") + " (I am not who I "
-         "should be) is logged with the user's name."],
+         "uid/gid with " + c("argv[3]") + "/" + c("argv[4]"), c("⛔⛔ I AM NOT WHO I SHOULD BE") + " is logged with the user's name."],
     ], "«TAB» — How the parent and the child keep each other honest") + \
     p("One child per user, one graphical session per user (" + c("SPECIFICHE.md") + " §5.1): a second device of the "
       "same user is refused with " + c("0x0F GIA_ATTIVA_REMOTA") + " (or takes the seat by ghost eviction, never "

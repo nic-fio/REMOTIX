@@ -256,11 +256,11 @@ S7 = p("The rate regulator is the only mechanism that lowers the frame rate, and
          "drops, 0 gaps, 1 key in the session)"],
         ["One keyframe per episode", c("serve_chiave") + " (key needed) is a boolean cleared only when the key has left whole, "
          "and deltas behind that key are not abandoned"],
-        ["Two log lines per episode", c("il ritmo SCENDE") + " (the rate goes down) with " + c("arretrato") + ", slots, queue bytes, "
+        ["Two log lines per episode", c("the rate DROPS") + " with " + c("backlog") + ", slots, queue bytes, "
          + c("cwnd") + ", " + c("cwnd_left") + ", bytes in flight, RTT and the queue inside the network ("
-         + c("smoothed_rtt - min_rtt") + "); " + c("il ritmo RISALE") + " (the rate goes back up) with the duration. Never one line per frame"],
-        ["One line per second while on", c("ritmo_ciclo()") + " (the once-a-second rate tick) prints how many times " + c("arretrato")
-         + " was read: <i>zero reads</i> means a still scene, not “zero backlog”"],
+         + c("smoothed_rtt - min_rtt") + "); " + c("the rate RISES") + " with the duration. Never one line per frame"],
+        ["One line per second while on", c("ritmo_ciclo()") + " (the once-a-second rate tick) prints " + c("backlog READ N times")
+         + ", how many times the backlog was read: <i>zero reads</i> means a still scene, not “zero backlog”"],
     ], "«TAB» — What the regulator depends on and what it costs") + \
     p("Measured in the phase 9 paired comparison: keyframes dropped from 51.7–88.1 % of frames to 0.0–5.6 %, "
       "and the delivered rate rose 1.7–2.8× on the degraded profiles (" + c("DECISIONI.md") + " §3.1-septies). The "
@@ -300,8 +300,8 @@ S8 = p("A keyframe is about ten times a delta. Asking for one at every sign of t
         ["3 Mbit/s, moving desktop", "~171 ms", "371 · 462 → 1 552 · 1 595 · 1 725", "115 · 99 → 89 · 128"],
         ["1 Mbit/s, moving desktop", "600–1000 ms", "15 → 577", "57 → 47"],
     ], "«TAB» — Bench 07-b65, 21 Aug 2026 evening, test machine, alternating runs differing by one line") + \
-    p("Where there is bandwidth the cure declares itself inert (" + c("la banda misurata basta: resta il fondo di 150 ms")
-      + ", “the measured bandwidth is enough: the 150 ms floor remains”, 100 times out of 101 at 15 Mbit/s). On a narrow line the image stays broken longer after "
+    p("Where there is bandwidth the cure declares itself inert (" + c("the measured bandwidth is enough: the 150 ms backstop remains")
+      + ", 100 times out of 101 at 15 Mbit/s). On a narrow line the image stays broken longer after "
       "a loss — that is the price, and it is visible — and in exchange the audio, whose datagrams found "
       + c("cwnd_left = 0") + " behind keyframes asked faster than they could leave, gets through.")
 

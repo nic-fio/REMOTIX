@@ -262,8 +262,8 @@ S7 = p(c("pagina.c") + " is a small HTTPS/1.1 server: one request per connection
       "14 August 2026) and shared memory. The third header is not optional: with " + c("require-corp") + " the browser "
       "refuses any sub-resource that does not declare it, and the symptom does not mention isolation — the resource "
       "simply does not load.") + \
-    p("A banned address still gets the page, with HTTP status 200 and a notice that begins " + c("tentativi esauriti")
-      + " (attempts exhausted) and gives the hours and minutes left; the notice is written in Italian in "
+    p("A banned address still gets the page, with HTTP status 200 and a notice that begins " + c("attempts exhausted")
+      + " and gives the hours and minutes left; the notice is written in "
       + c("pagina.c") + ". The page is served even when banned because whoever is banned by mistake is almost always the owner, "
       "and a server that looks dead for half a day is the worst diagnosis; 200 rather than a 4xx because an intermediary "
       "or the browser may replace the body of an error response with its own page, and the sentence the owner must read "

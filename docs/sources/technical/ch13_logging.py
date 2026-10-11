@@ -47,12 +47,11 @@ S1 = p("Every line the server writes goes through one module, " + c("src/registr
 # ── 13.2 Anatomy of a log line ───────────────────────────────────────────
 S2 = p("A line is " + c("HH:MM:SS.mmm area [identity] body") + ": local wall-clock time with milliseconds, the area "
        "left-aligned in seven columns, the identity in brackets only when there is one, then the body.", lead=True) + \
-    code("08:41:07.312 avvio   ⭐ pronto: https://server.lan:7447  —  la sessione WebTransport vive su /rcp/1 (RCP.md §2.2)\n"
-         "08:41:19.884 rcp     [anna] PAM ha risposto (pratica 3): ammesso  ⭐ e il filo non si e' mai fermato (DECISIONI.md §1.10)\n"
-         "08:41:21.040 figlio  [anna] ⭐ PRIMA CONNESSIONE: «anna» non e' nei gruppi della scheda (render,video) …",
-         "text", "Three log lines as the server writes them (bodies are in Italian, as the code writes them: "
-         "«ready», «PAM answered (request 3): admitted, and the loop never stopped», «FIRST CONNECTION: anna is not "
-         "in the card groups»)") + \
+    code("08:41:07.312 avvio   ⭐ ready: https://server.lan:7447  —  the WebTransport session lives on /rcp/1 (RCP.md §2.2)\n"
+         "08:41:19.884 rcp     [anna] PAM answered (request 3): admitted  ⭐ and the thread never stopped (DECISIONI.md §1.10)\n"
+         "08:41:21.040 figlio  [anna] ⭐ FIRST CONNECTION: «anna» is not in the card's groups (render,video) and I am PUTTING it there, now …",
+         "text", "Three log lines as the server writes them (binaries built before the English migration write "
+         "the same lines in Italian)") + \
     table(["Rule", "Value", "Why"], [
         ["One " + c("write(2)") + " per line", "Header, body and newline in one buffer of 4096 bytes",
          "Until 21 Aug 2026 a line was three writes on an unbuffered " + c("stderr") + ". Parent and child append to "
@@ -248,9 +247,9 @@ S6 = p("With " + c("--journal") + " every event line also goes to the systemd jo
          "journalctl -t remotix REMOTIX_AREA=budget        # why somebody was refused\n"
          "journalctl -t remotix -o verbose -n 1            # see every field of the last line",
          "bash", "Reading the journal") + \
-    p("At startup the parent declares the outcome: either " + c("registro anche nel journal di systemd (--journal) …")
-      + " (log also in the systemd journal), or " + c("⚠ --journal chiesto ma il socket non si apre (<errno>): il "
-      "registro resta SOLO qui") + " (--journal requested but the socket does not open: the log stays ONLY here). "
+    p("At startup the parent declares the outcome: either " + c("log also in the systemd journal (--journal): …")
+      + ", or " + c("⚠ --journal requested but the socket does not open (<errno>): the "
+      "log stays ONLY here") + ". "
       "The journal is switched on before the first line, so the first line goes there too.") + \
     warn("all three packaged units start the server under systemd, whose default sends the unit's "
          + c("stderr") + " to the journal as well. With " + c("--journal") + " every event line of the parent is "
@@ -286,7 +285,7 @@ S7 = p("Three things never enter any log at any level: passwords, what the user 
          "(" + c("RCP.md") + " §11). Mouse buttons keep their code too.",
          c("registro_tasto_dicibile()") + "; its twin " + c("tasto_dicibile()") + " in " + c("rcp.c")],
         ["Text from the page", c("/diario") + " lines are reduced to printable ASCII (no newline, no control "
-         "bytes) and cut at 900 bytes with a visible " + c("⛔TAGLIATA QUI") + " (CUT HERE)", c("pagina.c")],
+         "bytes) and cut at 900 bytes with a visible " + c("⛔CUT HERE"), c("pagina.c")],
         ["Session identities", "Sanitised to user-name characters", c("riga()")],
     ], "«TAB» — The exclusions and where they are enforced") + \
     p("A sequence of evdev codes " + c("30, 48, 46") + " is a word: a key code <b>is</b> a character up to the "
@@ -306,8 +305,7 @@ S8 = p("At startup the parent writes the value <b>in force</b> of every mechanis
     table(["Order", "Line (area)", "Written by"], [
         ["1", "Product banner; journal on, or why not (" + c("avvio") + ")", c("main.c")],
         ["2", "Encoding probe in a separate process, then the codecs offered in " + c("ECCOMI") + " (the server's "
-         "welcome message) — or " + c("⛔⛔ QUESTO SERVER NON SA CODIFICARE VIDEO") + " (THIS SERVER CANNOT ENCODE "
-         "VIDEO) with the reason (" + c("avvio") + ")", c("figlio_capacita_video()")],
+         "welcome message) — or " + c("⛔⛔ THIS SERVER CANNOT ENCODE VIDEO") + " with the reason (" + c("avvio") + ")", c("figlio_capacita_video()")],
         ["3", "The desktop of this machine (" + c("avvio") + ")", c("sessione_desktop_spiega()") + " (explains the "
          "desktop)"],
         ["4", "On KDE only: the KWin capture permission is there, or the code and the remedy (" + c("avvio") + ")",
@@ -332,15 +330,14 @@ S8 = p("At startup the parent writes the value <b>in force</b> of every mechanis
          "silence (" + c("figlio") + ")", c("figli_fase9()")],
         ["17", "The effective uid and what it implies", c("main.c")],
         ["18", "Unlock socket opened, or why not", c("comando_apri()")],
-        ["19", "PAM service file found, or " + c("⛔ il servizio PAM «remotix» NON C'E'") + " (the PAM service is NOT "
-         "there)", c("guarda_il_servizio_pam()")],
+        ["19", "PAM service file found, or " + c("⛔ the PAM service «remotix» DOES NOT EXIST"), c("guarda_il_servizio_pam()")],
         ["20", "Certificates: generated or reused, two fingerprints, session fingerprint (" + c("cert") + ")",
          c("certificati_prepara()")],
         ["21", "TLS contexts: QUIC (ALPN h3, TLS 1.3, 0-RTT off) and page", c("tls.c")],
         ["22", "Local-session guardian connected or not (" + c("sessione") + ")", c("main.c")],
         ["23", "Desktops found alive from a previous server (reattach pending)", c("ritrovati_all_avvio()")
          + " (found again at startup)"],
-        ["24", c("⭐ pronto: https://<name>:<port>") + " (ready)", c("main.c")],
+        ["24", c("⭐ ready: https://<name>:<port>"), c("main.c")],
     ], "«TAB» — What the parent declares before serving, in order") + \
     p("While running, the parent adds one line per minute with the guardian's count (" + c("guardiano: chiamate=… "
       "peggiore_ms=… inquilini=… giri_fermi=… giro_peggiore_ms=…") + ": logind calls, worst call, tenants served, "
@@ -521,8 +518,8 @@ S11 = p("Besides the log, the product carries a few instruments for diagnosis. N
         "connected.",
         "Filter by tenant (" + c("REMOTIX_INQUILINO") + " or the bracket) and by area; read " + c("budget")
         + " for refusals, " + c("rcp") + " for the handshake, " + c("figlio") + " for the birth of the desktop.",
-        "For a refused login, distinguish " + c("PAM ha RIFIUTATO") + " (PAM REFUSED: a real no) from "
-        + c("⛔ PAM NON HA POTUTO GIUDICARE") + " (PAM COULD NOT JUDGE: a missing " + c("/etc/pam.d/remotix") + " or " + c("/etc/remotix/utenti-negati")
+        "For a refused login, distinguish " + c("PAM REFUSED") + " (a real no) from "
+        + c("⛔ PAM COULD NOT JUDGE") + " (a missing " + c("/etc/pam.d/remotix") + " or " + c("/etc/remotix/utenti-negati")
         + "): the client receives " + c("0x07") + " in both cases, the log does not.",
         "For a desktop that is born and shows nothing, look for the line of " + c("figlio") + " about the card groups (the groups that own the nodes in "
         + c("/dev/dri") + ")"

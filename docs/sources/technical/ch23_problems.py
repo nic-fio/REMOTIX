@@ -51,10 +51,6 @@ S1 = p("Defects found while this manual was written (10 October 2026), by readin
          "firewall.",
          c("installatore/motore/preflight.go") + ", " + c("installatore/motore/ambiente.go"),
          "An administrator may meet a code the catalogue says no longer exists."],
-        ["<b>Parts of the interface are still in Italian</b>: the farewell sentences of the page, the logout "
-         "notice, the ban notice served by the page server.",
-         c("src/pagina.html") + ", " + c("src/pagina.c"),
-         "Listed as pending in DECISIONI.md §10.32."],
     ], "«TAB» — Open defects in the product")
 
 S2 = p("Comments and log lines in the code that no longer describe what the code does. None changes behaviour, but each "

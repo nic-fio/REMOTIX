@@ -506,7 +506,7 @@ S13 = p("Every encoded frame carries its costs separately, so that a drop in fra
         [c("RICOSTRUITE") + " / " + c("CODED_MARGINE"), "3 / 64 KiB", c("vadiretta.c")],
         [c("SLOT_DPB") + " / " + c("INGRESSI") + " / " + c("IMPORTAZIONI_MAX"), "2 / 2 / 8", c("vulkanvideo.c")],
     ], "«TAB» — Encoder constants") + \
-    tip("the log area of the encoder is " + c("video") + "; the line that starts with " + c("aperto:") + " (opened) names the codec, "
+    tip("the log area of the encoder is " + c("video") + "; the line that starts with " + c("opened:") + " names the codec, "
         "depth, component, node, vendor and (on VA-API) the entry point actually in force, and the line before it says "
         "which path was taken and whether it was asked by name or by capability. "
         + c("remotix --prova-codifica") + " with " + c("--codifica vulkan") + " or " + c("--codifica vaapi")

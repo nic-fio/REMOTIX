@@ -139,9 +139,8 @@ S3 = p("The login form has two fields and a button — " + c("#utente") + ", " +
       + " is at or below zero, a " + c("PUNTATORE") + " (pointer move) is held aside and replaced by the next one, and any key or "
       "button pushes it out first — measured from DeX on 14 Aug 2026, median round trip 135 ms but worst 2161 ms, "
       "a queue rather than a slow network. Keys and buttons are never dropped.") + \
-    p("Some user-facing texts of the page — the reason sentences, the declarations, the logout dialog — are "
-      "still in Italian, while the login page is in English; " + c("DECISIONI.md") + " §10.32 lists their "
-      "translation as pending work.")
+    p("Every user-facing text of the page — the login page, the reason sentences, the declarations, the logout "
+      "dialog — is in English (" + c("DECISIONI.md") + " §10.32).")
 
 # ── 4. Capabilities ───────────────────────────────────────────────────────
 S4 = p("The CIAO capabilities say what <b>this</b> browser can do, measured where possible. An empty value is a "
@@ -462,7 +461,7 @@ S12 = p("The page measures its own share of the latency and exposes it, so that 
       "audio's " + c("aoff_ms()") + ", the unknown clock offset cancels out (" + rif("Audio and clipboard") + ").") + \
     p("Lines passed to " + c("nota()") + " that contain " + c("MISURA") + " (measurement), " + c("MARCA") + " or ⛔ are also "
       "sent to the server with " + c("fetch(\"/diario?…\")") + " and appear in its log as "
-      + c("📄 la pagina di <address> dice: PAGINA …") + " (the page of &lt;address&gt; says): with the desktop at full screen the page's own log is unreachable. The first lines identify the "
+      + c("📄 the page of <address> says: PAGINA …") + ": with the desktop at full screen the page's own log is unreachable. The first lines identify the "
       "browser (user agent, screen, ratio, WebCodecs), the system (" + c("userAgentData") + " on Chromium, "
       + c("navigator.oscpu") + " on Firefox, each value labelled with its source) and what the engine offers "
       "without WebCodecs.") + \

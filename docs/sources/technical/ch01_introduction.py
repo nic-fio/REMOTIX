@@ -185,9 +185,9 @@ S3 = p("The server's code is split by job. This is the map the manual follows ch
 
 S4 = p("The " + c("nic-fio/REMOTIX") + " repository on GitHub (private) holds everything: the product, the "
        "installer, the packages, the test benches, the measurements and the documents. Documents and code comments "
-       "are in Italian; this manual is in English, and so is most of the page the user sees — but some of the "
-       "sentences the page shows, such as the reasons of a farewell (" + c("MOTIVO") + " in " + c("pagina.html")
-       + ") and the ban notice, are still in Italian.", lead=True) + tree([
+       "are in Italian; this manual is in English, and so is what the user and the administrator read: the page, "
+       "including the reasons of a farewell (" + c("MOTIVO") + " in " + c("pagina.html") + ") and the ban notice, "
+       "and the server's log lines.", lead=True) + tree([
     "REMOTIX/",
     "├── src/  # the product: the server in C, the page, PAM files, build scripts",
     "│   ├── protocolli/  # the Wayland protocol XML files the server is built against",

@@ -43,8 +43,8 @@ S1 = p("The server starts from " + c("main()") + " in " + c("main.c") + ". Befor
     "<b>QUIC.</b> " + c("trasporto_apri()") + " binds the UDP port; then the hooks between transport and children "
     "are registered, the sentinel connects to the system bus, and the desktops left alive by a previous server "
     "are looked for (" + rif("Desktops found again after a restart") + ").",
-    "<b>The page.</b> " + c("pagina_apri()") + " binds the TCP port. The log line " + c("⭐ pronto: https://NAME:PORT")
-    + " (“ready”), which goes on to say that the WebTransport session lives on " + c("/rcp/1") + ", is the moment "
+    "<b>The page.</b> " + c("pagina_apri()") + " binds the TCP port. The log line " + c("⭐ ready: https://NAME:PORT")
+    + ", which goes on to say that the WebTransport session lives on " + c("/rcp/1") + ", is the moment "
     "the server can be used.",
 ]) + \
     table(["Exit", "When"], [
@@ -512,12 +512,12 @@ S12 = p("A defect in this chain rarely names its cause: the user sees “black�
     table(["Symptom", "Step to check", "Where"], [
         ["the login is refused for every user, right passwords included", "the PAM file; " + c("utenti-negati")
          + " missing makes " + c("pam_listfile") + " refuse everyone", c("guarda_il_servizio_pam()") + " line at "
-         "startup; the " + c("PAM NON HA POTUTO GIUDICARE") + " (PAM could not judge) line"],
+         "startup; the " + c("⛔ PAM COULD NOT JUDGE") + " line"],
         ["the desktop never appears", "the logind session (the child's first line: runtime directory and bus "
          "present?); the server started inside a user session; no desktop recognised", c("figlio") + " area; "
          + c("MSG_SONO") + " line"],
         ["it appears after many seconds", "a previous session still dying (the child waits for it); the birth window",
-         c("sessione") + " area: " + c("non e' ancora finita") + " (not yet over)"],
+         c("sessione") + " area: " + c("the PREVIOUS graphical session has not ended yet")],
         ["black bands, a “broken” desktop, clicks in the wrong place", "the canvas: the stage was born at a size "
          "nobody asked for", c("MSG_TELA") + " lines, chosen and obtained"],
         ["everything is slow, even typing in a terminal", "the GPU's groups: the compositor renders with llvmpipe",

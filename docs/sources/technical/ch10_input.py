@@ -406,8 +406,8 @@ S11 = p("The layout is negotiated at every attach, like the canvas, for two reas
         "keyboard device.",
         "<b>The keymap confirms.</b> The compositor recreates the keyboard device with the new keymap; "
         + c("leggi_keymap()") + " reads it, fingerprints it (size plus hash, since Mutter names every keymap "
-        + c("(unnamed)") + ") and writes " + c("KEYMAP CAMBIATA") + " (keymap changed). If the session layout differs from the "
-        "requested one, " + c("tastiera.c") + " writes " + c("RIPIEGO DICHIARATO") + " (declared fallback) and uses the session's.",
+        + c("(unnamed)") + ") and writes " + c("KEYMAP CHANGED") + ". If the session layout differs from the "
+        "requested one, " + c("tastiera.c") + " writes " + c("DECLARED FALLBACK") + " and uses the session's.",
     ]) + \
     table(["Desktop", "How the layout is applied", "Notes"], [
         ["GNOME", c("org.gnome.desktop.input-sources") + " " + c("sources") + " = "
