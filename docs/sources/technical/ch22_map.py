@@ -151,6 +151,8 @@ GRUPPI = [
         (S + "protocolli/wlr-output-management-unstable-v1.xml", "Output size on labwc"),
         (S + "protocolli/wlr-screencopy-unstable-v1.xml", "Screen capture on labwc"),
         (S + "protocolli/wlr-virtual-pointer-unstable-v1.xml", "Virtual pointer (labwc input)"),
+        (S + "protocolli/wlr-layer-shell-unstable-v1.xml", "Layer surfaces: the nested KWin's «ticker», one transparent pixel on the labwc that hosts it (kwin.c)"),
+        (S + "protocolli/xdg-shell.xml", "The base protocol layer-shell names (xdg_popup)"),
         (S + "protocolli/zkde-screencast-unstable-v1.xml", "KWin screen streams as PipeWire nodes"),
     ]),
     ("System files and server build", [
@@ -293,6 +295,8 @@ GRUPPI = [
         ("packaging/rpm/selinux/remotix.te", "The SELinux module: why it exists and the domain transition to the user"),
         ("packaging/rpm/selinux/remotix.fc", "SELinux file contexts"),
         ("packaging/rpm/selinux/remotix.if", "SELinux interface"),
+        ("packaging/rpm/labwc/VERSIONI", t("versions") + "Our labwc for RHEL / Alma 10: version, tarball, sha256 and URL, pinned"),
+        ("packaging/rpm/labwc/scarica.sh", t("fetch") + "Fetches the labwc tarball and accepts it only if both checksums match"),
         ("packaging/rpm/selinux/remotix_porta.cil", t("port") + "The port type for 7447 TCP and UDP, in CIL"),
     ]),
     ("Packaging: Arch", [
