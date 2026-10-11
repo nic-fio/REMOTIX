@@ -7054,6 +7054,12 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 		 *    with the session): KWin is asked for its stream.  The GNOME branch
 		 *    below is not touched. */
 		close_stage_kwin();
+		if (!kwin_ospite_assesta(3.0, &sbaglio)) {
+			registro_dice(REG_FIGLIO, "⚠ KDE: KWin's output did not settle on the host's "
+			                          "size (%s): mounting anyway",
+			              sbaglio ? sbaglio->message : "?");
+			g_clear_error(&sbaglio);
+		}
 		CHRONO_START("mount the stage (kwin_apri)");
 		palco_kwin = kwin_apri(&sbaglio);
 		CHRONO_END();

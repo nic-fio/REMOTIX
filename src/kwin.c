@@ -977,20 +977,28 @@ int kwin_disposizione(const char *nome, GError **sbaglio)
  * this folder, so a user's `~/.config/labwc` (an XFCE/LXQt user has one) is
  * never read here.
  *   · every window FULL SCREEN — there is exactly one, KWin, and its size
- *     must be the output's: that is the whole mechanism.  ⛔ A window smaller
+ *     must be the output's: that is the whole mechanism.  ⛔ Matched on the
+ *     TITLE, not on `identifier`: `[M]` 11 Oct 2026, Leap 16 (labwc 0.8.1,
+ *     KWin 6.4.2) the `identifier="*"` rule never fired — KWin's window stayed
+ *     floating, 2 px narrower and 28 px shorter than the output, and the
+ *     capture fell back to memory; with `title="*"` it is full screen on both
+ *     boxes.  (One rule only: the action TOGGLES, two would undo each other.)  ⛔ A window smaller
  *     or larger than the output would not do: labwc repaints only what is
  *     on its output, and KWin draws only when labwc has repainted;
- *   · no decoration: nobody sees this screen, but a title bar would take
- *     pixels from KWin's window.
+ *   · no decoration, ⛔ from the very first configure (`decoration` client in
+ *     `core`, not only the rule): `[M]` 11 Oct 2026, Leap 16 (labwc 0.8.1),
+ *     KWin's window was first configured 3822x2036 on a 3824x2064 output —
+ *     the title bar's pixels taken away before the rule made it full screen —
+ *     and a capture mounted in that instant asked for the wrong size.
  */
 static const char OSPITE_RC[] =
     "<?xml version=\"1.0\"?>\n"
     "<!-- REMOTIX: the screenless labwc that hosts KWin (kwin.c, «nested KWin»).\n"
     "     Rewritten at every birth: do not edit. -->\n"
     "<labwc_config>\n"
-    "  <core><decoration>server</decoration><gap>0</gap></core>\n"
+    "  <core><decoration>client</decoration><gap>0</gap></core>\n"
     "  <windowRules>\n"
-    "    <windowRule identifier=\"*\" serverDecoration=\"no\">\n"
+    "    <windowRule title=\"*\" serverDecoration=\"no\">\n"
     "      <action name=\"ToggleFullscreen\"/>\n"
     "    </windowRule>\n"
     "  </windowRules>\n"
@@ -1458,3 +1466,20 @@ bool kwin_ospite_misura(uint32_t larghezza, uint32_t altezza, double attesa_s,
 	return true;
 }
 
+
+bool kwin_ospite_assesta(double attesa_s, GError **sbaglio)
+{
+	g_autofree char *display = kwin_ospite_display();
+	WlrPalco *ospite;
+	uint32_t l = 0, a = 0;
+
+	if (!kwin_ospite_c_e())
+		return true; /* no host: nothing to wait for */
+	ospite = wlr_apri_su(display, sbaglio);
+	if (!ospite)
+		return false;
+	wlr_measure(ospite, &l, &a);
+	wlr_close(ospite);
+	/* same size ⇒ no request leaves (`wlr_misura_chiedi`: GIA_COSI); only the wait */
+	return kwin_ospite_misura(l, a, attesa_s, sbaglio);
+}

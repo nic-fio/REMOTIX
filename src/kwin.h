@@ -116,3 +116,11 @@ bool kwin_ospite_misura(uint32_t larghezza, uint32_t altezza, double attesa_s,
 /* Is there a host to talk to?  (The socket exists and accepts.) */
 bool kwin_ospite_c_e(void);
 
+
+/* ⛔ Before mounting the capture: KWin's output must already have the HOST's size.
+ *    At birth labwc configures KWin's window more than once (`[M]` 11 Oct 2026,
+ *    Leap 16: first 3822x2036, then full screen 3824x2064), and a capture asked
+ *    in between offers a size KWin's stream no longer has — the card route
+ *    refused, and the stage fell back to copying in memory for the whole session.
+ *    TRUE at once when there is no host. */
+bool kwin_ospite_assesta(double attesa_s, GError **sbaglio);
