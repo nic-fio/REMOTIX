@@ -272,7 +272,7 @@ def main():
     lines = load(o.log)
     rounds = [str(r.get("round")) for r in lines]
     round_id = o.round_id or (rounds[-1] if rounds else "?")
-    lines = [r for r in lines if str(r.get("round_id")) == round_id]
+    lines = [r for r in lines if str(r.get("round")) == round_id]
     defects = load(o.defects)
     if o.html:
         with open(o.html, "w", encoding="utf-8") as f:

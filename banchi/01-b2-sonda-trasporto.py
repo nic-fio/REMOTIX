@@ -308,7 +308,7 @@ async def main(a) -> int:
     outcomes = []
 
     def prova(name, dove, passes, seen, expected):
-        outcomes.append({"name": name, "where": where, "passes": bool(passes),
+        outcomes.append({"name": name, "where": dove, "passes": bool(passes),
                       "seen": str(seen), "expected": str(expected)})
         sign = "OK " if passes else "NO "
         print(f"   {sign} {name:38s} {dove}")

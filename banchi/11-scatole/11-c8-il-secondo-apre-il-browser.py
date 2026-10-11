@@ -756,7 +756,7 @@ def main():
         completed, why = create(chi, a.password)
         if not completed:
             print("  %-6s  ?   I could not create it: %s" % (chi, why))
-            outcomes.append({"who": who, "a": None, "b": None})
+            outcomes.append({"who": chi, "a": None, "b": None})
             continue
         if not a.no_fix:
             apply_fix(chi)
@@ -830,7 +830,7 @@ def main():
               % (chi, "YES" if vista_b else ("NO" if vista_b is False else "?"),
                  reason_b))
 
-        outcomes.append({"who": who, "a": vista_a, "b": vista_b})
+        outcomes.append({"who": chi, "a": vista_a, "b": vista_b})
         sh("pkill -KILL -u %s 2>/dev/null; loginctl terminate-user %s 2>/dev/null"
            % (chi, chi))
         time.sleep(1.5)

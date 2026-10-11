@@ -217,7 +217,7 @@ ENTRIES = []
 def entry(tag, dove, question, reading_a, reading_b, choice, bites,
          footholds_rcp=(), footholds_client=(), byte=None, note=""):
     ENTRIES.append({
-        "tag": tag, "where": where, "question": question,
+        "tag": tag, "where": dove, "question": question,
         "a": reading_a, "b": reading_b, "choice": choice, "bites": bites,
         "footholds_rcp": list(footholds_rcp),
         "footholds_client": list(footholds_client),

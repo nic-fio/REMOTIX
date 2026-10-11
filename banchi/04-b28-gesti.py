@@ -1513,7 +1513,7 @@ def measure_crossing(c_old, cdp, port, ox, oy, diagnosis):
     except Exception:                          # noqa: BLE001
         pass
     note["card_faults"] = list(c.faults)
-    return {"outcomes": outcomes, "notes": notes}
+    return {"outcomes": outcomes, "notes": note}
 
 
 # ---------------------------------------------------------------------------
