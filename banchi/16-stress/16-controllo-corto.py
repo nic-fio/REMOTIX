@@ -311,7 +311,7 @@ def f003(o, E, s):
     E.put("F-003", es, text if es != S.PASS else "opens and changes: the photos follow the "
             "screen (reduced: no drag)", expected="the window opens in the photo; "
             "counter ≤ %.0f ms in every photo for %d s" % (F003.CAP_MS, F003.QUICK_S),
-            observed=text, evidenze=[o.evidenze], parts={p: [e, m] for p, e, m in parts})
+            observed=text, evidence=[o.evidence], parts={p: [e, m] for p, e, m in parts})
     if o.fault:
         if es != S.PASS:
             E.fault("F-003", None, "the healthy pass is not green: the fault is judged only "
@@ -382,8 +382,8 @@ def main():
     o.cap_s = max(o.cap_s, CAP_BIRTH_S)
     o.functions = [f for f in FUNCTIONS if not o.only or f in o.only.split(",")]
     os.makedirs(o.dir, exist_ok=True)
-    o.evidenze = o.evidenze or os.path.join(o.dir, "short-check")
-    os.makedirs(o.evidenze, exist_ok=True)
+    o.evidence = o.evidence or os.path.join(o.dir, "short-check")
+    os.makedirs(o.evidence, exist_ok=True)
     E = S.Outcomes(o)
     nnn = "%03d" % o.level
     chi = "c16%su%d" % (nnn, o.user)
@@ -392,7 +392,7 @@ def main():
     #   actor has that number ⇒ the entry goes to the level), «outcomes» {F-NNN: outcome}
     ratio = {"level": o.level, "user": o.user, "tenant": chi, "browser": o.browser,
                 "box": o.box,
-                "size": "%dx%d" % (o.largo, o.alto), "started": started,
+                "size": "%dx%d" % (o.width, o.height), "started": started,
                 "wayland": os.environ.get("WAYLAND_DISPLAY", ""), "functions": {},
                 "birth": {}, "evidence": o.evidence}
     print("⭐ short check · %s · level %d · %s · %s · %s" % (
