@@ -719,13 +719,43 @@ with builds, and the numbers are taken on a quiet server.*
 lost out of ~68; the photos looked at (the film full screen; the letters in konsole). ⚠ Xvnc at ~0.1 cores for
 24 fps at 60+ Mbit/s is low: to be looked at in the campaign (`top` in the box) before writing it.
 
-**The campaign** (on a quiet server, as nicfio, no sudo): 12 measures (3 sizes × 2 browsers × 2 scenes) of
-120 s, ~29 minutes:
+**⭐ The REMOTIX twin** (coordinator's decision, 11 Oct: *same scenes, sizes, browsers and meters, row by row
+at the same moment*): `16-kasmvnc.py --sistema remotix` and `gemello-accendi`. The box `kasm-remotix-kde` is
+the image `rete11/kde:p0` with the product of phase 20 (`rete11/prodotto`, **716e35b**), KDE **Wayland**, built
+by `11-accendi.sh` with two new variables, `REMOTIX_11_NOME` (only `kasm-*`) and `REMOTIX_11_PORTA` (only
+`87xx`), run from a **copy** of the rete11 tree (`/media/REMOTIX/kasm/rete11`): rete11-* and 8511-8514 are not
+touched. Port **8702**, tenant `c87u1`, `mpv` added (the same player as the KasmVNC box), a **new session per
+measure**. Meters, from which side:
+- paints/s: REMOTIX's page gauge `conti.dipinti` read every 4 ms (the page draws in a worker, the document's
+  prototypes do not see it); KasmVNC: the canvas draws, bursts > 5 ms;
+- bandwidth, server side for both: KasmVNC `ss -ti bytes_sent`; REMOTIX the `rete-quic … byte_spediti` lines
+  of its log (one per second);
+- ⭐ **delivered size**: KasmVNC's row says the source of the biggest `drawImage` (`consegnata`) and `ridotta`
+  = its video mode sent a frame smaller than the screen, plus the log lines that mention video; REMOTIX's says
+  the canvas agreed at the admission. ⚠ REMOTIX's canvas is a multiple of 16: **1920×1072** and **2880×1616**
+  (its rule, `TELA_A_PASSO`), not the bench's.
+- ⚠ Two things found by the dry run: `11-accendi.sh` of `full-english` waits for «ready: https» and the 716e35b
+  binary writes «pronto: https» (now both are accepted); and a **resumed** session keeps the canvas it was born
+  with (1904×1072 after a view with a scrollbar) ⇒ new session per measure, and the view is set on the page's
+  `documentElement.client*`.
+
+**Dry run of the twin** `[M]` (11 Oct ~07:35 UTC, server NOT quiet, Full HD, 30 s each; the chain only):
+
+| | KasmVNC | REMOTIX |
+|---|---|---|
+| Chrome, video: paints/s · Mbit/s · box cores | 24.4 · 62.7 · 0.14 | 30.0 · 5.6 · 0.10 |
+| Firefox, keys: p95 ms (keys lost) | 76.8 (0) | 45.4 (0) |
+| delivered | 1920×1080, not reduced | 1920×1072 |
+
+⚠ Headless means **software decoding** for both: for REMOTIX that is H.264 in WebCodecs, for KasmVNC JPEG/WebP.
+Declared in the row (`client`), as in §8.4.
+
+**The campaign** (on a quiet server, as nicfio; sudo for the twin as in `16-salita.py`): 24 measures (2 systems ×
+3 sizes × 2 browsers × 2 scenes) of 90 s; the overhead measured in the dry run is ~20 s (KasmVNC) and ~32 s (REMOTIX,
+the session is born again) per measure ⇒ **~50 minutes**:
 
     cd /media/REMOTIX/src/remotix-wt-kasmvnc/banchi/16-stress && \
-    nohup python3 16-kasmvnc.py campagna --secondi 120 \
+    nohup python3 16-kasmvnc.py campagna --secondi 90 \
         --dir /media/REMOTIX/misure/fase20-kasmvnc/k20-$(date +%Y%m%d-%H%M) > ~/k20-campagna.log 2>&1 &
 
-Stop: `touch <dir>/FERMA` (between measures). ⛔ **The REMOTIX side is not in this bench**: §8 has REMOTIX at 1
-user, KDE, Intel (delay p95 39 ms Full HD / 43 ms 2K, video 29-30 paints/s) but **not** at 2880×1620 (§8 was
-3200×1800) and **without bandwidth**: for a row-by-row comparison REMOTIX needs a twin run.
+Stop: `touch <dir>/FERMA` (between measures); at the end, or on a stop, both boxes are switched off.

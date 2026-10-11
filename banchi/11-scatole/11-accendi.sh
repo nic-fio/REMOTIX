@@ -70,7 +70,14 @@ set -uo pipefail
 
 DESKTOP=${2:-gnome}
 BASE=$(cd "$(dirname "$0")" && pwd)
+# ⭐ fasi/20 §9 (the KasmVNC comparison): a TWIN box with its own name and port, so that the
+#   rete11 boxes and 8511-8514 are never touched.  Only names starting with «kasm-» are accepted.
 NOME="rete11-$DESKTOP"
+case "${REMOTIX_11_NOME:-}" in
+  '') ;;
+  kasm-*) NOME="$REMOTIX_11_NOME" ;;
+  *) echo "REMOTIX_11_NOME must start with kasm-" >&2; exit 2 ;;
+esac
 IMMAGINE="rete11/$DESKTOP:p0"
 RICETTA="$BASE/Contenitore.$DESKTOP"
 # ⭐ phase 20 §7: `<desktop>-xrdp` is the box of that desktop with xrdp, from ONE
@@ -100,6 +107,11 @@ case "$DESKTOP" in
   xfce)  PORTA=8513 ;;
   lxqt)  PORTA=8514 ;;
   *)     PORTA=8519 ;;
+esac
+case "${REMOTIX_11_PORTA:-}" in
+  '') ;;
+  87[0-9][0-9]) PORTA="$REMOTIX_11_PORTA" ;;
+  *) echo "REMOTIX_11_PORTA must be 87xx" >&2; exit 2 ;;
 esac
 
 # ---------------------------------------------------------------------------
@@ -686,7 +698,7 @@ server)
 	#    server with a live process and nobody listening passed for on.
 	PRONTO=0
 	for _ in $(seq 1 40); do
-		if podman exec "$NOME" grep -q "ready: https" /var/lib/rete11/registro.log 2>/dev/null; then
+		if podman exec "$NOME" grep -qE "(ready|pronto): https" /var/lib/rete11/registro.log 2>/dev/null; then
 			PRONTO=1; break
 		fi
 		sleep 0.5
