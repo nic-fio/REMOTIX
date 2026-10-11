@@ -1897,8 +1897,9 @@ int main(int argc, char **argv)
 		 *   (how long a live client is silent between two keep-alives) and a
 		 *   one-second unit could not express them.
 		 *
-		 * ⛔ `0` = OFF, and it is the default: invariant I6, and without this
-		 *    option the behaviour is yesterday's byte for byte. */
+		 * ⛔ `0` = OFF, and it is the only road to turn it off: since 24 Aug 2026
+		 *    the default is ON, 15000 ms (`DEFAULT_EVICTION` in rcp.c, half the
+		 *    silence clock), as the help text above says. */
 		else if (strcmp(a, "--eviction-ms") == 0 && v)
 			rcp_eviction_set((uint64_t)strtoull(argv[++i], NULL, 10));
 		/* ⭐ PHASE 19 — the card's route (`DECISIONS.md` §10.27).  It applies to

@@ -29,8 +29,9 @@ S1 = p("<b>REMOTIX</b> is a remote desktop for Linux. A server runs on the Linux
       "LXQt, whichever desktop the machine has — started headless by REMOTIX, with one virtual monitor as large as "
       "the browser window. The session belongs to the user, not to the connection: closing the tab, losing the "
       "network or switching device leaves it running, and the next login finds the same windows. Only the user ends "
-      "it, with “Log out” from the desktop menu or " + c("Ctrl+Alt+End") + " in the page, or the server closes it "
-      "after 60 minutes without input.") + \
+      "it, with “Log Out…” from the desktop menu (the page keeps no key combination of its own since 17 Aug 2026), "
+      "or the server closes it after 60 minutes without input; after 30 minutes without input the server only "
+      "detaches the page, and the next login finds the desktop.") + \
     p("Several users can work on the same machine at once, each in their own desktop (10 by default, set with "
       + c("--session-cap") + ", the session cap). The video is encoded only on the graphics card (VA-API on Intel and AMD, Vulkan "
       "Video on AMD and NVIDIA) in H.264 or HEVC; the audio travels as Opus in QUIC datagrams; keyboard, pointer, "
@@ -49,6 +50,8 @@ S1 = p("<b>REMOTIX</b> is a remote desktop for Linux. A server runs on the Linux
         ["Desktops", "GNOME, KDE Plasma, XFCE and LXQt (the last two on the labwc compositor; on KDE, KWin runs "
          "nested inside a labwc without a screen, DECISIONS.md §10.40); one desktop per machine (DECISIONS.md §0.6)"],
         ["Sessions", "Wayland only; X11 applications run through XWayland"],
+        ["Without input", "30 minutes: the page is detached, the desktop keeps running (" + c("--inactivity-s")
+         + "); 60 minutes: the desktop is closed (" + c("--abandon-s") + "); SPECS.md §5.3"],
         ["Size", f"{righe(conta('.c') + conta('.h'))} lines of C, {righe(conta('page.html'))} lines of page, "
          f"{righe(conta('.go'))} lines of Go"],
         ["Licence", "Our own text, " + c("LICENSE.md") + " (DECISIONS.md §10.39): free for personal and "

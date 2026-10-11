@@ -425,7 +425,7 @@ USCITA = seq([("Page", "browser", "light"), ("Server", "root", "navy"), ("Child"
     ("note", 2, "drop-ins and environment restored"),
     (2, 1, "exit 0", True),
     (1, 0, "farewell 0x10 (if still attached)", True),
-], "«FIG» — Ctrl+Alt+End: the page asks, the child ends the desktop", width=900)
+], "«FIG» — TERMINATE_SESSION: a client asks, the child ends the desktop", width=900)
 
 S9 = p("Only the user ends their session; the server ends it only when it is abandoned. Either way the reason is sent "
        "<b>before</b> the desktop dies: when the compositor goes, the stage goes with it, and a reason sent after "
@@ -435,7 +435,8 @@ S9 = p("Only the user ends their session; the server ends it only when it is aba
          "server reaps the child and " + c("dismiss_child()") + " dismisses the clients. If the child sees the "
          "session die first, it sends " + c("MSG_SESSION_FINISHED") + " and the server does the same",
          c("0x10 SESSION_TERMINATED")],
-        [c("Ctrl+Alt+End") + " in the page, after a confirmation", c("TERMINATE_SESSION") + " → "
+        [c("TERMINATE_SESSION") + " from a client (the page sends it from no gesture since 17 Aug 2026, when "
+         + c("Ctrl+Alt+End") + " was removed)", c("TERMINATE_SESSION") + " → "
          + c("terminate_in_child()") + ": the user's other clients are dismissed, the child receives "
          + c("CHILDREN_INPUT_TERMINATE") + " and calls " + c("session_terminate()"), c("0x10")],
         ["60 minutes without input", c("abandon_expired()") + ": clients dismissed, then the same request to the "
