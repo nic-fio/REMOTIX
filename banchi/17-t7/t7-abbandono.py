@@ -44,7 +44,7 @@ def stage(u):
 
 
 o = S.call_args("t7-abbandono")
-o.evidenze = EV
+o.evidence = EV
 E = S.Outcomes(o)
 outcome = {"desktop": D, "abbandono_s": SEC}
 with S.Session(o, "974", E) as s:
