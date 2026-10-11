@@ -523,9 +523,9 @@ def certify_common():
 
 
 def save_json(o, name, data):
-    if not o.evidenze:
+    if not o.evidence:
         return ""
-    p = os.path.join(o.evidenze, name)
+    p = os.path.join(o.evidence, name)
     with open(p, "w") as f:
         json.dump(data, f, ensure_ascii=False, indent=1)
     return p

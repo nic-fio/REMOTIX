@@ -64,7 +64,7 @@ def una(esp):
     ev = os.path.join(BASE, "%s-%s" % (D, esp))
     os.makedirs(ev, exist_ok=True)
     o = S.call_args("t2")
-    o.evidenze = ev
+    o.evidence = ev
     E = S.Outcomes(o)
     restore = False
     with S.Session(o, "917", E) as s:

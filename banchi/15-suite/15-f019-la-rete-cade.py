@@ -180,7 +180,7 @@ def reenter(s, cap):
 
 
 def drop(s, o, reg, lm, observe_s, remove=True, during=None):
-    """The line dies for `o.caduta_s`; `during()` is called halfway.
+    """The line dies for `o.drop_s`; `during()` is called halfway.
     Returns a dictionary with the facts seen."""
     f = {"linea_morta": None, "detto": None, "detto_dopo_s": None, "discarded": 0}
     sign = reg.lines()
