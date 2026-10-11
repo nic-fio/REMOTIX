@@ -310,7 +310,7 @@ def take_c8a():
 # ⭐ The four pieces of C1 without which this mesh cannot wait for the stage.
 #   ⛔ They are here, in a list, and not scattered in the code: a list can be
 #      checked, a dozen `getattr` cannot.
-C1_PIECES = ("leggi_nascita", "monitor_nato", "verdetto_giro", "TETTO_NASCITA")
+C1_PIECES = ("read_birth", "monitor_born", "round_verdict", "BIRTH_CAP")
 
 
 def c1_has_what_it_needs(c1):
