@@ -7,7 +7,7 @@
   "collisions_handled": 18,
   "contracts": 92,
   "files_scanned": 614,
-  "files_skipped": 2584,
+  "files_skipped": 2585,
   "frozen_register_words": 1095,
   "shared_new_names": 33,
   "merges_met_in_a_scope": 4,
@@ -24039,7 +24039,7 @@
    "langs": [
     "html"
    ],
-   "occurrences": 2,
+   "occurrences": 3,
    "how": "interi.tsv"
   },
   {
@@ -71497,6 +71497,7 @@
   "english-migration/esterni-c-glob.txt": "the migration's own tables (Italian on purpose)",
   "english-migration/esterni-c-macro.txt": "the migration's own tables (Italian on purpose)",
   "english-migration/esterni-web.txt": "the migration's own tables (Italian on purpose)",
+  "english-migration/fase_a.py": "the migration's own tables (Italian on purpose)",
   "english-migration/fondamenta-tolti.txt": "the migration's own tables (Italian on purpose)",
   "english-migration/glossario-00.tsv": "the migration's own tables (Italian on purpose)",
   "english-migration/glossario-01.tsv": "the migration's own tables (Italian on purpose)",
@@ -74357,7 +74358,7 @@
     "banchi/11-scatole/11-c16-i-documenti-non-mentono.py:85",
     "banchi/attrezzi-allinea-innesto.sh:169",
     "banchi/attrezzi-allinea-prodotto.sh:107",
-    "banchi/attrezzi-allinea-prodotto.sh:467",
+    "banchi/attrezzi-allinea-prodotto.sh:459",
     "banchi/attrezzi-utenti.sh:33",
     "banchi/rcp/rcp.c:263",
     "banchi/rcp/rcp.c:327",
@@ -75101,7 +75102,7 @@
     "banchi/attrezzi-allinea-prodotto.sh:80",
     "banchi/attrezzi-allinea-prodotto.sh:134",
     "banchi/attrezzi-allinea-prodotto.sh:140",
-    "banchi/attrezzi-allinea-prodotto.sh:490"
+    "banchi/attrezzi-allinea-prodotto.sh:482"
    ]
   },
   {
@@ -75122,7 +75123,7 @@
     "banchi/01-b11-guasto.sh:42",
     "banchi/01-b11-guasto.sh:179",
     "banchi/01-b11-pagina.html:882",
-    "banchi/attrezzi-allinea-prodotto.sh:385",
+    "banchi/attrezzi-allinea-prodotto.sh:377",
     "docs/sources/technical/ch05_rcp.py:847"
    ]
   },
@@ -75941,7 +75942,7 @@
     "banchi/attrezzi-allinea-prodotto.sh:41",
     "banchi/attrezzi-allinea-prodotto.sh:96",
     "banchi/attrezzi-allinea-prodotto.sh:139",
-    "banchi/attrezzi-allinea-prodotto.sh:460"
+    "banchi/attrezzi-allinea-prodotto.sh:452"
    ]
   },
   {
@@ -78216,7 +78217,7 @@
     "banchi/15-suite/suite.py:45",
     "banchi/16-stress/16-attore-rdp.py:81",
     "docs/sources/technical/ch16_testing.py:73",
-    "docs/sources/technical/ch22_map.py:347",
+    "docs/sources/technical/ch22_map.py:348",
     "fasi/13-xfce.md:687",
     "fasi/15-suite-funzionale.md:209"
    ]
@@ -78247,7 +78248,7 @@
     "docs/sources/technical/ch16_testing.py:73",
     "docs/sources/technical/ch16_testing.py:496",
     "docs/sources/technical/ch16_testing.py:513",
-    "docs/sources/technical/ch22_map.py:347",
+    "docs/sources/technical/ch22_map.py:348",
     "fasi/12-kde.md:144",
     "fasi/12-kde.md:228",
     "fasi/13-xfce.md:604",
@@ -80022,7 +80023,7 @@
     "banchi/18-a1/costruisci.sh:5",
     "banchi/19-nvidia/19-nvidia.sh:71",
     "banchi/19-nvidia/19-nvidia.sh:72",
-    "banchi/attrezzi-allinea-prodotto.sh:462",
+    "banchi/attrezzi-allinea-prodotto.sh:454",
     "docs/sources/technical/ch01_introduction.py:278",
     "docs/sources/technical/ch11_audio_clipboard.py:177",
     "docs/sources/technical/ch14_security.py:516",
@@ -80051,8 +80052,8 @@
     "docs/sources/technical/ch20_conventions.py:237",
     "docs/sources/technical/ch22_map.py:139",
     "docs/sources/technical/ch22_map.py:165",
-    "docs/sources/technical/ch22_map.py:254",
-    "docs/sources/technical/ch22_map.py:299",
+    "docs/sources/technical/ch22_map.py:255",
+    "docs/sources/technical/ch22_map.py:300",
     "fasi/06-la-tela-e-la-vista.md:156",
     "fasi/06-la-tela-e-la-vista.md:962",
     "fasi/08-l-anello.md:2839",
@@ -80542,7 +80543,7 @@
     "docs/sources/technical/ch17_build.py:159",
     "docs/sources/technical/ch19_extending.py:251",
     "docs/sources/technical/ch22_map.py:43",
-    "docs/sources/technical/ch22_map.py:377",
+    "docs/sources/technical/ch22_map.py:378",
     "docs/sources/technical/ch23_problems.py:75",
     "fasi/17-l-installatore.md:238",
     "fasi/17-l-installatore.md:1434",
@@ -80984,7 +80985,7 @@
    "references": 2,
    "referenced_at": [
     "docs/sources/technical/ch15_installer.py:704",
-    "docs/sources/technical/ch22_map.py:235"
+    "docs/sources/technical/ch22_map.py:236"
    ]
   },
   {
@@ -81000,7 +81001,7 @@
     "docs/sources/technical/ch15_installer.py:223",
     "docs/sources/technical/ch15_installer.py:703",
     "docs/sources/technical/ch17_build.py:10",
-    "docs/sources/technical/ch22_map.py:236",
+    "docs/sources/technical/ch22_map.py:237",
     "fasi/17-l-installatore.md:836",
     "fasi/17-l-installatore.md:1445",
     "fasi/17-l-installatore.md:1466",
@@ -81065,7 +81066,7 @@
     "banchi/18-a1/costruisci.sh:5",
     "banchi/19-nvidia/19-nvidia.sh:71",
     "banchi/19-nvidia/19-nvidia.sh:72",
-    "banchi/attrezzi-allinea-prodotto.sh:462",
+    "banchi/attrezzi-allinea-prodotto.sh:454",
     "docs/sources/technical/ch01_introduction.py:278",
     "docs/sources/technical/ch11_audio_clipboard.py:177",
     "docs/sources/technical/ch14_security.py:516",
@@ -81094,8 +81095,8 @@
     "docs/sources/technical/ch20_conventions.py:237",
     "docs/sources/technical/ch22_map.py:139",
     "docs/sources/technical/ch22_map.py:165",
-    "docs/sources/technical/ch22_map.py:254",
-    "docs/sources/technical/ch22_map.py:299",
+    "docs/sources/technical/ch22_map.py:255",
+    "docs/sources/technical/ch22_map.py:300",
     "fasi/06-la-tela-e-la-vista.md:156",
     "fasi/06-la-tela-e-la-vista.md:962",
     "fasi/08-l-anello.md:2839",
@@ -81161,7 +81162,7 @@
    "referenced_at": [
     "docs/sources/technical/ch15_installer.py:221",
     "docs/sources/technical/ch15_installer.py:234",
-    "docs/sources/technical/ch22_map.py:240",
+    "docs/sources/technical/ch22_map.py:241",
     "fasi/17-l-installatore.md:945"
    ]
   },
@@ -81181,7 +81182,7 @@
     "docs/sources/technical/ch20_conventions.py:29",
     "docs/sources/technical/ch20_conventions.py:29",
     "docs/sources/technical/ch22_map.py:221",
-    "docs/sources/technical/ch22_map.py:242",
+    "docs/sources/technical/ch22_map.py:243",
     "fasi/17-l-installatore.md:957",
     "fasi/17-l-installatore.md:1445",
     "installatore/motore/lingua.go:7"
@@ -81193,7 +81194,7 @@
    "references": 2,
    "referenced_at": [
     "docs/sources/technical/ch15_installer.py:1009",
-    "docs/sources/technical/ch22_map.py:243"
+    "docs/sources/technical/ch22_map.py:244"
    ]
   },
   {
@@ -81201,7 +81202,7 @@
    "new": "installer/interface/tui/preview.go",
    "references": 1,
    "referenced_at": [
-    "docs/sources/technical/ch22_map.py:246"
+    "docs/sources/technical/ch22_map.py:247"
    ]
   },
   {
@@ -81408,8 +81409,10 @@
   {
    "old": "installatore/motore/epoca_test.go",
    "new": "installer/engine/epoch_test.go",
-   "references": 0,
-   "referenced_at": []
+   "references": 1,
+   "referenced_at": [
+    "docs/sources/technical/ch22_map.py:224"
+   ]
   },
   {
    "old": "installatore/motore/eventi.go",
@@ -81438,7 +81441,7 @@
    "references": 2,
    "referenced_at": [
     "docs/sources/technical/ch15_installer.py:1008",
-    "docs/sources/technical/ch22_map.py:225"
+    "docs/sources/technical/ch22_map.py:226"
    ]
   },
   {
@@ -81447,7 +81450,7 @@
    "references": 2,
    "referenced_at": [
     "docs/sources/technical/ch15_installer.py:257",
-    "docs/sources/technical/ch22_map.py:227"
+    "docs/sources/technical/ch22_map.py:228"
    ]
   },
   {
@@ -81456,7 +81459,7 @@
    "references": 2,
    "referenced_at": [
     "docs/sources/technical/ch15_installer.py:256",
-    "docs/sources/technical/ch22_map.py:226"
+    "docs/sources/technical/ch22_map.py:227"
    ]
   },
   {
@@ -81502,7 +81505,7 @@
     "docs/sources/technical/ch15_installer.py:978",
     "docs/sources/technical/ch15_installer.py:1011",
     "docs/sources/technical/ch19_extending.py:288",
-    "docs/sources/technical/ch22_map.py:228",
+    "docs/sources/technical/ch22_map.py:229",
     "installatore/motore/lingua.go:9"
    ]
   },
@@ -81522,7 +81525,7 @@
    "references": 2,
    "referenced_at": [
     "docs/sources/technical/ch15_installer.py:1009",
-    "docs/sources/technical/ch22_map.py:229"
+    "docs/sources/technical/ch22_map.py:230"
    ]
   },
   {
@@ -81540,7 +81543,7 @@
    "references": 2,
    "referenced_at": [
     "docs/sources/technical/ch15_installer.py:1011",
-    "docs/sources/technical/ch22_map.py:230"
+    "docs/sources/technical/ch22_map.py:231"
    ]
   },
   {
@@ -81550,7 +81553,7 @@
    "referenced_at": [
     "docs/sources/technical/ch15_installer.py:984",
     "docs/sources/technical/ch15_installer.py:1003",
-    "docs/sources/technical/ch22_map.py:231"
+    "docs/sources/technical/ch22_map.py:232"
    ]
   },
   {
@@ -81570,7 +81573,7 @@
    "new": "installer/engine/taken_test.go",
    "references": 1,
    "referenced_at": [
-    "docs/sources/technical/ch22_map.py:224"
+    "docs/sources/technical/ch22_map.py:225"
    ]
   },
   {
@@ -81640,7 +81643,7 @@
     "docs/sources/technical/ch13_logging.py:464",
     "docs/sources/technical/ch15_installer.py:501",
     "docs/sources/technical/ch15_installer.py:1004",
-    "docs/sources/technical/ch22_map.py:233"
+    "docs/sources/technical/ch22_map.py:234"
    ]
   },
   {
@@ -81706,7 +81709,7 @@
     "docs/sources/technical/ch20_conventions.py:29",
     "docs/sources/technical/ch20_conventions.py:29",
     "docs/sources/technical/ch22_map.py:221",
-    "docs/sources/technical/ch22_map.py:242",
+    "docs/sources/technical/ch22_map.py:243",
     "fasi/17-l-installatore.md:957",
     "fasi/17-l-installatore.md:1445",
     "installatore/motore/lingua.go:7"
@@ -81726,7 +81729,7 @@
    "new": "installer/prove/Container.systemd",
    "references": 6,
    "referenced_at": [
-    "docs/sources/technical/ch22_map.py:257",
+    "docs/sources/technical/ch22_map.py:258",
     "fasi/17-l-installatore.md:1495",
     "installatore/prove/Contenitore.systemd:7",
     "installatore/prove/systemd-giro.sh:6",
@@ -81739,7 +81742,7 @@
    "new": "installer/prove/groups-desktop.sh",
    "references": 2,
    "referenced_at": [
-    "docs/sources/technical/ch22_map.py:258",
+    "docs/sources/technical/ch22_map.py:259",
     "fasi/17-l-installatore.md:1454"
    ]
   },
@@ -81760,7 +81763,7 @@
    "new": "installer/prove/on-server.sh",
    "references": 4,
    "referenced_at": [
-    "docs/sources/technical/ch22_map.py:262",
+    "docs/sources/technical/ch22_map.py:263",
     "fasi/17-l-installatore.md:1497",
     "installatore/prove/sul-server.sh:7",
     "installatore/prove/sul-server.sh:8"
@@ -81771,7 +81774,7 @@
    "new": "installer/prove/systemd-round.sh",
    "references": 3,
    "referenced_at": [
-    "docs/sources/technical/ch22_map.py:263",
+    "docs/sources/technical/ch22_map.py:264",
     "fasi/17-l-installatore.md:1445",
     "fasi/17-l-installatore.md:1495"
    ]
@@ -81820,7 +81823,7 @@
     "banchi/18-a1/costruisci.sh:5",
     "banchi/19-nvidia/19-nvidia.sh:71",
     "banchi/19-nvidia/19-nvidia.sh:72",
-    "banchi/attrezzi-allinea-prodotto.sh:462",
+    "banchi/attrezzi-allinea-prodotto.sh:454",
     "docs/sources/technical/ch01_introduction.py:278",
     "docs/sources/technical/ch11_audio_clipboard.py:177",
     "docs/sources/technical/ch14_security.py:516",
@@ -81849,8 +81852,8 @@
     "docs/sources/technical/ch20_conventions.py:237",
     "docs/sources/technical/ch22_map.py:139",
     "docs/sources/technical/ch22_map.py:165",
-    "docs/sources/technical/ch22_map.py:254",
-    "docs/sources/technical/ch22_map.py:299",
+    "docs/sources/technical/ch22_map.py:255",
+    "docs/sources/technical/ch22_map.py:300",
     "fasi/06-la-tela-e-la-vista.md:156",
     "fasi/06-la-tela-e-la-vista.md:962",
     "fasi/08-l-anello.md:2839",
@@ -81915,9 +81918,9 @@
     "banchi/17-distro/17-t3-prova.sh:129",
     "docs/sources/technical/ch12_desktops.py:381",
     "docs/sources/technical/ch14_security.py:465",
-    "docs/sources/technical/ch22_map.py:278",
-    "docs/sources/technical/ch22_map.py:290",
-    "docs/sources/technical/ch22_map.py:305",
+    "docs/sources/technical/ch22_map.py:279",
+    "docs/sources/technical/ch22_map.py:291",
+    "docs/sources/technical/ch22_map.py:306",
     "docs/sources/technical/ch23_problems.py:92",
     "packaging/arch/PKGBUILD:219",
     "packaging/arch/PKGBUILD:220",
@@ -81957,8 +81960,8 @@
     "docs/sources/technical/ch15_installer.py:826",
     "docs/sources/technical/ch17_build.py:202",
     "docs/sources/technical/ch17_build.py:383",
-    "docs/sources/technical/ch22_map.py:281",
-    "docs/sources/technical/ch22_map.py:307",
+    "docs/sources/technical/ch22_map.py:282",
+    "docs/sources/technical/ch22_map.py:308",
     "fasi/17-l-installatore.md:1434",
     "fasi/17-l-installatore.md:1434",
     "fasi/17-l-installatore.md:1434",
@@ -82029,9 +82032,9 @@
     "banchi/17-distro/17-t3-prova.sh:129",
     "docs/sources/technical/ch12_desktops.py:381",
     "docs/sources/technical/ch14_security.py:465",
-    "docs/sources/technical/ch22_map.py:278",
-    "docs/sources/technical/ch22_map.py:290",
-    "docs/sources/technical/ch22_map.py:305",
+    "docs/sources/technical/ch22_map.py:279",
+    "docs/sources/technical/ch22_map.py:291",
+    "docs/sources/technical/ch22_map.py:306",
     "docs/sources/technical/ch23_problems.py:92",
     "packaging/arch/PKGBUILD:219",
     "packaging/arch/PKGBUILD:220",
@@ -82071,8 +82074,8 @@
     "docs/sources/technical/ch15_installer.py:826",
     "docs/sources/technical/ch17_build.py:202",
     "docs/sources/technical/ch17_build.py:383",
-    "docs/sources/technical/ch22_map.py:281",
-    "docs/sources/technical/ch22_map.py:307",
+    "docs/sources/technical/ch22_map.py:282",
+    "docs/sources/technical/ch22_map.py:308",
     "fasi/17-l-installatore.md:1434",
     "fasi/17-l-installatore.md:1434",
     "fasi/17-l-installatore.md:1434",
@@ -82139,7 +82142,7 @@
     "docs/sources/technical/ch17_build.py:31",
     "docs/sources/technical/ch17_build.py:425",
     "docs/sources/technical/ch17_build.py:462",
-    "docs/sources/technical/ch22_map.py:311",
+    "docs/sources/technical/ch22_map.py:312",
     "fasi/17-l-installatore.md:1271",
     "fasi/17-l-installatore.md:1499",
     "packaging/motore/PKGBUILD:3",
@@ -82182,7 +82185,7 @@
     "docs/sources/technical/ch17_build.py:449",
     "docs/sources/technical/ch17_build.py:471",
     "docs/sources/technical/ch17_build.py:542",
-    "docs/sources/technical/ch22_map.py:310",
+    "docs/sources/technical/ch22_map.py:311",
     "docs/sources/technical/ch23_problems.py:28",
     "fasi/17-l-installatore.md:1037",
     "fasi/17-l-installatore.md:1065",
@@ -82218,7 +82221,7 @@
     "docs/sources/technical/ch17_build.py:458",
     "docs/sources/technical/ch17_build.py:557",
     "docs/sources/technical/ch17_build.py:596",
-    "docs/sources/technical/ch22_map.py:285",
+    "docs/sources/technical/ch22_map.py:286",
     "fasi/17-l-installatore.md:1447",
     "packaging/rilascio.sh:17",
     "packaging/rilascio.sh:100",
@@ -82243,9 +82246,9 @@
     "banchi/17-distro/17-t3-prova.sh:129",
     "docs/sources/technical/ch12_desktops.py:381",
     "docs/sources/technical/ch14_security.py:465",
-    "docs/sources/technical/ch22_map.py:278",
-    "docs/sources/technical/ch22_map.py:290",
-    "docs/sources/technical/ch22_map.py:305",
+    "docs/sources/technical/ch22_map.py:279",
+    "docs/sources/technical/ch22_map.py:291",
+    "docs/sources/technical/ch22_map.py:306",
     "docs/sources/technical/ch23_problems.py:92",
     "packaging/arch/PKGBUILD:219",
     "packaging/arch/PKGBUILD:220",
@@ -82266,7 +82269,7 @@
    "references": 9,
    "referenced_at": [
     "docs/sources/technical/ch17_build.py:323",
-    "docs/sources/technical/ch22_map.py:295",
+    "docs/sources/technical/ch22_map.py:296",
     "fasi/17-l-installatore.md:1463",
     "packaging/rpm/remotix.spec:296",
     "packaging/rpm/remotix.spec:296",
@@ -82321,7 +82324,7 @@
     "docs/sources/technical/ch19_extending.py:55",
     "docs/sources/technical/ch19_extending.py:192",
     "docs/sources/technical/ch22_map.py:163",
-    "docs/sources/technical/ch22_map.py:257",
+    "docs/sources/technical/ch22_map.py:258",
     "fasi/11-la-rete-di-sicurezza.md:545",
     "fasi/11-la-rete-di-sicurezza.md:1113",
     "fasi/13-xfce.md:117",
@@ -82641,7 +82644,7 @@
     "docs/sources/technical/ch17_build.py:159",
     "docs/sources/technical/ch19_extending.py:251",
     "docs/sources/technical/ch22_map.py:43",
-    "docs/sources/technical/ch22_map.py:377",
+    "docs/sources/technical/ch22_map.py:378",
     "docs/sources/technical/ch23_problems.py:75",
     "fasi/17-l-installatore.md:238",
     "fasi/17-l-installatore.md:1434",
@@ -83330,7 +83333,7 @@
     "banchi/18-a1/costruisci.sh:5",
     "banchi/19-nvidia/19-nvidia.sh:71",
     "banchi/19-nvidia/19-nvidia.sh:72",
-    "banchi/attrezzi-allinea-prodotto.sh:462",
+    "banchi/attrezzi-allinea-prodotto.sh:454",
     "docs/sources/technical/ch01_introduction.py:278",
     "docs/sources/technical/ch11_audio_clipboard.py:177",
     "docs/sources/technical/ch14_security.py:516",
@@ -83359,8 +83362,8 @@
     "docs/sources/technical/ch20_conventions.py:237",
     "docs/sources/technical/ch22_map.py:139",
     "docs/sources/technical/ch22_map.py:165",
-    "docs/sources/technical/ch22_map.py:254",
-    "docs/sources/technical/ch22_map.py:299",
+    "docs/sources/technical/ch22_map.py:255",
+    "docs/sources/technical/ch22_map.py:300",
     "fasi/06-la-tela-e-la-vista.md:156",
     "fasi/06-la-tela-e-la-vista.md:962",
     "fasi/08-l-anello.md:2839",
@@ -84042,7 +84045,7 @@
     "banchi/18-a1/costruisci.sh:5",
     "banchi/19-nvidia/19-nvidia.sh:71",
     "banchi/19-nvidia/19-nvidia.sh:72",
-    "banchi/attrezzi-allinea-prodotto.sh:462",
+    "banchi/attrezzi-allinea-prodotto.sh:454",
     "docs/sources/technical/ch01_introduction.py:278",
     "docs/sources/technical/ch11_audio_clipboard.py:177",
     "docs/sources/technical/ch14_security.py:516",
@@ -84071,8 +84074,8 @@
     "docs/sources/technical/ch20_conventions.py:237",
     "docs/sources/technical/ch22_map.py:139",
     "docs/sources/technical/ch22_map.py:165",
-    "docs/sources/technical/ch22_map.py:254",
-    "docs/sources/technical/ch22_map.py:299",
+    "docs/sources/technical/ch22_map.py:255",
+    "docs/sources/technical/ch22_map.py:300",
     "fasi/06-la-tela-e-la-vista.md:156",
     "fasi/06-la-tela-e-la-vista.md:962",
     "fasi/08-l-anello.md:2839",

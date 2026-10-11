@@ -474,7 +474,7 @@ Proof on the copy with the rules above (`rinomina2-prova.sh`): 576 files, 167,42
 | collisions handled | 18 |
 | contracts | 92 |
 | files scanned | 614 |
-| files skipped | 2584 |
+| files skipped | 2585 |
 | frozen register words | 1095 |
 | shared new names | 33 |
 | merges met in a scope | 4 |
@@ -1191,7 +1191,7 @@ Every reference is in rinomina2-plan.json → file_moves (first 200 per file).
 | `installatore/motore/dbus.go` | `installer/engine/dbus.go` | 0 |
 | `installatore/motore/disinstalla.go` | `installer/engine/uninstall.go` | 4 |
 | `installatore/motore/disinstalla_test.go` | `installer/engine/uninstall_test.go` | 2 |
-| `installatore/motore/epoca_test.go` | `installer/engine/epoch_test.go` | 0 |
+| `installatore/motore/epoca_test.go` | `installer/engine/epoch_test.go` | 1 |
 | `installatore/motore/eventi.go` | `installer/engine/events.go` | 3 |
 | `installatore/motore/fiducia.go` | `installer/engine/trust.go` | 4 |
 | `installatore/motore/fiducia_test.go` | `installer/engine/trust_test.go` | 2 |
