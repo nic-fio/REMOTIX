@@ -77,8 +77,7 @@ SORGENTI := main.c transport.c webtransport.c page.c command.c certificates.c \
             session.c capture.c mutter.c encoder.c vadirect.c \
             vulkanvideo.c bit_writer.c colors709.c audio.c sound.c \
             input.c keyboard.c cursor.c sentinel.c clipboard.c kwin.c \
-            clipboard_kde.c wlroots.c wlr_input.c shape.c rediscover.c \
-            busfilter.c
+            clipboard_kde.c wlroots.c wlr_input.c shape.c rediscover.c
 OGGETTI  := $(SORGENTI:.c=.o)
 
 # -----------------------------------------------------------------------------

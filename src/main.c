@@ -85,7 +85,6 @@
 #include "webtransport.h"
 #include "session.h"
 #include "kwin.h"
-#include "busfilter.h"
 
 #include <errno.h>
 #include <poll.h>
@@ -1834,12 +1833,6 @@ int main(int argc, char **argv)
 	 *    becomes the KWin wrapper: nothing of the server is opened here. */
 	if (argc >= 2 && strcmp(argv[1], "--kwin-nested") == 0)
 		return kwin_nested_alive(argc, argv);
-	/* ⭐ 11 Oct 2026 (`DECISIONS.md` §10.49) — the start line of every
-	 *    desktop: the filter of the session's system bus is forked, and this
-	 *    process becomes the desktop (`busfilter.h`).  As the USER: nothing of
-	 *    the server is opened here. */
-	if (argc >= 2 && strcmp(argv[1], BUSFILTER_ARG) == 0)
-		return busfilter_main(argc, argv);
 
 	for (int i = 1; i < argc; i++) {
 		const char *a = argv[i];

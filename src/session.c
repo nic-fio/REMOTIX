@@ -41,7 +41,6 @@
  *   during `deactivating` is another first run.
  */
 #include "session.h"
-#include "busfilter.h"
 
 #include "shape.h"
 #include "log.h"
@@ -2685,39 +2684,6 @@ static char *log_session_path(void)
 	return NULL;
 }
 
-/*
- * ⭐ §10.49 — the start command, wrapped by the system bus filter
- *   (`busfilter.h`): `exec <this binary> --internal-bus-filter <socket> -- sh -c
- *   '<command>'`.  The socket lives in `$XDG_RUNTIME_DIR/remotix/`, the user's.
- * ⛔ If this binary cannot be named, the command goes as it is — and it is SAID:
- *    the session is born, with the power entries in its menu.
- */
-static char *bus_filter_command(const char *command)
-{
-	const char *runtime = g_getenv("XDG_RUNTIME_DIR");
-	g_autofree char *me = g_file_read_link("/proc/self/exe", NULL);
-	g_autofree char *folder = runtime ? g_build_filename(runtime, "remotix", NULL) : NULL;
-	g_autofree char *socket_path = NULL;
-	g_autofree char *q_me = NULL, *q_socket = NULL, *q_command = NULL;
-
-	if (!me || !folder || strstr(me, " (deleted)") || g_mkdir_with_parents(folder, 0700) != 0) {
-		registro_dice(LOG_SESSION,
-		              "⛔ §10.49: the system bus filter is NOT put in front of the session "
-		              "(%s) — Power Off, Restart, Suspend WILL appear in its menu",
-		              !me ? "/proc/self/exe unreadable"
-		              : !folder ? "XDG_RUNTIME_DIR not set"
-		              : strstr(me, " (deleted)") ? "this binary was replaced on disk"
-		                                         : g_strerror(errno));
-		return g_strdup(command);
-	}
-	socket_path = g_build_filename(folder, BUSFILTER_SOCKET, NULL);
-	q_me = g_shell_quote(me);
-	q_socket = g_shell_quote(socket_path);
-	q_command = g_shell_quote(command);
-	return g_strdup_printf("exec %s " BUSFILTER_ARG " %s -- sh -c %s", q_me, q_socket,
-	                       q_command);
-}
-
 /* ⭐ `width`/`height`: the client's canvas.  ⚠ The LXQt and
  *   XFCE branches use them (`measured_primary()`): GNOME and KDE take the size from the
  *   drop-in — identical to before. */
@@ -2738,7 +2704,6 @@ static gboolean start(uint32_t width, uint32_t height)
 	 *    `XDG_RUNTIME_DIR`): it lives here, and `command` points to it. */
 	g_autofree char *lxqt_command = NULL;
 	g_autofree char *xfce_command = NULL;
-	g_autofree char *filtered_command = NULL;
 
 	if (e_kde())
 		command = SESSION_COMMAND_KDE;
@@ -2770,18 +2735,6 @@ static gboolean start(uint32_t width, uint32_t height)
 	environment = compose_environment();
 	if (!environment)
 		return FALSE;
-
-	/*
-	 * ⭐⭐ 11 Oct 2026 (`DECISIONS.md` §10.49) — NO POWER OFF, RESTART, SUSPEND
-	 *      IN THE SESSION, on all four desktops, and «Log Out…» stays.
-	 *
-	 * The command goes through `remotix --internal-bus-filter` (`busfilter.h`):
-	 * it forks the filter of the session's system bus and becomes the desktop,
-	 * with `DBUS_SYSTEM_BUS_ADDRESS` pointing to the filter.  One path for all four:
-	 * every desktop asks logind's `Can*`, and through the filter logind says «na».
-	 * ⛔ Nothing is written in the system, nothing installed (§10.36).
-	 */
-	command = filtered_command = bus_filter_command(command);
 
 	/*
 	 * ⛔⭐ THE SESSION LOG CANNOT LIVE IN `XDG_RUNTIME_DIR` — 16
@@ -3145,10 +3098,7 @@ static const char *const OUR_VARIABLES[] = {
 	"LABWC_UPDATE_ACTIVATION_ENV", "WAYLAND_DISPLAY", "DISPLAY",
 	/* ⭐ D8: it is set by a session's `Exec` (`env GNOME_SHELL_SESSION_MODE=…`),
 	 *    and gnome-session exports it to the manager like its whole environment. */
-	"GNOME_SHELL_SESSION_MODE",
-	/* ⭐ §10.49: the filter's address — gnome-session and startplasma export it
-	 *    like the rest; the user at the monitor must get the real bus back. */
-	"DBUS_SYSTEM_BUS_ADDRESS", NULL
+	"GNOME_SHELL_SESSION_MODE", NULL
 };
 
 /* { drop-in folder, name } — all of ours and only ours */
