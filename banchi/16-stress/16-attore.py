@@ -1011,7 +1011,7 @@ class Actor:
                     and (st.get("esito") or "").startswith(("Ammesso", "Admitted")):
                 admitted = now
             if st.get("esito_classe") == "bad" and st.get("esito"):
-                n.update(outcome="refusal", reason="refusal: «%s»" % st["outcome"],
+                n.update(outcome="refusal", reason="refusal: «%s»" % st["esito"],
                          access_ms=round(t0 * 1000))
                 return n
             if (st.get("painted") or 0) > 0:
@@ -1029,7 +1029,7 @@ class Actor:
         n["admission_ms"] = round((admitted - t0) * 1000) if admitted else None
         if not first:
             n.update(outcome="no_frame", reason="no frame in %d s (outcome «%s»)"
-                     % (self.o.cap_s, st.get("outcome")))
+                     % (self.o.cap_s, st.get("esito")))
             return n
         # ⚠ the «not degenerate» judgement photographs up to the cap: `[M]` 25 Sep,
         #   xfce has a BLACK background and waited 60 s for it ⇒ short cap, and the
@@ -1228,7 +1228,7 @@ class Hands:
         delay = R.whole(50, 120)
         if hasattr(self.g, "cdp"):
             self.G2.mouse(self.g, [("move_to",) + tuple(self.pos), ("giu", button_code, 1),
-                                   ("delay", delay), ("su", button_code, 1)])
+                                   ("pausa", delay), ("su", button_code, 1)])
             t = time.time() - delay / 1000.0
         else:
             x, y = int(round(self.pos[0])), int(round(self.pos[1]))
@@ -1383,7 +1383,7 @@ def main():
     o.fault = False
     o.is_visible = True
     o.port = 0
-    o.evidenze = os.path.join(o.dir, "user-%02d" % o.user)
+    o.evidence = os.path.join(o.dir, "user-%02d" % o.user)
     o.url = "https://%s:%d/" % (o.host, S.PORTS[o.box])
     # ⭐ to measure a route of the page (e.g. «?canvas=gl», anomaly A1): it is appended
     #   to the address, and declared in the state; empty = the default page
