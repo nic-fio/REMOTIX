@@ -1,0 +1,694 @@
+# step 2 move table: file-moves.tsv of the plan (fase-c, written at 9d7e586) with the coordinator's rulings of 11 Oct applied; the benches retired by the user on 11 Oct (09-b70/b76/b81, 07-b64/b65, 18-software-confronto, 18-confronto, 18-a1/, 17-t9/, 01-b0-terreno) have no row
+old_path	new_path	why
+DECISIONI.md	DECISIONS.md	top-level document; also cited by name in memory notes, agent prompts and commit messages outside the repo (see hazards)
+FASI.md	PHASES.md	top-level document; also cited by name in memory notes, agent prompts and commit messages outside the repo (see hazards)
+LEZIONI.md	LESSONS.md	top-level document; also cited by name in memory notes, agent prompts and commit messages outside the repo (see hazards)
+PIANO.md	PLAN.md	top-level document; also cited by name in memory notes, agent prompts and commit messages outside the repo (see hazards)
+SPECIFICHE.md	SPECS.md	top-level document; also cited by name in memory notes, agent prompts and commit messages outside the repo (see hazards)
+STUDI.md	STUDIES.md	top-level document; also cited by name in memory notes, agent prompts and commit messages outside the repo (see hazards)
+anteprime/	previews/	installer TUI screenshots (ch01 map names the folder)
+anteprime/1-controllo.png	previews/1-check.png	screen name of the TUI (Italian-language screenshot)
+anteprime/2-scelte.png	previews/2-choices.png	screen name of the TUI (Italian-language screenshot)
+anteprime/3-piano.png	previews/3-plan.png	screen name of the TUI (Italian-language screenshot)
+anteprime/4-avanzamento.png	previews/4-progress.png	screen name of the TUI (Italian-language screenshot)
+anteprime/5-pronto.png	previews/5-ready.png	screen name of the TUI (Italian-language screenshot)
+anteprime/en/1-controllo.png	previews/en/1-check.png	screen name of the TUI (English screenshot)
+anteprime/en/2-scelte.png	previews/en/2-choices.png	screen name of the TUI (English screenshot)
+anteprime/en/3-piano.png	previews/en/3-plan.png	screen name of the TUI (English screenshot)
+anteprime/en/4-avanzamento.png	previews/en/4-progress.png	screen name of the TUI (English screenshot)
+anteprime/en/5-pronto.png	previews/en/5-ready.png	screen name of the TUI (English screenshot)
+anteprime/en/variante-bloccata.png	previews/en/variant-blocked.png	screen name of the TUI (English screenshot)
+anteprime/en/variante-nessun-desktop.png	previews/en/variant-no-desktop.png	screen name of the TUI (English screenshot)
+anteprime/variante-bloccata.png	previews/variant-blocked.png	screen name of the TUI (Italian-language screenshot)
+anteprime/variante-nessun-desktop.png	previews/variant-no-desktop.png	screen name of the TUI (Italian-language screenshot)
+banchi/	benches/	banchi→benches (whole tree); bare word «banchi» in package denylists, git pathspecs, os.path.join and server paths must follow, see hazards
+banchi/00-sessione-gnome.sh	benches/00-gnome-session.sh	starts the headless GNOME session
+banchi/01-b0-bersaglio.py	benches/01-b0-target.py	target profile, Python twin (bersaglio→target)
+banchi/01-b0-bersaglio.sh	benches/01-b0-target.sh	target profile, sourced by B5-B8 (bersaglio→target)
+banchi/01-b11-guasto-innesta.py	benches/01-b11-graft-faults.py	grafts the B11 faults (innesta→graft, guasto→fault)
+banchi/01-b11-guasto.sh	benches/01-b11-faulty-server.sh	turns the faulty B11 server on/off
+banchi/01-b11-lancia.sh	benches/01-b11-launch.sh	lancia→launch
+banchi/01-b11-pagina.html	benches/01-b11-page.html	pagina→page
+banchi/01-b2-cliente-aioquic.py	benches/01-b2-aioquic-client.py	cliente→client
+banchi/01-b2-costruisci-ngtcp2.sh	benches/01-b2-build-ngtcp2.sh	costruisci→build
+banchi/01-b2-costruisci.sh	benches/01-b2-build.sh	costruisci→build
+banchi/01-b2-lancia-wt.sh	benches/01-b2-launch-wt.sh	lancia→launch
+banchi/01-b2-ngtcp2-wt-innesta.py	benches/01-b2-graft-ngtcp2-wt.py	grafts WebTransport into ngtcp2 (innesta→graft)
+banchi/01-b2-raccogli.py	benches/01-b2-collect.py	raccogli→collect
+banchi/01-b2-sonda-trasporto.py	benches/01-b2-transport-probe.py	sonda→probe, trasporto→transport
+banchi/01-b2-sonda.html	benches/01-b2-probe.html	sonda→probe
+banchi/01-b3-cliente.py	benches/01-b3-client.py	cliente→client
+banchi/01-b3-rcp-innesta.py	benches/01-b3-graft-rcp.py	grafts RCP onto the B2 layer (innesta→graft)
+banchi/01-b4-lancia.py	benches/01-b4-launch.py	lancia→launch
+banchi/01-b4-registrazioni.py	benches/01-b4-recordings.py	registrazioni→recordings
+banchi/01-b4-validatore.py	benches/01-b4-validator.py	validatore→validator
+banchi/01-b5-lancia.sh	benches/01-b5-launch.sh	lancia→launch
+banchi/01-b5-violazioni.py	benches/01-b5-violations.py	violazioni→violations
+banchi/01-b6-lancia.sh	benches/01-b6-launch.sh	lancia→launch
+banchi/01-b6-tetti.py	benches/01-b6-caps.py	tetti→caps (phase-B word)
+banchi/01-b7-congedo.py	benches/01-b7-farewell.py	congedo→farewell (glossary)
+banchi/01-b7-lancia.sh	benches/01-b7-launch.sh	lancia→launch
+banchi/01-b8-cronometro.py	benches/01-b8-stopwatch.py	cronometro→stopwatch
+banchi/01-b8-lancia.sh	benches/01-b8-launch.sh	lancia→launch
+banchi/01-b8-prova-ban.c	benches/01-b8-ban-test.c	unit test of the ban (prova→test)
+banchi/01-b8-sblocca.py	benches/01-b8-unblock.py	sblocca→unblock (the RCP unblock command)
+banchi/01-b9-letture.py	benches/01-b9-readings.py	letture→readings (two readings of RCP.md)
+banchi/01-casa-7448.sh	benches/01-home-7448.sh	the «home server» on 7448 (casa→home)
+banchi/01-s7-esiti.jsonl	benches/01-s7-outcomes.jsonl	esiti→outcomes; append-only, rows keep their old keys
+banchi/01-s7-pagina.html	benches/01-s7-page.html	pagina→page
+banchi/01-s7-raccogli.py	benches/01-s7-collect.py	raccogli→collect
+banchi/01-s7-rotella.c	benches/01-s7-wheel.c	rotella→wheel (scroll wheel)
+banchi/01-s7-rotella.sh	benches/01-s7-wheel.sh	rotella→wheel
+banchi/02-cattura-certifica.sh	benches/02-capture-certify.sh	cattura→capture, certifica→certify
+banchi/02-cattura-costruisci.sh	benches/02-capture-build.sh	costruisci→build
+banchi/02-cattura-esiti.jsonl	benches/02-capture-outcomes.jsonl	esiti→outcomes; append-only, rows keep their old keys
+banchi/02-cattura-fotogramma.c	benches/02-capture-frame.c	fotogramma→frame
+banchi/02-cattura-giudica.py	benches/02-capture-judge.py	giudica→judge
+banchi/02-cattura-lancia.sh	benches/02-capture-launch.sh	lancia→launch
+banchi/02-cattura-prodotto.c	benches/02-capture-product.c	prodotto→product
+banchi/02-codifica-costruisci.sh	benches/02-encoding-build.sh	codifica→encoding
+banchi/02-codifica-esiti.jsonl	benches/02-encoding-outcomes.jsonl	esiti→outcomes; append-only, rows keep their old keys
+banchi/02-codifica-immagine.py	benches/02-encoding-image.py	immagine→image
+banchi/02-codifica-lancia.sh	benches/02-encoding-launch.sh	lancia→launch
+banchi/02-codifica-nal.py	benches/02-encoding-nal.py	codifica→encoding
+banchi/02-codifica-obu.py	benches/02-encoding-obu.py	codifica→encoding
+banchi/02-codifica-prova.c	benches/02-encoding-test.c	prova→test (the harness pointed at the product encoder)
+banchi/02-figlio-accendi.sh	benches/02-child-start.sh	figlio→child, accendi→start
+banchi/02-figlio-esiti.jsonl	benches/02-child-outcomes.jsonl	esiti→outcomes; append-only, rows keep their old keys
+banchi/02-figlio-lancia.sh	benches/02-child-launch.sh	lancia→launch
+banchi/02-figlio-prova.py	benches/02-child-test.py	prova→test
+banchi/02-filo-cliente.py	benches/02-wire-client.py	filo→wire
+banchi/02-filo-esiti.jsonl	benches/02-wire-outcomes.jsonl	esiti→outcomes; append-only, rows keep their old keys
+banchi/02-filo-fotogramma.py	benches/02-wire-frame.py	fotogramma→frame
+banchi/02-filo-lancia.sh	benches/02-wire-launch.sh	lancia→launch
+banchi/02-filo-validatore.py	benches/02-wire-validator.py	validatore→validator
+banchi/02-pagina-misura-cdp.py	benches/02-page-measure-cdp.py	the CDP reading channel (pagina→page, misura→measure)
+banchi/02-pagina-sonda-codec.py	benches/02-page-codec-probe.py	builds the page codec probes (sonda→probe)
+banchi/02-pam-accendi.sh	benches/02-pam-start.sh	accendi→start
+banchi/02-pam-esiti.jsonl	benches/02-pam-outcomes.jsonl	esiti→outcomes; append-only, rows keep their old keys
+banchi/02-pam-fermo.py	benches/02-pam-standstill.py	how long a non-authenticating client stands still (fermo)
+banchi/02-pam-i3.py	benches/02-pam-i3.py	name already English; parent dir renamed
+banchi/02-pam-lancia.sh	benches/02-pam-launch.sh	lancia→launch
+banchi/02-sessione-dispositivi.py	benches/02-session-devices.py	dispositivi→devices
+banchi/02-sessione-esiti.jsonl	benches/02-session-outcomes.jsonl	esiti→outcomes; append-only, rows keep their old keys
+banchi/02-sessione-guardia.sh	benches/02-session-guard.sh	guardia→guard
+banchi/02-sessione-lancia.sh	benches/02-session-launch.sh	lancia→launch
+banchi/02-sessione-scene/	benches/02-session-scenes/	sessione→session, scene→scenes; read as "$SCENE/<name>.json"
+banchi/02-sessione-scene/nera.json	benches/02-session-scenes/black.json	recorded black-screen scene (nera→black)
+banchi/02-sessione-scene/sana.json	benches/02-session-scenes/healthy.json	recorded healthy scene (sana→healthy)
+banchi/02-sessione-stato.py	benches/02-session-state.py	which state the session is in (stato→state)
+banchi/03-marca.py	benches/03-mark.py	the mark reader (marca→mark)
+banchi/04-b25-esiti.jsonl	benches/04-b25-outcomes.jsonl	esiti→outcomes; append-only, rows keep their old keys
+banchi/04-b25-guasti.c	benches/04-b25-faults.c	guasti→faults
+banchi/04-b25-lancia.sh	benches/04-b25-launch.sh	lancia→launch
+banchi/04-b25-tastiera.c	benches/04-b25-keyboard.c	tastiera→keyboard
+banchi/04-b28-esiti.jsonl	benches/04-b28-outcomes.jsonl	phase-B disco row; append-only, rows keep their old keys
+banchi/04-b28-gesti.py	benches/04-b28-gestures.py	gesti→gestures
+banchi/04-b28-lancia.sh	benches/04-b28-launch.sh	lancia→launch
+banchi/04-b28-registro.jsonl	benches/04-b28-register.jsonl	phase-B row (bench register); --verdetto re-reads old rows via _OLD_WORDS
+banchi/04-b31-tela.c	benches/04-b31-canvas.c	tela→canvas
+banchi/04-in8-costruisci.sh	benches/04-in8-build.sh	costruisci→build
+banchi/04-in8-misura.c	benches/04-in8-measure.c	misura→measure (which sizes Mutter accepts)
+banchi/04-in8-parita.c	benches/04-in8-parity.c	parita→parity (odd sizes vs the encoder)
+banchi/06-b33-costruisci.sh	benches/06-b33-build.sh	costruisci→build
+banchi/06-b33-risveglio-certifica.sh	benches/06-b33-wakeup-certify.sh	risveglio→wakeup
+banchi/06-b33-risveglio-costruisci.sh	benches/06-b33-wakeup-build.sh	risveglio→wakeup
+banchi/06-b33-risveglio-giudice.py	benches/06-b33-wakeup-judge.py	giudice→judge
+banchi/06-b33-risveglio-guasti.py	benches/06-b33-wakeup-faults.py	guasti→faults
+banchi/06-b33-risveglio.c	benches/06-b33-wakeup.c	risveglio→wakeup
+banchi/06-b33-risveglio.sh	benches/06-b33-wakeup.sh	risveglio→wakeup
+banchi/06-b33-terreno.sh	benches/06-b33-terrain.sh	terreno→terrain
+banchi/06-b33-testimone.c	benches/06-b33-witness.c	testimone→witness
+banchi/06-b34-tabella.c	benches/06-b34-table.c	tabella→table
+banchi/06-b5-esiti-cattura.c	benches/06-b5-capture-outcomes.c	esiti della cattura → capture outcomes
+banchi/06-b5-esiti-cattura.sh	benches/06-b5-capture-outcomes.sh	builds and runs 06-b5-capture-outcomes.c
+banchi/07-b42-giudice.py	benches/07-b42-judge.py	giudice→judge
+banchi/07-b46-marionette.py	benches/07-b46-marionette.py	name already English; parent dir renamed
+banchi/09-b77-audio-riordino.py	benches/09-b77-audio-reorder.py	riordino→reorder
+banchi/09-b78-apertura.py	benches/09-b78-opening.py	how long a session takes to open
+banchi/09-b79-cure.py	benches/09-b79-fixes.py	cure→fixes (phase-B word; the two paired cures)
+banchi/09-b79-terreno.sh	benches/09-b79-terrain.sh	terreno→terrain
+banchi/09-b84-audio-silenzio.py	benches/09-b84-audio-silence.py	silenzio→silence
+banchi/09-lucchetto.py	benches/09-lock.py	lucchetto→lock
+banchi/10-f1-testimone.py	benches/10-f1-witness.py	testimone→witness
+banchi/11-scatole/	benches/11-boxes/	scatole→boxes (rete11 boxes)
+banchi/11-scatole/11-accendi.sh	benches/11-boxes/11-start.sh	accendi→start
+banchi/11-scatole/11-c1-nasce-e-si-vede.py	benches/11-boxes/11-c1-born-and-visible.py	«it is born and can be seen»
+banchi/11-scatole/11-c10-le-copie-gemelle.py	benches/11-boxes/11-c10-the-twin-copies.py	«the twin copies (of the protocol) match»
+banchi/11-scatole/11-c11-allineamento.py	benches/11-boxes/11-c11-alignment.py	«the boxes are aligned»
+banchi/11-scatole/11-c12-il-gancio-e-vivo.py	benches/11-boxes/11-c12-the-hook-is-alive.py	gancio→hook
+banchi/11-scatole/11-c13-la-certificazione-e-recente.py	benches/11-boxes/11-c13-the-certification-is-recent.py	mesh title
+banchi/11-scatole/11-c14-non-si-disturbano.py	benches/11-boxes/11-c14-they-do-not-interfere.py	«the boxes do not disturb each other»
+banchi/11-scatole/11-c15-la-meta-remota-gira.py	benches/11-boxes/11-c15-the-remote-half-runs.py	header says «THE REMOTE HALF REALLY RUNS»
+banchi/11-scatole/11-c16-eccezioni.txt	benches/11-boxes/11-c16-exceptions.txt	C16 exception list (read by name from 11-c16)
+banchi/11-scatole/11-c16-i-documenti-non-mentono.py	benches/11-boxes/11-c16-the-documents-do-not-lie.py	given in the brief
+banchi/11-scatole/11-c17-gli-appunti-vanno-nei-due-versi.py	benches/11-boxes/11-c17-the-clipboard-goes-both-ways.py	appunti→clipboard
+banchi/11-scatole/11-c18-i-gruppi-li-mette-il-prodotto.py	benches/11-boxes/11-c18-the-product-sets-the-groups.py	«the product puts the groups in»
+banchi/11-scatole/11-c19-la-scatola-resta-pulita.py	benches/11-boxes/11-c19-the-box-stays-clean.py	scatola→box
+banchi/11-scatole/11-c2-finestra.html	benches/11-boxes/11-c2-window.html	C2 page
+banchi/11-scatole/11-c2-una-finestra-si-apre.py	benches/11-boxes/11-c2-a-window-opens.py	mesh title
+banchi/11-scatole/11-c20-la-rinascita-non-porta-fantasmi.py	benches/11-boxes/11-c20-rebirth-brings-no-ghosts.py	mesh title
+banchi/11-scatole/11-c20-scena.html	benches/11-boxes/11-c20-scene.html	scena→scene
+banchi/11-scatole/11-c21-sul-bordo-la-forma-cambia.py	benches/11-boxes/11-c21-on-the-edge-the-shape-changes.py	forma→shape (cursor shape)
+banchi/11-scatole/11-c22-il-bordo-si-trascina.py	benches/11-boxes/11-c22-the-edge-drags.py	mesh title
+banchi/11-scatole/11-c23-maiusc-e-frecce-selezionano.py	benches/11-boxes/11-c23-shift-and-arrows-select.py	mesh title
+banchi/11-scatole/11-c24-l-esci-chiude-sempre.py	benches/11-boxes/11-c24-log-out-always-closes.py	«Esci» is the page's Log out button
+banchi/11-scatole/11-c3-i-fotogrammi-cambiano.py	benches/11-boxes/11-c3-frames-change.py	fotogramma→frame
+banchi/11-scatole/11-c3-scena.html	benches/11-boxes/11-c3-scene.html	scena→scene
+banchi/11-scatole/11-c4-il-tasto-arriva-allo-schermo.py	benches/11-boxes/11-c4-the-key-reaches-the-screen.py	mesh title
+banchi/11-scatole/11-c5-il-suono-non-e-silenzio.py	benches/11-boxes/11-c5-sound-is-not-silence.py	suono→sound
+banchi/11-scatole/11-c6-si-stacca-e-si-ritrova.py	benches/11-boxes/11-c6-detach-and-find-again.py	session detaches and is found again
+banchi/11-scatole/11-c7-si-chiude-e-non-resta-niente.py	benches/11-boxes/11-c7-closes-and-leaves-nothing.py	mesh title
+banchi/11-scatole/11-c8-il-secondo-apre-il-browser.py	benches/11-boxes/11-c8-the-second-opens-the-browser.py	mesh title
+banchi/11-scatole/11-c8-pagina.html	benches/11-boxes/11-c8-page.html	pagina→page
+banchi/11-scatole/11-c8b-la-pagina-si-vede-dal-cliente.py	benches/11-boxes/11-c8b-the-page-shows-on-the-client.py	cliente→client
+banchi/11-scatole/11-c9-il-registro-dice-di-chi.py	benches/11-boxes/11-c9-the-log-says-whose.py	registro = product log here
+banchi/11-scatole/11-capacita-del-prodotto.sh	benches/11-boxes/11-product-capabilities.sh	sourced by 11-accendi.sh and 11-gancio.sh
+banchi/11-scatole/11-gancio-registro.jsonl	benches/11-boxes/11-gancio-registro.jsonl	KEEP: committed append-only register (C12/C13/C15 read it by name; .gitattributes merge=union; live copy /media/REMOTIX/rete11/); only the folder changes
+banchi/11-scatole/11-gancio-remoto.sh	benches/11-boxes/11-hook-remote.sh	gancio→hook
+banchi/11-scatole/11-gancio.sh	benches/11-boxes/11-hook.sh	gancio→hook (installed git hooks call it by path: see hazards)
+banchi/11-scatole/11-pam-root-negato.py	benches/11-boxes/11-pam-root-denied.py	negato→denied
+banchi/11-scatole/11-passo0.sh	benches/11-boxes/11-step0.sh	passo0→step0 (phase-B action word)
+banchi/11-scatole/11-registro-unisci.py	benches/11-boxes/11-register-merge.py	merges the bench register (bench records → register)
+banchi/11-scatole/Contenitore.gnome	benches/11-boxes/Containerfile.gnome	Containerfile.* (podman's own name), same as what src/costruzione/Contenitore.* becomes
+banchi/11-scatole/Contenitore.kde	benches/11-boxes/Containerfile.kde	Containerfile.* (podman's own name), same as src/costruzione/Contenitore.*
+banchi/11-scatole/Contenitore.lxqt	benches/11-boxes/Containerfile.lxqt	Containerfile.* (podman's own name), same as src/costruzione/Contenitore.*
+banchi/11-scatole/Contenitore.xfce	benches/11-boxes/Containerfile.xfce	Containerfile.* (podman's own name), same as src/costruzione/Contenitore.*
+banchi/11-scatole/Contenitore.xrdp	benches/11-boxes/Containerfile.xrdp	Containerfile.* (podman's own name), same as src/costruzione/Contenitore.*
+banchi/11-scatole/adattatore.gnome.sh	benches/11-boxes/adapter.gnome.sh	adattatore→adapter (installed in the box as /usr/local/lib/rete11/adattatore.sh)
+banchi/11-scatole/adattatore.kde.sh	benches/11-boxes/adapter.kde.sh	adattatore→adapter
+banchi/11-scatole/adattatore.lxqt.sh	benches/11-boxes/adapter.lxqt.sh	adattatore→adapter
+banchi/11-scatole/adattatore.xfce.sh	benches/11-boxes/adapter.xfce.sh	adattatore→adapter
+banchi/11-scatole/appunti-gtk.py	benches/11-boxes/clipboard-gtk.py	appunti→clipboard
+banchi/11-scatole/rifai.sh	benches/11-boxes/restart-servers.sh	it restarts the server in the 4 boxes (optionally re-puts the product)
+banchi/12-c20-veri.py	benches/12-c20-real.py	C20 with real browsers (veri→real)
+banchi/12-client-veri.py	benches/12-real-clients.py	the real-browser client test (client veri → real clients)
+banchi/13-w1-un-fotogramma.c	benches/13-w1-one-frame.c	un fotogramma → one frame
+banchi/14-f1-forma.c	benches/14-f1-shape.c	forma→shape
+banchi/14-f1-forma.sh	benches/14-f1-shape.sh	forma→shape
+banchi/15-suite/.gitignore	benches/15-suite/.gitignore	folder only (name already English)
+banchi/15-suite/15-compositori.sh	benches/15-suite/15-compositors.sh	compositori→compositors
+banchi/15-suite/15-d006-misura.py	benches/15-suite/15-d006-measure.py	misura→measure
+banchi/15-suite/15-d006-server.sh	benches/15-suite/15-d006-server.sh	folder only (name already English)
+banchi/15-suite/15-d007-server.sh	benches/15-suite/15-d007-server.sh	folder only (name already English)
+banchi/15-suite/15-f001-accesso-e-prima-immagine.py	benches/15-suite/15-f001-login-and-first-image.py	accesso = log-in here
+banchi/15-suite/15-f003-lo-schermo-si-aggiorna.py	benches/15-suite/15-f003-the-screen-updates.py	test title
+banchi/15-suite/15-f004-il-mouse.py	benches/15-suite/15-f004-the-mouse.py	article only
+banchi/15-suite/15-f005-forma-del-puntatore.py	benches/15-suite/15-f005-pointer-shape.py	forma→shape
+banchi/15-suite/15-f006-il-bordo-si-trascina.py	benches/15-suite/15-f006-the-edge-drags.py	same words as 11-c22
+banchi/15-suite/15-f007-tasti-speciali.py	benches/15-suite/15-f007-special-keys.py	test title
+banchi/15-suite/15-f008-modificatori.py	benches/15-suite/15-f008-modifiers.py	test title
+banchi/15-suite/15-f009-accenti-e-altgr.py	benches/15-suite/15-f009-accents-and-altgr.py	test title
+banchi/15-suite/15-f010-scorciatoie-del-desktop.py	benches/15-suite/15-f010-desktop-shortcuts.py	test title
+banchi/15-suite/15-f011-la-tela-all-attacco.py	benches/15-suite/15-f011-the-canvas-on-attach.py	tela→canvas
+banchi/15-suite/15-f012-audio.py	benches/15-suite/15-f012-audio.py	folder only (name already English)
+banchi/15-suite/15-f012b-audio-dopo-esci.py	benches/15-suite/15-f012b-audio-after-log-out.py	«Esci» = Log out
+banchi/15-suite/15-f013-video.py	benches/15-suite/15-f013-video.py	folder only (name already English)
+banchi/15-suite/15-f014-appunti.py	benches/15-suite/15-f014-clipboard.py	appunti→clipboard
+banchi/15-suite/15-f014c-appunti-dal-computer.py	benches/15-suite/15-f014c-clipboard-from-the-computer.py	appunti→clipboard
+banchi/15-suite/15-f016-stacco-e-riattacco.py	benches/15-suite/15-f016-detach-and-reattach.py	test title
+banchi/15-suite/15-f018-riattacco-a-misura-diversa.py	benches/15-suite/15-f018-reattach-at-a-different-size.py	misura = size here
+banchi/15-suite/15-f018b-finestre-dentro-al-riattacco.py	benches/15-suite/15-f018b-windows-inside-on-reattach.py	windows kept inside the screen at reattach
+banchi/15-suite/15-f019-la-rete-cade.py	benches/15-suite/15-f019-the-network-drops.py	test title
+banchi/15-suite/15-f020-browser-chiuso-di-colpo.py	benches/15-suite/15-f020-browser-closed-abruptly.py	test title
+banchi/15-suite/15-f021-esci.py	benches/15-suite/15-f021-log-out.py	«Esci» = Log out
+banchi/15-suite/15-f022-orologi.py	benches/15-suite/15-f022-clocks.py	the inactivity/abandon clocks
+banchi/15-suite/15-f024b-sessione-mai-toccata.py	benches/15-suite/15-f024b-session-never-touched.py	sessione→session
+banchi/15-suite/15-f025-stesso-utente-due-schede.py	benches/15-suite/15-f025-same-user-two-tabs.py	schede = browser TABS here, not cards
+banchi/15-suite/15-f026-piu-utenti-insieme.py	benches/15-suite/15-f026-several-users-together.py	utenti→users
+banchi/15-suite/15-f027-parola-e-ban.py	benches/15-suite/15-f027-password-and-ban.py	parola = password
+banchi/15-suite/15-f029-voci-pericolose-assenti.py	benches/15-suite/15-f029-dangerous-entries-absent.py	menu entries
+banchi/15-suite/15-f030-schermo-sempre-acceso.py	benches/15-suite/15-f030-screen-always-on.py	test title
+banchi/15-suite/15-f031-tocco.py	benches/15-suite/15-f031-touch.py	tocco→touch
+banchi/15-suite/15-f031b-impostazioni-intatte.py	benches/15-suite/15-f031b-settings-intact.py	test title
+banchi/15-suite/15-f032-la-shell-dell-utente.py	benches/15-suite/15-f032-the-users-shell.py	test title
+banchi/15-suite/15-g1b-comune.py	benches/15-suite/15-g1b-common.py	shared module of group G1b
+banchi/15-suite/15-g1b-esplora.py	benches/15-suite/15-g1b-explore.py	diagnosis tool
+banchi/15-suite/15-g2-scena.py	benches/15-suite/15-g2-scene.py	scena→scene
+banchi/15-suite/15-g3-comune.py	benches/15-suite/15-g3-common.py	shared module of group G3
+banchi/15-suite/15-g4-comune.py	benches/15-suite/15-g4-common.py	shared module of group G4
+banchi/15-suite/15-g6-comune.py	benches/15-suite/15-g6-common.py	shared module of group G6
+banchi/15-suite/15-g7-comune.py	benches/15-suite/15-g7-common.py	shared module of group G7
+banchi/15-suite/15-g7-server.sh	benches/15-suite/15-g7-server.sh	folder only (name already English)
+banchi/15-suite/15-g8-comune.py	benches/15-suite/15-g8-common.py	shared module of group G8
+banchi/15-suite/15-g8-server.sh	benches/15-suite/15-g8-server.sh	folder only (name already English)
+banchi/15-suite/15-giro.py	benches/15-suite/15-round.py	giro→round (phase-B: bench run round)
+banchi/15-suite/15-n027-negative.py	benches/15-suite/15-n027-negative.py	folder only (name already English)
+banchi/15-suite/15-porta.sh	benches/15-suite/15-ship.sh	porta = «carries» (phase-B action word ship), not port
+banchi/15-suite/15-rapporto.py	benches/15-suite/15-report.py	rapporto→report
+banchi/15-suite/15-rifai-scatole.sh	benches/15-suite/15-rebuild-boxes.sh	rebuilds the rete11 boxes from scratch
+banchi/15-suite/15-una.sh	benches/15-suite/15-one.sh	runs ONE test
+banchi/15-suite/19-f018-prova.sh	benches/15-suite/19-f018-test.sh	prova→test
+banchi/15-suite/19-scatole-scheda.sh	benches/15-suite/19-boxes-card.sh	boxes rebuilt on the chosen card
+banchi/15-suite/difetti.jsonl	benches/15-suite/difetti.jsonl	KEEP: committed append-only defects register (brief: C13 family reads registers by name); phase-B disco suggested defects.jsonl — not taken
+banchi/15-suite/rapporto-giro1.html	benches/15-suite/rapporto-giro1.html	KEEP the name (ruling 11 Oct: history report); only the folder moves
+banchi/15-suite/rapporto-giro1.txt	benches/15-suite/rapporto-giro1.txt	KEEP the name (ruling 11 Oct: history report); only the folder moves
+banchi/15-suite/rapporto-giro18-software-2.html	benches/15-suite/rapporto-giro18-software-2.html	KEEP the name (ruling 11 Oct: history report); only the folder moves
+banchi/15-suite/rapporto-giro18-software-2.txt	benches/15-suite/rapporto-giro18-software-2.txt	KEEP the name (ruling 11 Oct: history report); only the folder moves
+banchi/15-suite/rapporto-giro18-suite.html	benches/15-suite/rapporto-giro18-suite.html	KEEP the name (ruling 11 Oct: history report); only the folder moves
+banchi/15-suite/rapporto-giro18-suite.txt	benches/15-suite/rapporto-giro18-suite.txt	KEEP the name (ruling 11 Oct: history report); only the folder moves
+banchi/15-suite/rapporto-giro19-intel.html	benches/15-suite/rapporto-giro19-intel.html	KEEP the name (ruling 11 Oct: history report); only the folder moves
+banchi/15-suite/rapporto-giro19-intel.txt	benches/15-suite/rapporto-giro19-intel.txt	KEEP the name (ruling 11 Oct: history report); only the folder moves
+banchi/15-suite/rapporto-giro19-nvcure-intel.html	benches/15-suite/rapporto-giro19-nvcure-intel.html	KEEP the name (ruling 11 Oct: history report); only the folder moves
+banchi/15-suite/rapporto-giro19-nvcure-intel.txt	benches/15-suite/rapporto-giro19-nvcure-intel.txt	KEEP the name (ruling 11 Oct: history report); only the folder moves
+banchi/15-suite/rapporto-giro19-nvcure-radeon.html	benches/15-suite/rapporto-giro19-nvcure-radeon.html	KEEP the name (ruling 11 Oct: history report); only the folder moves
+banchi/15-suite/rapporto-giro19-nvcure-radeon.txt	benches/15-suite/rapporto-giro19-nvcure-radeon.txt	KEEP the name (ruling 11 Oct: history report); only the folder moves
+banchi/15-suite/rapporto-giro19-radeon.html	benches/15-suite/rapporto-giro19-radeon.html	KEEP the name (ruling 11 Oct: history report); only the folder moves
+banchi/15-suite/rapporto-giro19-radeon.txt	benches/15-suite/rapporto-giro19-radeon.txt	KEEP the name (ruling 11 Oct: history report); only the folder moves
+banchi/15-suite/rapporto-giro2.html	benches/15-suite/rapporto-giro2.html	KEEP the name (ruling 11 Oct: history report); only the folder moves
+banchi/15-suite/rapporto-giro2.txt	benches/15-suite/rapporto-giro2.txt	KEEP the name (ruling 11 Oct: history report); only the folder moves
+banchi/15-suite/registro.jsonl	benches/15-suite/registro.jsonl	KEEP: committed append-only suite register (14734 rows; 15-porta.sh excludes *registro*.jsonl by name)
+banchi/15-suite/suite.py	benches/15-suite/suite.py	folder only (name already English)
+banchi/16-stress/16-attore-rdp.py	benches/16-stress/16-actor-rdp.py	attore→actor
+banchi/16-stress/16-attore.py	benches/16-stress/16-actor.py	attore→actor
+banchi/16-stress/16-banco-tela.html	benches/16-stress/16-canvas-bench.html	«canvas bench» (its own <title>)
+banchi/16-stress/16-campagna.sh	benches/16-stress/16-campaign.sh	campagna→campaign
+banchi/16-stress/16-classifica.py	benches/16-stress/16-classify.py	it classifies sessions/levels; pairs with phase-B riclassifica→reclassify (phase-B identifier/log uses ranking)
+banchi/16-stress/16-coda.sh	benches/16-stress/16-queue.sh	coda→queue
+banchi/16-stress/16-compositori-rdp.sh	benches/16-stress/16-compositors-rdp.sh	compositori→compositors
+banchi/16-stress/16-compositori.sh	benches/16-stress/16-compositors.sh	compositori→compositors
+banchi/16-stress/16-controllo-corto.py	benches/16-stress/16-short-check.py	phase-B register name controllo-corto→short-check
+banchi/16-stress/16-d023-cornice.c	benches/16-stress/16-d023-border.c	phase-B cornice→border
+banchi/16-stress/16-d023-cornice.sh	benches/16-stress/16-d023-border.sh	phase-B cornice→border
+banchi/16-stress/16-lavori.py	benches/16-stress/16-workloads.py	«the actor's four workloads»
+banchi/16-stress/16-rapporto.py	benches/16-stress/16-report.py	rapporto→report
+banchi/16-stress/16-riclassifica.py	benches/16-stress/16-reclassify.py	phase-B riclassifica→reclassify
+banchi/16-stress/16-risorse.py	benches/16-stress/16-resources.py	risorse→resources
+banchi/16-stress/16-salita.py	benches/16-stress/16-climb.py	phase-B salita→climb
+banchi/16-stress/finti/	benches/16-stress/fakes/	the fakes of actor/resources/classify for dry runs
+banchi/16-stress/finti/16-attore.py	benches/16-stress/fakes/16-actor.py	fake: MUST have the same name as the real one (16-salita builds prog/16-…)
+banchi/16-stress/finti/16-classifica.py	benches/16-stress/fakes/16-classify.py	fake: same name as the real one
+banchi/16-stress/finti/16-risorse.py	benches/16-stress/fakes/16-resources.py	fake: same name as the real one
+banchi/17-distro/17-amministratore.sh	benches/17-distro/17-administrator.sh	amministratore→administrator
+banchi/17-distro/17-carico.sh	benches/17-distro/17-load.sh	carico→load
+banchi/17-distro/17-t10-giro.sh	benches/17-distro/17-t10-round.sh	giro→round
+banchi/17-distro/17-t10.sh	benches/17-distro/17-t10.sh	folder only (name already English)
+banchi/17-distro/17-t1c-browser.py	benches/17-distro/17-t1c-browser.py	folder only (name already English)
+banchi/17-distro/17-t1c-guarda.sh	benches/17-distro/17-t1c-look.sh	a real browser looks at the desktop
+banchi/17-distro/17-t1c-installa.sh	benches/17-distro/17-t1c-install.sh	installa→install
+banchi/17-distro/17-t3-gruppi.sh	benches/17-distro/17-t3-groups.sh	gruppi→groups
+banchi/17-distro/17-t3-impronta-arch.sh	benches/17-distro/17-t3-fingerprint-arch.sh	impronta→fingerprint
+banchi/17-distro/17-t3-impronta-rpm.sh	benches/17-distro/17-t3-fingerprint-rpm.sh	impronta→fingerprint
+banchi/17-distro/17-t3-impronta.sh	benches/17-distro/17-t3-fingerprint.sh	impronta→fingerprint
+banchi/17-distro/17-t3-pacchetto.sh	benches/17-distro/17-t3-package.sh	pacchetto→package
+banchi/17-distro/17-t3-prova.sh	benches/17-distro/17-t3-test.sh	prova→test
+banchi/17-distro/17-t3-rpm.sh	benches/17-distro/17-t3-rpm.sh	folder only (name already English)
+banchi/17-distro/17-t4-alma.sh	benches/17-distro/17-t4-alma.sh	folder only (name already English)
+banchi/17-distro/17-t4-motore.sh	benches/17-distro/17-t4-engine.sh	motore→engine (installer engine)
+banchi/17-distro/17-vm.sh	benches/17-distro/17-vm.sh	folder only (name already English)
+banchi/17-distro/iso-differenze.md	benches/17-distro/iso-differences.md	differenze→differences
+banchi/17-distro/iso-risposte/	benches/17-distro/iso-answers/	unattended-install answer files (preseed/kickstart/autoyast)
+banchi/17-distro/iso-risposte/alma10.ks	benches/17-distro/iso-answers/alma10.ks	folder rename only
+banchi/17-distro/iso-risposte/arch.config.json	benches/17-distro/iso-answers/arch.config.json	folder rename only
+banchi/17-distro/iso-risposte/arch.creds.json	benches/17-distro/iso-answers/arch.creds.json	folder rename only
+banchi/17-distro/iso-risposte/arch.sh	benches/17-distro/iso-answers/arch.sh	folder rename only
+banchi/17-distro/iso-risposte/debian13.preseed	benches/17-distro/iso-answers/debian13.preseed	folder rename only
+banchi/17-distro/iso-risposte/fedora44.ks	benches/17-distro/iso-answers/fedora44.ks	folder rename only
+banchi/17-distro/iso-risposte/tumbleweed.xml	benches/17-distro/iso-answers/tumbleweed.xml	folder rename only
+banchi/17-distro/iso-risposte/ubuntu2604.user-data	benches/17-distro/iso-answers/ubuntu2604.user-data	folder rename only
+banchi/17-distro/scatole/	benches/17-distro/boxes/	scatole→boxes (podman boxes of phase 17)
+banchi/17-distro/scatole/17-scatola.sh	benches/17-distro/boxes/17-box.sh	scatola→box
+banchi/17-distro/scatole/Contenitore.alma10	benches/17-distro/boxes/Containerfile.alma10	Containerfile.* (podman's own name), same as src/costruzione/Contenitore.*
+banchi/17-distro/scatole/Contenitore.arch	benches/17-distro/boxes/Containerfile.arch	Containerfile.* (podman's own name), same as src/costruzione/Contenitore.*
+banchi/17-distro/scatole/Contenitore.debian13	benches/17-distro/boxes/Containerfile.debian13	Containerfile.* (podman's own name), same as src/costruzione/Contenitore.*
+banchi/17-distro/scatole/Contenitore.fedora44	benches/17-distro/boxes/Containerfile.fedora44	Containerfile.* (podman's own name), same as src/costruzione/Contenitore.*
+banchi/17-distro/scatole/Contenitore.suse	benches/17-distro/boxes/Containerfile.suse	Containerfile.* (podman's own name), same as src/costruzione/Contenitore.*
+banchi/17-distro/scatole/Contenitore.ubuntu2604	benches/17-distro/boxes/Containerfile.ubuntu2604	Containerfile.* (podman's own name), same as src/costruzione/Contenitore.*
+banchi/17-distro/scatole/comune.sh	benches/17-distro/boxes/common.sh	steps common to the recipes (COPY comune.sh in every recipe)
+banchi/17-t2/catena.sh	benches/17-t2/chain.sh	catena→chain
+banchi/17-t2/lancia.sh	benches/17-t2/launch.sh	lancia→launch (basename also in banchi/sonda/)
+banchi/17-t2/riassunto.sh	benches/17-t2/summary.sh	riassunto→summary
+banchi/17-t2/t2-misura.py	benches/17-t2/t2-measure.py	misura→measure
+banchi/17-t2/t2box.py	benches/17-t2/t2box.py	folder only (name already English)
+banchi/17-t2/tabella.sh	benches/17-t2/table.sh	tabella→table
+banchi/17-t6/t6-giornale.sh	benches/17-t6/t6-journal.sh	journalctl lines
+banchi/17-t6/t6-giro.sh	benches/17-t6/t6-round.sh	giro→round
+banchi/17-t6/t6-leggi-pam.sh	benches/17-t6/t6-read-pam.sh	leggi→read
+banchi/17-t6/t6-porta.sh	benches/17-t6/t6-ship.sh	porta = carries to the server (phase-B ship)
+banchi/17-t6/t6-seguiti.sh	benches/17-t6/t6-follow-ups.sh	the follow-up points 1 and 3 of T6
+banchi/17-t6/t6-vm.sh	benches/17-t6/t6-vm.sh	folder only (name already English)
+banchi/17-t7/t7-abbandono.py	benches/17-t7/t7-abandonment.py	the abandonment clock
+banchi/17-t7/t7-aggiorna.py	benches/17-t7/t7-upgrade.py	upgrading without closing desktops
+banchi/17-t7/t7-campagna.sh	benches/17-t7/t7-campaign.sh	campagna→campaign
+banchi/17-t7/t7-fine.sh	benches/17-t7/t7-end.sh	fine→end (the final T7 step)
+banchi/17-t7/t7box.py	benches/17-t7/t7box.py	folder only (name already English)
+banchi/17-t8/t8-browser.py	benches/17-t8/t8-browser.py	folder only (name already English)
+banchi/17-t8/t8-catenab.sh	benches/17-t8/t8-chain-b.sh	catena B
+banchi/17-t8/t8-guasta.sh	benches/17-t8/t8-break.sh	guasta = breaks something on purpose
+banchi/17-t8/t8-porta.sh	benches/17-t8/t8-ship.sh	porta = carries to the server
+banchi/17-t8/t8-terzi.sh	benches/17-t8/t8-third-party.sh	phase-B terzi→third-party
+banchi/17-t8/t8-vm.sh	benches/17-t8/t8-vm.sh	folder only (name already English)
+banchi/18-scheda/	benches/18-card/	scheda here = the graphics card (phase 18 hardware encoder)
+banchi/18-scheda/18-decodifica-chrome.html	benches/18-card/18-decode-chrome.html	decodifica→decode
+banchi/18-scheda/18-decodifica-chrome.sh	benches/18-card/18-decode-chrome.sh	decodifica→decode
+banchi/18-scheda/18-tabella.py	benches/18-card/18-table.py	tabella→table
+banchi/18-software/18-software-openh264-vuota.c	benches/18-software/18-software-openh264-empty.c	vuota→empty
+banchi/18-software/18-software-webcodecs.html	benches/18-software/18-software-webcodecs.html	folder only (name already English)
+banchi/18-software/18-software-webcodecs.py	benches/18-software/18-software-webcodecs.py	folder only (name already English)
+banchi/19-android/19-android.py	benches/19-android/19-android.py	folder only (name already English)
+banchi/19-android/19-android.sh	benches/19-android/19-android.sh	folder only (name already English)
+banchi/19-android/LEGGIMI.md	benches/19-android/README.md	LEGGIMI→README
+banchi/19-android/telefono.py	benches/19-android/phone.py	telefono→phone
+banchi/19-nvidia/19-nv-macchina.sh	benches/19-nvidia/19-nv-machine.sh	macchina→machine
+banchi/19-nvidia/19-nv-prova-contenitore.sh	benches/19-nvidia/19-nv-test-in-container.sh	tests the bench in a podman container
+banchi/19-nvidia/19-nv-suite.py	benches/19-nvidia/19-nv-suite.py	folder only (name already English)
+banchi/19-nvidia/19-nvidia.sh	benches/19-nvidia/19-nvidia.sh	folder only (name already English)
+banchi/19-nvidia/LEGGIMI.md	benches/19-nvidia/README.md	LEGGIMI→README
+banchi/19-vulkan/19-confronto.c	benches/19-vulkan/19-compare.c	confronto→compare
+banchi/19-vulkan/19-confronto.sh	benches/19-vulkan/19-compare.sh	confronto→compare
+banchi/19-vulkan/19-decodifica-chrome.sh	benches/19-vulkan/19-decode-chrome.sh	decodifica→decode
+banchi/19-vulkan/19-shader.sh	benches/19-vulkan/19-shader.sh	folder only (name already English)
+banchi/19-vulkan/19-tabella.py	benches/19-vulkan/19-table.py	tabella→table
+banchi/19-vulkan/chrome/19-chrome-corri.sh	benches/19-vulkan/chrome/19-chrome-run.sh	corri→run
+banchi/19-vulkan/chrome/19-chrome-prova.html	benches/19-vulkan/chrome/19-chrome-test.html	prova→test
+banchi/19-vulkan/chrome/19-chrome-servi.py	benches/19-vulkan/chrome/19-chrome-serve.py	servi→serve
+banchi/attrezzi-allinea-innesto.sh	benches/tools-align-graft.sh	attrezzi→tools, allinea→align, innesto→graft
+banchi/attrezzi-allinea-prodotto.sh	benches/tools-align-product.sh	attrezzi→tools, allinea→align, prodotto→product
+banchi/attrezzi-gruppi-scheda.sh	benches/tools-card-groups.sh	the card (GPU) groups tool
+banchi/attrezzi-utenti.sh	benches/tools-users.sh	attrezzi→tools, utenti→users
+banchi/b2-esiti.jsonl	benches/b2-outcomes.jsonl	esiti→outcomes; append-only, rows keep their old keys
+banchi/b2-trasporto-esiti.jsonl	benches/b2-transport-outcomes.jsonl	esiti→outcomes; append-only, rows keep their old keys
+banchi/prodotto/	benches/prodotto/	KEEP the name (ruling 11 Oct: frozen snapshot of 10 Aug); only the parent folder moves
+banchi/prodotto/01-s1b-visite.jsonl	benches/prodotto/01-s1b-visite.jsonl	KEEP the name (ruling 11 Oct: frozen snapshot of 10 Aug); only the parent folder moves
+banchi/prodotto/avvia-server.sh	benches/prodotto/avvia-server.sh	KEEP the name (ruling 11 Oct: frozen snapshot of 10 Aug); only the parent folder moves
+banchi/prodotto/b11-fumo.py	benches/prodotto/b11-fumo.py	KEEP the name (ruling 11 Oct: frozen snapshot of 10 Aug); only the parent folder moves
+banchi/prodotto/b12-esiti.jsonl	benches/prodotto/b12-esiti.jsonl	KEEP the name (ruling 11 Oct: frozen snapshot of 10 Aug); only the parent folder moves
+banchi/prodotto/b8-campioni.jsonl	benches/prodotto/b8-campioni.jsonl	KEEP the name (ruling 11 Oct: frozen snapshot of 10 Aug); only the parent folder moves
+banchi/prodotto/b8-fatti.jsonl	benches/prodotto/b8-fatti.jsonl	KEEP the name (ruling 11 Oct: frozen snapshot of 10 Aug); only the parent folder moves
+banchi/prodotto/b8-lungo.log	benches/prodotto/b8-lungo.log	KEEP the name (ruling 11 Oct: frozen snapshot of 10 Aug); only the parent folder moves
+banchi/prodotto/check-env.sh	benches/prodotto/check-env.sh	KEEP the name (ruling 11 Oct: frozen snapshot of 10 Aug); only the parent folder moves
+banchi/prodotto/corpo.html	benches/prodotto/corpo.html	KEEP the name (ruling 11 Oct: frozen snapshot of 10 Aug); only the parent folder moves
+banchi/prodotto/filo.sh	benches/prodotto/filo.sh	KEEP the name (ruling 11 Oct: frozen snapshot of 10 Aug); only the parent folder moves
+banchi/prodotto/fumo.sh	benches/prodotto/fumo.sh	KEEP the name (ruling 11 Oct: frozen snapshot of 10 Aug); only the parent folder moves
+banchi/prodotto/pagina-ban.html	benches/prodotto/pagina-ban.html	KEEP the name (ruling 11 Oct: frozen snapshot of 10 Aug); only the parent folder moves
+banchi/prodotto/pagina-dopo.html	benches/prodotto/pagina-dopo.html	KEEP the name (ruling 11 Oct: frozen snapshot of 10 Aug); only the parent folder moves
+banchi/prodotto/resto.sh	benches/prodotto/resto.sh	KEEP the name (ruling 11 Oct: frozen snapshot of 10 Aug); only the parent folder moves
+banchi/prodotto/spegni.sh	benches/prodotto/spegni.sh	KEEP the name (ruling 11 Oct: frozen snapshot of 10 Aug); only the parent folder moves
+banchi/rcp/	benches/rcp/	name English; parent renamed; Makefile GEMELLO ?= ../banchi/rcp and package tarball pathspecs must follow
+banchi/rcp/autenticazione.c	benches/rcp/authentication.c	byte twin of src/autenticazione.c: must become src/authentication.c in the same commit (Makefile GEMELLATI)
+banchi/rcp/rcp.c	benches/rcp/rcp.c	byte twin of src/rcp.c; parent dir renamed only
+banchi/rcp/rcp.h	benches/rcp/rcp.h	byte twin of src/rcp.h; parent dir renamed only
+banchi/sonda/	benches/probe/	sonda→probe
+banchi/sonda/lancia.sh	benches/probe/launch.sh	sonda→probe, lancia→launch
+banchi/sonda/racc.py	benches/probe/collect.py	racc(ogli)→collect
+banchi/sonda/sonda-rcp.html	benches/probe/rcp-probe.html	the RCP probe page
+english-migration/	english-migration/	KEEP (ruling 11 Oct): the migration tool and its tables (protetti.tsv, glossario-*.tsv, strings/*.jsonl, fase_a/fase_b.py) name the OLD paths and Italian words on purpose; rename nothing inside while it runs; delete or archive the folder after step 2?
+fasi/	phases/	ruling 11 Oct: yes. phase history documents; the user opens them by name and old records cite fasi/<name>
+fasi/06-la-tela-e-la-vista.md	phases/06-the-canvas-and-the-view.md	ruling 11 Oct: yes. phase document, title translated from its H1
+fasi/07-audio-e-appunti.md	phases/07-audio-and-clipboard.md	ruling 11 Oct: yes. phase document, title translated from its H1
+fasi/08-l-anello.md	phases/08-the-shortest-loop.md	ruling 11 Oct: yes. phase document, title translated from its H1
+fasi/09-la-qualita-e-la-degradazione.md	phases/09-quality-and-degradation.md	ruling 11 Oct: yes. phase document, title translated from its H1
+fasi/10-multi-tenant-e-il-budget.md	phases/10-multi-tenant-and-the-budget.md	ruling 11 Oct: yes. phase document, title translated from its H1
+fasi/11-la-rete-di-sicurezza.md	phases/11-the-safety-net.md	ruling 11 Oct: yes. phase document, title translated from its H1
+fasi/12-kde.md	phases/12-kde.md	ruling 11 Oct: yes. only the folder changes
+fasi/13-xfce.md	phases/13-xfce.md	ruling 11 Oct: yes. only the folder changes
+fasi/14-lxqt.md	phases/14-lxqt.md	ruling 11 Oct: yes. only the folder changes
+fasi/15-suite-funzionale.md	phases/15-functional-suite.md	ruling 11 Oct: yes. phase document, title translated from its H1
+fasi/16-a3-radeon-vcn.md	phases/16-a3-radeon-vcn.md	ruling 11 Oct: yes. only the folder changes
+fasi/16-stress-e-capacita.md	phases/16-stress-and-capacity.md	ruling 11 Oct: yes. phase document, title translated from its H1
+fasi/17-l-installatore.md	phases/17-the-installer.md	ruling 11 Oct: yes. phase document, title translated from its H1
+fasi/18-senza-ffmpeg.md	phases/18-without-ffmpeg.md	ruling 11 Oct: yes. phase document, title translated from its H1
+fasi/19-nvidia.md	phases/19-nvidia.md	ruling 11 Oct: yes. only the folder changes
+fasi/20-le-prestazioni.md	phases/20-performance.md	ruling 11 Oct: yes. phase document, title translated from its H1
+fasi/21-la-licenza.md	phases/21-the-licence.md	ruling 11 Oct: yes. phase document, title translated from its H1
+fasi/scatti/	phases/screenshots/	ruling 11 Oct: yes. screenshots embedded by fasi/10 (relative links scatti/…)
+fasi/scatti/10-appena-entrato-panoramica.png	phases/screenshots/10-just-in-overview.png	ruling 11 Oct: yes. screenshot of phase 10
+fasi/scatti/10-desktop-remoto-nautilus.png	phases/screenshots/10-remote-desktop-nautilus.png	ruling 11 Oct: yes. screenshot of phase 10
+fasi/scatti/10-firefox-curato.png	phases/screenshots/10-firefox-cured.png	ruling 11 Oct: yes. screenshot of phase 10
+fasi/scatti/10-firefox-nel-prodotto-cucito.png	phases/screenshots/10-firefox-in-the-assembled-product.png	ruling 11 Oct: yes. screenshot of phase 10
+fasi/scatti/10-firefox-profile-missing.png	phases/screenshots/10-firefox-profile-missing.png	ruling 11 Oct: yes. screenshot of phase 10
+fasi/scatti/10-la-7730-dal-browser.png	phases/screenshots/10-the-7730-from-the-browser.png	ruling 11 Oct: yes. screenshot of phase 10
+fondamenta/	fondamenta/	KEEP: v1 files, pending the user's decision to delete them
+grafica/	design/	design material: mockups, logo, prototypes
+grafica/installatore-prototipo/	design/installer-prototype/	installer screen prototype
+grafica/installatore-prototipo/Avanzamento.dc.html	design/installer-prototype/Progress.dc.html	prototype screen (canvas.json keys and href links name these files)
+grafica/installatore-prototipo/Bloccata.dc.html	design/installer-prototype/Blocked.dc.html	prototype screen (canvas.json keys and href links name these files)
+grafica/installatore-prototipo/LEGGIMI.md	design/installer-prototype/README.md	prototype screen (canvas.json keys and href links name these files)
+grafica/installatore-prototipo/Main.dc.html	design/installer-prototype/Main.dc.html	folder only
+grafica/installatore-prototipo/NessunDesktop.dc.html	design/installer-prototype/NoDesktop.dc.html	prototype screen (canvas.json keys and href links name these files)
+grafica/installatore-prototipo/Piano.dc.html	design/installer-prototype/Plan.dc.html	prototype screen (canvas.json keys and href links name these files)
+grafica/installatore-prototipo/Pronto.dc.html	design/installer-prototype/Ready.dc.html	prototype screen (canvas.json keys and href links name these files)
+grafica/installatore-prototipo/Scelte.dc.html	design/installer-prototype/Choices.dc.html	prototype screen (canvas.json keys and href links name these files)
+grafica/installatore-prototipo/canvas.json	design/installer-prototype/canvas.json	folder only
+grafica/login-mockup/01-svizzero.html	design/login-mockup/01-swiss.html	archived login proposal (style name translated)
+grafica/login-mockup/02-scheda-aziendale.html	design/login-mockup/02-company-card.html	archived login proposal (style name translated)
+grafica/login-mockup/03-meta-illustrata.html	design/login-mockup/03-half-illustrated.html	archived login proposal (style name translated)
+grafica/login-mockup/04-neumorfismo.html	design/login-mockup/04-neumorphism.html	archived login proposal (style name translated)
+grafica/login-mockup/05-documentazione.html	design/login-mockup/05-documentation.html	archived login proposal (style name translated)
+grafica/login-mockup/06-aurora-pastello.html	design/login-mockup/06-pastel-aurora.html	archived login proposal (style name translated)
+grafica/login-mockup/07-cielo-mattutino.html	design/login-mockup/07-morning-sky.html	archived login proposal (style name translated)
+grafica/login-mockup/08-bauhaus-gentile.html	design/login-mockup/08-gentle-bauhaus.html	archived login proposal (style name translated)
+grafica/login-mockup/09-onde-menta.html	design/login-mockup/09-mint-waves.html	archived login proposal (style name translated)
+grafica/login-mockup/10-puntini-arancio.html	design/login-mockup/10-orange-dots.html	archived login proposal (style name translated)
+grafica/login-mockup/11-quattro-desktop.html	design/login-mockup/11-four-desktops.html	archived login proposal (style name translated)
+grafica/login-mockup/12-finestra-di-sistema.html	design/login-mockup/12-system-window.html	archived login proposal (style name translated)
+grafica/login-mockup/13-rete.html	design/login-mockup/13-network.html	archived login proposal (style name translated)
+grafica/login-mockup/14-progetto-tecnico.html	design/login-mockup/14-blueprint.html	archived login proposal (style name translated)
+grafica/login-mockup/15-prodotto-moderno.html	design/login-mockup/15-modern-product.html	archived login proposal (style name translated)
+grafica/login-mockup/16-editoriale.html	design/login-mockup/16-editorial.html	archived login proposal (style name translated)
+grafica/login-mockup/17-mediterraneo.html	design/login-mockup/17-mediterranean.html	archived login proposal (style name translated)
+grafica/login-mockup/18-giocoso.html	design/login-mockup/18-playful.html	archived login proposal (style name translated)
+grafica/login-mockup/19-vetrina-premium.html	design/login-mockup/19-premium-showcase.html	archived login proposal (style name translated)
+grafica/login-mockup/20-accessibile.html	design/login-mockup/20-accessible.html	archived login proposal (style name translated)
+grafica/login-premium/01-notte-profonda.html	design/login-premium/01-deep-night.html	archived login proposal (indice.html links it)
+grafica/login-premium/02-aurora.html	design/login-premium/02-aurora.html	folder only
+grafica/login-premium/03-diviso.html	design/login-premium/03-split.html	archived login proposal (indice.html links it)
+grafica/login-premium/04-grafite.html	design/login-premium/04-graphite.html	archived login proposal (indice.html links it)
+grafica/login-premium/05-vetro-chiaro.html	design/login-premium/05-clear-glass.html	archived login proposal (indice.html links it)
+grafica/login-premium/06-orizzonte.html	design/login-premium/06-horizon.html	archived login proposal (indice.html links it)
+grafica/login-premium/07-griglia-prospettica.html	design/login-premium/07-perspective-grid.html	archived login proposal (indice.html links it)
+grafica/login-premium/08-r-gigante.html	design/login-premium/08-giant-r.html	archived login proposal (indice.html links it)
+grafica/login-premium/09-bordo-luminoso.html	design/login-premium/09-glowing-edge.html	archived login proposal (indice.html links it)
+grafica/login-premium/10-desktop-fantasma.html	design/login-premium/10-ghost-desktop.html	archived login proposal (indice.html links it)
+grafica/login-premium/11-terminale-elegante.html	design/login-premium/11-elegant-terminal.html	archived login proposal (indice.html links it)
+grafica/login-premium/12-editoriale-scuro.html	design/login-premium/12-dark-editorial.html	archived login proposal (indice.html links it)
+grafica/login-premium/13-costellazione.html	design/login-premium/13-constellation.html	archived login proposal (indice.html links it)
+grafica/login-premium/14-blu-profondo.html	design/login-premium/14-deep-blue.html	archived login proposal (indice.html links it)
+grafica/login-premium/15-minimal-assoluto.html	design/login-premium/15-absolute-minimal.html	archived login proposal (indice.html links it)
+grafica/login-premium/16-schede-sovrapposte.html	design/login-premium/16-stacked-cards.html	archived login proposal (indice.html links it)
+grafica/login-premium/17-fascio-di-luce.html	design/login-premium/17-light-beam.html	archived login proposal (indice.html links it)
+grafica/login-premium/18-satinato.html	design/login-premium/18-satin.html	archived login proposal (indice.html links it)
+grafica/login-premium/19-stato-del-server.html	design/login-premium/19-server-status.html	archived login proposal (indice.html links it)
+grafica/login-premium/20-mobile-prima.html	design/login-premium/20-mobile-first.html	archived login proposal (indice.html links it)
+grafica/login-premium/CONTRATTO.md	design/login-premium/CONTRACT.md	the proposals' contract
+grafica/login-premium/indice.html	design/login-premium/index.html	index of the 20 proposals
+grafica/login-premium/logo.svg	design/login-premium/logo.svg	folder only
+grafica/logo/remotix-logo.png	design/logo/remotix-logo.png	folder only (docs/sources/build.py builds the path from pieces)
+grafica/sito-mockup/	design/site-mockup/	landing page mockup
+grafica/sito-mockup/LEGGIMI.md	design/site-mockup/README.md	readme
+grafica/sito-mockup/autocontenuta.py	design/site-mockup/standalone.py	builds the self-contained page (path pieces QUI/"pubblica" inside, see hazards)
+grafica/sito-mockup/icone/	design/site-mockup/icons/	icons folder (regex in autocontenuta.py and src= in index.html)
+grafica/sito-mockup/icone/almalinux.svg	design/site-mockup/icons/almalinux.svg	folder only
+grafica/sito-mockup/icone/android.svg	design/site-mockup/icons/android.svg	folder only
+grafica/sito-mockup/icone/archlinux.svg	design/site-mockup/icons/archlinux.svg	folder only
+grafica/sito-mockup/icone/debian.svg	design/site-mockup/icons/debian.svg	folder only
+grafica/sito-mockup/icone/fedora.svg	design/site-mockup/icons/fedora.svg	folder only
+grafica/sito-mockup/icone/firefoxbrowser.svg	design/site-mockup/icons/firefoxbrowser.svg	folder only
+grafica/sito-mockup/icone/googlechrome.svg	design/site-mockup/icons/googlechrome.svg	folder only
+grafica/sito-mockup/icone/linux.svg	design/site-mockup/icons/linux.svg	folder only
+grafica/sito-mockup/icone/opensuse.svg	design/site-mockup/icons/opensuse.svg	folder only
+grafica/sito-mockup/icone/ubuntu.svg	design/site-mockup/icons/ubuntu.svg	folder only
+grafica/sito-mockup/index.html	design/site-mockup/index.html	folder only
+grafica/sito-mockup/performance.html	design/site-mockup/performance.html	folder only
+grafica/sito-mockup/pubblica/	design/site-mockup/public/	generated self-contained pages (output of autocontenuta.py)
+grafica/sito-mockup/pubblica/index.html	design/site-mockup/public/index.html	folder only; ⚠ uncommitted edits on the laptop clone
+grafica/sito-mockup/pubblica/performance.html	design/site-mockup/public/performance.html	folder only; ⚠ uncommitted edits on the laptop clone
+grafica/sito-mockup/schermate-vere/	design/site-mockup/screenshots/	real screenshots (regex in autocontenuta.py and src= in index.html)
+grafica/sito-mockup/schermate-vere/check-desktop.png	design/site-mockup/screenshots/check-desktop.png	folder only
+grafica/sito-mockup/schermate-vere/check.png	design/site-mockup/screenshots/check.png	folder only
+grafica/sito-mockup/schermate-vere/gnome-desktop-canvas.png	design/site-mockup/screenshots/gnome-desktop-canvas.png	folder only
+grafica/sito-mockup/schermate-vere/gnome-desktop-page.png	design/site-mockup/screenshots/gnome-desktop-page.png	folder only
+grafica/sito-mockup/schermate-vere/kde-desktop-canvas.png	design/site-mockup/screenshots/kde-desktop-canvas.png	folder only
+grafica/sito-mockup/schermate-vere/kde-desktop-page.png	design/site-mockup/screenshots/kde-desktop-page.png	folder only
+grafica/sito-mockup/schermate-vere/login-1600x1000.png	design/site-mockup/screenshots/login-1600x1000.png	folder only
+grafica/sito-mockup/schermate-vere/login-412x915.png	design/site-mockup/screenshots/login-412x915.png	folder only
+grafica/sito-mockup/schermate-vere/lxqt-desktop-canvas.png	design/site-mockup/screenshots/lxqt-desktop-canvas.png	folder only
+grafica/sito-mockup/schermate-vere/lxqt-desktop-page.png	design/site-mockup/screenshots/lxqt-desktop-page.png	folder only
+grafica/sito-mockup/schermate-vere/phone-gnome-dpr2.png	design/site-mockup/screenshots/phone-gnome-dpr2.png	folder only
+grafica/sito-mockup/schermate-vere/xfce-desktop-canvas.png	design/site-mockup/screenshots/xfce-desktop-canvas.png	folder only
+grafica/sito-mockup/schermate-vere/xfce-desktop-page.png	design/site-mockup/screenshots/xfce-desktop-page.png	folder only
+grafica/sito-mockup/stile.css	design/site-mockup/style.css	stylesheet (inlined by name)
+grafica/tui-mockup/index.html	design/tui-mockup/index.html	folder only
+installatore/	installer/	installatore=installer; go.mod module remotix/installatore -> remotix/installer
+installatore/.gitignore	installer/.gitignore	name already English; parent dir renamed
+installatore/catalogo/	installer/catalog/	catalogo=catalog (glossary: American spelling, like color); package catalogo -> catalog
+installatore/catalogo/catalogo.go	installer/catalog/catalog.go	package catalogo -> catalog; //go:embed line names the json
+installatore/catalogo/catalogo.json	installer/catalog/catalog.json	//go:embed catalogo.json in catalogo.go:13 must change in the same commit; also read by path in motore/inglese_test.go:96 and docs ch17_build.py:10
+installatore/cmd/	installer/cmd/	parent dir renamed
+installatore/cmd/remotix-install/	installer/cmd/remotix-install/	parent dir renamed
+installatore/cmd/remotix-install/interfacce.go	installer/cmd/remotix-install/tui.go	holds tuiCmd only (the TUI subcommand)
+installatore/cmd/remotix-install/main.go	installer/cmd/remotix-install/main.go	name already English; parent dir renamed
+installatore/costruisci.sh	installer/build.sh	costruisci=build; -X remotix/installatore/motore.VersioneMotore must follow module+package rename
+installatore/go.mod	installer/go.mod	name already English; parent dir renamed
+installatore/go.sum	installer/go.sum	name already English; parent dir renamed
+installatore/interfaccia/	installer/ui/	interfaccia=interface, but «interface» is a Go keyword: `package interface` does not compile and the import would need an alias; package interfaccia -> ui
+installatore/interfaccia/sessione.go	installer/ui/session.go	translated (sessione.go -> session.go)
+installatore/interfaccia/testi.go	installer/ui/texts.go	translated (testi.go -> texts.go)
+installatore/interfaccia/testi_test.go	installer/ui/texts_test.go	translated (testi_test.go -> texts_test.go)
+installatore/interfaccia/tui/	installer/ui/tui/	parent dir renamed (tui is already English)
+installatore/interfaccia/tui/anteprima.go	installer/ui/tui/preview.go	anteprima=preview
+installatore/interfaccia/tui/tui.go	installer/ui/tui/tui.go	name already English; parent dir renamed
+installatore/interfaccia/tui/tui_test.go	installer/ui/tui/tui_test.go	name already English; parent dir renamed
+installatore/interfaccia/vista.go	installer/ui/view.go	vista=view (shared word)
+installatore/motore/	installer/engine/	motore=engine (glossary); package motore -> engine
+installatore/motore/aggiornato.go	installer/engine/post_upgrade.go	aggiornato=updated; the file is the post-upgrade command (DECISIONI §10.23): named after it
+installatore/motore/ambiente.go	installer/engine/environment.go	translated (ambiente.go -> environment.go)
+installatore/motore/archivio.go	installer/engine/archive.go	translated (archivio.go -> archive.go)
+installatore/motore/azione_file.go	installer/engine/action_file.go	translated (azione_file.go -> action_file.go)
+installatore/motore/azione_gruppo.go	installer/engine/action_group.go	translated (azione_gruppo.go -> action_group.go)
+installatore/motore/azione_pacchetti.go	installer/engine/action_packages.go	translated (azione_pacchetti.go -> action_packages.go)
+installatore/motore/azione_registri_utente.go	installer/engine/action_user_logs.go	action togli-registri-utente: removes the user's session log
+installatore/motore/azione_servizio.go	installer/engine/action_service.go	translated (azione_servizio.go -> action_service.go)
+installatore/motore/azione_sessioni.go	installer/engine/action_sessions.go	translated (azione_sessioni.go -> action_sessions.go)
+installatore/motore/azione_unita.go	installer/engine/action_unit.go	translated (azione_unita.go -> action_unit.go)
+installatore/motore/azioni.go	installer/engine/actions.go	translated (azioni.go -> actions.go)
+installatore/motore/azioni_dichiarate.go	installer/engine/actions_declared.go	translated (azioni_dichiarate.go -> actions_declared.go)
+installatore/motore/certifica.go	installer/engine/certify.go	translated (certifica.go -> certify.go)
+installatore/motore/certifica_test.go	installer/engine/certify_test.go	translated (certifica_test.go -> certify_test.go)
+installatore/motore/codici.go	installer/engine/codes.go	translated (codici.go -> codes.go)
+installatore/motore/compatibilita.go	installer/engine/compatibility.go	translated (compatibilita.go -> compatibility.go)
+installatore/motore/dbus.go	installer/engine/dbus.go	name already English; parent dir renamed
+installatore/motore/disinstalla.go	installer/engine/uninstall.go	translated (disinstalla.go -> uninstall.go)
+installatore/motore/disinstalla_test.go	installer/engine/uninstall_test.go	translated (disinstalla_test.go -> uninstall_test.go)
+installatore/motore/epoca_test.go	installer/engine/epoch_test.go	translated (epoca_test.go -> epoch_test.go)
+installatore/motore/eventi.go	installer/engine/events.go	translated (eventi.go -> events.go)
+installatore/motore/fiducia.go	installer/engine/trust.go	translated (fiducia.go -> trust.go)
+installatore/motore/fiducia_test.go	installer/engine/trust_test.go	translated (fiducia_test.go -> trust_test.go)
+installatore/motore/finti2_test.go	installer/engine/fakes2_test.go	finti=fakes
+installatore/motore/finti_test.go	installer/engine/fakes_test.go	finti=fakes (the fake machine)
+installatore/motore/formato.go	installer/engine/format.go	translated (formato.go -> format.go)
+installatore/motore/gestore.go	installer/engine/package_manager.go	gestore=manager: the distribution's package manager
+installatore/motore/grafica_utente.go	installer/engine/graphical_user.go	translated (grafica_utente.go -> graphical_user.go)
+installatore/motore/inglese_test.go	installer/engine/english_test.go	translated (inglese_test.go -> english_test.go)
+installatore/motore/interfaccia.go	installer/engine/questions.go	holds Domande/DomandeDaFare (what the interfaces ask): «interface.go» would mislead in Go
+installatore/motore/interfaccia_test.go	installer/engine/questions_test.go	test of questions.go
+installatore/motore/lingua.go	installer/engine/language.go	translated (lingua.go -> language.go)
+installatore/motore/lingua_test.go	installer/engine/language_test.go	translated (lingua_test.go -> language_test.go)
+installatore/motore/motore_test.go	installer/engine/engine_test.go	translated (motore_test.go -> engine_test.go)
+installatore/motore/occupato.go	installer/engine/busy.go	occupato=busy (package manager busy: waitPackageManager); round-1 «taken» rejected
+installatore/motore/occupato_test.go	installer/engine/busy_test.go	translated (occupato_test.go -> busy_test.go)
+installatore/motore/operazione.go	installer/engine/operation.go	translated (operazione.go -> operation.go)
+installatore/motore/piano.go	installer/engine/plan.go	translated (piano.go -> plan.go)
+installatore/motore/piano_installazione.go	installer/engine/install_plan.go	InstallOptions / the install plan
+installatore/motore/preflight.go	installer/engine/preflight.go	name already English; parent dir renamed
+installatore/motore/preflight_test.go	installer/engine/preflight_test.go	name already English; parent dir renamed
+installatore/motore/profilo.go	installer/engine/profile.go	translated (profilo.go -> profile.go)
+installatore/motore/registro.go	installer/engine/log.go	the write-ahead log (log.jsonl, disco.tsv)
+installatore/motore/ripresa_test.go	installer/engine/resume_test.go	ripresa=resume (R30: resume after kill)
+installatore/motore/script_test.go	installer/engine/script_test.go	name already English; parent dir renamed
+installatore/motore/stati.go	installer/engine/states.go	translated (stati.go -> states.go)
+installatore/motore/strade.go	installer/engine/encoding_routes.go	strade=routes: the card's encoding routes (phase 19)
+installatore/motore/tabella.go	installer/engine/version_table.go	TabellaVersioni: the version tables generated from the catalogue
+installatore/motore/testi.go	installer/engine/texts.go	translated (testi.go -> texts.go)
+installatore/motore/versioni.go	installer/engine/versions.go	translated (versioni.go -> versions.go)
+installatore/prove/	installer/tests/	prove=tests; Go package dirs inside (go vet ./... walks it); NOT testdata
+installatore/prove/Contenitore.systemd	installer/tests/Containerfile.systemd	translated (Contenitore.systemd -> Containerfile.systemd)
+installatore/prove/gruppi-desktop.sh	installer/tests/desktop-groups.sh	translated (gruppi-desktop.sh -> desktop-groups.sh)
+installatore/prove/impronta/	installer/tests/fingerprint/	impronta=fingerprint (glossary); package main, built as ./prove/impronta
+installatore/prove/impronta/main.go	installer/tests/fingerprint/main.go	name already English; parent dir renamed
+installatore/prove/r1-contenitori.sh	installer/tests/r1-containers.sh	translated (r1-contenitori.sh -> r1-containers.sh)
+installatore/prove/sul-server.sh	installer/tests/on-server.sh	sul server=on the server
+installatore/prove/systemd-giro.sh	installer/tests/systemd-round.sh	giro=round (glossary); NOT systemd-run.sh (name of a systemd tool)
+installatore/run.sh	installer/run.sh	name already English; parent dir renamed
+installatore/vendor/	installer/vendor/	third-party, contents unchanged: moves only because its parent is renamed (vendor/modules.txt does not name the main module)
+licenze/	licenses/	licence explainer folder (SPECIFICHE cites it)
+licenze/come-funziona.html	licenses/how-it-works.html	licence explainer; NB its content is still Italian
+memoria/	memoria/	KEEP (ruling 11 Oct): v1 memory notes, history
+misure/	misure/	KEEP (ruling 11 Oct): measurement history; old records, registers and the user cite misure/<phase>/… by path
+packaging/arch/costruisci.sh	packaging/arch/build.sh	translated (costruisci.sh -> build.sh)
+packaging/arch/remotix-niente-sospensione.conf	packaging/arch/remotix-no-suspend.conf	disco.tsv: remotix-no-suspend.conf
+packaging/arch/utenti-negati	packaging/arch/denied-users	disco.tsv: utenti-negati -> denied-users (installed /etc/remotix/denied-users)
+packaging/archivio/	packaging/archive/	archivio=archive (the package-repository archive; glossary)
+packaging/archivio/licenze.py	packaging/archive/licenses.py	licenze=licenses
+packaging/archivio/sbom.py	packaging/archive/sbom.py	name already English; parent dir renamed
+packaging/debian/remotix-niente-sospensione.conf	packaging/debian/remotix-no-suspend.conf	disco.tsv: remotix-no-suspend.conf
+packaging/debian/utenti-negati	packaging/debian/denied-users	disco.tsv: denied-users; debian/rules:67 names it as debian/utenti-negati (dir copied to debian/)
+packaging/motore/	packaging/engine/	motore=engine: the remotix-install engine's own packages
+packaging/motore/PKGBUILD	packaging/engine/PKGBUILD	name already English; parent dir renamed
+packaging/motore/README	packaging/engine/README	name already English; parent dir renamed
+packaging/motore/pacchetti-motore.sh	packaging/engine/engine-packages.sh	the engine's packages (.deb/.rpm/.pkg of remotix-install)
+packaging/motore/remotix-install.install	packaging/engine/remotix-install.install	name already English; parent dir renamed
+packaging/motore/remotix-install.spec	packaging/engine/remotix-install.spec	name already English; parent dir renamed
+packaging/rilascio.sh	packaging/release.sh	rilascio=release
+packaging/rpm/costruisci-rpm.sh	packaging/rpm/build-rpm.sh	translated (costruisci-rpm.sh -> build-rpm.sh)
+packaging/rpm/remotix-niente-sospensione.conf	packaging/rpm/remotix-no-suspend.conf	disco.tsv: remotix-no-suspend.conf
+packaging/rpm/selinux/remotix_porta.cil	packaging/rpm/selinux/remotix_portcon.cil	disco.tsv: module name = CIL basename = remotix_portcon (not remotix_port: prefix of type remotix_port_t)
+src/Contenitore	src/Containerfile	Contenitore=container; «Containerfile» is podman's own name for the recipe (podman build finds it without -f)
+src/aiutante.c	src/helper.c	phase-A helper_* (helper_turn_off); aiutante_accendi etc. left to finish
+src/aiutante.h	src/helper.h	translated (aiutante.h -> helper.h)
+src/appunti.c	src/clipboard.c	translated (appunti.c -> clipboard.c)
+src/appunti.h	src/clipboard.h	translated (appunti.h -> clipboard.h)
+src/appunti_kde.c	src/clipboard_kde.c	translated (appunti_kde.c -> clipboard_kde.c)
+src/appunti_kde.h	src/clipboard_kde.h	translated (appunti_kde.h -> clipboard_kde.h)
+src/autenticazione.c	src/authentication.c	TWIN of banchi/rcp/autenticazione.c (Makefile GEMELLATI): both must move in one commit; defines rcp_autentica
+src/cattura.c	src/capture.c	translated (cattura.c -> capture.c)
+src/cattura.h	src/capture.h	translated (cattura.h -> capture.h)
+src/certificati.c	src/certificates.c	translated (certificati.c -> certificates.c)
+src/certificati.h	src/certificates.h	translated (certificati.h -> certificates.h)
+src/codificatore.c	src/encoder.c	translated (codificatore.c -> encoder.c)
+src/codificatore.h	src/encoder.h	translated (codificatore.h -> encoder.h)
+src/colori709.c	src/colors709.c	phase-A already has colors709_to_p010; macro COLORI709_SENZA_SIMD (used with -D by 18-software-confronto.sh) -> COLORS709_NO_SIMD
+src/colori709.h	src/colors709.h	translated (colori709.h -> colors709.h)
+src/comando.c	src/command.c	translated (comando.c -> command.c)
+src/comando.h	src/command.h	translated (comando.h -> command.h)
+src/costruisci-in-contenitore.sh	src/build-in-container.sh	translated (costruisci-in-contenitore.sh -> build-in-container.sh)
+src/costruisci.sh	src/build.sh	translated (costruisci.sh -> build.sh)
+src/costruzione/	src/build-targets/	costruzione=build; NOT src/build/: root .gitignore has `build/` (matches at any depth) so new files there would be silently ignored.  ruling 11 Oct: yes. or keep src/build/ and change .gitignore to /build/
+src/costruzione/Contenitore.alma10	src/build-targets/Containerfile.alma10	translated (Contenitore.alma10 -> Containerfile.alma10)
+src/costruzione/Contenitore.arch	src/build-targets/Containerfile.arch	translated (Contenitore.arch -> Containerfile.arch)
+src/costruzione/Contenitore.debian13	src/build-targets/Containerfile.debian13	translated (Contenitore.debian13 -> Containerfile.debian13)
+src/costruzione/Contenitore.fedora44	src/build-targets/Containerfile.fedora44	translated (Contenitore.fedora44 -> Containerfile.fedora44)
+src/costruzione/Contenitore.leap16	src/build-targets/Containerfile.leap16	translated (Contenitore.leap16 -> Containerfile.leap16)
+src/costruzione/Contenitore.tumbleweed	src/build-targets/Containerfile.tumbleweed	translated (Contenitore.tumbleweed -> Containerfile.tumbleweed)
+src/costruzione/Contenitore.ubuntu2404	src/build-targets/Containerfile.ubuntu2404	translated (Contenitore.ubuntu2404 -> Containerfile.ubuntu2404)
+src/costruzione/Contenitore.ubuntu2604	src/build-targets/Containerfile.ubuntu2604	translated (Contenitore.ubuntu2604 -> Containerfile.ubuntu2604)
+src/costruzione/costruisci-deb.sh	src/build-targets/build-deb.sh	translated (costruisci-deb.sh -> build-deb.sh)
+src/costruzione/costruisci-tutti.sh	src/build-targets/build-all.sh	build-all; its action word tutti -> all-targets (comandi.tsv)
+src/costruzione/quic-statiche.sh	src/build-targets/quic-static.sh	statiche=static (static ngtcp2/nghttp3)
+src/cursore.c	src/cursor.c	translated (cursore.c -> cursor.c)
+src/cursore.h	src/cursor.h	translated (cursore.h -> cursor.h)
+src/figlio.c	src/child.c	log area figlio->child; NB the struct/prefix is plural (figli/children_*): file keeps the singular of the log area
+src/figlio.h	src/child.h	translated (figlio.h -> child.h)
+src/forma.c	src/shape.c	translated (forma.c -> shape.c)
+src/forma.h	src/shape.h	translated (forma.h -> shape.h)
+src/opus-wasm/costruisci.sh	src/opus-wasm/build.sh	translated (costruisci.sh -> build.sh)
+src/opus-wasm/decodifica.c	src/opus-wasm/decoder.c	the page's Opus decoder (decoding only): decoder.c
+src/opus-wasm/prova/	src/opus-wasm/test/	prova=test
+src/opus-wasm/prova/confronta.mjs	src/opus-wasm/test/compare.mjs	translated (confronta.mjs -> compare.mjs)
+src/opus-wasm/prova/prova.sh	src/opus-wasm/test/test.sh	translated (prova.sh -> test.sh)
+src/opus-wasm/prova/riferimento.c	src/opus-wasm/test/reference.c	translated (riferimento.c -> reference.c)
+src/pagina.c	src/page.c	translated (pagina.c -> page.c)
+src/pagina.h	src/page.h	translated (pagina.h -> page.h)
+src/pagina.html	src/page.html	installed as /usr/share/remotix/page.html (disco.tsv remotix/pagina.html -> remotix/page.html); main.c:1798 default must follow
+src/protocolli/	src/protocols/	protocolli=protocols
+src/protocolli/ext-data-control-v1.xml	src/protocols/ext-data-control-v1.xml	name already English; parent dir renamed
+src/protocolli/linux-dmabuf-unstable-v1.xml	src/protocols/linux-dmabuf-unstable-v1.xml	name already English; parent dir renamed
+src/protocolli/virtual-keyboard-unstable-v1.xml	src/protocols/virtual-keyboard-unstable-v1.xml	name already English; parent dir renamed
+src/protocolli/wlr-data-control-unstable-v1.xml	src/protocols/wlr-data-control-unstable-v1.xml	name already English; parent dir renamed
+src/protocolli/wlr-output-management-unstable-v1.xml	src/protocols/wlr-output-management-unstable-v1.xml	name already English; parent dir renamed
+src/protocolli/wlr-screencopy-unstable-v1.xml	src/protocols/wlr-screencopy-unstable-v1.xml	name already English; parent dir renamed
+src/protocolli/wlr-virtual-pointer-unstable-v1.xml	src/protocols/wlr-virtual-pointer-unstable-v1.xml	name already English; parent dir renamed
+src/protocolli/zkde-screencast-unstable-v1.xml	src/protocols/zkde-screencast-unstable-v1.xml	name already English; parent dir renamed
+src/provisiona.sh	src/provision.sh	provisiona=provision (verb, like the script's job; round-1 «provisions» rejected)
+src/registro.c	src/log.c	log area registro->log (registro.tsv); phase-A prefix already log_* (log_says_in)
+src/registro.h	src/log.h	same module as log.c; macros registro_dice etc. still Italian (phase A)
+src/remotix-niente-spegnimento.rules	src/remotix-no-poweroff.rules	disco.tsv: remotix-no-poweroff.rules (installed as 50-remotix-no-poweroff.rules)
+src/remotix-tasti.conf	src/remotix-power-keys.conf	disco.tsv: remotix-power-keys.conf (not «keys»: would sit next to page.key/session.key)
+src/riavvia-7700.sh	src/restart-7700.sh	riavvia=restart (the server); a copy also lives off-repo at /media/REMOTIX/tmp/riavvia-7700.sh
+src/riavvia-7900.sh	src/restart-7900.sh	translated (riavvia-7900.sh -> restart-7900.sh)
+src/ritrovo.c	src/rediscover.c	ritrovo=finding again (desktops no child holds, found again after restart);  ruling 11 Oct: yes. prefix ritrovo_cerca/ritrovo_vivo/RitrovoDesktop -> rediscover_search/rediscover_alive/RediscoveredDesktop (round-1 «finding_again» rejected)
+src/ritrovo.h	src/rediscover.h	translated (ritrovo.h -> rediscover.h)
+src/scrittore_bit.c	src/bit_writer.c	bit writer (mirror of LettoreBit in codificatore.c -> BitReader); ScrittoreBit -> BitWriter, prefix sb_* -> bw_* (or keep sb_:  ruling 11 Oct: yes. ), guard REMOTIX_BIT_WRITER_H
+src/scrittore_bit.h	src/bit_writer.h	translated (scrittore_bit.h -> bit_writer.h)
+src/sentinella.c	src/sentinel.c	phase-A sentinel_open/close; sentinella_locale etc. left to finish
+src/sentinella.h	src/sentinel.h	translated (sentinella.h -> sentinel.h)
+src/sessione.c	src/session.c	translated (sessione.c -> session.c)
+src/sessione.h	src/session.h	translated (sessione.h -> session.h)
+src/suono.c	src/sound.c	translated (suono.c -> sound.c)
+src/suono.h	src/sound.h	translated (suono.h -> sound.h)
+src/tastiera.c	src/keyboard.c	translated (tastiera.c -> keyboard.c)
+src/tastiera.h	src/keyboard.h	translated (tastiera.h -> keyboard.h)
+src/trasporto.c	src/transport.c	translated (trasporto.c -> transport.c)
+src/trasporto.h	src/transport.h	translated (trasporto.h -> transport.h)
+src/vadiretta.c	src/vadirect.c	phase-A prefix vadirect_* (VaDirectCodec); VaDirettaRichiesta/vadiretta_carica_nv12 left to finish
+src/vadiretta.h	src/vadirect.h	translated (vadiretta.h -> vadirect.h)
