@@ -422,13 +422,13 @@ const e = document.getElementById('outcome'), m = document.getElementById('signi
 const a = document.getElementById('warning');
 const vis = (x) => !!x && getComputedStyle(x).display !== 'none' && x.getBoundingClientRect().width > 0;
 const R = window.REMOTIX, s = R && R.viewer;
-return { url: location.href, esito: e ? e.textContent : null, classe: e ? e.className : null,
-         modulo: vis(m), session: !!(s && s.session),
+return { url: location.href, outcome: e ? e.textContent : null, class: e ? e.className : null,
+         form: vis(m), session: !!(s && s.session),
          banned: document.body ? (document.body.dataset.banned || null) : null,
-         avviso: a ? a.textContent : '',
+         warning: a ? a.textContent : '',
          hours: (document.getElementById('hours') || {}).textContent || null,
          minutes: (document.getElementById('minutes') || {}).textContent || null,
-         testo: document.body ? document.body.innerText.slice(0, 400) : '' };
+         text: document.body ? document.body.innerText.slice(0, 400) : '' };
 """
 
 

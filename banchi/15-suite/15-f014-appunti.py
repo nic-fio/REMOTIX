@@ -372,7 +372,7 @@ CLIPBOARD_STATE = """
   const A = window.REMOTIX && window.REMOTIX.clipboard;
   if (!A) return null;
   return {on: A.on, watched: A.watched || '', counts: A.counts,
-          in_attesa: A.awaiting_gesture !== null, own_id: A.own_id, peer_id: A.peer_id};
+          waiting: A.awaiting_gesture !== null, own_id: A.own_id, peer_id: A.peer_id};
 """
 DIARY = """
   const r = document.getElementById('logbook');
@@ -380,12 +380,12 @@ DIARY = """
   return t.split('\\n').filter(x => /clipboard|CLIPBOARD|paste|Ctrl\\+V|readText|§9/.test(x)).slice(-25);
 """
 READ_LAUNCH = """
-  window.__f015 = {fatto: false};
+  window.__f015 = {done: false};
   try {
     navigator.clipboard.readText().then(
-      t => { window.__f015 = {fatto: true, testo: t}; },
-      e => { window.__f015 = {fatto: true, errore: String(e)}; });
-  } catch (e) { window.__f015 = {fatto: true, errore: 'exception: ' + e}; }
+      t => { window.__f015 = {done: true, text: t}; },
+      e => { window.__f015 = {done: true, error: String(e)}; });
+  } catch (e) { window.__f015 = {done: true, error: 'exception: ' + e}; }
 """
 
 

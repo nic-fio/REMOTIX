@@ -196,8 +196,8 @@ const vis = (x) => !!x && getComputedStyle(x).display !== 'none'
 const R = window.REMOTIX, s = R && R.viewer;
 const righe = reg ? reg.textContent.split('\n') : [];
 return {
-  esito: e ? e.textContent : null,
-  esito_classe: e ? e.className : null,
+  outcome: e ? e.textContent : null,
+  outcome_class: e ? e.className : null,
   esito_visibile: vis(e) && !!(e && e.textContent.trim()),
   modulo_visibile: vis(m),
   vestita: document.body ? (document.body.dataset.viewer || null) : null,

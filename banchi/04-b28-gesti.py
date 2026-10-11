@@ -851,12 +851,12 @@ SCENA = r"""
   t.width = %d; t.height = %d;
   t.style.width = "960px"; t.style.height = "540px";
   const s = window.REMOTIX && window.REMOTIX.touch;
-  if (!s) return JSON.stringify({errore: "⛔ REMOTIX.touch does not exist"});
+  if (!s) return JSON.stringify({error: "⛔ REMOTIX.touch does not exist"});
   const r = t.getBoundingClientRect();
   return JSON.stringify({ layout: document.body.dataset.layout,
                           why: s.why(), context: s.context(),
                           thresholds: s.thresholds, state: s.state(),
-                          cornice: [r.left, r.top, r.width, r.height] });
+                          border: [r.left, r.top, r.width, r.height] });
 })()
 """
 
