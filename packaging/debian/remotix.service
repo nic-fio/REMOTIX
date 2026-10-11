@@ -13,7 +13,7 @@
 #    real configuration («defaults in /usr, choices in /etc», §6.5 point 7)
 #    belongs to the engine (T4).
 # ⛔ No bench options (--survey, --command-socket, --audio-test,
-#    --verbose, --sblocca): R13.
+#    --verbose): R13.
 # ⭐ DECISIONI §10.12, point 3 (final version of 30 Sep): only two routes,
 #    the installer or the source by hand; NO guard preventing a start
 #    without the installer.  `remotix state` will only say whether the installation

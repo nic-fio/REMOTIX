@@ -137,7 +137,7 @@ fi
 #    was running: it is not "improved" here, or the scene of the other benches changes.
 nohup "$D/remotix" --address 0.0.0.0 --name "$ADDR" --port "$PORT" \
       --certificates "$CERT" --page "$D/pagina.html" \
-      --ban "$BAN" --command-socket "$SOCK" \
+      --ban-file "$BAN" --command-socket "$SOCK" \
       >> "$LOG" 2>&1 &
 pid=$!
 echo "$pid" > "$PIDF"

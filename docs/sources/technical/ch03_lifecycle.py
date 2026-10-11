@@ -6,10 +6,7 @@ S1 = p("The server starts from " + c("main()") + " in " + c("main.c") + ". Befor
     "<b>Role.</b> With " + c("--internal-child") + " as first argument the process is a child and goes to "
     + c("child_alive()") + "; with " + c("--encoding-test") + " (encoding test) it encodes one frame on the GPU, prints one JSON "
     "line and exits (0 the GPU encodes, 1 it opens but no frame comes out, 2 usage error, 3 no GPU can encode).",
-    "<b>Options.</b> The command line is read; an unknown option prints the usage and exits with 2. Options that "
-    "no longer exist (" + c("--ritmo-adattivo") + ", " + c("--linea-morta") + ", " + c("--unblock") + " — adaptive pace, "
-    "dead line, unblock) exit with "
-    "2 and a sentence saying what replaced them, instead of being silently ignored. Without a real "
+    "<b>Options.</b> The command line is read; an unknown option prints the usage and exits with 2. Without a real "
     + c("--name") + " (the name; empty, " + c("0.0.0.0") + " or " + c("::") + ") the server refuses to start: the "
     "certificate must carry the name the browser will use.",
     "<b>Signals.</b> " + c("SIGINT") + " and " + c("SIGTERM") + " only set a flag that ends the loop; "
@@ -92,7 +89,7 @@ RestartSec=2""", "text", "packaging/debian/remotix.service (excerpt, without the
         [c("Restart=on-failure") + ", " + c("RestartSec=2"), "a crash restarts the server in 2 s; the desktops are "
          "found again"],
         ["no test options", c("--survey") + " (frame dump), " + c("--command-socket") + " (unblock socket), "
-         + c("--audio-test") + " (test tone), " + c("--verbose") + " (verbose log) and " + c("--unblock")
+         + c("--audio-test") + " (test tone), " + c("--verbose") + " (verbose log)"
          + " are not in the packaged command line; the rpm build script (" + c("costruisci-rpm.sh")
          + ") refuses them"],
     ], "«TAB» — The unit's settings") + \

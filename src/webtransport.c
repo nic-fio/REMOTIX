@@ -3899,8 +3899,7 @@ void wt_adaptive_rate(bool is_on)
 	              "+160 ms of drift on a bad network, ZERO on the healthy line "
 	              "(39.85 / 40.19 / 39.63 frames/s, zero keyframes in all three "
 	              "arms).  ⛔ It is SWITCHED OFF with `--no-adaptive-rate`, and that is "
-	              "the only way — the old name `--ritmo-adattivo` no longer "
-	              "exists.  ⚠ Every drop ends up in the log (I1), and there is "
+	              "the only way.  ⚠ Every drop ends up in the log (I1), and there is "
 	              "no rise to remember: `backlog` is reread at every "
 	              "frame",
 	              (unsigned)WT_RATE_SLOTS);
@@ -3971,8 +3970,7 @@ void wt_dead_line(bool enabled, uint64_t stall_ms, uint64_t silence_s)
 	              "⛔⭐ PHASE 9: the DEAD LINE is ON — the "
 	              "wire drops and the user comes back in BY HAND (the user's decision, 23 "
 	              "Aug 2026).  ⭐ It is the DEFAULT since 24 Aug 2026, and it is "
-	              "SWITCHED OFF with `--no-dead-line` (only way; the old "
-	              "name `--linea-morta` no longer exists).  ⛔⛔ IT IS THE CURE THAT "
+	              "SWITCHED OFF with `--no-dead-line` (only way).  ⛔⛔ IT IS THE CURE THAT "
 	              "CLOSES A SESSION: if the threshold were badly tuned it would throw "
 	              "out someone who is working — `[M]` 23-24 Aug the margin is >10x "
 	              "above `casa-cattiva`, the WORST line that holds (largest "

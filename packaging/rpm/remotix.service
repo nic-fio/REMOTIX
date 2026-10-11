@@ -21,7 +21,7 @@
 #    `REMOTIX_AREA`, `REMOTIX_TENANT`) and from the child, which sits in the
 #    session scope (`registro.h`: ⇒ `journalctl -t remotix`).
 # ⛔ No bench options (`--survey`, `--command-socket`, `--audio-test`,
-#    `--verbose`, `--sblocca`): R13.
+#    `--verbose`): R13.
 # ⛔ `DECISIONI.md` §10.12: the package does NOT enable and does NOT start this unit
 #    (the engine does), and no guard prevents it from starting.
 [Unit]

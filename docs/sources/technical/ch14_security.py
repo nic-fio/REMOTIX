@@ -296,7 +296,7 @@ S6 = p("The way out for whoever bans themselves from their own phone must ask «
          "python3 banchi/01-b8-sblocca.py --socket /run/remotix/command 192.168.0.2", "bash",
          "Unlocking an address (the socket path is whatever " + c("--command-socket") + " was given)") + \
     table(["Rejected form", "Why it fails"], [
-        ["A second process (" + c("remotix --unblock IND") + ", the removed unlock option)", "The ban lives in the memory of the serving process. "
+        ["A second process (the server run again with an unlock option)", "The ban lives in the memory of the serving process. "
          "A second process can only rewrite the file; the server keeps answering " + c("TOO_MANY_ATTEMPTS")
          + ", and the next ban of anyone rewrites the file from stale memory, putting the address back. And it "
          "exited 0."],
