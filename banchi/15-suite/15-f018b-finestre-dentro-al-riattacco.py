@@ -22,9 +22,9 @@ F-018b expected (D-007, decided by the user on 25 Sep 2026: «it must be cured»
         ⚠ The edge alone is NOT enough: a window brought back inside sits
         right against the edge, to the pixel — and one cut by the edge touches it
         just the same.  The SIZE instead separates them: the cut one is shorter.
-  ⭐ on all the desktops.  On KDE (canvas kept, declared exception) the
-        window stays whole by itself; on GNOME Mutter brings it back inside; on
-        XFCE and LXQt (labwc) the product does.
+  ⭐ on all the desktops.  On GNOME Mutter brings it back inside, on KDE KWin
+        (nested since 11 Oct 2026, `src/kwin.h`: the canvas changes there too),
+        on XFCE and LXQt (labwc) the product does.
 
 FAULT: the 4K photo of the creation, cut to the NEW size from the top-left
         corner — that is what is seen if at the reattach nobody moves
@@ -264,7 +264,7 @@ def corpo(o, E):
                     break
                 time.sleep(1.5)
             print("   B (reattach): %s" % breve(B), flush=True)
-            if B.get("tela") and A.get("tela") and o.scatola != "kde" \
+            if B.get("tela") and A.get("tela") \
                     and abs(B["tela"][0] - A["tela"][0]) < 64:
                 raise S.Bloccata("the canvas did not change size (%s → %s): the reattach is not "
                                  "«smaller»" % (A["tela"], B["tela"]))
@@ -311,8 +311,6 @@ def corpo(o, E):
                     E.guasto("F-018b", None, "the 4K photo is no longer there: nothing to cut")
                 else:
                     tl, ta = B.get("tela") or (NEW_SIZE[0] - 16, NEW_SIZE[1] - 96)
-                    if o.scatola == "kde":
-                        tl, ta = B.get("vista")[:2] if B.get("vista") else (tl, ta)
                     T = look_png(taglia(A["png"], int(tl), int(ta)))
                     T["tela"] = [int(tl), int(ta)]
                     g, r = judge_inside(A, T)

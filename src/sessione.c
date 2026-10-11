@@ -50,6 +50,7 @@
 #include <locale.h>
 #include <signal.h>
 #include <pwd.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -2258,12 +2259,49 @@ static gboolean scrivi_dropin(uint32_t larghezza, uint32_t altezza)
 			              "fallback to %s, and if it is not there the unit will not start",
 			              involucro);
 		}
-		contenuto = g_strdup_printf("[Service]\n"
-		                            "ExecStart=\n"
-		                            "ExecStart=%s --xwayland --virtual --width %u "
-		                            "--height %u --no-lockscreen\n",
-		                            involucro, larghezza, altezza);
-		atteso = g_strdup_printf("--virtual --width %u --height %u", larghezza, altezza);
+		/*
+		 * ⭐⭐ 11 Oct 2026 — KWin NESTED in a screenless labwc (`kwin.h`,
+		 *      `DECISIONI.md` §10.40): the line no longer starts KWin, it
+		 *      starts THIS binary in `--kwin-annidato` mode, which starts labwc
+		 *      at W×H and becomes the KWin wrapper with `--wayland-display`.
+		 *      ⇒ The desktop is born at W×H as before, and at a reattach of
+		 *      another size labwc's output changes and KWin follows it — the
+		 *      reason `--virtual` is gone: its output cannot change size.
+		 * ⚠ The card is chosen HERE, with the same two questions as XFCE's labwc
+		 *   (it opens; it can create a buffer), and KWin draws on the card its
+		 *   host announces (`linux-dmabuf` `main_device`).
+		 */
+		{
+			g_autofree char *nodo = nodo_della_scheda();
+			g_autofree char *perche = NULL;
+			g_autofree char *io = realpath("/proc/self/exe", NULL);
+			const char *carta = nodo ? nodo : "-";
+
+			if (nodo && !scheda_sa_disegnare(nodo, &perche)) {
+				carta = "pixman";
+				registro_dice(REG_SESSIONE,
+				              "⛔ KDE: the card %s opens but CANNOT create a buffer "
+				              "(%s). DECLARED FALLBACK: KWin's host draws in memory",
+				              nodo, perche);
+			} else if (!nodo)
+				registro_dice(REG_SESSIONE,
+				              "⛔ KDE: no openable /dev/dri/renderD* node — KWin's host "
+				              "will choose by itself");
+			if (!io) {
+				registro_dice(REG_SESSIONE,
+				              "⛔ I do not know which binary I am (%s): the nested "
+				              "KWin line cannot be written", g_strerror(errno));
+				return FALSE;
+			}
+			contenuto = g_strdup_printf("[Service]\n"
+			                            "ExecStart=\n"
+			                            "ExecStart=%s --kwin-annidato %u %u %s -- %s "
+			                            "--xwayland --width %u --height %u "
+			                            "--no-lockscreen\n",
+			                            io, larghezza, altezza, carta, involucro,
+			                            larghezza, altezza);
+		}
+		atteso = g_strdup_printf("--kwin-annidato %u %u", larghezza, altezza);
 		goto scrivi;
 	}
 
@@ -2395,8 +2433,8 @@ scrivi:
 	if (kde) {
 		registro_dice(REG_SESSIONE,
 		              "⭐ the Plasma session will be born with ONE output only, %ux%u, and it is "
-		              "the PROGRAM that asks for it (%s).  ⚠ With `--virtual` the size will not "
-		              "change again while the session lives.  ExecStart in force: %s",
+		              "the PROGRAM that asks for it (%s): KWin nested in a screenless labwc, "
+		              "so a reattach of another size can change it.  ExecStart in force: %s",
 		              larghezza, altezza, percorso, vigore);
 		return TRUE;
 	}

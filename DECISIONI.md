@@ -3354,6 +3354,10 @@ starts, and the session starts at the first attach.
 
 ### 5.0-bis 🔸 Reattach at a different size on KDE ≤ 6.7.4: declared degradation
 
+> ⭐ *11 Oct 2026: overtaken by §10.40 — KWin nested in a labwc without a screen resizes at reattach on every KWin.
+> The degradation below survives only where the host labwc is missing (a broken install): RHEL / Alma 10, which has
+> no labwc, gets ours since 11 Oct 2026 (§10.43).*
+
 > ⚠ *The title said «KDE < 6.8», and §5.0-quater promised that version «in October».*
 > ⛔ **Corrected on 14 Aug 2026**: `[R]` checked on invent.kde.org, **`Plasma/6.8` does not
 > exist**, the last tag is **v6.7.4**, and the branches from `Plasma/6.3` to `Plasma/6.7` do not have
@@ -6679,7 +6683,7 @@ estendo l'uso gratuito ad associazioni no-profit e a chiese e istituti religiosi
   ours, written without a lawyer: the doubtful cases are settled by the Author's written answer (§2 of the licence).
 - ⚠ **Not "open source"** and not "freeware for everyone": the site says *free for personal use*.
 
-### 10.40 ✅ KDE too resizes the desktop on reattach (10 Oct 2026)
+### 10.40 ✅ KDE too resizes the desktop on reattach (10 Oct 2026) — ✅ done on 11 Oct, judged by the user the same day
 
 User's words, after the report «on KDE the desktop sits at half height» (Windows + Chrome, and a friend on Zorin OS
 from Trieste, all re-attaching the same session): *«abbiamo già rinunciato al dynamic resize per i limiti di kwin.
@@ -6690,9 +6694,88 @@ ma riprendere una sessione e non avere il resize al reattach non è accettabile�
   white below. The page is fixed (canvas centred, black bands, commit `c10c1e5` merged in `258f752`).
 - ⇒ **The rule of §5.0-sexies now holds on KDE without exception**: the canvas takes the window's size at birth AND
   at reattach. Resizing during the session stays out (§5.1-bis).
-- 🔸 The way being tried (10 Oct): on reattach to a different size, create a new virtual output of the right size
-  and remove the old one, as when a monitor is swapped. To be confirmed on the hardware (branch
-  `fix-kde-riattacco`).
+- ⛔ **The way written on 10 Oct does not exist on KWin ≤ 6.7**: «create a new virtual output of the right size and
+  remove the old one» needs `createVirtualOutput()`, and KWin's `--virtual` backend does not have it (`[R]` KWin 6.3.6
+  `virtual_backend.h`; `[M]` 8 Aug, M7a/M11: `stream_virtual_output` answers «Could not find output» to every size;
+  `STUDI.md` §kde §8.1). And restarting KWin at the new size `[M]` 10 Oct kills every program that is not Qt (Firefox
+  and a GTK editor died at the first restart): out.
+- ⭐ **What was done (branch `fix-kde-riattacco`, 11 Oct): KWin is born NESTED in a labwc without a screen** — its own
+  folder in `XDG_RUNTIME_DIR`, one full-screen window (KWin), nobody looks at it. The desktop is KWin's output, and
+  KWin's output follows the size of its window (`[R]` `wayland_output.cpp`, `handleConfigure` → `resize`). ⇒ At a
+  reattach of another size REMOTIX changes the size of labwc's output (the protocol it already uses on XFCE and LXQt),
+  reads KWin's output back at the new size, and remounts the capture: **the monitor is swapped under the session,
+  the programs stay** (`src/kwin.h`, «the nested KWin»). The start line of `plasma-kwin_wayland.service` is
+  `remotix --kwin-annidato W H <card> -- kwin_wayland_wrapper …`: labwc at W×H, then KWin with `--wayland-display`.
+  ⭐ One road for every KWin, 6.8 included: nothing depends on the version. ✅ The user accepted this road on
+  11 Oct, **for KDE only** (the other desktops keep theirs), asking for the cost to be measured against today's KWin.
+- ⛔ **Five traps of KWin-inside-labwc, found by measuring and cured** (each one is written where it lives, `kwin.c`):
+  1. **KWin froze** a few seconds after birth: the windows stayed at their first image (Firefox at «New Tab» with its
+     page alive). `[M]` `WAYLAND_DEBUG` on KWin: 614 frames, 612 answered — the one never answered was a frame
+     *without damage*; labwc answers only when it repaints, KWin waits for the answer before drawing again ⇒ still
+     forever. ⇒ A **1×1 transparent surface** on labwc, touched every 16 ms, makes labwc repaint one pixel and answer.
+     `[M]` without it F-018 is BLOCKED (the input never shows), with it green.
+  2. **The pointer**: nested KWin puts the cursor on labwc's screen (it has a cursor layer there) and hands a
+     full-screen window to labwc as it is. `[M]` F-005 red (the shape never changed) and F-004 blocked (a full-screen
+     Firefox frozen). ⇒ `KWIN_FORCE_SW_CURSOR=1`, which is what `--virtual` did by construction: both green.
+  3. **The cadence**: labwc presents on its own 60 Hz clock and the two clocks drift. `[M]` 60 fps animation at
+     3824×2064: 59 fps with `--virtual`, 52–55 nested at 60 Hz ⇒ labwc's output at 240 Hz: 59 again.
+  4. **A full-screen window with the pointer hidden froze in the picture** (`[M]` F-008 BLOCKED twice: the letters
+     reached the kiosk Firefox, the photo stayed still; green with `--virtual`). `[R]` KWin hands such a window to
+     labwc as it is (direct scanout) and the stream is built from the last frame KWin composited — in the nested
+     backend that frame is old. It is exactly the full-screen video with the pointer hidden. ⇒ **One transparent
+     pixel on top, inside KWin**, on the capture's own connection: KWin never scans out (`workspacescene.cpp`: any
+     window above a full-screen one prevents it) and composites as with `--virtual`. F-008 green.
+  5. **labwc's rule must match on the title**: on Leap 16 (labwc 0.8.1, KWin 6.4.2) the `identifier="*"` rule never
+     fired, KWin's window stayed floating 2×28 px smaller than the output and the capture fell back to copying in
+     memory (38–48 fps, the child at 27–48 % of a core). `title="*"`: full screen on both boxes. And the capture
+     waits, before mounting, until KWin's output has the host's size.
+- `[M]` **11 Oct 2026 — the functions**, box `rete11-kde` = Debian 13, **KWin 6.3.6**, labwc 0.8.3, encoding on the
+  AMD RX 6800 (the card that box has today); Chrome 155, real window on a labwc without a screen; this branch's server
+  on its own port (8813), the box's own server untouched:
+
+  | | |
+  |---|---|
+  | the 15-suite on KDE, every F-0xx bench | **32 PASS**, 4 FAIL, 11 BLOCKED — the 4 FAIL (F-014C, F-014D, F-015C: the computer's clipboard; F-025) fail the same with the binary of `full-english`; the BLOCKED need a server of their own (F-019, F-022…F-024b, F-027/F-028) or the real phone (F-031) |
+  | F-016/F-017/P-A/P-F, F-018/P-C, F-018b/F-018c | ✅ PASS (F-018 was the declared exception; with `full-english` it is ⛔ FAIL, as it must) |
+  | GNOME and XFCE, F-018 with the same binary (ports 8815, 8816; ⛔ not 8511) | ✅ PASS |
+  | keyboard layout (F-009), pointer and its shape (F-004, F-005, F-006), keys (F-007, F-008, F-010), clipboard in the session (F-014/F-015), audio, logout (F-021), screen always on (F-030) | ✅ PASS — through both layers |
+  | eight reattaches in a row at six sizes (1232×864 … 3824×2064) | canvas = window, screen inside = canvas, **one** KWin output (`WL-0`) and one labwc output every time, one labwc and one KWin; click + typing right **8/8**; the server's resize **21–31 ms** |
+  | three reattaches at the SAME size | nothing happens: no resize asked, the window at the same pixel, one output |
+
+- `[M]` **11 Oct 2026 — the cost, nested against today's KWin `--virtual`, on the Intel UHD 770** of the server
+  (i5-13500T), box `t10-kde-leap16` = openSUSE Leap 16, **KWin 6.4.2**, labwc 0.8.1, H.264 VA-API; the same box, two
+  servers side by side; a 60 fps animation filling a Firefox window (the moving scene); two runs each; CPU in % of
+  ONE core; «latency» = the server's stretch from the compositor's frame to the bytes on the wire (median), the part
+  the nesting can change — ⚠ the browser's decode and display are not in it:
+
+  | window (canvas) | fps `--virtual` → nested | latency ms | KWin % | labwc % | ticker % |
+  |---|---|---|---|---|---|
+  | 1080p (1872×944) | 58 → 58 | 15.3–15.6 → 12.5 | 4.9–5.3 → 5.9–6.4 | — → 2.4–2.6 | 0.1–0.2 |
+  | **2K** (2512×1296) | **58 → 58** | 15.5–16.4 → 13.4–13.5 | 6.7–6.8 → 6.9–8.1 | — → 2.9–3.2 | 0.2 |
+  | **3K** (2832×1488) | **58 → 54–55** (min 56–57 → 46–48) | 17.9–18.1 → 18.7 | 5.3–5.7 → 5.5–5.6 | — → 2.5 | 0.2 |
+  | 4K, reference (3824×2064) | 58 → 44–49 | 25.5 → 39.4–39.9 | 4.7–4.8 → 4.4–4.7 | — → 2.5–2.6 | 0.2 |
+  | still desktop | — | — | 0 → 0 | — → 0.5–1.5 | 0.1–0.2 |
+
+  ⇒ At 1080p and 2K the nesting costs ~3 % of one core (labwc) and nothing in fps or latency; at 3K it starts to lose
+  frames (−3/−4 fps); at 4K on this integrated card it loses 9–14 fps and adds 14 ms. `[?]` The likely cause: labwc
+  draws KWin's whole frame once more on the same integrated card (not measured: the card's time cannot be read in
+  the boxes). On the AMD RX 6800 (box `rete11-kde`, KWin 6.3.6) the same 4K animation gives **59 → 59 fps**, KWin
+  4.0–4.3 → 2.5–2.8 % + labwc 2.6–2.9 %. ⚠ **Not measured on the N100 tablet** (it runs GNOME; there is no KDE on it).
+- ⚠ **Where labwc is missing** the session still starts, with KWin `--virtual` as before and the old size at reattach,
+  **declared** in the user's journal and in the server log. The packages ask for labwc on KDE too (Debian Recommends,
+  Fedora/openSUSE `Requires: (labwc if plasma…)`, Arch already did).
+  ⭐ **RHEL / Alma 10 is no longer an exception** (11 Oct 2026, user's decision): EPEL has no labwc, so the Alma
+  package builds **our own labwc 0.8.4** against EPEL's wlroots 0.18 and KWin's host execs it at
+  `/usr/lib/remotix/labwc` (§10.43). The six other distributions keep their own labwc, as tested.
+- ✅ Two KWin versions, one road: 6.3.6 (Debian 13) and 6.4.2 (Leap 16). ⚠ Not tried here: **Ubuntu 26.04 (KWin
+  6.6)** — there is no box of it on the server; Plasma 6.8 (Forky) when it comes.
+- ✅ **The user's verdict, 11 Oct 2026, 08:25–08:32 UTC** — box `rete11-kde` (Debian 13, KWin 6.3.6, Radeon RX 6800),
+  build `4c96a4c` with the distribution's labwc: *«Il risultato e' andato ben oltre le migliori aspettative. Avviata
+  sessione da linux e fatto detach. Re-attach da windows eseguito alla perfezione, con riproduzione fluida di video a
+  1440p. detach della sessione, re-attach da Chrome per android: tutto perfetto!»*
+  `[M]` from the box's log: attaches from 192.168.0.3 (2544×912), from .21 (1888×864), from .21 again at the same
+  size (no output change, as required), from .24 (2544×912); each resize of the host and of KWin read back in
+  **18–26 ms**.
 - ⚠ Windows being rearranged is **not a KDE price**: every desktop moves and shrinks windows to fit a smaller screen
   on reattach (user: *«accade la stessa cosa anche sugli altri DE»*). The only KDE detail (August note above: KWin
   puts windows back where they were the last time it saw that size) is measured alongside GNOME, not treated as a
@@ -6743,6 +6826,110 @@ follows §7.19.
 soddisfatto, un risultato del genere su questo tablet ha quasi del miracoloso»*. ⇒ 4K seek on an N100 is the
 **declared limit**, not a defect to chase. During that test `[M]` (top every ~1 s, 10 Oct 22:37–22:39): the tablet
 at 55–80 %, peak 83 %, never saturated; Chrome ≈ 95 % of one thread, REMOTIX ≈ 13 %.
+
+### 10.43 ✅ RHEL / Alma 10: our own labwc hosts the nested KWin (11 Oct 2026)
+
+User's decision, 11 Oct 2026 (relayed): *our own labwc ONLY for Alma/RHEL 10; the other six distributions keep
+their distribution's labwc exactly as in the tested build `4c96a4c`*. A labwc of ours on all seven was built and
+measured the same morning and then left for `MASTERPLAN.md` M7 (local branch `m7-labwc-ovunque`, not merged).
+
+- **Why only there**: EPEL 10 has KWin 6.6.4 and wlroots 0.18.2 but **no labwc**, so KDE on Alma kept the canvas of
+  its birth at reattach (the exception of §10.40). With a labwc, Alma follows §10.40 like the others.
+- **What**: **labwc 0.8.4** — the last release for wlroots 0.18 (0.9.x needs wlroots 0.19, which EPEL 10 does not
+  have) — built **unmodified** in the Alma package (`packaging/rpm/remotix.spec`, `%if 0%{?rhel}`) against **EPEL's
+  wlroots 0.18, linked dynamically** (`Requires: libwlroots-0.18.so()(64bit)`, written out); the BuildRequires are
+  those of Fedora's labwc 0.8.4 spec (dist-git `rpms/labwc` `fd759d1`) minus what is switched off:
+  `-Dxwayland=disabled -Dsvg=disabled -Dicon=disabled -Dnls=disabled -Dman-pages=disabled`, `--wrap-mode=nodownload`,
+  the wraps removed, the distribution's flags, PIE. Installed **privately** as `/usr/lib/remotix/labwc`: not on PATH,
+  no clash with a labwc EPEL may add one day.
+- **Which labwc KWin's host execs is a build-time choice of the package, not a runtime switch**: `make
+  LABWC=/usr/lib/remotix/labwc` → `REMOTIX_LABWC` in `src/kwin.c`, exact path; without it (the six others) the
+  distribution's labwc from PATH, as tested. If the file is missing (a broken install) the declared fallback of §10.40
+  (`--virtual`) still holds.
+- **The source, verified** (`packaging/rpm/labwc/`: `VERSIONI`, `scarica.sh`): labwc publishes no tarball and signs
+  nothing; the tarball is GitHub's archive of the annotated tag `0.8.4`, pinned by **sha256**
+  `2d3ded90…9797`, and checked on 11 Oct 2026 two independent ways: **identical to `git archive` of the tag**, and
+  **its SHA512 equal to the one in Fedora's dist-git** `sources` (`scarica.sh` checks both at every build).
+- `[R]` **The source review** (11 Oct 2026, ~40 min, labwc 0.9.8 read in full by categories, 0.8.4 checked against
+  it): **no network** (no AF_INET, no getaddrinfo); **no dlopen**; **no setuid**, and labwc refuses to run setuid
+  (`main.c`); **writes nothing to disk** (only `shm_open`+unlink and memfd; the Wayland socket and its lock in its
+  runtime folder, which `kwin.c` makes `<runtime>/remotix-kwin-ospite`, 0700); the build runs only `git describe`
+  and wayland-scanner, downloads nothing with `nodownload`, no binary blobs. **It starts programs** (`spawn.c`, `sh
+  -c`) only from: `autostart`/`shutdown` in its config folder (with `-C`, only ours: there are none); the
+  activation-environment update (`dbus-update-activation-environment`, `systemctl --user import-environment`) —
+  only with a DRM backend or `LABWC_UPDATE_ACTIVATION_ENV=1`, and `kwin.c` says it `0` and runs it headless; menus and
+  `Execute` bindings. ✅ **One finding, FIXED on 11 Oct 2026** (user's approval: «procedi»): an `rc.xml` without
+  bindings made labwc load its **default** bindings, which start programs (Super+Return a terminal — `alacritty` in
+  0.8.x, `lab-sensible-terminal` in 0.9.x —, the volume keys `amixer`, the brightness keys `brightnessctl`; the
+  default root menu of 0.9.x has a «Terminal» entry, reached only through the default mouse binding). On this labwc
+  nobody presses keys (no input device), but **any program of the same user** on its socket could, through the
+  virtual-keyboard protocol (no new reach: that program is already the same user, and the socket is in a 0700
+  folder).
+  - **The cure, on all seven distributions** (it is `kwin.c`'s `rc.xml`, passed with `-C`; so the six others'
+    `kwin.o` is no longer that of `4c96a4c`, by decision): **one key binding and one mouse binding, each with the
+    single action `None`**, and `LABWC_UPDATE_ACTIVATION_ENV=0` said instead of unset. ⇒ labwc keeps **zero** bindings.
+    Why it works: labwc decides «load the defaults?» on the bindings it has *read* (one each: no), and only
+    afterwards removes every binding whose action list is empty (`None` adds no action) — `rcxml.c`,
+    `post_processing()`: the defaults test, then `deduplicate_key_bindings()`/`deduplicate_mouse_bindings()`; the
+    same order in **every tag 0.8.0-0.9.8** (checked one by one). ⚠ The earlier reading («not `None`, labwc clears
+    it») saw the clearing but not its order. ⛔ The key must be a valid keysym: with an unknown one (`W-NonEsiste`)
+    labwc creates no binding and the defaults come back (`[M]`, «Invalid keybind», «load default key bindings»).
+  - `[M]` **The proof** (headless labwc as `kwin.c` runs it, `-d`, then W-Return and XF86AudioRaiseVolume sent through
+    the virtual keyboard with `wtype`, and fake `alacritty`/`lab-sensible-terminal`/`amixer`/… first in PATH that
+    write down that they ran), old file as control on each version:
+    | labwc | old `rc.xml` | new `rc.xml` |
+    |---|---|---|
+    | 0.8.3 (Debian 13) | «load default key bindings», «load default mouse bindings» (38 mousebinds), 2 Execute: `alacritty`, `amixer sset Master 5%+` ran | no defaults, «Cleared 1 keybinds», «Cleared 1 mousebinds», **nothing ran** |
+    | 0.9.8 (build of branch M7) | defaults (32 mousebinds), `lab-sensible-terminal`, `amixer` ran | the same as 0.8.3: **nothing ran** |
+    | **0.8.4 ours, Alma 10** (fresh container, the rpm rebuilt with the cure) | defaults (38 mousebinds), `alacritty`, `amixer` ran | the `rc.xml` **written by `remotix --kwin-annidato` itself**, loaded with `-d`: «Cleared 1 keybinds/mousebinds», no defaults, **nothing ran** |
+  - `[M]` **Alma 10, same day**: `remotix --kwin-annidato 1280 800 pixman` starts `/usr/lib/remotix/labwc` (0.8.4) in
+    **23 ms** at 1280×800, its environment carries `LABWC_UPDATE_ACTIVATION_ENV=0`; `wlr-randr` sets 1920×1080 and
+    reads it back; W-Return and Vol+ sent to that very labwc start nothing.
+  - `[M]` **KDE (rete11-kde, Debian 13, KWin nested in labwc 0.8.3)**, the binary of this tree on a server of its own
+    (port 8743, its own ban-file, socket and log; abandonment clock off so as not to touch the desktop of the
+    user's live server on 8512, which kept running), Chrome: **F-016/F-017 PASS** (and P-A: click and keys reach
+    the desktop after the reattach), **F-018 PASS** (2560×1440 and back to 4K), **F-018b/F-018c PASS**, each with its
+    fault seen; **three reattaches in a row** on one session at 1280×900, 3840×2160, 1920×1080: canvas = view, screen
+    inside = canvas, text read every time, panel at the bottom edge (checked on the photos; the script's automatic
+    panel-colour test failed because the panel is translucent and its colour follows the wallpaper behind — a
+    flaw of that ad-hoc script, not of the session). The tenants' labwc had the new `rc.xml` (two `None`) and
+    `LABWC_UPDATE_ACTIVATION_ENV=0`.
+- **It never listens on the network and it is invisible**: headless, no screen, no input device, its socket in a
+  private folder; the user never sees it.
+- ⛔ **The rule, from now on**:
+  1. **Updated at every REMOTIX release**: check labwc's releases for the wlroots that EPEL 10 carries (0.8.x while
+     EPEL has wlroots 0.18; move to the next series when EPEL moves). Change `VERSIONI` and `%global labwc_ver`.
+  2. **Every update reviews the diff** between the pinned version and the new one (`git diff 0.8.4..<new>` of
+     labwc, focused on the categories above: network, exec, file writes, setuid, dlopen, environment, build
+     scripts), recorded here; then the Alma package is rebuilt and the proofs below rerun.
+  3. **A serious security advisory in labwc** (or in the wlroots it links, which EPEL updates) **triggers an
+     extraordinary REMOTIX release**: the Alma package is rebuilt with the fixed labwc at once (for wlroots, the
+     rebuild against EPEL's fixed package, if the soname changes).
+  4. ⛔ **labwc is not patched.** If a patch ever becomes necessary, it is published under GPL-2.0 together with the
+     source.
+- **Licence**: labwc is GPL-2.0-only (two files LGPL-2.0-or-later); it is a separate program, not linked with REMOTIX.
+  `THIRD-PARTY-LICENSES` carries its full text (and wlroots' MIT, for reference: EPEL's, not shipped); `LICENSE.md`
+  §8 and the README say that REMOTIX's terms do not apply to it. **The exact corresponding source** — the upstream
+  tarball, the recipe (`VERSIONI`, `scarica.sh`, `remotix.spec`) — goes with every release, **inside the `.run`**
+  (`source/labwc/`) **and next to it** (`remotix-<version>-labwc-source.tar.gz`, `packaging/rilascio.sh`); the Alma
+  source rpm carries it too.
+- `[M]` **11 Oct 2026 — the proofs** (server, private podman storage on `/media`):
+  - **The seven packages** (`packaging/rilascio.sh 0.99.43-4`, commit `70ed338`): built, `.run` 25 MB, the labwc source
+    next to it. lintian 0 E/W on Debian 13 and Ubuntu 26.04, R4/R13/R14 green; rpmlint on the four rpm targets and
+    namcap on Arch **the same lines as release 0.18.0-95** (nothing new); the Alma rpm requires
+    `libwlroots-0.18.so()(64bit)` and carries `/usr/lib/remotix/labwc` (`labwc 0.8.4`, no library missing).
+  - **The six others did not change**: without `LABWC`, `kwin.o` built from this tree and from `4c96a4c` has the same
+    data and the same code but for one line-number constant (an assertion's `__LINE__`, the file is 12 lines longer).
+  - **Alma 10, fresh container with EPEL + CRB**: the rpm installs (108 packages; for labwc EPEL's `wlroots
+    0.18.2-1.el10_0` and `libseat`); the distribution labwc is not installed; `remotix --kwin-annidato 1280 800 pixman`
+    starts our labwc headless at 1280×800 in **22 ms**; `wlr-randr` (0.5.0, built from its upstream tarball, signature
+    checked) reads 1280×800, sets 1920×1080, reads 1920×1080.
+  - **KWin 6.6.4 (EPEL) nested in it**, same container (with `--cap-add=SYS_NICE`: `kwin_wayland` carries the file
+    capability `cap_sys_nice`, which a default rootless container does not grant), llvmpipe: KWin's own socket appears,
+    a client of KWin (`wayland-info`) sees its output **1280×800**; the host set to 1920×1080 ⇒ KWin's output
+    **1920×1080**. ⚠ **Not done: F-018 on Alma** — there is no Alma KDE box on the server (the boxes are Debian/Leap);
+    what is proven is the mechanism of §10.40 on Alma's KWin, not a browser session. ⚠ A third KWin version
+    (6.6) on the same road.
 
 ## How this document is kept
 

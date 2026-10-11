@@ -58,6 +58,14 @@ build_one()
 	tar -C "$ALBERO" --transform "s,^,remotix-$VER/," \
 		--exclude='*.o' --exclude='src/remotix' --exclude='*-client-protocol.h' --exclude='*-protocol.c' \
 		-czf "$lav/SOURCES/remotix-$VER.tar.gz" src banchi/rcp packaging/rpm THIRD-PARTY-LICENSES LICENSE.md
+	# ⭐ DECISIONI §10.43: RHEL / Alma 10 only — the upstream source of OUR labwc (Source1),
+	#    fetched once and verified at every build (sha256 + Fedora's sha512)
+	if [ "$b" = alma10 ]; then
+		SORGENTI_LABWC=${SORGENTI_LABWC:-$ALBERO/costruzione-uscita/sorgenti-labwc}
+		"$QUI/labwc/scarica.sh" "$SORGENTI_LABWC" ||
+			{ echo "$b pacchetto=NO the labwc source" | tee "$u/esito.txt"; return 1; }
+		install -m 0644 "$SORGENTI_LABWC"/labwc-*.tar.gz "$lav/SOURCES/"
+	fi
 	cp "$QUI/remotix.spec" "$lav/SPECS/"
 
 	echo "== $b: rpmbuild (log in $u/rpmbuild.log)"
@@ -82,6 +90,8 @@ build_one()
 		rm -rf /lavoro/estratto; mkdir /lavoro/estratto; cd /lavoro/estratto
 		rpm2cpio "$p" | cpio -idm --quiet
 		ldd usr/libexec/remotix/remotix >/lavoro/ldd.txt 2>&1
+		# ⭐ §10.43 (Alma): our labwc — the version, and no library missing
+		[ -e usr/lib/remotix/labwc ] && { usr/lib/remotix/labwc --version; ldd usr/lib/remotix/labwc; } >/lavoro/ldd-labwc.txt 2>&1
 		# R13: the bench-function sentence NOT in the package binary, and YES
 		# in an rcp.o with BANCO_ACCESO 1 (the positive check: without it, «not
 		# found» could mean «I cannot search») — like the .deb line.
@@ -96,7 +106,7 @@ build_one()
 	' >"$u/rpmbuild.log" 2>&1
 
 	cp "$lav"/RPMS/*/*.rpm "$lav"/SRPMS/*.rpm "$u/" 2>/dev/null
-	for f in rpmlint.txt richieste.txt file.txt scriptlet.txt ldd.txt r13-binario.txt; do
+	for f in rpmlint.txt richieste.txt file.txt scriptlet.txt ldd.txt ldd-labwc.txt r13-binario.txt; do
 		[ -f "$lav/$f" ] && cp "$lav/$f" "$u/"
 	done
 	if ! ls "$u"/remotix-[0-9]*.x86_64.rpm >/dev/null 2>&1; then
@@ -106,6 +116,13 @@ build_one()
 
 	grep -q 'not found' "$u/ldd.txt" && nota="$nota ldd:not-found"
 	grep -qE 'ngtcp2|nghttp3' "$u/ldd.txt" && nota="$nota ldd:quic-dinamiche"
+	if [ "$b" = alma10 ]; then
+		if grep -q '^labwc ' "$u/ldd-labwc.txt" 2>/dev/null && ! grep -q 'not found' "$u/ldd-labwc.txt"; then
+			nota="$nota labwc:verde($(head -1 "$u/ldd-labwc.txt" | cut -d' ' -f2))"
+		else
+			nota="$nota labwc:ROSSO"
+		fi
+	fi
 	awk '{ print $NF }' "$u/file.txt" | grep -E "$LISTA_NERA" >"$u/r14.txt" && nota="$nota R14:ROSSO"
 	grep '^ExecStart' "$lav/estratto/usr/lib/systemd/system/remotix.service" | grep -E -- "$OPZIONI_BANCO" >"$u/r13.txt" \
 		&& nota="$nota R13-unita:ROSSO"
