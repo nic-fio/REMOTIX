@@ -210,16 +210,16 @@ const m = document.getElementById('signin-form');
 const vis = (e) => !!e && getComputedStyle(e).display !== 'none'
                    && getComputedStyle(e).visibility !== 'hidden'
                    && e.getBoundingClientRect().width > 0;
-return { url: location.href, titolo: document.title,
-         pronta: document.readyState,
-         modulo: !!m, visibile: vis(m),
-         username: !!document.getElementById('username'),
+return { url: location.href, title: document.title,
+         ready: document.readyState,
+         form: !!m, visible: vis(m),
+         user: !!document.getElementById('username'),
          password: !!document.getElementById('password'),
-         signin-button: !!document.getElementById('signin-button'),
+         signin_button: !!document.getElementById('signin-button'),
          remotix: !!window.REMOTIX,
          banned: document.body ? document.body.dataset.banned || null : null,
          warning: (document.getElementById('warning') || {}).textContent || '',
-         testo: document.body ? document.body.innerText.slice(0, 300) : '' };
+         text: document.body ? document.body.innerText.slice(0, 300) : '' };
 """
 
 # ⚠ The value is put in the field and `requestSubmit()` is asked of the form: it is
@@ -247,20 +247,20 @@ const t = document.getElementById('viewer');
 const r = t ? t.getBoundingClientRect() : null;
 return {
   session: !!(s && s.session),
-  esito_classe: e ? e.className : null,
-  esito: e ? e.textContent : null,
+  outcome_class: e ? e.className : null,
+  outcome: e ? e.textContent : null,
   painted: s && s.counts ? s.counts.painted : null,
   delivered: s && s.counts ? s.counts.delivered : null,
-  acceso: document.body ? (document.body.dataset.viewer || null) : null,
+  on: document.body ? (document.body.dataset.viewer || null) : null,
   input: !!window.REMOTIX_INPUT,
   giro: g,
-  tela: r ? [r.left, r.top, r.width, r.height] : null,
+  canvas: r ? [r.left, r.top, r.width, r.height] : null,
   buffer: t ? [t.width, t.height] : null,
-  vista: [innerWidth, innerHeight, devicePixelRatio || 1],
-  registro: reg ? reg.textContent : '',
-  errori_schermo: s && s.errors ? s.errors.slice(-5).map(String) : [],
-  banco: window.__BANCO__ ? { errori: window.__BANCO__.errori.slice(0, 40),
-                              rete: window.__BANCO__.rete.slice(0, 40) } : null,
+  view: [innerWidth, innerHeight, devicePixelRatio || 1],
+  log: reg ? reg.textContent : '',
+  screen_errors: s && s.errors ? s.errors.slice(-5).map(String) : [],
+  bench: window.__BANCO__ ? { errors: window.__BANCO__.errori.slice(0, 40),
+                              network: window.__BANCO__.rete.slice(0, 40) } : null,
   ingresso: window.__BANCO_IN__ ? window.__BANCO_IN__ : null,
 };
 """
@@ -859,14 +859,14 @@ class Test:
                 m = self.g.js(JS_MODULE)
             except Exception as e:               # noqa: BLE001
                 m = {"error": str(e)[:200]}
-            if m and m.get("form") and m.get("pronta") == "complete":
+            if m and m.get("form") and m.get("ready") == "complete":
                 break
             time.sleep(0.5)
         if not m or not m.get("form"):
             text = (m or {}).get("text", "") if isinstance(m, dict) else ""
             return False, ("the login form is not there (url %s): «%s»"
                            % ((m or {}).get("url"), " ".join(text.split())[:160]))
-        if not (m["user"] and m["parola"] and m["vai"]):
+        if not (m["user"] and m["password"] and m["signin_button"]):
             return False, "the form is there but a field is missing: %s" % m
         if not m["remotix"]:
             return False, "the form is there but `window.REMOTIX` is not: the script stopped"
@@ -1174,7 +1174,7 @@ class Test:
         while time.time() < fine:
             try:
                 m = self.g.js(JS_MODULE)
-                if m and m.get("form") and m.get("pronta") == "complete" and m.get("visible"):
+                if m and m.get("form") and m.get("ready") == "complete" and m.get("visible"):
                     return True, ""
             except Exception:                    # noqa: BLE001
                 pass
