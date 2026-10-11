@@ -59,7 +59,7 @@ macchine() {  # the 26, one per line
 	done
 }
 
-scegli() {  # scegli <m>: sets D, DE, n, k, FAM, ARGS, PSSH, PRX, NOME, IMMAGINE
+choose() {  # scegli <m>: sets D, DE, n, k, FAM, ARGS, PSSH, PRX, NOME, IMMAGINE
 	m=$1; D=${m%%-*}; DE=${m#*-}
 	macchine | grep -qx "$m" || die "$m: not in the matrix (bash 17-scatola.sh elenco)"
 	local y; n=0; for y in $MATRICE; do n=$((n + 1)); [ "$y" = "$D" ] && break; done
@@ -86,7 +86,7 @@ ssh_s() {
 		root@127.0.0.1 "$@"
 }
 accesa() { [ "$(P inspect -f '{{.State.Running}}' "$NOME" 2>/dev/null)" = true ]; }
-aspetta_systemd() {
+wait_systemd() {
 	local S=""
 	for _ in $(seq 1 120); do
 		S=$(P exec "$NOME" systemctl is-system-running 2>&1 | head -1)
@@ -106,7 +106,7 @@ aspetta_ssh() {  # aspetta_ssh <secondi>
 }
 
 costruisci() {  # costruisci <m>
-	scegli "$1"
+	choose "$1"
 	[ -f "$QUI/Contenitore.$FAM" ] || die "missing $QUI/Contenitore.$FAM"
 	[ -f "$QUI/chiave-banco.pub" ] || cp "$CHIAVE.pub" "$QUI/chiave-banco.pub" || die "missing $CHIAVE.pub"
 	# the image depends neither on the GPU nor on the port: the build ssh port is the Intel one,
@@ -120,7 +120,7 @@ verbo=${1:?verb}; shift
 case $verbo in
 elenco)
 	for x in $(macchine); do
-		scegli "$x"
+		choose "$x"
 		printf '%-18s ssh %s REMOTIX %s  %s\n' "$x" "$PSSH" "$PRX" \
 			"$(P image exists "$IMMAGINE" && echo image || echo '—')$(accesa && echo ' · RUNNING')"
 	done
@@ -135,7 +135,7 @@ costruisci-tutte)
 	exit 0 ;;
 esac
 
-scegli "${1:?machine}"; shift
+choose "${1:?machine}"; shift
 case $verbo in
 porte) echo "$PSSH $PRX" ;;
 stato) P ps -a --filter "name=^$NOME\$" --format '{{.Names}} {{.Status}} {{.Image}}' ;;
@@ -170,7 +170,7 @@ avvia)
 		--device "$CARD:/dev/dri/card0" --device "$RENDER:/dev/dri/renderD128" "${VERI[@]}" \
 		--cap-add=AUDIT_WRITE --cap-add=AUDIT_CONTROL --cap-add=SYS_ADMIN --cap-add=SYS_NICE --cap-add=WAKE_ALARM \
 		"$IMMAGINE" >/dev/null || die "podman run failed"
-	S=$(aspetta_systemd)
+	S=$(wait_systemd)
 	# the ssh port: the image is born with the Intel one; on the Radeon (or if the scheme changes) it is
 	# rewritten before the bench enters
 	P exec "$NOME" sh -c "grep -q '^Port $PSSH\$' /etc/ssh/sshd_config.d/t17.conf || { sed -i 's/^Port .*/Port $PSSH/' /etc/ssh/sshd_config.d/t17.conf; systemctl restart sshd.service 2>/dev/null || systemctl restart ssh.service; }"
@@ -188,7 +188,7 @@ riavvia)
 	P restart -t 15 "$NOME" >/dev/null || die "podman restart failed"
 	a1=$(P inspect -f '{{.State.StartedAt}}' "$NOME")
 	[ "$a0" != "$a1" ] || die "the box did not restart (StartedAt unchanged)"
-	S=$(aspetta_systemd)
+	S=$(wait_systemd)
 	ok "rebooted: the container restarted ($a0 → $a1; systemd $S)"
 	aspetta_ssh 90
 	;;

@@ -124,12 +124,12 @@ QUI = os.path.dirname(os.path.abspath(__file__))
 # ⛔ If C1 does not load we exit **3** and say so: ⛔ we do not silently fall back
 #    on a poorer judgement.
 # ═══════════════════════════════════════════════════════════════════════════
-_MESTIERI_C1 = ("e_stato_ammesso", "certifica_ammissione",
+_JOBS_C1 = ("e_stato_ammesso", "certifica_ammissione",
                 "garantisci_i_gruppi", "verdetto_gruppi", "certifica_gruppi")
 _C1 = None
 
 
-def _carica_c1():
+def _load_c1():
     """⛔ It is a LOADER, not a judge: it finds the file, it decides nothing.
 
     ⚠ It is looked for next to me (in the box everything is in `/opt/remotix`) and one
@@ -148,17 +148,17 @@ def _carica_c1():
             return None
         # ⛔ We VERIFY that what is needed is there, we do not trust the name of the
         #    file (`CODER.md` §3.9).
-        for mestiere in _MESTIERI_C1:
+        for mestiere in _JOBS_C1:
             if not callable(getattr(m, mestiere, None)):
                 return None
         return m
     return None
 
 
-def casa_di_c1():
+def c1_home():
     global _C1
     if _C1 is None:
-        _C1 = _carica_c1()
+        _C1 = _load_c1()
     if _C1 is None:
         print("⛔ I cannot find `11-c1-nasce-e-si-vede.py` next to me, and from there")
         print("   come the admission predicate and the guarantee of the")
@@ -174,7 +174,7 @@ def e_stato_ammesso(coda):
     ⛔ `False` is not a product red: a client turned away is a client
        turned away, and the caller says «I could not look» (**3**).
     """
-    return casa_di_c1().e_stato_ammesso(coda)
+    return c1_home().e_stato_ammesso(coda)
 
 
 def garantisci_i_gruppi(chi, prefisso="   "):
@@ -186,7 +186,7 @@ def garantisci_i_gruppi(chi, prefisso="   "):
        force».  ⭐ The work is done by `attrezzi-gruppi-scheda.sh`, which reads the gids
        from the NODES and reads back comparing the numbers.  ⛔ No copy of it is made here.
     """
-    return casa_di_c1().garantisci_i_gruppi(chi, prefisso)
+    return c1_home().garantisci_i_gruppi(chi, prefisso)
 
 # ---------------------------------------------------------------------------
 # ⛔ THE COLOUR OF THE TARGET AND ITS TOLERANCE — declared here and printed in
@@ -364,8 +364,8 @@ def certifica():
     #   would be a second place to diverge from (§1.47).
     # ═══════════════════════════════════════════════════════════════════════
     print()
-    guai_gr, _quanti_gr = casa_di_c1().certifica_gruppi("C8")
-    guai += guai_gr
+    group_troubles, _how_many_groups = c1_home().certifica_gruppi("C8")
+    guai += group_troubles
 
     print()
     if guai:
@@ -448,9 +448,9 @@ def crea(chi, parola):
            "printf '%s:%s\n' | chpasswd" % (chi, chi, parola))
     if r.returncode != 0:
         return False, (r.stderr or "").strip()[:120]
-    e_gr, perche_gr = garantisci_i_gruppi(chi, prefisso="      ")
+    e_gr, why_groups = garantisci_i_gruppi(chi, prefisso="      ")
     if e_gr != 0:
-        return False, perche_gr
+        return False, why_groups
     return True, ""
 
 
@@ -541,7 +541,7 @@ def scatta(chi, parola, fuori, a, resta):
     return fuori, quanti, None
 
 
-def rende_la_pagina_da_solo(chi, a, fuori):
+def renders_page_alone(chi, a, fuori):
     """⭐⭐ TEST A — *«the browser renders the page»*, ⛔ **without the stage in between**.
 
     Firefox takes a photograph of itself (`--screenshot`), as a user, on the
@@ -764,30 +764,30 @@ def main():
 
         # ── TEST A ─────────────────────────────────────────────────────────
         pa = os.path.join(a.lavoro, "%s-A.png" % chi)
-        png_a, detto = rende_la_pagina_da_solo(chi, a, pa)
+        png_a, detto = renders_page_alone(chi, a, pa)
         fra = frazione_del_colore(png_a) if png_a else None
         # ⛔ «the profile is there» is not enough: with the link to `/tmp` that
         #    folder is SHARED, and the second tenant would see in it the
         #    profile of the FIRST.  ⇒ We look at WHOSE it is.
         prof = sh("ls -d /home/%s/.cache/mozilla/firefox/*/ 2>/dev/null | head -1"
                   % chi).stdout.strip()
-        padrone = sh("stat -c %%U /home/%s/.cache/mozilla 2>/dev/null" % chi).stdout.strip()
+        owner = sh("stat -c %%U /home/%s/.cache/mozilla 2>/dev/null" % chi).stdout.strip()
         if not prof:
             profilo = "⛔ NEVER BORN"
-        elif padrone and padrone != chi:
-            profilo = "⛔ it belongs to «%s»" % padrone
+        elif owner and owner != chi:
+            profilo = "⛔ it belongs to «%s»" % owner
         else:
             profilo = "its own"
         if fra is None:
             vista_a = False
-            comeche = ("⛔ the browser did not even produce an image"
+            anyhow = ("⛔ the browser did not even produce an image"
                        if png_a is None else "⛔ the image could not be read")
         else:
             vista_a = fra >= FRAZIONE_MINIMA
-            comeche = "the page covers %.1f%% of the image" % (fra * 100)
+            anyhow = "the page covers %.1f%% of the image" % (fra * 100)
         print("  %-6s  A  %-3s  %-42s  (profile: %s · can write in "
               "~/.cache/mozilla: %s)"
-              % (chi, "YES" if vista_a else "NO", comeche, profilo,
+              % (chi, "YES" if vista_a else "NO", anyhow, profilo,
                  "yes" if scrive else "⛔ NO"))
         if not vista_a and detto:
             # ⭐ The reason next to the symptom: «it did not draw» alone
@@ -796,39 +796,39 @@ def main():
 
         # ── TEST B ─────────────────────────────────────────────────────────
         vista_b = None
-        motivo_b = ""
+        reason_b = ""
         if a.senza_sessione:
-            motivo_b = "not asked for (--senza-sessione)"
+            reason_b = "not asked for (--senza-sessione)"
         else:
             png1 = os.path.join(a.lavoro, "%s-B-prima.png" % chi)
             p1, f1, err1 = scatta(chi, a.parola, png1, a, a.resta_prima)
             g1 = giudice.giudica(p1) if p1 else None
             if g1 is None:
-                motivo_b = ("⛔ I could not look at the desktop BEFORE: %s"
+                reason_b = ("⛔ I could not look at the desktop BEFORE: %s"
                             % (err1 or "unreadable image"))
             elif g1["verdetto"] in ("nero", "quasi-nero"):
-                motivo_b = ("⛔ the desktop is «%s» BEFORE the browser: it is the "
+                reason_b = ("⛔ the desktop is «%s» BEFORE the browser: it is the "
                             "defect of phase 10 §7.4, not C8" % g1["verdetto"])
             else:
                 display, err = apri_il_browser(chi, a)
                 if display is None:
-                    motivo_b = "⛔ I could not switch on the browser: %s" % err
+                    reason_b = "⛔ I could not switch on the browser: %s" % err
                 else:
                     time.sleep(a.attesa_browser)
                     png2 = os.path.join(a.lavoro, "%s-B-dopo.png" % chi)
                     p2, f2, err2 = scatta(chi, a.parola, png2, a, a.resta_dopo)
                     frb = frazione_del_colore(p2) if p2 else None
                     if frb is None:
-                        motivo_b = ("⛔ I could not look at the desktop AFTER: %s"
+                        reason_b = ("⛔ I could not look at the desktop AFTER: %s"
                                     % (err2 or "unreadable image"))
                     else:
                         vista_b = frb >= FRAZIONE_MINIMA
-                        motivo_b = ("the page covers %.1f%% of the screen "
+                        reason_b = ("the page covers %.1f%% of the screen "
                                     "(desktop before: %s · frames %s/%s)"
                                     % (frb * 100, g1["verdetto"], f1, f2))
         print("  %-6s  B  %-3s  %s"
               % (chi, "YES" if vista_b else ("NO" if vista_b is False else "?"),
-                 motivo_b))
+                 reason_b))
 
         esiti.append({"chi": chi, "a": vista_a, "b": vista_b})
         sh("pkill -KILL -u %s 2>/dev/null; loginctl terminate-user %s 2>/dev/null"

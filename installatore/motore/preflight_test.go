@@ -8,7 +8,7 @@ import (
 )
 
 // a fake root for the PREFLIGHT: the files it reads, and no command (all «not there»).
-func radiceFinta(t *testing.T, file map[string]string, collegamenti map[string]string) string {
+func fakeRoot(t *testing.T, file map[string]string, links map[string]string) string {
 	r := t.TempDir()
 	for p, c := range file {
 		d := filepath.Join(r, p)
@@ -17,7 +17,7 @@ func radiceFinta(t *testing.T, file map[string]string, collegamenti map[string]s
 			t.Fatal(err)
 		}
 	}
-	for p, dest := range collegamenti {
+	for p, dest := range links {
 		d := filepath.Join(r, p)
 		os.MkdirAll(filepath.Dir(d), 0o755)
 		if err := os.Symlink(dest, d); err != nil {
@@ -27,14 +27,14 @@ func radiceFinta(t *testing.T, file map[string]string, collegamenti map[string]s
 	return r
 }
 
-func condizioniDi(r *Rapporto, d string) string {
+func conditionsOf(r *Rapporto, d string) string {
 	for _, e := range r.Desktop {
 		if e.Desktop == d {
 			var c []string
 			for _, k := range e.Condizioni {
 				c = append(c, k.Codice)
 			}
-			for _, m := range e.Motivi {
+			for _, m := range e.Reasons {
 				c = append(c, m.Codice)
 			}
 			// what is missing (§10.36): for the desktop, and for the whole machine
@@ -42,15 +42,15 @@ func condizioniDi(r *Rapporto, d string) string {
 				c = append(c, "RX-MANCA-003")
 			}
 			// the pieces the desktop requires: REMOTIX dependencies, the manager installs them
-			if len(e.Dipende) > 0 {
-				c = append(c, "DEP("+strings.Join(e.Dipende, ",")+")")
+			if len(e.Depends) > 0 {
+				c = append(c, "DEP("+strings.Join(e.Depends, ",")+")")
 			}
 			for _, m := range r.Mancano {
-				if m.Codice != "RX-MANCA-003" && e.Livello != NON_SUPPORTATA {
+				if m.Codice != "RX-MANCA-003" && e.Level != NON_SUPPORTATA {
 					c = append(c, m.Codice)
 				}
 			}
-			return e.Livello + " " + strings.Join(c, ",")
+			return e.Level + " " + strings.Join(c, ",")
 		}
 	}
 	return ""
@@ -58,7 +58,7 @@ func condizioniDi(r *Rapporto, d string) string {
 
 // Fedora 44 with proprietary NVIDIA, SELinux, pam_faillock: every known defect with its code (R2).
 func TestPreflightFedoraNvidia(t *testing.T) {
-	r := radiceFinta(t, map[string]string{
+	r := fakeRoot(t, map[string]string{
 		"etc/os-release":                           "ID=fedora\nVERSION_ID=44\nPRETTY_NAME=\"Fedora Linux 44 (Workstation Edition)\"\n",
 		"sys/fs/selinux/enforce":                   "1",
 		"sys/class/drm/renderD128/device/vendor":   "0x10de\n",
@@ -72,8 +72,8 @@ func TestPreflightFedoraNvidia(t *testing.T) {
 		"usr/lib64/security/pam_systemd.so":        "",
 		"etc/systemd/logind.conf.d/50-uccidi.conf": "[Login]\nKillUserProcesses=yes\n",
 	}, map[string]string{"sys/class/drm/renderD128/device/driver": "../../../bus/pci/drivers/nvidia"})
-	a := &Ambiente{Radice: r, Esegui: nessunComando}
-	p := Preflight(a, OpzioniPreflight{})
+	a := &Ambiente{Radice: r, Esegui: noCommand}
+	p := Preflight(a, PreflightOptions{})
 	for k, v := range map[string]string{"distro.family": "fedora", "selinux": "enforcing", "gpu.nvidia_proprietary": "yes",
 		"gpu.renderD128.driver": "nvidia", "pam.faillock": "yes", "desktop.gnome": "present", "group.render": "absent",
 		"logind.kill_user_processes": "yes", "system.systemd": "yes"} {
@@ -82,11 +82,11 @@ func TestPreflightFedoraNvidia(t *testing.T) {
 		}
 	}
 	// no VA driver (proprietary NVIDIA) ⇒ the card does not encode, RILEVATO. Never «yes»
-	if f, _ := p.F("h264.gpu"); f.Stato != RILEVATO || f.Valore != "no" {
+	if f, _ := p.F("h264.gpu"); f.Stato != RILEVATO || f.Value != "no" {
 		t.Errorf("h264.scheda without a VA driver: %+v", f)
 	}
 	codici := map[string]bool{}
-	for _, m := range p.Messaggi {
+	for _, m := range p.Messages {
 		codici[m.Codice] = true
 	}
 	// phase 19: no fallback — a proprietary NVIDIA alone is a refusal (RX-GPU-004), already in the
@@ -105,14 +105,14 @@ func TestPreflightFedoraNvidia(t *testing.T) {
 	if p.V("encoding.routes") != "vulkan,vaapi" || p.V("encoding.vulkan") != "active" || p.V("encoding.vulkan.icd") != "none" {
 		t.Errorf("the routes: %q, vulkan %q, icd %q", p.V("encoding.routes"), p.V("encoding.vulkan"), p.V("encoding.vulkan.icd"))
 	}
-	rap := Valuta(catalogoProva(t), p)
+	rap := Valuta(catalogTest(t), p)
 	for _, d := range DESKTOP {
-		if got := condizioniDi(rap, d); !strings.HasPrefix(got, "UNSUPPORTED RX-GPU-004") {
+		if got := conditionsOf(rap, d); !strings.HasPrefix(got, "UNSUPPORTED RX-GPU-004") {
 			t.Errorf("%s on Fedora 44 with only the proprietary NVIDIA: %s", d, got)
 		}
 	}
 	// the same machine with an Intel next to it (the «hybrid» laptop): it passes, and the NVIDIA is stated
-	r2 := radiceFinta(t, map[string]string{
+	r2 := fakeRoot(t, map[string]string{
 		"etc/os-release":                         "ID=fedora\nVERSION_ID=44\n",
 		"sys/class/drm/renderD128/device/vendor": "0x8086\n",
 		"sys/class/drm/renderD129/device/vendor": "0x10de\n",
@@ -120,20 +120,20 @@ func TestPreflightFedoraNvidia(t *testing.T) {
 		"run/systemd/system/.x":                  "",
 		"usr/bin/gnome-shell":                    "",
 	}, nil)
-	p2 := Preflight(&Ambiente{Radice: r2, Esegui: nessunComando}, OpzioniPreflight{})
-	for _, m := range p2.Messaggi {
+	p2 := Preflight(&Ambiente{Radice: r2, Esegui: noCommand}, PreflightOptions{})
+	for _, m := range p2.Messages {
 		if strings.HasPrefix(m.Codice, "RX-GPU-00") && m.Codice != "RX-GPU-002" {
 			t.Errorf("Intel + NVIDIA: %s", m.Codice)
 		}
 	}
-	if got := condizioniDi(Valuta(catalogoProva(t), p2), "gnome"); got != "COMPATIBLE C-HARDWARE" {
+	if got := conditionsOf(Valuta(catalogTest(t), p2), "gnome"); got != "COMPATIBLE C-HARDWARE" {
 		t.Errorf("gnome on Fedora 44 with Intel and NVIDIA: %s", got)
 	}
 }
 
 // Phase 19 (DECISIONI §10.27): without a capable card REMOTIX is not installed, and the preliminary
 // check says so before touching, with the case's code; with a capable Intel or AMD card it passes.
-func TestPreflightSenzaSchedaCapace(t *testing.T) {
+func TestPreflightWithoutCapableCard(t *testing.T) {
 	base := map[string]string{"etc/os-release": "ID=debian\nVERSION_ID=13\n", "run/systemd/system/.x": "", "usr/bin/gnome-shell": ""}
 	con := func(extra map[string]string) map[string]string {
 		m := map[string]string{}
@@ -157,12 +157,12 @@ func TestPreflightSenzaSchedaCapace(t *testing.T) {
 		{"AMD", con(map[string]string{"sys/class/drm/renderD128/device/vendor": "0x1002\n", "usr/lib/x86_64-linux-gnu/dri/radeonsi_drv_video.so": ""}), ""},
 		{"unreadable vendor: the real test decides (7a)", con(map[string]string{"sys/class/drm/renderD128/device/.x": ""}), ""},
 	} {
-		p := Preflight(&Ambiente{Radice: radiceFinta(t, c.file, nil), Esegui: nessunComando}, OpzioniPreflight{})
+		p := Preflight(&Ambiente{Radice: fakeRoot(t, c.file, nil), Esegui: noCommand}, PreflightOptions{})
 		var gpu []string
-		for _, m := range p.Messaggi {
+		for _, m := range p.Messages {
 			if m.Codice != "RX-GPU-002" && strings.HasPrefix(m.Codice, "RX-GPU-") {
 				gpu = append(gpu, m.Codice)
-				if m.Gravita != BLOCCANTE || !strings.HasPrefix(m.Testo, "Missing") {
+				if m.Severity != BLOCCANTE || !strings.HasPrefix(m.Testo, "Missing") {
 					t.Errorf("%s: %s is not BLOCKING or does not say what is missing: %+v", c.nome, m.Codice, m)
 				}
 			}
@@ -170,8 +170,8 @@ func TestPreflightSenzaSchedaCapace(t *testing.T) {
 		if strings.Join(gpu, ",") != c.codice {
 			t.Errorf("%s: %v, expected %q", c.nome, gpu, c.codice)
 		}
-		rap := Valuta(catalogoProva(t), p)
-		got := condizioniDi(rap, "gnome")
+		rap := Valuta(catalogTest(t), p)
+		got := conditionsOf(rap, "gnome")
 		if c.codice != "" && !strings.HasPrefix(got, "UNSUPPORTED "+c.codice) {
 			t.Errorf("%s: gnome %s", c.nome, got)
 		}
@@ -181,8 +181,8 @@ func TestPreflightSenzaSchedaCapace(t *testing.T) {
 	}
 }
 
-func profiloDi(id, ver string, extra map[string]string) *Profilo {
-	p := profiloFinto()
+func profileOf(id, ver string, extra map[string]string) *Profile {
+	p := fakeProfile()
 	p.Rilevato("distro.id", id, "finto")
 	p.Rilevato("distro.version", ver, "finto")
 	p.Rilevato("distro.family", Famiglia(id, ""), "finto")
@@ -194,7 +194,7 @@ func profiloDi(id, ver string, extra map[string]string) *Profilo {
 
 // The catalogue: the matrix of §3, the derivatives, the excluded ones, the conditions of §11.1.
 func TestCatalogo(t *testing.T) {
-	cat := catalogoProva(t)
+	cat := catalogTest(t)
 	casi := []struct {
 		id, ver, desktop string
 		extra            map[string]string
@@ -241,32 +241,32 @@ func TestCatalogo(t *testing.T) {
 		{"debian", "13", "gnome", map[string]string{"distro.immutable": "yes"}, "UNSUPPORTED RX-COMPAT-003"},
 	}
 	for _, c := range casi {
-		rap := Valuta(cat, profiloDi(c.id, c.ver, c.extra))
-		if got := condizioniDi(rap, c.desktop); got != c.atteso {
-			t.Errorf("%s %s %s: %q, expected %q (%s)", c.id, c.ver, c.desktop, got, c.atteso, rap.Riconosciuta)
+		rap := Valuta(cat, profileOf(c.id, c.ver, c.extra))
+		if got := conditionsOf(rap, c.desktop); got != c.atteso {
+			t.Errorf("%s %s %s: %q, expected %q (%s)", c.id, c.ver, c.desktop, got, c.atteso, rap.Recognized)
 		}
 	}
 	// no combination is CERTIFIED until the catalogue records a full run (T10)
-	for _, pl := range cat.Piattaforme {
-		if pl.GiroIntero != "" {
+	for _, pl := range cat.Platforms {
+		if pl.FullRound != "" {
 			t.Errorf("%s: full run recorded without T10", pl.Nome)
 		}
 	}
 }
 
 // ⛔ UNKNOWN is not PASS in the judgement either: an untested H.264 is a written unknown.
-func TestIncognite(t *testing.T) {
-	p := profiloFinto()
+func TestUnknowns(t *testing.T) {
+	p := fakeProfile()
 	p.Sconosciuto("h264.gpu", "ffmpeg is not there")
-	rap := Valuta(catalogoProva(t), p)
-	if len(rap.Incognite) == 0 || !strings.Contains(strings.Join(rap.Incognite, " "), "H.264") {
-		t.Fatalf("unknowns: %v", rap.Incognite)
+	rap := Valuta(catalogTest(t), p)
+	if len(rap.Unknowns) == 0 || !strings.Contains(strings.Join(rap.Unknowns, " "), "H.264") {
+		t.Fatalf("unknowns: %v", rap.Unknowns)
 	}
 }
 
 // The manual's table (§3.1) is generated from the catalogue.
-func TestTabellaVersioni(t *testing.T) {
-	tab := TabellaVersioni(catalogoProva(t))
+func TestVersionTable(t *testing.T) {
+	tab := TabellaVersioni(catalogTest(t))
 	for _, x := range []string{"| Debian | **13** (Trixie)", "Rocky Linux", "Ubuntu 24.04", "| OpenSSL | 3.5 |", "labwc #2525"} {
 		if !strings.Contains(tab, x) {
 			t.Errorf("the table does not contain %q:\n%s", x, tab)
@@ -307,7 +307,7 @@ func TestStradaVulkan(t *testing.T) {
 		{"Intel with ANV: it does not count in Vulkan, VA-API does", con(map[string]string{"sys/class/drm/renderD128/device/vendor": "0x8086\n",
 			"usr/share/vulkan/icd.d/intel_icd.x86_64.json": "{}", "usr/lib/x86_64-linux-gnu/dri/iHD_drv_video.so": ""}), "intel", "", ""},
 	} {
-		p := Preflight(&Ambiente{Radice: radiceFinta(t, c.file, nil), Esegui: nessunComando}, OpzioniPreflight{})
+		p := Preflight(&Ambiente{Radice: fakeRoot(t, c.file, nil), Esegui: noCommand}, PreflightOptions{})
 		if p.V("encoding.vulkan.icd") != c.icd {
 			t.Errorf("%s: icd %q, expected %q", c.nome, p.V("encoding.vulkan.icd"), c.icd)
 		}
@@ -315,7 +315,7 @@ func TestStradaVulkan(t *testing.T) {
 			t.Errorf("%s: vulkan cards %q, expected %q", c.nome, got, c.schede)
 		}
 		var gpu []string
-		for _, m := range p.Messaggi {
+		for _, m := range p.Messages {
 			if m.Codice != "RX-GPU-002" && strings.HasPrefix(m.Codice, "RX-GPU-") {
 				gpu = append(gpu, m.Codice)
 			}
@@ -323,8 +323,8 @@ func TestStradaVulkan(t *testing.T) {
 		if strings.Join(gpu, ",") != c.codice {
 			t.Errorf("%s: %v, expected %q", c.nome, gpu, c.codice)
 		}
-		rap := Valuta(catalogoProva(t), p)
-		got := condizioniDi(rap, "gnome")
+		rap := Valuta(catalogTest(t), p)
+		got := conditionsOf(rap, "gnome")
 		if c.codice != "" && !strings.HasPrefix(got, "UNSUPPORTED "+c.codice) {
 			t.Errorf("%s: gnome %s", c.nome, got)
 		}

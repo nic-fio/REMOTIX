@@ -12,22 +12,22 @@ import (
 // Impronta of the machine (§6.6.5): the binding part decides whether the plan still holds; the
 // annotated one is only recorded.
 type Impronta struct {
-	Elementi []string `json:"elements"` // binding, sorted, one per line in the canonical text
-	Digest   string   `json:"digest"`   // sha256 of the canonical text
-	Annotata []string `json:"recorded"`
+	Elements  []string `json:"elements"` // binding, sorted, one per line in the canonical text
+	Digest    string   `json:"digest"`   // sha256 of the canonical text
+	Annotated []string `json:"recorded"`
 }
 
 // profile keys that enter the binding fingerprint (prefixes). ⚠ Not the packages in
 // general: only those the plan touches or depends on (Piano.Dipende).
-var prefissiVincolanti = []string{
+var bindingPrefixes = []string{
 	"distro.id", "distro.version", "distro.variant", "system.arch", "system.systemd",
 	"desktop.", "gpu.", "h264.", "selinux", "firewall.",
 	"group.video", "group.render", "repo.",
 }
 
-var prefissiAnnotati = []string{"system.name", "system.kernel", "distro.name"}
+var annotatedPrefixes = []string{"system.name", "system.kernel", "distro.name"}
 
-func haPrefisso(k string, pp []string) bool {
+func hasPrefix(k string, pp []string) bool {
 	for _, p := range pp {
 		if strings.HasPrefix(k, p) {
 			return true
@@ -38,23 +38,23 @@ func haPrefisso(k string, pp []string) bool {
 
 // CalcolaImpronta from the profile, the catalogue and the actions (the files, groups, units, rules
 // the plan touches, with their state now).
-func CalcolaImpronta(p *Profilo, cat *Catalogo, azioni []AzionePiano, dipende []string, c *Contesto) (*Impronta, error) {
+func CalcolaImpronta(p *Profile, cat *Catalogo, azioni []AzionePiano, dipende []string, c *Contesto) (*Impronta, error) {
 	im := &Impronta{}
-	for _, f := range p.Fatti {
-		v := f.Chiave + "=" + f.Valore + " [" + string(f.Stato) + "]"
+	for _, f := range p.Facts {
+		v := f.Key + "=" + f.Value + " [" + string(f.Stato) + "]"
 		switch {
-		case haPrefisso(f.Chiave, prefissiVincolanti):
-			im.Elementi = append(im.Elementi, v)
-		case haPrefisso(f.Chiave, prefissiAnnotati):
-			im.Annotata = append(im.Annotata, v)
+		case hasPrefix(f.Key, bindingPrefixes):
+			im.Elements = append(im.Elements, v)
+		case hasPrefix(f.Key, annotatedPrefixes):
+			im.Annotated = append(im.Annotated, v)
 		}
 	}
 	for _, d := range dipende {
-		im.Elementi = append(im.Elementi, "package."+d+"="+p.V("package."+d))
+		im.Elements = append(im.Elements, "package."+d+"="+p.V("package."+d))
 	}
-	im.Elementi = append(im.Elementi, "engine="+VersioneMotore, "catalog="+cat.Versione)
+	im.Elements = append(im.Elements, "engine="+VersioneMotore, "catalog="+cat.Version)
 	for _, ap := range azioni {
-		az, err := NuovaAzione(ap)
+		az, err := NewAction(ap)
 		if err != nil {
 			return nil, err
 		}
@@ -64,16 +64,16 @@ func CalcolaImpronta(p *Profilo, cat *Catalogo, azioni []AzionePiano, dipende []
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", ap.ID, err)
 		}
-		im.Elementi = append(im.Elementi, v...)
+		im.Elements = append(im.Elements, v...)
 	}
-	sort.Strings(im.Elementi)
-	sort.Strings(im.Annotata)
-	im.Digest = Sha256([]byte(strings.Join(im.Elementi, "\n") + "\n"))
+	sort.Strings(im.Elements)
+	sort.Strings(im.Annotated)
+	im.Digest = Sha256([]byte(strings.Join(im.Elements, "\n") + "\n"))
 	return im, nil
 }
 
-// DifferenzeImpronta: what has changed (to say it, not only to refuse — R31).
-func DifferenzeImpronta(prima, dopo []string) (tolti, aggiunti []string) {
+// FingerprintDifferences: what has changed (to say it, not only to refuse — R31).
+func FingerprintDifferences(prima, dopo []string) (tolti, aggiunti []string) {
 	a, b := map[string]bool{}, map[string]bool{}
 	for _, x := range prima {
 		a[x] = true
@@ -96,7 +96,7 @@ func DifferenzeImpronta(prima, dopo []string) (tolti, aggiunti []string) {
 
 // Approvazione: the «yes» of whoever installs, to the question of `install` or in the TUI (DECISIONI §10.36:
 // no answers file). It holds only for the plan with the digest written here.
-type Approvazione struct {
+type Approval struct {
 	Da          string `json:"from"`
 	Ora         string `json:"time"`
 	Modo        string `json:"mode"`
@@ -106,31 +106,31 @@ type Approvazione struct {
 // Piano: the third object (§6.6.1). `install` builds it, shows it with the exact packages, asks
 // and applies it; it stays in the operation's folder as a record of what was done.
 type Piano struct {
-	Formato     string        `json:"format"`
-	Oggetto     string        `json:"object"` // "plan"
-	ID          string        `json:"id"`
-	Creato      string        `json:"created"`
-	Mestiere    string        `json:"kind"` // "engine-test" in T4; then installation, upgrade, uninstallation
-	Motore      RifMotore     `json:"engine"`
-	Catalogo    RifCatalogo   `json:"catalog"`
-	Piattaforma string        `json:"platform"`
-	Impronta    Impronta      `json:"fingerprint"`
-	Dipende     []string      `json:"depends"` // packages the plan depends on (in the fingerprint)
-	Azioni      []AzionePiano `json:"actions"`
-	Consensi    []string      `json:"consents"`   // the questions with a line of their own (IRREVERSIBLE)
-	Condizioni  []Condizione  `json:"conditions"` // those of the report that apply to the installed desktops
-	// NonFatto: what the plan declares it does not do, and why. A BLOCKING message (what is
+	Formato    string        `json:"format"`
+	Object     string        `json:"object"` // "plan"
+	ID         string        `json:"id"`
+	Created    string        `json:"created"`
+	Duty       string        `json:"kind"` // "engine-test" in T4; then installation, upgrade, uninstallation
+	Motore     EngineRef     `json:"engine"`
+	Catalogo   CatalogRef    `json:"catalog"`
+	Platform   string        `json:"platform"`
+	Impronta   Impronta      `json:"fingerprint"`
+	Depends    []string      `json:"depends"` // packages the plan depends on (in the fingerprint)
+	Azioni     []AzionePiano `json:"actions"`
+	Consents   []string      `json:"consents"`   // the questions with a line of their own (IRREVERSIBLE)
+	Condizioni []Condition   `json:"conditions"` // those of the report that apply to the installed desktops
+	// NotDone: what the plan declares it does not do, and why. A BLOCKING message (what is
 	// missing, RX-MANCA-*: §10.36) stops the operation before touching anything
-	NonFatto []Messaggio `json:"not_done"`
+	NotDone []Message `json:"not_done"`
 	// Dichiarate: what the plan does WITHOUT asking, stated beforehand (enrolment in the card's groups)
 	Dichiarate []string `json:"declared,omitempty"`
 	// Pacchetti: what the manager would do (its simulation, made at planning time): the plan
 	// shows them before the question. When doing it, the manager simulates again (Fotografa)
-	Pacchetti []Artefatto `json:"packages,omitempty"`
+	Pacchetti []Artifact `json:"packages,omitempty"`
 	// Dipendenze: the distribution packages REMOTIX requires for the machine's desktop
 	// (labwc, wlr-randr, a font), and for which desktop: the plan shows them as such
-	Dipendenze   []Dipendenza  `json:"dependencies,omitempty"`
-	Approvazione *Approvazione `json:"approval,omitempty"`
+	Dipendenze []Dependency `json:"dependencies,omitempty"`
+	Approval   *Approval    `json:"approval,omitempty"`
 	// Purge: uninstallation --purge (the configuration too, and the engine's history)
 	Purge bool `json:"purge,omitempty"`
 }
@@ -138,8 +138,8 @@ type Piano struct {
 // Digest of the plan without the approval: it is what the approval signs.
 func (p *Piano) Digest() string {
 	c := *p
-	c.Approvazione = nil
-	return Sha256(JSONCanonico(c))
+	c.Approval = nil
+	return Sha256(CanonicalJSON(c))
 }
 
 func nuovoID() string {
@@ -148,48 +148,48 @@ func nuovoID() string {
 	return time.Now().UTC().Format("20060102T150405Z") + "-" + hex.EncodeToString(b)
 }
 
-// OpzioniPianoProva: the trial plan of T4 (no REMOTIX packages: those belong to
+// TestPlanOptions: the trial plan of T4 (no REMOTIX packages: those belong to
 // lines B, C, D).
-type OpzioniPianoProva struct {
+type TestPlanOptions struct {
 	Utente    string // whom to put in «video»; empty ⇒ the step is not there
 	Pacchetti string // packages from the machine's repositories to have installed (test of the manager)
 	Porta     int
 }
 
-// PianoDiProva builds the plan with the four trial actions.
-func PianoDiProva(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambiente, o OpzioniPianoProva) (*Piano, error) {
+// TestPlan builds the plan with the four trial actions.
+func TestPlan(prof *Profile, rap *Rapporto, cat *Catalogo, amb *Ambiente, o TestPlanOptions) (*Piano, error) {
 	if o.Porta == 0 {
 		o.Porta = 7447
 	}
 	ps := fmt.Sprint(o.Porta)
-	pn := &Piano{Formato: Formato, Oggetto: "plan", ID: nuovoID(), Creato: ora(), Mestiere: "engine-test",
-		Motore:   RifMotore{VersioneMotore, DigestMotore()},
-		Catalogo: RifCatalogo{cat.Versione, cat.Digest}, Piattaforma: rap.Piattaforma,
-		Dipende: []string{}, Consensi: []string{}, Condizioni: []Condizione{}, NonFatto: []Messaggio{}}
+	pn := &Piano{Formato: Formato, Object: "plan", ID: nuovoID(), Created: ora(), Duty: "engine-test",
+		Motore:   EngineRef{VersioneMotore, EngineDigest()},
+		Catalogo: CatalogRef{cat.Version, cat.Digest}, Platform: rap.Platform,
+		Depends: []string{}, Consents: []string{}, Condizioni: []Condition{}, NotDone: []Message{}}
 	if o.Pacchetti != "" {
-		pn.Azioni = append(pn.Azioni, PianoPacchetti("packages", "", o.Pacchetti))
+		pn.Azioni = append(pn.Azioni, PlanPackages("packages", "", o.Pacchetti))
 	}
 	pn.Azioni = append(pn.Azioni,
-		PianoScriviFile("conf-file", "/etc/remotix/engine-test.conf",
+		PlanWriteFile("conf-file", "/etc/remotix/engine-test.conf",
 			"# REMOTIX — installation engine test file (phase 17, T4). It can be removed.\nporta="+ps+"\n", "0644"),
-		PianoScriviFile("unit-file", "/etc/systemd/system/remotix-engine-test.service",
+		PlanWriteFile("unit-file", "/etc/systemd/system/remotix-engine-test.service",
 			"# REMOTIX — installation engine test unit (phase 17, T4): it does nothing.\n[Unit]\nDescription=REMOTIX, installation engine test\n\n[Service]\nType=oneshot\nExecStart=/bin/true\n\n[Install]\nWantedBy=multi-user.target\n", "0644"),
-		PianoUnita("unit", "remotix-engine-test.service"),
+		PlanUnit("unit", "remotix-engine-test.service"),
 	)
 	// the group last: with a user that does not exist the step fails AFTER all the others, and
 	// the operation is cancelled entirely (R28 for real)
 	if o.Utente != "" {
-		pn.Azioni = append(pn.Azioni, PianoGruppo("group-video", o.Utente, "video"))
+		pn.Azioni = append(pn.Azioni, PlanGroup("group-video", o.Utente, "video"))
 	} else {
-		pn.NonFatto = append(pn.NonFatto, Messaggio{Gravita: INFO, Testo: T("np.utente")})
+		pn.NotDone = append(pn.NotDone, Message{Severity: INFO, Testo: T("np.utente")})
 	}
 	for _, e := range rap.Desktop {
-		if e.Livello != NON_SUPPORTATA && e.Installato != "" && e.Installato != "absent" && e.Installato != "unknown" {
+		if e.Level != NON_SUPPORTATA && e.Installed != "" && e.Installed != "absent" && e.Installed != "unknown" {
 			pn.Condizioni = append(pn.Condizioni, e.Condizioni...)
 		}
 	}
 	c := &Contesto{Amb: amb}
-	im, err := CalcolaImpronta(prof, cat, pn.Azioni, pn.Dipende, c)
+	im, err := CalcolaImpronta(prof, cat, pn.Azioni, pn.Depends, c)
 	if err != nil {
 		return nil, err
 	}

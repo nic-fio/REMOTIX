@@ -96,12 +96,12 @@ ok "collector listening, PID $PID_RACC"
 # ⭐ And it is called BEFORE the verdict, not only from the `trap`: a cleanup that
 #    fails after the green line is a wrong green line.  The `trap` stays
 #    for early exits, and does not repeat it.
-RIPULITO=0
+CLEANED=0
 ripulisci()
 {
 	local st esito=0
-	[ "$RIPULITO" -eq 0 ] || return 0
-	RIPULITO=1
+	[ "$CLEANED" -eq 0 ] || return 0
+	CLEANED=1
 	kill $PID_RACC 2>/dev/null
 	$SSH "bash /media/REMOTIX/src/01-b2-lancia-wt.sh spegni" \
 		> "$TEMP/rip-sano.log" 2>&1
@@ -182,12 +182,12 @@ SALTATI=0
 #    returned 0 and left no trace: neither `ESITO` nor any
 #    count took note of it, and the missing engines ended up in the
 #    denominator all the same (finding R5.16).
-ESEGUITO=0
+EXECUTED=0
 prova_motore()
 {
 	local nome=$1 binario=$2; shift 2
 	local marca=""
-	ESEGUITO=0
+	EXECUTED=0
 	rm -f "$TEMP/ultimo.json"
 	case "$binario" in
 	*chrome*|*chromium*) marca=Chrome ;;
@@ -209,7 +209,7 @@ prova_motore()
 		return 0
 	fi
 	PROVATI=$((PROVATI + 1))
-	ESEGUITO=1
+	EXECUTED=1
 	local url="http://127.0.0.1:$PORTA_PAGINA/01-b11-pagina.html?url=https://$IND:$PORTA/rcp/1&impronta=$(python3 -c 'import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1],safe=""))' "$IMPRONTA")"
 	rm -rf "$TEMP/$nome"
 	mkdir -p "$TEMP/$nome"
@@ -302,7 +302,7 @@ ok "HEALTHY server on, fingerprint $IMPRONTA"
 
 ATTESO=NON-CONFORME prova_motore controllo firefox xvfb-run -a firefox \
 	--no-remote --profile "$TEMP/controllo" || ESITO=1
-CONTROLLO=$ESEGUITO
+CONTROLLO=$EXECUTED
 # ⛔ "NON-CONFORME" ALONE PROVES NOTHING, and it is the biggest hole of
 #    this bench.
 #
@@ -397,7 +397,7 @@ CASI_ATTESI=0
 conta_i_casi()
 {
 	local n
-	[ "$ESEGUITO" -eq 1 ] || return 0
+	[ "$EXECUTED" -eq 1 ] || return 0
 	MOTORI_GUASTO=$((MOTORI_GUASTO + 1))
 	[ -f "$TEMP/ultimo.json" ] || return 0
 	n=$(python3 -c '
@@ -447,23 +447,23 @@ fi
 #    first engine: a "bytes arrived AFTER the end" of the first engine left
 #    the window long before the count of the cases noticed
 #    (finding R5.9).
-DICHIARATE=$(sed -n 's/^== RIGHE-DEL-REGISTRO-FILTRATE: \([0-9][0-9]*\)$/\1/p' \
+DECLARED=$(sed -n 's/^== RIGHE-DEL-REGISTRO-FILTRATE: \([0-9][0-9]*\)$/\1/p' \
 	"$TEMP/registro.txt" | tail -1)
-RICEVUTE=$(grep -Ec "B11|AFTER the end|parting CONGEDO|congedo motivo|control channel opened" \
+RECEIVED=$(grep -Ec "B11|AFTER the end|parting CONGEDO|congedo motivo|control channel opened" \
 	"$TEMP/registro.txt")
-if [ -z "$DICHIARATE" ]; then
+if [ -z "$DECLARED" ]; then
 	ko "⛔ the server did not declare how many lines it filtered: what"
 	ko "   arrived here has no denominator"
 	ESITO=1
-elif [ "$DICHIARATE" -ne "$RICEVUTE" ]; then
-	ko "⛔ the server filtered $DICHIARATE of them and $RICEVUTE arrived here:"
+elif [ "$DECLARED" -ne "$RECEIVED" ]; then
+	ko "⛔ the server filtered $DECLARED of them and $RECEIVED arrived here:"
 	ko "   something cut the log along the way"
 	ESITO=1
 else
-	inf "log lines: $RICEVUTE, all those the server filtered"
+	inf "log lines: $RECEIVED, all those the server filtered"
 fi
 DOPO=$(grep -c "AFTER the end" "$TEMP/registro.txt" || true)
-SERVITI=$(grep -c "B11 GUASTO: fault requested" "$TEMP/registro.txt" || true)
+SERVED=$(grep -c "B11 GUASTO: fault requested" "$TEMP/registro.txt" || true)
 # ⛔ THE DENOMINATOR OF THE FAULTS SERVED, AND IT IS NOT ZERO.
 #
 #    The bench knows the exact number it must find — the page's cases
@@ -477,13 +477,13 @@ if [ "$MOTORI_GUASTO" -eq 0 ] || [ "$CASI_ATTESI" -eq 0 ]; then
 	ko "⛔ no case was requested by any engine: there is nothing to"
 	ko "   divide, and this is not an outcome"
 	ESITO=1
-elif [ "$SERVITI" -ne "$CASI_ATTESI" ]; then
-	ko "⛔ the server served $SERVITI faults, and the $MOTORI_GUASTO engines"
+elif [ "$SERVED" -ne "$CASI_ATTESI" ]; then
+	ko "⛔ the server served $SERVED faults, and the $MOTORI_GUASTO engines"
 	ko "   declared $CASI_ATTESI: the missing cases never reached the"
 	ko "   server, and their outcome is not a judgement on the page"
 	ESITO=1
 else
-	ok "faults served by the server: $SERVITI of $CASI_ATTESI expected, from $MOTORI_GUASTO engines"
+	ok "faults served by the server: $SERVED of $CASI_ATTESI expected, from $MOTORI_GUASTO engines"
 fi
 if [ "${DOPO:-0}" -eq 0 ]; then
 	ok "⭐ no byte arrived after the end of the session (§4.2, §4.4)"
@@ -534,7 +534,7 @@ fi
 #    engines against the faulty server are 0" pinning its own
 #    arithmetic on the page, and in the green branch "the farewell arrives every time: 0 of 0"
 #    (findings R5.16 and R5.5).
-ATTESI=$MOTORI_GUASTO
+EXPECTED_COUNT=$MOTORI_GUASTO
 eval "$(awk '
   function chiudi_caso() { if (aperto && (canale_visto || chiusura_vista)) con++ }
   /fault requested by the client:/ {
@@ -565,20 +565,20 @@ if [ "$CONTROLLO" -ne 1 ]; then
 	ko "   is missing.  This round is not a verdict on B11."
 	ESITO=1
 fi
-if [ "$ATTESI" -eq 0 ]; then
-	ko "⛔ no engine ran against the faulty server: «$CON of $ATTESI»"
+if [ "$EXPECTED_COUNT" -eq 0 ]; then
+	ko "⛔ no engine ran against the faulty server: «$CON of $EXPECTED_COUNT»"
 	ko "   would be a positive control passed with zero observations"
 	ESITO=1
-elif [ "$CASI" -ne "$ATTESI" ]; then
+elif [ "$CASI" -ne "$EXPECTED_COUNT" ]; then
 	ko "⛔ the case was served $CASI times, and the engines against the faulty server are"
-	ko "   $ATTESI: the count below would have no denominator"
+	ko "   $EXPECTED_COUNT: the count below would have no denominator"
 	ESITO=1
-elif [ "$CON" -ne "$ATTESI" ]; then
-	ko "⛔ only $CON farewells of $ATTESI: there is an engine that closes and does NOT say"
+elif [ "$CON" -ne "$EXPECTED_COUNT" ]; then
+	ko "⛔ only $CON farewells of $EXPECTED_COUNT: there is an engine that closes and does NOT say"
 	ko "   why, neither on the channel nor in the close code (§8.1)"
 	ESITO=1
 else
-	ok "⭐ the farewell of §8.1 arrives every time: $CON of $ATTESI"
+	ok "⭐ the farewell of §8.1 arrives every time: $CON of $EXPECTED_COUNT"
 	# ⛔ And the two roads are DECLARED counted, not declared seen.  The
 	#    green branch asserted "and ⛔ by TWO different roads" on the sole
 	#    condition `CON -eq ATTESI`, with `CANALE` and `CHIUSURA` computed and never

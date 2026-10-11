@@ -47,7 +47,7 @@
 set -uo pipefail
 
 UTENTE=provanic
-UID_UTENTE=4011
+USER_UID=4011
 VERDE=0; ROSSO=0; NONSO=0
 
 blu()  { printf '\n\033[1;34m=== %s\033[0m\n' "$*"; }
@@ -56,7 +56,7 @@ no()   { printf '  \033[1;31mNO \033[0m %s\n' "$*"; ROSSO=$((ROSSO+1)); }
 boh()  { printf '  \033[1;33m?  \033[0m %s\n' "$*"; NONSO=$((NONSO+1)); }
 nota() { printf '       %s\n' "$*"; }
 
-come_lui() { runuser -u "$UTENTE" -- "$@"; }
+as_him() { runuser -u "$UTENTE" -- "$@"; }
 
 # ---------------------------------------------------------------------------
 # ⭐⭐ THE ADAPTER — the answer to «how do we stay blind to the desktop»
@@ -65,12 +65,12 @@ come_lui() { runuser -u "$UTENTE" -- "$@"; }
 # carries at the SAME path a file that says how its compositor is started.
 # ⇒ The list of tests stays ONE; the «how» lives below (`fasi/11…` §3.7).
 # ---------------------------------------------------------------------------
-ADATTATORE=/usr/local/lib/rete11/adattatore.sh
-if [ -r "$ADATTATORE" ]; then
-	. "$ADATTATORE"
+ADAPTER=/usr/local/lib/rete11/adattatore.sh
+if [ -r "$ADAPTER" ]; then
+	. "$ADAPTER"
 	DESK=$(adattatore_nome)
 else
-	DESK="(no adapter: $ADATTATORE is not there)"
+	DESK="(no adapter: $ADAPTER is not there)"
 fi
 
 printf '\033[1m STEP 0 — does the box hold the system?\033[0m\n'
@@ -95,8 +95,8 @@ fi
 #    the `if` read it as «I do not know».  ⇒ We capture the TEXT and judge
 #    that: the exit status here is not the judgement, it is a detail.
 #    `[M]` 25 August 2026, defect of this bench on its first run.
-STATO_SIS=$(systemctl is-system-running 2>&1 | head -1)
-case "$STATO_SIS" in
+SYS_STATE=$(systemctl is-system-running 2>&1 | head -1)
+case "$SYS_STATE" in
   running)
 	si "the system has started (running)" ;;
   degraded)
@@ -106,7 +106,7 @@ case "$STATO_SIS" in
   starting)
 	boh "the system is still starting: too early to judge" ;;
   *)
-	boh "state not readable: $STATO_SIS" ;;
+	boh "state not readable: $SYS_STATE" ;;
 esac
 
 # ---------------------------------------------------------------------------
@@ -128,14 +128,14 @@ else
 	#     ⚠ Preparing is not cheating: the product turns on linger and starts the
 	#       user manager by itself.  Cheating would be **skipping** the check.
 	loginctl enable-linger "$UTENTE" 2>/dev/null
-	systemctl start "user@${UID_UTENTE}.service" 2>/dev/null
+	systemctl start "user@${USER_UID}.service" 2>/dev/null
 	for _ in $(seq 1 30); do
 		loginctl show-user "$UTENTE" >/dev/null 2>&1 && break
 		sleep 0.5
 	done
 	# ⛔ It is not enough that the service runs: it must be able to OPEN a session.
 	#    We try to open a real one with a non-interactive login.
-	if come_lui true 2>/dev/null; then
+	if as_him true 2>/dev/null; then
 		SES=$(loginctl list-sessions --no-legend 2>/dev/null | wc -l)
 		nota "sessions open now: $SES"
 		if loginctl show-user "$UTENTE" >/dev/null 2>&1; then
@@ -165,15 +165,15 @@ else
 	nota "⛔ without linger the graphical session does not survive the client detaching"
 fi
 
-if systemctl is-active "user@${UID_UTENTE}.service" >/dev/null 2>&1; then
-	si "the user manager («user@${UID_UTENTE}») is alive without any interactive login"
+if systemctl is-active "user@${USER_UID}.service" >/dev/null 2>&1; then
+	si "the user manager («user@${USER_UID}») is alive without any interactive login"
 else
-	STATO=$(systemctl is-active "user@${UID_UTENTE}.service" 2>&1)
-	if systemctl start "user@${UID_UTENTE}.service" 2>/dev/null; then
+	STATO=$(systemctl is-active "user@${USER_UID}.service" 2>&1)
+	if systemctl start "user@${USER_UID}.service" 2>/dev/null; then
 		si "the user manager starts on request (it was «$STATO»)"
 	else
 		no "the user manager does not start: it was «$STATO»"
-		systemctl status "user@${UID_UTENTE}.service" --no-pager -l 2>&1 | tail -6 | sed 's/^/       /'
+		systemctl status "user@${USER_UID}.service" --no-pager -l 2>&1 | tail -6 | sed 's/^/       /'
 	fi
 fi
 
@@ -183,16 +183,16 @@ blu "3. Can a service be started inside the user session?"
 # ⚠ The product starts like this: a user unit, not a detached process.
 #   Here we test the MECHANISM with a fake unit, because the product is not
 #   in this box yet.
-if come_lui env XDG_RUNTIME_DIR="/run/user/$UID_UTENTE" \
+if as_him env XDG_RUNTIME_DIR="/run/user/$USER_UID" \
         systemd-run --user --quiet --unit=passo0-prova \
         --property=Type=oneshot /bin/true 2>/dev/null; then
 	si "a user unit starts from inside the session"
-	come_lui env XDG_RUNTIME_DIR="/run/user/$UID_UTENTE" \
+	as_him env XDG_RUNTIME_DIR="/run/user/$USER_UID" \
 	        systemctl --user reset-failed passo0-prova 2>/dev/null || true
 else
 	no "a user unit cannot be started"
 	nota "⛔ it is the way the product starts the graphical session"
-	come_lui env XDG_RUNTIME_DIR="/run/user/$UID_UTENTE" \
+	as_him env XDG_RUNTIME_DIR="/run/user/$USER_UID" \
 	        systemd-run --user --unit=passo0-prova --property=Type=oneshot /bin/true 2>&1 \
 	        | tail -4 | sed 's/^/       /'
 fi
@@ -203,14 +203,14 @@ blu "4. When the session ends, do the processes really DIE?"
 # ⛔ The shape of the feared fault: a container in which processes stay
 #    alive after closing ⇒ test C7 («nothing remains») would be green here
 #    and red on the real machine, or vice versa.
-if come_lui env XDG_RUNTIME_DIR="/run/user/$UID_UTENTE" \
+if as_him env XDG_RUNTIME_DIR="/run/user/$USER_UID" \
         systemd-run --user --quiet --unit=passo0-dorme sleep 300 2>/dev/null; then
 	sleep 1
 	PID=$(pgrep -u "$UTENTE" -f 'slee[p] 300' | head -1)
 	if [ -n "$PID" ]; then
 		nota "the fake child is alive (pid $PID); now the user's session is closed"
 		loginctl terminate-user "$UTENTE" 2>/dev/null || \
-			come_lui env XDG_RUNTIME_DIR="/run/user/$UID_UTENTE" \
+			as_him env XDG_RUNTIME_DIR="/run/user/$USER_UID" \
 			        systemctl --user stop passo0-dorme 2>/dev/null
 		sleep 2
 		if pgrep -u "$UTENTE" -f 'slee[p] 300' >/dev/null 2>&1; then
@@ -243,10 +243,10 @@ fi
 #   reopening succeeded before letting the others judge.
 # ---------------------------------------------------------------------------
 loginctl enable-linger "$UTENTE" 2>/dev/null
-systemctl start "user@${UID_UTENTE}.service" 2>/dev/null
+systemctl start "user@${USER_UID}.service" 2>/dev/null
 RIPRESO=0
 for _ in $(seq 1 30); do
-	if [ -S "/run/user/$UID_UTENTE/bus" ]; then RIPRESO=1; break; fi
+	if [ -S "/run/user/$USER_UID/bus" ]; then RIPRESO=1; break; fi
 	sleep 0.5
 done
 if [ "$RIPRESO" = 1 ]; then
@@ -261,10 +261,10 @@ fi
 # ---------------------------------------------------------------------------
 blu "5. Is the user's private directory there, is it THEIRS, and is it writable?"
 # ---------------------------------------------------------------------------
-RTD="/run/user/$UID_UTENTE"
+RTD="/run/user/$USER_UID"
 if [ -d "$RTD" ]; then
 	PROP=$(stat -c '%U %a' "$RTD" 2>/dev/null)
-	if come_lui test -w "$RTD"; then
+	if as_him test -w "$RTD"; then
 		si "$RTD exists, it is writable by the user ($PROP)"
 	else
 		no "$RTD exists but the user can NOT write to it ($PROP)"
@@ -274,11 +274,11 @@ if [ -d "$RTD" ]; then
 	# ⚠ `findmnt` in here returns empty (logind made the mount after
 	#   the container started, and the table it sees does not list it): we ask
 	#   the kernel for the TYPE, which always answers.  `[M]` 25 August 2026.
-	TIPO_RTD=$(stat -fc %T "$RTD" 2>/dev/null)
-	if [ "$TIPO_RTD" = tmpfs ]; then
+	TYPE_RTD=$(stat -fc %T "$RTD" 2>/dev/null)
+	if [ "$TYPE_RTD" = tmpfs ]; then
 		si "and it is a directory of this box (tmpfs), not a piece of the host"
 	else
-		no "it is NOT a tmpfs of this box, it is «$TIPO_RTD»"
+		no "it is NOT a tmpfs of this box, it is «$TYPE_RTD»"
 		nota "⛔ two boxes sharing this directory would step on each other's toes"
 	fi
 else
@@ -290,7 +290,7 @@ blu "6. Is the session message bus there, and does the desktop see it?"
 # ---------------------------------------------------------------------------
 if [ -S "$RTD/bus" ]; then
 	si "the session bus is there ($RTD/bus)"
-	if come_lui env XDG_RUNTIME_DIR="$RTD" \
+	if as_him env XDG_RUNTIME_DIR="$RTD" \
 	        DBUS_SESSION_BUS_ADDRESS="unix:path=$RTD/bus" \
 	        busctl --user list --no-legend >/dev/null 2>&1; then
 		si "and it can be talked to"
@@ -316,7 +316,7 @@ else
 	# deadline that fires whenever it happens to (`LEZIONI.md`, the heartbeat rule).
 	SOCK=''
 	for _ in $(seq 1 40); do
-		SOCK=$(come_lui sh -c "ls $RTD/wayland-* 2>/dev/null | grep -v lock | head -1" 2>/dev/null)
+		SOCK=$(as_him sh -c "ls $RTD/wayland-* 2>/dev/null | grep -v lock | head -1" 2>/dev/null)
 		[ -n "$SOCK" ] && break
 		sleep 0.5
 	done
@@ -328,7 +328,7 @@ else
 		DISP=$(basename "$SOCK")
 		# ⭐ THE YARDSTICK OF THE 25 AUGUST FAULT: how many outputs it ANNOUNCES.
 		if command -v wayland-info >/dev/null 2>&1; then
-			USCITE=$(come_lui env XDG_RUNTIME_DIR="$RTD" WAYLAND_DISPLAY="$DISP" \
+			USCITE=$(as_him env XDG_RUNTIME_DIR="$RTD" WAYLAND_DISPLAY="$DISP" \
 			        wayland-info 2>/dev/null | grep -c 'interface:.*wl_output' || echo 0)
 			if [ "${USCITE:-0}" -gt 0 ]; then
 				si "and it ANNOUNCES $USCITE output(s) — a client can open a window"
@@ -341,7 +341,7 @@ else
 		fi
 		# A real client that draws.
 		if command -v weston-simple-shm >/dev/null 2>&1; then
-			come_lui env XDG_RUNTIME_DIR="$RTD" WAYLAND_DISPLAY="$DISP" \
+			as_him env XDG_RUNTIME_DIR="$RTD" WAYLAND_DISPLAY="$DISP" \
 			        weston-simple-shm >/tmp/passo0-cliente.log 2>&1 &
 			CLPID=$!
 			sleep 3
@@ -367,14 +367,14 @@ if [ ! -e /dev/dri/renderD128 ]; then
 	no "/dev/dri/renderD128 is not in the box: the card did not get in"
 else
 	si "/dev/dri/renderD128 is there"
-	if come_lui test -r /dev/dri/renderD128 && come_lui test -w /dev/dri/renderD128; then
+	if as_him test -r /dev/dri/renderD128 && as_him test -w /dev/dri/renderD128; then
 		si "and the user can read and write it"
 	else
 		no "it is there but the user can NOT write to it ($(stat -c '%U:%G %a' /dev/dri/renderD128))"
 		nota "⛔ it is the «render» group: without it, encoding happens in software and the numbers change"
 	fi
 	if command -v vainfo >/dev/null 2>&1; then
-		VA=$(come_lui env LIBVA_DRIVER_NAME=iHD vainfo --display drm --device /dev/dri/renderD128 2>&1)
+		VA=$(as_him env LIBVA_DRIVER_NAME=iHD vainfo --display drm --device /dev/dri/renderD128 2>&1)
 		if echo "$VA" | grep -q 'VAProfileH264'; then
 			si "the hardware encoder answers ($(echo "$VA" | grep -m1 'Driver version' | sed 's/^ *//'))"
 			nota "H.264 encoding profiles found: $(echo "$VA" | grep -c 'VAProfileH264.*Enc')"

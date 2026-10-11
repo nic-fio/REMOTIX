@@ -6,38 +6,38 @@ import (
 )
 
 // Gravita and Natura of a message (§6.6.9).
-type Gravita string
-type Natura string
+type Severity string
+type Nature string
 
 const (
-	INFO      Gravita = "INFO"
-	AVVISO    Gravita = "WARNING"
-	BLOCCANTE Gravita = "BLOCKING"
+	INFO      Severity = "INFO"
+	AVVISO    Severity = "WARNING"
+	BLOCCANTE Severity = "BLOCKING"
 
-	ServeAzione       Natura = "ACTION_NEEDED"
-	Riprovabile       Natura = "RETRYABLE"
-	Recuperabile      Natura = "RECOVERABLE"
-	ServeAnnullamento Natura = "ROLLBACK_NEEDED"
-	Fatale            Natura = "FATAL"
+	ServeAzione       Nature = "ACTION_NEEDED"
+	Riprovabile       Nature = "RETRYABLE"
+	Recuperabile      Nature = "RECOVERABLE"
+	ServeAnnullamento Nature = "ROLLBACK_NEEDED"
+	Fatale            Nature = "FATAL"
 )
 
 // Codice is an entry of the codes catalogue: stable, never reused for another meaning.
 type Codice struct {
-	Gravita Gravita `json:"severity"`
-	Natura  Natura  `json:"nature"`
-	Testo   string  `json:"text"`
-	Rimedio string  `json:"remedy,omitempty"`
+	Severity    Severity `json:"severity"`
+	Nature      Nature   `json:"nature"`
+	Testo       string   `json:"text"`
+	Remediation string   `json:"remedy,omitempty"`
 }
 
 // Messaggio is a code in its context: what the CLI prints, the log records, the
 // certificate keeps, and every future interface shows (§6.6.9).
-type Messaggio struct {
-	Codice    string  `json:"code"`
-	Gravita   Gravita `json:"severity"`
-	Natura    Natura  `json:"nature"`
-	Testo     string  `json:"text"`
-	Rimedio   string  `json:"remedy,omitempty"`
-	Dettaglio string  `json:"detail,omitempty"`
+type Message struct {
+	Codice      string   `json:"code"`
+	Severity    Severity `json:"severity"`
+	Nature      Nature   `json:"nature"`
+	Testo       string   `json:"text"`
+	Remediation string   `json:"remedy,omitempty"`
+	Detail      string   `json:"detail,omitempty"`
 }
 
 // Codici: ⛔ a code never changes meaning and is never reused. If a text must be corrected,
@@ -190,30 +190,30 @@ var Codici = map[string]Codice{
 
 // Msg builds a message from a code. An unknown code is a defect of the engine, and the
 // test TestCodiciUsatiEsistono finds it before it reaches anyone.
-func Msg(codice, dettaglio string) Messaggio {
+func Msg(codice, dettaglio string) Message {
 	c, ok := Codici[codice]
 	if !ok {
 		panic("unknown code: " + codice)
 	}
-	return Messaggio{Codice: codice, Gravita: c.Gravita, Natura: c.Natura, Testo: c.Testo, Rimedio: c.Rimedio, Dettaglio: dettaglio}
+	return Message{Codice: codice, Severity: c.Severity, Nature: c.Nature, Testo: c.Testo, Remediation: c.Remediation, Detail: dettaglio}
 }
 
-// ErroreRX is an error carrying its stable code.
-type ErroreRX struct{ M Messaggio }
+// ErrorRX is an error carrying its stable code.
+type ErrorRX struct{ M Message }
 
-func (e *ErroreRX) Error() string {
-	if e.M.Dettaglio != "" {
-		return fmt.Sprintf("%s: %s (%s)", e.M.Codice, e.M.Testo, e.M.Dettaglio)
+func (e *ErrorRX) Error() string {
+	if e.M.Detail != "" {
+		return fmt.Sprintf("%s: %s (%s)", e.M.Codice, e.M.Testo, e.M.Detail)
 	}
 	return e.M.Codice + ": " + e.M.Testo
 }
 
 // Errore builds an error with a code.
-func Errore(codice, dettaglio string) error { return &ErroreRX{Msg(codice, dettaglio)} }
+func Errore(codice, dettaglio string) error { return &ErrorRX{Msg(codice, dettaglio)} }
 
-// CodiceDi extracts the code from an error, or "" if the error has none.
-func CodiceDi(err error) string {
-	var e *ErroreRX
+// CodeOf extracts the code from an error, or "" if the error has none.
+func CodeOf(err error) string {
+	var e *ErrorRX
 	if errors.As(err, &e) {
 		return e.M.Codice
 	}

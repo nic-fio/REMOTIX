@@ -75,11 +75,11 @@ F12 = _modulo("f012", "15-f012-audio.py")
 F13 = _modulo("f013", "15-f013-video.py")
 
 FUNZIONI = ("D-006",)
-BLOCCO_S = 0.020           # one audio block = 20 ms (RCP §6.3)
-CUSCINO_S = 0.250          # AUDIO_CUSCINO_MS: the minimum gap of a re-arm
-CONTI = ("ricevuti", "suonati", "riarmi", "tirate", "tagliati", "usciti", "sospesi",
+BLOCK_S = 0.020           # one audio block = 20 ms (RCP §6.3)
+CUSHION_S = 0.250          # AUDIO_CUSCINO_MS: the minimum gap of a re-arm
+COUNTS = ("ricevuti", "suonati", "riarmi", "tirate", "tagliati", "usciti", "sospesi",
          "scartati_pieno", "scartati_tardivi", "scartati_vecchi", "mancati", "salti_suono")
-GUASTO_S = 20.0
+FAULT_S = 20.0
 
 
 def extra(a):
@@ -99,14 +99,14 @@ def extra(a):
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE PURE FUNCTIONS
 # ═══════════════════════════════════════════════════════════════════════════
-def delta(c0, c1, ms0, ms1, blocco_s=BLOCCO_S):
+def delta(c0, c1, ms0, ms1, blocco_s=BLOCK_S):
     """The counts of the window: differences + estimates.  `ms` = performance.now().
     ⚠ `blocco_s`: 20 ms for Opus, 5 ms for PCM (`[M]` 200 blocks/s)."""
-    d = {k: (c1.get(k) or 0) - (c0.get(k) or 0) for k in CONTI}
+    d = {k: (c1.get(k) or 0) - (c0.get(k) or 0) for k in COUNTS}
     durata = max(1e-3, (ms1 - ms0) / 1000.0)
     d["durata_s"] = round(durata, 1)
     d["udibile_stima_pct"] = round(min(100.0, 100.0 * d["usciti"] * blocco_s / durata), 1)
-    d["silenzio_minimo_s"] = round(d["riarmi"] * CUSCINO_S, 2)
+    d["silenzio_minimo_s"] = round(d["riarmi"] * CUSHION_S, 2)
     d["contesto"] = c1.get("contesto")
     d["orologio_stantio_ms"] = c1.get("orologio_stantio_ms")   # only if the page carries it
     return d
@@ -180,7 +180,7 @@ def certifica():
         nonlocal ok
         print("   %s %s" % ("⭐" if cond else "⛔", nome))
         ok = ok and cond
-    c0 = {k: 0 for k in CONTI}
+    c0 = {k: 0 for k in COUNTS}
     c0.update(ricevuti=100, suonati=90, usciti=80, contesto="running")
     sano = dict(c0, ricevuti=3100, suonati=3090, usciti=3080, contesto="running")
     d = delta(c0, sano, 1000.0, 61000.0)
@@ -226,7 +226,7 @@ class Cpu:
         self.sc, self.secondi, self.righe, self.ps = sc, secondi, [], ""
         self._t = None
 
-    def _locale(self):
+    def _local(self):
         fine = time.time() + self.secondi
         meta = time.time() + self.secondi / 2
         while time.time() < fine:
@@ -244,14 +244,14 @@ class Cpu:
                     self.ps = ["(ps: %s)" % e]
             time.sleep(1.0)
 
-    def _scatola(self):
+    def _box(self):
         n = int(self.secondi)
         _c, t = self.sc.dentro("for i in $(seq %d); do grep ^cpu /proc/stat; echo ---; sleep 1; "
                                "done" % n, n + 60)
         self.righe = (t or "").splitlines()
 
     def accendi(self):
-        self._t = threading.Thread(target=self._locale if SUL_SERVER else self._scatola,
+        self._t = threading.Thread(target=self._local if SUL_SERVER else self._box,
                                    daemon=True)
         self._t.start()
 
@@ -264,8 +264,8 @@ class Cpu:
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE TEST
 # ═══════════════════════════════════════════════════════════════════════════
-def conti_pagina(g):
-    return G4.in_pagina(g, "(function(){ return { ora: performance.now(),"
+def page_counts(g):
+    return G4.in_page(g, "(function(){ return { ora: performance.now(),"
                            " conti: (typeof audio_conti === 'function') ? audio_conti() : null,"
                            " worker: (typeof VW !== 'undefined') && VW !== null }; })()")
 
@@ -274,7 +274,7 @@ def aspetta(g, cond, tetto_s):
     fine = time.time() + tetto_s
     r = None
     while time.time() < fine:
-        r = conti_pagina(g)
+        r = page_counts(g)
         if r and cond(r):
             return True, r
         time.sleep(0.5)
@@ -282,13 +282,13 @@ def aspetta(g, cond, tetto_s):
 
 
 def finestra(s, o, secondi):
-    blocco = 0.005 if getattr(o, "pcm", False) else BLOCCO_S
+    blocco = 0.005 if getattr(o, "pcm", False) else BLOCK_S
     """(delta, cpu, ps) over `secondi`, two readings of `audio_conti()`."""
     cpu = Cpu(s.sc, secondi)
-    r0 = conti_pagina(s.g)
+    r0 = page_counts(s.g)
     cpu.accendi()
     time.sleep(secondi)
-    r1 = conti_pagina(s.g)
+    r1 = page_counts(s.g)
     c, ps = cpu.leggi()
     if not r0 or not r1 or not r0.get("conti") or not r1.get("conti"):
         raise S.Bloccata("audio_conti() cannot be read from the page (%r / %r)" % (r0, r1))
@@ -299,14 +299,14 @@ def finestra(s, o, secondi):
 #   thread stopped beyond the cushion.  Only the bench puts it, only in the fault.
 JS_GUASTO = ("window.__c15d006 = setInterval(function(){ const f = performance.now() + 400;"
              " while (performance.now() < f) {} }, 2000);")
-JS_GUASTO_VIA = "clearInterval(window.__c15d006);"
+JS_FAULT_OFF = "clearInterval(window.__c15d006);"
 
 
 def corpo(o, E):
     if o.video_worker:
         o.url = o.url.split("#")[0] + "#video=worker"
     sess = S.Sessione(o, o.nnn, E)
-    G4.robusta(sess.sc)
+    G4.robust(sess.sc)
     with sess as s:
         ok, m = s.pr.apri()
         if not ok:
@@ -317,18 +317,18 @@ def corpo(o, E):
             #   server sends PCM.  It removes `AudioDecoder` from the audio path.
             #   ⭐ D-006 cure: and also the page's wasm decoder must not
             #   start (WebAssembly.instantiate refuses), or the page declares Opus.
-            s.g.js(G4._inietta("if (window.AudioDecoder) AudioDecoder.isConfigSupported ="
+            s.g.js(G4._inject("if (window.AudioDecoder) AudioDecoder.isConfigSupported ="
                                " async function () { return { supported: false }; };"
                                " if (window.WebAssembly) WebAssembly.instantiate ="
                                " function () { return Promise.reject(new Error('bench: PCM')); };"))
         ok, m = s.entra(apri=False)            # ⭐ WITHOUT ear
         if not ok:
             raise S.Bloccata(m)
-        r = conti_pagina(s.g) or {}
+        r = page_counts(s.g) or {}
         if o.video_worker and not r.get("worker"):
             raise S.Bloccata("#video=worker requested but in the page the worker is off (%r)" % r)
         if o.quale == "f012":
-            ok, m = F12.prepara_tono_ffmpeg(s)
+            ok, m = F12.prepare_tone_ffmpeg(s)
             if not ok:
                 raise S.Bloccata("the tone does not get ready: " + m)
             c, t = F12.suona(s)
@@ -336,10 +336,10 @@ def corpo(o, E):
                 raise S.Bloccata("pw-play does not start: " + t[-200:])
             punto = (0.62, 0.55)
         else:
-            ok, m = F13.prepara_video(s)
+            ok, m = F13.prepare_video(s)
             if not ok:
                 raise S.Bloccata("the video is not generated: " + m)
-            c, t = F13.accendi_video(s)
+            c, t = F13.turn_on_video(s)
             if c != 0:
                 raise S.Bloccata("ffplay does not start: " + t[-200:])
             punto = (0.97, 0.5)                # right edge: outside the video window
@@ -349,7 +349,7 @@ def corpo(o, E):
                         (None, "(none)"), 30)
         if not ok:
             raise S.Bloccata("the page did not create an AudioContext in 30 s (%r)" % r)
-        note.append(G4.clic_vero(s, *punto))
+        note.append(G4.real_click(s, *punto))
         ok, r = aspetta(s.g, lambda x: (x.get("conti") or {}).get("contesto") == "running", 10)
         if not ok:
             raise S.Bloccata("the audio context does not wake up at the click (%r)" % (r or {}).get("conti"))
@@ -357,7 +357,7 @@ def corpo(o, E):
             raise S.Bloccata("PCM requested but the page receives codec %r"
                              % (r.get("conti") or {}).get("codec"))
         time.sleep(o.assesta_s)
-        segno = s.segno_registro()
+        segno = s.log_mark()
         d, cpu, ps, r1 = finestra(s, o, o.finestra_s)
         e, ragione = giudica(d)
         cf = r1.get("conti") or {}
@@ -372,23 +372,23 @@ def corpo(o, E):
         ev = [G4.salva_json(o, "d006-misura-%s-%s-%s%s.json" % (
             o.scatola, o.browser, o.quale, ("-worker" if o.video_worker else "") + ("-pcm" if o.pcm else "")),
             dict(misura, ps=ps)),
-              s.salva_testo("server-d006.txt", s.registro_da(segno) if segno else []),
-              s.salva_console()]
+              s.save_text("server-d006.txt", s.registro_da(segno) if segno else []),
+              s.save_console()]
         E.metti("D-006", e, ragione,
                 atteso="re-arms 0 in %.0f s, without ear (page counts)" % o.finestra_s,
                 osservato="; ".join(note) + " · cpu %s" % cpu, evidenze=[p for p in ev if p],
                 numeri=misura)
 
         if o.guasto:
-            s.g.js(G4._inietta(JS_GUASTO))
+            s.g.js(G4._inject(JS_GUASTO))
             try:
-                dg, _c, _p, _r = finestra(s, o, GUASTO_S)
+                dg, _c, _p, _r = finestra(s, o, FAULT_S)
             finally:
-                s.g.js(G4._inietta(JS_GUASTO_VIA))
+                s.g.js(G4._inject(JS_FAULT_OFF))
             visto = dg["riarmi"] >= 3
             E.guasto("D-006", visto, "page main thread stopped 400 ms every 2 s for "
                      "%.0f s ⇒ re-arms %d (expected >= 3), tirate %d"
-                     % (GUASTO_S, dg["riarmi"], dg["tirate"]), numeri={"delta": dg})
+                     % (FAULT_S, dg["riarmi"], dg["tirate"]), numeri={"delta": dg})
 
 
 if __name__ == "__main__":

@@ -75,17 +75,17 @@ BTN_LEFT, KEY_ENTER, KEY_CTRL = 272, 28, 29
 #   what follows matches both *"on a DEVICE"* (the pointer) and *"on a
 #   KEYBOARD"*.
 # ---------------------------------------------------------------------------
-M_ORFANI_PULSANTI = " buttons were PRESSED on the device the compositor has just removed"
-M_ORFANI_TASTI = " keys were PRESSED on the device the compositor has just removed"
-M_NON_PARTE_PULSANTE = "DOES NOT LEAVE: it was pressed on a device"
-M_NON_PARTE_TASTO = "DOES NOT LEAVE: it was pressed on a keyboard"
+M_ORPHAN_BUTTONS = " buttons were PRESSED on the device the compositor has just removed"
+M_ORPHAN_KEYS = " keys were PRESSED on the device the compositor has just removed"
+M_BUTTON_NOT_LEAVING = "DOES NOT LEAVE: it was pressed on a device"
+M_KEY_NOT_LEAVING = "DOES NOT LEAVE: it was pressed on a keyboard"
 # cure "C", `src/input.c` `guarisci()` — ⚠ long form: "HEALING" alone would
 # also show up in a comment or in a future line of another module
-M_GUARIGIONE = "HEALING (n."
-M_GUARITO = "EIS channel REDONE"
+M_HEALING = "HEALING (n."
+M_HEALED = "EIS channel REDONE"
 
 
-def leggi_visto(percorso, da):
+def read_seen(percorso, da):
     """The witness lines with `n` > `da`.  ⛔ And the number is kept: it is the
     denominator, and without it "zero events" and "I did not look" are the same."""
     fuori = []
@@ -136,7 +136,7 @@ def main():
     p.add_argument("--esiti", default="")
     a = p.parse_args()
 
-    righe = leggi_visto(a.visto, a.da)
+    righe = read_seen(a.visto, a.da)
     try:
         with open(a.iniettore, encoding="utf-8", errors="replace") as f:
             ini = f.read()
@@ -144,7 +144,7 @@ def main():
         ini = ""
 
     # ⛔ The wake-ups and their deltas, READ from the injector's lines: the count
-    #    comes from `input_conto()`, which is the internal state of `input.c`,
+    #    comes from `input_count()`, which is the internal state of `input.c`,
     #    not a deduction from a log.
     risvegli = [(int(m.group(1)), int(m.group(2)), int(m.group(3)))
                 for m in re.finditer(
@@ -167,7 +167,7 @@ def main():
     # ⛔⛔ AND THE INSTRUMENT IS NOT THE SAME IN ALL SCENES — bench defect found
     #      on 21 August 2026, at the second round.  In the `libero` scene
     #      **nothing is injected to the witness**: the measurement is the count
-    #      of replacements, which comes from `input_conto()`.  ⇒ Demanding
+    #      of replacements, which comes from `input_count()`.  ⇒ Demanding
     #      witness lines in there was a red that accused the bench of itself,
     #      and that would have hidden the real measurement.
     if a.modo == "libero":
@@ -228,15 +228,15 @@ def main():
         #    is replaced at the viewport, the keyboard only at a keymap change)
         #    and a red that does not tell them apart sends one looking in the
         #    wrong place.
-        orf_p = M_ORFANI_PULSANTI in ini
-        orf_t = M_ORFANI_TASTI in ini
-        quali = ("buttons" if orf_p and not orf_t
-                 else "keys" if orf_t and not orf_p
-                 else "buttons AND keys" if orf_p else "")
+        orph_p = M_ORPHAN_BUTTONS in ini
+        orph_t = M_ORPHAN_KEYS in ini
+        quali = ("buttons" if orph_p and not orph_t
+                 else "keys" if orph_t and not orph_p
+                 else "buttons AND keys" if orph_p else "")
         caso("L4 with the hand raised there are NO orphans",
-             "OK" if not (orf_p or orf_t) else "NO",
+             "OK" if not (orph_p or orph_t) else "NO",
              "no orphans line, neither of buttons nor of keys, as it should be"
-             if not (orf_p or orf_t)
+             if not (orph_p or orph_t)
              else f"⛔ the orphans line ({quali}) is there without anything being "
                   f"pressed: the count of input.c is dirty")
         return stampa(a, casi)
@@ -263,16 +263,16 @@ def main():
     #      become an orphan — that is, precisely when the scene does not hold.
     #      *Regression found by the adversarial review on 22 Aug 2026: the
     #      old bench had the distinction.*
-    orf_p = M_ORFANI_PULSANTI in ini
-    orf_t = M_ORFANI_TASTI in ini
+    orph_p = M_ORPHAN_BUTTONS in ini
+    orph_t = M_ORPHAN_KEYS in ini
     caso("T1 the BUTTON was pressed at the moment of the replacement",
-         "OK" if orf_p else "NO",
+         "OK" if orph_p else "NO",
          "`input.c` declares the orphans of the BUTTONS, so the button was there"
-         if orf_p
+         if orph_p
          else "⛔ THE BENCH: no orphan of BUTTONS declared"
               + (" — there is only the KEYS one, which is another thing: at "
                  "the viewport change the keyboard is not replaced, so this "
-                 "scene did not do what it believed" if orf_t
+                 "scene did not do what it believed" if orph_t
                  else " — either nothing was pressed, or the replacement arrived "
                       "before the press"))
 
@@ -330,11 +330,11 @@ def main():
     #      nobody had asked of it (`CODER.md` §3.10).
     #      ⇒ If the key was not even REQUESTED from the injector, the case is
     #      out of scene, not red.
-    chiesto_ctrl = "posizione 29 1 ->" in ini
-    chiesto_invio = "posizione 28 1 ->" in ini
+    requested_ctrl = "posizione 29 1 ->" in ini
+    requested_send = "posizione 28 1 ->" in ini
     kg = tasto(righe, KEY_CTRL, 1)
     ks = tasto(righe, KEY_CTRL, 0, kg) if kg >= 0 else -1
-    if not chiesto_ctrl:
+    if not requested_ctrl:
         caso("T5 the KEY instead goes down and comes back up (check inside the scene)",
              "NON_IN_SCENA",
              "this scene presses no Ctrl: there is nothing to judge")
@@ -347,7 +347,7 @@ def main():
                 "of the POINTER, and T3/T4 are accusing the wrong thing"))
 
     ke = tasto(righe, KEY_ENTER, 1)
-    if not chiesto_invio:
+    if not requested_send:
         caso("T6 and a FRESH key still arrives", "NON_IN_SCENA",
              "this scene presses no Enter: there is nothing to judge")
     else:
@@ -369,9 +369,9 @@ def main():
     #      catch is the BUTTON release that does not arrive while its path
     #      stays silent: a keyboard line would have let it pass in green.
     #      *Regression found by the adversarial review on 22 Aug 2026.*
-    np_pulsante = M_NON_PARTE_PULSANTE in ini
-    np_tasto = M_NON_PARTE_TASTO in ini
-    if np_pulsante:
+    np_button = M_BUTTON_NOT_LEAVING in ini
+    np_key = M_KEY_NOT_LEAVING in ini
+    if np_button:
         caso("T7 the impossible release of the BUTTON is DECLARED", "OK",
              "the line is there: the log does NOT say \"done\" while the desktop "
              "stays stuck")
@@ -384,7 +384,7 @@ def main():
              "⛔ the button release did not arrive AND its path stays "
              "silent: it is the green that is not true (`CODER.md` §4.6)"
              + (".  ⚠ The KEYBOARD line is there, which is another thing and "
-                "does not count for the button" if np_tasto else ""))
+                "does not count for the button" if np_key else ""))
 
     return stampa(a, casi)
 

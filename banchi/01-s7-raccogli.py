@@ -36,7 +36,7 @@ QUI = Path(__file__).resolve().parent
 REGISTRO = QUI / "01-s7-esiti.jsonl"
 
 
-class Raccoglitore(SimpleHTTPRequestHandler):
+class Collector(SimpleHTTPRequestHandler):
     def __init__(self, *a, **kw):
         super().__init__(*a, directory=str(QUI), **kw)
 
@@ -68,4 +68,4 @@ if __name__ == "__main__":
     porta = int(sys.argv[1]) if len(sys.argv) > 1 else 8877
     print(f"== S7: page on http://127.0.0.1:{porta}/01-s7-pagina.html")
     print(f"   the log accumulates in {REGISTRO}", flush=True)
-    ThreadingHTTPServer(("127.0.0.1", porta), Raccoglitore).serve_forever()
+    ThreadingHTTPServer(("127.0.0.1", porta), Collector).serve_forever()

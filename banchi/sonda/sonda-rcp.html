@@ -49,7 +49,7 @@ const IMPRONTA_SERVITA = Q.get("impronta") || "";
  *    so that the difference is not forgotten.
  * ------------------------------------------------------------------------- */
 const F = new URLSearchParams((location.hash || "").replace(/^#/, ""));
-const credenziale = (nome) => F.get(nome) || Q.get(nome) || "";
+const credential = (nome) => F.get(nome) || Q.get(nome) || "";
 const AVVISO = "";
 
 const $ = (i) => document.getElementById(i);
@@ -321,7 +321,7 @@ async function collega(utente, parola) {
   }
 }
 
-async function spedisci(esito, dettaglio) {
+async function ship(esito, dettaglio) {
   try {
     await fetch("/esito", {method: "POST", headers: {"Content-Type": "application/json"},
       body: JSON.stringify({esito: esito, motore: navigator.userAgent,
@@ -330,14 +330,14 @@ async function spedisci(esito, dettaglio) {
 }
 
 (async () => {
-  $("utente").value = credenziale("utente");
-  $("parola").value = credenziale("parola");
+  $("utente").value = credential("utente");
+  $("parola").value = credential("parola");
   try {
-    await collega(credenziale("utente"), credenziale("parola"));
+    await collega(credential("utente"), credential("parola"));
     const t = $("esito").textContent;
-    await spedisci(/^Admitted/.test(t) ? "AMMESSO" : "RIFIUTATO", t);
+    await ship(/^Admitted/.test(t) ? "AMMESSO" : "RIFIUTATO", t);
   } catch (e) {
-    await spedisci("ERRORE", String(e && e.message ? e.message : e));
+    await ship("ERRORE", String(e && e.message ? e.message : e));
   }
 })();
 </script></body></html>

@@ -7,9 +7,9 @@ import "strings"
 // repository to add to the system: the manager installs the files as they are, and takes the
 // dependencies from the repositories the machine already has (packaging/rilascio.sh builds it).
 
-// PacchettiRemotix: REMOTIX's packages (the product, the engine and, on rpm with the targeted
+// RemotixPackages: REMOTIX's packages (the product, the engine and, on rpm with the targeted
 // policy, the SELinux module): those whose versions `post-upgrade` records.
-var PacchettiRemotix = []string{"remotix", "remotix-install", "remotix-selinux"}
+var RemotixPackages = []string{"remotix", "remotix-install", "remotix-selinux"}
 
 // Bersaglio: the name of the distribution in the single package (debian13, ubuntu2604, fedora44,
 // alma10, tumbleweed, leap16, arch): the folder packages/<bersaglio>/ of the .run.

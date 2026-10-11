@@ -63,8 +63,8 @@ G4 = F12.G4
 
 FUNZIONI = ("F-012B",)
 CLIENT = "c15pulse.py"
-SEGNO_CLIENT = "c15pulse"
-TOLL_INIZIO_S = 2.0
+CLIENT_MARKER = "c15pulse"
+TOL_START_S = 2.0
 # the units of the user manager that are photographed; `systemd` in the init.scope
 # is the manager itself
 UNITA = ("pipewire.service", "pipewire-pulse.service", "wireplumber.service",
@@ -115,7 +115,7 @@ while True:
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE JUDGES — pure
 # ═══════════════════════════════════════════════════════════════════════════
-def leggi_foto(testo):
+def read_photo(testo):
     """The lines `@@p <comm> <pid> <start_tick> <unit>` and `@@hz <n>` ⇒
     {"hz": n, "proc": [{"comm", "pid", "inizio_s", "unita"}]} — pure."""
     hz, proc = None, []
@@ -149,7 +149,7 @@ def riassunto(foto):
     return ", ".join(pezzi) or "(none)"
 
 
-def giudica_pid(prima, dopo):
+def judge_pid(prima, dopo):
     """(outcome, reason) of the rule: pipewire-pulse not older than
     pipewire in the new session, with the user manager survived.
     `prima` = photo of session 1, `dopo` = photo of session 2 that plays."""
@@ -164,7 +164,7 @@ def giudica_pid(prima, dopo):
         return S.FAIL, "in the new session there is no pipewire"
     if not pp:
         return S.FAIL, "in the new session, with the pulse client playing, there is no pipewire-pulse"
-    if pp["inizio_s"] < pw["inizio_s"] - TOLL_INIZIO_S:
+    if pp["inizio_s"] < pw["inizio_s"] - TOL_START_S:
         vecchio = di(prima, "pipewire-pulse.service")
         return S.FAIL, ("pipewire-pulse (pid %d, since %.1f s) is OLDER than pipewire "
                         "(pid %d, since %.1f s)%s" % (
@@ -176,21 +176,21 @@ def giudica_pid(prima, dopo):
                                    pw["inizio_s"]))
 
 
-def giudica(e_tono, d_tono, e_pid, d_pid):
+def giudica(e_tone, d_tone, e_pid, d_pid):
     """The outcome of F-012B: the tone at point 4 and the pid rule."""
     if e_pid == S.BLOCKED:
         return S.BLOCKED, d_pid
     guai = []
-    if e_tono != "PASS":
+    if e_tone != "PASS":
         guai.append("after «Exit» and the re-entry the PulseAudio program is NOT heard in the "
-                    "browser: %s" % d_tono)
+                    "browser: %s" % d_tone)
     if e_pid != S.PASS:
         guai.append(d_pid)
     if guai:
-        if e_tono == "BLOCKED" and e_pid == S.PASS:
+        if e_tone == "BLOCKED" and e_pid == S.PASS:
             return S.BLOCKED, " · ".join(guai)
         return S.FAIL, " · ".join(guai)
-    return S.PASS, "after «Exit» and the re-entry the tone is heard: %s · %s" % (d_tono, d_pid)
+    return S.PASS, "after «Exit» and the re-entry the tone is heard: %s · %s" % (d_tone, d_pid)
 
 
 def certifica():
@@ -206,35 +206,35 @@ def certifica():
     t1 = ("@@hz 100\n@@p systemd 700 1000 init.scope\n@@p pipewire 710 1100 pipewire.service\n"
           "@@p pipewire 711 1100 filter-chain.service\n"
           "@@p pipewire-pulse 712 1110 pipewire-pulse.service\n")
-    prima = leggi_foto(t1)
+    prima = read_photo(t1)
     p("⭐ the photo reads (4 processes, hz 100)", (prima["hz"], len(prima["proc"])), (100, 4))
     p("⭐ the pipewire is pipewire.service's, not filter-chain",
       di(prima, "pipewire.service")["pid"], 710)
-    sana = leggi_foto("@@hz 100\n@@p systemd 700 1000 init.scope\n"
+    sana = read_photo("@@hz 100\n@@p systemd 700 1000 init.scope\n"
                       "@@p pipewire 810 9000 pipewire.service\n"
                       "@@p pipewire-pulse 812 9050 pipewire-pulse.service\n")
-    p("⭐ new session, pulse born after pipewire ⇒ PASS", giudica_pid(prima, sana)[0], S.PASS)
-    difetto = leggi_foto("@@hz 100\n@@p systemd 700 1000 init.scope\n"
+    p("⭐ new session, pulse born after pipewire ⇒ PASS", judge_pid(prima, sana)[0], S.PASS)
+    difetto = read_photo("@@hz 100\n@@p systemd 700 1000 init.scope\n"
                          "@@p pipewire 810 9000 pipewire.service\n"
                          "@@p pipewire-pulse 712 1110 pipewire-pulse.service\n")
-    p("⛔ the pulse of the previous session stays ⇒ FAIL", giudica_pid(prima, difetto)[0], S.FAIL)
-    p("⛔ ⇒ and it says so", "previous session" in giudica_pid(prima, difetto)[1], True)
+    p("⛔ the pulse of the previous session stays ⇒ FAIL", judge_pid(prima, difetto)[0], S.FAIL)
+    p("⛔ ⇒ and it says so", "previous session" in judge_pid(prima, difetto)[1], True)
     p("⭐ pulse born 1 s earlier (socket activation) ⇒ PASS, tolerance",
-      giudica_pid(prima, leggi_foto("@@hz 100\n@@p systemd 700 1000 init.scope\n"
+      judge_pid(prima, read_photo("@@hz 100\n@@p systemd 700 1000 init.scope\n"
                                     "@@p pipewire 810 9000 pipewire.service\n"
                                     "@@p pipewire-pulse 812 8900 pipewire-pulse.service\n"))[0],
       S.PASS)
     p("⚠ manager reborn ⇒ BLOCKED (the scene is not there)",
-      giudica_pid(prima, leggi_foto("@@hz 100\n@@p systemd 900 8000 init.scope\n"
+      judge_pid(prima, read_photo("@@hz 100\n@@p systemd 900 8000 init.scope\n"
                                     "@@p pipewire 810 9000 pipewire.service\n"
                                     "@@p pipewire-pulse 812 9050 pipewire-pulse.service\n"))[0],
       S.BLOCKED)
-    p("⚠ photo not read ⇒ BLOCKED, never PASS", giudica_pid(prima, leggi_foto(""))[0], S.BLOCKED)
+    p("⚠ photo not read ⇒ BLOCKED, never PASS", judge_pid(prima, read_photo(""))[0], S.BLOCKED)
     p("⛔ pulse absent with the client playing ⇒ FAIL",
-      giudica_pid(prima, leggi_foto("@@hz 100\n@@p systemd 700 1000 init.scope\n"
+      judge_pid(prima, read_photo("@@hz 100\n@@p systemd 700 1000 init.scope\n"
                                     "@@p pipewire 810 9000 pipewire.service\n"))[0], S.FAIL)
     p("⛔ a systemd not in the init.scope is not the manager",
-      di(leggi_foto("@@p systemd 5 1 %s\n" % U), "init.scope"), None)
+      di(read_photo("@@p systemd 5 1 %s\n" % U), "init.scope"), None)
     p("⭐ tone PASS and pid PASS ⇒ PASS", giudica("PASS", "x", S.PASS, "y")[0], S.PASS)
     p("⛔ tone FAIL (silence) ⇒ FAIL", giudica("FAIL", "x", S.PASS, "y")[0], S.FAIL)
     p("⛔ tone PASS but old pulse ⇒ FAIL", giudica("PASS", "x", S.FAIL, "y")[0], S.FAIL)
@@ -264,40 +264,40 @@ def fotografa(s):
             "| grep -v grep" % (s.chi, s.chi), 40)
         return t if "@@fine" in (t or "") else None
     t = F21._ritenta(una) or ""
-    return leggi_foto(t), t
+    return read_photo(t), t
 
 
-def prepara_client(s):
+def prepare_client(s):
     h = "/home/%s/%s" % (s.chi, CLIENT)
     c, t = s.sc.dentro("cat > %s <<'@@FINE@@'\n%s\n@@FINE@@\nchown %s: %s && ls -l %s"
                        % (h, CLIENT_PY, s.chi, h, h), 30)
     return c == 0, (t or "").strip()[-200:]
 
 
-def suona_pulse(s):
+def plays_pulse(s):
     return s.nella_sessione("exec python3 /home/%s/%s /home/%s/%s # %s"
-                            % (s.chi, CLIENT, s.chi, F12.WAV, SEGNO_CLIENT))
+                            % (s.chi, CLIENT, s.chi, F12.WAV, CLIENT_MARKER))
 
 
-def zittisci_pulse(s):
+def silence_pulse(s):
     s.sc.dentro("pkill -u %s -f '[c]15pulse'; sleep 0.3; pgrep -u %s -f '[c]15pulse' || "
                 "echo zitto" % (s.chi, s.chi), 30)
 
 
-def diario_client(s):
+def diary_client(s):
     _c, t = s.sc.dentro("tail -n 20 /home/%s/.c15-exec.log 2>/dev/null" % s.chi, 30)
     return (t or "").strip()
 
 
-def client_visto(s):
+def client_seen(s):
     """Is the pulse client seen by the session's pipewire? (diagnosis)"""
-    _c, t = s.come_utente("pw-cli ls Client 2>&1 | grep -c c15pulse", 30)
+    _c, t = s.as_user("pw-cli ls Client 2>&1 | grep -c c15pulse", 30)
     return (t or "").strip()
 
 
-def entra_e_ascolta(s, nome, ev, note):
+def enter_and_listen(s, nome, ev, note):
     """The client plays and the ear listens for FINESTRA_S ⇒ (outcome, descr, numbers, r)."""
-    c, t = suona_pulse(s)
+    c, t = plays_pulse(s)
     if c != 0:
         raise S.Bloccata("the pulse client does not start in the session: " + (t or "")[-200:])
     if not F12.sveglia(s, note):
@@ -306,92 +306,92 @@ def entra_e_ascolta(s, nome, ev, note):
     e, d, num, r = F12.ascolta(s, F12.FINESTRA_S)
     ev.append(G4.salva_json(s.o, "f012b-orecchio-%s.json" % nome, r))
     note.append("%s: client «%s», seen by pipewire: %s" % (
-        nome, diario_client(s).replace("\n", " | ")[-160:], client_visto(s)))
+        nome, diary_client(s).replace("\n", " | ")[-160:], client_seen(s)))
     return e, d, num, r
 
 
 def corpo(o, E):
     sess = S.Sessione(o, "912", E)
-    G4.robusta(sess.sc)
+    G4.robust(sess.sc)
     with sess as s:
-        desktop, gesto = s.sc.gesto_esci()
+        desktop, gesto = s.sc.exit_gesture()
         if not gesto:
             raise S.Bloccata("I do not know how to say «Exit» in %s" % s.sc.contenitore)
         print("   «Exit» (%s): %s" % (desktop, gesto), flush=True)
-        ok, m = F12.entra_con_orecchio(s)
+        ok, m = F12.enter_with_ear(s)
         if not ok:
             raise S.Bloccata(m)
-        ok, m = F12.prepara_tono_ffmpeg(s)
+        ok, m = F12.prepare_tone_ffmpeg(s)
         if not ok:
             print("   ⚠ the tone with ffmpeg: %s — the bench writes it" % m, flush=True)
-            ok, m = F12.prepara_tono(s)
+            ok, m = F12.prepare_tone(s)
         if not ok:
             raise S.Bloccata("the tone does not get ready in the box: " + m)
-        ok, m = prepara_client(s)
+        ok, m = prepare_client(s)
         if not ok:
             raise S.Bloccata("the pulse client cannot be written in the box: " + m)
-        segno = s.segno_registro()
+        segno = s.log_mark()
         ev, note, foto = [], [], {}
 
         def scatta(nome):
             f, t = fotografa(s)
             foto[nome] = f
-            ev.append(s.salva_testo("f012b-processi-%s.txt" % nome, t))
+            ev.append(s.save_text("f012b-processi-%s.txt" % nome, t))
             print("      [%s] %s" % (nome, riassunto(f)), flush=True)
             return f
 
         # 1 ── the first session plays ──────────────────────────────────────
-        e1, d1, _n1, _r1 = entra_e_ascolta(s, "1-prima", ev, note)
+        e1, d1, _n1, _r1 = enter_and_listen(s, "1-prima", ev, note)
         scatta("1-suona")
         print("   1 before «Exit»: %s — %s" % (e1, d1), flush=True)
         if e1 != "PASS":
-            ev.append(s.salva_testo("server-f012b.txt", s.registro_da(segno) if segno else []))
+            ev.append(s.save_text("server-f012b.txt", s.registro_da(segno) if segno else []))
             raise S.Bloccata("already BEFORE «Exit» the pulse client is not heard (%s): it is not "
                              "the scene of this test (see F-012)" % d1)
-        zittisci_pulse(s)
+        silence_pulse(s)
 
         # 2 ── «Exit» like the user ──────────────────────────────────────────
-        segno_esci = F21._ritenta(s.segno_registro)
-        c, t = F21.fai_il_gesto(s, gesto)
+        sign_exit = F21._ritenta(s.log_mark)
+        c, t = F21.do_gesture(s, gesto)
         if c != 0:
             raise S.Bloccata("the «Exit» gesture did not answer (code %s): %s" % (c, t[-200:]))
         t0 = time.time()
-        finita, _r = F21.aspetta_finita(s, segno_esci, F21.TETTO_FINITA)
+        finita, _r = F21.wait_finished(s, sign_exit, F21.CAP_FINISHED)
         if not finita:
             raise S.Bloccata("after «Exit» the product does not declare the session ended in %.0f s"
-                             % F21.TETTO_FINITA)
-        modulo, frase, _letta = F21.leggi_pagina(s, 30)
+                             % F21.CAP_FINISHED)
+        modulo, frase, _read = F21.leggi_pagina(s, 30)
         esci = "ended («%s») after %.1f s, page at the form=%s «%s»" % (
             finita, time.time() - t0, modulo, frase[:60])
         print("   2 %s" % esci, flush=True)
         scatta("2-dopo-esci")
 
         # 3 ── inside again AT ONCE ─────────────────────────────────────────
-        segno_rientro = F21._ritenta(s.segno_registro)
+        sign_reentry = F21._ritenta(s.log_mark)
         t1 = time.time()
-        ok, m = F12.entra_con_orecchio(s)
+        ok, m = F12.enter_with_ear(s)
         if not ok:
             raise S.Bloccata("the re-entry after «Exit» does not succeed: %s" % m)
-        fetta = F21.registro(s, segno_rientro) or []
+        fetta = F21.registro(s, sign_reentry) or []
         nuova = any("I AM MAKING IT BE BORN" in r and F21.e_di(r, s.chi) for r in fetta)
         rientro = "re-entry %.1f s after the form, session %s" % (
             t1 - t0, "NEW («I AM MAKING IT BE BORN»)" if nuova else "NOT new (resumed?)")
         print("   3 %s" % rientro, flush=True)
         scatta("3-dopo-rientro")
         if not nuova:
-            ev.append(s.salva_testo("server-f012b.txt", s.registro_da(segno) if segno else []))
+            ev.append(s.save_text("server-f012b.txt", s.registro_da(segno) if segno else []))
             raise S.Bloccata("the re-entry did not make a new session be born: the scene "
                              "of the defect is not there (%s)" % rientro)
 
         # 4 ── the pulse client plays again ─────────────────────────────────
-        e4, d4, num4, r4 = entra_e_ascolta(s, "4-dopo-esci", ev, note)
-        campioni4 = r4.get("campioni") or []
+        e4, d4, num4, r4 = enter_and_listen(s, "4-dopo-esci", ev, note)
+        samples4 = r4.get("campioni") or []
         dopo = scatta("4-risuona")
-        e_pid, d_pid = giudica_pid(foto["1-suona"], dopo)
+        e_pid, d_pid = judge_pid(foto["1-suona"], dopo)
         nome, _v, _m, tv = F12.volume(s)
         esito, perche = giudica(e4, d4, e_pid, d_pid)
-        ev.append(s.salva_testo("server-f012b.txt", s.registro_da(segno) if segno else []))
-        ev.append(s.salva_console())
+        ev.append(s.save_text("server-f012b.txt", s.registro_da(segno) if segno else []))
+        ev.append(s.save_console())
         _png, dove = s.foto("f012b-fine")
         if dove:
             ev.append(dove)
@@ -407,24 +407,24 @@ def corpo(o, E):
                 atteso="after «Exit» and an immediate re-entry (user manager alive) a PulseAudio "
                        "client plays and the browser hears the 440 Hz tone (>=80%% audible, "
                        "peak 440±12 Hz); pipewire-pulse not older than pipewire "
-                       "(tolerance %.0f s)" % TOLL_INIZIO_S,
+                       "(tolerance %.0f s)" % TOL_START_S,
                 osservato=oss, evidenze=ev, numeri=num4, gesto=gesto)
 
         if not o.guasto:
             return
         # ── the fault: at point 4 nothing plays ────────────────────────────
-        zittisci_pulse(s)
+        silence_pulse(s)
         time.sleep(1.5)
         eg1, dg1, _x, rg1 = F12.ascolta(s, 4.0)
         evg = [G4.salva_json(o, "f012b-orecchio-guasto.json", rg1)]
-        if not campioni4:
+        if not samples4:
             E.guasto("F-012B", None, "no healthy sample at point 4 for the wrong expectation")
             return
-        eg2, dg2, _y = G4.giudica_suono(campioni4, 660)
-        finto = leggi_foto("@@hz 100\n@@p systemd 1 10 init.scope\n"
+        eg2, dg2, _y = G4.judge_sound(samples4, 660)
+        finto = read_photo("@@hz 100\n@@p systemd 1 10 init.scope\n"
                            "@@p pipewire 3 900 pipewire.service\n"
                            "@@p pipewire-pulse 2 20 pipewire-pulse.service\n")
-        eg3, dg3 = giudica_pid(leggi_foto("@@hz 100\n@@p systemd 1 10 init.scope\n"
+        eg3, dg3 = judge_pid(read_photo("@@hz 100\n@@p systemd 1 10 init.scope\n"
                                           "@@p pipewire-pulse 2 20 pipewire-pulse.service\n"),
                                finto)
         visto = eg1 == "FAIL" and eg2 == "FAIL" and eg3 == S.FAIL

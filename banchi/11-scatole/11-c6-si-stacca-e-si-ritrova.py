@@ -253,7 +253,7 @@ QUI = os.path.dirname(os.path.abspath(__file__))
 #    child, and a substring would let it pass.
 # `[M]` 26 Aug 2026 (C7, XFCE box): `pid 12113 remotix, ppid 10575, uid c7u1`.
 # ---------------------------------------------------------------------------
-NOME_FIGLIO = "remotix"
+CHILD_NAME = "remotix"
 
 # ⛔ The value that means «I looked and it is not there».  ⚠ `None` means «I could
 #    not look», and the two things must not have the same face
@@ -285,17 +285,17 @@ SCARTO_MASSIMO = 0.25
 # would re-attach before the stage had a chance to die, and would say green
 # without having proved anything.
 # ---------------------------------------------------------------------------
-SOPRAVVIVENZA_MISURATA_S = 15.0
-PAUSA_PREDEFINITA_S = 2 * SOPRAVVIVENZA_MISURATA_S
+MEASURED_SURVIVAL_S = 15.0
+DEFAULT_PAUSE_S = 2 * MEASURED_SURVIVAL_S
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 # ⭐⭐ THE JUDGES ARE IMPORTED, NOT REWRITTEN — and here there are TWO
 # ═══════════════════════════════════════════════════════════════════════════
-def _carica(percorsi, nome):
+def _carica(paths, nome):
     """Loads the first module that exists, or `None`.  ⛔ It is a LOADER, not a
        judge: it decides nothing, it only finds the file."""
-    for p in percorsi:
+    for p in paths:
         if not os.path.exists(p):
             continue
         spec = importlib.util.spec_from_file_location(nome, p)
@@ -311,7 +311,7 @@ def _carica(percorsi, nome):
 _C1 = None
 
 
-def casa_dell_ammissione():
+def admission_home():
     """⭐⭐ «WAS THE CLIENT ADMITTED?» — ⛔ and its home is C1, not this file.
 
     ⛔ Until 27 August 2026 there was `"AMMESSO" in coda` here, ⭐ and it could not
@@ -358,7 +358,7 @@ def e_stato_ammesso(coda):
 
     ⛔ `False` is not a product red: `giudica()` brings it to **3**.
     """
-    return casa_dell_ammissione().e_stato_ammesso(coda)
+    return admission_home().e_stato_ammesso(coda)
 
 
 def garantisci_i_gruppi(chi, prefisso="   "):
@@ -376,7 +376,7 @@ def garantisci_i_gruppi(chi, prefisso="   "):
     ⭐ The work is done by `attrezzi-gruppi-scheda.sh`, which reads the gids from the NODES and
        reads back comparing the numbers.  ⛔ No copy of it is made here (§1.47).
     """
-    return casa_dell_ammissione().garantisci_i_gruppi(chi, prefisso)
+    return admission_home().garantisci_i_gruppi(chi, prefisso)
 
 
 def giudice_immagini():
@@ -395,7 +395,7 @@ def giudice_immagini():
                    "testimone10f1")
 
 
-def lettore_del_colore():
+def color_reader():
     """⭐⭐ The judge of the scene's COLOUR: it is **C8**'s, not another one.
 
     ⛔ And the reason is worth more than convenience: C6 opens **the same window
@@ -453,7 +453,7 @@ def giudica(prima, dopo, frazione_minima, scarto_massimo=SCARTO_MASSIMO):
     if prima["figlio"] == VUOTO:
         return 3, "I do not know", [
             "the tenant's «%s» child was not there even BEFORE the detach:"
-            % NOME_FIGLIO,
+            % CHILD_NAME,
             "the session did not really start.  ⛔ And a session that did not",
             "start can neither be lost nor found again.",
         ]
@@ -498,13 +498,13 @@ def giudica(prima, dopo, frazione_minima, scarto_massimo=SCARTO_MASSIMO):
     # ⚠ The «same session» half.  ⛔ `None` is not «not there»: if I could not
     #   read the processes, that half stays MUTE — and a mute half
     #   cannot produce a green (§1.47).
-    muta_sessione = False
+    session_muted = False
     if dopo["figlio"] is None:
-        muta_sessione = True
+        session_muted = True
     elif dopo["figlio"] == VUOTO:
         return 1, "the session is gone", [
             "after the re-attach the tenant no longer has any «%s» child."
-            % NOME_FIGLIO,
+            % CHILD_NAME,
             "⛔ It did not find its session again: there is none.",
         ]
     elif dopo["figlio"] != prima["figlio"]:
@@ -559,7 +559,7 @@ def giudica(prima, dopo, frazione_minima, scarto_massimo=SCARTO_MASSIMO):
             "  underneath — not widened until it goes quiet.",
         ]
 
-    if muta_sessione:
+    if session_muted:
         return 3, "I do not know", [
             "⭐ the image holds: the scene was found again (%.1f%% ⇒ %.1f%%,"
             % (prima["frazione"] * 100, dopo["frazione"] * 100),
@@ -579,7 +579,7 @@ def giudica(prima, dopo, frazione_minima, scarto_massimo=SCARTO_MASSIMO):
     ]
 
 
-def guasto_morso(prima, dopo):
+def fault_bitten(prima, dopo):
     """⛔⛔ §1.52 — with the grafted fault the COLOUR of the verdict is not enough.
 
     ⭐ C6 carries with it a real and already known defect (the stage that dies with the
@@ -624,7 +624,7 @@ def certifica(frazione_minima=None, scarto=SCARTO_MASSIMO):
     ⇒ A certification that declares itself wider than it is is worth less than
       no certification (C1's rule).
     """
-    c8 = lettore_del_colore()
+    c8 = color_reader()
     if c8 is None:
         print("⛔ I cannot find C8 next to me: the colour reader is ITS and I do not")
         print("   rewrite it here.  ⇒ I could not look")
@@ -639,7 +639,7 @@ def certifica(frazione_minima=None, scarto=SCARTO_MASSIMO):
           % (c8.COLORE, c8.TOLLERANZA, fm * 100))
     print("          screen · maximum deviation between before and after %.3f" % scarto)
     print("   pause: %.0f s = 2 × the measured survival (%.0f s)\n"
-          % (PAUSA_PREDEFINITA_S, SOPRAVVIVENZA_MISURATA_S))
+          % (DEFAULT_PAUSE_S, MEASURED_SURVIVAL_S))
 
     # The two «healthy» observations, from which every case is derived by changing one
     # thing only — ⭐ §3.3 of the phase document: one thing is moved at a time.
@@ -750,7 +750,7 @@ def certifica(frazione_minima=None, scarto=SCARTO_MASSIMO):
     #     red?» (§1.52).  ⛔ For C6 it is the part that is worth the most: the mesh
     #     can already be red on its own.
     # ═══════════════════════════════════════════════════════════════════════
-    casi_morso = [
+    cases_bitten = [
         ("⭐ the session killed: the child is another one ⇒ SEEN",
          dict(prima=viva(), dopo=viva(figlio="20044")), True),
 
@@ -772,8 +772,8 @@ def certifica(frazione_minima=None, scarto=SCARTO_MASSIMO):
     print()
     print("   ⛔ and the grafted fault is read on the DIFFERENCE (the PID of the")
     print("      child), not on the colour of the verdict — `LEZIONI.md` §1.52:")
-    for nome, arg, atteso in casi_morso:
-        avuto = guasto_morso(**arg)
+    for nome, arg, atteso in cases_bitten:
+        avuto = fault_bitten(**arg)
         ok = avuto is atteso
         print("  %s  %-62s  bitten=%-5s  expected %s"
               % ("OK " if ok else "NO ", nome, avuto, atteso))
@@ -833,17 +833,17 @@ def certifica(frazione_minima=None, scarto=SCARTO_MASSIMO):
     #    The predicate lives in C1 and is certified with C1's cases: ⛔ a copy
     #    of the cases here would be a second place to diverge from (§1.47).
     print()
-    guai_amm, quanti_amm = casa_dell_ammissione().certifica_ammissione("C6")
-    guai += guai_amm
+    admission_troubles, how_many_admitted = admission_home().certifica_ammissione("C6")
+    guai += admission_troubles
 
     # ⭐⭐ AND THE CARD GROUPS CASES — ⛔ the other case that was missing:
     #    a tenant without the groups of the nodes ⇒ «I could not look», ⛔
     #    never red.  They live in C1 with the step they certify.
     print()
-    guai_gr, quanti_gr = casa_dell_ammissione().certifica_gruppi("C6")
-    guai += guai_gr
+    group_troubles, how_many_groups = admission_home().certifica_gruppi("C6")
+    guai += group_troubles
 
-    quanti = len(casi) + len(casi_morso) + quanti_amm + quanti_gr + 3
+    quanti = len(casi) + len(cases_bitten) + how_many_admitted + how_many_groups + 3
     print()
     if guai:
         print("⛔ the judge is NOT reliable: %d cases out of %d wrong"
@@ -888,7 +888,7 @@ def uid_di(chi):
         return None
 
 
-def figlio_di(uid):
+def child_of(uid):
     """The pid of the tenant's «remotix» child.
 
     ⛔ Three outcomes and not two: `None` = «/proc could not be read», `VUOTO` =
@@ -911,7 +911,7 @@ def figlio_di(uid):
                 nome = f.read().strip()
         except OSError:
             continue
-        if nome == NOME_FIGLIO:
+        if nome == CHILD_NAME:
             pid.append(voce)
     if not pid:
         return VUOTO
@@ -995,7 +995,7 @@ def attacca(chi, a, resta, diario, video=None):
                             text=True), presa
 
 
-def raccogli_il_cliente(proc, presa, diario, tetto):
+def collect_client(proc, presa, diario, tetto):
     """Waits for the client to finish.  Returns `(ammesso, fotogrammi, coda)`.
 
     ⛔ `ammesso` has THREE states: `True`, `False`, and `None` = «the client did not
@@ -1035,7 +1035,7 @@ def raccogli_il_cliente(proc, presa, diario, tetto):
     return ammesso, quanti, coda
 
 
-def immagine_dal_flusso(flusso, fuori):
+def image_from_stream(flusso, fuori):
     """The LAST frame of the stream, as PNG.  `None` if none was made.
 
     ⛔ `-update 1` keeps the LAST: it is what the desktop shows now.  The
@@ -1084,7 +1084,7 @@ def apri_la_scena(chi, a):
     return display, None
 
 
-def profilo_del_browser(chi):
+def browser_profile(chi):
     """⭐ The EVENT «the browser started»: its profile exists.
 
     ⛔ It is not «the window is seen» — that is said only by the pixel, and it is the
@@ -1095,7 +1095,7 @@ def profilo_del_browser(chi):
     return r.stdout.strip() or None
 
 
-def scalda_il_browser(chi, a, fuori):
+def warm_up_browser(chi, a, fuori):
     """⭐⭐ THE FIRST START IS DONE OUTSIDE THE SESSION, and it serves TWO things.
 
     1. ⛔ **It warms up the profile.**  `LEZIONI.md` §1.45: the first start of Firefox
@@ -1165,13 +1165,13 @@ def crea(chi, parola):
            "printf '%s:%s\n' | chpasswd" % (chi, chi, parola))
     if r.returncode != 0:
         return False, ((r.stderr or "") + (r.stdout or "")).strip()[:140]
-    e_gr, perche_gr = garantisci_i_gruppi(chi, prefisso="      ")
+    e_gr, why_groups = garantisci_i_gruppi(chi, prefisso="      ")
     if e_gr != 0:
-        return False, perche_gr
+        return False, why_groups
     return True, ""
 
 
-def togli_di_mezzo_il_difetto_di_c8(chi, c8):
+def remove_c8_defect(chi, c8):
     """⚠ C6 does NOT test the provisioning defect: it GETS IT OUT OF THE WAY.
 
     ⛔ And the reason is a real danger between benches: `11-c8` prepares the terrain
@@ -1232,7 +1232,7 @@ def main():
     p.add_argument("--attesa-figlio", type=float, default=90.0,
                    help="how long to wait for the «%s» child to appear among the "
                         "tenant's processes. Expired: «I do not know»"
-                        % NOME_FIGLIO)
+                        % CHILD_NAME)
     p.add_argument("--attesa-scena", type=float, default=180.0,
                    help="how long the browser is given to create its profile and "
                         "draw the page OUTSIDE the session (the "
@@ -1246,7 +1246,7 @@ def main():
                    help="how long the client that takes the BEFORE photo stays "
                         "attached. ⚠ It must be longer than --posa-scena, or the "
                         "photo arrives before the window")
-    p.add_argument("--pausa-staccato", type=float, default=PAUSA_PREDEFINITA_S,
+    p.add_argument("--pausa-staccato", type=float, default=DEFAULT_PAUSE_S,
                    help="⭐⭐ how long we stay DETACHED. The default is "
                         "TWICE the measured survival of the monitor "
                         "(`[M]` 15 s): below that threshold one would re-attach "
@@ -1295,7 +1295,7 @@ def main():
         sys.exit(2)
 
     # ── the things without which we do not judge ──────────────────────────
-    c8 = lettore_del_colore()
+    c8 = color_reader()
     if c8 is None:
         print("⛔ I cannot find C8 next to me: the colour reader is ITS and I do not")
         print("   rewrite it here.  ⇒ I could not look")
@@ -1311,10 +1311,10 @@ def main():
             print("⛔ I cannot find %s: %s" % (che, dove))
             print("   ⇒ I could not look")
             sys.exit(3)
-    for attrezzo, perche in ((a.browser, "I cannot open any window"),
+    for tool, perche in ((a.browser, "I cannot open any window"),
                              ("ffmpeg", "the frames do not become an image")):
-        if sh("command -v %s" % attrezzo).returncode != 0:
-            print("⛔ the box does not have %s: %s" % (attrezzo, perche))
+        if sh("command -v %s" % tool).returncode != 0:
+            print("⛔ the box does not have %s: %s" % (tool, perche))
             print("   ⇒ I could not look")
             sys.exit(3)
 
@@ -1329,7 +1329,7 @@ def main():
           % (c8.COLORE, c8.TOLLERANZA, fm * 100))
     print("          screen · maximum deviation before/after %.3f" % a.scarto_massimo)
     print("   detached pause: %.0f s  (⭐ = 2 × the %.0f s of measured survival "
-          "of the monitor)" % (a.pausa_staccato, SOPRAVVIVENZA_MISURATA_S))
+          "of the monitor)" % (a.pausa_staccato, MEASURED_SURVIVAL_S))
     print("   mode: %s" % (
         "⛔ GRAFTED FAULT — between the detach and the re-attach the "
         "session is KILLED: it must give RED, and the bite is the child's PID changing"
@@ -1345,7 +1345,7 @@ def main():
         print("⛔ I could not create «%s»: %s" % (chi, perche))
         print("   ⇒ I could not look")
         sys.exit(3)
-    togli_di_mezzo_il_difetto_di_c8(chi, c8)
+    remove_c8_defect(chi, c8)
     uid = uid_di(chi)
 
     esito = 3
@@ -1359,18 +1359,18 @@ def main():
               % a.resta_nascita)
         dn = os.path.join(a.lavoro, "nascita.log")
         pn, sn = attacca(chi, a, a.resta_nascita, dn)
-        amm_n, _f, coda_n = raccogli_il_cliente(
+        admitted_n, _f, tail_n = collect_client(
             pn, sn, dn, max(120.0, a.resta_nascita * 4))
-        if amm_n is None:
+        if admitted_n is None:
             print("      ⛔ the test client did not come back: it is a fault of the "
                   "BENCH (§1.51)")
             print("   ⇒ I could not look")
             sys.exit(3)
-        if not amm_n:
+        if not admitted_n:
             # ⛔ «Not admitted» on its own is a silence: the REASON is carried
             #    next to the symptom (C1's lesson, 26 Aug 2026).
             motivo = "?"
-            for riga in reversed((coda_n or "").strip().splitlines()):
+            for riga in reversed((tail_n or "").strip().splitlines()):
                 riga = riga.strip()
                 if riga and not riga.startswith("=="):
                     motivo = riga[:100]
@@ -1380,9 +1380,9 @@ def main():
             sys.exit(3)
 
         figlio, quanto = aspetta(lambda: (lambda v: v if v != VUOTO else None)(
-            figlio_di(uid)), a.attesa_figlio)
+            child_of(uid)), a.attesa_figlio)
         print("      the «%s» child: %s"
-              % (NOME_FIGLIO,
+              % (CHILD_NAME,
                  ("⭐ pid %s, after %.1f s" % (figlio, quanto)) if figlio
                  else "⛔ never appeared in %.0f s" % a.attesa_figlio))
         display, quanto = aspetta(lambda: socket_wayland(uid),
@@ -1404,7 +1404,7 @@ def main():
         # ═══════════════════════════════════════════════════════════════════
         print("  2 · I warm up the browser outside the session (ceiling %.0f s)…"
               % a.attesa_scena)
-        png_s, detto = scalda_il_browser(chi, a, os.path.join(a.lavoro, "scaldata.png"))
+        png_s, detto = warm_up_browser(chi, a, os.path.join(a.lavoro, "scaldata.png"))
         fr_s = c8.frazione_del_colore(png_s) if png_s else None
         if fr_s is None or fr_s < fm:
             print("      ⛔ the browser does not draw the page even on its own "
@@ -1423,9 +1423,9 @@ def main():
 
         print("  3 · «BEFORE» attach (%.0fs) and I open the scene INSIDE the session…"
               % a.resta_prima)
-        flusso1 = os.path.join(a.lavoro, "prima.264")
+        stream1 = os.path.join(a.lavoro, "prima.264")
         dp = os.path.join(a.lavoro, "prima.log")
-        pp, sp = attacca(chi, a, a.resta_prima, dp, video=flusso1)
+        pp, sp = attacca(chi, a, a.resta_prima, dp, video=stream1)
         # ⭐ WE WAIT FOR THE EVENT, NOT FOR THE CLOCK (§1.49): the client's diary
         #    says when it was ADMITTED.  ⛔ Opening the window before
         #    that instant would mean opening it on a desktop that, `[M]`, does not
@@ -1453,7 +1453,7 @@ def main():
             #       AFTER the client had already gone away — i.e. the defect
             #       that the budget check, above, exists to
             #       prevent.
-            prof, q2 = aspetta(lambda: profilo_del_browser(chi),
+            prof, q2 = aspetta(lambda: browser_profile(chi),
                                max(1.0, a.posa_scena / 2.0))
             print("      the browser started: %s"
                   % (("⭐ its own profile after %.1f s" % q2) if prof
@@ -1464,28 +1464,28 @@ def main():
             if resto > 0:
                 time.sleep(resto)
 
-        amm_p, fot_p, coda_p = raccogli_il_cliente(
+        admitted_p, frame_p, tail_p = collect_client(
             pp, sp, dp, max(180.0, a.resta_prima * 3))
-        if amm_p is False:
+        if admitted_p is False:
             # ⛔ «Not admitted» on its own is a silence: the reason is carried
             #    next to the symptom, as C1 has done since 26 Aug 2026.
             motivo = "?"
-            for riga in reversed((coda_p or "").strip().splitlines()):
+            for riga in reversed((tail_p or "").strip().splitlines()):
                 riga = riga.strip()
                 if riga and not riga.startswith("=="):
                     motivo = riga[:100]
                     break
             print("      ⛔ the «before» client was NOT admitted: %s" % motivo)
-        figlio_p = figlio_di(uid)
-        png1 = immagine_dal_flusso(flusso1, os.path.join(a.lavoro, "prima.png"))
+        child_p = child_of(uid)
+        png1 = image_from_stream(stream1, os.path.join(a.lavoro, "prima.png"))
         fr_p = c8.frazione_del_colore(png1) if png1 else None
         g1 = giudice.giudica(png1) if png1 else None
-        prima = osservazione(ammesso=amm_p, figlio=figlio_p, frazione=fr_p,
+        prima = osservazione(ammesso=admitted_p, figlio=child_p, frazione=fr_p,
                              verdetto=(g1 or {}).get("verdetto"),
-                             fotogrammi=fot_p)
+                             fotogrammi=frame_p)
         print("      BEFORE: admitted=%s · child=%s · frames=%s · "
               "image=«%s» · scene=%s"
-              % (amm_p, figlio_p, fot_p, (g1 or {}).get("verdetto", "?"),
+              % (admitted_p, child_p, frame_p, (g1 or {}).get("verdetto", "?"),
                  "unknown" if fr_p is None else "%.1f%%" % (fr_p * 100)))
 
         # ═══════════════════════════════════════════════════════════════════
@@ -1511,29 +1511,29 @@ def main():
         # 5 · THE RE-ATTACH — ⭐ and here we look
         # ═══════════════════════════════════════════════════════════════════
         print("  5 · re-attach (%.0f s)…" % a.resta_dopo)
-        flusso2 = os.path.join(a.lavoro, "dopo.264")
+        stream2 = os.path.join(a.lavoro, "dopo.264")
         dd = os.path.join(a.lavoro, "dopo.log")
-        pd, sd = attacca(chi, a, a.resta_dopo, dd, video=flusso2)
-        amm_d, fot_d, coda_d = raccogli_il_cliente(
+        pd, sd = attacca(chi, a, a.resta_dopo, dd, video=stream2)
+        admitted_d, frame_d, tail_d = collect_client(
             pd, sd, dd, max(180.0, a.resta_dopo * 3))
-        if amm_d is False:
+        if admitted_d is False:
             motivo = "?"
-            for riga in reversed((coda_d or "").strip().splitlines()):
+            for riga in reversed((tail_d or "").strip().splitlines()):
                 riga = riga.strip()
                 if riga and not riga.startswith("=="):
                     motivo = riga[:100]
                     break
             print("      ⛔ the re-attach was NOT admitted: %s" % motivo)
-        figlio_d = figlio_di(uid)
-        png2 = immagine_dal_flusso(flusso2, os.path.join(a.lavoro, "dopo.png"))
+        child_d = child_of(uid)
+        png2 = image_from_stream(stream2, os.path.join(a.lavoro, "dopo.png"))
         fr_d = c8.frazione_del_colore(png2) if png2 else None
         g2 = giudice.giudica(png2) if png2 else None
-        dopo = osservazione(ammesso=amm_d, figlio=figlio_d, frazione=fr_d,
+        dopo = osservazione(ammesso=admitted_d, figlio=child_d, frazione=fr_d,
                             verdetto=(g2 or {}).get("verdetto"),
-                            fotogrammi=fot_d)
+                            fotogrammi=frame_d)
         print("      AFTER : admitted=%s · child=%s · frames=%s · "
               "image=«%s» · scene=%s"
-              % (amm_d, figlio_d, fot_d, (g2 or {}).get("verdetto", "?"),
+              % (admitted_d, child_d, frame_d, (g2 or {}).get("verdetto", "?"),
                  "unknown" if fr_d is None else "%.1f%%" % (fr_d * 100)))
         print()
 
@@ -1563,7 +1563,7 @@ def main():
         # ═══════════════════════════════════════════════════════════════════
         if a.uccidi_la_sessione and esito in (0, 1):
             print()
-            morso = guasto_morso(prima, dopo)
+            morso = fault_bitten(prima, dopo)
             if esito == 1 and morso:
                 print("⭐ THE GRAFTED FAULT WAS SEEN ⇒ this mesh CAN "
                       "say red")

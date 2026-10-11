@@ -76,7 +76,7 @@ ENTRA=/media/REMOTIX/enter.sh
 FUORI=/media/REMOTIX/src
 DENTRO=/srv/src
 SORG=$DENTRO/b2/ngtcp2/examples/http3_server_proto_codec.cc
-SORG_MAIN=$DENTRO/b2/ngtcp2/examples/server.cc
+SRC_MAIN=$DENTRO/b2/ngtcp2/examples/server.cc
 PER_CASO=2          # triplets per block: 2 failures per address, threshold 3
 # ⛔ AND THE CREDENTIALS ARE HERE, IN CLEAR AND NEXT TO THOSE OF THE OTHER
 #    BENCHES.  Until 11 Aug 2026 this bench carried its own default value
@@ -159,8 +159,8 @@ if [ -n "${B8_PORTA:-}${B8_BAN:-}${B8_COMANDO:-}" ]; then
 	printf '        port %s · ban %s · command %s\n' "$B_PORTA" "$B_BAN" "$B_COMANDO"
 fi
 PORTA=$B_PORTA
-LEGAME=$B_LEGAME
-INDIRIZZI=$B_INDIRIZZI
+BIND=$B_BIND
+INDIRIZZI=$B_ADDRESSES
 BAN_FILE=$B_BAN
 COMANDO=$B_COMANDO
 GIRO=$B_GIRO
@@ -202,7 +202,7 @@ if [ "$AZIONE" = costruisci ]; then
 		| grep -E "foothold|NO |our files" | sed 's/^/        /'
 	# ⛔ And the graft is COUNTED in the two files, before compiling: a graft that
 	#    does not find an anchor prints «NO» and goes on.
-	QUANTI=$(bash "$ENTRA" --root "grep -c 'REMOTIX B3' $SORG_MAIN" | tr -cd '0-9')
+	QUANTI=$(bash "$ENTRA" --root "grep -c 'REMOTIX B3' $SRC_MAIN" | tr -cd '0-9')
 	if [ "${QUANTI:-0}" -lt 5 ]; then
 		ko "⛔ the host-side ban is NOT in server.cc («REMOTIX B3» lines: ${QUANTI:-0})"
 		ko "   one would compile a server without the TCP page and without the unblock"
@@ -278,7 +278,7 @@ inf "  day the PAM stack had a pam_faillock, that user would get locked"
 #
 # ⭐ With `B8_NON_RICOSTRUIRE=1` the binary THAT IS THERE is measured, and nothing
 #    that counts is lost: the real verification stays whole —
-#    `b0_binario_e_sorgenti` takes the md5 fingerprint and ⛔ **refuses a binary
+#    `b0_binary_and_sources` takes the md5 fingerprint and ⛔ **refuses a binary
 #    older than a source**, which is precisely the trap of R12-A.6.
 #    ⚠ It is the same rule this file already applies to the product: «a bench
 #      that recompiles what it measures removes its own independent witness».
@@ -293,11 +293,11 @@ if [ "${B8_NON_RICOSTRUIRE:-0}" = 1 ]; then
 		# ⚠ The glob is the same as `bersaglio_pronto`: it is a copy, and it is
 		#   declared.  The day a source is added to the graft it must be added in
 		#   both places.
-		b0_binario_e_sorgenti \
+		b0_binary_and_sources \
 			"$DENTRO/b2/ngtcp2/examples/*.cc $DENTRO/b2/ngtcp2/examples/*.c $DENTRO/rcp/rcp.c" \
 			|| exit 3
 	else
-		b0_binario_e_sorgenti "$DENTRO/remotix/*.c $DENTRO/remotix/*.h" || exit 3
+		b0_binary_and_sources "$DENTRO/remotix/*.c $DENTRO/remotix/*.h" || exit 3
 	fi
 else
 	bersaglio_pronto || exit 3
@@ -308,19 +308,19 @@ fi
 #    the host-side ban.  The B12 fault does not touch those lines.
 if [ "$B_NOME" = innesto ]; then
 	bash "$ENTRA" --root \
-		"{ grep -c 'REMOTIX B3' $SORG; grep -c 'REMOTIX B3' $SORG_MAIN; } > $DENTRO/b8-stato.txt 2>&1"
+		"{ grep -c 'REMOTIX B3' $SORG; grep -c 'REMOTIX B3' $SRC_MAIN; } > $DENTRO/b8-stato.txt 2>&1"
 	if [ ! -f "$FUORI/b8-stato.txt" ]; then
 		ko "I could not look at the state of the server: the file is not there"
 		exit 2
 	fi
-	INNESTO=$(sed -n 1p "$FUORI/b8-stato.txt")
+	GRAFT=$(sed -n 1p "$FUORI/b8-stato.txt")
 	OSPITE=$(sed -n 2p "$FUORI/b8-stato.txt")
-	case "$INNESTO$OSPITE" in
+	case "$GRAFT$OSPITE" in
 		''|*[!0-9]*) ko "I could not count the RCP graft in the sources:"
 		             sed 's/^/        /' "$FUORI/b8-stato.txt"; exit 2 ;;
 	esac
-	if [ "$INNESTO" -lt 3 ]; then
-		ko "⛔ the RCP graft is NOT in the codec ($INNESTO «REMOTIX B3» lines)"
+	if [ "$GRAFT" -lt 3 ]; then
+		ko "⛔ the RCP graft is NOT in the codec ($GRAFT «REMOTIX B3» lines)"
 		ko "   this server does not speak RCP: «01-b8-lancia.sh costruisci»"
 		exit 3
 	fi
@@ -330,7 +330,7 @@ if [ "$B_NOME" = innesto ]; then
 		ko "   «BERSAGLIO=innesto ... 01-b8-lancia.sh costruisci»"
 		exit 3
 	fi
-	ok "the graft is in the two files (codec $INNESTO lines · host $OSPITE)"
+	ok "the graft is in the two files (codec $GRAFT lines · host $OSPITE)"
 else
 	# ⭐ On the product the equivalent piece is the command socket, and it is
 	#    MEASURED in the source before starting: without it, every unblock of this
@@ -413,12 +413,12 @@ if ! bash "$ENTRA" "gcc -std=c11 -Wall -Wextra -I$DENTRO/rcp -o $PB \
 	exit 3
 fi
 bash "$ENTRA" "$PB"
-PROVA_BAN=$?
+TEST_BAN=$?
 # ⛔ And here too the redirection goes INSIDE: `>/dev/null 2>&1` around
 #    `enter.sh` hides the password prompt exactly as above.
 bash "$ENTRA" "rm -f $PB > /dev/null 2>&1"
-if [ "$PROVA_BAN" -ne 0 ]; then
-	ko "⛔ the certification off the wire does NOT pass (exit $PROVA_BAN):"
+if [ "$TEST_BAN" -ne 0 ]; then
+	ko "⛔ the certification off the wire does NOT pass (exit $TEST_BAN):"
 	ko "   as long as it is red, the three pieces of the ban the wire does not see are"
 	ko "   proved by nothing, and the green of the run below is worth less"
 	exit 3
@@ -442,11 +442,11 @@ bash "$ENTRA" --root "python3 $DENTRO/01-b8-cronometro.py --bersaglio $B_NOME --
 # ---------------------------------------------------------------------------
 # ⛔ `bersaglio_opzioni_python` carries with it --bersaglio, --porta, --uscita,
 #    --md5 and --giro: the same five as B5, B6 and B7, in a single place.
-CRONO="python3 -u $DENTRO/01-b8-cronometro.py $(bersaglio_opzioni_python) \
+CHRONO="python3 -u $DENTRO/01-b8-cronometro.py $(bersaglio_opzioni_python) \
 	--indirizzi $INDIRIZZI --comando $COMANDO \
 	--utente $UTENTE --parola-file $PAROLA_DENTRO"
 
-ACCENDI() # $1 = why
+TURN_ON() # $1 = why
 {
 	# ⛔ The start lives in `bersaglio_accendi`: it passes `--ban-file` and
 	#    `--comando-socket` in the syntax that target understands
@@ -483,7 +483,7 @@ ACCENDI() # $1 = why
 		ko "   server said nothing about the ban», it is that I could not look"
 		return 4
 	fi
-	grep -E "$B_R_BAN_CARICATI|$B_R_BAN_ILLEGGIBILE|host-side ban|the page is served|$B_R_PAGINA|unblock command" \
+	grep -E "$B_R_BAN_LOADED|$B_R_BAN_UNREADABLE|host-side ban|the page is served|$B_R_PAGINA|unblock command" \
 		"$B_LOG_FUORI" | sed 's/^/        /'
 	# ⛔⭐ AND THE TWO LINES ARE WRITTEN DIFFERENTLY IN THE TWO SERVERS — they come
 	#     from the profile, not from here.
@@ -491,16 +491,16 @@ ACCENDI() # $1 = why
 	#       prodotto  «ban: <file>, N addresses loaded»  ·  «exists and could
 	#                 NOT be read»  — ⛔ and in that case the product does NOT
 	#                 START at all, so one does not even get here.
-	CARICHI=$(grep -c "$B_R_BAN_CARICATI" "$B_LOG_FUORI")
-	ILLEGGIBILI=$(grep -c "$B_R_BAN_ILLEGGIBILE" "$B_LOG_FUORI")
+	LOADS=$(grep -c "$B_R_BAN_LOADED" "$B_LOG_FUORI")
+	UNREADABLE=$(grep -c "$B_R_BAN_UNREADABLE" "$B_LOG_FUORI")
 	SOCKET=$(grep -c "the unblock command listens on" "$B_LOG_FUORI")
-	if [ "$ILLEGGIBILI" -gt 0 ]; then
+	if [ "$UNREADABLE" -gt 0 ]; then
 		ko "⛔ the server declares it could NOT read the ban file."
 		ko "   ⛔ This is NOT «zero bans»: the persistence of §4.4-bis starts from"
 		ko "   an unknown state, and every line about the ban that follows is worth less than zero"
 		return 4
 	fi
-	if [ "$CARICHI" -eq 0 ]; then
+	if [ "$LOADS" -eq 0 ]; then
 		ko "⛔ the server said NOTHING about the ban at start-up (no"
 		ko "   «bans loaded» line and no «COULD NOT READ» line)."
 		ko "   ⛔ It is precisely the pair this check exists to separate:"
@@ -508,7 +508,7 @@ ACCENDI() # $1 = why
 		ko "   the same face (LEZIONI.md §1.9 rule 1)"
 		return 4
 	fi
-	ok "the server declared the state of the ban: $CARICHI «bans loaded» lines"
+	ok "the server declared the state of the ban: $LOADS «bans loaded» lines"
 	ok "   and 0 «could not read» lines — they are two facts, and they are distinct"
 	if [ "$SOCKET" -eq 0 ]; then
 		ko "⛔ the unblock command is NOT listening: «$COMANDO» was not born."
@@ -521,7 +521,7 @@ ACCENDI() # $1 = why
 	return 0
 }
 
-SPEGNI()
+TURN_OFF()
 {
 	printf '\n===== %s =====\n' "$1" >> "$FUORI/b8-$B_NOME-server.log"
 	if [ -f "$B_LOG_FUORI" ]; then
@@ -544,15 +544,15 @@ VIVO() # ⛔ B0.5: after every test the server must still be there
 
 # ---------------------------------------------------------------------------
 log "3. The FIRST life of the server — the samples and the ban run"
-ACCENDI "first life" || exit 4
+TURN_ON "first life" || exit 4
 
 log "3.0  The initial state, declared AND verified (B0.1)"
 inf "⛔ and this unblock is BEFORE the run, not inside it (B0.3)"
-bash "$ENTRA" --root "$CRONO --stato-iniziale"
+bash "$ENTRA" --root "$CHRONO --stato-iniziale"
 if [ $? -ne 0 ]; then
 	ko "⛔ the initial state is not the declared one: I stop"
 	ko "   measuring from an unknown state means measuring the machine's history"
-	SPEGNI "first life (initial state failed)"
+	TURN_OFF "first life (initial state failed)"
 	exit 2
 fi
 
@@ -564,25 +564,25 @@ fi
 #    afterwards.  ⭐ And it is printed anyway, with its times: discarding silently
 #    is the most convenient way of hiding an awkward number.
 log "3.0b  the WARM-UP — a triplet, discarded by a rule written before (E9)"
-bash "$ENTRA" --root "$CRONO --campioni --blocco 0 --per-caso 1"
+bash "$ENTRA" --root "$CHRONO --campioni --blocco 0 --per-caso 1"
 VIVO "the warm-up" || exit 4
-bash "$ENTRA" --root "$CRONO --sblocca $INDIRIZZI --perche dopo-la-scaldata"
+bash "$ENTRA" --root "$CHRONO --sblocca $INDIRIZZI --perche dopo-la-scaldata"
 
 b=1
 while [ "$b" -le "$BLOCCHI" ]; do
 	log "3.$b  block $b of $BLOCCHI — $((PER_CASO * 3)) attempts"
-	bash "$ENTRA" --root "$CRONO --campioni --blocco $b --per-caso $PER_CASO"
+	bash "$ENTRA" --root "$CHRONO --campioni --blocco $b --per-caso $PER_CASO"
 	ESITO=$?
 	VIVO "block $b" || exit 4
 	if [ "$ESITO" -eq 2 ]; then
 		ko "⛔ block $b did not start (plan or initial state): I stop"
 		ko "   better no samples than samples taken outside the balance"
-		SPEGNI "first life (block $b did not start)"
+		TURN_OFF "first life (block $b did not start)"
 		exit 2
 	fi
 	if [ "$ESITO" -ne 0 ]; then
 		ko "block $b ended badly (exit $ESITO): I stop"
-		SPEGNI "first life (block $b failed)"
+		TURN_OFF "first life (block $b failed)"
 		exit "$ESITO"
 	fi
 	# ⛔ THE UNBLOCK BETWEEN ONE BLOCK AND THE NEXT, AND IT IS DECLARED — B0.3.
@@ -591,7 +591,7 @@ while [ "$b" -le "$BLOCCHI" ]; do
 	#    ⚠ It changes what the measurement is measuring, and that is why it is
 	#      printed: the samples are ALWAYS taken with the count below threshold.
 	if [ "$b" -lt "$BLOCCHI" ]; then
-		bash "$ENTRA" --root "$CRONO --sblocca $INDIRIZZI --perche fra-i-blocchi"
+		bash "$ENTRA" --root "$CHRONO --sblocca $INDIRIZZI --perche fra-i-blocchi"
 	fi
 	b=$((b + 1))
 done
@@ -603,17 +603,17 @@ inf "the unblock below is the LAST before the run: it serves to start from a"
 inf "reset count, and it is declared.  ⚠ If it failed, the ban run would notice"
 inf "   anyway — the balance of the blocks keeps every address at"
 inf "   two failures, that is one below the threshold"
-bash "$ENTRA" --root "$CRONO --sblocca $INDIRIZZI --perche prima-del-giro-del-ban"
-bash "$ENTRA" --root "$CRONO --ban prima"
-ESITO_BAN=$?
+bash "$ENTRA" --root "$CHRONO --sblocca $INDIRIZZI --perche prima-del-giro-del-ban"
+bash "$ENTRA" --root "$CHRONO --ban prima"
+OUTCOME_BAN=$?
 VIVO "the ban run" || exit 4
-if [ "$ESITO_BAN" -eq 2 ]; then
+if [ "$OUTCOME_BAN" -eq 2 ]; then
 	ko "⛔ the ban run did not start: the verdict would be blind"
-	SPEGNI "first life (ban run did not start)"
+	TURN_OFF "first life (ban run did not start)"
 	exit 2
 fi
 
-SPEGNI "first life"
+TURN_OFF "first life"
 
 # ---------------------------------------------------------------------------
 # ⛔ THE SECOND LIFE — and it serves ONE thing only: invariant I7.
@@ -621,8 +621,8 @@ log "5. ⭐ The SECOND life of the server — does the ban survive the restart?"
 inf "⛔ the ban file is NOT touched: it is the only road by which the ban can"
 inf "   come back, and throwing it away here would mean proving the opposite of"
 inf "   what one wants to prove"
-ACCENDI "second life" || exit 4
-bash "$ENTRA" --root "$CRONO --ban dopo"
+TURN_ON "second life" || exit 4
+bash "$ENTRA" --root "$CHRONO --ban dopo"
 ESITO_DOPO=$?
 VIVO "persistence and the unblock" || exit 4
 
@@ -630,8 +630,8 @@ VIVO "persistence and the unblock" || exit 4
 #    B0.3 says every bench that unblocks declares it.  Without this line the
 #    next bench would find an address out for twelve hours.
 log "6. The machine is put back in order (B0.3)"
-bash "$ENTRA" --root "$CRONO --sblocca $INDIRIZZI --perche pulizia-finale"
-SPEGNI "second life"
+bash "$ENTRA" --root "$CHRONO --sblocca $INDIRIZZI --perche pulizia-finale"
+TURN_OFF "second life"
 
 # ---------------------------------------------------------------------------
 log "7. The verdict — the bench compares it, not whoever reads (B0.4)"
@@ -643,14 +643,14 @@ log "7. The verdict — the bench compares it, not whoever reads (B0.4)"
 #    has always used: the bench writes, the orchestrator reads).
 # ⚠ And it is printed anyway, line by line: a verdict that ends up only in a
 #   file is a verdict nobody reads live.
-VERDETTO_FUORI="$FUORI/b8-verdetto-$B_NOME.txt"
-rm -f "$VERDETTO_FUORI"
-bash "$ENTRA" --root "$CRONO --verdetto --registro $DENTRO/b8-$B_NOME-server.log > $DENTRO/b8-verdetto-$B_NOME.txt 2>&1"
+VERDICT_FILE="$FUORI/b8-verdetto-$B_NOME.txt"
+rm -f "$VERDICT_FILE"
+bash "$ENTRA" --root "$CHRONO --verdetto --registro $DENTRO/b8-$B_NOME-server.log > $DENTRO/b8-verdetto-$B_NOME.txt 2>&1"
 ESITO=$?
-if [ -f "$VERDETTO_FUORI" ]; then
-	cat "$VERDETTO_FUORI"
+if [ -f "$VERDICT_FILE" ]; then
+	cat "$VERDICT_FILE"
 else
-	ko "⛔ the verdict did NOT write its file ($VERDETTO_FUORI): it is not"
+	ko "⛔ the verdict did NOT write its file ($VERDICT_FILE): it is not"
 	ko "   «it said nothing», it is that one never got as far as reading it"
 fi
 
@@ -660,7 +660,7 @@ fi
 #    time, built by hand, and the verdict must turn red **at that point**: a
 #    bench that does not reproduce is not a proof of correctness (§1.3).
 log "8. ⛔ The certification: the fault is built and the red is demanded"
-bash "$ENTRA" --root "$CRONO --certifica --registro $DENTRO/b8-$B_NOME-server.log"
+bash "$ENTRA" --root "$CHRONO --certifica --registro $DENTRO/b8-$B_NOME-server.log"
 CERT=$?
 if [ "$CERT" -ne 0 ]; then
 	ko "⛔ the certification of the JUDGE does not pass: as long as it is red, a green"

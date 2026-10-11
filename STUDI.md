@@ -3077,7 +3077,7 @@ in order of how hard they would bite us.*
 | **14** | **The wheel with `angleDelta/120`**, **integer** division | `PortalSession.cpp:161` | any step below a notch **is lost**. Confirms §7.2: use `ei_device_scroll_discrete(±120)` and pass the value almost as it is |
 
 > ⭐ **And the most instructive defect of all is in report 14 §2.2**: in 6.3.6 **the direction of
-> key press and release was inverted**. It is the same point that in our `input.c` · `manda_bottone()`
+> key press and release was inverted**. It is the same point that in our `input.c` · `send_button()`
 > we verified to be right (`gboolean premuto = !(flags & KBD_FLAGS_RELEASE)`). A mature RDP
 > server, inside KDE, shipped for one release a defect that shows at the first word typed:
 > **the test on the three clients is not bureaucracy.**

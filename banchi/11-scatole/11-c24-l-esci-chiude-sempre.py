@@ -148,16 +148,16 @@ REGISTRO = "/var/lib/rete11/registro.log"
 PAROLA = "provanic2026"
 
 
-def _carica(nome_file):
+def _carica(file_name):
     """⭐ C20 and C1 are IMPORTED: the table of gestures, the lines of the end, the
     clear-out and the card groups are there, and a copy here would be one
     more place to diverge from (§1.47)."""
     for base in (QUI, os.path.dirname(QUI), "/opt/remotix", "/rete11"):
-        perc = os.path.join(base, nome_file)
+        perc = os.path.join(base, file_name)
         if not os.path.exists(perc):
             continue
         spec = importlib.util.spec_from_file_location(
-            "importato_" + re.sub(r"\W", "_", nome_file), perc)
+            "importato_" + re.sub(r"\W", "_", file_name), perc)
         m = importlib.util.module_from_spec(spec)
         try:
             spec.loader.exec_module(m)
@@ -174,42 +174,42 @@ C20 = _carica("11-c20-la-rinascita-non-porta-fantasmi.py")
 #     «I AM MAKING IT BE BORN»  the child decides to make it be born  src/figlio.c
 #     «negotiated format»       the capture has started               src/cattura.c
 #   ⇒ After the gesture neither of the two must appear for this tenant.
-RIGA_FACCIO_NASCERE = "I AM MAKING IT BE BORN"
-RIGA_NASCITA = "negotiated format"
+LINE_SPAWNING = "I AM MAKING IT BE BORN"
+LINE_BIRTH = "negotiated format"
 # ⭐ The farewell as the client prints it (`01-b3-cliente.py`, «session closed
 #   by the server, code 0x10»).  It is the second witness of the end: the one
 #   whoever WATCHES sees, not what the product tells about itself.
-RIGA_CONGEDO = re.compile(r"code 0x10\b")
+LINE_FAREWELL = re.compile(r"code 0x10\b")
 
 # ⭐ The moment of the gesture CHANGES at every run.
 ATTESE_K = (8.0, 10.0, 12.0, 15.0)
-GUARDIA_T = 10.0
+GUARD_T = 10.0
 TETTO_NASCITA = 60.0
-TETTO_SCATOLA = 300.0
-# ⭐ How many «Log out» in a row each tenant does (see `un_inquilino`).
-ACCESSI = 2
+CAP_BOX = 300.0
+# ⭐ How many «Log out» in a row each tenant does (see `tenant`).
+ACCESSES = 2
 # ⚠ What it costs besides K and T, `[M]` 24 Sep 2026 on the four boxes:
 #   a login (birth + waiting for the dismissed client to leave) and a
 #   tenant (creation, groups, clear-out).  They serve ONLY to declare the
 #   duration before starting: the real ceilings are TETTO_NASCITA and the 15 s
 #   of the client's exit.
-SPESA_ACCESSO = 3.0
-SPESA_INQUILINO = 3.0
+ACCESS_COST = 3.0
+TENANT_COST = 3.0
 
 
-def attesa_del_giro(n, attese=None):
+def round_wait(n, attese=None):
     """⭐ K of run n (from 0): in rotation over `ATTESE_K`."""
     attese = attese or ATTESE_K
     return attese[n % len(attese)]
 
 
-def durata_prevista(giri, guardia=GUARDIA_T, accessi=ACCESSI, attese=None,
-                    spesa_accesso=SPESA_ACCESSO,
-                    spesa_inquilino=SPESA_INQUILINO):
+def durata_prevista(giri, guardia=GUARD_T, accessi=ACCESSES, attese=None,
+                    access_cost=ACCESS_COST,
+                    tenant_cost=TENANT_COST):
     """⭐ The seconds of N runs («Log out»), declared before starting — pure."""
     inquilini = -(-giri // max(1, accessi))
-    return (sum(spesa_accesso + attesa_del_giro(n, attese) + guardia
-                for n in range(giri)) + inquilini * spesa_inquilino)
+    return (sum(access_cost + round_wait(n, attese) + guardia
+                for n in range(giri)) + inquilini * tenant_cost)
 
 
 def e_di(riga, chi):
@@ -218,7 +218,7 @@ def e_di(riga, chi):
     return ("[%s]" % chi) in riga or ("«%s»" % chi) in riga
 
 
-def righe_finita():
+def finished_lines():
     """The two forms of the end, from C20 — or those written here if C20 is missing
     (and then `main()` exits 3 before using them)."""
     if C20 is not None:
@@ -226,7 +226,7 @@ def righe_finita():
     return []
 
 
-def giudica_il_giro(fetta, chi, detto_dal_cliente, finite=None):
+def judge_round(fetta, chi, client_output, finite=None):
     """⭐ (esito, perche) of ONE run, from the log lines written AFTER the
     gesture and from what the client printed — pure.
 
@@ -240,17 +240,17 @@ def giudica_il_giro(fetta, chi, detto_dal_cliente, finite=None):
        line would be exactly the defect slipping through.
     """
     if finite is None:
-        finite = righe_finita()
+        finite = finished_lines()
     if fetta is None:
         return 3, "I could not read the server log"
     mie = [r for r in fetta if e_di(r, chi)]
     nascite = [r for r in mie
-               if RIGA_FACCIO_NASCERE in r or RIGA_NASCITA in r]
+               if LINE_SPAWNING in r or LINE_BIRTH in r]
     if nascite:
         return 1, ("after «Log out» the session of «%s» IS REBORN (%d lines; the "
                    "first: %s)" % (chi, len(nascite), nascite[0].strip()[:110]))
     finita = next((p for p in finite if any(p in r for r in mie)), None)
-    congedo = bool(RIGA_CONGEDO.search(detto_dal_cliente or ""))
+    congedo = bool(LINE_FAREWELL.search(client_output or ""))
     if finita or congedo:
         return 0, ("over%s%s, and no birth after"
                    % ((" («%s»)" % finita) if finita else "",
@@ -260,7 +260,7 @@ def giudica_il_giro(fetta, chi, detto_dal_cliente, finite=None):
                "what happened")
 
 
-def esito_dei_giri(esiti):
+def rounds_outcome(esiti):
     """⭐ The mesh's outcome from the runs' outcomes — pure.
 
     ⛔ Even ONE rebirth is red: the race is caught once in twenty, and
@@ -278,7 +278,7 @@ def esito_dei_giri(esiti):
     return 0
 
 
-def esito_col_guasto(esito):
+def outcome_with_fault(esito):
     """⛔ With the injected fault it reads the other way round — pure."""
     return {1: 0, 0: 1}.get(esito, 3)
 
@@ -298,48 +298,48 @@ def certifica():
     fin = ["IS OVER", "has gone ⇒ the graphical session is over"]
     finita_f = ["figlio  ⭐ §7.6: the graphical session of «c24u1» IS OVER "
                 "(no client asked for it)"]
-    finita_p = ["padre  ⭐ §7.6: the stage of «c24u1» has gone ⇒ the "
+    finished_p = ["padre  ⭐ §7.6: the stage of «c24u1» has gone ⇒ the "
                 "graphical session is over: sent away 1 clients with 0x10"]
-    rinasce = ["figlio  [c24u1] ⭐ no graphical session for «c24u1»: I AM "
+    reborn = ["figlio  [c24u1] ⭐ no graphical session for «c24u1»: I AM "
                "MAKING IT BE BORN (canvas 1920x1080)"]
     negozia = ["cattura [c24u1] ⭐ negotiated format: 1920x1080 BGRx"]
     congedo = "   [wt]   session closed by the server, code 0x10 = ?"
-    g = lambda f, c="": giudica_il_giro(f, "c24u1", c, fin)[0]
+    g = lambda f, c="": judge_round(f, "c24u1", c, fin)[0]
     p("⭐ over (the child says so) ⇒ GREEN", g(finita_f), 0)
-    p("⭐ over (the parent says so, GNOME) ⇒ GREEN", g(finita_p), 0)
+    p("⭐ over (the parent says so, GNOME) ⇒ GREEN", g(finished_p), 0)
     p("⭐ nothing in the log but the client dismissed 0x10 ⇒ GREEN",
       g([], congedo), 0)
-    p("⛔ over AND then «I AM MAKING IT BE BORN» ⇒ RED", g(finita_f + rinasce), 1)
+    p("⛔ over AND then «I AM MAKING IT BE BORN» ⇒ RED", g(finita_f + reborn), 1)
     p("⛔ over AND then a second «negotiated format» ⇒ RED",
-      g(finita_p + negozia, congedo), 1)
-    p("⛔ reborn without ever saying over ⇒ RED", g(rinasce), 1)
+      g(finished_p + negozia, congedo), 1)
+    p("⛔ reborn without ever saying over ⇒ RED", g(reborn), 1)
     p("⚠ the rebirth belongs to ANOTHER tenant ⇒ GREEN for this one",
-      g(finita_f + [r.replace("c24u1", "c24u9") for r in rinasce]), 0)
+      g(finita_f + [r.replace("c24u1", "c24u9") for r in reborn]), 0)
     p("⚠ «c24u1» is not «c24u10» ⇒ the rebirth of c24u10 does not count",
-      g(finita_f + [r.replace("c24u1", "c24u10") for r in rinasce]), 0)
+      g(finita_f + [r.replace("c24u1", "c24u10") for r in reborn]), 0)
     p("⚠ nothing at all ⇒ 3, ⛔ never a green", g([]), 3)
     p("⚠ the log cannot be read ⇒ 3", g(None), 3)
     p("⚠ a code 0x100 is not 0x10 ⇒ 3",
       g([], "session closed by the server, code 0x100"), 3)
 
-    p("⭐ 10 greens ⇒ 0", esito_dei_giri([0] * 10), 0)
-    p("⛔ 9 greens and ONE rebirth ⇒ 1", esito_dei_giri([0] * 9 + [1]), 1)
-    p("⚠ 9 greens and a 3 ⇒ 3, ⛔ not a green", esito_dei_giri([0] * 9 + [3]), 3)
+    p("⭐ 10 greens ⇒ 0", rounds_outcome([0] * 10), 0)
+    p("⛔ 9 greens and ONE rebirth ⇒ 1", rounds_outcome([0] * 9 + [1]), 1)
+    p("⚠ 9 greens and a 3 ⇒ 3, ⛔ not a green", rounds_outcome([0] * 9 + [3]), 3)
     p("⛔ a red and a 3 ⇒ 1: the rebirth seen stays",
-      esito_dei_giri([3, 1, 0]), 1)
-    p("⚠ no run ⇒ 3", esito_dei_giri([]), 3)
-    p("⛔ fault seen (1) ⇒ 0", esito_col_guasto(1), 0)
-    p("⛔ fault NOT seen (0) ⇒ 1", esito_col_guasto(0), 1)
-    p("⚠ fault not looked at (3) ⇒ 3", esito_col_guasto(3), 3)
+      rounds_outcome([3, 1, 0]), 1)
+    p("⚠ no run ⇒ 3", rounds_outcome([]), 3)
+    p("⛔ fault seen (1) ⇒ 0", outcome_with_fault(1), 0)
+    p("⛔ fault NOT seen (0) ⇒ 1", outcome_with_fault(0), 1)
+    p("⚠ fault not looked at (3) ⇒ 3", outcome_with_fault(3), 3)
 
     p("⭐ K in rotation: 8, 10, 12, 15, 8",
-      [attesa_del_giro(n) for n in range(5)], [8.0, 10.0, 12.0, 15.0, 8.0])
-    p("⭐ 10 runs at 2 logins are 5 tenants", -(-10 // ACCESSI), 5)
-    p("⛔ 10 runs fit in the ceiling of %d s" % TETTO_SCATOLA,
-      durata_prevista(10) <= TETTO_SCATOLA, True)
+      [round_wait(n) for n in range(5)], [8.0, 10.0, 12.0, 15.0, 8.0])
+    p("⭐ 10 runs at 2 logins are 5 tenants", -(-10 // ACCESSES), 5)
+    p("⛔ 10 runs fit in the ceiling of %d s" % CAP_BOX,
+      durata_prevista(10) <= CAP_BOX, True)
     p("⭐ C20 is imported, and its table has the four desktops",
       (C20 is not None and len(C20.DESKTOP_E_GESTO) == 4), True)
-    p("⭐ and the two forms of the end come from C20", len(righe_finita()), 2)
+    p("⭐ and the two forms of the end come from C20", len(finished_lines()), 2)
     print()
     if guai:
         print("⛔ %d cases do NOT give what they must" % guai)
@@ -372,7 +372,7 @@ def ferma(proc):
         pass
 
 
-def leggi_testo(percorso):
+def read_text(percorso):
     try:
         with open(percorso, "r", encoding="utf-8", errors="replace") as f:
             return f.read()
@@ -380,7 +380,7 @@ def leggi_testo(percorso):
         return ""
 
 
-def un_accesso(i, k, chi, a, gesto, desktop, dove, clienti):
+def access(i, k, chi, a, gesto, desktop, dove, clienti):
     """⭐ (esito, perche) of ONE login: attach, birth, K seconds, «Log out»,
     T seconds of guard."""
     uscita = os.path.join(dove, "%s-%d.txt" % (chi, i))
@@ -389,18 +389,18 @@ def un_accesso(i, k, chi, a, gesto, desktop, dove, clienti):
     cli = attacca(a.porta, chi, TETTO_NASCITA + k + a.guardia + 30, uscita,
                   a.tela)
     clienti.append(cli)
-    nato, _ = C20.aspetta_la_riga(a.registro, segno, chi, RIGA_NASCITA,
+    nato, _ = C20.wait_line(a.registro, segno, chi, LINE_BIRTH,
                                   TETTO_NASCITA)
     if not nato:
         return 3, ("in %d s the session of %s (login %d) was not born: %s"
-                   % (TETTO_NASCITA, chi, i + 1, C20.coda_di(uscita)))
+                   % (TETTO_NASCITA, chi, i + 1, C20.tail_of(uscita)))
 
     # ── K seconds of session, then «Log out» from the menu ────────────────
     time.sleep(k)
     righe = C20.leggi(a.registro)
     segno = len(righe) if righe is not None else 0
     rtd, _ = C20.il_socket_di(chi)
-    t_gesto = time.time()
+    t_gesture = time.time()
     r = C20.sh("runuser -u %s -- env XDG_RUNTIME_DIR=%s "
                "DBUS_SESSION_BUS_ADDRESS=unix:path=%s/bus %s"
                % (chi, rtd, rtd, gesto), 20)
@@ -414,22 +414,22 @@ def un_accesso(i, k, chi, a, gesto, desktop, dove, clienti):
     #    ⛔ With the injected fault, as soon as the end is declared a client
     #       is reattached for the same tenant, INSIDE the window.
     if a.rientra_subito:
-        finita, _ = C20.aspetta_la_riga(a.registro, segno, chi,
-                                        righe_finita(), a.guardia - 2)
+        finita, _ = C20.wait_line(a.registro, segno, chi,
+                                        finished_lines(), a.guardia - 2)
         if finita:
             clienti.append(attacca(a.porta, chi, a.guardia + 10,
                                    uscita + ".guasto", a.tela))
             print("      ⛔ injected fault: end declared, reattaching %s "
-                  "after %.1f s" % (chi, time.time() - t_gesto))
-    resto = a.guardia - (time.time() - t_gesto)
+                  "after %.1f s" % (chi, time.time() - t_gesture))
+    resto = a.guardia - (time.time() - t_gesture)
     if resto > 0:
         time.sleep(resto)
     fetta = C20.leggi(a.registro)
     fetta = fetta[segno:] if fetta is not None else None
-    return giudica_il_giro(fetta, chi, leggi_testo(uscita))
+    return judge_round(fetta, chi, read_text(uscita))
 
 
-def un_inquilino(primo, quanti, a, gesto, desktop, dove):
+def tenant(primo, quanti, a, gesto, desktop, dove):
     """⭐ [(esito, perche, secondi)] of ONE new tenant, which does `quanti`
     «Log out» in a row — the runs `primo`, `primo+1`, … of the mesh.
 
@@ -463,8 +463,8 @@ def un_inquilino(primo, quanti, a, gesto, desktop, dove):
         if eg != 0:
             return [(3, perche_g, time.time() - t0)]
         for i in range(quanti):
-            k = attesa_del_giro(primo + i, a.attese)
-            esito, perche = un_accesso(i, k, chi, a, gesto, desktop, dove,
+            k = round_wait(primo + i, a.attese)
+            esito, perche = access(i, k, chi, a, gesto, desktop, dove,
                                        clienti)
             fuori.append((esito, "%s login %d · K=%.0f s · %s"
                           % (chi, i + 1, k, perche), time.time() - t0))
@@ -474,7 +474,7 @@ def un_inquilino(primo, quanti, a, gesto, desktop, dove):
             # ⚠ The previous client was dismissed: we wait for it to have really
             #   left, or the next login arrives while the
             #   first is still inside (C20, 23 Sep 2026).
-            C20.aspetta_che_il_cliente_se_ne_vada(a.porta, chi, 15)
+            C20.wait_client_gone(a.porta, chi, 15)
         return fuori
     finally:
         for c in clienti:
@@ -493,7 +493,7 @@ def main():
     p.add_argument("--porta", type=int, default=0)
     p.add_argument("--giri", type=int, default=0,
                    help="how many «Log out» (default 10; 2 with the fault)")
-    p.add_argument("--guardia", type=float, default=GUARDIA_T,
+    p.add_argument("--guardia", type=float, default=GUARD_T,
                    help="T: the seconds after the gesture in which nothing must be "
                         "born")
     p.add_argument("--registro", default=REGISTRO)
@@ -537,7 +537,7 @@ def main():
         return 3
     giri = a.giri or (2 if a.rientra_subito else 10)
 
-    desktop, gesto = C20.come_si_esce()
+    desktop, gesto = C20.how_to_exit()
     if desktop is None:
         print("⛔ %s ⇒ I could not look" % gesto)
         return 3
@@ -545,7 +545,7 @@ def main():
         print("⛔ I cannot read %s ⇒ I could not look" % a.registro)
         return 3
     accessi = max(1, a.accessi)
-    previsti = durata_prevista(giri, a.guardia, accessi, a.attese)
+    foreseen = durata_prevista(giri, a.guardia, accessi, a.attese)
     print("== C24 — «Log out» closes the session, always (%s, port %d, %d runs)%s"
           % (desktop, a.porta, giri,
              " ⛔ INJECTED FAULT: --rientra-subito" if a.rientra_subito
@@ -553,10 +553,10 @@ def main():
     print("   «Log out» is said like this: %s" % gesto)
     print("   expected duration: ~%.0f s (%d runs = %d tenants × %d logins; "
           "every run %.0f s + K + T=%.0f s)%s"
-          % (previsti, giri, -(-giri // accessi), accessi, SPESA_ACCESSO,
+          % (foreseen, giri, -(-giri // accessi), accessi, ACCESS_COST,
              a.guardia,
-                  "" if previsti <= TETTO_SCATOLA else
-                  "  ⚠ BEYOND the net's ceiling of %.0f s" % TETTO_SCATOLA))
+                  "" if foreseen <= CAP_BOX else
+                  "  ⚠ BEYOND the net's ceiling of %.0f s" % CAP_BOX))
 
     dove = "/tmp/c24.%d" % os.getpid()
     os.makedirs(dove, exist_ok=True)
@@ -564,7 +564,7 @@ def main():
     esiti = []
     try:
         while len(esiti) < giri:
-            for e, perche, s in un_inquilino(len(esiti),
+            for e, perche, s in tenant(len(esiti),
                                              min(accessi, giri - len(esiti)),
                                              a, gesto, desktop, dove):
                 esiti.append(e)
@@ -579,15 +579,15 @@ def main():
         except OSError:
             pass
 
-    esito = esito_dei_giri(esiti)
-    rinate, verdi = esiti.count(1), esiti.count(0)
+    esito = rounds_outcome(esiti)
+    respawned, verdi = esiti.count(1), esiti.count(0)
     print()
-    print("   duration: %.0f s (expected ~%.0f s)" % (time.time() - t0, previsti))
+    print("   duration: %.0f s (expected ~%.0f s)" % (time.time() - t0, foreseen))
     if a.rientra_subito:
-        fuori = esito_col_guasto(esito)
+        fuori = outcome_with_fault(esito)
         if fuori == 0:
             print("⭐ THE INJECTED FAULT WAS SEEN — reborn %d times out of "
-                  "%d: this mesh CAN give red" % (rinate, giri))
+                  "%d: this mesh CAN give red" % (respawned, giri))
         elif fuori == 1:
             print("⛔⛔ THE INJECTED FAULT WAS NOT SEEN: the session was "
                   "really reborn\n   (a new attach) and the mesh said "
@@ -600,7 +600,7 @@ def main():
               "reborn" % (verdi, giri))
     elif esito == 1:
         print("⛔⛔ RED — after «Log out» the session was REBORN %d times out of %d"
-              % (rinate, giri))
+              % (respawned, giri))
     else:
         print("⚠ I could not look — %d runs out of %d without an outcome"
               % (esiti.count(3), giri))

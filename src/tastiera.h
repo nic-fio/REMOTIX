@@ -51,7 +51,7 @@ Tastiera *tastiera_apri(const char *disposizione, char **errore);
  *
  * ⚠ And the old signature STAYS, instead of growing a parameter: it is used by
  *   `banchi/04-b25-tastiera.c`, and in this module by the two internal
- *   comparison openings (`tastiera_apri_da_keymap`, `tastiera_e_questa`) that
+ *   comparison openings (`keyboard_open_from_keymap`, `tastiera_e_questa`) that
  *   run only in the child.  ⇒ Whoever has no tenant to name should not have to
  *   write `NULL` to say so.
  */
@@ -96,7 +96,7 @@ Tastiera *tastiera_apri_per(const char *disposizione, const char *chi, char **er
  *    measures that a keymap change destroys and recreates the keyboard device,
  *    and the old one stops working **without an error**.
  */
-Tastiera *tastiera_apri_da_keymap(const char *testo, size_t lunghezza,
+Tastiera *keyboard_open_from_keymap(const char *testo, size_t lunghezza,
                                   const char *negoziata, char **errore);
 
 /* How many key positions at most a letter needs (with the modifiers). */
@@ -128,7 +128,7 @@ int tastiera_posizioni_per(Tastiera *, uint32_t carattere,
  * The name of the layout actually in force, for the log and for
  * the answer to the client.  Never NULL after a successful opening.
  */
-const char *tastiera_disposizione(Tastiera *);
+const char *keyboard_layout(Tastiera *);
 
 /*
  * ⛔⭐ "DOES THIS KEYMAP DO WHAT `nome` WOULD DO?" — and it serves not to ask twice
@@ -150,7 +150,7 @@ const char *tastiera_disposizione(Tastiera *);
  *
  * ⚠ And the comparison is the usual one: two layouts are the same if
  *   **they produce the same characters on the same keys**, not if they are called
- *   the same way (see the box of `fanno_la_stessa_cosa` in the `.c`).
+ *   the same way (see the box of `do_the_same` in the `.c`).
  *
  *   returns  1  yes, this keymap does what `nome` would do
  *   returns  0  no
@@ -159,6 +159,6 @@ const char *tastiera_disposizione(Tastiera *);
  */
 int tastiera_e_questa(Tastiera *, const char *nome);
 
-void tastiera_chiudi(Tastiera *);
+void keyboard_close(Tastiera *);
 
 #endif /* REMOTIX_TASTIERA_H */

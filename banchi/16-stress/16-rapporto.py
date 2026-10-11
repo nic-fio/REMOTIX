@@ -34,9 +34,9 @@ QUI = os.path.dirname(os.path.abspath(__file__))
 DESKTOP = ("gnome", "kde", "xfce", "lxqt")
 MISURE = ("4K", "3K", "2K", "FHD")
 ORD = {"GREEN": 0, "DEGRADED": 1, "FAIL": 2}
-SERIE = (("cpu", "machine CPU"), ("disegno", "card: drawing"),
+SERIAL = (("cpu", "machine CPU"), ("disegno", "card: drawing"),
          ("video", "card: video"), ("mem", "memory used"))
-BREVI = {"cpu": "CPU", "disegno": "drawing", "video": "video", "mem": "memory"}
+SHORT = {"cpu": "CPU", "disegno": "drawing", "video": "video", "mem": "memory"}
 
 # ── the rows of the register written before the English rename (DECISIONI §10.38) keep the Italian
 #    words: the register (*.jsonl, misure/) is never rewritten.  The first tuple is protected
@@ -78,7 +78,7 @@ def leggi(p):
     return out
 
 
-def colonna_scheda(s):
+def column_card(s):
     s = (s or "").lower()
     if "amd" in s or "radeon" in s or "rx" in s:
         return "radeon"
@@ -87,7 +87,7 @@ def colonna_scheda(s):
     return s or "?"
 
 
-def misura_di(m):
+def size_of(m):
     m = str(m or "").lower().replace(" ", "")
     if m in ("4k", "3840x2160"):
         return "4K"
@@ -128,7 +128,7 @@ def peggiore(sess, voce, verso="max"):
     return max(v) if verso == "max" else min(v)
 
 
-def sommario(liv):
+def summary(liv):
     r = liv.get("risorse") or {}
     out = {"cpu": (r.get("cpu_macchina_pct") or {}).get("media")}
     dis = vid = None
@@ -145,7 +145,7 @@ def sommario(liv):
     return out
 
 
-def esiti_campagna(cc):
+def outcomes_campaign(cc):
     liv = sorted(cc["livelli"])
     verdi = [n for n in liv if cc["livelli"][n]["classe"] == "GREEN"]
     rotti = [n for n in liv if cc["livelli"][n]["classe"] == "FAIL"]
@@ -169,10 +169,10 @@ def collo(cc):
     liv = sorted(cc["livelli"])
     if not liv:
         return None
-    brutti = [n for n in liv if cc["livelli"][n]["classe"] != "GREEN"]
-    n = brutti[0] if brutti else liv[-1]
+    ugly = [n for n in liv if cc["livelli"][n]["classe"] != "GREEN"]
+    n = ugly[0] if ugly else liv[-1]
     L = cc["livelli"][n]
-    s = sommario(L)
+    s = summary(L)
     cand = [(k, v) for k, v in s.items() if v is not None]
     if not cand:
         return {"livello": n, "risorsa": None}
@@ -193,11 +193,11 @@ def collo(cc):
             if val is not None:
                 rec.append((nome, "%.0f MB" % val, val))
     rec.sort(key=lambda t: -t[2])
-    stroz = sorted({x for g in (r.get("gpu") or {}).values()
+    throttle = sorted({x for g in (r.get("gpu") or {}).values()
                     for x, f in (g.get("strozzatura_frazione") or {}).items() if f >= 0.1})
     temp = max([((g.get("temp_c") or {}).get("max") or 0) for g in (r.get("gpu") or {}).values()] or [0])
-    return {"livello": n, "classe": L["classe"], "risorsa": dict(SERIE)[k], "valore": v,
-            "recinti": rec[:3], "strozzatura": stroz, "temp_max": temp or None}
+    return {"livello": n, "classe": L["classe"], "risorsa": dict(SERIAL)[k], "valore": v,
+            "recinti": rec[:3], "strozzatura": throttle, "temp_max": temp or None}
 
 
 # ─────────────────────────────── text ──────────────────────────────────────
@@ -205,13 +205,13 @@ def testo(righe):
     c = campagne(righe)
     out = ["PHASE 16 — %d campaigns" % len(c)]
     for k, cc in sorted(c.items()):
-        e = esiti_campagna(cc)
+        e = outcomes_campaign(cc)
         out.append("\n%s (%s · %s · %s) — holds %s · last GREEN %s · break %s" % (
             k, cc["meta"].get("desktop"), cc["meta"].get("scheda"), cc["meta"].get("misura"),
             e["regge"], e["ultimo_verde"], e["rottura"]))
         for n in sorted(cc["livelli"]):
             L = cc["livelli"][n]
-            s = sommario(L)
+            s = summary(L)
             out.append("  %3s users  %-8s %s  cpu %s%% drawing %s%% video %s%% mem %s%%%s" % (
                 n, L["classe"], "SIG" if L.get("significativo") and L["classe"] == "DEGRADED" else "   ",
                 s["cpu"], s["disegno"], s["video"], s["mem"],
@@ -296,8 +296,8 @@ def grafico(cc):
     s.append("<text x='%d' y='%d' font-size='11' text-anchor='end' fill='var(--tenue)'>users →</text>"
              % (L + sx, 14 + sy + 46))
     etichette = []
-    for i, (k, nome) in enumerate(SERIE):
-        pts = [(n, sommario(cc["livelli"][n])[k]) for n in liv]
+    for i, (k, nome) in enumerate(SERIAL):
+        pts = [(n, summary(cc["livelli"][n])[k]) for n in liv]
         pts = [(n, v) for n, v in pts if v is not None]
         if not pts:
             continue
@@ -308,7 +308,7 @@ def grafico(cc):
             s.append("<circle cx='%.1f' cy='%.1f' r='4' fill='%s' stroke='var(--carta)' stroke-width='2'>"
                      "<title>%s users · %s: %.1f %%</title></circle>" % (X(n), Y(min(v, 100)), col, n, e(nome), v))
         n, v = pts[-1]
-        etichette.append([Y(min(v, 100)) + 4, X(n) + 10, BREVI[k]])
+        etichette.append([Y(min(v, 100)) + 4, X(n) + 10, SHORT[k]])
     # the labels at the end of the lines do not overlap: at least 13 px between one and the next
     etichette.sort()
     for j in range(1, len(etichette)):
@@ -316,7 +316,7 @@ def grafico(cc):
     for y, x, t in etichette:
         s.append("<text x='%.1f' y='%.1f' font-size='11' fill='var(--testo)'>%s</text>" % (x, y, e(t)))
     s.append("</svg>")
-    leg = "".join("<span><i style='background:var(--s%d)'></i>%s</span>" % (i + 1, e(n)) for i, (_, n) in enumerate(SERIE))
+    leg = "".join("<span><i style='background:var(--s%d)'></i>%s</span>" % (i + 1, e(n)) for i, (_, n) in enumerate(SERIAL))
     return ("<div class='grafico'>%s<div class='legenda'>%s<span>below the axis: the class of the level "
             "(✓ GREEN · ▲ DEGRADED · ✕ FAIL)</span></div></div>" % ("".join(s), leg))
 
@@ -342,7 +342,7 @@ def pagina(righe):
     trova = {}
     for k, cc in c.items():
         m = cc["meta"]
-        trova[(m.get("desktop"), colonna_scheda(m.get("scheda")), misura_di(m.get("misura")))] = (k, esiti_campagna(cc))
+        trova[(m.get("desktop"), column_card(m.get("scheda")), size_of(m.get("misura")))] = (k, outcomes_campaign(cc))
     h.append("<h2>Summary: how many users together</h2><p class='tenue'>The big number: users "
              "together with <b>all</b> under 50 ms and every other measure GREEN (§9). Below, «holds»: "
              "the level at which at most one user in four is just over (never above 100 ms) and "
@@ -366,7 +366,7 @@ def pagina(righe):
         h.append("</tr>")
     h.append("</tbody></table></div>")
     # ── the §11 matrix ──
-    schede = sorted({colonna_scheda(cc["meta"].get("scheda")) for cc in c.values()} | {"intel", "radeon"})
+    schede = sorted({column_card(cc["meta"].get("scheda")) for cc in c.values()} | {"intel", "radeon"})
     h.append("<h2>The final matrix</h2><p class='tenue'>For every screen size: the last level "
              "in GREEN · the breaking point (first FAIL). Every row links to its climb.</p>")
     h.append("<div class='scorre'><table><thead><tr><th>desktop</th>%s</tr></thead><tbody>"
@@ -376,15 +376,15 @@ def pagina(righe):
         h.append("<tr><th>%s</th>" % e(d.upper() if d != "lxqt" else "LXQt"))
         for sc in schede:
             celle = []
-            for k, cc in sorted(c.items(), key=lambda kv: MISURE.index(misura_di(kv[1]["meta"].get("misura")))
-                                if misura_di(kv[1]["meta"].get("misura")) in MISURE else 9):
-                if cc["meta"].get("desktop") != d or colonna_scheda(cc["meta"].get("scheda")) != sc:
+            for k, cc in sorted(c.items(), key=lambda kv: MISURE.index(size_of(kv[1]["meta"].get("misura")))
+                                if size_of(kv[1]["meta"].get("misura")) in MISURE else 9):
+                if cc["meta"].get("desktop") != d or column_card(cc["meta"].get("scheda")) != sc:
                     continue
-                es = esiti_campagna(cc)
+                es = outcomes_campaign(cc)
                 cl = "GREEN" if es["rottura"] is None and es["primo_degradato"] is None else (
                     "FAIL" if es["rottura"] is not None else "DEGRADED")
                 celle.append("<a href='#%s' class='bollo %s'>%s</a> holds <b>%s</b> · last GREEN <b>%s</b> · break <b>%s</b>"
-                             % (e(k), cl, e(misura_di(cc["meta"].get("misura"))), fmt(es["regge"]),
+                             % (e(k), cl, e(size_of(cc["meta"].get("misura"))), fmt(es["regge"]),
                                 fmt(es["ultimo_verde"]), fmt(es["rottura"])))
             h.append("<td>%s</td>" % ("<br>".join(celle) if celle else "<span class='tenue'>·</span>"))
         h.append("</tr>")
@@ -416,7 +416,7 @@ def pagina(righe):
                  "<th>memory</th></tr></thead><tbody>")
         for n in sorted(cc["livelli"]):
             L, ss = cc["livelli"][n], cc["sessioni"].get(n, [])
-            s = sommario(L)
+            s = summary(L)
             co = L.get("sessioni") or {}
             rip = cc["ripetizioni"].get(n, 1)
             h.append("<tr><th>%s%s</th><td>%s</td><td class='n'>%s/%s/%s</td>" % (
@@ -515,7 +515,7 @@ def certifica():
         sintetico(reg)
         righe = leggi(reg)
         c = campagne(righe)
-        e = esiti_campagna(c["intel-4k-kde"])
+        e = outcomes_campaign(c["intel-4k-kde"])
         guarda("the bisection: last GREEN 10, break 11", e["ultimo_verde"] == 10 and e["rottura"] == 11,
                str(e))
         guarda("the repetition of §14 takes the place of the first",
@@ -557,28 +557,28 @@ def certifica():
     return 0 if ok == n else 1
 
 
-def scegli(righe, prefissi):
+def choose(righe, prefixes):
     """⭐ The VALID campaigns (fasi/16 §11 and the anomalies): only the given labels (`intel-b`,
     `amd-b`, `intel-c` …), and for every desktop × card × size cell the **most
     recent** campaign — a redone climb (actor cured, product cured, resumed after a block)
     takes the place of the earlier one.  The discarded ones are listed, they do not vanish silently."""
-    if not prefissi:
+    if not prefixes:
         return righe, []
-    tieni = [r for r in righe if any((r.get("campagna") or "").startswith(x + "-") for x in prefissi)]
+    tieni = [r for r in righe if any((r.get("campagna") or "").startswith(x + "-") for x in prefixes)]
     quando, casella = {}, {}
     for r in tieni:
         if r.get("tipo") != "livello":
             continue
         k = r.get("campagna")
         quando[k] = max(quando.get(k, ""), r.get("inizio") or "")
-        casella[k] = (r.get("desktop"), colonna_scheda(r.get("scheda")), misura_di(r.get("misura")))
+        casella[k] = (r.get("desktop"), column_card(r.get("scheda")), size_of(r.get("misura")))
     vince = {}
     for k, cas in casella.items():
         if cas not in vince or quando[k] > quando[vince[cas]]:
             vince[cas] = k
     buone = set(vince.values())
-    scartate = sorted(k for k in casella if k not in buone)
-    return [r for r in tieni if r.get("campagna") in buone], scartate
+    discarded = sorted(k for k in casella if k not in buone)
+    return [r for r in tieni if r.get("campagna") in buone], discarded
 
 
 def main():
@@ -598,9 +598,9 @@ def main():
         sintetico(o.sintetico)
         return 0
     righe = leggi(o.registro)
-    righe, scartate = scegli(righe, o.campagne)
-    if scartate:
-        print("⚠ replaced by a more recent climb: %s" % ", ".join(scartate))
+    righe, discarded = choose(righe, o.campagne)
+    if discarded:
+        print("⚠ replaced by a more recent climb: %s" % ", ".join(discarded))
     with open(o.html, "w", encoding="utf-8") as f:
         f.write(pagina(righe))
     if o.testo:

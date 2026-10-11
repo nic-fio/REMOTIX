@@ -123,7 +123,7 @@ MODELLO = re.compile(r"^c[0-9]+b?u[0-9]+$")
 #   rule — the rule is the pattern above, and they do not fall into it
 #   by shape.  This list only serves to PRINT them, so whoever reads sees that
 #   the distinction was made and not forgotten.
-DI_SERVIZIO = {
+SERVICE_PROCESSES = {
     "provanic": "the benches' test user (the recipe puts it there)",
     "nictest":  "⭐ the user of the MANUAL tests: it is in the boxes on purpose, "
                 "and this mesh neither touches nor counts it",
@@ -138,7 +138,7 @@ def corri(argv, tempo=30):
         return None
 
 
-def guscio(riga, tempo=30):
+def shell(riga, tempo=30):
     try:
         return subprocess.run(["/bin/sh", "-c", riga], capture_output=True,
                               text=True, timeout=tempo)
@@ -151,7 +151,7 @@ def guscio(riga, tempo=30):
 #   could not be read.  ⛔ `None` is not «empty»: empty is a green, `None`
 #   is an «I could not look».
 # ═══════════════════════════════════════════════════════════════════════════
-def tutti_gli_utenti():
+def all_users():
     """[(name, uid)] of `/etc/passwd`, or `None`."""
     r = corri(["getent", "passwd"], 20)
     if r is None or r.returncode != 0:
@@ -176,7 +176,7 @@ def case_in(cartella="/home"):
         return None
 
 
-def processi_di(nomi):
+def processes_of(nomi):
     """{name: [pid…]} for the given names.  ⛔ It asks `pgrep -u`, which looks at
        the REAL uid: ⚠ a `pkill -f` on the name would also catch the shell that
        is running it (`LEZIONI.md`, 22 Sep 2026: the shell was killing
@@ -202,7 +202,7 @@ def sporco_della_scatola(noti):
             m = re.match(r"^\s*user@(\d+)\.service", riga)
             if m and int(m.group(1)) not in noti:
                 unita.append(m.group(1))
-    r = guscio("find /tmp -mindepth 1 -maxdepth 1 -nouser 2>/dev/null", 30)
+    r = shell("find /tmp -mindepth 1 -maxdepth 1 -nouser 2>/dev/null", 30)
     if r is not None:
         orfani = [x for x in (r.stdout or "").splitlines() if x.strip()]
     r = corri(["loginctl", "list-sessions", "--no-legend"], 20)
@@ -273,14 +273,14 @@ def giudizio(utenti, case, processi, sporco=None):
 #   dies half-way, the hook clears them out by itself at the next mesh.  ⛔ A bench
 #   that leaves leftovers while measuring leftovers would be a joke.
 # ═══════════════════════════════════════════════════════════════════════════
-def innesta_un_inquilino(chi):
+def graft_tenant(chi):
     """⛔ A LIVE tenant of the net: user + home + a process of theirs."""
     r = corri(["useradd", "-m", "-s", "/bin/bash", chi], 60)
     if r is None or r.returncode != 0:
         return False, "useradd did not succeed"
     # ⚠ `setsid` and stdin on /dev/null, like C3's scene: a child left
     #   in the terminal's process group ends up stopped in `T`.
-    guscio("setsid runuser -u %s -- sleep 600 < /dev/null > /dev/null 2>&1 &"
+    shell("setsid runuser -u %s -- sleep 600 < /dev/null > /dev/null 2>&1 &"
            % chi, 20)
     for _ in range(20):
         r = corri(["pgrep", "-u", chi], 10)
@@ -290,7 +290,7 @@ def innesta_un_inquilino(chi):
     return True, "⚠ the user is there but their process was not seen"
 
 
-def innesta_una_casa(chi):
+def graft_home(chi):
     """⛔ ONLY the home: the user not.  It is the `userdel` without `-r`, that is the
        leftover no `pgrep` and no `getent passwd` see."""
     try:
@@ -302,13 +302,13 @@ def innesta_una_casa(chi):
         return False, "I could not make /home/%s: %s" % (chi, e)
 
 
-def togli_il_guasto(chi):
+def remove_fault(chi):
     """⭐ Always, and without asking."""
     corri(["loginctl", "terminate-user", chi], 20)
     corri(["pkill", "-KILL", "-u", chi], 10)
     time.sleep(0.3)
     corri(["userdel", "-r", chi], 30)
-    guscio("rm -rf /home/%s" % chi, 20)
+    shell("rm -rf /home/%s" % chi, 20)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -362,12 +362,12 @@ def certifica():
 
     # ⭐ And the pattern is tested by NAME, not by trust: it is the only thing that
     #   separates a tenant of the net from `nictest`.
-    prove_nome = [("c1u1", True), ("c3u2", True), ("c8bu5", True),
+    name_cases = [("c1u1", True), ("c3u2", True), ("c8bu5", True),
                   ("c17u931", True), ("c20u407", True), ("c19u100", True),
                   ("nictest", False), ("provanic", False), ("root", False),
                   ("corrx1", False), ("w4u12345", False), ("ki9", False),
                   ("c1u1x", False), ("xc1u1", False)]
-    for nome, atteso in prove_nome:
+    for nome, atteso in name_cases:
         avuto = bool(MODELLO.match(nome))
         if avuto != atteso:
             guai += 1
@@ -421,22 +421,22 @@ def main():
     print("== C19 — at the end of the run no tenant of the net survives%s"
           % innestato)
 
-    guasto_chi = None
+    fault_who = None
     try:
         if a.lascia_un_inquilino or a.lascia_una_casa:
-            guasto_chi = chi
-            togli_il_guasto(chi)
+            fault_who = chi
+            remove_fault(chi)
             if a.lascia_un_inquilino:
-                fatto, nota = innesta_un_inquilino(chi)
+                fatto, nota = graft_tenant(chi)
             else:
-                fatto, nota = innesta_una_casa(chi)
+                fatto, nota = graft_home(chi)
             if not fatto:
                 print("   ⛔ I could not inject the fault (%s) ⇒ I could "
                       "not look" % nota)
                 return 3
             print("   ⛔ injected: %s%s" % (chi, (" — " + nota) if nota else ""))
 
-        utenti = tutti_gli_utenti()
+        utenti = all_users()
         case = case_in(a.case)
         if utenti is None or case is None:
             esito, u, c, pf, perche = giudizio(utenti, case, {}, None)
@@ -444,18 +444,18 @@ def main():
             return 3
 
         della_rete = sorted(n for n, _ in utenti if MODELLO.match(n))
-        processi = processi_di(della_rete + sorted(DI_SERVIZIO))
+        processi = processes_of(della_rete + sorted(SERVICE_PROCESSES))
         noti = set(uid for _, uid in utenti)
         sporco = sporco_della_scatola(noti)
 
         # ── what I do NOT count, printed: the distinction shows ──
         fuori = sorted(n for n, uid in utenti
                        if 1000 <= uid < 60000 and not MODELLO.match(n)
-                       and n not in DI_SERVIZIO)
-        for n in sorted(DI_SERVIZIO):
+                       and n not in SERVICE_PROCESSES)
+        for n in sorted(SERVICE_PROCESSES):
             if any(x == n for x, _ in utenti):
                 print("   ⭐ I do NOT count it: «%s» — %s%s"
-                      % (n, DI_SERVIZIO[n],
+                      % (n, SERVICE_PROCESSES[n],
                          (" (now it has %d processes)" % len(processi[n]))
                          if n in processi else ""))
         if fuori:
@@ -500,10 +500,10 @@ def main():
             print("⚠ I could not look — %s" % perche)
         return esito
     finally:
-        if guasto_chi:
-            togli_il_guasto(guasto_chi)
+        if fault_who:
+            remove_fault(fault_who)
             print("   ⭐ the injected fault was removed: «%s» is no longer there"
-                  % guasto_chi)
+                  % fault_who)
 
 
 if __name__ == "__main__":

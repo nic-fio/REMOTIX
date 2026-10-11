@@ -39,10 +39,10 @@ import os
 import subprocess
 import sys
 
-ESEMPI = "/srv/src/b2/ngtcp2/examples"
+EXAMPLES = "/srv/src/b2/ngtcp2/examples"
 MARCA = "REMOTIX B11 GUASTO"
 
-INNESTI = [
+GRAFTS = [
     # ── 1. The field that holds the name of the fault ──────────────────────
     (
         "rcp.c",
@@ -305,18 +305,18 @@ def leggi(percorso):
        bench instead of looking like a zero.
     """
     try:
-        with open(os.path.join(ESEMPI, percorso), encoding="utf-8") as f:
+        with open(os.path.join(EXAMPLES, percorso), encoding="utf-8") as f:
             return f.read()
     except FileNotFoundError:
         return None
 
 
 def scrivi(percorso, testo):
-    with open(os.path.join(ESEMPI, percorso), "w", encoding="utf-8") as f:
+    with open(os.path.join(EXAMPLES, percorso), "w", encoding="utf-8") as f:
         f.write(testo)
 
 
-def marche_attese():
+def expected_marks():
     """How many times the mark must appear in each file once the graft is done.
 
     ⭐ The number is COMPUTED by the table, not written by a hand: it is the
@@ -325,8 +325,8 @@ def marche_attese():
        graft someone adds.
     """
     conto = {}
-    for percorso, _appiglio, sostituto, _nome in INNESTI:
-        conto[percorso] = conto.get(percorso, 0) + sostituto.count(MARCA)
+    for percorso, _foothold, substitute, _name in GRAFTS:
+        conto[percorso] = conto.get(percorso, 0) + substitute.count(MARCA)
     return conto
 
 
@@ -342,27 +342,27 @@ def togli():
     what whoever finds it six months from now will read.
     """
     print("== Removing the B11 faults")
-    testi, originali, tolti = {}, {}, 0
+    testi, originals, tolti = {}, {}, 0
     # ⛔ In REVERSE order to how they were put in: a substitute can contain
     #    the foothold of another, and undoing backwards is the only order that
     #    leaves no half grafts.
-    for percorso, appiglio, sostituto, nome in reversed(INNESTI):
+    for percorso, appiglio, substitute, nome in reversed(GRAFTS):
         if percorso not in testi:
-            testi[percorso] = originali[percorso] = leggi(percorso)
+            testi[percorso] = originals[percorso] = leggi(percorso)
         if testi[percorso] is None:
             print(f"   --  {nome:32s} {percorso} is not there: nothing to remove")
             continue
-        n = testi[percorso].count(sostituto)
+        n = testi[percorso].count(substitute)
         if n == 0:
             print(f"   --  {nome:32s} was not there")
             continue
-        testi[percorso] = testi[percorso].replace(sostituto, appiglio)
+        testi[percorso] = testi[percorso].replace(substitute, appiglio)
         tolti += 1
         print(f"   OK  {nome:32s} removed {n} time(s)  [{percorso}]")
 
     scritti = 0
     for percorso, testo in testi.items():
-        if testo is not None and testo != originali[percorso]:
+        if testo is not None and testo != originals[percorso]:
             scrivi(percorso, testo)
             scritti += 1
 
@@ -387,16 +387,16 @@ def togli():
 def innesta():
     print("== The B11 faults — lines that must NOT survive the phase")
     testi = {}
-    for percorso in dict.fromkeys(p for p, *_ in INNESTI):
+    for percorso in dict.fromkeys(p for p, *_ in GRAFTS):
         testi[percorso] = leggi(percorso)
         if testi[percorso] is None:
-            print(f"   ⛔ {percorso} is not in {ESEMPI}: the B2 and")
+            print(f"   ⛔ {percorso} is not in {EXAMPLES}: the B2 and")
             print("      B3 grafts must be applied BEFORE this one.")
             return 1
-    originali = dict(testi)
+    originals = dict(testi)
 
-    applicati, gia, guasti = 0, 0, 0
-    for percorso, appiglio, sostituto, nome in INNESTI:
+    applied, gia, guasti = 0, 0, 0
+    for percorso, appiglio, substitute, nome in GRAFTS:
         # ⛔ THE GUARD ASKS WHETHER THIS GRAFT IS THERE, not whether there is A mark.
         #
         #    It was `MARCA in testo and appiglio not in testo`, and three grafts out of
@@ -411,7 +411,7 @@ def innesta():
         #    a red that belongs to the graft.
         # ⭐ The substitute is the only thing that can say "this graft is
         #    already there", because it is exactly what was written on disk.
-        if sostituto in testi[percorso]:
+        if substitute in testi[percorso]:
             gia += 1
             print(f"   ⚠  {nome:32s} already there  [{percorso}]")
             continue
@@ -421,8 +421,8 @@ def innesta():
         if n != 1:
             guasti += 1
             continue
-        testi[percorso] = testi[percorso].replace(appiglio, sostituto, 1)
-        applicati += 1
+        testi[percorso] = testi[percorso].replace(appiglio, substitute, 1)
+        applied += 1
 
     if guasti:
         print(f"\n   ⛔ {guasti} footholds not found: NOTHING is written.")
@@ -430,7 +430,7 @@ def innesta():
         print("      way different from the one the bench believes it is measuring.")
         return 1
 
-    scritti = [p for p in testi if testi[p] != originali[p]]
+    scritti = [p for p in testi if testi[p] != originals[p]]
     for percorso in scritti:
         scrivi(percorso, testi[percorso])
 
@@ -442,7 +442,7 @@ def innesta():
     #    11 guasti innestati in 3 file" with zero substitutions, and returned 0.
     #    ⚠ A count that cannot be zero is not a count: it is a
     #      caption (`LEZIONI.md` §1.9).
-    attese = marche_attese()
+    attese = expected_marks()
     male = 0
     for percorso, atteso in attese.items():
         vero = (leggi(percorso) or "").count(MARCA)
@@ -450,8 +450,8 @@ def innesta():
         print(f"   {stato} {percorso:34s} marks on disk: {vero}  (expected {atteso})")
         if vero != atteso:
             male += 1
-    print(f"\n   {applicati} grafts applied, {gia} were already there, out of"
-          f" {len(INNESTI)}; {len(scritti)} files rewritten")
+    print(f"\n   {applied} grafts applied, {gia} were already there, out of"
+          f" {len(GRAFTS)}; {len(scritti)} files rewritten")
     if male:
         print("   ⛔ the disk does not say what the table declares: nothing")
         print("      is turned on, or a server is measured different from the one")

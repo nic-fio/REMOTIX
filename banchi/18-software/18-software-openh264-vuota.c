@@ -12,7 +12,7 @@
 
 typedef struct {
 	unsigned int uMajor, uMinor, uRevision, uReserved;
-} Versione;
+} Version;
 
 #ifndef VUOTA
 #define VUOTA 1
@@ -30,7 +30,7 @@ void WelsDestroySVCEncoder(void *p)
 	(void) p;
 }
 #endif
-void WelsGetCodecVersionEx(Versione *v)
+void WelsGetCodecVersionEx(Version *v)
 {
 	v->uMajor = 2;
 	v->uMinor = 6;

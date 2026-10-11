@@ -26,9 +26,9 @@ import json
 import math
 import sys
 
-FREQUENZA = 48000
+FREQUENCY = 48000
 CANALI = 2
-BLOCCO_US = {1: 20000, 2: 5000}  # Opus 20 ms, PCM 5 ms (§5.3)
+BLOCK_US = {1: 20000, 2: 5000}  # Opus 20 ms, PCM 5 ms (§5.3)
 
 
 def giudica(campioni):
@@ -42,7 +42,7 @@ def giudica(campioni):
     rms = math.sqrt(sum(x * x for x in campioni) / m)
     picco, hz, somma = 0.0, 0, 0.0
     for f in range(100, 2001):
-        w = 2.0 * math.cos(2.0 * math.pi * f / FREQUENZA)
+        w = 2.0 * math.cos(2.0 * math.pi * f / FREQUENCY)
         s1 = s2 = 0.0
         for x in campioni:
             s1, s2 = w * s1 - s2 + x, s1
@@ -55,7 +55,7 @@ def giudica(campioni):
             "purezza": round(picco / somma, 4) if somma > 0 else None}
 
 
-def pcm_campioni(dati):
+def pcm_samples(dati):
     """s16 LITTLE-endian, interleaved (§5.3) — the left channel is taken.
 
     ⛔ Little-endian is the only declared exception to network order, and
@@ -99,21 +99,21 @@ def main():
         return 1
 
     # ── the RHYTHM, from the server's `istante` ─────────────────────────────
-    atteso_us = BLOCCO_US.get(codec)
-    istanti = [b["istante"] for b in blocchi]
+    expected_us = BLOCK_US.get(codec)
+    instants = [b["istante"] for b in blocchi]
     salti, passi = [], []
-    for i in range(1, len(istanti)):
-        d = istanti[i] - istanti[i - 1]
+    for i in range(1, len(instants)):
+        d = instants[i] - instants[i - 1]
         passi.append(d)
-        if atteso_us and d != atteso_us:
+        if expected_us and d != expected_us:
             salti.append((i, d))
-    durata_s = (istanti[-1] - istanti[0] + (atteso_us or 0)) / 1e6
+    durata_s = (instants[-1] - instants[0] + (expected_us or 0)) / 1e6
 
     # ── the CONTENT ─────────────────────────────────────────────────────────
     if codec == 2:
         campioni = []
         for b in blocchi:
-            campioni.extend(pcm_campioni(base64.b64decode(b["byte"])))
+            campioni.extend(pcm_samples(base64.b64decode(b["byte"])))
         # ⚠ 100 ms of start-up discarded: `CODER.md` §3.5, «a sample taken
         #   at startup says nothing about steady state».
         salta = min(4800, len(campioni) // 4)
@@ -133,7 +133,7 @@ def main():
     else:
         print("   ⚠ the rhythm is NOT judged: `--secondi` is missing, that is how long "
               "the capture lasted")
-    print(f"   step between blocks: expected {atteso_us} µs · "
+    print(f"   step between blocks: expected {expected_us} µs · "
           f"minimum {min(passi) if passi else '-'} · "
           f"maximum {max(passi) if passi else '-'} · off step {len(salti)}")
     if salti[:5]:
@@ -152,7 +152,7 @@ def main():
         if g["rms"] < 0.05:
             rossi.append(f"amplitude {g['rms']}: silence, or lost gain")
     if salti:
-        rossi.append(f"{len(salti)} steps off the {atteso_us} µs of §5.3")
+        rossi.append(f"{len(salti)} steps off the {expected_us} µs of §5.3")
     if a.secondi and durata_s / a.secondi < 0.95:
         rossi.append(f"yield {durata_s / a.secondi * 100:.1f} %: the server does NOT "
                      f"produce the audio in real time")

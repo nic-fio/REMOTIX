@@ -80,35 +80,35 @@ typedef enum { VULKANVIDEO_H264 = 3, VULKANVIDEO_HEVC = 1 } VulkanVideoCodec; /*
 typedef struct {
 	bool codifica;                       /* the card can encode this profile */
 	uint32_t misura_massima_l, misura_massima_a;
-	uint32_t misura_minima_l, misura_minima_a;
+	uint32_t min_size_w, min_size_h;
 	unsigned modi_bitrate;               /* VULKANVIDEO_RC_* mask */
 	int qp_minimo, qp_massimo;
-	int livello_massimo_idc;             /* level_idc (H.264) / general_level_idc (HEVC) */
-	uint32_t slot_dpb, riferimenti_attivi;
+	int max_level_idc;             /* level_idc (H.264) / general_level_idc (HEVC) */
+	uint32_t slot_dpb, active_references;
 	uint32_t livelli_qualita;
-	uint32_t granularita_l, granularita_a; /* the alignment the card wants on input */
+	uint32_t granularity_w, granularity_h; /* the alignment the card wants on input */
 	bool intestazioni_dal_driver;        /* `vkGetEncodedVideoSessionParametersKHR` is there */
 	char formato_ingresso[48];           /* the VkFormat chosen for the input planes */
-	bool ingresso_scrivibile_dallo_shader; /* STORAGE on the input format: direct conversion */
+	bool input_writable_by_shader; /* STORAGE on the input format: direct conversion */
 	uint32_t sintassi;                   /* `stdSyntaxFlags`: which header fields the driver honours */
 	bool cabac, transform_8x8;           /* H.264: read from `sintassi` */
-} VulkanVideoProfiloCapacita;
+} VulkanVideoProfileCapabilities;
 
 typedef struct {
 	bool vulkan_c_e;                     /* device + encode queue found */
 	char perche[256];                    /* if not, why */
-	char nome_scheda[256];               /* `deviceName` */
+	char card_name[256];               /* `deviceName` */
 	char driver[256];                    /* `driverName` + `driverInfo` */
-	uint32_t versione_api;               /* the device's VK_API_VERSION */
+	uint32_t api_version;               /* the device's VK_API_VERSION */
 	bool dmabuf;                         /* the two zero-copy extensions are there */
-	VulkanVideoProfiloCapacita h264;     /* High, 8 bits */
-	VulkanVideoProfiloCapacita hevc;     /* Main, 8 bits */
-	VulkanVideoProfiloCapacita hevc10;   /* Main 10 */
-} VulkanVideoCapacita;
+	VulkanVideoProfileCapabilities h264;     /* High, 8 bits */
+	VulkanVideoProfileCapabilities hevc;     /* Main, 8 bits */
+	VulkanVideoProfileCapabilities hevc10;   /* Main 10 */
+} VulkanVideoCapabilities;
 
 /* Opens and closes everything by itself: needed before deciding the route,
  * and by the installer.  Returns false only if the node does not open at all. */
-bool vulkanvideo_capacita(const char *nodo, VulkanVideoCapacita *c, char *errore,
+bool vulkanvideo_capacita(const char *nodo, VulkanVideoCapabilities *c, char *errore,
                           size_t errore_byte);
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -116,11 +116,11 @@ bool vulkanvideo_capacita(const char *nodo, VulkanVideoCapacita *c, char *errore
  *    (`VK_EXT_physical_device_drm`: not «the first card around»), logical
  *    device with one encode queue and one compute queue.
  * ═══════════════════════════════════════════════════════════════════════════ */
-typedef struct VulkanVideoDispositivo VulkanVideoDispositivo;
+typedef struct VulkanVideoDevice VulkanVideoDevice;
 
-VulkanVideoDispositivo *vulkanvideo_apri_dispositivo(const char *nodo, char *errore,
+VulkanVideoDevice *vulkanvideo_apri_dispositivo(const char *nodo, char *errore,
                                                      size_t errore_byte);
-void vulkanvideo_chiudi_dispositivo(VulkanVideoDispositivo *d);
+void vulkanvideo_close_device(VulkanVideoDevice *d);
 
 /* The (non-linear) modifiers that the node's card can import and sample
  * for `formato_drm`, up to `quanti`; returns how many it wrote (0 = none, or
@@ -131,8 +131,8 @@ int vulkanvideo_modificatori(const char *nodo, uint32_t formato_drm, uint64_t *f
  * Intel and Radeon do not.  ⚠ false also if the node does not open: the
  * caller stays on the usual linear. */
 bool vulkanvideo_scheda_rifiuta_il_lineare(const char *nodo);
-const char *vulkanvideo_nome_scheda(const VulkanVideoDispositivo *d);
-const char *vulkanvideo_nome_driver(const VulkanVideoDispositivo *d);
+const char *vulkanvideo_card_name(const VulkanVideoDevice *d);
+const char *vulkanvideo_nome_driver(const VulkanVideoDevice *d);
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * 3. THE ENCODER
@@ -149,12 +149,12 @@ typedef struct {
 	 * QVBR: the requested QP becomes the regulator's MINIMUM QP (no more is
 	 * spent than the requested quality would cost), and the regulator raises
 	 * the QP only when the ceiling bites.  It is declared in the
-	 * `VulkanVideoDichiarazione`. */
+	 * `VulkanVideoDeclaration`. */
 	int64_t banda_punto, banda_filo;
-	int serbatoio_bit;
+	int reservoir_bit;
 	/* 0 = the level is COMPUTED as ffmpeg did; >0 = imposed
 	 * (`level_idc` for H.264, `general_level_idc` for HEVC). */
-	int livello_idc;
+	int lvl_idc;
 	uint32_t chiavi_ogni;          /* 0 = keyframes on request only */
 } VulkanVideoRichiesta;
 
@@ -162,25 +162,25 @@ typedef struct {
 typedef struct {
 	uint32_t larghezza_codificata, altezza_codificata; /* aligned to the block */
 	uint32_t blocco;                   /* 16 (H.264) or the HEVC CTB */
-	int livello_idc;                   /* the one written in the SPS */
-	unsigned modo_rc;                  /* VULKANVIDEO_RC_CQP / _VBR */
+	int lvl_idc;                   /* the one written in the SPS */
+	unsigned manner_rc;                  /* VULKANVIDEO_RC_CQP / _VBR */
 	bool intestazioni_dal_driver;      /* SPS/PPS taken from the driver (otherwise written by us) */
 	bool driver_ha_cambiato_parametri; /* `hasOverrides` on the parameter sets */
 	bool livello_corretto_nei_byte;    /* HEVC: the driver had written the level in the wrong alphabet */
 	bool conversione_diretta;          /* the shader writes INTO the input planes (STORAGE) */
 	bool ritardo_minimo_chiesto;       /* VK_VIDEO_ENCODE_TUNING_MODE_ULTRA_LOW_LATENCY */
-	uint32_t famiglia_codifica, famiglia_calcolo;
+	uint32_t encode_family, compute_family;
 	char formato_ingresso[48];
 	int qp_minimo, qp_massimo;         /* declared by the card */
 	size_t intestazioni_byte;          /* how many bytes of SPS/PPS(/VPS) in front of every keyframe */
-} VulkanVideoDichiarazione;
+} VulkanVideoDeclaration;
 
 typedef struct VulkanVideo VulkanVideo;
 
-VulkanVideo *vulkanvideo_apri(VulkanVideoDispositivo *d, const VulkanVideoRichiesta *r,
+VulkanVideo *vulkanvideo_open(VulkanVideoDevice *d, const VulkanVideoRichiesta *r,
                               char *errore, size_t errore_byte);
-void vulkanvideo_chiudi(VulkanVideo *v);
-const VulkanVideoDichiarazione *vulkanvideo_dichiarazione(const VulkanVideo *v);
+void vulkanvideo_close(VulkanVideo *v);
+const VulkanVideoDeclaration *vulkanvideo_declaration(const VulkanVideo *v);
 
 /* The times of a frame, in microseconds, split the way
  * `CodificatoreFotogramma` keeps them: zero in `caricamento` on zero copy
@@ -189,10 +189,10 @@ typedef struct {
 	uint64_t us_caricamento;  /* system memory → card (from memory only) */
 	uint64_t us_conversione;  /* the RGB → NV12 shader on the card (and the GPU copy of the uploaded pixels) */
 	uint64_t us_codifica;     /* from handing to the encoder to the bytes read */
-} VulkanVideoTempi;
+} VulkanVideoTimings;
 
 /* The byte order of the input pixels. */
-typedef enum { VULKANVIDEO_BGRX, VULKANVIDEO_RGBX } VulkanVideoOrdine;
+typedef enum { VULKANVIDEO_BGRX, VULKANVIDEO_RGBX } VulkanVideoOrder;
 
 /*
  * Encodes a frame FROM MEMORY: `pixel` is BGRx/RGBx, 4 bytes per
@@ -200,9 +200,9 @@ typedef enum { VULKANVIDEO_BGRX, VULKANVIDEO_RGBX } VulkanVideoOrdine;
  * bytes belong to `v` until the next call.  ⚠ It WAITS for the card to
  * finish.
  */
-bool vulkanvideo_codifica_memoria(VulkanVideo *v, const uint8_t *pixel, uint32_t passo,
-                                  VulkanVideoOrdine ordine, bool chiave,
-                                  const uint8_t **dati, size_t *byte, VulkanVideoTempi *t,
+bool vulkanvideo_encode_memory(VulkanVideo *v, const uint8_t *pixel, uint32_t passo,
+                                  VulkanVideoOrder ordine, bool chiave,
+                                  const uint8_t **dati, size_t *byte, VulkanVideoTimings *t,
                                   char *errore, size_t errore_byte);
 
 /* The same DMA-BUF that `codificatore.h` describes (`CodificatoreSuperficie`):
@@ -216,13 +216,13 @@ typedef struct {
 	uint32_t formato_drm;          /* DRM_FORMAT_XRGB8888 / XBGR8888 (and the alpha variants) */
 	uint64_t modificatore;
 	uint64_t generazione;
-} VulkanVideoSuperficie;
+} VulkanVideoSurface;
 
 /* Encodes a frame that is ALREADY on the card: zero copy.  ⛔ The
  * descriptor must stay valid for the whole call; when it returns, the
  * card has FINISHED reading it. */
-bool vulkanvideo_codifica_dmabuf(VulkanVideo *v, const VulkanVideoSuperficie *s, bool chiave,
-                                 const uint8_t **dati, size_t *byte, VulkanVideoTempi *t,
+bool vulkanvideo_encode_dmabuf(VulkanVideo *v, const VulkanVideoSurface *s, bool chiave,
+                                 const uint8_t **dati, size_t *byte, VulkanVideoTimings *t,
                                  char *errore, size_t errore_byte);
 
 /* The LIVE quality change: in CQP it is the QP of the next frame; in VBR it
@@ -232,7 +232,7 @@ bool vulkanvideo_qualita(VulkanVideo *v, int qp, char *errore, size_t errore_byt
 
 /* The canvas change: it closes and reopens at the new size, and the first
  * frame afterwards is a keyframe (`codificatore.h`, `codificatore_ridimensiona`). */
-bool vulkanvideo_ridimensiona(VulkanVideo *v, uint32_t larghezza, uint32_t altezza,
+bool vulkanvideo_resize(VulkanVideo *v, uint32_t larghezza, uint32_t altezza,
                               char *errore, size_t errore_byte);
 
 #endif

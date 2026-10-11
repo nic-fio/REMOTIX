@@ -288,10 +288,10 @@ struct corpo_sono {
 	char runtime[160];
 };
 
-struct corpo_palco {
-	uint32_t bus_aperto;      /* the CONNECTION to the bus succeeded */
+struct body_stage {
+	uint32_t bus_open;      /* the CONNECTION to the bus succeeded */
 	uint32_t stato_sessione;  /* SessioneStato, 0 = SANA */
-	uint32_t presa;           /* CatturaPresa */
+	uint32_t presa;           /* CaptureTake */
 	uint32_t monitor_prima, monitor_dopo;
 	uint32_t larghezza, altezza, stride, bit;
 	uint32_t flussi;          /* how many codecs delivered */
@@ -299,12 +299,12 @@ struct corpo_palco {
 	char guasto[224];
 };
 
-/* ⛔⭐ The stage's answer to the canvas request.  ⚠ `avuta_l == 0` means
+/* ⛔⭐ The stage's answer to the canvas request.  ⚠ `got_w == 0` means
  *     "I did not make it", and it is NOT a size: it is the other face of the
  *     zero of `CODER.md` §3.10, declared instead of inferred from silence. */
-struct corpo_tela {
-	uint32_t voluta_l, voluta_a;
-	uint32_t avuta_l, avuta_a;
+struct body_canvas {
+	uint32_t intended_w, intended_h;
+	uint32_t got_w, got_h;
 	/* ⭐⭐ "NOT YET" — 16 Aug 2026, and it is not a third number: it is a third
 	 *     FACT.  `avuta = 0x0` means "I did not make it"; silence meant "I am
 	 *     still trying", ⛔ and the parent INFERRED it — that is, it did not
@@ -370,7 +370,7 @@ struct corpo_video {
  * ⭐ `id` is there because it is the only thing that makes the `input` field of
  *    frames (§6.2) honest: without it, the child would know it had injected
  *    **something** and not **which**. */
-struct corpo_input {
+struct body_input {
 	uint32_t id;       /* §7.3: grows by at least one over the whole channel */
 	uint8_t azione;    /* FIGLI_INPUT_* of `figlio.h` */
 	uint8_t premuto;   /* 1 pressed, 0 released */
@@ -382,7 +382,7 @@ struct corpo_input {
  *    plus the NUL, which is the cap `RCP.md` §4.5 puts on the string: the
  *    envelope is fixed-size so that the child does not have to trust a
  *    length that comes to it from the socket. */
-struct corpo_disposizione {
+struct body_layout {
 	char nome[65];
 };
 
@@ -391,7 +391,7 @@ struct corpo_disposizione {
  *    side of the pipe: they are not rechecked here — ⛔ except what is needed
  *    not to trust a sender, which in the parent is a different thing from
  *    trusting a module. */
-struct corpo_cursore {
+struct body_cursor {
 	uint16_t larghezza, altezza; /* 0x0 = hidden (§5.5) */
 	int16_t attivo_x, attivo_y;
 	uint32_t totale;  /* bytes of the whole image: w x h x 4 */
@@ -403,7 +403,7 @@ struct corpo_cursore {
  *    §6.3 — 1 = Opus, 2 = PCM — and ⚠ **not** those of §6.2: there 1 is HEVC.
  *    `0` = "off": nobody is listening, and the capture stops while the sink
  *    stays (invariant I4, like the stage). */
-struct corpo_audio {
+struct body_audio {
 	uint8_t codec;
 	uint8_t riempi[3];
 };
@@ -412,7 +412,7 @@ struct corpo_audio {
  * the FIRST sample of the block (§6.3) — ⛔ and the child sets it for the same
  * reason it sets `input` in frames: it is the only one that knows when the
  * samples were really taken. */
-struct corpo_blocco {
+struct body_block {
 	uint8_t codec;
 	uint8_t riempi[3];
 	uint32_t byte;
@@ -431,7 +431,7 @@ struct corpo_blocco {
  *    for the frame — stitching a hole would mean guessing what was missing,
  *    and a text with a guessed hole pasted into a terminal is worse than a
  *    missing text (§5.4, in its own words). */
-struct corpo_appunti {
+struct body_clipboard {
 	uint32_t serial; /* parent → child: Mutter's request.  Otherwise 0 */
 	uint32_t totale; /* bytes of the whole text, final zero EXCLUDED */
 	uint32_t offset;
@@ -446,7 +446,7 @@ struct corpo_appunti {
 	uint8_t riempi[3];
 };
 
-struct corpo_fotogramma {
+struct body_frame {
 	uint8_t codec; /* 1 = HEVC, 2 = AV1 — the same numbers as §4.3/§6.2 */
 	uint8_t chiave;
 	uint16_t riempi;
@@ -471,10 +471,10 @@ struct corpo_fotogramma {
 };
 
 /* The longest message that passes through here. */
-#define BUSTA_MAX (sizeof(struct testa) + sizeof(struct corpo_fotogramma) + PEZZO_MAX)
-_Static_assert(sizeof(struct corpo_cursore) <= sizeof(struct corpo_fotogramma),
+#define ENVELOPE_MAX (sizeof(struct testa) + sizeof(struct body_frame) + PEZZO_MAX)
+_Static_assert(sizeof(struct body_cursor) <= sizeof(struct body_frame),
                "the envelope is sized on the frame: the cursor must fit in it");
-_Static_assert(sizeof(struct corpo_appunti) <= sizeof(struct corpo_fotogramma),
+_Static_assert(sizeof(struct body_clipboard) <= sizeof(struct body_frame),
                "the envelope is sized on the frame: the clipboard must fit in it");
 
 /* ========================================================================== */
@@ -491,60 +491,60 @@ struct figlio {
 	pid_t pid;
 	int fd;
 	uint64_t matricola;
-	uint64_t nato_ms;
-	uint64_t ultimo_ricontrollo_ms;
-	bool si_e_presentato;
+	uint64_t born_ms;
+	uint64_t last_recheck_ms;
+	bool showed_up;
 	/* ⛔⭐ "I told it to leave" and "it has left" are two different facts,
 	 *     and keeping only one of them is the defect this bench found on the
 	 *     first run (12 Aug 2026, case `muore`).  See the box above
-	 *     `figlio_congeda()`. */
+	 *     `child_dismiss()`. */
 	bool uscendo;
-	uint64_t congedato_ms;
+	uint64_t dismissed_ms;
 	/* The incoming frame, one piece at a time. */
 	uint8_t *monta;
-	size_t monta_totale, monta_avuti;
-	uint8_t monta_codec, monta_chiave;
-	uint32_t monta_l, monta_a;
-	uint64_t monta_istante;
-	uint32_t monta_input; /* §6.2, and the child STAMPS it: see `corpo_fotogramma` */
+	size_t assembly_total, assembly_got;
+	uint8_t assembly_codec, assembly_key;
+	uint32_t assembly_w, assembly_h;
+	uint64_t assembly_instant;
+	uint32_t assembly_input; /* §6.2, and the child STAMPS it: see `body_frame` */
 	/* ⭐ The CURSOR assembly is separate from the frame's, and it is not a
 	 *    convenience: the two arrive **interleaved** on the same socket, and a
 	 *    single assembly would turn every shape change into a dropped frame
 	 *    (and vice versa).  ⛔ It is the out-of-order pieces trap seen from
 	 *    above: it is not the sender that is wrong, it is the receiver that
 	 *    does not have two tables. */
-	uint8_t *cur_monta;
-	size_t cur_totale, cur_avuti;
+	uint8_t *cur_mount;
+	size_t cur_total, cur_got;
 	uint16_t cur_l, cur_a;
 	int16_t cur_ax, cur_ay;
 	/* ⛔ The count of frames arrived from this child.  ⚠ It is here and not in
 	 *    a module variable because it is PER CHILD: summed over two users it
 	 *    would say the stage works even when only one of them works — two
 	 *    measures under the same label. */
-	uint64_t fotogrammi_avuti, byte_avuti, chiavi_avute;
-	uint64_t detto_conto_ms;
+	uint64_t frames_received, byte_got, keys_received;
+	uint64_t count_logged_ms;
 	/* ⛔ What the parent has already asked of this stage: kept so as not to
 	 *    repeat the same command on every round of `poll`. */
-	uint8_t video_codec_chiesto;
+	uint8_t requested_video_codec;
 	/* ⛔ And the depth with it: see `corpo_video`.  ⚠ `0` = never asked. */
-	uint8_t video_prof_chiesta;
+	uint8_t video_profile_requested;
 	/* ⛔ And the LEVEL with them (§4.3, 23 Aug 2026), for the same reason:
 	 *    it belongs to the SESSION, it changes from client to client, and a
 	 *    second client declaring 4.1 where the first had 5.1 is "something new
 	 *    to say" even with codec and depth unchanged.  ⚠ `0` = never asked. */
-	uint8_t video_liv_chiesto;
+	uint8_t video_level_requested;
 	/* ⛔ The last audio codec asked of this child, so as not to repeat the
 	 *    same request on every beat — and to write the log line only when the
 	 *    fact CHANGES.  ⚠ `0` = off, and it is the initial state of every
 	 *    child: nobody listens until someone attaches. */
-	uint8_t audio_codec_chiesto;
+	uint8_t requested_audio_codec;
 	/* ⭐ PHASE 7 — the THIRD assembly table, and the reason is the one written
-	 *    above `cur_monta`: frames, cursors and clipboard arrive
+	 *    above `cur_mount`: frames, cursors and clipboard arrive
 	 *    **interleaved** on the same socket, and with only two tables every
 	 *    copied text would become a dropped frame.  ⚠ One table per type, and
 	 *    the count adds up whatever arrives first. */
-	uint8_t *app_monta;
-	size_t app_totale, app_avuti;
+	uint8_t *app_mount;
+	size_t app_total, app_got;
 };
 
 struct figli {
@@ -553,32 +553,32 @@ struct figli {
 	 *    only the loop LIMITS change, going from a `#define` to `f->tetto`. */
 	struct figlio *v;
 	int tetto;
-	uint64_t prossima_matricola;
+	uint64_t next_serial;
 	uint32_t tela_l, tela_a;
-	char dir_rilievo[256];
-	bool c_e_rilievo;
+	char dir_survey[256];
+	bool has_survey;
 	/* ⭐ PHASE 9 — what every child will have to repeat to itself after the
 	 *    `execve`, because the encoder is over there.  ⚠ It is not USED here:
 	 *    it is copied into the child's command line (`diventa_ed_esegui()`). */
-	bool fase9_qualita_risale;
-	uint32_t fase9_tetto_banda_mbit;
+	bool phase9_quality_rises;
+	uint32_t phase9_bandwidth_cap_mbit;
 	/* ⭐ The THIRD, 24 Aug 2026, and it is born ON: an all-zero audio block
 	 *    does not become a datagram.  ⚠ It is passed NEGATED in the child's
 	 *    `argv` (`--niente-audio-silenzio`), because what is written at the end
 	 *    is the EXCEPTION to the default, not the default. */
-	bool fase9_audio_silenzio;
-	char percorso_mio[512]; /* /proc/self/exe resolved, for the `exec` */
-	FiglioSessioneFinita su_sessione_finita;
-	void *ctx_sessione_finita;
-	FiglioTelaAttendi su_tela_attendi;
-	void *ctx_tela_attendi;
+	bool phase9_audio_silence;
+	char my_path[512]; /* /proc/self/exe resolved, for the `exec` */
+	ChildSessionFinished on_session_finished;
+	void *ctx_session_finished;
+	ChildCanvasWait on_canvas_wait;
+	void *ctx_canvas_wait;
 	/* ⭐ PHASE 7 — the audio blocks.  ⚠ It has a context of ITS OWN and does
 	 *    not use `ctx` like `deposita`/`congeda`/`cursore`: those are hooked
 	 *    by `main.c` as a block, this one is hooked by whoever owns the audio
 	 *    channel, and tying them together would mean forcing audio on wherever
 	 *    there is video. */
-	FiglioBlocco su_blocco;
-	void *ctx_blocco;
+	ChildBlock on_block;
+	void *ctx_block;
 	/* ⭐ PHASE 7 — the clipboard.  ⚠ Context of ITS OWN like the blocks', and
 	 *    for the same reason: whoever owns the clipboard channel is not the
 	 *    one hooking the video, and tying them would mean forcing the
@@ -586,17 +586,17 @@ struct figli {
 	 * ⛔ The two hooks are attached together or not at all (`figlio.h`): one
 	 *    that could receive the session's text and could not serve whoever
 	 *    pastes would leave the pasting application hanging. */
-	FiglioAppuntiTesto su_appunti_testo;
-	FiglioAppuntiRichiesta su_appunti_richiesta;
-	void *ctx_appunti;
+	ChildClipboardText on_clipboard_text;
+	ChildClipboardRequest on_clipboard_request;
+	void *ctx_clipboard;
 	FiglioDeposito deposita;
-	FiglioCongedo congeda;
-	FiglioCursore cursore;
-	FiglioTela tela;
+	ChildFarewell congeda;
+	ChildCursor cursore;
+	ChildCanvas tela;
 	void *ctx;
 };
 
-static void magia_scrivi(struct testa *t)
+static void magic_write(struct testa *t)
 {
 	t->magia[0] = 'F';
 	t->magia[1] = 'I';
@@ -604,7 +604,7 @@ static void magia_scrivi(struct testa *t)
 	t->magia[3] = '1';
 }
 
-static bool magia_giusta(const struct testa *t)
+static bool magic_ok(const struct testa *t)
 {
 	return t->magia[0] == 'F' && t->magia[1] == 'I' && t->magia[2] == 'G'
 	       && t->magia[3] == '1' && t->versione == FIGLIO_VERSIONE;
@@ -616,7 +616,7 @@ static bool magia_giusta(const struct testa *t)
  *   message **without** credentials is not a message with the right
  *   credentials — "empty" and "forbidden" look the same (`LEZIONI.md` §1.9),
  *   and here the common face would cost the isolation between users. */
-static ssize_t ricevi_con_credenziali(int fd, void *buf, size_t cap,
+static ssize_t receive_with_credentials(int fd, void *buf, size_t cap,
                                       struct ucred *chi, bool *credenziali)
 {
 	struct msghdr m;
@@ -679,53 +679,53 @@ static ssize_t ricevi_con_credenziali(int fd, void *buf, size_t cap,
  * ⛔ There is no path that delivers a byte to someone who does not pass here. */
 static bool credenziali_combaciano(const struct figlio *g, const struct testa *t,
                                    bool c_e, const struct ucred *chi,
-                                   char *perche_no, size_t cap_perche)
+                                   char *perche_no, size_t cap_why)
 {
-	struct passwd pw, *ris = NULL;
+	struct passwd pw, *result = NULL;
 	char scorta[1024];
 
 	if (!c_e) {
-		snprintf(perche_no, cap_perche,
+		snprintf(perche_no, cap_why,
 		         "the kernel did not attach the credentials to the message");
 		return false;
 	}
 	if (chi->pid != g->pid) {
-		snprintf(perche_no, cap_perche,
+		snprintf(perche_no, cap_why,
 		         "written by pid %ld, and the child of «%s» is pid %ld",
 		         (long)chi->pid, g->utente, (long)g->pid);
 		return false;
 	}
 	if (chi->uid != g->uid || chi->gid != g->gid) {
-		snprintf(perche_no, cap_perche,
+		snprintf(perche_no, cap_why,
 		         "the kernel says uid %ld gid %ld, and «%s» is uid %ld gid %ld",
 		         (long)chi->uid, (long)chi->gid, g->utente, (long)g->uid,
 		         (long)g->gid);
 		return false;
 	}
 	if (t->matricola != g->matricola) {
-		snprintf(perche_no, cap_perche, "serial %llu instead of %llu",
+		snprintf(perche_no, cap_why, "serial %llu instead of %llu",
 		         (unsigned long long)t->matricola,
 		         (unsigned long long)g->matricola);
 		return false;
 	}
 	if (t->uid_dichiarato != (uint32_t)g->uid) {
-		snprintf(perche_no, cap_perche,
+		snprintf(perche_no, cap_why,
 		         "the message declares uid %lu and the child is uid %ld",
 		         (unsigned long)t->uid_dichiarato, (long)g->uid);
 		return false;
 	}
-	if (getpwnam_r(g->utente, &pw, scorta, sizeof scorta, &ris) != 0 || !ris) {
-		snprintf(perche_no, cap_perche,
+	if (getpwnam_r(g->utente, &pw, scorta, sizeof scorta, &result) != 0 || !result) {
+		snprintf(perche_no, cap_why,
 		         "the name «%s» no longer resolves to any user: the "
 		         "link can no longer be proven",
 		         g->utente);
 		return false;
 	}
-	if (ris->pw_uid != g->uid) {
-		snprintf(perche_no, cap_perche,
+	if (result->pw_uid != g->uid) {
+		snprintf(perche_no, cap_why,
 		         "«%s» is now uid %ld, and the child is uid %ld: the name and "
 		         "the uid have come apart",
-		         g->utente, (long)ris->pw_uid, (long)g->uid);
+		         g->utente, (long)result->pw_uid, (long)g->uid);
 		return false;
 	}
 	return true;
@@ -748,7 +748,7 @@ static bool credenziali_combaciano(const struct figlio *g, const struct testa *t
  *   for the PARENT too, which had nothing left to look at in the slot.
  *
  * ⇒ From here on there are two steps:
- *     `figlio_congeda()`  closes the socket, asks the child to leave, and
+ *     `child_dismiss()`  closes the socket, asks the child to leave, and
  *                         leaves the slot occupied **with the pid inside**;
  *     the reaping         in `figli_muovi()`, `waitpid(WNOHANG)`: when the
  *                         kernel confirms the death, THEN the slot is
@@ -797,7 +797,7 @@ static const char *perche_uscito(int codice)
 }
 
 /* The second half: the kernel has confirmed, the slot is freed. */
-static void figlio_libera(struct figli *f, struct figlio *g, const char *perche)
+static void child_free(struct figli *f, struct figlio *g, const char *perche)
 {
 	if (!g->usato)
 		return;
@@ -819,7 +819,7 @@ static void figlio_libera(struct figli *f, struct figlio *g, const char *perche)
 	g->fd = -1;
 }
 
-static void figlio_congeda(struct figli *f, struct figlio *g, const char *perche)
+static void child_dismiss(struct figli *f, struct figlio *g, const char *perche)
 {
 	if (!g->usato || g->uscendo)
 		return;
@@ -830,7 +830,7 @@ static void figlio_congeda(struct figli *f, struct figlio *g, const char *perche
 	              g->utente, (long)g->uid, (long)g->pid,
 	              (unsigned long long)g->matricola, perche);
 	g->uscendo = true;
-	g->congedato_ms = registro_ora_ms();
+	g->dismissed_ms = registro_ora_ms();
 	if (g->fd >= 0) {
 		close(g->fd);
 		g->fd = -1;
@@ -858,16 +858,16 @@ static struct figlio *cerca(struct figli *f, const char *utente)
 /* ⭐ The trigger reaches the PARENT and must be passed on to the children: see
  *    the box inside `figli_muovi()`.  ⛔ Here it is only noted — the work is
  *    done in the loop, not inside a signal handler. */
-static volatile sig_atomic_t scatto_da_inoltrare = 0;
+static volatile sig_atomic_t shot_to_forward = 0;
 
-static void scatto_inoltro_segnale(int quale)
+static void shot_forward_signal(int quale)
 {
-	scatto_da_inoltrare = (quale == SIGUSR2) ? 2 : 1;
+	shot_to_forward = (quale == SIGUSR2) ? 2 : 1;
 }
 
-figli *figli_accendi(uint32_t tela_l, uint32_t tela_a, const char *dir_rilievo,
-                     FiglioDeposito deposita, FiglioCongedo congeda,
-                     FiglioCursore cursore, FiglioTela tela, void *ctx)
+figli *figli_accendi(uint32_t tela_l, uint32_t tela_a, const char *dir_survey,
+                     FiglioDeposito deposita, ChildFarewell congeda,
+                     ChildCursor cursore, ChildCanvas tela, void *ctx)
 {
 	figli *f = (figli *)calloc(1, sizeof *f);
 	ssize_t n;
@@ -886,10 +886,10 @@ figli *figli_accendi(uint32_t tela_l, uint32_t tela_a, const char *dir_rilievo,
 	}
 	for (int i = 0; i < f->tetto; i++)
 		f->v[i].fd = -1;
-	f->prossima_matricola = 1;
+	f->next_serial = 1;
 	/* ⭐ The on-demand trigger: the box is inside `figli_muovi()`. */
-	signal(SIGUSR1, scatto_inoltro_segnale);
-	signal(SIGUSR2, scatto_inoltro_segnale);
+	signal(SIGUSR1, shot_forward_signal);
+	signal(SIGUSR2, shot_forward_signal);
 	f->tela_l = tela_l;
 	f->tela_a = tela_a;
 	f->deposita = deposita;
@@ -897,16 +897,16 @@ figli *figli_accendi(uint32_t tela_l, uint32_t tela_a, const char *dir_rilievo,
 	f->cursore = cursore;
 	f->tela = tela;
 	f->ctx = ctx;
-	if (dir_rilievo && dir_rilievo[0]) {
-		snprintf(f->dir_rilievo, sizeof f->dir_rilievo, "%s", dir_rilievo);
-		f->c_e_rilievo = true;
+	if (dir_survey && dir_survey[0]) {
+		snprintf(f->dir_survey, sizeof f->dir_survey, "%s", dir_survey);
+		f->has_survey = true;
 	}
 
 	/* ⛔ The path of the binary is ASKED OF THE KERNEL, not inferred from
 	 *    `argv[0]`: `argv[0]` is chosen by whoever launches, and an `exec` on a
 	 *    path chosen by whoever launches would be a way to run as the user a
 	 *    program that is not this one. */
-	n = readlink("/proc/self/exe", f->percorso_mio, sizeof f->percorso_mio - 1);
+	n = readlink("/proc/self/exe", f->my_path, sizeof f->my_path - 1);
 	if (n <= 0) {
 		registro_dice(REG_FIGLIO,
 		              "⛔ I do not know which binary I am running (/proc/self/exe: "
@@ -917,14 +917,14 @@ figli *figli_accendi(uint32_t tela_l, uint32_t tela_a, const char *dir_rilievo,
 		free(f);
 		return NULL;
 	}
-	f->percorso_mio[n] = 0;
-	if (strstr(f->percorso_mio, " (deleted)")) {
+	f->my_path[n] = 0;
+	if (strstr(f->my_path, " (deleted)")) {
 		registro_dice(REG_FIGLIO,
 		              "⛔ the running binary has been deleted or "
 		              "replaced underfoot («%s»): I am NOT spawning children, "
 		              "because I cannot prove which program would run "
 		              "as the user",
-		              f->percorso_mio);
+		              f->my_path);
 		free(f->v);
 		free(f);
 		return NULL;
@@ -932,20 +932,20 @@ figli *figli_accendi(uint32_t tela_l, uint32_t tela_a, const char *dir_rilievo,
 	registro_dice(REG_FIGLIO,
 	              "⭐ children table on: up to %d, one per user (I2), "
 	              "canvas %ux%u, binary «%s»",
-	              f->tetto, tela_l, tela_a, f->percorso_mio);
+	              f->tetto, tela_l, tela_a, f->my_path);
 	return f;
 }
 
 /* ⭐⭐ The box is in `figlio.h`: here it is only noted, and whoever has no
  *     children table (`figli_accendi()` failed) does not break. */
 void figli_fase9(figli *f, bool qualita_risale, uint32_t tetto_banda_mbit,
-                 bool audio_silenzio)
+                 bool audio_silence)
 {
 	if (!f)
 		return;
-	f->fase9_qualita_risale = qualita_risale;
-	f->fase9_tetto_banda_mbit = tetto_banda_mbit;
-	f->fase9_audio_silenzio = audio_silenzio;
+	f->phase9_quality_rises = qualita_risale;
+	f->phase9_bandwidth_cap_mbit = tetto_banda_mbit;
+	f->phase9_audio_silence = audio_silence;
 	/* ⛔ AND THIS LINE IS NOT THE DECLARATION OF THE VALUE IN FORCE — it is the
 	 *    opposite: it says what the parent has committed to PASS.  The value
 	 *    in force is written by `codificatore.c` when each encoder opens,
@@ -973,7 +973,7 @@ void figli_fase9(figli *f, bool qualita_risale, uint32_t tetto_banda_mbit,
 	              "child: %s.  ⚠ `[M]` 09-b84: 102.1 times less traffic on a "
 	              "still screen (557.6 → 5.5 kbit/s), 1 248 blocks silenced out of "
 	              "1 248; the price is +2 «missed» out of 5 000 at the client",
-	              audio_silenzio
+	              audio_silence
 	                  ? "ON, and it is the DEFAULT since 24 Aug 2026 "
 	                    "(the user's decision) — turned off with "
 	                    "`--niente-audio-silenzio`"
@@ -994,7 +994,7 @@ void figli_fase9(figli *f, bool qualita_risale, uint32_t tetto_banda_mbit,
  *    random would be worse than failing (`CODER.md` §3.9: failure is
  *    declared).
  */
-static int conversazione_muta_figlio(int n, const struct pam_message **m,
+static int child_silent_conversation(int n, const struct pam_message **m,
                                      struct pam_response **r, void *dati)
 {
 	(void)n;
@@ -1034,7 +1034,7 @@ static void livello_selinux_come_sshd(const char *utente)
 	void *l = dlopen("libselinux.so.1", RTLD_NOW | RTLD_LOCAL);
 	if (!l)
 		return;
-	int (*abilitato)(void) = (int (*)(void))dlsym(l, "is_selinux_enabled");
+	int (*enabled)(void) = (int (*)(void))dlsym(l, "is_selinux_enabled");
 	int (*leggi)(char **) = (int (*)(char **))dlsym(l, "getexeccon");
 	int (*scrivi)(const char *) = (int (*)(const char *))dlsym(l, "setexeccon");
 	int (*mappa)(const char *, char **, char **) =
@@ -1042,18 +1042,18 @@ static void livello_selinux_come_sshd(const char *utente)
 	int (*valido)(const char *) =
 		(int (*)(const char *))dlsym(l, "security_check_context");
 	void (*libera)(char *) = (void (*)(char *))dlsym(l, "freecon");
-	char *esec = NULL, *seuser = NULL, *livello = NULL;
+	char *exec = NULL, *seuser = NULL, *livello = NULL;
 
-	if (!abilitato || !leggi || !scrivi || !mappa || !valido || !libera ||
-	    abilitato() != 1)
+	if (!enabled || !leggi || !scrivi || !mappa || !valido || !libera ||
+	    enabled() != 1)
 		goto fine;
-	if (leggi(&esec) != 0 || !esec)
+	if (leggi(&exec) != 0 || !exec)
 		goto fine; /* pam_selinux chose nothing: nothing is invented */
 	if (mappa(utente, &seuser, &livello) != 0 || !livello || !livello[0])
 		goto fine;
 	{
 		/* user:role:type:level — the level may contain ":" */
-		const char *p = esec;
+		const char *p = exec;
 		for (int i = 0; i < 3 && p; i++) {
 			p = strchr(p, ':');
 			if (p)
@@ -1063,13 +1063,13 @@ static void livello_selinux_come_sshd(const char *utente)
 			goto fine; /* no level, or already the right one */
 		char nuovo[512];
 		int n = snprintf(nuovo, sizeof nuovo, "%.*s%s",
-		                 (int)(p - esec), esec, livello);
+		                 (int)(p - exec), exec, livello);
 		if (n <= 0 || (size_t)n >= sizeof nuovo || valido(nuovo) != 0) {
 			fprintf(stderr,
 			        "figlio: ⚠ SELinux: the desktop of «%s» is born «%s»; "
 			        "the level of the login mapping («%s») does not make a "
 			        "valid context — left as is\n",
-			        utente, esec, livello);
+			        utente, exec, livello);
 			goto fine;
 		}
 		if (scrivi(nuovo) == 0)
@@ -1077,16 +1077,16 @@ static void livello_selinux_come_sshd(const char *utente)
 			        "figlio: ⭐ SELinux: the desktop of «%s» is born «%s» "
 			        "as with ssh (pam_selinux had given «%s»: remotix_t "
 			        "is not in the policy's stock contexts)\n",
-			        utente, nuovo, esec);
+			        utente, nuovo, exec);
 		else
 			fprintf(stderr,
 			        "figlio: ⚠ SELinux: setexeccon(«%s») refused (%s): "
 			        "the desktop is born «%s»\n",
-			        nuovo, strerror(errno), esec);
+			        nuovo, strerror(errno), exec);
 	}
 fine:
-	if (esec && libera)
-		libera(esec);
+	if (exec && libera)
+		libera(exec);
 	free(seuser);
 	free(livello);
 	dlclose(l);
@@ -1105,11 +1105,11 @@ fine:
  * ⚠ This function never returns: either it does `exec`, or it exits with a
  *   code. */
 static void diventa_ed_esegui(const struct figli *f, const struct figlio *g,
-                              int socket_figlio, const struct passwd *pw,
-                              const gid_t *gruppi, int ngruppi)
+                              int socket_child, const struct passwd *pw,
+                              const gid_t *gruppi, int ngroups)
 {
-	char a_utente[80], a_uid[32], a_gid[32], a_l[32], a_a[32], a_matr[40];
-	char a_tetto[32];
+	char a_user[80], a_uid[32], a_gid[32], a_l[32], a_a[32], a_serial[40];
+	char a_cap[32];
 	char e_home[512], e_user[96], e_log[96], e_path[128], e_runtime[160],
 		e_bus[224], e_shell[16];
 	/* ⚠ Eighteen: the nine fixed ones, the NULL, and the EIGHT optional words
@@ -1124,17 +1124,17 @@ static void diventa_ed_esegui(const struct figli *f, const struct figlio *g,
 	 *   `pam_systemd` puts in the session's environment — `XDG_SESSION_ID`
 	 *   first, which is what Mutter was missing. */
 	char *envp[16];
-	char **ambiente_pam = NULL;
+	char **pam_environment = NULL;
 	int na = 0, ne = 0;
 	uid_t r, e, s;
 	gid_t rg, eg, sg;
 
 	/* 1. the socket in the agreed place (fd 3), and without CLOEXEC: it is the
 	 *    only thing that must cross the `exec`. */
-	if (socket_figlio != 3) {
-		if (dup2(socket_figlio, 3) < 0)
+	if (socket_child != 3) {
+		if (dup2(socket_child, 3) < 0)
 			_exit(30);
-		close(socket_figlio);
+		close(socket_child);
 	}
 	fcntl(3, F_SETFD, 0);
 
@@ -1199,11 +1199,11 @@ static void diventa_ed_esegui(const struct figli *f, const struct figlio *g,
 	 *   not even leave a line for whoever reads the log (invariant I1).
 	 */
 	{
-		struct pam_conv conv_muta = { conversazione_muta_figlio, NULL };
+		struct pam_conv silent_conv = { child_silent_conversation, NULL };
 		pam_handle_t *pam = NULL;
 		int rv;
 
-		rv = pam_start("remotix", pw->pw_name, &conv_muta, &pam);
+		rv = pam_start("remotix", pw->pw_name, &silent_conv, &pam);
 		if (rv != PAM_SUCCESS) {
 			fprintf(stderr, "figlio: ⛔ pam_start: %s\n",
 			        pam_strerror(NULL, rv));
@@ -1226,7 +1226,7 @@ static void diventa_ed_esegui(const struct figli *f, const struct figlio *g,
 				        "compositor will not start\n",
 				        pam_strerror(pam, rv));
 			} else {
-				ambiente_pam = pam_getenvlist(pam);
+				pam_environment = pam_getenvlist(pam);
 				/* ⭐ PHASE 17 T6: the SELinux level as for ssh. */
 				livello_selinux_come_sshd(pw->pw_name);
 			}
@@ -1236,7 +1236,7 @@ static void diventa_ed_esegui(const struct figli *f, const struct figlio *g,
 	}
 
 	/* 3. the groups, then the gid, then the uid — and never the other way round. */
-	if (setgroups((size_t)ngruppi, gruppi) != 0)
+	if (setgroups((size_t)ngroups, gruppi) != 0)
 		_exit(31);
 	if (setgid(pw->pw_gid) != 0)
 		_exit(32);
@@ -1295,29 +1295,29 @@ static void diventa_ed_esegui(const struct figli *f, const struct figlio *g,
 	 * ⛔ `XDG_SESSION_ID` is the one that counts: it is the thread that ties
 	 *    this process to the logind session, and it is what Mutter was
 	 *    looking for. */
-	for (int i = 0; ambiente_pam && ambiente_pam[i] && ne < 14; i++)
-		if (strncmp(ambiente_pam[i], "XDG_SESSION_ID=", 15) == 0)
-			envp[ne++] = ambiente_pam[i];
+	for (int i = 0; pam_environment && pam_environment[i] && ne < 14; i++)
+		if (strncmp(pam_environment[i], "XDG_SESSION_ID=", 15) == 0)
+			envp[ne++] = pam_environment[i];
 	envp[ne] = NULL;
 
 	/* 6. the child's command line, which is what the bench will read in
 	 *    `/proc/<pid>/cmdline`.  ⛔ No secrets in here: the password already
 	 *    died with the helper, and it does not pass through here. */
-	snprintf(a_utente, sizeof a_utente, "%s", pw->pw_name);
+	snprintf(a_user, sizeof a_user, "%s", pw->pw_name);
 	snprintf(a_uid, sizeof a_uid, "%ld", (long)pw->pw_uid);
 	snprintf(a_gid, sizeof a_gid, "%ld", (long)pw->pw_gid);
 	snprintf(a_l, sizeof a_l, "%u", f->tela_l);
 	snprintf(a_a, sizeof a_a, "%u", f->tela_a);
-	snprintf(a_matr, sizeof a_matr, "%llu", (unsigned long long)g->matricola);
+	snprintf(a_serial, sizeof a_serial, "%llu", (unsigned long long)g->matricola);
 	argv[na++] = (char *)"remotix-figlio";
 	argv[na++] = (char *)"--figlio-interno";
-	argv[na++] = a_utente;
+	argv[na++] = a_user;
 	argv[na++] = a_uid;
 	argv[na++] = a_gid;
 	argv[na++] = a_l;
 	argv[na++] = a_a;
-	argv[na++] = a_matr;
-	argv[na++] = f->c_e_rilievo ? (char *)f->dir_rilievo : (char *)"-";
+	argv[na++] = a_serial;
+	argv[na++] = f->has_survey ? (char *)f->dir_survey : (char *)"-";
 	/*
 	 * ⛔⭐⭐⭐ AND THE CHATTER IS PASSED TO THE CHILD — 16 Aug 2026, and it is
 	 *        the defect that cost me a whole day.
@@ -1367,12 +1367,12 @@ static void diventa_ed_esegui(const struct figli *f, const struct figlio *g,
 	 *   break.  ⭐ And they appear in `/proc/<pid>/cmdline`: whoever watches a
 	 *   bench sees what that child was born with, without trusting a log.
 	 */
-	if (f->fase9_qualita_risale)
+	if (f->phase9_quality_rises)
 		argv[na++] = (char *)"--qualita-risale";
-	if (f->fase9_tetto_banda_mbit) {
-		snprintf(a_tetto, sizeof a_tetto, "%u", f->fase9_tetto_banda_mbit);
+	if (f->phase9_bandwidth_cap_mbit) {
+		snprintf(a_cap, sizeof a_cap, "%u", f->phase9_bandwidth_cap_mbit);
 		argv[na++] = (char *)"--tetto-banda-mbit";
-		argv[na++] = a_tetto;
+		argv[na++] = a_cap;
 	}
 	/* ⛔⭐⭐ AND THE THIRD TRAVELS NEGATED, which is the only form that does not lie.
 	 *
@@ -1384,17 +1384,17 @@ static void diventa_ed_esegui(const struct figli *f, const struct figlio *g,
 	 *      with the parent's command line.  ⚠ If a positive `--audio-silenzio`
 	 *      appeared here there would be TWO names for the same cure, and that
 	 *      is exactly what this phase removed. */
-	if (!f->fase9_audio_silenzio)
+	if (!f->phase9_audio_silence)
 		argv[na++] = (char *)"--niente-audio-silenzio";
 	/* ⭐ PHASE 19: the card's route, if forced (`--codifica vaapi|vulkan`):
 	 *    the default "scheda" is not passed, and the child is born with the same. */
-	if (strcmp(figlio_codifica_strada_chiesta(), "scheda") != 0) {
+	if (strcmp(child_encoding_route_requested(), "scheda") != 0) {
 		argv[na++] = (char *)"--codifica";
-		argv[na++] = (char *)figlio_codifica_strada_chiesta();
+		argv[na++] = (char *)child_encoding_route_requested();
 	}
 	argv[na] = NULL;
 
-	execve(f->percorso_mio, argv, envp);
+	execve(f->my_path, argv, envp);
 	_exit(37);
 }
 
@@ -1449,28 +1449,28 @@ static void diventa_ed_esegui(const struct figli *f, const struct figlio *g,
  *    is the defect this line cures.
  * ---------------------------------------------------------------------------
  */
-#define DIR_NODI_SCHEDA "/dev/dri"
-#define QUANTI_GRUPPI_SCHEDA 8
+#define CARD_NODES_DIR "/dev/dri"
+#define MAX_CARD_GROUPS 8
 
-static const char *nome_del_gruppo(gid_t g, char *dove, size_t cap)
+static const char *group_name(gid_t g, char *dove, size_t cap)
 {
-	struct group gr, *ris = NULL;
+	struct group gr, *result = NULL;
 	char scorta[1024];
 
-	if (getgrgid_r(g, &gr, scorta, sizeof scorta, &ris) == 0 && ris)
+	if (getgrgid_r(g, &gr, scorta, sizeof scorta, &result) == 0 && result)
 		snprintf(dove, cap, "%s", gr.gr_name);
 	else
 		snprintf(dove, cap, "gid %ld without a name", (long)g);
 	return dove;
 }
 
-static bool sta_nel_gruppo(gid_t primario, const gid_t *gruppi, int ngruppi,
-                           gid_t cercato)
+static bool is_in_group(gid_t primario, const gid_t *gruppi, int ngroups,
+                           gid_t searched)
 {
-	if (primario == cercato)
+	if (primario == searched)
 		return true;
-	for (int i = 0; i < ngruppi; i++)
-		if (gruppi[i] == cercato)
+	for (int i = 0; i < ngroups; i++)
+		if (gruppi[i] == searched)
 			return true;
 	return false;
 }
@@ -1483,23 +1483,23 @@ static bool sta_nel_gruppo(gid_t primario, const gid_t *gruppi, int ngruppi,
  * one that only says it and the one that enrols the tenant — and a second
  * copied scan would be a second place to diverge from (`LEZIONI.md` §1.47).
  */
-static int raccogli_gruppi_scheda(gid_t visti[QUANTI_GRUPPI_SCHEDA],
-                                  char nomi[QUANTI_GRUPPI_SCHEDA][64],
-                                  char nodi[QUANTI_GRUPPI_SCHEDA][96],
+static int raccogli_gruppi_scheda(gid_t visti[MAX_CARD_GROUPS],
+                                  char nomi[MAX_CARD_GROUPS][64],
+                                  char nodi[MAX_CARD_GROUPS][96],
                                   const char *utente)
 {
 	DIR *d;
 	struct dirent *e;
-	int nvisti = 0;
+	int nseen = 0;
 
-	d = opendir(DIR_NODI_SCHEDA);
+	d = opendir(CARD_NODES_DIR);
 	if (!d) {
 		registro_dice_di(REG_FIGLIO, utente,
 		                 "⚠ %s does not open (%s): I CANNOT say whether this "
 		                 "tenant will see.  ⛔ On a machine without DRM nodes "
 		                 "the compositor draws in software, and the session "
 		                 "can be born blind without giving an error",
-		                 DIR_NODI_SCHEDA, strerror(errno));
+		                 CARD_NODES_DIR, strerror(errno));
 		return 0;
 	}
 	while ((e = readdir(d)) != NULL) {
@@ -1520,51 +1520,51 @@ static int raccogli_gruppi_scheda(gid_t visti[QUANTI_GRUPPI_SCHEDA],
 		 *   existed the truncated path would not open: the `stat` below
 		 *   fails and that node is skipped — ⇒ never a WRONG group declared
 		 *   for a half path. */
-		snprintf(percorso, sizeof percorso, "%s/%.32s", DIR_NODI_SCHEDA,
+		snprintf(percorso, sizeof percorso, "%s/%.32s", CARD_NODES_DIR,
 		         e->d_name);
 		if (stat(percorso, &st) != 0)
 			continue;
-		for (int i = 0; i < nvisti; i++)
+		for (int i = 0; i < nseen; i++)
 			if (visti[i] == st.st_gid) {
 				gia = true;
 				break;
 			}
-		if (gia || nvisti >= QUANTI_GRUPPI_SCHEDA)
+		if (gia || nseen >= MAX_CARD_GROUPS)
 			continue;
-		visti[nvisti] = st.st_gid;
-		nome_del_gruppo(st.st_gid, nomi[nvisti], 64);
-		snprintf(nodi[nvisti], 96, "%s", percorso);
-		nvisti++;
+		visti[nseen] = st.st_gid;
+		group_name(st.st_gid, nomi[nseen], 64);
+		snprintf(nodi[nseen], 96, "%s", percorso);
+		nseen++;
 	}
 	closedir(d);
-	return nvisti;
+	return nseen;
 }
 
 /* ⭐ Writes in the log whether this tenant will see or not.  It decides
  *    nothing: it declares.  Returns `true` if it is in ALL the groups of the
  *    card's nodes. */
 static bool gruppi_della_scheda(const char *utente, gid_t primario,
-                                const gid_t *gruppi, int ngruppi)
+                                const gid_t *gruppi, int ngroups)
 {
-	gid_t visti[QUANTI_GRUPPI_SCHEDA];
-	char nomi[QUANTI_GRUPPI_SCHEDA][64];
-	char nodi[QUANTI_GRUPPI_SCHEDA][96];
-	int nvisti = raccogli_gruppi_scheda(visti, nomi, nodi, utente);
+	gid_t visti[MAX_CARD_GROUPS];
+	char nomi[MAX_CARD_GROUPS][64];
+	char nodi[MAX_CARD_GROUPS][96];
+	int nseen = raccogli_gruppi_scheda(visti, nomi, nodi, utente);
 	int mancanti = 0;
 	char elenco[256];
 	size_t usati = 0;
 
-	if (nvisti == 0) {
+	if (nseen == 0) {
 		registro_dice_di(REG_FIGLIO, utente,
 		                 "⚠ no `cardN`/`renderDN` node in %s: this "
 		                 "machine has no card to show, and the "
 		                 "compositor will draw in SOFTWARE",
-		                 DIR_NODI_SCHEDA);
+		                 CARD_NODES_DIR);
 		return false;
 	}
 
-	for (int i = 0; i < nvisti; i++) {
-		if (sta_nel_gruppo(primario, gruppi, ngruppi, visti[i])) {
+	for (int i = 0; i < nseen; i++) {
+		if (is_in_group(primario, gruppi, ngroups, visti[i])) {
 			int n = snprintf(elenco + usati, sizeof elenco - usati, "%s%s",
 			                 usati ? ", " : "", nomi[i]);
 			if (n > 0 && (size_t)n < sizeof elenco - usati)
@@ -1633,7 +1633,7 @@ static bool gruppi_della_scheda(const char *utente, gid_t primario,
  * Returns `true` if it changed something (and then the groups must be read
  * again).
  */
-static bool comando_da_root(const char *quale, char *const argv[], const char *utente)
+static bool run_as_root(const char *quale, char *const argv[], const char *utente)
 {
 	pid_t p = fork();
 	int stato = 0;
@@ -1676,11 +1676,11 @@ static bool comando_da_root(const char *quale, char *const argv[], const char *u
  *   is worse (§4.2) — but it is SAID, with what the uninstallation will not
  *   know.
  */
-#define GRUPPI_CARTELLA "/var/lib/remotix"
+#define GROUPS_DIR "/var/lib/remotix"
 #define GRUPPI_FILE "gruppi-iscritti.jsonl"
 
 /* The JSON text of a string: quotes, backslash and control characters. */
-static void json_testo(char *d, size_t quanto, const char *s)
+static void json_text(char *d, size_t quanto, const char *s)
 {
 	size_t k = 0;
 
@@ -1702,22 +1702,22 @@ static void json_testo(char *d, size_t quanto, const char *s)
 /* The folder: opened without following links, owned by root, not writable by
  * others.  If missing (outside the package: a bench) it is created 0700.  -1
  * with `perche` written. */
-static int gruppi_apri_cartella(char *perche, size_t quanto)
+static int groups_open_folder(char *perche, size_t quanto)
 {
 	struct stat st;
 	int dfd;
 
-	if (mkdir(GRUPPI_CARTELLA, 0700) != 0 && errno != EEXIST) {
-		snprintf(perche, quanto, "mkdir %s: %s", GRUPPI_CARTELLA, strerror(errno));
+	if (mkdir(GROUPS_DIR, 0700) != 0 && errno != EEXIST) {
+		snprintf(perche, quanto, "mkdir %s: %s", GROUPS_DIR, strerror(errno));
 		return -1;
 	}
-	dfd = open(GRUPPI_CARTELLA, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+	dfd = open(GROUPS_DIR, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
 	if (dfd < 0) {
-		snprintf(perche, quanto, "%s: %s", GRUPPI_CARTELLA, strerror(errno));
+		snprintf(perche, quanto, "%s: %s", GROUPS_DIR, strerror(errno));
 		return -1;
 	}
 	if (fstat(dfd, &st) != 0 || st.st_uid != 0 || (st.st_mode & 022)) {
-		snprintf(perche, quanto, "%s is not owned by root or is writable by others", GRUPPI_CARTELLA);
+		snprintf(perche, quanto, "%s is not owned by root or is writable by others", GROUPS_DIR);
 		close(dfd);
 		return -1;
 	}
@@ -1725,10 +1725,10 @@ static int gruppi_apri_cartella(char *perche, size_t quanto)
 }
 
 /* The file, append-only.  -1 with `perche` written. */
-static int gruppi_apri_file(char *perche, size_t quanto)
+static int groups_open_file(char *perche, size_t quanto)
 {
 	struct stat st;
-	int dfd = gruppi_apri_cartella(perche, quanto);
+	int dfd = groups_open_folder(perche, quanto);
 	int fd;
 	bool nuovo = false;
 
@@ -1741,13 +1741,13 @@ static int gruppi_apri_file(char *perche, size_t quanto)
 		nuovo = fd >= 0;
 	}
 	if (fd < 0) {
-		snprintf(perche, quanto, "%s/%s: %s", GRUPPI_CARTELLA, GRUPPI_FILE, strerror(errno));
+		snprintf(perche, quanto, "%s/%s: %s", GROUPS_DIR, GRUPPI_FILE, strerror(errno));
 		close(dfd);
 		return -1;
 	}
 	if (fstat(fd, &st) != 0 || !S_ISREG(st.st_mode) || st.st_uid != 0 || (st.st_mode & 022)) {
 		snprintf(perche, quanto, "%s/%s is not a regular file owned by root, or is writable by others",
-		         GRUPPI_CARTELLA, GRUPPI_FILE);
+		         GROUPS_DIR, GRUPPI_FILE);
 		close(fd);
 		close(dfd);
 		return -1;
@@ -1761,7 +1761,7 @@ static int gruppi_apri_file(char *perche, size_t quanto)
 }
 
 /* One line per group.  false with `perche` written. */
-static bool gruppi_annota(int fd, const char *utente, uid_t uid, const char *gruppo, gid_t gid,
+static bool groups_annotate(int fd, const char *utente, uid_t uid, const char *gruppo, gid_t gid,
                           char *perche, size_t quanto)
 {
 	char u[256], g[192], quando[32], riga[768];
@@ -1769,8 +1769,8 @@ static bool gruppi_annota(int fd, const char *utente, uid_t uid, const char *gru
 	time_t ora = time(NULL);
 	int n;
 
-	json_testo(u, sizeof u, utente);
-	json_testo(g, sizeof g, gruppo);
+	json_text(u, sizeof u, utente);
+	json_text(g, sizeof g, gruppo);
 	gmtime_r(&ora, &tm);
 	strftime(quando, sizeof quando, "%Y-%m-%dT%H:%M:%SZ", &tm);
 	n = snprintf(riga, sizeof riga,
@@ -1795,14 +1795,14 @@ static bool gruppi_annota(int fd, const char *utente, uid_t uid, const char *gru
 }
 
 static bool iscrivi_ai_gruppi_della_scheda(const char *utente, uid_t uid, gid_t primario,
-                                           const gid_t *gruppi, int ngruppi)
+                                           const gid_t *gruppi, int ngroups)
 {
-	gid_t visti[QUANTI_GRUPPI_SCHEDA];
-	char nomi[QUANTI_GRUPPI_SCHEDA][64];
-	char nodi[QUANTI_GRUPPI_SCHEDA][96];
-	int nvisti = raccogli_gruppi_scheda(visti, nomi, nodi, utente);
-	int messi[QUANTI_GRUPPI_SCHEDA];
-	int nmessi = 0;
+	gid_t visti[MAX_CARD_GROUPS];
+	char nomi[MAX_CARD_GROUPS][64];
+	char nodi[MAX_CARD_GROUPS][96];
+	int nseen = raccogli_gruppi_scheda(visti, nomi, nodi, utente);
+	int messi[MAX_CARD_GROUPS];
+	int nplaced = 0;
 	char elenco[256] = "";
 	char perche[256] = "";
 	size_t usati = 0;
@@ -1810,19 +1810,19 @@ static bool iscrivi_ai_gruppi_della_scheda(const char *utente, uid_t uid, gid_t 
 	char *argv_term[4];
 	int fd;
 
-	if (nvisti == 0 || geteuid() != 0)
+	if (nseen == 0 || geteuid() != 0)
 		return false;
-	for (int i = 0; i < nvisti; i++) {
+	for (int i = 0; i < nseen; i++) {
 		int n;
 
 		/* Whoever is already there is PREESISTENTE: not enrolled and not recorded. */
-		if (sta_nel_gruppo(primario, gruppi, ngruppi, visti[i]))
+		if (is_in_group(primario, gruppi, ngroups, visti[i]))
 			continue;
 		n = snprintf(elenco + usati, sizeof elenco - usati, "%s%s", usati ? "," : "",
 		             nomi[i]);
 		if (n > 0 && (size_t)n < sizeof elenco - usati) {
 			usati += (size_t)n;
-			messi[nmessi++] = i;
+			messi[nplaced++] = i;
 		}
 	}
 	if (!usati)
@@ -1842,9 +1842,9 @@ static bool iscrivi_ai_gruppi_della_scheda(const char *utente, uid_t uid, gid_t 
 	 * at once; the line is written AFTER, only if `usermod` succeeded:
 	 * recording an enrolment never made would make the uninstallation remove a
 	 * group put there by others. */
-	fd = gruppi_apri_file(perche, sizeof perche);
-	if (!comando_da_root("/usr/sbin/usermod", argv_mod, utente) &&
-	    !comando_da_root("/sbin/usermod", argv_mod, utente)) {
+	fd = groups_open_file(perche, sizeof perche);
+	if (!run_as_root("/usr/sbin/usermod", argv_mod, utente) &&
+	    !run_as_root("/sbin/usermod", argv_mod, utente)) {
 		registro_dice_di(REG_FIGLIO, utente,
 		                 "⛔ I could not enrol «%s» in «%s»: the session will be born "
 		                 "BLIND, and the manual cure is `usermod -aG %s %s`",
@@ -1853,21 +1853,21 @@ static bool iscrivi_ai_gruppi_della_scheda(const char *utente, uid_t uid, gid_t 
 			close(fd);
 		return false;
 	}
-	for (int j = 0; j < nmessi; j++) {
+	for (int j = 0; j < nplaced; j++) {
 		int i = messi[j];
 
-		if (fd >= 0 && gruppi_annota(fd, utente, uid, nomi[i], visti[i], perche, sizeof perche))
+		if (fd >= 0 && groups_annotate(fd, utente, uid, nomi[i], visti[i], perche, sizeof perche))
 			registro_dice_di(REG_FIGLIO, utente,
 			                 "⭐ recorded in %s/%s: «%s» in «%s» (gid %ld), DIRETTA — the "
 			                 "uninstallation will remove it",
-			                 GRUPPI_CARTELLA, GRUPPI_FILE, utente, nomi[i], (long)visti[i]);
+			                 GROUPS_DIR, GRUPPI_FILE, utente, nomi[i], (long)visti[i]);
 		else
 			registro_dice_di(REG_FIGLIO, utente,
 			                 "⛔ enrolment NOT RECORDED (%s): «%s» in «%s» (gid %ld) is "
 			                 "the work of REMOTIX but %s/%s does not say so — the uninstallation "
 			                 "will NOT remove it.  Manual remedy: `gpasswd -d %s %s` after "
 			                 "uninstalling",
-			                 perche, utente, nomi[i], (long)visti[i], GRUPPI_CARTELLA,
+			                 perche, utente, nomi[i], (long)visti[i], GROUPS_DIR,
 			                 GRUPPI_FILE, utente, nomi[i]);
 	}
 	if (fd >= 0)
@@ -1907,7 +1907,7 @@ static bool iscrivi_ai_gruppi_della_scheda(const char *utente, uid_t uid, gid_t 
 	argv_term[1] = (char *)"terminate-user";
 	argv_term[2] = (char *)utente;
 	argv_term[3] = NULL;
-	(void)comando_da_root("/usr/bin/loginctl", argv_term, utente);
+	(void)run_as_root("/usr/bin/loginctl", argv_term, utente);
 	registro_dice_di(REG_FIGLIO, utente,
 	                 "⭐ «%s» enrolled in «%s» and user manager restarted: from "
 	                 "now on it sees the card",
@@ -1923,10 +1923,10 @@ bool figli_assicura(figli *f, const char *utente)
 bool figli_assicura_da(figli *f, const char *utente, const char *rhost)
 {
 	struct figlio *g;
-	struct passwd pw, *ris = NULL;
+	struct passwd pw, *result = NULL;
 	char scorta[1024];
 	gid_t gruppi[64];
-	int ngruppi = (int)(sizeof gruppi / sizeof gruppi[0]);
+	int ngroups = (int)(sizeof gruppi / sizeof gruppi[0]);
 	int sv[2];
 	int uno = 1;
 	int libero = -1;
@@ -1967,7 +1967,7 @@ bool figli_assicura_da(figli *f, const char *utente, const char *rhost)
 	 *    is the one the kernel will have to stamp on every message.  ⚠
 	 *    Resolving it in the child would mean letting the one to be checked
 	 *    say who it is. */
-	if (getpwnam_r(utente, &pw, scorta, sizeof scorta, &ris) != 0 || !ris) {
+	if (getpwnam_r(utente, &pw, scorta, sizeof scorta, &result) != 0 || !result) {
 		registro_dice(REG_FIGLIO,
 		              "⛔ «%s» passed PAM but is not a user of this "
 		              "system (getpwnam: %s): NO child.  ⚠ It is not a "
@@ -1989,15 +1989,15 @@ bool figli_assicura_da(figli *f, const char *utente, const char *rhost)
 		              utente);
 		return false;
 	}
-	if (getgrouplist(pw.pw_name, pw.pw_gid, gruppi, &ngruppi) < 0) {
+	if (getgrouplist(pw.pw_name, pw.pw_gid, gruppi, &ngroups) < 0) {
 		/* More groups than the buffer holds: what is there is taken and it is
 		 * DECLARED, because a child with fewer groups than due may hit a
 		 * permission denied much later and much further away. */
-		ngruppi = (int)(sizeof gruppi / sizeof gruppi[0]);
+		ngroups = (int)(sizeof gruppi / sizeof gruppi[0]);
 		registro_dice(REG_FIGLIO,
 		              "⚠ «%s» has more than %d groups: the child will carry %d.  "
 		              "If something is denied to it, the cause is this line",
-		              utente, ngruppi, ngruppi);
+		              utente, ngroups, ngroups);
 	}
 
 	/* ⭐⭐⭐ AND HERE IT IS SAID WHETHER THIS TENANT WILL SEE — the box above
@@ -2011,12 +2011,12 @@ bool figli_assicura_da(figli *f, const char *utente, const char *rhost)
 	 *    user's decision, 20 Sep 2026): once enrolled, the groups are read
 	 *    again and declared again — the line the administrator reads must be
 	 *    the TRUE one of this session, not the one from before the cure. */
-	if (iscrivi_ai_gruppi_della_scheda(pw.pw_name, pw.pw_uid, pw.pw_gid, gruppi, ngruppi)) {
-		ngruppi = (int)(sizeof gruppi / sizeof gruppi[0]);
-		if (getgrouplist(pw.pw_name, pw.pw_gid, gruppi, &ngruppi) < 0)
-			ngruppi = (int)(sizeof gruppi / sizeof gruppi[0]);
+	if (iscrivi_ai_gruppi_della_scheda(pw.pw_name, pw.pw_uid, pw.pw_gid, gruppi, ngroups)) {
+		ngroups = (int)(sizeof gruppi / sizeof gruppi[0]);
+		if (getgrouplist(pw.pw_name, pw.pw_gid, gruppi, &ngroups) < 0)
+			ngroups = (int)(sizeof gruppi / sizeof gruppi[0]);
 	}
-	(void)gruppi_della_scheda(pw.pw_name, pw.pw_gid, gruppi, ngruppi);
+	(void)gruppi_della_scheda(pw.pw_name, pw.pw_gid, gruppi, ngroups);
 
 	/* ⛔ `SOCK_SEQPACKET` for the same reason as the helper: the message
 	 *    boundaries are kept by the kernel.  With a stream the framing would
@@ -2049,7 +2049,7 @@ bool figli_assicura_da(figli *f, const char *utente, const char *rhost)
 
 	g = &f->v[libero];
 	memset(g, 0, sizeof *g);
-	g->matricola = f->prossima_matricola;
+	g->matricola = f->next_serial;
 	snprintf(g->utente, sizeof g->utente, "%s", pw.pw_name);
 	snprintf(g->rhost, sizeof g->rhost, "%s", rhost ? rhost : "");
 	g->uid = pw.pw_uid;
@@ -2067,7 +2067,7 @@ bool figli_assicura_da(figli *f, const char *utente, const char *rhost)
 	}
 	if (p == 0) {
 		close(sv[0]);
-		diventa_ed_esegui(f, g, sv[1], &pw, gruppi, ngruppi);
+		diventa_ed_esegui(f, g, sv[1], &pw, gruppi, ngroups);
 		_exit(38); /* never reached */
 	}
 
@@ -2081,9 +2081,9 @@ bool figli_assicura_da(figli *f, const char *utente, const char *rhost)
 	 *    PAM, brought back through another door.  ⚠ The CHILD's end stays
 	 *    blocking on purpose: there waiting is the job. */
 	fcntl(g->fd, F_SETFL, O_NONBLOCK);
-	g->nato_ms = registro_ora_ms();
-	g->ultimo_ricontrollo_ms = g->nato_ms;
-	f->prossima_matricola++;
+	g->born_ms = registro_ora_ms();
+	g->last_recheck_ms = g->born_ms;
+	f->next_serial++;
 
 	registro_dice(REG_FIGLIO,
 	              "⭐ child spawned for «%s»: pid %ld, uid %ld, gid %ld, "
@@ -2110,7 +2110,7 @@ size_t figli_descrittori(figli *f, struct pollfd *fds, size_t max)
 	return n;
 }
 
-int figli_quanti(const figli *f)
+int children_count(const figli *f)
 {
 	int n = 0;
 	if (!f)
@@ -2131,10 +2131,10 @@ int figli_quanti(const figli *f)
  *    **underestimates**, and underestimating is the direction that starves
  *    everyone (§1.33).
  *
- * ⚠ The index goes from 0 to `figli_quanti() − 1` and **is not stable between
+ * ⚠ The index goes from 0 to `children_count() − 1` and **is not stable between
  *   two calls**: slots get freed.  It serves to scan once, within the same
  *   round of the loop, and for nothing else. */
-const char *figli_utente_ennesimo(const figli *f, int quale)
+const char *children_nth_user(const figli *f, int quale)
 {
 	int n = 0;
 
@@ -2160,8 +2160,8 @@ pid_t figli_pid_di(const figli *f, const char *utente)
 }
 
 /* A frame piece has arrived, and the credentials were right. */
-static void monta_pezzo(struct figli *f, struct figlio *g,
-                        const struct corpo_fotogramma *c, const uint8_t *dati)
+static void assemble_piece(struct figli *f, struct figlio *g,
+                        const struct body_frame *c, const uint8_t *dati)
 {
 	if (c->totale == 0 || c->totale > FOTOGRAMMA_MAX) {
 		registro_dice(REG_FIGLIO,
@@ -2179,7 +2179,7 @@ static void monta_pezzo(struct figli *f, struct figlio *g,
 		              g->utente, c->offset, c->pezzo, c->totale);
 		free(g->monta);
 		g->monta = NULL;
-		g->monta_totale = g->monta_avuti = 0;
+		g->assembly_total = g->assembly_got = 0;
 		return;
 	}
 
@@ -2191,35 +2191,35 @@ static void monta_pezzo(struct figli *f, struct figlio *g,
 			              "⛔ «%s»: %u bytes of frame do not fit in "
 			              "memory",
 			              g->utente, c->totale);
-			g->monta_totale = g->monta_avuti = 0;
+			g->assembly_total = g->assembly_got = 0;
 			return;
 		}
-		g->monta_totale = c->totale;
-		g->monta_avuti = 0;
-		g->monta_codec = c->codec;
-		g->monta_chiave = c->chiave;
-		g->monta_l = c->larghezza;
-		g->monta_a = c->altezza;
-		g->monta_istante = c->istante_us;
-		g->monta_input = c->input;
+		g->assembly_total = c->totale;
+		g->assembly_got = 0;
+		g->assembly_codec = c->codec;
+		g->assembly_key = c->chiave;
+		g->assembly_w = c->larghezza;
+		g->assembly_h = c->altezza;
+		g->assembly_instant = c->istante_us;
+		g->assembly_input = c->input;
 	}
 	/* ⛔ Pieces are accepted ONLY in order, and one out of place throws away
 	 *    everything: stitching a hole would mean guessing what was missing, and
 	 *    that is the leniency that hides (`REVIEWER.md` §5). */
-	if (!g->monta || c->offset != g->monta_avuti || c->codec != g->monta_codec
-	    || c->totale != g->monta_totale) {
+	if (!g->monta || c->offset != g->assembly_got || c->codec != g->assembly_codec
+	    || c->totale != g->assembly_total) {
 		registro_dice(REG_FIGLIO,
 		              "⛔ «%s»: piece out of order (expected %zu, got "
 		              "%u): the whole frame is DROPPED",
-		              g->utente, g->monta_avuti, c->offset);
+		              g->utente, g->assembly_got, c->offset);
 		free(g->monta);
 		g->monta = NULL;
-		g->monta_totale = g->monta_avuti = 0;
+		g->assembly_total = g->assembly_got = 0;
 		return;
 	}
 	memcpy(g->monta + c->offset, dati, c->pezzo);
-	g->monta_avuti += c->pezzo;
-	if (g->monta_avuti < g->monta_totale)
+	g->assembly_got += c->pezzo;
+	if (g->assembly_got < g->assembly_total)
 		return;
 
 	/* ⛔⭐ AND THIS LINE MOVED TO CHATTER WITH PHASE 3.
@@ -2231,29 +2231,29 @@ static void monta_pezzo(struct figli *f, struct figlio *g,
 	 *     it stays in the chatter, and the summary count is written by
 	 *     `contati` below once per second.  The first one, the one that says
 	 *     whether the stage works, is written anyway. */
-	if (g->fotogrammi_avuti == 0)
+	if (g->frames_received == 0)
 		registro_dice(REG_FIGLIO,
 		              "⭐ FIRST complete frame from «%s» (uid %ld, kernel "
 		              "stamp): codec %u, %zu bytes, %ux%u, %s",
-		              g->utente, (long)g->uid, g->monta_codec, g->monta_totale,
-		              g->monta_l, g->monta_a,
-		              g->monta_chiave ? "KEYFRAME" : "delta");
+		              g->utente, (long)g->uid, g->assembly_codec, g->assembly_total,
+		              g->assembly_w, g->assembly_h,
+		              g->assembly_key ? "KEYFRAME" : "delta");
 	else
 		registro_dettaglio(REG_FIGLIO,
 		                   "frame from «%s»: codec %u, %zu bytes, %s",
-		                   g->utente, g->monta_codec, g->monta_totale,
-		                   g->monta_chiave ? "KEYFRAME" : "delta");
-	g->fotogrammi_avuti++;
-	g->byte_avuti += g->monta_totale;
-	if (g->monta_chiave)
-		g->chiavi_avute++;
+		                   g->utente, g->assembly_codec, g->assembly_total,
+		                   g->assembly_key ? "KEYFRAME" : "delta");
+	g->frames_received++;
+	g->byte_got += g->assembly_total;
+	if (g->assembly_key)
+		g->keys_received++;
 	if (f->deposita)
-		f->deposita(f->ctx, g->utente, g->uid, g->monta_codec,
-		            g->monta_chiave != 0, g->monta, g->monta_totale, g->monta_l,
-		            g->monta_a, g->monta_istante, g->monta_input);
+		f->deposita(f->ctx, g->utente, g->uid, g->assembly_codec,
+		            g->assembly_key != 0, g->monta, g->assembly_total, g->assembly_w,
+		            g->assembly_h, g->assembly_instant, g->assembly_input);
 	free(g->monta);
 	g->monta = NULL;
-	g->monta_totale = g->monta_avuti = 0;
+	g->assembly_total = g->assembly_got = 0;
 }
 
 /* ⭐⭐ A CURSOR piece has arrived, and the credentials were right.
@@ -2272,8 +2272,8 @@ static void monta_pezzo(struct figli *f, struct figlio *g,
  *         here on the text travels as a string, and `appunti.c` has already
  *         guaranteed it does not contain one in the middle.
  */
-static void monta_appunti(struct figli *f, struct figlio *g,
-                          const struct corpo_appunti *c, const uint8_t *dati)
+static void assemble_clipboard(struct figli *f, struct figlio *g,
+                          const struct body_clipboard *c, const uint8_t *dati)
 {
 	if (c->totale > APPUNTI_TETTO) {
 		registro_dice(REG_FIGLIO,
@@ -2286,8 +2286,8 @@ static void monta_appunti(struct figli *f, struct figlio *g,
 	/* ⚠ Zero bytes is a LEGITIMATE fact: the clipboard emptied.  It is
 	 *   delivered, and the receiver decides — it is not this table's job. */
 	if (c->totale == 0) {
-		if (f->su_appunti_testo)
-			f->su_appunti_testo(f->ctx_appunti, g->utente, g->uid, "", 0);
+		if (f->on_clipboard_text)
+			f->on_clipboard_text(f->ctx_clipboard, g->utente, g->uid, "", 0);
 		return;
 	}
 	if (c->pezzo > PEZZO_MAX || (uint64_t)c->offset + c->pezzo > c->totale) {
@@ -2295,58 +2295,58 @@ static void monta_appunti(struct figli *f, struct figlio *g,
 		              "⛔ «%s»: clipboard piece out of size (offset %u + %u of "
 		              "%u): discarded",
 		              g->utente, c->offset, c->pezzo, c->totale);
-		free(g->app_monta);
-		g->app_monta = NULL;
-		g->app_totale = g->app_avuti = 0;
+		free(g->app_mount);
+		g->app_mount = NULL;
+		g->app_total = g->app_got = 0;
 		return;
 	}
 	if (c->offset == 0) {
-		free(g->app_monta);
-		g->app_monta = (uint8_t *)malloc((size_t)c->totale + 1u);
-		if (!g->app_monta) {
+		free(g->app_mount);
+		g->app_mount = (uint8_t *)malloc((size_t)c->totale + 1u);
+		if (!g->app_mount) {
 			registro_dice(REG_FIGLIO,
 			              "⛔ «%s»: %u bytes of clipboard do not fit in memory",
 			              g->utente, c->totale);
-			g->app_totale = g->app_avuti = 0;
+			g->app_total = g->app_got = 0;
 			return;
 		}
-		g->app_totale = c->totale;
-		g->app_avuti = 0;
+		g->app_total = c->totale;
+		g->app_got = 0;
 	}
 	/* ⛔ In order and nothing else, like the frame and the cursor.  ⚠ And here
 	 *    the guessed hole would be **worse**: a wrong frame lasts 20 ms, a
 	 *    wrong text gets pasted into a terminal. */
-	if (!g->app_monta || c->offset != g->app_avuti
-	    || c->totale != g->app_totale) {
+	if (!g->app_mount || c->offset != g->app_got
+	    || c->totale != g->app_total) {
 		registro_dice(REG_FIGLIO,
 		              "⛔ «%s»: clipboard piece out of order (expected %zu, "
 		              "got %u): the whole text is DROPPED",
-		              g->utente, g->app_avuti, c->offset);
-		free(g->app_monta);
-		g->app_monta = NULL;
-		g->app_totale = g->app_avuti = 0;
+		              g->utente, g->app_got, c->offset);
+		free(g->app_mount);
+		g->app_mount = NULL;
+		g->app_total = g->app_got = 0;
 		return;
 	}
-	memcpy(g->app_monta + c->offset, dati, c->pezzo);
-	g->app_avuti += c->pezzo;
-	if (g->app_avuti < g->app_totale)
+	memcpy(g->app_mount + c->offset, dati, c->pezzo);
+	g->app_got += c->pezzo;
+	if (g->app_got < g->app_total)
 		return;
 
-	g->app_monta[g->app_totale] = 0;
+	g->app_mount[g->app_total] = 0;
 	registro_dice(REG_FIGLIO,
 	              "⭐ «%s» copied %zu bytes of text in the session: to the "
 	              "client (§7.4)",
-	              g->utente, g->app_totale);
-	if (f->su_appunti_testo)
-		f->su_appunti_testo(f->ctx_appunti, g->utente, g->uid,
-		                    (const char *)g->app_monta, g->app_totale);
-	free(g->app_monta);
-	g->app_monta = NULL;
-	g->app_totale = g->app_avuti = 0;
+	              g->utente, g->app_total);
+	if (f->on_clipboard_text)
+		f->on_clipboard_text(f->ctx_clipboard, g->utente, g->uid,
+		                    (const char *)g->app_mount, g->app_total);
+	free(g->app_mount);
+	g->app_mount = NULL;
+	g->app_total = g->app_got = 0;
 }
 
-static void monta_cursore(struct figli *f, struct figlio *g,
-                          const struct corpo_cursore *c, const uint8_t *dati)
+static void assemble_cursor(struct figli *f, struct figlio *g,
+                          const struct body_cursor *c, const uint8_t *dati)
 {
 	/* ⛔ The cap is that of `RCP.md` §5.5 — 256x256 in BGRA — and it is
 	 *    enforced HERE because here the sender is another process.  ⚠ It is
@@ -2373,20 +2373,20 @@ static void monta_cursore(struct figli *f, struct figlio *g,
 		              "⛔ «%s»: cursor piece out of size (offset %u + %u of "
 		              "%u): discarded",
 		              g->utente, c->offset, c->pezzo, c->totale);
-		free(g->cur_monta);
-		g->cur_monta = NULL;
-		g->cur_totale = g->cur_avuti = 0;
+		free(g->cur_mount);
+		g->cur_mount = NULL;
+		g->cur_total = g->cur_got = 0;
 		return;
 	}
 	if (c->offset == 0) {
-		free(g->cur_monta);
-		g->cur_monta = (uint8_t *)malloc(c->totale);
-		if (!g->cur_monta) {
-			g->cur_totale = g->cur_avuti = 0;
+		free(g->cur_mount);
+		g->cur_mount = (uint8_t *)malloc(c->totale);
+		if (!g->cur_mount) {
+			g->cur_total = g->cur_got = 0;
 			return;
 		}
-		g->cur_totale = c->totale;
-		g->cur_avuti = 0;
+		g->cur_total = c->totale;
+		g->cur_got = 0;
 		g->cur_l = c->larghezza;
 		g->cur_a = c->altezza;
 		g->cur_ax = c->attivo_x;
@@ -2395,28 +2395,28 @@ static void monta_cursore(struct figli *f, struct figlio *g,
 	/* ⛔ In order and nothing else, like the frame: stitching a hole would mean
 	 *    guessing what was missing — and a guessed cursor is a cursor made of
 	 *    someone else's memory. */
-	if (!g->cur_monta || c->offset != g->cur_avuti || c->totale != g->cur_totale
+	if (!g->cur_mount || c->offset != g->cur_got || c->totale != g->cur_total
 	    || c->larghezza != g->cur_l || c->altezza != g->cur_a) {
 		registro_dettaglio(REG_FIGLIO,
 		                   "«%s»: cursor piece out of order: dropping the half "
 		                   "shape (the client keeps the previous one)",
 		                   g->utente);
-		free(g->cur_monta);
-		g->cur_monta = NULL;
-		g->cur_totale = g->cur_avuti = 0;
+		free(g->cur_mount);
+		g->cur_mount = NULL;
+		g->cur_total = g->cur_got = 0;
 		return;
 	}
-	memcpy(g->cur_monta + c->offset, dati, c->pezzo);
-	g->cur_avuti += c->pezzo;
-	if (g->cur_avuti < g->cur_totale)
+	memcpy(g->cur_mount + c->offset, dati, c->pezzo);
+	g->cur_got += c->pezzo;
+	if (g->cur_got < g->cur_total)
 		return;
 
 	if (f->cursore)
 		f->cursore(f->ctx, g->utente, g->uid, g->cur_l, g->cur_a, g->cur_ax,
-		           g->cur_ay, g->cur_monta, g->cur_totale);
-	free(g->cur_monta);
-	g->cur_monta = NULL;
-	g->cur_totale = g->cur_avuti = 0;
+		           g->cur_ay, g->cur_mount, g->cur_total);
+	free(g->cur_mount);
+	g->cur_mount = NULL;
+	g->cur_total = g->cur_got = 0;
 }
 
 /* ⛔ Returns `false` when the child is gone — and the caller MUST stop
@@ -2445,17 +2445,17 @@ static bool tratta(struct figli *f, struct figlio *g, const struct testa *t,
 			              g->utente, s.uid, s.euid, s.suid, (long)g->uid);
 			if (g->pid > 0)
 				kill(g->pid, SIGKILL);
-			figlio_congeda(f, g, "declares a uid different from the stamped one");
+			child_dismiss(f, g, "declares a uid different from the stamped one");
 			return false;
 		}
-		if (g->si_e_presentato) {
+		if (g->showed_up) {
 			registro_dettaglio(REG_FIGLIO,
 			                   "«%s» rechecked: uid %u, pid %u, parent %u, "
 			                   "%u descriptors — the link holds",
 			                   g->utente, s.euid, s.pid, s.ppid, s.descrittori);
 			return true;
 		}
-		g->si_e_presentato = true;
+		g->showed_up = true;
 		registro_dice(REG_FIGLIO,
 		              "⭐ «%s» introduces itself: pid %u (parent %u), uid %u/%u/%u, "
 		              "gid %u/%u/%u, %u open descriptors, runtime «%s» %s, "
@@ -2481,8 +2481,8 @@ static bool tratta(struct figli *f, struct figlio *g, const struct testa *t,
 		              "client asked for it: the user logged out from the "
 		              "desktop menu).  Whoever is watching gets the farewell 0x10",
 		              g->utente);
-		if (f->su_sessione_finita)
-			f->su_sessione_finita(f->ctx_sessione_finita, g->utente, g->uid);
+		if (f->on_session_finished)
+			f->on_session_finished(f->ctx_session_finished, g->utente, g->uid);
 		else
 			registro_dice(REG_FIGLIO,
 			              "⚠ no «session over» hook: the clients of «%s» "
@@ -2491,7 +2491,7 @@ static bool tratta(struct figli *f, struct figlio *g, const struct testa *t,
 			              g->utente);
 		return true;
 	case MSG_PALCO: {
-		struct corpo_palco p;
+		struct body_stage p;
 		if (byte < sizeof p)
 			return true;
 		memcpy(&p, corpo, sizeof p);
@@ -2500,34 +2500,34 @@ static bool tratta(struct figli *f, struct figlio *g, const struct testa *t,
 		              "monitor «%s» (%u before, %u after), %ux%u stride %u at %u "
 		              "bits, %u streams delivering%s%s",
 		              p.flussi > 0 ? "⭐" : "⛔", g->utente,
-		              p.bus_aperto ? "OPEN" : "⛔ NO", p.stato_sessione,
+		              p.bus_open ? "OPEN" : "⛔ NO", p.stato_sessione,
 		              p.presa, p.monitor, p.monitor_prima, p.monitor_dopo,
 		              p.larghezza, p.altezza, p.stride, p.bit, p.flussi,
 		              p.guasto[0] ? " — " : "", p.guasto);
 		return true;
 	}
 	case MSG_CURSORE: {
-		struct corpo_cursore c;
+		struct body_cursor c;
 		if (byte < sizeof c)
 			return true;
 		memcpy(&c, corpo, sizeof c);
 		if (byte < sizeof c + c.pezzo)
 			return true;
-		monta_cursore(f, g, &c, corpo + sizeof c);
+		assemble_cursor(f, g, &c, corpo + sizeof c);
 		return true;
 	}
 	case MSG_FOTOGRAMMA: {
-		struct corpo_fotogramma c;
+		struct body_frame c;
 		if (byte < sizeof c)
 			return true;
 		memcpy(&c, corpo, sizeof c);
 		if (byte < sizeof c + c.pezzo)
 			return true;
-		monta_pezzo(f, g, &c, corpo + sizeof c);
+		assemble_piece(f, g, &c, corpo + sizeof c);
 		return true;
 	}
 	case MSG_BLOCCO: {
-		struct corpo_blocco c;
+		struct body_block c;
 		if (byte < sizeof c)
 			return true;
 		memcpy(&c, corpo, sizeof c);
@@ -2547,23 +2547,23 @@ static bool tratta(struct figli *f, struct figlio *g, const struct testa *t,
 			              g->utente, c.codec);
 			return true;
 		}
-		if (f->su_blocco)
-			f->su_blocco(f->ctx_blocco, g->utente, g->uid, c.codec,
+		if (f->on_block)
+			f->on_block(f->ctx_block, g->utente, g->uid, c.codec,
 			             c.istante_us, corpo + sizeof c, c.byte);
 		return true;
 	}
 	case MSG_APPUNTI_DALLA_SESSIONE: {
-		struct corpo_appunti c;
+		struct body_clipboard c;
 		if (byte < sizeof c)
 			return true;
 		memcpy(&c, corpo, sizeof c);
 		if (byte < sizeof c + c.pezzo)
 			return true;
-		monta_appunti(f, g, &c, corpo + sizeof c);
+		assemble_clipboard(f, g, &c, corpo + sizeof c);
 		return true;
 	}
 	case MSG_APPUNTI_VUOLE: {
-		struct corpo_appunti c;
+		struct body_clipboard c;
 		if (byte < sizeof c)
 			return true;
 		memcpy(&c, corpo, sizeof c);
@@ -2576,20 +2576,20 @@ static bool tratta(struct figli *f, struct figlio *g, const struct testa *t,
 		 *      application hanging indefinitely, and the symptom — "the
 		 *      desktop has frozen" — names neither the clipboard nor the
 		 *      detach.  ⇒ The timeout is not enough: the answer goes NOW. */
-		if (!f->su_appunti_richiesta) {
+		if (!f->on_clipboard_request) {
 			registro_dice(REG_FIGLIO,
 			              "«%s» is pasting (request %u) and nobody serves "
 			              "the clipboard: answering «I don't have it» at once, instead of "
 			              "leaving the paster hanging",
 			              g->utente, c.serial);
-			figli_appunti_risposta(f, g->utente, c.serial, NULL, 0);
+			children_clipboard_response(f, g->utente, c.serial, NULL, 0);
 			return true;
 		}
-		f->su_appunti_richiesta(f->ctx_appunti, g->utente, g->uid, c.serial);
+		f->on_clipboard_request(f->ctx_clipboard, g->utente, g->uid, c.serial);
 		return true;
 	}
 	case MSG_TELA: {
-		struct corpo_tela c;
+		struct body_canvas c;
 		if (byte < sizeof c)
 			return true;
 		memcpy(&c, corpo, sizeof c);
@@ -2601,10 +2601,10 @@ static bool tratta(struct figli *f, struct figlio *g, const struct testa *t,
 			registro_dice(REG_FIGLIO,
 			              "«%s»: the stage for the canvas %ux%u is NOT there YET — "
 			              "the deadline of §7.1 is postponed",
-			              g->utente, c.voluta_l, c.voluta_a);
-			if (f->su_tela_attendi)
-				f->su_tela_attendi(f->ctx_tela_attendi, g->utente, g->uid,
-				                   c.voluta_l, c.voluta_a);
+			              g->utente, c.intended_w, c.intended_h);
+			if (f->on_canvas_wait)
+				f->on_canvas_wait(f->ctx_canvas_wait, g->utente, g->uid,
+				                   c.intended_w, c.intended_h);
 			return true;
 		}
 		/* ⛔⭐ §7.1 — THE ANSWER TO THE CANVAS, and the parent no longer GUESSES
@@ -2614,16 +2614,16 @@ static bool tratta(struct figli *f, struct figlio *g, const struct testa *t,
 		 * ⚠ The line is written here by the parent because it is the side that
 		 *   decides: the child has already written its own, with the reason. */
 		registro_dice(REG_FIGLIO,
-		              c.avuta_l && c.avuta_a
+		              c.got_w && c.got_h
 		                  ? "«%s»: the stage answers the canvas — asked %ux%u, "
 		                    "OBTAINED %ux%u"
 		                  : "«%s»: the stage did NOT make it on the canvas %ux%u "
 		                    "(%ux%u): the client will know now instead of after "
 		                    "the deadline of §7.1",
-		              g->utente, c.voluta_l, c.voluta_a, c.avuta_l, c.avuta_a);
+		              g->utente, c.intended_w, c.intended_h, c.got_w, c.got_h);
 		if (f->tela)
-			f->tela(f->ctx, g->utente, g->uid, c.voluta_l, c.voluta_a, c.avuta_l,
-			        c.avuta_a);
+			f->tela(f->ctx, g->utente, g->uid, c.intended_w, c.intended_h, c.got_w,
+			        c.got_h);
 		return true;
 	}
 	default:
@@ -2633,7 +2633,7 @@ static bool tratta(struct figli *f, struct figlio *g, const struct testa *t,
 	}
 }
 
-void figli_muovi(figli *f, struct pollfd *fds, size_t n, uint64_t ora_ms)
+void figli_muovi(figli *f, struct pollfd *fds, size_t n, uint64_t now_ms)
 {
 	if (!f)
 		return;
@@ -2648,10 +2648,10 @@ void figli_muovi(figli *f, struct pollfd *fds, size_t n, uint64_t ora_ms)
 	 *    PARENT ONLY.  ⚠ The `--kill-whom=all` road would also deliver to
 	 *    `gnome-shell`, for which `SIGUSR1` means "die": it would shut down the
 	 *    very scene one wanted to photograph. */
-	if (scatto_da_inoltrare) {
-		int quale = scatto_da_inoltrare == 2 ? SIGUSR2 : SIGUSR1;
+	if (shot_to_forward) {
+		int quale = shot_to_forward == 2 ? SIGUSR2 : SIGUSR1;
 
-		scatto_da_inoltrare = 0;
+		shot_to_forward = 0;
 		for (int i = 0; i < f->tetto; i++) {
 			struct figlio *g = &f->v[i];
 
@@ -2677,16 +2677,16 @@ void figli_muovi(figli *f, struct pollfd *fds, size_t n, uint64_t ora_ms)
 				leggibile = true;
 
 		while (leggibile) {
-			uint8_t busta[BUSTA_MAX];
+			uint8_t envelope[ENVELOPE_MAX];
 			struct testa t;
 			struct ucred chi;
 			bool c_e = false;
 			char perche[256];
-			ssize_t letti = ricevi_con_credenziali(g->fd, busta, sizeof busta,
+			ssize_t letti = receive_with_credentials(g->fd, envelope, sizeof envelope,
 			                                       &chi, &c_e);
 
 			if (letti == 0) {
-				figlio_congeda(f, g, "closed the socket (or died)");
+				child_dismiss(f, g, "closed the socket (or died)");
 				break;
 			}
 			if (letti == -2) {
@@ -2704,7 +2704,7 @@ void figli_muovi(figli *f, struct pollfd *fds, size_t n, uint64_t ora_ms)
 					continue;
 				if (errno == EAGAIN || errno == EWOULDBLOCK)
 					break;
-				figlio_congeda(f, g, strerror(errno));
+				child_dismiss(f, g, strerror(errno));
 				break;
 			}
 			if ((size_t)letti < sizeof t) {
@@ -2714,8 +2714,8 @@ void figli_muovi(figli *f, struct pollfd *fds, size_t n, uint64_t ora_ms)
 				              g->utente, letti);
 				continue;
 			}
-			memcpy(&t, busta, sizeof t);
-			if (!magia_giusta(&t)) {
+			memcpy(&t, envelope, sizeof t);
+			if (!magic_ok(&t)) {
 				registro_dice(REG_FIGLIO,
 				              "⛔ «%s»: message without the signature of this "
 				              "protocol: DISCARDED",
@@ -2736,7 +2736,7 @@ void figli_muovi(figli *f, struct pollfd *fds, size_t n, uint64_t ora_ms)
 				              g->utente, perche);
 				if (g->pid > 0)
 					kill(g->pid, SIGKILL);
-				figlio_congeda(f, g, "the kernel's credentials did not match");
+				child_dismiss(f, g, "the kernel's credentials did not match");
 				break;
 			}
 			if ((size_t)letti < sizeof t + t.byte) {
@@ -2746,7 +2746,7 @@ void figli_muovi(figli *f, struct pollfd *fds, size_t n, uint64_t ora_ms)
 				              g->utente, t.byte, letti - (ssize_t)sizeof t);
 				continue;
 			}
-			if (!tratta(f, g, &t, busta + sizeof t, t.byte))
+			if (!tratta(f, g, &t, envelope + sizeof t, t.byte))
 				break;
 		}
 
@@ -2778,19 +2778,19 @@ void figli_muovi(figli *f, struct pollfd *fds, size_t n, uint64_t ora_ms)
 				else
 					snprintf(detto, sizeof detto, "ended (status %d)", stato);
 				g->pid = 0;
-				figlio_libera(f, g, detto);
+				child_free(f, g, detto);
 				continue;
 			}
 			/* ⛔ And if it does not die, we insist — but only after having asked.
 			 *    ⚠ A child that ignores `SIGTERM` while holding a user's virtual
 			 *    monitor is an orphan in the making. */
-			if (g->uscendo && ora_ms >= g->congedato_ms + 3000) {
+			if (g->uscendo && now_ms >= g->dismissed_ms + 3000) {
 				registro_dice(REG_FIGLIO,
 				              "⛔ the child of «%s» (pid %ld) did not die within 3 s "
 				              "of the farewell: SIGKILL",
 				              g->utente, (long)g->pid);
 				kill(g->pid, SIGKILL);
-				g->congedato_ms = ora_ms;
+				g->dismissed_ms = now_ms;
 			}
 			/* ⚠ And while it is leaving nothing more is asked of it: the slot
 			 *   stays its own until the kernel confirms. */
@@ -2801,7 +2801,7 @@ void figli_muovi(figli *f, struct pollfd *fds, size_t n, uint64_t ora_ms)
 		/* ⛔ The deadline of the INTRODUCTION, and only that one.  ⚠ After it,
 		 *    none: I4 — the stage outlives the detach, and a silent child is a
 		 *    child nobody is asking anything. */
-		if (!g->si_e_presentato && ora_ms >= g->nato_ms + SCADENZA_SONO_MS) {
+		if (!g->showed_up && now_ms >= g->born_ms + SCADENZA_SONO_MS) {
 			registro_dice(REG_FIGLIO,
 			              "⛔ the child of «%s» (pid %ld) did not say who it is within "
 			              "%d ms: killing it.  A process running as a "
@@ -2810,7 +2810,7 @@ void figli_muovi(figli *f, struct pollfd *fds, size_t n, uint64_t ora_ms)
 			if (g->pid > 0)
 				kill(g->pid, SIGKILL);
 			/* ⚠ No waiting here: the reaping belongs to the next round. */
-			figlio_congeda(f, g, "did not introduce itself in time");
+			child_dismiss(f, g, "did not introduce itself in time");
 		}
 	}
 }
@@ -2821,7 +2821,7 @@ void figli_muovi(figli *f, struct pollfd *fds, size_t n, uint64_t ora_ms)
  * stay in the table without anyone having put it to the test again. */
 #define RICONTROLLO_MS 60000
 
-void figli_ricontrolla(figli *f, uint64_t ora_ms)
+void figli_ricontrolla(figli *f, uint64_t now_ms)
 {
 	if (!f)
 		return;
@@ -2829,14 +2829,14 @@ void figli_ricontrolla(figli *f, uint64_t ora_ms)
 		struct figlio *g = &f->v[i];
 		struct testa t;
 
-		if (!g->usato || g->fd < 0 || !g->si_e_presentato)
+		if (!g->usato || g->fd < 0 || !g->showed_up)
 			continue;
-		if (ora_ms < g->ultimo_ricontrollo_ms + RICONTROLLO_MS)
+		if (now_ms < g->last_recheck_ms + RICONTROLLO_MS)
 			continue;
-		g->ultimo_ricontrollo_ms = ora_ms;
+		g->last_recheck_ms = now_ms;
 
 		memset(&t, 0, sizeof t);
-		magia_scrivi(&t);
+		magic_write(&t);
 		t.tipo = MSG_CHI_SEI;
 		t.versione = FIGLIO_VERSIONE;
 		t.matricola = g->matricola;
@@ -2854,7 +2854,7 @@ void figli_ricontrolla(figli *f, uint64_t ora_ms)
 	}
 }
 
-bool figli_chiedi_palco(figli *f, const char *utente)
+bool children_ask_stage(figli *f, const char *utente)
 {
 	struct figlio *g;
 	struct testa t;
@@ -2865,7 +2865,7 @@ bool figli_chiedi_palco(figli *f, const char *utente)
 	if (!g || g->fd < 0 || g->uscendo)
 		return false;
 	memset(&t, 0, sizeof t);
-	magia_scrivi(&t);
+	magic_write(&t);
 	t.tipo = MSG_RIMANDA_PALCO;
 	t.versione = FIGLIO_VERSIONE;
 	t.matricola = g->matricola;
@@ -2923,12 +2923,12 @@ bool figli_chiedi_palco(figli *f, const char *utente)
  *    (`SPECIFICHE.md` §7.3), and on a German keyboard `Z` sits where `Y` sits
  *    for us — without renegotiating, `Ctrl+Z` arrives as `Ctrl+Y`, that is
  *    "redo" instead of "undo". */
-bool figli_disposizione(figli *f, const char *utente, const char *nome)
+bool children_layout(figli *f, const char *utente, const char *nome)
 {
 	struct figlio *g;
 	struct testa t;
-	struct corpo_disposizione c;
-	uint8_t busta[sizeof t + sizeof c];
+	struct body_layout c;
+	uint8_t envelope[sizeof t + sizeof c];
 
 	if (!f || !utente || !nome || !*nome)
 		return false;
@@ -2937,7 +2937,7 @@ bool figli_disposizione(figli *f, const char *utente, const char *nome)
 		return false;
 
 	memset(&t, 0, sizeof t);
-	magia_scrivi(&t);
+	magic_write(&t);
 	t.tipo = MSG_DISPOSIZIONE;
 	t.versione = FIGLIO_VERSIONE;
 	t.matricola = g->matricola;
@@ -2945,9 +2945,9 @@ bool figli_disposizione(figli *f, const char *utente, const char *nome)
 	t.byte = (uint32_t)sizeof c;
 	memset(&c, 0, sizeof c);
 	snprintf(c.nome, sizeof c.nome, "%s", nome);
-	memcpy(busta, &t, sizeof t);
-	memcpy(busta + sizeof t, &c, sizeof c);
-	if (send(g->fd, busta, sizeof busta, MSG_NOSIGNAL) != (ssize_t)sizeof busta) {
+	memcpy(envelope, &t, sizeof t);
+	memcpy(envelope + sizeof t, &c, sizeof c);
+	if (send(g->fd, envelope, sizeof envelope, MSG_NOSIGNAL) != (ssize_t)sizeof envelope) {
 		/* ⛔ `registro_dice` and not `dettaglio`: it happens once per attach,
 		 *    and if it does not go out the user is left with misaligned
 		 *    shortcuts — which is precisely the fault nobody connects. */
@@ -2961,13 +2961,13 @@ bool figli_disposizione(figli *f, const char *utente, const char *nome)
 	return true;
 }
 
-bool figli_input(figli *f, const char *utente, uint32_t id, uint8_t azione,
+bool children_input(figli *f, const char *utente, uint32_t id, uint8_t azione,
                  uint16_t codice, int premuto, int32_t a, int32_t b)
 {
 	struct figlio *g;
 	struct testa t;
-	struct corpo_input c;
-	uint8_t busta[sizeof t + sizeof c];
+	struct body_input c;
+	uint8_t envelope[sizeof t + sizeof c];
 
 	if (!f || !utente)
 		return false;
@@ -2976,7 +2976,7 @@ bool figli_input(figli *f, const char *utente, uint32_t id, uint8_t azione,
 		return false;
 
 	memset(&t, 0, sizeof t);
-	magia_scrivi(&t);
+	magic_write(&t);
 	t.tipo = MSG_INPUT;
 	t.versione = FIGLIO_VERSIONE;
 	t.matricola = g->matricola;
@@ -2989,9 +2989,9 @@ bool figli_input(figli *f, const char *utente, uint32_t id, uint8_t azione,
 	c.codice = codice;
 	c.a = a;
 	c.b = b;
-	memcpy(busta, &t, sizeof t);
-	memcpy(busta + sizeof t, &c, sizeof c);
-	if (send(g->fd, busta, sizeof busta, MSG_NOSIGNAL) != (ssize_t)sizeof busta) {
+	memcpy(envelope, &t, sizeof t);
+	memcpy(envelope + sizeof t, &c, sizeof c);
+	if (send(g->fd, envelope, sizeof envelope, MSG_NOSIGNAL) != (ssize_t)sizeof envelope) {
 		/* ⛔ `registro_dettaglio` and not `registro_dice`: a user moving the
 		 *    mouse produces dozens of messages per second, and one line for
 		 *    each would bury the log precisely when it needs to be read.
@@ -3017,7 +3017,7 @@ bool figli_input(figli *f, const char *utente, uint32_t id, uint8_t azione,
  *    branch and a second way to get it wrong — to carry two numbers that the
  *    existing one already carries.
  *
- * ⛔ BUT THE NAME IS NOT COSMETIC, and it is not `figli_input()` with a strange
+ * ⛔ BUT THE NAME IS NOT COSMETIC, and it is not `children_input()` with a strange
  *    action: input is a GESTURE already validated by §7.3 that is injected and
  *    forgotten; this is a request to **reconfigure the stage** whose outcome
  *    does not come back from here — it comes back with a frame, minutes later
@@ -3033,32 +3033,32 @@ bool figli_ritela(figli *f, const char *utente, uint32_t larghezza,
 	/* ⛔ `id = 0` and not the last input id: §6.2 reserves zero for "no
 	 *    input", and this is not a user action on which the latency link
 	 *    should measure anything. */
-	return figli_input(f, utente, 0, FIGLI_INPUT_RITELA, 0, 0,
+	return children_input(f, utente, 0, FIGLI_INPUT_RITELA, 0, 0,
 	                   (int32_t)larghezza, (int32_t)altezza);
 }
 
-/* ⭐ §7.6 — and it delegates to `figli_input()` like `figli_ritela()`, for the
+/* ⭐ §7.6 — and it delegates to `children_input()` like `figli_ritela()`, for the
  * same reason: a single envelope on the wire between parent and child.  ⛔ But
  * with its own name, because the jobs are two and whoever reads `main.c` must
  * see the chain. */
-void figli_gancio_tela_attendi(figli *f, FiglioTelaAttendi fn, void *ctx)
+void children_hook_canvas_wait(figli *f, ChildCanvasWait fn, void *ctx)
 {
 	if (!f)
 		return;
-	f->su_tela_attendi = fn;
-	f->ctx_tela_attendi = ctx;
+	f->on_canvas_wait = fn;
+	f->ctx_canvas_wait = ctx;
 }
 
-void figli_gancio_blocco(figli *f, FiglioBlocco fn, void *ctx)
+void children_hook_block(figli *f, ChildBlock fn, void *ctx)
 {
 	if (!f)
 		return;
-	f->su_blocco = fn;
-	f->ctx_blocco = ctx;
+	f->on_block = fn;
+	f->ctx_block = ctx;
 }
 
-void figli_gancio_appunti(figli *f, FiglioAppuntiTesto testo,
-                          FiglioAppuntiRichiesta richiesta, void *ctx)
+void children_hook_clipboard(figli *f, ChildClipboardText testo,
+                          ChildClipboardRequest richiesta, void *ctx)
 {
 	if (!f)
 		return;
@@ -3076,16 +3076,16 @@ void figli_gancio_appunti(figli *f, FiglioAppuntiTesto testo,
 		                    : "the one carrying the text to the client is missing");
 		return;
 	}
-	f->su_appunti_testo = testo;
-	f->su_appunti_richiesta = richiesta;
-	f->ctx_appunti = ctx;
+	f->on_clipboard_text = testo;
+	f->on_clipboard_request = richiesta;
+	f->ctx_clipboard = ctx;
 }
 
-bool figli_appunti_offri(figli *f, const char *utente)
+bool children_clipboard_offer(figli *f, const char *utente)
 {
 	struct figlio *g;
 	struct testa t;
-	uint8_t busta[sizeof t];
+	uint8_t envelope[sizeof t];
 
 	if (!f || !utente)
 		return false;
@@ -3094,14 +3094,14 @@ bool figli_appunti_offri(figli *f, const char *utente)
 		return false;
 
 	memset(&t, 0, sizeof t);
-	magia_scrivi(&t);
+	magic_write(&t);
 	t.tipo = MSG_APPUNTI_OFFERTA;
 	t.versione = FIGLIO_VERSIONE;
 	t.matricola = g->matricola;
 	t.uid_dichiarato = (uint32_t)g->uid;
 	t.byte = 0;
-	memcpy(busta, &t, sizeof t);
-	if (send(g->fd, busta, sizeof busta, MSG_NOSIGNAL) != (ssize_t)sizeof busta) {
+	memcpy(envelope, &t, sizeof t);
+	if (send(g->fd, envelope, sizeof envelope, MSG_NOSIGNAL) != (ssize_t)sizeof envelope) {
 		registro_dice(REG_FIGLIO,
 		              "⚠ the clipboard offer to «%s» did not go out (%s): "
 		              "inside that session it will not be possible to paste what "
@@ -3115,7 +3115,7 @@ bool figli_appunti_offri(figli *f, const char *utente)
 	return true;
 }
 
-bool figli_appunti_risposta(figli *f, const char *utente, uint32_t serial,
+bool children_clipboard_response(figli *f, const char *utente, uint32_t serial,
                             const char *testo, size_t byte)
 {
 	struct figlio *g;
@@ -3148,8 +3148,8 @@ bool figli_appunti_risposta(figli *f, const char *utente, uint32_t serial,
 	 *    the second, which are two different things. */
 	do {
 		struct testa t;
-		struct corpo_appunti c;
-		uint8_t busta[sizeof t + sizeof c + PEZZO_MAX];
+		struct body_clipboard c;
+		uint8_t envelope[sizeof t + sizeof c + PEZZO_MAX];
 		size_t q = 0;
 
 		if (testo) {
@@ -3159,7 +3159,7 @@ bool figli_appunti_risposta(figli *f, const char *utente, uint32_t serial,
 		}
 
 		memset(&t, 0, sizeof t);
-		magia_scrivi(&t);
+		magic_write(&t);
 		t.tipo = MSG_APPUNTI_DAL_CLIENT;
 		t.versione = FIGLIO_VERSIONE;
 		t.matricola = g->matricola;
@@ -3171,11 +3171,11 @@ bool figli_appunti_risposta(figli *f, const char *utente, uint32_t serial,
 		c.offset = (uint32_t)off;
 		c.pezzo = (uint32_t)q;
 		c.niente = testo ? 0 : 1;
-		memcpy(busta, &t, sizeof t);
-		memcpy(busta + sizeof t, &c, sizeof c);
+		memcpy(envelope, &t, sizeof t);
+		memcpy(envelope + sizeof t, &c, sizeof c);
 		if (q)
-			memcpy(busta + sizeof t + sizeof c, testo + off, q);
-		if (send(g->fd, busta, sizeof t + sizeof c + q, MSG_NOSIGNAL)
+			memcpy(envelope + sizeof t + sizeof c, testo + off, q);
+		if (send(g->fd, envelope, sizeof t + sizeof c + q, MSG_NOSIGNAL)
 		    != (ssize_t)(sizeof t + sizeof c + q)) {
 			/* ⛔⛔ AND THIS IS THE CASE THAT LEAVES THE PASTER HANGING, so the
 			 *      line is plain and says the symptom: without it, the defect
@@ -3198,27 +3198,27 @@ bool figli_appunti_risposta(figli *f, const char *utente, uint32_t serial,
 	return true;
 }
 
-void figli_gancio_sessione_finita(figli *f, FiglioSessioneFinita fn, void *ctx)
+void children_hook_session_finished(figli *f, ChildSessionFinished fn, void *ctx)
 {
 	if (!f)
 		return;
-	f->su_sessione_finita = fn;
-	f->ctx_sessione_finita = ctx;
+	f->on_session_finished = fn;
+	f->ctx_session_finished = ctx;
 }
 
 bool figli_termina_sessione(figli *f, const char *utente, int perche)
 {
 	/* ⛔ The `perche` travels in field `a`, which was free: the reason is on
 	 *    `FIGLI_USCITA_*` in `figlio.h`. */
-	return figli_input(f, utente, 0, FIGLI_INPUT_TERMINA, 0, 0, perche, 0);
+	return children_input(f, utente, 0, FIGLI_INPUT_TERMINA, 0, 0, perche, 0);
 }
 
-bool figli_audio(figli *f, const char *utente, uint8_t codec)
+bool children_audio(figli *f, const char *utente, uint8_t codec)
 {
 	struct figlio *g;
 	struct testa t;
-	struct corpo_audio c;
-	uint8_t busta[sizeof t + sizeof c];
+	struct body_audio c;
+	uint8_t envelope[sizeof t + sizeof c];
 
 	if (!f || !utente)
 		return false;
@@ -3236,11 +3236,11 @@ bool figli_audio(figli *f, const char *utente, uint8_t codec)
 	 *
 	 * ⚠ The price is an eight-byte message per attach: it is paid once per
 	 *   connection, not per block. */
-	if (codec == g->audio_codec_chiesto && codec == 0)
+	if (codec == g->requested_audio_codec && codec == 0)
 		return true; /* off, and stays off: there is nothing to say */
 
 	memset(&t, 0, sizeof t);
-	magia_scrivi(&t);
+	magic_write(&t);
 	t.tipo = MSG_AUDIO;
 	t.versione = FIGLIO_VERSIONE;
 	t.matricola = g->matricola;
@@ -3248,9 +3248,9 @@ bool figli_audio(figli *f, const char *utente, uint8_t codec)
 	t.byte = (uint32_t)sizeof c;
 	memset(&c, 0, sizeof c);
 	c.codec = codec;
-	memcpy(busta, &t, sizeof t);
-	memcpy(busta + sizeof t, &c, sizeof c);
-	if (send(g->fd, busta, sizeof busta, MSG_NOSIGNAL) != (ssize_t)sizeof busta) {
+	memcpy(envelope, &t, sizeof t);
+	memcpy(envelope + sizeof t, &c, sizeof c);
+	if (send(g->fd, envelope, sizeof envelope, MSG_NOSIGNAL) != (ssize_t)sizeof envelope) {
 		registro_dice(REG_FIGLIO,
 		              "⚠ the audio request to «%s» (codec %u) did not go out "
 		              "(%s): that session will hear nothing, and this line "
@@ -3266,7 +3266,7 @@ bool figli_audio(figli *f, const char *utente, uint8_t codec)
 	                      "any more, and the sink stays up (I4)",
 	              utente, codec,
 	              codec == 1 ? "Opus" : codec == 2 ? "PCM" : "-");
-	g->audio_codec_chiesto = codec;
+	g->requested_audio_codec = codec;
 	return true;
 }
 
@@ -3276,7 +3276,7 @@ bool figli_video(figli *f, const char *utente, uint8_t codec,
 	struct figlio *g;
 	struct testa t;
 	struct corpo_video c;
-	uint8_t busta[sizeof t + sizeof c];
+	uint8_t envelope[sizeof t + sizeof c];
 
 	if (!f || !utente)
 		return false;
@@ -3293,12 +3293,12 @@ bool figli_video(figli *f, const char *utente, uint8_t codec,
 	 *    had 5.1 changes neither codec nor depth, and without this line the
 	 *    message would not go out — the stream would stay at the ceiling of
 	 *    the FIRST and the second would see a mute black screen. */
-	if (codec == g->video_codec_chiesto && profondita == g->video_prof_chiesta
-	    && livello_x10 == g->video_liv_chiesto && !chiave)
+	if (codec == g->requested_video_codec && profondita == g->video_profile_requested
+	    && livello_x10 == g->video_level_requested && !chiave)
 		return true; /* nothing new to say */
 
 	memset(&t, 0, sizeof t);
-	magia_scrivi(&t);
+	magic_write(&t);
 	t.tipo = MSG_VIDEO;
 	t.versione = FIGLIO_VERSIONE;
 	t.matricola = g->matricola;
@@ -3309,9 +3309,9 @@ bool figli_video(figli *f, const char *utente, uint8_t codec,
 	c.chiave = chiave ? 1u : 0u;
 	c.profondita = profondita;
 	c.livello_x10 = livello_x10;
-	memcpy(busta, &t, sizeof t);
-	memcpy(busta + sizeof t, &c, sizeof c);
-	if (send(g->fd, busta, sizeof busta, MSG_NOSIGNAL) != (ssize_t)sizeof busta) {
+	memcpy(envelope, &t, sizeof t);
+	memcpy(envelope + sizeof t, &c, sizeof c);
+	if (send(g->fd, envelope, sizeof envelope, MSG_NOSIGNAL) != (ssize_t)sizeof envelope) {
 		registro_dice(REG_FIGLIO,
 		              "⚠ the video request to «%s» (codec %u, keyframe %s) did "
 		              "not go out (%s): that session will see nothing, and "
@@ -3319,7 +3319,7 @@ bool figli_video(figli *f, const char *utente, uint8_t codec,
 		              utente, codec, chiave ? "YES" : "no", strerror(errno));
 		return false;
 	}
-	if (codec != g->video_codec_chiesto)
+	if (codec != g->requested_video_codec)
 		registro_dice(REG_FIGLIO,
 		              codec ? "⭐ PHASE 3: asked the stage of «%s» to "
 		                      "capture continuously, codec %u%s"
@@ -3328,9 +3328,9 @@ bool figli_video(figli *f, const char *utente, uint8_t codec,
 		                      "any more%s",
 		              utente, codec, chiave ? " — and the first must be a "
 		                                      "KEYFRAME (§5.2)" : "");
-	g->video_codec_chiesto = codec;
-	g->video_prof_chiesta = profondita;
-	g->video_liv_chiesto = livello_x10;
+	g->requested_video_codec = codec;
+	g->video_profile_requested = profondita;
+	g->video_level_requested = livello_x10;
 	return true;
 }
 
@@ -3361,7 +3361,7 @@ void figli_spegni(figli *f)
 		registro_dice(REG_FIGLIO, "the child of «%s» (pid %ld) is shut down",
 		              g->utente, (long)g->pid);
 		free(g->monta);
-		free(g->cur_monta);
+		free(g->cur_mount);
 		memset(g, 0, sizeof *g);
 		g->fd = -1;
 	}
@@ -3376,30 +3376,30 @@ void figli_spegni(figli *f)
  *     `libei` talks to the graphical session, and the graphical session
  *     belongs to this process.
  *
- * ⛔ `input_iniettato` is the `id` of the last input the COMPOSITOR TOOK — not
+ * ⛔ `input_injected` is the `id` of the last input the COMPOSITOR TOOK — not
  *    the last received, not the last attempted.  §6.2 promises that "the
  *    effect of that input is already in the scene", and of a refused input
  *    there is no effect to see.  ⇒ It advances only when `input.c` has
  *    answered 0. */
-static Input *palco_input;
+static Input *stage_input;
 /* ⭐ §5-bis.7: the layout requested when the stage was not there yet.
  *    ⛔ Empty = nothing pending.  It is applied as soon as `input_apri()`
  *    succeeds. */
-static char disposizione_in_attesa[65];
-static uint32_t input_iniettato;
-static uint32_t input_rifiutati;
-static uint32_t input_non_producibili;
+static char pending_layout[65];
+static uint32_t input_injected;
+static uint32_t input_refused;
+static uint32_t input_unproducible;
 /* ⭐ 24 Sep 2026 — where the pointer is, for the shape PROBE on labwc
  *    (`cattura_sonda_puntatore`): a button carries no coordinates, but it can
  *    change the shape (grabbing the title bar), and it is probed here. */
-static uint32_t sonda_x, sonda_y;
-static bool sonda_nota;
+static uint32_t probe_x, probe_y;
+static bool probe_note;
 
 /* ⭐⭐ PHASE 7 — THE SESSION'S CLIPBOARD, and it lives on this side for the
- *     same reason as `palco_input`: the clipboard belongs to the compositor,
+ *     same reason as `stage_input`: the clipboard belongs to the compositor,
  *     and this process is the one talking to the compositor
  *     (`src/appunti.h`). */
-static Appunti *palco_appunti;
+static Appunti *stage_clipboard;
 
 /* ⭐ PHASE 12, INCREMENT 2 — the stage on KDE.  On GNOME it stays NULL and
  *    the `MutterSessione` does everything as before; on KDE `mut` stays NULL
@@ -3407,10 +3407,10 @@ static Appunti *palco_appunti;
  *    the other two above: a child has only one stage. */
 static KwinSessione *palco_kwin;
 
-static void chiudi_palco_kwin(void)
+static void close_stage_kwin(void)
 {
 	if (palco_kwin) {
-		kwin_chiudi(palco_kwin);
+		kwin_close(palco_kwin);
 		palco_kwin = NULL;
 	}
 }
@@ -3418,7 +3418,7 @@ static void chiudi_palco_kwin(void)
 /* The stage's PipeWire node, whoever it comes from. */
 static uint32_t nodo_del_palco(const MutterSessione *m)
 {
-	return m ? mutter_nodo(m) : kwin_nodo(palco_kwin);
+	return m ? mutter_nodo(m) : kwin_node(palco_kwin);
 }
 
 /*
@@ -3466,7 +3466,7 @@ static void misura_del_palco(uint32_t *l, uint32_t *a)
  *
  * ⭐ It is remembered that it fell, and it is redone as soon as the channel is
  *    there.  It is the same form as the pending request of `rcp.c`
- *    (`appunti_chiedi_l_arretrato`): instead of delaying something for
+ *    (`clipboard_ask_backlog`): instead of delaying something for
  *    everyone, ONE bit is kept and the seam is stitched. */
 static bool appunti_offerta_arretrata;
 
@@ -3493,17 +3493,17 @@ static bool appunti_offerta_arretrata;
 static struct {
 	bool usato;
 	uint32_t serial;
-	uint64_t scade_ms;
-} appunti_in_volo[APPUNTI_IN_VOLO];
+	uint64_t expires_ms;
+} clipboard_in_flight[APPUNTI_IN_VOLO];
 
-static int fd_figlio = 3; /* the agreed place, put there by `diventa_ed_esegui` */
-static uint64_t mia_matricola;
-static uid_t mio_uid;
+static int fd_child = 3; /* the agreed place, put there by `diventa_ed_esegui` */
+static uint64_t my_serial;
+static uid_t my_uid;
 
 /* How many descriptors I really have open.  ⛔ They are COUNTED, not
  * declared: it is the half of the bench that lives in the product — "the
  * child did not carry the port along" must be a number, not a promise. */
-static uint32_t quanti_descrittori(void)
+static uint32_t how_many_descriptors(void)
 {
 	uint32_t n = 0;
 	for (int i = 0; i < 4096; i++)
@@ -3513,37 +3513,37 @@ static uint32_t quanti_descrittori(void)
 }
 
 static bool manda(uint16_t tipo, const void *corpo, size_t byte,
-                  const void *coda, size_t byte_coda)
+                  const void *coda, size_t byte_queue)
 {
-	uint8_t busta[BUSTA_MAX];
+	uint8_t envelope[ENVELOPE_MAX];
 	struct testa t;
 	size_t n = 0;
 
-	if (sizeof t + byte + byte_coda > sizeof busta)
+	if (sizeof t + byte + byte_queue > sizeof envelope)
 		return false;
 	memset(&t, 0, sizeof t);
-	magia_scrivi(&t);
+	magic_write(&t);
 	t.tipo = tipo;
 	t.versione = FIGLIO_VERSIONE;
-	t.matricola = mia_matricola;
+	t.matricola = my_serial;
 	/* ⛔ The uid is ASKED OF THE KERNEL on every message, and not read from a
 	 *    variable written at startup: the variable would say what we believed
 	 *    we were, and the parent will compare this field with what the kernel
 	 *    stamped.  ⚠ If the two did not match, the parent kills — and rightly
 	 *    so: a child that no longer knows who it is must not deliver pixels. */
 	t.uid_dichiarato = (uint32_t)geteuid();
-	t.byte = (uint32_t)(byte + byte_coda);
-	memcpy(busta, &t, sizeof t);
+	t.byte = (uint32_t)(byte + byte_queue);
+	memcpy(envelope, &t, sizeof t);
 	n = sizeof t;
 	if (byte) {
-		memcpy(busta + n, corpo, byte);
+		memcpy(envelope + n, corpo, byte);
 		n += byte;
 	}
-	if (byte_coda) {
-		memcpy(busta + n, coda, byte_coda);
-		n += byte_coda;
+	if (byte_queue) {
+		memcpy(envelope + n, coda, byte_queue);
+		n += byte_queue;
 	}
-	return send(fd_figlio, busta, n, MSG_NOSIGNAL) == (ssize_t)n;
+	return send(fd_child, envelope, n, MSG_NOSIGNAL) == (ssize_t)n;
 }
 
 /* ⛔⭐ THE CANVAS THE CLIENT ASKED FOR, kept apart from the one the stage
@@ -3558,54 +3558,54 @@ static bool manda(uint16_t tipo, const void *corpo, size_t byte,
  * ⚠ They are born equal (the size from the command line) and diverge at the
  *   first `ADATTA_TELA` that the compositor does not serve to the letter
  *   (§4.5). */
-static uint32_t tela_voluta_l, tela_voluta_a;
+static uint32_t canvas_intended_w, canvas_intended_h;
 
-/* The answer of §7.1 to the parent.  ⛔ `avuta_l == 0` = "I did not make it",
+/* The answer of §7.1 to the parent.  ⛔ `got_w == 0` = "I did not make it",
  * and it is a different fact from "I am trying": without this line the parent
  * would wait to the end of the three seconds to learn something known here at
  * once. */
 /* ⭐ "WAIT": the stage is not there YET, and the question will get a real
  * answer.  ⛔ It is not `0x0` — that is "I did not make it" — and it is the
  *    message that takes an inference away from the parent (`LEZIONI.md` §7.5). */
-static void attendi_tela(uint32_t voluta_l, uint32_t voluta_a)
+static void wait_canvas(uint32_t intended_w, uint32_t intended_h)
 {
-	struct corpo_tela c;
+	struct body_canvas c;
 	memset(&c, 0, sizeof c);
-	c.voluta_l = voluta_l;
-	c.voluta_a = voluta_a;
+	c.intended_w = intended_w;
+	c.intended_h = intended_h;
 	c.attendi = 1;
 	if (!manda(MSG_TELA, &c, sizeof c, NULL, 0))
 		registro_dice(REG_FIGLIO,
 		              "⛔ the «wait» on the canvas (%ux%u) did not go out (%s): the "
 		              "parent will let the deadline of §7.1 expire on a question that "
 		              "was about to get an answer",
-		              voluta_l, voluta_a, strerror(errno));
+		              intended_w, intended_h, strerror(errno));
 }
 
-static void rispondi_tela(uint32_t voluta_l, uint32_t voluta_a, uint32_t avuta_l,
-                          uint32_t avuta_a)
+static void rispondi_tela(uint32_t intended_w, uint32_t intended_h, uint32_t got_w,
+                          uint32_t got_h)
 {
-	struct corpo_tela c;
+	struct body_canvas c;
 	memset(&c, 0, sizeof c);
-	c.voluta_l = voluta_l;
-	c.voluta_a = voluta_a;
-	c.avuta_l = avuta_l;
-	c.avuta_a = avuta_a;
+	c.intended_w = intended_w;
+	c.intended_h = intended_h;
+	c.got_w = got_w;
+	c.got_h = got_h;
 	if (!manda(MSG_TELA, &c, sizeof c, NULL, 0))
 		registro_dice(REG_FIGLIO,
 		              "⛔ the answer on the canvas (%ux%u → %ux%u) did not go out "
 		              "(%s): the parent will wait for the deadline of §7.1 instead of "
 		              "knowing it now",
-		              voluta_l, voluta_a, avuta_l, avuta_a, strerror(errno));
+		              intended_w, intended_h, got_w, got_h, strerror(errno));
 }
 
-static void manda_fotogramma(uint8_t codec, bool chiave, uint32_t l, uint32_t a,
+static void send_frame(uint8_t codec, bool chiave, uint32_t l, uint32_t a,
                              uint64_t istante_us, const uint8_t *dati, size_t byte,
                              uint32_t input)
 {
 	size_t off = 0;
 	while (off < byte) {
-		struct corpo_fotogramma c;
+		struct body_frame c;
 		size_t q = byte - off;
 		if (q > PEZZO_MAX)
 			q = PEZZO_MAX;
@@ -3637,7 +3637,7 @@ static void manda_fotogramma(uint8_t codec, bool chiave, uint32_t l, uint32_t a,
 /* ⭐⭐ THE CURSOR SHAPE, from PipeWire's metadata to the wire — and in between
  *     there is a process boundary.
  *
- * ⛔ This is the `CursoreArrivata` of `cursore.h`, and `cattura.c` calls it
+ * ⛔ This is the `CursorArrived` of `cursore.h`, and `cattura.c` calls it
  *    **from the PipeWire thread**.  ⚠ So it does NOT touch any of the loop's
  *    state and does not allocate: it takes the bytes, splits them and sends
  *    them.  A `malloc` in here would be a `malloc` on the capture's real-time
@@ -3649,7 +3649,7 @@ static void manda_fotogramma(uint8_t codec, bool chiave, uint32_t l, uint32_t a,
  * Returns 0: from here on the shape belongs to the parent, and the child has
  * no way of knowing whether the client received it — ⛔ saying otherwise would
  * be faking a confirmation that does not exist. */
-static int cursore_al_padre(void *chi, const CursoreForma *f)
+static int cursor_to_parent(void *chi, const CursoreForma *f)
 {
 	size_t byte, off = 0;
 
@@ -3661,7 +3661,7 @@ static int cursore_al_padre(void *chi, const CursoreForma *f)
 	 *    a message**: it is the only way the client has of knowing the pointer
 	 *    has vanished, instead of drawing the last shape forever (§5.5). */
 	if (byte == 0) {
-		struct corpo_cursore c;
+		struct body_cursor c;
 		memset(&c, 0, sizeof c);
 		c.larghezza = f->larghezza;
 		c.altezza = f->altezza;
@@ -3672,7 +3672,7 @@ static int cursore_al_padre(void *chi, const CursoreForma *f)
 	if (!f->immagine)
 		return -1;
 	while (off < byte) {
-		struct corpo_cursore c;
+		struct body_cursor c;
 		size_t q = byte - off;
 		if (q > PEZZO_MAX)
 			q = PEZZO_MAX;
@@ -3714,7 +3714,7 @@ static int cursore_al_padre(void *chi, const CursoreForma *f)
  *    serials in, and the child's loop, which expires them.  ⚠ A lock for an
  *    eight-entry table costs less than a defect that shows up once every
  *    thousand pastes. */
-static pthread_mutex_t appunti_lucchetto = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t clipboard_lock = PTHREAD_MUTEX_INITIALIZER;
 
 static void appunti_dalla_sessione(const char *testo, size_t byte, void *dati)
 {
@@ -3724,7 +3724,7 @@ static void appunti_dalla_sessione(const char *testo, size_t byte, void *dati)
 
 	/* ⚠ The cap has already been enforced by `appunti.c`, which is where the
 	 *   text exists whole.  ⛔ This line is NOT a duplicate: it is the promise
-	 *   that `monta_appunti()` on the other side never receives a `totale` it
+	 *   that `assemble_clipboard()` on the other side never receives a `totale` it
 	 *   would refuse — that is, that the defect, if there were one, shows
 	 *   **here** and not as a text vanished without explanation. */
 	if (byte > APPUNTI_TETTO) {
@@ -3737,7 +3737,7 @@ static void appunti_dalla_sessione(const char *testo, size_t byte, void *dati)
 	}
 
 	do {
-		struct corpo_appunti c;
+		struct body_clipboard c;
 		size_t q = byte - off;
 
 		if (q > PEZZO_MAX)
@@ -3764,26 +3764,26 @@ static void appunti_dalla_sessione(const char *testo, size_t byte, void *dati)
 	} while (off < byte);
 }
 
-static void appunti_vuole_incollare(uint32_t serial, void *dati)
+static void clipboard_wants_paste(uint32_t serial, void *dati)
 {
-	struct corpo_appunti c;
+	struct body_clipboard c;
 	uint64_t adesso = registro_ora_ms();
 	int posto = -1;
 
 	(void)dati;
 
-	pthread_mutex_lock(&appunti_lucchetto);
+	pthread_mutex_lock(&clipboard_lock);
 	for (int i = 0; i < APPUNTI_IN_VOLO; i++)
-		if (!appunti_in_volo[i].usato) {
+		if (!clipboard_in_flight[i].usato) {
 			posto = i;
 			break;
 		}
 	if (posto >= 0) {
-		appunti_in_volo[posto].usato = true;
-		appunti_in_volo[posto].serial = serial;
-		appunti_in_volo[posto].scade_ms = adesso + APPUNTI_ATTESA_MS;
+		clipboard_in_flight[posto].usato = true;
+		clipboard_in_flight[posto].serial = serial;
+		clipboard_in_flight[posto].expires_ms = adesso + APPUNTI_ATTESA_MS;
 	}
-	pthread_mutex_unlock(&appunti_lucchetto);
+	pthread_mutex_unlock(&clipboard_lock);
 
 	/* ⛔ The table is full: «I don't have it» is answered AT ONCE instead of
 	 *    adding a debt nobody will expire.  ⚠ Eight pastes together is not a
@@ -3795,7 +3795,7 @@ static void appunti_vuole_incollare(uint32_t serial, void *dati)
 		              "at once with «I don't have it», instead of staying without "
 		              "an answer",
 		              APPUNTI_IN_VOLO, serial);
-		appunti_rispondi(palco_appunti, serial, NULL, 0);
+		appunti_rispondi(stage_clipboard, serial, NULL, 0);
 		return;
 	}
 
@@ -3810,27 +3810,27 @@ static void appunti_vuole_incollare(uint32_t serial, void *dati)
 		              "parent (%s): answering «I don't have it» at once, or the paster "
 		              "stays hanging",
 		              serial, strerror(errno));
-		pthread_mutex_lock(&appunti_lucchetto);
-		appunti_in_volo[posto].usato = false;
-		pthread_mutex_unlock(&appunti_lucchetto);
-		appunti_rispondi(palco_appunti, serial, NULL, 0);
+		pthread_mutex_lock(&clipboard_lock);
+		clipboard_in_flight[posto].usato = false;
+		pthread_mutex_unlock(&clipboard_lock);
+		appunti_rispondi(stage_clipboard, serial, NULL, 0);
 	}
 }
 
 /* Whoever was in flight and got no answer within the timeout: it is answered
  * empty-handed.  ⛔ Runs on the child's loop, on every round of `poll`. */
-static void appunti_scadi(uint64_t adesso)
+static void clipboard_expire(uint64_t adesso)
 {
-	uint32_t scaduti[APPUNTI_IN_VOLO];
+	uint32_t expired[APPUNTI_IN_VOLO];
 	int quanti = 0;
 
-	pthread_mutex_lock(&appunti_lucchetto);
+	pthread_mutex_lock(&clipboard_lock);
 	for (int i = 0; i < APPUNTI_IN_VOLO; i++)
-		if (appunti_in_volo[i].usato && adesso >= appunti_in_volo[i].scade_ms) {
-			scaduti[quanti++] = appunti_in_volo[i].serial;
-			appunti_in_volo[i].usato = false;
+		if (clipboard_in_flight[i].usato && adesso >= clipboard_in_flight[i].expires_ms) {
+			expired[quanti++] = clipboard_in_flight[i].serial;
+			clipboard_in_flight[i].usato = false;
 		}
-	pthread_mutex_unlock(&appunti_lucchetto);
+	pthread_mutex_unlock(&clipboard_lock);
 
 	/* ⛔ Outside the lock: `appunti_rispondi` makes synchronous D-Bus calls,
 	 *    and holding it while waiting for the bus would block the clipboard
@@ -3841,8 +3841,8 @@ static void appunti_scadi(uint64_t adesso)
 		              "%d ms: closing with «I don't have it».  ⛔ The paster sees an "
 		              "empty paste, which is much better than a hung "
 		              "desktop",
-		              scaduti[i], APPUNTI_ATTESA_MS);
-		appunti_rispondi(palco_appunti, scaduti[i], NULL, 0);
+		              expired[i], APPUNTI_ATTESA_MS);
+		appunti_rispondi(stage_clipboard, expired[i], NULL, 0);
 	}
 }
 
@@ -3861,28 +3861,28 @@ static struct {
 	bool aperto;
 	uint32_t serial;
 	uint8_t *dati;
-	size_t totale, avuti;
-} appunti_montaggio;
+	size_t totale, got;
+} clipboard_assembly;
 
-static void appunti_montaggio_libera(void)
+static void clipboard_assembly_free(void)
 {
-	free(appunti_montaggio.dati);
-	appunti_montaggio.dati = NULL;
-	appunti_montaggio.aperto = false;
-	appunti_montaggio.totale = appunti_montaggio.avuti = 0;
+	free(clipboard_assembly.dati);
+	clipboard_assembly.dati = NULL;
+	clipboard_assembly.aperto = false;
+	clipboard_assembly.totale = clipboard_assembly.got = 0;
 }
 
-static bool appunti_riscuoti(uint32_t serial);
+static bool clipboard_collect(uint32_t serial);
 
-static void appunti_dal_client(const struct corpo_appunti *c, const uint8_t *dati)
+static void clipboard_from_client(const struct body_clipboard *c, const uint8_t *dati)
 {
 	/* ⛔ "I don't have it" arrives as a FIELD, not as a zero length: an empty
 	 *    text is a legitimate and different fact.  ⇒ Two roads, and two
 	 *    different calls towards Mutter. */
 	if (c->niente) {
-		appunti_montaggio_libera();
-		if (appunti_riscuoti(c->serial))
-			appunti_rispondi(palco_appunti, c->serial, NULL, 0);
+		clipboard_assembly_free();
+		if (clipboard_collect(c->serial))
+			appunti_rispondi(stage_clipboard, c->serial, NULL, 0);
 		else
 			registro_dettaglio(REG_APPUNTI,
 			                   "«I don't have it» for request %u, which is no "
@@ -3897,93 +3897,93 @@ static void appunti_dal_client(const struct corpo_appunti *c, const uint8_t *dat
 		              "⛔ the parent announces %u bytes of clipboard, over the cap "
 		              "of §5.4 (%u): answering «I don't have it» instead of truncating",
 		              c->totale, APPUNTI_TETTO);
-		appunti_montaggio_libera();
-		if (appunti_riscuoti(c->serial))
-			appunti_rispondi(palco_appunti, c->serial, NULL, 0);
+		clipboard_assembly_free();
+		if (clipboard_collect(c->serial))
+			appunti_rispondi(stage_clipboard, c->serial, NULL, 0);
 		return;
 	}
 
 	if (c->offset == 0) {
-		appunti_montaggio_libera();
-		appunti_montaggio.dati = (uint8_t *)malloc((size_t)c->totale + 1u);
-		if (!appunti_montaggio.dati) {
+		clipboard_assembly_free();
+		clipboard_assembly.dati = (uint8_t *)malloc((size_t)c->totale + 1u);
+		if (!clipboard_assembly.dati) {
 			registro_dice(REG_APPUNTI,
 			              "⛔ %u bytes of clipboard from the client do not fit in "
 			              "memory: answering «I don't have it»",
 			              c->totale);
-			if (appunti_riscuoti(c->serial))
-				appunti_rispondi(palco_appunti, c->serial, NULL, 0);
+			if (clipboard_collect(c->serial))
+				appunti_rispondi(stage_clipboard, c->serial, NULL, 0);
 			return;
 		}
-		appunti_montaggio.aperto = true;
-		appunti_montaggio.serial = c->serial;
-		appunti_montaggio.totale = c->totale;
-		appunti_montaggio.avuti = 0;
+		clipboard_assembly.aperto = true;
+		clipboard_assembly.serial = c->serial;
+		clipboard_assembly.totale = c->totale;
+		clipboard_assembly.got = 0;
 	}
 
 	/* ⛔ In order, of the same transfer, and of the same size.  A piece that
 	 *    does not add up throws everything away and ANSWERS: leaving the
 	 *    assembly open halfway would mean a `SelectionTransfer` waiting for
 	 *    the timeout for nothing. */
-	if (!appunti_montaggio.aperto || c->serial != appunti_montaggio.serial
-	    || c->offset != appunti_montaggio.avuti
-	    || c->totale != appunti_montaggio.totale
+	if (!clipboard_assembly.aperto || c->serial != clipboard_assembly.serial
+	    || c->offset != clipboard_assembly.got
+	    || c->totale != clipboard_assembly.totale
 	    || (uint64_t)c->offset + c->pezzo > c->totale) {
 		registro_dice(REG_APPUNTI,
 		              "⛔ clipboard piece out of place (request %u, offset %u "
 		              "of %u): dropping the whole text and answering «I don't have it»",
 		              c->serial, c->offset, c->totale);
-		appunti_montaggio_libera();
-		if (appunti_riscuoti(c->serial))
-			appunti_rispondi(palco_appunti, c->serial, NULL, 0);
+		clipboard_assembly_free();
+		if (clipboard_collect(c->serial))
+			appunti_rispondi(stage_clipboard, c->serial, NULL, 0);
 		return;
 	}
 
-	memcpy(appunti_montaggio.dati + c->offset, dati, c->pezzo);
-	appunti_montaggio.avuti += c->pezzo;
-	if (appunti_montaggio.avuti < appunti_montaggio.totale)
+	memcpy(clipboard_assembly.dati + c->offset, dati, c->pezzo);
+	clipboard_assembly.got += c->pezzo;
+	if (clipboard_assembly.got < clipboard_assembly.totale)
 		return;
 
-	appunti_montaggio.dati[appunti_montaggio.totale] = 0;
+	clipboard_assembly.dati[clipboard_assembly.totale] = 0;
 	/* ⛔ It is collected BEFORE answering: if the serial is no longer in
 	 *    flight, the timeout has already closed it with Mutter, and a second
 	 *    `SelectionWriteDone` on the same transfer is a message Mutter is no
 	 *    longer waiting for. */
-	if (appunti_riscuoti(appunti_montaggio.serial)) {
+	if (clipboard_collect(clipboard_assembly.serial)) {
 		registro_dice(REG_APPUNTI,
 		              "⭐ %zu bytes from the client delivered to whoever is pasting "
 		              "(request %u)",
-		              appunti_montaggio.totale, appunti_montaggio.serial);
-		appunti_rispondi(palco_appunti, appunti_montaggio.serial,
-		                 (const char *)appunti_montaggio.dati,
-		                 appunti_montaggio.totale);
+		              clipboard_assembly.totale, clipboard_assembly.serial);
+		appunti_rispondi(stage_clipboard, clipboard_assembly.serial,
+		                 (const char *)clipboard_assembly.dati,
+		                 clipboard_assembly.totale);
 	} else {
 		registro_dice(REG_APPUNTI,
 		              "⚠ the text for request %u arrived AFTER the timeout "
 		              "of %d ms: it is dropped, because Mutter has already had its "
 		              "answer.  ⛔ Whoever pasted saw an empty "
 		              "paste, and that is the declared price of the timeout",
-		              appunti_montaggio.serial, APPUNTI_ATTESA_MS);
+		              clipboard_assembly.serial, APPUNTI_ATTESA_MS);
 	}
-	appunti_montaggio_libera();
+	clipboard_assembly_free();
 }
 
 /* Was the serial really among those in flight?  ⛔ Removing it from the table
  * and serving it are one thing only, and they live here together: a serial
  * served and left in the table would be expired later, and Mutter would
  * receive **two** `SelectionWriteDone` for the same transfer. */
-static bool appunti_riscuoti(uint32_t serial)
+static bool clipboard_collect(uint32_t serial)
 {
 	bool c_era = false;
 
-	pthread_mutex_lock(&appunti_lucchetto);
+	pthread_mutex_lock(&clipboard_lock);
 	for (int i = 0; i < APPUNTI_IN_VOLO; i++)
-		if (appunti_in_volo[i].usato && appunti_in_volo[i].serial == serial) {
-			appunti_in_volo[i].usato = false;
+		if (clipboard_in_flight[i].usato && clipboard_in_flight[i].serial == serial) {
+			clipboard_in_flight[i].usato = false;
 			c_era = true;
 			break;
 		}
-	pthread_mutex_unlock(&appunti_lucchetto);
+	pthread_mutex_unlock(&clipboard_lock);
 	return c_era;
 }
 
@@ -3999,17 +3999,17 @@ static bool appunti_riscuoti(uint32_t serial)
  *   delivering two different images under the same label.  ⛔ The frame loop
  *   belongs to phase 3. */
 static uint8_t *tenuto[3];
-static size_t tenuto_byte[3];
-static bool tenuto_chiave[3];
-static uint32_t tenuto_l, tenuto_a;
-static uint64_t tenuto_istante;
+static size_t kept_byte[3];
+static bool kept_key[3];
+static uint32_t kept_w, kept_h;
+static uint64_t kept_instant;
 /* ⛔ And the KEPT frame carries its `input` too, the one from the instant it
  *    was captured — not the current one.  ⚠ Sending it again with the current
  *    number would tell whoever comes back that an input just arrived is
  *    already in the scene of an image frozen for minutes: and the latency
  *    link would read it as a very low latency.  It is the same reason **the
  *    same** frame is sent again and not a new one. */
-static uint32_t tenuto_input;
+static uint32_t kept_input;
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
 /* ⭐⭐ PHASE 3 — THE FRAME LOOP, INSIDE THE CHILD                              */
@@ -4074,7 +4074,7 @@ static uint32_t tenuto_input;
  *    it turns out that this machine's encoder is in software.
  *    ⚠ It never goes forward again by itself: going forward would mean
  *    retrying a route already measured impossible, at every remount. */
-static CatturaStrada strada_del_palco =
+static CaptureRoute stage_route =
     COPIA_ZERO ? CATTURA_STRADA_SCHEDA : CATTURA_STRADA_MEMORIA;
 /* ⛔ THE THREE REMOUNT STATES, and they are three because they answer three
  *    different questions.  ⚠ None of them remounts anything by itself: the
@@ -4083,7 +4083,7 @@ static CatturaStrada strada_del_palco =
  *
  *   `scheda_da_abbandonare`  ⇒ remount in MEMORY: this frame on the card
  *                              cannot be used;
- *   `scheda_da_riprovare`    ⇒ remount on the CARD: the canvas has changed and
+ *   `card_to_retry`    ⇒ remount on the CARD: the canvas has changed and
  *                              the earlier denial no longer holds;
  *   `scheda_mai_piu`         ⛔ this machine's encoder is in SOFTWARE: it is
  *                              not a matter of canvas, and retrying at every
@@ -4091,7 +4091,7 @@ static CatturaStrada strada_del_palco =
  *                              nothing, forever.
  */
 static bool scheda_da_abbandonare;
-static bool scheda_da_riprovare;
+static bool card_to_retry;
 static bool scheda_mai_piu;
 /* ⛔⛔ AND THIS IS THE GUARD THAT AVOIDS THE IDLE ROUND TRIP — and it deserves a
  *     line of explanation, because it looks like the same thing and is not.
@@ -4144,9 +4144,9 @@ static uint32_t scheda_negata_l, scheda_negata_a;
  * ═══════════════════════════════════════════════════════════════════════════ */
 static bool ripiega_se_rifiutata(bool rifiutata, const char *perche)
 {
-	if (!rifiutata || strada_del_palco != CATTURA_STRADA_SCHEDA)
+	if (!rifiutata || stage_route != CATTURA_STRADA_SCHEDA)
 		return false;
-	strada_del_palco = CATTURA_STRADA_MEMORIA;
+	stage_route = CATTURA_STRADA_MEMORIA;
 	scheda_mai_piu = true;
 	registro_dice(REG_FIGLIO,
 	              "⛔⛔ the CARD route was REFUSED by the compositor "
@@ -4167,7 +4167,7 @@ static bool ripiega_se_rifiutata(bool rifiutata, const char *perche)
  *   server's asynchronous loop, not here.
  * ⛔ And on a STILL desktop Mutter delivers nothing: this wait expires
  *    entirely, and the next round starts again.  Zero frames on a still scene
- *    is a RESULT (`CatturaPresa` tells it apart from a fault), not a defect.
+ *    is a RESULT (`CaptureTake` tells it apart from a fault), not a defect.
  *
  * ═══════════════════════════════════════════════════════════════════════════
  * ⛔⛔⛔ AND IT WAS 0.25 — that is A QUARTER OF A SECOND OF LATENCY ON EVERY CLICK.
@@ -4291,7 +4291,7 @@ static bool ripiega_se_rifiutata(bool rifiutata, const char *perche)
  *    by the arrival of a client — that is `MSG_VIDEO` with a codec — because
  *    that is the gesture with which the user says "I want a desktop again".
  */
-static bool sessione_chiusa_dall_utente;
+static bool session_closed_by_user;
 /* ⭐ "I have SEEN the graphical session alive": it is what separates "not born
  *    yet" from "it was there and the user logged out" (§7.6, below in
  *    `prendi_il_palco`).
@@ -4304,8 +4304,8 @@ static bool sessione_chiusa_dall_utente;
 static bool vista_viva;
 
 /* When to retry, and how long was waited the last time. */
-static uint64_t palco_riprova_ms;
-static uint64_t palco_attesa_ms;
+static uint64_t stage_retry_ms;
+static uint64_t stage_wait_ms;
 
 /*
  * ⛔⭐⭐⭐ "THE CLIENT'S CANVAS HAS ARRIVED" — and without this the stage was
@@ -4334,7 +4334,7 @@ static uint64_t palco_attesa_ms;
  *   caution.  Once `TELA_ATTESA_MS` has passed we start with the fallback —
  *   better a desktop to resize than no desktop.
  */
-static bool tela_dal_cliente;
+static bool canvas_from_client;
 
 /* ⚠ How long the client's canvas is given before starting with the fallback.
  *   `[M]` ~650 are enough: half a second of margin and not one more, because
@@ -4347,14 +4347,14 @@ static bool tela_dal_cliente;
  *    loop could not see it — so it could not tell "the stage is not there
  *    YET" from "it is no longer there", and treated the two cases with the
  *    same doubling wait.  ⇒ See `PALCO_NASCITA_RIPROVA_MS`. */
-static uint64_t nascita_chiesta_ms;
+static uint64_t birth_requested_ms;
 
 /* Are we inside the window in which a requested session can still show up?
  * ⚠ If so, the missing stage is a stage that is BEING BORN. */
-static bool sta_nascendo(uint64_t ora_ms)
+static bool is_being_born(uint64_t now_ms)
 {
-	return nascita_chiesta_ms != 0 &&
-	       ora_ms - nascita_chiesta_ms <= NASCITA_BRIGLIA_MS;
+	return birth_requested_ms != 0 &&
+	       now_ms - birth_requested_ms <= NASCITA_BRIGLIA_MS;
 }
 
 #define CODEC_MAX 4
@@ -4364,9 +4364,9 @@ static bool sta_nascendo(uint64_t ora_ms)
  *    written worse: the day a new codec took 4, the subtraction would have to
  *    be fixed in six places and the log would say numbers different from the
  *    protocol's. */
-static Codificatore *codif[CODEC_MAX];
+static Codificatore *enc[CODEC_MAX];
 /* Which codec the parent asked for: 0 = none, that is nobody is watching. */
-static uint8_t codec_chiesto;
+static uint8_t requested_codec;
 /* ⛔⭐⭐ AND THE DEPTH THE PARENT NEGOTIATED (§4.3) — 17 Aug 2026.
  *
  *      Here there was a literal, three lines further on: `r.profondita = 10`,
@@ -4394,7 +4394,7 @@ static uint8_t profondita_chiesta;
  *   depth is always negotiated (§4.3 imposes it on both), the level is not.
  *   They are two different "zeros", and treating them alike would be
  *   inventing an obligation the document does not have. */
-static uint8_t livello_chiesto_x10;
+static uint8_t requested_level_x10;
 /* ⛔ §5.2 — the keyframe debt, one per codec: asking for it for HEVC does not
  *    produce it on AV1, and treating them together would give a keyframe to
  *    whoever did not ask for it and a delta to whoever did. */
@@ -4405,20 +4405,20 @@ static uint8_t livello_chiesto_x10;
  *      request, that is a memory defect disguised as a negotiation defect.
  *      ⇒ Zero frames, and no line naming the cause.
  * ⚠ The index IS the number of §6.2: whoever adds a codec widens THESE arrays,
- *   and they are FIVE since 23 Aug 2026 (`codif_liv[]` is the latest).  They
+ *   and they are FIVE since 23 Aug 2026 (`enc_level[]` is the latest).  They
  *   are found like this: `grep "\[CODEC_MAX\]"`. */
 static bool debito_chiave[CODEC_MAX];
 /* ⛔ With which depth each encoder was OPENED.  ⚠ It is kept here and not
  *    asked of `codificatore.h`: that module has no reader for the depth, and
  *    adding one for a question that can be remembered would be widening an
  *    interface out of the caller's laziness. */
-static uint8_t codif_prof[CODEC_MAX];
+static uint8_t enc_profile[CODEC_MAX];
 /* ⛔ And with which LEVEL IMPOSED (§4.3, in tenths; `0` = no ceiling).  ⚠ It
- *    sits next to `codif_prof[]` and for the same reason: the stage outlives
+ *    sits next to `enc_profile[]` and for the same reason: the stage outlives
  *    the client (I4), and the second to connect can declare a level different
  *    from the first — without this memory the encoder would stay at the
  *    ceiling of the FIRST, which is exactly the defect being cured. */
-static uint8_t codif_liv[CODEC_MAX];
+static uint8_t enc_level[CODEC_MAX];
 /*
  * ⭐ PHASE 13 — THE CHANNEL ORDER THAT COMES FROM THE CAPTURE.
  *
@@ -4429,17 +4429,17 @@ static uint8_t codif_liv[CODEC_MAX];
  *     the hard-wired order the user saw **red and blue swapped**.  Found by
  *     the adversarial reviewer, not by an image: C1 does not look at colours.
  * ⇒ The order is told by the FRAME (`formato_drm`), and if it changes the
- *   encoder is redone — the same scheme as `codif_liv`.
+ *   encoder is redone — the same scheme as `enc_level`.
  */
 static FormatoPixel formato_ingresso = CODIFICATORE_PIXEL_BGRX;
-static FormatoPixel codif_fmt[CODEC_MAX];
-static uint64_t ciclo_fotogrammi, ciclo_chiavi, ciclo_zero, ciclo_guasti;
-/* ⛔ COUNTED APART from `ciclo_guasti`, and it is not pedantry: that counter
+static FormatoPixel enc_fmt[CODEC_MAX];
+static uint64_t cycle_frames, cycle_keys, cycle_zero, cycle_faults;
+/* ⛔ COUNTED APART from `cycle_faults`, and it is not pedantry: that counter
  *    enters the criterion "the loop did not even try to capture" of the
  *    summary line.  Putting here the frames discarded for inconsistent
  *    geometry would give two different facts under the same label — form E8,
  *    inside the very line that exists to unmask it. */
-static uint64_t fotogrammi_incoerenti;
+static uint64_t inconsistent_frames;
 /* ⛔⭐ THE GROWING WAIT ON REOPENING THE ENCODER — and the reason is the same
  *     as the 30.8 GB of log of 14 Aug: if `codificatore_nuovo()` fails for a
  *     PERSISTENT cause (GPU memory, a profile that does not hold that size, a
@@ -4447,8 +4447,8 @@ static uint64_t fotogrammi_incoerenti;
  *     frame** — sixty VAAPI contexts per second, and one log line for each.
  *     ⚠ The backoff here hides nothing: the first line is always written, and
  *     the retry is declared. */
-static uint64_t codif_riprova_ms[CODEC_MAX];
-static uint64_t codif_attesa_ms[CODEC_MAX];
+static uint64_t enc_retry_ms[CODEC_MAX];
+static uint64_t enc_wait_ms[CODEC_MAX];
 #define CODIF_RIPROVA_MIN_MS 500u
 #define CODIF_RIPROVA_MAX_MS 10000u
 /* ⭐ When the stream was last restarted to get a frame delivered on a still
@@ -4456,20 +4456,20 @@ static uint64_t codif_attesa_ms[CODEC_MAX];
  *    renegotiation, and doing one on every round would remove the very frames
  *    being sought.  ⚠ 400 ms is two orders of magnitude below the measured
  *    4.4 seconds and above the cost of a restart (`[M]` 41.6 ms). */
-static uint64_t risveglio_ms;
+static uint64_t wakeup_ms;
 #define RISVEGLIO_MS 400u
 /* ⛔ Cure "A" (21 Aug 2026, 🔸 derived) skips the wake-up when something is
  *    held down.  ⚠ This flag serves only NOT to repeat the log line every
  *    400 ms while the user drags: diagnostics that drown the ones that count
  *    are diagnostics that stay silent (`LEZIONI.md` §2.7). */
-static int risveglio_zitto;
-static uint64_t ciclo_detto_ms;
+static int wakeup_quiet;
+static uint64_t cycle_logged_ms;
 /* ⛔ The measure of point 7, made and NOT inferred: is the `pts` Mutter attaches
  *    to the frame our monotonic clock or not?  It is looked at once, written
  *    down, and from then on it is known which instant ends up in the 28 bytes. */
-static int pts_e_monotono = -1; /* -1 = not looked at yet */
+static int pts_is_monotonic = -1; /* -1 = not looked at yet */
 
-static uint64_t ora_monotona_us(void)
+static uint64_t now_monotonic_us(void)
 {
 	struct timespec t;
 	clock_gettime(CLOCK_MONOTONIC, &t);
@@ -4506,10 +4506,10 @@ static uint64_t ora_monotona_us(void)
  * and it costs 192 KiB — which is less than a frame. */
 #define AUDIO_ANELLO_FOTOGRAMMI 48000u
 
-static int16_t audio_anello[AUDIO_ANELLO_FOTOGRAMMI * AUDIO_CANALI];
-static _Atomic uint32_t audio_testa; /* moved ONLY by the PipeWire thread */
-static _Atomic uint32_t audio_coda;  /* moved ONLY by the child's loop */
-static _Atomic uint64_t audio_traboccati; /* frames dropped by the producer */
+static int16_t audio_ring[AUDIO_ANELLO_FOTOGRAMMI * AUDIO_CANALI];
+static _Atomic uint32_t audio_head; /* moved ONLY by the PipeWire thread */
+static _Atomic uint32_t audio_queue;  /* moved ONLY by the child's loop */
+static _Atomic uint64_t audio_overflowed; /* frames dropped by the producer */
 
 /* ⛔ The audio clock is the SAMPLE COUNT, not `CLOCK_MONOTONIC`.
  *
@@ -4525,15 +4525,15 @@ static _Atomic uint64_t audio_traboccati; /* frames dropped by the producer */
  *   base MOVES by the lost samples, or the clock would tell of a continuous
  *   sound where there was a gap. */
 static uint64_t audio_base_us;
-static uint64_t audio_consumati; /* frames already out, since the base */
+static uint64_t audio_consumed; /* frames already out, since the base */
 
-static void audio_anello_azzera(void)
+static void audio_ring_reset(void)
 {
-	atomic_store(&audio_testa, 0);
-	atomic_store(&audio_coda, 0);
-	atomic_store(&audio_traboccati, 0);
+	atomic_store(&audio_head, 0);
+	atomic_store(&audio_queue, 0);
+	atomic_store(&audio_overflowed, 0);
 	audio_base_us = 0;
-	audio_consumati = 0;
+	audio_consumed = 0;
 }
 
 /*
@@ -4546,43 +4546,43 @@ static void audio_anello_azzera(void)
  */
 static void audio_campioni(const int16_t *campioni, uint32_t fotogrammi, void *ctx)
 {
-	uint32_t testa, coda, liberi;
+	uint32_t testa, coda, free_n;
 	(void)ctx;
 
 	if (!fotogrammi || !campioni)
 		return;
 
-	testa = atomic_load_explicit(&audio_testa, memory_order_relaxed);
-	coda = atomic_load_explicit(&audio_coda, memory_order_acquire);
+	testa = atomic_load_explicit(&audio_head, memory_order_relaxed);
+	coda = atomic_load_explicit(&audio_queue, memory_order_acquire);
 
 	/* ⛔ One slot always stays empty: it is the only way to tell "full" from
 	 *    "empty" with only two indices. */
-	liberi = (coda + AUDIO_ANELLO_FOTOGRAMMI - testa - 1u) % AUDIO_ANELLO_FOTOGRAMMI;
-	if (fotogrammi > liberi) {
+	free_n = (coda + AUDIO_ANELLO_FOTOGRAMMI - testa - 1u) % AUDIO_ANELLO_FOTOGRAMMI;
+	if (fotogrammi > free_n) {
 		/* The TAIL of the block is kept, that is the most recent sound. */
-		uint32_t buttati = fotogrammi - liberi;
-		atomic_fetch_add_explicit(&audio_traboccati, buttati, memory_order_relaxed);
+		uint32_t buttati = fotogrammi - free_n;
+		atomic_fetch_add_explicit(&audio_overflowed, buttati, memory_order_relaxed);
 		campioni += (size_t)buttati * AUDIO_CANALI;
-		fotogrammi = liberi;
+		fotogrammi = free_n;
 		if (!fotogrammi)
 			return;
 	}
 
 	for (uint32_t i = 0; i < fotogrammi; i++) {
 		uint32_t p = (testa + i) % AUDIO_ANELLO_FOTOGRAMMI;
-		audio_anello[p * AUDIO_CANALI] = campioni[i * AUDIO_CANALI];
-		audio_anello[p * AUDIO_CANALI + 1] = campioni[i * AUDIO_CANALI + 1];
+		audio_ring[p * AUDIO_CANALI] = campioni[i * AUDIO_CANALI];
+		audio_ring[p * AUDIO_CANALI + 1] = campioni[i * AUDIO_CANALI + 1];
 	}
-	atomic_store_explicit(&audio_testa,
+	atomic_store_explicit(&audio_head,
 	                      (testa + fotogrammi) % AUDIO_ANELLO_FOTOGRAMMI,
 	                      memory_order_release);
 }
 
 /* How many frames are ready to be consumed. */
-static uint32_t audio_pronti(void)
+static uint32_t audio_ready(void)
 {
-	uint32_t testa = atomic_load_explicit(&audio_testa, memory_order_acquire);
-	uint32_t coda = atomic_load_explicit(&audio_coda, memory_order_relaxed);
+	uint32_t testa = atomic_load_explicit(&audio_head, memory_order_acquire);
+	uint32_t coda = atomic_load_explicit(&audio_queue, memory_order_relaxed);
 	return (testa + AUDIO_ANELLO_FOTOGRAMMI - coda) % AUDIO_ANELLO_FOTOGRAMMI;
 }
 
@@ -4599,12 +4599,12 @@ static uint32_t audio_pronti(void)
  *      `acod`  the ENCODER, belongs to the **connection**: it depends on the
  *              codec that connection negotiated (§4.3), and is redone when
  *              the codec changes. */
-static suono *son;
-static audio_cod *acod;
+static suono *snd;
+static audio_cod *aenc;
 /* Which audio codec the parent asked for: 0 = nobody is listening. */
 static uint8_t audio_codec;
-static uint64_t audio_blocchi_spediti, audio_blocchi_persi;
-static uint64_t audio_detto_us;
+static uint64_t audio_blocks_shipped, audio_blocks_lost;
+static uint64_t audio_logged_us;
 
 /*
  * Turns audio on, changes it or turns it off.  `codec` 0 = off (§6.3: 1 Opus,
@@ -4661,7 +4661,7 @@ static void dichiara_priorita_audio(void)
 	unsigned long tetto = 0;
 	DIR *cartella;
 	struct dirent *voce;
-	int guardati = 0, in_tempo_reale = 0, peggior_nice = -100;
+	int guardati = 0, realtime = 0, worst_nice = -100;
 	char elenco[512];
 	size_t usato = 0;
 
@@ -4674,7 +4674,7 @@ static void dichiara_priorita_audio(void)
 		char percorso[128], nome[64];
 		FILE *f;
 		long tid;
-		int politica, gentilezza;
+		int politica, niceness;
 		size_t l;
 
 		if (voce->d_name[0] < '0' || voce->d_name[0] > '9')
@@ -4709,15 +4709,15 @@ static void dichiara_priorita_audio(void)
 		 *    parse, and it has no field index to get wrong. */
 		politica = sched_getscheduler((pid_t) tid);
 		errno = 0;
-		gentilezza = getpriority(PRIO_PROCESS, (id_t) tid);
+		niceness = getpriority(PRIO_PROCESS, (id_t) tid);
 		if (errno)
-			gentilezza = 0;
+			niceness = 0;
 
 		guardati++;
 		if (politica == SCHED_FIFO || politica == SCHED_RR)
-			in_tempo_reale++;
-		else if (gentilezza > peggior_nice)
-			peggior_nice = gentilezza;
+			realtime++;
+		else if (niceness > worst_nice)
+			worst_nice = niceness;
 
 		if (usato < sizeof elenco - 48)
 			usato += (size_t) snprintf(elenco + usato, sizeof elenco - usato, "%s%s(%s,nice %d)",
@@ -4727,7 +4727,7 @@ static void dichiara_priorita_audio(void)
 			                           : politica == SCHED_IDLE ? "idle"
 			                           : politica == SCHED_BATCH ? "batch"
 			                                                     : "normal",
-			                           gentilezza);
+			                           niceness);
 	}
 	if (cartella)
 		closedir(cartella);
@@ -4745,11 +4745,11 @@ static void dichiara_priorita_audio(void)
 		return;
 	}
 
-	if (in_tempo_reale == guardati)
+	if (realtime == guardati)
 		registro_dice(REG_FIGLIO,
 		              "⭐ real-time priority OBTAINED: %d threads out of %d of the "
 		              "audio path run FIFO/RR (RLIMIT_RTPRIO = %lu).  %s",
-		              in_tempo_reale, guardati, tetto, elenco);
+		              realtime, guardati, tetto, elenco);
 	else
 		registro_dice(
 		    REG_FIGLIO,
@@ -4762,7 +4762,7 @@ static void dichiara_priorita_audio(void)
 		    "desktop it does not reproduce.  ⚠ And the cure is not here: the independent referee "
 		    "(`pw-record` on the same monitor) hears the same crackles at the same instants ⇒ the "
 		    "defect is born in the SESSION's audio graph, not in our transport.  %s",
-		    guardati - in_tempo_reale, guardati, peggior_nice == -100 ? 0 : peggior_nice, tetto,
+		    guardati - realtime, guardati, worst_nice == -100 ? 0 : worst_nice, tetto,
 		    elenco);
 }
 
@@ -4775,15 +4775,15 @@ static void audio_regola_figlio(uint8_t codec)
 	 * thread, and whoever returns from there is allowed to touch what the
 	 * callback was using — the ring included. */
 	if (audio_codec) {
-		suono_ascolto_ferma(son);
-		audio_cod_chiudi(acod);
-		acod = NULL;
+		suono_ascolto_ferma(snd);
+		audio_cod_chiudi(aenc);
+		aenc = NULL;
 		registro_dice(REG_FIGLIO,
 		              "audio turns OFF: %llu blocks sent, %llu lost, "
 		              "%llu frames overflowed.  ⭐ The sink stays (I4)",
-		              (unsigned long long)audio_blocchi_spediti,
-		              (unsigned long long)audio_blocchi_persi,
-		              (unsigned long long)atomic_load(&audio_traboccati));
+		              (unsigned long long)audio_blocks_shipped,
+		              (unsigned long long)audio_blocks_lost,
+		              (unsigned long long)atomic_load(&audio_overflowed));
 	}
 	audio_codec = 0;
 
@@ -4791,9 +4791,9 @@ static void audio_regola_figlio(uint8_t codec)
 		return;
 
 	/* ⛔ The sink is mounted ONLY ONCE for the life of the child. */
-	if (!son) {
-		son = suono_apri();
-		if (!son) {
+	if (!snd) {
+		snd = suono_apri();
+		if (!snd) {
 			/* ⚠ DECLARED FALLBACK (`CODER.md` §4.2): the desktop keeps
 			 *   working without audio, and this line is the only difference
 			 *   between "degraded" and "silently broken".  The log of the
@@ -4808,22 +4808,22 @@ static void audio_regola_figlio(uint8_t codec)
 	/* ⛔ Invariant I5: whoever connects finds the volume AT MAXIMUM.  It is
 	 *    redone at every connection and not only at creation, because a slider
 	 *    left low is a state the client can neither see nor explain. */
-	suono_volume_massimo(son);
+	suono_volume_massimo(snd);
 
-	acod = audio_cod_apri(codec);
-	if (!acod) {
+	aenc = audio_cod_apri(codec);
+	if (!aenc) {
 		registro_dice(REG_FIGLIO,
 		              "⛔ the audio encoder for codec %u does not open: "
 		              "this session stays without sound", codec);
 		return;
 	}
 
-	audio_anello_azzera();
-	if (!suono_ascolto_avvia(son, audio_campioni, NULL)) {
+	audio_ring_reset();
+	if (!sound_listen_start(snd, audio_campioni, NULL)) {
 		registro_dice(REG_FIGLIO,
 		              "⛔ the monitor capture does not start: no sound");
-		audio_cod_chiudi(acod);
-		acod = NULL;
+		audio_cod_chiudi(aenc);
+		aenc = NULL;
 		return;
 	}
 	/* ⛔⛔ AND IT IS CHECKED WHETHER REAL-TIME PRIORITY WAS OBTAINED, instead
@@ -4845,12 +4845,12 @@ static void audio_regola_figlio(uint8_t codec)
 	dichiara_priorita_audio();
 
 	audio_codec = codec;
-	audio_blocchi_spediti = audio_blocchi_persi = 0;
+	audio_blocks_shipped = audio_blocks_lost = 0;
 	registro_dice(REG_FIGLIO,
 	              "⭐ PHASE 7: audio turns ON — codec %u (%s), blocks of %u "
 	              "frames, sink node %u",
-	              codec, codec == 1 ? "Opus" : "PCM", audio_cod_blocco(acod),
-	              suono_nodo(son));
+	              codec, codec == 1 ? "Opus" : "PCM", audio_cod_blocco(aenc),
+	              sound_node(snd));
 }
 
 /*
@@ -4877,49 +4877,49 @@ static void audio_svuota(void)
 	uint32_t blocco;
 	int16_t campioni[AUDIO_BLOCCO_OPUS * AUDIO_CANALI];
 	uint8_t fuori[AUDIO_FUORI_MAX];
-	uint64_t traboccati;
+	uint64_t overflowed;
 
-	if (!audio_codec || !acod)
+	if (!audio_codec || !aenc)
 		return;
-	blocco = audio_cod_blocco(acod);
+	blocco = audio_cod_blocco(aenc);
 
 	/* ⛔ The overflow is read HERE and not in the callback: there one cannot
 	 *    write to the log without risking the desktop's frames. */
-	traboccati = atomic_exchange(&audio_traboccati, 0);
-	if (traboccati) {
+	overflowed = atomic_exchange(&audio_overflowed, 0);
+	if (overflowed) {
 		/* ⭐ And the clock base MOVES by the lost samples, or the `istante`
 		 *    values would tell of a continuous sound where there was a gap —
 		 *    and the client would reorder on a lie (§6.3). */
-		audio_base_us += traboccati * 1000000u / AUDIO_FREQUENZA;
+		audio_base_us += overflowed * 1000000u / AUDIO_FREQUENZA;
 		registro_dice(REG_FIGLIO,
 		              "⚠ the audio ring overflowed by %llu frames "
 		              "(%llu ms): the loop does not empty it fast enough.  "
 		              "⛔ It is not the network: it is here",
-		              (unsigned long long)traboccati,
-		              (unsigned long long)(traboccati * 1000u / AUDIO_FREQUENZA));
+		              (unsigned long long)overflowed,
+		              (unsigned long long)(overflowed * 1000u / AUDIO_FREQUENZA));
 	}
 
-	while (audio_pronti() >= blocco) {
-		uint32_t coda = atomic_load_explicit(&audio_coda, memory_order_relaxed);
+	while (audio_ready() >= blocco) {
+		uint32_t coda = atomic_load_explicit(&audio_queue, memory_order_relaxed);
 		size_t n = 0;
 		uint64_t istante;
 
 		for (uint32_t i = 0; i < blocco; i++) {
 			uint32_t p = (coda + i) % AUDIO_ANELLO_FOTOGRAMMI;
-			campioni[i * AUDIO_CANALI] = audio_anello[p * AUDIO_CANALI];
-			campioni[i * AUDIO_CANALI + 1] = audio_anello[p * AUDIO_CANALI + 1];
+			campioni[i * AUDIO_CANALI] = audio_ring[p * AUDIO_CANALI];
+			campioni[i * AUDIO_CANALI + 1] = audio_ring[p * AUDIO_CANALI + 1];
 		}
-		atomic_store_explicit(&audio_coda,
+		atomic_store_explicit(&audio_queue,
 		                      (coda + blocco) % AUDIO_ANELLO_FOTOGRAMMI,
 		                      memory_order_release);
 
 		if (!audio_base_us)
-			audio_base_us = ora_monotona_us();
-		istante = audio_base_us + audio_consumati * 1000000u / AUDIO_FREQUENZA;
-		audio_consumati += blocco;
+			audio_base_us = now_monotonic_us();
+		istante = audio_base_us + audio_consumed * 1000000u / AUDIO_FREQUENZA;
+		audio_consumed += blocco;
 
-		if (audio_cod_passa(acod, campioni, fuori, &n)) {
-			struct corpo_blocco c;
+		if (audio_cod_passa(aenc, campioni, fuori, &n)) {
+			struct body_block c;
 			memset(&c, 0, sizeof c);
 			c.codec = audio_codec;
 			c.byte = (uint32_t)n;
@@ -4928,9 +4928,9 @@ static void audio_svuota(void)
 			 *    retransmission, and a child waiting to be able to write
 			 *    would stop the desktop capture. */
 			if (!manda(MSG_BLOCCO, &c, sizeof c, fuori, n))
-				audio_blocchi_persi++;
+				audio_blocks_lost++;
 			else
-				audio_blocchi_spediti++;
+				audio_blocks_shipped++;
 		}
 	}
 
@@ -4938,21 +4938,21 @@ static void audio_svuota(void)
 	 * session does not play" and "the blocks do not go out" must have three
 	 * different faces (`CODER.md` §3.10). */
 	{
-		uint64_t adesso = ora_monotona_us();
-		if (adesso - audio_detto_us >= 1000000u) {
-			audio_detto_us = adesso;
+		uint64_t adesso = now_monotonic_us();
+		if (adesso - audio_logged_us >= 1000000u) {
+			audio_logged_us = adesso;
 			registro_dettaglio(REG_FIGLIO,
 			                   "audio: %llu blocks sent, %llu lost, "
 			                   "%llu frames waiting in the ring — codec %u",
-			                   (unsigned long long)audio_blocchi_spediti,
-			                   (unsigned long long)audio_blocchi_persi,
-			                   (unsigned long long)audio_pronti(), audio_codec);
+			                   (unsigned long long)audio_blocks_shipped,
+			                   (unsigned long long)audio_blocks_lost,
+			                   (unsigned long long)audio_ready(), audio_codec);
 		}
 	}
 }
 
 
-static void rilievo_scrivi(const char *dir, const char *nome, const void *dati,
+static void survey_write(const char *dir, const char *nome, const void *dati,
                            size_t byte)
 {
 	char percorso[512];
@@ -5002,53 +5002,53 @@ static void rilievo_scrivi(const char *dir, const char *nome, const void *dati,
  *     it arms once per signal, and `SIGUSR2` closes it at once (without it,
  *     on a still scene one would wait for frames that do not arrive).
  * ------------------------------------------------------------------ */
-#define SCATTO_FOTOGRAMMI 300
+#define SHOT_FRAMES 300
 
 /* ⛔ AND IT KEEPS THE FOLDER ITSELF, instead of reading it from the parameter.
  *
  * `[M]` 17 Aug 2026, and the first snapshot was lost like this: in the main
- * ROUND `codifica_e_manda()` is called with `dir_rilievo = NULL` (the
- * `codec_chiesto` line) — the real folder arrives only at the first encoding,
- * the one at switch-on.  ⇒ `rilievo_scrivi()` exited silently, and the log
+ * ROUND `codifica_e_manda()` is called with `dir_survey = NULL` (the
+ * `requested_codec` line) — the real folder arrives only at the first encoding,
+ * the one at switch-on.  ⇒ `survey_write()` exited silently, and the log
  * line said "input 2560x962, 9850880 bytes" of a file that had not been
  * written: the worst form, a green that looked at nothing (`LEZIONI.md`
  * §1.9). */
-static const char *scatto_dir = NULL;
+static const char *shot_dir = NULL;
 
-static volatile sig_atomic_t scatto_chiesto = 0;
-static volatile sig_atomic_t scatto_stop = 0;
-static int scatto_stato = 0; /* 0 idle · 1 waiting for the keyframe · 2 queueing */
-static int scatto_restano = 0;
-static FILE *scatto_fp = NULL;
-static unsigned long long scatto_quanti = 0;
+static volatile sig_atomic_t shot_requested = 0;
+static volatile sig_atomic_t shot_stop = 0;
+static int shot_state = 0; /* 0 idle · 1 waiting for the keyframe · 2 queueing */
+static int shots_left = 0;
+static FILE *shot_fp = NULL;
+static unsigned long long shot_count = 0;
 
-static void scatto_segnale(int quale)
+static void shot_signal(int quale)
 {
 	if (quale == SIGUSR2)
-		scatto_stop = 1;
+		shot_stop = 1;
 	else
-		scatto_chiesto = 1;
+		shot_requested = 1;
 }
 
 /* Closes the stream and writes the last input.  `perche` ends up in the log,
  * so that a truncated survey is not mistaken for a finished one. */
-static void scatto_chiudi(const char *dir_rilievo, const CatturaFermo *fo,
+static void scatto_chiudi(const char *dir_survey, const CatturaFermo *fo,
                           const char *perche)
 {
-	if (scatto_fp) {
-		fclose(scatto_fp);
-		scatto_fp = NULL;
+	if (shot_fp) {
+		fclose(shot_fp);
+		shot_fp = NULL;
 	}
-	scatto_stato = 0;
-	scatto_restano = 0;
+	shot_state = 0;
+	shots_left = 0;
 	if (fo && fo->pixel)
-		rilievo_scrivi(dir_rilievo, "scatto-uscita.bgrx", fo->pixel,
+		survey_write(dir_survey, "scatto-uscita.bgrx", fo->pixel,
 		               (size_t)fo->byte);
 	registro_dice(REG_FIGLIO,
 	              "⭐ SNAPSHOT FINISHED (%s): %llu frames in "
 	              "`scatto-flusso.obu`, and `scatto-uscita.bgrx` is the input "
 	              "of the LAST of them",
-	              perche, scatto_quanti);
+	              perche, shot_count);
 }
 
 /* ⛔ The same encoding request as `main.c` before 12 Aug 2026 —
@@ -5191,7 +5191,7 @@ static unsigned livello_in_decimi(CodecVideo codec, int livello_flusso)
  *    and the translation lives in ONE function: the day they diverged, a
  *    single line would be what diverges.  ⚠ An unknown number does NOT become
  *    a codec "so as to go on": it is declared and nothing is encoded. */
-static CodecVideo codec_del_numero(uint8_t numero)
+static CodecVideo codec_from_number(uint8_t numero)
 {
 	switch (numero) {
 	case 1:
@@ -5228,19 +5228,19 @@ static const char *nodo_rendering = NODO_RENDERING;
  *    `h264_scheda`, `hevc_vulkan`, … (`codificatore.h`).  ⛔ The parent passes
  *    it to the child on the command line (`figli_esegui`): the child is an
  *    exec, and a static of the parent does not reach this side. */
-static const char *strada_codifica = "scheda";
+static const char *encode_route = "scheda";
 
-bool figlio_codifica_strada(const char *strada)
+bool child_encoding_route(const char *strada)
 {
 	if (!strada || (strcmp(strada, "scheda") && strcmp(strada, "vulkan") && strcmp(strada, "vaapi")))
 		return false;
-	strada_codifica = strada;
+	encode_route = strada;
 	return true;
 }
 
-const char *figlio_codifica_strada_chiesta(void)
+const char *child_encoding_route_requested(void)
 {
-	return strada_codifica;
+	return encode_route;
 }
 
 /*
@@ -5250,7 +5250,7 @@ const char *figlio_codifica_strada_chiesta(void)
  *    `wlroots.c`); with VA-API not.  ⇒ It is decided ONCE, before the first
  *    stage, with the same rule as the components (`componente_di()`):
  *    "vulkan" yes, "vaapi" no, "scheda" = what the node's card declares
- *    (`codificatore_vulkan_sul_nodo`).
+ *    (`encoder_vulkan_on_node`).
  */
 static void lastre_per_la_strada(void)
 {
@@ -5260,12 +5260,12 @@ static void lastre_per_la_strada(void)
 	if (deciso)
 		return;
 	deciso = true;
-	if (!strcmp(strada_codifica, "vulkan"))
+	if (!strcmp(encode_route, "vulkan"))
 		vulkan = true;
-	else if (!strcmp(strada_codifica, "vaapi"))
+	else if (!strcmp(encode_route, "vaapi"))
 		vulkan = false;
 	else
-		vulkan = codificatore_vulkan_sul_nodo(nodo_rendering);
+		vulkan = encoder_vulkan_on_node(nodo_rendering);
 	wlr_lastre_alla_tela_massima(vulkan);
 	registro_dice(REG_FIGLIO,
 	              "⭐ PHASE 19: the slabs of the wlroots capture %s (route requested «%s», node %s)",
@@ -5273,7 +5273,7 @@ static void lastre_per_la_strada(void)
 	                       "encoding will be Vulkan (the Radeon GPU hang)"
 	                     : "are of the right size and are redone on a change — the encoding "
 	                       "will be VA-API",
-	              strada_codifica, nodo_rendering);
+	              encode_route, nodo_rendering);
 }
 
 /*
@@ -5290,7 +5290,7 @@ static void modificatori_per_la_strada(void)
 	uint64_t m[16];
 	int n = 0;
 
-	if (deciso || strada_del_palco != CATTURA_STRADA_SCHEDA)
+	if (deciso || stage_route != CATTURA_STRADA_SCHEDA)
 		return;
 	deciso = true;
 	if (!vulkanvideo_scheda_rifiuta_il_lineare(nodo_rendering))
@@ -5324,7 +5324,7 @@ static const char *componente_di(CodecVideo codec)
 	int quale = codec == CODIFICATORE_H264 ? 0 : 1;
 
 	snprintf(nome[quale], sizeof nome[quale], "%s_%s", codec == CODIFICATORE_H264 ? "h264" : "hevc",
-	         strada_codifica);
+	         encode_route);
 	return nome[quale];
 }
 
@@ -5363,15 +5363,15 @@ static Codificatore *codificatore_di(CodecVideo codec, uint8_t indice,
 	 *     artefacts — that is the same defect as tonight, with another cause.
 	 * ⛔ And the next frame must be a KEYFRAME: a new encoder does not have the
 	 *    stream's past (§5.2). */
-	if (codif[indice] && codif_prof[indice] != prof) {
+	if (enc[indice] && enc_profile[indice] != prof) {
 		registro_dice(REG_FIGLIO,
 		              "⭐ the negotiated depth has changed (%u → %u): redoing "
 		              "encoder %u, and the next frame will be a "
 		              "KEYFRAME (§5.2)",
-		              codif_prof[indice], prof, indice);
-		codificatore_libera(codif[indice]);
-		codif[indice] = NULL;
-		codif_prof[indice] = 0;
+		              enc_profile[indice], prof, indice);
+		codificatore_libera(enc[indice]);
+		enc[indice] = NULL;
+		enc_profile[indice] = 0;
 		debito_chiave[indice] = true;
 	}
 	/* ⛔⭐ AND THE SAME FOR THE LEVEL (§4.3 line 701) — 23 Aug 2026.  The level
@@ -5380,42 +5380,42 @@ static Codificatore *codificatore_di(CodecVideo codec, uint8_t indice,
 	 *     second client declaring a ceiling different from the first brings
 	 *     along a new encoder, or it would see the ceiling of the FIRST — and
 	 *     the symptom, again, would be a black screen without a line. */
-	if (codif[indice] && codif_fmt[indice] != formato_ingresso) {
+	if (enc[indice] && enc_fmt[indice] != formato_ingresso) {
 		registro_dice(REG_FIGLIO,
 		              "⭐ the capture's channel order has changed (%s → %s): "
 		              "redoing encoder %u, and the next frame will be "
 		              "a KEYFRAME (§5.2)",
-		              codif_fmt[indice] == CODIFICATORE_PIXEL_RGBX ? "RGBx" : "BGRx",
+		              enc_fmt[indice] == CODIFICATORE_PIXEL_RGBX ? "RGBx" : "BGRx",
 		              formato_ingresso == CODIFICATORE_PIXEL_RGBX ? "RGBx" : "BGRx",
 		              indice);
-		codificatore_libera(codif[indice]);
-		codif[indice] = NULL;
-		codif_prof[indice] = 0;
-		codif_liv[indice] = 0;
+		codificatore_libera(enc[indice]);
+		enc[indice] = NULL;
+		enc_profile[indice] = 0;
+		enc_level[indice] = 0;
 		debito_chiave[indice] = true;
 	}
-	if (codif[indice] && codif_liv[indice] != livello_chiesto_x10) {
+	if (enc[indice] && enc_level[indice] != requested_level_x10) {
 		registro_dice(REG_FIGLIO,
 		              "⭐ §4.3: the level ceiling has changed (%u.%u → %u.%u, "
 		              "0.0 = no ceiling): redoing encoder %u, and the "
 		              "next frame will be a KEYFRAME (§5.2)",
-		              codif_liv[indice] / 10u, codif_liv[indice] % 10u,
-		              livello_chiesto_x10 / 10u, livello_chiesto_x10 % 10u,
+		              enc_level[indice] / 10u, enc_level[indice] % 10u,
+		              requested_level_x10 / 10u, requested_level_x10 % 10u,
 		              indice);
-		codificatore_libera(codif[indice]);
-		codif[indice] = NULL;
-		codif_prof[indice] = 0;
-		codif_liv[indice] = 0;
+		codificatore_libera(enc[indice]);
+		enc[indice] = NULL;
+		enc_profile[indice] = 0;
+		enc_level[indice] = 0;
 		debito_chiave[indice] = true;
 	}
-	if (codif[indice])
-		return codif[indice];
+	if (enc[indice])
+		return enc[indice];
 
-	/* ⛔⭐ AND IT IS NOT RETRIED AT EVERY FRAME — see `codif_riprova_ms`.  ⚠ The
+	/* ⛔⭐ AND IT IS NOT RETRIED AT EVERY FRAME — see `enc_retry_ms`.  ⚠ The
 	 *    silence here is intended and limited: the line explaining the failure
 	 *    was already written by the previous attempt, and repeating it sixty
 	 *    times a second is the defect this wait exists to avoid. */
-	if (codif_riprova_ms[indice] && registro_ora_ms() < codif_riprova_ms[indice])
+	if (enc_retry_ms[indice] && registro_ora_ms() < enc_retry_ms[indice])
 		return NULL;
 
 	memset(&r, 0, sizeof r);
@@ -5464,7 +5464,7 @@ static Codificatore *codificatore_di(CodecVideo codec, uint8_t indice,
 	 * ⚠ `0` = the client declared nothing (§4.3 does not require it): no
 	 *   ceiling, the encoder chooses, and the chosen level is WRITTEN anyway —
 	 *   whoever reads the log must know what came out. */
-	r.livello_x10 = (int) livello_chiesto_x10;
+	r.livello_x10 = (int) requested_level_x10;
 	r.formato = formato_ingresso;
 	r.chiavi_ogni = 0;
 
@@ -5494,23 +5494,23 @@ static Codificatore *codificatore_di(CodecVideo codec, uint8_t indice,
 		r.componente = componente_di(codec);
 		r.nodo_rendering = nodo_rendering;
 		r.potenza = POTENZA_RENDERING;
-		codif[indice] = codificatore_nuovo(&r, errore, sizeof errore);
+		enc[indice] = codificatore_nuovo(&r, errore, sizeof errore);
 		/* The reason also stays outside the log: `--prova-codifica` reports it
 		 * in its `motivo`. */
 		snprintf(rifiuto_hardware, sizeof rifiuto_hardware, "%s",
-		         codif[indice] ? "" : errore);
+		         enc[indice] ? "" : errore);
 		/* ⭐ 6 Oct 2026, `[M]` RTX 4090: the thirteenth concurrent encoding
 		 *    returns VK_ERROR_TOO_MANY_OBJECTS.  The card is there and it is
 		 *    FULL: saying "this codec is not available" would be false, and the
 		 *    retry below picks it up as soon as a slot frees up. */
-		if (!codif[indice] && strstr(rifiuto_hardware, "TOO_MANY_OBJECTS"))
+		if (!enc[indice] && strstr(rifiuto_hardware, "TOO_MANY_OBJECTS"))
 			snprintf(errore, sizeof errore,
 			         "«%s» on %.40s did not open (%.150s) ⇒ the card is there but has RUN OUT "
 			         "of encoding slots (the driver's limit: `[M]` 12 at once on the "
 			         "RTX 4090) — the session stays without an image until a slot "
 			         "frees up",
 			         r.componente, nodo_rendering, rifiuto_hardware);
-		else if (!codif[indice])
+		else if (!enc[indice])
 			snprintf(errore, sizeof errore,
 			         "«%s» on %.40s did not open (%.150s) ⇒ this codec is NOT available on "
 			         "this machine: without a card there is no encoding (phase 19)",
@@ -5522,33 +5522,33 @@ static Codificatore *codificatore_di(CodecVideo codec, uint8_t indice,
 		snprintf(errore, sizeof errore, "%.400s — and without a card there is no encoding (phase 19)",
 		         rifiuto_hardware);
 	}
-	if (codif[indice]) {
-		codif_prof[indice] = prof;
-		codif_liv[indice] = livello_chiesto_x10;
-		codif_fmt[indice] = formato_ingresso;
+	if (enc[indice]) {
+		enc_profile[indice] = prof;
+		enc_level[indice] = requested_level_x10;
+		enc_fmt[indice] = formato_ingresso;
 	}
-	if (!codif[indice]) {
+	if (!enc[indice]) {
 		/* ⛔ The wait grows, and the line SAYS so: without it, this branch wrote
 		 *    the log in bursts and burned a core — the same form as the 30.8 GB
 		 *    of 14 August, in another point of the loop. */
-		codif_attesa_ms[indice] = codif_attesa_ms[indice]
-		                              ? codif_attesa_ms[indice] * 2
+		enc_wait_ms[indice] = enc_wait_ms[indice]
+		                              ? enc_wait_ms[indice] * 2
 		                              : CODIF_RIPROVA_MIN_MS;
-		if (codif_attesa_ms[indice] > CODIF_RIPROVA_MAX_MS)
-			codif_attesa_ms[indice] = CODIF_RIPROVA_MAX_MS;
-		codif_riprova_ms[indice] = registro_ora_ms() + codif_attesa_ms[indice];
+		if (enc_wait_ms[indice] > CODIF_RIPROVA_MAX_MS)
+			enc_wait_ms[indice] = CODIF_RIPROVA_MAX_MS;
+		enc_retry_ms[indice] = registro_ora_ms() + enc_wait_ms[indice];
 		registro_dice(REG_FIGLIO,
 		              "⛔ no video for codec %d: %s.  ⚠ Retrying in %llu "
 		              "ms — not at every frame, or it would be sixty contexts "
 		              "opened and closed per second",
 		              (int)codec, errore,
-		              (unsigned long long)codif_attesa_ms[indice]);
+		              (unsigned long long)enc_wait_ms[indice]);
 		return NULL;
 	}
 	/* ⭐ Succeeded: the wait is reset, or the next failure would start from the
 	 *    bottom of the previous one. */
-	codif_riprova_ms[indice] = 0;
-	codif_attesa_ms[indice] = 0;
+	enc_retry_ms[indice] = 0;
+	enc_wait_ms[indice] = 0;
 	/* ⭐ And the name carries the EFFECTIVE entrypoint (with node and vendor),
 	 *    not the requested one: with `LA_DICHIARATA` they are two different
 	 *    things until the driver has answered, and this is the line that says
@@ -5559,18 +5559,18 @@ static Codificatore *codificatore_di(CodecVideo codec, uint8_t indice,
 	              "prediction would not exist and every frame would be a "
 	              "keyframe · route %s (requested «%s») · in force: %s",
 	              (int)codec, tela_l, tela_a, MOVIMENTO_FPS,
-	              codificatore_strada(codif[indice]), strada_codifica,
-	              codificatore_nome(codif[indice]));
-	return codif[indice];
+	              codificatore_strada(enc[indice]), encode_route,
+	              codificatore_nome(enc[indice]));
+	return enc[indice];
 }
 
-static void codificatori_libera(void)
+static void encoders_free(void)
 {
 	for (uint8_t i = 0; i < CODEC_MAX; i++) {
-		if (!codif[i])
+		if (!enc[i])
 			continue;
-		codificatore_libera(codif[i]);
-		codif[i] = NULL;
+		codificatore_libera(enc[i]);
+		enc[i] = NULL;
 	}
 }
 
@@ -5628,7 +5628,7 @@ static void codificatori_libera(void)
  */
 #define PROVA_LATO 256u
 #define PROVA_GIRI 8
-#define PROVA_NESSUNA_SCHEDA 3
+#define PROBE_NO_CARD 3
 
 /* ⭐ What this machine's card can do, codec by codec: it is the same question
  *    as `--prova-codifica`, asked at startup by the parent to decide what to
@@ -5637,11 +5637,11 @@ typedef struct {
 	bool hevc_scheda;          /* the card opens and encodes HEVC on `nodo` */
 	bool h264_scheda;          /* H.264 likewise */
 	char nodo[64];
-	char perche_hevc[768];     /* the reason, when not */
-	char perche_h264[768];
-	char strada_hevc[16];      /* ⭐ phase 19: "vulkan" / "vaapi" when yes, "" when not */
-	char strada_h264[16];
-} CapacitaVideo;
+	char why_hevc[768];     /* the reason, when not */
+	char why_h264[768];
+	char route_hevc[16];      /* ⭐ phase 19: "vulkan" / "vaapi" when yes, "" when not */
+	char route_h264[16];
+} VideoCapabilities;
 
 /* Opens the card for `codec` and encodes until bytes come out.  ⚠ It goes
  * through `codificatore_di()`, that is the session's road: it is the same
@@ -5649,8 +5649,8 @@ typedef struct {
  * confession): the caller frees it.  `*aperto` says whether the card opened —
  * the "no" of one that does not open and that of one that does not encode
  * are two different codes of `--prova-codifica`. */
-static bool prova_un_codec(CodecVideo codec, uint8_t indice, char *motivo, size_t n,
-                           size_t *byte_usciti, bool *aperto)
+static bool test_codec(CodecVideo codec, uint8_t indice, char *motivo, size_t n,
+                           size_t *byte_exited, bool *aperto)
 {
 	static uint8_t pixel[PROVA_LATO * PROVA_LATO * 4];
 	CodificatoreFotogramma fg;
@@ -5658,17 +5658,17 @@ static bool prova_un_codec(CodecVideo codec, uint8_t indice, char *motivo, size_
 	Codificatore *cod;
 	bool uscito = false;
 
-	*byte_usciti = 0;
+	*byte_exited = 0;
 	*aperto = false;
 	profondita_chiesta = 8;
-	livello_chiesto_x10 = 0;
+	requested_level_x10 = 0;
 	formato_ingresso = CODIFICATORE_PIXEL_BGRX;
 	/* ⚠ It is REALLY tried, even if a round before already said no: the wait
 	 *   between two attempts belongs to the session, not to the test — and
 	 *   the reason is reset, or the one of the codec tried before would be
 	 *   read. */
-	codif_riprova_ms[indice] = 0;
-	codif_attesa_ms[indice] = 0;
+	enc_retry_ms[indice] = 0;
+	enc_wait_ms[indice] = 0;
 	rifiuto_hardware[0] = 0;
 	cod = codificatore_di(codec, indice, PROVA_LATO, PROVA_LATO);
 	if (!cod) {
@@ -5701,7 +5701,7 @@ static bool prova_un_codec(CodecVideo codec, uint8_t indice, char *motivo, size_
 		}
 		if (fg.byte > 0) {
 			uscito = true;
-			*byte_usciti = fg.byte;
+			*byte_exited = fg.byte;
 		}
 		codificatore_rilascia(cod);
 	}
@@ -5720,7 +5720,7 @@ static bool prova_un_codec(CodecVideo codec, uint8_t indice, char *motivo, size_
 }
 
 /* The measure, in this process: two questions, and each "no" with its reason. */
-static void capacita_video_misura(CapacitaVideo *cv)
+static void capabilities_video_measure(VideoCapabilities *cv)
 {
 	size_t byte;
 	bool aperto;
@@ -5728,24 +5728,24 @@ static void capacita_video_misura(CapacitaVideo *cv)
 
 	memset(cv, 0, sizeof *cv);
 	snprintf(cv->nodo, sizeof cv->nodo, "%s", nodo_rendering);
-	cv->hevc_scheda = prova_un_codec(CODIFICATORE_HEVC, 1, motivo, sizeof motivo, &byte, &aperto);
+	cv->hevc_scheda = test_codec(CODIFICATORE_HEVC, 1, motivo, sizeof motivo, &byte, &aperto);
 	if (!cv->hevc_scheda)
-		snprintf(cv->perche_hevc, sizeof cv->perche_hevc, "%s",
+		snprintf(cv->why_hevc, sizeof cv->why_hevc, "%s",
 		         rifiuto_hardware[0] ? rifiuto_hardware : motivo);
 	else
-		snprintf(cv->strada_hevc, sizeof cv->strada_hevc, "%s", codificatore_strada(codif[1]));
-	codificatori_libera();
-	cv->h264_scheda = prova_un_codec(CODIFICATORE_H264, 3, motivo, sizeof motivo, &byte, &aperto);
+		snprintf(cv->route_hevc, sizeof cv->route_hevc, "%s", codificatore_strada(enc[1]));
+	encoders_free();
+	cv->h264_scheda = test_codec(CODIFICATORE_H264, 3, motivo, sizeof motivo, &byte, &aperto);
 	if (!cv->h264_scheda)
-		snprintf(cv->perche_h264, sizeof cv->perche_h264, "%s",
+		snprintf(cv->why_h264, sizeof cv->why_h264, "%s",
 		         rifiuto_hardware[0] ? rifiuto_hardware : motivo);
 	else
-		snprintf(cv->strada_h264, sizeof cv->strada_h264, "%s", codificatore_strada(codif[3]));
-	codificatori_libera();
+		snprintf(cv->route_h264, sizeof cv->route_h264, "%s", codificatore_strada(enc[3]));
+	encoders_free();
 }
 
 /* What is OFFERED, from the measure: "hevc,h264" · "hevc" · "h264" · "" (nothing). */
-static void capacita_video_offerti(const CapacitaVideo *cv, char *dove, size_t n)
+static void capabilities_video_offered(const VideoCapabilities *cv, char *dove, size_t n)
 {
 	snprintf(dove, n, "%s%s%s", cv->hevc_scheda ? "hevc" : "",
 	         cv->hevc_scheda && cv->h264_scheda ? "," : "",
@@ -5753,18 +5753,18 @@ static void capacita_video_offerti(const CapacitaVideo *cv, char *dove, size_t n
 }
 
 /* One line that says everything, for the log and for the `motivo`. */
-static void capacita_video_spiega(const CapacitaVideo *cv, char *dove, size_t n)
+static void capabilities_video_explain(const VideoCapabilities *cv, char *dove, size_t n)
 {
 	snprintf(dove, n, "card %s (route requested «%s») — HEVC: %s%.300s%s · H.264: %s%.300s%s",
-	         cv->nodo, strada_codifica,
+	         cv->nodo, encode_route,
 	         cv->hevc_scheda ? "yes via " : "NO (",
-	         cv->hevc_scheda ? cv->strada_hevc : cv->perche_hevc, cv->hevc_scheda ? "" : ")",
+	         cv->hevc_scheda ? cv->route_hevc : cv->why_hevc, cv->hevc_scheda ? "" : ")",
 	         cv->h264_scheda ? "yes via " : "NO (",
-	         cv->h264_scheda ? cv->strada_h264 : cv->perche_h264, cv->h264_scheda ? "" : ")");
+	         cv->h264_scheda ? cv->route_h264 : cv->why_h264, cv->h264_scheda ? "" : ")");
 }
 
-bool figlio_capacita_video(char *offerti, size_t offerti_byte, char *spiegazione,
-                           size_t spiegazione_byte)
+bool figlio_capacita_video(char *offerti, size_t offered_bytes, char *spiegazione,
+                           size_t explanation_byte)
 {
 	/* ═══════════════════════════════════════════════════════════════════════
 	 * ⭐⭐ THE TEST AT STARTUP — phase 18, the user's decision (30 Sep 2026).
@@ -5784,35 +5784,35 @@ bool figlio_capacita_video(char *offerti, size_t offerti_byte, char *spiegazione
 	 *   groups at the first connection (§6.5-bis), so root's answer is the
 	 *   right one for the session.
 	 * ═══════════════════════════════════════════════════════════════════════ */
-	CapacitaVideo cv;
-	int tubo[2];
+	VideoCapabilities cv;
+	int pipe_fd[2];
 	pid_t pid;
 
 	memset(&cv, 0, sizeof cv);
-	if (pipe(tubo) != 0) {
-		snprintf(spiegazione, spiegazione_byte, "the test's pipe does not open: %s",
+	if (pipe(pipe_fd) != 0) {
+		snprintf(spiegazione, explanation_byte, "the test's pipe does not open: %s",
 		         strerror(errno));
 		offerti[0] = 0;
 		return false;
 	}
 	pid = fork();
 	if (pid < 0) {
-		snprintf(spiegazione, spiegazione_byte, "the test does not start (fork): %s",
+		snprintf(spiegazione, explanation_byte, "the test does not start (fork): %s",
 		         strerror(errno));
-		close(tubo[0]);
-		close(tubo[1]);
+		close(pipe_fd[0]);
+		close(pipe_fd[1]);
 		offerti[0] = 0;
 		return false;
 	}
 	if (pid == 0) {
-		close(tubo[0]);
-		capacita_video_misura(&cv);
-		codificatori_libera();
+		close(pipe_fd[0]);
+		capabilities_video_measure(&cv);
+		encoders_free();
 		{
 			const uint8_t *p = (const uint8_t *) &cv;
 			size_t resta = sizeof cv;
 			while (resta) {
-				ssize_t n = write(tubo[1], p, resta);
+				ssize_t n = write(pipe_fd[1], p, resta);
 				if (n <= 0) {
 					if (n < 0 && errno == EINTR)
 						continue;
@@ -5822,10 +5822,10 @@ bool figlio_capacita_video(char *offerti, size_t offerti_byte, char *spiegazione
 				resta -= (size_t) n;
 			}
 		}
-		close(tubo[1]);
+		close(pipe_fd[1]);
 		_exit(0);
 	}
-	close(tubo[1]);
+	close(pipe_fd[1]);
 	{
 		uint8_t *p = (uint8_t *) &cv;
 		size_t letti = 0;
@@ -5834,25 +5834,25 @@ bool figlio_capacita_video(char *offerti, size_t offerti_byte, char *spiegazione
 		 *   the test costs; beyond that, it is declared and we go on without
 		 *   video. */
 		while (letti < sizeof cv) {
-			struct pollfd pf = { .fd = tubo[0], .events = POLLIN };
+			struct pollfd pf = { .fd = pipe_fd[0], .events = POLLIN };
 			int pronto = poll(&pf, 1, 30000);
 			if (pronto < 0 && errno == EINTR)
 				continue;
 			if (pronto <= 0)
 				break;
-			ssize_t n = read(tubo[0], p + letti, sizeof cv - letti);
+			ssize_t n = read(pipe_fd[0], p + letti, sizeof cv - letti);
 			if (n < 0 && errno == EINTR)
 				continue;
 			if (n <= 0)
 				break;
 			letti += (size_t) n;
 		}
-		close(tubo[0]);
+		close(pipe_fd[0]);
 		if (letti < sizeof cv) {
 			int stato = 0;
 			kill(pid, SIGKILL);
 			waitpid(pid, &stato, 0);
-			snprintf(spiegazione, spiegazione_byte,
+			snprintf(spiegazione, explanation_byte,
 			         "⛔ the encoding test at startup did NOT answer (%zu bytes of %zu, %s): "
 			         "no video codec is offered — «I don't know» is not a «yes»",
 			         letti, sizeof cv,
@@ -5863,29 +5863,29 @@ bool figlio_capacita_video(char *offerti, size_t offerti_byte, char *spiegazione
 		waitpid(pid, NULL, 0);
 	}
 	cv.nodo[sizeof cv.nodo - 1] = 0;
-	cv.perche_hevc[sizeof cv.perche_hevc - 1] = 0;
-	cv.perche_h264[sizeof cv.perche_h264 - 1] = 0;
-	cv.strada_hevc[sizeof cv.strada_hevc - 1] = 0;
-	cv.strada_h264[sizeof cv.strada_h264 - 1] = 0;
-	capacita_video_offerti(&cv, offerti, offerti_byte);
-	capacita_video_spiega(&cv, spiegazione, spiegazione_byte);
+	cv.why_hevc[sizeof cv.why_hevc - 1] = 0;
+	cv.why_h264[sizeof cv.why_h264 - 1] = 0;
+	cv.route_hevc[sizeof cv.route_hevc - 1] = 0;
+	cv.route_h264[sizeof cv.route_h264 - 1] = 0;
+	capabilities_video_offered(&cv, offerti, offered_bytes);
+	capabilities_video_explain(&cv, spiegazione, explanation_byte);
 	return offerti[0] != 0;
 }
 
-static int prova_esce(const char *esito, const char *codificatore, const char *strada,
+static int test_exits(const char *esito, const char *codificatore, const char *strada,
                       const char *nodo, const char *motivo, CodecVideo codec,
-                      const CapacitaVideo *cv, int codice)
+                      const VideoCapabilities *cv, int codice)
 {
 	char c[128], n[128], m[4096], o[32], r[64], s[32], sh[32], s4[32];
 
-	json_testo(c, sizeof c, codificatore);
-	json_testo(s, sizeof s, strada);
-	json_testo(n, sizeof n, nodo);
-	json_testo(m, sizeof m, motivo);
-	capacita_video_offerti(cv, r, sizeof r);
-	json_testo(o, sizeof o, r);
-	json_testo(sh, sizeof sh, cv->strada_hevc);
-	json_testo(s4, sizeof s4, cv->strada_h264);
+	json_text(c, sizeof c, codificatore);
+	json_text(s, sizeof s, strada);
+	json_text(n, sizeof n, nodo);
+	json_text(m, sizeof m, motivo);
+	capabilities_video_offered(cv, r, sizeof r);
+	json_text(o, sizeof o, r);
+	json_text(sh, sizeof sh, cv->route_hevc);
+	json_text(s4, sizeof s4, cv->route_h264);
 	printf("{\"esito\":\"%s\",\"codificatore\":\"%s\",\"strada\":\"%s\",\"nodo\":\"%s\","
 	       "\"motivo\":\"%s\",\"codec\":\"%s\",\"offerti\":\"%s\",\"hevc\":\"%s\",\"h264\":\"%s\","
 	       "\"hevc_strada\":\"%s\",\"h264_strada\":\"%s\"}\n",
@@ -5904,7 +5904,7 @@ int figlio_prova_codifica(int argc, char **argv)
 	CodecVideo codec = CODIFICATORE_H264;
 	uint8_t indice = 3; /* §6.2: 3 = H.264, 1 = HEVC */
 	const CodificatoreConfessione *c;
-	CapacitaVideo cv;
+	VideoCapabilities cv;
 	char motivo[2048], spiega[1024];
 	size_t byte = 0;
 	bool aperto = false;
@@ -5919,7 +5919,7 @@ int figlio_prova_codifica(int argc, char **argv)
 		} else if (strcmp(argv[i], "--nodo") == 0 && i + 1 < argc) {
 			nodo_rendering = argv[++i];
 		} else if (strcmp(argv[i], "--codifica") == 0 && i + 1 < argc
-		           && figlio_codifica_strada(argv[i + 1])) {
+		           && child_encoding_route(argv[i + 1])) {
 			i++;
 		} else {
 			fprintf(stderr,
@@ -5933,29 +5933,29 @@ int figlio_prova_codifica(int argc, char **argv)
 	/* ⭐ First the whole picture (it is the same measure as at startup), then
 	 *    the requested test: so the JSON line also says what the server would
 	 *    offer. */
-	capacita_video_misura(&cv);
-	codificatori_libera();
-	capacita_video_spiega(&cv, spiega, sizeof spiega);
+	capabilities_video_measure(&cv);
+	encoders_free();
+	capabilities_video_explain(&cv, spiega, sizeof spiega);
 	registro_dice(REG_FIGLIO, "--prova-codifica: %s", spiega);
 
-	if (!prova_un_codec(codec, indice, motivo, sizeof motivo, &byte, &aperto)) {
-		codificatori_libera();
+	if (!test_codec(codec, indice, motivo, sizeof motivo, &byte, &aperto)) {
+		encoders_free();
 		if (!aperto)
 			registro_dice(REG_FIGLIO,
 			              "⛔⛔ NO CARD CAN ENCODE %s on this machine: %s",
 			              codec == CODIFICATORE_HEVC ? "HEVC" : "H.264", motivo);
-		return prova_esce("nessuno", "", "", "", motivo, codec, &cv,
-		                  aperto ? 1 : PROVA_NESSUNA_SCHEDA);
+		return test_exits("nessuno", "", "", "", motivo, codec, &cv,
+		                  aperto ? 1 : PROBE_NO_CARD);
 	}
-	c = codificatore_confessione(codif[indice]);
+	c = codificatore_confessione(enc[indice]);
 	snprintf(motivo, sizeof motivo, "a %ux%u frame encoded: %zu bytes, %s — %s · %s",
-	         PROVA_LATO, PROVA_LATO, byte, c->stringa_codec, codificatore_nome(codif[indice]),
+	         PROVA_LATO, PROVA_LATO, byte, c->stringa_codec, codificatore_nome(enc[indice]),
 	         spiega);
 	{
-		int fine = prova_esce("hardware", c->componente ? c->componente : "",
-		                      codificatore_strada(codif[indice]), nodo_rendering, motivo, codec,
+		int fine = test_exits("hardware", c->componente ? c->componente : "",
+		                      codificatore_strada(enc[indice]), nodo_rendering, motivo, codec,
 		                      &cv, 0);
-		codificatori_libera();
+		encoders_free();
 		return fine;
 	}
 }
@@ -5981,13 +5981,13 @@ int figlio_prova_codifica(int argc, char **argv)
  *
  *     ⚠ The latency link of step 5 relies on this number: here is the line
  *       that says which of the two it is reading. */
-static uint64_t istante_del_fotogramma(const CatturaFermo *fo, uint64_t nostro_us)
+static uint64_t frame_instant(const CatturaFermo *fo, uint64_t our_us)
 {
 	uint64_t pts_us;
 
 	if (!fo->seq_nota || fo->pts <= 0) {
-		if (pts_e_monotono != 0) {
-			pts_e_monotono = 0;
+		if (pts_is_monotonic != 0) {
+			pts_is_monotonic = 0;
 			registro_dice(REG_FIGLIO,
 			              "⚠ the frame carries no `pts` (seq_nota %d, pts "
 			              "%lld): the instant of the 28 bytes is OUR "
@@ -5996,15 +5996,15 @@ static uint64_t istante_del_fotogramma(const CatturaFermo *fo, uint64_t nostro_u
 			              "slot",
 			              (int)fo->seq_nota, (long long)fo->pts);
 		}
-		return nostro_us;
+		return our_us;
 	}
 	pts_us = (uint64_t)fo->pts / 1000u;
-	if (pts_e_monotono < 0) {
-		uint64_t scarto = pts_us > nostro_us ? pts_us - nostro_us
-		                                     : nostro_us - pts_us;
-		pts_e_monotono = scarto < 1000000u ? 1 : 0;
+	if (pts_is_monotonic < 0) {
+		uint64_t scarto = pts_us > our_us ? pts_us - our_us
+		                                     : our_us - pts_us;
+		pts_is_monotonic = scarto < 1000000u ? 1 : 0;
 		registro_dice(REG_FIGLIO,
-		              pts_e_monotono
+		              pts_is_monotonic
 		                  ? "⭐ MEASURED: Mutter's `pts` is the same "
 		                    "CLOCK_MONOTONIC as ours (offset %llu us) ⇒ the 28 "
 		                    "bytes of §6.2 get the REAL instant of capture, "
@@ -6017,7 +6017,7 @@ static uint64_t istante_del_fotogramma(const CatturaFermo *fo, uint64_t nostro_u
 		                    "exchange slot",
 		              (unsigned long long)scarto);
 	}
-	return pts_e_monotono ? pts_us : nostro_us;
+	return pts_is_monotonic ? pts_us : our_us;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -6065,23 +6065,23 @@ static uint64_t istante_del_fotogramma(const CatturaFermo *fo, uint64_t nostro_u
  *    place where those hits still show.
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-#define TRATTI_VOCI 10
-#define TRATTI_CAMPIONI 512
+#define STRETCH_ENTRIES 10
+#define STRETCH_SAMPLES 512
 
 /* The order is that of the box: it is also the order in which they are printed. */
-static const char *const tratti_nomi[TRATTI_VOCI] = {
+static const char *const stretches_names[STRETCH_ENTRIES] = {
 	"producer", "allocation", "copy",     "in slot", "measure",
 	"conversion", "upload", "encoding", "sending", "rest"
 };
-static uint32_t tratti_campione[TRATTI_CAMPIONI][TRATTI_VOCI];
-static uint32_t tratti_totale[TRATTI_CAMPIONI];
-static unsigned tratti_quanti; /* how many slots are full (stops at the cap) */
-static unsigned tratti_prossimo;
-static uint64_t tratti_visti;  /* how many frames in all */
-static uint64_t tratti_detto_us;
+static uint32_t stretches_sample[STRETCH_SAMPLES][STRETCH_ENTRIES];
+static uint32_t stretches_total[STRETCH_SAMPLES];
+static unsigned stretches_n; /* how many slots are full (stops at the cap) */
+static unsigned stretches_next;
+static uint64_t stretches_seen;  /* how many frames in all */
+static uint64_t stretches_logged_us;
 /* ⛔ How many frames had to do without Mutter's `pts`: without this number the
  *    "producer" item would be an average between two different quantities. */
-static uint64_t tratti_senza_pts;
+static uint64_t stretches_without_pts;
 
 /* ⭐ PHASE 16 (25 Sep 2026) — OUR PIECE, SECOND BY SECOND.
  *
@@ -6097,11 +6097,11 @@ static uint64_t tratti_senza_pts;
  *    second.
  * ⚠ On the wlroots road the "copy" is the compositor's blit onto our
  *   DMA-BUF: it stays inside, on the cautious side. */
-#define NOSTRO_SECONDO_MAX 512
-static uint32_t nostro_secondo[NOSTRO_SECONDO_MAX];
-static unsigned nostro_quanti;
+#define OUR_SECOND_MAX 512
+static uint32_t our_second[OUR_SECOND_MAX];
+static unsigned our_count;
 
-static int tratti_confronta(const void *a, const void *b)
+static int stretches_compare(const void *a, const void *b)
 {
 	uint32_t x = *(const uint32_t *)a, y = *(const uint32_t *)b;
 	return x < y ? -1 : (x > y ? 1 : 0);
@@ -6111,19 +6111,19 @@ static int tratti_confronta(const void *a, const void *b)
  * the sample is a ring and sorting it in place would destroy it. */
 static uint32_t tratti_mediana(int voce, uint32_t *massimo)
 {
-	uint32_t copia[TRATTI_CAMPIONI];
-	unsigned i, n = tratti_quanti;
+	uint32_t copia[STRETCH_SAMPLES];
+	unsigned i, n = stretches_n;
 
 	if (massimo)
 		*massimo = 0;
 	if (!n)
 		return 0;
 	for (i = 0; i < n; i++) {
-		copia[i] = voce < 0 ? tratti_totale[i] : tratti_campione[i][voce];
+		copia[i] = voce < 0 ? stretches_total[i] : stretches_sample[i][voce];
 		if (massimo && copia[i] > *massimo)
 			*massimo = copia[i];
 	}
-	qsort(copia, n, sizeof copia[0], tratti_confronta);
+	qsort(copia, n, sizeof copia[0], stretches_compare);
 	return copia[n / 2];
 }
 
@@ -6135,9 +6135,9 @@ static uint32_t tratti_mediana(int voce, uint32_t *massimo)
  *   second (`figlio.c`, the loop's count).
  */
 static void tratti_conta(const CatturaFermo *fo, const CodificatoreFotogramma *fg,
-                         uint64_t us_spedizione, uint64_t us_fine)
+                         uint64_t send_us, uint64_t us_fine)
 {
-	uint32_t *v = tratti_campione[tratti_prossimo];
+	uint32_t *v = stretches_sample[stretches_next];
 	uint64_t pts_us, inizio, somma = 0;
 	uint64_t totale;
 	int i;
@@ -6145,11 +6145,11 @@ static void tratti_conta(const CatturaFermo *fo, const CodificatoreFotogramma *f
 	/* ⛔ Without Mutter's `pts` the stretch has no REAL start: it starts from
 	 *    the arrival in the slot and the "producer" item stays at zero, which
 	 *    is a declared gap and not a measured zero. */
-	if (pts_e_monotono == 1 && fo->seq_nota && fo->pts > 0) {
+	if (pts_is_monotonic == 1 && fo->seq_nota && fo->pts > 0) {
 		pts_us = (uint64_t)fo->pts / 1000u;
 		inizio = pts_us;
 	} else {
-		tratti_senza_pts++;
+		stretches_without_pts++;
 		inizio = fo->us_arrivo > (fo->us_copia + fo->us_allocazione)
 		             ? fo->us_arrivo - fo->us_copia - fo->us_allocazione
 		             : fo->us_arrivo;
@@ -6158,15 +6158,15 @@ static void tratti_conta(const CatturaFermo *fo, const CodificatoreFotogramma *f
 		return; /* clocks that do not subtract: no number is invented */
 	totale = us_fine - inizio;
 
-	memset(v, 0, sizeof tratti_campione[0]);
+	memset(v, 0, sizeof stretches_sample[0]);
 	/* "producer" = from when Mutter says it captured to when our callback
 	 *  starts copying.  ⛔ The copy and the allocation are INSIDE the
 	 *  pts→arrival interval, and are subtracted, or they would count twice. */
 	{
-		uint64_t fino_a_copia = fo->us_arrivo > (fo->us_copia + fo->us_allocazione)
+		uint64_t until_copy = fo->us_arrivo > (fo->us_copia + fo->us_allocazione)
 		                            ? fo->us_arrivo - fo->us_copia - fo->us_allocazione
 		                            : fo->us_arrivo;
-		v[0] = fino_a_copia > inizio ? (uint32_t)(fino_a_copia - inizio) : 0u;
+		v[0] = until_copy > inizio ? (uint32_t)(until_copy - inizio) : 0u;
 	}
 	v[1] = (uint32_t)fo->us_allocazione;
 	v[2] = (uint32_t)fo->us_copia;
@@ -6175,48 +6175,48 @@ static void tratti_conta(const CatturaFermo *fo, const CodificatoreFotogramma *f
 	v[5] = (uint32_t)fg->us_conversione;
 	v[6] = (uint32_t)fg->us_caricamento;
 	v[7] = (uint32_t)fg->us_codifica;
-	v[8] = (uint32_t)us_spedizione;
-	for (i = 0; i < TRATTI_VOCI - 1; i++)
+	v[8] = (uint32_t)send_us;
+	for (i = 0; i < STRETCH_ENTRIES - 1; i++)
 		somma += v[i];
 	v[9] = somma < totale ? (uint32_t)(totale - somma) : 0u;
-	tratti_totale[tratti_prossimo] = totale > 0xffffffffu ? 0xffffffffu : (uint32_t)totale;
-	if (nostro_quanti < NOSTRO_SECONDO_MAX) {
+	stretches_total[stretches_next] = totale > 0xffffffffu ? 0xffffffffu : (uint32_t)totale;
+	if (our_count < OUR_SECOND_MAX) {
 		uint64_t nostro = totale > v[0] ? totale - v[0] : 0u;
-		nostro_secondo[nostro_quanti++] = nostro > 0xffffffffu ? 0xffffffffu
+		our_second[our_count++] = nostro > 0xffffffffu ? 0xffffffffu
 		                                                        : (uint32_t)nostro;
 	}
 
-	tratti_prossimo = (tratti_prossimo + 1) % TRATTI_CAMPIONI;
-	if (tratti_quanti < TRATTI_CAMPIONI)
-		tratti_quanti++;
-	tratti_visti++;
+	stretches_next = (stretches_next + 1) % STRETCH_SAMPLES;
+	if (stretches_n < STRETCH_SAMPLES)
+		stretches_n++;
+	stretches_seen++;
 
-	if (us_fine - tratti_detto_us < 1000000u)
+	if (us_fine - stretches_logged_us < 1000000u)
 		return;
-	tratti_detto_us = us_fine;
-	if (nostro_quanti) {
-		unsigned n = nostro_quanti;
-		qsort(nostro_secondo, n, sizeof nostro_secondo[0], tratti_confronta);
+	stretches_logged_us = us_fine;
+	if (our_count) {
+		unsigned n = our_count;
+		qsort(our_second, n, sizeof our_second[0], stretches_compare);
 		/* p95 "nearest rank": with 30 frames it is the 29th, that is the
 		 * second worst — not the average of two. */
 		unsigned k = (n * 95 + 99) / 100;
 		registro_dice(REG_FIGLIO,
 		              "⭐ OURS in the second (copy → byte out, §3.2): p95 %.2f ms · "
 		              "max %.2f · median %.2f · %u frames",
-		              nostro_secondo[k ? k - 1 : 0] / 1000.0,
-		              nostro_secondo[n - 1] / 1000.0, nostro_secondo[n / 2] / 1000.0, n);
-		nostro_quanti = 0;
+		              our_second[k ? k - 1 : 0] / 1000.0,
+		              our_second[n - 1] / 1000.0, our_second[n / 2] / 1000.0, n);
+		our_count = 0;
 	}
 	{
 		char riga[512];
 		size_t off = 0;
-		uint32_t massimo_totale = 0;
-		uint32_t mediana_totale = tratti_mediana(-1, &massimo_totale);
+		uint32_t max_total = 0;
+		uint32_t total_median = tratti_mediana(-1, &max_total);
 
-		for (i = 0; i < TRATTI_VOCI; i++) {
+		for (i = 0; i < STRETCH_ENTRIES; i++) {
 			uint32_t mx = 0, md = tratti_mediana(i, &mx);
 			int scritto = snprintf(riga + off, sizeof riga - off, "%s%s %.2f (max %.2f)",
-			                       i ? " · " : "", tratti_nomi[i], md / 1000.0,
+			                       i ? " · " : "", stretches_names[i], md / 1000.0,
 			                       mx / 1000.0);
 			if (scritto < 0 || (size_t)scritto >= sizeof riga - off)
 				break;
@@ -6225,9 +6225,9 @@ static void tratti_conta(const CatturaFermo *fo, const CodificatoreFotogramma *f
 		registro_dice(REG_FIGLIO,
 		              "⭐ STRETCH capture → byte out: median %.2f ms (max %.2f) over %u "
 		              "frames of the sample, %llu in all — %s%s",
-		              mediana_totale / 1000.0, massimo_totale / 1000.0, tratti_quanti,
-		              (unsigned long long)tratti_visti, riga,
-		              tratti_senza_pts
+		              total_median / 1000.0, max_total / 1000.0, stretches_n,
+		              (unsigned long long)stretches_seen, riga,
+		              stretches_without_pts
 		                  ? "  ⚠ and some frames have no Mutter `pts`: "
 		                    "for those «producer» is a gap, not a zero"
 		                  : "");
@@ -6238,8 +6238,8 @@ static void tratti_conta(const CatturaFermo *fo, const CodificatoreFotogramma *f
  * parent.  ⛔ `chiave` is not assumed: it is what the encoder read from the
  * stream (`fg.chiave`), and §6.2 writes it in the `tipo` field. */
 static bool codifica_e_manda(const CatturaFermo *fo, CodecVideo codec,
-                             uint8_t numero, const char *dir_rilievo,
-                             const char *nome_file, uint64_t istante_us,
+                             uint8_t numero, const char *dir_survey,
+                             const char *file_name, uint64_t istante_us,
                              uint32_t tela_l, uint32_t tela_a, uint32_t input)
 {
 	CodificatoreFotogramma fg;
@@ -6255,7 +6255,7 @@ static bool codifica_e_manda(const CatturaFermo *fo, CodecVideo codec,
 		                      ((uint32_t)'2' << 16) | ((uint32_t)'4' << 24);
 		const uint32_t ab24 = (uint32_t)'A' | ((uint32_t)'B' << 8) |
 		                      ((uint32_t)'2' << 16) | ((uint32_t)'4' << 24);
-		FormatoPixel visto = (!fo->sulla_scheda &&
+		FormatoPixel visto = (!fo->on_card &&
 		                      (fo->formato_drm == xb24 || fo->formato_drm == ab24))
 		                         ? CODIFICATORE_PIXEL_RGBX
 		                         : CODIFICATORE_PIXEL_BGRX;
@@ -6293,7 +6293,7 @@ static bool codifica_e_manda(const CatturaFermo *fo, CodecVideo codec,
 	 *   were not on the card must not receive a descriptor.  It is flagged,
 	 *   and dismantling is left to the loop, which is the only one holding the
 	 *   stage. */
-	if (fo->sulla_scheda && !codificatore_in_hardware(cod)) {
+	if (fo->on_card && !codificatore_in_hardware(cod)) {
 		if (!scheda_da_abbandonare) {
 			scheda_da_abbandonare = true;
 			scheda_mai_piu = true;
@@ -6319,7 +6319,7 @@ static bool codifica_e_manda(const CatturaFermo *fo, CodecVideo codec,
 	 *   gives a desktop skewed by a few pixels per row, which passes every
 	 *   check on milliseconds and every check on colour.  Better a few frames
 	 *   not sent and a remount, than a wrong image for the whole session. */
-	if (fo->sulla_scheda && !codificatore_stride_importabile(fo->stride)) {
+	if (fo->on_card && !codificatore_stride_importabile(fo->stride)) {
 		if (!scheda_da_abbandonare) {
 			scheda_da_abbandonare = true;
 			scheda_negata_l = fo->larghezza;
@@ -6339,7 +6339,7 @@ static bool codifica_e_manda(const CatturaFermo *fo, CodecVideo codec,
 		return false;
 	}
 
-	if (fo->sulla_scheda) {
+	if (fo->on_card) {
 		CodificatoreSuperficie sup = {
 			.fd = fo->fd,
 			.offset = fo->offset,
@@ -6356,7 +6356,7 @@ static bool codifica_e_manda(const CatturaFermo *fo, CodecVideo codec,
 			              "CARD: `false` is NOT «an empty frame», it is "
 			              "«this one is not sent»",
 			              (int)codec);
-			ciclo_guasti++;
+			cycle_faults++;
 			return false;
 		}
 	} else if (!codificatore_comprimi(cod, fo->pixel, fo->stride, &fg)) {
@@ -6365,14 +6365,14 @@ static bool codifica_e_manda(const CatturaFermo *fo, CodecVideo codec,
 		              "is NOT «an empty frame», it is «this one is not "
 		              "sent»",
 		              (int)codec);
-		ciclo_guasti++;
+		cycle_faults++;
 		return false;
 	}
 	c = codificatore_confessione(cod);
 	/* ⛔ The first is stated, the following go to chatter: at sixty per second
 	 *    this line would make the whole rest of the log unreadable — and that
 	 *    is precisely the case in which the rest of the log is needed. */
-	if (ciclo_fotogrammi == 0)
+	if (cycle_frames == 0)
 		registro_dice(REG_FIGLIO,
 		              "⭐ FIRST frame encoded: codec %d, %zu bytes, %s, "
 		              "«%s», depth in the stream %d, level %d, promotion "
@@ -6413,7 +6413,7 @@ static bool codifica_e_manda(const CatturaFermo *fo, CodecVideo codec,
 	 * ⚠ A level produced higher than the requested one gives no error: it gives
 	 *   a black screen, and that is the reason the verdict is written in plain
 	 *   form instead of staying a comparison in the reader's head. */
-	if (ciclo_fotogrammi == 0) {
+	if (cycle_frames == 0) {
 		unsigned decimi = livello_in_decimi(codec, c->livello_flusso);
 		const char *alfabeto = codec == CODIFICATORE_H264   ? "level_idc"
 		                       : codec == CODIFICATORE_HEVC ? "general_level_idc, "
@@ -6426,7 +6426,7 @@ static bool codifica_e_manda(const CatturaFermo *fo, CodecVideo codec,
 			              "don't know» does NOT mean «low»: it means the ceiling "
 			              "of `video.livello` cannot be verified today",
 			              c->livello_flusso);
-		else if (!livello_chiesto_x10)
+		else if (!requested_level_x10)
 			registro_dice(REG_FIGLIO,
 			              "⭐ §4.3 — LEVEL: produced %u.%u (in the SPS %d, that is "
 			              "%s) · string for the decoder «%s» · REQUESTED: "
@@ -6436,14 +6436,14 @@ static bool codifica_e_manda(const CatturaFermo *fo, CodecVideo codec,
 			              "this one",
 			              decimi / 10u, decimi % 10u, c->livello_flusso,
 			              alfabeto, c->stringa_codec);
-		else if (decimi <= livello_chiesto_x10)
+		else if (decimi <= requested_level_x10)
 			registro_dice(REG_FIGLIO,
 			              "⭐ §4.3 — LEVEL: produced %u.%u ≤ requested %u.%u ✓ "
 			              "(in the SPS %d, that is %s) · string for the "
 			              "decoder «%s».  ⭐ The ceiling was IMPOSED "
 			              "at opening and READ BACK from the bytes: it is R31",
 			              decimi / 10u, decimi % 10u,
-			              livello_chiesto_x10 / 10u, livello_chiesto_x10 % 10u,
+			              requested_level_x10 / 10u, requested_level_x10 % 10u,
 			              c->livello_flusso, alfabeto, c->stringa_codec);
 		else
 			registro_dice(REG_FIGLIO,
@@ -6458,10 +6458,10 @@ static bool codifica_e_manda(const CatturaFermo *fo, CodecVideo codec,
 			              "up, and this line is the only place where the "
 			              "fact is written",
 			              decimi / 10u, decimi % 10u,
-			              livello_chiesto_x10 / 10u, livello_chiesto_x10 % 10u,
+			              requested_level_x10 / 10u, requested_level_x10 % 10u,
 			              c->livello_flusso, alfabeto, c->stringa_codec);
 	}
-	if (ciclo_fotogrammi != 0)
+	if (cycle_frames != 0)
 		registro_dettaglio(REG_FIGLIO,
 		                   "codec %d: %zu bytes, %s, upload %llu us, "
 		                   "encoding %llu us%s",
@@ -6470,17 +6470,17 @@ static bool codifica_e_manda(const CatturaFermo *fo, CodecVideo codec,
 		                   (unsigned long long)fg.us_codifica,
 		                   fg.trattenuto ? " — HELD BACK" : "");
 
-	ciclo_fotogrammi++;
+	cycle_frames++;
 	if (fg.chiave)
-		ciclo_chiavi++;
+		cycle_keys++;
 
 	{
-		uint64_t t_spedizione = ora_monotona_us();
-		manda_fotogramma(numero, fg.chiave, tela_l, tela_a, istante_us, fg.dati,
+		uint64_t t_dispatch = now_monotonic_us();
+		send_frame(numero, fg.chiave, tela_l, tela_a, istante_us, fg.dati,
 		                 fg.byte, input);
 		{
-			uint64_t t_fine = ora_monotona_us();
-			tratti_conta(fo, &fg, t_fine - t_spedizione, t_fine);
+			uint64_t t_fine = now_monotonic_us();
+			tratti_conta(fo, &fg, t_fine - t_dispatch, t_fine);
 		}
 	}
 	/* ⛔ The KEPT frame is still the one from switch-on — "send the stage
@@ -6494,31 +6494,31 @@ static bool codifica_e_manda(const CatturaFermo *fo, CodecVideo codec,
 			memcpy(copia, fg.dati, fg.byte);
 			free(tenuto[numero]);
 			tenuto[numero] = copia;
-			tenuto_byte[numero] = fg.byte;
-			tenuto_chiave[numero] = true;
-			tenuto_l = tela_l;
-			tenuto_a = tela_a;
-			tenuto_istante = istante_us;
-			tenuto_input = input;
+			kept_byte[numero] = fg.byte;
+			kept_key[numero] = true;
+			kept_w = tela_l;
+			kept_h = tela_a;
+			kept_instant = istante_us;
+			kept_input = input;
 		}
 	}
 	/* ⛔ The survey is written only if someone asked for it, and only the
 	 *    first: sixty files per second are not a survey, they are a full disk. */
-	if (ciclo_fotogrammi <= 2)
-		rilievo_scrivi(dir_rilievo, nome_file, fg.dati, fg.byte);
+	if (cycle_frames <= 2)
+		survey_write(dir_survey, file_name, fg.dati, fg.byte);
 
-	/* ⭐ THE ON-DEMAND SNAPSHOT — the box is above `scatto_segnale()`. */
+	/* ⭐ THE ON-DEMAND SNAPSHOT — the box is above `shot_signal()`. */
 	/* ⛔ And a `SIGUSR2` arrived when nothing was in progress does NOT stay
 	 *    pending.  `[M]` 20 Aug 2026: a snapshot closed by hand six minutes
-	 *    earlier had left `scatto_stop` at 1, and the NEXT snapshot closed at
+	 *    earlier had left `shot_stop` at 1, and the NEXT snapshot closed at
 	 *    the first frame — "1 frames in `scatto-flusso.obu`".
 	 *    ⚠ The survey was there and looked good: it is the worst form, a green
 	 *    that looked at a single frame (`LEZIONI.md` §1.9). */
-	if (scatto_stop && scatto_stato == 0)
-		scatto_stop = 0;
-	if (scatto_chiesto) {
-		scatto_chiesto = 0;
-		if (scatto_stato != 0) {
+	if (shot_stop && shot_state == 0)
+		shot_stop = 0;
+	if (shot_requested) {
+		shot_requested = 0;
+		if (shot_state != 0) {
 			registro_dice(REG_FIGLIO,
 			              "⚠ SNAPSHOT: one is already in progress, the signal "
 			              "does not open a second");
@@ -6528,52 +6528,52 @@ static bool codifica_e_manda(const CatturaFermo *fo, CodecVideo codec,
 			registro_dice(REG_FIGLIO,
 			              "⛔ SNAPSHOT impossible: the pixels are not in memory "
 			              "(card's road), there is nothing to write");
-		} else if (!scatto_dir || !scatto_dir[0] || strcmp(scatto_dir, "-") == 0) {
+		} else if (!shot_dir || !shot_dir[0] || strcmp(shot_dir, "-") == 0) {
 			registro_dice(REG_FIGLIO,
 			              "⛔ SNAPSHOT impossible: the server has no survey "
 			              "folder (`--rilievo`), there is nowhere to write");
 		} else {
 			codificatore_chiedi_chiave(cod);
-			scatto_stato = 1;
-			scatto_quanti = 0;
+			shot_state = 1;
+			shot_count = 0;
 			registro_dice(REG_FIGLIO,
 			              "⭐ SNAPSHOT requested: asked for a KEYFRAME, and from "
 			              "that one input and stream go on disk in «%s»",
-			              scatto_dir);
+			              shot_dir);
 		}
 	}
-	if (scatto_stato == 1 && fg.chiave && fo->pixel) {
+	if (shot_state == 1 && fg.chiave && fo->pixel) {
 		char percorso[512];
 
-		/* ⛔ `rilievo_scrivi()` says BY ITSELF whether it wrote or not: the
+		/* ⛔ `survey_write()` says BY ITSELF whether it wrote or not: the
 		 *    line below tells the geometry, not the outcome — and the two
 		 *    things no longer get mixed. */
-		rilievo_scrivi(scatto_dir, "scatto-ingresso.bgrx", fo->pixel,
+		survey_write(shot_dir, "scatto-ingresso.bgrx", fo->pixel,
 		               (size_t)fo->byte);
 		registro_dice(REG_FIGLIO,
 		              "⭐ SNAPSHOT: input %ux%u, stride %u, %llu bytes — the "
 		              "stream starts from THIS keyframe",
 		              fo->larghezza, fo->altezza, fo->stride,
 		              (unsigned long long)fo->byte);
-		snprintf(percorso, sizeof percorso, "%s/scatto-flusso.obu", scatto_dir);
-		scatto_fp = fopen(percorso, "wb");
-		if (!scatto_fp)
+		snprintf(percorso, sizeof percorso, "%s/scatto-flusso.obu", shot_dir);
+		shot_fp = fopen(percorso, "wb");
+		if (!shot_fp)
 			registro_dice(REG_FIGLIO, "⛔ SNAPSHOT %s: %s", percorso,
 			              strerror(errno));
-		scatto_stato = scatto_fp ? 2 : 0;
-		scatto_restano = SCATTO_FOTOGRAMMI;
+		shot_state = shot_fp ? 2 : 0;
+		shots_left = SHOT_FRAMES;
 	}
-	if (scatto_stato == 2 && scatto_fp) {
-		if (fwrite(fg.dati, 1, fg.byte, scatto_fp) != fg.byte)
+	if (shot_state == 2 && shot_fp) {
+		if (fwrite(fg.dati, 1, fg.byte, shot_fp) != fg.byte)
 			registro_dice(REG_FIGLIO,
 			              "⛔ SNAPSHOT: short write on the stream — the file is NOT "
 			              "decodable to the end");
-		scatto_quanti++;
-		if (scatto_stop || --scatto_restano <= 0) {
-			scatto_chiudi(scatto_dir, fo,
-			              scatto_stop ? "closed by hand with SIGUSR2"
+		shot_count++;
+		if (shot_stop || --shots_left <= 0) {
+			scatto_chiudi(shot_dir, fo,
+			              shot_stop ? "closed by hand with SIGUSR2"
 			                          : "requested frames reached");
-			scatto_stop = 0;
+			shot_stop = 0;
 		}
 	}
 
@@ -6613,20 +6613,20 @@ static bool codifica_e_manda(const CatturaFermo *fo, CodecVideo codec,
  * two are not frames of the movement, and redoing them would reset the loop's
  * counts in the middle of a live session. */
 static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
-                            const char *dir_rilievo, bool primo,
-                            MutterSessione **fuori_m, Cattura **fuori_c)
+                            const char *dir_survey, bool primo,
+                            MutterSessione **out_m, Cattura **out_c)
 {
-	struct corpo_palco p;
+	struct body_stage p;
 	GError *sbaglio = NULL;
 	GDBusConnection *bus;
 	CatturaFermo fo;
-	CatturaPresa presa;
+	CaptureTake presa;
 	uint64_t istante_us;
 	MutterSessione *mut = NULL;
 	Cattura *cat = NULL;
 	/* ⏱ the steps' stopwatch — see the box below */
-	const char *crono_nome = "";
-	uint64_t crono_ms = 0;
+	const char *chrono_name = "";
+	uint64_t chrono_ms = 0;
 
 	/* ⛔⛔⭐ THE ENVELOPE IS ZEROED HERE, BEFORE ANY EXIT PATH — and until
 	 *       27 Aug 2026 this `memset` sat THREE HUNDRED lines further down,
@@ -6660,7 +6660,7 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 	 *    "forbidden" with the same face, error form E8, inside the line meant
 	 *    to unmask it.  `[M]` seen in the log of 12 Aug 2026: the stage of
 	 *    "prova" said "session 0" and nobody had read it. */
-	p.stato_sessione = (uint32_t)SESSIONE_NON_LETTA;
+	p.stato_sessione = (uint32_t)SESSION_NOT_READ;
 
 	/*
 	 * ⭐ AND FIRST OF ALL: if someone is waiting for a canvas, they are told.
@@ -6693,7 +6693,7 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 	 * ⛔⭐⭐⭐ NOTHING IS MADE TO BE BORN UNTIL THE SIZE IS KNOWN.
 	 *
 	 * ⭐ It is the cure for the tail of login times, and the reason is spelled
-	 *    out in full in the box of `tela_dal_cliente`: a stage mounted at the
+	 *    out in full in the box of `canvas_from_client`: a stage mounted at the
 	 *    fallback must be resized, and on Wayland the resize completes only
 	 *    when the compositor delivers a frame — that is NEVER, on a freshly
 	 *    born desktop that does not move.
@@ -6705,28 +6705,28 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 	 *    window within `TELA_ATTESA_MS`, we start with the fallback and
 	 *    DECLARE it — better a desktop to resize than no desktop.
 	 */
-	if (!tela_dal_cliente) {
-		static uint64_t primo_giro_ms;
+	if (!canvas_from_client) {
+		static uint64_t first_round_ms;
 		uint64_t adesso = registro_ora_ms();
 
-		if (primo_giro_ms == 0)
-			primo_giro_ms = adesso;
-		if (adesso - primo_giro_ms < TELA_ATTESA_MS) {
+		if (first_round_ms == 0)
+			first_round_ms = adesso;
+		if (adesso - first_round_ms < TELA_ATTESA_MS) {
 			registro_dettaglio(REG_FIGLIO,
 			                   "waiting for the client's canvas before making anything "
 			                   "be born (%llu ms of %d): mounting at the fallback "
 			                   "would mean resizing, and the "
 			                   "resize on a still scene does not "
 			                   "complete",
-			                   (unsigned long long)(adesso - primo_giro_ms),
+			                   (unsigned long long)(adesso - first_round_ms),
 			                   TELA_ATTESA_MS);
-			p.stato_sessione = (uint32_t)SESSIONE_NON_LETTA;
+			p.stato_sessione = (uint32_t)SESSION_NOT_READ;
 			snprintf(p.guasto, sizeof p.guasto,
 			         "waiting for the client's canvas");
 			manda(MSG_PALCO, &p, sizeof p, NULL, 0);
 			return false;
 		}
-		if (!tela_dal_cliente) {
+		if (!canvas_from_client) {
 			static bool detto;
 
 			if (!detto) {
@@ -6742,7 +6742,7 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 		}
 	}
 	if (tela_l && tela_a)
-		attendi_tela(tela_l, tela_a);
+		wait_canvas(tela_l, tela_a);
 	registro_dettaglio(REG_FIGLIO, "the «wait» has gone out: now the bus");
 
 	/*
@@ -6765,23 +6765,23 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 	 *   to say, and filling the log with normal lines is the way to make the
 	 *   ones that count go unread.
 	 */
-#define PASSO_LENTO_MS 250
-#define CRONO_INIZIO(nome) \
+#define SLOW_STEP_MS 250
+#define CHRONO_START(nome) \
 	do { \
-		crono_nome = (nome); \
-		crono_ms = registro_ora_ms(); \
+		chrono_name = (nome); \
+		chrono_ms = registro_ora_ms(); \
 	} while (0)
-#define CRONO_FINE() \
+#define CHRONO_END() \
 	do { \
-		uint64_t crono_durata = registro_ora_ms() - crono_ms; \
-		if (crono_durata >= PASSO_LENTO_MS) \
+		uint64_t chrono_duration = registro_ora_ms() - chrono_ms; \
+		if (chrono_duration >= SLOW_STEP_MS) \
 			registro_dice(REG_FIGLIO, \
 			              "⏱ the step «%s» took %llu ms — it is THAT step that " \
 			              "holds the child still, not «the session being born»", \
-			              crono_nome, (unsigned long long)crono_durata); \
+			              chrono_name, (unsigned long long)chrono_duration); \
 	} while (0)
 
-	/* ⚠ `memset(&p, …)` and `p.stato_sessione = SESSIONE_NON_LETTA` used to be
+	/* ⚠ `memset(&p, …)` and `p.stato_sessione = SESSION_NOT_READ` used to be
 	 *   HERE, and from here they did not cover the `manda(MSG_PALCO, …)` of the
 	 *   "waiting for the client's canvas" branch, which is further up.  ⇒ Moved
 	 *   to the top of the function, 27 Aug 2026: the full reason is written
@@ -6790,9 +6790,9 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 	/* ⛔⭐ THE BUS, AND IT IS THE MEASURE THAT DECIDES THE WHOLE MANDATE.  `[M]`
 	 *     root does not connect here; this process is the user, and it either
 	 *     connects or says why. */
-	CRONO_INIZIO("open the session bus");
-	bus = sessione_bus(&sbaglio);
-	CRONO_FINE();
+	CHRONO_START("open the session bus");
+	bus = session_bus(&sbaglio);
+	CHRONO_END();
 	if (!bus) {
 		snprintf(p.guasto, sizeof p.guasto, "session bus: %s",
 		         sbaglio ? sbaglio->message : "(no details)");
@@ -6805,7 +6805,7 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 		manda(MSG_PALCO, &p, sizeof p, NULL, 0);
 		return false;
 	}
-	p.bus_aperto = 1;
+	p.bus_open = 1;
 	g_object_unref(bus);
 	registro_dice(REG_FIGLIO,
 	              "⭐ THE SESSION BUS IS MINE: connected as uid %ld — the "
@@ -6837,9 +6837,9 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 	 *   seconds to show up on the bus, and without this rein every retry would
 	 *   start another one.
 	 */
-	CRONO_INIZIO("read the session state (GetCurrentState)");
+	CHRONO_START("read the session state (GetCurrentState)");
 	p.stato_sessione = (uint32_t)sessione_stato(tela_l, tela_a, NULL);
-	CRONO_FINE();
+	CHRONO_END();
 	{
 		/*
 		 * ⭐⭐ "IT WAS THERE AND NOW IT IS NO LONGER" — §7.6, the twin, and the
@@ -6861,12 +6861,12 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 		 *   the same — telling whoever is watching instead of making a desktop
 		 *   the user had closed reappear.
 		 */
-		if (p.stato_sessione != SESSIONE_MORTA &&
-		    p.stato_sessione != SESSIONE_NON_LETTA)
+		if (p.stato_sessione != SESSION_DEAD &&
+		    p.stato_sessione != SESSION_NOT_READ)
 			vista_viva = true;
-		else if (p.stato_sessione == SESSIONE_MORTA && vista_viva) {
+		else if (p.stato_sessione == SESSION_DEAD && vista_viva) {
 			vista_viva = false;
-			sessione_chiusa_dall_utente = true;
+			session_closed_by_user = true;
 			registro_dice(REG_FIGLIO,
 			              "⭐ §7.6: the graphical session WAS THERE and now is NO "
 			              "LONGER — the user logged out from the "
@@ -6882,7 +6882,7 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 			return false;
 		}
 	}
-	if (p.stato_sessione == SESSIONE_MORTA && sessione_chiusa_dall_utente) {
+	if (p.stato_sessione == SESSION_DEAD && session_closed_by_user) {
 		/* ⛔ The third state: the user LOGGED OUT.  Remaking it now would mean
 		 *    making the desktop they just closed reappear — that is preventing
 		 *    them from logging out.  A NEW attach is awaited. */
@@ -6891,11 +6891,11 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 		                   "by the user: not remaking it until someone "
 		                   "reattaches",
 		                   g_get_user_name());
-	} else if (p.stato_sessione == SESSIONE_MORTA) {
-		uint64_t adesso_ms = registro_ora_ms();
+	} else if (p.stato_sessione == SESSION_DEAD) {
+		uint64_t current_ms = registro_ora_ms();
 
-		if (!sta_nascendo(adesso_ms)) {
-			nascita_chiesta_ms = adesso_ms;
+		if (!is_being_born(current_ms)) {
+			birth_requested_ms = current_ms;
 			registro_dice(REG_FIGLIO,
 			              "⭐ no graphical session for «%s»: I AM MAKING IT "
 			              "BE BORN (canvas %ux%u) and returning at once — "
@@ -6914,7 +6914,7 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 			              "I already asked for it %llu ms ago and am waiting for it "
 			              "to show up on the bus",
 			              g_get_user_name(),
-			              (unsigned long long)(adesso_ms - nascita_chiesta_ms));
+			              (unsigned long long)(current_ms - birth_requested_ms));
 		}
 	} else if (p.stato_sessione != SESSIONE_SANA) {
 		registro_dice(REG_FIGLIO,
@@ -6922,15 +6922,15 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 		              "not touching it — states other than «dead» are governed by "
 		              "sessione_assicura(), and bringing down a live one would take "
 		              "the desktop away from whoever is watching it (I4)",
-		              sessione_marca((SessioneStato)p.stato_sessione),
+		              session_mark((SessioneStato)p.stato_sessione),
 		              p.stato_sessione);
 	}
 
 	/*
 	 * ⛔⭐⭐ WE DO NOT MOUNT ON TOP OF A COMPOSITOR THAT HAS NOT ANSWERED — 16 Aug
-	 *       2026, and it is the other half of `ATTESA_SONDAGGIO_MS`.
+	 *       2026, and it is the other half of `WAIT_POLL_MS`.
 	 *
-	 * ⛔ `SESSIONE_NON_LETTA` does not mean "not there" and does not mean
+	 * ⛔ `SESSION_NOT_READ` does not mean "not there" and does not mean
 	 *    "there": it means **"it has its name on the bus and did not answer
 	 *    me"**, that is it is still being born.  ⇒ Going on to mount would
 	 *    mean making a more expensive call to that same silent compositor —
@@ -6943,7 +6943,7 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 	 * ⭐ The right answer is the one the loop already knows how to use: "not
 	 *    now".  We return, say "WAIT" to the parent, and retry in 200 ms.
 	 */
-	if (p.stato_sessione == (uint32_t)SESSIONE_NON_LETTA) {
+	if (p.stato_sessione == (uint32_t)SESSION_NOT_READ) {
 		snprintf(p.guasto, sizeof p.guasto,
 		         "the compositor did not answer the poll: it is still being born");
 		registro_dettaglio(REG_FIGLIO,
@@ -6993,13 +6993,13 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 		 * ⚠ `wlr-randr` before `exec lxqt-session` (e4ecfbb) widens the window
 		 *   between labwc and the manager, and makes the race almost certain.
 		 *
-		 * ⭐ The cure is the form of `SESSIONE_NON_LETTA` above: "not now".  We
+		 * ⭐ The cure is the form of `SESSION_NOT_READ` above: "not now".  We
 		 *    return, the parent hears WAIT, and the loop retries densely
 		 *    (`PALCO_NASCITA_RIPROVA_MS`, while it is being born or someone is
 		 *    watching).  The mounting that succeeds has read SANA, and
 		 *    `vista_viva` is true by construction.
 		 * ⛔ And the birth is NOT requested at every round: the rein is
-		 *    `sta_nascendo()` (above), and after the rein
+		 *    `is_being_born()` (above), and after the rein
 		 *    `sessione_fai_nascere()` refuses while labwc is alive
 		 *    (`unita_inattiva()`).  It is the same fate as GNOME when Mutter
 		 *    does not appear: the mounting fails and is retried.
@@ -7007,14 +7007,14 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 		 *   silent: every five seconds a line says so, with the time since the
 		 *   birth was requested.
 		 */
-		if (p.stato_sessione == SESSIONE_MORTA) {
-			static uint64_t detto_ms;
-			uint64_t ora_ms = registro_ora_ms();
+		if (p.stato_sessione == SESSION_DEAD) {
+			static uint64_t logged_ms;
+			uint64_t now_ms = registro_ora_ms();
 
 			snprintf(p.guasto, sizeof p.guasto,
 			         "the session manager is not on the bus yet");
-			if (ora_ms - detto_ms >= 5000) {
-				detto_ms = ora_ms;
+			if (now_ms - logged_ms >= 5000) {
+				logged_ms = now_ms;
 				registro_dice(REG_FIGLIO,
 				              "⏳ %s: labwc perhaps is there, the session manager "
 				              "is NOT (birth requested %llu ms ago) — ⛔ not mounting "
@@ -7022,8 +7022,8 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 				              "turn on «seen alive», and the «Log out» after would make it "
 				              "BE BORN AGAIN.  Retrying shortly",
 				              sessione_desktop() == SESSIONE_DESKTOP_LXQT ? "LXQt" : "XFCE",
-				              nascita_chiesta_ms
-				                  ? (unsigned long long)(ora_ms - nascita_chiesta_ms)
+				              birth_requested_ms
+				                  ? (unsigned long long)(now_ms - birth_requested_ms)
 				                  : 0ULL);
 			}
 			manda(MSG_PALCO, &p, sizeof p, NULL, 0);
@@ -7049,14 +7049,14 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 		 *   session manager appears on the bus: that is the right fact, and it
 		 *   is enough.
 		 */
-	} else if (sessione_desktop() == SESSIONE_DESKTOP_KDE) {
+	} else if (sessione_desktop() == SESSION_DESKTOP_KDE) {
 		/* ⭐ On KDE the monitor is already there (`kwin_wayland --virtual`, born
 		 *    with the session): KWin is asked for its stream.  The GNOME branch
 		 *    below is not touched. */
-		chiudi_palco_kwin();
-		CRONO_INIZIO("mount the stage (kwin_apri)");
+		close_stage_kwin();
+		CHRONO_START("mount the stage (kwin_apri)");
 		palco_kwin = kwin_apri(&sbaglio);
-		CRONO_FINE();
+		CHRONO_END();
 		if (!palco_kwin) {
 			snprintf(p.guasto, sizeof p.guasto, "KWin: %s",
 			         sbaglio ? sbaglio->message : "(no details)");
@@ -7067,9 +7067,9 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 		}
 		vista_viva = true;
 	} else {
-	CRONO_INIZIO("mount the stage (mutter_apri)");
+	CHRONO_START("mount the stage (mutter_apri)");
 	mut = mutter_apri(&sbaglio);
-	CRONO_FINE();
+	CHRONO_END();
 	if (!mut) {
 		snprintf(p.guasto, sizeof p.guasto, "ScreenCast: %s",
 		         sbaglio ? sbaglio->message : "(no details)");
@@ -7083,7 +7083,7 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 
 	/* ⭐ PHASE 17 — we come back here ONCE, if the card was refused:
 	 *    `ripiega_se_rifiutata()`.  The stage (Mutter or KWin) stays the same. */
-rimonta_la_cattura:
+remount_capture:
 	/* ⛔ The rate is asked ONCE and with ONE name: `MOVIMENTO_FPS`.  Here there
 	 *    was the literal 60 and the encoding request declared 30 — two
 	 *    different numbers for the same quantity. */
@@ -7093,10 +7093,10 @@ rimonta_la_cattura:
 	 *    quantity. */
 	registro_dice(REG_FIGLIO,
 	              "⭐ the stage mounts on the «%s» route%s",
-	              strada_del_palco == CATTURA_STRADA_SCHEDA
+	              stage_route == CATTURA_STRADA_SCHEDA
 	                  ? "CARD (DMA-BUF, zero copy)"
 	                  : "MEMORY (the pixels are copied)",
-	              strada_del_palco == CATTURA_STRADA_SCHEDA
+	              stage_route == CATTURA_STRADA_SCHEDA
 	                  ? " — ⚠ it holds only if the encoder is in hardware, and if it "
 	                    "is not this stage is remounted on memory, declaring it"
 	                  : "");
@@ -7105,12 +7105,12 @@ rimonta_la_cattura:
 	 *    is not even called, because on this family a node does not exist. */
 	if (sessione_su_wlroots()) {
 		lastre_per_la_strada();
-		cat = cattura_avvia_wlr(tela_l, tela_a, MOVIMENTO_FPS, strada_del_palco,
+		cat = cattura_avvia_wlr(tela_l, tela_a, MOVIMENTO_FPS, stage_route,
 		                        CATTURA_COLORE_BGRX, &sbaglio);
 	} else {
 		modificatori_per_la_strada();
 		cat = cattura_avvia(nodo_del_palco(mut), tela_l, tela_a, MOVIMENTO_FPS,
-		                    strada_del_palco, CATTURA_COLORE_BGRX, NULL, NULL,
+		                    stage_route, CATTURA_COLORE_BGRX, NULL, NULL,
 		                    NULL, &sbaglio);
 	}
 	if (!cat && ripiega_se_rifiutata(
@@ -7118,7 +7118,7 @@ rimonta_la_cattura:
 	                                           G_IO_ERROR_NOT_SUPPORTED),
 	                sbaglio ? sbaglio->message : NULL)) {
 		g_clear_error(&sbaglio);
-		goto rimonta_la_cattura;
+		goto remount_capture;
 	}
 	if (!cat) {
 		snprintf(p.guasto, sizeof p.guasto, "capture: %s",
@@ -7126,7 +7126,7 @@ rimonta_la_cattura:
 		registro_dice(REG_FIGLIO, "⛔ the capture does not open: %s", p.guasto);
 		g_clear_error(&sbaglio);
 		mutter_chiudi(mut);
-		chiudi_palco_kwin();
+		close_stage_kwin();
 		manda(MSG_PALCO, &p, sizeof p, NULL, 0);
 		return false;
 	}
@@ -7137,12 +7137,12 @@ rimonta_la_cattura:
 	if (palco_kwin)
 		cattura_cursore_mai_nascondere(cat, "KWin --virtual: the session's cursor "
 		                                    "theme is invisible");
-	*fuori_m = mut;
-	*fuori_c = cat;
+	*out_m = mut;
+	*out_c = cat;
 
 	memset(&fo, 0, sizeof fo);
 	presa = cattura_prendi(cat, 5.0, &fo, &sbaglio);
-	istante_us = istante_del_fotogramma(&fo, ora_monotona_us());
+	istante_us = frame_instant(&fo, now_monotonic_us());
 	p.presa = (uint32_t)presa;
 	/* ⛔ `PIXEL_ALTROVE` IS A DELIVERED FRAME, not a no-show: on the card's
 	 *    road the pixels are not in memory, and the frame is there all the
@@ -7153,13 +7153,13 @@ rimonta_la_cattura:
 	 *    more input formats").  Only the capture is stopped, and reopened. */
 	if (presa != CATTURA_PRESA_FATTA && presa != CATTURA_PRESA_PIXEL_ALTROVE &&
 	    ripiega_se_rifiutata(cattura_formato_rifiutato(cat),
-	                         cattura_guasto(cat))) {
+	                         capture_fault(cat))) {
 		g_clear_error(&sbaglio);
 		cattura_fermo_libera(&fo);
 		cattura_ferma(cat);
 		cat = NULL;
-		*fuori_c = NULL;
-		goto rimonta_la_cattura;
+		*out_c = NULL;
+		goto remount_capture;
 	}
 	if (presa != CATTURA_PRESA_FATTA && presa != CATTURA_PRESA_PIXEL_ALTROVE) {
 		snprintf(p.guasto, sizeof p.guasto, "grab %u: %s", (unsigned)presa,
@@ -7172,7 +7172,7 @@ rimonta_la_cattura:
 		g_clear_error(&sbaglio);
 		/* ⛔⭐ AND HERE IT IS DISMANTLED, instead of staying with half a stage.
 		 *
-		 *     Before, it returned leaving `*fuori_c` full: the loop found a live
+		 *     Before, it returned leaving `*out_c` full: the loop found a live
 		 *     capture that did not deliver, and had no way of telling it apart
 		 *     from a healthy one.  ⚠ "The stream never started" and "the scene
 		 *     is still" are two different things (`cattura.h`), and this is the
@@ -7180,9 +7180,9 @@ rimonta_la_cattura:
 		cattura_fermo_libera(&fo);
 		cattura_ferma(cat);
 		mutter_chiudi(mut);
-		chiudi_palco_kwin();
-		*fuori_c = NULL;
-		*fuori_m = NULL;
+		close_stage_kwin();
+		*out_c = NULL;
+		*out_m = NULL;
 		manda(MSG_PALCO, &p, sizeof p, NULL, 0);
 		return false;
 	}
@@ -7193,9 +7193,9 @@ rimonta_la_cattura:
 		/* ⭐ On KDE the monitor is the session's, and `kwin.c` has already said
 		 *    the scale if it is not 1.  "Before" and "after" are the same
 		 *    number: the stage adds none. */
-		p.monitor_prima = p.monitor_dopo = kwin_quante_uscite(palco_kwin);
+		p.monitor_prima = p.monitor_dopo = kwin_output_count(palco_kwin);
 		snprintf(p.monitor, sizeof p.monitor, "%s",
-		         kwin_nome_uscita(palco_kwin) ? kwin_nome_uscita(palco_kwin)
+		         kwin_output_name(palco_kwin) ? kwin_output_name(palco_kwin)
 		                                      : "(no name)");
 	} else if (!mut) {
 		/* ⭐ PHASE 13 — on wlroots there is neither a Mutter session nor a KWin
@@ -7208,15 +7208,15 @@ rimonta_la_cattura:
 		cattura_misura_negoziata(cat, &l, &a);
 		p.monitor_prima = p.monitor_dopo = 1;
 		snprintf(p.monitor, sizeof p.monitor, "%s",
-		         cattura_uscita_nome(cat) ?: "(the compositor's output)");
+		         capture_output_name(cat) ?: "(the compositor's output)");
 	} else if (mutter_monitor_cerca(mut)) {
 		guint prima = 0, dopo = 0;
 		double scala;
 
-		mutter_monitor_conteggi(mut, &prima, &dopo);
+		mutter_monitor_counts(mut, &prima, &dopo);
 		p.monitor_prima = prima;
 		p.monitor_dopo = dopo;
-		snprintf(p.monitor, sizeof p.monitor, "%s", mutter_monitor_nostro(mut));
+		snprintf(p.monitor, sizeof p.monitor, "%s", mutter_our_monitor(mut));
 
 		/* ⛔⭐⭐ GUARD 2 OF §5.0-sexies, AND SINCE TONIGHT IT IS A CONDITION OF
 		 *     SERVICE — "read the scale and FAIL if it is not 1.0".
@@ -7305,7 +7305,7 @@ rimonta_la_cattura:
 	              : fo.consegna.nero          ? "⛔ BLACK"
 	                                          : "not black");
 
-	rilievo_scrivi(dir_rilievo, "cattura.bgrx", fo.pixel, (size_t)fo.byte);
+	survey_write(dir_survey, "cattura.bgrx", fo.pixel, (size_t)fo.byte);
 
 	/* ⛔⭐ AND THIS FIRST ENCODING STAYS, even if there is the loop now: it does
 	 *     not serve to send, it serves to PROVE the stage works before anyone
@@ -7337,7 +7337,7 @@ rimonta_la_cattura:
 		 *     whether they can be touched. */
 		if (fo.stride >= (guint64) fo.larghezza * 4u
 		    && fo.byte >= (guint64) fo.stride * fo.altezza) {
-			if (codifica_e_manda(&fo, CODIFICATORE_HEVC, 1, dir_rilievo,
+			if (codifica_e_manda(&fo, CODIFICATORE_HEVC, 1, dir_survey,
 			                     "flusso-hevc.265", istante_us, fo.larghezza,
 			                     fo.altezza, 0))
 				p.flussi++;
@@ -7346,7 +7346,7 @@ rimonta_la_cattura:
 			/* ⭐ The second, since 20 August: a client negotiating H.264 finds
 			 *    the first frame already in the deposit like the other, instead
 			 *    of waiting for something to move on the desktop. */
-			if (codifica_e_manda(&fo, CODIFICATORE_H264, 3, dir_rilievo,
+			if (codifica_e_manda(&fo, CODIFICATORE_H264, 3, dir_survey,
 			                     "flusso-h264.264", istante_us, fo.larghezza,
 			                     fo.altezza, 0))
 				p.flussi++;
@@ -7367,7 +7367,7 @@ rimonta_la_cattura:
 		 *    frames of the movement, they are the switch-on diagnosis.  Adding
 		 *    them would say "two frames delivered" to a user who has not seen
 		 *    a single one. */
-		ciclo_fotogrammi = ciclo_chiavi = 0;
+		cycle_frames = cycle_keys = 0;
 	} else {
 		/* ⚠ On a remount the diagnosis is not redone: it would cost ~80 ms of
 		 *   encoding in the middle of a live session, and the two frames would
@@ -7384,20 +7384,20 @@ rimonta_la_cattura:
 	 *     would mean a desktop that is seen and cannot be driven — without any
 	 *     error anywhere.
 	 *
-	 * ⛔ `cursore_apri()` wants the recipient **at opening**, and the opening
+	 * ⛔ `cursor_open()` wants the recipient **at opening**, and the opening
 	 *    happens inside `cattura_avvia()`: so the registration goes through
 	 *    `cattura.h`.  ⚠ Without this line the pipe would be written in full
 	 *    and **empty**.
 	 * ⛔ And `input_apri()` goes on the `RemoteDesktop` session that `mutter.c`
 	 *    has just started: on a remount that is **another session**, and an
 	 *    `Input` hooked to the old one will no longer inject anything. */
-	cattura_cursore(cat, cursore_al_padre, NULL);
-	if (palco_input) {
-		input_chiudi(palco_input);
-		palco_input = NULL;
+	cattura_cursore(cat, cursor_to_parent, NULL);
+	if (stage_input) {
+		input_chiudi(stage_input);
+		stage_input = NULL;
 	}
 	{
-		char *sbaglio_input = NULL;
+		char *err_input = NULL;
 		/* ⭐ PHASE 12, INCREMENT 3 — on KDE the channel is given by KWin, at
 		 *    the output's size (`tela_l`/`tela_a` have already been aligned by
 		 *    `misura_del_palco()`). */
@@ -7406,12 +7406,12 @@ rimonta_la_cattura:
 		 *    (`input.h`).  ⛔ The branch comes FIRST and does not touch the
 		 *    GNOME and KDE line below. */
 		if (sessione_su_wlroots())
-			palco_input = input_apri_wlr(tela_l, tela_a, &sbaglio_input);
+			stage_input = input_apri_wlr(tela_l, tela_a, &err_input);
 		else
-		palco_input = palco_kwin
-		                  ? input_apri_kwin(palco_kwin, tela_l, tela_a, &sbaglio_input)
-		                  : input_apri(mut, tela_l, tela_a, &sbaglio_input);
-		if (palco_input && disposizione_in_attesa[0]) {
+		stage_input = palco_kwin
+		                  ? input_apri_kwin(palco_kwin, tela_l, tela_a, &err_input)
+		                  : input_apri(mut, tela_l, tela_a, &err_input);
+		if (stage_input && pending_layout[0]) {
 			/* ⛔ Before saying the channel is open: the layout requested at
 			 *    attach had arrived with the stage closed, and if it is not
 			 *    applied HERE the user types the first keys on the wrong
@@ -7420,11 +7420,11 @@ rimonta_la_cattura:
 			              "⭐ §5-bis.7: applying now the layout «%s», "
 			              "which had been requested when the stage was not there "
 			              "yet",
-			              disposizione_in_attesa);
-			input_disposizione(palco_input, disposizione_in_attesa);
-			disposizione_in_attesa[0] = '\0';
+			              pending_layout);
+			input_disposizione(stage_input, pending_layout);
+			pending_layout[0] = '\0';
 		}
-		if (palco_input) {
+		if (stage_input) {
 			registro_dice(REG_FIGLIO,
 			              "⭐⭐ THE INPUT CHANNEL IS OPEN on the canvas %ux%u: "
 			              "from now on what the user does in the browser reaches "
@@ -7436,7 +7436,7 @@ rimonta_la_cattura:
 			 *    were.  ⇒ They are brought back inside now that the channel
 			 *    exists.  (Harmless at the first birth, and it does nothing on
 			 *    GNOME and KDE.) */
-			input_riporta_dentro(palco_input);
+			input_riporta_dentro(stage_input);
 		} else
 			/* ⛔ And if it does not open we do NOT die: `CODER.md` §4.2 —
 			 *    degrade, do not fail.  A user who sees the desktop and cannot
@@ -7447,8 +7447,8 @@ rimonta_la_cattura:
 			              "is SEEN but cannot be DRIVEN.  ⚠ The session stays "
 			              "up — §8.3 forbids disconnecting — and this line is "
 			              "the declared fallback",
-			              sbaglio_input ? sbaglio_input : "no details");
-		free(sbaglio_input);
+			              err_input ? err_input : "no details");
+		free(err_input);
 	}
 
 	/*
@@ -7462,32 +7462,32 @@ rimonta_la_cattura:
 	 *    remount.
 	 *
 	 * ⛔ And it is CLOSED before reopening, the old one is not left standing:
-	 *    `appunti_chiudi()` never calls `DisableClipboard` (trap 1 of
+	 *    `clipboard_close()` never calls `DisableClipboard` (trap 1 of
 	 *    `appunti.h`), so closing here does not burn the graphical session's
 	 *    clipboard — it only closes our thread and the subscriptions.
 	 */
-	if (palco_appunti) {
-		appunti_chiudi(palco_appunti);
-		palco_appunti = NULL;
+	if (stage_clipboard) {
+		clipboard_close(stage_clipboard);
+		stage_clipboard = NULL;
 	}
 	{
-		GError *sbaglio_app = NULL;
+		GError *err_app = NULL;
 
 		/* ⭐ PHASE 13 — on XFCE the clipboard goes through labwc, with the same
 		 *    wlroots protocol KDE already uses (`appunti_kde.c`).  ⛔ The new
 		 *    branch comes FIRST, and the two below are the ones from before.
 		 * ⭐ PHASE 12 — on KDE the clipboard goes through KWin (`appunti_kde.c`). */
 		if (sessione_su_wlroots())
-			palco_appunti = appunti_apri_wlroots(&sbaglio_app);
+			stage_clipboard = appunti_apri_wlroots(&err_app);
 		else
-			palco_appunti = palco_kwin
-			                    ? appunti_apri_kde(&sbaglio_app)
+			stage_clipboard = palco_kwin
+			                    ? appunti_apri_kde(&err_app)
 			                    : appunti_apri(mutter_bus(mut),
-			                                   mutter_percorso_controllo(mut),
-			                                   &sbaglio_app);
-		if (palco_appunti) {
-			appunti_ascolta(palco_appunti, appunti_dalla_sessione,
-			                appunti_vuole_incollare, NULL);
+			                                   mutter_control_path(mut),
+			                                   &err_app);
+		if (stage_clipboard) {
+			clipboard_listen(stage_clipboard, appunti_dalla_sessione,
+			                clipboard_wants_paste, NULL);
 			registro_dice(REG_FIGLIO,
 			              "⭐⭐ THE CLIPBOARD IS OPEN, in both directions and text "
 			              "only: from now on what is copied in the desktop can "
@@ -7496,14 +7496,14 @@ rimonta_la_cattura:
 			 *    ASKED FOR, or connecting loses it (see the box in
 			 *    `appunti.c`).  ⛔ And it is asked BEFORE the pending offer:
 			 *    offering first, our text would be read instead of its own. */
-			appunti_leggi_adesso(palco_appunti);
+			appunti_leggi_adesso(stage_clipboard);
 
 			/* ⭐ And the offer that arrived while we were not there is redone NOW. */
 			if (appunti_offerta_arretrata) {
 				GError *sb = NULL;
 
 				appunti_offerta_arretrata = false;
-				if (appunti_offri(palco_appunti, &sb))
+				if (clipboard_offer(stage_clipboard, &sb))
 					registro_dice(REG_APPUNTI,
 					              "⭐ CLIPBOARD: the client had announced BEFORE "
 					              "the clipboard opened, and the offer has been "
@@ -7529,9 +7529,9 @@ rimonta_la_cattura:
 			              "and driven, but copy-paste between the two worlds is "
 			              "not there.  ⚠ The session stays up, and this line is "
 			              "the declared fallback",
-			              sbaglio_app ? sbaglio_app->message : "no details");
+			              err_app ? err_app->message : "no details");
 		}
-		g_clear_error(&sbaglio_app);
+		g_clear_error(&err_app);
 	}
 
 	/*
@@ -7546,20 +7546,20 @@ rimonta_la_cattura:
 	 *    answer "yes" from logind, which looks at `CAP_SYS_BOOT` before polkit.
 	 */
 	{
-		static bool gia_fatto;
+		static bool already_done;
 
-		if (!gia_fatto) {
+		if (!already_done) {
 			sentinella *guardia;
 			char dettaglio[192];
 
-			gia_fatto = true;
+			already_done = true;
 
 			/* 1. ⛔ Suspension, and it is not theoretical: `[M]` the
 			 *    "Automatic Suspend" notification appeared in the remote
 			 *    desktop. */
 			sessione_inibisci();
 
-			guardia = sentinella_apri();
+			guardia = sentinel_open();
 			if (!guardia) {
 				registro_dice(REG_FIGLIO,
 				              "⚠ without the system bus I cannot VERIFY "
@@ -7606,7 +7606,7 @@ rimonta_la_cattura:
 					              "polkit rule is missing, or it does not cover all "
 					              "twelve actions",
 					              dettaglio[0] ? dettaglio : "no details");
-				sentinella_chiudi(guardia);
+				sentinel_close(guardia);
 			}
 		}
 	}
@@ -7628,15 +7628,15 @@ rimonta_la_cattura:
  */
 static void smonta_il_palco(MutterSessione **m, Cattura **c)
 {
-	if (palco_input) {
-		int quanti = input_rilascia_tutto(palco_input);
+	if (stage_input) {
+		int quanti = input_rilascia_tutto(stage_input);
 		if (quanti > 0)
 			registro_dice(REG_FIGLIO,
 			              "⭐ §7.3: the stage is dismantled and %d keys and "
 			              "buttons were still held down: released",
 			              quanti);
-		input_chiudi(palco_input);
-		palco_input = NULL;
+		input_chiudi(stage_input);
+		stage_input = NULL;
 	}
 	/* ⛔⭐ AND THE CLIPBOARD IS CLOSED BEFORE THE SESSION, not after: the two
 	 *     subscriptions and the thread live on `mutter_bus()`, which belongs
@@ -7645,10 +7645,10 @@ static void smonta_il_palco(MutterSessione **m, Cattura **c)
 	 * ⛔ And `DisableClipboard` is NOT called (trap 1 of `appunti.h`): whoever
 	 *    called it at dismantling would find, at the remount, a dead clipboard
 	 *    **for the rest of the graphical session**. */
-	if (palco_appunti) {
-		appunti_chiudi(palco_appunti);
-		palco_appunti = NULL;
-		appunti_montaggio_libera();
+	if (stage_clipboard) {
+		clipboard_close(stage_clipboard);
+		stage_clipboard = NULL;
+		clipboard_assembly_free();
 	}
 	if (*c) {
 		cattura_ferma(*c);
@@ -7658,7 +7658,7 @@ static void smonta_il_palco(MutterSessione **m, Cattura **c)
 		mutter_chiudi(*m);
 		*m = NULL;
 	}
-	chiudi_palco_kwin();
+	close_stage_kwin();
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -7701,7 +7701,7 @@ static void smonta_il_palco(MutterSessione **m, Cattura **c)
  *       black page.
  *
  * ⛔ What is remounted is what MUST be remounted: the `Cattura` and its cursor
- *    seam (`cursore_apri()` wants the recipient at opening, and the opening is
+ *    seam (`cursor_open()` wants the recipient at opening, and the opening is
  *    inside `cattura_avvia()` — see the box of the three seams in
  *    `prendi_il_palco()`).
  *
@@ -7737,14 +7737,14 @@ static bool rimonta_solo_la_cattura(MutterSessione *m, Cattura **c, uint32_t l,
 		}
 		misura_del_palco(&l, &a);
 		lastre_per_la_strada();
-		nuova = cattura_avvia_wlr(l, a, MOVIMENTO_FPS, strada_del_palco,
+		nuova = cattura_avvia_wlr(l, a, MOVIMENTO_FPS, stage_route,
 		                          CATTURA_COLORE_BGRX, &sbaglio);
 		if (!nuova) {
 			registro_dice(REG_FIGLIO,
 			              "⛔ wlroots: the capture did NOT reopen on the route "
 			              "«%s» (%s): dismantling the whole stage, which is the "
 			              "fallback",
-			              strada_del_palco == CATTURA_STRADA_SCHEDA ? "CARD"
+			              stage_route == CATTURA_STRADA_SCHEDA ? "CARD"
 			                                                        : "MEMORY",
 			              sbaglio ? sbaglio->message : "no details");
 			g_clear_error(&sbaglio);
@@ -7756,12 +7756,12 @@ static bool rimonta_solo_la_cattura(MutterSessione *m, Cattura **c, uint32_t l,
 		 *   is accepted and never calls back (the pointer is in the pixels),
 		 *   but it is done anyway — a remounted stage must be the same as a
 		 *   mounted one. */
-		cattura_cursore(*c, cursore_al_padre, NULL);
+		cattura_cursore(*c, cursor_to_parent, NULL);
 		registro_dice(REG_FIGLIO,
 		              "⭐⭐ wlroots: the PIXELS' ROUTE changed to «%s» "
 		              "remounting ONLY the capture (canvas %ux%u): input and clipboard "
 		              "were NOT touched",
-		              strada_del_palco == CATTURA_STRADA_SCHEDA
+		              stage_route == CATTURA_STRADA_SCHEDA
 		                  ? "CARD (DMA-BUF, zero copy)"
 		                  : "MEMORY (the pixels are copied)",
 		              l, a);
@@ -7780,7 +7780,7 @@ static bool rimonta_solo_la_cattura(MutterSessione *m, Cattura **c, uint32_t l,
 	}
 
 	misura_del_palco(&l, &a);
-	nuova = cattura_avvia(nodo_del_palco(m), l, a, MOVIMENTO_FPS, strada_del_palco,
+	nuova = cattura_avvia(nodo_del_palco(m), l, a, MOVIMENTO_FPS, stage_route,
 	                      CATTURA_COLORE_BGRX, NULL, NULL, NULL, &sbaglio);
 	if (nuova && palco_kwin)
 		cattura_cursore_mai_nascondere(nuova, "KWin --virtual: the session's cursor "
@@ -7791,7 +7791,7 @@ static bool rimonta_solo_la_cattura(MutterSessione *m, Cattura **c, uint32_t l,
 		              "«%s» (%s): dismantling the whole stage, which is the fallback "
 		              "— ⚠ and it costs the graphical session, not only the stream",
 		              nodo_del_palco(m),
-		              strada_del_palco == CATTURA_STRADA_SCHEDA ? "CARD"
+		              stage_route == CATTURA_STRADA_SCHEDA ? "CARD"
 		                                                        : "MEMORY",
 		              sbaglio ? sbaglio->message : "no details");
 		g_clear_error(&sbaglio);
@@ -7803,7 +7803,7 @@ static bool rimonta_solo_la_cattura(MutterSessione *m, Cattura **c, uint32_t l,
 	 *    registered on the `Cattura`, and the previous one is gone.  ⚠ Without
 	 *    this line the pointer would stop changing shape **without any
 	 *    error**, and the symptom would appear hours later. */
-	cattura_cursore(*c, cursore_al_padre, NULL);
+	cattura_cursore(*c, cursor_to_parent, NULL);
 	registro_dice(REG_FIGLIO,
 	              "⭐⭐ the PIXELS' ROUTE changed to «%s» remounting ONLY "
 	              "the stream (node %u, canvas %ux%u): the graphical session, the "
@@ -7811,7 +7811,7 @@ static bool rimonta_solo_la_cattura(MutterSessione *m, Cattura **c, uint32_t l,
 	              "this is the cure of P1: dismantling the stage to change "
 	              "route closed a freshly born EIS channel, and `ei_disconnect()` "
 	              "killed the child with a SIGSEGV before the first frame",
-	              strada_del_palco == CATTURA_STRADA_SCHEDA
+	              stage_route == CATTURA_STRADA_SCHEDA
 	                  ? "CARD (DMA-BUF, zero copy)"
 	                  : "MEMORY (the pixels are copied)",
 	              nodo_del_palco(m), l, a);
@@ -7825,9 +7825,9 @@ void figlio_vive(int argc, char **argv)
 	struct corpo_sono s;
 	struct stat st;
 	uint32_t tela_l, tela_a;
-	const char *utente, *dir_rilievo;
+	const char *utente, *dir_survey;
 	uid_t atteso;
-	gid_t atteso_g;
+	gid_t expected_g;
 	MutterSessione *mut = NULL;
 	Cattura *cat = NULL;
 	int uno = 1;
@@ -7835,14 +7835,14 @@ void figlio_vive(int argc, char **argv)
 	gid_t rg, eg, sg;
 	/* ⭐ PHASE 9 — what the parent wrote on the command line, and that this
 	 *    process must repeat to itself: see below. */
-	bool f9_risale = false;
-	uint32_t f9_tetto = 0;
+	bool f9_rises = false;
+	uint32_t f9_cap = 0;
 	/* ⛔ `true`, and not `false` like the two above: this cure is born ON
 	 *    (24 Aug 2026), so the absence of the word at the end means "on".
 	 *    ⚠ And the child can NOT just ask `audio.c` for the default: it must
 	 *    be able to declare what REACHED it, or "the option was lost in the
 	 *    hand-over" and "the cure does not work" have the same face (form D5). */
-	bool f9_audio_silenzio = true;
+	bool f9_audio_silence = true;
 
 	/* `--figlio-interno <user> <uid> <gid> <w> <h> <serial> <survey>` */
 	if (argc < 9)
@@ -7869,7 +7869,7 @@ void figlio_vive(int argc, char **argv)
 	 *   previous image, and this is a new image. */
 	registro_identita(utente);
 	atteso = (uid_t)strtoul(argv[3], NULL, 10);
-	atteso_g = (gid_t)strtoul(argv[4], NULL, 10);
+	expected_g = (gid_t)strtoul(argv[4], NULL, 10);
 	tela_l = (uint32_t)strtoul(argv[5], NULL, 10);
 	tela_a = (uint32_t)strtoul(argv[6], NULL, 10);
 	/* ⛔ The WANTED canvas is born equal to the starting one and diverges at
@@ -7877,12 +7877,12 @@ void figlio_vive(int argc, char **argv)
 	 *    stage.  ⚠ Without it, a stage falling after a resize was born again
 	 *    at the command line's size, and the bands came back without any line
 	 *    connecting the two things. */
-	tela_voluta_l = tela_l;
-	tela_voluta_a = tela_a;
-	mia_matricola = strtoull(argv[7], NULL, 10);
-	dir_rilievo = argv[8];
-	/* ⭐ The snapshot keeps it: see the box above `scatto_dir`. */
-	scatto_dir = dir_rilievo;
+	canvas_intended_w = tela_l;
+	canvas_intended_h = tela_a;
+	my_serial = strtoull(argv[7], NULL, 10);
+	dir_survey = argv[8];
+	/* ⭐ The snapshot keeps it: see the box above `shot_dir`. */
+	shot_dir = dir_survey;
 	/* ⭐ The chatter, if the parent passed it to us: see the box in
 	 *    `figli_esegui()`.  ⛔ Without it, every `registro_dettaglio` of this
 	 *    file is written and reaches nobody. */
@@ -7905,36 +7905,36 @@ void figlio_vive(int argc, char **argv)
 		else if (strcmp(argv[i], "--journal") == 0)
 			registro_journal(true); /* ⚠ if it does not open, stderr remains */
 		else if (strcmp(argv[i], "--qualita-risale") == 0)
-			f9_risale = true;
+			f9_rises = true;
 		else if (strcmp(argv[i], "--tetto-banda-mbit") == 0 && i + 1 < argc)
-			f9_tetto = (uint32_t)strtoul(argv[++i], NULL, 10);
+			f9_cap = (uint32_t)strtoul(argv[++i], NULL, 10);
 		/* ⭐ PHASE 19: the forced card route (the server's `--codifica`), for
 		 *    the same reason as the three lines above — it is a static of THIS
 		 *    process, and the parent repeats it to it.  ⚠ A value that is not
 		 *    recognised stays "scheda", and the encoder's line says so. */
 		else if (strcmp(argv[i], "--codifica") == 0 && i + 1 < argc)
-			figlio_codifica_strada(argv[++i]);
+			child_encoding_route(argv[++i]);
 		/* ⛔⭐ AND THIS ONE IS READ NEGATED, because it is born ON (24 Aug 2026):
 		 *     the word at the end is the EXCEPTION to the default.  ⚠ An absence
 		 *     here means "on", which is the opposite of the two lines above —
-		 *     and it is the reason `f9_audio_silenzio` starts from `true`. */
+		 *     and it is the reason `f9_audio_silence` starts from `true`. */
 		else if (strcmp(argv[i], "--niente-audio-silenzio") == 0)
-			f9_audio_silenzio = false;
+			f9_audio_silence = false;
 	}
-	codificatore_qualita_risale(f9_risale);
-	codificatore_tetto_banda(f9_tetto);
+	codificatore_qualita_risale(f9_rises);
+	codificatore_tetto_banda(f9_cap);
 	/* ⛔ And the audio encoder lives in THIS process, like the video one: the
 	 *    line of the value IN FORCE is written by `audio.c` when each encoder
 	 *    opens, and it is the third of the triple (parent WILL PASS · child
 	 *    RECEIVED · in force). */
-	audio_silenzio_taci(f9_audio_silenzio);
+	audio_silenzio_taci(f9_audio_silence);
 
 	signal(SIGTERM, SIG_DFL);
 	signal(SIGINT, SIG_DFL);
 	signal(SIGPIPE, SIG_IGN);
-	/* ⭐ The on-demand snapshot: the box is above `scatto_segnale()`. */
-	signal(SIGUSR1, scatto_segnale);
-	signal(SIGUSR2, scatto_segnale);
+	/* ⭐ The on-demand snapshot: the box is above `shot_signal()`. */
+	signal(SIGUSR1, shot_signal);
+	signal(SIGUSR2, shot_signal);
 
 	/* ⛔ If the server dies, this process dies with it: no orphan attached to a
 	 *    user's virtual monitor.  ⚠ And it is armed AFTER the privilege drop,
@@ -7950,24 +7950,24 @@ void figlio_vive(int argc, char **argv)
 	 *     declaring itself. */
 	if (getresuid(&r, &e, &sv) != 0 || getresgid(&rg, &eg, &sg) != 0)
 		_exit(41);
-	if (r != atteso || e != atteso || sv != atteso || rg != atteso_g
-	    || eg != atteso_g || sg != atteso_g) {
+	if (r != atteso || e != atteso || sv != atteso || rg != expected_g
+	    || eg != expected_g || sg != expected_g) {
 		registro_dice(REG_FIGLIO,
 		              "⛔⛔ I AM NOT WHO I SHOULD BE: they wanted me as uid %ld gid "
 		              "%ld and the kernel says uid %ld/%ld/%ld gid %ld/%ld/%ld.  "
 		              "EXITING without touching anything: a child running as "
 		              "the wrong user is I3 violated invisibly",
-		              (long)atteso, (long)atteso_g, (long)r, (long)e, (long)sv,
+		              (long)atteso, (long)expected_g, (long)r, (long)e, (long)sv,
 		              (long)rg, (long)eg, (long)sg);
 		_exit(42);
 	}
-	mio_uid = e;
+	my_uid = e;
 
 	/* ⛔ The child too wants the kernel's stamp on the parent's messages: the
 	 *    link is verified **at both ends**.  ⚠ `SO_PEERCRED` here would tell
 	 *    the truth (root created the socketpair), but it must be the same
 	 *    proof the parent makes — and the parent's is per message. */
-	setsockopt(fd_figlio, SOL_SOCKET, SO_PASSCRED, &uno, sizeof uno);
+	setsockopt(fd_child, SOL_SOCKET, SO_PASSCRED, &uno, sizeof uno);
 
 	memset(&s, 0, sizeof s);
 	s.uid = r;
@@ -7978,7 +7978,7 @@ void figlio_vive(int argc, char **argv)
 	s.sgid = sg;
 	s.pid = (uint32_t)getpid();
 	s.ppid = (uint32_t)getppid();
-	s.descrittori = quanti_descrittori();
+	s.descrittori = how_many_descriptors();
 	snprintf(s.utente, sizeof s.utente, "%s", utente);
 	snprintf(s.runtime, sizeof s.runtime, "%s",
 	         getenv("XDG_RUNTIME_DIR") ? getenv("XDG_RUNTIME_DIR") : "(none)");
@@ -8069,9 +8069,9 @@ void figlio_vive(int argc, char **argv)
 	              "encoder now, before the first stage.  Whether it took them "
 	              "is told by the «encoder OPENED» line (video) and the "
 	              "«digital silence cure» line (audio)",
-	              f9_risale ? "ON" : "off (I6)",
-	              f9_tetto ? "ON" : "off (I6)", f9_tetto,
-	              f9_audio_silenzio
+	              f9_rises ? "ON" : "off (I6)",
+	              f9_cap ? "ON" : "off (I6)", f9_cap,
+	              f9_audio_silence
 	                  ? "ON (default since 24 Aug 2026)"
 	                  : "turned OFF by hand (--niente-audio-silenzio)");
 
@@ -8089,7 +8089,7 @@ void figlio_vive(int argc, char **argv)
 	 *     needed" there is **at least one second guaranteed by the protocol**,
 	 *     and it is all the time this child has to be born, connect to the
 	 *     bus, capture and encode.  Waiting for a request would throw it away. */
-	if (!prendi_il_palco(tela_l, tela_a, dir_rilievo, true, &mut, &cat)) {
+	if (!prendi_il_palco(tela_l, tela_a, dir_survey, true, &mut, &cat)) {
 		/* ⛔⭐ AND IF AT BIRTH THE STAGE IS NOT THERE, WE DO NOT STAY LIKE THIS —
 		 *     it is the second twin defect, `[M]` from the user's real
 		 *     session: a child born without a graphical session **never**
@@ -8102,8 +8102,8 @@ void figlio_vive(int argc, char **argv)
 		              "disconnecting — and I do NOT stand still: retrying, the first time "
 		              "in %d ms",
 		              utente, PALCO_RIPROVA_MIN_MS);
-		palco_riprova_ms = registro_ora_ms() + PALCO_RIPROVA_MIN_MS;
-		palco_attesa_ms = PALCO_RIPROVA_MIN_MS;
+		stage_retry_ms = registro_ora_ms() + PALCO_RIPROVA_MIN_MS;
+		stage_wait_ms = PALCO_RIPROVA_MIN_MS;
 	}
 
 	/* ═══════════════════════════════════════════════════════════════════ */
@@ -8117,14 +8117,14 @@ void figlio_vive(int argc, char **argv)
 	/*    to a quarter of a second, which on the latency of                 */
 	/*    `SPECIFICHE.md` §3.2 is five times the ceiling.                   */
 	/*                                                                     */
-	/* ⛔ AND WHEN NOBODY IS WATCHING NOTHING IS CAPTURED: `codec_chiesto`  */
+	/* ⛔ AND WHEN NOBODY IS WATCHING NOTHING IS CAPTURED: `requested_codec`  */
 	/*    at zero means the last session has gone.  ⚠ It is NOT invariant   */
 	/*    I1 the other way round — I1 forbids lowering the rate out of      */
 	/*    caution **while someone is watching**; here nobody is watching,   */
 	/*    and the stage (I4) stays up: only the loop stops.  Then we wait   */
 	/*    on the socket, and the process costs zero.                        */
 	for (;;) {
-		uint8_t busta[BUSTA_MAX];
+		uint8_t envelope[ENVELOPE_MAX];
 		struct testa t;
 		struct ucred chi;
 		bool c_e = false;
@@ -8149,16 +8149,16 @@ void figlio_vive(int argc, char **argv)
 		 *   runs, this line never appears.
 		 */
 		if (!cat) {
-			static uint64_t battito_ms;
+			static uint64_t heartbeat_ms;
 			uint64_t adesso = registro_ora_ms();
 
-			if (adesso - battito_ms >= 1000) {
-				battito_ms = adesso;
+			if (adesso - heartbeat_ms >= 1000) {
+				heartbeat_ms = adesso;
 				registro_dice(REG_FIGLIO,
 				              "♥ loop ALIVE without a stage: codec %u, wanted canvas "
 				              "%ux%u, next attempt in %lld ms",
-				              (unsigned)codec_chiesto, tela_voluta_l, tela_voluta_a,
-				              (long long)((int64_t)palco_riprova_ms - (int64_t)adesso));
+				              (unsigned)requested_codec, canvas_intended_w, canvas_intended_h,
+				              (long long)((int64_t)stage_retry_ms - (int64_t)adesso));
 			}
 		}
 
@@ -8168,7 +8168,7 @@ void figlio_vive(int argc, char **argv)
 			int quanti = 1;
 			int fd_ei;
 
-			pf.fd = fd_figlio;
+			pf.fd = fd_child;
 			pf.events = POLLIN;
 			pf.revents = 0;
 			due[0] = pf;
@@ -8179,7 +8179,7 @@ void figlio_vive(int argc, char **argv)
 			 *     §1-bis is 50 ms in all.  ⚠ When nothing is captured this
 			 *     `poll` waits a whole second: without this line, a click on a
 			 *     still desktop would arrive **up to a second later**. */
-			fd_ei = palco_input ? input_descrittore(palco_input) : -1;
+			fd_ei = stage_input ? input_descriptor(stage_input) : -1;
 			if (fd_ei >= 0) {
 				due[1].fd = fd_ei;
 				due[1].events = POLLIN;
@@ -8191,7 +8191,7 @@ void figlio_vive(int argc, char **argv)
 			 *    lose time.
 			 * ⛔⭐ And "capturing" requires TWO things: that someone is
 			 *     watching **and** that the stage is there.  With
-			 *     `codec_chiesto` alone, a child that lost the stage while a
+			 *     `requested_codec` alone, a child that lost the stage while a
 			 *     client was watching ran with `poll` at zero — that is it
 			 *     burned a whole core capturing nothing.  `[M]` it is the
 			 *     silent half of the 14 August defect: the log is cured by
@@ -8211,7 +8211,7 @@ void figlio_vive(int argc, char **argv)
 			 *    cadence: the second stays as a ceiling (the parent must be
 			 *    able to speak anyway), but it is no longer a floor. */
 			{
-				int attesa_ms = (codec_chiesto && cat) ? 0 : 1000;
+				int attesa_ms = (requested_codec && cat) ? 0 : 1000;
 
 				/*
 				 * ⛔⭐⭐ AND ZERO MEANS "NOW", NOT "NOT ARMED" — 16 Aug 2026,
@@ -8219,7 +8219,7 @@ void figlio_vive(int argc, char **argv)
 				 *       file.
 				 *
 				 * `[M]` The client's canvas arrives, the handler sets
-				 * `palco_riprova_ms = 0` to say "retry at once", and this
+				 * `stage_retry_ms = 0` to say "retry at once", and this
 				 * `poll` — which read zero as "no attempt scheduled" — went to
 				 * sleep.  ⇒ Between "the canvas has arrived" and "entering the
 				 * mounting" **2000 ms flat** passed, that is two whole sleeps,
@@ -8231,14 +8231,14 @@ void figlio_vive(int argc, char **argv)
 				 *   included.
 				 *
 				 * ⛔ And it does not spin: the following attempt immediately
-				 *    puts `palco_riprova_ms` back in the future, so the zero
+				 *    puts `stage_retry_ms` back in the future, so the zero
 				 *    holds for one round only.
 				 */
 				if (!cat) {
 					uint64_t adesso = registro_ora_ms();
 
-					attesa_ms = palco_riprova_ms > adesso
-					                ? (int)(palco_riprova_ms - adesso)
+					attesa_ms = stage_retry_ms > adesso
+					                ? (int)(stage_retry_ms - adesso)
 					                : 0;
 					if (attesa_ms > 1000)
 						attesa_ms = 1000;
@@ -8268,11 +8268,11 @@ void figlio_vive(int argc, char **argv)
 			 *      ⛔ That is, without this line the timeout would exist on
 			 *        paper and never fire — the worst form of a protection:
 			 *        the one read in the code that is not there. */
-			appunti_scadi(registro_ora_ms());
+			clipboard_expire(registro_ora_ms());
 			/* ⭐ If `libei` spoke, it is served AT ONCE — even before reading
 			 *    the parent: it is the path on which latency is measured. */
 			if (pronto > 0 && quanti == 2 && due[1].revents)
-				input_gira(palco_input);
+				input_gira(stage_input);
 			if (pronto < 0) {
 				if (errno == EINTR)
 					continue;
@@ -8307,7 +8307,7 @@ void figlio_vive(int argc, char **argv)
 			if (!pf.revents)
 				break;
 
-			letti = ricevi_con_credenziali(fd_figlio, busta, sizeof busta, &chi,
+			letti = receive_with_credentials(fd_child, envelope, sizeof envelope, &chi,
 			                               &c_e);
 			if (letti == 0) {
 				registro_dice(REG_FIGLIO,
@@ -8327,8 +8327,8 @@ void figlio_vive(int argc, char **argv)
 			}
 			if ((size_t)letti < sizeof t)
 				continue;
-			memcpy(&t, busta, sizeof t);
-			if (!magia_giusta(&t))
+			memcpy(&t, envelope, sizeof t);
+			if (!magic_ok(&t))
 				continue;
 			/* ⛔ The parent must be root AND must be my parent process.  A
 			 *    message without the kernel's stamp is not a message from the
@@ -8340,11 +8340,11 @@ void figlio_vive(int argc, char **argv)
 				              c_e ? (long)chi.uid : -1L);
 				continue;
 			}
-			if (t.uid_dichiarato != (uint32_t)mio_uid) {
+			if (t.uid_dichiarato != (uint32_t)my_uid) {
 				registro_dice(REG_FIGLIO,
 				              "⛔ the parent believes I am uid %lu and the kernel "
 				              "says %ld: I do NOT answer",
-				              (unsigned long)t.uid_dichiarato, (long)mio_uid);
+				              (unsigned long)t.uid_dichiarato, (long)my_uid);
 				continue;
 			}
 			if (t.tipo == MSG_SPEGNITI) {
@@ -8355,7 +8355,7 @@ void figlio_vive(int argc, char **argv)
 				struct corpo_video cv;
 				if ((size_t)letti < sizeof t + sizeof cv)
 					continue;
-				memcpy(&cv, busta + sizeof t, sizeof cv);
+				memcpy(&cv, envelope + sizeof t, sizeof cv);
 				/* ⛔⭐ THE CEILING IS 3 SINCE 20 AUG 2026 (H.264, §1.13-ter), and
 				 *     this line cost a round: the parent already negotiated
 				 *     codec 3 and the child REFUSED it here — "the parent asks
@@ -8376,14 +8376,14 @@ void figlio_vive(int argc, char **argv)
 				 *    this is the only message that says "there is a client
 				 *    watching": the session's birth must follow a WILL, not a
 				 *    clock. */
-				if (cv.codec != 0 && sessione_chiusa_dall_utente) {
-					sessione_chiusa_dall_utente = false;
+				if (cv.codec != 0 && session_closed_by_user) {
+					session_closed_by_user = false;
 					registro_dice(REG_FIGLIO,
 					              "⭐ §7.6: someone reattaches after a logout "
 					              "— from now on the graphical session can be made "
 					              "to be born again, and it will be NEW");
 				}
-				if (cv.codec != codec_chiesto)
+				if (cv.codec != requested_codec)
 					registro_dice(REG_FIGLIO,
 					              cv.codec
 					                  ? "⭐ PHASE 3: the frame loop turns "
@@ -8414,7 +8414,7 @@ void figlio_vive(int argc, char **argv)
 				 * ⚠ `cv.codec &&` is there because "off" (codec 0) carries
 				 *   zeros in all fields: it is not a client declaring "no
 				 *   level", it is no client. */
-				if (cv.codec && cv.livello_x10 != livello_chiesto_x10) {
+				if (cv.codec && cv.livello_x10 != requested_level_x10) {
 					if (cv.livello_x10)
 						registro_dice(REG_FIGLIO,
 						              "⭐ §4.3: the client declares "
@@ -8423,18 +8423,18 @@ void figlio_vive(int argc, char **argv)
 						              "read it back from the SPS",
 						              cv.livello_x10 / 10u,
 						              cv.livello_x10 % 10u,
-						              livello_chiesto_x10 ? "another one" : "none");
+						              requested_level_x10 ? "another one" : "none");
 					else
 						registro_dice(REG_FIGLIO,
 						              "⚠ §4.3: no video.livello declared "
 						              "(before %u.%u) — NO CEILING, and I do not "
 						              "invent one: the level produced is "
 						              "written anyway",
-						              livello_chiesto_x10 / 10u,
-						              livello_chiesto_x10 % 10u);
-					livello_chiesto_x10 = cv.livello_x10;
+						              requested_level_x10 / 10u,
+						              requested_level_x10 % 10u);
+					requested_level_x10 = cv.livello_x10;
 				}
-				codec_chiesto = cv.codec;
+				requested_codec = cv.codec;
 				/* ⛔ §5.2: the debt is set on the REQUESTED codec, not on all.
 				 *    Asking for a keyframe for HEVC does not produce one on
 				 *    AV1, and setting them together would give a keyframe to
@@ -8444,11 +8444,11 @@ void figlio_vive(int argc, char **argv)
 				continue;
 			}
 			if (t.tipo == MSG_AUDIO) {
-				struct corpo_audio ca;
+				struct body_audio ca;
 
 				if ((size_t)letti < sizeof t + sizeof ca)
 					continue;
-				memcpy(&ca, busta + sizeof t, sizeof ca);
+				memcpy(&ca, envelope + sizeof t, sizeof ca);
 				if (ca.codec > 2) {
 					registro_dice(REG_FIGLIO,
 					              "⛔ the parent asks for audio codec %u, which "
@@ -8462,7 +8462,7 @@ void figlio_vive(int argc, char **argv)
 				 *    encoder instead no: that would cut the sound for whoever
 				 *    is already listening. */
 				if (ca.codec && ca.codec == audio_codec) {
-					suono_volume_massimo(son);
+					suono_volume_massimo(snd);
 					registro_dettaglio(REG_FIGLIO,
 					                   "someone else connects: volume at "
 					                   "maximum (I5), capture unchanged");
@@ -8480,7 +8480,7 @@ void figlio_vive(int argc, char **argv)
 			if (t.tipo == MSG_APPUNTI_OFFERTA) {
 				GError *sb = NULL;
 
-				if (!palco_appunti) {
+				if (!stage_clipboard) {
 					/* ⚠ It is not a fault: it is the stage not being there yet,
 					 *   or the clipboard that did not open (the declared
 					 *   fallback further up).  It is said, and we go on. */
@@ -8492,7 +8492,7 @@ void figlio_vive(int argc, char **argv)
 					                   "opens, instead of falling");
 					continue;
 				}
-				if (!appunti_offri(palco_appunti, &sb))
+				if (!clipboard_offer(stage_clipboard, &sb))
 					registro_dice(REG_APPUNTI,
 					              "⛔ the offer to the session did not succeed "
 					              "(%s): inside the desktop it will not be possible to "
@@ -8504,22 +8504,22 @@ void figlio_vive(int argc, char **argv)
 			/* ⭐⭐ AND THE ANSWER TO WHOEVER IS PASTING, which arrives **in
 			 *     pieces**. */
 			if (t.tipo == MSG_APPUNTI_DAL_CLIENT) {
-				struct corpo_appunti ca;
+				struct body_clipboard ca;
 
 				if ((size_t)letti < sizeof t + sizeof ca)
 					continue;
-				memcpy(&ca, busta + sizeof t, sizeof ca);
+				memcpy(&ca, envelope + sizeof t, sizeof ca);
 				if ((size_t)letti < sizeof t + sizeof ca + ca.pezzo)
 					continue;
-				appunti_dal_client(&ca, busta + sizeof t + sizeof ca);
+				clipboard_from_client(&ca, envelope + sizeof t + sizeof ca);
 				continue;
 			}
 			if (t.tipo == MSG_DISPOSIZIONE) {
-				struct corpo_disposizione cd;
+				struct body_layout cd;
 
 				if ((size_t)letti < sizeof t + sizeof cd)
 					continue;
-				memcpy(&cd, busta + sizeof t, sizeof cd);
+				memcpy(&cd, envelope + sizeof t, sizeof cd);
 				/* ⛔ WE impose the NUL: the envelope comes from a socket, and
 				 *    an unterminated string read as such is a memory defect,
 				 *    not a keyboard one. */
@@ -8527,13 +8527,13 @@ void figlio_vive(int argc, char **argv)
 				/* ⚠ And if the stage is not there yet, it is DECLARED: "I did
 				 *   not apply it" and "there was nothing to apply" are two
 				 *   different facts (`LEZIONI.md` §1.9 rule 1). */
-				if (!palco_input) {
+				if (!stage_input) {
 					/* ⛔ It is NOT thrown away: it is KEPT.  `rcp.c` asks for
 					 *    it when `SESSIONE` has gone out, and `libei` opens a
 					 *    few hundredths later — throwing it away here would
 					 *    mean the cure works on every attach except the FIRST. */
-					snprintf(disposizione_in_attesa,
-					         sizeof disposizione_in_attesa, "%s", cd.nome);
+					snprintf(pending_layout,
+					         sizeof pending_layout, "%s", cd.nome);
 					registro_dice(REG_FIGLIO,
 					              "⚠ layout «%s» requested but the input channel "
 					              "is not there yet: KEPT, it is "
@@ -8541,16 +8541,16 @@ void figlio_vive(int argc, char **argv)
 					              cd.nome);
 				}
 				else
-					input_disposizione(palco_input, cd.nome);
+					input_disposizione(stage_input, cd.nome);
 				continue;
 			}
 			if (t.tipo == MSG_INPUT) {
-				struct corpo_input ci;
+				struct body_input ci;
 				int e;
 
 				if ((size_t)letti < sizeof t + sizeof ci)
 					continue;
-				memcpy(&ci, busta + sizeof t, sizeof ci);
+				memcpy(&ci, envelope + sizeof t, sizeof ci);
 				/* ⛔⭐ THE CANVAS IS NOT AN INPUT, and it goes BEFORE the guard
 				 *     below.  ⚠ Defect found while rereading, on 15 Aug 2026:
 				 *     `FIGLI_INPUT_RITELA` travels inside `MSG_INPUT` so as not
@@ -8579,7 +8579,7 @@ void figlio_vive(int argc, char **argv)
 					 *    this line said "the user asked" even when the one
 					 *    asking was a clock. */
 					registro_dice(REG_FIGLIO,
-					              ci.a == FIGLI_USCITA_ABBANDONO
+					              ci.a == CHILDREN_EXIT_ABANDON
 					                  ? "⭐ §5.3: the session is ABANDONED — "
 					                    "closing the graphical session and with it its "
 					                    "programs.  ⚠ Nobody asked for it: "
@@ -8621,8 +8621,8 @@ void figlio_vive(int argc, char **argv)
 				}
 
 				if (ci.azione == FIGLI_INPUT_RITELA) {
-					CatturaRitela r;
-					uint32_t ora_l = 0, ora_a = 0;
+					CaptureRecanvas r;
+					uint32_t now_w = 0, now_h = 0;
 
 					/* ⛔ The WANTED canvas is remembered BEFORE trying, and it
 					 *    is not the same thing as `tela_l`/`tela_a` (which are
@@ -8630,22 +8630,22 @@ void figlio_vive(int argc, char **argv)
 					 *    ⚠ Without it, a stage falling after a resize is born
 					 *    again at the previous size and the bands come back —
 					 *    and no line connects the two things. */
-					tela_voluta_l = (uint32_t)ci.a;
-					tela_voluta_a = (uint32_t)ci.b;
+					canvas_intended_w = (uint32_t)ci.a;
+					canvas_intended_h = (uint32_t)ci.b;
 					/* ⭐ From now on the canvas is THE CLIENT'S, not the command
-					 *    line's fallback: see `tela_dal_cliente`. */
-					if (!tela_dal_cliente) {
-						tela_dal_cliente = true;
+					 *    line's fallback: see `canvas_from_client`. */
+					if (!canvas_from_client) {
+						canvas_from_client = true;
 						/* ⭐ And it is retried AT ONCE: waiting for the next
 						 *    retry would mean throwing away the half second
 						 *    just waited on purpose. */
-						palco_riprova_ms = 0;
+						stage_retry_ms = 0;
 						registro_dice(REG_FIGLIO,
 						              "⭐ the CLIENT's canvas has arrived (%ux%u): "
 						              "from now on the session can be born "
 						              "at the right size, without resizing it "
 						              "later",
-						              tela_voluta_l, tela_voluta_a);
+						              canvas_intended_w, canvas_intended_h);
 					}
 
 					if (!cat) {
@@ -8661,7 +8661,7 @@ void figlio_vive(int argc, char **argv)
 						 *      1. the client asks for 2544x926 while the stage is
 						 *         not there yet (server just restarted);
 						 *      2. we answer `NON_ORA`, and `rcp.c` CLOSES the
-						 *         request: `tela_volo = false`;
+						 *         request: `canvas_flight = false`;
 						 *      3. `[M]` 2.2 s later the stage mounts — and it
 						 *         mounts at the WANTED size, which we remembered
 						 *         above: 2544x926, right;
@@ -8691,7 +8691,7 @@ void figlio_vive(int argc, char **argv)
 						              "and retrying AT ONCE instead of finishing the wait "
 						              "— there is someone waiting",
 						              (unsigned)ci.a, (unsigned)ci.b);
-						attendi_tela(tela_voluta_l, tela_voluta_a);
+						wait_canvas(canvas_intended_w, canvas_intended_h);
 						/*
 						 * ⛔⭐ AND THE WAIT IS RESET — 16 Aug 2026, and without
 						 *     this line the "wait" was useless.
@@ -8708,8 +8708,8 @@ void figlio_vive(int argc, char **argv)
 						 *   another "wait", and the deadline is postponed until
 						 *   the stage is really there.
 						 */
-						palco_attesa_ms = PALCO_RIPROVA_MIN_MS;
-						palco_riprova_ms = 0;
+						stage_wait_ms = PALCO_RIPROVA_MIN_MS;
+						stage_retry_ms = 0;
 						continue;
 					}
 					/*
@@ -8748,12 +8748,12 @@ void figlio_vive(int argc, char **argv)
 					 *   ratio that `RCP.md` §11 declares the highest of the
 					 *   document.
 					 *
-					 * ⚠ `!palco_input` is not a fault: it is a session without
+					 * ⚠ `!stage_input` is not a fault: it is a session without
 					 *   input, and the line was already written by whoever did
 					 *   not open it.
 					 */
-					if (palco_input) {
-						int giu = input_rilascia_tutto(palco_input);
+					if (stage_input) {
+						int giu = input_rilascia_tutto(stage_input);
 						if (giu > 0)
 							registro_dice(REG_FIGLIO,
 							              "⭐ §7.1: RELEASED %d keys and "
@@ -8775,13 +8775,13 @@ void figlio_vive(int argc, char **argv)
 					 *    exists, and the page rescales.  Asking the capture for
 					 *    another would make it fall forever. */
 					if (palco_kwin) {
-						uint32_t kl = tela_voluta_l, ka = tela_voluta_a;
+						uint32_t kl = canvas_intended_w, ka = canvas_intended_h;
 
 						misura_del_palco(&kl, &ka);
-						rispondi_tela(tela_voluta_l, tela_voluta_a, kl, ka);
+						rispondi_tela(canvas_intended_w, canvas_intended_h, kl, ka);
 						continue;
 					}
-					r = cattura_ridimensiona(cat, tela_voluta_l, tela_voluta_a);
+					r = cattura_ridimensiona(cat, canvas_intended_w, canvas_intended_h);
 					if (r == CATTURA_RITELA_CHIESTA) {
 						/*
 						 * ⛔ "REQUESTED" IS NOT "THE STREAM IS STILL ALIVE" — `[M]`
@@ -8803,11 +8803,11 @@ void figlio_vive(int argc, char **argv)
 						 *     of hushed up: the remount asks for
 						 *     `prendi_il_palco(tela_voluta_*)`, that is **the same
 						 *     size that has just killed the stage**, and with
-						 *     `codec_chiesto && tela_voluta_l` it picks the SHORT
+						 *     `requested_codec && canvas_intended_w` it picks the SHORT
 						 *     wait.  `[M]` (bench 06-b5 case 3) `cattura_avvia()`
 						 *     at that size **SUCCEEDS 3 times out of 3** and the
 						 *     stage is dead 300 ms later, 3 out of 3 ⇒ the loop
-						 *     does not get out by itself, and `attendi_tela()` at
+						 *     does not get out by itself, and `wait_canvas()` at
 						 *     every round also prevents the parent from expiring.
 						 *     ⚠ On the real product it is `[?]`: Mutter granted 30
 						 *     sizes out of 30 up to 7680x4320, and
@@ -8835,10 +8835,10 @@ void figlio_vive(int argc, char **argv)
 						 *
 						 * `cattura_misura_negoziata()` returns `FALSE` when the
 						 * format **has not been negotiated yet**, and in that
-						 * case ⛔ it writes NOTHING in the two parameters: `ora_l`
-						 * and `ora_a` stay the zeros they are born with.  ⚠ And
+						 * case ⛔ it writes NOTHING in the two parameters: `now_w`
+						 * and `now_h` stay the zeros they are born with.  ⚠ And
 						 * for `rispondi_tela()` zero is not "I don't know": it is
-						 * **"I did not make it"** (`figlio.h`, `corpo_tela`),
+						 * **"I did not make it"** (`figlio.h`, `body_canvas`),
 						 * which `rcp.c` passes on to the client as
 						 * `TELA(RIFIUTATA, NON_ORA)`.
 						 *
@@ -8867,9 +8867,9 @@ void figlio_vive(int argc, char **argv)
 						 *   requested one).  ⇒ Saying it is not an invention: it
 						 *   is the only number known for certain in that branch.
 						 */
-						if (!cattura_misura_negoziata(cat, &ora_l, &ora_a)) {
-							ora_l = tela_voluta_l;
-							ora_a = tela_voluta_a;
+						if (!cattura_misura_negoziata(cat, &now_w, &now_h)) {
+							now_w = canvas_intended_w;
+							now_h = canvas_intended_h;
 							registro_dice(REG_FIGLIO,
 							              "⚠ §7.1: the stage already has the canvas %ux%u, "
 							              "but the format is NOT negotiated "
@@ -8882,9 +8882,9 @@ void figlio_vive(int argc, char **argv)
 							registro_dice(REG_FIGLIO,
 							              "§7.1: the stage already has the canvas %ux%u "
 							              "(negotiated %ux%u): answering at once",
-							              (unsigned)ci.a, (unsigned)ci.b, ora_l,
-							              ora_a);
-						rispondi_tela(tela_voluta_l, tela_voluta_a, ora_l, ora_a);
+							              (unsigned)ci.a, (unsigned)ci.b, now_w,
+							              now_h);
+						rispondi_tela(canvas_intended_w, canvas_intended_h, now_w, now_h);
 						continue;
 					}
 					registro_dice(REG_FIGLIO,
@@ -8892,10 +8892,10 @@ void figlio_vive(int argc, char **argv)
 					              "able right now.  Saying it at once: the client will get "
 					              "`TELA(NON_ORA)` instead of three seconds of waiting",
 					              (unsigned)ci.a, (unsigned)ci.b);
-					rispondi_tela(tela_voluta_l, tela_voluta_a, 0, 0);
+					rispondi_tela(canvas_intended_w, canvas_intended_h, 0, 0);
 					continue;
 				}
-				if (!palco_input) {
+				if (!stage_input) {
 					/* ⛔ "I have no input channel" is NOT "the client made a
 					 *    mistake": it is DECLARED and we carry on, and the
 					 *    session stays up.  ⚠ In chatter: at sixty messages per
@@ -8904,30 +8904,30 @@ void figlio_vive(int argc, char **argv)
 					                   "input %u (action %u) and no channel "
 					                   "to the compositor: NOT injected",
 					                   (unsigned)ci.id, (unsigned)ci.azione);
-					input_rifiutati++;
+					input_refused++;
 					continue;
 				}
 				switch (ci.azione) {
-				case FIGLI_INPUT_PUNTATORE:
-					e = input_puntatore(palco_input, (uint32_t)ci.a,
+				case CHILDREN_INPUT_POINTER:
+					e = input_pointer(stage_input, (uint32_t)ci.a,
 					                    (uint32_t)ci.b);
 					break;
-				case FIGLI_INPUT_PULSANTE:
-					e = input_pulsante(palco_input, ci.codice, ci.premuto);
+				case CHILDREN_INPUT_BUTTON:
+					e = input_button(stage_input, ci.codice, ci.premuto);
 					break;
-				case FIGLI_INPUT_ROTELLA:
+				case CHILDREN_INPUT_WHEEL:
 					/* ⛔ The sign is inverted by `input_rotella()`, only once:
 					 *    here it passes whole, half notches included. */
-					e = input_rotella(palco_input, ci.a, ci.b);
+					e = input_rotella(stage_input, ci.a, ci.b);
 					break;
-				case FIGLI_INPUT_LETTERA:
-					e = input_lettera(palco_input, (uint32_t)ci.a);
+				case CHILDREN_INPUT_LETTER:
+					e = input_lettera(stage_input, (uint32_t)ci.a);
 					break;
-				case FIGLI_INPUT_POSIZIONE:
-					e = input_posizione(palco_input, ci.codice, ci.premuto);
+				case CHILDREN_INPUT_POSITION:
+					e = input_position(stage_input, ci.codice, ci.premuto);
 					break;
 				case FIGLI_INPUT_RILASCIA_TUTTO: {
-					int quanti = input_rilascia_tutto(palco_input);
+					int quanti = input_rilascia_tutto(stage_input);
 					registro_dice(REG_FIGLIO,
 					              "⭐ §7.3: released %d keys and buttons "
 					              "that were still held down.  ⚠ Zero is NOT a "
@@ -8946,7 +8946,7 @@ void figlio_vive(int argc, char **argv)
 					              "⛔ unknown input action %u: NOT "
 					              "injected",
 					              (unsigned)ci.azione);
-					input_rifiutati++;
+					input_refused++;
 					continue;
 				}
 
@@ -8958,28 +8958,28 @@ void figlio_vive(int argc, char **argv)
 				 *     into a promise the frame does not keep — and the latency
 				 *     link would believe it. */
 				if (e == 0) {
-					input_iniettato = ci.id;
+					input_injected = ci.id;
 					/* ⭐ THE REAL SHAPE ON LABWC: after every pointer gesture
 					 *    TAKEN, the probe looks at the pixel of the encoded theme
 					 *    under the point (`wlroots.h`).  On GNOME and KDE it does
 					 *    nothing: the shape already comes from the metadata. */
-					if (ci.azione == FIGLI_INPUT_PUNTATORE) {
-						sonda_x = (uint32_t)ci.a;
-						sonda_y = (uint32_t)ci.b;
-						sonda_nota = true;
+					if (ci.azione == CHILDREN_INPUT_POINTER) {
+						probe_x = (uint32_t)ci.a;
+						probe_y = (uint32_t)ci.b;
+						probe_note = true;
 					}
-					if (sonda_nota && (ci.azione == FIGLI_INPUT_PUNTATORE ||
-					                   ci.azione == FIGLI_INPUT_PULSANTE))
-						cattura_sonda_puntatore(cat, sonda_x, sonda_y);
+					if (probe_note && (ci.azione == CHILDREN_INPUT_POINTER ||
+					                   ci.azione == CHILDREN_INPUT_BUTTON))
+						cattura_sonda_puntatore(cat, probe_x, probe_y);
 				} else if (e == 1) {
 					/* ⛔ Only `input_lettera`: "not producible with this
 					 *    layout".  The log line has already been written by
 					 *    `tastiera.c`, with WHICH layout in it: here it is only
 					 *    counted, or the same thing would end up twice in two
 					 *    different wordings. */
-					input_non_producibili++;
+					input_unproducible++;
 				} else {
-					input_rifiutati++;
+					input_refused++;
 					registro_dettaglio(REG_FIGLIO,
 					                   "input %u (action %u): the compositor "
 					                   "did not take it",
@@ -8992,9 +8992,9 @@ void figlio_vive(int argc, char **argv)
 				for (uint8_t c = 1; c < 3; c++) {
 					if (!tenuto[c])
 						continue;
-					manda_fotogramma(c, tenuto_chiave[c], tenuto_l, tenuto_a,
-					                 tenuto_istante, tenuto[c], tenuto_byte[c],
-					                 tenuto_input);
+					send_frame(c, kept_key[c], kept_w, kept_h,
+					                 kept_instant, tenuto[c], kept_byte[c],
+					                 kept_input);
 					quanti++;
 				}
 				registro_dice(REG_FIGLIO,
@@ -9011,8 +9011,8 @@ void figlio_vive(int argc, char **argv)
 				 *    keyframe, not the previous one — that one is already being
 				 *    received, but its decoder starts again from there and the
 				 *    deltas that follow belong to another chain. */
-				if (codec_chiesto)
-					debito_chiave[codec_chiesto] = true;
+				if (requested_codec)
+					debito_chiave[requested_codec] = true;
 
 				/* ⛔⛔⭐ AND THE CLIPBOARD IS SENT AGAIN TOO — 21 Aug 2026.
 				 *
@@ -9030,8 +9030,8 @@ void figlio_vive(int argc, char **argv)
 				 * ⇒ Whoever comes back receives the desktop's clipboard as they
 				 *   receive the last frame: it is the same idea, applied to the
 				 *   other thing the stage has to give. */
-				if (palco_appunti)
-					appunti_leggi_adesso(palco_appunti);
+				if (stage_clipboard)
+					appunti_leggi_adesso(stage_clipboard);
 				continue;
 			}
 			if (t.tipo == MSG_CHI_SEI) {
@@ -9046,7 +9046,7 @@ void figlio_vive(int argc, char **argv)
 				s.egid = eg;
 				s.sgid = sg;
 				s.ppid = (uint32_t)getppid();
-				s.descrittori = quanti_descrittori();
+				s.descrittori = how_many_descriptors();
 				manda(MSG_SONO, &s, sizeof s, NULL, 0);
 				continue;
 			}
@@ -9072,8 +9072,8 @@ void figlio_vive(int argc, char **argv)
 		 *   to do without the descriptor being readable (its own deadlines),
 		 *   and a loop that trusted only the descriptor would miss them
 		 *   **without any error**. */
-		if (palco_input)
-			input_gira(palco_input);
+		if (stage_input)
+			input_gira(stage_input);
 
 		/* ── 1-ter. the stage that is not there: it is REMOUNTED ─────────── */
 		/* ⛔⭐ THE TWO TWIN DEFECTS ARE CURED HERE, AND IT IS THE SAME PLACE
@@ -9105,24 +9105,24 @@ void figlio_vive(int argc, char **argv)
 			 *    cured.  This line costs one line per second and is worth the
 			 *    three diagnoses it spared me.
 			 */
-			if (ora < palco_riprova_ms) {
-				static uint64_t detto_ms;
+			if (ora < stage_retry_ms) {
+				static uint64_t logged_ms;
 
-				if (ora - detto_ms >= 1000) {
-					detto_ms = ora;
+				if (ora - logged_ms >= 1000) {
+					logged_ms = ora;
 					registro_dice(REG_FIGLIO,
 					              "⏳ without a stage and WAITING: %llu ms to the "
 					              "next attempt (current wait %llu ms, "
 					              "birth requested %llu ms ago) — ⚠ I am not "
 					              "trying and failing: I am not trying",
-					              (unsigned long long)(palco_riprova_ms - ora),
-					              (unsigned long long)palco_attesa_ms,
-					              nascita_chiesta_ms
-					                  ? (unsigned long long)(ora - nascita_chiesta_ms)
+					              (unsigned long long)(stage_retry_ms - ora),
+					              (unsigned long long)stage_wait_ms,
+					              birth_requested_ms
+					                  ? (unsigned long long)(ora - birth_requested_ms)
 					                  : 0ULL);
 				}
 			}
-			if (ora >= palco_riprova_ms) {
+			if (ora >= stage_retry_ms) {
 				/* ⛔⭐ AND THE WHOLE ATTEMPT IS TIMED, not its three main
 				 *     steps.
 				 *
@@ -9137,7 +9137,7 @@ void figlio_vive(int argc, char **argv)
 				 * ⚠ Lesson, and it holds beyond this defect: **a stopwatch on
 				 *   the steps you suspect measures your suspicions.**  What is
 				 *   needed goes around the whole round. */
-				uint64_t tentativo_ms = registro_ora_ms();
+				uint64_t attempt_ms = registro_ora_ms();
 				bool preso;
 
 				/* ⛔ It is remounted at the WANTED canvas, not at the one the
@@ -9145,29 +9145,29 @@ void figlio_vive(int argc, char **argv)
 				 *    with the graphical session.  ⚠ If the compositor grants
 				 *    something else, the reconciliation of point 2 will say so
 				 *    and the parent will know. */
-				preso = prendi_il_palco(tela_voluta_l, tela_voluta_a, dir_rilievo,
+				preso = prendi_il_palco(canvas_intended_w, canvas_intended_h, dir_survey,
 				                        false, &mut, &cat);
-				if (registro_ora_ms() - tentativo_ms >= 250)
+				if (registro_ora_ms() - attempt_ms >= 250)
 					registro_dice(REG_FIGLIO,
 					              "⏱ the WHOLE ATTEMPT (%s) took "
 					              "%llu ms — and the stopwatches of the single steps "
 					              "are silent: the time lies outside them",
 					              preso ? "succeeded" : "failed",
-					              (unsigned long long)(registro_ora_ms() - tentativo_ms));
+					              (unsigned long long)(registro_ora_ms() - attempt_ms));
 				if (preso) {
 					registro_dice(REG_FIGLIO,
 					              "⭐⭐ RESTARTING THE CAPTURE: the stage came back "
 					              "after %llu ms of waiting — and the next "
 					              "frame will be a KEYFRAME (§5.2), because "
 					              "whoever is watching has lost the stream's past",
-					              (unsigned long long)palco_attesa_ms);
-					palco_attesa_ms = PALCO_RIPROVA_MIN_MS;
-					palco_riprova_ms = 0;
+					              (unsigned long long)stage_wait_ms);
+					stage_wait_ms = PALCO_RIPROVA_MIN_MS;
+					stage_retry_ms = 0;
 					/* ⛔ §5.2: after a gap the client can NOT decode a delta —
 					 *    its decoder no longer has the past of this chain.  The
 					 *    debt is set on the REQUESTED codec, not on all. */
-					if (codec_chiesto)
-						debito_chiave[codec_chiesto] = true;
+					if (requested_codec)
+						debito_chiave[requested_codec] = true;
 				} else {
 					/* ⛔ What the attempt left halfway is dismantled: a `mut`
 					 *    open without capture would keep a virtual monitor
@@ -9203,7 +9203,7 @@ void figlio_vive(int argc, char **argv)
 					 *   · `current wait 30000` ⇒ the wait really doubled, up to
 					 *     the ceiling: 2, 4, 8, 16, 30 seconds;
 					 *   · `birth requested 0 ms ago` ⇒ ⛔ and the guard above
-					 *     could not fire, because `nascita_chiesta_ms` is written
+					 *     could not fire, because `birth_requested_ms` is written
 					 *     ONLY when the session turns out DEAD.
 					 *
 					 * ⭐ And the slow rounds are EXACTLY those in which the
@@ -9230,10 +9230,10 @@ void figlio_vive(int argc, char **argv)
 				 *     doubling wait, and the session was born at 3.2 s
 				 *     instead of 1.1 — that is the cure ate half of its
 				 *     gain. */
-				if (sta_nascendo(ora) || !tela_dal_cliente ||
-				    (codec_chiesto && tela_voluta_l)) {
-						palco_attesa_ms = PALCO_NASCITA_RIPROVA_MS;
-						palco_riprova_ms = ora + palco_attesa_ms;
+				if (is_being_born(ora) || !canvas_from_client ||
+				    (requested_codec && canvas_intended_w)) {
+						stage_wait_ms = PALCO_NASCITA_RIPROVA_MS;
+						stage_retry_ms = ora + stage_wait_ms;
 						registro_dettaglio(REG_FIGLIO,
 						                   "without a stage and SOMEONE IS WATCHING (or the "
 						                   "session is being born, requested %llu "
@@ -9241,12 +9241,12 @@ void figlio_vive(int argc, char **argv)
 						                   "on purpose, the doubling wait is "
 						                   "for the stage that is NO LONGER there, "
 						                   "not for the one that is not there YET",
-						                   nascita_chiesta_ms
-						                       ? (unsigned long long)(ora - nascita_chiesta_ms)
+						                   birth_requested_ms
+						                       ? (unsigned long long)(ora - birth_requested_ms)
 						                       : 0ULL,
-						                   (unsigned long long)palco_attesa_ms);
-						if (tela_voluta_l && tela_voluta_a)
-							attendi_tela(tela_voluta_l, tela_voluta_a);
+						                   (unsigned long long)stage_wait_ms);
+						if (canvas_intended_w && canvas_intended_h)
+							wait_canvas(canvas_intended_w, canvas_intended_h);
 						/* ⛔⭐⭐ AND THE AUDIO RING IS EMPTIED BEFORE LEAVING
 						 *       HERE, because this `continue` skips the
 						 *       `audio_svuota()` line further down — and it is
@@ -9276,19 +9276,19 @@ void figlio_vive(int argc, char **argv)
 						audio_svuota();
 						continue;
 					}
-					if (palco_attesa_ms < PALCO_RIPROVA_MIN_MS)
-						palco_attesa_ms = PALCO_RIPROVA_MIN_MS;
+					if (stage_wait_ms < PALCO_RIPROVA_MIN_MS)
+						stage_wait_ms = PALCO_RIPROVA_MIN_MS;
 					else
-						palco_attesa_ms *= 2;
-					if (palco_attesa_ms > PALCO_RIPROVA_MAX_MS)
-						palco_attesa_ms = PALCO_RIPROVA_MAX_MS;
-					palco_riprova_ms = ora + palco_attesa_ms;
+						stage_wait_ms *= 2;
+					if (stage_wait_ms > PALCO_RIPROVA_MAX_MS)
+						stage_wait_ms = PALCO_RIPROVA_MAX_MS;
+					stage_retry_ms = ora + stage_wait_ms;
 					registro_dice(REG_FIGLIO,
 					              "⛔ NO STAGE: the attempt did not succeed "
 					              "— retrying in %llu ms.  ⚠ The wait grows "
 					              "on purpose: without it, this loop writes gigabytes "
 					              "of log and burns a core",
-					              (unsigned long long)palco_attesa_ms);
+					              (unsigned long long)stage_wait_ms);
 					/*
 					 * ⭐⭐ AND "WAIT" KEEPS BEING SAID — 16 Aug 2026, and
 					 *     without this line the earlier cure was useless:
@@ -9302,8 +9302,8 @@ void figlio_vive(int argc, char **argv)
 					 *   silence: whoever keeps quiet makes others infer, and the
 					 *   inference was the defect.
 					 */
-					if (tela_voluta_l && tela_voluta_a)
-						attendi_tela(tela_voluta_l, tela_voluta_a);
+					if (canvas_intended_w && canvas_intended_h)
+						wait_canvas(canvas_intended_w, canvas_intended_h);
 				}
 			}
 		}
@@ -9330,12 +9330,12 @@ void figlio_vive(int argc, char **argv)
 		audio_svuota();
 
 		/* ── 2. the frame ────────────────────────────────────────────────── */
-		if (!codec_chiesto || !cat)
+		if (!requested_codec || !cat)
 			continue;
 		{
 			CatturaFermo fo;
 			GError *sbaglio = NULL;
-			CatturaPresa presa;
+			CaptureTake presa;
 			uint64_t istante_us, adesso;
 
 			memset(&fo, 0, sizeof fo);
@@ -9355,18 +9355,18 @@ void figlio_vive(int argc, char **argv)
 			 *     ⇒ Now it is written anyway, once per second, with the ZEROS
 			 *     in it: whoever reads tells the three things apart without
 			 *     inferring. */
-			adesso = ora_monotona_us();
-			if (adesso - ciclo_detto_ms >= 1000000u) {
-				ciclo_detto_ms = adesso;
+			adesso = now_monotonic_us();
+			if (adesso - cycle_logged_ms >= 1000000u) {
+				cycle_logged_ms = adesso;
 				registro_dice(REG_FIGLIO,
 				              "loop: %llu frames delivered (%llu keyframes), "
 				              "%llu empty waits (still scene: Mutter delivers "
 				              "only when something changes), %llu faults — codec "
 				              "%u, %d/s requested, wait %.2f s%s",
-				              (unsigned long long)ciclo_fotogrammi,
-				              (unsigned long long)ciclo_chiavi,
-				              (unsigned long long)ciclo_zero,
-				              (unsigned long long)ciclo_guasti, codec_chiesto,
+				              (unsigned long long)cycle_frames,
+				              (unsigned long long)cycle_keys,
+				              (unsigned long long)cycle_zero,
+				              (unsigned long long)cycle_faults, requested_codec,
 				              MOVIMENTO_FPS, MOVIMENTO_ATTESA_S,
 				              /* ⛔⭐ AND THIS TAIL IS WORTH AS MUCH AS THE LINE.
 				               *
@@ -9379,8 +9379,8 @@ void figlio_vive(int argc, char **argv)
 				               * even tried to capture**, that is the loop was
 				               * stuck elsewhere.  The line had the right number
 				               * and the wrong word next to it. */
-				              (ciclo_fotogrammi == 0 && ciclo_zero == 0
-				               && ciclo_guasti == 0)
+				              (cycle_frames == 0 && cycle_zero == 0
+				               && cycle_faults == 0)
 				                  ? "  ⛔⛔ and ZERO empty waits means that "
 				                    "the loop DID NOT EVEN TRY to capture: "
 				                    "it is NOT «the scene is still», it is this "
@@ -9409,13 +9409,13 @@ void figlio_vive(int argc, char **argv)
 			 *   once every `RISVEGLIO_MS`: every restart costs the
 			 *   renegotiation, and doing sixty per second would remove precisely
 			 *   the frames being sought. */
-			/* ⚠ `codec_chiesto` sits inside the array, and the bound is ONE:
+			/* ⚠ `requested_codec` sits inside the array, and the bound is ONE:
 			 *   whoever adds a codec must not find a second one written by hand
 			 *   here (it was `< 3`, and it was left behind on 20 August). */
-			if (presa == CATTURA_PRESA_ZERO && codec_chiesto < CODEC_MAX
-			    && debito_chiave[codec_chiesto]) {
-				uint64_t adesso_ms = registro_ora_ms();
-				if (adesso_ms - risveglio_ms >= RISVEGLIO_MS) {
+			if (presa == CATTURA_PRESA_ZERO && requested_codec < CODEC_MAX
+			    && debito_chiave[requested_codec]) {
+				uint64_t current_ms = registro_ora_ms();
+				if (current_ms - wakeup_ms >= RISVEGLIO_MS) {
 					/*
 					 * ⛔⛔⛔ CURE "A" — 21 Aug 2026.  🔸 DERIVED by the
 					 *       coordinator, and the price below is VISIBLE to the
@@ -9447,7 +9447,7 @@ void figlio_vive(int argc, char **argv)
 					 *    desktop, with a key or a button held down, the keyframe
 					 *    does not go out — and a client just attached may stay
 					 *    with the **blank page** until it is released.
-					 *    ⚠ It is limited and heals by itself: `risveglio_ms` is
+					 *    ⚠ It is limited and heals by itself: `wakeup_ms` is
 					 *      NOT touched, so at the first release the backoff has
 					 *      already expired and the next round wakes up.
 					 *    ⚠ And the scene is rare: a drag **moves** the desktop,
@@ -9459,14 +9459,14 @@ void figlio_vive(int argc, char **argv)
 					 *   `monitors-changed`, the keymap change, and those GNOME
 					 *   will add.
 					 */
-					unsigned giu = palco_input ? input_premuti(palco_input) : 0;
+					unsigned giu = stage_input ? input_premuti(stage_input) : 0;
 
 					if (giu) {
 						/* ⛔ And it is said ONCE per wait, not at every round: at
 						 *    400 ms each these lines would drown the log
 						 *    precisely while the user drags. */
-						if (!risveglio_zitto) {
-							risveglio_zitto = 1;
+						if (!wakeup_quiet) {
+							wakeup_quiet = 1;
 							registro_dice(
 							    REG_FIGLIO,
 							    "⛔ a KEYFRAME is due and the scene is still, but %u "
@@ -9479,8 +9479,8 @@ void figlio_vive(int argc, char **argv)
 							    giu);
 						}
 					} else {
-						risveglio_zitto = 0;
-						risveglio_ms = adesso_ms;
+						wakeup_quiet = 0;
+						wakeup_ms = current_ms;
 						registro_dice(REG_FIGLIO,
 						              "⭐ a KEYFRAME is due and the scene has been still for "
 						              "%u ms: restarting the stream to get "
@@ -9510,8 +9510,8 @@ void figlio_vive(int argc, char **argv)
 				g_clear_error(&sbaglio);
 				cattura_fermo_libera(&fo);
 				smonta_il_palco(&mut, &cat);
-				palco_attesa_ms = PALCO_RIPROVA_MIN_MS;
-				palco_riprova_ms = registro_ora_ms() + palco_attesa_ms;
+				stage_wait_ms = PALCO_RIPROVA_MIN_MS;
+				stage_retry_ms = registro_ora_ms() + stage_wait_ms;
 				continue;
 			}
 			if (presa == CATTURA_PRESA_ZERO) {
@@ -9523,7 +9523,7 @@ void figlio_vive(int argc, char **argv)
 				 *    ⚠ Nothing is encoded and nothing is sent: I1 forbids
 				 *    lowering the rate out of caution, not standing still when
 				 *    the scene does not move. */
-				ciclo_zero++;
+				cycle_zero++;
 				g_clear_error(&sbaglio);
 				continue;
 			}
@@ -9545,7 +9545,7 @@ void figlio_vive(int argc, char **argv)
 				 *   loop does not pass here again, and the remount with the
 				 *   growing wait is at point 1-ter.  ⚠ The line is written
 				 *   **once per loss**, not once per round. */
-				ciclo_guasti++;
+				cycle_faults++;
 				registro_dice(REG_FIGLIO,
 				              "⛔⛔ THE STAGE HAS GONE FROM UNDER OUR FEET "
 				              "(grab %u: %s).  ⚠ It is NOT «the scene is still»: "
@@ -9558,8 +9558,8 @@ void figlio_vive(int argc, char **argv)
 				g_clear_error(&sbaglio);
 				cattura_fermo_libera(&fo);
 				smonta_il_palco(&mut, &cat);
-				palco_attesa_ms = PALCO_RIPROVA_MIN_MS;
-				palco_riprova_ms = registro_ora_ms() + palco_attesa_ms;
+				stage_wait_ms = PALCO_RIPROVA_MIN_MS;
+				stage_retry_ms = registro_ora_ms() + stage_wait_ms;
 				continue;
 			}
 			g_clear_error(&sbaglio);
@@ -9632,8 +9632,8 @@ void figlio_vive(int argc, char **argv)
 			if (!fo.larghezza || !fo.altezza || !fo.stride
 			    || fo.stride < (guint64) fo.larghezza * 4u
 			    || fo.byte < (guint64) fo.stride * fo.altezza) {
-				fotogrammi_incoerenti++;
-				if (fotogrammi_incoerenti == 1)
+				inconsistent_frames++;
+				if (inconsistent_frames == 1)
 					registro_dice(REG_FIGLIO,
 					              "⛔ frame DISCARDED: it declares %ux%u with stride %u "
 					              "and carries %llu bytes — whoever compresses it would read "
@@ -9649,7 +9649,7 @@ void figlio_vive(int argc, char **argv)
 			}
 
 			if (fo.larghezza != tela_l || fo.altezza != tela_a) {
-				uint32_t chiesta_l = 0, chiesta_a = 0;
+				uint32_t requested_w = 0, requested_h = 0;
 				char errore[256];
 
 				/* ⭐ AND THIS IS THE PLACE WHERE THE DIVERGENCE IS REALLY READ,
@@ -9668,15 +9668,15 @@ void figlio_vive(int argc, char **argv)
 				 *   cause costs more than a silent log.  ⛔ And in neither case
 				 *   does the behaviour change: the reconciliation below looks at
 				 *   the frame, which is right in both. */
-				cattura_misura_chiesta(cat, &chiesta_l, &chiesta_a);
+				capture_measure_requested(cat, &requested_w, &requested_h);
 				registro_dice(REG_FIGLIO,
 				              "⭐⭐ NEW CANVAS FROM THE STAGE: %ux%u → %ux%u (asked of the "
 				              "producer %ux%u)%s.  Reopening the encoder, "
 				              "remapping the pointer, and from here the 28 bytes of §6.2 "
 				              "carry the new size",
-				              tela_l, tela_a, fo.larghezza, fo.altezza, chiesta_l,
-				              chiesta_a,
-				              (chiesta_l == fo.larghezza && chiesta_a == fo.altezza)
+				              tela_l, tela_a, fo.larghezza, fo.altezza, requested_w,
+				              requested_h,
+				              (requested_w == fo.larghezza && requested_h == fo.altezza)
 				                  ? ""
 				                  : " — ⛔ GRANTED DIFFERS FROM REQUESTED: either the "
 				                    "compositor granted something else (§4.5 "
@@ -9689,9 +9689,9 @@ void figlio_vive(int argc, char **argv)
 				 *    codec, and an encoder open and not resized would deliver
 				 *    cropped images at the first frame after a codec change. */
 				for (uint8_t c = 1; c < CODEC_MAX; c++) {
-					if (!codif[c])
+					if (!enc[c])
 						continue;
-					if (!codificatore_ridimensiona(codif[c], fo.larghezza,
+					if (!codificatore_ridimensiona(enc[c], fo.larghezza,
 					                               fo.altezza, errore,
 					                               sizeof errore)) {
 						registro_dice(REG_FIGLIO,
@@ -9700,8 +9700,8 @@ void figlio_vive(int argc, char **argv)
 						              "an image that is not its own — better "
 						              "no frame than a cropped one",
 						              c, fo.larghezza, fo.altezza, errore);
-						codificatore_libera(codif[c]);
-						codif[c] = NULL;
+						codificatore_libera(enc[c]);
+						enc[c] = NULL;
 					}
 					/* ⛔ §5.2: the first at the new size MUST be a keyframe.
 					 *    `codificatore_ridimensiona()` already imposes it by
@@ -9716,8 +9716,8 @@ void figlio_vive(int argc, char **argv)
 				 *    a fault: it is a session without input, and it is silent here
 				 *    because the line was already written by whoever did not open
 				 *    it. */
-				if (palco_input
-				    && input_ritela(palco_input, fo.larghezza, fo.altezza) != 0)
+				if (stage_input
+				    && input_recanvas(stage_input, fo.larghezza, fo.altezza) != 0)
 					registro_dice(REG_FIGLIO,
 					              "⛔ the pointer region did NOT get remapped "
 					              "on %ux%u: from here on the pointer would go "
@@ -9728,12 +9728,12 @@ void figlio_vive(int argc, char **argv)
 				 *    compositor does it, and the call does nothing).  ⚠ HERE, at
 				 *    the first frame of the new size: labwc has already redone
 				 *    the layout. */
-				if (palco_input)
-					input_riporta_dentro(palco_input);
+				if (stage_input)
+					input_riporta_dentro(stage_input);
 
 				/* 3. ⛔ AND THE KEPT KEYFRAMES ARE THROWN AWAY — defect found
 				 *    while refuting: `tenuto[]` is per CODEC, but
-				 *    `tenuto_l`/`tenuto_a` are a single pair.  ⇒ After a resize
+				 *    `kept_w`/`kept_h` are a single pair.  ⇒ After a resize
 				 *    the inactive codec kept a keyframe of the OLD size that
 				 *    `MSG_RIMANDA_PALCO` would have sent declaring the NEW size:
 				 *    the client would have sized the canvas on one number and
@@ -9745,8 +9745,8 @@ void figlio_vive(int argc, char **argv)
 						continue;
 					free(tenuto[c]);
 					tenuto[c] = NULL;
-					tenuto_byte[c] = 0;
-					tenuto_chiave[c] = false;
+					kept_byte[c] = 0;
+					kept_key[c] = false;
 				}
 
 				/* 4. and the real size becomes ours. */
@@ -9764,12 +9764,12 @@ void figlio_vive(int argc, char **argv)
 				 *   will again be given by the MEASURED stride, not by a
 				 *   computation on the width. */
 				if (COPIA_ZERO && !scheda_mai_piu && scheda_negata_l != 0
-				    && strada_del_palco == CATTURA_STRADA_MEMORIA
+				    && stage_route == CATTURA_STRADA_MEMORIA
 				    && (fo.larghezza != scheda_negata_l
 				        || fo.altezza != scheda_negata_a)) {
 					scheda_negata_l = 0;
 					scheda_negata_a = 0;
-					scheda_da_riprovare = true;
+					card_to_retry = true;
 					registro_dice(REG_FIGLIO,
 					              "⭐ new canvas %ux%u: zero copy had been "
 					              "denied for the previous canvas, and on this one it is "
@@ -9784,10 +9784,10 @@ void figlio_vive(int argc, char **argv)
 				 *    nobody had asked for anything (the stage drifting by
 				 *    itself): it is a fact, and whoever receives it decides what
 				 *    to do with it. */
-				rispondi_tela(tela_voluta_l, tela_voluta_a, tela_l, tela_a);
+				rispondi_tela(canvas_intended_w, canvas_intended_h, tela_l, tela_a);
 			}
 
-			istante_us = istante_del_fotogramma(&fo, ora_monotona_us());
+			istante_us = frame_instant(&fo, now_monotonic_us());
 			/* ⭐⭐ §6.2 — THE STAMP IS TAKEN HERE, at the instant of capture,
 			 *     and nowhere else.  ⛔ Reading it after encoding would say
 			 *     "the last input injected before SENDING", which is a higher
@@ -9799,9 +9799,9 @@ void figlio_vive(int argc, char **argv)
 			 *    codecs a `? :` was enough, with the third a nested `? :` would
 			 *    say "AV1" of every number it does not know — and the symptom
 			 *    would be an AV1 stream sent with label 3. */
-			codifica_e_manda(&fo, codec_del_numero(codec_chiesto),
-			                 codec_chiesto, NULL, NULL, istante_us, tela_l,
-			                 tela_a, input_iniettato);
+			codifica_e_manda(&fo, codec_from_number(requested_codec),
+			                 requested_codec, NULL, NULL, istante_us, tela_l,
+			                 tela_a, input_injected);
 			/* ⛔⭐ THE RELEASE — and on the card's road this line is NOT a
 			 *     clean-up: it is the cure of `LEZIONI.md` §8.  Until it is
 			 *     called, Mutter's buffer is ours; and it is called AFTER the
@@ -9826,23 +9826,23 @@ void figlio_vive(int argc, char **argv)
 			 *      for a window 1268 px wide.  ⚠ The dismantling stays as a
 			 *      FALLBACK, for the only case in which the node cannot be taken
 			 *      back. */
-			if (scheda_da_abbandonare || scheda_da_riprovare) {
-				strada_del_palco = scheda_da_riprovare
+			if (scheda_da_abbandonare || card_to_retry) {
+				stage_route = card_to_retry
 				                       ? CATTURA_STRADA_SCHEDA
 				                       : CATTURA_STRADA_MEMORIA;
 				scheda_da_abbandonare = false;
-				scheda_da_riprovare = false;
+				card_to_retry = false;
 				if (rimonta_solo_la_cattura(mut, &cat, tela_l, tela_a))
 					continue;
 				smonta_il_palco(&mut, &cat);
-				palco_attesa_ms = PALCO_RIPROVA_MIN_MS;
-				palco_riprova_ms = registro_ora_ms() + palco_attesa_ms;
+				stage_wait_ms = PALCO_RIPROVA_MIN_MS;
+				stage_retry_ms = registro_ora_ms() + stage_wait_ms;
 				continue;
 			}
 		}
 	}
 
-	codificatori_libera();
+	encoders_free();
 	for (uint8_t c = 0; c < 3; c++) {
 		free(tenuto[c]);
 		tenuto[c] = NULL;
@@ -9850,10 +9850,10 @@ void figlio_vive(int argc, char **argv)
 	registro_dice(REG_FIGLIO,
 	              "the loop stops: %llu frames delivered (%llu keyframes), "
 	              "%llu empty waits, %llu faults",
-	              (unsigned long long)ciclo_fotogrammi,
-	              (unsigned long long)ciclo_chiavi,
-	              (unsigned long long)ciclo_zero,
-	              (unsigned long long)ciclo_guasti);
+	              (unsigned long long)cycle_frames,
+	              (unsigned long long)cycle_keys,
+	              (unsigned long long)cycle_zero,
+	              (unsigned long long)cycle_faults);
 
 	/* ⛔⭐ AND BEFORE EVERYTHING ELSE WHAT WAS LEFT HELD DOWN IS RELEASED.
 	 *
@@ -9867,8 +9867,8 @@ void figlio_vive(int argc, char **argv)
 	registro_dice(REG_FIGLIO,
 	              "the input channel closes: %u injected, %u refused "
 	              "by the compositor, %u not producible with the layout (§7.3)",
-	              (unsigned)input_iniettato, (unsigned)input_rifiutati,
-	              (unsigned)input_non_producibili);
+	              (unsigned)input_injected, (unsigned)input_refused,
+	              (unsigned)input_unproducible);
 	/* ⚠ And the release is done by `smonta_il_palco`, which is the SAME
 	 *   dismantling as the remount: two roads to dismantle the stage would
 	 *   mean that one of the two, one day, will forget a piece. */
@@ -9879,9 +9879,9 @@ void figlio_vive(int argc, char **argv)
 	 *    write into the ring of a dying process — and the defect would show up
 	 *    every now and then, at exit, which is the place where nobody looks. */
 	audio_regola_figlio(0);
-	if (son) {
-		suono_chiudi(son);
-		son = NULL;
+	if (snd) {
+		sound_close(snd);
+		snd = NULL;
 	}
 	/* ⭐ R1/R2: if the session is gone, the manager goes back to how it was */
 	sessione_sgombera_gestore("the child exits");

@@ -73,7 +73,7 @@ extern "C" {
  * ⭐⭐ AND SINCE 25 AUG 2026 (evening) THE NUMBER IS **CONFIGURABLE** — phase 10,
  *     `--tetto-sessioni N`.  The `#define` below stays, and it is the
  *     **DEFAULT**; the value in force is told by `rcp_tetto()`, and it is moved
- *     by `rcp_tetto_imposta()` only once, at startup, before a session
+ *     by `rcp_cap_set()` only once, at startup, before a session
  *     exists.  ⇒ The four tables are **allocated** on that number instead of
  *     being fixed-size arrays: `[M]` §3.3 had verified that the five
  *     functions that walk `attaccate[]` do **only linear scans** and
@@ -101,7 +101,7 @@ int rcp_tetto(void);
  *    — if the tables have already been allocated, because then there would be
  *    two numbers in force in the same process, which is exactly the «second
  *    road» that `CODER.md` §2-bis forbids. */
-bool rcp_tetto_imposta(int quante);
+bool rcp_cap_set(int quante);
 
 /* ⭐ PHASE 18 — the video codecs the ECCOMI OFFERS («hevc,h264» · «h264» · «»),
  *    measured at startup by the parent (`figlio_capacita_video()`), not written.
@@ -114,24 +114,24 @@ const char *rcp_video_codec(void);
 enum {
 	RCP_CHIUSO_DALL_UTENTE = 0x01,
 	RCP_INATTIVITA = 0x02,
-	RCP_SESSIONE_ABBANDONATA = 0x03,
-	RCP_SESSIONE_LOCALE_PREVALSA = 0x04,
-	RCP_GIA_ATTIVA_LOCALE = 0x05,
+	RCP_SESSION_ABANDONED = 0x03,
+	RCP_LOCAL_SESSION_PREVAILED = 0x04,
+	RCP_ALREADY_ACTIVE_LOCALLY = 0x05,
 	RCP_BUDGET_PIENO = 0x06,
-	RCP_CREDENZIALI_ERRATE = 0x07,
-	RCP_TROPPI_TENTATIVI = 0x08,
-	RCP_NIENTE_IN_COMUNE = 0x09,
-	RCP_VERSIONE_INCOMPATIBILE = 0x0A,
+	RCP_WRONG_CREDENTIALS = 0x07,
+	RCP_TOO_MANY_ATTEMPTS = 0x08,
+	RCP_NOTHING_IN_COMMON = 0x09,
+	RCP_INCOMPATIBLE_VERSION = 0x0A,
 	RCP_ERRORE_PROTOCOLLO = 0x0B,
 	RCP_SERVER_IN_CHIUSURA = 0x0C,
 	RCP_TEMPO_SCADUTO = 0x0D,
-	RCP_SESSIONE_NON_SERVIBILE = 0x0E,
+	RCP_SESSION_UNSERVABLE = 0x0E,
 	RCP_GIA_ATTIVA_REMOTA = 0x0F,
 	/* ⭐ 15 Aug 2026, `DECISIONI.md` §4.1-quater: the user has LOGGED OUT of the
 	 * desktop («Log out»).  ⛔ It is NOT `0x01`: that is the wire dropping and
 	 * it carries the promise «reattach and find everything again», which after a
 	 * logout is false — the graphical session has ended and the programs are closed. */
-	RCP_SESSIONE_TERMINATA = 0x10,
+	RCP_SESSION_TERMINATED = 0x10,
 };
 
 typedef struct rcp_sessione rcp_sessione;
@@ -195,7 +195,7 @@ typedef struct {
 	 *    look the same: it is the **E8** error shape, and on this
 	 *    exact field it has already been paid for (finding R1.7, 9 Aug 2026).
 	 *
-	 * ⛔ AND THEY ARE **OPTIONAL**: if `video_apri` is NULL this server has no
+	 * ⛔ AND THEY ARE **OPTIONAL**: if `video_open` is NULL this server has no
 	 *    video channel, and `rcp_video_apri()` returns
 	 *    `RCP_VIDEO_NIENTE_CANALE` instead of keeping quiet.  ⚠ «I have no video
 	 *    channel» and «the frame did not leave» are two different facts
@@ -226,7 +226,7 @@ typedef struct {
 	 *     *«screen frozen, and no line saying why»* of finding R1.9.
 	 *
 	 *     ⚠ Whoever does not know writes `0` and the line will say so. */
-	bool (*video_apri)(void *ctx, int64_t *stream, uint64_t *restano);
+	bool (*video_open)(void *ctx, int64_t *stream, uint64_t *restano);
 	/* Writes bytes on that stream.  ⛔ `false` means «they did not get in»,
 	 * and the caller RESETS: a stream missing a piece is not closed with FIN,
 	 * because FIN means «complete» (§6.2). */
@@ -237,7 +237,7 @@ typedef struct {
 	void (*video_fin)(void *ctx, int64_t stream);
 	/* ⛔ §5.1, §6.2: `RESET_STREAM` ⇒ the frame is **incomplete**, the
 	 * client throws it away, does NOT hand it over, and treats it as a gap. */
-	void (*video_azzera)(void *ctx, int64_t stream);
+	void (*video_reset)(void *ctx, int64_t stream);
 
 	/* ------------------------------------------------------------------ */
 	/* ⭐ THE SIX HOOKS OF THE INPUT CHANNEL — `RCP.md` §7.3, and the signatures
@@ -279,8 +279,8 @@ typedef struct {
 	 *    `input_lettera` — «that character CANNOT be produced with the
 	 *    session's layout», which §7.3 requires to be written to the
 	 *    log and forbids replacing with another letter or with silence. */
-	int (*input_puntatore)(void *ctx, uint32_t x, uint32_t y);
-	int (*input_pulsante)(void *ctx, uint16_t codice, int premuto);
+	int (*input_pointer)(void *ctx, uint32_t x, uint32_t y);
+	int (*input_button)(void *ctx, uint16_t codice, int premuto);
 	/* ⛔⛔ THE SIGN IS NOT INVERTED HERE, AND IT IS NOT INVERTED IN `rcp.c`.
 	 *
 	 *     `RCP.md` §7.3 (box «The sign of the wheel», `[M]` 10 Aug
@@ -294,7 +294,7 @@ typedef struct {
 	 *   `rcp.c` does NOT round. */
 	int (*input_rotella)(void *ctx, int32_t asse_x, int32_t asse_y);
 	int (*input_lettera)(void *ctx, uint32_t carattere);
-	int (*input_posizione)(void *ctx, uint16_t codice, int premuto);
+	int (*input_position)(void *ctx, uint16_t codice, int premuto);
 	/* ⛔⭐ §7.3, last paragraph: «On detach everything is released.  When a
 	 *     connection ends — by farewell, by silence, by error — the
 	 *     server MUST release every key and every button that are
@@ -442,8 +442,8 @@ typedef struct {
 	 *    which is exactly the behaviour before 15 Aug 2026.
 	 *
 	 * `false` = «I do not know» — no stage, or no frame yet.  ⚠ It is not
-	 * «0x0»: the difference is the same as for `rcp_tela_in_vigore()`. */
-	bool (*tela_del_palco)(void *ctx, uint32_t *larghezza, uint32_t *altezza);
+	 * «0x0»: the difference is the same as for `rcp_canvas_in_effect()`. */
+	bool (*stage_canvas)(void *ctx, uint32_t *larghezza, uint32_t *altezza);
 
 	/* ⛔⭐ «DOES THIS USER ALREADY HAVE A LOCAL GRAPHICAL SESSION?» — §5.1 of
 	 *     `SPECIFICHE.md`, reason `0x05 GIA_ATTIVA_LOCALE`.
@@ -466,7 +466,7 @@ typedef struct {
 	 *
 	 * Returns `true` if a **local** graphical session of that user
 	 * exists right now. */
-	bool (*sessione_locale)(void *ctx, const char *utente, char *descrizione,
+	bool (*sessione_locale)(void *ctx, const char *utente, char *description,
 	                        size_t quanto);
 
 	/* ⛔⭐ «THE USER HAS ASKED TO LEAVE» — `RCP.md` §7.6, `TERMINA_SESSIONE`.
@@ -509,7 +509,7 @@ typedef struct {
 	 *   hanging** — and the symptom is «the desktop froze».
 	 *
 	 * ⛔⭐ AND WHY THE `video_*` ARE NOT REUSED, though they open the same kind
-	 *     of stream: `video_apri` remembers which stream it opened, because §5.1
+	 *     of stream: `video_open` remembers which stream it opened, because §5.1
 	 *     makes it reset **the previous one** when a more recent one leaves.  A
 	 *     clipboard transfer that went through there would become the
 	 *     «previous frame» of the next one — that is it would be reset
@@ -526,7 +526,7 @@ typedef struct {
 	/* ⛔ Closes the stream with FIN: the transfer is over.  ⚠ Unlike
 	 * video, here FIN is not a statement about the content — the length
 	 * is already in the framing of §6.1 — it is the end of the transfer. */
-	void (*appunti_fin)(void *ctx, int64_t stream);
+	void (*clipboard_fin)(void *ctx, int64_t stream);
 
 	/* ⭐ «THE CLIENT HAS COPIED SOME TEXT»: offer it to the session.
 	 *
@@ -535,13 +535,13 @@ typedef struct {
 	 *    pastes.
 	 * `true` = the request has left.  ⚠ NOT «the session has it»: who knows that
 	 * is the compositor, and whoever sews things together writes it. */
-	bool (*appunti_offri)(void *ctx);
+	bool (*clipboard_offer)(void *ctx);
 
 	/* ⭐ The answer to whoever, inside the session, is pasting.  `testo` NULL =
 	 * «I do not have it», ⛔ **which is an answer all the same** and is the one that
 	 * unblocks whoever is pasting.  `serial` is the number the session gave to
 	 * its request, and it comes back as is. */
-	bool (*appunti_risposta)(void *ctx, uint32_t serial, const char *testo,
+	bool (*clipboard_response)(void *ctx, uint32_t serial, const char *testo,
 	                         size_t byte);
 
 	void (*termina_sessione)(void *ctx);
@@ -552,7 +552,7 @@ typedef struct {
 	 *    even to whoever came back into their desktop and on any desktop: the
 	 *    page wrote «new session, unknown desktop» to everyone.
 	 *
-	 * `sessione_ripresa` — `true` if this user's stage WAS ALREADY THERE when
+	 * `session_resumed` — `true` if this user's stage WAS ALREADY THERE when
 	 *   PAM admitted them (§4.5: `2 = RIPRESA`).  ⚠ The fact is known at the
 	 *   verdict, not at `SESSIONE`: by that point the newborn child is already
 	 *   there, and asking there would say «resumed» to everyone.
@@ -562,15 +562,15 @@ typedef struct {
 	 * ⛔ OPTIONAL, like the others: whoever does not connect them (the wire
 	 *    benches, where there is no stage) sends what it sent before — `NUOVA` and
 	 *    `sconosciuto` — which for them is true. */
-	bool (*sessione_ripresa)(void *ctx);
+	bool (*session_resumed)(void *ctx);
 	const char *(*desktop)(void *ctx);
 } rcp_ganci;
 
 /* Opens an RCP session on a newborn control channel.
  * `provenienza` is the address of whoever connects: it serves the per-address
- * counter of §4.4-bis and the log.  `ora_ms` is a monotonic clock. */
+ * counter of §4.4-bis and the log.  `now_ms` is a monotonic clock. */
 rcp_sessione *rcp_apri(const rcp_ganci *g, const char *provenienza,
-                       uint64_t ora_ms);
+                       uint64_t now_ms);
 
 /* Closes and frees.  If the session was attached, frees the slot. */
 void rcp_libera(rcp_sessione *s);
@@ -578,11 +578,11 @@ void rcp_libera(rcp_sessione *s);
 /* Bytes arrived on the control channel.
  * Returns false if the session has ended (by farewell or by violation). */
 bool rcp_ricevi(rcp_sessione *s, const uint8_t *dati, size_t len,
-                uint64_t ora_ms);
+                uint64_t now_ms);
 
 /* Makes time pass: the ceilings of §4.6 and the fixed delay of §4.4-bis.
  * Returns false if the session has ended. */
-bool rcp_tempo(rcp_sessione *s, uint64_t ora_ms);
+bool rcp_tempo(rcp_sessione *s, uint64_t now_ms);
 
 /* ⭐ The outcome of the asynchronous check comes back through here —
  * `DECISIONI.md` §1.10.
@@ -600,7 +600,7 @@ bool rcp_tempo(rcp_sessione *s, uint64_t ora_ms);
  *   because the fixed delay of §4.4-bis must have expired — and the verdict,
  *   now, can arrive before or after it. */
 bool rcp_verdetto(rcp_sessione *s, uint64_t pratica, bool ammesso,
-                  uint64_t ora_ms);
+                  uint64_t now_ms);
 
 /* ⛔ §8.1: whoever closes MUST send `CONGEDO` with a reason BEFORE closing the
  * WebTransport session, and MUST repeat the reason in the application error
@@ -668,7 +668,7 @@ const char *rcp_utente(const rcp_sessione *s);
  * ⚠ Returns `false` when the client **did not declare it**, and it is not the
  *   same thing as «declared it zero»: whoever receives `false` falls back on the
  *   stage's canvas, and not on a zero. */
-bool rcp_misura_massima(const rcp_sessione *s, uint32_t *l, uint32_t *a);
+bool rcp_max_size(const rcp_sessione *s, uint32_t *l, uint32_t *a);
 
 /* ⛔⭐ §5.3 — «the client is still there»: the TRANSPORT calls it after every
  *     DECRYPTED AND AUTHENTICATED packet, and the thirty-second clock depends on
@@ -676,7 +676,7 @@ bool rcp_misura_massima(const rcp_sessione *s, uint32_t *l, uint32_t *a);
  *     inactivity*, which is thirty MINUTES and not thirty seconds.  The long
  *     reason — and the measurement that imposed it — is on the field
  *     `ultima_vita` in `rcp.c`. */
-void rcp_segno_di_vita(rcp_sessione *s, uint64_t ora_ms);
+void rcp_segno_di_vita(rcp_sessione *s, uint64_t now_ms);
 
 /* ⛔⭐ §5.3 — THE SECOND CLOCK: «30 minutes without input ⇒ REMOTIX detaches the
  *     client, and getting back in takes user and password».  The farewell goes
@@ -688,8 +688,8 @@ void rcp_segno_di_vita(rcp_sessione *s, uint64_t ora_ms);
  *   to be thrown out.  ⛔ Whoever sews things together MUST write the value in
  *   force to the log: a half-hour ceiling nobody can read is tested only by
  *   waiting half an hour, and that is the way never to test it. */
-void rcp_inattivita_imposta(uint64_t ms);
-uint64_t rcp_inattivita(void);
+void rcp_inactivity_set(uint64_t ms);
+uint64_t rcp_inactivity(void);
 
 /* ⛔⭐⭐ THE GHOST EVICTION — phase 9, 23 Aug 2026.  ⚠ It is NOT a fourth
  *      clock of §5.3: it is a shortcut inside the first, and it fires ONLY
@@ -706,16 +706,16 @@ uint64_t rcp_inattivita(void);
  *     23 August the default was `0` for invariant I6.
  * ⚠ `[M]` 23-24 Aug 2026: the ghost goes from 32.13 s / 14 refusals to 16.83 s /
  *   7 refusals.
- * ⚠ The RECOMMENDED value is given by `rcp_sfratto_consigliato()` — 15 000 ms,
+ * ⚠ The RECOMMENDED value is given by `rcp_eviction_recommended()` — 15 000 ms,
  *   that is half of the silence clock — and the reason (the browser's keep-alive,
  *   `[M]` 15 s) is in the box above `SFRATTO_PREDEFINITO` in `rcp.c`.  Below
  *   that number one risks evicting an ALIVE and still client, that is
  *   switching off invariant I2.
  * ⛔ Whoever sews things together MUST write the value in force to the log, on
  *   or off: a threshold nobody can read is the E1 shape. */
-void rcp_sfratto_imposta(uint64_t ms);
-uint64_t rcp_sfratto(void);
-uint64_t rcp_sfratto_consigliato(void);
+void rcp_eviction_set(uint64_t ms);
+uint64_t rcp_eviction(void);
+uint64_t rcp_eviction_recommended(void);
 
 /* ⛔ Resets the registry of active sessions.  It serves ONLY the bench, between
  * one test and the next: in a real server nobody calls it. */
@@ -785,7 +785,7 @@ enum {
  *               capture (§6.2).  ⚠ It is not a time of day.
  * `input`       the identifier of the last input injected before the
  *               capture, 0 if none (§6.2, §7.3).
- * `ora_ms`      the session clock, as for `rcp_ricevi()`.  ⛔ It is a separate
+ * `now_ms`      the session clock, as for `rcp_ricevi()`.  ⛔ It is a separate
  *               parameter and is NOT derived from `istante_us`: that is the
  *               capture clock, and that the two are the same is likely and
  *               written nowhere.  It serves the 200 ms of §5.2 (exception 5
@@ -799,7 +799,7 @@ enum {
  *    inside: the protection lives in the program, not in a line that can get
  *    lost. */
 int rcp_video_apri(rcp_sessione *s, bool chiave, size_t lunghezza,
-                   uint64_t istante_us, uint32_t input, uint64_t ora_ms);
+                   uint64_t istante_us, uint32_t input, uint64_t now_ms);
 
 /* Writes a piece of the data of the open frame.  ⛔ If they do not get in, the
  * stream is RESET in here (§6.2) and `RCP_VIDEO_ROTTO_A_META` is returned:
@@ -832,10 +832,10 @@ bool rcp_video_abbandona(rcp_sessione *s, const char *perche);
  *
  * `chiave` is passed by the caller because §5.2 forbids abandoning a keyframe
  * **downstream too**: here it is refused, written, and `false` is returned.
- * `byte_non_usciti` goes into the line: «I threw it away before spending
+ * `unsent_bytes` goes into the line: «I threw it away before spending
  * bandwidth» and «I had almost sent it already» are two different facts. */
 bool rcp_video_abbandonato_a_valle(rcp_sessione *s, uint32_t numero, bool chiave,
-                                   size_t byte_non_usciti, const char *perche);
+                                   size_t unsent_bytes, const char *perche);
 
 /* ⛔ §2.3 — the mandatory line for when the stream **does not open**: «and in
  * both cases it is written to the log».  `rcp_video_apri()` calls it by
@@ -854,7 +854,7 @@ void rcp_video_niente_credito(rcp_sessione *s, bool chiave, uint64_t restano);
  *
  * ⚠ It is NOT `rcp_video_abbandonato_a_valle()`: that is form A (stream
  *   reset, bytes already spent) and it would write to the log one form in place
- *   of another.  ⚠ And it does NOT touch `video_abbandonati`, for the reason the
+ *   of another.  ⚠ And it does NOT touch `video_abandoned`, for the reason the
  *   box of `rcp_video_niente_credito()` declares: on the wire there is nothing
  *   to reset.
  *
@@ -871,7 +871,7 @@ void rcp_video_scartato_prima_del_filo(rcp_sessione *s, bool chiave,
 /* How many frames this session has sent and how many it has abandoned.
  * ⛔ The two numbers together, always: «zero abandoned» on its own does not
  * tell a line that carries from a channel that has never sent anything. */
-void rcp_video_conti(const rcp_sessione *s, uint32_t *spediti,
+void rcp_video_counts(const rcp_sessione *s, uint32_t *spediti,
                      uint32_t *abbandonati);
 
 /* The convenience: opens, writes and closes in one call.  ⛔ The 16 MiB ceiling
@@ -879,7 +879,7 @@ void rcp_video_conti(const rcp_sessione *s, uint32_t *spediti,
  * not a byte leaves and nothing is opened. */
 int rcp_video_spedisci(rcp_sessione *s, bool chiave, const uint8_t *dati,
                        size_t len, uint64_t istante_us, uint32_t input,
-                       uint64_t ora_ms);
+                       uint64_t now_ms);
 
 /* ⛔ §7.1 — `TELA(ADATTATA, lar, alt)` has just been answered: from here on the
  * canvas **in force** is this one, and §6.2 binds to it the `largh.`/`altezza`
@@ -962,7 +962,7 @@ int rcp_video_spedisci(rcp_sessione *s, bool chiave, const uint8_t *dati,
  *    ⛔ BELOW the minimum instead it is refused as before: there no legal
  *    canvas fits inside.
  *
- * `fuori_l`/`fuori_a` receive the nearest allowed size: each side beyond
+ * `out_w`/`out_h` receive the nearest allowed size: each side beyond
  * the maximum brought to the maximum, then truncated to even.  Returns `false`
  * only if the request is BELOW the minimum: then one answers
  * `TELA(RIFIUTATA, MISURA_FUORI_LIMITI)`.  ⚠ Whoever must know whether the size
@@ -982,8 +982,8 @@ int rcp_video_spedisci(rcp_sessione *s, bool chiave, const uint8_t *dati,
 #define RCP_TELA_L_MASSIMA 4096u
 #define RCP_TELA_A_MINIMA 240u
 #define RCP_TELA_A_MASSIMA 2304u
-bool rcp_misura_ammessa(uint32_t larghezza, uint32_t altezza, uint32_t *fuori_l,
-                        uint32_t *fuori_a);
+bool rcp_misura_ammessa(uint32_t larghezza, uint32_t altezza, uint32_t *out_w,
+                        uint32_t *out_h);
 
 void rcp_tela_adattata(rcp_sessione *s, uint32_t lar, uint32_t alt);
 
@@ -1026,7 +1026,7 @@ void rcp_tela_adattata(rcp_sessione *s, uint32_t lar, uint32_t alt);
  *     taken as the answer to the SECOND, and the desktop settled on the wrong
  *     size **with the message counts in order**.
  *
- * ⛔ `avuta_l == 0` = «the stage did not make it»: `NON_ORA` is answered
+ * ⛔ `got_w == 0` = «the stage did not make it»: `NON_ORA` is answered
  *    at once, instead of letting the `RCP_TELA_ATTESA_MS` backstop expire for
  *    news that is already there.
  *
@@ -1038,14 +1038,14 @@ void rcp_tela_adattata(rcp_sessione *s, uint32_t lar, uint32_t alt);
  *     `TELA` that would justify it.  ⇒ When the stage is elsewhere on its own, it
  *     is ASKED AGAIN for the canvas in force with a growing wait, and nothing
  *     is adopted. */
-void rcp_tela_dal_palco(rcp_sessione *s, uint32_t voluta_l, uint32_t voluta_a,
-                        uint32_t avuta_l, uint32_t avuta_a, uint64_t ora_ms);
+void rcp_tela_dal_palco(rcp_sessione *s, uint32_t intended_w, uint32_t intended_h,
+                        uint32_t got_w, uint32_t got_h, uint64_t now_ms);
 
 /* ⛔ Is there an `ADATTA_TELA` passed to the stage and not yet answered?  ⚠ It
  * serves whoever sees the frames to know whether an unexpected size is a
  * legitimate race or a new fact — and the bench, to read the state instead of
  * deducing it from timings. */
-bool rcp_tela_in_volo(const rcp_sessione *s, uint32_t *lar, uint32_t *alt);
+bool rcp_canvas_in_flight(const rcp_sessione *s, uint32_t *lar, uint32_t *alt);
 
 /* ⭐⭐ «THE STAGE IS NOT THERE YET»: the §7.1 backstop is POSTPONED — 16 Aug 2026.
  *
@@ -1065,12 +1065,12 @@ bool rcp_tela_in_volo(const rcp_sessione *s, uint32_t *lar, uint32_t *alt);
  *
  * `true` if the request in flight was precisely that one and the backstop has
  * been postponed.  ⛔ It sends nothing on the wire: it only moves a deadline. */
-bool rcp_tela_rimanda(rcp_sessione *s, uint32_t voluta_l, uint32_t voluta_a,
-                      uint64_t ora_ms);
+bool rcp_tela_rimanda(rcp_sessione *s, uint32_t intended_w, uint32_t intended_h,
+                      uint64_t now_ms);
 
 /* For the log, for the bench and for whoever captures.  ⛔ `false` when the
  * canvas is not there yet, which is NOT «0x0» (§6.0: no sentinel values). */
-bool rcp_tela_in_vigore(const rcp_sessione *s, uint32_t *lar, uint32_t *alt);
+bool rcp_canvas_in_effect(const rcp_sessione *s, uint32_t *lar, uint32_t *alt);
 
 /* ⛔⭐ THE VIEW — §7.1, and it is NOT the canvas.  16 Aug 2026, sub-phase 6.4.
  *
@@ -1095,14 +1095,14 @@ bool rcp_tela_in_vigore(const rcp_sessione *s, uint32_t *lar, uint32_t *alt);
 bool rcp_vista(const rcp_sessione *s, uint32_t *lar, uint32_t *alt);
 
 /* §4.3/§6.2: 1 = HEVC, 2 = AV1.  ⛔ `0` = not yet negotiated. */
-uint8_t rcp_codec_negoziato(const rcp_sessione *s);
+uint8_t rcp_codec_negotiated(const rcp_sessione *s);
 
 /* ⭐⭐ The depth negotiated in §4.3 — **8** or **10**, `0` if there is none.
  *
  * ⛔ AND IT MUST BE READ, or a depth different from the declared one is sent on
  *    the wire: it is the defect measured on 17 Aug 2026 on Firefox, and the
  *    full box is on the implementation in `rcp.c`. */
-uint8_t rcp_profondita_negoziata(const rcp_sessione *s);
+uint8_t rcp_depth_negotiated(const rcp_sessione *s);
 
 /* ⭐⭐ THE LEVEL the client declared in §4.3 (`video.livello`), in
  *     TENTHS: `5.1` ⇒ **51**.  `0` = not declared, or declared malformed.
@@ -1131,7 +1131,7 @@ uint8_t rcp_audio_negoziato(const rcp_sessione *s);
 bool rcp_video_serve_chiave(const rcp_sessione *s);
 /* The `numero` (§6.2) of the last frame sent.  ⛔ `0` means
  * «none», and it is the meaning §6.2 and §7.1 give to zero. */
-uint32_t rcp_video_ultimo_numero(const rcp_sessione *s);
+uint32_t rcp_video_last_number(const rcp_sessione *s);
 
 /* ========================================================================= */
 /* ⭐ THE INPUT CHANNEL — `RCP.md` §2.5, §3, §6.1, §7.1, §7.3                */
@@ -1175,7 +1175,7 @@ uint32_t rcp_video_ultimo_numero(const rcp_sessione *s);
  *    move the mouse **is not silent**.  Without this line they would lose the
  *    slot while using the desktop. */
 bool rcp_ricevi_input(rcp_sessione *s, int64_t stream, const uint8_t *dati,
-                      size_t len, uint64_t ora_ms);
+                      size_t len, uint64_t now_ms);
 
 /* ========================================================================= */
 /* ⭐⭐ THE CLIPBOARD — `RCP.md` §7.4, §5.4, §2.5                            */
@@ -1207,7 +1207,7 @@ bool rcp_ricevi_input(rcp_sessione *s, int64_t stream, const uint8_t *dati,
  * Returns `false` if the session has ended, like `rcp_ricevi()`.
  */
 bool rcp_ricevi_appunti(rcp_sessione *s, int64_t stream, const uint8_t *dati,
-                        size_t len, bool fin, uint64_t ora_ms);
+                        size_t len, bool fin, uint64_t now_ms);
 
 /*
  * ⭐ «THE SESSION HAS COPIED THIS TEXT» — it is announced to the client (§7.4).
@@ -1222,7 +1222,7 @@ bool rcp_ricevi_appunti(rcp_sessione *s, int64_t stream, const uint8_t *dati,
  *
  * `false` = no announcement has left, and the log says why.
  */
-bool rcp_appunti_dalla_sessione(rcp_sessione *s, const char *testo, size_t byte);
+bool rcp_clipboard_from_session(rcp_sessione *s, const char *testo, size_t byte);
 
 /*
  * ⭐ «SOMEONE IN THE SESSION IS PASTING»: the client is asked for the text it
@@ -1236,7 +1236,7 @@ bool rcp_appunti_dalla_sessione(rcp_sessione *s, const char *testo, size_t byte)
  *    answer «I do not have it» to whoever is pasting, at once: the debt towards the
  *    compositor does not extinguish itself.
  */
-bool rcp_appunti_chiedi(rcp_sessione *s, uint32_t serial, uint64_t ora_ms);
+bool rcp_appunti_chiedi(rcp_sessione *s, uint32_t serial, uint64_t now_ms);
 
 /* ⭐ §6.2, `input` field: «the identifier of the last input **injected**
  *    before the capture; 0 if none».
@@ -1254,14 +1254,14 @@ bool rcp_appunti_chiedi(rcp_sessione *s, uint32_t serial, uint64_t ora_ms);
  *   capture and the call the whole encoding passes.  Taking it here would say
  *   «the last injected before SENDING», which is a higher number and a bigger
  *   promise than the one the frame can keep. */
-uint32_t rcp_input_ultimo_iniettato(const rcp_sessione *s);
+uint32_t rcp_input_last_injected(const rcp_sessione *s);
 
 /* The last `id` **accepted** on the channel — injected or not.  ⛔ For the log and
  * for the bench: together with the previous one it tells «the compositor took
  * nothing» from «nothing arrived», which is `LEZIONI.md` §1.9 rule 1 on the
  * field where it costs most (the symptom of both is «the desktop does not
  * respond»). */
-uint32_t rcp_input_ultimo_id(const rcp_sessione *s);
+uint32_t rcp_input_last_id(const rcp_sessione *s);
 
 /* ⛔ §7.1 — the version of `rcp_tela_adattata()` that knows **when**, and opens the
  *    SECOND OF GRACE: «after sending `TELA(ADATTATA)` the server MUST
@@ -1274,7 +1274,7 @@ uint32_t rcp_input_ultimo_id(const rcp_sessione *s);
  *   grace**: it has no clock to start it from.  The fallback is DECLARED
  *   (`CODER.md` §4.2) and a log line declares it, not this comment. */
 void rcp_tela_adattata_ora(rcp_sessione *s, uint32_t lar, uint32_t alt,
-                           uint64_t ora_ms);
+                           uint64_t now_ms);
 
 /* ========================================================================= */
 /* ⭐ THE CURSOR — `RCP.md` §7.2, §5.5, §5, §6.1                             */
@@ -1309,9 +1309,9 @@ void rcp_tela_adattata_ora(rcp_sessione *s, uint32_t lar, uint32_t alt,
  *                        function returns, the caller can reuse the buffer —
  *                        and it is what `cursore.h` demands, because there
  *                        the image «lives until the next callback».
- * `immagine_n`           how many bytes there REALLY are behind `immagine`.
+ * `image_n`           how many bytes there REALLY are behind `immagine`.
  *
- * ⛔⭐ `immagine_n` is NOT redundant, and it is the reason this signature does not
+ * ⛔⭐ `image_n` is NOT redundant, and it is the reason this signature does not
  *     take only the size: §7.2 requires the message length to be
  *     **exactly** `8 + larghezza × altezza × 4`, and without knowing how many bytes
  *     really exist this function would read `larghezza × altezza × 4` of them
@@ -1327,15 +1327,15 @@ void rcp_tela_adattata_ora(rcp_sessione *s, uint32_t lar, uint32_t alt,
  *    ugly; a session that drops is broken (`SPECIFICHE.md` §8.3).
  *
  * ⛔⛔ FROM THE LOOP THREAD, NEVER FROM THE REAL-TIME THREAD OF THE CAPTURE.
- *     `cattura.c` calls `CursoreArrivata` on the PipeWire thread
- *     (`cursore_rimbalzo()`, and the box of the loop in `cattura.h`); this
+ *     `cattura.c` calls `CursorArrived` on the PipeWire thread
+ *     (`cursor_bounce()`, and the box of the loop in `cattura.h`); this
  *     module has no lock and `manda` writes into the transport's queue.
  *     Whoever sews the two together MUST pass the shape through the loop — and in
  *     the product it already does, because the capture lives in the CHILD and the
  *     session in the parent. */
 int rcp_cursore_forma(rcp_sessione *s, uint16_t larghezza, uint16_t altezza,
                       int16_t attivo_x, int16_t attivo_y,
-                      const uint8_t *immagine, size_t immagine_n);
+                      const uint8_t *immagine, size_t image_n);
 
 /* ------------------------------------------------------------------------ */
 /* §4.4-bis — THE ADDRESS BAN, and the three things the host must be able to
@@ -1348,14 +1348,14 @@ int rcp_cursore_forma(rcp_sessione *s, uint16_t larghezza, uint16_t altezza,
  * same and say the attempts are used up — never a network error, never a silence,
  * because whoever is banned by mistake is almost always the owner.
  * `provenienza` may carry the port: it is cut in here. */
-bool rcp_bannato(const char *provenienza, uint64_t ora_ms, uint64_t *restano_ms);
+bool rcp_bannato(const char *provenienza, uint64_t now_ms, uint64_t *restano_ms);
 
 /* ⛔ The unblock command — the other way out besides the twelve hours.
  * Returns `true` if the address was really banned: «it was not banned» and
  * «I unblocked it» are two different facts, and whoever commands must be able to
  * tell them apart.  ⭐ It is also what makes bench B8 possible, which wants
  * many more than three samples. */
-bool rcp_sblocca(const char *indirizzo, uint64_t ora_ms);
+bool rcp_sblocca(const char *indirizzo, uint64_t now_ms);
 
 /* ⛔ Declares the ban file and reads it back: without it, the ban lives in memory
  * and a restart takes it away — invariant I7.  Returns how many it loaded,
@@ -1364,7 +1364,7 @@ bool rcp_sblocca(const char *indirizzo, uint64_t ora_ms);
  * caller MUST print them differently — a -1 read as zero is the protection
  * switched off with the air of having nothing to protect.
  * ⚠ An empty or NULL path switches off persistence (it is the bench's case). */
-int rcp_ban_carica(const char *percorso, uint64_t ora_ms);
+int rcp_ban_carica(const char *percorso, uint64_t now_ms);
 
 /* ⛔ The ban key in the form in which §4.4-bis counts it, from any form of
  * address: `127.0.0.1` · `127.0.0.1:53` · `[127.0.0.1]:53` · `fe80::1`

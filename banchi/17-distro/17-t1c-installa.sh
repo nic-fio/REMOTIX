@@ -84,8 +84,8 @@ case $m in
 	tumbleweed-*|leap16-*) $VM 'sudo zypper -n install labwc xwayland' ;;
 	esac ;;
 esac
-MANCANO=$($VM "ldd /tmp/t1c/remotix | grep 'not found' || true")
-if [ -n "$MANCANO" ]; then echo "⛔ missing libraries:"; echo "$MANCANO"; exit 1; fi
+MISSING=$($VM "ldd /tmp/t1c/remotix | grep 'not found' || true")
+if [ -n "$MISSING" ]; then echo "⛔ missing libraries:"; echo "$MISSING"; exit 1; fi
 
 # ── 2. the product, the family's PAM file, the denied users ─────────────────
 echo "==> $m: product and PAM"

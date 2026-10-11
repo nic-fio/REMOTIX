@@ -65,12 +65,12 @@ typedef struct pagina pagina;
 
 pagina *pagina_apri(const char *indirizzo, const char *porta, SSL_CTX *ctx,
                     const char *file_html, const certificati *cert);
-void pagina_chiudi(pagina *p);
+void page_close(pagina *p);
 
-void pagina_contesto(pagina *p, SSL_CTX *ctx);
+void page_context(pagina *p, SSL_CTX *ctx);
 
 /* The descriptors to watch.  Returns how many it put in. */
-size_t pagina_descrittori(pagina *p, struct pollfd *dove, size_t cap);
+size_t page_descriptors(pagina *p, struct pollfd *dove, size_t cap);
 /* To be called after the `poll`, with the same array. */
 void pagina_muovi(pagina *p, struct pollfd *dove, size_t quanti);
 

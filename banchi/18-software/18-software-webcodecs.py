@@ -31,7 +31,7 @@ QUI = os.path.dirname(os.path.abspath(__file__))
 esiti = {}
 
 
-class Servo(http.server.SimpleHTTPRequestHandler):
+class Serve(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *a, **k):
         super().__init__(*a, directory=DIR, **k)
 
@@ -59,7 +59,7 @@ class Servo(http.server.SimpleHTTPRequestHandler):
 
 
 socketserver.TCPServer.allow_reuse_address = True
-srv = socketserver.ThreadingTCPServer(("127.0.0.1", PORTA), Servo)
+srv = socketserver.ThreadingTCPServer(("127.0.0.1", PORTA), Serve)
 threading.Thread(target=srv.serve_forever, daemon=True).start()
 profilo = tempfile.mkdtemp(prefix="f18-chrome-", dir=DIR)
 versione = subprocess.run(["google-chrome", "--version"], capture_output=True, text=True).stdout.strip()

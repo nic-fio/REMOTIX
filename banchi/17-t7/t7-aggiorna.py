@@ -31,7 +31,7 @@ P = R + "/prodotto"
 BOX = "rete11-" + D
 VECCHIO = "4fb3287d"
 NUOVO = os.environ["T7_NUOVO"]
-PAM_NUOVO = BASE + "/remotix.pam"
+PAM_NEW = BASE + "/remotix.pam"
 PAM_PRIMA = BASE + "/remotix.pam.prima"
 EV = os.path.join(BASE, "%s-%s" % (D, MODO))
 os.makedirs(EV, exist_ok=True)
@@ -71,7 +71,7 @@ def server(tetto=None):
     return c
 
 
-def ora_box():
+def now_box():
     return float(dentro("date +%s.%N", 20)[1].strip().splitlines()[-1])
 
 
@@ -84,7 +84,7 @@ def fotografia(u):
 
 
 ORA = "#!/bin/sh\nf=$HOME/ora-$1.txt\nwhile :; do date +%s.%N >> $f; sleep 1; done\n"
-TERMINALE = {
+TERMINAL = {
     "gnome": "gnome-terminal -- sh $HOME/t7-ora.sh terminale",
     "kde": "systemd-run --user --scope --unit=app-t7-konsole konsole -e sh $HOME/t7-ora.sh terminale",
     "xfce": "xfce4-terminal -x sh $HOME/t7-ora.sh terminale",
@@ -96,7 +96,7 @@ def testimoni(s):
     u = s.chi
     dentro("echo %s | base64 -d > /home/%s/t7-ora.sh; chown %s /home/%s/t7-ora.sh"
            % (base64.b64encode(ORA.encode()).decode(), u, u, u), 30)
-    s.nella_sessione(TERMINALE[D])
+    s.nella_sessione(TERMINAL[D])
     s.nella_sessione("sh $HOME/t7-ora.sh sessione")
     s.nella_sessione("systemd-run --user --scope --unit=t7-testimone-utente sh $HOME/t7-ora.sh utente")
     time.sleep(4)
@@ -114,11 +114,11 @@ def testimoni(s):
 def buchi(u, t0):
     """The longest gap between two beats of each witness, from t0 - 5 s."""
     c, t = dentro("for f in /home/%s/ora-*.txt; do echo \"== $f\"; cat $f; done" % u, 30)
-    ris, nome, prec = {}, None, None
+    result, nome, prec = {}, None, None
     for r in t.splitlines():
         if r.startswith("== "):
             nome, prec = r.split("ora-")[-1].replace(".txt", ""), None
-            ris[nome] = {"buco_max_s": 0.0, "battiti": 0, "ultimo": None}
+            result[nome] = {"buco_max_s": 0.0, "battiti": 0, "ultimo": None}
             continue
         try:
             v = float(r.strip())
@@ -128,11 +128,11 @@ def buchi(u, t0):
             prec = v
             continue
         if prec is not None:
-            ris[nome]["buco_max_s"] = round(max(ris[nome]["buco_max_s"], v - prec), 2)
-        ris[nome]["battiti"] += 1
-        ris[nome]["ultimo"] = v
+            result[nome]["buco_max_s"] = round(max(result[nome]["buco_max_s"], v - prec), 2)
+        result[nome]["battiti"] += 1
+        result[nome]["ultimo"] = v
         prec = v
-    return ris
+    return result
 
 
 def giornale(t0):
@@ -153,16 +153,16 @@ def primo(righe, pezzo, dopo=0.0):
     return None, ""
 
 
-PERSI_IGNORA = {"sleep", "date", "remotix", "runuser", "(sd-pam)"}
+LOST_IGNORE = {"sleep", "date", "remotix", "runuser", "(sd-pam)"}
 
 
-def sessione_con(o, nnn, esiti, wl):
+def session_with(o, nnn, esiti, wl):
     os.environ["WAYLAND_DISPLAY"] = wl
     return S.Sessione(o, nnn, esiti)
 
 
 def main():
-    E = S.Esiti(S.argomenti("t7"))
+    E = S.Outcomes(S.argomenti("t7"))
     o1 = S.argomenti("t7")
     o1.evidenze = EV
     o2 = S.argomenti("t7")
@@ -175,14 +175,14 @@ def main():
     if MODO == "aggiornamento":
         esito["prima"] = prodotto(VECCHIO, PAM_PRIMA)
     else:
-        esito["prima"] = prodotto(NUOVO, PAM_NUOVO)
+        esito["prima"] = prodotto(NUOVO, PAM_NEW)
     if server() != 0:
         esito["esito"] = "server did not start"
         return esito
 
-    s1 = sessione_con(o1, "971", E, wl_ff).__enter__()
+    s1 = session_with(o1, "971", E, wl_ff).__enter__()
     try:
-        s2 = sessione_con(o2, "972", E, wl_cr).__enter__()
+        s2 = session_with(o2, "972", E, wl_cr).__enter__()
     except Exception:
         s1.__exit__(None, None, None)
         raise
@@ -212,19 +212,19 @@ def main():
 
         # 2. the restart (and in the upgrade, first, the new binary)
         if MODO == "aggiornamento":
-            esito["dopo"] = prodotto(NUOVO, PAM_NUOVO)
-        t0 = ora_box()
+            esito["dopo"] = prodotto(NUOVO, PAM_NEW)
+        t0 = now_box()
         rc = server(2 if MODO == "aggiornamento" else None)
-        t1 = ora_box()
+        t1 = now_box()
         righe = giornale(t0)
-        t_pronto, _ = primo(righe, "ready: https", t0)
-        t_avvio, r_avvio = primo(righe, "Started rete11-server", t0)
-        t_ritr, r_ritr = primo(righe, "live REMOTIX desktops found again at startup", t0)
+        t_ready, _ = primo(righe, "ready: https", t0)
+        t_startup, r_startup = primo(righe, "Started rete11-server", t0)
+        t_found_again, r_refound = primo(righe, "live REMOTIX desktops found again at startup", t0)
         ritrovati = [r for r in righe if "FOUND AGAIN the desktop of" in r]
-        esito["a_servizio_fermo_s"] = round(t_pronto - t0, 2) if t_pronto else None
-        esito["c_ritrovata_dall_avvio_s"] = round(t_ritr - t_avvio, 3) if t_ritr and t_avvio else None
-        esito["c_ritrovata_dallo_stop_s"] = round(t_ritr - t0, 2) if t_ritr else None
-        esito["riga_ritrovati"] = r_ritr[r_ritr.find("live REMOTIX desktops"):][:220]
+        esito["a_servizio_fermo_s"] = round(t_ready - t0, 2) if t_ready else None
+        esito["c_ritrovata_dall_avvio_s"] = round(t_found_again - t_startup, 3) if t_found_again and t_startup else None
+        esito["c_ritrovata_dallo_stop_s"] = round(t_found_again - t0, 2) if t_found_again else None
+        esito["riga_ritrovati"] = r_refound[r_refound.find("live REMOTIX desktops"):][:220]
         esito["ritrovati"] = [r[r.find("FOUND AGAIN"):][:200] for r in ritrovati]
         log("found again: %s" % esito["riga_ritrovati"])
 
@@ -232,7 +232,7 @@ def main():
         if MODO == "aggiornamento":
             o3 = S.argomenti("t7")
             o3.evidenze, o3.porte_base = EV, o3.porte_base + 4
-            with sessione_con(o3, "973", E, os.environ["T7_WL_TERZO"]) as s3:
+            with session_with(o3, "973", E, os.environ["T7_WL_TERZO"]) as s3:
                 ok3, m3 = s3.entra()
                 time.sleep(2)
                 c, t = dentro("journalctl -o cat --no-pager --since @%d | grep -a '%s' | "
@@ -270,7 +270,7 @@ def main():
             p1 = [x["pid"] for x in dopo[s.chi].get("palco", [])]
             vivi = {x["pid"] for x in dopo[s.chi].get("processi", [])}
             persi = [x for x in prima[s.chi].get("processi", [])
-                     if x["pid"] not in vivi and x["comm"] not in PERSI_IGNORA
+                     if x["pid"] not in vivi and x["comm"] not in LOST_IGNORE
                      and not x["cg"].endswith("/init.scope")]
             rientro = [r for r in righe if "COMES BACK to their desktop" in r and s.chi in r]
             esito["b_%s" % s.chi] = {

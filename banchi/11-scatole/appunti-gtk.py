@@ -42,7 +42,7 @@ def finestra(app):
     return f
 
 
-def al_fuoco(f, fatto):
+def on_focus(f, fatto):
     """⭐⭐ WE WAIT FOR THE FOCUS, AND DO NOTHING BEFORE — 20 Sep 2026.
 
     ⛔ `[M]` On GNOME the clipboard is granted to whoever has the ACTIVE window, and in
@@ -66,7 +66,7 @@ def copia(testo, secondi):
        offers it — whoever exits takes it away, and that is the defect that makes a desktop
        that no longer has anything say «copied».
     """
-    def avviato(app):
+    def started(app):
         f = finestra(app)
 
         def adesso():
@@ -75,11 +75,11 @@ def copia(testo, secondi):
                   % (len(testo), secondi), flush=True)
 
         print("window open, waiting for focus", flush=True)
-        al_fuoco(f, adesso)
+        on_focus(f, adesso)
         GLib.timeout_add_seconds(int(secondi), lambda: (app.quit(), False)[1])
 
     app = Gtk.Application(application_id="org.remotix.appunti.copia")
-    app.connect("activate", avviato)
+    app.connect("activate", started)
     return app.run([])
 
 
@@ -87,12 +87,12 @@ def incolla():
     """Reads the session clipboard and prints it (nothing = empty line)."""
     esito = {"testo": ""}
 
-    def avviato(app):
+    def started(app):
         f = finestra(app)
 
-        def letto(clip, ris):
+        def letto(clip, result):
             try:
-                esito["testo"] = clip.read_text_finish(ris) or ""
+                esito["testo"] = clip.read_text_finish(result) or ""
             except GLib.Error as e:
                 print("⛔ could not read: %s" % e.message, file=sys.stderr)
             app.quit()
@@ -101,11 +101,11 @@ def incolla():
             Gdk.Display.get_default().get_clipboard().read_text_async(None, letto)
 
         print("window open, waiting for focus", file=sys.stderr, flush=True)
-        al_fuoco(f, adesso)
+        on_focus(f, adesso)
         GLib.timeout_add_seconds(25, lambda: (app.quit(), False)[1])
 
     app = Gtk.Application(application_id="org.remotix.appunti.incolla")
-    app.connect("activate", avviato)
+    app.connect("activate", started)
     app.run([])
     print(esito["testo"], end="")
     return 0

@@ -18,7 +18,7 @@ OPUS_SHA256=65c1d2f78b9f2fb20082c38cbe47c951ad5839345876e46941612ee87f9a7ce1
 # emscripten 4.0.15 (emcc 09f52557f0d48b65b8c724853ed8f4e8bf80e669)
 EMSDK_IMG="docker.io/emscripten/emsdk@sha256:27bc6267cb285223b8aebb7627bfebae7cb3ad2aaa0d5923b8aa5321793033e8"
 
-incastona() {
+embeds() {
 	python3 - "$QUI/opus.wasm" "$PAGINA" "$1" <<'PY'
 import base64, re, sys
 wasm, pagina, modo = sys.argv[1], sys.argv[2], sys.argv[3]
@@ -40,7 +40,7 @@ PY
 }
 
 if [ "${1:-}" = "--verifica" ]; then
-	incastona verifica
+	embeds verifica
 	exit $?
 fi
 
@@ -68,4 +68,4 @@ podman run --rm --network=none -v "$LAV:/w:Z" -w /w "$EMSDK_IMG" sh -euc '
 cp "$LAV/opus.wasm" "$QUI/opus.wasm"
 sha256sum "$QUI/opus.wasm" | sed "s#  .*#  opus.wasm#" > "$QUI/opus.wasm.sha256"
 echo "⭐ opus.wasm: $(wc -c < "$QUI/opus.wasm") bytes, sha256 $(cut -d' ' -f1 "$QUI/opus.wasm.sha256")"
-incastona scrivi
+embeds scrivi

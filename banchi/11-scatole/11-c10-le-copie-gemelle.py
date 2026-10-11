@@ -163,17 +163,17 @@ import tempfile
 # ⛔ THE TWO PATHS, declared here and printed in every outcome: «they match» is
 #    a verdict, and a verdict without its yardstick is an opinion.
 CASA = "src"
-GEMELLA = "banchi/rcp"
+TWIN = "banchi/rcp"
 MAKEFILE = "src/Makefile"
 
 # ⚠ Which files of the twin folder are CODE, that is which can be
 #   a twin.  ⛔ The list is declared instead of deduced: a `README.md`
 #   put one day in `banchi/rcp/` must not become a perpetual red.
-SUFFISSI_SORGENTE = (".c", ".h")
+SOURCE_SUFFIXES = (".c", ".h")
 
 
 # ---------------------------------------------------------------------------
-def senza_commento(riga):
+def without_comment(riga):
     """⛔⛔ In a Makefile a `#` opens a comment up to the end of the line.
 
     ⚠ A real defect of this mesh, found on 27 Aug 2026 by an agent
@@ -194,7 +194,7 @@ def senza_commento(riga):
     return riga.split("#", 1)[0]
 
 
-def elenco_dichiarato(percorso_makefile):
+def declared_list(makefile_path):
     """⭐ Reads `GEMELLATI` from `src/Makefile`.
 
     ⛔ Returns `None` if it did not find it, and ⛔ **does not fall back on a pinned
@@ -206,7 +206,7 @@ def elenco_dichiarato(percorso_makefile):
       comparison without having looked at anything (`LEZIONI.md` §1.47).
     """
     try:
-        with open(percorso_makefile, "r", encoding="utf-8", errors="replace") as f:
+        with open(makefile_path, "r", encoding="utf-8", errors="replace") as f:
             testo = f.read()
     except OSError:
         return None
@@ -225,16 +225,16 @@ def elenco_dichiarato(percorso_makefile):
     #    reading only its first half would have the same effect as above.
     #
     # ⛔⛔ AND THE TRAILING COMMENT IS CUT — a real defect, found on 27 Aug
-    #    2026 (see `senza_commento`).  ⚠ The certification had the case of the
+    #    2026 (see `without_comment`).  ⚠ The certification had the case of the
     #    WHOLE-line comment and not the TRAILING one, which is the most
     #    normal thing in the world inside a Makefile.
     righe = []
     continua = False
     for riga in testo.splitlines():
         if continua:
-            righe[-1] += " " + senza_commento(riga).rstrip()
+            righe[-1] += " " + without_comment(riga).rstrip()
         elif re.match(r"^GEMELLATI\s*[:?+]?=", riga):
-            righe.append(senza_commento(riga).rstrip())
+            righe.append(without_comment(riga).rstrip())
         else:
             continua = False
             continue
@@ -276,9 +276,9 @@ def guarda(radice):
         "radice": radice,
         "makefile": os.path.join(radice, MAKEFILE),
         "casa": os.path.join(radice, CASA),
-        "gemella": os.path.join(radice, GEMELLA),
+        "gemella": os.path.join(radice, TWIN),
     }
-    f["elenco"] = elenco_dichiarato(f["makefile"])
+    f["elenco"] = declared_list(f["makefile"])
     f["gemella_c_e"] = os.path.isdir(f["gemella"])
     f["casa_c_e"] = os.path.isdir(f["casa"])
 
@@ -312,7 +312,7 @@ def guarda(radice):
         for nome in sorted(os.listdir(f["gemella"])):
             if not os.path.isfile(os.path.join(f["gemella"], nome)):
                 continue
-            if not nome.endswith(SUFFISSI_SORGENTE):
+            if not nome.endswith(SOURCE_SUFFIXES):
                 f["estranei"].append(nome)
                 continue
             if f["elenco"] is not None and nome in f["elenco"]:
@@ -344,14 +344,14 @@ def giudica(f):
                    "looked at anything (LEZIONI.md §1.47)"]
     if not f["gemella_c_e"]:
         return 3, ["⛔ the twin folder «%s» IS NOT THERE: it is not «the copies "
-                   "match», it is «I could not look»" % GEMELLA]
+                   "match», it is «I could not look»" % TWIN]
     if not f["casa_c_e"]:
         return 3, ["⛔ the folder «%s» IS NOT THERE" % CASA]
 
     # ── 1 · the reds ───────────────────────────────────────────────────────
     divergono = [c["nome"] for c in f["coppie"] if c["stato"] == "divergono"]
     for nome in divergono:
-        motivi.append("⛔ %s DIVERGES between %s/ and %s/" % (nome, CASA, GEMELLA))
+        motivi.append("⛔ %s DIVERGES between %s/ and %s/" % (nome, CASA, TWIN))
     for nome in f["non_dichiarati"]:
         motivi.append("⛔ «%s» is in both folders but is NOT in "
                       "`GEMELLATI`: it is a twin nobody is looking at"
@@ -382,7 +382,7 @@ def giudica(f):
 #    fault into the real files is a bench that, if it dies half-way, leaves the repository
 #    broken — and the fault looks like the product's.
 # ---------------------------------------------------------------------------
-MAKEFILE_FINTO = (
+FAKE_MAKEFILE = (
     "# Synthetic Makefile of the C10 certification\n"
     "SORGENTI := main.c rcp.c\n"
     "GEMELLATI := rcp.c rcp.h autenticazione.c\n"
@@ -391,7 +391,7 @@ MAKEFILE_FINTO = (
 )
 
 
-def scena(dove, elenco_makefile=MAKEFILE_FINTO, contenuti=None, gemello=None):
+def scena(dove, elenco_makefile=FAKE_MAKEFILE, contenuti=None, gemello=None):
     """Builds a fake repository: `src/`, `banchi/rcp/`, `src/Makefile`."""
     contenuti = contenuti or {"rcp.c": b"protocollo\n",
                               "rcp.h": b"intestazioni\n",
@@ -399,7 +399,7 @@ def scena(dove, elenco_makefile=MAKEFILE_FINTO, contenuti=None, gemello=None):
     gemello = contenuti if gemello is None else gemello
     os.makedirs(os.path.join(dove, CASA), exist_ok=True)
     if gemello is not False:
-        os.makedirs(os.path.join(dove, GEMELLA), exist_ok=True)
+        os.makedirs(os.path.join(dove, TWIN), exist_ok=True)
     if elenco_makefile is not None:
         with open(os.path.join(dove, MAKEFILE), "wb") as f:
             f.write(elenco_makefile.encode("utf-8"))
@@ -408,7 +408,7 @@ def scena(dove, elenco_makefile=MAKEFILE_FINTO, contenuti=None, gemello=None):
             f.write(dati)
     if gemello is not False:
         for nome, dati in gemello.items():
-            with open(os.path.join(dove, GEMELLA, nome), "wb") as f:
+            with open(os.path.join(dove, TWIN, nome), "wb") as f:
                 f.write(dati)
     return dove
 
@@ -419,10 +419,10 @@ def certifica():
     # ⛔ One BYTE, not one line: if the judge only took the big
     #    differences, the tuning of `BAN_DURATA` from 12 to 1 would escape it.
     un_byte = dict(sano, **{"rcp.c": b"protocollo\r\n"})
-    senza_uno = {k: v for k, v in sano.items() if k != "rcp.h"}
-    quarto_uguale = dict(sano, **{"ban.c": b"ban\n"})
+    missing_one = {k: v for k, v in sano.items() if k != "rcp.h"}
+    fourth_equal = dict(sano, **{"ban.c": b"ban\n"})
     quarto_diverso_src = dict(sano, **{"ban.c": b"ban DODICI ore\n"})
-    quarto_diverso_gem = dict(sano, **{"ban.c": b"ban UNA ora\n"})
+    fourth_different_gem = dict(sano, **{"ban.c": b"ban UNA ora\n"})
 
     casi = [
         # (name, how the scene is built, expected outcome)
@@ -436,7 +436,7 @@ def certifica():
          dict(contenuti=sano, gemello=sano), 0),
 
         ("⛔ a twin copy is MISSING ⇒ 3, I could not look",
-         dict(contenuti=sano, gemello=senza_uno), 3),
+         dict(contenuti=sano, gemello=missing_one), 3),
 
         ("⛔ the twin folder is not there at all ⇒ 3",
          dict(contenuti=sano, gemello=False), 3),
@@ -449,10 +449,10 @@ def certifica():
               elenco_makefile="GEMELLATI :=\n"), 3),
 
         ("⭐⭐ a FOURTH undeclared twin, and IDENTICAL ⇒ RED all the same",
-         dict(contenuti=quarto_uguale, gemello=quarto_uguale), 1),
+         dict(contenuti=fourth_equal, gemello=fourth_equal), 1),
 
         ("⭐⭐ …and indeed here it is DIFFERENT: it was red because nobody watched it",
-         dict(contenuti=quarto_diverso_src, gemello=quarto_diverso_gem), 1),
+         dict(contenuti=quarto_diverso_src, gemello=fourth_different_gem), 1),
 
         ("⚠ a file only in the bench (no sibling in src/) is NOT a red",
          dict(contenuti=sano,
@@ -468,17 +468,17 @@ def certifica():
         #    declared.  ⭐ A false red on a correct declaration is
         #    exactly §1.49, and here it is injected and tested.
         ("⛔ declared with `GEMELLATI += ban.c` ⇒ GREEN, not a false red",
-         dict(contenuti=quarto_uguale, gemello=quarto_uguale,
+         dict(contenuti=fourth_equal, gemello=fourth_equal,
               elenco_makefile="GEMELLATI := rcp.c rcp.h autenticazione.c\n"
                               "GEMELLATI += ban.c\n"), 0),
 
         ("⛔ declared on TWO lines with the backslash ⇒ GREEN",
-         dict(contenuti=quarto_uguale, gemello=quarto_uguale,
+         dict(contenuti=fourth_equal, gemello=fourth_equal,
               elenco_makefile="GEMELLATI := rcp.c rcp.h \\\n"
                               "             autenticazione.c ban.c\n"), 0),
 
         ("⛔ …and with the backslash the fourth DIVERGES ⇒ RED all the same",
-         dict(contenuti=quarto_diverso_src, gemello=quarto_diverso_gem,
+         dict(contenuti=quarto_diverso_src, gemello=fourth_different_gem,
               elenco_makefile="GEMELLATI := rcp.c rcp.h \\\n"
                               "             autenticazione.c ban.c\n"), 1),
 
@@ -500,12 +500,12 @@ def certifica():
                               "  # i tre di sempre\n"), 0),
 
         ("⛔⛔ a comment that NAMES a file does NOT declare it ⇒ RED",
-         dict(contenuti=quarto_uguale, gemello=quarto_uguale,
+         dict(contenuti=fourth_equal, gemello=fourth_equal,
               elenco_makefile="GEMELLATI := rcp.c rcp.h autenticazione.c"
                               "  # e un giorno ban.c\n"), 1),
 
         ("⛔ and the trailing comment on a line STITCHED with the backslash",
-         dict(contenuti=quarto_uguale, gemello=quarto_uguale,
+         dict(contenuti=fourth_equal, gemello=fourth_equal,
               elenco_makefile="GEMELLATI := rcp.c rcp.h \\\n"
                               "             autenticazione.c ban.c  # i quattro\n"),
          0),
@@ -539,10 +539,10 @@ def certifica():
     #    certification covered `giudica` and nothing else.  ⇒ The fact that
     #    the injection did not look at the scene BEFORE breaking it could not
     #    come out here.
-    # ⚠ Now `innesta_e_giudica` takes any folder, ⇒ it is tested
+    # ⚠ Now `graft_and_judge` takes any folder, ⇒ it is tested
     #   with the synthetic scenes like everything else.
     # ═══════════════════════════════════════════════════════════════════════
-    casi_guasto = [
+    fault_cases = [
         ("⭐ GREEN scene ⇒ the byte bites ⇒ 0 (the fault was seen)",
          dict(contenuti=sano), 0),
 
@@ -554,21 +554,21 @@ def certifica():
          dict(contenuti=sano, gemello=un_byte), 3),
 
         ("⛔⛔ already red because of an undeclared twin ⇒ 3, ⛔ NOT 0",
-         dict(contenuti=quarto_uguale, gemello=quarto_uguale), 3),
+         dict(contenuti=fourth_equal, gemello=fourth_equal), 3),
 
         ("⛔ a twin copy is missing (outcome 3 already before) ⇒ 3",
-         dict(contenuti=sano, gemello=senza_uno), 3),
+         dict(contenuti=sano, gemello=missing_one), 3),
 
         ("⛔ `GEMELLATI` unreadable ⇒ 3: there is nothing to inject",
          dict(contenuti=sano, elenco_makefile=None), 3),
     ]
     print()
     print("  ⛔ and the injected fault is judged BEFORE being injected (§1.52):")
-    for nome, come, atteso in casi_guasto:
+    for nome, come, atteso in fault_cases:
         dove = tempfile.mkdtemp(prefix="c10-cert-guasto-")
         try:
             scena(dove, **come)
-            esito, righe = innesta_e_giudica(dove)
+            esito, righe = graft_and_judge(dove)
         finally:
             shutil.rmtree(dove, ignore_errors=True)
         bene = esito == atteso
@@ -580,7 +580,7 @@ def certifica():
             for r in righe:
                 print("        %s" % r)
 
-    quanti = len(casi) + len(casi_guasto)
+    quanti = len(casi) + len(fault_cases)
     print()
     print("  %d cases out of %d" % (quanti - guai, quanti))
     if guai:
@@ -594,7 +594,7 @@ def certifica():
 
 
 # ---------------------------------------------------------------------------
-def git_dice_la_radice(qui):
+def git_says_root(qui):
     """⭐ The root according to git, or None if git cannot answer."""
     try:
         p = subprocess.run(["git", "-C", qui, "rev-parse", "--show-toplevel"],
@@ -609,11 +609,11 @@ def git_dice_la_radice(qui):
     return None
 
 
-def radice_del_deposito(qui):
+def repo_root(qui):
     """⚠ Git is asked, and if git is not there we go up two folders — this
        file lives in `banchi/11-scatole/`.  ⛔ It is not a silent fallback: the
        chosen path is PRINTED, and if the folders are not there the outcome is 3."""
-    return git_dice_la_radice(qui) or os.path.abspath(
+    return git_says_root(qui) or os.path.abspath(
         os.path.join(qui, "..", ".."))
 
 
@@ -640,9 +640,9 @@ def radice_del_deposito(qui):
 #     serves to shout.  ⇒ This silences no defect: it only moves
 #     the case in which there is, by construction, nothing to look at.
 # ═══════════════════════════════════════════════════════════════════════════
-def qui_c_e_il_deposito(qui, radice):
+def repo_is_here(qui, radice):
     """⭐ (it is there, why) — and the «why» is what gets printed."""
-    if git_dice_la_radice(qui):
+    if git_says_root(qui):
         return True, ""
     if os.path.isfile(os.path.join(radice, MAKEFILE)):
         # ⚠ A repository without `.git` (a copy, an unpacked archive) is
@@ -683,7 +683,7 @@ def qui_c_e_il_deposito(qui, radice):
 #   injected fault would stop meaning anything.  ⛔ The net would
 #   certify itself on a defect of the product.
 # ---------------------------------------------------------------------------
-def innesta_e_giudica(dove):
+def graft_and_judge(dove):
     """⭐ The injected fault, and ⛔ **it runs on any scene**.
 
     ⚠ It is written this way on purpose: by taking the folder as an argument, this
@@ -716,7 +716,7 @@ def innesta_e_giudica(dove):
 
     # ⛔ ONE BYTE, not one line: if the judge only took the big
     #    differences, a shifted constant would escape it.
-    bersaglio = os.path.join(dove, GEMELLA, f["elenco"][0])
+    bersaglio = os.path.join(dove, TWIN, f["elenco"][0])
     if not os.path.isfile(bersaglio):
         righe.append("⛔ the twin copy of «%s» is not there: I have no target "
                      "to break ⇒ I could not look" % f["elenco"][0])
@@ -730,7 +730,7 @@ def innesta_e_giudica(dove):
     with open(bersaglio, "wb") as h:
         h.write(bytes(dati))
     righe.append("fault: one byte changed in %s/%s (position %d of %d)"
-                 % (GEMELLA, f["elenco"][0], meta, len(dati)))
+                 % (TWIN, f["elenco"][0], meta, len(dati)))
 
     dopo, motivi = giudica(guarda(dove))
     righe += ["   " + m for m in motivi]
@@ -761,25 +761,25 @@ def guasto_innestato(radice):
     dove = tempfile.mkdtemp(prefix="c10-guasto-")
     try:
         os.makedirs(os.path.join(dove, CASA))
-        os.makedirs(os.path.join(dove, GEMELLA))
+        os.makedirs(os.path.join(dove, TWIN))
         shutil.copy2(os.path.join(radice, MAKEFILE), os.path.join(dove, MAKEFILE))
         # ⛔ The WHOLE twin folder is copied, not only the declared ones: the
         #    third question of C10 is «does the list cover the folder?», and copying
         #    only the declared ones the scene would be green by construction ⇒ the
         #    «before» judgement would have nothing to judge.
-        for nome in sorted(os.listdir(os.path.join(radice, GEMELLA))):
-            for cartella in (CASA, GEMELLA):
+        for nome in sorted(os.listdir(os.path.join(radice, TWIN))):
+            for cartella in (CASA, TWIN):
                 a = os.path.join(radice, cartella, nome)
                 if os.path.isfile(a):
                     shutil.copy2(a, os.path.join(dove, cartella, nome))
         for nome in vero["elenco"]:
-            for cartella in (CASA, GEMELLA):
+            for cartella in (CASA, TWIN):
                 a = os.path.join(radice, cartella, nome)
                 if os.path.isfile(a) and not os.path.isfile(
                         os.path.join(dove, cartella, nome)):
                     shutil.copy2(a, os.path.join(dove, cartella, nome))
 
-        esito, righe = innesta_e_giudica(dove)
+        esito, righe = graft_and_judge(dove)
         for r in righe:
             print("   %s" % r)
         return esito
@@ -803,12 +803,12 @@ def main():
         return certifica()
 
     qui = os.path.dirname(os.path.abspath(__file__))
-    radice = a.radice or radice_del_deposito(qui)
+    radice = a.radice or repo_root(qui)
 
     # ⭐⭐ THE TERRAIN FIRST OF ALL — and ⛔ `--radice` overrides it on purpose: whoever
     #    passes it is saying where to look, and if they are wrong they must see a 3.
     if not a.radice:
-        c_e, perche = qui_c_e_il_deposito(qui, radice)
+        c_e, perche = repo_is_here(qui, radice)
         if not c_e:
             print("⛔ %s." % perche)
             print("   ⇒ if this is the test machine, the two twin copies")
@@ -825,7 +825,7 @@ def main():
 
     print("== C10 — do the two twin copies of the protocol match? ==")
     print("   repository: %s" % radice)
-    print("   the two   : %s/  and  %s/" % (CASA, GEMELLA))
+    print("   the two   : %s/  and  %s/" % (CASA, TWIN))
     print("   the list  : `GEMELLATI` READ from %s — ⛔ not copied here" % MAKEFILE)
     print("   yardstick : ⛔ **the whole file, byte for byte** — and it is not an")
     print("              excess: the two copies are the same module mounted on")
@@ -859,13 +859,13 @@ def main():
                 print("     ⛔ %s — it is in both, and it is NOT declared" % n)
         else:
             print("     OK  no source of %s/ was left out of `GEMELLATI`"
-                  % GEMELLA)
+                  % TWIN)
         for n in f["solo_nel_banco"]:
             print("     ⚠  %s — it is ONLY in the bench: it has no twin, I do not "
                   "judge it" % n)
         for n in f["estranei"]:
             print("     ⚠  %s — it is not a source (%s): I do not judge it"
-                  % (n, "/".join(SUFFISSI_SORGENTE)))
+                  % (n, "/".join(SOURCE_SUFFIXES)))
         print()
 
     esito, motivi = giudica(f)

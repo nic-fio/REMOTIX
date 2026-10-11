@@ -97,7 +97,7 @@
  *    from the sessions the display manager offers: the criterion is on
  *    `sessione_gnome()` in `sessione.c`.  `gnome` remains only as a DECLARED
  *    FALLBACK, when no offered session launches gnome-session. */
-#define SESSIONE_GNOME_RIPIEGO "gnome"
+#define SESSION_GNOME_FALLBACK "gnome"
 /*
  * ⛔⭐ PHASE 17 — THE SHELL UNIT DOES NOT HAVE ONE NAME ONLY (`fasi/17-l-installatore.md` §5.1).
  *
@@ -121,15 +121,15 @@
  *   of the INSTANCE, never in that of the template (`org.gnome.Shell@.service.d/`):
  *   that one also applies to GDM's Shell.
  */
-#define SESSIONE_UNITA_SHELL_48 "org.gnome.Shell@wayland.service"
-#define SESSIONE_UNITA_SHELL_MODELLO "org.gnome.Shell@.service"
+#define SESSION_UNIT_SHELL_48 "org.gnome.Shell@wayland.service"
+#define SESSION_UNIT_SHELL_MODEL "org.gnome.Shell@.service"
 /* ⚠ The session manager unit is `gnome-session-manager@<sessione>.service`:
  *   the name is composed by `sessione_gnome()` (D8). */
 /* ⛔ And the SECOND unit to wait for: when a GNOME session ends, GNOME
  * RESTARTS the session bus with this one.  A new session started while it runs
  * is born on a bus about to be replaced — and dies without writing anything
  * (`[M]` 16 August 2026: its log stays at zero bytes). */
-#define SESSIONE_UNITA_DBUS "gnome-session-restart-dbus.service"
+#define SESSION_UNIT_DBUS "gnome-session-restart-dbus.service"
 
 /*
  * ⭐ PHASE 12 — THE SECOND DESKTOP: PLASMA.  `fasi/12-kde.md`, increment 1.
@@ -144,9 +144,9 @@
  *   `plasma-kwin_wayland.service`, whose `ExecStart` is overridden with the drop-in
  *   (`STUDI.md` §kde §6.1-§6.2), exactly like the Shell unit.
  */
-#define SESSIONE_COMANDO_KDE "exec startplasma-wayland"
-#define SESSIONE_UNITA_KWIN "plasma-kwin_wayland.service"
-#define SESSIONE_UNITA_PLASMA "plasma-workspace.target"
+#define SESSION_COMMAND_KDE "exec startplasma-wayland"
+#define SESSION_UNIT_KWIN "plasma-kwin_wayland.service"
+#define SESSION_UNIT_PLASMA "plasma-workspace.target"
 
 /*
  * ⭐ PHASE 13 — THE THIRD DESKTOP: XFCE.  `fasi/13-xfce.md`, increment 1.
@@ -183,8 +183,8 @@
  *    `SESSIONE_LABWC_TASTIERA` below.  ⚠ The line always contains `labwc`
  *    and `--session`: the logout belt stays as it was. */
 #define SESSIONE_TESTA_XFCE "labwc -m --session"
-#define SESSIONE_PRIMARIO_XFCE "xfce4-session"
-#define SESSIONE_RIGA_XFCE SESSIONE_TESTA_XFCE " " SESSIONE_PRIMARIO_XFCE
+#define SESSION_PRIMARY_XFCE "xfce4-session"
+#define SESSIONE_RIGA_XFCE SESSIONE_TESTA_XFCE " " SESSION_PRIMARY_XFCE
 /* ⭐ 5 Oct 2026: the COMMAND is no longer a constant — the primary client is born
  *    after the client's size (`primario_misurato()` in sessione.c), as
  *    on LXQt.  ⚠ The head is the same macro: `labwc` and `--session` stay
@@ -192,12 +192,12 @@
  *    belt looks only at those two words (`STUDI.md` §xfce §9.2). */
 /* ⛔ The compositor process, by name: on XFCE the guard against the
  *    second session cannot ask systemd — see `unita_inattiva()`. */
-#define SESSIONE_PROCESSO_XFCE "labwc"
+#define SESSION_PROCESS_XFCE "labwc"
 /* The session manager on the USER bus — `[M]` 20 Sep 2026: it appears there, not
  * on a private bus, because we start `labwc` ourselves without `dbus-run-session`.
  * ⚠ The name is not the interface: `org.xfce.Session.Manager` (with one more
  * dot) — `STUDI.md` §xfce §9.5. */
-#define SESSIONE_BUS_XFCE "org.xfce.SessionManager"
+#define SESSION_BUS_XFCE "org.xfce.SessionManager"
 
 /*
  * ⭐ PHASE 14 — THE FOURTH DESKTOP: LXQt.  Increment 1, «it is recognised, is born and
@@ -229,15 +229,15 @@
  *   is under `XDG_RUNTIME_DIR` and is composed in `avvia()`.  Here are
  *   the two pieces that do not change.
  */
-#define SESSIONE_MARCATORE_LXQT "lxqt-session"
-#define SESSIONE_PRIMARIO_LXQT "lxqt-session"
+#define SESSION_MARKER_LXQT "lxqt-session"
+#define SESSION_PRIMARY_LXQT "lxqt-session"
 /* ⭐ The name on the USER bus, and also the logout object and interface:
  *    `[R]` lxqt-session 2.1.1 `sessionapplication.cpp:48-49` (service and
  *    `/LXQtSession`), `sessiondbusadaptor.h` (interface `org.lxqt.session`)
  *    — https://raw.githubusercontent.com/lxqt/lxqt-session/2.1.1/lxqt-session/src/sessiondbusadaptor.h
  * ⚠ The name appears in the CONSTRUCTOR: «the name is there» does not mean «desktop up»
  *   (`STUDI.md` §lxqt §3.4).  See `sessione_viva()`. */
-#define SESSIONE_BUS_LXQT "org.lxqt.session"
+#define SESSION_BUS_LXQT "org.lxqt.session"
 
 /*
  * ⭐⭐ PHASE 15, D-007 — WINDOWS ARE BROUGHT BACK INSIDE WHEN THE OUTPUT
@@ -309,12 +309,12 @@
  *   seen.
  */
 #define SESSIONE_LABWC_TASTO "W-C-A-S-F12"
-#define SESSIONE_LABWC_ESCLUSE                                                  \
+#define SESSION_LABWC_EXCLUDED                                                  \
 	"<query maximized=\"both\"/><query maximized=\"horizontal\"/>"         \
 	"<query maximized=\"vertical\"/><query tiled=\"left\"/>"               \
 	"<query tiled=\"right\"/><query tiled=\"up\"/><query tiled=\"down\"/>" \
 	"<query tiled=\"center\"/><query tiled_region=\"*\"/>"
-#define SESSIONE_LABWC_SPOSTA                                                  \
+#define SESSION_LABWC_MOVE                                                  \
 	"<action name=\"FitToOutput\"/>"                                         \
 	"<action name=\"WarpCursor\" to=\"window\" x=\"center\" y=\"center\"/>" \
 	"<action name=\"AutoPlace\" policy=\"cursor\"/>"
@@ -322,21 +322,21 @@
 	"  <keyboard>\n"                                                        \
 	"    <default/>\n"                                                      \
 	"    <keybind key=\"" SESSIONE_LABWC_TASTO "\">\n"                      \
-	"      <action name=\"ForEach\">" SESSIONE_LABWC_ESCLUSE                \
+	"      <action name=\"ForEach\">" SESSION_LABWC_EXCLUDED                \
 	"<query shaded=\"yes\"/><query decoration=\"full\"/>"                   \
 	"<query decoration=\"border\"/><else>"                                  \
 	"<action name=\"SetDecorations\" decorations=\"border\" forceSSD=\"yes\"/>" \
 	"</else></action>\n"                                                    \
-	"      <action name=\"ForEach\">" SESSIONE_LABWC_ESCLUSE                \
+	"      <action name=\"ForEach\">" SESSION_LABWC_EXCLUDED                \
 	"<query shaded=\"yes\"/><query decoration=\"full\"/>"                   \
-	"<query decoration=\"none\"/><else>" SESSIONE_LABWC_SPOSTA              \
+	"<query decoration=\"none\"/><else>" SESSION_LABWC_MOVE              \
 	"<action name=\"SetDecorations\" decorations=\"none\"/>"                \
 	"</else></action>\n"                                                    \
-	"      <action name=\"ForEach\">" SESSIONE_LABWC_ESCLUSE                \
+	"      <action name=\"ForEach\">" SESSION_LABWC_EXCLUDED                \
 	"<query shaded=\"yes\"/><query decoration=\"none\"/>"                   \
 	"<query decoration=\"border\"/><else><action name=\"Shade\"/>"          \
 	"</else></action>\n"                                                    \
-	"      <action name=\"ForEach\">" SESSIONE_LABWC_ESCLUSE                \
+	"      <action name=\"ForEach\">" SESSION_LABWC_EXCLUDED                \
 	"<query shaded=\"no\"/><else><action name=\"Unshade\"/>"                \
 	"<action name=\"FitToOutput\"/>"                                         \
 	"<action name=\"SetDecorations\" decorations=\"border\"/>"              \
@@ -369,8 +369,8 @@
  *   parent and the child, and moving 0 or 1 would break that boundary.
  */
 typedef enum {
-	SESSIONE_DESKTOP_GNOME = 0,
-	SESSIONE_DESKTOP_KDE = 1,
+	SESSION_DESKTOP_GNOME = 0,
+	SESSION_DESKTOP_KDE = 1,
 	SESSIONE_DESKTOP_XFCE = 2,
 	SESSIONE_DESKTOP_NESSUNO = 3,
 	/* ⭐ PHASE 14 — AT THE END, per the rule above: 0..3 stay as they are. */
@@ -441,7 +441,7 @@ bool sessione_su_wlroots(void);
  *    `[R]`).  It is `CODER.md` §3.9 to the letter: *ask for the component by name, and
  *    verify that it obeyed*.
  */
-#define SESSIONE_PRODOTTO_CHIESTO "MetaVirtualMonitor"
+#define SESSION_REQUESTED_PRODUCT "MetaVirtualMonitor"
 
 /*
  * ⛔ THE STATE NUMBERS, AND THEY ARE THE SAME AS THE BENCH'S.
@@ -465,14 +465,14 @@ bool sessione_su_wlroots(void);
 typedef enum {
 	SESSIONE_SANA = 0,          /* one monitor only, of the requested name and size */
 	SESSIONE_NERA = 1,          /* alive, and ZERO monitors — fault M9 of STUDI.md §gnome §13 */
-	SESSIONE_MISURA_ALTRA = 2,  /* one monitor, but not of the requested size */
-	SESSIONE_SCELTO_DA_SE = 3,  /* product other than the requested one, or more than one ← E2 */
-	SESSIONE_MORTA = 4,         /* no compositor: the bus does not answer */
-	SESSIONE_NON_LETTA = 5,     /* I COULD not read: denied or unreadable ← E8 */
+	SESSION_WRONG_SIZE = 2,  /* one monitor, but not of the requested size */
+	SESSION_SELF_CHOSEN = 3,  /* product other than the requested one, or more than one ← E2 */
+	SESSION_DEAD = 4,         /* no compositor: the bus does not answer */
+	SESSION_NOT_READ = 5,     /* I COULD not read: denied or unreadable ← E8 */
 } SessioneStato;
 
 /* The mark in words, with the same words as the bench. */
-const char *sessione_marca(SessioneStato stato);
+const char *session_mark(SessioneStato stato);
 
 /* The monitor as Mutter declares it, for whoever must capture it by NAME. */
 typedef struct {
@@ -501,7 +501,7 @@ typedef struct {
  *
  * Returns a new reference, or NULL with `sbaglio` written.
  */
-GDBusConnection *sessione_bus(GError **sbaglio);
+GDBusConnection *session_bus(GError **sbaglio);
 
 /*
  * The configuration folder of the Plasma session we serve:
@@ -526,7 +526,7 @@ bool sessione_dconf_prepara(void);
  * Is the session's dconf in force in THIS process?  ⛔ If not, whoever
  * writes GNOME settings would write them into the user's.
  */
-bool sessione_dconf_di_sessione(void);
+bool session_dconf_of_session(void);
 
 /*
  * ⭐ PHASE 15 (R1/R2) — systemd's USER MANAGER goes back to how it was after the
@@ -599,7 +599,7 @@ SessioneStato sessione_stato(uint32_t larghezza, uint32_t altezza, SessioneMonit
  *                   read is damage done on a hypothesis
  */
 /* ⭐ Asks for the birth of the graphical session and RETURNS AT ONCE — phase 5.
- * It starts only from `SESSIONE_MORTA`; whoever retries takes care of finding out that it is there.
+ * It starts only from `SESSION_DEAD`; whoever retries takes care of finding out that it is there.
  * ⛔ The CHILD uses it, which during a 40 s wait would stop answering the
  *    parent.  The full why is above the function in `sessione.c`. */
 bool sessione_fai_nascere(uint32_t larghezza, uint32_t altezza);

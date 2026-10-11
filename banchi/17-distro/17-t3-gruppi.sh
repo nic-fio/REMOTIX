@@ -33,7 +33,7 @@ set -u
 REGISTRO=/var/tmp/remotix-t3-gruppi.registro
 
 # login.defs: on openSUSE it lives in /usr/etc (and /etc overrides it if present).
-leggi_defs()
+read_defs()
 {
 	v=""
 	for f in /usr/etc/login.defs /etc/login.defs; do
@@ -55,20 +55,20 @@ gruppi_della_scheda()
 }
 
 # already there (as supplementary or primary group)?
-membro()
+member()
 {
 	id -nG "$1" 2>/dev/null | tr ' ' '\n' | grep -qx "$2"
 }
 
-annotata()
+annotated()
 {
 	[ -f "$REGISTRO" ] && grep -qE "^(c-era|messo) $1 $2\$" "$REGISTRO"
 }
 
 iscrivi()
 {
-	min=$(leggi_defs UID_MIN 1000)
-	max=$(leggi_defs UID_MAX 60000)
+	min=$(read_defs UID_MIN 1000)
+	max=$(read_defs UID_MAX 60000)
 	gruppi=$(gruppi_della_scheda)
 	if [ -z "$gruppi" ]; then
 		echo "remotix: no /dev/dri node on this machine: no GPU group to give"
@@ -79,8 +79,8 @@ iscrivi()
 		'$3 >= a && $3 <= b && $7 !~ /(nologin|false)$/ { print $1 }' /etc/passwd)
 	for p in $persone; do
 		for g in $gruppi; do
-			annotata "$p" "$g" && continue
-			if membro "$p" "$g"; then
+			annotated "$p" "$g" && continue
+			if member "$p" "$g"; then
 				echo "c-era $p $g" >>"$REGISTRO"
 			elif gpasswd -a "$p" "$g" >/dev/null 2>&1; then
 				echo "messo $p $g" >>"$REGISTRO"
@@ -98,7 +98,7 @@ annulla()
 	[ -f "$REGISTRO" ] || return 0
 	grep '^messo ' "$REGISTRO" | while read -r _ p g; do
 		getent passwd "$p" >/dev/null || continue
-		if membro "$p" "$g" && gpasswd -d "$p" "$g" >/dev/null 2>&1; then
+		if member "$p" "$g" && gpasswd -d "$p" "$g" >/dev/null 2>&1; then
 			echo "remotix: $p removed from $g (the engine step had put it there)"
 		fi
 	done

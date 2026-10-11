@@ -118,7 +118,7 @@ VERDE, ROSSO, CIECO = C21.VERDE, C21.ROSSO, C21.CIECO
 PORTE = C21.PORTE
 NOME_ESITO = C21.NOME_ESITO
 
-MODELLO_INQUILINO = re.compile(r"^c22u[0-9]+$")
+TENANT_PATTERN = re.compile(r"^c22u[0-9]+$")
 
 # ---------------------------------------------------------------------------
 # ⛔ THE NUMBERS — each with its reason.
@@ -129,7 +129,7 @@ PRESE = tuple(range(-2, 7))
 # How far it drags, and in how many steps: a hand gesture, not a jump.
 SPINTA = 150
 PASSI = 15
-PAUSA_PASSO_MS = 30
+STEP_PAUSE_MS = 30
 # ⭐ Green wants at least 100 px of the 150: the desktop can round the size
 #   (the character grid, a minimum, an unfinished animation) but a
 #   real resize brings almost all of them.
@@ -139,7 +139,7 @@ SOGLIA = 100
 FERMO = 4
 # Between one point and the next: more than every desktop's double click (400-500 ms),
 # so two close presses do not become a «double click on the edge».
-FRA_I_PUNTI_S = 1.0
+BETWEEN_POINTS_S = 1.0
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -149,8 +149,8 @@ def finestra_nel_desktop(geo, f):
     """The window found in the photo (`C21.trova_finestra`) in desktop pixels:
     {sinistro, destro, alto} — the right one is the LAST cyan pixel."""
     pw, ph = f["foto"]
-    x0, y0 = C21.dalla_foto_al_desktop(geo, pw, ph, f["ciano"][0] + 0.5, f["ciano"][1] + 0.5)
-    xd, _ = C21.dalla_foto_al_desktop(geo, pw, ph, f["destro"] + 0.5, f["centro"][1] + 0.5)
+    x0, y0 = C21.from_photo_to_desktop(geo, pw, ph, f["ciano"][0] + 0.5, f["ciano"][1] + 0.5)
+    xd, _ = C21.from_photo_to_desktop(geo, pw, ph, f["destro"] + 0.5, f["centro"][1] + 0.5)
     return {"sinistro": int(x0), "destro": int(xd), "alto": int(y0)}
 
 
@@ -289,7 +289,7 @@ def certifica():
 # ═══════════════════════════════════════════════════════════════════════════
 #  INSIDE THE PAGE — what it saw, to separate the bench from the product
 # ═══════════════════════════════════════════════════════════════════════════
-JS_OSSERVA = r"""
+JS_OBSERVE = r"""
 (function () {
   if (window.__C22__) return;
   const C = window.__C22__ = { giu: 0, su: 0, premuti: 0, alzati: 0 };
@@ -307,9 +307,9 @@ JS_OSSERVA = r"""
   }, true);
 })();
 """
-JS_AZZERA = ("const C=window.__C22__; if(!C) return false; "
+JS_RESET = ("const C=window.__C22__; if(!C) return false; "
              "C.giu=0; C.su=0; C.premuti=0; C.alzati=0; return true;")
-JS_CONTA = r"""
+JS_COUNT = r"""
 const C = window.__C22__;
 const st = window.REMOTIX && REMOTIX.input_classico ? REMOTIX.input_classico.stato() : null;
 return C ? { giu: C.giu, su: C.su, premuti: C.premuti, alzati: C.alzati,
@@ -321,8 +321,8 @@ def trascina(g, geo, X, Y, premi):
     """⭐ The gesture, with REAL browser EVENTS: the pointer is brought to (X,Y),
     pressed (if `premi`), dragged right by `SPINTA` px in `PASSI`
     steps, released.  (X,Y) and the points are DESKTOP pixels."""
-    punti = [C21.dal_desktop_al_vetro(geo, X, Y)] + \
-        [C21.dal_desktop_al_vetro(geo, x, y) for x, y in gesto(X, Y, SPINTA, PASSI)]
+    punti = [C21.desktop_to_glass(geo, X, Y)] + \
+        [C21.desktop_to_glass(geo, x, y) for x, y in gesto(X, Y, SPINTA, PASSI)]
     if hasattr(g, "cdp"):
         c = g.cdp.chiama
         x0, y0 = punti[0]
@@ -338,7 +338,7 @@ def trascina(g, geo, X, Y, premi):
                   buttons=1)
             else:
                 c("Input.dispatchMouseEvent", type="mouseMoved", x=x, y=y)
-            time.sleep(PAUSA_PASSO_MS / 1000.0)
+            time.sleep(STEP_PAUSE_MS / 1000.0)
         time.sleep(0.2)
         if premi:
             x, y = punti[-1]
@@ -355,17 +355,17 @@ def trascina(g, geo, X, Y, premi):
     for x, y in punti[1:]:
         az.append({"type": "pointerMove", "x": int(round(x)), "y": int(round(y)),
                    "origin": "viewport", "duration": 0})
-        az.append({"type": "pause", "duration": PAUSA_PASSO_MS})
+        az.append({"type": "pause", "duration": STEP_PAUSE_MS})
     az.append({"type": "pause", "duration": 200})
     if premi:
         az.append({"type": "pointerUp", "button": 0})
-    g._azioni([{"type": "pointer", "id": "topo", "parameters": {"pointerType": "mouse"},
+    g._actions([{"type": "pointer", "id": "topo", "parameters": {"pointerType": "mouse"},
                 "actions": az}])
 
 
 def misura(g, geo, o, nome, etichetta):
     """The window in the desktop, from the (still) photograph, or (None, reason)."""
-    f, perche = C21.cerca_la_finestra(g, o.attesa_finestra, "", nome)
+    f, perche = C21.search_window(g, o.attesa_finestra, "", nome)
     if not f:
         return None, perche
     if o.salva:
@@ -387,16 +387,16 @@ def scansiona(g, geo, o, nome, premi):
                           % (k, perche), None))
             break
         pw, ph = prima["f"]["foto"]
-        _x, Yc = C21.dalla_foto_al_desktop(geo, pw, ph, 0, prima["cy"] + 0.5)
+        _x, Yc = C21.from_photo_to_desktop(geo, pw, ph, 0, prima["cy"] + 0.5)
         X = prima["destro"] + k + 0.5
         if X + SPINTA + 2 >= geo["tl"]:
             righe.append((k, CIECO, "%+d px: on the right there is no room to drag (edge "
                           "x=%d, screen %d)" % (k, prima["destro"], geo["tl"]), None))
             break
-        g.js(JS_AZZERA)
+        g.js(JS_RESET)
         trascina(g, geo, X, Yc, premi)
         time.sleep(0.3)
-        n = g.js(JS_CONTA) or {}
+        n = g.js(JS_COUNT) or {}
         # ⛔ The bench before the product: if the page did not see the gesture,
         #   there is nothing to judge.
         if premi and (n.get("giu", 0) < 1 or n.get("su", 0) < 1
@@ -409,11 +409,11 @@ def scansiona(g, geo, o, nome, premi):
                           "it should (%s)" % (k, n), None))
             break
         sp_ = n.get("spedito") or [-1, -1]
-        atteso_x = int(X + SPINTA)
-        if abs(sp_[0] - atteso_x) > 2 or abs(sp_[1] - int(Yc)) > 2:
+        expected_x = int(X + SPINTA)
+        if abs(sp_[0] - expected_x) > 2 or abs(sp_[1] - int(Yc)) > 2:
             righe.append((k, CIECO, "%+d px: the page sent last (%s,%s) instead of "
                           "(%d,%d): the pointer is not where I say"
-                          % (k, sp_[0], sp_[1], atteso_x, int(Yc)), None))
+                          % (k, sp_[0], sp_[1], expected_x, int(Yc)), None))
             break
         dopo, perche = misura(g, geo, o, nome, "dopo%+d" % k)
         e, m, sp = giudica_presa(k, prima, dopo)
@@ -425,7 +425,7 @@ def scansiona(g, geo, o, nome, premi):
         righe.append((k, e, m, sp))
         if e != ROSSO:
             break
-        time.sleep(FRA_I_PUNTI_S)
+        time.sleep(BETWEEN_POINTS_S)
     es, ms, x = giudica_scansione(righe)
     return es, ms, x, righe
 
@@ -466,7 +466,7 @@ def prova_browser(nome, o, sc, chi):
         # ⚠ C21's wake-up (GNOME is born in the overview), BEFORE the window
         print("   wake-up: %s" % C21.sveglia(g, geo), flush=True)
         largo_f, alto_f = geo["tl"] * 0.45, geo["ta"] * 0.55
-        ok, t = C21.prepara_la_casa(sc, chi, largo_f, alto_f)
+        ok, t = C21.prepare_home(sc, chi, largo_f, alto_f)
         if not ok:
             return dict(riga, esito=CIECO, perche="the home cannot be prepared: %s" % t[-200:])
         ok, t = C21.accendi_la_finestra(sc, chi)
@@ -483,7 +483,7 @@ def prova_browser(nome, o, sc, chi):
         riga["finestra"] = {k: w0[k] for k in ("sinistro", "destro", "alto")}
         print("   ⭐ window: x=%d..%d, top y=%d in the desktop · grabs from %+d to %+d px"
               % (w0["sinistro"], w0["destro"], w0["alto"], PRESE[0], PRESE[-1]), flush=True)
-        g.js(VERI._inietta(JS_OSSERVA))
+        g.js(VERI._inject(JS_OBSERVE))
         if not g.js("return !!window.__C22__;"):
             return dict(riga, esito=CIECO, perche="the observer did not install itself")
 
@@ -549,7 +549,7 @@ def main():
         os.makedirs(o.salva, exist_ok=True)
     sc = C20V.Scatola(o.scatola)
     chi = "c22u%03d" % random.randint(0, 999)
-    assert MODELLO_INQUILINO.match(chi)
+    assert TENANT_PATTERN.match(chi)
     o.utente = chi
     print("⭐ 11-c22 · %s · %s · inquilino %s · browser %s · %s%s"
           % (sc.contenitore, o.url, chi, o.browser,

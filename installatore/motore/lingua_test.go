@@ -14,8 +14,8 @@ func TestTesti(t *testing.T) {
 		if v.Testo == "" {
 			t.Errorf("%s without text", c)
 		}
-		if italiano.MatchString(v.Testo + " " + v.Rimedio) {
-			t.Errorf("%s: Italian left: %q", c, v.Testo+" "+v.Rimedio)
+		if italiano.MatchString(v.Testo + " " + v.Remediation) {
+			t.Errorf("%s: Italian left: %q", c, v.Testo+" "+v.Remediation)
 		}
 	}
 	for k, v := range testi {
@@ -26,18 +26,18 @@ func TestTesti(t *testing.T) {
 			t.Errorf("%s: Italian left: %q", k, v)
 		}
 	}
-	usate := regexp.MustCompile(`\bT\("([^"]+)"\s*[,)]`)
+	used_count := regexp.MustCompile(`\bT\("([^"]+)"\s*[,)]`)
 	voci, _ := filepath.Glob("*.go")
-	voci2, _ := filepath.Glob("../cmd/remotix-install/*.go")
-	for _, f := range append(voci, voci2...) {
+	entries2, _ := filepath.Glob("../cmd/remotix-install/*.go")
+	for _, f := range append(voci, entries2...) {
 		b, _ := os.ReadFile(f)
-		for _, m := range usate.FindAllStringSubmatch(string(b), -1) {
+		for _, m := range used_count.FindAllStringSubmatch(string(b), -1) {
 			if _, ok := testi[m[1]]; !ok {
 				t.Errorf("%s uses the key %q, which does not exist", f, m[1])
 			}
 		}
 	}
-	for _, s := range TuttiGliStati() {
+	for _, s := range AllStates() {
 		if _, ok := testi["state."+string(s)]; !ok {
 			t.Errorf("the name of state %s is missing", s)
 		}

@@ -84,7 +84,7 @@ typedef struct wt wt;
  * whole server, and this layer receives it without owning it.  ⚠ NULL is
  * allowed and means «synchronous check», that is the declared fallback — the
  * server works all the same, with the wire stopping. */
-wt *wt_nuovo(ngtcp2_conn *conn, ngtcp2_ccerr *ultimo_errore,
+wt *wt_new(ngtcp2_conn *conn, ngtcp2_ccerr *last_error,
              const char *provenienza, aiutante *aiuto);
 
 /* ⭐ PAM's verdict coming back from the helper.  ⛔ `true` if this connection
@@ -92,7 +92,7 @@ wt *wt_nuovo(ngtcp2_conn *conn, ngtcp2_ccerr *ultimo_errore,
  * and only one takes it. */
 /* ⭐ D-001: `ripresa` = that user's stage already existed (`SESSIONE` will say
  * `2 = RIPRESA`, §4.5). */
-bool wt_verdetto(wt *w, uint64_t pratica, bool ammesso, bool ripresa);
+bool wt_verdict(wt *w, uint64_t pratica, bool ammesso, bool ripresa);
 /* ⭐ D-001: the desktop name for `SESSIONE` (`gnome · kde · xfce · lxqt ·
  * unknown`), one per process — `main.c` sets it at startup. */
 void wt_desktop(const char *nome);
@@ -101,9 +101,9 @@ void wt_libera(wt *w);
 /* The calls the transport forwards here.  They return 0 or an ngtcp2 error
  * (negative) to propagate. */
 int wt_app_pronta(wt *w); /* the application key is ready: HTTP/3 opens */
-int wt_ricevi_stream(wt *w, uint32_t flags, int64_t stream_id,
+int wt_receive_stream(wt *w, uint32_t flags, int64_t stream_id,
                      const uint8_t *dati, size_t len);
-int wt_stream_chiuso(wt *w, int64_t stream_id, uint64_t codice, bool con_codice);
+int wt_stream_chiuso(wt *w, int64_t stream_id, uint64_t codice, bool with_code);
 int wt_stream_reset(wt *w, int64_t stream_id);
 int wt_stream_stop_sending(wt *w, int64_t stream_id);
 int wt_ack_stream_data(wt *w, int64_t stream_id, uint64_t len);
@@ -121,8 +121,8 @@ int wt_ack_stream_data(wt *w, int64_t stream_id, uint64_t len);
  *    without saying so. */
 void wt_dgram_perso(wt *w, uint64_t id);
 void wt_dgram_riscontrato(wt *w, uint64_t id);
-int wt_estendi_max_stream_data(wt *w, int64_t stream_id);
-int wt_estendi_max_streams_bidi(wt *w, uint64_t max_streams);
+int wt_extend_max_stream_data(wt *w, int64_t stream_id);
+int wt_extend_max_streams_bidi(wt *w, uint64_t max_streams);
 
 /* ⭐ Writes ONE packet: it is the point where the WebTransport layer does the
  * two things nghttp3 cannot do.  It is called by the callback the transport
@@ -149,12 +149,12 @@ void wt_batti(wt *w, ngtcp2_tstamp ts);
 /* ⛔⭐ §5.3 — «the client is still there».  `trasporto.c` calls it after every
  *     packet ngtcp2 has ACCEPTED, and it is the only thing that moves when
  *     the user watches and touches nothing. */
-void wt_segno_di_vita(wt *w, ngtcp2_tstamp ts);
+void wt_sign_of_life(wt *w, ngtcp2_tstamp ts);
 
 /* ⛔ §8.1 — whoever closes MUST send `CONGEDO` with the reason and repeat it
  * in the close code, «never with a silence».  The transport calls it when the
  * server shuts down: `RCP_SERVER_IN_CHIUSURA` (§8.2, `0x0C`).  Finding B-7. */
-void wt_congeda(wt *w, uint8_t motivo, const char *dettaglio);
+void wt_dismiss(wt *w, uint8_t motivo, const char *dettaglio);
 
 /* ⛔ «Does it still have something to say?» — lets whoever shuts down the
  * server know when it has finished sending out the farewells, instead of
@@ -162,7 +162,7 @@ void wt_congeda(wt *w, uint8_t motivo, const char *dettaglio);
 bool wt_ha_da_dire(const wt *w);
 /* ⛔ Why it still has something to say: «capsule not mature» and «queue not
  *    empty» are two different faults, and at shutdown they looked the same. */
-const char *wt_perche_ha_da_dire(const wt *w);
+const char *wt_pending_reason(const wt *w);
 
 /* ⭐⭐ PHASE 3 — THE FRAME LOOP, AND WHERE THE BOUNDARY RUNS.
  *
@@ -238,10 +238,10 @@ void wt_video_diffondi(const char *utente, uint8_t codec, bool chiave,
  *      decoder that REFUSES the configuration.  ⚠ In tenths (`5.1` ⇒
  *      51); `0` = the client did not declare it, that is NO CAP — and it
  *      does not mean «low». */
-typedef void (*wt_video_richiesta)(void *ctx, const char *utente, uint8_t codec,
+typedef void (*wt_video_request)(void *ctx, const char *utente, uint8_t codec,
                                    uint8_t profondita, uint8_t livello_x10,
                                    bool chiave);
-void wt_video_gancio(wt_video_richiesta f, void *ctx);
+void wt_video_gancio(wt_video_request f, void *ctx);
 
 /* ⭐⭐ PHASE 4 — THE INPUT BRIDGE, and it crosses a PROCESS boundary.
  *
@@ -258,10 +258,10 @@ void wt_video_gancio(wt_video_richiesta f, void *ctx);
  *   number is the truth instead of a promise.
  *
  * `azione` are the `FIGLI_INPUT_*` of `figlio.h`. */
-typedef bool (*wt_input_richiesta)(void *ctx, const char *utente, uint32_t id,
+typedef bool (*wt_input_request)(void *ctx, const char *utente, uint32_t id,
                                    uint8_t azione, uint16_t codice, int premuto,
                                    int32_t a, int32_t b);
-void wt_input_gancio(wt_input_richiesta f, void *ctx);
+void wt_input_hook(wt_input_request f, void *ctx);
 
 /* ⭐⭐ THE CANVAS BRIDGE — `RCP.md` §7.1, `DECISIONI.md` §5.0-sexies.
  *
@@ -276,14 +276,14 @@ void wt_input_gancio(wt_input_richiesta f, void *ctx);
  * ⚠ `true` = the request has left towards the child.  ⛔ NOT «the canvas
  *   has changed»: that will be said by `rcp_tela_concessa()`, when the pixels
  *   arrive at the new size. */
-typedef bool (*wt_ritela_richiesta)(void *ctx, const char *utente,
+typedef bool (*wt_recanvas_request)(void *ctx, const char *utente,
                                     uint32_t larghezza, uint32_t altezza);
-void wt_ritela_gancio(wt_ritela_richiesta f, void *ctx);
+void wt_recanvas_hook(wt_recanvas_request f, void *ctx);
 
 /* ⭐ §5-bis.7 — the layout to the stage of WHOEVER ASKED. */
-typedef bool (*wt_disposizione_richiesta)(void *ctx, const char *utente,
+typedef bool (*wt_layout_request)(void *ctx, const char *utente,
                                           const char *nome);
-void wt_disposizione_gancio(wt_disposizione_richiesta f, void *ctx);
+void wt_layout_hook(wt_layout_request f, void *ctx);
 
 /* ⭐⭐ §5.1 — THE GUARD OF LOCAL GRAPHICAL SESSIONS, and it serves TWO things
  *     that look like one and are not:
@@ -301,9 +301,9 @@ void wt_disposizione_gancio(wt_disposizione_richiesta f, void *ctx);
  * `quale` — if not NULL — receives which session it is, **for the server's
  * log**: §8.2 does not allow telling the client the facts of other people's
  * sessions, and indeed it does not end up in the farewell body. */
-typedef bool (*wt_locale_richiesta)(void *ctx, const char *utente, char *quale,
+typedef bool (*wt_local_request)(void *ctx, const char *utente, char *quale,
                                     size_t quanto);
-void wt_locale_gancio(wt_locale_richiesta f, void *ctx);
+void wt_local_hook(wt_local_request f, void *ctx);
 
 /* ⭐⭐⭐ THE SWEEP HOOK — **a single question for all tenants**.
  *
@@ -322,10 +322,10 @@ void wt_locale_gancio(wt_locale_richiesta f, void *ctx);
  *
  * `quali` — if not NULL, `quanti` slices of `larghezza` bytes, for the LOG.
  * Returns how many tenants have a local graphical session. */
-typedef size_t (*wt_locali_ripasso)(void *ctx, const char *const *utenti,
+typedef size_t (*wt_locals_sweep)(void *ctx, const char *const *utenti,
                                     size_t quanti, bool *locale, char *quali,
                                     size_t larghezza);
-void wt_locali_gancio(wt_locali_ripasso f, void *ctx);
+void wt_locals_hook(wt_locals_sweep f, void *ctx);
 
 /* The sweep: asks the guard — **in a single question** — which of the
  * attached users have opened a local graphical session, and sends those a
@@ -349,7 +349,7 @@ size_t wt_sorveglia_locali(void);
  *   two truths.
  * ⛔ A connection without an RCP session, without a user or closing is NOT
  *    counted: it is not a served tenant, it is someone knocking or leaving. */
-size_t wt_inquilini_serviti(void);
+size_t wt_tenants_served(void);
 
 /* ⛔⭐⭐⭐ THE SERVICE CLOCK — «the time we did not run is not the client's
  *        silence».  `main.c` calls it at every pass of the loop.
@@ -370,14 +370,14 @@ size_t wt_inquilini_serviti(void);
  *    seconds of frozen screen; erring low throws out someone who is working,
  *    and that cannot be undone (the same asymmetry that chose the 5.0 s of
  *    the stall). */
-void wt_giro_del_padre(uint64_t ora_ms);
+void wt_giro_del_padre(uint64_t now_ms);
 
 /* How many times the parent's loop fell behind, and the worst gap in
  * milliseconds.  ⛔ It is the number that makes the cure above FALSIFIABLE:
  * if it were always zero, that cure would never have done anything and it
  * would show; if it is large, the defect is in the loop and must be cured
  * there, not here. */
-void wt_giri_fermi(uint64_t *quanti, uint64_t *peggiore_ms);
+void wt_stalled_rounds(uint64_t *quanti, uint64_t *peggiore_ms);
 
 /* ⭐⭐ §7.6 — «THE USER ASKED TO LOG OUT», and it is not the farewell.
  *
@@ -386,8 +386,8 @@ void wt_giri_fermi(uint64_t *quanti, uint64_t *peggiore_ms);
  *    graphical session of THAT user — the name is set by this module, which
  *    knows whom PAM admitted on that connection, and does not come from the
  *    wire (I3). */
-typedef void (*wt_termina_richiesta)(void *ctx, const char *utente);
-void wt_termina_gancio(wt_termina_richiesta f, void *ctx);
+typedef void (*wt_terminate_request)(void *ctx, const char *utente);
+void wt_terminate_hook(wt_terminate_request f, void *ctx);
 
 /* Sends a farewell to all the sessions of a user, skipping `tranne` (which
  * is usually the one that has just asked, already sent away by `rcp.c`).
@@ -395,7 +395,7 @@ void wt_termina_gancio(wt_termina_richiesta f, void *ctx);
  * so whoever was watching it from a second device would be left with a
  * frozen screen forever. */
 size_t wt_congeda_utente(const char *utente, uint8_t motivo, const char *dettaglio,
-                         const wt *tranne);
+                         const wt *except);
 
 /* ⭐ The canvas cap that the sessions of that user can decode —
  *    `video.misura_massima` of §4.3, the widest if there is more than one.
@@ -410,16 +410,16 @@ bool wt_misura_massima_di(const char *utente, uint32_t *l, uint32_t *a);
  * on that user's sessions that are waiting for exactly that size.  ⛔ It sends
  * nothing on the wire: it moves a deadline, and removes a deduction from the
  * parent (`LEZIONI.md` §7.5). */
-void wt_tela_rimanda(const char *utente, uint32_t voluta_l, uint32_t voluta_a);
+void wt_canvas_resend(const char *utente, uint32_t intended_w, uint32_t intended_h);
 
 /* ⭐⭐ AND THE ANSWER COMES BACK THROUGH HERE — §7.1.  The child sends it
- *     (`FiglioTela`) and `main.c` carries it here, because this module is
+ *     (`ChildCanvas`) and `main.c` carries it here, because this module is
  *     the one that knows which sessions belong to that user.
  *
- * ⛔ `avuta_l == 0` = the stage did not make it ⇒ `TELA(NON_ORA)` at once,
+ * ⛔ `got_w == 0` = the stage did not make it ⇒ `TELA(NON_ORA)` at once,
  *    instead of the three seconds of the §7.1 backstop. */
-void wt_tela_dal_palco(const char *utente, uint32_t voluta_l, uint32_t voluta_a,
-                       uint32_t avuta_l, uint32_t avuta_a);
+void wt_canvas_from_stage(const char *utente, uint32_t intended_w, uint32_t intended_h,
+                       uint32_t got_w, uint32_t got_h);
 
 /* ⛔ That user's stage is gone: its size is forgotten.
  * ⚠ «I don't know» and «it was 1920x1080» are two different facts, and the
@@ -459,21 +459,21 @@ void wt_audio_diffondi(const char *utente, uint8_t codec, uint64_t istante_us,
 /* Is anyone listening to `utente`, and with which codec?  ⛔ It serves to
  * not make the encoder work for nobody — the same question
  * `wt_video_qualcuno_guarda` asks for pixels. */
-bool wt_audio_qualcuno_ascolta(const char *utente, uint8_t *codec);
+bool wt_audio_someone_listening(const char *utente, uint8_t *codec);
 
 /* ========================================================================= */
 /* ⭐⭐ THE CLIPBOARD — `RCP.md` §7.4, phase 7                                */
 
 /* «The client copied some text: offer it to the session of `utente`.»       */
-typedef bool (*wt_appunti_offerta)(void *ctx, const char *utente);
+typedef bool (*wt_clipboard_offer)(void *ctx, const char *utente);
 /* «Here is the text for whoever is pasting in the session of `utente`.»
  * ⛔ `testo` NULL = «I don't have it», which is still an answer. */
-typedef bool (*wt_appunti_consegna)(void *ctx, const char *utente,
+typedef bool (*wt_clipboard_delivery)(void *ctx, const char *utente,
                                     uint32_t serial, const char *testo,
                                     size_t byte);
 /* ⚠ The two are hooked together: without both the channel is not connected
  *   at all, and `rcp.c` declares it in the log instead of serving half a wire. */
-void wt_appunti_gancio(wt_appunti_offerta offri, wt_appunti_consegna risposta,
+void wt_clipboard_hook(wt_clipboard_offer offer, wt_clipboard_delivery risposta,
                        void *ctx);
 
 /*
@@ -483,7 +483,7 @@ void wt_appunti_gancio(wt_appunti_offerta offri, wt_appunti_consegna risposta,
  * ⛔ The I3 guard — that the text goes to the connection of WHOEVER copied it
  *    — is in here, as for frames and for audio.
  */
-void wt_appunti_dalla_sessione(const char *utente, const char *testo,
+void wt_clipboard_from_session(const char *utente, const char *testo,
                                size_t byte);
 
 /*
@@ -496,7 +496,7 @@ void wt_appunti_dalla_sessione(const char *utente, const char *testo,
  *    does not settle by itself, and a desktop waiting for an answer that will
  *    not arrive is a desktop the user sees as hung.
  */
-bool wt_appunti_richiesta(const char *utente, uint32_t serial);
+bool wt_clipboard_request(const char *utente, uint32_t serial);
 
 /*
  * The four numbers that tell a session's audio.
@@ -508,7 +508,7 @@ bool wt_appunti_richiesta(const char *utente, uint32_t serial);
  *    `LEZIONI.md` §2.2 describes: a number that never says where to look.
  */
 void wt_audio_conti(const wt *w, uint64_t *spediti, uint64_t *buttati,
-                    uint64_t *rifiutati, size_t *in_coda);
+                    uint64_t *rifiutati, size_t *queued);
 
 /*
  * ⛔ BENCH FUNCTION — switches on a test tone at `hz` Hz on every admitted
@@ -565,11 +565,11 @@ void wt_sgombra_soglia(uint64_t ms);
 
 /*
  * ⛔ The value IN FORCE, and there is a single copy of it — the shape already
- *    used for `rcp_inattivita()`.  Whoever writes it in the startup line
+ *    used for `rcp_inactivity()`.  Whoever writes it in the startup line
  *    reads it from here instead of keeping a copy of their own, or «written»
  *    and «in force» become two different numbers (shape E1).
  */
-uint64_t wt_sgombra_soglia_letta(void);
+uint64_t wt_clear_threshold_read(void);
 
 /*
  * ⛔⭐⭐ PHASE 9 — THE RATE REGULATOR, and since 24 Aug 2026 it is born **ON**
@@ -716,7 +716,7 @@ void wt_linea_morta(bool accesa, uint64_t stallo_ms, uint64_t silenzio_s);
  *    nothing to do with it, because the road of `RCP.md` §3.1 point 3 waits
  *    for the queue to empty on a line that by hypothesis no longer carries.
  */
-bool wt_linea_morta_scattata(const wt *w);
+bool wt_dead_line_fired(const wt *w);
 
 /*
  * ⭐⭐ THE AUDIO SEAM — the twin of `wt_video_gancio`.
@@ -730,8 +730,8 @@ bool wt_linea_morta_scattata(const wt *w);
  *
  * `codec` 1 = Opus, 2 = PCM, **0 = nobody listens any more**.
  */
-typedef void (*wt_audio_richiesta)(void *ctx, const char *utente, uint8_t codec);
-void wt_audio_gancio(wt_audio_richiesta f, void *ctx);
+typedef void (*wt_audio_request)(void *ctx, const char *utente, uint8_t codec);
+void wt_audio_hook(wt_audio_request f, void *ctx);
 
 /* The FIVE video numbers of a session, for the log and for the benches.
  * ⛔ Together, always: «zero abandoned» said alone does not tell a line that
@@ -743,11 +743,11 @@ void wt_audio_gancio(wt_audio_richiesta f, void *ctx);
  *    exhausted, refusal by rcp), this one counts a RATE DROP decided by us,
  *    and they are two different facts.  Adding them would give a total that
  *    looks healthy and says nothing. */
-void wt_video_conti(const wt *w, uint32_t *diffusi, uint32_t *saltati,
+void wt_video_conti(const wt *w, uint32_t *broadcast, uint32_t *saltati,
                     uint32_t *spediti, uint32_t *abbandonati,
                     uint32_t *ritmo_scesi);
 
 /* For the log and for the benches. */
-const char *wt_stato_rcp(const wt *w);
+const char *wt_rcp_state(const wt *w);
 
 #endif

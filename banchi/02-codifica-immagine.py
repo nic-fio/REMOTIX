@@ -112,19 +112,19 @@ LARGHEZZA = 1920
 ALTEZZA = 1080
 
 # The bands, in rows.  They are INCLUSIVE on the left and EXCLUSIVE on the right.
-FASCIA_RAMPA = (0, 256)
-FASCIA_SFUMATURE = (256, 512)
-FASCIA_TESTO = (512, 768)
-FASCIA_FINE = (768, 1024)
-FASCIA_TOPPE = (1024, 1080)
+BAND_RAMP = (0, 256)
+BAND_GRADIENTS = (256, 512)
+BAND_TEXT = (512, 768)
+BAND_END = (768, 1024)
+BAND_PATCHES = (1024, 1080)
 
 # ⛔ The row on which the 10-bit test is read.  It is inside the ramp, and it is
 #    declared here because the bench and the report must cite THE SAME one.
-RIGA_RAMPA = 128
+RAMP_LINE = 128
 
 # The limited range at 10 bits.
 Y_MIN, Y_MAX = 64, 940
-CROMA_ZERO = 512
+CHROMA_ZERO = 512
 
 # The expectations, written BEFORE the round (PIANO.md §0.3 rule 4).
 ATTESO_LIVELLI_VERI = 877          # 940 - 64 + 1
@@ -153,7 +153,7 @@ FONT = {
     ":": (".....", "..#..", "..#..", ".....", "..#..", "..#..", "....."),
     " ": (".....", ".....", ".....", ".....", ".....", ".....", "....."),
 }
-FRASE = "REMOTIX 10 bit 4:2:0"
+SENTENCE = "REMOTIX 10 bit 4:2:0"
 
 
 def rgb_a_ycbcr(r, g, b):
@@ -162,8 +162,8 @@ def rgb_a_ycbcr(r, g, b):
     cb = (b - yf) / 1.8556
     cr = (r - yf) / 1.5748
     y = int(round(64 + 876 * yf))
-    u = int(round(CROMA_ZERO + 896 * cb))
-    v = int(round(CROMA_ZERO + 896 * cr))
+    u = int(round(CHROMA_ZERO + 896 * cb))
+    v = int(round(CHROMA_ZERO + 896 * cr))
     limita = lambda x: max(4, min(1019, x))
     return limita(y), limita(u), limita(v)
 
@@ -177,30 +177,30 @@ def costruisci():
       exactly where the defect they then measure is born.
     """
     Y = [[0] * LARGHEZZA for _ in range(ALTEZZA)]
-    U = [[CROMA_ZERO] * LARGHEZZA for _ in range(ALTEZZA)]
-    V = [[CROMA_ZERO] * LARGHEZZA for _ in range(ALTEZZA)]
+    U = [[CHROMA_ZERO] * LARGHEZZA for _ in range(ALTEZZA)]
+    V = [[CHROMA_ZERO] * LARGHEZZA for _ in range(ALTEZZA)]
 
     # ── the 1-LSB ramp ─────────────────────────────────────────────────────
-    riga_rampa = [Y_MIN + (c * (Y_MAX - Y_MIN)) // (LARGHEZZA - 1)
+    ramp_line = [Y_MIN + (c * (Y_MAX - Y_MIN)) // (LARGHEZZA - 1)
                   for c in range(LARGHEZZA)]
-    for r in range(*FASCIA_RAMPA):
-        Y[r] = list(riga_rampa)
+    for r in range(*BAND_RAMP):
+        Y[r] = list(ramp_line)
 
     # ── soft colour gradients: blue → cyan, and green → yellow ─────────────
-    a, b_ = FASCIA_SFUMATURE
+    a, b_ = BAND_GRADIENTS
     meta = (a + b_) // 2
     for r in range(a, b_):
-        verso_giallo = r >= meta
+        towards_yellow = r >= meta
         for c in range(LARGHEZZA):
             t = c / (LARGHEZZA - 1)
-            if verso_giallo:
+            if towards_yellow:
                 y, u, v = rgb_a_ycbcr(t * 0.85, 0.85, 0.05)
             else:
                 y, u, v = rgb_a_ycbcr(0.05, t * 0.85, 0.85)
             Y[r][c], U[r][c], V[r][c] = y, u, v
 
     # ── the text: saturated red on saturated blue, at three magnifications ─
-    a, b_ = FASCIA_TESTO
+    a, b_ = BAND_TEXT
     fondo = rgb_a_ycbcr(0.05, 0.05, 0.90)
     inchiostro = rgb_a_ycbcr(0.90, 0.06, 0.06)
     for r in range(a, b_):
@@ -208,11 +208,11 @@ def costruisci():
             Y[r][c], U[r][c], V[r][c] = fondo
     riga = a + 8
     for scala in (1, 2, 3, 4):
-        disegna_frase(Y, U, V, FRASE, 8, riga, scala, inchiostro)
+        draw_sentence(Y, U, V, SENTENCE, 8, riga, scala, inchiostro)
         riga += 7 * scala + 10
 
     # ── the fine detail: checkerboards and 1, 2, 3 px bars ────────────────
-    a, b_ = FASCIA_FINE
+    a, b_ = BAND_END
     nero = rgb_a_ycbcr(0.02, 0.02, 0.02)
     bianco = rgb_a_ycbcr(0.95, 0.95, 0.95)
     rosso = rgb_a_ycbcr(0.90, 0.05, 0.05)
@@ -236,7 +236,7 @@ def costruisci():
             Y[r][c], U[r][c], V[r][c] = p
 
     # ── the flat reference patches ────────────────────────────────────────
-    a, b_ = FASCIA_TOPPE
+    a, b_ = BAND_PATCHES
     toppe = [rgb_a_ycbcr(x, x, x) for x in (0.0, 0.18, 0.5, 0.75, 1.0)]
     largo = LARGHEZZA // len(toppe)
     for r in range(a, b_):
@@ -246,7 +246,7 @@ def costruisci():
     return Y, U, V
 
 
-def disegna_frase(Y, U, V, frase, x0, y0, scala, colore):
+def draw_sentence(Y, U, V, frase, x0, y0, scala, colore):
     for k, ch in enumerate(frase):
         g = FONT.get(ch)
         if g is None:
@@ -263,7 +263,7 @@ def disegna_frase(Y, U, V, frase, x0, y0, scala, colore):
                             Y[y][x], U[y][x], V[y][x] = colore
 
 
-def sottocampiona(P):
+def subsamples(P):
     """4:4:4 → 4:2:0 with the average of the 2x2 block.  ⚠ Here the fringing is born."""
     fuori = []
     for r in range(0, ALTEZZA, 2):
@@ -282,7 +282,7 @@ def in_byte(piano):
     return bytes(b)
 
 
-def scrivi_yuv(percorso, Y, U, V):
+def write_yuv(percorso, Y, U, V):
     with open(percorso, "wb") as f:
         f.write(in_byte(Y))
         f.write(in_byte(U))
@@ -306,7 +306,7 @@ def a_8_bit(dati):
 
 # ── The judging tools ──────────────────────────────────────────────────────
 
-def leggi_riga_y(percorso, riga):
+def read_y_row(percorso, riga):
     """Row `riga` of the Y plane.  ⛔ It checks the file SIZE first.
 
     A short file read with `seek` gives no error: it gives bytes of another row, or
@@ -326,8 +326,8 @@ def leggi_riga_y(percorso, riga):
     return [crudo[i] | (crudo[i + 1] << 8) for i in range(0, len(crudo), 2)]
 
 
-def misura_bit(percorso, riga):
-    valori = leggi_riga_y(percorso, riga)
+def measure_bit(percorso, riga):
+    valori = read_y_row(percorso, riga)
     livelli = len(set(valori))
     m4 = sum(1 for v in valori if v % 4 == 0) / len(valori)
     verdetto = "8-bit-travestiti" if m4 > SOGLIA_M4_VERI else "10-bit-veri"
@@ -346,13 +346,13 @@ def confronta(a, b):
                 "identici": False}
     ny = LARGHEZZA * ALTEZZA * 2
     nc = (LARGHEZZA // 2) * (ALTEZZA // 2) * 2
-    tagli = {"Y": (0, ny), "U": (ny, ny + nc), "V": (ny + nc, ny + 2 * nc)}
+    cuts = {"Y": (0, ny), "U": (ny, ny + nc), "V": (ny + nc, ny + 2 * nc)}
     esito = {"confrontabili": True, "byte_totali": len(da), "identici": da == db}
-    for nome, (i0, i1) in tagli.items():
+    for nome, (i0, i1) in cuts.items():
         pa, pb = da[i0:i1], db[i0:i1]
         diversi = 0
         massimo = 0
-        somma2 = 0
+        sum2 = 0
         for i in range(0, len(pa), 2):
             va = pa[i] | (pa[i + 1] << 8)
             vb = pb[i] | (pb[i + 1] << 8)
@@ -361,11 +361,11 @@ def confronta(a, b):
                 diversi += 1
                 if d > massimo:
                     massimo = d
-            somma2 += d * d
+            sum2 += d * d
         n = len(pa) // 2
         esito[nome] = {"campioni": n, "campioni_diversi": diversi,
                        "differenza_massima": massimo,
-                       "errore_quadratico_medio": round(somma2 / n, 4)}
+                       "errore_quadratico_medio": round(sum2 / n, 4)}
     return esito
 
 
@@ -395,7 +395,7 @@ def autoprova(cartella):
     # 1 — the comparator
     graffiato = os.path.join(cartella, "autoprova-graffiato.yuv")
     dati = bytearray(open(vero, "rb").read())
-    dove = LARGHEZZA * 2 * RIGA_RAMPA + 100
+    dove = LARGHEZZA * 2 * RAMP_LINE + 100
     dati[dove] ^= 0xFF
     open(graffiato, "wb").write(bytes(dati))
     c1 = confronta(vero, graffiato)
@@ -409,20 +409,20 @@ def autoprova(cartella):
         guasti.append("⛔ the comparator says DIFFERENT for a file against itself")
 
     # 2 and 3 — the bit meter, both ways
-    m_vero = misura_bit(vero, RIGA_RAMPA)
-    m_finto = misura_bit(finto, RIGA_RAMPA)
-    ok2 = m_vero["verdetto"] == "10-bit-veri" and m_vero["livelli_distinti"] == ATTESO_LIVELLI_VERI
-    ok3 = m_finto["verdetto"] == "8-bit-travestiti" and m_finto["livelli_distinti"] == ATTESO_LIVELLI_8IN10
+    m_real = measure_bit(vero, RAMP_LINE)
+    m_fake = measure_bit(finto, RAMP_LINE)
+    ok2 = m_real["verdetto"] == "10-bit-veri" and m_real["livelli_distinti"] == ATTESO_LIVELLI_VERI
+    ok3 = m_fake["verdetto"] == "8-bit-travestiti" and m_fake["livelli_distinti"] == ATTESO_LIVELLI_8IN10
     if not ok2:
-        guasti.append(f"⛔ on the REAL source the meter says {m_vero}")
+        guasti.append(f"⛔ on the REAL source the meter says {m_real}")
     if not ok3:
         guasti.append(f"⛔ 10 BITS NOT DISTINGUISHABLE FROM 8: on the opposite case the "
-                      f"meter says {m_finto}")
+                      f"meter says {m_fake}")
 
     os.remove(graffiato)
     esito = {"controllo_positivo": ok0 and ok1 and ok2 and ok3,
              "comparatore_identita": ok0, "comparatore_un_byte": ok1,
-             "misura_vero": m_vero, "misura_opposto": m_finto,
+             "misura_vero": m_real, "misura_opposto": m_fake,
              "guasti": guasti}
     print(json.dumps(esito, ensure_ascii=False, indent=2))
     return 0 if esito["controllo_positivo"] else 1
@@ -431,23 +431,23 @@ def autoprova(cartella):
 def genera(cartella):
     os.makedirs(cartella, exist_ok=True)
     Y, U, V = costruisci()
-    Us, Vs = sottocampiona(U), sottocampiona(V)
+    Us, Vs = subsamples(U), subsamples(V)
     vero = os.path.join(cartella, "sorgente-10bit.yuv")
-    scrivi_yuv(vero, Y, Us, Vs)
+    write_yuv(vero, Y, Us, Vs)
     crudo = open(vero, "rb").read()
     open(os.path.join(cartella, "sorgente-8in10.yuv"), "wb").write(a_8_bit(crudo))
 
     scheda = {
         "larghezza": LARGHEZZA, "altezza": ALTEZZA,
         "formato": "yuv420p10le", "colore": "BT.709 range limitato",
-        "riga_della_rampa": RIGA_RAMPA,
+        "riga_della_rampa": RAMP_LINE,
         "atteso_livelli_veri": ATTESO_LIVELLI_VERI,
         "atteso_livelli_8in10": ATTESO_LIVELLI_8IN10,
         "atteso_m4_8in10": ATTESO_M4_8IN10,
         "soglia_m4_veri": SOGLIA_M4_VERI,
-        "fasce": {"rampa": FASCIA_RAMPA, "sfumature": FASCIA_SFUMATURE,
-                  "testo": FASCIA_TESTO, "fine": FASCIA_FINE,
-                  "toppe": FASCIA_TOPPE},
+        "fasce": {"rampa": BAND_RAMP, "sfumature": BAND_GRADIENTS,
+                  "testo": BAND_TEXT, "fine": BAND_END,
+                  "toppe": BAND_PATCHES},
         "byte_per_fotogramma": len(crudo),
     }
     with open(os.path.join(cartella, "sorgente.json"), "w") as f:
@@ -461,7 +461,7 @@ def main():
     p.add_argument("--genera", metavar="CARTELLA")
     p.add_argument("--autoprova", metavar="CARTELLA")
     p.add_argument("--livelli", metavar="FILE")
-    p.add_argument("--riga", type=int, default=RIGA_RAMPA)
+    p.add_argument("--riga", type=int, default=RAMP_LINE)
     p.add_argument("--confronta", nargs=2, metavar=("A", "B"))
     a = p.parse_args()
 
@@ -470,7 +470,7 @@ def main():
     if a.autoprova:
         return autoprova(a.autoprova)
     if a.livelli:
-        print(json.dumps(misura_bit(a.livelli, a.riga), ensure_ascii=False))
+        print(json.dumps(measure_bit(a.livelli, a.riga), ensure_ascii=False))
         return 0
     if a.confronta:
         print(json.dumps(confronta(*a.confronta), ensure_ascii=False))

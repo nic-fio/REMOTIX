@@ -8,34 +8,34 @@ import (
 	"path/filepath"
 )
 
-// TipoEvento: the lines of the write-ahead log (§6.6.3).
-type TipoEvento string
+// EventType: the lines of the write-ahead log (§6.6.3).
+type EventType string
 
 const (
-	EvStato               TipoEvento = "STATE"
-	EvIntenzione          TipoEvento = "INTENT"
-	EvFatta               TipoEvento = "DONE"
-	EvFallita             TipoEvento = "FAILED"
-	EvIntenzioneAnnulla   TipoEvento = "ROLLBACK_INTENT"
-	EvAnnullata           TipoEvento = "ROLLED_BACK"
-	EvAnnullamentoFallito TipoEvento = "ROLLBACK_FAILED"
-	EvNota                TipoEvento = "NOTE"
-	EvComando             TipoEvento = "COMMAND" // a program of the closed list launched (R41)
+	EvState          EventType = "STATE"
+	EvIntent         EventType = "INTENT"
+	EvDone           EventType = "DONE"
+	EvFailed         EventType = "FAILED"
+	EvIntentRollback EventType = "ROLLBACK_INTENT"
+	EvCancelled      EventType = "ROLLED_BACK"
+	EvRollbackFailed EventType = "ROLLBACK_FAILED"
+	EvNote           EventType = "NOTE"
+	EvCommand        EventType = "COMMAND" // a program of the closed list launched (R41)
 )
 
 // Evento is a line of the log (registro.jsonl).
-type Evento struct {
-	N         int             `json:"n"`
-	Ora       string          `json:"time"`
-	Tipo      TipoEvento      `json:"type"`
-	Azione    string          `json:"action,omitempty"`
-	Da        Stato           `json:"from,omitempty"`
-	A         Stato           `json:"to,omitempty"`
-	Prima     json.RawMessage `json:"state_before,omitempty"`
-	Dopo      json.RawMessage `json:"state_after,omitempty"`
-	Origine   Origine         `json:"origin,omitempty"`
-	Codice    string          `json:"code,omitempty"`
-	Dettaglio string          `json:"detail,omitempty"`
+type Event struct {
+	N       int             `json:"n"`
+	Ora     string          `json:"time"`
+	Tipo    EventType       `json:"type"`
+	Azione  string          `json:"action,omitempty"`
+	Da      Stato           `json:"from,omitempty"`
+	A       Stato           `json:"to,omitempty"`
+	Prima   json.RawMessage `json:"state_before,omitempty"`
+	Dopo    json.RawMessage `json:"state_after,omitempty"`
+	Origine Origine         `json:"origin,omitempty"`
+	Codice  string          `json:"code,omitempty"`
+	Detail  string          `json:"detail,omitempty"`
 }
 
 // Registro: the write-ahead log. Every line is written with fsync of the file (and of the
@@ -43,14 +43,14 @@ type Evento struct {
 type Registro struct {
 	percorso string
 	f        *os.File
-	Eventi   []Evento
+	Eventi   []Event
 }
 
-// ApriRegistro reads the existing log (or creates one) and opens it for appending. A final line
+// OpenLog reads the existing log (or creates one) and opens it for appending. A final line
 // written halfway (the process killed while writing) is removed and reported: lines are
 // written whole or not at all, and without its line the thing did not happen.
-func ApriRegistro(percorso string) (*Registro, []Messaggio, error) {
-	var avvisi []Messaggio
+func OpenLog(percorso string) (*Registro, []Message, error) {
+	var avvisi []Message
 	r := &Registro{percorso: percorso}
 	b, err := os.ReadFile(percorso)
 	nuovo := os.IsNotExist(err)
@@ -69,7 +69,7 @@ func ApriRegistro(percorso string) (*Registro, []Messaggio, error) {
 		if len(riga) == 0 {
 			continue
 		}
-		var e Evento
+		var e Event
 		if err := json.Unmarshal(riga, &e); err != nil {
 			return nil, nil, fmt.Errorf("%s: line %d broken: %w", percorso, i+1, err)
 		}
@@ -84,7 +84,7 @@ func ApriRegistro(percorso string) (*Registro, []Messaggio, error) {
 		if err := f.Sync(); err != nil {
 			return nil, nil, err
 		}
-		if err := SincronizzaCartella(filepath.Dir(percorso)); err != nil {
+		if err := SyncFolder(filepath.Dir(percorso)); err != nil {
 			return nil, nil, err
 		}
 	}
@@ -92,7 +92,7 @@ func ApriRegistro(percorso string) (*Registro, []Messaggio, error) {
 }
 
 // Scrivi appends a line and makes it durable before returning.
-func (r *Registro) Scrivi(e Evento) error {
+func (r *Registro) Scrivi(e Event) error {
 	e.N = len(r.Eventi) + 1
 	e.Ora = ora()
 	b, err := json.Marshal(e)
@@ -113,7 +113,7 @@ func (r *Registro) Scrivi(e Evento) error {
 func (r *Registro) Chiudi() error { return r.f.Close() }
 
 // Ultimo: the last line of an action among the given types (all if none).
-func (r *Registro) Ultimo(azione string, tipi ...TipoEvento) *Evento {
+func (r *Registro) Last(azione string, tipi ...EventType) *Event {
 	for i := len(r.Eventi) - 1; i >= 0; i-- {
 		e := &r.Eventi[i]
 		if e.Azione != azione {
@@ -134,9 +134,9 @@ func (r *Registro) Ultimo(azione string, tipi ...TipoEvento) *Evento {
 // Intenzione: the FIRST intention of an action. The before-state that counts is that one: if
 // resume re-photographed the machine after an effect had already happened, it would mistake a change
 // of ours for a PRE-EXISTING one and would never undo it (§6.6.4).
-func (r *Registro) Intenzione(azione string) *Evento {
+func (r *Registro) Intenzione(azione string) *Event {
 	for i := range r.Eventi {
-		if r.Eventi[i].Azione == azione && r.Eventi[i].Tipo == EvIntenzione {
+		if r.Eventi[i].Azione == azione && r.Eventi[i].Tipo == EvIntent {
 			return &r.Eventi[i]
 		}
 	}
@@ -146,7 +146,7 @@ func (r *Registro) Intenzione(azione string) *Evento {
 // Toccata: the log has at least one intention, that is the machine may have been changed.
 func (r *Registro) Toccata() bool {
 	for _, e := range r.Eventi {
-		if e.Tipo == EvIntenzione {
+		if e.Tipo == EvIntent {
 			return true
 		}
 	}

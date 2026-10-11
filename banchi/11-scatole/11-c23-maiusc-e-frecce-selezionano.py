@@ -143,28 +143,28 @@ VERDE, ROSSO, CIECO = VERI.VERDE, VERI.ROSSO, VERI.CIECO
 PORTE = C20V.PORTE
 NOME_ESITO = C21.NOME_ESITO
 
-MODELLO_INQUILINO = re.compile(r"^c23u[0-9]+$")
+TENANT_PATTERN = re.compile(r"^c23u[0-9]+$")
 
 # ---------------------------------------------------------------------------
 # ⛔ THE NUMBERS — each with its reason.
 # ---------------------------------------------------------------------------
 # Between one event and the next: more than a human's shortest repeat, and
 # enough for every key to travel on its own (`[M]` c95: 90 ms are enough).
-PAUSA_MS = 90
+PAUSE_MS = 90
 # How long we wait for the photograph to say the value: it is not a latency, it is
 # a ceiling beyond which the value no longer arrives.
 ATTESA_S = 6.0
-FOTO_OGNI_S = 0.7
+PHOTO_EVERY_S = 0.7
 # The tolerance on a box's colour: half the minimum distance between two
 # colours of the palette (127) minus a margin.
 TOLLERANZA = 60
 # ⭐ The strip, in fractions of the kiosk window (= the desktop): wide and
 #   in the middle, far from bars and drawers even if the kiosk did not cover them.
 CASELLE = 14
-STRISCIA_X0, STRISCIA_X1 = 0.04, 0.96      # from the left mark to the right one
-STRISCIA_Y0, STRISCIA_Y1 = 0.55, 0.75
+STRIP_X0, STRIP_X1 = 0.04, 0.96      # from the left mark to the right one
+STRIP_Y0, STRIP_Y1 = 0.55, 0.75
 # The sample at the centre of each box: +/- this fraction of the box.
-CAMPIONE = 0.2
+SAMPLE = 0.2
 
 # ⭐ THE PALETTE.  Reserved: VUOTO (box without a character), ALTRO (a
 #   character outside the alphabet, or the value too long), MARCA (the two
@@ -175,22 +175,22 @@ MARCA = (255, 255, 255)
 ALFABETO = "abcdefnoquxyzAXY "
 
 
-def _cubo():
+def _cube():
     livelli = (0, 128, 255)
     return [(r, g, b) for r in livelli for g in livelli for b in livelli]
 
 
-COLORI = {}
-for _c in [c for c in _cubo() if c not in (VUOTO, ALTRO, MARCA)][:len(ALFABETO)]:
-    COLORI[ALFABETO[len(COLORI)]] = _c
-assert len(COLORI) == len(ALFABETO)
+COLORS = {}
+for _c in [c for c in _cube() if c not in (VUOTO, ALTRO, MARCA)][:len(ALFABETO)]:
+    COLORS[ALFABETO[len(COLORS)]] = _c
+assert len(COLORS) == len(ALFABETO)
 
 # ---------------------------------------------------------------------------
 # ⭐ THE KEYS.  A step is («giu»|«su», name).  The letters are written ALREADY
 #   in the form the browser reports (`ev.key`): «Y», not «y» + Shift.
 #   ⇒ The fault can remove Shift without changing the letters.
 # ---------------------------------------------------------------------------
-SPECIALI = {
+SPECIAL = {
     #  name        key          code          vk  WebDriver   CDP bit
     "Shift":     ("Shift",     "ShiftLeft",   16, "", 8),
     "Control":   ("Control",   "ControlLeft", 17, "", 2),
@@ -215,7 +215,7 @@ def col(mod, passi):
     return [("giu", mod)] + passi + [("su", mod)]
 
 
-PULISCI = col("Control", premi("a")) + premi("Backspace")
+CLEAN = col("Control", premi("a")) + premi("Backspace")
 
 # (title, base, sequence, expected)
 CASI = [
@@ -287,38 +287,38 @@ def simula(passi, valore=""):
     return valore
 
 
-def centri_caselle():
+def box_centers():
     """[(fx, fy)] of the centres: mark, CASELLE boxes, mark — in fractions."""
-    passo = (STRISCIA_X1 - STRISCIA_X0) / (CASELLE + 2)
-    fy = (STRISCIA_Y0 + STRISCIA_Y1) / 2
-    return [(STRISCIA_X0 + (i + 0.5) * passo, fy) for i in range(CASELLE + 2)]
+    passo = (STRIP_X1 - STRIP_X0) / (CASELLE + 2)
+    fy = (STRIP_Y0 + STRIP_Y1) / 2
+    return [(STRIP_X0 + (i + 0.5) * passo, fy) for i in range(CASELLE + 2)]
 
 
 def _dist(a, b):
     return max(abs(x - y) for x, y in zip(a, b))
 
 
-def nome_colore(c):
+def color_name(c):
     """(name, distance) of the nearest palette colour."""
     tutti = [("MARCA", MARCA), ("VUOTO", VUOTO), ("ALTRO", ALTRO)] + \
-        [(k, v) for k, v in COLORI.items()]
+        [(k, v) for k, v in COLORS.items()]
     k, v = min(tutti, key=lambda kv: _dist(kv[1], c))
     return k, _dist(v, c)
 
 
-def leggi_striscia(campiona):
+def read_strip(campiona):
     """⭐ The value of the field from the photograph.
 
     `campiona(fx, fy, rx, ry)` returns the (median) colour of the rectangle
     centred in (fx, fy) with half-width (rx, ry), in fractions of the desktop.
     Returns (value or None, why)."""
-    cc = centri_caselle()
-    passo = (STRISCIA_X1 - STRISCIA_X0) / (CASELLE + 2)
-    rx, ry = passo * CAMPIONE, (STRISCIA_Y1 - STRISCIA_Y0) * CAMPIONE
+    cc = box_centers()
+    passo = (STRIP_X1 - STRIP_X0) / (CASELLE + 2)
+    rx, ry = passo * SAMPLE, (STRIP_Y1 - STRIP_Y0) * SAMPLE
     nomi = []
     for i, (fx, fy) in enumerate(cc):
         c = campiona(fx, fy, rx, ry)
-        k, d = nome_colore(c)
+        k, d = color_name(c)
         if d > TOLLERANZA:
             return None, "box %d unreadable: %s is %d away from the nearest (%s)" % (
                 i, c, d, k)
@@ -341,7 +341,7 @@ def leggi_striscia(campiona):
     return v, ""
 
 
-def campionatore(im, geo):
+def sampler_obj(im, geo):
     """`campiona()` on a PIL image of the canvas, with C21's geometry:
     fraction of the desktop ⇒ desktop pixel ⇒ photograph pixel."""
     pw, ph = im.size
@@ -363,24 +363,24 @@ def campionatore(im, geo):
     return campiona
 
 
-def giudica_caso(titolo, base, atteso, vuoto, visto_base, visto):
+def judge_case(titolo, base, atteso, vuoto, seen_base, visto):
     """(outcome, reason) of a case, from the three values read in the photographs."""
     if vuoto != "":
         return CIECO, "%s: after the cleaning the strip is not empty (%r): the scene does not " \
             "bear witness" % (titolo, vuoto)
-    if visto_base != base:
+    if seen_base != base:
         return CIECO, "%s: the base %r did not arrive (seen %r): plain typing " \
-            "is C4's, the selection is not judged" % (titolo, base, visto_base)
+            "is C4's, the selection is not judged" % (titolo, base, seen_base)
     if visto == atteso:
         return VERDE, "%s: %r ⇒ %r" % (titolo, base, visto)
     return ROSSO, "%s: %r ⇒ %r instead of %r" % (titolo, base, visto, atteso)
 
 
-def esito_complessivo(esiti):
+def overall_outcome(esiti):
     return ROSSO if ROSSO in esiti else (CIECO if CIECO in esiti else VERDE)
 
 
-def esito_col_guasto(esiti):
+def outcome_with_fault(esiti):
     """⛔ The other way round: 0 if EVERY case is red (the fault shows everywhere)."""
     if CIECO in esiti:
         return CIECO
@@ -390,22 +390,22 @@ def esito_col_guasto(esiti):
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE CERTIFICATION OF THE PURE FUNCTIONS
 # ═══════════════════════════════════════════════════════════════════════════
-def _foto_finta(valore, geo, spost=(0, 0), rumore=25, seme=7):
+def _fake_photo(valore, geo, shift=(0, 0), rumore=25, seme=7):
     """A canvas painted like the scene, with a shift (a bar the
     kiosk does not cover) and some noise (the encoding)."""
     from PIL import Image, ImageDraw
     rnd = random.Random(seme)
     im = Image.new("RGB", (geo["bw"], geo["bh"]), (32, 32, 32))
     d = ImageDraw.Draw(im)
-    passo = (STRISCIA_X1 - STRISCIA_X0) / (CASELLE + 2)
-    colori = [MARCA] + [COLORI.get(c, ALTRO) for c in valore[:CASELLE]] + \
+    passo = (STRIP_X1 - STRIP_X0) / (CASELLE + 2)
+    colori = [MARCA] + [COLORS.get(c, ALTRO) for c in valore[:CASELLE]] + \
         [VUOTO] * (CASELLE - len(valore[:CASELLE])) + [MARCA]
     for i, c in enumerate(colori):
-        x0 = (STRISCIA_X0 + i * passo) * geo["bw"] + spost[0]
-        x1 = (STRISCIA_X0 + (i + 1) * passo) * geo["bw"] + spost[0] - 3
+        x0 = (STRIP_X0 + i * passo) * geo["bw"] + shift[0]
+        x1 = (STRIP_X0 + (i + 1) * passo) * geo["bw"] + shift[0] - 3
         c = tuple(min(255, max(0, v + rnd.randint(-rumore, rumore))) for v in c)
-        d.rectangle([x0, STRISCIA_Y0 * geo["bh"] + spost[1], x1,
-                     STRISCIA_Y1 * geo["bh"] + spost[1]], fill=c)
+        d.rectangle([x0, STRIP_Y0 * geo["bh"] + shift[1], x1,
+                     STRIP_Y1 * geo["bh"] + shift[1]], fill=c)
     return im
 
 
@@ -421,7 +421,7 @@ def certifica():
             guai.append(cosa)
 
     # 1. the palette: colours distinct well beyond twice the tolerance
-    tutti = [MARCA, VUOTO, ALTRO] + list(COLORI.values())
+    tutti = [MARCA, VUOTO, ALTRO] + list(COLORS.values())
     dmin = min(_dist(a, b) for i, a in enumerate(tutti) for b in tutti[i + 1:])
     prova("palette: %d colours, minimum distance %d > 2×%d" % (len(tutti), dmin, TOLLERANZA),
           dmin > 2 * TOLLERANZA)
@@ -435,7 +435,7 @@ def certifica():
         vg = simula(scrivi(base) + senza_maiusc(seq))
         prova("simula %s WITHOUT Shift ⇒ something else" % t.split()[0], vg != atteso,
               "gives %r" % vg)
-    prova("simula: the cleaning empties the field", simula(PULISCI, "abc") == "")
+    prova("simula: the cleaning empties the field", simula(CLEAN, "abc") == "")
     # ⭐ case 4 with only the first half of the cure: after the letter Shift
     #   is UP for the server ⇒ the two Lefts move.  `[M]` c95: «abcdXqeA».
     vecchia = scrivi("abcdef") + col("Shift", premi("ArrowLeft") + premi("A")) \
@@ -452,10 +452,10 @@ def certifica():
            "sx": 1.0, "sy": 1.0}
     for v in ("", "abcY", "uno z", "abcdeAb", "abcdXqeA", "abcdefabcdefab"):
         for sp in ((0, 0), (0, 40), (-30, 25)):
-            letto, perche = leggi_striscia(campionatore(_foto_finta(v, geo, sp), geo))
+            letto, perche = read_strip(sampler_obj(_fake_photo(v, geo, sp), geo))
             prova("strip %r shifted %s ⇒ it reads back" % (v, sp), letto == v,
                   "read %r %s" % (letto, perche))
-    letto, perche = leggi_striscia(campionatore(_foto_finta("abc@", geo), geo))
+    letto, perche = read_strip(sampler_obj(_fake_photo("abc@", geo), geo))
     prova("a character outside the alphabet ⇒ the replacement sign", letto == "abc�",
           "read %r %s" % (letto, perche))
     # the canvas bigger than the photo (Chrome shrinks it) and with black margins
@@ -463,26 +463,26 @@ def certifica():
             "sx": 0.5, "sy": 0.5}
     from PIL import Image
     tela = Image.new("RGB", (1920, 1200), (0, 0, 0))
-    tela.paste(_foto_finta("abcY", {"bw": 1920, "bh": 1080}), (0, 60))
-    letto, perche = leggi_striscia(campionatore(tela, geo2))
+    tela.paste(_fake_photo("abcY", {"bw": 1920, "bh": 1080}), (0, 60))
+    letto, perche = read_strip(sampler_obj(tela, geo2))
     prova("4K canvas in a buffer with margins ⇒ it reads back", letto == "abcY",
           "read %r %s" % (letto, perche))
-    letto, perche = leggi_striscia(campionatore(Image.new("RGB", (1920, 1080), (90, 60, 30)),
+    letto, perche = read_strip(sampler_obj(Image.new("RGB", (1920, 1080), (90, 60, 30)),
                                                 geo))
     prova("without a strip ⇒ None (no judgement)", letto is None, perche)
     # 4. the judges
     prova("giudica: expected ⇒ GREEN",
-          giudica_caso("t", "abcdef", "abcY", "", "abcdef", "abcY")[0] == VERDE)
+          judge_case("t", "abcdef", "abcY", "", "abcdef", "abcY")[0] == VERDE)
     prova("giudica: Shift does not select ⇒ RED",
-          giudica_caso("t", "abcdef", "abcY", "", "abcdef", "abcYdef")[0] == ROSSO)
+          judge_case("t", "abcdef", "abcY", "", "abcdef", "abcYdef")[0] == ROSSO)
     prova("giudica: the base does not arrive ⇒ 3",
-          giudica_caso("t", "abcdef", "abcY", "", "abc", "abcY")[0] == CIECO)
+          judge_case("t", "abcdef", "abcY", "", "abc", "abcY")[0] == CIECO)
     prova("giudica: the cleaning does not empty ⇒ 3",
-          giudica_caso("t", "abcdef", "abcY", "xx", "abcdef", "abcY")[0] == CIECO)
-    prova("with the fault: all red ⇒ 0 (seen)", esito_col_guasto([ROSSO] * 4) == VERDE)
+          judge_case("t", "abcdef", "abcY", "xx", "abcdef", "abcY")[0] == CIECO)
+    prova("with the fault: all red ⇒ 0 (seen)", outcome_with_fault([ROSSO] * 4) == VERDE)
     prova("with the fault: one green ⇒ 1 (not seen)",
-          esito_col_guasto([ROSSO, VERDE, ROSSO, ROSSO]) == ROSSO)
-    prova("with the fault: one blind ⇒ 3", esito_col_guasto([ROSSO, CIECO]) == CIECO)
+          outcome_with_fault([ROSSO, VERDE, ROSSO, ROSSO]) == ROSSO)
+    prova("with the fault: one blind ⇒ 3", outcome_with_fault([ROSSO, CIECO]) == CIECO)
     print()
     if guai:
         print("⛔ CERTIFICATION FAILED: %d tests out of %d" % (len(guai), len(fatte)))
@@ -498,8 +498,8 @@ def certifica():
 # ═══════════════════════════════════════════════════════════════════════════
 def pagina_scena():
     """⭐ The page, with THIS program's palette put inside."""
-    tav = {k: "rgb(%d,%d,%d)" % v for k, v in COLORI.items()}
-    passo = (STRISCIA_X1 - STRISCIA_X0) / (CASELLE + 2) * 100
+    tav = {k: "rgb(%d,%d,%d)" % v for k, v in COLORS.items()}
+    passo = (STRIP_X1 - STRIP_X0) / (CASELLE + 2) * 100
     return """<!doctype html><meta charset=utf-8><title>REMOTIX C23</title>
 <style>
  html,body{margin:0;height:100%%;background:#202020;overflow:hidden}
@@ -523,12 +523,12 @@ addEventListener('keydown',e=>m('K '+e.key+' shift='+e.shiftKey+' ctrl='+e.ctrlK
 f.addEventListener('input',()=>{dipingi();m('V '+JSON.stringify(f.value));});
 setInterval(()=>{ if(document.activeElement!==f) f.focus(); dipingi(); },300);
 </script>""" % {"tav": json.dumps(tav), "vu": "%d,%d,%d" % VUOTO, "al": "%d,%d,%d" % ALTRO,
-                "ma": "%d,%d,%d" % MARCA, "n": CASELLE, "x0": STRISCIA_X0 * 100,
-                "w": passo, "y0": STRISCIA_Y0 * 100, "h": (STRISCIA_Y1 - STRISCIA_Y0) * 100}
+                "ma": "%d,%d,%d" % MARCA, "n": CASELLE, "x0": STRIP_X0 * 100,
+                "w": passo, "y0": STRIP_Y0 * 100, "h": (STRIP_Y1 - STRIP_Y0) * 100}
 
 
 # The scene's server: it serves the page and notes what the page says.
-SERVITORE = r'''
+SERVER = r'''
 import http.server, sys
 PAG = open(sys.argv[2], "rb").read()
 LOG = sys.argv[3]
@@ -567,12 +567,12 @@ def accendi_la_scena(sc, chi, porta):
         "</dev/null >$h/.c23-firefox.log 2>&1 & "
         "for i in $(seq 1 80); do grep -q caricata $h/c23.log && {{ echo started; exit 0; }}; "
         "sleep 0.5; done; echo 'the scene did not say «caricata»'; tail -5 $h/.c23-firefox.log; "
-        "exit 1".format(c=chi, p=porta, srv=b(SERVITORE), pag=b(pagina_scena()),
+        "exit 1".format(c=chi, p=porta, srv=b(SERVER), pag=b(pagina_scena()),
                         pref=b(C21.PREFERENZE)), 90)
     return c == 0, t
 
 
-def leggi_il_quaderno(sc, chi):
+def read_notebook(sc, chi):
     _c, t = sc.dentro("cat /home/%s/c23.log 2>/dev/null" % chi, 30)
     return [r for r in t.splitlines() if r.strip()]
 
@@ -585,8 +585,8 @@ def manda(g, passi):
     if hasattr(g, "cdp"):
         mod = 0
         for tipo, nome in passi:
-            if nome in SPECIALI:
-                key, code, vk, _w, bit = SPECIALI[nome]
+            if nome in SPECIAL:
+                key, code, vk, _w, bit = SPECIAL[nome]
                 if tipo == "giu":
                     mod |= bit
                 g.cdp.chiama("Input.dispatchKeyEvent",
@@ -602,13 +602,13 @@ def manda(g, passi):
                 if tipo == "giu" and not (mod & 2):
                     p["text"] = p["unmodifiedText"] = nome
                 g.cdp.chiama("Input.dispatchKeyEvent", **p)
-            time.sleep(PAUSA_MS / 1000.0)
+            time.sleep(PAUSE_MS / 1000.0)
         return
     az = []
     for tipo, nome in passi:
-        v = SPECIALI[nome][3] if nome in SPECIALI else nome
+        v = SPECIAL[nome][3] if nome in SPECIAL else nome
         az.append({"type": "keyDown" if tipo == "giu" else "keyUp", "value": v})
-        az.append({"type": "pause", "duration": PAUSA_MS})
+        az.append({"type": "pause", "duration": PAUSE_MS})
     g.m.chiama("WebDriver:PerformActions",
                {"actions": [{"type": "key", "id": "tastiera", "actions": az}]})
     g.m.chiama("WebDriver:ReleaseActions")
@@ -627,12 +627,12 @@ def fotografa_e_leggi(g, geo, voluto, salva, nome):
             png, perche = None, "photograph failed: %s" % str(e)[:120]
         if png:
             im = Image.open(io.BytesIO(png)).convert("RGB")
-            letto, perche = leggi_striscia(campionatore(im, geo))
+            letto, perche = read_strip(sampler_obj(im, geo))
             if letto == voluto:
                 break
         if time.time() >= fine:
             break
-        time.sleep(FOTO_OGNI_S)
+        time.sleep(PHOTO_EVERY_S)
     if salva and png:
         with open(os.path.join(salva, "%s.png" % nome), "wb") as fh:
             fh.write(png)
@@ -677,7 +677,7 @@ def osserva(nome, o, sc, chi):
         time.sleep(3)
         # ⚠ A click in the remote field: the new window takes the keyboard
         #   focus even where the desktop does not give it by itself.
-        x, y = C21.dal_desktop_al_vetro(geo, geo["tl"] * 0.5, geo["ta"] * 0.26)
+        x, y = C21.desktop_to_glass(geo, geo["tl"] * 0.5, geo["ta"] * 0.26)
         g.clic(x, y)
         time.sleep(1.0)
         esiti, casi = [], []
@@ -685,21 +685,21 @@ def osserva(nome, o, sc, chi):
             if o.senza_maiusc:
                 seq = senza_maiusc(seq)
             corto = titolo.split()[0]
-            manda(g, PULISCI)
+            manda(g, CLEAN)
             vuoto, pv = fotografa_e_leggi(g, geo, "", o.salva, "%s-c%s-0vuoto" % (nome, corto))
             manda(g, scrivi(base))
             vb, pb = fotografa_e_leggi(g, geo, base, o.salva, "%s-c%s-1base" % (nome, corto))
-            n0 = len(leggi_il_quaderno(sc, chi))
+            n0 = len(read_notebook(sc, chi))
             manda(g, seq)
             visto, pvi = fotografa_e_leggi(g, geo, atteso, o.salva,
                                            "%s-c%s-2dopo" % (nome, corto))
-            es, msg = giudica_caso(titolo, base, atteso, vuoto, vb, visto)
+            es, msg = judge_case(titolo, base, atteso, vuoto, vb, visto)
             if es == CIECO and (vuoto is None or vb is None):
                 msg += " — %s" % (pv or pb)
             elif visto is None:
                 es, msg = CIECO, "%s: the strip cannot be read after the sequence: %s" % (
                     titolo, pvi)
-            quad = leggi_il_quaderno(sc, chi)[n0:]
+            quad = read_notebook(sc, chi)[n0:]
             tasti = [r[2:] for r in quad if r.startswith("K ")]
             print("   %s %s" % ({VERDE: "⭐ 0", ROSSO: "⛔ 1", CIECO: "⚠ 3"}[es], msg),
                   flush=True)
@@ -728,12 +728,12 @@ def giudica_browser(riga, guasto):
         return riga
     es = riga["esiti"]
     if not guasto:
-        e = esito_complessivo(es)
+        e = overall_outcome(es)
         perche = {VERDE: "all %d cases come out right" % len(es),
                   ROSSO: "%d cases out of %d do not come out right" % (es.count(ROSSO), len(es)),
                   CIECO: "one case could not be looked at"}[e]
         return dict(riga, esito=e, perche=perche)
-    e = esito_col_guasto(es)
+    e = outcome_with_fault(es)
     perche = {VERDE: "⭐ FAULT SEEN: without Shift all %d cases are red" % len(es),
               ROSSO: "⛔ FAULT NOT SEEN: without Shift %d cases come out right all the same"
                      % es.count(VERDE),
@@ -781,7 +781,7 @@ def main():
     if o.contenitore:
         sc.contenitore = o.contenitore
     chi = "c23u%03d" % random.randint(0, 999)
-    assert MODELLO_INQUILINO.match(chi)
+    assert TENANT_PATTERN.match(chi)
     o.utente = chi
     print("⭐ 11-c23 · %s · %s · inquilino %s · browser %s · %s%s"
           % (sc.contenitore, o.url, chi, o.browser,

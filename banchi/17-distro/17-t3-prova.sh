@@ -124,10 +124,10 @@ diff "$E/impronta-browser.txt" "$E/impronta-reinstallato.txt" >"$E/diff-R5.txt"
 echo "   R5: $(grep -c '^[<>]' "$E/diff-R5.txt") lines differ between \"browser\" and \"reinstallato\""
 
 echo "==> ⚠ the engine steps UNDONE by hand, then apt-get purge remotix (R6)"
-NUOVE=$(sed -n 's/^new folder: //p' "$E/passi-motore.txt" | tr '\n' ' ')
+NEW=$(sed -n 's/^new folder: //p' "$E/passi-motore.txt" | tr '\n' ' ')
 vm "sudo systemctl disable --now remotix 2>&1 | tail -1
 sudo rm -f /etc/polkit-1/rules.d/50-remotix-niente-spegnimento.rules /etc/systemd/logind.conf.d/remotix-tasti.conf /etc/systemd/sleep.conf.d/remotix-niente-sospensione.conf
-for d in $NUOVE; do sudo rmdir \$d && echo removed folder \$d; done
+for d in $NEW; do sudo rmdir \$d && echo removed folder \$d; done
 sudo systemctl reload systemd-logind
 sudo rm -f /var/lib/remotix/installazione-confermata" >"$E/passi-disfatti.txt" 2>&1
 for g in $(sed -n 's/^group: prova + //p' "$E/passi-motore.txt"); do vm "sudo gpasswd -d prova $g >/dev/null && echo 'undone: prova - $g'"; done >>"$E/passi-disfatti.txt" 2>&1

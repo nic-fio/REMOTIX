@@ -37,10 +37,10 @@
 # ---------------------------------------------------------------------------
 set -uo pipefail
 
-UID_UTENTE=$(id -u)
-RUNTIME=${XDG_RUNTIME_DIR:-/run/user/$UID_UTENTE}
+USER_UID=$(id -u)
+RUNTIME=${XDG_RUNTIME_DIR:-/run/user/$USER_UID}
 REGISTRO=$RUNTIME/remotix-sessione.log
-REGISTRO_SHELL=$RUNTIME/mutter.log
+SHELL_LOG=$RUNTIME/mutter.log
 COMANDO="exec gnome-session --session=gnome"
 
 # ---------------------------------------------------------------------------
@@ -60,15 +60,15 @@ COMANDO="exec gnome-session --session=gnome"
 #    ~/.config/systemd/user wins over the system one, and we can send
 #    the Shell's output to a file of our own.
 # ---------------------------------------------------------------------------
-registro_shell()
+shell_log()
 {
 	local cartella=$HOME/.config/systemd/user/org.gnome.Shell@wayland.service.d
 
 	mkdir -p "$cartella"
 	cat >"$cartella/00-registro.conf" <<CONF
 [Service]
-StandardOutput=append:$REGISTRO_SHELL
-StandardError=append:$REGISTRO_SHELL
+StandardOutput=append:$SHELL_LOG
+StandardError=append:$SHELL_LOG
 CONF
 	systemctl --user daemon-reload
 }
@@ -93,8 +93,8 @@ ambiente()
 	    "PATH=/usr/local/bin:/usr/bin:/bin" \
 	    "SHELL=" \
 	    "LANG=C.UTF-8" \
-	    "XDG_RUNTIME_DIR=/run/user/$UID_UTENTE" \
-	    "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$UID_UTENTE/bus" \
+	    "XDG_RUNTIME_DIR=/run/user/$USER_UID" \
+	    "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$USER_UID/bus" \
 	    "XDG_CURRENT_DESKTOP=GNOME" \
 	    "XDG_SESSION_DESKTOP=gnome" \
 	    "XDG_SESSION_TYPE=wayland"
@@ -102,7 +102,7 @@ ambiente()
 
 viva()
 {
-	pgrep -u "$UID_UTENTE" -x gnome-shell >/dev/null 2>&1
+	pgrep -u "$USER_UID" -x gnome-shell >/dev/null 2>&1
 }
 
 # ---------------------------------------------------------------------------
@@ -126,7 +126,7 @@ viva()
 #    starting the target, it opens a fifo and sleeps, exiting once the session is torn down
 #    (`STUDI.md` §gnome §3.2).  `Logout(1)` is not enough: it shows the dialog if there is an
 #    inhibitor, and in an unattended session nobody sees it.
-ferma_e_aspetta()
+stop_and_wait()
 {
 	local scadenza=$((SECONDS + ${1:-45}))
 	local stato
@@ -203,7 +203,7 @@ headless()
 {
 	local pid cmdline
 
-	pid=$(pgrep -u "$UID_UTENTE" -x gnome-shell | head -1)
+	pid=$(pgrep -u "$USER_UID" -x gnome-shell | head -1)
 	if [ -z "$pid" ]; then
 		echo "UNKNOWN: there is no gnome-shell to ask"
 		return 2
@@ -225,13 +225,13 @@ headless()
 
 	# We did not ask for it: then the only hope is the accidental path,
 	# and to know it we need the log.
-	if [ ! -s "$REGISTRO_SHELL" ]; then
+	if [ ! -s "$SHELL_LOG" ]; then
 		echo "UNKNOWN: --headless is not on the command line, and Mutter's log"
-		echo "        is empty ($REGISTRO_SHELL).  It is not «Mutter did not"
+		echo "        is empty ($SHELL_LOG).  It is not «Mutter did not"
 		echo "        say it»: it is «we did not hear it»."
 		return 2
 	fi
-	if grep -q "No seat assigned, running headlessly" "$REGISTRO_SHELL"; then
+	if grep -q "No seat assigned, running headlessly" "$SHELL_LOG"; then
 		echo "YES, but by ACCIDENT: Mutter says «No seat assigned, running headlessly»."
 		echo "    ⚠ It works, but none of our lines asks for it — DECISIONI.md §4.3-bis"
 		echo "      says it must be declared, not inherited from the lack of a seat."
@@ -254,14 +254,14 @@ avvia)
 	   && ! viva
 	then
 		echo "session manager alive but without a compositor: stopping everything and restarting"
-		ferma_e_aspetta || { echo "⛔ it did not stop in time"; exit 1; }
+		stop_and_wait || { echo "⛔ it did not stop in time"; exit 1; }
 	fi
 
 	if viva; then
-		echo "there is already a session: $(pgrep -u "$UID_UTENTE" -x gnome-shell | tr '\n' ' ')"
+		echo "there is already a session: $(pgrep -u "$USER_UID" -x gnome-shell | tr '\n' ' ')"
 	else
-		registro_shell
-		: >"$REGISTRO"; : >"$REGISTRO_SHELL"
+		shell_log
+		: >"$REGISTRO"; : >"$SHELL_LOG"
 		# `setsid --fork` detaches it from our process group: closing
 		# the ssh does not take it away.
 		env -i $(ambiente) setsid --fork sh -c "exec >>'$REGISTRO' 2>&1; $COMANDO"
@@ -276,14 +276,14 @@ avvia)
 	;;
 stato)
 	if viva; then
-		echo "gnome-shell:  $(pgrep -u "$UID_UTENTE" -c -x gnome-shell) process(es)"
+		echo "gnome-shell:  $(pgrep -u "$USER_UID" -c -x gnome-shell) process(es)"
 	else
 		echo "gnome-shell:  none"
 	fi
 	echo -n "headless?     "; headless
 	;;
 ferma)
-	ferma_e_aspetta && echo "stopped" || { echo "⛔ it did not stop in time"; exit 1; }
+	stop_and_wait && echo "stopped" || { echo "⛔ it did not stop in time"; exit 1; }
 	;;
 registro) tail -n "${2:-40}" "$REGISTRO" ;;
 *) echo "usage: $0 {avvia|stato|ferma|registro [n]}" >&2; exit 2 ;;

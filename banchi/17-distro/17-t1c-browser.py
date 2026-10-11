@@ -121,7 +121,7 @@ def main():
     finally:
         if g is not None:
             try:
-                js, rete, _ = g.errori_fuori()
+                js, rete, _ = g.errors_out()
                 riga["errori"] = (js + rete)[:10]
             except Exception:                    # noqa: BLE001
                 pass

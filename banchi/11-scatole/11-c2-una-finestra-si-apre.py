@@ -269,7 +269,7 @@ FRAZIONE_MINIMA = 0.25
 #   round, or of another mesh) would give green to an application that has
 #   not even started.  ⚠ `[?]`, prudent: 0.20 sits below `FRAZIONE_MINIMA`
 #   because a bit of that colour could already be there by chance.
-MARGINE = 0.20
+MARGIN = 0.20
 
 # ⭐ With the grafted fault: how much the fraction must COLLAPSE between the healthy control
 #   and the faulted tenant for us to be able to say «the fault BIT».
@@ -285,13 +285,13 @@ QUOTA_GUASTO = 0.33
 
 # ⛔ How many `wl_output` are enough.  One: the question is «is there a screen?», not
 #    «how many screens are there».
-OUTPUT_MINIMI = 1
+MIN_OUTPUTS = 1
 
 # `wayland-info` lists the interfaces like this:
 #     interface: 'wl_output', version: 4, name: 42
 # ⚠ We look for the whole line anchored to the name between quotes, not the word inside a
 #   text (`CODER.md` §3.3-bis: «wl_output» also appears in «wl_output_manager»).
-FIRMA_OUTPUT = re.compile(r"interface:\s*'wl_output'")
+OUTPUT_SIGNATURE = re.compile(r"interface:\s*'wl_output'")
 
 # ═══════════════════════════════════════════════════════════════════════════
 # ⛔⛔ AND THE ADMISSION SIGNATURE IS A WHOLE LINE, NOT A WORD.
@@ -327,7 +327,7 @@ def e_stato_ammesso(coda):
     ⛔ `False` is not a product red: a client turned away is a client
        turned away, and the caller exits **3**.
     """
-    return casa_di_c1().e_stato_ammesso(coda)
+    return c1_home().e_stato_ammesso(coda)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -352,7 +352,7 @@ def e_stato_ammesso(coda):
 # ⛔ If one of the two is missing, this mesh exits **3**: we do not fall back on a
 #    poorer judgement without saying so.
 # ═══════════════════════════════════════════════════════════════════════════
-def _carica(nome_file, mestieri):
+def _carica(file_name, jobs):
     """Loads a module next to me (or one level up) and demands its trades.
 
     ⚠ «one level up» serves the laptop: in the box everything is in
@@ -361,11 +361,11 @@ def _carica(nome_file, mestieri):
       run where the phase document says it must run.
     """
     for base in (QUI, os.path.dirname(QUI)):
-        perc = os.path.join(base, nome_file)
+        perc = os.path.join(base, file_name)
         if not os.path.exists(perc):
             continue
         spec = importlib.util.spec_from_file_location(
-            "importato_" + re.sub(r"\W", "_", nome_file), perc)
+            "importato_" + re.sub(r"\W", "_", file_name), perc)
         m = importlib.util.module_from_spec(spec)
         try:
             spec.loader.exec_module(m)
@@ -374,18 +374,18 @@ def _carica(nome_file, mestieri):
         # ⛔ And we VERIFY that what is needed is there, instead of trusting the name
         #    of the file: `CODER.md` §3.9 — ask for the piece by name, and verify
         #    that it obeyed.
-        for mestiere in mestieri:
+        for mestiere in jobs:
             if not callable(getattr(m, mestiere, None)):
                 return None, perc
         return m, perc
     return None, ""
 
 
-def giudice_del_desktop():
+def desktop_judge():
     return _carica("10-f1-testimone.py", ("giudica",))
 
 
-def lettore_del_colore():
+def color_reader():
     return _carica("11-c8-il-secondo-apre-il-browser.py", ("frazione_del_colore",))
 
 
@@ -404,16 +404,16 @@ def lettore_del_colore():
 #   · `sgombra_il_posto_condiviso(b)` — removes `/tmp/mozilla` ⛔ only if it
 #        belongs to a tenant of base `b`, i.e. MINE.
 # ═══════════════════════════════════════════════════════════════════════════
-_MESTIERI_C8 = ("applica_la_cura", "sa_scrivere_nella_cache",
+_JOBS_C8 = ("applica_la_cura", "sa_scrivere_nella_cache",
                 "sgombra_il_posto_condiviso")
 _C8 = None
 
 
-def casa_di_c8():
+def c8_home():
     """⭐ C8's module, or `None`.  ⛔ We do not exit here: the caller decides."""
     global _C8
     if _C8 is None:
-        _C8, _ = _carica("11-c8-il-secondo-apre-il-browser.py", _MESTIERI_C8)
+        _C8, _ = _carica("11-c8-il-secondo-apre-il-browser.py", _JOBS_C8)
     return _C8
 
 
@@ -434,15 +434,15 @@ def casa_di_c8():
 # ⛔ If C1 does not load we exit **3** and say so: ⛔ we do not silently fall back
 #    on a poorer judgement.
 # ═══════════════════════════════════════════════════════════════════════════
-_MESTIERI_C1 = ("e_stato_ammesso", "certifica_ammissione",
+_JOBS_C1 = ("e_stato_ammesso", "certifica_ammissione",
                 "garantisci_i_gruppi", "verdetto_gruppi", "certifica_gruppi")
 _C1 = None
 
 
-def casa_di_c1():
+def c1_home():
     global _C1
     if _C1 is None:
-        _C1, _perc = _carica("11-c1-nasce-e-si-vede.py", _MESTIERI_C1)
+        _C1, _path = _carica("11-c1-nasce-e-si-vede.py", _JOBS_C1)
     if _C1 is None:
         print("⛔ I cannot find `11-c1-nasce-e-si-vede.py` next to me, and from there")
         print("   come the admission predicate and the guarantee of the")
@@ -461,15 +461,15 @@ def garantisci_i_gruppi(chi, prefisso="   "):
        force».  ⭐ The work is done by `attrezzi-gruppi-scheda.sh`, which reads the gids
        from the NODES and reads back comparing the numbers.  ⛔ No copy of it is made here.
     """
-    return casa_di_c1().garantisci_i_gruppi(chi, prefisso)
+    return c1_home().garantisci_i_gruppi(chi, prefisso)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 # ⭐⭐ THE JUDGEMENT — and it lives in a PURE function, so `--certifica` can
 #    run it on fake images without switching anything on.
 # ═══════════════════════════════════════════════════════════════════════════
-def giudica_il_giro(primo, ultimo, giudica, frazione, processi,
-                    frazione_minima=FRAZIONE_MINIMA, margine=MARGINE):
+def judge_round(primo, ultimo, giudica, frazione, processi,
+                    frazione_minima=FRAZIONE_MINIMA, margine=MARGIN):
     """Given the FIRST and the LAST frame of the grab, says whether the window is seen.
 
     `giudica`  = `10-f1-testimone.py:giudica`  (black / near-black / drawn)
@@ -571,8 +571,8 @@ def certifica():
         return 3
     import tempfile
 
-    giudice, dove_g = giudice_del_desktop()
-    lettore, dove_l = lettore_del_colore()
+    giudice, dove_g = desktop_judge()
+    lettore, dove_l = color_reader()
     if giudice is None:
         print("⛔ I cannot find (or it does not hold up) the image judge "
               "10-f1-testimone.py%s" % (" in %s" % dove_g if dove_g else ""))
@@ -589,7 +589,7 @@ def certifica():
 
     lav = tempfile.mkdtemp(prefix="c2cert-")
 
-    def dipingi_righe(nome, fondo, finestra, righe, disegno=True):
+    def paint_lines(nome, fondo, finestra, righe, disegno=True):
         """⭐ The window is painted by EXACT ROWS, not by share.
 
         ⛔ It serves to cross the thresholds **at the edge**: with a round share one
@@ -690,11 +690,11 @@ def certifica():
     print("   colour reader : %s" % dove_l)
     print("   colour %s · tolerance ±%d per channel · at least %.0f%% of the "
           "screen · margin %.0f points"
-          % (COLORE, TOLLERANZA, FRAZIONE_MINIMA * 100, MARGINE * 100))
+          % (COLORE, TOLLERANZA, FRAZIONE_MINIMA * 100, MARGIN * 100))
     print()
     guai = 0
     for nome, primo, ultimo, proc, atteso in casi:
-        e = giudica_il_giro(primo, ultimo, giudice.giudica, frazione, proc)
+        e = judge_round(primo, ultimo, giudice.giudica, frazione, proc)
         ok = e["stato"] == atteso
         guai += 0 if ok else 1
         print("  %s  %-56s  processes=%s  ⇒ %-10s (expected %s)"
@@ -709,9 +709,9 @@ def certifica():
     #    from a document; with this it is a fact the mesh produces by itself.
     # ═══════════════════════════════════════════════════════════════════════
     print()
-    a = giudica_il_giro(nudo, dipingi("dim-si", FONDO, COLORE, 0.85),
+    a = judge_round(nudo, dipingi("dim-si", FONDO, COLORE, 0.85),
                         giudice.giudica, frazione, 1)
-    b = giudica_il_giro(nudo, dipingi("dim-no", FONDO),
+    b = judge_round(nudo, dipingi("dim-no", FONDO),
                         giudice.giudica, frazione, 1)
     dimostrato = (a["stato"] == "vista" and b["stato"] == "non-vista"
                   and a["processi"] == b["processi"] == 1)
@@ -763,7 +763,7 @@ def certifica():
     #    check exists to catch.
     # ═══════════════════════════════════════════════════════════════════════
     print()
-    ammissioni = [
+    admissions = [
         ("the real line of the admitted client",
          "   ← ECCOMI\n   AMMESSO after 1023 ms (fixed delay §4.4-bis)\n", True),
         ("⛔ CONGEDO instead of AMMESSO — the word is there and the sense is opposite",
@@ -775,7 +775,7 @@ def certifica():
         ("the client did not start at all",
          "Traceback (most recent call last):\n  ImportError: aioquic\n", False),
     ]
-    for nome, testo, atteso in ammissioni:
+    for nome, testo, atteso in admissions:
         got = e_stato_ammesso(testo)
         ok = got is atteso
         guai += 0 if ok else 1
@@ -802,28 +802,28 @@ def certifica():
     # ═══════════════════════════════════════════════════════════════════════
     print()
     bordo = []
-    al_limite = (min(255, COLORE[0] + TOLLERANZA), COLORE[1], COLORE[2])
+    to_limit = (min(255, COLORE[0] + TOLLERANZA), COLORE[1], COLORE[2])
     oltre = (min(255, COLORE[0] + TOLLERANZA + 1), COLORE[1], COLORE[2])
     bordo.append(("⭐ colour shifted by EXACTLY ±%d ⇒ still GREEN" % TOLLERANZA,
-                  nudo, dipingi("bordo-t1", FONDO, al_limite, 0.85), "vista"))
+                  nudo, dipingi("bordo-t1", FONDO, to_limit, 0.85), "vista"))
     bordo.append(("colour shifted by ±%d ⇒ RED" % (TOLLERANZA + 1),
                   nudo, dipingi("bordo-t2", FONDO, oltre, 0.85), "non-vista"))
     # the fraction: 55/216 = 0.2546 (above 0.25) · 53/216 = 0.2454 (below)
     bordo.append(("⭐ the window covers 25.5%% ⇒ GREEN (threshold %.0f%%)"
                   % (FRAZIONE_MINIMA * 100),
-                  nudo, dipingi_righe("bordo-f1", FONDO, COLORE, 55), "vista"))
+                  nudo, paint_lines("bordo-f1", FONDO, COLORE, 55), "vista"))
     bordo.append(("the window covers 24.5% ⇒ RED",
-                  nudo, dipingi_righe("bordo-f2", FONDO, COLORE, 53), "non-vista"))
+                  nudo, paint_lines("bordo-f2", FONDO, COLORE, 53), "non-vista"))
     # the margin: before 65/216 = 0.3009 · after 111 ⇒ +0.2130 · after 106 ⇒ +0.1898
-    gia_aperta = dipingi_righe("bordo-m0", FONDO, COLORE, 65)
+    gia_aperta = paint_lines("bordo-m0", FONDO, COLORE, 65)
     bordo.append(("⭐ the colour grows by 21.3 points ⇒ GREEN (margin %.0f)"
-                  % (MARGINE * 100),
-                  gia_aperta, dipingi_righe("bordo-m1", FONDO, COLORE, 111), "vista"))
+                  % (MARGIN * 100),
+                  gia_aperta, paint_lines("bordo-m1", FONDO, COLORE, 111), "vista"))
     bordo.append(("the colour grows by 19.0 points ⇒ RED",
-                  gia_aperta, dipingi_righe("bordo-m2", FONDO, COLORE, 106),
+                  gia_aperta, paint_lines("bordo-m2", FONDO, COLORE, 106),
                   "non-vista"))
     for nome, primo, ultimo, atteso in bordo:
-        e = giudica_il_giro(primo, ultimo, giudice.giudica, frazione, 1)
+        e = judge_round(primo, ultimo, giudice.giudica, frazione, 1)
         ok = e["stato"] == atteso
         guai += 0 if ok else 1
         print("  %s  %-56s  ⇒ %-10s (expected %s)"
@@ -844,7 +844,7 @@ def certifica():
                                  ("without the window", vuota, "non-vista")):
         visti = set()
         for proc in (0, 1, 7, None):
-            visti.add(giudica_il_giro(nudo, ultimo, giudice.giudica,
+            visti.add(judge_round(nudo, ultimo, giudice.giudica,
                                       frazione, proc)["stato"])
         ok = visti == {atteso}
         guai += 0 if ok else 1
@@ -865,7 +865,7 @@ def certifica():
         return {"stato": stato, "frazione_dopo": frazione_dopo,
                 "processi": processi, "ucciso": ucciso, "perche": perche}
 
-    giunti = [
+    joints = [
         ("cieca: healthy green + fault red + process alive ⇒ 0 (seen)",
          "cieca", giro("vista", 0.85, 3), giro("non-vista", 0.00, 2), 0),
         ("muore: healthy green + fault red + processes 0 ⇒ 0 (seen)",
@@ -888,8 +888,8 @@ def certifica():
         ("⚠ signature missing: `pkill` found nothing ⇒ 3",
          "muore", giro("vista", 0.85, 3), giro("non-vista", 0.0, 0, False), 3),
     ]
-    for nome, quale, sano, rotto, atteso in giunti:
-        e, _righe = collauda_il_guasto(quale, sano, rotto)
+    for nome, quale, sano, rotto, atteso in joints:
+        e, _lines = test_fault(quale, sano, rotto)
         ok = e == atteso
         guai += 0 if ok else 1
         print("  %s  %-62s  ⇒ outcome %s (expected %s)"
@@ -906,16 +906,16 @@ def certifica():
     #   would be a second place to diverge from (§1.47).
     # ═══════════════════════════════════════════════════════════════════════
     print()
-    guai_gr, _quanti_gr = casa_di_c1().certifica_gruppi("C2")
-    guai += guai_gr
+    group_troubles, _how_many_groups = c1_home().certifica_gruppi("C2")
+    guai += group_troubles
 
     # ═══════════════════════════════════════════════════════════════════════
     # ⭐⭐⭐ THE SHARED PROVISIONING — ⛔ the case that on 27 August 2026 was missing,
     #    and it cost a whole round read backwards.
     # ═══════════════════════════════════════════════════════════════════════
     print()
-    guai_pr, quanti_pr = certifica_la_provvista("C2", "c2u")
-    guai += guai_pr
+    troubles_pr, how_many_pr = certifica_la_provvista("C2", "c2u")
+    guai += troubles_pr
 
     print()
     if guai:
@@ -931,7 +931,7 @@ def certifica():
           "«I could not look», ⛔ never red")
     # ⛔ And the provisioning line is printed ONLY if the real cases ran:
     #    saying «covered» after skipping them would be §1.50 in one line.
-    if quanti_pr >= 4:
+    if how_many_pr >= 4:
         print("   ⭐⭐ and THE PROVISIONING: a /tmp/mozilla of another mesh I do not "
               "touch, and my tenant writes anyway — ⛔ never red")
     else:
@@ -963,7 +963,7 @@ def quanti_schermi(testo):
     """
     if testo is None:
         return None
-    return len(FIRMA_OUTPUT.findall(testo))
+    return len(OUTPUT_SIGNATURE.findall(testo))
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -1005,15 +1005,15 @@ def quanti_schermi(testo):
 #   (`crea` returns `(False, perche)`), because a browser stuck on the profile
 #   chooser is a defect of the BENCH and not of the product.
 # ═══════════════════════════════════════════════════════════════════════════
-IL_POSTO_CONDIVISO = "/tmp/mozilla"
+SHARED_DIR = "/tmp/mozilla"
 
 
-def padrone_del_posto_condiviso():
+def shared_slot_owner():
     """Whose `/tmp/mozilla` is — `""` if it is not there.  It serves only to SAY it."""
-    return sh("stat -c %%U %s 2>/dev/null" % IL_POSTO_CONDIVISO).stdout.strip()
+    return sh("stat -c %%U %s 2>/dev/null" % SHARED_DIR).stdout.strip()
 
 
-def sgombra_il_mio_rimasuglio(mio_base):
+def sgombra_il_mio_rimasuglio(my_base):
     """Removes `/tmp/mozilla` ⛔ only if it was left to one of MY tenants.
 
     ⛔ The rule is not rewritten: it is C8's `sgombra_il_posto_condiviso()`,
@@ -1022,10 +1022,10 @@ def sgombra_il_mio_rimasuglio(mio_base):
        says «I do NOT touch it» and touches nothing, which is what I want.
     ⚠ Returns a line to print, or `None` if there is nothing to say.
     """
-    c8 = casa_di_c8()
+    c8 = c8_home()
     if c8 is None:
-        return "⚠ I cannot find C8: I did not even look at %s" % IL_POSTO_CONDIVISO
-    return c8.sgombra_il_posto_condiviso(mio_base)
+        return "⚠ I cannot find C8: I did not even look at %s" % SHARED_DIR
+    return c8.sgombra_il_posto_condiviso(my_base)
 
 
 def cura_della_provvista(chi):
@@ -1036,7 +1036,7 @@ def cura_della_provvista(chi):
        ⚠ Writing into `~/.cache` would prove nothing: with the link it is
        `/tmp`, which is writable by anyone (mode 1777).
     """
-    c8 = casa_di_c8()
+    c8 = c8_home()
     if c8 is None:
         return False, ("I cannot find `11-c8-il-secondo-apre-il-browser.py` next "
                        "to me: the cure of `src/provisiona.sh` comes from there, and "
@@ -1044,11 +1044,11 @@ def cura_della_provvista(chi):
     c8.applica_la_cura(chi)
     if c8.sa_scrivere_nella_cache(chi):
         return True, ""
-    padrone = padrone_del_posto_condiviso()
+    owner = shared_slot_owner()
     return False, ("«%s» cannot write into ~/.cache/mozilla (%s belongs to "
                    "«%s»): Firefox would stay on the profile chooser and this "
                    "mesh would measure the BENCH, not the product"
-                   % (chi, IL_POSTO_CONDIVISO, padrone or "nobody"))
+                   % (chi, SHARED_DIR, owner or "nobody"))
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -1063,7 +1063,7 @@ def cura_della_provvista(chi):
 # ⛔⛔ AND IT INSPECTS NOTHING (E1): it makes a `/tmp/mozilla` of another tenant,
 #     with a real tenant and the real skeleton, and then LOOKS at what happens.
 # ═══════════════════════════════════════════════════════════════════════════
-def certifica_la_provvista(nome_maglia, mia_base):
+def certifica_la_provvista(mesh_name, own_base):
     """⭐ Returns `(guai, quanti_casi_provati)`.
 
     The cases, and there are three:
@@ -1080,15 +1080,15 @@ def certifica_la_provvista(nome_maglia, mia_base):
     guai = 0
     quanti = 0
     print("  ── the shared provisioning of %s (%s) ──"
-          % (nome_maglia, IL_POSTO_CONDIVISO))
-    if casa_di_c8() is None:
+          % (mesh_name, SHARED_DIR))
+    if c8_home() is None:
         print("  NO   ⛔ I cannot find C8: the cure of src/provisiona.sh cannot be "
               "imported, and ⛔ no copy of it is made")
         return 1, 1
 
     # ── 1 · and no permission is needed ────────────────────────────────────
     quanti += 1
-    fatto, perche = cura_della_provvista("non-esiste-%s-x" % mia_base)
+    fatto, perche = cura_della_provvista("non-esiste-%s-x" % own_base)
     ok = (fatto is False) and bool(perche)
     guai += 0 if ok else 1
     print("  %s  ⛔ the cure cannot succeed ⇒ it stops SAYING WHY "
@@ -1101,16 +1101,16 @@ def certifica_la_provvista(nome_maglia, mia_base):
         print("  ⚠   the two REAL cases need the administrator: ⛔ I did NOT "
               "test them, and so this certification does not cover the cure")
         return guai, quanti
-    if os.path.exists(IL_POSTO_CONDIVISO):
+    if os.path.exists(SHARED_DIR):
         print("  ⚠   %s is already there and belongs to «%s»: ⛔ I do not touch it to run a "
               "test on it — the two REAL cases I did NOT test"
-              % (IL_POSTO_CONDIVISO, padrone_del_posto_condiviso()))
+              % (SHARED_DIR, shared_slot_owner()))
         return guai, quanti
 
-    estraneo = "c99u9"          # a tenant of the net, ⛔ but of another mesh
-    mio = "%s9" % mia_base
+    foreign = "c99u9"          # a tenant of the net, ⛔ but of another mesh
+    mio = "%s9" % own_base
 
-    def scheletro_della_macchina_vera(chi):
+    def real_machine_skeleton(chi):
         """`~/.cache` as a link to `/tmp`, ⛔ only on this tenant.
 
         ⚠ `/etc/skel` is not touched: here the terrain is reproduced by hand, on two
@@ -1119,11 +1119,11 @@ def certifica_la_provvista(nome_maglia, mia_base):
         sh("rm -rf /home/%s/.cache && ln -s /tmp /home/%s/.cache && "
            "chown -h %s:%s /home/%s/.cache" % (chi, chi, chi, chi, chi))
 
-    def il_posto_e_di(chi):
+    def slot_belongs_to(chi):
         sh("rm -rf %s && mkdir -p %s/firefox && chown -R %s:%s %s && "
            "chmod 700 %s"
-           % (IL_POSTO_CONDIVISO, IL_POSTO_CONDIVISO, chi, chi,
-              IL_POSTO_CONDIVISO, IL_POSTO_CONDIVISO))
+           % (SHARED_DIR, SHARED_DIR, chi, chi,
+              SHARED_DIR, SHARED_DIR))
 
     def via(chi):
         # ⛔ The link is removed BEFORE `userdel -r`: it is a pointer to
@@ -1132,25 +1132,25 @@ def certifica_la_provvista(nome_maglia, mia_base):
            % (chi, chi, chi))
 
     try:
-        via(estraneo)
+        via(foreign)
         via(mio)
-        for chi in (estraneo, mio):
+        for chi in (foreign, mio):
             r = sh("useradd -m -s /bin/bash %s" % chi)
             if r.returncode != 0:
                 print("  ⚠   I could not create «%s»: %s ⇒ ⛔ the two "
                       "REAL cases I did NOT test"
                       % (chi, (r.stderr or "").strip()[:80]))
                 return guai, quanti
-            scheletro_della_macchina_vera(chi)
+            real_machine_skeleton(chi)
 
         # ── 2 · the place belongs to ANOTHER mesh ──────────────────────────
-        il_posto_e_di(estraneo)
-        detto = sgombra_il_mio_rimasuglio(mia_base)
+        slot_belongs_to(foreign)
+        detto = sgombra_il_mio_rimasuglio(own_base)
         quanti += 1
-        ok = padrone_del_posto_condiviso() == estraneo
+        ok = shared_slot_owner() == foreign
         guai += 0 if ok else 1
         print("  %s  ⛔ %s belongs to «%s» (another mesh) ⇒ I do NOT touch it"
-              % ("OK " if ok else "NO ", IL_POSTO_CONDIVISO, estraneo))
+              % ("OK " if ok else "NO ", SHARED_DIR, foreign))
         if detto:
             print("        says: %s" % detto)
 
@@ -1158,31 +1158,31 @@ def certifica_la_provvista(nome_maglia, mia_base):
         #   proves that the red of 27 August would not come back.
         quanti += 1
         fatto, perche = cura_della_provvista(mio)
-        ancora = padrone_del_posto_condiviso() == estraneo
+        ancora = shared_slot_owner() == foreign
         ok = bool(fatto) and ancora
         guai += 0 if ok else 1
         print("  %s  ⭐ and «%s» writes anyway into ~/.cache/mozilla, with %s "
               "still belonging to «%s»" % ("OK " if ok else "NO ", mio,
-                                           IL_POSTO_CONDIVISO, estraneo))
+                                           SHARED_DIR, foreign))
         if not ok:
             print("        ⛔ it said: (%s, %s) · now it belongs to «%s»"
-                  % (fatto, perche, padrone_del_posto_condiviso()))
+                  % (fatto, perche, shared_slot_owner()))
 
         # ── 3 · the place is MINE, left from the previous round ────────────
-        scheletro_della_macchina_vera(mio)      # the cure had given it its own
-        il_posto_e_di(mio)
-        detto = sgombra_il_mio_rimasuglio(mia_base)
+        real_machine_skeleton(mio)      # the cure had given it its own
+        slot_belongs_to(mio)
+        detto = sgombra_il_mio_rimasuglio(own_base)
         quanti += 1
-        ok = not os.path.exists(IL_POSTO_CONDIVISO)
+        ok = not os.path.exists(SHARED_DIR)
         guai += 0 if ok else 1
         print("  %s  ⭐ %s belongs to «%s» (MINE, from the previous round) ⇒ I clear it"
-              % ("OK " if ok else "NO ", IL_POSTO_CONDIVISO, mio))
+              % ("OK " if ok else "NO ", SHARED_DIR, mio))
         if detto:
             print("        says: %s" % detto)
     finally:
         # ⛔ ONLY what this function made is removed.
-        sh("rm -rf %s" % IL_POSTO_CONDIVISO)
-        via(estraneo)
+        sh("rm -rf %s" % SHARED_DIR)
+        via(foreign)
         via(mio)
     return guai, quanti
 
@@ -1210,15 +1210,15 @@ def crea(chi, parola):
            "printf '%s:%s\n' | chpasswd" % (chi, chi, parola))
     if r.returncode != 0:
         return False, (r.stderr or "").strip()[:120]
-    e_gr, perche_gr = garantisci_i_gruppi(chi, prefisso="      ")
+    e_gr, why_groups = garantisci_i_gruppi(chi, prefisso="      ")
     if e_gr != 0:
-        return False, perche_gr
+        return False, why_groups
     # ⭐⭐ AND THE PROVISIONING, right after the `useradd -m` that copies the skeleton:
     #    it is there that the tenant is born with `~/.cache` pointing at `/tmp`, ⇒ it is there
     #    that it is given its own.  ⛔ Before switching anything on.
-    fatto_cura, perche_cura = cura_della_provvista(chi)
-    if not fatto_cura:
-        return False, perche_cura
+    done_fix, why_fix = cura_della_provvista(chi)
+    if not done_fix:
+        return False, why_fix
     return True, ""
 
 
@@ -1257,7 +1257,7 @@ def il_socket_di(chi):
     d = soc.stdout.strip()
     return (rtd, d) if d else (rtd, None)
 
-def chiedi_al_compositore(chi):
+def ask_compositor(chi):
     """⭐ We ask the COMPOSITOR whether there is a screen, not the product.
 
     ⛔ A bench that asks the product whether the product worked believes what
@@ -1283,7 +1283,7 @@ def chiedi_al_compositore(chi):
     return quanti_schermi(r.stdout), ""
 
 
-def accendi_l_applicazione(chi, applicazione, argomenti, pagina):
+def turn_on_application(chi, applicazione, argomenti, pagina):
     """Switches on the application INSIDE the tenant's session.
 
     ⚠ `HOME` explicit and not inherited: the program's profile lives inside
@@ -1315,7 +1315,7 @@ def accendi_l_applicazione(chi, applicazione, argomenti, pagina):
         "setsid runuser -u %s -- env XDG_RUNTIME_DIR=%s WAYLAND_DISPLAY=%s "
         "MOZ_ENABLE_WAYLAND=1 XDG_SESSION_TYPE=wayland HOME=/home/%s "
         "%s %s < /dev/null > %s 2>&1 &"
-        % (chi, rtd, display, chi, applicazione, args, registro_applicazione(chi)))
+        % (chi, rtd, display, chi, applicazione, args, app_log(chi)))
     r = sh(comando, secondi=30)
     if r.returncode != 0:
         # ⛔ And the result is NOT thrown away.  `LEZIONI.md` §1.46: a command that
@@ -1327,7 +1327,7 @@ def accendi_l_applicazione(chi, applicazione, argomenti, pagina):
     return display, ""
 
 
-def registro_applicazione(chi):
+def app_log(chi):
     """⭐ Where the application writes what it says — and ⛔ **it is read**.
 
     `[M]` (C8, 26 August 2026) the bench's working folder belongs to `root` with
@@ -1338,14 +1338,14 @@ def registro_applicazione(chi):
     return "/home/%s/.c2-applicazione.log" % chi
 
 
-def ultima_riga_detta(chi):
+def last_line_said(chi):
     """The last line the application said, or «» if it said nothing."""
-    r = sh("tail -n 5 %s 2>/dev/null" % registro_applicazione(chi))
+    r = sh("tail -n 5 %s 2>/dev/null" % app_log(chi))
     righe = [x.strip() for x in (r.stdout or "").splitlines() if x.strip()]
     return righe[-1][:160] if righe else ""
 
 
-def aspetta_che_parta(chi, applicazione, attesa):
+def wait_started(chi, applicazione, attesa):
     """⛔ We wait for the application to EXIST before demanding a window.
 
     ⚠ It serves two things, and the second is worth more than the first:
@@ -1362,14 +1362,14 @@ def aspetta_che_parta(chi, applicazione, attesa):
     """
     scadenza = time.time() + attesa
     while time.time() < scadenza:
-        n = quanti_processi(chi, applicazione)
+        n = how_many_processes(chi, applicazione)
         if n:
             return n, round(attesa - (scadenza - time.time()), 1)
         time.sleep(1.0)
     return 0, None
 
 
-def quanti_processi(chi, applicazione):
+def how_many_processes(chi, applicazione):
     """How many processes of the application are alive.
 
     ⛔⛔ AND THIS NUMBER DECIDES NOTHING.  It is the quantity that `fasi/10…` §7.4
@@ -1414,7 +1414,7 @@ def i_fotogrammi_di_prima(flusso, dove, quanti, tetto):
     return elenco, (r.returncode == 124)
 
 
-def l_ultimo_fotogramma(flusso, dove, tetto):
+def last_frame_seen(flusso, dove, tetto):
     """The LAST frame of the stream — what the desktop shows at the end.
 
     ⛔ `-update 1` rewrites the same file at every decoded frame: at the
@@ -1528,16 +1528,16 @@ def un_giro(chi, modo, a, giudice, lettore):
     #     blaming the product.
     # ⚠ The examples do not have this problem because they use `subprocess.run`,
     #   which empties the pipes while it waits.  Here we do not wait: we work.
-    detto_file = os.path.join(lavoro, "cliente.log")
-    detto_fd = open(detto_file, "w")
+    out_file = os.path.join(lavoro, "cliente.log")
+    out_fd = open(out_file, "w")
     cliente = subprocess.Popen(
         ["python3", "-u", a.cliente,
          "--indirizzo", a.indirizzo, "--porta", str(a.porta),
          "--utente", chi, "--parola", a.parola,
          "--video-scrivi", flusso, "--resta", str(resta)],
-        stdout=detto_fd, stderr=subprocess.STDOUT, text=True)
+        stdout=out_fd, stderr=subprocess.STDOUT, text=True)
 
-    def chiudi_il_cliente(scadenza):
+    def close_client(scadenza):
         """Waits for the client to finish, and returns what it said.
 
         ⛔ It always returns a string: if the file cannot be read it is an
@@ -1548,9 +1548,9 @@ def un_giro(chi, modo, a, giudice, lettore):
         except subprocess.TimeoutExpired:
             cliente.kill()
             cliente.wait()
-        detto_fd.close()
+        out_fd.close()
         try:
-            with open(detto_file, "r", errors="replace") as f:
+            with open(out_file, "r", errors="replace") as f:
                 return f.read()
         except OSError:
             return ""
@@ -1563,15 +1563,15 @@ def un_giro(chi, modo, a, giudice, lettore):
         if cliente.poll() is not None:
             motivo = "the client went away before a screen was born"
             break
-        schermi, motivo = chiedi_al_compositore(chi)
-        if schermi is not None and schermi >= OUTPUT_MINIMI:
+        schermi, motivo = ask_compositor(chi)
+        if schermi is not None and schermi >= MIN_OUTPUTS:
             esito["palco_s"] = round(time.time() - partito, 1)
             break
         schermi = None
         time.sleep(2.0)
     esito["schermi"] = schermi
 
-    if schermi is None or schermi < OUTPUT_MINIMI:
+    if schermi is None or schermi < MIN_OUTPUTS:
         # ⛔ And it is NOT a red: it is «I could not look».  A window cannot
         #    open where there is no screen, and accusing the application
         #    would mean accusing it of something that happened before it.
@@ -1579,35 +1579,35 @@ def un_giro(chi, modo, a, giudice, lettore):
                            "screen (%s) ⇒ no application could open "
                            "a window" % (a.attesa_palco, motivo or "?"))
         cliente.kill()
-        chiudi_il_cliente(30)
+        close_client(30)
         sgombra(chi, a.attesa_sgombero)
         return esito
 
     # ── 4. the application ──────────────────────────────────────────────────
     argomenti = a.argomenti_ciechi if modo == "cieca" else a.argomenti
-    display, err = accendi_l_applicazione(chi, a.applicazione, argomenti, a.pagina)
+    display, err = turn_on_application(chi, a.applicazione, argomenti, a.pagina)
     if display is None:
         esito["perche"] = "I could not switch on the application: %s" % err
         cliente.kill()
-        chiudi_il_cliente(30)
+        close_client(30)
         sgombra(chi, a.attesa_sgombero)
         return esito
 
     # ⛔⛔ AND BEFORE ANYTHING ELSE WE WAIT FOR IT TO EXIST — see
-    #     `aspetta_che_parta`: if it does not start at all the outcome is «I could not
+    #     `wait_started`: if it does not start at all the outcome is «I could not
     #     look», not a red for the product; and the «dies at once» fault must
     #     kill what it SAW alive, not what it hopes exists.
-    vivi, esito["avvio_s"] = aspetta_che_parta(chi, a.applicazione, a.attesa_avvio)
+    vivi, esito["avvio_s"] = wait_started(chi, a.applicazione, a.attesa_avvio)
     if not vivi:
-        detta = ultima_riga_detta(chi)
+        said = last_line_said(chi)
         esito["perche"] = ("the application «%s» never started in %.0f s%s "
                            "⇒ it is not the product that failed to show me a "
                            "window: there was nobody to draw it"
                            % (a.applicazione, a.attesa_avvio,
-                              (": it says «%s»" % detta) if detta else
+                              (": it says «%s»" % said) if said else
                               " (and it said nothing)"))
         cliente.kill()
-        chiudi_il_cliente(30)
+        close_client(30)
         sgombra(chi, a.attesa_sgombero)
         return esito
 
@@ -1628,21 +1628,21 @@ def un_giro(chi, modo, a, giudice, lettore):
                                "the injection did not take"
                                % (a.applicazione, r.returncode))
             cliente.kill()
-            chiudi_il_cliente(30)
+            close_client(30)
             sgombra(chi, a.attesa_sgombero)
             return esito
 
     # ── 5. we wait for it to paint ──────────────────────────────────────────
     time.sleep(a.attesa_finestra)
-    esito["processi_apertura"] = quanti_processi(chi, a.applicazione)
+    esito["processi_apertura"] = how_many_processes(chi, a.applicazione)
 
     # ── 6. the client finishes and writes the stream ────────────────────────
     # ⛔ AND THE PROCESSES ARE COUNTED AGAIN HERE, next to the last frame: it is the one
     #    that is judged, and a count taken two minutes earlier does not sit next to it.
-    coda = chiudi_il_cliente(int(resta) + 180)
-    esito["processi"] = quanti_processi(chi, a.applicazione)
+    coda = close_client(int(resta) + 180)
+    esito["processi"] = how_many_processes(chi, a.applicazione)
     esito["fotogrammi"] = quanti_fotogrammi(coda or "")
-    esito["detto"] = ultima_riga_detta(chi)
+    esito["detto"] = last_line_said(chi)
     ammesso = e_stato_ammesso(coda)
 
     if ammesso is not True:
@@ -1665,7 +1665,7 @@ def un_giro(chi, modo, a, giudice, lettore):
             "%s ⇒ I have nothing to look at (last line of the client: «%s»)"
             % ("no frame arrived from the wire"
                if esito["fotogrammi"] == 0 else
-               "the client did not say how many frames it took", ultimo_detto(coda)))
+               "the client did not say how many frames it took", last_said(coda)))
         sgombra(chi, a.attesa_sgombero)
         return esito
 
@@ -1674,24 +1674,24 @@ def un_giro(chi, modo, a, giudice, lettore):
     #    still while `--attesa-palco` grows: `LEZIONI.md` §1.17 — a number
     #    that depends on another and does not know it is a number that will lie.
     tetto = max(300.0, resta * 2.0)
-    prima_tutti, scaduto_p = i_fotogrammi_di_prima(
+    before_all, expired_p = i_fotogrammi_di_prima(
         flusso, lavoro, a.fotogrammi_prima, tetto)
-    ultimo, scaduto_u = l_ultimo_fotogramma(flusso, lavoro, tetto)
-    if scaduto_u:
+    ultimo, expired_u = last_frame_seen(flusso, lavoro, tetto)
+    if expired_u:
         esito["perche"] = ("the decoder did not finish in %.0f s: what it "
                            "left is NOT the last frame but one from the "
                            "middle, and I do not judge it" % tetto)
         sgombra(chi, a.attesa_sgombero)
         return esito
-    if not prima_tutti:
+    if not before_all:
         esito["perche"] = ("%d frames arrived but the decoder "
                            "made no image of any of them%s"
                            % (esito["fotogrammi"],
-                              " (and it expired)" if scaduto_p else ""))
+                              " (and it expired)" if expired_p else ""))
         sgombra(chi, a.attesa_sgombero)
         return esito
 
-    primo, guardati, verdetti = scegli_il_prima(prima_tutti, giudice.giudica)
+    primo, guardati, verdetti = scegli_il_prima(before_all, giudice.giudica)
     esito["guardati_prima"] = guardati
     esito["png_prima"], esito["png_dopo"] = primo, ultimo
     if primo is None:
@@ -1705,7 +1705,7 @@ def un_giro(chi, modo, a, giudice, lettore):
     def frazione(p):
         return lettore.frazione_del_colore(p, COLORE, TOLLERANZA)
 
-    g = giudica_il_giro(primo, ultimo, giudice.giudica, frazione,
+    g = judge_round(primo, ultimo, giudice.giudica, frazione,
                         esito["processi"], a.frazione_minima, a.margine)
     esito.update({k: g[k] for k in ("stato", "perche", "frazione_prima",
                                     "frazione_dopo", "desktop_prima")})
@@ -1717,7 +1717,7 @@ def un_giro(chi, modo, a, giudice, lettore):
     return esito
 
 
-def ultimo_detto(coda):
+def last_said(coda):
     for riga in reversed((coda or "").strip().splitlines()):
         riga = riga.strip()
         if riga and not riga.startswith("=="):
@@ -1759,7 +1759,7 @@ def stampa(e):
 #     derives `ha_visto_il_guasto`, from which C13 says whether the net can still say
 #     red.  ⛔ A joint like that is not left uncertified.
 # ═══════════════════════════════════════════════════════════════════════════
-def collauda_il_guasto(guasto, sano, rotto, frazione_minima=FRAZIONE_MINIMA,
+def test_fault(guasto, sano, rotto, frazione_minima=FRAZIONE_MINIMA,
                        quota=QUOTA_GUASTO):
     """Returns `(esito, [lines to print])`.  ⛔ The outcome is read BACKWARDS.
 
@@ -1970,7 +1970,7 @@ def main():
     p.add_argument("--muore-dopo", type=float, default=1.5,
                    help="how long the application lives in the «dies at once» fault")
     p.add_argument("--frazione-minima", type=float, default=FRAZIONE_MINIMA)
-    p.add_argument("--margine", type=float, default=MARGINE)
+    p.add_argument("--margine", type=float, default=MARGIN)
     p.add_argument("--applicazione-che-muore", action="store_true",
                    help="⛔ GRAFTED FAULT: the application starts and dies at once. "
                         "The outcome is read BACKWARDS (0 = the fault was seen)")
@@ -2016,12 +2016,12 @@ def main():
         sys.exit(2)
 
     # ── the terrain: without one of these we do not judge, and we say which ──
-    giudice, dove_g = giudice_del_desktop()
+    giudice, dove_g = desktop_judge()
     if giudice is None:
         print("⛔ I cannot find the image judge (10-f1-testimone.py) next to me")
         print("   ⇒ I could not look")
         sys.exit(3)
-    lettore, dove_l = lettore_del_colore()
+    lettore, dove_l = color_reader()
     if lettore is None:
         print("⛔ I cannot find the colour reader (11-c8-…py) next to me")
         print("   ⇒ I could not look")
@@ -2082,16 +2082,16 @@ def main():
     #    `LEZIONI.md` §1.52: the fault is not measured on the colour of the verdict, it is
     #    measured on the DIFFERENCE with respect to the round without the fault.
     # ═══════════════════════════════════════════════════════════════════════
-    gambe = []
+    legs = []
     if guasto:
-        gambe.append((None, "sano"))
-        gambe.append((guasto, "guasto"))
+        legs.append((None, "sano"))
+        legs.append((guasto, "guasto"))
     else:
         for n in range(a.giri):
-            gambe.append((None, "sano"))
+            legs.append((None, "sano"))
 
     esiti = []
-    for n, (modo, _nome) in enumerate(gambe, 1):
+    for n, (modo, _name) in enumerate(legs, 1):
         chi = "%s%d" % (a.utente_base, n)
         e = un_giro(chi, modo, a, giudice, lettore)
         esiti.append(e)
@@ -2117,7 +2117,7 @@ def main():
         sys.exit(0)
 
     # ── the acceptance test of the grafted fault ────────────────────────────
-    esito, righe = collauda_il_guasto(guasto, esiti[0], esiti[1],
+    esito, righe = test_fault(guasto, esiti[0], esiti[1],
                                       a.frazione_minima)
     for riga in righe:
         print(riga)

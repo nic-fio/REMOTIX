@@ -60,7 +60,7 @@ LUNGA = True
 
 TETTO_S = 600           # a time above 10 minutes is not «by itself, in a hurry»
 GIALLO = (255, 255, 0)
-BLOCCATORI = r"swayidle|swaylock|xscreensaver|xfce4-screensaver|light-locker|hypridle|gtklock"
+BLOCKERS = r"swayidle|swaylock|xscreensaver|xfce4-screensaver|light-locker|hypridle|gtklock"
 
 
 def extra(a):
@@ -71,14 +71,14 @@ def extra(a):
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE JUDGES (pure functions)
 # ═══════════════════════════════════════════════════════════════════════════
-def _spento_o_lungo(v, scala=1):
+def _off_or_long(v, scala=1):
     """None (not read) · True if 0 (off) or > TETTO_S."""
     if v is None:
         return None
     return v == 0 or v * scala > TETTO_S
 
 
-def giudica_tempi(d, v):
+def judge_times(d, v):
     """v = the values read.  Returns [defects]; a missing value is a defect
     (I could not read what I had to judge)."""
     guai = []
@@ -90,10 +90,10 @@ def giudica_tempi(d, v):
         return True
 
     if d == "gnome":
-        if serve("idle-delay") and not _spento_o_lungo(v["idle-delay"]):
+        if serve("idle-delay") and not _off_or_long(v["idle-delay"]):
             guai.append("idle-delay=%d s (dims and locks)" % v["idle-delay"])
         if serve("sleep-inactive-ac-type") and v["sleep-inactive-ac-type"] != "nothing":
-            if not _spento_o_lungo(v.get("sleep-inactive-ac-timeout")):
+            if not _off_or_long(v.get("sleep-inactive-ac-timeout")):
                 guai.append("suspend «%s» after %s s" % (
                     v["sleep-inactive-ac-type"], v.get("sleep-inactive-ac-timeout")))
     elif d == "kde":
@@ -101,16 +101,16 @@ def giudica_tempi(d, v):
             guai.append("KWin WITHOUT --no-lockscreen (kscreenlocker locks)")
         if serve("inibito") and not v["inibito"]:
             s = v.get("spegni-schermo-s")
-            if not _spento_o_lungo(s):
+            if not _off_or_long(s):
                 guai.append("powerdevil NOT inhibited and screen off after %s s" % s)
     elif d == "xfce":
         if serve("dpms-enabled") and v["dpms-enabled"]:
             for k in ("dpms-on-ac-sleep", "dpms-on-ac-off"):
-                if not _spento_o_lungo(v.get(k), 60):
+                if not _off_or_long(v.get(k), 60):
                     guai.append("DPMS on, %s=%s min" % (k, v.get(k)))
-        if serve("inactivity-on-ac") and not _spento_o_lungo(v["inactivity-on-ac"], 60):
+        if serve("inactivity-on-ac") and not _off_or_long(v["inactivity-on-ac"], 60):
             guai.append("inactivity-on-ac=%d min" % v["inactivity-on-ac"])
-        if v.get("blank-on-ac") is not None and not _spento_o_lungo(v["blank-on-ac"], 60):
+        if v.get("blank-on-ac") is not None and not _off_or_long(v["blank-on-ac"], 60):
             guai.append("blank-on-ac=%d min" % v["blank-on-ac"])
     elif d == "lxqt":
         if serve("enableIdlenessWatcher") and v["enableIdlenessWatcher"]:
@@ -121,7 +121,7 @@ def giudica_tempi(d, v):
     return guai
 
 
-def col_guasto_300(d, v):
+def with_fault_300(d, v):
     """FAULT A: the desktop's main time brought to 300 s."""
     v = dict(v)
     if d == "gnome":
@@ -136,12 +136,12 @@ def col_guasto_300(d, v):
 
 
 def misura(png):
-    k = G1B.conta_colori(png, (G1B.CIANO, GIALLO))
-    return {"ciano": k[G1B.CIANO], "giallo": k[GIALLO],
-            "lum": G1B.luminanza_media(png), "vivi": G1B.vivi(png)}
+    k = G1B.count_colors(png, (G1B.CYAN, GIALLO))
+    return {"ciano": k[G1B.CYAN], "giallo": k[GIALLO],
+            "lum": G1B.mean_luminance(png), "vivi": G1B.vivi(png)}
 
 
-def giudica_foto(rif, m):
+def judge_photo(rif, m):
     """(ok, sentence) of ONE photo against the starting one."""
     guai = []
     area0 = rif["ciano"] + rif["giallo"]
@@ -156,7 +156,7 @@ def giudica_foto(rif, m):
     return (not guai), (frase if not guai else "; ".join(guai))
 
 
-def colore_di(m):
+def color_of(m):
     if m["ciano"] > 2 * m["giallo"] and m["ciano"] > 0.005:
         return "ciano"
     if m["giallo"] > 2 * m["ciano"] and m["giallo"] > 0.005:
@@ -164,19 +164,19 @@ def colore_di(m):
     return None
 
 
-def giudica_serie(rif, serie):
+def judge_series(rif, serie):
     """serie = [(t, measurement)].  Returns (outcome, sentence)."""
-    cattive = []
+    bad = []
     colori = set()
     for t, m in serie:
-        ok, f = giudica_foto(rif, m)
+        ok, f = judge_photo(rif, m)
         if not ok:
-            cattive.append("at %d s: %s" % (t, f))
-        c = colore_di(m)
+            bad.append("at %d s: %s" % (t, f))
+        c = color_of(m)
         if c:
             colori.add(c)
-    if cattive:
-        return S.ROSSO, "the screen is NO longer the desktop — " + " · ".join(cattive)
+    if bad:
+        return S.ROSSO, "the screen is NO longer the desktop — " + " · ".join(bad)
     if len(colori) < 2:
         return S.ROSSO, ("FROZEN image: the known window never changed colour "
                          "(seen: %s)" % (sorted(colori) or "none"))
@@ -201,24 +201,24 @@ def certifica():
         "lxqt": {"enableIdlenessWatcher": False, "bloccatori": ""},
     }
     for d, v in buoni.items():
-        prova("%s: the cure's values ⇒ no defects" % d, not giudica_tempi(d, v))
-        prova("%s: FAULT A (300 s) ⇒ defect" % d, bool(giudica_tempi(d, col_guasto_300(d, v))))
+        prova("%s: the cure's values ⇒ no defects" % d, not judge_times(d, v))
+        prova("%s: FAULT A (300 s) ⇒ defect" % d, bool(judge_times(d, with_fault_300(d, v))))
         prova("%s: a field not read ⇒ defect" % d,
-              bool(giudica_tempi(d, {"bloccatori": ""})))
-    prova("gnome: idle-delay 900 s ⇒ fine", not giudica_tempi(
+              bool(judge_times(d, {"bloccatori": ""})))
+    prova("gnome: idle-delay 900 s ⇒ fine", not judge_times(
         "gnome", dict(buoni["gnome"], **{"idle-delay": 900})))
-    prova("locker running ⇒ defect", bool(giudica_tempi(
+    prova("locker running ⇒ defect", bool(judge_times(
         "lxqt", dict(buoni["lxqt"], bloccatori="swayidle"))))
     rif = {"ciano": 0.08, "giallo": 0.0, "lum": 90, "vivi": 0.9}
     g = {"ciano": 0.0, "giallo": 0.08, "lum": 95, "vivi": 0.9}
-    prova("live series ⇒ VERDE", giudica_serie(rif, [(45, rif), (90, g)])[0] == S.VERDE)
-    prova("frozen series ⇒ ROSSO", giudica_serie(rif, [(45, rif), (90, rif)])[0] == S.ROSSO)
+    prova("live series ⇒ VERDE", judge_series(rif, [(45, rif), (90, g)])[0] == S.VERDE)
+    prova("frozen series ⇒ ROSSO", judge_series(rif, [(45, rif), (90, rif)])[0] == S.ROSSO)
     nero = misura(G1B.png_nero(64, 36))
     prova("FAULT B: black canvas at the end ⇒ ROSSO",
-          giudica_serie(rif, [(45, rif), (90, g), (135, nero)])[0] == S.ROSSO)
+          judge_series(rif, [(45, rif), (90, g), (135, nero)])[0] == S.ROSSO)
     xfce = {"ciano": 0.08, "giallo": 0.0, "lum": 22, "vivi": 0.12}
     prova("XFCE (black background): the turned-off screen is seen from the non-black pixels",
-          not giudica_foto(xfce, dict(nero))[0])
+          not judge_photo(xfce, dict(nero))[0])
     print("⛔ %d problems" % len(guai) if guai else "⭐ CERTIFIED")
     return 1 if guai else 0
 
@@ -231,7 +231,7 @@ def _num(t):
     return int(m.group(0)) if m else None
 
 
-def _ultima(t):
+def _last(t):
     # ⚠ `[M]` 25 Sep 2026, kde: qdbus6/kreadconfig6 write AFTER the answer
     #   the locale warning («Detected locale "C"…»): it is not the value
     rumore = re.compile(r"password|Detected locale|Qt depends on a UTF-8|reconfigure your "
@@ -240,13 +240,13 @@ def _ultima(t):
     return righe[-1].strip() if righe else ""
 
 
-def leggi_tempi(s, d):
+def read_times(s, d):
     v, grezzo = {}, []
 
     def sess(cmd):
         c, t = G1B.nella_sessione(s, cmd, 60)
         grezzo.append("$ %s\n%s" % (cmd, t))
-        return c, _ultima(t)
+        return c, _last(t)
 
     if d == "gnome":
         _c, t = sess("gsettings get org.gnome.desktop.session idle-delay")
@@ -297,7 +297,7 @@ def leggi_tempi(s, d):
         v["enableIdlenessWatcher"] = (m.group(1) == "true") if m else None
         m = re.search(r"^idlenessTime\w*\s*=\s*(\S+)", t, re.M)
         v["idle-s"] = m.group(1) if m else None
-    c, t = s.sc.dentro("pgrep -u %s -a -f '%s' | grep -v pgrep || true" % (s.chi, BLOCCATORI),
+    c, t = s.sc.dentro("pgrep -u %s -a -f '%s' | grep -v pgrep || true" % (s.chi, BLOCKERS),
                        30)
     t = "\n".join(r for r in t.splitlines() if r.strip() and "password" not in r)
     grezzo.append("$ bloccatori\n" + t)
@@ -320,16 +320,16 @@ def corpo(o, E):
         time.sleep(6 if d != "kde" else 10)
         geo = s.geometria()
         W, H = geo["tl"], geo["ta"]
-        c, t = G1B.metti_finestra(s)
+        c, t = G1B.put_window(s)
         if c != 0:
             raise S.Bloccata("the window's program cannot be written: " + t[-200:])
-        c, t = G1B.apri_finestra(s, "orologio", "#00ffff", int(W * 0.3), int(H * 0.3),
+        c, t = G1B.open_window(s, "orologio", "#00ffff", int(W * 0.3), int(H * 0.3),
                                  altro="#ffff00", periodo=7)
         if c != 0:
             raise S.Bloccata("the known window does not start: " + t[-200:])
         time.sleep(5)
         if d == "gnome":
-            G1B.fuoco_sulla_tela(s, geo)
+            G1B.focus_on_canvas(s, geo)
             G1B.combinazione(s.g, ["Escape"])    # ⚠ GNOME is born in the overview
             time.sleep(2)
         # ⛔ from here NO input: only photos (CDP/Marionette move nothing)
@@ -348,72 +348,72 @@ def corpo(o, E):
             G1B.passo("the window's log: %s" % t[-400:])
             raise S.Bloccata("the known window is not seen in the starting photo (%s)" % rif)
         ev = [p0]
-        v, grezzo = leggi_tempi(s, d)
+        v, grezzo = read_times(s, d)
         # the wait: the cap is 10 minutes for the WHOLE test
         attesa = min(o.attesa_s, max(60, 480 - int(time.time() - t_inizio)))
         print("   wait without input: %d s (photo every %d s)" % (attesa, o.ogni_s), flush=True)
         serie, t0 = [], time.time()
-        png_ultima = png0
+        png_last = png0
         while True:
             dorme = min(o.ogni_s, attesa - (time.time() - t0))
             if dorme <= 0:
                 break
             time.sleep(dorme)
-            trascorso = int(time.time() - t0)
-            png, p = G1B.foto(s, "ferma-%03ds" % trascorso, scala=0.5)
+            elapsed = int(time.time() - t0)
+            png, p = G1B.foto(s, "ferma-%03ds" % elapsed, scala=0.5)
             if not png:
-                serie.append((trascorso, {"ciano": 0, "giallo": 0, "lum": 0, "vivi": 0}))
+                serie.append((elapsed, {"ciano": 0, "giallo": 0, "lum": 0, "vivi": 0}))
                 continue
-            png_ultima = png
+            png_last = png
             mm = misura(png)
-            print("   %4d s: %s" % (trascorso, giudica_foto(rif, mm)[1]), flush=True)
-            serie.append((trascorso, mm))
+            print("   %4d s: %s" % (elapsed, judge_photo(rif, mm)[1]), flush=True)
+            serie.append((elapsed, mm))
             ev.append(p)
         # ⭐ THE PROOF OF LIFE, at the end of the wait: the known window changes colour
         #   every 7 s (it was 30: `[M]` 24 Sep 2026, gnome, photos every ~60 s fell
         #   on the same phase (`[M]` 24 Sep 2026, gnome: eight photos all yellow).
         #   ⇒ A photo every 4 s, up to 40 s, until the colour CHANGES.
-        ultimo = colore_di(serie[-1][1]) if serie else colore_di(rif)
+        ultimo = color_of(serie[-1][1]) if serie else color_of(rif)
         fine_vita = time.time() + 40
         while time.time() < fine_vita:
             time.sleep(4)
-            trascorso = int(time.time() - t0)
-            png, p = G1B.foto(s, "vita-%03ds" % trascorso, scala=0.5)
+            elapsed = int(time.time() - t0)
+            png, p = G1B.foto(s, "vita-%03ds" % elapsed, scala=0.5)
             if not png:
                 continue
-            png_ultima = png
+            png_last = png
             mm = misura(png)
-            serie.append((trascorso, mm))
-            if colore_di(mm) and colore_di(mm) != ultimo:
+            serie.append((elapsed, mm))
+            if color_of(mm) and color_of(mm) != ultimo:
                 ev.append(p)
-                print("   %4d s: proof of life, %s → %s" % (trascorso, ultimo, colore_di(mm)),
+                print("   %4d s: proof of life, %s → %s" % (elapsed, ultimo, color_of(mm)),
                       flush=True)
                 break
-        v_fine, grezzo_fine = leggi_tempi(s, d)
-        e_foto, f_foto = giudica_serie(rif, serie)
-        guai = giudica_tempi(d, v)
-        guai_fine = giudica_tempi(d, v_fine)
-        ev.append(s.salva_testo("f030-campi.txt",
+        v_fine, raw_end = read_times(s, d)
+        e_photo, f_photo = judge_series(rif, serie)
+        guai = judge_times(d, v)
+        end_troubles = judge_times(d, v_fine)
+        ev.append(s.save_text("f030-campi.txt",
                                 ["at the start: %s" % v, "at the end: %s" % v_fine, ""]
-                                + grezzo + ["", "--- at the end ---"] + grezzo_fine))
-        oss = "photos: %s · fields: %s" % (f_foto, v)
+                                + grezzo + ["", "--- at the end ---"] + raw_end))
+        oss = "photos: %s · fields: %s" % (f_photo, v)
         atteso = ("%d s still without input: every photo is still the desktop, the image is live; "
                   "inactivity/DPMS/lock off or > %d s" % (attesa, TETTO_S))
-        if e_foto == S.ROSSO:
-            E.metti("F-030", S.FAIL, f_foto, atteso=atteso, osservato=oss, evidenze=ev)
-        elif guai or guai_fine:
+        if e_photo == S.ROSSO:
+            E.metti("F-030", S.FAIL, f_photo, atteso=atteso, osservato=oss, evidenze=ev)
+        elif guai or end_troubles:
             E.metti("F-030", S.FAIL, "the photos are fine, but the fields are not: %s"
-                    % "; ".join(guai or guai_fine), atteso=atteso, osservato=oss, evidenze=ev)
+                    % "; ".join(guai or end_troubles), atteso=atteso, osservato=oss, evidenze=ev)
         else:
-            E.metti("F-030", S.PASS, "%s; right fields (%s)" % (f_foto, d), atteso=atteso,
+            E.metti("F-030", S.PASS, "%s; right fields (%s)" % (f_photo, d), atteso=atteso,
                     osservato=oss, evidenze=ev)
 
         if o.guasto:
-            ga = giudica_tempi(d, col_guasto_300(d, v))
-            w, h = G1B.misura_png(png_ultima)
-            serie_b = serie[:-1] + [(serie[-1][0] if serie else 0,
+            ga = judge_times(d, with_fault_300(d, v))
+            w, h = G1B.png_size(png_last)
+            series_b = serie[:-1] + [(serie[-1][0] if serie else 0,
                                      misura(G1B.png_nero(w, h)))]
-            eb, fb = giudica_serie(rif, serie_b)
+            eb, fb = judge_series(rif, series_b)
             E.guasto("F-030", bool(ga) and eb == S.ROSSO,
                      "A) time at 300 s ⇒ %s · B) last photo black ⇒ %s"
                      % ("ROSSO (%s)" % "; ".join(ga) if ga else "verde (NOT seen)",

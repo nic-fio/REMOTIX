@@ -121,10 +121,10 @@ import sys
 #      expected value written by hand would have required thirteen fixes, and it
 #      would have been the time one gets forgotten.
 MAGIA = b"RCPREG\x00\x03"
-MAGIA_V1 = b"RCPREG\x00\x01"
-MAGIA_V2 = b"RCPREG\x00\x02"
-MAGIA_VECCHIA = MAGIA_V1        # ⚠ the old name stays for whoever imports it
-RIEMPIMENTO = 0x2A
+MAGIC_V1 = b"RCPREG\x00\x01"
+MAGIC_V2 = b"RCPREG\x00\x02"
+OLD_MAGIC = MAGIC_V1        # ⚠ the old name stays for whoever imports it
+FILL = 0x2A
 CLIENT, SERVER = 1, 2
 
 # The block of §11.1: direction, channel, end, stream, length, quanti_oscurati.
@@ -196,12 +196,12 @@ def credenziali():
     """
     u, p = UTENTE.encode(), PAROLA.encode()
     corpo = s(u) + s(p)
-    inizio_parola = 2 + len(u) + 2      # inside the message body
-    return corpo, inizio_parola, len(p), hashlib.sha256(p).digest()
+    word_start = 2 + len(u) + 2      # inside the message body
+    return corpo, word_start, len(p), hashlib.sha256(p).digest()
 
 
 # ---------------------------------------------------------------------------
-class Registrazione:
+class Recording:
     """Builds the file of §11.1 keeping track of the offsets."""
 
     def __init__(self):
@@ -211,7 +211,7 @@ class Registrazione:
         #    without them outcome 2 of the validator has no positive control
         #    (finding R7.13).
         self.dichiarate = {}    # index -> DECLARED length, different from the true one
-        self.dichiara_quanti = None   # `quanti_blocchi` different from those written
+        self.declare_how_many = None   # `quanti_blocchi` different from those written
         self.coda = b""         # bytes after the last block
         # ⛔ And the fourth: yesterday's MAGIC, `RCPREG 0x00 0x01`, with the
         #    16-byte block.  It serves one thing only, and it is the one §11.1
@@ -225,7 +225,7 @@ class Registrazione:
         #    rule of the second unaccusable, and a bench that takes away its
         #    own chance to fail is not a bench.
         self.orologio = 1
-        self.orologio_falso = None   # for the deliberately malformed recording
+        self.fake_clock = None   # for the deliberately malformed recording
 
     def blocco(self, verso, carico, canale=0x00, stream=0, oscurati=(),
                fine=CONTINUA, istante=0):
@@ -241,7 +241,7 @@ class Registrazione:
                              fine, istante))
         return self
 
-    def scostamento(self, indice_blocco, dentro):
+    def scostamento(self, block_index, dentro):
         """The ABSOLUTE offset in the file of byte `dentro` of the given block.
 
         ⛔ It rests on `BLOCCO_BYTE`, never on a 16 written by hand: that is what
@@ -252,25 +252,25 @@ class Registrazione:
         for i, b in enumerate(self.blocchi):
             carico, osc = b[3], b[4]
             p += BLOCCO_BYTE + 40 * len(osc)
-            if i == indice_blocco:
+            if i == block_index:
                 return p + dentro
             p += len(carico)
-        raise IndexError(indice_blocco)
+        raise IndexError(block_index)
 
     def byte(self):
-        quanti = (len(self.blocchi) if self.dichiara_quanti is None
-                  else self.dichiara_quanti)
-        oro = (self.orologio if self.orologio_falso is None
-               else self.orologio_falso)
+        quanti = (len(self.blocchi) if self.declare_how_many is None
+                  else self.declare_how_many)
+        oro = (self.orologio if self.fake_clock is None
+               else self.fake_clock)
         out = bytearray(self.magia
                         + struct.pack("!IBBBB", quanti, oro, 0, 0, 0))
         for i, (verso, canale, stream, carico, osc, fine, ist) in enumerate(
                 self.blocchi):
             lung = self.dichiarate.get(i, len(carico))
-            if self.magia == MAGIA_V1:
+            if self.magia == MAGIC_V1:
                 out += struct.pack("!BBQIH", verso, canale, stream, lung,
                                    len(osc))
-            elif self.magia == MAGIA_V2:
+            elif self.magia == MAGIC_V2:
                 out += struct.pack("!BBBQIH", verso, canale, fine, stream,
                                    lung, len(osc))
             else:
@@ -286,12 +286,12 @@ def conforme():
     """The whole handshake, with the password obscured."""
     corpo, ini, qua, imp = credenziali()
     cred = msg(0x0003, corpo)
-    r = Registrazione()
+    r = Recording()
     r.blocco(CLIENT, CIAO)
     r.blocco(SERVER, ECCOMI)
     # the obscured interval is inside the block's PAYLOAD: 6 bytes of
     # framing, then the body
-    r.blocco(CLIENT, cred[:6 + ini] + bytes([RIEMPIMENTO]) * qua + cred[6 + ini + qua:],
+    r.blocco(CLIENT, cred[:6 + ini] + bytes([FILL]) * qua + cred[6 + ini + qua:],
              oscurati=[(6 + ini, qua, imp)])
     r.blocco(SERVER, AMMESSO)
     r.blocco(CLIENT, ATTACCA)
@@ -319,10 +319,10 @@ def costruisci():
     # ── 1. length inconsistent with the type (§6.1) ─────────────────────────
     #    `ATTACCA` declares 4 bytes fewer than its fields want: the body ends
     #    while the view is being read.
-    corpo_a = struct.pack("!IIII", 1920, 1080, 1920, 1080) + s("it")
+    body_a = struct.pack("!IIII", 1920, 1080, 1920, 1080) + s("it")
     r = conforme()
-    r.blocchi[4] = (CLIENT, 0x00, 0, msg(0x0006, corpo_a[:-6],
-                                        len(corpo_a) - 6), [], CONTINUA, 0)
+    r.blocchi[4] = (CLIENT, 0x00, 0, msg(0x0006, body_a[:-6],
+                                        len(body_a) - 6), [], CONTINUA, 0)
     # ⛔ The offending byte is where the MISSING field would have begun — here
     #    `vista_altezza`, after the first three u32 — not the end of the body.
     #    ⚠ The first expected value written on 10 August said «the end of the
@@ -339,39 +339,39 @@ def costruisci():
     #    byte.  It is the case in which a careless receiver accepts and then
     #    shows a mangled name in a log.
     guasto = b"remotix\xc3\x28prova"
-    corpo_c = struct.pack("!H", 1) + cap([("video.codec", "hevc")])
+    body_c = struct.pack("!H", 1) + cap([("video.codec", "hevc")])
     # the list is rebuilt by hand to know WHERE the broken byte falls
     voci = [(b"video.codec", b"hevc"), (b"client.nome", guasto)]
-    corpo_c = struct.pack("!HH", 1, len(voci))
+    body_c = struct.pack("!HH", 1, len(voci))
     # ⚠ The offset accumulates over ALL the entries that come before, not only
     #   over the faulty one: the first run of 10 August computed it from the
     #   start of the list and accused a byte 19 positions further back.
     #   ⛔ It is the error this bench exists to catch — only this time it was
     #      in the EXPECTED, not in the validator.
-    scost = None
+    offs = None
     for n, v in voci:
         if v is guasto:
-            scost = len(corpo_c) + 2 + len(n) + 2 + 7  # up to byte 0xC3
-        corpo_c += s(n) + s(v)
+            offs = len(body_c) + 2 + len(n) + 2 + 7  # up to byte 0xC3
+        body_c += s(n) + s(v)
     r = conforme()
-    r.blocchi[0] = (CLIENT, 0x00, 0, msg(0x0001, corpo_c), [], CONTINUA, 0)
+    r.blocchi[0] = (CLIENT, 0x00, 0, msg(0x0001, body_c), [], CONTINUA, 0)
     casi.append(("2-utf8-non-valido", r, 1,
-                 ("RCP.md §6.0", r.scostamento(0, 6 + scost)),
+                 ("RCP.md §6.0", r.scostamento(0, 6 + offs)),
                  "client.nome contains a broken UTF-8 sequence"))
 
     # ── 3. repeated capability name (§4.3) ──────────────────────────────────
     voci = [(b"video.codec", b"hevc"), (b"video.profondita", b"8"),
             (b"video.codec", b"av1")]
-    corpo_c = struct.pack("!HH", 1, len(voci))
-    scost = None
+    body_c = struct.pack("!HH", 1, len(voci))
+    offs = None
     for k, (n, v) in enumerate(voci):
         if k == 2:
-            scost = len(corpo_c)
-        corpo_c += s(n) + s(v)
+            offs = len(body_c)
+        body_c += s(n) + s(v)
     r = conforme()
-    r.blocchi[0] = (CLIENT, 0x00, 0, msg(0x0001, corpo_c), [], CONTINUA, 0)
+    r.blocchi[0] = (CLIENT, 0x00, 0, msg(0x0001, body_c), [], CONTINUA, 0)
     casi.append(("3-capacita-ripetuta", r, 1,
-                 ("RCP.md §4.3", r.scostamento(0, 6 + scost)),
+                 ("RCP.md §4.3", r.scostamento(0, 6 + offs)),
                  "video.codec appears twice"))
 
     # ── 4. high byte outside the five channels (§2.5) ───────────────────────
@@ -384,7 +384,7 @@ def costruisci():
 
     # ── 5. message in the wrong state (§4) ──────────────────────────────────
     #    ATTACCA before CREDENZIALI.
-    r = Registrazione()
+    r = Recording()
     r.blocco(CLIENT, CIAO)
     r.blocco(SERVER, ECCOMI)
     r.blocco(CLIENT, ATTACCA)
@@ -457,7 +457,7 @@ def costruisci():
     r.blocchi[4] = (CLIENT, 0x00, 0,
                     msg(0x0006, struct.pack("!IIII", 1921, 1080, 1920, 1080)
                         + s("it")), [], CONTINUA, 0)
-    r.dichiara_quanti = 4
+    r.declare_how_many = 4
     casi.append(("11-quanti-sotto-dichiarato", r, 2, None,
                  "quanti_blocchi says 4 and the blocks are 6: the violation "
                  "is in the fifth"))
@@ -475,7 +475,7 @@ def costruisci():
     #      that neither arbiter judges is needed, and it is the **clipboard**
     #      (`0x02`, §7.4): there «I did not look» stays a true fact, and stays
     #      declared instead of acquitted.
-    r = Registrazione()
+    r = Recording()
     r.blocco(CLIENT, msg(0x0201, b"\x00" * 8), canale=0x02, stream=6)
     casi.append(("12-niente-da-giudicare", r, 3, None,
                  "a single CLIPBOARD block: zero control messages and zero "
@@ -496,14 +496,14 @@ def costruisci():
     #    validator that rejected **every** frame would be green on all the
     #    violations.  The recording that respects all six together is 13.
     # =======================================================================
-    def con_video(*blocchi_video, base=None):
+    def con_video(*blocks_video, base=None):
         """The whole handshake, and then the video.  ⛔ In this order.
 
         `SESSIONE` is the sixth block of `conforme()`, so every frame added
         here comes **after**, which is what §2.5 demands (P1).
         """
         r = conforme() if base is None else base
-        for b in blocchi_video:
+        for b in blocks_video:
             # ⭐ the fifth element, optional, is the block's `istante_ms`:
             #    T4 needs it, and without it «how much time has passed» is not there.
             r.blocco(*b[:2], canale=VIDEO, stream=b[2], fine=b[3],
@@ -528,7 +528,7 @@ def costruisci():
                  "FIN: it respects all six lines of 12 August"))
 
     # ── 14. P1 — §2.5: no video stream before `SESSIONE` ───────────────────
-    r = Registrazione()
+    r = Recording()
     r.blocco(CLIENT, CIAO)
     r.blocco(SERVER, ECCOMI)
     r.blocco(SERVER, intestazione() + b"\x00" * 64, canale=VIDEO, stream=7,
@@ -637,7 +637,7 @@ def costruisci():
     #    ⚠ And the content is the **compliant** recording: so the only thing
     #      that gets it rejected is the version, not a defect of the wire.
     r = conforme()
-    r.magia = MAGIA_VECCHIA
+    r.magia = OLD_MAGIC
     casi.append(("21-formato-vecchio", r, 2, None,
                  "⛔ a «RCPREG 0x00 0x01» recording, compliant in all the "
                  "rest: it is REJECTED, not misread"))
@@ -886,7 +886,7 @@ def costruisci():
     #    It is not a canvas rule: it is the handshake.  It sits here because
     #    an arbiter that learned the canvas by putting `ADATTA_TELA` outside the
     #    state machine would open this hole without noticing.
-    r = Registrazione()
+    r = Recording()
     r.blocco(CLIENT, CIAO)
     r.blocco(SERVER, ECCOMI)
     r.blocco(CLIENT, adatta(1280, 720))
@@ -997,11 +997,11 @@ def costruisci():
     #       has replaced sends one looking for a server defect inside a choice
     #       of the recorder.
     r = conforme()
-    corpo_t = struct.pack("!BBII", 1, 0, 1280, 720)
+    body_t = struct.pack("!BBII", 1, 0, 1280, 720)
     r.blocco(CLIENT, adatta(1280, 720))
     r.blocco(SERVER,
-             msg(0x000E, corpo_t[:2] + bytes([RIEMPIMENTO]) * 4 + corpo_t[6:]),
-             oscurati=[(6 + 2, 4, hashlib.sha256(corpo_t[2:6]).digest())])
+             msg(0x000E, body_t[:2] + bytes([FILL]) * 4 + body_t[6:]),
+             oscurati=[(6 + 2, 4, hashlib.sha256(body_t[2:6]).digest())])
     casi.append(("42-oscurato-su-un-numero", r, 2, None,
                  "⛔ an obscured interval over tela_larghezza of TELA: §11.1 "
                  "exists for the password, and that field is not judged"))
@@ -1071,7 +1071,7 @@ def costruisci():
     #      it and the bench would stay green — and it is exactly the shape in
     #      which the defect of 12 August lived for four days.
     r = conforme()
-    r.magia = MAGIA_V2
+    r.magia = MAGIC_V2
     casi.append(("46-formato-del-12-agosto", r, 2, None,
                  "⛔ «RCPREG 0x00 0x02», compliant in all the rest: the block "
                  "is 17 bytes instead of 21 and it is REJECTED — misread, "
@@ -1079,7 +1079,7 @@ def costruisci():
 
     # ── 47. ⛔ `orologio` not declared ──────────────────────────────────────
     r = conforme()
-    r.orologio_falso = 0
+    r.fake_clock = 0
     casi.append(("47-orologio-non-dichiarato", r, 2, None,
                  "⛔ `orologio` = 0: §11.1 defines two (1 client, 2 "
                  "server), and without knowing WHOSE the times are the rule of "
@@ -1096,7 +1096,7 @@ def costruisci():
                  "arrive «before» the TELA that precedes it on the wire"))
 
     # ── 49-50. ⭐⛔ THE GRACE SECOND OF §7.1, both directions ────────────────
-    def con_grazia(dt_ms):
+    def with_grace(dt_ms):
         """The canvas drops to 1280x720, and then a PUNTATORE valid on the OLD one.
 
         ⛔ (1900,1000) lies inside 1920x1080 and outside 1280x720: it is exactly
@@ -1106,8 +1106,8 @@ def costruisci():
         r = conforme()
         r.blocco(CLIENT, adatta(1280, 720), istante=500)
         r.blocco(SERVER, tela(1, 0, 1280, 720), istante=1000)
-        corpo_p = struct.pack("!IQII", 1, 0, 1900, 1000)
-        r.blocco(CLIENT, msg(0x0101, corpo_p), canale=0x01, stream=9,
+        body_p = struct.pack("!IQII", 1, 0, 1900, 1000)
+        r.blocco(CLIENT, msg(0x0101, body_p), canale=0x01, stream=9,
                  istante=1000 + dt_ms)
         # ⛔ And the server MUST have closed: here instead it keeps serving, and
         #    the proof is that it answers another request.  ⚠ Without this block
@@ -1117,7 +1117,7 @@ def costruisci():
         r.blocco(SERVER, tela(1, 0, 1600, 900), istante=1000 + dt_ms + 150)
         return r
 
-    r = con_grazia(1500)
+    r = with_grace(1500)
     casi.append(("49-grazia-scaduta", r, 1,
                  ("RCP.md §7.1", r.scostamento(8, 0)),
                  "⛔ a PUNTATORE on the OLD canvas 1500 ms after the "
@@ -1125,18 +1125,18 @@ def costruisci():
                  "keeps serving instead of closing.  ⭐ It is the [?] that "
                  "`istante_ms` exists to close"))
 
-    r = con_grazia(800)
+    r = with_grace(800)
     casi.append(("50-grazia-dentro-il-secondo", r, 0, None,
                  "⭐ the same wire at 800 ms: the arbiter does NOT accuse, and ⛔ SAYS "
                  "it is not judgeable — the times are the client's, and "
                  "the server's true interval is longer than this"))
 
     # ── 51-52. ⭐⛔ T4 — «COMPLIANT IS NOT WORKS» ───────────────────────────
-    def con_t4(misura_fotogrammi):
+    def con_t4(measure_frames):
         r = conforme()
         r.blocco(CLIENT, adatta(1264, 800), istante=50)
         r.blocco(SERVER, tela(1, 0, 1264, 800), istante=100)
-        for i, (l, a, ist, sid) in enumerate(misura_fotogrammi):
+        for i, (l, a, ist, sid) in enumerate(measure_frames):
             r.blocco(SERVER, intestazione(lar=l, alt=a, num=i + 1) + b"\x00" * 64,
                      canale=VIDEO, stream=sid, fine=FIN, istante=ist)
         return r

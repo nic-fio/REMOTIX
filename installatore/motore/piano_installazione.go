@@ -11,9 +11,9 @@ import (
 	"syscall"
 )
 
-// OpzioniInstallazione: the few things whoever installs chooses (§10: the port, who enters the card's
+// InstallOptions: the few things whoever installs chooses (§10: the port, who enters the card's
 // groups) and where the packages come from (the single package, DECISIONI §10.36).
-type OpzioniInstallazione struct {
+type InstallOptions struct {
 	// Pacchetti: the packages/ folder of the .run (or, in the tests, any folder with
 	// <bersaglio>/*.deb|*.rpm|*.pkg.tar.zst); "" ⇒ no package (RX-MANCA-004)
 	Pacchetti string
@@ -31,7 +31,7 @@ type OpzioniInstallazione struct {
 // REMOTIX's packages from the .run (the manager takes the dependencies from the machine's repositories) →
 // the card's groups (the exception the user wanted) → the port, if it is not the stock one →
 // the switch-on. The manager simulates at once: the plan shows the exact packages before the question.
-func PianoInstallazione(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambiente, o OpzioniInstallazione) (*Piano, error) {
+func PianoInstallazione(prof *Profile, rap *Rapporto, cat *Catalogo, amb *Ambiente, o InstallOptions) (*Piano, error) {
 	if o.Porta == 0 {
 		o.Porta = 7447
 	}
@@ -40,23 +40,23 @@ func PianoInstallazione(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambien
 	if o.Aggiornamento {
 		mestiere = "upgrade"
 	}
-	pn := &Piano{Formato: Formato, Oggetto: "plan", ID: nuovoID(), Creato: ora(), Mestiere: mestiere,
-		Motore:   RifMotore{VersioneMotore, DigestMotore()},
-		Catalogo: RifCatalogo{cat.Versione, cat.Digest}, Piattaforma: rap.Piattaforma,
-		Dipende: []string{}, Consensi: []string{}, Condizioni: []Condizione{}, NonFatto: []Messaggio{}}
+	pn := &Piano{Formato: Formato, Object: "plan", ID: nuovoID(), Created: ora(), Duty: mestiere,
+		Motore:   EngineRef{VersioneMotore, EngineDigest()},
+		Catalogo: CatalogRef{cat.Version, cat.Digest}, Platform: rap.Platform,
+		Depends: []string{}, Consents: []string{}, Condizioni: []Condition{}, NotDone: []Message{}}
 
 	// what is missing, and the reasons why REMOTIX does not work on this machine: they are stated, and it stops
-	pn.NonFatto = append(pn.NonFatto, rap.Mancano...)
-	for _, m := range rap.Messaggi {
-		if m.Gravita == BLOCCANTE && !haCodice(pn.NonFatto, m.Codice) {
-			pn.NonFatto = append(pn.NonFatto, m)
+	pn.NotDone = append(pn.NotDone, rap.Mancano...)
+	for _, m := range rap.Messages {
+		if m.Severity == BLOCCANTE && !hasCode(pn.NotDone, m.Codice) {
+			pn.NotDone = append(pn.NotDone, m)
 		}
 	}
-	if !haDesktopBuono(rap) && !rap.SenzaDesktop {
+	if !hasGoodDesktop(rap) && !rap.NoDesktop {
 		for _, e := range rap.Desktop {
-			for _, m := range e.Motivi {
-				if !haCodice(pn.NonFatto, m.Codice) {
-					pn.NonFatto = append(pn.NonFatto, m)
+			for _, m := range e.Reasons {
+				if !hasCode(pn.NotDone, m.Codice) {
+					pn.NotDone = append(pn.NotDone, m)
 				}
 			}
 		}
@@ -64,61 +64,61 @@ func PianoInstallazione(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambien
 
 	file, err := PacchettiDelRun(amb, o.Pacchetti)
 	if err != nil {
-		pn.NonFatto = append(pn.NonFatto, Msg("RX-MANCA-004", err.Error()))
+		pn.NotDone = append(pn.NotDone, Msg("RX-MANCA-004", err.Error()))
 	} else {
 		// the dependencies the desktop requires (labwc, wlr-randr, a font): with the manager, together
-		pn.Azioni = append(pn.Azioni, PianoPacchetti("packages", strings.Join(file, ","), strings.Join(rap.NomiDipendenze(), ",")))
+		pn.Azioni = append(pn.Azioni, PlanPackages("packages", strings.Join(file, ","), strings.Join(rap.DependencyNames(), ",")))
 		pn.Dipendenze = rap.Dipendenze
 	}
 	if !o.Aggiornamento {
 		utenti := o.Utenti
 		if len(utenti) == 0 {
-			utenti = Persone(amb)
+			utenti = People(amb)
 		}
 		gruppi := GruppiScheda(amb)
 		for _, u := range utenti {
 			for _, g := range gruppi {
-				pn.Azioni = append(pn.Azioni, PianoGruppo("group-"+u+"-"+g, u, g))
+				pn.Azioni = append(pn.Azioni, PlanGroup("group-"+u+"-"+g, u, g))
 			}
 		}
 		if len(gruppi) == 0 {
-			pn.NonFatto = append(pn.NonFatto, Messaggio{Gravita: INFO, Testo: T("np.nessun_gruppo")})
+			pn.NotDone = append(pn.NotDone, Message{Severity: INFO, Testo: T("np.nessun_gruppo")})
 		} else {
 			pn.Dichiarate = append(pn.Dichiarate, T("np.gruppi", strings.Join(gruppi, ", ")))
 		}
 		// the chosen port (§6.4: the defaults in /usr, the choices in /etc): remotix.service reads it
 		// from /etc/remotix/remotix.conf.d/*.conf. Only if it is not the stock one
 		if o.Porta != 7447 {
-			pn.Azioni = append(pn.Azioni, PianoScriviFile("port", "/etc/remotix/remotix.conf.d/porta.conf", "REMOTIX_PORTA="+ps+"\n", "0644"))
+			pn.Azioni = append(pn.Azioni, PlanWriteFile("port", "/etc/remotix/remotix.conf.d/porta.conf", "REMOTIX_PORTA="+ps+"\n", "0644"))
 		}
-		pn.Azioni = append(pn.Azioni, PianoAccendiServizio("service", "remotix.service", o.Porta))
+		pn.Azioni = append(pn.Azioni, PlanStartService("service", "remotix.service", o.Porta))
 		// the firewall is the administrator's (§10.36): it is stated, not opened
 		switch g := amb.Firewall.Nome(); g {
 		case "none", "":
 		default:
-			pn.NonFatto = append(pn.NonFatto, Messaggio{Gravita: AVVISO, Testo: T("np.firewall", g, ps)})
+			pn.NotDone = append(pn.NotDone, Message{Severity: AVVISO, Testo: T("np.firewall", g, ps)})
 		}
-		pn.NonFatto = append(pn.NonFatto, Messaggio{Gravita: INFO, Testo: T("np.sospensione")})
+		pn.NotDone = append(pn.NotDone, Message{Severity: INFO, Testo: T("np.sospensione")})
 	}
 	for _, e := range rap.Desktop {
-		if e.Livello != NON_SUPPORTATA && e.Installato != "" && e.Installato != "absent" && e.Installato != "unknown" {
+		if e.Level != NON_SUPPORTATA && e.Installed != "" && e.Installed != "absent" && e.Installed != "unknown" {
 			pn.Condizioni = append(pn.Condizioni, e.Condizioni...)
 		}
 	}
 	// the manager's simulation: the exact packages, BEFORE the question. If the manager cannot
 	// install (a dependency no repository of the machine provides), it says so here
-	if !Bloccato(pn) && amb.Pacchetti != nil && len(file) > 0 {
+	if !Blocked(pn) && amb.Pacchetti != nil && len(file) > 0 {
 		var veri []string
 		for _, f := range file {
 			veri = append(veri, amb.P(f))
 		}
-		ins, err := amb.Pacchetti.Simula(veri, rap.NomiDipendenze())
+		ins, err := amb.Pacchetti.Simula(veri, rap.DependencyNames())
 		if err != nil {
-			pn.NonFatto = append(pn.NonFatto, messaggioSimula(err))
+			pn.NotDone = append(pn.NotDone, messageSimulate(err))
 		}
 		pn.Pacchetti = ins
 	}
-	im, err := CalcolaImpronta(prof, cat, pn.Azioni, pn.Dipende, &Contesto{Amb: amb})
+	im, err := CalcolaImpronta(prof, cat, pn.Azioni, pn.Depends, &Contesto{Amb: amb})
 	if err != nil {
 		return nil, err
 	}
@@ -126,10 +126,10 @@ func PianoInstallazione(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambien
 	return pn, nil
 }
 
-// haDesktopBuono: at least one installed desktop that REMOTIX supports.
-func haDesktopBuono(rap *Rapporto) bool {
+// hasGoodDesktop: at least one installed desktop that REMOTIX supports.
+func hasGoodDesktop(rap *Rapporto) bool {
 	for _, e := range rap.Desktop {
-		if e.Livello != NON_SUPPORTATA && e.Installato != "" && e.Installato != "absent" && e.Installato != "unknown" {
+		if e.Level != NON_SUPPORTATA && e.Installed != "" && e.Installed != "absent" && e.Installed != "unknown" {
 			return true
 		}
 	}
@@ -137,18 +137,18 @@ func haDesktopBuono(rap *Rapporto) bool {
 }
 
 // Bloccato: the plan has a BLOCKING message (what is missing): it is not applied.
-func Bloccato(p *Piano) bool {
-	for _, m := range p.NonFatto {
-		if m.Gravita == BLOCCANTE {
+func Blocked(p *Piano) bool {
+	for _, m := range p.NotDone {
+		if m.Severity == BLOCCANTE {
 			return true
 		}
 	}
 	return false
 }
 
-// NienteDaFare: the simulation says the .run's packages are all already installed, at that
+// NothingToDo: the simulation says the .run's packages are all already installed, at that
 // version (an upgrade with the same .run).
-func NienteDaFare(p *Piano) bool {
+func NothingToDo(p *Piano) bool {
 	if len(p.Pacchetti) == 0 {
 		return false
 	}
@@ -196,7 +196,7 @@ func PacchettiDelRun(a *Ambiente, dir string) ([]string, error) {
 }
 
 // Persone: the machine's human users (uid between UID_MIN and 60000, with a real shell).
-func Persone(a *Ambiente) []string {
+func People(a *Ambiente) []string {
 	min := 1000
 	for _, f := range []string{"/etc/login.defs", "/usr/etc/login.defs"} {
 		if t, ok := leggi(a, f); ok {
@@ -236,7 +236,7 @@ func Persone(a *Ambiente) []string {
 // GruppiScheda: the groups of the card's nodes (/dev/dri/card* and renderD*), root excluded
 // (DECISIONI §7.21: the numbers change from one machine to another, they are read from the nodes).
 func GruppiScheda(a *Ambiente) []string {
-	gr, _ := LeggiGruppi(a.P("/etc/group"))
+	gr, _ := ReadGroups(a.P("/etc/group"))
 	nome := map[string]string{}
 	for n, v := range gr {
 		nome[v[0]] = n

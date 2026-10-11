@@ -45,9 +45,9 @@ func Sha256File(percorso string) (string, error) {
 	return Sha256(b), nil
 }
 
-// SincronizzaCartella fsyncs the folder: without it, a rename or a creation can vanish
+// SyncFolder fsyncs the folder: without it, a rename or a creation can vanish
 // on a power cut even if the file was synced (§6.6.3).
-func SincronizzaCartella(cartella string) error {
+func SyncFolder(cartella string) error {
 	d, err := os.Open(cartella)
 	if err != nil {
 		return err
@@ -64,8 +64,8 @@ func ScriviAtomico(percorso string, dati []byte, modo os.FileMode) error {
 	if err != nil {
 		return err
 	}
-	nomeTmp := tmp.Name()
-	pulisci := func() { tmp.Close(); os.Remove(nomeTmp) }
+	tmpName := tmp.Name()
+	pulisci := func() { tmp.Close(); os.Remove(tmpName) }
 	if _, err := tmp.Write(dati); err != nil {
 		pulisci()
 		return err
@@ -79,18 +79,18 @@ func ScriviAtomico(percorso string, dati []byte, modo os.FileMode) error {
 		return err
 	}
 	if err := tmp.Close(); err != nil {
-		os.Remove(nomeTmp)
+		os.Remove(tmpName)
 		return err
 	}
-	if err := os.Rename(nomeTmp, percorso); err != nil {
-		os.Remove(nomeTmp)
+	if err := os.Rename(tmpName, percorso); err != nil {
+		os.Remove(tmpName)
 		return err
 	}
-	return SincronizzaCartella(cartella)
+	return SyncFolder(cartella)
 }
 
-// ScriviJSON writes an engine object, atomically and readably.
-func ScriviJSON(percorso string, v any) error {
+// WriteJSON writes an engine object, atomically and readably.
+func WriteJSON(percorso string, v any) error {
 	b, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
 		return err
@@ -117,7 +117,7 @@ func LeggiJSON(percorso string, v any) error {
 }
 
 // JSONCanonico serialises stably (Go's maps already come out sorted by key).
-func JSONCanonico(v any) []byte {
+func CanonicalJSON(v any) []byte {
 	b, err := json.Marshal(v)
 	if err != nil {
 		panic(err) // only our types: an error here is a defect of the engine

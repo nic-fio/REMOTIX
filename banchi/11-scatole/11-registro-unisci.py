@@ -109,7 +109,7 @@ def current_spelling(x):
     return OLD_SPELLING.get(x, x) if isinstance(x, str) else x
 
 
-def istante_di(riga_json):
+def instant_of(riga_json):
     """Returns the instant as seconds, or `None` if it cannot tell.
 
     ⛔ Never zero and never an invented number: «I do not know» has a value of its own, and
@@ -148,19 +148,19 @@ def leggi(percorso):
             continue
         # ⚠ the instant is read in the code's spelling, ⛔ but the line is appended AS IT IS:
         #   the register is never rewritten, not even to translate it.
-        coppie.append((istante_di(current_spelling(o)), r, o))
+        coppie.append((instant_of(current_spelling(o)), r, o))
     return coppie, storte
 
 
-def scegli(gia_presenti, arrivate):
+def choose(already_present, arrivate):
     """⭐ The judgement, separated from the files — so it can be certified.
 
     Returns (da_accodare, perse_perche_vecchie, gia_c_erano, senza_istante).
 
     da_accodare is in increasing order of instant.
     """
-    testi_presenti = set(t for _, t, _ in gia_presenti)
-    istanti_presenti = [i for i, _, _ in gia_presenti if i is not None]
+    texts_present = set(t for _, t, _ in already_present)
+    instants_present = [i for i, _, _ in already_present if i is not None]
     # ═══════════════════════════════════════════════════════════════════
     # ⛔⛔ THE BOUNDARY IS THE MOST RECENT, **not the last line of the file** — and the
     #     first draft had written the last line.  ⭐ The certification below
@@ -178,12 +178,12 @@ def scegli(gia_presenti, arrivate):
     #   newer than everything gets in, and in increasing order ⇒ **the last line of the file is
     #   always the most recent**, which is exactly what C12 needs.
     # ═══════════════════════════════════════════════════════════════════
-    confine = max(istanti_presenti) if istanti_presenti else None
+    confine = max(instants_present) if instants_present else None
 
-    nuove, vecchie, doppie, senza = [], 0, 0, 0
+    nuove, old_ones, duplicate, senza = [], 0, 0, 0
     for i, testo, _ in arrivate:
-        if testo in testi_presenti:
-            doppie += 1
+        if testo in texts_present:
+            duplicate += 1
             continue
         if i is None:
             # ⚠ A line without an instant has no known place: appending it
@@ -191,11 +191,11 @@ def scegli(gia_presenti, arrivate):
             senza += 1
             continue
         if confine is not None and i <= confine:
-            vecchie += 1
+            old_ones += 1
             continue
         nuove.append((i, testo))
     nuove.sort(key=lambda c: c[0])
-    return [t for _, t in nuove], vecchie, doppie, senza
+    return [t for _, t in nuove], old_ones, duplicate, senza
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -235,15 +235,15 @@ def certifica():
     print("      stays the most recent, which is what C12 reads")
     guai = 0
     for nome, presenti, arrivate, atteso in casi:
-        nuove, vecchie, doppie, senza = scegli(presenti, arrivate)
-        ottenuto = (len(nuove), vecchie, doppie, senza)
+        nuove, old_ones, duplicate, senza = choose(presenti, arrivate)
+        ottenuto = (len(nuove), old_ones, duplicate, senza)
         ok = ottenuto == atteso
         # ⭐ and the count is not enough: the new ones must come out IN ORDER.
         if ok and len(nuove) > 1:
-            istanti = []
+            instants = []
             for t in nuove:
-                istanti.append(istante_di(json.loads(t)))
-            if istanti != sorted(istanti):
+                instants.append(instant_of(json.loads(t)))
+            if instants != sorted(instants):
                 ok = False
         print("  %s  %-62s ⇒ %s (expected %s)"
               % ("OK " if ok else "NO ", nome, ottenuto, atteso))
@@ -256,14 +256,14 @@ def certifica():
     #    certification twenty times believing it had twenty.
     presenti = [r(100)]
     arrivate = [r(200), r(300)]
-    nuove, _, _, _ = scegli(presenti, arrivate)
-    presenti2 = presenti + [(istante_di(json.loads(t)), t, json.loads(t)) for t in nuove]
-    nuove2, _, doppie2, _ = scegli(presenti2, arrivate)
-    ok = (len(nuove) == 2 and len(nuove2) == 0 and doppie2 == 2)
+    nuove, _, _, _ = choose(presenti, arrivate)
+    present2 = presenti + [(instant_of(json.loads(t)), t, json.loads(t)) for t in nuove]
+    new2, _, duplicate2, _ = choose(present2, arrivate)
+    ok = (len(nuove) == 2 and len(new2) == 0 and duplicate2 == 2)
     print("  %s  %-62s ⇒ %s"
           % ("OK " if ok else "NO ",
              "⭐⭐ merging twice in a row adds nothing the second time",
-             (len(nuove), len(nuove2), doppie2)))
+             (len(nuove), len(new2), duplicate2)))
     if not ok:
         guai += 1
 
@@ -297,29 +297,29 @@ def main():
         print("   ⇒ I could not look")
         return 3
 
-    presenti, storte_qui = leggi(a.locale)
-    arrivate, storte_la = leggi(a.arrivate)
+    presenti, malformed_here = leggi(a.locale)
+    arrivate, malformed_there = leggi(a.arrivate)
 
     if not arrivate:
         print("⛔ the arrived file contains no readable line "
-              "(%d malformed)" % storte_la)
+              "(%d malformed)" % malformed_there)
         print("   ⇒ I could not look — ⛔ and it is NOT «zero new lines»")
         return 3
 
-    nuove, vecchie, doppie, senza = scegli(presenti, arrivate)
+    nuove, old_ones, duplicate, senza = choose(presenti, arrivate)
 
     with open(a.locale, "a") as f:
         for t in nuove:
             f.write(t + "\n")
 
     print("== merge of the logs ==")
-    print("   were here         : %d lines (%d malformed)" % (len(presenti), storte_qui))
-    print("   arrived           : %d lines (%d malformed)" % (len(arrivate), storte_la))
+    print("   were here         : %d lines (%d malformed)" % (len(presenti), malformed_here))
+    print("   arrived           : %d lines (%d malformed)" % (len(arrivate), malformed_there))
     print("   ⭐ appended        : %d" % len(nuove))
-    print("   already there     : %d" % doppie)
-    if vecchie:
+    print("   already there     : %d" % duplicate)
+    if old_ones:
         print("   ⚠ perse_perche_vecchie : %d — older than the last line"
-              " here, and appending them would break the order C12 reads" % vecchie)
+              " here, and appending them would break the order C12 reads" % old_ones)
     if senza:
         print("   ⚠ no instant      : %d — no known place for them" % senza)
     return 0

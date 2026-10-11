@@ -34,7 +34,7 @@ struct comando {
  *   (`CODER.md` §4.2). */
 static const struct timeval TETTO = {0, 200000};
 
-static void scrivi_tutto(int fd, const char *testo)
+static void write_all(int fd, const char *testo)
 {
 	size_t n = strlen(testo);
 	size_t o = 0;
@@ -58,7 +58,7 @@ static void scrivi_tutto(int fd, const char *testo)
  *   `riga.starts_with("SBLOCCA ")` and answers a blank line with
  *   `NON-BANNATO []`.  The cure belongs there and not here; this file does
  *   the right thing and declares it. */
-static bool solo_spazi(const char *t)
+static bool only_spaces(const char *t)
 {
 	for (; *t; t++)
 		if (*t != ' ' && *t != '\t')
@@ -94,7 +94,7 @@ static void servi(int fd)
 		              "⚠ empty command on the unblock socket (read %zd bytes): "
 		              "I removed nothing",
 		              letti);
-		scrivi_tutto(fd, "NON-CAPITO empty line\n");
+		write_all(fd, "NON-CAPITO empty line\n");
 		return;
 	}
 	buf[letti] = 0;
@@ -107,12 +107,12 @@ static void servi(int fd)
 		 *    denominator that leaves no trace is of no use to anyone. */
 		registro_dice(REG_RCP, "command PING — the unblock socket is alive, and "
 		                       "I touched no ban");
-		scrivi_tutto(fd, "PONG\n");
+		write_all(fd, "PONG\n");
 		return;
 	}
 
 	if (strncmp(buf, "SBLOCCA ", 8) != 0 || buf[8] == 0 ||
-	    solo_spazi(buf + 8)) {
+	    only_spaces(buf + 8)) {
 		char fuori[320];
 		registro_dice(REG_RCP,
 		              "⚠ unknown command «%s» on the unblock socket: I "
@@ -120,7 +120,7 @@ static void servi(int fd)
 		              "«PING»)",
 		              buf);
 		snprintf(fuori, sizeof fuori, "NON-CAPITO %s\n", buf);
-		scrivi_tutto(fd, fuori);
+		write_all(fd, fuori);
 		return;
 	}
 
@@ -149,7 +149,7 @@ static void servi(int fd)
 			 *    and moved inside its own cure.
 			 * ⭐ The real cure is not here: `rcp_sblocca()` must be able to say
 			 *    whether it wrote the file (today it returns a single `bool`,
-			 *    and `percorso_ban` is `static` inside `rcp.c`).  Until it says
+			 *    and `ban_path` is `static` inside `rcp.c`).  Until it says
 			 *    so, this line declares what it knows and no more, and whoever
 			 *    measures looks at the file from outside — `01-b8-sblocca.py
 			 *    --ban-file`, which reads it before and after. */
@@ -169,7 +169,7 @@ static void servi(int fd)
 			              chiave, buf + 8);
 		snprintf(fuori, sizeof fuori, "%s %s\n", era ? "TOLTO" : "NON-BANNATO",
 		         chiave);
-		scrivi_tutto(fd, fuori);
+		write_all(fd, fuori);
 	}
 }
 
@@ -292,7 +292,7 @@ comando *comando_apri(const char *percorso)
 	return k;
 }
 
-void comando_chiudi(comando *k)
+void command_close(comando *k)
 {
 	if (!k)
 		return;

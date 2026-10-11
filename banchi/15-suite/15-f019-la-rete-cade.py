@@ -69,7 +69,7 @@ FUNZIONI = ("F-019", "P-B", "P-D")
 SERVER = "15-g7-server.sh"
 CADUTA_S = 20          # the dead line; the server declares it at 10 s
 OSSERVA_S = 60         # after the line comes back: how long to wait for the page to say it
-TETTO_RIENTRO_S = 40
+CAP_REENTRY_S = 40
 
 
 def extra(a):
@@ -107,11 +107,11 @@ def certifica():
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-def server_pronto(o):
+def server_ready(o):
     """Our server on and with the DEFAULT clocks; if not, it starts it."""
-    inatt, abb, riga = G7.orologi_in_vigore(o.scatola)
+    idle, abb, riga = G7.clocks_in_effect(o.scatola)
     c, t = G7.dentro(o.scatola, "systemctl is-active rete15-g7", 30)
-    if (t or "").strip() == "active" and inatt == 1800 and abb == 3600:
+    if (t or "").strip() == "active" and idle == 1800 and abb == 3600:
         return "our server already on, default clocks"
     ok, t = G7.server("accendi", o.scatola)
     if not ok:
@@ -119,14 +119,14 @@ def server_pronto(o):
     return t.splitlines()[0] if t else "on"
 
 
-def sano_8511(o):
+def healthy_8511(o):
     """⛔ Everybody's server (851x) must stay the previous one: pid and active."""
     c, t = G7.dentro(o.scatola, "systemctl is-active rete11-server; "
                      "systemctl show -p MainPID --value rete11-server", 30)
     return " ".join((t or "").split())
 
 
-def clic_tela(s):
+def click_canvas(s):
     """A click at the centre of the canvas: it is the user's gesture that unblocks
     the browser's audio (autoplay) — without it, the AudioContext stays suspended."""
     st = s.stato()
@@ -136,7 +136,7 @@ def clic_tela(s):
     return x, y
 
 
-def entra_con_orecchio(s):
+def enter_with_ear(s):
     ok, m = s.pr.apri()
     if not ok:
         return False, "the page does not open: " + m
@@ -187,11 +187,11 @@ def caduta(s, o, reg, lm, osserva_s, togli=True, durante=None):
     lm.metti()
     t0 = time.time()
     try:
-        chiamato = False
+        called = False
         while time.time() - t0 < o.caduta_s:
-            if durante and not chiamato and time.time() - t0 > o.caduta_s / 3:
+            if durante and not called and time.time() - t0 > o.caduta_s / 3:
                 durante()
-                chiamato = True
+                called = True
             st = G7.pagina(s.g)
             if f["detto"] is None and G7.la_pagina_lo_dice(st):
                 f["detto"], f["detto_dopo_s"] = st, time.time() - t0
@@ -231,40 +231,40 @@ def caduta(s, o, reg, lm, osserva_s, togli=True, durante=None):
 
 def corpo(o, E):
     if not o.porta:
-        o.porta = G7.PORTE_G7[o.scatola]
+        o.porta = G7.PORTS_G7[o.scatola]
         o.url = "https://%s:%d/" % (o.host, o.porta)
-    if o.porta != G7.PORTE_G7[o.scatola]:
+    if o.porta != G7.PORTS_G7[o.scatola]:
             raise S.Bloccata("port %d is not our server's (%d)"
-                         % (o.porta, G7.PORTE_G7[o.scatola]))
-    print("   %s" % server_pronto(o), flush=True)
-    prima_8511 = sano_8511(o)
+                         % (o.porta, G7.PORTS_G7[o.scatola]))
+    print("   %s" % server_ready(o), flush=True)
+    before_8511 = healthy_8511(o)
     reg = G7.Registro(o.scatola)
     lm = G7.LineaMorta(o.porta)
     lm.togli()
     ev_srv = []
     try:
         with S.Sessione(o, "019", E) as s:
-            segno0 = reg.righe()
-            ok, m = entra_con_orecchio(s)
+            sign0 = reg.righe()
+            ok, m = enter_with_ear(s)
             if not ok:
                 raise S.Bloccata("you cannot get in even with a healthy line: " + m)
             print("   in: %s" % m, flush=True)
-            clic_tela(s)
+            click_canvas(s)
             pid_scena, t = G7.lancia_scena(s)
             print("   %s" % t, flush=True)
             if not pid_scena:
                 raise S.Bloccata("the scene does not start: " + t)
-            c, t = G7.lancia_tono(s)
+            c, t = G7.launch_tone(s)
             vista, t = G7.aspetta_scena(s, S)
             if not vista:
                 raise S.Bloccata("before the drop: " + t)
             time.sleep(3)
-            ps0 = G7.processi_inquilino(o.scatola, s.chi)
-            pid_tono = [p for p, n in ps0.items() if n.startswith("pw-play")]
+            ps0 = G7.tenant_processes(o.scatola, s.chi)
+            tone_pid = [p for p, n in ps0.items() if n.startswith("pw-play")]
             rms0, d0 = G7.ascolta(s.g, 3)
-            mossa0, dm0, ev0 = G7.la_scena_si_muove(s, "prima")
+            move0, dm0, ev0 = G7.la_scena_si_muove(s, "prima")
             print("   before: scene %s (%s) · sound RMS %s %s · %d processes"
-                  % (mossa0, dm0, rms0, d0, len(ps0)), flush=True)
+                  % (move0, dm0, rms0, d0, len(ps0)), flush=True)
 
             # ═══ THE HEALTHY DROP ═════════════════════════════════════════
             f = caduta(s, o, reg, lm, o.osserva_s)
@@ -273,22 +273,22 @@ def corpo(o, E):
                      ("after %.0f s" % f["detto_dopo_s"]) if f["detto"] else "NO"), flush=True)
             if f["scartati"] == 0:
                 raise S.Bloccata("the nft rule dropped nothing: the line did not die")
-            ok_r, come, mr = rientra(s, TETTO_RIENTRO_S)
+            ok_r, come, mr = rientra(s, CAP_REENTRY_S)
             print("   re-entry %s: %s — %s" % (come, ok_r, mr[:200]), flush=True)
             if ok_r:
-                clic_tela(s)
+                click_canvas(s)
             time.sleep(4)
-            ps1 = G7.processi_inquilino(o.scatola, s.chi)
-            mossa1, dm1, ev1 = G7.la_scena_si_muove(s, "dopo")
+            ps1 = G7.tenant_processes(o.scatola, s.chi)
+            move1, dm1, ev1 = G7.la_scena_si_muove(s, "dopo")
             rms1, d1 = G7.ascolta(s.g, 3)
-            ev_srv.append(s.salva_testo("server-f019-sana.txt", reg.da(segno0, s.chi)))
-            ev_pag = s.salva_testo("pagina-dopo-caduta.txt", "\n".join(
+            ev_srv.append(s.save_text("server-f019-sana.txt", reg.da(sign0, s.chi)))
+            ev_page = s.save_text("pagina-dopo-caduta.txt", "\n".join(
                 "%s: %s" % (k, v) for k, v in (f.get("ultima_pagina") or {}).items()))
             # ⚠ pw-play's pid changes at every turn of the loop (a 5 s file):
             #   the session's state is judged on the scene's pid.
             stessi = pid_scena in ps1
             ripresa = "resumed" in mr
-            ev = ev0 + ev1 + ev_srv + [ev_pag, s.salva_console()]
+            ev = ev0 + ev1 + ev_srv + [ev_page, s.save_console()]
 
             # F-019
             osservato = ("linea-morta from the server: %s · the page: %s · re-entry %s: %s · "
@@ -321,34 +321,34 @@ def corpo(o, E):
                         evidenze=ev)
 
             # P-B
-            atteso_b = "after the re-entry the scene moves in the photos, same process as before"
+            expected_b = "after the re-entry the scene moves in the photos, same process as before"
             if not ok_r:
-                E.metti("P-B", S.FAIL, "no getting back in: " + mr[:200], atteso=atteso_b,
+                E.metti("P-B", S.FAIL, "no getting back in: " + mr[:200], atteso=expected_b,
                         osservato=mr[:200], evidenze=ev)
-            elif mossa1 is None:
+            elif move1 is None:
                 E.metti("P-B", S.BLOCKED, "photos not judgeable: " + dm1, evidenze=ev)
-            elif mossa1 and pid_scena in ps1:
+            elif move1 and pid_scena in ps1:
                 E.metti("P-B", S.PASS, "scene alive after the re-entry (%s), pid %d" % (dm1, pid_scena),
-                        atteso=atteso_b, osservato=dm1, evidenze=ev)
+                        atteso=expected_b, osservato=dm1, evidenze=ev)
             else:
                 E.metti("P-B", S.FAIL, "after the re-entry the scene is still or gone (%s, pid alive %s)"
-                        % (dm1, pid_scena in ps1), atteso=atteso_b, osservato=dm1, evidenze=ev)
+                        % (dm1, pid_scena in ps1), atteso=expected_b, osservato=dm1, evidenze=ev)
 
             # P-D
-            atteso_d = "after the re-entry moving photos AND sound played not silence (RMS > %.2f)" \
+            expected_d = "after the re-entry moving photos AND sound played not silence (RMS > %.2f)" \
                 % G7.SOGLIA_RMS
             if rms0 is None or rms0 < G7.SOGLIA_RMS:
                 E.metti("P-D", S.BLOCKED, "the sound was not arriving even BEFORE the drop "
                         "(RMS %s, %s): I have no «before» to find again" % (rms0, d0), evidenze=ev)
             elif not ok_r:
-                E.metti("P-D", S.FAIL, "no getting back in: " + mr[:200], atteso=atteso_d, evidenze=ev)
-            elif mossa1 and rms1 is not None and rms1 >= G7.SOGLIA_RMS:
+                E.metti("P-D", S.FAIL, "no getting back in: " + mr[:200], atteso=expected_d, evidenze=ev)
+            elif move1 and rms1 is not None and rms1 >= G7.SOGLIA_RMS:
                 E.metti("P-D", S.PASS, "after the re-entry video alive (%s) and sound RMS %.3f (before %.3f)"
-                        % (dm1, rms1, rms0), atteso=atteso_d,
+                        % (dm1, rms1, rms0), atteso=expected_d,
                         osservato="RMS %.3f · %s" % (rms1, d1), evidenze=ev)
             else:
                 E.metti("P-D", S.FAIL, "after the re-entry: video %s (%s), sound RMS %s (%s)"
-                        % (mossa1, dm1, rms1, d1), atteso=atteso_d, evidenze=ev)
+                        % (move1, dm1, rms1, d1), atteso=expected_d, evidenze=ev)
 
             if not o.guasto:
                 return
@@ -358,12 +358,12 @@ def corpo(o, E):
                 E.guasto("P-B", None, "same")
                 E.guasto("P-D", None, "same")
                 return
-            vittime = [pid_scena] + pid_tono
+            victims = [pid_scena] + tone_pid
 
             def uccidi():
                 G7.dentro(o.scatola, "pkill -KILL -u %s -f 'pw-play|weston-simple-egl'; "
                           "kill -KILL %s 2>/dev/null; true"
-                          % (s.chi, " ".join(str(p) for p in vittime)), 30)
+                          % (s.chi, " ".join(str(p) for p in victims)), 30)
             f2 = caduta(s, o, reg, lm, 0, togli=False, durante=uccidi)
             try:
                 ok_g, come_g, mg = rientra(s, 30)          # line STILL dead
@@ -371,31 +371,31 @@ def corpo(o, E):
                 lm.togli()
             E.guasto("F-019", not ok_g, "re-entry with the line still dead ⇒ %s (%s)"
                      % ("NO getting back in: " + mg[:120] if not ok_g else "BACK IN?!", come_g))
-            ok_r2, come2, mr2 = rientra(s, TETTO_RIENTRO_S)
+            ok_r2, come2, mr2 = rientra(s, CAP_REENTRY_S)
             if not ok_r2:
                 E.guasto("P-B", None, "after the fault you can no longer get back in: " + mr2[:150])
                 E.guasto("P-D", None, "same")
                 return
-            clic_tela(s)
+            click_canvas(s)
             time.sleep(4)
-            ps2 = G7.processi_inquilino(o.scatola, s.chi)
-            mossa2, dm2, _e = G7.la_scena_si_muove(s, "guasto")
+            ps2 = G7.tenant_processes(o.scatola, s.chi)
+            move2, dm2, _e = G7.la_scena_si_muove(s, "guasto")
             rms2, d2 = G7.ascolta(s.g, 3)
-            s.salva_testo("server-f019-guasto.txt", reg.da(f2.get("segno") or segno0, s.chi))
+            s.save_text("server-f019-guasto.txt", reg.da(f2.get("segno") or sign0, s.chi))
             vivo = pid_scena in ps2
-            pb_rosso = not (mossa2 and vivo)
-            E.guasto("P-B", pb_rosso if mossa2 is not None else None,
+            pb_red = not (move2 and vivo)
+            E.guasto("P-B", pb_red if move2 is not None else None,
                      "scene killed during the drop ⇒ P-B's judge says %s (%s, pid alive %s)"
-                     % ("red" if pb_rosso else "VERDE", dm2, vivo))
-            pd_rosso = not (mossa2 and rms2 is not None and rms2 >= G7.SOGLIA_RMS)
-            E.guasto("P-D", pd_rosso, "scene and tone killed ⇒ P-D's judge says %s "
-                     "(video %s, RMS %s)" % ("red" if pd_rosso else "VERDE", mossa2, rms2))
+                     % ("red" if pb_red else "VERDE", dm2, vivo))
+            pd_red = not (move2 and rms2 is not None and rms2 >= G7.SOGLIA_RMS)
+            E.guasto("P-D", pd_red, "scene and tone killed ⇒ P-D's judge says %s "
+                     "(video %s, RMS %s)" % ("red" if pd_red else "VERDE", move2, rms2))
     finally:
         tolta = lm.togli()
-        dopo_8511 = sano_8511(o)
+        after_8511 = healthy_8511(o)
         print("   nft rule removed: %s · 851x server before «%s» after «%s»%s"
-              % (tolta, prima_8511, dopo_8511,
-                 "" if prima_8511 == dopo_8511 else "  ⛔ CHANGED"), flush=True)
+              % (tolta, before_8511, after_8511,
+                 "" if before_8511 == after_8511 else "  ⛔ CHANGED"), flush=True)
 
 
 if __name__ == "__main__":

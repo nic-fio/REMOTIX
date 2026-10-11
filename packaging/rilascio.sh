@@ -52,9 +52,9 @@ RUN=$USCITA/remotix-$VERSIONE.run
 
 passo "1. the tree ($VERSIONE, targets: $BERSAGLI)"
 COMMIT=$(git -C "$ALBERO" rev-parse HEAD)
-SPORCO=$(git -C "$ALBERO" status --porcelain -- src packaging installatore banchi/rcp THIRD-PARTY-LICENSES LICENSE.md)
-if [ -n "$SPORCO" ]; then
-	[ "${RX_SPORCO:-}" = 1 ] || { echo "⛔ uncommitted changes:"; echo "$SPORCO"; exit 1; }
+DIRTY=$(git -C "$ALBERO" status --porcelain -- src packaging installatore banchi/rcp THIRD-PARTY-LICENSES LICENSE.md)
+if [ -n "$DIRTY" ]; then
+	[ "${RX_SPORCO:-}" = 1 ] || { echo "⛔ uncommitted changes:"; echo "$DIRTY"; exit 1; }
 	echo "⚠ RX_SPORCO=1: tree with uncommitted changes (for testing only)" | tee -a "$REG"
 fi
 echo "commit $COMMIT" | tee -a "$REG"

@@ -20,7 +20,7 @@
 #include <openssl/rand.h>
 #include <openssl/x509v3.h>
 
-static const char *errore_ssl(void)
+static const char *error_ssl(void)
 {
 	static char buf[256];
 	unsigned long e = ERR_get_error();
@@ -44,11 +44,11 @@ static bool esiste(const char *p) { return access(p, F_OK) == 0; }
  *    only one that keeps the road of `serverCertificateHashes` open, and a key
  *    chosen today for convenience would close that door without anyone
  *    noticing. */
-static EVP_PKEY *chiave_p256(void)
+static EVP_PKEY *key_p256(void)
 {
 	EVP_PKEY *k = EVP_EC_gen("P-256");
 	if (!k)
-		registro_dice(REG_CERT, "⛔ EVP_EC_gen(P-256): %s", errore_ssl());
+		registro_dice(REG_CERT, "⛔ EVP_EC_gen(P-256): %s", error_ssl());
 	return k;
 }
 
@@ -66,7 +66,7 @@ static void san_di(const char *indirizzo, char *fuori, size_t cap)
 		snprintf(fuori, cap, "DNS:%s", indirizzo);
 }
 
-static bool scrivi_pem(const char *pem, const char *key, X509 *crt, EVP_PKEY *k)
+static bool write_pem(const char *pem, const char *key, X509 *crt, EVP_PKEY *k)
 {
 	FILE *f;
 	int fd;
@@ -86,7 +86,7 @@ static bool scrivi_pem(const char *pem, const char *key, X509 *crt, EVP_PKEY *k)
 		return false;
 	}
 	if (PEM_write_PrivateKey(f, k, NULL, NULL, 0, NULL, NULL) != 1) {
-		registro_dice(REG_CERT, "⛔ PEM_write_PrivateKey: %s", errore_ssl());
+		registro_dice(REG_CERT, "⛔ PEM_write_PrivateKey: %s", error_ssl());
 		fclose(f);
 		return false;
 	}
@@ -98,7 +98,7 @@ static bool scrivi_pem(const char *pem, const char *key, X509 *crt, EVP_PKEY *k)
 		return false;
 	}
 	if (PEM_write_X509(f, crt) != 1) {
-		registro_dice(REG_CERT, "⛔ PEM_write_X509: %s", errore_ssl());
+		registro_dice(REG_CERT, "⛔ PEM_write_X509: %s", error_ssl());
 		fclose(f);
 		return false;
 	}
@@ -120,7 +120,7 @@ static bool genera(const char *pem, const char *key, const char *marca,
 	bool bene = false;
 	FILE *f;
 
-	k = chiave_p256();
+	k = key_p256();
 	if (!k)
 		goto fine;
 
@@ -167,7 +167,7 @@ static bool genera(const char *pem, const char *key, const char *marca,
 	ext = X509V3_EXT_conf_nid(NULL, &ctx, NID_subject_alt_name, san);
 	if (!ext) {
 		registro_dice(REG_CERT, "⛔ subjectAltName «%s»: %s", san,
-		              errore_ssl());
+		              error_ssl());
 		goto fine;
 	}
 	if (X509_add_ext(crt, ext, -1) != 1)
@@ -181,11 +181,11 @@ static bool genera(const char *pem, const char *key, const char *marca,
 	}
 
 	if (X509_sign(crt, k, EVP_sha256()) == 0) {
-		registro_dice(REG_CERT, "⛔ X509_sign: %s", errore_ssl());
+		registro_dice(REG_CERT, "⛔ X509_sign: %s", error_ssl());
 		goto fine;
 	}
 
-	if (!scrivi_pem(pem, key, crt, k))
+	if (!write_pem(pem, key, crt, k))
 		goto fine;
 
 	/* The marker: «we wrote this one».  See certificati.h. */
@@ -230,7 +230,7 @@ static X509 *leggi(const char *pem)
 /* How many seconds are left before expiry.  Negative if already expired.
  * ⛔ And `giorni_restanti` is not «the file exists»: `LEZIONI.md` §1.9 point 8 —
  *    a file from yesterday answers «yes» to *does it exist?* exactly like one from now. */
-static long secondi_alla_scadenza(X509 *crt, time_t *scade)
+static long seconds_to_expiry(X509 *crt, time_t *scade)
 {
 	const ASN1_TIME *fine = X509_get0_notAfter(crt);
 	int giorni = 0, sec = 0;
@@ -244,8 +244,8 @@ static long secondi_alla_scadenza(X509 *crt, time_t *scade)
 }
 
 /* The fingerprint: SHA-256 of the DER, in base64 and in hexadecimal. */
-static bool impronta_di(X509 *crt, char *b64, size_t b64cap, char *esa,
-                        size_t esacap)
+static bool fingerprint_of(X509 *crt, char *b64, size_t b64cap, char *esa,
+                        size_t hexcap)
 {
 	unsigned char dig[EVP_MAX_MD_SIZE];
 	unsigned int n = 0;
@@ -271,24 +271,24 @@ static bool impronta_di(X509 *crt, char *b64, size_t b64cap, char *esa,
 	b64[o++] = '=';
 	b64[o] = 0;
 
-	if (esacap < 2 * n + 1)
+	if (hexcap < 2 * n + 1)
 		return false;
 	for (i = 0; i < n; i++)
-		snprintf(esa + 2 * i, esacap - 2 * i, "%02x", dig[i]);
+		snprintf(esa + 2 * i, hexcap - 2 * i, "%02x", dig[i]);
 	return true;
 }
 
-static bool aggiorna_impronta(certificati *c)
+static bool update_fingerprint(certificati *c)
 {
-	X509 *crt = leggi(c->sessione_pem);
+	X509 *crt = leggi(c->session_pem);
 	bool bene;
 	if (!crt) {
-		registro_dice(REG_CERT, "⛔ cannot read %s", c->sessione_pem);
+		registro_dice(REG_CERT, "⛔ cannot read %s", c->session_pem);
 		return false;
 	}
-	bene = impronta_di(crt, c->impronta, sizeof c->impronta, c->impronta_esa,
-	                   sizeof c->impronta_esa);
-	secondi_alla_scadenza(crt, &c->sessione_scade);
+	bene = fingerprint_of(crt, c->impronta, sizeof c->impronta, c->fingerprint_hex,
+	                   sizeof c->fingerprint_hex);
+	seconds_to_expiry(crt, &c->session_expires);
 	X509_free(crt);
 	if (!bene) {
 		registro_dice(REG_CERT, "⛔ fingerprint not computed");
@@ -312,17 +312,17 @@ bool certificati_prepara(certificati *c, const char *dir, const char *indirizzo)
 		return false;
 	}
 
-	percorso(c->pagina_pem, sizeof c->pagina_pem, dir, "pagina.pem");
-	percorso(c->pagina_key, sizeof c->pagina_key, dir, "pagina.key");
-	percorso(c->pagina_marca, sizeof c->pagina_marca, dir, "pagina.nostro");
-	percorso(c->sessione_pem, sizeof c->sessione_pem, dir, "sessione.pem");
-	percorso(c->sessione_key, sizeof c->sessione_key, dir, "sessione.key");
-	percorso(c->sessione_marca, sizeof c->sessione_marca, dir, "sessione.nostro");
+	percorso(c->page_pem, sizeof c->page_pem, dir, "pagina.pem");
+	percorso(c->page_key, sizeof c->page_key, dir, "pagina.key");
+	percorso(c->page_marker, sizeof c->page_marker, dir, "pagina.nostro");
+	percorso(c->session_pem, sizeof c->session_pem, dir, "sessione.pem");
+	percorso(c->session_key, sizeof c->session_key, dir, "sessione.key");
+	percorso(c->session_mark, sizeof c->session_mark, dir, "sessione.nostro");
 
 	/* ── the LONG-LIVED one ─────────────────────────────────────────── */
-	if (esiste(c->pagina_pem) && esiste(c->pagina_key)) {
-		c->pagina_e_nostro = esiste(c->pagina_marca);
-		if (!c->pagina_e_nostro) {
+	if (esiste(c->page_pem) && esiste(c->page_key)) {
+		c->page_is_ours = esiste(c->page_marker);
+		if (!c->page_is_ours) {
 			/* ⛔ §4.1: it is the administrator's.  It is used and
 			 *    NOT regenerated — not even if expired: regenerating
 			 *    it would secretly replace their decision, and the
@@ -331,38 +331,38 @@ bool certificati_prepara(certificati *c, const char *dir, const char *indirizzo)
 			registro_dice(REG_CERT,
 			              "⭐ the page uses a certificate that is not "
 			              "ours (%s): it is used and not regenerated (§4.1)",
-			              c->pagina_pem);
+			              c->page_pem);
 		} else {
-			crt = leggi(c->pagina_pem);
+			crt = leggi(c->page_pem);
 			if (crt) {
-				long s = secondi_alla_scadenza(crt, NULL);
+				long s = seconds_to_expiry(crt, NULL);
 				X509_free(crt);
 				if (s < 0) {
 					registro_dice(REG_CERT,
 					              "the page certificate has "
 					              "expired: making a new one");
-					if (!genera(c->pagina_pem, c->pagina_key,
-					            c->pagina_marca, indirizzo,
+					if (!genera(c->page_pem, c->page_key,
+					            c->page_marker, indirizzo,
 					            CERT_GIORNI_PAGINA))
 						return false;
 				}
 			}
 		}
 	} else {
-		if (!genera(c->pagina_pem, c->pagina_key, c->pagina_marca,
+		if (!genera(c->page_pem, c->page_key, c->page_marker,
 		            indirizzo, CERT_GIORNI_PAGINA))
 			return false;
-		c->pagina_e_nostro = true;
+		c->page_is_ours = true;
 	}
 
 	/* ── the SHORT one ──────────────────────────────────────────────── */
-	if (!esiste(c->sessione_pem) || !esiste(c->sessione_key)) {
-		if (!genera(c->sessione_pem, c->sessione_key, c->sessione_marca,
+	if (!esiste(c->session_pem) || !esiste(c->session_key)) {
+		if (!genera(c->session_pem, c->session_key, c->session_mark,
 		            indirizzo, CERT_GIORNI_SESSIONE))
 			return false;
 		c->rotazioni++;
 	}
-	if (!aggiorna_impronta(c))
+	if (!update_fingerprint(c))
 		return false;
 
 	/* ⛔ And if what was there is already past the margin, rotate now —
@@ -374,11 +374,11 @@ bool certificati_prepara(certificati *c, const char *dir, const char *indirizzo)
 	/* ⛔ And the two MUST be TWO.  It is the check of B13.1, and it is done at
 	 *    birth instead of fourteen days later. */
 	{
-		X509 *p = leggi(c->pagina_pem), *s = leggi(c->sessione_pem);
+		X509 *p = leggi(c->page_pem), *s = leggi(c->session_pem);
 		char ip[64], ipe[80], is[64], ise[80];
 		bool due = false;
-		if (p && s && impronta_di(p, ip, sizeof ip, ipe, sizeof ipe) &&
-		    impronta_di(s, is, sizeof is, ise, sizeof ise))
+		if (p && s && fingerprint_of(p, ip, sizeof ip, ipe, sizeof ipe) &&
+		    fingerprint_of(s, is, sizeof is, ise, sizeof ise))
 			due = strcmp(ip, is) != 0;
 		if (p)
 			X509_free(p);
@@ -405,7 +405,7 @@ bool certificati_prepara(certificati *c, const char *dir, const char *indirizzo)
 
 bool certificati_ruota_se_serve(certificati *c)
 {
-	X509 *crt = leggi(c->sessione_pem);
+	X509 *crt = leggi(c->session_pem);
 	long restano;
 
 	if (!crt) {
@@ -414,7 +414,7 @@ bool certificati_ruota_se_serve(certificati *c)
 		              "a new one");
 		restano = -1;
 	} else {
-		restano = secondi_alla_scadenza(crt, &c->sessione_scade);
+		restano = seconds_to_expiry(crt, &c->session_expires);
 		X509_free(crt);
 	}
 
@@ -428,12 +428,12 @@ bool certificati_ruota_se_serve(certificati *c)
 	              "⭐ rotation of the SESSION certificate: %ld "
 	              "seconds were left, the margin is %d days",
 	              restano, CERT_MARGINE_GIORNI);
-	if (!genera(c->sessione_pem, c->sessione_key, c->sessione_marca,
+	if (!genera(c->session_pem, c->session_key, c->session_mark,
 	            c->indirizzo, CERT_GIORNI_SESSIONE)) {
 		registro_dice(REG_CERT, "⛔ rotation FAILED: the old one stays");
 		return false;
 	}
-	if (!aggiorna_impronta(c))
+	if (!update_fingerprint(c))
 		return false;
 	c->rotazioni++;
 	registro_dice(REG_CERT,

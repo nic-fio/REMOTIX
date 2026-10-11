@@ -12,8 +12,8 @@
 
 #include "registro.h"
 
-#define NOME_LOGIND "org.freedesktop.login1"
-#define PERCORSO_LOGIND "/org/freedesktop/login1"
+#define LOGIND_NAME "org.freedesktop.login1"
+#define PATH_LOGIND "/org/freedesktop/login1"
 #define IFACE_MANAGER "org.freedesktop.login1.Manager"
 #define IFACE_SESSIONE "org.freedesktop.login1.Session"
 
@@ -46,20 +46,20 @@
 
 /* ⚠ `mir` is here because it was in v1: we do not serve it, but a Mir session is
  *   graphical all the same, and counting it is more prudent than ignoring it. */
-static const char *TIPI_GRAFICI[] = { "wayland", "x11", "mir", NULL };
+static const char *GRAPHICAL_TYPES[] = { "wayland", "x11", "mir", NULL };
 
 struct sentinella {
 	GDBusConnection *bus;
 	uint64_t chiamate;
-	uint64_t peggior_ms;
+	uint64_t worst_ms;
 	/* ⛔ A single line when logind stops answering, not one per turn:
 	 * a re-check every two seconds would fill the log with a fact that
 	 * counts once (`LEZIONI.md` §6.2-ter: the number that explains everything is
 	 * searched for, and in a flooded log it is not found). */
-	bool muto_gia_detto;
+	bool mute_already_logged;
 };
 
-sentinella *sentinella_apri(void)
+sentinella *sentinel_open(void)
 {
 	g_autoptr(GError) sbaglio = NULL;
 	GDBusConnection *bus = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, &sbaglio);
@@ -82,7 +82,7 @@ sentinella *sentinella_apri(void)
 	return s;
 }
 
-void sentinella_chiudi(sentinella *s)
+void sentinel_close(sentinella *s)
 {
 	if (!s)
 		return;
@@ -94,7 +94,7 @@ static GVariant *chiama(sentinella *s, const char *percorso,
                         const char *interfaccia, const char *metodo,
                         GVariant *argomenti, const GVariantType *tipo)
 {
-	return g_dbus_connection_call_sync(s->bus, NOME_LOGIND, percorso, interfaccia,
+	return g_dbus_connection_call_sync(s->bus, LOGIND_NAME, percorso, interfaccia,
 	                                   metodo, argomenti, tipo,
 	                                   G_DBUS_CALL_FLAGS_NONE, ATTESA_MS, NULL,
 	                                   NULL);
@@ -105,16 +105,16 @@ static GVariant *chiama(sentinella *s, const char *percorso,
  * closing.  NULL if it is not — or if it vanished between the list and this question,
  * which is logind's normal race condition and not a fault.
  */
-static char *tipo_se_grafica(sentinella *s, const char *percorso)
+static char *type_if_graphical(sentinella *s, const char *percorso)
 {
 	g_autoptr(GVariant) risposta =
 		chiama(s, percorso, "org.freedesktop.DBus.Properties", "GetAll",
 	               g_variant_new("(s)", IFACE_SESSIONE), G_VARIANT_TYPE("(a{sv})"));
 	g_autoptr(GVariant) proprieta = NULL;
-	g_autoptr(GVariant) v_tipo = NULL;
-	g_autoptr(GVariant) v_classe = NULL;
-	g_autoptr(GVariant) v_remota = NULL;
-	g_autoptr(GVariant) v_stato = NULL;
+	g_autoptr(GVariant) v_type = NULL;
+	g_autoptr(GVariant) v_class = NULL;
+	g_autoptr(GVariant) v_remote = NULL;
+	g_autoptr(GVariant) v_state = NULL;
 	const char *tipo;
 	bool grafica = false;
 
@@ -122,30 +122,30 @@ static char *tipo_se_grafica(sentinella *s, const char *percorso)
 		return NULL;
 	proprieta = g_variant_get_child_value(risposta, 0);
 
-	v_tipo = g_variant_lookup_value(proprieta, "Type", G_VARIANT_TYPE_STRING);
-	v_classe = g_variant_lookup_value(proprieta, "Class", G_VARIANT_TYPE_STRING);
-	v_remota = g_variant_lookup_value(proprieta, "Remote", G_VARIANT_TYPE_BOOLEAN);
-	v_stato = g_variant_lookup_value(proprieta, "State", G_VARIANT_TYPE_STRING);
-	if (!v_tipo || !v_classe)
+	v_type = g_variant_lookup_value(proprieta, "Type", G_VARIANT_TYPE_STRING);
+	v_class = g_variant_lookup_value(proprieta, "Class", G_VARIANT_TYPE_STRING);
+	v_remote = g_variant_lookup_value(proprieta, "Remote", G_VARIANT_TYPE_BOOLEAN);
+	v_state = g_variant_lookup_value(proprieta, "State", G_VARIANT_TYPE_STRING);
+	if (!v_type || !v_class)
 		return NULL;
 
-	tipo = g_variant_get_string(v_tipo, NULL);
-	for (gsize i = 0; TIPI_GRAFICI[i]; i++)
-		if (g_strcmp0(tipo, TIPI_GRAFICI[i]) == 0)
+	tipo = g_variant_get_string(v_type, NULL);
+	for (gsize i = 0; GRAPHICAL_TYPES[i]; i++)
+		if (g_strcmp0(tipo, GRAPHICAL_TYPES[i]) == 0)
 			grafica = true;
 	if (!grafica)
 		return NULL;
 	/* `greeter`, `lock-screen` and `background` are not the user at work. */
-	if (g_strcmp0(g_variant_get_string(v_classe, NULL), "user") != 0)
+	if (g_strcmp0(g_variant_get_string(v_class, NULL), "user") != 0)
 		return NULL;
 	/* ⚠ The second belt, and today it cuts nothing: until `PAM_RHOST` is
 	 *   set, our sessions show `Remote=no` like the local ones.
 	 *   ⇒ The SEAT does the work, and this line will become true later. */
-	if (v_remota && g_variant_get_boolean(v_remota))
+	if (v_remote && g_variant_get_boolean(v_remote))
 		return NULL;
 	/* `closing` is the session that is going away: counting it would lock out
 	 * whoever reconnects right while the local one ends. */
-	if (v_stato && g_strcmp0(g_variant_get_string(v_stato, NULL), "closing") == 0)
+	if (v_state && g_strcmp0(g_variant_get_string(v_state, NULL), "closing") == 0)
 		return NULL;
 
 	return g_strdup(tipo);
@@ -185,24 +185,24 @@ size_t sentinella_locali(sentinella *s, const char *const *utenti, size_t quanti
 	restano = quanti;
 
 	inizio = registro_ora_ms();
-	risposta = chiama(s, PERCORSO_LOGIND, IFACE_MANAGER, "ListSessions", NULL,
+	risposta = chiama(s, PATH_LOGIND, IFACE_MANAGER, "ListSessions", NULL,
 	                  G_VARIANT_TYPE("(a(susso))"));
 	if (!risposta) {
 		/* ⛔ Carry on WITHOUT the rule instead of locking everyone out: I1.
 		 * ⚠ And say it once only, not at every re-check. */
-		if (!s->muto_gia_detto) {
+		if (!s->mute_already_logged) {
 			registro_dice(REG_SESSIONE,
 			              "⛔ logind did not answer within %d ms: the rule "
 			              "of §5.1 is not applied while it is silent (and this "
 			              "line is not repeated)",
 			              ATTESA_MS);
-			s->muto_gia_detto = true;
+			s->mute_already_logged = true;
 		}
 		return 0;
 	}
-	if (s->muto_gia_detto) {
+	if (s->mute_already_logged) {
 		registro_dice(REG_SESSIONE, "logind is answering again");
-		s->muto_gia_detto = false;
+		s->mute_already_logged = false;
 	}
 
 	g_variant_get(risposta, "(a(susso))", &elenco);
@@ -233,7 +233,7 @@ size_t sentinella_locali(sentinella *s, const char *const *utenti, size_t quanti
 		 *   tenants: it is made only for a session that ALREADY has a seat and a name
 		 *   we care about — that is for the real local session, which is what
 		 *   we are looking for.  On a headless machine it never happens. */
-		tipo = tipo_se_grafica(s, percorso);
+		tipo = type_if_graphical(s, percorso);
 		if (!tipo)
 			continue;
 
@@ -251,8 +251,8 @@ size_t sentinella_locali(sentinella *s, const char *const *utenti, size_t quanti
 
 	costo = registro_ora_ms() - inizio;
 	s->chiamate++;
-	if (costo > s->peggior_ms)
-		s->peggior_ms = costo;
+	if (costo > s->worst_ms)
+		s->worst_ms = costo;
 	if (costo >= LENTA_MS)
 		registro_dice(REG_SESSIONE,
 		              "⚠ logind took %llu ms for the list of "
@@ -264,19 +264,19 @@ size_t sentinella_locali(sentinella *s, const char *const *utenti, size_t quanti
 	return trovate;
 }
 
-bool sentinella_locale(sentinella *s, const char *utente, char *descrizione,
+bool sentinella_locale(sentinella *s, const char *utente, char *description,
                        size_t quanto)
 {
 	bool locale = false;
 	const char *uno = utente;
 
-	if (descrizione && quanto)
-		descrizione[0] = '\0';
+	if (description && quanto)
+		description[0] = '\0';
 	if (!utente || !utente[0])
 		return false;
 	/* ⛔ One road only: the question for one is the question for all with N = 1.
 	 *    ⚠ `quali` may be NULL, and then `larghezza` is not looked at. */
-	sentinella_locali(s, &uno, 1, &locale, descrizione, descrizione ? quanto : 0);
+	sentinella_locali(s, &uno, 1, &locale, description, description ? quanto : 0);
 	return locale;
 }
 
@@ -292,26 +292,26 @@ bool sentinella_locale(sentinella *s, const char *utente, char *descrizione,
  *    looked at the wrong thing.  A check made from the wrong place is
  *    worse than a missing check.
  */
-static const char *AZIONI[] = { "CanPowerOff", "CanReboot", "CanSuspend", "CanHibernate", NULL };
+static const char *ACTIONS[] = { "CanPowerOff", "CanReboot", "CanSuspend", "CanHibernate", NULL };
 
 bool sentinella_spegnimento_vietato(sentinella *s, char *dettaglio, size_t quanto)
 {
-	bool tutto_no = true;
+	bool all_no = true;
 
 	if (dettaglio && quanto)
 		dettaglio[0] = '\0';
 	if (!s || !s->bus)
 		return false;
 
-	for (int i = 0; AZIONI[i]; i++) {
+	for (int i = 0; ACTIONS[i]; i++) {
 		g_autoptr(GVariant) risposta =
-			chiama(s, PERCORSO_LOGIND, IFACE_MANAGER, AZIONI[i], NULL,
+			chiama(s, PATH_LOGIND, IFACE_MANAGER, ACTIONS[i], NULL,
 		               G_VARIANT_TYPE("(s)"));
 		const char *esito = NULL;
 		char pezzo[64];
 
 		if (!risposta) {
-			tutto_no = false;
+			all_no = false;
 			esito = "(no answer)";
 		} else {
 			g_variant_get(risposta, "(&s)", &esito);
@@ -319,13 +319,13 @@ bool sentinella_spegnimento_vietato(sentinella *s, char *dettaglio, size_t quant
 			 *    password», and on GNOME it **shows the menu entry**
 			 *    instead of removing it. */
 			if (g_strcmp0(esito, "no") != 0)
-				tutto_no = false;
+				all_no = false;
 		}
-		g_snprintf(pezzo, sizeof pezzo, "%s=%s ", AZIONI[i], esito ? esito : "?");
+		g_snprintf(pezzo, sizeof pezzo, "%s=%s ", ACTIONS[i], esito ? esito : "?");
 		if (dettaglio && quanto)
 			g_strlcat(dettaglio, pezzo, quanto);
 	}
-	return tutto_no;
+	return all_no;
 }
 
 bool sentinella_senza_seat(sentinella *s, char *quale, size_t quanto)
@@ -341,7 +341,7 @@ bool sentinella_senza_seat(sentinella *s, char *quale, size_t quanto)
 	if (!s || !s->bus)
 		return false;
 
-	risposta = chiama(s, PERCORSO_LOGIND, IFACE_MANAGER, "GetSessionByPID",
+	risposta = chiama(s, PATH_LOGIND, IFACE_MANAGER, "GetSessionByPID",
 	                  g_variant_new("(u)", (guint32)getpid()), G_VARIANT_TYPE("(o)"));
 	if (!risposta) {
 		/* ⛔ NO SESSION is worse than «with a seat»: without a session the
@@ -370,10 +370,10 @@ bool sentinella_senza_seat(sentinella *s, char *quale, size_t quanto)
 }
 
 void sentinella_conti(const sentinella *s, uint64_t *chiamate,
-                      uint64_t *peggior_ms)
+                      uint64_t *worst_ms)
 {
 	if (chiamate)
 		*chiamate = s ? s->chiamate : 0;
-	if (peggior_ms)
-		*peggior_ms = s ? s->peggior_ms : 0;
+	if (worst_ms)
+		*worst_ms = s ? s->worst_ms : 0;
 }

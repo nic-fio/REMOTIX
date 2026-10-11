@@ -33,7 +33,7 @@ const (
 // been touched and resume finds a DONE step undone by others (§6.6.3, last line), the state
 // is INTERROTTA with the code RX-RIPRESA-001: one leaves it with riprendi or annulla (the
 // coordinator's decision, 30 Sep). APPLICATA and VERIFICATA can go to IN_ANNULLAMENTO («red»).
-var transizioni = map[Stato][]Stato{
+var transitions = map[Stato][]Stato{
 	NUOVA:           {FIDATA, BLOCCATA},
 	FIDATA:          {ESAMINATA, BLOCCATA},
 	ESAMINATA:       {VALUTATA, BLOCCATA},
@@ -51,7 +51,7 @@ var transizioni = map[Stato][]Stato{
 
 // Valida says whether da → a is a transition of the design.
 func Valida(da, a Stato) bool {
-	for _, x := range transizioni[da] {
+	for _, x := range transitions[da] {
 		if x == a {
 			return true
 		}
@@ -68,10 +68,10 @@ func Finale(s Stato) bool {
 	return false
 }
 
-// TuttiGliStati, in alphabetical order (for the tests).
-func TuttiGliStati() []Stato {
+// AllStates, in alphabetical order (for the tests).
+func AllStates() []Stato {
 	visti := map[Stato]bool{}
-	for da, aa := range transizioni {
+	for da, aa := range transitions {
 		visti[da] = true
 		for _, a := range aa {
 			visti[a] = true

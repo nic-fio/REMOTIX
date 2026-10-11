@@ -203,20 +203,20 @@ def principale():
                    Gio.DBusCallFlags.NONE, 15000, None)
     ok("NotifyPointerMotionRelative(7,5) accepted")
     time.sleep(1.0)
-    idle_dopo = idletime(conn)
-    inf(f"idle time after the motion:  {idle_dopo} ms")
+    idle_after = idletime(conn)
+    inf(f"idle time after the motion:  {idle_after} ms")
     fatti["idle_prima_ms"] = idle_prima
-    fatti["idle_dopo_ms"] = idle_dopo
+    fatti["idle_dopo_ms"] = idle_after
 
     esito = 0
-    if idle_dopo >= a.attesa_crollo:
-        no(f"⛔ the idle time did NOT collapse ({idle_dopo} ms ≥ {a.attesa_crollo}):")
+    if idle_after >= a.attesa_crollo:
+        no(f"⛔ the idle time did NOT collapse ({idle_after} ms ≥ {a.attesa_crollo}):")
         no("   the motion did not reach Mutter, so the pointer was not")
         no("   born and the scene I wanted to measure NEVER HAPPENED.")
         no("   ⛔ I do not judge: a no on a scene that never happened is worse than nothing.")
         esito = 2
     else:
-        ok(f"⭐ positive control passed: {idle_prima} → {idle_dopo} ms.  Mutter")
+        ok(f"⭐ positive control passed: {idle_prima} → {idle_after} ms.  Mutter")
         ok("   really received the motion, so the pointer is there.")
 
     time.sleep(3.0)
@@ -239,12 +239,12 @@ def principale():
         no("   `[?]` on the cause becomes `[M]`.")
 
     titolo("4. The opposite case: a NEW client, born AFTER the pointer")
-    traccia2 = a.traccia + ".dopo"
-    with open(traccia2, "w") as f:
+    trace2 = a.traccia + ".dopo"
+    with open(trace2, "w") as f:
         amb = dict(os.environ, WAYLAND_DEBUG="1", WAYLAND_DISPLAY="wayland-0")
         subprocess.run(["timeout", "25", "foot", "-e", "sleep", "6"],
                        stdout=f, stderr=subprocess.STDOUT, env=amb)
-    nuovo = capacita(traccia2)
+    nuovo = capacita(trace2)
     inf(f"announcements of the new client: {nuovo}")
     fatti["capacita_client_nuovo"] = nuovo
     if not nuovo:

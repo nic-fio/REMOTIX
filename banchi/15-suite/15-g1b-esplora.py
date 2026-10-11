@@ -44,24 +44,24 @@ def corpo(o, E):
                 print("photo", dove, flush=True)
             elif tipo == "clic":
                 x, y = [float(v) for v in arg.split(",")]
-                G1B.clic_desktop(s, geo, x, y)
+                G1B.click_desktop(s, geo, x, y)
             elif tipo == "destro":
                 x, y = [float(v) for v in arg.split(",")]
-                G1B.clic_desktop(s, geo, x, y, bottone=2)
+                G1B.click_desktop(s, geo, x, y, bottone=2)
             elif tipo == "muovi":
                 x, y = [float(v) for v in arg.split(",")]
-                vx, vy = S.C21.dal_desktop_al_vetro(geo, x, y)
+                vx, vy = S.C21.desktop_to_glass(geo, x, y)
                 s.g.muovi(vx, vy)
             elif tipo == "attendi":
                 time.sleep(float(arg))
             elif tipo == "tasti":
                 G1B.combinazione(s.g, arg.split("+"))
             elif tipo == "orologio":
-                print(G1B.metti_finestra(s), G1B.apri_finestra(s, "orologio", "#00ffff", 1100, 600,
+                print(G1B.put_window(s), G1B.open_window(s, "orologio", "#00ffff", 1100, 600,
                       altro="#ffff00", periodo=int(arg or 30)), flush=True)
             elif tipo == "misura":
                 png, dove = G1B.foto(s, "m", scala=0.5)
-                k = G1B.conta_colori(png, (G1B.CIANO, (255, 255, 0)))
+                k = G1B.count_colors(png, (G1B.CYAN, (255, 255, 0)))
                 st = s.pr.stato() or {}
                 print("measure", [round(v, 3) for v in k.values()],
                       {x: st.get(x) for x in ("dipinti", "consegnati", "decodificati")}, flush=True)

@@ -42,7 +42,7 @@
 
 #if defined(__SSE2__) && !defined(COLORI709_SENZA_SIMD) /* the second: for the bench */
 #include <emmintrin.h>
-#define COLORI709_SSE2 1
+#define COLORS709_SSE2 1
 #endif
 
 #define SCALA 15
@@ -65,7 +65,7 @@ typedef struct {
 	int16_t y[4], u[4], v[4];
 } Coeff;
 
-static Coeff coefficienti(Colori709Ordine ordine)
+static Coeff coefficients(Colori709Ordine ordine)
 {
 	Coeff c;
 	const int ir = ordine == COLORI709_RGBX ? 0 : 2;
@@ -87,13 +87,13 @@ static Coeff coefficienti(Colori709Ordine ordine)
  *     bits shifted by two: it is what swscale did towards `yuv420p10le`.
  */
 static void riga(const uint8_t *restrict px, uint32_t l, const Coeff *c, int prof10, int semi,
-                 void *restrict yv, int16_t *restrict somme)
+                 void *restrict yv, int16_t *restrict sums)
 {
 	const int32_t k = prof10 ? 4 : 1;
 	const int32_t off = ((16 * k) << SCALA) + (1 << (SCALA - 1));
 	const int sp = prof10 && semi ? 6 : 0; /* P010: the ten bits at the TOP */
 	uint32_t x = 0;
-#ifdef COLORI709_SSE2
+#ifdef COLORS709_SSE2
 	const __m128i zero = _mm_setzero_si128();
 	const __m128i cy = _mm_setr_epi16(c->y[0], c->y[1], c->y[2], c->y[3], c->y[0], c->y[1],
 	                                  c->y[2], c->y[3]);
@@ -116,7 +116,7 @@ static void riga(const uint8_t *restrict px, uint32_t l, const Coeff *c, int pro
 			/* the pair sums: low half + high half of each `lo`/`hi` */
 			__m128i sl = _mm_add_epi16(lo, _mm_srli_si128(lo, 8));
 			__m128i sh = _mm_add_epi16(hi, _mm_srli_si128(hi, 8));
-			_mm_storeu_si128((__m128i *) (somme + 4 * ((x + 4 * j) / 2)),
+			_mm_storeu_si128((__m128i *) (sums + 4 * ((x + 4 * j) / 2)),
 			                 _mm_unpacklo_epi64(sl, sh));
 		}
 		__m128i y16a = _mm_packs_epi32(y32[0], y32[1]);
@@ -144,7 +144,7 @@ static void riga(const uint8_t *restrict px, uint32_t l, const Coeff *c, int pro
 			((uint8_t *) yv)[x + 1] = (uint8_t) y1;
 		}
 		for (int j = 0; j < 4; j++)
-			somme[4 * (x / 2) + j] = (int16_t) (p[j] + p[4 + j]);
+			sums[4 * (x / 2) + j] = (int16_t) (p[j] + p[4 + j]);
 	}
 }
 
@@ -170,7 +170,7 @@ static void croma(const int16_t *const s[4], uint32_t lc, const Coeff *c, int pr
 	const int32_t off = ((128 * k) << sh) + (1 << (sh - 1));
 	const int16_t *a = s[0], *b = s[1], *cc = s[2], *d = s[3];
 	uint32_t i = 0;
-#ifdef COLORI709_SSE2
+#ifdef COLORS709_SSE2
 	const __m128i cu = _mm_setr_epi16(c->u[0], c->u[1], c->u[2], c->u[3], c->u[0], c->u[1],
 	                                  c->u[2], c->u[3]);
 	const __m128i cv = _mm_setr_epi16(c->v[0], c->v[1], c->v[2], c->v[3], c->v[0], c->v[1],
@@ -247,7 +247,7 @@ static void croma(const int16_t *const s[4], uint32_t lc, const Coeff *c, int pr
 	}
 }
 
-static bool converti(const uint8_t *pixel, uint32_t passo, uint32_t l, uint32_t a,
+static bool convert(const uint8_t *pixel, uint32_t passo, uint32_t l, uint32_t a,
                      Colori709Ordine ordine, int prof10, int semi,
                      uint8_t *y, uint32_t py, uint8_t *u, uint32_t pu, uint8_t *v, uint32_t pv)
 {
@@ -255,7 +255,7 @@ static bool converti(const uint8_t *pixel, uint32_t passo, uint32_t l, uint32_t 
 		return false;
 	if (!passo)
 		passo = l * 4;
-	const Coeff c = coefficienti(ordine);
+	const Coeff c = coefficients(ordine);
 	const uint32_t lc = l / 2;
 	/* The ring of sums: four rows, four `int16` per chroma sample
 	 * (61 KB at 3840). */
@@ -293,38 +293,38 @@ static bool converti(const uint8_t *pixel, uint32_t passo, uint32_t l, uint32_t 
 bool colori709_a_i420(const uint8_t *pixel, uint32_t passo, uint32_t larghezza,
                       uint32_t altezza, Colori709Ordine ordine,
                       uint8_t *y, uint32_t passo_y,
-                      uint8_t *u, uint32_t passo_u,
-                      uint8_t *v, uint32_t passo_v)
+                      uint8_t *u, uint32_t stride_u,
+                      uint8_t *v, uint32_t stride_v)
 {
-	return converti(pixel, passo, larghezza, altezza, ordine, 0, 0,
-	                y, passo_y, u, passo_u, v, passo_v);
+	return convert(pixel, passo, larghezza, altezza, ordine, 0, 0,
+	                y, passo_y, u, stride_u, v, stride_v);
 }
 
 bool colori709_a_i420_10(const uint8_t *pixel, uint32_t passo, uint32_t larghezza,
                          uint32_t altezza, Colori709Ordine ordine,
                          uint16_t *y, uint32_t passo_y,
-                         uint16_t *u, uint32_t passo_u,
-                         uint16_t *v, uint32_t passo_v)
+                         uint16_t *u, uint32_t stride_u,
+                         uint16_t *v, uint32_t stride_v)
 {
-	return converti(pixel, passo, larghezza, altezza, ordine, 1, 0,
-	                (uint8_t *) y, passo_y, (uint8_t *) u, passo_u,
-	                (uint8_t *) v, passo_v);
+	return convert(pixel, passo, larghezza, altezza, ordine, 1, 0,
+	                (uint8_t *) y, passo_y, (uint8_t *) u, stride_u,
+	                (uint8_t *) v, stride_v);
 }
 
 bool colori709_a_nv12(const uint8_t *pixel, uint32_t passo, uint32_t larghezza,
                       uint32_t altezza, Colori709Ordine ordine,
                       uint8_t *y, uint32_t passo_y,
-                      uint8_t *uv, uint32_t passo_uv)
+                      uint8_t *uv, uint32_t stride_uv)
 {
-	return converti(pixel, passo, larghezza, altezza, ordine, 0, 1,
-	                y, passo_y, uv, passo_uv, NULL, 0);
+	return convert(pixel, passo, larghezza, altezza, ordine, 0, 1,
+	                y, passo_y, uv, stride_uv, NULL, 0);
 }
 
-bool colori709_a_p010(const uint8_t *pixel, uint32_t passo, uint32_t larghezza,
+bool colors709_to_p010(const uint8_t *pixel, uint32_t passo, uint32_t larghezza,
                       uint32_t altezza, Colori709Ordine ordine,
                       uint16_t *y, uint32_t passo_y,
-                      uint16_t *uv, uint32_t passo_uv)
+                      uint16_t *uv, uint32_t stride_uv)
 {
-	return converti(pixel, passo, larghezza, altezza, ordine, 1, 1,
-	                (uint8_t *) y, passo_y, (uint8_t *) uv, passo_uv, NULL, 0);
+	return convert(pixel, passo, larghezza, altezza, ordine, 1, 1,
+	                (uint8_t *) y, passo_y, (uint8_t *) uv, stride_uv, NULL, 0);
 }

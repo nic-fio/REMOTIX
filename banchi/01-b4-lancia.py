@@ -53,8 +53,8 @@ import subprocess
 import sys
 
 QUI = os.path.dirname(os.path.abspath(__file__))
-VALIDATORE = os.path.join(QUI, "01-b4-validatore.py")
-COSTRUTTORE = os.path.join(QUI, "01-b4-registrazioni.py")
+VALIDATOR = os.path.join(QUI, "01-b4-validatore.py")
+BUILDER = os.path.join(QUI, "01-b4-registrazioni.py")
 
 ESITI = {0: "compliant", 1: "non-compliant", 2: "broken-recording",
          3: "nothing-to-judge"}
@@ -63,7 +63,7 @@ ESITI = {0: "compliant", 1: "non-compliant", 2: "broken-recording",
 def rigenera(dove):
     """⛔ The manifest and the `.rcpreg` files are produced NOW by whoever knows how."""
     print(f"== 1. the recordings are regenerated in {dove}/\n")
-    p = subprocess.run([sys.executable, COSTRUTTORE, dove],
+    p = subprocess.run([sys.executable, BUILDER, dove],
                        capture_output=True, text=True)
     for riga in (p.stdout + p.stderr).strip().splitlines():
         print(f"   | {riga}")
@@ -95,21 +95,21 @@ def main():
     copertura = {u: [0, 0] for u in ESITI}
     for voce in manifesto:
         percorso = os.path.join(dove, voce["file"])
-        p = subprocess.run([sys.executable, VALIDATORE, percorso],
+        p = subprocess.run([sys.executable, VALIDATOR, percorso],
                            capture_output=True, text=True)
         uscita, testo = p.returncode, p.stdout + p.stderr
 
-        atteso_uscita = voce["uscita"]
-        copertura[atteso_uscita][1] += 1
+        expected_output = voce["uscita"]
+        copertura[expected_output][1] += 1
         ok = True
         note = []
 
-        if uscita != atteso_uscita:
+        if uscita != expected_output:
             ok = False
-            note.append(f"expected exit {atteso_uscita} "
-                        f"({ESITI[atteso_uscita]}), got {uscita} "
+            note.append(f"expected exit {expected_output} "
+                        f"({ESITI[expected_output]}), got {uscita} "
                         f"({ESITI.get(uscita, '?')})")
-        elif atteso_uscita == 1:
+        elif expected_output == 1:
             # ⛔ The byte and the rule are compared ONLY when the exit code is
             #    the right one.  Before, «byte N in the file» was searched even
             #    on an exit 1 that came for an entirely different reason — for
@@ -135,7 +135,7 @@ def main():
                 print(f"       | {riga}")
         else:
             buoni += 1
-            copertura[atteso_uscita][0] += 1
+            copertura[expected_output][0] += 1
 
     print(f"\n== 3. Outcome")
     print(f"   {buoni} out of {len(manifesto)}")
@@ -149,17 +149,17 @@ def main():
     #    is a branch that nobody has ever run, and the validator declares it
     #    as the reason the outcomes are not two.
     print("\n   the coverage of the validator's four outcomes:")
-    scoperti = 0
+    uncovered = 0
     for u in sorted(ESITI):
-        buoni_u, tot_u = copertura[u]
+        good_u, tot_u = copertura[u]
         if tot_u == 0:
-            scoperti += 1
+            uncovered += 1
             print(f"     exit {u} = {ESITI[u]:<20s} ⛔ NO recording "
                   f"exercises it")
         else:
-            print(f"     exit {u} = {ESITI[u]:<20s} {buoni_u} out of {tot_u}")
-    if scoperti:
-        print(f"   ⛔ {scoperti} outcomes out of {len(ESITI)} without a positive control:")
+            print(f"     exit {u} = {ESITI[u]:<20s} {good_u} out of {tot_u}")
+    if uncovered:
+        print(f"   ⛔ {uncovered} outcomes out of {len(ESITI)} without a positive control:")
         print("      on those branches «I found nothing» means nothing")
         return 1
 

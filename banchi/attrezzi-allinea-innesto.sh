@@ -45,7 +45,7 @@ set -uo pipefail
 E=${ENTRA:-/media/REMOTIX/enter.sh}
 FUORI=${FUORI:-/media/REMOTIX/src}
 DENTRO=${DENTRO:-/srv/src}
-ESEMPI_FUORI=$FUORI/b2/ngtcp2/examples
+EXAMPLES_OUT=$FUORI/b2/ngtcp2/examples
 ESEMPI_DENTRO=$DENTRO/b2/ngtcp2/examples
 FILE="rcp.c rcp.h autenticazione.c"
 
@@ -63,7 +63,7 @@ DIVERSI=""
 MANCANTI=0
 for f in $FILE; do
 	s=$FUORI/rcp/$f
-	d=$ESEMPI_FUORI/$f
+	d=$EXAMPLES_OUT/$f
 	if [ ! -f "$s" ] || [ ! -f "$d" ]; then
 		ko "⛔ cannot compare «$f»: missing $( [ -f "$s" ] || echo "rcp/$f" ) $( [ -f "$d" ] || echo "examples/$f" )"
 		MANCANTI=$((MANCANTI+1))
@@ -99,21 +99,21 @@ inf "⚠ 01-b0-terreno.sh compares only rcp.c; here all three are checked"
 # which the fingerprints match, `guarda` would say «aligned», and the terrain
 # would still reject it with «the binary is older than a source it
 # declares».  ⇒ We look at the clock too, not only at the fingerprints.
-BINARIO=$FUORI/b2/ngtcp2/build/examples/bsslserver
+BINARY=$FUORI/b2/ngtcp2/build/examples/bsslserver
 VECCHIO=""
-if [ -f "$BINARIO" ]; then
+if [ -f "$BINARY" ]; then
 	for f in $FILE; do
-		[ "$ESEMPI_FUORI/$f" -nt "$BINARIO" ] && VECCHIO="$VECCHIO $f"
+		[ "$EXAMPLES_OUT/$f" -nt "$BINARY" ] && VECCHIO="$VECCHIO $f"
 	done
 	if [ -n "$VECCHIO" ]; then
 		ko "⛔ the binary is OLDER than:$VECCHIO"
-		inf "   bsslserver: $(stat -c %y "$BINARIO" | cut -c1-19)"
+		inf "   bsslserver: $(stat -c %y "$BINARY" | cut -c1-19)"
 		inf "   ⇒ it must be rebuilt even if the fingerprints match"
 	else
-		ok "and the binary is newer than all three ($(stat -c %y "$BINARIO" | cut -c1-19))"
+		ok "and the binary is newer than all three ($(stat -c %y "$BINARY" | cut -c1-19))"
 	fi
 else
-	ko "⛔ $BINARIO is not there: the graft has never been built"
+	ko "⛔ $BINARY is not there: the graft has never been built"
 	VECCHIO=" (binary missing)"
 fi
 
@@ -127,7 +127,7 @@ fi
 log "2. ⛔ Is there a grafted fault inside the graft?"
 TROVATI=0
 for m in "REMOTIX B12 GUASTO" "REMOTIX B11"; do
-	n=$(grep -ac "$m" "$ESEMPI_FUORI/rcp.c" 2>/dev/null)
+	n=$(grep -ac "$m" "$EXAMPLES_OUT/rcp.c" 2>/dev/null)
 	if [ "${n:-0}" -gt 0 ]; then
 		ko "⛔ «$m» appears $n time(s) in examples/rcp.c"
 		TROVATI=$((TROVATI+1))
@@ -156,7 +156,7 @@ if [ -n "$DIVERSI" ]; then
 		bash "$E" --root "cp $DENTRO/rcp/$f $ESEMPI_DENTRO/$f" || {
 			ko "⛔ copying «$f» failed"; exit 3; }
 		a=$(md5sum "$FUORI/rcp/$f" | cut -d' ' -f1)
-		b=$(md5sum "$ESEMPI_FUORI/$f" | cut -d' ' -f1)
+		b=$(md5sum "$EXAMPLES_OUT/$f" | cut -d' ' -f1)
 		[ "$a" = "$b" ] && ok "$f copied, and the fingerprints now match ($a)" \
 		                || { ko "⛔ $f copied but the fingerprints do NOT match"; exit 3; }
 	done

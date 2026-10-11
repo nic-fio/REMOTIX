@@ -23,11 +23,11 @@
 #define AREA "forma"
 
 /* The numbers of the Xcursor 1.0 format. */
-#define XCUR_MAGIA     0x72756358u /* "Xcur" */
-#define XCUR_IMMAGINE  0xfffd0002u
-#define XCUR_TESTA     16u
-#define XCUR_BLOCCO    36u
-#define XCUR_LATO_MAX  0x7fffu     /* the largest the format allows */
+#define XCUR_MAGIC     0x72756358u /* "Xcur" */
+#define XCUR_IMAGE  0xfffd0002u
+#define XCUR_HEAD     16u
+#define XCUR_BLOCK    36u
+#define XCUR_SIDE_MAX  0x7fffu     /* the largest the format allows */
 
 /* ⚠ A ceiling on the file BEFORE reading it: a real Adwaita cursor weighs 78 KB
  *   (all sizes, up to 96).  Beyond that, it is not a cursor. */
@@ -56,9 +56,9 @@
 typedef struct {
 	const char *nome;
 	const char *alias[4];
-} Voce;
+} Entry;
 
-static const Voce VOCI[FORMA_QUANTE] = {
+static const Entry VOCI[FORMA_QUANTE] = {
 	{ "left_ptr", { "default", "arrow" } },
 	{ "default", { "left_ptr", "arrow" } },
 	{ "arrow", { "default", "left_ptr" } },
@@ -160,11 +160,11 @@ static const Voce VOCI[FORMA_QUANTE] = {
 
 /* If not even an alias is there: the arrow, which is better than nothing — the client
  * would see an arrow anyway, its own. */
-static const char *ULTIMI[] = { "default", "left_ptr" };
+static const char *LAST[] = { "default", "left_ptr" };
 
 /* ⭐ The real themes, in order.  ⚠ `[M]` 24 Sep 2026: Adwaita (62 cursors) is
  *   in ALL four `rete11-*` boxes; `breeze_cursors` only in KDE. */
-static const char *TEMI_REALI[] = { "Adwaita", "breeze_cursors" };
+static const char *REAL_THEMES[] = { "Adwaita", "breeze_cursors" };
 
 /* ------------------------------------------------------------------ *
  *  The colours
@@ -202,7 +202,7 @@ int forma_da_pixel(uint8_t b, uint8_t g, uint8_t r, uint8_t a)
 	return (g == eg && b == eb) ? i : -1;
 }
 
-const char *forma_nome(int indice)
+const char *shape_name(int indice)
 {
 	return (indice >= 0 && indice < FORMA_QUANTE) ? VOCI[indice].nome : "?";
 }
@@ -213,7 +213,7 @@ const char *forma_nome(int indice)
 
 /* An Xcursor 1.0 cursor with ONE 1x1 image: the header of phase 12's
  * `scrivi_cursore_vuoto`, with the pixel that now has a colour. */
-static gboolean scrivi_cursore_colorato(const char *percorso, int i)
+static gboolean write_colored_cursor(const char *percorso, int i)
 {
 	uint8_t r, g, b;
 	guint32 argb;
@@ -222,14 +222,14 @@ static gboolean scrivi_cursore_colorato(const char *percorso, int i)
 	argb = 0xFF000000u | ((guint32) r << 16) | ((guint32) g << 8) | (guint32) b;
 	{
 		guint32 dati[] = {
-			GUINT32_TO_LE(XCUR_MAGIA),
-			GUINT32_TO_LE(XCUR_TESTA),  /* how long the header is */
+			GUINT32_TO_LE(XCUR_MAGIC),
+			GUINT32_TO_LE(XCUR_HEAD),  /* how long the header is */
 			GUINT32_TO_LE(0x00010000u), /* version 1.0 */
 			GUINT32_TO_LE(1u),          /* a single entry in the index */
-			GUINT32_TO_LE(XCUR_IMMAGINE), GUINT32_TO_LE((guint32) FORMA_MISURA),
+			GUINT32_TO_LE(XCUR_IMAGE), GUINT32_TO_LE((guint32) FORMA_MISURA),
 			GUINT32_TO_LE(28u),         /* where the chunk starts */
-			GUINT32_TO_LE(XCUR_BLOCCO), /* length of the chunk header */
-			GUINT32_TO_LE(XCUR_IMMAGINE),
+			GUINT32_TO_LE(XCUR_BLOCK), /* length of the chunk header */
+			GUINT32_TO_LE(XCUR_IMAGE),
 			GUINT32_TO_LE((guint32) FORMA_MISURA), /* nominal size */
 			GUINT32_TO_LE(1u),          /* chunk version */
 			GUINT32_TO_LE(1u),          /* width */
@@ -247,11 +247,11 @@ static gboolean scrivi_cursore_colorato(const char *percorso, int i)
 gboolean forma_tema_scrivi(const char *runtime)
 {
 	g_autofree char *tema = g_build_filename(runtime, "remotix", "icons", FORMA_TEMA, NULL);
-	g_autofree char *cursori = g_build_filename(tema, "cursors", NULL);
+	g_autofree char *cursors = g_build_filename(tema, "cursors", NULL);
 	g_autofree char *indice = g_build_filename(tema, "index.theme", NULL);
 	unsigned scritte = 0;
 
-	g_mkdir_with_parents(cursori, 0700);
+	g_mkdir_with_parents(cursors, 0700);
 	/* ⚠ No `Inherits=`: inheriting from a real theme would put back into the image
 	 *   the REAL cursor for every shape missing here — and ⛔ that one would not
 	 *   carry a colour of ours, the dictionary would not recognise it. */
@@ -265,9 +265,9 @@ gboolean forma_tema_scrivi(const char *runtime)
 		return FALSE;
 	}
 	for (int i = 0; i < FORMA_QUANTE; i++) {
-		g_autofree char *percorso = g_build_filename(cursori, VOCI[i].nome, NULL);
+		g_autofree char *percorso = g_build_filename(cursors, VOCI[i].nome, NULL);
 
-		if (scrivi_cursore_colorato(percorso, i))
+		if (write_colored_cursor(percorso, i))
 			scritte++;
 	}
 	if (scritte == 0) {
@@ -290,13 +290,13 @@ typedef struct {
 	int16_t attivo_x, attivo_y;
 	uint8_t *pixel; /* premultiplied BGRA, lives for the whole process */
 	const char *da; /* the name of the file it came from (for the log) */
-} Immagine;
+} Bitmap;
 
 static GMutex chiave;
 static gboolean caricato;
-static gboolean detto_assente;
-static char *cartella_temi; /* NULL = /usr/share/icons */
-static Immagine immagini[FORMA_QUANTE];
+static gboolean logged_absent;
+static char *themes_dir; /* NULL = /usr/share/icons */
+static Bitmap immagini[FORMA_QUANTE];
 
 static guint32 le32(const guint8 *p)
 {
@@ -311,46 +311,46 @@ static guint32 le32(const guint8 *p)
  * outside the bucket.  ⚠ Of animations (`wait`, `progress`) the first
  * frame is taken: the wire carries a single image.
  */
-static gboolean leggi_xcursor(const char *percorso, Immagine *out)
+static gboolean read_xcursor(const char *percorso, Bitmap *out)
 {
 	g_autofree char *contenuto = NULL;
 	gsize n = 0;
 	const guint8 *d;
-	guint32 testa, voci, scelta_pos = 0, scelta_dist = G_MAXUINT32;
+	guint32 testa, voci, best_pos = 0, best_dist = G_MAXUINT32;
 	guint32 l, a, hx, hy, lt, at;
 
-	if (!g_file_get_contents(percorso, &contenuto, &n, NULL) || n > FILE_MAX || n < XCUR_TESTA)
+	if (!g_file_get_contents(percorso, &contenuto, &n, NULL) || n > FILE_MAX || n < XCUR_HEAD)
 		return FALSE;
 	d = (const guint8 *) contenuto;
-	if (le32(d) != XCUR_MAGIA)
+	if (le32(d) != XCUR_MAGIC)
 		return FALSE;
 	testa = le32(d + 4);
 	voci = le32(d + 12);
-	if (testa < XCUR_TESTA || testa > n || voci == 0 || voci > (n - testa) / 12u)
+	if (testa < XCUR_HEAD || testa > n || voci == 0 || voci > (n - testa) / 12u)
 		return FALSE;
 	for (guint32 k = 0; k < voci; k++) {
 		const guint8 *v = d + testa + (gsize) k * 12u;
 		guint32 tipo = le32(v), misura = le32(v + 4), pos = le32(v + 8);
 		guint32 dist = misura > FORMA_MISURA ? misura - FORMA_MISURA : FORMA_MISURA - misura;
 
-		if (tipo != XCUR_IMMAGINE)
+		if (tipo != XCUR_IMAGE)
 			continue;
-		if (dist < scelta_dist) { /* ⚠ "<": at equal size the FIRST frame wins */
-			scelta_dist = dist;
-			scelta_pos = pos;
+		if (dist < best_dist) { /* ⚠ "<": at equal size the FIRST frame wins */
+			best_dist = dist;
+			best_pos = pos;
 		}
 	}
-	if (scelta_dist == G_MAXUINT32 || scelta_pos > n || n - scelta_pos < XCUR_BLOCCO)
+	if (best_dist == G_MAXUINT32 || best_pos > n || n - best_pos < XCUR_BLOCK)
 		return FALSE;
-	d += scelta_pos;
-	if (le32(d) != XCUR_BLOCCO || le32(d + 4) != XCUR_IMMAGINE)
+	d += best_pos;
+	if (le32(d) != XCUR_BLOCK || le32(d + 4) != XCUR_IMAGE)
 		return FALSE;
 	l = le32(d + 16);
 	a = le32(d + 20);
 	hx = le32(d + 24);
 	hy = le32(d + 28);
-	if (l == 0 || a == 0 || l > XCUR_LATO_MAX || a > XCUR_LATO_MAX ||
-	    (n - scelta_pos - XCUR_BLOCCO) / 4u / l < a)
+	if (l == 0 || a == 0 || l > XCUR_SIDE_MAX || a > XCUR_SIDE_MAX ||
+	    (n - best_pos - XCUR_BLOCK) / 4u / l < a)
 		return FALSE;
 
 	/* ⛔ RCP §7.2: beyond 256 the receiver closes.  The top-left corner is
@@ -361,7 +361,7 @@ static gboolean leggi_xcursor(const char *percorso, Immagine *out)
 	/* ⭐ Xcursor pixels are premultiplied ARGB in little-endian integers:
 	 *    in memory they are ALREADY the bytes B, G, R, A the wire wants. */
 	for (guint32 y = 0; y < at; y++)
-		memcpy(out->pixel + (gsize) y * lt * 4u, d + XCUR_BLOCCO + (gsize) y * l * 4u,
+		memcpy(out->pixel + (gsize) y * lt * 4u, d + XCUR_BLOCK + (gsize) y * l * 4u,
 		       (gsize) lt * 4u);
 	out->larghezza = (uint16_t) lt;
 	out->altezza = (uint16_t) at;
@@ -378,26 +378,26 @@ static gboolean leggi_xcursor(const char *percorso, Immagine *out)
  * index is a half-installed theme, and its cursors are not taken
  * (the bench injects it).
  */
-static char *tema_buono(const char *radice, const char *tema)
+static char *good_theme(const char *radice, const char *tema)
 {
 	g_autofree char *indice = g_build_filename(radice, tema, "index.theme", NULL);
 	g_autofree char *testo = NULL;
-	char *cursori = g_build_filename(radice, tema, "cursors", NULL);
+	char *cursors = g_build_filename(radice, tema, "cursors", NULL);
 
 	if (!g_file_get_contents(indice, &testo, NULL, NULL) ||
 	    !g_str_has_prefix(testo, "[Icon Theme]") ||
-	    !g_file_test(cursori, G_FILE_TEST_IS_DIR)) {
-		g_free(cursori);
+	    !g_file_test(cursors, G_FILE_TEST_IS_DIR)) {
+		g_free(cursors);
 		return NULL;
 	}
-	return cursori;
+	return cursors;
 }
 
-static gboolean prova_nome(const char *cartella, const char *nome, Immagine *out)
+static gboolean test_name(const char *cartella, const char *nome, Bitmap *out)
 {
 	g_autofree char *p = g_build_filename(cartella, nome, NULL);
 
-	if (!leggi_xcursor(p, out))
+	if (!read_xcursor(p, out))
 		return FALSE;
 	out->da = nome;
 	return TRUE;
@@ -411,18 +411,18 @@ static gboolean prova_nome(const char *cartella, const char *nome, Immagine *out
  *    two different drawings on the same desktop.  ⇒ The theme is the outer
  *    loop, and one theme falls back on the other only if no alias is there.
  */
-static gboolean prova_voce(char **cartelle, const Voce *v, Immagine *out)
+static gboolean test_entry(char **dirs, const Entry *v, Bitmap *out)
 {
-	for (int t = 0; cartelle[t]; t++) {
-		if (prova_nome(cartelle[t], v->nome, out))
+	for (int t = 0; dirs[t]; t++) {
+		if (test_name(dirs[t], v->nome, out))
 			return TRUE;
 		for (int k = 0; k < 4 && v->alias[k]; k++)
-			if (prova_nome(cartelle[t], v->alias[k], out))
+			if (test_name(dirs[t], v->alias[k], out))
 				return TRUE;
 	}
-	for (int t = 0; cartelle[t]; t++)
-		for (unsigned k = 0; k < G_N_ELEMENTS(ULTIMI); k++)
-			if (prova_nome(cartelle[t], ULTIMI[k], out))
+	for (int t = 0; dirs[t]; t++)
+		for (unsigned k = 0; k < G_N_ELEMENTS(LAST); k++)
+			if (test_name(dirs[t], LAST[k], out))
 				return TRUE;
 	return FALSE;
 }
@@ -430,20 +430,20 @@ static gboolean prova_voce(char **cartelle, const Voce *v, Immagine *out)
 /* Loads the FORMA_QUANTE images ONCE.  Called with the lock held. */
 static void carica(void)
 {
-	const char *radice = cartella_temi ? cartella_temi : "/usr/share/icons";
-	char *cartelle[G_N_ELEMENTS(TEMI_REALI) + 1] = { NULL };
-	int quanti_temi = 0, pronte = 0;
+	const char *radice = themes_dir ? themes_dir : "/usr/share/icons";
+	char *dirs[G_N_ELEMENTS(REAL_THEMES) + 1] = { NULL };
+	int how_many_themes = 0, pronte = 0;
 
 	caricato = TRUE;
-	for (unsigned t = 0; t < G_N_ELEMENTS(TEMI_REALI); t++) {
-		char *c = tema_buono(radice, TEMI_REALI[t]);
+	for (unsigned t = 0; t < G_N_ELEMENTS(REAL_THEMES); t++) {
+		char *c = good_theme(radice, REAL_THEMES[t]);
 
 		if (c)
-			cartelle[quanti_temi++] = c;
+			dirs[how_many_themes++] = c;
 	}
-	if (quanti_temi == 0) {
-		if (!detto_assente) {
-			detto_assente = TRUE;
+	if (how_many_themes == 0) {
+		if (!logged_absent) {
+			logged_absent = TRUE;
 			registro_dice(AREA,
 			              "⛔ no readable real cursor theme in %s (Adwaita, "
 			              "breeze_cursors; index missing or corrupt): shapes are NOT "
@@ -453,19 +453,19 @@ static void carica(void)
 		return;
 	}
 	for (int i = 0; i < FORMA_QUANTE; i++) {
-		if (prova_voce(cartelle, &VOCI[i], &immagini[i]))
+		if (test_entry(dirs, &VOCI[i], &immagini[i]))
 			pronte++;
 	}
 	registro_dice(AREA, "⭐ cursor dictionary: %d shapes of %d from the real theme in %s "
 	              "(first: %s, nominal size %d)",
-	              pronte, FORMA_QUANTE, radice, cartelle[0], FORMA_MISURA);
-	for (int t = 0; t < quanti_temi; t++)
-		g_free(cartelle[t]);
+	              pronte, FORMA_QUANTE, radice, dirs[0], FORMA_MISURA);
+	for (int t = 0; t < how_many_themes; t++)
+		g_free(dirs[t]);
 }
 
 gboolean forma_immagine(int indice, CursoreForma *out)
 {
-	Immagine *im;
+	Bitmap *im;
 	gboolean esito;
 
 	if (indice < 0 || indice >= FORMA_QUANTE || !out)
@@ -486,15 +486,15 @@ gboolean forma_immagine(int indice, CursoreForma *out)
 	return esito;
 }
 
-void forma_prova_cartella_temi(const char *cartella)
+void shape_test_themes_folder(const char *cartella)
 {
 	g_mutex_lock(&chiave);
 	for (int i = 0; i < FORMA_QUANTE; i++)
 		g_free(immagini[i].pixel);
 	memset(immagini, 0, sizeof immagini);
-	g_free(cartella_temi);
-	cartella_temi = g_strdup(cartella);
+	g_free(themes_dir);
+	themes_dir = g_strdup(cartella);
 	caricato = FALSE;
-	detto_assente = FALSE;
+	logged_absent = FALSE;
 	g_mutex_unlock(&chiave);
 }

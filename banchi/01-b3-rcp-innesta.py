@@ -63,13 +63,13 @@ import subprocess
 import sys
 
 ALBERO = "/srv/src/b2/ngtcp2"
-ESEMPI = "/srv/src/b2/ngtcp2/examples"
+EXAMPLES = "/srv/src/b2/ngtcp2/examples"
 SORGENTI = "/srv/src/rcp"
 MARCA = "REMOTIX B3"
-MARCA_B2 = "REMOTIX B2"
-MARCA_B11 = "REMOTIX B11 GUASTO"
+MARK_B2 = "REMOTIX B2"
+MARK_B11 = "REMOTIX B11 GUASTO"
 
-FILE_NOSTRI = ["rcp.c", "rcp.h", "autenticazione.c"]
+OUR_FILES = ["rcp.c", "rcp.h", "autenticazione.c"]
 
 # The files of the example this graft touches: `--togli` needs them to
 # VERIFY it has removed, instead of returning 0 anyway.
@@ -79,14 +79,14 @@ FILE_NOSTRI = ["rcp.c", "rcp.h", "autenticazione.c"]
 #    the page to whoever is banned, removing a ban on command — live in `main`
 #    and in the event loop, not in the codec.  ⚠ Whoever forgets it here leaves
 #    `--togli` declaring "no trace" on a file that has a hundred.
-FILE_TOCCATI = [
+TOUCHED_FILES = [
     "http3_server_proto_codec.cc",
     "http3_server_proto_codec.h",
     "CMakeLists.txt",
     "server.cc",
 ]
 
-INNESTI = [
+GRAFTS = [
     # ── 0. ⛔ The RCP header, AT THE TOP ─────────────────────────────────────
     #    The first round of 10 Aug put it together with the body of the hooks, which
     #    sits halfway down the file: `rcp_tempo` was used at line 120 and declared
@@ -1494,7 +1494,7 @@ bool remotix_ospite_avvia(const char *addr, const char *port) {
 #    places in which a `main` written by others lets itself be widened: the table
 #    of long options, the `switch` that reads them, the help, and the line between
 #    "the server is ready" and "it runs".
-INNESTI_OSPITE = [
+GUEST_GRAFTS = [
     # ── the body, right before `main` ───────────────────────────────────────
     (
         "server.cc",
@@ -1582,7 +1582,7 @@ def leggi(percorso):
         return f.read()
 
 
-def righe_di_commento(righe):
+def comment_lines(righe):
     """⛔ ONE SINGLE RULE FOR COMMENTS, AND THE SAME IN THE THREE GRAFTS.
 
     Here the rule was "starts with //, /* or *", and it classified as
@@ -1625,9 +1625,9 @@ def togli():
         print(f"   ⛔ git checkout failed (exit {r.returncode}):"
               " nothing was removed.")
         return r.returncode
-    for f in FILE_NOSTRI:
+    for f in OUR_FILES:
         try:
-            os.remove(os.path.join(ESEMPI, f))
+            os.remove(os.path.join(EXAMPLES, f))
         except FileNotFoundError:
             pass
 
@@ -1635,15 +1635,15 @@ def togli():
     #    whatever had happened.  `LEZIONI.md` §1.9, fourth rule: a
     #    measurement that can say "zero" must be able to say "I failed".
     guai = 0
-    for percorso in FILE_TOCCATI:
-        testo = leggi(os.path.join(ESEMPI, percorso))
-        for marca in (MARCA, MARCA_B2, MARCA_B11):
+    for percorso in TOUCHED_FILES:
+        testo = leggi(os.path.join(EXAMPLES, percorso))
+        for marca in (MARCA, MARK_B2, MARK_B11):
             n = testo.count(marca)
             if n:
                 print(f"   NO  {n} lines with «{marca}» remain in {percorso}")
                 guai += n
-    for f in FILE_NOSTRI:
-        if os.path.exists(os.path.join(ESEMPI, f)):
+    for f in OUR_FILES:
+        if os.path.exists(os.path.join(EXAMPLES, f)):
             print(f"   NO  examples/{f} is still there")
             guai += 1
     if guai:
@@ -1658,8 +1658,8 @@ def main():
         return togli()
 
     print("== The RCP graft in the ngtcp2 example")
-    testo_cc = leggi(os.path.join(ESEMPI, "http3_server_proto_codec.cc"))
-    if MARCA in testo_cc:
+    text_cc = leggi(os.path.join(EXAMPLES, "http3_server_proto_codec.cc"))
+    if MARCA in text_cc:
         print("   ⚠ the graft is already there: nothing is touched.")
         return 0
 
@@ -1670,28 +1670,28 @@ def main():
     #    "the footholds are not ONE" — that is, it sent people to reread the grafts
     #    while the defect was that the denominator was missing.  ⚠ It is form E6,
     #    the sender deduced instead of asked (`CODER.md` §3.7).
-    if MARCA_B2 not in testo_cc:
-        print(f"   ⛔ the B2 graft is missing: «{MARCA_B2}» does not appear in")
+    if MARK_B2 not in text_cc:
+        print(f"   ⛔ the B2 graft is missing: «{MARK_B2}» does not appear in")
         print("      http3_server_proto_codec.cc.")
         print("      This graft rests on it: apply first")
         print("      01-b2-ngtcp2-wt-innesta.py, then this command again.")
         return 2
 
-    lista = list(INNESTI) + [
+    lista = list(GRAFTS) + [
         ("http3_server_proto_codec.cc",
          "std::expected<void, Error> ProtoCodec::wt_apri_sessione(Stream *stream) {\n",
          None, "the body of the hooks"),
-    ] + list(INNESTI_OSPITE)
+    ] + list(GUEST_GRAFTS)
     testi, guasti = {}, 0
-    for percorso, appiglio, sostituto, nome in lista:
-        if sostituto is None:
+    for percorso, appiglio, substitute, nome in lista:
+        if substitute is None:
             # ⚠ Two bodies, and each has its own file: the hooks one goes into the
             #   codec, the host-side ban one goes into `main`.  Before, here
             #   there was a single `CORPO` and the choice did not exist.
             corpo = CORPO_OSPITE if percorso == "server.cc" else CORPO
-            sostituto = corpo + appiglio
+            substitute = corpo + appiglio
         if percorso not in testi:
-            with open(os.path.join(ESEMPI, percorso), encoding="utf-8") as f:
+            with open(os.path.join(EXAMPLES, percorso), encoding="utf-8") as f:
                 testi[percorso] = f.read()
         n = testi[percorso].count(appiglio)
         stato = "OK " if n == 1 else "NO "
@@ -1699,7 +1699,7 @@ def main():
         if n != 1:
             guasti += 1
             continue
-        testi[percorso] = testi[percorso].replace(appiglio, sostituto, 1)
+        testi[percorso] = testi[percorso].replace(appiglio, substitute, 1)
 
     # the two public declarations of the hooks, in the class
     a = ("  void wt_accoda(int64_t stream_id, std::span<const uint8_t> dati);\n")
@@ -1736,12 +1736,12 @@ def main():
     # ⛔ Our files are COPIED, not linked: the ngtcp2 tree belongs to
     #    someone else, and a symbolic link pointing outside breaks
     #    silently the day someone reclones it.
-    for f in FILE_NOSTRI:
-        shutil.copyfile(os.path.join(SORGENTI, f), os.path.join(ESEMPI, f))
-    print(f"\n   OK  {len(FILE_NOSTRI)} of our files copied into examples/")
+    for f in OUR_FILES:
+        shutil.copyfile(os.path.join(SORGENTI, f), os.path.join(EXAMPLES, f))
+    print(f"\n   OK  {len(OUR_FILES)} of our files copied into examples/")
 
     for percorso, testo in testi.items():
-        with open(os.path.join(ESEMPI, percorso), "w", encoding="utf-8") as f:
+        with open(os.path.join(EXAMPLES, percorso), "w", encoding="utf-8") as f:
             f.write(testo)
     print(f"   OK  {len(lista) + 1} grafts, in {len(testi)} files")
 
@@ -1749,13 +1749,13 @@ def main():
     d = subprocess.run(["git", "-C", ALBERO, "diff", "-U0", "--",
                         "examples"], capture_output=True, text=True).stdout.splitlines()
     agg = [r[1:] for r in d if r.startswith("+") and not r.startswith("+++")]
-    vuote = sum(1 for r in agg if not r.strip())
-    cod = len(agg) - vuote - righe_di_commento(agg)
+    empty = sum(1 for r in agg if not r.strip())
+    cod = len(agg) - empty - comment_lines(agg)
     print(f"   inside the example (B2 + the wires of B3): {len(agg)} lines, {cod} of code")
-    for f in FILE_NOSTRI:
+    for f in OUR_FILES:
         righe = leggi(os.path.join(SORGENTI, f)).splitlines()
-        vuote = sum(1 for r in righe if not r.strip())
-        cod = len(righe) - vuote - righe_di_commento(righe)
+        empty = sum(1 for r in righe if not r.strip())
+        cod = len(righe) - empty - comment_lines(righe)
         # ⚠ And the name of the place is the REAL one: here it used to print
         #   `banchi/rcp/<file>` while reading `/srv/src/rcp/<file>` — the
         #   count was right and the place was not, which is the most convenient way of

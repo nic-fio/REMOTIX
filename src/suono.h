@@ -32,7 +32,7 @@
  * as many times as needed.
  *
  * ⇒ `suono_apri()` mounts the sink and KEEPS it for the whole session;
- *   `suono_ascolto_avvia()` / `suono_ascolto_ferma()` belong to the connection.
+ *   `sound_listen_start()` / `suono_ascolto_ferma()` belong to the connection.
  *
  * ---------------------------------------------------------------------------
  * ⛔ THE FORMAT IS FIXED, AND IT IS NOT AN OPINION OF THIS FILE
@@ -45,7 +45,7 @@
  *
  * ⚠ In v1 the rate came from the format negotiated with the RDP client and
  *   this module received it as a parameter.  In V2 nothing is negotiated:
- *   `suono_ascolto_avvia()` no longer has either rate or channels.
+ *   `sound_listen_start()` no longer has either rate or channels.
  *
  * ---------------------------------------------------------------------------
  * ⛔⛔ AND BLOCKS ARE NOT ACCUMULATED HERE — the choice, with the reason
@@ -117,7 +117,7 @@ typedef struct suono suono;
  * ⚠ `campioni` is valid only for the duration of the callback: on the next
  *   round PipeWire writes into it again.
  */
-typedef void (*suono_campioni)(const int16_t *campioni, uint32_t fotogrammi, void *chi);
+typedef void (*sound_samples)(const int16_t *campioni, uint32_t fotogrammi, void *chi);
 
 /*
  * Mounts the virtual sink in the session, and brings it to maximum.
@@ -128,7 +128,7 @@ typedef void (*suono_campioni)(const int16_t *campioni, uint32_t fotogrammi, voi
  *    behind would mean that a restarted REMOTIX finds two.
  */
 suono *suono_apri(void);
-void suono_chiudi(suono *s);
+void sound_close(suono *s);
 
 /*
  * Switches on the capture of the sink's monitor.
@@ -141,12 +141,12 @@ void suono_chiudi(suono *s);
  *
  * ⚠ One capture at a time: the second returns `false` and says so.
  */
-bool suono_ascolto_avvia(suono *s, suono_campioni su_campioni, void *chi);
+bool sound_listen_start(suono *s, sound_samples on_samples, void *chi);
 
 /*
  * Switches off the capture, and WAITS for the realtime thread to finish.
  *
- * ⛔ It must wait: `su_campioni` carries the connection's pointer, and whoever
+ * ⛔ It must wait: `on_samples` carries the connection's pointer, and whoever
  *    returns from here is entitled to free it.  A frame left half
  *    way would be a segfault inside a thread that does not bear our name.
  *    How it really waits — and why the loop lock is NOT enough — is
@@ -155,7 +155,7 @@ bool suono_ascolto_avvia(suono *s, suono_campioni su_campioni, void *chi);
 void suono_ascolto_ferma(suono *s);
 
 /* The sink's node, for the log and for diagnosis.  0 = not there (any more). */
-uint32_t suono_nodo(const suono *s);
+uint32_t sound_node(const suono *s);
 
 /*
  * The sink's volume at maximum, and not muted — invariant I5.

@@ -9,7 +9,7 @@ PORTA=${2:-7448}
 #    fixed at 8898, and two probe rounds on the same machine took the port
 #    from each other: the second died with "collector dead", which looks
 #    exactly like "the probe cannot start".  They are two different things.
-RACC=${3:-8898}
+COLL=${3:-8898}
 ok() { printf '    OK  %s\n' "$*"; }
 ko() { printf '    NO  %s\n' "$*"; }
 log(){ printf '\n== %s\n' "$*"; }
@@ -24,11 +24,11 @@ IMP=$(curl -sk "https://$IND:$PORTA/impronta" | python3 -c 'import json,sys;prin
 echo "    fingerprint: $IMP"
 
 rm -f "$QUI/esiti.jsonl"
-python3 "$QUI/racc.py" $RACC > "$QUI/racc.log" 2>&1 &
+python3 "$QUI/racc.py" $COLL > "$QUI/racc.log" 2>&1 &
 PR=$!
 sleep 1
 [ -d "/proc/$PR" ] || { ko "collector dead"; cat "$QUI/racc.log"; exit 2; }
-ok "collector on 127.0.0.1:$RACC"
+ok "collector on 127.0.0.1:$COLL"
 
 # ---------------------------------------------------------------------------
 # ⛔ WHO IS STILL USING THIS PROFILE — read from `/proc`, PID by PID.
@@ -38,7 +38,7 @@ ok "collector on 127.0.0.1:$RACC"
 #    ⭐ The criterion is the profile path, which exists only for this round,
 #       and it is compared with the WHOLE argument (`grep -x`): "/…/prof-ammesso"
 #       and "/…/prof-ammesso-vecchio" are two different things.
-chi_usa_il_profilo() # $1 = profile
+who_uses_profile() # $1 = profile
 {
   local d
   for d in /proc/[0-9]*; do
@@ -77,7 +77,7 @@ giro() # $1 = label, $2 = password
 {
   local prof="$QUI/prof-$1"
   rm -rf "$prof"; mkdir -p "$prof"
-  local U="http://127.0.0.1:$RACC/sonda-rcp.html?base=$(python3 -c 'import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1],safe=""))' "https://$IND:$PORTA")&impronta=$(python3 -c 'import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1],safe=""))' "$IMP")#utente=prova&parola=$2"
+  local U="http://127.0.0.1:$COLL/sonda-rcp.html?base=$(python3 -c 'import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1],safe=""))' "https://$IND:$PORTA")&impronta=$(python3 -c 'import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1],safe=""))' "$IMP")#utente=prova&parola=$2"
   log "round «$1»"
   # ⛔ AND HERE THE ADDRESS IS PRINTED MASKED — R12-A.34, second half.
   #    Moving the password into the fragment takes it out of the HTTP log, but
@@ -195,10 +195,10 @@ giro() # $1 = label, $2 = password
   kill -TERM -- "-$p" 2>/dev/null   # the group: we try, we do not trust it
   wait "$p" 2>/dev/null
   local g=0 vivi
-  vivi=$(chi_usa_il_profilo "$prof")
+  vivi=$(who_uses_profile "$prof")
   [ -n "$vivi" ] && kill $vivi 2>/dev/null
   while [ "$g" -lt 60 ]; do
-    vivi=$(chi_usa_il_profilo "$prof")
+    vivi=$(who_uses_profile "$prof")
     [ -z "$vivi" ] && break
     sleep 0.5; g=$((g+1))
   done
@@ -206,7 +206,7 @@ giro() # $1 = label, $2 = password
     echo "    -- after 30 s of TERM these still use the profile: $(echo $vivi) — KILL"
     kill -KILL $vivi 2>/dev/null
     sleep 1
-    vivi=$(chi_usa_il_profilo "$prof")
+    vivi=$(who_uses_profile "$prof")
   fi
   if [ -n "$vivi" ]; then
     ko "⛔ these processes still have the profile open: $(echo $vivi)"

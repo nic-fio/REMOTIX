@@ -23,12 +23,12 @@ set -uo pipefail
 m=${1:?machine}; porta=${2:-7447}
 distro=${m%%-*}; desktop=${m#*-}; desktop=${desktop%-iso}
 fai() { echo "+ $*"; "$@"; }
-forn=""
+card_vendors=""
 for v in /sys/class/drm/renderD*/device/vendor; do
-	case $(cat "$v" 2>/dev/null) in 0x8086) forn="$forn Intel" ;; 0x1002) forn="$forn AMD" ;; 0x10de) forn="$forn NVIDIA" ;; esac
+	case $(cat "$v" 2>/dev/null) in 0x8086) card_vendors="$card_vendors Intel" ;; 0x1002) card_vendors="$card_vendors AMD" ;; 0x10de) card_vendors="$card_vendors NVIDIA" ;; esac
 done
-echo "== $m · cards:${forn:- none} · port $porta"
-ha() { case " $forn " in *" $1 "*) return 0 ;; esac; return 1; }
+echo "== $m · cards:${card_vendors:- none} · port $porta"
+ha() { case " $card_vendors " in *" $1 "*) return 0 ;; esac; return 1; }
 comp=""
 case $distro in
 debian13 | ubuntu2604)

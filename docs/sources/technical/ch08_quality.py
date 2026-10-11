@@ -422,7 +422,7 @@ peggiore(t) = canvas_width * canvas_height * 39.54 / 1e6    Mpixel/s
          "the process boundary: only the measured delay is used.", "Not settled yet.")
 
 # ── 12. Admission ─────────────────────────────────────────────────────────
-AMMISSIONE = seq(
+ADMISSION = seq(
     [("Page", "browser", "light"), ("Transport", "webtransport.c", "blue"),
      ("Main loop", "consegna_verdetto()", "navy"), ("Budget", "budget.c", "amber"), ("Child", "figlio.c", "dark")],
     [(0, 1, "CIAO · CREDENZIALI"),
@@ -443,7 +443,7 @@ S12 = p("A refusal decided after the desktop has started is not a refusal: it is
         "eviction. Measured in phase 10: a user who was never admitted had 42 processes and a "
         + c("gnome-shell") + ". Since 25 August 2026 both limits are checked in " + c("consegna_verdetto()")
         + " (deliver the verdict) <b>before</b> " + c("figli_assicura_da()") + " (ensure the user's child) starts "
-        "the child.", lead=True) + AMMISSIONE + \
+        "the child.", lead=True) + ADMISSION + \
     table(["Check", "Counted on", "Refusal", "Phrase on the page (translated)"], [
         ["<b>Session cap</b> — " + c("--tetto-sessioni") + " (10)", c("palchi_quanti()")
          + " (how many stages): live children plus desktops found at startup and awaiting reattach",

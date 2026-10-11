@@ -73,9 +73,9 @@ typedef struct sentinella sentinella;
  * one).  ⛔ Returns NULL if the bus is missing: then the rule of §5.1
  * is NOT in force, and the caller writes it in the log instead of carrying on
  * as if nothing happened. */
-sentinella *sentinella_apri(void);
+sentinella *sentinel_open(void);
 
-void sentinella_chiudi(sentinella *s);
+void sentinel_close(sentinella *s);
 
 /*
  * «Does this user have a LOCAL graphical session, right now?»
@@ -88,7 +88,7 @@ void sentinella_chiudi(sentinella *s);
  *   isn't one» are two different facts, and locking everyone out because logind does not
  *   answer would punish those who did nothing wrong (invariant I1).
  */
-bool sentinella_locale(sentinella *s, const char *utente, char *descrizione,
+bool sentinella_locale(sentinella *s, const char *utente, char *description,
                        size_t quanto);
 
 /*
@@ -190,9 +190,9 @@ bool sentinella_senza_seat(sentinella *s, char *quale, size_t quanto);
  * ⛔ AND ON 25 AUGUST 2026 THIS SENTENCE WAS STILL HALF FALSE (finding R7 of
  *    §5.5): the line was there, ⛔ **but the number of tenants was not** — that is,
  *    exactly the denominator that makes the cure refutable was missing.  ⭐ Now
- *    the line carries `inquilini=` (from `wt_inquilini_serviti()`), and the three numbers
+ *    the line carries `inquilini=` (from `wt_tenants_served()`), and the three numbers
  *    are read together: `chiamate=` must follow the RE-CHECKS, not `inquilini=`. */
 void sentinella_conti(const sentinella *s, uint64_t *chiamate,
-                      uint64_t *peggior_ms);
+                      uint64_t *worst_ms);
 
 #endif

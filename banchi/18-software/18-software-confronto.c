@@ -42,7 +42,7 @@
 #include <libswscale/swscale.h>
 #include <libyuv/convert_from_argb.h>
 
-static uint64_t ora_us(void)
+static uint64_t now_us(void)
 {
 	struct timespec t;
 	clock_gettime(CLOCK_MONOTONIC, &t);
@@ -52,7 +52,7 @@ static uint64_t ora_us(void)
 /* the route name for the output lines: vecchia · corretta · nuova */
 static const char *strada = "?";
 
-static void muori(const char *m)
+static void die(const char *m)
 {
 	fprintf(stderr, "⛔ %s\n", m);
 	exit(1);
@@ -85,7 +85,7 @@ static uint8_t *leggi(const char *percorso, size_t attesi)
 	return p;
 }
 
-static void scena_apri(Scena *s, uint32_t l, uint32_t a, const char *dir)
+static void scene_open(Scena *s, uint32_t l, uint32_t a, const char *dir)
 {
 	char p[512];
 	s->l = l;
@@ -112,7 +112,7 @@ static void riempi(Scena *s, int x, int y, int w, int h, uint32_t colore)
 	}
 }
 
-static void scena_fotogramma(Scena *s, int n)
+static void scene_frame(Scena *s, int n)
 {
 	const double k = s->l / 1920.0;
 	memcpy(s->quadro, s->sfondo, (size_t) s->l * s->a * 4);
@@ -173,9 +173,9 @@ typedef struct {
 	struct SwsContext *sws;
 	int64_t numero;
 	int trattenuti, riaperture;
-} Vecchia;
+} Old;
 
-static int vecchia_contesto(Vecchia *v)
+static int old_context(Old *v)
 {
 	v->ctx = avcodec_alloc_context3(v->comp);
 	v->ctx->width = (int) v->l;
@@ -233,14 +233,14 @@ static int vecchia_contesto(Vecchia *v)
 	return 0;
 }
 
-static void vecchia_chiudi_contesto(Vecchia *v)
+static void old_close_context(Old *v)
 {
 	av_packet_free(&v->pk);
 	av_frame_free(&v->f);
 	avcodec_free_context(&v->ctx);
 }
 
-static int vecchia_apri(Vecchia *v, CodecVideo codec, uint32_t l, uint32_t a, int prof,
+static int old_open(Old *v, CodecVideo codec, uint32_t l, uint32_t a, int prof,
                         int qualita, int livello_x10)
 {
 	memset(v, 0, sizeof *v);
@@ -258,33 +258,33 @@ static int vecchia_apri(Vecchia *v, CodecVideo codec, uint32_t l, uint32_t a, in
 	                        SWS_BILINEAR, NULL, NULL, NULL);
 	const int *t = sws_getCoefficients(SWS_CS_ITU709);
 	sws_setColorspaceDetails(v->sws, t, 1, t, 0, 0, 1 << 16, 1 << 16);
-	return vecchia_contesto(v);
+	return old_context(v);
 }
 
 /* Like `comprimi_comune()`: one frame in, one packet out; if the
  * encoder holds it back (EAGAIN) it is flushed and REOPENED, and the next one
  * is a key — exactly the product's route. */
-static bool vecchia_codifica(Vecchia *v, const uint8_t *px, bool chiave, uint64_t *us_conv,
-                             uint64_t *us_cod, bool *e_chiave, uint8_t **dati, size_t *byte,
+static bool old_encoding(Old *v, const uint8_t *px, bool chiave, uint64_t *us_conv,
+                             uint64_t *us_cod, bool *is_key, uint8_t **dati, size_t *byte,
                              bool *riaperto)
 {
-	static bool prossimo_chiave_forzato;
+	static bool force_next_key;
 	*riaperto = false;
-	uint64_t t0 = ora_us();
+	uint64_t t0 = now_us();
 	av_frame_make_writable(v->f);
 	const uint8_t *piani[4] = { px, NULL, NULL, NULL };
 	int passi[4] = { (int) v->l * 4, 0, 0, 0 };
 	sws_scale(v->sws, piani, passi, 0, (int) v->a, v->f->data, v->f->linesize);
-	*us_conv = ora_us() - t0;
-	chiave = chiave || prossimo_chiave_forzato;
-	prossimo_chiave_forzato = false;
+	*us_conv = now_us() - t0;
+	chiave = chiave || force_next_key;
+	force_next_key = false;
 	v->f->pts = v->numero++;
 	v->f->pict_type = chiave ? AV_PICTURE_TYPE_I : AV_PICTURE_TYPE_NONE;
 	if (chiave)
 		v->f->flags |= AV_FRAME_FLAG_KEY;
 	else
 		v->f->flags &= ~(unsigned) AV_FRAME_FLAG_KEY;
-	uint64_t t1 = ora_us();
+	uint64_t t1 = now_us();
 	if (avcodec_send_frame(v->ctx, v->f) < 0)
 		return false;
 	int e = avcodec_receive_packet(v->ctx, v->pk);
@@ -296,27 +296,27 @@ static bool vecchia_codifica(Vecchia *v, const uint8_t *px, bool chiave, uint64_
 	}
 	if (e < 0)
 		return false;
-	*us_cod = ora_us() - t1;
-	*e_chiave = (v->pk->flags & AV_PKT_FLAG_KEY) != 0;
+	*us_cod = now_us() - t1;
+	*is_key = (v->pk->flags & AV_PKT_FLAG_KEY) != 0;
 	*dati = malloc((size_t) v->pk->size);
 	memcpy(*dati, v->pk->data, (size_t) v->pk->size);
 	*byte = (size_t) v->pk->size;
 	av_packet_unref(v->pk);
 	if (*riaperto) {
 		/* the product's reopening, and its cost goes into the time */
-		uint64_t t2 = ora_us();
-		vecchia_chiudi_contesto(v);
-		vecchia_contesto(v);
+		uint64_t t2 = now_us();
+		old_close_context(v);
+		old_context(v);
 		v->riaperture++;
-		prossimo_chiave_forzato = true;
-		*us_cod += ora_us() - t2;
+		force_next_key = true;
+		*us_cod += now_us() - t2;
 	}
 	return true;
 }
 
-static void vecchia_chiudi(Vecchia *v)
+static void old_close(Old *v)
 {
-	vecchia_chiudi_contesto(v);
+	old_close_context(v);
 	sws_freeContext(v->sws);
 }
 
@@ -353,16 +353,16 @@ static double psnr8(const uint8_t *a, const uint8_t *b, size_t n)
 	return 10.0 * log10(255.0 * 255.0 * (double) n / s);
 }
 
-static int mediana_u64(const void *x, const void *y)
+static int median_u64(const void *x, const void *y)
 {
 	uint64_t a = *(const uint64_t *) x, b = *(const uint64_t *) y;
 	return a < b ? -1 : a > b;
 }
 
-static int modo_colori(uint32_t l, uint32_t a, const char *dir, int n)
+static int color_mode(uint32_t l, uint32_t a, const char *dir, int n)
 {
 	Scena s;
-	scena_apri(&s, l, a, dir);
+	scene_open(&s, l, a, dir);
 	size_t ny = (size_t) l * a, nc = ny / 4;
 	uint8_t *nostro = aligned_alloc(64, ny * 3 / 2 + 64);
 	uint8_t *suo = aligned_alloc(64, ny * 3 / 2 + 64);
@@ -385,31 +385,31 @@ static int modo_colori(uint32_t l, uint32_t a, const char *dir, int n)
 	double pY = 1e9, pU = 1e9, pV = 1e9, py601 = 1e9, pu601 = 1e9;
 	size_t dY = 0, dC = 0;
 	for (int i = 0; i < n; i++) {
-		scena_fotogramma(&s, i * (120 / n));
-		uint64_t t0 = ora_us();
+		scene_frame(&s, i * (120 / n));
+		uint64_t t0 = now_us();
 		colori709_a_i420(s.quadro, l * 4, l, a, COLORI709_BGRX, nostro, l, nostro + ny, l / 2,
 		                 nostro + ny + nc, l / 2);
-		t_n[i] = ora_us() - t0;
+		t_n[i] = now_us() - t0;
 		const uint8_t *pi[4] = { s.quadro };
 		int pa[4] = { (int) l * 4 };
 		uint8_t *po[4] = { suo, suo + ny, suo + ny + nc };
 		int ps[4] = { (int) l, (int) l / 2, (int) l / 2 };
-		t0 = ora_us();
+		t0 = now_us();
 		sws_scale(sws, pi, pa, 0, (int) a, po, ps);
-		t_s[i] = ora_us() - t0;
-		t0 = ora_us();
+		t_s[i] = now_us() - t0;
+		t0 = now_us();
 		ARGBToI420(s.quadro, (int) l * 4, yuv, (int) l, yuv + ny, (int) l / 2, yuv + ny + nc,
 		           (int) l / 2, (int) l, (int) a);
-		t_y[i] = ora_us() - t0;
-		t0 = ora_us();
+		t_y[i] = now_us() - t0;
+		t0 = now_us();
 		colori709_a_i420_10(s.quadro, l * 4, l, a, COLORI709_BGRX, n10, l * 2, n10 + ny,
 		                    l, n10 + ny + nc, l);
-		t_n10[i] = ora_us() - t0;
+		t_n10[i] = now_us() - t0;
 		uint8_t *po10[4] = { (uint8_t *) s10, (uint8_t *) (s10 + ny), (uint8_t *) (s10 + ny + nc) };
 		int ps10[4] = { (int) l * 2, (int) l, (int) l };
-		t0 = ora_us();
+		t0 = now_us();
 		sws_scale(sws10, pi, pa, 0, (int) a, po10, ps10);
-		t_s10[i] = ora_us() - t0;
+		t_s10[i] = now_us() - t0;
 
 		if (i == 0) {
 			/* the fingerprint of the output: the SSE2 route and the plain C one
@@ -457,11 +457,11 @@ static int modo_colori(uint32_t l, uint32_t a, const char *dir, int n)
 				m10 = dd;
 		}
 	}
-	qsort(t_n, (size_t) n, 8, mediana_u64);
-	qsort(t_s, (size_t) n, 8, mediana_u64);
-	qsort(t_y, (size_t) n, 8, mediana_u64);
-	qsort(t_n10, (size_t) n, 8, mediana_u64);
-	qsort(t_s10, (size_t) n, 8, mediana_u64);
+	qsort(t_n, (size_t) n, 8, median_u64);
+	qsort(t_s, (size_t) n, 8, median_u64);
+	qsort(t_y, (size_t) n, 8, median_u64);
+	qsort(t_n10, (size_t) n, 8, median_u64);
+	qsort(t_s10, (size_t) n, 8, median_u64);
 	printf("colours %ux%u, %d frames, medians:\n", l, a, n);
 	printf("  time 8 bit : ours %.2f ms · sws_scale %.2f ms · libyuv ARGBToI420 (BT.601!) %.2f ms\n",
 	       t_n[n / 2] / 1000.0, t_s[n / 2] / 1000.0, t_y[n / 2] / 1000.0);
@@ -496,7 +496,7 @@ static int modo_colori(uint32_t l, uint32_t a, const char *dir, int n)
 		printf("  BGRx %06x → ours Y %3u U %3u V %3u · sws Y %3u U %3u V %3u\n", prove[i], y[0],
 		       u[0], v[0], ys[0], us[0], vs[0]);
 	}
-	int grigi_male = 0;
+	int bad_grays = 0;
 	for (int g = 0; g < 256; g++) {
 		for (int k = 0; k < 8; k++) {
 			px[4 * k] = px[4 * k + 1] = px[4 * k + 2] = (uint8_t) g;
@@ -505,9 +505,9 @@ static int modo_colori(uint32_t l, uint32_t a, const char *dir, int n)
 		uint8_t y[8], u[2], v[2];
 		colori709_a_i420(px, 16, 4, 2, COLORI709_BGRX, y, 4, u, 2, v, 2);
 		if (u[0] != 128 || v[0] != 128)
-			grigi_male++;
+			bad_grays++;
 	}
-	printf("  greys with chroma other than 128: %d out of 256\n", grigi_male);
+	printf("  greys with chroma other than 128: %d out of 256\n", bad_grays);
 
 	/* ⭐ NV12 and P010: the card route when the pixels come from
 	 *    memory (the card line, 30 Sep: the VPP there is worse than swscale).
@@ -526,17 +526,17 @@ static int modo_colori(uint32_t l, uint32_t a, const char *dir, int n)
 		double p12 = 1e9;
 		int giri = n < 8 ? n : 8;
 		for (int i = 0; i < giri; i++) {
-			scena_fotogramma(&s, i * (120 / giri));
+			scene_frame(&s, i * (120 / giri));
 			const uint8_t *pi[4] = { s.quadro };
 			int pa[4] = { (int) l * 4 };
-			uint64_t t0 = ora_us();
+			uint64_t t0 = now_us();
 			colori709_a_nv12(s.quadro, l * 4, l, a, COLORI709_BGRX, nostro, l, nostro + ny, l);
-			tn += ora_us() - t0;
+			tn += now_us() - t0;
 			uint8_t *po[4] = { suo, suo + ny };
 			int ps[4] = { (int) l, (int) l };
-			t0 = ora_us();
+			t0 = now_us();
 			sws_scale(s12, pi, pa, 0, (int) a, po, ps);
-			ts += ora_us() - t0;
+			ts += now_us() - t0;
 			for (size_t k = 0; k < ny * 3 / 2; k++) {
 				int dd = abs((int) nostro[k] - (int) suo[k]);
 				if (dd > m12)
@@ -545,14 +545,14 @@ static int modo_colori(uint32_t l, uint32_t a, const char *dir, int n)
 			double q = psnr8(nostro, suo, ny * 3 / 2);
 			if (q < p12)
 				p12 = q;
-			t0 = ora_us();
-			colori709_a_p010(s.quadro, l * 4, l, a, COLORI709_BGRX, n10, l * 2, n10 + ny, l * 2);
-			tn10 += ora_us() - t0;
+			t0 = now_us();
+			colors709_to_p010(s.quadro, l * 4, l, a, COLORI709_BGRX, n10, l * 2, n10 + ny, l * 2);
+			tn10 += now_us() - t0;
 			uint8_t *po10[4] = { (uint8_t *) s10, (uint8_t *) (s10 + ny) };
 			int ps10[4] = { (int) l * 2, (int) l * 2 };
-			t0 = ora_us();
+			t0 = now_us();
 			sws_scale(s010, pi, pa, 0, (int) a, po10, ps10);
-			ts10 += ora_us() - t0;
+			ts10 += now_us() - t0;
 			for (size_t k = 0; k < ny * 3 / 2; k++) {
 				int dd = abs((int) (n10[k] >> 6) - (int) (s10[k] >> 6));
 				if (dd > m010)
@@ -569,7 +569,7 @@ static int modo_colori(uint32_t l, uint32_t a, const char *dir, int n)
 	/* RGBx (labwc): the same frame with the R and B bytes swapped must give
 	 * THE SAME YUV bytes as BGRx on the original. */
 	{
-		scena_fotogramma(&s, 30);
+		scene_frame(&s, 30);
 		colori709_a_i420(s.quadro, l * 4, l, a, COLORI709_BGRX, nostro, l, nostro + ny, l / 2,
 		                 nostro + ny + nc, l / 2);
 		for (size_t k = 0; k < ny; k++) {
@@ -585,13 +585,13 @@ static int modo_colori(uint32_t l, uint32_t a, const char *dir, int n)
 	return 0;
 }
 
-static int modo_sorgente(uint32_t l, uint32_t a, const char *dir, int n, const char *uscita)
+static int source_mode(uint32_t l, uint32_t a, const char *dir, int n, const char *uscita)
 {
 	Scena s;
-	scena_apri(&s, l, a, dir);
+	scene_open(&s, l, a, dir);
 	FILE *f = fopen(uscita, "wb");
 	for (int i = 0; i < n; i++) {
-		scena_fotogramma(&s, i);
+		scene_frame(&s, i);
 		fwrite(s.quadro, 1, (size_t) l * a * 4, f);
 	}
 	fclose(f);
@@ -606,7 +606,7 @@ static CodecVideo codec_di(const char *s)
 		return CODIFICATORE_AV1;
 	if (!strcmp(s, "hevc"))
 		return CODIFICATORE_HEVC;
-	muori("codec: h264, av1 or hevc");
+	die("codec: h264, av1 or hevc");
 	return 0;
 }
 
@@ -629,11 +629,11 @@ static CodificatoreRichiesta richiesta(CodecVideo codec, uint32_t l, uint32_t a)
 	return r;
 }
 
-static int modo_codifica(CodecVideo codec, bool nuova, uint32_t l, uint32_t a, const char *dir,
+static int encoding_mode(CodecVideo codec, bool nuova, uint32_t l, uint32_t a, const char *dir,
                          int n, const char *uscita, int chiave_a)
 {
 	Scena s;
-	scena_apri(&s, l, a, dir);
+	scene_open(&s, l, a, dir);
 	CodificatoreRichiesta r = richiesta(codec, l, a);
 	char err[512] = "";
 	char csv[600];
@@ -641,8 +641,8 @@ static int modo_codifica(CodecVideo codec, bool nuova, uint32_t l, uint32_t a, c
 	FILE *fo = fopen(uscita, "wb"), *fc = fopen(csv, "w");
 	fprintf(fc, "n,byte,chiave,us_conv,us_cod,chiesta\n");
 	Ripiego *rp = NULL;
-	Vecchia v;
-	uint64_t t0 = ora_us();
+	Old v;
+	uint64_t t0 = now_us();
 	if (nuova) {
 		rp = ripiego_apri(&r, err, sizeof err);
 		if (!rp) {
@@ -650,14 +650,14 @@ static int modo_codifica(CodecVideo codec, bool nuova, uint32_t l, uint32_t a, c
 			return 1;
 		}
 		fprintf(stderr, "opened: %s\n", ripiego_nome(rp));
-	} else if (vecchia_apri(&v, codec, l, a, r.profondita, r.qualita, r.livello_x10) < 0) {
-		muori("old route not opened");
+	} else if (old_open(&v, codec, l, a, r.profondita, r.qualita, r.livello_x10) < 0) {
+		die("old route not opened");
 	}
-	uint64_t us_apri = ora_us() - t0;
+	uint64_t opening_us = now_us() - t0;
 	uint64_t tot_conv = 0, tot_cod = 0, tot_byte = 0;
-	int chiavi = 0, chiave_mancata = 0, riaperture = 0;
+	int chiavi = 0, missed_key = 0, riaperture = 0;
 	for (int i = 0; i < n; i++) {
-		scena_fotogramma(&s, i);
+		scene_frame(&s, i);
 		bool chiedi = (i == chiave_a);
 		uint64_t uc = 0, ue = 0;
 		bool k = false;
@@ -677,7 +677,7 @@ static int modo_codifica(CodecVideo codec, bool nuova, uint32_t l, uint32_t a, c
 			b = u.byte;
 		} else {
 			bool rip;
-			if (!vecchia_codifica(&v, s.quadro, chiedi, &uc, &ue, &k, &dv, &b, &rip)) {
+			if (!old_encoding(&v, s.quadro, chiedi, &uc, &ue, &k, &dv, &b, &rip)) {
 				fprintf(stderr, "⛔ frame %d not encoded (vecchia)\n", i);
 				return 1;
 			}
@@ -691,7 +691,7 @@ static int modo_codifica(CodecVideo codec, bool nuova, uint32_t l, uint32_t a, c
 		tot_byte += b;
 		chiavi += k;
 		if (chiedi && !k)
-			chiave_mancata++;
+			missed_key++;
 		free(dv);
 	}
 	fclose(fo);
@@ -700,30 +700,30 @@ static int modo_codifica(CodecVideo codec, bool nuova, uint32_t l, uint32_t a, c
 	       "average encoding %.2f ms · %.1f KiB/frame · keys %d · key requested at %d %s · "
 	       "reopenings for EAGAIN %d\n",
 	       codec == CODIFICATORE_H264 ? "H.264" : "AV1", strada, l, a, n,
-	       us_apri / 1000.0, tot_conv / 1000.0 / n, tot_cod / 1000.0 / n,
+	       opening_us / 1000.0, tot_conv / 1000.0 / n, tot_cod / 1000.0 / n,
 	       tot_byte / 1024.0 / n, chiavi, chiave_a,
-	       chiave_a < 0 ? "-" : chiave_mancata ? "⛔ NOT EMITTED" : "emitted",
+	       chiave_a < 0 ? "-" : missed_key ? "⛔ NOT EMITTED" : "emitted",
 	       nuova ? 0 : v.riaperture);
 	if (nuova)
 		ripiego_chiudi(rp);
 	else
-		vecchia_chiudi(&v);
+		old_close(&v);
 	return 0;
 }
 
 /* key on request, quality on the fly, new size: times and stream */
-static int modo_eventi(CodecVideo codec, bool nuova, uint32_t l, uint32_t a, const char *dir,
+static int events_mode(CodecVideo codec, bool nuova, uint32_t l, uint32_t a, const char *dir,
                        const char *uscita)
 {
 	Scena s, s2;
-	scena_apri(&s, l, a, dir);
+	scene_open(&s, l, a, dir);
 	uint32_t l2 = l == 3840 ? 1920 : 3840, a2 = l == 3840 ? 1080 : 2160;
-	scena_apri(&s2, l2, a2, dir);
+	scene_open(&s2, l2, a2, dir);
 	CodificatoreRichiesta r = richiesta(codec, l, a);
 	char err[512] = "";
 	FILE *fo = fopen(uscita, "wb");
 	Ripiego *rp = NULL;
-	Vecchia v;
+	Old v;
 	if (nuova) {
 		rp = ripiego_apri(&r, err, sizeof err);
 		if (!rp) {
@@ -731,7 +731,7 @@ static int modo_eventi(CodecVideo codec, bool nuova, uint32_t l, uint32_t a, con
 			return 1;
 		}
 	} else {
-		vecchia_apri(&v, codec, l, a, r.profondita, r.qualita, r.livello_x10);
+		old_open(&v, codec, l, a, r.profondita, r.qualita, r.livello_x10);
 	}
 	/* 0-9 size 1 (key requested at 5), 10: quality +9 (the drop of
 	 * `abbassa_qualita()`), 15: quality back down, 20-29 size 2 */
@@ -742,7 +742,7 @@ static int modo_eventi(CodecVideo codec, bool nuova, uint32_t l, uint32_t a, con
 		uint64_t us_ev = 0;
 		bool chiedi = (i == 5);
 		if (i == 10 || i == 15 || i == 20) {
-			uint64_t t0 = ora_us();
+			uint64_t t0 = now_us();
 			int q = i == 10 ? r.qualita + 9 : r.qualita;
 			if (nuova) {
 				bool ok = i == 20 ? ripiego_ridimensiona(rp, l2, a2, err, sizeof err)
@@ -752,15 +752,15 @@ static int modo_eventi(CodecVideo codec, bool nuova, uint32_t l, uint32_t a, con
 					return 1;
 				}
 			} else {
-				vecchia_chiudi(&v);
-				vecchia_apri(&v, codec, ll, aa, r.profondita, q, r.livello_x10);
+				old_close(&v);
+				old_open(&v, codec, ll, aa, r.profondita, q, r.livello_x10);
 			}
-			us_ev = ora_us() - t0;
+			us_ev = now_us() - t0;
 			evento = i == 10 ? "quality +9 (reopening)" : i == 15 ? "quality -9 (reopening)"
 			                                                        : "new size (reopening)";
 			chiedi = true;
 		}
-		scena_fotogramma(sc, i * 3);
+		scene_frame(sc, i * 3);
 		uint64_t uc = 0, ue = 0;
 		bool k = false;
 		const uint8_t *d;
@@ -779,7 +779,7 @@ static int modo_eventi(CodecVideo codec, bool nuova, uint32_t l, uint32_t a, con
 			b = u.byte;
 		} else {
 			bool rip;
-			if (!vecchia_codifica(&v, sc->quadro, chiedi, &uc, &ue, &k, &dv, &b, &rip))
+			if (!old_encoding(&v, sc->quadro, chiedi, &uc, &ue, &k, &dv, &b, &rip))
 				return 1;
 			d = dv;
 		}
@@ -796,11 +796,11 @@ static int modo_eventi(CodecVideo codec, bool nuova, uint32_t l, uint32_t a, con
 	if (nuova)
 		ripiego_chiudi(rp);
 	else
-		vecchia_chiudi(&v);
+		old_close(&v);
 	return 0;
 }
 
-static int modo_rifiuti(void)
+static int refusals_mode(void)
 {
 	struct {
 		const char *cosa;
@@ -825,9 +825,9 @@ static int modo_rifiuti(void)
 		r.profondita = casi[i].prof;
 		r.modo = casi[i].modo;
 		char perche[512] = "";
-		uint64_t t0 = ora_us();
+		uint64_t t0 = now_us();
 		Ripiego *rp = ripiego_apri(&r, perche, sizeof perche);
-		double ms = (ora_us() - t0) / 1000.0;
+		double ms = (now_us() - t0) / 1000.0;
 		if (rp) {
 			/* and a real frame, if it opened: grey with a gradient */
 			size_t np = (size_t) r.larghezza * r.altezza * 4;
@@ -868,23 +868,23 @@ int main(int argc, char **argv)
 			setenv("VECCHIA_X264_EXTRA", ":force-cfr=1:keyint=infinite", 1);
 	}
 	if (argc < 2)
-		muori("mode: colori | sorgente | codifica | eventi | rifiuti");
+		die("mode: colori | sorgente | codifica | eventi | rifiuti");
 	const char *m = argv[1];
 	if (!strcmp(m, "colori") && argc >= 6)
-		return modo_colori((uint32_t) atoi(argv[2]), (uint32_t) atoi(argv[3]), argv[4],
+		return color_mode((uint32_t) atoi(argv[2]), (uint32_t) atoi(argv[3]), argv[4],
 		                   atoi(argv[5]));
 	if (!strcmp(m, "sorgente") && argc >= 7)
-		return modo_sorgente((uint32_t) atoi(argv[2]), (uint32_t) atoi(argv[3]), argv[4],
+		return source_mode((uint32_t) atoi(argv[2]), (uint32_t) atoi(argv[3]), argv[4],
 		                     atoi(argv[5]), argv[6]);
 	if (!strcmp(m, "codifica") && argc >= 9)
-		return modo_codifica(codec_di(argv[2]), !strcmp(argv[3], "nuova"),
+		return encoding_mode(codec_di(argv[2]), !strcmp(argv[3], "nuova"),
 		                     (uint32_t) atoi(argv[4]), (uint32_t) atoi(argv[5]), argv[6],
 		                     atoi(argv[7]), argv[8], argc >= 10 ? atoi(argv[9]) : -1);
 	if (!strcmp(m, "eventi") && argc >= 8)
-		return modo_eventi(codec_di(argv[2]), !strcmp(argv[3], "nuova"),
+		return events_mode(codec_di(argv[2]), !strcmp(argv[3], "nuova"),
 		                   (uint32_t) atoi(argv[4]), (uint32_t) atoi(argv[5]), argv[6], argv[7]);
 	if (!strcmp(m, "rifiuti"))
-		return modo_rifiuti();
-	muori("wrong arguments");
+		return refusals_mode();
+	die("wrong arguments");
 	return 1;
 }

@@ -149,7 +149,7 @@ PORTE = C20V.PORTE
 NOME_ESITO = {VERDE: "VERDE", ROSSO: "ROSSO", CIECO: "I COULD NOT LOOK"}
 
 # ⭐ The tenant: a name of the net, which C19 recognises and the hook clears out.
-MODELLO_INQUILINO = re.compile(r"^c21u[0-9]+$")
+TENANT_PATTERN = re.compile(r"^c21u[0-9]+$")
 
 # ---------------------------------------------------------------------------
 # ⛔ THE NUMBERS — each with its reason.
@@ -159,7 +159,7 @@ TETTO_MS = 300.0
 # How long we look AFTER the ceiling: not to give green, but to say WHEN
 # a late shape arrived (a red «at 450 ms» is cured, «never» is another
 # defect).
-GUARDA_S = 2.0
+LOOK_S = 2.0
 # ⭐ The scan of the right edge, in DESKTOP pixels relative to the last
 #   pixel of the page: from 4 inside to 8 outside (the three measured zones are between
 #   -1 and +7).  ⚠ The step lasts longer than the ceiling, so every change is attributed
@@ -168,18 +168,18 @@ SCANSIONE = tuple(range(-4, 9))
 PASSO_SCANSIONE_S = 0.4
 # The page colours, and the tolerance: the chain goes through H.264 4:2:0, which
 # subsamples the chroma (§4.3 of phase 11, the same reason as C2).
-CIANO = (0x00, 0xFF, 0xFF)
+CYAN = (0x00, 0xFF, 0xFF)
 GIALLO = (0xFF, 0xFF, 0x00)
 TOLLERANZA = 60
 # The window must be at least this share of the canvas, or it is a leftover.
-AREA_MINIMA = 0.02
+MIN_AREA = 0.02
 # The alpha threshold of the silhouette: the theme's soft edges are not silhouette.
-ALFA = 128
+ALPHA = 128
 
 # ⭐ THE TABLE OF EXPECTATIONS, and the same one shifted by one (the fault).
 PASSI = ("centro", "bordo", "testo")
 ATTESO = {"centro": "freccia", "bordo": "orizzontale", "testo": "testo"}
-ATTESO_SBAGLIATO = {"centro": "orizzontale", "bordo": "testo", "testo": "freccia"}
+EXPECTED_WRONG = {"centro": "orizzontale", "bordo": "testo", "testo": "freccia"}
 
 # ⭐ THE KNOWN PAGE.  Cyan background with `cursor: default`, and a yellow box
 #   with `cursor: text` at the top left — far from the centre, so the centre
@@ -225,7 +225,7 @@ def xulstore(largo, alto):
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE PURE FUNCTIONS — and they are the ones `--certifica` tests
 # ═══════════════════════════════════════════════════════════════════════════
-_VESTE = re.compile(r'url\(\s*["\']?(data:image/png;base64,[^"\')]+)["\']?\s*\)'
+_SKIN_URL = re.compile(r'url\(\s*["\']?(data:image/png;base64,[^"\')]+)["\']?\s*\)'
                     r'\s+(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)')
 
 
@@ -239,7 +239,7 @@ def leggi_veste(stile):
         return ("sistema",)
     if s == "none":
         return ("nascosta",)
-    m = _VESTE.search(s)
+    m = _SKIN_URL.search(s)
     if not m:
         return ("illeggibile", s[:80])
     try:
@@ -249,11 +249,11 @@ def leggi_veste(stile):
     return ("png", png, float(m.group(2)), float(m.group(3)))
 
 
-def classifica_sagoma(larghezza, altezza, alfa, hx, hy):
+def classify_shape(larghezza, altezza, alfa, hx, hy):
     """⭐ The class of a cursor from its PIXELS: `alfa` is the list row by
     row of the alpha values.  Returns (class, description)."""
-    xs = [i % larghezza for i, a in enumerate(alfa) if a >= ALFA]
-    ys = [i // larghezza for i, a in enumerate(alfa) if a >= ALFA]
+    xs = [i % larghezza for i, a in enumerate(alfa) if a >= ALPHA]
+    ys = [i // larghezza for i, a in enumerate(alfa) if a >= ALPHA]
     if not xs:
         return "nascosta", "%dx%d without opaque pixels" % (larghezza, altezza)
     x0, x1, y0, y1 = min(xs), max(xs), min(ys), max(ys)
@@ -261,7 +261,7 @@ def classifica_sagoma(larghezza, altezza, alfa, hx, hy):
     rx, ry = (hx - x0 + 0.5) / w, (hy - y0 + 0.5) / h
     pieni = set(zip(xs, ys))
     # the above-below symmetry of the silhouette inside its rectangle
-    simm = sum(1 for (x, y) in pieni if (x, y0 + y1 - y) in pieni) / len(pieni)
+    symm = sum(1 for (x, y) in pieni if (x, y0 + y1 - y) in pieni) / len(pieni)
     # how much of the rectangle is full: an arrow is thin, an hourglass is not
     pieno = len(pieni) / float(w * h)
     # the shaft: the longest opaque run on the hotspot's row (± 1)
@@ -273,12 +273,12 @@ def classifica_sagoma(larghezza, altezza, alfa, hx, hy):
             asta = max(asta, corsa)
     desc = ("%dx%d, silhouette %dx%d at (%d,%d), hotspot (%g,%g) = %.2f,%.2f of the "
             "silhouette, above/below symmetry %.2f, full %.2f, shaft %d/%d"
-            % (larghezza, altezza, w, h, x0, y0, hx, hy, rx, ry, simm, pieno, asta, w))
+            % (larghezza, altezza, w, h, x0, y0, hx, hy, rx, ry, symm, pieno, asta, w))
     if rx <= 0.2 and ry <= 0.2:
         return "freccia", desc
     if 0.25 <= rx <= 0.75 and 0.25 <= ry <= 0.75 and h >= 1.5 * w:
         return "testo", desc
-    if 0.3 <= ry <= 0.7 and w >= 0.8 * h and simm >= 0.8 and pieno <= 0.68 \
+    if 0.3 <= ry <= 0.7 and w >= 0.8 * h and symm >= 0.8 and pieno <= 0.68 \
             and asta >= 0.6 * w:
         return "orizzontale", desc
     return "altra", desc
@@ -299,7 +299,7 @@ def classifica(veste):
         return "illeggibile", "unreadable PNG: %s" % e
     l, a = im.size
     alfa = [p[3] for p in im.getdata()]
-    return classifica_sagoma(l, a, alfa, veste[2], veste[3])
+    return classify_shape(l, a, alfa, veste[2], veste[3])
 
 
 def giudica_passo(nome, atteso, prima, cambi, t_mossa):
@@ -316,7 +316,7 @@ def giudica_passo(nome, atteso, prima, cambi, t_mossa):
             return CIECO, ("%s: the shape was already «%s» before the movement and did not "
                            "change: the step proves nothing" % (nome, atteso)), None
         return ROSSO, ("%s: in %.0f ms the shape DID NOT CHANGE (stays «%s», expected «%s»)"
-                       % (nome, GUARDA_S * 1000, prima, atteso)), None
+                       % (nome, LOOK_S * 1000, prima, atteso)), None
     entro = [c for c in dopo if c[0] - t_mossa <= TETTO_MS]
     if not entro:
         c = dopo[0]
@@ -367,7 +367,7 @@ def giudica_scansione(nome, atteso, prima, cambi, mosse):
                       else "stays «%s», no change" % prima)), None
 
 
-def giudica_tutto(osservati, tabella):
+def judge_all(osservati, tabella):
     """[(step, outcome, reason, ms)] and the overall outcome, for a table."""
     righe = []
     for p in PASSI:
@@ -385,7 +385,7 @@ def giudica_tutto(osservati, tabella):
     return (ROSSO if ROSSO in v else (CIECO if CIECO in v else VERDE)), righe
 
 
-def _vicino(p, c, toll=TOLLERANZA):
+def _near(p, c, toll=TOLLERANZA):
     return abs(p[0] - c[0]) <= toll and abs(p[1] - c[1]) <= toll and abs(p[2] - c[2]) <= toll
 
 
@@ -404,35 +404,35 @@ def trova_finestra(larghezza, altezza, pixel, passo=1):
       photograph); the fine edge is looked for pixel by pixel anyway."""
     col = [0] * larghezza
     rig = [0] * altezza
-    gcol, grig = [0] * larghezza, [0] * altezza
+    gcol, gray_rows = [0] * larghezza, [0] * altezza
     for y in range(0, altezza, passo):
         base = y * larghezza
         for x in range(0, larghezza, passo):
             p = pixel[base + x]
-            if _vicino(p, CIANO):
+            if _near(p, CYAN):
                 col[x] += 1
                 rig[y] += 1
-            elif _vicino(p, GIALLO):
+            elif _near(p, GIALLO):
                 gcol[x] += 1
-                grig[y] += 1
+                gray_rows[y] += 1
     if max(col) == 0:
         return None, "no cyan pixel: the test window does not show"
     xs = [x for x, n in enumerate(col) if n >= 0.3 * max(col)]
     ys = [y for y, n in enumerate(rig) if n >= 0.3 * max(rig)]
     x0, x1, y0, y1 = min(xs), max(xs) + passo - 1, min(ys), max(ys) + passo - 1
-    if (x1 - x0 + 1) * (y1 - y0 + 1) < AREA_MINIMA * larghezza * altezza:
+    if (x1 - x0 + 1) * (y1 - y0 + 1) < MIN_AREA * larghezza * altezza:
         return None, ("the cyan is there but it is small (%dx%d): it is not the window"
                       % (x1 - x0 + 1, y1 - y0 + 1))
     cx, cy = (x0 + x1) // 2, (y0 + y1) // 2
     # ⚠ with `passo` the centre must be put back on a sampled row of the cyan
     cx, cy = cx - cx % passo, cy - cy % passo
-    if not _vicino(pixel[cy * larghezza + cx], CIANO):
+    if not _near(pixel[cy * larghezza + cx], CYAN):
         return None, "the centre of the cyan (%d,%d) is not cyan: the window is covered" % (cx, cy)
     bordi = []
     for dy in (-20, -10, 0, 10, 20):
         y = min(max(cy + dy, 0), altezza - 1)
         x = cx
-        while x + 1 < larghezza and _vicino(pixel[y * larghezza + x + 1], CIANO):
+        while x + 1 < larghezza and _near(pixel[y * larghezza + x + 1], CYAN):
             x += 1
         bordi.append(x)
     bordi.sort()
@@ -440,7 +440,7 @@ def trova_finestra(larghezza, altezza, pixel, passo=1):
     if max(gcol) == 0:
         return None, "no yellow pixel: the text box does not show"
     gx = [x for x, n in enumerate(gcol) if n >= 0.3 * max(gcol)]
-    gy = [y for y, n in enumerate(grig) if n >= 0.3 * max(grig)]
+    gy = [y for y, n in enumerate(gray_rows) if n >= 0.3 * max(gray_rows)]
     return {"ciano": [x0, y0, x1, y1], "centro": [cx, cy], "destro": destro,
             "bordi": bordi,
             "testo": [(min(gx) + max(gx)) // 2, (min(gy) + max(gy)) // 2],
@@ -456,7 +456,7 @@ def _png(im):
     return b.getvalue()
 
 
-def cursori_finti():
+def fake_cursors():
     """The cursors drawn here, with the shape of the real ones."""
     from PIL import Image, ImageDraw
     fr = Image.new("RGBA", (24, 24), (0, 0, 0, 0))
@@ -509,7 +509,7 @@ def certifica():
             guai.append(cosa)
 
     try:
-        c = cursori_finti()
+        c = fake_cursors()
     except ImportError:
         print("⛔ PIL is not there: I cannot certify ⇒ 3")
         return 3
@@ -576,8 +576,8 @@ def certifica():
                      "scansione": [(-1, 2000), (0, 2400)]},
            "testo": {"prima": "orizzontale", "cambi": [(3070, te[0], te[1])],
                      "t_mossa": 3000}}
-    es, _ = giudica_tutto(oss, ATTESO)
-    eg, righe = giudica_tutto(oss, ATTESO_SBAGLIATO)
+    es, _ = judge_all(oss, ATTESO)
+    eg, righe = judge_all(oss, EXPECTED_WRONG)
     prova("right table ⇒ GREEN, shifted table ⇒ RED", es == VERDE and eg == ROSSO,
           "healthy %s · fault %s (%s)" % (es, eg, righe[0][2]))
     # 5. the window in the photograph
@@ -594,13 +594,13 @@ def certifica():
     f, perche = trova_finestra(L, A, px)
     prova("trova_finestra: right edge = 299", bool(f) and f["destro"] == 299,
           perche or json.dumps(f))
-    f3, perche3 = trova_finestra(L, A, px, passo=3)
+    f3, why3 = trova_finestra(L, A, px, passo=3)
     prova("trova_finestra with step 3: right edge = 299 all the same",
-          bool(f3) and f3["destro"] == 299, perche3 or json.dumps(f3))
+          bool(f3) and f3["destro"] == 299, why3 or json.dumps(f3))
     prova("trova_finestra: the text falls in the yellow",
           bool(f) and 62 <= f["testo"][0] < 150 and 52 <= f["testo"][1] < 100)
-    f2, perche2 = trova_finestra(L, A, [(90, 90, 90)] * (L * A))
-    prova("trova_finestra: without cyan ⇒ no window", f2 is None, perche2)
+    f2, why2 = trova_finestra(L, A, [(90, 90, 90)] * (L * A))
+    prova("trova_finestra: without cyan ⇒ no window", f2 is None, why2)
     print()
     if guai:
         print("⛔ CERTIFICATION FAILED: %d tests out of %d" % (len(guai), len(fatte)))
@@ -617,7 +617,7 @@ def certifica():
 # ⭐ The observer: the instant of every movement and of every change of the garment,
 #   with the page's `performance.now()` — that is the latency measured where the
 #   user sees it, not by the bench waiting for Marionette's answers.
-JS_OSSERVA = r"""
+JS_OBSERVE = r"""
 (function () {
   if (window.__C21__) return;
   const s = document.getElementById('schermo');
@@ -700,19 +700,19 @@ def foto_piena(g):
     return png
 
 
-def dalla_foto_al_desktop(geo, pw, ph, px, py):
+def from_photo_to_desktop(geo, pw, ph, px, py):
     """Photograph pixels ⇒ desktop pixels (floating point)."""
     return ((px * geo["bw"] / pw - geo["bx0"]) / geo["sx"],
             (py * geo["bh"] / ph - geo["by0"]) / geo["sy"])
 
 
-def dal_desktop_al_vetro(geo, X, Y):
+def desktop_to_glass(geo, X, Y):
     """Desktop pixels ⇒ browser coordinates (the same as `cl_disegna`)."""
     return (geo["left"] + (geo["bx0"] + X * geo["sx"]) * geo["vx"],
             geo["top"] + (geo["by0"] + Y * geo["sy"]) * geo["vy"])
 
 
-def cerca_la_finestra(g, attesa, salva, nome):
+def search_window(g, attesa, salva, nome):
     """Waits for the test window to appear STILL (two equal photographs)."""
     from PIL import Image
     fine = time.time() + attesa
@@ -749,7 +749,7 @@ def cerca_la_finestra(g, attesa, salva, nome):
 
 # ⭐ The ESC in the key table of `12-client-veri` (which has only Control and
 #   the arrow): an entry is ADDED, the driver is not copied.
-VERI.TASTI.setdefault("Escape", {"key": "Escape", "code": "Escape", "vk": 27,
+VERI.KEYS.setdefault("Escape", {"key": "Escape", "code": "Escape", "vk": 27,
                                  "wd": "\ue00c"})
 
 
@@ -758,7 +758,7 @@ def sveglia(g, geo):
     try:
         g.js("if (document.activeElement && document.activeElement.blur) "
              "document.activeElement.blur(); return 1;")
-        x, y = dal_desktop_al_vetro(geo, geo["tl"] * 0.5, geo["ta"] * 0.5)
+        x, y = desktop_to_glass(geo, geo["tl"] * 0.5, geo["ta"] * 0.5)
         g.muovi(x, y)
         time.sleep(0.3)
         g.tasto("Escape")
@@ -768,31 +768,31 @@ def sveglia(g, geo):
         return "⚠ ESC not sent: %s" % str(e)[:120]
 
 
-def scansiona(g, geo, Xbordo, Y):
+def scansiona(g, geo, Xedge, Y):
     """⭐ The edge, one pixel per step.  Returns (final X, [(offset, t0)], t0, data)."""
     t_inizio = g.js(JS_ORA)
     passi = []
     for k in SCANSIONE:
-        vx, vy = dal_desktop_al_vetro(geo, Xbordo + k, Y)
+        vx, vy = desktop_to_glass(geo, Xedge + k, Y)
         passi.append((k, g.js(JS_ORA)))
         g.muovi(vx, vy)
         time.sleep(PASSO_SCANSIONE_S)
-    time.sleep(max(0.0, GUARDA_S - PASSO_SCANSIONE_S))
-    return Xbordo + SCANSIONE[-1], passi, t_inizio, g.js(JS_DOPO, t_inizio)
+    time.sleep(max(0.0, LOOK_S - PASSO_SCANSIONE_S))
+    return Xedge + SCANSIONE[-1], passi, t_inizio, g.js(JS_DOPO, t_inizio)
 
 
-def un_passo(g, x, y):
+def one_step(g, x, y):
     """Moves the pointer and gathers what the page saw."""
     t0 = g.js(JS_ORA)
     g.muovi(x, y)
-    time.sleep(GUARDA_S)
+    time.sleep(LOOK_S)
     return t0, g.js(JS_DOPO, t0)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 #  INSIDE THE BOX
 # ═══════════════════════════════════════════════════════════════════════════
-def prepara_la_casa(sc, chi, largo, alto):
+def prepare_home(sc, chi, largo, alto):
     """The known page and the Firefox profile, in the tenant's home."""
     b = lambda s: base64.b64encode(s.encode()).decode()     # noqa: E731
     c, t = sc.dentro(
@@ -873,29 +873,29 @@ def osserva(nome, o, sc, chi):
 
         # ── the test window ────────────────────────────────────────────────
         largo_f, alto_f = geo["tl"] * 0.45, geo["ta"] * 0.55
-        ok, t = prepara_la_casa(sc, chi, largo_f, alto_f)
+        ok, t = prepare_home(sc, chi, largo_f, alto_f)
         if not ok:
             return dict(riga, esito=CIECO, perche="the home cannot be prepared: %s" % t[-200:]), None
         ok, t = accendi_la_finestra(sc, chi)
         if not ok:
             return dict(riga, esito=CIECO, perche="firefox-esr does not start: %s" % t[-200:]), None
-        f, perche = cerca_la_finestra(g, o.attesa_finestra, o.salva, nome)
+        f, perche = search_window(g, o.attesa_finestra, o.salva, nome)
         if not f:
             return dict(riga, esito=CIECO, perche="the test window does not show within "
                         "%d s: %s" % (o.attesa_finestra, perche)), None
         pw, ph = f["foto"]
         # ⛔ A preview is not a window: if the cyan is much narrower than
         #   the size asked for in the profile, the overview is still there.
-        lx0, _ = dalla_foto_al_desktop(geo, pw, ph, f["ciano"][0], 0)
-        lx1, _ = dalla_foto_al_desktop(geo, pw, ph, f["destro"] + 1, 0)
+        lx0, _ = from_photo_to_desktop(geo, pw, ph, f["ciano"][0], 0)
+        lx1, _ = from_photo_to_desktop(geo, pw, ph, f["destro"] + 1, 0)
         if lx1 - lx0 < 0.7 * largo_f:
             return dict(riga, esito=CIECO, perche="the window is %d px wide and I asked for "
                         "%d: it is a preview (the overview?), not the window"
                         % (lx1 - lx0, largo_f)), None
-        Xd, Yc = dalla_foto_al_desktop(geo, pw, ph, f["destro"] + 0.5, f["centro"][1] + 0.5)
+        Xd, Yc = from_photo_to_desktop(geo, pw, ph, f["destro"] + 0.5, f["centro"][1] + 0.5)
         Xd = int(Xd)                               # the last cyan pixel, in the desktop
-        Xc, Yc = dalla_foto_al_desktop(geo, pw, ph, f["centro"][0] + 0.5, f["centro"][1] + 0.5)
-        Xt, Yt = dalla_foto_al_desktop(geo, pw, ph, f["testo"][0] + 0.5, f["testo"][1] + 0.5)
+        Xc, Yc = from_photo_to_desktop(geo, pw, ph, f["centro"][0] + 0.5, f["centro"][1] + 0.5)
+        Xt, Yt = from_photo_to_desktop(geo, pw, ph, f["testo"][0] + 0.5, f["testo"][1] + 0.5)
         if Xd + SCANSIONE[-1] + 2 >= geo["tl"]:
             return dict(riga, esito=CIECO, perche="the right edge of the window (x=%d) is "
                         "on the edge of the screen: there is no room outside" % Xd), None
@@ -910,7 +910,7 @@ def osserva(nome, o, sc, chi):
                                             Xd + SCANSIONE[-1]), flush=True)
 
         # ── the steps ──────────────────────────────────────────────────────
-        g.js(VERI._inietta(JS_OSSERVA))
+        g.js(VERI._inject(JS_OBSERVE))
         if not g.js("return !!window.__C21__;"):
             return dict(riga, esito=CIECO, perche="the observer did not install itself"), None
         osservati = {}
@@ -920,8 +920,8 @@ def osserva(nome, o, sc, chi):
             if passo == "bordo":
                 X, scansione, t0, d = scansiona(g, geo, X, Y)
             else:
-                vx, vy = dal_desktop_al_vetro(geo, X, Y)
-                t0, d = un_passo(g, vx, vy)
+                vx, vy = desktop_to_glass(geo, X, Y)
+                t0, d = one_step(g, vx, vy)
             if not d:
                 return dict(riga, esito=CIECO, perche="%s: the observer does not answer" % passo), \
                     None
@@ -994,7 +994,7 @@ def giudica_browser(riga, osservati, guasto):
     """The verdict of one browser.  ⛔ With the fault it reads the other way round."""
     if osservati is None:
         return riga
-    es, rs = giudica_tutto(osservati, ATTESO)
+    es, rs = judge_all(osservati, ATTESO)
     for p, e, m, _ms in rs:
         print("   %s %s" % ({VERDE: "⭐ 0", ROSSO: "⛔ 1", CIECO: "⚠ 3"}[e], m))
     riga["sano"] = {"esito": es, "passi": [[p, e, m] for p, e, m, _ in rs]}
@@ -1002,7 +1002,7 @@ def giudica_browser(riga, osservati, guasto):
         perche = "; ".join(m for _p, e, m, _ in rs if e == es) if es != VERDE else \
             "the shape changes on all three steps within %.0f ms" % TETTO_MS
         return dict(riga, esito=es, perche=perche)
-    eg, rg = giudica_tutto(osservati, ATTESO_SBAGLIATO)
+    eg, rg = judge_all(osservati, EXPECTED_WRONG)
     riga["guasto"] = {"esito": eg, "passi": [[p, e, m] for p, e, m, _ in rg]}
     print("   ── the table shifted by one (--forma-sbagliata) ──")
     for p, e, m, _ms in rg:
@@ -1054,7 +1054,7 @@ def main():
         os.makedirs(o.salva, exist_ok=True)
     sc = C20V.Scatola(o.scatola)
     chi = "c21u%03d" % random.randint(0, 999)
-    assert MODELLO_INQUILINO.match(chi)
+    assert TENANT_PATTERN.match(chi)
     o.utente = chi
     print("⭐ 11-c21 · %s · %s · inquilino %s · browser %s · %s%s"
           % (sc.contenitore, o.url, chi, o.browser,

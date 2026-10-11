@@ -10,7 +10,7 @@
  * SWS_CS_ITU709)`, full-range source, limited output.  Removing ffmpeg also
  * removes libswscale, and the conversion has to be redone **identically**:
  * two different matrices at the two ends would measure the matrix, not the
- * image (the colour numbers are declared, not inherited: `COLORE_PRIMARI`… in
+ * image (the colour numbers are declared, not inherited: `COLOR_PRIMARIES`… in
  * `vadiretta.c`, `vui264`/`vui265` in `vulkanvideo.c`, and the matrix IMPOSED
  * on the GPU conversion, `converti_sulla_gpu()` in `codificatore.c`).
  *
@@ -55,8 +55,8 @@ typedef enum {
 bool colori709_a_i420(const uint8_t *pixel, uint32_t passo, uint32_t larghezza,
                       uint32_t altezza, Colori709Ordine ordine,
                       uint8_t *y, uint32_t passo_y,
-                      uint8_t *u, uint32_t passo_u,
-                      uint8_t *v, uint32_t passo_v);
+                      uint8_t *u, uint32_t stride_u,
+                      uint8_t *v, uint32_t stride_v);
 
 /* ⭐ 10 bits, three 16-bit planes (`yuv420p10le`): for 10-bit SVT-AV1.  ⚠ These
  *    are 8 bits PROMOTED with the matrix computed at 10 bits, not 8 bits shifted
@@ -65,8 +65,8 @@ bool colori709_a_i420(const uint8_t *pixel, uint32_t passo, uint32_t larghezza,
 bool colori709_a_i420_10(const uint8_t *pixel, uint32_t passo, uint32_t larghezza,
                          uint32_t altezza, Colori709Ordine ordine,
                          uint16_t *y, uint32_t passo_y,
-                         uint16_t *u, uint32_t passo_u,
-                         uint16_t *v, uint32_t passo_v);
+                         uint16_t *u, uint32_t stride_u,
+                         uint16_t *v, uint32_t stride_v);
 
 /* ⭐ 8-bit semi-planar (NV12): for the card route when zero copy is not
  *    available and the frame comes up from memory (`c->appoggio` in
@@ -74,12 +74,12 @@ bool colori709_a_i420_10(const uint8_t *pixel, uint32_t passo, uint32_t larghezz
 bool colori709_a_nv12(const uint8_t *pixel, uint32_t passo, uint32_t larghezza,
                       uint32_t altezza, Colori709Ordine ordine,
                       uint8_t *y, uint32_t passo_y,
-                      uint8_t *uv, uint32_t passo_uv);
+                      uint8_t *uv, uint32_t stride_uv);
 
 /* ⭐ 10-bit semi-planar (P010: the ten bits in the HIGH bits of sixteen). */
-bool colori709_a_p010(const uint8_t *pixel, uint32_t passo, uint32_t larghezza,
+bool colors709_to_p010(const uint8_t *pixel, uint32_t passo, uint32_t larghezza,
                       uint32_t altezza, Colori709Ordine ordine,
                       uint16_t *y, uint32_t passo_y,
-                      uint16_t *uv, uint32_t passo_uv);
+                      uint16_t *uv, uint32_t stride_uv);
 
 #endif

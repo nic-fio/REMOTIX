@@ -28,7 +28,7 @@ import suite as S                                                     # noqa: E4
 
 G1B = S._carica("g1b", os.path.join(S.QUI, "15-g1b-comune.py"))
 FUNZIONI = ("F-032",)
-PANNELLO = {"gnome": "gnome-shell", "kde": "plasmashell", "xfce": "xfce4-panel",
+PANEL = {"gnome": "gnome-shell", "kde": "plasmashell", "xfce": "xfce4-panel",
             "lxqt": "lxqt-panel"}
 
 
@@ -76,10 +76,10 @@ def corpo(o, E):
         shell = t.strip()
         if c != 0 or not shell:
             raise S.Bloccata("the tenant's passwd line cannot be read: %s" % t[-200:])
-        processo = PANNELLO[o.scatola]
+        processo = PANEL[o.scatola]
         amb = {}
         for _ in range(30):                     # the panel is born a few seconds later
-            amb = G1B.ambiente_di(s, processo)
+            amb = G1B.environment_of(s, processo)
             if amb:
                 break
             time.sleep(1)
@@ -111,7 +111,7 @@ def corpo(o, E):
         E.metti("F-032", esito, ragione if esito != S.PASS else "",
                 atteso="the session's SHELL = passwd (%s) outside GNOME, empty on GNOME; "
                        "on LXQt qterminal opens %s" % (shell, os.path.basename(shell)),
-                osservato=ragione, evidenze=[s.salva_console()])
+                osservato=ragione, evidenze=[s.save_console()])
         if o.guasto:
             # the fault: the judge with the wrong expectation — /bin/sh outside GNOME, and on
             # GNOME another desktop's judge (which wants the shell, not the empty one)

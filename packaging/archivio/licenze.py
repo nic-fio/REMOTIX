@@ -17,7 +17,7 @@ never says more than it knows.
 import glob, json, os, re, sys, urllib.request
 
 archivio, inst = sys.argv[1], sys.argv[2]
-licenza_go = sys.argv[3] if len(sys.argv) > 3 else ""
+go_license = sys.argv[3] if len(sys.argv) > 3 else ""
 mancano = []
 parti = []
 
@@ -66,8 +66,8 @@ for lib in sorted(statiche):
         sezione(lib, v, spdx(testo), "linked STATICALLY into the remotix binary (" + url + ")", testo)
 
 # 3. the engine: the Go library and the modules
-if licenza_go and os.path.exists(licenza_go):
-    t = open(licenza_go).read()
+if go_license and os.path.exists(go_license):
+    t = open(go_license).read()
     sezione("Go (standard library and runtime)", "", spdx(t), "inside the static remotix-install binary", t)
 else:
     mancano.append("the Go licence (the file from the build container)")

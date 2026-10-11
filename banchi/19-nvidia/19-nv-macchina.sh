@@ -43,7 +43,7 @@ set -u
 export LC_ALL=C.UTF-8 DEBIAN_FRONTEND=noninteractive
 QUI=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 ALBERO=$(cd "$QUI/../.." && pwd)
-VALIGIA=$(cd "$ALBERO/.." && pwd)
+SUITCASE=$(cd "$ALBERO/.." && pwd)
 LAVORO=${LAVORO:-/var/lib/remotix-nv}
 PRIMA=$LAVORO/prima
 FATTO=$LAVORO/fatto
@@ -341,20 +341,20 @@ driver() {
 # The spare memory (5 Oct 2026: the rented machine may have 8 GB, the bench asked for 16).
 # Without it, when memory runs out the system kills the browser mid-test, and the red would look like the
 # product's.  Under 12 GiB and without swap: a 4 GiB file, which "pulisci" removes.
-SCORTA=/remotix-nv.scorta
+SPARE=/remotix-nv.scorta
 scorta() {
 	local kib
 	kib=$(awk '/MemTotal/{print $2}' /proc/meminfo)
 	if [ "$kib" -ge $((12 * 1048576)) ]; then ok "memory $((kib / 1048576)) GiB: no swap needed"; return 0; fi
 	if [ -n "$(swapon --noheadings 2>/dev/null)" ]; then ok "memory $((kib / 1048576)) GiB, swap already present: $(swapon --noheadings --show=NAME,SIZE | tr '\n' ' ')"; return 0; fi
-	if fallocate -l 4G "$SCORTA" 2>/dev/null || dd if=/dev/zero of="$SCORTA" bs=1M count=4096 status=none; then
-		chmod 600 "$SCORTA"
-		if mkswap "$SCORTA" > /dev/null 2>&1 && swapon "$SCORTA" 2>/dev/null; then
-			ok "memory $((kib / 1048576)) GiB ⇒ 4 GiB swap turned on ($SCORTA)"
+	if fallocate -l 4G "$SPARE" 2>/dev/null || dd if=/dev/zero of="$SPARE" bs=1M count=4096 status=none; then
+		chmod 600 "$SPARE"
+		if mkswap "$SPARE" > /dev/null 2>&1 && swapon "$SPARE" 2>/dev/null; then
+			ok "memory $((kib / 1048576)) GiB ⇒ 4 GiB swap turned on ($SPARE)"
 			return 0
 		fi
 	fi
-	rm -f "$SCORTA"
+	rm -f "$SPARE"
 	avviso "memory $((kib / 1048576)) GiB and the swap does not turn on: a red from memory running out must be read in the kernel log (oom)"
 }
 
@@ -454,8 +454,8 @@ dipendenze() {
 	command -v google-chrome >/dev/null && ok "Chrome: $(google-chrome --version 2>/dev/null)" \
 		|| { ko "Chrome does not install"; esito dipendenze ROSSO chrome; return 1; }
 	# the "firefox" the benches launch (07-b46: `firefox --marionette`) is firefox-esr
-	mkdir -p "$VALIGIA/bin"
-	ln -sf "$(command -v firefox-esr)" "$VALIGIA/bin/firefox"
+	mkdir -p "$SUITCASE/bin"
+	ln -sf "$(command -v firefox-esr)" "$SUITCASE/bin/firefox"
 	# the bench user: the browsers do NOT run as root; passwordless sudo to get "into the box"
 	# (which here is the machine itself); linger to have /run/user/<uid> and its labwc
 	if ! id "$UTENTE_BANCO" >/dev/null 2>&1; then
@@ -486,14 +486,14 @@ dipendenze() {
 # ═══════════════════════════════════════════════════════════════════════════
 remotix() {
 	log "(b) REMOTIX from the .deb, with the installer"
-	local fam deb ri="$VALIGIA/bin/remotix-install" e=0
+	local fam deb ri="$SUITCASE/bin/remotix-install" e=0
 	fam=$(famiglia)
 	case $fam in
-	debian) deb=$(ls "$VALIGIA"/pacchetti/remotix_*deb13*_amd64.deb 2>/dev/null | head -1) ;;
-	ubuntu) deb=$(ls "$VALIGIA"/pacchetti/remotix_*ubuntu26.04*_amd64.deb 2>/dev/null | head -1) ;;
+	debian) deb=$(ls "$SUITCASE"/pacchetti/remotix_*deb13*_amd64.deb 2>/dev/null | head -1) ;;
+	ubuntu) deb=$(ls "$SUITCASE"/pacchetti/remotix_*ubuntu26.04*_amd64.deb 2>/dev/null | head -1) ;;
 	*) deb="" ;;
 	esac
-	[ -n "$deb" ] || { ko "no .deb for $(distro) in $VALIGIA/pacchetti"; esito remotix ROSSO "the .deb is missing"; return 1; }
+	[ -n "$deb" ] || { ko "no .deb for $(distro) in $SUITCASE/pacchetti"; esito remotix ROSSO "the .deb is missing"; return 1; }
 	ok "package: $(basename "$deb")"
 	# the installer's preliminary check (read only): RX-GPU-*, the vulkan route, the ICD
 	"$ri" check > "$EVID/installatore-verifica.txt" 2>&1
@@ -502,9 +502,9 @@ remotix() {
 	ok "check: codes $(cat "$LAVORO/codici-verifica")"
 	# the single package in small (DECISIONI §10.36): the packages/<target>/ folder with the .deb, and
 	# `install` answering "y" to the question like a person
-	local bers
-	case $fam in debian) bers=debian13 ;; ubuntu) bers=ubuntu2604 ;; esac
-	rm -rf "$LAVORO/bundle"; mkdir -p "$LAVORO/bundle/$bers"; cp "$deb" "$LAVORO/bundle/$bers/"
+	local tgt
+	case $fam in debian) tgt=debian13 ;; ubuntu) tgt=ubuntu2604 ;; esac
+	rm -rf "$LAVORO/bundle"; mkdir -p "$LAVORO/bundle/$tgt"; cp "$deb" "$LAVORO/bundle/$tgt/"
 	if printf 'y\n' | "$ri" install --bundle "$LAVORO/bundle" --port "$PORTA" --users "$UTENTE_BANCO" \
 		> "$EVID/installatore-applica.txt" 2>&1; then
 		ok "the installer installed REMOTIX"
@@ -682,8 +682,8 @@ suite() {
 	local sistema
 	sistema="$(. /etc/os-release; echo "$PRETTY_NAME") · $(nvidia-smi --query-gpu=name,driver_version --format=csv,noheader 2>/dev/null | head -1) · ${DESKTOP_NV:-xfce} · browser: $modo"
 	runuser -u "$UTENTE_BANCO" -- env XDG_RUNTIME_DIR="/run/user/$uid" WAYLAND_DISPLAY="$sock" \
-		PATH="$VALIGIA/bin:$PATH" RXNV_REGISTRO="$LAVORO/registro.log" RXNV_SISTEMA="$sistema" \
-		RXNV_VERSIONE="$(head -1 "$VALIGIA/VERSIONE" 2>/dev/null)" \
+		PATH="$SUITCASE/bin:$PATH" RXNV_REGISTRO="$LAVORO/registro.log" RXNV_SISTEMA="$sistema" \
+		RXNV_VERSIONE="$(head -1 "$SUITCASE/VERSIONE" 2>/dev/null)" \
 		python3 "$QUI/19-nv-suite.py" --registro "$u/registro.jsonl" --evidenze "$u" \
 		--porta "$PORTA" --modo "$modo" --desktop "${DESKTOP_NV:-xfce}" ${PROVE:+--prove "$PROVE"} ${BROWSER_SUITE:+--browser "$BROWSER_SUITE"} \
 		> "$EVID/suite.txt" 2>&1
@@ -715,7 +715,7 @@ raccogli() {
 	grep -i -E 'NVRM|Xid|nvidia' "$EVID/nucleo.txt" > "$EVID/nucleo-nvidia.txt" 2>/dev/null
 	nvidia-smi -q > "$EVID/nvidia-smi-fine.txt" 2>&1
 	cp -f "$LAVORO/registro.log" "$EVID/server-registro.log" 2>/dev/null
-	cp -f "$VALIGIA/VERSIONE" "$EVID/" 2>/dev/null
+	cp -f "$SUITCASE/VERSIONE" "$EVID/" 2>/dev/null
 	cp -f "$LAVORO/piano.json" "$EVID/" 2>/dev/null
 	local nome
 	nome="remotix-nv-$(hostname -s)-$(date +%Y%m%d-%H%M).tar.gz"
@@ -747,9 +747,9 @@ pulisci() {
 	done
 	[ -f "$LAVORO/opt-remotix-nostra" ] && rm -rf /opt/remotix
 	# 2. REMOTIX: with the installer if it installed it, then our two files
-	if [ -x /usr/bin/remotix-install ] || [ -x "$VALIGIA/bin/remotix-install" ]; then
+	if [ -x /usr/bin/remotix-install ] || [ -x "$SUITCASE/bin/remotix-install" ]; then
 		local ri=/usr/bin/remotix-install
-		[ -x $ri ] || ri=$VALIGIA/bin/remotix-install
+		[ -x $ri ] || ri=$SUITCASE/bin/remotix-install
 		if printf 'y\n' | $ri uninstall --purge > "$LAVORO/disinstalla.txt" 2>&1; then
 			ok "REMOTIX uninstalled by the installer"
 		else
@@ -774,7 +774,7 @@ pulisci() {
 		ln -sfn ../lib/firefox-esr/firefox /usr/bin/firefox-esr
 	fi
 	# 3-bis. the spare memory, if we had added it
-	if [ -f "$SCORTA" ]; then swapoff "$SCORTA" 2>/dev/null; rm -f "$SCORTA"; ok "swap removed"; fi
+	if [ -f "$SPARE" ]; then swapoff "$SPARE" 2>/dev/null; rm -f "$SPARE"; ok "swap removed"; fi
 	# 4. modeset, if we had set it
 	if [ -f /etc/modprobe.d/remotix-nv.conf ]; then
 		rm -f /etc/modprobe.d/remotix-nv.conf
@@ -811,16 +811,16 @@ pulisci() {
 	ok "/etc/apt as it was"
 	if [ ! -f "$PRIMA/etc-remotix" ]; then rm -rf /etc/remotix /var/lib/remotix; fi
 	# 7. what is still different, said
-	local dopo_p dopo_u
-	dopo_p=$(comm -3 "$PRIMA/pacchetti.txt" <(installati) | tr -d '\t' | tr '\n' ' ')
-	dopo_u=$(comm -13 "$PRIMA/utenti.txt" <(getent passwd | cut -d: -f1 | sort) | tr '\n' ' ')
+	local after_p after_u
+	after_p=$(comm -3 "$PRIMA/pacchetti.txt" <(installati) | tr -d '\t' | tr '\n' ' ')
+	after_u=$(comm -13 "$PRIMA/utenti.txt" <(getent passwd | cut -d: -f1 | sort) | tr '\n' ' ')
 	{
-		echo "packages different from before: ${dopo_p:-none}"
-		echo "extra users (from the packages): ${dopo_u:-none}"
+		echo "packages different from before: ${after_p:-none}"
+		echo "extra users (from the packages): ${after_u:-none}"
 		echo "reboot recommended: $([ $riavvio = 1 ] && echo yes || echo no)"
 	} | tee "$LAVORO/pulito.txt" | sed 's/^/    /'
 	[ $riavvio = 1 ] && avviso "REBOOT RECOMMENDED: driver or modeset removed"
-	ok "clean (the suitcase $VALIGIA and $LAVORO are removed by the laptop, once the script ends)"
+	ok "clean (the suitcase $SUITCASE and $LAVORO are removed by the laptop, once the script ends)"
 	return 0
 }
 

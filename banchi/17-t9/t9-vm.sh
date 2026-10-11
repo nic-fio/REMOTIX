@@ -86,8 +86,8 @@ prepara)
 	;;
 fuori-linea)
 	r=${1:-risposte-debian.conf}
-	pac=${PACCHETTO:-$E/fuori-linea.tar}
-	vm "sudo rm -rf /root/fuori-linea && sudo tar -C /root -xf -" <"$pac"
+	pkt=${PACCHETTO:-$E/fuori-linea.tar}
+	vm "sudo rm -rf /root/fuori-linea && sudo tar -C /root -xf -" <"$pkt"
 	T0=$(date +%s); date -u +%T >"$E/finestra.txt"
 	vm "sudo /root/remotix-install install --offline /root/fuori-linea --answers /root/$r" >"$E/installa.txt" 2>&1
 	u=$?; date -u +%T >>"$E/finestra.txt"

@@ -39,7 +39,7 @@ while i + 16 <= len(b):
     tipo = struct.unpack(">H", f[12:14])[0]
     if ospite is None and src.startswith("52:54:00:12"):
         ospite = src
-    dalla_vm = src == ospite
+    from_vm = src == ospite
     ora = time.strftime("%H:%M:%S", time.gmtime(ts))
     chiave = None
     p = f[14:]
@@ -52,30 +52,30 @@ while i + 16 <= len(b):
             sp, dp = struct.unpack(">HH", p[ihl:ihl + 4])
         if proto == 6:
             flag = p[ihl + 13] if len(p) > ihl + 13 else 0
-            servizio = sp if dalla_vm else dp
+            servizio = sp if from_vm else dp
             if servizio in (22, 7447):
                 entrata["TCP %d (bench forward)" % servizio] += 1
                 continue
-            if dalla_vm and flag & 0x02 and not flag & 0x10:
+            if from_vm and flag & 0x02 and not flag & 0x10:
                 chiave = "TCP %s → %s:%d" % (s, d, dp)
-            elif dalla_vm:
+            elif from_vm:
                 chiave = "TCP %s → %s:%d (follow-up)" % (s, d, dp)
             else:
                 entrata["TCP from %s:%d" % (s, sp)] += 1
                 continue
         elif proto == 17:
-            if (dalla_vm and sp == 7447) or (not dalla_vm and dp == 7447):
+            if (from_vm and sp == 7447) or (not from_vm and dp == 7447):
                 entrata["UDP 7447 (bench forward, QUIC)"] += 1
                 continue
-            if not dalla_vm:
+            if not from_vm:
                 entrata["UDP from %s:%d" % (s, sp)] += 1
                 continue
             chiave = "UDP %s:%d → %s:%d" % (s, sp, d, dp)
         else:
-            if not dalla_vm:
+            if not from_vm:
                 continue
             chiave = "IP proto %d %s → %s" % (proto, s, d)
-    elif dalla_vm:
+    elif from_vm:
         chiave = {0x0806: "ARP", 0x86DD: "IPv6 (neighbour, multicast)"}.get(tipo, "ethertype %04x" % tipo)
     if chiave:
         t = tentativi.setdefault(chiave, [ora, ora, 0])

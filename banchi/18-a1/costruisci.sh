@@ -22,14 +22,14 @@ FUORI=${1:-/tmp/18-a1}
 mkdir -p "$FUORI"
 
 CF="-O2 -g -std=gnu11 -Wall -Wextra -Wno-unused-parameter -D_GNU_SOURCE -I$SRC"
-RINOMINA="-Daudio_cod_apri=vecchio_cod_apri -Daudio_cod_chiudi=vecchio_cod_chiudi \
+RENAMES="-Daudio_cod_apri=vecchio_cod_apri -Daudio_cod_chiudi=vecchio_cod_chiudi \
  -Daudio_cod_blocco=vecchio_cod_blocco -Daudio_cod_passa=vecchio_cod_passa \
  -Daudio_cod_conti=vecchio_cod_conti -Daudio_cod_taciuti=vecchio_cod_taciuti \
  -Daudio_silenzio_taci=vecchio_silenzio_taci \
  -Daudio_silenzio_acceso=vecchio_silenzio_acceso"
 
 # shellcheck disable=SC2086
-cc $CF $RINOMINA $(pkg-config --cflags libavcodec libavutil) \
+cc $CF $RENAMES $(pkg-config --cflags libavcodec libavutil) \
    -c "$QUI/audio-vecchio.c" -o "$FUORI/audio-vecchio.o"
 # shellcheck disable=SC2086
 cc $CF $(pkg-config --cflags opus) -c "$SRC/audio.c" -o "$FUORI/audio-nuovo.o"

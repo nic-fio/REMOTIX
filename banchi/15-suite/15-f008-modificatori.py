@@ -55,12 +55,12 @@ FUNZIONI = ("F-008",)
 # ⭐ The widening of C23's palette and keys — it is ADDED, not copied:
 #   the page (`C23.pagina_scena`) and the judge (`C23.nome_colore`) read the
 #   same dictionary, so they cannot diverge.
-C23.SPECIALI.setdefault("ArrowRight", ("ArrowRight", "ArrowRight", 39, "", 0))
+C23.SPECIAL.setdefault("ArrowRight", ("ArrowRight", "ArrowRight", 39, "", 0))
 for _l in "rtv":
-    if _l not in C23.COLORI:
-        _libero = [c for c in C23._cubo() if c not in (C23.VUOTO, C23.ALTRO, C23.MARCA)
-                   and c not in C23.COLORI.values()][0]
-        C23.COLORI[_l] = _libero
+    if _l not in C23.COLORS:
+        _free = [c for c in C23._cube() if c not in (C23.VUOTO, C23.ALTRO, C23.MARCA)
+                   and c not in C23.COLORS.values()][0]
+        C23.COLORS[_l] = _free
         C23.ALFABETO += _l
 
 premi, scrivi, col = C23.premi, C23.scrivi, C23.col
@@ -170,12 +170,12 @@ def simula(passi, valore=""):
     return valore
 
 
-def esito_guasto_gruppo(coppie):
+def outcome_fault_group(coppie):
     """[(healthy outcome, outcome with the fault)] of a group ⇒ True seen / False / None.
     ⛔ A case counts only if its healthy pass was green."""
     if not coppie or any(s != VERDE for s, _g in coppie):
         return None
-    e = C23.esito_col_guasto([g for _s, g in coppie])
+    e = C23.outcome_with_fault([g for _s, g in coppie])
     return {VERDE: True, ROSSO: False, CIECO: None}[e]
 
 
@@ -189,7 +189,7 @@ def certifica():
         if not vero:
             guai.append(cosa)
 
-    tutti = [C23.MARCA, C23.VUOTO, C23.ALTRO] + list(C23.COLORI.values())
+    tutti = [C23.MARCA, C23.VUOTO, C23.ALTRO] + list(C23.COLORS.values())
     dmin = min(C23._dist(a, b) for i, a in enumerate(tutti) for b in tutti[i + 1:])
     prova("widened palette: %d distinct colours, minimum distance %d > 2×%d"
           % (len(set(tutti)), dmin, C23.TOLLERANZA),
@@ -203,19 +203,19 @@ def certifica():
         prova("[%s] %s with the fault ⇒ something else" % (gr, t.split()[0]), gu != a,
               "gives %r" % gu)
         prova("[%s] %s: every character has its colour, and it fits" % (gr, t.split()[0]),
-              all(c in C23.COLORI for c in b + a + gu) and max(len(b), len(a), len(gu))
+              all(c in C23.COLORS for c in b + a + gu) and max(len(b), len(a), len(gu))
               <= C23.CASELLE)
     geo = {"tl": 1920, "ta": 1080, "bw": 1920, "bh": 1080, "bx0": 0, "by0": 0,
            "sx": 1.0, "sy": 1.0}
     for v in ("abcdefdef", "ababab", "uno zdue tre", "cvv", "abccv"):
-        letto, perche = C23.leggi_striscia(C23.campionatore(C23._foto_finta(v, geo), geo))
+        letto, perche = C23.read_strip(C23.sampler_obj(C23._fake_photo(v, geo), geo))
         prova("strip %r reads back" % v, letto == v, "read %r %s" % (letto, perche))
     prova("fault: healthy green, fault all red ⇒ seen",
-          esito_guasto_gruppo([(VERDE, ROSSO), (VERDE, ROSSO)]) is True)
+          outcome_fault_group([(VERDE, ROSSO), (VERDE, ROSSO)]) is True)
     prova("fault: one comes back the same ⇒ NOT seen",
-          esito_guasto_gruppo([(VERDE, ROSSO), (VERDE, VERDE)]) is False)
+          outcome_fault_group([(VERDE, ROSSO), (VERDE, VERDE)]) is False)
     prova("fault: healthy red ⇒ not judged",
-          esito_guasto_gruppo([(ROSSO, ROSSO)]) is None)
+          outcome_fault_group([(ROSSO, ROSSO)]) is None)
     if guai:
         print("⛔ WIDENING NOT CERTIFIED: %d" % len(guai))
         return 1
@@ -226,25 +226,25 @@ def certifica():
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE PASS
 # ═══════════════════════════════════════════════════════════════════════════
-def un_caso(s, geo, gruppo, titolo, base, seq, atteso, etichetta):
+def one_case(s, geo, gruppo, titolo, base, seq, atteso, etichetta):
     """The case as `C23.osserva` does it: cleaning, base, sequence, three photos."""
     g, o = s.g, s.o
     corto = titolo.split()[0]
     nome = "%s-%s-c%s" % (o.browser, etichetta, corto)
-    C23.manda(g, C23.PULISCI)
+    C23.manda(g, C23.CLEAN)
     vuoto, pv = C23.fotografa_e_leggi(g, geo, "", o.salva, nome + "-0vuoto")
     if vuoto:
         # ⚠ `[M]` 25 Sep, kde, server under load: a lost cleaning (the field keeps
         #   the value of the previous case).  It is repeated ONCE: the cleaning is not
         #   the thing judged, and the «empty» check stays as it is.
-        C23.manda(g, C23.PULISCI)
+        C23.manda(g, C23.CLEAN)
         vuoto, pv = C23.fotografa_e_leggi(g, geo, "", o.salva, nome + "-0vuoto-bis")
     C23.manda(g, scrivi(base))
     vb, pb = C23.fotografa_e_leggi(g, geo, base, o.salva, nome + "-1base")
-    n0 = len(C23.leggi_il_quaderno(s.sc, s.chi))
+    n0 = len(C23.read_notebook(s.sc, s.chi))
     C23.manda(g, seq)
     visto, pvi = C23.fotografa_e_leggi(g, geo, atteso, o.salva, nome + "-2dopo")
-    es, msg = C23.giudica_caso(titolo, base, atteso, vuoto, vb, visto)
+    es, msg = C23.judge_case(titolo, base, atteso, vuoto, vb, visto)
     if es == CIECO and (vuoto is None or vb is None):
         msg += " — %s" % (pv or pb)
     elif visto is None and es != CIECO:
@@ -253,7 +253,7 @@ def un_caso(s, geo, gruppo, titolo, base, seq, atteso, etichetta):
         es, msg = CIECO, ("%s: the scene DIED during the case (firefox-esr is no longer "
                           "in the session): the red is not the product's%s"
                           % (titolo, G3.spiega_cieco(s.oom0)))
-    quad = C23.leggi_il_quaderno(s.sc, s.chi)[n0:]
+    quad = C23.read_notebook(s.sc, s.chi)[n0:]
     tasti = [r[2:] for r in quad if r.startswith("K ")]
     valori = [r[2:] for r in quad if r.startswith("V ")]
     print("   %s [%s] %s" % ({VERDE: "⭐", ROSSO: "⛔", CIECO: "⚠"}[es], gruppo, msg), flush=True)
@@ -268,7 +268,7 @@ def un_caso(s, geo, gruppo, titolo, base, seq, atteso, etichetta):
 def passata(s, geo, guasto):
     risultati = []
     for gruppo, titolo, base, costr, atteso in CASI:
-        r = un_caso(s, geo, gruppo, titolo, base, costr(guasto), atteso,
+        r = one_case(s, geo, gruppo, titolo, base, costr(guasto), atteso,
                     "guasto" if guasto else "sano")
         risultati.append(r)
         ciechi = [x for x in risultati[-2:] if x["esito"] == CIECO]
@@ -283,7 +283,7 @@ def corpo(o, E):
     with S.Sessione(o, "008", E) as s:
         G3.prepara_o(o, s)
         s.oom0 = G3.uccisi_dal_server()
-        segno = s.segno_registro()
+        segno = s.log_mark()
         ok, m = s.entra()
         if not ok:
             raise S.Bloccata(m)
@@ -297,7 +297,7 @@ def corpo(o, E):
         if not ok:
             raise S.Bloccata("the scene does not start: %s" % t[-300:])
         time.sleep(3)
-        x, y = S.C21.dal_desktop_al_vetro(geo, geo["tl"] * 0.5, geo["ta"] * 0.26)
+        x, y = S.C21.desktop_to_glass(geo, geo["tl"] * 0.5, geo["ta"] * 0.26)
         s.g.clic(x, y)
         time.sleep(1.0)
 
@@ -307,8 +307,8 @@ def corpo(o, E):
         gruppi = {}
         for gr in GRUPPI:
             es = [r["esito"] for r in sani if r["gruppo"] == gr]
-            gruppi[gr] = C23.esito_complessivo(es) if es else CIECO
-        tutto = C23.esito_complessivo(list(gruppi.values()))
+            gruppi[gr] = C23.overall_outcome(es) if es else CIECO
+        tutto = C23.overall_outcome(list(gruppi.values()))
         male = [r["motivo"] for r in sani if r["esito"] != VERDE]
         if tutto == VERDE:
             ragione = "all %d cases add up (%s)" % (len(sani), ", ".join(GRUPPI))
@@ -317,8 +317,8 @@ def corpo(o, E):
                 g for g, e in gruppi.items() if e == CIECO]
             if tutto == CIECO and "OOM" not in ragione:
                 ragione += G3.spiega_cieco(s.oom0)
-        quaderno = s.salva_testo("quaderno-scena-%s.txt" % o.browser,
-                                 C23.leggi_il_quaderno(s.sc, s.chi))
+        quaderno = s.save_text("quaderno-scena-%s.txt" % o.browser,
+                                 C23.read_notebook(s.sc, s.chi))
         try:
             premuti = s.g.js("return REMOTIX.input_classico.stato().tasti_premuti")
         except Exception as ex:                  # noqa: BLE001
@@ -326,9 +326,9 @@ def corpo(o, E):
         E.metti("F-008", tutto, ragione,
                 atteso="; ".join("%s: %r ⇒ %r" % (c[1].split()[0], c[2], c[4]) for c in CASI),
                 osservato="; ".join("%s %r" % (r["caso"], r["visto"]) for r in sani),
-                evidenze=ev + [quaderno, s.salva_console()],
-                gruppi={k: S.DA_CODICE[v] for k, v in gruppi.items()},
-                casi=[dict(r, esito=S.DA_CODICE[r["esito"]]) for r in sani],
+                evidenze=ev + [quaderno, s.save_console()],
+                gruppi={k: S.FROM_CODE[v] for k, v in gruppi.items()},
+                casi=[dict(r, esito=S.FROM_CODE[r["esito"]]) for r in sani],
                 tasti_premuti_alla_fine=premuti)
 
         if o.guasto:
@@ -336,24 +336,24 @@ def corpo(o, E):
                   flush=True)
             prima = G3.evidenze_ora(o)
             guasti = passata(s, geo, True)
-            per_gruppo = {}
+            per_group = {}
             for gr in GRUPPI:
                 coppie = [(sa["esito"], gu["esito"]) for sa, gu in zip(sani, guasti)
                           if sa["gruppo"] == gr]
-                per_gruppo[gr] = esito_guasto_gruppo(coppie)
-            v = list(per_gruppo.values())
+                per_group[gr] = outcome_fault_group(coppie)
+            v = list(per_group.values())
             visto = None if None in v else all(v)
             ragione = "; ".join("%s: %s" % (gr, {True: "seen", False: "NOT SEEN",
                                                   None: "not judgeable"}[x])
-                                for gr, x in per_gruppo.items())
+                                for gr, x in per_group.items())
             E.guasto("F-008", visto, ragione,
                      atteso="without the modifier every case gives red",
                      osservato="; ".join("%s %r" % (r["caso"], r["visto"]) for r in guasti),
                      evidenze=G3.evidenze_nuove(o, prima),
-                     gruppi={k: x for k, x in per_gruppo.items()},
-                     casi=[dict(r, esito=S.DA_CODICE[r["esito"]]) for r in guasti])
+                     gruppi={k: x for k, x in per_group.items()},
+                     casi=[dict(r, esito=S.FROM_CODE[r["esito"]]) for r in guasti])
         server = s.registro_da(segno) if segno is not None else []
-        s.salva_testo("server-f008.txt", server)
+        s.save_text("server-f008.txt", server)
 
 
 if __name__ == "__main__":

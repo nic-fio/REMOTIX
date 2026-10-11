@@ -115,8 +115,8 @@ FUORI = os.environ.get("FUORI", os.path.join(
     "b62d7177-9fdd-47c7-8aa1-567c8b13accf/scratchpad", "b77"))
 
 # ⛔ The ports that are NOT mine.  They are counted, not touched.
-VIETATE = ("7900", "7910", "7920")
-VIETATA_IFACE = "enp7s0"
+FORBIDDEN = ("7900", "7910", "7920")
+FORBIDDEN_IFACE = "enp7s0"
 
 for k, v in (("PORTA", str(PORTA)), ("UTENTE", UTENTE), ("UID_B", str(UID_B)),
              ("ALBERO", ALB), ("LAV", LAV), ("DENTRO_ALB", DENTRO_ALB),
@@ -136,9 +136,9 @@ RETE = _carica("b64rete", "07-b64-rete.py")      # root(), guasta(), tono_*, gua
 LUCCHETTO = _carica("lucchetto", "09-lucchetto.py")
 G42 = _carica("g42", "07-b42-giudice.py")        # the tone judge, certified
 
-FREQUENZA = 48000
+FREQUENCY = 48000
 CANALI = 2
-PASSO_PCM_US = 5000          # §5.3: the PCM block is 5 ms
+STEP_PCM_US = 5000          # §5.3: the PCM block is 5 ms
 HZ = 440
 CHI = "09-b77"
 
@@ -193,7 +193,7 @@ def _c(n, chiave):
 
 
 # ── the positive control: without it the bench has no right to green ───────
-def a_crolla_con_vecchia(tetto, min_vecchi):
+def a_collapses_with_old(tetto, min_old):
     """⛔⭐ THE POSITIVE CONTROL — «DOES THE PROFILE BITE?».
 
     With the OLD rule, every block arriving behind a newer one is thrown
@@ -225,26 +225,26 @@ def a_crolla_con_vecchia(tetto, min_vecchi):
         if pv is None or ve is None:
             return _muto("the old rule gave no purezza/scartati_vecchi: "
                          "I do not judge")
-        if ve >= min_vecchi and pv > tetto:
+        if ve >= min_old and pv > tetto:
             return _p(False,
                       "⛔ CONTRADICTION: the old rule says it threw away "
                       "%d blocks but the purity stays %.4f (sul_filo %s) — they are "
                       "the same quantity seen twice, and one of the two counts "
                       "is wrong" % (ve, pv, sf))
-        if pv > tetto or ve < min_vecchi:
+        if pv > tetto or ve < min_old:
             return _muto("⛔ THE PROFILE DOES NOT BITE: with the old rule the "
                          "purity had to collapse below %.2f (seen %.4f) and the "
                          "blocks thrown away be >= %d (seen %d).  ⇒ I do NOT "
                          "JUDGE: a green here would not be a measurement, it would be "
-                         "chance" % (tetto, pv, min_vecchi, ve))
+                         "chance" % (tetto, pv, min_old, ve))
         return _p(True,
                   "OLD: the profile BITES — purity %.4f <= %.2f and %d blocks "
                   "thrown away (>= %d) out of %s arrived on the wire"
-                  % (pv, tetto, ve, min_vecchi, sf))
+                  % (pv, tetto, ve, min_old, sf))
     return f
 
 
-def a_risale_con_nuova(min_purezza=0.95):
+def a_rises_with_new(min_purity=0.95):
     """The cure must restore the delivered fraction, and without moving
        the damage onto `scartati_tardivi`.
 
@@ -261,14 +261,14 @@ def a_risale_con_nuova(min_purezza=0.95):
         if ta is None:
             return _muto("the new rule gave no scartati_tardivi: I do not judge")
         tetto = max(20, int(0.01 * (sf or 0)))
-        return _p(pu >= min_purezza and ta <= tetto,
+        return _p(pu >= min_purity and ta <= tetto,
                   "NEW: purity >= %.2f (seen %.4f) and scartati_tardivi <= %d "
                   "(seen %d) — the safety net after the decoder did not "
-                  "take the damage" % (min_purezza, pu, tetto, ta))
+                  "take the damage" % (min_purity, pu, tetto, ta))
     return f
 
 
-def a_il_tono_conferma(guadagno=0.05):
+def a_tone_confirms(guadagno=0.05):
     """⭐ THE SECOND LEG, FROM THE SAMPLES AND NOT FROM THE CLIENT'S ARITHMETIC.
 
     `purezza` is computed by the client, which is also the object of the measurement: that is
@@ -296,7 +296,7 @@ def a_il_tono_conferma(guadagno=0.05):
     return f
 
 
-def a_fuori_positivo(v, u):
+def a_out_positive(v, u):
     """⭐⛔ THE PREDICATE THAT KEEPS THE CURE HONEST.
 
        `fuori_ordine` must be GREATER THAN ZERO in the profiles that reorder.
@@ -311,7 +311,7 @@ def a_fuori_positivo(v, u):
               "REAL reorderings, not a quiet network" % fu)
 
 
-def a_doppioni_zero(v, u):
+def a_zero_duplicates(v, u):
     """⛔ Zero with both rules.  If they rise, someone counts twice —
        and a block delivered twice would double the signal, which §6.3 does not
        allow and is the worst way of failing."""
@@ -323,7 +323,7 @@ def a_doppioni_zero(v, u):
               % ("-" if dv is None else dv, du))
 
 
-def a_le_due_coincidono(tolleranza=0.01, min_purezza=0.98):
+def a_both_coincide(tolleranza=0.01, min_purity=0.98):
     """⛔ The denominator.  On a line that does NOT reorder the two rules must
        give the same result: if they already differ here, the cure has a defect
        on the easy case and none of its other greens counts."""
@@ -331,13 +331,13 @@ def a_le_due_coincidono(tolleranza=0.01, min_purezza=0.98):
         pv, pu = _c(v, "purezza"), _c(u, "purezza")
         if pv is None or pu is None:
             return _muto("one of the two purities is missing: I do not judge")
-        return _p(abs(pv - pu) <= tolleranza and pv >= min_purezza and pu >= min_purezza,
+        return _p(abs(pv - pu) <= tolleranza and pv >= min_purity and pu >= min_purity,
                   "SMOOTH: |%.4f - %.4f| <= %.2f and both >= %.2f"
-                  % (pv, pu, tolleranza, min_purezza))
+                  % (pv, pu, tolleranza, min_purity))
     return f
 
 
-def a_niente_riordino_sul_liscio(v, u):
+def a_no_reorder_on_smooth(v, u):
     """⛔ On `lo` without a qdisc packets do not overtake each other.  If here
        `fuori_ordine` rises, something else is reordering — and then not even the
        numbers of the broken profiles can be attributed to `netem`."""
@@ -350,7 +350,7 @@ def a_niente_riordino_sul_liscio(v, u):
 
 
 
-def a_perdita_dichiarata(frazione, tolleranza=0.6):
+def a_declared_loss(frazione, tolleranza=0.6):
     """⚠ WHERE THERE IS ALSO LOSS, THE LOST PART IS DECLARED — AND FROM BOTH ENDS.
 
     `purezza` does not see it, and must not: `sul_filo` counts what the network
@@ -384,13 +384,13 @@ def a_perdita_dichiarata(frazione, tolleranza=0.6):
         if sp is None or not sf:
             return _muto("the server's «spediti» or the client's «sul filo» were not "
                          "read: the loss cannot be attributed")
-        perduti = sp - sf
-        if perduti < 0:
+        lost = sp - sf
+        if lost < 0:
             return _p(False,
                       "⛔ the client says it saw MORE blocks on the wire than "
                       "the server sent (%d > %d): one of the two "
                       "counts is wrong" % (sf, sp))
-        vista = perduti / float(sp)
+        vista = lost / float(sp)
         return _p(abs(vista - frazione) <= tolleranza * frazione + 0.005,
                   "THE LOSS IS DECLARED, FROM BOTH ENDS: the server sent "
                   "%d, the client saw %d on the wire ⇒ **%d lost on the "
@@ -398,12 +398,12 @@ def a_perdita_dichiarata(frazione, tolleranza=0.6):
                   "%s REFUSED by ngtcp2, that is never put on the wire — those "
                   "do not belong to netem, and the client's `mancati` (%s) counts them "
                   "together with the lost ones"
-                  % (sp, sf, perduti, vista * 100, frazione * 100,
+                  % (sp, sf, lost, vista * 100, frazione * 100,
                      _c(u, "rifiutati_server"), _c(u, "mancati")))
     return f
 
 
-def a_il_tono_non_torna_a_uno(tetto=0.98):
+def a_tone_does_not_return_to_one(tetto=0.98):
     """⚠ AND HERE THE TONE PURITY **MUST NOT** GO BACK TO 1, and it is an expectation
        like the others: with 2 % loss gaps remain that no rule of the
        receiver can fill.  ⛔ If it went back to 1 it would be the judge that is
@@ -418,7 +418,7 @@ def a_il_tono_non_torna_a_uno(tetto=0.98):
     return f
 
 
-def a_riordino_dai_due_capi(v, u):
+def a_reorder_from_both_ends(v, u):
     """⭐⭐⭐ THE SECOND LEG OF THE POSITIVE CONTROL, FROM THE OTHER END OF THE WIRE.
 
     ⛔ THE DEFECT IT CURES.  The purity and the count of overtakes both come
@@ -474,7 +474,7 @@ def a_riordino_dai_due_capi(v, u):
                  "a green here would be chance" % (cli, mio, vec))
 
 
-def a_capi_non_si_contraddicono(v, u):
+def a_ends_do_not_contradict(v, u):
     """⛔ And if the two ends contradict each other, it is a fact worth more than
        both: the server saw packets go from lost to
        acknowledged, and the receiver did not see even one out of sequence.
@@ -493,7 +493,7 @@ def a_capi_non_si_contraddicono(v, u):
                     "overtakes on the JSONL %s)" % (srv, cli, mio))
 
 
-def a_netem_ha_visto(v, u):
+def a_netem_has_seen(v, u):
     """⛔ If the `u32` filter does not bite, the traffic does not go through `netem`: I would have
        measured a HEALTHY network believing it broken, and written that the cure is needed
        where there was nothing to cure.  ⚠ It is not a red: it is an «I did not
@@ -507,7 +507,7 @@ def a_netem_ha_visto(v, u):
     return _p(True, "the netem saw %d + %d packets (the filter bites)" % (pv, pu))
 
 
-def a_server_ha_spedito(v, u):
+def a_server_has_sent(v, u):
     """⛔ The client knows how many datagrams it received; it does not know how many
        left.  Without this, a SERVER defect would be attributed to
        `netem` (R13)."""
@@ -530,55 +530,55 @@ def a_server_ha_spedito(v, u):
 PROFILI = [
     ("liscio", [],
      "the denominator: no fault, and the two rules must coincide",
-     [a_le_due_coincidono(), a_niente_riordino_sul_liscio, a_doppioni_zero,
-      a_server_ha_spedito, a_capi_non_si_contraddicono]),
+     [a_both_coincide(), a_no_reorder_on_smooth, a_zero_duplicates,
+      a_server_has_sent, a_ends_do_not_contradict]),
 
     ("jitter-2", ["delay", "20ms", "2ms", "distribution", "normal"],
      "jitter ±2 ms, less than one PCM block (5 ms): it is the MILDEST profile that "
      "reorders, and the bound of its positive control is 0.90 — one block in "
      "ten thrown away is twenty gaps per second",
-     [a_netem_ha_visto, a_server_ha_spedito, a_riordino_dai_due_capi,
-      a_capi_non_si_contraddicono, a_crolla_con_vecchia(0.90, 100),
-      a_risale_con_nuova(0.95), a_il_tono_conferma(), a_fuori_positivo,
-      a_doppioni_zero]),
+     [a_netem_has_seen, a_server_has_sent, a_reorder_from_both_ends,
+      a_ends_do_not_contradict, a_collapses_with_old(0.90, 100),
+      a_rises_with_new(0.95), a_tone_confirms(), a_out_positive,
+      a_zero_duplicates]),
 
     ("jitter-5", ["delay", "20ms", "5ms", "distribution", "normal"],
      "jitter ±5 ms = one whole block: overtakes grow, and the bound drops "
      "to 0.80",
-     [a_netem_ha_visto, a_server_ha_spedito, a_riordino_dai_due_capi,
-      a_capi_non_si_contraddicono, a_crolla_con_vecchia(0.80, 300),
-      a_risale_con_nuova(0.95), a_il_tono_conferma(), a_fuori_positivo,
-      a_doppioni_zero]),
+     [a_netem_has_seen, a_server_has_sent, a_reorder_from_both_ends,
+      a_ends_do_not_contradict, a_collapses_with_old(0.80, 300),
+      a_rises_with_new(0.95), a_tone_confirms(), a_out_positive,
+      a_zero_duplicates]),
 
     ("jitter-15", ["delay", "30ms", "15ms", "distribution", "normal"],
      "jitter ±15 ms = three blocks: with the old rule listening is broken, and "
      "the bound drops to 0.60",
-     [a_netem_ha_visto, a_server_ha_spedito, a_riordino_dai_due_capi,
-      a_capi_non_si_contraddicono, a_crolla_con_vecchia(0.60, 800),
-      a_risale_con_nuova(0.95), a_il_tono_conferma(), a_fuori_positivo,
-      a_doppioni_zero]),
+     [a_netem_has_seen, a_server_has_sent, a_reorder_from_both_ends,
+      a_ends_do_not_contradict, a_collapses_with_old(0.60, 800),
+      a_rises_with_new(0.95), a_tone_confirms(), a_out_positive,
+      a_zero_duplicates]),
 
     ("riordino-25", ["delay", "10ms", "reorder", "25%", "50%"],
      "⭐ EXPLICIT REORDERING, which is NOT jitter: one packet in four "
      "jumps the queue and leaves at once.  ⛔ The `delay 10ms` is mandatory, or "
      "`reorder` does nothing",
-     [a_netem_ha_visto, a_server_ha_spedito, a_riordino_dai_due_capi,
-      a_capi_non_si_contraddicono, a_crolla_con_vecchia(0.90, 300),
-      a_risale_con_nuova(0.95), a_il_tono_conferma(), a_fuori_positivo,
-      a_doppioni_zero]),
+     [a_netem_has_seen, a_server_has_sent, a_reorder_from_both_ends,
+      a_ends_do_not_contradict, a_collapses_with_old(0.90, 300),
+      a_rises_with_new(0.95), a_tone_confirms(), a_out_positive,
+      a_zero_duplicates]),
 
     ("casa-cattiva", ["delay", "40ms", "20ms", "distribution", "normal",
                       "loss", "2%"],
      "⚠ HERE THERE IS ALSO LOSS.  `purezza` does not see it — `sul_filo` counts what "
      "the network DELIVERED — so the lost part is declared separately "
      "(`mancati`), and the TONE purity must not go back to 1",
-     [a_netem_ha_visto, a_server_ha_spedito, a_riordino_dai_due_capi,
-      a_capi_non_si_contraddicono, a_crolla_con_vecchia(0.80, 500),
-      a_risale_con_nuova(0.95), a_perdita_dichiarata(0.02),
-      a_il_tono_non_torna_a_uno(), a_fuori_positivo, a_doppioni_zero]),
+     [a_netem_has_seen, a_server_has_sent, a_reorder_from_both_ends,
+      a_ends_do_not_contradict, a_collapses_with_old(0.80, 500),
+      a_rises_with_new(0.95), a_declared_loss(0.02),
+      a_tone_does_not_return_to_one(), a_out_positive, a_zero_duplicates]),
 ]
 
-REGOLE = ("vecchia", "nuova")
+RULES = ("vecchia", "nuova")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -603,7 +603,7 @@ def purezza_tono(campioni):
        fall back on `07-b42` and DECLARE it (one window only).
     """
     m = len(campioni)
-    if m != FREQUENZA:
+    if m != FREQUENCY:
         return G42.giudica([x / 32768.0 for x in campioni])
     try:
         import numpy as _np
@@ -660,13 +660,13 @@ def scaletta(percorso, finestre=8, finestra_s=1):
                 "blocchi": len(blocchi)}
     base = min(i for i, _ in blocchi)
     fine = max(i for i, _ in blocchi)
-    n_tot = int(round((fine - base) / 1e6 * FREQUENZA)) + (FREQUENZA * PASSO_PCM_US // 1000000)
-    if n_tot <= 0 or n_tot > FREQUENZA * 3600:
+    n_tot = int(round((fine - base) / 1e6 * FREQUENCY)) + (FREQUENCY * STEP_PCM_US // 1000000)
+    if n_tot <= 0 or n_tot > FREQUENCY * 3600:
         return {"esito": "NOTHING TO JUDGE — absurd timeline (%d)" % n_tot}
     tela = [0] * n_tot
     pieno = bytearray(n_tot)
     for ist, b in blocchi:
-        off = int(round((ist - base) / 1e6 * FREQUENZA))
+        off = int(round((ist - base) / 1e6 * FREQUENCY))
         n = len(b) // (2 * CANALI)
         if n <= 0 or off < 0 or off + n > n_tot:
             continue
@@ -679,28 +679,28 @@ def scaletta(percorso, finestre=8, finestra_s=1):
     copertura = coperti / float(n_tot)
     # ⭐ The purity over SEVERAL windows, and the median is taken: a single window
     #   catches chance.  ⚠ The windows are equally spaced, not chosen.
-    n = finestra_s * FREQUENZA
-    purezze, hz_visti = [], []
+    n = finestra_s * FREQUENCY
+    purities, seen_hz = [], []
     if n_tot >= n:
         posti = ([0] if finestre <= 1 else
                  [int(k * (n_tot - n) / (finestre - 1)) for k in range(finestre)])
         for i in posti:
             g = purezza_tono(tela[i:i + n])
             if g.get("purezza") is not None:
-                purezze.append(g["purezza"])
-                hz_visti.append(g.get("hz"))
-    purezze_ord = sorted(purezze)
-    med = (purezze_ord[len(purezze_ord) // 2] if purezze_ord else None)
+                purities.append(g["purezza"])
+                seen_hz.append(g.get("hz"))
+    sorted_purities = sorted(purities)
+    med = (sorted_purities[len(sorted_purities) // 2] if sorted_purities else None)
     return {"esito": "GIUDICATO", "blocchi": len(blocchi),
             "doppioni_scaletta": dop, "fuori_arrivo": fuori_arrivo,
-            "durata_s": round(n_tot / float(FREQUENZA), 3),
+            "durata_s": round(n_tot / float(FREQUENCY), 3),
             "campioni_scritti": coperti, "campioni_totali": n_tot,
             "copertura": round(copertura, 5),
             "purezza_tono": None if med is None else round(med, 4),
-            "purezza_tono_min": None if not purezze_ord else round(purezze_ord[0], 4),
-            "purezza_tono_max": None if not purezze_ord else round(purezze_ord[-1], 4),
-            "finestre": len(purezze_ord),
-            "hz": hz_visti[len(hz_visti) // 2] if hz_visti else None}
+            "purezza_tono_min": None if not sorted_purities else round(sorted_purities[0], 4),
+            "purezza_tono_max": None if not sorted_purities else round(sorted_purities[-1], 4),
+            "finestre": len(sorted_purities),
+            "hz": seen_hz[len(seen_hz) // 2] if seen_hz else None}
 
 
 # ⛔⛔ THERE WAS A THIRD JUDGEMENT HERE, AND IT WAS REMOVED — 23 August 2026.
@@ -729,7 +729,7 @@ def root(comando, tetto=300):
     return RETE.root(comando, tetto)
 
 
-def netem_pacchetti():
+def netem_packets():
     """The packets the `netem` node REALLY saw pass.
 
     ⛔ It is the substitute for the `reordered` counter, which on this machine does not
@@ -777,7 +777,7 @@ def conti_del_server(riga0):
             "rifiutati": int(m.group(3)), "rimandati": int(m.group(4))}
 
 
-def testimone_del_server(riga0):
+def server_witness(riga0):
     """⭐⭐ THE REORDERING WITNESS THAT KNOWS NOTHING OF THE CURE.
 
     The `rete-quic` line of the log carries, since 23 August 2026:
@@ -848,7 +848,7 @@ DA_LEGGERE = {
     "riarmi":         r"\brearms\s+(\d+)",
     "passo_us":       r"\bstep\s+(\d+)us",
 }
-DA_LEGGERE_DEC = {
+TO_READ_DEC = {
     "purezza":        r"PURITY\s+([0-9]+\.[0-9]+)",
     "purezza_pagina": r"\(page\s+([0-9]+\.[0-9]+)\)",
 }
@@ -866,13 +866,13 @@ def _num(testo, nome):
 
 def _dec(testo, nome):
     trovato = None
-    for m in re.finditer(DA_LEGGERE_DEC.get(nome, r"\b%s\b\s+([0-9.]+)" % re.escape(nome)),
+    for m in re.finditer(TO_READ_DEC.get(nome, r"\b%s\b\s+([0-9.]+)" % re.escape(nome)),
                          testo):
         trovato = float(m.group(1))
     return trovato
 
 
-def _regola_dichiarata(testo):
+def _declared_rule(testo):
     """⭐⭐ THE PROOF THAT THE RULE WAS IN FORCE IN THIS RUN.
 
     ⛔ `LEZIONI.md` E1: «written is not in force».  That `--audio-regola` exists
@@ -887,7 +887,7 @@ def _regola_dichiarata(testo):
     return trovata
 
 
-def cliente_ha_interruttore():
+def client_has_switch():
     """⛔ THE CHECK THAT AVOIDS THIS BENCH'S MOST LIKELY FALSE GREEN.
 
        If `--audio-regola` is not there yet, the two runs would use the same
@@ -939,26 +939,26 @@ def terreno_controlla():
         guai.append("nobody is listening on %d: `... bash banchi/07-b64-terreno.sh accendi`" % PORTA)
     # ⛔ The other agents' ports are COUNTED, not touched.
     conto = []
-    for p in VIETATE:
+    for p in FORBIDDEN:
         rc, o, _ = root("ss -uln 2>/dev/null | grep -c ':%s ' || true" % p)
         conto.append("%s:%s" % (p, o.strip()))
     inf("FORBIDDEN ports (counted, not touched): %s" % " ".join(conto))
     inf("my server on %d: %s listener(s)" % (PORTA, mio))
-    rc, out, _ = root("/usr/sbin/tc qdisc show dev %s" % VIETATA_IFACE)
+    rc, out, _ = root("/usr/sbin/tc qdisc show dev %s" % FORBIDDEN_IFACE)
     inf("%s (ssh + the user's 7730) — NOT touched: %s"
-        % (VIETATA_IFACE, out.strip().split("\n")[0]))
+        % (FORBIDDEN_IFACE, out.strip().split("\n")[0]))
     rc, out, _ = root("uptime")
     inf("load: %s" % out.strip()[-42:])
 
-    interr = cliente_ha_interruttore()
-    if interr.get("dentro"):
+    sw = client_has_switch()
+    if sw.get("dentro"):
         ok("the client has `--audio-regola` (in the container, read from `--help`)")
     else:
         guai.append("⛔⛔ THE CLIENT DOES NOT HAVE `--audio-regola` (laptop: %s, "
                     "container: %s).  I do NOT measure: two runs with the same "
                     "rule would give «no difference», which looks the same "
                     "as «the cure is not needed» and is the opposite conclusion"
-                    % (interr.get("portatile"), interr.get("dentro")))
+                    % (sw.get("portatile"), sw.get("dentro")))
     for g in guai:
         ko(g)
     if not guai:
@@ -969,13 +969,13 @@ def terreno_controlla():
 def giro(profilo, regola, secondi):
     """One client run, with the chosen rule.  Returns the numbers, or `None`."""
     nome = "%s-%s" % (profilo, regola)
-    j_fuori = os.path.join(FUORI, nome + ".jsonl")
-    t_fuori = os.path.join(FUORI, nome + ".txt")
-    for f in (j_fuori, t_fuori):
+    j_out = os.path.join(FUORI, nome + ".jsonl")
+    t_out = os.path.join(FUORI, nome + ".txt")
+    for f in (j_out, t_out):
         try: os.remove(f)
         except Exception: pass
     riga0 = righe_registro()
-    pkt0 = netem_pacchetti()
+    pkt0 = netem_packets()
     t0 = time.time()
     dentro = ("python3 -u %s/banchi/01-b3-cliente.py --indirizzo %s --porta %d "
               "--utente %s --parola-file %s/parola --audio-codec pcm "
@@ -985,14 +985,14 @@ def giro(profilo, regola, secondi):
     rc, out, err = root("bash /media/REMOTIX/enter.sh --root '%s'" % dentro,
                         secondi + 240)
     uscita = out + err
-    open(t_fuori, "w").write(uscita)
+    open(t_out, "w").write(uscita)
     subprocess.run("ssh -o BatchMode=yes %s \"printf '%%s\\n' '%s' | sudo -S -p '' "
                    "cat %s/b77-%s.jsonl\" > %s"
-                   % (RETE.MACCHINA, RETE.PAROLA_SUDO, LAV, nome, j_fuori),
+                   % (RETE.MACCHINA, RETE.PAROLA_SUDO, LAV, nome, j_out),
                    shell=True)
-    pkt1 = netem_pacchetti()
+    pkt1 = netem_packets()
     sv = conti_del_server(riga0)
-    tst = testimone_del_server(riga0)
+    wit = server_witness(riga0)
 
     # ⛔ If the client refused `--audio-regola`, its numbers would be
     #    those of the OTHER rule: it is declared and not judged.
@@ -1002,13 +1002,13 @@ def giro(profilo, regola, secondi):
     # ⛔⛔ AND THE RULE MUST BE THE ONE I ASKED FOR, AS STATED BY THE CLIENT.
     #     «I passed it» is not «it used it» (`LEZIONI.md` E1): an argument
     #     accepted and ignored would give two identical runs under two names.
-    detta = _regola_dichiarata(uscita)
-    if detta != regola:
+    said = _declared_rule(uscita)
+    if said != regola:
         return {"esito": "⛔⛔ I ASKED FOR «%s» AND THE CLIENT SAYS «%s»: the two "
                          "runs would not be paired, they would be the same run "
-                         "twice" % (regola, detta), "coda": uscita[-600:]}
+                         "twice" % (regola, said), "coda": uscita[-600:]}
 
-    sc = scaletta(j_fuori)
+    sc = scaletta(j_out)
     n = {
         "profilo": profilo, "regola": regola, "secondi": round(time.time() - t0, 1),
         # ⭐ THE PAGE'S NAMES, which are the interface agreed with the client.
@@ -1034,7 +1034,7 @@ def giro(profilo, regola, secondi):
         "purezza": _dec(uscita, "purezza"),
         "purezza_pagina": _dec(uscita, "purezza_pagina"),
         "riarmi": _num(uscita, "riarmi"),
-        "regola_dichiarata": _regola_dichiarata(uscita),
+        "regola_dichiarata": _declared_rule(uscita),
         "spediti_server": sv.get("spediti"),
         # ⛔ `rifiutati` = ngtcp2 did not put them on the wire (window closed).
         #    ⚠ They are not network loss, and confusing them with it is R13.
@@ -1042,14 +1042,14 @@ def giro(profilo, regola, secondi):
         "buttati_server": sv.get("buttati"),
         "server": sv,
         # ⭐ The witness at the OTHER end of the wire, which knows nothing of the cure.
-        "dgram_falsi": tst.get("dgram_falsi"),
-        "dgram_falsi_d": tst.get("dgram_falsi_d"),
-        "dgram_persi": tst.get("dgram_persi"),
-        "dgram_ok": tst.get("dgram_ok"),
-        "testimone": tst,
+        "dgram_falsi": wit.get("dgram_falsi"),
+        "dgram_falsi_d": wit.get("dgram_falsi_d"),
+        "dgram_persi": wit.get("dgram_persi"),
+        "dgram_ok": wit.get("dgram_ok"),
+        "testimone": wit,
         "netem_pkt": (None if (pkt0 is None or pkt1 is None) else max(0, pkt1 - pkt0)),
         "scaletta": sc,
-        "jsonl": j_fuori,
+        "jsonl": j_out,
     }
     # ⭐ And the SECOND LEG, taken from the samples and not from the client's
     #   arithmetic: the coverage of the timeline and the TONE purity.
@@ -1071,9 +1071,9 @@ def giro(profilo, regola, secondi):
     #     check queried `_num(uscita, "vecchi")` (right) while the
     #     dictionary asked for `scartati_vecchi` (wrong).  ⇒ A check that
     #     does not look at the same thing as the code it protects protects nothing.
-    OBBLIGATORI = ("sul_filo", "consegnati", "vecchi", "tardivi", "fuori",
+    MANDATORY = ("sul_filo", "consegnati", "vecchi", "tardivi", "fuori",
                    "rec", "dop", "mancati", "purezza")
-    manca = [k for k in OBBLIGATORI if n.get(k) is None]
+    manca = [k for k in MANDATORY if n.get(k) is None]
     if manca:
         return {"esito": "⛔ THE CLIENT'S COUNTERS WERE NOT READ (%s): the "
                          "DA_LEGGERE regexes no longer hook its output"
@@ -1081,7 +1081,7 @@ def giro(profilo, regola, secondi):
     return n
 
 
-def riga_numeri(n):
+def numbers_line(n):
     def q(x, f="%s"):
         return "-" if x is None else (f % x)
     return ("%-8s PUREZZA %s  (tono %s · cop %s · pagina %s) | filo %s cons %s "
@@ -1121,10 +1121,10 @@ def certifica():
     print("   are MANUFACTURED: what is tested here is that they can give RED.\n")
 
     # An «old» run on a profile that bites, and its cured twin.
-    v_rotto = _n(purezza=0.62, sul_filo=5000, consegnati=3100, vecchi=1900,
+    v_broken = _n(purezza=0.62, sul_filo=5000, consegnati=3100, vecchi=1900,
                  copertura=0.62, purezza_tono=0.41, netem_pkt=12000,
                  spediti_server=5000, dgram_falsi=31, mancati=1)
-    u_sano = _n(purezza=0.9982, sul_filo=5000, consegnati=4991, vecchi=3,
+    u_healthy = _n(purezza=0.9982, sul_filo=5000, consegnati=4991, vecchi=3,
                 tardivi=6, fuori=812, fuori_arrivo=810, dop=0, rec=790,
                 mancati=1, copertura=0.9985, purezza_tono=0.997,
                 netem_pkt=12100, spediti_server=5000, dgram_falsi=29)
@@ -1132,126 +1132,126 @@ def certifica():
     casi = [
         # ── the positive control: «does the profile bite?» ─────────────────
         ("positive control · the profile BITES (purity 0.62 · 1900 thrown away)",
-         a_crolla_con_vecchia(0.90, 100), v_rotto, u_sano, True),
+         a_collapses_with_old(0.90, 100), v_broken, u_healthy, True),
         ("⚠ MUTE  · the profile does NOT bite (purity 0.991 · 3 thrown away) ⇒ I do NOT "
          "judge, and it is not a green",
-         a_crolla_con_vecchia(0.90, 100),
-         _n(purezza=0.991, vecchi=3, sul_filo=5000), u_sano, None),
+         a_collapses_with_old(0.90, 100),
+         _n(purezza=0.991, vecchi=3, sul_filo=5000), u_healthy, None),
         ("⚠ MUTE  · bites little: purity 0.45 but only 20 thrown away",
-         a_crolla_con_vecchia(0.90, 100),
-         _n(purezza=0.45, vecchi=20, sul_filo=5000), u_sano, None),
+         a_collapses_with_old(0.90, 100),
+         _n(purezza=0.45, vecchi=20, sul_filo=5000), u_healthy, None),
         ("⛔ RED · CONTRADICTION: 1900 thrown away AND purity 0.99",
-         a_crolla_con_vecchia(0.90, 100),
-         _n(purezza=0.99, vecchi=1900, sul_filo=5000), u_sano, False),
+         a_collapses_with_old(0.90, 100),
+         _n(purezza=0.99, vecchi=1900, sul_filo=5000), u_healthy, False),
         ("⚠ MUTE  · the old rule's purity was not read",
-         a_crolla_con_vecchia(0.90, 100), _n(vecchi=1900), u_sano, None),
+         a_collapses_with_old(0.90, 100), _n(vecchi=1900), u_healthy, None),
 
         # ── the cure brings it back up ─────────────────────────────────────
         ("the cure brings it back up (purity 0.9982 · late 6 out of 5000 on the wire)",
-         a_risale_con_nuova(), v_rotto, u_sano, True),
+         a_rises_with_new(), v_broken, u_healthy, True),
         ("⛔ RED · the cure does NOT bring it back up (purity 0.31)",
-         a_risale_con_nuova(), v_rotto,
+         a_rises_with_new(), v_broken,
          _n(purezza=0.31, tardivi=4, sul_filo=5000), False),
         ("⛔ RED · back up but the damage moved onto the late ones (900/5000)",
-         a_risale_con_nuova(), v_rotto,
+         a_rises_with_new(), v_broken,
          _n(purezza=0.99, tardivi=900, sul_filo=5000), False),
         ("⚠ MUTE  · the new rule did not state scartati_tardivi",
-         a_risale_con_nuova(), v_rotto, _n(purezza=0.99, sul_filo=5000), None),
+         a_rises_with_new(), v_broken, _n(purezza=0.99, sul_filo=5000), None),
 
         # ── the second leg: the samples, not the client's arithmetic ────────
         ("⭐ the TONE confirms (cov 0.62 → 0.9985 · tone 0.41 → 0.997)",
-         a_il_tono_conferma(), v_rotto, u_sano, True),
+         a_tone_confirms(), v_broken, u_healthy, True),
         ("⛔ RED · the client says 0.998 but the SAMPLES say the "
          "coverage did not rise",
-         a_il_tono_conferma(), _n(copertura=0.62, purezza_tono=0.41),
+         a_tone_confirms(), _n(copertura=0.62, purezza_tono=0.41),
          _n(copertura=0.63, purezza_tono=0.42), False),
         ("⛔ RED · the coverage rises but the tone gets WORSE",
-         a_il_tono_conferma(), _n(copertura=0.62, purezza_tono=0.90),
+         a_tone_confirms(), _n(copertura=0.62, purezza_tono=0.90),
          _n(copertura=0.99, purezza_tono=0.55), False),
         ("⚠ MUTE  · the coverage was not measured",
-         a_il_tono_conferma(), _n(), _n(), None),
+         a_tone_confirms(), _n(), _n(), None),
 
         # ── the honesty of the cure ────────────────────────────────────────
         ("⭐ the honesty of the cure: fuori_ordine 812 > 0",
-         a_fuori_positivo, v_rotto, u_sano, True),
+         a_out_positive, v_broken, u_healthy, True),
         ("⛔⭐ RED · purity 0.999 BUT fuori_ordine 0: it is not curing, "
          "it is not seeing the reordering",
-         a_fuori_positivo, v_rotto,
+         a_out_positive, v_broken,
          _n(purezza=0.999, fuori=0, tardivi=0, sul_filo=5000), False),
         ("⚠ MUTE  · the client did not state fuori_ordine",
-         a_fuori_positivo, v_rotto, _n(purezza=0.999), None),
+         a_out_positive, v_broken, _n(purezza=0.999), None),
 
-        ("duplicates 0 with both", a_doppioni_zero, v_rotto, u_sano, True),
-        ("⛔ RED · 7 duplicates with the new rule", a_doppioni_zero, v_rotto,
+        ("duplicates 0 with both", a_zero_duplicates, v_broken, u_healthy, True),
+        ("⛔ RED · 7 duplicates with the new rule", a_zero_duplicates, v_broken,
          _n(dop=7), False),
-        ("⛔ RED · 2 duplicates with the old rule", a_doppioni_zero,
+        ("⛔ RED · 2 duplicates with the old rule", a_zero_duplicates,
          _n(dop=2), _n(dop=0), False),
 
         # ── the denominator ────────────────────────────────────────────────
         ("smooth · the two rules coincide (0.9990 / 0.9992)",
-         a_le_due_coincidono(), _n(purezza=0.9990), _n(purezza=0.9992), True),
+         a_both_coincide(), _n(purezza=0.9990), _n(purezza=0.9992), True),
         ("⛔ RED · on the easy case the two rules DIVERGE (0.999 / 0.60)",
-         a_le_due_coincidono(), _n(purezza=0.999), _n(purezza=0.60), False),
+         a_both_coincide(), _n(purezza=0.999), _n(purezza=0.60), False),
         ("⛔ RED · they coincide but both are low (0.40 / 0.41)",
-         a_le_due_coincidono(), _n(purezza=0.40), _n(purezza=0.41), False),
+         a_both_coincide(), _n(purezza=0.40), _n(purezza=0.41), False),
         ("smooth · no reordering on `lo` without a qdisc",
-         a_niente_riordino_sul_liscio, _n(vecchi=0), _n(fuori=0), True),
+         a_no_reorder_on_smooth, _n(vecchi=0), _n(fuori=0), True),
         ("⛔ RED · on the smooth line there are 40 overtakes: something else reorders",
-         a_niente_riordino_sul_liscio, _n(vecchi=0), _n(fuori=40), False),
+         a_no_reorder_on_smooth, _n(vecchi=0), _n(fuori=40), False),
 
         # ── the loss is declared, and the tone does not go back to 1 ────────
         ("bad home · the loss from BOTH ENDS (2879 sent, 2813 on the wire "
-         "= 2.29 %)", a_perdita_dichiarata(0.02), v_rotto,
+         "= 2.29 %)", a_declared_loss(0.02), v_broken,
          _n(spediti_server=2879, sul_filo=2813, rifiutati_server=2134,
             mancati=2183), True),
         ("⭐⛔ RED · the REAL case of 23 August read with the WRONG number: "
          "`mancati` 2183 out of 4996 would be 43.7 %",
-         a_perdita_dichiarata(0.437), v_rotto,
+         a_declared_loss(0.437), v_broken,
          _n(spediti_server=2879, sul_filo=2813, rifiutati_server=2134,
             mancati=2183), False),
         ("⛔ RED · «2 % loss» but EVERYTHING arrived on the wire",
-         a_perdita_dichiarata(0.02), v_rotto,
+         a_declared_loss(0.02), v_broken,
          _n(spediti_server=5000, sul_filo=5000), False),
         ("⛔ RED · the client saw MORE than the server sent",
-         a_perdita_dichiarata(0.02), v_rotto,
+         a_declared_loss(0.02), v_broken,
          _n(spediti_server=4000, sul_filo=4200), False),
         ("⚠ MUTE  · the server's «spediti» was not read",
-         a_perdita_dichiarata(0.02), v_rotto, _n(sul_filo=5000), None),
+         a_declared_loss(0.02), v_broken, _n(sul_filo=5000), None),
         ("with 2 % loss the tone does NOT go back to 1 (0.93)",
-         a_il_tono_non_torna_a_uno(), v_rotto, _n(purezza_tono=0.93), True),
+         a_tone_does_not_return_to_one(), v_broken, _n(purezza_tono=0.93), True),
         ("⛔ RED · with 2 % loss the tone goes back to 0.999: the judge is blind, "
          "the network is not healed",
-         a_il_tono_non_torna_a_uno(), v_rotto, _n(purezza_tono=0.999), False),
+         a_tone_does_not_return_to_one(), v_broken, _n(purezza_tono=0.999), False),
 
         # ── the two ends of the wire ───────────────────────────────────────
         ("⭐ the two ends: the SERVER confirms the reordering (29+31 dgram_falsi)",
-         a_riordino_dai_due_capi, v_rotto, u_sano, True),
+         a_reorder_from_both_ends, v_broken, u_healthy, True),
         ("⭐ the server is silent but the DATA see the reordering (fuori 812): green, "
          "with the price declared",
-         a_riordino_dai_due_capi, _n(vecchi=1004, dgram_falsi=0),
+         a_reorder_from_both_ends, _n(vecchi=1004, dgram_falsi=0),
          _n(dgram_falsi=0, fuori=812, fuori_arrivo=810), True),
         ("⚠ MUTE  · NONE of the three ends sees reordering: the profile does not bite",
-         a_riordino_dai_due_capi, _n(vecchi=0, dgram_falsi=0),
+         a_reorder_from_both_ends, _n(vecchi=0, dgram_falsi=0),
          _n(dgram_falsi=0, fuori=0, fuori_arrivo=0, purezza=0.999), None),
-        ("the two ends agree", a_capi_non_si_contraddicono, v_rotto, u_sano, True),
+        ("the two ends agree", a_ends_do_not_contradict, v_broken, u_healthy, True),
         ("⛔ RED · the server sees 29 reorderings, the receiver ZERO",
-         a_capi_non_si_contraddicono, v_rotto,
+         a_ends_do_not_contradict, v_broken,
          _n(dgram_falsi=29, fuori=0, fuori_arrivo=0), False),
-        ("smooth: neither of the two sees reordering", a_capi_non_si_contraddicono,
+        ("smooth: neither of the two sees reordering", a_ends_do_not_contradict,
          _n(dgram_falsi=0), _n(dgram_falsi=0, fuori=0, fuori_arrivo=0), True),
         ("⚠ MUTE  · the binary does not have the datagram witness",
-         a_capi_non_si_contraddicono, _n(), _n(fuori=5), None),
+         a_ends_do_not_contradict, _n(), _n(fuori=5), None),
 
         # ── the ground of the measurement ──────────────────────────────────
         ("the netem saw the traffic (12000 + 12100 pkt)",
-         a_netem_ha_visto, v_rotto, u_sano, True),
+         a_netem_has_seen, v_broken, u_healthy, True),
         ("⚠ MUTE  · the netem saw NOTHING: the u32 filter does not bite",
-         a_netem_ha_visto, _n(netem_pkt=0), _n(netem_pkt=0), None),
-        ("the server sent in both runs", a_server_ha_spedito, v_rotto, u_sano, True),
+         a_netem_has_seen, _n(netem_pkt=0), _n(netem_pkt=0), None),
+        ("the server sent in both runs", a_server_has_sent, v_broken, u_healthy, True),
         ("⛔ RED · the server did not send: the red is not the network's",
-         a_server_ha_spedito, _n(spediti_server=0), _n(spediti_server=0), False),
+         a_server_has_sent, _n(spediti_server=0), _n(spediti_server=0), False),
         ("⚠ MUTE  · the server's «final count» was not read",
-         a_server_ha_spedito, _n(), _n(), None),
+         a_server_has_sent, _n(), _n(), None),
     ]
 
     verde, rossi, muti = True, 0, 0
@@ -1274,23 +1274,23 @@ def certifica():
     import random, tempfile
     amp = 0.5 * 32767
     tmp = tempfile.mkdtemp(prefix="b77-cert-")
-    camp = FREQUENZA * PASSO_PCM_US // 1000000
+    camp = FREQUENCY * STEP_PCM_US // 1000000
 
-    def fabbrica(percorso, buttane, mescola, seme=77):
+    def fabbrica(percorso, drop_prob, mixes, seme=77):
         """5 ms PCM blocks of a 440 Hz tone, `istante` every 5000 us."""
         random.seed(seme)
         righe = []
         for k in range(1400):                 # 7 s
-            if buttane and random.random() < buttane:
+            if drop_prob and random.random() < drop_prob:
                 continue                      # ⛔ the block does NOT go in: it is a gap
             n0 = k * camp
             b = bytearray()
             for i in range(camp):
-                x = int(amp * math.sin(2 * math.pi * HZ * (n0 + i) / FREQUENZA))
+                x = int(amp * math.sin(2 * math.pi * HZ * (n0 + i) / FREQUENCY))
                 b += struct.pack("<hh", x, x)
-            righe.append({"istante": 1000000 + k * PASSO_PCM_US, "codec": 2,
+            righe.append({"istante": 1000000 + k * STEP_PCM_US, "codec": 2,
                           "byte": base64.b64encode(bytes(b)).decode()})
-        if mescola:
+        if mixes:
             # ⭐ The ARRIVAL reordering: the lines are swapped in pairs, and the
             #   judge must stay INDIFFERENT — it puts the blocks where the
             #   `istante` says, not where they are written.  ⛔ If it were not
@@ -1313,8 +1313,8 @@ def certifica():
         ("4-⛔ 50 % thrown away", 0.50, False, 0.50, (0.0, 0.70)),
     ]
     sani = {}
-    for nome, butta, mescola, cop, (pmin, pmax) in prove:
-        f = fabbrica(os.path.join(tmp, nome.split(" ")[0] + ".jsonl"), butta, mescola)
+    for nome, butta, mixes, cop, (pmin, pmax) in prove:
+        f = fabbrica(os.path.join(tmp, nome.split(" ")[0] + ".jsonl"), butta, mixes)
         s = scaletta(f, finestre=5)
         pt, cp = s.get("purezza_tono"), s.get("copertura")
         buono = (pt is not None and pmin <= pt <= pmax
@@ -1341,9 +1341,9 @@ def certifica():
     #     same thing only if the bin falls on the whole Hz — and it is not taken
     #     on trust: it is compared.
     print()
-    campioni = [int(amp * math.sin(2 * math.pi * HZ * k / FREQUENZA))
-                + int(0.05 * amp * math.sin(2 * math.pi * 997 * k / FREQUENZA))
-                for k in range(FREQUENZA)]
+    campioni = [int(amp * math.sin(2 * math.pi * HZ * k / FREQUENCY))
+                + int(0.05 * amp * math.sin(2 * math.pi * 997 * k / FREQUENCY))
+                for k in range(FREQUENCY)]
     veloce = purezza_tono(campioni)
     lento = G42.giudica([x / 32768.0 for x in campioni])
     uguali = (veloce.get("hz") == lento.get("hz")
@@ -1392,7 +1392,7 @@ def certifica():
         verde = verde and buono
         if not buono:
             print("  ⛔NO  %-16s expected %-8s seen %s" % (nome, atteso, visto))
-    reg = _regola_dichiarata(finta)
+    reg = _declared_rule(finta)
     verde = verde and (reg == "nuova")
     print("  %-4s all %d counters hooked, and the rule in force "
           "is «%s»" % ("OK" if reg == "nuova" else "⛔NO",
@@ -1401,7 +1401,7 @@ def certifica():
     #   recognised as such, not mistaken for «all at zero».
     vuota = "   [audio] received 0 · 0 bytes of payload · codec (none)\n"
     cieca = (_num(vuota, "sul_filo") is None and _dec(vuota, "purezza") is None
-             and _regola_dichiarata(vuota) is None)
+             and _declared_rule(vuota) is None)
     verde = verde and cieca
     rossi += 1
     print("  %-4s ⛔ and an output WITHOUT the counters returns `None`, not zero"
@@ -1424,7 +1424,7 @@ def misura(a):
     log("09-b77 · THE AUDIO REORDERING CURE, PAIRED")
     inf("port %d · user %s (uid %d) · tree %s" % (PORTA, UTENTE, UID_B, ALB))
     inf("⛔ «%s» (ssh + the 7730) is NOT touched · netem ONLY on `lo`, u32 filters "
-        "on port %d only" % (VIETATA_IFACE, PORTA))
+        "on port %d only" % (FORBIDDEN_IFACE, PORTA))
     inf("the two runs are identical in everything except `--audio-regola`")
     os.makedirs(FUORI, exist_ok=True)
 
@@ -1441,7 +1441,7 @@ def misura(a):
     log("THE netem LOCK")
     try:
         LUCCHETTO.prendi(CHI, secondi=a.affitto, attesa=a.attesa)
-    except LUCCHETTO.NonMio as e:
+    except LUCCHETTO.NotMine as e:
         ko(str(e))
         return 2
 
@@ -1495,13 +1495,13 @@ def misura(a):
                 continue
 
             giri = {}
-            for regola in REGOLE:
+            for regola in RULES:
                 n = giro(nome, regola, a.secondi)
                 giri[regola] = n
                 if n.get("esito"):
                     ko("%s: %s" % (regola, n["esito"]))
                 else:
-                    print("    %s" % riga_numeri(n))
+                    print("    %s" % numbers_line(n))
             v, u = giri["vecchia"], giri["nuova"]
             if v.get("esito") or u.get("esito"):
                 esiti.append({"profilo": nome, "passa": None, "giri": giri,
@@ -1542,7 +1542,7 @@ def misura(a):
           % ("profile", "rule", "PURITY", "tone", "cov.", "sul_filo",
              "deliv.", "vecchi", "tard", "fuori", "rec", "dop", "srv:fal"))
     for e in esiti:
-        for regola in REGOLE:
+        for regola in RULES:
             n = (e.get("giri") or {}).get(regola)
             if not n or n.get("esito"):
                 print("    %-13s %-8s   (no numbers)" % (e["profilo"], regola))

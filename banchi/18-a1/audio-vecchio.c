@@ -99,16 +99,16 @@
  *      one, and a number that meant "lost" starts to also mean
  *      "there was nothing to send".
  */
-static bool audio_taci_silenzio = true;
+static bool audio_hush_silence = true;
 
 void audio_silenzio_taci(bool si)
 {
-	audio_taci_silenzio = si;
+	audio_hush_silence = si;
 }
 
 bool audio_silenzio_acceso(void)
 {
-	return audio_taci_silenzio;
+	return audio_hush_silence;
 }
 
 struct audio_cod {
@@ -122,7 +122,7 @@ struct audio_cod {
 	AVFrame *frame;
 	AVPacket *pkt;
 	int64_t pts;
-	bool eagain_detto;
+	bool logged_eagain;
 };
 
 static bool opus_apri(audio_cod *c)
@@ -210,7 +210,7 @@ audio_cod *audio_cod_apri(uint8_t codec)
 	 *    that it really switched on two different arms. */
 	registro_dice(REG_AUDIO,
 	              "digital silence cure: %s",
-	              audio_taci_silenzio
+	              audio_hush_silence
 	                  ? "⭐ ON — blocks that are all zero are not sent.  "
 	                    "It is the DEFAULT since 24 August 2026 (the user's "
 	                    "decision).  `[M]` 09-b84: 102.1 times less traffic with "
@@ -262,7 +262,7 @@ void audio_cod_chiudi(audio_cod *c)
 	registro_dice(REG_AUDIO,
 	              "silence cure count (%s): %llu blocks muted "
 	              "of %llu in, %llu out on the wire — codec %u",
-	              audio_taci_silenzio
+	              audio_hush_silence
 	                  ? "ON, and it is the default since 24 Aug 2026"
 	                  : "OFF by hand, --niente-audio-silenzio",
 	              (unsigned long long)c->taciuti,
@@ -288,7 +288,7 @@ uint32_t audio_cod_blocco(const audio_cod *c)
  *    wrong on a big-endian ARM — and the symptom is not an error, it is
  *    full-scale noise.  ⚠ It costs two lines and removes a defect that would
  *    show only on the one machine where nobody tests it. */
-static void pcm_scrivi(const int16_t *campioni, uint32_t fotogrammi, uint8_t *fuori)
+static void pcm_write(const int16_t *campioni, uint32_t fotogrammi, uint8_t *fuori)
 {
 	uint32_t n = fotogrammi * AUDIO_CANALI;
 	for (uint32_t i = 0; i < n; i++) {
@@ -303,7 +303,7 @@ static void pcm_scrivi(const int16_t *campioni, uint32_t fotogrammi, uint8_t *fu
  *    for an Opus one, fifty times a second — and it is less work than the
  *    `memcpy` the encoder does right after.  ⭐ And it exits at the FIRST
  *    non-zero sample: on real sound the cost is one read. */
-static bool tutto_zero(const int16_t *campioni, uint32_t fotogrammi)
+static bool all_zero(const int16_t *campioni, uint32_t fotogrammi)
 {
 	uint32_t n = fotogrammi * AUDIO_CANALI;
 	for (uint32_t i = 0; i < n; i++)
@@ -333,7 +333,7 @@ bool audio_cod_passa(audio_cod *c, const int16_t *campioni, uint8_t *fuori,
 	 * ⛔ And the Opus `pts` does NOT move: libavcodec would see a jump, and a
 	 *    jump is something we have not measured.  Here the encoder
 	 *    simply does not see those blocks. */
-	if (audio_taci_silenzio && tutto_zero(campioni, c->blocco)) {
+	if (audio_hush_silence && all_zero(campioni, c->blocco)) {
 		c->taciuti++;
 		/* ⚠ With a floor, or a mute desktop would fill the log instead of
 		 *   telling about it: the first and then one every thousand (20 s of Opus, 5 of PCM). */
@@ -352,7 +352,7 @@ bool audio_cod_passa(audio_cod *c, const int16_t *campioni, uint8_t *fuori,
 		size_t n = (size_t)c->blocco * AUDIO_CANALI * 2;
 		if (n > AUDIO_FUORI_MAX)
 			return false;
-		pcm_scrivi(campioni, c->blocco, fuori);
+		pcm_write(campioni, c->blocco, fuori);
 		*quanti = n;
 		c->usciti++;
 		return true;
@@ -382,8 +382,8 @@ bool audio_cod_passa(audio_cod *c, const int16_t *campioni, uint8_t *fuori,
 		 *    "Opus is accumulating" would have been indistinguishable from "the block
 		 *    did not arrive".  And if one day it were taken, the `istante` of §6.3
 		 *    would no longer belong to the block that leaves. */
-		if (!c->eagain_detto) {
-			c->eagain_detto = true;
+		if (!c->logged_eagain) {
+			c->logged_eagain = true;
 			registro_dice(REG_AUDIO,
 			              "⛔ libopus held back a block (EAGAIN) — and "
 			              "`banchi/07-b44` says it never happens.  ⚠ From here "

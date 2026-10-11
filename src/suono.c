@@ -38,20 +38,20 @@
 
 /* How long we wait for the server to register the sink's node.  It is a local
  * answer on a socket: if it does not arrive in five seconds it will not arrive. */
-#define ATTESA_SINK_MS 5000
+#define WAIT_SINK_MS 5000
 
 /* How long we wait for the capture to reach `paused`, that is for the format to
  * be negotiated.  ⛔ It is the only point where a refusal shows AT ONCE instead
  * of becoming silence later — the same reason as the wait in `cattura.c`, and
  * there it costs ten seconds because there a compositor is getting up; here on
  * the other side there is only PipeWire. */
-#define ATTESA_ASCOLTO_MS 5000
+#define WAIT_LISTEN_MS 5000
 
 /* How long we wait, at most, for a realtime callback already started to
  * exit (see `suono_ascolto_ferma`).  ⚠ In health it costs zero or one quantum —
  * `[?]` 5-6 ms: the ceiling is wide on purpose, because exceeding it means
  * PipeWire is stuck and the line saying so is worth more than the time it costs. */
-#define ATTESA_BARRIERA_MS 2000
+#define WAIT_BARRIER_MS 2000
 
 /*
  * The sink's name, which is also how the capture finds it again.
@@ -62,7 +62,7 @@
  * WRONG sink the day the machine has two (a real card, or a second served
  * session).
  */
-#define NOME_SINK "remotix"
+#define SINK_NAME "remotix"
 
 /*
  * ⚠ The forced quantum, and the number is that of v1 and of the reference
@@ -76,7 +76,7 @@
  *   ten-seconds box in `cattura.c`).  It changes the day someone measures
  *   that it pays off.
  */
-#define QUANTO_FORZATO "256"
+#define FORCED_QUANTUM "256"
 
 struct suono
 {
@@ -85,23 +85,23 @@ struct suono
 	struct pw_core *nucleo;
 
 	struct pw_proxy *sink;
-	struct spa_hook gancio_sink;
+	struct spa_hook hook_sink;
 	uint32_t nodo;
 
 	struct pw_stream *flusso;
-	struct spa_hook gancio_flusso;
+	struct spa_hook hook_stream;
 	enum pw_stream_state stato;
 	char *guasto;
 
 	/* --- what the realtime thread touches -------------------------------- *
 	 *
-	 * ⛔ `consegna` and `in_richiamo` are ATOMIC and not plain `bool`s: they are
+	 * ⛔ `consegna` and `in_callback` are ATOMIC and not plain `bool`s: they are
 	 *    the two halves of the barrier of `suono_ascolto_ferma()`, and a barrier
 	 *    built on reads the compiler can move is not a barrier.  The reason for
 	 *    the design is next to that function. */
 	atomic_bool consegna;
-	atomic_bool in_richiamo;
-	suono_campioni su_campioni;
+	atomic_bool in_callback;
+	sound_samples on_samples;
 	void *chi;
 
 	/* The counts.  ⚠ The realtime thread increments them and whoever wants reads
@@ -119,15 +119,15 @@ struct suono
 /* ------------------------------------------------------------------ *
  * The virtual sink
  * ------------------------------------------------------------------ */
-static void su_sink_legato(void *dati, uint32_t id_globale)
+static void on_sink_bound(void *dati, uint32_t global_id)
 {
 	suono *s = dati;
 
-	s->nodo = id_globale;
+	s->nodo = global_id;
 	pw_thread_loop_signal(s->ciclo, false);
 }
 
-static void su_sink_tolto(void *dati)
+static void on_sink_removed(void *dati)
 {
 	suono *s = dati;
 
@@ -140,7 +140,7 @@ static void su_sink_tolto(void *dati)
 	pw_thread_loop_signal(s->ciclo, false);
 }
 
-static void su_sink_sbagliato(void *dati, int seq, int res, const char *messaggio)
+static void on_sink_error(void *dati, int seq, int res, const char *messaggio)
 {
 	suono *s = dati;
 
@@ -149,17 +149,17 @@ static void su_sink_sbagliato(void *dati, int seq, int res, const char *messaggi
 	pw_thread_loop_signal(s->ciclo, false);
 }
 
-static const struct pw_proxy_events eventi_sink = {
+static const struct pw_proxy_events events_sink = {
 	PW_VERSION_PROXY_EVENTS,
-	.bound = su_sink_legato,
-	.removed = su_sink_tolto,
-	.error = su_sink_sbagliato,
+	.bound = on_sink_bound,
+	.removed = on_sink_removed,
+	.error = on_sink_error,
 };
 
 /* ------------------------------------------------------------------ *
  * The monitor capture
  * ------------------------------------------------------------------ */
-static void su_stato(void *dati, enum pw_stream_state vecchio, enum pw_stream_state nuovo,
+static void on_state(void *dati, enum pw_stream_state vecchio, enum pw_stream_state nuovo,
                      const char *sbaglio)
 {
 	suono *s = dati;
@@ -220,7 +220,7 @@ static void su_parametri(void *dati, uint32_t id, const struct spa_pod *param)
 		              negoziato.rate == AUDIO_FREQUENZA && negoziato.channels == AUDIO_CANALI;
 		/* ⚠ The name may be missing — `spa_debug_type_find_short_name()` returns
 		 *   NULL for an id its table does not know — and then the bare NUMBER is
-		 *   printed: it is the same rule as `cattura.c` (`primo_tipo_grezzo`),
+		 *   printed: it is the same rule as `cattura.c` (`first_raw_type`),
 		 *   because "(null)" in a log cannot be searched for anywhere. */
 		const char *nome = negoziato.format == SPA_AUDIO_FORMAT_S16
 		                       ? "S16"
@@ -273,20 +273,20 @@ static void su_processo(void *dati)
 {
 	suono *s = dati;
 	struct pw_stream *flusso = s->flusso;
-	struct pw_buffer *pacco;
+	struct pw_buffer *bundle;
 
 	/*
 	 * ⛔ THE FIRST HALF OF THE BARRIER, and the order is everything: we declare
 	 *    we are inside BEFORE reading `consegna`.  Whoever stops does the opposite —
-	 *    switches off `consegna` and then reads `in_richiamo` — and with two
+	 *    switches off `consegna` and then reads `in_callback` — and with two
 	 *    sequentially consistent writes at least one of the two sees the other.  It
 	 *    is Dekker, and it is what makes the promise of `suono_ascolto_ferma()` true.
 	 */
-	atomic_store(&s->in_richiamo, true);
+	atomic_store(&s->in_callback, true);
 
 	if (!flusso)
 	{
-		atomic_store(&s->in_richiamo, false);
+		atomic_store(&s->in_callback, false);
 		return;
 	}
 
@@ -301,11 +301,11 @@ static void su_processo(void *dati)
 	 * downstream — whoever queues the samples knows how many it can keep — not
 	 * in a silent loss here.
 	 */
-	while ((pacco = pw_stream_dequeue_buffer(flusso)))
+	while ((bundle = pw_stream_dequeue_buffer(flusso)))
 	{
-		struct spa_data *piano = &pacco->buffer->datas[0];
+		struct spa_data *piano = &bundle->buffer->datas[0];
 
-		if (pacco->buffer->n_datas > 0 && piano->data && piano->chunk && piano->chunk->size > 0)
+		if (bundle->buffer->n_datas > 0 && piano->data && piano->chunk && piano->chunk->size > 0)
 		{
 			const int16_t *campioni =
 			    (const int16_t *) ((const uint8_t *) piano->data + piano->chunk->offset);
@@ -317,7 +317,7 @@ static void su_processo(void *dati)
 				/* ⛔ `consegna` is read only once and kept: reading it twice
 				 *    would mean possibly finding it on in the check and
 				 *    off in the callback. */
-				if (atomic_load(&s->consegna) && s->su_campioni)
+				if (atomic_load(&s->consegna) && s->on_samples)
 				{
 					/*
 					 * ⭐ THE PEAK, AND IT IS THE ONLY NUMBER THAT TELLS THE TWO
@@ -353,7 +353,7 @@ static void su_processo(void *dati)
 
 					atomic_fetch_add(&s->blocchi, 1u);
 					atomic_fetch_add(&s->fotogrammi, fotogrammi);
-					s->su_campioni(campioni, fotogrammi, s->chi);
+					s->on_samples(campioni, fotogrammi, s->chi);
 				}
 				else
 				{
@@ -364,15 +364,15 @@ static void su_processo(void *dati)
 				}
 			}
 		}
-		pw_stream_queue_buffer(flusso, pacco);
+		pw_stream_queue_buffer(flusso, bundle);
 	}
 
-	atomic_store(&s->in_richiamo, false);
+	atomic_store(&s->in_callback, false);
 }
 
-static const struct pw_stream_events eventi_flusso = {
+static const struct pw_stream_events events_stream = {
 	PW_VERSION_STREAM_EVENTS,
-	.state_changed = su_stato,
+	.state_changed = on_state,
 	.param_changed = su_parametri,
 	.process = su_processo,
 };
@@ -405,18 +405,18 @@ static void alza(suono *s)
 {
 	uint8_t memoria[512];
 	struct spa_pod_builder costruttore = SPA_POD_BUILDER_INIT(memoria, sizeof memoria);
-	float volumi[AUDIO_CANALI];
+	float volumes[AUDIO_CANALI];
 	const struct spa_pod *props;
 	int seq;
 	int i;
 
 	for (i = 0; i < AUDIO_CANALI; i++)
-		volumi[i] = 1.0f;
+		volumes[i] = 1.0f;
 
 	props = spa_pod_builder_add_object(
 	    &costruttore, SPA_TYPE_OBJECT_Props, SPA_PARAM_Props, SPA_PROP_mute, SPA_POD_Bool(false),
 	    SPA_PROP_channelVolumes,
-	    SPA_POD_Array(sizeof(float), SPA_TYPE_Float, SPA_N_ELEMENTS(volumi), volumi));
+	    SPA_POD_Array(sizeof(float), SPA_TYPE_Float, SPA_N_ELEMENTS(volumes), volumes));
 
 	seq = pw_node_set_param((struct pw_node *) s->sink, SPA_PARAM_Props, 0, props);
 
@@ -458,13 +458,13 @@ void suono_volume_massimo(suono *s)
 /* ------------------------------------------------------------------ *
  * Life cycle
  * ------------------------------------------------------------------ */
-static bool crea_sink(suono *s)
+static bool create_sink(suono *s)
 {
 	struct pw_properties *proprieta;
 	uint64_t scadenza;
 
 	proprieta = pw_properties_new(
-	    PW_KEY_FACTORY_NAME, "support.null-audio-sink", PW_KEY_NODE_NAME, NOME_SINK,
+	    PW_KEY_FACTORY_NAME, "support.null-audio-sink", PW_KEY_NODE_NAME, SINK_NAME,
 	    PW_KEY_NODE_DESCRIPTION, "REMOTIX", PW_KEY_MEDIA_CLASS, "Audio/Sink", "audio.position",
 	    "[FL,FR]",
 	    /*
@@ -532,23 +532,23 @@ static bool crea_sink(suono *s)
 
 	if (!s->sink)
 	{
-		registro_dice(REG_SUONO, "⛔ PipeWire did not create the virtual sink «%s»", NOME_SINK);
+		registro_dice(REG_SUONO, "⛔ PipeWire did not create the virtual sink «%s»", SINK_NAME);
 		return false;
 	}
-	pw_proxy_add_listener(s->sink, &s->gancio_sink, &eventi_sink, s);
+	pw_proxy_add_listener(s->sink, &s->hook_sink, &events_sink, s);
 
 	/* ⚠ We wait for the node's id, not the creation: `bound` is the moment the
 	 *   server REALLY registered the object.  Whoever returned earlier would hold
 	 *   a proxy that could still fail, and the refusal would show up later as
 	 *   silence. */
-	scadenza = registro_ora_ms() + ATTESA_SINK_MS;
+	scadenza = registro_ora_ms() + WAIT_SINK_MS;
 	while (s->nodo == 0 && registro_ora_ms() < scadenza)
 		pw_thread_loop_timed_wait(s->ciclo, 1);
 
 	if (s->nodo == 0)
 	{
 		registro_dice(REG_SUONO, "⛔ the virtual sink was not registered within %d ms",
-		              ATTESA_SINK_MS);
+		              WAIT_SINK_MS);
 		return false;
 	}
 	alza(s);
@@ -559,9 +559,9 @@ static bool crea_sink(suono *s)
  *    it is not synchronised by itself, and the child opens the stage and the sound
  *    at two different moments.  ⚠ `pthread_once` and not a `bool`, because "it
  *    usually happens first" is not a synchronisation. */
-static pthread_once_t una_volta = PTHREAD_ONCE_INIT;
+static pthread_once_t init_once = PTHREAD_ONCE_INIT;
 
-static void inizializza_pipewire(void)
+static void init_pipewire(void)
 {
 	pw_init(NULL, NULL);
 }
@@ -572,10 +572,10 @@ suono *suono_apri(void)
 
 	if (!s)
 		return NULL;
-	pthread_once(&una_volta, inizializza_pipewire);
+	pthread_once(&init_once, init_pipewire);
 
 	atomic_init(&s->consegna, false);
-	atomic_init(&s->in_richiamo, false);
+	atomic_init(&s->in_callback, false);
 	atomic_init(&s->blocchi, 0);
 	atomic_init(&s->fotogrammi, 0);
 	atomic_init(&s->scartati, 0);
@@ -614,7 +614,7 @@ suono *suono_apri(void)
 		goto guasto;
 	}
 
-	if (!crea_sink(s))
+	if (!create_sink(s))
 	{
 		pw_thread_loop_unlock(s->ciclo);
 		goto guasto;
@@ -623,15 +623,15 @@ suono *suono_apri(void)
 
 	registro_dice(REG_SUONO, "⭐ audio sink «%s» mounted in the session: node %u, %d Hz, %d channels "
 	                         "— it belongs to the SESSION, it survives detach (I4)",
-	              NOME_SINK, s->nodo, (int) AUDIO_FREQUENZA, (int) AUDIO_CANALI);
+	              SINK_NAME, s->nodo, (int) AUDIO_FREQUENZA, (int) AUDIO_CANALI);
 	return s;
 
 guasto:
-	suono_chiudi(s);
+	sound_close(s);
 	return NULL;
 }
 
-bool suono_ascolto_avvia(suono *s, suono_campioni su_campioni, void *chi)
+bool sound_listen_start(suono *s, sound_samples on_samples, void *chi)
 {
 	uint8_t spazio[1024];
 	struct spa_pod_builder costruttore = SPA_POD_BUILDER_INIT(spazio, sizeof spazio);
@@ -640,7 +640,7 @@ bool suono_ascolto_avvia(suono *s, suono_campioni su_campioni, void *chi)
 	struct pw_properties *proprieta;
 	uint64_t scadenza;
 
-	if (!s || !s->nucleo || !su_campioni)
+	if (!s || !s->nucleo || !on_samples)
 		return false;
 
 	/*
@@ -661,7 +661,7 @@ bool suono_ascolto_avvia(suono *s, suono_campioni su_campioni, void *chi)
 		return false;
 	}
 
-	s->su_campioni = su_campioni;
+	s->on_samples = on_samples;
 	s->chi = chi;
 	s->stato = PW_STREAM_STATE_UNCONNECTED;
 	atomic_store(&s->blocchi, 0);
@@ -678,7 +678,7 @@ bool suono_ascolto_avvia(suono *s, suono_campioni su_campioni, void *chi)
 	                               * MONITOR (the output) of our sink, and not
 	                               * the input of a microphone that does not exist here. */
 	                              PW_KEY_STREAM_CAPTURE_SINK, "true", PW_KEY_TARGET_OBJECT,
-	                              NOME_SINK, PW_KEY_NODE_FORCE_QUANTUM, QUANTO_FORZATO, NULL);
+	                              SINK_NAME, PW_KEY_NODE_FORCE_QUANTUM, FORCED_QUANTUM, NULL);
 	s->flusso = proprieta ? pw_stream_new(s->nucleo, "remotix-suono", proprieta) : NULL;
 	if (!s->flusso)
 	{
@@ -687,7 +687,7 @@ bool suono_ascolto_avvia(suono *s, suono_campioni su_campioni, void *chi)
 		registro_dice(REG_SUONO, "⛔ PipeWire stream not created");
 		return false;
 	}
-	pw_stream_add_listener(s->flusso, &s->gancio_flusso, &eventi_flusso, s);
+	pw_stream_add_listener(s->flusso, &s->hook_stream, &events_stream, s);
 
 	/*
 	 * ⛔ THE FORMAT IS ASKED FIXED, and it is not a preference: `RCP.md` §5.3.
@@ -719,13 +719,13 @@ bool suono_ascolto_avvia(suono *s, suono_campioni su_campioni, void *chi)
 		s->flusso = NULL;
 		atomic_store(&s->consegna, false);
 		pw_thread_loop_unlock(s->ciclo);
-		registro_dice(REG_SUONO, "⛔ attaching to the monitor of sink «%s» failed", NOME_SINK);
+		registro_dice(REG_SUONO, "⛔ attaching to the monitor of sink «%s» failed", SINK_NAME);
 		return false;
 	}
 
 	/* ⛔ We wait for `paused`: it is the moment the format was negotiated,
 	 *    that is the only one in which a refusal shows at once. */
-	scadenza = registro_ora_ms() + ATTESA_ASCOLTO_MS;
+	scadenza = registro_ora_ms() + WAIT_LISTEN_MS;
 	while (s->stato != PW_STREAM_STATE_PAUSED && s->stato != PW_STREAM_STATE_STREAMING &&
 	       s->stato != PW_STREAM_STATE_ERROR && registro_ora_ms() < scadenza)
 		pw_thread_loop_timed_wait(s->ciclo, 1);
@@ -741,7 +741,7 @@ bool suono_ascolto_avvia(suono *s, suono_campioni su_campioni, void *chi)
 	if (s->stato != PW_STREAM_STATE_PAUSED && s->stato != PW_STREAM_STATE_STREAMING)
 	{
 		registro_dice(REG_SUONO, "⛔ the audio capture gave no sign of life within %d ms",
-		              ATTESA_ASCOLTO_MS);
+		              WAIT_LISTEN_MS);
 		suono_ascolto_ferma(s);
 		return false;
 	}
@@ -749,7 +749,7 @@ bool suono_ascolto_avvia(suono *s, suono_campioni su_campioni, void *chi)
 	registro_dice(REG_SUONO,
 	              "⭐ audio capture started from the monitor of «%s»: %d Hz, %d channels, s16, quantum %s "
 	              "— ⚠ blocks have VARIABLE size, the listener accumulates (suono.h)",
-	              NOME_SINK, (int) AUDIO_FREQUENZA, (int) AUDIO_CANALI, QUANTO_FORZATO);
+	              SINK_NAME, (int) AUDIO_FREQUENZA, (int) AUDIO_CANALI, FORCED_QUANTUM);
 	return true;
 }
 
@@ -772,7 +772,7 @@ bool suono_ascolto_avvia(suono *s, suono_campioni su_campioni, void *chi)
  * ⇒ The wait is in two steps, and the first does NOT depend on how
  *   `pw_stream_destroy()` is made inside:
  *
- *   1. `consegna` is switched off and we wait for `in_richiamo` to go back false.
+ *   1. `consegna` is switched off and we wait for `in_callback` to go back false.
  *      From here on no listener callback is in flight, and none will start
  *      again (the two sequentially consistent writes see each other: see
  *      `su_processo`).  ⭐ This, and only this, is what entitles the
@@ -787,16 +787,16 @@ bool suono_ascolto_avvia(suono *s, suono_campioni su_campioni, void *chi)
  *   data thread would be the way to end up in the middle of a deadlock
  *   the day PipeWire changed its mind about who holds what.
  */
-static void aspetta_richiamo(suono *s)
+static void wait_callback(suono *s)
 {
 	uint64_t inizio = registro_ora_ms();
 
-	while (atomic_load(&s->in_richiamo))
+	while (atomic_load(&s->in_callback))
 	{
 		struct timespec pausa = { 0, 200 * 1000 }; /* 200 µs: a quantum is 5 ms */
 
 		nanosleep(&pausa, NULL);
-		if (registro_ora_ms() - inizio > ATTESA_BARRIERA_MS)
+		if (registro_ora_ms() - inizio > WAIT_BARRIER_MS)
 		{
 			/* ⛔ We exit anyway, and it IS DECLARED.  Staying here forever
 			 *    would mean a frozen session, and "an ugly session
@@ -807,7 +807,7 @@ static void aspetta_richiamo(suono *s)
 			registro_dice(REG_SUONO,
 			              "⛔⛔ the realtime thread did not leave the callback within %d ms: "
 			              "do NOT free the listening context — PipeWire is blocked",
-			              ATTESA_BARRIERA_MS);
+			              WAIT_BARRIER_MS);
 			return;
 		}
 	}
@@ -820,7 +820,7 @@ void suono_ascolto_ferma(suono *s)
 
 	/* 1. the barrier towards the listener (see the box). */
 	atomic_store(&s->consegna, false);
-	aspetta_richiamo(s);
+	wait_callback(s);
 
 	/* 2. the stream, under the loop lock. */
 	pw_thread_loop_lock(s->ciclo);
@@ -857,12 +857,12 @@ void suono_ascolto_ferma(suono *s)
 		              (unsigned long long) scartati,
 		              (unsigned long long) atomic_load(&s->picco));
 	}
-	s->su_campioni = NULL;
+	s->on_samples = NULL;
 	s->chi = NULL;
 	pw_thread_loop_unlock(s->ciclo);
 }
 
-uint32_t suono_nodo(const suono *s)
+uint32_t sound_node(const suono *s)
 {
 	return s ? s->nodo : 0;
 }
@@ -893,7 +893,7 @@ void suono_conti(const suono *s, uint64_t *blocchi, uint64_t *fotogrammi, uint64
 		*scartati = s ? atomic_load(&s->scartati) : 0;
 }
 
-void suono_chiudi(suono *s)
+void sound_close(suono *s)
 {
 	if (!s)
 		return;

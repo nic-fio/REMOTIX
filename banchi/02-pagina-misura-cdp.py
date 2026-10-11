@@ -65,7 +65,7 @@ class Ws:
             if not pezzo:
                 raise RuntimeError("the socket closed during the handshake")
             testa += pezzo
-        intestazione, _, avanzo = testa.partition(b"\r\n\r\n")
+        intestazione, _, leftover = testa.partition(b"\r\n\r\n")
         if b" 101 " not in intestazione.split(b"\r\n")[0]:
             raise RuntimeError("handshake refused: "
                                + intestazione.split(b"\r\n")[0].decode())
@@ -75,11 +75,11 @@ class Ws:
         #    answered 101 would pass for Chrome.
         if atteso.lower() not in intestazione.decode("latin1").lower():
             raise RuntimeError("Sec-WebSocket-Accept does not match")
-        self.buf = bytearray(avanzo)
+        self.buf = bytearray(leftover)
         self.n = 0
 
     # -- framing ------------------------------------------------------------
-    def _leggi(self, quanti):
+    def _read(self, quanti):
         while len(self.buf) < quanti:
             pezzo = self.s.recv(65536)
             if not pezzo:
@@ -89,16 +89,16 @@ class Ws:
         del self.buf[:quanti]
         return fuori
 
-    def _pezzo(self):
-        b0, b1 = self._leggi(2)
+    def _piece(self):
+        b0, b1 = self._read(2)
         fin = b0 & 0x80
         codice = b0 & 0x0F
         lung = b1 & 0x7F
         if lung == 126:
-            lung = struct.unpack(">H", self._leggi(2))[0]
+            lung = struct.unpack(">H", self._read(2))[0]
         elif lung == 127:
-            lung = struct.unpack(">Q", self._leggi(8))[0]
-        corpo = self._leggi(lung)
+            lung = struct.unpack(">Q", self._read(8))[0]
+        corpo = self._read(lung)
         return fin, codice, corpo
 
     def manda(self, testo):
@@ -119,7 +119,7 @@ class Ws:
     def ricevi(self):
         pezzi = b""
         while True:
-            fin, codice, corpo = self._pezzo()
+            fin, codice, corpo = self._piece()
             if codice == 0x9:               # ping → pong
                 self.s.sendall(b"\x8a\x80" + os.urandom(4))
                 continue
@@ -209,7 +209,7 @@ def pagina(porta, attesa=25):
 #    answer CONSISTENTLY: a fake decoder that said «yes» to the
 #    filter and threw at `configure` would measure a device that does not
 #    exist — and precisely the case in which the page already does not trust the filter.
-PROLOGO_TELEFONO = r"""
+PHONE_PROLOGUE = r"""
 (function () {
   if (typeof VideoDecoder === "undefined") return;
   const TETTO_L = %d, TETTO_A = %d;

@@ -201,31 +201,31 @@
 #define BUDGET_TOLLERANZA 0.01
 
 /* ⛔ The outcome, and there are THREE.  ⚠ `BUDGET_NON_SO` is not
- *    `BUDGET_NON_REGGE`: it is «I could not measure», and whoever receives it
+ *    `BUDGET_DOES_NOT_HOLD`: it is «I could not measure», and whoever receives it
  *    **admits** and writes the line.  A budget that refused for not having
  *    been able to measure would make the user pay for a fault of ours. */
 enum budget_esito {
-	BUDGET_REGGE,
-	BUDGET_NON_REGGE,
+	BUDGET_HOLDS,
+	BUDGET_DOES_NOT_HOLD,
 	BUDGET_NON_SO,
 };
 
 /* ⭐ It is turned on once only, at startup, with the numbers of the command line.
  *
- *   `capacita_mpixel_s`  `--budget-mpixel-s`, **0 = OFF** (I6);
+ *   `capacity_mpixel_s`  `--budget-mpixel-s`, **0 = OFF** (I6);
  *   `riserva`            `--riserva`, 0..1 (§6.9);
  *   `tela_l`, `tela_a`   the stage canvas, that is the **upper bound** of the
  *                        canvas any session can obtain: it serves as a declared
  *                        fallback for whoever has not delivered anything yet,
  *                        and goes in the uncomfortable direction. */
-void budget_accendi(double capacita_mpixel_s, double riserva, uint32_t tela_l,
+void budget_turn_on(double capacity_mpixel_s, double riserva, uint32_t tela_l,
                     uint32_t tela_a);
 
 /* ⛔ How many slots the tenant table will have — called **before**
- *    `budget_accendi()`, with the session cap in force.  ⚠ After switch-on it
+ *    `budget_turn_on()`, with the session cap in force.  ⚠ After switch-on it
  *    does nothing: the table is already allocated, and changing its size on
  *    the fly would mean losing the delivered of whoever is there. */
-void budget_caselle(int quante);
+void budget_cells(int quante);
 
 /* ⭐⭐ THE STARTUP LINE, and it is written **ON AND OFF**.
  *
@@ -249,12 +249,12 @@ void budget_riga_avvio(int tetto_sessioni);
  *     with the budget off the product behaves as yesterday, and denies nobody.
  *
  * ⚠ The counts are TWO and not one: `negati` are all the noes said at this
- *   door (full table included), `negati_budget` are the `0x06` only.  Adding
+ *   door (full table included), `denied_budget` are the `0x06` only.  Adding
  *   them up would pass off a configuration fault as capacity. */
-void budget_riga_verdetto(const char *utente, bool ammesso, uint8_t motivo,
+void budget_verdict_line(const char *utente, bool ammesso, uint8_t motivo,
                           int tetto_sessioni, const char *perche);
 
-bool budget_acceso(void);
+bool budget_on(void);
 
 /* ⭐⭐ THE ACCUMULATOR — called for **every** frame of **every** child, from
  *     `deposita_fotogramma()`.  ⛔ Without guards on «someone is watching»: it
@@ -273,22 +273,22 @@ void budget_deposita(const char *utente, uint32_t larghezza, uint32_t altezza,
  *    tying them together would mean the budget knows the children, and then
  *    one day it would decide something about them. */
 struct budget_conto {
-	uint64_t ora_us;
+	uint64_t now_us;
 	bool orologio;          /* ⛔ false = I did not read the time: I do not judge */
 	double domanda;         /* Mpixel/s already committed */
 	int quanti;
 	/* ⛔ The first throttled one found: it is the delay gate, and it closes
 	 *    the count **before** the sum. */
-	char strozzato[257];
-	double strozzato_ms;
+	char throttled[257];
+	double throttled_ms;
 	/* ⚠ How many of those inside were counted at the worst case because they
 	 *   had not delivered yet: it goes into the line, or the demand number
 	 *   looks like a measurement when it is a fallback. */
-	int al_peggiore;
+	int at_worst;
 };
 
-void budget_conto_apri(struct budget_conto *c);
-void budget_conto_dentro(struct budget_conto *c, const char *utente);
+void budget_count_open(struct budget_conto *c);
+void budget_count_inside(struct budget_conto *c, const char *utente);
 
 /* ⭐ The verdict on the newcomer.  `tela_l`/`tela_a` are the **ceiling** of the
  *    canvas it will obtain — `min(stage canvas, the client's video.misura_massima)`
@@ -297,9 +297,9 @@ void budget_conto_dentro(struct budget_conto *c, const char *utente);
  *
  * `perche` receives the sentence that goes into the **body of the CONGEDO** and
  * into the log: it must be readable by a user, not by whoever wrote the code. */
-enum budget_esito budget_conto_verdetto(struct budget_conto *c,
+enum budget_esito budget_count_verdict(struct budget_conto *c,
                                         const char *nuovo, uint32_t tela_l,
                                         uint32_t tela_a, char *perche,
-                                        size_t perche_cap);
+                                        size_t why_cap);
 
 #endif /* BUDGET_H */

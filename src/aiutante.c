@@ -26,7 +26,7 @@
  *    by the grandchild**: in the serving process it is never executed again. */
 bool rcp_autentica_da(const char *utente, const char *parola,
                       const char *rhost);
-bool rcp_rhost_da_provenienza(const char *provenienza, char *fuori, size_t cap);
+bool rcp_rhost_from_provenance(const char *provenienza, char *fuori, size_t cap);
 
 /* ⛔⛔ THIS NUMBER IS NOT THE SESSION CAP, AND MUST NOT FOLLOW IT — 25 Aug
  *      2026, and the line above said the opposite.
@@ -99,15 +99,15 @@ struct volo {
 struct aiutante {
 	int fd;         /* -1 when the dispatcher is dead or was never born */
 	pid_t figlio;
-	uint64_t prossima_pratica;
+	uint64_t next_case;
 	struct volo volo[MAX_IN_VOLO];
-	int nvolo;
+	int nflight;
 };
 
 /* ------------------------------------------------------------------------ */
 /* THE GRANDCHILD — one single PAM transaction, then it dies.               */
 
-static void nipote(int fd, const struct richiesta *r)
+static void grandchild(int fd, const struct richiesta *r)
 {
 	struct risposta out;
 	bool ok;
@@ -133,7 +133,7 @@ static void nipote(int fd, const struct richiesta *r)
 /* ------------------------------------------------------------------------ */
 /* THE DISPATCHER — never calls PAM: reads and forks.                       */
 
-static void smistatore(int fd)
+static void dispatcher(int fd)
 {
 	struct richiesta r;
 
@@ -143,7 +143,7 @@ static void smistatore(int fd)
 	prctl(PR_SET_PDEATHSIG, SIGTERM);
 
 	/* ⛔ The parent's handlers do not apply here: the parent leaves its loop
-	 *    when `si_ferma` becomes 1, and this process never looks at that
+	 *    when `stop_requested` becomes 1, and this process never looks at that
 	 *    variable.  With the inherited handler a `SIGTERM` would not stop it,
 	 *    and whoever shuts the server down would wait for an immortal child. */
 	signal(SIGTERM, SIG_DFL);
@@ -178,7 +178,7 @@ static void smistatore(int fd)
 
 		pid_t p = fork();
 		if (p == 0)
-			nipote(fd, &r); /* does not return */
+			grandchild(fd, &r); /* does not return */
 		if (p < 0) {
 			/* ⛔ No fallback of calling PAM HERE: it would block the
 			 *    dispatcher, and with it all the other requests.  Stay
@@ -232,13 +232,13 @@ aiutante *aiutante_accendi(void)
 	}
 	if (a->figlio == 0) {
 		close(sv[0]);
-		smistatore(sv[1]); /* does not return */
+		dispatcher(sv[1]); /* does not return */
 		_exit(1);
 	}
 
 	close(sv[1]);
 	a->fd = sv[0];
-	a->prossima_pratica = 1;
+	a->next_case = 1;
 	/* ⛔ Non-blocking: it is the whole point of this file.  A `send` that
 	 *    waits is a wait inside the asynchronous loop — `CODER.md` §4.4 —
 	 *    that is, the defect moved instead of cured. */
@@ -252,7 +252,7 @@ aiutante *aiutante_accendi(void)
 	return a;
 }
 
-void aiutante_spegni(aiutante *a)
+void helper_turn_off(aiutante *a)
 {
 	if (!a)
 		return;
@@ -268,24 +268,24 @@ void aiutante_spegni(aiutante *a)
 	free(a);
 }
 
-int aiutante_descrittore(const aiutante *a)
+int helper_descriptor(const aiutante *a)
 {
 	return a ? a->fd : -1;
 }
 
-int aiutante_in_volo(const aiutante *a)
+int helper_in_flight(const aiutante *a)
 {
-	return a ? a->nvolo : 0;
+	return a ? a->nflight : 0;
 }
 
-static void volo_togli(aiutante *a, int i)
+static void flight_remove(aiutante *a, int i)
 {
-	a->volo[i] = a->volo[a->nvolo - 1];
-	a->nvolo--;
+	a->volo[i] = a->volo[a->nflight - 1];
+	a->nflight--;
 }
 
 bool aiutante_chiedi(aiutante *a, const char *utente, const char *parola,
-                     const char *provenienza, uint64_t ora_ms,
+                     const char *provenienza, uint64_t now_ms,
                      uint64_t *pratica)
 {
 	struct richiesta r;
@@ -295,16 +295,16 @@ bool aiutante_chiedi(aiutante *a, const char *utente, const char *parola,
 	*pratica = 0;
 	if (!a || a->fd < 0 || !utente || !parola)
 		return false;
-	if (a->nvolo >= MAX_IN_VOLO) {
+	if (a->nflight >= MAX_IN_VOLO) {
 		registro_dice(REG_RCP,
 		              "⛔ %d PAM checks already in flight: this one does NOT leave, and "
 		              "whoever asked will receive a NO (I3: failure is a "
 		              "no, not a maybe)",
-		              a->nvolo);
+		              a->nflight);
 		return false;
 	}
 
-	mia = a->prossima_pratica;
+	mia = a->next_case;
 	memset(&r, 0, sizeof r);
 	r.pratica = mia;
 	/* ⛔ `snprintf` and not `strcpy`: the ranges have already been enforced by
@@ -312,7 +312,7 @@ bool aiutante_chiedi(aiutante *a, const char *utente, const char *parola,
 	 *    wall — the one that holds even if the first changes. */
 	snprintf(r.utente, sizeof r.utente, "%s", utente);
 	snprintf(r.parola, sizeof r.parola, "%s", parola);
-	(void)rcp_rhost_da_provenienza(provenienza, r.rhost, sizeof r.rhost);
+	(void)rcp_rhost_from_provenance(provenienza, r.rhost, sizeof r.rhost);
 
 	scritti = send(a->fd, &r, sizeof r, MSG_NOSIGNAL);
 	/* ⛔ §4.4: the password is zeroed as soon as it has served.  This is the
@@ -331,15 +331,15 @@ bool aiutante_chiedi(aiutante *a, const char *utente, const char *parola,
 		return false;
 	}
 
-	a->volo[a->nvolo].pratica = mia;
-	a->volo[a->nvolo].scade = ora_ms + SCADENZA_MS;
-	snprintf(a->volo[a->nvolo].utente, sizeof a->volo[a->nvolo].utente, "%s",
+	a->volo[a->nflight].pratica = mia;
+	a->volo[a->nflight].scade = now_ms + SCADENZA_MS;
+	snprintf(a->volo[a->nflight].utente, sizeof a->volo[a->nflight].utente, "%s",
 	         utente);
-	(void)rcp_rhost_da_provenienza(provenienza, a->volo[a->nvolo].rhost,
-	                               sizeof a->volo[a->nvolo].rhost);
-	a->nvolo++;
+	(void)rcp_rhost_from_provenance(provenienza, a->volo[a->nflight].rhost,
+	                               sizeof a->volo[a->nflight].rhost);
+	a->nflight++;
 	*pratica = mia;
-	a->prossima_pratica++;
+	a->next_case++;
 	return true;
 }
 
@@ -347,12 +347,12 @@ bool aiutante_chiedi(aiutante *a, const char *utente, const char *parola,
  * An answer for an unknown request — or the second answer for the same one —
  * is discarded and written: it is the only way for «I received two verdicts»
  * not to become «the last one wins». */
-static bool volo_consuma(aiutante *a, uint64_t pratica, char *utente,
+static bool flight_consumes(aiutante *a, uint64_t pratica, char *utente,
                          size_t cap, char *rhost, size_t rcap)
 {
-	for (int i = 0; i < a->nvolo; i++) {
+	for (int i = 0; i < a->nflight; i++) {
 		if (a->volo[i].pratica == pratica) {
-			/* ⛔ The name is copied BEFORE removing the request: `volo_togli()`
+			/* ⛔ The name is copied BEFORE removing the request: `flight_remove()`
 			 *    writes the last one of the table over it, and reading it
 			 *    afterwards would mean delivering another user's name — which
 			 *    here is the worst possible defect. */
@@ -360,7 +360,7 @@ static bool volo_consuma(aiutante *a, uint64_t pratica, char *utente,
 				snprintf(utente, cap, "%s", a->volo[i].utente);
 			if (rhost && rcap)
 				snprintf(rhost, rcap, "%s", a->volo[i].rhost);
-			volo_togli(a, i);
+			flight_remove(a, i);
 			return true;
 		}
 	}
@@ -379,7 +379,7 @@ static void muore(aiutante *a, const char *perche, AiutanteVerdetto consegna,
 	              "flight become NO, and every following attempt will be a NO "
 	              "(invariant I3).  ⚠ It is not «wrong password»: it is «PAM "
 	              "could not judge», and the server does not keep it to itself.",
-	              perche, a->nvolo);
+	              perche, a->nflight);
 	if (a->fd >= 0) {
 		close(a->fd);
 		a->fd = -1;
@@ -389,7 +389,7 @@ static void muore(aiutante *a, const char *perche, AiutanteVerdetto consegna,
 	 *     «the pid is still alive after SIGKILL».
 	 *
 	 *     It was not alive: it was a **zombie**.  The parent did not reap it
-	 *     until `aiutante_spegni()`, that is until the server's shutdown, and
+	 *     until `helper_turn_off()`, that is until the server's shutdown, and
 	 *     in `/proc` a zombie and a live process have **the same face**.
 	 *
 	 * ⚠ The damage was not the extra entry in the process table: it was that
@@ -399,7 +399,7 @@ static void muore(aiutante *a, const char *perche, AiutanteVerdetto consegna,
 	 *
 	 * ⛔ `WNOHANG`: here we are inside the asynchronous loop, and `CODER.md`
 	 *    §4.4 forbids waiting.  If it had not finished yet we retry at the
-	 *    next round, and in any case `aiutante_spegni()` settles the account. */
+	 *    next round, and in any case `helper_turn_off()` settles the account. */
 	if (a->figlio > 0 && waitpid(a->figlio, NULL, WNOHANG) == a->figlio) {
 		registro_dice(REG_RCP,
 		              "⭐ and helper %ld has been reaped: from now on «dead» "
@@ -407,11 +407,11 @@ static void muore(aiutante *a, const char *perche, AiutanteVerdetto consegna,
 		              (long)a->figlio);
 		a->figlio = 0;
 	}
-	while (a->nvolo > 0) {
+	while (a->nflight > 0) {
 		uint64_t p = a->volo[0].pratica;
 		char chi[257];
 		snprintf(chi, sizeof chi, "%s", a->volo[0].utente);
-		volo_togli(a, 0);
+		flight_remove(a, 0);
 		if (consegna)
 			consegna(ctx, p, false, chi, "");
 	}
@@ -448,7 +448,7 @@ void aiutante_muovi(aiutante *a, AiutanteVerdetto consegna, void *ctx)
 			              letti, sizeof ri);
 			continue;
 		}
-		if (!volo_consuma(a, ri.pratica, chi, sizeof chi, da, sizeof da)) {
+		if (!flight_consumes(a, ri.pratica, chi, sizeof chi, da, sizeof da)) {
 			registro_dice(REG_RCP,
 			              "⛔ answer for request %llu, which is not in flight "
 			              "(already expired, or already answered): DISCARDED",
@@ -463,17 +463,17 @@ void aiutante_muovi(aiutante *a, AiutanteVerdetto consegna, void *ctx)
 	}
 }
 
-void aiutante_scaduti(aiutante *a, uint64_t ora_ms, AiutanteVerdetto consegna,
+void helper_expired(aiutante *a, uint64_t now_ms, AiutanteVerdetto consegna,
                       void *ctx)
 {
 	if (!a)
 		return;
-	for (int i = 0; i < a->nvolo;) {
-		if (ora_ms >= a->volo[i].scade) {
+	for (int i = 0; i < a->nflight;) {
+		if (now_ms >= a->volo[i].scade) {
 			uint64_t p = a->volo[i].pratica;
 			char chi[257];
 			snprintf(chi, sizeof chi, "%s", a->volo[i].utente);
-			volo_togli(a, i);
+			flight_remove(a, i);
 			registro_dice(REG_RCP,
 			              "⛔ request %llu received no answer in %d ms: "
 			              "the grandchild died or PAM got stuck.  ⭐ The "

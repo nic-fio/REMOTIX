@@ -441,15 +441,15 @@ class Registro:
 #    identical example.  That is why the criteria are four, and the second is
 #    the one that unmasks the `switch`.
 # ===========================================================================
-ANCORA_TABELLA = "const MOTIVO = {"
+TABLE_ANCHOR = "const MOTIVO = {"
 # ⚠ Since the page's table became an object literal — `0x07: "phrase",`, with
 #   long phrases split as `"…" + "…"` and comments between the entries — it
 #   carries the PHRASE only, not the name: the name is the one §8.2 gives to
 #   the code (`MOTIVI`), and criterion 3 still checks that the phrase is not it.
-VOCE = re.compile(r'(?<![0-9A-Za-z_])0x([0-9A-Fa-f]{1,2})\s*:\s*'
+ENTRY = re.compile(r'(?<![0-9A-Za-z_])0x([0-9A-Fa-f]{1,2})\s*:\s*'
                   r'((?:"(?:[^"\\\n]|\\.)*"\s*\+?\s*)+)')
-PEZZO = re.compile(r'"((?:[^"\\\n]|\\.)*)"')
-COMMENTO = re.compile(r'/\*.*?\*/|^\s*//[^\n]*', re.S | re.M)
+PIECE = re.compile(r'"((?:[^"\\\n]|\\.)*)"')
+COMMENT = re.compile(r'/\*.*?\*/|^\s*//[^\n]*', re.S | re.M)
 
 
 def leggi_tabella(testo):
@@ -459,19 +459,19 @@ def leggi_tabella(testo):
        «I did not find the table» are two different facts, and confusing them
        would give a red to the client for a defect of the bench.
     """
-    i = testo.find(ANCORA_TABELLA)
+    i = testo.find(TABLE_ANCHOR)
     if i < 0:
-        return None, f"the anchor «{ANCORA_TABELLA}» is not in this file"
+        return None, f"the anchor «{TABLE_ANCHOR}» is not in this file"
     j = testo.find("\n};", i)
     if j < 0:
         return None, "the table starts and does not end: «};» is missing"
     # ⛔ The comments go first: they quote old phrases in quotes ("silence
     #    too long") and would be read as entries.
-    corpo = COMMENTO.sub("", testo[i + len(ANCORA_TABELLA):j])
+    corpo = COMMENT.sub("", testo[i + len(TABLE_ANCHOR):j])
     voci = {}
-    for m in VOCE.finditer(corpo):
+    for m in ENTRY.finditer(corpo):
         c = int(m.group(1), 16)
-        frase = "".join(PEZZO.findall(m.group(2)))
+        frase = "".join(PIECE.findall(m.group(2)))
         voci[c] = (MOTIVI.get(c, f"0x{c:02X}"), frase)
     if not voci:
         return None, "the anchor is there but no entry matches the expected shape"
@@ -486,7 +486,7 @@ def giudica_frasi(voci):
     fuori = []
     viste = {}
     for c in sorted(MOTIVI):
-        nome_atteso = MOTIVI[c]
+        expected_name = MOTIVI[c]
         if c not in voci:
             fuori.append((c, False, "⛔ the reason is not in the client's "
                                     "table: there is no phrase to show"))
@@ -494,9 +494,9 @@ def giudica_frasi(voci):
         nome, frase = voci[c]
         f = frase.strip()
         chiave = " ".join(f.lower().split())
-        if nome != nome_atteso:
+        if nome != expected_name:
             fuori.append((c, False, f"the name says «{nome}», §8.2 says "
-                                    f"«{nome_atteso}»"))
+                                    f"«{expected_name}»"))
             continue
         # 1. a phrase, not a label
         if len(f.split()) < 3:
@@ -534,16 +534,16 @@ def giudica_frasi(voci):
 # ⚠ The good phrases contain NO digit, on purpose: criterion 2 looks for the
 #   reason's number, and a test phrase that happened to carry one would make
 #   the positive control fail, blaming the reader.
-def _tabella_finta(frase_di):
-    return {c: (MOTIVI[c], frase_di(c)) for c in MOTIVI}
+def _tabella_finta(sentence_of):
+    return {c: (MOTIVI[c], sentence_of(c)) for c in MOTIVI}
 
 
-def _buone():
+def _good():
     return _tabella_finta(
         lambda c: f"this is phrase {chr(96 + c)} to show to the user")
 
 
-def certifica_frasi():
+def certify_sentences():
     """⭐ The tool that judges the phrases can say yes, and can say no.
 
     ⛔ Without this, «fifteen out of fifteen» is compatible with a reader that
@@ -554,16 +554,16 @@ def certifica_frasi():
       default branch produces fifteen non-empty strings **all distinct**, that
       is it passes every criterion except the one R3.20 had to write on purpose.
     """
-    doppia = _buone()
+    doppia = _good()
     doppia[0x03] = (MOTIVI[0x03], doppia[0x04][1])
-    mancante = _buone()
+    mancante = _good()
     del mancante[0x0E]
     # ⚠ The broken ones are written as someone in good faith would write them —
     #   whole phrases, long, distinct — because a too clumsy broken one would be
     #   rejected by the WRONG criterion, and the check would prove nothing about
     #   the criterion that matters.
     prove = [
-        ("a good table", _buone(), True),
+        ("a good table", _good(), True),
         ("⛔ the switch with the default branch",
          _tabella_finta(lambda c: f"Error {c} while connecting to the "
                                   f"server"), False),
@@ -589,7 +589,7 @@ def certifica_frasi():
     return fuori
 
 
-def certifica_lettori():
+def certify_readers():
     """⭐ THE TWO READERS OF THE TWO ROADS, called from outside on known bytes.
 
     `CODER.md` §3.6: when the chain is already narrowed, one does not do another
@@ -644,7 +644,7 @@ def certifica_lettori():
     return prove
 
 
-def certifica_denominatore(casi, esclusi_lista=None):
+def certifica_denominatore(casi, excluded_list=None):
     """⛔ M + the excluded must make fifteen, and the count is done by the program.
 
     A number written by hand in a comment is the number nobody recomputes:
@@ -652,7 +652,7 @@ def certifica_denominatore(casi, esclusi_lista=None):
     file.
     """
     provocabili = {c[1] for c in casi}
-    esclusi = {c for c, _ in (esclusi_lista if esclusi_lista is not None
+    esclusi = {c for c, _ in (excluded_list if excluded_list is not None
                               else ESCLUSI)}
     doppi = provocabili & esclusi
     tutti = provocabili | esclusi
@@ -724,9 +724,9 @@ class Esito:
         self.tipo_motivo = None   # ⛔ in WHICH message (§11, §4.4)
         self.dettaglio = ""
         self.codice_wt = None     # §3.1 point 3, read on the wire
-        self.riga_registro = None # §3.1 point 1
+        self.log_line = None # §3.1 point 1
         self.al_server = {}       # the client→server direction, from the log
-        self.posto_libero = None  # the observable consequence on the wire
+        self.slot_free = None  # the observable consequence on the wire
         self.messaggi = []
         self.provocato = False    # ⛔ did the provocation really leave?
         self.fase = "opening"
@@ -741,7 +741,7 @@ class Esito:
         #   sense only when the server is the one closing.  In the other
         #   direction whoever receives is the server, and printing them «absent»
         #   would invite reading a silence as a fault.
-        if self.verso != VERSO_CS:
+        if self.verso != DIR_CS:
             if self.motivo is not None:
                 p.append(f"CONGEDO={self.motivo:#04x}="
                          f"{MOTIVI.get(self.motivo, '?')} in {self.tipo_motivo}")
@@ -753,8 +753,8 @@ class Esito:
                                        else f"{self.codice_wt:#04x}"))
         for k, v in self.al_server.items():
             p.append(f"{k}={'yes' if v else 'NO'}")
-        if self.posto_libero is not None:
-            p.append("place=" + ("free" if self.posto_libero else "TAKEN"))
+        if self.slot_free is not None:
+            p.append("place=" + ("free" if self.slot_free else "TAKEN"))
         if self.attesa_ms is not None:
             p.append(f"after {self.attesa_ms:.0f} ms")
         if self.errore:
@@ -868,7 +868,7 @@ async def chiudi_piano(gestore):
 #    declaration that prevents saying «Firefox does not say farewell».
 # ===========================================================================
 CASI = []
-VERSO_SC, VERSO_CS = "server→client", "client→server"
+DIR_SC, DIR_CS = "server→client", "client→server"
 
 
 def caso(nome, motivo, verso, strade, spiega):
@@ -886,7 +886,7 @@ def caso(nome, motivo, verso, strade, spiega):
 #    bite**, and demanding the `CONGEDO` is not giving red to right code (which
 #    was the fear of finding R3.3).  The case where the conditional bites is in
 #    the other direction, and it is `chiuso-dall-utente-alla-firefox`.
-@caso("errore-protocollo", ERRORE_PROTOCOLLO, VERSO_SC, ("congedo", "chiusura"),
+@caso("errore-protocollo", ERRORE_PROTOCOLLO, DIR_SC, ("congedo", "chiusura"),
       "a type that does not exist on the control channel: §3 forbids ignoring it")
 async def _(campo, es):
     cli = await campo.apri()
@@ -897,7 +897,7 @@ async def _(campo, es):
     await osserva(cli, es, attesa=12)
 
 
-@caso("versione-incompatibile", VERSIONE_INCOMPATIBILE, VERSO_SC,
+@caso("versione-incompatibile", VERSIONE_INCOMPATIBILE, DIR_SC,
       ("congedo", "chiusura"),
       "CIAO(versione=2) on /rcp/1: §2.2 wants the two to coincide")
 async def _(campo, es):
@@ -909,7 +909,7 @@ async def _(campo, es):
     await osserva(cli, es, attesa=12)
 
 
-@caso("niente-in-comune", NIENTE_IN_COMUNE, VERSO_SC, ("congedo", "chiusura"),
+@caso("niente-in-comune", NIENTE_IN_COMUNE, DIR_SC, ("congedo", "chiusura"),
       "`audio.codec = opus` without `pcm`: §4.3 requires it on both sides, and "
       "whoever does not declare it takes leave with NIENTE_IN_COMUNE — not with "
       "ERRORE_PROTOCOLLO: it did not misspell, it has nothing to talk about")
@@ -923,7 +923,7 @@ async def _(campo, es):
     await osserva(cli, es, attesa=12)
 
 
-@caso("tempo-scaduto", TEMPO_SCADUTO, VERSO_SC, ("congedo", "chiusura"),
+@caso("tempo-scaduto", TEMPO_SCADUTO, DIR_SC, ("congedo", "chiusura"),
       "the control channel is opened and ONE KEEPS QUIET: §4.6, the cap for the CIAO. "
       "⚠ B7 demands the REASON, not the value of the cap: B6 measures the seconds")
 async def _(campo, es):
@@ -947,7 +947,7 @@ async def _(campo, es):
     await osserva(cli, es, attesa=20)
 
 
-@caso("sessione-non-servibile", SESSIONE_NON_SERVIBILE, VERSO_SC,
+@caso("sessione-non-servibile", SESSIONE_NON_SERVIBILE, DIR_SC,
       ("congedo", "chiusura", "dettaglio"),
       "ATTACCA with layout `zz`: WELL FORMED and unknown to the machine "
       "(§4.5 wants two different faults).  ⛔ And §8.2 requires the `dettaglio` in "
@@ -961,7 +961,7 @@ async def _(campo, es):
     await osserva(cli, es, attesa=12)
 
 
-@caso("gia-attiva-remota", GIA_ATTIVA_REMOTA, VERSO_SC, ("congedo", "chiusura"),
+@caso("gia-attiva-remota", GIA_ATTIVA_REMOTA, DIR_SC, ("congedo", "chiusura"),
       "two clients of the same user: the SECOND gets 0x0F (I2, §8.2). "
       "⛔ And the first must have reached SESSIONE, or the red and the green "
       "would mean the same thing")
@@ -994,13 +994,13 @@ async def guarda_il_posto(campo, es):
       is still open, so only the farewell can have freed the place.
     """
     libero, perche = await stretta_intera(campo.a)
-    es.posto_libero = libero
+    es.slot_free = libero
     if not libero:
         es.errore = (es.errore or "") + f" · the place is NOT free: {perche}"
 
 
 
-@caso("chiuso-dall-utente-alla-chrome", CHIUSO_DALL_UTENTE, VERSO_CS,
+@caso("chiuso-dall-utente-alla-chrome", CHIUSO_DALL_UTENTE, DIR_CS,
       ("congedo", "chiusura", "posto"),
       "what Chrome does: `CONGEDO(0x01)` on the channel **and** the session closed "
       "with code 0x01.  §8.1 requires both of whoever closes")
@@ -1017,7 +1017,7 @@ async def _(campo, es):
     await guarda_il_posto(campo, es)
 
 
-@caso("chiuso-dall-utente-alla-firefox", CHIUSO_DALL_UTENTE, VERSO_CS,
+@caso("chiuso-dall-utente-alla-firefox", CHIUSO_DALL_UTENTE, DIR_CS,
       ("chiusura", "posto"),
       "⛔ what Firefox does: the session closes with code 0x01 and the control "
       "channel gets RESET, without any CONGEDO. §3.1 point 2 is "
@@ -1079,7 +1079,7 @@ async def _(campo, es):
 # process** (finding R8.13, already paid for on `01-b2-lancia-wt.sh`).
 # ⛔ If the name is not the expected one, the case sends NOTHING and declares
 #    «test not done» — which is not «test failed».
-@caso("server-in-chiusura", SERVER_IN_CHIUSURA, VERSO_SC,
+@caso("server-in-chiusura", SERVER_IN_CHIUSURA, DIR_SC,
       ("congedo", "chiusura"),
       "⭐ ONLY AGAINST THE PRODUCT: session open, then SIGTERM to the server. "
       "§8.1 forbids closing with a silence, and src/main.c says farewell to everyone with "
@@ -1189,7 +1189,7 @@ async def gira_caso(a, registro, inizio, motivo, verso, f):
             #    only by `osserva`, from a message that arrived on the wire.
     # ── §3.1 point 1, and the client→server direction: from the server log ──
     if inizio is not None:
-        if verso == VERSO_SC:
+        if verso == DIR_SC:
             # ⛔ WITHOUT THE PREFIX, and it is not laziness — 11 Aug 2026.
             #
             #    Here there was `f"REMOTIX B3: congedo motivo=…"`, that is the
@@ -1211,7 +1211,7 @@ async def gira_caso(a, registro, inizio, motivo, verso, f):
             #    protocol.
             trovata, perche = await registro.attendi(
                 inizio, f"congedo motivo={motivo:#04x}", entro=6)
-            es.riga_registro = (trovata, perche)
+            es.log_line = (trovata, perche)
         else:
             for chiave, frase in (
                     ("congedo-al-server",
@@ -1232,12 +1232,12 @@ def esigenze(strade, es, motivo, verso):
     does not say farewell» and «on Firefox point 2 is not enforceable».
     """
     fuori = []
-    if verso == VERSO_SC:
+    if verso == DIR_SC:
         fuori.append((
             "§3.1 point 1 — the «what» line in the log of whoever closes",
-            es.riga_registro is not None,
-            bool(es.riga_registro and es.riga_registro[0]),
-            "" if not es.riga_registro else (es.riga_registro[1] or "present")))
+            es.log_line is not None,
+            bool(es.log_line and es.log_line[0]),
+            "" if not es.log_line else (es.log_line[1] or "present")))
         fuori.append((
             "§3.1 point 2 — the reason in the CONGEDO on the channel",
             "congedo" in strade,
@@ -1282,7 +1282,7 @@ def esigenze(strade, es, motivo, verso):
         if "posto" in strade:
             fuori.append((
                 "and the place is freed, observed ON THE WIRE", True,
-                bool(es.posto_libero), "free" if es.posto_libero
+                bool(es.slot_free), "free" if es.slot_free
                 else "TAKEN: §8.2 0x0F to whoever has no session"))
     return fuori
 
@@ -1306,14 +1306,14 @@ async def principale(a):
     #    graft it is the opposite.  ⭐ The number B7 prints next to an outcome is
     #    that of the target that was started, not that of the document.
     TUTTI = casi_di(a.bersaglio)
-    ESCL = esclusi_di(a.bersaglio)
+    EXCL = esclusi_di(a.bersaglio)
     casi = [c for c in TUTTI if not a.solo or a.solo in c[0]]
     if a.escludi:
         prima = len(casi)
         casi = [c for c in casi if a.escludi not in c[0]]
-        a.esclusi_a_mano = prima - len(casi)
+        a.manually_excluded = prima - len(casi)
     else:
-        a.esclusi_a_mano = 0
+        a.manually_excluded = 0
 
     # ── --elenco: the predictions, and the denominator, without measuring ──
     if a.elenco:
@@ -1325,11 +1325,11 @@ async def principale(a):
             print(f"  {nome:34s} {motivo:#04x} {MOTIVI[motivo]}  [{verso}]")
             print(f"  {'':34s}   enforceable roads: {', '.join(strade)}")
             print(f"  {'':34s}   {spiega}")
-        print(f"\n   ⛔ AND THE {len(ESCL)} EXCLUDED, with the why — without "
+        print(f"\n   ⛔ AND THE {len(EXCL)} EXCLUDED, with the why — without "
               f"this list «7 out of 7» would be true by construction:\n")
-        for c, perche in ESCL:
+        for c, perche in EXCL:
             print(f"  {MOTIVI[c]:26s} {c:#04x}  {perche}")
-        ok, testo = certifica_denominatore(TUTTI, ESCL)
+        ok, testo = certifica_denominatore(TUTTI, EXCL)
         print(f"\n   {'⭐' if ok else '⛔'} {testo}")
         return 0 if ok else 3
 
@@ -1337,13 +1337,13 @@ async def principale(a):
     #    Until 11 Aug 2026 B7 had none.
     a.reg = b0.Registro(a.uscita, a.bersaglio, a.porta, a.giro or None,
                         a.md5 or None)
-    a.reg.apri_giro(
+    a.reg.open_round(
         "B7", "one case per reason, each on a new connection; the "
               "farewell is read ON THE WIRE from the receiving side, never from the log "
               "of whoever sends it",
         extra={"casi": len(casi), "casi_del_bersaglio": len(TUTTI),
                "provocabili": len({c[1] for c in TUTTI}),
-               "esclusi": len(ESCL), "filtro": a.solo,
+               "esclusi": len(EXCL), "filtro": a.solo,
                # ⛔ THE NUMBER THAT CHANGES WITH THE TARGET, written BEFORE
                #    measuring: seven against the graft, eight against the product.
                "attesi_provocabili": b0.profilo(a.bersaglio)["motivi_provocabili"],
@@ -1351,15 +1351,15 @@ async def principale(a):
     print("== B7 — the farewell, verified FROM THE RECEIVING SIDE (§8.1)")
     print(f"   ⛔ TARGET: {a.bersaglio} · port {a.porta} · binary md5 "
           f"{(a.md5 or 'unknown')[:12]}…")
-    atteso_prov = b0.profilo(a.bersaglio)["motivi_provocabili"]
-    visti_prov = len({c[1] for c in TUTTI})
-    if visti_prov != atteso_prov:
+    expected_provocable = b0.profilo(a.bersaglio)["motivi_provocabili"]
+    seen_orig = len({c[1] for c in TUTTI})
+    if seen_orig != expected_provocable:
         print(f"   {ROSSO}⛔ the reasons that can be provoked on this target should be "
-              f"{atteso_prov} and the cases cover {visti_prov}{GRIGIO}")
+              f"{expected_provocable} and the cases cover {seen_orig}{GRIGIO}")
         print(f"      ⛔ It is not a server red: it is the bench that cannot "
               f"count what it is about to measure.")
         return 3
-    print(f"   ⛔ {visti_prov} reasons that can be provoked out of {len(MOTIVI)} of §8.2 — and "
+    print(f"   ⛔ {seen_orig} reasons that can be provoked out of {len(MOTIVI)} of §8.2 — and "
           f"the number is the TARGET's, not the document's")
     print("   ⛔ for every reason: the CONGEDO on the channel **and** the code in the "
           "closing")
@@ -1368,20 +1368,20 @@ async def principale(a):
     # ═══ THE CERTIFICATION, BEFORE MEASURING ═══════════════════════════════
     print("== ⭐ The bench certifies itself before pointing at the unknown "
           "(CODER.md §3.3)")
-    guasti_cert = 0
-    ok, testo = certifica_denominatore(TUTTI, ESCL)
+    cert_faults = 0
+    ok, testo = certifica_denominatore(TUTTI, EXCL)
     riga(ok, "the denominator adds up", testo)
-    guasti_cert += 0 if ok else 1
-    for nome, ok, testo in certifica_lettori():
+    cert_faults += 0 if ok else 1
+    for nome, ok, testo in certify_readers():
         riga(ok, nome, testo)
-        guasti_cert += 0 if ok else 1
-    for nome, ok, testo in certifica_frasi():
+        cert_faults += 0 if ok else 1
+    for nome, ok, testo in certify_sentences():
         riga(ok, nome, testo)
-        guasti_cert += 0 if ok else 1
+        cert_faults += 0 if ok else 1
     if a.registro:
         ok, perche = registro.leggibile()
         riga(ok, "the server log can be read", perche or a.registro)
-        guasti_cert += 0 if ok else 1
+        cert_faults += 0 if ok else 1
     else:
         inf("⚠ no --registro: §3.1 point 1 and the client→server direction are NOT")
         inf("  measured, and the run will be declared PARTIAL")
@@ -1392,7 +1392,7 @@ async def principale(a):
     marca = registro.finestra() if a.registro else None
     ok, testo = await stretta_intera(a)
     riga(ok, "stretta-di-mano-intera", testo)
-    guasti_cert += 0 if ok else 1
+    cert_faults += 0 if ok else 1
     if a.registro and ok:
         # ⭐ The positive control of the log READER, on the line that must
         #    surely be there — and the negative one on one that is not.
@@ -1400,16 +1400,16 @@ async def principale(a):
             marca, f"admitted utente={a.utente}", entro=6)
         riga(trovata, "⭐ the log reader finds",
              f"«admitted utente={a.utente}»" if trovata else perche)
-        guasti_cert += 0 if trovata else 1
-        testo_finestra = registro.da(marca) or ""
-        finta = "congedo motivo=0xff" not in testo_finestra
+        cert_faults += 0 if trovata else 1
+        window_text = registro.da(marca) or ""
+        finta = "congedo motivo=0xff" not in window_text
         riga(finta, "⛔ and does not find what is not there",
              "«congedo motivo=0xff» is not there, as it must")
-        guasti_cert += 0 if finta else 1
+        cert_faults += 0 if finta else 1
 
-    if guasti_cert:
+    if cert_faults:
         print(f"\n    {ROSSO}⛔ B7 DOES NOT MEASURE: the tool is not certified "
-              f"({guasti_cert} checks failed){GRIGIO}")
+              f"({cert_faults} checks failed){GRIGIO}")
         print("       A negative outcome with an uncertified tool is")
         print("       ambiguous between «the server does not work» and «the bench")
         print("       did not work» — and this is NOT a server red.")
@@ -1424,7 +1424,7 @@ async def principale(a):
     #    than a measurement that accuses the wrong defendant.
     if not a.registro:
         prima = len(casi)
-        casi = [c for c in casi if c[2] != VERSO_CS]
+        casi = [c for c in casi if c[2] != DIR_CS]
         if prima != len(casi):
             print(f"    {GIALLO}⚠{GRIGIO} without --registro the {prima - len(casi)}"
                   f" client→server cases are NOT run: the witness is missing")
@@ -1442,8 +1442,8 @@ async def principale(a):
     if a.solo:
         print(f"    {GIALLO}⚠ PARTIAL RUN{GRIGIO}: the green outcome reads «the "
               f"selected cases pass», never «B7 passes»")
-    if a.esclusi_a_mano:
-        print(f"    {GIALLO}⚠{GRIGIO} {a.esclusi_a_mano} cases removed by "
+    if a.manually_excluded:
+        print(f"    {GIALLO}⚠{GRIGIO} {a.manually_excluded} cases removed by "
               f"«--escludi {a.escludi}»: the run is PARTIAL, and the green outcome "
               f"does not cover them")
 
@@ -1462,12 +1462,12 @@ async def principale(a):
     #    `CHIUSO_DALL_UTENTE` has two — Chrome-style and Firefox-style — and
     #    counting it full because one of the two went well would be mistaking
     #    «one engine out of two» for «the reason is covered».
-    motivi_visti, motivi_rotti = set(), set()
+    seen_reasons, broken_reasons = set(), set()
 
     for nome, motivo, verso, strade, spiega, f in casi:
         inizio = registro.finestra() if a.registro else None
         es = await gira_caso(a, registro, inizio, motivo, verso, f)
-        motivi_visti.add(motivo)
+        seen_reasons.add(motivo)
         # ⚠ The place is looked at by the CASE, with its connection still open
         #   (see `guarda_il_posto`): looking at it from here, with the connection
         #   closed, would find it free even with the farewell ignored.
@@ -1485,7 +1485,7 @@ async def principale(a):
             buono = buono and arrivata
         riga(buono, nome, str(es))
         if not buono:
-            motivi_rotti.add(motivo)
+            broken_reasons.add(motivo)
             guasti += 1
             print(f"        expected: {motivo:#04x} {MOTIVI[motivo]}  "
                   f"[{verso}]  enforceable roads: {', '.join(strade)}")
@@ -1599,7 +1599,7 @@ async def principale(a):
         #    and it is the eighth reason that can be provoked.  ⚠ A zero here would
         #    mean I am measuring a binary **from before** that night, and the
         #    `server-in-chiusura` case would be red for the wrong reason.
-        atteso_positivo = b0.profilo(a.bersaglio)["spegnimento"]
+        expected_positive = b0.profilo(a.bersaglio)["spegnimento"]
         sorgenti = b0.sorgenti_spegnimento(a.bersaglio, a.dentro)
         print(f"\n== ⛔ The exclusion that is MEASURED: SERVER_IN_CHIUSURA (0x0C)")
         inf(f"one looks WHERE THE THING HAPPENS, and on «{a.bersaglio}» that is "
@@ -1609,7 +1609,7 @@ async def principale(a):
         if quanti is None:
             riga(False, "the sources can be read", testo)
             guasti += 1
-        elif atteso_positivo:
+        elif expected_positive:
             riga(quanti > 0, "⭐ SERVER_IN_CHIUSURA IS producible", testo)
             if quanti > 0:
                 inf("⭐ and indeed those that can be provoked here are EIGHT, not seven: it is the "
@@ -1645,12 +1645,12 @@ async def principale(a):
         col = VERDE if buoni == tot else ROSSO
         print(f"    {col}{buoni:3d} out of {tot:3d}{GRIGIO}  {che}")
 
-    motivi_pieni = motivi_visti - motivi_rotti
+    motivi_pieni = seen_reasons - broken_reasons
     print()
-    print(f"    ⛔ the reasons: {len(motivi_pieni)} out of {len(motivi_visti)} "
+    print(f"    ⛔ the reasons: {len(motivi_pieni)} out of {len(seen_reasons)} "
           f"proved in this run, and those THAT CAN BE PROVOKED by phase 1 are "
           f"{len({c[1] for c in TUTTI})} out of {len(MOTIVI)} of §8.2")
-    print(f"       the other {len(ESCL)} are excluded, each with its "
+    print(f"       the other {len(EXCL)} are excluded, each with its "
           f"why (--elenco), and the exclusion of")
     print(f"       SERVER_IN_CHIUSURA is measured, not asserted")
 
@@ -1672,7 +1672,7 @@ async def principale(a):
         return 1
     a.reg.scrivi({"tipo": "verdetto", "guasti": guasti,
                   "parziale": bool(a.solo or not a.registro
-                                   or a.esclusi_a_mano),
+                                   or a.manually_excluded),
                   "motivi_pieni": sorted(motivi_pieni),
                   "provocabili": len({c[1] for c in TUTTI}),
                   "conti": {k: v for k, v in conti.items()}})
@@ -1681,7 +1681,7 @@ async def principale(a):
         print(f"\n    {ROSSO}⛔ B7: {guasti} points do not pass against "
               f"«{a.bersaglio}»{GRIGIO}")
         return 1
-    if a.solo or not a.registro or a.esclusi_a_mano:
+    if a.solo or not a.registro or a.manually_excluded:
         print(f"\n    {VERDE}⭐ the measured points pass against "
               f"«{a.bersaglio}»{GRIGIO} — ⚠ and this is NOT «B7 passes»: the run "
               f"was partial")

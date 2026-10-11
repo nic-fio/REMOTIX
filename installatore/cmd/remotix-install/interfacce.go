@@ -29,7 +29,7 @@ func tuiCmd(arg []string) (int, error) {
 		return 2, err
 	}
 	if *anteprima > 0 {
-		fmt.Print(tui.Testo(tui.Anteprime(*anteprima, 0, *colori)))
+		fmt.Print(tui.Testo(tui.Previews(*anteprima, 0, *colori)))
 		return 0, nil
 	}
 	if os.Geteuid() != 0 {
@@ -42,7 +42,7 @@ func tuiCmd(arg []string) (int, error) {
 	if err := sistemaAperta(c.motore()); err != nil {
 		return 1, err
 	}
-	s := interfaccia.NuovaSessione(interfaccia.Config{Operazioni: c.operazioni, Fonti: c.fonti,
-		Base: motore.OpzioniInstallazione{Pacchetti: c.pacchetti}, Chi: chi(), Modo: "by hand, in the TUI (remotix-install tui)"})
-	return tui.Avvia(s, c.porta)
+	s := interfaccia.NewSession(interfaccia.Config{Operazioni: c.operazioni, Fonti: c.fonti,
+		Base: motore.InstallOptions{Pacchetti: c.pacchetti}, Chi: chi(), Modo: "by hand, in the TUI (remotix-install tui)"})
+	return tui.Start(s, c.porta)
 }

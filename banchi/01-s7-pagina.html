@@ -42,11 +42,11 @@
 <script>
 "use strict";
 
-const CENTRO = 8000;        // where it starts again at every round
-const ATTESA_LETTURA = 250; // ms between the click and the reading of scrollY
+const CENTER = 8000;        // where it starts again at every round
+const WAIT_READ = 250; // ms between the click and the reading of scrollY
 
 let numero = 0;             // grows inside THIS page load
-let inCorso = false;
+let inProgress = false;
 
 // ⛔ THE MARK OF THE ROUND, and it is born from a real defect.
 //
@@ -61,7 +61,7 @@ let inCorso = false;
 //    not repeat is needed.  This.
 const GIRO = Math.random().toString(36).slice(2, 10);
 
-function spedisci(dati) {
+function ship(dati) {
   dati.n = ++numero;
   dati.giro = GIRO;
   dati.motore = navigator.userAgent;     // ⛔ B0.6: the version, always
@@ -94,24 +94,24 @@ function targa(dati) {
 //    the last recentred position — which the page knows because it is the one
 //    putting it there.  This way the measurement holds both where scrolling is
 //    asynchronous and where it is not.
-let base = CENTRO;
+let base = CENTER;
 
 addEventListener("wheel", (e) => {
-  if (inCorso) return;      // one click at a time: the rounds do not mix
-  inCorso = true;
+  if (inProgress) return;      // one click at a time: the rounds do not mix
+  inProgress = true;
   const prima = Math.round(scrollY);
   setTimeout(() => {
     const dopo = Math.round(scrollY);
-    spedisci({
+    ship({
       tipo: "SCATTO",
       deltaY: e.deltaY, deltaX: e.deltaX, deltaMode: e.deltaMode,
       wheelDeltaY: e.wheelDeltaY,
       base: base, prima: prima, dopo: dopo, scorrimento: dopo - base
     });
     // Back to the centre for the next round, and the reference is redone there.
-    scrollTo(0, CENTRO);
-    setTimeout(() => { base = Math.round(scrollY); inCorso = false; }, 150);
-  }, ATTESA_LETTURA);
+    scrollTo(0, CENTER);
+    setTimeout(() => { base = Math.round(scrollY); inProgress = false; }, 150);
+  }, WAIT_READ);
 }, {capture: true, passive: true});
 
 // ⛔ THE DENOMINATOR OF THE MEASUREMENT, and it was not there at the first round.
@@ -124,25 +124,25 @@ addEventListener("wheel", (e) => {
 //
 //    ⭐ It is `LEZIONI.md` §1.9 rule 2 — the positive control on the same
 //    instrument — put where it is needed instead of in words.
-let ultimoPuntatore = 0;
+let lastPointer = 0;
 addEventListener("pointermove", (e) => {
   const ora = performance.now();
-  if (ora - ultimoPuntatore < 400) return;   // the log is not flooded
-  ultimoPuntatore = ora;
-  spedisci({tipo: "PUNTATORE", x: Math.round(e.clientX), y: Math.round(e.clientY),
+  if (ora - lastPointer < 400) return;   // the log is not flooded
+  lastPointer = ora;
+  ship({tipo: "PUNTATORE", x: Math.round(e.clientX), y: Math.round(e.clientY),
             deltaY: null, scorrimento: null});
 }, {passive: true});
 
 addEventListener("mousedown", (e) => {
-  spedisci({tipo: "BOTTONE", bottone: e.button, x: Math.round(e.clientX),
+  ship({tipo: "BOTTONE", bottone: e.button, x: Math.round(e.clientX),
             y: Math.round(e.clientY), deltaY: null, scorrimento: null});
 }, {passive: true});
 
 addEventListener("load", () => {
-  scrollTo(0, CENTRO);
+  scrollTo(0, CENTER);
   setTimeout(() => {
     base = Math.round(scrollY);
-    spedisci({tipo: "PRONTA", deltaY: null, scorrimento: null, partenza: base});
+    ship({tipo: "PRONTA", deltaY: null, scorrimento: null, partenza: base});
   }, 200);
 });
 </script>

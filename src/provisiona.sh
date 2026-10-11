@@ -39,7 +39,7 @@ tit() { printf '\n\033[1;34m==> %s\033[0m\n' "$*"; }
 
 ESITO=0
 QUI=$(cd "$(dirname "$0")" && pwd)
-SOLO_VERIFICA=${1:-}
+VERIFY_ONLY=${1:-}
 
 [ "$(id -u)" -eq 0 ] || { echo "⛔ root needed"; exit 2; }
 
@@ -64,11 +64,11 @@ SOLO_VERIFICA=${1:-}
 #    check demanded it: «prova is NOT in the card's groups:
 #    remotix-nogpu».  ⇒ One would measure on the wrong card without knowing it.
 # ---------------------------------------------------------------------------
-GRUPPO_ESCLUSO=remotix-nogpu
+EXCLUDED_GROUP=remotix-nogpu
 
-gid_della_scheda() {
+card_gid() {
 	local n g escluso
-	escluso=$(getent group "$GRUPPO_ESCLUSO" | cut -d: -f3)
+	escluso=$(getent group "$EXCLUDED_GROUP" | cut -d: -f3)
 	for n in /dev/dri/card[0-9]* /dev/dri/renderD[0-9]*; do
 		[ -e "$n" ] || continue
 		g=$(stat -c %g "$n" 2>/dev/null) || continue
@@ -77,9 +77,9 @@ gid_della_scheda() {
 	done | sort -un
 }
 
-nomi_della_scheda() {
+card_names() {
 	local g nome nomi=""
-	for g in $(gid_della_scheda); do
+	for g in $(card_gid); do
 		nome=$(getent group "$g" | cut -d: -f1)
 		[ -n "$nome" ] || continue
 		case ",$nomi," in *",$nome,"*) continue ;; esac
@@ -88,7 +88,7 @@ nomi_della_scheda() {
 	printf '%s' "$nomi"
 }
 
-GRUPPI_SCHEDA=$(nomi_della_scheda)
+GRUPPI_SCHEDA=$(card_names)
 
 # ---------------------------------------------------------------------------
 # 1. The test users, and ⛔ THEIR GROUPS
@@ -117,7 +117,7 @@ GRUPPI_SCHEDA=$(nomi_della_scheda)
 #      error.  ⭐ From today the PRODUCT notices it and writes it to the log
 #      at the birth of every session (`figlio.c`, `gruppi_della_scheda()`).
 # ---------------------------------------------------------------------------
-if [ "$SOLO_VERIFICA" != "verifica" ]; then
+if [ "$VERIFY_ONLY" != "verifica" ]; then
 	tit "The test users, with the groups headless makes us lose"
 	if [ -z "$GRUPPI_SCHEDA" ]; then
 		ko "⛔ no group readable from the /dev/dri nodes: the tenants will be born BLIND"
@@ -313,12 +313,12 @@ CONF
 	#   rootfs in RAM: it disappears by itself at reboot.
 	# -------------------------------------------------------------------
 	tit "The benches drive the service without a password"
-	UTENTE_BANCHI=${SUDO_USER:-nicfio}
+	BENCHES_USER=${SUDO_USER:-nicfio}
 	printf '%s ALL=(root) NOPASSWD: /usr/bin/systemctl, /usr/bin/loginctl, /usr/sbin/nft, /usr/bin/tee /etc/default/remotix\n' \
-		"$UTENTE_BANCHI" > /etc/sudoers.d/remotix-banchi
+		"$BENCHES_USER" > /etc/sudoers.d/remotix-banchi
 	chmod 440 /etc/sudoers.d/remotix-banchi
 	if visudo -c -q -f /etc/sudoers.d/remotix-banchi; then
-		ok "$UTENTE_BANCHI: four commands without a password"
+		ok "$BENCHES_USER: four commands without a password"
 	else
 		rm -f /etc/sudoers.d/remotix-banchi
 		ko "sudoers rule not valid: removed"
@@ -332,21 +332,21 @@ CONF
 	# number: `renderD128` and `renderD129` swap between two boots.
 	# -------------------------------------------------------------------
 	tit "The card: the discrete one is excluded"
-	DISCRETA=""
+	DISCRETE=""
 	for c in /sys/class/drm/card[0-9]; do
 		[ -e "$c/device/driver" ] || continue
 		drv=$(basename "$(readlink -f "$c/device/driver")")
 		pci=$(basename "$(readlink -f "$c/device")")
 		case "$drv" in
-		amdgpu|nvidia|nouveau) DISCRETA="$pci"; inf "discrete: $drv at $pci" ;;
+		amdgpu|nvidia|nouveau) DISCRETE="$pci"; inf "discrete: $drv at $pci" ;;
 		*)                     inf "integrated: $drv at $pci" ;;
 		esac
 	done
-	if [ -n "$DISCRETA" ] && [ -x /media/REMOTIX/gpu-udev.sh ]; then
-		bash /media/REMOTIX/gpu-udev.sh "$DISCRETA" >/dev/null 2>&1 \
-			&& ok "excluded $DISCRETA: measurements on the integrated one" \
+	if [ -n "$DISCRETE" ] && [ -x /media/REMOTIX/gpu-udev.sh ]; then
+		bash /media/REMOTIX/gpu-udev.sh "$DISCRETE" >/dev/null 2>&1 \
+			&& ok "excluded $DISCRETE: measurements on the integrated one" \
 			|| ko "the udev rule did not go in"
-	elif [ -z "$DISCRETA" ]; then
+	elif [ -z "$DISCRETE" ]; then
 		ok "a single card: nothing to exclude"
 	else
 		ko "/media/REMOTIX/gpu-udev.sh is missing"
@@ -402,17 +402,17 @@ CONF
 
 	# ⭐ The libraries outside the system paths are REGISTERED, because the
 	#   environment variable does not cross the child's `execve`.
-	LIBRERIE=""
+	LIBRARIES=""
 	for c in /opt/remotix/lib /opt/remotix/solo "$QUI/lib-remotix"; do
 		[ -d "$c" ] || continue
-		LIBRERIE="$c"
+		LIBRARIES="$c"
 		break
 	done
-	if [ -n "$LIBRERIE" ]; then
+	if [ -n "$LIBRARIES" ]; then
 		printf '# ⛔ `LD_LIBRARY_PATH` does not reach the child (execve with an environment from\n#    scratch): the libraries of the product are registered here.\n%s\n' \
-			"$LIBRERIE" > /etc/ld.so.conf.d/zz-remotix.conf
+			"$LIBRARIES" > /etc/ld.so.conf.d/zz-remotix.conf
 		ldconfig
-		ok "product libraries registered: $LIBRERIE (ldconfig done)"
+		ok "product libraries registered: $LIBRARIES (ldconfig done)"
 	else
 		inf "no product library folder to register"
 	fi
@@ -428,9 +428,9 @@ tit "The check"
 
 # ⭐ The binary is asked of the SERVICE, not guessed: it is the one that will really
 #   run.  ⚠ If the service is not there, the tree's one is looked at.
-BINARIO=$(systemctl show remotix.service -p ExecStart --value 2>/dev/null \
+BINARY=$(systemctl show remotix.service -p ExecStart --value 2>/dev/null \
 	| sed -n 's/.*path=\([^ ;]*\).*/\1/p' | head -1)
-[ -n "$BINARIO" ] || BINARIO="$QUI/remotix"
+[ -n "$BINARY" ] || BINARY="$QUI/remotix"
 
 # ⛔⭐⭐ REQUIREMENT 1 — the server must run as ROOT, or there is no multi-tenancy.
 if systemctl cat remotix.service >/dev/null 2>&1; then
@@ -450,12 +450,12 @@ for n in prova prova2; do
 	#     belongs to another group — that is it would say OK to a tenant who
 	#     will be born blind.  ⚠ And ALL the nodes' gids are looked at: `cardN` and
 	#     `renderDN` have two different ones, and both are needed.
-	SUOI=" $(id -G "$n" 2>/dev/null) "
+	THEIR_GROUPS=" $(id -G "$n" 2>/dev/null) "
 	MANCA=""
-	for g in $(gid_della_scheda); do
-		case "$SUOI" in *" $g "*) ;; *) MANCA="${MANCA:+$MANCA }$(getent group "$g" | cut -d: -f1) (gid $g)" ;; esac
+	for g in $(card_gid); do
+		case "$THEIR_GROUPS" in *" $g "*) ;; *) MANCA="${MANCA:+$MANCA }$(getent group "$g" | cut -d: -f1) (gid $g)" ;; esac
 	done
-	if [ -z "$(gid_della_scheda)" ]; then
+	if [ -z "$(card_gid)" ]; then
 		ko "⛔ no /dev/dri node: it cannot be said whether $n will see"
 	elif [ -z "$MANCA" ]; then
 		ok "$n is in ALL the groups of the card's nodes (${GRUPPI_SCHEDA})"
@@ -492,18 +492,18 @@ for n in prova prova2; do
 	#     · a library is not found ⇒ «not found», and it is exit 127.
 	# ⚠ `LD_TRACE_LOADED_OBJECTS` makes it list and NOT execute: no server
 	#   starts, and nothing of what is running is touched.
-	if [ ! -e "$BINARIO" ]; then
-		inf "⚠ $BINARIO is not there: the loader test for $n cannot be done"
+	if [ ! -e "$BINARY" ]; then
+		inf "⚠ $BINARY is not there: the loader test for $n cannot be done"
 	else
-		ESCE=$(su -s /bin/sh -c "env -i LD_TRACE_LOADED_OBJECTS=1 '$BINARIO'" "$n" 2>&1)
+		ESCE=$(su -s /bin/sh -c "env -i LD_TRACE_LOADED_OBJECTS=1 '$BINARY'" "$n" 2>&1)
 		if printf '%s' "$ESCE" | grep -q 'not found'; then
 			ko "⛔⛔ $n is MISSING some libraries ($(printf '%s' "$ESCE" | grep -c 'not found')): the child will exit with 127.  ⚠ LD_LIBRARY_PATH does NOT reach it: the cure is /etc/ld.so.conf.d + ldconfig"
 			printf '%s' "$ESCE" | grep 'not found' | sed 's/^/        /'
 		elif printf '%s' "$ESCE" | grep -qi 'permission denied\|cannot execute\|No such file'; then
-			ko "⛔⛔ $n can NOT execute $BINARIO: the child will exit with 37.  ⚠ Look at the modes of the folders on the path — a 0700 home stops everything"
+			ko "⛔⛔ $n can NOT execute $BINARY: the child will exit with 37.  ⚠ Look at the modes of the folders on the path — a 0700 home stops everything"
 			printf '%s' "$ESCE" | head -2 | sed 's/^/        /'
 		else
-			ok "$n executes $BINARIO and resolves its libraries with the environment AT ZERO (like the child)"
+			ok "$n executes $BINARY and resolves its libraries with the environment AT ZERO (like the child)"
 		fi
 	fi
 done
@@ -530,8 +530,8 @@ grep -q 'multiple-sessions' /etc/polkit-1/rules.d/50-remotix-niente-spegnimento.
 	&& ok "and it covers the *-multiple-sessions (the multi-user case)" \
 	|| ko "⛔ it does NOT cover the *-multiple-sessions: it fails precisely with multiple users"
 
-VIG=$(systemd-analyze cat-config systemd/logind.conf 2>/dev/null | grep -c '^HandlePowerKey=ignore')
-[ "$VIG" -ge 1 ] && ok "the power key is ignored" \
+IN_FORCE=$(systemd-analyze cat-config systemd/logind.conf 2>/dev/null | grep -c '^HandlePowerKey=ignore')
+[ "$IN_FORCE" -ge 1 ] && ok "the power key is ignored" \
 	|| ko "the power key still switches the machine off"
 
 # ⭐ PHASE 17: the three Shell folders (GNOME ≤ 49, GNOME 50, the template)

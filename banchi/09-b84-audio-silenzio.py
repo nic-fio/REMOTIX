@@ -175,8 +175,8 @@ FUORI = os.environ.get("FUORI", os.path.join(
     "b62d7177-9fdd-47c7-8aa1-567c8b13accf/scratchpad", "b84"))
 
 # ⛔ The ports that are NOT mine.  They are counted, not touched.
-VIETATE = ("7900", "7910", "7920", "7971")
-VIETATA_IFACE = "enp7s0"
+FORBIDDEN = ("7900", "7910", "7920", "7971")
+FORBIDDEN_IFACE = "enp7s0"
 
 for k, v in (("PORTA", str(PORTA)), ("UTENTE", UTENTE), ("UID_B", str(UID_B)),
              ("ALBERO", ALB), ("LAV", LAV), ("DENTRO_ALB", DENTRO_ALB),
@@ -203,7 +203,7 @@ LUCCHETTO = B77.LUCCHETTO
 CHI = "09-b84"
 # ⛔ ONE binary only, and it is the product's: the arms are made with
 #    `OPZIONI_SERVER` (⇒ the header, «one suspect less»).
-BINARIO = "%s/src/remotix" % ALB
+BINARY = "%s/src/remotix" % ALB
 # ⭐ The command line of each arm, and the ON arm has none.
 OPZIONI = {"accesa": "", "spenta": "--niente-audio-silenzio"}
 
@@ -238,7 +238,7 @@ def _c(n, chiave):
     return n.get(chiave)
 
 
-def a_il_riempimento_c_e(min_kbit=400.0, max_carico_kbit=5.0):
+def a_il_riempimento_c_e(min_kbit=400.0, max_load_kbit=5.0):
     """⭐ THE FACT, measured with the OFF arm — which is today's product.
 
     ⛔ It is also the bench's POSITIVE CONTROL: if the padding does not come out here,
@@ -249,9 +249,9 @@ def a_il_riempimento_c_e(min_kbit=400.0, max_carico_kbit=5.0):
         c = _c(s, "carico_kbit_s")
         if k is None or c is None:
             return _muto("I did not read kbit_s (%s) or carico_kbit_s (%s)" % (k, c))
-        return _p(k >= min_kbit and c <= max_carico_kbit,
+        return _p(k >= min_kbit and c <= max_load_kbit,
                   "cure OFF: %.1f kbit/s on the wire for %.2f kbit/s of payload "
-                  "(expected >= %.0f and <= %.1f)" % (k, c, min_kbit, max_carico_kbit))
+                  "(expected >= %.0f and <= %.1f)" % (k, c, min_kbit, max_load_kbit))
     return f
 
 
@@ -392,7 +392,7 @@ def a_il_pcm_si_fa_rifiutare(minimo=100):
     return f
 
 
-def a_opus_regge_dove_il_pcm_cede(tetto_permille=20):
+def a_opus_regge_dove_il_pcm_cede(cap_permille=20):
     """⭐ THE PREDICTION: on the SAME `netem`, Opus gets refused in a
        negligible fraction of what PCM gets refused.
 
@@ -415,9 +415,9 @@ def a_opus_regge_dove_il_pcm_cede(tetto_permille=20):
             return _muto("server counts: pcm=%s/%s opus=%s/%s" % (rp, sp, ro, so))
         fp = 1000.0 * rp / (sp + rp)
         fo = 1000.0 * ro / (so + ro)
-        return _p(fo <= tetto_permille,
+        return _p(fo <= cap_permille,
                   "refused: PCM %.0f‰ against Opus %.0f‰ (expected Opus <= %d‰)"
-                  % (fp, fo, tetto_permille))
+                  % (fp, fo, cap_permille))
     return f
 
 
@@ -462,12 +462,12 @@ def righe_registro():
         return 0
 
 
-R_RETE = re.compile(
+R_NETWORK = re.compile(
     r"rete-quic \S+ da_ms=(\d+).*?spediti=(\d+) spediti_d=(\d+) "
     r"byte_spediti=(\d+).*?dgram_ok=(\d+)")
 
 
-def rete_del_giro(riga0):
+def round_network(riga0):
     """⭐ THE BYTES ON THE WIRE ARE TOLD BY THE PRODUCT, not an estimate of mine.
 
     The `rete-quic` line carries `byte_spediti` (cumulative per connection) and
@@ -481,7 +481,7 @@ def rete_del_giro(riga0):
                       "'rete-quic '" % (riga0 + 1, LAV))
     righe = []
     for r in out.split("\n"):
-        m = R_RETE.search(r)
+        m = R_NETWORK.search(r)
         if m:
             righe.append(tuple(int(x) for x in m.groups()))
     if len(righe) < 3:
@@ -606,9 +606,9 @@ def costruisci():
         "bash %s/src/costruisci.sh 2>&1 | tail -6'" % DENTRO_ALB, 1200)
     for r in (out + err).splitlines()[-6:]:
         inf(r.strip()[:150])
-    m = md5(BINARIO)
+    m = md5(BINARY)
     if not m:
-        ko("⛔ the binary is not there: %s" % BINARIO)
+        ko("⛔ the binary is not there: %s" % BINARY)
         return False
     ok("binary md5 %s" % m)
     # ⛔⭐ AND WE CHECK THAT IT CARRIES THE SWITCH.  A binary from before
@@ -616,7 +616,7 @@ def costruisci():
     #    it would give «the server does not start» on the OFF arm, and an ON arm
     #    that is not on.
     rc, out, _ = root("grep -qa -- --niente-audio-silenzio %s && echo si || "
-                      "echo no" % BINARIO)
+                      "echo no" % BINARY)
     if "si" not in out:
         ko("⛔⛔ `--niente-audio-silenzio` is NOT in this binary: it is from before "
            "24 August 2026, and the two arms would both be «spenta»")
@@ -632,9 +632,9 @@ def accendi(braccio):
        (`cura_del_registro()` + `a_la_cura_ha_parlato()`) — «I wrote it on the
        command line» is not «it is in force», and it is the only belt left since
        the binary has been just one."""
-    m = md5(BINARIO)
+    m = md5(BINARY)
     if m is None:
-        ko("⛔ the binary is not there (%s): «costruisci»" % BINARIO)
+        ko("⛔ the binary is not there (%s): «costruisci»" % BINARY)
 
         return None
     subprocess.run(["bash", os.path.join(QUI, "07-b64-terreno.sh"), "accendi"],
@@ -652,7 +652,7 @@ def accendi(braccio):
 def giro(braccio, scena, codec, secondi):
     """One run: arm (spenta|accesa) · scene (muto|tono) · codec (pcm|opus)."""
     nome = "%s-%s-%s" % (braccio, scena, codec)
-    j_fuori = os.path.join(FUORI, nome + ".jsonl")
+    j_out = os.path.join(FUORI, nome + ".jsonl")
     binario = accendi(braccio)
     if binario is None:
         return {"esito": "the binary of arm «%s» did not get in place" % braccio}
@@ -694,12 +694,12 @@ def giro(braccio, scena, codec, secondi):
     open(os.path.join(FUORI, nome + ".txt"), "w").write(uscita)
     subprocess.run("ssh -o BatchMode=yes %s \"printf '%%s\\n' '%s' | sudo -S -p '' "
                    "cat %s/b84-%s.jsonl\" > %s"
-                   % (MACCHINA, RETE.PAROLA_SUDO, LAV, nome, j_fuori),
+                   % (MACCHINA, RETE.PAROLA_SUDO, LAV, nome, j_out),
                    shell=True)
     if scena == "tono":
         RETE.tono_spegni()
 
-    rq = rete_del_giro(riga0)
+    rq = round_network(riga0)
     sv = conti_del_server(riga0)
     cu = cura_del_registro(riga0)
     n = {"braccio": braccio, "scena": scena, "codec": codec, "binario": binario,
@@ -743,7 +743,7 @@ def giro(braccio, scena, codec, secondi):
         n["copertura_filo"] = None
     # ⭐ The second leg, from the SAMPLES: only PCM is judged this way
     #   (`09-b77.scaletta()` skips the blocks that are not codec 2).
-    sc = B77.scaletta(j_fuori) if codec == "pcm" else {
+    sc = B77.scaletta(j_out) if codec == "pcm" else {
         "esito": "NOT JUDGED — Opus samples cannot be read without "
                  "decoding them, and this bench has no decoder"}
     n["scaletta"] = sc
@@ -806,15 +806,15 @@ def terreno_controlla():
     rc, out, _ = root("test -s %s/parola && echo si || echo no" % LAV)
     if "si" not in out:
         guai.append("%s/parola (0600) is missing: D12 forbids the password in argv" % LAV)
-    if not md5(BINARIO):
-        guai.append("the binary is missing (%s): «costruisci»" % BINARIO)
+    if not md5(BINARY):
+        guai.append("the binary is missing (%s): «costruisci»" % BINARY)
     conto = []
-    for p in VIETATE:
+    for p in FORBIDDEN:
         rc, o, _ = root("ss -uln 2>/dev/null | grep -c ':%s ' || true" % p)
         conto.append("%s:%s" % (p, o.strip()))
     inf("FORBIDDEN ports (counted, not touched): %s" % " ".join(conto))
-    rc, out, _ = root("/usr/sbin/tc qdisc show dev %s" % VIETATA_IFACE)
-    inf("%s — NOT touched: %s" % (VIETATA_IFACE, out.strip().split("\n")[0]))
+    rc, out, _ = root("/usr/sbin/tc qdisc show dev %s" % FORBIDDEN_IFACE)
+    inf("%s — NOT touched: %s" % (FORBIDDEN_IFACE, out.strip().split("\n")[0]))
     for g in guai:
         ko(g)
     if not guai:
@@ -953,7 +953,7 @@ def certifica():
 # ═══════════════════════════════════════════════════════════════════════════
 # THE MEASUREMENTS
 # ═══════════════════════════════════════════════════════════════════════════
-def misura_muto(secondi):
+def measure_mute(secondi):
     log("SCENE «MUTO» — desktop still, Opus negotiated, cure off against on")
     inf("⛔ it is the product's NORMAL scene: `[M]` on the user's real session "
         "the datagram payload is 3 bytes, that is digital silence")
@@ -967,7 +967,7 @@ def misura_muto(secondi):
             "verdi": v, "rossi": r, "muti": m}
 
 
-def misura_tono(secondi):
+def measure_tone(secondi):
     log("SCENE «TONO» — 440 Hz in the sink, PCM (for the samples judge)")
     inf("⛔ it is the CONTROL that protects the user: with the tone on the cure must "
         "silence nothing, and the coverage must not move")
@@ -980,7 +980,7 @@ def misura_tono(secondi):
             "verdi": v, "rossi": r, "muti": m}
 
 
-def misura_costo(secondi):
+def measure_cost(secondi):
     log("THE COST OF THE TWO CODECS — PCM against Opus, same scene, cure OFF")
     inf("⭐ it is the refutation: the 2 463 kbit/s of `09-b81` and the 36 % of `09-b77` "
         "are PCM numbers, and the product negotiates Opus")
@@ -991,7 +991,7 @@ def misura_costo(secondi):
     return {"scena": "costo", "pcm": p, "opus": o, "verdi": v, "rossi": r, "muti": m}
 
 
-def misura_stretta(nome_profilo, secondi):
+def measure_tight(nome_profilo, secondi):
     """⛔ HERE THE NETWORK IS BROKEN: lock, `lo` only, filters on my
        port only, detached guardian, and everything released in a `finally`."""
     prof = None
@@ -1060,13 +1060,13 @@ def principale():
 
     fuori = []
     if a.passo in ("muto", "tutto"):
-        fuori.append(misura_muto(a.secondi))
+        fuori.append(measure_mute(a.secondi))
     if a.passo in ("tono", "tutto"):
-        fuori.append(misura_tono(a.secondi))
+        fuori.append(measure_tone(a.secondi))
     if a.passo in ("costo", "tutto"):
-        fuori.append(misura_costo(a.secondi))
+        fuori.append(measure_cost(a.secondi))
     if a.passo in ("stretta", "tutto"):
-        r = misura_stretta(a.profilo, a.secondi)
+        r = measure_tight(a.profilo, a.secondi)
         if r:
             fuori.append(r)
 

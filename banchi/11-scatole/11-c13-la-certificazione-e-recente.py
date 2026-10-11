@@ -119,7 +119,7 @@ def current_spelling(x):
 ULTIMI_PREDEFINITI = 20
 
 
-def leggi_il_registro(percorso):
+def read_log(percorso):
     """Returns (giri, guaio) — ⛔ and the cases are three, as in C12.
 
        (None, "assente")     the file is not there
@@ -193,7 +193,7 @@ def giudica(giri, ultimi):
             "a_vuoto": len(giri) - len(veri)}
 
 
-def eta_in_giorni(istante, adesso):
+def age_in_days(istante, adesso):
     """⛔ Returns `None` if it cannot tell — never zero, never an invented number."""
     if not istante:
         return None
@@ -308,7 +308,7 @@ def main():
     if a.certifica:
         sys.exit(certifica())
 
-    giri, guaio = leggi_il_registro(a.registro)
+    giri, guaio = read_log(a.registro)
 
     print("== C13 — is the certification recent? ==")
     print("   ⛔ the fault it looks for: a net that is no longer able to give")
@@ -343,7 +343,7 @@ def main():
     print("   ⭐ seen            : %d" % r["viste"])
     adesso = time.time()
     if r["ultima"]:
-        eta = eta_in_giorni(r["ultima"].get("istante"), adesso)
+        eta = age_in_days(r["ultima"].get("istante"), adesso)
         print("   last successful   : %s  (%s)"
               % (r["ultima"].get("istante"),
                  "age unknown" if eta is None else "%.1f days ago" % eta))
@@ -359,7 +359,7 @@ def main():
     if r["viste"] >= 1:
         vecchia = False
         if a.giorni and r["ultima"]:
-            eta = eta_in_giorni(r["ultima"].get("istante"), adesso)
+            eta = age_in_days(r["ultima"].get("istante"), adesso)
             if eta is not None and eta > a.giorni:
                 vecchia = True
                 print("⛔ RED — the last successful certification is from %.1f days"

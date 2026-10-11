@@ -47,13 +47,13 @@ G4 = _iu.module_from_spec(_s)
 _s.loader.exec_module(G4)
 
 FUNZIONI = ("F-013",)
-TONO_HZ = 660
+TONE_HZ = 660
 FILE = "c15-video.mp4"
-GUASTO_S = 20.0
+FAULT_S = 20.0
 
 
 def certifica():
-    return G4.certifica_comune()
+    return G4.certify_common()
 
 
 def extra(a):
@@ -63,7 +63,7 @@ def extra(a):
                    help="how long it listens, without photos, before photographing")
 
 
-def prepara_video(s):
+def prepare_video(s):
     h = "/home/%s/%s" % (s.chi, FILE)
     grafo = ("color=c=red:s=1280x720:r=30,hue=h=t*47[bg];color=c=white:s=144x144:r=30[m];"
              "[bg][m]overlay=x='abs(mod(t*400,2*(W-w))-(W-w))':y='(H-h)/2+(H/3)*sin(t*1.3)'[out0]")
@@ -71,11 +71,11 @@ def prepara_video(s):
         "ffmpeg -loglevel error -y -f lavfi -i \"%s\" -f lavfi -i "
         "\"aevalsrc=0.5*sin(2*PI*%d*t)|0.5*sin(2*PI*%d*t):s=48000\" -t 150 "
         "-c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac -b:a 160k %s "
-        "&& chown %s: %s && ls -l %s" % (grafo, TONO_HZ, TONO_HZ, h, s.chi, h, h), 120)
+        "&& chown %s: %s && ls -l %s" % (grafo, TONE_HZ, TONE_HZ, h, s.chi, h, h), 120)
     return c == 0, t.strip()[-300:]
 
 
-def accendi_video(s):
+def turn_on_video(s):
     return s.nella_sessione(
         "SDL_VIDEODRIVER=wayland ffplay -loglevel warning -loop 0 -window_title c15video "
         "-x 1280 -y 720 /home/%s/%s" % (s.chi, FILE))
@@ -86,7 +86,7 @@ def segnale(s, sig):
                        "&& echo vivo || echo morto" % (sig, s.chi, s.chi), 30)
 
 
-def fuori_dal_video(box, im):
+def out_of_video(box, im):
     """A point of the canvas (fractions) outside the video window, far from the edges."""
     w, h = im.size
     x0, y0, x1, y1 = box[0] / w, box[1] / h, box[2] / w, box[3] / h
@@ -96,13 +96,13 @@ def fuori_dal_video(box, im):
     return 0.97, 0.5
 
 
-def guarda(s, o, box, secondi, nome, salva_ogni=6, minimo=6, tetto=90.0):
+def guarda(s, o, box, secondi, nome, save_every=6, minimo=6, tetto=90.0):
     """Photos for `secondi` (and at least `minimo` photos, within `tetto` s):
     [(t, crop)], [saved paths].
     ⚠ `[M]` 24 Sep: with the page STILL Chrome photographs in ~8 s each ⇒ a
     frozen video (the fault, or a real defect) would give 3 photos and a BLOCKED
     instead of a red: it continues until `minimo` photos."""
-    quadri, salvate = [], []
+    quadri, saved = [], []
     t0 = time.time()
     k = 0
     while (time.time() - t0 < secondi or len(quadri) < minimo) and time.time() - t0 < tetto:
@@ -112,17 +112,17 @@ def guarda(s, o, box, secondi, nome, salva_ogni=6, minimo=6, tetto=90.0):
         prossima = t0 + k * 1.0
         if time.time() < prossima:
             time.sleep(prossima - time.time())
-        im, _png, perche = G4.foto_ridotta(s.g, 0.5)
+        im, _png, perche = G4.reduced_photo(s.g, 0.5)
         t = time.time() - t0
         if im is None:
             print("   ⚠ photo %d: %s" % (k, perche), flush=True)
             time.sleep(0.5)
             continue
         quadri.append((t, G4.ritaglia(im, box)))
-        if o.evidenze and (k % salva_ogni == 0):
+        if o.evidenze and (k % save_every == 0):
             p = os.path.join(o.evidenze, "f013-%s-%03d.jpg" % (nome, k))
             im.save(p, quality=70)
-            salvate.append(p)
+            saved.append(p)
         k += 1
     if o.evidenze and quadri:
         # all the crops, in a strip: you can see by eye whether it moves
@@ -134,22 +134,22 @@ def guarda(s, o, box, secondi, nome, salva_ogni=6, minimo=6, tetto=90.0):
             st.paste(c, ((i % col) * 160, (i // col) * 90))
         p = os.path.join(o.evidenze, "f013-%s-ritagli.png" % nome)
         st.save(p)
-        salvate.append(p)
-    return quadri, salvate
+        saved.append(p)
+    return quadri, saved
 
 
 def corpo(o, E):
     sess = S.Sessione(o, "013", E)
-    G4.robusta(sess.sc)
+    G4.robust(sess.sc)
     with sess as s:
-        ok, m = G4.entra_con_orecchio(s)
+        ok, m = G4.enter_with_ear(s)
         if not ok:
             raise S.Bloccata(m)
-        ok, m = prepara_video(s)
+        ok, m = prepare_video(s)
         if not ok:
             raise S.Bloccata("the video is not generated in the box: " + m)
-        segno = s.segno_registro()
-        c, t = accendi_video(s)
+        segno = s.log_mark()
+        c, t = turn_on_video(s)
         if c != 0:
             raise S.Bloccata("ffplay does not start in the session: " + t[-200:])
         time.sleep(4)
@@ -157,11 +157,11 @@ def corpo(o, E):
         box, desc, prime = None, "", []
         fine = time.time() + 40
         while time.time() < fine and box is None:
-            im, _p, perche = G4.foto_ridotta(s.g, 0.5)
+            im, _p, perche = G4.reduced_photo(s.g, 0.5)
             if im is not None:
                 prime = (prime + [im])[-4:]
             if len(prime) >= 4:
-                box, desc = G4.trova_video(prime)
+                box, desc = G4.find_video(prime)
             time.sleep(0.7)
         ev = []
         if box is None:
@@ -169,48 +169,48 @@ def corpo(o, E):
                 p = os.path.join(o.evidenze, "f013-video-NON-trovato.jpg")
                 prime[-1].save(p, quality=80)
                 ev.append(p)
-            _c, log = s.come_utente("tail -n 5 /home/%s/.c15-SDL_VIDEODRIVERwayland.log "
+            _c, log = s.as_user("tail -n 5 /home/%s/.c15-SDL_VIDEODRIVERwayland.log "
                                     "/home/%s/.c15-*.log 2>/dev/null" % (s.chi, s.chi), 20)
             _c, vivo = segnale(s, "0")
-            ev.append(s.salva_testo("ffplay-f013.txt", log))
+            ev.append(s.save_text("ffplay-f013.txt", log))
             if "morto" in vivo:
                 raise S.Bloccata("ffplay died in the session: " + log[-300:])
             E.metti("F-013", S.FAIL, "ffplay runs in the session but in the canvas no "
                     "moving video is seen: " + desc, atteso="visible video that moves",
-                    osservato=desc, evidenze=ev + [s.salva_console()])
+                    osservato=desc, evidenze=ev + [s.save_console()])
             return
         print("   video found: %s" % desc, flush=True)
         # the gesture: a real click outside the video window
         note = []
-        stato, conti = G4.aspetta_contesto(s.g, 20)
+        stato, conti = G4.wait_context(s.g, 20)
         note.append("audio context «%s»" % stato)
-        fx, fy = fuori_dal_video(box, prime[-1])
-        note.append(G4.clic_vero(s, fx, fy))
+        fx, fy = out_of_video(box, prime[-1])
+        note.append(G4.real_click(s, fx, fy))
         time.sleep(1.5)
-        stato2, _ = G4.aspetta_contesto(s.g, 5)
-        note.append("after the click «%s»" % stato2)
+        state2, _ = G4.wait_context(s.g, 5)
+        note.append("after the click «%s»" % state2)
 
         # A — the SOUND, listened to without photographing: `[M]` 24 Sep, Firefox's 4K
         #     photo stops the page's main thread, which is the same one
         #     that schedules the audio (250 ms cushion) ⇒ the gaps were made by the bench.
-        ta = G4.ora_pagina(s.g)
+        ta = G4.now_page(s.g)
         time.sleep(o.ascolto_s)
-        r = G4.leggi_orecchio(s.g, ta) or {}
-        es, ds, ns = G4.giudica_suono(r.get("campioni") or [], TONO_HZ, min_frazione=0.95,
-                                      max_buco_s=1.0, min_campioni=int(o.ascolto_s * 3))
+        r = G4.read_ear(s.g, ta) or {}
+        es, ds, ns = G4.judge_sound(r.get("campioni") or [], TONE_HZ, min_frazione=0.95,
+                                      max_buco_s=1.0, min_samples=int(o.ascolto_s * 3))
         # B — the IMAGE, one photo per second; the sound of this window is only
         #     a diagnostic (it also hears the price of the photos)
-        tb = G4.ora_pagina(s.g)
-        quadri, salvate = guarda(s, o, box, o.video_s, "sano")
-        rb = G4.leggi_orecchio(s.g, tb) or {}
-        ev += salvate + [G4.salva_json(o, "f013-orecchio-sano.json", r),
+        tb = G4.now_page(s.g)
+        quadri, saved = guarda(s, o, box, o.video_s, "sano")
+        rb = G4.read_ear(s.g, tb) or {}
+        ev += saved + [G4.salva_json(o, "f013-orecchio-sano.json", r),
                          G4.salva_json(o, "f013-orecchio-durante-le-foto.json", rb)]
-        ei, di, ni = G4.giudica_immagine(quadri)
-        esb, dsb, nsb = G4.giudica_suono(rb.get("campioni") or [], TONO_HZ, min_frazione=0.95,
-                                         max_buco_s=1.0, min_campioni=10)
+        ei, di, ni = G4.judge_image(quadri)
+        esb, dsb, nsb = G4.judge_sound(rb.get("campioni") or [], TONE_HZ, min_frazione=0.95,
+                                         max_buco_s=1.0, min_samples=10)
         note.append("sound DURING the photos (diagnostic, does not judge): %s %s" % (esb, dsb))
-        ev += [s.salva_testo("server-f013.txt", s.registro_da(segno) if segno else []),
-               s.salva_console()]
+        ev += [s.save_text("server-f013.txt", s.registro_da(segno) if segno else []),
+               s.save_console()]
         atteso = ("sound: for %.0f s 660 Hz tone audible >=95%%, gap <=1 s; then image for "
                   "%.0f s that moves (>=90%% different photos, freeze <=4 s, frames without mosaic)"
                   % (o.ascolto_s, o.video_s))
@@ -234,12 +234,12 @@ def corpo(o, E):
         if o.guasto:
             _c, v = segnale(s, "STOP")
             time.sleep(2.0)
-            ta = G4.ora_pagina(s.g)
-            qg, sg = guarda(s, o, box, GUASTO_S, "guasto", salva_ogni=5)
-            rg = G4.leggi_orecchio(s.g, ta) or {}
-            eig, dig, _ = G4.giudica_immagine(qg)
-            esg, dsg, _ = G4.giudica_suono(rg.get("campioni") or [], TONO_HZ, min_frazione=0.95,
-                                           max_buco_s=1.0, min_campioni=int(GUASTO_S * 3))
+            ta = G4.now_page(s.g)
+            qg, sg = guarda(s, o, box, FAULT_S, "guasto", save_every=5)
+            rg = G4.read_ear(s.g, ta) or {}
+            eig, dig, _ = G4.judge_image(qg)
+            esg, dsg, _ = G4.judge_sound(rg.get("campioni") or [], TONE_HZ, min_frazione=0.95,
+                                           max_buco_s=1.0, min_samples=int(FAULT_S * 3))
             segnale(s, "CONT")
             segnale(s, "KILL")
             evg = sg + [G4.salva_json(o, "f013-orecchio-guasto.json", rg)]

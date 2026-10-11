@@ -338,12 +338,12 @@ QUI = os.path.dirname(os.path.abspath(__file__))
 # ⛔ If C1 does not load we exit **3** and say so: ⛔ we do not silently fall back
 #    on a poorer judgement.
 # ═══════════════════════════════════════════════════════════════════════════
-_MESTIERI_C1 = ("e_stato_ammesso", "certifica_ammissione",
+_JOBS_C1 = ("e_stato_ammesso", "certifica_ammissione",
                 "garantisci_i_gruppi", "verdetto_gruppi", "certifica_gruppi")
 _C1 = None
 
 
-def _carica_c1():
+def _load_c1():
     """⛔ It is a LOADER, not a judge: it finds the file, it decides nothing.
 
     ⚠ It is looked for next to me (in the box everything is in `/opt/remotix`) and one
@@ -362,17 +362,17 @@ def _carica_c1():
             return None
         # ⛔ We VERIFY that what is needed is there, we do not trust the name of the
         #    file (`CODER.md` §3.9).
-        for mestiere in _MESTIERI_C1:
+        for mestiere in _JOBS_C1:
             if not callable(getattr(m, mestiere, None)):
                 return None
         return m
     return None
 
 
-def casa_di_c1():
+def c1_home():
     global _C1
     if _C1 is None:
-        _C1 = _carica_c1()
+        _C1 = _load_c1()
     if _C1 is None:
         print("⛔ I cannot find `11-c1-nasce-e-si-vede.py` next to me, and from there")
         print("   come the admission predicate and the guarantee of the")
@@ -408,12 +408,12 @@ def casa_di_c1():
 #    not in C8 because C8 cannot be modified today; ⭐ the day it can, it
 #    moves next to `applica_la_cura`.
 # ═══════════════════════════════════════════════════════════════════════════
-_MESTIERI_PROVVISTA = ("cura_della_provvista", "sgombra_il_mio_rimasuglio",
+_PROVISIONING_JOBS = ("cura_della_provvista", "sgombra_il_mio_rimasuglio",
                        "certifica_la_provvista")
-_PROVVISTA = None
+_PROVISIONING = None
 
 
-def _carica_provvista():
+def _load_provisioning():
     """⛔ It is a LOADER, not a judge: it finds the file, it decides nothing."""
     for base in (QUI, os.path.dirname(QUI)):
         perc = os.path.join(base, "11-c2-una-finestra-si-apre.py")
@@ -425,23 +425,23 @@ def _carica_provvista():
             spec.loader.exec_module(m)
         except Exception:
             return None
-        for mestiere in _MESTIERI_PROVVISTA:
+        for mestiere in _PROVISIONING_JOBS:
             if not callable(getattr(m, mestiere, None)):
                 return None
         return m
     return None
 
 
-def casa_della_provvista():
-    global _PROVVISTA
-    if _PROVVISTA is None:
-        _PROVVISTA = _carica_provvista()
-    return _PROVVISTA
+def provisioning_home():
+    global _PROVISIONING
+    if _PROVISIONING is None:
+        _PROVISIONING = _load_provisioning()
+    return _PROVISIONING
 
 
 def cura_della_provvista(chi):
     """⭐⭐ (done, why) — and ⛔ if it does not hold it is NOT a red."""
-    casa = casa_della_provvista()
+    casa = provisioning_home()
     if casa is None:
         return False, ("I cannot find `11-c2-una-finestra-si-apre.py` next to me: "
                        "the provisioning cure comes from there, and ⛔ no "
@@ -449,12 +449,12 @@ def cura_della_provvista(chi):
     return casa.cura_della_provvista(chi)
 
 
-def sgombra_il_mio_rimasuglio(mio_base):
+def sgombra_il_mio_rimasuglio(my_base):
     """Removes `/tmp/mozilla` ⛔ only if it was left to one of MY tenants."""
-    casa = casa_della_provvista()
+    casa = provisioning_home()
     if casa is None:
         return "⚠ I cannot find C2: I did not even look at /tmp/mozilla"
-    return casa.sgombra_il_mio_rimasuglio(mio_base)
+    return casa.sgombra_il_mio_rimasuglio(my_base)
 
 
 def e_stato_ammesso(coda):
@@ -463,7 +463,7 @@ def e_stato_ammesso(coda):
     ⛔ `False` is not a product red: a client turned away is a client
        turned away, and the caller says «I could not look» (**3**).
     """
-    return casa_di_c1().e_stato_ammesso(coda)
+    return c1_home().e_stato_ammesso(coda)
 
 
 def garantisci_i_gruppi(chi, prefisso="   "):
@@ -475,7 +475,7 @@ def garantisci_i_gruppi(chi, prefisso="   "):
        force».  ⭐ The work is done by `attrezzi-gruppi-scheda.sh`, which reads the gids
        from the NODES and reads back comparing the numbers.  ⛔ No copy of it is made here.
     """
-    return casa_di_c1().garantisci_i_gruppi(chi, prefisso)
+    return c1_home().garantisci_i_gruppi(chi, prefisso)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -494,9 +494,9 @@ def garantisci_i_gruppi(chi, prefisso="   "):
 #     this green for 60 % of its area, and the mesh will say so;
 #   · magenta is **already measured** through this chain: it is the same as
 #     C8, which finds it again after the H.264 encoding in 4:2:0 with ±48 (§7-bis.10).
-COLORE_PARTENZA = (0x00, 0xC0, 0x60)     # bright green — before the key
-COLORE_ARRIVO = (0xFF, 0x00, 0xFF)       # magenta — after the key
-COLORE_FONDO = (0x18, 0x24, 0x30)        # the rest of the page, and it never changes
+START_COLOR = (0x00, 0xC0, 0x60)     # bright green — before the key
+ARRIVAL_COLOR = (0xFF, 0x00, 0xFF)       # magenta — after the key
+BACKGROUND_COLOR = (0x18, 0x24, 0x30)        # the rest of the page, and it never changes
 
 # ⛔ THE TOLERANCE IS NOT GENERIC PRUDENCE (§4.3, Gemini's finding accepted): the
 #    compositors apply colour profiles and rescaling, the chain goes through
@@ -510,7 +510,7 @@ COLORE_FONDO = (0x18, 0x24, 0x30)        # the rest of the page, and it never ch
 TOLLERANZA = 48                  # per channel, max norm, levels 0..255
 
 # ⭐ THE EXPECTED ZONE, in fractions of the image.  The why is in the header.
-ZONA = (0.35, 0.35, 0.65, 0.65)
+ZONE = (0.35, 0.35, 0.65, 0.65)
 # ⭐ The target the scene paints, in fractions of the screen: from 20 % to 80 %.
 #    ⛔ `--certifica` verifies that the ZONE is **strictly inside** the
 #    TARGET: two numbers written in two places that contradict each other would give
@@ -529,21 +529,21 @@ TESTIMONE = (0.12, 0.12, 0.88, 0.88)
 # colour».  ⚠ 0.60 and not 0.95: the page may have slipped by a bar, and the
 # encoding dirties the edges.  ⛔ And not 0.20: below half the zone it is no longer «the zone
 # is that colour», it is «there is a spot».
-FRAZIONE_COLORE = 0.60
+FRACTION_COLOR = 0.60
 
 # ⛔ When two pixels are considered «changed»: more than 40 levels on at least one
 #    channel.  ⚠ It serves NOT to count the encoder's noise: between two
 #    frames of a still scene the levels dance by a few points, and a bench
 #    that counted them would always say «changed».
-SOGLIA_CAMBIO = 40
+CHANGE_THRESHOLD = 40
 CAMBIO_MINIMO_DENTRO = 0.60      # with the key: at least 60 % of the zone changes
-CAMBIO_MASSIMO_TESTIMONE = 0.20  # beyond, the scene moves by itself ⇒ «I do not know»
+MAX_WITNESS_CHANGE = 0.20  # beyond, the scene moves by itself ⇒ «I do not know»
 CAMBIO_RESIDUO = 0.05            # ⭐ without the key: inside no more than this changes
 
 # ⭐ The measured key.  §7.3: `LETTERA` carries a Unicode scalar value.
 LETTERA = 0x0061                 # «a»
-T_LETTERA = 0x0104
-T_POSIZIONE_TASTO = 0x0105
+T_LETTER = 0x0104
+T_KEY_POSITION = 0x0105
 ESC_EVDEV = 1                    # `linux/input-event-codes.h`, KEY_ESC
 
 # ⭐⭐ THE STAGE DELAY — ⛔ it is a MEASUREMENT, not a round number (§1.45).
@@ -556,12 +556,12 @@ ESC_EVDEV = 1                    # `linux/input-event-codes.h`, KEY_ESC
 #     are five, and they are five because they wait for five different things:
 #
 #       ATTESA_SESSIONE    the `SESSIONE` reply           `[?]` 30 s, prudent
-#       ATTESA_PALCO       for the stage to BE BORN       `[M]` 152 s — C1, above
+#       WAIT_STAGE       for the stage to BE BORN       `[M]` 152 s — C1, above
 #       ATTESA_PRIMO_FOTO  for the encoder to deliver     `[?]` 30 s, to calibrate
 #       ATTESA_SCENA       for the page to appear         `[?]` 90 s, to calibrate
-#       ATTESA_TASTO       for the pixel to change        `[?]` 8 s, to calibrate
+#       WAIT_KEY       for the pixel to change        `[?]` 8 s, to calibrate
 #
-#     ⚠ The first frame is waited for **ATTESA_PALCO + ATTESA_PRIMO_FOTO**: they are
+#     ⚠ The first frame is waited for **WAIT_STAGE + ATTESA_PRIMO_FOTO**: they are
 #       two phenomena in a row (first the stage is born, then the encoder delivers),
 #       and adding them is the only way not to lend the ceiling of one to the other.
 #       ⛔ A single ceiling, as short as the second, would look **always in the
@@ -570,10 +570,10 @@ ESC_EVDEV = 1                    # `linux/input-event-codes.h`, KEY_ESC
 #     ⇒ The four `[?]` are **prudent** and must be measured at the first real round:
 #       they are written as such in the report, and ⛔ they are not passed off as measurements.
 ATTESA_SESSIONE = 30.0
-ATTESA_PALCO = 152.0
-ATTESA_PRIMO_FOTOGRAMMA = 30.0
+WAIT_STAGE = 152.0
+WAIT_FIRST_FRAME = 30.0
 ATTESA_SCENA = 90.0
-ATTESA_TASTO = 8.0
+WAIT_KEY = 8.0
 
 # ⚠ The default port is **gnome**'s (8511); the hook passes the one
 #   of the box.  ⛔ C4 wants the image AND the input: today (21 Sep 2026) the
@@ -606,7 +606,7 @@ def scena_html(sorda=False):
     ascolto = "" if sorda else """
  window.addEventListener('keydown', function () {
    document.getElementById('bersaglio').style.background = '%s';
- }, true);""" % _esa(COLORE_ARRIVO)
+ }, true);""" % _esa(ARRIVAL_COLOR)
     return """<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <title>C4 — the key arrives at the screen</title>
@@ -619,8 +619,8 @@ def scena_html(sorda=False):
 <body><div id="bersaglio"></div>
 <script>%(ascolto)s
 </script></body></html>
-""" % {"fondo": _esa(COLORE_FONDO),
-       "partenza": _esa(COLORE_PARTENZA),
+""" % {"fondo": _esa(BACKGROUND_COLOR),
+       "partenza": _esa(START_COLOR),
        "bx": "%g" % round(BERSAGLIO[0] * 100, 4),
        "by": "%g" % round(BERSAGLIO[1] * 100, 4),
        "bw": "%g" % round((BERSAGLIO[2] - BERSAGLIO[0]) * 100, 4),
@@ -631,7 +631,7 @@ def scena_html(sorda=False):
 # ═══════════════════════════════════════════════════════════════════════════
 # ⭐ THE PIXEL JUDGE — «two PNGs» is not «the key arrived»
 # ═══════════════════════════════════════════════════════════════════════════
-def _numpy_o_niente():
+def _numpy_or_nothing():
     try:
         import numpy
         return numpy
@@ -649,7 +649,7 @@ def _carica(percorso):
     if not percorso or not os.path.exists(percorso) \
             or os.path.getsize(percorso) == 0:
         return None
-    np = _numpy_o_niente()
+    np = _numpy_or_nothing()
     if np is None:
         return None
     try:
@@ -662,7 +662,7 @@ def _carica(percorso):
     return img
 
 
-def taglia(img, zona=ZONA):
+def taglia(img, zona=ZONE):
     """The rectangle of the expected zone.  ⛔ `None` if it does not fit."""
     h, w = img.shape[0], img.shape[1]
     x0, y0 = int(round(zona[0] * w)), int(round(zona[1] * h))
@@ -680,18 +680,18 @@ def frazione_del_colore(pezzo, colore, tolleranza=TOLLERANZA):
       provided it is right on the other two — and between magenta and green the
       difference lies entirely in one channel at a time.
     """
-    np = _numpy_o_niente()
+    np = _numpy_or_nothing()
     scarto = np.abs(pezzo - np.array(colore, dtype="int16")).max(axis=2)
     return float((scarto <= tolleranza).mean())
 
 
-def frazione_cambiata(a, b, soglia=SOGLIA_CAMBIO):
+def frazione_cambiata(a, b, soglia=CHANGE_THRESHOLD):
     """How many pixels deviate by more than `soglia` on at least one channel."""
-    np = _numpy_o_niente()
+    np = _numpy_or_nothing()
     return float((np.abs(a - b).max(axis=2) > soglia).mean())
 
 
-def misura(png_prima, png_dopo, zona=ZONA):
+def misura(png_prima, png_dopo, zona=ZONE):
     """The six quantities on which the whole judgement rests.
 
     ⛔ Returns `None` — «I could not look» — if one of the two images cannot
@@ -712,7 +712,7 @@ def misura(png_prima, png_dopo, zona=ZONA):
     _, cornice = taglia(a, TESTIMONE)
     if cornice is None:
         return None
-    np = _numpy_o_niente()
+    np = _numpy_or_nothing()
     # ⭐ The two masks, and ⛔ **they are not the complement of each other**: the
     #   band in between (from 12 % to 35 % and from 65 % to 88 %) is in
     #   neither of the two, and it is not judged.  It is the declared margin that
@@ -721,14 +721,14 @@ def misura(png_prima, png_dopo, zona=ZONA):
     dentro[box[1]:box[3], box[0]:box[2]] = True
     testimone = np.ones(a.shape[:2], dtype=bool)
     testimone[cornice[1]:cornice[3], cornice[0]:cornice[2]] = False
-    diff = np.abs(a - b).max(axis=2) > SOGLIA_CAMBIO
+    diff = np.abs(a - b).max(axis=2) > CHANGE_THRESHOLD
     return {
         "larghezza": int(a.shape[1]), "altezza": int(a.shape[0]),
         "zona": box, "cornice": cornice,
-        "prima_partenza": frazione_del_colore(za, COLORE_PARTENZA),
-        "prima_arrivo": frazione_del_colore(za, COLORE_ARRIVO),
-        "dopo_partenza": frazione_del_colore(zb, COLORE_PARTENZA),
-        "dopo_arrivo": frazione_del_colore(zb, COLORE_ARRIVO),
+        "prima_partenza": frazione_del_colore(za, START_COLOR),
+        "prima_arrivo": frazione_del_colore(za, ARRIVAL_COLOR),
+        "dopo_partenza": frazione_del_colore(zb, START_COLOR),
+        "dopo_arrivo": frazione_del_colore(zb, ARRIVAL_COLOR),
         "dentro": float(diff[dentro].mean()),
         "testimone": (float(diff[testimone].mean())
                       if int(testimone.sum()) else 0.0),
@@ -752,24 +752,24 @@ def giudica(m):
     #    if the zone were already the arrival colour, the «after» check
     #    would be green whatever happens — *a predicate that cannot
     #    fail*, `LEZIONI.md` §1.44.
-    if m["prima_arrivo"] >= FRAZIONE_COLORE:
+    if m["prima_arrivo"] >= FRACTION_COLOR:
         return None, ("⛔ the zone was ALREADY the arrival colour BEFORE the key "
                       "(%.0f %%): the scene does not start from the starting colour, and "
                       "a green «after» would prove nothing"
                       % (100 * m["prima_arrivo"]))
-    if m["prima_partenza"] < FRAZIONE_COLORE:
+    if m["prima_partenza"] < FRACTION_COLOR:
         return None, ("⛔ the scene is NOT in force before the key: in the zone "
                       "the starting colour is there only for %.0f %% (%.0f %% is "
                       "needed) — the page did not appear, or does not cover the "
                       "screen.  ⚠ It is not a red of C4: it is a desktop that does not "
                       "testify" % (100 * m["prima_partenza"],
-                                   100 * FRAZIONE_COLORE))
+                                   100 * FRACTION_COLOR))
 
     # ── 2. AFTER: the zone is the arrival colour, and 3. it changed ────────
-    if m["dopo_arrivo"] < FRAZIONE_COLORE:
+    if m["dopo_arrivo"] < FRACTION_COLOR:
         return False, ("⛔ after the key the expected zone is NOT the arrival "
                        "colour: only %.0f %% (%.0f %% is needed)"
-                       % (100 * m["dopo_arrivo"], 100 * FRAZIONE_COLORE))
+                       % (100 * m["dopo_arrivo"], 100 * FRACTION_COLOR))
     if m["dentro"] < CAMBIO_MINIMO_DENTRO:
         # ⚠ The colour is there but the pixels did not move: it is the case in which the
         #   «before» and the «after» are the same image.  ⛔ It must be said separately,
@@ -786,12 +786,12 @@ def giudica(m):
     #   credit cannot be attributed to the key.
     # ⚠ And it is an «I do not know», not a red: the product is not accused of a
     #   scene that moves by itself.
-    if m["testimone"] > CAMBIO_MASSIMO_TESTIMONE:
+    if m["testimone"] > MAX_WITNESS_CHANGE:
         return None, ("⚠ the zone changed right, ⛔ but in the WITNESS ZONE "
                       "(the frame) %.0f %% changed (the ceiling is %.0f %%): "
                       "the scene moves by itself and the change cannot be "
                       "attributed to the key"
-                      % (100 * m["testimone"], 100 * CAMBIO_MASSIMO_TESTIMONE))
+                      % (100 * m["testimone"], 100 * MAX_WITNESS_CHANGE))
 
     return True, ("⭐ the expected zone went from the starting colour to the "
                   "arrival one: %.0f %% of its pixels changed, and in the frame "
@@ -815,7 +815,7 @@ def guasto_visto(verdetto, m):
     """
     if verdetto is not False or m is None:
         return False
-    return (m["dopo_partenza"] >= FRAZIONE_COLORE
+    return (m["dopo_partenza"] >= FRACTION_COLOR
             and m["dentro"] <= CAMBIO_RESIDUO)
 
 
@@ -847,7 +847,7 @@ def certifica():
     half of the acceptance test.  ⇒ A certification that declares itself wider than
     it is is worth less than no certification.
     """
-    np = _numpy_o_niente()
+    np = _numpy_or_nothing()
     if np is None:
         print("⛔ numpy is missing: I cannot even certify myself")
         print("   ⇒ I could not look")
@@ -863,7 +863,7 @@ def certifica():
     lav = tempfile.mkdtemp(prefix="c4cert-")
     L, A = 384, 216       # the same shape as a 16:9 screen, in small
 
-    def dipingi(nome, bersaglio, fondo=COLORE_FONDO, macchia=None):
+    def dipingi(nome, bersaglio, fondo=BACKGROUND_COLOR, macchia=None):
         """A fake screen: background + target at 20..80 % + a spot.
 
         ⚠ `macchia = (x0, y0, x1, y1, colore)` in fractions: it serves to put
@@ -884,30 +884,30 @@ def certifica():
     guai = 0
     print("== certification of C4's judge ==")
     print("   expected zone %s (%.0f %% of the screen, in the middle)"
-          % (ZONA, 100 * (ZONA[2] - ZONA[0]) * (ZONA[3] - ZONA[1])))
+          % (ZONE, 100 * (ZONE[2] - ZONE[0]) * (ZONE[3] - ZONE[1])))
     print("   witness zone: everything OUTSIDE %s (the frame)" % (TESTIMONE,))
     print("   starting %s · arrival %s · tolerance ±%d per channel"
-          % (_esa(COLORE_PARTENZA), _esa(COLORE_ARRIVO), TOLLERANZA))
+          % (_esa(START_COLOR), _esa(ARRIVAL_COLOR), TOLLERANZA))
     print("   %.0f %% of the zone must be the colour · changed: inside ≥ %.0f %%, "
           "witness ≤ %.0f %%"
-          % (100 * FRAZIONE_COLORE, 100 * CAMBIO_MINIMO_DENTRO,
-             100 * CAMBIO_MASSIMO_TESTIMONE))
+          % (100 * FRACTION_COLOR, 100 * CAMBIO_MINIMO_DENTRO,
+             100 * MAX_WITNESS_CHANGE))
     print()
 
     # ── PART 1 · THE VERDICT ───────────────────────────────────────────────
-    verde = dipingi("v-prima", COLORE_PARTENZA)
-    arrivato = dipingi("v-dopo", COLORE_ARRIVO)
+    verde = dipingi("v-prima", START_COLOR)
+    arrivato = dipingi("v-dopo", ARRIVAL_COLOR)
 
     # ⭐ The colour shifted by **as much as the tolerance allows**: colour
     #    profiles, 4:2:0, limited range.  It must stay GREEN, or the threshold is
     #    too tight and the mesh gets thrown away in two weeks.
     spostato = tuple(min(255, max(0, c + s))
-                     for c, s in zip(COLORE_ARRIVO, (-TOLLERANZA, +TOLLERANZA,
+                     for c, s in zip(ARRIVAL_COLOR, (-TOLLERANZA, +TOLLERANZA,
                                                      -TOLLERANZA)))
     # ⛔ And one shifted TOO MUCH must not pass, or the tolerance no longer separates
     #    anything: a colour admitted anyway is an infinite tolerance.
     troppo = tuple(min(255, max(0, c + s))
-                   for c, s in zip(COLORE_ARRIVO, (0, +3 * TOLLERANZA, 0)))
+                   for c, s in zip(ARRIVAL_COLOR, (0, +3 * TOLLERANZA, 0)))
 
     casi = [
         # name, png before, png after, expected verdict
@@ -915,15 +915,15 @@ def certifica():
          verde, arrivato, True),
 
         ("⛔ no key: the two images are identical",
-         verde, dipingi("r-dopo", COLORE_PARTENZA), False),
+         verde, dipingi("r-dopo", START_COLOR), False),
 
         # ⭐⭐⭐ THE CASE THAT MATTERS MOST (C4's mandate, and §4.3):
         #    something changes OUTSIDE the expected zone — a clock in a corner
         #    that advances — and inside nothing changes.  ⛔ It MUST be RED.
         ("⭐⭐ ONLY outside the zone changes (the clock in the corner) ⇒ RED",
-         dipingi("o-prima", COLORE_PARTENZA,
+         dipingi("o-prima", START_COLOR,
                  macchia=(0.02, 0.02, 0.20, 0.09, (0, 0, 0))),
-         dipingi("o-dopo", COLORE_PARTENZA,
+         dipingi("o-dopo", START_COLOR,
                  macchia=(0.02, 0.02, 0.20, 0.09, (255, 255, 255))),
          False),
 
@@ -941,18 +941,18 @@ def certifica():
         #   a product that is wrong.
         ("⚠ the scene is not in force before the key ⇒ «I do not know»",
          dipingi("s-prima", (58, 62, 70), fondo=(58, 62, 70)),
-         dipingi("s-dopo", COLORE_ARRIVO), None),
+         dipingi("s-dopo", ARRIVAL_COLOR), None),
 
         # ⛔⛔ The predicate that cannot fail (§1.44): the zone is ALREADY the
         #    arrival colour before the key leaves.
         ("⛔⛔ the zone had ALREADY arrived BEFORE the key ⇒ «I do not know»",
-         dipingi("g-prima", COLORE_ARRIVO), arrivato, None),
+         dipingi("g-prima", ARRIVAL_COLOR), arrivato, None),
 
         # ⭐ The scene moves by itself: the zone changes right, but so does half the
         #   screen around it.  ⇒ «I do not know», not green.
         ("⭐ the zone is right but the frame moves too ⇒ «I do not know»",
-         dipingi("m-prima", COLORE_PARTENZA),
-         dipingi("m-dopo", COLORE_ARRIVO, fondo=(240, 240, 240)), None),
+         dipingi("m-prima", START_COLOR),
+         dipingi("m-dopo", ARRIVAL_COLOR, fondo=(240, 240, 240)), None),
 
         # ⭐⭐ THE CASE THE FIRST DRAFT DID NOT PASS, and which corrected the
         #    design before any real round: the target changes **all of it
@@ -961,16 +961,16 @@ def certifica():
         #    case gave «I do not know», i.e. the mesh would NEVER have turned
         #    green (`LEZIONI.md` §1.49).
         ("⭐⭐ the target changes ALL AT ONCE (the real case) ⇒ GREEN",
-         dipingi("b-prima", COLORE_PARTENZA), dipingi("b-dopo", COLORE_ARRIVO),
+         dipingi("b-prima", START_COLOR), dipingi("b-dopo", ARRIVAL_COLOR),
          True),
 
         # ⚠ And a bar at the top that lights up: it is IN THE WITNESS, but it is small.
         #   ⛔ It must not spoil a green, or the mesh would break at the first
         #   desktop with a wider bar — i.e. at phase 12.
         ("⚠ a bar at the top lights up, and the key arrives ⇒ GREEN anyway",
-         dipingi("br-prima", COLORE_PARTENZA,
+         dipingi("br-prima", START_COLOR,
                  macchia=(0.0, 0.0, 1.0, 0.04, (30, 30, 30))),
-         dipingi("br-dopo", COLORE_ARRIVO,
+         dipingi("br-dopo", ARRIVAL_COLOR,
                  macchia=(0.0, 0.0, 1.0, 0.04, (200, 200, 200))), True),
     ]
 
@@ -995,7 +995,7 @@ def certifica():
     # ⚠ Two images of different size: they are not compared, and pretending to do so
     #   would produce a meaningless number.
     piccola = np.zeros((100, 100, 3), dtype="uint8")
-    piccola[:, :] = COLORE_PARTENZA
+    piccola[:, :] = START_COLOR
     pic = os.path.join(lav, "piccola.png")
     Image.fromarray(piccola).save(pic)
     for nome, pa, pb in (("the «before» file is not there",
@@ -1014,9 +1014,9 @@ def certifica():
     # ── PART 3 · THE GRAFTED FAULT IS READ ON THE DIFFERENCE (§1.52) ──────
     print()
     print("  ⭐⭐ and «the fault was seen» is not «the verdict is red»:")
-    casi_guasto = [
+    fault_cases = [
         ("⭐ without the key: the zone is STILL starting and does not change ⇒ SEEN",
-         verde, dipingi("gv-dopo", COLORE_PARTENZA), True),
+         verde, dipingi("gv-dopo", START_COLOR), True),
         # ⛔ Red, but for another reason: the window disappeared.  The injection
         #    bit nothing, and saying «seen» would be certifying the net on
         #    a fault of the product.
@@ -1030,7 +1030,7 @@ def certifica():
         ("⛔ «I do not know» ⇒ the fault was NOT seen",
          dipingi("gi-prima", (58, 62, 70), fondo=(58, 62, 70)), arrivato, False),
     ]
-    for nome, pa, pb, atteso in casi_guasto:
+    for nome, pa, pb, atteso in fault_cases:
         m = misura(pa, pb)
         v, _ = giudica(m)
         avuto = guasto_visto(v, m)
@@ -1051,15 +1051,15 @@ def certifica():
     print("  ⭐⭐ and the constants check each other, or they contradict each other silently:")
     controlli = [
         ("the ZONE sits STRICTLY inside the scene's TARGET",
-         ZONA[0] > BERSAGLIO[0] and ZONA[1] > BERSAGLIO[1]
-         and ZONA[2] < BERSAGLIO[2] and ZONA[3] < BERSAGLIO[3],
+         ZONE[0] > BERSAGLIO[0] and ZONE[1] > BERSAGLIO[1]
+         and ZONE[2] < BERSAGLIO[2] and ZONE[3] < BERSAGLIO[3],
          "zone %s · target %s · margin %.0f %% per side"
-         % (ZONA, BERSAGLIO, 100 * (ZONA[0] - BERSAGLIO[0]))),
+         % (ZONE, BERSAGLIO, 100 * (ZONE[0] - BERSAGLIO[0]))),
         ("the two colours are further apart than the tolerance, by a lot",
-         max(abs(a - b) for a, b in zip(COLORE_PARTENZA, COLORE_ARRIVO))
+         max(abs(a - b) for a, b in zip(START_COLOR, ARRIVAL_COLOR))
          > 3 * TOLLERANZA,
          "per-channel distance %d, tolerance %d"
-         % (max(abs(a - b) for a, b in zip(COLORE_PARTENZA, COLORE_ARRIVO)),
+         % (max(abs(a - b) for a, b in zip(START_COLOR, ARRIVAL_COLOR)),
             TOLLERANZA)),
         ("the «changes» with the key and «does not change» without are a factor ≥ 10 apart",
          CAMBIO_MINIMO_DENTRO >= 10 * CAMBIO_RESIDUO,
@@ -1067,9 +1067,9 @@ def certifica():
          % (CAMBIO_MINIMO_DENTRO, CAMBIO_RESIDUO,
             CAMBIO_MINIMO_DENTRO / CAMBIO_RESIDUO)),
         ("the witness ceiling is lower than the «inside» minimum",
-         CAMBIO_MASSIMO_TESTIMONE < CAMBIO_MINIMO_DENTRO,
+         MAX_WITNESS_CHANGE < CAMBIO_MINIMO_DENTRO,
          "witness ≤ %.2f · inside ≥ %.2f"
-         % (CAMBIO_MASSIMO_TESTIMONE, CAMBIO_MINIMO_DENTRO)),
+         % (MAX_WITNESS_CHANGE, CAMBIO_MINIMO_DENTRO)),
         # ⭐⭐ The check that corrected the design: the WITNESS must not
         #    touch the TARGET, or it would see the scene change at every successful
         #    round and the mesh would never turn green (§1.49).
@@ -1085,11 +1085,11 @@ def certifica():
         # ⭐ The scene and the judge share the constant: it is verified on the text
         #   the program really writes, not on a promise.
         ("the scene paints EXACTLY the colours the judge looks for",
-         _esa(COLORE_PARTENZA) in scena_html()
-         and _esa(COLORE_ARRIVO) in scena_html()
-         and _esa(COLORE_FONDO) in scena_html(),
-         "%s · %s · %s" % (_esa(COLORE_PARTENZA), _esa(COLORE_ARRIVO),
-                           _esa(COLORE_FONDO))),
+         _esa(START_COLOR) in scena_html()
+         and _esa(ARRIVAL_COLOR) in scena_html()
+         and _esa(BACKGROUND_COLOR) in scena_html(),
+         "%s · %s · %s" % (_esa(START_COLOR), _esa(ARRIVAL_COLOR),
+                           _esa(BACKGROUND_COLOR))),
         ("the scene has NOTHING that changes by itself",
          not any(x in scena_html() for x in
                  ("setTimeout", "setInterval", "requestAnimationFrame",
@@ -1099,8 +1099,8 @@ def certifica():
          "keydown" in scena_html() and "keydown" not in scena_html(sorda=True),
          "healthy: listens · deaf: does not listen"),
         ("and the deaf scene paints the starting colour anyway",
-         _esa(COLORE_PARTENZA) in scena_html(sorda=True)
-         and _esa(COLORE_ARRIVO) not in scena_html(sorda=True),
+         _esa(START_COLOR) in scena_html(sorda=True)
+         and _esa(ARRIVAL_COLOR) not in scena_html(sorda=True),
          "⇒ the «before» stays judgeable, and the «after» cannot arrive"),
     ]
     for nome, ok, detto in controlli:
@@ -1119,8 +1119,8 @@ def certifica():
     #   would be a second place to diverge from (§1.47).
     # ═══════════════════════════════════════════════════════════════════════
     print()
-    guai_gr, quanti_gr = casa_di_c1().certifica_gruppi("C4")
-    guai += guai_gr
+    group_troubles, how_many_groups = c1_home().certifica_gruppi("C4")
+    guai += group_troubles
 
     # ═══════════════════════════════════════════════════════════════════════
     # ⭐⭐⭐ THE SHARED PROVISIONING — ⛔ the case that on 27 August 2026 was missing,
@@ -1130,17 +1130,17 @@ def certifica():
     #   a second place to diverge from (§1.47).
     # ═══════════════════════════════════════════════════════════════════════
     print()
-    casa_pr = casa_della_provvista()
-    if casa_pr is None:
+    home_pr = provisioning_home()
+    if home_pr is None:
         print("  NO   ⛔ I cannot find `11-c2-…py`: the provisioning cannot be certified")
         guai += 1
-        guai_pr, quanti_pr = 0, 0
+        troubles_pr, how_many_pr = 0, 0
     else:
-        guai_pr, quanti_pr = casa_pr.certifica_la_provvista("C4", "c4u")
-        guai += guai_pr
+        troubles_pr, how_many_pr = home_pr.certifica_la_provvista("C4", "c4u")
+        guai += troubles_pr
 
-    quanti = (len(casi) + 3 + len(casi_guasto) + len(controlli)
-              + quanti_gr + quanti_pr)
+    quanti = (len(casi) + 3 + len(fault_cases) + len(controlli)
+              + how_many_groups + how_many_pr)
     print()
     if guai:
         print("⛔ the judge is NOT reliable: %d cases out of %d wrong"
@@ -1151,7 +1151,7 @@ def certifica():
     print("   ⭐ it withstands a colour shift of ±%d, and ⛔ it reads the grafted" % TOLLERANZA)
     print("   fault on the DIFFERENCE and not on the colour of the verdict.")
     # ⛔ The provisioning line is printed ONLY if the real cases ran.
-    if quanti_pr >= 4:
+    if how_many_pr >= 4:
         print("   ⭐⭐ and THE PROVISIONING: a /tmp/mozilla of another mesh I do not "
               "touch, and my tenant writes anyway — ⛔ never red")
     else:
@@ -1235,15 +1235,15 @@ def crea(chi, parola):
            "printf '%s:%s\n' | chpasswd" % (chi, chi, parola))
     if r.returncode != 0:
         return False, (r.stderr or "").strip()[:120]
-    e_gr, perche_gr = garantisci_i_gruppi(chi, prefisso="      ")
+    e_gr, why_groups = garantisci_i_gruppi(chi, prefisso="      ")
     if e_gr != 0:
-        return False, perche_gr
+        return False, why_groups
     # ⭐⭐ AND THE PROVISIONING, right after the `useradd -m` that copies the skeleton:
     #    it is there that the tenant is born with `~/.cache` pointing at `/tmp`, ⇒ it is there
     #    that it is given its own.  ⛔ Before switching anything on.
-    fatto_cura, perche_cura = cura_della_provvista(chi)
-    if not fatto_cura:
-        return False, perche_cura
+    done_fix, why_fix = cura_della_provvista(chi)
+    if not done_fix:
+        return False, why_fix
     return True, ""
 
 
@@ -1327,7 +1327,7 @@ def fabbrica_cliente(B3):
       on the same channel would be two truths about the same fact.
     """
 
-    class ClienteCoiTasti(B3.Cliente):
+    class ClientWithKeys(B3.Cliente):
         def _manda_input(self, tipo, resto):
             sid = self.apri_input()
             self.inp_id += 1
@@ -1342,14 +1342,14 @@ def fabbrica_cliente(B3):
 
         def manda_lettera(self, carattere):
             """§7.3 `LETTERA` — a Unicode scalar value."""
-            return self._manda_input(T_LETTERA, struct.pack("!I", carattere))
+            return self._manda_input(T_LETTER, struct.pack("!I", carattere))
 
         def manda_posizione_tasto(self, codice, premuto):
             """§7.3 `POSIZIONE_TASTO` — **evdev** code, pressed/released."""
             return self._manda_input(
-                T_POSIZIONE_TASTO, struct.pack("!HB", codice, 1 if premuto else 0))
+                T_KEY_POSITION, struct.pack("!HB", codice, 1 if premuto else 0))
 
-    return ClienteCoiTasti
+    return ClientWithKeys
 
 
 def fetta_di_flusso(fotogrammi, percorso):
@@ -1363,18 +1363,18 @@ def fetta_di_flusso(fotogrammi, percorso):
        arrive out of order.
     ⇒ Returns `None` if no keyframe arrived in that window.
     """
-    ordinati = sorted(fotogrammi, key=lambda f: f[0])
+    ordered = sorted(fotogrammi, key=lambda f: f[0])
     inizio = None
-    for i, f in enumerate(ordinati):
+    for i, f in enumerate(ordered):
         if f[1]:
             inizio = i
             break
     if inizio is None:
         return None
     with open(percorso, "wb") as f:
-        for x in ordinati[inizio:]:
+        for x in ordered[inizio:]:
             f.write(x[4])
-    return len(ordinati) - inizio
+    return len(ordered) - inizio
 
 
 def _decodifica(flusso, fuori):
@@ -1396,12 +1396,12 @@ async def scatta(B3, cli, lavoro, nome, secondi):
        «they arrived but no image was made of them» — and the last two are
        *«I did not look»*, not «the screen was empty».
     """
-    n0 = len(cli.v_fotogrammi)
+    n0 = len(cli.v_frames)
     # ⛔ A STILL DESKTOP DOES NOT SEND FRAMES: the server sends only what
     #    changes.  ⇒ A keyframe is ASKED for, or the «before» of a motionless scene
     #    would always be empty and the mesh would say «I do not know» forever.
     #    ⚠ It is the same reason why the client has `--chiave-dopo` (§6.2).
-    ultimo = max((f[0] for f in cli.v_fotogrammi), default=0)
+    ultimo = max((f[0] for f in cli.v_frames), default=0)
     try:
         cli.manda(B3.inquadra(B3.T["RICHIEDI_CHIAVE"], struct.pack("!I", ultimo)))
     except Exception as e:
@@ -1413,7 +1413,7 @@ async def scatta(B3, cli, lavoro, nome, secondi):
         return None, 0, "the session fell while I was looking: %s" % cli.caduta
     except asyncio.TimeoutError:
         pass
-    fetta = cli.v_fotogrammi[n0:]
+    fetta = cli.v_frames[n0:]
     if not fetta:
         return None, 0, ("no frame arrived from the wire in %.0f s "
                          "(stage that does not deliver, or session without a monitor)"
@@ -1445,29 +1445,29 @@ async def aspetta_la_scena(B3, cli, a, lavoro):
     Returns `(png|None, perche')` — the image is already the «before».
     """
     scadenza = time.time() + a.attesa_scena
-    ultimo_perche = "the scene did not appear in %.0f s" % a.attesa_scena
+    last_why = "the scene did not appear in %.0f s" % a.attesa_scena
     giro = 0
     while time.time() < scadenza:
         giro += 1
         png, quanti, perche = await scatta(
             B3, cli, lavoro, "prima-%02d" % giro, a.passo_scena)
         if png is None:
-            ultimo_perche = perche
+            last_why = perche
             continue
         img = _carica(png)
         if img is None:
-            ultimo_perche = "the image could not be read"
+            last_why = "the image could not be read"
             continue
         pezzo, _ = taglia(img)
-        fr = frazione_del_colore(pezzo, COLORE_PARTENZA)
-        if fr >= FRAZIONE_COLORE:
+        fr = frazione_del_colore(pezzo, START_COLOR)
+        if fr >= FRACTION_COLOR:
             return png, ("the scene is in force: the zone is the starting "
                          "colour for %.0f %% (after %d attempts)"
                          % (100 * fr, giro))
-        ultimo_perche = ("the zone is the starting colour only for %.0f %% "
+        last_why = ("the zone is the starting colour only for %.0f %% "
                          "(%.0f %% is needed)"
-                         % (100 * fr, 100 * FRAZIONE_COLORE))
-    return None, ultimo_perche
+                         % (100 * fr, 100 * FRACTION_COLOR))
+    return None, last_why
 
 
 async def il_giro(B3, a, chi, lavoro):
@@ -1527,14 +1527,14 @@ async def il_giro(B3, a, chi, lavoro):
         tetto = a.attesa_palco + a.attesa_primo_fotogramma
         t0 = time.monotonic()
         scadenza = time.time() + tetto
-        while time.time() < scadenza and not cli.v_fotogrammi:
+        while time.time() < scadenza and not cli.v_frames:
             try:
                 await asyncio.wait_for(cli.caduto.wait(), timeout=1.0)
                 return None, None, note + ["the session fell while waiting for the "
                                            "first frame: %s" % cli.caduta]
             except asyncio.TimeoutError:
                 pass
-        if not cli.v_fotogrammi:
+        if not cli.v_frames:
             return None, None, note + [
                 "no frame in %.0f s (stage %.0f + encoder %.0f): "
                 "the stage does not deliver"
@@ -1646,12 +1646,12 @@ def main():
 
     p.add_argument("--attesa-sessione", type=float, default=ATTESA_SESSIONE,
                    help="how long to wait for the SESSIONE reply. ⚠ [?] prudent")
-    p.add_argument("--attesa-palco", type=float, default=ATTESA_PALCO,
+    p.add_argument("--attesa-palco", type=float, default=WAIT_STAGE,
                    help="how long the STAGE is given to be born. ⭐ 152 s = the "
                         "maximum measured on GNOME (101.0 s) plus half — [M] "
                         "27 Aug 2026, C1")
     p.add_argument("--attesa-primo-fotogramma", type=float,
-                   default=ATTESA_PRIMO_FOTOGRAMMA,
+                   default=WAIT_FIRST_FRAME,
                    help="how long the ENCODER is given after the stage is there. "
                         "⚠ [?] not measured: it is ADDED to the wait for the stage, "
                         "because they are two phenomena in a row (§1.45)")
@@ -1661,7 +1661,7 @@ def main():
                         "in a cold box, which [M] exceeds 25 s (C8, §1.45)")
     p.add_argument("--passo-scena", type=float, default=5.0,
                    help="how often to look again, waiting for the scene")
-    p.add_argument("--attesa-tasto", type=float, default=ATTESA_TASTO,
+    p.add_argument("--attesa-tasto", type=float, default=WAIT_KEY,
                    help="how long to wait for the pixel to change. ⚠ [?] to calibrate")
     p.add_argument("--attesa-sgombero", type=float, default=45.0)
 
@@ -1688,7 +1688,7 @@ def main():
         sys.exit(2)
 
     # ── the terrain, and the things without which we do not judge ──────────
-    if _numpy_o_niente() is None:
+    if _numpy_or_nothing() is None:
         print("⛔ the box does not have numpy: I cannot look at a pixel")
         print("   ⇒ I could not look")
         sys.exit(3)
@@ -1723,18 +1723,18 @@ def main():
     print("   the scene: target from %.0f %% to %.0f %% of the screen, "
           "%s → %s at the first key"
           % (100 * BERSAGLIO[0], 100 * BERSAGLIO[2],
-             _esa(COLORE_PARTENZA), _esa(COLORE_ARRIVO)))
+             _esa(START_COLOR), _esa(ARRIVAL_COLOR)))
     print("   the EXPECTED ZONE: from %.0f %% to %.0f %% in both directions "
           "(%.0f %% of the screen, in the middle)"
-          % (100 * ZONA[0], 100 * ZONA[2],
-             100 * (ZONA[2] - ZONA[0]) * (ZONA[3] - ZONA[1])))
+          % (100 * ZONE[0], 100 * ZONE[2],
+             100 * (ZONE[2] - ZONE[0]) * (ZONE[3] - ZONE[1])))
     print("   the WITNESS ZONE: the frame, everything outside %.0f..%.0f %% — "
           "nothing must change there"
           % (100 * TESTIMONE[0], 100 * TESTIMONE[2]))
     print("   the yardstick: %.0f %% of the zone the colour ±%d · changed inside "
           "≥ %.0f %% · witness ≤ %.0f %%"
-          % (100 * FRAZIONE_COLORE, TOLLERANZA, 100 * CAMBIO_MINIMO_DENTRO,
-             100 * CAMBIO_MASSIMO_TESTIMONE))
+          % (100 * FRACTION_COLOR, TOLLERANZA, 100 * CAMBIO_MINIMO_DENTRO,
+             100 * MAX_WITNESS_CHANGE))
     print("   the key: %s × %d"
           % ("POSIZIONE_TASTO evdev %d" % a.codice_evdev
              if a.tasto == "posizione" else "LETTERA U+%04X" % a.lettera,

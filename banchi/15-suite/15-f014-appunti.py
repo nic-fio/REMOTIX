@@ -81,9 +81,9 @@ def _parola_sudo():
 #   randomly lost a command of the scene — and the CLEAR-OUT, which left
 #   the tenant alive.  ⇒ Here (and only in this process) `Scatola.dentro` does
 #   a direct `sudo podman exec`, with a retry.  To be proposed for suite.py.
-def _dentro_locale(self, riga, secondi=90):
+def _inside_local(self, riga, secondi=90):
     import subprocess
-    for _tentativo in range(3):
+    for _attempt in range(3):
         try:
             r = subprocess.run(["sudo", "-S", "-p", "", "podman", "exec", self.contenitore,
                                 "sh", "-c", riga], input=_parola_sudo(), capture_output=True,
@@ -101,22 +101,22 @@ def _dentro_locale(self, riga, secondi=90):
 
 
 if os.environ.get("REMOTIX_SUL_SERVER") == "1":
-    S.C20V.Scatola.dentro = _dentro_locale
+    S.C20V.Scatola.dentro = _inside_local
 ATTESA_S = 12.0
 
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE PURE FUNCTIONS
 # ═══════════════════════════════════════════════════════════════════════════
-def testo_unico(sigla):
+def unique_text(sigla):
     return "%s àèìòù €ß→ «ÀÉ» %s" % (sigla, secrets.token_hex(4))
 
 
-def senza_accenti(t):
+def strip_accents(t):
     return "".join(c for c in unicodedata.normalize("NFD", t)
                    if unicodedata.category(c) != "Mn")
 
 
-def giudica_testo(atteso, visto):
+def judge_text(atteso, visto):
     """(outcome, why): PASS only if IDENTICAL, byte for byte."""
     if visto is None:
         return S.FAIL, "no value read"
@@ -125,25 +125,25 @@ def giudica_testo(atteso, visto):
                                                              len(atteso.encode()))
     if visto.strip() == atteso:
         return S.FAIL, "equal except for spaces/newlines at the edges: %r" % visto[:80]
-    if senza_accenti(visto) == senza_accenti(atteso):
+    if strip_accents(visto) == strip_accents(atteso):
         return S.FAIL, "equal WITHOUT the accents: %r" % visto[:80]
     return S.FAIL, "different: %r instead of %r" % (visto[:80], atteso[:80])
 
 
 def certifica():
-    t = testo_unico("F014")
+    t = unique_text("F014")
     casi = [
-        ("identical ⇒ PASS", giudica_testo(t, t)[0] == S.PASS),
-        ("without accents ⇒ FAIL", giudica_testo(t, senza_accenti(t))[0] == S.FAIL),
-        ("the accents are really there", senza_accenti(t) != t),
-        ("trailing newline ⇒ FAIL", giudica_testo(t, t + "\n")[0] == S.FAIL),
-        ("empty ⇒ FAIL", giudica_testo(t, "")[0] == S.FAIL),
-        ("nothing ⇒ FAIL", giudica_testo(t, None)[0] == S.FAIL),
-        ("two different unique texts", testo_unico("X") != testo_unico("X")),
-        ("notebook: the last value", ultimo_valore(
+        ("identical ⇒ PASS", judge_text(t, t)[0] == S.PASS),
+        ("without accents ⇒ FAIL", judge_text(t, strip_accents(t))[0] == S.FAIL),
+        ("the accents are really there", strip_accents(t) != t),
+        ("trailing newline ⇒ FAIL", judge_text(t, t + "\n")[0] == S.FAIL),
+        ("empty ⇒ FAIL", judge_text(t, "")[0] == S.FAIL),
+        ("nothing ⇒ FAIL", judge_text(t, None)[0] == S.FAIL),
+        ("two different unique texts", unique_text("X") != unique_text("X")),
+        ("notebook: the last value", last_value(
             [("V", ""), ("P", "x"), ("V", "ab"), ("OK", 1)]) == "ab"),
-        ("Ctrl+V is recognised", tasto_visto([("K", "Control ctrl"), ("K", "v ctrl")], "v")),
-        ("a v without Ctrl does not count", not tasto_visto([("K", "v")], "v")),
+        ("Ctrl+V is recognised", key_seen([("K", "Control ctrl"), ("K", "v ctrl")], "v")),
+        ("a v without Ctrl does not count", not key_seen([("K", "v")], "v")),
     ]
     ok = True
     for nome, vero in casi:
@@ -152,12 +152,12 @@ def certifica():
     return 0 if ok else 1
 
 
-def tasto_visto(quaderno, lettera):
+def key_seen(quaderno, lettera):
     """Did Ctrl+<letter> arrive as keydown at the scene's application?"""
     return ("K", "%s ctrl" % lettera) in quaderno or ("K", "%s ctrl" % lettera.upper()) in quaderno
 
 
-def ultimo_valore(quaderno, tag="V"):
+def last_value(quaderno, tag="V"):
     v = None
     for t, x in quaderno:
         if t == tag:
@@ -193,7 +193,7 @@ setInterval(async()=>{
 },300);
 </script>"""
 
-SERVITORE = r'''
+SERVER = r'''
 import http.server, os, sys
 PAG = open(sys.argv[2], "rb").read()
 LOG, CMD = sys.argv[3], sys.argv[4]
@@ -257,7 +257,7 @@ class Scena:
             "echo --ps; ps -u {c} -o pid,args | cut -c1-150 | tail -n 25; echo --run; ls /run/user/$u; "
             "echo --curl; python3 -c \"import urllib.request as u; "
             "print(len(u.urlopen('http://127.0.0.1:{p}/', timeout=3).read()))\" 2>&1 | tail -n 1; exit 1"
-            .format(h=self.h, c=self.chi, p=self.porta, srv=b(SERVITORE), pag=b(PAGINA),
+            .format(h=self.h, c=self.chi, p=self.porta, srv=b(SERVER), pag=b(PAGINA),
                     pref=b(PREFERENZE)), 180)
         return c == 0, t
 
@@ -301,12 +301,12 @@ class Scena:
         raise S.Bloccata("the scene did not execute command n=%d in 12 s (notebook: %d lines; "
                          "tail: %s)" % (self.n, len(q), (coda or "")[-500:]))
 
-    def aspetta_valore(self, atteso, da, tetto=ATTESA_S):
+    def wait_value(self, atteso, da, tetto=ATTESA_S):
         """Watches the field until it is `atteso` or the time runs out.  Returns (value, new notebook)."""
         fine = time.time() + tetto
         while True:
             q = self.quaderno()[da:]
-            v = ultimo_valore(q)
+            v = last_value(q)
             if v == atteso or time.time() >= fine:
                 return v, q
             time.sleep(1.0)
@@ -357,7 +357,7 @@ def lettera(g, x):
     g.m.chiama("WebDriver:ReleaseActions")
 
 
-CAMPO_APRI = """
+OPEN_FIELD = """
   let t = document.getElementById('__f014');
   if (!t) { t = document.createElement('textarea'); t.id = '__f014';
     t.style.cssText = 'position:fixed;left:20px;top:20px;width:600px;height:60px;z-index:99999';
@@ -365,21 +365,21 @@ CAMPO_APRI = """
   t.value = arguments[0]; t.focus(); t.select();
   return document.activeElement === t;
 """
-CAMPO_CHIUDI = """
+CLOSE_FIELD = """
   const t = document.getElementById('__f014'); if (t) t.remove(); return true;
 """
-STATO_APPUNTI = """
+CLIPBOARD_STATE = """
   const A = window.REMOTIX && window.REMOTIX.appunti;
   if (!A) return null;
   return {acceso: A.acceso, sorvegliata: A.sorvegliata || '', conti: A.conti,
           in_attesa: A.in_attesa_di_gesto !== null, mio_id: A.mio_id, suo_id: A.suo_id};
 """
-DIARIO = """
+DIARY = """
   const r = document.getElementById('registro');
   const t = r ? r.textContent : '';
   return t.split('\\n').filter(x => /clipboard|APPUNTI|paste|Ctrl\\+V|readText|§9/.test(x)).slice(-25);
 """
-LEGGI_LANCIA = """
+READ_LAUNCH = """
   window.__f015 = {fatto: false};
   try {
     navigator.clipboard.readText().then(
@@ -389,24 +389,24 @@ LEGGI_LANCIA = """
 """
 
 
-def js_pagina(g, corpo):
+def js_page(g, corpo):
     """A body executed IN the page (on Firefox with <script>, not in the sandbox)."""
     if hasattr(g, "cdp"):
         return g.js(corpo + "; return true;")
-    return g.js(S.VERI._inietta(corpo))
+    return g.js(S.VERI._inject(corpo))
 
 
-def leggi_appunti_browser(g, s, geo):
+def read_browser_clipboard(g, s, geo):
     """(text | None, notes) — the browser's clipboard, with `readText()`."""
     note = []
     if not hasattr(g, "cdp"):
         # ⭐ the activation: a real click on the canvas (it goes to the remote field: harmless)
-        x, y = S.C21.dal_desktop_al_vetro(geo, geo["tl"] * 0.5, geo["ta"] * 0.75)
+        x, y = S.C21.desktop_to_glass(geo, geo["tl"] * 0.5, geo["ta"] * 0.75)
         g.clic(x, y)
         time.sleep(0.3)
-    js_pagina(g, LEGGI_LANCIA)
+    js_page(g, READ_LAUNCH)
     fine = time.time() + 8
-    bottoncino = 0
+    small_button = 0
     while time.time() < fine:
         r = g.js("return window.__f015 || null;") or {}
         if r.get("fatto"):
@@ -414,8 +414,8 @@ def leggi_appunti_browser(g, s, geo):
                 note.append("readText denied: %s" % r["errore"])
                 return None, note
             return r.get("testo"), note
-        if not hasattr(g, "cdp") and not bottoncino and paga_il_bottoncino(g):
-            bottoncino += 1
+        if not hasattr(g, "cdp") and not small_button and click_paste_panel(g):
+            small_button += 1
             note.append("Firefox asked for the little «Paste» button (SPECIFICHE §9): "
                         "clicked like the user")
         time.sleep(0.3)
@@ -423,7 +423,7 @@ def leggi_appunti_browser(g, s, geo):
     return None, note
 
 
-def paga_il_bottoncino(g):
+def click_paste_panel(g):
     """Firefox's «Paste» panel (07-b56): clicks it if it is open."""
     esito = None
     try:
@@ -452,66 +452,66 @@ def paga_il_bottoncino(g):
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE TWO DIRECTIONS
 # ═══════════════════════════════════════════════════════════════════════════
-def verso_browser_sessione(s, scena, geo, testo, copia=True):
+def browser_to_session(s, scena, geo, testo, copia=True):
     """F-014: returns (value of the remote field, details)."""
     g = s.g
     scena.comanda(pulisci=True)
     da = len(scena.quaderno())
     det = {"copia_fatta": copia}
     if copia:
-        det["campo_a_fuoco"] = g.js(CAMPO_APRI, testo)
+        det["campo_a_fuoco"] = g.js(OPEN_FIELD, testo)
         time.sleep(0.3)
         ctrl(g, "c")                       # ⭐ the REAL copy in the browser
         time.sleep(0.8)
-        g.js(CAMPO_CHIUDI)
+        g.js(CLOSE_FIELD)
     # the click on the remote field (focus in the session) and then the real Ctrl+V
-    x, y = S.C21.dal_desktop_al_vetro(geo, geo["tl"] * 0.5, geo["ta"] * 0.3)
+    x, y = S.C21.desktop_to_glass(geo, geo["tl"] * 0.5, geo["ta"] * 0.3)
     g.clic(x, y)
     time.sleep(1.0)
-    det["stato_prima"] = g.js(STATO_APPUNTI)
+    det["stato_prima"] = g.js(CLIPBOARD_STATE)
     ctrl(g, "v")
-    visto, q = scena.aspetta_valore(testo, da)
-    if visto != testo and not tasto_visto(q, "v"):
+    visto, q = scena.wait_value(testo, da)
+    if visto != testo and not key_seen(q, "v"):
         # ⚠ the Ctrl+V did not REACH the application (session focus):
         #   the user types it again.  It is declared.  `[M]` gnome/chrome, one time in three.
         det["riprova_ctrl_v"] = True
         g.clic(x, y)
         time.sleep(1.0)
         ctrl(g, "v")
-        visto, q = scena.aspetta_valore(testo, da)
-    det["gesto_arrivato"] = tasto_visto(q, "v")
+        visto, q = scena.wait_value(testo, da)
+    det["gesto_arrivato"] = key_seen(q, "v")
     det["quaderno"] = q[-12:]
-    det["stato_dopo"] = g.js(STATO_APPUNTI)
-    det["diario"] = g.js(DIARIO)
+    det["stato_dopo"] = g.js(CLIPBOARD_STATE)
+    det["diario"] = g.js(DIARY)
     return visto, det
 
 
-def verso_sessione_browser(s, scena, geo, testo, copia=True):
+def session_to_browser(s, scena, geo, testo, copia=True):
     """F-015: returns (text in the browser's clipboard, details)."""
     g = s.g
     q = scena.comanda(metti=testo)
-    det = {"copia_fatta": copia, "campo_remoto": ultimo_valore(q)}
+    det = {"copia_fatta": copia, "campo_remoto": last_value(q)}
     if det["campo_remoto"] != testo:
         raise S.Bloccata("the scene did not take the text to copy: %r"
                          % (det["campo_remoto"],))
-    prima = (g.js(STATO_APPUNTI) or {}).get("conti") or {}
+    prima = (g.js(CLIPBOARD_STATE) or {}).get("conti") or {}
     da = len(q)
     if copia:
         ctrl(g, "c")                       # ⭐ the REAL copy in the session
         fine = time.time() + 5
-        while time.time() < fine and not tasto_visto(scena.quaderno()[da:], "c"):
+        while time.time() < fine and not key_seen(scena.quaderno()[da:], "c"):
             time.sleep(0.7)
-        if not tasto_visto(scena.quaderno()[da:], "c"):
+        if not key_seen(scena.quaderno()[da:], "c"):
             det["riprova_ctrl_c"] = True     # the user types it again, and it is declared
             scena.comanda(metti=testo)
             ctrl(g, "c")
             time.sleep(1.5)
-        det["gesto_arrivato"] = tasto_visto(scena.quaderno()[da:], "c")
+        det["gesto_arrivato"] = key_seen(scena.quaderno()[da:], "c")
     # waits for the text to reach the page (diagnosis, not judgment)
     fine = time.time() + 8
     st = {}
     while time.time() < fine:
-        st = g.js(STATO_APPUNTI) or {}
+        st = g.js(CLIPBOARD_STATE) or {}
         c = st.get("conti") or {}
         if c.get("ricevuti", 0) > prima.get("ricevuti", 0) and (
                 c.get("scritti", 0) > prima.get("scritti", 0) or st.get("in_attesa")):
@@ -522,13 +522,13 @@ def verso_sessione_browser(s, scena, geo, testo, copia=True):
     if st.get("in_attesa"):
         # ⚠ the product declares it: «set aside, it goes there at the first click»
         det["gesto_chiesto_dal_prodotto"] = True
-        x, y = S.C21.dal_desktop_al_vetro(geo, geo["tl"] * 0.5, geo["ta"] * 0.75)
+        x, y = S.C21.desktop_to_glass(geo, geo["tl"] * 0.5, geo["ta"] * 0.75)
         s.g.clic(x, y)
         time.sleep(1.0)
-        det["stato_dopo_gesto"] = g.js(STATO_APPUNTI)
-    letto, note = leggi_appunti_browser(g, s, geo)
+        det["stato_dopo_gesto"] = g.js(CLIPBOARD_STATE)
+    letto, note = read_browser_clipboard(g, s, geo)
     det["note_lettura"] = note
-    det["diario"] = g.js(DIARIO)
+    det["diario"] = g.js(DIARY)
     return letto, det
 
 
@@ -545,14 +545,14 @@ def corpo(o, E):
                 print("   clipboard permission granted to %s" % origine, flush=True)
             except Exception as e:               # noqa: BLE001
                 print("   ⚠ permission NOT granted: %s" % e, flush=True)
-        segno = s.segno_registro()
+        segno = s.log_mark()
         ok, m = s.entra()
         if not ok:
             raise S.Bloccata(m)
         geo = s.geometria()
         if not geo:
             raise S.Bloccata("the canvas geometry is not there")
-        st = g.js(STATO_APPUNTI)
+        st = g.js(CLIPBOARD_STATE)
         print("   page clipboard: %s" % json.dumps(st, ensure_ascii=False), flush=True)
         if not st or not st.get("acceso"):
             E.metti("F-014", S.FAIL, "the page's clipboard is not on: %s" % st)
@@ -575,77 +575,77 @@ def dentro_la_scena(o, E, s, g, geo, scena, segno):
         raise S.Bloccata("the scene does not start: %s" % (t or "")[-300:])
     time.sleep(3)
     # ⛔ poor man's check: does the keyboard reach the remote field?  (if not, it is not F-014)
-    x, y = S.C21.dal_desktop_al_vetro(geo, geo["tl"] * 0.5, geo["ta"] * 0.3)
+    x, y = S.C21.desktop_to_glass(geo, geo["tl"] * 0.5, geo["ta"] * 0.3)
     g.clic(x, y)
     time.sleep(1.0)
     scena.comanda(pulisci=True)
     da = len(scena.quaderno())
     lettera(g, "q")
-    v, _q = scena.aspetta_valore("q", da, 8)
+    v, _q = scena.wait_value("q", da, 8)
     if v != "q":
         raise S.Bloccata("the keyboard does not reach the scene's field (a «q» typed ⇒ %r):"
                          " the paste cannot be looked at" % (v,))
 
     # ── F-014 healthy ──────────────────────────────────────────────────
-    t14 = testo_unico("F014")
-    visto14, d14 = verso_browser_sessione(s, scena, geo, t14)
+    t14 = unique_text("F014")
+    seen14, d14 = browser_to_session(s, scena, geo, t14)
     png, dove = s.foto("f014-sana")
     ev14 = [dove] if dove else []
-    ev14.append(s.salva_testo("f014-sana.json", json.dumps(d14, ensure_ascii=False,
+    ev14.append(s.save_text("f014-sana.json", json.dumps(d14, ensure_ascii=False,
                                                            indent=1)))
-    e, perche = giudica_testo(t14, visto14)
+    e, perche = judge_text(t14, seen14)
     if e == S.FAIL and not d14.get("gesto_arrivato"):
         e, perche = S.BLOCKED, ("the Ctrl+V did not reach the session's application "
                                 "(no keydown, even typed again): it is the keyboard, not the "
                                 "clipboard — " + perche)
     if d14.get("riprova_ctrl_v"):
         perche += " · (Ctrl+V typed again once)"
-    E.metti("F-014", e, perche, atteso=t14, osservato=visto14, evidenze=ev14)
+    E.metti("F-014", e, perche, atteso=t14, osservato=seen14, evidenze=ev14)
 
     # ── F-015 healthy ──────────────────────────────────────────────────
-    t15 = testo_unico("F015")
-    letto15, d15 = verso_sessione_browser(s, scena, geo, t15)
-    ev15 = [s.salva_testo("f015-sana.json", json.dumps(d15, ensure_ascii=False,
+    t15 = unique_text("F015")
+    read15, d15 = session_to_browser(s, scena, geo, t15)
+    ev15 = [s.save_text("f015-sana.json", json.dumps(d15, ensure_ascii=False,
                                                        indent=1))]
-    e, perche = giudica_testo(t15, letto15)
+    e, perche = judge_text(t15, read15)
     if e == S.FAIL and not d15.get("gesto_arrivato"):
         e, perche = S.BLOCKED, ("the Ctrl+C did not reach the session's application "
                                 "(no keydown, even typed again): it is the keyboard, not the "
                                 "clipboard — " + perche)
     if d15.get("riprova_ctrl_c"):
         perche += " · (Ctrl+C typed again once)"
-    if e == S.FAIL and letto15 is None and any("button" in n or "denied" in n
+    if e == S.FAIL and read15 is None and any("button" in n or "denied" in n
                                                 for n in d15.get("note_lettura", [])):
         perche += " · " + "; ".join(d15["note_lettura"])
     if d15.get("gesto_chiesto_dal_prodotto"):
         perche += " · (the page asked for a gesture: a click made, §9)"
-    E.metti("F-015", e, perche, atteso=t15, osservato=letto15, evidenze=ev15)
+    E.metti("F-015", e, perche, atteso=t15, osservato=read15, evidenze=ev15)
 
     if o.guasto:
         # different expectation: the judge on the real values, against the text without accents
-        ad14 = giudica_testo(senza_accenti(t14), visto14)[0] == S.FAIL
-        ad15 = giudica_testo(senza_accenti(t15), letto15)[0] == S.FAIL
+        ad14 = judge_text(strip_accents(t14), seen14)[0] == S.FAIL
+        ad15 = judge_text(strip_accents(t15), read15)[0] == S.FAIL
         # copy not made, F-014
-        g14 = testo_unico("F014G")
-        vg14, dg14 = verso_browser_sessione(s, scena, geo, g14, copia=False)
-        s.salva_testo("f014-guasto.json", json.dumps(dg14, ensure_ascii=False, indent=1))
-        r14 = giudica_testo(g14, vg14)[0] == S.FAIL
-        visto_g14 = (r14 and ad14) if dg14.get("gesto_arrivato") else None
-        E.guasto("F-014", visto_g14,
+        g14 = unique_text("F014G")
+        vg14, dg14 = browser_to_session(s, scena, geo, g14, copia=False)
+        s.save_text("f014-guasto.json", json.dumps(dg14, ensure_ascii=False, indent=1))
+        r14 = judge_text(g14, vg14)[0] == S.FAIL
+        seen_g14 = (r14 and ad14) if dg14.get("gesto_arrivato") else None
+        E.guasto("F-014", seen_g14,
                  "copy not made ⇒ the remote field is %r (%s); expected without accents ⇒ %s"
                  % ((vg14 or "")[:50], "ROSSO" if r14 else "VERDE",
                     "ROSSO" if ad14 else "VERDE"), atteso=g14, osservato=vg14)
-        g15 = testo_unico("F015G")
-        vg15, dg15 = verso_sessione_browser(s, scena, geo, g15, copia=False)
-        s.salva_testo("f015-guasto.json", json.dumps(dg15, ensure_ascii=False, indent=1))
-        r15 = giudica_testo(g15, vg15)[0] == S.FAIL
+        g15 = unique_text("F015G")
+        vg15, dg15 = session_to_browser(s, scena, geo, g15, copia=False)
+        s.save_text("f015-guasto.json", json.dumps(dg15, ensure_ascii=False, indent=1))
+        r15 = judge_text(g15, vg15)[0] == S.FAIL
         E.guasto("F-015", r15 and ad15,
                  "copy not made ⇒ the browser's clipboard is %r (%s); expected without "
                  "accents ⇒ %s" % ((vg15 or "")[:50], "ROSSO" if r15 else "VERDE",
                                    "ROSSO" if ad15 else "VERDE"),
                  atteso=g15, osservato=vg15)
-    s.salva_testo("server-f014.txt", s.registro_da(segno) if segno is not None else [])
-    s.salva_console()
+    s.save_text("server-f014.txt", s.registro_da(segno) if segno is not None else [])
+    s.save_console()
 
 
 if __name__ == "__main__":

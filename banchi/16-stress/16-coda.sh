@@ -61,7 +61,7 @@ mkdir -p "$MISURE_DIR"
 FATTE=0; SECONDI=0
 DOPO=${REMOTIX_16_DESKTOP_DOPO:-0}
 # preventivo <current desktop> <sizes left for it> <desktops left after it>
-preventivo() {
+estimate() {
 	python3 - "$FATTE" "$SECONDI" "$2" "$3" "$DOPO" "$(echo $SCALA | wc -w)" <<'PY' >>"$MISURE_DIR/campagna.log"
 import sys, datetime
 f, s, qui, resto, dopo, scala = map(int, sys.argv[1:])
@@ -148,12 +148,12 @@ for d in $DESKTOP; do
 			esito=$c
 			break
 		done
-		restano_qui=$(( $(echo $SCALA | wc -w) - I_MISURA ))
+		remain_here=$(( $(echo $SCALA | wc -w) - I_MISURA ))
 		case "$esito" in
 		1) ;;
-		*) restano_qui=0 ;;
+		*) remain_here=0 ;;
 		esac
-		preventivo "$d" "$restano_qui" "$((N_DESKTOP - I_DESKTOP))"
+		estimate "$d" "$remain_here" "$((N_DESKTOP - I_DESKTOP))"
 		case "$esito" in
 		0) dice "✅ $d holds 16 users at $m (last true GREEN: $verde)"; break ;;
 		1) dice "↘ $d gives way at $m (last true GREEN: $verde): going down a size" ;;

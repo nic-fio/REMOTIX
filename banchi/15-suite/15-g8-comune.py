@@ -44,10 +44,10 @@ C23 = S._carica("c23_g8", os.path.join(S.BANCHI, "11-scatole",
                                        "11-c23-maiusc-e-frecce-selezionano.py"))
 
 # ⛔ The ports of group G8 — only these (common mandate).
-PORTE_MIE = {"gnome": 8621, "kde": 8622, "xfce": 8623, "lxqt": 8624}
+MY_PORTS = {"gnome": 8621, "kde": 8622, "xfce": 8623, "lxqt": 8624}
 BASE_BROWSER = {"gnome": 4900, "kde": 4910, "xfce": 4920, "lxqt": 4930}
 # the second and the third browser of the same type: base+50 and base+54
-SPOSTA_BROWSER = (0, 50, 54)
+MOVE_BROWSER = (0, 50, 54)
 # the scene's server: base+5+i (Firefox N, Chrome N+1, Android N+2 belong to the browsers)
 SPOSTA_SCENA = 5
 UNITA = "rete15-g8"
@@ -59,7 +59,7 @@ BAN_85XX = "/var/lib/rete11/ban"
 INDIRIZZO = "192.168.0.2"
 
 # The page's sentences (src/pagina.html, `MOTIVO`), by substring.
-FRASE = {
+SENTENCE = {
     0x07: "incorrect username or password",
     0x08: "attempts from this address are used up",
     0x0F: "taken by another client",
@@ -85,10 +85,10 @@ def dentro(sc, riga, secondi=90):
 class MioServer:
     def __init__(self, desktop, sc=None):
         self.desktop = desktop
-        self.porta = PORTE_MIE[desktop]
+        self.porta = MY_PORTS[desktop]
         self.sc = sc or S.C20V.Scatola(desktop)
 
-    def comando_accensione(self):
+    def command_startup(self):
         return (
             "mkdir -p %(d)s; systemctl stop %(u)s 2>/dev/null; "
             "systemctl reset-failed %(u)s 2>/dev/null; "
@@ -104,7 +104,7 @@ class MioServer:
     def accendi(self, tetto=30):
         """(True, lines) when the log says «ready: https» AFTER the startup."""
         n0 = self.righe_registro() or 0
-        c, t = dentro(self.sc, self.comando_accensione() + "echo acceso", 60)
+        c, t = dentro(self.sc, self.command_startup() + "echo acceso", 60)
         if c != 0:
             return False, "systemd-run: %s" % t[-300:]
         fine = time.time() + tetto
@@ -178,7 +178,7 @@ setInterval(()=>{ if(document.activeElement!==f) f.focus();
     document.body.style.background='rgb('+c+')'; m('C '+c);}}).catch(()=>0); },400);
 </script>"""
 
-SERVITORE = r'''
+SERVER = r'''
 import http.server, sys
 PAG = open(sys.argv[2], "rb").read()
 LOG, COL = sys.argv[3], sys.argv[4]
@@ -231,12 +231,12 @@ def accendi_scena(sc, chi, porta, colore, attesa=45):
         "for i in $(seq 1 {n}); do grep -q caricata $h/g8.log && {{ echo accesa; exit 0; }}; "
         "sleep 0.5; done; echo 'the scene did not say «caricata»'; tail -n 5 $h/.g8-firefox.log; "
         "echo '-- server:'; ss -ltn | grep ':{p} ' ; pgrep -a -u {c} | cut -c1-150 | tail -n 8; "
-        "exit 1".format(c=chi, p=porta, srv=b(SERVITORE), pag=b(pag),
+        "exit 1".format(c=chi, p=porta, srv=b(SERVER), pag=b(pag),
                         pref=b(S.C21.PREFERENZE), col=rgb(colore), n=attesa * 2), attesa + 60)
     return c == 0, t
 
 
-def cambia_colore(sc, chi, colore):
+def change_color(sc, chi, colore):
     c, t = dentro(sc, "echo %s > /home/%s/g8-colore" % (rgb(colore), chi), 30)
     return c == 0
 
@@ -286,14 +286,14 @@ def frazioni(png, colori, toll=60, riduci=8):
     return fuori
 
 
-def aspetta_colore(s, nome_foto, colori, voluto, soglia=0.5, tetto=40):
+def wait_color(s, photo_name, colori, voluto, soglia=0.5, tetto=40):
     """Photographs until the colour `voluto` covers `soglia` or the cap expires; the
     photo that decides is SAVED in the evidence.
     Returns (fractions or None, path of the photo, reason)."""
     fine = time.time() + tetto
     fr, perche = None, "no photo"
     while True:
-        png, perche = _foto_muta(s)
+        png, perche = _quiet_photo(s)
         if png:
             fr = frazioni(png, colori)
             if fr and fr.get(voluto, 0) >= soglia:
@@ -301,14 +301,14 @@ def aspetta_colore(s, nome_foto, colori, voluto, soglia=0.5, tetto=40):
         if time.time() >= fine:
             break
         time.sleep(1.5)
-    png, dove = s.foto(nome_foto)
+    png, dove = s.foto(photo_name)
     if png:
         fr = frazioni(png, colori)
         return fr, dove, ""
     return fr, "", dove
 
 
-def _foto_muta(s):
+def _quiet_photo(s):
     """A photo that is NOT saved (the attempts of the wait)."""
     try:
         png = S.C21.foto_piena(s.g)
@@ -317,7 +317,7 @@ def _foto_muta(s):
     return (png, "") if png else (None, "the canvas cannot be photographed")
 
 
-def fr_testo(fr):
+def fr_text(fr):
     if not fr:
         return "(no measurement)"
     return ", ".join("%s %.1f%%" % (k, 100 * v) for k, v in fr.items())
@@ -329,14 +329,14 @@ def fr_testo(fr):
 def o_per(o, i):
     """A copy of the options for browser number `i` (0, 1, 2)."""
     o2 = copy.copy(o)
-    o2.porte_base = o.porte_base + SPOSTA_BROWSER[i]
+    o2.porte_base = o.porte_base + MOVE_BROWSER[i]
     if o.evidenze:
         o2.evidenze = os.path.join(o.evidenze, "browser%d" % i) if i else o.evidenze
         os.makedirs(o2.evidenze, exist_ok=True)
     return o2
 
 
-def _figli():
+def _children():
     fig = {}
     for v in os.listdir("/proc"):
         if not v.isdigit():
@@ -352,7 +352,7 @@ def _figli():
 
 
 def albero(pid):
-    fig = _figli()
+    fig = _children()
     tutti, coda = [], [pid]
     while coda:
         p = coda.pop()
@@ -397,12 +397,12 @@ def riprendi(g):
     return ferma(g, False)
 
 
-def muovi_un_po(s, volte=3):
+def nudge(s, volte=3):
     """A real user's sign of life: the pointer moves on the canvas."""
     try:
         geo = s.geometria()
         for k in range(volte):
-            x, y = S.C21.dal_desktop_al_vetro(geo, geo["tl"] * (0.3 + 0.1 * k),
+            x, y = S.C21.desktop_to_glass(geo, geo["tl"] * (0.3 + 0.1 * k),
                                               geo["ta"] * 0.2)
             s.g.muovi(x, y)
             time.sleep(0.2)
@@ -411,9 +411,9 @@ def muovi_un_po(s, volte=3):
         return False
 
 
-def clic_centro(s, fy=0.47):
+def click_center(s, fy=0.47):
     geo = s.geometria()
-    x, y = S.C21.dal_desktop_al_vetro(geo, geo["tl"] * 0.5, geo["ta"] * fy)
+    x, y = S.C21.desktop_to_glass(geo, geo["tl"] * 0.5, geo["ta"] * fy)
     s.g.clic(x, y)
 
 
@@ -457,7 +457,7 @@ def carica(g, url, attesa=20):
     return p
 
 
-def tenta_tenace(s, utente, parola, tetto=30, volte=3):
+def try_hard(s, utente, parola, tetto=30, volte=3):
     """`tenta`, retrying when the refusal is the ENVIRONMENT's (see `AMBIENTE`).
     Returns (admitted, state, [environment refusals seen])."""
     visti = []
@@ -472,7 +472,7 @@ def tenta_tenace(s, utente, parola, tetto=30, volte=3):
     return None, st, visti
 
 
-def tenta_senza_ricarica(s, utente, parola, tetto=30):
+def try_without_reload(s, utente, parola, tetto=30):
     return tenta(s, utente, parola, tetto, ricarica=False)
 
 
@@ -484,7 +484,7 @@ def tenta(s, utente, parola, tetto=30, ricarica=True):
     vecchio = s.o.utente
     s.o.utente = utente
     try:
-        r = s.g.js(S.VERI.JS_ENTRA, utente, parola)
+        r = s.g.js(S.VERI.JS_ENTER, utente, parola)
     finally:
         s.o.utente = vecchio
     if r != "mandato":
@@ -508,7 +508,7 @@ def tenta(s, utente, parola, tetto=30, ricarica=True):
 # ═══════════════════════════════════════════════════════════════════════════
 def main():
     if len(sys.argv) < 3 or sys.argv[1] not in ("accendi", "spegni", "sblocca", "stato") \
-            or sys.argv[2] not in PORTE_MIE:
+            or sys.argv[2] not in MY_PORTS:
         print(__doc__)
         return 2
     cosa, d = sys.argv[1], sys.argv[2]

@@ -78,7 +78,7 @@ PORTE = dict(C20V.PORTE)
 #   not over ssh to the server itself: `[M]` 24 Sep 2026, ten agents together,
 #   sshd cut off some of them («Connection closed … port 22») ⇒ tenants not
 #   created, BLOCKED that were not the product's (finding of group G7).
-def _dentro_locale(self, riga, secondi=90):
+def _inside_local(self, riga, secondi=90):
     import subprocess
     try:
         r = subprocess.run(["sudo", "-S", "-p", "", "podman", "exec", self.contenitore,
@@ -90,11 +90,11 @@ def _dentro_locale(self, riga, secondi=90):
 
 
 if os.environ.get("REMOTIX_SUL_SERVER") == "1":
-    C20V.Scatola.dentro = _dentro_locale
+    C20V.Scatola.dentro = _inside_local
 DESKTOP = ("gnome", "kde", "xfce", "lxqt")
-MODELLO_INQUILINO = re.compile(r"^c15[0-9]{3}u[0-9]+$")
+TENANT_PATTERN = re.compile(r"^c15[0-9]{3}u[0-9]+$")
 PASS, FAIL, BLOCKED = "PASS", "FAIL", "BLOCKED"
-DA_CODICE = {VERDE: PASS, ROSSO: FAIL, CIECO: BLOCKED}
+FROM_CODE = {VERDE: PASS, ROSSO: FAIL, CIECO: BLOCKED}
 
 
 def _parola_sudo():
@@ -161,7 +161,7 @@ def argomenti(doc, extra=None):
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE OUTCOMES
 # ═══════════════════════════════════════════════════════════════════════════
-class Esiti:
+class Outcomes:
     """Collects and prints the SUITE lines; gives the exit code."""
 
     def __init__(self, o):
@@ -171,8 +171,8 @@ class Esiti:
 
     def metti(self, funzione, esito, ragione, atteso="", osservato="",
               evidenze=None, passata="sana", guasto_visto=None, **altro):
-        if esito in DA_CODICE:
-            esito = DA_CODICE[esito]
+        if esito in FROM_CODE:
+            esito = FROM_CODE[esito]
         assert esito in (PASS, FAIL, BLOCKED), esito
         if esito in (FAIL, BLOCKED) and not ragione:
             ragione = "(no reason given: bench defect)"
@@ -228,17 +228,17 @@ class Sessione:
         self.o, self.nnn, self.esiti = o, nnn, esiti
         self.sc = C20V.Scatola(o.scatola)
         self.chi = chi or "c15%su%d" % (nnn, random.randint(100, 999))
-        assert MODELLO_INQUILINO.match(self.chi), self.chi
+        assert TENANT_PATTERN.match(self.chi), self.chi
         self.parola = parola or "c15-" + secrets.token_hex(6)
-        self.crea_inquilino = inquilino
+        self.create_tenant = inquilino
         self.g = None
         self.pr = None
-        self._foto = 0
+        self._photo = 0
 
     # -- life cycle -----------------------------------------------------------
     def __enter__(self):
         self.o.utente = self.chi
-        if self.crea_inquilino:
+        if self.create_tenant:
             self.sc.sgombera(self.chi)
             c, t = self.sc.crea(self.chi, self.parola)
             if c != 0:
@@ -250,22 +250,22 @@ class Sessione:
             self.sc.dentro("h=/home/%s; [ -L $h/.cache ] && rm -f $h/.cache; "
                            "install -d -o %s -g %s -m 700 $h/.cache" % (
                                self.chi, self.chi, self.chi), 30)
-        self.accendi_browser()
+        self.turn_on_browser()
         return self
 
     def __exit__(self, tipo, val, tb):
-        self.spegni_browser()
-        if self.crea_inquilino:
+        self.turn_off_browser()
+        if self.create_tenant:
             try:
                 self.sc.sgombera(self.chi)
             except Exception as e:               # noqa: BLE001
                 print("   ⚠ clear-out of %s: %s" % (self.chi, e))
         return False
 
-    def accendi_browser(self):
+    def turn_on_browser(self):
         try:
             if self.o.browser == "telefono":
-                self.g = telefono().GuidaTelefono(self.o)
+                self.g = telefono().PhoneDriver(self.o)
             else:
                 self.g = VERI.accendi_guida(self.o.browser, self.o)
         except Exception as e:                   # noqa: BLE001
@@ -282,7 +282,7 @@ class Sessione:
                 print("   ⚠ dimensiona: %s" % e)
         self.pr = VERI.Prova(self.g, self.o, self.o.url, self.parola)
 
-    def spegni_browser(self):
+    def turn_off_browser(self):
         if self.g is not None:
             try:
                 self.g.chiudi()
@@ -320,10 +320,10 @@ class Sessione:
             return None, "photo failed: %s" % str(e)[:200]
         if not png:
             return None, "the canvas is not there or has no visible area"
-        self._foto += 1
+        self._photo += 1
         percorso = ""
         if self.o.evidenze:
-            percorso = os.path.join(self.o.evidenze, "%02d-%s.png" % (self._foto, nome))
+            percorso = os.path.join(self.o.evidenze, "%02d-%s.png" % (self._photo, nome))
             with open(percorso, "wb") as f:
                 f.write(png)
         return png, percorso
@@ -333,13 +333,13 @@ class Sessione:
         return self.g.js(C21.JS_GEOMETRIA)
 
     # -- the server -----------------------------------------------------------
-    def segno_registro(self):
+    def log_mark(self):
         return self.sc.righe_registro()
 
     def registro_da(self, segno):
         return self.sc.registro_da(segno or 0, self.chi)
 
-    def salva_testo(self, nome, righe):
+    def save_text(self, nome, righe):
         if not self.o.evidenze:
             return ""
         p = os.path.join(self.o.evidenze, nome)
@@ -347,16 +347,16 @@ class Sessione:
             f.write("\n".join(righe) if isinstance(righe, (list, tuple)) else str(righe))
         return p
 
-    def salva_console(self):
+    def save_console(self):
         """The browser's JS and network errors, in the evidence."""
         try:
-            js, rete, _ = self.g.errori_fuori()
+            js, rete, _ = self.g.errors_out()
         except Exception as e:                   # noqa: BLE001
             js, rete = ["(not read: %s)" % e], []
-        return self.salva_testo("console-%s.txt" % self.o.browser, js + rete)
+        return self.save_text("console-%s.txt" % self.o.browser, js + rete)
 
-    def come_utente(self, comando, secondi=60):
-        return self.sc.come_utente(self.chi, comando, secondi)
+    def as_user(self, comando, secondi=60):
+        return self.sc.as_user(self.chi, comando, secondi)
 
     def nella_sessione(self, comando, secondi=60, fondo=True):
         """Runs `comando` as the tenant INSIDE their graphical session
@@ -379,15 +379,15 @@ class Bloccata(Exception):
     """The test could not look: it becomes BLOCKED with this reason."""
 
 
-_TELEFONO = []
+_PHONE = []
 
 
 def telefono():
     """The module of the real phone's driver (`banchi/19-android/telefono.py`),
     loaded only once and only by whoever uses it."""
-    if not _TELEFONO:
-        _TELEFONO.append(_carica("telefono", os.path.join(BANCHI, "19-android", "telefono.py")))
-    return _TELEFONO[0]
+    if not _PHONE:
+        _PHONE.append(_carica("telefono", os.path.join(BANCHI, "19-android", "telefono.py")))
+    return _PHONE[0]
 
 
 def _q(s):
@@ -410,7 +410,7 @@ def esegui(doc, funzioni, corpo, certifica=None, extra=None):
             print("⚠ this test has no pure functions to certify")
             return 0
         return certifica()
-    esiti = Esiti(o)
+    esiti = Outcomes(o)
     t0 = time.time()
     print("⭐ %s · %s · %s · %s%s" % (os.path.basename(sys.argv[0]), o.scatola, o.browser,
                                       o.url, " · + GUASTO" if o.guasto else ""), flush=True)

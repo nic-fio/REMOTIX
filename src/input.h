@@ -54,7 +54,7 @@
 typedef struct input Input;
 
 /*
- * Opens the channel to the compositor.  `sessione_controllo` is the D-Bus
+ * Opens the channel to the compositor.  `session_check` is the D-Bus
  * path of the `RemoteDesktop` session already started by `mutter.c`, from which
  * `ConnectToEIS` is requested (see the comment of `src/mutter.c:402`).
  *
@@ -64,7 +64,7 @@ typedef struct input Input;
  * ⛔ Returns NULL and fills `*errore` (to be freed with free) if it does not open.
  *    No silent fallback: `CODER.md` §4.2.
  */
-Input *input_apri(void *sessione_mutter, uint32_t tela_l, uint32_t tela_a,
+Input *input_apri(void *session_mutter, uint32_t tela_l, uint32_t tela_a,
                   char **errore);
 
 /* ⭐ PHASE 12 — the same, with the channel asked of KWin (`kwin_eis_fd()`).
@@ -116,7 +116,7 @@ int input_gira(Input *);
  * Returns -1 if the channel is not open: ⛔ and -1 means "nothing to put
  * in the poll", not "error" — the caller tells them apart by looking at whether `Input` exists.
  */
-int input_descrittore(Input *);
+int input_descriptor(Input *);
 
 /*
  * The five actions of `RCP.md` §7.3.  All return 0 if the action was
@@ -126,7 +126,7 @@ int input_descrittore(Input *);
  *    already refused out-of-range coordinates (it is `rcp.c`): here NO
  *    transformation is applied.
  */
-int input_puntatore(Input *, uint32_t x, uint32_t y);
+int input_pointer(Input *, uint32_t x, uint32_t y);
 
 /*
  * ⛔ THE CANVAS IN FORCE HAS CHANGED (`RCP.md` §7.1, `TELA(ADATTATA)`).  Remaps
@@ -143,7 +143,7 @@ int input_puntatore(Input *, uint32_t x, uint32_t y);
  *   `DEVICE_ADDED` is not the moment of the `TELA`.  As long as it stays `[?]`, the
  *   explicit call is the way.
  */
-int input_ritela(Input *, uint32_t tela_l, uint32_t tela_a);
+int input_recanvas(Input *, uint32_t tela_l, uint32_t tela_a);
 
 /*
  * ⭐ PHASE 15, D-007 — AFTER A CHANGE OF THE OUTPUT'S SIZE, THE WINDOWS ARE
@@ -199,7 +199,7 @@ int input_riporta_dentro(Input *);
 int input_disposizione(Input *, const char *nome);
 
 /* `codice` is evdev: `BTN_LEFT` = 0x110.  `premuto` 1 or 0. */
-int input_pulsante(Input *, uint16_t codice, int premuto);
+int input_button(Input *, uint16_t codice, int premuto);
 
 /*
  * ⛔ Units of 120 per notch, and THE SIGN OF THE VERTICAL AXIS IS INVERTED IN
@@ -227,13 +227,13 @@ int input_rotella(Input *, int32_t asse_x, int32_t asse_y);
  *
  * ⚠ And for the same reason `input_apri()` does NOT take the layout: the
  *   keymap arrives from `libei` inside `input.c`, at every `DEVICE_ADDED`
- *   (`tastiera_apri_da_keymap()`).  It is not an oversight: it is the right
+ *   (`keyboard_open_from_keymap()`).  It is not an oversight: it is the right
  *   direction.
  */
 int input_lettera(Input *, uint32_t carattere);
 
 /* A key position, in evdev: `KEY_A` = 30.  `premuto` 1 or 0. */
-int input_posizione(Input *, uint16_t codice, int premuto);
+int input_position(Input *, uint16_t codice, int premuto);
 
 /*
  * ⛔⛔ THE RELEASE AT DETACH — `RCP.md` §11 calls it "the rule with the highest

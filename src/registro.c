@@ -84,7 +84,7 @@ bool registro_tasto_dicibile(unsigned c)
  *    connection finds the new one at the next datagram.
  */
 static void al_journal(const char *file, int linea, const char *area,
-                       const char *chi, int priorita, const char *msg,
+                       const char *chi, int priority, const char *msg,
                        size_t msg_n)
 {
 	static const struct sockaddr_un dove = {
@@ -97,7 +97,7 @@ static void al_journal(const char *file, int linea, const char *area,
 	                 "PRIORITY=%d\nSYSLOG_IDENTIFIER=remotix\n"
 	                 "REMOTIX_AREA=%s\n%s%s%sCODE_FILE=%s\nCODE_LINE=%d\n"
 	                 "MESSAGE\n",
-	                 priorita, area, chi ? "REMOTIX_INQUILINO=" : "",
+	                 priority, area, chi ? "REMOTIX_INQUILINO=" : "",
 	                 chi ? chi : "", chi ? "\n" : "", file ? file : "?", linea);
 	if (n < 0 || (size_t)n >= sizeof campi)
 		return;
@@ -182,11 +182,11 @@ static void riga(const char *file, int linea, bool dettaglio, const char *area,
 	 * ⚠ And the extra bytes are paid ONLY by the lines that have something to
 	 *   say: whoever does not know stays silent, and does not pay. */
 	const char *id = (chi && *chi) ? chi : identita;
-	char idsano[REG_IDENTITA_MAX + 1];
+	char safe_id[REG_IDENTITA_MAX + 1];
 	int n;
 	/* ⭐ For the journal: where the line without the time begins (the MESSAGE)
 	 *    and where the body begins (from which the severity is read). */
-	int senza_ora, corpo;
+	int without_time, corpo;
 	bool con_id = false;
 	if (id && *id) {
 		con_id = true;
@@ -201,11 +201,11 @@ static void riga(const char *file, int linea, bool dettaglio, const char *area,
 			bool buono = (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z')
 			             || (c >= 'a' && c <= 'z') || c == '.' || c == '_'
 			             || c == '-' || c == '@' || c == ':';
-			idsano[k] = buono ? (char)c : '_';
+			safe_id[k] = buono ? (char)c : '_';
 		}
-		idsano[k] = '\0';
+		safe_id[k] = '\0';
 		n = snprintf(buf, sizeof buf, "%s.%03ld %-7s [%s] ", quando,
-		             ts.tv_nsec / 1000000, area, idsano);
+		             ts.tv_nsec / 1000000, area, safe_id);
 	} else
 		n = snprintf(buf, sizeof buf, "%s.%03ld %-7s ", quando,
 		             ts.tv_nsec / 1000000, area);
@@ -213,9 +213,9 @@ static void riga(const char *file, int linea, bool dettaglio, const char *area,
 		return;
 	if ((size_t)n > sizeof buf - 2)
 		n = (int)(sizeof buf - 2);
-	senza_ora = (int)strlen(quando) + 5; /* «HH:MM:SS» + «.mmm » */
-	if (senza_ora > n)
-		senza_ora = n;
+	without_time = (int)strlen(quando) + 5; /* «HH:MM:SS» + «.mmm » */
+	if (without_time > n)
+		without_time = n;
 	corpo = n;
 	int m = vsnprintf(buf + n, sizeof buf - (size_t)n - 1, fmt, ap);
 	if (m < 0)
@@ -255,12 +255,12 @@ static void riga(const char *file, int linea, bool dettaglio, const char *area,
 			c++;
 		int prio = strncmp(c, "⛔", strlen("⛔")) == 0 ? 3
 		         : strncmp(c, "⚠", strlen("⚠")) == 0 ? 4 : 6;
-		al_journal(file, linea, area, con_id ? idsano : NULL, prio,
-		           buf + senza_ora, (size_t)(n - 1 - senza_ora));
+		al_journal(file, linea, area, con_id ? safe_id : NULL, prio,
+		           buf + without_time, (size_t)(n - 1 - without_time));
 	}
 }
 
-void registro_dice_in(const char *file, int linea, const char *area,
+void log_says_in(const char *file, int linea, const char *area,
                       const char *fmt, ...)
 {
 	va_list ap;
@@ -269,7 +269,7 @@ void registro_dice_in(const char *file, int linea, const char *area,
 	va_end(ap);
 }
 
-void registro_dettaglio_in(const char *file, int linea, const char *area,
+void log_detail_in(const char *file, int linea, const char *area,
                            const char *fmt, ...)
 {
 	va_list ap;
@@ -280,7 +280,7 @@ void registro_dettaglio_in(const char *file, int linea, const char *area,
 	va_end(ap);
 }
 
-void registro_dice_di_in(const char *file, int linea, const char *area,
+void log_says_of_in(const char *file, int linea, const char *area,
                          const char *chi, const char *fmt, ...)
 {
 	va_list ap;
@@ -289,7 +289,7 @@ void registro_dice_di_in(const char *file, int linea, const char *area,
 	va_end(ap);
 }
 
-void registro_dettaglio_di_in(const char *file, int linea, const char *area,
+void log_detail_of_in(const char *file, int linea, const char *area,
                               const char *chi, const char *fmt, ...)
 {
 	va_list ap;

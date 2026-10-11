@@ -65,16 +65,16 @@ FUNZIONI = ("F-015C", "F-014C", "F-014D")
 # ⭐ the scene, the gestures and the judge of 15-f014 (its local `dentro` too)
 F14 = S._carica("f014", os.path.join(S.QUI, "15-f014-appunti.py"))
 
-GIRI_P2 = 5
-FERMO_P1_S = 6.0          # no gestures: the transient activation (5 s) expires
-TETTO_P1_S = 3.0          # within how long the text must be in the computer's clipboard
-ATTESA_CAMPO_S = 12.0
+ROUNDS_P2 = 5
+STILL_P1_S = 6.0          # no gestures: the transient activation (5 s) expires
+CAP_P1_S = 3.0          # within how long the text must be in the computer's clipboard
+WAIT_FIELD_S = 12.0
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE PURE FUNCTIONS
 # ═══════════════════════════════════════════════════════════════════════════
-def giudica_giri(giri, quanti):
+def judge_rounds(giri, quanti):
     """(outcome, why) on the P2 rounds: [{"atteso", "visto", "gesto"}].
     The rounds without the Ctrl+V keydown do not count (it is the keyboard)."""
     validi = [g for g in giri if g.get("gesto")]
@@ -91,25 +91,25 @@ def giudica_giri(giri, quanti):
 
 
 def certifica():
-    t = F14.testo_unico("X")
-    z = F14.testo_unico("Z")
-    giri_ok = [{"atteso": t, "visto": t, "gesto": True}] * GIRI_P2
+    t = F14.unique_text("X")
+    z = F14.unique_text("Z")
+    rounds_ok = [{"atteso": t, "visto": t, "gesto": True}] * ROUNDS_P2
     casi = [
-        ("f014's judge: identical ⇒ PASS", F14.giudica_testo(t, t)[0] == S.PASS),
-        ("without accents ⇒ FAIL", F14.giudica_testo(t, F14.senza_accenti(t))[0] == S.FAIL),
-        ("five right rounds ⇒ PASS", giudica_giri(giri_ok, GIRI_P2)[0] == S.PASS),
-        ("one round with the old text ⇒ FAIL", giudica_giri(
-            giri_ok[:4] + [{"atteso": t, "visto": z, "remoto": z, "gesto": True}],
-            GIRI_P2)[0] == S.FAIL),
-        ("the old text is counted", "1 times" in giudica_giri(
+        ("f014's judge: identical ⇒ PASS", F14.judge_text(t, t)[0] == S.PASS),
+        ("without accents ⇒ FAIL", F14.judge_text(t, F14.strip_accents(t))[0] == S.FAIL),
+        ("five right rounds ⇒ PASS", judge_rounds(rounds_ok, ROUNDS_P2)[0] == S.PASS),
+        ("one round with the old text ⇒ FAIL", judge_rounds(
+            rounds_ok[:4] + [{"atteso": t, "visto": z, "remoto": z, "gesto": True}],
+            ROUNDS_P2)[0] == S.FAIL),
+        ("the old text is counted", "1 times" in judge_rounds(
             [{"atteso": t, "visto": z, "remoto": z, "gesto": True}], 1)[1]),
-        ("one wrong round is enough even with few valid ones", giudica_giri(
+        ("one wrong round is enough even with few valid ones", judge_rounds(
             [{"atteso": t, "visto": None, "gesto": True},
-             {"atteso": t, "visto": None, "gesto": False}], GIRI_P2)[0] == S.FAIL),
-        ("rounds without gesture ⇒ BLOCKED", giudica_giri(
-            [{"atteso": t, "visto": None, "gesto": False}] * GIRI_P2, GIRI_P2)[0] == S.BLOCKED),
-        ("four valid right out of five ⇒ BLOCKED", giudica_giri(
-            giri_ok[:4], GIRI_P2)[0] == S.BLOCKED),
+             {"atteso": t, "visto": None, "gesto": False}], ROUNDS_P2)[0] == S.FAIL),
+        ("rounds without gesture ⇒ BLOCKED", judge_rounds(
+            [{"atteso": t, "visto": None, "gesto": False}] * ROUNDS_P2, ROUNDS_P2)[0] == S.BLOCKED),
+        ("four valid right out of five ⇒ BLOCKED", judge_rounds(
+            rounds_ok[:4], ROUNDS_P2)[0] == S.BLOCKED),
     ]
     ok = True
     for nome, vero in casi:
@@ -121,7 +121,7 @@ def certifica():
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE COMPUTER'S CLIPBOARD (the browser's Wayland session)
 # ═══════════════════════════════════════════════════════════════════════════
-def wl_copia(testo):
+def wl_copy(testo):
     """`wl-copy` as another application of the computer would do it.  ⚠ wl-copy
     stays alive in the background serving the text: the outputs do NOT go into a pipe."""
     r = subprocess.run(["wl-copy"], input=testo.encode("utf-8"), stdout=subprocess.DEVNULL,
@@ -129,7 +129,7 @@ def wl_copia(testo):
     return r.returncode == 0
 
 
-def wl_leggi():
+def wl_read():
     """The text in the computer's clipboard, or None."""
     try:
         r = subprocess.run(["wl-paste", "--no-newline"], capture_output=True, timeout=5)
@@ -140,7 +140,7 @@ def wl_leggi():
     return r.stdout.decode("utf-8", "replace")
 
 
-def fuoco_al_browser():
+def focus_to_browser():
     """The compositor's KEYBOARD focus to the browser.  ⚠ `[M]` 2 Oct 2026,
     round `cure-intel-2`: the keys of `wtype` reached nobody — the bench's
     browser receives clicks and keys from Marionette/CDP, which do not go through the
@@ -163,7 +163,7 @@ def fuoco_al_browser():
     return None
 
 
-def ctrl_dal_sistema(g, lettera):
+def ctrl_from_system(g, lettera):
     """`Ctrl+<letter>` typed BY THE GRAPHICAL SYSTEM (`wtype`, Wayland's virtual
     keyboard), not injected into the browser.  ⛔ Why it is needed: `[M]` 2 Oct 2026, round
     `f014c-prima` — with the injected `Ctrl+C` (Marionette / `Input.dispatchKeyEvent`)
@@ -181,7 +181,7 @@ def ctrl_dal_sistema(g, lettera):
     #   browser the keyboard focus and a fresh serial number; the
     #   combination stays injected, with the right positions.
     via = "injected"
-    if shutil.which("wtype") and fuoco_al_browser():
+    if shutil.which("wtype") and focus_to_browser():
         r = subprocess.run(["wtype", "-k", "Shift_L"], stdout=subprocess.DEVNULL,
                            stderr=subprocess.DEVNULL, timeout=10)
         if r.returncode == 0:
@@ -191,7 +191,7 @@ def ctrl_dal_sistema(g, lettera):
     return via
 
 
-def wl_svuota():
+def wl_clear():
     try:
         subprocess.run(["wl-copy", "--clear"], stdout=subprocess.DEVNULL,
                        stderr=subprocess.DEVNULL, timeout=10)
@@ -201,7 +201,7 @@ def wl_svuota():
 
 def stato(g):
     try:
-        return g.js(F14.STATO_APPUNTI) or {}
+        return g.js(F14.CLIPBOARD_STATE) or {}
     except Exception as e:                       # noqa: BLE001
         return {"errore": str(e)[:200]}
 
@@ -213,46 +213,46 @@ def conti(st):
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE PERSON'S GESTURES
 # ═══════════════════════════════════════════════════════════════════════════
-def punto_campo(geo):
-    return S.C21.dal_desktop_al_vetro(geo, geo["tl"] * 0.5, geo["ta"] * 0.3)
+def point_field(geo):
+    return S.C21.desktop_to_glass(geo, geo["tl"] * 0.5, geo["ta"] * 0.3)
 
 
 def copia_nella_sessione(g, scena, testo, copia=True):
     """The text in the scene's field, selected, and REAL `Ctrl+C` on the page.
     No click.  Returns the details (gesture arrived or not)."""
     q = scena.comanda(metti=testo)
-    if F14.ultimo_valore(q) != testo:
-        raise S.Bloccata("the scene did not take the text to copy: %r" % (F14.ultimo_valore(q),))
+    if F14.last_value(q) != testo:
+        raise S.Bloccata("the scene did not take the text to copy: %r" % (F14.last_value(q),))
     det = {"copia_fatta": copia, "stato_prima": stato(g)}
     da = len(q)
     if copia:
-        det["tasto"] = ctrl_dal_sistema(g, "c")
+        det["tasto"] = ctrl_from_system(g, "c")
         fine = time.time() + 5
-        while time.time() < fine and not F14.tasto_visto(scena.quaderno()[da:], "c"):
+        while time.time() < fine and not F14.key_seen(scena.quaderno()[da:], "c"):
             time.sleep(0.5)
-        det["gesto_arrivato"] = F14.tasto_visto(scena.quaderno()[da:], "c")
+        det["gesto_arrivato"] = F14.key_seen(scena.quaderno()[da:], "c")
     return det, da
 
 
-def incolla_una_volta(g, scena, geo, atteso):
+def paste_once(g, scena, geo, atteso):
     """ONE click on the canvas (on the remote field), ONE Ctrl+V.  Never typed again.
     Returns (value of the field, details)."""
     da = len(scena.quaderno())
-    x, y = punto_campo(geo)
+    x, y = point_field(geo)
     det = {}
     g.clic(x, y)
     time.sleep(1.0)
-    det["computer_al_ctrl_v"] = wl_leggi()
+    det["computer_al_ctrl_v"] = wl_read()
     det["stato_prima"] = stato(g)
-    det["tasto"] = ctrl_dal_sistema(g, "v")
-    visto, q = scena.aspetta_valore(atteso, da, ATTESA_CAMPO_S)
-    det["gesto_arrivato"] = F14.tasto_visto(q, "v")
+    det["tasto"] = ctrl_from_system(g, "v")
+    visto, q = scena.wait_value(atteso, da, WAIT_FIELD_S)
+    det["gesto_arrivato"] = F14.key_seen(q, "v")
     det["incollato_dalla_scena"] = [v for t, v in q if t == "P"]
     det["quaderno"] = q[-10:]
     det["stato_dopo"] = stato(g)
     det["annunci"] = conti(det["stato_dopo"]).get("annunciati", 0) - \
         conti(det["stato_prima"]).get("annunciati", 0)
-    det["computer_dopo"] = wl_leggi()
+    det["computer_dopo"] = wl_read()
     return visto, det
 
 
@@ -261,52 +261,52 @@ def incolla_una_volta(g, scena, geo, atteso):
 # ═══════════════════════════════════════════════════════════════════════════
 def p1(g, scena, testo, copia=True):
     """F-015C: returns (text in the computer's clipboard within 3 s, details)."""
-    wl_copia("prima-di-P1 " + F14.testo_unico("S"))
+    wl_copy("prima-di-P1 " + F14.unique_text("S"))
     q = scena.comanda(metti=testo)
-    if F14.ultimo_valore(q) != testo:
-        raise S.Bloccata("the scene did not take the text: %r" % (F14.ultimo_valore(q),))
-    time.sleep(FERMO_P1_S)                       # ⭐ still: no recent gesture
+    if F14.last_value(q) != testo:
+        raise S.Bloccata("the scene did not take the text: %r" % (F14.last_value(q),))
+    time.sleep(STILL_P1_S)                       # ⭐ still: no recent gesture
     det = {"copia_fatta": copia, "stato_prima": stato(g)}
     da = len(scena.quaderno())
     if copia:
-        det["tasto"] = ctrl_dal_sistema(g, "c")
+        det["tasto"] = ctrl_from_system(g, "c")
     t0 = time.time()
     letto, letture = None, []
-    while time.time() - t0 < TETTO_P1_S:
-        letto = wl_leggi()
+    while time.time() - t0 < CAP_P1_S:
+        letto = wl_read()
         letture.append((round(time.time() - t0, 2), (letto or "")[:60]))
         if letto == testo:
             break
         time.sleep(0.2)
     det["entro_s"] = round(time.time() - t0, 2) if letto == testo else None
     det["letture"] = letture[-6:]
-    det["gesto_arrivato"] = F14.tasto_visto(scena.quaderno()[da:], "c") if copia else None
+    det["gesto_arrivato"] = F14.key_seen(scena.quaderno()[da:], "c") if copia else None
     det["stato_dopo"] = stato(g)
     det["computer_dopo_5s"] = None
     if letto != testo:
         time.sleep(2.0)
-        det["computer_dopo_5s"] = wl_leggi()      # diagnosis: is it only late?
+        det["computer_dopo_5s"] = wl_read()      # diagnosis: is it only late?
         det["stato_dopo_5s"] = stato(g)
-    det["diario"] = g.js(F14.DIARIO)
+    det["diario"] = g.js(F14.DIARY)
     return letto, det
 
 
 def p2_giro(g, scena, geo, sigla, copia_fuori=True):
     """F-014C, one round.  Returns {"atteso", "visto", "remoto", "gesto", ...}."""
-    z = F14.testo_unico(sigla + "Z")
-    x = F14.testo_unico(sigla + "X")
+    z = F14.unique_text(sigla + "Z")
+    x = F14.unique_text(sigla + "X")
     dc, _da = copia_nella_sessione(g, scena, z)
     time.sleep(2.0)                              # the person switches to another window
-    st_copia = stato(g)
+    st_copy = stato(g)
     scena.comanda(pulisci=True)
     if copia_fuori:
-        wl_copia(x)
-    fuori = wl_leggi()
+        wl_copy(x)
+    fuori = wl_read()
     time.sleep(1.0)                              # and comes back to the browser
-    visto, di = incolla_una_volta(g, scena, geo, x)
+    visto, di = paste_once(g, scena, geo, x)
     r = {"atteso": x, "visto": visto, "remoto": z, "copia_fuori": copia_fuori,
          "gesto": di["gesto_arrivato"], "ctrl_c_arrivato": dc.get("gesto_arrivato"),
-         "computer_dopo_wl_copy": fuori, "stato_dopo_copia": st_copia}
+         "computer_dopo_wl_copy": fuori, "stato_dopo_copia": st_copy}
     r.update(di)
     return r
 
@@ -315,26 +315,26 @@ def p1b(g, scena, geo, x, seconda):
     """F-014D: (first value, second value, details)."""
     det = {}
     scena.comanda(pulisci=True)
-    wl_copia(x)
+    wl_copy(x)
     time.sleep(1.0)
-    v1, det["primo"] = incolla_una_volta(g, scena, geo, x)
-    w = F14.testo_unico("P1bW")
+    v1, det["primo"] = paste_once(g, scena, geo, x)
+    w = F14.unique_text("P1bW")
     det["copia_remota"], _ = copia_nella_sessione(g, scena, w)
     time.sleep(2.0)
     det["stato_dopo_copia_remota"] = stato(g)
     scena.comanda(pulisci=True)
-    wl_copia(seconda)
-    det["computer_seconda"] = wl_leggi()
+    wl_copy(seconda)
+    det["computer_seconda"] = wl_read()
     time.sleep(1.0)
-    v2, det["secondo"] = incolla_una_volta(g, scena, geo, x)
+    v2, det["secondo"] = paste_once(g, scena, geo, x)
     det["remoto"] = w
-    det["diario"] = g.js(F14.DIARIO)
+    det["diario"] = g.js(F14.DIARY)
     return v1, v2, det
 
 
-def giudica_p1b(x, v1, v2, det):
-    e1, p1_ = F14.giudica_testo(x, v1)
-    e2, p2_ = F14.giudica_testo(x, v2)
+def judge_p1b(x, v1, v2, det):
+    e1, p1_ = F14.judge_text(x, v1)
+    e2, p2_ = F14.judge_text(x, v2)
     if e1 == S.PASS and e2 == S.PASS:
         return S.PASS, "both times the field is the copied text (even the second, identical one)"
     parti = []
@@ -361,8 +361,8 @@ def corpo(o, E):
     if not wd or not os.path.exists(os.path.join(rd, wd)):
         raise S.Bloccata("no Wayland session of the browser (WAYLAND_DISPLAY=%r, "
                          "XDG_RUNTIME_DIR=%r): it is launched from the round or from 15-una.sh" % (wd, rd))
-    prova = F14.testo_unico("WL")
-    if not wl_copia(prova) or wl_leggi() != prova:
+    prova = F14.unique_text("WL")
+    if not wl_copy(prova) or wl_read() != prova:
         raise S.Bloccata("the computer's clipboard cannot be written/read with wl-copy/"
                          "wl-paste on %s" % wd)
     print("   computer's clipboard: %s (wl-copy/wl-paste)" % wd, flush=True)
@@ -373,12 +373,12 @@ def corpo(o, E):
             #   never clicked «Allow»
             dentro(o, E, s, porta_scena)
     finally:
-        wl_svuota()
+        wl_clear()
 
 
 def dentro(o, E, s, porta_scena):
     g = s.g
-    segno = s.segno_registro()
+    segno = s.log_mark()
     ok, m = s.entra()
     if not ok:
         raise S.Bloccata(m)
@@ -397,8 +397,8 @@ def dentro(o, E, s, porta_scena):
         la_scena(o, E, s, g, geo, scena)
     finally:
         try:
-            s.salva_testo("server-f014c.txt", s.registro_da(segno) if segno is not None else [])
-            s.salva_console()
+            s.save_text("server-f014c.txt", s.registro_da(segno) if segno is not None else [])
+            s.save_console()
         finally:
             scena.spegni()
 
@@ -412,29 +412,29 @@ def la_scena(o, E, s, g, geo, scena):
         raise S.Bloccata("the scene does not start: %s" % (t or "")[-300:])
     time.sleep(3)
     # ⛔ poor man's check: does the keyboard reach the remote field?
-    x, y = punto_campo(geo)
+    x, y = point_field(geo)
     g.clic(x, y)
     time.sleep(1.0)
     scena.comanda(pulisci=True)
     da = len(scena.quaderno())
     F14.lettera(g, "q")
-    v, _q = scena.aspetta_valore("q", da, 8)
+    v, _q = scena.wait_value("q", da, 8)
     if v != "q":
         raise S.Bloccata("the keyboard does not reach the scene's field (a «q» typed ⇒ %r)"
                          % (v,))
     scena.comanda(pulisci=True)
-    salva = lambda nome, d: s.salva_testo(nome, json.dumps(d, ensure_ascii=False, indent=1))  # noqa: E731
+    salva = lambda nome, d: s.save_text(nome, json.dumps(d, ensure_ascii=False, indent=1))  # noqa: E731
 
     # ── P1 · F-015C ────────────────────────────────────────────────────────
-    t1 = F14.testo_unico("P1")
-    letto1, d1 = p1(g, scena, t1)
+    t1 = F14.unique_text("P1")
+    read1, d1 = p1(g, scena, t1)
     ev1 = [salva("p1-sana.json", d1)]
-    e, perche = F14.giudica_testo(t1, letto1)
+    e, perche = F14.judge_text(t1, read1)
     if e == S.PASS:
         perche += " · in the computer's clipboard after %.2f s" % d1["entro_s"]
     else:
         perche = "within %.0f s of the Ctrl+C (still for %.0f s, no click) the computer's " \
-                 "clipboard does not have the text: %s" % (TETTO_P1_S, FERMO_P1_S, perche)
+                 "clipboard does not have the text: %s" % (CAP_P1_S, STILL_P1_S, perche)
         if d1.get("computer_dopo_5s") == t1:
             perche += " · it arrives AFTER the 3 s"
         if (d1.get("stato_dopo") or {}).get("in_attesa"):
@@ -442,12 +442,12 @@ def la_scena(o, E, s, g, geo, scena):
         if not d1.get("gesto_arrivato"):
             e, perche = S.BLOCKED, ("the Ctrl+C did not reach the session's "
                                     "application: it is the keyboard — " + perche)
-    E.metti("F-015C", e, perche, atteso=t1, osservato=letto1, evidenze=ev1)
+    E.metti("F-015C", e, perche, atteso=t1, osservato=read1, evidenze=ev1)
 
     # ── P2 · F-014C ────────────────────────────────────────────────────────
     giri = []
-    for i in range(GIRI_P2 + 3):
-        if sum(1 for r in giri if r["gesto"]) >= GIRI_P2:
+    for i in range(ROUNDS_P2 + 3):
+        if sum(1 for r in giri if r["gesto"]) >= ROUNDS_P2:
             break
         r = p2_giro(g, scena, geo, "P2%d" % i)
         giri.append(r)
@@ -458,34 +458,34 @@ def la_scena(o, E, s, g, geo, scena):
             "arrived" if r["gesto"] else "NOT arrived", r.get("annunci")), flush=True)
         if r["visto"] != r["atteso"] and not any(x.get("foto") for x in giri):
             r["foto"] = s.foto("p2-giro%d-sbagliato" % (i + 1))[1]
-    _png, foto2 = s.foto("p2-fine")
-    ev2 = [salva("p2-sana.json", {"giri": giri, "diario": g.js(F14.DIARIO)})]
-    ev2 += [x for x in [foto2] + [r.get("foto") for r in giri] if x]
-    e, perche = giudica_giri(giri, GIRI_P2)
+    _png, photo2 = s.foto("p2-fine")
+    ev2 = [salva("p2-sana.json", {"giri": giri, "diario": g.js(F14.DIARY)})]
+    ev2 += [x for x in [photo2] + [r.get("foto") for r in giri] if x]
+    e, perche = judge_rounds(giri, ROUNDS_P2)
     E.metti("F-014C", e, perche, atteso=" | ".join(r["atteso"] for r in giri),
             osservato=" | ".join(repr(r["visto"]) for r in giri), evidenze=ev2)
 
     # ── P1b · F-014D ───────────────────────────────────────────────────────
-    xb = F14.testo_unico("P1b")
+    xb = F14.unique_text("P1b")
     v1, v2, db = p1b(g, scena, geo, xb, xb)
     evb = [salva("p1b-sana.json", db)]
-    e, perche = giudica_p1b(xb, v1, v2, db)
+    e, perche = judge_p1b(xb, v1, v2, db)
     E.metti("F-014D", e, perche, atteso=xb, osservato="%r | %r" % (v1, v2), evidenze=evb)
 
     if not o.guasto:
         return
     # ── THE FAULTS ─────────────────────────────────────────────────────────
-    ad1 = F14.giudica_testo(F14.senza_accenti(t1), letto1)[0] == S.FAIL
-    g1 = F14.testo_unico("P1G")
+    ad1 = F14.judge_text(F14.strip_accents(t1), read1)[0] == S.FAIL
+    g1 = F14.unique_text("P1G")
     lg1, dg1 = p1(g, scena, g1, copia=False)
     salva("p1-guasto.json", dg1)
-    r1 = F14.giudica_testo(g1, lg1)[0] == S.FAIL
+    r1 = F14.judge_text(g1, lg1)[0] == S.FAIL
     E.guasto("F-015C", r1 and ad1,
              "Ctrl+C not made ⇒ the computer's clipboard is %r (%s); expected without "
              "accents ⇒ %s" % ((lg1 or "")[:50], "ROSSO" if r1 else "VERDE",
                                "ROSSO" if ad1 else "VERDE"), atteso=g1, osservato=lg1)
 
-    ad2 = all(F14.giudica_testo(F14.senza_accenti(r["atteso"]), r["visto"])[0] == S.FAIL
+    ad2 = all(F14.judge_text(F14.strip_accents(r["atteso"]), r["visto"])[0] == S.FAIL
               for r in giri)
     rg = p2_giro(g, scena, geo, "P2G", copia_fuori=False)
     salva("p2-guasto.json", rg)
@@ -495,12 +495,12 @@ def la_scena(o, E, s, g, geo, scena):
              % ((rg["visto"] or "")[:50], "ROSSO" if r2 else "VERDE",
                 "ROSSO" if ad2 else "VERDE"), atteso=rg["atteso"], osservato=rg["visto"])
 
-    adb = F14.giudica_testo(F14.senza_accenti(xb), v2)[0] == S.FAIL
-    xg = F14.testo_unico("P1bG")
-    yg = F14.testo_unico("P1bY")
+    adb = F14.judge_text(F14.strip_accents(xb), v2)[0] == S.FAIL
+    xg = F14.unique_text("P1bG")
+    yg = F14.unique_text("P1bY")
     gv1, gv2, dgb = p1b(g, scena, geo, xg, yg)
     salva("p1b-guasto.json", dgb)
-    rb = giudica_p1b(xg, gv1, gv2, dgb)[0] != S.PASS
+    rb = judge_p1b(xg, gv1, gv2, dgb)[0] != S.PASS
     gesti = dgb["primo"]["gesto_arrivato"] and dgb["secondo"]["gesto_arrivato"]
     E.guasto("F-014D", (rb and adb) if gesti else None,
              "the second copy is another text ⇒ the field is %r (%s); expected without "

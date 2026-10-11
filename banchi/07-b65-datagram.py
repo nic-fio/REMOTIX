@@ -153,7 +153,7 @@ def qdisc():
 
 
 # ── ⛔ THE GUARDIAN IS ARMED AND DISARMED BY PID, NOT BY PATTERN ─────────
-GUARDIANO = LAV + "/.guardiano.pid"
+GUARDIAN = LAV + "/.guardiano.pid"
 
 
 def guardiano_arma(secondi):
@@ -164,19 +164,19 @@ def guardiano_arma(secondi):
     #    `[M]` the first run printed «pid ?», that is a guardian that could not
     #    have been disarmed by pid — the cure without its other half.
     root('bash -c "setsid sh -c \'sleep %d; /usr/sbin/tc qdisc del dev %s root\' '
-         '>/dev/null 2>&1 & echo \\$! > %s"' % (secondi, DEV, GUARDIANO))
-    rc, out, _ = root("cat %s 2>/dev/null" % GUARDIANO)
+         '>/dev/null 2>&1 & echo \\$! > %s"' % (secondi, DEV, GUARDIAN))
+    rc, out, _ = root("cat %s 2>/dev/null" % GUARDIAN)
     print("   OK  guardian armed for %d s (pid %s): the network goes back as it was "
           "EVEN if I die" % (secondi, out.strip() or "?"))
 
 
 def guardiano_disarma():
     """⛔ The GROUP is killed, so `sh` never reaches the `tc` line."""
-    rc, out, _ = root("cat %s 2>/dev/null || true" % GUARDIANO)
+    rc, out, _ = root("cat %s 2>/dev/null || true" % GUARDIAN)
     p = out.strip()
     if p.isdigit():
         root("kill -TERM -%s 2>/dev/null; kill -TERM %s 2>/dev/null; true" % (p, p))
-    root("rm -f %s; true" % GUARDIANO)
+    root("rm -f %s; true" % GUARDIAN)
 
 
 def rimetti(dillo=True):
@@ -232,7 +232,7 @@ def innesca_sessione(secondi=8):
 
 
 # ── the tone, which must play for the WHOLE run ───────────────────────────
-def tono_fabbrica(hz=440, secondi=70, ampiezza=0.5):
+def tone_factory(hz=440, secondi=70, ampiezza=0.5):
     """⛔ The tone is built HERE if missing, and the amplitude is KNOWN: the expected RMS
        is a calculation (A/sqrt2), not an estimate.  ⚠ And the file must be readable
        by the session's user, who is not root."""
@@ -241,19 +241,19 @@ def tono_fabbrica(hz=440, secondi=70, ampiezza=0.5):
     if out.strip().isdigit() and int(out.strip()) > 48000 * secondi * 2:
         return f
     root("mkdir -p %s && chmod 755 %s" % (LAV, LAV))
-    copione = (
+    script = (
         "import math,struct,wave;"
         "w=wave.open('%s','wb');w.setnchannels(2);w.setsampwidth(2);"
         "w.setframerate(48000);d=bytearray();"
         "[d.extend(struct.pack('<hh',v,v)) for v in "
         "[int(%f*math.sin(2*math.pi*%d*n/48000)*32767) for n in range(48000*%d)]];"
         "w.writeframes(bytes(d));w.close()" % (f, ampiezza, hz, secondi))
-    root("python3 -c \"%s\" && chmod 644 %s" % (copione, f), 300)
+    root("python3 -c \"%s\" && chmod 644 %s" % (script, f), 300)
     return f
 
 
 def tono_accendi():
-    tono_fabbrica()
+    tone_factory()
     root("setsid nohup setpriv --reuid=%d --regid=%d --init-groups env -i "
          "HOME=/home/%s USER=%s LANG=C.UTF-8 PATH=/usr/local/bin:/usr/bin:/bin "
          "XDG_RUNTIME_DIR=/run/user/%d DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/%d/bus "
@@ -262,12 +262,12 @@ def tono_accendi():
          % (UID_B, UID_B, UTENTE, UTENTE, UID_B, UID_B, LAV))
     for _ in range(30):
         time.sleep(0.4)
-        if legami() > 0:
+        if input_links() > 0:
             return True
     return False
 
 
-def legami():
+def input_links():
     rc, out, _ = root("env UTENTE=%s UID_B=%d LAV=%s python3 %s/banchi/"
                       "07-b64-scena.py grafo" % (UTENTE, UID_B, LAV, ALB))
     try:
@@ -346,10 +346,10 @@ def giro(nome, codec, secondi):
               % (DENTRO_ALB, IND, PORTA, UTENTE, DENTRO_LAV,
                  "opus,pcm" if codec == "opus" else codec,
                  DENTRO_LAV, nome, DENTRO_LAV, nome, secondi))
-    prima_filo = byte_sul_filo()
+    before_wire = byte_sul_filo()
     rc, out, err = root("bash /media/REMOTIX/enter.sh --root '%s'" % dentro,
                         secondi + 240)
-    dopo_filo = byte_sul_filo()
+    after_wire = byte_sul_filo()
     testo = out + err
     r = {"cliente": {}}
     for x in testo.splitlines():
@@ -363,9 +363,9 @@ def giro(nome, codec, secondi):
     rc, out, _ = root("tail -n +%d %s/registro.log | grep -aE 'final count|cwnd_left' "
                       "| tail -4" % (riga0 + 1, LAV))
     r["server"] = [x.strip() for x in out.splitlines()]
-    if prima_filo and dopo_filo:
-        b = dopo_filo[0] - prima_filo[0]
-        pk = dopo_filo[1] - prima_filo[1]
+    if before_wire and after_wire:
+        b = after_wire[0] - before_wire[0]
+        pk = after_wire[1] - before_wire[1]
         r["filo"] = {"byte": b, "pacchetti": pk,
                      "byte_per_pacchetto": round(b / pk, 1) if pk else None,
                      "mbit_s": round(b * 8 / secondi / 1e6, 3)}
@@ -437,7 +437,7 @@ def principale():
             if not ok:
                 print("   ", q); break
             print("    tc: %s" % " ".join(q.split("\n")[:2])[:150])
-            leg = legami()
+            leg = input_links()
             print("    M3: incoming links to the sink = %s" % leg)
             if leg <= 0:
                 print("   NO  the tone is silent: I do NOT judge this step")

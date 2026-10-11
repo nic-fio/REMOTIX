@@ -103,7 +103,7 @@ async def tentativo(a, utente, parola):
         cli.manda(F.inquadra(F.T["CREDENZIALI"], F.s(utente) + F.s(parola)))
         try:
             nome, corpo = await F.attendi(cli, None, attesa=40)
-        except (F.Caduta, asyncio.TimeoutError) as e:
+        except (F.Drop, asyncio.TimeoutError) as e:
             return ("CADUTA", None, (time.monotonic() - t0) * 1000, str(e))
         ms = (time.monotonic() - t0) * 1000
         motivo = corpo[0] if (nome == "RESPINTO" and corpo) else None
@@ -117,7 +117,7 @@ def dillo(ok, testo):
 
 async def principale(a, parola):
     male = 0
-    nome_motivo = F.MOTIVI
+    reason_name = F.MOTIVI
 
     if a.caso == "secondo":
         print("== the fixed second of §4.4-bis, and it holds ALSO for the admitted one")
@@ -129,7 +129,7 @@ async def principale(a, parola):
         n, m, ms, err = await tentativo(a, a.utente, "questa-e-sbagliata")
         male += dillo(n == "RESPINTO" and m == 0x07 and ms >= 1000,
                       f"WRONG password -> {n}"
-                      f"({nome_motivo.get(m, m)}) in {ms:.0f} ms "
+                      f"({reason_name.get(m, m)}) in {ms:.0f} ms "
                       f"(expected RESPINTO 0x07, >= 1000)")
         # ⛔ And it cleans up: a failure left as inheritance to the next case
         #    would skew the count of whoever comes next.
@@ -143,14 +143,14 @@ async def principale(a, parola):
         for i, u in enumerate(("prova", "prova2", "nessuno-di-questi"), 1):
             n, m, ms, err = await tentativo(a, u, "questa-e-sbagliata")
             print(f"   -- failure {i}/3 (user «{u}»): {n}"
-                  f"({nome_motivo.get(m, m)}) in {ms:.0f} ms")
+                  f"({reason_name.get(m, m)}) in {ms:.0f} ms")
             male += dillo(n == "RESPINTO" and m == 0x07,
                           f"   number {i} is a CREDENZIALI_ERRATE, not already a ban")
             await asyncio.sleep(0.4)
         print("== and the FOURTH, with the RIGHT password")
         n, m, ms, err = await tentativo(a, a.utente, parola)
         male += dillo(n == "RESPINTO" and m == 0x08,
-                      f"RIGHT password -> {n}({nome_motivo.get(m, m)}) in "
+                      f"RIGHT password -> {n}({reason_name.get(m, m)}) in "
                       f"{ms:.0f} ms  (expected RESPINTO 0x08 TROPPI_TENTATIVI: "
                       f"⭐ it is the proof that tells a ban from a counter)")
 
@@ -159,7 +159,7 @@ async def principale(a, parola):
         n, m, ms, err = await tentativo(a, a.utente, parola)
         male += dillo(n == "RESPINTO" and m == 0x08,
                       f"after the restart, RIGHT password -> {n}"
-                      f"({nome_motivo.get(m, m)})  (expected 0x08)")
+                      f"({reason_name.get(m, m)})  (expected 0x08)")
 
     elif a.caso == "morto":
         print("== ⛔ I3: the helper is dead, and the RIGHT password is presented")
@@ -168,7 +168,7 @@ async def principale(a, parola):
         n, m, ms, err = await tentativo(a, a.utente, parola)
         male += dillo(n == "RESPINTO",
                       f"RIGHT password with the helper dead -> {n}"
-                      f"({nome_motivo.get(m, m)}) in {ms:.0f} ms  "
+                      f"({reason_name.get(m, m)}) in {ms:.0f} ms  "
                       f"(expected RESPINTO, NEVER AMMESSO)")
         male += dillo(ms >= 1000,
                       f"   and the fixed second is there anyway ({ms:.0f} ms): an "
@@ -196,16 +196,16 @@ async def principale(a, parola):
             tentativo(a, "prova", "questa-e-sbagliata"),
             tentativo(a, "prova2", "questa-e-sbagliata"))
         tot = (time.monotonic() - t0) * 1000
-        print(f"   -- the first: {r1[0]}({nome_motivo.get(r1[1], r1[1])}) in {r1[2]:.0f} ms")
-        print(f"   -- the second:{r2[0]}({nome_motivo.get(r2[1], r2[1])}) in {r2[2]:.0f} ms")
-        piu_lento = max(r1[2], r2[2])
+        print(f"   -- the first: {r1[0]}({reason_name.get(r1[1], r1[1])}) in {r1[2]:.0f} ms")
+        print(f"   -- the second:{r2[0]}({reason_name.get(r2[1], r2[1])}) in {r2[2]:.0f} ms")
+        slower = max(r1[2], r2[2])
         somma = r1[2] + r2[2]
         male += dillo(r1[1] == 0x07 and r2[1] == 0x07,
                       "both are CREDENZIALI_ERRATE (0x07): PAM was really "
                       "queried twice")
         male += dillo(tot < somma * 0.75,
                       f"the total wall is {tot:.0f} ms — the slower of the two "
-                      f"is {piu_lento:.0f}, the sum would be {somma:.0f}.  "
+                      f"is {slower:.0f}, the sum would be {somma:.0f}.  "
                       f"⭐ In parallel, not queued")
         print(f"   ⚠ unblock DECLARED, so as not to leave the field dirty: "
               f"{F.sblocca(a.socket, a.indirizzo)}")

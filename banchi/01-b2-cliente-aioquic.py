@@ -87,12 +87,12 @@ class ClienteWebTransport(QuicConnectionProtocol):
         self._http = H3Connection(self._quic, enable_webtransport=True)
         self.accettata = asyncio.get_event_loop().create_future()
         self.tornato = asyncio.get_event_loop().create_future()
-        self._sessione = None
+        self._session = None
         self._stream_wt = None
 
     def apri_sessione(self, autorita: str, percorso: str) -> int:
         sid = self._quic.get_next_available_stream_id(is_unidirectional=False)
-        self._sessione = sid
+        self._session = sid
         self._http.send_headers(
             sid,
             [
@@ -108,7 +108,7 @@ class ClienteWebTransport(QuicConnectionProtocol):
         return sid
 
     def manda_byte(self, dati: bytes) -> None:
-        sid = self._http.create_webtransport_stream(self._sessione, is_unidirectional=False)
+        sid = self._http.create_webtransport_stream(self._session, is_unidirectional=False)
         self._stream_wt = sid
         self._quic.send_stream_data(sid, dati, end_stream=False)
         self.transmit()

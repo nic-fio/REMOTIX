@@ -76,23 +76,23 @@ import subprocess
 import sys
 import tempfile
 
-MARCHE_ESTERNE = ("⟨v1⟩", "⟨mutter⟩", "⟨gnome⟩", "⟨lsquic⟩", "⟨quiche⟩",
+EXTERNAL_MARKS = ("⟨v1⟩", "⟨mutter⟩", "⟨gnome⟩", "⟨lsquic⟩", "⟨quiche⟩",
                   "⟨ngtcp2⟩", "⟨kwin⟩", "⟨xrdp⟩", "⟨esterno⟩")
 # the historical papers: photographs of what was, they are not chased
-ESCLUSE = ("fondamenta/", "memoria/")
+EXCLUDED = ("fondamenta/", "memoria/")
 
 # ⭐ THE REPORTS REMOVED ON PURPOSE — 94 files, taken out on 16 August 2026 by the user's
 #    decision, and ⛔ **not lost**: they live in `0c85e5c` and `FASI.md` §0 has the
 #    recipe to get one out.  ⇒ Citing them is PROVENANCE and it is kept: it says
 #    where a measurement comes from.  ⛔ **Linking them** is not: a link promises to open.
 #    That is why they are here and not in check 3, which catches the links anyway.
-TOLTI_APPOSTA = ("fasi/rapporti/", "web/rapporti/")
+DELIBERATELY_REMOVED = ("fasi/rapporti/", "web/rapporti/")
 
 ECCEZIONI = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                          "11-c16-eccezioni.txt")
 
 
-def eccezioni_dichiarate(percorso=ECCEZIONI):
+def declared_exceptions(percorso=ECCEZIONI):
     """⛔ the exceptions live in a file, not in the code: so they are COUNTED"""
     fuori = []
     try:
@@ -117,7 +117,7 @@ RX_RIGA  = re.compile(r'`([A-Za-z0-9_./-]+\.(?:c|h|py|sh|html)):([0-9]+)`')
 # ⭐ THE FROZEN CODE — `fondamenta/` is the v1 product, closed and still.
 #    A coordinate in there **does not age**, because there is nothing that
 #    moves it.  ⇒ Forbidding those too would be a rule without a defect behind it.
-CONGELATO = ("fondamenta/",)
+FROZEN = ("fondamenta/",)
 RX_PERC  = re.compile(r'`([A-Za-z0-9_][A-Za-z0-9_./-]*\.(?:c|h|py|sh|md|html|json|jsonl|pam|rs))`')
 RX_LINK  = re.compile(r'\[[^\]]+\]\(([A-Za-z0-9_][A-Za-z0-9_./-]*\.(?:md|png|jpg|sh|py|c|h))\)')
 # ⚠ 11 Oct 2026: the documents went to English (§10.38) and the heading with them,
@@ -132,10 +132,10 @@ def documenti(radice):
                                         text=True, stderr=subprocess.DEVNULL)
     except (subprocess.CalledProcessError, FileNotFoundError):
         return None
-    return [f for f in fuori.split() if not f.startswith(ESCLUSE)]
+    return [f for f in fuori.split() if not f.startswith(EXCLUDED)]
 
 
-def elenco_file(radice):
+def file_list(radice):
     fuori = subprocess.check_output(["git", "-C", radice, "ls-files"], text=True)
     tutti = set(fuori.split())
     nomi = set(p.rsplit("/", 1)[-1] for p in tutti)
@@ -144,12 +144,12 @@ def elenco_file(radice):
 
 def guarda(radice, eccezioni=None):
     """returns (coordinate, percorsi_morti, link_rotti, riprese) — each a list"""
-    scusati = eccezioni if eccezioni is not None else eccezioni_dichiarate()
+    excused = eccezioni if eccezioni is not None else declared_exceptions()
     docs = documenti(radice)
     if docs is None:
         return None
-    tutti, nomi = elenco_file(radice)
-    coord, morti, rotti, riprese = [], [], [], []
+    tutti, nomi = file_list(radice)
+    coord, dead, rotti, riprese = [], [], [], []
     for d in docs:
         p = os.path.join(radice, d)
         try:
@@ -159,30 +159,30 @@ def guarda(radice, eccezioni=None):
             continue
         for n, riga in enumerate(righe, 1):
             for m in RX_RIGA.finditer(riga):
-                f_cit = m.group(1)
-                if f_cit.startswith(CONGELATO):
+                f_cited = m.group(1)
+                if f_cited.startswith(FROZEN):
                     continue
                 vivo = any(os.path.exists(os.path.join(radice, x))
-                           for x in (f_cit, "src/" + f_cit, "banchi/" + f_cit))
+                           for x in (f_cited, "src/" + f_cited, "banchi/" + f_cited))
                 if vivo:
                     coord.append(f"{d}:{n}  {m.group(0)}")
             if RX_RIPR.search(riga) and riga.lstrip("> ").startswith("#"):
                 riprese.append(f"{d}:{n}")
             # the paths marked ⟨…⟩ are declared as other people's: they are not chased
-            ripulita = riga
-            for marca in MARCHE_ESTERNE:
-                ripulita = re.sub(re.escape(marca) + r'\s*[A-Za-z0-9_./-]+', "", ripulita)
-            for m in RX_PERC.finditer(ripulita):
+            cleaned = riga
+            for marca in EXTERNAL_MARKS:
+                cleaned = re.sub(re.escape(marca) + r'\s*[A-Za-z0-9_./-]+', "", cleaned)
+            for m in RX_PERC.finditer(cleaned):
                 c = m.group(1)
                 if c in tutti or c.rsplit("/", 1)[-1] in nomi:
                     continue
                 if os.path.exists(os.path.join(radice, c)):
                     continue
-                if c.startswith(TOLTI_APPOSTA):
+                if c.startswith(DELIBERATELY_REMOVED):
                     continue
-                if any(s in c for s in scusati):
+                if any(s in c for s in excused):
                     continue
-                morti.append(f"{d}:{n}  {c}")
+                dead.append(f"{d}:{n}  {c}")
             for m in RX_LINK.finditer(riga):
                 c = m.group(1)
                 if c.startswith(("http", "#")):
@@ -192,19 +192,19 @@ def guarda(radice, eccezioni=None):
                    or os.path.exists(os.path.join(radice, base, c)):
                     continue
                 rotti.append(f"{d}:{n}  {c}")
-    return coord, morti, rotti, riprese
+    return coord, dead, rotti, riprese
 
 
-def stampa(nome, brutti, tetto, spiega):
-    if not brutti:
+def stampa(nome, ugly, tetto, spiega):
+    if not ugly:
         print(f"  \033[1;32mOK\033[0m  {nome}")
         return True
-    print(f"  \033[1;31mNO\033[0m  {nome} — {len(brutti)}")
+    print(f"  \033[1;31mNO\033[0m  {nome} — {len(ugly)}")
     print(f"      ⛔ {spiega}")
-    for b in brutti[:tetto]:
+    for b in ugly[:tetto]:
         print(f"        {b}")
-    if len(brutti) > tetto:
-        print(f"        … and {len(brutti) - tetto} more")
+    if len(ugly) > tetto:
+        print(f"        … and {len(ugly) - tetto} more")
     return False
 
 
@@ -214,14 +214,14 @@ def giro(radice, silenzioso=False, eccezioni=None):
         if not silenzioso:
             print("  ⛔ I could not look: the root is not a git repository")
         return 3
-    coord, morti, rotti, riprese = visto
+    coord, dead, rotti, riprese = visto
     if silenzioso:
-        return 1 if (coord or morti or rotti or len(riprese) > 1) else 0
+        return 1 if (coord or dead or rotti or len(riprese) > 1) else 0
     print("== C16 — the documents do not lie ==")
     verdi = [
         stampa("no line coordinate towards our code", coord, 8,
                "a coordinate right today is wrong next week: the NAME is cited"),
-        stampa("every cited path exists (or carries the ⟨…⟩ mark)", morti, 8,
+        stampa("every cited path exists (or carries the ⟨…⟩ mark)", dead, 8,
                "the document points to a file that is not in the repository"),
         stampa("no broken markdown link", rotti, 8,
                "a broken link is worse than a citation: it promises to open"),

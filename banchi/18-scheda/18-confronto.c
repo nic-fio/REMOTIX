@@ -59,7 +59,7 @@ static uint32_t caso(void)
 
 /* A «stable» 5x7 glyph: it depends only on (row, column) of the text, so the
  * text does not change from one frame to the next unless it scrolls. */
-static uint32_t glifo(uint32_t riga, uint32_t colonna)
+static uint32_t glyph(uint32_t riga, uint32_t colonna)
 {
 	uint32_t h = riga * 2654435761u ^ colonna * 40503u ^ 0xA5A5A5A5u;
 	h ^= h >> 15;
@@ -73,7 +73,7 @@ typedef struct {
 	uint32_t l, a, passo;
 } Tela;
 
-static void rettangolo(Tela *t, int x0, int y0, int l, int a, uint8_t b, uint8_t g, uint8_t r)
+static void rectangle(Tela *t, int x0, int y0, int l, int a, uint8_t b, uint8_t g, uint8_t r)
 {
 	for (int y = y0; y < y0 + a; y++) {
 		if (y < 0 || y >= (int) t->a)
@@ -92,29 +92,29 @@ static void rettangolo(Tela *t, int x0, int y0, int l, int a, uint8_t b, uint8_t
 
 /* Lines of text: 5x7 glyphs in cells of (scale·6)x(scale·10), from pixel
  * `scorrimento` downwards (to make the terminal scroll). */
-static void testo(Tela *t, int x0, int y0, int l, int a, int scala, uint32_t prima_riga,
+static void testo(Tela *t, int x0, int y0, int l, int a, int scala, uint32_t first_row,
                   int scorrimento, uint8_t b, uint8_t g, uint8_t r)
 {
-	int cella_l = 6 * scala, cella_a = 10 * scala;
-	int colonne = l / cella_l;
+	int cell_w = 6 * scala, cell_h = 10 * scala;
+	int colonne = l / cell_w;
 	for (int y = 0; y < a; y++) {
 		int yy = y + scorrimento;
-		int riga_testo = yy / cella_a, dentro_y = (yy % cella_a) / scala;
-		if (dentro_y >= 7)
+		int text_line = yy / cell_h, inside_y = (yy % cell_h) / scala;
+		if (inside_y >= 7)
 			continue;
 		int py = y0 + y;
 		if (py < 0 || py >= (int) t->a)
 			continue;
 		uint8_t *riga = t->pixel + (size_t) py * t->passo;
 		for (int c = 0; c < colonne; c++) {
-			uint32_t gl = glifo(prima_riga + (uint32_t) riga_testo, (uint32_t) c);
+			uint32_t gl = glyph(first_row + (uint32_t) text_line, (uint32_t) c);
 			if ((gl & 7) == 0)
 				continue; /* one space every eight */
 			for (int dx = 0; dx < 5 * scala; dx++) {
 				int bitx = dx / scala;
-				if (!((gl >> (dentro_y * 5 + bitx + 3)) & 1u))
+				if (!((gl >> (inside_y * 5 + bitx + 3)) & 1u))
 					continue;
-				int px = x0 + c * cella_l + dx;
+				int px = x0 + c * cell_w + dx;
 				if (px < 0 || px >= (int) t->l)
 					continue;
 				riga[px * 4 + 0] = b;
@@ -129,17 +129,17 @@ static void finestra(Tela *t, int x, int y, int l, int a, int scala, uint32_t id
                      int scorrimento, bool scura)
 {
 	int barra = 28 * scala;
-	rettangolo(t, x - 1, y - 1, l + 2, a + 2, 60, 60, 60);           /* border */
-	rettangolo(t, x, y, l, barra, 0x3a, 0x4a, 0x5e);                 /* title bar */
-	rettangolo(t, x + 10 * scala, y + 8 * scala, 12 * scala, 12 * scala, 0x38, 0x38, 0xe0); /* button */
-	rettangolo(t, x + 26 * scala, y + 8 * scala, 12 * scala, 12 * scala, 0x38, 0xc0, 0xe0);
+	rectangle(t, x - 1, y - 1, l + 2, a + 2, 60, 60, 60);           /* border */
+	rectangle(t, x, y, l, barra, 0x3a, 0x4a, 0x5e);                 /* title bar */
+	rectangle(t, x + 10 * scala, y + 8 * scala, 12 * scala, 12 * scala, 0x38, 0x38, 0xe0); /* button */
+	rectangle(t, x + 26 * scala, y + 8 * scala, 12 * scala, 12 * scala, 0x38, 0xc0, 0xe0);
 	testo(t, x + 50 * scala, y + 8 * scala, l / 2, 14 * scala, scala, id * 1000u, 0, 240, 240, 240);
 	if (scura) {
-		rettangolo(t, x, y + barra, l, a - barra, 0x1e, 0x1e, 0x1e);
+		rectangle(t, x, y + barra, l, a - barra, 0x1e, 0x1e, 0x1e);
 		testo(t, x + 8 * scala, y + barra + 4 * scala, l - 16 * scala, a - barra - 8 * scala, scala,
 		      id * 7919u, scorrimento, 0x60, 0xe0, 0x90);
 	} else {
-		rettangolo(t, x, y + barra, l, a - barra, 0xf4, 0xf4, 0xf4);
+		rectangle(t, x, y + barra, l, a - barra, 0xf4, 0xf4, 0xf4);
 		testo(t, x + 12 * scala, y + barra + 10 * scala, l - 24 * scala, a - barra - 20 * scala, scala,
 		      id * 104729u, scorrimento, 0x20, 0x20, 0x20);
 	}
@@ -160,9 +160,9 @@ static void disegna(Tela *t, uint32_t n)
 		}
 	}
 	/* the bottom bar (panel) with «icons» */
-	rettangolo(t, 0, (int) t->a - 40 * scala, (int) t->l, 40 * scala, 0x28, 0x28, 0x28);
+	rectangle(t, 0, (int) t->a - 40 * scala, (int) t->l, 40 * scala, 0x28, 0x28, 0x28);
 	for (int i = 0; i < 12; i++)
-		rettangolo(t, 12 * scala + i * 48 * scala, (int) t->a - 34 * scala, 28 * scala, 28 * scala,
+		rectangle(t, 12 * scala + i * 48 * scala, (int) t->a - 34 * scala, 28 * scala, 28 * scala,
 		           (uint8_t) (80 + i * 13), (uint8_t) (120 + i * 9), (uint8_t) (200 - i * 11));
 	int L = (int) t->l, A = (int) t->a;
 	/* window 1: a light editor, still */
@@ -184,9 +184,9 @@ static void disegna(Tela *t, uint32_t n)
 	int cx = L / 2 + (int) (L / 3 * __builtin_cos(ang));
 	int cy = A / 2 + (int) (A / 3 * __builtin_sin(ang * 1.3));
 	for (int i = 0; i < 16 * scala; i++)
-		rettangolo(t, cx, cy + i, (16 * scala - i) / 2 + 1, 1, 0xff, 0xff, 0xff);
+		rectangle(t, cx, cy + i, (16 * scala - i) / 2 + 1, 1, 0xff, 0xff, 0xff);
 	for (int i = 0; i < 16 * scala; i++)
-		rettangolo(t, cx - 1, cy + i, 1, 1, 0, 0, 0);
+		rectangle(t, cx - 1, cy + i, 1, 1, 0, 0, 0);
 	(void) caso;
 }
 
@@ -197,9 +197,9 @@ typedef struct {
 	uint32_t stride;
 } Buffer;
 
-#define BUFFER_QUANTI 4
+#define BUFFER_COUNT 4
 
-static const char *nome_codec_arg(CodecVideo c)
+static const char *codec_name_arg(CodecVideo c)
 {
 	return c == CODIFICATORE_H264 ? "h264" : "hevc";
 }
@@ -212,7 +212,7 @@ int main(int argc, char **argv)
 	uint32_t l = 1920, a = 1080, n = 120, fps = 60, qp = 26, tetto = 0;
 	int profondita = 8;
 	int chiave_a = -1, ridimensiona_a = -1;
-	uint32_t ridim_l = 0, ridim_a = 0;
+	uint32_t resize_w = 0, resize_h = 0;
 	bool software = false;
 
 	for (int i = 1; i < argc; i++) {
@@ -228,7 +228,7 @@ int main(int argc, char **argv)
 		else if (!strcmp(k, "--fps")) { fps = (uint32_t) atoi(v); i++; }
 		else if (!strcmp(k, "--qp")) { qp = (uint32_t) atoi(v); i++; }
 		else if (!strcmp(k, "--chiave-a")) { chiave_a = atoi(v); i++; }
-		else if (!strcmp(k, "--ridimensiona-a")) { sscanf(v, "%d:%ux%u", &ridimensiona_a, &ridim_l, &ridim_a); i++; }
+		else if (!strcmp(k, "--ridimensiona-a")) { sscanf(v, "%d:%ux%u", &ridimensiona_a, &resize_w, &resize_h); i++; }
 		else if (!strcmp(k, "--tetto")) { tetto = (uint32_t) atoi(v); i++; }
 		else if (!strcmp(k, "--sorgente-out")) { sorgente_out = v; i++; }
 		else if (!strcmp(k, "--software")) { software = true; }
@@ -280,7 +280,7 @@ int main(int argc, char **argv)
 	Tela t = { .l = l, .a = a, .passo = l * 4 };
 	t.pixel = malloc((size_t) t.passo * a);
 	struct gbm_device *gbm = NULL;
-	Buffer buffer[BUFFER_QUANTI];
+	Buffer buffer[BUFFER_COUNT];
 	int drm_fd = -1;
 	memset(buffer, 0, sizeof buffer);
 	if (scheda) {
@@ -294,7 +294,7 @@ int main(int argc, char **argv)
 
 	uint64_t byte_totali = 0;
 	uint32_t chiavi = 0, falliti = 0;
-	uint32_t larghezza_corrente = l, altezza_corrente = a;
+	uint32_t current_width = l, current_height = a;
 	/* ⛔ The GENERATION of the buffers: when the canvas changes the BOs are remade, and the
 	 *    descriptor numbers are recycled — without changing it the encoder
 	 *    would reuse a surface imported from a buffer that no longer exists
@@ -303,18 +303,18 @@ int main(int argc, char **argv)
 	printf("n,chiave,byte,us_conversione,us_caricamento,us_codifica,ricodifiche\n");
 	for (uint32_t i = 0; i < n; i++) {
 		if (ridimensiona_a >= 0 && (int) i == ridimensiona_a) {
-			if (!codificatore_ridimensiona(cod, ridim_l, ridim_a, errore, sizeof errore)) {
+			if (!codificatore_ridimensiona(cod, resize_w, resize_h, errore, sizeof errore)) {
 				fprintf(stderr, "⛔ ridimensiona: %s\n", errore);
 				return 1;
 			}
-			larghezza_corrente = ridim_l;
-			altezza_corrente = ridim_a;
-			t.l = ridim_l;
-			t.a = ridim_a;
-			t.passo = ridim_l * 4;
+			current_width = resize_w;
+			current_height = resize_h;
+			t.l = resize_w;
+			t.a = resize_h;
+			t.passo = resize_w * 4;
 			free(t.pixel);
-			t.pixel = malloc((size_t) t.passo * ridim_a);
-			for (int b = 0; b < BUFFER_QUANTI; b++)
+			t.pixel = malloc((size_t) t.passo * resize_h);
+			for (int b = 0; b < BUFFER_COUNT; b++)
 				if (buffer[b].bo) {
 					close(buffer[b].fd);
 					gbm_bo_destroy(buffer[b].bo);
@@ -332,9 +332,9 @@ int main(int argc, char **argv)
 		CodificatoreFotogramma fg;
 		bool ok;
 		if (scheda) {
-			Buffer *b = &buffer[i % BUFFER_QUANTI];
+			Buffer *b = &buffer[i % BUFFER_COUNT];
 			if (!b->bo) {
-				b->bo = gbm_bo_create(gbm, larghezza_corrente, altezza_corrente, GBM_FORMAT_XRGB8888,
+				b->bo = gbm_bo_create(gbm, current_width, current_height, GBM_FORMAT_XRGB8888,
 				                      GBM_BO_USE_LINEAR | GBM_BO_USE_RENDERING);
 				if (!b->bo) {
 					fprintf(stderr, "⛔ gbm_bo_create\n");
@@ -344,24 +344,24 @@ int main(int argc, char **argv)
 				b->stride = gbm_bo_get_stride(b->bo);
 			}
 			/* the pixels inside the DMA-BUF: the «capture» */
-			uint32_t stride_mappa = 0;
-			void *mappa_dati = NULL;
-			void *mappa = gbm_bo_map(b->bo, 0, 0, larghezza_corrente, altezza_corrente,
-			                         GBM_BO_TRANSFER_WRITE, &stride_mappa, &mappa_dati);
+			uint32_t stride_map = 0;
+			void *map_data = NULL;
+			void *mappa = gbm_bo_map(b->bo, 0, 0, current_width, current_height,
+			                         GBM_BO_TRANSFER_WRITE, &stride_map, &map_data);
 			if (!mappa) {
 				fprintf(stderr, "⛔ gbm_bo_map\n");
 				return 1;
 			}
-			for (uint32_t y = 0; y < altezza_corrente; y++)
-				memcpy((uint8_t *) mappa + (size_t) y * stride_mappa, t.pixel + (size_t) y * t.passo,
-				       (size_t) larghezza_corrente * 4);
-			gbm_bo_unmap(b->bo, mappa_dati);
+			for (uint32_t y = 0; y < current_height; y++)
+				memcpy((uint8_t *) mappa + (size_t) y * stride_map, t.pixel + (size_t) y * t.passo,
+				       (size_t) current_width * 4);
+			gbm_bo_unmap(b->bo, map_data);
 			CodificatoreSuperficie s = {
 				.fd = b->fd,
 				.offset = 0,
 				.stride = b->stride,
-				.larghezza = larghezza_corrente,
-				.altezza = altezza_corrente,
+				.larghezza = current_width,
+				.altezza = current_height,
 				.formato_drm = DRM_FORMAT_XRGB8888,
 				.modificatore = DRM_FORMAT_MOD_LINEAR,
 				.generazione = generazione,
@@ -394,14 +394,14 @@ int main(int argc, char **argv)
 	       "\"profilo_flusso\":%d,\"livello_flusso\":%d,\"misura_flusso\":\"%ux%u\","
 	       "\"bassa_potenza\":%s,\"modo_bitrate\":%d,\"fotogrammi\":%u,\"chiavi\":%u,"
 	       "\"falliti\":%u,\"byte\":%llu}\n",
-	       falliti ? "con fallimenti" : "ok", nome_codec_arg(codec), strada,
+	       falliti ? "con fallimenti" : "ok", codec_name_arg(codec), strada,
 	       c && c->componente ? c->componente : "", codificatore_in_hardware(cod) ? "true" : "false",
 	       c ? c->stringa_codec : "", c ? c->profondita_flusso : 0, c ? c->profilo_flusso : 0,
 	       c ? c->livello_flusso : 0, c ? c->larghezza_flusso : 0, c ? c->altezza_flusso : 0,
 	       c && c->bassa_potenza ? "true" : "false", c ? c->modo_bitrate : 0, n, chiavi, falliti,
 	       (unsigned long long) byte_totali);
 	codificatore_libera(cod);
-	for (int b = 0; b < BUFFER_QUANTI; b++)
+	for (int b = 0; b < BUFFER_COUNT; b++)
 		if (buffer[b].bo) {
 			close(buffer[b].fd);
 			gbm_bo_destroy(buffer[b].bo);

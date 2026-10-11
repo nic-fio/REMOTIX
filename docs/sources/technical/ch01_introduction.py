@@ -1,6 +1,6 @@
 from build import VERSION, arrow, box, path, c, conta, dl, fig, note, numeri, p, righe, rif, table, text, tree, warn, zone
 
-INSIEME = fig(
+OVERVIEW = fig(
     zone(20, 12, 250, 250, "Any device (a browser)")
     + box(40, 46, 210, 54, "The page", "src/pagina.html, served by the server", "navy")
     + box(40, 116, 210, 54, "WebCodecs + canvas", "decodes and draws the video", "blue")
@@ -24,7 +24,7 @@ S1 = p("<b>REMOTIX</b> is a remote desktop for Linux. A server runs on the Linux
        "WebTransport, that is HTTP/3 on QUIC. There is nothing to install on the device the user connects from: a "
        "browser with WebTransport and WebCodecs is the client. " + c("SPECIFICHE.md") + " says what the product "
        "promises, " + c("RCP.md") + " defines the protocol, " + c("DECISIONI.md") + " records why; this manual "
-       "explains how the code does it.", lead=True) + INSIEME + \
+       "explains how the code does it.", lead=True) + OVERVIEW + \
     p("Every user who logs in gets <b>their own graphical session</b> on the machine — GNOME, KDE Plasma, XFCE or "
       "LXQt, whichever desktop the machine has — started headless by REMOTIX, with one virtual monitor as large as "
       "the browser window. The session belongs to the user, not to the connection: closing the tab, losing the "
@@ -256,7 +256,7 @@ S4 = p("The " + c("nic-fio/REMOTIX") + " repository on GitHub (private) holds ev
          "sections of " + c("DECISIONI.md") + " win; " + rif("Conventions") + " explains how the documents are "
          "kept.", "Old headers.")
 
-PARTI = [
+PARTS = [
     ("Server", c("src/*.c") + ", " + c("src/*.h"),
      "parent, children, transport, RCP, capture, encoding, input, audio, clipboard, desktops",
      lambda f: f.startswith("src/") and f.count("/") == 1 and f.endswith((".c", ".h")) and not f.endswith("_spv.h")),
@@ -288,7 +288,7 @@ S5 = p("How big REMOTIX is, part by part. The lines are counted from the sources
        "files kept by git under " + c("src/") + ", " + c("installatore/") + " and " + c("packaging/")
        + ", plus the manual's own sources; the vendored Go modules, the protocol headers generated at build time and "
        "binary files are left out. The test benches (" + c("banchi/") + ", about 1,800 files) are not counted.",
-       lead=True) + numeri(PARTI, "«TAB» — The project's parts and their line counts") + \
+       lead=True) + numeri(PARTS, "«TAB» — The project's parts and their line counts") + \
     p("A large share of the C is comment: by the project's rules every non-obvious line carries the reason, the "
       "measurement or the decision behind it, often with the date. The counts in this table and in the file map "
       "are never written by hand.")

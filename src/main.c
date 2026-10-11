@@ -145,12 +145,12 @@
  *   and at every check it would be 43 200 lines a day, almost all the same. */
 #define CONTO_GUARDIANO_MS 60000
 
-static volatile sig_atomic_t si_ferma;
+static volatile sig_atomic_t stop_requested;
 
-static void al_segnale(int s)
+static void on_signal(int s)
 {
 	(void)s;
-	si_ferma = 1;
+	stop_requested = 1;
 }
 
 static void aiuto(const char *nome)
@@ -428,36 +428,36 @@ struct ponte {
 #define RIPASSO_RITROVATI_MS 10000u
 #define QUANTI_RITROVATI_MAX 256
 
-static void presenza_segna(const char *utente, uint64_t ora_ms);
-static void presenza_dimentica(const char *utente);
+static void presenza_segna(const char *utente, uint64_t now_ms);
+static void presence_forget(const char *utente);
 /* ⚠ Tentative definition (C11 §6.9.2): the value and its box are further
  *   down, with the third clock of §5.3. */
-static uint64_t abbandono_ms;
+static uint64_t abandon_ms;
 
 static RitrovoDesktop *ritrovati;
-static int ritrovati_n;
+static int found_again_n;
 
-static int ritrovato_indice(const char *utente)
+static int found_again_index(const char *utente)
 {
-	for (int i = 0; utente && i < ritrovati_n; i++)
+	for (int i = 0; utente && i < found_again_n; i++)
 		if (strcmp(ritrovati[i].utente, utente) == 0)
 			return i;
 	return -1;
 }
 
-static bool ritrovato_di(const char *utente)
+static bool found_again_of(const char *utente)
 {
-	return ritrovato_indice(utente) >= 0;
+	return found_again_index(utente) >= 0;
 }
 
-static void ritrovato_togli(const char *utente)
+static void found_again_remove(const char *utente)
 {
-	int i = ritrovato_indice(utente);
+	int i = found_again_index(utente);
 
 	if (i < 0)
 		return;
-	ritrovati[i] = ritrovati[ritrovati_n - 1];
-	ritrovati_n--;
+	ritrovati[i] = ritrovati[found_again_n - 1];
+	found_again_n--;
 }
 
 /* ⭐ «How many stages are alive»: the children, plus the desktops found again
@@ -465,10 +465,10 @@ static void ritrovato_togli(const char *utente)
  *    theirs is born, so nobody is counted twice. */
 static int palchi_quanti(const struct ponte *p)
 {
-	return figli_quanti(p->f) + ritrovati_n;
+	return children_count(p->f) + found_again_n;
 }
 
-static void ritrovati_all_avvio(uint64_t ora_ms)
+static void ritrovati_all_avvio(uint64_t now_ms)
 {
 	char perche[256] = "";
 	char elenco[1024] = "";
@@ -493,7 +493,7 @@ static void ritrovati_all_avvio(uint64_t ora_ms)
 		              perche);
 		return;
 	}
-	ritrovati_n = n;
+	found_again_n = n;
 	for (int i = 0; i < n; i++) {
 		int k;
 
@@ -504,11 +504,11 @@ static void ritrovati_all_avvio(uint64_t ora_ms)
 		              "cap and in the budget, and at reattach the new child picks up "
 		              "this same desktop",
 		              ritrovati[i].utente, (long)ritrovati[i].uid,
-		              ritrovati[i].sessione, RITROVO_SERVIZIO_PAM,
+		              ritrovati[i].sessione, FINDING_AGAIN_SERVICE_PAM,
 		              ritrovati[i].sessioni, (long)ritrovati[i].palco,
 		              ritrovati[i].comm);
 		/* ⚠ The abandonment clock restarts from NOW, and it is said below. */
-		presenza_segna(ritrovati[i].utente, ora_ms);
+		presenza_segna(ritrovati[i].utente, now_ms);
 		k = snprintf(elenco + usati, sizeof elenco - usati, "%s«%s»",
 		             usati ? ", " : "", ritrovati[i].utente);
 		if (k > 0 && (size_t)k < sizeof elenco - usati)
@@ -522,7 +522,7 @@ static void ritrovati_all_avvio(uint64_t ora_ms)
 	              "kept",
 	              n, n ? ": " : " (no logind session «remotix» with a live stage)",
 	              elenco, n, rcp_tetto(),
-	              (unsigned long long)(abbandono_ms / 1000));
+	              (unsigned long long)(abandon_ms / 1000));
 	if (n > rcp_tetto())
 		registro_dice(REG_FIGLIO,
 		              "⚠ PHASE 17 T7: the desktops found again (%d) are MORE than the "
@@ -534,24 +534,24 @@ static void ritrovati_all_avvio(uint64_t ora_ms)
 /* ⭐ The check: a desktop found again that has died in the meantime leaves the counts.
  * ⚠ Only if there is at least one: with an empty table nobody is asked
  *   anything, and the loop that delivers frames does not pay. */
-static void ritrovati_ripassa(uint64_t ora_ms)
+static void ritrovati_ripassa(uint64_t now_ms)
 {
 	static uint64_t ultimo;
-	static bool muto_detto;
+	static bool mute_logged;
 	RitrovoDesktop *vivi;
 	char perche[256] = "";
 	int n;
 
-	if (!ritrovati_n || ora_ms - ultimo < RIPASSO_RITROVATI_MS)
+	if (!found_again_n || now_ms - ultimo < RIPASSO_RITROVATI_MS)
 		return;
-	ultimo = ora_ms;
+	ultimo = now_ms;
 	vivi = calloc(QUANTI_RITROVATI_MAX, sizeof *vivi);
 	if (!vivi)
 		return;
 	n = ritrovo_cerca(vivi, QUANTI_RITROVATI_MAX, perche, sizeof perche);
 	if (n < 0) {
-		if (!muto_detto) {
-			muto_detto = true;
+		if (!mute_logged) {
+			mute_logged = true;
 			registro_dice(REG_FIGLIO,
 			              "⚠ PHASE 17 T7: the check of the desktops found again got no "
 			              "answer (%s): they stay in the counts until it is known",
@@ -560,8 +560,8 @@ static void ritrovati_ripassa(uint64_t ora_ms)
 		free(vivi);
 		return;
 	}
-	muto_detto = false;
-	for (int i = ritrovati_n - 1; i >= 0; i--) {
+	mute_logged = false;
+	for (int i = found_again_n - 1; i >= 0; i--) {
 		bool c_e = false;
 		char chi[sizeof ritrovati[0].utente];
 
@@ -577,8 +577,8 @@ static void ritrovati_ripassa(uint64_t ora_ms)
 		              "coming back): it leaves the cap, the budget and the "
 		              "abandonment clock",
 		              chi, (long)ritrovati[i].palco, ritrovati[i].comm);
-		ritrovato_togli(chi);
-		presenza_dimentica(chi);
+		found_again_remove(chi);
+		presence_forget(chi);
 	}
 	free(vivi);
 }
@@ -608,15 +608,15 @@ static void ritrovati_ripassa(uint64_t ora_ms)
  *    know»: a budget that refused for not having been able to measure would
  *    make the user pay for a fault of ours.  ⚠ The «I do not know» is written,
  *    the yes is not. */
-static bool c_e_capacita(struct ponte *p, const char *utente, char *perche,
-                         size_t perche_cap, uint8_t *motivo)
+static bool has_capabilities(struct ponte *p, const char *utente, char *perche,
+                         size_t why_cap, uint8_t *motivo)
 {
 	struct budget_conto conto;
 	enum budget_esito e;
 	uint32_t tl = TELA_L, ta = TELA_A, ml, ma;
 	int quanti;
 
-	if (!budget_acceso())
+	if (!budget_on())
 		return true;
 
 	/* ⭐ THE CEILING OF THE NEWCOMER'S CANVAS, and it is known from the `CIAO`.
@@ -636,20 +636,20 @@ static bool c_e_capacita(struct ponte *p, const char *utente, char *perche,
 			ta = ma;
 	}
 
-	budget_conto_apri(&conto);
-	quanti = figli_quanti(p->f);
+	budget_count_open(&conto);
+	quanti = children_count(p->f);
 	for (int i = 0; i < quanti; i++) {
-		const char *chi = figli_utente_ennesimo(p->f, i);
+		const char *chi = children_nth_user(p->f, i);
 
 		if (chi && chi[0])
-			budget_conto_dentro(&conto, chi);
+			budget_count_inside(&conto, chi);
 	}
 	/* ⭐ PHASE 17 T7: and the desktops found again, which do not have a child
 	 *    yet but go back to composing as soon as their user returns. */
-	for (int i = 0; i < ritrovati_n; i++)
-		budget_conto_dentro(&conto, ritrovati[i].utente);
-	e = budget_conto_verdetto(&conto, utente, tl, ta, perche, perche_cap);
-	if (e == BUDGET_NON_REGGE) {
+	for (int i = 0; i < found_again_n; i++)
+		budget_count_inside(&conto, ritrovati[i].utente);
+	e = budget_count_verdict(&conto, utente, tl, ta, perche, why_cap);
+	if (e == BUDGET_DOES_NOT_HOLD) {
 		*motivo = RCP_BUDGET_PIENO;
 		return false;
 	}
@@ -659,13 +659,13 @@ static bool c_e_capacita(struct ponte *p, const char *utente, char *perche,
 		registro_dice(REG_BUDGET,
 		              "⚠ «%s» ADMITTED without the budget's judgement: %s",
 		              utente, perche && perche[0] ? perche : "I did not measure");
-		if (perche && perche_cap)
+		if (perche && why_cap)
 			perche[0] = '\0';
 		return true;
 	}
 	registro_dettaglio(REG_BUDGET, "«%s» fits: %s", utente,
 	                   perche && perche[0] ? perche : "");
-	if (perche && perche_cap)
+	if (perche && why_cap)
 		perche[0] = '\0';
 	return true;
 }
@@ -692,7 +692,7 @@ static bool c_e_capacita(struct ponte *p, const char *utente, char *perche,
  *    of defect **P3**, and the long box sits on the line that does it. */
 /* ⭐ D-004: the presence table is further down, with its box; here it is only
  *    needed to start the clock at the birth of the stage. */
-static void presenza_segna(const char *utente, uint64_t ora_ms);
+static void presenza_segna(const char *utente, uint64_t now_ms);
 
 static void consegna_verdetto(void *ctx, uint64_t pratica, bool ammesso,
                               const char *utente, const char *rhost)
@@ -720,7 +720,7 @@ static void consegna_verdetto(void *ctx, uint64_t pratica, bool ammesso,
 	 *   `0x06` was declared in `rcp.h` from day one and **nobody had ever sent
 	 *   it** (`[M]` §3.4: `grep -r RCP_BUDGET_PIENO src/ --include=*.c` ⇒ zero
 	 *   callers).  This is the line that gives it its first sender. */
-	uint8_t no_motivo = RCP_SESSIONE_NON_SERVIBILE;
+	uint8_t no_reason = RCP_SESSION_UNSERVABLE;
 	/* ⭐ D-001: the stage was already there ⇒ `SESSIONE` will say `2 = RIPRESA`. */
 	bool ripresa = false;
 
@@ -741,7 +741,7 @@ static void consegna_verdetto(void *ctx, uint64_t pratica, bool ammesso,
 		 *     inside the cap and the budget, and the clock is not renewed);
 		 *     for the child it is not — it is born now (D1) and picks up the
 		 *     same compositor. */
-		bool ritrovato = !c_era && ritrovato_di(utente);
+		bool ritrovato = !c_era && found_again_of(utente);
 
 		if (ritrovato)
 			ripresa = true;
@@ -785,7 +785,7 @@ static void consegna_verdetto(void *ctx, uint64_t pratica, bool ammesso,
 		 *    `figli_assicura()`, and whoever does not fit spawns nothing:
 		 *    neither process, nor logind session, nor compositor.
 		 *
-		 * ⚠ `figli_quanti()` and `figli_pid_di()` already existed: no new
+		 * ⚠ `children_count()` and `figli_pid_di()` already existed: no new
 		 *   function is needed, what is needed is **asking first**. */
 		if (!ripresa && palchi_quanti(p) >= rcp_tetto()) {
 			registro_dice(REG_FIGLIO,
@@ -798,14 +798,14 @@ static void consegna_verdetto(void *ctx, uint64_t pratica, bool ammesso,
 			              "graphical session for whoever will be sent away (§8.1 D6), "
 			              "and the no goes out on the wire with 0x0E",
 			              utente, palchi_quanti(p), rcp_tetto(),
-			              figli_quanti(p->f), ritrovati_n);
+			              children_count(p->f), found_again_n);
 			snprintf(senza_palco, sizeof senza_palco,
 			         "all the stages of this server are in use (%d of "
 			         "%d): they are live graphical sessions, which are freed at "
 			         "logout or after abandonment",
 			         palchi_quanti(p), rcp_tetto());
-		} else if (!ripresa && !c_e_capacita(p, utente, senza_palco,
-		                                   sizeof senza_palco, &no_motivo)) {
+		} else if (!ripresa && !has_capabilities(p, utente, senza_palco,
+		                                   sizeof senza_palco, &no_reason)) {
 			/* ⛔⭐⭐⭐ THE BUDGET — phase 10, and it is the reason for the phase.
 			 *
 			 *     ⛔ Until tonight this machine **accepted everyone and
@@ -855,7 +855,7 @@ static void consegna_verdetto(void *ctx, uint64_t pratica, bool ammesso,
 			 *    its own — it leaves the found-again list so as not to count it
 			 *    twice.  ⛔ The presence slot is NOT touched: it is a reattach,
 			 *    and a reattach does not renew the clock (§5.3, 16 Aug 2026). */
-			int i = ritrovato_indice(utente);
+			int i = found_again_index(utente);
 
 			registro_dice(REG_FIGLIO,
 			              "⭐ PHASE 17 T7 — «%s» COMES BACK to their desktop "
@@ -864,7 +864,7 @@ static void consegna_verdetto(void *ctx, uint64_t pratica, bool ammesso,
 			              "RIPRESA",
 			              utente, ritrovati[i].sessione,
 			              (long)ritrovati[i].palco, ritrovati[i].comm);
-			ritrovato_togli(utente);
+			found_again_remove(utente);
 		} else if (!c_era) {
 			/* ⛔⭐ D-004 (phase 15) — THE ABANDONMENT CLOCK STARTS AT BIRTH, not
 			 *     at the first gesture.
@@ -889,7 +889,7 @@ static void consegna_verdetto(void *ctx, uint64_t pratica, bool ammesso,
 			 *    `video_regola()` turns the loop back on as soon as `SESSIONE`
 			 *    starts.  ⛔ Not to a child JUST BORN: it is already taking it,
 			 *    and the request would make it send the same frame twice. */
-			figli_chiedi_palco(p->f, utente);
+			children_ask_stage(p->f, utente);
 		}
 		/* ⛔⭐ AND HERE THE COUNT OF THE DENIED IS WRITTEN — one line per
 		 *     verdict, **even when the budget is off**, and that is the case
@@ -899,7 +899,7 @@ static void consegna_verdetto(void *ctx, uint64_t pratica, bool ammesso,
 		 * ⚠ It sits AFTER the chain and not inside its branches: a count
 		 *   written in three different places is a count that one day will
 		 *   forget one. */
-		budget_riga_verdetto(utente, senza_palco[0] == '\0', no_motivo,
+		budget_verdict_line(utente, senza_palco[0] == '\0', no_reason,
 		                     rcp_tetto(), senza_palco);
 	}
 	/* ⛔ `ripresa` only if it really gets in: with a farewell on its way there
@@ -945,13 +945,13 @@ static void consegna_verdetto(void *ctx, uint64_t pratica, bool ammesso,
 	 *    ADDED, they do not replace each other, and `0x06` belongs to the
 	 *    budget's round. */
 	if (senza_palco[0]) {
-		size_t quante = wt_congeda_utente(utente, no_motivo, senza_palco, NULL);
+		size_t quante = wt_congeda_utente(utente, no_reason, senza_palco, NULL);
 		registro_dice(REG_WT,
 		              "⛔ sent away %zu clients of «%s» with %#04x: %s.  ⚠ If here "
 		              "you read ZERO, the no reached NOBODY and the user "
 		              "is in front of a black page — it is defect P3, not its "
 		              "cure",
-		              quante, utente, no_motivo, senza_palco);
+		              quante, utente, no_reason, senza_palco);
 	}
 }
 
@@ -1087,7 +1087,7 @@ static void audio_chiedi(void *ctx, const char *utente, uint8_t codec)
 	struct ponte *p = (struct ponte *)ctx;
 	if (!p || !p->f)
 		return;
-	figli_audio(p->f, utente, codec);
+	children_audio(p->f, utente, codec);
 }
 
 /* The way back: an already encoded block, from the session to the wire.
@@ -1119,7 +1119,7 @@ static bool appunti_offri_al_figlio(void *ctx, const char *utente)
 	struct ponte *p = (struct ponte *)ctx;
 	if (!p || !p->f)
 		return false;
-	return figli_appunti_offri(p->f, utente);
+	return children_clipboard_offer(p->f, utente);
 }
 
 static bool appunti_risposta_al_figlio(void *ctx, const char *utente,
@@ -1129,7 +1129,7 @@ static bool appunti_risposta_al_figlio(void *ctx, const char *utente,
 	struct ponte *p = (struct ponte *)ctx;
 	if (!p || !p->f)
 		return false;
-	return figli_appunti_risposta(p->f, utente, serial, testo, byte);
+	return children_clipboard_response(p->f, utente, serial, testo, byte);
 }
 
 /* The two ways back, from the desktop to the wire.
@@ -1142,7 +1142,7 @@ static void appunti_dalla_sessione(void *ctx, const char *utente, uid_t uid,
 {
 	(void)ctx;
 	(void)uid;
-	wt_appunti_dalla_sessione(utente, testo, byte);
+	wt_clipboard_from_session(utente, testo, byte);
 }
 
 static void appunti_richiesta_dalla_sessione(void *ctx, const char *utente,
@@ -1156,10 +1156,10 @@ static void appunti_richiesta_dalla_sessione(void *ctx, const char *utente,
 	 *      ⚠ but here the answer is ALREADY known: making whoever pastes wait
 	 *      four seconds when the answer is certain is a desktop that looks
 	 *      frozen for something we had understood at once. */
-	if (wt_appunti_richiesta(utente, serial))
+	if (wt_clipboard_request(utente, serial))
 		return;
 	if (p && p->f)
-		figli_appunti_risposta(p->f, utente, serial, NULL, 0);
+		children_clipboard_response(p->f, utente, serial, NULL, 0);
 }
 
 /* ⭐⭐ THE INPUT SEAM — phase 4, and it is the twin of the one above.
@@ -1210,10 +1210,10 @@ static void appunti_richiesta_dalla_sessione(void *ctx, const char *utente,
  *   one mouse click in 10 minutes, rather unlikely»*.  ⇒ Only input counts,
  *   which is also the simplest rule to explain. */
 #define ABBANDONO_PREDEFINITO_MS 3600000u /* 60 minutes */
-static uint64_t abbandono_ms = ABBANDONO_PREDEFINITO_MS;
+static uint64_t abandon_ms = ABBANDONO_PREDEFINITO_MS;
 /* ⛔ The phase 7 test tone: `0` = off, and it is the value of every normal
  *    installation (invariant I6). */
-static uint32_t audio_prova_hz;
+static uint32_t audio_test_hz;
 
 /* ⛔⭐⭐⭐ THE PHASE 9 SWITCHES — AND ON 24 AUG 2026 THEY WERE FLIPPED.
  *
@@ -1312,7 +1312,7 @@ static uint64_t linea_morta_silenzio_s = WT_LM_SILENZIO_S;
  * ⛔ Until 23 August the switch was a COMPILE-TIME one
  *    (`-DAUDIO_SILENZIO_PREDEFINITO=1`), and that `-D` has been removed: one
  *    road only. */
-static bool audio_silenzio = true;  /* ⭐ on; --niente-audio-silenzio turns off */
+static bool audio_silence = true;  /* ⭐ on; --niente-audio-silenzio turns off */
 
 /* ⛔⭐⭐⭐ PHASE 10 — THE BUDGET, AND ITS THREE KNOBS (25 Aug 2026).
  *
@@ -1338,7 +1338,7 @@ static bool audio_silenzio = true;  /* ⭐ on; --niente-audio-silenzio turns off
  *      product that deduced its own ceiling would refuse users for a number
  *      nobody has verified. */
 static double budget_mpixel_s;                        /* 0 = OFF (I6) */
-static double budget_riserva = BUDGET_RISERVA_PREDEFINITA;
+static double budget_reserve = BUDGET_RISERVA_PREDEFINITA;
 static int tetto_sessioni = RCP_TETTO_SESSIONI;
 
 /* ⛔ One per user, and not per RCP session: the clock MUST survive the client
@@ -1356,22 +1356,22 @@ static int tetto_sessioni = RCP_TETTO_SESSIONI;
  *     road of `CODER.md` §2-bis. */
 static struct presente {
 	char utente[257];
-	uint64_t ultimo_input_ms;
+	uint64_t last_input_ms;
 } *presenti;
-static int quanti_presenti;
+static int how_many_present;
 
 /* ⛔ It is allocated at the first presence to record, once only.  ⚠ If the
  *    memory is not there, the fallback this table already declares further
  *    down applies: the users have no abandonment clock, and it is written. */
-static bool presenti_pronti(void)
+static bool present_ready(void)
 {
 	if (presenti)
 		return true;
-	quanti_presenti = rcp_tetto();
-	presenti = (struct presente *)calloc((size_t)quanti_presenti,
+	how_many_present = rcp_tetto();
+	presenti = (struct presente *)calloc((size_t)how_many_present,
 	                                     sizeof *presenti);
 	if (!presenti) {
-		quanti_presenti = 0;
+		how_many_present = 0;
 		return false;
 	}
 	return true;
@@ -1379,18 +1379,18 @@ static bool presenti_pronti(void)
 
 /* ⭐ «A gesture happened here just now.»  If the user is not in the table they
  *    are added: the first gesture is also the first sign of presence. */
-static void presenza_segna(const char *utente, uint64_t ora_ms)
+static void presenza_segna(const char *utente, uint64_t now_ms)
 {
 	int libero = -1;
 	if (!utente || !utente[0])
 		return;
-	if (!presenti_pronti()) {
+	if (!present_ready()) {
 		/* ⛔ Declared fallback: without a table there is no clock, and the
 		 *    case is the same as the full table below. */
-		static bool niente_tabella_detto;
+		static bool no_table_said;
 
-		if (!niente_tabella_detto) {
-			niente_tabella_detto = true;
+		if (!no_table_said) {
+			no_table_said = true;
 			registro_dice(REG_FIGLIO,
 			              "⚠ DECLARED FALLBACK: there is no memory for the "
 			              "presence table: NO graphical session "
@@ -1398,14 +1398,14 @@ static void presenza_segna(const char *utente, uint64_t ora_ms)
 		}
 		return;
 	}
-	for (int i = 0; i < quanti_presenti; i++) {
+	for (int i = 0; i < how_many_present; i++) {
 		if (presenti[i].utente[0] == '\0') {
 			if (libero < 0)
 				libero = i;
 			continue;
 		}
 		if (strcmp(presenti[i].utente, utente) == 0) {
-			presenti[i].ultimo_input_ms = ora_ms;
+			presenti[i].last_input_ms = now_ms;
 			return;
 		}
 	}
@@ -1422,30 +1422,30 @@ static void presenza_segna(const char *utente, uint64_t ora_ms)
 		 *   movement, and it is the defect of the 30.8 GB of log.  ⛔ The fact
 		 *   is not «it happened again»: it is «from now on there is a user
 		 *   without a clock», and it is said when it starts. */
-		static bool presenti_pieni_detto;
+		static bool attendees_full_logged;
 
-		if (!presenti_pieni_detto) {
-			presenti_pieni_detto = true;
+		if (!attendees_full_logged) {
+			attendees_full_logged = true;
 			registro_dice(REG_FIGLIO,
 			              "⚠ DECLARED FALLBACK: the presence table is "
 			              "full (%d): «%s» does not fit, and their graphical "
 			              "session will NOT expire by abandonment.  ⛔ If this "
 			              "line exists, the caps of rcp.h and of main.c have come "
 			              "untied: it should not be able to happen",
-			              quanti_presenti, utente);
+			              how_many_present, utente);
 		}
 		return;
 	}
 	snprintf(presenti[libero].utente, sizeof presenti[libero].utente, "%s",
 	         utente);
-	presenti[libero].ultimo_input_ms = ora_ms;
+	presenti[libero].last_input_ms = now_ms;
 }
 
-static void presenza_dimentica(const char *utente)
+static void presence_forget(const char *utente)
 {
 	if (!utente)
 		return;
-	for (int i = 0; i < quanti_presenti; i++)
+	for (int i = 0; i < how_many_present; i++)
 		if (strcmp(presenti[i].utente, utente) == 0)
 			presenti[i].utente[0] = '\0';
 }
@@ -1458,11 +1458,11 @@ static bool input_al_figlio(void *ctx, const char *utente, uint32_t id,
 	if (!p || !p->f)
 		return false;
 	/* ⛔ ONLY the five real gestures: the reason is in the box above. */
-	if (azione == FIGLI_INPUT_PUNTATORE || azione == FIGLI_INPUT_PULSANTE ||
-	    azione == FIGLI_INPUT_ROTELLA || azione == FIGLI_INPUT_LETTERA ||
-	    azione == FIGLI_INPUT_POSIZIONE)
+	if (azione == CHILDREN_INPUT_POINTER || azione == CHILDREN_INPUT_BUTTON ||
+	    azione == CHILDREN_INPUT_WHEEL || azione == CHILDREN_INPUT_LETTER ||
+	    azione == CHILDREN_INPUT_POSITION)
 		presenza_segna(utente, registro_ora_ms());
-	return figli_input(p->f, utente, id, azione, codice, premuto, a, b);
+	return children_input(p->f, utente, id, azione, codice, premuto, a, b);
 }
 
 /* ⭐⭐ THE CANVAS SEAM — and it closes the chain that the mandate of phase 4
@@ -1505,7 +1505,7 @@ static void termina_al_figlio(void *ctx, const char *utente)
 	if (!p || !p->f || !utente)
 		return;
 
-	altri = wt_congeda_utente(utente, RCP_SESSIONE_TERMINATA,
+	altri = wt_congeda_utente(utente, RCP_SESSION_TERMINATED,
 	                          "another client of this user has closed the "
 	                          "session", NULL);
 	if (altri)
@@ -1515,7 +1515,7 @@ static void termina_al_figlio(void *ctx, const char *utente)
 		              "watching it must know now, not in thirty seconds",
 		              altri, utente);
 
-	if (!figli_termina_sessione(p->f, utente, FIGLI_USCITA_UTENTE))
+	if (!figli_termina_sessione(p->f, utente, CHILDREN_EXIT_USER))
 		registro_dice(REG_AVVIO,
 		              "⛔ §7.6: the request to end the session of «%s» did NOT "
 		              "leave towards the child: the clients have been sent away "
@@ -1549,9 +1549,9 @@ static void abbandono_scaduto(struct ponte *p, const char *utente,
 	              "«if after 60 minutes there is no trace of input the session "
 	              "gets killed»",
 	              utente, (unsigned long long)fermo_ms,
-	              (unsigned long long)abbandono_ms);
+	              (unsigned long long)abandon_ms);
 
-	quanti = wt_congeda_utente(utente, RCP_SESSIONE_ABBANDONATA,
+	quanti = wt_congeda_utente(utente, RCP_SESSION_ABANDONED,
 	                           "session abandoned: no input within the "
 	                           "ceiling of §5.3",
 	                           NULL);
@@ -1563,7 +1563,7 @@ static void abbandono_scaduto(struct ponte *p, const char *utente,
 		              "WRITTEN instead of saying it in words: the ceiling is configurable, "
 		              "and «one hour» would be true only with the default value",
 		              quanti, utente, (unsigned long long)fermo_ms,
-		              (unsigned long long)abbandono_ms);
+		              (unsigned long long)abandon_ms);
 
 	/* ⭐ PHASE 17 T7 — a desktop FOUND AGAIN has no child: nobody to ask to
 	 *    close it.  ⇒ One is spawned (D1: the child is remade), which sits in
@@ -1571,15 +1571,15 @@ static void abbandono_scaduto(struct ponte *p, const char *utente,
 	 *    (`sessione_termina()`); the request below waits for it in its socket.
 	 *    ⚠ The parent does not close it by itself: as root and outside the bus
 	 *    it would only know how to kill, and desktops are closed, not killed. */
-	if (figli_pid_di(p->f, utente) <= 0 && ritrovato_di(utente)) {
+	if (figli_pid_di(p->f, utente) <= 0 && found_again_of(utente)) {
 		registro_dice(REG_AVVIO,
 		              "⭐ PHASE 17 T7: «%s» has a desktop FOUND AGAIN and no "
 		              "child — I spawn one to close it",
 		              utente);
 		if (figli_assicura(p->f, utente))
-			ritrovato_togli(utente);
+			found_again_remove(utente);
 	}
-	if (!figli_termina_sessione(p->f, utente, FIGLI_USCITA_ABBANDONO))
+	if (!figli_termina_sessione(p->f, utente, CHILDREN_EXIT_ABANDON))
 		registro_dice(REG_AVVIO,
 		              "⛔ §5.3: the request to close the abandoned session "
 		              "of «%s» did NOT leave towards the child: the clients have "
@@ -1589,31 +1589,31 @@ static void abbandono_scaduto(struct ponte *p, const char *utente,
 	 *    every round would fill the log with one line per second for a fault
 	 *    the first line has already reported.  ⚠ And if a new session is born,
 	 *    its first gesture will put it back in the table. */
-	presenza_dimentica(utente);
+	presence_forget(utente);
 }
 
 /* ⭐ The clock's round.  ⚠ Called at every pass of the loop: it costs nothing
  *    (sixteen comparisons) and an expiry that waits for an event is an expiry
  *    that never triggers — the lesson of `regola_battito`. */
-static void abbandono_giro(struct ponte *p, uint64_t ora_ms)
+static void abbandono_giro(struct ponte *p, uint64_t now_ms)
 {
-	if (!abbandono_ms || !p || !p->f)
+	if (!abandon_ms || !p || !p->f)
 		return;
-	for (int i = 0; i < quanti_presenti; i++) {
+	for (int i = 0; i < how_many_present; i++) {
 		if (presenti[i].utente[0] == '\0')
 			continue;
-		if (ora_ms <= presenti[i].ultimo_input_ms)
+		if (now_ms <= presenti[i].last_input_ms)
 			continue;
-		if (ora_ms - presenti[i].ultimo_input_ms > abbandono_ms) {
+		if (now_ms - presenti[i].last_input_ms > abandon_ms) {
 			/* ⛔ A COPY, not the pointer: `abbandono_scaduto()` ends up
-			 *    calling `presenza_dimentica()`, which zeroes precisely that
+			 *    calling `presence_forget()`, which zeroes precisely that
 			 *    slot — and the name is needed until the last line.
 			 * ⚠ `memcpy` and not `snprintf`: the source has the same size as
 			 *   the destination, and the compiler cannot know it. */
 			char chi[sizeof presenti[0].utente];
 			memcpy(chi, presenti[i].utente, sizeof chi);
 			chi[sizeof chi - 1] = '\0';
-			abbandono_scaduto(p, chi, ora_ms - presenti[i].ultimo_input_ms);
+			abbandono_scaduto(p, chi, now_ms - presenti[i].last_input_ms);
 		}
 	}
 }
@@ -1633,7 +1633,7 @@ static void sessione_finita_dal_figlio(void *ctx, const char *utente, uid_t uid)
 
 	(void)ctx;
 	(void)uid;
-	quanti = wt_congeda_utente(utente, RCP_SESSIONE_TERMINATA,
+	quanti = wt_congeda_utente(utente, RCP_SESSION_TERMINATED,
 	                           "the graphical session has ended", NULL);
 	registro_dice(REG_WT,
 	              "⭐ §7.6: the session of «%s» was ended from the desktop — sent away "
@@ -1645,14 +1645,14 @@ static void sessione_finita_dal_figlio(void *ctx, const char *utente, uid_t uid)
 /* ⭐ §7.1: the stage is not there yet — the bottom is postponed instead of
  *    answering `NON_ORA` to a question that is about to have a real answer. */
 static void tela_attendi_dal_figlio(void *ctx, const char *utente, uid_t uid,
-                                    uint32_t voluta_l, uint32_t voluta_a)
+                                    uint32_t intended_w, uint32_t intended_h)
 {
 	(void)ctx;
 	(void)uid;
-	wt_tela_rimanda(utente, voluta_l, voluta_a);
+	wt_canvas_resend(utente, intended_w, intended_h);
 }
 
-/* ⭐ §5-bis.7 — and it delegates to `figli_disposizione()` as
+/* ⭐ §5-bis.7 — and it delegates to `children_layout()` as
  *    `ritela_al_figlio()` delegates to `figli_ritela()`: this file is the
  *    bridge, not the rule. */
 static bool disposizione_al_figlio(void *ctx, const char *utente,
@@ -1661,7 +1661,7 @@ static bool disposizione_al_figlio(void *ctx, const char *utente,
 	struct ponte *p = (struct ponte *)ctx;
 	if (!p || !p->f)
 		return false;
-	return figli_disposizione(p->f, utente, nome);
+	return children_layout(p->f, utente, nome);
 }
 
 static bool ritela_al_figlio(void *ctx, const char *utente, uint32_t larghezza,
@@ -1698,7 +1698,7 @@ static void congeda_figlio(void *ctx, const char *utente, uid_t uid)
 	 *    asked, an hour later, to close a session that no longer exists (the
 	 *    line «⛔ §5.3 … did NOT leave towards the child» for a fault that does not exist).  The
 	 *    next stage will reopen it at birth. */
-	presenza_dimentica(utente);
+	presence_forget(utente);
 
 	/*
 	 * ⭐⭐⭐ §7.6, THE TWIN — AND IT LIVES HERE, NOT IN THE CHILD.  Defect found
@@ -1727,8 +1727,8 @@ static void congeda_figlio(void *ctx, const char *utente, uid_t uid)
 	 *    Saying `0x10` to whoever is about to receive `0x0C` would be telling
 	 *    them their session is over when instead they will find it again.
 	 */
-	if (!si_ferma) {
-		size_t quanti = wt_congeda_utente(utente, RCP_SESSIONE_TERMINATA,
+	if (!stop_requested) {
+		size_t quanti = wt_congeda_utente(utente, RCP_SESSION_TERMINATED,
 		                                  "the graphical session has ended",
 		                                  NULL);
 		if (quanti)
@@ -1781,12 +1781,12 @@ static size_t ripassa_sessioni_locali(void *ctx, const char *const *utenti,
 }
 
 static void tela_dal_palco(void *ctx, const char *utente, uid_t uid,
-                           uint32_t voluta_l, uint32_t voluta_a, uint32_t avuta_l,
-                           uint32_t avuta_a)
+                           uint32_t intended_w, uint32_t intended_h, uint32_t got_w,
+                           uint32_t got_h)
 {
 	(void)ctx;
 	(void)uid;
-	wt_tela_dal_palco(utente, voluta_l, voluta_a, avuta_l, avuta_a);
+	wt_canvas_from_stage(utente, intended_w, intended_h, got_w, got_h);
 }
 
 int main(int argc, char **argv)
@@ -1797,21 +1797,21 @@ int main(int argc, char **argv)
 	const char *dir_cert = "/var/lib/remotix/certificati";
 	const char *file_html = "pagina.html";
 	const char *file_ban = "/var/lib/remotix/ban";
-	const char *socket_comando = NULL;
-	const char *dir_rilievo = NULL;
+	const char *socket_command = NULL;
+	const char *dir_survey = NULL;
 	certificati cert;
-	SSL_CTX *ctx_quic = NULL, *ctx_pagina = NULL;
+	SSL_CTX *ctx_quic = NULL, *ctx_page = NULL;
 	trasporto *t = NULL;
 	pagina *p = NULL;
 	comando *k = NULL;
-	aiutante *pam_aiuto = NULL;  /* ⚠ not «aiuto»: that name already belongs to the function that prints the usage */
-	figli *prole = NULL;
+	aiutante *pam_help = NULL;  /* ⚠ not «aiuto»: that name already belongs to the function that prints the usage */
+	figli *offspring = NULL;
 	struct ponte ponte;
 	sentinella *guardiano = NULL;
-	time_t ultimo_controllo_cert;
-	uint64_t ultimo_ripasso_locali = 0;
-	uint64_t ultimo_conto_guardiano = 0;
-	bool journal_chiesto = false;   /* --journal, phase 16 §12 */
+	time_t last_cert_check;
+	uint64_t last_locals_sweep = 0;
+	uint64_t last_guardian_count = 0;
+	bool journal_requested = false;   /* --journal, phase 16 §12 */
 	int esito = 1;
 
 	/* ⛔⭐ AND THIS IS THE FIRST LINE OF THE PROGRAM, BEFORE ANYTHING ELSE: if
@@ -1858,7 +1858,7 @@ int main(int argc, char **argv)
 		else if ((strcmp(a, "--ban-file") == 0 || strcmp(a, "--ban") == 0) && v)
 			file_ban = argv[++i];
 		else if (strcmp(a, "--comando-socket") == 0 && v)
-			socket_comando = argv[++i];
+			socket_command = argv[++i];
 		/* ⭐ PHASE 2 — where to write the captured frame and the two streams.
 		 *
 		 * ⛔ It serves the pixel-judgement bench (F2.6): without it, the
@@ -1869,14 +1869,14 @@ int main(int argc, char **argv)
 		 * ⚠ It is off by default: without this option the server does not
 		 *   write one byte more than before. */
 		else if (strcmp(a, "--rilievo") == 0 && v)
-			dir_rilievo = argv[++i];
+			dir_survey = argv[++i];
 		else if (strcmp(a, "--parlantina") == 0)
 			registro_parlantina(true);
 		/* ⭐ Phase 16 §12 — the box is in `registro.h`.  ⚠ If the socket does
 		 *   not open it is said at startup (below) and we go on: the log on
 		 *   `stderr` does not depend on the journal. */
 		else if (strcmp(a, "--journal") == 0)
-			journal_chiesto = true;
+			journal_requested = true;
 		/* ⛔⭐ §5.3 — the second of the three clocks, and the document wants it
 		 *     configurable: *«the second and the third are configurable, with
 		 *     those values as defaults»*.
@@ -1889,12 +1889,12 @@ int main(int argc, char **argv)
 		 *
 		 * ⛔ `0` = off, and it is an allowed and declared value. */
 		else if (strcmp(a, "--inattivita-s") == 0 && v)
-			rcp_inattivita_imposta((uint64_t)strtoull(argv[++i], NULL, 10) * 1000);
+			rcp_inactivity_set((uint64_t)strtoull(argv[++i], NULL, 10) * 1000);
 		/* ⛔⭐ §5.3, the third: «if after 60 minutes there is no trace of input
 		 *     the session gets killed» (the user's decision, 16 Aug 2026).
 		 *     ⚠ `0` = off, and then no session is ever closed on its own. */
 		else if (strcmp(a, "--abbandono-s") == 0 && v)
-			abbandono_ms = (uint64_t)strtoull(argv[++i], NULL, 10) * 1000;
+			abandon_ms = (uint64_t)strtoull(argv[++i], NULL, 10) * 1000;
 		/* ⛔⭐⭐ PHASE 9 — GHOST EVICTION, and it sits next to the clocks
 		 *      because it belongs to their family, but it is NOT a fourth
 		 *      clock: it does not trigger on its own, it triggers only when a
@@ -1908,13 +1908,13 @@ int main(int argc, char **argv)
 		 * ⛔ `0` = OFF, and it is the default: invariant I6, and without this
 		 *    option the behaviour is yesterday's byte for byte. */
 		else if (strcmp(a, "--sfratto-ms") == 0 && v)
-			rcp_sfratto_imposta((uint64_t)strtoull(argv[++i], NULL, 10));
+			rcp_eviction_set((uint64_t)strtoull(argv[++i], NULL, 10));
 		/* ⭐ PHASE 19 — the card's route (`DECISIONI.md` §10.27).  It applies to
 		 *    the test at startup (in the parent, a fork) and to every child (the
 		 *    parent repeats it on its command line).  ⛔ A name that is not one
 		 *    of the three is a usage error, not a silent «scheda». */
 		else if (strcmp(a, "--codifica") == 0 && v) {
-			if (!figlio_codifica_strada(argv[++i])) {
+			if (!child_encoding_route(argv[++i])) {
 				fprintf(stderr, "⛔ --codifica «%s»: expected scheda, vulkan or vaapi\n",
 				        argv[i]);
 				return 2;
@@ -1928,7 +1928,7 @@ int main(int argc, char **argv)
 		 * ⛔ Off unless someone turns it on — invariant I6 — and when it is on
 		 *    the server WRITES it in the log at every session. */
 		else if (strcmp(a, "--audio-prova") == 0 && v)
-			audio_prova_hz = (uint32_t)strtoul(argv[++i], NULL, 10);
+			audio_test_hz = (uint32_t)strtoul(argv[++i], NULL, 10);
 		/* ⛔⭐⭐ THE THREE CURES OF PHASE 9, and they all follow the same rule as
 		 *      the three clocks above: the MECHANISM is exercised at short values
 		 *      from the command line, the NUMBER in force can be read in the line
@@ -2094,7 +2094,7 @@ int main(int argc, char **argv)
 		 *    regulator of phase 9 cannot remedy it: it holds back frames
 		 *    **already composed and already encoded**. */
 		else if (strcmp(a, "--riserva") == 0 && v)
-			budget_riserva = strtod(argv[++i], NULL);
+			budget_reserve = strtod(argv[++i], NULL);
 		/* ⛔⭐ THE ADMINISTRATIVE CAP — §4.6: *«ten is not the limit: it is the
 		 *     administrative cap»*.  ⭐ The FOUR tables that count a served user
 		 *     are sized from it — `attaccate[]` (`rcp.c`), `v[]` (`figlio.c`),
@@ -2112,7 +2112,7 @@ int main(int argc, char **argv)
 		else if (strcmp(a, "--tetto-sessioni") == 0 && v)
 			tetto_sessioni = (int)strtol(argv[++i], NULL, 10);
 		else if (strcmp(a, "--niente-audio-silenzio") == 0)
-			audio_silenzio = false;
+			audio_silence = false;
 		else if (strcmp(a, "--sblocca") == 0) {
 			/* ⛔⭐ AND THIS OPTION IS GONE, AND IT DOES NOT HIDE WHY — finding
 			 *     R12.1, night of 10 Aug 2026.
@@ -2170,21 +2170,21 @@ int main(int argc, char **argv)
 		return 2;
 	}
 
-	signal(SIGINT, al_segnale);
-	signal(SIGTERM, al_segnale);
+	signal(SIGINT, on_signal);
+	signal(SIGTERM, on_signal);
 	signal(SIGPIPE, SIG_IGN);
 
 	/* ⭐ The journal is turned on BEFORE the first line, so that it goes there too. */
 	int journal_errno = 0;
-	if (journal_chiesto && !registro_journal(true))
+	if (journal_requested && !registro_journal(true))
 		journal_errno = errno;
 	registro_dice(REG_AVVIO, "REMOTIX — phase 1, the bare wire");
-	if (journal_chiesto && !journal_errno)
+	if (journal_requested && !journal_errno)
 		registro_dice(REG_AVVIO,
 		              "log also in the systemd journal (--journal): "
 		              "SYSLOG_IDENTIFIER=remotix, fields REMOTIX_AREA and "
 		              "REMOTIX_INQUILINO — the line here stays identical");
-	else if (journal_chiesto)
+	else if (journal_requested)
 		registro_dice(REG_AVVIO,
 		              "⚠ --journal requested but the socket does not open (%s): the "
 		              "log stays ONLY here",
@@ -2227,10 +2227,10 @@ int main(int argc, char **argv)
 	 *    client's `SESSIONE`: before it said «unknown» (then `sconosciuto`) to everyone, since
 	 *    phase 1. */
 	switch (sessione_desktop()) {
-	case SESSIONE_DESKTOP_GNOME:
+	case SESSION_DESKTOP_GNOME:
 		wt_desktop("gnome");
 		break;
-	case SESSIONE_DESKTOP_KDE:
+	case SESSION_DESKTOP_KDE:
 		wt_desktop("kde");
 		break;
 	case SESSIONE_DESKTOP_XFCE:
@@ -2250,7 +2250,7 @@ int main(int argc, char **argv)
 	 *    2026).  ⭐ PHASE 17: the file belongs to the package, and the server
 	 *    no longer writes it — it checks it and, if it is not right, gives the
 	 *    code and the remedy.  On GNOME nothing is checked. */
-	if (sessione_desktop() == SESSIONE_DESKTOP_KDE) {
+	if (sessione_desktop() == SESSION_DESKTOP_KDE) {
 		char perche[768];
 
 		if (kwin_verifica_permesso(perche, sizeof perche))
@@ -2279,10 +2279,10 @@ int main(int argc, char **argv)
 	              "(fixed) · user inactivity %llu s%s · ⛔ session "
 	              "abandonment %llu s%s — and when it expires the graphical session "
 	              "is CLOSED, with the programs open inside it",
-	              (unsigned long long)(rcp_inattivita() / 1000),
-	              rcp_inattivita() ? "" : " (OFF)",
-	              (unsigned long long)(abbandono_ms / 1000),
-	              abbandono_ms ? "" : " (OFF)");
+	              (unsigned long long)(rcp_inactivity() / 1000),
+	              rcp_inactivity() ? "" : " (OFF)",
+	              (unsigned long long)(abandon_ms / 1000),
+	              abandon_ms ? "" : " (OFF)");
 
 	/* ⛔⭐ AND THE EVICTION IS ALWAYS DECLARED, on AND off — like the video
 	 *     queue threshold and unlike the test tone: here «off» is not noise, it
@@ -2291,7 +2291,7 @@ int main(int argc, char **argv)
 	 * ⛔⛔ AND SINCE 24 AUG 2026 THE LINE SAYS THE REAL STATE AND THE REASON: a
 	 *      line still saying «OFF (I6)» on a cure that is on is worse than no
 	 *      line. */
-	if (rcp_sfratto())
+	if (rcp_eviction())
 		registro_dice(REG_AVVIO,
 		              "⭐ phase 9 — ghost eviction: threshold %llu ms, ON. "
 		              " The slot of a client silent for longer than the threshold goes to "
@@ -2301,8 +2301,8 @@ int main(int argc, char **argv)
 		              "clock, %llu ms).  ⚠ `[M]` the ghost goes from 32.13 s "
 		              "and 14 refusals to 16.83 s and 7.  ⛔ It is TURNED OFF with "
 		              "`--sfratto-ms 0`, and that is the only road",
-		              (unsigned long long)rcp_sfratto(),
-		              (unsigned long long)rcp_sfratto_consigliato());
+		              (unsigned long long)rcp_eviction(),
+		              (unsigned long long)rcp_eviction_recommended());
 	else
 		registro_dice(REG_AVVIO,
 		              "⛔ phase 9 — ghost eviction: threshold 0 ms, turned OFF by "
@@ -2312,14 +2312,14 @@ int main(int argc, char **argv)
 		              "themselves.  ⚠ And it is NOT the default: since 24 Aug 2026 "
 		              "it is born ON at %llu ms (the user's decision), so "
 		              "someone turned it off on purpose",
-		              (unsigned long long)rcp_sfratto_consigliato());
+		              (unsigned long long)rcp_eviction_recommended());
 
 	/* ⛔ And the test tone is declared HERE, before any session: a server that
 	 *    played a tone without saying so would be a defect disguised as a
 	 *    feature.  ⚠ `wt_audio_prova()` writes its line only when it is on, and
 	 *    that is intended: a log that repeats «off» at every startup is no
 	 *    longer read. */
-	wt_audio_prova(audio_prova_hz);
+	wt_audio_prova(audio_test_hz);
 
 	/* ⛔⭐⭐ AND THE AUDIO SILENCE IS HANDED TO THIS PROCESS, not only to the
 	 *      children.  `--audio-prova` opens an `audio_cod` in here
@@ -2329,7 +2329,7 @@ int main(int argc, char **argv)
 	 * ⚠ The line of the value IN FORCE is written by `audio.c` at the opening
 	 *   of every encoder — no second one is written here, or «set» and «in
 	 *   force» would become two facts with the same face. */
-	audio_silenzio_taci(audio_silenzio);
+	audio_silenzio_taci(audio_silence);
 
 	/* ⛔⭐⭐ PHASE 10 — THE CAP AND THE BUDGET, and the lines are ALWAYS written.
 	 *
@@ -2343,7 +2343,7 @@ int main(int argc, char **argv)
 		registro_dice(REG_AVVIO,
 		              "⛔ --tetto-sessioni %d makes no sense: %d stays",
 		              tetto_sessioni, rcp_tetto());
-	} else if (!rcp_tetto_imposta(tetto_sessioni)) {
+	} else if (!rcp_cap_set(tetto_sessioni)) {
 		registro_dice(REG_AVVIO,
 		              "⛔ --tetto-sessioni %d did NOT come into force (the "
 		              "tables were already allocated): %d stays",
@@ -2362,8 +2362,8 @@ int main(int argc, char **argv)
 	              rcp_tetto() == RCP_TETTO_SESSIONI ? ""
 	                                                : " — moved by hand");
 
-	budget_caselle(rcp_tetto());
-	budget_accendi(budget_mpixel_s, budget_riserva, TELA_L, TELA_A);
+	budget_cells(rcp_tetto());
+	budget_turn_on(budget_mpixel_s, budget_reserve, TELA_L, TELA_A);
 	budget_riga_avvio(rcp_tetto());
 
 	/* ⛔⭐ AND THE VIDEO QUEUE THRESHOLD IS ALWAYS DECLARED, on **and** off —
@@ -2461,18 +2461,18 @@ int main(int argc, char **argv)
 	 * ⚠ And the fallback is DECLARED (`CODER.md` §4.2): if the table does not
 	 *   start the server starts anyway — page and authentication work — and
 	 *   nobody sees a pixel. */
-	pam_aiuto = aiutante_accendi();
-	if (!pam_aiuto)
+	pam_help = aiutante_accendi();
+	if (!pam_help)
 		registro_dice(REG_AVVIO,
 		              "⛔ no PAM helper: falling back to the SYNCHRONOUS "
 		              "check, which stops the loop for 1-2 s at every attempt "
 		              "(DECISIONI.md §1.10).  The fallback is declared, not "
 		              "silent (CODER.md §4.2).");
 
-	prole = figli_accendi(TELA_L, TELA_A, dir_rilievo, deposita_fotogramma,
+	offspring = figli_accendi(TELA_L, TELA_A, dir_survey, deposita_fotogramma,
 	                      congeda_figlio, cursore_dal_palco, tela_dal_palco,
 	                      NULL);
-	if (!prole)
+	if (!offspring)
 		registro_dice(REG_AVVIO,
 		              "⛔ the children table does not start: NO user "
 		              "will have a stage, and phase 2 has no object.  The server "
@@ -2488,7 +2488,7 @@ int main(int argc, char **argv)
 	 *      will be `codificatore.c`, at the opening of every encoder: if the
 	 *      option got lost on the way, those lines would say «off» and the
 	 *      defect would show at once (form D5). */
-	figli_fase9(prole, qualita_risale, tetto_banda_mbit, audio_silenzio);
+	figli_fase9(offspring, qualita_risale, tetto_banda_mbit, audio_silence);
 
 	/* ⛔ Who owns this process, written once and not deduced by the reader: on
 	 *    this depends whether the children can REALLY drop to another user.
@@ -2504,41 +2504,41 @@ int main(int argc, char **argv)
 	                      : "it is NOT root — PAM will be able to check only its own "
 	                        "user, and a child will be able to be born only for it");
 
-	k = comando_apri(socket_comando);
+	k = comando_apri(socket_command);
 
 	guarda_il_servizio_pam();
 
 	if (!certificati_prepara(&cert, dir_cert, nome))
 		goto fine;
 
-	ctx_quic = tls_contesto_quic(cert.sessione_pem, cert.sessione_key);
-	ctx_pagina = tls_contesto_pagina(cert.pagina_pem, cert.pagina_key);
-	if (!ctx_quic || !ctx_pagina)
+	ctx_quic = tls_contesto_quic(cert.session_pem, cert.session_key);
+	ctx_page = tls_contesto_pagina(cert.page_pem, cert.page_key);
+	if (!ctx_quic || !ctx_page)
 		goto fine;
 
-	t = trasporto_apri(indirizzo, porta, ctx_quic, pam_aiuto);
+	t = trasporto_apri(indirizzo, porta, ctx_quic, pam_help);
 	if (!t)
 		goto fine;
 	ponte.t = t;
-	ponte.f = prole;
+	ponte.f = offspring;
 	/* ⛔ The hook is connected HERE, after the children table exists and before
 	 *    the first packet arrives: connecting it later would leave the first
 	 *    session without the request for its keyframe, that is with the screen
 	 *    frozen and no line saying why. */
 	wt_video_gancio(video_chiedi, &ponte);
-	wt_audio_gancio(audio_chiedi, &ponte);
+	wt_audio_hook(audio_chiedi, &ponte);
 	/* ⭐ And with it the input one, for the same reason and at the same
 	 *    instant: connecting it later would leave the first session with a
 	 *    desktop that can be seen and not commanded, and no line saying why. */
-	wt_input_gancio(input_al_figlio, &ponte);
+	wt_input_hook(input_al_figlio, &ponte);
 	/* ⭐⭐ And the CANVAS one, at the same instant and for one more reason: the
 	 *     client asks for its size **at attach**, that is in the first half
 	 *     second of every session.  A hook connected after the first packet
 	 *     would answer `COMPOSITORE_INCAPACE` precisely to the request that
 	 *     matters — and the client would show «fit the desktop» as off on a
 	 *     server that can do it. */
-	wt_ritela_gancio(ritela_al_figlio, &ponte);
-	wt_disposizione_gancio(disposizione_al_figlio, &ponte);
+	wt_recanvas_hook(ritela_al_figlio, &ponte);
+	wt_layout_hook(disposizione_al_figlio, &ponte);
 
 	/* ⭐⭐ §5.1 — THE GUARD OF THE LOCAL SESSIONS, and it is connected BEFORE the
 	 *     page for the same reason as the others: the `0x05` question is asked
@@ -2546,20 +2546,20 @@ int main(int argc, char **argv)
 	 *     hook connected after the first packet would let in **precisely** the
 	 *     session this rule must keep out.
 	 *
-	 * ⛔ And if logind is not there, `sentinella_apri()` has already written in
+	 * ⛔ And if logind is not there, `sentinel_open()` has already written in
 	 *    the log that the rule is NOT in force: nothing is connected here, and
 	 *    `rcp.c` will say so at every attach.  ⚠ It is not a reason not to
 	 *    start — I1: a session without a rule is worth more than no session. */
-	guardiano = sentinella_apri();
+	guardiano = sentinel_open();
 	if (guardiano) {
-		wt_locale_gancio(chiedi_sessione_locale, guardiano);
+		wt_local_hook(chiedi_sessione_locale, guardiano);
 		/* ⭐⭐ AND THE CHECK HAS ITS OWN HOOK, which asks for EVERYONE at once
 		 *     — the reason, with the numbers, is in `sentinella.h` above
 		 *     `sentinella_locali()`: `[M]` §6.13, the cost goes from `N × D` to
 		 *     `D` inside the loop that delivers frames.  ⛔ Both are connected
 		 *     or neither: they are the two halves of the same rule, and half a
 		 *     rule is worse than none. */
-		wt_locali_gancio(ripassa_sessioni_locali, guardiano);
+		wt_locals_hook(ripassa_sessioni_locali, guardiano);
 	}
 	/* ⛔⛔ AND THE LINE THAT SAYS WHETHER SURVEILLANCE IS IN FORCE — 25 Aug 2026,
 	 *      finding R7 of §5.5, and until this morning NOBODY WROTE IT.
@@ -2597,28 +2597,28 @@ int main(int argc, char **argv)
 	 *    shortcut can arrive with the first useful packet of the session, and a
 	 *    hook connected later would leave the user pressing a combination that
 	 *    does nothing — which is worse than not having it. */
-	wt_termina_gancio(termina_al_figlio, &ponte);
+	wt_terminate_hook(termina_al_figlio, &ponte);
 	/* ⭐ And the twin: the fact that arrives from the desktop instead of the wire. */
-	figli_gancio_sessione_finita(prole, sessione_finita_dal_figlio, &ponte);
-	figli_gancio_tela_attendi(prole, tela_attendi_dal_figlio, &ponte);
+	children_hook_session_finished(offspring, sessione_finita_dal_figlio, &ponte);
+	children_hook_canvas_wait(offspring, tela_attendi_dal_figlio, &ponte);
 	/* ⭐ PHASE 7: the audio blocks come up this way.  ⚠ AFTER `figli_accendi`,
 	 *    like all the other hooks: before, there is no table to hook them to. */
-	figli_gancio_blocco(prole, audio_blocco, NULL);
+	children_hook_block(offspring, audio_blocco, NULL);
 	/* ⭐⭐ PHASE 7 — THE CLIPBOARD, in both directions, and the two hooks are
 	 *     hooked together: `webtransport.c` does not connect the channel if one
-	 *     is missing, and `figli_gancio_appunti` refuses to hook only one.
+	 *     is missing, and `children_hook_clipboard` refuses to hook only one.
 	 *     ⚠ Half a channel is seen by the user as «the clipboard does not
 	 *     work», which is the same face as «there is no clipboard». */
-	wt_appunti_gancio(appunti_offri_al_figlio, appunti_risposta_al_figlio,
+	wt_clipboard_hook(appunti_offri_al_figlio, appunti_risposta_al_figlio,
 	                  &ponte);
-	figli_gancio_appunti(prole, appunti_dalla_sessione,
+	children_hook_clipboard(offspring, appunti_dalla_sessione,
 	                     appunti_richiesta_dalla_sessione, &ponte);
 
 	/* ⭐⭐ PHASE 17 T7 — BEFORE saying «ready»: the desktops that a previous
 	 *     parent left alive enter the counts before the first user can knock. */
 	ritrovati_all_avvio(registro_ora_ms());
 
-	p = pagina_apri(indirizzo, porta, ctx_pagina, file_html, &cert);
+	p = pagina_apri(indirizzo, porta, ctx_page, file_html, &cert);
 	if (!p)
 		goto fine;
 
@@ -2627,36 +2627,36 @@ int main(int argc, char **argv)
 	              "on /rcp/1 (RCP.md §2.2)",
 	              nome, porta);
 
-	ultimo_controllo_cert = time(NULL);
+	last_cert_check = time(NULL);
 
-	while (!si_ferma) {
+	while (!stop_requested) {
 		struct pollfd fds[MAX_POLL];
-		size_t n = 0, npagina, ncomando, naiuto, nfigli;
+		size_t n = 0, npage, ncommand, nhelp, nchildren;
 		uint64_t adesso;
 		int attesa;
 
-		fds[n].fd = trasporto_fd(t);
+		fds[n].fd = transport_fd(t);
 		fds[n].events = POLLIN;
 		fds[n].revents = 0;
 		n++;
 
-		npagina = pagina_descrittori(p, fds + n, MAX_POLL - n);
-		ncomando = comando_descrittori(k, fds + n + npagina,
-		                               MAX_POLL - n - npagina);
+		npage = page_descriptors(p, fds + n, MAX_POLL - n);
+		ncommand = comando_descrittori(k, fds + n + npage,
+		                               MAX_POLL - n - npage);
 
 		/* ⭐ The PAM helper enters the `poll` like all the others, and that is
 		 *    all that is needed for the loop to no longer wait for anyone
 		 *    (`DECISIONI.md` §1.10).  ⛔ At the end, after the page and the
 		 *    command, because their counts are relative and slotting it in
 		 *    between would shift the indices of two calls. */
-		naiuto = 0;
-		if (aiutante_descrittore(pam_aiuto) >= 0
-		    && n + npagina + ncomando < MAX_POLL) {
-			size_t i = n + npagina + ncomando;
-			fds[i].fd = aiutante_descrittore(pam_aiuto);
+		nhelp = 0;
+		if (helper_descriptor(pam_help) >= 0
+		    && n + npage + ncommand < MAX_POLL) {
+			size_t i = n + npage + ncommand;
+			fds[i].fd = helper_descriptor(pam_help);
 			fds[i].events = POLLIN;
 			fds[i].revents = 0;
-			naiuto = 1;
+			nhelp = 1;
 		}
 
 		/* ⭐ And the children after the helper, for the same reason: the counts
@@ -2666,8 +2666,8 @@ int main(int argc, char **argv)
 		 *    out are the children — that is the video — and not the page or the
 		 *    authentication.  An ugly session is worth more than a closed
 		 *    session (invariant I1). */
-		nfigli = figli_descrittori(prole, fds + n + npagina + ncomando + naiuto,
-		                           MAX_POLL - n - npagina - ncomando - naiuto);
+		nchildren = figli_descrittori(offspring, fds + n + npage + ncommand + nhelp,
+		                           MAX_POLL - n - npage - ncommand - nhelp);
 
 		attesa = trasporto_attesa_ms(t);
 		if (attesa < 0 || attesa > 1000)
@@ -2680,10 +2680,10 @@ int main(int argc, char **argv)
 		 * ⚠ It is NOT needed by real audio: that one is paced by PipeWire, which
 		 *   sits in the `poll` with a descriptor of its own.  ⇒ This line dies
 		 *   with the test source, and it is not a hidden debt. */
-		if (audio_prova_hz && attesa > 10)
+		if (audio_test_hz && attesa > 10)
 			attesa = 10;
 
-		if (poll(fds, n + npagina + ncomando + naiuto + nfigli, attesa) < 0) {
+		if (poll(fds, n + npage + ncommand + nhelp + nchildren, attesa) < 0) {
 			if (errno == EINTR)
 				continue;
 			registro_dice(REG_AVVIO, "⛔ poll: %s", strerror(errno));
@@ -2710,7 +2710,7 @@ int main(int argc, char **argv)
 		 *    DEAD»* and closes healthy sessions with `persi=0` written next to
 		 *    it — `[M]` §6.7: a 5 s `SIGSTOP` on ONE child killed ALL the
 		 *    sessions.  The full why is in `webtransport.c`, above
-		 *    `WT_GIRO_ATTESO_MS`.
+		 *    `WT_EXPECTED_ROUND_MS`.
 		 * ⚠ It is here and not inside `poll()` because what counts is the
 		 *   distance between two COMPLETE passes: a loop that wakes up and then
 		 *   stays blocked inside a synchronous call has delivered nothing, and
@@ -2723,9 +2723,9 @@ int main(int argc, char **argv)
 		/* ⭐ PHASE 17 T7: are the desktops found again still there?  (Every
 		 *    10 s, and only if some are waiting for reattach.) */
 		ritrovati_ripassa(adesso);
-		if (naiuto && (fds[n + npagina + ncomando].revents & POLLIN))
-			aiutante_muovi(pam_aiuto, consegna_verdetto, &ponte);
-		aiutante_scaduti(pam_aiuto, adesso, consegna_verdetto, &ponte);
+		if (nhelp && (fds[n + npage + ncommand].revents & POLLIN))
+			aiutante_muovi(pam_help, consegna_verdetto, &ponte);
+		helper_expired(pam_help, adesso, consegna_verdetto, &ponte);
 		/* ⛔ The children BEFORE `trasporto_scaduti()`, and for the same reason
 		 *    as PAM's answers: a frame just arrived from the stage can enter the
 		 *    depot **in this round**, and postponing it to the next would cost a
@@ -2733,11 +2733,11 @@ int main(int argc, char **argv)
 		 * ⚠ And it is ALWAYS called, even when no child is readable: in here
 		 *   the dead are reaped (`waitpid(WNOHANG)`) and introductions expire,
 		 *   and an expiry that waits for a byte never triggers. */
-		figli_muovi(prole, fds + n + npagina + ncomando + naiuto, nfigli, adesso);
-		figli_ricontrolla(prole, adesso);
+		figli_muovi(offspring, fds + n + npage + ncommand + nhelp, nchildren, adesso);
+		figli_ricontrolla(offspring, adesso);
 		trasporto_scaduti(t);
-		pagina_muovi(p, fds + 1, npagina);
-		comando_muovi(k, fds + 1 + npagina, ncomando);
+		pagina_muovi(p, fds + 1, npage);
+		comando_muovi(k, fds + 1 + npage, ncommand);
 
 		/* ⛔ THE ROTATION, and it is checked once a minute instead of at every
 		 *    round: «before it expires», not «when it has expired»
@@ -2755,8 +2755,8 @@ int main(int argc, char **argv)
 		 *   (`LEZIONI.md` §6.2-bis).  ⚠ And two seconds are the maximum delay
 		 *   between «the user sat down in front of the machine» and «the remote
 		 *   session drops»: it is a wait nobody watches with a stopwatch. */
-		if (guardiano && adesso - ultimo_ripasso_locali >= RIPASSO_LOCALI_MS) {
-			ultimo_ripasso_locali = adesso;
+		if (guardiano && adesso - last_locals_sweep >= RIPASSO_LOCALI_MS) {
+			last_locals_sweep = adesso;
 			wt_sorveglia_locali();
 		}
 
@@ -2775,13 +2775,13 @@ int main(int argc, char **argv)
 		 * ⚠ One minute, not every check: it is a cumulative count, and at two
 		 *   seconds it would be 43 200 lines a day saying almost always the same
 		 *   thing (the defect of the 30.8 GB of log of phase 8). */
-		if (guardiano && adesso - ultimo_conto_guardiano >= CONTO_GUARDIANO_MS) {
-			uint64_t chiamate = 0, peggior_ms = 0;
-			uint64_t fermi = 0, fermo_peggiore = 0;
+		if (guardiano && adesso - last_guardian_count >= CONTO_GUARDIANO_MS) {
+			uint64_t chiamate = 0, worst_ms = 0;
+			uint64_t fermi = 0, worst_stall = 0;
 
-			ultimo_conto_guardiano = adesso;
-			sentinella_conti(guardiano, &chiamate, &peggior_ms);
-			wt_giri_fermi(&fermi, &fermo_peggiore);
+			last_guardian_count = adesso;
+			sentinella_conti(guardiano, &chiamate, &worst_ms);
+			wt_stalled_rounds(&fermi, &worst_stall);
 			/* ⛔⛔ AND `inquilini=` CAME IN ON 25 AUG 2026 — finding R7.
 			 *
 			 *      `sentinella.h` promised these two numbers *«next to the
@@ -2798,23 +2798,23 @@ int main(int argc, char **argv)
 			              "giro_peggiore_ms=%llu — ⭐ one call per CHECK, "
 			              "not per tenant (§6.13: it was `N × D`, now it is `D`)",
 			              (unsigned long long)chiamate,
-			              (unsigned long long)peggior_ms,
-			              wt_inquilini_serviti(),
+			              (unsigned long long)worst_ms,
+			              wt_tenants_served(),
 			              (unsigned long long)fermi,
-			              (unsigned long long)fermo_peggiore);
+			              (unsigned long long)worst_stall);
 		}
 
-		if (time(NULL) - ultimo_controllo_cert >= 60) {
-			ultimo_controllo_cert = time(NULL);
+		if (time(NULL) - last_cert_check >= 60) {
+			last_cert_check = time(NULL);
 			if (certificati_ruota_se_serve(&cert)) {
 				SSL_CTX *nuovo =
-					tls_contesto_quic(cert.sessione_pem, cert.sessione_key);
+					tls_contesto_quic(cert.session_pem, cert.session_key);
 				if (nuovo) {
 					/* ⚠ The connections already open keep the old context:
 					 *   TLS is already done, and changing it underneath
 					 *   makes no sense.  ⛔ The NEW ones take this one, and
 					 *   the page already publishes the new fingerprint. */
-					trasporto_contesto(t, nuovo);
+					transport_context(t, nuovo);
 					SSL_CTX_free(ctx_quic);
 					ctx_quic = nuovo;
 					registro_dice(REG_CERT,
@@ -2833,12 +2833,12 @@ int main(int argc, char **argv)
 	}
 
 	registro_dice(REG_AVVIO, "shutdown requested: %zu live QUIC connections",
-	              trasporto_quante(t));
+	              transport_count(t));
 
 	/* ⛔⭐ AND WHOEVER CLOSES SAYS SO — §8.1, §8.2 reason `0x0C SERVER_IN_CHIUSURA`.
 	 *     Finding B-7, night of 10 Aug 2026.
 	 *
-	 *     Before tonight the loop exited here and `trasporto_chiudi()` freed
+	 *     Before tonight the loop exited here and `transport_close()` freed
 	 *     everything: no `CONGEDO`, no closing code, not even a
 	 *     `CONNECTION_CLOSE`.  Whoever was connected waited thirty seconds and
 	 *     read «network error» — the defect of `LEZIONI.md` §1.7 that §3.1
@@ -2878,15 +2878,15 @@ int main(int argc, char **argv)
 		while (restano > 0) {
 			clock_gettime(CLOCK_MONOTONIC, &tn);
 			{
-				long long trascorsi =
+				long long elapsed =
 				    (long long)(tn.tv_sec - t0.tv_sec) * 1000
 				    + (tn.tv_nsec - t0.tv_nsec) / 1000000;
-				if (trascorsi >= 4000)
+				if (elapsed >= 4000)
 					break;
 			}
 			struct pollfd fds[MAX_POLL];
 			int attesa = trasporto_attesa_ms(t);
-			fds[0].fd = trasporto_fd(t);
+			fds[0].fd = transport_fd(t);
 			fds[0].events = POLLIN;
 			fds[0].revents = 0;
 			if (attesa < 0 || attesa > 10)
@@ -2906,7 +2906,7 @@ int main(int argc, char **argv)
 		 *     point 3 has been HANDED TO NGTCP2.  ⛔ But «handed to ngtcp2» is
 		 *     not «out on the wire» — it is the same distinction `wt_batti`
 		 *     makes for the `CONGEDO`, cured there and not here.  The loop
-		 *     exited, `trasporto_chiudi()` tore down QUIC, and those bytes no
+		 *     exited, `transport_close()` tore down QUIC, and those bytes no
 		 *     longer left.
 		 *
 		 * ⛔ What the client saw, measured: the `CONGEDO 0x0c` arrived on the
@@ -2927,7 +2927,7 @@ int main(int argc, char **argv)
 			int coda = 0;
 			while (coda < 50) {
 				struct pollfd fds[MAX_POLL];
-				fds[0].fd = trasporto_fd(t);
+				fds[0].fd = transport_fd(t);
 				fds[0].events = POLLIN;
 				fds[0].revents = 0;
 				if (poll(fds, 1, 10) > 0 && (fds[0].revents & POLLIN))
@@ -2950,25 +2950,25 @@ int main(int argc, char **argv)
 			              "in the closing code — may not have "
 			              "left at all.  Closing anyway. "
 			              "⚠ B7 `server-in-chiusura` measures exactly this.",
-			              restano, giri, trasporto_perche_restano(t));
+			              restano, giri, transport_remain_reason(t));
 	}
 	esito = 0;
 
 fine:
 	/* ⛔ The helper is shut down first: from here on there is nobody left to
 	 *    deliver a verdict to, and a child writing on a socket nobody reads is
-	 *    a process that stays.  ⚠ And `aiutante_spegni()` WAITS for the child
+	 *    a process that stays.  ⚠ And `helper_turn_off()` WAITS for the child
 	 *    — but outside the asynchronous loop, which has already ended:
 	 *    `CODER.md` §4.4 forbids waiting INSIDE the loop, and this is the line
 	 *    after the last round. */
-	aiutante_spegni(pam_aiuto);
+	helper_turn_off(pam_help);
 	/* ⚠ The guard before the page and the transport: from here on nobody asks
 	 *   questions about who is connected any more, and keeping a system bus
 	 *   open while closing serves no purpose. */
-	sentinella_chiudi(guardiano);
-	comando_chiudi(k);
-	pagina_chiudi(p);
-	trasporto_chiudi(t);
+	sentinel_close(guardiano);
+	command_close(k);
+	page_close(p);
+	transport_close(t);
 	/* ⛔ The children are shut down AFTER the transport: as long as a
 	 *    connection is alive there may be a frame in the queue, and its bytes
 	 *    are in the depot.
@@ -2978,10 +2978,10 @@ fine:
 	 *   to be dead, because the virtual monitor disappears when the consumer
 	 *   disappears: leaving earlier would leave a monitor attached to the
 	 *   user's session with nobody watching it. */
-	figli_spegni(prole);
+	figli_spegni(offspring);
 	if (ctx_quic)
 		SSL_CTX_free(ctx_quic);
-	if (ctx_pagina)
-		SSL_CTX_free(ctx_pagina);
+	if (ctx_page)
+		SSL_CTX_free(ctx_page);
 	return esito;
 }

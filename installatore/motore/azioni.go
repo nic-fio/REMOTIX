@@ -39,15 +39,15 @@ const (
 // AzionePiano: an action as it stands in the plan — what, how it is done, how it is verified, how it is
 // undone. The undo is born with the step (§6.0 point 3).
 type AzionePiano struct {
-	ID             string            `json:"id"`
-	Tipo           string            `json:"type"`
-	Parametri      map[string]string `json:"parameters"`
-	Descrizione    string            `json:"description"`
-	ComeSiFa       string            `json:"how_done"`
-	ComeSiVerifica string            `json:"how_verified"`
-	ComeSiAnnulla  string            `json:"how_rolled_back"`
-	Reversibilita  Reversibilita     `json:"reversibility"`
-	Consenso       string            `json:"consent,omitempty"` // the question, if the action has one of its own (D5, D6, IRREVERSIBLE)
+	ID            string            `json:"id"`
+	Tipo          string            `json:"type"`
+	Parametri     map[string]string `json:"parameters"`
+	Description   string            `json:"description"`
+	ComeSiFa      string            `json:"how_done"`
+	HowToVerify   string            `json:"how_verified"`
+	HowToUndo     string            `json:"how_rolled_back"`
+	Reversibilita Reversibilita     `json:"reversibility"`
+	Consent       string            `json:"consent,omitempty"` // the question, if the action has one of its own (D5, D6, IRREVERSIBLE)
 }
 
 // Contesto of a running action: the machine and the operation's folder (for the backups).
@@ -64,12 +64,12 @@ type Contesto struct {
 // Riparabile: an action that, found half-done, is repaired with its tool's remedy instead of
 // undoing and redoing (the package manager's transaction, §6.6.3).
 type Riparabile interface {
-	Ripara(c *Contesto, prima json.RawMessage) error
+	Repair(c *Contesto, prima json.RawMessage) error
 }
 
 // Dichiarante: an action that leaves INDIRECT changes (§6.6.4) and declares them.
-type Dichiarante interface {
-	Indirette(prima json.RawMessage) []string
+type Declarer interface {
+	Indirect(prima json.RawMessage) []string
 }
 
 // Azione is the interface of §6.6.3-§6.6.4. Every method is idempotent: redoing it does not double
@@ -91,23 +91,23 @@ type Azione interface {
 
 type costruttore func(p AzionePiano) (Azione, error)
 
-var tipiAzione = map[string]costruttore{}
+var actionTypes = map[string]costruttore{}
 
-func registraTipo(tipo string, c costruttore) { tipiAzione[tipo] = c }
+func registraTipo(tipo string, c costruttore) { actionTypes[tipo] = c }
 
-// NuovaAzione builds the action of a plan step.
-func NuovaAzione(p AzionePiano) (Azione, error) {
-	c, ok := tipiAzione[p.Tipo]
+// NewAction builds the action of a plan step.
+func NewAction(p AzionePiano) (Azione, error) {
+	c, ok := actionTypes[p.Tipo]
 	if !ok {
 		return nil, Errore("RX-PIANO-004", p.Tipo)
 	}
 	return c(p)
 }
 
-// TipiAzione: the types this engine knows.
-func TipiAzione() []string {
+// ActionTypes: the types this engine knows.
+func ActionTypes() []string {
 	var r []string
-	for t := range tipiAzione {
+	for t := range actionTypes {
 		r = append(r, t)
 	}
 	sort.Strings(r)
@@ -125,4 +125,4 @@ func punto(p, azione string) {
 	}
 }
 
-func jsonDi(v any) json.RawMessage { return json.RawMessage(JSONCanonico(v)) }
+func jsonDi(v any) json.RawMessage { return json.RawMessage(CanonicalJSON(v)) }

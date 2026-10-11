@@ -14,10 +14,10 @@ class Marionette:
         self.s.settimeout(180)
         self.buf = b""
         self.n = 0
-        self._leggi()                      # the server's greeting
+        self._read()                      # the server's greeting
 
     # the frame is «length:json»
-    def _leggi(self):
+    def _read(self):
         while b":" not in self.buf:
             self.buf += self.s.recv(65536)
         testa, resto = self.buf.split(b":", 1)
@@ -32,16 +32,16 @@ class Marionette:
         corpo = json.dumps([0, self.n, comando, parametri or {}]).encode()
         self.s.sendall(str(len(corpo)).encode() + b":" + corpo)
         while True:
-            m = self._leggi()
+            m = self._read()
             if isinstance(m, list) and len(m) == 4 and m[0] == 1 and m[1] == self.n:
                 if m[2] is not None:
                     raise RuntimeError("%s: %s" % (comando, json.dumps(m[2])[:600]))
                 return m[3]
 
-    def sessione(self, insicuri=True):
+    def sessione(self, insecure=True):
         return self.chiama("WebDriver:NewSession",
                            {"capabilities": {"alwaysMatch":
-                            {"acceptInsecureCerts": insicuri}}})
+                            {"acceptInsecureCerts": insecure}}})
 
     def vai(self, url):
         return self.chiama("WebDriver:Navigate", {"url": url})
@@ -62,7 +62,7 @@ class Marionette:
         return self.chiama("WebDriver:TakeScreenshot", {"full": False})
 
 
-def schermo_in_primo_piano():
+def screen_in_foreground():
     """⭐ Who is in front of the screen?  Returns `(va_bene, spiegazione)`.
 
     ⛔ On Wayland a NEW window is not mapped if the graphical session in
@@ -91,25 +91,25 @@ def schermo_in_primo_piano():
     if os.environ.get("REMOTIX_SCHERMO_ANNIDATO") == "1" and os.environ.get("WAYLAND_DISPLAY"):
         return True, ""
     try:
-        def _chiedi(*a):
+        def _ask(*a):
             return subprocess.run(["loginctl"] + list(a) + ["--value"],
                                   stdout=subprocess.PIPE,
                                   stderr=subprocess.DEVNULL,
                                   timeout=5).stdout.decode().strip()
-        attiva = _chiedi("show-seat", "seat0", "-p", "ActiveSession")
+        attiva = _ask("show-seat", "seat0", "-p", "ActiveSession")
         if not attiva:
             return True, ""
-        di_chi = _chiedi("show-session", attiva, "-p", "User")
+        di_chi = _ask("show-session", attiva, "-p", "User")
         if not di_chi or di_chi == str(os.getuid()):
             return True, ""
-        nome = _chiedi("show-session", attiva, "-p", "Name") or di_chi
+        nome = _ask("show-session", attiva, "-p", "Name") or di_chi
         return False, ("in the foreground is session %s of user «%s», "
                        "not yours" % (attiva, nome))
     except Exception:                          # noqa: BLE001
         return True, ""                        # I cannot tell: I do not get in the way
 
 
-def accendi(profilo_prefs=None, headless=True, porta=2828, largo=1400, alto=1000,
+def accendi(profile_prefs=None, headless=True, porta=2828, largo=1400, alto=1000,
             schermo=None):
     """⭐ `schermo=":99"` starts a REAL Firefox on a virtual screen.
 
@@ -122,7 +122,7 @@ def accendi(profilo_prefs=None, headless=True, porta=2828, largo=1400, alto=1000
     #   user's desktop wants that desktop in the foreground.  Better a
     #   verdict in zero seconds than three minutes of blind waiting.
     if not headless and not schermo:
-        ok, perche = schermo_in_primo_piano()
+        ok, perche = screen_in_foreground()
         if not ok:
             raise RuntimeError(
                 "⛔ VISIBLE Firefox cannot start: %s.  On Wayland the "
@@ -142,7 +142,7 @@ def accendi(profilo_prefs=None, headless=True, porta=2828, largo=1400, alto=1000
         #   faults the page does not carry to the server
         "devtools.console.stdout.content": True,
     }
-    prefs.update(profilo_prefs or {})
+    prefs.update(profile_prefs or {})
     # ⭐ `REMOTIX_FF_PREFS='{"pref": valore}'`: extra preferences for the bench's
     #   Firefox, without touching the guides (e.g. `media.hardware-video-decoding.
     #   enabled` to compare hardware and software decoding, phase 16).

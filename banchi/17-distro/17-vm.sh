@@ -95,7 +95,7 @@ riga() {  # riga <distro>[-<desktop>][-iso] -> NUM, URL, ESPR, DE, D, porte
 	[ -n "$r" ] || die "unknown distribution: $dis (see: 17-vm.sh elenco)"
 	NUM=$(printf '%s' "$r" | cut -d'|' -f2 | tr -d ' ')
 	URL=$(printf '%s' "$r" | cut -d'|' -f3 | tr -d ' ')
-	ESPR=$(printf '%s' "$r" | cut -d'|' -f4 | tr -d ' ')
+	EXPR=$(printf '%s' "$r" | cut -d'|' -f4 | tr -d ' ')
 	DE=$de; D=$dis; [ "$de" = nudo ] || D="$dis-$de"
 	if [ -n "$ISO" ]; then
 		[ "$de" != nudo ] || die "the ISO state wants a desktop: <distro>-<desktop>-iso"
@@ -103,7 +103,7 @@ riga() {  # riga <distro>[-<desktop>][-iso] -> NUM, URL, ESPR, DE, D, porte
 	fi
 	# the official image is ONE per distribution; the disk is one per machine
 	BASE_IMG="$RADICE/$dis/base.qcow2"
-	DIR="$RADICE/$D"; DISCO="$DIR/disco.qcow2"; SEME="${RX_VM_SEME:-$DIR/seme.iso}"
+	DIR="$RADICE/$D"; DISK="$DIR/disco.qcow2"; SEME="${RX_VM_SEME:-$DIR/seme.iso}"
 	PID="$DIR/qemu.pid"; MONITOR="$DIR/monitor.sock"; CONSOLE="$DIR/console.log"
 	VARS="$DIR/ovmf-vars.fd"   # the UEFI NVRAM: it exists only for the machines that use it
 	PORTA_SSH=$((2300 + 10 * NUM + k)); PORTA_RX=$((7500 + 10 * NUM + k))
@@ -149,7 +149,7 @@ cmd_elenco() {
 	printf '%s\n' "$DISTRO_TAB" | awk -F'|' 'NF>2{gsub(/ /,"",$1); print $1}' | while read -r d; do
 		riga "$d"
 		local s="-"
-		[ -f "$DISCO" ] && s="created"
+		[ -f "$DISK" ] && s="created"
 		accesa && s="ON (pid $(cat "$PID"))"
 		printf '%-11s %-3s %-6s %-6s %s\n' "$d" "$NUM" "$PORTA_SSH" "$PORTA_RX" "$s"
 	done
@@ -164,10 +164,10 @@ cmd_crea() {
 		ok "already downloaded ($(du -h "$BASE_IMG" | cut -f1))"
 	else
 		local u="$URL"
-		if [ -n "$ESPR" ]; then
+		if [ -n "$EXPR" ]; then
 			local f
-			f=$(curl -fsSL "$URL" | grep -o "$ESPR" | sort -V | tail -1)
-			[ -n "$f" ] || die "no file «$ESPR» in $URL"
+			f=$(curl -fsSL "$URL" | grep -o "$EXPR" | sort -V | tail -1)
+			[ -n "$f" ] || die "no file «$EXPR» in $URL"
 			u="${URL%/}/$f"
 		fi
 		inf "downloading $u"
@@ -207,10 +207,10 @@ UD
 	ok "seme.iso"
 
 	log "$D: disk"
-	if [ -f "$DISCO" ]; then
-		ok "already present ($(du -h "$DISCO" | cut -f1) used)"
+	if [ -f "$DISK" ]; then
+		ok "already present ($(du -h "$DISK" | cut -f1) used)"
 	else
-		qemu-img create -q -f qcow2 -F qcow2 -b "$BASE_IMG" "$DISCO" "$DISCO_GRANDE"
+		qemu-img create -q -f qcow2 -F qcow2 -b "$BASE_IMG" "$DISK" "$DISCO_GRANDE"
 		ok "overlay on the base image ($DISCO_GRANDE)"
 	fi
 }
@@ -230,7 +230,7 @@ cmd_avvia() {
 		fi
 		die "$D is already on and «$tiene» holds it: it is not used by two (RX_VM_CONDIVIDI=1 only if wanted)"
 	fi
-	[ -f "$DISCO" ] || die "disk missing: 17-vm.sh crea $D"
+	[ -f "$DISK" ] || die "disk missing: 17-vm.sh crea $D"
 	[ -w /dev/kvm ] || die "/dev/kvm not writable: usermod -aG kvm $USER and log in again"
 	log "$D: boot (ssh :$PORTA_SSH, REMOTIX :$PORTA_RX)"
 	rm -f "$MONITOR"
@@ -243,7 +243,7 @@ cmd_avvia() {
 	qemu-system-x86_64 \
 		-name "rx-$D" -machine q35,accel=kvm -cpu host -smp "$CPU" -m "$RAM" \
 		-device virtio-vga -display none \
-		-drive "file=$DISCO,if=virtio,format=qcow2,discard=unmap" \
+		-drive "file=$DISK,if=virtio,format=qcow2,discard=unmap" \
 		"${extra[@]}" "${AVVIA_EXTRA[@]}" \
 		-netdev "user,id=n0,hostfwd=tcp::$PORTA_SSH-:22,hostfwd=tcp::$PORTA_RX-:7447,hostfwd=udp::$PORTA_RX-:7447$RETE_EXTRA" \
 		-device virtio-net-pci,netdev=n0 \
@@ -288,7 +288,7 @@ cmd_riavvia() {
 cmd_fotografa() {
 	[ -n "${1:-}" ] || die "the photo name is missing"
 	accesa && die "first: 17-vm.sh ferma $D (the photo is taken with the machine stopped)"
-	cp --sparse=always "$DISCO" "$DIR/foto-$1.qcow2"
+	cp --sparse=always "$DISK" "$DIR/foto-$1.qcow2"
 	[ -f "$VARS" ] && cp "$VARS" "$DIR/foto-$1.vars.fd"
 	ok "photo «$1» ($(du -h "$DIR/foto-$1.qcow2" | cut -f1))"
 }
@@ -296,14 +296,14 @@ cmd_fotografa() {
 cmd_torna() {
 	[ -f "$DIR/foto-${1:-}.qcow2" ] || die "no photo «${1:-}» for $D"
 	accesa && die "first: 17-vm.sh ferma $D"
-	cp --sparse=always "$DIR/foto-$1.qcow2" "$DISCO"
+	cp --sparse=always "$DIR/foto-$1.qcow2" "$DISK"
 	[ -f "$DIR/foto-$1.vars.fd" ] && cp "$DIR/foto-$1.vars.fd" "$VARS"
 	ok "$D is back to the photo «$1»"
 }
 
 cmd_azzera() {
 	accesa && die "first: 17-vm.sh ferma $D"
-	rm -f "$DISCO"
+	rm -f "$DISK"
 	cmd_crea
 }
 
@@ -388,17 +388,17 @@ riga_iso() {  # -> ISO_URL ISO_SOMME ISO_ESPR ISO_KERNEL ISO_INITRD
 }
 
 scarica_iso() {  # -> ISO_FILE, downloaded and VERIFIED with the sha256 of the official site
-	local somme nome atteso
+	local sums nome atteso
 	mkdir -p "$ISO_DIR"
 	log "$D: the official ISO"
-	somme=$(curl -fsSL "$ISO_URL" | grep -oE "$ISO_SOMME" | sort -V | tail -1)
-	[ -n "$somme" ] || die "no checksum file «$ISO_SOMME» in $ISO_URL"
+	sums=$(curl -fsSL "$ISO_URL" | grep -oE "$ISO_SOMME" | sort -V | tail -1)
+	[ -n "$sums" ] || die "no checksum file «$ISO_SOMME» in $ISO_URL"
 	# two forms: «HASH  file» (or «HASH *file») and «SHA256 (file) = HASH»
-	read -r atteso nome < <(curl -fsSL "${ISO_URL%/}/$somme" | awk '
+	read -r atteso nome < <(curl -fsSL "${ISO_URL%/}/$sums" | awk '
 		/^SHA256 \(/ { f=$2; gsub(/[()]/, "", f); print $4, f; next }
 		length($1) == 64 && NF == 2 { f=$2; sub(/^\*/, "", f); print $1, f }' |
 		grep -E " $ISO_ESPR\$" | sort -k2 -V | tail -1) || true
-	[ -n "${nome:-}" ] || die "no ISO «$ISO_ESPR» in $somme"
+	[ -n "${nome:-}" ] || die "no ISO «$ISO_ESPR» in $sums"
 	ISO_FILE="$ISO_DIR/$nome"
 	if [ -f "$ISO_FILE" ] && [ "$(cat "$ISO_FILE.sha256-ok" 2>/dev/null)" = "$atteso" ]; then
 		ok "$nome (already verified)"; return
@@ -408,12 +408,12 @@ scarica_iso() {  # -> ISO_FILE, downloaded and VERIFIED with the sha256 of the o
 		curl -fL -sS -o "$ISO_FILE.parte" "${ISO_URL%/}/$nome" || die "download failed"
 		mv "$ISO_FILE.parte" "$ISO_FILE"
 	fi
-	inf "verifying the sha256 ($somme)"
+	inf "verifying the sha256 ($sums)"
 	[ "$(sha256sum "$ISO_FILE" | cut -d' ' -f1)" = "$atteso" ] || {
 		mv "$ISO_FILE" "$ISO_FILE.sbagliata"; die "$nome: sha256 different from the official one"; }
 	printf '%s\n' "$atteso" > "$ISO_FILE.sha256-ok"
 	printf '%s\n' "${ISO_URL%/}/$nome" > "$ISO_FILE.origine"
-	ok "$nome, sha256 ${atteso:0:16}… as per $somme"
+	ok "$nome, sha256 ${atteso:0:16}… as per $sums"
 }
 
 prepara_risposte() {  # the installer's answers in $DIR/risposte, served over HTTP
@@ -504,8 +504,8 @@ cmd_da_iso() {
 	fi
 
 	log "$D: NEW disk ($DISCO_GRANDE) and new UEFI NVRAM"
-	rm -f "$DISCO" "$VARS" "$PID"
-	qemu-img create -q -f qcow2 "$DISCO" "$DISCO_GRANDE"
+	rm -f "$DISK" "$VARS" "$PID"
+	qemu-img create -q -f qcow2 "$DISK" "$DISCO_GRANDE"
 	cp "$OVMF_VARS" "$VARS"
 	ok "done"
 
@@ -524,7 +524,7 @@ cmd_da_iso() {
 		-device virtio-vga -display none \
 		-drive "if=pflash,format=raw,readonly=on,file=$OVMF_CODE" \
 		-drive "if=pflash,format=raw,file=$VARS" \
-		-drive "file=$DISCO,if=virtio,format=qcow2,discard=unmap" \
+		-drive "file=$DISK,if=virtio,format=qcow2,discard=unmap" \
 		-drive "file=$ISO_FILE,media=cdrom,readonly=on" \
 		-kernel "$DIR/iso-kernel" -initrd "$DIR/iso-initrd" -append "$riga_k" \
 		-netdev "user,id=n0,hostfwd=tcp::$PORTA_SSH-:22" \
@@ -537,7 +537,7 @@ cmd_da_iso() {
 	local limite=${RX_ISO_ATTESA:-10800} t=0
 	while accesa; do
 		sleep 30; t=$((t + 30))
-		[ $((t % 600)) -ne 0 ] || inf "$((t / 60)) min: disk $(du -h "$DISCO" | cut -f1)"
+		[ $((t % 600)) -ne 0 ] || inf "$((t / 60)) min: disk $(du -h "$DISK" | cut -f1)"
 		if [ "$t" -ge "$limite" ]; then
 			cmd_schermo "$DIR/schermo-scaduto.png" || true
 			kill "$(cat "$PID")"; die "installation not finished in $limite s (screenshot: $DIR/schermo-scaduto.png)"
@@ -548,8 +548,8 @@ cmd_da_iso() {
 	local t_inst=$((SECONDS - t0))
 	grep -q '" 200 ' "$DIR/web.log" || die "the installer never asked for the answers (web.log)"
 	! grep -q 'RX-ESITO: FALLITA' "$CONSOLE" || die "the installer says FALLITA (console: $CONSOLE)"
-	[ "$(du -k "$DISCO" | cut -f1)" -gt 1500000 ] || die "disk almost empty ($(du -h "$DISCO" | cut -f1)): installation not done"
-	ok "installation finished in $((t_inst / 60)) min ($(du -h "$DISCO" | cut -f1) on the disk)"
+	[ "$(du -k "$DISK" | cut -f1)" -gt 1500000 ] || die "disk almost empty ($(du -h "$DISK" | cut -f1)): installation not done"
+	ok "installation finished in $((t_inst / 60)) min ($(du -h "$DISK" | cut -f1) on the disk)"
 
 	log "$D: first boot from the installed disk"
 	cmd_avvia
@@ -622,7 +622,7 @@ cmd_impronta() {
 	if [ -n "$foto" ]; then
 		[ -f "$DIR/foto-$foto.qcow2" ] || die "no photo «$foto» for $D"
 		nome=$foto
-		DISCO="$DIR/foto-$foto.qcow2"; PID="$DIR/impronta.pid"; MONITOR="$DIR/impronta.sock"
+		DISK="$DIR/foto-$foto.qcow2"; PID="$DIR/impronta.pid"; MONITOR="$DIR/impronta.sock"
 		CONSOLE="$DIR/impronta-console.log"
 		if [ -f "$DIR/foto-$foto.vars.fd" ]; then
 			cp "$DIR/foto-$foto.vars.fd" "$DIR/impronta-vars.fd"; VARS="$DIR/impronta-vars.fd"

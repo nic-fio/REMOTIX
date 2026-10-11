@@ -91,8 +91,8 @@ DROPIN_DIR=$HOME/.config/systemd/user/org.gnome.Shell@wayland.service.d
 DROPIN=$DROPIN_DIR/zz-s7-monitor-virtuale.conf
 TELA=${TELA:-1920x1080}
 PAROLA=${PAROLA:-nicfio}
-TIENI=0
-[ "${1:-}" = --tieni ] && TIENI=1
+KEEP=0
+[ "${1:-}" = --tieni ] && KEEP=1
 
 export XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
 export DBUS_SESSION_BUS_ADDRESS=${DBUS_SESSION_BUS_ADDRESS:-unix:path=$XDG_RUNTIME_DIR/bus}
@@ -155,7 +155,7 @@ congedo()
 		gsettings set org.gnome.desktop.peripherals.touchpad natural-scroll "$TOUCH_PRIMA"
 		inf "natural-scroll put back: mouse=$MOUSE_PRIMA touchpad=$TOUCH_PRIMA"
 	fi
-	if [ "$DROPIN_NOSTRO" = 1 ] && [ "$TIENI" = 0 ]; then
+	if [ "$DROPIN_NOSTRO" = 1 ] && [ "$KEEP" = 0 ]; then
 		rm -f "$DROPIN"
 		systemctl --user daemon-reload
 		inf "removed the drop-in $DROPIN: the session goes back to how it was"

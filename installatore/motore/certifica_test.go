@@ -8,17 +8,17 @@ import (
 )
 
 // R29 in small: certification on a machine broken on purpose never says GREEN.
-func TestCertificaGuasti(t *testing.T) {
-	codifica := func(json string, uscita int) Esecutore {
+func TestCertifyFaults(t *testing.T) {
+	codifica := func(json string, uscita int) Executor {
 		return func(_ time.Duration, nome string, _ ...string) (string, int, error) {
 			if nome == "remotix" {
 				return json, uscita, nil
 			}
-			return nessunComando(0, nome)
+			return noCommand(0, nome)
 		}
 	}
 	buona := codifica(`{"esito":"hardware","codificatore":"h264_vaapi","nodo":"/dev/dri/renderD128","motivo":""}`, 0)
-	apri := func(b *banco) { (&firewallFinto{b.radice}).Aggiungi("public", "7447/udp", false) }
+	apri := func(b *banco) { (&fakeFirewall{b.radice}).Add("public", "7447/udp", false) }
 	casi := []struct {
 		nome   string
 		guasta func(b *banco, m *Motore)
@@ -62,7 +62,7 @@ func TestCertificaGuasti(t *testing.T) {
 		}, "RED"},
 		{"port closed by the firewall: opening it is the administrator's job (§10.36)", func(b *banco, m *Motore) {
 			m.Amb.Esegui = buona
-			f := &firewallFinto{b.radice}
+			f := &fakeFirewall{b.radice}
 			f.Togli("public", "7447/tcp", false)
 			f.Togli("public", "7447/udp", false)
 		}, "CONDITIONAL"},
@@ -78,7 +78,7 @@ func TestCertificaGuasti(t *testing.T) {
 	}
 	for _, c := range casi {
 		t.Run(c.nome, func(t *testing.T) {
-			b := installaFinta(t)
+			b := fakeInstall(t)
 			m := b.motore(t)
 			c.guasta(b, m)
 			r, err := m.Certifica()
@@ -86,7 +86,7 @@ func TestCertificaGuasti(t *testing.T) {
 				t.Fatal(err)
 			}
 			if r.Esito != c.atteso {
-				t.Fatalf("outcome %s, expected %s: %+v %+v", r.Esito, c.atteso, r.Controlli, r.Condizioni)
+				t.Fatalf("outcome %s, expected %s: %+v %+v", r.Esito, c.atteso, r.Checks, r.Condizioni)
 			}
 		})
 	}
@@ -94,18 +94,18 @@ func TestCertificaGuasti(t *testing.T) {
 
 // R29 in the installation too: with the card that does not encode (phase 19: and there is no fallback) the
 // verification is red and the installation is cancelled.
-func TestInstallazioneSchedaGuasta(t *testing.T) {
-	b := nuovoBanco(t)
+func TestInstallBrokenCard(t *testing.T) {
+	b := newBench(t)
 	var p Piano
 	LeggiJSON(b.piano, &p)
-	p.Mestiere, p.Approvazione = "installation", nil
-	ScriviJSON(b.piano, &p)
+	p.Duty, p.Approval = "installation", nil
+	WriteJSON(b.piano, &p)
 	m := b.motore(t)
 	m.Amb.Esegui = func(_ time.Duration, nome string, _ ...string) (string, int, error) {
 		if nome == "remotix" {
 			return `{"esito":"nessuno","codificatore":"","nodo":"","motivo":"no render node"}`, 3, nil
 		}
-		return nessunComando(0, nome)
+		return noCommand(0, nome)
 	}
 	op, err := m.Applica(b.piano, true, "prova")
 	if err != nil || op.Stato != ANNULLATA {
@@ -115,10 +115,10 @@ func TestInstallazioneSchedaGuasta(t *testing.T) {
 
 // The port closed by the firewall (opening it is the administrator's job, §10.36): never PASS, and a condition
 // that says so, without commands.
-func TestPortaChiusa(t *testing.T) {
-	b := nuovoBanco(t)
-	k, c := controllaPorta(ambienteFinto(b.radice), 7447)
-	if k.Esito != "FAIL" || k.Richiesto || c == nil || c.Codice != "C-AMMINISTRATORE" || c.Testo == "" {
+func TestClosedPort(t *testing.T) {
+	b := newBench(t)
+	k, c := checkPort(fakeEnvironment(b.radice), 7447)
+	if k.Esito != "FAIL" || k.Requested || c == nil || c.Codice != "C-AMMINISTRATORE" || c.Testo == "" {
 		t.Fatalf("%+v %+v", k, c)
 	}
 }
@@ -126,19 +126,19 @@ func TestPortaChiusa(t *testing.T) {
 // D14 (DECISIONI §10.23): REMOTIX and the dependencies are upgraded with the system. After an upgrade
 // (versions newer than those installed then) the certification stays green; a rollback
 // done with the manager's commands is «half-done» until `remotix-install aggiornato` records the versions.
-func TestCertificaDopoAggiornamento(t *testing.T) {
-	b := installaFinta(t)
+func TestCertifyAfterUpdate(t *testing.T) {
+	b := fakeInstall(t)
 	m := b.motore(t)
 	m.Amb.Esegui = func(_ time.Duration, nome string, _ ...string) (string, int, error) {
 		if nome == "remotix" {
 			return `{"esito":"hardware","codificatore":"h264_vaapi","nodo":"/dev/dri/renderD128","motivo":""}`, 0, nil
 		}
-		return nessunComando(0, nome)
+		return noCommand(0, nome)
 	}
-	(&firewallFinto{b.radice}).Aggiungi("public", "7447/udp", false)
+	(&fakeFirewall{b.radice}).Add("public", "7447/udp", false)
 	pk := filepath.Join(b.radice, "var/lib/finto-pacchetti.json")
 	in := map[string]string{}
-	leggiJSONFinto(pk, &in)
+	readJSONFake(pk, &in)
 	esito := func(cosa string, v map[string]string) string {
 		t.Helper()
 		x := map[string]string{}
@@ -148,7 +148,7 @@ func TestCertificaDopoAggiornamento(t *testing.T) {
 		for k, y := range v {
 			x[k] = y
 		}
-		ScriviJSON(pk, x)
+		WriteJSON(pk, x)
 		r, err := m.Certifica()
 		if err != nil {
 			t.Fatal(cosa, err)
@@ -161,7 +161,7 @@ func TestCertificaDopoAggiornamento(t *testing.T) {
 	if e := esito("rolled back, not recorded", map[string]string{"remotix": "0.16.0-1"}); e != "RED" {
 		t.Fatalf("a rollback not recorded: %s", e)
 	}
-	if v, err := m.AnnotaVersioni(); err != nil || v["remotix"] != "0.16.0-1" {
+	if v, err := m.AnnotateVersions(); err != nil || v["remotix"] != "0.16.0-1" {
 		t.Fatalf("record: %v %v", v, err)
 	}
 	if e := esito("rolled back, recorded", map[string]string{"remotix": "0.16.0-1"}); e != "GREEN" {

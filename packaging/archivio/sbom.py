@@ -23,7 +23,7 @@ import hashlib, json, os, re, sys, uuid
 
 dati, uscita = sys.argv[1], sys.argv[2]
 os.makedirs(uscita, exist_ok=True)
-FONTI = {
+SOURCES = {
     "ngtcp2": "https://github.com/ngtcp2/ngtcp2/releases/download/v{v}/ngtcp2-{v}.tar.xz",
     "nghttp3": "https://github.com/ngtcp2/nghttp3/releases/download/v{v}/nghttp3-{v}.tar.xz",
 }
@@ -64,7 +64,7 @@ for b in nomi:
         v = inc[lib]
         pacchetti.append({
             "SPDXID": f"SPDXRef-{lib}", "name": lib, "versionInfo": v, "supplier": "Organization: ngtcp2 project",
-            "downloadLocation": FONTI[lib].format(v=v), "filesAnalyzed": False, "licenseDeclared": "MIT",
+            "downloadLocation": SOURCES[lib].format(v=v), "filesAnalyzed": False, "licenseDeclared": "MIT",
             "externalRefs": [{"referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl",
                               "referenceLocator": f"pkg:github/ngtcp2/{lib}@v{v}"}],
             "comment": "linked STATICALLY into the binary (" + inc.get("fonte", "") + ")" +

@@ -57,26 +57,26 @@ misura() {
 
 vivo() { [ -f "$C/$1.pid" ] && kill -0 "$(cat "$C/$1.pid")" 2>/dev/null && [ -S "$R/$(cat "$C/$1" 2>/dev/null)" ]; }
 
-uscita_di() { WAYLAND_DISPLAY=$1 wlr-randr 2>/dev/null | awk 'NR==1{print $1}'; }
+output_of() { WAYLAND_DISPLAY=$1 wlr-randr 2>/dev/null | awk 'NR==1{print $1}'; }
 
-metti_misura() {  # socket WxH
+set_size() {  # socket WxH
 	local u
-	u=$(uscita_di "$1")
+	u=$(output_of "$1")
 	[ -n "$u" ] || { echo "no output"; return 1; }
 	WAYLAND_DISPLAY=$1 wlr-randr --output "$u" --custom-mode "$2" 2>&1
 }
 
-misura_di() {  # socket ⇒ current WxH
+size_of() {  # socket ⇒ current WxH
 	WAYLAND_DISPLAY=$1 wlr-randr 2>/dev/null | awk '/current/{print $1; exit}'
 }
 
-accendi_uno() {  # uNN WxH
+turn_on_one() {  # uNN WxH
 	local n=$1 m=$2 prima nuovo
 	if vivo "$n"; then
 		s=$(cat "$C/$n")
-		if [ "$(misura_di "$s")" != "$m" ]; then
-			metti_misura "$s" "$m" >/dev/null
-			echo "$n: already on at $s, size set again to $m ($(misura_di "$s"))"
+		if [ "$(size_of "$s")" != "$m" ]; then
+			set_size "$s" "$m" >/dev/null
+			echo "$n: already on at $s, size set again to $m ($(size_of "$s"))"
 		else
 			echo "$n: already on at $s ($m)"
 		fi
@@ -107,10 +107,10 @@ accendi_uno() {  # uNN WxH
 	fi
 	echo "$nuovo" >"$C/$n"
 	echo "$RENDER" >"$C/render"
-	for _ in $(seq 1 20); do [ -n "$(uscita_di "$nuovo")" ] && break; sleep 0.25; done
-	metti_misura "$nuovo" "$m" >/dev/null
-	if [ "$(misura_di "$nuovo")" != "$m" ]; then
-		echo "$n: ⛔ $nuovo on but the size is «$(misura_di "$nuovo")» and not $m"
+	for _ in $(seq 1 20); do [ -n "$(output_of "$nuovo")" ] && break; sleep 0.25; done
+	set_size "$nuovo" "$m" >/dev/null
+	if [ "$(size_of "$nuovo")" != "$m" ]; then
+		echo "$n: ⛔ $nuovo on but the size is «$(size_of "$nuovo")» and not $m"
 		return 1
 	fi
 	echo "$n: ⭐ $nuovo ($m), pid $(cat "$C/$n.pid")"
@@ -122,7 +122,7 @@ accendi() {
 	M=$(misura "${2:-4k}") || { echo "unknown size: ${2:-}"; exit 2; }
 	esito=0
 	for i in $(seq 0 "$N"); do
-		accendi_uno "$(printf 'u%02d' "$i")" "$M" || esito=1
+		turn_on_one "$(printf 'u%02d' "$i")" "$M" || esito=1
 	done
 	return $esito
 }
@@ -144,7 +144,7 @@ stato() {
 		[ -e "$f" ] || continue
 		n=$(basename "$f")
 		if vivo "$n"; then
-			echo "$n: on at $(cat "$f") — $(misura_di "$(cat "$f")")"
+			echo "$n: on at $(cat "$f") — $(size_of "$(cat "$f")")"
 			quanti=$((quanti + 1))
 		else
 			echo "$n: ⚠ off (the file is left)"

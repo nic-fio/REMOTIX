@@ -171,7 +171,7 @@ S3 = p("A login crosses three processes. The page proves nothing until the serve
       "child opens the user's logind session and its bus while the fixed second runs out, which is the only time "
       "the protocol guarantees before " + c("ATTACCA") + ".")
 
-NASCITA = fig(
+BIRTH = fig(
     box(30, 40, 180, 56, "Born", "MSG_SONO sent", "dark")
     + box(250, 40, 180, 56, "Waiting for canvas", "at most 1.2 s", "grey")
     + box(470, 40, 180, 56, "Desktop being born", "retry every 200 ms", "amber")
@@ -193,7 +193,7 @@ S4 = p("The child is born before it knows the canvas, and it must not start the 
        "Wayland a resize completes only when the compositor delivers a new frame, and a fresh desktop changes "
        "nothing. Measured on 16 August 2026: starting at 1920×1080 and resizing 650 ms later left users looking at "
        "black bands for 13 to 30 seconds. So the child waits for the client's canvas, at most 1.2 s ("
-       + c("TELA_ATTESA_MS") + "), then starts with what it has.", lead=True) + NASCITA + \
+       + c("TELA_ATTESA_MS") + "), then starts with what it has.", lead=True) + BIRTH + \
     p("Once running, " + c("figlio_vive()") + " introduces itself, prepares the dconf profile, removes leftovers of "
       "a previous session from the user manager (" + c("sessione_sgombera_gestore()") + ") and calls "
       + c("prendi_il_palco()") + ". That function connects to the user's session bus, reads the state of the "

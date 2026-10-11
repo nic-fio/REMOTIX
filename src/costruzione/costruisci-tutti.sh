@@ -37,7 +37,7 @@ export TMPDIR="$CACHE/tmp"
 
 if [ $# -eq 0 ] || [ "$1" = tutti ]; then set -- "${TUTTI[@]}"; fi
 
-costruisci_uno()
+build_one()
 {
 	local b=$1 imm="localhost/remotix-costruzione-$1" u="$USCITA/$1" copia="$CACHE/albero-$1"
 	local compila=no ldd_ok=- nota=""
@@ -85,7 +85,7 @@ costruisci_uno()
 }
 
 stato=0
-for b in "$@"; do costruisci_uno "$b" || stato=1; done
+for b in "$@"; do build_one "$b" || stato=1; done
 printf '\n== summary (%s)\n' "$USCITA"
 for b in "$@"; do cat "$USCITA/$b/esito.txt" 2>/dev/null || echo "$b (no outcome)"; done
 exit $stato

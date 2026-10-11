@@ -52,7 +52,7 @@ GUASTI=${*:-RG1 RG2 RG3 RG4 RG5}
 
 SRC=${SRC:-/media/REMOTIX/src/06-i-src}
 LAV=${LAV:-/media/REMOTIX/tmp/06-i}
-SANI=$LAV/sani-risveglio
+HEALTHY=$LAV/sani-risveglio
 
 # ⛔⛔ THE PATHS INSIDE THE CONTAINER ARE DERIVED, NOT WRITTEN — finding R4
 #      of the adversarial review, 22 August 2026.
@@ -89,7 +89,7 @@ log() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 ESITO=0
 
 [ -r "$PAROLA_SUDO" ] || { printf '⛔ %s cannot be read\n' "$PAROLA_SUDO"; exit 2; }
-sudo_mio() { printf '%s\n' "$(cat "$PAROLA_SUDO")" | sudo -S -p 'Password: ' "$@"; }
+my_sudo() { printf '%s\n' "$(cat "$PAROLA_SUDO")" | sudo -S -p 'Password: ' "$@"; }
 dentro()   { printf '%s\n' "$(cat "$PAROLA_SUDO")" | sudo -S -p 'Password: ' \
                  bash /media/REMOTIX/enter.sh --root "$@"; }
 
@@ -139,16 +139,16 @@ costruisci() {
 #      0/1 = the round gave a verdict.
 #
 # Fills `MAPPA`; returns 1 if the round did not run.
-MAPPA=""
+MAP=""
 giro() { # $1 = label
 	local f e
 	f=$LAV/esiti-$1.jsonl
-	MAPPA=""
+	MAP=""
 	# ⛔ And it is CHECKED that it is gone, not hoped: the judge writes that file
 	#    **as root**, and if one day the folder were no longer ours the `rm`
 	#    would fail silently ⇒ yesterday's line would be read again, that is,
 	#    exactly the defect this function exists to close.
-	rm -f "$f" 2>/dev/null || sudo_mio rm -f "$f" >/dev/null 2>&1
+	rm -f "$f" 2>/dev/null || my_sudo rm -f "$f" >/dev/null 2>&1
 	if [ -e "$f" ]; then
 		ko "⛔ THE BENCH: I cannot delete $f ⇒ I would read YESTERDAY's outcome"
 		return 1
@@ -167,8 +167,8 @@ giro() { # $1 = label
 		ko "   in $f ⇒ the judge did not even speak"
 		return 1
 	fi
-	MAPPA=$(mappa "$f")
-	if [ -z "$MAPPA" ]; then
+	MAP=$(mappa "$f")
+	if [ -z "$MAP" ]; then
 		ko "⛔ THE BENCH: in $f there is no \"s2-tenuto\" line"
 		return 1
 	fi
@@ -204,14 +204,14 @@ print(" ".join(fuori))
 EOF
 }
 
-mkdir -p "$SANI"
+mkdir -p "$HEALTHY"
 
 log "0. The HEALTHY copies of the two files the faults touch"
 for f in input.c mutter.c; do
-	cp "$SRC/src/$f" "$SANI/$f" || { ko "I did not make the copy of $f"; exit 2; }
-	inf "$f saved ($(wc -l < "$SANI/$f") lines)"
+	cp "$SRC/src/$f" "$HEALTHY/$f" || { ko "I did not make the copy of $f"; exit 2; }
+	inf "$f saved ($(wc -l < "$HEALTHY/$f") lines)"
 done
-risana() { for f in input.c mutter.c; do cp "$SANI/$f" "$SRC/src/$f"; done; }
+risana() { for f in input.c mutter.c; do cp "$HEALTHY/$f" "$SRC/src/$f"; done; }
 
 log "1. The HEALTHY round — ⛔ and if this is not green nothing is certified"
 costruisci sano || { ko "⛔ the healthy tree does not compile"; tail -5 "$LAV/costr-sano.log"; exit 3; }
@@ -219,7 +219,7 @@ costruisci sano || { ko "⛔ the healthy tree does not compile"; tail -5 "$LAV/c
 #    nothing to compare with, and going on would mean certifying against
 #    nothing.
 giro sano || { ko "⛔ without the healthy round nothing is certified"; exit 3; }
-SANA=$MAPPA
+SANA=$MAP
 inf "healthy map: $SANA"
 case "$SANA" in
 *=NO*) ko "⛔ the HEALTHY round has reds: the bench cannot be certified"; exit 3 ;;
@@ -251,9 +251,9 @@ for G in $GUASTI; do
 		ko "⛔ $G: the round did not run ⇒ NOTHING can be said about this fault"
 		continue
 	fi
-	GUASTA=$MAPPA
-	inf "faulty map: $GUASTA"
-	OTT=$(cambiati "$SANA" "$GUASTA")
+	BROKEN=$MAP
+	inf "faulty map: $BROKEN"
+	OTT=$(cambiati "$SANA" "$BROKEN")
 	inf "changed cases: ${OTT:-none}"
 	# ⛔ EQUALITY OF THE SET, not membership: a fault that changed EVERYTHING
 	#    would necessarily contain the declared case, and would pass.
@@ -282,10 +282,10 @@ else
 	ko "⛔ the restoration did NOT rebuild: the tree stays FAULTY"
 fi
 if giro risanato; then
-	RIS=$MAPPA
-	inf "restored map: $RIS"
-	[ "$RIS" = "$SANA" ] && ok "the restored round is identical to the healthy one" \
-		|| ko "⛔ the restored one did NOT come back like the healthy one: $RIS"
+	RESULT=$MAP
+	inf "restored map: $RESULT"
+	[ "$RESULT" = "$SANA" ] && ok "the restored round is identical to the healthy one" \
+		|| ko "⛔ the restored one did NOT come back like the healthy one: $RESULT"
 else
 	ko "⛔ the restored round did not run: ⚠ it CANNOT be said that the tree is"
 	ko "   healthy again, and the doubt remains that a fault is inside"

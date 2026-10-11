@@ -118,10 +118,10 @@ import tempfile
 import time
 
 CLK = os.sysconf("SC_CLK_TCK")
-PAG_KB = os.sysconf("SC_PAGE_SIZE") // 1024
-SEGNI_BROWSER = ("remotix-ff-", "remotix-cr-")
+PAGE_KB = os.sysconf("SC_PAGE_SIZE") // 1024
+BROWSER_MARKS = ("remotix-ff-", "remotix-cr-")
 XRDP_EXE = ("xrdp", "xrdp-sesman", "xrdp-sesexec", "xrdp-chansrv")
-RECINTI = ("remotix", "sessioni", "browser")
+ENCLOSURES = ("remotix", "sessioni", "browser")
 EXTRA = ("altro_scatola", "labwc_cliente")
 
 
@@ -137,7 +137,7 @@ def unita(v):
     return n * {"": 1, "KiB": 1024, "MiB": 1024 ** 2, "GiB": 1024 ** 3}.get(u, 1)
 
 
-def leggi_fdinfo(testo):
+def read_fdinfo(testo):
     """The `drm-*` block of an fdinfo, in a simple dictionary:
     {driver, pdev, client, motori{nome:ns}, capacita{nome:n}, cicli{nome:c},
      cicli_tot{nome:c}, memoria{regione:byte}}   — None if it is not DRM."""
@@ -203,7 +203,7 @@ def categoria(motore):
     return m
 
 
-def uso_client(prima, ora, dt_ns):
+def use_client(prima, ora, dt_ns):
     """Usage % per engine of ONE client between two readings.  Normalised on the
     capacity (i915 video: 2 engines ⇒ 100 % = both full)."""
     out = {}
@@ -242,7 +242,7 @@ def stat_pid(proc, pid):
     r = s[i + 2:].split()
     try:
         return {"comm": comm, "ppid": int(r[1]), "cpu": int(r[11]) + int(r[12]),
-                "thread": int(r[17]), "avvio": int(r[19]), "rss_kb": int(r[21]) * PAG_KB}
+                "thread": int(r[17]), "avvio": int(r[19]), "rss_kb": int(r[21]) * PAGE_KB}
     except (IndexError, ValueError):
         return None
 
@@ -255,10 +255,10 @@ def pss_kb(proc, pid):
     return int(m.group(1)) if m else None
 
 
-class Campionatore:
+class Sampler:
     def __init__(self, scatola, proc="/proc", sys_="/sys", contenitore=None,
-                 orologio=time.monotonic, segni_browser=SEGNI_BROWSER,
-                 pss_ogni=5, scopri=True, sistema="remotix"):
+                 orologio=time.monotonic, segni_browser=BROWSER_MARKS,
+                 pss_ogni=5, discover=True, sistema="remotix"):
         self.scatola = scatola
         self.sistema = sistema
         self.proc, self.sys = proc, sys_
@@ -266,7 +266,7 @@ class Campionatore:
         self.orologio = orologio
         self.segni = tuple(s for s in segni_browser if s)
         self.pss_ogni = max(1, int(pss_ogni))
-        self.cont = contenitore or (self.scopri_contenitore() if scopri else None)
+        self.cont = contenitore or (self.discover_container() if discover else None)
         self.giro = 0
         self.t_prima = None
         self.cpu_prima = {}            # (pid, start) → ticks
@@ -279,12 +279,12 @@ class Campionatore:
         self.drm_prima = {}            # client key → reading
         self.rapl_prima = {}
         self.passwd = {}
-        self.passwd_giro = -99
+        self.passwd_round = -99
         self.ncpu = os.cpu_count() or 1
         self.io_prima = None
 
     # ── the box ──
-    def scopri_contenitore(self):
+    def discover_container(self):
         nome = "rete11-" + self.scatola
         try:
             o = subprocess.run(["podman", "inspect", nome, "--format",
@@ -296,9 +296,9 @@ class Campionatore:
             return None
 
     def nomi_scatola(self):
-        if self.giro - self.passwd_giro < 10 and self.passwd:
+        if self.giro - self.passwd_round < 10 and self.passwd:
             return self.passwd
-        self.passwd_giro = self.giro
+        self.passwd_round = self.giro
         s = leggi("%s/%d/root/etc/passwd" % (self.proc, self.cont["pid"])) if self.cont else None
         if s:
             self.passwd = {}
@@ -383,10 +383,10 @@ class Campionatore:
                 continue
             s = {"scheda": n, "driver": drv}
 
-            def num(p, fatt=1.0):
+            def num(p, factor=1.0):
                 v = leggi(p)
                 try:
-                    return round(float(v.strip()) * fatt, 1)
+                    return round(float(v.strip()) * factor, 1)
                 except (AttributeError, ValueError):
                     return None
             if drv in ("i915", "xe"):
@@ -476,7 +476,7 @@ class Campionatore:
         for pid, s in procs.items():
             figli.setdefault(s["ppid"], []).append(pid)
         rec = {}
-        radici_browser = {}
+        browser_roots = {}
         for pid, s in procs.items():
             ch = (pid, s["avvio"])
             i = self.identita(pid, ch)
@@ -502,18 +502,18 @@ class Campionatore:
                 else:
                     rec[pid] = "altro_scatola"
             elif self.segni and any(g in i["cmd"] for g in self.segni):
-                radici_browser[pid] = "chrome" if "remotix-cr-" in i["cmd"] else (
+                browser_roots[pid] = "chrome" if "remotix-cr-" in i["cmd"] else (
                     "firefox" if "remotix-ff-" in i["cmd"] else (
                         "freerdp" if "remotix-rdp-" in i["cmd"] else "browser"))
         # the descendants (one level at a time: the root wins over a child with the mark)
-        radice_di = {}
-        pila = [(r, r) for r in radici_browser
-                if procs[r]["ppid"] not in radici_browser and not _antenato_in(procs, r, radici_browser)]
+        root_of = {}
+        pila = [(r, r) for r in browser_roots
+                if procs[r]["ppid"] not in browser_roots and not _ancestor_in(procs, r, browser_roots)]
         while pila:
             pid, r = pila.pop()
-            if pid in radice_di:
+            if pid in root_of:
                 continue
-            radice_di[pid] = r
+            root_of[pid] = r
             rec[pid] = "browser"
             for c in figli.get(pid, []):
                 if not procs[c]["dentro"]:
@@ -524,14 +524,14 @@ class Campionatore:
                 rec[pid] = "labwc_cliente"
 
         # 3. CPU, memory, graphics fds per process
-        tot = {k: _vuoto() for k in RECINTI + EXTRA}
+        tot = {k: _empty() for k in ENCLOSURES + EXTRA}
         per_in = {"remotix": {}, "sessioni": {}}
         per_br = {}
-        padre = _vuoto()
-        nuovi_cpu = {}
+        padre = _empty()
+        new_cpu = {}
         for pid, s in procs.items():
             ch = s["ch"]
-            nuovi_cpu[ch] = s["cpu"]
+            new_cpu[ch] = s["cpu"]
             r = rec.get(pid)
             if r is None:
                 continue
@@ -551,12 +551,12 @@ class Campionatore:
                 if r == "remotix" and u < 1000:
                     voce.append(padre)
                 else:
-                    voce.append(per_in[r].setdefault(nome, _vuoto(uid=u)))
+                    voce.append(per_in[r].setdefault(nome, _empty(uid=u)))
                 s["inquilino"] = nome if (u >= 1000 and u != 65534) else None
             elif r == "browser":
-                rd = radice_di[pid]
-                voce.append(per_br.setdefault(rd, _vuoto(pid=rd, tipo=radici_browser[rd],
-                                                         profilo=_profilo(procs[rd]["i"]["cmd"]))))
+                rd = root_of[pid]
+                voce.append(per_br.setdefault(rd, _empty(pid=rd, tipo=browser_roots[rd],
+                                                         profilo=_profile(procs[rd]["i"]["cmd"]))))
             for v in voce:
                 v["cpu_core"] += d_cpu
                 v["processi"] += 1
@@ -566,8 +566,8 @@ class Campionatore:
                     v["pss_mancanti"] += 1
                 else:
                     v["pss_mb"] += pss / 1024
-        self.cpu_prima = nuovi_cpu
-        vivi = set(nuovi_cpu)
+        self.cpu_prima = new_cpu
+        vivi = set(new_cpu)
         for dct in (self.pss, self.info, self.drm_fd, self.drm_eta):
             for k in [k for k in dct if k not in vivi]:
                 del dct[k]
@@ -582,26 +582,26 @@ class Campionatore:
                 continue
             for fd in self.fd_drm(pid, s["ch"]):
                 txt = leggi("%s/%d/fdinfo/%s" % (self.proc, pid, fd))
-                d = leggi_fdinfo(txt or "")
+                d = read_fdinfo(txt or "")
                 if not d:
                     continue
                 k = (d["pdev"], d["client"]) if d["client"] else (pid, s["avvio"], fd)
                 if k in visti:
                     continue                  # the same client: once only
                 visti[k] = (pid, d)
-        schede_gpu = {}
-        nuovi_drm = {}
+        gpu_cards = {}
+        new_drm = {}
         for k, (pid, d) in visti.items():
-            nuovi_drm[k] = d
-            uso = uso_client(self.drm_prima.get(k), d, dt_ns)
+            new_drm[k] = d
+            uso = use_client(self.drm_prima.get(k), d, dt_ns)
             s = procs[pid]
             r = rec.get(pid, "altro_scatola" if s["dentro"] else None)
-            sch = schede_gpu.setdefault(d["pdev"], {"motori": {}, "memoria_mb": {}, "client": 0})
-            sch["client"] += 1
+            scr = gpu_cards.setdefault(d["pdev"], {"motori": {}, "memoria_mb": {}, "client": 0})
+            scr["client"] += 1
             for m, p in uso.items():
-                sch["motori"][m] = sch["motori"].get(m, 0) + p
+                scr["motori"][m] = scr["motori"].get(m, 0) + p
             for reg, b in d["memoria"].items():
-                sch["memoria_mb"][reg] = sch["memoria_mb"].get(reg, 0) + b / 2 ** 20
+                scr["memoria_mb"][reg] = scr["memoria_mb"].get(reg, 0) + b / 2 ** 20
             mem_mb = sum(d["memoria"].values()) / 2 ** 20
             if r:
                 dest = [tot[r]]
@@ -609,9 +609,9 @@ class Campionatore:
                     u = s["i"]["uid"]
                     nome = nomi.get(u, "uid%d" % u)
                     dest.append(padre if (r == "remotix" and u < 1000)
-                                else per_in[r].setdefault(nome, _vuoto(uid=u)))
+                                else per_in[r].setdefault(nome, _empty(uid=u)))
                 elif r == "browser":
-                    dest.append(per_br[radice_di[pid]])
+                    dest.append(per_br[root_of[pid]])
                 for v in dest:
                     for m, p in uso.items():
                         c = categoria(m)
@@ -625,7 +625,7 @@ class Campionatore:
                     pg["motori"][m] = pg["motori"].get(m, 0) + p
         proc_gpu = [dict(v, motori={m: round(p, 2) for m, p in v["motori"].items() if p >= 0.05})
                     for _, v in sorted(proc_gpu.items())]
-        self.drm_prima = nuovi_drm
+        self.drm_prima = new_drm
 
         # 5. machine, box, cards
         st = (leggi(self.proc + "/stat") or "cpu 0 0 0 0").splitlines()[0].split()[1:]
@@ -649,35 +649,35 @@ class Campionatore:
             mac["mem_disponibile_mb"] = round(int(ma.group(1)) / 1024)
             mac["mem_usata_mb"] = mac["mem_totale_mb"] - mac["mem_disponibile_mb"]
         cg = self.cg_scatola()
-        scat = None
+        box_stats = None
         if cg:
-            scat = {"mem_mb": round(cg["mem"] / 2 ** 20, 1) if cg["mem"] is not None else None,
+            box_stats = {"mem_mb": round(cg["mem"] / 2 ** 20, 1) if cg["mem"] is not None else None,
                     "anon_mb": round(cg["anon"] / 2 ** 20, 1) if cg["anon"] is not None else None,
                     "pids": cg["pids"], "cpu_core": None}
             if dt and self.cg_prima and cg["usec"] is not None and self.cg_prima["usec"] is not None:
-                scat["cpu_core"] = round(max(0, cg["usec"] - self.cg_prima["usec"]) / 1e6 / dt, 3)
+                box_stats["cpu_core"] = round(max(0, cg["usec"] - self.cg_prima["usec"]) / 1e6 / dt, 3)
         self.cg_prima = cg
         # the exact CPU of the sessions: the cgroup minus the others' long processes
-        if scat and scat["cpu_core"] is not None:
-            ses = scat["cpu_core"] - tot["remotix"]["cpu_core"] - tot["altro_scatola"]["cpu_core"]
+        if box_stats and box_stats["cpu_core"] is not None:
+            sess = box_stats["cpu_core"] - tot["remotix"]["cpu_core"] - tot["altro_scatola"]["cpu_core"]
             attr = tot["sessioni"]["cpu_core"]
             tot["sessioni"]["cpu_core_processi"] = attr
-            tot["sessioni"]["cpu_core"] = max(ses, attr)
-            tot["sessioni"]["cpu_non_attribuita"] = max(0.0, ses - attr)
+            tot["sessioni"]["cpu_core"] = max(sess, attr)
+            tot["sessioni"]["cpu_non_attribuita"] = max(0.0, sess - attr)
         g = self.schede(dt or 0)
-        for pdev, sch in schede_gpu.items():
+        for pdev, scr in gpu_cards.items():
             s = g.setdefault(pdev, {"scheda": None, "driver": None})
-            s["motori"] = {m: round(p, 2) for m, p in sorted(sch["motori"].items())}
+            s["motori"] = {m: round(p, 2) for m, p in sorted(scr["motori"].items())}
             cats = {}
-            for m, p in sch["motori"].items():
+            for m, p in scr["motori"].items():
                 c = categoria(m)
                 cats[c] = cats.get(c, 0) + p
             s["categorie"] = {c: round(p, 2) for c, p in sorted(cats.items())}
-            s["memoria_client_mb"] = {r: round(v, 1) for r, v in sch["memoria_mb"].items()}
-            s["client"] = sch["client"]
+            s["memoria_client_mb"] = {r: round(v, 1) for r, v in scr["memoria_mb"].items()}
+            s["client"] = scr["client"]
 
         # 6. empty enclosures are STATED (an empty enclosure is not a healthy enclosure)
-        for r in RECINTI:
+        for r in ENCLOSURES:
             if tot[r]["processi"] == 0:
                 avvisi.append("⚠ enclosure %s EMPTY: no process found" % r)
         if self.sistema != "xrdp" and self.cont and tot["remotix"]["processi"] and not padre["processi"]:
@@ -694,18 +694,18 @@ class Campionatore:
                           % sum(v["pss_mancanti"] for v in tot.values()))
 
         rec_out = {}
-        for r in RECINTI + EXTRA:
-            rec_out[r] = _pulisci(tot[r])
-        rec_out["remotix"]["padre"] = _pulisci(padre)
+        for r in ENCLOSURES + EXTRA:
+            rec_out[r] = _clean(tot[r])
+        rec_out["remotix"]["padre"] = _clean(padre)
         for r in ("remotix", "sessioni"):
-            rec_out[r]["per_inquilino"] = {n: _pulisci(v) for n, v in sorted(per_in[r].items())}
-        rec_out["browser"]["per_browser"] = [_pulisci(v) for _, v in sorted(per_br.items())]
+            rec_out[r]["per_inquilino"] = {n: _clean(v) for n, v in sorted(per_in[r].items())}
+        rec_out["browser"]["per_browser"] = [_clean(v) for _, v in sorted(per_br.items())]
 
         self.t_prima = t0
         riga = {"tipo": "campione", "t": round(time.time(), 3),
                 "ora": time.strftime("%Y-%m-%dT%H:%M:%S"),
                 "dt_s": round(dt, 3) if dt else None, "scatola": self.scatola,
-                "macchina": mac, "scatola_cg": scat, "recinti": rec_out, "gpu": g,
+                "macchina": mac, "scatola_cg": box_stats, "recinti": rec_out, "gpu": g,
                 "processi_gpu": proc_gpu, "remotix_pid": pids_rx[0] if pids_rx else None,
                 "avvisi": avvisi,
                 "misuratore": {"ms": round((self.orologio() - t0) * 1000, 1),
@@ -725,7 +725,7 @@ class Campionatore:
                 "euid": os.geteuid()}
 
 
-def _antenato_in(procs, pid, insieme):
+def _ancestor_in(procs, pid, insieme):
     seen = set()
     p = procs[pid]["ppid"]
     while p in procs and p not in seen and p > 1:
@@ -736,7 +736,7 @@ def _antenato_in(procs, pid, insieme):
     return False
 
 
-def _profilo(cmd):
+def _profile(cmd):
     m = re.search(r"(/[^ ]*remotix-(?:ff|cr)-[^ /]*)", cmd)
     return m.group(1) if m else None
 
@@ -748,14 +748,14 @@ def _glob(d, prefisso):
         return []
 
 
-def _vuoto(**extra):
+def _empty(**extra):
     v = {"cpu_core": 0.0, "processi": 0, "thread": 0, "rss_mb": 0.0, "pss_mb": 0.0,
          "pss_mancanti": 0, "gpu": {}, "gpu_mem_mb": 0.0}
     v.update(extra)
     return v
 
 
-def _pulisci(v):
+def _clean(v):
     o = dict(v)
     for k in ("cpu_core", "cpu_core_processi", "cpu_non_attribuita"):
         if k in o and o[k] is not None:
@@ -771,7 +771,7 @@ def _pulisci(v):
 # ─────────────────────────────── loop ──────────────────────────────────────
 def gira(o):
     os.makedirs(o.dir, exist_ok=True)
-    c = Campionatore(o.scatola, segni_browser=o.segni_browser.split(","), pss_ogni=o.pss_ogni,
+    c = Sampler(o.scatola, segni_browser=o.segni_browser.split(","), pss_ogni=o.pss_ogni,
                      sistema=o.sistema)
     fermo = {"si": False}
 
@@ -844,7 +844,7 @@ class Finto:
         os.makedirs(self.proc)
         os.makedirs(self.sys + "/fs/cgroup/machine.slice/libpod-x.scope")
         os.makedirs(self.sys + "/class/drm")
-        self.stat_macchina(0, 0)
+        self.machine_stat(0, 0)
         with open(self.proc + "/loadavg", "w") as f:
             f.write("1.00 0.50 0.25 2/300 999\n")
         with open(self.proc + "/meminfo", "w") as f:
@@ -858,7 +858,7 @@ class Finto:
         with open(b + "/memory.current", "w") as f:
             f.write("1048576000\n")
 
-    def stat_macchina(self, occ, idle):
+    def machine_stat(self, occ, idle):
         with open(self.proc + "/stat", "w") as f:
             f.write("cpu %d 0 0 %d 0 0 0 0 0 0\n" % (occ, idle))
 
@@ -905,34 +905,34 @@ def certifica():
     CGC = "/machine.slice/libpod-x.scope"
     SRV = CGC + "/container/system.slice/rete11-server.service"
     SES = CGC + "/container/user.slice/user-4013.slice/session-c5.scope"
-    OSP = "/user.slice/user-1000.slice/session-1.scope"
+    HOST = "/user.slice/user-1000.slice/session-1.scope"
 
     def nuovo():
         return Finto()
 
-    def campionatore(F, **kw):
-        c = Campionatore("kde", proc=F.proc, sys_=F.sys, orologio=F.orologio,
+    def sampler_obj(F, **kw):
+        c = Sampler("kde", proc=F.proc, sys_=F.sys, orologio=F.orologio,
                          contenitore={"nome": "rete11-kde", "pid": 1, "cgroup": CGC, "id": "x"},
                          **kw)
-        c._ripristina = lambda: None
+        c._restore = lambda: None
         return c
 
     print("16-risorse --certifica  (fake /proc and /sys, fake clock)")
     # ── 1. i915: render 250 ms over 1 s ⇒ 25 %; video 1 s on two engines ⇒ 50 % ──
     F = nuovo()
-    F.stat_macchina(0, 0)
+    F.machine_stat(0, 0)
     F.processo(10, "remotix", 0, SRV, cmd="/opt/remotix/remotix --porta 8512", exe="remotix")
     F.processo(20, "remotix", 4013, SES, ppid=10, exe="remotix",
                fdinfo={"7": FDI_I915.format(cid=5, mem=2048, r=0, v=0)})
     F.processo(21, "kwin_wayland", 4013, SES, exe="kwin_wayland",
                fdinfo={"9": FDI_I915.format(cid=6, mem=1024, r=0, v=0)})
-    F.processo(30, "firefox", 1000, OSP, cmd="firefox --profile /tmp/remotix-ff-abc", exe="firefox")
-    F.processo(31, "Web Content", 1000, OSP, ppid=30, cmd="firefox -contentproc 7", exe="firefox")
-    F.processo(40, "firefox", 1000, OSP, cmd="firefox --profile /home/nicfio/.mozilla/x", exe="firefox")
-    c = campionatore(F)
+    F.processo(30, "firefox", 1000, HOST, cmd="firefox --profile /tmp/remotix-ff-abc", exe="firefox")
+    F.processo(31, "Web Content", 1000, HOST, ppid=30, cmd="firefox -contentproc 7", exe="firefox")
+    F.processo(40, "firefox", 1000, HOST, cmd="firefox --profile /home/nicfio/.mozilla/x", exe="firefox")
+    c = sampler_obj(F)
     c.campione()
     F.t += 1.0
-    F.stat_macchina(1000, 1000)
+    F.machine_stat(1000, 1000)
     F.cg(2_000_000)
     F.processo(10, "remotix", 0, SRV, cpu=50, exe="remotix")
     F.processo(20, "remotix", 4013, SES, ppid=10, cpu=100, exe="remotix",
@@ -940,7 +940,7 @@ def certifica():
     F.processo(21, "kwin_wayland", 4013, SES, cpu=20, exe="kwin_wayland",
                fdinfo={"9": FDI_I915.format(cid=6, mem=1024, r=250_000_000, v=0)})
     r = c.campione()
-    c._ripristina()
+    c._restore()
     rx, se, br = r["recinti"]["remotix"], r["recinti"]["sessioni"], r["recinti"]["browser"]
     guarda("fdinfo i915, video on 2 engines", abs(rx["gpu"].get("video", -1) - 50.0) < 0.01,
            "remotix video %s %% (expected 50: 1 s busy over 1 s, capacity 2)" % rx["gpu"].get("video"))
@@ -974,14 +974,14 @@ def certifica():
     F.processo(10, "remotix", 0, SRV, exe="remotix")
     F.processo(20, "labwc", 4013, SES, fdinfo={"5": txt0, "6": txt0})
     F.processo(21, "figlio", 4013, SES, ppid=20, fdinfo={"5": txt0})
-    F.processo(30, "chrome", 1000, OSP, cmd="chrome --user-data-dir=/tmp/remotix-cr-1")
-    c = campionatore(F)
+    F.processo(30, "chrome", 1000, HOST, cmd="chrome --user-data-dir=/tmp/remotix-cr-1")
+    c = sampler_obj(F)
     c.campione()
     F.t += 1.0
     F.processo(20, "labwc", 4013, SES, fdinfo={"5": txt1, "6": txt1})
     F.processo(21, "figlio", 4013, SES, ppid=20, fdinfo={"5": txt1})
     r = c.campione()
-    c._ripristina()
+    c._restore()
     v = r["recinti"]["sessioni"]["gpu"].get("disegno")
     guarda("duplicated client counted ONCE", v is not None and abs(v - 50.0) < 0.01,
            "drawing %s %% (expected 50; counted three times it would give 150)" % v)
@@ -996,15 +996,15 @@ def certifica():
                fdinfo={"7": FDI_AMD.format(cid=1, vram=4096, g=0, e=0),
                        "8": FDI_XE.format(cid=2, c=0, t=1000)})
     F.processo(20, "kwin", 4013, SES)
-    F.processo(30, "firefox", 1000, OSP, cmd="firefox --profile /tmp/remotix-ff-z")
-    c = campionatore(F)
+    F.processo(30, "firefox", 1000, HOST, cmd="firefox --profile /tmp/remotix-ff-z")
+    c = sampler_obj(F)
     c.campione()
     F.t += 2.0
     F.processo(10, "remotix", 0, SRV, exe="remotix",
                fdinfo={"7": FDI_AMD.format(cid=1, vram=4096, g=500_000_000, e=1_000_000_000),
                        "8": FDI_XE.format(cid=2, c=300, t=2000)})
     r = c.campione()
-    c._ripristina()
+    c._restore()
     g = r["recinti"]["remotix"]["gpu"]
     guarda("amdgpu gfx/enc + xe cycles",
            abs(g.get("disegno", -1) - (25.0 + 30.0)) < 0.01 and abs(g.get("video", -1) - 50.0) < 0.01,
@@ -1019,12 +1019,12 @@ def certifica():
     t = FDI_I915.format(cid=3, mem=0, r=7_000_000_000, v=0)
     F.processo(10, "remotix", 0, SRV, exe="remotix", fdinfo={"7": t})
     F.processo(20, "kwin", 4013, SES)
-    F.processo(30, "firefox", 1000, OSP, cmd="firefox --profile /tmp/remotix-ff-z")
-    c = campionatore(F)
+    F.processo(30, "firefox", 1000, HOST, cmd="firefox --profile /tmp/remotix-ff-z")
+    c = sampler_obj(F)
     c.campione()
     F.t += 1.0
     r = c.campione()
-    c._ripristina()
+    c._restore()
     guarda("idle engine ⇒ 0 %", r["recinti"]["remotix"]["gpu"].get("disegno") == 0.0,
            "drawing %s %%" % r["recinti"]["remotix"]["gpu"].get("disegno"))
     shutil.rmtree(F.d, ignore_errors=True)
@@ -1033,8 +1033,8 @@ def certifica():
     F = nuovo()
     F.processo(10, "remotix", 0, SRV, exe="remotix", cpu=100000)
     F.processo(20, "kwin", 4013, SES)
-    F.processo(30, "firefox", 1000, OSP, cmd="firefox --profile /tmp/remotix-ff-z")
-    c = campionatore(F)
+    F.processo(30, "firefox", 1000, HOST, cmd="firefox --profile /tmp/remotix-ff-z")
+    c = sampler_obj(F)
     c.campione()
     F.t += 1.0
     F.togli(10)
@@ -1044,7 +1044,7 @@ def certifica():
     with open(F.proc + "/10/stat", "w") as f:
         f.write(s)
     r = c.campione()
-    c._ripristina()
+    c._restore()
     guarda("reused pid: no negative or giant CPU", r["recinti"]["remotix"]["cpu_core"] == 0.0,
            "remotix %s cores (the new process starts from zero; mistaken for the old one it would give 5)" % r["recinti"]["remotix"]["cpu_core"])
     shutil.rmtree(F.d, ignore_errors=True)
@@ -1052,11 +1052,11 @@ def certifica():
     # ── 6. FAULT: empty enclosures are REPORTED ──
     F = nuovo()
     F.processo(20, "kwin", 4013, SES)
-    c = campionatore(F)
+    c = sampler_obj(F)
     c.campione()
     F.t += 1.0
     r = c.campione()
-    c._ripristina()
+    c._restore()
     a = " | ".join(r["avvisi"])
     guarda("empty remotix enclosure reported", "enclosure remotix EMPTY" in a, a)
     guarda("empty browser enclosure reported", "enclosure browser EMPTY" in a, "")
@@ -1064,8 +1064,8 @@ def certifica():
     shutil.rmtree(F.d, ignore_errors=True)
 
     # ── 7. FAULT: the box that is not there ──
-    c = Campionatore("nessuna", proc=F.proc if os.path.isdir(F.proc) else "/proc",
-                     contenitore=None, scopri=False)
+    c = Sampler("nessuna", proc=F.proc if os.path.isdir(F.proc) else "/proc",
+                     contenitore=None, discover=False)
     r = c.campione()
     guarda("missing box reported", any("NOT found" in x for x in r["avvisi"]),
            r["avvisi"][0] if r["avvisi"] else "")
@@ -1087,7 +1087,7 @@ def main():
     a.add_argument("--intervallo", type=float, default=1.0)
     a.add_argument("--durata", type=float, default=0)
     a.add_argument("--pss-ogni", type=int, default=5)
-    a.add_argument("--segni-browser", default=",".join(SEGNI_BROWSER))
+    a.add_argument("--segni-browser", default=",".join(BROWSER_MARKS))
     a.add_argument("--certifica", action="store_true")
     o = a.parse_args()
     if o.certifica:

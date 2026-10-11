@@ -54,14 +54,14 @@ accendi)
 	BIN=${1:-}
 	dentro "mkdir -p $DIR"
 	if [ "$BIN" = "stock" ]; then
-		ESEGUI=/opt/remotix/remotix
-		echo "⭐ STANDARD binary (cure off): $ESEGUI $(dentro "sha256sum $ESEGUI" | cut -c1-16)"
+		RUN=/opt/remotix/remotix
+		echo "⭐ STANDARD binary (cure off): $RUN $(dentro "sha256sum $RUN" | cut -c1-16)"
 	else
 		[ -x "$BIN" ] || { echo "⛔ the binary «$BIN» is not there"; exit 2; }
-		ESEGUI=$DIR/remotix
+		RUN=$DIR/remotix
 		dentro "systemctl stop $UNITA 2>/dev/null; true"
-		printf '%s\n' "${REMOTIX_PAROLA_SUDO:-$(awk '/^pass:/{print $2; exit}' "$HOME/SERVER.ssh" 2>/dev/null)}" | sudo -S -p '' podman cp "$BIN" "$NOME:$ESEGUI" || exit 1
-		echo "⭐ binary $(sha256sum "$BIN" | cut -c1-16) → $NOME:$ESEGUI"
+		printf '%s\n' "${REMOTIX_PAROLA_SUDO:-$(awk '/^pass:/{print $2; exit}' "$HOME/SERVER.ssh" 2>/dev/null)}" | sudo -S -p '' podman cp "$BIN" "$NOME:$RUN" || exit 1
+		echo "⭐ binary $(sha256sum "$BIN" | cut -c1-16) → $NOME:$RUN"
 	fi
 	# ⛔ Only OUR unit: rete11-server is not touched.
 	dentro "
@@ -77,14 +77,14 @@ accendi)
 			--property=StandardOutput=append:$REG \
 			--property=StandardError=append:$REG \
 			--property=KillMode=mixed \
-			$ESEGUI --indirizzo 0.0.0.0 --nome 127.0.0.1 --porta $PORTA \
+			$RUN --indirizzo 0.0.0.0 --nome 127.0.0.1 --porta $PORTA \
 			--certificati $DIR/certificati \
 			--ban-file $DIR/ban --comando-socket $DIR/comando.sock \
 			--rilievo $DIR/rilievo --parlantina
 	" >/dev/null 2>&1
 	for _ in $(seq 1 40); do
 		if dentro "grep -q 'ready: https' $REG" 2>/dev/null; then
-			echo "⭐ $UNITA listens on $PORTA in $NOME ($ESEGUI)"
+			echo "⭐ $UNITA listens on $PORTA in $NOME ($RUN)"
 			exit 0
 		fi
 		sleep 0.5

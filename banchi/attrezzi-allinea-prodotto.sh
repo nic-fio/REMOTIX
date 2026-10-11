@@ -290,14 +290,14 @@ $SSH "find $DEST -maxdepth 1 -type f -printf '%T@ %f\n'" > "$T/la-ore.txt" || {
 	dub "⛔ I could not read the dates over there"; exit 2; }
 
 DIVERSI=""
-NUOVI=""
+NEW=""
 UGUALI=0
 for f in $FILE; do
 	a=$(md5sum "$FONTE/$f" | cut -d' ' -f1)
 	b=$(awk -v n="$DEST/$f" '$2==n{print $1}' "$T/la-md5.txt")
 	if [ -z "$b" ]; then
 		ko "⛔ $f is NOT THERE over there — $a"
-		NUOVI="$NUOVI $f"
+		NEW="$NEW $f"
 		continue
 	fi
 	if [ "$a" = "$b" ]; then
@@ -348,7 +348,7 @@ else
 	done < "$T/la-ore.txt"
 	# ⚠ And the files that are not over there yet count as «newer»: a
 	#   binary that never compiled them is old by definition.
-	[ -n "$NUOVI" ] && VECCHIO="$VECCHIO$NUOVI"
+	[ -n "$NEW" ] && VECCHIO="$VECCHIO$NEW"
 	if [ -n "$VECCHIO" ]; then
 		ko "⛔ the binary is OLDER than:$VECCHIO"
 		inf "   remotix: $(date -d "@${BIN_ORA%.*}" '+%Y-%m-%d %H:%M:%S %Z')  (CHUWI clock)"
@@ -358,7 +358,7 @@ else
 	fi
 fi
 
-if [ -z "$DIVERSI" ] && [ -z "$NUOVI" ] && [ -z "$VECCHIO" ]; then
+if [ -z "$DIVERSI" ] && [ -z "$NEW" ] && [ -z "$VECCHIO" ]; then
 	ok "⭐ the product over there is already aligned with the sources, and the binary comes after"
 	[ "$AZIONE" = guarda ] && exit 0
 	inf "nothing to copy and nothing to rebuild: straight to the terrain"
@@ -373,17 +373,17 @@ log "3. ⛔ Is there a grafted fault in one of the two trees?"
 #   A retired catalogue can no longer change its mark: it is the one of its last
 #   version (`git show bde27c5^:banchi/01-b12-guasti.py`), and grafts made with
 #   it may still sit in old copies, so the needle stays.
-MARCA12="REMOTIX B12 GUASTO"
-MARCA11=$(grep -m1 '^MARCA = ' "$QUI/01-b11-guasto-innesta.py" | cut -d'"' -f2)
-[ -n "$MARCA11" ] || { dub "⛔ B11 mark not read: I do not look halfway"; exit 2; }
-inf "needles read from the catalogues: «$MARCA12» · «$MARCA11»"
+MARK12="REMOTIX B12 GUASTO"
+MARK11=$(grep -m1 '^MARCA = ' "$QUI/01-b11-guasto-innesta.py" | cut -d'"' -f2)
+[ -n "$MARK11" ] || { dub "⛔ B11 mark not read: I do not look halfway"; exit 2; }
+inf "needles read from the catalogues: «$MARK12» · «$MARK11»"
 
 TROVATI=0
 # --- over here (the tree we copy from): the direction that matters most
 # ⛔ The status of `grep` is THREE facts and not two — `LEZIONI.md` §1.9 rule 1:
 #    0 = found · 1 = not there (which is an ANSWER) · ≥2 = I could not
 #    look (which is not an answer).  Only the third is a «??».
-for m in "$MARCA12" "$MARCA11"; do
+for m in "$MARK12" "$MARK11"; do
 	grep -rlF -e "$m" "$FONTE" > "$T/qua-guasti.txt"
 	s=$?
 	if [ "$s" -eq 0 ]; then
@@ -398,7 +398,7 @@ for m in "$MARCA12" "$MARCA11"; do
 	fi
 done
 # --- over there (the tree we write on)
-for m in "$MARCA12" "$MARCA11"; do
+for m in "$MARK12" "$MARK11"; do
 	$SSH "grep -lF -e '$m' -- $DEST/*" > "$T/la-guasti.txt"
 	s=$?
 	if [ "$s" -eq 0 ]; then
@@ -429,9 +429,9 @@ if [ "$AZIONE" = guarda ]; then
 fi
 
 # ---------------------------------------------------------------------------
-if [ -n "$DIVERSI" ] || [ -n "$NUOVI" ]; then
+if [ -n "$DIVERSI" ] || [ -n "$NEW" ]; then
 	log "4. Copying the sources into the product"
-	for f in $DIVERSI $NUOVI; do
+	for f in $DIVERSI $NEW; do
 		$SCP "$FONTE/$f" "$UTE@$IND:$DEST/$f" || {
 			ko "⛔ copying «$f» failed"; exit 3; }
 		a=$(md5sum "$FONTE/$f" | cut -d' ' -f1)

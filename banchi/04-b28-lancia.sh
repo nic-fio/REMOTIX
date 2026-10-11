@@ -34,7 +34,7 @@ set -u
 QUI="$(cd "$(dirname "$0")" && pwd)"
 RADICE="$(dirname "$QUI")"
 PORTA=7671
-DIAGNOSI=7672
+DIAGNOSIS=7672
 PROFILO="/tmp/04-b28-profilo"
 REGISTRO="$QUI/04-b28-registro.jsonl"
 
@@ -58,7 +58,7 @@ echo "  browser       $(google-chrome --version 2>&1)"
 echo "  ⚠ the window opens on the REAL desktop, and touch is DECLARED by the"
 echo "    bench (CDP): what is measured are the boundaries of the recogniser."
 
-for p in "$PORTA" "$DIAGNOSI"; do
+for p in "$PORTA" "$DIAGNOSIS"; do
   if ss -ltn 2>/dev/null | grep -q ":$p "; then
     echo "⛔ port $p is already taken: I stop instead of measuring"
     echo "   someone else's page."
@@ -73,14 +73,14 @@ echo
 echo "══ 3. CHROME ══"
 google-chrome \
   --user-data-dir="$PROFILO" \
-  --remote-debugging-port="$DIAGNOSI" \
+  --remote-debugging-port="$DIAGNOSIS" \
   --remote-allow-origins='*' \
   --no-first-run --no-default-browser-check \
   --disable-features=Translate,MediaRouter \
   --window-size=1500,900 \
   "about:blank" >"$PROFILO/chrome.log" 2>&1 &
 CHROME=$!
-echo "  chrome pid $CHROME, debugging on $DIAGNOSI, profile $PROFILO"
+echo "  chrome pid $CHROME, debugging on $DIAGNOSIS, profile $PROFILO"
 
 # ⛔ The coup de grâce is registered: if the bench dies, the window does not stay
 #    open on the user's desktop.
@@ -91,7 +91,7 @@ sleep 3
 echo
 echo "══ 4. THE MEASUREMENT ══"
 python3 "$QUI/04-b28-gesti.py" --gira --porta "$PORTA" \
-        --diagnosi "$DIAGNOSI" --registro "$REGISTRO"
+        --diagnosi "$DIAGNOSIS" --registro "$REGISTRO"
 ESITO=$?
 
 echo

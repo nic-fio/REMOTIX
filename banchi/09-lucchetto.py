@@ -42,7 +42,7 @@ PAROLA_SUDO = os.environ.get("PAROLA_SUDO", "nicfio")
 POSTO = os.environ.get("LUCCHETTO", "/media/REMOTIX/tmp/.lucchetto-netem.d")
 
 
-class NonMio(Exception):
+class NotMine(Exception):
     """The lock belongs to someone else, and it has not expired."""
 
 
@@ -75,21 +75,21 @@ def prendi(chi, secondi=900, attesa=0, dillo=True):
     """⛔ `attesa` = how many seconds I am willing to wait for my turn.
        Zero means «now or I stop», which is the default: a bench
        that waits in silence looks like a stuck bench."""
-    fine_attesa = time.time() + attesa
+    wait_deadline = time.time() + attesa
     while True:
         # ⭐ The atomic act.  `mkdir` without `-p`: if it already exists, it fails.
         rc, _, _ = _root("mkdir %s 2>/dev/null" % POSTO)
         if rc == 0:
-            scad = time.time() + secondi
+            exp = time.time() + secondi
             _root("bash -c \"printf '%%s %%s\\n' %d '%s' > %s/chi\""
-                  % (int(scad), chi, POSTO))
+                  % (int(exp), chi, POSTO))
             if dillo:
                 print("   OK  netem lock taken by «%s» for %d s"
                       % (chi, secondi))
             return True
 
-        altro, scad = stato()
-        if scad is not None and scad > 0 and time.time() > scad:
+        altro, exp = stato()
+        if exp is not None and exp > 0 and time.time() > exp:
             # ⛔⛔ BREAKING IT OPEN IS A RACE, AND IT MUST BE DONE BY COMPARING — 25 Aug 2026.
             #
             #   Between the `cat chi` of `stato()` and this `rm -rf` hundreds
@@ -109,8 +109,8 @@ def prendi(chi, secondi=900, attesa=0, dillo=True):
             #   close entirely (it is not atomic in the kernel), but it goes from
             #   «hundreds of ms» to «the time of one command».
             print("   ⚠   the lock belonged to «%s», expired %d s ago: BREAKING IT OPEN"
-                  % (altro, int(time.time() - scad)))
-            atteso = "%d %s" % (int(scad), altro)
+                  % (altro, int(time.time() - exp)))
+            atteso = "%d %s" % (int(exp), altro)
             # ⚠ The comparison is done by the machine, in one command: bringing it
             #   here would mean reopening the window we are closing.
             cmd = (r"""bash -c 'letto=$(cat "POSTO/chi" 2>/dev/null); """
@@ -123,11 +123,11 @@ def prendi(chi, secondi=900, attesa=0, dillo=True):
                       " CHANGED — it was someone else's, fresh.")
             continue
 
-        if time.time() >= fine_attesa:
-            raise NonMio("the netem on `lo` belongs to «%s» for %d more s: "
+        if time.time() >= wait_deadline:
+            raise NotMine("the netem on `lo` belongs to «%s» for %d more s: "
                          "I do NOT measure, because a fault that is not mine "
                          "would give a plausible and false number"
-                         % (altro, int((scad or 0) - time.time())))
+                         % (altro, int((exp or 0) - time.time())))
         if dillo:
             print("   --  waiting for my turn (it belongs to «%s»)..." % altro,
                   flush=True)
@@ -149,11 +149,11 @@ def molla(chi, dillo=True):
 if __name__ == "__main__":
     passo = sys.argv[1] if len(sys.argv) > 1 else "stato"
     if passo == "stato":
-        chi, scad = stato()
+        chi, exp = stato()
         if chi is None:
             print("free")
         else:
-            print("held by «%s», expires in %d s" % (chi, int(scad - time.time())))
+            print("held by «%s», expires in %d s" % (chi, int(exp - time.time())))
     elif passo == "scassina":
         _root("rm -rf %s" % POSTO)
         print("broken open by hand")

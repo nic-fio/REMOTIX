@@ -230,18 +230,18 @@ import time
 # ⛔ And if it cannot be imported we exit **3** and say so, ⇒ ⛔ we do not
 #   silently fall back on the poor predicate — which is the defect itself.
 # ═══════════════════════════════════════════════════════════════════════════
-_QUI_C1 = os.path.dirname(os.path.abspath(__file__))
+_HERE_C1 = os.path.dirname(os.path.abspath(__file__))
 _C1 = None
 
 
-def _carica_c1():
+def _load_c1():
     """⛔ It is a LOADER, not a judge: it finds the file, it decides nothing.
 
     ⚠ It is looked for next to me (inside the box everything is in `/opt/remotix`) and
       one level up, as C2, C3 and C6 do with their imported judges.
     """
-    for p in (os.path.join(_QUI_C1, "11-c1-nasce-e-si-vede.py"),
-              os.path.join(os.path.dirname(_QUI_C1), "11-scatole",
+    for p in (os.path.join(_HERE_C1, "11-c1-nasce-e-si-vede.py"),
+              os.path.join(os.path.dirname(_HERE_C1), "11-scatole",
                            "11-c1-nasce-e-si-vede.py")):
         if not os.path.exists(p):
             continue
@@ -267,10 +267,10 @@ def _carica_c1():
     return None
 
 
-def casa_dell_ammissione():
+def admission_home():
     global _C1
     if _C1 is None:
-        _C1 = _carica_c1()
+        _C1 = _load_c1()
     if _C1 is None:
         print("⛔ I cannot find `11-c1-nasce-e-si-vede.py` next to me, and from there")
         print("   comes the predicate «was the client ADMITTED?» — which lives")
@@ -286,7 +286,7 @@ def e_stato_ammesso(coda):
     ⛔ `False` is not a product red: a client turned away is a client
        turned away, and the caller exits **3**.
     """
-    return casa_dell_ammissione().e_stato_ammesso(coda)
+    return admission_home().e_stato_ammesso(coda)
 
 
 def garantisci_i_gruppi(chi, prefisso="   "):
@@ -304,13 +304,13 @@ def garantisci_i_gruppi(chi, prefisso="   "):
     ⭐ The work is done by `attrezzi-gruppi-scheda.sh`, which reads the gids from the NODES and
        reads back comparing the numbers.  ⛔ No copy of it is made here (§1.47).
     """
-    return casa_dell_ammissione().garantisci_i_gruppi(chi, prefisso)
+    return admission_home().garantisci_i_gruppi(chi, prefisso)
 
 # ---------------------------------------------------------------------------
 # ⛔ THE YARDSTICK, DECLARED HERE AND PRINTED AT EVERY ROUND.  A verdict without its
 #    yardstick is an opinion (§4.2 of the phase).
 # ---------------------------------------------------------------------------
-FONDO_SCALA = 32767.0
+FULL_SCALE = 32767.0
 
 # 1.0 % of full scale = −40 dBFS.  ⭐ CALIBRATED on six real sessions (the table
 # at the top): the default tone sits **70.6 times above** it, and the border was
@@ -326,7 +326,7 @@ MIN_BLOCCHI = 200
 #    a tenth of the time and zeros for the rest would have the global RMS in order.
 #
 # ⚠⚠ AND IT MUST BE SAID THAT TODAY THIS CRITERION IS ALMOST BLIND ON THE REAL PATH, as
-#    C5 says the other things it does not look at: `src/audio.c` (`audio_taci_silenzio`,
+#    C5 says the other things it does not look at: `src/audio.c` (`audio_hush_silence`,
 #    on by default) **does not send the mute blocks**, so the holes
 #    do not reach the client and do not enter the denominator.  ⇒ On real data
 #    `frazione` is ~1.0 **by construction**, and for `A TRATTI` to fire
@@ -342,13 +342,13 @@ MIN_FRAZIONE = 0.50
 
 # The format of the PCM payload — `src/audio.h`.
 PCM_CODEC = 2
-PCM_FREQUENZA = 48000
-PCM_CANALI = 2
-PCM_FOTOGRAMMI = 240          # 5 ms
-PCM_BYTE_BLOCCO = PCM_FOTOGRAMMI * PCM_CANALI * 2   # = 960
+PCM_FREQUENCY = 48000
+PCM_CHANNELS = 2
+PCM_FRAMES = 240          # 5 ms
+PCM_BLOCK_BYTES = PCM_FRAMES * PCM_CHANNELS * 2   # = 960
 
-# The sink the product creates by itself — `src/suono.c`, `NOME_SINK`.
-NOME_SINK = "remotix"
+# The sink the product creates by itself — `src/suono.c`, `SINK_NAME`.
+SINK_NAME = "remotix"
 
 # ═══════════════════════════════════════════════════════════════════════════
 # ⭐⭐ THE BIRTH CEILING — and it is a MEASUREMENT, not a round number (§1.45).
@@ -409,7 +409,7 @@ FINESTRA_MISURA = 25.0
 #      False = ⛔ red
 #      None  = ⛔ I do not know — and ⛔ `None` is NOT zero (§4.5)
 # ---------------------------------------------------------------------------
-def giudica(blocchi, soglia=SOGLIA_RMS, min_blocchi=MIN_BLOCCHI,
+def giudica(blocchi, soglia=SOGLIA_RMS, min_blocks=MIN_BLOCCHI,
             min_frazione=MIN_FRAZIONE):
     m = {"blocchi": None, "byte": 0, "codec": None, "campioni": 0,
          "rms": None, "picco": None, "sopra": None, "frazione": None,
@@ -480,15 +480,15 @@ def giudica(blocchi, soglia=SOGLIA_RMS, min_blocchi=MIN_BLOCCHI,
 
     # ⚠ The order of the three checks is that of the report one wants to read:
     #   first «how much», then «how loud», then «for how long».
-    if len(blocchi) < min_blocchi:
+    if len(blocchi) < min_blocks:
         m["motivo"] = ("POCHI: %d blocks of %d expected at minimum (%d ms of "
                        "sound): it is not a stream"
-                       % (len(blocchi), min_blocchi, len(blocchi) * 5))
+                       % (len(blocchi), min_blocks, len(blocchi) * 5))
         return False, m
     if m["rms"] < soglia:
         m["motivo"] = ("SILENZIO: RMS %.1f below the threshold %.0f (%.4f %% of "
                        "full scale): bytes arrive, but they are not sound"
-                       % (m["rms"], soglia, 100 * m["rms"] / FONDO_SCALA))
+                       % (m["rms"], soglia, 100 * m["rms"] / FULL_SCALE))
         return False, m
     if m["frazione"] < min_frazione:
         m["motivo"] = ("A TRATTI: only %d blocks out of %d (%.0f %%) are above "
@@ -519,7 +519,7 @@ def in_db(v):
     """dBFS, and ⛔ `None` for «I do not know»: a zero here would be a lie."""
     if v is None or v <= 0:
         return None
-    return 20.0 * math.log10(v / FONDO_SCALA)
+    return 20.0 * math.log10(v / FULL_SCALE)
 
 
 def riga_misure(m):
@@ -530,7 +530,7 @@ def riga_misure(m):
             "PEAK %s · above threshold %s/%s (%s %%)"
             % (q(m["blocchi"], "%d"), m["byte"], m["codec"],
                q(m["rms"]),
-               "?" if m["rms"] is None else "%.4f" % (100 * m["rms"] / FONDO_SCALA),
+               "?" if m["rms"] is None else "%.4f" % (100 * m["rms"] / FULL_SCALE),
                "?" if db is None else "%.1f" % db,
                q(m["picco"], "%d"), q(m["sopra"], "%d"), q(m["blocchi"], "%d"),
                "?" if m["frazione"] is None else "%.0f" % (100 * m["frazione"])))
@@ -539,7 +539,7 @@ def riga_misure(m):
 # ---------------------------------------------------------------------------
 # The test wave — written here, sample by sample.
 # ---------------------------------------------------------------------------
-def scrivi_onda(percorso, secondi, ampiezza, hertz=440.0):
+def write_wave(percorso, secondi, ampiezza, hertz=440.0):
     """A WAV s16le 48 kHz stereo with a sine wave.
 
     ⚠ It is written by hand instead of calling `ffmpeg` for one reason only, and it is not
@@ -548,14 +548,14 @@ def scrivi_onda(percorso, secondi, ampiezza, hertz=440.0):
       someone else's filter is a threshold that moves without anyone knowing.
     """
     picco = int(ampiezza * 32767)
-    passo = 2.0 * math.pi * hertz / PCM_FREQUENZA
+    passo = 2.0 * math.pi * hertz / PCM_FREQUENCY
     # ⭐ ONE SECOND is built and repeated, and it is not only to be quick:
     #   at 440 Hz a second contains 440 WHOLE cycles, ⇒ the joint is exact and
     #   does not produce the click a cut in mid-wave would leave.
     #   ⚠ With a non-integer `--hertz` the joint is no longer exact: it is a
     #     declared sound defect, and it does not touch the energy measurement.
     uno = []
-    for i in range(PCM_FREQUENZA):
+    for i in range(PCM_FREQUENCY):
         v = int(round(picco * math.sin(passo * i)))
         v = 32767 if v > 32767 else (-32768 if v < -32768 else v)
         uno.append(v)
@@ -566,8 +566,8 @@ def scrivi_onda(percorso, secondi, ampiezza, hertz=440.0):
         f.write(b"RIFF")
         f.write(struct.pack("<I", 36 + len(corpo)))
         f.write(b"WAVEfmt ")
-        f.write(struct.pack("<IHHIIHH", 16, 1, PCM_CANALI, PCM_FREQUENZA,
-                            PCM_FREQUENZA * PCM_CANALI * 2, PCM_CANALI * 2, 16))
+        f.write(struct.pack("<IHHIIHH", 16, 1, PCM_CHANNELS, PCM_FREQUENCY,
+                            PCM_FREQUENCY * PCM_CHANNELS * 2, PCM_CHANNELS * 2, 16))
         f.write(b"data")
         f.write(struct.pack("<I", len(corpo)))
         f.write(corpo)
@@ -575,7 +575,7 @@ def scrivi_onda(percorso, secondi, ampiezza, hertz=440.0):
     return picco
 
 
-def leggi_blocchi(percorso):
+def read_blocks(percorso):
     """⛔ Returns `None` if the file could not be read, `[]` if it is empty.
        They are two different things and must not have the same face."""
     if not os.path.exists(percorso):
@@ -632,7 +632,7 @@ def sink_c_e(chi, uid):
             classe = r.split("=", 1)[1].strip().strip('"')
         # ⛔ It is not enough that the name appears: there are TWO «remotix» nodes — the sink
         #    and the stream that captures it.  ⭐ The one needed is the SINK.
-        if nome == NOME_SINK and classe == "Audio/Sink":
+        if nome == SINK_NAME and classe == "Audio/Sink":
             return True
     return False
 
@@ -678,11 +678,11 @@ def certifica():
     """
     def onda(ampiezza, quanti, hertz=440.0):
         fuori = []
-        passo = 2.0 * math.pi * hertz / PCM_FREQUENZA
+        passo = 2.0 * math.pi * hertz / PCM_FREQUENCY
         i = 0
         for _ in range(quanti):
             b = bytearray()
-            for _k in range(PCM_FOTOGRAMMI):
+            for _k in range(PCM_FRAMES):
                 v = int(round(ampiezza * 32767 * math.sin(passo * i)))
                 b += struct.pack("<hh", v, v)
                 i += 1
@@ -690,7 +690,7 @@ def certifica():
         return fuori
 
     def zeri(quanti):
-        return [(PCM_CODEC, b"\x00" * PCM_BYTE_BLOCCO) for _ in range(quanti)]
+        return [(PCM_CODEC, b"\x00" * PCM_BLOCK_BYTES) for _ in range(quanti)]
 
     # ⭐ The amplitudes are NOT invented: they are the same that ran on
     #   real sessions (the calibration table, at the top).  ⇒ The
@@ -740,7 +740,7 @@ def certifica():
     #    predicate that looks at the colour confuses them.
     # ⚠ 41 is measured: `[M]` §7-bis.18, GNOME box, against ~4 878 elsewhere.
     # ═══════════════════════════════════════════════════════════════════════
-    casi_guasto = [
+    fault_cases = [
         ("⭐ without source: ZERO blocks ⇒ the fault WAS SEEN", [], True),
 
         ("⛔⛔ GNOME's 41 LOUD blocks: red for POCHI ⇒ ⛔ NOT «seen»",
@@ -757,7 +757,7 @@ def certifica():
     print("== certification of C5's judge ==")
     print("   the yardstick: RMS threshold %.0f of %.0f (%.1f %% f.s., %.0f dBFS) · "
           "at least %d blocks · at least %.0f %% above threshold"
-          % (SOGLIA_RMS, FONDO_SCALA, 100 * SOGLIA_RMS / FONDO_SCALA,
+          % (SOGLIA_RMS, FULL_SCALE, 100 * SOGLIA_RMS / FULL_SCALE,
              in_db(SOGLIA_RMS), MIN_BLOCCHI, 100 * MIN_FRAZIONE))
     print()
     guai = 0
@@ -771,7 +771,7 @@ def certifica():
             guai += 1
     print()
     print("  ⛔ and the grafted fault is read on the DIFFERENCE, not on the colour:")
-    for nome, blocchi, atteso in casi_guasto:
+    for nome, blocchi, atteso in fault_cases:
         v, m = giudica(blocchi)
         avuto = guasto_visto(v, m)
         bene = avuto is atteso
@@ -790,49 +790,49 @@ def certifica():
     # ⛔ And there is a second demand, and it is the one C5 had got wrong: the
     #   client must STILL BE ATTACHED when the sink appears.
     # ═══════════════════════════════════════════════════════════════════════
-    MISURE_SANE = (1.105, 0.998, 0.957)   # `[M]` 27 Aug 2026, cured box
-    SINK_MISURATO = 3.0                   # `[M]` 26 Aug 2026, healthy boxes
-    PEGGIORE_MAI_VISTA = 13.0             # `[M]` 26 Aug 2026, loaded box
-    MARGINE = 2.0
-    serve = PEGGIORE_MAI_VISTA * MARGINE
-    tetto_ok = TETTO_NASCITA >= serve
-    resta_ok = (TETTO_NASCITA + FINESTRA_MISURA) >= TETTO_NASCITA + 1.0
-    if not tetto_ok or not resta_ok:
+    HEALTHY_MEASUREMENTS = (1.105, 0.998, 0.957)   # `[M]` 27 Aug 2026, cured box
+    MEASURED_SINK = 3.0                   # `[M]` 26 Aug 2026, healthy boxes
+    WORST_EVER_SEEN = 13.0             # `[M]` 26 Aug 2026, loaded box
+    MARGIN = 2.0
+    serve = WORST_EVER_SEEN * MARGIN
+    cap_ok = TETTO_NASCITA >= serve
+    stays_ok = (TETTO_NASCITA + FINESTRA_MISURA) >= TETTO_NASCITA + 1.0
+    if not cap_ok or not stays_ok:
         guai += 1
     print()
     print("  %s  the ceiling covers the slowest birth EVER measured: "
           "%.0f s × %.0f = %.0f s ⇒ TETTO_NASCITA %.0f s"
-          % ("OK " if tetto_ok else "NO ", PEGGIORE_MAI_VISTA, MARGINE,
+          % ("OK " if cap_ok else "NO ", WORST_EVER_SEEN, MARGIN,
              serve, TETTO_NASCITA))
     print("      ⇒ and that is %.1f times the measured sink (%.0f s) and %.0f times "
           "today's healthy phenomenon (%.3f s)"
-          % (TETTO_NASCITA / SINK_MISURATO, SINK_MISURATO,
-             TETTO_NASCITA / max(MISURE_SANE), max(MISURE_SANE)))
+          % (TETTO_NASCITA / MEASURED_SINK, MEASURED_SINK,
+             TETTO_NASCITA / max(HEALTHY_MEASUREMENTS), max(HEALTHY_MEASUREMENTS)))
     print("  %s  the client stays attached %.0f s = ceiling %.0f + measuring "
           "window %.0f ⇒ it is still there when the sink appears"
-          % ("OK " if resta_ok else "NO ", TETTO_NASCITA + FINESTRA_MISURA,
+          % ("OK " if stays_ok else "NO ", TETTO_NASCITA + FINESTRA_MISURA,
              TETTO_NASCITA, FINESTRA_MISURA))
 
     # ⭐⭐ THE ADMISSION CASES — ⛔ the ones that were not there before today.
     #    The predicate lives in C1 and is certified with C1's cases: ⛔ a
     #    copy of the cases here would be a second place to diverge from (§1.47).
     print()
-    guai_amm, quanti_amm = casa_dell_ammissione().certifica_ammissione("C5")
-    guai += guai_amm
+    admission_troubles, how_many_admitted = admission_home().certifica_ammissione("C5")
+    guai += admission_troubles
 
     # ⭐⭐ AND THE CARD GROUPS CASES — ⛔ the other case that was missing:
     #    a tenant without the groups of the nodes ⇒ «I could not look», ⛔
     #    never red.  They live in C1 with the step they certify.
     print()
-    guai_gr, quanti_gr = casa_dell_ammissione().certifica_gruppi("C5")
-    guai += guai_gr
+    group_troubles, how_many_groups = admission_home().certifica_gruppi("C5")
+    guai += group_troubles
 
     # ⚠ `+ 2` and not `+ 1`: the checks printed above are TWO (the ceiling and
     #   the attach time).  ⛔ The count said 1 from the day the
     #   second was born, ⇒ the mesh declared one case fewer than those
     #   it really did — a count that does not add up is a count that cannot
     #   be quoted.
-    quanti = len(casi) + len(casi_guasto) + quanti_amm + quanti_gr + 2
+    quanti = len(casi) + len(fault_cases) + how_many_admitted + how_many_groups + 2
     print()
     if guai:
         print("⛔ the judge is NOT reliable: %d cases out of %d wrong"
@@ -901,10 +901,10 @@ def main():
         print("⛔ I cannot find the test client: %s" % a.cliente)
         print("   ⇒ I could not look")
         return 3
-    for arnese in ("/usr/bin/pw-play", "/usr/bin/pw-cli"):
-        if not os.path.exists(arnese):
+    for tool in ("/usr/bin/pw-play", "/usr/bin/pw-cli"):
+        if not os.path.exists(tool):
             print("⛔ %s is missing (package `pipewire-bin`): without it, I can neither "
-                  "make sound nor see the sink" % arnese)
+                  "make sound nor see the sink" % tool)
             print("   ⇒ I could not look")
             return 3
 
@@ -913,20 +913,20 @@ def main():
           % (a.utente, a.porta, a.resta))
     print("   the yardstick: RMS threshold %.0f of %.0f (%.1f %% f.s., %.0f dBFS) · "
           "at least %d blocks · at least %.0f %% above threshold"
-          % (SOGLIA_RMS, FONDO_SCALA, 100 * SOGLIA_RMS / FONDO_SCALA,
+          % (SOGLIA_RMS, FULL_SCALE, 100 * SOGLIA_RMS / FULL_SCALE,
              in_db(SOGLIA_RMS), MIN_BLOCCHI, 100 * MIN_FRAZIONE))
     if a.senza_sorgente:
         print("   ⛔⛔ GRAFTED FAULT: the source is NOT switched on. "
               "The outcome is read backwards.")
     else:
         print("   the source: wave at %.0f Hz, amplitude %.4f, played inside the "
-              "product's «%s» sink" % (a.hertz, a.ampiezza, NOME_SINK))
+              "product's «%s» sink" % (a.hertz, a.ampiezza, SINK_NAME))
     print()
 
     chi = a.utente
-    blocchi_file = "/tmp/c5-%s-blocchi.jsonl" % chi
-    cliente_log = "/tmp/c5-%s-cliente.log" % chi
-    onda_file = "/tmp/c5-%s-onda.wav" % chi
+    blocks_file = "/tmp/c5-%s-blocchi.jsonl" % chi
+    client_log = "/tmp/c5-%s-cliente.log" % chi
+    wave_file = "/tmp/c5-%s-onda.wav" % chi
     tono = None
     esito = 3
 
@@ -956,11 +956,11 @@ def main():
         # ⛔⛔ AND WITHOUT THE CARD'S GROUPS WE DO NOT MEASURE: `[M]` the session
         #     is born blind (0 of 4), and C5 would measure the sound of a desktop
         #     that does not exist.  ⇒ 3, ⛔ never red (§1.51).
-        e_gr, perche_gr = garantisci_i_gruppi(chi, prefisso="  ")
+        e_gr, why_groups = garantisci_i_gruppi(chi, prefisso="  ")
         if e_gr != 0:
             # ⭐ The tool's outcome is propagated, not a nailed-down 3: «I could not
             #   look» (3) and «wrong usage» (2) have different names.
-            print("  %s" % perche_gr)
+            print("  %s" % why_groups)
             print("  ⇒ I do not measure — ⛔ and it is NOT a red (§4.5): outcome %d"
                   % e_gr)
             return e_gr
@@ -978,7 +978,7 @@ def main():
         print("  tenant «%s» created, uid %d" % (chi, uid))
 
         # ═══ THE WAVE — and it is rewritten at every round ═════════════════
-        for vecchio in (blocchi_file, cliente_log, onda_file):
+        for vecchio in (blocks_file, client_log, wave_file):
             try:
                 os.unlink(vecchio)
             except OSError:
@@ -997,18 +997,18 @@ def main():
             #   a dependency between this mesh and an option of the product, and
             #   it is written here instead of being discovered on the day of the red.
             durata = a.resta + 15.0
-            picco = scrivi_onda(onda_file, durata, a.ampiezza, a.hertz)
+            picco = write_wave(wave_file, durata, a.ampiezza, a.hertz)
             print("  wave written: %.0f s at %.0f Hz, peak at the source %d of "
-                  "32767 (%s)" % (durata, a.hertz, picco, onda_file))
+                  "32767 (%s)" % (durata, a.hertz, picco, wave_file))
 
         # ═══ THE CLIENT — PCM is asked for, or the energy cannot be measured ══
-        with open(cliente_log, "w") as reg:
+        with open(client_log, "w") as reg:
             cli = subprocess.Popen(
                 ["python3", "-u", a.cliente,
                  "--indirizzo", a.indirizzo, "--porta", str(a.porta),
                  "--utente", chi, "--parola", a.parola,
                  "--audio-codec", "pcm",
-                 "--audio-scrivi", blocchi_file,
+                 "--audio-scrivi", blocks_file,
                  "--resta", str(a.resta)],
                 stdout=reg, stderr=subprocess.STDOUT)
 
@@ -1027,7 +1027,7 @@ def main():
         scadenza = time.time() + a.attesa_ammesso
         while time.time() < scadenza:
             try:
-                with open(cliente_log, "r", errors="replace") as h:
+                with open(client_log, "r", errors="replace") as h:
                     ammesso = e_stato_ammesso(h.read())
                     if ammesso is True:
                         break
@@ -1041,7 +1041,7 @@ def main():
             #    next to the symptom (C1's cure).
             motivo = "?"
             try:
-                with open(cliente_log, "r", errors="replace") as h:
+                with open(client_log, "r", errors="replace") as h:
                     for riga in reversed(h.read().strip().splitlines()):
                         riga = riga.strip()
                         if riga and not riga.startswith("=="):
@@ -1077,17 +1077,17 @@ def main():
         #     ⛔ They are the two outcomes this mesh declares it keeps separate
         #     on purpose (see the top).
         visto = None
-        ha_risposto = False
+        has_responded = False
         t0 = time.time()
         scadenza = t0 + a.attesa_sink
         while time.time() < scadenza:
             visto = sink_c_e(chi, uid)
             if visto is not None:
-                ha_risposto = True
+                has_responded = True
             if visto:
                 break
             time.sleep(1.0)
-        if not ha_risposto:
+        if not has_responded:
             print("  ⛔ the PipeWire of «%s» did not answer EVEN ONCE "
                   "in %.0f s" % (chi, a.attesa_sink))
             print("\n  ⚠ NOT JUDGING: it is the terrain that does not speak, not the "
@@ -1095,12 +1095,12 @@ def main():
             return 3
         if not visto:
             print("  ⛔ PipeWire answered (at least once), and the «%s» sink "
-                  "is NOT there after %.0f s" % (NOME_SINK, a.attesa_sink))
+                  "is NOT there after %.0f s" % (SINK_NAME, a.attesa_sink))
             print("\n  ⛔⛔ RED — the product did not open the sound path.")
             print("     ⇒ `src/suono.c` creates a `support.null-audio-sink` "
-                  "called «%s»: it is not there." % NOME_SINK)
+                  "called «%s»: it is not there." % SINK_NAME)
             return 1
-        print("  ⭐ the «%s» sink is there after %.0f s" % (NOME_SINK, time.time() - t0))
+        print("  ⭐ the «%s» sink is there after %.0f s" % (SINK_NAME, time.time() - t0))
 
         # ═══ THE SOURCE ═══════════════════════════════════════════════════
         if a.senza_sorgente:
@@ -1109,9 +1109,9 @@ def main():
             tono = subprocess.Popen(
                 ["runuser", "-u", chi, "--", "env",
                  "XDG_RUNTIME_DIR=/run/user/%d" % uid,
-                 "pw-play", "--target=%s" % NOME_SINK, onda_file],
+                 "pw-play", "--target=%s" % SINK_NAME, wave_file],
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            print("  the source plays (pw-play on «%s»)" % NOME_SINK)
+            print("  the source plays (pw-play on «%s»)" % SINK_NAME)
 
         # ⛔ The ceiling governs the WAIT FOR THE CLIENT, not the work: if the client
         #    has already written its blocks, they are judged anyway — the
@@ -1125,14 +1125,14 @@ def main():
             cli.wait(timeout=30)
 
         # ═══ THE JUDGEMENT ════════════════════════════════════════════════
-        blocchi = leggi_blocchi(blocchi_file)
+        blocchi = read_blocks(blocks_file)
         verdetto, m = giudica(blocchi)
         print()
         print("  %s" % riga_misure(m))
         # ⭐ The second witness: what the PRODUCT says it sent.
         #   ⚠ It is PRINTED and not judged — it is a comparison for whoever diagnoses,
         #     not a criterion.
-        for riga in coda_registro(a.registro, chi):
+        for riga in log_tail(a.registro, chi):
             print("  [log] %s" % riga)
         print("  ⇒ %s" % (m["motivo"] or "—"))
 
@@ -1162,7 +1162,7 @@ def main():
             #   the red verdict **and** a measurable difference.  Here the
             #   difference is the count of blocks: without source **ZERO** must
             #   arrive.  ⛔ And it is not a gratuitous demand: the silence cure
-            #   of `src/audio.c` (`audio_taci_silenzio`, on by
+            #   of `src/audio.c` (`audio_hush_silence`, on by
             #   default) does NOT send the mute blocks — so «no
             #   source» really means «no block».
             # ═══════════════════════════════════════════════════════════════
@@ -1212,7 +1212,7 @@ def main():
         sgombra(chi)
 
 
-def coda_registro(percorso, chi):
+def log_tail(percorso, chi):
     """The PRODUCT's lines about this tenant — ⭐ a second witness.
 
     ⛔ They are PRINTED and not judged: they are the count of whoever sends, and C5

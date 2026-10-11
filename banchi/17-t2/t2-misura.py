@@ -16,7 +16,7 @@ ESP = sys.argv[2:]
 sys.argv = [sys.argv[0], "--scatola", D, "--browser", "firefox"]
 import suite as S                                                     # noqa: E402
 
-SERRATURA = "/media/REMOTIX/rete11/.scatole.lock"
+LOCK = "/media/REMOTIX/rete11/.scatole.lock"
 BASE = "/media/REMOTIX/tmp/t2"
 BOX = "rete11-" + D
 
@@ -32,7 +32,7 @@ def sudo(cmd, t=300):
 
 
 def tieni():
-    fd = os.open(SERRATURA, os.O_RDWR | os.O_CREAT, 0o666)
+    fd = os.open(LOCK, os.O_RDWR | os.O_CREAT, 0o666)
     while True:
         try:
             fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -52,7 +52,7 @@ def scrivi(dir_, nome, testo):
 
 
 ORA = "#!/bin/sh\nf=$HOME/ora-$1.txt\nwhile :; do date +%H:%M:%S.%N >> $f; sleep 1; done\n"
-TERMINALE = {
+TERMINAL = {
     "gnome": "gnome-terminal -- sh $HOME/t2-ora.sh terminale",
     "kde": "systemd-run --user --scope --unit=app-t2-konsole konsole -e sh $HOME/t2-ora.sh terminale",
     "xfce": "xfce4-terminal -x sh $HOME/t2-ora.sh terminale",
@@ -65,7 +65,7 @@ def una(esp):
     os.makedirs(ev, exist_ok=True)
     o = S.argomenti("t2")
     o.evidenze = ev
-    E = S.Esiti(o)
+    E = S.Outcomes(o)
     rimetti = False
     with S.Sessione(o, "917", E) as s:
         u = s.chi
@@ -80,7 +80,7 @@ def una(esp):
         import base64
         s.sc.dentro("echo %s | base64 -d > /home/%s/t2-ora.sh; chown %s /home/%s/t2-ora.sh"
                     % (base64.b64encode(ORA.encode()).decode(), u, u, u), 30)
-        print(s.nella_sessione(TERMINALE[D]))
+        print(s.nella_sessione(TERMINAL[D]))
         print(s.nella_sessione("sh $HOME/t2-ora.sh sessione"))
         print(s.nella_sessione("systemd-run --user --scope --unit=t2-testimone-utente "
                                "sh $HOME/t2-ora.sh utente"))
@@ -114,7 +114,7 @@ def una(esp):
         figlio = s.sc.dentro("ps -eo pid=,ppid=,user:32= | awk '$2==%s && $3==\"%s\"{print $1}' | head -1" % (padre, u), 10)[1].strip()
         log("parent %s child %s" % (padre, figlio))
         if esp == "uccidi-figlio":
-            s.spegni_browser()
+            s.turn_off_browser()
             time.sleep(4)
         c, ta = s.sc.dentro("date +%H:%M:%S.%N", 10)
         if esp == "ferma":
@@ -136,8 +136,8 @@ def una(esp):
             c, t = sudo("bash /media/REMOTIX/rete11/11-accendi.sh server %s" % D, 120)
             log("service restarted: rc %s" % c)
             rimetti = False
-        s.spegni_browser()
-        s.accendi_browser()
+        s.turn_off_browser()
+        s.turn_on_browser()
         ok, m = s.entra()
         log("reattach: %s %s" % (ok, m[:100]))
         time.sleep(15)

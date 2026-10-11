@@ -8,7 +8,7 @@
 
 #include <openssl/err.h>
 
-static const char *errore_ssl(void)
+static const char *error_ssl(void)
 {
 	static char buf[256];
 	unsigned long e = ERR_get_error();
@@ -50,7 +50,7 @@ static SSL_CTX *comune(const char *pem, const char *key)
 {
 	SSL_CTX *ctx = SSL_CTX_new(TLS_server_method());
 	if (!ctx) {
-		registro_dice(REG_QUIC, "⛔ SSL_CTX_new: %s", errore_ssl());
+		registro_dice(REG_QUIC, "⛔ SSL_CTX_new: %s", error_ssl());
 		return NULL;
 	}
 	SSL_CTX_set_min_proto_version(ctx, TLS1_3_VERSION);
@@ -59,18 +59,18 @@ static SSL_CTX *comune(const char *pem, const char *key)
 	SSL_CTX_set_mode(ctx, SSL_MODE_RELEASE_BUFFERS);
 
 	if (SSL_CTX_use_PrivateKey_file(ctx, key, SSL_FILETYPE_PEM) != 1) {
-		registro_dice(REG_QUIC, "⛔ key %s: %s", key, errore_ssl());
+		registro_dice(REG_QUIC, "⛔ key %s: %s", key, error_ssl());
 		SSL_CTX_free(ctx);
 		return NULL;
 	}
 	if (SSL_CTX_use_certificate_chain_file(ctx, pem) != 1) {
-		registro_dice(REG_QUIC, "⛔ certificate %s: %s", pem, errore_ssl());
+		registro_dice(REG_QUIC, "⛔ certificate %s: %s", pem, error_ssl());
 		SSL_CTX_free(ctx);
 		return NULL;
 	}
 	if (SSL_CTX_check_private_key(ctx) != 1) {
 		registro_dice(REG_QUIC, "⛔ the key does not match the certificate: %s",
-		              errore_ssl());
+		              error_ssl());
 		SSL_CTX_free(ctx);
 		return NULL;
 	}

@@ -412,9 +412,9 @@ def importa():
     #    HERE, without touching its file (another agent is working on it).
     B70.righe_registro = righe_registro
     B70.spedisci_lettore = (lambda:
-                            scrivi_sulla_macchina("09-b70-leggi.py", B70.LETTORE))
+                            write_on_machine("09-b70-leggi.py", B70.LETTORE))
     B70.root = _root_che_trascrive     # ⛔ see `_root_che_trascrive`
-    _aggancia_la_consegna()
+    _hook_delivery()
     return B70
 
 
@@ -454,19 +454,19 @@ def _root_che_trascrive(comando, tetto=300):
 _MISURA_VERA = None
 
 
-def _misura_che_vede_la_consegna(giornale, chiesto_s, *r, **k):
+def _measure_seeing_delivery(giornale, chiesto_s, *r, **k):
     n = _MISURA_VERA(giornale, chiesto_s, *r, **k)
     n["consegna"] = riduci_consegna([f["arrivo_ms"] for f in (giornale or [])],
                                     chiesto_s)
     return n
 
 
-def _aggancia_la_consegna():
+def _hook_delivery():
     global _MISURA_VERA
     if _MISURA_VERA is not None:      # ⚠ only once: b79 imports this file
         return
     _MISURA_VERA = B70.misura
-    B70.misura = _misura_che_vede_la_consegna
+    B70.misura = _measure_seeing_delivery
 
 
 def root(comando, tetto=300):
@@ -491,7 +491,7 @@ def root(comando, tetto=300):
 #   depending on length would show at the same grain as the product.
 #
 # ⭐ And the probe **does not judge**: it prints the raw arrivals, and reducing them is the
-#    job of `riduci_sonda()` on the laptop — which is the SAME one that
+#    job of `reduce_probe()` on the laptop — which is the SAME one that
 #    `--certifica` exercises on fabricated arrivals.  A probe that reduced on
 #    its own would certify half of the tool.
 SONDA = r'''#!/usr/bin/env python3
@@ -558,7 +558,7 @@ if __name__ == "__main__":
 '''
 
 
-def riduci_sonda(arrivi, quanti):
+def reduce_probe(arrivi, quanti):
     """⭐ From the raw arrivals to the numbers of the FAULT.  ⛔ And it is the same function
        that `--certifica` exercises on fabricated arrivals.
 
@@ -612,7 +612,7 @@ def riduci_sonda(arrivi, quanti):
     return n
 
 
-def _ha_sondato(s):
+def _has_probed(s):
     return bool(s) and s.get("esito") == "misurato"
 
 
@@ -620,7 +620,7 @@ def _ha_sondato(s):
 # ⭐⭐ THE DELIVERY REDUCTION — «for how many seconds was the screen
 #     frozen?», which is the question that on 23 August had no name
 # ═══════════════════════════════════════════════════════════════════════════
-def riduci_consegna(arrivi_ms, chiesto_s):
+def riduci_consegna(arrivals_ms, chiesto_s):
     """From the arrival instants of the frames to the numbers of the DELIVERY.
 
     ⛔ It does not judge: it reduces.  Judging is the job of `p_consegna_non_si_ferma()`, and the two
@@ -649,13 +649,13 @@ def riduci_consegna(arrivi_ms, chiesto_s):
         return n
     celle = int(math.ceil(chiesto_s))
     n["secondi_finestra"] = celle
-    if not arrivi_ms:
+    if not arrivals_ms:
         # ⛔ Zero frames is not «I did not read»: it is the whole window at zero.
         n.update({"esito": "misurato", "fotogrammi": 0, "secondi_visti": 0,
                   "copertura": 0.0, "buco_max_s": round(float(chiesto_s), 3),
                   "buco_da_s": 0.0, "consegna_fino_a_s": 0.0})
         return n
-    t = sorted(arrivi_ms)
+    t = sorted(arrivals_ms)
     rel = [(x - t[0]) / 1000.0 for x in t]
     dentro = [x for x in rel if x <= chiesto_s]
     n["fotogrammi"] = len(dentro)
@@ -690,16 +690,16 @@ SONDA_PACCHETTI = int(os.environ.get("SONDA_PACCHETTI", "8000"))
 SONDA_PASSO_MS = float(os.environ.get("SONDA_PASSO_MS", "0.4"))
 
 # ── the thresholds, in one place only, and each with its reason ────────────
-RESA_MINIMA = 0.90      # ⚠ *sufficient, not right*: more than the noise between two
+MIN_YIELD = 0.90      # ⚠ *sufficient, not right*: more than the noise between two
                         #   runs (b70 estimates it at 5 %), less than any drop
                         #   the user would notice.
-PERDITA_TRASCURABILE = 0.2   # % — above it, a «lossless» profile no longer isolates
+NEGLIGIBLE_LOSS = 0.2   # % — above it, a «lossless» profile no longer isolates
                              #     the disorder and the comparison keeps quiet
-CODA_MIA_MAX_PC = 0.10       # % — `dropped` at zero nominal loss: above it,
+OWN_QUEUE_MAX_PC = 0.10       # % — `dropped` at zero nominal loss: above it,
                              #     it is my `limit` throwing away
-GUASTO_MINIMO = 0.30    # the measured fault must be at least 30 % of the
+MIN_FAULT = 0.30    # the measured fault must be at least 30 % of the
                         # nominal, or it was not put in
-GUASTO_MASSIMO = 3.0    # ⚠ and no more than three times: a `loss 1%` that loses
+MAX_FAULT = 3.0    # ⚠ and no more than three times: a `loss 1%` that loses
                         # 6 % is not the profile I declared
 
 # ── ⭐⭐ the two DELIVERY thresholds (⇒ §«THE DEFECT WAS OF NAME») ──────────
@@ -718,14 +718,14 @@ BUCO_SCHERMO_FERMO_S = 1.0
 #   retransmission that did its job, not a frozen screen.
 
 
-def _v_liscio(s):
+def _v_smooth(s):
     """⛔⛔ THE PROFILE THAT CHECKS THE BENCH, NOT THE PRODUCT.
 
     At zero nominal loss the probe must see zero: if it sees something, it is
     **my** queue (`limit %d`) throwing away, and every number of every other profile
     carries inside it a loss I did not declare.
     """ % CODA
-    if s["persi_pc"] > CODA_MIA_MAX_PC:
+    if s["persi_pc"] > OWN_QUEUE_MAX_PC:
         return (False, "at ZERO nominal loss the probe lost %d of %d "
                        "(%.2f %%): it is MY queue throwing away, and every other "
                        "profile is contaminated"
@@ -739,7 +739,7 @@ def _v_liscio(s):
             % (s["persi"], s["quanti"], s.get("ritardo_mediano_ms", -1)))
 
 
-def _v_ritardo(s):
+def _v_delay(s):
     """⭐⭐ THE REFERENCE: late but IN ORDER.  If it were not in order, none of the
        comparisons of this bench would separate anything any more."""
     med = s.get("ritardo_mediano_ms", 0)
@@ -751,24 +751,24 @@ def _v_ritardo(s):
         return (False, "the delay-only profile has %.1f %% of packets "
                        "out of order: it no longer separates delay from disorder"
                 % s["fuori_ordine_pc"])
-    if s["persi_pc"] > CODA_MIA_MAX_PC:
+    if s["persi_pc"] > OWN_QUEUE_MAX_PC:
         return (False, "the reference lost %.2f %%: it is not a "
                        "lossless reference" % s["persi_pc"])
     return (True, "median delay %.2f ms, ZERO out of order, ZERO lost: "
                   "late but in order, and it is the reference" % med)
 
 
-def _v_perdita(nominale, indipendente=True):
+def _v_loss(nominal, indipendente=True):
     def verifica(s):
-        if s["persi_pc"] < GUASTO_MINIMO * nominale:
+        if s["persi_pc"] < MIN_FAULT * nominal:
             return (None, "I had asked for %.2f %% loss and the probe "
                           "saw %.2f %%: the fault was NOT put in, and I do not "
                           "judge a profile that does not exist"
-                    % (nominale, s["persi_pc"]))
-        if s["persi_pc"] > GUASTO_MASSIMO * nominale:
+                    % (nominal, s["persi_pc"]))
+        if s["persi_pc"] > MAX_FAULT * nominal:
             return (None, "I had asked for %.2f %% and the probe saw "
                           "%.2f %%: it is not the profile I declared"
-                    % (nominale, s["persi_pc"]))
+                    % (nominal, s["persi_pc"]))
         if indipendente and s["raffica_media"] > 1.6:
             return (None, "the independent loss arrived in bursts of "
                           "%.2f packets: it is not independent"
@@ -780,12 +780,12 @@ def _v_perdita(nominale, indipendente=True):
                           "was NOT put in" % s["raffica_media"])
         return (True, "lost %d of %d = %.2f %% (requested %.2f) in %d bursts "
                       "of average length %.2f (max %d)"
-                % (s["persi"], s["quanti"], s["persi_pc"], nominale,
+                % (s["persi"], s["quanti"], s["persi_pc"], nominal,
                    s["raffiche"], s["raffica_media"], s["raffica_max"]))
     return verifica
 
 
-def _v_riordino(s):
+def _v_reorder(s):
     """⛔ `netem reorder` without `delay` does NOTHING, and does not say so.  ⇒
        The reordering is measured, or a profile that does not exist was measured."""
     if s["fuori_ordine_pc"] < 5.0:
@@ -793,7 +793,7 @@ def _v_riordino(s):
                       "put in (⛔ `reorder` without `delay` does nothing), and "
                       "I do not judge a profile that does not exist"
                 % s["fuori_ordine_pc"])
-    if s["persi_pc"] > PERDITA_TRASCURABILE:
+    if s["persi_pc"] > NEGLIGIBLE_LOSS:
         return (None, "the reordering profile lost %.2f %%: it no longer isolates "
                       "disorder from loss" % s["persi_pc"])
     return (True, "%d packets of %d out of order (%.1f %%) and ZERO lost: it is "
@@ -801,28 +801,28 @@ def _v_riordino(s):
                                       s["fuori_ordine_pc"]))
 
 
-def _v_jitter(nominale_ms):
+def _v_jitter(nominal_ms):
     def verifica(s):
         disp = s.get("dispersione_ms", 0)
-        if disp < 0.5 * nominale_ms:
+        if disp < 0.5 * nominal_ms:
             return (None, "the measured flicker (p95 − minimum) is %.1f ms and "
                           "I had asked for %d: the fault was not put in"
-                    % (disp, nominale_ms))
-        if s["persi_pc"] > PERDITA_TRASCURABILE:
+                    % (disp, nominal_ms))
+        if s["persi_pc"] > NEGLIGIBLE_LOSS:
             return (None, "the flicker profile lost %.2f %%: it no longer "
                           "isolates the disorder" % s["persi_pc"])
         return (True, "median delay %.1f ms, spread p95−min %.1f ms "
                       "(requested %d), %.1f %% out of order, ZERO lost"
-                % (s.get("ritardo_mediano_ms", -1), disp, nominale_ms,
+                % (s.get("ritardo_mediano_ms", -1), disp, nominal_ms,
                    s["fuori_ordine_pc"]))
     return verifica
 
 
-def _v_duplicazione(s):
-    if s["duplicati_pc"] < GUASTO_MINIMO * 1.0:
+def _v_duplication(s):
+    if s["duplicati_pc"] < MIN_FAULT * 1.0:
         return (None, "duplicates %.2f %% out of 1 %% requested: the fault was not "
                       "put in" % s["duplicati_pc"])
-    if s["persi_pc"] > PERDITA_TRASCURABILE:
+    if s["persi_pc"] > NEGLIGIBLE_LOSS:
         return (None, "the duplication profile lost %.2f %%"
                 % s["persi_pc"])
     return (True, "%d packets duplicated of %d (%.2f %%) and ZERO lost: QUIC "
@@ -830,8 +830,8 @@ def _v_duplicazione(s):
                                      s["duplicati_pc"]))
 
 
-def _v_casa(s):
-    if s["persi_pc"] < GUASTO_MINIMO * 2.0:
+def _v_home(s):
+    if s["persi_pc"] < MIN_FAULT * 2.0:
         return (None, "I had asked for 2 %% loss and the probe saw "
                       "%.2f %%: the fault was not put in" % s["persi_pc"])
     if s.get("dispersione_ms", 0) < 10.0:
@@ -856,36 +856,36 @@ PROFILI = [
     ("liscio", [], True, True, True,
      "⛔ the denominator. The netem is there all the same because it is what carries the "
      "byte counter, and it checks that MY queue throws nothing away of its own",
-     _v_liscio),
+     _v_smooth),
     ("ritardo-30", ["delay", "30ms"], True, True, True,
      "⭐⭐ THE CONTROL THAT SEPARATES DELAY FROM DISORDER: late but IN ORDER. "
      "It is the reference of all the comparisons",
-     _v_ritardo),
+     _v_delay),
     ("perdita-0,5", ["delay", "15ms", "loss", "0.5%"], False, True, False,
-     "the first loss: half a packet in a hundred", _v_perdita(0.5)),
+     "the first loss: half a packet in a hundred", _v_loss(0.5)),
     ("perdita-1", ["delay", "15ms", "loss", "1%"], False, True, False,
      "⭐ THE PROFILE ON WHICH THE PREDICATE IS WRITTEN «loss is paid in "
-     "delay, not in frames thrown away»", _v_perdita(1.0)),
+     "delay, not in frames thrown away»", _v_loss(1.0)),
     ("perdita-3", ["delay", "15ms", "loss", "3%"], False, True, False,
      "the declared boundary: up to here the keyframe spiral is a REQUIREMENT",
-     _v_perdita(3.0)),
+     _v_loss(3.0)),
     ("perdita-5", ["delay", "15ms", "loss", "5%"], False, False, False,
      "⚠ beyond the boundary — DIAGNOSIS: we look at HOW it gives way, not whether it does",
-     _v_perdita(5.0)),
+     _v_loss(5.0)),
     ("raffica-1", ["delay", "15ms", "loss", "gemodel", "0.2%", "20%", "100%", "0%"],
      False, True, False,
      "⭐⭐ THE EXACT TWIN OF «perdita-1»: same average loss, but in "
      "CLUSTERS (`[M]` bursts of 4.4 against 1.0). It is the only pair that isolates "
      "the STRUCTURE of the loss from its quantity",
-     _v_perdita(1.0, indipendente=False)),
+     _v_loss(1.0, indipendente=False)),
     ("raffica-forte", ["delay", "15ms", "loss", "gemodel", "3%", "20%", "100%", "0%"],
      False, False, False,
      "⚠ `[M]` 14.35 % in bursts of 5.5: really distant WiFi — DIAGNOSIS",
-     _v_perdita(14.0, indipendente=False)),
+     _v_loss(14.0, indipendente=False)),
     ("riordino-25", ["delay", "10ms", "reorder", "25%", "50%"], False, True, True,
      "⭐⭐ EXPLICIT REORDERING, which is not jitter: one packet in four "
      "jumps the queue, and NONE is lost",
-     _v_riordino),
+     _v_reorder),
     ("jitter-5", ["delay", "20ms", "5ms", "distribution", "normal"], False, True, True,
      "the small flicker: 20 ± 5 ms", _v_jitter(5)),
     ("jitter-15", ["delay", "20ms", "15ms", "distribution", "normal"], False, True, True,
@@ -897,20 +897,20 @@ PROFILI = [
      _v_jitter(30)),
     ("duplicazione-1", ["delay", "15ms", "duplicate", "1%"], False, True, True,
      "⭐ the case nobody ever tests. QUIC must ignore them; if our code "
-     "counted a packet twice it would show here", _v_duplicazione),
+     "counted a packet twice it would show here", _v_duplication),
     ("casa-cattiva", ["delay", "40ms", "20ms", "distribution", "normal",
                       "loss", "2%"], False, True, False,
      "⭐ THE MIX: a home with distant WiFi. It is the only profile run in a "
-     "PAIR (moving scene and still scene) for invariant I1", _v_casa),
+     "PAIR (moving scene and still scene) for invariant I1", _v_home),
 ]
 
-RIFERIMENTO = "ritardo-30"
+REFERENCE = "ritardo-30"
 
 # ⛔ The `netem` verbs that change the network.  If one appears that I did NOT
 #    ask for, the rule is not mine: `[M]` 23 Aug 2026, `tc qdisc change` is
 #    sticky and carried along a `reorder 25% 50%` for four
 #    profiles.
-VERBI = ["loss", "reorder", "duplicate", "corrupt", "rate", "slot", "ecn"]
+VERBS = ["loss", "reorder", "duplicate", "corrupt", "rate", "slot", "ecn"]
 
 
 def _regole(profilo):
@@ -956,20 +956,20 @@ def regola_riletta():
     return ""
 
 
-def controlla_regola(chieste, riletta):
+def controlla_regola(asks, riletta):
     """(passa, perche) — the installed fault is that one and ONLY that one."""
     if not riletta:
         return _no("I did not read back any `netem 40:` on «%s»: the rule is not "
                    "there" % DEV)
     guai = []
-    for verbo in VERBI:
-        chiesto = verbo in chieste
+    for verbo in VERBS:
+        chiesto = verbo in asks
         c_e = re.search(r"\b%s\b" % verbo, riletta) is not None
         if c_e and not chiesto:
             guai.append("«%s» is there and I did NOT ask for it" % verbo)
         if chiesto and not c_e:
             guai.append("I asked for «%s» and it is not there" % verbo)
-    if "delay" in chieste and "delay" not in riletta:
+    if "delay" in asks and "delay" not in riletta:
         guai.append("I asked for a delay and it is not there")
     if guai:
         return _no("⛔ THE INSTALLED RULE IS NOT MINE — %s · read back: «%s»"
@@ -985,12 +985,12 @@ def _no(p):   return (False, p)
 def _muto(p): return (None, p)
 
 
-def p_guasto_messo(profilo_nome, verifica, sonda):
+def p_guasto_messo(profile_name, verifica, sonda):
     """⭐ IT COMES BEFORE ALL: measuring a profile that does not exist is worse than
        not measuring it, because the number is true and the cause is made up."""
-    if not _ha_sondato(sonda):
+    if not _has_probed(sonda):
         return _muto("the probe did not measure: without it, I do not know whether the fault of "
-                     "«%s» was put in" % profilo_nome)
+                     "«%s» was put in" % profile_name)
     return verifica(sonda)
 
 
@@ -1089,7 +1089,7 @@ def p_consegna_non_si_ferma(n):
     return _si("the delivery never stopped: %s" % coda)
 
 
-def p_non_e_perdita(n, n_rif, sonda, nome):
+def p_not_loss(n, n_ref, sonda, nome):
     """⭐⭐ THE PREDICATE THIS BENCH EXISTS FOR.
 
     `SPECIFICHE.md` does not write it because nobody had thought of it: **reordering
@@ -1105,27 +1105,27 @@ def p_non_e_perdita(n, n_rif, sonda, nome):
     """
     if not B70._ha_misurato(n):
         return _muto(n.get("esito", "I did not measure this profile"))
-    if not B70._ha_misurato(n_rif or {}):
+    if not B70._ha_misurato(n_ref or {}):
         return _muto("the reference «%s» did not measure: without it there is no "
                      "comparison, and a number without a denominator does not judge"
-                     % RIFERIMENTO)
-    if _ha_sondato(sonda) and sonda["persi_pc"] > PERDITA_TRASCURABILE:
+                     % REFERENCE)
+    if _has_probed(sonda) and sonda["persi_pc"] > NEGLIGIBLE_LOSS:
         return _muto("on «%s» the probe saw %.2f %% of real loss: the "
                      "comparison would no longer isolate the disorder"
                      % (nome, sonda["persi_pc"]))
-    rapporto = n["fps"] / n_rif["fps"] if n_rif["fps"] else 0.0
+    rapporto = n["fps"] / n_ref["fps"] if n_ref["fps"] else 0.0
     coda = ("%.2f/s against %.2f/s of the reference «%s» (%.0f %%), worst "
             "second %s against %s"
-            % (n["fps"], n_rif["fps"], RIFERIMENTO, rapporto * 100,
-               n["fps_finestra_min"], n_rif["fps_finestra_min"]))
-    if rapporto < RESA_MINIMA:
+            % (n["fps"], n_ref["fps"], REFERENCE, rapporto * 100,
+               n["fps_finestra_min"], n_ref["fps_finestra_min"]))
+    if rapporto < MIN_YIELD:
         return _no("⛔ the rate drops on a network that LOSES NOTHING: %s — the "
                    "disorder was mistaken for loss, and it is not the "
                    "network's" % coda)
     return _si("the disorder was not mistaken for loss: %s" % coda)
 
 
-def p_perdita_in_ritardo(n, n_rif, sonda, nome):
+def p_late_loss(n, n_ref, sonda, nome):
     """**Loss is paid in DELAY, not in frames thrown away.**
 
     The video goes on QUIC **streams** (`RCP.md` §6.2), and a stream retransmits: a
@@ -1134,24 +1134,24 @@ def p_perdita_in_ritardo(n, n_rif, sonda, nome):
       drift — which here is PRINTED and not judged, because demanding at once
       «the frames do not drop» and «the delay does not grow» would mean forbidding
       the product the only way it has to pay for a loss.
-    """ % RESA_MINIMA
+    """ % MIN_YIELD
     if not B70._ha_misurato(n):
         return _muto(n.get("esito", "I did not measure this profile"))
-    if not B70._ha_misurato(n_rif or {}):
-        return _muto("the reference «%s» did not measure" % RIFERIMENTO)
-    rapporto = n["fps"] / n_rif["fps"] if n_rif["fps"] else 0.0
-    perso = ("%.2f %%" % sonda["persi_pc"]) if _ha_sondato(sonda) else "?"
+    if not B70._ha_misurato(n_ref or {}):
+        return _muto("the reference «%s» did not measure" % REFERENCE)
+    rapporto = n["fps"] / n_ref["fps"] if n_ref["fps"] else 0.0
+    perso = ("%.2f %%" % sonda["persi_pc"]) if _has_probed(sonda) else "?"
     coda = ("%.2f/s against %.2f/s (%.0f %%) with %s of real loss · the drift "
             "ended at %s ms (maximum %s)"
-            % (n["fps"], n_rif["fps"], rapporto * 100, perso,
+            % (n["fps"], n_ref["fps"], rapporto * 100, perso,
                n["deriva_fine_ms"], n["deriva_max_ms"]))
-    if rapporto < RESA_MINIMA:
+    if rapporto < MIN_YIELD:
         return _no("⛔ the loss was paid in FRAMES and not in delay: "
                    "%s — on QUIC streams that retransmit it should not be" % coda)
     return _si("the loss was paid in delay, not in frames: %s" % coda)
 
 
-def p_coda_mia(profilo_nome, senza_perdita, delta):
+def p_coda_mia(profile_name, senza_perdita, delta):
     """⛔ This bench's `limit` must NEVER throw anything away of its own: here there
        is no bandwidth, so every packet thrown away at zero nominal loss is a
        fault I added without declaring it."""
@@ -1160,7 +1160,7 @@ def p_coda_mia(profilo_nome, senza_perdita, delta):
     if not delta["pacchetti"]:
         return _muto("zero packets in the qdisc around the run")
     pc = 100.0 * delta["buttati"] / float(delta["pacchetti"] + delta["buttati"])
-    if senza_perdita and pc > CODA_MIA_MAX_PC:
+    if senza_perdita and pc > OWN_QUEUE_MAX_PC:
         return _no("⛔ the qdisc threw away %d packets of %d (%.2f %%) on a "
                    "LOSSLESS profile: it is my `limit %d` throwing away, and the "
                    "number of this run is contaminated"
@@ -1181,8 +1181,8 @@ def p_coda_mia(profilo_nome, senza_perdita, delta):
 # ⭐ And the cases do not pass ready-made numbers: they fabricate ARRIVALS and make them
 #    go through `riduci_sonda()`, which is the same function that runs on the real
 #    runs.  A deception living in the reduction would be seen.
-def _fab_arrivi(quanti, persi=(), duplicati=(), scambi=(), ritardo=15.0,
-                sfarfallio=0.0):
+def _make_arrivals(quanti, persi=(), duplicati=(), scambi=(), ritardo=15.0,
+                flicker=0.0):
     """Fabricates the probe's arrivals.  `scambi` = pairs (i, j) to swap
        in the ARRIVAL ORDER, which is what an overtaking packet does."""
     persi = set(persi)
@@ -1192,7 +1192,7 @@ def _fab_arrivi(quanti, persi=(), duplicati=(), scambi=(), ritardo=15.0,
             ordine[i], ordine[j] = ordine[j], ordine[i]
     arrivi = []
     for k, numero in enumerate(ordine):
-        r = ritardo + (sfarfallio if k % 2 else -sfarfallio)
+        r = ritardo + (flicker if k % 2 else -flicker)
         arrivi.append([numero, round(r, 3)])
         if numero in duplicati:
             arrivi.append([numero, round(r + 0.05, 3)])
@@ -1200,19 +1200,19 @@ def _fab_arrivi(quanti, persi=(), duplicati=(), scambi=(), ritardo=15.0,
 
 
 def _fab_giro(fps, secondi=25, chiave_ogni=0, deriva=0.0, cons=1000, sped=1000,
-              abb=0, vuote=3):
+              abb=0, empty=3):
     """A fake run, reduced by the SAME `misura()` that runs on the real runs."""
     g = B70._fab([(fps, secondi + 3)], chiave_ogni=chiave_ogni,
                  deriva_ms_per_fotogramma=deriva)
     srv = {"consegnati": cons, "spediti": sped, "abbandonati": abb,
            "non_spediti": cons - sped, "annunci_tela": 0,
-           "cattura": {"catturati": cons, "chiavi": 1, "attese_a_vuoto": vuote}}
+           "cattura": {"catturati": cons, "chiavi": 1, "attese_a_vuoto": empty}}
     filo = {"byte": 90 * 1000 * 1000, "secondi": float(secondi),
             "byte_per_pacchetto": 1452.0}
     return B70.misura(g, secondi, srv, filo)
 
 
-def _fab_giro_a_tratti(pezzi, chiesto=25, fps=40.0):
+def _make_round_in_stretches(pezzi, chiesto=25, fps=40.0):
     """⭐ A RUN WITH GAPS INSIDE.  `pezzi` = [(seconds of delivery,
        seconds of silence), ...].
 
@@ -1257,20 +1257,20 @@ def certifica():
 
     # ── 1 · THE PROBE REDUCTION, which is half of the tool ─────────────────
     print("  ── the probe reduction: from the arrivals to the numbers of the fault ──\n")
-    s = riduci_sonda(_fab_arrivi(1000), 1000)
+    s = reduce_probe(_make_arrivals(1000), 1000)
     esito("1-⭐ smooth probe: 1 000 out of 1 000, in order",
           (s["persi"] == 0 and s["duplicati"] == 0 and s["fuori_ordine"] == 0),
           True, "lost %d · dup %d · out of order %d" % (s["persi"],
                 s["duplicati"], s["fuori_ordine"]))
 
-    s = riduci_sonda(_fab_arrivi(1000, persi=[10, 11, 12, 500]), 1000)
+    s = reduce_probe(_make_arrivals(1000, persi=[10, 11, 12, 500]), 1000)
     esito("2-⭐ BURST loss: 3 in a row plus 1 alone → 2 bursts, average 2.0",
           (s["persi"] == 4 and s["raffiche"] == 2 and s["raffica_media"] == 2.0
            and s["raffica_max"] == 3),
           True, "lost %d in %d bursts, average %.2f, max %d"
           % (s["persi"], s["raffiche"], s["raffica_media"], s["raffica_max"]))
 
-    s = riduci_sonda(_fab_arrivi(1000, duplicati=[3, 7, 9]), 1000)
+    s = reduce_probe(_make_arrivals(1000, duplicati=[3, 7, 9]), 1000)
     esito("3-⭐ duplicates: 3 packets arrived twice, and ZERO lost",
           (s["duplicati"] == 3 and s["persi"] == 0), True,
           "duplicates %d · lost %d · received %d"
@@ -1284,7 +1284,7 @@ def certifica():
     #    ⇒ 6, not 2.  ⚠ It is also the reason why `[M]` `delay 20ms 15ms` gives
     #      81 % «out of order» with a fault that moves few packets: the
     #      quantity counts those DISPLACED BY, not those displaced.
-    s = riduci_sonda(_fab_arrivi(1000, scambi=[(10, 11), (20, 25)]), 1000)
+    s = reduce_probe(_make_arrivals(1000, scambi=[(10, 11), (20, 25)]), 1000)
     esito("4-⭐ reordering: a short overtake (1 late) plus a long one (5) = 6",
           (s["fuori_ordine"] == 6 and s["persi"] == 0), True,
           "out of order %d (%.2f %%) · lost %d"
@@ -1292,87 +1292,87 @@ def certifica():
 
     # ── 2 · «WAS THE FAULT PUT IN?», and the right answer is often MUTE ────
     print("\n  ── was the fault put in? (⭐ and «I do not know» is an outcome) ──\n")
-    p, q = p_guasto_messo("liscio", _v_liscio, riduci_sonda(_fab_arrivi(8000), 8000))
+    p, q = p_guasto_messo("liscio", _v_smooth, reduce_probe(_make_arrivals(8000), 8000))
     esito("5-⭐ clean smooth line", p, True, q)
 
-    p, q = p_guasto_messo("liscio", _v_liscio,
-                          riduci_sonda(_fab_arrivi(8000, persi=range(0, 8000, 50)), 8000))
+    p, q = p_guasto_messo("liscio", _v_smooth,
+                          reduce_probe(_make_arrivals(8000, persi=range(0, 8000, 50)), 8000))
     esito("6-⛔⛔ smooth line losing 2 %: it is MY queue, and it contaminates everything",
           p, False, q)
 
-    p, q = p_guasto_messo("perdita-1", _v_perdita(1.0),
-                          riduci_sonda(_fab_arrivi(8000, persi=range(0, 8000, 100)), 8000))
+    p, q = p_guasto_messo("perdita-1", _v_loss(1.0),
+                          reduce_probe(_make_arrivals(8000, persi=range(0, 8000, 100)), 8000))
     esito("7-⭐ perdita-1: the probe sees 1 %", p, True, q)
 
-    p, q = p_guasto_messo("perdita-3", _v_perdita(3.0),
-                          riduci_sonda(_fab_arrivi(8000), 8000))
+    p, q = p_guasto_messo("perdita-3", _v_loss(3.0),
+                          reduce_probe(_make_arrivals(8000), 8000))
     esito("8-⛔⛔ perdita-3 REQUESTED and NEVER PUT IN: the bench must KEEP SILENT, not give "
           "green", p, None, q)
 
     # ⛔ The case that really happened on 23 August: `tc qdisc change`
     #    carried along the previous profile's `reorder`.
-    p, q = p_guasto_messo("riordino-25", _v_riordino, riduci_sonda(_fab_arrivi(8000), 8000))
+    p, q = p_guasto_messo("riordino-25", _v_reorder, reduce_probe(_make_arrivals(8000), 8000))
     esito("9-⛔⛔ reordering requested and not put in (⚠ `reorder` without `delay` does "
           "nothing): SILENT", p, None, q)
 
     scambi = [(i, i + 1) for i in range(0, 6000, 4)]
-    p, q = p_guasto_messo("riordino-25", _v_riordino,
-                          riduci_sonda(_fab_arrivi(8000, scambi=scambi), 8000))
+    p, q = p_guasto_messo("riordino-25", _v_reorder,
+                          reduce_probe(_make_arrivals(8000, scambi=scambi), 8000))
     esito("10-⭐ reordering really put in: one packet in four overtakes",
           p, True, q)
 
-    p, q = p_guasto_messo("raffica-1", _v_perdita(1.0, indipendente=False),
-                          riduci_sonda(_fab_arrivi(8000, persi=range(0, 8000, 100)), 8000))
+    p, q = p_guasto_messo("raffica-1", _v_loss(1.0, indipendente=False),
+                          reduce_probe(_make_arrivals(8000, persi=range(0, 8000, 100)), 8000))
     esito("11-⛔⛔ «burst» that loses 1 % but ONE AT A TIME: it is «perdita-1» "
           "in disguise, and the bench KEEPS SILENT", p, None, q)
 
-    a_raffica = [i for base in range(0, 8000, 500) for i in range(base, base + 5)]
-    p, q = p_guasto_messo("raffica-1", _v_perdita(1.0, indipendente=False),
-                          riduci_sonda(_fab_arrivi(8000, persi=a_raffica), 8000))
+    a_burst = [i for base in range(0, 8000, 500) for i in range(base, base + 5)]
+    p, q = p_guasto_messo("raffica-1", _v_loss(1.0, indipendente=False),
+                          reduce_probe(_make_arrivals(8000, persi=a_burst), 8000))
     esito("12-⭐ real burst: 1 % in clusters of 5", p, True, q)
 
     p, q = p_guasto_messo("jitter-15", _v_jitter(15),
-                          riduci_sonda(_fab_arrivi(8000, ritardo=20.0,
-                                                   sfarfallio=0.2), 8000))
+                          reduce_probe(_make_arrivals(8000, ritardo=20.0,
+                                                   flicker=0.2), 8000))
     esito("13-⛔ jitter requested 15 ms, measured 0.4: SILENT", p, None, q)
 
-    p, q = p_guasto_messo("duplicazione-1", _v_duplicazione,
-                          riduci_sonda(_fab_arrivi(8000), 8000))
+    p, q = p_guasto_messo("duplicazione-1", _v_duplication,
+                          reduce_probe(_make_arrivals(8000), 8000))
     esito("14-⛔ duplication requested and no duplicate: SILENT", p, None, q)
 
     # ── 3 · ⭐⭐ THE PREDICATE THE BENCH EXISTS FOR ────────────────────────
     print("\n  ── ⭐⭐ «disorder is not loss»: does the rate drop where "
           "nothing is lost? ──\n")
     rif = _fab_giro(60)
-    pulita = riduci_sonda(_fab_arrivi(8000, scambi=scambi), 8000)
-    p, q = p_non_e_perdita(_fab_giro(59), rif, pulita, "riordino-25")
+    pulita = reduce_probe(_make_arrivals(8000, scambi=scambi), 8000)
+    p, q = p_not_loss(_fab_giro(59), rif, pulita, "riordino-25")
     esito("15-⭐ reordering, rate intact (59 against 60)", p, True, q)
 
-    p, q = p_non_e_perdita(_fab_giro(40), rif, pulita, "riordino-25")
+    p, q = p_not_loss(_fab_giro(40), rif, pulita, "riordino-25")
     esito("16-⛔⛔ THE DEFECT THE BENCH EXISTS TO FIND: 40/s against 60/s "
           "on a network that LOSES NOTHING", p, False, q)
 
-    p, q = p_non_e_perdita(_fab_giro(40), rif,
-                           riduci_sonda(_fab_arrivi(8000, persi=range(0, 8000, 100),
+    p, q = p_not_loss(_fab_giro(40), rif,
+                           reduce_probe(_make_arrivals(8000, persi=range(0, 8000, 100),
                                                     scambi=scambi), 8000),
                            "riordino-25")
     esito("17-⭐⭐ THE FALSE RED: same drop, but the probe saw 1 % of "
           "real loss — then the comparison isolates nothing and the bench KEEPS SILENT",
           p, None, q)
 
-    p, q = p_non_e_perdita(_fab_giro(40), {"esito": "niente"}, pulita, "riordino-25")
+    p, q = p_not_loss(_fab_giro(40), {"esito": "niente"}, pulita, "riordino-25")
     esito("18-⛔ without a reference there is no comparison: SILENT", p, None, q)
 
-    p, q = p_non_e_perdita(B70.misura([], 25, None, None), rif, pulita, "jitter-30")
+    p, q = p_not_loss(B70.misura([], 25, None, None), rif, pulita, "jitter-30")
     esito("19-⛔ the profile delivered nothing: SILENT", p, None, q)
 
     # ── 4 · «loss is paid in delay» ────────────────────────────────────────
     print("\n  ── «loss is paid in delay, not in frames» ──\n")
-    persa = riduci_sonda(_fab_arrivi(8000, persi=range(0, 8000, 100)), 8000)
-    p, q = p_perdita_in_ritardo(_fab_giro(58, deriva=1.5), rif, persa, "perdita-1")
+    persa = reduce_probe(_make_arrivals(8000, persi=range(0, 8000, 100)), 8000)
+    p, q = p_late_loss(_fab_giro(58, deriva=1.5), rif, persa, "perdita-1")
     esito("20-⭐ at perdita-1 the rate holds and what pays is the drift", p, True, q)
 
-    p, q = p_perdita_in_ritardo(_fab_giro(30), rif, persa, "perdita-1")
+    p, q = p_late_loss(_fab_giro(30), rif, persa, "perdita-1")
     esito("21-⛔⛔ at perdita-1 the rate halves: the loss was paid in "
           "FRAMES, and on streams that retransmit it should not be", p, False, q)
 
@@ -1383,11 +1383,11 @@ def certifica():
     print("\n  ── ⭐⭐ «the connection dropped» AND «the delivery stopped»: "
           "two facts, two predicates ──\n")
 
-    ATTACCATO = {"cliente_attaccato": True, "cliente_staccato": False,
+    ATTACHED = {"cliente_attaccato": True, "cliente_staccato": False,
                  "congedi": [], "aperta": True}
 
     # (a) the delivery REDUCTION, which is half of the tool
-    sano = _fab_giro_a_tratti([(25.0, 0.0)])
+    sano = _make_round_in_stretches([(25.0, 0.0)])
     c = sano["consegna"]
     esito("32-⭐ healthy delivery: 25 full s → coverage 25/25, no gap",
           (c["secondi_visti"] == 25 and c["buco_max_s"] < 0.5), True,
@@ -1395,7 +1395,7 @@ def certifica():
                                              c["secondi_finestra"], c["buco_max_s"]))
 
     # ⛔ THE REAL CASE OF 23 AUGUST: the delivery dies at 0.3 s of the 25.
-    morta = _fab_giro_a_tratti([(0.3, 24.7)])
+    morta = _make_round_in_stretches([(0.3, 24.7)])
     c = morta["consegna"]
     esito("33-⛔⛔ THE REAL CASE: the delivery stops at 0.3 s → 1 s out of 25 and a "
           "TAIL gap of 24.7 s (⚠ without counting the tail the gap would be ZERO)",
@@ -1404,8 +1404,8 @@ def certifica():
           c["secondi_finestra"], c["buco_max_s"], c["buco_da_s"]))
 
     # ⭐ And the gap IN THE MIDDLE, which coverage alone would not see as red.
-    bucata = _fab_giro_a_tratti([(10.0, 3.0), (12.0, 0.0)])
-    c = bucata["consegna"]
+    holed = _make_round_in_stretches([(10.0, 3.0), (12.0, 0.0)])
+    c = holed["consegna"]
     esito("34-⭐ a 3 s gap IN THE MIDDLE: coverage 22/25 and gap 3.0 s",
           (2.9 < c["buco_max_s"] < 3.2 and c["secondi_visti"] == 22), True,
           "coverage %d/%d · gap %.2f s from %.2f" % (c["secondi_visti"],
@@ -1419,11 +1419,11 @@ def certifica():
     esito("36-⛔⛔ THE RED THE BENCH EXISTS TO GIVE: delivery stopped at 0.3 s "
           "out of 25", p, False, q)
 
-    p, q = p_consegna_non_si_ferma(bucata)
+    p, q = p_consegna_non_si_ferma(holed)
     esito("37-⛔ the screen frozen for 3 s IN THE MIDDLE of a live session: red, and "
           "coverage alone (88 %) would barely say it", p, False, q)
 
-    corto = _fab_giro_a_tratti([(12.0, 0.4), (12.6, 0.0)])
+    corto = _make_round_in_stretches([(12.0, 0.4), (12.6, 0.0)])
     p, q = p_consegna_non_si_ferma(corto)
     esito("38-⭐ a 0.4 s gap: BELOW the %.1f s threshold — at 40/s it is a "
           "retransmission, not a frozen screen" % BUCO_SCHERMO_FERMO_S,
@@ -1437,7 +1437,7 @@ def certifica():
           "asked for — SILENT", p, None, q)
 
     # (c) THE CONNECTION PREDICATE — and the case that fooled the bench
-    p, q = p_connessione_viva(ATTACCATO)
+    p, q = p_connessione_viva(ATTACHED)
     esito("41-⭐⭐ THE SAME RUN AS CASE 36, asked of the WITNESSES OF THE "
           "CONNECTION: client attached, no farewell → GREEN", p, True, q)
 
@@ -1470,7 +1470,7 @@ def certifica():
     # (d) ⛔⛔ AND THE PAIR, which is the point of the whole cure: THE SAME RUN
     #     must give RED on the delivery and GREEN on the connection.
     pc, qc = p_consegna_non_si_ferma(morta)
-    ps, qs = p_connessione_viva(ATTACCATO)
+    ps, qs = p_connessione_viva(ATTACHED)
     esito("47-⭐⭐⭐ THE CASE THAT FOOLED THE BENCH — delivery stopped WITH "
           "connection alive: red on one, GREEN on the other, and never again a "
           "farewell to look for that is not there",
@@ -1484,7 +1484,7 @@ def certifica():
             "cwnd=%d cwnd_left=0 ssthresh=32000 involo=9800 srtt_us=41230 "
             "rttvar_us=11400 pto_us=132000 dgram_persi=4 dgram_ok=696 "
             "dgram_falsi=11 giudizio=⛔ the line is losing")
-    q = riduci_rete_quic([RIGA % 48000, RIGA % 10240, RIGA % 10240])
+    q = reduce_quic_network([RIGA % 48000, RIGA % 10240, RIGA % 10240])
     esito("48-⭐ three lines read: cwnd min 10 240, end 10 240, and the «giudizio» "
           "reaches the end of the line spaces included",
           (q["righe"] == 3 and q["cwnd_min"] == 10240 and q["cwnd_fine"] == 10240
@@ -1494,7 +1494,7 @@ def certifica():
                                         "cwnd_left_mediana", "dgram_falsi")},
                      ensure_ascii=False))
 
-    q = riduci_rete_quic(["18:22:07 wt  any other line of the log"])
+    q = reduce_quic_network(["18:22:07 wt  any other line of the log"])
     esito("49-⛔ binary older than the `rete-quic` line: «NOTHING TO "
           "READ», ⛔ not zeros (`CODER.md` §3.10)",
           q.get("esito", "").startswith("NOTHING TO READ"), True,
@@ -1572,13 +1572,13 @@ def importa_finto():
     # ⭐ …but the DELIVERY reduction is hooked all the same: it is half of the
     #    cure of 23 August, and a positive control that did not exercise it
     #    would certify a bench different from the one that runs.
-    _aggancia_la_consegna()
+    _hook_delivery()
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 # THE HALF THAT TALKS TO THE TEST MACHINE
 # ═══════════════════════════════════════════════════════════════════════════
-def scrivi_sulla_macchina(nome, testo):
+def write_on_machine(nome, testo):
     """⛔ In base64: the quotes of a heredoc inside a `sudo -S` inside an
        `ssh` are three levels of quoting, and a wrong one does not give an error —
        it gives a truncated file.
@@ -1632,7 +1632,7 @@ def righe_registro():
 # ═══════════════════════════════════════════════════════════════════════════
 # ⭐⭐ THE WITNESSES OF THE CONNECTION — and we ASK, we do not deduce
 # ═══════════════════════════════════════════════════════════════════════════
-def testimoni_connessione(riga0, n):
+def connection_witnesses(riga0, n):
     """⛔ It collects, it does not judge: judging is the job of `p_connessione_viva()`, and the two
        are certified on fabricated witnesses.
 
@@ -1660,7 +1660,7 @@ def testimoni_connessione(riga0, n):
     return t
 
 
-def stampa_testimoni(t):
+def print_witnesses(t):
     _inf("DETACH  client: %s · farewells in the log: %s · opened: %s"
          % ("⭐ still attached" if t.get("cliente_attaccato") else
             ("⛔ dropped — %s" % t.get("caduta")) if t.get("cliente_staccato")
@@ -1686,10 +1686,10 @@ def leggi_rete_quic(riga0):
     """
     rc, out, _ = root("bash -c \"tail -n +%d %s/registro.log | grep -a "
                       "'rete-quic ' | tail -400\"" % (riga0 + 1, LAV))
-    return riduci_rete_quic(out.splitlines())
+    return reduce_quic_network(out.splitlines())
 
 
-def riduci_rete_quic(righe):
+def reduce_quic_network(righe):
     """⛔ The reduction lives apart because it is the one `--certifica` exercises
        on fabricated lines: a contract on the text is tested on the TEXT."""
     righe = [r for r in righe if "rete-quic " in r]
@@ -1735,7 +1735,7 @@ def riduci_rete_quic(righe):
             "giudizi": giudizi}
 
 
-def stampa_terza_gamba(n, q):
+def print_third_leg(n, q):
     """⭐ The two numbers that at `raffica-forte` closed the diagnosis by themselves:
        `[M]` 860 not sent out of 981 and `cwnd` at ~10 KB ⇒ «nothing dropped,
        it is the pacer refusing»."""
@@ -1773,8 +1773,8 @@ def scegli_porta_sonda():
 
 
 def spedisci_sonda():
-    ok_s = scrivi_sulla_macchina("09-b76-sonda.py", SONDA)
-    ok_l = scrivi_sulla_macchina("09-b70-leggi.py", B70.LETTORE)
+    ok_s = write_on_machine("09-b76-sonda.py", SONDA)
+    ok_l = write_on_machine("09-b70-leggi.py", B70.LETTORE)
     if not ok_l:
         _ko("the §11.1 trace reader was not written in %s" % LAV)
     return ok_s and ok_l
@@ -1800,7 +1800,7 @@ def sonda_gira():
     except Exception as e:
         _dub("the probe did not answer: %s — %s" % (e, (out + err)[-200:]))
         return None
-    return riduci_sonda(d.get("arrivi") or [], d.get("quanti") or 0)
+    return reduce_probe(d.get("arrivi") or [], d.get("quanti") or 0)
 
 
 def scena_accendi(movimento):
@@ -1850,7 +1850,7 @@ def rinnova(chi, secondi):
     return True
 
 
-def stampa_consegna(n):
+def print_delivery(n):
     """⭐ The line that was missing on 23 August: not «how long it lasted», but **for
        how many seconds the screen saw something** and **how long it was frozen
        in a row**."""
@@ -1867,7 +1867,7 @@ def stampa_consegna(n):
 
 
 def stampa_sonda(s):
-    if not _ha_sondato(s):
+    if not _has_probed(s):
         _dub("PROBE  %s" % (s or {}).get("esito", "did not measure"))
         return
     _inf("PROBE   lost %d/%d = %.2f %% in %d bursts (average %.2f, max %d) · "
@@ -1913,7 +1913,7 @@ def principale():
 
     if a.passo == "terreno":
         # ⛔ FIRST the two scripts, THEN the check: b70's `terreno_controlla()`
-        #    looks for the reader and cannot write it (see `scrivi_sulla_macchina`).
+        #    looks for the reader and cannot write it (see `write_on_machine`).
         ok = spedisci_sonda()
         return 0 if (B70.terreno_controlla() and ok) else 2
 
@@ -1948,9 +1948,9 @@ def principale():
     # ⚠ And the REFERENCE must be there: without it «disorder is not loss»
     #   and «loss is paid in delay» have no denominator and KEEP SILENT —
     #   which is an honest but useless outcome, and better said before running.
-    if voluti and not any(x[0] == RIFERIMENTO for x in scelti):
+    if voluti and not any(x[0] == REFERENCE for x in scelti):
         _dub("⚠ «%s» is not among the chosen profiles: the comparisons will keep silent for "
-             "lack of a denominator" % RIFERIMENTO)
+             "lack of a denominator" % REFERENCE)
     quanti = len(scelti) + (1 if (not a.senza_coppia and
                                   any(x[0] == "casa-cattiva" for x in scelti)) else 0)
 
@@ -2040,13 +2040,13 @@ def principale():
                 riga0 = righe_registro()
                 n = B70.giro("%s-%s" % (nome, etichetta), movimento,
                              B70.TELA_PIENA, a.secondi)
-                n["testimoni"] = testimoni_connessione(riga0, n)
+                n["testimoni"] = connection_witnesses(riga0, n)
                 n["quic"] = leggi_rete_quic(riga0)
                 print("   [%s]" % etichetta)
                 B70.stampa_giro(n)
-                stampa_consegna(n)
-                stampa_testimoni(n["testimoni"])
-                stampa_terza_gamba(n, n["quic"])
+                print_delivery(n)
+                print_witnesses(n["testimoni"])
+                print_third_leg(n, n["quic"])
                 coppia[etichetta] = n
                 scena_spegni()
             dopo = conti_qdisc()
@@ -2057,7 +2057,7 @@ def principale():
             _inf("QDISC   around the run: %s" % json.dumps(delta))
 
             n = coppia.get("mossa") or {}
-            if nome == RIFERIMENTO and B70._ha_misurato(n) and passa_g:
+            if nome == REFERENCE and B70._ha_misurato(n) and passa_g:
                 riferimento = n
                 _ok("⭐ «%s» becomes the REFERENCE of all the comparisons "
                     "(%.2f frames/s)" % (nome, n["fps"]))
@@ -2066,51 +2066,51 @@ def principale():
             elenco = []
             # ⭐⭐ THE TWO PREDICATES THAT ON 23 AUGUST 2026 WERE ONE — and they are
             #    two different facts with two different causes (⇒ § at the top).
-            passa, perche2 = p_connessione_viva(n.get("testimoni"))
+            passa, why2 = p_connessione_viva(n.get("testimoni"))
             elenco.append(("⛔ the CONNECTION did not drop (§3.3/§8.3: «never "
-                           "detach» — it holds everywhere)", passa, perche2, True))
-            passa, perche2 = p_consegna_non_si_ferma(n)
+                           "detach» — it holds everywhere)", passa, why2, True))
+            passa, why2 = p_consegna_non_si_ferma(n)
             elenco.append(("⭐⭐ the DELIVERY did not stop (coverage ≥ %.2f "
                            "· no gap ≥ %.1f s)"
                            % (COPERTURA_MINIMA, BUCO_SCHERMO_FERMO_S),
-                           passa, perche2, True))
+                           passa, why2, True))
             # ⚠ And the old one runs all the same, marked «diagnosis»: its number
             #   stays next to the two new ones, so whoever rereads yesterday's grid
             #   sees by themselves what was renamed and what was not.
-            passa, perche2 = B70.p_niente_stacco(n)
+            passa, why2 = B70.p_niente_stacco(n)
             elenco.append(("⚠ b70's old «does not detach» — it measures the DURATION "
                            "of the delivery and calls it detachment: here it is diagnosis",
-                           passa, perche2, False))
-            passa, perche2 = B70.p_degrada_nel_tempo(n)
-            elenco.append(("no keyframe spiral (§3.3)", passa, perche2, spirale))
-            passa, perche2 = B70.p_pavimento_ritmo(n)
-            elenco.append(("the rate floor (§2.1: 25/s)", passa, perche2, pieno))
-            passa, perche2 = B70.p_ritardo_non_scappa(n)
-            elenco.append(("the drift does not run away", passa, perche2, pieno))
-            passa, perche2 = p_coda_mia(nome, senza_perdita, delta)
+                           passa, why2, False))
+            passa, why2 = B70.p_degrada_nel_tempo(n)
+            elenco.append(("no keyframe spiral (§3.3)", passa, why2, spirale))
+            passa, why2 = B70.p_pavimento_ritmo(n)
+            elenco.append(("the rate floor (§2.1: 25/s)", passa, why2, pieno))
+            passa, why2 = B70.p_ritardo_non_scappa(n)
+            elenco.append(("the drift does not run away", passa, why2, pieno))
+            passa, why2 = p_coda_mia(nome, senza_perdita, delta)
             elenco.append(("⛔ MY queue throws nothing away of its own", passa,
-                           perche2, senza_perdita))
-            if senza_perdita and nome not in ("liscio", RIFERIMENTO):
-                passa, perche2 = p_non_e_perdita(n, riferimento, s, nome)
-                elenco.append(("⭐⭐ disorder is NOT loss", passa, perche2, True))
+                           why2, senza_perdita))
+            if senza_perdita and nome not in ("liscio", REFERENCE):
+                passa, why2 = p_not_loss(n, riferimento, s, nome)
+                elenco.append(("⭐⭐ disorder is NOT loss", passa, why2, True))
             if not senza_perdita:
-                passa, perche2 = p_perdita_in_ritardo(n, riferimento, s, nome)
+                passa, why2 = p_late_loss(n, riferimento, s, nome)
                 elenco.append(("loss is paid in DELAY, not in frames",
-                               passa, perche2, spirale))
+                               passa, why2, spirale))
 
-            for etichetta, passa, perche2, conta in elenco:
+            for etichetta, passa, why2, conta in elenco:
                 voci["predicati"].append({"predicato": etichetta, "passa": passa,
-                                          "perche": perche2, "conta": conta})
+                                          "perche": why2, "conta": conta})
                 if not conta:
                     _inf("⚠ diagnosis · %s → %s (%s)"
-                         % (etichetta, passa, perche2[:90]))
+                         % (etichetta, passa, why2[:90]))
                     continue
                 (_ok if passa else (_dub if passa is None else _ko))(
-                    "%s: %s" % (etichetta, perche2))
+                    "%s: %s" % (etichetta, why2))
                 if passa is False:
                     rossi.append("%s · %s" % (nome, etichetta))
                 elif passa is None:
-                    muti.append("%s · %s — %s" % (nome, etichetta, perche2[:90]))
+                    muti.append("%s · %s — %s" % (nome, etichetta, why2[:90]))
 
             if "ferma" in coppia:
                 passa_i1, perche_i1 = B70.p_I1(coppia.get("ferma", {}),

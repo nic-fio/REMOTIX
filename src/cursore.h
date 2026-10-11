@@ -45,7 +45,7 @@ typedef struct {
  * Returns 0 if the shape was accepted, -1 if it is malformed (and then it is
  * DECLARED in the log, nothing is sent).
  */
-typedef int (*CursoreArrivata)(void *chi, const CursoreForma *);
+typedef int (*CursorArrived)(void *chi, const CursoreForma *);
 
 /*
  * ⛔ Why there is a module and not a direct call: between PipeWire and the
@@ -57,14 +57,14 @@ typedef int (*CursoreArrivata)(void *chi, const CursoreForma *);
  */
 typedef struct cursore Cursore;
 
-Cursore *cursore_apri(CursoreArrivata quando_cambia, void *chi);
+Cursore *cursor_open(CursorArrived when_changes, void *chi);
 
 /*
  * To be called with PipeWire's raw metadata (`struct spa_meta_cursor`).
- * Returns 1 if the shape CHANGED (and then `quando_cambia` has already been
+ * Returns 1 if the shape CHANGED (and then `when_changes` has already been
  * called), 0 if it is the same as before, -1 if it is malformed.
  */
-int cursore_metadato(Cursore *, const void *spa_meta_cursor, size_t dimensione);
+int cursor_metadata(Cursore *, const void *spa_meta_cursor, size_t dimensione);
 
 /*
  * ⛔⭐ "NEVER HIDE HERE" — phase 12, 20 September 2026, on Plasma.
@@ -83,6 +83,6 @@ int cursore_metadato(Cursore *, const void *spa_meta_cursor, size_t dimensione);
  */
 void cursore_mai_nascondere(Cursore *, const char *perche);
 
-void cursore_chiudi(Cursore *);
+void cursor_close(Cursore *);
 
 #endif /* REMOTIX_CURSORE_H */

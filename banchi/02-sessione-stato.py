@@ -121,12 +121,12 @@ from gi.repository import Gio, GLib  # noqa: E402
 
 # The product Mutter gives the persistent monitor requested with
 # `--virtual-monitor` (`meta-context-main.c:592-597`, read on 12 Aug 2026 [R]).
-PRODOTTO_CHIESTO = "MetaVirtualMonitor"
+REQUESTED_PRODUCT = "MetaVirtualMonitor"
 # And the one it sets by itself when a virtual ScreenCast wants one
 # (`meta-screen-cast-virtual-stream-src.c:606-609` [R]).  They are TWO different
 # strings, and it is the only thing that tells «mine» from «its own»: the size
 # does not, because it can coincide.
-PRODOTTO_DA_SE = "Virtual remote monitor"
+SELF_CHOSEN_PRODUCT = "Virtual remote monitor"
 
 MARCHE = {
     0: "HEALTHY",
@@ -139,7 +139,7 @@ MARCHE = {
     7: "SHELL NOT EMPTY",
 }
 # From strongest to weakest.  ⛔ The 6 sits at the bottom on purpose: see the header.
-PRECEDENZA = [5, 4, 7, 3, 2, 1, 6, 0]
+PRECEDENCE = [5, 4, 7, 3, 2, 1, 6, 0]
 
 VERDE = "\033[1;32m"
 ROSSO = "\033[1;31m"
@@ -171,11 +171,11 @@ def titolo(t):
 # Gathering the facts.  Every fact has three possible outcomes — it is there,
 # it is not there, I could not read it — and the third is not mistaken for the second.
 # ---------------------------------------------------------------------------
-class Ignota(Exception):
+class Unknown(Exception):
     """I could not read.  ⛔ It is not «it is not there»."""
 
 
-def processi_shell():
+def shell_processes():
     """The pids of gnome-shell.  ⛔ `pgrep -x`: `comm` is truncated to 15 characters
     (`FASI.md` §00-ambiente B3.1), and «gnome-shell» has 11 — it fits.  But the
     exit status is checked: 0 found, 1 none, 2+ ERROR."""
@@ -185,24 +185,24 @@ def processi_shell():
         return [int(r) for r in e.stdout.split()]
     if e.returncode == 1:
         return []
-    raise Ignota(f"pgrep exited with {e.returncode}: {e.stderr.strip()!r}")
+    raise Unknown(f"pgrep exited with {e.returncode}: {e.stderr.strip()!r}")
 
 
-def riga_comando(pid):
+def command_line(pid):
     try:
         with open(f"/proc/{pid}/cmdline", "rb") as f:
             return [a.decode("utf-8", "replace")
                     for a in f.read().split(b"\0") if a]
     except OSError as err:
-        raise Ignota(f"cannot read /proc/{pid}/cmdline: {err}")
+        raise Unknown(f"cannot read /proc/{pid}/cmdline: {err}")
 
 
-def ambiente_di(pid):
+def environment_of(pid):
     try:
         with open(f"/proc/{pid}/environ", "rb") as f:
             grezzo = f.read()
     except OSError as err:
-        raise Ignota(f"cannot read /proc/{pid}/environ: {err}")
+        raise Unknown(f"cannot read /proc/{pid}/environ: {err}")
     amb = {}
     for voce in grezzo.split(b"\0"):
         if b"=" in voce:
@@ -218,14 +218,14 @@ def pid_gnome_session():
         return int(e.stdout.split()[0])
     if e.returncode == 1:
         return None
-    raise Ignota(f"pgrep gnome-session-binary exited with {e.returncode}")
+    raise Unknown(f"pgrep gnome-session-binary exited with {e.returncode}")
 
 
 def bus():
     try:
         return Gio.bus_get_sync(Gio.BusType.SESSION, None)
     except GLib.Error as err:
-        raise Ignota(f"cannot connect to the session bus: {err.message}")
+        raise Unknown(f"cannot connect to the session bus: {err.message}")
 
 
 def chiama(conn, dest, path, iface, metodo, args=None, tetto=15000):
@@ -242,7 +242,7 @@ def chiama(conn, dest, path, iface, metodo, args=None, tetto=15000):
         return None, err.message
 
 
-def leggi_monitor(conn):
+def read_monitor(conn):
     """The monitors according to `org.gnome.Mutter.DisplayConfig.GetCurrentState`.
 
     The signature of the answer is
@@ -256,15 +256,15 @@ def leggi_monitor(conn):
                        "/org/gnome/Mutter/DisplayConfig",
                        "org.gnome.Mutter.DisplayConfig", "GetCurrentState")
     if errore is not None:
-        raise Ignota(f"GetCurrentState: {errore}")
+        raise Unknown(f"GetCurrentState: {errore}")
     serial, monitors, logical, props = r.unpack()
     elenco = []
     for (connettore, fornitore, prodotto, seriale), modi, mprops in monitors:
         corrente = None
         for m in modi:
-            mid, larg, alt, refresh, scala, scale, mp = m
+            mid, wid, alt, refresh, scala, scale, mp = m
             if mp.get("is-current"):
-                corrente = {"id": mid, "larghezza": larg, "altezza": alt,
+                corrente = {"id": mid, "larghezza": wid, "altezza": alt,
                             "refresh": round(refresh, 3)}
         elenco.append({"connettore": connettore, "fornitore": fornitore,
                        "prodotto": prodotto, "seriale": seriale,
@@ -274,7 +274,7 @@ def leggi_monitor(conn):
 
 
 # ---------------------------------------------------------------------------
-def raccogli_dal_bus():
+def collect_from_bus():
     """Builds the SCENE: all the raw facts, without judging them.
 
     ⭐ Separating gathering from judging is not elegance: it is the only thing that
@@ -284,10 +284,10 @@ def raccogli_dal_bus():
              "macchina": os.uname().nodename, "ignote": []}
 
     try:
-        pids = processi_shell()
+        pids = shell_processes()
         scena["shell_pid"] = pids
-        scena["shell_riga"] = riga_comando(pids[0]) if pids else None
-    except Ignota as e:
+        scena["shell_riga"] = command_line(pids[0]) if pids else None
+    except Unknown as e:
         scena["shell_pid"] = None
         scena["shell_riga"] = None
         scena["ignote"].append(str(e))
@@ -296,7 +296,7 @@ def raccogli_dal_bus():
         p = pid_gnome_session()
         scena["gnome_session_pid"] = p
         if p:
-            amb = ambiente_di(p)
+            amb = environment_of(p)
             # ⛔ The trap of `STUDI.md` §gnome §3.1: `gnome-session.in:3-14`
             #    re-executes itself inside a LOGIN shell if `$SHELL` is in
             #    /etc/shells.  The real check is `[ -n "$SHELL" ]`, so
@@ -309,14 +309,14 @@ def raccogli_dal_bus():
             scena["shell_var"] = None
             scena["shell_var_presente"] = None
             scena["xdg_session_type"] = None
-    except Ignota as e:
+    except Unknown as e:
         scena["gnome_session_pid"] = None
         scena["shell_var_presente"] = None
         scena["ignote"].append(str(e))
 
     try:
         conn = bus()
-    except Ignota as e:
+    except Unknown as e:
         scena["ignote"].append(str(e))
         scena["sessione_gira"] = None
         scena["display"] = None
@@ -339,8 +339,8 @@ def raccogli_dal_bus():
         scena["ignote"].append(f"IsSessionRunning: {errore}")
 
     try:
-        scena["display"] = leggi_monitor(conn)
-    except Ignota as e:
+        scena["display"] = read_monitor(conn)
+    except Unknown as e:
         scena["display"] = None
         scena["ignote"].append(str(e))
 
@@ -387,7 +387,7 @@ def controllo_positivo(conn, scena):
 # run on a recorded scene, and that is what makes the tool certifiable
 # without breaking a real machine for every opposite case.
 # ---------------------------------------------------------------------------
-def giudica(scena, attesa_l, attesa_a):
+def giudica(scena, want_w, want_h):
     stati = set()
     detto = []
 
@@ -424,18 +424,18 @@ def giudica(scena, attesa_l, attesa_a):
     # What the COMMAND LINE asks for.
     riga = scena.get("shell_riga") or []
     chiesto = None
-    chiesto_headless = "--headless" in riga
+    requested_headless = "--headless" in riga
     for i, a in enumerate(riga):
         m = re.match(r"^--virtual-monitor=(.+)$", a)
         if m:
             chiesto = m.group(1)
         elif a == "--virtual-monitor" and i + 1 < len(riga):
             chiesto = riga[i + 1]
-    chiesto_wh = None
+    requested_wh = None
     if chiesto:
         m = re.match(r"^(\d+)x(\d+)", chiesto)
         if m:
-            chiesto_wh = (int(m.group(1)), int(m.group(2)))
+            requested_wh = (int(m.group(1)), int(m.group(2)))
 
     # What the BUS says.
     d = scena.get("display")
@@ -463,51 +463,51 @@ def giudica(scena, attesa_l, attesa_a):
             m0 = monitor[0]
             dice(f"monitor: connector={m0['connettore']!r} vendor={m0['fornitore']!r} "
                  f"product={m0['prodotto']!r} serial={m0['seriale']!r}")
-            if m0["prodotto"] == PRODOTTO_DA_SE:
+            if m0["prodotto"] == SELF_CHOSEN_PRODUCT:
                 stati.add(3)
-                dice(f"⛔ the product is «{PRODOTTO_DA_SE}»: Mutter created this monitor "
+                dice(f"⛔ the product is «{SELF_CHOSEN_PRODUCT}»: Mutter created this monitor "
                      "by itself for a ScreenCast, we did not request it "
                      "(E2 — a component that decides by itself)")
-            elif m0["prodotto"] != PRODOTTO_CHIESTO:
+            elif m0["prodotto"] != REQUESTED_PRODUCT:
                 stati.add(3)
                 dice(f"⛔ unexpected product {m0['prodotto']!r}: it is neither our "
-                     f"«{PRODOTTO_CHIESTO}» nor the ScreenCast one")
+                     f"«{REQUESTED_PRODUCT}» nor the ScreenCast one")
             mc = m0["modo_corrente"]
             if mc is None:
                 stati.add(2)
                 dice("⛔ the monitor has no current mode")
-            elif (mc["larghezza"], mc["altezza"]) != (attesa_l, attesa_a):
+            elif (mc["larghezza"], mc["altezza"]) != (want_w, want_h):
                 stati.add(2)
                 dice(f"⛔ size {mc['larghezza']}x{mc['altezza']}, expected "
-                     f"{attesa_l}x{attesa_a}")
+                     f"{want_w}x{want_h}")
             else:
                 dice(f"size {mc['larghezza']}x{mc['altezza']} at {mc['refresh']} Hz: "
                      "it is the requested one")
 
     # ⛔ THE DISAGREEMENT BETWEEN THE TWO READINGS — E1.
     if riga and monitor is not None:
-        nostro = [m for m in monitor if m["prodotto"] == PRODOTTO_CHIESTO]
-        if chiesto_wh and not nostro:
+        nostro = [m for m in monitor if m["prodotto"] == REQUESTED_PRODUCT]
+        if requested_wh and not nostro:
             dice(f"⚠ the command line asks for --virtual-monitor {chiesto} and on the bus "
-                 f"there is no «{PRODOTTO_CHIESTO}» monitor")
+                 f"there is no «{REQUESTED_PRODUCT}» monitor")
             stati.add(6)
-        if not chiesto_wh and nostro:
-            dice(f"⚠ on the bus there is a «{PRODOTTO_CHIESTO}» and the command line does NOT "
+        if not requested_wh and nostro:
+            dice(f"⚠ on the bus there is a «{REQUESTED_PRODUCT}» and the command line does NOT "
                  "ask for it: someone put it there by another road")
             stati.add(6)
-        if chiesto_wh and nostro and nostro[0]["modo_corrente"]:
+        if requested_wh and nostro and nostro[0]["modo_corrente"]:
             mc = nostro[0]["modo_corrente"]
-            if (mc["larghezza"], mc["altezza"]) != chiesto_wh:
-                dice(f"⚠ the line asks for {chiesto_wh[0]}x{chiesto_wh[1]} and the bus says "
+            if (mc["larghezza"], mc["altezza"]) != requested_wh:
+                dice(f"⚠ the line asks for {requested_wh[0]}x{requested_wh[1]} and the bus says "
                      f"{mc['larghezza']}x{mc['altezza']}")
                 stati.add(6)
-        if not chiesto_headless:
+        if not requested_headless:
             dice("⚠ --headless is NOT on the command line: if headless is there it is "
                  "by accident (STUDI.md §gnome §1.2, DECISIONI.md §4.3-bis)")
 
     if not stati:
         stati.add(0)
-    for c in PRECEDENZA:
+    for c in PRECEDENCE:
         if c in stati:
             return c, sorted(stati), detto
     return 0, [], detto
@@ -531,16 +531,16 @@ def principale():
     if not m:
         print(f"⛔ --attesa {a.attesa!r} is not in the form WIDTHxHEIGHT")
         return 2
-    attesa_l, attesa_a = int(m.group(1)), int(m.group(2))
+    want_w, want_h = int(m.group(1)), int(m.group(2))
 
     if a.da_scena and a.dal_bus:
         print("⛔ either --dal-bus or --da-scena, not both")
         return 2
 
     titolo(f"The expected, WRITTEN BEFORE looking — scene «{a.etichetta}»")
-    inf(f"requested size: {attesa_l}x{attesa_a}")
-    inf(f"expected product of the monitor: «{PRODOTTO_CHIESTO}»")
-    inf(f"and the one that would mean E2: «{PRODOTTO_DA_SE}»")
+    inf(f"requested size: {want_w}x{want_h}")
+    inf(f"expected product of the monitor: «{REQUESTED_PRODUCT}»")
+    inf(f"and the one that would mean E2: «{SELF_CHOSEN_PRODUCT}»")
 
     if a.da_scena:
         titolo(f"The scene, read from {a.da_scena}")
@@ -553,7 +553,7 @@ def principale():
         inf(f"recorded on {scena.get('quando')} on {scena.get('macchina')}")
     else:
         titolo("The scene, read from the live bus")
-        scena = raccogli_dal_bus()
+        scena = collect_from_bus()
 
     if a.registra:
         os.makedirs(os.path.dirname(os.path.abspath(a.registra)), exist_ok=True)
@@ -562,7 +562,7 @@ def principale():
         inf(f"scene recorded in {a.registra}")
 
     titolo("The facts, and the verdict")
-    codice, tutti, detto = giudica(scena, attesa_l, attesa_a)
+    codice, tutti, detto = giudica(scena, want_w, want_h)
     for r in detto:
         (no if r.startswith("⛔") else att if r.startswith("⚠") else inf)(r)
 
@@ -594,7 +594,7 @@ def principale():
             f.write(json.dumps({
                 "quando": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
                 "banco": "F2.1", "scena": a.etichetta,
-                "attesa": f"{attesa_l}x{attesa_a}",
+                "attesa": f"{want_w}x{want_h}",
                 "uscita": codice, "marca": MARCHE[codice],
                 "stati": [MARCHE[c] for c in tutti],
                 "fonte": "scena:" + a.da_scena if a.da_scena else "bus",

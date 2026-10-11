@@ -105,17 +105,17 @@ typedef struct aiutante aiutante;
 aiutante *aiutante_accendi(void);
 
 /* Closes the socket and sends `SIGTERM` to the dispatcher. */
-void aiutante_spegni(aiutante *a);
+void helper_turn_off(aiutante *a);
 
 /* The descriptor to put in the `poll`, or -1 if the helper is off/dead. */
-int aiutante_descrittore(const aiutante *a);
+int helper_descriptor(const aiutante *a);
 
 /* ⛔ Asks for the check and RETURNS AT ONCE.  `true` = the question has left
  * and an answer will arrive (or expire); `false` = **it has not left**, and the
  * caller must treat it as an immediate «no».
  * `pratica` comes out with the number by which the answer will be recognised. */
 bool aiutante_chiedi(aiutante *a, const char *utente, const char *parola,
-                     const char *provenienza, uint64_t ora_ms,
+                     const char *provenienza, uint64_t now_ms,
                      uint64_t *pratica);
 
 /* ⛔⭐ AND THE DELIVERY ALSO CARRIES THE USER'S NAME — 12 Aug 2026,
@@ -145,10 +145,10 @@ void aiutante_muovi(aiutante *a, AiutanteVerdetto consegna, void *ctx);
 /* ⛔ Expires the requests that are too old, delivering a «no».  It is the
  * safety net of case 5: a grandchild killed halfway writes nothing, and
  * without this call the session would stay in `attesa-verdetto` forever. */
-void aiutante_scaduti(aiutante *a, uint64_t ora_ms, AiutanteVerdetto consegna,
+void helper_expired(aiutante *a, uint64_t now_ms, AiutanteVerdetto consegna,
                       void *ctx);
 
 /* How many requests are in flight.  For the log. */
-int aiutante_in_volo(const aiutante *a);
+int helper_in_flight(const aiutante *a);
 
 #endif

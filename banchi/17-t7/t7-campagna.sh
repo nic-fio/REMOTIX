@@ -41,15 +41,15 @@ export T7_NUOVO=$NUOVO
 u=$(id -u)
 declare -A WL
 for d in gnome kde xfce lxqt; do WL[$d]=$(cat /run/user/$u/15-compositori/$d); done
-ORDINE=(gnome kde xfce lxqt gnome kde)
+ORDER=(gnome kde xfce lxqt gnome kde)
 for d in $DESKTOP; do
-	for i in 0 1 2 3; do [ "${ORDINE[$i]}" = "$d" ] && k=$i; done
+	for i in 0 1 2 3; do [ "${ORDER[$i]}" = "$d" ] && k=$i; done
 	for m in ${MODI:-aggiornamento riavvio}; do
 		echo "$(date +%T) ===== $d $m"
 		env XDG_RUNTIME_DIR=/run/user/$u REMOTIX_SCHERMO_ANNIDATO=1 REMOTIX_SUL_SERVER=1 \
 			REMOTIX_CHROME_OPZIONI="--ozone-platform=wayland" MOZ_ENABLE_WAYLAND=1 \
-			T7_WL_FIREFOX=${WL[$d]} T7_WL_CHROME=${WL[${ORDINE[$((k+1))]}]} \
-			T7_WL_TERZO=${WL[${ORDINE[$((k+2))]}]} WAYLAND_DISPLAY=${WL[$d]} \
+			T7_WL_FIREFOX=${WL[$d]} T7_WL_CHROME=${WL[${ORDER[$((k+1))]}]} \
+			T7_WL_TERZO=${WL[${ORDER[$((k+2))]}]} WAYLAND_DISPLAY=${WL[$d]} \
 			python3 -u $T/t7-aggiorna.py "$d" "$m" 2>&1 | tee $T/$d-$m.log | grep -a "^T7 \|re-enters\|found again:\|third\|⛔\|Traceback"
 	done
 done

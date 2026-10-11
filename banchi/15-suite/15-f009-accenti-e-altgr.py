@@ -66,7 +66,7 @@ G2 = S._carica("g2scena", os.path.join(S.QUI, "15-g2-scena.py"))
 
 FUNZIONI = ("F-009",)
 #   character, code of the position (Italian keyboard), keyCode, modifier
-TASTIERA_IT = (
+KEYBOARD_IT = (
     ("è", "BracketLeft", 219, None), ("à", "Quote", 222, None),
     ("ò", "Semicolon", 186, None), ("ù", "Backslash", 220, None),
     ("é", "BracketLeft", 219, "Shift"), ("ç", "Semicolon", 186, "Shift"),
@@ -76,22 +76,22 @@ TASTIERA_IT = (
     ("€", "KeyE", 69, "AltGraph"),
     ("È", "BracketLeft", 219, "CapsLock"),
 )
-DICHIARATI_NON_SCRIVIBILI = {"È"}     # xkb `it` basic has no Egrave on any level
-SCRIVIBILI = "".join(c for c, _k, _v, _m in TASTIERA_IT if c not in DICHIARATI_NON_SCRIVIBILI)
-TUTTI = "".join(c for c, _k, _v, _m in TASTIERA_IT)
+DECLARED_UNWRITABLE = {"È"}     # xkb `it` basic has no Egrave on any level
+WRITABLE = "".join(c for c, _k, _v, _m in KEYBOARD_IT if c not in DECLARED_UNWRITABLE)
+TUTTI = "".join(c for c, _k, _v, _m in KEYBOARD_IT)
 ATTESA_S = 8.0
 # ⛔ Phase 16 §12 (25 Sep 2026): the log no longer writes WHICH character — it was
 #    the user's keystroke.  It says «a character is not producible…»: in the scene
 #    the non-producible one is only one (È), and it is counted.  The old form is still read.
-PRODUCIBILE = re.compile(r"(?:U\+([0-9A-Fa-f]{4,6})|a character) is not producible with "
+PRODUCIBLE = re.compile(r"(?:U\+([0-9A-Fa-f]{4,6})|a character) is not producible with "
                          r"layout ([^:]*)")
-IN_VIGORE = re.compile(r"layout in force[^:]*: (.*)$")
+IN_EFFECT = re.compile(r"layout in force[^:]*: (.*)$")
 
 # ── D-015: the user's settings, read FROM DISK as they would read them
-CHIAVI_IS = ("sources", "mru-sources", "current", "xkb-options")
-LEGGI_IMPOSTAZIONI = (
+IS_KEYS = ("sources", "mru-sources", "current", "xkb-options")
+READ_SETTINGS = (
     "export HOME=/home/%(c)s; p=$(mktemp); echo user-db:user > \"$p\"; "
-    "for k in " + " ".join(CHIAVI_IS) + "; do "
+    "for k in " + " ".join(IS_KEYS) + "; do "
     "v=$(DCONF_PROFILE=\"$p\" gsettings get org.gnome.desktop.input-sources \"$k\" "
     "2>/dev/null) || v='(non letta)'; echo \"is.$k=$v\"; done; rm -f \"$p\"; "
     # ⚠ of kxkbrc only the [Layout] group (the layout): Plasma can create
@@ -107,7 +107,7 @@ SCRIVI_GUASTO = (
     "echo scritto")
 
 
-def leggi_impostazioni(testo):
+def read_settings(testo):
     """{key: value} from the «name=value» lines; None if there is nothing."""
     d = {}
     for r in (testo or "").splitlines():
@@ -117,7 +117,7 @@ def leggi_impostazioni(testo):
     return d or None
 
 
-def giudica_impostazioni(prima, dopo):
+def judge_settings(prima, dopo):
     """(outcome, sentence): the user's settings must be the ones from BEFORE."""
     if prima is None or dopo is None:
         return S.BLOCKED, "the user's settings could not be read (%s)" % (
@@ -131,13 +131,13 @@ def giudica_impostazioni(prima, dopo):
 
 
 def impostazioni(s):
-    c, t = s.come_utente("sh -c %s" % S._q(LEGGI_IMPOSTAZIONI % {"c": s.chi}), 60)
-    return leggi_impostazioni(t) if c == 0 else None
+    c, t = s.as_user("sh -c %s" % S._q(READ_SETTINGS % {"c": s.chi}), 60)
+    return read_settings(t) if c == 0 else None
 
 
 def sequenza():
     p = []
-    for c, code, vk, mod in TASTIERA_IT:
+    for c, code, vk, mod in KEYBOARD_IT:
         tasto = G2.premi(c, code, vk)
         if mod == "CapsLock":
             p += G2.premi("CapsLock") + tasto + G2.premi("CapsLock")
@@ -151,16 +151,16 @@ def sequenza():
 def dichiarati(righe):
     """{character: layout} from the «is not producible» lines of the log."""
     d = {}
-    anonimi = 0
+    anonymous = 0
     for r in righe:
-        m = PRODUCIBILE.search(r)
+        m = PRODUCIBLE.search(r)
         if m and m.group(1):
             d[chr(int(m.group(1), 16))] = m.group(2).strip()
         elif m:
             # ⭐ without a name: it holds for the first of the declared ones not yet seen
-            resto = sorted(c for c in DICHIARATI_NON_SCRIVIBILI if c not in d)
-            ch = resto[0] if resto else "?%d" % anonimi
-            anonimi += 1
+            resto = sorted(c for c in DECLARED_UNWRITABLE if c not in d)
+            ch = resto[0] if resto else "?%d" % anonymous
+            anonymous += 1
             d[ch] = m.group(2).strip()
     return d
 
@@ -170,20 +170,20 @@ def giudica(st, righe):
     if not st or st.get("a") is None:
         return S.BLOCKED, "the scene did not tell the value of the field"
     a = st["a"]
-    dic = dichiarati(righe)
+    decl = dichiarati(righe)
     if a == TUTTI:
         return S.PASS, "a=%r (even «È» came out)" % a
-    if a == SCRIVIBILI:
-        mancanti_dichiarati = [c for c in DICHIARATI_NON_SCRIVIBILI if c in dic]
-        if len(mancanti_dichiarati) == len(DICHIARATI_NON_SCRIVIBILI):
+    if a == WRITABLE:
+        declared_missing = [c for c in DECLARED_UNWRITABLE if c in decl]
+        if len(declared_missing) == len(DECLARED_UNWRITABLE):
             return S.PASS, ("a=%r; «%s» not typeable with «%s» and it is DECLARED in the log"
-                            % (a, "".join(mancanti_dichiarati), dic[mancanti_dichiarati[0]]))
+                            % (a, "".join(declared_missing), decl[declared_missing[0]]))
         return S.FAIL, ("a=%r: «%s» vanished SILENTLY (no «is not producible» line)"
-                        % (a, "".join(DICHIARATI_NON_SCRIVIBILI)))
-    mancano = [c for c in SCRIVIBILI if c not in a]
+                        % (a, "".join(DECLARED_UNWRITABLE)))
+    mancano = [c for c in WRITABLE if c not in a]
     return S.FAIL, ("a=%r instead of %r · missing %s · declared not producible by the server: %s"
-                    % (a, SCRIVIBILI, "".join(mancano) or "-",
-                       ", ".join("%s (%s)" % kv for kv in dic.items()) or "none"))
+                    % (a, WRITABLE, "".join(mancano) or "-",
+                       ", ".join("%s (%s)" % kv for kv in decl.items()) or "none"))
 
 
 def certifica():
@@ -193,25 +193,25 @@ def certifica():
         print("   %s %s%s" % ("⭐ ok " if vero else "⛔ NO ", cosa, (" — " + det) if det else ""))
         if not vero:
             guai.append(cosa)
-    riga_e = ("21:00:00.000 tastiera [c15009u1] U+00C8 is not producible with layout "
+    line_e = ("21:00:00.000 tastiera [c15009u1] U+00C8 is not producible with layout "
               "it [Italian]: NOTHING sent (RCP.md §7.3)")
-    riga_u = riga_e.replace("U+00C8", "U+00E8").replace("it [Italian]", "us [English (US)]")
-    prova("reading the log", dichiarati([riga_e]) == {"È": "it [Italian]"},
-          repr(dichiarati([riga_e])))
-    riga_n = ("21:00:00.000 tastiera [c15009u1] a character is not producible with "
+    line_u = line_e.replace("U+00C8", "U+00E8").replace("it [Italian]", "us [English (US)]")
+    prova("reading the log", dichiarati([line_e]) == {"È": "it [Italian]"},
+          repr(dichiarati([line_e])))
+    line_n = ("21:00:00.000 tastiera [c15009u1] a character is not producible with "
               "layout it [Italian]: NOTHING sent (RCP.md §7.3; which one, is not written — phase 16 §12)")
     prova("reading the form without character (phase 16 §12)",
-          dichiarati([riga_n]) == {"È": "it [Italian]"}, repr(dichiarati([riga_n])))
+          dichiarati([line_n]) == {"È": "it [Italian]"}, repr(dichiarati([line_n])))
     prova("form without character, È declared ⇒ PASS",
-          giudica({"a": SCRIVIBILI}, [riga_n])[0] == S.PASS)
+          giudica({"a": WRITABLE}, [line_n])[0] == S.PASS)
     prova("form without character, È vanished silently ⇒ FAIL",
-          giudica({"a": SCRIVIBILI}, [])[0] == S.FAIL)
-    prova("all typed, È declared ⇒ PASS", giudica({"a": SCRIVIBILI}, [riga_e])[0] == S.PASS)
+          giudica({"a": WRITABLE}, [])[0] == S.FAIL)
+    prova("all typed, È declared ⇒ PASS", giudica({"a": WRITABLE}, [line_e])[0] == S.PASS)
     prova("È typed too ⇒ PASS", giudica({"a": TUTTI}, [])[0] == S.PASS)
-    prova("È vanished silently ⇒ FAIL", giudica({"a": SCRIVIBILI}, [])[0] == S.FAIL)
+    prova("È vanished silently ⇒ FAIL", giudica({"a": WRITABLE}, [])[0] == S.FAIL)
     prova("with «us» (è not producible) ⇒ FAIL",
-          giudica({"a": SCRIVIBILI.replace("è", "")}, [riga_e, riga_u])[0] == S.FAIL)
-    prova("a different letter ⇒ FAIL", giudica({"a": SCRIVIBILI.replace("@", "\"")}, [riga_e])[0]
+          giudica({"a": WRITABLE.replace("è", "")}, [line_e, line_u])[0] == S.FAIL)
+    prova("a different letter ⇒ FAIL", giudica({"a": WRITABLE.replace("@", "\"")}, [line_e])[0]
           == S.FAIL)
     prova("no field ⇒ BLOCKED", giudica(None, [])[0] == S.BLOCKED)
     seq = sequenza()
@@ -222,30 +222,30 @@ def certifica():
     # D-015
     uscita = ("is.sources=@a(ss) []\nis.mru-sources=@a(ss) []\nis.current=uint32 0\n"
               "is.xkb-options=@as []\nkxkbrc=assente\n")
-    pr = leggi_impostazioni(uscita)
+    pr = read_settings(uscita)
     prova("reading the settings", pr and pr["is.sources"] == "@a(ss) []"
           and pr["kxkbrc"] == "assente", repr(pr))
-    prova("equal settings ⇒ PASS", giudica_impostazioni(pr, dict(pr))[0] == S.PASS)
+    prova("equal settings ⇒ PASS", judge_settings(pr, dict(pr))[0] == S.PASS)
     scritta = dict(pr, **{"is.sources": "[('xkb', 'it')]"})
     prova("input-sources written in the user ⇒ FAIL",
-          giudica_impostazioni(pr, scritta)[0] == S.FAIL)
+          judge_settings(pr, scritta)[0] == S.FAIL)
     prova("user's kxkbrc born ⇒ FAIL",
-          giudica_impostazioni(pr, dict(pr, kxkbrc="LayoutList=it"))[0] == S.FAIL)
-    prova("not read ⇒ BLOCKED", giudica_impostazioni(None, pr)[0] == S.BLOCKED)
-    prova("nothing to read ⇒ None", leggi_impostazioni("sh: errore") is None)
+          judge_settings(pr, dict(pr, kxkbrc="LayoutList=it"))[0] == S.FAIL)
+    prova("not read ⇒ BLOCKED", judge_settings(None, pr)[0] == S.BLOCKED)
+    prova("nothing to read ⇒ None", read_settings("sh: errore") is None)
     print("⛔ CERTIFICATION FAILED" if guai else "⭐ CERTIFIED")
     return 1 if guai else 0
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-def prova_una(s, sc, mp, nome):
+def test_one(s, sc, mp, nome):
     """Types the sequence; returns (outcome, sentence, evidence, layouts in force)."""
-    segno = s.segno_registro()
+    segno = s.log_mark()
     st, foto, saltati, perche = G2.batti(
-        s, sc, mp, sequenza(), nome, lambda q: q.get("a") in (TUTTI, SCRIVIBILI), ATTESA_S,
-        saltabili=("AltGraph", "CapsLock"))
+        s, sc, mp, sequenza(), nome, lambda q: q.get("a") in (TUTTI, WRITABLE), ATTESA_S,
+        skippable=("AltGraph", "CapsLock"))
     righe = s.registro_da(segno) if segno is not None else []
-    ev = [x for x in (foto, s.salva_testo("server-%s.txt" % nome, righe)) if x]
+    ev = [x for x in (foto, s.save_text("server-%s.txt" % nome, righe)) if x]
     if perche:
         return S.BLOCKED, perche, ev, []
     e, m = giudica(st, righe)
@@ -255,27 +255,27 @@ def prova_una(s, sc, mp, nome):
     return e, m, ev, righe
 
 
-def disposizione_in_vigore(s, segno):
+def active_layout(s, segno):
     righe = s.registro_da(segno) if segno is not None else []
-    v = [IN_VIGORE.search(r).group(1).strip() for r in righe if IN_VIGORE.search(r)]
+    v = [IN_EFFECT.search(r).group(1).strip() for r in righe if IN_EFFECT.search(r)]
     rip = [r for r in righe if "FALLBACK" in r and "layout" in r]
     return v[-1] if v else "?", rip
 
 
 def corpo(o, E):
     with S.Sessione(o, "009", E) as s:
-        segno0 = s.segno_registro()
+        sign0 = s.log_mark()
         # D-015: the user's settings BEFORE the session sees them
         prima = impostazioni(s)
         print("   user's settings, before: %s" % prima, flush=True)
         sc, mp, geo, dove = G2.prepara(s, o.porte_base + 7, lingua="it-IT")
-        disp, rip = disposizione_in_vigore(s, segno0)
+        disp, rip = active_layout(s, sign0)
         print("   layout in force: %s%s" % (disp, " · ⚠ " + rip[-1][:200] if rip else ""),
               flush=True)
-        e, m, ev, _r = prova_una(s, sc, mp, "accenti-sana")
+        e, m, ev, _r = test_one(s, sc, mp, "accenti-sana")
         if e == S.FAIL:
             print("   ⚠ red (%s): redoing it to confirm" % m, flush=True)
-            e2, m2, ev2, _r = prova_una(s, sc, mp, "accenti-sana-bis")
+            e2, m2, ev2, _r = test_one(s, sc, mp, "accenti-sana-bis")
             ev += ev2
             if e2 == S.PASS:
                 e, m = S.PASS, "⚠ RED at the first attempt (%s), green at the second: %s" % (m, m2)
@@ -285,8 +285,8 @@ def corpo(o, E):
             disp, "; FALLBACK: " + rip[-1].split("] ", 1)[-1][:160] if rip else "", m)
         # D-015: and AFTER the pass, from disk, the same as before
         dopo = impostazioni(s)
-        ei, mi = giudica_impostazioni(prima, dopo)
-        p = s.salva_testo("impostazioni-utente.txt",
+        ei, mi = judge_settings(prima, dopo)
+        p = s.save_text("impostazioni-utente.txt",
                           "before: %r\nafter:  %r\n%s" % (prima, dopo, mi))
         if p:
             ev.append(p)
@@ -295,36 +295,36 @@ def corpo(o, E):
             e = ei
         E.metti("F-009", e, m, atteso="«%s» in the field; «È» not typeable and declared; "
                 "user's settings (input-sources, kxkbrc) the ones from before"
-                % SCRIVIBILI, osservato=m, evidenze=([dove] if dove else []) + ev
-                + ([s.salva_console()] if e != S.PASS else []))
+                % WRITABLE, osservato=m, evidenze=([dove] if dove else []) + ev
+                + ([s.save_console()] if e != S.PASS else []))
         if o.guasto:
             # injection 1 (D-015): a simulated persistent write in the user
-            _c, t = s.come_utente("sh -c %s" % S._q(SCRIVI_GUASTO % {"c": s.chi}), 60)
-            dopo_g = impostazioni(s)
-            eig, mig = giudica_impostazioni(prima, dopo_g)
+            _c, t = s.as_user("sh -c %s" % S._q(SCRIVI_GUASTO % {"c": s.chi}), 60)
+            after_g = impostazioni(s)
+            eig, mig = judge_settings(prima, after_g)
             print("   FAULT 1, simulated persistent write (%s): %s"
                   % ((t or "").strip().replace("\n", " | ")[-120:], mig), flush=True)
             if eig == S.BLOCKED:
                 E.guasto("F-009", None, "injection 1 (simulated persistent write) not "
                          "observable: %s" % mig)
                 return
-            visto_1 = eig == S.FAIL
+            seen_1 = eig == S.FAIL
             # injection 2: the browser in English
-            segno1 = s.segno_registro()
-            print("   FAULT: %s, and reattaching" % G2.metti_lingua(s.g, "en-US"), flush=True)
+            sign1 = s.log_mark()
+            print("   FAULT: %s, and reattaching" % G2.set_language(s.g, "en-US"), flush=True)
             ok, mm = s.entra()
             nl = s.g.js("return navigator.language") if ok else "?"
             if not ok or nl != "en-US":
                 E.guasto("F-009", None, "the reattach in English did not succeed: %s (language %s)"
                          % (mm, nl))
                 return
-            disp_g, _rip = disposizione_in_vigore(s, segno1)
-            eg, mg, evg, _r = prova_una(s, sc, mp, "accenti-guasto")
-            visto_2 = None if eg == S.BLOCKED else eg == S.FAIL
-            E.guasto("F-009", None if visto_2 is None else (visto_1 and visto_2),
+            avail_g, _rip = active_layout(s, sign1)
+            eg, mg, evg, _r = test_one(s, sc, mp, "accenti-guasto")
+            seen_2 = None if eg == S.BLOCKED else eg == S.FAIL
+            E.guasto("F-009", None if seen_2 is None else (seen_1 and seen_2),
                      "injection 1, simulated persistent write: %s — %s · injection 2, "
                      "browser in en-US, layout in force «%s»: %s"
-                     % ("RED (seen)" if visto_1 else "⛔ NOT seen", mig, disp_g, mg),
+                     % ("RED (seen)" if seen_1 else "⛔ NOT seen", mig, avail_g, mg),
                      atteso="red both: the user's settings changed; with "
                      "«us» the accents are not there", osservato=mig + " · " + mg,
                      evidenze=evg)

@@ -10,7 +10,7 @@
 # 11-accendi.sh server, plus --codifica).  It leaves /media/REMOTIX/rete11/prodotto/remotix
 # = the chosen binary: the caller puts it back afterwards.
 set -u
-MD5=$1; STRADA=$2; ETI=$3
+MD5=$1; STRADA=$2; LBL=$3
 D=${REMOTIX_D:-lxqt}; case $D in gnome) PORTA=8511;; kde) PORTA=8512;; xfce) PORTA=8513;; *) PORTA=8514;; esac
 R=/media/REMOTIX/rete11
 PAROLA=$(awk '/^pass:/{print $2; exit}' "$HOME/SERVER.ssh")
@@ -18,8 +18,8 @@ S() { printf '%s\n' "$PAROLA" | sudo -S -p '' "$@"; }
 cd $R || exit 2
 cp "prodotto/remotix.$MD5" prodotto/remotix || exit 2
 echo "binary $(md5sum prodotto/remotix | cut -c1-8) · route $STRADA · $(date +%T)"
-S env REMOTIX_SCHEDA=amd bash 11-accendi.sh prodotto $D >/tmp/f018-$ETI-prodotto.log 2>&1 || { echo "⛔ prodotto"; tail -3 /tmp/f018-$ETI-prodotto.log; exit 2; }
-S env REMOTIX_SCHEDA=amd bash 11-accendi.sh server $D >/tmp/f018-$ETI-server.log 2>&1 || { echo "⛔ server"; tail -3 /tmp/f018-$ETI-server.log; exit 2; }
+S env REMOTIX_SCHEDA=amd bash 11-accendi.sh prodotto $D >/tmp/f018-$LBL-prodotto.log 2>&1 || { echo "⛔ prodotto"; tail -3 /tmp/f018-$LBL-prodotto.log; exit 2; }
+S env REMOTIX_SCHEDA=amd bash 11-accendi.sh server $D >/tmp/f018-$LBL-server.log 2>&1 || { echo "⛔ server"; tail -3 /tmp/f018-$LBL-server.log; exit 2; }
 if [ "$STRADA" != scheda ]; then
 	S podman exec rete11-$D sh -c "
 		systemctl stop rete11-server 2>/dev/null; systemctl reset-failed rete11-server 2>/dev/null
@@ -38,7 +38,7 @@ fi
 echo "routes at startup: $(S podman exec rete11-$D sh -c "grep -a -o 'route [a-z]* (requested «[a-z]*»)' /var/lib/rete11/registro.log | sort | uniq -c | tr '\n' ';'")"
 PF0=$(S journalctl -k --no-pager 2>/dev/null | grep -c 'page fault')
 RS0=$(S journalctl -k --no-pager 2>/dev/null | grep -c 'GPU reset begin')
-EV=/media/REMOTIX/misure/fase15/giro19-diagnosi/$ETI
+EV=/media/REMOTIX/misure/fase15/giro19-diagnosi/$LBL
 mkdir -p "$EV"
 export XDG_RUNTIME_DIR=/run/user/$(id -u)
 bash /media/REMOTIX/src/controllo/banchi/15-suite/15-una.sh 15-f018-riattacco-a-misura-diversa.py --scatola $D --browser firefox --guasto --evidenze "$EV" > "$EV/uscita.log" 2>&1

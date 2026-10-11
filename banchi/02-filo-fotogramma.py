@@ -353,7 +353,7 @@ import time
 #    symptom.  ⚠ `INTESTAZIONE` in particular is the number `RCP.md` §6.2
 #    already had to correct once, on 9 Aug 2026: the drawing gave
 #    `… 24 │ 32`, that is four padding bytes never declared.
-INTESTAZIONE = 28                 # §6.2, «exactly 28 bytes, no padding»
+HEADER = 28                 # §6.2, «exactly 28 bytes, no padding»
 TETTO_FOTOGRAMMA = 16 * 1024 * 1024   # §6.2, «MUST NOT produce a frame
                                       # longer than 16 MiB»
 CHIAVE, DELTA = 0x0301, 0x0302    # §5.2, §6.2
@@ -449,16 +449,16 @@ class Contesto:
         #    out of order».  ⇒ Right after a `TELA(ADATTATA)` the client has in
         #    flight frames that **legitimately** carry the previous size,
         #    and §6.2 to the letter makes it close the session.
-        #    ⚠ `tela_precedente` is `None` as long as nothing has ever changed:
+        #    ⚠ `previous_canvas` is `None` as long as nothing has ever changed:
         #      `None` is «there is no previous one», and it is NOT a size.
-        self.tela_precedente = None
+        self.previous_canvas = None
         # ⛔⛔ AND THE CANVASES THAT WERE IN FORCE **SINCE THE QUEUE
         #    STARTED DRAINING**, not a single one.  §6.2 named «the
         #    **previous** canvas» in the singular, ⚠ but `ADATTA_TELA` is sent by the user
         #    dragging a window, and dragging sends several:
         #    the canvas can change twice while a frame is still in
         #    flight (finding **P11**, cured on 12 Aug 2026).
-        self.tele_recenti = []
+        self.recent_canvases = []
         # ⛔⭐ D13, §5.2: after a `TELA(ADATTATA)` the first frame at the
         #    NEW size MUST be a real keyframe.  ⚠ `True` by default means
         #    «there is no pending canvas change»: at the start of the session
@@ -521,7 +521,7 @@ class Contesto:
         self.chiedi_chiave = False    # §5.2: the client MUST ask for it on a gap
         # ⛔ «Does this reader apply exception 6 of §3?» — and it is NOT «the
         #    second has not passed yet»: the second is no longer there (P13).
-        self.grazia_concessa = True
+        self.grace_granted = True
         # ⛔⛔⭐ AND THE CANVAS CHANGE REQUESTS THE CLIENT SENT AND THAT
         #     NO `TELA` HAS ANSWERED YET — proposal **P21**, 13 Aug 2026.
         #
@@ -542,7 +542,7 @@ class Contesto:
         #     ⛔ Empty by default: whoever declares nothing has yesterday's judge, and
         #       no reader importing this file (`01-b4-validatore.py`,
         #       `02-filo-validatore.py`) changes verdict without knowing — I6.
-        self.adatta_in_volo = []
+        self.fit_in_flight = []
 
     def adatta_spedito(self, lar, alt):
         """⭐⛔ **The client has sent an `ADATTA_TELA(lar, alt)`** — §7.1, and the
@@ -553,7 +553,7 @@ class Contesto:
            referee reading a **recording** sees it anyway, because
            §11.1 records both directions.
         """
-        self.adatta_in_volo.append((lar, alt))
+        self.fit_in_flight.append((lar, alt))
 
     def risponde_il_tela(self):
         """⛔ A `TELA` has arrived: **one** request in flight has been answered.
@@ -568,8 +568,8 @@ class Contesto:
         ⚠ It holds for both outcomes: a `TELA(RIFIUTATA)` answers as much as a
           `TELA(ADATTATA)` (§7.1, *«successful or not»*).
         """
-        if self.adatta_in_volo:
-            self.adatta_in_volo.pop(0)
+        if self.fit_in_flight:
+            self.fit_in_flight.pop(0)
 
     def adatta_tela(self, lar, alt, precedente=None, grazia=True):
         """§7.1 — a `TELA(ADATTATA, lar, alt)` has arrived.
@@ -645,13 +645,13 @@ class Contesto:
         # ⛔ The list keeps the previous one **and** those before, if the queue
         #    was already draining: two `TELA`s in a row are the normal scene of
         #    whoever drags a window (P11).
-        self.tele_recenti = ([prec] + self.tele_recenti
+        self.recent_canvases = ([prec] + self.recent_canvases
                              if self.coda_da_svuotare() else [prec])
-        self.tela_precedente = prec
+        self.previous_canvas = prec
         # ⚠ `grazia` no longer opens a time: it only says **whether this reader
         #   applies exception 6 of §3**.  Off (fault G6) the queue is not
         #   tolerated at all, and it is the judge from before the cure.
-        self.grazia_concessa = bool(grazia)
+        self.grace_granted = bool(grazia)
         self.chiave_alla_tela_nuova = False
         self.tela_larghezza, self.tela_altezza = lar, alt
         self.tela_da = "TELA(ADATTATA) (§7.1)"
@@ -674,8 +674,8 @@ class Contesto:
           exists to protect.  ⭐ And lengthening the second would have **moved**
           the defect instead of removing it.
         """
-        return (self.grazia_concessa and not self.chiave_alla_tela_nuova
-                and bool(self.tele_recenti))
+        return (self.grace_granted and not self.chiave_alla_tela_nuova
+                and bool(self.recent_canvases))
 
     def arriva_la_chiave_nuova(self):
         """⛔ The first keyframe at the new size has arrived: **the queue has
@@ -692,7 +692,7 @@ class Contesto:
         self.chiave_alla_tela_nuova = True
         # ⛔ And with the queue the old sizes go away: they are no longer «in
         #    flight», they are sizes that are worth nothing any more (§6.2).
-        self.tele_recenti = []
+        self.recent_canvases = []
 
 
 # ---------------------------------------------------------------------------
@@ -715,7 +715,7 @@ class Giudice:
         self.dove = dove              # "uni" | "controllo"
         self.guasti = set(guasti)
         self.grezzo = bytearray()     # ONLY the header, never the data
-        self.byte_dati = 0
+        self.byte_data = 0
         self.verdetto = None          # the first verdict wins
         self.letta = False
         self.campi = {}
@@ -725,24 +725,24 @@ class Giudice:
         #    broken is **the judgement**, not the scoring: a switch that
         #    turned off a check would make the bench red without
         #    proving that the bench can see that fault.  See `--elenco`.
-        self.intestazione = 32 if "G1" in self.guasti else INTESTAZIONE
-        self.tipi_leciti = ({CHIAVE, DELTA, 0x0300} if "G2" in self.guasti
+        self.intestazione = 32 if "G1" in self.guasti else HEADER
+        self.allowed_types = ({CHIAVE, DELTA, 0x0300} if "G2" in self.guasti
                             else {CHIAVE, DELTA})
         self.reset_come_fin = "G3" in self.guasti
         # ⛔ G5 — «the judge of the morning of 12 Aug 2026», that is BEFORE
         #    the four lines entered `RCP.md`.  See the header.
-        self.regole_12_agosto = "G5" not in self.guasti
+        self.rules_aug_12 = "G5" not in self.guasti
         # ⛔ G6 and G7 — «the judge of the EVENING of 12 Aug», before the two
         #    cures of D13 and D14.  Each switches off a single line.
-        self.grazia_di_6_2 = "G6" not in self.guasti      # D14, §6.2 + §3 exc. 6
-        self.chiave_di_5_2 = "G7" not in self.guasti      # D13, §5.2
+        self.grace_6_2 = "G6" not in self.guasti      # D14, §6.2 + §3 exc. 6
+        self.key_of_5_2 = "G7" not in self.guasti      # D13, §5.2
         # ⛔ G8 and G9 — «the judge of two hours ago», that is between the two
         #    cures of the evening and the two that put them back on their feet (P11 and P10).
-        self.finestra_di_6_2 = "G8" not in self.guasti    # P11: the window
-        self.rilievo_di_5_2 = "G9" not in self.guasti     # P10: the finding
+        self.window_6_2 = "G8" not in self.guasti    # P11: the window
+        self.survey_of_5_2 = "G9" not in self.guasti     # P10: the finding
         # ⛔ G10 — «the judge with the clock»: the tolerance goes back to ending by
         #    time, that is the line as it was before the **P13** cure.
-        self.orologio_tolto = "G10" not in self.guasti
+        self.clock_removed = "G10" not in self.guasti
         # ⛔ G11 — «the judge of an hour ago»: the size looked at BEFORE
         #    the order, that is §6.2 without the precedence of P14.
         self.ordine_prima = "G11" not in self.guasti
@@ -757,8 +757,8 @@ class Giudice:
         #        `ATTACCA` can push pixels onto whoever has not attached yet.
         #        ⚠ It is the form in which **P5** ended up wrong:
         #        a cure that saves the case that motivated it and opens the other.
-        self.sessione_come_grandezza = "G12" in self.guasti
-        self.chiude_prima_di_attacca = "G13" not in self.guasti
+        self.session_as_quantity = "G12" in self.guasti
+        self.closes_before_attach = "G13" not in self.guasti
         # ⛔⛔ G14 and G15 — THE TWO WAYS OF WRITING **P21** BADLY, one per direction, and
         #     the first is not invented: it is **the cure as it was proposed**.
         #
@@ -774,19 +774,19 @@ class Giudice:
         #         away the P11 line — the one that closes **at once** on a size
         #         nobody ever asked for — that is right where the server is
         #         most likely to err.
-        self.p21_sulla_misura = "G14" in self.guasti
-        self.p21_trattiene_sempre = "G15" in self.guasti
+        self.p21_on_measure = "G14" in self.guasti
+        self.p21_always_holds_back = "G15" in self.guasti
         # ⛔ The size tolerated by the grace is KEPT, not decided at once:
         #    a frame in flight stays subject to all the other lines of
         #    §6.2 — the order of the `numero`s, the ceiling, the FIN — and deciding here
         #    would skip `_giudica_completo`, that is it would acquit a stream that
         #    never closed.
-        self.misura_tollerata = None
+        self.tolerated_size = None
         # ⛔ The finding on the **client's state** (P10), which is not the outcome:
         #    see point 8-bis.  `None` = «there was nothing to say», and it is not
         #    «I did not look»: the decoder is declared from outside, and
         #    when it is not declared the bench does not invent where it is.
-        self.rilievo_cliente = None
+        self.survey_client = None
 
     # -- the outcome is written only once: the first verdict is the cause, the
     #    following ones are consequences (like `_cade` in `01-b3-cliente.py`).
@@ -809,7 +809,7 @@ class Giudice:
         is `AMBIGUO` instead of `ERRORE_PROTOCOLLO`, and the four cases that must
         drop turn red with the mark `nome: ERRORE_PROTOCOLLO -> AMBIGUO`.
         """
-        if not self.regole_12_agosto:
+        if not self.rules_aug_12:
             return self._decidi(Verdetto(AMBIGUO, regola_prima, dice_prima,
                                          scostamento=scostamento,
                                          propone=sigla))
@@ -829,13 +829,13 @@ class Giudice:
                 self._leggi_intestazione()
                 if self.verdetto is not None:
                     return
-        self.byte_dati += len(pezzo)
+        self.byte_data += len(pezzo)
         # ⛔ THE CEILING IS CHECKED HERE, WHILE THE BYTES FLOW — §6.2.
-        if self.intestazione + self.byte_dati > TETTO_FOTOGRAMMA:
+        if self.intestazione + self.byte_data > TETTO_FOTOGRAMMA:
             self._decidi(Verdetto(
                 ERRORE_PROTOCOLLO, "RCP.md §6.2",
                 f"the frame exceeded {TETTO_FOTOGRAMMA} bytes "
-                f"({self.intestazione + self.byte_dati} so far): it closes "
+                f"({self.intestazione + self.byte_data} so far): it closes "
                 f"«instead of continuing to accumulate»"))
 
     def finisce(self, come):
@@ -881,7 +881,7 @@ class Giudice:
 
     # -- the header, field by field, in the order of §6.2 -------------------
     def _leggi_intestazione(self):
-        g = bytes(self.grezzo[:INTESTAZIONE])
+        g = bytes(self.grezzo[:HEADER])
         tipo, codec, lar, alt, num, ist, inp = struct.unpack("!HHIIIQI", g)
         self.campi = {"tipo": tipo, "codec": codec, "larghezza": lar,
                       "altezza": alt, "numero": num, "istante": ist,
@@ -951,7 +951,7 @@ class Giudice:
         #         delivery — losing the packet that carries `SESSIONE` is enough.
         #         ⇒ Today the case comes out `AMBIGUO` with the cure next to it: it belongs to the
         #         coordinator, not to this bench.
-        if not self.c.attacca_spedito and self.chiude_prima_di_attacca:
+        if not self.c.attacca_spedito and self.closes_before_attach:
             return self._decidi(Verdetto(
                 ERRORE_PROTOCOLLO, "RCP.md §2.5",
                 "a frame before `SESSIONE`: §2.5 forbids the server to "
@@ -960,7 +960,7 @@ class Giudice:
                 "receive a pixel",
                 scostamento=0))
         if not self.c.sessione_aperta:
-            if self.sessione_come_grandezza:
+            if self.session_as_quantity:
                 # ⛔ TODAY's reading, to the letter: it closes.  It is the
                 #    substitute quantity, and it is what the test client
                 #    did at its first live round (`P2-6` §5.2).
@@ -981,7 +981,7 @@ class Giudice:
                 scostamento=0, propone="P20"))
 
         # 4. ⛔ THE TYPE — §6.2: «Other values: ERRORE_PROTOCOLLO».
-        if tipo not in self.tipi_leciti:
+        if tipo not in self.allowed_types:
             return self._decidi(Verdetto(
                 ERRORE_PROTOCOLLO, "RCP.md §6.2",
                 f"type {tipo:#06x}: RCP/1 defines two, {CHIAVE:#06x} "
@@ -1107,8 +1107,8 @@ class Giudice:
             #      had just closed.
             # ⛔ With fault **G8** the window goes back to being «the previous one»
             #    alone, that is the line of two hours ago.
-            finestra = (self.c.tele_recenti if self.finestra_di_6_2
-                        else self.c.tele_recenti[:1])
+            finestra = (self.c.recent_canvases if self.window_6_2
+                        else self.c.recent_canvases[:1])
             # ⭐⛔ **P13 — THE TOLERANCE ENDS AT THE KEYFRAME, NOT BY THE CLOCK.**
             #    §6.2: *«the tolerance does not end by the clock: it ends when
             #    the first keyframe at the new size arrives»*.  ⇒ The condition is
@@ -1117,13 +1117,13 @@ class Giudice:
             #    the clock», the line of two hours ago — can put it back in charge and
             #    the session can be seen dropping on the slow line.
             coda = self.c.coda_da_svuotare()
-            if not self.orologio_tolto and self.c.secondo_passato:
+            if not self.clock_removed and self.c.secondo_passato:
                 coda = False
-            if (coda and self.grazia_di_6_2 and (lar, alt) in finestra):
+            if (coda and self.grace_6_2 and (lar, alt) in finestra):
                 # ⛔ It is NOT decided here: the tolerance is marked and it goes on.
                 #    A frame in flight stays subject to the order of the
                 #    `numero`s, to the ceiling and to the FIN.
-                self.misura_tollerata = (lar, alt)
+                self.tolerated_size = (lar, alt)
                 # ⭐⛔ **P10 — AND HERE WE LOOK AT WHERE THE DECODER IS.**
                 #
                 #    §5.2, line entered on the evening of 12 Aug: *«the client
@@ -1140,10 +1140,10 @@ class Giudice:
                 #      nobody made a mistake; the finding talks about the **client's
                 #      state**, which is declared from outside because it is not on the
                 #      wire.
-                if (self.rilievo_di_5_2
+                if (self.survey_of_5_2
                         and self.c.decodificatore_a is not None
                         and self.c.decodificatore_a != (lar, alt)):
-                    self.rilievo_cliente = (
+                    self.survey_client = (
                         f"⛔ the decoder is configured at "
                         f"{self.c.decodificatore_a[0]}x"
                         f"{self.c.decodificatore_a[1]} while a "
@@ -1175,7 +1175,7 @@ class Giudice:
             #        **the client itself sent**, that is the same quantity as
             #        P20 and the general form of the `numero` of P14: local,
             #        monotonic, independent of delivery.  ⛔ And it is NOT «the
-            #        size the client named» — see `adatta_in_volo` and
+            #        size the client named» — see `fit_in_flight` and
             #        fault G14: §4.5 allows the server to grant a
             #        canvas **different from the requested one**, and the discriminant
             #        written on the numbers would kill the healthy session one step
@@ -1183,23 +1183,23 @@ class Giudice:
             #     ⛔ And nothing is cured here: `RCP.md` belongs to the coordinator.
             #        As long as the document carries the two lines, the honest outcome is
             #        `AMBIGUO` — two conforming implementations diverge.
-            in_volo = (self.p21_trattiene_sempre
-                       or ((lar, alt) in self.c.adatta_in_volo
-                           if self.p21_sulla_misura
-                           else bool(self.c.adatta_in_volo)))
-            if self.misura_tollerata is None and in_volo:
+            in_volo = (self.p21_always_holds_back
+                       or ((lar, alt) in self.c.fit_in_flight
+                           if self.p21_on_measure
+                           else bool(self.c.fit_in_flight)))
+            if self.tolerated_size is None and in_volo:
                 return self._decidi(Verdetto(
                     AMBIGUO, "RCP.md §6.2",
                     f"the frame is {lar}x{alt}, the canvas in force is "
                     f"{self.c.tela_larghezza}x{self.c.tela_altezza} and that "
                     f"size was never in force in this window — "
-                    f"⛔ but the client has {len(self.c.adatta_in_volo)} "
+                    f"⛔ but the client has {len(self.c.fit_in_flight)} "
                     f"`ADATTA_TELA` sent and unanswered: §6.2 says "
                     f"«hold back» in the paragraph of the frames in flight and "
                     f"`ERRORE_PROTOCOLLO` **at once** eight lines below.  Two "
                     f"conforming implementations, two different bytes",
                     scostamento=4, propone="P21"))
-            if self.misura_tollerata is None:
+            if self.tolerated_size is None:
                 return self._chiuso_il_12_agosto(
                     "P5", 4, "RCP.md §6.2",
                     f"the frame is {lar}x{alt} and the canvas IN FORCE is "
@@ -1271,10 +1271,10 @@ class Giudice:
         #       and this judge applies it to whoever **receives**: it is the strict
         #       reading, and it is the same P6 has had since this morning.  A gap in the
         #       `numero`s tells the two cases apart, and no line says to look at it.
-        if (self.chiave_di_5_2
+        if (self.key_of_5_2
                 and self.c.tela_da.startswith("TELA")
                 and not self.c.chiave_alla_tela_nuova
-                and self.misura_tollerata is None
+                and self.tolerated_size is None
                 and tipo == DELTA):
             return self._decidi(Verdetto(
                 ERRORE_PROTOCOLLO, "RCP.md §5.2",
@@ -1330,12 +1330,12 @@ class Giudice:
             #    *«it ends when the first keyframe at the new size arrives»* ⇒
             #    from here on an old size is `ERRORE_PROTOCOLLO`, and it is not
             #    a clock that says so but a frame that was seen.
-            if self.misura_tollerata is None:
+            if self.tolerated_size is None:
                 self.c.arriva_la_chiave_nuova()
         se = (f"{'keyframe' if self.campi['tipo'] == CHIAVE else 'delta'} "
               f"no. {num}, {self.campi['larghezza']}x{self.campi['altezza']}, "
-              f"{self.byte_dati} bytes of data")
-        if self.misura_tollerata is not None:
+              f"{self.byte_data} bytes of data")
+        if self.tolerated_size is not None:
             # ⛔ §3, last line: the tolerance IS WRITTEN IN THE LOG.  A
             #    silent tolerance is indistinguishable from a defect.
             return Verdetto(
@@ -1344,10 +1344,10 @@ class Giudice:
                 f"`TELA(ADATTATA)` has just passed, so it was already in flight. "
                 f"It is painted **rescaled to the view** and it is the sixth exception "
                 f"of §3, which must be written in the log",
-                tollerato=(f"canvas {self.misura_tollerata[0]}x"
-                           f"{self.misura_tollerata[1]}, in force within the "
+                tollerato=(f"canvas {self.tolerated_size[0]}x"
+                           f"{self.tolerated_size[1]}, in force within the "
                            f"second just passed (§6.2, §3 exception 6)"),
-                rilievo=self.rilievo_cliente)
+                rilievo=self.survey_client)
         return Verdetto(ACCETTATO, "RCP.md §6.2", se)
 
 
@@ -1440,7 +1440,7 @@ REGOLE_NUOVE = {
         "rispetta": "primo-fotogramma-chiave",
     },
     # ── ⭐⛔ AND THE TWO ENTERED ON THE **EVENING** OF 12 AUG, FROM D13 AND D14 ─
-    #    ⚠ Until that evening they sat in the `PROPOSTE_APERTE` table here
+    #    ⚠ Until that evening they sat in the `OPEN_PROPOSALS` table here
     #      below, and their cases came out `AMBIGUO`.  ⛔ The day a
     #      proposal becomes a line, its cases change **expectation**: leaving them
     #      where they were would mean judging yesterday's document, which is what
@@ -1608,7 +1608,7 @@ REGOLE_DI_STATO = {
 #    ⚠ It was not found by a rereading: it was found by the **test client** at
 #      its first round against a server that really sends (`P2-6` §5.2), and the
 #      cure of that round cured the **bench** — not the line.
-PROPOSTE_APERTE = {
+OPEN_PROPOSALS = {
     "P20": {
         "dove": "RCP.md §2.5, «video» line of the table",
         "dice":
@@ -1666,7 +1666,7 @@ PROPOSTE_APERTE = {
     #     13 AUG 2026 by lining up again the six that by now live together:
     #     P8 -> P11 -> P13 -> P14 -> P19 -> P20 -> **P21**.
     #     ⚠ On 13 Aug it was born as a finding **declared and not cured**
-    #       (`RILIEVI_DICHIARATI`), without a case.  ⛔ It stayed there one round
+    #       (`DECLARED_FINDINGS`), without a case.  ⛔ It stayed there one round
     #       only: a finding that has a cure, three cases and a fault per direction
     #       **is no longer a finding, it is a proposal** — and the table it is
     #       written in is half of what it says.
@@ -1786,7 +1786,7 @@ PROPOSTE_APERTE = {
 #       or with «no case», declared.
 #     ⛔ And nothing is cured here: `RCP.md` belongs to the coordinator, and on the evening of
 #       12 Aug 2026 three lines applied in a hurry cost three rounds.
-RILIEVI_DICHIARATI = {
+DECLARED_FINDINGS = {
     "P15": {
         "dove": "RCP.md §7.1 — the grace on the **input coordinates**, which "
                 "stayed «for one second»",
@@ -1852,7 +1852,7 @@ RILIEVI_DICHIARATI = {
 
 # ⭐⛔ AND THIS TABLE HOSTED ONE FOR ONE ROUND ONLY: **P21**, born here on
 #    13 Aug 2026 — «§6.2 commands the opposite of itself eight lines
-#    apart» — and moved to `PROPOSTE_APERTE` the round after, with the text
+#    apart» — and moved to `OPEN_PROPOSALS` the round after, with the text
 #    ready, three cases and two faults.  ⛔ The move is not bookkeeping: a
 #    finding is a **reading**, a proposal is a **cure with the cases that
 #    keep it honest**, and this bench says which of the two it is delivering
@@ -1877,10 +1877,10 @@ def rilievi_col_caso(casi):
       things it is delivering (`REVIEWER.md` §4: a finding without «how it is
       proved» is a hypothesis).
     """
-    per_nome = {c["nome"] for c in casi}
+    per_name = {c["nome"] for c in casi}
     con, senza = [], []
-    for sigla, r in RILIEVI_DICHIARATI.items():
-        if r["caso"] and r["caso"] in per_nome:
+    for sigla, r in DECLARED_FINDINGS.items():
+        if r["caso"] and r["caso"] in per_name:
             con.append(sigla)
         else:
             senza.append(sigla)
@@ -1897,12 +1897,12 @@ def proposte_coperte(casi):
       prevent writing it **too broadly**.  ⛔ Requiring here the same
       form as there would mean pretending the cure is already applied.
     """
-    per_nome = {c["nome"]: c for c in casi}
+    per_name = {c["nome"]: c for c in casi}
     coperte, mancanti = [], []
-    for sigla, p in PROPOSTE_APERTE.items():
+    for sigla, p in OPEN_PROPOSALS.items():
         buchi = []
         for nome, atteso in p["casi"].items():
-            c = per_nome.get(nome)
+            c = per_name.get(nome)
             if c is None:
                 buchi.append(f"the case «{nome}» is missing")
             elif c["atteso"] != atteso:
@@ -1925,12 +1925,12 @@ def regole_di_stato_coperte(casi):
       halves of the mark (R12-A.3), applied to a finding instead of a
       fault.
     """
-    per_nome = {c["nome"]: c for c in casi}
+    per_name = {c["nome"]: c for c in casi}
     coperte, mancanti = [], []
     for sigla, r in REGOLE_DI_STATO.items():
         buchi = []
         for chi, nome in (("VIOLATES", r["viola"]), ("RESPECTS", r["rispetta"])):
-            c = per_nome.get(nome)
+            c = per_name.get(nome)
             if c is None:
                 buchi.append(f"the case that {chi} it is missing («{nome}»)")
             elif c["atteso"] != ACCETTATO:
@@ -1956,35 +1956,35 @@ def regole_coperte(casi):
     and «the rule is not tested at all» are two different defects, and the first
     is the one that lets a rule written too broadly pass.
     """
-    per_nome = {c["nome"]: c for c in casi}
+    per_name = {c["nome"]: c for c in casi}
     coperte, mancanti = [], []
     for sigla, r in REGOLE_NUOVE.items():
         # ⛔ «viola» can be ONE or MORE THAN ONE, and the difference is not one of
         #    convenience: **P8** has two halves to keep tight — the grace
         #    second and the size — and a rule that tested only one
         #    would stay green with the other written too broadly.
-        nomi_viola = (r["viola"] if isinstance(r["viola"], (tuple, list))
+        violated_names = (r["viola"] if isinstance(r["viola"], (tuple, list))
                       else (r["viola"],))
         # ⛔ AND THE EXPECTED OUTCOME OF THE TWO HALVES IS DECLARED, not taken for
         #    granted: **P14** has the pair «discarded / really closes», and
         #    requiring `ERRORE_PROTOCOLLO` and `ACCETTATO` here would have meant
         #    that a rule with a different form cannot be counted —
         #    that is counting it wrong, or not counting it at all.
-        att_v = r.get("esito_viola", ERRORE_PROTOCOLLO)
-        att_s = r.get("esito_rispetta", ACCETTATO)
-        s = per_nome.get(r["rispetta"])
+        expected_v = r.get("esito_viola", ERRORE_PROTOCOLLO)
+        expected_s = r.get("esito_rispetta", ACCETTATO)
+        s = per_name.get(r["rispetta"])
         buchi = []
-        for nome_v in nomi_viola:
-            v = per_nome.get(nome_v)
+        for name_v in violated_names:
+            v = per_name.get(name_v)
             if v is None:
-                buchi.append(f"the case that VIOLATES it is missing («{nome_v}»)")
-            elif v["atteso"] != att_v:
-                buchi.append(f"«{nome_v}» does not require {att_v} but "
+                buchi.append(f"the case that VIOLATES it is missing («{name_v}»)")
+            elif v["atteso"] != expected_v:
+                buchi.append(f"«{name_v}» does not require {expected_v} but "
                              f"{v['atteso']}")
         if s is None:
             buchi.append(f"the case that RESPECTS it is missing («{r['rispetta']}»)")
-        elif s["atteso"] != att_s:
-            buchi.append(f"«{r['rispetta']}» does not require {att_s} but "
+        elif s["atteso"] != expected_s:
+            buchi.append(f"«{r['rispetta']}» does not require {expected_s} but "
                          f"{s['atteso']}")
         if buchi:
             mancanti.append((sigla, "; ".join(buchi)))
@@ -2137,7 +2137,7 @@ def _():
 def _():
     def pezzi():
         yield intestazione()
-        rimane = TETTO_FOTOGRAMMA - INTESTAZIONE + 1
+        rimane = TETTO_FOTOGRAMMA - HEADER + 1
         blocco = b"\x00" * (1 << 20)
         while rimane > 0:
             n = min(rimane, len(blocco))
@@ -2154,7 +2154,7 @@ def _():
 def _():
     def pezzi():
         yield intestazione()
-        rimane = TETTO_FOTOGRAMMA - INTESTAZIONE
+        rimane = TETTO_FOTOGRAMMA - HEADER
         blocco = b"\x00" * (1 << 20)
         while rimane > 0:
             n = min(rimane, len(blocco))
@@ -2511,7 +2511,7 @@ def _():
       "RCP.md §6.2",
       # ⛔ THE CONTEXT BECAME EXPLICIT ON 13 AUG 2026 — proposal
       #    **P21** — and the expectation did NOT change.  ⭐ The field that decides is
-      #    `adatta_in_volo`, and here it is **empty**: both `TELA`s have
+      #    `fit_in_flight`, and here it is **empty**: both `TELA`s have
       #    arrived, so there is no request of the client that 800x600
       #    could still grant.  ⇒ It is the case that keeps the P21 cure TIGHT:
       #    without it, *«always hold back»* would stay green on the whole
@@ -3063,7 +3063,7 @@ def gira_caso(c, guasti):
     secondo_passato = campi.pop("secondo_passato", False)
     # ⚠ And the keyframe at the new size is declared **after** the `TELA`, because it is
     #    what closes the queue: see `arriva_la_chiave_nuova()`.
-    chiave_nuova = campi.pop("chiave_alla_tela_nuova", None)
+    new_key = campi.pop("chiave_alla_tela_nuova", None)
     if adatta is not None:
         # ⛔ One or MORE THAN ONE: whoever drags a window sends more than one
         #    `ADATTA_TELA` per second, and it is the scene of the case
@@ -3094,9 +3094,9 @@ def gira_caso(c, guasti):
     for k, v in campi.items():
         setattr(ctx, k, v)
     ctx.secondo_passato = secondo_passato
-    if chiave_nuova:
+    if new_key:
         ctx.arriva_la_chiave_nuova()
-    elif chiave_nuova is False:
+    elif new_key is False:
         ctx.chiave_alla_tela_nuova = False
     g = Giudice(ctx, dove=c["dove"], guasti=guasti)
     pezzi, come = c["fabbrica"]()
@@ -3156,7 +3156,7 @@ def giro(a, guasti=(), silenzioso=False):
         print("       This is NOT a green.  The names are read with --elenco.")
         return None
     guastati, ambigui, righe = 0, [], []
-    testo_intero = []
+    whole_text = []
     for c in casi:
         try:
             visto, v, ctx = gira_caso(c, guasti)
@@ -3167,10 +3167,10 @@ def giro(a, guasti=(), silenzioso=False):
         ok = (errore is None and visto == atteso)
         # ⛔ AND THE CITED RULE IS COMPARED, not just printed: a red
         #    with the wrong section next to it passes for a right red.
-        regola_ok = (errore is None and c["regola"]
+        rule_ok = (errore is None and c["regola"]
                      and sezione_principale(v.regola)
                      == sezione_principale(c["regola"]))
-        if ok and c["regola"] and not regola_ok:
+        if ok and c["regola"] and not rule_ok:
             ok = False
             errore = (f"right outcome, but the LOAD-BEARING SECTION does not match: the "
                       f"verdict cites «{sezione_principale(v.regola)}», the "
@@ -3229,7 +3229,7 @@ def giro(a, guasti=(), silenzioso=False):
         # ⭐ `nome: atteso -> visto` is a real mark: in the healthy round expected and
         #    seen always coincide, so `X: A -> B` with A != B exists
         #    **only** when something is broken.
-        testo_intero.append(f"{c['nome']}: {atteso} -> {visto}    {testo}")
+        whole_text.append(f"{c['nome']}: {atteso} -> {visto}    {testo}")
         if atteso == AMBIGUO:
             # ⛔ AN AMBIGUOUS ONE IS NOT A FAULT, AND IT IS NOT A GREEN.
             #    The case is green if the judge **recognises** the ambiguity;
@@ -3248,7 +3248,7 @@ def giro(a, guasti=(), silenzioso=False):
             if not silenzioso:
                 print(f"        expected {atteso}, seen {visto}")
                 print(f"        {c['spiega']}")
-    return guastati, ambigui, righe, "\n".join(testo_intero)
+    return guastati, ambigui, righe, "\n".join(whole_text)
 
 
 def scrivi_esito(a, rec):
@@ -3315,37 +3315,37 @@ def certifica(a):
     print(f"\n== ⛔ THE CERTIFICATION — healthy -> fault -> healed, "
           f"{len(GUASTI)} faults")
     print(f"   ⛔ The expectations are written in `--elenco`, BEFORE this round\n")
-    tutto_bene, righe = True, []
+    all_well, righe = True, []
     sano = giro(a, guasti=(), silenzioso=True)
     if sano is None:
         return 2
-    n_sano, _, _, testo_sano = sano
-    print(f"    healthy: {n_sano} faulty")
+    n_healthy, _, _, testo_sano = sano
+    print(f"    healthy: {n_healthy} faulty")
     for sigla, g in GUASTI.items():
         rotto = giro(a, guasti=(sigla,), silenzioso=True)
-        n_rotto, _, _, testo_rotto = rotto
+        n_broken, _, _, broken_text = rotto
         marca = g["marca"]
         # ⛔ THE MARK HAS TWO HALVES, and the second gets forgotten — R12-A.3.
-        vista = marca in testo_rotto
+        vista = marca in broken_text
         gia = marca in testo_sano
         risanato = giro(a, guasti=(), silenzioso=True)[0]
-        ok = (n_sano == 0 and n_rotto > n_sano and vista and not gia
-              and risanato == n_sano)
-        tutto_bene &= ok
+        ok = (n_healthy == 0 and n_broken > n_healthy and vista and not gia
+              and risanato == n_healthy)
+        all_well &= ok
         riga(VERDE if ok else ROSSO, "OK" if ok else "NO", sigla,
-             f"healthy {n_sano} -> fault {n_rotto} -> healed {risanato}   "
+             f"healthy {n_healthy} -> fault {n_broken} -> healed {risanato}   "
              f"mark «{marca}»: {'seen' if vista else '⛔ NOT seen'}"
              + ("  ⛔ but already present in the healthy round" if gia else ""))
         if not ok:
             print(f"        {g['titolo']}")
-        righe.append({"guasto": sigla, "titolo": g["titolo"], "sano": n_sano,
-                      "guasto_conta": n_rotto, "risanato": risanato,
+        righe.append({"guasto": sigla, "titolo": g["titolo"], "sano": n_healthy,
+                      "guasto_conta": n_broken, "risanato": risanato,
                       "marca": marca, "marca_vista": vista,
                       "marca_gia_nel_sano": gia, "esito": bool(ok)})
     scrivi_esito(a, {"tipo": "certificazione", "guasti": righe,
-                     "esito": bool(tutto_bene)})
+                     "esito": bool(all_well)})
     print()
-    if tutto_bene:
+    if all_well:
         print(f"    {VERDE}⭐ 02-filo-fotogramma.py IS CERTIFIED: "
               f"{len(GUASTI)} faults out of {len(GUASTI)}{GRIGIO}")
         return 0
@@ -3396,8 +3396,8 @@ def principale(a):
               f"document")
         print(f"        is touched by the coordinator.  Here is TODAY's expectation, "
               f"not tomorrow's")
-        ap_coperte, ap_mancanti = proposte_coperte(CASI)
-        for sigla, p in PROPOSTE_APERTE.items():
+        ap_covered, ap_missing = proposte_coperte(CASI)
+        for sigla, p in OPEN_PROPOSALS.items():
             print(f"  {sigla}  {p['dove']}")
             print(f"      «{p['dice']}»")
             print(f"      is:       {p['era']}")
@@ -3415,9 +3415,9 @@ def principale(a):
                 #    from the list.  ⚠ A bench that duplicates its own
                 #    lines makes whoever reads the output count wrong.
                 print(f"      {nome:32s} expected {atteso} (today)")
-        print(f"\n  ⛔ proposals with ALL their cases: {len(ap_coperte)} of "
-              f"{len(PROPOSTE_APERTE)} — {', '.join(ap_coperte) or '—'}")
-        for sigla, perche in ap_mancanti:
+        print(f"\n  ⛔ proposals with ALL their cases: {len(ap_covered)} of "
+              f"{len(OPEN_PROPOSALS)} — {', '.join(ap_covered) or '—'}")
+        for sigla, perche in ap_missing:
             print(f"     {ROSSO}⛔ {sigla}: {perche}{GRIGIO}")
         return 0
 
@@ -3474,24 +3474,24 @@ def principale(a):
     #      have yet» are two different facts, and adding them up would give a number that
     #      means nothing.
     # ⛔ AND THE LINE THAT TALKS ABOUT THE CLIENT'S STATE, COUNTED SEPARATELY — P10.
-    st_coperte, st_mancanti = regole_di_stato_coperte(CASI)
+    st_covered, st_missing = regole_di_stato_coperte(CASI)
     print(f"\n    == ⭐⛔ the lines that talk about the CLIENT'S STATE, not the "
           f"wire")
-    riga(VERDE if not st_mancanti else ROSSO, "OK" if not st_mancanti else "NO",
+    riga(VERDE if not st_missing else ROSSO, "OK" if not st_missing else "NO",
          "stato-con-i-due-casi",
-         f"{len(st_coperte)} of {len(REGOLE_DI_STATO)} have the case that carries "
+         f"{len(st_covered)} of {len(REGOLE_DI_STATO)} have the case that carries "
          f"the FINDING and the one that does not: "
-         f"{', '.join(st_coperte) or '—'}")
-    for sigla, perche in st_mancanti:
+         f"{', '.join(st_covered) or '—'}")
+    for sigla, perche in st_missing:
         print(f"        ⛔ {sigla}: {perche}")
 
-    ap_coperte, ap_mancanti = proposte_coperte(CASI)
+    ap_covered, ap_missing = proposte_coperte(CASI)
     print(f"\n    == ⛔⛔ the OPEN proposals — `RCP.md` does not carry them yet")
-    riga(VERDE if not ap_mancanti else ROSSO, "OK" if not ap_mancanti else "NO",
+    riga(VERDE if not ap_missing else ROSSO, "OK" if not ap_missing else "NO",
          "proposte-con-i-loro-casi",
-         f"{len(ap_coperte)} of {len(PROPOSTE_APERTE)} have all their "
-         f"cases: {', '.join(ap_coperte) or '—'}")
-    for sigla, perche in ap_mancanti:
+         f"{len(ap_covered)} of {len(OPEN_PROPOSALS)} have all their "
+         f"cases: {', '.join(ap_covered) or '—'}")
+    for sigla, perche in ap_missing:
         print(f"        ⛔ {sigla}: {perche}")
 
     # ⭐⛔ THE AMBIGUITIES OF `RCP.md`, AT THE END AND WITH THE CURE NEXT TO THEM.
@@ -3520,7 +3520,7 @@ def principale(a):
             # ⛔ The cure is looked up in both tables: a proposal still
             #    open is not among the entered rules, and printing it as «?»
             #    would turn a finding with the cure ready into a complaint.
-            r = REGOLE_NUOVE.get(prop) or PROPOSTE_APERTE.get(prop, {})
+            r = REGOLE_NUOVE.get(prop) or OPEN_PROPOSALS.get(prop, {})
             print(f"\n       {nome}")
             print(f"         {dice}")
             print(f"         ⇒ {prop} — {r.get('dove', '?')}")
@@ -3551,8 +3551,8 @@ def principale(a):
     # ⛔⛔ THE DECLARED FINDINGS — where the document decides, and the decision does not
     #    hold.  ⚠ They do not make the round fail: it is not the bench that cures them.
     con, senza = rilievi_col_caso(CASI)
-    if RILIEVI_DICHIARATI:
-        n = len(RILIEVI_DICHIARATI)
+    if DECLARED_FINDINGS:
+        n = len(DECLARED_FINDINGS)
         print(f"\n    {GIALLO}⛔⛔ AND {n} FINDING{'' if n == 1 else 'S'} "
               f"DECLARED{'' if n == 1 else ''} on `RCP.md`, which this round "
               f"does NOT cure{GRIGIO}")
@@ -3564,12 +3564,12 @@ def principale(a):
               f"reads the bench.")
         print(f"       --  with a case that shows them: "
               f"{', '.join(con) or '—'} · without: {', '.join(senza) or '—'}")
-        for sigla, r in RILIEVI_DICHIARATI.items():
+        for sigla, r in DECLARED_FINDINGS.items():
             print(f"\n       {sigla}  {r['dove']}   {r['marca']}")
             print(f"         {r['dice']}")
             print(f"         scene: {r['scena']}")
-            senza_caso = "⛔ none — it stays a reading, and it is declared"
-            print(f"         case: {r['caso'] or senza_caso}")
+            without_case = "⛔ none — it stays a reading, and it is declared"
+            print(f"         case: {r['caso'] or without_case}")
 
     # ⛔ THE POSITIVE CONTROL, AT THE END OF EVERY RUN.
     print(f"\n    == ⛔ the positive control")
@@ -3624,11 +3624,11 @@ if __name__ == "__main__":
     #    of this bench, and must not look like one — but **it is declared
     #    and not kept silent**, which is form E8 applied to oneself.
     try:
-        _codice = principale(p.parse_args())
+        _code = principale(p.parse_args())
     except BrokenPipeError:
         # ⚠ Descriptor 1 is redirected, not `sys.stdout`: closing
         #   the Python object makes the final flush fail too, and the
         #   second error hides the first.
         os.dup2(os.open(os.devnull, os.O_WRONLY), 1)
-        _codice = 0
-    sys.exit(_codice)
+        _code = 0
+    sys.exit(_code)

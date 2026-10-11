@@ -47,8 +47,8 @@ var programmiAmmessi = map[string][]string{
 // ErrNonAmmesso: the engine launches no programs outside the list.
 var ErrNonAmmesso = errors.New("program outside the engine's closed list (DECISIONS §10.14)")
 
-// ProgrammiAmmessi: the list, for the tests and for the manual.
-func ProgrammiAmmessi() []string {
+// AllowedPrograms: the list, for the tests and for the manual.
+func AllowedPrograms() []string {
 	var r []string
 	for n := range programmiAmmessi {
 		r = append(r, n)
@@ -60,10 +60,10 @@ func ProgrammiAmmessi() []string {
 // Esecutore launches a program of the list and returns its output, its exit code and an
 // error only if it could not be launched (exec.ErrNotFound: it is not there — the case that makes a fact
 // SCONOSCIUTO, §6.6.7; ErrNonAmmesso: outside the list).
-type Esecutore func(tempo time.Duration, nome string, argomenti ...string) (uscita string, codice int, err error)
+type Executor func(tempo time.Duration, nome string, argomenti ...string) (uscita string, codice int, err error)
 
-// percorsoAmmesso: the absolute path of a program of the list, if it is there.
-func percorsoAmmesso(nome string) (string, error) {
+// allowedPath: the absolute path of a program of the list, if it is there.
+func allowedPath(nome string) (string, error) {
 	cand, ok := programmiAmmessi[nome]
 	if !ok {
 		return "", ErrNonAmmesso
@@ -79,7 +79,7 @@ func percorsoAmmesso(nome string) (string, error) {
 // eseguiDavvero: absolute path, fixed arguments, minimal environment in the C locale, no
 // input, maximum time; and the record (R41).
 func (a *Ambiente) eseguiDavvero(tempo time.Duration, nome string, argomenti ...string) (string, int, error) {
-	percorso, err := percorsoAmmesso(nome)
+	percorso, err := allowedPath(nome)
 	if err != nil {
 		a.annota(nome, argomenti, -1, err)
 		return "", -1, err
@@ -89,7 +89,7 @@ func (a *Ambiente) eseguiDavvero(tempo time.Duration, nome string, argomenti ...
 	cmd := exec.CommandContext(ctx, percorso, argomenti...)
 	// ZYPP_LOCK_TIMEOUT: zypper waits for whoever holds it, like apt with DPkg::Lock::Timeout (occupato.go)
 	cmd.Env = []string{"LC_ALL=C", "PATH=/usr/sbin:/usr/bin:/sbin:/bin", "DEBIAN_FRONTEND=noninteractive",
-		"ZYPP_LOCK_TIMEOUT=" + strconv.Itoa(int(TettoOccupato.Seconds()))}
+		"ZYPP_LOCK_TIMEOUT=" + strconv.Itoa(int(BusyCap.Seconds()))}
 	var uscita strings.Builder
 	cmd.Stdout = &uscita
 	cmd.Stderr = &uscita
@@ -119,31 +119,31 @@ func (a *Ambiente) annota(percorso string, argomenti []string, codice int, err e
 	a.Annota(r)
 }
 
-// GestoreGruppi reads and changes group membership.
-type GestoreGruppi interface {
+// GroupHandler reads and changes group membership.
+type GroupHandler interface {
 	// Membri: the group's explicit members, and whether the group exists.
-	Membri(gruppo string) (membri []string, gid string, esiste bool, err error)
-	// GruppoPrimario: the gid of the user's primary group, and whether the user exists.
-	GruppoPrimario(utente string) (gid string, esiste bool, err error)
-	Aggiungi(utente, gruppo string) error
+	Members(gruppo string) (membri []string, gid string, esiste bool, err error)
+	// PrimaryGroup: the gid of the user's primary group, and whether the user exists.
+	PrimaryGroup(utente string) (gid string, esiste bool, err error)
+	Add(utente, gruppo string) error
 	Togli(utente, gruppo string) error
 }
 
-// GestoreUnita enables, disables, starts and stops systemd units (over D-Bus).
-type GestoreUnita interface {
+// UnitHandler enables, disables, starts and stops systemd units (over D-Bus).
+type UnitHandler interface {
 	// Stato: the state of the unit file (enabled, disabled, static, masked, not-found…), what
 	// systemctl is-enabled calls by the same name.
 	Stato(unita string) (string, error)
-	Abilita(unita string) error
-	Disabilita(unita string) error
+	Enable(unita string) error
+	Disable(unita string) error
 	// Attiva: ActiveState (active, inactive, failed…).
 	Attiva(unita string) (string, error)
-	Avvia(unita string) error
+	Start(unita string) error
 	Ferma(unita string) error
-	Ricarica(unita string) error
+	Reload(unita string) error
 	// the boot target (graphical.target / multi-user.target)
-	Predefinito() (string, error)
-	ImpostaPredefinito(bersaglio string) error
+	Default() (string, error)
+	SetDefault(bersaglio string) error
 }
 
 // Sessione: a logind session.
@@ -151,24 +151,24 @@ type Sessione struct {
 	ID, Utente, Servizio, Stato, Tipo string
 }
 
-// GestoreSessioni: logind, over D-Bus.
-type GestoreSessioni interface {
-	Elenco() ([]Sessione, error)
-	Termina(id string) error
+// SessionHandler: logind, over D-Bus.
+type SessionHandler interface {
+	List() ([]Sessione, error)
+	Terminate(id string) error
 	// Segnale to the processes of ONE session (logind KillSession, who=all): it stays inside the session.
-	Segnale(id string, segnale int32) error
+	Signal(id string, segnale int32) error
 	// Grafici: how many desktop processes the person has in their user manager.
-	Grafici(utente string) (int, error)
-	// ChiudiGrafica: stops the desktop's units in the user manager (grafica_utente.go).
-	ChiudiGrafica(utente string) ([]string, error)
+	Graphical(utente string) (int, error)
+	// CloseGraphical: stops the desktop's units in the user manager (grafica_utente.go).
+	CloseGraphical(utente string) ([]string, error)
 }
 
-// GestoreFirewall opens and closes a port. Today only firewalld (§6.6.4, T4's mandate).
-type GestoreFirewall interface {
+// FirewallHandler opens and closes a port. Today only firewalld (§6.6.4, T4's mandate).
+type FirewallHandler interface {
 	Nome() string // "firewalld", "ufw", "nftables", "none"
-	ZonaPredefinita() (string, error)
-	HaPorta(zona, porta string, permanente bool) (bool, error) // porta = "7447/tcp"
-	Aggiungi(zona, porta string, permanente bool) error
+	DefaultZone() (string, error)
+	HasPort(zona, porta string, permanente bool) (bool, error) // porta = "7447/tcp"
+	Add(zona, porta string, permanente bool) error
 	Togli(zona, porta string, permanente bool) error
 }
 
@@ -176,19 +176,19 @@ type GestoreFirewall interface {
 // under a folder; the engine does not know the difference.
 type Ambiente struct {
 	Radice    string // "/" on the real machine; for reading /etc, /sys, /proc, /usr, /var/lib
-	Esegui    Esecutore
+	Esegui    Executor
 	Bus       *Bus // system D-Bus (nil in the tests)
 	Famiglia  string
-	Gruppi    GestoreGruppi
-	Unita     GestoreUnita
-	Firewall  GestoreFirewall
+	Gruppi    GroupHandler
+	Unita     UnitHandler
+	Firewall  FirewallHandler
 	Pacchetti Gestore
-	Sessioni  GestoreSessioni
+	Sessioni  SessionHandler
 	Annota    func(riga string) // every program launched (R41); nil = nobody listens
-	Avvisa    func(m Messaggio) // what the engine says while it waits (occupato.go); nil = nobody listens
+	Avvisa    func(m Message)   // what the engine says while it waits (occupato.go); nil = nobody listens
 }
 
-func (a *Ambiente) avvisa(m Messaggio) {
+func (a *Ambiente) avvisa(m Message) {
 	if a.Avvisa != nil {
 		a.Avvisa(m)
 	}
@@ -202,14 +202,14 @@ func (a *Ambiente) P(percorso string) string {
 	return filepath.Join(a.Radice, percorso)
 }
 
-// AmbienteVero is the machine the engine runs on.
-func AmbienteVero() *Ambiente {
+// RealEnvironment is the machine the engine runs on.
+func RealEnvironment() *Ambiente {
 	a := &Ambiente{Radice: "/", Bus: &Bus{}}
 	a.Esegui = a.eseguiDavvero
-	a.Gruppi = &gruppiVeri{a}
-	a.Unita = &unitaDBus{a.Bus}
-	a.Firewall = scegliFirewall(a)
-	a.Sessioni = &sessioniDBus{a.Bus, a}
+	a.Gruppi = &realGroups{a}
+	a.Unita = &unitDBus{a.Bus}
+	a.Firewall = chooseFirewall(a)
+	a.Sessioni = &sessionsDBus{a.Bus, a}
 	if m, _ := OsRelease(a); m != nil {
 		a.Famiglia = Famiglia(m["ID"], m["ID_LIKE"])
 	}
@@ -217,8 +217,8 @@ func AmbienteVero() *Ambiente {
 	return a
 }
 
-// LeggiGruppi reads a file in the /etc/group format: name → (gid, members).
-func LeggiGruppi(percorso string) (map[string][2]string, error) {
+// ReadGroups reads a file in the /etc/group format: name → (gid, members).
+func ReadGroups(percorso string) (map[string][2]string, error) {
 	f, err := os.Open(percorso)
 	if err != nil {
 		return nil, err
@@ -236,8 +236,8 @@ func LeggiGruppi(percorso string) (map[string][2]string, error) {
 	return r, s.Err()
 }
 
-// DividiMembri: "a,b,,c" → [a b c], sorted.
-func DividiMembri(s string) []string {
+// SplitMembers: "a,b,,c" → [a b c], sorted.
+func SplitMembers(s string) []string {
 	var m []string
 	for _, x := range strings.Split(s, ",") {
 		if x = strings.TrimSpace(x); x != "" {
@@ -248,8 +248,8 @@ func DividiMembri(s string) []string {
 	return m
 }
 
-// LeggiUtente looks up a user in a file in the /etc/passwd format and gives their gid.
-func LeggiUtente(percorso, utente string) (gid string, esiste bool, err error) {
+// ReadUser looks up a user in a file in the /etc/passwd format and gives their gid.
+func ReadUser(percorso, utente string) (gid string, esiste bool, err error) {
 	f, err := os.Open(percorso)
 	if err != nil {
 		return "", false, err
@@ -265,43 +265,43 @@ func LeggiUtente(percorso, utente string) (gid string, esiste bool, err error) {
 	return "", false, s.Err()
 }
 
-// gruppiVeri: /etc/group is read, changed with gpasswd (which also keeps gshadow and the lock
+// realGroups: /etc/group is read, changed with gpasswd (which also keeps gshadow and the lock
 // of the account files: there is no stable D-Bus interface for local groups). Only local
 // groups: they are the ones REMOTIX touches (§6.4).
-type gruppiVeri struct{ a *Ambiente }
+type realGroups struct{ a *Ambiente }
 
-func (g *gruppiVeri) Membri(gruppo string) ([]string, string, bool, error) {
-	t, err := LeggiGruppi(g.a.P("/etc/group"))
+func (g *realGroups) Members(gruppo string) ([]string, string, bool, error) {
+	t, err := ReadGroups(g.a.P("/etc/group"))
 	if err != nil {
 		return nil, "", false, err
 	}
 	v, ok := t[gruppo]
-	return DividiMembri(v[1]), v[0], ok, nil
+	return SplitMembers(v[1]), v[0], ok, nil
 }
 
-func (g *gruppiVeri) GruppoPrimario(utente string) (string, bool, error) {
-	return LeggiUtente(g.a.P("/etc/passwd"), utente)
+func (g *realGroups) PrimaryGroup(utente string) (string, bool, error) {
+	return ReadUser(g.a.P("/etc/passwd"), utente)
 }
 
-func (g *gruppiVeri) Aggiungi(utente, gruppo string) error {
-	return eseguiOErrore(g.a, "gpasswd", "-a", utente, gruppo)
+func (g *realGroups) Add(utente, gruppo string) error {
+	return runOrError(g.a, "gpasswd", "-a", utente, gruppo)
 }
 
-func (g *gruppiVeri) Togli(utente, gruppo string) error {
-	return eseguiOErrore(g.a, "gpasswd", "-d", utente, gruppo)
+func (g *realGroups) Togli(utente, gruppo string) error {
+	return runOrError(g.a, "gpasswd", "-d", utente, gruppo)
 }
 
-// firewallNonFatto: nftables is recognised, but the engine cannot change it yet (T4's
+// firewallNotDone: nftables is recognised, but the engine cannot change it yet (T4's
 // mandate): every change returns RX-FW-004, and the plan declares it beforehand. (ufw can, since T6.)
-type firewallNonFatto struct{ nome string }
+type firewallNotDone struct{ nome string }
 
-func (f *firewallNonFatto) Nome() string                     { return f.nome }
-func (f *firewallNonFatto) ZonaPredefinita() (string, error) { return "", nil }
-func (f *firewallNonFatto) HaPorta(string, string, bool) (bool, error) {
+func (f *firewallNotDone) Nome() string                 { return f.nome }
+func (f *firewallNotDone) DefaultZone() (string, error) { return "", nil }
+func (f *firewallNotDone) HasPort(string, string, bool) (bool, error) {
 	return false, Errore("RX-FW-004", f.nome)
 }
-func (f *firewallNonFatto) Aggiungi(string, string, bool) error { return Errore("RX-FW-004", f.nome) }
-func (f *firewallNonFatto) Togli(string, string, bool) error    { return Errore("RX-FW-004", f.nome) }
+func (f *firewallNotDone) Add(string, string, bool) error   { return Errore("RX-FW-004", f.nome) }
+func (f *firewallNotDone) Togli(string, string, bool) error { return Errore("RX-FW-004", f.nome) }
 
 // firewallUfw: ufw running (T6). With its program (closed list); a single level — ufw's rules
 // are live and permanent together: «live» reads as «permanent» and does not change by itself.
@@ -309,25 +309,25 @@ func (f *firewallNonFatto) Togli(string, string, bool) error    { return Errore(
 // /etc/ufw/applications.d/remotix) if it is there and the port is its own, otherwise the port.
 type firewallUfw struct{ a *Ambiente }
 
-func (f *firewallUfw) Nome() string                     { return "ufw" }
-func (f *firewallUfw) ZonaPredefinita() (string, error) { return "", nil }
+func (f *firewallUfw) Nome() string                 { return "ufw" }
+func (f *firewallUfw) DefaultZone() (string, error) { return "", nil }
 
 // Conosce: the service profile is there (the file name is the service's).
-func (f *firewallUfw) Conosce(servizio string) (bool, error) {
+func (f *firewallUfw) Knows(servizio string) (bool, error) {
 	_, err := os.Stat(f.a.P("/etc/ufw/applications.d/" + servizio))
 	return err == nil, nil
 }
 
-// ufwRegola: «servizio:remotix» ⇒ «REMOTIX» (the profile name); «7447/tcp» stays as it is.
-func ufwRegola(porta string) string {
-	if s := servizioDi(porta); s != "" {
+// ufwRule: «servizio:remotix» ⇒ «REMOTIX» (the profile name); «7447/tcp» stays as it is.
+func ufwRule(porta string) string {
+	if s := serviceOf(porta); s != "" {
 		return strings.ToUpper(s)
 	}
 	return porta
 }
 
-// HaPorta: the rule is among those added (`ufw show added`, which answers even with ufw off).
-func (f *firewallUfw) HaPorta(_, porta string, _ bool) (bool, error) {
+// HasPort: the rule is among those added (`ufw show added`, which answers even with ufw off).
+func (f *firewallUfw) HasPort(_, porta string, _ bool) (bool, error) {
 	out, c, err := f.a.Esegui(time.Minute, "ufw", "show", "added")
 	if err != nil {
 		return false, err
@@ -335,7 +335,7 @@ func (f *firewallUfw) HaPorta(_, porta string, _ bool) (bool, error) {
 	if c != 0 {
 		return false, fmt.Errorf("ufw show added: exit %d: %s", c, strings.TrimSpace(out))
 	}
-	voglio := "ufw allow " + ufwRegola(porta)
+	voglio := "ufw allow " + ufwRule(porta)
 	for _, r := range strings.Split(out, "\n") {
 		if strings.TrimSpace(r) == voglio {
 			return true, nil
@@ -344,36 +344,36 @@ func (f *firewallUfw) HaPorta(_, porta string, _ bool) (bool, error) {
 	return false, nil
 }
 
-func (f *firewallUfw) Aggiungi(_, porta string, permanente bool) error {
+func (f *firewallUfw) Add(_, porta string, permanente bool) error {
 	if !permanente {
 		return nil // a single level: the rule is put by the «permanent» step
 	}
-	return eseguiOErrore(f.a, "ufw", "allow", ufwRegola(porta))
+	return runOrError(f.a, "ufw", "allow", ufwRule(porta))
 }
 
 func (f *firewallUfw) Togli(_, porta string, permanente bool) error {
 	if !permanente {
 		return nil
 	}
-	return eseguiOErrore(f.a, "ufw", "delete", "allow", ufwRegola(porta))
+	return runOrError(f.a, "ufw", "delete", "allow", ufwRule(porta))
 }
 
-// scegliFirewall: the running one. firewalld answers on the bus; ufw says it is on in its file;
+// chooseFirewall: the running one. firewalld answers on the bus; ufw says it is on in its file;
 // nftables as an active unit.
-func scegliFirewall(a *Ambiente) GestoreFirewall {
-	if fw := (&firewalldDBus{a.Bus}); fw.Acceso() {
+func chooseFirewall(a *Ambiente) FirewallHandler {
+	if fw := (&firewalldDBus{a.Bus}); fw.On() {
 		return fw
 	}
 	if b, err := os.ReadFile(a.P("/etc/ufw/ufw.conf")); err == nil && strings.Contains(string(b), "ENABLED=yes") {
 		return &firewallUfw{a}
 	}
-	if s, err := a.Bus.StatoAttivo("nftables.service"); err == nil && s == "active" {
-		return &firewallNonFatto{"nftables"}
+	if s, err := a.Bus.ActiveState("nftables.service"); err == nil && s == "active" {
+		return &firewallNotDone{"nftables"}
 	}
-	return &firewallNonFatto{"none"}
+	return &firewallNotDone{"none"}
 }
 
-func eseguiOErrore(a *Ambiente, nome string, argomenti ...string) error {
+func runOrError(a *Ambiente, nome string, argomenti ...string) error {
 	out, c, err := a.Esegui(2*time.Minute, nome, argomenti...)
 	if err != nil {
 		return err

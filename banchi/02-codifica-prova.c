@@ -182,12 +182,12 @@ int main(int argc, char **argv)
 			fprintf(stderr, "⛔ resize failed: %s\n", errore);
 			stato = 1;
 		} else {
-			size_t attesi2 = (formato == CODIFICATORE_PIXEL_BGRX)
+			size_t expected2 = (formato == CODIFICATORE_PIXEL_BGRX)
 			                     ? (size_t) l2 * a2 * 4 : (size_t) l2 * a2 * 3;
-			uint8_t *p2 = calloc(1, attesi2);
+			uint8_t *p2 = calloc(1, expected2);
 			CodificatoreFotogramma fg;
-			uint32_t passo2 = (formato == CODIFICATORE_PIXEL_BGRX) ? l2 * 4 : l2 * 2;
-			if (!p2 || !codificatore_comprimi(cod, p2, passo2, &fg)) {
+			uint32_t stride2 = (formato == CODIFICATORE_PIXEL_BGRX) ? l2 * 4 : l2 * 2;
+			if (!p2 || !codificatore_comprimi(cod, p2, stride2, &fg)) {
 				fprintf(stderr, "⛔ no frame at the new size\n");
 				stato = 1;
 			} else {

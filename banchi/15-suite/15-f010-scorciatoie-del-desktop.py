@@ -46,9 +46,9 @@ import suite as S                                                     # noqa: E4
 G1B = S._carica("g1b", os.path.join(S.QUI, "15-g1b-comune.py"))
 FUNZIONI = ("F-010",)
 
-MARGINE = 0.01          # minimum difference (fraction of the pixels) to say «on top»
-TOLLERANZA_REL = 0.25   # the desktop «is still that one»: colours within 25%
-TOLLERANZA_LUM = 25
+MARGIN = 0.01          # minimum difference (fraction of the pixels) to say «on top»
+REL_TOLERANCE = 0.25   # the desktop «is still that one»: colours within 25%
+LUM_TOLERANCE = 25
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -56,19 +56,19 @@ TOLLERANZA_LUM = 25
 # ═══════════════════════════════════════════════════════════════════════════
 def sopra(conti):
     """'ciano' | 'magenta' | None: who covers more pixels (with margin)."""
-    c, m = conti[G1B.CIANO], conti[G1B.MAGENTA]
+    c, m = conti[G1B.CYAN], conti[G1B.MAGENTA]
     if c < 0.01 and m < 0.01:
         return None
-    if abs(c - m) < MARGINE:
+    if abs(c - m) < MARGIN:
         return None
     return "ciano" if c > m else "magenta"
 
 
-def scambiate(prima, dopo):
+def swapped(prima, dopo):
     """(outcome, sentence): VERDE if whoever was on top is now below."""
     a, b = sopra(prima), sopra(dopo)
     frase = "on top before: %s (c %.3f, m %.3f) · after: %s (c %.3f, m %.3f)" % (
-        a, prima[G1B.CIANO], prima[G1B.MAGENTA], b, dopo[G1B.CIANO], dopo[G1B.MAGENTA])
+        a, prima[G1B.CYAN], prima[G1B.MAGENTA], b, dopo[G1B.CYAN], dopo[G1B.MAGENTA])
     if a is None:
         return S.CIECO, "before the gesture it is not clear who is on top: " + frase
     if b is None:
@@ -76,17 +76,17 @@ def scambiate(prima, dopo):
     return (S.VERDE if a != b else S.ROSSO), frase
 
 
-def ancora_li(rif, lum_rif, conti, lum):
+def still(rif, lum_ref, conti, lum):
     """(outcome, sentence): VERDE if the desktop is still the reference one."""
     guai = []
-    for col, nome in ((G1B.CIANO, "ciano"), (G1B.MAGENTA, "magenta")):
+    for col, nome in ((G1B.CYAN, "ciano"), (G1B.MAGENTA, "magenta")):
         r, v = rif[col], conti[col]
-        if r > 0.01 and abs(v - r) > TOLLERANZA_REL * r:
+        if r > 0.01 and abs(v - r) > REL_TOLERANCE * r:
             guai.append("%s %.3f → %.3f" % (nome, r, v))
-    if abs(lum - lum_rif) > TOLLERANZA_LUM:
-        guai.append("luminance %.0f → %.0f" % (lum_rif, lum))
+    if abs(lum - lum_ref) > LUM_TOLERANCE:
+        guai.append("luminance %.0f → %.0f" % (lum_ref, lum))
     frase = "cyan %.3f, magenta %.3f, luminance %.0f" % (
-        conti[G1B.CIANO], conti[G1B.MAGENTA], lum)
+        conti[G1B.CYAN], conti[G1B.MAGENTA], lum)
     return (S.ROSSO, "the desktop is NO longer that one: " + "; ".join(guai)) if guai \
         else (S.VERDE, "the desktop is still there: " + frase)
 
@@ -99,20 +99,20 @@ def certifica():
         if not vero:
             guai.append(cosa)
 
-    C, M = G1B.CIANO, G1B.MAGENTA
-    prova("real swap ⇒ VERDE", scambiate({C: 0.2, M: 0.3}, {C: 0.3, M: 0.2})[0] == S.VERDE)
-    prova("no swap ⇒ ROSSO", scambiate({C: 0.2, M: 0.3}, {C: 0.2, M: 0.3})[0] == S.ROSSO)
-    prova("windows vanished ⇒ ROSSO", scambiate({C: 0.2, M: 0.3}, {C: 0, M: 0})[0] == S.ROSSO)
+    C, M = G1B.CYAN, G1B.MAGENTA
+    prova("real swap ⇒ VERDE", swapped({C: 0.2, M: 0.3}, {C: 0.3, M: 0.2})[0] == S.VERDE)
+    prova("no swap ⇒ ROSSO", swapped({C: 0.2, M: 0.3}, {C: 0.2, M: 0.3})[0] == S.ROSSO)
+    prova("windows vanished ⇒ ROSSO", swapped({C: 0.2, M: 0.3}, {C: 0, M: 0})[0] == S.ROSSO)
     prova("before, not clear ⇒ CIECO",
-          scambiate({C: 0.25, M: 0.255}, {C: 0.3, M: 0.2})[0] == S.CIECO)
+          swapped({C: 0.25, M: 0.255}, {C: 0.3, M: 0.2})[0] == S.CIECO)
     prova("same desktop ⇒ VERDE",
-          ancora_li({C: 0.2, M: 0.3}, 120, {C: 0.21, M: 0.29}, 118)[0] == S.VERDE)
-    prova("black screen ⇒ ROSSO", ancora_li({C: 0.2, M: 0.3}, 120, {C: 0, M: 0}, 0)[0] == S.ROSSO)
+          still({C: 0.2, M: 0.3}, 120, {C: 0.21, M: 0.29}, 118)[0] == S.VERDE)
+    prova("black screen ⇒ ROSSO", still({C: 0.2, M: 0.3}, 120, {C: 0, M: 0}, 0)[0] == S.ROSSO)
     prova("lock screen (colours gone, similar light) ⇒ ROSSO",
-          ancora_li({C: 0.2, M: 0.3}, 120, {C: 0.0, M: 0.0}, 110)[0] == S.ROSSO)
+          still({C: 0.2, M: 0.3}, 120, {C: 0.0, M: 0.0}, 110)[0] == S.ROSSO)
     nero = G1B.png_nero(64, 36)
     prova("the black canvas: no cyan, no magenta",
-          G1B.conta_colori(nero, (C, M)) == {C: 0.0, M: 0.0})
+          G1B.count_colors(nero, (C, M)) == {C: 0.0, M: 0.0})
     print("⛔ %d problems" % len(guai) if guai else "⭐ CERTIFIED")
     return 1 if guai else 0
 
@@ -124,8 +124,8 @@ def guarda(s, nome):
     png, dove = G1B.foto(s, nome, scala=0.5)
     if not png:
         raise S.Bloccata("photo failed (%s): %s" % (nome, dove))
-    return png, dove, G1B.conta_colori(png, (G1B.CIANO, G1B.MAGENTA)), \
-        G1B.luminanza_media(png)
+    return png, dove, G1B.count_colors(png, (G1B.CYAN, G1B.MAGENTA)), \
+        G1B.mean_luminance(png)
 
 
 def corpo(o, E):
@@ -139,17 +139,17 @@ def corpo(o, E):
         time.sleep(6 if d != "kde" else 10)
         geo = s.geometria()
         W, H = geo["tl"], geo["ta"]
-        c, t = G1B.metti_finestra(s)
+        c, t = G1B.put_window(s)
         if c != 0:
             raise S.Bloccata("the window's program cannot be written: " + t[-200:])
         lw, la = int(W * 0.60), int(H * 0.68)
         for nome, col in (("ciano", "#00ffff"), ("magenta", "#ff00ff")):
-            c, t = G1B.apri_finestra(s, nome, col, lw, la)
+            c, t = G1B.open_window(s, nome, col, lw, la)
             if c != 0:
                 raise S.Bloccata("the window %s does not start: %s" % (nome, t[-200:]))
             time.sleep(5)
         G1B.passo("windows open")
-        G1B.fuoco_sulla_tela(s, geo)
+        G1B.focus_on_canvas(s, geo)
         if d == "gnome":
             # ⚠ GNOME is born in the overview: ESC closes it (and on the desktop does nothing)
             G1B.combinazione(s.g, ["Escape"])
@@ -158,11 +158,11 @@ def corpo(o, E):
         png0, p0, k0, l0 = guarda(s, "scena")
         ev.append(p0)
         if sopra(k0) is None:
-            ev.append(s.salva_testo("f010-scena.txt", "cyan %.3f magenta %.3f" % (
-                k0[G1B.CIANO], k0[G1B.MAGENTA])))
+            ev.append(s.save_text("f010-scena.txt", "cyan %.3f magenta %.3f" % (
+                k0[G1B.CYAN], k0[G1B.MAGENTA])))
             raise S.Bloccata("the scene is not there: the two known windows are not seen or do not "
                              "overlap (cyan %.3f, magenta %.3f)"
-                             % (k0[G1B.CIANO], k0[G1B.MAGENTA]))
+                             % (k0[G1B.CYAN], k0[G1B.MAGENTA]))
 
         G1B.passo("scene photographed")
         # 1. use
@@ -170,21 +170,21 @@ def corpo(o, E):
         time.sleep(2.5)
         png1, p1, k1, l1 = guarda(s, "dopo-alt-tab")
         ev.append(p1)
-        e1, f1 = scambiate(k0, k1)
+        e1, f1 = swapped(k0, k1)
 
         G1B.passo("Alt+Tab: %s" % f1)
         # 2. dangerous
         pericolose = []
-        rif, lrif = k1, l1
-        dopo_super = None
+        rif, lref = k1, l1
+        after_super = None
         for tasti, nome in ((["Super", "l"], "super-l"), (["Control", "Alt", "l"], "ctrl-alt-l")):
             G1B.combinazione(s.g, tasti)
             time.sleep(5)
             pngx, px, kx, lx = guarda(s, "dopo-" + nome)
             ev.append(px)
-            if dopo_super is None:
-                dopo_super = pngx
-            ex, fx = ancora_li(rif, lrif, kx, lx)
+            if after_super is None:
+                after_super = pngx
+            ex, fx = still(rif, lref, kx, lx)
             pericolose.append((nome, ex, fx))
 
         G1B.passo("dangerous: %s" % [p[1] for p in pericolose])
@@ -193,12 +193,12 @@ def corpo(o, E):
         time.sleep(2.5)
         png3, p3, k3, l3 = guarda(s, "dopo-secondo-alt-tab")
         ev.append(p3)
-        e3, f3 = scambiate(rif, k3)
+        e3, f3 = swapped(rif, k3)
 
         righe = ["1 Alt+Tab: %s · %s" % (S.C21.NOME_ESITO[e1], f1)]
         righe += ["2 %s: %s · %s" % (n, S.C21.NOME_ESITO[e], f) for n, e, f in pericolose]
         righe += ["3 second Alt+Tab: %s · %s" % (S.C21.NOME_ESITO[e3], f3)]
-        ev.append(s.salva_testo("f010-giudizi.txt", righe))
+        ev.append(s.save_text("f010-giudizi.txt", righe))
         oss = " | ".join(righe)
         atteso = ("Alt+Tab swaps the two known windows; after Super+L and Ctrl+Alt+L the "
                   "desktop is still there and a second Alt+Tab swaps them again")
@@ -222,12 +222,12 @@ def corpo(o, E):
             G1B.combinazione(s.g, ["Tab"])
             time.sleep(2.5)
             _pb, pb, kb, _lb = guarda(s, "guasto-dopo-il-tab")
-            ea, fa = scambiate(ka, kb)
+            ea, fa = swapped(ka, kb)
             # B) the black canvas instead of the photo after Super+L
-            w, h = G1B.misura_png(dopo_super)
+            w, h = G1B.png_size(after_super)
             nero = G1B.png_nero(w, h)
-            eb, fb = ancora_li(rif, lrif, G1B.conta_colori(nero, (G1B.CIANO, G1B.MAGENTA)),
-                               G1B.luminanza_media(nero))
+            eb, fb = still(rif, lref, G1B.count_colors(nero, (G1B.CYAN, G1B.MAGENTA)),
+                               G1B.mean_luminance(nero))
             visto = (ea == S.ROSSO) and (eb == S.ROSSO)
             E.guasto("F-010", None if ea == S.CIECO else visto,
                      "A) only Tab ⇒ %s (%s) · B) black canvas after Super+L ⇒ %s"

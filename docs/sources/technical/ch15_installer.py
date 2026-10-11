@@ -16,10 +16,10 @@ def _go_string(s):
     return s.replace('\\"', '"').replace("\\\\", "\\")
 
 
-GRAVITA = {"INFO": "INFO", "AVVISO": "WARNING", "BLOCCANTE": "BLOCKING"}
-NATURA = {"ServeAzione": "ACTION_NEEDED", "Riprovabile": "RETRYABLE", "Recuperabile": "RECOVERABLE",
+SEVERITY = {"INFO": "INFO", "AVVISO": "WARNING", "BLOCCANTE": "BLOCKING"}
+NATURE = {"ServeAzione": "ACTION_NEEDED", "Riprovabile": "RETRYABLE", "Recuperabile": "RECOVERABLE",
           "ServeAnnullamento": "ROLLBACK_NEEDED", "Fatale": "FATAL"}
-AREE = {
+AREAS = {
     "TRUST": "Phase 0 — trust in the catalogue",
     "DISTRO": "Phase 1 — the distribution",
     "SYSTEMD": "systemd (phase 1: booted with systemd; operation: the unit)",
@@ -49,7 +49,7 @@ AREE = {
 }
 
 
-def codici_rx():
+def rx_codes():
     """The code catalogue, read from installatore/motore/codici.go, with the files that raise each code."""
     src = (INST / "motore" / "codici.go").read_text()
     rx = re.compile(r'"(RX-[A-Z0-9]+-\d{3})":\s*\{(\w+),\s*(\w+),\s*"((?:[^"\\]|\\.)*)",\s*"((?:[^"\\]|\\.)*)"\}')
@@ -59,43 +59,43 @@ def codici_rx():
     out = []
     for cod, grav, nat, testo, rimedio in rx.findall(src):
         dove = sorted({f.name for f, rr in righe.items() if any(cod in r for r in rr)})
-        out.append(dict(code=cod, area=cod.split("-")[1], sev=GRAVITA.get(grav, grav), nat=NATURA.get(nat, nat),
+        out.append(dict(code=cod, area=cod.split("-")[1], sev=SEVERITY.get(grav, grav), nat=NATURE.get(nat, nat),
                         text=_go_string(testo), remedy=_go_string(rimedio), where=dove,
                         retired=testo.startswith("(retired")))
     return out
 
 
-CODICI = codici_rx()
+CODES = rx_codes()
 
 
-def _codici_in_code(t):
+def _codes_in_code(t):
     """RX- codes inside a generated text, set as code (their area names are Italian identifiers)."""
     return re.sub(r"RX-[A-Z0-9]+-\d{3}", lambda m: c(m.group()), t)
 
 
-def tabella_codici():
+def code_table():
     rows, area = [], None
-    for k in CODICI:
+    for k in CODES:
         if k["area"] != area:
             area = k["area"]
-            rows.append(c("RX-" + area) + " · " + esc(AREE.get(area, area)))
+            rows.append(c("RX-" + area) + " · " + esc(AREAS.get(area, area)))
         stato = pill("retired", "off") if k["retired"] else pill(k["sev"], {"BLOCKING": "snooze", "WARNING": "wait"}
                                                                    .get(k["sev"], "info"))
-        testo = _codici_in_code(esc(k["text"])) + (("<br><i>Remedy:</i> " + _codici_in_code(esc(k["remedy"])))
+        testo = _codes_in_code(esc(k["text"])) + (("<br><i>Remedy:</i> " + _codes_in_code(esc(k["remedy"])))
                                                      if k["remedy"] else "")
         dove = ", ".join(c(w) for w in k["where"]) or "—"
         rows.append([c(k["code"]), stato, esc(k["nat"]), testo, dove])
     return table(["Code", "Severity", "Nature", "Text (as printed) and remedy", "Raised in"], rows,
                  "«TAB» — Every " + c("RX-") + " code of the engine, generated from " + c("installatore/motore/codici.go")
-                 + f" ({len(CODICI)} codes, {sum(not k['retired'] for k in CODICI)} in force, "
-                 + f"{sum(k['retired'] for k in CODICI)} retired)")
+                 + f" ({len(CODES)} codes, {sum(not k['retired'] for k in CODES)} in force, "
+                 + f"{sum(k['retired'] for k in CODES)} retired)")
 
 
 CAT = json.loads((INST / "catalogo" / "catalogo.json").read_text())
-NOMI_DESKTOP = {"gnome": "GNOME", "kde": "KDE Plasma", "xfce": "XFCE", "lxqt": "LXQt"}
+DESKTOP_NAMES = {"gnome": "GNOME", "kde": "KDE Plasma", "xfce": "XFCE", "lxqt": "LXQt"}
 
 
-def tabella_piattaforme():
+def platform_table():
     """The same logic as TabellaVersioni() (motore/tabella.go), in HTML."""
     rows = []
     for pl in CAT["piattaforme"]:
@@ -120,13 +120,13 @@ def tabella_piattaforme():
             dc = pl["desktop"].get(d)
             if not dc or not dc.get("supportato"):
                 continue
-            desk.append(NOMI_DESKTOP[d])
+            desk.append(DESKTOP_NAMES[d])
             for k in dc.get("componenti", []):
-                metti(c(k) + " (" + NOMI_DESKTOP[d] + ")")
+                metti(c(k) + " (" + DESKTOP_NAMES[d] + ")")
             for k in dc.get("limiti", []):
                 metti(esc(k))
             if dc.get("richiede_3d"):
-                metti(NOMI_DESKTOP[d] + ": needs 3D acceleration")
+                metti(DESKTOP_NAMES[d] + ": needs 3D acceleration")
         stato = ("certified (full run " + pl["giro_intero"] + ")" if pl.get("matrice") and pl.get("giro_intero")
                  else "in the matrix, not yet certified (no full run)" if pl.get("matrice")
                  else "analysed, outside the matrix")
@@ -142,7 +142,7 @@ def tabella_piattaforme():
                  + "), generated from " + c("installatore/catalogo/catalogo.json"))
 
 
-def tabella_escluse():
+def excluded_table():
     rows = [[c(e["id"]), esc(", ".join(e["versioni"])), esc(e["motivo"])] for e in CAT["escluse"]]
     rows += [["—", "—", esc(x)] for x in CAT["fuori_sempre"]]
     return table(["os-release ID", "Versions", "Why it is out"], rows,
@@ -150,7 +150,7 @@ def tabella_escluse():
                  "catalogue)")
 
 
-def tabella_minimi():
+def min_table():
     rows = [[esc(k["componente"]), esc(k["minimo"]), esc(k["perche"])] for k in CAT["componenti_minimi"]]
     r = CAT["requisiti"]
     rows.append(["<b>Checked by the engine</b>", "OpenSSL " + esc(r["openssl_minima"]) + " · GNOME " + esc(r["gnome_minima"])
@@ -339,7 +339,7 @@ S_RUNTIME = p("What happens when the administrator runs the " + c(".run") + ". T
           + c(".run") + " is already installed at that version, it prints “REMOTIX X is already installed: nothing to "
           "do.” and exits 0.", "Upgrade.")
 
-STATI = fig(
+STATES = fig(
     "".join(box(16 + i * 126, 30, 112, 40, s, "", "blue", 11.5) for i, s in enumerate(
         ["NEW", "TRUSTED", "EXAMINED", "ASSESSED", "PLANNED", "APPROVED", "ACQUIRED"]))
     + "".join(arrow(16 + i * 126 + 113, 50, 16 + (i + 1) * 126 - 1, 50) for i in range(6))
@@ -369,7 +369,7 @@ STATI = fig(
 S_STATES = p("An operation (installation, upgrade, uninstallation) has an identifier — the UTC time plus 4 random bytes, "
              "e.g. " + c("20261010T081500Z-1a2b3c4d") + " (" + c("nuovoID()") + ", new ID) — and one state, kept in "
              + c("<state-dir>/<id>/state") + ". " + c("Valida()") + " (valid) allows only the transitions of the design; any other "
-             "is " + c("RX-STATO-002") + ", an engine defect. No state is skipped.", lead=True) + STATI + \
+             "is " + c("RX-STATO-002") + ", an engine defect. No state is skipped.", lead=True) + STATES + \
     table(["State", "Progress text", "Final", "Meaning"], [
         [c("NEW"), "new", "", "Folder created, plan copied in."],
         [c("TRUSTED"), "trust checked", "", "Phase 0: catalogue read and understood (" + c("trust.json") + ")."],
@@ -717,7 +717,7 @@ S_CATALOGUE = p("The catalogue is " + c("installatore/catalogo/catalogo.json") +
         [c("componenti_minimi"), "the table of minimum component versions for the manual"],
         [c("carattere_scalabile"), "the font package per family"],
     ], "«TAB» — The catalogue's keys (" + c("Catalogo") + " in " + c("compatibilita.go") + ")") + \
-    tabella_piattaforme() + tabella_escluse() + tabella_minimi() + \
+    platform_table() + excluded_table() + min_table() + \
     warn("Linux Mint 23 is a compatible derivative in the catalogue, but " + c("Bersaglio()") + " maps its os-release to "
          + c("linuxmint23") + ", a folder the " + c(".run") + " does not have: the plan stops with " + c("RX-MANCA-004") + ". Fedora 43 "
          "(outside the matrix) has the same fate. Rocky and RHEL map to " + c("alma10") + ", Manjaro and EndeavourOS to "
@@ -993,7 +993,7 @@ S_TEXTS = p("All texts live in catalogues, not in the code: " + c("motore/codici
 S_CODES = p("The table is generated from " + c("installatore/motore/codici.go") + " when the manual is built; the last "
             "column lists the non-test files whose code mentions the code (comments excluded). A code in force with no "
             "file is defined but never raised; a retired code with a file is still raised somewhere.", lead=True) + \
-    tabella_codici()
+    code_table()
 
 S_TESTS = p("The engine's tests run with " + c("installatore/costruisci.sh prove") + ": " + c("gofmt -l") + ", "
             + c("go vet") + " and " + c("go test") + " in the " + c("golang:1.25") + " container, offline. The release "

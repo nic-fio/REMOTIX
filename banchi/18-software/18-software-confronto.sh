@@ -50,23 +50,23 @@ costruisci() {
 	# ⛔ Phase 19 (1 Oct 2026): `src/ripiego.c` has left the product.  The bench
 	#    stays as HISTORY, and takes the fallback from the last commit that
 	#    had it (6bacca7) — it needs a git tree; the rest is today's.
-	local STORIA=$LAVORO/storia-ripiego f
-	mkdir -p "$STORIA"
+	local HISTORY=$LAVORO/storia-ripiego f
+	mkdir -p "$HISTORY"
 	for f in ripiego.c ripiego.h; do
-		[ -s "$STORIA/$f" ] || git -C "$ALBERO" show "6bacca7:src/$f" > "$STORIA/$f" \
+		[ -s "$HISTORY/$f" ] || git -C "$ALBERO" show "6bacca7:src/$f" > "$HISTORY/$f" \
 			|| { echo "⛔ $f is no longer in the product (phase 19) and cannot be extracted from git 6bacca7"; exit 2; }
 	done
 	gcc -O2 -g -std=gnu11 -D_GNU_SOURCE -DRIPIEGO_BANCO -Wall -Wextra \
-		-I"$STORIA" -I"$ALBERO/src" \
-		-o "$BANCO" "$QUI/18-software-confronto.c" "$STORIA/ripiego.c" \
+		-I"$HISTORY" -I"$ALBERO/src" \
+		-o "$BANCO" "$QUI/18-software-confronto.c" "$HISTORY/ripiego.c" \
 		"$ALBERO/src/colori709.c" "$ALBERO/src/registro.c" \
 		$(pkg-config --cflags openh264) \
 		$(pkg-config --cflags --libs libavcodec libavutil libswscale SvtAv1Enc) \
 		-lyuv -ldl -lm && echo "built: $BANCO"
 	# the same, with the conversion in plain C: the bytes must match
 	gcc -O2 -std=gnu11 -D_GNU_SOURCE -DRIPIEGO_BANCO -DCOLORI709_SENZA_SIMD \
-		-I"$STORIA" -I"$ALBERO/src" \
-		-o "$BANCO-c" "$QUI/18-software-confronto.c" "$STORIA/ripiego.c" \
+		-I"$HISTORY" -I"$ALBERO/src" \
+		-o "$BANCO-c" "$QUI/18-software-confronto.c" "$HISTORY/ripiego.c" \
 		"$ALBERO/src/colori709.c" "$ALBERO/src/registro.c" \
 		$(pkg-config --cflags openh264) \
 		$(pkg-config --cflags --libs libavcodec libavutil libswscale SvtAv1Enc) \

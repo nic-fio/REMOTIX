@@ -145,7 +145,7 @@ typedef void (*FiglioDeposito)(void *ctx, const char *utente, uid_t uid,
  * example the video deposit, which today belongs to the PROCESS (see the box
  * of `video_forse()` in `webtransport.c`): a deposit that outlives the child
  * that filled it is the image of a user who stays in the house. */
-typedef void (*FiglioCongedo)(void *ctx, const char *utente, uid_t uid);
+typedef void (*ChildFarewell)(void *ctx, const char *utente, uid_t uid);
 
 /* ⭐⭐ PHASE 7 — AN ALREADY ENCODED AUDIO BLOCK, from the session to the wire.
  *
@@ -166,10 +166,10 @@ typedef void (*FiglioCongedo)(void *ctx, const char *utente, uid_t uid);
  *              a higher number and always in our favour.
  * `dati`       lives ONLY inside the call: whoever wants to keep it copies it.
  */
-typedef void (*FiglioBlocco)(void *ctx, const char *utente, uid_t uid,
+typedef void (*ChildBlock)(void *ctx, const char *utente, uid_t uid,
                              uint8_t codec, uint64_t istante_us,
                              const uint8_t *dati, size_t byte);
-void figli_gancio_blocco(figli *f, FiglioBlocco fn, void *ctx);
+void children_hook_block(figli *f, ChildBlock fn, void *ctx);
 
 /*
  * "Capture this user's audio, and encode it like this" — or "stop".
@@ -183,7 +183,7 @@ void figli_gancio_blocco(figli *f, FiglioBlocco fn, void *ctx);
  *   vanish at every detach would cut the sound for whoever is listening inside
  *   the session and leave the applications already open on a dead device.
  */
-bool figli_audio(figli *f, const char *utente, uint8_t codec);
+bool children_audio(figli *f, const char *utente, uint8_t codec);
 
 /* ------------------------------------------------------------------------- */
 /* ⭐⭐ PHASE 7 — THE CLIPBOARD, and it crosses the boundary for the FOURTH time
@@ -212,14 +212,14 @@ bool figli_audio(figli *f, const char *utente, uint8_t codec);
  *
  * `testo` is zero-terminated and lives ONLY inside the call.
  */
-typedef void (*FiglioAppuntiTesto)(void *ctx, const char *utente, uid_t uid,
+typedef void (*ChildClipboardText)(void *ctx, const char *utente, uid_t uid,
                                    const char *testo, size_t byte);
 
 /*
  * ⭐ "SOMEONE IN THE SESSION IS PASTING" — the device → desktop direction, and
  *    it is the half used most (`DECISIONI.md` §5-ter.1).
  *
- * ⛔⛔ IT MUST ALWAYS BE ANSWERED, with `figli_appunti_risposta()`, even
+ * ⛔⛔ IT MUST ALWAYS BE ANSWERED, with `children_clipboard_response()`, even
  *      empty-handed and even if the client never answers.  A
  *      `SelectionTransfer` without an answer leaves the pasting application
  *      hanging **indefinitely**, and what the user sees is a frozen desktop —
@@ -228,14 +228,14 @@ typedef void (*FiglioAppuntiTesto)(void *ctx, const char *utente, uid_t uid,
  *
  * `serial` is Mutter's number, and must be returned as is.
  */
-typedef void (*FiglioAppuntiRichiesta)(void *ctx, const char *utente, uid_t uid,
+typedef void (*ChildClipboardRequest)(void *ctx, const char *utente, uid_t uid,
                                        uint32_t serial);
 
 /* ⚠ The two hooks are attached together or not at all: a parent that could
  *   receive the session's text and could not serve whoever pastes would leave
  *   the desktop **worse than it found it** — see above. */
-void figli_gancio_appunti(figli *f, FiglioAppuntiTesto testo,
-                          FiglioAppuntiRichiesta richiesta, void *ctx);
+void children_hook_clipboard(figli *f, ChildClipboardText testo,
+                          ChildClipboardRequest richiesta, void *ctx);
 
 /*
  * "THE CLIENT HAS TEXT IN ITS CLIPBOARD": the child offers it to the session,
@@ -243,18 +243,18 @@ void figli_gancio_appunti(figli *f, FiglioAppuntiTesto testo,
  *
  * ⛔ It does NOT carry the text, and it is not an oversight: it is §7.4's
  *    "announce first, then pull" applied on this side.  The text is requested
- *    when someone really pastes — that is with `FiglioAppuntiRichiesta` — and
+ *    when someone really pastes — that is with `ChildClipboardRequest` — and
  *    whoever copies a whole document on the phone sends it to nobody until
  *    that moment comes.
  */
-bool figli_appunti_offri(figli *f, const char *utente);
+bool children_clipboard_offer(figli *f, const char *utente);
 
 /*
- * The answer to a `FiglioAppuntiRichiesta`.  With `testo` NULL it declares not
+ * The answer to a `ChildClipboardRequest`.  With `testo` NULL it declares not
  * having it — ⛔ **which is still an answer**, and it is the one that unblocks
  * whoever is pasting.
  */
-bool figli_appunti_risposta(figli *f, const char *utente, uint32_t serial,
+bool children_clipboard_response(figli *f, const char *utente, uint32_t serial,
                             const char *testo, size_t byte);
 
 /* ⭐⭐ PHASE 4 — THE CURSOR SHAPE, and it crosses the boundary in the opposite
@@ -270,7 +270,7 @@ bool figli_appunti_risposta(figli *f, const char *utente, uint32_t serial,
  * ⚠ The POSITION does not pass through here and does not pass anywhere in
  *   this direction: it belongs to the client, which draws the pointer itself
  *   (`SPECIFICHE.md` §7.1). */
-typedef void (*FiglioCursore)(void *ctx, const char *utente, uid_t uid,
+typedef void (*ChildCursor)(void *ctx, const char *utente, uid_t uid,
                               uint16_t larghezza, uint16_t altezza,
                               int16_t attivo_x, int16_t attivo_y,
                               const uint8_t *immagine, size_t byte);
@@ -300,9 +300,9 @@ typedef void (*FiglioCursore)(void *ctx, const char *utente, uid_t uid,
  * ⚠ And it arrives even when nobody had asked for anything: the stage can
  *   change size by itself (a remount after a fall of the graphical session).
  *   The receiver decides what to do with it — here a fact is reported. */
-typedef void (*FiglioTela)(void *ctx, const char *utente, uid_t uid,
-                           uint32_t voluta_l, uint32_t voluta_a, uint32_t avuta_l,
-                           uint32_t avuta_a);
+typedef void (*ChildCanvas)(void *ctx, const char *utente, uid_t uid,
+                           uint32_t intended_w, uint32_t intended_h, uint32_t got_w,
+                           uint32_t got_h);
 
 /* Switches on the children table.  ⛔ It spawns nothing: here it is not yet
  * known who will enter.
@@ -311,7 +311,7 @@ typedef void (*FiglioTela)(void *ctx, const char *utente, uid_t uid,
  *                    encoding — the same constant as `main.c`, passed instead
  *                    of copied (`P2-1-sessione.md` §6.3: "or in two weeks they
  *                    will be three places").
- * `dir_rilievo`      where the child writes the raw data and the streams, or
+ * `dir_survey`      where the child writes the raw data and the streams, or
  *                    NULL.  ⚠ **The child** writes there, that is the user: if
  *                    the folder is not theirs, the survey does not come out
  *                    and the line says so. */
@@ -328,18 +328,18 @@ typedef void (*FiglioTela)(void *ctx, const char *utente, uid_t uid,
  * ⚠ It is registered separately instead of lengthening `figli_accendi()`: that
  *   signature already has four callbacks, and a fifth parameter on a line of
  *   six would no longer be read by anyone. */
-typedef void (*FiglioSessioneFinita)(void *ctx, const char *utente, uid_t uid);
+typedef void (*ChildSessionFinished)(void *ctx, const char *utente, uid_t uid);
 
 /* ⭐ §7.1 — "the stage is not there YET": the child SAYS so, and the parent
  * postpones the deadline instead of inferring a failure from silence. */
-typedef void (*FiglioTelaAttendi)(void *ctx, const char *utente, uid_t uid,
-                                  uint32_t voluta_l, uint32_t voluta_a);
-void figli_gancio_tela_attendi(figli *f, FiglioTelaAttendi fn, void *ctx);
-void figli_gancio_sessione_finita(figli *f, FiglioSessioneFinita fn, void *ctx);
+typedef void (*ChildCanvasWait)(void *ctx, const char *utente, uid_t uid,
+                                  uint32_t intended_w, uint32_t intended_h);
+void children_hook_canvas_wait(figli *f, ChildCanvasWait fn, void *ctx);
+void children_hook_session_finished(figli *f, ChildSessionFinished fn, void *ctx);
 
-figli *figli_accendi(uint32_t tela_l, uint32_t tela_a, const char *dir_rilievo,
-                     FiglioDeposito deposita, FiglioCongedo congeda,
-                     FiglioCursore cursore, FiglioTela tela, void *ctx);
+figli *figli_accendi(uint32_t tela_l, uint32_t tela_a, const char *dir_survey,
+                     FiglioDeposito deposita, ChildFarewell congeda,
+                     ChildCursor cursore, ChildCanvas tela, void *ctx);
 
 /*
  * ⭐⭐⭐ THE **THREE** CURES OF PHASE 9 THAT LIVE ON THE OTHER SIDE — 23 Aug
@@ -362,7 +362,7 @@ figli *figli_accendi(uint32_t tela_l, uint32_t tela_a, const char *dir_rilievo,
  * `qualita_risale`     quality climbs back instead of staying low (I6).
  * `tetto_banda_mbit`   the **floor** in Mbit/s from which the encoder derives
  *                      wire, working point and reservoir; `0` = off.
- * `audio_silenzio`     ⭐ an all-zero audio block does not become a datagram.
+ * `audio_silence`     ⭐ an all-zero audio block does not become a datagram.
  *                      **`true` is the default** since 24 Aug 2026 (the user's
  *                      decision), and it is turned off with
  *                      `--niente-audio-silenzio`.  ⚠ `main.c` calls it with the
@@ -372,7 +372,7 @@ figli *figli_accendi(uint32_t tela_l, uint32_t tela_a, const char *dir_rilievo,
  *                      products.
  *
  * ⚠ It is registered separately instead of lengthening `figli_accendi()`, for
- *   the reason already written above `FiglioSessioneFinita`: that signature
+ *   the reason already written above `ChildSessionFinished`: that signature
  *   already has four callbacks.
  * ⛔ It holds for the children born AFTER: it is called at startup, before PAM
  *    can say yes to anyone.  ⚠ And the one declaring the value in force is
@@ -382,11 +382,11 @@ figli *figli_accendi(uint32_t tela_l, uint32_t tela_a, const char *dir_rilievo,
  *    and those lines are the only place where the two separate.
  */
 void figli_fase9(figli *f, bool qualita_risale, uint32_t tetto_banda_mbit,
-                 bool audio_silenzio);
+                 bool audio_silence);
 
 /* ⛔ Shuts down all the children and waits until they are dead.  ⚠ It WAITS,
  * and it must be said: it sits **after** the last round of the `poll` loop,
- * like `aiutante_spegni()` — `CODER.md` §4.4 forbids waiting INSIDE the loop,
+ * like `helper_turn_off()` — `CODER.md` §4.4 forbids waiting INSIDE the loop,
  * not after. */
 void figli_spegni(figli *f);
 
@@ -416,18 +416,18 @@ size_t figli_descrittori(figli *f, struct pollfd *fds, size_t max);
  * in here the waits expire and the dead are reaped, and a deadline that waits
  * for a byte is a deadline that never fires — the lesson of `regola_battito`,
  * paid on 11 August with B6 and paid again by the helper. */
-void figli_muovi(figli *f, struct pollfd *fds, size_t n, uint64_t ora_ms);
+void figli_muovi(figli *f, struct pollfd *fds, size_t n, uint64_t now_ms);
 
 /* How many children are alive now.  For the log and for the bench. */
-int figli_quanti(const figli *f);
+int children_count(const figli *f);
 
-/* ⭐⭐ The user name of the `quale`-th live stage (0 … `figli_quanti()−1`), or
+/* ⭐⭐ The user name of the `quale`-th live stage (0 … `children_count()−1`), or
  *     `NULL`.  ⛔ It serves the BUDGET (phase 10) to know **who is inside**,
  *     and the right set is this one and not the slots of the RCP registry: a
  *     session that left its slot through silence **still encodes** as long as
  *     its stage is alive (§3.2, the *ghost*), and costs as much as the others.
  * ⚠ The index is not stable between two calls: it is scanned once only. */
-const char *figli_utente_ennesimo(const figli *f, int quale);
+const char *children_nth_user(const figli *f, int quale);
 
 /* ⛔ For the bench: the pid of that user's child, or -1.  ⚠ It serves
  * `banchi/02-figlio-*` to ask the KERNEL who that process is
@@ -448,7 +448,7 @@ pid_t figli_pid_di(const figli *f, const char *utente);
  *
  * `false` = there is no child for that user, or the request did not go out —
  * and then that session will see nothing, declared. */
-bool figli_chiedi_palco(figli *f, const char *utente);
+bool children_ask_stage(figli *f, const char *utente);
 
 /* ⛔⭐ PHASE 3 — "CAPTURE CONTINUOUSLY", AND "THIS ONE MUST BE A KEYFRAME".
  *
@@ -507,11 +507,11 @@ bool figli_video(figli *f, const char *utente, uint8_t codec,
  * ⛔ and then that input did not reach the desktop, which is DECLARED in the
  * log instead of being hushed up (`CODER.md` §4.2). */
 enum {
-	FIGLI_INPUT_PUNTATORE = 1,
-	FIGLI_INPUT_PULSANTE = 2,
-	FIGLI_INPUT_ROTELLA = 3,
-	FIGLI_INPUT_LETTERA = 4,
-	FIGLI_INPUT_POSIZIONE = 5,
+	CHILDREN_INPUT_POINTER = 1,
+	CHILDREN_INPUT_BUTTON = 2,
+	CHILDREN_INPUT_WHEEL = 3,
+	CHILDREN_INPUT_LETTER = 4,
+	CHILDREN_INPUT_POSITION = 5,
 	/* ⛔⭐ "The rule with the highest damage/cost ratio of the document"
 	 *     (`RCP.md` §11): at detach EVERYTHING is released.  A Ctrl left down
 	 *     in a session that outlives the client makes the desktop unusable at
@@ -533,9 +533,9 @@ enum {
  *     ⛔ `true` = the request WENT OUT, not "it is in force": the one
  *     ascertaining it is the child's «KEYMAP CHANGED» line, after Mutter has
  *     destroyed and recreated the keyboard device. */
-bool figli_disposizione(figli *f, const char *utente, const char *nome);
+bool children_layout(figli *f, const char *utente, const char *nome);
 
-bool figli_input(figli *f, const char *utente, uint32_t id, uint8_t azione,
+bool children_input(figli *f, const char *utente, uint32_t id, uint8_t azione,
                  uint16_t codice, int premuto, int32_t a, int32_t b);
 
 /* ⭐⭐ "THE SERVER'S CANVAS TAKES THE SIZE OF THE CLIENT'S CANVAS" — the chain
@@ -575,8 +575,8 @@ bool figli_input(figli *f, const char *utente, uint32_t id, uint8_t azione,
  *
  * ⚠ No new message is needed: field `a` of the envelope was free. */
 enum {
-	FIGLI_USCITA_UTENTE = 0,   /* §7.6: a person asked for it */
-	FIGLI_USCITA_ABBANDONO = 1 /* §5.3: the ceiling expired, nobody asked for it */
+	CHILDREN_EXIT_USER = 0,   /* §7.6: a person asked for it */
+	CHILDREN_EXIT_ABANDON = 1 /* §5.3: the ceiling expired, nobody asked for it */
 };
 
 bool figli_termina_sessione(figli *f, const char *utente, int perche);
@@ -596,7 +596,7 @@ bool figli_ritela(figli *f, const char *utente, uint32_t larghezza,
  * ⚠ The OK outcome line is in the chatter (`registro_dettaglio`): one per
  *   minute per child would fill the log with green.  The disagreement does
  *   not: that one is always written. */
-void figli_ricontrolla(figli *f, uint64_t ora_ms);
+void figli_ricontrolla(figli *f, uint64_t now_ms);
 
 /* ⛔⭐ THE CHILD'S ENTRY POINT — `main.c` gets here as the FIRST thing, when
  *     `argv[1]` is `--figlio-interno`, and it never returns.
@@ -631,15 +631,15 @@ int figlio_prova_codifica(int argc, char **argv);
  *    tests and diagnosis).  Returns false on a name that is not one of the
  *    three, and then nothing changes.  The parent passes it to the child on
  *    the command line (`--codifica`), like the phase 9 cures. */
-bool figlio_codifica_strada(const char *strada);
-const char *figlio_codifica_strada_chiesta(void);
+bool child_encoding_route(const char *strada);
+const char *child_encoding_route_requested(void);
 
 /* ⭐ PHASE 18 — the test AT THE PARENT'S STARTUP: what this machine can
  *    encode, in a separate process (a crashing driver does not bring down the
  *    server).  `offerti` is the list for ECCOMI's `video.codec` ("hevc,h264"
  *    · "hevc" · "h264" · "" = nothing), `spiegazione` the line for the log
  *    with the reason for each "no".  Returns false if nothing is offered. */
-bool figlio_capacita_video(char *offerti, size_t offerti_byte, char *spiegazione,
-                           size_t spiegazione_byte);
+bool figlio_capacita_video(char *offerti, size_t offered_bytes, char *spiegazione,
+                           size_t explanation_byte);
 
 #endif

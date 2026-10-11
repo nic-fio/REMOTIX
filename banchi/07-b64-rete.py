@@ -107,7 +107,7 @@ def a_pulito(n):
               "yield >= 0.99 · stale 0 · purity >= 0.80")
 
 
-def a_come_pulito(n):
+def a_like_clean(n):
     """A fixed delay does not reorder: it must be indistinguishable from the smooth one."""
     return a_pulito(n)
 
@@ -120,7 +120,7 @@ def a_sorpassi(minimo):
     return f
 
 
-def a_perdita(frazione, tolleranza=0.5):
+def a_loss(frazione, tolleranza=0.5):
     """Loss shows in the yield, and in proportion to what netem removes."""
     def f(n):
         if n["resa"] is None:
@@ -197,7 +197,7 @@ PROFILI = [
      a_pulito),
     ("1-ritardo-30", ["delay", "30ms"],
      "30 ms fixed, no jitter: they arrive late but in order -- nothing must change",
-     a_come_pulito),
+     a_like_clean),
     ("2-jitter-2", ["delay", "20ms", "2ms", "distribution", "normal"],
      "jitter 2 ms, less than one PCM block (5 ms): overtakes must already be there",
      a_sorpassi(100)),
@@ -210,7 +210,7 @@ PROFILI = [
      "jitter 15 ms = three blocks: here listening is already broken",
      a_sorpassi(1500)),
     ("6-perdita-1", ["loss", "1%"], "1 datagram out of 100 lost",
-     a_perdita(0.01)),
+     a_loss(0.01)),
     # ⛔ THE PROSE OF THIS STEP WAS FALSE and must be read as a warning:
     #    it said «10 %: `[M]` the session does not open at all in 25 s».
     #    `[M]` 23 August 2026 (`banchi/09-b78-apertura.py`): the session opens
@@ -277,7 +277,7 @@ def perdita_vera():
 
 
 # ── ⛔ THE GUARDIAN IS ARMED AND DISARMED BY PID, NOT BY PATTERN ─────────
-GUARDIANO = LAV + "/.guardiano.pid"
+GUARDIAN = LAV + "/.guardiano.pid"
 
 
 def guardiano_arma(secondi):
@@ -288,19 +288,19 @@ def guardiano_arma(secondi):
     #    `[M]` the first run printed «pid ?», that is a guardian that could not
     #    have been disarmed by pid — the cure without its other half.
     root('bash -c "setsid sh -c \'sleep %d; /usr/sbin/tc qdisc del dev %s root\' '
-         '>/dev/null 2>&1 & echo \\$! > %s"' % (secondi, DEV, GUARDIANO))
-    rc, out, _ = root("cat %s 2>/dev/null" % GUARDIANO)
+         '>/dev/null 2>&1 & echo \\$! > %s"' % (secondi, DEV, GUARDIAN))
+    rc, out, _ = root("cat %s 2>/dev/null" % GUARDIAN)
     print("   OK  guardian armed for %d s (pid %s): the network goes back as it was "
           "EVEN if I die" % (secondi, out.strip() or "?"))
 
 
 def guardiano_disarma():
     """⛔ The GROUP is killed, so `sh` never reaches the `tc` line."""
-    rc, out, _ = root("cat %s 2>/dev/null || true" % GUARDIANO)
+    rc, out, _ = root("cat %s 2>/dev/null || true" % GUARDIAN)
     p = out.strip()
     if p.isdigit():
         root("kill -TERM -%s 2>/dev/null; kill -TERM %s 2>/dev/null; true" % (p, p))
-    root("rm -f %s; true" % GUARDIANO)
+    root("rm -f %s; true" % GUARDIAN)
 
 
 def rimetti(dillo=True, disarma=True):
@@ -382,7 +382,7 @@ def innesca_sessione(secondi=8):
     return "SESSIONE" in (out + err)
 
 
-def tono_fabbrica(hz=440, secondi=70, ampiezza=0.5):
+def tone_factory(hz=440, secondi=70, ampiezza=0.5):
     """⛔ The tone is built HERE if missing, and the amplitude is KNOWN: the expected RMS
        is a calculation (A/sqrt2), not an estimate.  ⚠ And the file must be readable
        by the session's user, who is not root."""
@@ -391,19 +391,19 @@ def tono_fabbrica(hz=440, secondi=70, ampiezza=0.5):
     if out.strip().isdigit() and int(out.strip()) > 48000 * secondi * 2:
         return f
     root("mkdir -p %s && chmod 755 %s" % (LAV, LAV))
-    copione = (
+    script = (
         "import math,struct,wave;"
         "w=wave.open('%s','wb');w.setnchannels(2);w.setsampwidth(2);"
         "w.setframerate(48000);d=bytearray();"
         "[d.extend(struct.pack('<hh',v,v)) for v in "
         "[int(%f*math.sin(2*math.pi*%d*n/48000)*32767) for n in range(48000*%d)]];"
         "w.writeframes(bytes(d));w.close()" % (f, ampiezza, hz, secondi))
-    root("python3 -c \"%s\" && chmod 644 %s" % (copione, f), 300)
+    root("python3 -c \"%s\" && chmod 644 %s" % (script, f), 300)
     return f
 
 
 def tono_accendi():
-    tono_fabbrica()
+    tone_factory()
     """⛔ The tone must play INSIDE the session, or the judge measures silence
        and the bench reports «rms 0» as if it were a network fault.
        ⚠ It happened on the first «casa» run: 5993 perfect datagrams and rms 0.0.
@@ -739,7 +739,7 @@ def principale():
             conti = (c or {}).get("conti", {})
             import re as _re
 
-            def daconti(chiave, testo):
+            def from_counts(chiave, testo):
                 for x in conti.values():
                     if chiave in x:
                         m = _re.search(testo, x)
@@ -747,8 +747,8 @@ def principale():
                 return None
 
             numeri = {
-                "ricevuti": daconti("received", r"received (\d+)"),
-                "vecchi": daconti("discarded", r"old (\d+)"),
+                "ricevuti": from_counts("received", r"received (\d+)"),
+                "vecchi": from_counts("discarded", r"old (\d+)"),
                 "resa": g.get("resa_campioni"),
                 "purezza": (g.get("tono") or {}).get("purezza"),
                 "spediti_dal_server": sv.get("spediti"),

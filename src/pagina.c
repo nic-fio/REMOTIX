@@ -19,7 +19,7 @@
 #include <openssl/err.h>
 
 #define MAX_CLIENTI 32
-#define MAX_RICHIESTA 8192
+#define MAX_REQUEST 8192
 
 /* ⛔ THE TWO CROSS-ORIGIN ISOLATION HEADERS, PLUS THE THIRD THEY IMPLY.
  *
@@ -29,26 +29,26 @@
  *
  * ⚠ And they go on EVERY response, not only on the page: this is what «changes
  *   how the server serves every resource» means in bytes. */
-#define ISOLAMENTO                                                             \
+#define ISOLATION                                                             \
 	"Cross-Origin-Opener-Policy: same-origin\r\n"                              \
 	"Cross-Origin-Embedder-Policy: require-corp\r\n"                           \
 	"Cross-Origin-Resource-Policy: same-origin\r\n"
 
-enum fase { F_STRETTA, F_LEGGE, F_SCRIVE, F_FINITA };
+enum fase { F_HANDSHAKE, F_READ, F_WRITE, F_DONE };
 
 typedef struct {
 	int fd;
 	SSL *ssl;
 	enum fase fase;
-	char richiesta[MAX_RICHIESTA];
-	size_t nrichiesta;
+	char richiesta[MAX_REQUEST];
+	size_t nrequest;
 	char *risposta;
-	size_t nrisposta, orisposta;
+	size_t nrisposta, oresponse;
 	char provenienza[80];
 	/* ⚠ Which event OpenSSL is waiting for: without this the wrong event is
 	 *   watched and the connection stays stuck until something else
 	 *   expires. */
-	bool vuole_scrivere;
+	bool wants_to_write;
 } cliente;
 
 struct pagina {
@@ -62,7 +62,7 @@ struct pagina {
 
 /* ------------------------------------------------------------------------ */
 
-static char *leggi_file(const char *percorso, size_t *quanto)
+static char *read_file(const char *percorso, size_t *quanto)
 {
 	FILE *f = fopen(percorso, "rb");
 	char *d;
@@ -128,7 +128,7 @@ static char *sostituisci(const char *testo, const char *segno, const char *valor
 
 /* ------------------------------------------------------------------------ */
 
-static void cliente_chiudi(cliente *c)
+static void client_close(cliente *c)
 {
 	if (c->ssl) {
 		SSL_free(c->ssl);
@@ -140,12 +140,12 @@ static void cliente_chiudi(cliente *c)
 	}
 	free(c->risposta);
 	c->risposta = NULL;
-	c->nrisposta = c->orisposta = c->nrichiesta = 0;
-	c->fase = F_FINITA;
+	c->nrisposta = c->oresponse = c->nrequest = 0;
+	c->fase = F_DONE;
 }
 
 static void componi(cliente *c, const char *stato, const char *tipo,
-                    const char *corpo, size_t ncorpo, const char *extra)
+                    const char *corpo, size_t nbody, const char *extra)
 {
 	char testa[768];
 	int n;
@@ -154,23 +154,23 @@ static void componi(cliente *c, const char *stato, const char *tipo,
 	             "HTTP/1.1 %s\r\n"
 	             "Content-Type: %s\r\n"
 	             "Content-Length: %zu\r\n"
-	             ISOLAMENTO
+	             ISOLATION
 	             "Cache-Control: no-store\r\n"
 	             "X-Content-Type-Options: nosniff\r\n"
 	             "Connection: close\r\n"
 	             "%s"
 	             "\r\n",
-	             stato, tipo, ncorpo, extra ? extra : "");
+	             stato, tipo, nbody, extra ? extra : "");
 	if (n < 0)
 		return;
-	c->risposta = malloc((size_t)n + ncorpo);
+	c->risposta = malloc((size_t)n + nbody);
 	if (!c->risposta)
 		return;
 	memcpy(c->risposta, testa, (size_t)n);
-	memcpy(c->risposta + n, corpo, ncorpo);
-	c->nrisposta = (size_t)n + ncorpo;
-	c->orisposta = 0;
-	c->fase = F_SCRIVE;
+	memcpy(c->risposta + n, corpo, nbody);
+	c->nrisposta = (size_t)n + nbody;
+	c->oresponse = 0;
+	c->fase = F_WRITE;
 }
 
 static void servi(pagina *p, cliente *c)
@@ -192,7 +192,7 @@ static void servi(pagina *p, cliente *c)
 	uint64_t restano = 0;
 	bool bannato;
 
-	sp1 = memchr(c->richiesta, ' ', c->nrichiesta);
+	sp1 = memchr(c->richiesta, ' ', c->nrequest);
 	if (!sp1) {
 		componi(c, "400 Bad Request", "text/plain; charset=utf-8",
 		        "request is unreadable\n", 22, NULL);
@@ -204,7 +204,7 @@ static void servi(pagina *p, cliente *c)
 			n = sizeof metodo - 1;
 		memcpy(metodo, c->richiesta, n);
 	}
-	sp2 = memchr(sp1 + 1, ' ', c->nrichiesta - (size_t)(sp1 + 1 - c->richiesta));
+	sp2 = memchr(sp1 + 1, ' ', c->nrequest - (size_t)(sp1 + 1 - c->richiesta));
 	if (!sp2) {
 		componi(c, "400 Bad Request", "text/plain; charset=utf-8",
 		        "request is unreadable\n", 22, NULL);
@@ -282,7 +282,7 @@ static void servi(pagina *p, cliente *c)
 		int n = snprintf(corpo, sizeof corpo,
 		                 "{\"algoritmo\":\"sha-256\",\"impronta\":\"%s\","
 		                 "\"esadecimale\":\"%s\",\"rotazioni\":%u}\n",
-		                 p->cert->impronta, p->cert->impronta_esa,
+		                 p->cert->impronta, p->cert->fingerprint_hex,
 		                 p->cert->rotazioni);
 		componi(c, "200 OK", "application/json; charset=utf-8", corpo,
 		        (size_t)n, NULL);
@@ -386,7 +386,7 @@ static void servi(pagina *p, cliente *c)
 		 *   would have read would have ended mid-sentence.  A truncated notice
 		 *   is worse than no notice: §4.4-bis wants it to be UNDERSTOOD. */
 		char avviso[640] = "";
-		char restano_txt[32];
+		char remain_txt[32];
 		unsigned long long minuti = (restano + 59999u) / 60000u;
 
 		if (bannato) {
@@ -411,7 +411,7 @@ static void servi(pagina *p, cliente *c)
 			         "banned themselves from their own phone.",
 			         minuti / 60, minuti % 60);
 		}
-		snprintf(restano_txt, sizeof restano_txt, "%llu",
+		snprintf(remain_txt, sizeof remain_txt, "%llu",
 		         (unsigned long long)restano);
 
 		a = sostituisci(p->html, "__IMPRONTA__", p->cert->impronta);
@@ -434,7 +434,7 @@ static void servi(pagina *p, cliente *c)
 			        "text/plain; charset=utf-8", "no mem.\n", 8, NULL);
 			return;
 		}
-		d = sostituisci(cc, "__RESTANO_MS__", restano_txt);
+		d = sostituisci(cc, "__RESTANO_MS__", remain_txt);
 		free(cc);
 		if (!d) {
 			componi(c, "500 Internal Server Error",
@@ -448,21 +448,21 @@ static void servi(pagina *p, cliente *c)
 
 /* ------------------------------------------------------------------------ */
 
-static void muovi_cliente(pagina *p, cliente *c, short eventi)
+static void move_client(pagina *p, cliente *c, short eventi)
 {
 	int rv;
 
 	(void)eventi;
-	c->vuole_scrivere = false;
+	c->wants_to_write = false;
 
-	if (c->fase == F_STRETTA) {
+	if (c->fase == F_HANDSHAKE) {
 		rv = SSL_accept(c->ssl);
 		if (rv == 1) {
-			c->fase = F_LEGGE;
+			c->fase = F_READ;
 		} else {
 			int e = SSL_get_error(c->ssl, rv);
 			if (e == SSL_ERROR_WANT_WRITE) {
-				c->vuole_scrivere = true;
+				c->wants_to_write = true;
 				return;
 			}
 			if (e == SSL_ERROR_WANT_READ)
@@ -478,33 +478,33 @@ static void muovi_cliente(pagina *p, cliente *c, short eventi)
 			                   "not yet accepted",
 			                   c->provenienza, e);
 			ERR_clear_error();
-			cliente_chiudi(c);
+			client_close(c);
 			return;
 		}
 	}
 
-	if (c->fase == F_LEGGE) {
+	if (c->fase == F_READ) {
 		for (;;) {
 			size_t letti = 0;
-			rv = SSL_read_ex(c->ssl, c->richiesta + c->nrichiesta,
-			                 sizeof c->richiesta - c->nrichiesta - 1, &letti);
+			rv = SSL_read_ex(c->ssl, c->richiesta + c->nrequest,
+			                 sizeof c->richiesta - c->nrequest - 1, &letti);
 			if (rv != 1) {
 				int e = SSL_get_error(c->ssl, rv);
 				if (e == SSL_ERROR_WANT_WRITE)
-					c->vuole_scrivere = true;
+					c->wants_to_write = true;
 				if (e == SSL_ERROR_WANT_READ || e == SSL_ERROR_WANT_WRITE)
 					return;
-				cliente_chiudi(c);
+				client_close(c);
 				return;
 			}
-			c->nrichiesta += letti;
-			c->richiesta[c->nrichiesta] = 0;
+			c->nrequest += letti;
+			c->richiesta[c->nrequest] = 0;
 			if (strstr(c->richiesta, "\r\n\r\n") ||
 			    strstr(c->richiesta, "\n\n")) {
 				servi(p, c);
 				break;
 			}
-			if (c->nrichiesta + 1 >= sizeof c->richiesta) {
+			if (c->nrequest + 1 >= sizeof c->richiesta) {
 				/* ⛔ The length is checked before allocating, and it is
 				 *    the same rule of `RCP.md` §6.1 applied to HTTP. */
 				componi(c, "431 Request Header Fields Too Large",
@@ -516,32 +516,32 @@ static void muovi_cliente(pagina *p, cliente *c, short eventi)
 		}
 	}
 
-	if (c->fase == F_SCRIVE) {
-		while (c->orisposta < c->nrisposta) {
+	if (c->fase == F_WRITE) {
+		while (c->oresponse < c->nrisposta) {
 			size_t scritti = 0;
-			rv = SSL_write_ex(c->ssl, c->risposta + c->orisposta,
-			                  c->nrisposta - c->orisposta, &scritti);
+			rv = SSL_write_ex(c->ssl, c->risposta + c->oresponse,
+			                  c->nrisposta - c->oresponse, &scritti);
 			if (rv != 1) {
 				int e = SSL_get_error(c->ssl, rv);
 				if (e == SSL_ERROR_WANT_WRITE) {
-					c->vuole_scrivere = true;
+					c->wants_to_write = true;
 					return;
 				}
 				if (e == SSL_ERROR_WANT_READ)
 					return;
-				cliente_chiudi(c);
+				client_close(c);
 				return;
 			}
-			c->orisposta += scritti;
+			c->oresponse += scritti;
 		}
 		SSL_shutdown(c->ssl);
-		cliente_chiudi(c);
+		client_close(c);
 	}
 }
 
 /* ------------------------------------------------------------------------ */
 
-size_t pagina_descrittori(pagina *p, struct pollfd *dove, size_t cap)
+size_t page_descriptors(pagina *p, struct pollfd *dove, size_t cap)
 {
 	size_t n = 0;
 	if (cap == 0)
@@ -551,10 +551,10 @@ size_t pagina_descrittori(pagina *p, struct pollfd *dove, size_t cap)
 	dove[n].revents = 0;
 	n++;
 	for (size_t i = 0; i < MAX_CLIENTI && n < cap; i++) {
-		if (p->clienti[i].fase == F_FINITA || p->clienti[i].fd < 0)
+		if (p->clienti[i].fase == F_DONE || p->clienti[i].fd < 0)
 			continue;
 		dove[n].fd = p->clienti[i].fd;
-		dove[n].events = p->clienti[i].vuole_scrivere ? POLLOUT : POLLIN;
+		dove[n].events = p->clienti[i].wants_to_write ? POLLOUT : POLLIN;
 		dove[n].revents = 0;
 		n++;
 	}
@@ -577,7 +577,7 @@ static void accetta(pagina *p)
 			return;
 		}
 		for (size_t i = 0; i < MAX_CLIENTI; i++)
-			if (p->clienti[i].fase == F_FINITA && p->clienti[i].fd < 0) {
+			if (p->clienti[i].fase == F_DONE && p->clienti[i].fd < 0) {
 				c = &p->clienti[i];
 				break;
 			}
@@ -605,13 +605,13 @@ static void accetta(pagina *p)
 		if (!c->ssl) {
 			close(fd);
 			c->fd = -1;
-			c->fase = F_FINITA;
+			c->fase = F_DONE;
 			return;
 		}
 		SSL_set_fd(c->ssl, fd);
 		SSL_set_accept_state(c->ssl);
-		c->fase = F_STRETTA;
-		muovi_cliente(p, c, 0);
+		c->fase = F_HANDSHAKE;
+		move_client(p, c, 0);
 	}
 }
 
@@ -626,21 +626,21 @@ void pagina_muovi(pagina *p, struct pollfd *dove, size_t quanti)
 		}
 		for (size_t i = 0; i < MAX_CLIENTI; i++)
 			if (p->clienti[i].fd == dove[k].fd &&
-			    p->clienti[i].fase != F_FINITA) {
-				muovi_cliente(p, &p->clienti[i], dove[k].revents);
+			    p->clienti[i].fase != F_DONE) {
+				move_client(p, &p->clienti[i], dove[k].revents);
 				break;
 			}
 	}
 }
 
-void pagina_contesto(pagina *p, SSL_CTX *ctx) { p->ctx = ctx; }
+void page_context(pagina *p, SSL_CTX *ctx) { p->ctx = ctx; }
 
 /* ------------------------------------------------------------------------ */
 
 pagina *pagina_apri(const char *indirizzo, const char *porta, SSL_CTX *ctx,
                     const char *file_html, const certificati *cert)
 {
-	struct addrinfo sugg, *ris = NULL, *r;
+	struct addrinfo sugg, *result = NULL, *r;
 	pagina *p;
 	int fd = -1, uno = 1;
 
@@ -649,11 +649,11 @@ pagina *pagina_apri(const char *indirizzo, const char *porta, SSL_CTX *ctx,
 	sugg.ai_socktype = SOCK_STREAM;
 	sugg.ai_flags = AI_PASSIVE;
 
-	if (getaddrinfo(indirizzo, porta, &sugg, &ris) != 0) {
+	if (getaddrinfo(indirizzo, porta, &sugg, &result) != 0) {
 		registro_dice(REG_PAGINA, "⛔ %s:%s does not resolve", indirizzo, porta);
 		return NULL;
 	}
-	for (r = ris; r; r = r->ai_next) {
+	for (r = result; r; r = r->ai_next) {
 		fd = socket(r->ai_family, r->ai_socktype | SOCK_NONBLOCK, r->ai_protocol);
 		if (fd < 0)
 			continue;
@@ -663,7 +663,7 @@ pagina *pagina_apri(const char *indirizzo, const char *porta, SSL_CTX *ctx,
 		close(fd);
 		fd = -1;
 	}
-	freeaddrinfo(ris);
+	freeaddrinfo(result);
 	if (fd < 0) {
 		registro_dice(REG_PAGINA, "⛔ cannot bind to %s:%s over TCP: %s", indirizzo,
 		              porta, strerror(errno));
@@ -680,12 +680,12 @@ pagina *pagina_apri(const char *indirizzo, const char *porta, SSL_CTX *ctx,
 	p->cert = cert;
 	for (size_t i = 0; i < MAX_CLIENTI; i++) {
 		p->clienti[i].fd = -1;
-		p->clienti[i].fase = F_FINITA;
+		p->clienti[i].fase = F_DONE;
 	}
 
-	p->html = leggi_file(file_html, &p->nhtml);
+	p->html = read_file(file_html, &p->nhtml);
 	if (!p->html) {
-		pagina_chiudi(p);
+		page_close(p);
 		return NULL;
 	}
 	/* ⛔ The positive check of the marker: if the page does NOT contain
@@ -702,18 +702,18 @@ pagina *pagina_apri(const char *indirizzo, const char *porta, SSL_CTX *ctx,
 	 *    ⚠ A substitution that «succeeds doing nothing» is the seventh guise
 	 *    of `LEZIONI.md` §1.9, and it holds for all four. */
 	{
-		static const char *const SEGNI[] = {"__IMPRONTA__", "__AVVISO__",
+		static const char *const PLACEHOLDERS[] = {"__IMPRONTA__", "__AVVISO__",
 		                                    "__BANNATO__", "__RESTANO_MS__",
 		                                    NULL};
-		for (int i = 0; SEGNI[i]; i++)
-			if (!strstr(p->html, SEGNI[i])) {
+		for (int i = 0; PLACEHOLDERS[i]; i++)
+			if (!strstr(p->html, PLACEHOLDERS[i])) {
 				registro_dice(REG_PAGINA,
 				              "⛔ %s does not contain the marker %s: the page "
 				              "would serve an answer that is not there — and a "
 				              "substitution that succeeds doing nothing would "
 				              "not tell anyone.  Not starting.",
-				              file_html, SEGNI[i]);
-				pagina_chiudi(p);
+				              file_html, PLACEHOLDERS[i]);
+				page_close(p);
 				return NULL;
 			}
 	}
@@ -734,12 +734,12 @@ pagina *pagina_apri(const char *indirizzo, const char *porta, SSL_CTX *ctx,
 	 *    start — not even inside a comment, which is bytes served to the
 	 *    browser as much as the rest. */
 	{
-		static const char *const UNICI[] = {"data-bannato=\"",
+		static const char *const UNIQUE[] = {"data-bannato=\"",
 		                                    "data-restano-ms=\"", NULL};
-		for (int i = 0; UNICI[i]; i++) {
+		for (int i = 0; UNIQUE[i]; i++) {
 			int quante = 0;
-			for (const char *q = strstr(p->html, UNICI[i]); q;
-			     q = strstr(q + strlen(UNICI[i]), UNICI[i]))
+			for (const char *q = strstr(p->html, UNIQUE[i]); q;
+			     q = strstr(q + strlen(UNIQUE[i]), UNIQUE[i]))
 				quante++;
 			if (quante != 1) {
 				registro_dice(REG_PAGINA,
@@ -748,8 +748,8 @@ pagina *pagina_apri(const char *indirizzo, const char *porta, SSL_CTX *ctx,
 				              "string would take the wrong occurrence and "
 				              "would measure nobody's ban (§4.4-bis).  "
 				              "Not starting.",
-				              file_html, UNICI[i], quante);
-				pagina_chiudi(p);
+				              file_html, UNIQUE[i], quante);
+				page_close(p);
 				return NULL;
 			}
 		}
@@ -762,13 +762,13 @@ pagina *pagina_apri(const char *indirizzo, const char *porta, SSL_CTX *ctx,
 	return p;
 }
 
-void pagina_chiudi(pagina *p)
+void page_close(pagina *p)
 {
 	if (!p)
 		return;
 	for (size_t i = 0; i < MAX_CLIENTI; i++)
 		if (p->clienti[i].fd >= 0)
-			cliente_chiudi(&p->clienti[i]);
+			client_close(&p->clienti[i]);
 	free(p->html);
 	if (p->fd >= 0)
 		close(p->fd);

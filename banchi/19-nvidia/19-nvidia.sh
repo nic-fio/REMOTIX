@@ -21,7 +21,7 @@ ALBERO=$(cd "$QUI/../.." && pwd)
 USCITA=${USCITA:-$ALBERO/costruzione-uscita}
 VAL=$USCITA/19-nvidia
 MISURE=$ALBERO/misure/19-nvidia
-LONTANO=/opt/remotix-nv
+FAR=/opt/remotix-nv
 LAVORO=/var/lib/remotix-nv
 UNITA=remotix-nv-banco
 UTENTE=${UTENTE:-root}
@@ -114,13 +114,13 @@ manda() {
 		tar -C "$VAL/valigia" -czf "$VAL/valigia.tgz" .
 	fi
 	if [ -n "${CONTENITORE:-}" ]; then
-		podman exec "$CONTENITORE" mkdir -p "$LONTANO"
-		podman exec -i "$CONTENITORE" tar -xzf - -C "$LONTANO" < "$VAL/valigia.tgz" || exit 1
+		podman exec "$CONTENITORE" mkdir -p "$FAR"
+		podman exec -i "$CONTENITORE" tar -xzf - -C "$FAR" < "$VAL/valigia.tgz" || exit 1
 	else
 		ssh -o StrictHostKeyChecking=accept-new ${CHIAVE:+-i "$CHIAVE"} -p "${PORTA_SSH:-22}" "$UTENTE@$IP" \
-			"$PRE rm -rf $LONTANO && $PRE mkdir -p $LONTANO && $PRE tar -xzf - -C $LONTANO" < "$VAL/valigia.tgz" || exit 1
+			"$PRE rm -rf $FAR && $PRE mkdir -p $FAR && $PRE tar -xzf - -C $FAR" < "$VAL/valigia.tgz" || exit 1
 	fi
-	ok "$(lontano "head -1 $LONTANO/VERSIONE")"
+	ok "$(lontano "head -1 $FAR/VERSIONE")"
 }
 
 avvia() {
@@ -132,7 +132,7 @@ avvia() {
 		systemd-run --unit=$UNITA --collect --property=StandardOutput=append:$LAVORO/banco.log \
 		--property=StandardError=append:$LAVORO/banco.log --setenv=FORZA=${FORZA:-0} --setenv=RIFAI='${RIFAI:-}' \
 		--setenv=PROVE='${PROVE:-}' --setenv=BROWSER_SUITE='${BROWSER_SUITE:-}' --setenv=CLIENTE_SCHEDA='${CLIENTE_SCHEDA:-0}' --setenv=DESKTOP_NV='${DESKTOP_NV:-xfce}' \
-		/bin/bash $LONTANO/albero/banchi/19-nvidia/19-nv-macchina.sh $p" \
+		/bin/bash $FAR/albero/banchi/19-nvidia/19-nv-macchina.sh $p" \
 		&& ok "started"
 }
 
@@ -170,7 +170,7 @@ aspetta_ssh() {
 
 raccogli() {
 	log "collecting the evidence archive"
-	lontano "bash $LONTANO/albero/banchi/19-nvidia/19-nv-macchina.sh raccogli" | tail -n 3
+	lontano "bash $FAR/albero/banchi/19-nvidia/19-nv-macchina.sh raccogli" | tail -n 3
 	local nome sha
 	nome=$(lontano "cat $LAVORO/archivio")
 	sha=$(lontano "cat $LAVORO/archivio.sha256")
@@ -188,8 +188,8 @@ raccogli() {
 
 pulisci() {
 	log "cleaning the machine"
-	lontano "FORZA=${FORZA:-0} bash $LONTANO/albero/banchi/19-nvidia/19-nv-macchina.sh pulisci" || return 1
-	lontano "rm -rf $LONTANO $LAVORO" && ok "suitcase and work folder removed"
+	lontano "FORZA=${FORZA:-0} bash $FAR/albero/banchi/19-nvidia/19-nv-macchina.sh pulisci" || return 1
+	lontano "rm -rf $FAR $LAVORO" && ok "suitcase and work folder removed"
 	lontano "cat /run/reboot-required 2>/dev/null; true"
 }
 
@@ -217,7 +217,7 @@ case "$AZIONE" in
 prepara) prepara ;;
 manda|segui|raccogli|pulisci|tutto) serve_ip "${2:-}"; "$AZIONE" ;;
 avvia) serve_ip "${2:-}"; avvia "${3:-tutto}" ;;
-stato) serve_ip "${2:-}"; lontano "bash $LONTANO/albero/banchi/19-nvidia/19-nv-macchina.sh stato" ;;
+stato) serve_ip "${2:-}"; lontano "bash $FAR/albero/banchi/19-nvidia/19-nv-macchina.sh stato" ;;
 entra) serve_ip "${2:-}"; ssh ${CHIAVE:+-i "$CHIAVE"} -p "${PORTA_SSH:-22}" "$UTENTE@$IP" ;;
 *) sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
 esac

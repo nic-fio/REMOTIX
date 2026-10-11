@@ -173,7 +173,7 @@ LAV = "/media/REMOTIX/tmp/10f1"
 PAROLA_FILE = "/media/REMOTIX/tmp/10nic/parola"
 
 # ⚠ Inside the container the two mounts show up under other names (`enter.sh`).
-def _dentro(percorso):
+def _inside(percorso):
     if percorso.startswith("/media/REMOTIX/src/"):
         return "/srv/src/" + percorso[len("/media/REMOTIX/src/"):]
     if percorso.startswith("/media/REMOTIX/"):
@@ -187,7 +187,7 @@ def _dentro(percorso):
 # an opinion.
 # ═══════════════════════════════════════════════════════════════════════════
 LUMA_NERO = 16.0       # below this luma a pixel is "off"
-FRAZIONE_NERO = 0.001  # less than 0.1 % of pixels lit ⇒ the screen is BLACK
+FRACTION_BLACK = 0.001  # less than 0.1 % of pixels lit ⇒ the screen is BLACK
 # ⛔ "FLAT COLOUR" IS MEASURED ON HOW MUCH OF THE SCREEN IS THE MOST COMMON COLOUR,
 #    not on the number of distinct colours — and the first draft got exactly this wrong.
 #    `[M]` 25 Aug 2026, fault G8 of `--certifica`: a **black screen with
@@ -195,7 +195,7 @@ FRAZIONE_NERO = 0.001  # less than 0.1 % of pixels lit ⇒ the screen is BLACK
 #    declared "flat colour".  ⚠ That is, the witness threw away the only proof
 #    that it had really looked, and did so with a plausible verdict.
 #    ⇒ The right criterion is **how much of the screen is NOT the background**.
-FRAZIONE_PIATTO = 0.001
+FRACTION_FLAT = 0.001
 # ⭐⭐ "NEARLY BLACK" — and the threshold is MEASURED, not chosen.  `[M]` 25 Aug 2026,
 #    the negative control on the real thing: `provanic3`'s desktop with the background set to
 #    `#000000`, captured from the wire.  Below the GNOME bar (y ≥ 40) the
@@ -209,14 +209,14 @@ FRAZIONE_PIATTO = 0.001
 #         black desktop + bar    mean **0.28**
 #         real desktop           mean **34.3** (empty) … **106.9** (with the scene)
 #      The threshold is set at **2.0**, that is, in the middle of the gap between the two.
-MEDIA_QUASI_NERO = 2.0
+MEAN_NEARLY_BLACK = 2.0
 
 # BT.709, the same matrix `03-marca.py` declares: here it only serves to make
 # ONE number out of three channels.
-PESI_LUMA = (0.2126, 0.7152, 0.0722)
+LUMA_WEIGHTS = (0.2126, 0.7152, 0.0722)
 
 
-def _marca_modulo():
+def _mark_module():
     """⭐ The certified reader is IMPORTED, not rewritten.
 
     ⛔ `03-marca.py` is the only thing in the chain that is not touched: it is the one
@@ -233,7 +233,7 @@ def _marca_modulo():
     return m
 
 
-def _numpy_o_niente():
+def _numpy_or_nothing():
     """⛔ Returns `None` if it is not there, and the caller must say "I did not judge".
 
     ⚠ The temptation was a pure-Python fallback that says "more or less" whether it
@@ -268,7 +268,7 @@ def giudica(percorso):
         return None
     if os.path.getsize(percorso) == 0:
         return None
-    np = _numpy_o_niente()
+    np = _numpy_or_nothing()
     if np is None:
         return None
     try:
@@ -283,11 +283,11 @@ def giudica(percorso):
 
     h, w = img.shape[0], img.shape[1]
     f = img.astype("float32")
-    luma = (f[:, :, 0] * PESI_LUMA[0] + f[:, :, 1] * PESI_LUMA[1]
-            + f[:, :, 2] * PESI_LUMA[2])
+    luma = (f[:, :, 0] * LUMA_WEIGHTS[0] + f[:, :, 1] * LUMA_WEIGHTS[1]
+            + f[:, :, 2] * LUMA_WEIGHTS[2])
     accesi = float((luma > LUMA_NERO).mean())
 
-    piatto = img.reshape(-1, 3)
+    flat = img.reshape(-1, 3)
     # ⚠ On 1920x1080 `np.unique` on the rows is costly; 1 pixel in 4 is sampled in
     #   each direction.  ⛔ And it is SAID, because "distinct colours" here means
     #   "distinct in the sample", and on an image with very few colours —
@@ -301,14 +301,14 @@ def giudica(percorso):
     diversi = float(1.0 - conti.max() / float(len(campione)))
 
     media = float(f.mean())
-    if accesi < FRAZIONE_NERO:
+    if accesi < FRACTION_BLACK:
         verdetto = "nero"
-    elif media < MEDIA_QUASI_NERO:
+    elif media < MEAN_NEARLY_BLACK:
         # ⭐ "there is a screen, and there is nothing on it" — and it must be said with
         #    its own words, because it is the outcome the negative control must produce on
         #    a GNOME desktop, where the bar at the top never goes off.
         verdetto = "quasi-nero"
-    elif diversi < FRAZIONE_PIATTO:
+    elif diversi < FRACTION_FLAT:
         verdetto = "tinta-unita"
     else:
         verdetto = "disegnato"
@@ -322,13 +322,13 @@ def giudica(percorso):
         "colori": colori,
         "accesi": round(accesi, 6),
         "diversi": round(diversi, 6),
-        "soglie": {"luma_nero": LUMA_NERO, "frazione_nero": FRAZIONE_NERO,
-                   "media_quasi_nero": MEDIA_QUASI_NERO,
-                   "frazione_piatto": FRAZIONE_PIATTO},
+        "soglie": {"luma_nero": LUMA_NERO, "frazione_nero": FRACTION_BLACK,
+                   "media_quasi_nero": MEAN_NEARLY_BLACK,
+                   "frazione_piatto": FRACTION_FLAT},
     }
 
 
-def leggi_la_marca(percorso, giri):
+def read_mark(percorso, giri):
     """⭐ The positive control: is the mark there, and is it **mine**?
 
     `giri` is the list of round names I ran myself.  ⛔ The inversion
@@ -343,8 +343,8 @@ def leggi_la_marca(percorso, giri):
                                       "I don't know"
       {"c_e": True, "giro": …, "mio": bool, "disegno": …, "istante_us": …}
     """
-    np = _numpy_o_niente()
-    m = _marca_modulo()
+    np = _numpy_or_nothing()
+    m = _mark_module()
     if np is None or m is None:
         return None
     if not percorso or not os.path.exists(percorso) \
@@ -386,7 +386,7 @@ def _ssh(comando, secondi=180, macchina=MACCHINA):
             p.stderr.decode("utf-8", "replace"))
 
 
-def _nel_contenitore(script, secondi=180, macchina=MACCHINA,
+def _in_container(script, secondi=180, macchina=MACCHINA,
                      parola_sudo=PAROLA_SUDO, lav=LAV):
     """Runs a bash script **inside** the container, as administrator.
 
@@ -401,11 +401,11 @@ def _nel_contenitore(script, secondi=180, macchina=MACCHINA,
     riga = ("printf '%%s' '%s' | base64 -d > %s/passo.sh && "
             "printf '%%s\\n' %s | bash %s --root "
             "\"bash %s/passo.sh\""
-            % (b64, lav, parola_sudo, ENTRA, _dentro(lav)))
+            % (b64, lav, parola_sudo, ENTRA, _inside(lav)))
     return _ssh(riga, secondi=secondi, macchina=macchina)
 
 
-def _leggi_esito_cliente(testo):
+def _read_client_outcome(testo):
     """From the client log: **how many frames ARRIVED**.
 
     ⛔ Returns `None` when nothing arrived — and not zero.  `LEZIONI.md`
@@ -439,7 +439,7 @@ def _leggi_esito_cliente(testo):
             "sessione": sessione}
 
 
-SCRIPT_PRESA = r"""
+GRAB_SCRIPT = r"""
 set -u
 LAV=%(lav_dentro)s
 CLIENTE=%(cliente)s
@@ -504,20 +504,20 @@ def scatta(utente, fuori, resta=6.0, porta=PORTA, indirizzo=INDIRIZZO,
         altro = "--adatta %s@1.0 --adatta %dx%d@2.0" % (
             sveglia, 1920, 1080)
 
-    script = SCRIPT_PRESA % {
-        "lav_dentro": _dentro(lav),
-        "cliente": _dentro(albero) + "/banchi/01-b3-cliente.py",
+    script = GRAB_SCRIPT % {
+        "lav_dentro": _inside(lav),
+        "cliente": _inside(albero) + "/banchi/01-b3-cliente.py",
         "tetto": int(resta) + 60,
         "indirizzo": indirizzo, "porta": porta, "utente": utente,
-        "parola": _dentro(parola_file), "resta": resta, "altro": altro,
+        "parola": _inside(parola_file), "resta": resta, "altro": altro,
         "tutti": "1" if tutti else "",
     }
-    rc, out, err = _nel_contenitore(script, secondi=int(resta) + 120,
+    rc, out, err = _in_container(script, secondi=int(resta) + 120,
                                     macchina=macchina,
                                     parola_sudo=parola_sudo, lav=lav)
     if loquace:
         sys.stderr.write(out + err)
-    conti = _leggi_esito_cliente(out)
+    conti = _read_client_outcome(out)
     if conti is None:
         return {"png": None, "conti": None,
                 "perche": ("⛔ I DID NOT LOOK: no frame arrived "
@@ -570,7 +570,7 @@ def scatta(utente, fuori, resta=6.0, porta=PORTA, indirizzo=INDIRIZZO,
 # ═══════════════════════════════════════════════════════════════════════════
 # ⛔ THE CHECK THAT CANNOT BE SKIPPED: does the witness DISTURB the session?
 # ═══════════════════════════════════════════════════════════════════════════
-def guarda_il_registro(righe_prima, macchina=MACCHINA,
+def look_log(righe_prima, macchina=MACCHINA,
                        parola_sudo=PAROLA_SUDO,
                        registro="/media/REMOTIX/tmp/10nic/registro.log"):
     """⭐ The server lines written FROM `righe_prima` ONWARDS, filtered on what
@@ -589,7 +589,7 @@ def guarda_il_registro(righe_prima, macchina=MACCHINA,
     return out
 
 
-def quante_righe(macchina=MACCHINA, parola_sudo=PAROLA_SUDO,
+def how_many_lines(macchina=MACCHINA, parola_sudo=PAROLA_SUDO,
                  registro="/media/REMOTIX/tmp/10nic/registro.log"):
     # ⛔ NOT `wc -l < file`: the redirection STEALS standard input from `sudo -S`,
     #    which then asks for the password on a terminal that is not there and — after three
@@ -606,7 +606,7 @@ def quante_righe(macchina=MACCHINA, parola_sudo=PAROLA_SUDO,
 # ═══════════════════════════════════════════════════════════════════════════
 # ⛔⛔ THE CERTIFICATION — healthy → faulty → healed, and the faults are RUN
 # ═══════════════════════════════════════════════════════════════════════════
-def _dipingi(dove, larghezza, altezza, fondo, giro=None, disegno=7,
+def _paint(dove, larghezza, altezza, fondo, giro=None, disegno=7,
              istante_us=123456):
     """Builds a fake frame, with the certified reader.
 
@@ -614,8 +614,8 @@ def _dipingi(dove, larghezza, altezza, fondo, giro=None, disegno=7,
       `03-marca.py`, that is the same file that then reads it — which is how
       a reader is certified without having to turn the machine on.
     """
-    np = _numpy_o_niente()
-    m = _marca_modulo()
+    np = _numpy_or_nothing()
+    m = _mark_module()
     if np is None or m is None:
         return False
     from PIL import Image
@@ -644,15 +644,15 @@ def certifica():
     Every predicate of this witness has its fault here, and the fault **runs**:
     healthy → faulty → healed, counted and printed.
     """
-    np = _numpy_o_niente()
-    if np is None or _marca_modulo() is None:
+    np = _numpy_or_nothing()
+    if np is None or _mark_module() is None:
         print("⛔ I COULD NOT CERTIFY: without `numpy`/`Pillow` and without "
               "`03-marca.py` next to me, the pixel reading cannot be done.\n"
               "   ⚠ And this is NOT a green: it is the third outcome.")
         return 3
 
     tmp = tempfile.mkdtemp(prefix="10-f1-certifica-")
-    buoni = rossi = risanati = 0
+    buoni = rossi = healed = 0
     guasti = []
 
     def prova(nome, che, atteso, ottenuto):
@@ -671,21 +671,21 @@ def certifica():
             "   [vid]  12 frames (2 keys), 1920x1080, written to /x.264\n")
     g1 = "   ⭐ SESSIONE: stato=1\n   [vid]  ⛔ no frame taken from the wire\n"
     g2 = "   ⛔ the client died before opening the session\n"
-    a = _leggi_esito_cliente(sano)
+    a = _read_client_outcome(sano)
     ok0 = prova("P1", "healthy: 12 frames", 12, (a or {}).get("fotogrammi"))
     ok1 = prova("P1", "fault G1 «no frame» ⇒ None",
-                None, _leggi_esito_cliente(g1))
+                None, _read_client_outcome(g1))
     ok2 = prova("P1", "fault G2 «client dead» ⇒ None",
-                None, _leggi_esito_cliente(g2))
+                None, _read_client_outcome(g2))
     ok3 = prova("P1", "healed: 12 frames", 12,
-                (_leggi_esito_cliente(sano) or {}).get("fotogrammi"))
-    buoni += ok0; rossi += (ok1 + ok2); risanati += ok3
+                (_read_client_outcome(sano) or {}).get("fotogrammi"))
+    buoni += ok0; rossi += (ok1 + ok2); healed += ok3
     if not (ok0 and ok1 and ok2 and ok3): guasti.append("P1")
 
     # ── P2 · the PNG that is not there, or cannot be read, is I DID NOT LOOK ─
     print("\n  P2 · the snapshot: «I did not read it» is not «it is black»")
     vero = os.path.join(tmp, "vero.png")
-    _dipingi(vero, 640, 480, "desktop")
+    _paint(vero, 640, 480, "desktop")
     ok0 = prova("P2", "healthy: a real PNG is judged", "disegnato",
                 (giudica(vero) or {}).get("verdetto"))
     ok1 = prova("P2", "fault G3 file that does not exist ⇒ None",
@@ -698,13 +698,13 @@ def certifica():
         f.write(open(vero, "rb").read()[:400])   # ⛔ PNG truncated halfway
     ok3 = prova("P2", "fault G5 truncated PNG ⇒ None", None, giudica(rotto))
     ok4 = prova("P2", "healed", "disegnato", (giudica(vero) or {}).get("verdetto"))
-    buoni += ok0; rossi += (ok1 + ok2 + ok3); risanati += ok4
+    buoni += ok0; rossi += (ok1 + ok2 + ok3); healed += ok4
     if not (ok0 and ok1 and ok2 and ok3 and ok4): guasti.append("P2")
 
     # ── P3 · the verdict on the pixels: black, flat colour, drawn ───────────
     print("\n  P3 · the verdict: ⛔ «a PNG that exists» is not «a PNG that shows»")
-    nero = os.path.join(tmp, "nero.png"); _dipingi(nero, 640, 480, "nero")
-    grigio = os.path.join(tmp, "grigio.png"); _dipingi(grigio, 640, 480, "grigio-pieno")
+    nero = os.path.join(tmp, "nero.png"); _paint(nero, 640, 480, "nero")
+    grigio = os.path.join(tmp, "grigio.png"); _paint(grigio, 640, 480, "grigio-pieno")
     ok0 = prova("P3", "healthy: the gradient is «disegnato»", "disegnato",
                 (giudica(vero) or {}).get("verdetto"))
     ok1 = prova("P3", "fault G6 black screen ⇒ «nero»", "nero",
@@ -715,7 +715,7 @@ def certifica():
     #    the mark on it is NOT black — and a witness that said "black" here
     #    would throw away the only proof that it really looked.
     nero_marca = os.path.join(tmp, "nero-marca.png")
-    _dipingi(nero_marca, 640, 480, "nero", giro="f1-t")
+    _paint(nero_marca, 640, 480, "nero", giro="f1-t")
     ok3 = prova("P3", "fault G8 black + mark ⇒ «disegnato»", "disegnato",
                 (giudica(nero_marca) or {}).get("verdetto"))
     # ⭐ G12 — THE NEGATIVE CONTROL OF THE REAL THING, redone here in miniature: a
@@ -731,50 +731,50 @@ def certifica():
     #   draft, with a 500x40 block that gave a mean of 2.46.
     _img = np.zeros((1080, 1920, 3), np.uint8)
     _img[8:24, 860:1020] = 255          # ⇐ the bar's clock
-    from PIL import Image as _Immagine
-    _Immagine.fromarray(_img).save(quasi)
+    from PIL import Image as _Image
+    _Image.fromarray(_img).save(quasi)
     ok5 = prova("P3", "fault G12 black + bar at the top ⇒ «quasi-nero»",
                 "quasi-nero", (giudica(quasi) or {}).get("verdetto"))
     ok4 = prova("P3", "healed", "nero", (giudica(nero) or {}).get("verdetto"))
-    buoni += ok0; rossi += (ok1 + ok2 + ok3 + ok5); risanati += ok4
+    buoni += ok0; rossi += (ok1 + ok2 + ok3 + ok5); healed += ok4
     if not ok5: guasti.append("P3")
     if not (ok0 and ok1 and ok2 and ok3 and ok4): guasti.append("P3")
 
     # ── P4 · the mark: it is there, and above all it is MINE ────────────────
     print("\n  P4 · the calibration: the mark is there, and it is from MY round")
     con = os.path.join(tmp, "con-marca.png")
-    _dipingi(con, 1280, 720, "desktop", giro="f1-taratura", disegno=41)
-    r = leggi_la_marca(con, ["f1-taratura"])
+    _paint(con, 1280, 720, "desktop", giro="f1-taratura", disegno=41)
+    r = read_mark(con, ["f1-taratura"])
     ok0 = prova("P4", "healthy: mark found, and it is mine",
                 (True, True, 41),
                 ((r or {}).get("c_e"), (r or {}).get("mio"), (r or {}).get("disegno")))
     senza = os.path.join(tmp, "senza-marca.png")
-    _dipingi(senza, 1280, 720, "desktop")
-    r1 = leggi_la_marca(senza, ["f1-taratura"])
+    _paint(senza, 1280, 720, "desktop")
+    r1 = read_mark(senza, ["f1-taratura"])
     ok1 = prova("P4", "fault G9 no mark ⇒ red (not None)",
                 (True, False), (r1 is not None, (r1 or {}).get("c_e")))
     # ⛔ G10: the mark is there but from ANOTHER round — that is, I am looking at
     #    someone else's desktop.  It is the fault no frame count
     #    could ever give.
     altrui = os.path.join(tmp, "altrui.png")
-    _dipingi(altrui, 1280, 720, "desktop", giro="di-un-altro")
-    r2 = leggi_la_marca(altrui, ["f1-taratura"])
+    _paint(altrui, 1280, 720, "desktop", giro="di-un-altro")
+    r2 = read_mark(altrui, ["f1-taratura"])
     ok2 = prova("P4", "fault G10 mark from ANOTHER round ⇒ «not mine»",
                 (True, False), ((r2 or {}).get("c_e"), (r2 or {}).get("mio")))
     # ⛔ G11: the frame is too small for the mark to fit.  Here
     #    "the mark is not there" would be FALSE: I could not look.
     minuscolo = os.path.join(tmp, "minuscolo.png")
-    _dipingi(minuscolo, 200, 100, "desktop")
+    _paint(minuscolo, 200, 100, "desktop")
     ok3 = prova("P4", "fault G11 frame too small ⇒ None",
-                None, leggi_la_marca(minuscolo, ["f1-taratura"]))
-    r3 = leggi_la_marca(con, ["f1-taratura"])
+                None, read_mark(minuscolo, ["f1-taratura"]))
+    r3 = read_mark(con, ["f1-taratura"])
     ok4 = prova("P4", "healed", (True, True),
                 ((r3 or {}).get("c_e"), (r3 or {}).get("mio")))
-    buoni += ok0; rossi += (ok1 + ok2 + ok3); risanati += ok4
+    buoni += ok0; rossi += (ok1 + ok2 + ok3); healed += ok4
     if not (ok0 and ok1 and ok2 and ok3 and ok4): guasti.append("P4")
 
     print("\n───────────────────────────────────────────────────────────────")
-    print("  healthy %d · faulty %d · healed %d" % (buoni, rossi, risanati))
+    print("  healthy %d · faulty %d · healed %d" % (buoni, rossi, healed))
     if guasti:
         print("  ⛔ NOT CERTIFIED: %s" % ", ".join(guasti))
         return 1
@@ -869,13 +869,13 @@ def main():
              g["accesi"], g["diversi"]))
     print("   the thresholds black luma %.0f · black below %.4f lit · nearly "
           "black below mean %.1f · flat colour below %.4f different"
-          % (LUMA_NERO, FRAZIONE_NERO, MEDIA_QUASI_NERO, FRAZIONE_PIATTO))
+          % (LUMA_NERO, FRACTION_BLACK, MEAN_NEARLY_BLACK, FRACTION_FLAT))
     fuori.update({"guardato": True, "png": e["png"], "conti": c, "giudizio": g})
 
     esito = 0
     if a.marca:
         giri = [x for x in a.marca.split(",") if x]
-        m = leggi_la_marca(e["png"], giri)
+        m = read_mark(e["png"], giri)
         fuori["marca"] = m
         if m is None:
             print("   ⛔ THE MARK: I could not read it (frame too "

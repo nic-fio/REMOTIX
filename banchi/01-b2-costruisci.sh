@@ -153,7 +153,7 @@ inf "archive $LIB"
 inf "bytes   $(stat -c %s "$LIB" 2>/dev/null || echo '?')"
 inf "symbols naming webtransport, at a glance: $(nm -g --defined-only "$LIB" 2>/dev/null | grep -ci webtransport)"
 nm -g --defined-only "$LIB" 2>/dev/null | grep -i webtransport | sed 's/^/        /' | head -8
-ATTESI=(
+EXPECTED_COUNT=(
 	lsquic_stream_set_webtransport_session
 	lsquic_stream_is_webtransport_session
 	lsquic_stream_is_webtransport_client_bidi_stream
@@ -174,10 +174,10 @@ ATTESI=(
 #    as one that passes the wrong one — in the same family as the scroll wheel
 #    bench.  Here it would have struck off the best candidate of `DECISIONI.md`
 #    §6.4 with a false [M] against an [R].
-SIMBOLI=$(nm -g --defined-only "$LIB" 2>/dev/null)
+SYMBOLS=$(nm -g --defined-only "$LIB" 2>/dev/null)
 TROVATI=0
-for s in "${ATTESI[@]}"; do
-	if grep -q " $s\$" <<<"$SIMBOLI"; then
+for s in "${EXPECTED_COUNT[@]}"; do
+	if grep -q " $s\$" <<<"$SYMBOLS"; then
 		ok "$s"
 		TROVATI=$((TROVATI + 1))
 	else

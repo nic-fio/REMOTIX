@@ -547,9 +547,9 @@ def principale():
     #    sentence «after, the key is not there» has no positive control — a reader
     #    that cannot find ANYTHING would say exactly the same thing
     #    (`LEZIONI.md` §1.9 rule 2).
-    prima, prima_guasto = (None, None)
+    prima, before_fault = (None, None)
     if a.ban_file:
-        prima, prima_guasto = leggi_file_ban(a.ban_file)
+        prima, before_fault = leggi_file_ban(a.ban_file)
 
     r = sblocca_esteso(a.socket, a.indirizzo, a.attesa)
     if r["avviso"]:
@@ -587,7 +587,7 @@ def principale():
         # ⚠ And the ban file WINS over the comparison with the expected: 4 says
         #   «it is not the outcome I expected», 5 says «the ban is still there».
         #   The lines on screen all stay; the exit status carries the most serious fact.
-        codice = guarda_le_due_meta(a, r, prima, prima_guasto) or codice
+        codice = guarda_le_due_meta(a, r, prima, before_fault) or codice
     return codice
 
 
@@ -613,7 +613,7 @@ def giudica_chi(a, chi):
     return codice
 
 
-def guarda_le_due_meta(a, r, prima, prima_guasto):
+def guarda_le_due_meta(a, r, prima, before_fault):
     """⛔ §4.4-bis lives in TWO places — the memory of the process that serves and
     the file that survives the restart — and an unblock that convinces only one
     of them is not an unblock: at the restart the ban comes back, and whoever gave
@@ -627,12 +627,12 @@ def guarda_le_due_meta(a, r, prima, prima_guasto):
               f"§4.4-bis forbids to whoever commands")
         return 6
     chiave = r["chiave"]
-    dopo, dopo_guasto = leggi_file_ban(a.ban_file)
+    dopo, after_fault = leggi_file_ban(a.ban_file)
 
     # ⛔ The denominator, always (`LEZIONI.md` §1.9 rule 4): «absent» is not a
     #    datum until one knows on how many lines one looked.
-    for etichetta, righe, guasto in (("before", prima, prima_guasto),
-                                     ("after ", dopo, dopo_guasto)):
+    for etichetta, righe, guasto in (("before", prima, before_fault),
+                                     ("after ", dopo, after_fault)):
         if guasto:
             print(f"        {GIALLO}??{GRIGIO}  ban file {etichetta}: {guasto}")
         else:
@@ -640,21 +640,21 @@ def guarda_le_due_meta(a, r, prima, prima_guasto):
                   f"{'PRESENT' if dentro(righe, chiave) else 'absent'} "
                   f"({len(righe)} lines in «{a.ban_file}»)")
 
-    if dopo_guasto:
+    if after_fault:
         print(f"    {GIALLO}??{GRIGIO}  ⚠ the check on FILE was not done: "
               f"I only know that the process memory says «{r['esito']}».  ⛔ It is not "
               f"a «clean»")
         return 6
 
-    c_dopo = dentro(dopo, chiave)
+    c_after = dentro(dopo, chiave)
     c_prima = dentro(prima, chiave) if prima is not None else None
 
-    if r["esito"] == "TOLTO" and c_dopo:
+    if r["esito"] == "TOLTO" and c_after:
         print(f"    {ROSSO}NO{GRIGIO}  ⛔ the process says TOLTO and the ban file "
               f"still contains «{chiave}»: the unblock did NOT reach the disk, "
               f"and at the first restart the ban comes back (§4.4-bis, invariant I7)")
         return 5
-    if r["esito"] == "NON-BANNATO" and c_dopo:
+    if r["esito"] == "NON-BANNATO" and c_after:
         print(f"    {ROSSO}NO{GRIGIO}  ⛔ the process says NON-BANNATO and the ban "
               f"file contains «{chiave}»: the two halves of §4.4-bis do not "
               f"agree, and the possible readings are two — ⛔ either I talked to "
@@ -671,7 +671,7 @@ def guarda_le_due_meta(a, r, prima, prima_guasto):
         if c_prima:
             print(f"        {VERDE}OK{GRIGIO}  ⭐ and the positive control of the "
                   f"reader is there: before, I found «{chiave}» in that file")
-        elif prima_guasto:
+        elif before_fault:
             print(f"        ⚠ positive control ABSENT: I could not read the «before», "
                   f"so I do not know whether this reader can "
                   f"find a key that is there (`LEZIONI.md` §1.9 rule 2)")

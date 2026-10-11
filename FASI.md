@@ -690,7 +690,7 @@ or noise — and they are taken up when the phase that uses them touches them:
 | `prepara` skips every non-empty file: a truncated scene is never redone | phase 3 |
 | between one cell and the next it kills and restarts after a fixed 1.5 s, and there is no `trap` | phase 3 |
 | `banco.sh` writes `scena.log` and **does not read it**: in the twenty-cell table the §1.1 check does not appear, and the file is overwritten at every cell | phase 3 |
-| plus five minor findings and the `[?]` on `quanti_fd`, on the type of the last frame and on the `pkill -x` of a real session | — |
+| plus five minor findings and the `[?]` on `how_many_fd`, on the type of the last frame and on the `pkill -x` of a real session | — |
 
 #### ⚠ And a defect I made myself while applying the cures
 
@@ -4461,7 +4461,7 @@ its own.
 
 | the pipe | the direction | where |
 |---|---|---|
-| ⭐ **input** | parent → child | `MSG_INPUT` + `figli_input()` · the **six hooks** in `rcp_avvia()` · the bridge `input_al_figlio()` in `main.c` |
+| ⭐ **input** | parent → child | `MSG_INPUT` + `children_input()` · the **six hooks** in `rcp_avvia()` · the bridge `input_al_figlio()` in `main.c` |
 | ⭐ **the cursor shape** | child → parent | `MSG_CURSORE` in pieces (a 256×256 in BGRA makes 262 144 bytes, eight times `PEZZO_MAX`) · `wt_cursore_diffondi()` · `rcp_cursore_forma()` |
 | ⭐ **the `input` field of frames** | child → parent, **inside the frame** | ⛔ and this is the choice that makes it **true** instead of plausible |
 
@@ -4541,7 +4541,7 @@ three entered the verdict — and precisely for that reason nobody would have ch
 | | |
 |---|---|
 | ⛔ «HEVC does not paint» | **false**: `[M]` **8 boxes out of 8** paint (string profile × stream depth, HEVC and AV1, 64×48 **and** 1920×1080), including the exact combination of the product — Main10 stream read with the Main8 string. Stage = the **real desktop**, real GPU, declared and verified from the other end. And continuously: **60 out of 60**, six rounds |
-| ⛔ the «1 748 delivered, 0 painted» | ⛔ **the count was misread**: in the window of the black session the counter **enters at 1748 and exits at 1748** for 2 min 38 s — the 1748 is **the leftover from the evening before** (`ciclo_fotogrammi` is file-static). And the «1 659» was a `grep -c` over the whole 6.7 MB file: in the real window they are **653** |
+| ⛔ the «1 748 delivered, 0 painted» | ⛔ **the count was misread**: in the window of the black session the counter **enters at 1748 and exits at 1748** for 2 min 38 s — the 1748 is **the leftover from the evening before** (`cycle_frames` is file-static). And the «1 659» was a `grep -c` over the whole 6.7 MB file: in the real window they are **653** |
 | ⇒ the real cause | **the added, empty monitor**: nothing moves, Mutter does not deliver. **Work for A1, not for the codec** |
 | ⛔ «drawing costs that segment» | **false**: real drawing costs little, same boundary as phase 3, and the positive control on AV1 comes back with the values of phase 3 ⇒ **the stopwatch was calibrated**. *(The numbers, taken on the chain with encoding without the card or from memory, are removed with phase 18.)* |
 
@@ -4839,7 +4839,7 @@ Identical locally and in the container (`xkbcommon` 1.7.0 on both). It is rechec
 | ⭐ **and it has a negative control** | key 26 **without** Shift ⇒ `è`, not `é`. Without it, an accommodating simulator would have given green even to whoever forgets the modifiers |
 | **the three tests `PIANO.md` names** | `é` on `it` ⇒ `42+26`, `é` comes out · `é` on `us` ⇒ ⛔ **nothing**, and the line in the log · `@` by two paths: `100(AltGr)+16` on `it`, `42(Maiusc)+3` on `us` · emoji and `中` not producible anywhere |
 | ⭐ **the bench is CERTIFIED** | three implementations wrong on purpose, and the launcher demands **RED on the right test**: the one that sends `e` instead of `é` is red |
-| **the fallback is not silent** | `[M]` `xkbcommon` 1.7.0 **does not fall back by itself** (it returns NULL), and `tastiera_disposizione()` says `it [Italian]` ⇒ a fallback coming in from elsewhere would read in the log as `it [English (US)]` |
+| **the fallback is not silent** | `[M]` `xkbcommon` 1.7.0 **does not fall back by itself** (it returns NULL), and `keyboard_layout()` says `it [Italian]` ⇒ a fallback coming in from elsewhere would read in the log as `it [English (US)]` |
 
 ⛔ **And three measurements changed the code** — i.e. the bench did work:
 
@@ -4871,7 +4871,7 @@ using the session's keymap.
 ⭐ **And v1 already did it this way** (`fondamenta/remotix-c/src/tastiera.c:69`): it is the only piece of v1 that the first
 V2 contract had not taken back.
 
-⇒ ✅ **Accepted on 14 Aug 2026**: `tastiera_apri_da_keymap()` is in `src/tastiera.h`, and
+⇒ ✅ **Accepted on 14 Aug 2026**: `keyboard_open_from_keymap()` is in `src/tastiera.h`, and
 `input_apri()` does **not** take the layout — the keymap arrives from `libei` inside `input.c`, at every
 `DEVICE_ADDED`.
 
@@ -5120,7 +5120,7 @@ value nobody granted.**
 |---|---|
 | `src/cattura.c` · `.h` | `cattura_ridimensiona()` (the outcome is the REQUEST, not the change), `cattura_risveglia()`, `cattura_misura_negoziata()`, the four consumption parameters in a single place, the guard on inconsistent geometry |
 | `src/figlio.c` · `.h` | `figli_ritela()`, the `RITELA` branch, **reconciliation on the frame** (encoder reopened, pointer remapped, held keys discarded), `MSG_TELA` — the answer to the parent —, the *wanted* canvas for remounting, the growing wait on the encoder |
-| `src/rcp.c` · `.h` | the `ritela` and `tela_del_palco` hooks, `rcp_tela_dal_palco()` (three cases), `tela_richiama_il_palco()`, the backstop of §7.1, the per-side limits of §4.5, the `video.misura_massima` cap also on `ADATTA_TELA` |
+| `src/rcp.c` · `.h` | the `ritela` and `stage_canvas` hooks, `rcp_tela_dal_palco()` (three cases), `tela_richiama_il_palco()`, the backstop of §7.1, the per-side limits of §4.5, the `video.misura_massima` cap also on `ADATTA_TELA` |
 | `src/webtransport.c` · `.h` | the bridge for the two hooks, the table of the stages' canvases per user |
 | `src/main.c` | the two seams, and `wt_palco_dimentica()` on the child's death |
 | `src/mutter.c` · `.h` | `mutter_scala_nostra()` — the scale of **our** logical monitor |
@@ -5479,8 +5479,8 @@ stage already has with **zero frames discarded** `[M]`, and the hot resize costs
 |---|---|---|
 | remote alive + a **second device** | `0x0F GIA_ATTIVA_REMOTA` | ⭐ **live and tested** `[M]`: the slot registry in `rcp.c`, and case 18 of bench `04-b31` |
 | remote **silent for 30 s** + another device | *(gets in)* | live: `torna_a_parlare()` |
-| ⛔ **local already active**, the remote arrives | `0x05 GIA_ATTIVA_LOCALE` | **defined in `rcp.h` · `rcp_tetto_imposta()` and NEVER EMITTED by any `.c`** |
-| ⛔ remote alive, **the local one opens** | `0x04 SESSIONE_LOCALE_PREVALSA` | **defined in `rcp.h` · `rcp_tetto_imposta()` and NEVER EMITTED** |
+| ⛔ **local already active**, the remote arrives | `0x05 GIA_ATTIVA_LOCALE` | **defined in `rcp.h` · `rcp_cap_set()` and NEVER EMITTED by any `.c`** |
+| ⛔ remote alive, **the local one opens** | `0x04 SESSIONE_LOCALE_PREVALSA` | **defined in `rcp.h` · `rcp_cap_set()` and NEVER EMITTED** |
 
 ⛔ It is the same fault shape as `RCP_SERVER_IN_CHIUSURA` (finding **B-7**): a reason that exists
 in the header and that nobody sends. ⭐ And the page **is already ready to read them**
@@ -5706,7 +5706,7 @@ no rejection), and the child wrote three times
 >
 > ⚠ **What nobody sets, and silently falls back on the defaults**: `XDG_DATA_DIRS`,
 > `XDG_CONFIG_DIRS`, `XDG_DATA_HOME`, `XDG_CONFIG_HOME`, `XDG_STATE_HOME`, `XDG_CACHE_HOME`,
-> `XDG_SESSION_CLASS`. ⛔ And `XDG_SESSION_ID` **on purpose** (`sessione.c` · `locale_utf8()`).
+> `XDG_SESSION_CLASS`. ⛔ And `XDG_SESSION_ID` **on purpose** (`sessione.c` · `local_utf8()`).
 >
 > ⇒ **The work that comes out of it, for this phase:**
 > 1. a single place that composes the environment **and verifies it**, writing for each variable **where it
@@ -5900,7 +5900,7 @@ and started waiting for a new one that, with a still scene, would never arrive.
 **The cure**: **the latest one is always kept** — a single slot, the most recent wins, which is also the
 right policy for a remote desktop (nobody has any use for an old frame). ⭐ And the
 cost the old comment feared **is paid less than before**: the buffer is **reused**
-(`posto_capienza`), so the real-time callback does one `memcpy` and no longer a
+(`slot_capacity`), so the real-time callback does one `memcpy` and no longer a
 `g_free`+`g_malloc` of 8 MB.
 
 ⚠ **With a new counter in the summary line** — *«sostituiti nel posto N (prima del 15 ago
@@ -5946,7 +5946,7 @@ reinstalled and `provision-server.sh` run again.*
 
 | | |
 |---|---|
-| **the code** | `src/sentinella.c` + `.h` (new), the `sessione_locale` hook in `rcp.h`/`rcp.c`, `wt_locale_gancio` and `wt_sorveglia_locali()` in `webtransport.c`, the seam in `main.c` with a recheck every **2 s** |
+| **the code** | `src/sentinella.c` + `.h` (new), the `sessione_locale` hook in `rcp.h`/`rcp.c`, `wt_local_hook` and `wt_sorveglia_locali()` in `webtransport.c`, the seam in `main.c` with a recheck every **2 s** |
 | ⭐ **it is live on the server** | `[M]` in the log: *«guardiano delle sessioni locali pronto (bus di sistema); il discrimine è il SEAT, non «Remote»»* |
 | ⭐⭐ **the measurement that justifies the discriminant** | `[M]` a session made **like ours** — `pam_open_session` without `XDG_SEAT` — shows to logind: `Seat=` **empty**, `Remote=no`, `Type=wayland`. ⛔ That is, **indistinguishable from a local one** if the criterion were `Remote`: the first connected user would have been rejected with `0x05` by their own session |
 | ✅ **the bench** | `banchi/05-b1-sentinella.c`, **6 cases, 0 red**: no session · one like ours · a local one (`seat0`, wayland) · the local one closed · the local one **belongs to another user** · the user is at the console **in a text session** |
@@ -5998,7 +5998,7 @@ the reason why the morning's twenty rounds always read zero.
 ⏳ **The other two paths of §7.3 were not tested** and this is declared instead of letting it be
 believed: the **protocol error** (`viola_input()`) and the **freeing of the session**
 (`rcp_libera()`). ⚠ The second is the safety net of all the others, and goes through the same
-`rilascia_al_distacco()` with the same `inp_rilasciato` guard.
+`release_on_detach()` with the same `inp_released` guard.
 
 #### 6.3 ⛔⛔ AND THE SHOWCASE LINE ALWAYS SAID ZERO
 
@@ -6092,7 +6092,7 @@ RCP byte.
 
 | | |
 |---|---|
-| **what is touched** | `s->ultima_vita` in `rcp.c` next to `ultimo_byte` (**two fields, two clocks**) · `rcp_segno_di_vita()` · the bridge `wt_segno_di_vita()` · the call in `trasporto.c` after `ngtcp2_conn_read_pkt()` |
+| **what is touched** | `s->ultima_vita` in `rcp.c` next to `ultimo_byte` (**two fields, two clocks**) · `rcp_segno_di_vita()` · the bridge `wt_sign_of_life()` · the call in `trasporto.c` after `ngtcp2_conn_read_pkt()` |
 | ⭐ **what is NOT touched** | **the protocol**: no new message, no heartbeat to add to the page, `RCP.md` unchanged. ⚠ And `rcp.c` has a twin identical byte for byte in `banchi/rcp/` |
 | ⛔ **and ONLY if `rv == 0`** | the packet must be **decrypted and authenticated**: any UDP datagram is not enough, or anyone could keep someone else's slot occupied by sending packets with their address |
 | ⚠ **the case not to break** | the tab **frozen** by the browser after ~5 minutes in the background (§5.3 names it): a frozen tab also stops answering QUIC ⇒ the two clocks stay in agreement, the slot is freed all the same |
@@ -6306,7 +6306,7 @@ measures itself.
 to the thing that had made it red**. The day the birth request disappeared — that is, the
 seventeen seconds of tail came back — the sums would add up all the same. ⇒ Two moves instead of one:
 
-1. the seven cases count **from after the birth** (`dopo_la_nascita()`), which tells the reader that the
+1. the seven cases count **from after the birth** (`after_birth()`), which tells the reader that the
    birth exists and is a different thing. And the outcome line names it: *«richieste al palco 2 (di cui 1
    alla nascita, §4.5)»*;
 2. ⭐ **case 19 tests the birth on its own**: *«UNA richiesta al palco già con l'`ATTACCA`, a
@@ -6523,8 +6523,8 @@ machine busy — the mechanism at short values, the number read in the startup l
 | *«⭐ §7.6: **l'utente ha chiesto** di USCIRE»* | ⛔ **nobody had asked for anything**: what closed it was a clock. The child wrote that sentence for *every* closure, because until this morning the only one asking it was §7.6 |
 
 ⭐ **Both cured**, and the second without adding a message to the internal protocol: the field
-`a` of the envelope was free, and now it carries the **why** (`FIGLI_USCITA_UTENTE` /
-`FIGLI_USCITA_ABBANDONO`). Remeasured, the lines say `20065 ms (tetto 20000)` and *«⚠ Non l'ha
+`a` of the envelope was free, and now it carries the **why** (`CHILDREN_EXIT_USER` /
+`CHILDREN_EXIT_ABANDON`). Remeasured, the lines say `20065 ms (tetto 20000)` and *«⚠ Non l'ha
 chiesto nessuno: è scaduto il tetto»*.
 
 > ⚠ **It is the third time in one day** that a log line asserts a cause or a number it does not
@@ -6840,7 +6840,7 @@ and changed nothing was removed, not moved:
 
 | removed | why it was not a debt |
 |---|---|
-| ~~«due strade di §7.3 su quattro»~~ | they all go through the **same funnel** (`rilascia_al_distacco` + `inp_rilasciato`), and the funnel is exercised twice. Covered by **construction**, not to be tested |
+| ~~«due strade di §7.3 su quattro»~~ | they all go through the **same funnel** (`release_on_detach` + `inp_released`), and the funnel is exercised twice. Covered by **construction**, not to be tested |
 | ~~the three tails of phase 4~~ | we had been **moving them house for two phases**. If nobody does them they are not a list: they are a way of not deciding. ⇒ They stay where they were born, in §04-si-comanda |
 | ~~«la latenza va rimisurata»~~ | it is not an open point: it is **a number we do not have**. It gets taken when a number is needed |
 

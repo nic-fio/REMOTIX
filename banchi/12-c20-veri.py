@@ -111,20 +111,20 @@ class Scatola:
                             60)
         return t.splitlines()
 
-    def gesto_esci(self):
+    def exit_gesture(self):
         """(desktop, gesture) — the same question as C20, asked inside."""
-        for nome, ci_vuole, non_ci_vuole, gesto in C20.DESKTOP_E_GESTO:
-            c, _ = self.dentro("command -v %s >/dev/null 2>&1" % ci_vuole, 30)
+        for nome, required_cmd, unwanted, gesto in C20.DESKTOP_E_GESTO:
+            c, _ = self.dentro("command -v %s >/dev/null 2>&1" % required_cmd, 30)
             if c != 0:
                 continue
-            if non_ci_vuole:
-                c2, _ = self.dentro("command -v %s >/dev/null 2>&1" % non_ci_vuole, 30)
+            if unwanted:
+                c2, _ = self.dentro("command -v %s >/dev/null 2>&1" % unwanted, 30)
                 if c2 == 0:
                     continue
             return nome, gesto
         return None, None
 
-    def come_utente(self, chi, comando, secondi=60):
+    def as_user(self, chi, comando, secondi=60):
         return self.dentro(
             "u=$(id -u %s) && runuser -u %s -- env XDG_RUNTIME_DIR=/run/user/$u "
             "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$u/bus %s 2>&1"
@@ -191,7 +191,7 @@ def desktop_scuro_ma_vivo(e, m, s):
     return e, m
 
 
-def aspetta_riga(sc, segno, chi, forme, tetto):
+def wait_line(sc, segno, chi, forme, tetto):
     fine = time.time() + tetto
     while time.time() < fine:
         for r in sc.registro_da(segno, chi):
@@ -260,25 +260,25 @@ def un_browser(nome, o, sc, chi, gesto):
         segno = sc.righe_registro()
         if segno is None:
             return dict(esito, esito=CIECO, perche="I cannot read the server log")
-        c, t = sc.come_utente(chi, gesto)
+        c, t = sc.as_user(chi, gesto)
         if c != 0:
             return dict(esito, esito=CIECO, perche="the «Log out» gesture did not answer "
                         "(code %s): %s" % (c, t[-300:]))
-        t_esci = time.time()
-        forma, riga = aspetta_riga(sc, segno, chi, [p for p, _d in C20.RIGHE_FINITA],
+        t_exit = time.time()
+        forma, riga = wait_line(sc, segno, chi, [p for p, _d in C20.RIGHE_FINITA],
                                    o.attesa_uscita)
         if not forma:
             return dict(esito, esito=CIECO, perche="%d s after «Log out» the product has not "
                         "declared the session over" % o.attesa_uscita)
         print("   ⭐ «Log out»: after %.1f s the product says «%s»"
-              % (time.time() - t_esci, forma), flush=True)
+              % (time.time() - t_exit, forma), flush=True)
 
         # ── 3. what the PAGE does ──────────────────────────────────────────
         modulo, pagina = False, {}
         fine = time.time() + 30
         while time.time() < fine:
             try:
-                mm = g.js(VERI.JS_MODULO)
+                mm = g.js(VERI.JS_MODULE)
                 if mm and mm.get("modulo") and mm.get("visibile"):
                     modulo = True
                     break
@@ -293,11 +293,11 @@ def un_browser(nome, o, sc, chi, gesto):
 
         # ── 4. the new login, FROM THE SAME PAGE ───────────────────────────
         time.sleep(o.attesa_rientro)
-        segno2 = sc.righe_registro() or segno
+        sign2 = sc.righe_registro() or segno
         if not modulo:
             print("   ⚠ the form is not there: reloading, as the user would", flush=True)
             g.ricarica()
-            ok, m = pr.apri_dopo_ricarica()
+            ok, m = pr.open_after_reload()
             if not ok:
                 return dict(esito, esito=CIECO, perche="after the reload: " + m)
         e, m, s = pr.entra(o.parola)
@@ -305,14 +305,14 @@ def un_browser(nome, o, sc, chi, gesto):
             # ⛔ Here the red is the PRODUCT's: after "Log out" the user cannot get back in.
             coda = [x for x in (s or {}).get("registro", "").splitlines() if x.strip()][-6:]
             return dict(esito, esito=ROSSO, perche="after «Log out» it does NOT GET BACK IN: %s" % m,
-                        pagina=coda, server=sc.registro_da(segno2, chi)[-25:])
+                        pagina=coda, server=sc.registro_da(sign2, chi)[-25:])
         e, m, s = pr.primo_fotogramma()
         e, m = desktop_scuro_ma_vivo(e, m, s)
         print("   %s second login: %s" % ("⭐" if e == VERDE else "⛔", m), flush=True)
         if e != VERDE:
             return dict(esito, esito=ROSSO if e == ROSSO else CIECO,
                         perche="second login without image: " + m,
-                        server=sc.registro_da(segno2, chi)[-25:])
+                        server=sc.registro_da(sign2, chi)[-25:])
 
         # ── 5. the scene, and the canvas photographed ──────────────────────
         accesa, t = sc.accendi_scena(chi)
@@ -339,13 +339,13 @@ def un_browser(nome, o, sc, chi, gesto):
         d1 = s.get("dipinti") or 0
         print("   luminances (%d photographs, %d frames painted): %s"
               % (len(lum), d1 - d0, " ".join(str(x) for x in lum[:80])), flush=True)
-        ep, salti, perche = C20.giudica_i_pixel(lum)
-        server = sc.registro_da(segno2, chi)
-        interessanti = [r for r in server if any(k in r for k in (
+        ep, salti, perche = C20.judge_the_pixels(lum)
+        server = sc.registro_da(sign2, chi)
+        interesting = [r for r in server if any(k in r for k in (
             "child spawned", "REAPED", "IS OVER", "has gone", "throwing away",
             "RESTARTING THE CAPTURE", "farewell", "closed"))]
         return dict(esito, esito=ep, perche=perche, salti=salti, fotografie=len(lum),
-                    dipinti=d1 - d0, server=interessanti[-20:])
+                    dipinti=d1 - d0, server=interesting[-20:])
     finally:
         try:
             g.chiudi()
@@ -383,7 +383,7 @@ def main():
     if o.salva:
         os.makedirs(o.salva, exist_ok=True)
     sc = Scatola(o.scatola)
-    desktop, gesto = sc.gesto_esci()
+    desktop, gesto = sc.exit_gesture()
     if not gesto:
         print("⛔ I do not know how to say «Log out» in %s ⇒ 3" % sc.contenitore)
         return 3

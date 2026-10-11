@@ -110,8 +110,8 @@ log() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 ESITO=0
 
 [ -r "$PAROLA_SUDO" ] || { printf '⛔ %s cannot be read\n' "$PAROLA_SUDO"; exit 2; }
-sudo_mio() { printf '%s\n' "$(cat "$PAROLA_SUDO")" | sudo -S -p 'Password: ' "$@"; }
-terreno()  { sudo_mio bash "$T" "$@"; }
+my_sudo() { printf '%s\n' "$(cat "$PAROLA_SUDO")" | sudo -S -p 'Password: ' "$@"; }
+terreno()  { my_sudo bash "$T" "$@"; }
 di()       { terreno iniettore-di "$@" >/dev/null; }
 carico()   { terreno carico | sed 's/^/        /'; }
 
@@ -120,7 +120,7 @@ carico()   { terreno carico | sed 's/^/        /'; }
 #    unsticks it is the drop of the EIS channel (`meta-eis-client.c:1075`,
 #    `drop_device`).  ⇒ A second round inside the same injector would measure
 #    the DAMAGE OF THE FIRST.
-rimonta() {
+remount() {
 	terreno iniettore-spegni  > /dev/null 2>&1
 	terreno testimone-via     > /dev/null 2>&1
 	terreno spegni            > /dev/null 2>&1
@@ -152,7 +152,7 @@ rimonta() {
 segna() { terreno righe | awk '{print $2}'; }
 
 giudica() { # $1 label · $2 scene(mode) · $3 from · $4 description
-	sudo_mio python3 "$G" --visto "$LAV/visto.jsonl" \
+	my_sudo python3 "$G" --visto "$LAV/visto.jsonl" \
 		--iniettore "$LAV/06-b33-risveglio.log" --da "$3" \
 		--modo "$2" --etichetta "$1" --tela "$TELA" --esiti "$ESITI" \
 		--scena "$4"
@@ -163,7 +163,7 @@ case "$COSA" in
 strumento)
 	log "S0 · THE ZERO CHECK — can the instrument see a click?"
 	carico
-	rimonta || exit 3
+	remount || exit 3
 	DA=$(segna)
 	di "punta $((TL / 2)) $((TA / 2))"; sleep 0.4
 	di "pulsante 272 1";                sleep 0.4
@@ -177,7 +177,7 @@ strumento)
 libero)
 	log "S1 · THREE WAKE-UPS WITH HAND RAISED — §7.1 says 3 replacements, and zero ADATTA_TELA"
 	carico
-	rimonta || exit 3
+	remount || exit 3
 	DA=$(segna)
 	di "stato";     sleep 0.3
 	di "risveglia"; sleep 1.2
@@ -192,7 +192,7 @@ libero)
 tenuto)
 	log "S2 · ⛔ THE BUTTON HELD DOWN WHILE THE CAPTURE WAKES UP"
 	carico
-	rimonta || exit 3
+	remount || exit 3
 	DA=$(segna)
 	di "punta $((TL / 2)) $((TA / 2))";  sleep 0.4
 	di "pulsante 272 1";                 sleep 0.6
@@ -225,7 +225,7 @@ tenuto)
 confronto)
 	log "S3 · THE ALREADY KNOWN DOOR — the same scene with a RESIZE"
 	carico
-	rimonta || exit 3
+	remount || exit 3
 	DA=$(segna)
 	di "punta $((TL / 2)) $((TA / 2))";  sleep 0.4
 	di "pulsante 272 1";                 sleep 0.6
@@ -273,7 +273,7 @@ guarigione)
 	#      open and Mutter **sees no detach at all**.
 	log "S4 · ⭐ CAN IT BE HEALED WITHOUT TOUCHING THE SESSION?"
 	carico
-	rimonta || exit 3
+	remount || exit 3
 	DA=$(segna)
 	di "punta $((TL / 2)) $((TA / 2))";  sleep 0.4
 	di "pulsante 272 1";                 sleep 0.6
@@ -289,21 +289,21 @@ guarigione)
 	giudica s4-rotto tenuto "$DA" "the damage, redone on purpose to then heal it"
 
 	log "And now I detach ONLY the EIS client — gnome-shell is NOT touched"
-	PRIMA_SHELL=$(sudo_mio pgrep -u 1006 -x gnome-shell | head -1)
+	BEFORE_SHELL=$(my_sudo pgrep -u 1006 -x gnome-shell | head -1)
 	terreno iniettore-spegni > /dev/null
 	sleep 2
 	terreno iniettore-accendi "$TELA" > /dev/null || { ko "⛔ it does not come back on"; exit 3; }
 	terreno testimone "$TELA" > /dev/null || { ko "⛔ THE BENCH: witness"; exit 3; }
 	di "punta $((TL / 2)) $((TA / 2))"; sleep 1.5
 	di "punta $((TL / 3)) $((TA / 3))"; sleep 1.0
-	DOPO_SHELL=$(sudo_mio pgrep -u 1006 -x gnome-shell | head -1)
+	AFTER_SHELL=$(my_sudo pgrep -u 1006 -x gnome-shell | head -1)
 	# ⛔ And it is CHECKED that the session is the same: if gnome-shell had
 	#    restarted, the seat's count (`MetaSeatImpl`) would be brand new and
 	#    the green would only say "I restarted everything".
-	if [ -n "$PRIMA_SHELL" ] && [ "$PRIMA_SHELL" = "$DOPO_SHELL" ]; then
-		ok "gnome-shell is the SAME process ($PRIMA_SHELL): the seat is not new"
+	if [ -n "$BEFORE_SHELL" ] && [ "$BEFORE_SHELL" = "$AFTER_SHELL" ]; then
+		ok "gnome-shell is the SAME process ($BEFORE_SHELL): the seat is not new"
 	else
-		ko "⛔ gnome-shell has changed ($PRIMA_SHELL → $DOPO_SHELL): the green that follows does not count"
+		ko "⛔ gnome-shell has changed ($BEFORE_SHELL → $AFTER_SHELL): the green that follows does not count"
 	fi
 	DA=$(segna)
 	di "pulsante 272 1"; sleep 0.4

@@ -15,7 +15,7 @@
  *   1. `cattura_ridimensiona()` declares SUCCESS on a stream that dies, and
  *      *«`figlio.c` has no way of knowing that the renegotiation KILLED the
  *      capture: today it only finds out from the timeout of `cattura_prendi`»*;
- *   2. `misura_divergente` is **written and never read** ⇒ an accessor is needed;
+ *   2. `measure_divergent` is **written and never read** ⇒ an accessor is needed;
  *   3. the *«granted different from requested»* branch **cannot be reached from
  *      outside** except with a race, *«and a bench cannot program a race»*.
  *
@@ -64,18 +64,18 @@
  *  would answer «no», that is green on every case that requires an absence).
  * ------------------------------------------------------------------ */
 #define REG_CAP 262144
-static char registro_visto[REG_CAP];
-static FILE *dirottato;
+static char seen_log[REG_CAP];
+static FILE *hijacked;
 static bool parlantina;
 
-static void registro_dirotta(void)
+static void log_redirect(void)
 {
-	dirottato = tmpfile();
-	if (!dirottato) {
+	hijacked = tmpfile();
+	if (!hijacked) {
 		printf("  ⛔ the temporary file for the log cannot be opened\n");
 		exit(2);
 	}
-	if (dup2(fileno(dirottato), STDERR_FILENO) < 0) {
+	if (dup2(fileno(hijacked), STDERR_FILENO) < 0) {
 		printf("  ⛔ stderr cannot be redirected\n");
 		exit(2);
 	}
@@ -84,35 +84,35 @@ static void registro_dirotta(void)
 
 static off_t segno;
 
-static void registro_azzera(void)
+static void log_reset(void)
 {
 	fflush(stderr);
-	segno = lseek(fileno(dirottato), 0, SEEK_CUR);
+	segno = lseek(fileno(hijacked), 0, SEEK_CUR);
 	if (segno < 0)
 		segno = 0;
-	registro_visto[0] = 0;
+	seen_log[0] = 0;
 }
 
-static void registro_rileggi(void)
+static void log_reread(void)
 {
 	ssize_t n;
 	fflush(stderr);
-	n = pread(fileno(dirottato), registro_visto, REG_CAP - 1, segno);
-	registro_visto[n > 0 ? n : 0] = 0;
+	n = pread(fileno(hijacked), seen_log, REG_CAP - 1, segno);
+	seen_log[n > 0 ? n : 0] = 0;
 	if (parlantina && n > 0)
-		printf("      | %s\n", registro_visto);
+		printf("      | %s\n", seen_log);
 }
 
 static bool dice(const char *pezzo)
 {
-	return strstr(registro_visto, pezzo) != NULL;
+	return strstr(seen_log, pezzo) != NULL;
 }
 
 /* ------------------------------------------------------------------ *
  *  ⭐ THE FAKE STAGE — a PipeWire producer, with limits I choose
  *
  *  ⚠ It is the one from `06-b40`, with **one thing more** that case 5 needs: the
- *    stage can REDO its own offer on the fly (`palco_ripropone`), which is the
+ *    stage can REDO its own offer on the fly (`stage_reproposes`), which is the
  *    only way to ask «can a producer IMPOSE its size on a
  *    consumer that offers a fixed one?».
  * ------------------------------------------------------------------ */
@@ -125,36 +125,36 @@ typedef struct {
 	uint32_t nodo;
 	uint32_t min_l, min_a, max_l, max_a;   /* ⛔ the limits of the fake stage */
 	bool fissa;                            /* the offer is a FIXED rectangle */
-	uint32_t negoziata_l, negoziata_a;
-	int quante_negoziazioni;
-} Palco;
+	uint32_t negotiated_w, negotiated_h;
+	int how_many_negotiations;
+} Stage;
 
-static void palco_parametro(void *dati, uint32_t id, const struct spa_pod *param)
+static void stage_parameter(void *dati, uint32_t id, const struct spa_pod *param)
 {
-	Palco *p = dati;
+	Stage *p = dati;
 	struct spa_video_info_raw info;
 
 	if (!param || id != SPA_PARAM_Format)
 		return;
 	if (spa_format_video_raw_parse(param, &info) < 0)
 		return;
-	p->negoziata_l = info.size.width;
-	p->negoziata_a = info.size.height;
-	p->quante_negoziazioni++;
+	p->negotiated_w = info.size.width;
+	p->negotiated_h = info.size.height;
+	p->how_many_negotiations++;
 	printf("      [stage] negotiated format: %ux%u  (negotiation no.%d)\n",
-	       info.size.width, info.size.height, p->quante_negoziazioni);
+	       info.size.width, info.size.height, p->how_many_negotiations);
 }
 
-static const struct pw_stream_events palco_eventi = {
+static const struct pw_stream_events stage_events = {
 	PW_VERSION_STREAM_EVENTS,
-	.param_changed = palco_parametro,
+	.param_changed = stage_parameter,
 };
 
 /* ⛔ The frame rate is a RANGE starting from zero, not a fixed 30/1: `cattura.c`
  *    offers `framerate` as a fixed fraction 0/1 — «the producer dictates the
  *    frame rate» — and a stage offering a fixed 30/1 would give an EMPTY
  *    intersection.  ⚠ A defect of the STAGE, already paid for by `06-b40` on 21 August 2026. */
-static const struct spa_pod *palco_proposta(struct spa_pod_builder *b, Palco *p)
+static const struct spa_pod *stage_proposal(struct spa_pod_builder *b, Stage *p)
 {
 	struct spa_rectangle mis  = SPA_RECTANGLE(p->min_l, p->min_a);
 	struct spa_rectangle mini = SPA_RECTANGLE(p->min_l, p->min_a);
@@ -187,10 +187,10 @@ static const struct spa_pod *palco_proposta(struct spa_pod_builder *b, Palco *p)
 	    SPA_POD_CHOICE_RANGE_Fraction(&cmax, &cmin, &cmax));
 }
 
-static Palco *palco_apri(uint32_t min_l, uint32_t min_a,
+static Stage *stage_open(uint32_t min_l, uint32_t min_a,
                          uint32_t max_l, uint32_t max_a)
 {
-	Palco *p = calloc(1, sizeof *p);
+	Stage *p = calloc(1, sizeof *p);
 	uint8_t spazio[1024];
 	struct spa_pod_builder b = SPA_POD_BUILDER_INIT(spazio, sizeof spazio);
 	const struct spa_pod *par[1];
@@ -225,8 +225,8 @@ static Palco *palco_apri(uint32_t min_l, uint32_t min_a,
 		pw_thread_loop_unlock(p->ciclo);
 		goto guasto;
 	}
-	pw_stream_add_listener(p->flusso, &p->gancio, &palco_eventi, p);
-	par[0] = palco_proposta(&b, p);
+	pw_stream_add_listener(p->flusso, &p->gancio, &stage_events, p);
+	par[0] = stage_proposal(&b, p);
 	if (pw_stream_connect(p->flusso, PW_DIRECTION_OUTPUT, PW_ID_ANY,
 	                      PW_STREAM_FLAG_MAP_BUFFERS, par, 1) < 0) {
 		pw_thread_loop_unlock(p->ciclo);
@@ -259,7 +259,7 @@ guasto:
  * ⛔ If `fissa`, the stage demands EXACTLY `l x a`: it is the producer that
  *    tries to impose its own size on a consumer that offers a fixed and
  *    different one.  If not `fissa`, it is a new range. */
-static int palco_ripropone(Palco *p, uint32_t min_l, uint32_t min_a,
+static int stage_reproposes(Stage *p, uint32_t min_l, uint32_t min_a,
                            uint32_t max_l, uint32_t max_a, bool fissa)
 {
 	uint8_t spazio[1024];
@@ -272,7 +272,7 @@ static int palco_ripropone(Palco *p, uint32_t min_l, uint32_t min_a,
 	p->fissa = fissa;
 
 	pw_thread_loop_lock(p->ciclo);
-	par[0] = palco_proposta(&b, p);
+	par[0] = stage_proposal(&b, p);
 	esito = pw_stream_update_params(p->flusso, par, 1);
 	pw_thread_loop_unlock(p->ciclo);
 	printf("      [stage] re-offers %s %ux%u..%ux%u → %d\n",
@@ -280,7 +280,7 @@ static int palco_ripropone(Palco *p, uint32_t min_l, uint32_t min_a,
 	return esito;
 }
 
-static void palco_chiudi(Palco *p)
+static void stage_close(Stage *p)
 {
 	if (!p)
 		return;
@@ -319,7 +319,7 @@ static void aspetta(double secondi)
 	usleep((useconds_t)(secondi * 1000000.0));
 }
 
-static double ora_ms(void)
+static double now_ms(void)
 {
 	struct timespec t;
 	clock_gettime(CLOCK_MONOTONIC, &t);
@@ -341,19 +341,19 @@ static double ora_ms(void)
  *    every other case that requires an absence would be green through a defect of the
  *    instrument.
  * ===================================================================== */
-static void caso1(void)
+static void case1(void)
 {
-	Palco *p;
+	Stage *p;
 	Cattura *c;
 	GError *sbaglio = NULL;
 	CatturaFermo fo;
-	CatturaPresa presa;
+	CaptureTake presa;
 	uint32_t nl = 0, na = 0;
 	bool bene, strumento;
 	char visto[600];
 
-	registro_azzera();
-	p = palco_apri(320, 240, 4096, 4096);
+	log_reset();
+	p = stage_open(320, 240, 4096, 4096);
 	if (!p) {
 		esito("1 positive control: healthy stream ⇒ ZERO, and the instrument sees", false,
 		      "the fake stage opens", "⛔ the fake stage did NOT open");
@@ -366,11 +366,11 @@ static void caso1(void)
 		      "the capture attaches to the fake stage's node",
 		      sbaglio ? sbaglio->message : "⛔ cattura_avvia said no");
 		g_clear_error(&sbaglio);
-		palco_chiudi(p);
+		stage_close(p);
 		return;
 	}
 	aspetta(1.0);
-	registro_rileggi();
+	log_reread();
 	strumento = dice("capture started on node");
 	cattura_misura_negoziata(c, &nl, &na);
 	presa = cattura_prendi(c, 0.008, &fo, &sbaglio);
@@ -391,7 +391,7 @@ static void caso1(void)
 	      "start line SEEN · negotiated 1920x1080 · cattura_prendi = ZERO (NOT "
 	      "fault) · no DIVERGENT SIZE", visto);
 	cattura_ferma(c);
-	palco_chiudi(p);
+	stage_close(p);
 }
 
 /* =====================================================================
@@ -410,21 +410,21 @@ static void caso1(void)
  *  the one to be disproved: `cattura_prendi()` must either not notice, or
  *  notice by spending the whole wait (>= 8 ms per round).
  * ===================================================================== */
-static void caso2(void)
+static void case2(void)
 {
-	Palco *p;
+	Stage *p;
 	Cattura *c;
 	GError *sbaglio = NULL;
 	CatturaFermo fo;
-	CatturaRitela r;
-	double t0, t_guasto = -1.0;
-	int giri = 0, giri_zero = 0;
+	CaptureRecanvas r;
+	double t0, t_fault = -1.0;
+	int giri = 0, zero_rounds = 0;
 	char messaggio[300] = "";
-	bool nomina_lo_stato, bene;
+	bool names_state, bene;
 	char visto[900];
 
-	registro_azzera();
-	p = palco_apri(320, 240, 1920, 1080);
+	log_reset();
+	p = stage_open(320, 240, 1920, 1080);
 	if (!p) {
 		esito("2 the dead stream is KNOWN, and what knowing it costs", false,
 		      "the fake stage opens", "⛔ the fake stage did NOT open");
@@ -437,29 +437,29 @@ static void caso2(void)
 		      "the capture attaches to the fake stage's node",
 		      sbaglio ? sbaglio->message : "⛔ cattura_avvia said no");
 		g_clear_error(&sbaglio);
-		palco_chiudi(p);
+		stage_close(p);
 		return;
 	}
 	aspetta(1.0);
-	registro_azzera();
+	log_reset();
 
 	r = cattura_ridimensiona(c, 2560, 1440);
-	t0 = ora_ms();
+	t0 = now_ms();
 
 	/* ⛔ The child's loop, reproduced: `cattura_prendi(MOVIMENTO_ATTESA_S)`
 	 *    until it says something other than ZERO.  ⚠ The ceiling is 2 seconds:
 	 *    beyond it, the proposal is right and this case is red. */
-	while (ora_ms() - t0 < 2000.0) {
-		CatturaPresa presa = cattura_prendi(c, 0.008, &fo, &sbaglio);
+	while (now_ms() - t0 < 2000.0) {
+		CaptureTake presa = cattura_prendi(c, 0.008, &fo, &sbaglio);
 		giri++;
 		if (presa == CATTURA_PRESA_ZERO) {
-			giri_zero++;
+			zero_rounds++;
 			g_clear_error(&sbaglio);
 			cattura_fermo_libera(&fo);
 			continue;
 		}
 		if (presa == CATTURA_PRESA_GUASTO) {
-			t_guasto = ora_ms() - t0;
+			t_fault = now_ms() - t0;
 			snprintf(messaggio, sizeof messaggio, "%s",
 			         sbaglio ? sbaglio->message : "no detail");
 			g_clear_error(&sbaglio);
@@ -469,34 +469,34 @@ static void caso2(void)
 		cattura_fermo_libera(&fo);
 		g_clear_error(&sbaglio);
 	}
-	registro_rileggi();
+	log_reread();
 
 	/* ⛔ «It says so» is not enough: it must ALSO say WHY.  A FAULT without the state
 	 *    and without the producer's fault would leave the caller to deduce. */
-	nomina_lo_stato = strstr(messaggio, "error") != NULL;
+	names_state = strstr(messaggio, "error") != NULL;
 
-	bene = r == CATTURA_RITELA_CHIESTA && t_guasto >= 0.0 && t_guasto < 100.0
-	    && nomina_lo_stato;
+	bene = r == CATTURA_RITELA_CHIESTA && t_fault >= 0.0 && t_fault < 100.0
+	    && names_state;
 	snprintf(visto, sizeof visto,
 	         "resize → %d (0 = «requested»); then %d rounds of 8 ms (%d ZERO) and "
 	         "the FAULT arrives at %.1f ms; the message %s the state: «%s»",
-	         (int)r, giri, giri_zero, t_guasto,
-	         nomina_lo_stato ? "NAMES" : "⛔ does NOT name", messaggio);
+	         (int)r, giri, zero_rounds, t_fault,
+	         names_state ? "NAMES" : "⛔ does NOT name", messaggio);
 	esito("2 the dead stream is KNOWN, and what knowing it costs", bene,
 	      "⇒ to DISPROVE proposal 1: FAULT within 100 ms (not a timeout) and "
 	      "a message that names the state «error»", visto);
 	cattura_ferma(c);
-	palco_chiudi(p);
+	stage_close(p);
 }
 
 /* =====================================================================
  *  3 — ⛔⛔ THE REAL DEFECT BEHIND PROPOSAL 1, and it is not in
  *      `cattura.c`: **the remount at the size that has just killed the stage**.
  *
- *  `figlio.c:6299` remounts with `prendi_il_palco(tela_voluta_l, tela_voluta_a, …)`
+ *  `figlio.c:6299` remounts with `prendi_il_palco(canvas_intended_w, canvas_intended_h, …)`
  *  — that is with **the size the client wants**, which is exactly the one that
  *  killed the stream.  And `figlio.c:6385` chooses the SHORT wait when
- *  `codec_chiesto && tela_voluta_l`, that is precisely when someone is watching.
+ *  `requested_codec && canvas_intended_w`, that is precisely when someone is watching.
  *
  *  ⇒ The question that decides whether it is a loop or a noose: **does a new
  *    `cattura_avvia()` at the same size, on the same stage, produce a LIVE stage?**
@@ -513,26 +513,26 @@ static void caso2(void)
  *  EXPECTED, declared before the run: if every remount dies at once,
  *  `figlio.c:6299` retries the same size forever and does not get out by itself.
  * ===================================================================== */
-static void caso3(void)
+static void case3(void)
 {
-	Palco *p;
+	Stage *p;
 	Cattura *c;
 	GError *sbaglio = NULL;
 	CatturaFermo fo;
-	int tentativi = 3, montati = 0, vivi = 0;
+	int tentativi = 3, mounted = 0, vivi = 0;
 	char primo[300] = "";
 	bool bene;
 	char visto[800];
 
-	registro_azzera();
-	p = palco_apri(320, 240, 1920, 1080);
+	log_reset();
+	p = stage_open(320, 240, 1920, 1080);
 	if (!p) {
 		esito("3 the remount at the size that killed the stage", false,
 		      "the fake stage opens", "⛔ the fake stage did NOT open");
 		return;
 	}
 	for (int i = 0; i < tentativi; i++) {
-		CatturaPresa presa;
+		CaptureTake presa;
 
 		c = cattura_avvia(p->nodo, 2560, 1440, 30, CATTURA_STRADA_MEMORIA,
 		                  CATTURA_COLORE_BGRX, NULL, NULL, NULL, &sbaglio);
@@ -543,7 +543,7 @@ static void caso3(void)
 			g_clear_error(&sbaglio);
 			continue;
 		}
-		montati++;
+		mounted++;
 		g_clear_error(&sbaglio);
 		/* ⛔ 300 ms: the death measured by case 2 arrives within 10 ms, and this is
 		 *    thirty times that — it is not a wait tuned to the result. */
@@ -558,14 +558,14 @@ static void caso3(void)
 		g_clear_error(&sbaglio);
 		cattura_ferma(c);
 	}
-	registro_rileggi();
+	log_reread();
 
 	bene = vivi == 0;
 	snprintf(visto, sizeof visto,
 	         "%d `cattura_avvia()` out of %d RETURNED a stage at 2560x1440 "
 	         "(a size the stage cannot hold), but only %d were still ALIVE 300 "
 	         "ms later: %s.  The refusal: «%s»",
-	         montati, tentativi, vivi,
+	         mounted, tentativi, vivi,
 	         vivi == 0 ? "⛔ none ⇒ `figlio.c:6299` would retry the same "
 	                     "size forever, with the SHORT wait of `:6385`"
 	                   : "⭐ some hold ⇒ it is not a noose",
@@ -573,7 +573,7 @@ static void caso3(void)
 	esito("3 the remount at the size that killed the stage", bene,
 	      "0 live stages out of 3 (⇒ the loop of `figlio.c:6299` does not get out by itself), "
 	      "and `cattura_avvia()` that SUCCEEDS all the same", visto);
-	palco_chiudi(p);
+	stage_close(p);
 }
 
 /* =====================================================================
@@ -602,19 +602,19 @@ static void caso3(void)
  *  chain is repeated several times before concluding: a race that does not fire at the
  *  first shot is not a race that does not exist.
  * ===================================================================== */
-static void caso4(void)
+static void case4(void)
 {
-	Palco *p;
+	Stage *p;
 	Cattura *c;
 	GError *sbaglio = NULL;
 	uint32_t cl = 0, ca = 0, nl = 0, na = 0;
-	int catene = 160, scattata = -1;
+	int chains = 160, scattata = -1;
 	char riga[300] = "";
 	bool bene;
 	char visto[700];
 
-	registro_azzera();
-	p = palco_apri(320, 240, 4096, 4096);
+	log_reset();
+	p = stage_open(320, 240, 4096, 4096);
 	if (!p) {
 		esito("4 two chained resizes ⇒ DIVERGENT SIZE?", false,
 		      "the fake stage opens", "⛔ the fake stage did NOT open");
@@ -627,11 +627,11 @@ static void caso4(void)
 		      "the capture attaches to the fake stage's node",
 		      sbaglio ? sbaglio->message : "⛔ cattura_avvia said no");
 		g_clear_error(&sbaglio);
-		palco_chiudi(p);
+		stage_close(p);
 		return;
 	}
 	aspetta(1.0);
-	registro_azzera();
+	log_reset();
 
 	/* ⛔⛔ THE DELAY BETWEEN THE TWO CALLS IS SWEPT, and it is not a detail:
 	 *     with the two calls BACK TO BACK (delay 0) the line appears `[M]` **2
@@ -647,17 +647,17 @@ static void caso4(void)
 	 * ⚠ And it is swept instead of guessed: a delay chosen by hand would be a
 	 *   number tuned to the machine of whoever wrote it. */
 	{
-		static const int ritardi_us[] = {0, 50, 100, 200, 400, 800, 1600, 3200};
-		const int quanti_r = (int)(sizeof ritardi_us / sizeof ritardi_us[0]);
-		const int per_ritardo = catene / quanti_r;
+		static const int delays_us[] = {0, 50, 100, 200, 400, 800, 1600, 3200};
+		const int how_many_r = (int)(sizeof delays_us / sizeof delays_us[0]);
+		const int per_delay = chains / how_many_r;
 
 		/* ⛔ AND IT DOES NOT STOP AT THE FIRST HIT: EVERYTHING is swept.  Stopping
 		 *    would give «fired» and no profile, that is the number that is needed —
 		 *    which delay makes it fire — would remain unknown. */
-		for (int r = 0; r < quanti_r; r++) {
-			int colpi = 0;
-			for (int k = 0; k < per_ritardo; k++) {
-				int i = r * per_ritardo + k;
+		for (int r = 0; r < how_many_r; r++) {
+			int shots = 0;
+			for (int k = 0; k < per_delay; k++) {
+				int i = r * per_delay + k;
 				uint32_t a_l = 1200 + (uint32_t)(i % 7) * 2u;
 				uint32_t a_a =  800 + (uint32_t)(i % 5) * 2u;
 				uint32_t b_l = 1600 + (uint32_t)(i % 3) * 2u;
@@ -666,23 +666,23 @@ static void caso4(void)
 				/* ⛔ The log is reset AT EVERY CHAIN, or from the first hit
 				 *    on `dice()` would answer «yes» forever and every later
 				 *    delay would come out as a hit. */
-				registro_azzera();
+				log_reset();
 				cattura_ridimensiona(c, a_l, a_a);
-				if (ritardi_us[r])
-					usleep((useconds_t)ritardi_us[r]);
+				if (delays_us[r])
+					usleep((useconds_t)delays_us[r]);
 				cattura_ridimensiona(c, b_l, b_a);
 				aspetta(0.03);
-				registro_rileggi();
+				log_reread();
 				if (dice("DIVERGENT SIZE")) {
-					colpi++;
+					shots++;
 					if (scattata < 0) {
-						const char *q = strstr(registro_visto,
+						const char *q = strstr(seen_log,
 						                       "DIVERGENT SIZE");
 						/* ⛔ Cut at the first full stop: the rest of the
 						 *    line is the explanation, and here the
 						 *    NUMBERS are what matters. */
 						const char *fine = strstr(q, ".  ");
-						scattata = ritardi_us[r];
+						scattata = delays_us[r];
 						snprintf(riga, sizeof riga, "%.*s",
 						         (int)(fine ? (size_t)(fine - q)
 						                    : strlen(q)), q);
@@ -692,11 +692,11 @@ static void caso4(void)
 				}
 			}
 			printf("      [chain] delay %5d us: %d hits out of %d\n",
-			       ritardi_us[r], colpi, per_ritardo);
+			       delays_us[r], shots, per_delay);
 		}
 	}
 
-	cattura_misura_chiesta(c, &cl, &ca);
+	capture_measure_requested(c, &cl, &ca);
 	cattura_misura_negoziata(c, &nl, &na);
 
 	/* ⛔ This case is GREEN when the line APPEARS: it is a bench written to
@@ -705,17 +705,17 @@ static void caso4(void)
 	snprintf(visto, sizeof visto,
 	         "over %d chains of two resizes (8 delays swept) the "
 	         "DIVERGENT SIZE line %s%d; final requested %ux%u, negotiated %ux%u",
-	         catene,
+	         chains,
 	         scattata >= 0 ? "⭐ APPEARED ⇒ proposal 3 is DISPROVED, the branch "
 	                         "is reachable from outside — first hit with the delay "
 	                         "in us "
 	                       : "⛔ does NOT appear ⇒ proposal 3 HOLDS; chains spent: ",
-	         scattata >= 0 ? scattata : catene,
+	         scattata >= 0 ? scattata : chains,
 	         cl, ca, nl, na);
 	esito("4 two chained resizes ⇒ DIVERGENT SIZE?", bene,
 	      "the line APPEARS (⇒ proposal 3 disproved)", visto);
 	cattura_ferma(c);
-	palco_chiudi(p);
+	stage_close(p);
 }
 
 /* =====================================================================
@@ -741,17 +741,17 @@ static void caso4(void)
  *     control that keeps case 4 honest, because it shows that the divergence
  *     of case 4 **cannot** come from the producer.
  * ===================================================================== */
-static void caso5(void)
+static void case5(void)
 {
-	Palco *p;
+	Stage *p;
 	Cattura *c;
 	GError *sbaglio = NULL;
 	uint32_t nl = 0, na = 0, cl = 0, ca = 0;
-	bool divergente, in_errore, bene;
+	bool divergent, in_errore, bene;
 	char visto[800];
 
-	registro_azzera();
-	p = palco_apri(320, 240, 4096, 4096);
+	log_reset();
+	p = stage_open(320, 240, 4096, 4096);
 	if (!p) {
 		esito("5 the producer tries to IMPOSE its size", false,
 		      "the fake stage opens", "⛔ the fake stage did NOT open");
@@ -764,32 +764,32 @@ static void caso5(void)
 		      "the capture attaches to the fake stage's node",
 		      sbaglio ? sbaglio->message : "⛔ cattura_avvia said no");
 		g_clear_error(&sbaglio);
-		palco_chiudi(p);
+		stage_close(p);
 		return;
 	}
 	aspetta(1.0);
-	registro_azzera();
+	log_reset();
 
 	/* ⛔ The stage demands a FIXED 1600x900, while the consumer has 1920x1080. */
-	palco_ripropone(p, 1600, 900, 1600, 900, true);
+	stage_reproposes(p, 1600, 900, 1600, 900, true);
 	aspetta(1.0);
-	registro_rileggi();
+	log_reread();
 
-	cattura_misura_chiesta(c, &cl, &ca);
+	capture_measure_requested(c, &cl, &ca);
 	cattura_misura_negoziata(c, &nl, &na);
-	divergente = dice("DIVERGENT SIZE");
+	divergent = dice("DIVERGENT SIZE");
 	in_errore = dice("→ error");
 
 	/* ⛔ Green = the producer did NOT manage it.  ⚠ If one day the divergence
 	 *    appeared from here, this case turns red — and that is what is wanted:
 	 *    it would mean that the fixed rectangle is no longer a guarantee, and that
 	 *    case 4 has a second source to tell apart. */
-	bene = !divergente && in_errore && nl == 1920 && na == 1080;
+	bene = !divergent && in_errore && nl == 1920 && na == 1080;
 	snprintf(visto, sizeof visto,
 	         "the stage demanded a fixed 1600x900; requested %ux%u, negotiated %ux%u; "
 	         "stream %s; DIVERGENT SIZE: %s",
 	         cl, ca, nl, na, in_errore ? "in ERROR" : "⛔ alive",
-	         divergente ? "⛔ APPEARED ⇒ the producer IMPOSES, and case 4 has a "
+	         divergent ? "⛔ APPEARED ⇒ the producer IMPOSES, and case 4 has a "
 	                      "second source"
 	                    : "absent ⇒ the FIXED rectangle holds: either that value, or "
 	                      "the empty set");
@@ -797,30 +797,30 @@ static void caso5(void)
 	      "still negotiated 1920x1080 · stream in error · NO divergence "
 	      "(⇒ the producer cannot impose)", visto);
 	cattura_ferma(c);
-	palco_chiudi(p);
+	stage_close(p);
 }
 
 /* =====================================================================
  *  6 — ⛔ PROPOSAL 2 PUT TO THE TEST: is an accessor for the divergence needed?
  *
- *  The argument of the proposal: `misura_divergente` is written and never read, and
+ *  The argument of the proposal: `measure_divergent` is written and never read, and
  *  `cattura.h` does not expose it ⇒ no caller can know it.
  *
  *  ⭐ The hypothesis to disprove: that the caller CANNOT know it.  `cattura.h`
- *     already exposes **two** accessors — `cattura_misura_chiesta()` and
+ *     already exposes **two** accessors — `capture_measure_requested()` and
  *     `cattura_misura_negoziata()` — and the divergence is their inequality.
  *     ⇒ It is checked that the two are enough to reconstruct it, including the case in which the
  *     format is not yet known (where the third field would lie: it is `FALSE`
  *     because there is nothing to compare yet, not because everything is
  *     fine — `CODER.md` §3.10).
  * ===================================================================== */
-static void caso6(void)
+static void case6(void)
 {
-	Palco *p;
+	Stage *p;
 	Cattura *c;
 	GError *sbaglio = NULL;
 	uint32_t cl = 0, ca = 0, nl = 0, na = 0;
-	gboolean noto_prima, noto_dopo;
+	gboolean noto_prima, known_after;
 	/* ⛔ The BEFORE numbers are kept in their own variables: the first draft of
 	 *    this case reprinted them as `0` written by hand in the `printf`, that is
 	 *    the bench STATED a number it had not read — the author's defect,
@@ -829,8 +829,8 @@ static void caso6(void)
 	bool bene;
 	char visto[800];
 
-	registro_azzera();
-	p = palco_apri(320, 240, 1920, 1080);
+	log_reset();
+	p = stage_open(320, 240, 1920, 1080);
 	if (!p) {
 		esito("6 the two accessors are enough to reconstruct the divergence", false,
 		      "the fake stage opens", "⛔ the fake stage did NOT open");
@@ -843,40 +843,40 @@ static void caso6(void)
 		      "the capture attaches to the fake stage's node",
 		      sbaglio ? sbaglio->message : "⛔ cattura_avvia said no");
 		g_clear_error(&sbaglio);
-		palco_chiudi(p);
+		stage_close(p);
 		return;
 	}
 	aspetta(1.0);
-	cattura_misura_chiesta(c, &cl0, &ca0);
+	capture_measure_requested(c, &cl0, &ca0);
 	noto_prima = cattura_misura_negoziata(c, &nl0, &na0);
 
 	/* ⛔ The request the stage cannot hold: from here on «requested» and
 	 *    «negotiated» diverge, and the two PUBLIC accessors say so. */
 	cattura_ridimensiona(c, 2560, 1440);
 	aspetta(0.5);
-	cattura_misura_chiesta(c, &cl, &ca);
-	noto_dopo = cattura_misura_negoziata(c, &nl, &na);
+	capture_measure_requested(c, &cl, &ca);
+	known_after = cattura_misura_negoziata(c, &nl, &na);
 
 	bene = noto_prima && cl0 == 1920 && ca0 == 1080 && nl0 == 1920 && na0 == 1080
-	    && noto_dopo && cl == 2560 && ca == 1440 && nl == 1920 && na == 1080;
+	    && known_after && cl == 2560 && ca == 1440 && nl == 1920 && na == 1080;
 	snprintf(visto, sizeof visto,
 	         "before: requested %ux%u, negotiated %s%ux%u.  After the request the "
 	         "stage cannot hold: requested %ux%u, negotiated %s%ux%u ⇒ the divergence "
 	         "%s from the two public accessors, and without the private field",
 	         cl0, ca0, noto_prima ? "" : "⛔ UNKNOWN ", nl0, na0,
-	         cl, ca, noto_dopo ? "" : "⛔ UNKNOWN ", nl, na,
+	         cl, ca, known_after ? "" : "⛔ UNKNOWN ", nl, na,
 	         (cl != nl || ca != na) ? "CAN BE READ" : "⛔ cannot be read");
 	esito("6 the two accessors are enough to reconstruct the divergence", bene,
 	      "requested 2560x1440 · negotiated 1920x1080, both readable from "
 	      "`cattura.h` without a third accessor", visto);
 	cattura_ferma(c);
-	palco_chiudi(p);
+	stage_close(p);
 }
 
 int main(int argc, char **argv)
 {
 	int solo = argc > 1 ? atoi(argv[1]) : 0;
-	void (*casi[])(void) = {caso1, caso2, caso3, caso4, caso5, caso6};
+	void (*casi[])(void) = {case1, case2, case3, case4, case5, case6};
 	const int quanti = (int)(sizeof casi / sizeof casi[0]);
 
 	parlantina = getenv("PARLANTINA") != NULL;
@@ -886,7 +886,7 @@ int main(int argc, char **argv)
 	 *    off it is not written at all — the cases that REQUIRE that line
 	 *    would be red for a reason unrelated to what they measure. */
 	registro_parlantina(true);
-	registro_dirotta();
+	log_redirect();
 
 	printf("\n== 06-b5: the three proposals of 06-b40, put to the test to DISPROVE them ==\n\n");
 	for (int i = 0; i < quanti; i++) {

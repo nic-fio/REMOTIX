@@ -61,7 +61,7 @@ S1 = p("REMOTIX grew out of a few rules, most of them written before the code an
          "browsers (" + rif("Testing") + ")"],
     ], "«TAB» — The eight invariants")
 
-PROCESSI = fig(
+PROCESSES = fig(
     zone(20, 12, 420, 290, "remotix.service (system.slice)")
     + box(40, 44, 380, 52, "remotix — the server", "root · one poll loop · ports, TLS, QUIC, RCP", "navy")
     + box(40, 128, 180, 52, "PAM dispatcher", "root · started once, forks", "dark")
@@ -83,7 +83,7 @@ PROCESSI = fig(
 
 S2 = p("REMOTIX is one binary, " + c("/usr/libexec/remotix/remotix") + ", that plays several roles. The server "
        "forks the others; the children re-execute the same binary with " + c("--figlio-interno") + " (internal child) so that they "
-       "start from a clean process image, as a different user.", lead=True) + PROCESSI + \
+       "start from a clean process image, as a different user.", lead=True) + PROCESSES + \
     table(["Process", "Runs as", "Born", "Dies", "Job"], [
         [c("remotix") + " (the server)", "root", "started by systemd (" + c("ExecStart") + ")",
          "on " + c("SIGTERM") + "/" + c("SIGINT") + ", after saying farewell to every client",

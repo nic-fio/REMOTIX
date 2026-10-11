@@ -48,7 +48,7 @@ DENTRO=/srv/src
 PORTA=7531
 PREFISSO=pam2-7531
 UTENTE=prova
-UTENTE_CATTIVO=prova2
+BAD_USER=prova2
 ESITI_DENTRO=$DENTRO/02-pam-esiti.jsonl
 
 log()  { printf '\n\033[1m== %s\033[0m\n' "$*"; }
@@ -142,18 +142,18 @@ registro)
 
 misura)
 	ATTESA=${2:-nessuna}
-	GIRI=${3:-5}
+	ROUNDS=${3:-5}
 	NOTA=${4:-}
-	log "The measurement: expectation «$ATTESA», $GIRI rounds"
+	log "The measurement: expectation «$ATTESA», $ROUNDS rounds"
 	# ⛔ D12: the password in a 0600 file, written with `printf` (a builtin), and
 	#    deleted right after.  Never in `argv`, which `/proc/<pid>/cmdline`
 	#    shows to anyone.
 	dentro "umask 077; printf '%s\n' 'parola-di-prova' > $DENTRO/tmp/$PREFISSO-parola; chmod 600 $DENTRO/tmp/$PREFISSO-parola"
 	dentro "python3 $DENTRO/02-pam-fermo.py --porta $PORTA \
 	        --utente $UTENTE --parola-file $DENTRO/tmp/$PREFISSO-parola \
-	        --utente-cattivo $UTENTE_CATTIVO \
+	        --utente-cattivo $BAD_USER \
 	        --socket $DENTRO/tmp/$PREFISSO.sock \
-	        --giri $GIRI --attesa $ATTESA --esiti $ESITI_DENTRO --nota '$NOTA'"
+	        --giri $ROUNDS --attesa $ATTESA --esiti $ESITI_DENTRO --nota '$NOTA'"
 	ESITO=$?
 	dentro "rm -f $DENTRO/tmp/$PREFISSO-parola"
 	exit $ESITO ;;

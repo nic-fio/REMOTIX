@@ -149,7 +149,7 @@ CONGEDO, RESPINTO, BANCO_ESITO = 0x000C, 0x0005, 0x0010
 #    client MUST NOT retry on the same connection (§4.4), after a `CONGEDO` the
 #    connection is simply over — two different state machines under the same
 #    number (finding R7.9).
-PORTATORE = {CREDENZIALI_ERRATE: "RESPINTO", TROPPI_TENTATIVI: "RESPINTO"}
+CARRIER = {CREDENZIALI_ERRATE: "RESPINTO", TROPPI_TENTATIVI: "RESPINTO"}
 
 
 class Cliente(b3.Cliente):
@@ -159,7 +159,7 @@ class Cliente(b3.Cliente):
         super().__init__(*a, **kw)
         # ⛔ THE STREAMS THIS BENCH OPENS, and they must be kept away from
         #    aioquic's HTTP/3 layer: see `quic_event_received`.
-        self.miei_stream = set()
+        self.my_streams = set()
         self.eco = {}
 
     def apri_uni(self):
@@ -167,13 +167,13 @@ class Cliente(b3.Cliente):
         # unidirectional stream: the type 0x54 and the session identifier.
         s_id = self._http.create_webtransport_stream(
             self.sessione, is_unidirectional=True)
-        self.miei_stream.add(s_id)
+        self.my_streams.add(s_id)
         return s_id
 
     def apri_bidi(self):
         s_id = self._http.create_webtransport_stream(
             self.sessione, is_unidirectional=False)
-        self.miei_stream.add(s_id)
+        self.my_streams.add(s_id)
         return s_id
 
     def manda_su(self, stream, dati, fine=False):
@@ -216,7 +216,7 @@ class Cliente(b3.Cliente):
         #    browser hands those bytes to the page and stays connected.
         #    Here they are discarded, DECLARING THEM (§3: no silent tolerance).
         if (type(event).__name__ == "StreamDataReceived"
-                and event.stream_id in self.miei_stream):
+                and event.stream_id in self.my_streams):
             if event.data and event.stream_id not in self.eco:
                 self.eco[event.stream_id] = len(event.data)
                 print(f"   [wt]   ⚠ {len(event.data)} bytes came back from the server "
@@ -246,7 +246,7 @@ BUONE = [("video.codec", "hevc,av1"), ("video.profondita", "8,10"),
 #    TWICE, and §4.3 gives two distinct reasons to close — the duplicate and
 #    the value — so a server that implemented only the first gave green
 #    without ever having looked at the length of a value (finding R7.6).
-SENZA_NOME = [v for v in BUONE if v[0] != "client.nome"]
+WITHOUT_NAME = [v for v in BUONE if v[0] != "client.nome"]
 
 
 def ciao(voci=None, versione=1):
@@ -273,17 +273,17 @@ async def banco_esito(cli, es, id_, esito, motivo):
         raise RuntimeError(f"expected BANCO_ESITO, arrived {nome}")
     if len(corpo) < 14:
         raise RuntimeError(f"BANCO_ESITO of {len(corpo)} bytes: §7.5 wants 14")
-    v_id, v_esito, v_motivo = struct.unpack("!IBB", corpo[:6])
-    v_istante = struct.unpack("!Q", corpo[6:14])[0]
-    es.banco = f"id={v_id} esito={v_esito} motivo={v_motivo} istante={v_istante}"
-    if (v_id, v_esito, v_motivo) != (id_, esito, motivo):
+    v_id, v_esito, v_reason = struct.unpack("!IBB", corpo[:6])
+    v_instant = struct.unpack("!Q", corpo[6:14])[0]
+    es.banco = f"id={v_id} esito={v_esito} motivo={v_reason} istante={v_instant}"
+    if (v_id, v_esito, v_reason) != (id_, esito, motivo):
         raise RuntimeError(
             f"BANCO_ESITO {es.banco}, expected id={id_} esito={esito} "
             f"motivo={motivo}")
     # ⛔ «`istante`: 0 if refused, and it is the only meaning of *absent*
     #    for this field» (§7.5, §6.0).
-    if v_esito == 2 and v_istante != 0:
-        raise RuntimeError(f"refused, but `istante` is {v_istante} and not 0")
+    if v_esito == 2 and v_instant != 0:
+        raise RuntimeError(f"refused, but `istante` is {v_instant} and not 0")
 
 
 # ---------------------------------------------------------------------------
@@ -295,7 +295,7 @@ class Esito:
         self.tipo_motivo = None   # ⛔ IN WHICH message it arrived (§11, §4.4)
         self.dettaglio = ""
         self.codice_wt = None     # from the closing of the session (§3.1 point 3)
-        self.stato_http = None    # for the path case
+        self.http_status = None    # for the path case
         self.messaggi = []        # the types that arrived, in order
         self.viva = False         # the session is still open at the end
         # ⛔ Did the violation really leave?  See point 1 of the docstring:
@@ -307,8 +307,8 @@ class Esito:
 
     def __str__(self):
         p = []
-        if self.stato_http and self.stato_http != "200":
-            p.append(f":status={self.stato_http}")
+        if self.http_status and self.http_status != "200":
+            p.append(f":status={self.http_status}")
         if not self.provocato:
             p.append(f"⛔ violation NEVER SENT (stopped in «{self.fase}»)")
         if self.motivo is not None:
@@ -545,7 +545,7 @@ async def _(cli, a, es):
       "⛔ ONE violation only: `client.nome` appears once and that is it")
 async def _(cli, a, es):
     cli.apri_controllo()
-    cli.manda(ciao(SENZA_NOME + [("client.nome", "")]))
+    cli.manda(ciao(WITHOUT_NAME + [("client.nome", "")]))
 
 
 @caso("valore-257-byte", ERRORE_PROTOCOLLO,
@@ -553,7 +553,7 @@ async def _(cli, a, es):
       "only, for the same reason as the case above")
 async def _(cli, a, es):
     cli.apri_controllo()
-    cli.manda(ciao(SENZA_NOME + [("client.nome", "x" * 257)]))
+    cli.manda(ciao(WITHOUT_NAME + [("client.nome", "x" * 257)]))
 
 
 @caso("capacita-ripetuta", ERRORE_PROTOCOLLO,
@@ -823,7 +823,7 @@ async def gira_caso(a, nome, atteso, spiega, f):
     gestore = None
     try:
         gestore, cli, stato = await apri(a)
-        es.stato_http = stato
+        es.http_status = stato
         if stato != "200":
             es.errore = f"the extended CONNECT answered {stato}"
             return es
@@ -1077,9 +1077,9 @@ def conta(casi):
 
 async def principale(a):
     casi = [c for c in CASI if not a.solo or a.solo in c[0]]
-    tot_v, tot_verdi = conta(CASI)
+    tot_v, total_green = conta(CASI)
     if a.elenco:
-        print(f"== B5: {len(CASI)} cases — {tot_v} violations and {tot_verdi} "
+        print(f"== B5: {len(CASI)} cases — {tot_v} violations and {total_green} "
               f"⭐ expected greens.  Every line is a PREDICTION\n")
         for nome, atteso, spiega, dove, _ in CASI:
             att = (f"{atteso:#04x} {MOTIVI.get(atteso, '?')}" if atteso
@@ -1101,7 +1101,7 @@ async def principale(a):
         print("       This is NOT a green.  The names are read with --elenco.")
         return 2
 
-    sel_v, sel_verdi = conta(casi)
+    sel_v, sel_green = conta(casi)
 
     # ⛔ THE RUN'S LOG, AND THE FIRST LINE SAYS AGAINST WHAT ONE MEASURES.
     #
@@ -1112,15 +1112,15 @@ async def principale(a):
     a.reg = b0.Registro(a.uscita, a.bersaglio, a.porta, a.giro or None,
                         a.md5 or None)
     prof = a.reg.profilo
-    a.reg.apri_giro(
+    a.reg.open_round(
         "B5", "violations sent on a new connection per case; the "
               "server is started by 01-b5-lancia.sh and no moving scene "
               "is needed",
         extra={"casi_selezionati": len(casi), "casi_totali": len(CASI),
-               "filtro": a.solo, "violazioni": sel_v, "verdi_attesi": sel_verdi,
+               "filtro": a.solo, "violazioni": sel_v, "verdi_attesi": sel_green,
                # ⛔ THE ECHO: on the product it is not there, and the difference
                #    is written BEFORE measuring.  `src/webtransport.c`
-               #    `scarta_stream_di_troppo()`: «the bytes are thrown away, and
+               #    `discard_extra_stream()`: «the bytes are thrown away, and
                #    NOT sent back».  ⚠ A bench that waited for it would stay
                #    hanging, and on 10 Aug 2026 that red was diagnosed for
                #    hours as a «certificate defect».  B5 does not wait for it:
@@ -1135,7 +1135,7 @@ async def principale(a):
           f"{'expected' if prof['eco'] else '⛔ NOT expected on this target'}")
     print(f"   this run's log: {a.uscita or '⛔ NONE'}")
     print(f"   {len(casi)} cases out of {len(CASI)} selected: {sel_v} violations "
-          f"and {sel_verdi} ⭐ expected greens")
+          f"and {sel_green} ⭐ expected greens")
     print("   ⛔ every case: the violation really sent, the right reason in the "
           "right message,")
     print("      the two roads of §3.1, and the server still alive afterwards\n")
@@ -1167,11 +1167,11 @@ async def principale(a):
             conti["⭐ expected greens, session alive"][0] += int(ok)
         else:
             conti["violations with the expected reason"][1] += 1
-            atteso_in = PORTATORE.get(atteso, "CONGEDO")
+            expected_in = CARRIER.get(atteso, "CONGEDO")
             # §11: «at least one of the two roads» must have carried the reason.
             strade = []
-            if es.motivo == atteso and es.tipo_motivo == atteso_in:
-                strade.append(atteso_in)
+            if es.motivo == atteso and es.tipo_motivo == expected_in:
+                strade.append(expected_in)
             if es.codice_wt == atteso:
                 strade.append("chiusura-WT")
             ok = es.provocato and bool(strade)
@@ -1226,13 +1226,13 @@ async def principale(a):
             # ⛔ AND IN WHICH MESSAGE (§11, §4.4).
             if es.motivo is not None:
                 conti["§11 — reason in the right message"][1] += 1
-                if es.tipo_motivo == PORTATORE.get(atteso, "CONGEDO"):
+                if es.tipo_motivo == CARRIER.get(atteso, "CONGEDO"):
                     conti["§11 — reason in the right message"][0] += 1
                 else:
                     guasti += 1
                     riga(False, "", f"   §11 on «{nome}»: the reason arrived "
                                     f"in {es.tipo_motivo}, and §11 wants it in "
-                                    f"{PORTATORE.get(atteso, 'CONGEDO')} — they are "
+                                    f"{CARRIER.get(atteso, 'CONGEDO')} — they are "
                                     f"two different state machines")
         # ⛔ and the server afterwards?
         vivo, perche = await ancora_vivo(a)

@@ -29,7 +29,7 @@
  *     · the duplicate press, which here nobody filters for us.
  *
  * ⛔ A SINGLE THREAD, like `input.h`: all functions from the thread that calls
- *    `wlr_input_gira()`.  `libwayland-client` would bear several threads, but only
+ *    `wlr_input_run()`.  `libwayland-client` would bear several threads, but only
  *    with a queue protocol that is not here — and is not needed.
  *
  * ⚠ A CONNECTION OF ITS OWN, and not the capture's (`wlroots.c`).  §7.1
@@ -67,28 +67,28 @@ typedef struct WlrInput WlrInput;
  *
  * NULL with `sbaglio` written.
  */
-WlrInput *wlr_input_apri(GError **sbaglio);
+WlrInput *wlr_input_open(GError **sbaglio);
 
 /* The descriptor to put in the `poll()`; -1 if the wire has dropped. */
-int wlr_input_descrittore(WlrInput *w);
+int wlr_input_descriptor(WlrInput *w);
 
 /* Serves the wire WITHOUT waiting: reads what there is, sends what is left.
  * Returns the events served, or -1 if the wire has dropped (and says so once). */
-int wlr_input_gira(WlrInput *w);
+int wlr_input_run(WlrInput *w);
 
-bool wlr_input_caduto(const WlrInput *w);
+bool wlr_input_dropped(const WlrInput *w);
 
 /*
  * ⛔ THE KEYMAP IN FORCE on our keyboard, as XKB text (without the final
  *    zero in `*lunghezza`).  It is **the one** `input.c` must give to
- *    `tastiera_apri_da_keymap()`: letters are translated into key positions with the
+ *    `keyboard_open_from_keymap()`: letters are translated into key positions with the
  *    very same keymap with which the compositor will read them back.  Two "equal"
  *    keymaps compiled twice are a promise; the same text is a fact.
  */
 const char *wlr_input_keymap(const WlrInput *w, size_t *lunghezza);
 
 /* Where the keymap in force comes from: «session», «environment», or the requested name. */
-const char *wlr_input_keymap_origine(const WlrInput *w);
+const char *wlr_input_keymap_origin(const WlrInput *w);
 
 /*
  * ⭐ The negotiated layout (`RCP.md` §4.5: `it`, `us`, `de(neo)`) becomes the
@@ -117,15 +117,15 @@ int wlr_input_keymap_da_testo(WlrInput *w, const char *testo, size_t lunghezza,
  * would toggle it at every repetition.
  * 0 delivered (or duplicate ignored), -1 not.
  */
-int wlr_input_tasto(WlrInput *w, uint16_t codice, bool premuto);
+int wlr_input_key(WlrInput *w, uint16_t codice, bool premuto);
 
 /* The absolute pointer: `x` in [0, l), `y` in [0, a) — the extent is the canvas. */
-int wlr_input_assoluto(WlrInput *w, uint32_t x, uint32_t y, uint32_t l, uint32_t a);
+int wlr_input_absolute(WlrInput *w, uint32_t x, uint32_t y, uint32_t l, uint32_t a);
 
 /* A button, in evdev (`BTN_LEFT` = 0x110).  ⛔ Here too the duplicate is not
  * sent: the wlroots seat COUNTS presses, and a double press wants
  * two releases — with the second one that will never arrive. */
-int wlr_input_pulsante(WlrInput *w, uint16_t codice, bool premuto);
+int wlr_input_button(WlrInput *w, uint16_t codice, bool premuto);
 
 /*
  * ⛔ The release that is sent EVEN IF this device did not press it:
@@ -134,7 +134,7 @@ int wlr_input_pulsante(WlrInput *w, uint16_t codice, bool premuto);
  *    laptop the headless seat did not need it (see `riattacca_wlr`
  *    in `input.c`); it stays for the case, `[?]`, of another pointer in the seat.
  */
-int wlr_input_rilascia_forzato(WlrInput *w, uint16_t codice);
+int wlr_input_force_release(WlrInput *w, uint16_t codice);
 
 /*
  * The wheel, in units of 120 per notch and ⛔ in WAYLAND's convention
@@ -143,4 +143,4 @@ int wlr_input_rilascia_forzato(WlrInput *w, uint16_t codice);
  */
 int wlr_input_rotella(WlrInput *w, int32_t orizzontale, int32_t verticale);
 
-void wlr_input_chiudi(WlrInput *w);
+void wlr_input_close(WlrInput *w);

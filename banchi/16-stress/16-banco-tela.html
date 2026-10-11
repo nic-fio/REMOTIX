@@ -63,7 +63,7 @@ function disegna(f) {
       f.close();
       ctx.transferFromImageBitmap(b); R.dipinti++;
     }).catch((e) => { f.close(); R.errori.push(String(e)); });
-    R.chiamata_ms = (R.chiamata_ms || []); R.chiamata_ms.push(performance.now() - t0);
+    R.call_ms = (R.call_ms || []); R.call_ms.push(performance.now() - t0);
     return;
   }
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, f);
@@ -72,11 +72,11 @@ function disegna(f) {
   R.disegno_ms.push(performance.now() - t0); R.dipinti++;
 }
 
-let ultimo_cb = 0, dec;
+let last_cb = 0, dec;
 function uscita(f) {
   const ora = performance.now();
-  if (ultimo_cb) R.callback_gap_ms.push(ora - ultimo_cb);
-  ultimo_cb = ora; R.usciti++;
+  if (last_cb) R.callback_gap_ms.push(ora - last_cb);
+  last_cb = ora; R.usciti++;
   if (R.formato === null) R.formato = f.format;
   if (!gl && !ctx) prepara(f.displayWidth, f.displayHeight);
   R.coda_max = Math.max(R.coda_max, dec.decodeQueueSize);
@@ -115,8 +115,8 @@ function p95(v) { if (!v.length) return null; const s = [...v].sort((a,b)=>a-b);
   let n = 0;
   await new Promise((fine) => {
     const giro = () => {                   /* delivers at the server's pace, like the wire */
-      const dovuti = Math.floor((performance.now() - t_inizio) / passo);
-      while (n <= dovuti) {
+      const due = Math.floor((performance.now() - t_inizio) / passo);
+      while (n <= due) {
         const a = au[n % au.length];
         if (n > 0 && n % au.length === 0 && !a.chiave) { n++; continue; }
         dec.decode(new EncodedVideoChunk({ type: (n === 0 || a.chiave) ? "key" : "delta",
@@ -132,7 +132,7 @@ function p95(v) { if (!v.length) return null; const s = [...v].sort((a,b)=>a-b);
     saltati_coda: R.saltati_coda,
     saltati_pct: +(100 * R.saltati_coda / Math.max(1, R.usciti)).toFixed(1),
     disegno_ms_mediana: mediana(R.disegno_ms), disegno_ms_p95: p95(R.disegno_ms),
-    chiamata_ms_mediana: mediana(R.chiamata_ms || []),
+    chiamata_ms_mediana: mediana(R.call_ms || []),
     gap_callback_mediana: mediana(R.callback_gap_ms), coda_max: R.coda_max,
     formato: R.formato, errori: R.errori.slice(0, 5) };
   console.log("ESITO " + JSON.stringify(window.ESITO));

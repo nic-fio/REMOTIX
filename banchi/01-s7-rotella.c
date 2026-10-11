@@ -56,13 +56,13 @@
 #include <string.h>
 #include <unistd.h>
 
-#define NOME_RD "org.gnome.Mutter.RemoteDesktop"
-#define PERCORSO_RD "/org/gnome/Mutter/RemoteDesktop"
+#define RD_NAME "org.gnome.Mutter.RemoteDesktop"
+#define PATH_RD "/org/gnome/Mutter/RemoteDesktop"
 #define IFACE_RD "org.gnome.Mutter.RemoteDesktop"
 #define IFACE_RD_SESSIONE "org.gnome.Mutter.RemoteDesktop.Session"
 #define ATTESA_MS 5000
 
-static void dilo(const char *forma, ...)
+static void tell(const char *forma, ...)
 {
 	va_list argomenti;
 
@@ -79,7 +79,7 @@ static void dilo(const char *forma, ...)
  * ------------------------------------------------------------------------ */
 static struct ei *contesto;
 static struct ei_device *puntatore;     /* the one that has scrolling */
-static bool puntatore_pronto;
+static bool pointer_ready;
 static uint32_t sequenza;
 static bool regione_nota;
 static double reg_x, reg_y, reg_l, reg_a;
@@ -92,7 +92,7 @@ static bool assoluto;                   /* the region is there: one goes to the 
  *    quoted in `fondamenta/remotix-c/src/sessione.h`, and here it would produce an
  *    injector that dies by itself halfway through the measurement without anything saying so.
  */
-static GDBusConnection *apri_bus(GError **sbaglio)
+static GDBusConnection *open_bus(GError **sbaglio)
 {
 	g_autofree char *indirizzo = g_dbus_address_get_for_bus_sync(G_BUS_TYPE_SESSION, NULL, sbaglio);
 
@@ -110,18 +110,18 @@ static GDBusConnection *apri_bus(GError **sbaglio)
  *   CreateSession → ConnectToEIS → Start.  `ConnectToEIS` is asked on the
  *   session NOT yet started.
  * ------------------------------------------------------------------------ */
-static int apri_eis(GDBusConnection *bus, GError **sbaglio)
+static int open_eis(GDBusConnection *bus, GError **sbaglio)
 {
 	g_autofree char *sessione = NULL;
 	g_autoptr(GUnixFDList) descrittori = NULL;
 	g_autoptr(GVariant) risposta = NULL;
-	GVariantBuilder vuote;
+	GVariantBuilder empty;
 	gint32 indice = -1;
 	int fd;
 
 	{
 		g_autoptr(GVariant) r =
-		    g_dbus_connection_call_sync(bus, NOME_RD, PERCORSO_RD, IFACE_RD, "CreateSession", NULL,
+		    g_dbus_connection_call_sync(bus, RD_NAME, PATH_RD, IFACE_RD, "CreateSession", NULL,
 		                                G_VARIANT_TYPE("(o)"), G_DBUS_CALL_FLAGS_NONE, ATTESA_MS,
 		                                NULL, sbaglio);
 		if (!r)
@@ -132,11 +132,11 @@ static int apri_eis(GDBusConnection *bus, GError **sbaglio)
 		}
 		g_variant_get(r, "(o)", &sessione);
 	}
-	dilo("RemoteDesktop session: %s", sessione);
+	tell("RemoteDesktop session: %s", sessione);
 
-	g_variant_builder_init(&vuote, G_VARIANT_TYPE("a{sv}"));
+	g_variant_builder_init(&empty, G_VARIANT_TYPE("a{sv}"));
 	risposta = g_dbus_connection_call_with_unix_fd_list_sync(
-	    bus, NOME_RD, sessione, IFACE_RD_SESSIONE, "ConnectToEIS", g_variant_new("(a{sv})", &vuote),
+	    bus, RD_NAME, sessione, IFACE_RD_SESSIONE, "ConnectToEIS", g_variant_new("(a{sv})", &empty),
 	    G_VARIANT_TYPE("(h)"), G_DBUS_CALL_FLAGS_NONE, ATTESA_MS, NULL, &descrittori, NULL, sbaglio);
 	if (!risposta)
 	{
@@ -150,7 +150,7 @@ static int apri_eis(GDBusConnection *bus, GError **sbaglio)
 
 	{
 		g_autoptr(GVariant) r =
-		    g_dbus_connection_call_sync(bus, NOME_RD, sessione, IFACE_RD_SESSIONE, "Start", NULL,
+		    g_dbus_connection_call_sync(bus, RD_NAME, sessione, IFACE_RD_SESSIONE, "Start", NULL,
 		                                NULL, G_DBUS_CALL_FLAGS_NONE, ATTESA_MS, NULL, sbaglio);
 		if (!r)
 		{
@@ -159,7 +159,7 @@ static int apri_eis(GDBusConnection *bus, GError **sbaglio)
 			return -1;
 		}
 	}
-	dilo("EIS channel open (descriptor %d), session started", fd);
+	tell("EIS channel open (descriptor %d), session started", fd);
 	return fd;
 }
 
@@ -169,7 +169,7 @@ static int apri_eis(GDBusConnection *bus, GError **sbaglio)
  * ⛔ It is always PRINTED, even when it is not there.  «No region» and «region
  *    0x0» have two different cures, and a mute injector confuses them.
  * ------------------------------------------------------------------------ */
-static void leggi_regione(struct ei_device *dispositivo)
+static void read_region(struct ei_device *dispositivo)
 {
 	regione_nota = false;
 	for (size_t i = 0;; i++)
@@ -183,7 +183,7 @@ static void leggi_regione(struct ei_device *dispositivo)
 		 *    was «0,0 0x0» — that is it looked like a real diagnosis («the
 		 *    region is degenerate») while the region was 1920x1080.  A
 		 *    PRINTING defect that reads as a defect of the compositor. */
-		dilo("region %zu: %u,%u  %ux%u  (mapping-id «%s»)", i, ei_region_get_x(regione),
+		tell("region %zu: %u,%u  %ux%u  (mapping-id «%s»)", i, ei_region_get_x(regione),
 		     ei_region_get_y(regione), ei_region_get_width(regione), ei_region_get_height(regione),
 		     ei_region_get_mapping_id(regione) ?: "absent");
 		if (!regione_nota && ei_region_get_width(regione) > 0 && ei_region_get_height(regione) > 0)
@@ -196,22 +196,22 @@ static void leggi_regione(struct ei_device *dispositivo)
 		}
 	}
 	if (!regione_nota)
-		dilo("NO region: the pointer will move in RELATIVE mode, and the final "
+		tell("NO region: the pointer will move in RELATIVE mode, and the final "
 		     "position is not guaranteed");
 }
 
-static void al_centro(void)
+static void to_center(void)
 {
-	if (!puntatore_pronto)
+	if (!pointer_ready)
 	{
-		dilo("ERROR: no pointing device ready");
+		tell("ERROR: no pointing device ready");
 		return;
 	}
 	if (regione_nota && assoluto)
 	{
 		ei_device_pointer_motion_absolute(puntatore, reg_x + reg_l / 2, reg_y + reg_a / 2);
 		ei_device_frame(puntatore, ei_now(contesto));
-		dilo("pointer at %.0f,%.0f (absolute)", reg_x + reg_l / 2, reg_y + reg_a / 2);
+		tell("pointer at %.0f,%.0f (absolute)", reg_x + reg_l / 2, reg_y + reg_a / 2);
 	}
 	else
 	{
@@ -222,7 +222,7 @@ static void al_centro(void)
 		ei_device_frame(puntatore, ei_now(contesto));
 		ei_device_pointer_motion(puntatore, -960, -540);
 		ei_device_frame(puntatore, ei_now(contesto));
-		dilo("pointer moved in RELATIVE mode towards the centre (corner, then -960,-540)");
+		tell("pointer moved in RELATIVE mode towards the centre (corner, then -960,-540)");
 	}
 }
 
@@ -230,7 +230,7 @@ static void al_centro(void)
  * The libei events.  Names and order are those already tested in
  * `fondamenta/remotix-c/src/input.c`, which runs on this same Mutter.
  * ------------------------------------------------------------------------ */
-static void tratta_evento(struct ei_event *evento)
+static void handle_event(struct ei_event *evento)
 {
 	enum ei_event_type tipo = ei_event_get_type(evento);
 	struct ei_device *dispositivo = ei_event_get_device(evento);
@@ -238,17 +238,17 @@ static void tratta_evento(struct ei_event *evento)
 	switch (tipo)
 	{
 		case EI_EVENT_CONNECT:
-			dilo("connected");
+			tell("connected");
 			break;
 		case EI_EVENT_SEAT_ADDED:
 			ei_seat_bind_capabilities(ei_event_get_seat(evento), EI_DEVICE_CAP_POINTER,
 			                          EI_DEVICE_CAP_POINTER_ABSOLUTE, EI_DEVICE_CAP_BUTTON,
 			                          EI_DEVICE_CAP_SCROLL, NULL);
-			dilo("seat «%s»: requested the pointing and scrolling capabilities",
+			tell("seat «%s»: requested the pointing and scrolling capabilities",
 			     ei_seat_get_name(ei_event_get_seat(evento)) ?: "?");
 			break;
 		case EI_EVENT_DEVICE_ADDED:
-			dilo("device «%s»: pointer=%d absolute=%d scroll=%d buttons=%d",
+			tell("device «%s»: pointer=%d absolute=%d scroll=%d buttons=%d",
 			     ei_device_get_name(dispositivo) ?: "?",
 			     ei_device_has_capability(dispositivo, EI_DEVICE_CAP_POINTER),
 			     ei_device_has_capability(dispositivo, EI_DEVICE_CAP_POINTER_ABSOLUTE),
@@ -278,57 +278,57 @@ static void tratta_evento(struct ei_event *evento)
 			{
 				if (puntatore)
 				{
-					dilo("switching device: the previous one did not have absolute mode");
+					tell("switching device: the previous one did not have absolute mode");
 					ei_device_unref(puntatore);
-					puntatore_pronto = false;
+					pointer_ready = false;
 				}
 				puntatore = ei_device_ref(dispositivo);
 				assoluto = ei_device_has_capability(dispositivo, EI_DEVICE_CAP_POINTER_ABSOLUTE);
-				leggi_regione(dispositivo);
+				read_region(dispositivo);
 			}
 			break;
 		case EI_EVENT_DEVICE_RESUMED:
 			ei_device_start_emulating(dispositivo, ++sequenza);
 			if (dispositivo == puntatore)
 			{
-				leggi_regione(dispositivo);
-				puntatore_pronto = true;
+				read_region(dispositivo);
+				pointer_ready = true;
 				/* ⛔ Two different words for two different situations: whoever launches
 				 *    the bench must be able to wait for the good one instead of
 				 *    starting with the first that arrives. */
-				dilo(assoluto ? "PRONTO" : "PRONTO-RELATIVO");
+				tell(assoluto ? "PRONTO" : "PRONTO-RELATIVO");
 			}
 			break;
 		case EI_EVENT_DEVICE_PAUSED:
 			if (dispositivo == puntatore)
 			{
-				puntatore_pronto = false;
-				dilo("the device was SUSPENDED by the compositor");
+				pointer_ready = false;
+				tell("the device was SUSPENDED by the compositor");
 			}
 			break;
 		case EI_EVENT_DEVICE_REMOVED:
 			if (dispositivo == puntatore)
 			{
-				puntatore_pronto = false;
-				dilo("the device was REMOVED by the compositor");
+				pointer_ready = false;
+				tell("the device was REMOVED by the compositor");
 			}
 			break;
 		case EI_EVENT_DISCONNECT:
-			dilo("DISCONNECTED by the compositor");
+			tell("DISCONNECTED by the compositor");
 			exit(4);
 		default:
 			break;
 	}
 }
 
-static void dispatcia(void)
+static void dispatch_all(void)
 {
 	struct ei_event *evento;
 
 	ei_dispatch(contesto);
 	while ((evento = ei_get_event(contesto)) != NULL)
 	{
-		tratta_evento(evento);
+		handle_event(evento);
 		ei_event_unref(evento);
 	}
 }
@@ -343,39 +343,39 @@ static void comando(char *riga)
 		return;
 	if (g_str_equal(riga, "fine"))
 	{
-		dilo("fine");
+		tell("fine");
 		exit(0);
 	}
 	if (g_str_equal(riga, "centro"))
 	{
-		al_centro();
+		to_center();
 		return;
 	}
 	if (g_str_equal(riga, "stato"))
 	{
-		dilo("device ready=%d  absolute=%d  region=%d (%.0f,%.0f %.0fx%.0f)",
-		     puntatore_pronto, assoluto, regione_nota, reg_x, reg_y, reg_l, reg_a);
+		tell("device ready=%d  absolute=%d  region=%d (%.0f,%.0f %.0fx%.0f)",
+		     pointer_ready, assoluto, regione_nota, reg_x, reg_y, reg_l, reg_a);
 		return;
 	}
 	if (sscanf(riga, "scatto %d %d", &dx, &dy) == 2)
 	{
-		if (!puntatore_pronto)
+		if (!pointer_ready)
 		{
-			dilo("ERROR: no device ready, the click was NOT sent");
+			tell("ERROR: no device ready, the click was NOT sent");
 			return;
 		}
 		ei_device_scroll_discrete(puntatore, dx, dy);
 		ei_device_frame(puntatore, ei_now(contesto));
-		dilo("CLICK dx=%d dy=%d sent", dx, dy);
+		tell("CLICK dx=%d dy=%d sent", dx, dy);
 		return;
 	}
 	/* The movement by hand: it serves the positive control — if the page sees
 	 * the pointer move, the road from the injector to the page is open. */
 	if (sscanf(riga, "muovi %d %d", &dx, &dy) == 2)
 	{
-		if (!puntatore_pronto)
+		if (!pointer_ready)
 		{
-			dilo("ERROR: no device ready");
+			tell("ERROR: no device ready");
 			return;
 		}
 		if (regione_nota && assoluto)
@@ -383,34 +383,34 @@ static void comando(char *riga)
 		else
 			ei_device_pointer_motion(puntatore, dx, dy);
 		ei_device_frame(puntatore, ei_now(contesto));
-		dilo("MOVED to %d,%d", dx, dy);
+		tell("MOVED to %d,%d", dx, dy);
 		return;
 	}
 	if (sscanf(riga, "bottone %d %d", &dx, &dy) == 2)
 	{
-		if (!puntatore_pronto)
+		if (!pointer_ready)
 		{
-			dilo("ERROR: no device ready");
+			tell("ERROR: no device ready");
 			return;
 		}
 		ei_device_button_button(puntatore, (uint32_t) dx, dy != 0);
 		ei_device_frame(puntatore, ei_now(contesto));
-		dilo("BUTTON %d %s", dx, dy ? "down" : "up");
+		tell("BUTTON %d %s", dx, dy ? "down" : "up");
 		return;
 	}
 	if (sscanf(riga, "liscio %d %d", &dx, &dy) == 2)
 	{
-		if (!puntatore_pronto)
+		if (!pointer_ready)
 		{
-			dilo("ERROR: no device ready, the smooth scroll was NOT sent");
+			tell("ERROR: no device ready, the smooth scroll was NOT sent");
 			return;
 		}
 		ei_device_scroll_delta(puntatore, dx, dy);
 		ei_device_frame(puntatore, ei_now(contesto));
-		dilo("SMOOTH dx=%d dy=%d sent", dx, dy);
+		tell("SMOOTH dx=%d dy=%d sent", dx, dy);
 		return;
 	}
-	dilo("unknown command: «%s»", riga);
+	tell("unknown command: «%s»", riga);
 }
 
 int main(void)
@@ -423,16 +423,16 @@ int main(void)
 
 	setvbuf(stdout, NULL, _IOLBF, 0);
 
-	bus = apri_bus(&sbaglio);
+	bus = open_bus(&sbaglio);
 	if (!bus)
 	{
-		dilo("ERROR: session bus not reachable: %s", sbaglio->message);
+		tell("ERROR: session bus not reachable: %s", sbaglio->message);
 		return 2;
 	}
-	fd_eis = apri_eis(bus, &sbaglio);
+	fd_eis = open_eis(bus, &sbaglio);
 	if (fd_eis < 0)
 	{
-		dilo("ERROR: %s", sbaglio->message);
+		tell("ERROR: %s", sbaglio->message);
 		return 3;
 	}
 
@@ -440,7 +440,7 @@ int main(void)
 	ei_configure_name(contesto, "remotix-s7");
 	if (ei_setup_backend_fd(contesto, fd_eis) != 0)
 	{
-		dilo("ERROR: libei did not accept the ConnectToEIS descriptor");
+		tell("ERROR: libei did not accept the ConnectToEIS descriptor");
 		return 3;
 	}
 
@@ -449,22 +449,22 @@ int main(void)
 	sorveglianza[1].fd = STDIN_FILENO;
 	sorveglianza[1].events = POLLIN;
 
-	dispatcia();
+	dispatch_all();
 	for (;;)
 	{
 		if (poll(sorveglianza, 2, 1000) < 0)
 			break;
 		if (sorveglianza[0].revents & POLLIN)
-			dispatcia();
+			dispatch_all();
 		if (sorveglianza[1].revents & POLLIN)
 		{
 			if (!fgets(riga, sizeof riga, stdin))
 			{
-				dilo("standard input closed: exiting");
+				tell("standard input closed: exiting");
 				break;
 			}
 			comando(riga);
-			dispatcia();
+			dispatch_all();
 		}
 		if (sorveglianza[1].revents & POLLHUP)
 			break;

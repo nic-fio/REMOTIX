@@ -68,7 +68,7 @@ fi
 #    same on both sides, so it can be read from here without sudo.
 # ⚠ And after the `kill` we CHECK that it is dead, before throwing away the file:
 #    deleting it first is losing the only handle we had.
-ferma_per_pid() # $1 = PID file, $2 = expected program name
+stop_by_pid() # $1 = PID file, $2 = expected program name
 {
 	local file=$1 atteso=$2 p="" comm=""
 	[ -f "$file" ] && p=$(cat "$file" 2>/dev/null)
@@ -111,7 +111,7 @@ ferma_per_pid() # $1 = PID file, $2 = expected program name
 }
 
 if [ "$AZIONE" = spegni ]; then
-	ferma_per_pid "$FUORI/b2-wt.pid" "$(basename "$SERVER")"
+	stop_by_pid "$FUORI/b2-wt.pid" "$(basename "$SERVER")"
 	exit $?
 fi
 if [ "$AZIONE" != misura ] && [ "$AZIONE" != accendi ]; then
@@ -140,7 +140,7 @@ ok "sudo validated"
 #    looked at: the status of `enter.sh`, the status of `ss`, and the content.
 #
 # Exits 0 = taken · 1 = free · 2 = could not look.
-guarda_porta() # $1 = port
+look_port() # $1 = port
 {
 	local p=$1
 	rm -f "$FUORI/b2-porte.txt" "$FUORI/b2-porte.stato"
@@ -155,10 +155,10 @@ guarda_porta() # $1 = port
 		ko "could not look at the ports: the list was not written"
 		return 2
 	fi
-	local stato_ss
-	stato_ss=$(cat "$FUORI/b2-porte.stato")
-	if [ "$stato_ss" != 0 ]; then
-		ko "«ss» inside the container exited $stato_ss:"
+	local state_ss
+	state_ss=$(cat "$FUORI/b2-porte.stato")
+	if [ "$state_ss" != 0 ]; then
+		ko "«ss» inside the container exited $state_ss:"
 		sed 's/^/        /' "$FUORI/b2-porte.txt"
 		return 2
 	fi
@@ -167,7 +167,7 @@ guarda_porta() # $1 = port
 }
 
 log "The port"
-guarda_porta "$PORTA"
+look_port "$PORTA"
 LIBERA=$?
 if [ "$LIBERA" -eq 2 ]; then
 	exit 3
@@ -201,12 +201,12 @@ fi
 #    port passed the check, and the bench printed "listening" on a false fact.
 #    It is the necessary taken for sufficient (E1), right in the file that
 #    tells of the defect of the crooked arguments.
-guarda_porta "$PORTA"
-TIENE=$?
-if [ "$TIENE" -eq 2 ]; then
+look_port "$PORTA"
+HOLDS=$?
+if [ "$HOLDS" -eq 2 ]; then
 	exit 4
 fi
-if [ "$TIENE" -ne 0 ] || ! grep ":$PORTA " "$FUORI/b2-porte.txt" | grep -q "pid=$PID,"; then
+if [ "$HOLDS" -ne 0 ] || ! grep ":$PORTA " "$FUORI/b2-porte.txt" | grep -q "pid=$PID,"; then
 	ko "the server is alive but does NOT hold port $PORTA (the list is above)"
 	sed 's/^/        /' "$FUORI/b2-wt.log"
 	exit 4
@@ -215,10 +215,10 @@ ok "listening on port $PORTA, PID $PID"
 inf "what it said at startup:"
 grep "REMOTIX B2" "$FUORI/b2-wt.log" | head -4 | sed 's/^/        /'
 
-fermare() {
+stop() {
 	# ⚠ Same road as the shutdown: we look at which PID it is, and check
 	#   that it is dead before throwing away the file (R8.13).
-	ferma_per_pid "$FUORI/b2-wt.pid" "$(basename "$SERVER")"
+	stop_by_pid "$FUORI/b2-wt.pid" "$(basename "$SERVER")"
 }
 
 if [ "$AZIONE" = accendi ]; then
@@ -235,8 +235,8 @@ log "1. The RIGHT path — /rcp/1"
 inf "expected: :status 200, and the bytes come back identical"
 bash "$ENTRA" --root \
 	"python3 $DENTRO/01-b2-cliente-aioquic.py https://$IND:$PORTA/rcp/1"
-ESITO_SI=$?
-inf "test client: exit $ESITO_SI"
+OUTCOME_YES=$?
+inf "test client: exit $OUTCOME_YES"
 
 # ---------------------------------------------------------------------------
 log "2. ⛔ The WRONG path — /rcp/9, the check that says NO"
@@ -249,31 +249,31 @@ inf "          finding R1.24 chose 404 among the three statuses that were legiti
 #    that is what the document asks for, and any other outcome is red.
 bash "$ENTRA" --root \
 	"python3 $DENTRO/01-b2-cliente-aioquic.py https://$IND:$PORTA/rcp/9 404"
-ESITO_NO=$?
-inf "test client: exit $ESITO_NO (expected: 0, that is «refused with 404»)"
+OUTCOME_NO=$?
+inf "test client: exit $OUTCOME_NO (expected: 0, that is «refused with 404»)"
 
 # ---------------------------------------------------------------------------
 log "What the server saw"
 grep "REMOTIX B2" "$FUORI/b2-wt.log" | sed 's/^/        /'
 
-fermare
+stop
 
 log "Outcome"
-BENE=0
-if [ "$ESITO_SI" -eq 0 ]; then
+ALL_GOOD=0
+if [ "$OUTCOME_YES" -eq 0 ]; then
 	ok "/rcp/1: session opened and bytes came back"
 else
-	ko "/rcp/1: did NOT work (exit $ESITO_SI)"
-	BENE=1
+	ko "/rcp/1: did NOT work (exit $OUTCOME_YES)"
+	ALL_GOOD=1
 fi
-if [ "$ESITO_NO" -eq 0 ]; then
+if [ "$OUTCOME_NO" -eq 0 ]; then
 	ok "/rcp/9: REFUSED with 404, as §2.2 requires"
 else
-	ko "⛔ /rcp/9 was NOT refused with 404 (exit $ESITO_NO):"
+	ko "⛔ /rcp/9 was NOT refused with 404 (exit $OUTCOME_NO):"
 	ko "   either the server accepts it — and then it is a violation of RCP.md"
 	ko "   §2.2 — or the refusal came with another status, or the test"
 	ko "   did not even start.  The log above says which."
-	BENE=1
+	ALL_GOOD=1
 fi
 inf "the complete log stays in $FUORI/b2-wt.log"
-exit "$BENE"
+exit "$ALL_GOOD"

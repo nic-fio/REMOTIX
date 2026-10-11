@@ -42,7 +42,7 @@ SRC=${SRC:-/media/REMOTIX/src}
 PRODOTTO=${PRODOTTO:-$SRC/remotix}          # the product tree, seen from the host
 DENTRO_SRC=${DENTRO_SRC:-/srv/src}          # the same, seen from the container
 DENTRO_QUI=${DENTRO_QUI:-/srv/remotix/tmp/02-cattura}
-BINARIO=$QUI/02-cattura-prodotto
+BINARY=$QUI/02-cattura-prodotto
 REGISTRO=$QUI/costruzione-prodotto.log
 
 # ⛔ This agent's port is 7512, and no port is opened here.  The
@@ -83,15 +83,15 @@ fi
 
 if [ "${1:-costruisci}" = guarda ]; then
 	log "1. Is the binary there, and is it newer than the sources?"
-	if [ ! -x "$BINARIO" ]; then
-		ko "⛔ there is no $BINARIO"
+	if [ ! -x "$BINARY" ]; then
+		ko "⛔ there is no $BINARY"
 		exit 1
 	fi
 	vecchio=
 	for f in $SORGENTI_PRODOTTO cattura.h mutter.h registro.h; do
-		[ "$PRODOTTO/$f" -nt "$BINARIO" ] && vecchio="$vecchio $f"
+		[ "$PRODOTTO/$f" -nt "$BINARY" ] && vecchio="$vecchio $f"
 	done
-	[ "$SRC/$SORGENTE_BANCO" -nt "$BINARIO" ] && vecchio="$vecchio $SORGENTE_BANCO"
+	[ "$SRC/$SORGENTE_BANCO" -nt "$BINARY" ] && vecchio="$vecchio $SORGENTE_BANCO"
 	if [ -n "$vecchio" ]; then
 		ko "⛔ the binary is OLDER than:$vecchio"
 		inf "measuring now would mean running code different from the code read"
@@ -116,11 +116,11 @@ bash /media/REMOTIX/enter.sh "cd $DENTRO_QUI && \
         \$(pkg-config --cflags --libs libpipewire-0.3 gio-2.0 libdrm) \
         > $DENTRO_QUI/costruzione-prodotto.log 2>&1; \
     echo \"uscita-gcc: \$?\" >> $DENTRO_QUI/costruzione-prodotto.log"
-esito_enter=$?
+outcome_enter=$?
 
 log "2. The COMPILER's outcome, not the presence of the binary"
 if [ ! -r "$REGISTRO" ]; then
-	ko "⛔ there is no build log ($REGISTRO): enter.sh exited with $esito_enter"
+	ko "⛔ there is no build log ($REGISTRO): enter.sh exited with $outcome_enter"
 	inf "⚠ and this is NOT «it compiled»: it is «I could not look»"
 	exit 2
 fi
@@ -134,19 +134,19 @@ if [ "$uscita_gcc" != 0 ]; then
 	ko "⛔ gcc exited with $uscita_gcc: I built NOTHING"
 	exit 1
 fi
-if [ ! -x "$BINARIO" ]; then
-	ko "⛔ gcc says 0 and the binary is not there: $BINARIO"
+if [ ! -x "$BINARY" ]; then
+	ko "⛔ gcc says 0 and the binary is not there: $BINARY"
 	exit 2
 fi
 ok "gcc exit 0, and the binary is there"
-ls -la "$BINARIO"
+ls -la "$BINARY"
 
 log "3. The verdict"
-ok "⭐ built: $BINARIO"
+ok "⭐ built: $BINARY"
 inf "now the bench is pointed at the PRODUCT like this, and the judge does not change:"
-inf "    PROG=$BINARIO FONTE=$SRC/$SORGENTE_BANCO \\"
+inf "    PROG=$BINARY FONTE=$SRC/$SORGENTE_BANCO \\"
 inf "        bash $SRC/02-cattura-lancia.sh misura"
 inf "and the whole certification:"
-inf "    PROG=$BINARIO FONTE=$SRC/$SORGENTE_BANCO \\"
+inf "    PROG=$BINARY FONTE=$SRC/$SORGENTE_BANCO \\"
 inf "        bash $SRC/02-cattura-certifica.sh"
 exit 0

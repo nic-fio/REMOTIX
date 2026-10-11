@@ -113,7 +113,7 @@ PORTE_DA_NON_TOCCARE=${PORTE_DA_NON_TOCCARE:-"7448 7501"}
 U=$(id -u)
 RUNTIME=${XDG_RUNTIME_DIR:-/run/user/$U}
 REGISTRO=$RUNTIME/remotix-sessione.log
-REGISTRO_SHELL=$RUNTIME/mutter.log
+SHELL_LOG=$RUNTIME/mutter.log
 DROPIN_DIR=$RUNTIME/systemd/user.control/org.gnome.Shell@wayland.service.d
 DROPIN=$DROPIN_DIR/zz-f21-monitor.conf
 # ⛔ The PERSISTENT drop-in, the one written by `fondamenta/banco/provision-server.sh`.
@@ -133,8 +133,8 @@ log() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 # ⛔ THE LOCK ON 7511 — not a listener, a RIGHT TO CYCLE.
 # It is held by an `nc`/python process that occupies the port while it lives.
 # ---------------------------------------------------------------------------
-PID_LUCCHETTO=""
-prendi_lucchetto()
+PID_LOCK=""
+take_lock()
 {
 	python3 -c "
 import socket, sys, time
@@ -149,45 +149,45 @@ print('taken')
 sys.stdout.flush()
 time.sleep(86400)
 " &
-	PID_LUCCHETTO=$!
+	PID_LOCK=$!
 	sleep 1
-	if ! kill -0 "$PID_LUCCHETTO" 2>/dev/null; then
+	if ! kill -0 "$PID_LOCK" 2>/dev/null; then
 		ko "⛔ port $PORTA_LUCCHETTO is already taken: another copy of this"
 		ko "   bench is cycling the session.  I do not start: two cycles together"
 		ko "   would give two different measurements under the same label."
 		return 1
 	fi
-	ok "lock taken on $PORTA_LUCCHETTO (pid $PID_LUCCHETTO)"
+	ok "lock taken on $PORTA_LUCCHETTO (pid $PID_LOCK)"
 	return 0
 }
 molla_lucchetto()
 {
-	[ -n "$PID_LUCCHETTO" ] && kill "$PID_LUCCHETTO" 2>/dev/null
-	PID_LUCCHETTO=""
+	[ -n "$PID_LOCK" ] && kill "$PID_LOCK" 2>/dev/null
+	PID_LOCK=""
 }
 trap molla_lucchetto EXIT
 
 # ---------------------------------------------------------------------------
-conta_ascoltatori() # $1 = port
+count_listeners() # $1 = port
 {
 	ss -tuln | grep -c ":$1\b"
 }
 
 vicini_prima()
 {
-	VICINI=""
+	NEIGHBORS=""
 	for p in $PORTE_DA_NON_TOCCARE; do
-		VICINI="$VICINI $p:$(conta_ascoltatori "$p")"
+		NEIGHBORS="$NEIGHBORS $p:$(count_listeners "$p")"
 	done
-	inf "the neighbours I do not touch, before:$VICINI"
+	inf "the neighbours I do not touch, before:$NEIGHBORS"
 }
 
 vicini_dopo()
 {
 	local guai=0 p n atteso
 	for p in $PORTE_DA_NON_TOCCARE; do
-		atteso=$(echo "$VICINI" | tr ' ' '\n' | grep "^$p:" | cut -d: -f2)
-		n=$(conta_ascoltatori "$p")
+		atteso=$(echo "$NEIGHBORS" | tr ' ' '\n' | grep "^$p:" | cut -d: -f2)
+		n=$(count_listeners "$p")
 		if [ "$n" -lt "${atteso:-0}" ]; then
 			ko "⛔ on $p the listeners went from $atteso to $n:"
 			ko "   I touched something that was not mine.  STOPPING EVERYTHING."
@@ -212,7 +212,7 @@ vicini_dopo()
 #    `ConditionEnvironment=XDG_SESSION_TYPE=wayland` (checked in the file
 #    installed on NIC-OS on 12 Aug 2026), and without it the compositor does not
 #    start at all — a crippled session, and no line saying why.
-avvia_sessione()
+start_session()
 {
 	env -i \
 		HOME="$HOME" \
@@ -237,7 +237,7 @@ viva() { pgrep -u "$U" -x gnome-shell >/dev/null; }
 # ⛔ And it waits for `inactive`, NOT «other than active»: `is-active` passes through
 #    `deactivating`, and restarting in there is another first execution
 #    (`FASI.md` §00-ambiente, defect 4 of phase 0).
-ferma_e_aspetta()
+stop_and_wait()
 {
 	local scadenza=$((SECONDS + ${1:-60})) stato
 	gdbus call --session -d org.gnome.SessionManager -o /org/gnome/SessionManager \
@@ -357,7 +357,7 @@ CONF
 #   reboot must be rerun anyway.  This function checks whether that line is there,
 #   and if it is not it says so LOUDLY instead of letting you believe it is done.
 # ---------------------------------------------------------------------------
-dilo_se_non_persiste()
+tell_if_not_persistent()
 {
 	if [ ! -r "$DROPIN_PERSISTENTE" ]; then
 		att "⚠ the persistent drop-in is not there or I cannot read it:"
@@ -382,7 +382,7 @@ dilo_se_non_persiste()
 	return 1
 }
 
-togli_dropin()
+remove_dropin()
 {
 	rm -f "$DROPIN"
 	rmdir "$DROPIN_DIR" 2>&1 | grep -v "Directory not empty" || true
@@ -419,14 +419,14 @@ riparti() # $1 = con|senza ; $2 = label ; $3 = scene file (optional)
 {
 	log "I restart the session from scratch, drop-in «$1»"
 	if viva; then
-		ferma_e_aspetta 60 || { ko "⛔ it did not stop within 60 s"; return 9; }
+		stop_and_wait 60 || { ko "⛔ it did not stop within 60 s"; return 9; }
 		ok "session stopped"
 	else
 		inf "there was no session to stop"
 	fi
 	scrivi_dropin "$1" || return 9
 	: >"$REGISTRO"
-	avvia_sessione
+	start_session
 	if ! attendi 60; then
 		ko "⛔ the session did NOT start within 60 s.  Last lines:"
 		tail -n 25 "$REGISTRO" | sed 's/^/        /'
@@ -441,7 +441,7 @@ riparti() # $1 = con|senza ; $2 = label ; $3 = scene file (optional)
 	local e=$?
 	# ⛔ And it says AT ONCE whether this health is only for today: whoever has just read
 	#    «HEALTHY» is exactly who must know that after the reboot it will not be any more.
-	[ "$1" = con ] && dilo_se_non_persiste
+	[ "$1" = con ] && tell_if_not_persistent
 	return $e
 }
 
@@ -526,34 +526,34 @@ dispositivi()
 # ---------------------------------------------------------------------------
 certifica()
 {
-	local A_SANO=0 A_GUASTO=1 MARCA_GUASTO="BLACK: ZERO MONITORS"
+	local A_HEALTHY=0 A_GUASTO=1 MARCA_GUASTO="BLACK: ZERO MONITORS"
 	log "The expectations, WRITTEN BEFORE the round"
-	inf "healthy: $A_SANO (HEALTHY) · fault: $A_GUASTO ($MARCA_GUASTO) · healed: $A_SANO"
+	inf "healthy: $A_HEALTHY (HEALTHY) · fault: $A_GUASTO ($MARCA_GUASTO) · healed: $A_HEALTHY"
 	inf "requested size: $MISURA"
 	vicini_prima
 
 	mkdir -p "$SCENE"
 
 	log "1. The HEALTHY round — the session WITH the monitor"
-	riparti con "certifica-sano" "$SCENE/sana.json"; local E_SANO=$?
+	riparti con "certifica-sano" "$SCENE/sana.json"; local E_HEALTHY=$?
 	log "2. The FAULT — the same session WITHOUT --virtual-monitor (M9)"
 	riparti senza "certifica-guasto" "$SCENE/nera.json"; local E_GUASTO=$?
 	log "3. The HEALED — the monitor is put back"
-	riparti con "certifica-risanato" "$SCENE/sana-2.json"; local E_RIS=$?
+	riparti con "certifica-risanato" "$SCENE/sana-2.json"; local E_RESULT=$?
 
 	log "The verdict, with the three numbers next to it"
-	inf "healthy $E_SANO · fault $E_GUASTO · healed $E_RIS"
+	inf "healthy $E_HEALTHY · fault $E_GUASTO · healed $E_RESULT"
 	local falle=0
-	[ "$E_SANO" -eq "$A_SANO" ] && ok "the healthy one is the expected ($E_SANO)" || {
-		ko "⛔ the healthy one is $E_SANO instead of $A_SANO: the subject is broken, and a"
+	[ "$E_HEALTHY" -eq "$A_HEALTHY" ] && ok "the healthy one is the expected ($E_HEALTHY)" || {
+		ko "⛔ the healthy one is $E_HEALTHY instead of $A_HEALTHY: the subject is broken, and a"
 		ko "   bench whose subject is broken is NOT certified"
 		falle=$((falle+1)); }
 	[ "$E_GUASTO" -eq "$A_GUASTO" ] && ok "the fault is the expected ($E_GUASTO = $MARCA_GUASTO)" || {
 		ko "⛔ the fault is $E_GUASTO instead of $A_GUASTO: either the bench does not see it,"
 		ko "   or it is red for another reason"
 		falle=$((falle+1)); }
-	[ "$E_RIS" -eq "$A_SANO" ] && ok "the healed one goes back to healthy ($E_RIS)" || {
-		ko "⛔ the healed one is $E_RIS instead of $A_SANO: the fault left"
+	[ "$E_RESULT" -eq "$A_HEALTHY" ] && ok "the healed one goes back to healthy ($E_RESULT)" || {
+		ko "⛔ the healed one is $E_RESULT instead of $A_HEALTHY: the fault left"
 		ko "   something behind, or the healthy one was not repeatable"
 		falle=$((falle+1)); }
 
@@ -561,7 +561,7 @@ certifica()
 
 	if [ "$falle" -eq 0 ]; then
 		printf '\n    \033[1;32m⭐ F2.1 IS CERTIFIED: healthy %s → fault %s (at its point) → healed %s\033[0m\n' \
-		    "$E_SANO" "$E_GUASTO" "$E_RIS"
+		    "$E_HEALTHY" "$E_GUASTO" "$E_RESULT"
 		printf '    --  and it is not «the bench is right»: it is «the bench can see THIS defect».\n'
 		return 0
 	fi
@@ -577,7 +577,7 @@ guarda)
 	vicini_prima
 	misura "${2:-guarda}"
 	e=$?
-	dilo_se_non_persiste
+	tell_if_not_persistent
 	exit $e
 	;;
 guardia)
@@ -587,13 +587,13 @@ guardia)
 	shift
 	exec bash "$QUI/02-sessione-guardia.sh" "$@"
 	;;
-sano)      prendi_lucchetto || exit 2; vicini_prima; riparti con "sano" "${2:-}"; e=$?; vicini_dopo || e=9; exit $e ;;
-guasto)    prendi_lucchetto || exit 2; vicini_prima; riparti senza "guasto" "${2:-}"; e=$?; vicini_dopo || e=9; exit $e ;;
+sano)      take_lock || exit 2; vicini_prima; riparti con "sano" "${2:-}"; e=$?; vicini_dopo || e=9; exit $e ;;
+guasto)    take_lock || exit 2; vicini_prima; riparti senza "guasto" "${2:-}"; e=$?; vicini_dopo || e=9; exit $e ;;
 come-al-riavvio)
 	# ⭐ The PERSISTENCE test without rebooting the server: this bench's
 	#    drop-ins are removed and the session is born again with only the
 	#    configuration that would be there at reboot anyway.
-	prendi_lucchetto || exit 2
+	take_lock || exit 2
 	vicini_prima
 	riparti nudo "come-al-riavvio" "${2:-}"; e=$?
 	vicini_dopo || e=9
@@ -611,9 +611,9 @@ come-al-riavvio)
 	att "  real reboot touches them (LEZIONI.md §2.5-bis)."
 	exit $e
 	;;
-dispositivi) prendi_lucchetto || exit 2; dispositivi; exit $? ;;
-ferma)     prendi_lucchetto || exit 2; ferma_e_aspetta && { ok "stopped"; exit 0; } || { ko "⛔ it did not stop"; exit 1; } ;;
-certifica) prendi_lucchetto || exit 2; certifica; exit $? ;;
-pulisci)   togli_dropin; ok "F2.1 drop-in removed: the machine goes back to its own"; exit 0 ;;
+dispositivi) take_lock || exit 2; dispositivi; exit $? ;;
+ferma)     take_lock || exit 2; stop_and_wait && { ok "stopped"; exit 0; } || { ko "⛔ it did not stop"; exit 1; } ;;
+certifica) take_lock || exit 2; certifica; exit $? ;;
+pulisci)   remove_dropin; ok "F2.1 drop-in removed: the machine goes back to its own"; exit 0 ;;
 *) echo "usage: $0 {guarda|sano|guasto|come-al-riavvio|dispositivi|ferma|certifica|pulisci|guardia [...]}" >&2; exit 2 ;;
 esac

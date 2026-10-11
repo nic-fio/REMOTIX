@@ -27,7 +27,7 @@ import suite as S                                                     # noqa: E4
 FUNZIONI = ("F-001", "F-002")
 
 
-def png_uniforme(w, h, rgb=(0, 0, 0)):
+def uniform_png(w, h, rgb=(0, 0, 0)):
     riga = b"\x00" + bytes(rgb) * w
     dati = zlib.compress(riga * h, 9)
 
@@ -39,7 +39,7 @@ def png_uniforme(w, h, rgb=(0, 0, 0)):
 
 
 def certifica():
-    nero = png_uniforme(64, 48)
+    nero = uniform_png(64, 48)
     deg, desc = S.VERI.giudica_pixel(nero)
     ok = deg is True
     print("%s judge: a black canvas is degenerate (%s)" % ("⭐" if ok else "⛔", desc))
@@ -48,13 +48,13 @@ def certifica():
 
 def corpo(o, E):
     with S.Sessione(o, "001", E) as s:
-        segno = s.segno_registro()
+        segno = s.log_mark()
         ok, m = s.pr.apri()
         if not ok:
             raise S.Bloccata("the page does not open: " + m)
         e, m, st = s.pr.entra(s.parola)
         server = s.registro_da(segno) if segno is not None else []
-        ev = [s.salva_testo("server-f001.txt", server)]
+        ev = [s.save_text("server-f001.txt", server)]
         if e != S.VERDE:
             E.metti("F-001", S.FAIL, "right user and password, and it does not get in: " + m,
                     atteso="«Admitted» and session created", osservato=m, evidenze=ev)
@@ -78,14 +78,14 @@ def corpo(o, E):
                 e, m = S.C20V.desktop_scuro_ma_vivo(
                     S.ROSSO, "the full-resolution photo is degenerate: " + desc, st)
         E.metti("F-002", e, m, atteso="desktop drawn, not degenerate, within %d s" % o.tetto_s,
-                osservato=m, evidenze=ev + [s.salva_console()])
+                osservato=m, evidenze=ev + [s.save_console()])
 
         if o.guasto:
             # F-002: the judge on a black canvas of the same size
             if png:
                 import struct as _s
                 w, h = _s.unpack(">II", png[16:24])
-                deg, desc = S.VERI.giudica_pixel(png_uniforme(min(w, 640), min(h, 360)))
+                deg, desc = S.VERI.giudica_pixel(uniform_png(min(w, 640), min(h, 360)))
                 E.guasto("F-002", bool(deg), "black canvas ⇒ the judge says «%s»" % desc)
             else:
                 E.guasto("F-002", None, "no real photo to start from")

@@ -66,8 +66,8 @@ prova() {
 	[ "${json:0:1}" = "{" ] || json='{"esito":"nessuna riga"}'
 	# decoding with ffmpeg, frame by frame
 	local fmt=$codec; [ "$codec" = hevc ] && fmt=hevc
-	local decodificati errori_dec
-	errori_dec=$(ffmpeg -v error -f $fmt -i "$flusso" -f null - 2>&1 | grep -c .)
+	local decodificati errors_dec
+	errors_dec=$(ffmpeg -v error -f $fmt -i "$flusso" -f null - 2>&1 | grep -c .)
 	decodificati=$(ffprobe -v error -f $fmt -count_frames -show_entries stream=nb_read_frames -of csv=p=0 "$flusso" 2>/dev/null)
 	local probe
 	probe=$(ffprobe -v error -f $fmt -show_entries stream=profile,level,width,height,pix_fmt,color_range,color_space,color_transfer,color_primaries -of csv=p=0 "$flusso" 2>/dev/null | head -1)
@@ -86,7 +86,7 @@ prova() {
 	local byte
 	byte=$(stat -c %s "$flusso" 2>/dev/null)
 	printf '{"prova":"%s","versione":"%s","nodo":"renderD%s","codec":"%s","profondita":%s,"misura":"%s","strada":"%s","extra":"%s","codice":%s,"secondi":%.2f,"byte_flusso":%s,"decodificati":"%s","errori_decodifica":%s,"ffprobe":"%s","psnr":"%s","ssim":"%s","banco":%s}\n' \
-		"$nome" "$versione" "$nodo" "$codec" "$prof" "$misura" "$strada" "$*" "$codice" "$(awk "BEGIN{print $t1 - $t0}")" "${byte:-0}" "${decodificati:-?}" "${errori_dec:-0}" "$probe" "$psnr" "$ssim" "$json" >> "$USCITA/esiti.jsonl"
+		"$nome" "$versione" "$nodo" "$codec" "$prof" "$misura" "$strada" "$*" "$codice" "$(awk "BEGIN{print $t1 - $t0}")" "${byte:-0}" "${decodificati:-?}" "${errors_dec:-0}" "$probe" "$psnr" "$ssim" "$json" >> "$USCITA/esiti.jsonl"
 	echo "   $nome $versione: code $codice · ${byte:-0} bytes · decoded ${decodificati:-?} · psnr ${psnr:-—} · ssim ${ssim:-—} · $probe"
 }
 

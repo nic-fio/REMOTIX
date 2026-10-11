@@ -48,7 +48,7 @@
 
 /* ⛔ THREE COUNTERS, NOT ONE — finding A20 of review R12-A, 11 Aug 2026.
  *
- * Until tonight there was **only one** here, `falliti_prova`, and the verdict at
+ * Until tonight there was **only one** here, `test_failures`, and the verdict at
  * the bottom was `printf("%s: %d checks failed")`: zero denominator.  It was
  * enough to have a `return 0;` after section 1 — or an `#if 0` around sections
  * 2-4, or a wrong `#include` that made a block be skipped — for the output to
@@ -64,17 +64,17 @@
  *    checks run, sections that got to the end — and at the bottom they are
  *    required to be the expected ones, which is the only form a stray
  *    `return 0;` cannot satisfy.                                             */
-static int falliti_prova = 0;
-static int passati_prova = 0;
-static int sezioni_prova = 0;
+static int test_failures = 0;
+static int passed_test = 0;
+static int test_sections = 0;
 
 static void esige(int cond, const char *che)
 {
 	printf("    %s  %s\n", cond ? "OK" : "NO", che);
 	if (cond)
-		passati_prova++;
+		passed_test++;
 	else
-		falliti_prova++;
+		test_failures++;
 }
 
 /* ⚠ The denominator of every section is printed: how many checks, and on what.
@@ -82,8 +82,8 @@ static void esige(int cond, const char *che)
  *   measurement (`LEZIONI.md` §1.9 rule 4). */
 static void sezione(const char *titolo)
 {
-	sezioni_prova++;
-	printf("\n  == [section %d] %s\n", sezioni_prova, titolo);
+	test_sections++;
+	printf("\n  == [section %d] %s\n", test_sections, titolo);
 }
 
 /* ⛔ AND THE HALF OF FINDING A20 THAT NO COUNTER CAN CATCH.
@@ -100,17 +100,17 @@ static void sezione(const char *titolo)
  *    verdict was not given the exit status is not zero.  «I did not conclude»
  *    and «I concluded that it is fine» are two different facts, and it is the
  *    same rule of §1.9 applied to the exit status instead of to a count.     */
-static bool verdetto_dato = false;
-static void al_congedo(void)
+static bool verdict_given = false;
+static void on_farewell(void)
 {
-	if (verdetto_dato)
+	if (verdict_given)
 		return;
 	fprintf(stderr,
 	        "\n  ⛔ EARLY EXIT: this program ended WITHOUT giving a "
 	        "verdict.\n     It ran %d checks in %d sections and "
 	        "concluded nothing:\n     «I did not conclude» is not «everything "
 	        "went well».\n",
-	        passati_prova + falliti_prova, sezioni_prova);
+	        passed_test + test_failures, test_sections);
 	fflush(NULL);
 	_exit(4);
 }
@@ -123,7 +123,7 @@ static void al_congedo(void)
  * §4.4-bis counter go up from here: without a real session the count does not
  * move, and without the count section 5 has nothing to measure.
  * ═══════════════════════════════════════════════════════════════════════════ */
-enum { T_CIAO = 0x0001, T_ECCOMI = 0x0002, T_CREDENZIALI = 0x0003,
+enum { T_HELLO = 0x0001, T_HERE_I_AM = 0x0002, T_CREDENZIALI = 0x0003,
        T_AMMESSO = 0x0004, T_RESPINTO = 0x0005 };
 
 struct ospite {
@@ -133,13 +133,13 @@ struct ospite {
 	uint8_t motivo;  /* the reason of the last RESPINTO */
 };
 
-static void o_manda(void *ctx, const uint8_t *dati, size_t len)
+static void o_send(void *ctx, const uint8_t *dati, size_t len)
 {
 	struct ospite *o = ctx;
 	if (len < 6)
 		return;
 	uint16_t tipo = (uint16_t)((dati[0] << 8) | dati[1]);
-	if (tipo == T_ECCOMI)
+	if (tipo == T_HERE_I_AM)
 		o->eccomi++;
 	else if (tipo == T_AMMESSO)
 		o->ammesso++;
@@ -148,18 +148,18 @@ static void o_manda(void *ctx, const uint8_t *dati, size_t len)
 		o->motivo = len > 6 ? dati[6] : 0;
 	}
 }
-static void o_chiudi(void *ctx, uint8_t motivo) { (void)ctx; (void)motivo; }
-static void o_registra(void *ctx, const char *riga) { (void)ctx; (void)riga; }
+static void o_close(void *ctx, uint8_t motivo) { (void)ctx; (void)motivo; }
+static void o_log(void *ctx, const char *riga) { (void)ctx; (void)riga; }
 /* ⚠ The right password is only one, and it is declared: this way «wrong» and
  *   «right» are two cases and not two names of the same thing. */
-static bool o_verifica(void *ctx, const char *utente, const char *parola)
+static bool o_verify(void *ctx, const char *utente, const char *parola)
 {
 	(void)ctx;
 	(void)utente;
 	return strcmp(parola, "parola-giusta") == 0;
 }
 
-static size_t metti_str(uint8_t *b, size_t i, const char *t)
+static size_t put_str(uint8_t *b, size_t i, const char *t)
 {
 	size_t n = strlen(t);
 	b[i++] = (uint8_t)(n >> 8);
@@ -194,7 +194,7 @@ static uint8_t un_tentativo(const char *provenienza, uint64_t ora,
 	    "video.misura_massima", "3840x2160", "appunti.testo", "si",
 	    "input.tocco", "no", "client.nome", "01-b8-prova-ban", NULL};
 	struct ospite o = {0, 0, 0, 0};
-	rcp_ganci g = {&o, o_manda, o_chiudi, o_registra, o_verifica};
+	rcp_ganci g = {&o, o_send, o_close, o_log, o_verify};
 	rcp_sessione *s = rcp_apri(&g, provenienza, ora);
 	if (!s)
 		return 0xFF;
@@ -209,18 +209,18 @@ static uint8_t un_tentativo(const char *provenienza, uint64_t ora,
 	corpo[i++] = (uint8_t)(quante >> 8);
 	corpo[i++] = (uint8_t)(quante & 0xFF);
 	for (int k = 0; VOCI[k]; k += 2) {
-		i = metti_str(corpo, i, VOCI[k]);
-		i = metti_str(corpo, i, VOCI[k + 1]);
+		i = put_str(corpo, i, VOCI[k]);
+		i = put_str(corpo, i, VOCI[k + 1]);
 	}
-	size_t n = inquadra(frame, T_CIAO, corpo, i);
+	size_t n = inquadra(frame, T_HELLO, corpo, i);
 	rcp_ricevi(s, frame, n, ora);
 	if (o.eccomi != 1) {
 		rcp_libera(s);
 		return 0xFF;         /* ⛔ without ECCOMI the attempt did not happen */
 	}
 
-	i = metti_str(corpo, 0, "utente-di-prova");
-	i = metti_str(corpo, i, parola);
+	i = put_str(corpo, 0, "utente-di-prova");
+	i = put_str(corpo, i, parola);
 	n = inquadra(frame, T_CREDENZIALI, corpo, i);
 	rcp_ricevi(s, frame, n, ora);
 	/* ⛔ The fixed second of §4.4-bis: time arrives from outside (`rcp.h`), and
@@ -238,8 +238,8 @@ static uint8_t un_tentativo(const char *provenienza, uint64_t ora,
 int main(void)
 {
 	/* ⛔ Before anything else: the exit hook that refuses to exit zero without
-	 *    a verdict (see `al_congedo`). */
-	atexit(al_congedo);
+	 *    a verdict (see `on_farewell`). */
+	atexit(on_farewell);
 	const uint64_t ORA = 1000000; /* any monotonic clock */
 	const char *f = "/tmp/remotix-b8-ban.txt";
 	time_t adesso = time(NULL);
@@ -348,9 +348,9 @@ int main(void)
 		esige(n6 == 1, "an IPv6 ban is read back from the file");
 		esige(rcp_bannato("[fe80::1]:44661", ORA, NULL),
 		      "and with the port on it it is banned (it is the session's form)");
-		char chiave6[64];
-		rcp_chiave_indirizzo("fe80::1", chiave6, sizeof chiave6);
-		esige(rcp_sblocca(chiave6, ORA),
+		char key6[64];
+		rcp_chiave_indirizzo("fe80::1", key6, sizeof key6);
+		esige(rcp_sblocca(key6, ORA),
 		      "⛔ and the unblock FINDS it even without a port: «[fe80::1]» is not "
 		      "cut at the last colon, or it would become «[fe80:»");
 		esige(!rcp_bannato("[fe80::1]:44661", ORA, NULL),
@@ -410,7 +410,7 @@ int main(void)
 		if (da_root) {
 			printf("    ??  ⛔ SKIPPED: run this test again as a normal "
 			       "user, or it proves nothing\n");
-			falliti_prova++; /* ⛔ a skipped check is not a passed check */
+			test_failures++; /* ⛔ a skipped check is not a passed check */
 		} else {
 			esige(r == -1,
 			      "⛔ a file that is there and cannot be read counts as -1, NOT zero: «empty» "
@@ -467,7 +467,7 @@ int main(void)
 		esige(un_tentativo("[10.0.0.1]:1", T, "parola-giusta") == 0x00,
 		      "⭐ positive control: an attempt with the RIGHT password gets "
 		      "to AMMESSO — the tool can make happen what counts");
-		esige(un_tentativo("[10.0.0.1]:2", T, "sbagliata") == RCP_CREDENZIALI_ERRATE,
+		esige(un_tentativo("[10.0.0.1]:2", T, "sbagliata") == RCP_WRONG_CREDENTIALS,
 		      "⭐ and one with the wrong password gets to CREDENZIALI_ERRATE: "
 		      "the tool can also produce the failures that count");
 
@@ -476,7 +476,7 @@ int main(void)
 		for (int k = 0; k < 3; k++)
 			un_tentativo("[10.0.0.2]:9", T, "sbagliata");
 		esige(un_tentativo("[10.0.0.2]:9", T, "parola-giusta")
-		          == RCP_TROPPI_TENTATIVI,
+		          == RCP_TOO_MANY_ATTEMPTS,
 		      "⛔ the check that says NO: WITHOUT unblock, three failures "
 		      "ban and the fourth — with the RIGHT password — is TROPPI_TENTATIVI");
 
@@ -514,7 +514,7 @@ int main(void)
 	 *      number alone cannot be told from a short run.  So it is declared HOW
 	 *      MANY there had to be, and the comparison is done by the bench (B0.4). */
 	{
-		int da_root_qui = (geteuid() == 0);
+		int as_root_here = (geteuid() == 0);
 		/* ⚠ As root section 4 skips two checks and counts one failed in their
 		 *   place: the expected number is different, and it is declared instead
 		 *   of being widened when it does not add up. */
@@ -522,41 +522,41 @@ int main(void)
 		 *   (5 as a normal user, 3 as root) + 7.  ⛔ Whoever adds an `esige()`
 		 *   updates this line in the same commit: it is the price of the
 		 *   denominator, and it is lower than a green on an empty set. */
-		const int SEZIONI_ATTESE = 5;
-		const int CONTROLLI_ATTESI = da_root_qui ? 31 : 33;
+		const int EXPECTED_SECTIONS = 5;
+		const int CONTROLLI_ATTESI = as_root_here ? 31 : 33;
 		printf("\n  == the denominator of THIS verdict\n");
 		printf("    sections that got to the end : %d (expected %d)\n",
-		       sezioni_prova, SEZIONI_ATTESE);
+		       test_sections, EXPECTED_SECTIONS);
 		printf("    checks run                   : %d (expected %d%s)\n",
-		       passati_prova + falliti_prova, CONTROLLI_ATTESI,
-		       da_root_qui ? ", as root" : "");
-		printf("    of which APPROVED            : %d\n", passati_prova);
-		printf("    of which failed              : %d\n", falliti_prova);
+		       passed_test + test_failures, CONTROLLI_ATTESI,
+		       as_root_here ? ", as root" : "");
+		printf("    of which APPROVED            : %d\n", passed_test);
+		printf("    of which failed              : %d\n", test_failures);
 
-		if (passati_prova + falliti_prova == 0) {
+		if (passed_test + test_failures == 0) {
 			printf("\n  ⛔ NO OUTCOME: this run approved ZERO things.\n");
 			printf("     «All those tested went well» is true even "
 			       "when the tested are zero\n");
-			verdetto_dato = true;
+			verdict_given = true;
 			return 2;
 		}
-		if (sezioni_prova != SEZIONI_ATTESE
-		    || passati_prova + falliti_prova != CONTROLLI_ATTESI) {
+		if (test_sections != EXPECTED_SECTIONS
+		    || passed_test + test_failures != CONTROLLI_ATTESI) {
 			printf("\n  ⛔ ROSSO: the run did not get to the end — %d sections "
 			       "out of %d, %d checks out of %d.\n",
-			       sezioni_prova, SEZIONI_ATTESE,
-			       passati_prova + falliti_prova, CONTROLLI_ATTESI);
+			       test_sections, EXPECTED_SECTIONS,
+			       passed_test + test_failures, CONTROLLI_ATTESI);
 			printf("     ⛔ The expected is not widened until it comes back green: either "
 			       "a check was added and these two numbers must be "
 			       "updated together, or a piece of the file was not "
 			       "run.\n");
-			verdetto_dato = true;
+			verdict_given = true;
 			return 3;
 		}
 		printf("\n  %s: %d checks failed out of %d approved, in %d sections\n",
-		       falliti_prova ? "ROSSO" : "VERDE", falliti_prova, passati_prova,
-		       sezioni_prova);
-		verdetto_dato = true;
-		return falliti_prova ? 1 : 0;
+		       test_failures ? "ROSSO" : "VERDE", test_failures, passed_test,
+		       test_sections);
+		verdict_given = true;
+		return test_failures ? 1 : 0;
 	}
 }
