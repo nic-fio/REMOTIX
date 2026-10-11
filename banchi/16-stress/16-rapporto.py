@@ -47,11 +47,15 @@ _OLD_WORDS = (
     "campagna", "livello", "tipo", "sessione", "scheda", "misura", "binario", "pagina", "nucleo",
     "classe", "significativo", "risorse", "disegno", "sessioni", "ragione", "evidenze", "inizio",
     "utente", "profilo", "inquilino", "misure", "saltati_pct", "buchi",
+    "audio_udibile_pct", "blocco_max_s", "cpu_macchina_pct", "media", "mem_totale_mb", "mem_usata_mb",
+    "nascita_s", "recinti", "ritardo_p95_ms", "strozzatura_frazione",
 )  # end of the old words
 _WORDS_NOW = (
     "campaign", "level", "type", "session", "card", "size", "binary", "page", "kernel",
     "class", "significant", "resources", "draw", "sessions", "rationale", "evidence", "started",
     "user", "profile", "tenant", "measurements", "skipped_pct", "holes",
+    "audio_audible_pct", "block_max_s", "cpu_machine_pct", "mean", "mem_total_mb", "mem_used_mb",
+    "birth_s", "enclosures", "delay_p95_ms", "throttling_fraction",
 )
 OLD_SPELLING = {a: b for a, b in zip(_OLD_WORDS, _WORDS_NOW) if a != b}
 

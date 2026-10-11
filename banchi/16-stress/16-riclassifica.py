@@ -46,11 +46,11 @@ CLASSES = ("GREEN", "DEGRADED", "FAIL")
 #    code's own, before it is empty.  Same order in both, one word per position.
 _OLD_WORDS = (
     "nome", "livello", "classe", "ragione_classe", "interrotto", "campagna", "controllo_min",
-    "giro", "visti", "campioni", "profilo", "lavoro", "user-", "classifica",
+    "giro", "visti", "campioni", "profilo", "lavoro", "utente-", "classifica", "blocco_max_ms",
 )  # end of the old words
 _WORDS_NOW = (
     "name", "level", "class", "class_rationale", "interrupted", "campaign", "check_min",
-    "round_trip", "seen", "samples", "profile", "work", "user-", "classifica",
+    "round_trip", "seen", "samples", "profile", "work", "user-", "ranking", "block_max_ms",
 )
 OLD_SPELLING = {a: b for a, b in zip(_OLD_WORDS, _WORDS_NOW) if a != b}
 
@@ -112,7 +112,7 @@ def class_imposed(r):
     why = str(r.get("class_rationale") or "")
     return (r.get("interrupted") or r.get("class") not in CLASSES
             or why.startswith(("ENTRATA FALLITA", "ENTRY FAILED"))
-            or why.startswith(("⛔ RISORSE DELL'GUEST", "⛔ HOST RESOURCES")))
+            or why.startswith(("⛔ RISORSE DELL'OSPITE", "⛔ HOST RESOURCES")))
 
 
 def copy_corrected(level_path, dest):
@@ -125,7 +125,7 @@ def copy_corrected(level_path, dest):
             entry_now = "user-" + entry.split("-", 1)[1]
             os.makedirs(os.path.join(dest, entry_now))
             for f in os.listdir(src):
-                if f == "state.jsonl":
+                if f in ("state.jsonl", "stato.jsonl"):     # and its old name
                     lines = []
                     for line in open(os.path.join(src, f), encoding="utf-8", errors="replace"):
                         try:
@@ -139,7 +139,7 @@ def copy_corrected(level_path, dest):
                             o.write(json.dumps(r, ensure_ascii=False) + "\n")
                 else:
                     os.symlink(os.path.join(src, f), os.path.join(dest, entry_now, f))
-        elif not entry.startswith(spellings("classifica")):
+        elif not entry.startswith(spellings("ranking")):
             os.symlink(src, os.path.join(dest, entry))
     return touched
 
@@ -177,7 +177,9 @@ def judge_again(level_path, line, fps_video, prog):
 def reclassify(climb, fps_video=None, prog=None):
     prog = prog or os.path.join(HERE, "16-classifica.py")
     lines = []
-    for l in open(os.path.join(climb, "climb.jsonl"), encoding="utf-8", errors="replace"):
+    p = os.path.join(climb, "climb.jsonl")
+    p = p if os.path.exists(p) else os.path.join(climb, "salita.jsonl")    # a climb before the rename
+    for l in open(p, encoding="utf-8", errors="replace"):
         try:
             lines.append(current_spelling(json.loads(l)))
         except ValueError:
@@ -248,7 +250,7 @@ def certify():
     # ⚠ the two rows below are an OLD climb.jsonl, word for word (protected from the rename)
     prova("imposed class: entry failed, host, interrupted, «?»",
           class_imposed(current_spelling({"class": "FAIL", "class_rationale": "ENTRATA FALLITA (1 entrati su 4)"}))
-          and class_imposed(current_spelling({"class": "FAIL", "class_rationale": "⛔ RISORSE DELL'GUEST (§7.7): x"}))
+          and class_imposed(current_spelling({"class": "FAIL", "class_rationale": "⛔ RISORSE DELL'OSPITE (§7.7): x"}))
           and class_imposed({"class": "GREEN", "interrupted": True}) and class_imposed({"class": "?"})
           and not class_imposed({"class": "DEGRADED", "class_rationale": "block"}))
 
