@@ -92,6 +92,8 @@ The plan (installation, …):
 What the package manager will do (its own simulation):
   …
 
+Port: 7447 (TCP+UDP) — use --port N to change it
+
 Proceed? [y/N] y
 …
 operation …: CONFIRMED
@@ -107,7 +109,8 @@ S_INSTALL = p("Copy the " + c(".run") + " file to the machine and run it as admi
         "It prints <b>the plan</b>: the steps it will take (install the packages, add people to the graphics-card "
         "groups, start the service), each marked with how it can be undone; then, under “What the package manager "
         "will do (its own simulation):”, the exact list of packages with versions, as the package manager itself "
-        "worked it out. Nothing has been touched yet.",
+        "worked it out; last, the port it will use (“Port: 7447 (TCP+UDP) — use --port N to change it”, or "
+        "the one given with " + c("--port N") + "). Nothing has been touched yet.",
         "If something is missing, the plan ends with the MISSING list and the line “REMOTIX is not installed: "
         "nothing was touched. Run it again when what is missing is there.”",
         "Otherwise it asks " + c("Proceed? [y/N]") + ". Only " + c("y") + " or " + c("yes") + " go ahead; anything "

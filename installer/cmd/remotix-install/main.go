@@ -344,6 +344,9 @@ func install(arg []string) (int, error) {
 		return 1, err
 	}
 	showPlan(p)
+	if l := portLine(o); l != "" {
+		fmt.Printf("\n%s\n", l)
+	}
 	if engine.Blocked(p) {
 		fmt.Printf("\n%s\n", T("cli.bloccato"))
 		return 1, nil
@@ -385,6 +388,19 @@ func apply(m *engine.Engine, p *engine.Piano) (int, error) {
 		return 0, nil
 	}
 	return 1, nil
+}
+
+// portLine: the port the installation will use (--port N, or the stock 7447), stated in the plan
+// before «Proceed? [y/N]». Empty on an upgrade: the port is already there and is not touched.
+func portLine(o engine.InstallOptions) string {
+	if o.Update {
+		return ""
+	}
+	p := o.Porta
+	if p == 0 {
+		p = 7447
+	}
+	return T("cli.porta", p)
 }
 
 func showPlan(p *engine.Piano) {

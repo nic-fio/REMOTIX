@@ -155,6 +155,7 @@ REMOTIX does not change the system: what is missing is said, and providing it is
 	"cli.fatti":              "The facts (DETECTED = seen; VERIFIED = actually tested; UNKNOWN = unknown):",
 	"cli.non_fatto":          "not done: %s %s %s",
 	"cli.dichiarato":         "always done: %s",
+	"cli.porta":              "Port: %d (TCP+UDP) — use --port N to change it",
 	"cli.router":             "From outside the local network: forward port %d, TCP and UDP, on the router to this machine (REMOTIX does not do it by itself: no UPnP).",
 	"cli.operazione":         "operation %s: %s",
 	"cli.nessuna_op":         "no operation in %s",
