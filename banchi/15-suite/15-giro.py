@@ -462,7 +462,7 @@ def main():
     t0 = time.time()
     outcomes = []
     if not o.technical_layer_only:
-        test_server(prove, o.desktop, "accendi")
+        test_server(prove, o.desktop, "start")
         try:
             threads = [threading.Thread(target=streak, args=(o, d, prove, meta, outcomes))
                     for d in o.desktop]
@@ -471,7 +471,7 @@ def main():
             for t in threads:
                 t.join()
         finally:
-            test_server(prove, o.desktop, "spegni")
+            test_server(prove, o.desktop, "stop")
     if o.technical_layer or o.technical_layer_only:
         outcomes.extend(technical_layer(o, o.desktop, meta))
     tally = {}
