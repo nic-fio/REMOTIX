@@ -1,7 +1,15 @@
 #!/bin/bash
 # rinomina2-prova.sh — prove rinomina2.py on a COPY of the tree, never on the tree itself.
 #
-#   english-migration/rinomina2-prova.sh <copy> [--fase-b] [--certifica | --rilascio]
+#   english-migration/rinomina2-prova.sh <copy> [--fase-b | --fase-c] [--certifica | --rilascio]
+#
+# --fase-c proves step 2 (the file and folder names: fase_c.py and english-migration/fase-c-moves.tsv, or
+# $FASE_C_MOVES): it applies the moves, regenerates the manual, runs `fase_c.py check` (every move done,
+# no reference to an old path left outside the allowed list) and then every check below under the NEW
+# paths (benches/, installer/, benches/rcp as the twin); 5b compares the server's strings with the old
+# file names mapped to the new ones, 6 compares the benches' exit codes and outputs modulo the path
+# names (fase_c.py map), 7 builds the debian13 release with the new R14 denylists, and 8 runs
+# `docs/sources/build.py --controlla` (PYTHONPATH=$FASE_C_PYLIB, default /media/REMOTIX/strumenti/pylib).
 #
 # --fase-b proves phase B instead (fase_b.py, the table english-migration/fase-b-tabella.tsv or
 # $FASE_B_TABLE, $FASE_B_SINCE = the commit the tables were written against): it applies the table,
@@ -24,15 +32,21 @@ set -u
 COPIA=$(cd "${1:?usage: rinomina2-prova.sh <copy> [--fase-b] [--certifica | --rilascio]}" && pwd)
 QUI=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 shift
-FASEB=0 CERT=0 RILASCIO=0
+FASEB=0 FASEC=0 CERT=0 RILASCIO=0
 for a in "$@"; do
 	case $a in
 	--fase-b) FASEB=1 ;;
+	--fase-c) FASEC=1 ;;
 	--certifica) CERT=1 ;;
 	--rilascio) CERT=1 RILASCIO=1 ;;
-	*) echo "usage: rinomina2-prova.sh <copy> [--fase-b] [--certifica | --rilascio]" >&2; exit 2 ;;
+	*) echo "usage: rinomina2-prova.sh <copy> [--fase-b | --fase-c] [--certifica | --rilascio]" >&2; exit 2 ;;
 	esac
 done
+[ "$FASEB$FASEC" = 11 ] && { echo "--fase-b and --fase-c: one at a time" >&2; exit 2; }
+FC_MOVES=${FASE_C_MOVES:-$QUI/fase-c-moves.tsv}
+fc() { python3 "$QUI/fase_c.py" "$@"; }
+# the tree's own folders: old names before step 2, new ones after it (the baseline always runs on the old)
+B=banchi INST=installatore
 FB_TABLE=${FASE_B_TABLE:-$QUI/fase-b-tabella.tsv}
 fb() { python3 "$QUI/fase_b.py" "$@"; }
 # the phase-B spelling of a public name (the name itself when the table does not rename it)
@@ -44,7 +58,9 @@ rosso() { echo "⛔ $*"; ROSSI=$((ROSSI + 1)); }
 verde() { echo "✅ $*"; }
 
 cd "$COPIA" || exit 2
-git checkout -q -- . && git clean -qfd -e costruzione-uscita || exit 2
+git reset -q --hard && git clean -qfd -e costruzione-uscita || exit 2
+# step 2 moves folders: what an earlier proof left under the new names (ignored files too) must go first
+[ "$FASEC" = 1 ] && { git clean -qfdx -e costruzione-uscita || exit 2; }
 podman unshare rm -rf costruzione-uscita/rilasci costruzione-uscita/rilascio-* 2>/dev/null   # files of the build user namespace
 
 # the benches' pure judges (--certifica: synthetic inputs, no terrain) on the tree as it is, once per
@@ -79,7 +95,26 @@ if [ "$CERT" = 1 ]; then
 		certifica certifica "$BASE/list.txt" "$BASE"
 	fi
 fi
-if [ "$FASEB" = 1 ]; then
+if [ "$FASEC" = 1 ]; then
+	echo "== apply (step 2: $FC_MOVES)"
+	if ! fc apply --root "$COPIA" --moves "$FC_MOVES" >"$COPIA/.rinomina2-apply.log" 2>&1; then
+		grep '^⛔' "$COPIA/.rinomina2-apply.log" | head -40; exit 2
+	fi
+	grep -E '^(✅|⚠|⛔)' "$COPIA/.rinomina2-apply.log" | head -20
+	B=benches INST=installer
+	# the manual is generated: regenerate it from the rewritten sources
+	if PYTHONPATH=${FASE_C_PYLIB:-/media/REMOTIX/strumenti/pylib} \
+		python3 docs/sources/build.py >"$COPIA/.rinomina2-docs.log" 2>&1; then
+		verde "the manual regenerated"
+	else rosso "the manual does not regenerate"; tail -5 "$COPIA/.rinomina2-docs.log"; fi
+	mapfile -t CAMBIATI < <(git diff --name-only -M HEAD)
+	echo "== 1. every move done, no reference to an old path left"
+	fc check --root "$COPIA" --moves "$FC_MOVES" >"$COPIA/.rinomina2-check.log" 2>&1
+	R1=$?
+	grep -E '^(⛔|✅)' "$COPIA/.rinomina2-check.log" | head -30
+	echo "   (the whole list: $COPIA/.rinomina2-check.log)"
+	[ "$R1" = 0 ] || rosso "step 2 left old paths or missed a move"
+elif [ "$FASEB" = 1 ]; then
 	echo "== apply (phase B: $FB_TABLE)"
 	if ! fb apply --root "$COPIA" --table "$FB_TABLE" ${FASE_B_SINCE:+--since "$FASE_B_SINCE"} >"$COPIA/.rinomina2-apply.log" 2>&1; then
 		grep '^⛔' "$COPIA/.rinomina2-apply.log" | head -40; exit 2
@@ -139,7 +174,7 @@ python3 - "$J" <<'EOF'
 import re, subprocess, sys, os
 out = sys.argv[1]
 fs = [f for f in subprocess.check_output(["git", "ls-files", "*.html"]).decode().split()
-      if f.startswith(("src/", "banchi/")) and "/prodotto/" not in f and "rapporto" not in f]
+      if f.startswith(("src/", "banchi/", "benches/")) and "/prodotto/" not in f and "rapporto" not in f]
 for f in fs:
     t = open(f, encoding="utf-8").read()
     for i, m in enumerate(re.finditer(r"<script(?![^>]*\bsrc=)[^>]*>(.*?)</script\s*>", t, re.S | re.I)):
@@ -155,12 +190,12 @@ else rosso "page JavaScript"; fi
 rm -rf "$J"
 
 echo "== 4. installer (gofmt -w on the changed Go files, then vet and test)"
-G=$(printf '%s\n' "${CAMBIATI[@]}" | grep '^installatore/.*\.go$' | sed 's|^installatore/||')
+G=$(printf '%s\n' "${CAMBIATI[@]}" | grep "^$INST/.*\.go\$" | sed "s|^$INST/||")
 if [ -n "$G" ]; then
-	podman run --rm --network=none -v "$COPIA/installatore:/src:Z" -w /src docker.io/library/golang:1.25 \
+	podman run --rm --network=none -v "$COPIA/$INST:/src:Z" -w /src docker.io/library/golang:1.25 \
 		gofmt -w $G
 fi
-if (cd installatore && sh costruisci.sh prove) >"$COPIA/.rinomina2-go.log" 2>&1 &&
+if (cd "$INST" && sh "$([ -f costruisci.sh ] && echo costruisci.sh || echo build.sh)" prove) >"$COPIA/.rinomina2-go.log" 2>&1 &&
 	! grep -qE '^(FAIL|gofmt:)' "$COPIA/.rinomina2-go.log"; then
 	verde "installer: $(grep -c '^ok ' "$COPIA/.rinomina2-go.log") packages ok"
 else
@@ -169,7 +204,7 @@ fi
 
 echo "== 5. C: the server objects in the debian13 build image"
 podman run --rm --network=none --userns=keep-id -v "$COPIA:/a" -w /a/src localhost/remotix-costruzione-debian13 \
-	sh -c 'make -k -j8 GEMELLO=../banchi/rcp 2>&1' >"$COPIA/.rinomina2-c.log" 2>&1
+	sh -c "make -k -j8 GEMELLO=../$B/rcp 2>&1" >"$COPIA/.rinomina2-c.log" 2>&1
 ERR=$(grep -cE '(error|Error)[: ]' "$COPIA/.rinomina2-c.log")
 OBJ=$(ls src/*.o 2>/dev/null | wc -l)
 if [ "$ERR" = 0 ] && [ -x src/remotix ]; then
@@ -188,7 +223,33 @@ podman run --rm --network=none --userns=keep-id -v "$COPIA:/n" -v "$R:/r" localh
 	       objcopy -O binary --only-section=.rodata /r/a/src/remotix /r/prima.rodata &&
 	       objcopy -O binary --only-section=.rodata /n/src/remotix /r/dopo.rodata &&
 	       strings -a -n 4 /r/prima.rodata >/r/prima.str && strings -a -n 4 /r/dopo.rodata >/r/dopo.str' >/dev/null 2>&1
-if [ "$FASEB" = 1 ]; then
+if [ "$FASEC" = 1 ]; then
+	# step 2 changes the file names the binary holds (__FILE__, the page's name): the strings before,
+	# with the old names mapped to the new ones, must be the strings after
+	if [ -s "$R/prima.str" ] && [ -s "$R/dopo.str" ]; then
+		fc map --root "$COPIA" <"$R/prima.str" | sort >"$R/prima.map"
+		sort "$R/dopo.str" >"$R/dopo.map"
+		# the linker merges a string into a longer one that ends with it (transport.c inside
+		# webtransport.c): a string only before that is the tail of a string after is not a difference
+		python3 - "$R/prima.map" "$R/dopo.map" <<'EOF3'
+import sys, collections
+a, b = (collections.Counter(open(f, errors="replace").read().split("\n")) for f in sys.argv[1:3])
+only = a - b
+dopo = list(b)
+for s in list(only):
+    if any(x.endswith(s) and x != s for x in dopo):
+        a[s] -= only[s]
+open(sys.argv[1], "w").write("\n".join(sorted(a.elements())))
+open(sys.argv[2], "w").write("\n".join(sorted(b.elements())))
+EOF3
+		if cmp -s "$R/prima.map" "$R/dopo.map"; then
+			verde "C: the server's strings, old file names mapped, are the ones before step 2 ($(wc -l <"$R/dopo.map"))"
+		else
+			rosso "C: the server's strings differ beyond the file names"
+			diff "$R/prima.map" "$R/dopo.map" | grep '^[<>]' | head -20
+		fi
+	else rosso "C: the server before or after step 2 did not build"; fi
+elif [ "$FASEB" = 1 ]; then
 	if [ -s "$R/prima.str" ] && [ -s "$R/dopo.str" ]; then
 		fb map --side before --table "$FB_TABLE" <"$R/prima.str" | sort >"$R/prima.map"
 		fb map --side after --table "$FB_TABLE" <"$R/dopo.str" | sort >"$R/dopo.map"
@@ -209,13 +270,29 @@ if [ "$CERT" = 1 ]; then
 	echo "== 6. the benches' self-certification, against the same commit before the rename"
 	if [ "$FASEB" = 1 ]; then
 		OPT=$(fbnew --certifica); OPT=${OPT#--}
+	elif [ "$FASEC" = 1 ]; then
+		OPT=certifica
 	else
 		OPT=$(python3 -c 'import json,sys; m=json.load(open(sys.argv[1]))["pairs"]
 d={k.split("→")[0]:k.split("→")[1] for k in m}; print(d.get("certifica","certifica"))' "$COPIA/.rinomina2-applied.json")
 	fi
 	rm -rf "$COPIA/.rinomina2-certifica"
-	certifica "$OPT" "$BASE/list.txt" "$COPIA/.rinomina2-certifica"
-	python3 - "$BASE" "$COPIA/.rinomina2-certifica" "$([ "$FASEB" = 1 ] && echo "$FB_TABLE")" "$QUI" <<'EOF2' || ROSSI=$((ROSSI + 1))
+	LISTA=$BASE/list.txt
+	if [ "$FASEC" = 1 ]; then          # the same benches, under their new paths
+		LISTA=$COPIA/.rinomina2-certifica-list.txt
+		fc map --root "$COPIA" --paths <"$BASE/list.txt" >"$LISTA"
+	fi
+	certifica "$OPT" "$LISTA" "$COPIA/.rinomina2-certifica"
+	if [ "$FASEC" = 1 ]; then          # judged under the old names, outputs mapped: see out() below
+		fc map --root "$COPIA" --paths --back <"$COPIA/.rinomina2-certifica/exit.txt" >"$COPIA/.rinomina2-certifica/exit.new"
+		while read -r e f; do
+			n=$(echo "$f" | fc map --root "$COPIA" --paths)
+			mv "$COPIA/.rinomina2-certifica/$(echo "$n" | tr / _).out" "$COPIA/.rinomina2-certifica/$(echo "$f" | tr / _).out" 2>/dev/null
+		done <"$COPIA/.rinomina2-certifica/exit.new"
+		mv "$COPIA/.rinomina2-certifica/exit.new" "$COPIA/.rinomina2-certifica/exit.txt"
+	fi
+	python3 - "$BASE" "$COPIA/.rinomina2-certifica" "$([ "$FASEB" = 1 ] && echo "$FB_TABLE")" "$QUI" \
+		"$([ "$FASEC" = 1 ] && echo "$COPIA")" <<'EOF2' || ROSSI=$((ROSSI + 1))
 import os, re, sys
 A, B = sys.argv[1], sys.argv[2]
 ROWS = None
@@ -223,12 +300,20 @@ if sys.argv[3]:                         # phase B: both outputs mapped through t
     sys.path.insert(0, sys.argv[4])
     import fase_b
     ROWS = fase_b.read_merged(sys.argv[3])
+FC = None
+if len(sys.argv) > 5 and sys.argv[5]:   # step 2: the output before, its old path names mapped to the new
+    sys.path.insert(0, sys.argv[4])
+    import fase_c
+    FC = fase_c.Mapper(sys.argv[5])
 def ex(d):
     return dict(reversed(l.split(" ", 1)) for l in open(os.path.join(d, "exit.txt")).read().split("\n") if l)
 def out(d, f):
     t = open(os.path.join(d, f.replace("/", "_") + ".out"), errors="replace").read()
     if ROWS is not None:
         t = fase_b.map_text(t, ROWS, "before" if d == A else "after")
+    if FC is not None:
+        t = FC.text(t) if d == A else t
+        t = re.sub(r"[ \t]+", " ", t)     # a longer name moves the padding of a column
     # a traceback quotes source lines and function names (renamed): keep only its last line
     t = re.sub(r"Traceback \(most recent call last\):\n(?:[ \t].*\n)*", "Traceback\n", t)
     return re.sub(r"[0-9]+", "0", re.sub(r"/tmp/[^\s'\"]*", "/tmp/X", t))
@@ -257,13 +342,25 @@ fi
 
 if [ "$RILASCIO" = 1 ]; then
 	echo "== 7. packaging/rilascio.sh (debian13)"
+	REL=packaging/rilascio.sh
+	if [ "$FASEC" = 1 ]; then
+		[ -f "$COPIA/.rinomina2-applied.json" ] || echo '{"pairs": []}' >"$COPIA/.rinomina2-applied.json"
+		REL=$(echo "$REL" | fc map --root "$COPIA" --paths)
+	fi
 	# the release script's own variables were renamed too: ask the applied table for their new names
 	nuovo() { [ "$FASEB" = 1 ] && { fbnew "$1"; return; }; python3 -c 'import json,sys; m=json.load(open(sys.argv[1]))["pairs"]
 d={k.split("→")[0]:k.split("→")[1] for k in m}; print(d.get(sys.argv[2], sys.argv[2]))' "$COPIA/.rinomina2-applied.json" "$1"; }
 	env PATH=/media/REMOTIX/src/full-english-uscite/rilascio-finale/shim:$PATH "$(nuovo RX_SPORCO)=1" \
 		"$(nuovo BERSAGLI)=debian13" "$(nuovo USCITA)=$COPIA/costruzione-uscita/rilasci" \
-		bash packaging/rilascio.sh 0.99.0-1 >"$COPIA/.rinomina2-rilascio.log" 2>&1 &&
+		bash "$REL" 0.99.0-1 >"$COPIA/.rinomina2-rilascio.log" 2>&1 &&
 		verde "rilascio.sh debian13" || { rosso "rilascio.sh"; tail -25 "$COPIA/.rinomina2-rilascio.log"; }
+fi
+if [ "$FASEC" = 1 ]; then
+	echo "== 8. the manual's own check (docs/sources/build.py --controlla)"
+	if PYTHONPATH=${FASE_C_PYLIB:-/media/REMOTIX/strumenti/pylib} \
+		python3 docs/sources/build.py --controlla >"$COPIA/.rinomina2-controlla.log" 2>&1; then
+		verde "build.py --controlla"
+	else rosso "build.py --controlla"; tail -15 "$COPIA/.rinomina2-controlla.log"; fi
 fi
 echo "== $ROSSI red"
 exit $((ROSSI > 0))
