@@ -351,6 +351,11 @@ alias bg bind break builtin caller cd command compgen complete continue declare 
 exit export false fc fg getopts hash help history jobs kill let local logout mapfile popd printf pushd pwd read
 readarray readonly return set shift shopt source suspend test times trap true type typeset ulimit umask unalias
 unset wait""".split())
+PY_BUILTINS = set(dir(builtins)) | {"exec", "print", "input", "id", "type", "file", "open", "format", "next",
+                                    "iter", "hash", "help", "vars", "dir", "license", "copyright", "credits"}
+# C11 7.31 / POSIX: future library directions and reserved spellings
+C_RESERVED = re.compile(r"^(str[a-z]|mem[a-z]|wcs[a-z]|is[a-z]|to[a-z]|E[A-Z0-9]|SIG_?[A-Z]|LC_[A-Z]|_[A-Z_]|PRI[a-zX]|"
+                        r"SCN[a-zX]|\w+_t$|atomic_|memory_order|cnd_|mtx_|thrd_|tss_)")
 SH_RESERVED = set("if then else elif fi case esac for while until do done in function select time coproc".split())
 SPECIAL_ENV = set("""PATH HOME USER SHELL TERM DISPLAY WAYLAND_DISPLAY LANG LANGUAGE PWD OLDPWD IFS PS1 PS2 PS4 UID EUID
 HOSTNAME HOSTTYPE TMPDIR EDITOR PAGER MAIL LOGNAME SECONDS RANDOM LINENO COLUMNS LINES OPTARG OPTIND REPLY
@@ -358,6 +363,15 @@ FUNCNAME PIPESTATUS BASHPID GROUPS DIRSTACK SHLVL PPID TZ CC CFLAGS LDFLAGS CPPF
 MAKEFLAGS SOURCE_DATE_EPOCH XDG_RUNTIME_DIR XDG_SESSION_TYPE XDG_CURRENT_DESKTOP XDG_CONFIG_HOME XDG_DATA_HOME
 XDG_CACHE_HOME DBUS_SESSION_BUS_ADDRESS GOPATH GOROOT GOFLAGS GOCACHE GOOS GOARCH NAME VERSION ARCH TIME
 TIMEFORMAT HISTFILE ENV BASH_ENV CDPATH""".split())
+
+
+def _sh_commands_file():
+    # the commands of a Debian 13 machine with the build and bench tools (compgen -c on the server)
+    p = os.path.join(HERE, "esterni-sh-comandi.txt")
+    return set(open(p).read().split()) if os.path.exists(p) else set()
+
+
+SH_COMMANDS = _sh_commands_file() | SH_KEYWORDS
 
 
 def load_externals():
@@ -923,7 +937,7 @@ def plan(root):
         lang_own["css"] |= fi.cssown
     scopes = build_scopes(infos)
     # phase A: every name whose spelling something outside the renamed code can see is frozen
-    FA, shellfiles = fase_a.frozen(root, files, infos, scopes, set(origin_candidates(infos)))
+    FA, shellfiles, text_tokens = fase_a.frozen(root, files, infos, scopes, set(origin_candidates(infos)))
     web_ext = load_web_externals()
     for fi in infos.values():
         web_ext |= fi.webplat
@@ -1086,26 +1100,31 @@ def plan(root):
 
     def forbidden(name, new):
         langs = origin.get(name, set())
+        # phase A, symmetric to the freeze: a new name may not be a word of any text the tool does not
+        # rename (a reader that looks for SERVER in another file's text would now find the new name)
+        if new in text_tokens:
+            return "the new name occurs in text the tool does not rename (strings, documents, data, shell words)"
         if "c" in langs:
             if new in C_KEYWORDS or new in c_macro:
                 return "C keyword or system macro"
-            glob = any(name in (roles[s].get("plain", ())) for s in roles if s.startswith("c-program:"))
-            if glob and new in c_ident:
-                return "C global onto a libc/glib/system symbol"
+            if new in c_ident:
+                return "C name onto a libc/glib/system symbol"
+            if C_RESERVED.match(new):
+                return "C name in a reserved family (str*, mem*, wcs*, is*, to*, E*, SIG*, _X)"
         if "go" in langs and new in GO_KEYWORDS:
             return "Go keyword or predeclared name"
         if name in go_methods and new in GO_IFACE_METHODS:
             return "Go method onto a well-known interface method (String, Error, Write…)"
-        if "py" in langs and new in PY_KEYWORDS:
+        if "py" in langs and (new in PY_KEYWORDS or new in PY_BUILTINS):
             return "Python keyword or builtin"
         if ("js" in langs or "html" in langs) and new in JS_KEYWORDS:
             return "JavaScript reserved word"
-        if name in js_top and new in JS_GLOBALS:
-            return "top-level page name onto a browser global"
-        if ("sh" in langs or "make" in langs) and new in SH_RESERVED:
-            return "shell reserved word"
-        if name in sh_funcs and new in SH_KEYWORDS:
-            return "shell function onto a builtin"
+        if ("js" in langs or "html" in langs) and new in JS_GLOBALS:
+            return "page name onto a browser global"
+        if ("sh" in langs or "make" in langs) and (new in SH_RESERVED or new in SH_KEYWORDS):
+            return "shell reserved word or builtin"
+        if name in sh_funcs and new in SH_COMMANDS:
+            return "shell function onto a command"
         if (langs & {"sh", "make", "conf"}) and new in SPECIAL_ENV:
             return "well-known environment variable"
         if WEB_PREFIX.match(new):
