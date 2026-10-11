@@ -81,21 +81,36 @@ BTN_NAMES = {SINISTRO: "sinistro", DESTRO: "destro", CENTRALE: "centrale"}
 TELA = (1920, 1080)
 
 # ── the registers recorded before the English rename (DECISIONI §10.38: 04-b28-registro.jsonl of
-#    phase 4) keep the Italian keys, and --verdict re-reads them.  The first tuple is protected
+#    phase 4) keep the Italian words, and --verdict re-reads them.  The first tuple is protected
 #    (english-migration/protetti.tsv), the second is renamed with the code: after the rename
-#    OLD_SPELLING maps every old key to the code's own, before it is empty.
+#    OLD_SPELLING maps every old word to the code's own, before it is empty.
 _OLD_WORDS = (
     "fase", "marca",
+    "C1-tap-troppo-lungo", "C2-tap-che-scivola", "C3-due-dita-a-30ms",
+    "C4-due-dita-senza-sovrapposizione", "C5a-doppio-clic", "C5b-tap-e-mezzo-che-trascina",
+    "C6-trascinamento-che-comincia-fermo", "C7a-pizzico-non-rotella",
+    "C7b-rotella-non-pizzico", "C8-il-dito-residuo", "G1-un-dito-trascina", "G2-un-dito-tap",
+    "G3-due-dita-tap", "G4-due-dita-trascina", "G5-tap-e-mezzo", "G6-tre-dita-tap",
+    "G7-pizzico", "F-fine",
 )  # end of the old words
 _WORDS_NOW = (
     "phase", "mark",
+    "C1-tap-too-long", "C2-tap-that-slides", "C3-two-fingers-30ms-apart",
+    "C4-two-fingers-without-overlap", "C5a-double-click", "C5b-tap-and-a-half-that-drags",
+    "C6-drag-that-starts-still", "C7a-pinch-not-wheel", "C7b-wheel-not-pinch",
+    "C8-the-leftover-finger", "G1-one-finger-drags", "G2-one-finger-tap", "G3-two-finger-tap",
+    "G4-two-fingers-drag", "G5-tap-and-a-half", "G6-three-finger-tap", "G7-pinch", "F-end",
 )
 OLD_SPELLING = {a: b for a, b in zip(_OLD_WORDS, _WORDS_NOW) if a != b}
 
 
-def current_spelling(r):
-    """A row of an old register in the code's spelling (its keys)."""
-    return {OLD_SPELLING.get(k, k): v for k, v in r.items()} if isinstance(r, dict) else r
+def current_spelling(x):
+    """A row of an old register in the code's spelling: keys, and string values equal to a word."""
+    if isinstance(x, dict):
+        return {OLD_SPELLING.get(k, k): current_spelling(v) for k, v in x.items()}
+    if isinstance(x, list):
+        return [current_spelling(v) for v in x]
+    return OLD_SPELLING.get(x, x) if isinstance(x, str) else x
 
 
 class Violation(Exception):

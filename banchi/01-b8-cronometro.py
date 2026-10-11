@@ -193,6 +193,10 @@ _OLD_WORDS = (
     "caso", "classe", "atteso_motivo", "stato-iniziale", "NON-BANNATO", "pagina", "AMMESSO",
     "misurato", "controllo", "atteso", "RESPINTO", "campione", "inesistente", "sbagliata",
     "limitatore", "TOLTO",
+    "atteso_modello", "chiusura", "motivo", "ore", "scaldata", "stato", "giusta", "sblocco",
+    "altro-indirizzo", "azzeramento", "azzeramento-dopo", "bannato-dopo-riavvio",
+    "bannato-prima", "dopo-riavvio", "dopo-sblocco", "fra-i-blocchi",
+    "non-bannato-dopo-riavvio", "non-bannato-prima", "so-fare-un-ammesso",
 )  # end of the old words
 _WORDS_NOW = (
     "round", "type", "label", "address", "outcome", "detail", "banned", "remaining_ms",
@@ -200,6 +204,10 @@ _WORDS_NOW = (
     "case", "class", "expected_reason", "initial-state", "NOT-BANNED", "page", "ADMITTED",
     "measured", "check", "expected", "REJECTED", "sample", "nonexistent", "wrong",
     "limiter", "REMOVED",
+    "expected_model", "closure", "reason", "hours", "warmup", "state", "correct", "unblocked",
+    "other-address", "reset", "reset-after", "banned-after-restart", "banned-before",
+    "after-restart", "after-unblock", "between-blocks", "not-banned-after-restart",
+    "not-banned-before", "can-produce-admitted",
 )
 OLD_SPELLING = {a: b for a, b in zip(_OLD_WORDS, _WORDS_NOW) if a != b}
 

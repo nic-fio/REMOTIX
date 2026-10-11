@@ -62,11 +62,13 @@ _OLD_WORDS = (
     "giro", "funzione", "passata", "esito", "ragione", "binario", "pagina", "atteso", "osservato",
     "evidenze", "inizio", "durata_s", "versione", "guasto", "telefono", "classe", "titolo",
     "verificato",
+    "commit_cura", "dove", "stato", "sana",
 )  # end of the old words
 _WORDS_NOW = (
     "round", "function", "pass", "outcome", "rationale", "binary", "page", "expected", "observed",
     "evidence", "started", "duration_s", "version", "fault", "phone", "class", "title",
     "verificato",
+    "fix_commit", "where", "state", "healthy",
 )
 OLD_SPELLING = {a: b for a, b in zip(_OLD_WORDS, _WORDS_NOW) if a != b}
 
