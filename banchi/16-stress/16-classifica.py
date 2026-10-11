@@ -265,11 +265,11 @@ RESTART = re.compile(r"^\d\d:\d\d:\d\d(?:\.\d+)?\s+(?:avvio|startup)\s+REMOTIX\b
 #   (old Italian form and new English form).
 REFUSAL = re.compile(r"(?:\[(c[0-9a-z]+)\]|«(c[0-9a-z]+)»).*(?:posto NEGATO|attacco NEGATO|"
                      r"sessione WebTransport RIFIUTATA|slot DENIED|attach DENIED|WebTransport session REFUSED)")
-OURS = re.compile(r"\[(c[0-9a-z]+)\] ⭐ (?:OURS nel secondo|OURS in the second) \([^)]*\): p95 ([\d.]+) ms · "
+OURS = re.compile(r"\[(c[0-9a-z]+)\] ⭐ (?:NOSTRO nel secondo|OURS in the second) \([^)]*\): p95 ([\d.]+) ms · "
                     r"max ([\d.]+) · (?:mediana|median) ([\d.]+) · (\d+) (?:fotogrammi|frames)")
 PRODUCER = re.compile(r"(?:produttore|producer) ([\d.]+) \(max ([\d.]+)\)")
-NETWORK = re.compile(r"\[(c[0-9a-z]+)\] (?:rete-quic|network-quic) (\S+) (.*)$")   # old and new binary
-STRETCH = re.compile(r"\[(c[0-9a-z]+)\] ⭐ (?:STRETCH cattura → byte fuori|STRETCH capture → byte out): "
+NETWORK = re.compile(r"\[(c[0-9a-z]+)\] (?:rete-quic|quic-net) (\S+) (.*)$")   # old and new binary
+STRETCH = re.compile(r"\[(c[0-9a-z]+)\] ⭐ (?:TRATTO cattura → byte fuori|STRETCH capture → byte out): "
                     r"(?:mediana|median) ([\d.]+) ms \(max ([\d.]+)\)")
 
 
@@ -886,7 +886,7 @@ def network_log(p, w0, w1, merged=0.0):
         return {}
     conn = {}                                  # (inq, address) → [first, last, srtt[], pto[]]
     for line in open(p, encoding="utf-8", errors="replace"):
-        if "rete-quic" not in line and "network-quic" not in line:      # old and new binary
+        if "rete-quic" not in line and "quic-net" not in line:      # old and new binary
             continue
         m = NETWORK.search(line.rstrip("\n"))
         if not m:
@@ -1058,7 +1058,7 @@ def level_entries(all_results, w0, w1, m0=None, m1=None):
         pts = [(r["t"], r["enclosures"][rc]["pss_mb"]) for r in fin
                if r.get("enclosures", {}).get(rc, {}).get("processes")]
         if len(pts) < 20 or pts[-1][0] - pts[0][0] < 60:
-            entries["memoria_" + rc] = not_measured("memory series of %s too short (%d points)"
+            entries[rc + "_memory"] = not_measured("memory series of %s too short (%d points)"
                                                  % (rc, len(pts)))
             continue
         t0, t1 = pts[0][0], pts[-1][0]
@@ -1080,9 +1080,9 @@ def level_entries(all_results, w0, w1, m0=None, m1=None):
                           {"ongoing": ongoing, "slope_pct_per_hour": _round(k_now), "stretch_s": round(t1 - t0)})
         if v["class"] == "FAIL" and not ongoing:
             # §9: FAIL is «> 15 % AND keeps going»; beyond 15 % but stopped: it is reported
-            v.update(classe="DEGRADED", significant=True,
+            v.update(**{"class": "DEGRADED"}, significant=True,
                      note=note + " — beyond 15 % but STOPPED: reported (§9)")
-        entries["memoria_" + rc] = v
+        entries[rc + "_memory"] = v
     # the restart seen from the resources: the parent's pid changes (in the WHOLE level)
     pids = [r.get("remotix_pid") for r in all_results if r.get("remotix_pid")]
     empty = [r for r in all_results if r.get("enclosures", {}).get("remotix", {}).get("processes") == 0]
@@ -1242,13 +1242,13 @@ def log_line_list(g):
         c = class_of(entries)
         counts[c] += 1
         r = dict(base, type="session", **info)
-        r.update(measures=measures, entries=entries, classe=c, rationale=reason_of(entries),
+        r.update(measurements=measures, entries=entries, **{"class": c}, rationale=reason_of(entries),
                  unmeasured=sorted(k for k, v in entries.items() if v.get("not_measured")),
                  evidence=[d])
         out.append(r)
     lvr = dict(base, type="level", users=len(g["sessions"]), sessions=counts,
                journal_err=g.get("journal"),
-               entries=g["voci_livello"], resources=g["resources"], classe=g["classe"],
+               entries=g["voci_livello"], resources=g["resources"], **{"class": g["class"]},
                significant=g["significant"],
                rationale=_level_reason(g, counts), evidence=[g["cart"]])
     return [lvr] + out
