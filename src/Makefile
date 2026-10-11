@@ -122,6 +122,14 @@ CFLAGS   ?= -O2 -g -std=gnu11 $(AVVERTIMENTI)
 #    line together with the rest, and `struct in6_pktinfo` would vanish with an error that
 #    names no option.
 override CFLAGS += -D_GNU_SOURCE
+# ⭐ DECISIONI §10.43 — the labwc that hosts the nested KWin (`kwin.c`): empty = the
+#    distribution's, from PATH (six distributions); a path = OUR labwc at that exact path,
+#    for the distributions without one (RHEL/Alma 10: `packaging/rpm/remotix.spec`).
+#    A build-time choice of the package, never a runtime switch.  `make pulisci` first.
+LABWC ?=
+ifneq ($(LABWC),)
+override CFLAGS += -DREMOTIX_LABWC='"$(LABWC)"'
+endif
 
 # ⛔⭐ THE LIBRARIES OF PHASE 2, ASKED OF `pkg-config` ONCE ONLY.
 #

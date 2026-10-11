@@ -34,6 +34,9 @@
 
 %global ngtcp2_ver  1.25.0
 %global nghttp3_ver 1.18.0
+# ⭐ DECISIONI §10.43: our labwc, RHEL / Alma 10 only — the version of packaging/rpm/labwc/VERSIONI
+#   (%%build stops if they differ)
+%global labwc_ver   0.8.4
 
 # openSUSE keeps the packages' PAM files in /usr/lib/pam.d (§4.3)
 %if 0%{?suse_version}
@@ -54,11 +57,24 @@ Release:        %{?rx_rilascio}%{!?rx_rilascio:1}%{?dist}
 Summary:        This machine's desktop in the browser
 # Our own text, not a standard one (DECISIONI §10.39): free for personal and non-profit use,
 # source readable, no modifications, no redistribution. Its text is LICENSE.md.
+%if 0%{?rhel}
+# ⭐ DECISIONI §10.43: on RHEL / Alma 10 the package also carries OUR labwc
+#   (/usr/lib/remotix/labwc), a separate program under its own licence (GPL-2.0-only; two files
+#   LGPL-2.0-or-later); REMOTIX's terms do not apply to it (LICENSE.md §8).
+License:        LicenseRef-REMOTIX AND GPL-2.0-only AND LGPL-2.0-or-later
+%else
 License:        LicenseRef-REMOTIX
+%endif
 URL:            https://github.com/nic-fio/REMOTIX
 # An archive of src/, banchi/rcp/ (the twin copy that `make` compares) and
 # packaging/rpm/, made by `costruisci-rpm.sh`.
 Source0:        %{name}-%{version}.tar.gz
+%if 0%{?rhel}
+# ⭐ DECISIONI §10.43: EPEL 10 has wlroots 0.18 but NO labwc ⇒ the Alma package builds labwc
+#   %%{labwc_ver} (the last release for wlroots 0.18), unmodified, from the upstream tarball
+#   pinned and verified by packaging/rpm/labwc/ (scarica.sh); the source rpm carries it.
+Source1:        https://github.com/labwc/labwc/archive/refs/tags/%{labwc_ver}.tar.gz#/labwc-%{labwc_ver}.tar.gz
+%endif
 
 ExclusiveArch:  x86_64
 
@@ -88,6 +104,23 @@ BuildRequires:  pkgconfig(gbm)
 #   (vulkan-loader-devel; `[M]` 1 Oct 2026: 1.4.328 on Alma 10 AppStream, 1.4.341
 #   on Fedora 44).  The minimum 1.3.274 is the Makefile's.
 BuildRequires:  pkgconfig(vulkan) >= 1.3.274
+%if 0%{?rhel}
+# ⭐ DECISIONI §10.43: OUR labwc — the BuildRequires of Fedora's labwc 0.8.4 spec (dist-git
+#   rpms/labwc fd759d1), minus what the options below switch off (Xwayland/xcb, SVG, icons/libsfdo,
+#   man pages); wlroots 0.18 from EPEL, linked dynamically.
+BuildRequires:  meson >= 0.59.0
+BuildRequires:  pkgconfig(wlroots-0.18) >= 0.18.1
+BuildRequires:  pkgconfig(wayland-server)
+BuildRequires:  pkgconfig(wayland-protocols)
+BuildRequires:  pkgconfig(cairo)
+BuildRequires:  pkgconfig(glib-2.0)
+BuildRequires:  pkgconfig(pangocairo)
+BuildRequires:  pkgconfig(libinput) >= 1.14
+BuildRequires:  pkgconfig(libxml-2.0)
+BuildRequires:  pkgconfig(pixman-1)
+BuildRequires:  pkgconfig(libpng16)
+BuildRequires:  pkgconfig(libdrm)
+%endif
 # ⚠ ngtcp2 >= 1.25.0 and nghttp3: they are NOT a BuildRequires, because almost no
 #   distribution has them (§6.3).  The container builds them, STATIC ONLY, in
 #   /usr/local/lib (`src/costruzione/quic-statiche.sh`); %%build checks that they are
@@ -162,8 +195,11 @@ Recommends:     mesa-vulkan-drivers
 # ⛔ Phase 19: here were svt-av1-libs (EPEL 10) and openh264 (Cisco repository for
 #   EPEL 10), the software fallback — out.
 # ⛔ No labwc/XFCE/LXQt in RHEL/EPEL 10 (§3): no dependency to write.
-#   ⚠ So on KDE here KWin starts with --virtual (DECLARED FALLBACK, `kwin.c`):
-#     the desktop keeps the size of its birth at reattach (DECISIONI §10.40).
+# ⭐ DECISIONI §10.43: for KDE the package carries OUR labwc, /usr/lib/remotix/labwc, built
+#   against EPEL's wlroots 0.18 (dynamic): the soname requirement rpm computes
+#   (libwlroots-0.18.so) is written here too, so the dependency on EPEL's wlroots is explicit.
+Requires:       libwlroots-0.18.so()(64bit)
+#   ⇒ KDE resizes at reattach here too (DECISIONI §10.40): Alma is no longer an exception.
 # ⛔ RHEL 10 Mesa has no VA-API and EPEL lacks the Intel driver (§4.2): GPU
 #   encoding exists only with third-party repositories.
 %endif
@@ -241,8 +277,30 @@ export LDFLAGS="%{?build_ldflags}"
 CFLAGS="$CFLAGS -fPIE"; LDFLAGS="$LDFLAGS -pie"
 %endif
 make pulisci >/dev/null
+%if 0%{?rhel}
+# ⭐ §10.43: kwin.c execs OUR labwc at this exact path (build-time choice, not a switch)
+make %{?_smp_mflags} tutto LABWC=%{_prefix}/lib/remotix/labwc
+%else
 make %{?_smp_mflags} tutto
+%endif
 cd ..
+
+%if 0%{?rhel}
+# ⭐ DECISIONI §10.43: OUR labwc, unmodified (no patches), from Source1; the options cut what a
+#    screenless host of KWin does not need.  Distribution flags, PIE.
+test "$(awk '$1 == "labwc" { print $2 }' packaging/rpm/labwc/VERSIONI)" = %{labwc_ver} || \
+    { echo "⛔ packaging/rpm/labwc/VERSIONI: labwc is not %{labwc_ver}"; exit 1; }
+echo "$(awk '$1 == "labwc" { print $4 }' packaging/rpm/labwc/VERSIONI)  %{SOURCE1}" | sha256sum -c -
+rm -rf labwc-build && mkdir labwc-build
+tar -C labwc-build -xzf %{SOURCE1}
+rm -f labwc-build/labwc-%{labwc_ver}/subprojects/*.wrap
+CFLAGS="%{optflags}" LDFLAGS="%{?build_ldflags}" \
+    meson setup labwc-build/b labwc-build/labwc-%{labwc_ver} --buildtype=plain -Db_pie=true \
+    --wrap-mode=nodownload -Dxwayland=disabled -Dsvg=disabled -Dicon=disabled \
+    -Dnls=disabled -Dman-pages=disabled
+meson compile -C labwc-build/b labwc
+labwc-build/b/labwc --version
+%endif
 
 # The SELinux module, with the policy interfaces of THIS distribution.
 # ⚠ `--define "rx_selinux_permissivo 1"` (costruisci-rpm.sh: RX_SELINUX_PERMISSIVO=1)
@@ -256,6 +314,10 @@ cd ../../..
 
 %install
 install -D -m 0755 src/remotix %{buildroot}%{_libexecdir}/remotix/remotix
+%if 0%{?rhel}
+# ⛔ our labwc, private: not on PATH, no clash with a future EPEL labwc (§10.43)
+install -D -m 0755 labwc-build/b/labwc %{buildroot}%{_prefix}/lib/remotix/labwc
+%endif
 install -D -m 0644 src/pagina.html %{buildroot}%{_datadir}/remotix/pagina.html
 # The DEFAULTS (port, options): owned by the package, an upgrade rewrites them.
 # The administrator's choices in /etc/remotix/remotix.conf.d/*.conf (they win).
@@ -358,6 +420,10 @@ fi
 %license THIRD-PARTY-LICENSES
 %dir %{_libexecdir}/remotix
 %{_libexecdir}/remotix/remotix
+%if 0%{?rhel}
+%dir %{_prefix}/lib/remotix
+%{_prefix}/lib/remotix/labwc
+%endif
 %dir %{_datadir}/remotix
 %{_datadir}/remotix/pagina.html
 %{_datadir}/remotix/remotix.conf

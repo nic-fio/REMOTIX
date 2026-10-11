@@ -1233,11 +1233,19 @@ int kwin_annidato_vive(int argc, char **argv)
 		g_printerr("remotix --kwin-annidato: XDG_RUNTIME_DIR is not set\n");
 		return 1;
 	}
-	/* ⛔ Without labwc the session must still be born: KWin `--virtual`, as
+	/* ⭐ Which labwc is a BUILD-TIME choice of the package, not a runtime
+	 *    switch: the distribution's from PATH, except where the distribution
+	 *    has none — RHEL/Alma 10 (EPEL has wlroots 0.18 but no labwc), whose
+	 *    package builds OUR labwc and passes its exact path here
+	 *    (`make LABWC=/usr/lib/remotix/labwc`, DECISIONI §10.43).
+	 * ⛔ Without labwc the session must still be born: KWin `--virtual`, as
 	 *    before 11 Oct 2026, and SAID — the desktop keeps the size it is born
-	 *    with (the page centres it).  `[R]` it is the case of RHEL/Alma 10,
-	 *    where EPEL has no labwc (`packaging/rpm/remotix.spec`). */
+	 *    with (the page centres it). */
+#ifdef REMOTIX_LABWC
+	labwc_c_e = access(REMOTIX_LABWC, X_OK) == 0 ? g_strdup(REMOTIX_LABWC) : NULL;
+#else
 	labwc_c_e = g_find_program_in_path("labwc");
+#endif
 	if (!labwc_c_e) {
 		riga = g_ptr_array_new();
 		for (int i = 6; i < argc; i++)
@@ -1286,7 +1294,7 @@ int kwin_annidato_vive(int argc, char **argv)
 			g_setenv("WLR_RENDERER", "pixman", TRUE);
 		else if (strcmp(nodo, "-") != 0)
 			g_setenv("WLR_RENDER_DRM_DEVICE", nodo, TRUE);
-		execlp("labwc", "labwc", "-C", config, (char *)NULL);
+		execl(labwc_c_e, "labwc", "-C", config, (char *)NULL);
 		g_printerr("remotix --kwin-annidato: labwc does not start: %s\n", strerror(errno));
 		_exit(127);
 	}
