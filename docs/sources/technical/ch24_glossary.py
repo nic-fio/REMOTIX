@@ -86,7 +86,7 @@ NOMI = [
     (c("LETTER") + ", " + c("KEY_POSITION"), "<i>Letter, key position.</i> Text travels as characters, "
      "commands as evdev key positions; the child turns a letter into the keys that produce it on the session's "
      "layout." + v("Keyboard: letters and positions", "From a letter to key positions")),
-    (c("linea morta"), "<i>Dead line.</i> The detector that closes a connection which has stopped carrying "
+    (c("dead line"), "<i>Dead line.</i> The detector that closes a connection which has stopped carrying "
      "anything: 5 s of stalled video output, or 10 s without a client packet." + v("The dead line")),
     (c("meshes"), "<i>Meshes.</i> The checks of the safety net, C1 to C24." + v("The meshes C1 to C24")),
     (c("mark"), "<i>Mark.</i> The bench marker " + c("BENCH_MARK") + " (a coloured square painted after a known "
