@@ -543,7 +543,7 @@ def main():
     # ⚠ the fields the drivers and `Test` of 12-client-veri expect
     o.url = "https://%s:%d/" % (o.host, port)
     o.password = "c22-" + secrets.token_hex(6)
-    o.scene, o.continuita_s, o.log_cmd = "alive", 8, ""
+    o.scene, o.continuity_s, o.log_cmd = "alive", 8, ""
     o.leave_on = False
     if o.save:
         os.makedirs(o.save, exist_ok=True)
