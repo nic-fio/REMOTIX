@@ -6931,6 +6931,72 @@ measured the same morning and then left for `MASTERPLAN.md` M7 (local branch `m7
     what is proven is the mechanism of §10.40 on Alma's KWin, not a browser session. ⚠ A third KWin version
     (6.6) on the same road.
 
+### 10.45 ✅ The English rename of the names: in three steps, by hand where it is public (11 Oct 2026)
+
+> §10.43 and §10.44 are written by other branches (labwc for Alma; the retired benches). The method in detail:
+> `english-migration/RINOMINA.md` §0.
+
+- **Round 1 thrown away.** The first rename (branch `rinomina`, `cd66e92`) was mechanical and touched every word of
+  every file. It passed every static check, yet ten adversarial reviewers and two live tests found **about 130
+  confirmed faults**: the installation **aborted on all 7 distributions**, and the video encoder was **not found**
+  (a name built at run time no longer matched its table). ⇒ Not repaired, discarded: a rule per fault does not
+  converge; the scope had to shrink.
+- **Phase A — merged.** Only the internal code identifiers. Proved identical from the outside: every string
+  byte-for-byte, the binary's `.rodata` identical, **82 benches with the same output**, install and upgrade on the
+  7 distributions identical, the live session identical.
+- **Phase B — every name someone outside the code can see** (options, environment, data keys, wire and RCP names,
+  log areas, page names): by **hand-curated tables**, one decision per name, checked against every place that
+  reads it. **No aliases and no upgrade migration** — user's words: *«al momento nessuno ha remotix. Il prodotto
+  non e' ancora stato rilasciato»* (11 Oct). The coordinator's rulings that matter to the user:
+  - retired options are removed, not kept as old names (`--ritmo-adattivo`, `--linea-morta`,
+    `--linea-morta-permille`, `--sblocca`; and the `--ban` alias of `--ban-file`);
+  - the standard word wins when there is one (`--verbose`, `--quality-recovery`, `start`, `deps`);
+  - the committed append-only registers of the benches keep their **file names** (history); new rows get English
+    keys and the readers accept both spellings;
+  - external names stay (the test accounts `prova*`), and so do names read by historical sources.
+- **Step 2 — file and folder names** (`fasi/` → `phases/`, `src/costruzione/` → `src/build-targets/`, …), after
+  the dead benches are retired (§10.44). Measurements, memory and reports keep their names (they are history).
+  `english-migration/` leaves the tree at the very end; its summary moves into this document.
+
+### 10.46 ✅ A component is built by us only when the distribution's version gives a measured problem (11 Oct 2026)
+
+User's words, while deciding to build labwc ourselves for Alma (§10.43): *«al momento si, restiamo come siamo, con
+labwc che ce lo analizziamo e compiliamo da soli»*.
+
+- **Rule**: REMOTIX uses what the customer's distribution ships. A component is built by us **only** when the
+  distribution's version gives a **measured** problem — today **ngtcp2/nghttp3** (QUIC/HTTP-3) and **labwc on
+  Alma/RHEL 10** (missing).
+- Each such component is **written here with its reason**; none is added "because it is better".
+- The wider idea — a parallel factory that reads and builds every package a server runs — is **`MASTERPLAN.md`
+  M7**, a "later" item: taken to the end it is a distribution of its own.
+
+### 10.47 🔸 REMOTIX against KasmVNC: the bench is ready (11 Oct 2026)
+
+- **Why**: the free alternatives that reach a desktop from the browser are VNC (noVNC), Guacamole and KasmVNC;
+  xrdp is already measured (phase 20). KasmVNC is the strongest of them, so it is the one to measure against.
+- **The bench** (branch `fix-kasmvnc`: `banchi/16-stress/16-kasmvnc.py`, `fasi/20` §9): same scene, same machine,
+  REMOTIX as the twin row by row. ⚠ **KasmVNC serves X11 sessions only**: GNOME (Wayland only) is excluded from the
+  comparison.
+- **Sizes**: 1080p, 2K, 3K — user's words: *«il test puo anche fermarsi al 3K»*.
+- **Dry run at 1080p** `[M]` (not the campaign — the server was not quiet):
+
+  | | KasmVNC | REMOTIX |
+  |---|---|---|
+  | frames per second | 24.4 | **30.0** |
+  | bandwidth | 62.7 Mbit/s | **5.6 Mbit/s** |
+  | key latency p95 | 77 ms | **45 ms** |
+
+- `[?]` The real campaign, on a quiet server, is still to be run; the numbers above say only that the bench works.
+
+### 10.48 ✅ Incident of 11 Oct 03:17 UTC: an `rm -rf` through a mount, and the rule that follows
+
+- **What happened**: an agent ran `rm -rf` on what it took for its own scratch folder; that folder was an **sshfs
+  mount of the server's `/media/REMOTIX/src`**. Files were deleted for **11 minutes** before it was noticed.
+- **Recovery**: everything came back from the git objects on the server and from GitHub; nothing was lost.
+- **Rules from now on**:
+  - **no mounts inside scratch folders**: the server is reached **only through ssh**;
+  - **one deletes only what one created** — never a folder whose origin has not been checked.
+
 ## How this document is kept
 
 An ❓ item that gets an answer **is moved** to the section it belongs to and changes mark; it is not
