@@ -66,10 +66,12 @@ S2 = p("A desktop is not a module of REMOTIX: it is a set of answers spread acro
         ["how the session is recognised", c("gnome-session") + " in " + c("PATH"), c("startplasma-wayland")
          + " and no " + c("gnome-session"), c("xfce4-session") + " / " + c("lxqt-session") + "; " + c("labwc")
          + " is a precondition, never the marker"],
-        ["who is the compositor", "a systemd user unit, drop-in " + c("--headless"), "a systemd user unit, drop-in "
-         + c("--virtual --width W --height H"), c("labwc") + " started by us, " + c("WLR_BACKENDS=headless")
-         + "; no unit, so " + c("write_dropin()") + " (write the drop-in) has nothing to act on"],
-        ["monitor at birth", "none until a consumer attaches (" + c("RecordVirtual") + ")", "one, the size of the first client, fixed",
+        ["who is the compositor", "a systemd user unit, drop-in " + c("--headless"), "a systemd user unit whose "
+         "drop-in starts " + c("remotix --kwin-nested W H") + ": a screenless labwc at W×H, then KWin inside it with "
+         + c("--wayland-display") + " (" + c("--virtual") + " only where labwc is missing, declared)", c("labwc") + " started by us, " + c("WLR_BACKENDS=headless")
+         + "; no unit, so " + c("write_dropin()") + " has nothing to act on"],
+        ["monitor at birth", "none until a consumer attaches (" + c("RecordVirtual") + ")", "one, the size of the first "
+         "client; at a reattach of another size labwc's output is resized and KWin's follows",
          "one, 1280×720, resized through " + c("zwlr_output_manager_v1")],
         ["capture", "D-Bus ScreenCast, PipeWire pushes", c("zkde_screencast_unstable_v1") + ", PipeWire pushes; "
          "needs a " + c(".desktop") + " permission", c("zwlr_screencopy_manager_v1") + " v3: we pull one frame per request"],
@@ -80,8 +82,8 @@ S2 = p("A desktop is not a module of REMOTIX: it is a set of answers spread acro
          + c("clipboard_kde_open_wlroots()") + ")"],
     ], "«TAB» — The three families") + \
     p("The product's touch points, in the order an increment meets them:") + steps([
-        "<b>Recognition</b> — " + c("recognize_desktop()") + " (recognise the desktop) in " + c("src/sessione.c") + ", decided once per "
-        "process and read through " + c("sessione_desktop()") + ". It is a search, not an arbitration: one machine, "
+        "<b>Recognition</b> — " + c("recognize_desktop()") + " in " + c("src/sessione.c") + ", decided once per "
+        "process and read through " + c("desktop_session()") + ". It is a search, not an arbitration: one machine, "
         "one desktop (" + c("DECISIONI.md") + " §0.6). A new desktop gets a new value of " + c("DesktopSession")
         + " <b>appended at the end</b>: the value travels as a " + c("uint32_t") + " between parent and child, and "
         "moving 0 or 1 would break that boundary. Its branch goes after the existing ones so that no machine served "
@@ -95,12 +97,12 @@ S2 = p("A desktop is not a module of REMOTIX: it is a set of answers spread acro
         "«Log Out» gesture the product recognises; the user-settings rule (only lock, reboot, suspend and standby "
         "may be written to the user's settings, everything else lives only in the remote session, "
         + c("DECISIONI.md") + " §8.2); dangerous menu entries hidden; the guard against a second session.",
-        "<b>The stage</b> — " + c("figlio.c") + " opens Mutter (" + c("mutter_apri()") + ", open Mutter), KWin ("
+        "<b>The stage</b> — " + c("figlio.c") + " opens Mutter (" + c("mutter_open()") + "), KWin ("
         + c("kwin_open()") + ") or nothing (on wlroots the source is the capture itself), then calls "
-        + c("cattura_avvia()") + " (start the capture) or " + c("capture_start_wlr()") + ". A pull-model source entered <i>under</i> the "
+        + c("capture_start()") + " or " + c("capture_start_wlr()") + ". A pull-model source entered <i>under</i> the "
         "capture interface, not beside it: the 35 call sites in " + c("figlio.c") + " did not change.",
         "<b>Input and clipboard</b> — " + c("input.c") + " with libei, or " + c("wlr_input.c") + "; "
-        + c("clipboard_open_kde()") + " or " + c("clipboard_open_wlroots()") + " (open the clipboard), both in " + c("appunti.c")
+        + c("clipboard_open_kde()") + " or " + c("clipboard_open_wlroots()") + ", both in " + c("appunti.c")
         + " and both handing over to " + c("appunti_kde.c") + ".",
         "<b>The name on the wire</b> — " + c("main.c") + " maps the desktop to the name sent in " + c("SESSION")
         + " (the session message, " + c("wt_desktop()") + "); a desktop the product does not recognise is reported as "
@@ -111,7 +113,7 @@ S2 = p("A desktop is not a module of REMOTIX: it is a set of answers spread acro
         "from the metadata on KDE (" + c("cursore.c") + ") and through a 3×3 probe on labwc (" + c("wlroots.c")
         + "); a new desktop must give it too, or the shape leaves the product for everybody.",
     ]) + \
-    warn("phase 13 found that " + c("inactive_unit()") + " (unit inactive), the guard against a second session, asks systemd "
+    warn("phase 13 found that " + c("inactive_unit()") + ", the guard against a second session, asks systemd "
          "whether the compositor's unit is stopped — and an <i>unknown</i> unit counts as stopped. On a desktop "
          "whose compositor is not a unit, a guard paid for on 16 Aug 2026 would not have failed: it would have "
          "vanished. Before reusing a guard, ask what fact it reads, and whether that fact exists on the new "
@@ -131,7 +133,7 @@ S3 = p("The three additions are the worked example. Each row is an increment tha
          + c("wayland-scanner") + " in the Makefile, the stage branch in " + c("figlio.c"),
          "the screencast global is hidden unless a " + c(".desktop") + " declares " + c("X-KDE-Wayland-Interfaces")
          + " with " + c("Exec=") + " on the canonical binary; KWin 6.3.6 cannot resize its virtual output, so "
-         "the capture asks the output's size (" + c("stage_size") + ", the stage's size) and the page rescales; the first 2.4 s "
+         "the capture asks the output's size (" + c("stage_size") + ") and the page rescales; the first 2.4 s "
          "are Plasma's splash screen, which fooled the bench's «before» photograph"],
         ["3 · mouse and keyboard", "KWin's " + c("connectToEIS") + " and the pointer region by geometry",
          "the wheel needs " + c("scroll_discrete") + " in 120-unit steps on KWin; C3's «encoder stopped» fault landed "
@@ -140,6 +142,14 @@ S3 = p("The three additions are the worked example. Each row is an increment tha
          "set by the product (C18), the user's manual tests",
          "the box needed " + c("SYS_NICE") + " (" + c("kwin_wayland") + " carries " + c("cap_sys_nice=ep") + ") and "
          + c("WAKE_ALARM") + " (powerdevil); the " + c("render") + " group did not exist in a Plasma image"],
+        ["reattach · 11 Oct 2026", "KWin nested in a screenless labwc started by " + c("remotix --kwin-nested")
+         + ", with a labwc " + c("rc.xml") + " of zero bindings written by REMOTIX (" + c("-C") + "); at a reattach "
+         "of another size labwc's output is resized and KWin's follows (" + c("DECISIONI.md") + " §10.40, §10.43)",
+         "five traps, each cured in " + c("kwin.c") + ": KWin froze waiting for a frame answer labwc never sent "
+         "(a 1×1 surface touched every 16 ms); the pointer drawn on labwc's screen (" + c("KWIN_FORCE_SW_CURSOR")
+         + "); the two 60 Hz clocks drifting (labwc's output at 240 Hz); a full-screen window frozen by direct "
+         "scanout (one transparent pixel on top); labwc's window rule had to match on " + c("title")
+         + ". Alma/RHEL 10 has no labwc: the package builds its own"],
         "XFCE — phase 13, 20–23 Sep 2026 (protected: GNOME and KDE)",
         ["1 · XFCE is born", "a third enum value; <b>the silent fallback to GNOME removed</b>: a machine with no "
          "known desktop now says so and starts nothing", "before, a solo-XFCE machine was declared «GNOME by "
@@ -196,12 +206,12 @@ S4 = p("Most of the work of a new desktop is outside " + c("src/") + ". The orde
     "<b>The adapter</b> " + c("adattatore.&lt;name&gt;.sh") + " — name, package, how to start — and nothing about "
     "how the product behaves.",
     "<b>A port</b> in the map of " + c("11-accendi.sh") + " (switch on a box; 8511–8514 are taken, unknown desktops get 8519) and "
-    "the name in " + c("KNOWN_DESKTOPS") + " (known desktops) of " + c("11-gancio.sh") + " (the pre-push hook). Adding a recipe triggers the "
+    "the name in " + c("KNOWN_DESKTOPS") + " of " + c("11-gancio.sh") + " (the pre-push hook). Adding a recipe triggers the "
     + c("desktop-nuovo") + " (new desktop) family on the next push: everything on the new box, regression on the old ones, C14.",
     "<b>Step 0</b> in the new box: 18 verdicts, all green, before anything else.",
     "<b>A fault of its own.</b> Every new desktop enters with at least one plausible, invented fault that the "
     "net must see (phase 11 §3.6): the net is certified against the past, and a new desktop brings its own defects.",
-    "<b>The capability gate.</b> A row in " + c("desktop_capabilities") + " (the desktop's capabilities) of " + c("11-capacita-del-prodotto.sh")
+    "<b>The capability gate.</b> A row in " + c("desktop_capabilities") + " of " + c("11-capacita-del-prodotto.sh")
     + ": empty at first, so every product mesh skips with a reason; each capability (" + c("immagine") + " image, "
     + c("input") + ", " + c("clipboard") + " clipboard, " + c("forma") + " pointer shape) is opened in the increment in which its mesh is green "
     "<i>and</i> its fault was seen.",
@@ -219,16 +229,16 @@ S4 = p("Most of the work of a new desktop is outside " + c("src/") + ". The orde
 
 # ── 19.5 ─────────────────────────────────────────────────────────────────────
 S5 = p("RCP/1 is closed by design: a receiver that does not understand something <b>must</b> close with "
-       + c("PROTOCOL_ERROR") + " (protocol error; " + c("RCP.md") + " §3), and inside a major version one grows only through "
+       + c("PROTOCOL_ERROR") + " (" + c("RCP.md") + " §3), and inside a major version one grows only through "
        "capabilities, never by adding fields to existing messages. A new mandatory type is a new major version.",
        lead=True) + \
     table(["High byte of the type", "Channel", "Types in use"], [
-        [c("0x00"), "control: only the first bidirectional stream of the session", c("HELLO") + " (hello) " + c("0x0001")
-         + " … " + c("TERMINATE_SESSION") + " (end the session) " + c("0x0011")],
-        [c("0x01"), "input, client to server", c("POINTER") + " (pointer) " + c("0x0101") + " … " + c("KEY_POSITION")
-         + " (key position) " + c("0x0105")],
+        [c("0x00"), "control: only the first bidirectional stream of the session", c("HELLO") + " " + c("0x0001")
+         + " … " + c("TERMINATE_SESSION") + " " + c("0x0011")],
+        [c("0x01"), "input, client to server", c("POINTER") + " " + c("0x0101") + " … " + c("KEY_POSITION")
+         + " " + c("0x0105")],
         [c("0x02"), "clipboard", c("CLIPBOARD_ANNOUNCE") + ", " + c("CLIPBOARD_ASK") + ", " + c("CLIPBOARD_TEXT")
-         + " (announce, ask, text: " + c("0x0201") + "–" + c("0x0203") + ")"],
+         + " (" + c("0x0201") + "–" + c("0x0203") + ")"],
         [c("0x03"), "video: a 28-byte header and no framing, only on unidirectional streams opened by the server",
          c("0x0301") + " key frame, " + c("0x0302") + " delta frame (the header's type field)"],
         [c("0x04"), "audio: datagrams only", c("0x0401") + ", the only one defined"],
@@ -240,7 +250,7 @@ S5 = p("RCP/1 is closed by design: a receiver that does not understand something
     "<b>Decide how an old peer reacts.</b> A peer that does not know the type closes the connection. Since page "
     "and server ship together this is acceptable for a message only one side sends on an explicit gesture ("
     + c("TERMINATE_SESSION") + ", 15 Aug 2026); for anything a client must be able to omit, add a capability in "
-    + c("HELLO") + "/" + c("HERE_I_AM") + " (here I am; §4.3: names " + c("a-z0-9._") + ", unknown names ignored).",
+    + c("HELLO") + "/" + c("HERE_I_AM") + " (§4.3: names " + c("a-z0-9._") + ", unknown names ignored).",
     "<b>If it tolerates anything</b>, add the line to the list of exceptions in §3 in the same moment — the "
     "list was found incomplete twice, and a client written from §3 closed exactly the sessions the other "
     "sections saved.",
@@ -250,7 +260,7 @@ S5 = p("RCP/1 is closed by design: a receiver that does not understand something
     "<b>The twin</b>: copy the same change into " + c("banchi/rcp/") + ". The build compares " + c("rcp.c")
     + ", " + c("rcp.h") + " and " + c("autenticazione.c") + " byte by byte and refuses to compile if they differ; "
     "mesh C10 checks the same on the laptop.",
-    "<b>Page</b>: the type in the " + c("TYPE") + " (type) table of " + c("src/pagina.html") + " (or " + c("INPUT_TYPE")
+    "<b>Page</b>: the type in the " + c("TYPE") + " table of " + c("src/pagina.html") + " (or " + c("INPUT_TYPE")
     + "), the encoder or decoder with " + c("DataView") + " in network order, and the page's own handling of the "
     "refusal.",
     "<b>Validate against the document, not against the other side</b>: two programs written by the same hand "
@@ -269,13 +279,13 @@ S6 = p("The installer's " + c("check") + " is a read-only inspection (phase PREF
        "<b>profile</b> of facts, and a compatibility step that turns facts into verdicts with stable codes. A "
        "new check touches both, and the tests that guard their contracts.", lead=True) + steps([
     "<b>Read a fact</b> in " + c("installatore/motore/preflight.go") + ": a small function called from "
-    + c("Preflight()") + " that records " + c("Rilevato()") + ", " + c("Verificato()") + " or "
-    + c("Sconosciuto()") + " (detected, verified, unknown) on the profile. It may read files, ask logind, systemd and firewalld over D-Bus "
+    + c("Preflight()") + " that records " + c("Detected()") + ", " + c("Verified()") + " or "
+    + c("Unknown()") + " on the profile. It may read files, ask logind, systemd and firewalld over D-Bus "
     "(properties and queries only), and nothing else: the only program ever launched is " + c("rpm -q")
     + " on RPM families, from a closed list annotated in the profile. <b>Nothing is written</b> — R1 compares "
     "fingerprints of " + c("/etc") + " before and after, in a container per family (" + c("prove/r1-contenitori.sh")
     + ", R1 in containers). An unreadable source is " + c("UNKNOWN") + ", never an empty value.",
-    "<b>A code</b>, if the fact can be a problem: an entry in " + c("Codici") + " (codes) of " + c("motore/codici.go")
+    "<b>A code</b>, if the fact can be a problem: an entry in " + c("Codes") + " of " + c("motore/codici.go")
     + " with the form " + c("RX-&lt;AREA&gt;-&lt;NNN&gt;") + ", a severity (INFO, WARNING, BLOCKING), a nature "
     "(ACTION_NEEDED, RETRYABLE, RECOVERABLE, ROLLBACK_NEEDED, FATAL), an English text and, when there is one, the "
     "remedy. A code never changes meaning and is never reused: a retired code stays with a «retired» text "
@@ -303,12 +313,12 @@ S7 = p("A new bench is cheap to write and expensive to trust. The checklist belo
         ["What does it look at?", "the pixel, the bytes reaching the client, the field's value — not a counter "
          "or the sender's log"],
         ["How does it know it can say red?", "an injected fault, run, with the exit code reversed; for a judge, "
-         "the red cases <i>and</i> the cases that must stay green in " + c("--certify") + " (certify)"],
+         "the red cases <i>and</i> the cases that must stay green in " + c("--certify")],
         ["Can it tell zero from failure?", "a reading it could not take returns " + c("None") + " and the bench "
          "exits 3 with the reason"],
         ["Does it have a positive control?", "the tool finds something that is certainly there before concluding "
          "that something is absent"],
-        ["Is the scene declared and moving?", "a scene file or a declared " + c("--scene") + " (scene), started and "
+        ["Is the scene declared and moving?", "a scene file or a declared " + c("--scene") + ", started and "
          "stopped by the bench in a " + c("finally")],
         ["What does it share?", "port, ban file, socket, directory, user, uid, shared-memory name — counted, and "
          "the bench refuses to measure on a busy machine"],

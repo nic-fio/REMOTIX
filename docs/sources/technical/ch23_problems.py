@@ -1,7 +1,7 @@
-from build import c, note, p, table
+from build import c, note, p, rif, table
 
-S1 = p("Defects found while this manual was written (10 October 2026), by reading the code against the documents. "
-       "Each one was checked in the source. They are recorded here so that a maintainer meets them before a user does; "
+S1 = p("Defects found while this manual was written (10 October 2026), by reading the code against the documents, and "
+       "checked again in the source of 0.19.0 (11 October 2026). They are recorded here so that a maintainer meets them before a user does; "
        "a defect leaves this table in the commit that cures it.", lead=True) + \
     table(["Defect", "Where", "Consequence"], [
         ["<b>No way to lift an address ban on an installed machine.</b> The unlock socket " + c("--command-socket")
@@ -14,7 +14,7 @@ S1 = p("Defects found while this manual was written (10 October 2026), by readin
          "user to the groups of the " + c("/dev/dri") + " nodes, the parent (before the fork) runs " + c("loginctl terminate-user")
          + " so that the new groups reach the compositor. It spares a live REMOTIX desktop (" + c("finding_again_alive()")
          + ", the found-again check), but nothing else.",
-         c("enroll_in_card_groups()") + " (enrol in the card groups) in " + c("src/figlio.c"),
+         c("enroll_in_card_groups()") + " in " + c("src/figlio.c"),
          "The first REMOTIX login of a user who is not yet in the group closes that user's SSH and local sessions "
          "without warning. It happens once per user."],
         ["<b>The groups are all those of the card nodes</b>, usually " + c("video") + " and " + c("render")
@@ -22,8 +22,8 @@ S1 = p("Defects found while this manual was written (10 October 2026), by readin
          "be tried there).",
          c("enroll_in_card_groups()"),
          c("video") + " also grants " + c("/dev/fb*") + " and webcams."],
-        ["<b>The installer knows no derivative distribution by name.</b> " + c("Bersaglio()")
-         + " (target) builds the package folder from " + c("ID") + " and " + c("VERSION_ID") + " (for example "
+        ["<b>The installer knows no derivative distribution by name.</b> " + c("Target()")
+         + " builds the package folder from " + c("ID") + " and " + c("VERSION_ID") + " (for example "
          + c("linuxmint22") + "); only Arch-like, openSUSE and Alma/Rocky/RHEL IDs are mapped. The .run carries "
          "only the seven release targets of " + c("packaging/rilascio.sh") + ".",
          c("installatore/motore/archivio.go"),
@@ -37,13 +37,13 @@ S1 = p("Defects found while this manual was written (10 October 2026), by readin
          + " (the reasons of RCP.md §8.2) accepts 0x01–0x0F, while RCP/1 defines 0x10 ("
          + c("SESSION_TERMINATED") + ", session ended).",
          c("src/rcp.c"),
-         "Harmless today, because only the server sends 0x10; a client " + c("FAREWELL") + " (farewell) with 0x10 would be answered with "
-         + c("PROTOCOL_ERROR") + " (protocol error)."],
-        ["<b>Bench messages are compiled into the product.</b> " + c("BENCH_MARK") + " (bench marker) is present, "
-         "switched off with " + c("BANCO_ACCESO") + " (bench switch) set to 0, whereas RCP.md §7.5 says it must be "
+         "Harmless today, because only the server sends 0x10; a client " + c("FAREWELL") + " with 0x10 would be answered with "
+         + c("PROTOCOL_ERROR") + "."],
+        ["<b>Bench messages are compiled into the product.</b> " + c("BENCH_MARK") + " is present, "
+         "switched off with " + c("BENCH_ON") + " set to 0, whereas RCP.md §7.5 says it must be "
          "absent from the installed binary, not merely off.",
          c("src/rcp.c"),
-         "The server answers it with " + c("BENCH_OUTCOME") + " " + c("FEATURE_OFF") + " (function off) instead of "
+         "The server answers it with " + c("BENCH_OUTCOME") + " " + c("FEATURE_OFF") + " instead of "
          "not knowing it. (RCP.md's own test table asks for that answer, so the specification contradicts itself.)"],
         ["<b>Retired installer codes are still raised.</b> " + c("RX-H264-003") + " and " + c("RX-H264-004")
          + " are marked retired in " + c("codici.go") + " but " + c("codeH264()") + " still returns them for "
@@ -73,25 +73,48 @@ S2 = p("Comments and log lines in the code that no longer describe what the code
          "the lines have moved"],
         [c("src/figlio.c") + ", " + c("struct body_video"), "codec 1 = HEVC, 2 = AV1, 0 = off",
          "AV1 is retired; H.264 is 3 (" + c("RCP_CODEC_VIDEO_MAX") + " in " + c("rcp.h") + ")"],
-        [c("src/pagina.html"), "WebGL2 is a candidate path, not the default; a message naming the codecs (HEVC, AV1)",
-         "WebGL2 has been the default since 26 Sep 2026; the codecs are HEVC and H.264"],
+        [c("src/pagina.html"), "a message naming the two video codecs as HEVC and AV1",
+         "AV1 left the product; the codecs are HEVC and H.264"],
         [c("src/main.c"), "the program is at phase 1, with no video (header, usage line, first log line); 0x06 "
          "means no encoding capacity left", "0x06 is composition capacity since DECISIONI.md §4.6-nonies"],
-        [c("src/main.c"), "the help of " + c("--journal") + ": " + c("--verbose") + " (chatter) lines go to "
+        [c("src/main.c"), "the help of " + c("--journal") + ": " + c("--verbose") + " lines go to "
          "the journal with PRIORITY 7", "detail lines never reach the journal (" + c("src/registro.c") + ")"],
         [c("WT_FLOOR_BYTE_MS") + " in " + c("src/webtransport.c") + ", the help of " + c("--bandwidth-cap-mbit")
-         + " in " + c("src/main.c"), "a 20 Mbit/s floor",
+         + " in " + c("src/main.c") + " (help and comments)", "a 20 Mbit/s floor",
          "the decided floor is 30 Mbit/s since 23 Aug 2026 (DECISIONI.md §3.1-sexies)"],
-        [c("packaging/debian/remotix.service") + ", " + c("packaging/rpm/remotix.service"),
+        [c("packaging/debian/remotix.service"),
          c("RestartPreventExitStatus=78"), "the server exits only with 0, 1 or 2"],
         ["comments in " + c("remotix.postinst") + ", " + c("remotix.spec") + ", " + c("remotix-firewalld.xml")
-         + " and the three " + c("remotix-niente-sospensione.conf") + " (no-suspend) files", "the engine enables the power safety settings and opens the firewall with consent",
+         + " and the three " + c("remotix-niente-sospensione.conf") + " files (whose own header already gives them an English name)", "the engine enables the power safety settings and opens the firewall with consent",
          "since DECISIONI.md §10.36 it does neither"],
     ], "«TAB» — Stale texts in the code") + \
     note("the project documents (SPECIFICHE.md, RCP.md, DECISIONI.md, the phase documents) carry their own list of "
          "stale passages, found in the same pass; they are corrected there, not here.", "Documents.")
 
+S3 = p("Not defects but declared limits of 0.19.0: each is written in the log or in DECISIONI.md, and each has a "
+       "known cause outside the code that would have to change to remove it.", lead=True) + \
+    table(["Limit", "Where", "What it means"], [
+        ["<b>KDE without labwc keeps its birth size at reattach.</b> The nested KWin needs a labwc to host it; where "
+         "none is installed " + c("remotix --kwin-nested") + " starts KWin " + c("--virtual") + " and says so.",
+         c("src/kwin.c"),
+         "The desktop keeps the canvas it was born with; the page centres it with black bands. The packages ask for "
+         "labwc on KDE, so this happens only on a damaged installation (DECISIONI.md §10.40)."],
+        ["<b>The nested KWin costs frames at 3K and 4K on an integrated card.</b>",
+         c("src/kwin.c") + ", " + c("src/sessione.c"),
+         "On the Intel UHD 770 (integrated) a 60 fps scene loses 3–4 fps at 3K and 9–14 fps at 4K; nothing at "
+         "1080p and 2K (" + rif("The cost of the nested KWin") + ")."],
+        ["<b>Our own labwc on Alma/RHEL 10 must be followed by hand.</b> EPEL 10 has no labwc, so the Alma package "
+         "builds labwc 0.8.4 and installs it at " + c("/usr/lib/remotix/labwc") + ".",
+         c("packaging/rpm/remotix.spec") + ", " + c("packaging/rpm/labwc/"),
+         "At every REMOTIX release the labwc releases for the wlroots EPEL carries must be checked (DECISIONI.md "
+         "§10.43)."],
+        ["<b>KWin 6.6 (Ubuntu 26.04) is untested.</b>", "—",
+         "The nested road was tried on KWin 6.3.6 (Debian 13) and 6.4.2 (openSUSE Leap 16) only; no box of Ubuntu "
+         "26.04 exists on the test machine."],
+    ], "«TAB» — Declared limits")
+
 CHAPTER = ("Appendix C — Known issues", [
     ("Open defects in the product", S1),
     ("Stale texts in the code", S2),
+    ("Declared limits", S3),
 ])
