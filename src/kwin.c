@@ -958,6 +958,12 @@ int kwin_disposizione(const char *nome, GError **sbaglio)
  * ------------------------------------------------------------------ */
 
 #define OSPITE_CARTELLA "remotix-kwin-ospite"
+/* ⛔ The host is OUR labwc (DECISIONI §10.43), never one found on PATH.  The
+ *    same path on every distribution; the Makefile may say another one only
+ *    for a build that is not a package. */
+#ifndef REMOTIX_LABWC
+#define REMOTIX_LABWC "/usr/lib/remotix/labwc"
+#endif
 /* How long the helper waits for labwc's socket.  `[M]` labwc is up in about
  * a tenth of a second on the test machine: the ceiling is for a loaded
  * machine, not a guess at the normal case. */
@@ -989,7 +995,17 @@ int kwin_disposizione(const char *nome, GError **sbaglio)
  *     `core`, not only the rule): `[M]` 11 Oct 2026, Leap 16 (labwc 0.8.1),
  *     KWin's window was first configured 3822x2036 on a 3824x2064 output —
  *     the title bar's pixels taken away before the rule made it full screen —
- *     and a capture mounted in that instant asked for the wrong size.
+ *     and a capture mounted in that instant asked for the wrong size;
+ *   · ⛔ ONE key binding and ONE mouse binding that do nothing harmful: with
+ *     none, labwc loads its defaults (`[R]` labwc 0.9.8 `rcxml.c`
+ *     post_processing), and those START PROGRAMS (Super+Return a terminal, the
+ *     volume keys `amixer`, the root menu a terminal).  Nobody presses keys on
+ *     this labwc (no input device), but any program of the user on its socket
+ *     could (virtual keyboard): with our bindings there is nothing to start
+ *     (DECISIONI §10.43, the review).  ⛔ «Focus», not «None»: a binding whose
+ *     only action is None is CLEARED (`[M]` 11 Oct 2026, «Cleared 1
+ *     keybinds» in labwc's log) — it worked only because the defaults are
+ *     checked before the clearing, an order nobody promises.
  */
 static const char OSPITE_RC[] =
     "<?xml version=\"1.0\"?>\n"
@@ -997,6 +1013,9 @@ static const char OSPITE_RC[] =
     "     Rewritten at every birth: do not edit. -->\n"
     "<labwc_config>\n"
     "  <core><decoration>client</decoration><gap>0</gap></core>\n"
+    "  <keyboard><keybind key=\"W-F24\"><action name=\"Focus\"/></keybind></keyboard>\n"
+    "  <mouse><context name=\"Root\"><mousebind button=\"Middle\" action=\"Press\">"
+    "<action name=\"Focus\"/></mousebind></context></mouse>\n"
     "  <windowRules>\n"
     "    <windowRule title=\"*\" serverDecoration=\"no\">\n"
     "      <action name=\"ToggleFullscreen\"/>\n"
@@ -1209,7 +1228,6 @@ int kwin_annidato_vive(int argc, char **argv)
 	g_autofree char *display = NULL;
 	g_autoptr(GError) sbaglio = NULL;
 	g_autoptr(GPtrArray) riga = NULL;
-	g_autofree char *labwc_c_e = NULL;
 	unsigned long larghezza, altezza;
 	const char *nodo;
 	pid_t labwc;
@@ -1233,18 +1251,20 @@ int kwin_annidato_vive(int argc, char **argv)
 		g_printerr("remotix --kwin-annidato: XDG_RUNTIME_DIR is not set\n");
 		return 1;
 	}
-	/* ⛔ Without labwc the session must still be born: KWin `--virtual`, as
-	 *    before 11 Oct 2026, and SAID — the desktop keeps the size it is born
-	 *    with (the page centres it).  `[R]` it is the case of RHEL/Alma 10,
-	 *    where EPEL has no labwc (`packaging/rpm/remotix.spec`). */
-	labwc_c_e = g_find_program_in_path("labwc");
-	if (!labwc_c_e) {
+	/* ⛔ OUR labwc, at its exact path — never the distribution's from PATH
+	 *    (DECISIONI §10.43): the packages build it from the pinned upstream
+	 *    sources (`packaging/labwc/`) and install it there, on all seven
+	 *    distributions, RHEL/Alma 10 included (no labwc in EPEL).
+	 *    Without it (a broken install) the session must still be born: KWin
+	 *    `--virtual`, as before 11 Oct 2026, and SAID — the desktop keeps the
+	 *    size it is born with (the page centres it). */
+	if (access(REMOTIX_LABWC, X_OK) != 0) {
 		riga = g_ptr_array_new();
 		for (int i = 6; i < argc; i++)
 			g_ptr_array_add(riga, argv[i]);
 		g_ptr_array_add(riga, (char *)"--virtual");
 		g_ptr_array_add(riga, NULL);
-		g_printerr("remotix --kwin-annidato: ⛔ labwc is not installed: KWin --virtual, "
+		g_printerr("remotix --kwin-annidato: ⛔ " REMOTIX_LABWC " is missing: KWin --virtual, "
 		           "and the desktop will NOT take the window's size at reattach "
 		           "(DECLARED FALLBACK)\n");
 		execvp(argv[6], (char **)riga->pdata);
@@ -1278,16 +1298,25 @@ int kwin_annidato_vive(int argc, char **argv)
 		g_unsetenv("DISPLAY");
 		/* ⛔ Never: it would publish the HOST's display to the bus and to
 		 *    systemd, and the session's programs would open on a screen
-		 *    nobody sees. */
-		g_unsetenv("LABWC_UPDATE_ACTIVATION_ENV");
+		 *    nobody sees.  Said «0», not left unset: the default may change
+		 *    (DECISIONI §10.43, the review). */
+		g_setenv("LABWC_UPDATE_ACTIVATION_ENV", "0", TRUE);
+		g_unsetenv("LABWC_FALLBACK_OUTPUT");
+		/* ⛔ Only the variables below choose how wlroots draws: none inherited
+		 *    from the session (the review of §10.43). */
+		g_unsetenv("WLR_RENDERER");
+		g_unsetenv("WLR_RENDER_DRM_DEVICE");
+		g_unsetenv("WLR_RENDERER_FORCE_SOFTWARE");
+		g_unsetenv("WLR_RENDERER_ALLOW_SOFTWARE");
 		g_setenv("WLR_BACKENDS", "headless", TRUE);
 		g_setenv("WLR_LIBINPUT_NO_DEVICES", "1", TRUE);
 		if (strcmp(nodo, "pixman") == 0)
 			g_setenv("WLR_RENDERER", "pixman", TRUE);
 		else if (strcmp(nodo, "-") != 0)
 			g_setenv("WLR_RENDER_DRM_DEVICE", nodo, TRUE);
-		execlp("labwc", "labwc", "-C", config, (char *)NULL);
-		g_printerr("remotix --kwin-annidato: labwc does not start: %s\n", strerror(errno));
+		execl(REMOTIX_LABWC, "labwc", "-C", config, (char *)NULL);
+		g_printerr("remotix --kwin-annidato: " REMOTIX_LABWC " does not start: %s\n",
+		           strerror(errno));
 		_exit(127);
 	}
 

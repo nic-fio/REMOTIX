@@ -38,6 +38,11 @@ mkdir -p "$CACHE/tmp" "$USCITA"
 export TMPDIR="$CACHE/tmp"
 [ $# -gt 0 ] || set -- debian13 ubuntu2604
 
+# ⭐ DECISIONI §10.43: the upstream sources of OUR labwc, fetched once and verified at every build
+#    (sha256 + wlroots' signature) by packaging/labwc/scarica.sh
+SORGENTI_LABWC=${SORGENTI_LABWC:-$ALBERO/costruzione-uscita/sorgenti-labwc}
+"$ALBERO/packaging/labwc/scarica.sh" "$SORGENTI_LABWC" || { echo "⛔ the labwc sources"; exit 1; }
+
 HASH=$(git -C "$ALBERO" rev-parse --short=7 HEAD)
 DATA_R=$(git -C "$ALBERO" log -1 --format=%cD HEAD)
 GIORNO=$(git -C "$ALBERO" log -1 --date=format:%Y%m%d --format=%cd HEAD)
@@ -59,6 +64,9 @@ prepare_copy() {  # prepare_copy <cartella> <bersaglio>
 	cp -a "$ALBERO/src" "$c/remotix/src"
 	cp -a "$ALBERO/banchi/rcp" "$c/remotix/banchi/rcp"
 	cp -a "$ALBERO/packaging/debian" "$c/remotix/debian"
+	cp -a "$ALBERO/packaging/labwc" "$c/remotix/labwc"
+	mkdir -p "$c/remotix/labwc/sorgenti"
+	cp "$SORGENTI_LABWC"/*.tar.gz "$c/remotix/labwc/sorgenti/"
 	cp "$ALBERO/THIRD-PARTY-LICENSES" "$c/remotix/"
 	# the licence text (DECISIONI §10.39) goes into debian/copyright, whose last line is
 	#   «License: LicenseRef-REMOTIX»: DEP-5 continuation lines, « .» for an empty one
@@ -134,6 +142,11 @@ uno() {
 		if printf "%s\n" "$l" | grep -q "not found"; then echo "R4 ldd NO (not found)";
 		elif printf "%s\n" "$l" | grep -qE "ngtcp2|nghttp3"; then echo "R4 ldd NO (dynamic ngtcp2/nghttp3)";
 		else echo "R4 ldd SI ($(printf "%s\n" "$l" | wc -l) libraries, none missing)"; fi
+		# ⭐ §10.43: our labwc, with wlroots INSIDE (no libwlroots) and nothing missing
+		lw=$(ldd $d/usr/lib/remotix/labwc 2>&1)
+		if [ ! -x $d/usr/lib/remotix/labwc ]; then echo "R4 labwc NO (not in the package)";
+		elif printf "%s\n" "$lw" | grep -qE "not found|libwlroots"; then echo "R4 labwc NO ($(printf "%s\n" "$lw" | grep -E "not found|libwlroots" | tr "\n" " "))";
+		else echo "R4 labwc SI ($($d/usr/lib/remotix/labwc --version), $(printf "%s\n" "$lw" | wc -l) libraries, wlroots static)"; fi
 		echo "Depends:    $(dpkg-deb -f /u/'"$deb"' Depends)"
 		echo "Recommends: $(dpkg-deb -f /u/'"$deb"' Recommends)"
 		echo "Static:     $(dpkg-deb -f /u/'"$deb"' Static-Built-Using)"

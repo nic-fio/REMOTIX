@@ -38,6 +38,30 @@ Comment: ngtcp2 1.25.0 and nghttp3 1.18.0 are linked STATICALLY into the binary
  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  THE SOFTWARE.
 
+Files: labwc/sorgenti/labwc-*.tar.gz
+Copyright: 2019-2026 the labwc contributors (https://github.com/labwc/labwc)
+License: GPL-2
+Comment: OUR labwc (DECISIONI.md §10.43), built unmodified from this upstream
+ tarball and shipped as the separate program /usr/lib/remotix/labwc (not linked
+ with REMOTIX, whose licence does NOT apply to it).  Two of its files
+ (src/img/img-xpm.c, src/common/xcolor-table.h) are LGPL-2.0-or-later.  The
+ exact corresponding source (the two upstream tarballs and the recipe) is
+ published with every release, inside the .run and next to it.
+ .
+ On Debian systems, the complete text of the GNU General Public License
+ version 2 can be found in /usr/share/common-licenses/GPL-2, and that of the
+ GNU Library General Public License version 2 in
+ /usr/share/common-licenses/LGPL-2; both are also printed in
+ /usr/share/doc/remotix/THIRD-PARTY-LICENSES.
+
+Files: labwc/sorgenti/wlroots-*.tar.gz
+Copyright: 2017-2018 Drew DeVault
+           2014 Jari Vetoniemi
+           2023 The wlroots contributors
+License: Expat
+Comment: wlroots 0.19.3, linked STATICALLY into /usr/lib/remotix/labwc.  The
+ Expat (MIT) text is the one of the src/remotix paragraph above.
+
 # ⛔ LICENSE.md is the only copy of the licence text: src/costruzione/costruisci-deb.sh
 #    appends it below, line by line, when it turns packaging/debian into debian/.
 License: LicenseRef-REMOTIX

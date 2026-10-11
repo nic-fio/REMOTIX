@@ -33,6 +33,10 @@ mkdir -p "$CACHE/tmp" "$USCITA/rpm"
 export TMPDIR="$CACHE/tmp"
 if [ $# -eq 0 ] || [ "$1" = tutti ]; then set -- "${TUTTI[@]}"; fi
 
+# ⭐ DECISIONI §10.43: the upstream sources of OUR labwc, fetched once and verified at every build
+SORGENTI_LABWC=${SORGENTI_LABWC:-$ALBERO/costruzione-uscita/sorgenti-labwc}
+"$ALBERO/packaging/labwc/scarica.sh" "$SORGENTI_LABWC" || { echo "⛔ the labwc sources"; exit 2; }
+
 # ⛔ R14 in small: nothing from the bench in the package (§6.4)
 LISTA_NERA='provisiona|sudoers|gpu-udev|riavvia-|ld\.so\.conf|/prova|banchi|\.py$|Contenitore|costruisci'
 # ⛔ R13 in small: the unit passes no bench options (§4.5)
@@ -57,7 +61,8 @@ build_one()
 		|| { echo "$b pacchetto=NO remotix-firewalld.xml is not valid XML" | tee "$u/esito.txt"; return 1; }
 	tar -C "$ALBERO" --transform "s,^,remotix-$VER/," \
 		--exclude='*.o' --exclude='src/remotix' --exclude='*-client-protocol.h' --exclude='*-protocol.c' \
-		-czf "$lav/SOURCES/remotix-$VER.tar.gz" src banchi/rcp packaging/rpm THIRD-PARTY-LICENSES LICENSE.md
+		-czf "$lav/SOURCES/remotix-$VER.tar.gz" src banchi/rcp packaging/rpm packaging/labwc THIRD-PARTY-LICENSES LICENSE.md
+	cp "$SORGENTI_LABWC"/*.tar.gz "$lav/SOURCES/"
 	cp "$QUI/remotix.spec" "$lav/SPECS/"
 
 	echo "== $b: rpmbuild (log in $u/rpmbuild.log)"
@@ -82,6 +87,8 @@ build_one()
 		rm -rf /lavoro/estratto; mkdir /lavoro/estratto; cd /lavoro/estratto
 		rpm2cpio "$p" | cpio -idm --quiet
 		ldd usr/libexec/remotix/remotix >/lavoro/ldd.txt 2>&1
+		# ⭐ §10.43: our labwc — wlroots INSIDE (no libwlroots), nothing missing
+		{ usr/lib/remotix/labwc --version; ldd usr/lib/remotix/labwc; } >/lavoro/ldd-labwc.txt 2>&1
 		# R13: the bench-function sentence NOT in the package binary, and YES
 		# in an rcp.o with BANCO_ACCESO 1 (the positive check: without it, «not
 		# found» could mean «I cannot search») — like the .deb line.
@@ -96,7 +103,7 @@ build_one()
 	' >"$u/rpmbuild.log" 2>&1
 
 	cp "$lav"/RPMS/*/*.rpm "$lav"/SRPMS/*.rpm "$u/" 2>/dev/null
-	for f in rpmlint.txt richieste.txt file.txt scriptlet.txt ldd.txt r13-binario.txt; do
+	for f in rpmlint.txt richieste.txt file.txt scriptlet.txt ldd.txt ldd-labwc.txt r13-binario.txt; do
 		[ -f "$lav/$f" ] && cp "$lav/$f" "$u/"
 	done
 	if ! ls "$u"/remotix-[0-9]*.x86_64.rpm >/dev/null 2>&1; then
@@ -106,6 +113,11 @@ build_one()
 
 	grep -q 'not found' "$u/ldd.txt" && nota="$nota ldd:not-found"
 	grep -qE 'ngtcp2|nghttp3' "$u/ldd.txt" && nota="$nota ldd:quic-dinamiche"
+	if grep -q '^labwc ' "$u/ldd-labwc.txt" 2>/dev/null && ! grep -qE 'not found|libwlroots' "$u/ldd-labwc.txt"; then
+		nota="$nota labwc:verde($(head -1 "$u/ldd-labwc.txt" | cut -d' ' -f2))"
+	else
+		nota="$nota labwc:ROSSO"
+	fi
 	awk '{ print $NF }' "$u/file.txt" | grep -E "$LISTA_NERA" >"$u/r14.txt" && nota="$nota R14:ROSSO"
 	grep '^ExecStart' "$lav/estratto/usr/lib/systemd/system/remotix.service" | grep -E -- "$OPZIONI_BANCO" >"$u/r13.txt" \
 		&& nota="$nota R13-unita:ROSSO"

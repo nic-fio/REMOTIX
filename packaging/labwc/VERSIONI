@@ -1,0 +1,9 @@
+# VERSIONI — the upstream sources of OUR labwc (DECISIONI §10.43), pinned.
+# name version tarball sha256 url
+# · labwc: GitHub's archive of the annotated tag (labwc publishes no tarball and does not sign its
+#   tags); checked once against `git archive` of the tag — identical (§10.43).
+# · wlroots: the release tarball, signed by Simon Ser (key in wlroots-firma.asc, fingerprint below).
+labwc 0.9.8 labwc-0.9.8.tar.gz f97bdbcb4b2b907b0eda243a62d8e06db822e889de14126156505245ffb7e6cb https://github.com/labwc/labwc/archive/refs/tags/0.9.8.tar.gz
+wlroots 0.19.3 wlroots-0.19.3.tar.gz 5d02693175e5afd9af5f10e3e4976d6e9249dc39a90eb17d23fa5f54b125ccc5 https://gitlab.freedesktop.org/-/project/12103/uploads/d988b4ea6ff89afc14fb36de8e5366bc/wlroots-0.19.3.tar.gz
+wlroots-firma 0.19.3 wlroots-0.19.3.tar.gz.sig 6f85e64e95f48cef3479aee948ca730bed3e18fa77f907cb0744028d2246aa8d https://gitlab.freedesktop.org/-/project/12103/uploads/8616dc1afc77f309dbd6ebe93df2a64c/wlroots-0.19.3.tar.gz.sig
+chiave 34FF9526CFEF0E97A340E2E40FDE7BE0E88F5E48 wlroots-firma.asc - https://keys.openpgp.org/vks/v1/by-fingerprint/34FF9526CFEF0E97A340E2E40FDE7BE0E88F5E48

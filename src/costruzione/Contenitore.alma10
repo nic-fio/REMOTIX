@@ -22,3 +22,14 @@ RUN sh /usr/local/bin/quic-statiche.sh
 ENV LIBRARY_PATH=/usr/local/lib \
     PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
 WORKDIR /albero/src
+
+# --- 11 Oct 2026 (DECISIONI §10.43): what OUR labwc needs to be built — the host of the nested
+#     KWin, built from the pinned upstream sources by packaging/labwc/costruisci-labwc.sh inside the
+#     package build, wlroots linked statically.  A layer AT THE END: the ones above stay cached.
+#     ⚠ Alma 10: libseat-devel comes from EPEL, libinput/libdisplay-info/hwdata-devel/meson from CRB.
+RUN dnf -y install --setopt=install_weak_deps=False meson hwdata \
+        "pkgconfig(wayland-protocols)" "pkgconfig(pixman-1)" "pkgconfig(libinput)" \
+        "pkgconfig(cairo)" "pkgconfig(pangocairo)" "pkgconfig(libxml-2.0)" "pkgconfig(libpng16)" \
+        "pkgconfig(egl)" "pkgconfig(glesv2)" "pkgconfig(libseat)" "pkgconfig(libdisplay-info)" \
+        "pkgconfig(libudev)" "pkgconfig(hwdata)" \
+    && dnf clean all

@@ -71,6 +71,21 @@ for b in nomi:
                        (f"; declared by the package: {dich[lib]}" if lib in dich else ""),
         })
         rel.append({"spdxElementId": "SPDXRef-remotix", "relationshipType": "STATIC_LINK", "relatedSpdxElement": f"SPDXRef-{lib}"})
+    # ⭐ DECISIONI §10.43: our labwc, a separate program in the package (/usr/lib/remotix/labwc),
+    #    with wlroots linked statically into it — the versions pinned in packaging/labwc/VERSIONI.
+    if inc.get("labwc"):
+        lv, wv = inc["labwc"], inc.get("wlroots", "NOASSERTION")
+        pacchetti.append({
+            "SPDXID": "SPDXRef-labwc", "name": "labwc", "versionInfo": lv, "supplier": "Organization: labwc project",
+            "downloadLocation": f"https://github.com/labwc/labwc/archive/refs/tags/{lv}.tar.gz", "filesAnalyzed": False,
+            "licenseDeclared": "GPL-2.0-only AND LGPL-2.0-or-later",
+            "comment": "a separate program shipped as /usr/lib/remotix/labwc (not linked with REMOTIX); built unmodified"})
+        pacchetti.append({
+            "SPDXID": "SPDXRef-wlroots", "name": "wlroots", "versionInfo": wv, "supplier": "Organization: wlroots project",
+            "downloadLocation": f"https://gitlab.freedesktop.org/wlroots/wlroots/-/releases/{wv}", "filesAnalyzed": False,
+            "licenseDeclared": "MIT", "comment": "linked STATICALLY into /usr/lib/remotix/labwc"})
+        rel.append({"spdxElementId": "SPDXRef-remotix", "relationshipType": "CONTAINS", "relatedSpdxElement": "SPDXRef-labwc"})
+        rel.append({"spdxElementId": "SPDXRef-labwc", "relationshipType": "STATIC_LINK", "relatedSpdxElement": "SPDXRef-wlroots"})
     for i, d in enumerate(x.strip() for x in re.split(r"[,\n]", leggi("richieste")) if x.strip()):
         if d.startswith("rpmlib(") or d.startswith("/"):
             continue

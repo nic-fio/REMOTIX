@@ -50,9 +50,14 @@ pkgrel=3
 pkgdesc='The Linux desktop in the browser (server: GNOME, KDE, XFCE, LXQt on Wayland)'
 arch=('x86_64')
 url='https://github.com/nic-fio/REMOTIX'
-license=('LicenseRef-REMOTIX')
+# ⭐ DECISIONI §10.43: the package also carries OUR labwc (/usr/lib/remotix/labwc), a separate
+#   program under its own licences (GPL-2.0-only, two files LGPL-2.0-or-later; wlroots MIT, static).
+license=('LicenseRef-REMOTIX' 'GPL-2.0-only' 'LGPL-2.0-or-later' 'MIT')
 _ngtcp2=1.25.0
 _nghttp3=1.18.0
+# ⭐ §10.43: the versions of packaging/labwc/VERSIONI (build() stops if they differ)
+_labwc=0.9.8
+_wlroots=0.19.3
 depends=(
 	glibc
 	systemd                                   # logind, user manager, tmpfiles
@@ -84,13 +89,26 @@ depends=(
 	#    wlr-randr serves the size cure on LXQt and XFCE.  ⛔ As optdepends
 	#    pacman would never install them, and R4 («nothing by hand») would fail on
 	#    XFCE and LXQt.  The price: labwc+wlroots on GNOME and KDE too.
-	#    ⭐ 11 Oct 2026: KDE uses it too — KWin nested in a screenless labwc
-	#    (DECISIONI §10.40, the desktop's size at reattach).
+	#    ⛔ Not for KDE: the labwc that hosts the nested KWin (DECISIONI §10.40)
+	#    is OUR build, /usr/lib/remotix/labwc, inside this package (§10.43).
 	#    ⚠ labwc dies without a scalable font (labwc #2525, leap16-lxqt
 	#    in T1): on Arch labwc depends on `ttf-font`, and pacman brings one.
 	#    ⛔ Not the DESKTOP: without a desktop the engine installs it (§10.7).
 	labwc
 	wlr-randr
+	# ⭐ §10.43: what OUR labwc links dynamically (wlroots is static inside it);
+	#    the sonames are checked by makepkg against the binary.
+	libinput libinput.so
+	seatd libseat.so
+	libdisplay-info libdisplay-info.so
+	pixman libpixman-1.so
+	cairo
+	pango libpango-1.0.so libpangocairo-1.0.so
+	libxml2 libxml2.so
+	libpng libpng16.so
+	libglvnd libEGL.so libGLESv2.so
+	systemd-libs libudev.so
+	libdrm
 	# ⭐ AUDIO: the sink and the sound capture live in the user's PipeWire
 	#    daemon, and Arch's xfce4 group does NOT bring it.  `[M]` 29 Sep,
 	#    arch-xfce with package -1: «PipeWire context not created … this
@@ -105,7 +123,8 @@ depends=(
 	wireplumber
 	pipewire-pulse
 )
-makedepends=(cmake ninja pkgconf vulkan-headers) # wayland-scanner: from `wayland`, already in depends; vulkan-headers: phase 19
+makedepends=(cmake ninja pkgconf vulkan-headers meson wayland-protocols hwdata) # meson…hwdata: our labwc (§10.43)
+ # wayland-scanner: from `wayland`, already in depends; vulkan-headers: phase 19
 optdepends=(
 	'vulkan-radeon: Vulkan Video encoding on AMD GPUs (RADV), phase 19'
 	'nvidia-utils: Vulkan Video encoding on NVIDIA GPUs with the proprietary driver'
@@ -122,16 +141,32 @@ source=(
 	"remotix-$pkgver.tar.gz"
 	"https://github.com/ngtcp2/ngtcp2/releases/download/v$_ngtcp2/ngtcp2-$_ngtcp2.tar.xz"
 	"https://github.com/ngtcp2/nghttp3/releases/download/v$_nghttp3/nghttp3-$_nghttp3.tar.xz"
+	# ⭐ §10.43: the upstream sources of OUR labwc, put here by costruisci.sh after
+	#    packaging/labwc/scarica.sh verified them (sha256 + wlroots' signature)
+	"labwc-$_labwc.tar.gz"
+	"wlroots-$_wlroots.tar.gz"
 )
+noextract=("labwc-$_labwc.tar.gz" "wlroots-$_wlroots.tar.gz")
 # ⚠ The repository tarball changes at every commit: costruisci.sh writes the
 #   commit and its sha256 next to the package (sorgente.txt).
 sha256sums=('SKIP'
             '2a34d2484ba17847a5d11965704e9dd0fac4c6d8efc75ffe1ec7de66d8c6b6fb'
-            'aad782c23d3f01bd4bb52c8bac7a553b631ef8115fd1612703df6183449fef19')
+            'aad782c23d3f01bd4bb52c8bac7a553b631ef8115fd1612703df6183449fef19'
+            'f97bdbcb4b2b907b0eda243a62d8e06db822e889de14126156505245ffb7e6cb'
+            '5d02693175e5afd9af5f10e3e4976d6e9249dc39a90eb17d23fa5f54b125ccc5')
 
 _quic=quic
 
 build() {
+	# ── ⭐ DECISIONI §10.43: OUR labwc, unmodified, with makepkg's flags (before the
+	#    REMOTIX-specific ones below).  The recipe checks the two tarballs again.
+	local l="$srcdir/remotix-$pkgver/packaging/labwc"
+	[ "$(awk '$1 == "labwc" { print $2 }' "$l/VERSIONI")" = "$_labwc" ] &&
+		[ "$(awk '$1 == "wlroots" { print $2 }' "$l/VERSIONI")" = "$_wlroots" ] ||
+		{ echo "⛔ packaging/labwc/VERSIONI differs from _labwc/_wlroots" >&2; return 1; }
+	( export CFLAGS="$CFLAGS -ffile-prefix-map=$srcdir=/usr/src/remotix"
+	  sh "$l/costruisci-labwc.sh" "$srcdir" "$srcdir/labwc-lavoro" "$srcdir/labwc-uscita/labwc" )
+
 	# R23: build paths do not enter the binary (the asserts of
 	# ngtcp2/nghttp3 carry __FILE__ along: makepkg «reference to $srcdir»)
 	export CFLAGS="$CFLAGS -ffile-prefix-map=$srcdir=/usr/src/remotix"
@@ -177,20 +212,28 @@ check() {
 		echo "⛔ the binary asks for dynamic ngtcp2/nghttp3, or for missing libraries" >&2
 		return 1
 	fi
+	# §10.43: wlroots inside our labwc, nothing missing
+	if ldd "$srcdir/labwc-uscita/labwc" | grep -E 'libwlroots|not found'; then
+		echo "⛔ our labwc asks for a dynamic wlroots, or for missing libraries" >&2
+		return 1
+	fi
 }
 
 package() {
 	local a="$srcdir/remotix-$pkgver/packaging/arch" s="$srcdir/remotix-$pkgver/src"
 	install -Dm755 "$s/remotix"          "$pkgdir/usr/lib/remotix/remotix"
+	# ⛔ our labwc at the path kwin.c execs (REMOTIX_LABWC), not on PATH (§10.43)
+	install -Dm755 "$srcdir/labwc-uscita/labwc" "$pkgdir/usr/lib/remotix/labwc"
 	install -Dm644 "$s/pagina.html"      "$pkgdir/usr/share/remotix/pagina.html"
 	install -Dm644 "$srcdir/remotix-$pkgver/LICENSE.md" "$pkgdir/usr/share/licenses/remotix/LICENSE.md"
 	install -Dm644 "$srcdir/remotix-$pkgver/THIRD-PARTY-LICENSES" \
 		"$pkgdir/usr/share/licenses/remotix/THIRD-PARTY-LICENSES"
 	# R24 (T8): the versions of the static libraries LINKED, from the pkg-config of
 	#    the folder where build() installed them — for the archive's SBOM.
-	printf '{"formato":"remotix-incorporate/1","ngtcp2":"%s","nghttp3":"%s","fonte":"pkg-config of the linked .a files"}\n' \
+	printf '{"formato":"remotix-incorporate/1","ngtcp2":"%s","nghttp3":"%s","labwc":"%s","wlroots":"%s","fonte":"pkg-config of the linked .a files; packaging/labwc/VERSIONI for labwc and its static wlroots"}\n' \
 		"$(PKG_CONFIG_PATH="$srcdir/$_quic/lib/pkgconfig" pkg-config --modversion libngtcp2)" \
 		"$(PKG_CONFIG_PATH="$srcdir/$_quic/lib/pkgconfig" pkg-config --modversion libnghttp3)" \
+		"$_labwc" "$_wlroots" \
 		>"$pkgdir/usr/share/remotix/incorporate.json"
 	install -Dm644 "$a/remotix.service"  "$pkgdir/usr/lib/systemd/system/remotix.service"
 	# ⭐ Defaults in /usr, choices in /etc (§6.5 point 7), as in the .deb and the

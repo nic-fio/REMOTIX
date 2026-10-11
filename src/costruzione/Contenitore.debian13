@@ -30,3 +30,12 @@ WORKDIR /albero/src
 RUN apt-get update && apt-get install -y --no-install-recommends \
         debhelper dpkg-dev fakeroot lintian binutils \
     && rm -rf /var/lib/apt/lists/*
+
+# --- 11 Oct 2026 (DECISIONI §10.43): what OUR labwc needs to be built — the host of the nested
+#     KWin, built from the pinned upstream sources by packaging/labwc/costruisci-labwc.sh inside the
+#     package build, wlroots linked statically.  A layer AT THE END: the ones above stay cached.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        meson wayland-protocols libpixman-1-dev libinput-dev libcairo2-dev libpango1.0-dev \
+        libxml2-dev libpng-dev libegl-dev libgles-dev libseat-dev libdisplay-info-dev hwdata \
+        libudev-dev \
+    && rm -rf /var/lib/apt/lists/*

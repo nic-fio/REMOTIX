@@ -65,7 +65,12 @@ git -C "$ALBERO" archive "$COMMIT" packaging/arch/PKGBUILD packaging/arch/remoti
 [ -n "${RX_REVISIONE:-}" ] && sed -i "s/^pkgrel=.*/pkgrel=$RX_REVISIONE/" "$LAV/PKGBUILD"
 sed -i "s/^pkgver=.*/pkgver=$PKGVER/" "$LAV/PKGBUILD"
 git -C "$ALBERO" archive --format=tar.gz --prefix="remotix-$PKGVER/" \
-	-o "$LAV/remotix-$PKGVER.tar.gz" "$COMMIT" src banchi/rcp packaging/arch THIRD-PARTY-LICENSES LICENSE.md
+	-o "$LAV/remotix-$PKGVER.tar.gz" "$COMMIT" src banchi/rcp packaging/arch packaging/labwc THIRD-PARTY-LICENSES LICENSE.md
+# ⭐ DECISIONI §10.43: the upstream sources of OUR labwc, verified (sha256 + wlroots' signature);
+#    the PKGBUILD pins the same sha256 again
+SORGENTI_LABWC=${SORGENTI_LABWC:-$ALBERO/costruzione-uscita/sorgenti-labwc}
+"$ALBERO/packaging/labwc/scarica.sh" "$SORGENTI_LABWC"
+cp "$SORGENTI_LABWC"/*.tar.gz "$LAV/"
 {
 	echo "commit $COMMIT"
 	echo "tarball $(sha256sum "$LAV/remotix-$PKGVER.tar.gz" | cut -d' ' -f1)  remotix-$PKGVER.tar.gz"

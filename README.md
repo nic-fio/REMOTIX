@@ -1249,6 +1249,18 @@ as a **server**, which was the real lever.
 
 ---
 
+## Licence
+
+REMOTIX is under its own licence, [`LICENSE.md`](LICENSE.md) (`DECISIONI.md` §10.39): free for personal use and for
+non-profit organisations, source readable, no modifications and no redistribution. ⛔ **Those terms cover REMOTIX
+only.** The third-party components keep their own licences, with their full texts in
+[`THIRD-PARTY-LICENSES`](THIRD-PARTY-LICENSES) (`LICENSE.md` §8) — in particular **labwc** (GPL-2.0-only) and
+**wlroots** (MIT), which the packages carry, unmodified, as the separate program `/usr/lib/remotix/labwc` (the
+invisible host of KWin, `DECISIONI.md` §10.43): anyone may use, modify and redistribute them under those licences.
+Their exact corresponding source (the upstream tarballs and the recipe, [`packaging/labwc/`](packaging/labwc/)) is
+published with every release, inside the `.run` (`source/labwc/`) and next to it
+(`remotix-<version>-labwc-source.tar.gz`).
+
 ## Where to start reading
 
 ⛔ **In this order.** Whoever skips the first one ends up repeating mistakes already paid for.

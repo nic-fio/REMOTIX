@@ -23,3 +23,11 @@ RUN sh /usr/local/bin/quic-statiche.sh
 ENV LIBRARY_PATH=/usr/local/lib \
     PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
 WORKDIR /albero/src
+
+# --- 11 Oct 2026 (DECISIONI §10.43): what OUR labwc needs to be built — the host of the nested
+#     KWin, built from the pinned upstream sources by packaging/labwc/costruisci-labwc.sh inside the
+#     package build, wlroots linked statically.  A layer AT THE END: the ones above stay cached.
+RUN pacman -Syu --noconfirm --needed \
+        meson wayland-protocols pixman libinput cairo pango libxml2 libpng libglvnd seatd \
+        libdisplay-info hwdata systemd-libs \
+    && pacman -Scc --noconfirm

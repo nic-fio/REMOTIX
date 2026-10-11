@@ -34,6 +34,10 @@
 
 %global ngtcp2_ver  1.25.0
 %global nghttp3_ver 1.18.0
+# ⭐ DECISIONI §10.43: our labwc and the wlroots inside it — the versions of packaging/labwc/VERSIONI
+#   (%%build stops if they differ).
+%global labwc_ver   0.9.8
+%global wlroots_ver 0.19.3
 
 # openSUSE keeps the packages' PAM files in /usr/lib/pam.d (§4.3)
 %if 0%{?suse_version}
@@ -54,11 +58,19 @@ Release:        %{?rx_rilascio}%{!?rx_rilascio:1}%{?dist}
 Summary:        This machine's desktop in the browser
 # Our own text, not a standard one (DECISIONI §10.39): free for personal and non-profit use,
 # source readable, no modifications, no redistribution. Its text is LICENSE.md.
-License:        LicenseRef-REMOTIX
+# ⭐ DECISIONI §10.43: the package also carries OUR labwc (/usr/lib/remotix/labwc), a separate
+#   program under its own licences — GPL-2.0-only (two files LGPL-2.0-or-later) and wlroots (MIT)
+#   linked statically into it; REMOTIX's terms do not apply to it (LICENSE.md §8).
+License:        LicenseRef-REMOTIX AND GPL-2.0-only AND LGPL-2.0-or-later AND MIT
 URL:            https://github.com/nic-fio/REMOTIX
 # An archive of src/, banchi/rcp/ (the twin copy that `make` compares) and
 # packaging/rpm/, made by `costruisci-rpm.sh`.
 Source0:        %{name}-%{version}.tar.gz
+# ⭐ DECISIONI §10.43: the upstream sources of OUR labwc, exactly as released (verified by
+#   packaging/labwc/scarica.sh, pinned in packaging/labwc/VERSIONI, checked again in %%build):
+#   the source rpm carries them, with the recipe (packaging/labwc/ inside Source0).
+Source1:        labwc-%{labwc_ver}.tar.gz
+Source2:        wlroots-%{wlroots_ver}.tar.gz
 
 ExclusiveArch:  x86_64
 
@@ -88,6 +100,24 @@ BuildRequires:  pkgconfig(gbm)
 #   (vulkan-loader-devel; `[M]` 1 Oct 2026: 1.4.328 on Alma 10 AppStream, 1.4.341
 #   on Fedora 44).  The minimum 1.3.274 is the Makefile's.
 BuildRequires:  pkgconfig(vulkan) >= 1.3.274
+# ⭐ DECISIONI §10.43: what OUR labwc needs to be built (wlroots static inside it; the rest dynamic,
+#   so rpm states the run-time libraries by itself).  ⚠ Alma 10: libseat-devel is in EPEL.
+BuildRequires:  meson
+BuildRequires:  hwdata
+BuildRequires:  pkgconfig(hwdata)
+BuildRequires:  pkgconfig(wayland-server)
+BuildRequires:  pkgconfig(wayland-protocols)
+BuildRequires:  pkgconfig(pixman-1)
+BuildRequires:  pkgconfig(libinput)
+BuildRequires:  pkgconfig(cairo)
+BuildRequires:  pkgconfig(pangocairo)
+BuildRequires:  pkgconfig(libxml-2.0)
+BuildRequires:  pkgconfig(libpng16)
+BuildRequires:  pkgconfig(egl)
+BuildRequires:  pkgconfig(glesv2)
+BuildRequires:  pkgconfig(libseat)
+BuildRequires:  pkgconfig(libdisplay-info)
+BuildRequires:  pkgconfig(libudev)
 # ⚠ ngtcp2 >= 1.25.0 and nghttp3: they are NOT a BuildRequires, because almost no
 #   distribution has them (§6.3).  The container builds them, STATIC ONLY, in
 #   /usr/local/lib (`src/costruzione/quic-statiche.sh`); %%build checks that they are
@@ -97,6 +127,8 @@ BuildRequires:  pkgconfig(vulkan) >= 1.3.274
 #   old REMOTIX brings, except patented codecs and desktops.
 Provides:       bundled(ngtcp2) = %{ngtcp2_ver}
 Provides:       bundled(nghttp3) = %{nghttp3_ver}
+# ⭐ DECISIONI §10.43: wlroots, linked statically into our labwc (not into remotix).
+Provides:       bundled(wlroots) = %{wlroots_ver}
 
 # ⭐ SELinux (T6, `DECISIONI.md` §10.18): the REMOTIX PAM is sshd's, with
 #    `pam_selinux`; the transition to the user's context is allowed by the REMOTIX
@@ -129,9 +161,8 @@ Requires:       firewalld-filesystem
 # only if that desktop is present.
 Requires:       (labwc if xfce4-session)
 Requires:       (labwc if lxqt-session)
-# ⭐ 11 Oct 2026 (DECISIONI §10.40): KWin is born nested in a screenless labwc,
-# so the KDE desktop takes the window's size at reattach.
-Requires:       (labwc if plasma-workspace)
+# ⛔ NOT for KDE: the screenless labwc that hosts the nested KWin (DECISIONI §10.40) is OUR
+#   build, /usr/lib/remotix/labwc, inside this package (§10.43).
 Requires:       (wlr-randr if lxqt-session)
 Requires:       (wlr-randr if xfce4-session)
 # Xwayland under labwc for X11 applications (XFCE 4.20 AND the LXQt panel/config):
@@ -162,8 +193,8 @@ Recommends:     mesa-vulkan-drivers
 # ⛔ Phase 19: here were svt-av1-libs (EPEL 10) and openh264 (Cisco repository for
 #   EPEL 10), the software fallback — out.
 # ⛔ No labwc/XFCE/LXQt in RHEL/EPEL 10 (§3): no dependency to write.
-#   ⚠ So on KDE here KWin starts with --virtual (DECLARED FALLBACK, `kwin.c`):
-#     the desktop keeps the size of its birth at reattach (DECISIONI §10.40).
+#   ⭐ KDE resizes at reattach here too: the labwc that hosts KWin is OUR build, inside this
+#     package (DECISIONI §10.43), not the distribution's.
 # ⛔ RHEL 10 Mesa has no VA-API and EPEL lacks the Intel driver (§4.2): GPU
 #   encoding exists only with third-party repositories.
 %endif
@@ -171,8 +202,7 @@ Recommends:     mesa-vulkan-drivers
 %if 0%{?suse_version}
 Requires:       (labwc if xfce4-session)
 Requires:       (labwc if lxqt-session)
-# ⭐ 11 Oct 2026 (DECISIONI §10.40): KWin nested in a screenless labwc.
-Requires:       (labwc if plasma6-workspace)
+# ⛔ NOT for KDE: the host of the nested KWin is OUR labwc, inside this package (§10.43).
 Requires:       (wlr-randr if lxqt-session)
 Requires:       (wlr-randr if xfce4-session)
 # Xwayland under labwc for X11 applications (XFCE 4.20 AND the LXQt panel/config):
@@ -244,6 +274,13 @@ make pulisci >/dev/null
 make %{?_smp_mflags} tutto
 cd ..
 
+# ⭐ DECISIONI §10.43: OUR labwc, from Source1/Source2 (sha256 checked again by the recipe
+#    against packaging/labwc/VERSIONI), unmodified, with the distribution's flags.
+test "$(awk '$1 == "labwc" { print $2 }' packaging/labwc/VERSIONI)" = %{labwc_ver} || { echo "⛔ VERSIONI: labwc is not %{labwc_ver}"; exit 1; }
+test "$(awk '$1 == "wlroots" { print $2 }' packaging/labwc/VERSIONI)" = %{wlroots_ver} || { echo "⛔ VERSIONI: wlroots is not %{wlroots_ver}"; exit 1; }
+CFLAGS="%{optflags}" LDFLAGS="%{?build_ldflags}" \
+    sh packaging/labwc/costruisci-labwc.sh %{_sourcedir} labwc-lavoro labwc-uscita/labwc
+
 # The SELinux module, with the policy interfaces of THIS distribution.
 # ⚠ `--define "rx_selinux_permissivo 1"` (costruisci-rpm.sh: RX_SELINUX_PERMISSIVO=1)
 #   builds the module with the domain in «permissive»: to MEASURE the denials of a
@@ -256,14 +293,18 @@ cd ../../..
 
 %install
 install -D -m 0755 src/remotix %{buildroot}%{_libexecdir}/remotix/remotix
+%dir %{_prefix}/lib/remotix
+%{_prefix}/lib/remotix/labwc
+# ⛔ our labwc at the path kwin.c execs (REMOTIX_LABWC), not on PATH (§10.43)
+install -D -m 0755 labwc-uscita/labwc %{buildroot}%{_prefix}/lib/remotix/labwc
 install -D -m 0644 src/pagina.html %{buildroot}%{_datadir}/remotix/pagina.html
 # The DEFAULTS (port, options): owned by the package, an upgrade rewrites them.
 # The administrator's choices in /etc/remotix/remotix.conf.d/*.conf (they win).
 install -D -m 0644 packaging/rpm/remotix.conf %{buildroot}%{_datadir}/remotix/remotix.conf
 # R24 (T8): the versions of the LINKED static libraries (pkg-config in the build
 # container), for the archive SBOM.
-printf '{"formato":"remotix-incorporate/1","ngtcp2":"%s","nghttp3":"%s","fonte":"pkg-config of the linked .a files"}\n' \
-    "$(pkg-config --modversion libngtcp2)" "$(pkg-config --modversion libnghttp3)" \
+printf '{"formato":"remotix-incorporate/1","ngtcp2":"%s","nghttp3":"%s","labwc":"%s","wlroots":"%s","fonte":"pkg-config of the linked .a files; packaging/labwc/VERSIONI for labwc and its static wlroots"}\n' \
+    "$(pkg-config --modversion libngtcp2)" "$(pkg-config --modversion libnghttp3)" %{labwc_ver} %{wlroots_ver} \
     > %{buildroot}%{_datadir}/remotix/incorporate.json
 install -D -m 0644 packaging/rpm/remotix.service %{buildroot}%{_unitdir}/remotix.service
 install -D -m 0644 packaging/rpm/remotix.tmpfiles %{buildroot}%{_tmpfilesdir}/remotix.conf

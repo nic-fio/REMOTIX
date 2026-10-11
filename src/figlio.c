@@ -8829,7 +8829,7 @@ void figlio_vive(int argc, char **argv)
 							registro_dice(REG_FIGLIO,
 							              "⚠ §7.1 KDE: this Plasma session has no "
 							              "host for KWin (KWin --virtual: born before "
-							              "11 Oct 2026, or labwc is not installed): "
+							              "11 Oct 2026, or /usr/lib/remotix/labwc is missing): "
 							              "the canvas stays %ux%u and the page "
 							              "rescales — DECLARED FALLBACK",
 							              ol, oa);
