@@ -73,6 +73,7 @@ build_one()
 		if command -v dnf >/dev/null; then
 			dnf -y -q install --setopt=install_weak_deps=False rpm-build rpmlint systemd-rpm-macros cpio selinux-policy-devel bzip2 >/dev/null 2>&1
 		else
+			zypper -n -q refresh >/dev/null 2>&1  # Tumbleweed rolls: stale metadata in the image
 			zypper -n -q install --no-recommends --force-resolution rpm-build rpmlint systemd-rpm-macros cpio selinux-policy-devel bzip2 >/dev/null 2>&1
 		fi
 		rpm -q rpm-build rpmlint | sed "s/^/tools: /"
@@ -91,7 +92,7 @@ build_one()
 		rpm2cpio "$p" | cpio -idm --quiet
 		ldd usr/libexec/remotix/remotix >/work/ldd.txt 2>&1
 		# ⭐ §10.43 (Alma): our labwc — the version, and no library missing
-		[ -e usr/lib/remotix/labwc ] && { usr/lib/remotix/labwc --version; ldd usr/lib/remotix/labwc; } >/lavoro/ldd-labwc.txt 2>&1
+		[ -e usr/lib/remotix/labwc ] && { usr/lib/remotix/labwc --version; ldd usr/lib/remotix/labwc; } >/work/ldd-labwc.txt 2>&1
 		# R13: the bench-function sentence NOT in the package binary, and YES
 		# in an rcp.o with BENCH_ON 1 (the positive check: without it, «not
 		# found» could mean «I cannot search») — like the .deb line.
