@@ -1185,7 +1185,7 @@ def valid(fpath):
                                   #    it would be reading the wire
                                   #    backwards.
                                   "canvas": state.canvas,
-                                  "canvas_from": state.canvas_from,
+                                  "tela_da": state.canvas_from,
                                   # ⭐⛔ THE REQUESTS IN FLIGHT WHEN THE STREAM
                                   #     OPENS — §6.2, and without them the arbiter
                                   #     killed healthy sessions.
@@ -1209,9 +1209,9 @@ def valid(fpath):
                                   #  `CANVAS` was PROTOCOL_ERROR: the scene that
                                   #  §6.2 describes as the one in which «nobody
                                   #  made a mistake».
-                                  "in_flight": [m for _, _, _, m in state.in_flight
+                                  "in_volo": [m for _, _, _, m in state.in_flight
                                               if m],
-                                  "prev_canvas": state.prev_canvas}
+                                  "tela_prec": state.prev_canvas}
                 order.append(stream)
             streams[stream]["pezzi"].append((nb, which_way, load, fine, obscured))
             continue

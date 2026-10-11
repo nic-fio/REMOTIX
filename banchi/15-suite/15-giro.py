@@ -101,7 +101,7 @@ def read_tests(pattern=""):
         # ⭐ PHONE_ONLY = True: the test makes sense only with the real phone (F-031, touch)
         solo_tel = bool(re.search(r"^SOLO_TELEFONO\s*=\s*True", text, re.M))
         s = re.search(r"^SERVER\s*=\s*[\"']([^\"']+)[\"']", text, re.M)
-        prove.append({"file": f, "name": name, "too_short": too_short, "functions": functions,
+        prove.append({"file": f, "name": name, "corto": too_short, "functions": functions,
                       "per_browser": per_browser, "long": long, "solo_telefono": solo_tel,
                       "server": s.group(1) if s else ""})
     return prove
