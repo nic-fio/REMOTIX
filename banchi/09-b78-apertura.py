@@ -3,6 +3,9 @@
 """
 09-b78-apertura — HOW LONG A SESSION TAKES TO OPEN, WHEN THE NETWORK LOSES.
 
+⚠ `07-b64` was retired on 11 Oct 2026 (DECISIONI §10.44): the lines of it cited below
+  are read in git history (d2f27b3).  This bench does not import it.
+
 ⛔⭐ WHY IT EXISTS.  `banchi/07-b64-rete.py`, profile `7-perdita-10`, carries a
     `[M]` written as an **outcome**, not as a fault:
 

@@ -6931,6 +6931,33 @@ measured the same morning and then left for `MASTERPLAN.md` M7 (local branch `m7
     what is proven is the mechanism of §10.40 on Alma's KWin, not a browser session. ⚠ A third KWin version
     (6.6) on the same road.
 
+### 10.44 ✅ Retired benches (user, 11 Oct 2026)
+
+User's words, asked whether the benches that can no longer run should stay: *«allora via»*.
+
+⇒ **A bench that cannot run any more leaves the repository**; its measurements do not: they stay written where
+they were recorded, and the files stay in git history at `d2f27b3` (the commit before the removal). The history
+documents keep citing them as provenance — C16 knows it from the block «retired benches» of
+`banchi/11-scatole/11-c16-eccezioni.txt`.
+
+| bench | why it is dead | results recorded in |
+|---|---|---|
+| `07-b64-*` (network, ear, scene, terrain) | its terrain builds against the private ngtcp2 graft `/media/REMOTIX/src/b2`, gone; its scene was `04-b30-scena`, removed | `fasi/09-la-qualita-e-la-degradazione.md`, `LEZIONI.md` §1.29, `PIANO.md` |
+| `07-b65-datagram.py` | drives `04-b30-scena` and the same gone terrain | `fasi/09-…`, manual ch. 8 (table «Bench 07-b65»), `src/webtransport.c` |
+| `09-b70-ritmo.py` | refuses to start without `04-b30-scena` | `fasi/09-…`, `LEZIONI.md` §1.29 |
+| `09-b76-rete-cattiva.py` | imports `09-b70` and lights its scene | `fasi/09-…`, §3.1-ter above |
+| `09-b81-*` (dead line, terrain) | imports `09-b76` | `fasi/09-…`, `src/webtransport.c` |
+| `09-b79-*` (cures, terrain) — ⚠ not in the user's list | imports `09-b76` and lights its scene: dead with it | `fasi/09-…`, manual ch. 4 and 8, `src/main.c`, `src/webtransport.h` |
+| `09-b77-audio-riordino.py`, `09-b84-audio-silenzio.py` — ⚠ not in the user's list | import `07-b64-rete.py` and run on its terrain | `fasi/09-…`, manual ch. 8 and 11, `src/audio.c` |
+| `18-software/` (all five files) | recompiles the software fallback from commit `6bacca7`; the fallback left the product in phase 19 | `fasi/18-senza-ffmpeg.md`, `fasi/19-nvidia.md` |
+| `18-scheda/18-confronto.*`, `18-tabella.py`, `18-decodifica-chrome.sh` | compiles the encoder of commit `545ec55`; the table and the Chrome driver only read its output | `fasi/18-senza-ffmpeg.md`, manual ch. 7. ⭐ `18-decodifica-chrome.html` **stays**: `19-vulkan/19-decodifica-chrome.sh` uses it |
+| `18-a1/` | compiles the `audio.c` of commit `545ec55` against libavcodec, which left the product | `fasi/18-senza-ffmpeg.md`, manual ch. 11, `src/audio.c` |
+| `17-t9/` | tests an installer that no longer exists (§10.31, §10.36) | `fasi/17-l-installatore.md` |
+| `01-b0-terreno.sh`, `attrezzi-allinea-*.sh` | check and realign trees that are no longer on the server (the graft, `/media/REMOTIX/src/remotix`); nothing alive calls them — `01-casa-7448.sh` cites the graft one in a comment, `02-cattura-costruisci.sh` printed it as a hint (both reworded) | `README.md` and `FASI.md` (August diary), `LEZIONI.md` §1.9 |
+
+⭐ **What stays**: `10-f1-testimone.py` (the safety net imports its judge; its description no longer names
+`04-b30-scena`), `09-b78-apertura.py` and `09-lucchetto.py` (they do not depend on any of the above).
+
 ### 10.45 ✅ The English rename of the names: in three steps, by hand where it is public (11 Oct 2026)
 
 > §10.43 and §10.44 are written by other branches (labwc for Alma; the retired benches). The method in detail:

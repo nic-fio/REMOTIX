@@ -22,7 +22,7 @@
 # ⚠ And nobody had noticed because the command line had been typed by
 #   hand: there was no file to reread, and «it is running» looked like a
 #   complete answer.  It is the same shape as the misaligned graft of the
-#   same night (`attrezzi-allinea-innesto.sh`) and of the trap already paid for
+#   same night (`attrezzi-allinea-innesto.sh`, retired 11 Oct 2026, DECISIONI §10.44) and of the trap already paid for
 #   on B11 — *«the file is there» and «the file is the one I have just built» are
 #   two different questions* (`LEZIONI.md` §1.9 point 8).
 #

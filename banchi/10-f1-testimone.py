@@ -95,7 +95,8 @@ A witness that returns a **black** PNG and one that returns the desktop
 of this phase (`LEZIONI.md` §1.33):
 
   1. ⭐ **the positive control**: a **machine-readable** mark is painted on the
-     remote desktop (`04-b30-scena --movimento marca --giro NOME`) and it is
+     remote desktop (by any painter that uses `03-marca.py`; the original one,
+     `04-b30-scena`, is gone, DECISIONI §10.44) and it is
      verified that the witness **finds it again** — with the **certified reader**
      `banchi/03-marca.py`, which is not part of this bench and is not touched.  ⭐ The
      mark carries the **round name** inside the pixels: it is not enough that *a*

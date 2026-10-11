@@ -454,7 +454,7 @@ S12 = p("Phase 18 (closed 30 Sep 2026) removed ffmpeg; phase 19 (closed 3 Oct 20
     table(["Measurement (test server: i5-13500T, Intel UHD 770 iHD 25.2.3, Radeon RX 6800 radeonsi 25.0.7)",
            "Result"], [
         ["Zero copy, old vs new, 120 frames, H.264 / HEVC 8 / HEVC 10, 1080p and 4K, both cards ("
-         + c("banchi/18-scheda/18-confronto.sh") + ", 30 Sep 2026)", "Identical: PSNR/SSIM equal to the sixth "
+         + "bench 18-confronto, 30 Sep 2026, retired 11 Oct 2026)", "Identical: PSNR/SSIM equal to the sixth "
          "digit, bytes equal (±2 in H.264 = the SEI string), same profile and level, encode time equal (Intel "
          "H.264 1080p 2118 → 2113 µs; HEVC 4K 7368 → 7340 µs)"],
         ["Chrome 154 decoding the 28 H.264 streams with WebCodecs", "120/120 each, pixel fingerprints equal on zero "
@@ -510,8 +510,8 @@ S13 = p("Every encoded frame carries its costs separately, so that a drop in fra
         "depth, component, node, vendor and (on VA-API) the entry point actually in force, and the line before it says "
         "which path was taken and whether it was asked by name or by capability. "
         + c("remotix --prova-codifica") + " with " + c("--codifica vulkan") + " or " + c("--codifica vaapi")
-        + " reproduces one path in isolation; the comparison benches are " + c("banchi/18-scheda/18-confronto.sh")
-        + " and " + c("banchi/19-vulkan/19-confronto.sh") + ", and the shader is rebuilt with "
+        + " reproduces one path in isolation; the comparison bench is "
+        + c("banchi/19-vulkan/19-confronto.sh") + ", and the shader is rebuilt with "
         + c("banchi/19-vulkan/19-shader.sh") + ".", "Diagnosis.")
 
 CHAPTER = ("Video encoding", [

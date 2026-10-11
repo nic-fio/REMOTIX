@@ -14,7 +14,7 @@
  *                     with all the cures downstream of the bytes (cap, frame,
  *                     shape).  The JSON says which path came out.
  *
- * The shell is that of `banchi/18-scheda/18-confronto.c`: fake but
+ * The shell is that of `18-confronto.c` (retired, DECISIONI §10.44): fake but
  * realistic desktop (text, windows, scrolling, dragging, cursor), one CSV
  * line per frame, at the end one JSON line with the confession.  In addition:
  *   --qualita-a N:QP   the HOT quality change at frame N

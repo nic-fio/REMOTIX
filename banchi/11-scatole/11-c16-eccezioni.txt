@@ -92,3 +92,29 @@ terreno10.sh	banco di un giro, non conservato
 10-b92-scene.py	banco di un giro, non conservato
 input.c/.h	e' una coppia scritta a mano, non un percorso
 lsquic_stream.c/.h	idem, coppia scritta a mano
+
+# ── The benches RETIRED on 11 Oct 2026 (user: «allora via», DECISIONI §10.44).
+#    Dead benches (their scene, their trees or the code they compared are gone);
+#    the history documents keep citing them as PROVENANCE of their measurements,
+#    which stay valid and written.  The files are in git history at d2f27b3.
+07-b64-	retired bench (user, 11 Oct 2026, DECISIONI §10.44) → git history at d2f27b3
+07-b65-	retired bench (user, 11 Oct 2026, DECISIONI §10.44) → git history at d2f27b3
+09-b70-	retired bench (user, 11 Oct 2026, DECISIONI §10.44) → git history at d2f27b3
+09-b76-	retired bench (user, 11 Oct 2026, DECISIONI §10.44) → git history at d2f27b3
+09-b77-	retired bench (user, 11 Oct 2026, DECISIONI §10.44) → git history at d2f27b3
+09-b79-	retired bench (user, 11 Oct 2026, DECISIONI §10.44) → git history at d2f27b3
+09-b81-	retired bench (user, 11 Oct 2026, DECISIONI §10.44) → git history at d2f27b3
+09-b84-	retired bench (user, 11 Oct 2026, DECISIONI §10.44) → git history at d2f27b3
+01-b0-terreno.sh	retired bench (user, 11 Oct 2026, DECISIONI §10.44) → git history at d2f27b3
+attrezzi-allinea-	retired bench (user, 11 Oct 2026, DECISIONI §10.44) → git history at d2f27b3
+17-t9/	retired bench (user, 11 Oct 2026, DECISIONI §10.44) → git history at d2f27b3
+t9-gui.sh	retired bench (user, 11 Oct 2026, DECISIONI §10.44) → git history at d2f27b3
+t9-porta.sh	retired bench (user, 11 Oct 2026, DECISIONI §10.44) → git history at d2f27b3
+t9-r36.sh	retired bench (user, 11 Oct 2026, DECISIONI §10.44) → git history at d2f27b3
+t9-rete.py	retired bench (user, 11 Oct 2026, DECISIONI §10.44) → git history at d2f27b3
+t9-vm.sh	retired bench (user, 11 Oct 2026, DECISIONI §10.44) → git history at d2f27b3
+18-a1	retired bench (user, 11 Oct 2026, DECISIONI §10.44) → git history at d2f27b3
+18-software	retired bench (user, 11 Oct 2026, DECISIONI §10.44) → git history at d2f27b3
+18-confronto.	retired bench (user, 11 Oct 2026, DECISIONI §10.44) → git history at d2f27b3
+18-tabella.py	retired bench (user, 11 Oct 2026, DECISIONI §10.44) → git history at d2f27b3
+18-decodifica-chrome.sh	retired bench (user, 11 Oct 2026, DECISIONI §10.44) → git history at d2f27b3

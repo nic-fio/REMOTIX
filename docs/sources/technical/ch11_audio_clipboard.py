@@ -135,7 +135,7 @@ A4 = p("Between PipeWire's real-time thread and the child's loop sits a lock-fre
 A5 = p(c("audio.c") + " encodes with libopus directly since 30 Sep 2026: ffmpeg left the product for "
        "licence reasons (" + c("DECISIONI.md") + " §10.22, §10.25), and libavcodec was only a wrapper around the same "
        + c("libopus.so.0") + ". The parameters are the ones that wrapper used, and the packets were verified "
-       "identical byte for byte (" + c("18-a1-opus-senza-ffmpeg.c") + ", libopus 1.5.2).", lead=True) + \
+       "identical byte for byte (bench 18-a1, libopus 1.5.2, retired 11 Oct 2026).", lead=True) + \
     table(["Parameter", "Value", "Note"], [
         ["Application", c("OPUS_APPLICATION_AUDIO"), ""],
         ["Bit rate", c("AUDIO_OPUS_BITRATE") + " = 96 000 bit/s", "Read back after setting; a mismatch is logged"],

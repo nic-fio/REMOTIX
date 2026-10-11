@@ -173,7 +173,8 @@ struct audio_cod {
  *   439 216 bytes each.  ⇒ The multistream is not carried over: it is a
  *   wrapper that with a single stream adds nothing.
  *
- * ⭐ And the bench that keeps it true is `banchi/18-a1/`: the old `audio.c`
+ * ⭐ And the bench that proved it was `banchi/18-a1/` (retired 11 Oct 2026,
+ *    DECISIONI §10.44; in git history at d2f27b3): the old `audio.c`
  *    (545ec55) and this one, linked together, on the same 42 s signal
  *    (speech, music, digital silence, full-scale jumps, one-block gaps,
  *    ±1 LSB, loud noise, pure tone).  `[M]` 30 Sep 2026 on the server
