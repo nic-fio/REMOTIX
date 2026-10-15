@@ -82,4 +82,30 @@ bool colors709_to_p010(const uint8_t *pixel, uint32_t step, uint32_t width,
                       uint16_t *y, uint32_t stride_y,
                       uint16_t *uv, uint32_t stride_uv);
 
+/*
+ * ⭐ THE PADDING OF THE CARD'S SURFACE (15 Oct 2026, the question of 4b194bbc).
+ *
+ * The card encodes a picture ALIGNED to its block (1920x1080 → 1920x1088 in
+ * H.264) and the SPS crops the extra rows and columns away.  ⛔ They are
+ * cropped from the SHOWN picture, not from the coding: the encoder predicts,
+ * transforms and deblocks them together with the visible ones, so what they
+ * hold reaches the last visible row (deblocking across the 8x8 edge at row
+ * 1080, the motion search near the edge) and costs bits (a step from the
+ * picture to zero is an edge to code on every key).  ⇒ They are filled the
+ * way the Vulkan route's shader already did (`vulkanvideo_rgb_nv12.comp`,
+ * the `clamp()`): COPIES OF THE EDGE, the last sample of every row to the
+ * right, the last row (padded) downwards.
+ *
+ * Copies ONE plane of `rows` rows of `row_bytes` into a destination of
+ * `dst_rows` rows of `dst_row_bytes`, replicating the last `unit` bytes of
+ * each row to the right and the last row downwards.  `unit` is what one
+ * column is made of: NV12 Y 1, NV12 UV 2 (the U,V pair), P010 Y 2, P010 UV 4.
+ * ⚠ The source rows are re-read for the padding, never the destination: the
+ *   destination is the card's mapping (write-combined), slow to read.
+ * Returns false (and writes nothing) on a geometry that does not hold.
+ */
+bool colors709_copy_padded(uint8_t *dst, uint32_t dst_stride, uint32_t dst_row_bytes,
+                           uint32_t dst_rows, const uint8_t *src, uint32_t src_stride,
+                           uint32_t row_bytes, uint32_t rows, uint32_t unit);
+
 #endif

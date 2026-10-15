@@ -13,6 +13,7 @@
 #include "vadirect.h"
 #include "log.h"
 #include "bit_writer.h"
+#include "colors709.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -1121,7 +1122,19 @@ VaDirect *vadirect_open(const VaDevice *d, const VaDirectRequest *r,
 		vadirect_close(v);
 		return NULL;
 	}
-	/* the input pool, at the size of the CANVAS: the driver pads by itself */
+	/* ⛔⭐ THE INPUT POOL, AT THE ALIGNED SIZE (15 Oct 2026) — until today it was
+	 *     at the size of the CANVAS, with the note "the driver pads by itself".
+	 *     ⚠ Nothing in our code made that true: the context encodes
+	 *     `surface_width` x `surface_height` (1920x1088 for a 1080 canvas in
+	 *     H.264), and the rows past the canvas were read by the card from
+	 *     whatever the driver's allocation held past row 1080 — its alignment
+	 *     slack, never written by us: zero on a fresh buffer, a previous
+	 *     frame on a reused one, the driver's own padding only if the driver
+	 *     does one.  ⇒ The pool is now as big as what is encoded, and the
+	 *     padding is OURS: copies of the edge, written by `write_image()` on
+	 *     the memory route and by the VPP's padding layers on zero copy
+	 *     (`convert_on_gpu()` in `encoder.c`).  The same rule as the Vulkan
+	 *     route's shader (`clamp()` in `vulkanvideo_rgb_nv12.comp`). */
 	v->ingress = calloc(v->r.input_surfaces, sizeof *v->ingress);
 	if (!v->ingress) {
 		di(error, error_byte, "out of memory for the pool");
@@ -1135,12 +1148,14 @@ VaDirect *vadirect_open(const VaDevice *d, const VaDirectRequest *r,
 			.value.type = VAGenericValueTypeInteger,
 			.value.value.i = (int) v->d.input_fourcc,
 		};
-		st = vaCreateSurfaces(d->display, v->d.rt_format, r->width, r->height,
-		                      v->ingress, v->r.input_surfaces, &fmt, 1);
+		st = vaCreateSurfaces(d->display, v->d.rt_format, v->d.surface_width,
+		                      v->d.surface_height, v->ingress, v->r.input_surfaces,
+		                      &fmt, 1);
 	}
 	if (st != VA_STATUS_SUCCESS) {
 		di(error, error_byte, "the input pool (%u x %s %ux%u) was not created: %s",
-		   v->r.input_surfaces, p10 ? "P010" : "NV12", r->width, r->height,
+		   v->r.input_surfaces, p10 ? "P010" : "NV12", v->d.surface_width,
+		   v->d.surface_height,
 		   vaErrorStr(st));
 		free(v->ingress);
 		v->ingress = NULL;
@@ -1631,17 +1646,23 @@ bool vadirect_encode(VaDirect *v, VASurfaceID ingress, bool key,
 
 /* Writes `lines` rows of `byte_per_line` into an image derived from or created
  * on the surface: first `vaDeriveImage` (no extra copy), and if the
- * driver does not give it, `vaCreateImage` + `vaPutImage`. */
+ * driver does not give it, `vaCreateImage` + `vaPutImage`.
+ * ⭐ And the PADDING up to `padded_lines` x `padded_bytes` (the aligned
+ *    surface, see the input pool) with copies of the edge, `unit` bytes per
+ *    column (`colors709_copy_padded()`). */
 typedef struct {
 	const uint8_t *piano[3];
 	uint32_t step[3];
 	uint32_t lines[3];         /* rows per plane */
 	uint32_t byte_per_line[3];
+	uint32_t padded_lines[3];  /* rows per plane on the aligned surface */
+	uint32_t padded_bytes[3];  /* bytes per row on the aligned surface */
+	uint32_t unit[3];          /* bytes of one column: Y 1/2, UV pair 2/4 */
 	unsigned plans;
 } Plans;
 
-static bool write_image(VaDirect *v, VASurfaceID dest, unsigned fourcc, uint32_t l,
-                            uint32_t a, const Plans *p, char *error, size_t error_byte)
+static bool write_image(VaDirect *v, VASurfaceID dest, unsigned fourcc, const Plans *p,
+                            char *error, size_t error_byte)
 {
 	VAImage img;
 	VAStatus st;
@@ -1658,7 +1679,8 @@ static bool write_image(VaDirect *v, VASurfaceID dest, unsigned fourcc, uint32_t
 		f.fourcc = fourcc;
 		f.byte_order = VA_LSB_FIRST;
 		f.bits_per_pixel = (fourcc == VA_FOURCC_NV12) ? 12 : (fourcc == VA_FOURCC_P010 ? 24 : 32);
-		st = vaCreateImage(v->display, &f, (int) l, (int) a, &img);
+		st = vaCreateImage(v->display, &f, (int) v->d.surface_width,
+		                   (int) v->d.surface_height, &img);
 		if (st != VA_STATUS_SUCCESS) {
 			di(error, error_byte, "neither vaDeriveImage nor vaCreateImage (%c%c%c%c): %s",
 			   fourcc & 0xff, (fourcc >> 8) & 0xff, (fourcc >> 16) & 0xff, (fourcc >> 24) & 0xff,
@@ -1676,12 +1698,26 @@ static bool write_image(VaDirect *v, VASurfaceID dest, unsigned fourcc, uint32_t
 		uint8_t *dove = map + img.offsets[k];
 		uint32_t img_stride = img.pitches[k];
 		uint32_t n = p->byte_per_line[k] < img_stride ? p->byte_per_line[k] : img_stride;
-		for (uint32_t r = 0; r < p->lines[k]; r++)
-			memcpy(dove + (size_t) r * img_stride, p->piano[k] + (size_t) r * p->step[k], n);
+		/* ⚠ The padding only where the image really has it: an image smaller
+		 *   than the surface (a driver that derives at the canvas size) gets the
+		 *   canvas alone, as before. */
+		uint32_t pn = p->padded_bytes[k] < img_stride ? p->padded_bytes[k] : img_stride;
+		uint32_t pl = p->padded_lines[k];
+		uint32_t img_lines = (uint32_t) (k == 0 ? img.height : img.height / 2);
+		if (pl > img_lines)
+			pl = img_lines;
+		if (pn < n || pl < p->lines[k] || !p->unit[k] ||
+		    !colors709_copy_padded(dove, img_stride, pn - (pn - n) % p->unit[k], pl,
+		                           p->piano[k], p->step[k], n, p->lines[k], p->unit[k])) {
+			for (uint32_t r = 0; r < p->lines[k]; r++)
+				memcpy(dove + (size_t) r * img_stride,
+				       p->piano[k] + (size_t) r * p->step[k], n);
+		}
 	}
 	vaUnmapBuffer(v->display, img.buf);
 	if (!derivative) {
-		st = vaPutImage(v->display, dest, img.image_id, 0, 0, l, a, 0, 0, l, a);
+		st = vaPutImage(v->display, dest, img.image_id, 0, 0, img.width, img.height,
+		                0, 0, img.width, img.height);
 		if (st != VA_STATUS_SUCCESS) {
 			vaDestroyImage(v->display, img.image_id);
 			di(error, error_byte, "vaPutImage: %s", vaErrorStr(st));
@@ -1711,10 +1747,13 @@ bool vadirect_load_nv12(VaDirect *v, VASurfaceID dest, const uint8_t *y, uint32_
 		.step = { stride_y, stride_uv },
 		.lines = { a, a / 2 },
 		.byte_per_line = { l, l },
+		.padded_lines = { v->d.surface_height, v->d.surface_height / 2 },
+		.padded_bytes = { v->d.surface_width, v->d.surface_width },
+		.unit = { 1, 2 },
 		.plans = 2,
 	};
 
-	return write_image(v, dest, VA_FOURCC_NV12, l, a, &p, error, error_byte);
+	return write_image(v, dest, VA_FOURCC_NV12, &p, error, error_byte);
 }
 
 bool vadirect_load_p010(VaDirect *v, VASurfaceID dest, const uint16_t *y, uint32_t stride_y,
@@ -1726,10 +1765,13 @@ bool vadirect_load_p010(VaDirect *v, VASurfaceID dest, const uint16_t *y, uint32
 		.step = { stride_y, stride_uv },
 		.lines = { a, a / 2 },
 		.byte_per_line = { l * 2, l * 2 },
+		.padded_lines = { v->d.surface_height, v->d.surface_height / 2 },
+		.padded_bytes = { v->d.surface_width * 2, v->d.surface_width * 2 },
+		.unit = { 2, 4 },
 		.plans = 2,
 	};
 
-	return write_image(v, dest, VA_FOURCC_P010, l, a, &p, error, error_byte);
+	return write_image(v, dest, VA_FOURCC_P010, &p, error, error_byte);
 }
 
 bool vadirect_load_yuv420p10(VaDirect *v, VASurfaceID dest, const uint8_t *pixel,
@@ -1774,9 +1816,12 @@ bool vadirect_load_yuv420p10(VaDirect *v, VASurfaceID dest, const uint8_t *pixel
 		.step = { l * 2, l * 2 },
 		.lines = { a, a / 2 },
 		.byte_per_line = { l * 2, l * 2 },
+		.padded_lines = { v->d.surface_height, v->d.surface_height / 2 },
+		.padded_bytes = { v->d.surface_width * 2, v->d.surface_width * 2 },
+		.unit = { 2, 4 },
 		.plans = 2,
 	};
-	outcome = write_image(v, dest, VA_FOURCC_P010, l, a, &p, error, error_byte);
+	outcome = write_image(v, dest, VA_FOURCC_P010, &p, error, error_byte);
 	free(tmp);
 	return outcome;
 }

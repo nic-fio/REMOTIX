@@ -1379,6 +1379,10 @@ struct Encoder {
 	VAContextID vpp_context;
 	bool vpp_open;
 	uint32_t vpp_l, vpp_a;        /* the size the VPP was opened for */
+	/* ⭐ The padding layers of `convert_on_gpu()` (15 Oct 2026): off when
+	 *    REMOTIX_VPP_PADDING=0, or after the driver refused them once. */
+	bool vpp_padding_off;
+	bool vpp_padding_logged;
 	struct {
 		int fd;
 		uint32_t l, a, stride, offset, formato_drm;
@@ -3198,6 +3202,11 @@ static bool open_vpp(Encoder *c, uint32_t width, uint32_t height)
 	c->vpp_open = true;
 	c->vpp_l = width;
 	c->vpp_a = height;
+	{
+		const char *e = getenv("REMOTIX_VPP_PADDING");
+		if (e && strcmp(e, "0") == 0)
+			c->vpp_padding_off = true;
+	}
 	return true;
 }
 
@@ -3224,19 +3233,82 @@ static void close_vpp(Encoder *c)
  *    destination**.  Getting the direction wrong gives no error: it gives a washed-out or
  *    over-contrasted picture, that is a defect no log line names.
  */
+/*
+ * ⭐⭐ THE PADDING ON ZERO COPY (15 Oct 2026, the question of 4b194bbc).
+ *
+ * The destination surface is the aligned one (`vadirect.c`, the input pool):
+ * 1920x1088 for a 1080 canvas in H.264, and the VPP writes only the canvas.
+ * ⛔ The rows and columns past it are ENCODED (the SPS crops them only from
+ *    what is shown) and nobody writes them: on iHD the driver's colour fill
+ *    paints the part of the target the output region does not cover with
+ *    `output_background_color` (black, Y 16) — `[S]` media-driver's
+ *    colorfill rule, not measured; on radeonsi nothing is written at all, and
+ *    the rows hold what the allocation held.  A step from the picture to
+ *    black or to garbage, every key, next to the last visible row.
+ * ⭐ THE CURE, in the SAME picture (`vaBeginPicture` … `vaEndPicture`): up to
+ *    three more layers, each the source's last row / last column / last
+ *    pixel STRETCHED over the padding — a 1-sample source region scaled into
+ *    the strip is a copy of the edge, the rule of the memory route
+ *    (`colors709_copy_padded()`) and of the Vulkan shader (`clamp()`).
+ *    ⚠ In the same picture and not in a second one: on iHD a second picture
+ *    whose output region does not cover the target would colour-fill the
+ *    whole target again, the canvas included.  ⚠ `VA_FILTER_SCALING_FAST`
+ *    on the strips: on a sampler that is bilinear the first padding rows
+ *    take a part of the row above the edge; it is padding, and continuous.
+ * ⛔ Not measured on a card on the day it was written (the server was in the
+ *    final round): if the driver refuses the layers the frame is redone at
+ *    once with the canvas alone, as before, and a line says so; and
+ *    REMOTIX_VPP_PADDING=0 switches them off for an A/B on a box.
+ */
+static VAStatus vpp_render(Encoder *c, VADisplay dpy, VASurfaceID destination,
+                           VAProcPipelineParameterBuffer *p, unsigned n)
+{
+	VABufferID buffer[4] = { VA_INVALID_ID, VA_INVALID_ID, VA_INVALID_ID, VA_INVALID_ID };
+	VAStatus state, fine;
+	unsigned made = 0;
+
+	state = vaBeginPicture(dpy, c->vpp_context, destination);
+	if (state != VA_STATUS_SUCCESS) {
+		registro_dice(LOG_ENCODING, "⛔ vaBeginPicture: %s", vaErrorStr(state));
+		return state;
+	}
+	for (; made < n; made++) {
+		state = vaCreateBuffer(dpy, c->vpp_context, VAProcPipelineParameterBufferType,
+		                       sizeof p[made], 1, &p[made], &buffer[made]);
+		if (state != VA_STATUS_SUCCESS) {
+			registro_dice(LOG_ENCODING, "⛔ vaCreateBuffer: %s", vaErrorStr(state));
+			break;
+		}
+	}
+	if (state == VA_STATUS_SUCCESS) {
+		state = vaRenderPicture(dpy, c->vpp_context, buffer, (int) n);
+		if (state != VA_STATUS_SUCCESS)
+			registro_dice(LOG_ENCODING, "⛔ vaRenderPicture (%u layers): %s", n,
+			              vaErrorStr(state));
+	}
+	fine = vaEndPicture(dpy, c->vpp_context);
+	for (unsigned k = 0; k < made; k++)
+		vaDestroyBuffer(dpy, buffer[k]);
+	if (state == VA_STATUS_SUCCESS && fine != VA_STATUS_SUCCESS) {
+		registro_dice(LOG_ENCODING, "⛔ vaEndPicture (%u layers): %s", n, vaErrorStr(fine));
+		state = fine;
+	}
+	return state;
+}
+
 static bool convert_on_gpu(Encoder *c, VASurfaceID source, VASurfaceID destination)
 {
 	VADisplay dpy = display_di(c);
-	VAProcPipelineParameterBuffer p;
-	VABufferID buffer = VA_INVALID_ID;
-	VAStatus state, fine;
-	VARectangle region;
+	VAProcPipelineParameterBuffer p[4];
+	VAStatus state;
+	VARectangle region, from[3], to[3];
+	unsigned layers = 1;
 
 	if (!dpy || !c->vpp_open)
 		return false;
 
-	memset(&p, 0, sizeof p);
-	p.surface = source;
+	memset(p, 0, sizeof p);
+	p[0].surface = source;
 	/* ═══════════════════════════════════════════════════════════════════════
 	 * ⛔⛔⛔ THE TWO REGIONS ARE DECLARED, AND LEAVING THEM `NULL` IS A REAL
 	 *       DEFECT — found by refuting, on 22 Aug 2026, and the milliseconds were
@@ -3263,38 +3335,72 @@ static bool convert_on_gpu(Encoder *c, VASurfaceID source, VASurfaceID destinati
 	region.y = 0;
 	region.width = (unsigned short) c->vpp_l;
 	region.height = (unsigned short) c->vpp_a;
-	p.surface_region = &region;
-	p.output_region = &region;
-	p.output_background_color = 0xff000000;
-	p.filter_flags = VA_FRAME_PICTURE;
-	p.filters = NULL;
-	p.num_filters = 0;
-	p.surface_color_standard = VAProcColorStandardNone; /* the source is RGB */
-	p.output_color_standard = VAProcColorStandardBT709;
-	p.input_color_properties.color_range = VA_SOURCE_RANGE_FULL;
-	p.output_color_properties.color_range = VA_SOURCE_RANGE_REDUCED;
+	p[0].surface_region = &region;
+	p[0].output_region = &region;
+	p[0].output_background_color = 0xff000000;
+	p[0].filter_flags = VA_FRAME_PICTURE;
+	p[0].filters = NULL;
+	p[0].num_filters = 0;
+	p[0].surface_color_standard = VAProcColorStandardNone; /* the source is RGB */
+	p[0].output_color_standard = VAProcColorStandardBT709;
+	p[0].input_color_properties.color_range = VA_SOURCE_RANGE_FULL;
+	p[0].output_color_properties.color_range = VA_SOURCE_RANGE_REDUCED;
 
-	state = vaBeginPicture(dpy, c->vpp_context, destination);
-	if (state != VA_STATUS_SUCCESS) {
-		registro_dice(LOG_ENCODING, "⛔ vaBeginPicture: %s", vaErrorStr(state));
-		return false;
+	/* ⭐ The padding layers: the edge of the SOURCE stretched over the strips
+	 *    of the aligned destination (see the box above). */
+	if (!c->vpp_padding_off && c->va) {
+		const VaDirectDeclaration *d = vadirect_declaration(c->va);
+		const uint32_t l = c->vpp_l, a = c->vpp_a;
+		const uint32_t sl = d ? d->surface_width : l, sa = d ? d->surface_height : a;
+		unsigned k = 0;
+		if (sa > a) {                                  /* below: the last row */
+			from[k] = (VARectangle){ 0, (short) (a - 1), (unsigned short) l, 1 };
+			to[k] = (VARectangle){ 0, (short) a, (unsigned short) l,
+			                       (unsigned short) (sa - a) };
+			k++;
+		}
+		if (sl > l) {                                  /* right: the last column */
+			from[k] = (VARectangle){ (short) (l - 1), 0, 1, (unsigned short) a };
+			to[k] = (VARectangle){ (short) l, 0, (unsigned short) (sl - l),
+			                       (unsigned short) a };
+			k++;
+		}
+		if (sa > a && sl > l) {                        /* the corner: the last pixel */
+			from[k] = (VARectangle){ (short) (l - 1), (short) (a - 1), 1, 1 };
+			to[k] = (VARectangle){ (short) l, (short) a, (unsigned short) (sl - l),
+			                       (unsigned short) (sa - a) };
+			k++;
+		}
+		for (unsigned i = 0; i < k; i++) {
+			p[1 + i] = p[0];
+			p[1 + i].surface_region = &from[i];
+			p[1 + i].output_region = &to[i];
+			p[1 + i].filter_flags = VA_FRAME_PICTURE | VA_FILTER_SCALING_FAST;
+		}
+		layers = 1 + k;
 	}
-	state = vaCreateBuffer(dpy, c->vpp_context, VAProcPipelineParameterBufferType, sizeof p, 1,
-	                       &p, &buffer);
-	if (state != VA_STATUS_SUCCESS) {
-		registro_dice(LOG_ENCODING, "⛔ vaCreateBuffer: %s", vaErrorStr(state));
-		vaEndPicture(dpy, c->vpp_context);
-		return false;
+
+	state = vpp_render(c, dpy, destination, p, layers);
+	if (state != VA_STATUS_SUCCESS && layers > 1) {
+		/* ⛔ The driver refused the padding layers: the frame again with the
+		 *    canvas alone, as before 15 Oct 2026, and no more layers on this
+		 *    encoder.  The padding is then the driver's (see the box above). */
+		c->vpp_padding_off = true;
+		registro_dice(LOG_ENCODING,
+		              "⚠ VPP: the %u padding layers were refused (%s): the padding "
+		              "past %ux%u stays the driver's, the canvas is converted alone",
+		              layers - 1, vaErrorStr(state), c->vpp_l, c->vpp_a);
+		layers = 1;
+		state = vpp_render(c, dpy, destination, p, 1);
 	}
-	state = vaRenderPicture(dpy, c->vpp_context, &buffer, 1);
 	if (state != VA_STATUS_SUCCESS)
-		registro_dice(LOG_ENCODING, "⛔ vaRenderPicture: %s", vaErrorStr(state));
-	fine = vaEndPicture(dpy, c->vpp_context);
-	vaDestroyBuffer(dpy, buffer);
-	if (state != VA_STATUS_SUCCESS || fine != VA_STATUS_SUCCESS) {
-		if (fine != VA_STATUS_SUCCESS)
-			registro_dice(LOG_ENCODING, "⛔ vaEndPicture: %s", vaErrorStr(fine));
 		return false;
+	if (layers > 1 && !c->vpp_padding_logged) {
+		c->vpp_padding_logged = true;
+		registro_dice(LOG_ENCODING,
+		              "⭐ VPP: the padding past %ux%u is filled with copies of the edge "
+		              "(%u layers in the same picture; REMOTIX_VPP_PADDING=0 switches "
+		              "them off)", c->vpp_l, c->vpp_a, layers - 1);
 	}
 	/* ⛔⭐ AND HERE WE REALLY WAIT — see the box at the top: this line IS the
 	 *     release.  When it returns, the GPU has finished reading the

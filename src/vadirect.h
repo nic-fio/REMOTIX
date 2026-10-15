@@ -123,7 +123,10 @@ VaDirect *vadirect_open(const VaDevice *d, const VaDirectRequest *r,
 void vadirect_close(VaDirect *v);
 const VaDirectDeclaration *vadirect_declaration(const VaDirect *v);
 
-/* The next free input surface (NV12 or P010, at the size of the canvas).
+/* The next free input surface (NV12 or P010, at the ALIGNED size
+ * `surface_width` x `surface_height`: the rows and columns past the canvas
+ * are the padding the card encodes and the SPS crops, and they are filled
+ * with copies of the edge by the loads below, or by the VPP on zero copy).
  * ⚠ The pool goes round in a circle: after `input_surfaces` calls it
  * starts again from the first, and that is fine because every encode WAITS
  * for the end. */
@@ -149,7 +152,8 @@ bool vadirect_encode(VaDirect *v, VASurfaceID ingress, bool key,
  *   zero copy, where the frame is already on the card.
  * - yuv420p10le (the bench): directly into the P010 input surface, with the
  *   shift of the 10 bits to the top of 16 done here.
- * Strides are in BYTES.
+ * Strides are in BYTES.  The planes are the CANVAS (`width` x `height`); the
+ * padding up to the aligned surface is written here, copies of the edge.
  */
 bool vadirect_load_nv12(VaDirect *v, VASurfaceID dest, const uint8_t *y, uint32_t stride_y,
                            const uint8_t *uv, uint32_t stride_uv, char *error, size_t error_byte);
