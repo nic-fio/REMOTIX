@@ -235,6 +235,10 @@ override CFLAGS += $(F18A_CFLAGS)
 #
 # ⚠ On Debian Trixie: `apt install libei-dev libxkbcommon-dev`.
 F4_CFLAGS := $(shell pkg-config --cflags libei-1.0 xkbcommon)
+# ⭐ 15 Oct 2026 — the compositor's RECEIPT for every key (`ei_ping`, «@since
+#    1.4» in the header, present in 1.3.901 = Debian 13's): `input.c` compiles
+#    it only where libei has it.  ⚠ Ubuntu 24.04 (1.2.x) builds without it.
+F4_CFLAGS += $(shell pkg-config --atleast-version=1.3.901 libei-1.0 && echo -DREMOTIX_EI_PING)
 F4_LIBS   := $(shell pkg-config --libs   libei-1.0 xkbcommon)
 override CFLAGS += $(F4_CFLAGS)
 

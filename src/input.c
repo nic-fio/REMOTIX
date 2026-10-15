@@ -192,7 +192,10 @@
 #include <poll.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
+#include <sys/ioctl.h>
+#include <linux/sockios.h>
 
 #include "kwin.h"
 #include "mutter.h"
@@ -314,6 +317,16 @@ struct input
 	 *    shows at a distance. */
 	int fd_socket;
 
+	/* ⭐ THE KEY WITNESS — 15 Oct 2026, KDE loses or delays keys (see the box
+	 *    "THE COMPOSITOR'S RECEIPT" above `send_key`).  Indexed by evdev code:
+	 *    when each press / release was handed to the socket (monotonic and
+	 *    wall clock), and when the compositor TOOK the press (its pong). */
+	gint64 key_sent_us[2][MAX_KEY];
+	gint64 key_sent_wall_us[2][MAX_KEY];
+	unsigned key_sent_unread[2][MAX_KEY];
+	gint64 key_taken_press_us[MAX_KEY];
+	unsigned pings_out;
+
 	/* ⭐ PHASE 13, INCREMENT 3 — on wlroots the transport is `wlr_input.c`, and
 	 *    `ei`, `session`, `kwin`, `pointer` and `keyboard_dev` stay NULL.
 	 *    ⛔ Non-NULL means "this Input is wlroots's" for its WHOLE
@@ -397,6 +410,136 @@ static void beat_border(Input *in, struct ei_device *device)
 	ei_device_frame(device, ei_now(in->ei));
 }
 
+/*
+ * ⭐⭐ THE COMPOSITOR'S RECEIPT — 15 Oct 2026, and it is EVIDENCE, not a cure.
+ *
+ * `[M]` climb `fix-kde-20261015/fix-kde-intel-4k`: on KDE the server took a
+ * PageDown (press and release 91 ms apart, both handed to libei: no
+ * «did not take it» line), and Firefox in the session never saw the keydown; a
+ * Home arrived THREE times (= the application's autorepeat, KDE's delay is
+ * 600 ms: the release reached the window more than 600 ms after the press).
+ * Typed text on the same path works.  ⚠ In the same seconds the HOST was at
+ * 19-20 cores of 20 and load 30, and a wheel gesture was lost too.
+ *
+ * ⛔ Until now the log ended at `ei_device_frame()`: what happened after —
+ *    the socket, KWin's main loop, the window — had no witness, and «our
+ *    side or KWin's side» could not be told.  `libei` writes AT ONCE
+ *    (`ei_send_message` → `iobuf_send`; on `EAGAIN` it queues and arms
+ *    `EPOLLOUT`, and `input_run()` flushes) ⇒ there is no flush missing here.
+ *
+ * ⭐ The receipt is `ei_ping()` (the protocol's `sync`): `libeis` answers it
+ *    in `eis_get_event()`, that is ONLY when the compositor's main loop has
+ *    PULLED from its queue everything we sent before — the key included.
+ *    ⇒ pong time − send time = how long the key waited for the compositor.
+ *    And for a release, the gap between the two receipts is the gap the
+ *    APPLICATION sees: ≥ 600 ms on KDE ⇒ autorepeat.
+ * ⚠ And `SIOCOUTQ` on the socket at send time: the bytes the compositor has
+ *   NOT read yet.  Non-zero = its loop was already behind before this key.
+ * ⛔ Not the key: for non-modifiers the code is written only if
+ *    `log_speakable_key()` allows it (phase 16 §12), «key» otherwise.
+ */
+#ifdef REMOTIX_EI_PING
+#define RECEIPT_SLOW_MS 100.0
+#define RECEIPT_REPEAT_MS 500.0
+
+static unsigned unread_by_compositor(Input *in)
+{
+	int queued = 0;
+
+	if (in->fd_socket < 0 || ioctl(in->fd_socket, SIOCOUTQ, &queued) != 0 || queued < 0)
+		return 0;
+	return (unsigned) queued;
+}
+
+static void wall_clock(gint64 wall_us, char *out, size_t n)
+{
+	time_t sec = (time_t) (wall_us / G_USEC_PER_SEC);
+	struct tm tm;
+
+	gmtime_r(&sec, &tm);
+	g_snprintf(out, n, "%02d:%02d:%02d.%03d", tm.tm_hour, tm.tm_min, tm.tm_sec,
+	           (int) ((wall_us % G_USEC_PER_SEC) / 1000));
+}
+
+static void ask_receipt(Input *in, uint16_t code, int pressed)
+{
+	struct ei_ping *ping;
+	int p = pressed != 0;
+
+	if (!in->ei || !in->handshake_done)
+		return;
+	in->key_sent_us[p][code] = g_get_monotonic_time();
+	in->key_sent_wall_us[p][code] = g_get_real_time();
+	in->key_sent_unread[p][code] = unread_by_compositor(in);
+	ping = ei_new_ping(in->ei);
+	if (!ping)
+		return;
+	/* ⭐ No allocation: the key travels IN the pointer (code and direction),
+	 *    so a pong lost at detach leaks nothing. */
+	ei_ping_set_user_data(ping, GUINT_TO_POINTER(0x100000u | ((unsigned) code << 1) | (unsigned) p));
+	ei_ping(ping);
+	ei_ping_unref(ping);
+	in->pings_out++;
+}
+
+static void receipt_arrived(Input *in, struct ei_event *event)
+{
+	struct ei_ping *ping = ei_event_pong_get_ping(event);
+	unsigned tag = ping ? GPOINTER_TO_UINT(ei_ping_get_user_data(ping)) : 0;
+	unsigned code, p;
+	gint64 now = g_get_monotonic_time();
+	double waited, gap_taken = -1.0, gap_sent = -1.0;
+	char which[24], sent_at[16];
+
+	if (in->pings_out)
+		in->pings_out--;
+	if (!(tag & 0x100000u))
+		return;
+	code = (tag >> 1) & 0x7FFFFu;
+	p = tag & 1u;
+	if (code >= MAX_KEY || !in->key_sent_us[p][code])
+		return;
+	waited = (double) (now - in->key_sent_us[p][code]) / 1000.0;
+	if (p)
+		in->key_taken_press_us[code] = now;
+	else if (in->key_taken_press_us[code])
+	{
+		gap_taken = (double) (now - in->key_taken_press_us[code]) / 1000.0;
+		if (in->key_sent_us[1][code])
+			gap_sent = (double) (in->key_sent_us[0][code] - in->key_sent_us[1][code]) / 1000.0;
+		in->key_taken_press_us[code] = 0;
+	}
+	if (log_speakable_key(code))
+		g_snprintf(which, sizeof which, "key 0x%X (%u)", code, code);
+	else
+		g_strlcpy(which, "key", sizeof which);
+	wall_clock(in->key_sent_wall_us[p][code], sent_at, sizeof sent_at);
+
+	if (gap_taken >= RECEIPT_REPEAT_MS && gap_sent >= 0.0 && gap_sent < RECEIPT_REPEAT_MS)
+		registro_dice(AREA,
+		              "⛔ RECEIPT: %s released — handed over at %s UTC, the compositor TOOK it "
+		              "after %.1f ms (%u bytes it had not read yet at send).  ⛔ Between press and "
+		              "release it took %.1f ms, we sent them %.1f ms apart: the application "
+		              "sees a key held that long ⇒ its AUTOREPEAT fires (KDE: 600 ms).  The delay "
+		              "is the compositor's, not ours",
+		              which, sent_at, waited, in->key_sent_unread[p][code], gap_taken, gap_sent);
+	else if (waited >= RECEIPT_SLOW_MS || in->key_sent_unread[p][code])
+		registro_dice(AREA,
+		              "⚠ RECEIPT: %s %s — handed over at %s UTC, the compositor TOOK it after "
+		              "%.1f ms (%u bytes it had not read yet at send, %u receipts still out).  "
+		              "⚠ The wait is in the compositor's main loop, after our socket",
+		              which, p ? "pressed" : "released", sent_at, waited,
+		              in->key_sent_unread[p][code], in->pings_out);
+	else
+		log_detail(AREA, "receipt: %s %s handed over at %s UTC, taken by the compositor after %.1f ms",
+		           which, p ? "pressed" : "released", sent_at, waited);
+	in->key_sent_us[p][code] = 0;
+}
+#else
+/* ⚠ libei older than 1.3.901 (Ubuntu 24.04): no `ei_ping`, no receipt. */
+static void ask_receipt(Input *in, uint16_t code, int pressed) { (void) in; (void) code; (void) pressed; }
+#endif
+
 static int send_key(Input *in, uint16_t code, int pressed)
 {
 	if (code >= MAX_KEY)
@@ -443,6 +586,7 @@ static int send_key(Input *in, uint16_t code, int pressed)
 
 	ei_device_keyboard_key(in->keyboard_dev, code, pressed != 0);
 	beat_border(in, in->keyboard_dev);
+	ask_receipt(in, code, pressed);
 
 	/* ⛔ The count is kept AFTER sending: marking a key that did not leave
 	 *    would make the detach release something nobody pressed. */
@@ -1005,7 +1149,19 @@ static void handle_event(Input *in, struct ei_event *event)
 				in->pointer_active = FALSE;
 			if (device == in->keyboard_dev)
 				in->keyboard_active = FALSE;
+			/* ⛔ 15 Oct 2026: a pause was SILENT, and every key in it is refused
+			 *    with only a chatter line.  It is said: a lost key must be
+			 *    told apart from a device the compositor took away. */
+			registro_dice(AREA, "⚠ device «%s» PAUSED by the compositor: its input is "
+			                    "refused until it resumes",
+			              ei_device_get_name(device) ?: "?");
 			break;
+
+#ifdef REMOTIX_EI_PING
+		case EI_EVENT_PONG:
+			receipt_arrived(in, event);
+			break;
+#endif
 
 		case EI_EVENT_DISCONNECT:
 			registro_dice(AREA, "⛔ the compositor CLOSED the input channel");
