@@ -461,7 +461,7 @@ static void wall_clock(gint64 wall_us, char *out, size_t n)
 	           (int) ((wall_us % G_USEC_PER_SEC) / 1000));
 }
 
-static void ask_receipt(Input *in, uint16_t code, int pressed)
+static void ask_receipt(Input *in, uint16_t code, int pressed, unsigned unread_before)
 {
 	struct ei_ping *ping;
 	int p = pressed != 0;
@@ -470,7 +470,7 @@ static void ask_receipt(Input *in, uint16_t code, int pressed)
 		return;
 	in->key_sent_us[p][code] = g_get_monotonic_time();
 	in->key_sent_wall_us[p][code] = g_get_real_time();
-	in->key_sent_unread[p][code] = unread_by_compositor(in);
+	in->key_sent_unread[p][code] = unread_before;
 	ping = ei_new_ping(in->ei);
 	if (!ping)
 		return;
@@ -537,7 +537,9 @@ static void receipt_arrived(Input *in, struct ei_event *event)
 }
 #else
 /* ⚠ libei older than 1.3.901 (Ubuntu 24.04): no `ei_ping`, no receipt. */
-static void ask_receipt(Input *in, uint16_t code, int pressed) { (void) in; (void) code; (void) pressed; }
+static unsigned unread_by_compositor(Input *in) { (void) in; return 0; }
+static void ask_receipt(Input *in, uint16_t code, int pressed, unsigned unread_before)
+{ (void) in; (void) code; (void) pressed; (void) unread_before; }
 #endif
 
 static int send_key(Input *in, uint16_t code, int pressed)
@@ -584,9 +586,13 @@ static int send_key(Input *in, uint16_t code, int pressed)
 		return -1;
 	}
 
+	/* ⛔ `SIOCOUTQ` is read BEFORE the key: libei writes at once, so read
+	 *    after it the count holds the key's own bytes, is almost never 0, and
+	 *    every keystroke would get an always-on «⚠ RECEIPT» line. */
+	unsigned unread_before = unread_by_compositor(in);
 	ei_device_keyboard_key(in->keyboard_dev, code, pressed != 0);
 	beat_border(in, in->keyboard_dev);
-	ask_receipt(in, code, pressed);
+	ask_receipt(in, code, pressed, unread_before);
 
 	/* ⛔ The count is kept AFTER sending: marking a key that did not leave
 	 *    would make the detach release something nobody pressed. */
