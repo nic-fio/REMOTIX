@@ -447,10 +447,13 @@ static void beat_border(Input *in, struct ei_device *device)
  *    A line per key with its millisecond and press/release is the typing
  *    rhythm, and the length of a password: NEVER in the always-on log.
  *    ⇒ The always-on log gets ONE line per RECEIPT_PERIOD_US, and only if in
- *      it something was slow: how many key events, how many slow, max and
- *      median wait, how many sent while the compositor was behind, how many
- *      autorepeat risks, and the period's bounds to the SECOND.  No key, no
- *      per-key time, no press/release order.  It is also the rate limit: an
+ *      it something was slow: the SHARE of slow key events and of those sent
+ *      while the compositor was behind (to 10 %), max and median wait (to
+ *      10 ms), whether there was an autorepeat risk (yes/no), and the
+ *      period's bounds to the SECOND.  NO COUNT: the period starts at the
+ *      first key, so a count after a password and 10 s idle is its length.
+ *      Exact counts only under `--verbose`.  No key, no per-key time, no
+ *      press/release order.  It is also the rate limit: an
  *      overloaded host (exactly when it is slow) gets one line per period,
  *      not one per key.
  *    ⇒ Per key, ONLY under `--verbose` and ONLY for the slow ones and the
@@ -500,6 +503,23 @@ static int compare_float(const void *a, const void *b)
 	return (x > y) - (x < y);
 }
 
+/* ⛔ The always-on line's precision (see the box above): a share to the
+ *    nearest 10 % (never 0 % when there was one), a time to 10 ms. */
+static unsigned rough_share(unsigned part, unsigned whole)
+{
+	unsigned pct;
+
+	if (!part || !whole)
+		return 0;
+	pct = (unsigned) ((part * 100.0 / whole + 5.0) / 10.0) * 10;
+	return pct ? pct : 10;
+}
+
+static unsigned rough_ms(double ms)
+{
+	return ms <= 0.0 ? 0 : (unsigned) ((ms + 5.0) / 10.0) * 10;
+}
+
 /* ⭐ The period's line, and the period starts again.  `force` = the channel is
  *    closing: what was gathered is said now or never. */
 static void summarize_receipts(Input *in, gint64 now, gboolean force)
@@ -525,20 +545,27 @@ static void summarize_receipts(Input *in, gint64 now, gboolean force)
 	wall_second(in->rc_start_wall_us, from, sizeof from);
 	wall_second(g_get_real_time(), to, sizeof to);
 	if (in->rc_slow || in->rc_repeat)
+		/* ⛔ No count here: a period starts at the first key, so «18 key
+		 *    events» after a password and 10 s of quiet is its length.
+		 *    Shares to 10 %, times to 10 ms, the risk as yes/no. */
 		registro_dice(AREA,
-		              "%s RECEIPTS %s–%s UTC: %u key events, %u taken by the compositor after "
-		              "≥ %.0f ms (max %.1f ms, median %.1f ms%s), %u sent while it had not yet "
-		              "read the ones before, %u autorepeat risks (a release taken ≥ %.0f ms after "
-		              "its press although sent closer: the application sees the key held, KDE "
-		              "repeats at 600 ms).  ⚠ The wait is in the compositor's main loop, after "
-		              "our socket",
-		              in->rc_repeat ? "⛔" : "⚠", from, to, in->rc_keys, in->rc_slow,
-		              RECEIPT_SLOW_MS, in->rc_max_ms, median,
+		              "%s RECEIPTS %s–%s UTC: about %u%% of the key events taken by the "
+		              "compositor after ≥ %.0f ms (max ~%u ms, median ~%u ms%s), about %u%% sent "
+		              "while it had not yet read the ones before, autorepeat risk: %s (a release "
+		              "taken ≥ %.0f ms after its press although sent closer: the application sees "
+		              "the key held, KDE repeats at 600 ms).  ⚠ The wait is in the compositor's "
+		              "main loop, after our socket",
+		              in->rc_repeat ? "⛔" : "⚠", from, to,
+		              rough_share(in->rc_slow, in->rc_keys), RECEIPT_SLOW_MS,
+		              rough_ms(in->rc_max_ms), rough_ms(median),
 		              in->rc_kept < in->rc_keys ? ", of the first ones" : "",
-		              in->rc_behind, in->rc_repeat, RECEIPT_REPEAT_MS);
-	else
-		log_detail(AREA, "receipts %s–%s UTC: %u key events, max %.1f ms, median %.1f ms",
-		           from, to, in->rc_keys, in->rc_max_ms, median);
+		              rough_share(in->rc_behind, in->rc_keys),
+		              in->rc_repeat ? "yes" : "no", RECEIPT_REPEAT_MS);
+	/* Exact counts: only under --verbose, like the per-key lines. */
+	log_detail(AREA, "receipts %s–%s UTC: %u key events, %u slow, %u sent while behind, "
+	                 "%u autorepeat risks, max %.1f ms, median %.1f ms",
+	           from, to, in->rc_keys, in->rc_slow, in->rc_behind, in->rc_repeat,
+	           in->rc_max_ms, median);
 	in->rc_start_us = 0;
 	in->rc_keys = in->rc_slow = in->rc_behind = in->rc_repeat = in->rc_kept = 0;
 	in->rc_max_ms = 0.0;
