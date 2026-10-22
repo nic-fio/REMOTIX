@@ -359,7 +359,7 @@ changed() {
 #    path can say something nobody thought of declaring.
 # ---------------------------------------------------------------------------
 decide_family() {
-	local -n _elenco=$1
+	local -n _list=$1
 	local f touches_product=0 touches_network=0 fresh=""
 
 	# A new desktop is recognised by an ADDED recipe, not a modified one.
@@ -542,7 +542,7 @@ run_mesh() {
 		"$@"
 		M_OUTCOME=$?
 		after=$SECONDS
-		M_SECONDS=$((dopo - prima))
+		M_SECONDS=$((after - before))
 		case "$M_OUTCOME" in
 		0) ok  "$name — holds  (${M_SECONDS}s)" ;;
 		1) ko  "$name — DOES NOT HOLD  (${M_SECONDS}s)" ;;
@@ -912,8 +912,8 @@ family_fast() {
 		skip_mesh C11 "the file is not there (or there is more than one)"
 	fi
 
-	spent=$SECONDS; left=$((TETTO_VELOCE - spent))
-	local cost=$((COSTO_C1_GIRO * GIRI_VELOCE))
+	spent=$SECONDS; left=$((FAST_CAP - spent))
+	local cost=$((COST_C1_ROUND * FAST_ROUNDS))
 	if [ $left -lt $cost ]; then
 		skip_mesh "C1x$FAST_ROUNDS" "${left}s remain and ~${cost}s are needed (ceiling ${FAST_CAP}s)"
 	else
@@ -1215,7 +1215,7 @@ box_on() {
 
 redo_one_box() {
 	local d=$1 before step t0 s has_failed=""
-	before=$(line_from_turn_on eta "$d" 'hours=')
+	before=$(line_from_turn_on age "$d" 'hours=')
 	if [ "$DRY_RUN" = 1 ]; then
 		inf "(dry run) I would rebuild the box $d  (now: $before)"
 		return 0
@@ -1230,7 +1230,7 @@ redo_one_box() {
 	fi
 	inf "the box $d before being thrown away: $before"
 	t0=$SECONDS
-	for step in accendi prodotto server; do
+	for step in start product server; do
 		if ! bash "$HERE/11-start.sh" "$step" "$d"; then
 			has_failed=$step
 			break
@@ -1238,7 +1238,7 @@ redo_one_box() {
 	done
 	s=$((SECONDS - t0))
 	if [ -z "$has_failed" ]; then
-		ok "box $d rebuilt from scratch — accendi, prodotto, server — in ${s}s"
+		ok "box $d rebuilt from scratch — start, product, server — in ${s}s"
 		annotate_box "$d" "redone" "$s" true "it was: $before"
 	else
 		ko "box $d: «$has_failed» did not succeed (${s}s) ⇒ its meshes will say «I could not look»"
@@ -1325,13 +1325,13 @@ value_of() {
 balance_before() {
 	BALANCE_BEFORE=""
 	[ "$DRY_RUN" = 1 ] && return 0
-	BALANCE_BEFORE=$(line_from_turn_on bilancio "$1" 'server_pid=')
+	BALANCE_BEFORE=$(line_from_turn_on balance "$1" 'server_pid=')
 }
 
 balance_after() {
 	local d=$1 after k a b product_growth="" box_growth="" note=""
 	[ "$DRY_RUN" = 1 ] && return 0
-	after=$(line_from_turn_on bilancio "$d" 'server_pid=')
+	after=$(line_from_turn_on balance "$d" 'server_pid=')
 	case "$BALANCE_BEFORE$after" in
 	*ignota*|*spenta*)
 		inf "⚠ bilancio($d): not readable (before «$BALANCE_BEFORE», after «$after»)"
@@ -1374,7 +1374,7 @@ box_guard() {
 	[ "$DRY_RUN" = 1 ] && return 0
 	command -v podman >/dev/null 2>&1 || return 0
 	for d in "$@"; do
-		line=$(line_from_turn_on eta "$d" 'hours=')
+		line=$(line_from_turn_on age "$d" 'hours=')
 		case "$line" in spenta|ignota) continue ;; esac
 		annotate_box "$d" "eta a fine giro" 0 true "$line"
 		case "$line" in
@@ -1673,7 +1673,7 @@ meta_remote() {
 		ko "⛔ $R_NOTE"
 		inf "  ⇒ I launch nothing and do not touch its log: one box at a time"
 		inf "    (§3.4, the card lock).  Try again when it has finished"
-		M_SECONDS=$((SECONDS - prima))
+		M_SECONDS=$((SECONDS - before))
 		return 3
 	fi
 	# ⛔ The log and the outcome file are deleted FIRST: an old outcome read
@@ -1689,13 +1689,13 @@ meta_remote() {
 		inf "  ⇒ it is an «I could not look» (outcome 3), ⛔ NOT a green:"
 		inf "    the log line carries it written, and §5.2 says that a repeated"
 		inf "    3 is a fault of the bench"
-		M_SECONDS=$((dopo - prima))
+		M_SECONDS=$((after - before))
 		return 3
 	fi
 
 	response=$(wait_remote "$outcome_f" "$WAIT_REMOTE")
 	after=$SECONDS
-	M_SECONDS=$((dopo - prima))
+	M_SECONDS=$((after - before))
 
 	# ⭐ The log is brought home with scp (`--get`), ⛔ never by capturing the stdout of
 	#   a remote `cat`: the password prompt also ends up in there
@@ -1893,7 +1893,7 @@ decide|run)
 		FAMILY="$REQUESTED_FAMILY"
 		REASON_TEXT="asked for by name"
 	else
-		FAMILY=$(decide_family ELENCO)
+		FAMILY=$(decide_family LIST)
 		REASON_TEXT=$(why_family "$FAMILY")
 	fi
 
@@ -2032,7 +2032,7 @@ remote)
 		FAMILY="$REQUESTED_FAMILY"
 		REASON_TEXT="asked for by name"
 	else
-		FAMILY=$(decide_family ELENCO)
+		FAMILY=$(decide_family LIST)
 		REASON_TEXT=$(why_family "$FAMILY")
 	fi
 

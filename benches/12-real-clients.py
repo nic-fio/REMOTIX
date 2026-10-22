@@ -3,7 +3,7 @@
 
     python3 benches/12-real-clients.py --url https://192.168.0.2:8511/ \\
         --user prova --password '…' [--browser firefox,chrome,android] \\
-        [--visible] [--cap-s 30] [--scene move|viva|ferma] \\
+        [--visible] [--cap-s 30] [--scene move|live|still] \\
         [--log-cmd "ssh … tail -n 3000 …/registro.log"] [--certify]
 
 ⭐ WHAT IT DOES.  It opens REMOTIX in a REAL browser — Firefox 140 ESR driven with
@@ -54,14 +54,14 @@
 
 ⚠ THE SCENE IS DECLARED (`--scene`).  A still desktop sends NO frames, and
   zero frames on a still desktop is the right thing:
-     · `ferma`  no new frame ⇒ 3 (it cannot be told apart)
-     · `viva`   whoever launches GUARANTEES that something moves ⇒ zero frames is 1
-     · `muovi`  (default) the bench moves the pointer over the canvas for
+     · `still`  no new frame ⇒ 3 (it cannot be told apart)
+     · `live`   whoever launches GUARANTEES that something moves ⇒ zero frames is 1
+     · `move`   (default) the bench moves the pointer over the canvas for
                 `--continuity-s` seconds, crossing the whole desktop ⇒ zero
                 frames is 1.  ⚠ The cursor is drawn by the page, not by the
                 server: the frame is born only if the desktop reacts to the
                 passage (highlights, bar, dock).  On a desktop that does not
-                react, use `viva` with a scene running.
+                react, use `live` with a scene running.
 
 ⚠ HEADLESS IS DECLARED.  Without `--visible` Firefox and Chrome run headless,
   that is without GPU: decoding and drawing are in SOFTWARE.  The Android
@@ -526,8 +526,8 @@ class CdpDriver:
 
 
 KEY_LIST = {
-    "Control": {"key": "Control", "code": "ControlLeft", "vk": 17, "wd": ""},
-    "ArrowRight": {"key": "ArrowRight", "code": "ArrowRight", "vk": 39, "wd": ""},
+    "Control": {"key": "Control", "code": "ControlLeft", "vk": 17, "wd": "\ue009"},
+    "ArrowRight": {"key": "ArrowRight", "code": "ArrowRight", "vk": 39, "wd": "\ue014"},
 }
 
 

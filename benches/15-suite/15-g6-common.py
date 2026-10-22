@@ -68,7 +68,7 @@ PAGE = """<!doctype html><meta charset=utf-8><title>REMOTIX G6</title>
 <input id=f autocomplete=off spellcheck=false>
 <div id=s></div>
 <script>
-const TAV=%(tav)s, VUOTO='rgb(128,128,128)', N=%(n)d;
+const TAV=%(pal)s, VUOTO='rgb(128,128,128)', N=%(n)d;
 const G=(Date.now().toString(36)+Math.random().toString(36).slice(2,8));
 const f=document.getElementById('f'), s=document.getElementById('s'), k=[];
 for (let i=0;i<N;i++){const d=document.createElement('div');d.className='k';
@@ -113,10 +113,10 @@ def turn_on_scene(s, window=SCENE_WINDOW):
     c, t = s.sc.inside(
         # (the REAL ~/.cache is now given by `suite.Session`, 25 Sep 2026)
         "set -e; h=/home/{c}; mkdir -p $h/{pr}; "
-        "echo {srv} | base64 -d > $h/g6-servitore.py; echo {pag} | base64 -d > $h/g6.html; "
+        "echo {srv} | base64 -d > $h/g6-servitore.py; echo {page_map} | base64 -d > $h/g6.html; "
         "echo {pref} | base64 -d > $h/{pr}/user.js; echo {xul} | base64 -d > $h/{pr}/xulstore.json; "
         ": > $h/g6.log; chown -R {c}: $h/{pr} $h/g6-servitore.py $h/g6.html $h/g6.log; set +e; "
-        "u=$(id -u {c}); "
+        "u=$(id -u {c}); pkill -f 'python3 /home/[^ ]*servitore[.]py {p} ' 2>/dev/null; sleep 0.3; "
         "setsid runuser -u {c} -- python3 $h/g6-servitore.py {p} $h/g6.html $h/g6.log "
         "</dev/null >/dev/null 2>&1 & "
         "d=''; for i in $(seq 1 40); do d=$(ls /run/user/$u 2>/dev/null | "
@@ -538,7 +538,7 @@ def borders(im, r=None):
                 k += (p[0] < 12 and p[1] < 12 and p[2] < 12)
         return round(k / max(1, n), 3)
     return {"top": media(range(0, min(6, h))), "basso": media(range(max(0, h - 6), h)),
-            "alto_f": slices(range(0, min(6, h))), "basso_f": slices(range(max(0, h - 6), h)),
+            "top_f": slices(range(0, min(6, h))), "basso_f": slices(range(max(0, h - 6), h)),
             "covered": covered,
             "nero_destra": nero(range(int(w * 0.97), w), range(0, h, 3)),
             "nero_basso": nero(range(0, w, 3), range(int(h * 0.97), h))}

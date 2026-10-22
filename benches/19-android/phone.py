@@ -249,9 +249,9 @@ class PhoneDriver(VERI.CdpDriver):
         self.guard()
         return super().drag(points)
 
-    def keystroke(self, t):
+    def key(self, t):
         self.guard()
-        return super().keystroke(t)
+        return super().key(t)
 
     # -- closing, and killing -------------------------------------------------
     def _close_tab(self):

@@ -86,7 +86,7 @@ def _zoom_in(s, im, cx, cy, name):
 def observe_dot(s, line):
     from PIL import Image
     try:
-        mira = line["window"]["mira_desktop"]["centro"]
+        mira = line["window"]["mira_desktop"]["center"]
     except (KeyError, TypeError):
         return {"seen": None, "detto": "the window was not found: not looking"}
     geo = s.geometry()
@@ -171,7 +171,7 @@ def body(o, E):
             raise S.Blocked(line.get("why", "the mesh did not observe")
                              + G3.explain_blind(oom0))
         r = C21.judge_browser(dict(line), oss, False)
-        passi = "; ".join(m for _p, _e, m in r["healthy"]["passi"])
+        passi = "; ".join(m for _p, _e, m in r["healthy"]["steps"])
 
         # the dot: after the judgment, with the same browser and the same window
         try:
@@ -189,7 +189,7 @@ def body(o, E):
                      expected="with the table of expectations shifted by one, the same "
                             "images give red",
                      observed="; ".join(m for _p, _e, m in rg.get("fault", {})
-                                         .get("passi", [])))
+                                         .get("steps", [])))
 
 
 if __name__ == "__main__":

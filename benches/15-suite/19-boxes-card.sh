@@ -24,7 +24,7 @@ for m in $(mount | awk '$3 ~ /devroot\/srv\/remotix\/contenitori\/storage\/overl
 done
 for d in $DESKTOP; do
 	echo "=== $d $GPU $(date +%T)"
-	for step in accendi prodotto server; do
+	for step in start product server; do
 		if ! printf '%s\n' "$PASSWORD" | sudo -S -p '' env REMOTIX_CARD="$GPU" bash 11-start.sh "$step" "$d" >"/tmp/rifai-$GPU-$d-$step.log" 2>&1; then
 			echo "⛔ $d $step failed: $(tail -2 "/tmp/rifai-$GPU-$d-$step.log" | tr '\n' ' ')"
 			outcome=1

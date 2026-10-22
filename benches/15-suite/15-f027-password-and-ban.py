@@ -195,7 +195,7 @@ def path_exists(sc, chi):
 
 def send_without_reload(s, user, password, cap=30):
     r = s.g.js(S.VERI.JS_ENTER, user, password)
-    if r != "mandato":
+    if r != "sent":
         return None, {"outcome": "form not filled in: %s" % r}
     fine = time.time() + cap
     st = {}

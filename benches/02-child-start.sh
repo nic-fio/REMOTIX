@@ -215,7 +215,7 @@ stop)
 	#   with one's own is exactly the defect cured above.
 	others=$(( $(pgrep -f -- "--internal-child" 2>/dev/null | wc -l) ))
 	inf "on the machine $others «--internal-child» processes remain in all"\
-	    "(mine: $remain · of other benches: $((altrui - remain))) — ⚠ background, not verdict"
+	    "(mine: $remain · of other benches: $((others - remain))) — ⚠ background, not verdict"
 	inf "$(neighbors)"
 	[ "$remain" -eq 0 ] || exit 4
 	exit 0 ;;

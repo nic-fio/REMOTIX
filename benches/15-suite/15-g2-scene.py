@@ -177,11 +177,11 @@ class Scene:
         b = lambda x: base64.b64encode(x.encode()).decode()     # noqa: E731
         c, t = self.sc.inside(
             "set -e; h={h}; mkdir -p $h/.g2-profilo; "
-            "echo {srv} | base64 -d > $h/g2-servitore.py; echo {pag} | base64 -d > $h/g2.html; "
+            "echo {srv} | base64 -d > $h/g2-servitore.py; echo {page_map} | base64 -d > $h/g2.html; "
             "echo {pref} | base64 -d > $h/.g2-profilo/user.js; : > $h/g2.log; : > $h/g2.cmd; "
             "chown -R {c}: $h/.g2-profilo $h/g2-servitore.py $h/g2.html $h/g2.log $h/g2.cmd; "
             "set +e; u=$(id -u {c}); "
-            "pkill -u {c} -f g2-servitore.py 2>/dev/null; "
+            "pkill -f 'python3 /home/[^ ]*servitore[.]py {p} ' 2>/dev/null; sleep 0.3; "
             "setsid runuser -u {c} -- python3 $h/g2-servitore.py {p} $h/g2.html $h/g2.log "
             "$h/g2.cmd </dev/null >$h/.g2-servitore.log 2>&1 & "
             "d=''; for i in $(seq 1 40); do d=$(ls /run/user/$u 2>/dev/null | "
@@ -210,13 +210,13 @@ class Scene:
             parts.append("")
         r = _json(parts[0].strip()[2:]) if parts[0].strip().startswith("R ") else None
         s = _json(parts[1].strip()[2:]) if parts[1].strip().startswith("S ") else None
-        f = parts[2].strip()[6:].strip() if parts[2].strip().startswith("DONE") else ""
+        f = parts[2].strip()[6:].strip() if parts[2].strip().startswith("FATTO") else ""
         if r:
             self.rect = r
         return r, s, f
 
     def in_charge(self, cmd, wait=20.0):
-        """Writes the command and waits for `DONE`.  Returns the state afterwards, or None."""
+        """Writes the command and waits for `FATTO`.  Returns the state afterwards, or None."""
         self.n_cmd += 1
         ident = "%d-%d" % (int(time.time()), self.n_cmd)
         self.sc.inside("printf '%%s' '%s %s' > %s/g2.cmd" % (ident, cmd, self.h), 30)

@@ -121,7 +121,7 @@ b0_inf() { printf '    --  %s\n' "$*"; }
 # ⛔ NO `${TARGET:-graft}`: the variable is mandatory.
 if [ -z "${TARGET:-}" ]; then
 	b0_ko "⛔ TARGET is missing, and I have no default value."
-	b0_ko "   The three values are «innesto», «prodotto» and «controllo»:"
+	b0_ko "   The three values are «graft», «product» and «control»:"
 	b0_ko "     TARGET=graft  bash .../01-${B0_TAG}-launch.sh …"
 	b0_ko "     TARGET=product bash .../01-${B0_TAG}-launch.sh …"
 	b0_ko "   ⛔ A default here would be the most convenient way to measure the"
@@ -236,7 +236,7 @@ control)
 	;;
 *)
 	b0_ko "⛔ TARGET=«$B_NAME» does not exist."
-	b0_ko "   The three values are «innesto», «prodotto» and «controllo»."
+	b0_ko "   The three values are «graft», «product» and «control»."
 	b0_ko "   ⛔ And I do not fall back on any: I would measure one server while declaring"
 	b0_ko "      another, and the log of the round would carry the right word on the"
 	b0_ko "      wrong server."
@@ -309,7 +309,7 @@ target_declare()
 #    port with two protocols (`RCP.md` §2.4), and a bench that looked only at
 #    UDP would say "free" with the page of another round still listening.
 B0_OUTPUT=""
-b0_inside() # $1 = remote command.  Output in $B0_USCITA, status = that of the command
+b0_inside() # $1 = remote command.  Output in $B0_OUTPUT, status = that of the command
 {
 	local all state
 	all=$(bash "$B0_ENTER" --root "$1"'; printf "\nB0-FINE=%s\n" $?')
@@ -503,7 +503,7 @@ target_turn_on()
 		b0_ko "   $B_IDLE_LONG ms and no option touches it."
 		b0_ko "   ⛔ And I do not turn on anyway declaring $idle: it would be measuring"
 		b0_ko "      one thing under the label of another (CODER.md §3.9)."
-		b0_ko "   The bench must ask for \$B_IDLE_LUNGO / \$B_IDLE_CORTO, which on"
+		b0_ko "   The bench must ask for \$B_IDLE_LONG / \$B_IDLE_SHORT, which on"
 		b0_ko "   this target are both $B_IDLE_LONG."
 		return 5
 	fi
@@ -676,7 +676,7 @@ target_ping()
 		"python3 $B0_INSIDE/01-b8-unblock.py --socket $B_COMMAND --ping"
 }
 
-target_unblock() # $1 = why · $2… = addresses (default: $B_INDIRIZZI)
+target_unblock() # $1 = why · $2… = addresses (default: $B_ADDRESSES)
 {
 	local why=$1
 	shift

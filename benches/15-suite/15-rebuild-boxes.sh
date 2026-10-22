@@ -7,8 +7,8 @@
 #    `nictest`) dies.  It is launched only with the user's go-ahead (phases/15 «How it is
 #    run»; permission given on 25 Sep 2026, rule in .claude/settings.local.json).
 # For each desktop, one box at a time (the card's padlock):
-#   turn_on  = NEW container from the image
-#   prodotto = binary and page from /media/REMOTIX/rete11/prodotto
+#   start    = NEW container from the image
+#   product  = binary and page from /media/REMOTIX/rete11/prodotto
 #   server   = the product's server on its port
 set -u
 DESKTOP=${*:-gnome kde xfce lxqt}
@@ -16,7 +16,7 @@ cd /media/REMOTIX/rete11 || exit 2
 outcome=0
 for d in $DESKTOP; do
 	echo "=== $d $(date +%T)"
-	for step in accendi prodotto server; do
+	for step in start product server; do
 		if ! printf '%s\n' "${REMOTIX_SUDO_PASSWORD:-$(awk '/^pass:/{print $2; exit}' "$HOME/SERVER.ssh" 2>/dev/null)}" | sudo -S -p '' bash 11-start.sh "$step" "$d" >"/tmp/rifai-$d-$step.log" 2>&1; then
 			echo "⛔ $d $step failed: $(tail -2 "/tmp/rifai-$d-$step.log" | tr '\n' ' ')"
 			outcome=1

@@ -7,12 +7,12 @@
 
 From the LAPTOP (where Phonestra's adb key lives):
 
-    bash benches/19-android/19-android.sh controlla
-    bash benches/19-android/19-android.sh prova 3                # row 3, on GNOME
-    bash benches/19-android/19-android.sh prova 1 --desktop kde
-    bash benches/19-android/19-android.sh prova tutte            # full round + short round
-    bash benches/19-android/19-android.sh ripristina             # after an interruption
-    bash benches/19-android/19-android.sh a-secco                # the bench without a phone
+    bash benches/19-android/19-android.sh check
+    bash benches/19-android/19-android.sh test 3                # row 3, on GNOME
+    bash benches/19-android/19-android.sh test 1 --desktop kde
+    bash benches/19-android/19-android.sh test all            # full round + short round
+    bash benches/19-android/19-android.sh restore             # after an interruption
+    bash benches/19-android/19-android.sh dry-run                # the bench without a phone
 
 HOW IT IS MADE
   - The tests are those of the SUITE (phase 15), with its judges and its faults:
@@ -793,7 +793,7 @@ def one_line(o, tel, sp, d, n, round_id, system_wide):
 def prova(tel, o):
     if read_state():
         raise Stopped("there is an unrestored starting state (%s): first "
-                    "`19-android.sh ripristina`" % STATE)
+                    "`19-android.sh restore`" % STATE)
     if not check(tel, o):
         return 3
     pi = piano(o)
@@ -945,7 +945,7 @@ def dry_run(o):
                        capture_output=True, text=True,
                        env=dict(os.environ, REMOTIX_ADB=fake, REMOTIX_PHONE="",
                                 HOME=tmp), timeout=60)
-    outcome("\"prova 1\" stops at the same point, without touching the server",
+    outcome("\"test 1\" stops at the same point, without touching the server",
           r.returncode == 2 and "phone not seen" in r.stdout and "The server" not in r.stdout,
           "code %d" % r.returncode)
     log = open(os.path.join(tmp, "adb.log")).read() if os.path.exists(
@@ -1010,7 +1010,7 @@ def dry_run(o):
         outcome("photo of the canvas via CDP", bool(png) and png[:4] == b"\x89PNG",
               "%d byte" % len(png or b""))
         g.click(100, 100)
-        g.keystroke("ArrowRight")
+        g.key("ArrowRight")
         g.finger_cdp([(50, 50), (80, 60), (120, 70)])
         seen_items = g.js("return window.__visti")
         outcome("click, key and finger reach the page", seen_items and "mousedown:" in seen_items
@@ -1115,7 +1115,7 @@ def main():
     a.add_argument("--no-fault", action="store_true")
     a.add_argument("--no-connect", action="store_true",
                    help="do not try `adb connect`: only the phone already seen")
-    a.add_argument("--keep", action="store_true", help="a-secco: keep the folder")
+    a.add_argument("--keep", action="store_true", help="dry-run: keep the folder")
     o = a.parse_args()
     o.desktop = [x for x in o.desktop.split(",") if x]
     for d in o.desktop:
@@ -1140,7 +1140,7 @@ def main():
             return 1 if any(f.startswith("⛔") for f in completed) else 0
         if o.action == "test":
             if not o.which:
-                a.error("test <1..10>|tutte")
+                a.error("test <1..10>|all")
             found, sentence = tel.find(connect=not o.no_connect)
             if not found:
                 no(sentence)

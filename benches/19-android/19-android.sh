@@ -3,7 +3,7 @@
 # from the laptop.  All the work is in 19-android.py; read README.md.
 #
 #   bash benches/19-android/19-android.sh check
-#   bash benches/19-android/19-android.sh prova <1..10>|all_of [--desktop kde]
+#   bash benches/19-android/19-android.sh test <1..10>|all [--desktop kde]
 #   bash benches/19-android/19-android.sh restore
-#   bash benches/19-android/19-android.sh a-secco
+#   bash benches/19-android/19-android.sh dry-run
 exec python3 "$(cd "$(dirname "$0")" && pwd)/19-android.py" "$@"

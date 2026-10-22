@@ -447,10 +447,10 @@ CLIENTE=%(cliente)s
 ALL=%(full_sequence)s
 rm -f "$WORKDIR/flusso.264" "$WORKDIR/scatto.png" "$WORKDIR/cliente.log"
 rm -f "$WORKDIR"/scatto-[0-9][0-9][0-9].png
-timeout %(tetto)d python3 -u "$CLIENTE" \
-    --address %(indirizzo)s --port %(porta)d \
-    --user %(utente)s --password-file %(parola)s \
-    --video-out "$WORKDIR/flusso.264" --stay %(resta).1f %(altro)s \
+timeout %(cap)d python3 -u "$CLIENTE" \
+    --address %(address)s --port %(port)d \
+    --user %(user)s --password-file %(parola)s \
+    --video-out "$WORKDIR/flusso.264" --stay %(stay).1f %(other)s \
     > "$WORKDIR/cliente.log" 2>&1
 echo "=== CLIENTE rc=$? ==="
 cat "$WORKDIR/cliente.log"

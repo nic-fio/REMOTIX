@@ -135,7 +135,7 @@ for d in $DESKTOP; do
 			wait "$child"; c=$?
 			while kill -0 "$child" 2>/dev/null; do wait "$child"; c=$?; done
 			child=""
-			DONE=$((DONE + 1)); SECONDS=$((SECONDS + $(date +%s) - T_SALITA))
+			DONE=$((DONE + 1)); SECONDS=$((SECONDS + $(date +%s) - T_CLIMB))
 			green=$(last_green "$camp")
 			mark "$d" "$m" "$camp" "$c" "$green"
 			says "   $camp: code $c ($(python3 -c "import json,sys; s=json.load(open(sys.argv[1])); print('good', s.get('last_good'), '· break', s.get('breakage'), '·', s.get('phase'))" "$MEASURES_DIR/$camp/state.json" 2>/dev/null || echo 'state unreadable')) · last true GREEN: $green"
@@ -150,7 +150,7 @@ for d in $DESKTOP; do
 			outcome=$c
 			break
 		done
-		remain_here=$(( $(echo $SCALE | wc -w) - I_MISURA ))
+		remain_here=$(( $(echo $SCALE | wc -w) - I_MEASURE ))
 		case "$outcome" in
 		1) ;;
 		*) remain_here=0 ;;

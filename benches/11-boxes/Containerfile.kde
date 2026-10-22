@@ -182,7 +182,7 @@ COPY pacchetti/firefox-esr_140.16.0esr-1~deb13u1_amd64.deb /tmp/pacchetti/firefo
 RUN apt-get update && apt-get install -y --no-install-recommends \
         /tmp/pacchetti/firefox-esr.deb ffmpeg \
         python3-numpy python3-pil \
-        fonts-dejavu-core libpci3 \
+        fonts-dejavu-core libpci3 labwc wlr-randr \
     && apt-mark hold firefox-esr \
     && rm -rf /tmp/pacchetti /var/lib/apt/lists/*
 

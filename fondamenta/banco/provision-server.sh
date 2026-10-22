@@ -313,7 +313,7 @@ ok "i .deb scaricati sopravvivono al riavvio"
 log "La iGPU Intel dev'essere dell'host"
 if pgrep -f 'qemu-system-x86_64 -name remotix-vm' >/dev/null 2>&1; then
     inf "la VM e' accesa: la fermo"
-    bash "$BASE/vm.sh" ferma >/dev/null 2>&1 || pkill -f 'qemu-system-x86_64 -name remotix-vm' || true
+    bash "$BASE/vm.sh" stop >/dev/null 2>&1 || pkill -f 'qemu-system-x86_64 -name remotix-vm' || true
     sleep 3
 fi
 if [ -e /sys/bus/pci/devices/0000:00:02.0/driver ]; then

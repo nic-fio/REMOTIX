@@ -165,7 +165,7 @@ def arguments_g3(a):
 #   `firefox-esr` windows of two scenes vanished (F-006 and F-008, gnome).  A
 #   red case with the scene dead is NOT a red of the product: it is BLOCKED.
 def scene_alive(sc, chi):
-    c, t = sc.inside("pgrep -u %s -f '[f]irefox-esr' >/dev/null && echo viva || echo morta"
+    c, t = sc.inside("pgrep -u %s -f '[f]irefox-esr' >/dev/null && echo alive || echo dead"
                      % chi, 30)
     return "alive" in (t or "")
 

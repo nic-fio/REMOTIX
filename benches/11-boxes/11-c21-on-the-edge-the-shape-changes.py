@@ -761,7 +761,7 @@ def wake(g, geo):
         x, y = desktop_to_glass(geo, geo["tl"] * 0.5, geo["ta"] * 0.5)
         g.move_to(x, y)
         time.sleep(0.3)
-        g.keystroke("Escape")
+        g.key("Escape")
         time.sleep(1.5)
         return "ESC sent"
     except Exception as e:                       # noqa: BLE001

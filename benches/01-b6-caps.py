@@ -952,7 +952,7 @@ async def main(a):
                 expect = (f"{c['expected']:#04x} {REASONS.get(c['expected'], '?')} at "
                        f"{DOC_CAPS[c['cap']] / 1000:.0f} s")
             print(f"  [{c['phase']:4s}] {c['name']:36s} {expect}")
-            print(f"  {'':43s} {c['spiega']}")
+            print(f"  {'':43s} {c['explain']}")
         print("\n  And first of all: cert-giro-completo · cert-cronometro ·")
         print("  cert-congedo-noto · cert-morte-silenziosa (only phase «ping»)")
         return 0
@@ -1201,7 +1201,7 @@ async def main(a):
                   f"(cap {cap_ms / 1000:.0f} s)") if ok else str(es))
             if not ok:
                 faults += 1
-                print(f"        expected: ⭐ no drop — {c['spiega']}")
+                print(f"        expected: ⭐ no drop — {c['explain']}")
 
         elif c["expected"] == "risposta":
             # ⛔ It is not a pass/fail: it is an open question, and the
@@ -1353,7 +1353,7 @@ async def main(a):
                       f"{cap_ms / 1000:.0f} s "
                       f"(tolerance -{TOL_DOWN / 1000:.1f} / "
                       f"+{TOLL_SU / 1000:.1f} s)")
-                print(f"        {c['spiega']}")
+                print(f"        {c['explain']}")
                 if not es.ready:
                     print(f"        ⛔ and the case NEVER GOT to the state "
                           f"to measure: it is not a failed test, it is a test "

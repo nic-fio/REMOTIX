@@ -31,7 +31,7 @@ set -uo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd)
 
 if [ $# -lt 1 ]; then
-	printf 'usage: bash %s <file-esito> gira --family <nome> …\n' "$0" >&2
+	printf 'usage: bash %s <file-esito> run --family <nome> …\n' "$0" >&2
 	exit 2
 fi
 

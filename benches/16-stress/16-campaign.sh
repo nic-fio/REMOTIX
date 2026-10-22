@@ -20,7 +20,7 @@ set -u
 HERE=$(cd "$(dirname "$0")" && pwd)
 M=/media/REMOTIX/misure/fase16
 child=""; halt=0
-trap 'ferma=1; [ -n "$figlio" ] && kill -TERM "$figlio"' TERM INT
+trap 'halt=1; [ -n "$child" ] && kill -TERM "$child"' TERM INT
 ALL=$#; I=0
 for label in "$@"; do
 	I=$((I + 1))
@@ -30,7 +30,7 @@ for label in "$@"; do
 	case "$label" in amd*) extra="--card amd" ;; esac
 	[ "${REMOTIX_16_SYSTEM:-}" = xrdp ] && extra="$extra --system xrdp"
 	echo "$(date '+%F %T') ▶ campaign $label ($extra)" >> "$M/campagna.log"
-	REMOTIX_16_EXTRA="$extra" REMOTIX_16_DESKTOPS_AFTER=$(( (TUTTE - I) * 4 )) \
+	REMOTIX_16_EXTRA="$extra" REMOTIX_16_DESKTOPS_AFTER=$(( (ALL - I) * 4 )) \
 		bash "$HERE/16-queue.sh" "$label" gnome kde xfce lxqt &
 	child=$!
 	wait "$child"; while kill -0 "$child" 2>/dev/null; do wait "$child"; done

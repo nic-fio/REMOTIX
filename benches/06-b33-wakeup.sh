@@ -85,7 +85,7 @@ set -uo pipefail
 
 HERE=$(cd -- "$(dirname -- "$0")" && pwd)
 SUDO_PASSWORD=${1:?needs the 0600 file with the sudo password}
-WHAT=${2:-tutto}
+WHAT=${2:-all}
 
 SRC=${SRC:-/media/REMOTIX/src/06-i-src}
 WORKDIR=${WORKDIR:-/media/REMOTIX/tmp/06-i}
@@ -112,7 +112,7 @@ OUTCOME=0
 [ -r "$SUDO_PASSWORD" ] || { printf '⛔ %s cannot be read\n' "$SUDO_PASSWORD"; exit 2; }
 my_sudo() { printf '%s\n' "$(cat "$SUDO_PASSWORD")" | sudo -S -p 'Password: ' "$@"; }
 terrain()  { my_sudo bash "$T" "$@"; }
-di()       { terrain iniettore-di "$@" >/dev/null; }
+di()       { terrain injector-do "$@" >/dev/null; }
 load()   { terrain load | sed 's/^/        /'; }
 
 # ⛔ The scene is rebuilt from scratch at EVERY round, and the reason is
@@ -121,16 +121,16 @@ load()   { terrain load | sed 's/^/        /'; }
 #    `drop_device`).  ⇒ A second round inside the same injector would measure
 #    the DAMAGE OF THE FIRST.
 remount() {
-	terrain iniettore-spegni  > /dev/null 2>&1
-	terrain testimone-via     > /dev/null 2>&1
-	terrain spegni            > /dev/null 2>&1
+	terrain injector-stop  > /dev/null 2>&1
+	terrain witness-off     > /dev/null 2>&1
+	terrain session-off            > /dev/null 2>&1
 	sleep 2
-	terrain sessione > /dev/null 2>&1
-	terrain iniettore-accendi "$CANVAS" || return 3
+	terrain session > /dev/null 2>&1
+	terrain injector-start "$CANVAS" || return 3
 	# ⛔ The witness is opened AFTER the injector: it is the injector that
 	#    mounts the virtual monitor, and the witness picks it BY SIZE.  Opening
 	#    it first would mean looking for a screen that does not exist yet.
-	terrain testimone "$CANVAS" || { ko "⛔ THE BENCH: the witness does not open"; return 3; }
+	terrain witness "$CANVAS" || { ko "⛔ THE BENCH: the witness does not open"; return 3; }
 	# ⛔⛔ THE WARM-UP, and it is not caution: it is a bench defect measured on
 	#     21 August 2026 that gave me a false red on the first round.
 	#
@@ -149,7 +149,7 @@ remount() {
 }
 
 # how many lines the witness has seen so far — it is the judge's `--since`
-mark() { terrain righe | awk '{print $2}'; }
+mark() { terrain lines | awk '{print $2}'; }
 
 judge() { # $1 label · $2 scene(mode) · $3 from · $4 description
 	my_sudo python3 "$G" --seen "$WORKDIR/visto.jsonl" \
@@ -290,10 +290,10 @@ healing)
 
 	log "And now I detach ONLY the EIS client — gnome-shell is NOT touched"
 	BEFORE_SHELL=$(my_sudo pgrep -u 1006 -x gnome-shell | head -1)
-	terrain iniettore-spegni > /dev/null
+	terrain injector-stop > /dev/null
 	sleep 2
-	terrain iniettore-accendi "$CANVAS" > /dev/null || { ko "⛔ it does not come back on"; exit 3; }
-	terrain testimone "$CANVAS" > /dev/null || { ko "⛔ THE BENCH: witness"; exit 3; }
+	terrain injector-start "$CANVAS" > /dev/null || { ko "⛔ it does not come back on"; exit 3; }
+	terrain witness "$CANVAS" > /dev/null || { ko "⛔ THE BENCH: witness"; exit 3; }
 	di "punta $((TL / 2)) $((TA / 2))"; sleep 1.5
 	di "punta $((TL / 3)) $((TA / 3))"; sleep 1.0
 	AFTER_SHELL=$(my_sudo pgrep -u 1006 -x gnome-shell | head -1)
@@ -331,27 +331,27 @@ application)
 	#   toolkit we did not write, which is the kind of test worth the most.
 	log "S5 · ⭐ DOES A REAL APPLICATION survive the healing?"
 	load
-	terrain iniettore-spegni  > /dev/null 2>&1
-	terrain testimone-via     > /dev/null 2>&1
-	terrain spegni            > /dev/null 2>&1
+	terrain injector-stop  > /dev/null 2>&1
+	terrain witness-off     > /dev/null 2>&1
+	terrain session-off            > /dev/null 2>&1
 	sleep 2
-	terrain sessione > /dev/null 2>&1
-	terrain iniettore-accendi "$CANVAS" || exit 3
+	terrain session > /dev/null 2>&1
+	terrain injector-start "$CANVAS" || exit 3
 	# ⛔ And the terminal is opened AFTER the injector, like the witness: it is
 	#    the injector that mounts the monitor.  ⚠ And NOT together with the
 	#    witness: the full-screen window takes the focus and the terminal would
 	#    not receive a key.
-	terrain terminale || { ko "⛔ THE BENCH: the terminal does not open"; exit 3; }
+	terrain terminal || { ko "⛔ THE BENCH: the terminal does not open"; exit 3; }
 	di "punta $((TL / 2)) $((TA / 2))"; sleep 1.5
-	BEFORE=$(terrain invii | awk '{print $2}')
+	BEFORE=$(terrain enters | awk '{print $2}')
 	inf "Enters received BEFORE: $BEFORE"
 	# ⛔ One Enter BEFORE the healing: if not even this one arrives, the scene
 	#    does not hold and the red afterwards would accusations the wrong thing.
 	di "posizione 28 1"; sleep 0.3
 	di "posizione 28 0"; sleep 0.8
-	MID=$(terrain invii | awk '{print $2}')
-	if [ "$((MEZZO - BEFORE))" -ge 1 ]; then
-		ok "the terminal receives the Enters BEFORE the healing ($((MEZZO - BEFORE)))"
+	MID=$(terrain enters | awk '{print $2}')
+	if [ "$((MID - BEFORE))" -ge 1 ]; then
+		ok "the terminal receives the Enters BEFORE the healing ($((MID - BEFORE)))"
 	else
 		ko "⛔ THE BENCH: the terminal receives nothing even before, the scene does not hold"
 		exit 3
@@ -368,7 +368,7 @@ application)
 	# ⛔ And the LONG form, not the bare word: "HEALING" alone would also show
 	#    up in a comment or in a future line of another module.  ⚠ It is the
 	#    same discipline as the finding on `%s`: the complete form is searched.
-	if terrain iniettore-registro 400 | grep -q 'HEALING (n\.'; then
+	if terrain injector-log 400 | grep -q 'HEALING (n\.'; then
 		ok "⭐ cure \"C\" kicked in (the HEALING line is there)"
 	else
 		ko "⛔ cure \"C\" did NOT kick in: what follows does not measure the healing"
@@ -377,23 +377,23 @@ application)
 	di "posizione 28 0"; sleep 0.8
 	di "posizione 28 1"; sleep 0.3
 	di "posizione 28 0"; sleep 1.0
-	AFTER=$(terrain invii | awk '{print $2}')
+	AFTER=$(terrain enters | awk '{print $2}')
 	inf "Enters received AFTER the healing: $AFTER (they were $MID)"
-	if [ "$((AFTER - MEZZO))" -ge 2 ]; then
-		ok "⭐ the REAL application received $((AFTER - MEZZO)) Enters AFTER the healing"
+	if [ "$((AFTER - MID))" -ge 2 ]; then
+		ok "⭐ the REAL application received $((AFTER - MID)) Enters AFTER the healing"
 	else
-		ko "⛔ it received $((AFTER - MEZZO)) instead of 2: a GTK client does NOT withstand the"
+		ko "⛔ it received $((AFTER - MID)) instead of 2: a GTK client does NOT withstand the"
 		ko "   seat capability change ⇒ the price of cure \"C\" is much higher"
 		ko "   than what was declared, and must be reported to the coordinator"
 	fi
-	terrain terminale-via > /dev/null 2>&1
+	terrain terminal-off > /dev/null 2>&1
 	load
 	exit $OUTCOME ;;
 
 stop)
-	terrain iniettore-spegni
-	terrain testimone-via
-	terrain terminale-via
+	terrain injector-stop
+	terrain witness-off
+	terrain terminal-off
 	exit 0 ;;
 
 all)

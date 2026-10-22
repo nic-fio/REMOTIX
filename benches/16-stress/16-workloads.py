@@ -217,7 +217,7 @@ addEventListener('scroll', () => { if (tS) return; tS = setTimeout(() => { tS = 
 //   ended up outside the field: a false «input lost»).  It leaves it when the ACTOR
 //   has finished the sentence and presses Esc (PageDown and Home must go back to the page),
 //   and says so («lascia»).
-const note = document.getElementById('note');
+const nota = document.getElementById('nota');
 let tN = null;
 nota.addEventListener('input', () => { clearTimeout(tN);
   tN = setTimeout(() => manda('text ' + NOME + ' ' + nota.value), 300); });

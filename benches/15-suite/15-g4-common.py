@@ -153,8 +153,8 @@ def read_ear(g, da=0.0, a=None):
         " const da = %f, a = %s;"
         " return { ora: performance.now(), agganci: O.agganci, contesti: O.contesti.length,"
         "  errori: O.errori.slice(0, 5),"
-        "  conti: (typeof audio_counts === 'function') ? audio_counts() : null,"
-        "  campioni: O.campioni.filter(c => c.t >= da && (a === null || c.t < a)) }; })()"
+        "  counts: (typeof audio_counts === 'function') ? audio_counts() : null,"
+        "  samples: O.campioni.filter(c => c.t >= da && (a === null || c.t < a)) }; })()"
         % (da, "null" if a is None else "%f" % a)))
     return r
 
@@ -167,8 +167,8 @@ def wait_context(g, cap_s=30):
     while time.time() < fine:
         r = in_page(g, "(function(){ const O = window.__c15orecchio;"
                          " return { n: O ? O.contesti.length : -1,"
-                         " stato: O && O.contesti.length ? O.contesti[O.contesti.length-1].state : null,"
-                         " conti: (typeof audio_counts === 'function') ? audio_counts() : null }; })()")
+                         " state: O && O.contesti.length ? O.contesti[O.contesti.length-1].state : null,"
+                         " counts: (typeof audio_counts === 'function') ? audio_counts() : null }; })()")
         if r and r.get("n", 0) > 0:
             return r.get("state"), r.get("counts")
         time.sleep(0.5)

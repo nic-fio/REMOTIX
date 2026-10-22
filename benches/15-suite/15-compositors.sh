@@ -42,7 +42,13 @@ start() {
 		echo "$fresh" >"$C/$d"
 		sleep 0.5
 		output=$(WAYLAND_DISPLAY=$fresh wlr-randr 2>/dev/null | awk 'NR==1{print $1}')
-		WAYLAND_DISPLAY=$fresh wlr-randr --output "$output" --custom-mode 3840x2160 2>&1
+		for try in 1 2 3; do
+			WAYLAND_DISPLAY=$fresh wlr-randr --output "$output" --custom-mode 3840x2160 2>&1
+			WAYLAND_DISPLAY=$fresh wlr-randr 2>/dev/null | grep -q '3840x2160 px.*current' && break
+			sleep 0.5
+		done
+		WAYLAND_DISPLAY=$fresh wlr-randr 2>/dev/null | grep -q '3840x2160 px.*current' \
+			|| echo "$d: ⛔ the compositor did not take 3840x2160"
 		echo "$d: ⭐ $fresh ($output 3840x2160), pid $(cat "$C/$d.pid")"
 	done
 }

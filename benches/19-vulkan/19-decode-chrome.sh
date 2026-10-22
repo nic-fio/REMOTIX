@@ -17,7 +17,7 @@ FOLDER=${1:?folder with the *.bin streams and esiti.jsonl}; shift
 PAGE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../18-card/18-decode-chrome.html
 CHROME=${CHROME:-google-chrome}
 PROFILE=$(mktemp -d)
-trap 'rm -rf "$PROFILO"' EXIT
+trap 'rm -rf "$PROFILE"' EXIT
 python3 - "$FOLDER/esiti.jsonl" <<'EOF' > "$PROFILE/lista"
 import json, sys
 for r in open(sys.argv[1]):

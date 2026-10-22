@@ -210,12 +210,12 @@ def turn_on_scene(sc, chi, port, color, wait=45):
     page_map = SCENE_PAGE.replace("__C__", rgb(color))
     c, t = inside(sc, 
         "set -e; h=/home/{c}; mkdir -p $h/.g8-profilo; "
-        "echo {srv} | base64 -d > $h/g8-servitore.py; echo {pag} | base64 -d > $h/g8.html; "
+        "echo {srv} | base64 -d > $h/g8-servitore.py; echo {page_map} | base64 -d > $h/g8.html; "
         "echo {pref} | base64 -d > $h/.g8-profilo/user.js; : > $h/g8.log; "
-        "echo {col} > $h/g8-colore; "
+        "echo {clr} > $h/g8-colore; "
         "chown -R {c}: $h/.g8-profilo $h/g8-servitore.py $h/g8.html $h/g8.log $h/g8-colore; "
         "set +e; u=$(id -u {c}); "
-        "pkill -f 'python3 /home/[^ ]*/g8-servitore[.]py {p} ' 2>/dev/null; sleep 0.3; "
+        "pkill -f 'python3 /home/[^ ]*servitore[.]py {p} ' 2>/dev/null; sleep 0.3; "
         "setsid runuser -u {c} -- python3 $h/g8-servitore.py {p} $h/g8.html $h/g8.log "
         "$h/g8-colore </dev/null >$h/.g8-servitore.log 2>&1 & "
         "for i in $(seq 1 20); do grep -q {c} /proc/$(ss -ltnpH 'sport = :{p}' | "
@@ -487,7 +487,7 @@ def try_login(s, user, password, cap=30, reload=True):
         r = s.g.js(S.VERI.JS_ENTER, user, password)
     finally:
         s.o.user = old
-    if r != "mandato":
+    if r != "sent":
         return None, {"outcome": "I could not fill in the form: %s" % r}
     fine = time.time() + cap
     st = {}

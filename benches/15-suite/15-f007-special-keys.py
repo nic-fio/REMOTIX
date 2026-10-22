@@ -115,8 +115,8 @@ def judge(st, expected):
         return S.BLOCKED, "the scene did not tell the values of the fields"
     if (a, b) == expected:
         return S.PASS, "a=%r b=%r" % (a, b)
-    return S.FAIL, "a=%r b=%r instead of a=%r b=%r · keys seen in the session: %s" % (
-        a, b, expected[0], expected[1], " ".join((st.get("keys") or [])[-40:]))
+    return S.FAIL, "a=%r b=%r instead of a=%r b=%r · tasti seen in the session: %s" % (
+        a, b, expected[0], expected[1], " ".join((st.get("tasti") or [])[-40:]))
 
 
 def certify():

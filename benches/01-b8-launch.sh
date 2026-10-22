@@ -251,11 +251,11 @@ log "1. The initial state"
 rm -f "$B_OUTCOMES_OUT" "$OUT/b8-$B_NAME-server.log" "$OUT/b8-stato.txt"
 target_drop_ban
 inf "run: $ROUND  ·  target: $B_NAME  ·  binary md5 ${B_MD5:-unknown}"
-inf "blocks: $BLOCKS  ·  samples kept per case: $((BLOCKS * PER_CASO))"
+inf "blocks: $BLOCKS  ·  samples kept per case: $((BLOCKS * PER_CASE))"
 
 inf "⚠ server lives: 2 (one for the samples and the ban, one for persistence)"
-inf "⚠ duration of the order of $(( BLOCCHI * 6 * 4 / 60 + 2 ))–$(( BLOCCHI * 6 * 6 / 60 + 4 )) minutes"
-inf "⚠ and it does $((BLOCCHI * 4 + 9)) FAILED authentications on the test user: if one"
+inf "⚠ duration of the order of $(( BLOCKS * 6 * 4 / 60 + 2 ))–$(( BLOCKS * 6 * 6 / 60 + 4 )) minutes"
+inf "⚠ and it does $((BLOCKS * 4 + 9)) FAILED authentications on the test user: if one"
 inf "  day the PAM stack had a pam_faillock, that user would get locked"
 
 # ⛔ WHICH SERVER IT IS THAT I AM ABOUT TO START — and on the graft the files are TWO.
@@ -570,7 +570,7 @@ bash "$ENTER" --root "$CHRONO --unblock $ADDRESSES --why dopo-la-scaldata"
 
 b=1
 while [ "$b" -le "$BLOCKS" ]; do
-	log "3.$b  block $b of $BLOCKS — $((PER_CASO * 3)) attempts"
+	log "3.$b  block $b of $BLOCKS — $((PER_CASE * 3)) attempts"
 	bash "$ENTER" --root "$CHRONO --samples --block $b --per-case $PER_CASE"
 	OUTCOME=$?
 	ALIVE "block $b" || exit 4

@@ -68,10 +68,10 @@ def judge_motion(st, expected):
 
 def judge_click(st):
     st = st or {}
-    if st.get("click") == 1 and st.get("clicbtn") == 0:
+    if st.get("clic") == 1 and st.get("clicbtn") == 0:
         return S.PASS, "the button counted 1 click with button 0"
     return S.FAIL, "the button counted %s clicks (button %s; clicks outside %s; down %s)" % (
-        st.get("click"), st.get("clicbtn"), st.get("out"), st.get("giu"))
+        st.get("clic"), st.get("clicbtn"), st.get("fuori"), st.get("giu"))
 
 
 def judge_menu(block, spot, tl):
@@ -121,8 +121,8 @@ def certify():
     prova("movement elsewhere ⇒ FAIL", judge_motion({"pad": [0.7, 0.6]}, (0.25, 0.3))[0]
           == S.FAIL)
     prova("no movement ⇒ FAIL", judge_motion({"pad": None}, (0.25, 0.3))[0] == S.FAIL)
-    prova("click ⇒ PASS", judge_click({"click": 1, "clicbtn": 0})[0] == S.PASS)
-    prova("click outside ⇒ FAIL", judge_click({"click": 0, "out": 1})[0] == S.FAIL)
+    prova("click ⇒ PASS", judge_click({"clic": 1, "clicbtn": 0})[0] == S.PASS)
+    prova("click outside ⇒ FAIL", judge_click({"clic": 0, "fuori": 1})[0] == S.FAIL)
     prova("menu at the point ⇒ PASS", judge_menu((100, 100, 500, 400), (102, 98), 3840)[0]
           == S.PASS)
     prova("menu far away ⇒ FAIL", judge_menu((900, 100, 1200, 400), (102, 98), 3840)[0]

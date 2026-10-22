@@ -883,7 +883,7 @@ def main(a):
 
     if a.list:
         for v in ENTRIES:
-            print(f"  {v['tag']:4s} {v['where']:22s} {v['domanda']}")
+            print(f"  {v['tag']:4s} {v['where']:22s} {v['question']}")
         print(f"\n  {len(ENTRIES)} entries.  Without --list the bytes are built.")
         return 0
 
@@ -920,17 +920,17 @@ def main(a):
 
     for v in ENTRIES:
         print(f"== {v['tag']}  ·  {v['where']}")
-        print(f"   {v['domanda']}")
+        print(f"   {v['question']}")
         print(f"     reading A   {v['a']}")
         print(f"     reading B   {v['b']}")
-        print(f"     ⭐ CHOSEN   {v['scelta']}")
-        print(f"     ⛔ BITES    {v['morde']}")
+        print(f"     ⭐ CHOSEN   {v['choice']}")
+        print(f"     ⛔ BITES    {v['bites']}")
 
         # the anchors
         counts["entries with ALL the anchors in place"][1] += 1
         lost = []
-        for text, which_ones in ((texts["RCP.md"], v["appigli_rcp"]),
-                             (texts["01-b3-client.py"], v["appigli_cliente"])):
+        for text, which_ones in ((texts["RCP.md"], v["footholds_rcp"]),
+                             (texts["01-b3-client.py"], v["footholds_client"])):
             n_text = normalize(text)
             for ap in which_ones:
                 if normalize(ap) not in n_text:
@@ -938,13 +938,13 @@ def main(a):
         if lost:
             disconnected.append((v["tag"], lost))
             print(f"     {YELLOW}[?]{GRAY} {len(lost)} anchors out of "
-                  f"{len(v['appigli_rcp']) + len(v['appigli_cliente'])} can no "
+                  f"{len(v['footholds_rcp']) + len(v['footholds_client'])} can no "
                   f"longer be found: the text changed under the bench")
             for ap in lost:
                 print(f"          «{normalize(ap)[:88]}»")
         else:
             counts["entries with ALL the anchors in place"][0] += 1
-            n = len(v["appigli_rcp"]) + len(v["appigli_cliente"])
+            n = len(v["footholds_rcp"]) + len(v["footholds_client"])
             print(f"     {GREEN}OK{GRAY}  {n} anchors out of {n} in place "
                   f"in the two texts")
 

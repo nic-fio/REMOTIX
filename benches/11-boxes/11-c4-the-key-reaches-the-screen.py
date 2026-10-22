@@ -613,11 +613,11 @@ def scene_html(deaf=False):
 <style>
  html, body { margin:0; padding:0; width:100%%; height:100%%;
               background:%(fondo)s; overflow:hidden; }
- #bersaglio { position:absolute; left:%(bx)s%%; top:%(by)s%%;
-              width:%(bw)s%%; height:%(bh)s%%; background:%(partenza)s; }
+ #target { position:absolute; left:%(bx)s%%; top:%(by)s%%;
+              width:%(bw)s%%; height:%(bh)s%%; background:%(start_base)s; }
 </style></head>
 <body><div id="target"></div>
-<script>%(ascolto)s
+<script>%(listen)s
 </script></body></html>
 """ % {"fondo": _hex(BACKGROUND_COLOR),
        "start_base": _hex(START_COLOR),

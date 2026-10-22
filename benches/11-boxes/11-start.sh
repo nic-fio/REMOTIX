@@ -252,7 +252,7 @@ age_line() {
 	ore=$(eta_in_ore)
 	case "$ore" in ignota) : ;; *) awk -v o="$ore" -v g="$GUARD_HOURS" 'BEGIN { exit !(o >= g) }' && guard=SUPERATA ;; esac
 	case "$sessions" in ignoti) : ;; *) [ "$sessions" -ge "$GUARD_SESSIONS" ] && guard=SUPERATA ;; esac
-	printf 'hours=%s launches=%s sessions=%s guard=%s' "$hours" "$launches" "$sessions" "$guard"
+	printf 'hours=%s launches=%s sessions=%s guard=%s' "$ore" "$launches" "$sessions" "$guard"
 }
 
 # ⭐ Counts a launch and, if the box is old, SAYS so — one line.

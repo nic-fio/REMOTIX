@@ -77,8 +77,8 @@ def internal(file, rest):
 # ═══════════════════════════════════════════════════════════════════════════
 def load(file):
     text = open(file, encoding="utf-8").read()
-    m = re.search(r"^FUNZIONI\s*=\s*\(([^)]*)\)", text, re.M)
-    functions = re.findall(r"[\"']([A-Z]-[0-9A-Z-]+)[\"']", m.group(1)) if m else []
+    m = re.search(r"^FUNCTIONS\s*=\s*\(([^)]*)\)", text, re.M)
+    functions = re.findall(r"[\"']([A-Z]-[0-9A-Za-z-]+)[\"']", m.group(1)) if m else []
     per_browser = not re.search(r"^PER_BROWSER\s*=\s*False", text, re.M)
     return functions, per_browser
 

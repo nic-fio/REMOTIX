@@ -427,10 +427,10 @@ def why_not_empty(d):
 #  THE BOX
 # ═══════════════════════════════════════════════════════════════════════════
 def redo_box(o, d, cap, dove):
-    """accendi · prodotto · server, like 15-rebuild-boxes.sh.  (ok, reason)"""
-    for step in ("accendi", "product", "server"):
+    """start · product · server, like 15-rebuild-boxes.sh.  (ok, reason)"""
+    for step in ("start", "product", "server"):
         env = "env REMOTIX_SESSION_CAP=%d " % cap if (step == "server" and cap) else ""
-        if step == "accendi":
+        if step == "start":
             env = "env REMOTIX_CARD=%s " % o.card
         t0 = time.time()
         c, t = sudo("cd %s && %sbash 11-start.sh %s %s" % (NETWORK11, env, step, d), 900)
@@ -711,8 +711,8 @@ class Actor:
         cmd = [sys.executable, self.o.prog_actor, "--box", self.o.box,
                "--user", str(self.n), "--display" if SYSTEM["xrdp"] else "--wayland", s,
                "--dir", self.folder,
-               "--seed", str(self.o.base_seed + self.n), "--width", str(largo),
-               "--height", str(alto), "--base-port", str(self.o.base_port + 10 * self.n)]
+               "--seed", str(self.o.base_seed + self.n), "--width", str(width),
+               "--height", str(height), "--base-port", str(self.o.base_port + 10 * self.n)]
         if self.o.video:
             cmd += ["--video", self.o.video]
         env = browser_env(s) if not SYSTEM["xrdp"] else rdp_environment(s)
@@ -838,7 +838,7 @@ class Climb:
     def enter(self, n_until, livello):
         """The missing actors up to `n_until`, one after the other: the next one
         when the previous one has the first frame (birth.json)."""
-        c, t = compositors("accendi", str(n_until), self.o.size)
+        c, t = compositors("start", str(n_until), self.o.size)
         if c != 0:
             says("⛔ compositors: %s" % " | ".join(t.splitlines()[-3:]))
             return False, "the compositors do not turn on: %s" % t.strip().splitlines()[-1:]
@@ -1348,7 +1348,7 @@ class Climb:
             clear_out_16(o.cont)
         except Exception as e:                   # noqa: BLE001
             says("⚠ clean-up: %s" % e)
-        c, t = compositors("spegni")
+        c, t = compositors("stop")
         says("   compositors off (%d)" % t.count("switched off"))
         if self.guard:
             self.guard.alive = False

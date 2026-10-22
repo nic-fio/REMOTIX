@@ -510,7 +510,7 @@ def scene_page():
 <input id=f autocomplete=off spellcheck=false>
 <div id=s></div>
 <script>
-const TAV=%(tav)s, VUOTO='rgb(%(vu)s)', ALTRO='rgb(%(al)s)', MARCA='rgb(%(ma)s)', N=%(n)d;
+const TAV=%(pal)s, VUOTO='rgb(%(vu)s)', ALTRO='rgb(%(al)s)', MARCA='rgb(%(ma)s)', N=%(n)d;
 const f=document.getElementById('f'), s=document.getElementById('s'), k=[];
 for (let i=0;i<N+2;i++){const d=document.createElement('div');d.className='k';
   d.style.left=(%(x0)f+i*%(w)f)+'vw';s.appendChild(d);k.push(d);}
@@ -551,10 +551,10 @@ def turn_on_scene(sc, chi, port):
     b = lambda s: base64.b64encode(s.encode()).decode()     # noqa: E731
     c, t = sc.inside(
         "set -e; h=/home/{c}; mkdir -p $h/.c23-profilo; "
-        "echo {srv} | base64 -d > $h/c23-servitore.py; echo {pag} | base64 -d > $h/c23.html; "
+        "echo {srv} | base64 -d > $h/c23-servitore.py; echo {page_map} | base64 -d > $h/c23.html; "
         "echo {pref} | base64 -d > $h/.c23-profilo/user.js; : > $h/c23.log; "
         "chown -R {c}: $h/.c23-profilo $h/c23-servitore.py $h/c23.html $h/c23.log; set +e; "
-        "u=$(id -u {c}); "
+        "u=$(id -u {c}); pkill -f 'python3 /home/[^ ]*servitore[.]py {p} ' 2>/dev/null; sleep 0.3; "
         "setsid runuser -u {c} -- python3 $h/c23-servitore.py {p} $h/c23.html $h/c23.log "
         "</dev/null >/dev/null 2>&1 & "
         "d=''; for i in $(seq 1 40); do d=$(ls /run/user/$u 2>/dev/null | "

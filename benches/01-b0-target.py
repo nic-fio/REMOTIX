@@ -51,7 +51,7 @@ import time
 # able to trace back in a minute to where we read it.
 # ===========================================================================
 PROFILE = {
-    "innesto": {
+    "graft": {
         "port": 7447,
         "eseguibile": "bsslserver (ngtcp2 example + the two grafts)",
         # ⛔ B7: `RCP_SERVER_CLOSING` (0x0C) cannot be produced.
@@ -159,7 +159,7 @@ def profile(name):
       healthy case in place of a check that must turn red, which is worse than
       an absent check.
     """
-    if name == "check":
+    if name == "control":
         raise SystemExit(
             "⛔ target «controllo»: the grammar provides for it, these four "
             "benches do not have it yet.  It would be the server FAULTY ON "

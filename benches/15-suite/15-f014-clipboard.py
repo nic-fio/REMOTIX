@@ -187,8 +187,8 @@ f.addEventListener('copy',()=>m('C',f.value.substring(f.selectionStart,f.selecti
 setInterval(async()=>{
   if(document.activeElement!==f) f.focus();
   try{const r=await fetch('/c'); if(r.status===200){const c=await r.json();
-    if(c.pulisci) f.value='';
-    if('metti' in c){f.value=c.metti; f.focus(); f.select();}
+    if(c.clean) f.value='';
+    if('put' in c){f.value=c.put; f.focus(); f.select();}
     v(); m('OK',c.n);}}catch(e){}
 },300);
 </script>"""
@@ -236,10 +236,10 @@ class Scene:
         b = lambda x: base64.b64encode(x.encode()).decode()     # noqa: E731
         c, t = self.sc.inside(
             "set -e; h={h}; mkdir -p $h/f014-profilo $h/f014-cache; "
-            "echo {srv} | base64 -d > $h/f014-servitore.py; echo {pag} | base64 -d > $h/f014.html; "
+            "echo {srv} | base64 -d > $h/f014-servitore.py; echo {page_map} | base64 -d > $h/f014.html; "
             "echo {pref} | base64 -d > $h/f014-profilo/user.js; : > $h/f014.log; rm -f $h/.f014-cmd; "
             "chown -R {c}: $h/f014-profilo $h/f014-cache $h/f014-servitore.py $h/f014.html $h/f014.log; set +e; "
-            "u=$(id -u {c}); "
+            "u=$(id -u {c}); pkill -f 'python3 /home/[^ ]*servitore[.]py {p} ' 2>/dev/null; sleep 0.3; "
             "setsid runuser -u {c} -- python3 $h/f014-servitore.py {p} $h/f014.html $h/f014.log "
             "$h/.f014-cmd </dev/null >$h/.f014-servitore.log 2>&1 & "
             "d=''; for i in $(seq 1 40); do d=$(ls /run/user/$u 2>/dev/null | "

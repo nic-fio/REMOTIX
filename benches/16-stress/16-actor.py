@@ -997,7 +997,7 @@ class Actor:
             return n
         t0 = time.time()
         r = s.g.js(VERI.JS_ENTER, self.chi, self.password)
-        if r != "mandato":
+        if r != "sent":
             n.update(outcome="modulo_non_compilato", reason="the form cannot be filled in: %s" % r)
             return n
         admitted = first = None

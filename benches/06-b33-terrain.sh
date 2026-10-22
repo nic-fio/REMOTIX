@@ -339,7 +339,7 @@ witness)
 	#    saying so instead of ending up on the wrong screen (form E2).
 	M=${2:?the size is needed, e.g. 1264x800}
 	log "The Wayland witness on monitor $M"
-	[ -x "$WITNESS" ] || { ko "⛔ $WITNESS is not there: do «costruisci»"; exit 2; }
+	[ -x "$WITNESS" ] || { ko "⛔ $WITNESS is not there: run 06-b33-build.sh"; exit 2; }
 	pkill -u "$UID_B" -f 06-b33-witness 2>/dev/null; sleep 1
 	# ⛔ The file is NOT reset at every reopening, nor is it kept forever:
 	#    it is reset HERE, at opening, and the line number restarts from 1 with the

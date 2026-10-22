@@ -19,13 +19,13 @@ def times(prova, version):
     lines = [r for r in open(p) if r and r[0].isdigit()]
     if not lines:
         return None
-    rdr = csv.DictReader(io.StringIO("n,chiave,byte,us_conversione,us_caricamento,us_codifica,ricodifiche\n" + "".join(lines)))
+    rdr = csv.DictReader(io.StringIO("n,key,byte,us_conversion,us_upload,us_encoding,reencodings\n" + "".join(lines)))
     cod, prep, key_byte, delta_byte = [], [], [], []
     for r in rdr:
         if r["key"] == "-":
             continue
         cod.append(int(r["us_encoding"]))
-        prep.append(int(r["us_conversion"]) + int(r["us_caricamento"]))
+        prep.append(int(r["us_conversion"]) + int(r["us_upload"]))
         (key_byte if r["key"] == "1" else delta_byte).append(int(r["byte"]))
     if not cod:
         return None

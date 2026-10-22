@@ -150,7 +150,7 @@ def window_in_desktop(geo, f):
     {sinistro, destro, alto} — the right one is the LAST cyan pixel."""
     pw, ph = f["photo"]
     x0, y0 = C21.from_photo_to_desktop(geo, pw, ph, f["ciano"][0] + 0.5, f["ciano"][1] + 0.5)
-    xd, _ = C21.from_photo_to_desktop(geo, pw, ph, f["right"] + 0.5, f["centro"][1] + 0.5)
+    xd, _ = C21.from_photo_to_desktop(geo, pw, ph, f["right"] + 0.5, f["center"][1] + 0.5)
     return {"sinistro": int(x0), "destro": int(xd), "top": int(y0)}
 
 
@@ -270,7 +270,7 @@ def certify():
     prova("gesture: %d steps, the last one at +%d" % (STEPS, PUSH),
           len(g) == STEPS and g[-1] == (100 + PUSH, 50) and g[0][0] > 100)
     # the window in the photo ⇒ in the desktop (geometry 1:1 and 2:1)
-    f = {"photo": [400, 250], "ciano": [50, 40, 299, 199], "right": 299, "centro": [174, 118]}
+    f = {"photo": [400, 250], "ciano": [50, 40, 299, 199], "right": 299, "center": [174, 118]}
     geo = {"bw": 400, "bh": 250, "bx0": 0, "by0": 0, "sx": 1.0, "sy": 1.0}
     d = window_in_desktop(geo, f)
     prova("window_in_desktop 1:1", d == {"sinistro": 50, "destro": 299, "top": 40}, str(d))
@@ -374,7 +374,7 @@ def measure(g, geo, o, name, label):
                 fh.write(C21.full_photo(g))
         except Exception:                        # noqa: BLE001
             pass
-    return dict(window_in_desktop(geo, f), cy=f["centro"][1], f=f), ""
+    return dict(window_in_desktop(geo, f), cy=f["center"][1], f=f), ""
 
 
 def scan_edge(g, geo, o, name, press):

@@ -423,7 +423,7 @@ prepare_replies() {  # the installer's answers in $DIR/replies, served over HTTP
 	key=$(cat "$SSH_KEY.pub")
 	fill() {
 		[ -f "$REPLIES/$1" ] || die "$REPLIES/$1 is missing"
-		sed -e "s|@UTENTE@|$UTENTE|g" -e "s|@HASH@|$hash|g" -e "s|@CHIAVE@|$key|g" \
+		sed -e "s|@UTENTE@|$ACCOUNT|g" -e "s|@HASH@|$hash|g" -e "s|@CHIAVE@|$key|g" \
 			-e "s|@NOME@|rx-$D|g" -e "s|@WEB@|$WEB|g" "$REPLIES/$1" > "$r/$2"
 	}
 	case "$DIS" in

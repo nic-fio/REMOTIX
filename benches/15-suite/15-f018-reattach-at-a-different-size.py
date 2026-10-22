@@ -65,7 +65,7 @@ def compare_panel(bp, bd, side):
     fp, fd = bp.get(side + "_f"), bd.get(side + "_f")
     if not fp or not fd:
         return G.distance(bp[side], bd[side]), 1
-    via = set(bp.get("coperte") or []) | set(bd.get("coperte") or [])
+    via = set(bp.get("covered") or []) | set(bd.get("covered") or [])
     ks = [k for k in range(len(fp)) if k not in via]
     if not ks:
         return None, 0

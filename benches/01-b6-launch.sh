@@ -197,14 +197,14 @@ inf()  { printf '    --  %s\n' "$*"; }
 
 # shellcheck source=01-b0-target.sh
 . "$OUT/01-b0-target.sh"
-ADDR=$B_IND
-PORT=$B_PORTA
+ADDR=$B_ADDR
+PORT=$B_PORT
 # ⛔ The two transport caps come from the PROFILE, not from here.  On the graft
 #    they are 120 000 and 15 000 ms; on the product they are both 30 000,
 #    because `IDLE_MS` does not move — and when they coincide the two phases are
 #    NOT independent, and the bench declares it instead of counting them twice.
-TETTO_SANI=$B_IDLE_LUNGO
-TETTO_PING=$B_IDLE_CORTO
+TETTO_SANI=$B_IDLE_LONG
+TETTO_PING=$B_IDLE_SHORT
 
 AZIONE=${1:-all}
 case "$AZIONE" in
@@ -270,7 +270,7 @@ chi_tiene_la_porta()
 }
 
 if [ "$AZIONE" = list ]; then
-	bash "$ENTER" --root "python3 $INSIDE/01-b6-caps.py --target $B_NOME --list"
+	bash "$ENTER" --root "python3 $INSIDE/01-b6-caps.py --target $B_NAME --list"
 	exit 0
 fi
 
@@ -283,7 +283,7 @@ fi
 #    `main.c` loop always calls: there is no graft that could be missing.
 bersaglio_pronto || exit 3
 
-if [ "$B_NOME" = graft ]; then
+if [ "$B_NAME" = graft ]; then
 	SRC=$INSIDE/b2/ngtcp2/examples/http3_server_proto_codec.cc
 	COUNT=$(bash "$ENTER" --root "grep -c 'rcp_time(rcp_' $SRC" | tr -cd '0-9')
 	if [ "${COUNT:-0}" -ge 1 ]; then
@@ -298,9 +298,9 @@ else
 	# ⭐ The equivalent check on the product, and it is MEASURED like the other.
 	COUNT=$(bash "$ENTER" --root "grep -c 'wt_beat(' $INSIDE/remotix/transport.c" | tr -cd '0-9')
 	if [ "${COUNT:-0}" -ge 1 ]; then
-		ok "the product loop calls wt_batti() ($COUNT): RCP's time flows"
+		ok "the product loop calls wt_beat() ($COUNT): RCP's time flows"
 	else
-		ko "⛔ `wt_batti()` does not appear in transport.c: without it, RCP's"
+		ko "⛔ wt_beat() does not appear in transport.c: without it, RCP's"
 		ko "   clock does not advance and no cap of §4.6 ever expires.  The three reds"
 		ko "   would be the bench's, not §4.6's"
 		exit 3
@@ -353,7 +353,7 @@ log "2. The caps written in the CODE — and the number changed on 10 August"
 #             `benches/rcp/rcp.c` — which MUST stay identical byte for byte
 #             (md5 `cb7af778…`): the day they diverged, the benches and the
 #             product would measure two different protocols with the same name.
-if [ "$B_NOME" = graft ]; then
+if [ "$B_NAME" = graft ]; then
 	SORGENTE_RCP=$OUT/rcp/rcp.c
 	COMPILATO_RCP=$OUT/b2/ngtcp2/examples/rcp.c
 else
@@ -375,7 +375,7 @@ for coppia in "HELLO:CAP_HELLO" "CREDENTIALS:CAP_CREDENTIALS" "ATTACH:CAP_ATTACH
 	fi
 	if [ "$A" != "$B" ]; then
 		ko "⛔ $DEF: «$SORGENTE_RCP» says $A and «$COMPILATO_RCP» says $B"
-		if [ "$B_NOME" = graft ]; then
+		if [ "$B_NAME" = graft ]; then
 			ko "   The graft did not recopy rcp.c: the binary does not have the"
 			ko "   number you believe you changed."
 		else
@@ -485,18 +485,18 @@ spegni()
 tetto_dal_pari() # $1 = expected in ms, $2 = label
 {
 	local atteso=$1 et=$2 letto=""
-	rm -f "$OUT/b6-$B_NOME-$et-tetto.log"
+	rm -f "$OUT/b6-$B_NAME-$et-tetto.log"
 	bash "$ENTER" --root \
-		"python3 $INSIDE/01-b2-transport-probe.py --target $B_NOME --address $ADDR --port $PORT --label b6-$et --expected-idle $atteso > $INSIDE/b6-$B_NOME-$et-tetto.log 2>&1"
-	if [ ! -f "$OUT/b6-$B_NOME-$et-tetto.log" ]; then
+		"python3 $INSIDE/01-b2-transport-probe.py --target $B_NAME --address $ADDR --port $PORT --label b6-$et --expected-idle $atteso > $INSIDE/b6-$B_NAME-$et-tetto.log 2>&1"
+	if [ ! -f "$OUT/b6-$B_NAME-$et-tetto.log" ]; then
 		ko "the probe wrote nothing: it could not be looked at"
 		return 2
 	fi
-	letto=$(grep -m1 'max_idle_timeout *=' "$OUT/b6-$B_NOME-$et-tetto.log" | tr -dc '0-9')
+	letto=$(grep -m1 'max_idle_timeout *=' "$OUT/b6-$B_NAME-$et-tetto.log" | tr -dc '0-9')
 	if [ -z "$letto" ]; then
 		ko "I could not read max_idle_timeout from the peer: the phase does not start"
 		ko "   (without the cap one does not know who will close — R8.3)"
-		tail -6 "$OUT/b6-$B_NOME-$et-tetto.log" | sed 's/^/        /'
+		tail -6 "$OUT/b6-$B_NAME-$et-tetto.log" | sed 's/^/        /'
 		return 2
 	fi
 	if [ "$letto" -ne "$atteso" ]; then
@@ -549,20 +549,20 @@ fase() # $1 = name (healthy|ping), $2 = transport cap in ms
 	# ⚠ The server log: diagnosis, NOT arbiter (§8.1 wants the farewell
 	#   verified from the receiving side).
 	log "What the server wrote in phase «$nome» — diagnosis, not proof"
-	if [ -f "$B_LOG_FUORI" ]; then
+	if [ -f "$B_LOG_OUT" ]; then
 		# ⛔ The TARGET's fingerprint is counted: the product does not write
 		#    «REMOTIX B3» anywhere, and a zero would be read as «the server
 		#    wrote nothing».
-		grep -cE "$B_IMPRONTA" "$B_LOG_FUORI" \
+		grep -cE "$B_FINGERPRINT" "$B_LOG_OUT" \
 			| sed 's/^/        log lines: /'
-		if grep -q "ceiling expired for" "$B_LOG_FUORI"; then
-			grep "ceiling expired for" "$B_LOG_FUORI" | sed 's/^/        /'
+		if grep -q "ceiling expired for" "$B_LOG_OUT"; then
+			grep "ceiling expired for" "$B_LOG_OUT" | sed 's/^/        /'
 		else
 			inf "no «ceiling expired for» line: the server does not declare"
 			inf "it let any cap expire in this phase"
 		fi
 	else
-		inf "⛔ no log to summarise: $B_LOG_FUORI is not there"
+		inf "⛔ no log to summarise: $B_LOG_OUT is not there"
 		inf "   (volume not mapped? server never started? name changed?)"
 	fi
 
@@ -591,7 +591,7 @@ fase() # $1 = name (healthy|ping), $2 = transport cap in ms
 #     (ping) then measure THE SAME THING, and counting them as two
 #     confirmations would be counting the same measurement twice.
 if [ "$TETTO_SANI" = "$TETTO_PING" ]; then
-	log "⛔ The two phases against «$B_NOME» are NOT independent"
+	log "⛔ The two phases against «$B_NAME» are NOT independent"
 	inf "the transport cap is $TETTO_SANI ms in both: it is IDLE_MS"
 	inf "in src/transport.c, and no option touches it."
 	inf "⚠ HELLO (5 s) and ATTACH (10 s) stay clean — 30 s > 10 s — and their"
@@ -626,7 +626,7 @@ inf "   no ban left on whoever comes after"
 inf "⛔ and its ban file is «$B_BAN», which no other bench reads"
 
 log "Outcome"
-inf "target: $B_NOME  ·  binary md5 ${B_MD5:-unknown}"
+inf "target: $B_NAME  ·  binary md5 ${B_MD5:-unknown}"
 inf "phases run:${DONE:- none}"
 case "$OUTCOME" in
 0)
@@ -667,8 +667,8 @@ case "$OUTCOME" in
 	ko "⛔ B6: something does not pass"
 	;;
 esac
-inf "the server logs: $OUT/b6-$B_NOME-sani.log and $OUT/b6-$B_NOME-ping.log"
-inf "⭐ and the FACTS of this run, one per line: $B_ESITI_FUORI"
+inf "the server logs: $OUT/b6-$B_NAME-sani.log and $OUT/b6-$B_NAME-ping.log"
+inf "⭐ and the FACTS of this run, one per line: $B_OUTCOMES_OUT"
 inf "   (until 11 Aug 2026 B6 had no log, and its three"
 inf "    numbers — 5.0 · 60.1 · 10.0 s — cannot be re-verified by anyone)"
 exit "$OUTCOME"

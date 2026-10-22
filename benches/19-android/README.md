@@ -10,10 +10,10 @@ on the same network, preferably charging. The boxes running and no other round o
 
 **How to launch it** (from the laptop, in the REMOTIX folder):
 
-    bash benches/19-android/19-android.sh controlla       # phone, calls, Chrome, server: all in order?
-    bash benches/19-android/19-android.sh prova tutte     # all 10 (about an hour and a half)
-    bash benches/19-android/19-android.sh prova 7         # a single row, on GNOME
-    bash benches/19-android/19-android.sh prova 2 --desktop kde
+    bash benches/19-android/19-android.sh check       # phone, calls, Chrome, server: all in order?
+    bash benches/19-android/19-android.sh test all     # all 10 (about an hour and a half)
+    bash benches/19-android/19-android.sh test 7         # a single row, on GNOME
+    bash benches/19-android/19-android.sh test 2 --desktop kde
 
 **The phone stays yours.**
 - It opens **only Chrome**, in tabs of its own, only towards `192.168.0.2`. It records your tabs at the start and does not
@@ -26,10 +26,10 @@ on the same network, preferably charging. The boxes running and no other round o
 - Test 8 **closes Chrome abruptly**: normal tabs come back by themselves, **incognito ones do not** —
   close them first, if you have any.
 - If you interrupt it (Ctrl-C) it puts the phone back in order by itself; if it is interrupted badly:
-  `bash benches/19-android/19-android.sh ripristina`.
+  `bash benches/19-android/19-android.sh restore`.
 
 **Where the results end up.** In the suite's log, on the server, in
-`/media/REMOTIX/misure/fase19-android/registro.jsonl` (browser "telefono"), with the photos of the canvas
+`/media/REMOTIX/misure/fase19-android/registro.jsonl` (browser "phone"), with the photos of the canvas
 and of the phone's page next to it. At the end the script prints the summary and the report command.
 
 **Two things said plainly.** Test 9 (network drops) does not turn off the phone's Wi-Fi — the

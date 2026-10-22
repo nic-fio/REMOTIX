@@ -315,7 +315,7 @@ else
 			#   plus twice the margin.  A bottomless wait would turn «it never
 			#   dies» into «the bench froze».
 			EXPECTED_DEATH=8
-			for _ in $(seq $((ATTESO_MORTE * 10))); do
+			for _ in $(seq $((EXPECTED_DEATH * 10))); do
 				[ -d "/proc/$PID" ] || break
 				sleep 0.1
 			done

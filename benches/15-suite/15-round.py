@@ -88,18 +88,18 @@ def read_tests(pattern=""):
     prove = []
     for f in sorted(glob.glob(os.path.join(HERE, "15-[fn][0-9]*.py"))):
         text = open(f, encoding="utf-8").read()
-        m = re.search(r"^FUNZIONI\s*=\s*\(([^)]*)\)", text, re.M)
+        m = re.search(r"^FUNCTIONS\s*=\s*\(([^)]*)\)", text, re.M)
         if not m:
             continue
-        functions = re.findall(r"[\"']([A-Z]-[0-9A-Z-]+)[\"']", m.group(1))
+        functions = re.findall(r"[\"']([A-Z]-[0-9A-Za-z-]+)[\"']", m.group(1))
         name = os.path.basename(f)[:-3]
         too_short = name.split("-")[1]                       # f004
         if pattern and not any(x.strip() and x.strip() in name for x in pattern.split(",")):
             continue
         per_browser = not re.search(r"^PER_BROWSER\s*=\s*False", text, re.M)
-        long = bool(re.search(r"^LUNGA\s*=\s*True", text, re.M))
+        long = bool(re.search(r"^LONG\s*=\s*True", text, re.M))
         # ⭐ PHONE_ONLY = True: the test makes sense only with the real phone (F-031, touch)
-        solo_tel = bool(re.search(r"^SOLO_TELEFONO\s*=\s*True", text, re.M))
+        solo_tel = bool(re.search(r"^PHONE_ONLY\s*=\s*True", text, re.M))
         s = re.search(r"^SERVER\s*=\s*[\"']([^\"']+)[\"']", text, re.M)
         prove.append({"file": f, "name": name, "corto": too_short, "functions": functions,
                       "per_browser": per_browser, "long": long, "solo_telefono": solo_tel,
