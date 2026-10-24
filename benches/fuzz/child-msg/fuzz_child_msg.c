@@ -18,8 +18,9 @@
  *    0 MESSAGE  a0-1 the type (u16 LE, as in struct head), the rest is the body: handed to handle() as it is
  *    1 PIECES   the child cuts a big message the way it does: a0 kind (0 frame · 1 cursor · 2 clipboard · 3 block),
  *               a1-4 total (u32 LE; anything — the caps are the product's to enforce), a5-6 piece size (u16, clamped to
- *               MAX_PIECE + 1 on purpose), a7 how many pieces, a8 bits: 0 skip a piece (a hole) · 1 repeat one · 2 change the
- *               codec/width/height midway · 3 pieces start at offset 0 each time · 4 the offset overshoots by one;
+ *               MAX_PIECE + 1 on purpose), a7 how many pieces, a8 bits: 1 skip the second piece (a hole) · 2 deliver every piece twice · 4 change the
+ *               codec/width/height midway · 8 every piece says offset 0 · 16 the last piece is not clamped to the total ·
+ *               32 the offset overshoots by one;
  *               a9 codec/key byte · a10-11 width · a12-13 height · the data is a pattern
  *    2 NEWCHILD the child dies and a new one takes the slot: assemblies freed as child_free does (a0 bit 0: showed_up)
  *
@@ -29,7 +30,8 @@
  *       CURSOR_MAX_SIDE² × 4 · CLIPBOARD_CAP)
  *    A2 a clipboard text reaches the hook with the zero AFTER it (`text[byte] == 0`: «one extra byte is allocated and the
  *       zero is put there») and never more than CLIPBOARD_CAP bytes
- *    A3 a frame delivered has exactly the total it announced (≤ FRAME_MAX, > 0) — «a cut frame delivered as whole is a lie»
+ *    A3 a frame delivered has exactly the total the child announced at its piece at offset 0 (the harness remembers it:
+ *       `frame_expect`), within 1..FRAME_MAX — «a cut frame delivered as whole is a lie»
  *    A4 a cursor delivered is hidden (no bitmap) or has total ≤ the cursor's cap
  *    A5 an audio block delivered has codec 1 or 2 (§6.3) and `byte` bytes readable
  *    A6 nothing is delivered after the child is dismissed (`exiting`)
@@ -45,6 +47,7 @@ static children F;
 static struct child G;
 static unsigned cfg;
 static uint8_t *body;
+static size_t frame_expect; /* the total announced by the frame being assembled (A3) */
 
 static void sum(const void *p, size_t n)
 {
@@ -59,6 +62,7 @@ static void h_deposit(void *c, const char *u, uid_t uid, uint8_t codec, bool key
 	(void)c; (void)u; (void)uid; (void)codec; (void)key; (void)w; (void)hh; (void)ins; (void)in;
 	if (G.exiting) FAIL("A6: a frame delivered after the child was dismissed");
 	if (n == 0 || n > FRAME_MAX) FAIL("A3: a frame of %zu bytes delivered", n);
+	if (n != frame_expect) FAIL("A3: a frame of %zu bytes delivered, the child announced %zu", n, frame_expect);
 	sum(d, n);
 }
 static void h_dismiss(void *c, const char *u, uid_t uid) { (void)c; (void)u; (void)uid; }
@@ -132,6 +136,13 @@ static void deliver(uint16_t kind, const uint8_t *b, size_t n)
 	t.version = CHILD_VERSION;
 	t.byte = (uint32_t)n;
 	t.declared_uid = (uint32_t)G.uid;
+	frame_expect = G.assembly ? G.assembly_total : 0;
+	if (kind == MSG_FRAME && n >= sizeof(struct body_frame)) {
+		struct body_frame c;
+		memcpy(&c, b, sizeof c);
+		if (c.offset == 0 && c.total >= 1 && c.total <= FRAME_MAX && c.piece <= MAX_PIECE && c.piece <= c.total)
+			frame_expect = c.total;
+	}
 	free(body);
 	body = malloc(n ? n : 1);
 	if (n) memcpy(body, b, n);
@@ -184,7 +195,6 @@ static void op_pieces(const uint8_t *a, size_t n)
 			memcpy(buf, &c, hl = sizeof c);
 		}
 		for (size_t k = 0; k < pc && k < piece; k++) buf[hl + k] = (uint8_t)(k * 7 + i + (z[9] == 0xAA ? 0 : 1) * 0);
-		if ((bits & 16) && pc < piece) { /* the piece claims more than it carries */ }
 		size_t carry = pc < piece ? pc : piece;
 		if (!((bits & 1) && i == 1)) deliver(kind, buf, hl + carry);
 		if (bits & 2) deliver(kind, buf, hl + carry);
