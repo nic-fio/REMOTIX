@@ -2448,7 +2448,7 @@ int main(int argc, char **argv)
 	if (!ctx_quic || !ctx_page)
 		goto fine;
 
-	t = transport_open(address, port, ctx_quic, pam_help);
+	t = transport_open(address, port, ctx_quic, pam_help, dir_cert);
 	if (!t)
 		goto fine;
 	bridge.t = t;

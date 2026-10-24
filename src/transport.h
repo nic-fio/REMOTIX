@@ -57,9 +57,16 @@ typedef struct transport transport;
  *    BEFORE this call — so the child process inherits neither the UDP socket
  *    nor the TCP listener.  ⚠ NULL is allowed: the server checks the
  *    credentials synchronously, that is stopping the thread, and it is the
- *    declared fallback of `CODER.md` §4.2. */
+ *    declared fallback of `CODER.md` §4.2.
+ *
+ * ⭐ `secret_dir` (`DECISIONS.md` §11.9) is where `quic-secret` is kept (0600):
+ *    the static secret from which both the Retry tokens and the Stateless
+ *    Reset tokens are derived.  ⚠ It must survive a restart, or a reset sent
+ *    after it would carry a token the client has never heard of.  If the file
+ *    cannot be read or written the secret of the run is used, and it is
+ *    declared in the log. */
 transport *transport_open(const char *address, const char *port, SSL_CTX *ctx,
-                          helper *help);
+                          helper *help, const char *secret_dir);
 
 /* ⭐ Delivers a PAM verdict to the connection that was waiting for it (§1.10).
  * ⚠ If nobody waits for it any more it writes it in the log and throws it

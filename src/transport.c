@@ -7,6 +7,7 @@
 #include "webtransport.h"
 
 #include <errno.h>
+#include <limits.h>
 #include <fcntl.h>
 #include <netdb.h>
 #include <netinet/in.h>
@@ -14,6 +15,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -24,6 +26,19 @@
 
 #define SCIDLEN 18
 #define MAX_PACKETS_PER_ROUND 64
+
+/* ⭐ §11.9 (13 Oct 2026): how long a Retry token is good for, and the cap on
+ *    Stateless Resets.  ⚠ 10 s is the time a client needs to answer a Retry
+ *    with the Initial it was asked for (one round trip) with room to spare, and
+ *    short enough that a token sniffed on the line is useless soon after.
+ *    The 100 per second are the cap on what a forged flood can make us send
+ *    out: a reset is as long as the packet that triggered it, so without a cap
+ *    a flood of short packets (even with forged sources, which Retry does not
+ *    cover here) would make us send as much as it sends. */
+#define RETRY_TOKEN_TIMEOUT (10 * NGTCP2_SECONDS)
+#define RESET_PER_SECOND 100
+#define SECRET_LEN 32
+#define SECRET_FILE "quic-secret"
 
 /* ⛔ 30 s, imposed by the server (`RCP.md` §2.2): «it is the silence clock:
  *    when it expires, the client is disconnected».  ⚠ It is the TRANSPORT
@@ -119,7 +134,16 @@ struct transport {
 	entry_cid *cids;
 	size_t ncids, capcids;
 
-	uint8_t secret[32];
+	/* ⭐ §11.9: static, and kept on disk (`secret_load()`): Retry tokens and
+	 *    Stateless Reset tokens are both derived from it.  Zeroed at close. */
+	uint8_t secret[SECRET_LEN];
+
+	/* ⭐ §11.9: the cap on Stateless Resets — the second (monotonic) that is
+	 *    being counted, how many went out in it, and whether the cap was
+	 *    already declared in the log for that second. */
+	uint64_t reset_second;
+	unsigned reset_count;
+	bool reset_capped_said;
 
 	/* ⭐ The PAM helper (`DECISIONS.md` §1.10): it is not this module's, it is
 	 *    passed in by `main.c`.  It only serves to hand it to every `wt` that
@@ -186,21 +210,24 @@ static connection *cid_find(transport *t, const uint8_t *dcid, size_t len)
 	return NULL;
 }
 
-static void cid_bind(transport *t, const ngtcp2_cid *cid, connection *c)
+/* ⭐ §11.9: returns false if the id could NOT be bound (out of memory).  An
+ * unbound id of a live connection would make its packets look unknown, and
+ * they would get a Stateless Reset: the callers must refuse the id. */
+static bool cid_bind(transport *t, const ngtcp2_cid *cid, connection *c)
 {
 	for (size_t i = 0; i < t->ncids; i++)
 		if (!t->cids[i].used) {
 			t->cids[i].cid = *cid;
 			t->cids[i].c = c;
 			t->cids[i].used = true;
-			return;
+			return true;
 		}
 	if (t->ncids == t->capcids) {
 		size_t nc = t->capcids ? t->capcids * 2 : 32;
 		entry_cid *n = realloc(t->cids, nc * sizeof *n);
 		if (!n) {
 			registro_dice(REG_QUIC, "⛔ out of memory in the CID map");
-			return;
+			return false;
 		}
 		t->cids = n;
 		t->capcids = nc;
@@ -209,6 +236,7 @@ static void cid_bind(transport *t, const ngtcp2_cid *cid, connection *c)
 	t->cids[t->ncids].c = c;
 	t->cids[t->ncids].used = true;
 	t->ncids++;
+	return true;
 }
 
 static void cid_unbind(transport *t, const ngtcp2_cid *cid)
@@ -255,7 +283,10 @@ static int cb_get_new_cid(ngtcp2_conn *conn, ngtcp2_cid *cid,
 	if (ngtcp2_crypto_generate_stateless_reset_token(
 		    token->data, c->t->secret, sizeof c->t->secret, cid) != 0)
 		return NGTCP2_ERR_CALLBACK_FAILURE;
-	cid_bind(c->t, cid, c);
+	if (!cid_bind(c->t, cid, c)) {
+		registro_dice(REG_QUIC, "⛔ new connection id refused: out of memory for the CID map");
+		return NGTCP2_ERR_CALLBACK_FAILURE;
+	}
 	return 0;
 }
 
@@ -586,7 +617,12 @@ static int cb_ack_datagram(ngtcp2_conn *conn, uint64_t dgram_id,
 	return 0;
 }
 
+/* ⭐ §11.9: `odcid` is the destination connection id of the Initial that
+ *    triggered our Retry, recovered from the token we validated; `hd->dcid` is
+ *    the one WE chose in that Retry (`retry_scid`).  Both go in the transport
+ *    parameters, or the client rejects the handshake (RFC 9000 §7.3). */
 static connection *accept_conn(transport *t, const ngtcp2_pkt_hd *hd,
+                            const ngtcp2_cid *odcid,
                             const struct sockaddr *local, socklen_t localelen,
                             const struct sockaddr *remote, socklen_t remotelen)
 {
@@ -650,6 +686,11 @@ static connection *accept_conn(transport *t, const ngtcp2_pkt_hd *hd,
 	ngtcp2_settings_default(&settings);
 	settings.initial_ts = now_ns();
 	settings.log_printf = NULL;
+	/* ⭐ §11.9: the token the client brought back, already verified by the
+	 *    caller; ngtcp2 copies it. */
+	settings.token = hd->token;
+	settings.tokenlen = hd->tokenlen;
+	settings.token_type = NGTCP2_TOKEN_TYPE_RETRY;
 
 	ngtcp2_transport_params_default(&params);
 	params.initial_max_stream_data_bidi_local = 256 * 1024;
@@ -705,8 +746,13 @@ static connection *accept_conn(transport *t, const ngtcp2_pkt_hd *hd,
 	params.stateless_reset_token_present = 1;
 	params.active_connection_id_limit = 7;
 	params.grease_quic_bit = 1;
-	params.original_dcid = hd->dcid;
+	/* ⭐ §11.9: with a Retry, `original_dcid` is the dcid of the FIRST Initial
+	 *    (the one in the token), not of this one, and `retry_scid` is the one
+	 *    we put in the Retry packet. */
+	params.original_dcid = *odcid;
 	params.original_dcid_present = 1;
+	params.retry_scid = hd->dcid;
+	params.retry_scid_present = 1;
 	/* ⛔ §2.3: the server MUST NOT disable migration — it is the reason QUIC
 	 *    was chosen (`SPECS.md` §8.4): the phone that moves from WiFi to
 	 *    the mobile network.  `disable_active_migration` is not touched, and
@@ -758,10 +804,24 @@ static connection *accept_conn(transport *t, const ngtcp2_pkt_hd *hd,
 	if (!c->w)
 		goto male;
 
+	/* ⭐ §11.9: both ids are bound BEFORE the connection enters the list, so a
+	 *    failure (CID map out of memory) frees it with nothing left behind. */
+	if (!cid_bind(t, &c->scid, c)) {
+		registro_dice(REG_QUIC, "⛔ connection refused: out of memory for the CID map");
+		goto male;
+	}
+	/* ⭐ §11.9: the dcid the client now uses (our `retry_scid`) is bound to
+	 *    the connection too: an Initial sent again before our answer gets to
+	 *    the same connection instead of opening a second one.  ⚠ ngtcp2 does
+	 *    NOT remove it with `cb_remove_cid` (it never learned of it): it stays
+	 *    until `cid_unbind_all()` in `connection_free()`. */
+	if (!cid_bind(t, &hd->dcid, c)) {
+		registro_dice(REG_QUIC, "⛔ connection refused: out of memory for the CID map");
+		goto male;
+	}
 	c->upcoming = t->prime;
 	t->prime = c;
 	t->how_many++;
-	cid_bind(t, &c->scid, c);
 
 	registro_dice(REG_QUIC, "new connection from %s (%zu in all)",
 	              c->provenance, t->how_many);
@@ -794,6 +854,131 @@ static void nego_version(transport *t, const ngtcp2_version_cid *vc,
 	send_msg(t, remote, remotelen, buf, (size_t)n);
 }
 
+/* ------------------------------------------------------------------------ */
+/* Address validation (Retry) and Stateless Reset — `DECISIONS.md` §11.9.   */
+
+/* An Initial without our token: a Retry and NO connection (nothing is
+ * allocated for an address that has not proved it can receive).
+ * ⚠ The client's Initial is at least 1200 bytes and the Retry is far smaller,
+ *   so the server is not an amplifier. */
+static void send_retry(transport *t, const ngtcp2_pkt_hd *hd,
+                       const struct sockaddr *remote, socklen_t remotelen)
+{
+	uint8_t token[NGTCP2_CRYPTO_MAX_RETRY_TOKENLEN2];
+	uint8_t buf[NGTCP2_MAX_UDP_PAYLOAD_SIZE];
+	ngtcp2_cid retry_scid;
+	ngtcp2_ssize tl, n;
+
+	retry_scid.datalen = SCIDLEN;
+	if (RAND_bytes(retry_scid.data, SCIDLEN) != 1) {
+		registro_dice(REG_QUIC, "⛔ RAND_bytes failed: Retry not sent");
+		return;
+	}
+	tl = ngtcp2_crypto_generate_retry_token2(
+		token, t->secret, sizeof t->secret, hd->version, remote, remotelen,
+		&retry_scid, &hd->dcid, now_ns());
+	if (tl < 0) {
+		registro_dice(REG_QUIC, "⛔ Retry token not generated: %s",
+		              ngtcp2_strerror((int)tl));
+		return;
+	}
+	n = ngtcp2_crypto_write_retry(buf, sizeof buf, hd->version, &hd->scid,
+	                              &retry_scid, &hd->dcid, token, (size_t)tl);
+	if (n < 0) {
+		registro_dice(REG_QUIC, "⛔ Retry packet not written: %s",
+		              ngtcp2_strerror((int)n));
+		return;
+	}
+	log_detail(REG_QUIC, "Initial without a token: Retry sent (%zd bytes)", n);
+	send_msg(t, remote, remotelen, buf, (size_t)n);
+}
+
+/* A token that does not prove the address (old, or made for another one):
+ * CONNECTION_CLOSE with INVALID_TOKEN in an Initial, and no connection. */
+static void send_invalid_token(transport *t, const ngtcp2_pkt_hd *hd,
+                               const struct sockaddr *remote,
+                               socklen_t remotelen)
+{
+	uint8_t buf[NGTCP2_MAX_UDP_PAYLOAD_SIZE];
+	ngtcp2_ssize n = ngtcp2_crypto_write_connection_close(
+		buf, sizeof buf, hd->version, &hd->scid, &hd->dcid,
+		NGTCP2_INVALID_TOKEN, NULL, 0);
+	if (n < 0)
+		return;
+	registro_dice(REG_QUIC, "Initial with a token that is old or not for this "
+	              "address: INVALID_TOKEN");
+	send_msg(t, remote, remotelen, buf, (size_t)n);
+}
+
+/* ⭐ A short-header packet for a connection we do not know: it tells the
+ *   client «that connection no longer exists» (RFC 9000 §10.3) instead of
+ *   letting it wait the 30 s of inactivity.
+ *
+ * ⛔ THE MINIMUM LENGTH IS 21, NOT 41.  The first attempt counted 25 random
+ *    bytes + 16 of token = 41 and answered nothing to Chrome's packets of 39
+ *    bytes: `[M]` 13 Oct 2026, Chrome kept sending for seconds.  The real floor
+ *    is `NGTCP2_MIN_STATELESS_RESET_RANDLEN` (5) + the 16 of the token = 21,
+ *    and the reset is ONE BYTE SHORTER than the packet that triggered it
+ *    (RFC 9000 §10.3: otherwise two servers would answer each other forever),
+ *    so a packet of 22 or more gets one.
+ * ⚠ The token is derived from the static secret and the dcid, so it is the
+ *   one the connection announced even if the server restarted since. */
+static void send_stateless_reset(transport *t, const ngtcp2_version_cid *vc,
+                                 const struct sockaddr *remote,
+                                 socklen_t remotelen, size_t triggerlen)
+{
+	uint8_t buf[NGTCP2_MAX_UDP_PAYLOAD_SIZE];
+	uint8_t rnd[NGTCP2_MAX_UDP_PAYLOAD_SIZE];
+	ngtcp2_stateless_reset_token token;
+	ngtcp2_cid cid;
+	uint64_t second = now_ns() / NGTCP2_SECONDS;
+	size_t outlen, randlen;
+	ngtcp2_ssize n;
+
+	if (triggerlen < NGTCP2_MIN_STATELESS_RESET_RANDLEN +
+	                     NGTCP2_STATELESS_RESET_TOKENLEN + 1)
+		return;
+	if (vc->dcidlen > NGTCP2_MAX_CIDLEN)
+		return;
+
+	if (second != t->reset_second) {
+		t->reset_second = second;
+		t->reset_count = 0;
+		t->reset_capped_said = false;
+	}
+	if (t->reset_count >= RESET_PER_SECOND) {
+		/* ⚠ DECLARED FALLBACK: over the cap the packet is ignored, as before
+		 *   §11.9.  Said once per second, not once per packet: a flood must
+		 *   not also flood the log. */
+		if (!t->reset_capped_said) {
+			registro_dice(REG_QUIC, "more than %d Stateless Resets in a "
+			              "second: the rest are ignored", RESET_PER_SECOND);
+			t->reset_capped_said = true;
+		}
+		return;
+	}
+
+	cid.datalen = vc->dcidlen;
+	memcpy(cid.data, vc->dcid, vc->dcidlen);
+	if (ngtcp2_crypto_generate_stateless_reset_token(
+		    token.data, t->secret, sizeof t->secret, &cid) != 0)
+		return;
+
+	outlen = triggerlen - 1;
+	if (outlen > sizeof buf)
+		outlen = sizeof buf;
+	randlen = outlen - NGTCP2_STATELESS_RESET_TOKENLEN;
+	if (RAND_bytes(rnd, (int)randlen) != 1)
+		return;
+	n = ngtcp2_pkt_write_stateless_reset2(buf, sizeof buf, &token, rnd, randlen);
+	if (n < 0)
+		return;
+	t->reset_count++;
+	log_detail(REG_QUIC, "packet of %zu bytes for a connection that does not "
+	           "exist: Stateless Reset of %zd bytes", triggerlen, n);
+	send_msg(t, remote, remotelen, buf, (size_t)n);
+}
+
 static void read_packet(transport *t, const struct sockaddr *local,
                             socklen_t localelen, const struct sockaddr *remote,
                             socklen_t remotelen, const ngtcp2_pkt_info *pi,
@@ -818,24 +1003,48 @@ static void read_packet(transport *t, const struct sockaddr *local,
 	c = cid_find(t, vc.dcid, vc.dcidlen);
 	if (!c) {
 		ngtcp2_pkt_hd hd;
+		ngtcp2_cid odcid;
 		if (ngtcp2_accept(&hd, data, len) != 0) {
-			/* ⚠ No connection and it is not an Initial.  ⛔ DECLARED
-			 *   FALLBACK: here the product should send a Stateless Reset,
-			 *   which is the way to tell a client with old state «that
-			 *   connection no longer exists» instead of making it wait the
-			 *   30 s of inactivity.  It is not there: it is ignored, and the
-			 *   line below is what tells «ignored» from «never arrived». */
+			/* ⭐ §11.9: no connection and it is not an Initial.  A SHORT
+			 *   header gets a Stateless Reset (first bit 0; the fixed bit is
+			 *   not tested, we announce grease_quic_bit).  A long header that
+			 *   is not an Initial is ignored, and the line says so. */
+			if (!(data[0] & 0x80)) {
+				send_stateless_reset(t, &vc, remote, remotelen, len);
+				return;
+			}
 			log_detail(REG_QUIC,
 			                   "packet of %zu bytes for a connection "
 			                   "that does not exist: ignored",
 			                   len);
 			return;
 		}
-		/* ⚠ No address validation with Retry: the product is used on one's
-		 *   own network or VPN (`SPECS.md` §4.1).  ⛔ It must be put
-		 *   back before exposing it, and it is declared here so that it does
-		 *   not look like an oversight. */
-		c = accept_conn(t, &hd, local, localelen, remote, remotelen);
+		/* ⭐ §11.9: address validation.  Without our token: Retry, and no
+		 *   connection.  With it: verified here, BEFORE any state exists.
+		 *   Connections already born never pass through this branch. */
+		if (hd.tokenlen == 0) {
+			send_retry(t, &hd, remote, remotelen);
+			return;
+		}
+		rv = ngtcp2_crypto_verify_retry_token2(
+			&odcid, hd.token, hd.tokenlen, t->secret, sizeof t->secret,
+			hd.version, remote, remotelen, &hd.dcid, RETRY_TOKEN_TIMEOUT,
+			now_ns());
+		if (rv == NGTCP2_CRYPTO_ERR_VERIFY_TOKEN) {
+			send_invalid_token(t, &hd, remote, remotelen);
+			return;
+		}
+		if (rv != 0) {
+			/* An unreadable token (not ours, or damaged) is ignored as if the
+			 * Initial had come without one: the client gets a Retry and can
+			 * start over (RFC 9000 §8.1.3). */
+			log_detail(REG_QUIC, "token not readable (%s): ignored, Retry "
+			           "sent", ngtcp2_strerror(rv));
+			send_retry(t, &hd, remote, remotelen);
+			return;
+		}
+		log_detail(REG_QUIC, "address validated with a Retry");
+		c = accept_conn(t, &hd, &odcid, local, localelen, remote, remotelen);
 		if (!c)
 			return;
 	}
@@ -1195,8 +1404,103 @@ void transport_context(transport *t, SSL_CTX *ctx) { t->ctx = ctx; }
 
 /* ------------------------------------------------------------------------ */
 
+/* ⭐ §11.9 — the static secret, from `<secret_dir>/quic-secret`.
+ *
+ * ⚠ It must be the same after a restart: the Stateless Reset token of a
+ *   connection is derived from it, and the client keeps the one it was given.
+ *   A new secret after each start would make every reset carry a token the
+ *   client throws away, and the 30 s wait would be back.
+ *
+ * ⛔ The file is created at 0600 ATOMICALLY: written to a temporary name opened
+ *    with O_CREAT|O_EXCL and mode 0600 (no moment at which it exists with
+ *    wider permissions, and `O_EXCL` refuses a name planted by someone else),
+ *    synced, then `rename()`d over the final one.
+ * ⚠ DECLARED FALLBACK: if it cannot be read or written the secret of the run
+ *   (random, already in `t->secret`) stays; the reset after a restart will not
+ *   be recognised by the client, and the log says so. */
+static void secret_load(transport *t, const char *dir)
+{
+	char path[PATH_MAX], tmp[PATH_MAX];
+	struct stat st;
+	int fd;
+
+	if (!dir || snprintf(path, sizeof path, "%s/" SECRET_FILE, dir) >=
+	                (int)sizeof path ||
+	    snprintf(tmp, sizeof tmp, "%s/" SECRET_FILE ".tmp.%ld", dir,
+	             (long)getpid()) >= (int)sizeof tmp) {
+		registro_dice(REG_QUIC, "⚠ quic-secret: no usable path: the secret "
+		              "of this run only, a Stateless Reset after a restart "
+		              "will not be recognised");
+		return;
+	}
+
+	fd = open(path, O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC);
+	if (fd >= 0) {
+		uint8_t buf[SECRET_LEN];
+		if (fstat(fd, &st) == 0 && S_ISREG(st.st_mode) &&
+		    st.st_uid == geteuid() && (st.st_mode & 077) == 0 &&
+		    st.st_size == SECRET_LEN &&
+		    read(fd, buf, sizeof buf) == (ssize_t)sizeof buf) {
+			memcpy(t->secret, buf, sizeof buf);
+			explicit_bzero(buf, sizeof buf);
+			close(fd);
+			registro_dice(REG_QUIC, "static secret read from %s", path);
+			return;
+		}
+		explicit_bzero(buf, sizeof buf);
+		close(fd);
+		registro_dice(REG_QUIC, "⚠ %s is not a 32-byte 0600 file of ours: "
+		              "replaced with a new secret", path);
+	} else if (errno != ENOENT) {
+		registro_dice(REG_QUIC, "⚠ %s not readable (%s): replaced with a "
+		              "new secret", path, strerror(errno));
+	}
+
+	fd = open(tmp, O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0600);
+	if (fd < 0 && errno == EEXIST) {
+		/* A leftover of a crashed run with the same pid. */
+		unlink(tmp);
+		fd = open(tmp, O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0600);
+	}
+	if (fd < 0) {
+		registro_dice(REG_QUIC, "⚠ quic-secret not written (%s): the secret "
+		              "of this run only, a Stateless Reset after a restart "
+		              "will not be recognised", strerror(errno));
+		return;
+	}
+	if (fchmod(fd, 0600) != 0 ||
+	    write(fd, t->secret, sizeof t->secret) != (ssize_t)sizeof t->secret ||
+	    fsync(fd) != 0) {
+		registro_dice(REG_QUIC, "⚠ quic-secret not written (%s): the secret "
+		              "of this run only", strerror(errno));
+		close(fd);
+		unlink(tmp);
+		return;
+	}
+	close(fd);
+	if (rename(tmp, path) != 0) {
+		registro_dice(REG_QUIC, "⚠ quic-secret not renamed (%s): the secret "
+		              "of this run only", strerror(errno));
+		unlink(tmp);
+		return;
+	}
+	/* The rename must survive a crash too: sync the directory.  Not fatal. */
+	{
+		int dfd = open(dir, O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+		if (dfd < 0 || fsync(dfd) != 0)
+			registro_dice(REG_QUIC, "⚠ directory %s not synced (%s): the "
+			              "secret may be lost at a crash, and a Stateless "
+			              "Reset after it would not be recognised", dir,
+			              strerror(errno));
+		if (dfd >= 0)
+			close(dfd);
+	}
+	registro_dice(REG_QUIC, "static secret generated and kept in %s (0600)",
+	              path);
+}
+
 transport *transport_open(const char *address, const char *port, SSL_CTX *ctx,
-                          helper *help)
+                          helper *help, const char *secret_dir)
 {
 	struct addrinfo hints, *result = NULL, *r;
 	transport *t;
@@ -1265,6 +1569,7 @@ transport *transport_open(const char *address, const char *port, SSL_CTX *ctx,
 		transport_close(t);
 		return NULL;
 	}
+	secret_load(t, secret_dir);
 
 	if (ngtcp2_crypto_ossl_init() != 0) {
 		registro_dice(REG_QUIC, "⛔ ngtcp2_crypto_ossl_init");
@@ -1294,5 +1599,6 @@ void transport_close(transport *t)
 	free(t->cids);
 	if (t->fd >= 0)
 		close(t->fd);
+	explicit_bzero(t->secret, sizeof t->secret);
 	free(t);
 }
