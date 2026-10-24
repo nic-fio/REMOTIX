@@ -35,6 +35,10 @@ bool rcp_rhost_from_provenance(const char *provenance, char *report, size_t cap)
 	return true;
 }
 
+/* the stub of rcp.c's flag (§11.39 addendum): the test decides who is «known» */
+static bool stub_known;
+bool rcp_asking_for_known_key(void) { return stub_known; }
+
 static int checks, bad;
 #define CHECK(cond, ...)                                                      \
 	do {                                                                  \
@@ -117,6 +121,22 @@ int main(void)
 	CHECK(g.n == 1 && g.lost && !g.admitted && strcmp(g.user, "carol") == 0 && strcmp(g.rhost, "1.2.3.4") == 0,
 	      "dead helper: n=%d user=%s rhost=«%s» lost=%d", g.n, g.user, g.rhost, g.lost);
 	CHECK(h.fd < 0 && helper_in_flight(&h) == 0, "the helper is closed and nothing stays in flight");
+
+	/* 4. the places kept for a known key (ported from 4d9eb72b): an unknown key gets 14 of the 16, a known one all 16 */
+	make(&h, &peer);
+	stub_known = false;
+	int taken = 0;
+	for (int i = 0; i < 16; i++)
+		if (helper_ask(&h, "dave", "pw", "[5.6.7.8]:1", 1000, &t))
+			taken++;
+	CHECK(taken == 14 && helper_in_flight(&h) == 14, "an unknown key takes 14 places (got %d)", taken);
+	CHECK(!helper_ask(&h, "dave", "pw", "[5.6.7.8]:1", 1000, &t), "the 15th ask of an unknown key is refused");
+	stub_known = true;
+	CHECK(helper_ask(&h, "erin", "pw", "[9.9.9.9]:1", 1000, &t), "a known key gets the 15th place");
+	CHECK(helper_ask(&h, "erin", "pw", "[9.9.9.9]:1", 1000, &t), "and the 16th");
+	CHECK(!helper_ask(&h, "erin", "pw", "[9.9.9.9]:1", 1000, &t), "but not a 17th: 16 is the ceiling for everybody");
+	stub_known = false;
+	close(peer); close(h.fd);
 
 	printf("\n%d checks, %d failed\n", checks, bad);
 	return bad ? 1 : 0;

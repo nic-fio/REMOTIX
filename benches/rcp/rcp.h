@@ -658,6 +658,14 @@ const char *rcp_state_name(const rcp_session *s);
  *    for any more (the client hung up, the session finished while PAM judged)
  *    must not start a desktop for nobody. */
 bool rcp_awaits_verdict(const rcp_session *s, uint64_t ticket);
+/* ⭐ THE TWO PAM SLOTS KEPT FOR A KNOWN KEY — 15 Oct 2026, `DECISIONS.md`
+ *    §11.39 addendum.  True ONLY while `rcp.c` is inside `ask_verify` for
+ *    credentials whose key (§4.4-bis: IPv4 address or IPv6 /64) had an ADMITTED
+ *    login during the last 30 days (`GOOD_AGE`, kept in memory: a restart
+ *    forgets it); false at every other instant.  `helper.c` reads it in
+ *    `helper_ask()`: an unknown key may take 14 of the 16 checks in flight, a
+ *    known one all 16 — so a flood from fresh addresses cannot keep the owner out. */
+bool rcp_asking_for_known_key(void);
 const char *rcp_user(const rcp_session *s);
 
 /* ⛔⭐ THE CLIENT'S DECODER CEILING — `video.max_size` of §4.3,

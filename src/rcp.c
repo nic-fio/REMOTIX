@@ -1224,6 +1224,58 @@ struct lentry {
 	uint64_t last_touch;
 };
 static struct lentry attempts[MAX_ATTEMPTS];
+
+/* ⭐ THE KEYS THAT LOGGED IN LATELY — 15 Oct 2026, `DECISIONS.md` §11.39 addendum
+ *    (ported from 4d9eb72b).  The last ADMITTED verdict of a §4.4-bis key, in
+ *    memory only (the monotonic clock does not survive a restart, so neither
+ *    does this): it serves `rcp_asking_for_known_key()` and nothing else.  A
+ *    ring of GOOD_KEYS: the same key takes its place again, else an empty one,
+ *    else the oldest. */
+#define GOOD_KEYS 64
+#define GOOD_AGE 2592000000ull /* 30 days, ms */
+static struct { char key[64]; uint64_t when; } good_keys[GOOD_KEYS];
+
+static void good_note(const char *key, uint64_t now)
+{
+	int pick = 0;
+	for (int k = 0; k < GOOD_KEYS; k++) {
+		if (good_keys[k].key[0] && strcmp(good_keys[k].key, key) == 0) {
+			pick = k;
+			goto found;
+		}
+	}
+	for (int k = 0; k < GOOD_KEYS; k++) {
+		if (!good_keys[k].key[0]) {
+			pick = k;
+			goto found;
+		}
+		if (good_keys[k].when < good_keys[pick].when)
+			pick = k;
+	}
+found:
+	snprintf(good_keys[pick].key, sizeof good_keys[pick].key, "%s", key);
+	good_keys[pick].when = now;
+}
+
+static bool good_recent(const char *key, uint64_t now)
+{
+	for (int k = 0; k < GOOD_KEYS; k++)
+		if (good_keys[k].key[0] && strcmp(good_keys[k].key, key) == 0)
+			/* ⚠ A login stamped LATER than `now` is recent, not 584 million
+			 *   years old: `login_resolve()` may run with the helper's clock,
+			 *   a few hundred ms ahead of a connection's `now`, and the
+			 *   unsigned subtraction would wrap (fresh-eyes review 24c7b668). */
+			return good_keys[k].when >= now || now - good_keys[k].when <= GOOD_AGE;
+	return false;
+}
+
+/* ⭐ Set only around the call to `ask_verify` (`rcp.h`). */
+static bool asking_for_known_key;
+
+bool rcp_asking_for_known_key(void)
+{
+	return asking_for_known_key;
+}
 static unsigned login_refused_full; /* refusals because of a full table, since the start */
 
 static char ban_path[512]; /* empty = not persisted (the bench, usually) */
@@ -1919,6 +1971,8 @@ static void login_resolve(const char *key, const char *user, bool admitted,
 				r->reset_amount = failed_inside(e, now);
 				e->amount = 0;
 			}
+			if (j == LK_KEY)
+				good_note(key, now);
 			continue;
 		}
 		if (is_banned(e, now)) {
@@ -3323,7 +3377,12 @@ static bool handle_credentials(rcp_session *s, reader *l, uint64_t now)
 		 *   flight» for the three levels until the verdict, which turns it into
 		 *   a failure or gives it back — `rcp_verdict()`, or
 		 *   `rcp_orphan_verdict()` if the connection is gone by then. */
-		if (s->g.ask_verify(s->g.ctx, user, password, &s->ticket)) {
+		/* ⭐ A key that logged in lately may take the two PAM slots kept for it
+		 *    (`rcp_asking_for_known_key()`, §11.39 addendum). */
+		asking_for_known_key = good_recent(s->address, now);
+		bool asked = s->g.ask_verify(s->g.ctx, user, password, &s->ticket);
+		asking_for_known_key = false;
+		if (asked) {
 			s->expected_verdict = true;
 			reg(s, "PAM asked of the helper, request %llu: the thread stays "
 			       "free (DECISIONS.md §1.10)",

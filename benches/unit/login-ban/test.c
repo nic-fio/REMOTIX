@@ -852,6 +852,23 @@ static void test_verdict_paths(void)
 	wire_reset();
 	CHECK(!rcp_time(&s, at(0) + FIXED_DELAY + 1) && wire_last == RCP_TOO_MANY_ATTEMPTS,
 	      "(wire) a reason other than WRONG_CREDENTIALS is kept (0x08, got %#x)", wire_last);
+
+	/* 5. the keys that logged in lately (ported from 4d9eb72b / 24c7b668): only an ADMITTED verdict makes a key known */
+	{
+		const char *G = "[7.7.7.7]", *B = "[8.8.8.8]";
+		struct login_result lr;
+		fresh();
+		CHECK(!good_recent(G, at(0)) && !rcp_asking_for_known_key(), "(known) nobody is known at the start, and the flag is down");
+		login_reserve(G, "alice", at(0), &info);
+		login_resolve(G, "alice", true, at(1), &lr);
+		login_reserve(B, "alice", at(0), &info);
+		login_resolve(B, "alice", false, at(1), &lr);
+		CHECK(good_recent(G, at(2)), "(known) a key with an admitted login is known");
+		CHECK(!good_recent(B, at(2)), "(known) a key with only a failure is not");
+		CHECK(good_recent(G, at(1) + GOOD_AGE), "(known) still known at exactly GOOD_AGE");
+		CHECK(!good_recent(G, at(1) + GOOD_AGE + 1), "(known) not known past GOOD_AGE");
+		CHECK(good_recent(G, at(0)), "(known) a login stamped after `now` (helper clock ahead) is recent, the subtraction does not wrap");
+	}
 }
 
 /* ------------------------------------------------------------------------ */
