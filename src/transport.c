@@ -970,7 +970,7 @@ static void note_login(transport *t, connection *c)
  *   them.  It is how the login is seen also on the SYNCHRONOUS PAM fallback, where
  *   `transport_verdict()` is never called.  If `rcp.c` renamed them the cost is
  *   bounded: a logged-in connection would keep counting against its address. */
-static bool rcp_logged_in(const wt *w)
+static bool wt_logged_in_now(const wt *w)
 {
 	const char *s = w ? wt_rcp_state(w) : "";
 	return strcmp(s, "wait-attach") == 0 || strcmp(s, "active") == 0 ||
@@ -2042,7 +2042,7 @@ void transport_expired(transport *t)
 			wt_beat(c->w, now);
 		/* ⭐ 1.5: the login also seen here — the synchronous PAM fallback never
 		 *    goes through `transport_verdict()`. */
-		if (c->unlogged && rcp_logged_in(c->w))
+		if (c->unlogged && wt_logged_in_now(c->w))
 			note_login(t, c);
 		/* ⭐ 1.5: and the absolute age (the box on MAX_CONNECTIONS) */
 		if (c->unlogged && now - c->born >= UNLOGGED_MAX_S * NGTCP2_SECONDS) {
