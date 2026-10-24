@@ -944,9 +944,10 @@ item below unless its line says otherwise. Release notes: `docs/RELEASE-NOTES-1.
 ### 11.40 🔸 QUIC connection caps, and who is closed when the server is full (15 Oct 2026) — approved 24 Oct 2026, ported on §11.9, under verification
 
 - 🔸 **State on 24 Oct 2026.** *Approved by the user on 24 Oct 2026* (after §11.9, on which it depends: the caps count
-  connections whose address the Retry has proved). The code of the first attempt (discarded, tag `1.5-scartata`) was
-  **ported by hand on top of `quic-su-p1`** (branch `limiti-su-quic`, `0d762036`), not applied as a patch: it does not
-  apply cleanly (the file differs by ~1000 lines). Taken from the tag: `2f671726`, `a723eb6b`, `f4201ee6`, `d0e56764`,
+  connections whose address the Retry has proved). The code of the first attempt (discarded; the tag `1.5-scartata` is in
+  the archive repository `REMOTIX-V15-archivio` on the laptop, **not in this repository**) was **ported by hand on top of
+  `quic-su-p1`** (branch `limiti-su-quic`, the porting commit), not applied as a patch: it does not apply cleanly (the file
+  differs by ~1000 lines). Taken from the tag (its commits, which do not change): `2f671726`, `a723eb6b`, `f4201ee6`, `d0e56764`,
   and from `0e0f6c32` the answer `INVALID_TOKEN` for a token used twice (the design below; `d0e56764` still sent a
   second Retry). **Left out** on purpose: the later commits of the tag (`91f6edb7`, `eab9623a`, `3d661878`, `8faaa131`,
   `24c7b668`, `4f52eab8`, `5843b5b6`, `cda1636d`, `2cb0be61`): the rule «wait-verdict is never evicted» stays.
@@ -956,10 +957,14 @@ item below unless its line says otherwise. Release notes: `docs/RELEASE-NOTES-1.
   Retry» always (here every connection has passed the Retry).
   Done, `[M]`: clean build, normal and `BENCH=1`, in a copy made with `git archive`: the same two warnings as
   `quic-su-p1` (`vulkanvideo.c:354`, `:379`), none new.
-  **To do:** `benches/01-b10-flood.py` + `01-b10-launch.sh` (recovered from the tag) with small caps 16/4/8, 3 runs of
-  9 checks; the default caps (128/8/32) live; the complete suite, Chrome and Firefox; the A/B at sample against the
-  build without the change. The `quic-conn` fuzz harness is **not available** here (it lives in `benches/runner/`,
-  which this tree does not have): the oracles below were never run on this code.
+  **To do:** `benches/01-b10-flood.py` + `01-b10-launch.sh` (the 01-b10 bench, recovered from the tag) with small caps
+  16/4/8, 3 runs of 9 checks; the default caps (128/8/32) live; the complete suite, Chrome and Firefox; the A/B at
+  sample against the build without the change; **running the `quic-conn` fuzz (`benches/fuzz/quic-conn/run.sh`)**.
+  The `quic-conn` fuzz harness (the fuzz harness commit on this branch) is **now here**: `benches/fuzz/quic-conn/`,
+  recovered from the tag (`benches/runner/fuzz/`, which this tree does not have) and adapted — a wait-verdict is never
+  evicted, as `evict_rank()` of this branch; the later rules of the tag (the «parked» connection, the pre-login
+  path-change cap) are not in it. It builds (`build.sh`, 80 seeds) but has **not been run yet**: the oracles below were
+  never run on this code.
 - ⚠ Everything below this note (the design, the `[M]` and `[?]` runs, the churn analysis) describes the **first
   attempt**: the numbers were measured on its code, not on the code now in the tree.
 
