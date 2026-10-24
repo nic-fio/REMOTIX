@@ -141,12 +141,14 @@
 	"Cross-Origin-Embedder-Policy: require-corp\r\n"                           \
 	"Cross-Origin-Resource-Policy: same-origin\r\n"
 
-/* ⛔ THE HEADERS OF THE HTML PAGE ONLY — page audit, 24 Oct 2026.
+/* ⛔ THE SECURITY HEADERS OF EVERY RESPONSE THE PAGE LISTENER WRITES — page audit, 24 Oct 2026.
  *
  *    Until now the page was served with the isolation pair and `nosniff` and nothing else: it
  *    could be framed by any site (clickjacking on a form with a password, on a page that forwards
  *    keys and the clipboard) and no policy limited what a future bug of injection could do.
- *    ⚠ They go on the HTML response and NOT on every response: `/fingerprint` is JSON.
+ *    ⚠ First they went on the HTML response only, `/fingerprint` (JSON) and the 400/404/431 errors being
+ *    left bare; now every response carries them (a CSP on a JSON body or a one-line error is harmless
+ *    and a stray response can no longer be framed or sniffed differently from the page).
  *
  *    Each directive is what THE PAGE REALLY USES (grep of page.html, same date) — a directive
  *    that is wrong breaks the page, so where in doubt the wider form is chosen and SAID:
@@ -1067,7 +1069,7 @@ static void serve(page *p, client *c)
 	sp1 = memchr(c->request, ' ', nline);
 	if (!sp1) {
 		compose(c, "400 Bad Request", "text/plain; charset=utf-8",
-		        "request is unreadable\n", 22, NULL);
+		        "request is unreadable\n", 22, PAGE_SECURITY);
 		return;
 	}
 	{
@@ -1079,7 +1081,7 @@ static void serve(page *p, client *c)
 	sp2 = memchr(sp1 + 1, ' ', nline - (size_t)(sp1 + 1 - c->request));
 	if (!sp2) {
 		compose(c, "400 Bad Request", "text/plain; charset=utf-8",
-		        "request is unreadable\n", 22, NULL);
+		        "request is unreadable\n", 22, PAGE_SECURITY);
 		return;
 	}
 	/* ⚠ A folded header line (obs-fold) is refused, not half-read: an
@@ -1087,7 +1089,7 @@ static void serve(page *p, client *c)
 	 *   read without its continuation (review of 6d8249c4). */
 	if (has_obs_fold(c->request, c->nrequest)) {
 		compose(c, "400 Bad Request", "text/plain; charset=utf-8",
-		        "request is unreadable\n", 22, NULL);
+		        "request is unreadable\n", 22, PAGE_SECURITY);
 		return;
 	}
 	/* ⭐ It waited PAGE_RATE_WAIT_MS for the accept rate in vain: «busy»,
@@ -1194,13 +1196,13 @@ static void serve(page *p, client *c)
 		                 p->cert->fingerprint, p->cert->fingerprint_hex,
 		                 p->cert->rotations);
 		compose(c, "200 OK", "application/json; charset=utf-8", body,
-		        (size_t)n, NULL);
+		        (size_t)n, PAGE_SECURITY);
 		return;
 	}
 
 	if (strcmp(fpath, "/") != 0 && strcmp(fpath, "/index.html") != 0) {
 		compose(c, "404 Not Found", "text/plain; charset=utf-8",
-		        "not here\n", 9, NULL);
+		        "not here\n", 9, PAGE_SECURITY);
 		return;
 	}
 
@@ -1431,7 +1433,7 @@ static void move_client(page *p, client *c, short events)
 				compose(c, "431 Request Header Fields Too Large",
 				        "text/plain; charset=utf-8", "request headers too "
 				                                     "long.\n",
-				        26, NULL);
+				        26, PAGE_SECURITY);
 				break;
 			}
 		}
