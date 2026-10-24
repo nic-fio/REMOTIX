@@ -179,6 +179,11 @@ not apply (the user is the Author). What follows is what the user decided on eac
   it is not in the exit code and its cell in the report stays «·». The other tests do not change. `15-report.py` has the
   F-014E name. Checked: `--certify` offline (15 cases), `py_compile`, `15-round.py --list` («· only kde»). **Not yet run** on the
   KDE box (`15-round.py --desktop kde --tests f014e`).
+- ✅ **The order of the checks (24 Oct 2026)** — commits `322468ea` (`clipboard_kde.c`) and `d8f48441` (`clipboard.c`, GNOME).
+  `g_utf8_validate_len()` **already rejects a zero**, so the `memchr` of `8031958d` placed after it was **unreachable**: the text
+  was refused either way, but the log blamed «not valid UTF-8» instead of the zero. The `memchr` now runs **before** the UTF-8
+  test, on both desktops; behaviour is unchanged, the log names the real cause, which is what F-014E reads, and `explicit_bzero`
+  runs on both paths. **Verified: F-014E PASS 2/2 on KDE.** GNOME compiled (normal and `BENCH=1`), not run.
 
 ### 11.7 ✅ Derivative distributions: the parent picks the package, the desktop decides
 
@@ -1063,8 +1068,15 @@ item below unless its line says otherwise. Release notes: `docs/RELEASE-NOTES-1.
   xfce only because of its threshold.) **Fix:** the bottom clamp moves one row higher **only when** `textureSize().y` is
   greater than the visible height `vis.y` (the browser uploaded padding rows): the last visible row then repeats the row
   above. Columns and the Firefox path (texture = visible) are untouched. **Cost:** one row of detail lost at the bottom
-  edge on Chrome. **Status: to be verified** with `f011-riga-prova.sh` (`/media/REMOTIX-15/lavori/pacchetto1-ab/`): F-011
-  (`chroma_bleed`) green on Chrome and Firefox, the four desktops. Not compiled in a real browser yet.
+  edge on Chrome. ⛔ **Insufficient on its own** (24 Oct 2026): the test of cure (b) showed that Chrome uploads a texture of
+  exactly the **visible** size with the last row **already tinted**, so `textureSize().y > vis.y` is never true there and the
+  clamp never moves.
+- ✅ **Cure (c), 24 Oct 2026 — branch `f011-riga`** (commits `571c8145` and `9b963d77`, `src/page.html`; merged into
+  `pacchetto1b` as `3a4d447d`). The signal that does not lie is the **VideoFrame**: when `codedHeight` is greater than the
+  visible rectangle (`visibleRect.y + height`) there are coded rows below the visible ones, and the page passes the shader a
+  new uniform `trim = 1.0`; the shader then moves the bottom clamp one row up, as in (b), whatever `textureSize()` says. The
+  Firefox path (no coded rows below) keeps `trim = 0.0`. The shader comment mentions (c). **Verified 8/8 PASS on 24 Oct 2026**
+  with `f011-riga-prova` (F-011 / `chroma_bleed`): row 2063 = row 2062. Cure (b) stays in the code, as the second guard.
 
 ### 11.42 ✅ The test server's Intel card for the stress bench: `nicfio` in the card groups (15 Oct 2026)
 
