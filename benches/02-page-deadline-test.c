@@ -56,9 +56,80 @@
  *      16-entry table is full: none above 5 in its window, and the 17th waits
  *      for a free entry (fuzz page, 15 Oct 2026).
  *
+ *  15. a banned visitor (a real ban, loaded with rcp_ban_load()) gets the
+ *      «attempts exhausted» page with its remaining time, built for its own
+ *      request and freed with it; visitors from other addresses keep getting
+ *      the shared page, which is not touched by the banned one;
+ *  16. allocation failures injected into page.c (the malloc seam below): every
+ *      failing allocation of build_page()/body_new() gives the 500 «no mem.»
+ *      reply, leaks nothing and leaves the shared page whole (never a
+ *      half-built or swapped one); a failing 500 head too leaves the client
+ *      without a response and still leaks nothing.
+ *
  * Exit status: 0 green, 1 red, 3 not all checks ran. */
 #define _GNU_SOURCE
+/* ⚠ THE MALLOC SEAM: every header page.c uses is included FIRST, so the two
+ *   macros below rewrite only page.c's own calls.  Each allocation page.c
+ *   makes is tracked (to see leaks), and the `fail_at`-th one from the
+ *   moment it is armed returns NULL (with `fail_rest`, every one after it
+ *   too). */
+#include "page.h"
+#include "rcp.h"
+#include "log.h"
+#include <errno.h>
+#include <fcntl.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <linux/tcp.h>
+#include <stddef.h>
+#include <unistd.h>
+#include <openssl/err.h>
+#include <openssl/rand.h>
+
+static void *live_allocs[4096];
+static size_t nlive, page_mallocs;
+static bool live_overflow;
+static long fail_at; /* 0 = off */
+static bool fail_rest;
+
+static void *t_malloc(size_t n)
+{
+	void *r;
+	page_mallocs++;
+	if (fail_at > 0 && --fail_at == 0) {
+		if (fail_rest)
+			fail_at = 1;
+		return NULL;
+	}
+	r = malloc(n);
+	if (r) {
+		if (nlive < sizeof live_allocs / sizeof live_allocs[0])
+			live_allocs[nlive++] = r;
+		else
+			live_overflow = true;
+	}
+	return r;
+}
+
+static void t_free(void *q)
+{
+	for (size_t i = 0; q && i < nlive; i++)
+		if (live_allocs[i] == q) {
+			live_allocs[i] = live_allocs[--nlive];
+			break;
+		}
+	free(q);
+}
+
+#define malloc(n) t_malloc(n)
+#define free(q) t_free(q)
 #include "page.c"
+#undef malloc
+#undef free
 
 #include <arpa/inet.h>
 #include <openssl/evp.h>
@@ -67,9 +138,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/wait.h>
+#include <time.h>
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 41
+#define EXPECTED_CHECKS 64
 
 static void require(int cond, const char *desc)
 {
@@ -209,8 +281,9 @@ static client *writer_wait(page *p, int want)
 
 /* In a forked child: TLS, `GET /`, then either read the whole response
  * (`read_all`) and exit 0 if it is a 200 with the page's markers replaced,
- * or sleep without reading (the slow reader). */
-static pid_t client_get(int port, const char *src, bool read_all)
+ * or sleep without reading (the slow reader).  `banned`: the page must be
+ * the ban notice of section 15 (1 h 30 min left), otherwise the free one. */
+static pid_t client_get_as(int port, const char *src, bool read_all, bool banned)
 {
 	pid_t pid = fork();
 	if (pid != 0)
@@ -236,9 +309,63 @@ static pid_t client_get(int port, const char *src, bool read_all)
 		n += (size_t)r;
 	}
 	b[n] = 0;
-	_exit(strncmp(b, "HTTP/1.1 200 ", 13) == 0 && strstr(b, "data-banned=\"no\"") &&
-	              strstr(b, "FPTEST") && !strstr(b, "__FINGERPRINT__")
-	              ? 0 : 12);
+	bool common = strncmp(b, "HTTP/1.1 200 ", 13) == 0 && strstr(b, "FPTEST") &&
+	              !strstr(b, "__FINGERPRINT__") && !strstr(b, "__WARNING__") &&
+	              !strstr(b, "__BANNED__") && !strstr(b, "__REMAINING_MS__") &&
+	              !strstr(b, "__DIARY__");
+	if (!banned)
+		_exit(common && strstr(b, "data-banned=\"no\"") &&
+		      !strstr(b, "attempts exhausted") && strstr(b, "data-remaining-ms=\"0\"")
+		      ? 0 : 12);
+	{
+		const char *r = strstr(b, "data-remaining-ms=\"");
+		unsigned long long ms = r ? strtoull(r + 19, NULL, 10) : 0;
+		_exit(common && strstr(b, "data-banned=\"yes\"") &&
+		      strstr(b, "<b>attempts exhausted</b>") &&
+		      strstr(b, "<b id=\"hours\">1</b> hours and <b id=\"minutes\">30</b> minutes") &&
+		      ms > 5340000 && ms <= 5400000
+		      ? 0 : 13);
+	}
+}
+
+static pid_t client_get(int port, const char *src, bool read_all)
+{
+	return client_get_as(port, src, read_all, false);
+}
+
+/* FNV-1a of a body: «the shared page did not change» checked byte by byte. */
+static uint64_t body_hash(const body *x)
+{
+	uint64_t h = 1469598103934665603ull;
+	for (size_t i = 0; i < x->n; i++)
+		h = (h ^ (unsigned char)x->data[i]) * 1099511628211ull;
+	return h;
+}
+
+static bool body_has(const body *x, const char *s)
+{
+	return memmem(x->data, x->n, s, strlen(s)) != NULL;
+}
+
+/* `serve()` driven directly, without a socket: the request `GET /` from
+ * `provenance` (fd -1, no SSL: compose only builds the response). */
+static void fake_get(page *p, client *c, const char *provenance)
+{
+	memset(c, 0, sizeof *c);
+	c->fd = -1;
+	c->phase = F_READ;
+	snprintf(c->provenance, sizeof c->provenance, "%s", provenance);
+	c->nrequest = (size_t)snprintf(c->request, sizeof c->request,
+	                               "GET / HTTP/1.1\r\nHost: t\r\n\r\n");
+	serve(p, c);
+}
+
+/* 1 = a 500 «no mem.» with no shared body. */
+static int is_500(const client *c)
+{
+	return c->phase == F_WRITE && c->head && c->shared == NULL &&
+	       strncmp(c->head, "HTTP/1.1 500 ", 13) == 0 && c->nhead >= 8 &&
+	       memcmp(c->head + c->nhead - 8, "no mem.\n", 8) == 0;
 }
 
 int main(void)
@@ -645,6 +772,222 @@ int main(void)
 				client_close(&p->clients[i]);
 		require(p->cached && p->cached->refs == 1, "the shared page is held by the listener alone again");
 	}
+
+	printf("15. a banned visitor gets its own «attempts exhausted» page, the others the shared one\n");
+	char ban_path[] = "/tmp/pdt-ban-XXXXXX";
+	body *shared0 = p->cached;
+	uint64_t hash0 = shared0 ? body_hash(shared0) : 0;
+	size_t n0 = shared0 ? shared0->n : 0, live0 = nlive;
+	{
+		int bfd = mkstemp(ban_path);
+		FILE *bf = fdopen(bfd, "w");
+		uint64_t rem = 0;
+		int loaded;
+		/* 90 minutes: the notice must say 1 hour and 30 minutes. */
+		fprintf(bf, "[127.0.0.50] %lld\n", (long long)time(NULL) + 5400);
+		fclose(bf);
+		loaded = rcp_ban_load(ban_path, log_now_ms());
+		require(loaded == 1 && rcp_banned("[127.0.0.50]:1", log_now_ms(), &rem) &&
+		                rem > 5390000 && !rcp_banned("[127.0.0.51]:1", log_now_ms(), NULL),
+		        "127.0.0.50 is banned for 90 minutes, 127.0.0.51 is not");
+	}
+	{
+		pid_t kids[3];
+		client *ban_w[2] = {NULL, NULL}, *free_w = NULL;
+		int nb = 0;
+		kids[0] = client_get_as(port, "127.0.0.50", false, true);
+		pump(p, 2);
+		kids[1] = client_get_as(port, "127.0.0.50", false, true);
+		pump(p, 2);
+		kids[2] = client_get_as(port, "127.0.0.51", false, false);
+		pump(p, 2);
+		require(writer_wait(p, 3) != NULL, "two banned slow readers and a free one in F_WRITE");
+		for (size_t i = 0; i < MAX_CLIENTS; i++) {
+			client *x = &p->clients[i];
+			if (!client_active(x) || x->phase != F_WRITE)
+				continue;
+			if (strcmp(x->key, "[127.0.0.50]") == 0 && nb < 2)
+				ban_w[nb++] = x;
+			else if (strcmp(x->key, "[127.0.0.51]") == 0)
+				free_w = x;
+		}
+		require(nb == 2 && ban_w[0]->shared && ban_w[1]->shared &&
+		                ban_w[0]->shared != p->cached && ban_w[1]->shared != p->cached &&
+		                ban_w[0]->shared != ban_w[1]->shared &&
+		                ban_w[0]->shared->refs == 1 && ban_w[1]->shared->refs == 1,
+		        "each banned request has its own body (refs 1), never the shared page");
+		require(nb == 2 && body_has(ban_w[0]->shared, "data-banned=\"yes\"") &&
+		                body_has(ban_w[0]->shared, "<b>attempts exhausted</b>") &&
+		                body_has(ban_w[0]->shared, "<b id=\"minutes\">30</b>") &&
+		                !body_has(ban_w[0]->shared, "data-remaining-ms=\"0\"") &&
+		                !body_has(ban_w[0]->shared, "__REMAINING_MS__"),
+		        "the banned body says «attempts exhausted», 1 h 30 min, its remaining ms");
+		require(free_w && free_w->shared == shared0 && p->cached == shared0 &&
+		                shared0->refs == 2,
+		        "the free visitor holds the SAME shared page as before (refs 2)");
+		for (int i = 0; i < 3; i++) {
+			kill(kids[i], SIGKILL);
+			waitpid(kids[i], NULL, 0);
+		}
+		for (size_t i = 0; i < MAX_CLIENTS; i++)
+			if (client_active(&p->clients[i]))
+				client_close(&p->clients[i]);
+		require(nlive == live0 && !live_overflow && p->cached == shared0 && shared0->refs == 1,
+		        "closing them frees both banned bodies; the shared page is held by the listener alone");
+	}
+	{
+		pid_t cb = client_get_as(port, "127.0.0.50", true, true);
+		pid_t cf = client_get_as(port, "127.0.0.51", true, false);
+		int sb = -1, sf = -1, db = 0, df = 0;
+		uint64_t t0 = log_now_ms();
+		while ((!db || !df) && log_now_ms() - t0 < 20000) {
+			pump(p, 1);
+			page_expired(p, log_now_ms());
+			if (!db && waitpid(cb, &sb, WNOHANG) == cb)
+				db = 1;
+			if (!df && waitpid(cf, &sf, WNOHANG) == cf)
+				df = 1;
+		}
+		require(db && WIFEXITED(sb) && WEXITSTATUS(sb) == 0,
+		        "a real banned GET: 200, data-banned=yes, «attempts exhausted», 1 h 30 min, ms in range");
+		require(df && WIFEXITED(sf) && WEXITSTATUS(sf) == 0,
+		        "a real free GET at the same time: 200, data-banned=no, no notice, remaining 0");
+		pump(p, 2);
+		require(p->cached == shared0 && shared0->n == n0 && body_hash(shared0) == hash0 &&
+		                shared0->refs == 1 && body_has(shared0, "data-banned=\"no\"") &&
+		                !body_has(shared0, "attempts exhausted") &&
+		                strcmp(p->cached_fp, "FPTEST") == 0 && nlive == live0,
+		        "the shared page is byte for byte the one before the banned visits; no leak");
+	}
+
+	printf("16. allocation failures: the 500 «no mem.», no leak, no half-built shared page\n");
+	{
+		static client fc;
+		size_t n_ban, n_free, n_reb;
+		int ok500 = 0, okleak = 0, okshared = 0;
+
+		/* How many allocations one request makes, counted, so that every
+		 * one of them can be made to fail (a rebuild of the shared page is
+		 * build_page() + the head; a cached one is the head alone). */
+		page_mallocs = 0;
+		fake_get(p, &fc, "[127.0.0.50]:40000");
+		n_ban = page_mallocs;
+		require(fc.phase == F_WRITE && fc.shared && fc.shared != p->cached &&
+		                fc.shared->refs == 1 && body_has(fc.shared, "data-banned=\"yes\"") &&
+		                strncmp(fc.head, "HTTP/1.1 200 ", 13) == 0 && n_ban >= 2,
+		        "driven directly, a banned GET gets its own 200 page");
+		client_close(&fc);
+		page_mallocs = 0;
+		fake_get(p, &fc, "[127.0.0.51]:40000");
+		n_free = page_mallocs;
+		require(fc.shared == shared0 && shared0->refs == 2 && n_free == 1,
+		        "a free GET with the page cached allocates only its head");
+		client_close(&fc);
+		require(nlive == live0, "no leak from the two direct GETs");
+
+		/* a) banned: each allocation of build_page()/body_new() fails in turn. */
+		for (size_t k = 1; k < n_ban; k++) {
+			fail_at = (long)k;
+			fail_rest = false;
+			fake_get(p, &fc, "[127.0.0.50]:40000");
+			fail_at = 0;
+			ok500 += is_500(&fc);
+			client_close(&fc);
+			okleak += nlive == live0;
+			okshared += p->cached == shared0 && shared0->refs == 1 &&
+			            shared0->n == n0 && body_hash(shared0) == hash0;
+		}
+		printf("       (a banned GET makes %zu allocations; a free one, cached, %zu)\n",
+		       n_ban, n_free);
+		require(ok500 == (int)(n_ban - 1),
+		        "banned: every failing allocation of build_page()/body_new() gives the 500 «no mem.»");
+		require(okleak == (int)(n_ban - 1) && okshared == (int)(n_ban - 1),
+		        "banned: none of them leaks, none touches the shared page");
+
+		/* b) banned: the page is built, its 200 head fails — the page is freed. */
+		fail_at = (long)n_ban;
+		fail_rest = false;
+		fake_get(p, &fc, "[127.0.0.50]:40000");
+		fail_at = 0;
+		require(fc.head == NULL && fc.shared == NULL && fc.phase != F_WRITE &&
+		                nlive == live0 && p->cached == shared0 && shared0->refs == 1,
+		        "banned, the 200 head fails: no response, the banned page freed, no leak");
+		client_close(&fc);
+
+		/* c) banned: the build fails AND so does the 500 head. */
+		ok500 = okleak = 0;
+		for (size_t k = 1; k < n_ban; k++) {
+			fail_at = (long)k;
+			fail_rest = true;
+			fake_get(p, &fc, "[127.0.0.50]:40000");
+			fail_at = 0;
+			fail_rest = false;
+			ok500 += fc.head == NULL && fc.shared == NULL && fc.phase != F_WRITE;
+			client_close(&fc);
+			okleak += nlive == live0 && p->cached == shared0 && shared0->refs == 1;
+		}
+		require(ok500 == (int)(n_ban - 1) && okleak == (int)(n_ban - 1),
+		        "banned, the 500 head fails too: no response, no leak, shared page untouched");
+
+		/* d) a rotation: the shared page must be rebuilt, and the rebuild fails. */
+		snprintf(cert.fingerprint, sizeof cert.fingerprint, "FPROT");
+		page_mallocs = 0;
+		fail_at = 1 << 20; /* armed but never reached: only counts */
+		fake_get(p, &fc, "[127.0.0.51]:40000");
+		fail_at = 0;
+		n_reb = page_mallocs;
+		require(fc.shared && fc.shared == p->cached && fc.shared != shared0 &&
+		                strcmp(p->cached_fp, "FPROT") == 0 && body_has(fc.shared, "FPROT") &&
+		                n_reb == n_ban,
+		        "after a rotation a free GET rebuilds the shared page (as many allocations as a banned one)");
+		/* Back to the state before the rotation, through the same road. */
+		client_close(&fc);
+		snprintf(cert.fingerprint, sizeof cert.fingerprint, "FPTEST");
+		fake_get(p, &fc, "[127.0.0.51]:40000");
+		client_close(&fc);
+		shared0 = p->cached;
+		hash0 = body_hash(shared0);
+		require(nlive == live0 && strcmp(p->cached_fp, "FPTEST") == 0 && shared0->refs == 1 &&
+		                shared0->n == n0,
+		        "two rebuilds: the old shared pages freed, no leak");
+		snprintf(cert.fingerprint, sizeof cert.fingerprint, "FPROT");
+		ok500 = okleak = okshared = 0;
+		for (size_t k = 1; k < n_reb; k++) {
+			fail_at = (long)k;
+			fail_rest = false;
+			fake_get(p, &fc, "[127.0.0.51]:40000");
+			fail_at = 0;
+			ok500 += is_500(&fc);
+			client_close(&fc);
+			okleak += nlive == live0;
+			/* ⛔ Never a half-built or a stale page served as the new one:
+			 *    the old one stays, whole, under its own fingerprint. */
+			okshared += p->cached == shared0 && shared0->refs == 1 &&
+			            body_hash(shared0) == hash0 && strcmp(p->cached_fp, "FPTEST") == 0;
+		}
+		require(ok500 == (int)(n_reb - 1),
+		        "rotation, the rebuild fails: the 500 «no mem.», never the old page under the new fingerprint");
+		require(okleak == (int)(n_reb - 1) && okshared == (int)(n_reb - 1),
+		        "rotation, the rebuild fails: no leak, the old shared page whole and not replaced");
+		/* e) the rebuild succeeds, the head fails: the new page is kept. */
+		fail_at = (long)n_reb;
+		fake_get(p, &fc, "[127.0.0.51]:40000");
+		fail_at = 0;
+		require(fc.head == NULL && fc.shared == NULL && p->cached != NULL &&
+		                p->cached->refs == 1 && strcmp(p->cached_fp, "FPROT") == 0 &&
+		                body_has(p->cached, "FPROT") && nlive == live0,
+		        "rotation, the head fails after the rebuild: the new page kept (refs 1), the old freed, no leak");
+		client_close(&fc);
+		fake_get(p, &fc, "[127.0.0.51]:40000");
+		require(fc.shared == p->cached && p->cached->refs == 2 && nlive == live0 + 1,
+		        "and the next free GET is served from it");
+		client_close(&fc);
+		snprintf(cert.fingerprint, sizeof cert.fingerprint, "FPTEST");
+		require(!live_overflow, "the allocation tracker never overflowed");
+	}
+	rcp_unblock("127.0.0.50", log_now_ms());
+	rcp_ban_load(NULL, log_now_ms());
+	unlink(ban_path);
 
 	page_close(p);
 	unlink(html_path);
