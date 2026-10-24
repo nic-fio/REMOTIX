@@ -1,0 +1,9 @@
+set -e
+PK="gio-2.0 libpipewire-0.3 libdrm libva libva-drm vulkan opus libei-1.0 xkbcommon"
+F="-g -O1 -fno-omit-frame-pointer -fsanitize=fuzzer-no-link,address,undefined -fno-sanitize-recover=undefined -std=gnu11 -D_GNU_SOURCE -Wno-unused-parameter -I. -I/albero/src $(pkg-config --cflags $PK)"
+L="$(pkg-config --libs gio-2.0) -lpam -lpthread -ldl -lm"
+# the harness #includes the REAL src/rootside.c and interposes its root powers (recvmsg, kill, child_birth, helper_ask_bare ...): nothing else is linked
+for s in stubs_log fuzz_rootside_dispatch; do clang $F -c $s.c -o /out/obj/$s.o; done
+clang -fsanitize=fuzzer,address,undefined /out/obj/fuzz_rootside_dispatch.o /out/obj/stubs_log.o $L -o /out/bin/rootside-dispatch
+python3 -I gen_seeds.py /out/seeds
+cp rootside-dispatch.dict /out/rootside-dispatch.dict

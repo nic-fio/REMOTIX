@@ -1,0 +1,12 @@
+# rootside-proto: the closed list (src/rootside_proto.h)
+magic="RXR1"
+version="\x01\x00"
+auth="\x01\x00"
+spawn="\x02\x00"
+orphan="\x03\x00"
+signal="\x04\x00"
+ready="\x65\x00"
+verdict="\x66\x00"
+user="nic"
+root="root"
+rhost="192.168.0.2"
