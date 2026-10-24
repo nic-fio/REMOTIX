@@ -383,9 +383,20 @@ typedef struct {
 
 struct wt {
 	ngtcp2_conn *conn;
+	/* ⛔ Before the login (holistic review, 15 Oct 2026): one connection opened
+	 *    session after session and asked request after request, and every one
+	 *    wrote lines — 5000 in 3.7 s.  How many sessions it opened and how many
+	 *    requests it made outside one, and whether it ever LOGGED IN (then
+	 *    none of the pre-login ceilings apply: `wt_logged_in()`). */
+	unsigned sessions_opened, stray_requests;
+	bool was_logged_in;
 	/* ⭐ D-001: this user's stage already existed at PAM's verdict ⇒
 	 *    `SESSION` says `2 = RESUMED`.  `wt_verdict()` writes it. */
 	bool resumed;
+	/* The request number of the PAM verdict this connection took (set by
+	 * `wt_verdict()`): `wt_dismiss_ticket()` finds the session of THAT login. */
+	uint64_t verdict_ticket;
+	bool has_verdict_ticket;
 	ngtcp2_ccerr *last_error;
 	nghttp3_conn *h3;
 	char provenance[80];
@@ -954,6 +965,107 @@ struct wt {
 static const char *wt_chi(const wt *w)
 {
 	return (w && w->rcp) ? rcp_user(w->rcp) : NULL;
+}
+
+/* ⛔⭐ THE PRE-LOGIN LOG BUDGET (holistic review, 15 Oct 2026).
+ *
+ *     Before the login whoever writes is a stranger, and every line they
+ *     cause is root's log they fill: one connection that reopened sessions and
+ *     resent HELLO/CREDENTIALS wrote 5000 lines (1.5 MB) in 3.7 s, and with
+ *     `--journal` journald's rate limit then dropped REMOTIX's OWN lines —
+ *     the bans and the logins among them.
+ * ⇒ Per ADDRESS KEY (`rcp_key_address()`: an IPv6 /64, an IPv4; new
+ *   connections from the same place share it), the first
+ *   `WT_PRELOGIN_BURST` pre-login lines of every `WT_PRELOGIN_WINDOW_MS` are
+ *   written, the rest counted, and the count is written when the window has
+ *   passed.  ⚠ The burst is not 5: an honest attempt writes ~12 lines (HELLO,
+ *   capabilities, CREDENTIALS, PAM, the fixed second), and they are the
+ *   diagnosis of a failed login.  ⛔ And two lines are never held back: the
+ *   failed attempt that counts toward §4.4-bis and the BAN — bounded by the ban
+ *   itself (three, then twelve hours), and the record whoever investigates
+ *   needs most. */
+#define WT_PRELOGIN_BURST 20
+#define WT_PRELOGIN_WINDOW_MS 10000
+#define WT_PRELOGIN_KEYS 128
+/* ⛔ And a connection that never logged in may open this many sessions and make
+ *    this many requests outside one; past them it is closed (H3_EXCESSIVE_LOAD).
+ *    A page opens ONE session, and retries with a new connection. */
+#define WT_PRELOGIN_SESSIONS_MAX 2
+#define WT_PRELOGIN_REQUESTS_MAX 8
+
+static struct {
+	bool used;
+	char key[96];
+	uint64_t window_ms;
+	uint32_t written;
+	uint64_t hidden;
+} prelogin[WT_PRELOGIN_KEYS];
+
+/* The connection has logged in (now, or once: a closed session keeps it). */
+static bool wt_logged_in(wt *w)
+{
+	if (w && w->rcp && rcp_logged_in(w->rcp))
+		w->was_logged_in = true;
+	return w && w->was_logged_in;
+}
+
+static void prelogin_summary(int i, uint64_t now)
+{
+	if (!prelogin[i].hidden)
+		return;
+	log_says_of(REG_WT, NULL,
+	            "⛔ %s: %llu more lines before the login in the last %llu ms, not "
+	            "written one by one (the first %d of every %d s per address are)",
+	            prelogin[i].key, (unsigned long long)prelogin[i].hidden,
+	            (unsigned long long)(now > prelogin[i].window_ms
+	                                     ? now - prelogin[i].window_ms : 0),
+	            WT_PRELOGIN_BURST, WT_PRELOGIN_WINDOW_MS / 1000);
+	prelogin[i].hidden = 0;
+}
+
+/* ⛔ May this connection write one more normal-level line?  Always once it
+ *    logged in; before, within its address's budget (the box above). */
+static bool prelogin_may_log(wt *w)
+{
+	char key[96];
+	uint64_t now;
+	int i, free_i = -1, oldest = 0;
+
+	if (!w || wt_logged_in(w))
+		return true;
+	now = log_now_ms();
+	rcp_key_address(w->provenance, key, sizeof key);
+	for (i = 0; i < WT_PRELOGIN_KEYS; i++) {
+		if (!prelogin[i].used) {
+			if (free_i < 0)
+				free_i = i;
+			continue;
+		}
+		if (strcmp(prelogin[i].key, key) == 0)
+			break;
+		if (prelogin[i].window_ms < prelogin[oldest].window_ms || !prelogin[oldest].used)
+			oldest = i;
+	}
+	if (i == WT_PRELOGIN_KEYS) {
+		i = free_i >= 0 ? free_i : oldest;
+		if (prelogin[i].used)
+			prelogin_summary(i, now); /* the evicted key's count is not lost */
+		memset(&prelogin[i], 0, sizeof prelogin[i]);
+		prelogin[i].used = true;
+		snprintf(prelogin[i].key, sizeof prelogin[i].key, "%s", key);
+		prelogin[i].window_ms = now;
+	}
+	if (now >= prelogin[i].window_ms + WT_PRELOGIN_WINDOW_MS) {
+		prelogin_summary(i, now);
+		prelogin[i].window_ms = now;
+		prelogin[i].written = 0;
+	}
+	if (prelogin[i].written < WT_PRELOGIN_BURST) {
+		prelogin[i].written++;
+		return true;
+	}
+	prelogin[i].hidden++;
+	return false;
 }
 
 /* ------------------------------------------------------------------------ */
@@ -2389,6 +2501,16 @@ static void hook_log(void *ctx, const char *line)
 {
 	wt *w = (wt *)ctx;
 	const char *chi = (w && w->rcp) ? rcp_user(w->rcp) : NULL;
+	/* ⛔ Before the login, in the address's budget — except the two lines that
+	 *    must never be lost (see `WT_PRELOGIN_BURST`). */
+	/* ⚠ By the literal PREFIX that `rcp.c` writes at the START of those two
+	 *   lines (`login_report()`), never by searching the whole line: it carries
+	 *   text from the client (the name, `max_size`, the level) and a stranger
+	 *   could put the words in it to be exempt from the budget. */
+	if (strncmp(line, "failed attempt from ", 20) != 0
+	    && strncmp(line, "⛔ BANNED ", strlen("⛔ BANNED ")) != 0
+	    && !prelogin_may_log(w))
+		return;
 	log_says_of(REG_RCP, chi, "%s", line);
 }
 
@@ -6357,6 +6479,15 @@ size_t wt_watch_locals(void)
 
 			if (!w->rcp || w->closing >= 0)
 				continue;
+			/* ⛔ Only sessions that LOGGED IN (review of eab9623a): the name
+			 *    is set at CREDENTIALS, and a login still waiting for its
+			 *    verdict sent away with 0x04 would skip the fixed second,
+			 *    tell a guesser without the password that the account exists
+			 *    and is logged in locally (§4.4), and lose its «no».  It gets
+			 *    REJECTED at the fixed second, or ADMITTED — and then the next
+			 *    sweep sends it away with 0x04. */
+			if (!rcp_logged_in(w->rcp))
+				continue;
 			my = rcp_user(w->rcp);
 			if (!my || !my[0])
 				continue;
@@ -6411,6 +6542,9 @@ size_t wt_tenants_served(void)
 
 		if (!w->rcp || w->closing >= 0)
 			continue;
+		/* ⚠ a claimed name is not a tenant (as `wt_max_size_of()`) */
+		if (!rcp_logged_in(w->rcp))
+			continue;
 		my = rcp_user(w->rcp);
 		if (!my || !my[0])
 			continue;
@@ -6455,6 +6589,18 @@ size_t wt_dismiss_user(const char *user, uint8_t reason, const char *detail,
 	return how_many;
 }
 
+size_t wt_dismiss_ticket(uint64_t ticket, uint8_t reason, const char *detail)
+{
+	for (wt *w = alive_before; w; w = w->alive_after) {
+		if (!w->rcp || w->closing >= 0 || !w->has_verdict_ticket ||
+		    w->verdict_ticket != ticket)
+			continue;
+		wt_dismiss(w, reason, detail);
+		return 1;
+	}
+	return 0;
+}
+
 /* ⛔⭐ THE CANVAS CAP OF WHOEVER IS KNOCKING — phase 10, and it serves the BUDGET.
  *
  *     At `delivery_verdict()` the session's canvas **is not yet decided**
@@ -6481,6 +6627,12 @@ bool wt_max_size_of(const char *user, uint32_t *l, uint32_t *a)
 		uint32_t sl, sa;
 
 		if (!w->rcp || w->closing >= 0)
+			continue;
+		/* ⛔ Only sessions that LOGGED IN (holistic review, 15 Oct 2026): the
+		 *    name of one still waiting for PAM is only CLAIMED, and a stranger
+		 *    declaring a huge max_size under the owner's name made the owner's
+		 *    own login get 0x06. */
+		if (!rcp_logged_in(w->rcp))
 			continue;
 		my = rcp_user(w->rcp);
 		if (!my || strcmp(my, user) != 0)
@@ -7918,6 +8070,32 @@ static int bare_response(wt *w, int64_t stream_id, const char *state)
 	return rv;
 }
 
+/* ⛔ One more session (`session` true) or one more request outside a session
+ *    for a connection that never logged in: past `WT_PRELOGIN_SESSIONS_MAX` /
+ *    `WT_PRELOGIN_REQUESTS_MAX` the connection is closed with
+ *    H3_EXCESSIVE_LOAD (`true`: the caller fails the callback). */
+static bool prelogin_excess(wt *w, bool session)
+{
+	unsigned n;
+
+	if (wt_logged_in(w))
+		return false;
+	n = session ? ++w->sessions_opened : ++w->stray_requests;
+	if (session ? n <= WT_PRELOGIN_SESSIONS_MAX : n <= WT_PRELOGIN_REQUESTS_MAX)
+		return false;
+	if (prelogin_may_log(w))
+		log_says_of(REG_WT, NULL,
+		            "⛔ %s: %u %s on one connection that never logged in (at most "
+		            "%d): the connection is closed (H3_EXCESSIVE_LOAD)",
+		            w->provenance, n,
+		            session ? "WebTransport sessions" : "requests outside the session",
+		            session ? WT_PRELOGIN_SESSIONS_MAX : WT_PRELOGIN_REQUESTS_MAX);
+	if (w->last_error)
+		ngtcp2_ccerr_set_application_error(w->last_error,
+		                                   NGHTTP3_H3_EXCESSIVE_LOAD, NULL, 0);
+	return true;
+}
+
 static int open_session(wt *w, request *r)
 {
 	nghttp3_nv nv[2];
@@ -7946,12 +8124,29 @@ static int open_session(wt *w, request *r)
 	 *    it is written in the log: it is §3 applied to the first byte, before
 	 *    RCP even starts. */
 	if (strcmp(r->uri, "/rcp/1") != 0) {
-		log_says_of(REG_WT, wt_chi(w),
+		/* ⚠ Chatter, not a normal line: a stranger chooses how many (holistic
+		 *   review, 15 Oct 2026), and it counts as a stray request. */
+		log_detail_of(REG_WT, wt_chi(w),
 		                 "⛔ WebTransport session REFUSED, path «%s» "
 		                 "(expected /rcp/1 — §2.2): 404",
 		                 r->uri);
+		if (prelogin_excess(w, false))
+			return NGHTTP3_ERR_CALLBACK_FAILURE;
 		return bare_response(w, r->id, "404");
 	}
+	/* ⛔ One session at a time, and a connection that never logged in gets
+	 *    `WT_PRELOGIN_SESSIONS_MAX` of them: closing the session and opening a
+	 *    new one on the same connection was a loop of HELLO/CREDENTIALS lines. */
+	if (w->session != -1) {
+		log_detail_of(REG_WT, wt_chi(w),
+		              "⛔ a second WebTransport session on a connection that has one "
+		              "(stream %ld): 404", (long)r->id);
+		if (prelogin_excess(w, false))
+			return NGHTTP3_ERR_CALLBACK_FAILURE;
+		return bare_response(w, r->id, "404");
+	}
+	if (prelogin_excess(w, true))
+		return NGHTTP3_ERR_CALLBACK_FAILURE;
 
 	nv[0].name = (uint8_t *)":status";
 	nv[0].namelen = 7;
@@ -7989,11 +8184,12 @@ static int open_session(wt *w, request *r)
 	                  + WT_CAP_CHANNEL_NS;
 	beat_between(w, 100);
 
-	log_says_of(REG_WT, wt_chi(w), "⭐ WebTransport session OPENED on %s (stream %ld) — "
-	                 "the control channel must be opened within %llu ms (§4.6, "
-	                 "DECISIONS.md §7.17)",
-	                 r->uri, (long)r->id,
-	                 (unsigned long long)(WT_CAP_CHANNEL_NS / NGTCP2_MILLISECONDS));
+	if (prelogin_may_log(w))
+		log_says_of(REG_WT, wt_chi(w), "⭐ WebTransport session OPENED on %s (stream %ld) — "
+		                 "the control channel must be opened within %llu ms (§4.6, "
+		                 "DECISIONS.md §7.17)",
+		                 r->uri, (long)r->id,
+		                 (unsigned long long)(WT_CAP_CHANNEL_NS / NGTCP2_MILLISECONDS));
 	return 0;
 }
 
@@ -8014,11 +8210,14 @@ static int cb_end_headers(nghttp3_conn *conn, int64_t stream_id, int fin,
 
 	/* ⚠ Everything else is NOT served by this listener: the page is
 	 *   served by TCP (`RCP.md` §2.4).  A 404 is the exact answer, and it is
-	 *   declared instead of leaving the request hanging. */
-	log_says_of(REG_WT, wt_chi(w),
+	 *   declared instead of leaving the request hanging — as chatter: a
+	 *   stranger chooses how many (holistic review, 15 Oct 2026). */
+	log_detail_of(REG_WT, wt_chi(w),
 	                 "HTTP/3 request %s %s on stream %ld: 404 (over UDP only "
 	                 "the WebTransport session is served)",
 	                 r->method, r->uri, (long)stream_id);
+	if (prelogin_excess(w, false))
+		return NGHTTP3_ERR_CALLBACK_FAILURE;
 	return bare_response(w, stream_id, "404") == 0
 	         ? 0
 	         : NGHTTP3_ERR_CALLBACK_FAILURE;
@@ -8739,6 +8938,8 @@ bool wt_verdict(wt *w, uint64_t ticket, bool admitted, bool resumed)
 	/* ⛔ Only on the connection that took the request: the others have
 	 *    nothing to do with it, and the fact belongs to this admission. */
 	w->resumed = admitted && resumed;
+	w->verdict_ticket = ticket;
+	w->has_verdict_ticket = true;
 	return true;
 }
 

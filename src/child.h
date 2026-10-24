@@ -434,6 +434,11 @@ const char *children_nth_user(const children *f, int which);
  * (`/proc/<pid>/status`) instead of inferring it from `pgrep`, which would
  * also find the children of the other benches' servers. */
 pid_t children_pid_of(const children *f, const char *user);
+/* ⭐ The user's child is there AND its desktop is not closing (not leaving, not
+ *    asked to end its session in the last 30 s): what «the stage was already
+ *    there» means for a login (RESUMED).  ⚠ `children_pid_of()` > 0 also
+ *    holds for a child that is closing. */
+bool children_alive_of(const children *f, const char *user);
 
 /* ⛔⭐ ASKS THAT USER'S CHILD TO SEND ITS FRAME AGAIN.
  *

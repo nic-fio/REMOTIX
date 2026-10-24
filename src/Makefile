@@ -220,6 +220,15 @@ F18A_CFLAGS := $(shell pkg-config --cflags opus)
 F18A_LIBS   := $(shell pkg-config --libs   opus)
 override CFLAGS += $(F18A_CFLAGS)
 
+# ⭐ 15 Oct 2026 — **zlib**: `page.c` sends the login page gzip-compressed
+#    (`DECISIONS-11.md` §11.44, the user's decision: zlib is a dependency of
+#    REMOTIX).  `zlib.pc` where it exists, plain `-lz` where it does not.
+#    ⚠ On Debian/Ubuntu: `apt install zlib1g-dev`; Fedora/Alma: `zlib-devel`
+#      (or `zlib-ng-compat-devel`); openSUSE: `zlib-devel`; Arch: `zlib`.
+ZLIB_CFLAGS := $(shell pkg-config --cflags zlib 2>/dev/null)
+ZLIB_LIBS   := $(or $(shell pkg-config --libs zlib 2>/dev/null),-lz)
+override CFLAGS += $(ZLIB_CFLAGS)
+
 # ⭐⭐ THE TWO OF PHASE 4, grafted on 14 August 2026: **libei** and
 #     **xkbcommon**.  The input channel wants them, and neither can be
 #     replaced by a line of ours:
@@ -317,7 +326,7 @@ endif
 #    left to right, and the other way round the bridge's symbols would be missing.
 LIBS := -lngtcp2_crypto_ossl -lngtcp2 -lnghttp3 -lssl -lcrypto -lpam \
         -lm $(F2_LIBS) $(F3_LIBS) $(F4_LIBS) \
-        $(F12_LIBS) $(F13_LIBS) $(F18A_LIBS) $(F19_LIBS) $(DL_LIBS)
+        $(F12_LIBS) $(F13_LIBS) $(F18A_LIBS) $(F19_LIBS) $(ZLIB_LIBS) $(DL_LIBS)
 # ⚠ `-lm` is from phase 7: the test tone of `webtransport.c` calls `sin()`.
 #   On glibc 2.35+ it would be superfluous (the math functions are in `libc`),
 #   ⛔ but depending on that detail means breaking on a different libc
@@ -489,7 +498,8 @@ clean:
 MINIMI := openssl:3.5.0 libva-drm:0 \
           libngtcp2:1.25.0 libngtcp2_crypto_ossl:1.25.0 libnghttp3:1.18.0 \
           libei-1.0:1.1.0 libpipewire-0.3:0.3.48 gio-2.0:2.80 xkbcommon:0 \
-          libva:0 libdrm:0 gbm:0 wayland-client:0 opus:1.3 vulkan:1.3.274
+          libva:0 libdrm:0 gbm:0 wayland-client:0 opus:1.3 vulkan:1.3.274 \
+          zlib:1.2
 
 deps:
 	@stato=0; \
@@ -510,7 +520,7 @@ deps:
 	for h in ngtcp2/ngtcp2.h ngtcp2/ngtcp2_crypto_ossl.h nghttp3/nghttp3.h \
 	         openssl/ssl.h security/pam_appl.h \
 	         gio/gio.h pipewire/pipewire.h drm_fourcc.h \
-	         va/va.h va/va_drm.h gbm.h opus.h vulkan/vulkan.h; do \
+	         va/va.h va/va_drm.h gbm.h opus.h vulkan/vulkan.h zlib.h; do \
 	  if printf '#include <%s>\nint main(void){return 0;}\n' "$$h" | \
 	     $(CC) $(CFLAGS) -x c - -o /dev/null $(LDFLAGS) $(LIBS) 2>/dev/null; then \
 	    printf '  OK  %s\n' "$$h"; \

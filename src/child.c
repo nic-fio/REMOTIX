@@ -136,7 +136,49 @@
  * the piece into which a frame that would not fit in the socket is cut. */
 #define MAX_PIECE 32768u
 
+/* ⛔ THE SHARE OF ONE CHILD IN ONE ROUND OF `poll` (fairness review, 15 Oct 2026).
+ *
+ *     The child runs as the session user, and the parent reads it inside the
+ *     server's single loop.  Reading a socket "until it is empty" let ONE child
+ *     that writes without pause hold `children_move()` for as long as it wrote
+ *     — measured: 2.95 s, 374k–584k messages — and every other session, the
+ *     page and the logins waited behind it.
+ * ⇒ At most `ROUND_MSGS_MAX` messages or `ROUND_NS_MAX` of reading per child
+ *   per round, whichever comes first, then the next child.  ⚠ Nothing is lost:
+ *   `poll` is level-triggered and wakes again at once while messages are still
+ *   queued.  An honest 4K keyframe (~64 pieces of `MAX_PIECE`) takes two
+ *   rounds instead of one. */
+#define ROUND_MSGS_MAX 32
+#define ROUND_NS_MAX 2000000ull
+
+/* ⛔ A REFUSED message writes a line in root's log, and a child that sends
+ *    nothing else would write the log full.  ⇒ The first `REFUSED_LOG_BURST`
+ *    of every `REFUSED_LOG_WINDOW_MS` are written as they are, the rest only
+ *    counted, and the count is written once the window has passed. */
+#define REFUSED_LOG_BURST 5
+#define REFUSED_LOG_WINDOW_MS 10000
+
+/* ⛔ And a child that sends ONLY refused messages, this many in a row without a
+ *    single one accepted, is not a stage with a bug: our own child never writes
+ *    one (same binary, same version).  It is sent away like the other
+ *    violations (wrong credentials, wrong uid in INTRO): SIGKILL and farewell.
+ *    ⚠ An honest message in between starts the count again. */
+#define REFUSED_STREAK_MAX 4096
+
+/* ⛔ How often the parent asks "who are you" again — and checks that the
+ * user's NAME still resolves to the child's uid.  ⚠ One minute, and the number
+ * is not caution: it is the maximum time for which a child that had changed
+ * identity — or a pid recycled after a death we did not reap, or a name NSS
+ * now gives to another uid — would stay in the table without anyone having put
+ * it to the test again. */
+#define RECHECK_MS 60000
+
 #define CHILD_VERSION 1
+
+/* ⛔ How long «the end was asked» counts as «closing» for a child that is still
+ *    alive (see `closing_asked_ms`): the desktop logs out in a few seconds; past
+ *    this the child is treated as alive again, and a login attaches to it. */
+#define CLOSING_GRACE_MS 30000
 
 enum {
 	MSG_CHI_SEI = 1,      /* parent → child */
@@ -512,6 +554,18 @@ struct child {
 	uint64_t serial;
 	uint64_t born_ms;
 	uint64_t last_recheck_ms;
+	/* ⭐ When the NAME was last resolved to `uid` (`name_still_ours()`), on the
+	 *    `RECHECK_MS` timer: not on every message (a 4K keyframe is ~64, and
+	 *    with sssd/LDAP every lookup is a network call inside the loop). */
+	uint64_t name_checked_ms;
+	/* ⛔ The refused messages: in a row (`REFUSED_STREAK_MAX`), and the log
+	 *    lines of the current window (`REFUSED_LOG_BURST`) with what was only
+	 *    counted.  `refused_now`: the message being handled was refused. */
+	uint32_t refused_streak;
+	uint64_t refused_window_ms;
+	uint32_t refused_logged;
+	uint64_t refused_hidden;
+	bool refused_now;
 	bool showed_up;
 	/* ⛔⭐ "I told it to leave" and "it has left" are two different facts,
 	 *     and keeping only one of them is the defect this bench found on the
@@ -519,6 +573,12 @@ struct child {
 	 *     `child_dismiss()`. */
 	bool exiting;
 	uint64_t dismissed_ms;
+	/* ⛔ The parent asked this child to END its session (`children_terminate_
+	 *    session()`, §7.6 or §5.3) and it has not died yet: a login in that
+	 *    window must not be attached to a desktop that is closing (review of
+	 *    eab9623a).  Holds for `CLOSING_GRACE_MS` at most — a child that does
+	 *    not close is not a closing child for ever. */
+	uint64_t closing_asked_ms;
 	/* The incoming frame, one piece at a time. */
 	uint8_t *assembly;
 	size_t assembly_total, assembly_got;
@@ -613,6 +673,8 @@ struct children {
 	ChildCursor cursor;
 	ChildCanvas canvas;
 	void *ctx;
+	/* the instant of the current `children_move()` round, for the refusal log */
+	uint64_t round_ms;
 };
 
 static void magic_write(struct head *t)
@@ -688,21 +750,19 @@ static ssize_t receive_with_credentials(int fd, void *buf, size_t cap,
  *     from the NAME of the RCP session's user;
  *   · the serial number is its own — the equivalent of the helper's case
  *     number, and it serves the same purpose: that one's answer does not
- *     admit another;
- *   · the user's name **still today** resolves to that uid.  ⚠ This is the
- *     only one of the five that can change while the child is alive (NSS,
- *     `/etc/passwd` rewritten, a domain answering differently): if it
- *     changes, the link between the RCP session and the child can no longer
- *     be proven, and a link that cannot be proven is a no.
+ *     admit another.
+ *
+ * ⚠ The fifth fact — the user's name **still today** resolves to that uid —
+ *   is the only one that can change while the child is alive (NSS,
+ *   `/etc/passwd` rewritten, a domain answering differently), and it is no
+ *   longer asked HERE, on every message: see `name_still_ours()`, on the
+ *   `RECHECK_MS` timer of `children_recheck()`.
  *
  * ⛔ There is no path that delivers a byte to someone who does not pass here. */
 static bool credentials_match(const struct child *g, const struct head *t,
                                    bool c_e, const struct ucred *chi,
                                    char *why_no, size_t cap_why)
 {
-	struct passwd pw, *result = NULL;
-	char spare[1024];
-
 	if (!c_e) {
 		snprintf(why_no, cap_why,
 		         "the kernel did not attach the credentials to the message");
@@ -733,6 +793,27 @@ static bool credentials_match(const struct child *g, const struct head *t,
 		         (unsigned long)t->declared_uid, (long)g->uid);
 		return false;
 	}
+	return true;
+}
+
+/* ⛔⭐ THE NAME STILL RESOLVES TO THE CHILD'S UID — the fifth fact of the wall
+ *     above, asked once every `RECHECK_MS` instead of on every message
+ *     (fairness review, 15 Oct 2026).
+ *
+ *     It was asked on every message: a 4K keyframe is ~64 pieces, so ~64
+ *     `getpwnam_r()` per frame, and with sssd/LDAP every one of them is a call
+ *     that can wait on the network — inside the server's single loop.
+ * ⇒ The name is resolved at the spawn (`children_ensure_from()`), and checked
+ *   again on the minute timer: a name that moved to another uid, or vanished,
+ *   still costs the child its life — within `RECHECK_MS` instead of at the
+ *   next message.  ⚠ The kernel's credentials (pid, uid, gid) and the header
+ *   (serial, declared uid) are still checked on EVERY message: those cost
+ *   nothing and are the isolation between users. */
+static bool name_still_ours(const struct child *g, char *why_no, size_t cap_why)
+{
+	struct passwd pw, *result = NULL;
+	char spare[1024];
+
 	if (getpwnam_r(g->user, &pw, spare, sizeof spare, &result) != 0 || !result) {
 		snprintf(why_no, cap_why,
 		         "the name «%s» no longer resolves to any user: the "
@@ -815,11 +896,69 @@ static const char *why_exited(int code)
 	}
 }
 
+/* ⛔ The summary of what was only counted, once its window has passed (or the
+ *    child is leaving): the fact stays in the log, as one line. */
+static void refusals_flush(struct child *g, uint64_t now_ms, bool force)
+{
+	if (!g->refused_hidden)
+		return;
+	if (!force && now_ms < g->refused_window_ms + REFUSED_LOG_WINDOW_MS)
+		return;
+	registro_dice(LOG_CHILD,
+	              "⛔ «%s»: %llu more refused messages since %llu ms ago, not "
+	              "written one by one (the first %d of every %d s are)",
+	              g->user, (unsigned long long)g->refused_hidden,
+	              (unsigned long long)(now_ms > g->refused_window_ms
+	                                       ? now_ms - g->refused_window_ms : 0),
+	              REFUSED_LOG_BURST, REFUSED_LOG_WINDOW_MS / 1000);
+	g->refused_hidden = 0;
+	g->refused_logged = 0;
+	g->refused_window_ms = now_ms;
+}
+
+/* ⛔ A message of this child is REFUSED: counted (in a row, for
+ *    `REFUSED_STREAK_MAX`), and the answer says whether its line may be written
+ *    (`REFUSED_LOG_BURST` per `REFUSED_LOG_WINDOW_MS`) or only counted.
+ *    ⚠ `f->round_ms` is the instant of the current `children_move()`. */
+static bool refused(struct children *f, struct child *g)
+{
+	uint64_t now_ms = f->round_ms;
+
+	g->refused_now = true;
+	if (g->refused_streak < UINT32_MAX)
+		g->refused_streak++;
+	if (g->refused_logged == 0 && !g->refused_hidden)
+		g->refused_window_ms = now_ms;
+	refusals_flush(g, now_ms, false);
+	if (now_ms >= g->refused_window_ms + REFUSED_LOG_WINDOW_MS) {
+		g->refused_window_ms = now_ms;
+		g->refused_logged = 0;
+	}
+	if (g->refused_logged < REFUSED_LOG_BURST) {
+		g->refused_logged++;
+		return true;
+	}
+	g->refused_hidden++;
+	return false;
+}
+
+/* ⛔ The same, for a body too short for what its type says: it was dropped
+ *    without a line before, and it still is — but it counts in the streak.
+ *    ⚠ Returns `true`: the child is still there (see `handle()`). */
+static bool refused_quietly(struct child *g)
+{
+	g->refused_now = true;
+	if (g->refused_streak < UINT32_MAX)
+		g->refused_streak++;
+	return true;
+}
+
 /* The second half: the kernel has confirmed, the slot is freed. */
 static void child_free(struct children *f, struct child *g, const char *why)
 {
 	if (!g->used)
 		return;
+	refusals_flush(g, log_now_ms(), true);
 	registro_dice(LOG_CHILD,
 	              "⭐ the child of «%s» (uid %ld) has been REAPED: %s.  From "
 	              "now on \"dead\" and \"alive\" no longer have the same face in "
@@ -848,6 +987,7 @@ static void child_dismiss(struct children *f, struct child *g, const char *why)
 {
 	if (!g->used || g->exiting)
 		return;
+	refusals_flush(g, log_now_ms(), true);
 	registro_dice(LOG_CHILD,
 	              "the child of «%s» (uid %ld, pid %ld, serial %llu) is "
 	              "leaving: %s — waiting for the kernel to confirm it before "
@@ -870,6 +1010,15 @@ static void child_dismiss(struct children *f, struct child *g, const char *why)
 	 *    be showing the image of a user whose process is gone. */
 	if (f->dismiss)
 		f->dismiss(f->ctx, g->user, g->uid);
+}
+
+/* ⛔ The desktop was asked to close (or the child is leaving), within
+ *    `CLOSING_GRACE_MS`. */
+static bool child_closing(const struct child *g)
+{
+	return g->exiting
+	       || (g->closing_asked_ms
+	           && log_now_ms() < g->closing_asked_ms + CLOSING_GRACE_MS);
 }
 
 static struct child *search(struct children *f, const char *user)
@@ -1949,6 +2098,27 @@ bool children_ensure_from(children *f, const char *user, const char *rhost)
 	 *     sees the same stage.  ⚠ And if the first is dead, the slot has
 	 *     already been freed by `children_move()`: nothing is resurrected here. */
 	g = search(f, user);
+	if (g && !g->exiting) {
+		/* ⛔ A new RCP session attaching to this child: the name is checked
+		 *    again NOW, once per login — the per-message check is gone
+		 *    (`name_still_ours()`), and a login is exactly the moment a
+		 *    name NSS now gives to another uid would be bound to a stage. */
+		char why[256];
+
+		why[0] = 0;
+		if (!name_still_ours(g, why, sizeof why)) {
+			registro_dice(LOG_CHILD,
+			              "⛔⛔ «%s» logs in and its child can no longer be "
+			              "proven to be that user: %s.  The child is killed, "
+			              "and this login gets none",
+			              user, why);
+			if (g->pid > 0)
+				kill(g->pid, SIGKILL);
+			child_dismiss(f, g, "its name no longer resolves to its uid");
+			return false;
+		}
+		g->name_checked_ms = log_now_ms();
+	}
 	if (g) {
 		registro_dice(LOG_CHILD,
 		              "«%s» is already served by the child pid %ld (uid %ld): a "
@@ -2118,6 +2288,7 @@ bool children_ensure_from(children *f, const char *user, const char *rhost)
 	fcntl(g->fd, F_SETFL, O_NONBLOCK);
 	g->born_ms = log_now_ms();
 	g->last_recheck_ms = g->born_ms;
+	g->name_checked_ms = g->born_ms; /* resolved just above, before the fork */
 	f->next_serial++;
 
 	registro_dice(LOG_CHILD,
@@ -2185,6 +2356,15 @@ const char *children_nth_user(const children *f, int which)
 	return NULL;
 }
 
+bool children_alive_of(const children *f, const char *user)
+{
+	const struct child *g;
+	if (!f || !user)
+		return false;
+	g = search((children *)f, user);
+	return g && g->pid > 0 && !child_closing(g);
+}
+
 pid_t children_pid_of(const children *f, const char *user)
 {
 	const struct child *g;
@@ -2199,19 +2379,21 @@ static void assemble_piece(struct children *f, struct child *g,
                         const struct body_frame *c, const uint8_t *data)
 {
 	if (c->total == 0 || c->total > FRAME_MAX) {
-		registro_dice(LOG_CHILD,
-		              "⛔ «%s» announces a frame of %u bytes: outside the "
-		              "cap of §6.2 (1..%u).  It is dropped, and NOT truncated: a "
-		              "cut frame delivered as whole is a "
-		              "frame that lies",
-		              g->user, c->total, FRAME_MAX);
+		if (refused(f, g))
+			registro_dice(LOG_CHILD,
+			              "⛔ «%s» announces a frame of %u bytes: outside the "
+			              "cap of §6.2 (1..%u).  It is dropped, and NOT truncated: a "
+			              "cut frame delivered as whole is a "
+			              "frame that lies",
+			              g->user, c->total, FRAME_MAX);
 		return;
 	}
 	if (c->piece > MAX_PIECE || (uint64_t)c->offset + c->piece > c->total) {
-		registro_dice(LOG_CHILD,
-		              "⛔ «%s»: piece out of size (offset %u + %u of %u): "
-		              "discarded",
-		              g->user, c->offset, c->piece, c->total);
+		if (refused(f, g))
+			registro_dice(LOG_CHILD,
+			              "⛔ «%s»: piece out of size (offset %u + %u of %u): "
+			              "discarded",
+			              g->user, c->offset, c->piece, c->total);
 		free(g->assembly);
 		g->assembly = NULL;
 		g->assembly_total = g->assembly_got = 0;
@@ -2243,10 +2425,11 @@ static void assemble_piece(struct children *f, struct child *g,
 	 *    that is the leniency that hides (`REVIEWER.md` §5). */
 	if (!g->assembly || c->offset != g->assembly_got || c->codec != g->assembly_codec
 	    || c->total != g->assembly_total) {
-		registro_dice(LOG_CHILD,
-		              "⛔ «%s»: piece out of order (expected %zu, got "
-		              "%u): the whole frame is DROPPED",
-		              g->user, g->assembly_got, c->offset);
+		if (refused(f, g))
+			registro_dice(LOG_CHILD,
+			              "⛔ «%s»: piece out of order (expected %zu, got "
+			              "%u): the whole frame is DROPPED",
+			              g->user, g->assembly_got, c->offset);
 		free(g->assembly);
 		g->assembly = NULL;
 		g->assembly_total = g->assembly_got = 0;
@@ -2311,11 +2494,12 @@ static void assemble_clipboard(struct children *f, struct child *g,
                           const struct body_clipboard *c, const uint8_t *data)
 {
 	if (c->total > CLIPBOARD_CAP) {
-		registro_dice(LOG_CHILD,
-		              "⛔ «%s» announces %u bytes of clipboard: over the cap of "
-		              "§5.4 (%u).  It is dropped, and NOT truncated — a cut text "
-		              "pasted into a terminal is worse than a missing text",
-		              g->user, c->total, CLIPBOARD_CAP);
+		if (refused(f, g))
+			registro_dice(LOG_CHILD,
+			              "⛔ «%s» announces %u bytes of clipboard: over the cap of "
+			              "§5.4 (%u).  It is dropped, and NOT truncated — a cut text "
+			              "pasted into a terminal is worse than a missing text",
+			              g->user, c->total, CLIPBOARD_CAP);
 		return;
 	}
 	/* ⚠ Zero bytes is a LEGITIMATE fact: the clipboard emptied.  It is
@@ -2326,10 +2510,11 @@ static void assemble_clipboard(struct children *f, struct child *g,
 		return;
 	}
 	if (c->piece > MAX_PIECE || (uint64_t)c->offset + c->piece > c->total) {
-		registro_dice(LOG_CHILD,
-		              "⛔ «%s»: clipboard piece out of size (offset %u + %u of "
-		              "%u): discarded",
-		              g->user, c->offset, c->piece, c->total);
+		if (refused(f, g))
+			registro_dice(LOG_CHILD,
+			              "⛔ «%s»: clipboard piece out of size (offset %u + %u of "
+			              "%u): discarded",
+			              g->user, c->offset, c->piece, c->total);
 		if (g->app_mount)
 			explicit_bzero(g->app_mount, g->app_total);
 		free(g->app_mount);
@@ -2357,10 +2542,11 @@ static void assemble_clipboard(struct children *f, struct child *g,
 	 *    wrong text gets pasted into a terminal. */
 	if (!g->app_mount || c->offset != g->app_got
 	    || c->total != g->app_total) {
-		registro_dice(LOG_CHILD,
-		              "⛔ «%s»: clipboard piece out of order (expected %zu, "
-		              "got %u): the whole text is DROPPED",
-		              g->user, g->app_got, c->offset);
+		if (refused(f, g))
+			registro_dice(LOG_CHILD,
+			              "⛔ «%s»: clipboard piece out of order (expected %zu, "
+			              "got %u): the whole text is DROPPED",
+			              g->user, g->app_got, c->offset);
 		if (g->app_mount)
 			explicit_bzero(g->app_mount, g->app_total);
 		free(g->app_mount);
@@ -2395,10 +2581,11 @@ static void assemble_cursor(struct children *f, struct child *g,
 	 *    not a duplicate of the limits of `cursor.c`: that one is a module we
 	 *    trust, this one is a socket. */
 	if (c->total > (uint32_t)CURSOR_MAX_SIDE * CURSOR_MAX_SIDE * 4u) {
-		registro_dice(LOG_CHILD,
-		              "⛔ «%s» announces a cursor of %u bytes: over the cap of "
-		              "§5.5 (%ux%u in BGRA).  It is dropped",
-		              g->user, c->total, CURSOR_MAX_SIDE, CURSOR_MAX_SIDE);
+		if (refused(f, g))
+			registro_dice(LOG_CHILD,
+			              "⛔ «%s» announces a cursor of %u bytes: over the cap of "
+			              "§5.5 (%ux%u in BGRA).  It is dropped",
+			              g->user, c->total, CURSOR_MAX_SIDE, CURSOR_MAX_SIDE);
 		return;
 	}
 
@@ -2411,10 +2598,11 @@ static void assemble_cursor(struct children *f, struct child *g,
 		return;
 	}
 	if (c->piece > MAX_PIECE || (uint64_t)c->offset + c->piece > c->total) {
-		registro_dice(LOG_CHILD,
-		              "⛔ «%s»: cursor piece out of size (offset %u + %u of "
-		              "%u): discarded",
-		              g->user, c->offset, c->piece, c->total);
+		if (refused(f, g))
+			registro_dice(LOG_CHILD,
+			              "⛔ «%s»: cursor piece out of size (offset %u + %u of "
+			              "%u): discarded",
+			              g->user, c->offset, c->piece, c->total);
 		free(g->cur_mount);
 		g->cur_mount = NULL;
 		g->cur_total = g->cur_got = 0;
@@ -2439,10 +2627,11 @@ static void assemble_cursor(struct children *f, struct child *g,
 	 *    someone else's memory. */
 	if (!g->cur_mount || c->offset != g->cur_got || c->total != g->cur_total
 	    || c->width != g->cur_l || c->height != g->cur_a) {
-		log_detail(LOG_CHILD,
-		                   "«%s»: cursor piece out of order: dropping the half "
-		                   "shape (the client keeps the previous one)",
-		                   g->user);
+		if (refused(f, g))
+			log_detail(LOG_CHILD,
+			                   "«%s»: cursor piece out of order: dropping the half "
+			                   "shape (the client keeps the previous one)",
+			                   g->user);
 		free(g->cur_mount);
 		g->cur_mount = NULL;
 		g->cur_total = g->cur_got = 0;
@@ -2472,7 +2661,7 @@ static bool handle(struct children *f, struct child *g, const struct head *t,
 	case MSG_INTRO: {
 		struct body_whoami s;
 		if (byte < sizeof s)
-			return true;
+			return refused_quietly(g);
 		memcpy(&s, body, sizeof s);
 		/* ⛔ 24 Oct 2026, review of the child-msg fuzz (present since 1.0: the same lines are
 		 *   in 04f6aa18): the socket is UNTRUSTED, and `user` and `runtime` are fixed arrays
@@ -2541,7 +2730,7 @@ static bool handle(struct children *f, struct child *g, const struct head *t,
 	case MSG_STAGE: {
 		struct body_stage p;
 		if (byte < sizeof p)
-			return true;
+			return refused_quietly(g);
 		memcpy(&p, body, sizeof p);
 		/* ⛔ 24 Oct 2026, review of the child-msg fuzz (present since 1.0, 04f6aa18): `monitor`
 		 *   and `fault` come from the untrusted socket and the log prints them with %s: the
@@ -2562,30 +2751,30 @@ static bool handle(struct children *f, struct child *g, const struct head *t,
 	case MSG_CURSOR: {
 		struct body_cursor c;
 		if (byte < sizeof c)
-			return true;
+			return refused_quietly(g);
 		memcpy(&c, body, sizeof c);
 		if (byte < sizeof c + c.piece)
-			return true;
+			return refused_quietly(g);
 		assemble_cursor(f, g, &c, body + sizeof c);
 		return true;
 	}
 	case MSG_FRAME: {
 		struct body_frame c;
 		if (byte < sizeof c)
-			return true;
+			return refused_quietly(g);
 		memcpy(&c, body, sizeof c);
 		if (byte < sizeof c + c.piece)
-			return true;
+			return refused_quietly(g);
 		assemble_piece(f, g, &c, body + sizeof c);
 		return true;
 	}
 	case MSG_BLOCK: {
 		struct body_block c;
 		if (byte < sizeof c)
-			return true;
+			return refused_quietly(g);
 		memcpy(&c, body, sizeof c);
 		if (byte < sizeof c + c.byte)
-			return true;
+			return refused_quietly(g);
 		/* ⛔⭐ AND HERE THE CODEC IS CHECKED, instead of trusted.
 		 *
 		 *     The child runs as the user and the parent is privileged: a
@@ -2594,10 +2783,11 @@ static bool handle(struct children *f, struct child *g, const struct head *t,
 		 *     datagram** and the client would discard it — that is, the audio
 		 *     would not arrive, without any line saying why. */
 		if (c.codec != 1 && c.codec != 2) {
-			registro_dice(LOG_CHILD,
-			              "⛔ «%s» sends an audio block with codec %u, which "
-			              "§6.3 does not define (1 = Opus, 2 = PCM): DROPPED",
-			              g->user, c.codec);
+			if (refused(f, g))
+				registro_dice(LOG_CHILD,
+				              "⛔ «%s» sends an audio block with codec %u, which "
+				              "§6.3 does not define (1 = Opus, 2 = PCM): DROPPED",
+				              g->user, c.codec);
 			return true;
 		}
 		if (f->on_block)
@@ -2608,17 +2798,17 @@ static bool handle(struct children *f, struct child *g, const struct head *t,
 	case MSG_CLIPBOARD_FROM_SESSION: {
 		struct body_clipboard c;
 		if (byte < sizeof c)
-			return true;
+			return refused_quietly(g);
 		memcpy(&c, body, sizeof c);
 		if (byte < sizeof c + c.piece)
-			return true;
+			return refused_quietly(g);
 		assemble_clipboard(f, g, &c, body + sizeof c);
 		return true;
 	}
 	case MSG_CLIPBOARD_REQUEST: {
 		struct body_clipboard c;
 		if (byte < sizeof c)
-			return true;
+			return refused_quietly(g);
 		memcpy(&c, body, sizeof c);
 		/* ⛔⛔ AND IF NOBODY IS LISTENING THE ANSWER GOES OUT ANYWAY, at once
 		 *      and empty-handed.
@@ -2644,7 +2834,7 @@ static bool handle(struct children *f, struct child *g, const struct head *t,
 	case MSG_CANVAS: {
 		struct body_canvas c;
 		if (byte < sizeof c)
-			return true;
+			return refused_quietly(g);
 		memcpy(&c, body, sizeof c);
 		/* ⭐⭐ "WAIT" before anything else: it is not an answer, it is the news
 		 *     that an answer is on its way.  ⛔ Treating it like the others
@@ -2680,16 +2870,46 @@ static bool handle(struct children *f, struct child *g, const struct head *t,
 		return true;
 	}
 	default:
-		registro_dice(LOG_CHILD, "⚠ «%s» sent a type I do not know (%u)",
-		              g->user, t->kind);
+		if (refused(f, g))
+			registro_dice(LOG_CHILD, "⚠ «%s» sent a type I do not know (%u)",
+			              g->user, t->kind);
 		return true;
 	}
+}
+
+/* ⛔ `REFUSED_STREAK_MAX` refused messages in a row and not one accepted: the
+ *    child is sent away like the other violations.  Returns `false` when it
+ *    is gone — and the caller MUST stop reading its descriptor. */
+static bool refused_too_many(struct children *f, struct child *g)
+{
+	if (g->refused_streak < REFUSED_STREAK_MAX)
+		return true;
+	refusals_flush(g, f->round_ms, true);
+	registro_dice(LOG_CHILD,
+	              "⛔⛔ «%s» sent %u refused messages in a row and not one "
+	              "accepted: our own child never writes one.  It is not a stage, "
+	              "it is a flood running as that user: the child is killed",
+	              g->user, g->refused_streak);
+	if (g->pid > 0)
+		kill(g->pid, SIGKILL);
+	child_dismiss(f, g, "sent only refused messages");
+	return false;
+}
+
+/* ⭐ The clock of a round's share (`ROUND_NS_MAX`): monotonic, in ns. */
+static uint64_t round_clock_ns(void)
+{
+	struct timespec ts;
+
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+	return (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
 }
 
 void children_move(children *f, struct pollfd *fds, size_t n, uint64_t now_ms)
 {
 	if (!f)
 		return;
+	f->round_ms = now_ms;
 
 	/* ⭐ FORWARDING THE TRIGGER — the parent photographs nothing: it only
 	 *    knows where the children are, and there the pixels are.
@@ -2729,7 +2949,23 @@ void children_move(children *f, struct pollfd *fds, size_t n, uint64_t now_ms)
 			if (fds[k].fd == g->fd && (fds[k].revents & (POLLIN | POLLHUP)))
 				readable = true;
 
+		/* ⛔ The summary of the refusals only counted, once their window
+		 *    has passed — even if this child has gone quiet since. */
+		refusals_flush(g, now_ms, false);
+
+		/* ⛔ This child's share of the round: `ROUND_MSGS_MAX` messages or
+		 *    `ROUND_NS_MAX`, then the next one (see the box at the top).
+		 *    ⚠ What stays queued is read at the next round: `poll` wakes again
+		 *    at once for it. */
+		uint64_t round_start_ns = readable ? round_clock_ns() : 0;
+		int round_msgs = 0;
+
 		while (readable) {
+			if (round_msgs >= ROUND_MSGS_MAX
+			    || (round_msgs > 0
+			        && round_clock_ns() - round_start_ns >= ROUND_NS_MAX))
+				break;
+			round_msgs++;
 			uint8_t envelope[MAX_ENVELOPE];
 			struct head t;
 			struct ucred chi;
@@ -2746,10 +2982,13 @@ void children_move(children *f, struct pollfd *fds, size_t n, uint64_t now_ms)
 				/* ⛔ Before `errno`, and not after: `-2` is a fact of OURS
 				 *    (message truncated by the kernel) and `errno` at that
 				 *    point still carries the outcome of something else. */
-				registro_dice(LOG_CHILD,
-				              "⛔ «%s» sent a message longer than "
-				              "expected: DISCARDED",
-				              g->user);
+				if (refused(f, g))
+					registro_dice(LOG_CHILD,
+					              "⛔ «%s» sent a message longer than "
+					              "expected: DISCARDED",
+					              g->user);
+				if (!refused_too_many(f, g))
+					break;
 				continue;
 			}
 			if (readings < 0) {
@@ -2761,18 +3000,24 @@ void children_move(children *f, struct pollfd *fds, size_t n, uint64_t now_ms)
 				break;
 			}
 			if ((size_t)readings < sizeof t) {
-				registro_dice(LOG_CHILD,
-				              "⛔ «%s»: message of %zd bytes, too short for "
-				              "a header: DISCARDED",
-				              g->user, readings);
+				if (refused(f, g))
+					registro_dice(LOG_CHILD,
+					              "⛔ «%s»: message of %zd bytes, too short for "
+					              "a header: DISCARDED",
+					              g->user, readings);
+				if (!refused_too_many(f, g))
+					break;
 				continue;
 			}
 			memcpy(&t, envelope, sizeof t);
 			if (!magic_ok(&t)) {
-				registro_dice(LOG_CHILD,
-				              "⛔ «%s»: message without the signature of this "
-				              "protocol: DISCARDED",
-				              g->user);
+				if (refused(f, g))
+					registro_dice(LOG_CHILD,
+					              "⛔ «%s»: message without the signature of this "
+					              "protocol: DISCARDED",
+					              g->user);
+				if (!refused_too_many(f, g))
+					break;
 				continue;
 			}
 			/* ⛔⭐ AND HERE, BEFORE LOOKING AT A SINGLE BYTE OF THE BODY. */
@@ -2793,13 +3038,23 @@ void children_move(children *f, struct pollfd *fds, size_t n, uint64_t now_ms)
 				break;
 			}
 			if ((size_t)readings < sizeof t + t.byte) {
-				registro_dice(LOG_CHILD,
-				              "⛔ «%s»: the header announces %u body bytes and "
-				              "%zd arrived: DISCARDED",
-				              g->user, t.byte, readings - (ssize_t)sizeof t);
+				if (refused(f, g))
+					registro_dice(LOG_CHILD,
+					              "⛔ «%s»: the header announces %u body bytes and "
+					              "%zd arrived: DISCARDED",
+					              g->user, t.byte, readings - (ssize_t)sizeof t);
+				if (!refused_too_many(f, g))
+					break;
 				continue;
 			}
+			g->refused_now = false;
 			if (!handle(f, g, &t, envelope + sizeof t, t.byte))
+				break;
+			/* ⭐ An accepted message starts the streak again; a refused one
+			 *    may have been the last allowed. */
+			if (!g->refused_now)
+				g->refused_streak = 0;
+			else if (!refused_too_many(f, g))
 				break;
 		}
 
@@ -2868,12 +3123,7 @@ void children_move(children *f, struct pollfd *fds, size_t n, uint64_t now_ms)
 	}
 }
 
-/* ⛔ How often the parent asks "who are you" again.  ⚠ One minute, and the
- * number is not caution: it is the maximum time for which a child that had
- * changed identity — or a pid recycled after a death we did not reap — would
- * stay in the table without anyone having put it to the test again. */
-#define RECHECK_MS 60000
-
+/* ⛔ The minute timer: `RECHECK_MS`, defined at the top. */
 void children_recheck(children *f, uint64_t now_ms)
 {
 	if (!f)
@@ -2881,8 +3131,32 @@ void children_recheck(children *f, uint64_t now_ms)
 	for (int i = 0; i < f->cap; i++) {
 		struct child *g = &f->v[i];
 		struct head t;
+		char why[256];
 
-		if (!g->used || g->fd < 0 || !g->showed_up)
+		if (!g->used || g->fd < 0 || g->exiting)
+			continue;
+		/* ⛔⭐ THE NAME, every `RECHECK_MS`, for every child — introduced or
+		 *     not: the fifth fact of the wall (`name_still_ours()`), moved
+		 *     here from every message.  A name that moved to another uid or
+		 *     vanished is the link between the RCP session and the child that
+		 *     can no longer be proven, and it costs the child as before. */
+		if (now_ms >= g->name_checked_ms + RECHECK_MS) {
+			g->name_checked_ms = now_ms;
+			why[0] = 0;
+			if (!name_still_ours(g, why, sizeof why)) {
+				registro_dice(LOG_CHILD,
+				              "⛔⛔ the child of «%s» can no longer be "
+				              "proven to be that user: %s.  ⚠ A child "
+				              "running as the wrong user is I3 violated "
+				              "invisibly.  The child is killed.",
+				              g->user, why);
+				if (g->pid > 0)
+					kill(g->pid, SIGKILL);
+				child_dismiss(f, g, "its name no longer resolves to its uid");
+				continue;
+			}
+		}
+		if (!g->showed_up)
 			continue;
 		if (now_ms < g->last_recheck_ms + RECHECK_MS)
 			continue;
@@ -3298,7 +3572,14 @@ bool children_terminate_session(children *f, const char *user, int why)
 {
 	/* ⛔ The `why` travels in field `a`, which was free: the reason is on
 	 *    `FIGLI_USCITA_*` in `child.h`. */
-	return children_input(f, user, 0, CHILDREN_INPUT_TERMINATE, 0, 0, why, 0);
+	if (!children_input(f, user, 0, CHILDREN_INPUT_TERMINATE, 0, 0, why, 0))
+		return false;
+	/* ⛔ From here the desktop is closing: a login now gets «retry», not a
+	 *    desktop about to vanish (`children_alive_of()`). */
+	struct child *g = search(f, user);
+	if (g)
+		g->closing_asked_ms = log_now_ms() ? log_now_ms() : 1;
+	return true;
 }
 
 bool children_audio(children *f, const char *user, uint8_t codec)

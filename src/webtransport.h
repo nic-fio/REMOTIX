@@ -407,6 +407,13 @@ void wt_terminate_hook(wt_terminate_request f, void *ctx);
 size_t wt_dismiss_user(const char *user, uint8_t reason, const char *detail,
                          const wt *except);
 
+/* Sends a farewell ONLY to the session whose PAM verdict was request
+ * `ticket` (the one `wt_verdict()` has just delivered).  Returns 1 or 0.
+ * ⛔ It serves the «desktop closing» 0x0E: other connections of the same name
+ * may be strangers trying passwords, and must neither be dismissed nor learn
+ * that the account exists (§4.4). */
+size_t wt_dismiss_ticket(uint64_t ticket, uint8_t reason, const char *detail);
+
 /* ⭐ The canvas cap that the sessions of that user can decode —
  *    `video.max_size` of §4.3, the widest if there is more than one.
  * ⛔ It serves the BUDGET (phase 10): at `delivery_verdict()` the canvas is

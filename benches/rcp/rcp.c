@@ -7655,6 +7655,14 @@ void rcp_free(rcp_session *s)
 
 bool rcp_is_finished(const rcp_session *s) { return s && s->state == S_FINISHED; }
 
+/* ⭐ Past the fixed second with a «yes» (`ADMITTED` sent): the session is a
+ *    login, not a knock.  Before it the name is only what the client CLAIMED
+ *    at `CREDENTIALS`, and nothing may be said about that account (§4.4). */
+bool rcp_logged_in(const rcp_session *s)
+{
+	return s && s->state >= S_WAIT_ATTACH && s->state != S_FINISHED;
+}
+
 /* ⛔⭐ §4.2 — THE SESSION IS OVER BECAUSE THE CLIENT SAYS SO, AND THE SLOT IS
  * LEFT NOW, NOT WHEN THE TRANSPORT HAS FINISHED TAKING ITSELF DOWN.
  *

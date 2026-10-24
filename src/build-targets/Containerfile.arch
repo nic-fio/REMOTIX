@@ -12,7 +12,7 @@
 FROM docker.io/library/archlinux:latest
 RUN pacman -Syu --noconfirm --needed \
         base-devel git cmake ninja \
-        openssl pam glib2 pipewire libdrm libva opus \
+        openssl pam glib2 pipewire libdrm libva opus zlib \
         libei libxkbcommon mesa wayland vulkan-headers vulkan-icd-loader \
         labwc wlr-randr wireplumber pipewire-pulse \
     && pacman -Scc --noconfirm

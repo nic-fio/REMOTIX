@@ -123,7 +123,13 @@
 #define CANVAS_W 1920u
 #define CANVAS_H 1080u
 
-/* 1 for UDP, 1 for the TCP listener, the rest for the TCP connections. */
+/* The shutdown loops' small `poll` arrays.  ⛔ The MAIN loop's array is NOT
+ * this size any more (15 Oct 2026): it is allocated once at start-up from
+ * what can really be in it — 1 UDP + PAGE_MAX_DESCRIPTORS + 1 command + 1
+ * PAM helper + one per child (`rcp_cap()`, which `--session-cap` moves).
+ * With a fixed 64 the page alone could take 33 slots, and a raised
+ * `--session-cap` left the children after the 28th out of the `poll` —
+ * frozen in silence by whoever held 32 page connections. */
 #define MAX_POLL 64
 
 /* ⭐ §5.1 — how often the local graphical sessions are checked again.
@@ -744,6 +750,8 @@ static void delivery_verdict(void *ctx, uint64_t ticket, bool admitted,
 	 *   it** (`[M]` §3.4: `grep -r RCP_BUDGET_FULL src/ --include=*.c` ⇒ zero
 	 *   callers).  This is the line that gives it its first sender. */
 	uint8_t no_reason = RCP_SESSION_UNSERVABLE;
+	/* The 0x0E «desktop closing» goes to THIS login only (its ticket). */
+	bool only_this_login = false;
 	/* ⭐ D-001: the stage was already there ⇒ `SESSION` will say `2 = RESUMED`. */
 	bool resumed = false;
 
@@ -766,7 +774,11 @@ static void delivery_verdict(void *ctx, uint64_t ticket, bool admitted,
 		 *    different facts, and the difference is needed a line below: a
 		 *    child just born is NOT asked to resend the stage — it is taking
 		 *    it right now, and the request would produce a double frame. */
-		bool c_era = children_pid_of(p->f, user) > 0;
+		bool c_era = children_alive_of(p->f, user);
+		/* ⛔ A child that is there but CLOSING (leaving, or asked to end its
+		 *    session): not «already there» — RESUMED onto it would be a black
+		 *    page and then 0x10 (review of eab9623a). */
+		bool closing = !c_era && children_pid_of(p->f, user) > 0;
 
 		/* ⭐ D-001 — and «it was already there» is exactly the RESUMED of
 		 *    §4.5: the child lives as long as the graphical session (child
@@ -824,7 +836,24 @@ static void delivery_verdict(void *ctx, uint64_t ticket, bool admitted,
 		 *
 		 * ⚠ `children_count()` and `children_pid_of()` already existed: no new
 		 *   function is needed, what is needed is **asking first**. */
-		if (!resumed && stage_count(p) >= rcp_cap()) {
+		if (closing) {
+			/* ⭐ Before the caps: it is not a capacity matter, and the user's
+			 *    other sessions are already being sent away by the closing.
+			 * ⚠ `without_stage` with `no_reason` = 0x0E, a refusal that is OURS
+			 *   (not a failed login, not counted).  ⛔ ONLY this login's session
+			 *   (`wt_dismiss_ticket()`): other connections of the same name may be
+			 *   strangers still trying passwords, and would learn that the
+			 *   account exists (§4.4). */
+			only_this_login = true;
+			snprintf(without_stage, sizeof without_stage,
+			         "the previous desktop of «%s» is still closing: "
+			         "retry in a few seconds",
+			         user);
+			registro_dice(LOG_CHILD,
+			              "⛔ «%s» is ADMITTED while its desktop is closing: %s.  "
+			              "⭐ It gets 0x0E",
+			              user, without_stage);
+		} else if (!resumed && stage_count(p) >= rcp_cap()) {
 			registro_dice(LOG_CHILD,
 			              "⛔ «%s» passed PAM but will NOT have a stage: the "
 			              "stages are %d out of %d (%d with children, %d found again "
@@ -983,7 +1012,9 @@ static void delivery_verdict(void *ctx, uint64_t ticket, bool admitted,
 	 *    ADDED, they do not replace each other, and `0x06` belongs to the
 	 *    budget's round. */
 	if (without_stage[0]) {
-		size_t how_many = wt_dismiss_user(user, no_reason, without_stage, NULL);
+		size_t how_many = only_this_login
+		                      ? wt_dismiss_ticket(ticket, no_reason, without_stage)
+		                      : wt_dismiss_user(user, no_reason, without_stage, NULL);
 		registro_dice(REG_WT,
 		              "⛔ sent away %zu clients of «%s» with %#04x: %s.  ⚠ If here "
 		              "you read ZERO, the no reached NOBODY and the user "
@@ -1857,6 +1888,8 @@ int main(int argc, char **argv)
 	command *k = NULL;
 	helper *pam_help = NULL;  /* ⚠ not «help»: that name already belongs to the function that prints the usage */
 	children *offspring = NULL;
+	struct pollfd *loop_fds = NULL;
+	size_t loop_max = 0;
 	struct bridge bridge;
 	sentinel *guardian = NULL;
 	time_t last_cert_check;
@@ -2671,6 +2704,18 @@ int main(int argc, char **argv)
 	p = page_open(address, port, ctx_page, file_html, &cert);
 	if (!p)
 		goto fine;
+	/* ⛔ The main loop's `poll` array, sized on everything that can be in
+	 *    it (see MAX_POLL): nobody is left out of the `poll` because somebody
+	 *    else took the slots first. */
+	loop_max = 1 + PAGE_MAX_DESCRIPTORS + 1 + 1 + (size_t)rcp_cap();
+	loop_fds = calloc(loop_max, sizeof *loop_fds);
+	if (!loop_fds) {
+		registro_dice(LOG_STARTUP,
+		              "⛔ no memory for the loop's %zu descriptors "
+		              "(--session-cap %d): not starting",
+		              loop_max, rcp_cap());
+		goto fine;
+	}
 
 	registro_dice(LOG_STARTUP,
 	              "⭐ ready: https://%s:%s  —  the WebTransport session lives "
@@ -2680,7 +2725,7 @@ int main(int argc, char **argv)
 	last_cert_check = time(NULL);
 
 	while (!stop_requested) {
-		struct pollfd fds[MAX_POLL];
+		struct pollfd *fds = loop_fds;
 		size_t n = 0, npage, ncommand, nhelp, nchildren;
 		uint64_t t_now;
 		int64_t wait_ns;
@@ -2691,9 +2736,9 @@ int main(int argc, char **argv)
 		fds[n].revents = 0;
 		n++;
 
-		npage = page_descriptors(p, fds + n, MAX_POLL - n);
+		npage = page_descriptors(p, fds + n, loop_max - n);
 		ncommand = command_descriptors(k, fds + n + npage,
-		                               MAX_POLL - n - npage);
+		                               loop_max - n - npage);
 
 		/* ⭐ The PAM helper enters the `poll` like all the others, and that is
 		 *    all that is needed for the loop to no longer wait for anyone
@@ -2702,7 +2747,7 @@ int main(int argc, char **argv)
 		 *    between would shift the indices of two calls. */
 		nhelp = 0;
 		if (helper_descriptor(pam_help) >= 0
-		    && n + npage + ncommand < MAX_POLL) {
+		    && n + npage + ncommand < loop_max) {
 			size_t i = n + npage + ncommand;
 			fds[i].fd = helper_descriptor(pam_help);
 			fds[i].events = POLLIN;
@@ -2713,14 +2758,20 @@ int main(int argc, char **argv)
 		/* ⭐ And the children after the helper, for the same reason: the counts
 		 *    of whoever comes before are relative, and slotting them in between
 		 *    would shift the indices of three calls.  ⛔ And they are the last
-		 *    block for a reason of truth too: if `MAX_POLL` ran out, those left
+		 *    block for a reason of truth too: if `loop_max` ran out, those left
 		 *    out are the children — that is the video — and not the page or the
 		 *    authentication.  An ugly session is worth more than a closed
 		 *    session (invariant I1). */
 		nchildren = children_descriptors(offspring, fds + n + npage + ncommand + nhelp,
-		                           MAX_POLL - n - npage - ncommand - nhelp);
+		                           loop_max - n - npage - ncommand - nhelp);
 
 		wait_ns = transport_wait_ns(t);
+		/* ⛔ The page listener's deadlines wake the loop too (15 Oct 2026). */
+		{
+			int wp = page_wait_ms(p, log_now_ms());
+			if (wp >= 0 && (wait_ns < 0 || (long long)wp * 1000000LL < wait_ns))
+				wait_ns = (long long)wp * 1000000LL;
+		}
 		if (wait_ns < 0 || wait_ns > 1000000000LL)
 			wait_ns = 1000000000LL;
 		/* ⛔ With the test tone on the loop wakes up every 10 ms, because the
@@ -2790,6 +2841,9 @@ int main(int argc, char **argv)
 		children_recheck(offspring, t_now);
 		transport_expired(t);
 		page_move(p, fds + 1, npage);
+		/* ⛔ ALWAYS, readable or not: the client that sends nothing is
+		 *    precisely the one this expiry is for (15 Oct 2026). */
+		page_expired(p, log_now_ms());
 		command_move(k, fds + 1 + npage, ncommand);
 
 		/* ⛔ THE ROTATION, and it is checked once a minute instead of at every
@@ -3021,6 +3075,7 @@ fine:
 	sentinel_close(guardian);
 	command_close(k);
 	page_close(p);
+	free(loop_fds);
 	transport_close(t);
 	/* ⛔ The children are shut down AFTER the transport: as long as a
 	 *    connection is alive there may be a frame in the queue, and its bytes

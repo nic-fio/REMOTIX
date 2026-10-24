@@ -94,6 +94,9 @@ BuildRequires:  pkgconfig(libva-drm)
 # ⛔ Phase 19 (1 Oct 2026, `DECISIONS.md` §10.27): OpenH264 and SVT-AV1, the software
 #   fallback, are OUT — and with them the Cisco OpenH264 repository.
 BuildRequires:  pkgconfig(opus)
+# ⭐ 15 Oct 2026 (`DECISIONS-11.md` §11.44): zlib, the login page sent gzip-compressed.
+#   (Fedora/Alma: zlib-ng-compat-devel; openSUSE: zlib-devel.)
+BuildRequires:  pkgconfig(zlib)
 # ⛔ no libyuv: the colour conversion is ours (`src/colors709.c`, phases/18 §1);
 #   removed on 30 Sep (T10).
 BuildRequires:  pkgconfig(libei-1.0) >= 1.1.0
