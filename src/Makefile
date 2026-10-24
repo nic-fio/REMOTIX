@@ -398,7 +398,7 @@ kwin.o clipboard_kde.o wlroots.o wlr_input.o render_node.o: $(PROTOCOLLI:%=%-cli
 # -----------------------------------------------------------------------------
 BANCO_W1 := ../benches/13-w1-one-frame
 
-$(BANCO_W1): ../benches/13-w1-one-frame.c wlroots.o registro.o \
+$(BANCO_W1): ../benches/13-w1-one-frame.c wlroots.o log.o \
              wlr-screencopy-unstable-v1-protocol.o \
              wlr-output-management-unstable-v1-protocol.o \
              linux-dmabuf-unstable-v1-protocol.o
