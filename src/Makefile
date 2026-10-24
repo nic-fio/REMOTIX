@@ -130,6 +130,11 @@ LABWC ?=
 ifneq ($(LABWC),)
 override CFLAGS += -DREMOTIX_LABWC='"$(LABWC)"'
 endif
+# ⭐ DECISIONS §11.6, §11.10 — bench-only endpoints and messages (`BENCH_MARK`).
+BENCH ?= 0
+ifeq ($(BENCH),1)
+override CFLAGS += -DREMOTIX_BENCH
+endif
 
 # ⛔⭐ THE LIBRARIES OF PHASE 2, ASKED OF `pkg-config` ONCE ONLY.
 #
@@ -313,7 +318,7 @@ LIBS := -lngtcp2_crypto_ossl -lngtcp2 -lnghttp3 -lssl -lcrypto -lpam \
 #   ⛔ but depending on that detail means breaking on a different libc
 #   with an error that does not name the phase that introduced it.
 
-.PHONY: all clean deps fingerprints bench-w1
+.PHONY: all clean deps fingerprints bench-w1 FORCE
 
 all: fingerprints $(NOME)
 
@@ -393,7 +398,7 @@ bench-w1: $(BANCO_W1)
 	$(SCANNER) private-code $< $@
 
 clean:
-	rm -f $(OGGETTI) $(NOME) $(GENERATI) $(PROTOCOLLI:%=%-protocol.o)
+	rm -f $(OGGETTI) $(NOME) $(GENERATI) $(PROTOCOLLI:%=%-protocol.o) .flags
 
 # ⛔ The dependency check SAYS what is missing, instead of making the
 #    compiler fail on an `#include` nobody connects to the missing library.
@@ -457,7 +462,10 @@ deps:
 #    (`registro_dice` & co. add __FILE__/__LINE__): an old object
 #    looks for the symbol that is no longer there and linking falls half way.  Every
 #    object goes through the log, so it depends on it — all of them, without a list.
-$(OGGETTI): log.h
+$(OGGETTI): log.h .flags
+
+.flags: FORCE
+	@printf '%s\n' '$(CFLAGS)' > $@.tmp && (cmp -s $@.tmp $@ || mv -f $@.tmp $@) && rm -f $@.tmp
 
 # ⛔ `main.c` NO LONGER depends on `session.h`, `capture.h`, `mutter.h` and
 #    `encoder.h`, and the line that removes them is the same decision as

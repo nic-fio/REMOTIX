@@ -175,14 +175,7 @@ static void compose(client *c, const char *state, const char *kind,
 
 static void serve(page *p, client *c)
 {
-	/* ⛔⭐ ONE THOUSAND AND NOT TWO HUNDRED FIFTY-SIX — 17 Aug 2026, and the reason
-	 *     is a measurement that LIED.  The page's diary (`/diary?…`) travels
-	 *     in the query string, percent-encoded: 250 bytes of target are fewer
-	 *     than 150 real characters, and as soon as the line also carried the
-	 *     video counts it reached the log CUT IN HALF — «… holes%» — without
-	 *     anything saying so.  ⚠ The missing number looks the same as the
-	 *     number that is zero.
-	 * ⛔ And BOTH GROW, or nothing grows: the target is a COPY of `fpath`
+	/* ⛔ BOTH GROW, or nothing grows: the target is a COPY of `fpath`
 	 *    taken before the cut at `?` (line below), so the real ceiling is set
 	 *    by `fpath`.  ⚠ Widening `target` alone would have been a cure
 	 *    that does not cure, with the air of having done it. */
@@ -286,54 +279,6 @@ static void serve(page *p, client *c)
 		                 p->cert->rotations);
 		compose(c, "200 OK", "application/json; charset=utf-8", body,
 		        (size_t)n, NULL);
-		return;
-	}
-
-	/* ⛔⭐ THE PAGE'S DIARY — where the CLIENT's numbers become readable.
-	 *
-	 *      `[M]` 17 Aug 2026, and it comes from a defect of my own method: for
-	 *      four cures in a row I chased the audio jitter having the numbers of
-	 *      **three links out of four** — the child says how many blocks it
-	 *      produces, the server how many it sends, and **nothing was known
-	 *      about the page**: how many arrive, how many get played, how many
-	 *      holes the playback makes.
-	 *
-	 * ⛔ And the page's diagnostics panel was not enough: when the desktop is
-	 *    on the page is full screen and that panel **is not reachable**.
-	 *    ⇒ Asking the user to read it was asking them something that cannot
-	 *    be done.
-	 *
-	 * ⚠ It is a DIAGNOSTIC endpoint, not a protocol one: it does not open a
-	 *   session, does not touch state, and what it writes ends up in the log
-	 *   like any other line.  ⛔ The body is truncated and cleaned before
-	 *   writing it: it comes from outside, so it is an input, not a datum. */
-	if (strcmp(fpath, "/diary") == 0) {
-		/* ⚠ SHORTER than `target` on purpose: this way the ceiling hit
-		 *   first is this one, which can say so — and not the one over there,
-		 *   which truncates silently. */
-		char clean[900];
-		size_t j = 0;
-		/* ⚠ The text arrives in the QUERY STRING, not in a body: this server
-		 *   does not read requests beyond the first line, and a `GET` with
-		 *   the query is what the page can send without anyone adding a body
-		 *   reader.  ⛔ `target` is the whole line as it arrived: the `?`
-		 *   is skipped by hand. */
-		const char *b = strchr(target, '?');
-		b = b ? b + 1 : "";
-		for (size_t i = 0; b[i] && j + 1 < sizeof clean; i++) {
-			unsigned char x = (unsigned char)b[i];
-			/* Printable ASCII only: a log line must not be able to carry a
-			 * newline (it would split the log in two) nor control bytes. */
-			clean[j++] = (x >= 0x20 && x < 0x7F) ? (char)x : ' ';
-		}
-		clean[j] = '\0';
-		/* ⛔ AND A CUT IS DECLARED.  A line cut silently looks like a short
-		 *    line, and whoever reads it counts the numbers that are there
-		 *    instead of noticing the ones that are missing. */
-		registro_dice(LOG_PAGE, "📄 the page of %s says: %s%s",
-		              c->provenance, clean,
-		              j + 1 >= sizeof clean ? "  ⛔CUT HERE" : "");
-		compose(c, "204 No Content", "text/plain; charset=utf-8", "", 0, NULL);
 		return;
 	}
 

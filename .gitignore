@@ -10,6 +10,7 @@ reference-cinnamon/
 build/
 target/
 *.o
+src/.flags
 # ⛔ Il binary del server: yes ricostruisce in venti seconds (`src/Containerfile`)
 #    ed e' legato alle librerie della machine desc l'ha costruito.  Uno in
 #    repository sarebbe un binary desc someone before o poi crede di poter lanciare

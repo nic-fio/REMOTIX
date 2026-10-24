@@ -191,7 +191,7 @@
      test: "on Firefox the clipboard does not send from the client to the
      server".  `[M]` The log said the page served 0 bytes because Firefox
      DENIES it reading, and the only route is `Ctrl+V` — ⛔ but the page wrote
-     it only in its diary, and whoever watched the desktop saw silence.
+     it only in its log, and whoever watched the desktop saw silence.
      ⇒ Now it says so WHERE the user is looking.
      ⚠ `pointer-events: none`: it is a sign, not a button — it must not eat
        a click aimed at the remote desktop. */
@@ -701,29 +701,9 @@ const BANNED = document.body.dataset.banned === "yes";
 
 const $ = (i) => document.getElementById(i);
 const lines = [];
-/* ⛔⭐⭐ AND THE LINES THAT MATTER GO TO THE SERVER, from HERE — 17 Aug 2026.
- *
- *      The page's box, with the desktop on, is full screen and cannot be
- *      reached: asking the user for it is asking for something that cannot be
- *      done.  ⚠ And the forwarding was already there, but **only in the worker
- *      branch** — which is off by default (`VIDEO_WORKER`), so nobody went
- *      through there.  ⛔ The fifth defect of the same family in one evening:
- *      a route written on a branch nobody travels.
- *
- * ⚠ It filters — the frame measurement and the faults — because sending them
- *   all would cost one `fetch` per line, and some lines are per frame. */
 function note(t) {
   lines.push(t);
   $("logbook").textContent = lines.join("\n");
-  /* ⚠ `MARK` came in on 17 Aug 2026 together with the browser line: the
-   *   project's marks have a meaning, and putting a `⛔` on a line that is not
-   *   a defect just to get it sent would be cheating the filter. */
-  if (t.indexOf("MEASURE") >= 0 || t.indexOf("MARK") >= 0 || t.indexOf("⛔") >= 0) {
-    try {
-      fetch("/diary?" + encodeURIComponent("PAGE " + t), { cache: "no-store" })
-        .catch(() => {});
-    } catch (e) { /* the account does not break what it recounts */ }
-  }
 }
 
 /* ⭐ The diagnostics switch.  ⛔ Off by default (see the stylesheet): the text
@@ -3052,7 +3032,7 @@ class Viewer {
      *    Sep) that the guard was blind, and (phase 16, 26 Sep) that with fast
      *    drawing it throws away 12 % of the frames without gaining a
      *    millisecond.  Neither thing could be read from the counters.
-     *    ⇒ Four measurements, all in the diary line and in `REMOTIX.stretches()`:
+     *    ⇒ Four measurements, all in the audio log line and in `REMOTIX.stretches()`:
      *      `queue_deliv`  histogram of `decodeQueueSize` at DELIVERY (0,1,2,3,4,≥5);
      *      `queue_out`   the same at OUTPUT — it is the number the guard decides on;
      *      `age_ms`     how much older the output frame is than the LAST one
@@ -3063,7 +3043,7 @@ class Viewer {
      *   `skip_age100` counts what an "age > 100 ms" rule WOULD HAVE skipped:
      *   it is measured before choosing it.
      * ⚠ Cost: two integers, a subtraction and one `performance.now()` per
-     *   frame; the medians are computed only on the diary line. */
+     *   frame; the medians are computed only on the audio log line. */
     this.recv_ms = []; this.age_ms = [];
     this.queue_deliv = [0, 0, 0, 0, 0, 0]; this.queue_out = [0, 0, 0, 0, 0, 0];
     this.last_dec_instant_us = 0; this.skip_age100 = 0;
@@ -4773,10 +4753,6 @@ class Viewer {
           b = (+v.buffered.start(0)).toFixed(2) + "→"
             + (+v.buffered.end(v.buffered.length - 1)).toFixed(2);
       } catch (e) { /* nothing */ }
-      /* ⚠ "MEASURE" is not an affectation: `note()` sends to the server only
-       *   the marked lines, and this one **is** a measurement.  ⛔ Putting a
-       *   `⛔` on it to get it sent would be cheating the filter (see the
-       *   box of `note`). */
       note("MEASURE §7.18 MSE: delivered " + this.counts.delivered + " · painted "
          + this.counts.painted + " · paused=" + v.paused + " seeking=" + v.seeking
          + " ready=" + v.readyState + " time=" + (+v.currentTime).toFixed(2)
@@ -5426,7 +5402,7 @@ function stretches() {
                                                : "canvas2d-fallback"),
     canvas: [s.canvas_w, s.canvas_h],
     painted: s.counts ? s.counts.painted : null,
-    /* ⭐ The same numbers as the diary line, with the same names: a bench
+    /* ⭐ The same numbers as the audio log line, with the same names: a bench
        reading one here and one there would read two different quantities
        under the same word, and it is form E2 of `REVIEWER.md`.
        ⇒ `delivered = out + inside` and
@@ -7714,13 +7690,6 @@ function start_audio(wt) {
           })()
        + " focus " + (document.hasFocus() ? "si" : "NO");
     note(line);
-    /* ⛔ And it is also sent TO THE SERVER, which is the only place where the
-       numbers of the four links sit on the same page.  ⚠ The box above is not
-       enough: with the desktop on the page is full screen and that box cannot
-       be reached — asking the user for it is asking for something that cannot
-       be done. */
-    fetch("/diary?" + encodeURIComponent(line), { cache: "no-store" })
-      .catch(() => {});
   }, 5000);
 
   (async function () {
@@ -8006,13 +7975,9 @@ function start_audio(wt) {
  *   5. it falls back to `readText()` and the browser denies it;
  *   6. the text is read and the announcement does not leave.
  *
- * ⇒ Every step writes a line, and the line goes **to the server** as well as
- *   to the page's log.  ⛔ The page's box is not enough: with the desktop on
- *   one is full screen and that box cannot be reached — asking the user for
- *   it is asking for something that cannot be done.  ⚠ It is the same reason,
- *   with the same words, for which the audio sends its counters.
+ * ⇒ Every step writes a line in the page's log.
  */
-/* ⭐ A sign of a few seconds on the canvas.  ⛔ Always accompanied by a diary
+/* ⭐ A sign of a few seconds on the canvas.  ⛔ Always accompanied by a log
  *    line: what the user sees and what the bench reads must be the same fact,
  *    or one thing is measured and another is seen. */
 let hints_timer = null;
@@ -8028,10 +7993,6 @@ function suggest(text, how_much_ms) {
 
 function app_log(line) {
   note("clipboard · " + line);
-  try {
-    fetch("/diary?" + encodeURIComponent("CLIPBOARD " + line),
-          { cache: "no-store" }).catch(() => {});
-  } catch (e) { /* the account must not be able to break what it recounts */ }
 }
 
 const T_CLIPBOARD = { ANNOUNCE: 0x0201, ASK: 0x0202, TEXT: 0x0203 };
@@ -8340,7 +8301,7 @@ async function clipboard_reread_before_serving() {
                + (navigator.userActivation
                   ? navigator.userActivation.isActive : "unknown")
                + ": serving what I have");
-    /* ⛔⭐ AND IT IS TOLD TO WHOEVER IS WATCHING, not only to the diary:
+    /* ⛔⭐ AND IT IS TOLD TO WHOEVER IS WATCHING, not only to the log:
      *     someone over there is pasting and nothing leaves from here.  ⚠ Only
      *     if we have NOTHING to needs: with a text in hand there is no
      *     silence. */
@@ -9414,8 +9375,8 @@ function start_worker() {
    * premise is false: `postMessage` does NOT throw — the stream transfers
    * perfectly well, and it is what the worker does with it that breaks.
    * ⇒ A check on the RESULT is needed, not on the call: if after N streams
-   *   transferred nothing has been painted, it is SAID — loudly and to the
-   *   server, because with the desktop full screen the box cannot be seen.
+   *   transferred nothing has been painted, it is SAID — loudly,
+   *   in the page's log.
    * ⚠ And it is just said, it does NOT fall back: falling back to the main
    *   thread would mean measuring one route and calling it by the other's
    *   name. */
@@ -9427,8 +9388,6 @@ function start_worker() {
             + "streams and painted NOTHING.  ⇒ `?video=worker` on this "
             + "engine does not work: go back to `/` without the query string.";
     note(r);
-    try { fetch("/diary?" + encodeURIComponent("VIDEO " + r),
-                { cache: "no-store" }).catch(() => {}); } catch (e) { /* quiet */ }
   };
   V.send_stream = function (f) {
     try { V.w.postMessage({ t: "stream", stream: f }, [f]); V.streams++;
@@ -9456,22 +9415,6 @@ function start_worker() {
     if (m.t === "ready") { V.ready = true; return; }
     if (m.t === "line") {
       note("video · " + m.line);
-      /* ⛔⭐ AND THE LINES THAT MATTER GO TO THE SERVER.  With the desktop on
-       *     the page is full screen and the box cannot be reached: asking the
-       *     user for them is asking for something that cannot be done.
-       *     ⚠ It filters — the measurement and the faults — because sending
-       *     them all would cost one `fetch` per frame. */
-      /* ⚠ `>= 0` and not `=== 0`: the line arrives with the «video · » prefix
-       *   that `Viewer`'s constructor puts on it — and a filter on the PREFIX
-       *   never found anything.  ⛔ The fourth defect of the same family in
-       *   one evening: a condition written on a shape of the data nobody
-       *   looked at. */
-      if (m.line.indexOf("MEASURE") >= 0 || m.line.indexOf("⛔") >= 0) {
-        try {
-          fetch("/diary?" + encodeURIComponent("VIDEO " + m.line),
-                { cache: "no-store" }).catch(() => {});
-        } catch (e) { /* the account does not break what it recounts */ }
-      }
       return;
     }
     /* ⛔ D-003: an "on" sent by the worker before `close()` arrives AFTER
