@@ -12,6 +12,44 @@ import (
 // DECISIONS §11.50: the network side's system user remotix — preflight, certification,
 // post-upgrade report, uninstall --purge.
 
+// ⭐ 16 Oct 2026 (rxtest installer --tests interrupt, debian13): a failed installation is rolled
+// back with purge, and the system user remotix the packages' scripts made goes with them; a
+// person's account called remotix is never touched.
+func TestRollbackDropsTheNewNetUser(t *testing.T) {
+	t.Run("system user removed", func(t *testing.T) {
+		root := t.TempDir()
+		prepareMachine(t, root)
+		env := fakeEnvironment(root)
+		var calls []string
+		env.Run = fakeAccountsRun(root, &calls)
+		appendTo(t, filepath.Join(root, "etc/passwd"), sysRemotix)
+		appendTo(t, filepath.Join(root, "etc/group"), "remotix:x:990:\n")
+		if err := dropNewNetUser(&Context{Env: env, Purge: true}); err != nil {
+			t.Fatal(err)
+		}
+		if _, ok := ReadAccount(env, NetUser); ok {
+			t.Fatal("the user remotix is still in /etc/passwd")
+		}
+		if strings.Join(calls, ";") != "userdel remotix" {
+			t.Fatalf("commands: %q", calls)
+		}
+	})
+	t.Run("a person's account stays", func(t *testing.T) {
+		root := t.TempDir()
+		prepareMachine(t, root)
+		env := fakeEnvironment(root)
+		var calls []string
+		env.Run = fakeAccountsRun(root, &calls)
+		appendTo(t, filepath.Join(root, "etc/passwd"), "remotix:x:1005:1005::/home/remotix:/bin/bash\n")
+		if err := dropNewNetUser(&Context{Env: env, Purge: true}); err != nil {
+			t.Fatal(err)
+		}
+		if _, ok := ReadAccount(env, NetUser); !ok || len(calls) != 0 {
+			t.Fatalf("a person's account was touched: %q", calls)
+		}
+	})
+}
+
 const sysRemotix = "remotix:x:990:990:REMOTIX network side:/:/usr/sbin/nologin\n"
 
 func appendTo(t *testing.T, f, line string) {
