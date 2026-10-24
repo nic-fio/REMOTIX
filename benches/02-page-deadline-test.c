@@ -175,7 +175,7 @@ static void *t_realloc(void *q, size_t n)
 #include <time.h>
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 87
+#define EXPECTED_CHECKS 97
 
 static void require(int cond, const char *desc)
 {
@@ -515,6 +515,25 @@ static pid_t client_get_ae(int port, const char *src, const char *ae, bool gz,
 	_exit(0);
 }
 
+/* What the page keeps for banned visitors for its whole life (built at the
+ * first one): the shared tail, and its raw-deflate copy. */
+#define BANNED_LIVE(p) ((size_t)((p)->tail != NULL) + (size_t)((p)->tail_gz != NULL))
+
+/* The client's own bytes (headers + its own prefix) contain `s`. */
+static bool own_has(const client *c, const char *s)
+{
+	return c->head && memmem(c->head, c->nhead, s, strlen(s)) != NULL;
+}
+
+/* The accept buckets forgotten: sections 7 and 10 reuse addresses that
+ * sections 1-6 drove far over PAGE_ACCEPT_RATE within the same second, and
+ * they test other rules; the rate itself is section 18. */
+static void rate_reset(page *p)
+{
+	memset(p->rate, 0, sizeof p->rate);
+	memset(p->rate48, 0, sizeof p->rate48);
+}
+
 /* The fingerprint the shared page is NOT built for: setting it forces a rebuild. */
 #define OTHER_FP(p) (strcmp((p)->cached_fp, "FPROT") == 0 ? "FPTEST" : "FPROT")
 
@@ -681,6 +700,7 @@ int main(void)
 	}
 
 	printf("7. a real HTTPS GET gets the page\n");
+	rate_reset(p);
 	{
 		pid_t c = client_get(port, "127.0.0.1", true);
 		int st = -1;
@@ -744,6 +764,7 @@ int main(void)
 	}
 
 	printf("10. 128 readers cannot lock the page out, whatever their speed\n");
+	rate_reset(p);
 	{
 		static pid_t kids[MAX_CLIENTS];
 		int k = 0, fd, others = 0;
@@ -969,17 +990,19 @@ int main(void)
 			else if (strcmp(x->key, "[127.0.0.51]") == 0)
 				free_w = x;
 		}
-		require(nb == 2 && ban_w[0]->shared && ban_w[1]->shared &&
-		                ban_w[0]->shared != p->cached && ban_w[1]->shared != p->cached &&
-		                ban_w[0]->shared != ban_w[1]->shared &&
-		                ban_w[0]->shared->refs == 1 && ban_w[1]->shared->refs == 1,
-		        "each banned request has its own body (refs 1), never the shared page");
-		require(nb == 2 && body_has(ban_w[0]->shared, "data-banned=\"yes\"") &&
-		                body_has(ban_w[0]->shared, "<b>attempts exhausted</b>") &&
-		                body_has(ban_w[0]->shared, "<b id=\"minutes\">30</b>") &&
-		                !body_has(ban_w[0]->shared, "data-remaining-ms=\"0\"") &&
-		                !body_has(ban_w[0]->shared, "__REMAINING_MS__"),
-		        "the banned body says «attempts exhausted», 1 h 30 min, its remaining ms");
+		/* holistic review: a banned response is ITS prefix (in its head)
+		 * + the page's shared tail, never a whole private page */
+		require(nb == 2 && p->tail && ban_w[0]->shared == p->tail &&
+		                ban_w[1]->shared == p->tail && p->tail->refs == 3 &&
+		                ban_w[0]->head != ban_w[1]->head,
+		        "each banned request has its own prefix and shares the page's tail (refs 3)");
+		require(nb == 2 && own_has(ban_w[0], "data-banned=\"yes\"") &&
+		                own_has(ban_w[0], "<b>attempts exhausted</b>") &&
+		                own_has(ban_w[0], "<b id=\"minutes\">30</b>") &&
+		                own_has(ban_w[0], "data-remaining-ms=\"5400000\"") &&
+		                !own_has(ban_w[0], "__REMAINING_MS__") &&
+		                !body_has(p->tail, "__"),
+		        "the banned prefix says «attempts exhausted», 1 h 30 min, 5400000 ms (whole minutes)");
 		require(free_w && free_w->shared == shared0 && p->cached == shared0 &&
 		                shared0->refs == 2,
 		        "the free visitor holds the SAME shared page as before (refs 2)");
@@ -990,8 +1013,9 @@ int main(void)
 		for (size_t i = 0; i < MAX_CLIENTS; i++)
 			if (client_active(&p->clients[i]))
 				client_close(&p->clients[i]);
-		require(nlive == live0 && !live_overflow && p->cached == shared0 && shared0->refs == 1,
-		        "closing them frees both banned bodies; the shared page is held by the listener alone");
+		require(nlive == live0 + BANNED_LIVE(p) && !live_overflow && p->cached == shared0 &&
+		                shared0->refs == 1 && p->tail->refs == 1,
+		        "closing them frees both banned prefixes; the shared page and the tail are held by the listener alone");
 	}
 	{
 		pid_t cb = client_get_as(port, "127.0.0.50", true, true);
@@ -1014,7 +1038,7 @@ int main(void)
 		require(p->cached == shared0 && shared0->n == n0 && body_hash(shared0) == hash0 &&
 		                shared0->refs == 1 && body_has(shared0, "data-banned=\"no\"") &&
 		                !body_has(shared0, "attempts exhausted") &&
-		                strcmp(p->cached_fp, "FPTEST") == 0 && nlive == live0,
+		                strcmp(p->cached_fp, "FPTEST") == 0 && nlive == live0 + BANNED_LIVE(p),
 		        "the shared page is byte for byte the one before the banned visits; no leak");
 	}
 
@@ -1030,10 +1054,10 @@ int main(void)
 		page_mallocs = 0;
 		fake_get(p, &fc, "[127.0.0.50]:40000");
 		n_ban = page_mallocs;
-		require(fc.phase == F_WRITE && fc.shared && fc.shared != p->cached &&
-		                fc.shared->refs == 1 && body_has(fc.shared, "data-banned=\"yes\"") &&
+		require(fc.phase == F_WRITE && fc.shared == p->tail && p->tail->refs == 2 &&
+		                own_has(&fc, "data-banned=\"yes\"") &&
 		                strncmp(fc.head, "HTTP/1.1 200 ", 13) == 0 && n_ban >= 2,
-		        "driven directly, a banned GET gets its own 200 page");
+		        "driven directly, a banned GET gets its own 200 prefix + the tail");
 		client_close(&fc);
 		page_mallocs = 0;
 		fake_get(p, &fc, "[127.0.0.51]:40000");
@@ -1041,6 +1065,9 @@ int main(void)
 		require(fc.shared == shared0 && shared0->refs == 2 && n_free == 1,
 		        "a free GET with the page cached allocates only its head");
 		client_close(&fc);
+		/* the tail and its copy stay for the page's life: from here on they are
+		 * part of the baseline */
+		live0 += BANNED_LIVE(p);
 		require(nlive == live0, "no leak from the two direct GETs");
 
 		/* a) banned: each allocation of build_page()/body_new() fails in turn. */
@@ -1175,8 +1202,12 @@ int main(void)
 			{"gzip;=x, *", true}, {"gzip;q=0;a=, *", true},
 		};
 
-		/* The state of section 16 put back through the road a visitor takes. */
+		/* The state of section 16 put back through the road a visitor takes;
+		 * a banned gzip GET first, so that the tail's gzip copy (kept for
+		 * the page's life) is in the baseline. */
 		fake_get(p, &fc, "[127.0.0.51]:40000");
+		client_close(&fc);
+		fake_get_ae(p, &fc, "[127.0.0.50]:40000", "gzip");
 		client_close(&fc);
 		live1 = nlive;
 		require(p->cached && p->cached_gz && !p->cached_gz_retry &&
@@ -1282,19 +1313,59 @@ int main(void)
 		                head_length(&fc) == (long long)p->cached->n,
 		        "«gzip;q=0»: the plain page");
 		client_close(&fc);
-		fake_get_ae(p, &fc, "[127.0.0.50]:40000", "gzip");
-		require(fc.shared && fc.shared != p->cached && fc.shared != p->cached_gz &&
-		                fc.shared->refs == 1 && !head_has(&fc, "Content-Encoding") &&
-		                !head_has(&fc, "Vary") && body_has(fc.shared, "data-banned=\"yes\"") &&
-		                head_length(&fc) == (long long)fc.shared->n,
-		        "a banned visitor asking gzip gets its own page, plain, Content-Length right");
-		client_close(&fc);
+		/* holistic review: the banned page goes gzip too — its own
+		 * compressed prefix + the tail's copy + its own trailer, one gzip
+		 * member that inflates to exactly the plain banned page */
+		{
+			static client fp;
+			size_t hlg, hlp, nb_plain = 0, nb_gz = 0, nz = 0;
+			char *plain = NULL, *gzb = NULL;
+			unsigned char *u = NULL;
+			fake_get_ae(p, &fp, "[127.0.0.50]:40000", NULL);
+			fake_get_ae(p, &fc, "[127.0.0.50]:40000", "gzip");
+			hlg = fc.head ? (size_t)((char *)memmem(fc.head, fc.nhead, "\r\n\r\n", 4) - fc.head) + 4 : 0;
+			hlp = fp.head ? (size_t)((char *)memmem(fp.head, fp.nhead, "\r\n\r\n", 4) - fp.head) + 4 : 0;
+			if (hlg && hlp) {
+				nb_plain = fp.nresponse - hlp;
+				nb_gz = fc.nresponse - hlg;
+				plain = malloc(nb_plain);
+				gzb = malloc(nb_gz);
+				memcpy(plain, fp.head + hlp, fp.nhead - hlp);
+				memcpy(plain + fp.nhead - hlp, fp.shared->data, fp.shared->n);
+				memcpy(gzb, fc.head + hlg, fc.nhead - hlg);
+				memcpy(gzb + fc.nhead - hlg, fc.shared->data, fc.shared->n);
+				memcpy(gzb + fc.nhead - hlg + fc.shared->n, fc.tail, fc.ntail);
+				u = gunzip(gzb, nb_gz, &nz);
+			}
+			require(fc.shared == p->tail_gz && fc.ntail == 8 && fp.shared == p->tail &&
+			                fp.ntail == 0 && head_has(&fc, "\r\nContent-Encoding: gzip\r\n") &&
+			                head_has(&fc, "\r\nVary: Accept-Encoding\r\n") &&
+			                head_has(&fp, "\r\nVary: Accept-Encoding\r\n") &&
+			                !head_has(&fp, "Content-Encoding") &&
+			                head_length(&fc) == (long long)nb_gz &&
+			                head_length(&fp) == (long long)nb_plain &&
+			                nb_plain == fp.nresponse - hlp && nb_gz < nb_plain / 4,
+			        "a banned visitor asking gzip gets gzip (own prefix + shared tail + 8-byte trailer); Content-Length right both ways");
+			require(u && nz == nb_plain && memcmp(u, plain, nz) == 0 &&
+			                memmem(plain, nb_plain, "data-banned=\"yes\"", 17) &&
+			                memmem(plain, nb_plain, "<b>attempts exhausted</b>", 25) &&
+			                !memmem(plain, nb_plain, "__", 2) &&
+			                nb_plain > p->tail->n &&
+			                memcmp(plain + nb_plain - p->tail->n, p->html + p->nhtml - p->tail->n,
+			                       p->tail->n) == 0,
+			        "… and it inflates to exactly the plain banned page (markers replaced, the template's tail)");
+			free(u);
+			free(plain);
+			free(gzb);
+			client_close(&fp);
+			client_close(&fc);
+		}
 		require(nlive == live1, "no leak from the direct GETs");
 
 		{
 			bool oom = true;
 			body *tiny = body_new("ab", 2);
-			body *z = tiny ? gz_page(tiny, &oom) : NULL;
+			body *z = tiny ? gz_page(tiny, &oom, 6) : NULL;
 			require(tiny && !z && !oom && nlive == live1 + 1,
 			        "a body that does not come out smaller gets no gzip copy (and no retry)");
 			body_unref(z);
@@ -1407,6 +1478,187 @@ int main(void)
 		client_close(&fc);
 		require(nlive == live1 && p->cached_gz && !live_overflow,
 		        "back to FPTEST: both copies rebuilt, no leak, the tracker never overflowed");
+	}
+
+	printf("18. holistic review: log forgery, the accept rate, the work per pass\n");
+	{
+		static client fc;
+		char lpath[] = "/tmp/pdt-log-XXXXXX";
+		int lfd = mkstemp(lpath), saved = dup(STDERR_FILENO);
+		char lb[8192];
+		ssize_t ln;
+		int lines = 0;
+		const char *forged =
+			"GET /\n14:00:00.000 rcp     [owner] \xe2\xad\x90 ADMITTED from 1.2.3.4\x1b[2J HTTP/1.1\r\n"
+			"Host: t\r\n\r\n";
+
+		/* a) the request line is the first line only: a target with a raw
+		 *    newline has no second space on its line → 400, and nothing of
+		 *    the next line reaches the log */
+		fflush(stderr);
+		dup2(lfd, STDERR_FILENO);
+		memset(&fc, 0, sizeof fc);
+		fc.fd = -1;
+		fc.phase = F_READ;
+		snprintf(fc.provenance, sizeof fc.provenance, "[127.0.0.81]:40000");
+		fc.nrequest = strlen(forged);
+		memcpy(fc.request, forged, fc.nrequest);
+		serve(p, &fc);
+		require(fc.head && strncmp(fc.head, "HTTP/1.1 400 ", 13) == 0,
+		        "a request line broken by a raw newline gets 400");
+		client_close(&fc);
+
+		/* b) a long target with control and escape bytes: logged cleaned
+		 *    and cut, ONE line.  (The request-line budget emptied first: the
+		 *    sections before filled its 16 addresses within 10 s.) */
+		memset(p->lines, 0, sizeof p->lines);
+		{
+			char big[1200];
+			int n = snprintf(big, sizeof big, "GET /?a=\x1b[31m\x7f");
+			memset(big + n, 'x', 600);
+			n += 600;
+			n += snprintf(big + n, sizeof big - (size_t)n, " HTTP/1.1\r\nHost: t\r\n\r\n");
+			memset(&fc, 0, sizeof fc);
+			fc.fd = -1;
+			fc.phase = F_READ;
+			snprintf(fc.provenance, sizeof fc.provenance, "[127.0.0.82]:40000");
+			fc.nrequest = (size_t)n;
+			memcpy(fc.request, big, fc.nrequest);
+			serve(p, &fc);
+			client_close(&fc);
+		}
+		fflush(stderr);
+		dup2(saved, STDERR_FILENO);
+		close(saved);
+		ln = pread(lfd, lb, sizeof lb - 1, 0);
+		lb[ln > 0 ? ln : 0] = 0;
+		for (ssize_t k = 0; k < ln; k++)
+			lines += lb[k] == '\n';
+		if (lines != 1 || ln >= 400)
+			printf("       the log: «%s»\n", lb);
+		require(ln > 0 && lines == 1 && !strstr(lb, "ADMITTED") && !strchr(lb, '\x1b') &&
+		                strstr(lb, "GET /?a=?[31m?xxx") && strstr(lb, "…(610 bytes) from [127.0.0.82]") && ln < 400,
+		        "the logged target: printable ASCII, each other byte `?`, cut at 200 with its length; no forged line");
+		close(lfd);
+		unlink(lpath);
+
+		/* c) the accept buckets: a burst, then the steady rate */
+		{
+			static struct bucket t[PAGE_RATE_KEYS];
+			int got = 0, later = 0, others = 1;
+			uint64_t t0 = 1000000;
+			for (int i = 0; i < 20; i++)
+				got += bucket_take(t, "[10.0.0.1]", t0, PAGE_ACCEPT_RATE, PAGE_ACCEPT_BURST);
+			for (int i = 0; i < 20; i++)
+				later += bucket_take(t, "[10.0.0.1]", t0 + 1000, PAGE_ACCEPT_RATE,
+				                     PAGE_ACCEPT_BURST);
+			/* a full table: every bucket busy, a new key still gets in */
+			for (int i = 0; i < PAGE_RATE_KEYS; i++) {
+				char k[32];
+				snprintf(k, sizeof k, "[10.1.0.%d]", i);
+				bucket_take(t, k, t0 + 1000, PAGE_ACCEPT_RATE, PAGE_ACCEPT_BURST);
+			}
+			others &= bucket_take(t, "[10.2.0.1]", t0 + 1000, PAGE_ACCEPT_RATE,
+			                      PAGE_ACCEPT_BURST);
+			require(got == PAGE_ACCEPT_BURST && later == PAGE_ACCEPT_RATE && others,
+			        "a bucket: the burst (8), then 4 a second; a full table still admits a new key");
+		}
+		{
+			uint64_t before = p->refused_rate_total;
+			int fdsr[12], refused = 0;
+			for (int i = 0; i < 12; i++) {
+				fdsr[i] = connect_from(port, "127.0.0.83", 0);
+				pump(p, 1);
+			}
+			for (int i = 0; i < 12; i++) {
+				refused += closed_by_server(fdsr[i]);
+				close(fdsr[i]);
+			}
+			printf("       (12 connects: %llu refused for the rate, %d closed in all)\n",
+			       (unsigned long long)(p->refused_rate_total - before), refused);
+			require(p->refused_rate_total - before >= 2 && refused >= 8,
+			        "12 connects from one address at once: those over the burst are closed at accept");
+			pump(p, 10);
+			usleep(600000);
+			pump(p, 2);
+			before = p->refused_rate_total;
+			int f2 = connect_from(port, "127.0.0.83", 0);
+			pump(p, 2);
+			require(p->refused_rate_total == before && client_of(p, "[127.0.0.83]") == 1,
+			        "… and 0.6 s later the next one is accepted");
+			close(f2);
+			pump(p, 4);
+		}
+
+		/* d) the work per pass: at most 16 events, round robin */
+		{
+			struct pollfd f[40];
+			size_t m0, m1, m2;
+			for (int i = 0; i < 40; i++)
+				f[i] = (struct pollfd){.fd = 100000 + i, .events = POLLIN, .revents = POLLIN};
+			p->move_next = 0;
+			page_move(p, f, 40);
+			m0 = p->move_next;
+			page_move(p, f, 40);
+			m1 = p->move_next;
+			page_move(p, f, 40);
+			m2 = p->move_next;
+			require(m0 == PAGE_EVENTS_PER_PASS && m1 == 2 * PAGE_EVENTS_PER_PASS &&
+			                m2 == (3 * PAGE_EVENTS_PER_PASS) % 40,
+			        "page_move handles at most 16 events a pass and starts where it stopped");
+		}
+	}
+
+	printf("19. independent review of 16b75f33: bare connects never push out a client that spoke\n");
+	rate_reset(p);
+	for (size_t i = 0; i < MAX_CLIENTS; i++)
+		if (client_active(&p->clients[i]))
+			client_close(&p->clients[i]);
+	{
+		static int bare[MAX_CLIENTS + 40];
+		int nb = 0, owner, owner_ok = 1, sizes_ok = 1;
+		unsigned sz[MAX_CLIENTS];
+		/* the owner first — the OLDEST — with the start of a ClientHello */
+		owner = connect_from(port, "127.0.3.1", 0);
+		pump(p, 2);
+		if (send(owner, "\x16\x03\x01\x00\x40", 5, 0) != 5)
+			owner_ok = 0;
+		pump(p, 4);
+		for (int i = 0; i < MAX_CLIENTS - 1; i++) {
+			snprintf(src, sizeof src, "127.0.4.%d", i + 1);
+			bare[nb++] = connect_from(port, src, 0);
+			pump(p, 1);
+		}
+		pump(p, 3);
+		require(owner_ok && active(p) == MAX_CLIENTS && client_of(p, "[127.0.3.1]") == 1,
+		        "the owner (spoke, the oldest) + 127 bare connects from 127 addresses fill the table");
+		/* group sizes counted once: the same answer as one group_size() each */
+		group_sizes(p, sz);
+		for (size_t i = 0; i < MAX_CLIENTS; i++)
+			if (client_active(&p->clients[i]))
+				sizes_ok &= sz[i] == group_size(p, p->clients[i].has48,
+				                                p->clients[i].p48, p->clients[i].key);
+		{
+			uint64_t t0 = log_now_ms();
+			for (int k = 0; k < 2000; k++)
+				(void)fair_victim(p, 0, log_now_ms());
+			printf("       (fair_victim on a full table of 128 groups: %.1f µs each)\n",
+			       (log_now_ms() - t0) * 1000.0 / 2000);
+		}
+		for (int i = 0; i < 30; i++) {
+			snprintf(src, sizeof src, "127.0.5.%d", i + 1);
+			bare[nb++] = connect_from(port, src, 0);
+			pump(p, 2);
+			owner_ok &= client_of(p, "[127.0.3.1]") == 1;
+		}
+		require(owner_ok && active(p) == MAX_CLIENTS,
+		        "30 more bare connects: each evicts a SILENT one, never the owner who spoke (on main: the owner, the oldest, went first)");
+		require(sizes_ok, "group sizes counted once per eviction agree with one count per client");
+		page_expired(p, log_now_ms() + PAGE_REQUEST_MS + 1);
+		for (int i = 0; i < nb; i++)
+			close(bare[i]);
+		close(owner);
+		pump(p, 4);
 	}
 
 	rcp_unblock("127.0.0.50", log_now_ms());
