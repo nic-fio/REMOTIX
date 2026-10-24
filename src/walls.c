@@ -154,32 +154,32 @@ static int selinux_exec_net(char *why, size_t n)
 	if (!enabled || !get || !set || !valid || !free_fn) {
 		say(why, n, "libselinux.so.1 lacks one of is_selinux_enabled, getcon, "
 		    "setexeccon, security_check_context, freecon");
-		goto fine;
+		goto out;
 	}
 	if (enabled() != 1) {
 		rc = 0;
-		goto fine;
+		goto out;
 	}
 	if (get(&cur) != 0 || !cur) {
 		say(why, n, "SELinux: getcon failed (%s)", strerror(errno));
-		goto fine;
+		goto out;
 	}
 	if (!context_with_type(cur, WALLS_SELINUX_TYPE, fresh, sizeof fresh)) {
 		say(why, n, "SELinux: my context «%s» is not user:role:type[:level]", cur);
-		goto fine;
+		goto out;
 	}
 	if (valid(fresh) != 0) {
 		say(why, n, "SELinux: «%s» is not a context of the loaded policy — the "
 		    "remotix module with %s is not installed (the root side runs «%s»)",
 		    fresh, WALLS_SELINUX_TYPE, cur);
-		goto fine;
+		goto out;
 	}
 	if (set(fresh) != 0) {
 		say(why, n, "SELinux: setexeccon(«%s») refused (%s)", fresh, strerror(errno));
-		goto fine;
+		goto out;
 	}
 	rc = 0;
-fine:
+out:
 	if (cur)
 		free_fn(cur);
 	dlclose(l);
@@ -442,11 +442,19 @@ int walls_apply(const struct rootside_options *o, char *why, size_t why_len)
 	if (private_dev(why, why_len) != 0)
 		return -1;
 	/* ⭐ asked back of the kernel, not assumed */
-	if (statvfs("/", &vs) != 0 || !(vs.f_flag & ST_RDONLY))
+	if (statvfs("/", &vs) != 0)
+		return say(why, why_len, "statvfs(/) after mount_setattr failed (%s)", strerror(errno));
+	if (!(vs.f_flag & ST_RDONLY))
 		return say(why, why_len, "/ is not read-only after mount_setattr");
-	if (statvfs(o->net_state_dir, &vs) != 0 || (vs.f_flag & ST_RDONLY))
+	if (statvfs(o->net_state_dir, &vs) != 0)
+		return say(why, why_len, "statvfs(%s) after the walls failed (%s)", o->net_state_dir,
+		           strerror(errno));
+	if (vs.f_flag & ST_RDONLY)
 		return say(why, why_len, "%s is not writable after the walls", o->net_state_dir);
-	if (statvfs(o->net_run_dir, &vs) != 0 || (vs.f_flag & ST_RDONLY))
+	if (statvfs(o->net_run_dir, &vs) != 0)
+		return say(why, why_len, "statvfs(%s) after the walls failed (%s)", o->net_run_dir,
+		           strerror(errno));
+	if (vs.f_flag & ST_RDONLY)
 		return say(why, why_len, "%s is not writable after the walls", o->net_run_dir);
 	/* ⚠ Back to the root side's own folder, by its path, in the NEW tree: a
 	 *   relative --page (the default «page.html», next to the binary the way
