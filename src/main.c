@@ -88,16 +88,44 @@
 #include "kwin.h"
 
 #include <errno.h>
+#include <fcntl.h>
+#include <grp.h>
+#include <limits.h>
 #include <poll.h>
+#include <pwd.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/prctl.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
 
 #include <openssl/ssl.h>
+
+/* ⭐⭐ 1.5 (DECISIONS.md §11.11, §11.50) — ONE SERVER, TWO PROCESSES, **ONLY WITH `--split`**.
+ *
+ *     Without `--split` (the default, and what every unit shipped so far runs) none of what follows is taken: this is
+ *     the single-process server of 1.0, byte for byte in behaviour.  With `--split`, started as root, this binary is the
+ *     ROOT SIDE: `main()` parses argv as always, binds the UDP and TCP sockets of the port and hands everything to
+ *     `rootside_main()` (`rootside.c`): the codec probe, the PAM helper, the desktops' births, and the NETWORK SIDE —
+ *     this same binary re-executed with `--network-side`, as `remotix` behind its walls (`walls.h`), fd 3 = the root
+ *     channel, 4 = UDP, 5 = TCP.  The network side is the rest of this file: it talks to the internet, never forks, and
+ *     asks the root side for every root operation over the closed list of `rootside_proto.h`. */
+#include "rootside.h"
+
+/* ⭐ The network side's three inherited descriptors (DECISIONS.md §11.50). */
+#define FD_ROOT ROOTSIDE_FD_CHANNEL
+#define FD_UDP ROOTSIDE_FD_UDP
+#define FD_TCP ROOTSIDE_FD_TCP
+/* ⭐ How long the network side waits for READY: the root side sends it right after the fork, but the codec probe ran
+ *    before (seconds on a slow card). */
+#define READY_WAIT_MS 30000
+/* ⛔ `sysexits` EX_CONFIG: the unit has RestartPreventExitStatus=78 — a configuration that cannot work is not retried. */
+#define EXIT_CONFIG 78
 
 #define DEFAULT_PORT "7447" /* RCP.md §2.4 */
 
@@ -312,6 +340,18 @@ static void help(const char *name)
 	        "                    with one false no).  ⛔ It serves against wake-up:\n"
 	        "                    `[M]` eight idle ones at 0.01 %% each wake up\n"
 	        "                    in 19 ms and ask for 130 %% of the engine\n"
+	        "  --split           ⭐ 1.5: two processes — the root side (PAM, the\n"
+	        "                    desktops' births) and the network side as the\n"
+	        "                    user remotix behind walls (DECISIONS.md §11.50).\n"
+	        "                    OFF by default.  Needs root and the user\n"
+	        "  --network-user NAME\n"
+	        "                    the network side's user (default remotix)\n"
+	        "  --network-state-dir DIR\n"
+	        "                    the one directory of the disk it may write\n"
+	        "                    (default /var/lib/remotix/net); with --split the\n"
+	        "                    certificates and the ban default to it\n"
+	        "  --network-run-dir DIR\n"
+	        "                    the second one (default /run/remotix/net)\n"
 	        "  --session-cap N\n"
 	        "                    the ADMINISTRATIVE cap (§4.6): how many users\n"
 	        "                    served at most.  ⭐ DEFAULT 10\n"
@@ -1871,6 +1911,176 @@ static void canvas_from_stage(void *ctx, const char *user, uid_t uid,
 	wt_canvas_from_stage(user, intended_w, intended_h, got_w, got_h);
 }
 
+/* ⭐ 1.5 (DECISIONS.md §11.50): the network side checks it was started the
+ *    way the root side starts it — not root, and the three descriptors there
+ *    and of the right kind — before it reads a single file.  Then they are
+ *    marked close-on-exec: this process never executes anything, and if it
+ *    ever did, nothing would inherit the port or the root channel. */
+static bool network_side_born_right(void)
+{
+	/* ⛔ Each must be a SOCKET of its kind: a descriptor the SELinux policy
+	 *    denies across the exec is silently replaced by a null file (lane 4,
+	 *    16 Oct 2026), and «fd 4 is open» would then say nothing. */
+	static const struct {
+		int fd, type;
+		const char *what;
+	} fds[] = {{FD_ROOT, SOCK_SEQPACKET, "the root channel (SEQPACKET)"},
+	           {FD_UDP, SOCK_DGRAM, "UDP"},
+	           {FD_TCP, SOCK_STREAM, "TCP"}};
+	pid_t parent = getppid();
+
+	if (getuid() == 0 || geteuid() == 0) {
+		registro_dice(LOG_STARTUP,
+		              "⛔ --network-side as root: it is the root side that "
+		              "starts the network side, as «remotix» behind its walls "
+		              "(DECISIONS.md §11.50) — never by hand.  Not starting.");
+		return false;
+	}
+	/* ⛔ The kernel clears PR_SET_PDEATHSIG across this exec (uid change,
+	 *    secure exec): armed again here, then the parent checked — if the root
+	 *    side died before this line, nobody would send the signal.
+	 * ⚠ Parent pid 1 is NOT a death by itself: in a container the root side
+	 *   IS pid 1 (`[M]` integration-a, 16 Oct 2026).  A root side dead before
+	 *   `main()` is caught by `rootside_attach()` (no READY from that pid). */
+	if (prctl(PR_SET_PDEATHSIG, SIGTERM) != 0 || getppid() != parent) {
+		registro_dice(LOG_STARTUP,
+		              "⛔ --network-side: the root side is gone (parent pid %ld) "
+		              "or PR_SET_PDEATHSIG failed.  Not starting.",
+		              (long)getppid());
+		return false;
+	}
+	for (size_t i = 0; i < sizeof fds / sizeof fds[0]; i++) {
+		struct stat st;
+		int type = 0;
+		socklen_t len = sizeof type;
+		int fl = fcntl(fds[i].fd, F_GETFD);
+		if (fl < 0 || fstat(fds[i].fd, &st) != 0 || !S_ISSOCK(st.st_mode) ||
+		    getsockopt(fds[i].fd, SOL_SOCKET, SO_TYPE, &type, &len) != 0 ||
+		    type != fds[i].type) {
+			registro_dice(LOG_STARTUP,
+			              "⛔ --network-side: descriptor %d is not %s (%s, "
+			              "socket type %d): the root side hands over 3 = root "
+			              "channel, 4 = UDP, 5 = TCP — and a descriptor the "
+			              "SELinux policy denies arrives as a null file.  Not "
+			              "starting.",
+			              fds[i].fd, fds[i].what,
+			              fl < 0 ? strerror(errno) : "open", type);
+			return false;
+		}
+		(void)fcntl(fds[i].fd, F_SETFD, fl | FD_CLOEXEC);
+	}
+	return true;
+}
+
+/* ⛔ The ban file that cannot be read stops the server (invariant I7), and
+ *    since 1.5 the most likely reason is an upgrade that did not give it to
+ *    `remotix`: the line says owner, mode and the fix, not only «could not». */
+static void ban_unreadable_line(const char *file_ban)
+{
+	struct stat st;
+	int e = errno;
+	if (stat(file_ban, &st) == 0)
+		registro_dice(LOG_STARTUP,
+		              "⛔ the ban file %s exists and could NOT be read by uid "
+		              "%ld (%s; owner uid %ld gid %ld, mode %04o): it is not "
+		              "«zero bans», it is the protection of §4.4-bis turned "
+		              "off.  Run the upgrade's chown (the file and its "
+		              "directory belong to the network user).  Not starting.",
+		              file_ban, (long)geteuid(), strerror(e), (long)st.st_uid,
+		              (long)st.st_gid, (unsigned)(st.st_mode & 07777));
+	else
+		registro_dice(LOG_STARTUP,
+		              "⛔ the ban file %s exists and could NOT be read by uid "
+		              "%ld (%s): it is not «zero bans», it is the protection "
+		              "of §4.4-bis turned off.  Run the upgrade's chown (the "
+		              "file and its directory belong to the network user).  "
+		              "Not starting.",
+		              file_ban, (long)geteuid(), strerror(e));
+}
+
+/* ⛔ Review 4 B, finding 21: «inside --network-state-dir» was a prefix test on
+ *    the strings — `/var/lib/remotix/net/../x` passed, `…/net/` (a trailing
+ *    slash) failed.  Now both are RESOLVED (realpath): the path itself if it
+ *    exists, else its parent (the certificates folder and the ban file are made
+ *    at the first start) with its last component, which may not be «.» or «..».
+ *    ⚠ A state dir that does not resolve (not made yet) keeps the old lexical
+ *    test, with «..» refused anywhere: the walls refuse a missing dir anyway. */
+/* ⭐ May uid:gid (no supplementary group: the network user has none) open `path` for
+ *    reading, from behind the network side's walls?  Under /tmp it never can (the walls
+ *    put a private, empty tmpfs there); elsewhere a forked copy becomes that uid and
+ *    TRIES — the kernel's own answer, ACLs and all.  `why` says what failed. */
+static bool page_readable_by(const char *path, uid_t uid, gid_t gid, char *why, size_t n)
+{
+	char real[PATH_MAX];
+	int st = 0;
+	pid_t p;
+
+	if (!realpath(path, real)) {
+		snprintf(why, n, "%s", strerror(errno));
+		return false;
+	}
+	if (strcmp(real, "/tmp") == 0 || strncmp(real, "/tmp/", 5) == 0) {
+		/* %.150s: `real` is PATH_MAX and the caller's `why` 256 — gcc's
+		 * -Wformat-truncation (night 17 Oct 2026); the line names --page whole. */
+		snprintf(why, n, "it is under /tmp (%.150s), which the network side's walls replace with "
+		         "a private, empty tmpfs", real);
+		return false;
+	}
+	p = fork();
+	if (p < 0) {
+		snprintf(why, n, "fork: %s", strerror(errno));
+		return false;
+	}
+	if (p == 0) {
+		int fd;
+
+		if (setgroups(0, NULL) != 0 || setresgid(gid, gid, gid) != 0
+		    || setresuid(uid, uid, uid) != 0)
+			_exit(2);
+		fd = open(real, O_RDONLY | O_CLOEXEC);
+		_exit(fd >= 0 ? 0 : errno == EACCES || errno == EPERM ? 1 : 3);
+	}
+	while (waitpid(p, &st, 0) < 0 && errno == EINTR)
+		;
+	if (WIFEXITED(st) && WEXITSTATUS(st) == 0)
+		return true;
+	snprintf(why, n, "%s", WIFEXITED(st) && WEXITSTATUS(st) == 1 ? "permission denied"
+	                       : WIFEXITED(st) && WEXITSTATUS(st) == 2 ? "the check could not become that uid"
+	                                                                 : "it cannot be opened");
+	return false;
+}
+
+static bool path_inside(const char *path, const char *dir)
+{
+	char d[PATH_MAX], p[PATH_MAX], parent[PATH_MAX];
+	const char *last;
+	size_t n;
+
+	if (!path || !dir || !path[0] || !dir[0])
+		return false;
+	if (!realpath(dir, d)) {
+		n = strlen(dir);
+		while (n > 1 && dir[n - 1] == '/')
+			n--;
+		return strstr(path, "/../") == NULL && strncmp(path, dir, n) == 0 && path[n] == '/';
+	}
+	if (!realpath(path, p)) {
+		last = strrchr(path, '/');
+		if (!last || !last[1] || strcmp(last + 1, ".") == 0 || strcmp(last + 1, "..") == 0)
+			return false;
+		n = (size_t)(last - path);
+		if (n == 0 || n >= sizeof parent)
+			return false;
+		memcpy(parent, path, n);
+		parent[n] = 0;
+		if (!realpath(parent, p) || strlen(p) + strlen(last) + 1 > sizeof p)
+			return false;
+		strcat(p, last);
+	}
+	n = strlen(d);
+	return strncmp(p, d, n) == 0 && p[n] == '/';
+}
+
 int main(int argc, char **argv)
 {
 	const char *address = "0.0.0.0";
@@ -1879,6 +2089,13 @@ int main(int argc, char **argv)
 	const char *dir_cert = "/var/lib/remotix/certificates";
 	const char *file_html = "page.html";
 	const char *file_ban = "/var/lib/remotix/ban";
+	/* ⭐ 1.5 (§11.50), all inert without `--split`. */
+	bool split = false, network_side = false, cert_given = false, ban_given = false;
+	const char *net_user = "remotix";
+	const char *net_state_dir = "/var/lib/remotix/net";
+	const char *net_run_dir = "/run/remotix/net";
+	const char *opt_render_node = NULL, *opt_encoding_route = NULL;
+	char cert_split[PATH_MAX], ban_split[PATH_MAX];
 	const char *socket_command = NULL;
 	const char *dir_survey = NULL;
 	certificates cert;
@@ -1896,6 +2113,7 @@ int main(int argc, char **argv)
 	uint64_t last_locals_sweep = 0;
 	uint64_t last_guardian_count = 0;
 	bool journal_requested = false;   /* --journal, phase 16 §12 */
+	struct rxr_ready ready;           /* ⭐ 1.5: READY of the root side (network side only) */
 	int outcome = 1;
 
 	/* ⛔⭐ AND THIS IS THE FIRST LINE OF THE PROGRAM, BEFORE ANYTHING ELSE: if
@@ -1929,7 +2147,12 @@ int main(int argc, char **argv)
 	if (argc >= 2 && strcmp(argv[1], "--kwin-nested") == 0)
 		return kwin_nested_alive(argc, argv);
 
-	for (int i = 1; i < argc; i++) {
+	/* ⭐ 1.5 (§11.50): the root side re-executes this binary as the network side with `--network-side` FIRST and then
+	 *    its own argv (`--split` included), so both halves parse the same options with the same loop below. */
+	if (argc >= 2 && strcmp(argv[1], "--network-side") == 0)
+		network_side = true;
+
+	for (int i = network_side ? 2 : 1; i < argc; i++) {
 		const char *a = argv[i];
 		const char *v = (i + 1 < argc) ? argv[i + 1] : NULL;
 		if (strcmp(a, "--address") == 0 && v)
@@ -1938,12 +2161,25 @@ int main(int argc, char **argv)
 			name = argv[++i];
 		else if (strcmp(a, "--port") == 0 && v)
 			port = argv[++i];
-		else if (strcmp(a, "--certificates") == 0 && v)
+		else if (strcmp(a, "--certificates") == 0 && v) {
 			dir_cert = argv[++i];
+			cert_given = true;
+		}
 		else if (strcmp(a, "--page") == 0 && v)
 			file_html = argv[++i];
-		else if (strcmp(a, "--ban-file") == 0 && v)
+		else if (strcmp(a, "--ban-file") == 0 && v) {
 			file_ban = argv[++i];
+			ban_given = true;
+		}
+		/* ⭐ 1.5 (§11.50): `--split` turns the two-process server ON (off by default); the other three only matter with it. */
+		else if (strcmp(a, "--split") == 0)
+			split = true;
+		else if (strcmp(a, "--network-user") == 0 && v)
+			net_user = argv[++i];
+		else if (strcmp(a, "--network-state-dir") == 0 && v)
+			net_state_dir = argv[++i];
+		else if (strcmp(a, "--network-run-dir") == 0 && v)
+			net_run_dir = argv[++i];
 		else if (strcmp(a, "--command-socket") == 0 && v)
 			socket_command = argv[++i];
 		/* ⭐ PHASE 2 — where to write the captured frame and the two streams.
@@ -2003,13 +2239,19 @@ int main(int argc, char **argv)
 		 *    of the three is a usage error, not a silent «card». */
 		/* ⭐ 1.5 — the encoding card's fallback (`child_render_node()`). */
 		else if (strcmp(a, "--render-node") == 0 && v) {
-			if (!child_render_node(argv[++i])) {
+			opt_render_node = argv[i + 1];
+			/* ⛔ NOT checked in the network side (§11.50): behind its walls /dev has no /dev/dri; the root side checked it
+			 *    already, and only the root side's children open a card. */
+			if (network_side)
+				i++;
+			else if (!child_render_node(argv[++i])) {
 				fprintf(stderr, "⛔ --render-node «%s»: expected a /dev/dri/ device "
 				        "that exists\n", argv[i]);
 				return 2;
 			}
 		}
 		else if (strcmp(a, "--encoding-route") == 0 && v) {
+			opt_encoding_route = argv[i + 1];
 			if (!child_encoding_route(argv[++i])) {
 				fprintf(stderr, "⛔ --encoding-route «%s»: expected card, vulkan or vaapi\n",
 				        argv[i]);
@@ -2234,6 +2476,155 @@ int main(int argc, char **argv)
 		              "⚠ --journal requested but the socket does not open (%s): the "
 		              "log stays ONLY here",
 		              strerror(journal_errno));
+	/* ⭐⭐ 1.5 (DECISIONS.md §11.50) — THE SPLIT, ONLY IF ASKED FOR.  Everything in this block is skipped when `--split` is
+	 *     absent: the server then goes on exactly as in 1.0 (one process).
+	 *     With `--split` there are two halves of this one binary:
+	 *       · started by hand/systemd as root: the ROOT SIDE — it binds the port, hands everything to `rootside_main()`
+	 *         (probe, PAM helper, births, network side behind its walls) and never returns here;
+	 *       · re-executed with `--network-side` as the user remotix: the NETWORK SIDE — it waits for READY and then
+	 *         goes on with the rest of this function, asking the root side for what needs root. */
+	if (network_side && !split) {
+		fprintf(stderr, "⛔ --network-side is the root side re-executing this binary (with --split): never by hand.\n");
+		return EXIT_CONFIG;
+	}
+	if (split && !network_side) {
+		struct rootside_options o;
+		struct passwd *pw;
+		static char *net_argv[1024];
+
+		if (geteuid() != 0) {
+			registro_dice(LOG_STARTUP,
+			              "⛔ --split needs root (uid %ld): the root side binds the port, forks the "
+			              "desktops and puts the network side behind its walls.  Not starting.",
+			              (long)geteuid());
+			return EXIT_CONFIG;
+		}
+		/* ⛔ The network user is resolved HERE, once, as root: the root side and the walls get its uid/gid, never a name to
+		 *    look up later. */
+		pw = getpwnam(net_user);
+		if (!pw || pw->pw_uid == 0 || pw->pw_gid == 0) {
+			registro_dice(LOG_STARTUP,
+			              "⛔ the network user «%s» %s: the network side cannot run (the package creates «remotix» "
+			              "with sysusers.d; a bench passes --network-user).  Not starting.",
+			              net_user, pw ? "is root" : "does not exist");
+			return EXIT_CONFIG;
+		}
+		if (!cert_given) {
+			snprintf(cert_split, sizeof cert_split, "%s/certificates", net_state_dir);
+			dir_cert = cert_split;
+		}
+		if (!ban_given) {
+			snprintf(ban_split, sizeof ban_split, "%s/ban", net_state_dir);
+			file_ban = ban_split;
+		}
+		if (!path_inside(dir_cert, net_state_dir)) {
+			registro_dice(LOG_STARTUP,
+			              "⛔ --certificates %s is not inside --network-state-dir %s: the network side (uid «%s») "
+			              "writes only there.  Fix: move the files into %s/certificates (owned by %s) and drop the "
+			              "--certificates of REMOTIX_OPTIONS in /etc/remotix/remotix.conf.d/, or pass a "
+			              "--network-state-dir that contains it.  Not starting.",
+			              dir_cert, net_state_dir, net_user, net_state_dir, net_user);
+			return EXIT_CONFIG;
+		}
+		if (!path_inside(file_ban, net_state_dir)) {
+			registro_dice(LOG_STARTUP,
+			              "⛔ --ban-file %s is not inside --network-state-dir %s: the network side (uid «%s») could "
+			              "not save it.  Fix: move it to %s/ban (owned by %s) and drop the --ban-file of "
+			              "REMOTIX_OPTIONS in /etc/remotix/remotix.conf.d/, or pass a --network-state-dir that "
+			              "contains it.  Not starting.",
+			              file_ban, net_state_dir, net_user, net_state_dir, net_user);
+			return EXIT_CONFIG;
+		}
+		{
+			char why[256];
+
+			if (!page_readable_by(file_html, pw->pw_uid, pw->pw_gid, why, sizeof why)) {
+				registro_dice(LOG_STARTUP,
+				              "⛔ --page %s cannot be read by the network side (uid «%s»): %s.  Fix: put the page "
+				              "where %s can read it (the package's own path, not under /tmp) and drop the --page of "
+				              "REMOTIX_OPTIONS in /etc/remotix/remotix.conf.d/.  Not starting.",
+				              file_html, net_user, why, net_user);
+				return EXIT_CONFIG;
+			}
+		}
+		memset(&o, 0, sizeof o);
+		/* ⚠ The cap is set first: the root side's children table is sized on `rcp_cap()`. */
+		if (session_cap >= 1)
+			(void)rcp_cap_set(session_cap);
+		if ((size_t)argc + 2 > sizeof net_argv / sizeof net_argv[0]) {
+			registro_dice(LOG_STARTUP, "⛔ %d arguments: too many.  Not starting.", argc);
+			return EXIT_CONFIG;
+		}
+		/* `/proc/self/exe --network-side` + this argv (the root side execs it). */
+		net_argv[0] = argv[0];
+		net_argv[1] = (char *)"--network-side";
+		for (int i = 1; i < argc; i++)
+			net_argv[i + 1] = argv[i];
+		net_argv[argc + 1] = NULL;
+		o.net_argv = net_argv;
+		o.remotix_uid = pw->pw_uid;
+		o.remotix_gid = pw->pw_gid;
+		o.cap = rcp_cap();
+		o.encoding_route = opt_encoding_route;
+		o.render_node = opt_render_node;
+		o.denied_users_path = NULL;
+		o.net_state_dir = net_state_dir;
+		o.net_run_dir = net_run_dir;
+		o.canvas_w = CANVAS_W;
+		o.canvas_h = CANVAS_H;
+		o.dir_survey = dir_survey;
+		o.quality_recovery = quality_recovery;
+		o.bandwidth_cap_mbit = bandwidth_cap_mbit;
+		o.audio_silence = audio_silence;
+		o.udp_fd = transport_bind(address, port);
+		if (o.udp_fd < 0)
+			return 1;
+		o.tcp_fd = page_bind(address, port);
+		if (o.tcp_fd < 0) {
+			close(o.udp_fd);
+			return 1;
+		}
+		registro_dice(LOG_STARTUP,
+		              "⭐ root side pid %ld (uid %ld): %s:%s bound before anything else — UDP and TCP, handed to the "
+		              "network side as fds 4 and 5, so it needs no capability for the port.  The network side runs as "
+		              "«%s» behind its walls, writing only %s and %s (DECISIONS.md §11.50)",
+		              (long)getpid(), (long)geteuid(), address, port, net_user, net_state_dir, net_run_dir);
+		return rootside_main(&o);
+	}
+	if (network_side) {
+		struct passwd *me;
+
+		if (!cert_given) {
+			snprintf(cert_split, sizeof cert_split, "%s/certificates", net_state_dir);
+			dir_cert = cert_split;
+		}
+		if (!ban_given) {
+			snprintf(ban_split, sizeof ban_split, "%s/ban", net_state_dir);
+			file_ban = ban_split;
+		}
+		if (!network_side_born_right())
+			return 1;
+		memset(&ready, 0, sizeof ready);
+		if (!rootside_attach(FD_ROOT, READY_WAIT_MS, &ready)) {
+			registro_dice(LOG_STARTUP,
+			              "⛔ the root channel (fd 3) gave no READY within %d ms (the reason is in the line above).  "
+			              "Not starting.",
+			              READY_WAIT_MS);
+			return 1;
+		}
+		me = getpwuid(getuid());
+		registro_dice(LOG_STARTUP,
+		              "⭐ network side: uid %ld (%s), root side pid %ld — this process talks to the network and holds the "
+		              "TLS key, the ban and the QUIC secret; PAM, the desktops' births and the signals to them are the "
+		              "root side's, asked over the closed list (DECISIONS.md §11.50)",
+		              (long)getuid(), me ? me->pw_name : "?", (long)getppid());
+		if (ready.remotix_uid != (uint32_t)getuid()) {
+			registro_dice(LOG_STARTUP,
+			              "⛔ the root side says the network side is uid %lu, and this process is uid %ld.  Not starting.",
+			              (unsigned long)ready.remotix_uid, (long)getuid());
+			return 1;
+		}
+	}
 	/* ⭐⭐ PHASE 18 — WHAT IS OFFERED TO THE BROWSER, MEASURED AT STARTUP.
 	 *     `video.codec` of the `HERE_I_AM` (§4.3) says only the codecs this
 	 *     machine can do: HEVC and H.264 if the CARD encodes them.  ⛔ Phase 19
@@ -2243,10 +2634,21 @@ int main(int argc, char **argv)
 	 *     ends in NOTHING_IN_COMMON. */
 	{
 		char offered[32], explain[1024];
-		registro_dice(LOG_STARTUP,
-		              "⭐ phase 18 — encoding test at startup, in a separate process: the "
-		              "«opened: …» lines at 256x256 below are its own, not a session's");
-		bool something = child_video_capabilities(offered, sizeof offered, explain, sizeof explain);
+		bool something;
+
+		if (network_side) {
+			/* ⭐ 1.5 (§11.50): the root side measured it before it forked us; READY carries the result. */
+			memcpy(offered, ready.offered, sizeof offered);
+			memcpy(explain, ready.explanation, sizeof explain);
+			offered[sizeof offered - 1] = '\0';
+			explain[sizeof explain - 1] = '\0';
+			something = ready.codecs_ok != 0;
+		} else {
+			registro_dice(LOG_STARTUP,
+			              "⭐ phase 18 — encoding test at startup, in a separate process: the "
+			              "«opened: …» lines at 256x256 below are its own, not a session's");
+			something = child_video_capabilities(offered, sizeof offered, explain, sizeof explain);
+		}
 		rcp_video_codec_set(offered);
 		if (something)
 			registro_dice(LOG_STARTUP,
@@ -2493,6 +2895,9 @@ int main(int argc, char **argv)
 			 *    protection turned off with the air of having nothing to
 			 *    protect, that is invariant I7 broken silently.  Not
 			 *    starting. */
+			if (network_side)
+				ban_unreadable_line(file_ban);
+			else
 			registro_dice(LOG_STARTUP,
 			              "⛔ the ban file %s exists and could NOT be "
 			              "read: it is not «zero bans», it is the protection of "
@@ -2579,6 +2984,7 @@ int main(int argc, char **argv)
 	 *    this depends whether the children can REALLY drop to another user.
 	 *    ⚠ An unprivileged server spawns children that stay itself —
 	 *    `setuid()` fails, and `children_ensure()` declares it. */
+	if (!network_side)
 	registro_dice(LOG_STARTUP,
 	              "%s this process is uid %ld: %s",
 	              geteuid() == 0 ? "⭐" : "⚠", (long)geteuid(),
@@ -2601,7 +3007,8 @@ int main(int argc, char **argv)
 	if (!ctx_quic || !ctx_page)
 		goto fine;
 
-	t = transport_open(address, port, ctx_quic, pam_help, dir_cert);
+	t = network_side ? transport_open_fd(FD_UDP, address, port, ctx_quic, pam_help, dir_cert)
+	                 : transport_open(address, port, ctx_quic, pam_help, dir_cert);
 	if (!t)
 		goto fine;
 	transport_limits(t, max_connections, max_pending, pending_per_address, pending_per_48);
@@ -2707,7 +3114,8 @@ int main(int argc, char **argv)
 	 *     parent left alive enter the counts before the first user can knock. */
 	found_again_at_startup(log_now_ms());
 
-	p = page_open(address, port, ctx_page, file_html, &cert);
+	p = network_side ? page_open_fd(FD_TCP, address, port, ctx_page, file_html, &cert)
+	               : page_open(address, port, ctx_page, file_html, &cert);
 	if (!p)
 		goto fine;
 	/* ⛔ The main loop's `poll` array, sized on everything that can be in
@@ -2731,6 +3139,15 @@ int main(int argc, char **argv)
 	last_cert_check = time(NULL);
 
 	while (!stop_requested) {
+		/* ⭐ 1.5 (§11.50): the root side is gone (EOF on the root channel): the network side stops — systemd restarts the
+		 *    unit, the desktops stay alive. */
+		if (network_side && rootside_lost()) {
+			registro_dice(LOG_STARTUP,
+			              "⛔ the root side is gone (EOF on the root channel): "
+			              "the network side stops — systemd restarts the "
+			              "unit, the desktops stay alive");
+			break;
+		}
 		struct pollfd *fds = loop_fds;
 		size_t n = 0, npage, ncommand, nhelp, nchildren;
 		uint64_t t_now;

@@ -78,7 +78,7 @@ SORGENTI := main.c transport.c webtransport.c page.c command.c certificates.c \
             vulkanvideo.c bit_writer.c colors709.c audio.c sound.c \
             input.c keyboard.c cursor.c sentinel.c clipboard.c kwin.c \
             clipboard_kde.c wlroots.c wlr_input.c shape.c rediscover.c \
-            render_grant.c render_node.c walls.c
+            render_grant.c render_node.c walls.c rootside.c
 OGGETTI  := $(SORGENTI:.c=.o)
 
 # -----------------------------------------------------------------------------
@@ -555,7 +555,8 @@ $(OGGETTI): log.h .flags
 #    `DECISIONS.md` §1.10-bis: those four links are opened by the CHILD, which runs
 #    as the user.  The parent is root, and root has nobody to talk to.
 main.o:           helper.h certificates.h command.h child.h page.h rcp.h \
-                  log.h tls.h transport.h rediscover.h
+                  log.h tls.h transport.h rediscover.h rootside.h walls.h
+rootside.o:       rootside.h rootside_proto.h child.h helper.h log.h render_grant.h
 transport.o:      transport.h helper.h log.h webtransport.h
 webtransport.o:   webtransport.h helper.h rcp.h log.h child.h audio.h
 page.o:         page.h certificates.h rcp.h log.h
@@ -652,9 +653,8 @@ clipboard.o:        clipboard.h log.h
 
 # ⭐ 1.5 (DECISIONS-11.md §11.50) — the ROOT SIDE's desk test (`benches/02-rootside-validator-test.c`: the closed list's
 #    validator, the grants, the AUTH bounds, the names refused before PAM).  `rootside.c` is #included by the test (its
-#    statics too); nothing is forked, no channel opened.  ⚠ `rootside.o` is NOT part of the product link yet (phase D of
-#    the split): this target is the only thing that builds it.  The symbols of phase D (`child_birth`, `helper_*_root`,
-#    `render_grant_remotix_session`, …) are not in this tree: the recipe links the log stub of the fuzz harness and ONE
+#    statics too); nothing is forked, no channel opened.  ⚠ `rootside.o` IS part of the product link since phase D6, but
+#    only `--split` reaches it.  This recipe stays as it was (the symbols of phase D are in the tree now, so few stubs are left): it links the log stub of the fuzz harness and ONE
 #    stub per undefined symbol, generated from the linker's list, that TRAPS if the test reaches it.
 test-rootside: ../benches/02-rootside-validator-test.c rootside.c rootside.h rootside_proto.h
 	@set -e; d=$$(mktemp -d "$${TMPDIR:-/tmp}/remotix-test-rootside.XXXXXX"); \
