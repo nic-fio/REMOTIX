@@ -1911,6 +1911,12 @@ int main(int argc, char **argv)
 		child_alive(argc, argv);
 		return 1; /* never reached */
 	}
+	/* ⛔⭐ And the PAM helper's dispatcher (`helper.h`, D3 of §11.50): `spawn()`
+	 *     re-executes this binary so the dispatcher holds a FRESH memory image
+	 *     — no TLS key, no session secret, no other user's password.  Before
+	 *     anything is read or opened, like the child above. */
+	if (argc >= 2 && strcmp(argv[1], "--pam-helper") == 0)
+		return helper_main(argc, argv);
 	/* ⭐ PHASE 17 (§6.5-bis) — the encoding test of the certification: on its
 	 *    own, before everything else — no certificates, no network, no
 	 *    sessions.  The contract is in `child.h`. */

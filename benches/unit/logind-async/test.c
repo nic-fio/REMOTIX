@@ -1,17 +1,10 @@
-/* 02-logind-async-test.c — the loop's questions to logind no longer wait
+/* test.c — the loop's questions to logind no longer wait
  * (15 Oct 2026): the check of the local sessions (`sentinel_locals()`, every
  * 2 s from `wt_watch_locals()`) and the check of the desktops found again
  * (`rediscover_search()`, every 10 s from `found_again_sweep()`) send their
  * question and read the answer at the next check; the ATTACH question
  * (`sentinel_local()`) still waits, 100 ms at most, and not at all for 30 s
  * after logind has been silent.
- *
- * In the build container, from src/:
- *
- *   gcc -std=gnu11 -D_GNU_SOURCE -Wall -Wextra -I. \
- *       $(pkg-config --cflags gio-2.0) -o /tmp/lat \
- *       ../benches/02-logind-async-test.c sentinel.c log.c \
- *       $(pkg-config --libs gio-2.0) && /tmp/lat
  *
  * ⚠ `rediscover.c` is INCLUDED (the seam): the test compares the candidates
  *   the answer of the check that does not wait leaves in `later` with those of
@@ -45,7 +38,13 @@
  *   R3  logind 2 s slow: every search < 10 ms, the previous answer is used;
  *   R4  a GetAll past the 5 s ceiling: -1 («I don't know»), then 0 again.
  *
- * Exit status: 0 green, 1 red, 3 not all checks ran. */
+ * BUILD AND RUN (a few seconds; timing test, so no sanitizers; the real src/sentinel.c, src/log.c (rediscover.c is included); run from the root of the tree):
+ *   nice -n 19 ionice -c3 podman run --rm --network=none --cpus=2 --memory=2g -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
+ *     cd /tmp && clang -std=gnu11 -D_GNU_SOURCE -O1 -Wall -Wextra -Wno-unused-parameter -I/albero/src \
+ *       $(pkg-config --cflags gio-2.0) -o test /albero/benches/unit/logind-async/test.c /albero/src/sentinel.c /albero/src/log.c \
+ *       $(pkg-config --libs gio-2.0) -lpthread -lm && ./test'
+ * Exit code 0 green, 1 red, 3 not all checks ran.
+ */
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif

@@ -1,19 +1,5 @@
-/* 02-child-closing-test.c — a desktop asked to end its session is «closing» for a
+/* test.c — a desktop asked to end its session is «closing» for a
  * login, not «already there» (review of eab9623a).
- *
- * In the build container, from src/ (the product's objects, then the test
- * linked against all of them except main.o and child.o), as
- * 02-child-strings-test.c says:
- *
- *   make TWIN=none
- *   gcc -std=gnu11 -Wall -Wextra -I. $(pkg-config --cflags gio-2.0 \
- *       libpipewire-0.3 libdrm libva libva-drm vulkan opus libei-1.0 \
- *       xkbcommon wayland-client gbm) -o /tmp/ccl \
- *       ../benches/02-child-closing-test.c \
- *       $(ls *.o | grep -v -e '^main.o$' -e '^child.o$') \
- *       -lngtcp2_crypto_ossl -lngtcp2 -lnghttp3 -lssl -lcrypto -lpam -lm \
- *       $(pkg-config --libs gio-2.0 libpipewire-0.3 libva libva-drm \
- *       libei-1.0 xkbcommon wayland-client gbm opus vulkan) -ldl && /tmp/ccl
  *
  * ⛔ `delivery_verdict()` in main.c called «the stage was already there»
  *    `children_pid_of() > 0`, which holds for a child that is closing: a login
@@ -30,7 +16,18 @@
  * ⚠ `child.c` is INCLUDED (the seam of 02-child-envelope-test.c); no child is
  *   spawned — the slot is filled by hand, and the «end» goes on a socketpair.
  *
- * Exit status: 0 green, 1 red, 3 not all checks ran. */
+ * BUILD AND RUN (a full build of the product first, about as long as `make`: the test links every object but main.o and child.o; run from the root of the tree):
+ *   nice -n 19 ionice -c3 podman run --rm --network=none --cpus=2 --memory=2g -v "$PWD:/albero:ro" localhost/remotix-costruzione sh -c '
+ *     mkdir /tmp/w && cp -a /albero/src /albero/benches /tmp/w/ && cd /tmp/w/src &&
+ *     { make clean >/dev/null 2>&1; true; } &&
+ *     { make -j2 TWIN=none >/tmp/make.log 2>&1 || { tail -40 /tmp/make.log; exit 1; }; } &&
+ *     gcc -std=gnu11 -Wall -Wextra -I. $(pkg-config --cflags gio-2.0 libpipewire-0.3 libdrm libva libva-drm vulkan opus libei-1.0 xkbcommon wayland-client gbm) \
+ *         -o /tmp/ccl ../benches/unit/child-closing/test.c $(ls *.o | grep -v -e "^main.o$" -e "^child.o$") \
+ *         -lngtcp2_crypto_ossl -lngtcp2 -lnghttp3 -lssl -lcrypto -lpam -lm \
+ *         $(pkg-config --libs gio-2.0 libpipewire-0.3 libva libva-drm libei-1.0 xkbcommon wayland-client gbm opus vulkan) -ldl &&
+ *     /tmp/ccl'
+ * Exit code 0 green, 1 red, 3 not all checks ran.
+ */
 #define _GNU_SOURCE
 #include "child.c"
 

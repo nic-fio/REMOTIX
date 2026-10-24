@@ -72,6 +72,22 @@ static void deliver(void *ctx, uint64_t ticket, bool admitted, const char *user,
 	snprintf(g->rhost, sizeof g->rhost, "%s", rhost);
 }
 
+struct root_got {
+	int n;
+	uint64_t ticket;
+	int outcome;
+	char user[257], rhost[64];
+};
+static void on_outcome(void *c, uint64_t ticket, int outcome, const char *user, const char *rhost)
+{
+	struct root_got *r = c;
+	r->n++;
+	r->ticket = ticket;
+	r->outcome = outcome;
+	snprintf(r->user, sizeof r->user, "%s", user);
+	snprintf(r->rhost, sizeof r->rhost, "%s", rhost);
+}
+
 static void make(helper *h, int *peer)
 {
 	int sv[2];
@@ -158,6 +174,58 @@ int main(void)
 		CHECK(mark_seen == (oc == 2 ? g.ticket : 0), "outcome %d: the locked mark is %s during the delivery (saw %llu)", oc,
 		      oc == 2 ? "the ticket" : "0", (unsigned long long)mark_seen);
 		CHECK(locked_mark == 0, "outcome %d: and it is cleared after", oc);
+		/* D3: outcome 3 = «not checked» (the dispatcher's own cap): a no that is OURS — delivered `lost`, like the dead helper */
+		CHECK(g.lost == (oc == 3), "outcome %d: lost is %d (only 3 is «not checked»)", oc, g.lost);
+		close(peer); close(h.fd);
+	}
+
+	/* 6. D3 (§11.50): the ROOT SIDE's helper — nothing of rcp.c is touched, every end is ONE call of the callback:
+	 *    1 yes, 0 no, 2 locked, 3 not checked (the dispatcher's answer 3, the PAM timeout, the dead helper) */
+	{
+		struct root_got rg;
+		memset(&rg, 0, sizeof rg);
+		for (int oc = 0; oc <= 3; oc++) {
+			struct request rq3;
+			make(&h, &peer);
+			h.root = true;
+			h.outcome_cb = on_outcome;
+			h.outcome_ctx = &rg;
+			memset(&rg, 0, sizeof rg);
+			mark_seen = 77;
+			CHECK(helper_ask_bare(&h, "gina", "pw", "9.9.9.9", 1000, &t), "root: ask_bare (outcome %d)", oc);
+			CHECK(recv(peer, &rq3, sizeof rq3, 0) == (ssize_t)sizeof rq3 && strcmp(rq3.rhost, "9.9.9.9") == 0,
+			      "root: the dispatcher gets the bare rhost as it is");
+			struct response rs3 = {rq3.ticket, (uint8_t)oc};
+			CHECK(send(peer, &rs3, sizeof rs3, 0) == (ssize_t)sizeof rs3, "root: answer");
+			helper_move(&h, deliver, &g);
+			CHECK(rg.n == 1 && rg.outcome == oc && strcmp(rg.user, "gina") == 0 && strcmp(rg.rhost, "9.9.9.9") == 0,
+			      "root: outcome %d reaches the callback once (n=%d got %d)", oc, rg.n, rg.outcome);
+			CHECK(mark_seen == 77, "root: rcp.c is not touched (no locked mark)");
+			close(peer); close(h.fd);
+		}
+		/* the PAM timeout and the dead helper are «not checked» for the root side */
+		make(&h, &peer);
+		h.root = true;
+		h.outcome_cb = on_outcome;
+		h.outcome_ctx = &rg;
+		memset(&rg, 0, sizeof rg);
+		CHECK(helper_ask_bare(&h, "hal", "pw", "1.1.1.1", 1000, &t), "root: ask for the timeout");
+		helper_expired(&h, 1000 + 8000, NULL, NULL);
+		CHECK(rg.n == 1 && rg.outcome == 3 && rg.ticket == t, "root: the PAM timeout is outcome 3");
+		CHECK(helper_ask_bare(&h, "ivy", "pw", "2.2.2.2", 1000, &t), "root: ask for the death");
+		close(peer);
+		helper_move(&h, NULL, NULL);
+		CHECK(rg.n == 2 && rg.outcome == 3 && strcmp(rg.user, "ivy") == 0 && h.fd < 0 && helper_in_flight(&h) == 0,
+		      "root: the dead helper is outcome 3, once, nothing left in flight");
+		/* a root helper has no places kept for a known key: all 16 */
+		make(&h, &peer);
+		h.root = true;
+		stub_known = false;
+		taken = 0;
+		for (int i = 0; i < 17; i++)
+			if (helper_ask_bare(&h, "jo", "pw", "3.3.3.3", 1000, &t))
+				taken++;
+		CHECK(taken == 16, "root: 16 places for everybody (got %d)", taken);
 		close(peer); close(h.fd);
 	}
 

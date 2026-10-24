@@ -21,8 +21,11 @@
  *   (4) 20-22  MAX_GRANTS reached: false, the ACL just put taken back from every node, the file as it was;
  *   (5) 23-27  render_grant_remove() takes out only OUR gid entries and only our row (another user's grant and an
  *                administrator's entry for another gid stay);
- *   (6) 28-33  acl_read() with an attribute of 0-3 bytes (and of 5) fails with EINVAL and does not look past what the
- *                kernel returned; 4 bytes is an empty ACL.
+ *   (6) 28-33  acl_read() with an attribute of 0-3 bytes (and of 5) fails with EINVAL and writes no entry; 4 bytes is
+ *                an empty ACL.  ⚠ These check the OUTCOME: that no byte past the returned length is read would take
+ *                MemorySanitizer, which this recipe does not use;
+ *   (7) 34     the record folder is not root's (uid 1000), or is writable by others (mode 0777): render_grant_add()
+ *                returns false and no node carries an ACL at the end — grants_load() fails before any ACL is written.
  *
  * BUILD AND RUN (a few seconds; nothing under /media/REMOTIX-15 is written; run from the root of the tree):
  *   nice -n 19 ionice -c3 podman run --rm --network=none --cpus=2 --memory=2g -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
@@ -35,7 +38,7 @@
  *     { echo "#include <stdio.h>"; grep -o "undefined reference to .[A-Za-z_0-9]*" link1.log | sed "s/.*to .//" | sort -u |
  *       while read -r n; do echo "void $n(void); void $n(void) { fputs(\"STUB reached: $n\", stderr); fputc(10, stderr); __builtin_trap(); }"; done; } > s.c &&
  *     clang $F -c s.c -o s.o && clang -fsanitize=address,undefined t.o l.o s.o $L -o test && ./test'
- * Exit status: 0 green, 1 red, 3 not all checks ran.
+ * Exit code 0 green, 1 red, 3 not all checks ran.
  */
 #define _GNU_SOURCE
 /* the system headers first: the macros below must not rename their declarations */
@@ -88,7 +91,7 @@ int fake_fstat(int fd, struct stat *st);
 #undef fstat
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 33
+#define EXPECTED_CHECKS 34
 
 static void require(int cond, const char *desc)
 {
@@ -239,13 +242,17 @@ int fake_open(const char *path, int flags, ...)
 	}
 	return open(strcmp(path, GRANTS_DIR) == 0 ? grants_dir : path, flags, mode);
 }
+static long fstat_uid = -1;               /* >= 0: the folder is this uid's */
+static int fstat_mode_or;                /* bits added to the folder's mode */
+
 int fake_fstat(int fd, struct stat *st)
 {
 	int r = fstat(fd, st);
 
 	if (r == 0 && S_ISDIR(st->st_mode)) {
-		st->st_uid = 0;                  /* «root's folder»: the container may run as anyone */
+		st->st_uid = fstat_uid >= 0 ? (uid_t)fstat_uid : 0;   /* «root's folder»: the container may run as anyone */
 		st->st_mode &= ~(mode_t)022;
+		st->st_mode |= (mode_t)fstat_mode_or;
 	}
 	return r;
 }
@@ -422,7 +429,7 @@ int main(void)
 		force_len = n;
 		errno = 0;
 		r = acl_read(DRI_DIR "/renderD128", v);
-		snprintf(msg, sizeof msg, "%d. %d byte(s): -1/EINVAL, no entry written", 28 + n, n);
+		snprintf(msg, sizeof msg, "%d. %d byte(s): -1/EINVAL, nothing returned in the entries", 28 + n, n);
 		require(r == -1 && errno == EINVAL && ((unsigned char *)v)[0] == 0x5A, msg);
 	}
 	{
@@ -439,6 +446,23 @@ int main(void)
 		require(acl_read(DRI_DIR "/renderD128", v) == -1 && errno == EINVAL, "33. 5 bytes (not whole entries): -1/EINVAL");
 	}
 	force_len = -1;
+
+	printf("  (7) the record folder is not trustworthy\n");
+	{
+		bool refused = true;
+		int stray = 0;
+
+		for (int how = 0; how < 2; how++) {
+			reset_world();
+			fstat_uid = how == 0 ? 1000 : -1;
+			fstat_mode_or = how == 1 ? 0777 : 0;
+			refused = !render_grant_add("anna", 1001, 1001) && refused;
+			stray += total_sets() + (group_perm(V_R128, 1001) >= 0) + (group_perm(V_R129, 1001) >= 0);
+		}
+		fstat_uid = -1;
+		fstat_mode_or = 0;
+		require(refused && stray == 0, "34. folder owned by uid 1000, or mode 0777: false, no ACL on any node");
+	}
 
 	{
 		char cmd[300];

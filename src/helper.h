@@ -58,8 +58,15 @@
  *   1. the helper did not start            `helper_ask` -> false -> NO
  *   2. the socket is full / EAGAIN         `helper_ask` -> false -> NO
  *   3. too many requests in flight (> 16)  `helper_ask` -> false -> NO
- *   4. the dispatcher is dead (EOF)        all requests in flight -> NO
+ *   4. the dispatcher is dead (EOF)        all requests in flight -> NO, `lost`
  *   5. the grandchild died without answering the request expires   -> NO
+ *   ⭐ After road 4 the dispatcher is reaped and STARTED AGAIN
+ *     (`helper_expired()`, D3 of DECISIONS.md §11.50) after 1 s, 2 s, 4 s … up
+ *     to 60 s for deaths in a row; while it is down road 1 applies — refused,
+ *     not counted.  Before, one death refused every login until the server
+ *     was restarted.
+ *   ⭐ «Not checked» (the dispatcher's own cap of 16 grandchildren, answered
+ *     with outcome 3) is delivered like road 4: a «no» that is OURS (`lost`).
  *   6. the answer is short or mangled      it is discarded         -> then (5)
  *   7. the answer carries a byte that is not exactly 1 -> NO
  *
@@ -99,15 +106,25 @@ typedef struct helper helper;
 /* ⛔ It is started EARLY, and the reason is that the child inherits the
  *    descriptors: started after `transport_open()` it would carry along the
  *    UDP socket and the TCP listener, and the port would stay held by it even
- *    after the server's death.  ⚠ Returns NULL if it could not be started, and
- *    the caller MUST be able to tell «started» from «not started»: without a
- *    helper every authentication is a NO. */
+ *    after the server's death.  (D3: it also closes everything above 3 and
+ *    re-executes itself — `helper_main()` — so its memory is a fresh image and
+ *    not a copy of the server's.)
+ * ⚠ Returns NULL only when the object itself cannot be allocated.  ⭐ If the
+ *   PROCESS does not start the object comes back without one, and
+ *   `helper_expired()` keeps trying with the restart's doubling pause;
+ *   meanwhile every login is refused, not counted. */
 helper *helper_turn_on(void);
+
+/* ⭐ The dispatcher's entry point after the `exec`: `main()` calls it FIRST
+ *    when `argv[1]` is `--pam-helper`, before any option, certificate or key.
+ *    The socket is descriptor 3.  Does not return while the server lives. */
+int helper_main(int argc, char **argv);
 
 /* Closes the socket and sends `SIGTERM` to the dispatcher. */
 void helper_turn_off(helper *a);
 
-/* The descriptor to put in the `poll`, or -1 if the helper is off/dead. */
+/* The descriptor to put in the `poll`, or -1 if the helper is off/dead.
+ * ⚠ It CHANGES after a restart: read it again at every round. */
 int helper_descriptor(const helper *a);
 
 /* ⛔ Asks for the check and RETURNS AT ONCE.  `true` = the question has left
@@ -148,25 +165,35 @@ typedef void (*HelperVerdict)(void *ctx, uint64_t ticket, bool admitted,
  *    a request without an answer is a wait nobody closes. */
 void helper_move(helper *a, HelperVerdict delivery, void *ctx);
 
-/* ⛔ Expires the requests that are too old, delivering a «no».  It is the
- * safety net of case 5: a grandchild killed halfway writes nothing, and
- * without this call the session would stay in `wait-verdict` forever. */
+/* ⛔ Expires the requests that are too old (8 s), delivering a «no» (NOT `lost`:
+ * it counts, as before).  It is the safety net of case 5: a grandchild killed
+ * halfway writes nothing, and without this call the session would stay in
+ * `wait-verdict` forever.
+ * ⭐ It is also the helper's watchdog, and must be called at EVERY round: it
+ * notices a dispatcher that exited (`waitpid(WNOHANG)`), reaps it, and starts
+ * a new one with a doubling pause (1 s … 60 s; loud after five rapid deaths in
+ * a row, still retrying).  It never waits. */
 void helper_expired(helper *a, uint64_t now_ms, HelperVerdict delivery,
                       void *ctx);
 
 /* How many requests are in flight.  For the log. */
 int helper_in_flight(const helper *a);
 
-/* ⭐ 1.5 (DECISIONS-11.md §11.50) — DECLARATIONS ONLY, for `rootside.c`; the implementation is phase D of the split
- *    and is NOT in this tree yet.
- *    In the ROOT SIDE, `helper_turn_on_root()` starts the real dispatcher, but nothing of `rcp.c` is touched: every
- *    request in flight ends in ONE call of `cb` — outcome 1 admitted, 0 refused, 2 refused while `pam_faillock`
- *    held the account, 3 not checked (expiry, the dispatcher died, the dispatcher's own cap of 16). */
+/* ⭐⭐ 1.5 (DECISIONS.md §11.50, step D3) — THE ROOT SIDE's helper.
+ *
+ *   `helper_turn_on_root()` starts the real dispatcher (the same `spawn()`,
+ *   restart and watchdog) but nothing of `rcp.c` is touched: every request in
+ *   flight ends in ONE call of `cb` — outcome 1 admitted, 0 refused, 2 refused
+ *   while `pam_faillock` held the account, 3 not checked (expiry, the
+ *   dispatcher died, the dispatcher's own cap of 16).  The product (single
+ *   process) keeps using `helper_turn_on()` and `HelperVerdict`.
+ *   ⚠ The same loop calls `helper_move()` / `helper_expired()` on it. */
 typedef void (*HelperOutcome)(void *ctx, uint64_t ticket, int outcome,
                               const char *user, const char *rhost);
 helper *helper_turn_on_root(HelperOutcome cb, void *ctx);
-/* `helper_ask()` with a bare `rhost` (no provenance to parse, no known-key
- * places: the root side's bounds are its own). */
+
+/* `helper_ask()` with a bare `rhost` (no provenance to parse), and on a root
+ * helper no places kept for a known key: the root side's bounds are its own. */
 bool helper_ask_bare(helper *a, const char *user, const char *password,
                      const char *rhost, uint64_t now_ms, uint64_t *ticket);
 

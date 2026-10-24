@@ -1,4 +1,4 @@
-/* 02-log-nonblock-test.c — a log line never stops the loop (15 Oct 2026).
+/* test.c — a log line never stops the loop (15 Oct 2026).
  *
  * Under systemd `stderr` is journald's blocking STREAM socket, and the line
  * that fell back to it (native journal send failed, or `--journal` off) went
@@ -7,11 +7,6 @@
  * (a socket with MSG_DONTWAIT, a pipe through a second, O_NONBLOCK open of
  * it), a line that does not fit is dropped and counted, and the count is
  * written as soon as `stderr` accepts again.
- *
- * In the build container, from src/:
- *
- *   gcc -std=gnu11 -D_GNU_SOURCE -Wall -Wextra -I. -o /tmp/lnb \
- *       ../benches/02-log-nonblock-test.c log.c && /tmp/lnb
  *
  *   L1  stderr a stream socket nobody reads: 4000 lines, none waits > 10 ms;
  *   L2  … what was read back is whole lines only, and the next line comes
@@ -26,7 +21,12 @@
  * ⚠ On a log.c that writes stderr with a plain write(2), L1 blocks: an
  *   alarm turns that into «BLOCKED» and exit 1.
  *
- * Exit status: 0 green, 1 red, 3 not all checks ran. */
+ * BUILD AND RUN (a few seconds; timing test, so no sanitizers; the real src/log.c; run from the root of the tree):
+ *   nice -n 19 ionice -c3 podman run --rm --network=none --cpus=2 --memory=2g -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
+ *     cd /tmp && clang -std=gnu11 -D_GNU_SOURCE -O1 -Wall -Wextra -Wno-unused-parameter -I/albero/src \
+ *       -o test /albero/benches/unit/log-nonblock/test.c /albero/src/log.c -lpthread && ./test'
+ * Exit code 0 green, 1 red, 3 not all checks ran.
+ */
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
