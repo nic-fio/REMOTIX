@@ -1431,11 +1431,15 @@ static void become_and_exec(const struct children *f, const struct child *g,
  *     say the cure.
  *
  * ⭐ AND THE GROUP IS READ FROM THE NODE, neither the name nor the number is
- *    hard-wired: `/dev/dri` is opened, the `st_gid` of every `cardN` and
- *    `renderDN` is taken (which is the provisioning's `stat -c %g`, done in C)
- *    and we look whether the tenant is in those groups.  ⚠ A hard-wired gid
- *    would be false on the next machine, and a hard-wired name (`render`) is
- *    false on a distribution that calls it otherwise.
+ *    hard-wired: `/dev/dri` is opened, the `st_gid` of every `renderDN` is
+ *    taken (which is the provisioning's `stat -c %g`, done in C) and we look
+ *    whether the tenant is in those groups.  ⚠ A hard-wired gid would be false
+ *    on the next machine, and a hard-wired name (`render`) is false on a
+ *    distribution that calls it otherwise.
+ * ⭐ 1.5 (DECISIONS.md §10.36, §11.38): ONLY the render nodes, no more `cardN`
+ *    (`video`).  `[M]` 13 Oct 2026 (§11.4), the four desktops on the boxes and
+ *    GNOME on the tablet: every compositor opened `renderD128` and never
+ *    `card0`; and `video` also gives `/dev/fb*` and the webcams.
  *
  * ⚠ WHY MEMBERSHIP AND NOT AN `access()`: the parent is root, and to root the
  *   kernel always says "yes".  The only question that can be asked from here,
@@ -1511,12 +1515,14 @@ static int collect_card_groups(gid_t seen_items[MAX_CARD_GROUPS],
 		struct stat st;
 		bool already = false;
 
-		/* ⚠ `cardN` (the `video` group) and `renderDN` (the `render` group):
-		 *   the two nodes have DIFFERENT groups, and both are needed.  ⛔ And
-		 *   the numbers are scanned instead of hard-wired: `renderD128` and
-		 *   `renderD129` swap between two boots (`provision.sh` §5). */
-		if (strncmp(e->d_name, "renderD", 7) != 0 &&
-		    strncmp(e->d_name, "card", 4) != 0)
+		/* ⭐ 1.5: only `renderDN` (usually the `render` group, but its
+		 *   real group is read below with `stat`).  ⛔ `cardN` (`video`) is no
+		 *   longer asked: `[M]` 13 Oct 2026 no compositor of the four desktops
+		 *   opened it (DECISIONS.md §11.4, §11.38), and `video` also opens
+		 *   `/dev/fb*` and the webcams.  ⛔ And the numbers are scanned
+		 *   instead of hard-wired: `renderD128` and `renderD129` swap between
+		 *   two boots (`provision.sh` §5). */
+		if (strncmp(e->d_name, "renderD", 7) != 0)
 			continue;
 		/* ⚠ `%.32s` and not `%s`: `d_name` is 256 long and the compiler is
 		 *   right to say so (`-Wformat-truncation`).  ⛔ A node name longer
@@ -1560,7 +1566,7 @@ static bool card_groups(const char *user, gid_t primary,
 
 	if (nseen == 0) {
 		log_says_of(LOG_CHILD, user,
-		                 "⚠ no `cardN`/`renderDN` node in %s: this "
+		                 "⚠ no `renderDN` node in %s: this "
 		                 "machine has no card to show, and the "
 		                 "compositor will draw in SOFTWARE",
 		                 CARD_NODES_DIR);
@@ -1835,7 +1841,9 @@ static bool enroll_in_card_groups(const char *user, uid_t uid, gid_t primary,
 	log_says_of(LOG_CHILD, user,
 	                 "⭐ FIRST CONNECTION: «%s» is not in the card's groups (%s) and "
 	                 "I am PUTTING it there, now — the user's decision of 20 Sep 2026.  "
-	                 "⚠ Without it, this session would be born BLIND",
+	                 "⚠ Without it, this session would be born BLIND.  Only the group "
+	                 "of the render nodes, read from /dev/dri/renderD* (not `video`: "
+	                 "DECISIONS.md §11.38)",
 	                 user, listing);
 	argv_mod[0] = (char *)"usermod";
 	argv_mod[1] = (char *)"-aG";
