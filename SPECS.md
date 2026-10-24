@@ -279,19 +279,37 @@ in `DECISIONS.md` §1.7, with the three items to reread that day.
 
 ### 4.2 Authentication
 
-**Local PAM**, service `remotix`, with the **address ban** after three failed attempts.
+**Local PAM**, service `remotix`, with the **defences of the login**: three levels of counters and a progressive ban.
 
-⭐ ✅ **Three failed authentications from the same address within 5 minutes, and that address is out
-for 12 hours** *(decided by the user on 10 Aug 2026 — `DECISIONS.md` §1.9, `RCP.md` §4.4-bis)*. The
-**user name does not count**: three different names count three. A successful sign-in resets the count.
+⭐ 🔸 **Rule of 1.5 — `DECISIONS-11.md` §11.53, SPEC CHANGE from 1.0** *(delegated by the user to the project leader
+on 24 Oct 2026; the decision is taken and the 1.5 rule is the valid one)*:
+
+| level | limit | window | ban of |
+|---|---|---|---|
+| (key, user) | 5 failed | 5 min | that user on that key |
+| key | 12 failed (any user) | 5 min | the key |
+| IPv6 /48 | 30 failed | 10 min | the /48 |
+
+The **key** is the whole address for IPv4 and the **/64** for IPv6 (link-local included). The ban is **progressive per
+level: 15 min, then 1 h, then 12 h**, and the memory of the previous bans is forgotten after 24 h without a ban. A
+successful sign-in resets only the failures of (key, user). `UNBLOCK <address>` removes every level that concerns the
+address. The ban file never holds a user name (HMAC), and the log writes a name that is not a user of the machine as a short
+tag. The text below is the **1.0 rule**, kept as history and for the parts that did not change (what counts, what
+the banned sees, the exits).
+
+> ⚠ *Superseded for 1.5 by `DECISIONS-11.md` §11.53.* **1.0:** ✅ **Three failed authentications from the same address
+> within 5 minutes, and that address is out for 12 hours** *(decided by the user on 10 Aug 2026 — `DECISIONS.md` §1.9,
+> `RCP.md` §4.4-bis)*. The **user name does not count**: three different names count three. A successful sign-in resets
+> the count.
 
 | | |
 |---|---|
 | **what counts** | ⛔ **only** failed authentication — non-existent user and wrong password are the same thing, as §4.1 requires. Not protocol errors, not timeouts, **and not the refusal of the second connection** (§5.1), which is what the same user's second device receives |
 | **what whoever is banned sees** | the page **loads all the same** and says the attempts are used up. ⛔ Never a silence: whoever is banned by mistake is almost always the owner |
-| **how one gets out** | ⭐ **the 12 hours passing, or an unblock command on the server** — which requires access to the machine, that is the only key that case admits. The ban **survives a restart** |
+| **how one gets out** | ⭐ **the wait passing (1.0: 12 hours; 1.5: 15 min, 1 h or 12 h), or an unblock command on the server** — which requires access to the machine, that is the only key that case admits. The ban **survives a restart** |
 
-⚠ **The price, declared**: behind a NAT addresses are shared, so three mistakes by one
+⚠ **The price, declared** *(1.5: five mistakes by one user ban that user for 15 minutes on every machine that shares the
+key, and twelve from the key ban the whole key; the text that follows is the 1.0 form)*: behind a NAT addresses are shared, so three mistakes by one
 person close the door to everyone else for twelve hours — and it is the case for which the
 previous form had a second counter, **removed knowingly**. And the first to trip over it is whoever types
 a long password on a phone keyboard.
@@ -1335,7 +1353,7 @@ What is **not** decided, listed so that it does not get lost. The detail and the
 | ✅ **the licence** | ⭐ **no licences: REMOTIX is free of charge** (`DECISIONS.md` §10.33, 10 Oct 2026, which supersedes §10.30). Visible code with the Phonestra-style licence (draft in `LICENSE.md`, to be approved). The constraint of §11.4 remains: no GPL dependencies |
 | 📖 **Cinnamon** | studied, to be measured — §11.2 |
 | `[?]` **4:4:4** | §3.1 |
-| ✅ ~~the form of the limitation of PAM attempts~~ | **closed on 9 Aug** and ⭐ **reopened and closed again by the user on the 10th**: it is not a rate limit, it is a **ban** — three attempts, twelve hours (§4.2, `DECISIONS.md` §1.9) |
+| ✅ ~~the form of the limitation of PAM attempts~~ | **closed on 9 Aug** and ⭐ **reopened and closed again by the user on the 10th**: it is not a rate limit, it is a **ban** — three attempts, twelve hours (§4.2, `DECISIONS.md` §1.9; ⚠ *superseded for 1.5 by `DECISIONS-11.md` §11.53: three levels, progressive 15 min / 1 h / 12 h*) |
 | `[?]` **native multi-finger touch** | §7.5 |
 | `[?]` **the relative pointer** for applications that capture the pointer | signalled by the server, not by the client |
 | `[?]` **does the certificate exception cover WebTransport?** | §4.1 — it is the measurement that decides whether the «one click» default works everywhere or only on Chrome and Firefox |

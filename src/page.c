@@ -415,9 +415,10 @@ static void serve(page *p, client *c)
 			          * would make `getElementById` take the wrong one —
 			          * that is, the connection outcome would appear
 			          * inside the ban notice. */
-			         "<b>attempts exhausted</b>: three failed login "
-			         "attempts came from this address, and for this "
-			         "reason it stays out. There are still "
+			         "<b>attempts exhausted</b>: too many failed login "
+			         "attempts came from this address or network; wait a few minutes "
+			         "and try again — the wait grows if it happens again "
+			         "(§4.4-bis). There are still "
 			         "<b id=\"hours\">%llu</b> hours and "
 			         "<b id=\"minutes\">%llu</b> minutes to go. There are two "
 			         "ways back in: waiting for the expiry, or with the "

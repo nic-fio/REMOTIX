@@ -516,7 +516,7 @@ REMOTIX_OPTIONS=--budget-mpixel-s 480 --reserve 0.5 --session-cap 8
         "Not settled yet: the cap and the quality rise wait for the user's judgement on the real desktop.",
         "Not settled yet: a second, network budget next to the GPU one (ten sessions × the floor on the server's "
         "uplink) was named in phase 9 and never written.",
-        "Not settled yet: the ban per address, shared by tenants behind one NAT, was deferred to a security "
+        "Not settled yet: the ban per address, shared by tenants behind one NAT (now three levels, DECISIONS-11.md §11.53), was deferred to a security "
         "chapter (" + c("DECISIONS.md") + " §4.6-octies).",
     ])
 

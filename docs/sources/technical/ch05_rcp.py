@@ -270,7 +270,7 @@ REJECTED
       "question to a helper process (" + c("helper.c") + ") and returns a ticket; the verdict comes back through "
       + c("rcp_verdict()") + ". A process, not a thread, because PAM is not reliably re-entrant. Two deadlines guard "
       "the answer: the helper's own at 8 s, and " + c("VERDICT_CAP") + " = 12 s in " + c("rcp.c") + ", which counts "
-      "as a no. If the question cannot even be sent, the answer is " + c("REJECTED") + " at once and does not count as a "
+      "as a failed attempt. If the question cannot even be sent, or the helper dies with requests in flight, the answer is " + c("REJECTED") + " at once and does not count as a "
       "failed attempt — the fault is ours.") + \
     p("<b>The fixed second.</b> The server never answers " + c("CREDENTIALS") + " earlier than " + c("FIXED_DELAY")
       + " = 1000 ms after receiving it, " + c("ADMITTED") + " included; the answer leaves from " + c("rcp_time()") + " "
@@ -279,35 +279,37 @@ REJECTED
       "Not settled yet: PAM's own delay is not constant (median 2636 ms over 42 rejected attempts, bench B8, 10 August "
       "2026), so the fixed second does not fully hide whether a user name exists.") + \
     table(["Rule", "Value", "Constant"], [
-        ["Failures that trigger the ban", "3 from the same address", c("THRESHOLD")],
-        ["Window", "5 minutes, sliding over the last three failures", c("WINDOW") + " = 300 000 ms"],
-        ["Ban duration", "12 hours", c("BAN_DURATION") + " = 43 200 000 ms"],
-        ["Addresses tracked", "256", c("MAX_ATTEMPTS")],
-        ["Key", "the address without the port, always in brackets: " + c("[192.168.0.2]"), c("rcp_key_address()")],
-        ["Reset", "a successful authentication from that address, or time", ""],
-        ["Persistence", c("--ban-file") + ", default " + c("/var/lib/remotix/ban") + ", absolute expiry times", c("rcp_ban_load()")],
-    ], "«TAB» — The address ban (DECISIONS.md §1.9, decided by the user on 10 August 2026)") + \
+        ["Levels", "(key, user): 5 failed in 5 min · key: 12 in 5 min · IPv6 /48: 30 in 10 min; sliding windows", c("LIMIT") + ", " + c("WINDOW_MS")],
+        ["Ban duration", "progressive per level: 15 min, then 1 h, then 12 h; forgotten after 24 h without a ban", c("LADDER_MS") + ", " + c("FORGET_MS")],
+        ["Attempts in flight", "booked at " + c("CREDENTIALS") + "; at most 2 at once for the same (key, user)", c("login_reserve()") + ", " + c("MAX_PER_USER_IN_FLIGHT")],
+        ["Entries tracked", "256; a banned entry or one with an attempt in flight is never evicted", c("MAX_ATTEMPTS")],
+        ["Key", "IPv4 whole; IPv6 the /64 (and the /48 aggregate), always in brackets, no port: " + c("[192.168.0.2]"), c("rcp_key_address()")],
+        ["Reset", "a successful authentication resets only the failures of (key, user)", ""],
+        ["Persistence", c("--ban-file") + ", default " + c("/var/lib/remotix/ban") + ", format " + c("B2") + ", no user name on disk (HMAC), absolute expiry times", c("rcp_ban_load()")],
+    ], "«TAB» — The login defences (DECISIONS-11.md §11.53, spec change from 1.0; the 1.0 rule is DECISIONS.md §1.9, superseded)") + \
     ul([
-        "<b>Only failed authentication counts.</b> Not protocol errors, version or codec mismatches (they can come from a "
-        "defect of ours or a stale tab), not timeouts, and not " + c("ALREADY_ACTIVE_REMOTELY") + ": counting the latter would let "
-        "a user ban themselves by retrying from the phone while their session is alive. The user name does not matter: three "
-        "names count three.",
-        "<b>A banned address</b> is answered without asking PAM, but still with " + c("REJECTED(TOO_MANY_ATTEMPTS)")
+        "<b>Only failed authentication counts.</b> That includes an attempt without a verdict (the helper's 8 s timeout, the 12 s ceiling). "
+        "Not protocol errors, version or codec mismatches (they can come from a defect of ours or a stale tab), not "
+        + c("ALREADY_ACTIVE_REMOTELY") + ": counting the latter would let a user ban themselves by retrying from the phone while their "
+        "session is alive; and not a refusal that is our defect (helper off, socket full, helper dead): the booking is given back. "
+        "Unlike 1.0, the user name now matters: the first level counts per (key, user), the second per key whatever the names.",
+        "<b>A banned address or user</b> is answered without asking PAM, but still with " + c("REJECTED(TOO_MANY_ATTEMPTS)")
         + " after the fixed second — a ban answered in a millisecond would itself be a timing channel. The page is still "
-        "served, with the hours left.",
+        "served, with the hours left (for the key and /48 levels).",
         "<b>The key has no port</b> because there is one attempt per connection and the port changes at every attempt: "
         "bench B5 found that the earlier counter, keyed with the port, was always 1.",
-        "<b>Nobody can get someone else banned:</b> reaching " + c("CREDENTIALS") + " requires a completed QUIC handshake, "
-        "so the source address cannot be forged.",
+        "<b>Nobody can get someone else banned from another network:</b> reaching " + c("CREDENTIALS") + " requires a completed QUIC handshake, "
+        "so the source address cannot be forged. Inside one network or /64 the counter is shared by design.",
         "<b>Unlocking.</b> The ban lives in the memory of the serving process, so a second process that rewrote the file "
         "would leave the server answering " + c("TOO_MANY_ATTEMPTS") + " and exit 0 as if it had worked; "
         "that is why the unlock is not an option of a second process. The live process answers a one-line protocol on a Unix "
         "socket created 0600 with " + c("--command-socket PATH") + ": " + c("UNBLOCK <address>")
-        + " → " + c("REMOVED") + " or " + c("NOT-BANNED") + ", and " + c("PING") + " → " + c("PONG") + ". Every unlock is logged.",
+        + " → " + c("REMOVED") + " or " + c("NOT-BANNED") + ", and " + c("PING") + " → " + c("PONG") + ". It removes every level that "
+        "concerns the address and the recidivism. Every unlock is logged.",
     ]) + \
     warn("the packaged units do not pass " + c("--command-socket") + ": it is listed among the bench options that "
          + c("build-rpm.sh") + " refuses in a unit. On an installed system the documented way out of a ban is the "
-         "12-hour expiry; editing " + c("/var/lib/remotix/ban") + " only takes effect after a restart. Not settled yet: an "
+         "wait of the ban (15 minutes, 1 hour or 12 hours); editing " + c("/var/lib/remotix/ban") + " only takes effect after a restart. Not settled yet: an "
          "unlock command for installed systems.", "Unlock on installed systems.")
 
 # ── ATTACH / SESSION ──────────────────────────────────────────────────
@@ -738,7 +740,7 @@ S19 = p("The reasons are a single numbering shared by " + c("FAREWELL") + ", " +
         [c("0x06"), c("BUDGET_FULL"), "the machine has no composition capacity left (corrected from «encoding» on 24 "
          "August 2026: the bottleneck measured was the render engine)", "capacity gate in " + c("main.c")],
         [c("0x07"), c("WRONG_CREDENTIALS"), "authentication failed", c("REJECTED")],
-        [c("0x08"), c("TOO_MANY_ATTEMPTS"), "the address is banned", c("REJECTED")],
+        [c("0x08"), c("TOO_MANY_ATTEMPTS"), "the address (key) or the user on it is banned", c("REJECTED")],
         [c("0x09"), c("NOTHING_IN_COMMON"), "no shared codec, depth or audio codec", "server or page"],
         [c("0x0A"), c("INCOMPATIBLE_VERSION"), "the versions do not match", "server or page"],
         [c("0x0B"), c("PROTOCOL_ERROR"), "§3", "both"],
@@ -839,7 +841,8 @@ S23 = p("Client and server are tested against the specification, not against eac
          "lengths, wrong states — the connection must fall every time"],
         [c("01-b6-caps.py") + " (ceilings)", "the handshake ceilings, measured by keeping silent"],
         [c("01-b7-farewell.py"), "the farewell, read from the receiving side, reason by reason, including the closing code"],
-        [c("01-b8-stopwatch.py") + " (stopwatch)", "the fixed second (successful answers too) and the address ban: the fourth attempt is "
+        [c("01-b8-stopwatch.py") + " (stopwatch)", "the fixed second (successful answers too) and the 1.0 address ban (three failures, twelve hours: superseded by "
+         "DECISIONS-11.md §11.53, the bench is to be rewritten for the new levels): the fourth attempt is "
          "refused even with the right password, three different user names count, another address still enters, a "
          "success resets, and the ban survives a restart"],
         [c("01-b9-readings.py") + " (readings)", "the places where " + c("RCP.md") + " admitted two readings, with the bytes compared"],

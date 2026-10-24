@@ -401,7 +401,7 @@ S9 = p("Each piece of state has one owner and one lifetime. The rule in the code
         ["certificates and their fingerprint", c("certificates.c"), "files in " + c("/var/lib/remotix/certificates")
          + ", rotated while running", rif("Transport: QUIC, HTTP/3, WebTransport")],
         ["the address ban", c("rcp.c"), "in memory and in " + c("/var/lib/remotix/ban") + ": survives restarts",
-         "lifted early only through the unblock socket of the running server"],
+         "lifted early only through the unblock socket of the running server; three levels, progressive 15 min · 1 h · 12 h"],
         ["RCP sessions and attach slots", c("rcp.c"), "one per connection; the slot is freed on detach or after "
          "30 s of silence", rif("The RCP/1 protocol")],
         ["WebTransport connections, per-user stage size", c("webtransport.c"), "per connection; the stage size "

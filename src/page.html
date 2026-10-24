@@ -964,7 +964,11 @@ const REASON_TEXT = {
      really does carry the remaining hours — two behaviours under the same
      label, inside one document.  ⭐ The server knows the hours left and writes
      them in the notice; here only the fact is said. */
-  0x08: "the attempts from this address are used up: reload the page to see how long is left, or unblock the address from the server",
+  /* ⭐ 24 Oct 2026 (§4.4-bis, DECISIONS-11 §11.53): 0x08 is also what a block on a
+     SINGLE USER on this address receives, and for that one the page shows no time
+     (it does not know the user): so the text is true for both.  The 15 minutes are
+     the first step of the ladder (then 1 h, 12 h): "the first time". */
+  0x08: "too many wrong passwords from this address or network: wait (15 minutes the first time, longer if it happens again) or ask the administrator to unblock it",
   0x09: "the server and this page have nothing in common to speak",
   0x0A: "incompatible protocol version",
   0x0B: "the server and this page misunderstood each other: reload the page and try again",

@@ -1,6 +1,21 @@
 #!/usr/bin/env python3
 """01-b8-stopwatch.py — ⛔ B8: the fixed second, and THE BAN OF THE ADDRESS.
 
+⛔⭐ UPDATED ON 24 OCT 2026 TO THE 1.5 RULE (`DECISIONS-11.md` §11.53, SPEC CHANGE from
+1.0): the text below that talks of «three failures and twelve hours» is the HISTORY of
+the 1.0 and is kept as such.  What this file proves now, on the wire:
+  · (address, user) level: 5 failures of ONE name ban that name on that address; the
+    6th attempt with that name is refused with TOO_MANY_ATTEMPTS, and ANOTHER user from
+    the same address still gets in (the ban is not of the address);
+  · address level: 12 failures (12 different names, 5 + 7 here) ban the address, and the
+    RIGHT password is then refused, in a REJECTED and in the closing code;
+  · the page shows the notice and the time left (the first step of the ladder: 15 min);
+  · the ban survives the restart (the ban file v2) and the unblock removes it.
+  NOT proved here, and covered by `benches/unit/login-ban` with a simulated clock
+  (nothing here can wait 15 min / 1 h / 12 h, nor open 30 /64 prefixes): the progressive
+  ladder 15 min / 1 h / 12 h and its forgetting after 24 h, the IPv6 /64 key, the /48
+  level (30 in 10 min), attempts in flight, the full table.
+
     python3 01-b8-stopwatch.py --prediction
     python3 01-b8-stopwatch.py --samples --block 3 --round ...
     python3 01-b8-stopwatch.py --ban before  --round ...    (one life of the server)
@@ -247,9 +262,13 @@ GREEN, RED, YELLOW, GRAY = "\033[1;32m", "\033[1;31m", "\033[1;33m", "\033[0m"
 
 # ── The numbers of the rule, all in one place and all declared ───────────────
 # `RCP.md` §4.4-bis, the user's shape of 10 Aug 2026.
-THRESHOLD = 3                 # three failed authentications from the same address
+THRESHOLD_USER = 5            # 5 failures of the same (address, user) within 5 minutes: that user is out
+THRESHOLD_KEY = 12            # 12 failures of the same address (any user) within 5 minutes: the address is out
+THRESHOLD_NET48 = 30          # 30 failures within 10 minutes in an IPv6 /48 (NOT exercised here: see the docstring)
+THRESHOLD = THRESHOLD_KEY     # the number that bans the ADDRESS
 WINDOW_MIN = 5           # ...within five minutes (SLIDING window)
-BAN_ORE = 12               # ...and that address is out for twelve hours
+LADDER_MIN = (15, 60, 720)  # the progressive ban: 15 min, 1 h, 12 h (only the first step is exercised here)
+BAN_MIN = LADDER_MIN[0]    # ...and the first ban lasts 15 minutes
 BALANCE = 2               # ⛔ one BELOW the threshold, per address and per block
 FIXED_DELAY = 1000.0     # §4.4-bis: no answer to CREDENTIALS before 1 s
 WANTED_RESOLUTION = 50.0  # ms — the separation the phase document names
@@ -287,16 +306,23 @@ ROTATIONS = [("nonexistent", "wrong", "correct"),
              ("wrong", "nonexistent", "correct"),
              ("correct", "wrong", "nonexistent")]
 
-# ⛔ THE THREE NAMES OF THE BAN RUN — and they MUST be different.
-#    `PHASES.md` §01-filo-nudo B8: «with the same name three times, a server that
-#    still had the per-NAME counter of the old shape would give green: the bench
-#    would prove the wrong rule.  It is the same shape with which B5 found the
-#    counter keyed on the port».
-#    ⭐ And the three are not even of the same KIND: two names that do not exist
-#       and a wrong password on the real user.  §4.4-bis counts the two things as
-#       one — «the count does not know whether the name did not exist or the
-#       password was wrong» — and this is the way to prove it instead of believing it.
-BAN_NAMES = ("nessuno-b8-uno", "<utente>", "nessuno-b8-tre")
+# ⛔ THE NAMES OF THE BAN RUN (1.5 rule).  Two levels, one run, one address:
+#    · ONE name (nonexistent, so that no real account gets a pam_faillock count) fails
+#      `THRESHOLD_USER` times: the next attempt with THAT name is refused, and the real
+#      user, from the same address, still gets in;
+#    · then `THRESHOLD_KEY - THRESHOLD_USER` DIFFERENT nonexistent names fail, which
+#      brings the address to `THRESHOLD_KEY`: the RIGHT password is refused.
+#    ⛔ The names of the second part MUST be different from each other and from the
+#       first: the count of the address does not look at the name, and with equal names
+#       the (address, user) level would ban first and the bench would prove the wrong rule.
+USER_LEVEL_NAME = "nessuno-b8-utente"
+KEY_LEVEL_NAMES = tuple("nessuno-b8-%02d" % i for i in range(1, THRESHOLD_KEY - THRESHOLD_USER + 1))
+BAN_NAMES = (USER_LEVEL_NAME,) + KEY_LEVEL_NAMES
+# the sequence: THRESHOLD_USER failures · 1 refused (user level) · 1 ADMITTED (real user)
+#               · the key-level failures · 1 refused (address level, RIGHT password)
+BAN_USER_REFUSED = THRESHOLD_USER + 1
+BAN_ADMITTED = THRESHOLD_USER + 2
+BAN_STEPS = THRESHOLD_USER + 2 + len(KEY_LEVEL_NAMES) + 1
 
 
 # ===========================================================================
@@ -564,10 +590,12 @@ def read_page(address, port, wait=5.0, tls=True):
 # ⛔ THE MODEL OF §4.4-bis, APPLIED TO THE PLAN BEFORE THE WIRE
 # ===========================================================================
 def simulate(steps):
-    """§4.4-bis read as a model, and applied to the plan before running it.
+    """§4.4-bis (1.5 rule, `DECISIONS-11.md` §11.53) read as a model, and applied to the plan before running it.
 
-    A single key — **the address** — because the one per user name no longer
-    exists (`DECISIONS.md` §1.9).  ⛔ Three different names count three.
+    Two counters, both per ADDRESS: the (address, user) one (`THRESHOLD_USER`) and the
+    address one, any user (`THRESHOLD_KEY`).  A success resets ONLY (address, user).
+    The unblock resets everything of the address.  The /48 level and the ladder are not
+    modelled: no plan of this bench goes there (see the docstring).
 
     ⚠ The five-minute window is taken here as **always true**: the model assumes
       that all the attempts of a block fit inside it, which is the
@@ -583,46 +611,37 @@ def simulate(steps):
       attempt** split them.
 
     Returns (expected per attempt, peak of the failures per address)."""
-    failed, banned_set, peak, outcomes = {}, set(), {}, []
+    kfail, ufail, kbanned, ubanned, peak, outcomes = {}, {}, set(), set(), {}, []
     for p in steps:
-        addr = p["address"]
+        addr, name = p["address"], p["name"]
         if p.get("action") == "sblocca":
-            # ⛔ The unblock resets the WHOLE entry — ban and count — because it
-            #    is what `rcp_unblock()` does: `memset` of the entry.
-            #
-            # ⛔ AND UNTIL 11 AUG 2026 THIS LINE WAS A BELIEF (finding A22): on
-            #    an address NOT banned the unblock answers «NOT-BANNED», and
-            #    whether it reset the count anyway nobody verified — while the
-            #    whole sampling strategy («unblock between one block and the
-            #    next») rests on it.
-            #    ⭐ Now it is measured, and not from here: `01-b8-ban-test.c`
-            #    section 5 fails twice, calls `rcp_unblock()` on an address that
-            #    is NOT banned, and verifies that the third failure does not make
-            #    the ban trigger.
-            # ⚠ And the symptom of the opposite case (§1.11), if one day it came
-            #   back: the failures would pile up between the blocks, and the
-            #   samples would start coming back `limiter` — the verdict says
-            #   it, and it is the first of the four causes it prints.
-            failed[addr] = 0
-            banned_set.discard(addr)
+            # ⛔ The unblock resets EVERY level of the address (`rcp_unblock()`): ban,
+            #    counts, recidivism.  Measured by `01-b8-ban-test.c` / `benches/unit/login-ban`.
+            kfail[addr] = 0
+            kbanned.discard(addr)
+            for k in [k for k in ufail if k[0] == addr]:
+                del ufail[k]
+            ubanned -= {k for k in ubanned if k[0] == addr}
             outcomes.append(("UNBLOCK", None, ""))
             continue
-        if addr in banned_set:
+        if addr in kbanned or (addr, name) in ubanned:
             outcomes.append(("REJECTED", TOO_MANY_ATTEMPTS, "banned"))
             continue
         if p["case"] == "correct":
-            failed[addr] = 0
+            ufail[(addr, name)] = 0       # ⛔ the success resets ONLY (address, user)
             outcomes.append(("ADMITTED", None, ""))
             continue
-        failed[addr] = failed.get(addr, 0) + 1
-        peak[addr] = max(peak.get(addr, 0), failed[addr])
-        # ⛔ The third failed one still receives `WRONG_CREDENTIALS` — it is the
-        #    one that MAKES the ban trigger, not the first that suffers it.
-        #    Whoever expected the refusal already at the third would look for a
-        #    defect that is not there.
+        kfail[addr] = kfail.get(addr, 0) + 1
+        ufail[(addr, name)] = ufail.get((addr, name), 0) + 1
+        peak[addr] = max(peak.get(addr, 0), kfail[addr])
+        # ⛔ The failure that reaches the threshold still receives
+        #    `WRONG_CREDENTIALS` — it is the one that MAKES the ban trigger, not
+        #    the first that suffers it.
         outcomes.append(("REJECTED", WRONG_CREDENTIALS, ""))
-        if failed[addr] >= THRESHOLD:
-            banned_set.add(addr)
+        if ufail[(addr, name)] >= THRESHOLD_USER:
+            ubanned.add((addr, name))
+        if kfail[addr] >= THRESHOLD_KEY:
+            kbanned.add(addr)
     return outcomes, peak
 
 
@@ -633,7 +652,9 @@ def verify_plan(steps, mode):
 
       `sotto-soglia`  no attempt must be blocked, and no address must exceed
                       the BALANCE.  It is the mode of the samples;
-      `banna-al-4`    the **fourth** attempt MUST be blocked, and none before:
+      `banna`         exactly the attempts `BAN_USER_REFUSED` (the name that failed
+                      `THRESHOLD_USER` times) and `BAN_STEPS` (the RIGHT password, after
+                      `THRESHOLD_KEY` failures) MUST be blocked, and none else:
                       it is the ban run;
       `non-banna`     no attempt blocked **and** at least one address that
                       reaches two failures: it is the reset check, and without
@@ -649,11 +670,13 @@ def verify_plan(steps, mode):
     if mode == "sotto-soglia":
         ok = not blocked and max(peak.values(), default=0) <= BALANCE
         lines.append(f"expected: none blocked, and peak ≤ {BALANCE} "
-                     f"(threshold {THRESHOLD})")
-    elif mode == "banna-al-4":
-        ok = blocked == [4]
-        lines.append("expected: ONLY the fourth blocked — the first three go "
-                     "through PAM, and the third is the one that MAKES the ban trigger")
+                     f"(thresholds: user {THRESHOLD_USER}, address {THRESHOLD_KEY})")
+    elif mode == "banna":
+        ok = blocked == [BAN_USER_REFUSED, BAN_STEPS]
+        lines.append(f"expected: ONLY attempts {BAN_USER_REFUSED} (that user, ban of "
+                     f"(address, user)) and {BAN_STEPS} (the address) blocked — the "
+                     f"others go through PAM, and the last failure is the one that "
+                     f"MAKES the address ban trigger")
     elif mode == "non-banna":
         ok = (not blocked) and max(peak.values(), default=0) >= 2
         lines.append("expected: none blocked, and at least one address at 2 "
@@ -690,30 +713,45 @@ def sample_plan(k, per_case, addresses, user, nonexistent):
 
 
 def piano_ban(addresses, user, names):
-    """⛔ THE BAN RUN: three failed with THREE DIFFERENT NAMES, then the RIGHT password.
+    """⛔ THE BAN RUN (1.5 rule): the user level, then the address level, then the RIGHT password.
 
-    ⭐ The fourth attempt **has the right password** and must be refused anyway:
+      1..5   one nonexistent name fails `THRESHOLD_USER` times  → WRONG_CREDENTIALS each
+      6      the SAME name again                               → TOO_MANY_ATTEMPTS (ban of (address, user))
+      7      the REAL user, right password, same address       → ADMITTED (the address is not banned)
+      8..14  seven DIFFERENT nonexistent names                 → WRONG_CREDENTIALS; the address is now at 12
+      15     the REAL user, RIGHT password                     → TOO_MANY_ATTEMPTS
+
+    ⭐ The last attempt **has the right password** and must be refused anyway:
        *«it is the line that tells a ban from a counter, and it is also the
        symptom the user will see — I typed it right and it does not let me in —
        so it is intended and must be tested, not avoided»* (`PHASES.md` §01-filo-nudo B8).
 
-    ⛔ All four from the SAME address: the count is per address, and alternating
-       here would mean never reaching three."""
+    ⛔ All from the SAME address: the counts are per address, and alternating
+       here would mean never reaching the thresholds.  ⚠ The failures use nonexistent
+       names on purpose: the real account gets no wrong password (pam_faillock)."""
     a = addresses[0]
-    steps = [{"case": "nonexistent", "address": a, "name": names[0],
-              "warmup": False},
-             {"case": "wrong", "address": a, "name": user,
-              "warmup": False},
-             {"case": "nonexistent", "address": a, "name": names[2],
-              "warmup": False},
-             # ⛔ the fourth: the RIGHT password
-             {"case": "correct", "address": a, "name": user,
-              "warmup": False}]
+    steps = []
+
+    def step(case, name):
+        steps.append({"case": case, "address": a, "name": name, "warmup": False})
+    for _ in range(THRESHOLD_USER):
+        step("nonexistent", names[0])
+    step("nonexistent", names[0])
+    step("correct", user)
+    for n in names[1:]:
+        step("nonexistent", n)
+    step("correct", user)
     return steps
 
 
 def reset_plan(addresses, user, nonexistent):
     """⭐ THE CHECK THAT SAYS NO: 2 failed · 1 succeeded · 2 failed.
+
+    ⚠ 1.5 rule: with the thresholds at 5 (user) and 12 (address) this plan no longer
+      DISTINGUISHES a server that resets from one that does not (4 < 5): it only proves
+      that a success does not break the count and that nothing is banned.  The proof
+      that a success resets (address, user) and ONLY that is in `benches/unit/login-ban`
+      — here it would need 5 wrong passwords on the real user, and pam_faillock (3) would lock the account.
 
     *«If the success did not reset, the second block would already have
     triggered»* (`PHASES.md` §01-filo-nudo B8).  ⛔ Counting all the failures, the
@@ -932,7 +970,8 @@ async def run(a, steps, kind, label, mode, compare_model=True):
       §1.9 calls the seventh guise."""
     ok, outcomes, lines = verify_plan(steps, mode)
     print(f"    -- plan of «{label}»: {len(steps)} attempts, mode «{mode}» "
-          f"(threshold {THRESHOLD}, balance {BALANCE}, window {WINDOW_MIN} min)")
+          f"(thresholds: user {THRESHOLD_USER}, address {THRESHOLD_KEY}; balance {BALANCE}, "
+          f"window {WINDOW_MIN} min)")
     for r in lines:
         print(f"       {r}")
     if not ok:
@@ -1521,31 +1560,32 @@ def verdict(a):
 
     # ── 3. the ban run ──────────────────────────────────────────────────────
     print()
-    print("    == ⛔ The ban: three failed with THREE DIFFERENT NAMES, then the RIGHT password")
+    print("    == ⛔ The ban (1.5 rule): one name 5 times · the same name refused · the real user still gets in "
+          "· 12 failures of the address · the RIGHT password refused")
     cur_round = sorted([r for r in data if r["type"] == "ban"], key=lambda r: r["order"])
-    if len(cur_round) != 4:
+    if len(cur_round) != BAN_STEPS:
         print(f"    {RED}NO{GRAY}  ⛔ the ban run has {len(cur_round)} attempts "
-              f"instead of 4: it is not the sequence §4.4-bis describes")
+              f"instead of {BAN_STEPS}: it is not the sequence §4.4-bis (1.5) describes")
         faults += 1
     else:
         def label_of(msg, reason):
             return REASONS.get(reason, str(reason)) if reason is not None else (msg or "error")
-        print(f"        names:    " + " ".join(f"{r['name']:18s}" for r in cur_round))
+        print(f"        names:    " + " ".join(f"{r['name'][-6:]:>7s}" for r in cur_round))
         print(f"        model:    " + " ".join(
-            f"{label_of(r['expected_model'], r['expected_reason']):18s}" for r in cur_round))
+            f"{label_of(r['expected_model'], r['expected_reason'])[:7]:>7s}" for r in cur_round))
         print(f"        on wire:  " + " ".join(
-            f"{label_of(r['message'], r['reason']):18s}" for r in cur_round))
-        # ⛔ THE THREE NAMES MUST BE DIFFERENT, and the bench compares it.
-        names = [r["name"] for r in cur_round[:3]]
-        if len(set(names)) != 3:
-            print(f"    {RED}NO{GRAY}  ⛔ the three names are not different ({names}): "
-                  f"with the same name three times a server with the old per-NAME "
-                  f"counter would give green, and the bench would prove the wrong "
-                  f"rule")
+            f"{label_of(r['message'], r['reason'])[:7]:>7s}" for r in cur_round))
+        # ⛔ THE NAMES OF THE ADDRESS LEVEL MUST BE DIFFERENT, and the bench compares it.
+        key_names = [r["name"] for r in cur_round[BAN_ADMITTED:BAN_STEPS - 1]]
+        if len(set(key_names)) != len(key_names) or cur_round[0]["name"] in key_names:
+            print(f"    {RED}NO{GRAY}  ⛔ the names are not different ({key_names}): "
+                  f"with equal names the (address, user) level would ban first and "
+                  f"the bench would prove the wrong rule")
             faults += 1
         else:
-            print(f"    {GREEN}OK{GRAY}  the three names are different: the count "
-                  f"looks at the address and not at the name (`DECISIONS.md` §1.9)")
+            print(f"    {GREEN}OK{GRAY}  the {len(key_names)} names that bring the address to "
+                  f"{THRESHOLD_KEY} are different from each other and from the first: the "
+                  f"count of the address does not look at the name")
         divergent = [r["order"] for r in cur_round
                       if r["message"] != r["expected_model"]
                       or r["reason"] != r["expected_reason"]]
@@ -1553,15 +1593,34 @@ def verdict(a):
             print(f"    {RED}NO{GRAY}  ⛔ the wire and the model of §4.4-bis "
                   f"split at attempts {divergent}")
             faults += 1
-        fourth = cur_round[3]
-        if fourth["reason"] == TOO_MANY_ATTEMPTS:
-            print(f"    {GREEN}OK{GRAY}  ⭐ the FOURTH attempt had the RIGHT "
+        # (address, user) level
+        refused_user = cur_round[BAN_USER_REFUSED - 1]
+        if refused_user["reason"] == TOO_MANY_ATTEMPTS:
+            print(f"    {GREEN}OK{GRAY}  {THRESHOLD_USER} failures of ONE name and the next attempt with "
+                  f"that name is refused with TOO_MANY_ATTEMPTS: the (address, user) level bans")
+        else:
+            print(f"    {RED}NO{GRAY}  ⛔ attempt {BAN_USER_REFUSED} (same name after "
+                  f"{THRESHOLD_USER} failures) received "
+                  f"{label_of(refused_user['message'], refused_user['reason'])} instead of TOO_MANY_ATTEMPTS")
+            faults += 1
+        other_user = cur_round[BAN_ADMITTED - 1]
+        if other_user["message"] == "ADMITTED":
+            print(f"    {GREEN}OK{GRAY}  and the REAL user, from the same address, still gets in: "
+                  f"the ban of the first level is of (address, user), not of the address")
+        else:
+            print(f"    {RED}NO{GRAY}  ⛔ the real user from the same address received "
+                  f"{label_of(other_user['message'], other_user['reason'])}: the ban of one name "
+                  f"is banning the whole address")
+            faults += 1
+        last = cur_round[-1]
+        if last["reason"] == TOO_MANY_ATTEMPTS:
+            print(f"    {GREEN}OK{GRAY}  ⭐ the LAST attempt had the RIGHT "
                   f"password and was refused anyway, with "
                   f"TOO_MANY_ATTEMPTS: it is the line that tells a ban from a "
                   f"counter")
         else:
-            print(f"    {RED}NO{GRAY}  ⛔ the fourth attempt — RIGHT password — "
-                  f"received {label_of(fourth['message'], fourth['reason'])} "
+            print(f"    {RED}NO{GRAY}  ⛔ the last attempt — RIGHT password — "
+                  f"received {label_of(last['message'], last['reason'])} "
                   f"instead of TOO_MANY_ATTEMPTS")
             print(f"        ⚠ and if it is ADMITTED, the ban did not trigger: look at the "
                   f"server log below, line «BANNED address»")
@@ -1569,17 +1628,20 @@ def verdict(a):
         # ⛔ And the tab already open: the reason travels ALSO in the session
         #    closing code (§3.1 point 3, §4.4-bis point 2), and it is verified
         #    FROM THE RECEIVING SIDE.
-        if fourth.get("closure") == TOO_MANY_ATTEMPTS:
+        if last.get("closure") == TOO_MANY_ATTEMPTS:
             print(f"    {GREEN}OK{GRAY}  ⭐ and the WebTransport session "
                   f"closed with TOO_MANY_ATTEMPTS in the application error "
                   f"code — read from the receiving side (§3.1 point 3)")
         else:
-            c = fourth.get("closure")
+            c = last.get("closure")
             print(f"    {RED}NO{GRAY}  ⛔ the session closing code "
                   f"is {REASONS.get(c, c)}, not TOO_MANY_ATTEMPTS: the tab already "
                   f"open — the one that does not reload the page — would stay "
                   f"waiting (§4.4-bis point 2)")
             faults += 1
+    print(f"    --  not proved on the wire here (covered by `benches/unit/login-ban`, simulated clock): "
+          f"the ladder {'/'.join(str(m) for m in LADDER_MIN)} min and its forgetting after 24 h, "
+          f"the IPv6 /64 key, the /48 level ({THRESHOLD_NET48} in 10 min), attempts in flight, the full table")
 
     # ── 4. the three checks that say NO ─────────────────────────────────────
     print()
@@ -1700,18 +1762,18 @@ def verdict(a):
             faults += 1
     banned_pages = [r for r in pages if r["expected_banned"] and r["hours"] is not None]
     if banned_pages:
-        ore = banned_pages[0]["hours"]
-        # ⚠ The hours left must be PLAUSIBLE: 12 right after the ban.  A
-        #   «0 hours left» or a «4 billion left» would say that the page's clock
-        #   is not the session's — the easiest defect to make and the hardest
-        #   to see.
-        if 1 <= ore <= BAN_ORE:
-            print(f"    {GREEN}OK{GRAY}  and the hours left are plausible "
-                  f"({ore} out of {BAN_ORE}): the page's clock is the "
+        left = banned_pages[0]["hours"] * 60 + (banned_pages[0]["minutes"] or 0)
+        # ⚠ The time left must be PLAUSIBLE: at most the first step of the ladder
+        #   (`BAN_MIN`, 15 min) right after the ban.  A «0 minutes left» or a «4
+        #   billion left» would say that the page's clock is not the session's —
+        #   the easiest defect to make and the hardest to see.
+        if 1 <= left <= BAN_MIN:
+            print(f"    {GREEN}OK{GRAY}  and the time left is plausible "
+                  f"({left} minutes out of {BAN_MIN}): the page's clock is the "
                   f"session's")
         else:
-            print(f"    {RED}NO{GRAY}  ⛔ the page says {ore} hours are left, "
-                  f"and the ban lasts {BAN_ORE}: the two clocks are not the same")
+            print(f"    {RED}NO{GRAY}  ⛔ the page says {left} minutes are left, "
+                  f"and the first ban lasts {BAN_MIN}: the two clocks are not the same")
             faults += 1
 
     # ── 6. the unblock — and it is tested AT THE END ────────────────────────
@@ -2120,10 +2182,10 @@ def _possible_faults():
                 if x.get("type") not in ("sample", "ban", "check")], reg
 
     return [
-        ("the fourth attempt, with the RIGHT password, is ADMITTED",
-         fourth_admitted, "the fourth attempt — RIGHT password —"),
-        ("the three names of the ban run are THE SAME",
-         names_equal, "the three names are not different"),
+        ("the last attempt, with the RIGHT password, is ADMITTED",
+         fourth_admitted, "the last attempt — RIGHT password —"),
+        ("the names of the ban run are THE SAME",
+         names_equal, "the names are not different"),
         ("a PAM answer arrives at 900 ms",
          too_fast, "responses below the second"),
         ("⛔ «user does not exist» answers 2 s before «wrong password»",
@@ -2377,22 +2439,24 @@ def prediction(a):
     print("      gives away the user names to whoever times it.")
     print()
     print("  PART 2 — the ban (RCP.md §4.4-bis, DECISIONS.md §1.9)")
-    print(f"    {THRESHOLD} failed authentications from the same address within")
-    print(f"    {WINDOW_MIN} minutes ⇒ that address is out for {BAN_ORE} hours.")
+    print(f"    {THRESHOLD_USER} failures of one (address, user) within {WINDOW_MIN} minutes ⇒ that user is out;")
+    print(f"    {THRESHOLD_KEY} failures of the address (any user) within {WINDOW_MIN} minutes ⇒ the address is out;")
+    print(f"    ({THRESHOLD_NET48} in an IPv6 /48 within 10 minutes: not exercised here); progressive:")
+    print(f"    {' / '.join(str(m) for m in LADDER_MIN)} minutes, the first step is what is measured here.")
     print()
     print("  The expected, written here before the numbers:")
     print(f"    1. every PAM answer to CREDENTIALS ≥ {FIXED_DELAY:.0f} ms;")
     print("    2. the three medians indistinguishable according to the interval rule;")
-    print("    3. the first three failed — WITH THREE DIFFERENT NAMES — receive")
-    print("       WRONG_CREDENTIALS, and the third makes the ban trigger;")
-    print("    4. ⛔ the FOURTH attempt has the RIGHT password and receives")
-    print("       TOO_MANY_ATTEMPTS, inside a REJECTED and not inside a FAREWELL,")
+    print(f"    3. {THRESHOLD_USER} failures of one name receive WRONG_CREDENTIALS, the next attempt with")
+    print("       that name TOO_MANY_ATTEMPTS, and the real user from the same address gets in;")
+    print(f"    4. ⛔ after {THRESHOLD_KEY} failures of the address (different names) the RIGHT password")
+    print("       receives TOO_MANY_ATTEMPTS, inside a REJECTED and not inside a FAREWELL,")
     print("       and the session closes with the same code;")
     print("    5. ANOTHER address gets in right away;")
-    print("    6. 2 failed · 1 succeeded · 2 failed do NOT ban;")
+    print("    6. 2 failed · 1 succeeded · 2 failed do NOT ban (the proof of the reset is in the unit test);")
     print("    7. the ban survives the server restart (invariant I7);")
     print("    8. the page loads ANYWAY, with HTTP 200, says «attempts")
-    print(f"       exhausted» and how many hours are left (~{BAN_ORE});")
+    print(f"       exhausted» and how much is left (~{BAN_MIN} minutes);")
     print("    9. the unblock command removes it, writes it in the log, and the")
     print("       second time answers «it was not banned».")
     print("   10. ⛔ and the JUDGE must not be blind: the PAM answers read")
@@ -2413,7 +2477,7 @@ def prediction(a):
     print("    «the fixed second has passed (N ms)» of the server log.")
     print("    `[M]` 10 Aug 2026: median 2636 ms on the refused.")
     print()
-    print(f"  The numbers of the rule: threshold {THRESHOLD} failures per address,")
+    print(f"  The numbers of the rule: thresholds {THRESHOLD_USER} (user) / {THRESHOLD_KEY} (address),")
     print(f"  balance {BALANCE} per block, wanted resolution "
           f"±{WANTED_RESOLUTION:.0f} ms, minimum {MIN_SAMPLES} samples per")
     print(f"  case, bootstrap {REPETITIONS} repetitions, seed {SEED}.")
@@ -2440,16 +2504,15 @@ async def phase_ban_before(a):
 
       1. the reset check on the SECOND address (which ends at two failures, and
          the page confirms it not banned);
-      2. the ban on the FIRST address, with three different names, and the
-         fourth with the right password;
+      2. the ban on the FIRST address (1.5 rule): the user level, then the address
+         level, and the last attempt with the right password;
       3. the check «another address gets in» — ⛔ **right after** the refusal,
          which is the only place where it answers the question «is the server
          still alive?»;
       4. the two pages.
     """
     nonexistent = "nessuno-b8-ban"
-    if not await check_users(a, nonexistent, *[n for n in BAN_NAMES
-                                                    if n != "<utente>"]):
+    if not await check_users(a, nonexistent, *BAN_NAMES):
         return 2
 
     print()
@@ -2461,10 +2524,9 @@ async def phase_ban_before(a):
     look_page(a, a.addresses[1], "reset-after", False)
 
     print()
-    print("    == ⛔ The ban run — three different names, then the RIGHT password")
-    names = tuple(a.user if n == "<user>" else n for n in BAN_NAMES)
-    steps = piano_ban(a.addresses, a.user, names)
-    e = await run(a, steps, "ban", "ban", "banna-al-4")
+    print("    == ⛔ The ban run — the user level, the address level, then the RIGHT password")
+    steps = piano_ban(a.addresses, a.user, BAN_NAMES)
+    e = await run(a, steps, "ban", "ban", "banna")
     if e:
         return e
 
@@ -2638,7 +2700,7 @@ def main():
                   f"{desc}")
             print(f"        without it, this bench can neither start from a "
                   f"known state nor put the machine back in order — and every "
-                  f"following bench would stay out for {BAN_ORE} hours (B0.3)")
+                  f"following bench would stay out for {BAN_MIN} minutes or more (B0.3)")
             return 2
         print(f"    {GREEN}OK{GRAY}  the unblock command answers ({desc})")
         unblock_and_declare(a, a.addresses, "initial-state")

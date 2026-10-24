@@ -151,7 +151,7 @@ NOMI = [
     ("twin", "The copy of " + c("rcp.c") + ", " + c("rcp.h") + " and " + c("authentication.c") + " in "
      + c("benches/rcp/") + "; " + c("make") + " refuses to build if the two differ (" + c("TWIN")
      + " names the folder)." + v("The twin-copy check")),
-    ("UNBLOCK", "The request on the unblock socket (" + c("--command-socket") + ") that lifts an address ban."
+    ("UNBLOCK", "The request on the unblock socket (" + c("--command-socket") + ") that lifts every ban level (user, key, /48) of an address and its recidivism."
      + v("The unlock command socket")),
     ("verdict", "PAM's yes or no, handed back to the server; never sent sooner than one second after "
      + c("CREDENTIALS") + "." + v("Credentials, the fixed delay and the address ban")),

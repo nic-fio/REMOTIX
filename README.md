@@ -923,6 +923,9 @@ libopus (phase 18, [`phases/18-without-ffmpeg.md`](phases/18-without-ffmpeg.md))
 > person close the door to everyone for twelve hours, and the first to trip over it is whoever types a long
 > password on a phone keyboard.
 >
+> > ⚠ *Superseded for 1.5 (24 Oct 2026): three levels of counters (5 per user and key, 12 per key, 30 per IPv6 /48),
+> > progressive ban 15 min / 1 h / 12 h, IPv6 key = the /64 — `DECISIONS-11.md` §11.53. The text above is the 1.0 rule.*
+>
 > #### ⛔⭐ THE FIRST STEP OF THE NEXT SESSION: **point the benches at the PRODUCT**, and find a second engine
 >
 > *(B8 was rewritten on the night of 10 Aug on the new rule — three failed with three different
