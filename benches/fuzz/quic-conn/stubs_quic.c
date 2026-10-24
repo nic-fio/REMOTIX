@@ -140,6 +140,12 @@ struct ngtcp2_conn {
 	int moves_seen;
 	uint64_t pkt_recv; /* the packets not discarded (ngtcp2's `cstat.pkt_recv`) */
 	int in_cb; /* >0 while one of transport.c's callbacks runs */
+	/* ⭐ audit ngtcp2 1.25 oracles (24 Oct 2026) */
+	bool dropped;          /* read_pkt returned NGTCP2_ERR_DROP_CONN: «drop silently» — NOTHING may be sent or read */
+	int expiry_rv;         /* handle_expiry failed with this (0 = not failed) */
+	int closes_after_exp;  /* write_connection_close calls since that failure */
+	bool h3_set;           /* a played wt callback wrote an H3 code into last_error */
+	uint64_t h3_code;
 };
 #define MAGIC 0x51c0c0a1u
 
@@ -320,6 +326,16 @@ void ngtcp2_conn_del(ngtcp2_conn *c)
 	if (!c)
 		return;
 	live(c, true, "ngtcp2_conn_del");
+	/* ⭐ handle_expiry error ⇒ EXACTLY ONE CONNECTION_CLOSE (ngtcp2 doc: «NGTCP2_ERR_IDLE_CLOSE ... drop the
+	 *    connection without calling ngtcp2_conn_write_connection_close.  If it returns any of the other negative
+	 *    error codes, close the connection by sending the terminal packet produced by
+	 *    ngtcp2_conn_write_connection_close»): none after IDLE_CLOSE, one after any other */
+	if (c->expiry_rv == NGTCP2_ERR_IDLE_CLOSE && c->closes_after_exp != 0)
+		DIE("connection #%td: %d CONNECTION_CLOSE after handle_expiry returned IDLE_CLOSE (zero expected)",
+		    c->reg - rxq_conns, c->closes_after_exp);
+	if (c->expiry_rv && c->expiry_rv != NGTCP2_ERR_IDLE_CLOSE && c->closes_after_exp != 1)
+		DIE("connection #%td: %d CONNECTION_CLOSE after handle_expiry failed with %s (exactly one expected)",
+		    c->reg - rxq_conns, c->closes_after_exp, ngtcp2_strerror(c->expiry_rv));
 	c->reg->alive = false;
 	c->reg->conn = NULL;
 	c->magic = 0;
@@ -457,8 +473,8 @@ static int run_script(ngtcp2_conn *c, rd *r, ngtcp2_tstamp ts)
 		switch (k) {
 		case 0: /* END */
 			rv = RV[p];
-			if ((rv == NGTCP2_ERR_DROP_CONN || rv == NGTCP2_ERR_RETRY) && app)
-				rv = NGTCP2_ERR_PROTO; /* only the handshake drops or retries */
+			if (rv == NGTCP2_ERR_RETRY && app)
+				rv = NGTCP2_ERR_PROTO; /* only the handshake retries (DROP_CONN: any state, audit 24 Oct) */
 			if (rv == NGTCP2_ERR_DRAINING)
 				c->state = ST_DRAINING;
 			return rv;
@@ -704,6 +720,9 @@ int ngtcp2_conn_read_pkt_versioned(ngtcp2_conn *c, const ngtcp2_path *path, int 
 	int idx = -1, rv;
 	(void)piv; (void)pi;
 	live(c, true, __func__);
+	if (c->dropped)
+		DIE("read_pkt on connection #%td after it returned DROP_CONN: transport.c must drop it silently "
+		    "and read nothing more for it (not even the next packets of the same round)", c->reg - rxq_conns);
 	if (!path || !pktlen)
 		DIE("read_pkt with no path or an empty packet");
 	local_is_received(path, "read_pkt");
@@ -754,7 +773,17 @@ int ngtcp2_conn_read_pkt_versioned(ngtcp2_conn *c, const ngtcp2_path *path, int 
 	c->pkt_recv++;
 	if (c->reg->wt_pkts < 64)
 		c->reg->wt_pkts++; /* and there is an ACK to send */
-	rv = run_script(c, &r, ts);
+	if (c->reg->read_err) { /* ⭐ the fuzzer chose the return code (NG op): DROP_CONN, CRYPTO, ... */
+		rv = c->reg->read_err;
+		c->reg->read_err = 0;
+		if (rv == NGTCP2_ERR_RETRY && c->state == ST_DONE)
+			rv = NGTCP2_ERR_PROTO; /* only the handshake retries: the rule of the script's END */
+		if (rv == NGTCP2_ERR_DRAINING)
+			c->state = ST_DRAINING;
+	} else
+		rv = run_script(c, &r, ts);
+	if (rv == NGTCP2_ERR_DROP_CONN)
+		c->dropped = true;
 	return rv;
 }
 
@@ -774,6 +803,9 @@ ngtcp2_ssize ngtcp2_conn_write_aggregate_pkt2_versioned(ngtcp2_conn *c, ngtcp2_p
 	(void)piv;
 	live(c, true, __func__);
 	rxq_expect.valid = false;
+	if (c->dropped)
+		DIE("write_aggregate_pkt2 on connection #%td after DROP_CONN: nothing may be sent to that peer",
+		    c->reg - rxq_conns);
 	if (c->state == ST_CLOSING || c->state == ST_DRAINING)
 		return 0;
 	if (buflen < path_max)
@@ -882,6 +914,18 @@ ngtcp2_ssize ngtcp2_conn_write_connection_close_versioned(ngtcp2_conn *c, ngtcp2
 	(void)piv;
 	live(c, true, __func__);
 	rxq_expect.valid = false;
+	if (c->dropped)
+		DIE("write_connection_close on connection #%td after DROP_CONN: the answer to a packet ngtcp2 "
+		    "judged not worth one is a reflection for whoever forges the source address", c->reg - rxq_conns);
+	if (c->expiry_rv)
+		c->closes_after_exp++;
+	/* ⭐ an H3 code a callback wrote into last_error is never overwritten by the close that follows the
+	 *    failure (the deliberate CONNECTION_REFUSED of the caps is another decision, not a failure's close) */
+	if (c->h3_set && !(ccerr->type == NGTCP2_CCERR_TYPE_TRANSPORT && ccerr->error_code == NGTCP2_CONNECTION_REFUSED) &&
+	    (ccerr->type != NGTCP2_CCERR_TYPE_APPLICATION || ccerr->error_code != c->h3_code))
+		DIE("connection #%td: last_error held the H3 code %#llx written by a callback, the CONNECTION_CLOSE "
+		    "carries type %d code %#llx", c->reg - rxq_conns, (unsigned long long)c->h3_code, (int)ccerr->type,
+		    (unsigned long long)ccerr->error_code);
 	if (ccerr->type == NGTCP2_CCERR_TYPE_TRANSPORT &&
 	    ccerr->error_code == NGTCP2_CONNECTION_REFUSED) {
 		/* the two closes of the caps, told apart by the reason transport.c writes */
@@ -984,9 +1028,22 @@ ngtcp2_tstamp ngtcp2_conn_get_expiry2(const ngtcp2_conn *c)
 	return e;
 }
 
+static int handle_expiry_body(ngtcp2_conn *c, ngtcp2_tstamp ts);
 int ngtcp2_conn_handle_expiry(ngtcp2_conn *c, ngtcp2_tstamp ts)
 {
+	int rv;
 	live(c, true, __func__);
+	if (c->dropped)
+		DIE("handle_expiry on connection #%td after DROP_CONN", c->reg - rxq_conns);
+	rv = handle_expiry_body(c, ts);
+	if (rv) {
+		c->expiry_rv = rv;
+		c->closes_after_exp = 0;
+	}
+	return rv;
+}
+static int handle_expiry_body(ngtcp2_conn *c, ngtcp2_tstamp ts)
+{
 	if (c->reg->loss_ms && c->loss_at == UINT64_MAX)
 		c->loss_at = ts + c->reg->loss_ms * NGTCP2_MILLISECONDS;
 	if (c->reg->expiry_err) {
@@ -1077,8 +1134,7 @@ void ngtcp2_ccerr_set_tls_alert(ngtcp2_ccerr *e, uint8_t alert, const uint8_t *r
 
 uint8_t ngtcp2_conn_get_tls_alert2(const ngtcp2_conn *c)
 {
-	live(c, false, __func__);
-	return 0;
+	return live(c, false, __func__)->reg->tls_alert;
 }
 
 void ngtcp2_ccerr_set_transport_error(ngtcp2_ccerr *e, uint64_t code, const uint8_t *r, size_t n)
@@ -1382,7 +1438,17 @@ static wt *W(wt *w, const char *fn, bool from_callback)
 }
 static int answer(wt *w, int bit)
 {
-	return (w->reg->wt_fail >> bit) & 1 ? NGTCP2_ERR_CALLBACK_FAILURE : 0;
+	if (!((w->reg->wt_fail >> bit) & 1))
+		return 0;
+	/* ⭐ as webtransport.c does before a CALLBACK_FAILURE: an H3 code into last_error (if none yet),
+	 *    when bit 8 of the mask asks for it; the oracle in write_connection_close keeps it honest */
+	if ((w->reg->wt_fail >> 8) & 1 && w->last_error->error_code == 0) {
+		ngtcp2_ccerr_set_application_error(w->last_error, 0x0100u + 0x10u + (unsigned)bit,
+		                                   (const uint8_t *)"cb", 2);
+		w->conn->h3_set = true;
+		w->conn->h3_code = w->last_error->error_code;
+	}
+	return NGTCP2_ERR_CALLBACK_FAILURE;
 }
 
 wt *wt_new(ngtcp2_conn *conn, ngtcp2_ccerr *last_error, const char *provenance, helper *help)

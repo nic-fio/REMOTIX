@@ -60,6 +60,13 @@
  *               close error, a3 expiry error, a4 loss timer (ms × 4), a5 the datagram it loses,
  *               a6 bit 0 the 1452-byte MTU, a7 the send quantum (× 600 bytes, 0 = 64 KB),
  *               a8 pacing: ns of wait per byte sent
+ *               a3 % 8 also the expiry error: none / NOMEM / CALLBACK_FAILURE / IDLE_CLOSE / HANDSHAKE_TIMEOUT / CRYPTO /
+ *               PROTO / INTERNAL; a9 the TLS alert ngtcp2 holds (0 = none); a10 % 16 forces the return code of the NEXT
+ *               decrypted read_pkt (DROP_CONN, CRYPTO, CALLBACK_FAILURE, HANDSHAKE_TIMEOUT, DRAINING, ... — 0 = the script);
+ *               bit 8 of the WT op's callback mask (a0 bit 0): the failing callback first writes an H3 code in last_error.
+ *               ORACLES (stubs_quic.c): nothing is read, written or expired for a connection after DROP_CONN; after a
+ *               handle_expiry error exactly one CONNECTION_CLOSE (none after IDLE_CLOSE); an H3 code in last_error is
+ *               the code of the CONNECTION_CLOSE that follows the failure.
  *   10 READ     `transport_read()` (delivers what was held)
  *   11 MISC     `transport_count()`, `transport_fd()`, `transport_wait_ms()`, `transport_context()`
  *   12 LIMITS   `transport_limits()`: a0 % 20 connections in all, a1 % 20 not logged in, a2 % 10
@@ -1128,16 +1135,26 @@ static void op_ng(uint8_t sel, const uint8_t *a, size_t n)
 	static const int WERR[4] = {0, NGTCP2_ERR_NOMEM, NGTCP2_ERR_CALLBACK_FAILURE,
 	                            NGTCP2_ERR_PKT_NUM_EXHAUSTED};
 	static const int CERR[4] = {0, NGTCP2_ERR_NOMEM, NGTCP2_ERR_NOBUF, NGTCP2_ERR_PKT_NUM_EXHAUSTED};
-	static const int EERR[4] = {0, NGTCP2_ERR_NOMEM, NGTCP2_ERR_CALLBACK_FAILURE, 0};
+	static const int EERR[8] = {0, NGTCP2_ERR_NOMEM, NGTCP2_ERR_CALLBACK_FAILURE, NGTCP2_ERR_IDLE_CLOSE,
+	                            NGTCP2_ERR_HANDSHAKE_TIMEOUT, NGTCP2_ERR_CRYPTO, NGTCP2_ERR_PROTO,
+	                            NGTCP2_ERR_INTERNAL};
+	/* the next read_pkt's return code (a10 % 16; 0 = what the packet's script says) */
+	static const int RERR[16] = {0, NGTCP2_ERR_DROP_CONN, NGTCP2_ERR_CRYPTO, NGTCP2_ERR_CRYPTO,
+	                             NGTCP2_ERR_CALLBACK_FAILURE, NGTCP2_ERR_HANDSHAKE_TIMEOUT, NGTCP2_ERR_PROTO,
+	                             NGTCP2_ERR_NOMEM, NGTCP2_ERR_DRAINING, NGTCP2_ERR_DROP_CONN,
+	                             NGTCP2_ERR_TRANSPORT_PARAM, NGTCP2_ERR_INTERNAL, NGTCP2_ERR_IDLE_CLOSE,
+	                             NGTCP2_ERR_CLOSING, NGTCP2_ERR_RETRY, NGTCP2_ERR_FLOW_CONTROL};
 	rxq_reg *r = pick(sel);
-	uint8_t z[9] = {0};
+	uint8_t z[11] = {0};
 	if (!r)
 		return;
 	memcpy(z, a, n < sizeof z ? n : sizeof z);
 	r->write_path = z[0] % 3;
 	r->write_err = WERR[z[1] & 3];
 	r->close_err = CERR[z[2] & 3];
-	r->expiry_err = EERR[z[3] & 3];
+	r->expiry_err = EERR[z[3] & 7];
+	r->tls_alert = z[9];                       /* a9: the TLS alert ngtcp2 holds (0 = none) */
+	r->read_err = RERR[z[10] & 15];            /* a10: force the next read_pkt's return code */
 	r->loss_ms = (uint64_t)z[4] * 4;
 	r->lost_dgram = z[5];
 	r->max_udp = z[6] & 1;
