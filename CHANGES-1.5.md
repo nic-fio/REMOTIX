@@ -92,7 +92,7 @@ Found on 24 Oct 2026 by the fuzz harnesses and by reading the ngtcp2 1.25 / nght
 
 ## 5. Still open
 - **A/B 30-perf against 1.0** and the complete functional suite on the integrated branch: running now, no result yet (§11.6, §11.9, §11.40).
-- **Android F-031** (Chrome on the emulator: `keyboard_close` refocuses after `hide()`): to be tested on the phone; the proposed fix
+- **Android F-031** (Chrome on the emulator: `keyboard_close` refocuses after `hide()`): to be tested on the phone (the emulator could not confirm it); the proposed fix
   is in `PIANO.md`, not in this range.
 - **F-011 cure (c)**: verified 8/8 on gnome and xfce, Chrome and Firefox; **kde and lxqt still due** (§11.41, `9c770c61`).
 - **Live checks due**: Stateless Reset with real Chrome and Firefox (§11.9); caps 16/4/8 with 01-b10, 3 runs of 9 (§11.40); migration on a
