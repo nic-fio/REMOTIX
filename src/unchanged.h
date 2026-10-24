@@ -305,8 +305,30 @@ static inline void uc_gate_frame(UcStaleGate *g, uint64_t generation, gboolean c
  * ⭐ THE COST OF LOOKING, re-checked: the mean over a window of looks — the
  *    first window short (a card that is slow from the start is caught in
  *    `UC_COST_FIRST` looks), then every `UC_COST_EVERY`.
+ *
+ * ⛔ 15 Oct 2026 — THE CEILING ALONE SWITCHED THE FILTER OFF WHERE IT WAS
+ *    NEEDED.  `[M]` rete11-kde, run functional/20261015-090731, F-003
+ *    kde/firefox (09:08): 19 switch-offs for cost in 50 minutes of the box's
+ *    log (08:43–09:34), means 4.3–9.3 ms against the 3 ms ceiling, most at the
+ *    FIRST window — while windows held back 25 of 30 frames (c16002u99,
+ *    strikes 2 and 3) and the F-003 one 12 of 30 (it fell on Firefox opening).  Off until a
+ *    renegotiation that F-003 never makes: KWin's ~49 frames/s all went to the
+ *    encoder (`video bandwidth … 493 frames` in 10 s), the Firefox page painted
+ *    ~6.5 of them a second, and every photo was 1.1–3.8 s old (3 runs out of 3).
+ *    ⚠ The cost is NOT the bytes compared: a look at ONE damaged pixel took
+ *      4.65, 7.07, 11.76, 12.20 ms in the same log (map + DMA-BUF sync of the
+ *      whole 30 MB buffer), and the encoding it replaces is ~10 ms on the
+ *      server plus a 4K decode on a client that cannot keep up.
+ *    ⇒ The verdict weighs what the look buys:
+ *      · mean > `UC_COST_HARD_US` ⇒ off whatever it holds back (a look plus
+ *        an encoding no longer fit in one interval at 50 frames/s);
+ *      · mean > `UC_COST_MAX_US` ⇒ off only if the window held back fewer than
+ *        1/`UC_YIELD_DIV` of its looks (costly AND sparing little);
+ *      · otherwise on.
  * ------------------------------------------------------------------ */
 #define UC_COST_MAX_US 3000u
+#define UC_COST_HARD_US 10000u
+#define UC_YIELD_DIV 4u
 #define UC_COST_FIRST 30u
 #define UC_COST_EVERY 300u
 
@@ -314,24 +336,39 @@ typedef struct
 {
 	guint64 sum_us;
 	guint n;
+	guint held; /* looks of the open window whose bytes were the same */
 	guint windows;
 	double last_mean_us;
+	guint last_held, last_n; /* the window that closed last */
 } UcCost;
 
-/* Adds one look.  TRUE ⇒ a window just closed with its mean above the
- * ceiling (`last_mean_us` says it). */
-static inline gboolean uc_cost_add(UcCost *c, uint64_t cost_us)
+/* The verdict on one closed window: TRUE ⇒ switch off. */
+static inline gboolean uc_cost_over(double mean_us, guint held, guint n)
+{
+	if (mean_us > UC_COST_HARD_US)
+		return TRUE;
+	return mean_us > UC_COST_MAX_US && (guint64)held * UC_YIELD_DIV < n;
+}
+
+/* Adds one look; `same` ⇒ its bytes were those already delivered.  TRUE ⇒ a
+ * window just closed and `uc_cost_over` says off (`last_*` say why). */
+static inline gboolean uc_cost_add(UcCost *c, uint64_t cost_us, gboolean same)
 {
 	guint size = c->windows == 0 ? UC_COST_FIRST : UC_COST_EVERY;
 
 	c->sum_us += cost_us;
+	if (same)
+		c->held++;
 	if (++c->n < size)
 		return FALSE;
 	c->last_mean_us = (double)c->sum_us / c->n;
+	c->last_held = c->held;
+	c->last_n = c->n;
 	c->sum_us = 0;
 	c->n = 0;
+	c->held = 0;
 	c->windows++;
-	return c->last_mean_us > UC_COST_MAX_US;
+	return uc_cost_over(c->last_mean_us, c->last_held, c->last_n);
 }
 
 static inline void uc_cost_reset(UcCost *c)
@@ -344,33 +381,48 @@ static inline void uc_cost_reset(UcCost *c)
  *    costly) is a STRIKE and holds for the buffers of that negotiation; a
  *    new generation re-arms the filter.  ⛔ After `UC_STRIKES_MAX` strikes
  *    it is off for the whole capture.
+ * ⭐ 15 Oct 2026: a switch-off for COST also re-arms after `UC_REARM_MS`.
+ *    `[M]` F-003 kde/firefox: the first window of 30 looks fell on Firefox
+ *    opening, and the stream never renegotiated afterwards ⇒ the measurement
+ *    of one burst held for the whole test.  The strikes still count: at most
+ *    `UC_STRIKES_MAX` windows are spent in all.  A switch-off for the buffer
+ *    (not LINEAR, not mappable) does not change with time: renegotiation only.
  * ------------------------------------------------------------------ */
 #define UC_STRIKES_MAX 3u
+#define UC_REARM_MS 5000u
 
 typedef struct
 {
-	gboolean off, hard;
+	gboolean off, hard, timed;
 	guint strikes;
 	uint64_t off_generation;
+	uint64_t off_us;
 } UcSwitch;
 
-static inline void uc_switch_strike(UcSwitch *s, uint64_t generation)
+/* A strike at `now_us`; `timed` ⇒ it may also re-arm after `UC_REARM_MS`. */
+static inline void uc_switch_strike(UcSwitch *s, uint64_t generation, uint64_t now_us,
+                                    gboolean timed)
 {
 	s->off = TRUE;
+	s->timed = timed;
 	s->off_generation = generation;
+	s->off_us = now_us;
 	if (++s->strikes >= UC_STRIKES_MAX)
 		s->hard = TRUE;
 }
 
-/* TRUE ⇒ the filter may look at a frame of `generation`.  `*rearmed` is set
- * TRUE when this call lifted a soft switch-off. */
-static inline gboolean uc_switch_allows(UcSwitch *s, uint64_t generation, gboolean *rearmed)
+/* TRUE ⇒ the filter may look at a frame of `generation` at `now_us`.
+ * `*rearmed` is set TRUE when this call lifted a soft switch-off. */
+static inline gboolean uc_switch_allows(UcSwitch *s, uint64_t generation, uint64_t now_us,
+                                        gboolean *rearmed)
 {
 	if (rearmed)
 		*rearmed = FALSE;
 	if (s->hard)
 		return FALSE;
-	if (s->off && generation != s->off_generation) {
+	if (s->off && (generation != s->off_generation ||
+	               (s->timed && now_us >= s->off_us &&
+	                now_us - s->off_us >= (uint64_t)UC_REARM_MS * 1000u))) {
 		s->off = FALSE;
 		if (rearmed)
 			*rearmed = TRUE;

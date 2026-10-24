@@ -308,6 +308,7 @@ struct Capture
 	UcStaleGate uc_gate;
 	guint64 uc_stale_spared;
 	guint64 uc_cost_us, uc_cost_n, uc_cost_max_us;
+	guint64 uc_sync_us; /* of `uc_cost_us`, the DMA-BUF sync (card route) */
 	guint64 uc_area_last, uc_area_max;
 };
 
@@ -2510,12 +2511,14 @@ void capture_probe_pointer(Capture *capture, uint32_t x, uint32_t y)
  *      measurement (KDE, 15 Oct 2026: ~50 buffers/s, ~45 of them the same picture).
  * ------------------------------------------------------------------ */
 
-/* The mean cost of a look above which the filter switches itself off
- * (`UC_COST_MAX_US`, `uc_cost_add` in `unchanged.h`: the first 30 looks, then
- * every 300).  ⚠ The look replaces an encoding of ~10 ms (`[M]` the same run:
- * «encoding 9.7 ms» median): above 3 ms it is no longer a saving, and on a
- * discrete card a mapped read is far slower (`[M]` the full pass: 63.7 s, see
- * `look_dmabuf_pixels`). */
+/* The verdict on the cost of a look (`uc_cost_add`, `uc_cost_over` in
+ * `unchanged.h`: the first 30 looks, then every 300).  ⚠ The look replaces an
+ * encoding of ~10 ms (`[M]` «encoding 9.7 ms» median) AND a 4K decode on the
+ * client: a look of 3–10 ms is still worth it when it holds frames back, and
+ * the ceiling alone (3 ms until 15 Oct 2026) switched it off 19 times in
+ * 50 minutes of rete11-kde's log, F-003 kde/firefox among them (`unchanged.h`).  On a discrete card a
+ * mapped read is far slower (`[M]` the full pass: 63.7 s, see
+ * `look_dmabuf_pixels`): there the hard ceiling switches it off. */
 
 static gboolean dmabuf_sync(int fd, gboolean start)
 {
@@ -2533,9 +2536,13 @@ static gboolean dmabuf_sync(int fd, gboolean start)
 	return FALSE;
 }
 
-static void uc_switch_off(Capture *capture, const char *why, uint64_t generation)
+/* ⚠ The log lines say «5 s»: they follow `UC_REARM_MS`. */
+G_STATIC_ASSERT(UC_REARM_MS == 5000u);
+
+static void uc_switch_off(Capture *capture, const char *why, uint64_t generation,
+                          gboolean timed)
 {
-	uc_switch_strike(&capture->uc_switch, generation);
+	uc_switch_strike(&capture->uc_switch, generation, now_us(), timed);
 	uc_free(&capture->uc);
 	uc_cost_reset(&capture->uc_window);
 	capture->uc_pending = FALSE;
@@ -2546,7 +2553,8 @@ static void uc_switch_off(Capture *capture, const char *why, uint64_t generation
 	              G_GUINT64_FORMAT,
 	              why,
 	              capture->uc_switch.hard ? "For the rest of this capture"
-	                                      : "Until the stream renegotiates its buffers,",
+	              : timed ? "For 5 s, or until the stream renegotiates its buffers,"
+	                      : "Until the stream renegotiates its buffers,",
 	              capture->uc_switch.strikes, UC_STRIKES_MAX, capture->uc_seen,
 	              capture->uc_dropped);
 }
@@ -2570,16 +2578,18 @@ static gboolean unchanged_judge(Capture *capture, CaptureStopped *report)
 
 	if (!capture->uc_on || capture->wlr)
 		return FALSE;
-	if (!uc_switch_allows(&capture->uc_switch, report->generation, &rearmed))
+	if (!uc_switch_allows(&capture->uc_switch, report->generation, now, &rearmed))
 		return FALSE;
 	if (rearmed)
 	{
 		capture->uc_rearmed++;
 		uc_cost_reset(&capture->uc_window);
 		registro_dice(AREA,
-		              "⭐ the «unchanged» filter is ON AGAIN: the stream renegotiated its "
-		              "buffers after switch-off %u of %u",
-		              capture->uc_switch.strikes, UC_STRIKES_MAX);
+		              "⭐ the «unchanged» filter is ON AGAIN after switch-off %u of %u: %s",
+		              capture->uc_switch.strikes, UC_STRIKES_MAX,
+		              report->generation != capture->uc_switch.off_generation
+		              ? "the stream renegotiated its buffers"
+		              : "the 5 s after a switch-off for cost are over");
 	}
 	capture->uc_seen++;
 	/* ⚠ The count of the PREVIOUS frames, one line every 300. */
@@ -2592,12 +2602,13 @@ static gboolean unchanged_judge(Capture *capture, CaptureStopped *report)
 		           " restarts, %" G_GUINT64_FORMAT " spared in the same episode), damage too large %" G_GUINT64_FORMAT ", outside the reference %"
 		           G_GUINT64_FORMAT ", not readable %" G_GUINT64_FORMAT
 		           " — damaged area last %" G_GUINT64_FORMAT " px, max %" G_GUINT64_FORMAT
-		           " px; look %.2f ms mean (last window %.2f), %.2f max",
+		           " px; look %.2f ms mean (of which DMA-BUF sync %.2f; last window %.2f), %.2f max",
 		           capture->uc_seen, capture->uc_dropped, UC_REFRESH_MS,
 		           capture->uc_refresh, capture->uc_flushed, capture->uc_stale_n,
 		           capture->uc_woken, capture->uc_stale_spared, capture->uc_big, capture->uc_outside,
 		           capture->uc_blind, capture->uc_area_last, capture->uc_area_max,
 		           capture->uc_cost_n ? capture->uc_cost_us / 1000.0 / capture->uc_cost_n : 0.0,
+		           capture->uc_cost_n ? capture->uc_sync_us / 1000.0 / capture->uc_cost_n : 0.0,
 		           capture->uc_window.last_mean_us / 1000.0,
 		           capture->uc_cost_max_us / 1000.0);
 
@@ -2647,7 +2658,7 @@ static gboolean unchanged_judge(Capture *capture, CaptureStopped *report)
 		if (report->modifier != DRM_FORMAT_MOD_LINEAR)
 		{
 			uc_switch_off(capture, "the card buffer is not LINEAR (its bytes are not "
-			                       "the rows of the image)", report->generation);
+			                       "the rows of the image)", report->generation, FALSE);
 			return FALSE;
 		}
 		amount = (size_t) report->offset + (size_t) st * h;
@@ -2655,14 +2666,20 @@ static gboolean unchanged_judge(Capture *capture, CaptureStopped *report)
 		if (map == MAP_FAILED)
 		{
 			map = NULL;
-			uc_switch_off(capture, "the card buffer cannot be mapped", report->generation);
+			uc_switch_off(capture, "the card buffer cannot be mapped", report->generation,
+			              FALSE);
 			return FALSE;
 		}
 		/* ⛔ Without the sync the CPU may read the bytes BEFORE the GPU has
 		 *    written them — and the old bytes equal the reference: a real
 		 *    change thrown away.  ⇒ No sync, no verdict. */
-		if (!dmabuf_sync(report->fd, TRUE))
-			mapped_ok = FALSE;
+		{
+			uint64_t ts = now_us();
+
+			if (!dmabuf_sync(report->fd, TRUE))
+				mapped_ok = FALSE;
+			capture->uc_sync_us += now_us() - ts;
+		}
 		base = (const uint8_t *) map + report->offset;
 	}
 	if (!base || !mapped_ok)
@@ -2697,17 +2714,21 @@ static gboolean unchanged_judge(Capture *capture, CaptureStopped *report)
 		capture->uc_cost_n++;
 		if (cost > capture->uc_cost_max_us)
 			capture->uc_cost_max_us = cost;
-		if (uc_cost_add(&capture->uc_window, cost))
+		if (uc_cost_add(&capture->uc_window, cost, same))
 		{
-			char why[160];
+			char why[256];
 
 			snprintf(why, sizeof why,
-			         "looking costs %.2f ms on average over the last %u frames (ceiling "
-			         "%.1f ms)",
-			         capture->uc_window.last_mean_us / 1000.0,
-			         capture->uc_window.windows == 1 ? UC_COST_FIRST : UC_COST_EVERY,
-			         UC_COST_MAX_US / 1000.0);
-			uc_switch_off(capture, why, report->generation);
+			         "looking costs %.2f ms on average over the last %u looks and held "
+			         "back %u of them (off above %.1f ms, or above %.1f ms holding back "
+			         "fewer than 1/%u); since the start the DMA-BUF sync took %.2f ms "
+			         "a look",
+			         capture->uc_window.last_mean_us / 1000.0, capture->uc_window.last_n,
+			         capture->uc_window.last_held, UC_COST_HARD_US / 1000.0,
+			         UC_COST_MAX_US / 1000.0, UC_YIELD_DIV,
+			         capture->uc_cost_n ? capture->uc_sync_us / 1000.0 / capture->uc_cost_n
+			                            : 0.0);
+			uc_switch_off(capture, why, report->generation, TRUE);
 			goto deliver;
 		}
 	}
