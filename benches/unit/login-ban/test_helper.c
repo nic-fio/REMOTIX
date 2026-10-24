@@ -15,11 +15,13 @@
 #include <stdio.h>
 #include "common.h"
 
-bool rcp_authenticate_from(const char *user, const char *password, const char *rhost)
+int rcp_authenticate_judged(const char *user, const char *password, const char *rhost)
 {
 	(void)user; (void)password; (void)rhost;
-	return false;
+	return 0;
 }
+static uint64_t locked_mark;
+void rcp_refusal_locked(uint64_t ticket) { locked_mark = ticket; }
 bool rcp_rhost_from_provenance(const char *provenance, char *report, size_t cap)
 {
 	/* the form of authentication.c: «[address]:port» -> «address» */
@@ -39,6 +41,7 @@ bool rcp_rhost_from_provenance(const char *provenance, char *report, size_t cap)
 static bool stub_known;
 bool rcp_asking_for_known_key(void) { return stub_known; }
 
+static uint64_t mark_seen;
 static int checks, bad;
 #define CHECK(cond, ...)                                                      \
 	do {                                                                  \
@@ -60,6 +63,7 @@ struct got {
 static void deliver(void *ctx, uint64_t ticket, bool admitted, const char *user, const char *rhost, bool lost)
 {
 	struct got *g = ctx;
+	mark_seen = locked_mark; /* the mark of §11.47 B, as the delivery sees it */
 	g->n++;
 	g->ticket = ticket;
 	g->admitted = admitted;
@@ -137,6 +141,25 @@ int main(void)
 	CHECK(!helper_ask(&h, "erin", "pw", "[9.9.9.9]:1", 1000, &t), "but not a 17th: 16 is the ceiling for everybody");
 	stub_known = false;
 	close(peer); close(h.fd);
+
+	/* 5. §11.47 B (ported from 249c534a): outcome 2 = refused while pam_faillock had the account locked — a NO, marked for
+	 *    rcp.c for the length of THAT delivery only; outcome 0 is not marked; 1 is the only yes */
+	for (int oc = 0; oc <= 3; oc++) {
+		struct request rq2;
+		make(&h, &peer);
+		memset(&g, 0, sizeof g);
+		mark_seen = 77;
+		CHECK(helper_ask(&h, "frank", "pw", "[1.2.3.4]:9", 1000, &t), "ask (outcome %d)", oc);
+		CHECK(recv(peer, &rq2, sizeof rq2, 0) == (ssize_t)sizeof rq2, "the dispatcher gets the request");
+		struct response rs2 = {rq2.ticket, (uint8_t)oc};
+		CHECK(send(peer, &rs2, sizeof rs2, 0) == (ssize_t)sizeof rs2, "answer");
+		helper_move(&h, deliver, &g);
+		CHECK(g.n == 1 && g.admitted == (oc == 1), "outcome %d: admitted only for 1 (n=%d admitted=%d)", oc, g.n, g.admitted);
+		CHECK(mark_seen == (oc == 2 ? g.ticket : 0), "outcome %d: the locked mark is %s during the delivery (saw %llu)", oc,
+		      oc == 2 ? "the ticket" : "0", (unsigned long long)mark_seen);
+		CHECK(locked_mark == 0, "outcome %d: and it is cleared after", oc);
+		close(peer); close(h.fd);
+	}
 
 	printf("\n%d checks, %d failed\n", checks, bad);
 	return bad ? 1 : 0;

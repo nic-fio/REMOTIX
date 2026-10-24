@@ -26,6 +26,11 @@
  *    by the grandchild**: in the serving process it is never executed again. */
 bool rcp_authenticate_from(const char *user, const char *password,
                       const char *rhost);
+/* ⭐ §11.47 B: 1 admitted, 2 refused while `pam_faillock` had the account
+ *    locked, 0 any other refusal — the byte `outcome` below. */
+int rcp_authenticate_judged(const char *user, const char *password,
+                            const char *rhost);
+void rcp_refusal_locked(uint64_t ticket); /* rcp.c / rcp.h */
 bool rcp_rhost_from_provenance(const char *provenance, char *report, size_t cap);
 
 /* ⛔⛔ THIS NUMBER IS NOT THE SESSION CAP, AND MUST NOT FOLLOW IT — 25 Aug
@@ -91,7 +96,11 @@ struct request {
 
 struct response {
 	uint64_t ticket;
-	uint8_t outcome; /* ⛔ 1 and ONLY 1 means admitted */
+	/* ⛔ 1 and ONLY 1 means admitted.  ⭐ 2 (§11.47 B, 15 Oct 2026): refused
+	 *    while `pam_faillock` had the account locked — a NO like 0, which
+	 *    `rcp.c` may leave out of the §4.4-bis count (`rcp_refusal_locked()`);
+	 *    every other value is a plain no. */
+	uint8_t outcome;
 };
 
 /* ⭐ 24 Oct 2026 (§4.4-bis B): `user` and `rhost` are also what the verdict is
@@ -122,20 +131,20 @@ struct helper {
 static void grandchild(int fd, struct request *r)
 {
 	struct response out;
-	bool ok;
+	int judged;
 
 	/* ⛔ The alarm is armed BEFORE calling PAM: arming it after would be
 	 *    arming it when the case it exists for has already happened. */
 	alarm(GRANDCHILD_ALARM_S);
 
-	ok = rcp_authenticate_from(r->user, r->password, r->rhost);
+	judged = rcp_authenticate_judged(r->user, r->password, r->rhost);
 
 	out.ticket = r->ticket;
 	explicit_bzero(r, sizeof *r);
 	/* ⛔ The only place in the program where a «yes» is born, and it is
 	 *    written so that a value other than `PAM_SUCCESS` cannot get there:
 	 *    `rcp_authenticate()` starts from `admitted = false`. */
-	out.outcome = ok ? 1u : 0u;
+	out.outcome = judged == 1 ? 1u : judged == 2 ? 2u : 0u;
 	/* ⚠ The outcome is written and that is all: if the `send` fails, the
 	 *   parent will receive nothing and the request will expire — that is, a
 	 *   «no».  No retry, and no «maybe» outcome is written. */
@@ -483,8 +492,15 @@ void helper_move(helper *a, HelperVerdict delivery, void *ctx)
 		/* ⛔⭐ HERE, AND ONLY HERE, A «YES» CAN ENTER THE SERVER — and it goes
 		 *     through a comparison with `1`, not through a `!= 0`: a dirty
 		 *     byte, a memory leftover or a 255 are a NO. */
+		/* ⭐ §11.47 B: a no given while `pam_faillock` had the account locked
+		 *    is marked for `rcp.c` for the length of THIS delivery only (the
+		 *    verdict travels through `main.c` and `transport.c` with its bool,
+		 *    unchanged — live session or orphan); `rcp.c` decides whether it
+		 *    counts. */
+		rcp_refusal_locked(ri.outcome == 2u ? ri.ticket : 0);
 		if (delivery)
 			delivery(ctx, ri.ticket, ri.outcome == 1u, chi, da, false);
+		rcp_refusal_locked(0);
 	}
 }
 

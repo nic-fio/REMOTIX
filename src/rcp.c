@@ -1999,6 +1999,59 @@ static void login_resolve(const char *key, const char *user, bool admitted,
 	}
 }
 
+/* ⭐ §11.47 B (ported from 249c534a): the ticket whose «no» PAM gave while
+ *    `pam_faillock` had the account locked; 0 = none.  Set by the host only
+ *    around ONE delivery (`rcp_refusal_locked()`, `rcp.h`). */
+static uint64_t locked_ticket;
+
+void rcp_refusal_locked(uint64_t ticket)
+{
+	locked_ticket = ticket;
+}
+
+/* ⛔⭐ A «NO» THAT DOES NOT COUNT — `DECISIONS.md` §11.47 B (the user, 15 Oct
+ *     2026).  Both must hold:
+ *       1. the helper said «refused while `pam_faillock` had the account
+ *          LOCKED» for THIS delivery — PAM's own words, seen before the
+ *          password was asked (`authentication.c`, `FAILLOCK_LOCKED`): while it
+ *          lasts no password can pass, the right one included, so the guess
+ *          was useless;
+ *       2. the key (§4.4-bis) had an ADMITTED login during the last 30 days
+ *          (`good_recent()`: the SAME notion as the two PAM places kept for a
+ *          known key, `RESERVED_FOR_KNOWN`).
+ *     ⛔ Why 2: only a REAL account can be locked (`pam_faillock` ignores
+ *        unknown users), so «not counted» for anyone would be a user-name
+ *        oracle (§4.4, §11.39).  For a key that never logged in the no counts
+ *        exactly as before; the owner coming back from home or office does not
+ *        ban themselves.
+ *     ⭐ In the model of §4.4-bis B «not counted» is `login_release()` (the
+ *        booking given back, no failure added), as for the defects of ours;
+ *        the caller does that when this returns true.
+ *     ⚠ `ticket` 0 = the orphan road, which has no ticket: the mark is set
+ *       only around ONE delivery, so any mark is that delivery's.
+ *     ⚠ Nothing else changes: the ban check before PAM, the checks in flight
+ *       per address, the fixed second and `REJECTED 0x07` on the wire. */
+static bool refusal_uncounted(const struct sink *k, uint64_t ticket,
+                              const char *key, uint64_t now)
+{
+	if (!locked_ticket || (ticket && ticket != locked_ticket))
+		return false;
+	if (!good_recent(key, now)) {
+		say(k, "PAM refused request %llu while pam_faillock had the account "
+		       "LOCKED; %s never logged in (30 days), so it COUNTS as a "
+		       "failed attempt (DECISIONS.md §11.47)",
+		    (unsigned long long)locked_ticket, key);
+		return false;
+	}
+	say(k, "⚠ PAM refused request %llu while pam_faillock had the account "
+	       "LOCKED (even a right password is refused until it unlocks, or "
+	       "`faillock --user <name> --reset`): %s logged in lately, so it is "
+	       "NOT counted towards the ban — the booking is given back (§4.4-bis, "
+	       "DECISIONS.md §11.47)",
+	    (unsigned long long)locked_ticket, key);
+	return true;
+}
+
 /* The ban file.  Defined below; declared here because the report below
  * writes it when a ban is born. */
 static void save_ban(const struct sink *k, uint64_t now);
@@ -2344,6 +2397,10 @@ void rcp_orphan_verdict(const char *user, const char *rhost, bool admitted,
 		say(&k, "⭐ the connection was gone and the PAM helper died before "
 		        "answering: our defect, the booking is given back and NOTHING "
 		        "is counted (§4.4-bis)");
+		return;
+	}
+	if (!admitted && refusal_uncounted(&k, 0, key, now)) {
+		login_release(key, user);
 		return;
 	}
 	login_resolve(key, user, admitted, now, &r);
@@ -8783,8 +8840,12 @@ bool rcp_verdict(rcp_session *s, uint64_t ticket, bool admitted,
 	{
 		struct sink k = {s, NULL, NULL};
 		struct login_result r;
-		login_resolve(s->address, s->user, admitted, now, &r);
-		login_report(&k, s->address, s->user, admitted, &r, now);
+		if (!admitted && refusal_uncounted(&k, ticket, s->address, now)) {
+			login_release(s->address, s->user);
+		} else {
+			login_resolve(s->address, s->user, admitted, now, &r);
+			login_report(&k, s->address, s->user, admitted, &r, now);
+		}
 	}
 	return true;
 }

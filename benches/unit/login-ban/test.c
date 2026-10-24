@@ -868,6 +868,47 @@ static void test_verdict_paths(void)
 		CHECK(good_recent(G, at(1) + GOOD_AGE), "(known) still known at exactly GOOD_AGE");
 		CHECK(!good_recent(G, at(1) + GOOD_AGE + 1), "(known) not known past GOOD_AGE");
 		CHECK(good_recent(G, at(0)), "(known) a login stamped after `now` (helper clock ahead) is recent, the subtraction does not wrap");
+
+		/* 6. §11.47 B (ported from 249c534a): a PAM no given while pam_faillock had the account locked is NOT counted for
+		 *    a key that logged in lately (login_release), and counts for a key that never did */
+		fresh();
+		good_note(G, at(0));
+		snprintf(s.address, sizeof s.address, "%s", G);
+		login_reserve(G, "alice", at(2), &info);
+		s.state = S_WAIT_VERDICT; s.expected_verdict = true; s.ticket = 21; s.cred_arrival = at(2);
+		rcp_refusal_locked(21);
+		CHECK(rcp_verdict(&s, 21, false, at(3)), "(locked) the verdict is taken");
+		rcp_refusal_locked(0);
+		CHECK(in_flight_of(G, "alice") == 0 && failures_of(G, "alice") == 0,
+		      "(locked) a locked-account no for a known key: booking given back, NOT counted (%d, %d)",
+		      in_flight_of(G, "alice"), failures_of(G, "alice"));
+		snprintf(s.address, sizeof s.address, "%s", B);
+		login_reserve(B, "alice", at(2), &info);
+		s.state = S_WAIT_VERDICT; s.expected_verdict = true; s.ticket = 22;
+		rcp_refusal_locked(22);
+		CHECK(rcp_verdict(&s, 22, false, at(3)), "(locked) the verdict is taken");
+		rcp_refusal_locked(0);
+		CHECK(failures_of(B, "alice") == 1, "(locked) the same no for a key that never logged in COUNTS (no user-name oracle): %d",
+		      failures_of(B, "alice"));
+		snprintf(s.address, sizeof s.address, "%s", G);
+		login_reserve(G, "alice", at(2), &info);
+		s.state = S_WAIT_VERDICT; s.expected_verdict = true; s.ticket = 23;
+		rcp_refusal_locked(99); /* another ticket's mark */
+		CHECK(rcp_verdict(&s, 23, false, at(3)), "(locked) the verdict is taken");
+		rcp_refusal_locked(0);
+		CHECK(failures_of(G, "alice") == 1, "(locked) a mark for ANOTHER ticket does not exempt this no: %d", failures_of(G, "alice"));
+		/* the orphan road (the connection is gone), same rule */
+		fresh();
+		good_note(G, at(0));
+		login_reserve(G, "alice", at(2), &info);
+		rcp_refusal_locked(31);
+		rcp_orphan_verdict("alice", "7.7.7.7", false, false, at(3), rec_line, NULL);
+		rcp_refusal_locked(0);
+		CHECK(in_flight_of(G, "alice") == 0 && failures_of(G, "alice") == 0,
+		      "(locked) orphan, known key: given back, NOT counted (%d, %d)", in_flight_of(G, "alice"), failures_of(G, "alice"));
+		login_reserve(G, "alice", at(4), &info);
+		rcp_orphan_verdict("alice", "7.7.7.7", false, false, at(5), rec_line, NULL);
+		CHECK(failures_of(G, "alice") == 1, "(locked) orphan without the mark: an ordinary no, counted (%d)", failures_of(G, "alice"));
 	}
 }
 

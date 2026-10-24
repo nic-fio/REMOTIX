@@ -658,6 +658,15 @@ const char *rcp_state_name(const rcp_session *s);
  *    for any more (the client hung up, the session finished while PAM judged)
  *    must not start a desktop for nobody. */
 bool rcp_awaits_verdict(const rcp_session *s, uint64_t ticket);
+/* ⭐ §11.47 B (`DECISIONS.md`, 15 Oct 2026): the «no» about to be delivered for
+ *    `ticket` (through `rcp_verdict()` or `rcp_orphan_verdict()`) was given
+ *    while `pam_faillock` had the account LOCKED.  The host (`helper.c`) sets
+ *    it just before ONE delivery and calls it with 0 just after.  Such a no is
+ *    NOT counted towards the ban (the booking is given back) when its key had
+ *    an admitted login in the last 30 days (the notion of the places kept for
+ *    a known key), and counts as any other otherwise.  The wire does not change. */
+void rcp_refusal_locked(uint64_t ticket);
+
 /* ⭐ THE TWO PAM SLOTS KEPT FOR A KNOWN KEY — 15 Oct 2026, `DECISIONS.md`
  *    §11.39 addendum.  True ONLY while `rcp.c` is inside `ask_verify` for
  *    credentials whose key (§4.4-bis: IPv4 address or IPv6 /64) had an ADMITTED
