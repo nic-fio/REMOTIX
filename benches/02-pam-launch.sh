@@ -1,4 +1,7 @@
 #!/bin/bash
+# ⚠ NOTE (25 Oct 2026): THIS LAUNCHER STILL DRIVES THE OLD CHUWI -> NIC-OS CONTAINER (enter.sh, sudo password, /srv/src) AND IS NOT
+#   USED ANY MORE.  The bench runs on one machine, as root, with `02-pam-start.sh` and `02-pam-standstill.py` called directly:
+#   see «HOW TO RUN» in the head of 02-pam-standstill.py (three scenes: free, unchecked, restart).
 #
 # 02-pam-launch.sh — ⛔ IT RUNS ON CHUWI.  The bench «how long whoever is NOT
 # authenticating stands still» — `DECISIONS.md` §1.10.

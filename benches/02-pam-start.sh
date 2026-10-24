@@ -1,10 +1,12 @@
 #!/bin/bash
-# ⚠ NOTE (25 Oct 2026, D4b of DECISIONS-11.md §11.50) — THIS SCRIPT DOES NOT RUN ON TODAY'S TREE.
-#   Its fault injector looks for the anchor "if (w->aiuto) g.chiedi_verifica = gancio_chiedi;" — the Italian names of the tree it
-#   was written for; today's webtransport.c has "if (w->help) g.ask_verify = hook_ask;" — so it stops with «the anchor is not
-#   unique (0 times)».  And the SYMPTOM it certifies has changed: the synchronous PAM fallback is gone, so a server
-#   whose asynchronous hook is not connected no longer stalls the wire, it refuses every login with 0x0E (not counted).
-#   To use it again: rename the anchor, and make `02-pam-standstill.py`'s «fault» phase expect 0x0E instead of a stall.
+# ⭐ UPDATED 25 Oct 2026 (D4b of DECISIONS-11.md §11.50) FOR TODAY'S TREE.  What changed:
+#   · it no longer needs the NIC-OS container: every path is a variable with a default that works from a checkout
+#     (SRC=<repo>/src, D=$TMPDIR/02-pam-target, TWIN=<repo>/benches/rcp, TMP=$TMPDIR/02-pam-tmp); it must still run as ROOT on a
+#     machine that has /etc/pam.d/remotix and the account the bench logs in with (see 02-pam-standstill.py, «HOW TO RUN»);
+#   · the FAULT is no longer «the old synchronous fallback, the wire stalls» (that fallback is gone): `fault` now builds a copy whose
+#     asynchronous hook is NOT connected, so every login is refused 0x0E, not counted, and the wire never stops;
+#   · `kill-helper` is the other fault, at run time: SIGKILL to the helper; the server restarts it by itself (1 s, 2 s, 4 s …), and in
+#     the meantime the logins are refused 0x0E (the scene «restart» of 02-pam-standstill.py).
 #
 # 02-pam-start.sh — ⛔ IT RUNS INSIDE THE CONTAINER.  It switches on THIS BENCH'S
 # TARGET: a copy of the product on port 7531, with ban, socket,
@@ -46,10 +48,11 @@
 #    are two different facts, and the measurement needs the second.
 set -uo pipefail
 
-SRC=${SRC:-/srv/src/02-pam-src}
-D=${D:-/srv/src/02-pam-bersaglio}
-TWIN=${TWIN:-/srv/src/rcp}
-TMP=/srv/src/tmp
+HERE=$(cd -- "$(dirname -- "$0")" && pwd)
+SRC=${SRC:-$HERE/../src}
+D=${D:-${TMPDIR:-/tmp}/02-pam-target}
+TWIN=${TWIN:-$HERE/../benches/rcp}
+TMP=${TMP:-${TMPDIR:-/tmp}/02-pam-tmp}
 PORT=${PORT:-7531}
 ADDR=${ADDR:-192.168.0.2}
 PREFIX=${PREFIX:-pam2-7531}
@@ -143,44 +146,38 @@ copy)
 	TWIN="$TWIN" bash "$D/build.sh" || exit 3
 	exit 0 ;;
 fault)
-	# ⛔⭐ THE FAULT IS THE CURE REMOVED, AND NOT AN INVENTED DEFECT — 12 Aug
-	#     2026.  It is the best form an injected fault can have: the
-	#     state of the server BEFORE §1.10, that is a defect that really
-	#     existed and that was really measured (`[M]` B8, 11 Aug:
-	#     1.0-2.2 s per attempt).
+	# ⛔⭐ THE FAULT, 25 Oct 2026: THE HELPER'S HOOK IS NOT CONNECTED.  Until D4b this was «the cure removed» — the server fell back
+	#     on a SYNCHRONOUS PAM call and the wire stalled for 1-2 s.  That fallback is gone: a server whose asynchronous hook is
+	#     not connected now refuses EVERY login with 0x0E (SESSION_UNSERVABLE, «our defect»), after the fixed second, not
+	#     counted towards the ban, and the wire never stops.  It is the state «no helper», and the scene
+	#     `02-pam-standstill.py --wait unchecked` expects exactly that (20 refusals in a row, never 0x07, never 0x08).
 	#
-	# ⛔ What it proves: that `02-pam-standstill.py` **can see** the blocking.  A
-	#    bench that stayed green with this fault inside would not prove that
-	#    the cure works — it would prove that the ruler is blind, and every later
-	#    green would be the worst of proofs (`CODER.md` §4.6).
+	# ⛔ What it proves: that the bench can SEE the difference.  A bench that stayed green with a healthy server in the place of this
+	#    one would be blind (`CODER.md` §4.6).
 	#
-	# ⚠ It is injected into the COPY (`$D`), never into the product of `/srv/src/remotix`,
-	#   which belongs to anyone else who is using it.
+	# ⚠ It is injected into the COPY (`$D`), never into the product or the checkout.
 	[ -f "$D/webtransport.c" ] || { echo "NO  ⛔ $D/webtransport.c is not there"; exit 2; }
 	python3 - "$D/webtransport.c" <<'FINE'
 import sys
 p = sys.argv[1]
 t = open(p).read()
-appiglio = "\tif (w->aiuto)\n\t\tg.chiedi_verifica = gancio_chiedi;\n"
-if t.count(appiglio) != 1:
-    print("NO  ⛔ the anchor is not unique (%d times): I inject nothing"
-          % t.count(appiglio))
+anchor = "\tif (w->help)\n\t\tg.ask_verify = hook_ask;\n"
+if t.count(anchor) != 1:
+    print("NO  ⛔ the anchor is not unique (%d times): I inject nothing" % t.count(anchor))
     sys.exit(2)
-guasto = ("\t/* REMOTIX 02-PAM GUASTO — the asynchronous hook NOT connected,\n"
-          "\t * that is the server as it was before DECISIONS.md §1.10.  rcp.c\n"
-          "\t * will fall back on the SYNCHRONOUS check and the wire will stall.\n"
-          "\t * If 02-pam-standstill.py stays green with this inside, it is blind. */\n")
-open(p, "w").write(t.replace(appiglio, guasto, 1))
+fault = ("\t/* REMOTIX 02-PAM FAULT — the asynchronous hook NOT connected: no helper.\n"
+         "\t * rcp.c refuses every login as OURS (0x0E), not counted.\n"
+         "\t * If 02-pam-standstill.py --wait unchecked stays green on a HEALTHY server, it is blind. */\n")
+open(p, "w").write(t.replace(anchor, fault, 1))
 print("OK  fault injected: the asynchronous hook is no longer connected")
 FINE
 	[ $? -eq 0 ] || exit 3
 	TWIN="$TWIN" bash "$D/build.sh" >/dev/null 2>&1 \
 		|| { echo "NO  ⛔ the rebuild with the fault failed"; exit 3; }
-	# ⛔ And it is CHECKED that the fault is in the binary, not only in the source:
-	#    «I wrote it» and «it is inside what runs» are two different facts, and
-	#    it is the defect with which B11 switched on the healthy server believing it faulty.
-	if grep -a -F -q "REMOTIX 02-PAM GUASTO" "$D/webtransport.c" \
-	   && ! grep -a -F -q "g.chiedi_verifica = gancio_chiedi" "$D/webtransport.c"; then
+	# ⛔ And it is CHECKED that the fault is in what was built, not only in the source: «I wrote it» and «it is inside what
+	#    runs» are two different facts.
+	if grep -a -F -q "REMOTIX 02-PAM FAULT" "$D/webtransport.c" \
+	   && ! grep -a -F -q "g.ask_verify = hook_ask" "$D/webtransport.c"; then
 		echo "OK  ⛔ rebuilt WITH the fault: $(sha256sum "$D/remotix" | cut -c1-16)…"
 	else
 		echo "NO  ⛔ the fault is not where it should be"
