@@ -66,4 +66,13 @@ void render_grant_remove(const char *user, uid_t uid, gid_t gid);
  */
 void render_grant_sweep(void);
 
+/* ⭐ 1.5 (§11.50) — DECLARATIONS ONLY, for `rootside.c`; the implementation (read from logind's own files) is phase D
+ *    of the split and is NOT in this tree yet.
+ *    Is there a live logind session of `uid` with the PAM service `remotix` (active, or closing with a process left in
+ *    its scope)?  1 yes · 0 no · -1 unknown.  Used by the sweep and by CLOSE_ORPHAN. */
+int render_grant_remotix_session(uid_t uid);
+/* The same, on other directories (the tests): `sessions_dir` in place of /run/systemd/sessions, `cgroup_root` in
+ * place of /sys/fs/cgroup. */
+int render_grant_remotix_session_at(const char *sessions_dir, const char *cgroup_root, uid_t uid);
+
 #endif
