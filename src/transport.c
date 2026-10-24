@@ -867,7 +867,8 @@ static size_t cap_per_48(const transport *t)
 }
 
 /* The place a connection is counted against — the rule of the box on `MAX_CONNECTIONS`
- * (§1.9-bis, NOT ported to `rcp_key_address()`, which only strips the port).  IPv4 is written as
+ * (§1.9-bis), the same one `rcp_key_address()` in `rcp.c` applies to the ban
+ * (`benches/unit/address-key` checks that the two agree).  IPv4 is written as
  * `::ffff:a.b.c.d`, so rules 1, 2 and 5 give one key.  `key48` is the /48 of rule
  * 4, and the key itself for the others. */
 static void address_key(const struct sockaddr *sa, uint8_t key[16], uint8_t key48[16])
