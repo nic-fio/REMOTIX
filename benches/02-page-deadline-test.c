@@ -175,7 +175,7 @@ static void *t_realloc(void *q, size_t n)
 #include <time.h>
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 97
+#define EXPECTED_CHECKS 104
 
 static void require(int cond, const char *desc)
 {
@@ -532,6 +532,8 @@ static void rate_reset(page *p)
 {
 	memset(p->rate, 0, sizeof p->rate);
 	memset(p->rate48, 0, sizeof p->rate48);
+	memset(&p->rate_over, 0, sizeof p->rate_over);
+	memset(&p->rate48_over, 0, sizeof p->rate48_over);
 }
 
 /* The fingerprint the shared page is NOT built for: setting it forces a rebuild. */
@@ -1542,52 +1544,114 @@ int main(void)
 		close(lfd);
 		unlink(lpath);
 
-		/* c) the accept buckets: a burst, then the steady rate */
+		/* c) the accept buckets (review of 95ed70ea): a burst then the rate;
+		 *    a newcomer gets a bucket of its own only if one is FULL, else
+		 *    it shares ONE overflow bucket; a /48 refusal spends no /64
+		 *    token, and the refusal names the bucket that refused */
 		{
-			static struct bucket t[PAGE_RATE_KEYS];
-			int got = 0, later = 0, others = 1;
+			static page rp;
+			const char *who = NULL;
+			int got = 0, later = 0, newk = 0, own = 0, n48 = 0;
 			uint64_t t0 = 1000000;
 			for (int i = 0; i < 20; i++)
-				got += bucket_take(t, "[10.0.0.1]", t0, PAGE_ACCEPT_RATE, PAGE_ACCEPT_BURST);
+				got += rate_take(&rp, "[10.0.0.1]", NULL, t0, &who);
 			for (int i = 0; i < 20; i++)
-				later += bucket_take(t, "[10.0.0.1]", t0 + 1000, PAGE_ACCEPT_RATE,
-				                     PAGE_ACCEPT_BURST);
-			/* a full table: every bucket busy, a new key still gets in */
+				later += rate_take(&rp, "[10.0.0.1]", NULL, t0 + 1000, &who);
+			require(got == PAGE_ACCEPT_BURST && later == PAGE_ACCEPT_RATE,
+			        "a bucket: the burst (8), then 4 a second");
+			memset(&rp, 0, sizeof rp);
 			for (int i = 0; i < PAGE_RATE_KEYS; i++) {
 				char k[32];
 				snprintf(k, sizeof k, "[10.1.0.%d]", i);
-				bucket_take(t, k, t0 + 1000, PAGE_ACCEPT_RATE, PAGE_ACCEPT_BURST);
+				rate_take(&rp, k, NULL, t0, &who); /* each bucket one short of full */
 			}
-			others &= bucket_take(t, "[10.2.0.1]", t0 + 1000, PAGE_ACCEPT_RATE,
-			                      PAGE_ACCEPT_BURST);
-			require(got == PAGE_ACCEPT_BURST && later == PAGE_ACCEPT_RATE && others,
-			        "a bucket: the burst (8), then 4 a second; a full table still admits a new key");
+			for (int i = 0; i < 40; i++) {
+				char k[32];
+				snprintf(k, sizeof k, "[10.2.0.%d]", i);
+				newk += rate_take(&rp, k, NULL, t0 + 100, &who);
+				newk += rate_take(&rp, k, NULL, t0 + 100, &who);
+			}
+			printf("       (40 rotating addresses × 2 with every bucket in use: %d admitted)\n", newk);
+			require(newk == PAGE_ACCEPT_BURST && strcmp(who, "(the shared overflow bucket)") == 0,
+			        "rotating new addresses share ONE overflow bucket: 8 admitted, not 80 (on 95ed70ea: a fresh burst each)");
+			for (int i = 0; i < 10; i++)
+				own += rate_take(&rp, "[10.3.0.1]", NULL, t0 + 5000, &who);
+			require(own == PAGE_ACCEPT_BURST,
+			        "once a bucket is full again, a new address gets a bucket of its own");
+			memset(&rp, 0, sizeof rp);
+			for (int i = 0; i < 20; i++) {
+				char k[32];
+				snprintf(k, sizeof k, "[2001:db8:1:%x::]", i);
+				n48 += rate_take(&rp, k, "2001:0db8:0001::/48", t0, &who);
+			}
+			{
+				struct bucket *b = bucket_of(rp.rate, &rp.rate_over, "[2001:db8:1:13::]",
+				                             t0, PAGE_ACCEPT_RATE, PAGE_ACCEPT_BURST);
+				require(n48 == PAGE_ACCEPT_BURST_48 && strcmp(who, "2001:0db8:0001::/48") == 0 &&
+				                b->milli == PAGE_ACCEPT_BURST * 1000u,
+				        "a /48 over its rate: refused, named as the /48, and the /64 keeps its token");
+			}
 		}
+		/* … and over the rate a connection is PARKED (no TLS), then started
+		 *   when a token comes; one that waits in vain is served 503 */
 		{
-			uint64_t before = p->refused_rate_total;
-			int fdsr[12], refused = 0;
-			for (int i = 0; i < 12; i++) {
-				fdsr[i] = connect_from(port, "127.0.0.83", 0);
-				pump(p, 1);
-			}
-			for (int i = 0; i < 12; i++) {
-				refused += closed_by_server(fdsr[i]);
-				close(fdsr[i]);
-			}
-			printf("       (12 connects: %llu refused for the rate, %d closed in all)\n",
-			       (unsigned long long)(p->refused_rate_total - before), refused);
-			require(p->refused_rate_total - before >= 2 && refused >= 8,
-			        "12 connects from one address at once: those over the burst are closed at accept");
-			pump(p, 10);
-			usleep(600000);
+			const char *who = NULL;
+			client *pc = NULL;
+			int f83, f84, ev0 = 0;
+			uint64_t now = log_now_ms();
+			while (rate_take(p, "[127.0.0.83]", NULL, now, &who))
+				;
+			f83 = connect_from(port, "127.0.0.83", 0);
 			pump(p, 2);
-			before = p->refused_rate_total;
-			int f2 = connect_from(port, "127.0.0.83", 0);
+			for (size_t i = 0; i < MAX_CLIENTS; i++)
+				if (client_active(&p->clients[i]) &&
+				    strcmp(p->clients[i].key, "[127.0.0.83]") == 0)
+					pc = &p->clients[i];
+			{
+				struct pollfd f[MAX_CLIENTS + 1];
+				size_t m = page_descriptors(p, f, MAX_CLIENTS + 1);
+				for (size_t k = 0; k < m; k++)
+					if (pc && f[k].fd == pc->fd)
+						ev0 = f[k].events == 0;
+			}
+			require(pc && pc->phase == F_RATE && !pc->ssl && ev0 && !closed_by_server(f83),
+			        "over the rate: accepted and parked — no TLS, not watched, not closed");
+			usleep(400000);
+			page_expired(p, log_now_ms());
+			require(pc && pc->phase == F_HANDSHAKE && pc->ssl && !pc->busy,
+			        "… a token later its TLS begins");
+			pc = NULL;
+			now = log_now_ms();
+			while (rate_take(p, "[127.0.0.84]", NULL, now, &who))
+				;
+			f84 = connect_from(port, "127.0.0.84", 0);
 			pump(p, 2);
-			require(p->refused_rate_total == before && client_of(p, "[127.0.0.83]") == 1,
-			        "… and 0.6 s later the next one is accepted");
-			close(f2);
-			pump(p, 4);
+			for (size_t i = 0; i < MAX_CLIENTS; i++)
+				if (client_active(&p->clients[i]) &&
+				    strcmp(p->clients[i].key, "[127.0.0.84]") == 0)
+					pc = &p->clients[i];
+			while (rate_take(p, "[127.0.0.84]", NULL, now + PAGE_RATE_WAIT_MS + 1, &who))
+				;
+			page_expired(p, now + PAGE_RATE_WAIT_MS + 1);
+			require(pc && pc->busy && pc->phase == F_HANDSHAKE && pc->ssl,
+			        "one that waited PAGE_RATE_WAIT_MS in vain gets TLS, marked busy");
+			memset(&fc, 0, sizeof fc);
+			fc.fd = -1;
+			fc.phase = F_READ;
+			fc.busy = true;
+			snprintf(fc.provenance, sizeof fc.provenance, "[127.0.0.84]:40000");
+			fc.nrequest = (size_t)snprintf(fc.request, sizeof fc.request,
+			                               "GET /fingerprint HTTP/1.1\r\nHost: t\r\n\r\n");
+			serve(p, &fc);
+			require(fc.head && strncmp(fc.head, "HTTP/1.1 503 ", 13) == 0 &&
+			                head_has(&fc, "\r\nRetry-After: 1\r\n"),
+			        "… and its request is answered 503 with Retry-After, which the page tells apart");
+			client_close(&fc);
+			for (size_t i = 0; i < MAX_CLIENTS; i++)
+				if (client_active(&p->clients[i]))
+					client_close(&p->clients[i]);
+			close(f83);
+			close(f84);
 		}
 
 		/* d) the work per pass: at most 16 events, round robin */
@@ -1616,22 +1680,49 @@ int main(void)
 			client_close(&p->clients[i]);
 	{
 		static int bare[MAX_CLIENTS + 40];
-		int nb = 0, owner, owner_ok = 1, sizes_ok = 1;
+		int nb = 0, owner_ok = 1, sizes_ok = 1;
+		pid_t owner;
 		unsigned sz[MAX_CLIENTS];
-		/* the owner first — the OLDEST — with the start of a ClientHello */
-		owner = connect_from(port, "127.0.3.1", 0);
-		pump(p, 2);
-		if (send(owner, "\x16\x03\x01\x00\x40", 5, 0) != 5)
-			owner_ok = 0;
-		pump(p, 4);
+		/* the owner first — the OLDEST — a real TLS handshake, then nothing */
+		owner = fork();
+		if (owner == 0) {
+			int fd = connect_from(port, "127.0.3.1", 0);
+			SSL_CTX *cx = SSL_CTX_new(TLS_client_method());
+			SSL *ss = SSL_new(cx);
+			SSL_set_fd(ss, fd);
+			SSL_connect(ss);
+			for (;;)
+				pause();
+		}
+		{
+			uint64_t t0 = log_now_ms();
+			while (log_now_ms() - t0 < 5000) {
+				pump(p, 1);
+				bool done = false;
+				for (size_t i = 0; i < MAX_CLIENTS; i++)
+					if (client_active(&p->clients[i]) &&
+					    strcmp(p->clients[i].key, "[127.0.3.1]") == 0 &&
+					    p->clients[i].spoke)
+						done = true;
+				if (done)
+					break;
+			}
+		}
+		/* review of 95ed70ea: each attacker sends ONE byte (and the start of
+		 * a record): that is not a ClientHello, it is still silent */
 		for (int i = 0; i < MAX_CLIENTS - 1; i++) {
 			snprintf(src, sizeof src, "127.0.4.%d", i + 1);
+			/* the rate out of the way: every attacker gets its TLS begun
+			 * (parked ones would be silent for another reason) */
+			rate_reset(p);
 			bare[nb++] = connect_from(port, src, 0);
+			if (send(bare[nb - 1], i % 2 ? "\x16" : "\x16\x03\x01\x00\x40", i % 2 ? 1 : 5, 0) < 0)
+				owner_ok = 0;
 			pump(p, 1);
 		}
 		pump(p, 3);
 		require(owner_ok && active(p) == MAX_CLIENTS && client_of(p, "[127.0.3.1]") == 1,
-		        "the owner (spoke, the oldest) + 127 bare connects from 127 addresses fill the table");
+		        "the owner (a whole ClientHello, the oldest) + 127 connects sending 1 or 5 bytes fill the table");
 		/* group sizes counted once: the same answer as one group_size() each */
 		group_sizes(p, sz);
 		for (size_t i = 0; i < MAX_CLIENTS; i++)
@@ -1647,18 +1738,55 @@ int main(void)
 		}
 		for (int i = 0; i < 30; i++) {
 			snprintf(src, sizeof src, "127.0.5.%d", i + 1);
+			rate_reset(p);
 			bare[nb++] = connect_from(port, src, 0);
+			if (send(bare[nb - 1], "\x16", 1, 0) < 0)
+				owner_ok = 0;
 			pump(p, 2);
 			owner_ok &= client_of(p, "[127.0.3.1]") == 1;
 		}
 		require(owner_ok && active(p) == MAX_CLIENTS,
-		        "30 more bare connects: each evicts a SILENT one, never the owner who spoke (on main: the owner, the oldest, went first)");
+		        "30 more connects sending a byte: each evicts a SILENT one, never the owner (on 95ed70ea one byte counted as «spoke»)");
 		require(sizes_ok, "group sizes counted once per eviction agree with one count per client");
 		page_expired(p, log_now_ms() + PAGE_REQUEST_MS + 1);
 		for (int i = 0; i < nb; i++)
 			close(bare[i]);
-		close(owner);
+		kill(owner, SIGKILL);
+		waitpid(owner, NULL, 0);
 		pump(p, 4);
+	}
+
+	printf("20. review of 95ed70ea: a failed build of the tail's gzip copy is not retried at every banned GET\n");
+	{
+		static client fc;
+		size_t n_plain, n_after;
+		body_unref(p->tail_gz);
+		p->tail_gz = NULL;
+		p->tail_gz_after = 0;
+		page_mallocs = 0;
+		fake_get_ae(p, &fc, "[127.0.0.50]:40000", NULL);
+		n_plain = page_mallocs;
+		client_close(&fc);
+		/* the prefix is pre + 5 replaces (6 allocations); the 7th is zlib's
+		 * first for the tail: it fails */
+		fail_at = 7;
+		fail_rest = false;
+		fake_get_ae(p, &fc, "[127.0.0.50]:40000", "gzip");
+		fail_at = 0;
+		bool first = fc.head && !head_has(&fc, "Content-Encoding") && !p->tail_gz;
+		client_close(&fc);
+		page_mallocs = 0;
+		fake_get_ae(p, &fc, "[127.0.0.50]:40000", "gzip");
+		n_after = page_mallocs;
+		bool second = fc.head && !head_has(&fc, "Content-Encoding") && !p->tail_gz;
+		client_close(&fc);
+		require(first && second && n_after == n_plain,
+		        "after the failure the next banned gzip GET does not try again (plain, as many allocations as a plain one)");
+		p->tail_gz_after = 0;
+		fake_get_ae(p, &fc, "[127.0.0.50]:40000", "gzip");
+		require(p->tail_gz && fc.shared == p->tail_gz && head_has(&fc, "\r\nContent-Encoding: gzip\r\n"),
+		        "… and once the back-off has passed it is built and used");
+		client_close(&fc);
 	}
 
 	rcp_unblock("127.0.0.50", log_now_ms());
