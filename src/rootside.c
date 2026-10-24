@@ -698,8 +698,10 @@ static void on_pam_outcome(void *ctx, uint64_t ticket, int outcome, const char *
 	rootside_auth_done(&R.bounds);
 	if (pa->generation != R.generation || R.chan < 0)
 		return; /* asked by a network side that is gone */
+	/* ⭐ D3 (7645beb7): outcome 4 is the root-form EXPIRY — an attempt without a verdict is not a free one, so it
+	 *    travels as a plain NO (counted by the network side); 3 stays «not checked» (cap, death, helper down). */
 	out = outcome == 1 ? RXR_YES : outcome == 2 ? RXR_NO_LOCKED
-	                             : outcome == 0 ? RXR_NO : RXR_NOT_CHECKED;
+	                             : (outcome == 0 || outcome == 4) ? RXR_NO : RXR_NOT_CHECKED;
 	if (out == RXR_YES
 	    && !rootside_grant_mint(&R.bounds, user, rhost, log_now_ms(), grant)) {
 		registro_dice(LOG_ROOT, "⛔ PAM said yes to «%s» but no grant could be minted "
