@@ -668,7 +668,7 @@ static void write_connection(connection *c)
 	uint8_t buf[64 * 1024];
 	ngtcp2_path_storage ps;
 	ngtcp2_pkt_info pi;
-	size_t gso = 0;
+	size_t gso = 0, buflen;
 	ngtcp2_tstamp ts = now_ns();
 	ngtcp2_ssize n;
 
@@ -681,7 +681,21 @@ static void write_connection(connection *c)
 	ngtcp2_path_storage_zero(&ps);
 	memset(&pi, 0, sizeof pi);
 
-	n = ngtcp2_conn_write_aggregate_pkt2(c->conn, &ps.path, &pi, buf, sizeof buf,
+	/* ⛔ 24 Oct 2026 (fuzz quic-conn, pacing oracle; present since 1.0): with
+	 *   num_pkts = 0 the `pkt2` variant does NOT clamp |buflen| to the send
+	 *   quantum, so a 64 KB buffer let one call put up to ~45 full packets on
+	 *   the wire at once, past ngtcp2's pacing.  The burst is now what
+	 *   `ngtcp2_conn_write_aggregate_pkt` would allow: the send quantum, never
+	 *   less than one full-size packet (ngtcp2's own floor). */
+	{
+		size_t quantum = ngtcp2_conn_get_send_quantum2(c->conn);
+		size_t floor = ngtcp2_conn_get_max_tx_udp_payload_size2(c->conn);
+
+		buflen = quantum < floor ? floor : quantum;
+		if (buflen > sizeof buf)
+			buflen = sizeof buf;
+	}
+	n = ngtcp2_conn_write_aggregate_pkt2(c->conn, &ps.path, &pi, buf, buflen,
 	                                     &gso, put_out_pkt, 0, ts);
 	if (n < 0) {
 		registro_dice(REG_QUIC, "⛔ write failed for %s: %s",
