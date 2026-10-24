@@ -505,7 +505,10 @@ static void gz_free(voidpf opaque, voidpf address)
 }
 
 /* ⭐ §11.44 (the user's decision, 15 Oct 2026): `plain` gzip-compressed
- *   (RFC 1952, level 9) — ~907 KB of page become far fewer for a slow phone.
+ *   (RFC 1952, level 6) — ~907 KB of page become far fewer for a slow phone.
+ *   ⚠ Level 6, not 9 (review of 6d8249c4): it runs on the main loop, once per
+ *   fingerprint, and 9 held it ~86 ms on the real page against ~45 ms for
+ *   +0.25 % of bytes.
  *   Done ONCE per fingerprint, when the shared page is built.  Returns a new
  *   body, or NULL: `*oom` says whether for lack of memory (worth retrying)
  *   or because it did not come out smaller (not worth it). */
@@ -521,7 +524,7 @@ static body *gz_page(const body *plain, bool *oom)
 	z.zalloc = gz_alloc;
 	z.zfree = gz_free;
 	/* 15 + 16: a 32 KB window and the gzip wrapper (not zlib's own). */
-	rv = deflateInit2(&z, 9, Z_DEFLATED, 15 + 16, 8, Z_DEFAULT_STRATEGY);
+	rv = deflateInit2(&z, 6, Z_DEFLATED, 15 + 16, 8, Z_DEFAULT_STRATEGY);
 	if (rv != Z_OK) {
 		*oom = rv == Z_MEM_ERROR;
 		return NULL;
@@ -550,6 +553,13 @@ static body *gz_page(const body *plain, bool *oom)
 	r->refs = 1;
 	r->n = (size_t)z.total_out;
 	deflateEnd(&z);
+	/* ⚠ The buffer was sized for the worst case (≈ the plain page): give
+	 *   the rest back.  A failed shrink keeps the big one, still valid. */
+	{
+		body *small = realloc(r, sizeof *r + r->n);
+		if (small)
+			r = small;
+	}
 	return r;
 }
 
@@ -575,68 +585,114 @@ static int qvalue(const char *s, size_t n)
 	return v > 1000 ? -1 : v;
 }
 
-/* One `Accept-Encoding` value: updates the q of `gzip` (or `x-gzip`) and of
- * `*` (-1 = not named). */
+static bool is_tchar(unsigned char ch)
+{
+	return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') ||
+	       (ch >= '0' && ch <= '9') || (ch && strchr("!#$%&'*+-.^_`|~", ch));
+}
+
+static bool is_ows(char ch)
+{
+	return ch == ' ' || ch == '\t';
+}
+
+/* One element of `Accept-Encoding` (no comma inside), RFC 9110 §12.5.3:
+ *   coding *( OWS ";" OWS [ name "=" value ] )
+ * — an EMPTY parameter (`gzip;q=0;`, `gzip;;q=0`) is allowed and skipped
+ * (review of 6d8249c4: it used to throw the whole element away, so
+ * `gzip;q=0;, *` got gzip).  Only `q` matters.  ⛔ An element that does not
+ * read — a coding or a name that is not a token, a parameter without a name
+ * or without a value, a value that is not a token (`a=b=c`, a quoted string),
+ * whitespace around `=`, `q` twice, a `q` that is no qvalue — COUNTS FOR
+ * NOTHING: as if it were not there. */
+static void accept_encoding_element(const char *s, size_t n, int *q_gzip, int *q_any)
+{
+	size_t i = 0, c0, c1;
+	int q = 1000;
+	bool have_q = false;
+
+	while (i < n && is_ows(s[i]))
+		i++;
+	while (n > i && is_ows(s[n - 1]))
+		n--;
+	c0 = i;
+	while (i < n && is_tchar((unsigned char)s[i]))
+		i++;
+	c1 = i;
+	if (c1 == c0)
+		return; /* empty, or no coding */
+	for (;;) {
+		size_t p0, p1, v0, v1;
+
+		while (i < n && is_ows(s[i]))
+			i++;
+		if (i == n)
+			break;
+		if (s[i] != ';')
+			return;
+		i++;
+		while (i < n && is_ows(s[i]))
+			i++;
+		if (i == n || s[i] == ';')
+			continue; /* the empty parameter */
+		p0 = i;
+		while (i < n && is_tchar((unsigned char)s[i]))
+			i++;
+		p1 = i;
+		if (p1 == p0 || i == n || s[i] != '=')
+			return;
+		i++;
+		v0 = i;
+		while (i < n && is_tchar((unsigned char)s[i]))
+			i++;
+		v1 = i;
+		if (v1 == v0 || (i < n && !is_ows(s[i]) && s[i] != ';'))
+			return;
+		if (p1 - p0 == 1 && (s[p0] == 'q' || s[p0] == 'Q')) {
+			if (have_q)
+				return;
+			have_q = true;
+			q = qvalue(s + v0, v1 - v0);
+			if (q < 0)
+				return;
+		}
+	}
+	if ((c1 - c0 == 4 && strncasecmp(s + c0, "gzip", 4) == 0) ||
+	    (c1 - c0 == 6 && strncasecmp(s + c0, "x-gzip", 6) == 0))
+		*q_gzip = *q_gzip < 0 ? q : (q < *q_gzip ? q : *q_gzip);
+	else if (c1 - c0 == 1 && s[c0] == '*')
+		*q_any = *q_any < 0 ? q : (q < *q_any ? q : *q_any);
+}
+
+/* One `Accept-Encoding` value: its elements, split on `,`. */
 static void accept_encoding_value(const char *s, size_t n, int *q_gzip, int *q_any)
 {
 	size_t i = 0;
 
-	while (i < n) {
-		size_t t0, t1;
-		int q = 1000;
-
-		while (i < n && (s[i] == ' ' || s[i] == '\t' || s[i] == ','))
-			i++;
-		t0 = i;
-		while (i < n && s[i] != ';' && s[i] != ',' && s[i] != ' ' && s[i] != '\t')
-			i++;
-		t1 = i;
-		/* The parameters: only `q` matters; anything unreadable makes the
-		 * whole element count for nothing (q = -1). */
-		while (i < n && s[i] != ',') {
-			size_t p0, p1, v0, v1;
-			while (i < n && (s[i] == ' ' || s[i] == '\t'))
-				i++;
-			if (i >= n || s[i] == ',')
-				break;
-			if (s[i] != ';') {
-				q = -1;
-				while (i < n && s[i] != ',')
-					i++;
-				break;
-			}
-			i++;
-			while (i < n && (s[i] == ' ' || s[i] == '\t'))
-				i++;
-			p0 = i;
-			while (i < n && s[i] != '=' && s[i] != ';' && s[i] != ',' &&
-			       s[i] != ' ' && s[i] != '\t')
-				i++;
-			p1 = i;
-			while (i < n && (s[i] == ' ' || s[i] == '\t'))
-				i++;
-			if (i >= n || s[i] != '=') {
-				q = -1;
-				continue;
-			}
-			i++;
-			while (i < n && (s[i] == ' ' || s[i] == '\t'))
-				i++;
-			v0 = i;
-			while (i < n && s[i] != ';' && s[i] != ',' && s[i] != ' ' && s[i] != '\t')
-				i++;
-			v1 = i;
-			if (p1 - p0 == 1 && (s[p0] == 'q' || s[p0] == 'Q'))
-				q = q < 0 ? -1 : qvalue(s + v0, v1 - v0);
-		}
-		if (q < 0 || t1 == t0)
-			continue;
-		if ((t1 - t0 == 4 && strncasecmp(s + t0, "gzip", 4) == 0) ||
-		    (t1 - t0 == 6 && strncasecmp(s + t0, "x-gzip", 6) == 0))
-			*q_gzip = *q_gzip < 0 ? q : (q < *q_gzip ? q : *q_gzip);
-		else if (t1 - t0 == 1 && s[t0] == '*')
-			*q_any = *q_any < 0 ? q : (q < *q_any ? q : *q_any);
+	while (i <= n) {
+		const char *comma = memchr(s + i, ',', n - i);
+		size_t e = comma ? (size_t)(comma - s) : n;
+		accept_encoding_element(s + i, e - i, q_gzip, q_any);
+		i = e + 1;
 	}
+}
+
+/* `true` = a header line begins with whitespace: an obs-fold (RFC 9112
+ * §5.2), refused with 400 as the RFC allows — never half-read. */
+static bool has_obs_fold(const char *req, size_t n)
+{
+	const char *line = memchr(req, '\n', n);
+
+	while (line) {
+		const char *start = line + 1;
+		size_t left = n - (size_t)(start - req);
+		if (left == 0 || *start == '\n' || (*start == '\r' && left > 1 && start[1] == '\n'))
+			return false; /* the empty line: the end of the headers */
+		if (is_ows(*start))
+			return true;
+		line = memchr(start, '\n', left);
+	}
+	return false;
 }
 
 /* ⭐ `true` = the request's `Accept-Encoding` allows gzip (RFC 9110
@@ -726,6 +782,14 @@ static void serve(page *p, client *c)
 	}
 	sp2 = memchr(sp1 + 1, ' ', c->nrequest - (size_t)(sp1 + 1 - c->request));
 	if (!sp2) {
+		compose(c, "400 Bad Request", "text/plain; charset=utf-8",
+		        "request is unreadable\n", 22, NULL);
+		return;
+	}
+	/* ⚠ A folded header line (obs-fold) is refused, not half-read: an
+	 *   `Accept-Encoding` continued on the next line would otherwise be
+	 *   read without its continuation (review of 6d8249c4). */
+	if (has_obs_fold(c->request, c->nrequest)) {
 		compose(c, "400 Bad Request", "text/plain; charset=utf-8",
 		        "request is unreadable\n", 22, NULL);
 		return;
