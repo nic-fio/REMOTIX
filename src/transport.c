@@ -1645,7 +1645,11 @@ static void read_packet(transport *t, const struct sockaddr *local,
 
 	{
 		ngtcp2_tstamp now = now_ns();
+		ngtcp2_conn_info before, after;
+
+		ngtcp2_conn_get_conn_info(c->conn, &before);
 		rv = ngtcp2_conn_read_pkt(c->conn, &path, pi, data, len, now);
+		ngtcp2_conn_get_conn_info(c->conn, &after);
 		/* ⛔⭐ §5.3 — AND HERE, AND ONLY IF `rv == 0`: the packet has been
 		 *     DECRYPTED AND AUTHENTICATED.  ⚠ A datagram arriving is not
 		 *     enough — anyone can send one with someone else's address, and
@@ -1655,8 +1659,14 @@ static void read_packet(transport *t, const struct sockaddr *local,
 		 *    looked at the last RCP byte, that is the last time the USER had
 		 *    touched something, and thirty seconds spent reading a page were
 		 *    enough to declare a live client gone.  ⛔ The price, measured: a
-		 *    second device came in and took the first one's desktop. */
-		if (rv == 0 && c->w)
+		 *    second device came in and took the first one's desktop.
+		 * ⛔ `rv == 0` alone is NOT «decrypted»: ngtcp2 also returns 0 for a
+		 *    packet it DISCARDS (undecryptable, duplicate, from an unknown path
+		 *    during the handshake).  Only a packet it counted as received
+		 *    (`pkt_recv`, «excluding discarded ones») is a sign of life — or a
+		 *    spoofed datagram would keep a dead connection alive.  Found by the
+		 *    quic-conn fuzz, 24 Oct 2026; already in 1.0. */
+		if (rv == 0 && c->w && after.pkt_recv > before.pkt_recv)
 			wt_sign_of_life(c->w, now);
 	}
 	if (rv != 0) {
