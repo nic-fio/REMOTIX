@@ -1062,8 +1062,7 @@ item below unless its line says otherwise. Release notes: `docs/RELEASE-NOTES-1.
     or waiting for HELLO or for CREDENTIALS). ⛔ A connection in **wait-verdict** (its password is being
     checked) is **never** evicted, nor one already signed in. A newcomer whose own address or /48 is full is
     refused, not given room. Evictions are counted in the 10 s summary line;
-  - a connection stops counting as «pending» at sign-in (admitted verdict, or the RCP state seen in
-    `transport_expired()` for the synchronous PAM fallback) or when reaped. ⭐ It is charged to its **birth
+  - a connection stops counting as «pending» at sign-in (admitted verdict, in `transport_verdict_from()`) or when reaped. ⭐ It is charged to its **birth
     address** and keeps it after a migration (§2.3), so moving cannot free a place on the old address.
 - ⚠ **The price, accepted knowingly:** everybody behind one shared IPv4 address (an office behind one NAT
   router) gets **8 sign-ins in progress at once**; the ninth is refused and must retry (the administrator can raise

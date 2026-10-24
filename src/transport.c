@@ -966,17 +966,6 @@ static void note_login(transport *t, connection *c)
 	           "not yet logged in (%zu left)", c->provenance, t->unlogged);
 }
 
-/* ⚠ The RCP states AFTER a granted login, by the names `rcp_state_name()` gives
- *   them.  It is how the login is seen also on the SYNCHRONOUS PAM fallback, where
- *   `transport_verdict()` is never called.  If `rcp.c` renamed them the cost is
- *   bounded: a logged-in connection would keep counting against its address. */
-static bool rcp_logged_in(const wt *w)
-{
-	const char *s = w ? wt_rcp_state(w) : "";
-	return strcmp(s, "wait-attach") == 0 || strcmp(s, "active") == 0 ||
-	       strcmp(s, "detached-by-silence") == 0;
-}
-
 /* ⛔ The states an eviction may close, by rank (lower goes first; -1 = never):
  *    0 `finished` — the RCP session is over and serves nobody;
  *    1 `(none)` — a QUIC connection that never opened its WebTransport session: it
@@ -2040,10 +2029,6 @@ void transport_expired(transport *t)
 		 *    nothing goes out. */
 		if (wt_heartbeat_ns(c->w) <= now)
 			wt_beat(c->w, now);
-		/* ⭐ 1.5: the login also seen here — the synchronous PAM fallback never
-		 *    goes through `transport_verdict()`. */
-		if (c->unlogged && rcp_logged_in(c->w))
-			note_login(t, c);
 		/* ⭐ 1.5: and the absolute age (the box on MAX_CONNECTIONS) */
 		if (c->unlogged && now - c->born >= UNLOGGED_MAX_S * NGTCP2_SECONDS) {
 			log_detail(REG_QUIC, "%s: not logged in after %d s (%s): closed",
