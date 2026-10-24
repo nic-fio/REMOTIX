@@ -8970,8 +8970,11 @@ ngtcp2_ssize wt_write(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 			if (u) {
 				stream_id = u->id;
 				fin = u->fin ? 1 : 0;
-				wtvec[0].base = u->data.d + u->off;
-				wtvec[0].len = u->data.n - u->off;
+				/* ⛔ A FIN-only entry has no bytes: `data.d` is NULL, and
+				 *    NULL + 0 is undefined behaviour in C (UBSan reports it).
+				 *    The vector then points at nothing with length 0. */
+				wtvec[0].base = u->data.d ? u->data.d + u->off : NULL;
+				wtvec[0].len = u->data.d ? u->data.n - u->off : 0;
 				wt_mine = true;
 			}
 		}
