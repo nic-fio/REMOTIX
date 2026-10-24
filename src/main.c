@@ -305,6 +305,19 @@ static void help(const char *name)
 	        "                    sized.  ⚠ Whoever does not fit receives 0x0E, which is\n"
 	        "                    a different fact from 0x06: the table is full, the\n"
 	        "                    machine is not\n"
+	        "  --max-connections N\n"
+	        "                    QUIC connections open at once, at most.  ⭐ DEFAULT\n"
+	        "                    256.  When full, the oldest connection not yet at\n"
+	        "                    its credentials is closed for the newcomer; with\n"
+	        "                    none, the newcomer is refused (CONNECTION_REFUSED).\n"
+	        "                    One log line every 10 s at most\n"
+	        "  --max-pending N   of those, NOT YET LOGGED IN, at most.  ⭐ DEFAULT 128\n"
+	        "  --max-pending-per-address N\n"
+	        "                    not yet logged in from one IPv4 address or IPv6\n"
+	        "                    /64, at most.  ⭐ DEFAULT 8.  A connection stops\n"
+	        "                    counting the moment it is admitted\n"
+	        "  --max-pending-per-48 N\n"
+	        "                    not yet logged in from one IPv6 /48.  ⭐ DEFAULT 32\n"
 	        "  --no-audio-silence\n"
 	        "                    ⭐⭐ TURNS OFF the AUDIO SILENCE, which since 24\n"
 	        "                    Aug 2026 is ON by default: a block in which\n"
@@ -1337,6 +1350,8 @@ static bool audio_silence = true;  /* ⭐ on; --no-audio-silence turns off */
 static double budget_mpixel_s;                        /* 0 = OFF (I6) */
 static double budget_reserve = BUDGET_DEFAULT_RESERVE;
 static int session_cap = RCP_SESSION_CAP;
+/* ⭐ 1.5: the QUIC connection caps; 0 = transport.c's default (256 / 128 / 8 / 32) */
+static size_t max_connections, max_pending, pending_per_address, pending_per_48;
 
 /* ⛔ One per user, and not per RCP session: the clock MUST survive the client
  *    that leaves — it is precisely the case it exists for.
@@ -2080,6 +2095,15 @@ int main(int argc, char **argv)
 			session_cap = (int)strtol(argv[++i], NULL, 10);
 		else if (strcmp(a, "--no-audio-silence") == 0)
 			audio_silence = false;
+		/* ⭐ 1.5: the QUIC connection caps (transport.h, `transport_limits()`) */
+		else if (strcmp(a, "--max-connections") == 0 && v)
+			max_connections = (size_t)strtoul(argv[++i], NULL, 10);
+		else if (strcmp(a, "--max-pending") == 0 && v)
+			max_pending = (size_t)strtoul(argv[++i], NULL, 10);
+		else if (strcmp(a, "--max-pending-per-address") == 0 && v)
+			pending_per_address = (size_t)strtoul(argv[++i], NULL, 10);
+		else if (strcmp(a, "--max-pending-per-48") == 0 && v)
+			pending_per_48 = (size_t)strtoul(argv[++i], NULL, 10);
 		else {
 			help(argv[0]);
 			return 2;
@@ -2451,6 +2475,7 @@ int main(int argc, char **argv)
 	t = transport_open(address, port, ctx_quic, pam_help, dir_cert);
 	if (!t)
 		goto fine;
+	transport_limits(t, max_connections, max_pending, pending_per_address, pending_per_48);
 	bridge.t = t;
 	bridge.f = offspring;
 	/* ⛔ The hook is connected HERE, after the children table exists and before

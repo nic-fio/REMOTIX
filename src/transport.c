@@ -6,6 +6,7 @@
 #include "log.h"
 #include "webtransport.h"
 
+#include <arpa/inet.h>
 #include <errno.h>
 #include <limits.h>
 #include <fcntl.h>
@@ -36,9 +37,95 @@
  *    a flood of short packets (even with forged sources, which Retry does not
  *    cover here) would make us send as much as it sends. */
 #define RETRY_TOKEN_TIMEOUT (10 * NGTCP2_SECONDS)
+/* ⭐ 1.5 (churn analysis, 15 Oct 2026): a Retry token makes ONE connection.  Without
+ *    this an evicted connection's Initial, sent again with the same token, was a new
+ *    connection with no new Retry — one datagram per eviction.  The tokens that made a
+ *    connection are remembered (a 64-bit keyed hash, until RETRY_TOKEN_TIMEOUT after
+ *    their use), and one seen again is answered INVALID_TOKEN (no connection, nothing
+ *    kept): whoever wants another connection starts over — an Initial without a token,
+ *    a Retry, a round trip at a real address.  ⚠ Bounded: TOKENS_KEPT entries
+ *    in a ring.  Past TOKENS_KEPT connections in 10 s (≈ 400 a second) the oldest is
+ *    forgotten early — its token could make a second connection — and the summary line
+ *    counts it; refusing instead would answer every token with a Retry, and nobody
+ *    could connect. */
+#define TOKENS_KEPT 4096
+/* The first this many new connections in a REFUSAL_LOG_S window are written one by
+ * one; the rest are counted in one line at the end of the window (a churn must not
+ * flood the log). */
+#define BIRTH_LINES 5
 #define RESET_PER_SECOND 100
 #define SECRET_LEN 32
 #define SECRET_FILE "quic-secret"
+
+/* ⛔⭐ 1.5 — HOW MANY CONNECTIONS, AND HOW MANY FROM ONE PLACE (security review,
+ *     15 Oct 2026).  Until today `accept_conn()` never looked at `how_many`: every
+ *     Initial with a good Retry token became a connection, and a connection that has
+ *     not logged in yet may hold up to ~1 MiB of half-received message for ~65 s
+ *     (CAP_HELLO 5 s + CAP_CREDENTIALS 60 s).  A few real addresses were enough to
+ *     fill the memory, and the same connections kept the 16 PAM slots busy.
+ *
+ *   · `MAX_CONNECTIONS` (256, `--max-connections`): all the connections at once,
+ *     logged in or not.
+ *   · `MAX_PENDING` (128, `--max-pending`): all the connections NOT YET LOGGED IN.
+ *     ⇒ The memory held before login is bounded by about 128 × 1 MiB, and at least
+ *       128 places stay for connections that have logged in.
+ *   · `PENDING_PER_ADDRESS` (8, `--max-pending-per-address`) and `PENDING_PER_48`
+ *     (32, `--max-pending-per-48`): not logged in from one place.  The place is the
+ *     rule of `rcp_key_address()` in `rcp.c` — ⛔ change both or neither:
+ *       1. `::ffff:a.b.c.d` (v4-mapped)         → a.b.c.d
+ *       2. `64:ff9b::a.b.c.d` (NAT64, RFC 6052) → a.b.c.d
+ *       3. `::1`                                → kept whole
+ *       4. any other IPv6                       → its /64
+ *       5. IPv4                                 → as it is
+ *     and the /48 is the second key of rule 4 (for 1, 2, 3, 5 it is the address
+ *     itself, so only the per-address cap bites there).  ⚠ A whole office behind
+ *     one NAT shares one IPv4 address: 8 people LOGGING IN in the same few seconds
+ *     is the ceiling, not 8 people connected — a connection stops counting the
+ *     moment it is admitted.
+ *   · ⭐ WHEN THE SERVER IS FULL (all connections, or all pending), the newcomer is
+ *     NOT simply refused: one connection that has not logged in and is still before
+ *     its credentials is closed for it (`CONNECTION_REFUSED`, «evicted»).  Otherwise
+ *     32 IPv4 addresses × 8, or one IPv6 /56, could hold every place for 65 s at a
+ *     time and lock everybody out, the owner too.  WHICH one (`pick_victim()`):
+ *       1. a `finished` one, the oldest — its RCP session is over (a client that
+ *          never said HELLO ends here, TIMED_OUT, without a ban), nobody is served;
+ *       2. otherwise, from the PLACE (the /48 key: an IPv4 address, or an IPv6 /48)
+ *          that holds the most pending connections — so a flood evicts ITSELF, not
+ *          the real users logging in from elsewhere —, the earliest state first
+ *          (no WebTransport session yet, then `wait-hello`, then
+ *          `wait-credentials`), the oldest within it.
+ *     ⛔ Never one in `wait-verdict` (PAM is judging it: closing it would waste the
+ *        check and let a flood cancel real logins) and never a logged-in one.
+ *     ⛔ The victim is closed only AFTER the newcomer's connection exists: if
+ *        `accept_conn()` fails nobody was closed for nothing.
+ *   · ⭐ AN ABSOLUTE AGE: a connection still not logged in `UNLOGGED_MAX_S` after it
+ *     was born is closed (`transport_expired()`).  The RCP clocks alone do not do
+ *     it: a session that never sent HELLO ends `finished` while the QUIC connection
+ *     lives on, kept by the client's PINGs — 16 addresses × 8 of those held all 128
+ *     pending places with no password and no ban (review of a723eb6b).  ⚠ The price: under a flood, a real user
+ *     whose HELLO or CREDENTIALS is still in flight can be evicted, and retries.
+ *     Nobody is evicted while typing: the page opens QUIC only AFTER the password
+ *     is typed (`connect()` on the form's submit, `page.html`).
+ *   · A refusal (a full place, or full with nobody evictable) keeps no state: a
+ *     `CONNECTION_CLOSE` with `CONNECTION_REFUSED`, answered only to an Initial whose
+ *     Retry token proved the address (so it is not reflected at a forged one), and
+ *     smaller than the Initial it answers.
+ *   · ⭐ Migration: a connection is counted against its BIRTH address and keeps it
+ *     after it moves (`c->birth_key`).  Re-keying on a move would let a client
+ *     dodge the cap by moving, or charge a slot to an address that never asked for
+ *     one; and the charge lasts at most until login or the ~65 s above. */
+#define MAX_CONNECTIONS 256
+#define MAX_PENDING 128
+#define PENDING_PER_ADDRESS 8
+#define PENDING_PER_48 32
+/* ⭐ The longest a login can honestly take: CAP_HELLO 5 s + CAP_CREDENTIALS 60 s +
+ *    VERDICT_CAP 12 s + the fixed second (rcp.c), and the margin for the QUIC and
+ *    HTTP/3 handshakes that come BEFORE the RCP clocks start.  ⚠ If rcp.c lengthens
+ *    those clocks, this follows. */
+#define UNLOGGED_MAX_S 90
+/* At most one log line about refusals every this many seconds (the others are counted
+ * into it): a flood must not become a flood of log lines. */
+#define REFUSAL_LOG_S 10
 
 /* ⛔ 30 s, imposed by the server (`RCP.md` §2.2): «it is the silence clock:
  *    when it expires, the client is disconnected».  ⚠ It is the TRANSPORT
@@ -109,6 +196,11 @@ typedef struct connection {
 
 	char provenance[80];
 	bool dead_run;
+	/* ⭐ 1.5: not logged in yet — it counts against `birth_key` (see the box on
+	 *    `MAX_CONNECTIONS`).  Set at birth, cleared ONCE: at login or when freed. */
+	bool unlogged;
+	uint8_t birth_key[16], birth_key48[16];
+	ngtcp2_tstamp born; /* `now_ns()` at accept: the clock of UNLOGGED_MAX_S */
 	/* ⛔ The datagrams that arrive and that in phase 1 are discarded: they are
 	 *    COUNTED, or «the audio does not arrive» and «the audio arrives and I
 	 *    throw it away» look the same (§6.3, finding B-10). */
@@ -130,6 +222,24 @@ struct transport {
 	SSL_CTX *ctx;
 	connection *prime;
 	size_t how_many;
+	/* ⭐ 1.5: the caps (0 = the default) and how many connections are `unlogged` */
+	size_t max_conns, max_pending, per_address, per_48;
+	size_t unlogged;
+	/* the refusals and evictions counted since the last line about them */
+	unsigned refused_full, refused_address, refused_48, evicted, aged;
+	char refused_last[64];
+	bool refused_ever;
+	ngtcp2_tstamp refused_line_ns;
+	/* ⭐ 1.5: the used Retry tokens (RETRY_TOKEN_TIMEOUT's box) */
+	struct {
+		uint64_t hash;
+		ngtcp2_tstamp until;
+	} tokens[TOKENS_KEPT];
+	size_t token_next;
+	unsigned token_replayed, token_forgotten;
+	/* the «new connection» lines (BIRTH_LINES) */
+	ngtcp2_tstamp birth_window_ns;
+	unsigned births_in_window, births_quiet;
 
 	entry_cid *cids;
 	size_t ncids, capcids;
@@ -570,6 +680,10 @@ static void reap_dead(transport *t)
 			*p = c->upcoming;
 			registro_dice(REG_QUIC, "connection with %s closed (%zu left)",
 			              c->provenance, t->how_many - 1);
+			if (c->unlogged) {
+				c->unlogged = false;
+				t->unlogged--;
+			}
 			connection_free(t, c);
 			t->how_many--;
 			continue;
@@ -615,6 +729,349 @@ static int cb_ack_datagram(ngtcp2_conn *conn, uint64_t dgram_id,
 	(void)conn;
 	wt_dgram_acked(c->w, dgram_id);
 	return 0;
+}
+
+/* ------------------------------------------------------------------------ */
+/* ⭐ 1.5: THE CAPS (the box on `MAX_CONNECTIONS`).                           */
+
+static size_t cap_conns(const transport *t)
+{
+	return t->max_conns ? t->max_conns : MAX_CONNECTIONS;
+}
+
+static size_t cap_pending(const transport *t)
+{
+	return t->max_pending ? t->max_pending : MAX_PENDING;
+}
+
+static size_t cap_per_address(const transport *t)
+{
+	return t->per_address ? t->per_address : PENDING_PER_ADDRESS;
+}
+
+static size_t cap_per_48(const transport *t)
+{
+	return t->per_48 ? t->per_48 : PENDING_PER_48;
+}
+
+/* The place a connection is counted against — the rule of the box on
+ * `MAX_CONNECTIONS`, the same as `rcp_key_address()`.  An IPv4 is written as
+ * `::ffff:a.b.c.d`, so rules 1, 2 and 5 give one key.  `key48` is the /48 of rule
+ * 4, and the key itself for the others. */
+static void address_key(const struct sockaddr *sa, uint8_t key[16], uint8_t key48[16])
+{
+	static const uint8_t NAT64[12] = {0x00, 0x64, 0xff, 0x9b};
+	memset(key, 0, 16);
+	if (sa->sa_family == AF_INET) {
+		key[10] = key[11] = 0xff;
+		memcpy(key + 12, &((const struct sockaddr_in *)sa)->sin_addr, 4);
+	} else if (sa->sa_family == AF_INET6) {
+		const struct in6_addr *a = &((const struct sockaddr_in6 *)sa)->sin6_addr;
+		if (IN6_IS_ADDR_V4MAPPED(a) || memcmp(a->s6_addr, NAT64, sizeof NAT64) == 0) {
+			key[10] = key[11] = 0xff;
+			memcpy(key + 12, a->s6_addr + 12, 4);
+		} else if (IN6_IS_ADDR_LOOPBACK(a)) {
+			memcpy(key, a, 16);
+		} else {
+			memcpy(key, a, 8);
+			memcpy(key48, key, 16);
+			memset(key48 + 6, 0, 10);
+			return;
+		}
+	}
+	memcpy(key48, key, 16);
+}
+
+static void key_text(const uint8_t key[16], int bits, char *out, size_t cap)
+{
+	static const uint8_t mapped[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff};
+	static const uint8_t loop[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
+	char a[INET6_ADDRSTRLEN];
+	if (memcmp(key, mapped, 12) == 0) {
+		if (!inet_ntop(AF_INET, key + 12, a, sizeof a))
+			snprintf(a, sizeof a, "?");
+		snprintf(out, cap, "%s", a);
+	} else {
+		if (!inet_ntop(AF_INET6, key, a, sizeof a))
+			snprintf(a, sizeof a, "?");
+		if (memcmp(key, loop, 16) == 0)
+			snprintf(out, cap, "%s", a);
+		else
+			snprintf(out, cap, "%s/%d", a, bits);
+	}
+}
+
+/* ⭐ The counts the caps compare are taken on the list itself, not kept in a table:
+ *    a count that is recomputed cannot drift.  A connection already closing
+ *    (`dead_run`, freed at the next `reap_dead()`) is not counted: it is going. */
+static size_t live_count(const transport *t)
+{
+	size_t n = 0;
+	for (const connection *c = t->prime; c; c = c->upcoming)
+		if (!c->dead_run)
+			n++;
+	return n;
+}
+
+static size_t pending_count(const transport *t)
+{
+	size_t n = 0;
+	for (const connection *c = t->prime; c; c = c->upcoming)
+		if (c->unlogged && !c->dead_run)
+			n++;
+	return n;
+}
+
+static size_t unlogged_from(const transport *t, const uint8_t key[16])
+{
+	size_t n = 0;
+	for (const connection *c = t->prime; c; c = c->upcoming)
+		if (c->unlogged && !c->dead_run && memcmp(c->birth_key, key, 16) == 0)
+			n++;
+	return n;
+}
+
+static size_t unlogged_from48(const transport *t, const uint8_t key48[16])
+{
+	size_t n = 0;
+	for (const connection *c = t->prime; c; c = c->upcoming)
+		if (c->unlogged && !c->dead_run && memcmp(c->birth_key48, key48, 16) == 0)
+			n++;
+	return n;
+}
+
+/* The connection has logged in: it no longer counts against its address. */
+static void note_login(transport *t, connection *c)
+{
+	if (!c->unlogged)
+		return;
+	c->unlogged = false;
+	t->unlogged--;
+	log_detail(REG_QUIC, "%s logged in: no longer counted among the connections "
+	           "not yet logged in (%zu left)", c->provenance, t->unlogged);
+}
+
+/* ⚠ The RCP states AFTER a granted login, by the names `rcp_state_name()` gives
+ *   them.  It is how the login is seen also on the SYNCHRONOUS PAM fallback, where
+ *   `transport_verdict()` is never called.  If `rcp.c` renamed them the cost is
+ *   bounded: a logged-in connection would keep counting against its address. */
+static bool rcp_logged_in(const wt *w)
+{
+	const char *s = w ? wt_rcp_state(w) : "";
+	return strcmp(s, "wait-attach") == 0 || strcmp(s, "active") == 0 ||
+	       strcmp(s, "detached-by-silence") == 0;
+}
+
+/* ⛔ The states an eviction may close, by rank (lower goes first; -1 = never):
+ *    0 `finished` — the RCP session is over and serves nobody;
+ *    1 `(none)` — a QUIC connection that never opened its WebTransport session: it
+ *      has no RCP clock at all (CAP_HELLO starts with the session);
+ *    2 `wait-hello`, 3 `wait-credentials` — before the credentials.
+ *    Never `wait-verdict` nor a logged-in one (the box on MAX_CONNECTIONS). */
+static int evict_rank(const connection *c)
+{
+	const char *s;
+	if (c->dead_run || !c->unlogged)
+		return -1;
+	s = c->w ? wt_rcp_state(c->w) : "(none)";
+	if (strcmp(s, "finished") == 0)
+		return 0;
+	if (strcmp(s, "(none)") == 0)
+		return 1;
+	if (strcmp(s, "wait-hello") == 0)
+		return 2;
+	if (strcmp(s, "wait-credentials") == 0)
+		return 3;
+	return -1;
+}
+
+/* The connection to close for a newcomer, or NULL — the order of the box on
+ * MAX_CONNECTIONS.  The list is newest first, so on a tie the later one (`>=`,
+ * `<=`) is the older.  ⚠ Quadratic in the connections (≤ 256), and only when full. */
+static connection *pick_victim(const transport *t)
+{
+	connection *v = NULL;
+	size_t v_n = 0;
+	int v_rank = 0;
+
+	for (connection *c = t->prime; c; c = c->upcoming)
+		if (evict_rank(c) == 0)
+			v = c;
+	if (v)
+		return v;
+	for (connection *c = t->prime; c; c = c->upcoming) {
+		int r = evict_rank(c);
+		size_t n;
+		if (r < 0)
+			continue;
+		n = unlogged_from48(t, c->birth_key48);
+		if (!v || n > v_n || (n == v_n && r <= v_rank)) {
+			v = c;
+			v_n = n;
+			v_rank = r;
+		}
+	}
+	return v;
+}
+
+/* Closes `c` with CONNECTION_REFUSED and `why`; `reaped` at the next `reap_dead()`. */
+static void close_refused(connection *c, const char *why)
+{
+	uint8_t buf[NGTCP2_MAX_UDP_PAYLOAD_SIZE];
+	ngtcp2_pkt_info opi;
+	ngtcp2_path_storage ps;
+	ngtcp2_ssize n;
+
+	ngtcp2_ccerr_set_transport_error(&c->last_error, NGTCP2_CONNECTION_REFUSED,
+	                                 (const uint8_t *)why, strlen(why));
+	ngtcp2_path_storage_zero(&ps);
+	memset(&opi, 0, sizeof opi);
+	n = ngtcp2_conn_write_connection_close(c->conn, &ps.path, &opi, buf, sizeof buf,
+	                                       &c->last_error, now_ns());
+	if (n > 0)
+		send_msg(c->t, (const struct sockaddr *)&c->remote, c->remotelen, buf, (size_t)n);
+	c->dead_run = true;
+}
+
+static void evict(transport *t, connection *victim)
+{
+	log_detail(REG_QUIC, "%s EVICTED (%s): the server is full and it had not sent "
+	           "its credentials", victim->provenance,
+	           victim->w ? wt_rcp_state(victim->w) : "(none)");
+	close_refused(victim, "server full: a login not yet begun is closed");
+	t->evicted++;
+}
+
+/* The token's place in the memory of used tokens: FNV-1a keyed with the static
+ * secret (the tokens are AEAD under that secret: nobody but the server makes them,
+ * so a chance collision — 2⁻⁶⁴ a pair — only costs one honest client one Retry). */
+static uint64_t token_hash(const transport *t, const uint8_t *tok, size_t len)
+{
+	uint64_t h = 0xcbf29ce484222325ull;
+	for (size_t i = 0; i < sizeof t->secret; i++)
+		h = (h ^ t->secret[i]) * 0x100000001b3ull;
+	for (size_t i = 0; i < len; i++)
+		h = (h ^ tok[i]) * 0x100000001b3ull;
+	return h;
+}
+
+static bool token_used(const transport *t, uint64_t h, ngtcp2_tstamp now)
+{
+	for (size_t i = 0; i < TOKENS_KEPT; i++)
+		if (t->tokens[i].until > now && t->tokens[i].hash == h)
+			return true;
+	return false;
+}
+
+static void token_keep(transport *t, uint64_t h, ngtcp2_tstamp now)
+{
+	size_t i = t->token_next;
+	if (t->tokens[i].until > now)
+		t->token_forgotten++;
+	t->tokens[i].hash = h;
+	t->tokens[i].until = now + RETRY_TOKEN_TIMEOUT;
+	t->token_next = (i + 1) % TOKENS_KEPT;
+}
+
+/* The count of the «new connection» lines not written, at the end of their window. */
+static void births_report(transport *t, ngtcp2_tstamp now)
+{
+	if (now - t->birth_window_ns < REFUSAL_LOG_S * NGTCP2_SECONDS)
+		return;
+	if (t->births_quiet)
+		registro_dice(REG_QUIC, "%u more new connections in the last %d s, not written one "
+		              "by one (%u written)", t->births_quiet, REFUSAL_LOG_S,
+		              t->births_in_window - t->births_quiet);
+	t->birth_window_ns = now;
+	t->births_in_window = t->births_quiet = 0;
+}
+
+/* One line, at most every REFUSAL_LOG_S seconds, with what was refused since the
+ * last one. */
+static void refusals_report(transport *t, ngtcp2_tstamp now)
+{
+	if (!t->refused_full && !t->refused_address && !t->refused_48 && !t->evicted &&
+	    !t->aged && !t->token_replayed && !t->token_forgotten)
+		return;
+	if (t->refused_ever && now - t->refused_line_ns < REFUSAL_LOG_S * NGTCP2_SECONDS)
+		return;
+	registro_dice(REG_QUIC,
+	              "⚠ SERVER UNDER PRESSURE%s: %u connections closed for not logging in "
+	              "within %d s; %u EVICTED to make room (not yet logged in, before "
+	              "credentials, from the most crowded place); REFUSED: %u full "
+	              "with nobody to evict (%zu in all / %zu pending), %u over %zu pending "
+	              "from one address, %u over %zu pending from one IPv6 /48; the last "
+	              "refused from %s; %u Retry tokens used again (INVALID_TOKEN each), %u "
+	              "forgotten early (more than %d connections in %d s)",
+	              t->refused_ever ? " in the last seconds" : "", t->aged, UNLOGGED_MAX_S,
+	              t->evicted,
+	              t->refused_full, cap_conns(t), cap_pending(t), t->refused_address,
+	              cap_per_address(t), t->refused_48, cap_per_48(t),
+	              t->refused_last[0] ? t->refused_last : "-", t->token_replayed,
+	              t->token_forgotten, TOKENS_KEPT, (int)(RETRY_TOKEN_TIMEOUT / NGTCP2_SECONDS));
+	t->refused_full = t->refused_address = t->refused_48 = t->evicted = t->aged = 0;
+	t->token_replayed = t->token_forgotten = 0;
+	t->refused_last[0] = 0;
+	t->refused_ever = true;
+	t->refused_line_ns = now;
+}
+
+/* `true` = room for one more connection from `remote` — and `*victim`, when not
+ * NULL, is the connection to EVICT once the newcomer's exists (the caller does it:
+ * `accept_conn()` may still fail); `false` = refused, and the client was told
+ * (stateless, see the box on MAX_CONNECTIONS). */
+static bool room_for(transport *t, const ngtcp2_pkt_hd *hd, const struct sockaddr *remote,
+                     socklen_t remotelen, connection **victim)
+{
+	uint8_t key[16], key48[16];
+	uint8_t buf[NGTCP2_MAX_UDP_PAYLOAD_SIZE];
+	ngtcp2_ssize n;
+
+	address_key(remote, key, key48);
+	/* ⛔ A full PLACE is refused, never evicted for: it would only let one place
+	 *    push out the others. */
+	if (unlogged_from(t, key) >= cap_per_address(t)) {
+		t->refused_address++;
+		key_text(key, 64, t->refused_last, sizeof t->refused_last);
+	} else if (unlogged_from48(t, key48) >= cap_per_48(t)) {
+		t->refused_48++;
+		key_text(key48, 48, t->refused_last, sizeof t->refused_last);
+	} else {
+		/* ⭐ One victim is enough for both caps (it is alive AND pending); if it
+		 *    is not — caps lowered under what is open — nobody is closed. */
+		size_t live = live_count(t), pend = pending_count(t);
+		connection *v = NULL;
+		*victim = NULL;
+		if (live < cap_conns(t) && pend < cap_pending(t))
+			return true;
+		v = pick_victim(t);
+		if (v && live - 1 < cap_conns(t) && pend - 1 < cap_pending(t)) {
+			*victim = v;
+			return true;
+		}
+		t->refused_full++;
+		key_text(key, 64, t->refused_last, sizeof t->refused_last);
+	}
+	n = ngtcp2_crypto_write_connection_close(buf, sizeof buf, hd->version, &hd->scid,
+	                                         &hd->dcid, NGTCP2_CONNECTION_REFUSED, NULL, 0);
+	if (n > 0)
+		send_msg(t, remote, remotelen, buf, (size_t)n);
+	refusals_report(t, now_ns());
+	return false;
+}
+
+void transport_limits(transport *t, size_t max_connections, size_t max_pending,
+                      size_t pending_per_address, size_t pending_per_48)
+{
+	t->max_conns = max_connections;
+	t->max_pending = max_pending;
+	t->per_address = pending_per_address;
+	t->per_48 = pending_per_48;
+	registro_dice(REG_QUIC,
+	              "connection caps: %zu in all, %zu not yet logged in, %zu of them per "
+	              "address (IPv4, or IPv6 /64), %zu per IPv6 /48 — when full, the oldest "
+	              "not yet at its credentials is evicted for the newcomer",
+	              cap_conns(t), cap_pending(t), cap_per_address(t), cap_per_48(t));
 }
 
 /* ⭐ §11.9: `odcid` is the destination connection id of the Initial that
@@ -822,9 +1279,20 @@ static connection *accept_conn(transport *t, const ngtcp2_pkt_hd *hd,
 	c->upcoming = t->prime;
 	t->prime = c;
 	t->how_many++;
+	address_key(remote, c->birth_key, c->birth_key48);
+	c->born = now_ns();
+	c->unlogged = true;
+	t->unlogged++;
 
-	registro_dice(REG_QUIC, "new connection from %s (%zu in all)",
-	              c->provenance, t->how_many);
+	births_report(t, c->born);
+	if (++t->births_in_window <= BIRTH_LINES) {
+		registro_dice(REG_QUIC, "new connection from %s (%zu in all), address "
+		              "validated with a Retry", c->provenance, t->how_many);
+	} else {
+		t->births_quiet++;
+		log_detail(REG_QUIC, "new connection from %s (%zu in all), address "
+		           "validated with a Retry", c->provenance, t->how_many);
+	}
 	return c;
 
 male:
@@ -1004,6 +1472,8 @@ static void read_packet(transport *t, const struct sockaddr *local,
 	if (!c) {
 		ngtcp2_pkt_hd hd;
 		ngtcp2_cid odcid;
+		connection *victim = NULL;
+		uint64_t token;
 		if (ngtcp2_accept(&hd, data, len) != 0) {
 			/* ⭐ §11.9: no connection and it is not an Initial.  A SHORT
 			 *   header gets a Stateless Reset (first bit 0; the fixed bit is
@@ -1044,9 +1514,30 @@ static void read_packet(transport *t, const struct sockaddr *local,
 			return;
 		}
 		log_detail(REG_QUIC, "address validated with a Retry");
+		/* ⭐ 1.5: a token makes one connection (RETRY_TOKEN_TIMEOUT's box).
+		 * ⛔ The answer is INVALID_TOKEN, not a second Retry: an HONEST client gets
+		 *    here too — its half-open connection was evicted and the CONNECTION_CLOSE
+		 *    was lost, or its first packet made «read failed» and it was reaped — and
+		 *    a client MUST discard a second Retry (RFC 9000 §17.2.5.2): it would wait
+		 *    its whole handshake timeout.  INVALID_TOKEN makes it fail at once (the
+		 *    page reconnects with a new Initial); the replayer gets nothing either way. */
+		token = token_hash(t, hd.token, hd.tokenlen);
+		if (token_used(t, token, now_ns())) {
+			log_detail(REG_QUIC, "Retry token used again: INVALID_TOKEN");
+			t->token_replayed++;
+			send_invalid_token(t, &hd, remote, remotelen);
+			refusals_report(t, now_ns());
+			return;
+		}
+		if (!room_for(t, &hd, remote, remotelen, &victim))
+			return;
 		c = accept_conn(t, &hd, &odcid, local, localelen, remote, remotelen);
 		if (!c)
 			return;
+		token_keep(t, token, c->born);
+		if (victim)
+			evict(t, victim);
+		refusals_report(t, now_ns());
 	}
 
 	if (ngtcp2_conn_in_draining_period2(c->conn))
@@ -1236,7 +1727,16 @@ int transport_wait_ms(const transport *t)
 		e = wt_heartbeat_ns(c->w);
 		if (e < before)
 			before = e;
+		if (c->unlogged && c->born + UNLOGGED_MAX_S * NGTCP2_SECONDS < before)
+			before = c->born + UNLOGGED_MAX_S * NGTCP2_SECONDS;
 	}
+	/* ⭐ 1.5: refusals counted and not yet written wake the loop for their line */
+	if ((t->refused_full || t->refused_address || t->refused_48 || t->evicted ||
+	     t->aged || t->token_replayed || t->token_forgotten) &&
+	    t->refused_line_ns + REFUSAL_LOG_S * NGTCP2_SECONDS < before)
+		before = t->refused_line_ns + REFUSAL_LOG_S * NGTCP2_SECONDS;
+	if (t->births_quiet && t->birth_window_ns + REFUSAL_LOG_S * NGTCP2_SECONDS < before)
+		before = t->birth_window_ns + REFUSAL_LOG_S * NGTCP2_SECONDS;
 	if (before == UINT64_MAX)
 		return -1;
 	if (before <= now)
@@ -1268,6 +1768,8 @@ void transport_verdict(transport *t, uint64_t ticket, bool admitted,
 		if (c->dead_run || !c->w)
 			continue;
 		if (wt_verdict(c->w, ticket, admitted, resumed)) {
+			if (admitted)
+				note_login(t, c);
 			/* ⛔ And it is written again AT ONCE: the verdict may have made
 			 *    the `ADMITTED`/`REJECTED` ripe, and waiting for the next beat
 			 *    would add up to 100 ms for whoever authenticates — that is,
@@ -1297,6 +1799,18 @@ void transport_expired(transport *t)
 		 *    nothing goes out. */
 		if (wt_heartbeat_ns(c->w) <= now)
 			wt_beat(c->w, now);
+		/* ⭐ 1.5: the login also seen here — the synchronous PAM fallback never
+		 *    goes through `transport_verdict()`. */
+		if (c->unlogged && rcp_logged_in(c->w))
+			note_login(t, c);
+		/* ⭐ 1.5: and the absolute age (the box on MAX_CONNECTIONS) */
+		if (c->unlogged && now - c->born >= UNLOGGED_MAX_S * NGTCP2_SECONDS) {
+			log_detail(REG_QUIC, "%s: not logged in after %d s (%s): closed",
+			           c->provenance, UNLOGGED_MAX_S, wt_rcp_state(c->w));
+			close_refused(c, "not logged in in time");
+			t->aged++;
+			continue;
+		}
 
 		/* ⛔⭐⭐ PHASE 9 — THE DEAD LINE, and it is dropped HERE because the
 		 *      QUIC connection belongs to this file: `webtransport.c` has the
@@ -1353,6 +1867,9 @@ void transport_expired(transport *t)
 			}
 		}
 	}
+	refusals_report(t, now);
+	if (t->births_quiet)
+		births_report(t, now);
 	transport_write(t);
 }
 

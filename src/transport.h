@@ -99,6 +99,19 @@ int transport_wait_ms(const transport *t);
 /* Expires the ripe timers (QUIC's and ours) and writes again. */
 void transport_expired(transport *t);
 
+/* ⭐ 1.5 (security review, 15 Oct 2026): the caps on connections — at most
+ * `max_connections` at once, `max_pending` of them NOT YET LOGGED IN, and of those
+ * `pending_per_address` from one IPv4 address or IPv6 /64 and `pending_per_48` from
+ * one IPv6 /48.  0 = the default (256, 128, 8, 32).  When the server is full the
+ * oldest connection that has not reached its credentials is closed for the
+ * newcomer; a full place, or full with nobody to close, is refused with
+ * CONNECTION_REFUSED and nothing kept.  One log line every 10 s at most.  The
+ * reasons, the address rule (the same as `rcp_key_address()`) and why a migrated
+ * connection keeps counting against its birth address are in the box on
+ * `MAX_CONNECTIONS` in `transport.c`.  Call it right after `transport_open()`. */
+void transport_limits(transport *t, size_t max_connections, size_t max_pending,
+                      size_t pending_per_address, size_t pending_per_48);
+
 /* How many connections are alive.  For the log. */
 size_t transport_count(const transport *t);
 
