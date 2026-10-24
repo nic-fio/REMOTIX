@@ -8536,20 +8536,22 @@ int wt_stream_reset(wt *w, int64_t stream_id)
 	return h3_shutdown_read(w, stream_id);
 }
 
-/* ⛔ 24 Oct 2026, audit nghttp3 1.18 (the same since 1.0): a STOP_SENDING of the client
- *    asks US to stop WRITING on the stream.  This called
- *    `nghttp3_conn_shutdown_stream_read`, that is «read-side of stream ... is
- *    abruptly closed, and any further incoming data and pending stream data
- *    should be discarded» (`nghttp3.h`): it threw away what the client sends
- *    and left nghttp3 offering bytes to a stream ngtcp2 had shut for
- *    writing.  The right call is `nghttp3_conn_shutdown_stream_write`:
- *    «any further write operation to stream ... is prohibited». */
+/* ⛔ 24 Oct 2026, audit nghttp3 1.18: this is ngtcp2's `.stream_stop_sending`, and
+ *    `ngtcp2.h` says it «is invoked when a stream is no longer read by a
+ *    local endpoint before it receives all stream data»: it fires when WE
+ *    stop reading, NOT when the client sends STOP_SENDING (that one is
+ *    `recv_stop_sending`, not registered: the client's STOP_SENDING reaches
+ *    us as STREAM_SHUT_WR from `ngtcp2_conn_writev_stream`, handled in
+ *    `wt_write`).  So the read side is the right one to tell nghttp3
+ *    (`nghttp3_conn_shutdown_stream_read`, «any further incoming data ...
+ *    should be discarded»), and with its result handled like the other
+ *    callers (`h3_shutdown_read`).  An earlier commit of this audit read the
+ *    callback wrongly and moved it to the write side: this restores it. */
 int wt_stream_stop_sending(wt *w, int64_t stream_id)
 {
 	if (!w->h3)
 		return 0;
-	nghttp3_conn_shutdown_stream_write(w->h3, stream_id);
-	return 0;
+	return h3_shutdown_read(w, stream_id);
 }
 
 /* ⛔⛔⭐ PHASE 9 — OUR BYTES FIRST, THEN nghttp3.
