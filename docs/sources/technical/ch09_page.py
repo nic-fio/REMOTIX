@@ -446,6 +446,13 @@ S11 = p("The decoded " + c("VideoFrame") + " reaches the screen by one of three 
          "context, and swapping the element would detach every input handler bound to it. The fallback is the next "
          "page load with " + c("?canvas=bmp")],
     ], "«TAB» — Context loss on the WebGL2 path") + \
+    p("<b>The last row of the picture.</b> Chrome converts the " + c("VideoFrame") + " to RGB before the shader sees it, "
+      "and builds the last visible row from part of the padding chroma row below, which is zero: that row came out tinted "
+      "(F-011, " + c("chroma_bleed") + "). Reading " + c("textureSize()") + " was not enough, because Chrome uploads a "
+      "texture of exactly the visible size with the row already tinted. The page therefore looks at the frame: when its "
+      + c("codedHeight") + " is greater than the visible rectangle it sets the uniform " + c("trim") + " and the shader "
+      "repeats the row above for the last visible one. Firefox, with no rows below the visible ones, is untouched; the "
+      "price is one row of detail at the bottom edge on Chrome. Verified on 24 October 2026: row 2063 equals row 2062.") + \
     p("On every path the buffer is set to the frame size only when it changes (writing " + c("canvas.width")
       + " clears it), explicitly: Chrome, unlike Firefox, does not resize a " + c("bitmaprenderer") + " canvas "
       "on transfer, and a 16×16 buffer stretched by CSS once sent every click to the top-left corner. The pointer "

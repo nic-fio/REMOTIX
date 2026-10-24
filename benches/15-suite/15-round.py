@@ -101,9 +101,12 @@ def read_tests(pattern=""):
         # ⭐ PHONE_ONLY = True: the test makes sense only with the real phone (F-031, touch)
         solo_tel = bool(re.search(r"^PHONE_ONLY\s*=\s*True", text, re.M))
         s = re.search(r"^SERVER\s*=\s*[\"']([^\"']+)[\"']", text, re.M)
+        # ⭐ DESKTOPS = ("kde",): the test is launched ONLY on these desktops (absent = on all)
+        dm = re.search(r"^DESKTOPS\s*=\s*\(([^)]*)\)", text, re.M)
+        desktops = re.findall(r"[\"']([a-z0-9]+)[\"']", dm.group(1)) if dm else []
         prove.append({"file": f, "name": name, "corto": too_short, "functions": functions,
                       "per_browser": per_browser, "long": long, "solo_telefono": solo_tel,
-                      "server": s.group(1) if s else ""})
+                      "server": s.group(1) if s else "", "desktops": desktops})
     return prove
 
 
@@ -298,6 +301,7 @@ def one_test(o, p, d, b, base, meta):
 
 
 def streak(o, d, prove, meta, outcomes):
+    prove = [p for p in prove if not p["desktops"] or d in p["desktops"]]     # DESKTOPS: not launched elsewhere
     base = 3100 + 10 * DESKTOP.index(d)
     long_tests = [p for p in prove if p["long"]]
     short = [p for p in prove if not p["long"]]
@@ -440,7 +444,8 @@ def main():
             print("%-44s %-28s %s%s%s" % (p["name"], ",".join(p["functions"]),
                                           "per browser" if p["per_browser"] else "once",
                                           " · LONG" if p["long"] else "",
-                                          " · server " + p["server"] if p["server"] else ""))
+                                          " · server " + p["server"] if p["server"] else "")
+                  + (" · only " + ",".join(p["desktops"]) if p["desktops"] else ""))
         return 0
     trouble = keep_boxes("15-round %s" % o.round)
     if trouble:

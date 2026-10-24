@@ -297,7 +297,9 @@ C3 = p("On GNOME the clipboard belongs to Mutter (" + c("MetaSelection") + "); t
         "The text types, in this order and nowhere else: " + c("text/plain;charset=utf-8") + ", "
         + c("UTF8_STRING") + ", " + c("text/plain") + " (" + c("TEXT_TYPES") + ").",
         "The text is read in the module, on the clipboard thread, because the announcement needs its length; "
-        "the limit and UTF-8 validity are checked there, where the text is still whole; the last text copied "
+        "the limit, a zero in the middle and UTF-8 validity are checked there, in that order, where the text is still whole "
+        "(the zero first: " + c("g_utf8_validate_len()") + " already rejects it, so after it the zero test was unreachable "
+        "and the log blamed UTF-8; the KDE module does the same); the last text copied "
         "in the session is remembered (" + c("clipboard_last_text()") + "), so that a client that reconnects "
         "finds it (invariant I4).",
         "The clipboard is enabled with empty options, so Mutter immediately reports who owns the selection; and "

@@ -434,26 +434,28 @@ static char *read_text(ClipboardKde *clipboard, size_t *byte)
 			continue;
 		}
 		start = g_bytes_get_data(data, &amount);
-		if (!g_utf8_validate_len(start, (gssize)amount, NULL)) {
-			registro_dice(LOG_CLIPBOARD, "⛔ «%s» is not valid UTF-8 (%zu bytes): "
-			                           "skipping it", TEXT_TYPES[i], (size_t)amount);
-			/* The GBytes is ours alone (from `read_type`): wiped before it is freed. */
-			explicit_bzero((void *)start, amount);
-			g_bytes_unref(data);
-			continue;
-		}
-		/* ⛔ A zero in the middle is valid UTF-8 but the text travels as a
-		 *    zero-terminated string (`last`, the socket, `rcp.c`): kept, it would
-		 *    be cut at the zero while `last_byte` stated the whole length, and the
-		 *    fallback in `clipboard_kde_reply` wrote past the copy.  Not announced,
-		 *    as `clipboard.c` does for GNOME: truncating would be an announcement
-		 *    that lies. */
+		/* ⛔ A zero in the middle: the text travels as a zero-terminated string
+		 *    (`last`, the socket, `rcp.c`): kept, it would be cut at the zero
+		 *    while `last_byte` stated the whole length, and the fallback in
+		 *    `clipboard_kde_reply` wrote past the copy.  Not announced, as
+		 *    `clipboard.c` does for GNOME: truncating would be an announcement
+		 *    that lies.  ⚠ Checked BEFORE the UTF-8 test (24 Oct 2026, F-014E):
+		 *    `g_utf8_validate_len()` already rejects a zero, so after it this
+		 *    test was unreachable and the log blamed «not valid UTF-8». */
 		if (memchr(start, 0, amount)) {
 			registro_dice(LOG_CLIPBOARD,
 			              "⛔ «%s»: %zu bytes with a zero in the middle — not "
 			              "announced.  Truncating here would give a text shorter "
 			              "than the announcement, that is an announcement that lies",
 			              TEXT_TYPES[i], (size_t)amount);
+			explicit_bzero((void *)start, amount);
+			g_bytes_unref(data);
+			continue;
+		}
+		if (!g_utf8_validate_len(start, (gssize)amount, NULL)) {
+			registro_dice(LOG_CLIPBOARD, "⛔ «%s» is not valid UTF-8 (%zu bytes): "
+			                           "skipping it", TEXT_TYPES[i], (size_t)amount);
+			/* The GBytes is ours alone (from `read_type`): wiped before it is freed. */
 			explicit_bzero((void *)start, amount);
 			g_bytes_unref(data);
 			continue;

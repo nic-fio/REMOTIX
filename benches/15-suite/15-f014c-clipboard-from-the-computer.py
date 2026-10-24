@@ -129,6 +129,29 @@ def wl_duplicate(text):
     return r.returncode == 0
 
 
+def diag_snap(label, t_ref=None):
+    """Diagnostic only (F-015C): who owns the computer's clipboard right now.
+    Same WAYLAND_DISPLAY as the test; each command has a short timeout (never
+    changes the verdict, costs a few ms)."""
+    lines = ["== %s%s" % (label, "" if t_ref is None else " (+%.2f s)" % (time.time() - t_ref))]
+    cmds = [["wl-paste", "--list-types"], ["wl-paste", "--no-newline"],
+            ["pgrep", "-a", "wl-copy"], ["wlrctl", "toplevel", "list"]]
+    for c in cmds:
+        if not shutil.which(c[0]):
+            lines.append("$ %s -> (not installed)" % " ".join(c))
+            continue
+        try:
+            r = subprocess.run(c, capture_output=True, timeout=0.5)
+            out = r.stdout.decode("utf-8", "replace").strip()
+            if c[1:2] == ["--no-newline"]:
+                out = out[:80]
+            lines.append("$ %s -> rc %s | %s" % (" ".join(c), r.returncode,
+                                                  out.replace("\n", " ; ")[:300]))
+        except Exception as e:                   # noqa: BLE001
+            lines.append("$ %s -> %s" % (" ".join(c), type(e).__name__))
+    return "\n".join(lines)
+
+
 def wl_read():
     """The text in the computer's clipboard, or None."""
     try:
@@ -271,10 +294,19 @@ def p1(g, scene, text, copied=True):
     if copied:
         det["key"] = ctrl_from_system(g, "c")
     t0 = time.time()
+    diag = [] if not copied else [diag_snap("WAYLAND_DISPLAY=%s, right after the Ctrl+C"
+                      % os.environ.get("WAYLAND_DISPLAY", ""), t0)]
+    diag_due = [0.2, 1.0]
     read, readings = None, []
     while time.time() - t0 < CAP_P1_S:
+        if copied and diag_due and time.time() - t0 >= diag_due[0] \
+                and time.time() - t0 + 2.0 < CAP_P1_S:
+            diag.append(diag_snap("poll", t0))
+            diag_due.pop(0)
         read = wl_read()
         readings.append((round(time.time() - t0, 2), (read or "")[:60]))
+        if read == text and time.time() - t0 > CAP_P1_S:
+            read = None                          # arrived AFTER the limit: not in time
         if read == text:
             break
         time.sleep(0.2)
@@ -286,8 +318,13 @@ def p1(g, scene, text, copied=True):
     if read != text:
         time.sleep(2.0)
         det["computer_after_5s"] = wl_read()      # diagnosis: is it only late?
+        if copied:
+            diag.append(diag_snap("after the wait (~5 s)", t0))
         det["state_after_5s"] = state(g)
     det["diary"] = g.js(F14.DIARY)
+    if copied:                                   # the fault pass (copied=False) has no diagnostics
+        det["diag_file"] = "diag-f015c.txt"
+        det["diag_text"] = "\n".join(diag)
     return read, det
 
 
@@ -428,6 +465,7 @@ def set_up_scene(o, E, s, g, geo, scene):
     # ── P1 · F-015C ────────────────────────────────────────────────────────
     t1 = F14.unique_text("P1")
     read1, d1 = p1(g, scene, t1)
+    s.save_text("diag-f015c.txt", d1.pop("diag_text", ""))
     ev1 = [save("p1-sana.json", d1)]
     e, why = F14.judge_text(t1, read1)
     if e == S.PASS:
