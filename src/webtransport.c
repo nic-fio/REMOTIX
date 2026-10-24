@@ -2584,6 +2584,31 @@ void wt_layout_hook(wt_layout_request f, void *ctx)
 	hook_stage_layout_ctx = ctx;
 }
 
+/* ⏳ `RCP.md` §13 (PROPOSED) — the decoder's pace, to the stage of WHOEVER
+ *    ASKED.  ⛔ I3 as for the layout: the user is the one PAM admitted on THIS
+ *    session, never a name from the wire. */
+static wt_pace_request hook_stage_pace;
+static void *hook_stage_pace_ctx;
+
+void wt_pace_hook(wt_pace_request f, void *ctx)
+{
+	hook_stage_pace = f;
+	hook_stage_pace_ctx = ctx;
+}
+
+static bool hook_pace(void *ctx, uint16_t max_fps)
+{
+	wt *w = (wt *)ctx;
+	const char *my;
+
+	if (!hook_stage_pace || !w->rcp)
+		return false;
+	my = rcp_user(w->rcp);
+	if (!my || !my[0])
+		return false;
+	return hook_stage_pace(hook_stage_pace_ctx, my, max_fps);
+}
+
 /* ⭐⭐ §5-bis.7 — «set this layout», and it goes to the stage of WHOEVER
  *     ASKED.  ⛔ Invariant I3, identical to the re-canvas: the user's name
  *     is the one PAM admitted on THIS session, never a parameter that
@@ -6993,6 +7018,10 @@ static void rcp_start(wt *w, int64_t stream_id)
 	 *   anybody for. */
 	if (hook_stage_recanvas)
 		g.recanvas = hook_recanvas;
+	/* ⏳ §13: connected only with the bridge to the stage — a server that
+	 *    cannot apply a `PACE` must not declare `video.pace`. */
+	if (hook_stage_pace)
+		g.pace = hook_pace;
 
 	/* ⛔⭐ AND THIS ONE IS ALWAYS CONNECTED, even without the bridge towards the stage: it
 	 *     asks nobody anything — it reads a number this module already has,

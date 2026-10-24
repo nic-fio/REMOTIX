@@ -251,6 +251,11 @@ static void help(const char *name)
 	        "                    slot is freed only by the silence clock\n"
 	        "                    (30 s): whoever comes back after a drop is\n"
 	        "                    told the slot is taken — by themselves\n"
+	        "  --decoder-pace\n"
+	        "                    ⏳ RCP.md §13, PROPOSED (DECISIONS.md §11.32, open):\n"
+	        "                    declares video.pace, so a client whose decoder\n"
+	        "                    is behind may lower its OWN frame rate (PACE,\n"
+	        "                    0x0012, clamped to 5..59/s).  OFF by default (I6)\n"
 	        "  --no-adaptive-rate\n"
 	        "                    ⭐⭐ TURNS OFF the rate regulator, which since 24\n"
 	        "                    Aug 2026 is ON by default: a frame does not\n"
@@ -1287,6 +1292,10 @@ static uint32_t bandwidth_cap_mbit;   /* --bandwidth-cap-mbit, 0 = off    */
  * ⚠ THE PRICE is the same as the threshold's, and it is written above: the two
  *   cures were measured together and do not have two separate prices. */
 static bool adaptive_rate = true;  /* ⭐ on; --no-adaptive-rate turns off */
+/* ⏳ `RCP.md` §13 (PROPOSED) — the decoder's pace.  ⛔ OFF (I6): fewer frames
+ *    is something the user SEES, and the protocol line is not yet decided
+ *    (`DECISIONS.md` §11.32). */
+static bool decoder_pace = false;
 /* ⛔⭐⭐ AND THE FIFTH, which is of another kind: the other four change HOW
  *      WELL one sees, this one decides whether the session still EXISTS.
  *      The user's decision of 23 Aug 2026: a line that loses in bursts is not
@@ -1677,6 +1686,16 @@ static bool layout_to_child(void *ctx, const char *user,
 	return children_layout(p->f, user, name);
 }
 
+/* ⏳ `RCP.md` §13 (PROPOSED) — the decoder's pace, to `children_pace()`:
+ *    this file is the bridge, not the rule. */
+static bool pace_to_child(void *ctx, const char *user, uint16_t max_fps)
+{
+	struct bridge *p = (struct bridge *)ctx;
+	if (!p || !p->f)
+		return false;
+	return children_pace(p->f, user, max_fps);
+}
+
 static bool recanvas_to_child(void *ctx, const char *user, uint32_t width,
                              uint32_t height)
 {
@@ -1985,6 +2004,9 @@ int main(int argc, char **argv)
 		 *    on purpose. */
 		else if (strcmp(a, "--no-adaptive-rate") == 0)
 			adaptive_rate = false;
+		/* ⏳ §13, PROPOSED: without an argument, like `--quality-recovery`. */
+		else if (strcmp(a, "--decoder-pace") == 0)
+			decoder_pace = true;
 		/* ⛔⭐⭐⭐ PHASE 9 — THE DEAD LINE, the user's decision of 23 Aug 2026:
 		 *      a line that loses in bursts is not served, it is declared dead —
 		 *      the wire drops and the user gets back in by hand.
@@ -2347,6 +2369,24 @@ int main(int argc, char **argv)
 	 *    trigger produce the same log, that is no line. */
 	wt_adaptive_rate(adaptive_rate);
 
+	/* ⏳ `RCP.md` §13 (PROPOSED) — and the line goes out ON AND OFF, like the
+	 *    switches above: «off» and «on and never asked for» must not look the
+	 *    same. */
+	rcp_pace_offer(decoder_pace);
+	if (decoder_pace)
+		registro_dice(REG_RCP,
+		              "⏳ DECODER PACE ON (--decoder-pace; RCP.md §13 is "
+		              "PROPOSED, not normative): HERE_I_AM declares "
+		              "video.pace=yes, and a client that declared it too may "
+		              "lower its OWN frame rate with PACE (0x0012), clamped to "
+		              "%u..%u/s.  The child takes fewer frames, before encoding",
+		              RCP_PACE_FLOOR_FPS, RCP_PACE_TOP_FPS - 1u);
+	else
+		registro_dice(REG_RCP,
+		              "decoder pace off (RCP.md §13 is PROPOSED; --decoder-pace "
+		              "turns it on): video.pace is not declared, and a PACE "
+		              "(0x0012) is PROTOCOL_ERROR");
+
 	/* ⛔⭐⭐⭐ AND THE DEAD LINE, and it is ALWAYS called — on and off — for the
 	 *       same reason as the two above, with one more weight: this one does
 	 *       not make the picture look worse, IT CLOSES THE SESSION.  A session
@@ -2519,6 +2559,9 @@ int main(int argc, char **argv)
 	 *     server that can do it. */
 	wt_recanvas_hook(recanvas_to_child, &bridge);
 	wt_layout_hook(layout_to_child, &bridge);
+	/* ⏳ §13: connected always; `rcp.c` declares `video.pace` only with
+	 *    `--decoder-pace`. */
+	wt_pace_hook(pace_to_child, &bridge);
 
 	/* ⭐⭐ §5.1 — THE GUARD OF THE LOCAL SESSIONS, and it is connected BEFORE the
 	 *     page for the same reason as the others: the `0x05` question is asked

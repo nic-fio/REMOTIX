@@ -110,6 +110,21 @@ bool rcp_cap_set(int how_many);
 void rcp_video_codec_set(const char *listing);
 const char *rcp_video_codec(void);
 
+/* ⏳ `RCP.md` §13 (PROPOSED, `DECISIONS.md` §11.32, open): `PACE`.
+ *
+ * ⛔ OFF by default (I6: fewer frames is something the user SEES).  On only
+ *    with `--decoder-pace`: then `HERE_I_AM` declares `video.pace=yes` — but
+ *    only on sessions whose host connected the `pace` hook.  The startup line
+ *    is written by `main.c`, on AND off. */
+void rcp_pace_offer(bool on);
+bool rcp_pace_offered(void);
+/* The clamp of §13.5.  ⚠ `RCP_PACE_TOP_FPS` is the stage's own rate
+ * (`MOTION_FPS` in `child.c`): a ceiling at or above it is no ceiling. */
+#define RCP_PACE_FLOOR_FPS 5u
+#define RCP_PACE_TOP_FPS 60u
+#define RCP_PACE_GAP_MS 250u
+uint16_t rcp_pace_clamp(uint32_t asked);
+
 /* The reasons of §8.2.  Code 0 MUST NOT be used (§3.1). */
 enum {
 	RCP_CLOSED_BY_USER = 0x01,
@@ -564,6 +579,15 @@ typedef struct {
 	 *    `sconosciuto` — which for them is true. */
 	bool (*session_resumed)(void *ctx);
 	const char *(*desktop)(void *ctx);
+
+	/* ⏳ `RCP.md` §13, PROPOSED and not normative — `PACE`: «the client's
+	 *    decoder is behind, do not send me more than `max_fps` frames per
+	 *    second».  `max_fps` arrives ALREADY CLAMPED (0 = no ceiling, or
+	 *    `RCP_PACE_FLOOR_FPS..RCP_PACE_TOP_FPS - 1`), at most once per
+	 *    `RCP_PACE_GAP_MS`, and 0 again when the session ends.
+	 * ⛔ OPTIONAL: without it the server does not declare `video.pace`, so no
+	 *    client may send `PACE` — the wire stays today's. */
+	bool (*pace)(void *ctx, uint16_t max_fps);
 } rcp_hooks;
 
 /* Opens an RCP session on a newborn control channel.

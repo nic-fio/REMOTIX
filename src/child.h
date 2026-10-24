@@ -535,6 +535,13 @@ enum {
  *     destroyed and recreated the keyboard device. */
 bool children_layout(children *f, const char *user, const char *name);
 
+/* ⏳ `RCP.md` §13 (PROPOSED, `DECISIONS.md` §11.32) — the frame-rate ceiling
+ *    the client's decoder asked for, already clamped by `rcp.c` (0 = none).
+ *    ⛔ The child applies it BEFORE encoding: it takes fewer frames from the
+ *    capture, so the delta chain stays whole and no keyframe is owed.  A
+ *    keyframe owed is never held back.  `true` = the request WENT OUT. */
+bool children_pace(children *f, const char *user, uint16_t max_fps);
+
 bool children_input(children *f, const char *user, uint32_t id, uint8_t action,
                  uint16_t code, int pressed, int32_t a, int32_t b);
 
