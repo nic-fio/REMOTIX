@@ -233,12 +233,13 @@ not apply (the user is the Author). What follows is what the user decided on eac
 - ⇒ Kept only in bench/laboratory builds, like the bench messages of §11.6.
 - ✅ **Done 13 Oct 2026 in the first attempt** (discarded, tag `1.5-scartata`): `/diary` existed only with
   `make BENCH=1`; the page sent nothing unless the server marked it `data-diary="yes"`.
-- 🔸 **In this tree (package 1, 24 Oct 2026) it goes further than the line above:** the commit «Remove /diary entirely
-  (even from BENCH builds); keep the local line in the page #logbook» (`src/page.c`, `src/page.html`, `src/Makefile`) takes
-  the endpoint, the 5-second measurement line and the `data-diary` marker out of **every** build, bench builds included;
-  the page keeps its own local line in `#logbook` (nothing leaves the browser). Done, `[M]`: normal and `BENCH=1` builds
-  compile with no new warning; `strings` of both binaries: no `/diary`. **To do:** the suite (the benches that read the
-  diary of a bench build must not need it any more) and the A/B.
+- ✅ **Decisione dell'utente del 22 ott 2026: eliminato del tutto, anche dalle build bench (nessun banco lo usa); resta
+  la riga locale nel #logbook** (it is in `PIANO.md`, section of package 1). It goes further than the line above.
+- 🔸 **In this tree (package 1, 24 Oct 2026)** — the commit «Remove /diary entirely (even from BENCH builds); keep the
+  local line in the page #logbook» (`src/page.c`, `src/page.html`, `src/Makefile`) takes the endpoint, the 5-second
+  measurement line and the `data-diary` marker out of **every** build, bench builds included; the page keeps its own
+  local line in `#logbook` (nothing leaves the browser). Done, `[M]`: normal and `BENCH=1` builds compile with no new
+  warning; `strings` of both binaries: no `/diary`. **To do:** the suite and the A/B.
 
 ### 11.11 ✅ The last phase of 1.5: a service user for the network side
 
