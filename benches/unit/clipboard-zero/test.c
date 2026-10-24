@@ -15,12 +15,14 @@
  * log_detail_in); everything else the .c links to is generated as a stub that TRAPS if reached.  Each case sets what each
  * of the three types "delivers" (or nothing: the type is absent / cannot be read).
  *
- * Cases (the same four on both):
+ * Cases (the same six on both):
  *   (a) «abc\0def» on all three types      ⇒ NULL, one «with a zero in the middle — not announced» per type, and NO «valid UTF-8»
  *                                            line (the zero is judged BEFORE the UTF-8 check)
  *   (b) valid text with accents            ⇒ returned, length = its UTF-8 length, no zero line
  *   (c) invalid UTF-8 without a zero       ⇒ NULL, «not valid UTF-8», no zero line
  *   (d) first type with a zero, second OK  ⇒ the second one is returned (length of the second), ONE zero line
+ *   (e) every type delivers 0 bytes        ⇒ NULL, no crash (UBSan: memchr on an empty buffer)
+ *   (f) first type missing, second valid   ⇒ the second one is returned
  *
  * BUILD AND RUN (a second; nothing under /media/REMOTIX-15 is written; run from the root of the tree).  Same command with
  * K="-DKDE" and SRC=clipboard_kde for the KDE half; with K="" for GNOME:
@@ -255,6 +257,23 @@ int main(void)
 	check(t != NULL && strcmp(t, GOOD2) == 0, "(d) the second type is the one announced");
 	check(len == strlen(GOOD2), "(d) its length, not the zero text's");
 	check(count(ZERO_LINE) == 1, "(d) exactly one zero line (the first type)");
+	free(t);
+
+	/* (e) every type delivers ZERO bytes (an emptied clipboard): nothing returned, nothing crashes */
+	for (int i = 0; i < NT; i++)
+		set(i, "", 0);
+	t = read_one(&len);
+	check(t == NULL, "(e) zero bytes on all types: nothing returned, no crash");
+	check(count(ZERO_LINE) == 0 && count(NOT_UTF8) == 0, "(e) no «zero in the middle» / «not valid UTF-8» line (it is empty, not broken)");
+	free(t);
+
+	/* (f) first type absent / unreadable, second valid */
+	set(0, NULL, 0);
+	set(1, GOOD2, strlen(GOOD2));
+	set(2, NULL, 0);
+	t = read_one(&len);
+	check(t != NULL && strcmp(t, GOOD2) == 0, "(f) first type missing: the second one is announced");
+	check(len == strlen(GOOD2), "(f) its length");
 	free(t);
 
 	printf(failures ? "RESULT: %d FAILED\n" : "RESULT: all OK\n", failures);

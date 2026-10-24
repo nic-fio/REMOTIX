@@ -434,6 +434,17 @@ static char *read_text(ClipboardKde *clipboard, size_t *byte)
 			continue;
 		}
 		start = g_bytes_get_data(data, &amount);
+		if (amount == 0) {
+			/* ⚠ Zero bytes is NOT a fault: it is an emptied clipboard (as in
+			 *    `clipboard.c`).  Declared, and we go on.  ⛔ And before the
+			 *    zero test: the data of an empty GBytes is NULL, and
+			 *    `memchr(NULL, 0, 0)` is undefined behaviour. */
+			log_detail(LOG_CLIPBOARD,
+			                   "«%s» delivered zero bytes: the clipboard is "
+			                   "empty, not broken", TEXT_TYPES[i]);
+			g_bytes_unref(data);
+			continue;
+		}
 		/* ⛔ A zero in the middle: the text travels as a zero-terminated string
 		 *    (`last`, the socket, `rcp.c`): kept, it would be cut at the zero
 		 *    while `last_byte` stated the whole length, and the fallback in
