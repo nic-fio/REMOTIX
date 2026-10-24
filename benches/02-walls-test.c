@@ -191,6 +191,8 @@ static int case_root(const struct passwd *nb)
 	      "a host tmpfs mounted at %s", slave);
 	CHECK(pipe(up) == 0 && pipe(down) == 0, "two pipes");
 
+	char cwd0[4096] = "";
+	(void)!getcwd(cwd0, sizeof cwd0);
 	fflush(stdout);
 	pid_t pid = fork();
 	if (pid == 0) {
@@ -229,6 +231,13 @@ static int case_root(const struct passwd *nb)
 		   "child: CapEff/CapPrm/CapBnd/CapAmb/CapInh all 0");
 		CC(status_value("NoNewPrivs:") == 1, "child: NoNewPrivs 1");
 		CC(setuid(0) != 0, "child: setuid(0) refused");
+		{
+			char cwd1[4096] = "";
+			(void)!getcwd(cwd1, sizeof cwd1);
+			CC(strncmp(cwd0, "/tmp", 4) == 0 ? strcmp(cwd1, "/") == 0 : strcmp(cwd1, cwd0) == 0,
+			   "child: still in the root side's folder (%s), so a relative --page resolves as in 1.0",
+			   cwd1);
+		}
 		/* review 3, F4 */
 		{
 			struct statvfs v;

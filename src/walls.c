@@ -377,6 +377,7 @@ int walls_apply(const struct rootside_options *o, char *why, size_t why_len)
 	gid_t rg, eg, sg;
 	uid_t uid;
 	gid_t gid;
+	char cwd[4096];
 
 	if (why && why_len)
 		why[0] = '\0';
@@ -402,6 +403,8 @@ int walls_apply(const struct rootside_options *o, char *why, size_t why_len)
 		return -1;
 
 	/* ⛔ 3 — the read-only tree. */
+	if (!getcwd(cwd, sizeof cwd))
+		cwd[0] = '\0';
 	if (unshare(CLONE_NEWNS) != 0)
 		return say(why, why_len, "unshare(CLONE_NEWNS) failed (%s)", strerror(errno));
 	/* ⛔ SLAVE, not PRIVATE (review 3, F3): a private copy pinned every host
@@ -445,8 +448,15 @@ int walls_apply(const struct rootside_options *o, char *why, size_t why_len)
 		return say(why, why_len, "%s is not writable after the walls", o->net_state_dir);
 	if (statvfs(o->net_run_dir, &vs) != 0 || (vs.f_flag & ST_RDONLY))
 		return say(why, why_len, "%s is not writable after the walls", o->net_run_dir);
-	if (chdir("/") != 0)
-		return say(why, why_len, "chdir(/) failed (%s)", strerror(errno));
+	/* ⚠ Back to the root side's own folder, by its path, in the NEW tree: a
+	 *   relative --page (the default «page.html», next to the binary the way
+	 *   02-pam-start.sh starts it) is resolved there, as in 1.0 — found by
+	 *   running that bench, 16 Oct 2026.  A folder the walls hid (under /tmp) or
+	 *   that is gone: «/». */
+	if (cwd[0] == '\0' || chdir(cwd) != 0) {
+		if (chdir("/") != 0)
+			return say(why, why_len, "chdir(/) failed (%s)", strerror(errno));
+	}
 
 	/* ⛔ 4 — the identity, and nothing left. */
 	if (drop_bounding_set(why, why_len) != 0)
