@@ -261,35 +261,47 @@ static void line(const char *file, int text_line, bool detail, const char *area,
 	 *    a password.  Every byte below 0x20 of the body becomes `?`, for
 	 *    every caller; UTF-8 (≥ 0x80) is untouched.  The one newline is the
 	 *    one below. */
-	/* ⛔ … and DEL, the C1 controls written as UTF-8 (U+0080–U+009F, some
-	 *    terminals obey them), the bidi controls (U+202A–U+202E,
-	 *    U+2066–U+2069, and the marks U+200E, U+200F, U+061C: they reorder
-	 *    what a reader sees) and the Unicode line and paragraph separators
-	 *    (U+2028, U+2029: some viewers break the line there) — each one
-	 *    `?` (reviews of 95ed70ea and 38639d7d).  The line can only get
-	 *    shorter. */
+	/* ⛔ … and DEL, the C1 controls (U+0080–U+009F, written as UTF-8 or as
+	 *    lone raw bytes 0x80–0x9F: some terminals obey them), the bidi
+	 *    controls (U+202A–U+202E, U+2066–U+2069, and the marks U+200E,
+	 *    U+200F, U+061C: they reorder what a reader sees), the Unicode line
+	 *    and paragraph separators (U+2028, U+2029: some viewers break the
+	 *    line there) and the invisible ones (U+2060–U+2064, U+FEFF) — each
+	 *    one `?` (reviews of 95ed70ea, 38639d7d and fc76de93).  Valid UTF-8
+	 *    otherwise passes untouched; the line can only get shorter. */
 	{
 		int w = body;
-		for (int k = body; k < n; k++) {
+		for (int k = body; k < n;) {
 			unsigned char b0 = (unsigned char)buf[k];
-			unsigned char b1 = k + 1 < n ? (unsigned char)buf[k + 1] : 0;
-			unsigned char b2 = k + 2 < n ? (unsigned char)buf[k + 2] : 0;
-			if (b0 < 0x20 || b0 == 0x7F) {
-				buf[w++] = '?';
-			} else if (b0 == 0xC2 && b1 >= 0x80 && b1 <= 0x9F) {
-				buf[w++] = '?';
-				k += 1;
-			} else if (b0 == 0xD8 && b1 == 0x9C) {
-				buf[w++] = '?'; /* U+061C */
-				k += 1;
-			} else if (b0 == 0xE2 && ((b1 == 0x80 && ((b2 >= 0xA8 && b2 <= 0xAE) ||
-			                                          b2 == 0x8E || b2 == 0x8F)) ||
-			                          (b1 == 0x81 && b2 >= 0xA6 && b2 <= 0xA9))) {
-				buf[w++] = '?';
-				k += 2;
-			} else {
-				buf[w++] = (char)b0;
+			int len = b0 < 0x80 ? 1 : b0 >= 0xC2 && b0 <= 0xDF ? 2
+			        : b0 >= 0xE0 && b0 <= 0xEF ? 3 : b0 >= 0xF0 && b0 <= 0xF4 ? 4 : 0;
+			uint32_t cp = len == 1 ? b0 : len == 2 ? b0 & 0x1Fu : len == 3 ? b0 & 0x0Fu
+			            : b0 & 0x07u;
+			bool valid = len > 0 && k + len <= n;
+			for (int j = 1; valid && j < len; j++) {
+				unsigned char bj = (unsigned char)buf[k + j];
+				if ((bj & 0xC0) != 0x80)
+					valid = false;
+				else
+					cp = (cp << 6) | (bj & 0x3Fu);
 			}
+			if (!valid) {
+				/* a byte outside a valid sequence: a lone C1 is `?`, any
+				 * other is copied as it came (as before) */
+				buf[w++] = b0 >= 0x80 && b0 <= 0x9F ? '?' : (char)b0;
+				k++;
+				continue;
+			}
+			if (cp < 0x20 || cp == 0x7F || (cp >= 0x80 && cp <= 0x9F) || cp == 0x061C ||
+			    cp == 0x200E || cp == 0x200F || (cp >= 0x2028 && cp <= 0x202E) ||
+			    (cp >= 0x2060 && cp <= 0x2064) || (cp >= 0x2066 && cp <= 0x2069) ||
+			    cp == 0xFEFF) {
+				buf[w++] = '?';
+			} else {
+				memmove(buf + w, buf + k, (size_t)len);
+				w += len;
+			}
+			k += len;
 		}
 		n = w;
 	}

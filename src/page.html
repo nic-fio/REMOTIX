@@ -5108,14 +5108,15 @@ function layout() {
 /* ⛔ The fingerprint is FETCHED AGAIN before every attempt (§4.1-bis). If the
    fetch fails the one served with the page is used, and IT IS SAID: a silent
    fallback produces two behaviours under the same label. */
-async function fingerprint() {
+async function fingerprint(again = true) {
   try {
     let r = await fetch("/fingerprint", { cache: "no-store" });
-    /* ⭐ 503 = the server IS there but busy (too many connections from this
-       address, 15 Oct 2026): said as such, and asked again up to twice,
-       1 s apart. */
+    /* ⭐ 503 = the server IS there but busy (15 Oct 2026): said in the
+       server's own words («from this address» or «right now»), and asked
+       again up to twice, 1 s apart. */
     for (let i = 0; r.status === 503 && i < 2; i++) {
-      note("fingerprint: the server is busy (503, too many connections from this address) — retrying in 1 s");
+      const why = (await r.text().catch(() => "")).trim();
+      note("fingerprint: the server is busy (503: " + (why || "busy") + ") — retrying in 1 s");
       await new Promise(ok => setTimeout(ok, 1000));
       r = await fetch("/fingerprint", { cache: "no-store" });
     }
@@ -5139,6 +5140,16 @@ async function fingerprint() {
      *    reached 13 s, and this page sets no clocks: it waits for the
      *    answer. */
     if (e && e.name === "TypeError") {
+      /* ⚠ A server with every page slot taken refuses a connection over
+       *   its accept rate at once (15 Oct 2026): the same TypeError.  It is
+       *   said right away all the same, and asked ONCE more after 1 s
+       *   before D-009's verdict. */
+      if (again) {
+        note("fingerprint: /fingerprint refused by the network (" + e.message + "): the "
+             + "server is not there, or too busy right now — asking once more in 1 s");
+        await new Promise(ok => setTimeout(ok, 1000));
+        return fingerprint(false);
+      }
       note("fingerprint: /fingerprint refused by the network (" + e.message + "): the "
            + "server is not there — not opening WebTransport (D-009)");
       return null;

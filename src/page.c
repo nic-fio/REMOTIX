@@ -115,6 +115,10 @@
  * a token; past it, it is served «503 busy» (review of 95ed70ea: closing it
  * at accept made the page say «the server is not there», D-009). */
 #define PAGE_RATE_WAIT_MS 3000u
+/* A connection younger than this without a reply yet is not «silent»: a
+ * browser's handshake takes one round trip (review of fc76de93: a parked
+ * one used to rank above a brand-new owner during that round trip). */
+#define PAGE_YOUNG_MS 1000u
 /* The «GET / from …» line: at most this many per address per window; the
  * rest are counted in the summary line. */
 #define PAGE_LINES_PER_ADDRESS 5
@@ -288,6 +292,8 @@ typedef struct {
 	 * waiting was the SHARED one (then the 503 does not blame the address) */
 	uint64_t park_seq;
 	bool busy_shared;
+	/* parked: the buckets it waits on (see queue_on()) */
+	struct bucket *qb, *qb48;
 	/* the page_move() call that accepted it: that call's `revents` are an
 	 * older owner's of the same descriptor number, never its own */
 	uint64_t accepted_in;
@@ -348,6 +354,9 @@ struct page {
 	/* parked for the rate; served 503 after waiting in vain */
 	unsigned delayed_rate, busy_rate, refused_rate;
 	uint64_t park_next;
+	/* the buckets the last rate_take() spent a token from, and the ones it
+	 * looked at */
+	struct bucket *taken, *taken48, *cand, *cand48;
 	/* after a failed build of `tail_gz`, not again before this time */
 	uint64_t tail_gz_after;
 	/* every connection ever parked for the rate, and ever refused for it
@@ -1653,8 +1662,8 @@ static uint32_t random_below(uint32_t n)
 }
 
 /* The eviction tier of a candidate: 0 = SILENT (no complete handshake nor
- * server reply: a bare TCP connect, a few bytes), 1 = no whole request yet
- * (or parked for the rate), 2 = writing for
+ * server reply, PAGE_YOUNG_MS after accept: a bare TCP connect, a few
+ * bytes), 1 = no whole request yet (or parked for the rate, or young), 2 = writing for
  * PAGE_EVICT_AGE_MS or more, 3 = writing for less (a fresh download).
  * ⛔ Tier 0 is the independent review of 16b75f33: with every group at one
  *    slot the OLDEST without a request went, and ~127 addresses doing bare
@@ -1664,8 +1673,12 @@ static int tier(const client *x, uint64_t now)
 {
 	if (x->phase != F_WRITE)
 		/* parked for the rate: waiting through no act of its own, it goes
-		 * after the silent ones (review of 38639d7d) */
-		return x->spoke || x->phase == F_RATE ? 1 : 0;
+		 * after the silent ones (review of 38639d7d) — and so does a
+		 * connection still in its first PAGE_YOUNG_MS, the owner's
+		 * handshake included (review of fc76de93); among them, the
+		 * oldest first */
+		return x->spoke || x->phase == F_RATE ||
+		       (now >= x->born && now - x->born < PAGE_YOUNG_MS) ? 1 : 0;
 	return now - x->write_start >= PAGE_EVICT_AGE_MS ? 2 : 3;
 }
 
@@ -1770,8 +1783,36 @@ static struct bucket *bucket_of(struct bucket *t, struct bucket *over,
  * NULL — or none: ⚠ when either refuses, NEITHER is spent (review of
  * 95ed70ea: a /48 refusal used to cost the /64 a token).  `*who` = the
  * bucket that refused. */
-static bool rate_take(page *p, const char *key, const char *k48, uint64_t now,
-                      const char **who)
+static void key48_text(const client *c, char k48[64])
+{
+	snprintf(k48, 64, "%02x%02x:%02x%02x:%02x%02x::/48", c->p48[0], c->p48[1],
+	         c->p48[2], c->p48[3], c->p48[4], c->p48[5]);
+}
+
+/* `true` = a connection is parked waiting on bucket `b` (or `b48`): a
+ * newcomer on the same bucket queues behind it (review of fc76de93).  Each
+ * parked one remembers the buckets it last waited on (`qb`, `qb48`, set
+ * whenever its rate_take() refuses): a pointer comparison per parked one. */
+static bool queue_on(page *p, const struct bucket *b, const struct bucket *b48)
+{
+	for (size_t i = 0; i < MAX_CLIENTS; i++) {
+		const client *c = &p->clients[i];
+		if (!client_active(c) || c->phase != F_RATE)
+			continue;
+		if (c->qb == b || (b48 && c->qb48 == b48))
+			return true;
+	}
+	return false;
+}
+
+/* One token from `key`'s bucket — and from the /48's, when `k48` is not
+ * NULL — or none: ⚠ when either refuses, NEITHER is spent (review of
+ * 95ed70ea: a /48 refusal used to cost the /64 a token).  `*who` = the
+ * bucket that refused.  `queue`: a newcomer, which waits behind the
+ * connections already parked on its bucket.  The buckets taken are kept
+ * for rate_refund(). */
+static bool rate_take_q(page *p, const char *key, const char *k48, uint64_t now,
+                        const char **who, bool queue)
 {
 	struct bucket *b = bucket_of(p->rate, &p->rate_over, key, now,
 	                             PAGE_ACCEPT_RATE, PAGE_ACCEPT_BURST);
@@ -1779,6 +1820,9 @@ static bool rate_take(page *p, const char *key, const char *k48, uint64_t now,
 	                                     PAGE_ACCEPT_RATE_48, PAGE_ACCEPT_BURST_48)
 	                         : NULL;
 
+	p->taken = p->taken48 = NULL;
+	p->cand = b;
+	p->cand48 = b48;
 	if (b->milli < 1000u) {
 		*who = b == &p->rate_over ? "(the shared overflow bucket)" : key;
 		return false;
@@ -1787,10 +1831,33 @@ static bool rate_take(page *p, const char *key, const char *k48, uint64_t now,
 		*who = b48 == &p->rate48_over ? "(the shared /48 overflow bucket)" : k48;
 		return false;
 	}
+	if (queue && queue_on(p, b, b48)) {
+		*who = b == &p->rate_over ? "(the shared overflow bucket, queued)" : key;
+		return false;
+	}
 	b->milli -= 1000u;
 	if (b48)
 		b48->milli -= 1000u;
+	p->taken = b;
+	p->taken48 = b48;
 	return true;
+}
+
+static bool rate_take(page *p, const char *key, const char *k48, uint64_t now,
+                      const char **who)
+{
+	return rate_take_q(p, key, k48, now, who, false);
+}
+
+/* The token(s) of the last rate_take() given back: the arrival was then
+ * refused anyway (review of fc76de93). */
+static void rate_refund(page *p)
+{
+	if (p->taken && p->taken->milli + 1000u <= PAGE_ACCEPT_BURST * 1000u)
+		p->taken->milli += 1000u;
+	if (p->taken48 && p->taken48->milli + 1000u <= PAGE_ACCEPT_BURST_48 * 1000u)
+		p->taken48->milli += 1000u;
+	p->taken = p->taken48 = NULL;
 }
 
 /* TLS for `c` (its descriptor accepted): an SSL object, the handshake begun.
@@ -1843,9 +1910,10 @@ static void parked_move(page *p, uint64_t now)
 		char k48[64];
 		const char *who = NULL;
 		if (c->has48)
-			snprintf(k48, sizeof k48, "%02x%02x:%02x%02x:%02x%02x::/48", c->p48[0],
-			         c->p48[1], c->p48[2], c->p48[3], c->p48[4], c->p48[5]);
+			key48_text(c, k48);
 		if (!rate_take(p, c->key, c->has48 ? k48 : NULL, now, &who)) {
+			c->qb = p->cand;
+			c->qb48 = p->cand48;
 			if (now < c->rate_until)
 				continue;
 			c->busy = true;
@@ -1867,6 +1935,9 @@ static int accept_page(page *p, int budget)
 	 *   calls again at the next pass. */
 	int round;
 
+	/* ⭐ The parked FIRST (review of fc76de93): a newcomer must not take
+	 *   the token they have been waiting for. */
+	parked_move(p, log_now_ms());
 	for (round = 0; round < PAGE_ACCEPTS_PER_CALL && round < budget; round++) {
 		struct sockaddr_storage da;
 		socklen_t dalen = sizeof da;
@@ -1938,7 +2009,7 @@ static int accept_page(page *p, int budget)
 		if (has48)
 			snprintf(rate_k48, sizeof rate_k48, "%02x%02x:%02x%02x:%02x%02x::/48",
 			         p48[0], p48[1], p48[2], p48[3], p48[4], p48[5]);
-		over_rate = !rate_take(p, key, has48 ? rate_k48 : NULL, now, &rate_who);
+		over_rate = !rate_take_q(p, key, has48 ? rate_k48 : NULL, now, &rate_who, true);
 		if (over_rate && !c) {
 			p->refused_rate++;
 			p->refused_rate_total++;
@@ -1984,6 +2055,7 @@ static int accept_page(page *p, int budget)
 			 *   than the largest live group: within that group any client
 			 *   can be evicted, fresh writers too (the last tier). */
 			p->refused_full++;
+			rate_refund(p);
 			snprintf(p->refused_last, sizeof p->refused_last, "%s", key);
 			close(fd);
 			refusals_report(p, now);
@@ -2005,6 +2077,8 @@ static int accept_page(page *p, int budget)
 		 *    without TLS, served in arrival order (`park_seq`) — not closed:
 		 *    a closed one made the page say «the server is not there». */
 		if (over_rate) {
+			c->qb = p->cand;
+			c->qb48 = p->cand48;
 			c->phase = F_RATE;
 			c->rate_until = now + PAGE_RATE_WAIT_MS;
 			c->park_seq = ++p->park_next;
