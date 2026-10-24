@@ -2006,9 +2006,32 @@ void transport_expired(transport *t)
 					              "%s: thirty seconds of silence, "
 					              "disconnected (§2.2)",
 					              c->provenance);
-				else
+				else {
 					registro_dice(REG_QUIC, "%s: timer expired: %s",
 					              c->provenance, ngtcp2_strerror(rv));
+					/* ⛔ 24 Oct 2026 (audit ngtcp2 1.25; present since 1.0): the
+					 *   doc of `ngtcp2_conn_handle_expiry` says «NGTCP2_ERR_IDLE_CLOSE
+					 *   ... drop the connection without calling
+					 *   ngtcp2_conn_write_connection_close.  If it returns any of the
+					 *   other negative error codes, close the connection by sending the
+					 *   terminal packet produced by
+					 *   ngtcp2_conn_write_connection_close».  Only the idle case was
+					 *   right: the others left the client waiting for ITS idle timeout.
+					 *   Same declared fallback as the failed read: one packet, then
+					 *   closed. */
+					uint8_t cbuf[NGTCP2_MAX_UDP_PAYLOAD_SIZE];
+					ngtcp2_pkt_info opi;
+					ngtcp2_path_storage ps;
+					ngtcp2_ssize cn;
+					ngtcp2_path_storage_zero(&ps);
+					memset(&opi, 0, sizeof opi);
+					ngtcp2_ccerr_set_liberr(&c->last_error, rv, NULL, 0);
+					cn = ngtcp2_conn_write_connection_close(
+						c->conn, &ps.path, &opi, cbuf, sizeof cbuf,
+						&c->last_error, now);
+					if (cn > 0)
+						send_on(c, &ps.path, cbuf, (size_t)cn);
+				}
 				c->dead_run = true;
 			}
 		}
