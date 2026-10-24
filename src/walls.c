@@ -42,6 +42,10 @@
 #include <sys/statvfs.h>
 #include <sys/syscall.h>
 #include <unistd.h>
+#include <stddef.h>
+#include <linux/audit.h>
+#include <linux/filter.h>
+#include <linux/seccomp.h>
 
 /* ⚠ `mount_setattr()` (Linux 5.12) is called by number: glibc has its wrapper
  *   only since 2.36, and the struct under our own name so that a glibc that
@@ -53,6 +57,26 @@
 #define AT_RECURSIVE 0x8000
 #endif
 #define WALLS_ATTR_RDONLY 0x00000001ULL
+#define WALLS_ATTR_NOSUID 0x00000002ULL
+#define WALLS_ATTR_NODEV  0x00000004ULL
+#define WALLS_ATTR_NOEXEC 0x00000008ULL
+
+/* ⛔ Review 3, F4: the only device nodes the network side finds in its /dev
+ *    (a tmpfs of its own); everything else under /dev — /dev/kvm, /dev/net/tun,
+ *    /dev/fuse, world-writable on some distributions — is not there. */
+static const char *const walls_devices[] = { "null", "zero", "full", "random", "urandom" };
+
+/* ⛔ Review 3, F4: a raw-BPF seccomp filter, no libseccomp — no user
+ *    namespace (`unshare`/`clone` with CLONE_NEWUSER ⇒ EPERM: it would give a
+ *    hijacked network side CAP_SYS_ADMIN inside it, the largest kernel
+ *    surface), `clone3` ⇒ ENOSYS (its flags are behind a pointer BPF cannot
+ *    read; glibc falls back to `clone`), any other ABI on the same kernel
+ *    (x32, a foreign arch) ⇒ EPERM. */
+#if defined(__x86_64__)
+#define WALLS_AUDIT_ARCH AUDIT_ARCH_X86_64
+#elif defined(__aarch64__)
+#define WALLS_AUDIT_ARCH AUDIT_ARCH_AARCH64
+#endif
 
 /* ⭐ The SELinux type of the network side (lane 4's module). */
 #define WALLS_SELINUX_TYPE "remotix_net_t"
@@ -253,6 +277,99 @@ static int drop_bounding_set(char *why, size_t n)
 	return 0;
 }
 
+/* ⛔ Review 3, F4: /dev is a tmpfs of the network side's own, with the five
+ *    harmless nodes bound in from the real /dev (opened BEFORE the tmpfs hides
+ *    it, bound through /proc/self/fd), the usual fd links, and then read-only,
+ *    nosuid, noexec.  The binds inherit the recursive nodev of step 3: it is
+ *    cleared on each of them, and only on them. */
+static int private_dev(char *why, size_t n)
+{
+	enum { ND = sizeof walls_devices / sizeof walls_devices[0] };
+	int fds[ND];
+	int rc = 0;
+
+	for (int i = 0; i < ND; i++) {
+		char p[64];
+		snprintf(p, sizeof p, "/dev/%s", walls_devices[i]);
+		fds[i] = open(p, O_PATH | O_CLOEXEC);
+		if (fds[i] < 0) {
+			for (int j = 0; j < i; j++)
+				close(fds[j]);
+			return say(why, n, "%s cannot be opened for the private /dev (%s)", p,
+			           strerror(errno));
+		}
+	}
+	if (mount("tmpfs", "/dev", "tmpfs", MS_NOSUID | MS_NOEXEC, "mode=0755,size=64k") != 0) {
+		rc = say(why, n, "the private tmpfs on /dev failed (%s)", strerror(errno));
+		goto out;
+	}
+	for (int i = 0; i < ND && rc == 0; i++) {
+		char p[64], src[64];
+		int f;
+		snprintf(p, sizeof p, "/dev/%s", walls_devices[i]);
+		snprintf(src, sizeof src, "/proc/self/fd/%d", fds[i]);
+		f = open(p, O_CREAT | O_EXCL | O_WRONLY | O_CLOEXEC, 0666);
+		if (f < 0) {
+			rc = say(why, n, "%s cannot be made in the private /dev (%s)", p, strerror(errno));
+			break;
+		}
+		close(f);
+		if (mount(src, p, NULL, MS_BIND, NULL) != 0)
+			rc = say(why, n, "the bind of %s into the private /dev failed (%s)", p,
+			         strerror(errno));
+		else if (set_attr(p, 0, WALLS_ATTR_NOSUID | WALLS_ATTR_NOEXEC, WALLS_ATTR_NODEV) != 0)
+			rc = say(why, n, "%s: nodev could not be cleared on its bind (%s)", p,
+			         strerror(errno));
+	}
+	if (rc == 0 && (symlink("/proc/self/fd", "/dev/fd") != 0
+	                || symlink("/proc/self/fd/0", "/dev/stdin") != 0
+	                || symlink("/proc/self/fd/1", "/dev/stdout") != 0
+	                || symlink("/proc/self/fd/2", "/dev/stderr") != 0))
+		rc = say(why, n, "the fd links of the private /dev failed (%s)", strerror(errno));
+	if (rc == 0 && set_attr("/dev", 0, WALLS_ATTR_RDONLY | WALLS_ATTR_NODEV | WALLS_ATTR_NOSUID
+	                                       | WALLS_ATTR_NOEXEC, 0) != 0)
+		rc = say(why, n, "the private /dev could not be made read-only (%s)", strerror(errno));
+out:
+	for (int i = 0; i < ND; i++)
+		close(fds[i]);
+	return rc;
+}
+
+static int no_user_namespaces(char *why, size_t n)
+{
+#ifndef WALLS_AUDIT_ARCH
+	return say(why, n, "no seccomp filter for this architecture (only x86_64 and aarch64): "
+	           "the network side is not started without one");
+#else
+	struct sock_filter f[] = {
+		BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, arch)),
+		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, WALLS_AUDIT_ARCH, 1, 0),
+		BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ERRNO | EPERM),
+		BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, nr)),
+#if defined(__x86_64__)
+		/* x32 on an x86_64 kernel: another table, refused whole */
+		BPF_JUMP(BPF_JMP | BPF_JGE | BPF_K, 0x40000000u, 0, 1),
+		BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ERRNO | EPERM),
+#endif
+		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_clone3, 0, 1),
+		BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ERRNO | ENOSYS),
+		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_unshare, 1, 0),
+		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_clone, 0, 3),
+		/* the flags: the first argument of both, its low word (little endian) */
+		BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, args[0])),
+		BPF_JUMP(BPF_JMP | BPF_JSET | BPF_K, CLONE_NEWUSER, 0, 1),
+		BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ERRNO | EPERM),
+		BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+	};
+	struct sock_fprog prog = { (unsigned short)(sizeof f / sizeof f[0]), f };
+
+	if (prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, &prog, 0, 0) != 0)
+		return say(why, n, "the seccomp filter (no user namespaces) was refused (%s)",
+		           strerror(errno));
+	return 0;
+#endif
+}
+
 int walls_apply(const struct rootside_options *o, char *why, size_t why_len)
 {
 	struct statvfs vs;
@@ -287,8 +404,15 @@ int walls_apply(const struct rootside_options *o, char *why, size_t why_len)
 	/* ⛔ 3 — the read-only tree. */
 	if (unshare(CLONE_NEWNS) != 0)
 		return say(why, why_len, "unshare(CLONE_NEWNS) failed (%s)", strerror(errno));
-	if (mount(NULL, "/", NULL, MS_REC | MS_PRIVATE, NULL) != 0)
-		return say(why, why_len, "making / recursively private failed (%s)",
+	/* ⛔ SLAVE, not PRIVATE (review 3, F3): a private copy pinned every host
+	 *    mount for the network side's life — `umount` of a USB disk, an NFS or
+	 *    LUKS volume «succeeded» on the host while the superblock stayed busy
+	 *    here.  As a slave, unmounts propagate in and nothing goes out.  ⚠ A
+	 *    mount made on the host LATER arrives without the read-only bit: DAC
+	 *    still applies, and remotix owns nothing there (systemd's
+	 *    ProtectSystem= makes the same choice). */
+	if (mount(NULL, "/", NULL, MS_REC | MS_SLAVE, NULL) != 0)
+		return say(why, why_len, "making / recursively a slave failed (%s)",
 		           strerror(errno));
 	if (mount(o->net_state_dir, o->net_state_dir, NULL, MS_BIND | MS_REC, NULL) != 0)
 		return say(why, why_len, "bind of %s onto itself failed (%s)",
@@ -296,8 +420,11 @@ int walls_apply(const struct rootside_options *o, char *why, size_t why_len)
 	if (mount(o->net_run_dir, o->net_run_dir, NULL, MS_BIND | MS_REC, NULL) != 0)
 		return say(why, why_len, "bind of %s onto itself failed (%s)",
 		           o->net_run_dir, strerror(errno));
-	if (set_attr("/", AT_RECURSIVE, WALLS_ATTR_RDONLY, 0) != 0)
-		return say(why, why_len, "mount_setattr(/, AT_RECURSIVE, RDONLY) failed (%s)%s",
+	/* ⛔ nosuid and nodev too (review 3, F4): read-only does not stop opening
+	 *    a device node for writing. */
+	if (set_attr("/", AT_RECURSIVE, WALLS_ATTR_RDONLY | WALLS_ATTR_NOSUID | WALLS_ATTR_NODEV,
+	             0) != 0)
+		return say(why, why_len, "mount_setattr(/, AT_RECURSIVE, RDONLY|NOSUID|NODEV) failed (%s)%s",
 		           strerror(errno),
 		           errno == ENOSYS ? ": the kernel is older than 5.12" : "");
 	if (set_attr(o->net_state_dir, 0, 0, WALLS_ATTR_RDONLY) != 0)
@@ -309,6 +436,8 @@ int walls_apply(const struct rootside_options *o, char *why, size_t why_len)
 	if (mount("tmpfs", "/tmp", "tmpfs", MS_NOSUID | MS_NODEV | MS_NOEXEC,
 	          "mode=1777,size=16m") != 0)
 		return say(why, why_len, "the private tmpfs on /tmp failed (%s)", strerror(errno));
+	if (private_dev(why, why_len) != 0)
+		return -1;
 	/* ⭐ asked back of the kernel, not assumed */
 	if (statvfs("/", &vs) != 0 || !(vs.f_flag & ST_RDONLY))
 		return say(why, why_len, "/ is not read-only after mount_setattr");
@@ -349,5 +478,9 @@ int walls_apply(const struct rootside_options *o, char *why, size_t why_len)
 		return say(why, why_len, "%d supplementary groups left", getgroups(0, NULL));
 	if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) != 0)
 		return say(why, why_len, "PR_SET_NO_NEW_PRIVS failed (%s)", strerror(errno));
-	return nothing_left(why, why_len);
+	if (nothing_left(why, why_len) != 0)
+		return -1;
+	/* ⛔ 5 — no user namespace, ever (review 3, F4): after NO_NEW_PRIVS, which
+	 *    an unprivileged filter needs. */
+	return no_user_namespaces(why, why_len);
 }

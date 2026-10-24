@@ -20,7 +20,12 @@
  *   3. no supplementary group, `setgid`/`setuid` to `remotix`, checked with
  *      `getresuid`/`getresgid`; no capability left (effective, permitted,
  *      bounding, ambient: read back from /proc/self/status);
- *   4. `PR_SET_NO_NEW_PRIVS`.
+ *   4. `PR_SET_NO_NEW_PRIVS`;
+ *   5. ⭐ review 3 (16 Oct 2026): the tree is also nosuid and nodev, mounts are
+ *      SLAVES of the host's (an unmount there reaches here; nothing pinned),
+ *      /dev is a read-only tmpfs with null, zero, full, random, urandom only,
+ *      RLIMIT_NPROC 64, and a raw-BPF seccomp filter: no user namespace
+ *      (CLONE_NEWUSER ⇒ EPERM), `clone3` ⇒ ENOSYS (glibc falls back).
  *
  * ⛔ Any step that fails ⇒ -1 and the reason in `why`: the root side does NOT
  *    start the network side.  A network side without its walls is the 1.0

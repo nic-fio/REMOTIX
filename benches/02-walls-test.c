@@ -175,15 +175,33 @@ static int case_root(const struct passwd *nb)
 	if (mfd >= 0)
 		close(mfd);
 
+	/* review 3, F3: a mount of the host's, unmounted while the walls are up */
+	char slave[700];
+	int up[2], down[2];
+	/* ⚠ under a SHARED mount, as systemd makes / on a host (a container's
+	 *   mounts are private, and an unmount propagates through the mount point's
+	 *   own mount): base bound onto itself and made shared, the tmpfs inside */
+	char shared[640];
+	snprintf(shared, sizeof shared, "%s/shared", base);
+	CHECK(mkdir(shared, 0755) == 0 && mount(shared, shared, NULL, MS_BIND, NULL) == 0
+	          && mount(NULL, shared, NULL, MS_SHARED, NULL) == 0,
+	      "a shared mount at %s", shared);
+	snprintf(slave, sizeof slave, "%s/slave", shared);
+	CHECK(mkdir(slave, 0755) == 0 && mount("tmpfs", slave, "tmpfs", 0, "size=64k") == 0,
+	      "a host tmpfs mounted at %s", slave);
+	CHECK(pipe(up) == 0 && pipe(down) == 0, "two pipes");
+
 	fflush(stdout);
 	pid_t pid = fork();
 	if (pid == 0) {
 		int bad = 0;
+		close(up[0]);
+		close(down[1]);
 		ino_t ns0 = mnt_ns();
 		if (walls_apply(&o, why, sizeof why) != 0) {
 			printf("  walls_apply: %s\n", why);
 			fflush(stdout);
-			_exit(strstr(why, "unshare") || strstr(why, "private") ||
+			_exit(strstr(why, "unshare") || strstr(why, "a slave") ||
 			              strstr(why, "mount_setattr") ? 200 : 1);
 		}
 #define CC(cond, ...) do { if (!(cond)) bad++; printf((cond) ? "  ok   " : "  FAIL "); \
@@ -211,6 +229,58 @@ static int case_root(const struct passwd *nb)
 		   "child: CapEff/CapPrm/CapBnd/CapAmb/CapInh all 0");
 		CC(status_value("NoNewPrivs:") == 1, "child: NoNewPrivs 1");
 		CC(setuid(0) != 0, "child: setuid(0) refused");
+		/* review 3, F4 */
+		{
+			struct statvfs v;
+			CC(statvfs("/", &v) == 0 && (v.f_flag & ST_NODEV) && (v.f_flag & ST_NOSUID),
+			   "child: / is nodev and nosuid");
+			int fd = open("/dev/null", O_RDWR);
+			CC(fd >= 0 && write(fd, "x", 1) == 1, "child: /dev/null opens and takes a write");
+			if (fd >= 0)
+				close(fd);
+			unsigned char r[8];
+			fd = open("/dev/urandom", O_RDONLY);
+			CC(fd >= 0 && read(fd, r, sizeof r) == (ssize_t)sizeof r, "child: /dev/urandom reads");
+			if (fd >= 0)
+				close(fd);
+			CC(access("/dev/kvm", F_OK) != 0 && access("/dev/net/tun", F_OK) != 0
+			       && access("/dev/fuse", F_OK) != 0 && access("/dev/sda", F_OK) != 0,
+			   "child: no /dev/kvm, /dev/net/tun, /dev/fuse, /dev/sda in its /dev");
+			CC(access("/dev/stdout", F_OK) == 0 && access("/dev/fd/0", F_OK) == 0,
+			   "child: /dev/stdout and /dev/fd are there");
+			CC(open("/dev/evil", O_CREAT | O_WRONLY, 0600) < 0, "child: its /dev is read-only");
+			errno = 0;
+			CC(unshare(CLONE_NEWUSER) != 0 && errno == EPERM,
+			   "child: unshare(CLONE_NEWUSER) refused (%s)", strerror(errno));
+			errno = 0;
+			CC(syscall(__NR_clone3, NULL, 0) == -1 && errno == ENOSYS,
+			   "child: clone3 says ENOSYS (glibc falls back to clone)");
+			errno = 0;
+			pid_t t = fork();
+			if (t == 0)
+				_exit(0);
+			int fe = errno, ts = -1;
+			pid_t w = t > 0 ? waitpid(t, &ts, 0) : -1;
+			CC(t > 0 && w == t && WIFEXITED(ts) && WEXITSTATUS(ts) == 0,
+			   "child: an ordinary fork still works (fork %ld %s, wait %ld, status %d)",
+			   (long)t, strerror(fe), (long)w, ts);
+		}
+		/* review 3, F3: the host unmounts, the unmount reaches us */
+		{
+			char c = 1, line[1024];
+			bool seen = false;
+			FILE *mi;
+			(void)!write(up[1], &c, 1);
+			(void)!read(down[0], &c, 1);
+			mi = fopen("/proc/self/mountinfo", "re");
+			while (mi && fgets(line, sizeof line, mi))
+				if (strstr(line, slave))
+					seen = true;
+			if (mi)
+				fclose(mi);
+			CC(!seen, "child: the host's umount of %s reached the walls (a slave, not private)",
+			   slave);
+		}
 		{
 			struct rlimit rl;
 			CC(getrlimit(RLIMIT_NPROC, &rl) == 0 && rl.rlim_cur == WALLS_NPROC_MAX
@@ -220,8 +290,23 @@ static int case_root(const struct passwd *nb)
 		fflush(stdout);
 		_exit(bad > 100 ? 100 : bad);
 	}
+	close(up[1]);
+	close(down[0]);
+	{
+		char c;
+		if (read(up[0], &c, 1) == 1) {
+			CHECK(umount(slave) == 0, "the host unmounts %s", slave);
+			(void)!write(down[1], &c, 1);
+		}
+	}
+	close(up[0]);
+	close(down[1]);
 	int st = 0;
 	waitpid(pid, &st, 0);
+	(void)umount(slave);
+	rmdir(slave);
+	(void)umount(shared);
+	rmdir(shared);
 	if (WIFEXITED(st) && WEXITSTATUS(st) == 200) {
 		printf("  BLIND: this root cannot mount (a container without SYS_ADMIN?)\n");
 		rc = 0;
