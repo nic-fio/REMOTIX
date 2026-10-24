@@ -917,7 +917,8 @@ static void delivery_verdict(void *ctx, uint64_t ticket, bool admitted,
 	}
 	/* ⛔ `resumed` only if it really gets in: with a farewell on its way there
 	 *    is no `SESSION` to fill. */
-	transport_verdict(p->t, ticket, admitted, resumed && !without_stage[0]);
+	transport_verdict(p->t, ticket, admitted, resumed && !without_stage[0], user,
+	                  rhost);
 
 	/* ⛔⭐ AND THE FAREWELL GOES OUT HERE, AFTER THE VERDICT — and the order is
 	 *     measured, not aesthetic.  Three reasons, all necessary:
@@ -2471,6 +2472,25 @@ int main(int argc, char **argv)
 	ctx_page = tls_page_context(cert.page_pem, cert.page_key);
 	if (!ctx_quic || !ctx_page)
 		goto fine;
+
+	/* ⛔ §4.4-bis D (24 Oct 2026): the secret of the tags `unknown user
+	 *    [a1b2c3]` of the log, in the same directory as the QUIC token secret.
+	 *    ⚠ Not being able to keep it is not fatal (the tags change at each
+	 *    restart), but it is SAID; and with no secret at all the log carries
+	 *    «??????», never the name. */
+	{
+		int ls = rcp_log_secret_load(dir_cert);
+		if (ls >= 0)
+			registro_dice(LOG_STARTUP, "log secret %s in %s (0600)",
+			              ls == 1 ? "read" : "made", dir_cert);
+		else
+			registro_dice(LOG_STARTUP,
+			              ls == -1 ? "⚠ log secret NOT kept on disk (%s): the "
+			                         "unknown-user tags change at every restart"
+			                       : "⛔ no log secret (%s): unknown names are logged "
+			                         "as «??????»",
+			              dir_cert);
+	}
 
 	t = transport_open(address, port, ctx_quic, pam_help, dir_cert);
 	if (!t)

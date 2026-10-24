@@ -4,6 +4,7 @@
 #include "transport.h"
 
 #include "log.h"
+#include "rcp.h" /* rcp_orphan_verdict(): a verdict whose connection is gone is still counted (§4.4-bis B) */
 #include "webtransport.h"
 
 #include <arpa/inet.h>
@@ -1931,8 +1932,15 @@ int transport_wait_ms(const transport *t)
  * ⭐ And if nobody takes it, it is WRITTEN: «the connection died while PAM was
  *    answering» and «the verdict ended up nowhere because of a defect of ours»
  *    look the same, and without this line they would be indistinguishable. */
+/* The lines of a verdict counted without a connection (`rcp_orphan_verdict()`). */
+static void orphan_line(void *ctx, const char *line)
+{
+	(void)ctx;
+	registro_dice(REG_RCP, "%s", line);
+}
+
 void transport_verdict(transport *t, uint64_t ticket, bool admitted,
-                        bool resumed)
+                        bool resumed, const char *user, const char *rhost)
 {
 	for (connection *c = t->prime; c; c = c->upcoming) {
 		if (c->dead_run || !c->w)
@@ -1954,6 +1962,13 @@ void transport_verdict(transport *t, uint64_t ticket, bool admitted,
 	              "⚠ the verdict of request %llu (%s) was taken by "
 	              "nobody: the connection waiting for it is gone",
 	              (unsigned long long)ticket, admitted ? "admitted" : "rejected");
+	/* ⛔⭐ §4.4-bis B (24 Oct 2026): the verdict is COUNTED all the same.  A
+	 *    client that opens a connection per attempt and closes it at once must
+	 *    not be able to try passwords for free: the name and the address are
+	 *    in the request in flight, and they are what the booking made at
+	 *    `CREDENTIALS` is resolved with. */
+	rcp_orphan_verdict(user, rhost, admitted, now_ns() / NGTCP2_MILLISECONDS,
+	                   orphan_line, NULL);
 }
 
 void transport_expired(transport *t)

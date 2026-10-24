@@ -73,8 +73,11 @@ transport *transport_open(const char *address, const char *port, SSL_CTX *ctx,
  *   away: it is what happens when the connection dies while PAM answers. */
 /* ⭐ D-001: `resumed` = that user's stage already existed before this verdict;
  * it travels up to `SESSION` (§4.5, `2 = RESUMED`). */
+/* ⭐ 24 Oct 2026 (§4.4-bis B): `user` and `rhost` are the NAME and the bare
+ * ADDRESS the request in flight carried (`struct flight`, `helper.c`): if the
+ * connection is gone the verdict is counted from them, not thrown away. */
 void transport_verdict(transport *t, uint64_t ticket, bool admitted,
-                        bool resumed);
+                        bool resumed, const char *user, const char *rhost);
 void transport_close(transport *t);
 
 int transport_fd(const transport *t);

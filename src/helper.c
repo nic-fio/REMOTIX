@@ -85,6 +85,9 @@ struct response {
 	uint8_t outcome; /* ⛔ 1 and ONLY 1 means admitted */
 };
 
+/* ⭐ 24 Oct 2026 (§4.4-bis B): `user` and `rhost` are also what the verdict is
+ *    COUNTED with when the connection that asked is gone: the booking made at
+ *    `CREDENTIALS` is resolved by name and address, not by session. */
 struct flight {
 	uint64_t ticket;
 	uint64_t expires;
@@ -478,9 +481,9 @@ void helper_expired(helper *a, uint64_t now_ms, HelperVerdict delivery,
 			registro_dice(REG_RCP,
 			              "⛔ request %llu received no answer in %d ms: "
 			              "the grandchild died or PAM got stuck.  ⭐ The "
-			              "expiry counts as NO (invariant I3), and does NOT count as a "
-			              "failed attempt of §4.4-bis: a defect of ours "
-			              "bans nobody",
+			              "expiry counts as NO (invariant I3), and since 24 Oct "
+			              "2026 it COUNTS as a failed attempt of §4.4-bis (B): an "
+			              "attempt without a verdict is not a free attempt",
 			              (unsigned long long)p, EXPIRY_MS);
 			if (delivery)
 				delivery(ctx, p, false, chi, "");
