@@ -11,9 +11,11 @@ tree». Two kinds:
 - **«NOT in this tree (abandoned attempt, commit …); being ported on port-pagina / port-rcp»** — the seven urgent ones: §11.4
   (no more `terminate-user`), §11.29 LXQt repair, §11.39 `0x0E`, §11.43 the 30-minute clock, §11.44 the page's TCP listener,
   §11.48 the 320×240 probe, and the rpm `%ghost` of §11.33;
-- **«NOT in this tree; still to port»** — §11.32 `PACE`, §11.36 Firefox worker, §11.37 / §11.38 render nodes, §11.45 encoder
-  padding, §11.47 `refusal_uncounted`, §11.50 (the whole root-side split), and in §11.33 the KDE «unchanged» filter, the nested
-  KWin size, the `remotix-capture` name and the key receipts.
+- **«Ported on port-varie (<hash>), to be built and tested»** — §11.32 `PACE` (`4895f2ad`, `c7bfef17`), §11.45 encoder padding
+  (`19749144`), and in §11.33 the key receipts (`8a2c3faa`, `6217b6dd`, `267068d4`, `cbe4534b`);
+- **«NOT in this tree; still to port»** — §11.36 Firefox worker (a PROPOSAL, not decided), §11.37 / §11.38 render nodes,
+  §11.47 `refusal_uncounted`, §11.50 (the whole root-side split), and in §11.33 the KDE «unchanged» filter, the nested
+  KWin size and the `remotix-capture` name.
 What IS in the code is listed in `CHANGES-1.5.md` and in §11.6, §11.9, §11.29 (migration part), §11.40, §11.41, §11.51-§11.53.
 An entry without the marker may still cite hashes of the discarded attempt; read the hash against `git log` before trusting it.
 
@@ -607,7 +609,7 @@ The «before a release» level of §11.24, release under test `remotix-1.4.99-2.
 
 ### 11.32 ✅ The client tells the server its decoder is behind (`PACE`) — A, measured: ON by default (15–16 Oct 2026)
 
-> ⚠ NOT in this tree; still to port: `738505ff` (server) and `d0e1fe07` (page), the `PACE` message
+> ⚠ Ported on port-varie (`4895f2ad` server, `c7bfef17` page; from `738505ff`, `d0e1fe07`), to be built and tested: the `PACE` message
 
 - `[M]` Firefox at 4K: decoder queue ≥ 5 for 80 % of the frames, decode delay median 1.35 s, while the server
   keeps sending at the full rate — nothing it can see is wrong. The page measures the queue and tells nobody.
@@ -699,7 +701,7 @@ item below unless its line says otherwise. Release notes: `docs/RELEASE-NOTES-1.
 - **Sound** — `fa316d71`: the capture stream is named `remotix-capture` (`PW_KEY_NODE_NAME`), so
   `target.object` «remotix» names only the sink. `[M]` the problem: F-013 xfce/Firefox run `20261015-063747`,
   pw-dump shows the capture linked to itself, digital silence. ⚠ The cure is not verified.
-- ⚠ NOT in this tree; still to port: `247d4bd0`, `0153ad88`, `cbc1cb8b`, `790856bf`, the key receipts
+- ⚠ Ported on port-varie (`8a2c3faa`, `6217b6dd`, `267068d4`, `cbe4534b`; from `247d4bd0`, `0153ad88`, `cbc1cb8b`, `790856bf`), to be built and tested: the key receipts
 - **Input (KDE lost keys)** — `247d4bd0` + `0153ad88` + `cbc1cb8b` + `790856bf`: a receipt from the compositor for every key
   (`ei_ping`; built only with libei ≥ 1.3.901), `DEVICE_PAUSED` written. Privacy (§9.2): the always-on log gets
   **one line per 10 s, only if something was slow**, with **no counts** (`790856bf`: a period starts at the
@@ -1373,7 +1375,7 @@ item below unless its line says otherwise. Release notes: `docs/RELEASE-NOTES-1.
 
 ### 11.45 ✅ The encoder's padding on AMD: edge copies, or the encoder's own colour conversion (15 Oct 2026) — decided: A
 
-> ⚠ NOT in this tree; still to port: `ceaf026f`, the encoder's zero-copy conversion on the GPU (`convert_on_gpu()`)
+> ⚠ Ported on port-varie (`19749144`, from `ceaf026f`; the bench case 5 of `benches/23-colors709-edge-test.c` is not ported, that file is not in this tree), to be built and tested: the encoder padding (edge copies past the canvas)
 
 - **What padding is, in plain words.** The card encodes a picture a little bigger than the screen: the width and
   height are rounded up (H.264: to 16; HEVC on AMD: to 64 wide and 16 high). A 1080-row screen is encoded with
