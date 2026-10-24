@@ -65,7 +65,7 @@ FUNCTIONS = ("F-027", "N-1", "F-028")
 PER_BROWSER = False
 SERVER = "15-g8-server.sh"
 # «failed attempt from [ip] as USER: 1 of 5 for the user, 5 of 12 for the address, 0 of 30 for the IPv6 /48 within the window»
-RE_FAILED = re.compile(r"failed attempt from \[([0-9.]+)\] as (\S+): (\d+) of (\d+) for the user, "
+RE_FAILED = re.compile(r"failed attempt from \[([0-9.]+)\] as (.+?): (\d+) of (\d+) for the user, "
                        r"(\d+) of (\d+) for the address")
 USER_LIMIT, ADDRESS_LIMIT = 5, 12      # rcp.c LIMIT[]: the product's, not lowered for the test
 ADDR = "[%s]" % G.ADDRESS
@@ -170,6 +170,9 @@ def judge_ban_address(page, my_file, lines):
     if not any("⛔ BANNED address of %s" % ADDR in r for r in lines):
         return S.FAIL, ("%d failed attempts of different users and the server does not say "
                         "«BANNED address»" % ADDRESS_LIMIT)
+    if address_counts(lines)[-1:] != [ADDRESS_LIMIT]:
+        return S.FAIL, "the ban is not at the %dth failure of the address: counters %s" % (
+            ADDRESS_LIMIT, address_counts(lines))
     if page.get("banned") != "yes":
         return S.FAIL, ("the reloaded page does not say the ban (data-banned=%s, outcome «%s»)"
                         % (page.get("banned"), page.get("outcome")))
@@ -210,6 +213,9 @@ def certify():
           judge_nonexistent(False, fr, fr, lines, "c15027u9", False)[0] == S.PASS)
     prova("nonexistent, different sentence ⇒ FAIL",
           judge_nonexistent(False, "unknown user", fr, lines, "c15027u9", False)[0] == S.FAIL)
+    prova("nonexistent, user logged as «unknown user [a1b2c3]» (spaces) ⇒ PASS",
+          judge_nonexistent(False, fr, fr, ["PAM answered (request 4): refused",
+                                            fl("unknown user [a1b2c3]", 1, 1)], "c15027u9", False)[0] == S.PASS)
     prova("nonexistent but exists ⇒ FAIL",
           judge_nonexistent(False, fr, fr, lines, "c15027u9", True)[0] == S.FAIL)
     g0f = "refused: this session's slot shows as " + G.SENTENCE[0x0F]
@@ -233,6 +239,7 @@ def certify():
     prova("address ban seen ⇒ PASS", judge_ban_address(pb, "[192.168.0.2] 1790000000", rb)[0] == S.PASS)
     prova("page not banned ⇒ FAIL", judge_ban_address(dict(pb, banned="no"), "[192.168.0.2] 1", rb)[0] == S.FAIL)
     prova("no BANNED line ⇒ FAIL", judge_ban_address(pb, "[192.168.0.2] 1", [])[0] == S.FAIL)
+    prova("ban before the 12th failure ⇒ FAIL", judge_ban_address(pb, "[192.168.0.2] 1", rb[:5] + rb[-1:])[0] == S.FAIL)
     prova("12 hours (the 1.0) ⇒ FAIL",
           judge_ban_address(dict(pb, hours="12", minutes="0"), "[192.168.0.2] 1", rb)[0] == S.FAIL)
     prova("file without address ⇒ FAIL", judge_ban_address(pb, "", rb)[0] == S.FAIL)

@@ -12,7 +12,7 @@ What is here (imported by 15-f025, 15-f026, 15-f027, 15-n027 with
                 binary /opt/remotix/remotix, systemd unit `rete15-g8`, port
                 862x, and ITS OWN ban-file, command socket, survey and log in
                 /var/lib/rete15-g8/.  ⛔ It serves everything that gets the
-                password wrong: three errors ban 192.168.0.2 for 12 hours, and on the box's
+                password wrong: five wrong passwords of one user, or twelve of the address, ban 192.168.0.2 (15 minutes the first time, then 1 h, then 12 h), and on the box's
                 server (8511-8514) they would stop everybody.  The ban is in
                 the PROCESS's memory and in ITS file: the 85xx's does not see it.
   scena_colore  a `firefox-esr --kiosk` window in the tenant's session,

@@ -7,8 +7,9 @@
 # 8622 kde · 8623 xfce · 8624 lxqt, and ITS OWN ban-file, command socket, survey and
 # log in /var/lib/rete15-g8/ (model: 11-start.sh, case `server`).
 #
-# ⛔ It serves everything that gets the password wrong (F-027, F-028, N-1, N-4): three
-#    failed attempts ban 192.168.0.2 for 12 hours, and on the box's server
+# ⛔ It serves everything that gets the password wrong (F-027, F-028, N-1, N-4): five
+#    wrong passwords of one user, or twelve of the address, ban 192.168.0.2 (15 minutes the first time,
+#    then 1 h, then 12 h), and on the box's server
 #    (8511-8514) they would stop the whole suite.  The ban lives in the memory
 #    of THIS process and in ITS file (/var/lib/rete15-g8/ban): the 85xx does not
 #    see it — `status` shows the two ban files side by side.
