@@ -1281,8 +1281,9 @@ fine:
  *
  * ⚠ This function never returns: either it does `exec`, or it exits with a
  *   code. */
-static void become_and_exec(const struct children *f, const struct child *g,
-                              int socket_child, const struct passwd *pw,
+static void become_and_exec(const struct birth_opts *b, uint64_t serial,
+                              const char *rhost, int socket_child,
+                              const struct passwd *pw,
                               const gid_t *groups, int ngroups)
 {
 	char a_user[80], a_uid[32], a_gid[32], a_l[32], a_a[32], a_serial[40];
@@ -1394,7 +1395,7 @@ static void become_and_exec(const struct children *f, const struct child *g,
 			 *    logind marks `Remote=no`, as for ssh from 127.0.0.1: the
 			 *    guardian of §5.1 discriminates on the seat, not on Remote. */
 			pam_set_item(pam, PAM_RHOST,
-			             g->rhost[0] ? g->rhost : "remotix");
+			             rhost && rhost[0] ? rhost : "remotix");
 			pam_set_item(pam, PAM_TTY, "remotix");
 
 			rv = pam_open_session(pam, PAM_SILENT);
@@ -1484,9 +1485,9 @@ static void become_and_exec(const struct children *f, const struct child *g,
 	snprintf(a_user, sizeof a_user, "%s", pw->pw_name);
 	snprintf(a_uid, sizeof a_uid, "%ld", (long)pw->pw_uid);
 	snprintf(a_gid, sizeof a_gid, "%ld", (long)pw->pw_gid);
-	snprintf(a_l, sizeof a_l, "%u", f->canvas_w);
-	snprintf(a_a, sizeof a_a, "%u", f->canvas_h);
-	snprintf(a_serial, sizeof a_serial, "%llu", (unsigned long long)g->serial);
+	snprintf(a_l, sizeof a_l, "%u", b->canvas_w);
+	snprintf(a_a, sizeof a_a, "%u", b->canvas_h);
+	snprintf(a_serial, sizeof a_serial, "%llu", (unsigned long long)serial);
 	argv[na++] = (char *)"remotix-child";
 	argv[na++] = (char *)"--internal-child";
 	argv[na++] = a_user;
@@ -1495,7 +1496,7 @@ static void become_and_exec(const struct children *f, const struct child *g,
 	argv[na++] = a_l;
 	argv[na++] = a_a;
 	argv[na++] = a_serial;
-	argv[na++] = f->has_survey ? (char *)f->dir_survey : (char *)"-";
+	argv[na++] = b->dir_survey && b->dir_survey[0] ? (char *)b->dir_survey : (char *)"-";
 	/*
 	 * ⛔⭐⭐⭐ AND THE CHATTER IS PASSED TO THE CHILD — 16 Aug 2026, and it is
 	 *        the defect that cost me a whole day.
@@ -1545,10 +1546,10 @@ static void become_and_exec(const struct children *f, const struct child *g,
 	 *   break.  ⭐ And they appear in `/proc/<pid>/cmdline`: whoever watches a
 	 *   bench sees what that child was born with, without trusting a log.
 	 */
-	if (f->phase9_quality_rises)
+	if (b->quality_rises)
 		argv[na++] = (char *)"--quality-recovery";
-	if (f->phase9_bandwidth_cap_mbit) {
-		snprintf(a_cap, sizeof a_cap, "%u", f->phase9_bandwidth_cap_mbit);
+	if (b->bandwidth_cap_mbit) {
+		snprintf(a_cap, sizeof a_cap, "%u", b->bandwidth_cap_mbit);
 		argv[na++] = (char *)"--bandwidth-cap-mbit";
 		argv[na++] = a_cap;
 	}
@@ -1562,7 +1563,7 @@ static void become_and_exec(const struct children *f, const struct child *g,
 	 *      with the parent's command line.  ⚠ If a positive `--audio-silenzio`
 	 *      appeared here there would be TWO names for the same cure, and that
 	 *      is exactly what this phase removed. */
-	if (!f->phase9_audio_silence)
+	if (!b->audio_silence)
 		argv[na++] = (char *)"--no-audio-silence";
 	/* ⭐ PHASE 19: the card's route, if forced (`--encoding-route vaapi|vulkan`):
 	 *    the default "card" is not passed, and the child is born with the same. */
@@ -1577,7 +1578,7 @@ static void become_and_exec(const struct children *f, const struct child *g,
 	}
 	argv[na] = NULL;
 
-	execve(f->my_path, argv, envp);
+	execve(b->my_path, argv, envp);
 	_exit(37);
 }
 
@@ -2072,75 +2073,27 @@ static bool enroll_in_card_groups(const char *user, uid_t uid, gid_t primary,
 	return true;
 }
 
-bool children_ensure(children *f, const char *user)
+/* ⭐ 1.5 (DECISIONS-11.md §11.50) — THE BIRTH, on its own: resolves `user`,
+ *    enrols it in the card groups, makes the pair, takes the render grant,
+ *    forks and `become_and_exec()`s.  It was the second half of
+ *    `children_ensure_from()`; the table (search, slot, name check) stays
+ *    there.  Called by `children_ensure_from()` in the single-process server;
+ *    the root side of the split will call it too (phase D). */
+child_outcome child_birth(const struct birth_opts *b, const char *user,
+                          const char *rhost, uint64_t serial,
+                          struct child_born *out)
 {
-	return children_ensure_from(f, user, NULL);
-}
-
-bool children_ensure_from(children *f, const char *user, const char *rhost)
-{
-	struct child *g;
 	struct passwd pw, *result = NULL;
 	char spare[1024];
 	gid_t groups[64];
 	int ngroups = (int)(sizeof groups / sizeof groups[0]);
 	int sv[2];
 	int uno = 1;
-	int free_slot = -1;
 	bool grant = false;
 	pid_t p;
 
-	if (!f || !user || !user[0])
-		return false;
-
-	/* ⛔⭐ I2 — "only one graphical session per user".  Two connections of the
-	 *     same user do NOT make two children: the second finds the first, and
-	 *     sees the same stage.  ⚠ And if the first is dead, the slot has
-	 *     already been freed by `children_move()`: nothing is resurrected here. */
-	g = search(f, user);
-	if (g && !g->exiting) {
-		/* ⛔ A new RCP session attaching to this child: the name is checked
-		 *    again NOW, once per login — the per-message check is gone
-		 *    (`name_still_ours()`), and a login is exactly the moment a
-		 *    name NSS now gives to another uid would be bound to a stage. */
-		char why[256];
-
-		why[0] = 0;
-		if (!name_still_ours(g, why, sizeof why)) {
-			registro_dice(LOG_CHILD,
-			              "⛔⛔ «%s» logs in and its child can no longer be "
-			              "proven to be that user: %s.  The child is killed, "
-			              "and this login gets none",
-			              user, why);
-			if (g->pid > 0)
-				kill(g->pid, SIGKILL);
-			child_dismiss(f, g, "its name no longer resolves to its uid");
-			return false;
-		}
-		g->name_checked_ms = log_now_ms();
-	}
-	if (g) {
-		registro_dice(LOG_CHILD,
-		              "«%s» is already served by the child pid %ld (uid %ld): a "
-		              "second one is NOT born — invariant I2, and the stage is the "
-		              "same because it belongs to the SESSION (I4)",
-		              user, (long)g->pid, (long)g->uid);
-		return true;
-	}
-
-	for (int i = 0; i < f->cap; i++)
-		if (!f->v[i].used) {
-			free_slot = i;
-			break;
-		}
-	if (free_slot < 0) {
-		registro_dice(LOG_CHILD,
-		              "⛔ %d children already alive: «%s» will NOT get one, and so "
-		              "will not get a stage.  It is a declared no, not a maybe "
-		              "(invariant I3)",
-		              f->cap, user);
-		return false;
-	}
+	if (!b || !user || !user[0] || !out)
+		return CHILD_FAILED;
 
 	/* ⛔ The name is resolved HERE, in the parent, and the uid that comes out
 	 *    is the one the kernel will have to stamp on every message.  ⚠
@@ -2154,7 +2107,7 @@ bool children_ensure_from(children *f, const char *user, const char *rhost)
 		              "resolve, and in that case there is no uid to "
 		              "drop to",
 		              user, strerror(errno));
-		return false;
+		return CHILD_NAME_UNKNOWN;
 	}
 	if (pw.pw_uid == 0) {
 		/* ⛔ A child at uid 0 would not be a child: it would be the parent
@@ -2166,7 +2119,7 @@ bool children_ensure_from(children *f, const char *user, const char *rhost)
 		              "§1.10-bis), and one at uid 0 would not have anyone's "
 		              "session bus anyway",
 		              user);
-		return false;
+		return CHILD_FAILED;
 	}
 	if (getgrouplist(pw.pw_name, pw.pw_gid, groups, &ngroups) < 0) {
 		/* More groups than the buffer holds: what is there is taken and it is
@@ -2208,7 +2161,7 @@ bool children_ensure_from(children *f, const char *user, const char *rhost)
 		              "⛔ no socketpair for «%s» (%s): no child, "
 		              "no stage",
 		              user, strerror(errno));
-		return false;
+		return CHILD_FAILED;
 	}
 	/* ⛔⭐ THIS LINE IS INVARIANT I3 OF THE WHOLE FILE.  Without
 	 *     `SO_PASSCRED`, the kernel does not stamp the credentials and every
@@ -2223,7 +2176,7 @@ bool children_ensure_from(children *f, const char *user, const char *rhost)
 		              strerror(errno));
 		close(sv[0]);
 		close(sv[1]);
-		return false;
+		return CHILD_FAILED;
 	}
 
 	/* ⭐⭐ 1.5 (DECISIONS.md §11.4) — THE CARD FOR A STALE USER MANAGER.
@@ -2249,15 +2202,6 @@ bool children_ensure_from(children *f, const char *user, const char *rhost)
 		}
 	}
 
-	g = &f->v[free_slot];
-	memset(g, 0, sizeof *g);
-	g->render_grant = grant;
-	g->serial = f->next_serial;
-	snprintf(g->user, sizeof g->user, "%s", pw.pw_name);
-	snprintf(g->rhost, sizeof g->rhost, "%s", rhost ? rhost : "");
-	g->uid = pw.pw_uid;
-	g->gid = pw.pw_gid;
-
 	p = fork();
 	if (p < 0) {
 		registro_dice(LOG_CHILD, "⛔ fork for «%s»: %s — no stage", user,
@@ -2265,39 +2209,142 @@ bool children_ensure_from(children *f, const char *user, const char *rhost)
 		close(sv[0]);
 		close(sv[1]);
 		if (grant)
-			render_grant_remove(g->user, g->uid, g->gid);
-		memset(g, 0, sizeof *g);
-		g->fd = -1;
-		return false;
+			render_grant_remove(pw.pw_name, pw.pw_uid, pw.pw_gid);
+		return CHILD_FAILED;
 	}
 	if (p == 0) {
 		close(sv[0]);
-		become_and_exec(f, g, sv[1], &pw, groups, ngroups);
+		become_and_exec(b, serial, rhost, sv[1], &pw, groups, ngroups);
 		_exit(38); /* never reached */
 	}
 
 	close(sv[1]);
-	g->used = true;
-	g->pid = p;
-	g->fd = sv[0];
 	/* ⛔ Non-blocking on the PARENT's side, and only on that one: here we are
 	 *    inside the server's single `poll` loop, and a read that waits stops
 	 *    all connections together (`CODER.md` §4.4) — the defect just cured on
 	 *    PAM, brought back through another door.  ⚠ The CHILD's end stays
 	 *    blocking on purpose: there waiting is the job. */
-	fcntl(g->fd, F_SETFL, O_NONBLOCK);
-	g->born_ms = log_now_ms();
-	g->last_recheck_ms = g->born_ms;
-	g->name_checked_ms = g->born_ms; /* resolved just above, before the fork */
-	f->next_serial++;
+	fcntl(sv[0], F_SETFL, O_NONBLOCK);
+
+	memset(out, 0, sizeof *out);
+	out->pid = p;
+	out->fd = sv[0];
+	out->uid = pw.pw_uid;
+	out->gid = pw.pw_gid;
+	out->render_grant = grant;
+	snprintf(out->user, sizeof out->user, "%s", pw.pw_name);
 
 	registro_dice(LOG_CHILD,
 	              "⭐ child spawned for «%s»: pid %ld, uid %ld, gid %ld, "
 	              "serial %llu.  ⛔ That it REALLY is that uid is not for me "
 	              "to say: the kernel will say it on each of its messages (SO_PASSCRED)",
-	              g->user, (long)g->pid, (long)g->uid, (long)g->gid,
-	              (unsigned long long)g->serial);
-	return true;
+	              out->user, (long)out->pid, (long)out->uid, (long)out->gid,
+	              (unsigned long long)serial);
+	return CHILD_READY;
+}
+
+static void birth_opts_of(const struct children *f, struct birth_opts *b)
+{
+	memset(b, 0, sizeof *b);
+	b->canvas_w = f->canvas_w;
+	b->canvas_h = f->canvas_h;
+	b->dir_survey = f->has_survey ? f->dir_survey : NULL;
+	b->quality_rises = f->phase9_quality_rises;
+	b->bandwidth_cap_mbit = f->phase9_bandwidth_cap_mbit;
+	b->audio_silence = f->phase9_audio_silence;
+	b->my_path = f->my_path;
+	b->parent_uid = -1; /* the parent is root: the child's default */
+	/* `close_only` and `parent_uid` are not passed to the child yet (phase D5) */
+}
+
+bool children_ensure(children *f, const char *user)
+{
+	return children_ensure_from(f, user, NULL) == CHILD_READY;
+}
+
+child_outcome children_ensure_from(children *f, const char *user, const char *rhost)
+{
+	struct child *g;
+	int free_slot = -1;
+
+	if (!f || !user || !user[0])
+		return CHILD_FAILED;
+
+	/* ⛔⭐ I2 — "only one graphical session per user".  Two connections of the
+	 *     same user do NOT make two children: the second finds the first, and
+	 *     sees the same stage.  ⚠ And if the first is dead, the slot has
+	 *     already been freed by `children_move()`: nothing is resurrected here. */
+	g = search(f, user);
+	if (g && !g->exiting) {
+		/* ⛔ A new RCP session attaching to this child: the name is checked
+		 *    again NOW, once per login — the per-message check is gone
+		 *    (`name_still_ours()`), and a login is exactly the moment a
+		 *    name NSS now gives to another uid would be bound to a stage. */
+		char why[256];
+
+		why[0] = 0;
+		if (!name_still_ours(g, why, sizeof why)) {
+			registro_dice(LOG_CHILD,
+			              "⛔⛔ «%s» logs in and its child can no longer be "
+			              "proven to be that user: %s.  The child is killed, "
+			              "and this login gets none",
+			              user, why);
+			if (g->pid > 0)
+				kill(g->pid, SIGKILL);
+			child_dismiss(f, g, "its name no longer resolves to its uid");
+			return CHILD_NAME_MOVED;
+		}
+		g->name_checked_ms = log_now_ms();
+	}
+	if (g) {
+		registro_dice(LOG_CHILD,
+		              "«%s» is already served by the child pid %ld (uid %ld): a "
+		              "second one is NOT born — invariant I2, and the stage is the "
+		              "same because it belongs to the SESSION (I4)",
+		              user, (long)g->pid, (long)g->uid);
+		return CHILD_READY;
+	}
+
+	for (int i = 0; i < f->cap; i++)
+		if (!f->v[i].used) {
+			free_slot = i;
+			break;
+		}
+	if (free_slot < 0) {
+		registro_dice(LOG_CHILD,
+		              "⛔ %d children already alive: «%s» will NOT get one, and so "
+		              "will not get a stage.  It is a declared no, not a maybe "
+		              "(invariant I3)",
+		              f->cap, user);
+		return CHILD_FAILED;
+	}
+
+	{
+		struct birth_opts b;
+		struct child_born c;
+		child_outcome o;
+
+		birth_opts_of(f, &b);
+		o = child_birth(&b, user, rhost, f->next_serial, &c);
+		if (o != CHILD_READY)
+			return o;
+		g = &f->v[free_slot];
+		memset(g, 0, sizeof *g);
+		g->render_grant = c.render_grant;
+		g->serial = f->next_serial;
+		snprintf(g->user, sizeof g->user, "%s", c.user);
+		snprintf(g->rhost, sizeof g->rhost, "%s", rhost ? rhost : "");
+		g->uid = c.uid;
+		g->gid = c.gid;
+		g->used = true;
+		g->pid = c.pid;
+		g->fd = c.fd;
+	}
+	g->born_ms = log_now_ms();
+	g->last_recheck_ms = g->born_ms;
+	g->name_checked_ms = g->born_ms; /* resolved just above, before the fork */
+	f->next_serial++;
+	return CHILD_READY;
 }
 
 size_t children_descriptors(children *f, struct pollfd *fds, size_t max)

@@ -896,7 +896,7 @@ static void delivery_verdict(void *ctx, uint64_t ticket, bool admitted,
 			              "wire with 0x06 BUDGET_FULL — which is a "
 			              "PHYSICAL limit, not the full table of 0x0E",
 			              user, without_stage);
-		} else if (!children_ensure_from(p->f, user, rhost)) {
+		} else if (children_ensure_from(p->f, user, rhost) != CHILD_READY) {
 			/* ⚠ The OTHER five roads by which a child is not born: a name PAM
 			 *   admits and NSS does not resolve, uid 0, `socketpair`,
 			 *   `SO_PASSCRED`, `fork`.  ⛔ None of these is capacity: they are

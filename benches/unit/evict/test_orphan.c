@@ -58,13 +58,13 @@ pid_t fake_children_pid_of(const children *f, const char *user)
 	n_pid++;                      /* "the user's desktop is looked at" */
 	return 0;
 }
-bool fake_children_ensure_from(children *f, const char *user, const char *rhost)
+child_outcome fake_children_ensure_from(children *f, const char *user, const char *rhost)
 {
 	(void)f;
 	(void)user;
 	(void)rhost;
 	n_ensure++;
-	return true;
+	return CHILD_READY;
 }
 int fake_children_count(const children *f)
 {
