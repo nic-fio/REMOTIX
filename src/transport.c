@@ -526,6 +526,45 @@ static int cb_handshake_completed(ngtcp2_conn *conn, void *user_data)
 	return 0;
 }
 
+/* ⭐ §2.3 (migration): ngtcp2 says how the validation of a NEW path ended, and the
+ *    operator must read it — a client that moved and a client that was spoofed are two
+ *    different facts.  On success the connection's address follows (logs, fallback).
+ *    ⚠ The charge of the connection caps does NOT follow: it stays on the BIRTH address
+ *    (`birth_key`, `birth_key48`), or moving would free a place on the old one. */
+static int cb_path_validation(ngtcp2_conn *conn, uint32_t flags,
+                              const ngtcp2_path *path,
+                              const ngtcp2_path *fallback_path,
+                              ngtcp2_path_validation_result res, void *user_data)
+{
+	connection *c = user_data;
+	char now[sizeof c->provenance];
+	(void)conn;
+	(void)flags;
+	(void)fallback_path;
+	address_text((const struct sockaddr *)path->remote.addr,
+	             (socklen_t)path->remote.addrlen, now, sizeof now);
+	if (res != NGTCP2_PATH_VALIDATION_RESULT_SUCCESS) {
+		registro_dice(REG_QUIC, "⚠ %s: the path towards %s was NOT validated (%s): "
+		              "the traffic stays where it was", c->provenance, now,
+		              res == NGTCP2_PATH_VALIDATION_RESULT_ABORTED ? "aborted" : "failed");
+		return 0;
+	}
+	if (strcmp(now, c->provenance) == 0)
+		return 0;
+	registro_dice(REG_QUIC, "⭐ %s MOVED to %s: new path validated (§2.3 migration)",
+	              c->provenance, now);
+	if (path->remote.addrlen <= sizeof c->remote) {
+		memcpy(&c->remote, path->remote.addr, path->remote.addrlen);
+		c->remotelen = (socklen_t)path->remote.addrlen;
+	}
+	if (path->local.addrlen > 0 && path->local.addrlen <= sizeof c->local) {
+		memcpy(&c->local, path->local.addr, path->local.addrlen);
+		c->localelen = (socklen_t)path->local.addrlen;
+	}
+	snprintf(c->provenance, sizeof c->provenance, "%s", now);
+	return 0;
+}
+
 /* ⛔⭐ DATAGRAMS ARRIVE, AND UNTIL TONIGHT THEY VANISHED WITHOUT A LINE —
  *     finding B-10, night of 10 Aug 2026.
  *
@@ -592,6 +631,20 @@ static void send_msg(transport *t, const struct sockaddr *sa, socklen_t salen,
 	}
 }
 
+/* ⛔ §2.3 (migration): a connection's packets go where NGTCP2 says — the path it wrote
+ *    them for (the new address after a migration, the probe of a path being validated) —
+ *    and not to the address the connection was born on.  An empty path (never expected)
+ *    falls back to that one. */
+static void send_on(connection *c, const ngtcp2_path *path, const uint8_t *data,
+                    size_t len)
+{
+	if (path && path->remote.addrlen > 0)
+		send_msg(c->t, (const struct sockaddr *)path->remote.addr,
+		         (socklen_t)path->remote.addrlen, data, len);
+	else
+		send_msg(c->t, (const struct sockaddr *)&c->remote, c->remotelen, data, len);
+}
+
 /* ⛔ The callback ngtcp2 invokes for every packet, and the `user_data` it
  *    passes is the CONNECTION's — not the WebTransport layer's.
  *    ⚠ This two-line detour exists on purpose: passing `wt_write` directly to
@@ -650,8 +703,7 @@ static void write_connection(connection *c)
 		size_t rest = (size_t)n;
 		while (rest > 0) {
 			size_t q = rest < gso ? rest : gso;
-			send_msg(c->t, (const struct sockaddr *)&c->remote, c->remotelen, p,
-			      q);
+			send_on(c, &ps.path, p, q);
 			p += q;
 			rest -= q;
 		}
@@ -960,7 +1012,7 @@ static void close_refused(connection *c, const char *why)
 	n = ngtcp2_conn_write_connection_close(c->conn, &ps.path, &opi, buf, sizeof buf,
 	                                       &c->last_error, now_ns());
 	if (n > 0)
-		send_msg(c->t, (const struct sockaddr *)&c->remote, c->remotelen, buf, (size_t)n);
+		send_on(c, &ps.path, buf, (size_t)n);
 	c->dead_run = true;
 }
 
@@ -1146,6 +1198,7 @@ static connection *accept_conn(transport *t, const ngtcp2_pkt_hd *hd,
 		/* ⛔ §6.3: datagrams are announced, so they arrive — and what arrives
 		 *    is either served or discarded WRITING IT DOWN.  Finding B-10. */
 		.recv_datagram = cb_recv_datagram,
+		.path_validation = cb_path_validation,
 		/* ⭐⭐ And the outcome of those WE send — as a pair, and the reason
 		 *    the pair is mandatory is above the two functions: alone,
 		 *    `lost_datagram` would count reordering as loss. */
@@ -1574,11 +1627,20 @@ static void read_packet(transport *t, const struct sockaddr *local,
 	if (ngtcp2_conn_in_draining_period2(c->conn))
 		return;
 
+	/* ⛔ §2.3 (migration): the path is the one THIS packet came on, not the one the
+	 *    connection was born on.  Until 1.5 it was `c->local` / `c->remote` always: ngtcp2
+	 *    never saw a new address, so a phone moving from Wi-Fi to mobile data (or a NAT that
+	 *    changes the port) kept being answered on the old one and died at the silence clock.
+	 *    `local` is the address the datagram arrived ON (IP_PKTINFO), `remote` where it came
+	 *    FROM.  ngtcp2 validates the new path itself (PATH_CHALLENGE) before it moves the
+	 *    traffic, and `cb_path_validation()` says how that ended.
+	 * ⚠ An attacker who sees the client's packets can still make us send up to three times
+	 *   what he sends to an address he chooses, until the validation fails (RFC 9000 §8, §9.3). */
 	memset(&path, 0, sizeof path);
-	path.local.addr = (ngtcp2_sockaddr *)&c->local;
-	path.local.addrlen = c->localelen;
-	path.remote.addr = (ngtcp2_sockaddr *)&c->remote;
-	path.remote.addrlen = c->remotelen;
+	path.local.addr = (ngtcp2_sockaddr *)local;
+	path.local.addrlen = (ngtcp2_socklen)localelen;
+	path.remote.addr = (ngtcp2_sockaddr *)remote;
+	path.remote.addrlen = (ngtcp2_socklen)remotelen;
 
 	{
 		ngtcp2_tstamp now = now_ns();
@@ -1622,8 +1684,7 @@ static void read_packet(transport *t, const struct sockaddr *local,
 				c->conn, &ps.path, &opi, buf, sizeof buf, &c->last_error,
 				now_ns());
 			if (n > 0)
-				send_msg(t, (const struct sockaddr *)&c->remote, c->remotelen,
-				      buf, (size_t)n);
+				send_on(c, &ps.path, buf, (size_t)n);
 		}
 		c->dead_run = true;
 		return;
@@ -1871,8 +1932,7 @@ void transport_expired(transport *t)
 				c->conn, &ps.path, &opi, buf, sizeof buf, &c->last_error,
 				now);
 			if (n > 0)
-				send_msg(t, (const struct sockaddr *)&c->remote, c->remotelen, buf,
-				      (size_t)n);
+				send_on(c, &ps.path, buf, (size_t)n);
 			registro_dice(REG_QUIC,
 			              "⛔ %s: DEAD LINE — the QUIC connection is closing "
 			              "(one single CONNECTION_CLOSE, %s).  The why, with the "
