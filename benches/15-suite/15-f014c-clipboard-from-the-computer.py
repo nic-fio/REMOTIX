@@ -294,16 +294,19 @@ def p1(g, scene, text, copied=True):
     if copied:
         det["key"] = ctrl_from_system(g, "c")
     t0 = time.time()
-    diag = [diag_snap("WAYLAND_DISPLAY=%s, right after the Ctrl+C"
+    diag = [] if not copied else [diag_snap("WAYLAND_DISPLAY=%s, right after the Ctrl+C"
                       % os.environ.get("WAYLAND_DISPLAY", ""), t0)]
     diag_due = [0.2, 1.0]
     read, readings = None, []
     while time.time() - t0 < CAP_P1_S:
-        if diag_due and time.time() - t0 >= diag_due[0]:
+        if copied and diag_due and time.time() - t0 >= diag_due[0] \
+                and time.time() - t0 + 2.0 < CAP_P1_S:
             diag.append(diag_snap("poll", t0))
             diag_due.pop(0)
         read = wl_read()
         readings.append((round(time.time() - t0, 2), (read or "")[:60]))
+        if read == text and time.time() - t0 > CAP_P1_S:
+            read = None                          # arrived AFTER the limit: not in time
         if read == text:
             break
         time.sleep(0.2)
@@ -315,11 +318,13 @@ def p1(g, scene, text, copied=True):
     if read != text:
         time.sleep(2.0)
         det["computer_after_5s"] = wl_read()      # diagnosis: is it only late?
-        diag.append(diag_snap("after the wait (~5 s)", t0))
+        if copied:
+            diag.append(diag_snap("after the wait (~5 s)", t0))
         det["state_after_5s"] = state(g)
     det["diary"] = g.js(F14.DIARY)
-    det["diag_file"] = "diag-f015c.txt"
-    det["diag_text"] = "\n".join(diag)
+    if copied:                                   # the fault pass (copied=False) has no diagnostics
+        det["diag_file"] = "diag-f015c.txt"
+        det["diag_text"] = "\n".join(diag)
     return read, det
 
 
