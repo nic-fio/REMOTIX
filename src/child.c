@@ -86,6 +86,7 @@
 #include "clipboard.h"
 #include "audio.h"
 #include "capture.h"
+#include "unchanged.h"
 #include "wlroots.h"
 #include "vulkanvideo.h"
 #include <drm_fourcc.h>
@@ -4485,6 +4486,8 @@ static uint64_t enc_wait_ms[CODEC_MAX];
  *    being sought.  ⚠ 400 ms is two orders of magnitude below the measured
  *    4.4 seconds and above the cost of a restart (`[M]` 41.6 ms). */
 static uint64_t wakeup_ms;
+/* ⭐ The last restart asked by a stale «unchanged» card frame (`unchanged.h`). */
+static uint64_t uc_wake_ms;
 #define WAKEUP_MS 400u
 /* ⛔ Cure "A" (21 Aug 2026, 🔸 derived) skips the wake-up when something is
  *    held down.  ⚠ This flag serves only NOT to repeat the log line every
@@ -9585,6 +9588,26 @@ void child_alive(int argc, char **argv)
 						              (unsigned)WAKEUP_MS);
 						capture_wake(cat);
 					}
+				}
+			}
+
+			/* ⭐ 15 Oct 2026 — a frame held back as «unchanged» on the CARD
+			 *    and then the scene went still (`unchanged.h`, «pending»): it
+			 *    may hide a change whose damage KWin lost, its buffer is
+			 *    already back with KWin, and no frame will come by itself.
+			 *    ⇒ The same restart as above, with the same guards (no key or
+			 *    button down, `WAKEUP_MS`), and at most one every
+			 *    `UC_WAKE_GAP_MS`.  ⚠ `capture_wake()` clears the flag; a
+			 *    refused restart is retried at the next round. */
+			if (take == CAPTURE_TAKE_ZERO && capture_unchanged_stale(cat)) {
+				uint64_t current_ms = log_now_ms();
+
+				if (current_ms - wakeup_ms >= WAKEUP_MS
+				    && current_ms - uc_wake_ms >= UC_WAKE_GAP_MS
+				    && !(stage_input && input_pressed(stage_input))) {
+					wakeup_ms = current_ms;
+					uc_wake_ms = current_ms;
+					capture_wake(cat);
 				}
 			}
 

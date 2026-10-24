@@ -5,9 +5,14 @@
  * Build and run:  make -C src bench-unchanged && ./benches/20-unchanged-test
  * Exit 0 = every case passed; otherwise the failing case is named.
  *
+ * Also the three decisions moved into `unchanged.h` after the review of
+ * 1849a57d: the held frame due when the scene goes still (`uc_pending_*`),
+ * the cost re-checked by windows (`uc_cost_*`), the switch-off re-armed by a
+ * renegotiation and hard after `UC_STRIKES_MAX` (`uc_switch_*`).
+ *
  * ⚠ What it does NOT cover: the merge of the damage in the slot
- *   (`on_process`, capture.c) and the 250 ms / bypass / cost guards
- *   (`unchanged_judge`), which live in capture.c and need a stream.
+ *   (`on_process`, capture.c), the keeping/sending of the held frame and the
+ *   restart on the card (`capture_take`, child.c), which need a stream.
  */
 #include "../src/unchanged.h"
 
@@ -122,6 +127,88 @@ int main(void)
 			CHECK(!uc_same(&u, big, W, H, S, &c, 1), "last byte of 4K is compared");
 		}
 		free(big);
+	}
+
+	/* --- the held frame when the scene goes still ------------------------- */
+	{
+		const uint64_t t0 = 1000000, ms = 1000;
+
+		CHECK(uc_pending_due(FALSE, FALSE, t0, t0 + 999 * ms) == UC_PENDING_NONE,
+		      "nothing held: nothing due");
+		CHECK(uc_pending_due(FALSE, TRUE, t0, t0) == UC_PENDING_NONE,
+		      "nothing held, keyframe due: still nothing");
+		CHECK(uc_pending_due(TRUE, FALSE, t0, t0 + 10 * ms) == UC_PENDING_WAIT,
+		      "held 10 ms after the last out: wait");
+		CHECK(uc_pending_due(TRUE, FALSE, t0, t0 + (UC_REFRESH_MS - 1) * ms) ==
+		          UC_PENDING_WAIT,
+		      "held, 1 ms before the window ends: wait");
+		CHECK(uc_pending_due(TRUE, FALSE, t0, t0 + UC_REFRESH_MS * ms) == UC_PENDING_FLUSH,
+		      "held, window over: flush");
+		CHECK(uc_pending_due(TRUE, FALSE, t0, t0 + 60000 * ms) == UC_PENDING_FLUSH,
+		      "held, scene still for a minute: flush");
+		CHECK(uc_pending_due(TRUE, TRUE, t0, t0 + 1 * ms) == UC_PENDING_FLUSH,
+		      "held, keyframe due: flush at once");
+		CHECK(uc_pending_due(TRUE, FALSE, 0, t0) == UC_PENDING_FLUSH,
+		      "held with nothing ever out: flush (doubt = send)");
+		CHECK(uc_pending_due(TRUE, FALSE, t0, t0 - 1) == UC_PENDING_FLUSH,
+		      "clock before the last out: flush (doubt = send)");
+
+		CHECK(uc_pending_wait_us(FALSE, t0, t0, 8 * ms) == 8 * ms,
+		      "nothing held: the caller's wait");
+		CHECK(uc_pending_wait_us(TRUE, t0, t0 + 100 * ms, 8 * ms) == 8 * ms,
+		      "held, far from due: the caller's wait");
+		CHECK(uc_pending_wait_us(TRUE, t0, t0 + (UC_REFRESH_MS - 3) * ms, 8 * ms) == 3 * ms,
+		      "held, due in 3 ms: wait 3 ms");
+		CHECK(uc_pending_wait_us(TRUE, t0, t0 + UC_REFRESH_MS * ms, 8 * ms) == 0,
+		      "held and due: no wait");
+		CHECK(uc_pending_wait_us(TRUE, 0, t0, 8 * ms) == 0, "held, nothing ever out: no wait");
+	}
+
+	/* --- the cost, re-checked by windows ----------------------------------- */
+	{
+		UcCost c = { 0 };
+		guint i, over = 0;
+
+		for (i = 0; i < UC_COST_FIRST - 1; i++)
+			CHECK(!uc_cost_add(&c, 100000), "no verdict before the first window closes");
+		CHECK(uc_cost_add(&c, 100000), "first window slow: over the ceiling");
+		uc_cost_reset(&c);
+		for (i = 0; i < UC_COST_FIRST; i++)
+			over += uc_cost_add(&c, 500);
+		CHECK(over == 0 && c.windows == 1, "first window cheap: no verdict");
+		/* later the card turns slow: caught by the next window, not never */
+		for (i = 0; i < UC_COST_EVERY - 1; i++)
+			over += uc_cost_add(&c, UC_COST_MAX_US * 2);
+		CHECK(over == 0, "no verdict before the second window closes");
+		CHECK(uc_cost_add(&c, UC_COST_MAX_US * 2) && c.windows == 2,
+		      "second window slow: over the ceiling");
+		CHECK(c.last_mean_us > UC_COST_MAX_US, "the mean is reported");
+		/* a window whose mean equals the ceiling is not over */
+		for (i = 0; i < UC_COST_EVERY; i++)
+			over = uc_cost_add(&c, UC_COST_MAX_US);
+		CHECK(!over, "mean equal to the ceiling is allowed");
+		/* one spike in a cheap window does not switch it off */
+		for (i = 0; i < UC_COST_EVERY; i++)
+			over = uc_cost_add(&c, i == 5 ? 100000 : 500);
+		CHECK(!over, "one spike of 100 ms in 300 cheap looks is allowed");
+	}
+
+	/* --- the switch: soft off until a renegotiation, hard after three ----- */
+	{
+		UcSwitch sw = { 0 };
+		gboolean re;
+
+		CHECK(uc_switch_allows(&sw, 1, &re) && !re, "fresh switch allows");
+		uc_switch_strike(&sw, 1);
+		CHECK(!uc_switch_allows(&sw, 1, &re) && !re, "off for the same generation");
+		CHECK(uc_switch_allows(&sw, 2, &re) && re, "a renegotiation re-arms");
+		CHECK(uc_switch_allows(&sw, 2, &re) && !re, "re-armed is said once");
+		uc_switch_strike(&sw, 2);
+		CHECK(!sw.hard && uc_switch_allows(&sw, 3, &re) && re, "second strike: re-armed");
+		uc_switch_strike(&sw, 3);
+		CHECK(sw.hard, "third strike is hard");
+		CHECK(!uc_switch_allows(&sw, 4, &re) && !re, "hard off: a renegotiation does not re-arm");
+		CHECK(!uc_switch_allows(&sw, 99, NULL), "hard off, no flag pointer");
 	}
 
 	/* --- forget ------------------------------------------------------------ */

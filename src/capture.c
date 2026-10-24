@@ -289,11 +289,20 @@ struct Capture
 	 * thrown away before the slot took its damage with it); the rest lives on
 	 * the CALLER's thread (`capture_take`), like `last_measure_us`. */
 	gboolean damage_lost;
-	gboolean uc_on, uc_bypass, uc_off;
+	gboolean uc_on, uc_bypass;
+	UcSwitch uc_switch; /* soft off until a renegotiation; hard after UC_STRIKES_MAX */
+	UcCost uc_window;   /* the cost of looking, re-checked every window */
 	Unchanged uc;
 	uint64_t uc_generation;
 	uint64_t uc_last_out_us; /* the last frame that WENT OUT of `capture_take` */
+	/* ⭐ The frame held back that nothing has superseded yet (`uc_pending_due`).
+	 *    On memory `uc_held` IS that frame (our own copy, no producer buffer
+	 *    in it); on the card the buffer went back at once and only the flag
+	 *    stays — when it is due, `uc_stale` asks the caller for a restart. */
+	gboolean uc_pending, uc_stale;
+	CaptureStopped uc_held;
 	guint64 uc_seen, uc_dropped, uc_refresh, uc_big, uc_outside, uc_blind;
+	guint64 uc_flushed, uc_stale_n, uc_woken, uc_rearmed;
 	guint64 uc_cost_us, uc_cost_n, uc_cost_max_us;
 	guint64 uc_area_last, uc_area_max;
 };
@@ -2095,6 +2104,12 @@ gboolean capture_wake(Capture *capture)
 		registro_dice(AREA, "⛔ stream wake-up at %ux%u: %s", l, a, spa_strerror(outcome));
 		return FALSE;
 	}
+	/* ⭐ The restart answers a stale held frame too (`capture_unchanged_stale`). */
+	if (capture->uc_stale)
+	{
+		capture->uc_stale = FALSE;
+		capture->uc_woken++;
+	}
 	registro_dice(AREA,
 	              "⭐ stream RESTARTED at the same size (%ux%u) to get a "
 	              "frame delivered: on Wayland one cannot ask «repaint», and this is the "
@@ -2484,13 +2499,12 @@ void capture_probe_pointer(Capture *capture, uint32_t x, uint32_t y)
  *      measurement (KDE, 15 Oct 2026: ~50 buffers/s, ~45 of them the same picture).
  * ------------------------------------------------------------------ */
 
-/* The mean cost of a look above which the filter switches itself off, and
- * after how many looks it is judged.  ⚠ The look replaces an encoding of
- * ~10 ms (`[M]` the same run: «encoding 9.7 ms» median): above 3 ms it is no
- * longer a saving, and on a discrete card a mapped read is far slower
- * (`[M]` the full pass: 63.7 s, see `look_dmabuf_pixels`). */
-#define UC_COST_MAX_US 3000u
-#define UC_COST_AFTER 30u
+/* The mean cost of a look above which the filter switches itself off
+ * (`UC_COST_MAX_US`, `uc_cost_add` in `unchanged.h`: the first 30 looks, then
+ * every 300).  ⚠ The look replaces an encoding of ~10 ms (`[M]` the same run:
+ * «encoding 9.7 ms» median): above 3 ms it is no longer a saving, and on a
+ * discrete card a mapped read is far slower (`[M]` the full pass: 63.7 s, see
+ * `look_dmabuf_pixels`). */
 
 static gboolean dmabuf_sync(int fd, gboolean start)
 {
@@ -2508,15 +2522,22 @@ static gboolean dmabuf_sync(int fd, gboolean start)
 	return FALSE;
 }
 
-static void uc_switch_off(Capture *capture, const char *why)
+static void uc_switch_off(Capture *capture, const char *why, uint64_t generation)
 {
-	capture->uc_off = TRUE;
+	uc_switch_strike(&capture->uc_switch, generation);
 	uc_free(&capture->uc);
+	uc_cost_reset(&capture->uc_window);
+	capture->uc_pending = FALSE;
 	registro_dice(AREA,
-	              "⚠ the «unchanged» filter SWITCHES ITSELF OFF: %s.  ⛔ From here every "
+	              "⚠ the «unchanged» filter SWITCHES ITSELF OFF: %s.  ⛔ %s every "
 	              "frame the producer sends is encoded, as before 15 Oct 2026 — "
-	              "looked at %" G_GUINT64_FORMAT ", held back %" G_GUINT64_FORMAT,
-	              why, capture->uc_seen, capture->uc_dropped);
+	              "strike %u of %u, looked at %" G_GUINT64_FORMAT ", held back %"
+	              G_GUINT64_FORMAT,
+	              why,
+	              capture->uc_switch.hard ? "For the rest of this capture"
+	                                      : "Until the stream renegotiates its buffers,",
+	              capture->uc_switch.strikes, UC_STRIKES_MAX, capture->uc_seen,
+	              capture->uc_dropped);
 }
 
 /*
@@ -2534,23 +2555,39 @@ static gboolean unchanged_judge(Capture *capture, CaptureStopped *report)
 	size_t amount = 0;
 	gboolean same = FALSE, mapped_ok = TRUE;
 	uint32_t w = report->width, h = report->height, st = report->stride;
+	gboolean rearmed = FALSE;
 
-	if (!capture->uc_on || capture->uc_off || capture->wlr)
+	if (!capture->uc_on || capture->wlr)
 		return FALSE;
+	if (!uc_switch_allows(&capture->uc_switch, report->generation, &rearmed))
+		return FALSE;
+	if (rearmed)
+	{
+		capture->uc_rearmed++;
+		uc_cost_reset(&capture->uc_window);
+		registro_dice(AREA,
+		              "⭐ the «unchanged» filter is ON AGAIN: the stream renegotiated its "
+		              "buffers after switch-off %u of %u",
+		              capture->uc_switch.strikes, UC_STRIKES_MAX);
+	}
 	capture->uc_seen++;
 	/* ⚠ The count of the PREVIOUS frames, one line every 300. */
 	if (capture->uc_seen % 300 == 0)
 		log_detail(AREA,
 		           "«unchanged» over %" G_GUINT64_FORMAT " frames: held back %"
 		           G_GUINT64_FORMAT ", sent anyway after %d ms %" G_GUINT64_FORMAT
-		           ", damage too large %" G_GUINT64_FORMAT ", outside the reference %"
+		           " (+%" G_GUINT64_FORMAT " held frames sent when the scene went still, %"
+		           G_GUINT64_FORMAT " stale on the card, %" G_GUINT64_FORMAT
+		           " restarts), damage too large %" G_GUINT64_FORMAT ", outside the reference %"
 		           G_GUINT64_FORMAT ", not readable %" G_GUINT64_FORMAT
 		           " — damaged area last %" G_GUINT64_FORMAT " px, max %" G_GUINT64_FORMAT
-		           " px; look %.2f ms mean, %.2f max",
+		           " px; look %.2f ms mean (last window %.2f), %.2f max",
 		           capture->uc_seen, capture->uc_dropped, UC_REFRESH_MS,
-		           capture->uc_refresh, capture->uc_big, capture->uc_outside,
+		           capture->uc_refresh, capture->uc_flushed, capture->uc_stale_n,
+		           capture->uc_woken, capture->uc_big, capture->uc_outside,
 		           capture->uc_blind, capture->uc_area_last, capture->uc_area_max,
 		           capture->uc_cost_n ? capture->uc_cost_us / 1000.0 / capture->uc_cost_n : 0.0,
+		           capture->uc_window.last_mean_us / 1000.0,
 		           capture->uc_cost_max_us / 1000.0);
 
 	/* the geometry of the reference must be the one of this frame */
@@ -2599,7 +2636,7 @@ static gboolean unchanged_judge(Capture *capture, CaptureStopped *report)
 		if (report->modifier != DRM_FORMAT_MOD_LINEAR)
 		{
 			uc_switch_off(capture, "the card buffer is not LINEAR (its bytes are not "
-			                       "the rows of the image)");
+			                       "the rows of the image)", report->generation);
 			return FALSE;
 		}
 		amount = (size_t) report->offset + (size_t) st * h;
@@ -2607,7 +2644,7 @@ static gboolean unchanged_judge(Capture *capture, CaptureStopped *report)
 		if (map == MAP_FAILED)
 		{
 			map = NULL;
-			uc_switch_off(capture, "the card buffer cannot be mapped");
+			uc_switch_off(capture, "the card buffer cannot be mapped", report->generation);
 			return FALSE;
 		}
 		/* ⛔ Without the sync the CPU may read the bytes BEFORE the GPU has
@@ -2645,17 +2682,18 @@ static gboolean unchanged_judge(Capture *capture, CaptureStopped *report)
 		capture->uc_cost_n++;
 		if (cost > capture->uc_cost_max_us)
 			capture->uc_cost_max_us = cost;
-		if (capture->uc_cost_n == UC_COST_AFTER &&
-		    capture->uc_cost_us / capture->uc_cost_n > UC_COST_MAX_US)
+		if (uc_cost_add(&capture->uc_window, cost))
 		{
 			char why[160];
 
 			snprintf(why, sizeof why,
-			         "looking costs %.2f ms on average over %u frames (ceiling %.1f ms)",
-			         capture->uc_cost_us / 1000.0 / capture->uc_cost_n, UC_COST_AFTER,
+			         "looking costs %.2f ms on average over the last %u frames (ceiling "
+			         "%.1f ms)",
+			         capture->uc_window.last_mean_us / 1000.0,
+			         capture->uc_window.windows == 1 ? UC_COST_FIRST : UC_COST_EVERY,
 			         UC_COST_MAX_US / 1000.0);
-			uc_switch_off(capture, why);
-			return FALSE;
+			uc_switch_off(capture, why, report->generation);
+			goto deliver;
 		}
 	}
 	/* ⚠ The hole of `unchanged.h` (a damage KWin lost): at least one frame
@@ -2681,10 +2719,22 @@ static gboolean unchanged_judge(Capture *capture, CaptureStopped *report)
 			              UC_REFRESH_MS);
 	}
 	if (same)
+	{
+		capture->uc_pending = TRUE; /* ⭐ see `uc_pending_due` */
 		return TRUE;
+	}
 deliver:
+	capture->uc_pending = FALSE;
 	capture->uc_last_out_us = now;
 	return FALSE;
+}
+
+/* Drops the frame held back (a newer one arrived, or the stream changed). */
+static void uc_pending_drop(Capture *capture)
+{
+	capture->uc_pending = FALSE;
+	capture->uc_stale = FALSE;
+	capture_stopped_free(&capture->uc_held);
 }
 
 void capture_skip_unchanged(Capture *capture, const char *why)
@@ -2709,6 +2759,11 @@ void capture_unchanged_forget(Capture *capture)
 {
 	if (capture)
 		uc_forget(&capture->uc);
+}
+
+gboolean capture_unchanged_stale(Capture *capture)
+{
+	return capture && capture->uc_stale;
 }
 
 CaptureTake capture_take(Capture *capture, double wait_s, CaptureStopped *report,
@@ -2941,6 +2996,12 @@ CaptureTake capture_take(Capture *capture, double wait_s, CaptureStopped *report
 	 *     undelivered, until the next movement.
 	 * ⭐ Now: if it is there, it is taken. */
 	expiry = g_get_monotonic_time() + (gint64) (wait_s * G_USEC_PER_SEC);
+	/* ⭐ A frame held back is due at `uc_last_out_us + UC_REFRESH_MS`: the wait
+	 *    does not run past it (`unchanged.h`, «pending»). */
+	if (capture->uc_pending)
+		expiry = g_get_monotonic_time() +
+		         (gint64) uc_pending_wait_us(TRUE, capture->uc_last_out_us, now_us(),
+		                                     (uint64_t) (wait_s * G_USEC_PER_SEC));
 	/* ⭐ PHASE 17 — and a stream in ERROR will deliver nothing more: we exit
 	 *    at once instead of waiting the whole timeout.  `[M]` 29 Sep 2026, VM without
 	 *    3D: the negotiation refusal arrived in milliseconds and the take
@@ -2989,12 +3050,55 @@ CaptureTake capture_take(Capture *capture, double wait_s, CaptureStopped *report
 
 	if (!taken)
 	{
+		/* ⭐⭐ 15 Oct 2026 — THE FRAME HELD BACK WHEN THE SCENE WENT STILL
+		 *     (`unchanged.h`, «pending»).  It may hide a change whose damage
+		 *     KWin lost, and with no later frame the 250 ms rule never
+		 *     fires.  ⇒ When it is due:
+		 *       · on MEMORY it goes out now — it is our own copy, no
+		 *         producer buffer is held for it;
+		 *       · on the CARD its buffer went back to KWin at once (we do
+		 *         not hold one longer than before, and a 4K CPU copy at
+		 *         every held frame costs more than the encoding it saves):
+		 *         the reference is forgotten, so the next frame goes out
+		 *         whole, and `capture_unchanged_stale()` asks the caller
+		 *         for a stream restart — the only «repaint» there is. */
+		if (uc_pending_due(capture->uc_pending, capture->uc_bypass, capture->uc_last_out_us,
+		                   now_us()) == UC_PENDING_FLUSH)
+		{
+			gboolean same_stream;
+
+			g_mutex_lock(&capture->lock);
+			same_stream = capture->uc_held.pixel &&
+			              capture->uc_held.generation == capture->buffer_generation;
+			g_mutex_unlock(&capture->lock);
+			capture->uc_pending = FALSE;
+			if (same_stream)
+			{
+				*report = capture->uc_held;
+				memset(&capture->uc_held, 0, sizeof capture->uc_held);
+				report->in_slot_us = now_us() - report->arrival_us;
+				capture->uc_flushed++;
+				capture->uc_last_out_us = now_us();
+				return CAPTURE_TAKE_DONE;
+			}
+			capture_stopped_free(&capture->uc_held);
+			uc_forget(&capture->uc);
+			if (capture->route == CAPTURE_ROUTE_CARD)
+			{
+				capture->uc_stale = TRUE;
+				capture->uc_stale_n++;
+			}
+		}
 		/* ⭐ LEGITIMATE ZERO: the stream was active for the whole wait and nothing
 		 *    arrived.  On Mutter it is the idle desktop — the rate is 0/1,
 		 *    «send me a frame when something changes» — and it is a result,
 		 *    not a fault. */
 		return CAPTURE_TAKE_ZERO;
 	}
+	/* ⭐ A newer frame supersedes the one held back: it is a whole frame,
+	 *    and it carries whatever the held one carried. */
+	if (capture->uc_pending || capture->uc_stale)
+		uc_pending_drop(capture);
 
 	/* ⛔ THE ROUTE IS VERIFIED, NOT TAKEN AS REQUESTED (`LESSONS.md` §1.8). */
 	if (capture->route == CAPTURE_ROUTE_CARD &&
@@ -3022,7 +3126,17 @@ CaptureTake capture_take(Capture *capture, double wait_s, CaptureStopped *report
 	 *    (`unchanged.h`): for whoever waits it is the still scene. */
 	if (unchanged_judge(capture, report))
 	{
-		capture_stopped_free(report);
+		/* ⭐ On memory the held frame is KEPT (our copy, no producer buffer):
+		 *    it is the one sent if the scene goes still (`uc_pending_due`).
+		 *    ⛔ On the card the buffer goes back NOW, as before. */
+		if (report->pixel && !report->held_buffer)
+		{
+			capture_stopped_free(&capture->uc_held);
+			capture->uc_held = *report;
+			memset(report, 0, sizeof *report);
+		}
+		else
+			capture_stopped_free(report);
 		return CAPTURE_TAKE_ZERO;
 	}
 
@@ -3369,6 +3483,7 @@ void capture_stop(Capture *capture)
 	 *      freed AFTER this function gives a buffer back to a `Capture` that no longer
 	 *      exists.  `child.c` does it in the right order in all three
 	 *      places where it tears down the stage, and this line is the reason why. */
+	uc_pending_drop(capture); /* memory only: no producer buffer in it */
 	if (capture->cycle && capture->stream)
 	{
 		pw_thread_loop_lock(capture->cycle);
@@ -3412,13 +3527,19 @@ void capture_stop(Capture *capture)
 		              G_GUINT64_FORMAT ", sent anyway after %d ms %" G_GUINT64_FORMAT
 		              ", damage too large %" G_GUINT64_FORMAT ", not readable %"
 		              G_GUINT64_FORMAT ", max damaged area %" G_GUINT64_FORMAT
-		              " px, look %.2f ms mean%s",
+		              " px, look %.2f ms mean; held frames sent when the scene went still %"
+		              G_GUINT64_FORMAT ", stale on the card %" G_GUINT64_FORMAT
+		              ", restarts %" G_GUINT64_FORMAT ", switch-offs %u, re-armed %"
+		              G_GUINT64_FORMAT "%s",
 		              capture->uc_seen, capture->uc_dropped, UC_REFRESH_MS,
 		              capture->uc_refresh, capture->uc_big, capture->uc_blind,
 		              capture->uc_area_max,
 		              capture->uc_cost_n ? capture->uc_cost_us / 1000.0 / capture->uc_cost_n
 		                                 : 0.0,
-		              capture->uc_off ? " — ⚠ it had switched itself off" : "");
+		              capture->uc_flushed, capture->uc_stale_n, capture->uc_woken,
+		              capture->uc_switch.strikes, capture->uc_rearmed,
+		              capture->uc_switch.hard ? " — ⚠ it had switched itself off for good"
+		              : capture->uc_switch.off ? " — ⚠ it was switched off" : "");
 	uc_free(&capture->uc);
 
 	g_free(capture->slot.pixel);

@@ -802,7 +802,11 @@ void capture_cursor_never_hide(Capture *capture, const char *why);
  * A frame held back comes out of `capture_take` as `CAPTURE_TAKE_ZERO`: for the
  * client it IS the still scene.  ⛔ Memory route always; card route only on a
  * LINEAR buffer that can be mapped and synchronised, and only while reading
- * stays cheap — otherwise the filter switches itself off and says so.
+ * stays cheap (re-checked every 300 looks) — otherwise the filter switches
+ * itself off and says so, until the stream renegotiates its buffers; after
+ * three switch-offs it stays off.  A frame held back when the scene then goes
+ * still is sent after `UC_REFRESH_MS` all the same (memory) or turns into
+ * `capture_unchanged_stale()` (card).
  */
 void capture_skip_unchanged(Capture *capture, const char *why);
 void capture_unchanged_bypass(Capture *capture, gboolean bypass);
@@ -811,6 +815,11 @@ void capture_unchanged_bypass(Capture *capture, gboolean bypass);
  *    same picture would be held back and the change would never reach the
  *    client.  Called by whoever drops a frame after the take. */
 void capture_unchanged_forget(Capture *capture);
+/* ⭐ TRUE ⇒ on the CARD a frame was held back, no other frame came within
+ * `UC_REFRESH_MS`, and its buffer is already back with the producer: the only
+ * way to send what it may hide is a stream restart (`capture_wake()`, which
+ * clears this).  ⚠ The caller decides when a restart is allowed. */
+gboolean capture_unchanged_stale(Capture *capture);
 
 void capture_stop(Capture *capture);
 

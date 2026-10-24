@@ -28,7 +28,8 @@
  *      (`screencaststream.cpp`, `record()` returns without keeping it).  A
  *      change lost that way would ride on the next frame, and if that one is
  *      dropped as «unchanged» it would wait.  ⇒ The caller re-delivers at
- *      least every `UC_REFRESH_MS` while frames keep coming.
+ *      least every `UC_REFRESH_MS` while frames keep coming, AND when they
+ *      stop (the «pending» frame, `uc_pending_due` below).
  *
  * Pure functions, no I/O: the caller maps the buffer and decides.  4 bytes per
  * pixel (the four formats `capture.c` can negotiate).
@@ -181,6 +182,130 @@ static inline void uc_keep(Unchanged *u, const uint8_t *base, uint32_t width, ui
 	u->height = height;
 	u->stride = stride;
 	u->valid = TRUE;
+}
+
+/* ------------------------------------------------------------------ *
+ * ⭐ 15 Oct 2026 (review of 1849a57d) — THE FRAME HELD BACK WHEN THE SCENE
+ *    GOES STILL.  The 250 ms rule above only fires when a LATER frame
+ *    arrives: if the last frame before a still scene is held back while it
+ *    hides a real change (KWin lost a damage), nothing would ever send it.
+ *    ⇒ A held frame is «pending»; if no other frame arrives by
+ *    `last_out + UC_REFRESH_MS` (or a keyframe is due), it is flushed:
+ *    on memory the copy we already own goes out; on the card the buffer
+ *    went back to KWin at once, so the stream is asked for a fresh frame.
+ * ------------------------------------------------------------------ */
+
+typedef enum
+{
+	UC_PENDING_NONE,  /* nothing held back since the last frame out */
+	UC_PENDING_WAIT,  /* held back, still inside the window */
+	UC_PENDING_FLUSH, /* held back and the window is over: send it now */
+} UcPending;
+
+static inline UcPending uc_pending_due(gboolean pending, gboolean bypass, uint64_t last_out_us,
+                                       uint64_t now_us)
+{
+	if (!pending)
+		return UC_PENDING_NONE;
+	if (bypass || last_out_us == 0 || now_us < last_out_us ||
+	    now_us - last_out_us >= (uint64_t)UC_REFRESH_MS * 1000u)
+		return UC_PENDING_FLUSH;
+	return UC_PENDING_WAIT;
+}
+
+/* How long (µs) a wait may last before the pending frame is due; `cap_us`
+ * when nothing is pending.  ⛔ Never more than `cap_us`. */
+static inline uint64_t uc_pending_wait_us(gboolean pending, uint64_t last_out_us, uint64_t now_us,
+                                          uint64_t cap_us)
+{
+	uint64_t due;
+
+	if (!pending || last_out_us == 0)
+		return pending ? 0 : cap_us;
+	due = last_out_us + (uint64_t)UC_REFRESH_MS * 1000u;
+	if (now_us >= due)
+		return 0;
+	return due - now_us < cap_us ? due - now_us : cap_us;
+}
+
+/* Two stream restarts asked by a stale card frame are at least this far apart. */
+#define UC_WAKE_GAP_MS 2000u
+
+/* ------------------------------------------------------------------ *
+ * ⭐ THE COST OF LOOKING, re-checked: the mean over a window of looks — the
+ *    first window short (a card that is slow from the start is caught in
+ *    `UC_COST_FIRST` looks), then every `UC_COST_EVERY`.
+ * ------------------------------------------------------------------ */
+#define UC_COST_MAX_US 3000u
+#define UC_COST_FIRST 30u
+#define UC_COST_EVERY 300u
+
+typedef struct
+{
+	guint64 sum_us;
+	guint n;
+	guint windows;
+	double last_mean_us;
+} UcCost;
+
+/* Adds one look.  TRUE ⇒ a window just closed with its mean above the
+ * ceiling (`last_mean_us` says it). */
+static inline gboolean uc_cost_add(UcCost *c, uint64_t cost_us)
+{
+	guint size = c->windows == 0 ? UC_COST_FIRST : UC_COST_EVERY;
+
+	c->sum_us += cost_us;
+	if (++c->n < size)
+		return FALSE;
+	c->last_mean_us = (double)c->sum_us / c->n;
+	c->sum_us = 0;
+	c->n = 0;
+	c->windows++;
+	return c->last_mean_us > UC_COST_MAX_US;
+}
+
+static inline void uc_cost_reset(UcCost *c)
+{
+	memset(c, 0, sizeof *c);
+}
+
+/* ------------------------------------------------------------------ *
+ * ⭐ THE SWITCH: a switch-off (card buffer not LINEAR, not mappable, too
+ *    costly) is a STRIKE and holds for the buffers of that negotiation; a
+ *    new generation re-arms the filter.  ⛔ After `UC_STRIKES_MAX` strikes
+ *    it is off for the whole capture.
+ * ------------------------------------------------------------------ */
+#define UC_STRIKES_MAX 3u
+
+typedef struct
+{
+	gboolean off, hard;
+	guint strikes;
+	uint64_t off_generation;
+} UcSwitch;
+
+static inline void uc_switch_strike(UcSwitch *s, uint64_t generation)
+{
+	s->off = TRUE;
+	s->off_generation = generation;
+	if (++s->strikes >= UC_STRIKES_MAX)
+		s->hard = TRUE;
+}
+
+/* TRUE ⇒ the filter may look at a frame of `generation`.  `*rearmed` is set
+ * TRUE when this call lifted a soft switch-off. */
+static inline gboolean uc_switch_allows(UcSwitch *s, uint64_t generation, gboolean *rearmed)
+{
+	if (rearmed)
+		*rearmed = FALSE;
+	if (s->hard)
+		return FALSE;
+	if (s->off && generation != s->off_generation) {
+		s->off = FALSE;
+		if (rearmed)
+			*rearmed = TRUE;
+	}
+	return !s->off;
 }
 
 #endif
