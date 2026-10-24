@@ -1752,6 +1752,10 @@ void transport_read(transport *t)
 				memcpy(&pk, CMSG_DATA(cm), sizeof pk);
 				s6->sin6_family = AF_INET6;
 				s6->sin6_addr = pk.ipi6_addr;
+				/* a link-local address means nothing without its interface: it
+				 * stays in the path (migration, §2.3) */
+				if (IN6_IS_ADDR_LINKLOCAL(&pk.ipi6_addr))
+					s6->sin6_scope_id = (uint32_t)pk.ipi6_ifindex;
 				localelen = sizeof *s6;
 			}
 		}
