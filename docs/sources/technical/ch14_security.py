@@ -108,6 +108,33 @@ S2 = p("The server makes its own certificates — two of them, on purpose (" + c
       "responses carry " + c("Cross-Origin-Opener-Policy: same-origin") + ", "
       + c("Cross-Origin-Embedder-Policy: require-corp") + ", " + c("Cross-Origin-Resource-Policy: same-origin")
       + ", " + c("Cache-Control: no-store") + " and " + c("X-Content-Type-Options: nosniff") + ".") + \
+    p("<b>The headers of the HTML page only</b> (page audit, 24 October 2026; the " + c("PAGE_SECURITY") + " block of "
+      + c("page.c") + "; not sent on " + c("/fingerprint") + ", which is JSON). Until then the page could be framed by any "
+      "site: clickjacking on a form with a password, on a page that forwards keys and the clipboard.") + \
+    table(["Header", "Value", "Why"], [
+        [c("Content-Security-Policy"), c("default-src 'self'") + "; " + c("script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'")
+         + "; " + c("style-src 'self' 'unsafe-inline'") + "; " + c("img-src 'self' data: blob:") + "; " + c("media-src blob:")
+         + "; " + c("worker-src blob:") + "; " + c("connect-src 'self' https:") + "; " + c("font-src 'self'") + "; "
+         + c("object-src 'none'") + "; " + c("base-uri 'none'") + "; " + c("form-action 'self'"),
+         "Each directive is what the page really uses. One inline script (a static file admits no nonce) and the Opus "
+         "decoder instantiated as WebAssembly, hence " + c("'wasm-unsafe-eval'") + "; MSE and the video worker are blobs; "
+         "no " + c("eval") + ", no font, no plugin, no " + c("<base>") + ". The sign-in form is handled by JS, and "
+         "if that fails the password must not travel to another site"],
+        [c("frame-ancestors 'none'"), "inside the CSP", "Nobody frames the page"],
+        [c("Referrer-Policy"), c("no-referrer"), "The address of a REMOTIX box is not for third parties"],
+        [c("Permissions-Policy"), c("clipboard-read=(self)") + ", " + c("clipboard-write=(self)") + "; camera, microphone, "
+         "geolocation, payment, USB, serial, HID, MIDI, motion sensors and screen capture off (" + c("()") + ")",
+         "The page uses the clipboard, pointer lock, keyboard lock and fullscreen: those are not touched"],
+    ], "«TAB» — The security headers of the page") + \
+    note(c("connect-src") + " carries " + c("https:") + " next to " + c("'self'") + ": whether " + c("'self'")
+         + " alone matches the WebTransport address on both Chrome and Firefox was not measured, and a narrow policy "
+         "that is wrong costs the whole session. Narrow it once the suite has proved it.", "Not settled yet.") + \
+    p("<b>Threat model of the page.</b> The page is served by the same server that holds the session, so a compromised "
+      "server is a compromised page: it can send any script, and the headers above are sent by the party they would "
+      "protect against. They do not defend against that. What they do is what the browser can still enforce against "
+      "everyone else: no other site can frame the page, a future injection bug cannot load code or send data to "
+      "another origin, the address of the box does not leak in a Referer, and the page cannot ask for devices it never "
+      "uses. The trust anchor stays the certificate fingerprint (" + rif("Authentication with PAM") + ").") + \
     warn("QUIC address validation with Retry is not done (" + c("transport.c") + ", the QUIC transport): «the product is used on its own "
          "network or VPN; it must be put back before exposing it». Exposing REMOTIX directly to the Internet is "
          "outside the declared scenario.", "No Retry.")

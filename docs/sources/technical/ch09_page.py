@@ -13,6 +13,9 @@ S1 = p("The whole client is one file, " + c("src/page.html") + ": the login page
         ["Headers on every answer", c("Cross-Origin-Opener-Policy: same-origin") + ", "
          + c("Cross-Origin-Embedder-Policy: require-corp") + ", " + c("Cross-Origin-Resource-Policy: same-origin")
          + ", " + c("Cache-Control: no-store") + ", " + c("X-Content-Type-Options: nosniff")],
+        ["Headers on the HTML page only", c("Content-Security-Policy") + " (with " + c("frame-ancestors 'none'")
+         + "), " + c("Referrer-Policy: no-referrer") + ", " + c("Permissions-Policy") + ": the " + c("PAGE_SECURITY")
+         + " block of " + c("page.c") + ", not sent on " + c("/fingerprint") + " (JSON). Described in the chapter on security"],
         ["External resources", "None. The Opus decoder (WebAssembly, " + c("OPUS_WASM_B64") + ") and the video probe "
          "streams are embedded in base64"],
         ["Connections", "At most 32 TCP clients at a time (" + c("MAX_CLIENTS") + "); a request header is at most 8 KiB"],
@@ -280,6 +283,12 @@ S7 = p("Two sizes must never be confused. The <b>canvas</b> (" + c("canvas") + "
       "side that overflows (5120×2880 → 4096×2304, 5120×1440 → 4096×1440), shown at scale 1 with bands. The limits "
       "are protocol constants (" + c("RCP_CANVAS_MAX_W") + " and its siblings in " + c("src/rcp.h") + "); the "
       "server applies the same rule in " + c("rcp_size_allowed()") + ".") + \
+    p("<b>The canvas the server grants is checked.</b> Since 24 October 2026 (page audit) the page no longer takes the "
+      "canvas of " + c("SESSION") + " and " + c("CANVAS") + " as it comes (a u32 per side): a width or height of zero, or "
+      "above 4096×2304 (" + c("CANVAS_MAX_W") + " × " + c("CANVAS_MAX_H") + "), closes the session with "
+      + c("PROTOCOL_ERROR") + ", the same way the cursor's check does. RCP.md §4.5 and §7.1 never grant such a size, so "
+      "the server that does is wrong or hostile, and a canvas of billions of pixels would only bring down the tab. "
+      "Every valid value passes exactly as before.") + \
     p(c("html { overflow-y: scroll }") + " keeps the vertical scrollbar always present, so turning the canvas on "
       "never changes " + c("clientWidth") + ". The canvas has " + c("tabindex=\"-1\"") + ", without which its "
       + c("focus()") + " calls do nothing and the keyboard stays in the password field.") + \

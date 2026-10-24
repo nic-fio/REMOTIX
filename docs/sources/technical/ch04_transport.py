@@ -261,7 +261,8 @@ S7 = p(c("page.c") + " is a small HTTPS/1.1 server: one request per connection, 
       "Isolation gives the page full-resolution timers (" + c("performance.now()") + " measured at 5 µs grain on Chrome 151, "
       "14 August 2026) and shared memory. The third header is not optional: with " + c("require-corp") + " the browser "
       "refuses any sub-resource that does not declare it, and the symptom does not mention isolation — the resource "
-      "simply does not load.") + \
+      "simply does not load. The HTML page alone carries more (CSP, " + c("frame-ancestors 'none'") + ", "
+      + c("Referrer-Policy") + ", " + c("Permissions-Policy") + "), described in the chapter on security.") + \
     p("A banned address still gets the page, with HTTP status 200 and a notice that begins " + c("attempts exhausted")
       + " and gives the hours and minutes left; the notice is written in "
       + c("page.c") + ". The page is served even when banned because whoever is banned by mistake is almost always the owner, "
@@ -414,6 +415,14 @@ S11 = p("QUIC measures the line continuously, which v1 had to do by hand. REMOTI
          "RTT whether a key frame can leave; before ngtcp2 has a measurement the floor " + c("WT_FLOOR_BYTE_MS")
          + " = 2500 bytes/ms is assumed."],
     ], "«TAB» — What sits between the encoder and ngtcp2") + \
+    p("<b>Pacing is honoured, and a write burst is at most the send quantum.</b> ngtcp2 paces the packets it hands out; "
+      "the QUIC write path used to bypass it (present since 1.0, found on 24 October 2026 by the pacing oracle of the "
+      + c("quic-conn") + " fuzz): " + c("ngtcp2_conn_write_aggregate_pkt2()") + " with " + c("num_pkts = 0") + " does "
+      "not clamp its buffer length, so the 64 KB buffer let a single call put about 45 full packets on the wire at "
+      "once. The buffer length is now the send quantum of ngtcp2, never less than one full-size packet (the size ngtcp2 "
+      "recommends, PMTUD) and never more than the buffer. With pacing honoured a pacing deadline follows every send "
+      "quantum, so the loop timeout is rounded <b>up</b> to the millisecond: rounded down it woke up 1 ms early and "
+      "spun on " + c("poll(0)") + " until the deadline.") + \
     note("the threshold and the regulator are on together by default since 24 August 2026 (the user's decision after "
          "watching them). With the threshold off the delta queue empties at every frame and the regulator can never "
          "trigger; the start-up log line says so. Their declared price, measured on 23–24 August 2026 with bench "
