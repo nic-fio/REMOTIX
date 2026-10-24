@@ -230,7 +230,7 @@ not apply (the user is the Author). What follows is what the user decided on eac
   5 s per connected client (`src/page.html`, the `setInterval` at line 7549) — some 720 lines an hour per user,
   including whether the window has focus: telemetry the user never asked for, and on a company server a record of
   who is looking at the screen.
-- ⇒ Kept only in bench/laboratory builds, like the bench messages of §11.6.
+- ⇒ Kept only in bench/laboratory builds, like the bench messages of §11.6. *(Superseded on 22 Oct 2026 by the user's decision below: removed entirely, bench builds included.)*
 - ✅ **Done 13 Oct 2026 in the first attempt** (discarded, tag `1.5-scartata`): `/diary` existed only with
   `make BENCH=1`; the page sent nothing unless the server marked it `data-diary="yes"`.
 - ✅ **Decisione dell'utente del 22 ott 2026: eliminato del tutto, anche dalle build bench (nessun banco lo usa); resta
