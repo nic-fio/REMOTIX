@@ -2844,7 +2844,14 @@ static void send_here_i_am(rcp_session *s)
 	uint8_t body[1024];
 	writer w = {body, sizeof body, 0, false};
 	sc_u16(&w, RCP_VERSION);
-	sc_u16(&w, 5); /* how many capabilities */
+	/* ⛔ 24 Oct 2026: counted from what is WRITTEN — since 84fdf573 `bench.mark`
+	 *    exists only in a BENCH build, and the product build declared 5 and
+	 *    wrote 4 (the page's DataView read past the end of the message). */
+#ifdef REMOTIX_BENCH
+	sc_u16(&w, 5); /* how many capabilities, bench.mark included */
+#else
+	sc_u16(&w, 4); /* how many capabilities */
+#endif
 	sc_str(&w, "video.codec");
 	sc_str(&w, our_codec);
 	sc_str(&w, "video.depth");
