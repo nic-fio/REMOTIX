@@ -463,6 +463,25 @@ fi
 %else
 %systemd_preun remotix.service
 %endif
+# ⭐ PHASE F (§11.50): the network side's files go back to the 1.0 paths (`remotix-net-move --back`) on the LAST removal
+#   ($1 == 0) and on a DOWNGRADE ($1 == 1 and the other installed version is LOWER than this one) — never on an upgrade.
+#   rpm runs the new package's %%post BEFORE this one: for a downgrade that is the 1.0 %%post, which moves nothing.
+#   INERT unless the package carries remotix-net-move (a `--with split` build).  ⛔ A failure is said, never fails the
+#   transaction.
+if [ -x %{_libexecdir}/remotix/remotix-net-move ]; then
+    rx_back=
+    if [ "$1" -eq 0 ]; then
+        rx_back=1
+    else
+        rx_other=$(rpm -q --qf '%%{VERSION}-%%{RELEASE}\n' remotix 2>/dev/null | grep -vx '%{version}-%{release}' | head -1)
+        if [ -n "$rx_other" ] && [ "$(printf '%%s\n%%s\n' "$rx_other" '%{version}-%{release}' | sort -V | head -1)" = "$rx_other" ]; then
+            rx_back=1
+        fi
+    fi
+    if [ -n "$rx_back" ]; then
+        %{_libexecdir}/remotix/remotix-net-move --back || echo "remotix: ⚠ the move of /var/lib/remotix/net back is incomplete" >&2
+    fi
+fi
 
 %postun
 # On upgrade: `try-restart`, that is ONLY if it was already running (T2, §5.2, T7:

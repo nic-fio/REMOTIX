@@ -15,6 +15,12 @@
 #    tmpfiles' job, run right after by every family's script).
 # ⛔ An administrator's page.pem/page.key (no page.ours mark) moves with the
 #    rest, and the journal says so: it is never regenerated.
+# ⭐ `remotix-net-move --back` is the reverse (net/ → the 1.0 paths, owned by root again), for a DOWNGRADE to 1.0 or a
+#    removal, called by the prerm / %preun / pre_upgrade+pre_remove of the split package (never on an upgrade): a 1.0
+#    would otherwise not find its ban and certificates, and make new ones (ban reset, another fingerprint).  Same
+#    safety as the forward move: mv -T, nothing followed, idempotent, and it RESUMES — a run interrupted between the
+#    mv and the chown finds the files already back and only gives them to root.  It stops the service first (the old
+#    network side writes in net/); the desktops stay (T2), the service stays stopped: start it after the downgrade.
 # ⛔ The SAME file in packaging/{debian,rpm,arch}/remotix-net-move
 #    (packaging/arch/build.sh checks they are byte-identical).
 set -u
@@ -25,6 +31,63 @@ say() {
 	echo "remotix: $*"
 	logger -t remotix-package -- "$*" 2>/dev/null || :
 }
+
+# ⭐ --back: see the header.  No user remotix needed (it may be gone).
+if [ "${1:-}" = "--back" ]; then
+	if command -v systemctl >/dev/null 2>&1 && systemctl is-active --quiet remotix.service 2>/dev/null; then
+		say "stopping remotix.service (the desktops stay) before moving $N back: start it after the downgrade"
+		systemctl stop remotix.service || { say "⛔ the service did not stop: nothing moved back"; exit 1; }
+	fi
+	if [ -L "$N" ] || { [ -e "$N" ] && [ ! -d "$N" ]; }; then
+		say "⛔ $N is not a directory: nothing moved back"
+		exit 1
+	fi
+	# Root's again.  By PATH and with -h (a link is changed itself, never followed), no -R: the directory first —
+	# it now sits in $S (root's, 0755), so remotix can no longer change what is inside — then its entries that are
+	# not links; a hard-linked file is refused and said (tmpfiles' rule too).
+	own_back() {
+		chown -h root:root -- "$1" || return 1
+		if [ -d "$1" ]; then
+			find "$1" -mindepth 1 -maxdepth 1 ! -type l \( -type d -o -links 1 \) -exec chown -h root:root -- {} + || return 1
+			if [ -n "$(find "$1" -mindepth 1 -maxdepth 1 -type f ! -links 1)" ]; then
+				say "⚠ a hard-linked file in $1 was not given to root"
+			fi
+		fi
+	}
+	# certificates/ (a directory)
+	if [ -d "$N/certificates" ] && [ ! -L "$N/certificates" ]; then
+		# an empty directory left by rpm/dpkg is not «already there»
+		if [ -d "$S/certificates" ] && [ ! -L "$S/certificates" ] && [ -z "$(ls -A "$S/certificates")" ]; then
+			rmdir "$S/certificates" || exit 1
+		fi
+		if [ -e "$S/certificates" ] || [ -L "$S/certificates" ]; then
+			say "⚠ both $S/certificates and $N/certificates exist: the one in net/ is left where it is, not merged"
+		else
+			# ⛔ -T: as in the forward move
+			mv -T "$N/certificates" "$S/certificates" || exit 1
+			say "moved $N/certificates to $S/certificates (1.5 → 1.0)"
+		fi
+	fi
+	# the resume: the directory is in $S, nothing is left in net/ — whatever the cause (a run interrupted after the
+	# mv), it is given to root.  A no-op when it is root's already.
+	if [ -d "$S/certificates" ] && [ ! -L "$S/certificates" ] && [ ! -e "$N/certificates" ]; then
+		own_back "$S/certificates" || { say "⛔ $S/certificates could not be given back to root"; exit 1; }
+	fi
+	for f in ban ban.new; do
+		if [ -f "$N/$f" ] && [ ! -L "$N/$f" ]; then
+			if [ -e "$S/$f" ] || [ -L "$S/$f" ]; then
+				say "⚠ both $S/$f and $N/$f exist: the one in net/ is left where it is"
+			else
+				mv -T "$N/$f" "$S/$f" || exit 1
+				say "moved $N/$f to $S/$f (1.5 → 1.0)"
+			fi
+		fi
+		if [ -f "$S/$f" ] && [ ! -L "$S/$f" ] && [ ! -e "$N/$f" ]; then
+			own_back "$S/$f" || { say "⛔ $S/$f could not be given back to root"; exit 1; }
+		fi
+	done
+	exit 0
+fi
 
 if ! getent passwd remotix >/dev/null; then
 	say "⛔ the system user remotix is missing (systemd-sysusers remotix.conf): nothing moved"

@@ -50,7 +50,19 @@ post_upgrade() {
 	return 0
 }
 
+# ⭐ PHASE F (§11.50): on a REMOVAL the network side's files go back to the 1.0 paths (`remotix-net-move --back`).  INERT
+#    unless the package carries remotix-net-move.
+# ⚠ A DOWNGRADE cannot be done from here: pacman runs the NEW package's scripts (the older one's pre_upgrade), never this
+#    one's.  Before `pacman -U <older package>` the administrator runs `/usr/lib/remotix/remotix-net-move --back`
+#    (it stops the service; the desktops stay) — the same command, idempotent.
+net_back() {
+	[ -x /usr/lib/remotix/remotix-net-move ] || return 0
+	/usr/lib/remotix/remotix-net-move --back || echo "remotix: ⚠ the move of /var/lib/remotix/net back is incomplete" >&2
+	return 0
+}
+
 pre_remove() {
+	net_back
 	# A remote-access server does not stay listening with its binary deleted,
 	# nor does an enable link stay behind for a unit that disappears.
 	systemctl --no-reload disable --now remotix.service 2>/dev/null
