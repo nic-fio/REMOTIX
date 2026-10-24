@@ -409,7 +409,7 @@ static void test_orphan(void)
 	/* five connections book and close: the five true verdicts arrive with no session */
 	for (int i = 0; i < 5; i++) {
 		CHECK(login_reserve(K, "alice", at(i), &info) == LV_OK, "booking %d", i);
-		rcp_orphan_verdict("alice", "1.2.3.4", false, false, at(i) + 1500u, capture, NULL);
+		rcp_orphan_verdict("alice", "1.2.3.4", false, false, 0, at(i) + 1500u, capture, NULL);
 	}
 	CHECK(peek(K, "alice", at(8), NULL) == LV_BANNED, "five orphan failures ban (key,user)");
 	CHECK(strstr(captured, "BANNED") != NULL, "the ban is written to the sink: %s", captured);
@@ -419,7 +419,7 @@ static void test_orphan(void)
 	fresh();
 	for (int i = 0; i < 4; i++) fail(K, "alice", at(i));
 	login_reserve(K, "alice", at(5), &info);
-	rcp_orphan_verdict("alice", "1.2.3.4", true, false, at(6), capture, NULL);
+	rcp_orphan_verdict("alice", "1.2.3.4", true, false, 0, at(6), capture, NULL);
 	for (int i = 0; i < 4; i++) fail(K, "alice", at(10 + i));
 	CHECK(peek(K, "alice", at(20), NULL) == LV_OK, "orphan success reset (key,user)");
 	int n = 0;
@@ -432,7 +432,7 @@ static void test_orphan(void)
 	key_of("[2001:db8:1:2:3:4:5:6]:4433", k);                   /* what the session has */
 	for (int i = 0; i < 5; i++) {
 		login_reserve(k, "alice", at(i), &info);
-		rcp_orphan_verdict("alice", "2001:db8:1:2:9:9:9:9", false, false, at(i), capture, NULL);
+		rcp_orphan_verdict("alice", "2001:db8:1:2:9:9:9:9", false, false, 0, at(i), capture, NULL);
 	}
 	CHECK(peek(k, "alice", at(6), NULL) == LV_BANNED, "orphan IPv6 lands on the session's /64 key");
 	/* IPv4 mapped in IPv6 (the dual-stack socket): rhost has already lost the ::ffff:, either form gives one key */
@@ -442,8 +442,8 @@ static void test_orphan(void)
 
 	/* no name or no address: nothing is counted and it is said */
 	captured[0] = 0;
-	rcp_orphan_verdict("", "1.2.3.4", false, false, at(0), capture, NULL);
-	rcp_orphan_verdict("alice", NULL, false, false, at(0), capture, NULL);
+	rcp_orphan_verdict("", "1.2.3.4", false, false, 0, at(0), capture, NULL);
+	rcp_orphan_verdict("alice", NULL, false, false, 0, at(0), capture, NULL);
 	CHECK(strstr(captured, "NOT counted") != NULL, "unknown name/address is said");
 }
 
@@ -723,11 +723,11 @@ static void test_log(void)
 	captured[0] = 0;
 	struct login_info info;
 	login_reserve("[1.2.3.4]", "hunter2-as-user", at(0), &info);
-	rcp_orphan_verdict("hunter2-as-user", "1.2.3.4", false, false, at(1), capture, NULL);
+	rcp_orphan_verdict("hunter2-as-user", "1.2.3.4", false, false, 0, at(1), capture, NULL);
 	CHECK(strstr(captured, "hunter2") == NULL && strstr(captured, "unknown user [") != NULL, "the line of a failed attempt carries the tag, not the name:\n%s", captured);
 	captured[0] = 0;
 	login_reserve("[1.2.3.4]", "root", at(2), &info);
-	rcp_orphan_verdict("root", "1.2.3.4", false, false, at(3), capture, NULL);
+	rcp_orphan_verdict("root", "1.2.3.4", false, false, 0, at(3), capture, NULL);
 	CHECK(strstr(captured, "as root") != NULL, "a real user is named in the line:\n%s", captured);
 }
 
@@ -761,12 +761,12 @@ static void test_verdict_paths(void)
 	/* 1. an orphan verdict WITH the rhost of the flight record gives the booking back and counts */
 	login_reserve(K, "alice", at(0), &info);
 	CHECK(in_flight_of(K, "alice") == 1, "booked");
-	rcp_orphan_verdict("alice", "1.2.3.4", false, false, at(1), rec_line, NULL);
+	rcp_orphan_verdict("alice", "1.2.3.4", false, false, 0, at(1), rec_line, NULL);
 	CHECK(in_flight_of(K, "alice") == 0 && failures_of(K, "alice") == 1, "orphan with rhost: in flight 0, failure counted (%d, %d)",
 	      in_flight_of(K, "alice"), failures_of(K, "alice"));
 	/* ...and WITHOUT it nothing can be resolved (this is the defect of helper.c the test of test_helper.c guards) */
 	login_reserve(K, "alice", at(2), &info);
-	rcp_orphan_verdict("alice", "", false, false, at(3), rec_line, NULL);
+	rcp_orphan_verdict("alice", "", false, false, 0, at(3), rec_line, NULL);
 	CHECK(in_flight_of(K, "alice") == 1, "an empty rhost leaves the booking up: the helper must always carry the address");
 
 	/* 2. the helper died: orphan, lost -> booking back, NOTHING counted */
@@ -774,8 +774,8 @@ static void test_verdict_paths(void)
 	login_reserve(K, "alice", at(0), &info);
 	login_reserve(K, "alice", at(0), &info);
 	captured[0] = 0;
-	rcp_orphan_verdict("alice", "1.2.3.4", false, true, at(1), rec_line, NULL);
-	rcp_orphan_verdict("alice", "1.2.3.4", false, true, at(1), rec_line, NULL);
+	rcp_orphan_verdict("alice", "1.2.3.4", false, true, 0, at(1), rec_line, NULL);
+	rcp_orphan_verdict("alice", "1.2.3.4", false, true, 0, at(1), rec_line, NULL);
 	CHECK(in_flight_of(K, "alice") == 0 && failures_of(K, "alice") == 0, "orphan lost: given back, not counted (%d, %d)",
 	      in_flight_of(K, "alice"), failures_of(K, "alice"));
 	CHECK(failures_of(K, "") == 0 && attempts[lfind(LK_KEY, K, NULL)].amount == 0, "the key's counter is untouched either");
@@ -783,7 +783,7 @@ static void test_verdict_paths(void)
 	/* a hundred dead-helper verdicts ban nobody */
 	for (int i = 0; i < 100; i++) {
 		login_reserve(K, "alice", at(i), &info);
-		rcp_orphan_verdict("alice", "1.2.3.4", false, true, at(i), rec_line, NULL);
+		rcp_orphan_verdict("alice", "1.2.3.4", false, true, 0, at(i), rec_line, NULL);
 	}
 	CHECK(peek(K, "alice", at(101), NULL) == LV_OK, "100 lost verdicts: not banned");
 
@@ -902,12 +902,12 @@ static void test_verdict_paths(void)
 		good_note(G, at(0));
 		login_reserve(G, "alice", at(2), &info);
 		rcp_refusal_locked(31);
-		rcp_orphan_verdict("alice", "7.7.7.7", false, false, at(3), rec_line, NULL);
+		rcp_orphan_verdict("alice", "7.7.7.7", false, false, 0, at(3), rec_line, NULL);
 		rcp_refusal_locked(0);
 		CHECK(in_flight_of(G, "alice") == 0 && failures_of(G, "alice") == 0,
 		      "(locked) orphan, known key: given back, NOT counted (%d, %d)", in_flight_of(G, "alice"), failures_of(G, "alice"));
 		login_reserve(G, "alice", at(4), &info);
-		rcp_orphan_verdict("alice", "7.7.7.7", false, false, at(5), rec_line, NULL);
+		rcp_orphan_verdict("alice", "7.7.7.7", false, false, 0, at(5), rec_line, NULL);
 		CHECK(failures_of(G, "alice") == 1, "(locked) orphan without the mark: an ordinary no, counted (%d)", failures_of(G, "alice"));
 	}
 }

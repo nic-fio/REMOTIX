@@ -2015,7 +2015,7 @@ void transport_verdict_from(transport *t, uint64_t ticket, bool admitted,
 	 *    not be able to try passwords for free: the name and the address are
 	 *    in the request in flight, and they are what the booking made at
 	 *    `CREDENTIALS` is resolved with. */
-	rcp_orphan_verdict(user, rhost, admitted, lost, now_ns() / NGTCP2_MILLISECONDS,
+	rcp_orphan_verdict(user, rhost, admitted, lost, ticket, now_ns() / NGTCP2_MILLISECONDS,
 	                   orphan_line, NULL);
 }
 

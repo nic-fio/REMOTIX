@@ -1417,7 +1417,7 @@ void rcp_key_address(const char *text, char *report, size_t cap);
  * to hang them on); `fn` may be NULL.  `now_ms` is the clock of `rcp_banned()`. */
 typedef void (*rcp_line_fn)(void *ctx, const char *line);
 void rcp_orphan_verdict(const char *user, const char *rhost, bool admitted,
-                        bool lost, uint64_t now_ms, rcp_line_fn fn, void *ctx);
+                        bool lost, uint64_t ticket, uint64_t now_ms, rcp_line_fn fn, void *ctx);
 
 /* ⛔ The PAM helper DIED while `ticket` was in flight: our defect, so the
  * booking of §4.4-bis is given back and NOTHING is counted (24 Oct 2026).  Same
