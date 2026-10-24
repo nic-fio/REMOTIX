@@ -721,6 +721,8 @@ iPhone passes through our hands, **the measurement is an afternoon**.
 
 ### 1.9 ✅ ⭐ Three failed attempts, then the address ban for 12 hours
 
+> ⚠ **Superseded for 1.5 by `DECISIONS-11.md` §11.53** (24 Oct 2026): three levels of counters, progressive ban 15 min / 1 h / 12 h, IPv6 key = the /64. The text below is the 1.0 decision and is kept as history.
+
 *10 Aug 2026, from the user, in two passes in the same conversation.*
 
 > *«Secondo me la cosa deve funzionare in modo molto semplice: se l'utente sbaglia la password per 3

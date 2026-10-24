@@ -836,7 +836,25 @@ cleartext in the memory of whoever receives it. It must be zeroed as soon as PAM
 in any log at any level — not even in `trace`, which in v1 is a keystroke recorder
 (`fondamenta/remotix-c/src/registro.h`).
 
-### 4.4-bis ✅ The address ban — three attempts, then twelve hours
+### 4.4-bis ✅ The address ban — three attempts, then twelve hours (1.0) · 🔸 three levels, progressive (1.5)
+
+> ⛔ **Rule of 1.5 — `DECISIONS-11.md` §11.53, SPEC CHANGE from 1.0** *(delegated by the user to the project leader on
+> 24 Oct 2026; until the user confirms it, the 1.0 text below is the written rule)*. **The wire does not change**:
+> `TOO_MANY_ATTEMPTS` (`0x08`) is still what a banned key, /48 or (key, user) receives, after the fixed second.
+>
+> | | |
+> |---|---|
+> | **the levels** | (key, user): **5** failed in 5 min · key: **12** failed (any user) in 5 min · IPv6 /48: **30** failed in 10 min. Sliding windows, as below |
+> | **the key** | IPv4: the whole address. IPv6: the **/64** (link-local included, zone id cut), plus an aggregate on the /48. `::ffff:a.b.c.d` and NAT64 are the IPv4 inside. In brackets, no port, built in `rcp_key_address()` only |
+> | **the consequence** | a ban **progressive per level: 15 min, then 1 h, then 12 h**; the memory of previous bans is forgotten after 24 h without a ban |
+> | **what counts** | as below, plus an attempt **without a verdict** (the helper's timeout, the server's 12 s ceiling). Not counted: a refusal that is our defect (helper off or dead, socket full, too many in flight) |
+> | **the booking** | the attempt is booked at `CREDENTIALS`, and the check and the booking are one step: at most 2 verifications at once for the same (key, user) |
+> | **what resets** | a successful authentication resets **only the failures of (key, user)**, not the recidivism nor the counters of the key and of the /48 |
+> | **the way out** | the wait, or `UNBLOCK <address>`, which removes every level that concerns the address and the recidivism |
+> | **on disk** | format `B2`; no user name (full HMAC-SHA256 of it); old 1.0 lines are read and converted |
+> | **what the page shows** | the banner for the key and /48 levels only (the page does not know the user) |
+>
+> ⚠ **The price**: LAN users (and link-local addresses) share a counter. The text from here on is the **1.0 rule**, kept as history and for what did not change.
 
 *Decided by the user on 10 Aug 2026, in two steps. First: «se l'utente sbaglia la password per
 3 volte consecutive, non vengono più accettate connessioni da quell'IP per 12 ore (ban)». Then, stricter:
@@ -2249,7 +2267,7 @@ acceptance-test obligation: **the farewell is checked from the side that receive
 | `0x05` | `ALREADY_ACTIVE_LOCALLY` | there is already a local graphical session |
 | `0x06` | `BUDGET_FULL` | ⭐ **the machine has no more COMPOSITION capacity** — ⚠ *it said «of encoding»: corrected on 24 Aug 2026, `DECISIONS.md` §4.6-nonies, because `[M]` the bottleneck is `rcs0` at **0.97 Gpixel/s**, **half** of the encoder. ⛔ And until phase 10 this code **was never sent by any line of the server**: from phase 10 it really leaves* |
 | `0x07` | `WRONG_CREDENTIALS` | |
-| `0x08` | `TOO_MANY_ATTEMPTS` | ⭐ **the address is banned**: three failed authentications, twelve hours (§4.4-bis). ⚠ *It said «rate limiting», and it was the previous form: since 10 Aug 2026 it is no longer a rate, it is a ban* |
+| `0x08` | `TOO_MANY_ATTEMPTS` | ⭐ **the address is banned** (1.5: the key, the /48 or the user on that key — three levels, progressive 15 min / 1 h / 12 h; 1.0: three failed authentications, twelve hours) (§4.4-bis). ⚠ *It said «rate limiting», and it was the previous form: since 10 Aug 2026 it is no longer a rate, it is a ban* |
 | `0x09` | `NOTHING_IN_COMMON` | no shared codec |
 | `0x0A` | `INCOMPATIBLE_VERSION` | |
 | `0x0B` | `PROTOCOL_ERROR` | §3 |
