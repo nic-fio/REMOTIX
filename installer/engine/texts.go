@@ -125,6 +125,7 @@ var texts = map[string]string{
 	"net.non_suoi":              "not owned by %s (uid %d) or not 0700: %s",
 	"net.non_spostati":          "1.0's files still in the old place (not moved into net/): %s",
 	"net.ok":                    "the system user %s (uid %d) owns /var/lib/remotix/net",
+	"net.opzioni_fuori":         "REMOTIX_OPTIONS point the network side's files outside /var/lib/remotix/net — 1.5 does not start with them (move the files into net/, owned by remotix, and drop the options): %s",
 	"net.link_illeggibile":      "links in net/ whose target the user %s cannot read — the network side will not start (copy the files in, owned by remotix, and on renewal from a deploy hook): %s",
 	"ver.pam":                   "the REMOTIX login stack resolves (files, includes, modules)",
 	"ver.porta":                 "the firewall lets port %s TCP and UDP through",

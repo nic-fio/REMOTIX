@@ -173,6 +173,17 @@ func TestNetworkSideCheck(t *testing.T) {
 			os.WriteFile(filepath.Join(le, "privkey.pem"), []byte("k"), 0o000)
 			os.Symlink("/etc/letsencrypt/live/h/privkey.pem", filepath.Join(root, NetDir[1:], "certificates/page.key"))
 		}},
+		// review 3, F6: a 1.0 drop-in pointing the files elsewhere
+		{"REMOTIX_OPTIONS --certificates outside net/", "RX-NETUSER-003", func(root string) {
+			os.MkdirAll(filepath.Join(root, "etc/remotix/remotix.conf.d"), 0o755)
+			os.WriteFile(filepath.Join(root, "etc/remotix/remotix.conf.d/certs.conf"),
+				[]byte("REMOTIX_OPTIONS=--name h --certificates /etc/remotix/certs\n"), 0o644)
+		}},
+		{"REMOTIX_OPTIONS --ban-file= outside net/", "RX-NETUSER-003", func(root string) {
+			os.MkdirAll(filepath.Join(root, "etc/remotix/remotix.conf.d"), 0o755)
+			os.WriteFile(filepath.Join(root, "etc/remotix/remotix.conf.d/ban.conf"),
+				[]byte("REMOTIX_OPTIONS=\"--ban-file=/var/lib/remotix/ban\"\n"), 0o644)
+		}},
 		{"a dangling link", "RX-NETUSER-003", func(root string) {
 			os.Symlink("/etc/letsencrypt/live/gone/privkey.pem", filepath.Join(root, NetDir[1:], "certificates/page.key"))
 		}},
@@ -188,6 +199,17 @@ func TestNetworkSideCheck(t *testing.T) {
 			}
 		})
 	}
+	t.Run("REMOTIX_OPTIONS inside net/ or with their own state dir", func(t *testing.T) {
+		root, a := netMachine(t)
+		os.MkdirAll(filepath.Join(root, "etc/remotix/remotix.conf.d"), 0o755)
+		os.WriteFile(filepath.Join(root, "etc/remotix/remotix.conf.d/a.conf"),
+			[]byte("REMOTIX_PORT=8531\nREMOTIX_OPTIONS=--certificates /var/lib/remotix/net/c2\n"), 0o644)
+		os.WriteFile(filepath.Join(root, "etc/remotix/remotix.conf.d/b.conf"),
+			[]byte("REMOTIX_OPTIONS=--network-state-dir /srv/rx --ban-file /srv/rx/ban\n"), 0o644)
+		if _, code, det := NetworkSide(a); code != "" {
+			t.Fatalf("options inside the state dir must pass: %q %s", code, det)
+		}
+	})
 	t.Run("a link to a readable certificate", func(t *testing.T) {
 		root, a := netMachine(t)
 		le := filepath.Join(root, "etc/letsencrypt/live/h")

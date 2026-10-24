@@ -174,6 +174,9 @@ func NetworkSide(a *Environment) (applies bool, code, detail string) {
 	if len(links) > 0 {
 		return true, "RX-NETUSER-003", T("net.link_illeggibile", NetUser, strings.Join(links, ", "))
 	}
+	if bad := netOptionsOutside(a); len(bad) > 0 {
+		return true, "RX-NETUSER-003", T("net.opzioni_fuori", strings.Join(bad, ", "))
+	}
 	var left []string
 	for _, n := range netOld {
 		if _, err := os.Lstat(a.P(filepath.Join(netStateRoot, n))); err == nil {
@@ -184,6 +187,51 @@ func NetworkSide(a *Environment) (applies bool, code, detail string) {
 		return true, "RX-NETUSER-003", T("net.non_spostati", strings.Join(left, ", "))
 	}
 	return true, "", T("net.ok", NetUser, u.Uid)
+}
+
+// netOptionsOutside (review 3, F6): a --certificates or --ban-file in REMOTIX_OPTIONS of
+// /etc/remotix/remotix.conf.d/*.conf that is not inside the network state dir (net/, or the
+// --network-state-dir the same options give): 1.5's root side refuses to start with it. Returns
+// «file: --option path» for each.
+func netOptionsOutside(a *Environment) []string {
+	files, _ := filepath.Glob(a.P("/etc/remotix/remotix.conf.d/*.conf"))
+	var bad []string
+	for _, f := range files {
+		t, err := os.ReadFile(f)
+		if err != nil {
+			continue
+		}
+		for _, line := range strings.Split(string(t), "\n") {
+			line = strings.TrimSpace(line)
+			if !strings.HasPrefix(line, "REMOTIX_OPTIONS=") {
+				continue
+			}
+			v := strings.Trim(strings.TrimPrefix(line, "REMOTIX_OPTIONS="), `"'`)
+			w := strings.Fields(v)
+			opt := map[string]string{}
+			for i := 0; i < len(w); i++ {
+				k, val, eq := strings.Cut(w[i], "=")
+				if !eq && i+1 < len(w) {
+					val = w[i+1]
+				}
+				switch k {
+				case "--certificates", "--ban-file", "--network-state-dir":
+					opt[k] = val
+				}
+			}
+			dir := NetDir
+			if d, ok := opt["--network-state-dir"]; ok && d != "" {
+				dir = filepath.Clean(d)
+			}
+			for _, k := range []string{"--certificates", "--ban-file"} {
+				if p, ok := opt[k]; ok && !strings.HasPrefix(filepath.Clean(p), dir+"/") {
+					r, _ := filepath.Rel(a.P("/"), f)
+					bad = append(bad, "/"+r+": "+k+" "+p)
+				}
+			}
+		}
+	}
+	return bad
 }
 
 // netLinkReadable: may uid:gid (no supplementary group: remotix has none) read what the link at
