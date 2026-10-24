@@ -172,6 +172,11 @@
 
 #define CHILD_VERSION 1
 
+/* ⛔ How long «the end was asked» counts as «closing» for a child that is still
+ *    alive (see `closing_asked_ms`): the desktop logs out in a few seconds; past
+ *    this the child is treated as alive again, and a login attaches to it. */
+#define CLOSING_GRACE_MS 30000
+
 enum {
 	MSG_CHI_SEI = 1,      /* parent → child */
 	MSG_SHUT_DOWN = 2,     /* parent → child */
@@ -549,6 +554,12 @@ struct child {
 	 *     `child_dismiss()`. */
 	bool exiting;
 	uint64_t dismissed_ms;
+	/* ⛔ The parent asked this child to END its session (`children_terminate_
+	 *    session()`, §7.6 or §5.3) and it has not died yet: a login in that
+	 *    window must not be attached to a desktop that is closing (review of
+	 *    eab9623a).  Holds for `CLOSING_GRACE_MS` at most — a child that does
+	 *    not close is not a closing child for ever. */
+	uint64_t closing_asked_ms;
 	/* The incoming frame, one piece at a time. */
 	uint8_t *assembly;
 	size_t assembly_total, assembly_got;
@@ -978,6 +989,15 @@ static void child_dismiss(struct children *f, struct child *g, const char *why)
 	 *    be showing the image of a user whose process is gone. */
 	if (f->dismiss)
 		f->dismiss(f->ctx, g->user, g->uid);
+}
+
+/* ⛔ The desktop was asked to close (or the child is leaving), within
+ *    `CLOSING_GRACE_MS`. */
+static bool child_closing(const struct child *g)
+{
+	return g->exiting
+	       || (g->closing_asked_ms
+	           && log_now_ms() < g->closing_asked_ms + CLOSING_GRACE_MS);
 }
 
 static struct child *search(struct children *f, const char *user)
@@ -2305,6 +2325,15 @@ const char *children_nth_user(const children *f, int which)
 	return NULL;
 }
 
+bool children_alive_of(const children *f, const char *user)
+{
+	const struct child *g;
+	if (!f || !user)
+		return false;
+	g = search((children *)f, user);
+	return g && g->pid > 0 && !child_closing(g);
+}
+
 pid_t children_pid_of(const children *f, const char *user)
 {
 	const struct child *g;
@@ -3478,7 +3507,14 @@ bool children_terminate_session(children *f, const char *user, int why)
 {
 	/* ⛔ The `why` travels in field `a`, which was free: the reason is on
 	 *    `FIGLI_USCITA_*` in `child.h`. */
-	return children_input(f, user, 0, CHILDREN_INPUT_TERMINATE, 0, 0, why, 0);
+	if (!children_input(f, user, 0, CHILDREN_INPUT_TERMINATE, 0, 0, why, 0))
+		return false;
+	/* ⛔ From here the desktop is closing: a login now gets «retry», not a
+	 *    desktop about to vanish (`children_alive_of()`). */
+	struct child *g = search(f, user);
+	if (g)
+		g->closing_asked_ms = log_now_ms() ? log_now_ms() : 1;
+	return true;
 }
 
 bool children_audio(children *f, const char *user, uint8_t codec)

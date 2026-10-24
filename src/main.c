@@ -748,7 +748,11 @@ static void delivery_verdict(void *ctx, uint64_t ticket, bool admitted,
 		 *    different facts, and the difference is needed a line below: a
 		 *    child just born is NOT asked to resend the stage — it is taking
 		 *    it right now, and the request would produce a double frame. */
-		bool c_era = children_pid_of(p->f, user) > 0;
+		bool c_era = children_alive_of(p->f, user);
+		/* ⛔ A child that is there but CLOSING (leaving, or asked to end its
+		 *    session): not «already there» — RESUMED onto it would be a black
+		 *    page and then 0x10 (review of eab9623a). */
+		bool closing = !c_era && children_pid_of(p->f, user) > 0;
 
 		/* ⭐ D-001 — and «it was already there» is exactly the RESUMED of
 		 *    §4.5: the child lives as long as the graphical session (child
@@ -806,7 +810,23 @@ static void delivery_verdict(void *ctx, uint64_t ticket, bool admitted,
 		 *
 		 * ⚠ `children_count()` and `children_pid_of()` already existed: no new
 		 *   function is needed, what is needed is **asking first**. */
-		if (!resumed && stage_count(p) >= rcp_cap()) {
+		if (closing) {
+			/* ⭐ Before the caps: it is not a capacity matter, and the user's
+			 *    other sessions are already being sent away by the closing.
+			 * ⚠ Same road as the full table: `without_stage` → `wt_dismiss_user()`
+			 *   with `no_reason` = 0x0E, a refusal that is OURS (not a failed login,
+			 *   not counted).  ⛔ Unlike the abandoned first attempt (which sent
+			 *   away this login only) it reaches every session of the user, and
+			 *   they are all on the desktop that is going away. */
+			snprintf(without_stage, sizeof without_stage,
+			         "the previous desktop of «%s» is still closing: "
+			         "retry in a few seconds",
+			         user);
+			registro_dice(LOG_CHILD,
+			              "⛔ «%s» is ADMITTED while its desktop is closing: %s.  "
+			              "⭐ It gets 0x0E",
+			              user, without_stage);
+		} else if (!resumed && stage_count(p) >= rcp_cap()) {
 			registro_dice(LOG_CHILD,
 			              "⛔ «%s» passed PAM but will NOT have a stage: the "
 			              "stages are %d out of %d (%d with children, %d found again "
