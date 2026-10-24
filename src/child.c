@@ -5505,7 +5505,7 @@ static const char *component_of(CodecVideo codec)
 	return name[which];
 }
 
-static const char *node_of_codec(CodecVideo codec, uint8_t idx);
+static const char *node_of_codec(CodecVideo codec, uint8_t idx, uint8_t depth);
 
 static Encoder *encoder_of(CodecVideo codec, uint8_t idx,
                                      uint32_t canvas_w, uint32_t canvas_h)
@@ -5676,7 +5676,7 @@ static Encoder *encoder_of(CodecVideo codec, uint8_t idx,
 		r.componente = component_of(codec);
 		/* ⭐ 1.5: the session's card, unless the codec is not there
 		 *    (`node_of_codec()`: tested once, then the startup card). */
-		r.nodo_rendering = node_of_codec(codec, idx);
+		r.nodo_rendering = node_of_codec(codec, idx, prof);
 		r.power = RENDER_POWER;
 		enc[idx] = codificatore_nuovo(&r, error, sizeof error);
 		/* The reason also stays outside the log: `--encoding-test` reports it
@@ -5927,8 +5927,9 @@ static bool test_codec(CodecVideo codec, uint8_t idx, char *reason, size_t n,
  * the encoder would fail there and `encoder_of()` would retry forever on a
  * codec the card lacks: a black screen.
  *   ⇒ When the two nodes DIFFER, the same test as at startup (`probe_frames()`,
- *     H.264/HEVC 8 bits, 256x256, the route in force) is run ONCE per codec on
- *     the session's node, before the first encoder.  Yes ⇒ that node.  No ⇒
+ *     H.264/HEVC at the NEGOTIATED depth, 256x256, the route in force) is run
+ *     ONCE per codec and depth on the session's node, before the first
+ *     encoder.  Yes ⇒ that node.  No ⇒
  *     the line says why, and the codec goes to the startup node: the
  *     cross-card import of before 13422add, which is slower but is an image.
  * ⛔ On one card (or when the compositor named the startup node) nothing is
@@ -5939,9 +5940,14 @@ static bool test_codec(CodecVideo codec, uint8_t idx, char *reason, size_t n,
  * ⚠ Outside the session (`--encoding-test`, the startup measure) it is
  *   `nodo_rendering`, untouched.
  */
-static const char *node_of_codec(CodecVideo codec, uint8_t idx)
+static const char *node_of_codec(CodecVideo codec, uint8_t idx, uint8_t depth)
 {
-	static char chosen[CODEC_MAX][64];
+	/* ⚠ per codec AND per depth: a card with HEVC 8 bits may lack HEVC
+	 *   10 bits (the Intel case above), and a second client may negotiate
+	 *   the other depth (`encoder_of()` redoes the encoder) */
+	static char chosen_by_depth[CODEC_MAX][2][64];
+	char (*chosen)[64];
+	int d;
 	CodificatoreRichiesta r;
 	Encoder *cod;
 	char error[512] = "", reason[768] = "", desc[160];
@@ -5950,11 +5956,13 @@ static const char *node_of_codec(CodecVideo codec, uint8_t idx)
 
 	if (!in_session_child || idx >= CODEC_MAX)
 		return nodo_rendering;
-	if (chosen[idx][0])
-		return chosen[idx];
+	chosen = chosen_by_depth[idx];
+	d = depth == 10 ? 1 : 0;
+	if (chosen[d][0])
+		return chosen[d];
 	if (render_node_same(nodo_rendering, startup_node())) {
-		snprintf(chosen[idx], sizeof chosen[idx], "%s", nodo_rendering);
-		return chosen[idx];
+		snprintf(chosen[d], sizeof chosen[d], "%s", nodo_rendering);
+		return chosen[d];
 	}
 
 	memset(&r, 0, sizeof r);
@@ -5965,7 +5973,11 @@ static const char *node_of_codec(CodecVideo codec, uint8_t idx)
 	r.fotogrammi_al_secondo = MOTION_FPS;
 	r.mode = CODIFICATORE_QUALITA_QP;
 	r.quality = QP_HARDWARE;
-	r.depth = 8; /* the startup measure's depth: the same test, on another card */
+	/* ⚠ the NEGOTIATED depth, not the startup measure's 8: tested at 8, the
+	 *   Intel without HEVC 10 bits would say yes and the real encoder (at 10)
+	 *   would then fail there and retry forever — the black screen this test
+	 *   exists to avoid (review of bc3158bf) */
+	r.depth = depth;
 	r.livello_x10 = 0;
 	r.fmt = ENCODER_PIXEL_BGRX;
 	r.chiavi_ogni = 0;
@@ -5982,22 +5994,23 @@ static const char *node_of_codec(CodecVideo codec, uint8_t idx)
 		codificatore_libera(cod);
 	}
 	if (yes) {
-		snprintf(chosen[idx], sizeof chosen[idx], "%s", nodo_rendering);
+		snprintf(chosen[d], sizeof chosen[d], "%s", nodo_rendering);
 		registro_dice(LOG_CHILD,
-		              "⭐ codec %d tested on the session's card %s (it is not the startup "
-		              "card %s): it encodes (%zu bytes) — the encoder opens there",
-		              (int)codec, nodo_rendering, startup_node(), bytes);
-		return chosen[idx];
+		              "⭐ codec %d at %u bits tested on the session's card %s (it is not "
+		              "the startup card %s): it encodes (%zu bytes) — the encoder opens there",
+		              (int)codec, depth, nodo_rendering, startup_node(), bytes);
+		return chosen[d];
 	}
-	snprintf(chosen[idx], sizeof chosen[idx], "%s", startup_node());
-	render_node_describe(chosen[idx], desc, sizeof desc);
+	snprintf(chosen[d], sizeof chosen[d], "%s", startup_node());
+	render_node_describe(chosen[d], desc, sizeof desc);
 	registro_dice(LOG_CHILD,
-	              "⛔ codec %d does NOT encode on the compositor's card %s: %s.  ⇒ It "
-	              "falls back to the startup card %s (%s), where the startup measure "
-	              "found it — every frame is a cross-card import (slower, as before "
-	              "1.5), and it is not retried on %s",
-	              (int)codec, nodo_rendering, reason, chosen[idx], desc, nodo_rendering);
-	return chosen[idx];
+	              "⛔ codec %d at %u bits does NOT encode on the compositor's card %s: "
+	              "%s.  ⇒ It falls back to the startup card %s (%s), where the startup "
+	              "measure found it — every frame is a cross-card import (slower, as "
+	              "before 1.5), and it is not retried on %s",
+	              (int)codec, depth, nodo_rendering, reason, chosen[d], desc,
+	              nodo_rendering);
+	return chosen[d];
 }
 
 /* The measure, in this process: two questions, and each "no" with its reason. */
