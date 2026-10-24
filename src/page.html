@@ -6079,6 +6079,19 @@ async function connect(username, password) {
   {
     const l = new Reader(m.body);
     const state = l.u8(), tl = l.u32(), ta = l.u32(), desktop = l.str();
+    /* ⛔ 24 Oct 2026, page audit: the canvas the server GRANTS is its word, and the
+       page used to take it as it came (a u32 each side).  §4.5 never grants zero
+       or more than the maximum (CANVAS_MAX_W × CANVAS_MAX_H, 4096×2304): a server
+       that does is wrong or hostile, and a canvas of billions of pixels would only
+       bring down the tab.  Closed as a protocol error, like the cursor's check;
+       ⚠ every valid value goes through exactly as before. */
+    if (tl === 0 || ta === 0 || tl > CANVAS_MAX_W || ta > CANVAS_MAX_H) {
+      outcome("The server granted a canvas of " + tl + "×" + ta + ", outside 1.." + CANVAS_MAX_W
+              + "×1.." + CANVAS_MAX_H + " (§4.5).", false);
+      await dismiss(REASON.PROTOCOL_ERROR, "SESSION grants a canvas of " + tl + "×" + ta
+        + ", which §4.5 never does");
+      return;
+    }
     /* ⛔ §4.5: "the granted canvas may differ from the one asked for […] the
        client MUST adapt by rescaling".  At phase 1 there is nothing to
        rescale — not a pixel arrives — but the difference is SAID: it is the
@@ -6448,6 +6461,14 @@ async function listen_control(channel, dismiss, farewell_read) {
     }
     if (m.type === TYPE.CANVAS) {
       const outcome_canvas = l.u8(), reason = l.u8(), tl = l.u32(), ta = l.u32();
+      /* ⛔ 24 Oct 2026, page audit: same check as for SESSION — CANVAS carries the canvas
+         in force (both outcomes), which is never zero nor above the maximum (§7.1).
+         Valid values pass untouched. */
+      if (tl === 0 || ta === 0 || tl > CANVAS_MAX_W || ta > CANVAS_MAX_H) {
+        await dismiss(REASON.PROTOCOL_ERROR, "CANVAS carries a canvas of " + tl + "×" + ta
+          + ", outside what §7.1 allows");
+        return;
+      }
       /* ⛔ The TARGET is reset here, and not elsewhere: from this instant the
          size the page is heading for goes back to being the canvas in force.
          ⚠ Without it, `ask_canvas()`'s comparison would keep measuring
