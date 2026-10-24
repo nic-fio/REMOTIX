@@ -25,7 +25,7 @@
  *     { echo "#include <stdio.h>"; grep -o "undefined reference to .[A-Za-z_0-9]*" link1.log | sed "s/.*to .//" | sort -u |
  *       while read -r n; do echo "void $n(void); void $n(void) { fputs(\"STUB reached: $n\", stderr); fputc(10, stderr); __builtin_trap(); }"; done; } > s.c &&
  *     clang $F -c s.c -o s.o && clang -fsanitize=address,undefined t.o l.o s.o $L -o test && ./test'
- * Exit status: 0 green, 1 red, 3 not all checks ran.
+ * Exit code 0 green, 1 red, 3 not all checks ran.
  */
 #define _GNU_SOURCE
 #define main remotix_main
