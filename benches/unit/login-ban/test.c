@@ -77,6 +77,7 @@ static enum login_verdict peek(const char *key, const char *user, uint64_t now, 
 }
 
 static void key_of(const char *text, char *out) { rcp_key_address(text, out, 64); }
+static int lfind_user(const char *key, const char *user) { char uk[65]; user_key(user, uk); return lfind(LK_USER, key, uk); }
 
 /* ------------------------------------------------------------------------ */
 static void test_keys(void)
@@ -93,6 +94,9 @@ static void test_keys(void)
 	    {"::ffff:1.2.3.4", "[1.2.3.4]"},
 	    {"64:ff9b::1.2.3.4", "[1.2.3.4]"},
 	    {"::1", "[::1]"},
+	    {"fe80::1%eth0", "[fe80::]"},
+	    {"[fe80::abcd:1%enp3s0]:443", "[fe80::]"},
+	    {"fe80::1%eth0%x", "[fe80::]"},
 	    {"[::1]:7", "[::1]"},
 	    {"   ", "[   ]"},
 	    {"garbage", "[garbage]"},
@@ -405,7 +409,7 @@ static void test_orphan(void)
 	/* five connections book and close: the five true verdicts arrive with no session */
 	for (int i = 0; i < 5; i++) {
 		CHECK(login_reserve(K, "alice", at(i), &info) == LV_OK, "booking %d", i);
-		rcp_orphan_verdict("alice", "1.2.3.4", false, at(i) + 1500u, capture, NULL);
+		rcp_orphan_verdict("alice", "1.2.3.4", false, false, at(i) + 1500u, capture, NULL);
 	}
 	CHECK(peek(K, "alice", at(8), NULL) == LV_BANNED, "five orphan failures ban (key,user)");
 	CHECK(strstr(captured, "BANNED") != NULL, "the ban is written to the sink: %s", captured);
@@ -415,7 +419,7 @@ static void test_orphan(void)
 	fresh();
 	for (int i = 0; i < 4; i++) fail(K, "alice", at(i));
 	login_reserve(K, "alice", at(5), &info);
-	rcp_orphan_verdict("alice", "1.2.3.4", true, at(6), capture, NULL);
+	rcp_orphan_verdict("alice", "1.2.3.4", true, false, at(6), capture, NULL);
 	for (int i = 0; i < 4; i++) fail(K, "alice", at(10 + i));
 	CHECK(peek(K, "alice", at(20), NULL) == LV_OK, "orphan success reset (key,user)");
 	int n = 0;
@@ -428,7 +432,7 @@ static void test_orphan(void)
 	key_of("[2001:db8:1:2:3:4:5:6]:4433", k);                   /* what the session has */
 	for (int i = 0; i < 5; i++) {
 		login_reserve(k, "alice", at(i), &info);
-		rcp_orphan_verdict("alice", "2001:db8:1:2:9:9:9:9", false, at(i), capture, NULL);
+		rcp_orphan_verdict("alice", "2001:db8:1:2:9:9:9:9", false, false, at(i), capture, NULL);
 	}
 	CHECK(peek(k, "alice", at(6), NULL) == LV_BANNED, "orphan IPv6 lands on the session's /64 key");
 	/* IPv4 mapped in IPv6 (the dual-stack socket): rhost has already lost the ::ffff:, either form gives one key */
@@ -438,8 +442,8 @@ static void test_orphan(void)
 
 	/* no name or no address: nothing is counted and it is said */
 	captured[0] = 0;
-	rcp_orphan_verdict("", "1.2.3.4", false, at(0), capture, NULL);
-	rcp_orphan_verdict("alice", NULL, false, at(0), capture, NULL);
+	rcp_orphan_verdict("", "1.2.3.4", false, false, at(0), capture, NULL);
+	rcp_orphan_verdict("alice", NULL, false, false, at(0), capture, NULL);
 	CHECK(strstr(captured, "NOT counted") != NULL, "unknown name/address is said");
 }
 
@@ -602,7 +606,16 @@ static void test_file(void)
 	/* write again at a moment in which everything is in force, and read it back */
 	save_ban(NULL, at(100));
 	txt = slurp(path);
-	CHECK(strstr(txt, "[1.2.3.4] john smith\n") != NULL, "the user with a space is written whole:\n%s", txt);
+	{
+		char uk[65], want[200];
+		user_key("john smith", uk);
+		snprintf(want, sizeof want, "[1.2.3.4] %s\n", uk);
+		CHECK(strstr(txt, want) != NULL, "the user is written as its HMAC:\n%s", txt);
+		CHECK(strstr(txt, "john") == NULL && strstr(txt, "smith") == NULL && strstr(txt, "ended") == NULL,
+		      "no name in clear in the ban file:\n%s", txt);
+		struct stat st;
+		CHECK(stat(path, &st) == 0 && (st.st_mode & 0777) == 0600, "ban file is 0600 (mode %o)", (unsigned)(st.st_mode & 0777));
+	}
 	CHECK(strstr(txt, "B2 K 1 ") != NULL && strstr(txt, "[5.5.5.5]\n") != NULL, "the key ban is written");
 	CHECK(strstr(txt, "B2 N 1 ") != NULL && strstr(txt, "[2001:db8:7::]\n") != NULL, "the /48 ban is written");
 	fresh();
@@ -615,7 +628,7 @@ static void test_file(void)
 	CHECK(rcp_banned("5.5.5.5", at(5000), NULL), "the key ban survived");
 	CHECK(rcp_banned("2001:db8:7:1234::1", at(5000), NULL), "the /48 ban survived");
 	/* the recidivism of the ended ban: 7.7.7.7 must be at level 1 again (the file was written at at(100): it was still in force) */
-	int ie = lfind(LK_USER, "[7.7.7.7]", "ended");
+	int ie = lfind_user("[7.7.7.7]", "ended");
 	CHECK(ie >= 0 && attempts[ie].level == 1, "the level of a ban is read back");
 
 	/* the file written when a ban has ENDED but is not forgotten: its level comes back, the ban does not */
@@ -692,28 +705,148 @@ static void test_log(void)
 
 	/* the tags */
 	char t1[96], t2[96], t3[96];
-	CHECK(strcmp(log_user("root", t1, sizeof t1), "root") == 0, "a user of the machine is named");
-	const char *ghost = log_user("zzqq-nosuchuser", t1, sizeof t1);
+	CHECK(strcmp(log_user("root", t1, sizeof t1, true), "root") == 0, "a user of the machine is named");
+	CHECK(strncmp(log_user("root", t1, sizeof t1, false), "user [", 6) == 0 && strstr(t1, "root") == NULL,
+	      "without the lookup (refused attempts) even a real name is a tag: %s", t1);
+	const char *ghost = log_user("zzqq-nosuchuser", t1, sizeof t1, true);
 	CHECK(strncmp(ghost, "unknown user [", 14) == 0 && strlen(ghost) == 14 + 6 + 1 && ghost[strlen(ghost) - 1] == ']', "format: %s", ghost);
 	CHECK(strstr(ghost, "zzqq") == NULL, "no character of the name in clear");
-	log_user("zzqq-nosuchuser", t2, sizeof t2);
+	log_user("zzqq-nosuchuser", t2, sizeof t2, true);
 	CHECK(strcmp(t1, t2) == 0, "same name, same tag");
-	log_user("zzqq-nosuchuser2", t3, sizeof t3);
+	log_user("zzqq-nosuchuser2", t3, sizeof t3, true);
 	CHECK(strcmp(t1, t3) != 0, "another name, another tag");
 	log_secret[0] ^= 0xff;
-	log_user("zzqq-nosuchuser", t3, sizeof t3);
+	log_user("zzqq-nosuchuser", t3, sizeof t3, true);
 	CHECK(strcmp(t1, t3) != 0, "another secret, another tag");
 	/* ...and in the lines of the limiter */
 	fresh();
 	captured[0] = 0;
 	struct login_info info;
 	login_reserve("[1.2.3.4]", "hunter2-as-user", at(0), &info);
-	rcp_orphan_verdict("hunter2-as-user", "1.2.3.4", false, at(1), capture, NULL);
+	rcp_orphan_verdict("hunter2-as-user", "1.2.3.4", false, false, at(1), capture, NULL);
 	CHECK(strstr(captured, "hunter2") == NULL && strstr(captured, "unknown user [") != NULL, "the line of a failed attempt carries the tag, not the name:\n%s", captured);
 	captured[0] = 0;
 	login_reserve("[1.2.3.4]", "root", at(2), &info);
-	rcp_orphan_verdict("root", "1.2.3.4", false, at(3), capture, NULL);
+	rcp_orphan_verdict("root", "1.2.3.4", false, false, at(3), capture, NULL);
 	CHECK(strstr(captured, "as root") != NULL, "a real user is named in the line:\n%s", captured);
+}
+
+/* ------------------------------------------------------------------------ */
+static void rec_line(void *ctx, const char *line) { capture(ctx, line); }
+
+static int in_flight_of(const char *key, const char *user)
+{
+	int i = lfind_user(key, user);
+	return i < 0 ? -1 : attempts[i].in_flight;
+}
+static int failures_of(const char *key, const char *user)
+{
+	int i = lfind_user(key, user);
+	return i < 0 ? 0 : failed_inside(&attempts[i], at(1));
+}
+
+static void test_verdict_paths(void)
+{
+	printf("verdict paths\n");
+	const char *K = "[1.2.3.4]";
+	struct login_info info;
+	fresh();
+	/* 1. an orphan verdict WITH the rhost of the flight record gives the booking back and counts */
+	login_reserve(K, "alice", at(0), &info);
+	CHECK(in_flight_of(K, "alice") == 1, "booked");
+	rcp_orphan_verdict("alice", "1.2.3.4", false, false, at(1), rec_line, NULL);
+	CHECK(in_flight_of(K, "alice") == 0 && failures_of(K, "alice") == 1, "orphan with rhost: in flight 0, failure counted (%d, %d)",
+	      in_flight_of(K, "alice"), failures_of(K, "alice"));
+	/* ...and WITHOUT it nothing can be resolved (this is the defect of helper.c the test of test_helper.c guards) */
+	login_reserve(K, "alice", at(2), &info);
+	rcp_orphan_verdict("alice", "", false, false, at(3), rec_line, NULL);
+	CHECK(in_flight_of(K, "alice") == 1, "an empty rhost leaves the booking up: the helper must always carry the address");
+
+	/* 2. the helper died: orphan, lost -> booking back, NOTHING counted */
+	fresh();
+	login_reserve(K, "alice", at(0), &info);
+	login_reserve(K, "alice", at(0), &info);
+	captured[0] = 0;
+	rcp_orphan_verdict("alice", "1.2.3.4", false, true, at(1), rec_line, NULL);
+	rcp_orphan_verdict("alice", "1.2.3.4", false, true, at(1), rec_line, NULL);
+	CHECK(in_flight_of(K, "alice") == 0 && failures_of(K, "alice") == 0, "orphan lost: given back, not counted (%d, %d)",
+	      in_flight_of(K, "alice"), failures_of(K, "alice"));
+	CHECK(failures_of(K, "") == 0 && attempts[lfind(LK_KEY, K, NULL)].amount == 0, "the key's counter is untouched either");
+	CHECK(strstr(captured, "NOTHING") != NULL, "and it is said: %s", captured);
+	/* a hundred dead-helper verdicts ban nobody */
+	for (int i = 0; i < 100; i++) {
+		login_reserve(K, "alice", at(i), &info);
+		rcp_orphan_verdict("alice", "1.2.3.4", false, true, at(i), rec_line, NULL);
+	}
+	CHECK(peek(K, "alice", at(101), NULL) == LV_OK, "100 lost verdicts: not banned");
+
+	/* 3. with a live SESSION: the PAM timeout (rcp_verdict false) counts; the dead helper (rcp_verdict_lost) does not */
+	static rcp_session s;
+	memset(&s, 0, sizeof s);
+	s.g.record = (void (*)(void *, const char *))rec_line;
+	snprintf(s.address, sizeof s.address, "%s", K);
+	snprintf(s.user, sizeof s.user, "%s", "alice");
+	fresh();
+	login_reserve(K, "alice", at(0), &info);
+	s.state = S_WAIT_VERDICT; s.expected_verdict = true; s.ticket = 7;
+	CHECK(rcp_verdict(&s, 7, false, at(1)), "session takes the timeout verdict");
+	CHECK(in_flight_of(K, "alice") == 0 && failures_of(K, "alice") == 1, "timeout through a session: counted (%d, %d)",
+	      in_flight_of(K, "alice"), failures_of(K, "alice"));
+	login_reserve(K, "alice", at(2), &info);
+	s.state = S_WAIT_VERDICT; s.expected_verdict = true; s.ticket = 8;
+	CHECK(!rcp_verdict_lost(&s, 9), "a wrong ticket is not taken");
+	CHECK(rcp_verdict_lost(&s, 8), "session takes the lost verdict");
+	CHECK(in_flight_of(K, "alice") == 0 && failures_of(K, "alice") == 1 && s.refusal_is_ours && !s.cred_good,
+	      "helper dead through a session: given back, NOT counted, refusal is ours (%d, %d)",
+	      in_flight_of(K, "alice"), failures_of(K, "alice"));
+	CHECK(!rcp_verdict_lost(&s, 8), "a second answer is not taken");
+}
+
+/* ------------------------------------------------------------------------ */
+static void test_extreme_expiries(void)
+{
+	printf("extreme expiries\n");
+	char dir[] = "/tmp/lg-ext-XXXXXX";
+	CHECK(mkdtemp(dir) != NULL, "mkdtemp");
+	char path[128];
+	snprintf(path, sizeof path, "%s/ban", dir);
+	time_t t_now = time(NULL);
+	fresh();
+	FILE *f = fopen(path, "w");
+	fprintf(f, "B2 K 1 9223372036854775807 [3.3.3.3]\n"        /* the end of time: capped at 12 h */
+	           "B2 K 1 -5 [4.4.4.4]\n"                            /* negative: not a time */
+	           "B2 K 1 -9223372036854775807 [4.4.4.5]\n"
+	           "B2 K 1 0 [7.7.7.7]\n"                             /* 1970: forgotten */
+	           "[5.5.5.5] 9223372036854775807\n"                 /* old format, same cap */
+	           "[6.6.6.6] -1\n"
+	           "B2 K 1 %lld [8.8.8.8]\n"                          /* a normal one */
+	           "B2 K 3 %lld [9.9.9.9]\n"                          /* level out of range */
+	           "B2 U 1 %lld [1.1.1.1] not-a-hash\n",              /* a name instead of a hash */
+	        (long long)t_now + 600, (long long)t_now + 600, (long long)t_now + 600);
+	fclose(f);
+	int n = rcp_ban_load(path, at(0));
+	CHECK(n == 3, "3 usable lines, got %d", n);
+	uint64_t remain = 0;
+	CHECK(rcp_banned("3.3.3.3", at(0), &remain) && remain == 43200000u, "the end of time is capped at 12 h: %llu", (unsigned long long)remain);
+	CHECK(rcp_banned("5.5.5.5", at(0), &remain) && remain == 43200000u, "old format capped too: %llu", (unsigned long long)remain);
+	CHECK(!rcp_banned("4.4.4.4", at(0), NULL) && !rcp_banned("4.4.4.5", at(0), NULL), "negative epochs are refused");
+	CHECK(!rcp_banned("7.7.7.7", at(0), NULL) && !rcp_banned("6.6.6.6", at(0), NULL), "1970 and a negative old line are not bans");
+	CHECK(rcp_banned("8.8.8.8", at(0), &remain) && remain > 590000u && remain <= 600000u, "a normal line: %llu", (unsigned long long)remain);
+	CHECK(!rcp_banned("9.9.9.9", at(0), NULL), "level 3 is not a line");
+	CHECK(lfind(LK_USER, "[1.1.1.1]", "not-a-hash") < 0, "a name in the U field is not accepted");
+	/* a clock that is tiny: the end of an ended ban is clamped, no wrap-around */
+	fresh();
+	f = fopen(path, "w");
+	fprintf(f, "B2 K 2 %lld [2.2.2.2]\n", (long long)t_now - 3600);
+	fclose(f);
+	n = rcp_ban_load(path, 5);
+	CHECK(n == 0 && !rcp_banned("2.2.2.2", 5, NULL), "ended ban with a tiny clock: not in force");
+	int i = lfind(LK_KEY, "[2.2.2.2]", NULL);
+	CHECK(i >= 0 && attempts[i].banned_until == 1 && attempts[i].level == 2, "recidivism read back, end clamped to 1");
+	snprintf(path, sizeof path, "%s/ban", dir);
+	unlink(path);
+	rmdir(dir);
+	fresh();
 }
 
 int main(void)
@@ -725,6 +858,8 @@ int main(void)
 	test_rotation();
 	test_in_flight();
 	test_orphan();
+	test_verdict_paths();
+	test_extreme_expiries();
 	test_table();
 	test_unblock();
 	test_file();
