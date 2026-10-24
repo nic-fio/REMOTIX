@@ -106,9 +106,10 @@ def run_loop(argv, time_limit=30, **kw):
 
 # ═══════════════════════════════════════════════════════════════════════════
 # ⭐⭐ THE GROUPS ARE ASKED OF THE NODES — and this is the project's rule, not
-#     a convenience.  `video` and `render` are the names of ONE distribution;
-#     what counts is the **gid** that the kernel and udev put on
-#     `/dev/dri/cardN` and `/dev/dri/renderDN` of THIS machine.
+#     a convenience.  `render` is the name of ONE distribution; what counts
+#     is the **gid** that the kernel and udev put on `/dev/dri/renderDN` of
+#     THIS machine.  ⭐ 1.5 (DECISIONS.md §11.38): only the render nodes —
+#     `cardN` (`video`) is no longer given by the product, and is not asked.
 #     `[R]` `src/provision.sh`, `card_gid()`; `src/child.c`,
 #     `collect_card_groups()`.  ⛔ Three places that read the same thing
 #     in the same way: if they diverge, the judgement diverges.
@@ -133,7 +134,7 @@ def node_groups(folder="/dev/dri"):
     excluded = excluded_gid()
     gid = []
     for name in sorted(os.listdir(folder)):
-        if not re.match(r"^(card|renderD)[0-9]+$", name):
+        if not re.match(r"^renderD[0-9]+$", name):
             continue
         try:
             g = str(os.stat(os.path.join(folder, name)).st_gid)
@@ -144,7 +145,7 @@ def node_groups(folder="/dev/dri"):
         if g not in gid:
             gid.append(g)
     if not gid:
-        return [], ("no readable `cardN`/`renderDN` node in %s: I do not know "
+        return [], ("no readable `renderDN` node in %s: I do not know "
                     "which groups the product should give" % folder)
     names = []
     for g in gid:
@@ -284,30 +285,30 @@ def certify():
     troubles = 0
     cases = [
         ("⭐ no groups before, enrolled and in the groups after ⇒ GREEN",
-         (["video", "render"], ["c18u1"], ["c18u1", "video", "render"],
+         (["render"], ["c18u1"], ["c18u1", "render"],
           ["child  [c18u1] ⭐ FIRST CONNECTION: «c18u1» is not in the card's groups",
-           "child  [c18u1] ⭐ is in the card's groups (render, video)"]), 0),
+           "child  [c18u1] ⭐ is in the card's groups (render)"]), 0),
         ("⛔ the product does not even try to enrol it ⇒ RED",
-         (["video", "render"], ["c18u1"], ["c18u1"],
-          ["child  [c18u1] ⛔⛔ «c18u1» IS NOT IN THE CARD'S GROUP «video»"]), 1),
+         (["render"], ["c18u1"], ["c18u1"],
+          ["child  [c18u1] ⛔⛔ «c18u1» IS NOT IN THE CARD'S GROUP «render»"]), 1),
         ("⛔ it tries and does not succeed (usermod hidden) ⇒ RED",
-         (["video", "render"], ["c18u1"], ["c18u1"],
+         (["render"], ["c18u1"], ["c18u1"],
           ["child  [c18u1] ⭐ FIRST CONNECTION: «c18u1» is not in the card's groups",
            "child  [c18u1] ⛔ I could not enrol «c18u1»"]), 1),
-        ("⛔ half enrolled (one of the two groups is missing) ⇒ RED",
-         (["video", "render"], ["c18u1"], ["c18u1", "video"],
+        ("⛔ enrolled in the WRONG group (video, not render) ⇒ RED",
+         (["render"], ["c18u1"], ["c18u1", "video"],
           ["child  [c18u1] ⭐ FIRST CONNECTION: «c18u1» is not in the card's groups"]), 1),
         ("⚠ it was ALREADY in the groups before ⇒ 3, ⛔ never green (proves nothing)",
-         (["video", "render"], ["c18u1", "video", "render"],
-          ["c18u1", "video", "render"],
-          ["child  [c18u1] ⭐ is in the card's groups (render, video)"]), 3),
+         (["render"], ["c18u1", "render"],
+          ["c18u1", "render"],
+          ["child  [c18u1] ⭐ is in the card's groups (render)"]), 3),
         ("⚠ no line of the tenant in the log ⇒ 3, ⛔ never red",
-         (["video", "render"], ["c18u1"], ["c18u1"],
+         (["render"], ["c18u1"], ["c18u1"],
           ["child  [altro] ⭐ FIRST CONNECTION: «altro» is not in the card's groups"]), 3),
         ("⚠ card nodes not readable ⇒ 3, ⛔ never red",
          ([], ["c18u1"], ["c18u1"], []), 3),
         ("⚠ the tenant's groups cannot be read ⇒ 3",
-         (["video"], None, None, []), 3),
+         (["render"], None, None, []), 3),
     ]
     print("== C18 — certification of the judgement (⛔ without touching the machine)")
     for name, call_args, expected in cases:

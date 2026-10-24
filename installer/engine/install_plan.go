@@ -236,8 +236,11 @@ func People(a *Environment) []string {
 	return r
 }
 
-// CardGroups: the groups of the card's nodes (/dev/dri/card* and renderD*), root excluded
-// (DECISIONI §7.21: the numbers change from one machine to another, they are read from the nodes).
+// CardGroups: the groups of the render nodes (/dev/dri/renderD*), root excluded — the same choice
+// as the product's first-login enrolment (src/child.c, collect_card_groups(); DECISIONS §11.38): every
+// compositor opens renderD* only, never card* (§11.4), so «video» is not added any more. The group is
+// read from each node (DECISIONI §7.21: the numbers and even the names change from one machine to
+// another).
 func CardGroups(a *Environment) []string {
 	gr, _ := ReadGroups(a.P("/etc/group"))
 	name := map[string]string{}
@@ -246,21 +249,13 @@ func CardGroups(a *Environment) []string {
 	}
 	seen_items := map[string]bool{}
 	var r []string
-	entries, _ := filepath.Glob(a.P("/dev/dri") + "/*")
+	entries, _ := filepath.Glob(a.P("/dev/dri") + "/renderD*")
 	for _, v := range entries {
-		b := filepath.Base(v)
-		if !strings.HasPrefix(b, "card") && !strings.HasPrefix(b, "renderD") {
+		gid, ok := nodeGid(v)
+		if !ok || gid == 0 {
 			continue
 		}
-		st, err := os.Stat(v)
-		if err != nil {
-			continue
-		}
-		sys, ok := st.Sys().(*syscall.Stat_t)
-		if !ok || sys.Gid == 0 {
-			continue
-		}
-		n := name[strconv.Itoa(int(sys.Gid))]
+		n := name[strconv.Itoa(int(gid))]
 		if n != "" && !seen_items[n] {
 			seen_items[n] = true
 			r = append(r, n)
@@ -268,4 +263,18 @@ func CardGroups(a *Environment) []string {
 	}
 	sort.Strings(r)
 	return r
+}
+
+// nodeGid: the group that owns a device node (a variable so the tests can give their fake nodes
+// the gid of a real distribution without being root).
+var nodeGid = func(fpath string) (uint32, bool) {
+	st, err := os.Stat(fpath)
+	if err != nil {
+		return 0, false
+	}
+	sys, ok := st.Sys().(*syscall.Stat_t)
+	if !ok {
+		return 0, false
+	}
+	return sys.Gid, true
 }

@@ -58,6 +58,7 @@
  *    is alive (nothing of the stage). */
 #include "rediscover.h"
 #include "render_grant.h"
+#include "render_node.h"
 
 #include <dirent.h>
 #include <dlfcn.h>
@@ -1125,14 +1126,15 @@ static void become_and_exec(const struct children *f, const struct child *g,
 	char a_cap[32];
 	char e_home[512], e_user[96], e_log[96], e_path[128], e_runtime[160],
 		e_bus[224], e_shell[16];
-	/* ⚠ Eighteen: the nine fixed ones, the NULL, and the EIGHT optional words
+	/* ⚠ Twenty: the nine fixed ones, the NULL, and the TEN optional words
 	 *   at the end — `--verbose`, `--journal`, `--quality-recovery`,
-	 *   `--bandwidth-cap-mbit` and its number, `--no-audio-silence`, and
-	 *   ⭐ phase 19 `--encoding-route` with its value.  They are added only if the
+	 *   `--bandwidth-cap-mbit` and its number, `--no-audio-silence`,
+	 *   ⭐ phase 19 `--encoding-route` with its value, and ⭐ 1.5 `--render-node`
+	 *   with its value.  They are added only if the
 	 *   parent has them (see below).  ⛔ The count is redone for every new
 	 *   word: an `argv[]` that is too short does not give an error, it writes
 	 *   past the end of the stack. */
-	char *argv[18];
+	char *argv[20];
 	/* ⚠ 16 and not 9: to the seven we compose ourselves are added those that
 	 *   `pam_systemd` puts in the session's environment — `XDG_SESSION_ID`
 	 *   first, which is what Mutter was missing. */
@@ -1405,6 +1407,11 @@ static void become_and_exec(const struct children *f, const struct child *g,
 		argv[na++] = (char *)"--encoding-route";
 		argv[na++] = (char *)child_encoding_route_requested();
 	}
+	/* ⭐ 1.5: `--render-node`, if given (`choose_render_node()`). */
+	if (child_render_node_requested()[0]) {
+		argv[na++] = (char *)"--render-node";
+		argv[na++] = (char *)child_render_node_requested();
+	}
 	argv[na] = NULL;
 
 	execve(f->my_path, argv, envp);
@@ -1440,11 +1447,15 @@ static void become_and_exec(const struct children *f, const struct child *g,
  *     say the cure.
  *
  * ⭐ AND THE GROUP IS READ FROM THE NODE, neither the name nor the number is
- *    hard-wired: `/dev/dri` is opened, the `st_gid` of every `cardN` and
- *    `renderDN` is taken (which is the provisioning's `stat -c %g`, done in C)
- *    and we look whether the tenant is in those groups.  ⚠ A hard-wired gid
- *    would be false on the next machine, and a hard-wired name (`render`) is
- *    false on a distribution that calls it otherwise.
+ *    hard-wired: `/dev/dri` is opened, the `st_gid` of every `renderDN` is
+ *    taken (which is the provisioning's `stat -c %g`, done in C) and we look
+ *    whether the tenant is in those groups.  ⚠ A hard-wired gid would be false
+ *    on the next machine, and a hard-wired name (`render`) is false on a
+ *    distribution that calls it otherwise.
+ * ⭐ 1.5 (DECISIONS.md §10.36, §11.38): ONLY the render nodes, no more `cardN`
+ *    (`video`).  `[M]` 13 Oct 2026 (§11.4), the four desktops on the boxes and
+ *    GNOME on the tablet: every compositor opened `renderD128` and never
+ *    `card0`; and `video` also gives `/dev/fb*` and the webcams.
  *
  * ⚠ WHY MEMBERSHIP AND NOT AN `access()`: the parent is root, and to root the
  *   kernel always says "yes".  The only question that can be asked from here,
@@ -1520,12 +1531,14 @@ static int collect_card_groups(gid_t seen_items[MAX_CARD_GROUPS],
 		struct stat st;
 		bool already = false;
 
-		/* ⚠ `cardN` (the `video` group) and `renderDN` (the `render` group):
-		 *   the two nodes have DIFFERENT groups, and both are needed.  ⛔ And
-		 *   the numbers are scanned instead of hard-wired: `renderD128` and
-		 *   `renderD129` swap between two boots (`provision.sh` §5). */
-		if (strncmp(e->d_name, "renderD", 7) != 0 &&
-		    strncmp(e->d_name, "card", 4) != 0)
+		/* ⭐ 1.5: only `renderDN` (usually the `render` group, but its
+		 *   real group is read below with `stat`).  ⛔ `cardN` (`video`) is no
+		 *   longer asked: `[M]` 13 Oct 2026 no compositor of the four desktops
+		 *   opened it (DECISIONS.md §11.4, §11.38), and `video` also opens
+		 *   `/dev/fb*` and the webcams.  ⛔ And the numbers are scanned
+		 *   instead of hard-wired: `renderD128` and `renderD129` swap between
+		 *   two boots (`provision.sh` §5). */
+		if (strncmp(e->d_name, "renderD", 7) != 0)
 			continue;
 		/* ⚠ `%.32s` and not `%s`: `d_name` is 256 long and the compiler is
 		 *   right to say so (`-Wformat-truncation`).  ⛔ A node name longer
@@ -1569,7 +1582,7 @@ static bool card_groups(const char *user, gid_t primary,
 
 	if (nseen == 0) {
 		log_says_of(LOG_CHILD, user,
-		                 "⚠ no `cardN`/`renderDN` node in %s: this "
+		                 "⚠ no `renderDN` node in %s: this "
 		                 "machine has no card to show, and the "
 		                 "compositor will draw in SOFTWARE",
 		                 CARD_NODES_DIR);
@@ -1841,7 +1854,9 @@ static bool enroll_in_card_groups(const char *user, uid_t uid, gid_t primary,
 	log_says_of(LOG_CHILD, user,
 	                 "⭐ FIRST CONNECTION: «%s» is not in the card's groups (%s) and "
 	                 "I am PUTTING it there, now — the user's decision of 20 Sep 2026.  "
-	                 "⚠ Without it, this session would be born BLIND",
+	                 "⚠ Without it, this session would be born BLIND.  Only the group "
+	                 "of the render nodes, read from /dev/dri/renderD* (not `video`: "
+	                 "DECISIONS.md §11.38)",
 	                 user, listing);
 	argv_mod[0] = (char *)"usermod";
 	argv_mod[1] = (char *)"-aG";
@@ -5248,12 +5263,109 @@ static CodecVideo codec_from_number(uint8_t nr)
  * or if it was not tried). */
 static char hardware_refusal[512];
 
-/* ⭐ PHASE 18 — the node on which the card is opened.  In the session it is
- *    ALWAYS `RENDER_NODE`: only `--encoding-test --node …` moves it, to
- *    try the other card (see `child_test_encoding()`).  ⛔ No environment
+/* ⭐ PHASE 18 — the node on which the card is opened.  ⛔ No environment
  *    variable touches it.  (`--software`, which skipped the card to try the
- *    fallback, left with the fallback: phase 19.) */
-static const char *nodo_rendering = RENDER_NODE;
+ *    fallback, left with the fallback: phase 19.)
+ * ⭐⭐ 1.5 (SPECS audit, 15 Oct 2026) — NO LONGER ALWAYS `RENDER_NODE`.  With
+ *    two cards `renderD128` is the one the KERNEL numbered first, not the one
+ *    the compositor draws on (cross-card import: it fails or it is slow).
+ *    In the session, `choose_render_node()` takes, in this order:
+ *      1. the compositor's card — `linux-dmabuf` v4 `main_device`
+ *         (`render_node.c`);
+ *      2. `--render-node /dev/dri/renderDN` (the server's option, repeated to
+ *         the child like `--encoding-route`);
+ *      3. `RENDER_NODE`.
+ *    ⚠ On a one-card machine the three are the same node: nothing changes.
+ *    ⚠ The parent's startup measure (`capabilities_video_measure()`) has no
+ *      compositor yet: it runs on 2 or 3.  `--encoding-test --node …` still
+ *      forces a node for the test. */
+static char render_node_buf[64] = RENDER_NODE;
+static const char *nodo_rendering = render_node_buf;
+/* `--render-node`, "" = not given */
+static char render_node_option[64];
+/* the session's choice is made: it does not move under an open encoder */
+static bool render_node_latched;
+/* true only in `child_alive()`: the parent's measure and `--encoding-test` have
+ * no compositor to ask */
+static bool in_session_child;
+
+/* ⭐ 1.5 (review of 13422add) — a `--render-node` that is not a DRM card is
+ *    REFUSED, and the refusal is SAID once: dropped in silence, the session
+ *    would go to `RENDER_NODE` and nobody would know the option was ignored
+ *    (the parent stops with a usage error; the child, which receives it
+ *    repeated, may live in a box where the path does not exist). */
+bool child_render_node(const char *node)
+{
+	static bool refusal_said;
+	char why[128] = "";
+
+	if (node && strlen(node) >= sizeof render_node_option)
+		snprintf(why, sizeof why, "longer than %zu characters", sizeof render_node_option - 1);
+	if (why[0] || !render_node_is_drm(node, why, sizeof why)) {
+		if (!refusal_said) {
+			refusal_said = true;
+			registro_dice(LOG_CHILD,
+			              "⛔ --render-node «%.64s» REFUSED (%s): it is not a DRM card "
+			              "(a character device with major %u under /dev/dri/) — the "
+			              "encoding card stays the compositor's, or %s",
+			              node ? node : "(null)", why, RENDER_NODE_DRM_MAJOR,
+			              render_node_option[0] ? render_node_option : RENDER_NODE);
+		}
+		return false;
+	}
+	snprintf(render_node_option, sizeof render_node_option, "%s", node);
+	snprintf(render_node_buf, sizeof render_node_buf, "%s", node);
+	return true;
+}
+
+const char *child_render_node_requested(void)
+{
+	return render_node_option;
+}
+
+/* ⭐ 1.5 — the node the parent's startup measure tested (the codecs offered
+ *    in HERE_I_AM are true THERE): `--render-node`, otherwise `RENDER_NODE`. */
+static const char *startup_node(void)
+{
+	return render_node_option[0] ? render_node_option : RENDER_NODE;
+}
+
+/*
+ * ⭐ 1.5 — the session's card, chosen ONCE and said ONCE (with PCI address,
+ *    driver and vendor:device, because «renderD129» alone does not say which
+ *    machine it is).
+ * ⚠ `final` = latch even without an answer: the encoder is about to open,
+ *   and the node must not move under it.  Without `final`, a compositor not
+ *   yet reachable (labwc still being born) is asked again at the next mount.
+ */
+static void choose_render_node(bool final)
+{
+	char node[64], why[256] = "", desc[160];
+	const char *come;
+	bool reached = false;
+
+	if (render_node_latched)
+		return;
+	if (render_node_of_compositor(node, sizeof node, why, sizeof why, &reached)) {
+		if (render_node_option[0] && !render_node_same(render_node_option, node))
+			registro_dice(LOG_CHILD,
+			              "⚠ --render-node %s is NOT the compositor's card (%s): the "
+			              "frames are on the compositor's, and the encoder goes there",
+			              render_node_option, node);
+		snprintf(render_node_buf, sizeof render_node_buf, "%s", node);
+		come = "the compositor's card (linux-dmabuf main_device)";
+	} else {
+		if (!reached && !final)
+			return; /* asked again at the next mount */
+		snprintf(render_node_buf, sizeof render_node_buf, "%s",
+		         render_node_option[0] ? render_node_option : RENDER_NODE);
+		come = render_node_option[0] ? "--render-node" : "the default " RENDER_NODE;
+	}
+	render_node_latched = true;
+	render_node_describe(render_node_buf, desc, sizeof desc);
+	registro_dice(LOG_CHILD, "⭐ the encoding card: %s (%s) — from %s%s%s", render_node_buf,
+	              desc, come, why[0] ? "; the compositor did not say it: " : "", why);
+}
 
 /* ⭐ PHASE 19 — THE CARD'S ROUTE (`DECISIONS.md` §10.27).  `card` = chosen BY
  *    CAPABILITY (Vulkan Video if available for that codec, otherwise VA-API),
@@ -5289,26 +5401,49 @@ const char *child_encoding_route_requested(void)
  */
 static void slabs_per_route(void)
 {
-	static bool decided = false;
+	/* ⭐ 1.5 (review of 13422add): decided ONCE — but a decision taken while
+	 *    the compositor did not answer yet (labwc still being born) is
+	 *    PROVISIONAL: it was taken on `--render-node`/`RENDER_NODE`, and the
+	 *    next mount (before the encoder opens) takes it again on the card
+	 *    the compositor names.  ⚠ The setter is read at `capture_start_wlr()`:
+	 *    redoing it here, before the next start, is in time. */
+	static bool decided = false, provisional = false, was = false;
 	bool vulkan;
 
-	if (decided)
+	choose_render_node(false);
+	if (decided && !provisional)
 		return;
-	decided = true;
+	if (decided && !render_node_latched)
+		return; /* still no answer: the provisional one stands */
 	if (!strcmp(encode_route, "vulkan"))
 		vulkan = true;
 	else if (!strcmp(encode_route, "vaapi"))
 		vulkan = false;
-	else
+	else {
 		vulkan = encoder_vulkan_on_node(nodo_rendering);
+		/* ⚠ Two cards, and the encoder may fall back to the startup one
+		 *   (`node_of_codec()`): the big slabs if EITHER encodes in Vulkan.
+		 *   On one card it is the same question, asked once. */
+		if (!vulkan && in_session_child && !render_node_same(nodo_rendering, startup_node()))
+			vulkan = encoder_vulkan_on_node(startup_node());
+	}
+	if (decided && vulkan == was) {
+		provisional = !render_node_latched;
+		return; /* the same answer: nothing to say again */
+	}
+	decided = true;
+	was = vulkan;
+	provisional = !render_node_latched;
 	wlr_slabs_at_max_canvas(vulkan);
 	registro_dice(LOG_CHILD,
-	              "⭐ PHASE 19: the slabs of the wlroots capture %s (route requested «%s», node %s)",
+	              "⭐ PHASE 19: the slabs of the wlroots capture %s (route requested «%s», node %s)%s",
 	              vulkan ? "are born at the MAXIMUM CANVAS and stay on a size change — the "
 	                       "encoding will be Vulkan (the Radeon GPU hang)"
 	                     : "are of the right size and are redone on a change — the encoding "
 	                       "will be VA-API",
-	              encode_route, nodo_rendering);
+	              encode_route, nodo_rendering,
+	              provisional ? " — ⚠ PROVISIONAL: the compositor did not answer yet, "
+	                            "decided again at the next mount" : "");
 }
 
 /*
@@ -5321,13 +5456,25 @@ static void slabs_per_route(void)
  */
 static void modifiers_per_route(void)
 {
-	static bool decided = false;
+	/* ⭐ 1.5: PROVISIONAL like `slabs_per_route()` while the compositor has
+	 *    not answered — the card asked may not be the one that encodes. */
+	static bool decided = false, provisional = false;
+	static char asked[64];
 	uint64_t m[16];
 	int n = 0;
 
-	if (decided || stage_route != CAPTURE_ROUTE_CARD)
+	choose_render_node(false);
+	if (stage_route != CAPTURE_ROUTE_CARD)
 		return;
+	if (decided && (!provisional || !render_node_latched))
+		return;
+	provisional = !render_node_latched;
+	if (decided && !strcmp(asked, nodo_rendering))
+		return; /* the same card: the same answer */
+	if (decided)
+		capture_modifiers_card(NULL, 0); /* the provisional list goes */
 	decided = true;
+	snprintf(asked, sizeof asked, "%s", nodo_rendering);
 	if (!vulkanvideo_card_rejects_linear(nodo_rendering))
 		return;
 	n = vulkanvideo_modifiers(nodo_rendering, DRM_FORMAT_XRGB8888, m, (int)G_N_ELEMENTS(m));
@@ -5347,9 +5494,11 @@ static void modifiers_per_route(void)
 	registro_dice(LOG_CHILD,
 	              "⭐ the card %s REFUSES the linear slab (NVIDIA): the capture's "
 	              "proposal also offers the %d modifiers the Vulkan encoder "
-	              "imports%s",
+	              "imports%s%s",
 	              nodo_rendering, n,
-	              n ? "" : " — ⛔ none: the memory fallback remains if the compositor refuses");
+	              n ? "" : " — ⛔ none: the memory fallback remains if the compositor refuses",
+	              provisional ? " — ⚠ PROVISIONAL: the compositor did not answer yet, "
+	                            "decided again at the next mount" : "");
 }
 
 /* The name of the component to request for `codec` on the route in force. */
@@ -5363,6 +5512,8 @@ static const char *component_of(CodecVideo codec)
 	return name[which];
 }
 
+static const char *node_of_codec(CodecVideo codec, uint8_t idx, uint8_t depth);
+
 static Encoder *encoder_of(CodecVideo codec, uint8_t idx,
                                      uint32_t canvas_w, uint32_t canvas_h)
 {
@@ -5372,6 +5523,9 @@ static Encoder *encoder_of(CodecVideo codec, uint8_t idx,
 
 	if (idx >= CODEC_MAX)
 		return NULL;
+	/* ⭐ 1.5: in the session, the card is latched before the first opening. */
+	if (in_session_child)
+		choose_render_node(true);
 
 	/* ⛔⭐ WITHOUT A NEGOTIATED DEPTH NOTHING OPENS, and it is not caution:
 	 *     opening one "just because" would mean choosing ourselves what §4.3
@@ -5527,7 +5681,9 @@ static Encoder *encoder_of(CodecVideo codec, uint8_t idx,
 		 *    encoder by capability (Vulkan first, VA-API after), or the one
 		 *    forced with `--encoding-route`.  Which one came out is told by the name. */
 		r.componente = component_of(codec);
-		r.nodo_rendering = nodo_rendering;
+		/* ⭐ 1.5: the session's card, unless the codec is not there
+		 *    (`node_of_codec()`: tested once, then the startup card). */
+		r.nodo_rendering = node_of_codec(codec, idx, prof);
 		r.power = RENDER_POWER;
 		enc[idx] = codificatore_nuovo(&r, error, sizeof error);
 		/* The reason also stays outside the log: `--encoding-test` reports it
@@ -5544,12 +5700,12 @@ static Encoder *encoder_of(CodecVideo codec, uint8_t idx,
 			         "of encoding slots (the driver's limit: `[M]` 12 at once on the "
 			         "RTX 4090) — the session stays without an image until a slot "
 			         "frees up",
-			         r.componente, nodo_rendering, hardware_refusal);
+			         r.componente, r.nodo_rendering, hardware_refusal);
 		else if (!enc[idx])
 			snprintf(error, sizeof error,
 			         "«%s» on %.40s did not open (%.150s) ⇒ this codec is NOT available on "
 			         "this machine: without a card there is no encoding (phase 19)",
-			         r.componente, nodo_rendering, hardware_refusal);
+			         r.componente, r.nodo_rendering, hardware_refusal);
 	} else {
 		snprintf(hardware_refusal, sizeof hardware_refusal,
 		         "codec %d is not encoded on the card (AV1: decode only)",
@@ -5678,43 +5834,19 @@ typedef struct {
 	char route_h264[16];
 } VideoCapabilities;
 
-/* Opens the card for `codec` and encodes until bytes come out.  ⚠ It goes
- * through `encoder_of()`, that is the session's road: it is the same
- * test the child will do.  The encoder stays open in `enc[]` (for the
- * confession): the caller frees it.  `*is_opened` says whether the card opened —
- * the "no" of one that does not open and that of one that does not encode
- * are two different codes of `--encoding-test`. */
-static bool test_codec(CodecVideo codec, uint8_t idx, char *reason, size_t n,
-                           size_t *bytes_out, bool *is_opened)
+/* ⭐ The frames of the test, on an encoder already open: a synthetic frame is
+ *    encoded until bytes come out (at most `PROBE_ROUNDS`), and "yes" only if
+ *    the confession says it obeyed, read back and is on the card.  ⚠ Shared
+ *    by `test_codec()` (startup, `--encoding-test`) and `node_of_codec()`
+ *    (the session's card, 1.5): ONE test, not two that drift apart. */
+static bool probe_frames(Encoder *cod, char *reason, size_t n, size_t *bytes_out)
 {
 	static uint8_t pixel[PROBE_SIDE * PROBE_SIDE * 4];
 	EncoderFrame fg;
 	const EncoderConfession *c;
-	Encoder *cod;
 	bool has_exited = false;
 
 	*bytes_out = 0;
-	*is_opened = false;
-	requested_depth = 8;
-	requested_level_x10 = 0;
-	input_format = ENCODER_PIXEL_BGRX;
-	/* ⚠ It is REALLY tried, even if a round before already said no: the wait
-	 *   between two attempts belongs to the session, not to the test — and
-	 *   the reason is reset, or the one of the codec tried before would be
-	 *   read. */
-	enc_retry_ms[idx] = 0;
-	enc_wait_ms[idx] = 0;
-	hardware_refusal[0] = 0;
-	cod = encoder_of(codec, idx, PROBE_SIDE, PROBE_SIDE);
-	if (!cod) {
-		snprintf(reason, n,
-		         "no card can encode %s: «%s» on %s does not open (%s).  ⛔ REMOTIX "
-		         "encodes only on the card (phase 19): without it, there is no video",
-		         codec == CODIFICATORE_HEVC ? "HEVC" : "H.264", component_of(codec),
-		         nodo_rendering, hardware_refusal[0] ? hardware_refusal : "no reason");
-		return false;
-	}
-	*is_opened = true;
 	for (int cur_round = 0; cur_round < PROBE_ROUNDS && !has_exited; cur_round++) {
 		/* A scrolling gradient: every frame differs from the previous one. */
 		for (uint32_t y = 0; y < PROBE_SIDE; y++)
@@ -5752,6 +5884,140 @@ static bool test_codec(CodecVideo codec, uint8_t idx, char *reason, size_t n,
 		return false;
 	}
 	return true;
+}
+
+/* Opens the card for `codec` and encodes until bytes come out.  ⚠ It goes
+ * through `encoder_of()`, that is the session's road: it is the same
+ * test the child will do.  The encoder stays open in `enc[]` (for the
+ * confession): the caller frees it.  `*is_opened` says whether the card opened —
+ * the "no" of one that does not open and that of one that does not encode
+ * are two different codes of `--encoding-test`. */
+static bool test_codec(CodecVideo codec, uint8_t idx, char *reason, size_t n,
+                           size_t *bytes_out, bool *is_opened)
+{
+	Encoder *cod;
+
+	*bytes_out = 0;
+	*is_opened = false;
+	requested_depth = 8;
+	requested_level_x10 = 0;
+	input_format = ENCODER_PIXEL_BGRX;
+	/* ⚠ It is REALLY tried, even if a round before already said no: the wait
+	 *   between two attempts belongs to the session, not to the test — and
+	 *   the reason is reset, or the one of the codec tried before would be
+	 *   read. */
+	enc_retry_ms[idx] = 0;
+	enc_wait_ms[idx] = 0;
+	hardware_refusal[0] = 0;
+	cod = encoder_of(codec, idx, PROBE_SIDE, PROBE_SIDE);
+	if (!cod) {
+		snprintf(reason, n,
+		         "no card can encode %s: «%s» on %s does not open (%s).  ⛔ REMOTIX "
+		         "encodes only on the card (phase 19): without it, there is no video",
+		         codec == CODIFICATORE_HEVC ? "HEVC" : "H.264", component_of(codec),
+		         nodo_rendering, hardware_refusal[0] ? hardware_refusal : "no reason");
+		return false;
+	}
+	*is_opened = true;
+	return probe_frames(cod, reason, n, bytes_out);
+}
+
+/*
+ * ⭐ 1.5 (review of 13422add/541479fc) — THE CODEC ON THE SESSION'S CARD.
+ *
+ * The codecs offered in HERE_I_AM were measured AT STARTUP on
+ * `startup_node()` (`--render-node` or `RENDER_NODE`): the parent has no
+ * compositor to ask.  The session encodes on the compositor's card
+ * (`choose_render_node()`), and on a two-card machine that may be ANOTHER
+ * card — one where the negotiated codec does not exist (the Intel without
+ * HEVC 10 bits, a Radeon without the VA-API driver…).  Without this test
+ * the encoder would fail there and `encoder_of()` would retry forever on a
+ * codec the card lacks: a black screen.
+ *   ⇒ When the two nodes DIFFER, the same test as at startup (`probe_frames()`,
+ *     H.264/HEVC at the NEGOTIATED depth, 256x256, the route in force) is run
+ *     ONCE per codec and depth on the session's node, before the first
+ *     encoder.  Yes ⇒ that node.  No ⇒
+ *     the line says why, and the codec goes to the startup node: the
+ *     cross-card import of before 13422add, which is slower but is an image.
+ * ⛔ On one card (or when the compositor named the startup node) nothing is
+ *    tested: the startup measure already said it.
+ * ⚠ A card that is FULL (`TOO_MANY_OBJECTS`, the RTX 4090 at 12 encodings) is
+ *   not a card without the codec: nothing is decided, the session's node is
+ *   kept and `encoder_of()`'s wait does the rest.
+ * ⚠ Outside the session (`--encoding-test`, the startup measure) it is
+ *   `nodo_rendering`, untouched.
+ */
+static const char *node_of_codec(CodecVideo codec, uint8_t idx, uint8_t depth)
+{
+	/* ⚠ per codec AND per depth: a card with HEVC 8 bits may lack HEVC
+	 *   10 bits (the Intel case above), and a second client may negotiate
+	 *   the other depth (`encoder_of()` redoes the encoder) */
+	static char chosen_by_depth[CODEC_MAX][2][64];
+	char (*chosen)[64];
+	int d;
+	CodificatoreRichiesta r;
+	Encoder *cod;
+	char error[512] = "", reason[768] = "", desc[160];
+	size_t bytes = 0;
+	bool yes;
+
+	if (!in_session_child || idx >= CODEC_MAX)
+		return nodo_rendering;
+	chosen = chosen_by_depth[idx];
+	d = depth == 10 ? 1 : 0;
+	if (chosen[d][0])
+		return chosen[d];
+	if (render_node_same(nodo_rendering, startup_node())) {
+		snprintf(chosen[d], sizeof chosen[d], "%s", nodo_rendering);
+		return chosen[d];
+	}
+
+	memset(&r, 0, sizeof r);
+	r.codec = codec;
+	r.componente = component_of(codec);
+	r.width = PROBE_SIDE;
+	r.height = PROBE_SIDE;
+	r.fotogrammi_al_secondo = MOTION_FPS;
+	r.mode = CODIFICATORE_QUALITA_QP;
+	r.quality = QP_HARDWARE;
+	/* ⚠ the NEGOTIATED depth, not the startup measure's 8: tested at 8, the
+	 *   Intel without HEVC 10 bits would say yes and the real encoder (at 10)
+	 *   would then fail there and retry forever — the black screen this test
+	 *   exists to avoid (review of bc3158bf) */
+	r.depth = depth;
+	r.livello_x10 = 0;
+	r.fmt = ENCODER_PIXEL_BGRX;
+	r.chiavi_ogni = 0;
+	r.nodo_rendering = nodo_rendering;
+	r.power = RENDER_POWER;
+	cod = codificatore_nuovo(&r, error, sizeof error);
+	if (!cod) {
+		if (strstr(error, "TOO_MANY_OBJECTS"))
+			return nodo_rendering; /* full, not without: decided at the next try */
+		snprintf(reason, sizeof reason, "«%s» does not open (%.400s)", r.componente, error);
+		yes = false;
+	} else {
+		yes = probe_frames(cod, reason, sizeof reason, &bytes);
+		codificatore_libera(cod);
+	}
+	if (yes) {
+		snprintf(chosen[d], sizeof chosen[d], "%s", nodo_rendering);
+		registro_dice(LOG_CHILD,
+		              "⭐ codec %d at %u bits tested on the session's card %s (it is not "
+		              "the startup card %s): it encodes (%zu bytes) — the encoder opens there",
+		              (int)codec, depth, nodo_rendering, startup_node(), bytes);
+		return chosen[d];
+	}
+	snprintf(chosen[d], sizeof chosen[d], "%s", startup_node());
+	render_node_describe(chosen[d], desc, sizeof desc);
+	registro_dice(LOG_CHILD,
+	              "⛔ codec %d at %u bits does NOT encode on the compositor's card %s: "
+	              "%s.  ⇒ It falls back to the startup card %s (%s), where the startup "
+	              "measure found it — every frame is a cross-card import (slower, as "
+	              "before 1.5), and it is not retried on %s",
+	              (int)codec, depth, nodo_rendering, reason, chosen[d], desc,
+	              nodo_rendering);
+	return chosen[d];
 }
 
 /* The measure, in this process: two questions, and each "no" with its reason. */
@@ -5952,7 +6218,13 @@ int child_test_encoding(int argc, char **argv)
 			codec = CODIFICATORE_HEVC;
 			idx = 1;
 		} else if (strcmp(argv[i], "--node") == 0 && i + 1 < argc) {
-			nodo_rendering = argv[++i];
+			/* a path that does not fit is refused, not cut: a truncated path names ANOTHER node */
+			if (strlen(argv[i + 1]) >= sizeof render_node_buf) {
+				fprintf(stderr, "⛔ --node: the path is longer than %zu characters\n",
+				        sizeof render_node_buf - 1);
+				return 2;
+			}
+			snprintf(render_node_buf, sizeof render_node_buf, "%s", argv[++i]);
 		} else if (strcmp(argv[i], "--encoding-route") == 0 && i + 1 < argc
 		           && child_encoding_route(argv[i + 1])) {
 			i++;
@@ -7888,6 +8160,7 @@ void child_alive(int argc, char **argv)
 	/* `--internal-child <user> <uid> <gid> <w> <h> <serial> <survey>` */
 	if (argc < 9)
 		_exit(40);
+	in_session_child = true;
 	user = argv[2];
 	/* ⛔⭐ AND FROM HERE ON EVERY LINE OF THIS PROCESS SAYS WHOSE IT IS — 25
 	 *     Aug 2026, R10-A4 / P6.  The box is in `log.h`.
@@ -7955,6 +8228,10 @@ void child_alive(int argc, char **argv)
 		 *    recognised stays "card", and the encoder's line says so. */
 		else if (strcmp(argv[i], "--encoding-route") == 0 && i + 1 < argc)
 			child_encoding_route(argv[++i]);
+		/* ⭐ 1.5: the server's `--render-node`, repeated (the fallback when
+		 *    the compositor does not name its card). */
+		else if (strcmp(argv[i], "--render-node") == 0 && i + 1 < argc)
+			child_render_node(argv[++i]);
 		/* ⛔⭐ AND THIS ONE IS READ NEGATED, because it is born ON (24 Aug 2026):
 		 *     the word at the end is the EXCEPTION to the default.  ⚠ An absence
 		 *     here means "on", which is the opposite of the two lines above —

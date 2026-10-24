@@ -175,6 +175,11 @@ static void help(const char *name)
 	        "                    VA-API), `vulkan` or `vaapi` to force it in\n"
 	        "                    tests and diagnosis (it fails saying so\n"
 	        "                    if absent: no fallback to the other)\n"
+	        "  --render-node /dev/dri/renderDN\n"
+	        "                    ⭐ 1.5: the encoding card when the desktop does\n"
+	        "                    not say which card it draws on (it is asked\n"
+	        "                    first, and it wins); also the card of the\n"
+	        "                    test at startup.  Default /dev/dri/renderD128\n"
 	        "\n"
 	        "  --address ADDR    what to listen on (default: 0.0.0.0)\n"
 	        "  --name NAME       the name or address that goes into the certificate\n"
@@ -1938,6 +1943,14 @@ int main(int argc, char **argv)
 		 *    the test at startup (in the parent, a fork) and to every child (the
 		 *    parent repeats it on its command line).  ⛔ A name that is not one
 		 *    of the three is a usage error, not a silent «card». */
+		/* ⭐ 1.5 — the encoding card's fallback (`child_render_node()`). */
+		else if (strcmp(a, "--render-node") == 0 && v) {
+			if (!child_render_node(argv[++i])) {
+				fprintf(stderr, "⛔ --render-node «%s»: expected a /dev/dri/ device "
+				        "that exists\n", argv[i]);
+				return 2;
+			}
+		}
 		else if (strcmp(a, "--encoding-route") == 0 && v) {
 			if (!child_encoding_route(argv[++i])) {
 				fprintf(stderr, "⛔ --encoding-route «%s»: expected card, vulkan or vaapi\n",

@@ -78,7 +78,7 @@ SORGENTI := main.c transport.c webtransport.c page.c command.c certificates.c \
             vulkanvideo.c bit_writer.c colors709.c audio.c sound.c \
             input.c keyboard.c cursor.c sentinel.c clipboard.c kwin.c \
             clipboard_kde.c wlroots.c wlr_input.c shape.c rediscover.c \
-            render_grant.c
+            render_grant.c render_node.c
 OGGETTI  := $(SORGENTI:.c=.o)
 
 # -----------------------------------------------------------------------------
@@ -371,7 +371,7 @@ $(NOME): $(OGGETTI) $(PROTOCOLLI:%=%-protocol.o)
 %.o: %.c
 	$(CC) $(CFLAGS) -MMD -MP -c -o $@ $<
 
-kwin.o clipboard_kde.o wlroots.o wlr_input.o: $(PROTOCOLLI:%=%-client-protocol.h)
+kwin.o clipboard_kde.o wlroots.o wlr_input.o render_node.o: $(PROTOCOLLI:%=%-client-protocol.h)
 
 # -----------------------------------------------------------------------------
 # ⭐ THE CAPTURE BENCH ON WLROOTS — `benches/13-w1-one-frame.c`.
@@ -530,7 +530,7 @@ helper.o:       helper.h log.h
 #    product only, like `helper.c`.
 child.o:         child.h log.h session.h capture.h mutter.h encoder.h \
                   input.h sentinel.h audio.h sound.h clipboard.h rediscover.h \
-                  render_grant.h
+                  render_grant.h render_node.h
 
 # ⭐ THE FOUR OF PHASE 2.  ⚠ NONE is among the `GEMELLATI`: they belong to the PRODUCT
 #    only — in `benches/rcp/` they do not exist, because the graft into ngtcp2's
@@ -545,6 +545,8 @@ sentinel.o:     sentinel.h log.h
 rediscover.o:        rediscover.h
 # ⭐ 1.5 (DECISIONS.md §11.4) — the card for a stale user manager.
 render_grant.o:   render_grant.h rediscover.h log.h
+# ⭐ 1.5 (SPECS audit, 15 Oct 2026) — which card encodes: the compositor's.
+render_node.o:    render_node.h kwin.h
 capture.o:        capture.h log.h cursor.h
 mutter.o:         mutter.h log.h
 encoder.o:   encoder.h log.h vadirect.h vulkanvideo.h bit_writer.h colors709.h

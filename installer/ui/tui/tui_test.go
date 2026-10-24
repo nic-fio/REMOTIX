@@ -55,7 +55,7 @@ func TestComeIlMockup(t *testing.T) {
 	waits := map[string][]string{
 		"check":         {"REMOTIX 0", "Installation", "● Check", "○ Plan", "System", "✓ OK", "! WARNING", "Nothing is missing.", "enter continue", "q quit"},
 		"check-missing": {"✗ Check", "✗ MISSING", "no driver that encodes H.264", "REMOTIX cannot be installed yet.", "Provide what is missing, then run the installer again.", "RX-GPU-006"},
-		"plan":          {"✓ Check", "● Plan", "Port", "[ 7447 ]", "TCP and UDP", "from this installer", "Dependencies of REMOTIX", "needed by REMOTIX for XFCE", "4 new · 0 upgraded · 1 already there", "Users added to groups render, video", "alice, bob, carol", "remotix.service, started after the final check", "Everything above is undone by remotix-install uninstall.", "Proceed? y yes · n no · tab edit port · d details"},
+		"plan":          {"✓ Check", "● Plan", "Port", "[ 7447 ]", "TCP and UDP", "from this installer", "Dependencies of REMOTIX", "needed by REMOTIX for XFCE", "4 new · 0 upgraded · 1 already there", "Users added to group render", "alice, bob, carol", "remotix.service, started after the final check", "Everything above is undone by remotix-install uninstall.", "Proceed? y yes · n no · tab edit port · d details"},
 		"install":       {"● Install", "█", "✓ Catalogue", "◐ Installing the packages", "○ Starting remotix.service", "a stop and undo", "r log"},
 		"ready":         {"✓ Ready", "✓ REMOTIX is running.", "OPEN IN A BROWSER", "https://192.168.0.2:7447/", "certificate SHA-256", "TO DO", "! Port 7447 TCP+UDP is closed by the firewall", "WHO CAN LOG IN", "root is excluded", "FINAL CHECKS", "Encoding on the graphics card", "enter close"},
 		"stopped":       {"✗ The machine is back as it was", "WHY", "RX-PACCHETTI-005"},

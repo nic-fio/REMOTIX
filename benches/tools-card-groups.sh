@@ -17,7 +17,8 @@
 # a whole phase.
 #
 # ⭐ THE CAUSE, measured on the real machine on 27 Aug 2026: the tenant is not
-#    in the groups of the `/dev/dri` nodes (here `video` and `render`).
+#    in the groups of the `/dev/dri` nodes (here `video` and `render`; from §11.38,
+#    15 Oct 2026, only the render nodes' group is given — see below).
 #
 #   | tenants WITH the two groups | `[M]` **17 out of 17** see (1.92-2.10 s) |
 #   | WITHOUT                     | `[M]` **0 out of 4**, never in 90 s, zero frames |
@@ -38,9 +39,15 @@
 #    another name, or none.  ⇒ we start from the **gid** of the `stat`, and the name
 #    is ASKED of `getent`.
 #
-# ⚠ AND ALL THE NODES ARE SCANNED, not `renderD128`: `renderD128` and `renderD129`
-#   swap between two boots (`src/provision.sh` already says so), and `cardN` and
-#   `renderDN` have DIFFERENT groups that are both needed.
+# ⚠ AND ALL THE RENDER NODES ARE SCANNED, not `renderD128`: `renderD128` and `renderD129`
+#   swap between two boots (`src/provision.sh` already says so).
+#
+# ⭐⭐ ONLY THE `renderD*` NODES, NOT `cardN` — 15 Oct 2026, `DECISIONS.md` §11.38.
+#    The product (`child.c` `collect_card_groups()`, 76b602b1; installer
+#    `CardGroups()`, add575c6) enrols only in the render nodes' group, because
+#    §11.4 measured every compositor of the four desktops opening `renderD128`
+#    only, never `card0`.  ⛔ A bench that also gave `video` (the group of
+#    `cardN`) would measure a tenant the product never makes.  ⇒ Same choice here.
 #
 # ⭐ AND THE VERIFICATION COMPARES THE NUMBERS, not the names (E1, «written is not in
 #   force»): the old `id -nG | grep -qw render` would have said OK on a
@@ -50,10 +57,10 @@
 # ═══ CORPO-INIZIO ═══  ⛔ From here to CORPO-FINE is what `--text` prints:
 #     nothing in here must depend on this file or on this machine.
 
-# The gids of the card's nodes, one per line, without duplicates.
+# The gids of the card's render nodes, one per line, without duplicates.
 card_groups_gid() {
 	_gs_n=; _gs_g=
-	for _gs_n in /dev/dri/card[0-9]* /dev/dri/renderD[0-9]*; do
+	for _gs_n in /dev/dri/renderD[0-9]*; do
 		[ -e "$_gs_n" ] || continue
 		_gs_g=$(stat -c %g "$_gs_n" 2>/dev/null) || continue
 		[ -n "$_gs_g" ] && printf '%s\n' "$_gs_g"
@@ -66,7 +73,7 @@ card_groups_name() { getent group "$1" 2>/dev/null | cut -d: -f1; }
 # Which node has that gid — needed only to write a message that makes sense.
 card_groups_node() {
 	_gs_n=
-	for _gs_n in /dev/dri/card[0-9]* /dev/dri/renderD[0-9]*; do
+	for _gs_n in /dev/dri/renderD[0-9]*; do
 		[ -e "$_gs_n" ] || continue
 		[ "$(stat -c %g "$_gs_n" 2>/dev/null)" = "$1" ] && { printf '%s' "$_gs_n"; return 0; }
 	done
@@ -108,7 +115,7 @@ card_groups_give_to() {
 	_gs_gid=$(card_groups_gid)
 
 	if [ -z "$_gs_gid" ]; then
-		printf '%s\033[1;31m⛔\033[0m  no `cardN`/`renderDN` node in /dev/dri: on this\n' "$_gs_pref"
+		printf '%s\033[1;31m⛔\033[0m  no `renderDN` node in /dev/dri: on this\n' "$_gs_pref"
 		printf '%s    machine the compositor will draw in SOFTWARE, and no group\n' "$_gs_pref"
 		printf '%s    can fix that.  ⚠ The number this bench will measure is NOT\n' "$_gs_pref"
 		printf '%s    that of the product in hardware.\n' "$_gs_pref"

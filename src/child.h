@@ -634,6 +634,18 @@ int child_test_encoding(int argc, char **argv);
 bool child_encoding_route(const char *route);
 const char *child_encoding_route_requested(void);
 
+/* ⭐ 1.5 — `--render-node /dev/dri/renderDN`: the encoding card when the
+ *    compositor does not name its own (`linux-dmabuf` `main_device`, which
+ *    wins), and the node of the startup measure.  false (nothing changes,
+ *    and ONE log line says why) if it is not a DRM card: a character device
+ *    under /dev/dri/ with major 226.  Repeated to the child on its command
+ *    line, like `--encoding-route`.  "" = not given.
+ *    ⭐ When the session's card is not this node, each codec is tested once
+ *    on the session's card before its first encoder, and falls back here if
+ *    it does not encode there (`node_of_codec()` in child.c). */
+bool child_render_node(const char *node);
+const char *child_render_node_requested(void);
+
 /* ⭐ PHASE 18 — the test AT THE PARENT'S STARTUP: what this machine can
  *    encode, in a separate process (a crashing driver does not bring down the
  *    server).  `offered` is the list for HERE_I_AM's `video.codec` ("hevc,h264"

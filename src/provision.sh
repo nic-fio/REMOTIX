@@ -51,8 +51,12 @@ VERIFY_ONLY=${1:-}
 #    `/dev/dri/renderD128` is what the kernel and udev decided on THIS
 #    machine, and the only way to know it is **to ask them** — `stat -c %g`.
 # ⛔ And the nodes are walked instead of nailing `renderD128`: `renderD128` and
-#    `renderD129` swap between two boots (see step 5), and `cardN` and
-#    `renderDN` have DIFFERENT groups (`video` and `render`) that are both needed.
+#    `renderD129` swap between two boots (see step 5).
+# ⭐⭐ ONLY THE `renderD*` NODES — 15 Oct 2026, `DECISIONS.md` §11.38: the product
+#    (server and installer) enrols only in the render nodes' group, because no
+#    compositor of the four desktops opened `cardN` (§11.4).  ⛔ Until then `cardN`
+#    was walked too, and the tenants got `video` — a tenant the product no
+#    longer makes.
 # ⚠ A gid is not passed to `usermod -aG`: the NAME is passed, derived from the
 #   number with `getent group`.  The number stays what is CHECKED, because a
 #   name can change meaning and a gid cannot.
@@ -69,7 +73,7 @@ EXCLUDED_GROUP=remotix-nogpu
 card_gid() {
 	local n g excluded
 	excluded=$(getent group "$EXCLUDED_GROUP" | cut -d: -f3)
-	for n in /dev/dri/card[0-9]* /dev/dri/renderD[0-9]*; do
+	for n in /dev/dri/renderD[0-9]*; do
 		[ -e "$n" ] || continue
 		g=$(stat -c %g "$n" 2>/dev/null) || continue
 		[ -n "$excluded" ] && [ "$g" = "$excluded" ] && continue
@@ -93,7 +97,7 @@ CARD_GROUPS=$(card_names)
 # ---------------------------------------------------------------------------
 # 1. The test users, and ⛔ THEIR GROUPS
 #
-# ⛔⛔ `video` and `render` are NOT a convenience of the test environment: they are a
+# ⛔⛔ The card's group (`render`; `video` too until §11.38) is NOT a convenience of the test environment: it is a
 #     REQUIREMENT of the product, and the reason is headless.  On a normal desktop
 #     GPU access is given by logind with an **ACL** (udev tag `uaccess`)
 #     to the user of the active session **on a seat**; ⇒ our session has no
@@ -133,7 +137,8 @@ if [ "$VERIFY_ONLY" != "check" ]; then
 	# -------------------------------------------------------------------
 	# ⭐⭐ AND ALL THE PEOPLE ALREADY ON THE MACHINE — decided by the user on 20
 	#     September 2026: "the installation procedure adds the users
-	#     present in the system to the video and render groups".
+	#     present in the system to the video and render groups" — narrowed to the
+	#     render nodes' group on 15 Oct 2026 (§11.38), like the product.
 	#
 	# ⛔ The PEOPLE, not the service accounts: `www-data`, `systemd-*` and
 	#    company do not open graphical sessions, and giving them the card would be
@@ -449,8 +454,8 @@ for n in prova prova2; do
 	# ⛔⭐ THE NODE'S **GID** IS CHECKED, not the name «render».  A `grep -qw
 	#     render` on `id -nG` passes even on a machine where the node
 	#     belongs to another group — that is it would say OK to a tenant who
-	#     will be born blind.  ⚠ And ALL the nodes' gids are looked at: `cardN` and
-	#     `renderDN` have two different ones, and both are needed.
+	#     will be born blind.  ⚠ And ALL the render nodes' gids are looked at
+	#     (`cardN` no longer, §11.38).
 	THEIR_GROUPS=" $(id -G "$n" 2>/dev/null) "
 	MISSING=""
 	for g in $(card_gid); do
