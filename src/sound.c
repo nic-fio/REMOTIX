@@ -678,7 +678,22 @@ bool sound_listen_start(sound *s, sound_samples on_samples, void *chi)
 	                               * MONITOR (the output) of our sink, and not
 	                               * the input of a microphone that does not exist here. */
 	                              PW_KEY_STREAM_CAPTURE_SINK, "true", PW_KEY_TARGET_OBJECT,
-	                              SINK_NAME, PW_KEY_NODE_FORCE_QUANTUM, FORCED_QUANTUM, NULL);
+	                              SINK_NAME, PW_KEY_NODE_FORCE_QUANTUM, FORCED_QUANTUM,
+	                              /*
+	                               * ⛔⭐ AND THE STREAM HAS A NAME OF ITS OWN — 15 Oct 2026.
+	                               *     Without this key `pw_stream_new()` names the node
+	                               *     after the application, that is «remotix»: the SAME
+	                               *     name as the sink, so `target.object` = «remotix»
+	                               *     matched two nodes.  `[M]` F-013 xfce/Firefox, run
+	                               *     20261015-063747, `pw-dump`: the capture stream was
+	                               *     linked TO ITSELF (link 39 → 39, driver
+	                               *     Dummy-Driver) while ffplay played into the sink
+	                               *     (57 → 49) ⇒ «DIGITAL silence» for the whole test
+	                               *     and 0 audio blocks to the page.  On gnome, same
+	                               *     product, it happened to pick the sink (49 → 38):
+	                               *     a race, not a desktop difference.
+	                               */
+	                              PW_KEY_NODE_NAME, "remotix-capture", NULL);
 	s->stream = property ? pw_stream_new(s->core, "remotix-suono", property) : NULL;
 	if (!s->stream)
 	{
