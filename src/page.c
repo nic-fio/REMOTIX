@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <linux/tcp.h>
 #include <stddef.h>
@@ -56,7 +57,8 @@
  *     SHARE (third review, 15 Oct 2026).  A client's GROUP is its IPv6 /48
  *     for a real IPv6 peer, its address otherwise.  The victim is taken from
  *     a group holding the MOST live slots (every client counts), preferring
- *     there clients without a whole request, then writers PAGE_EVICT_AGE_MS
+ *     there clients that never sent a byte, then clients without a whole
+ *     request, then writers PAGE_EVICT_AGE_MS
  *     or more into a response whatever their speed, then fresh writers; at
  *     random among equals — and when every group holds one slot, the OLDEST
  *     (refusing there would be a cheap lockout: one slot each from
@@ -87,6 +89,26 @@
 #define PAGE_EVICT_AGE_MS 5000u
 /* At most this many accepts per `accept_page()` call (refused ones included). */
 #define PAGE_ACCEPTS_PER_CALL 32
+/* ⭐ Holistic review, 15 Oct 2026 — the work of ONE `page_move()` call: at
+ *   most this many events (a client's event or one accept each), taken round
+ *   robin; the rest wait for the next pass of the main loop (`poll` is
+ *   level-triggered), so QUIC, the children and PAM are never held behind a
+ *   crowd of page clients. */
+#define PAGE_EVENTS_PER_PASS 16
+/* ⭐ Same review — accepts per second: per `rcp_key_address()` key (an IPv4
+ *   address or an IPv6 /64) and per IPv6 /48, as token buckets (a burst,
+ *   then a steady rate).  Over it the connection is closed at once, counted
+ *   in the summary line.  PAGE_RATE_KEYS buckets each, the fullest one
+ *   reused for a new key (a full bucket is the same as no bucket). */
+#define PAGE_ACCEPT_RATE 4
+#define PAGE_ACCEPT_BURST 8
+#define PAGE_ACCEPT_RATE_48 8
+#define PAGE_ACCEPT_BURST_48 16
+#define PAGE_RATE_KEYS 64
+/* The kernel's queue of connections not accepted yet (independent review of
+ * 16b75f33: 16 overflowed under a connect flood — the probe's SYN then
+ * waited 1-2 s for its retransmit). */
+#define PAGE_BACKLOG 256
 /* The «GET / from …» line: at most this many per address per window; the
  * rest are counted in the summary line. */
 #define PAGE_LINES_PER_ADDRESS 5
@@ -220,6 +242,10 @@ typedef struct {
 	char *head;
 	size_t nhead;
 	body *shared;
+	/* … and then `tail` (`ntail` bytes, 0 or 8: a gzip trailer composed
+	 * for this response, see `banned_respond()`). */
+	unsigned char tail[8];
+	size_t ntail;
 	size_t nresponse, oresponse;
 	char provenance[80];
 	/* `rcp_key_address(provenance)`: what PAGE_PER_ADDRESS counts. */
@@ -242,6 +268,10 @@ typedef struct {
 	 *   watched and the connection stays stuck until something else
 	 *   expires. */
 	bool wants_to_write;
+	/* The peer has sent at least one byte (a POLLIN reached this client, or
+	 * bytes were waiting at accept): a browser sends its ClientHello at
+	 * once; a bare TCP connect never does.  Eviction takes the silent first. */
+	bool spoke;
 } client;
 
 struct page {
@@ -274,6 +304,28 @@ struct page {
 	body *cached_gz;
 	bool cached_gz_retry;
 	char cached_fp[64];
+	/* ⭐ The banned page (holistic review, 15 Oct 2026: it was rebuilt WHOLE
+	 *   at every banned GET, ~907 KB and 3.2 ms each).  Every marker of
+	 *   `page.html` is in its first `split` bytes (~45 KB); the rest never
+	 *   changes.  So a banned response is its own small prefix (the markers
+	 *   replaced, gzip-compressed when asked) + `tail` or `tail_gz` (shared,
+	 *   built once for the page's life) + for gzip its own 8-byte trailer. */
+	bool split_done;
+	size_t split;
+	body *tail;
+	body *tail_gz; /* raw deflate (no wrapper), with its last block */
+	uLong tail_crc;
+	/* The accept buckets, per key and per /48. */
+	struct bucket {
+		char key[64];
+		uint64_t at;
+		unsigned milli;
+	} rate[PAGE_RATE_KEYS], rate48[PAGE_RATE_KEYS];
+	unsigned refused_rate;
+	/* … and never zeroed (the fuzz harness tells a rate refusal by it). */
+	unsigned long long refused_rate_total;
+	/* Round robin of `page_move()`'s event budget. */
+	size_t move_next;
 };
 
 /* ------------------------------------------------------------------------ */
@@ -358,7 +410,7 @@ static void client_close(client *c)
 	c->head = NULL;
 	body_unref(c->shared);
 	c->shared = NULL;
-	c->nhead = c->nresponse = c->oresponse = c->nrequest = 0;
+	c->nhead = c->nresponse = c->oresponse = c->nrequest = c->ntail = 0;
 	c->phase = F_DONE;
 }
 
@@ -404,12 +456,13 @@ static void sample(client *c, uint64_t now)
 /* The response of `c`: the headers and `text` (copied: only small bodies
  * come this way), followed by `shared` when it is not NULL (referenced, not
  * copied; `Content-Length` covers both). */
-static void compose_with(client *c, const char *state, const char *kind,
+static void compose_tail(client *c, const char *state, const char *kind,
                          const char *text, size_t ntext, body *shared,
+                         const unsigned char *tail, size_t ntail,
                          const char *extra)
 {
 	char head[2048]; /* the page's security headers (PAGE_SECURITY) are ~900 bytes */
-	size_t nbody = ntext + (shared ? shared->n : 0);
+	size_t nbody = ntext + (shared ? shared->n : 0) + ntail;
 	int n;
 
 	n = snprintf(head, sizeof head,
@@ -429,8 +482,8 @@ static void compose_with(client *c, const char *state, const char *kind,
 	 *   (so the retry cannot overflow again) and the sentence says why. */
 	if (n < 0 || (size_t)n >= sizeof head) {
 		if (extra) {
-			compose_with(c, "500 Internal Server Error", "text/plain; charset=utf-8",
-			             "response headers too long\n", 26, NULL, NULL);
+			compose_tail(c, "500 Internal Server Error", "text/plain; charset=utf-8",
+			             "response headers too long\n", 26, NULL, NULL, 0, NULL);
 		}
 		return;
 	}
@@ -441,12 +494,24 @@ static void compose_with(client *c, const char *state, const char *kind,
 	memcpy(c->head + n, text, ntext);
 	c->nhead = (size_t)n + ntext;
 	c->shared = body_ref(shared);
-	c->nresponse = c->nhead + (shared ? shared->n : 0);
+	if (ntail > sizeof c->tail)
+		ntail = sizeof c->tail;
+	if (ntail)
+		memcpy(c->tail, tail, ntail);
+	c->ntail = ntail;
+	c->nresponse = c->nhead + (shared ? shared->n : 0) + ntail;
 	c->oresponse = 0;
 	c->phase = F_WRITE;
 	c->write_start = c->last_progress = log_now_ms();
 	c->acked_base = tcp_acked(c->fd, 0);
 	c->delivered = 0;
+}
+
+static void compose_with(client *c, const char *state, const char *kind,
+                         const char *text, size_t ntext, body *shared,
+                         const char *extra)
+{
+	compose_tail(c, state, kind, text, ntext, shared, NULL, 0, extra);
 }
 
 static void compose(client *c, const char *state, const char *kind,
@@ -456,13 +521,12 @@ static void compose(client *c, const char *state, const char *kind,
 }
 
 /* The page with its five markers replaced.  Returns a new body, or NULL. */
-static body *build_page(const page *p, bool banned, const char *warning,
-                        const char *remain_txt)
+static char *build_text(const page *p, const char *src, bool banned,
+                        const char *warning, const char *remain_txt)
 {
 	char *a, *b, *cc, *cc2, *d;
-	body *r;
 
-	a = replace(p->html, "__FINGERPRINT__", p->cert->fingerprint);
+	a = replace(src, "__FINGERPRINT__", p->cert->fingerprint);
 	if (!a)
 		return NULL;
 	b = replace(a, "__WARNING__", warning);
@@ -481,6 +545,15 @@ static body *build_page(const page *p, bool banned, const char *warning,
 	 *   bench build, where `/diary` exists. */
 	d = replace(cc2, "__DIARY__", DIARY_ON);
 	free(cc2);
+	return d;
+}
+
+static body *build_page(const page *p, bool banned, const char *warning,
+                        const char *remain_txt)
+{
+	char *d = build_text(p, p->html, banned, warning, remain_txt);
+	body *r;
+
 	if (!d)
 		return NULL;
 	r = body_new(d, strlen(d));
@@ -512,7 +585,7 @@ static void gz_free(voidpf opaque, voidpf address)
  *   Done ONCE per fingerprint, when the shared page is built.  Returns a new
  *   body, or NULL: `*oom` says whether for lack of memory (worth retrying)
  *   or because it did not come out smaller (not worth it). */
-static body *gz_page(const body *plain, bool *oom)
+static body *gz_page(const body *plain, bool *oom, int level)
 {
 	z_stream z;
 	body *r;
@@ -524,7 +597,7 @@ static body *gz_page(const body *plain, bool *oom)
 	z.zalloc = gz_alloc;
 	z.zfree = gz_free;
 	/* 15 + 16: a 32 KB window and the gzip wrapper (not zlib's own). */
-	rv = deflateInit2(&z, 6, Z_DEFLATED, 15 + 16, 8, Z_DEFAULT_STRATEGY);
+	rv = deflateInit2(&z, level, Z_DEFLATED, 15 + 16, 8, Z_DEFAULT_STRATEGY);
 	if (rv != Z_OK) {
 		*oom = rv == Z_MEM_ERROR;
 		return NULL;
@@ -561,6 +634,146 @@ static body *gz_page(const body *plain, bool *oom)
 			r = small;
 	}
 	return r;
+}
+
+/* `n` bytes of `in` as RAW deflate (no wrapper) into a new buffer, `*nout`
+ * bytes: `last` ends the stream (Z_FINISH), otherwise it ends byte-aligned
+ * and open (Z_SYNC_FLUSH), so another raw deflate stream can follow it.
+ * `prefix` bytes are reserved at the start (a gzip header).  NULL when out
+ * of memory. */
+static unsigned char *deflate_raw(const char *in, size_t n, int level, bool last,
+                                  size_t prefix, size_t *nout)
+{
+	z_stream z;
+	unsigned char *out;
+	uLong bound;
+
+	memset(&z, 0, sizeof z);
+	z.zalloc = gz_alloc;
+	z.zfree = gz_free;
+	if (n > (uInt)-1 ||
+	    deflateInit2(&z, level, Z_DEFLATED, -15, 8, Z_DEFAULT_STRATEGY) != Z_OK)
+		return NULL;
+	/* + 16: room for the sync flush's empty stored block */
+	bound = deflateBound(&z, (uLong)n) + 16;
+	out = bound <= (uInt)-1 ? malloc(prefix + bound) : NULL;
+	if (!out) {
+		deflateEnd(&z);
+		return NULL;
+	}
+	z.next_in = (Bytef *)(uintptr_t)in;
+	z.avail_in = (uInt)n;
+	z.next_out = out + prefix;
+	z.avail_out = (uInt)bound;
+	if (deflate(&z, last ? Z_FINISH : Z_SYNC_FLUSH) != (last ? Z_STREAM_END : Z_OK) ||
+	    z.avail_in != 0 || z.avail_out == 0) {
+		deflateEnd(&z);
+		free(out);
+		return NULL;
+	}
+	*nout = prefix + (size_t)z.total_out;
+	deflateEnd(&z);
+	return out;
+}
+
+/* Where the last marker of the template ends: every byte after it is the
+ * same in every page this server sends. */
+static size_t page_split(page *p)
+{
+	static const char *const markers[] = {"__FINGERPRINT__", "__WARNING__",
+	                                      "__BANNED__", "__REMAINING_MS__",
+	                                      "__DIARY__"};
+	size_t end = 0;
+
+	if (p->split_done)
+		return p->split;
+	for (size_t i = 0; i < sizeof markers / sizeof markers[0]; i++) {
+		size_t k = strlen(markers[i]);
+		const char *at = p->html, *f;
+		while ((f = memmem(at, p->nhtml - (size_t)(at - p->html), markers[i], k))) {
+			if ((size_t)(f - p->html) + k > end)
+				end = (size_t)(f - p->html) + k;
+			at = f + k;
+		}
+	}
+	p->split = end;
+	p->split_done = true;
+	return end;
+}
+
+/* ⭐ A banned visitor's 200 (holistic review, 15 Oct 2026): ITS prefix (the
+ *   markers replaced, ~45 KB of the real page, ~0.2 ms) + the shared tail.
+ *   With gzip: a gzip header + the prefix as raw deflate ending byte-aligned
+ *   + `tail_gz` (raw deflate, compressed ONCE) + this response's trailer,
+ *   CRC-32 of the whole (crc32_combine) and its length — one valid gzip
+ *   member (RFC 1951 §3.2.4: blocks are independent of how they were made).
+ *   Returns false only when the page itself could not be built (the
+ *   caller's 500); a gzip that cannot be made falls back to plain. */
+static bool banned_respond(page *p, client *c, bool gz, const char *warning,
+                           const char *remain_txt)
+{
+	size_t split = page_split(p), ntext;
+	char *pre, *text;
+
+	if (!p->tail) {
+		p->tail = body_new(p->html + split, p->nhtml - split);
+		if (!p->tail)
+			return false;
+	}
+	pre = malloc(split + 1);
+	if (!pre)
+		return false;
+	memcpy(pre, p->html, split);
+	pre[split] = 0;
+	text = build_text(p, pre, true, warning, remain_txt);
+	free(pre);
+	if (!text)
+		return false;
+	ntext = strlen(text);
+	if (gz && !p->tail_gz) {
+		size_t n = 0;
+		unsigned char *raw = deflate_raw(p->tail->data, p->tail->n, 6, true, 0, &n);
+		if (raw) {
+			p->tail_gz = malloc(sizeof *p->tail_gz + n);
+			if (p->tail_gz) {
+				p->tail_gz->refs = 1;
+				p->tail_gz->n = n;
+				memcpy(p->tail_gz->data, raw, n);
+				p->tail_crc = crc32(crc32(0L, Z_NULL, 0),
+				                    (const Bytef *)p->tail->data,
+				                    (uInt)p->tail->n);
+			}
+			free(raw);
+		}
+	}
+	if (gz && p->tail_gz && ntext <= (uInt)-1) {
+		size_t nout = 0;
+		/* the gzip header (RFC 1952 §2.3): deflate, no flags, no time, Unix */
+		static const unsigned char gzh[10] = {0x1f, 0x8b, 8, 0, 0, 0, 0, 0, 0, 3};
+		unsigned char *out = deflate_raw(text, ntext, 1, false, sizeof gzh, &nout);
+		if (out) {
+			unsigned char trailer[8];
+			uLong crc = crc32_combine(crc32(crc32(0L, Z_NULL, 0),
+			                                (const Bytef *)text, (uInt)ntext),
+			                          p->tail_crc, (z_off_t)p->tail->n);
+			uint32_t isize = (uint32_t)(ntext + p->tail->n);
+			memcpy(out, gzh, sizeof gzh);
+			for (int i = 0; i < 4; i++) {
+				trailer[i] = (unsigned char)(crc >> (8 * i));
+				trailer[4 + i] = (unsigned char)(isize >> (8 * i));
+			}
+			compose_tail(c, "200 OK", "text/html; charset=utf-8", (const char *)out,
+			             nout, p->tail_gz, trailer, sizeof trailer,
+			             "Content-Encoding: gzip\r\nVary: Accept-Encoding\r\n" PAGE_SECURITY);
+			free(out);
+			free(text);
+			return true;
+		}
+	}
+	compose_tail(c, "200 OK", "text/html; charset=utf-8", text, ntext, p->tail,
+	             NULL, 0, "Vary: Accept-Encoding\r\n" PAGE_SECURITY);
+	free(text);
+	return true;
 }
 
 /* The q-value of RFC 9110 §12.4.2 in thousandths («0», «0.5», «1.000»), or
@@ -727,7 +940,29 @@ static bool accepts_gzip(const char *req, size_t n)
 	return q_any > 0;
 }
 
-/* `true` = the request line of `key` may be written now. */
+/* How much of a request target the «GET … from» line quotes. */
+#define PAGE_LOG_TARGET 200
+
+/* `src` (a C string) for the log: printable ASCII kept, any other byte a
+ * `?`, at most `limit` bytes, then «…(N bytes)» when it was longer. */
+static void log_clean(char *dst, size_t cap, const char *src, size_t limit)
+{
+	size_t len = strlen(src), j = 0;
+
+	for (size_t i = 0; i < len && i < limit && j + 1 < cap; i++) {
+		unsigned char x = (unsigned char)src[i];
+		dst[j++] = (x >= 0x20 && x < 0x7F) ? (char)x : '?';
+	}
+	dst[j] = '\0';
+	if (len > limit)
+		snprintf(dst + j, cap - j, "…(%zu bytes)", len);
+}
+
+/* `true` = the request line of `key` may be written now.
+ * ⚠ The price, stated (independent review of 16b75f33): when 16 other
+ *   addresses hold every entry inside their window, the owner's own «GET /
+ *   from» line is not written either — it is COUNTED in the summary line
+ *   («request lines not written»), never lost in silence. */
 static bool line_budget(page *p, const char *key, uint64_t now)
 {
 	size_t free_i = PAGE_LINES_KEYS;
@@ -764,11 +999,20 @@ static void serve(page *p, client *c)
 	 *    that does not cure, with the air of having done it. */
 	char method[16] = {0}, fpath[1024] = {0}, target[1024] = {0};
 	const char *sp1, *sp2;
+	size_t nline;
 	char address[64];
 	uint64_t remain = 0;
 	bool banned;
 
-	sp1 = memchr(c->request, ' ', c->nrequest);
+	/* ⛔ The method and the target are looked for in the REQUEST LINE only
+	 *    (holistic review, 15 Oct 2026): searched across the whole request,
+	 *    a line without its second space took the next header lines into the
+	 *    target — newlines included, and into the log. */
+	{
+		const char *eol = memchr(c->request, '\n', c->nrequest);
+		nline = eol ? (size_t)(eol - c->request) : c->nrequest;
+	}
+	sp1 = memchr(c->request, ' ', nline);
 	if (!sp1) {
 		compose(c, "400 Bad Request", "text/plain; charset=utf-8",
 		        "request is unreadable\n", 22, NULL);
@@ -780,7 +1024,7 @@ static void serve(page *p, client *c)
 			n = sizeof method - 1;
 		memcpy(method, c->request, n);
 	}
-	sp2 = memchr(sp1 + 1, ' ', c->nrequest - (size_t)(sp1 + 1 - c->request));
+	sp2 = memchr(sp1 + 1, ' ', nline - (size_t)(sp1 + 1 - c->request));
 	if (!sp2) {
 		compose(c, "400 Bad Request", "text/plain; charset=utf-8",
 		        "request is unreadable\n", 22, NULL);
@@ -852,8 +1096,21 @@ static void serve(page *p, client *c)
 	 *   the page in a loop writes the log at will.  The rest are counted in
 	 *   the summary line — never dropped in silence. */
 	if (line_budget(p, address, log_now_ms()))
-		registro_dice(LOG_PAGE, "%s %s from %s%s", method, target,
+	{
+		/* ⛔ What the peer sent is logged CLEANED and SHORT: printable
+		 *    ASCII only (any other byte a `?`), the target cut at
+		 *    PAGE_LOG_TARGET bytes with its length said.  A target like
+		 *    `/\n14:00:00.000 rcp [owner] ⭐ ADMITTED …` wrote a forged
+		 *    line in server.log without any password (holistic review,
+		 *    15 Oct 2026); `log.c` now also turns control bytes into `?`
+		 *    for every caller, and this keeps the escape codes and the
+		 *    3 KB out too. */
+		char lm[sizeof method + 32], lt[PAGE_LOG_TARGET + 32];
+		log_clean(lm, sizeof lm, method, sizeof method - 1);
+		log_clean(lt, sizeof lt, target, PAGE_LOG_TARGET);
+		registro_dice(LOG_PAGE, "%s %s from %s%s", lm, lt,
 		              c->provenance, banned ? " (address BANNED)" : "");
+	}
 	else
 		p->lines_unwritten++;
 
@@ -955,20 +1212,23 @@ static void serve(page *p, client *c)
 			         "banned themselves from their own phone.",
 			         minutes / 60, minutes % 60);
 		}
-		snprintf(remain_txt, sizeof remain_txt, "%llu",
-		         (unsigned long long)remain);
+		/* ⚠ The remaining time in whole minutes, rounded up as the
+		 *   sentence says it (holistic review, 15 Oct 2026): the page's
+		 *   countdown may end up to a minute late, never early. */
+		snprintf(remain_txt, sizeof remain_txt, "%llu", minutes * 60000ull);
 
 		/* ⭐ Not banned: the shared page, rebuilt only when the fingerprint
-		 *   changes (a rotation).  Banned: built for this request — its
-		 *   remaining time is its own, and bans are rare and costly to get
-		 *   (three failed logins each). */
-		/* ⭐ §11.44: the shared page also goes gzip-compressed, built
-		 *   with it and replaced with it; a banned page is per request and
-		 *   rare, and goes plain — compressing it at every request would
-		 *   hand a banned address a cheap way to spend the server's CPU. */
+		 *   changes (a rotation), with its gzip copy (§11.44).  Banned: its
+		 *   own prefix + the shared tail, gzip too (`banned_respond()`). */
 		const char *extra = PAGE_SECURITY; /* + the gzip headers below */
-		if (!banned) {
-			bool gz = accepts_gzip(c->request, c->nrequest);
+		bool gz = accepts_gzip(c->request, c->nrequest);
+		if (banned) {
+			if (!banned_respond(p, c, gz, warning, remain_txt))
+				compose(c, "500 Internal Server Error",
+				        "text/plain; charset=utf-8", "no mem.\n", 8, NULL);
+			return;
+		}
+		{
 			bool oom;
 			if (!p->cached ||
 			    strcmp(p->cached_fp, p->cert->fingerprint) != 0) {
@@ -977,13 +1237,13 @@ static void serve(page *p, client *c)
 					body_unref(p->cached);
 					body_unref(p->cached_gz);
 					p->cached = nb;
-					p->cached_gz = gz_page(nb, &oom);
+					p->cached_gz = gz_page(nb, &oom, 6);
 					p->cached_gz_retry = !p->cached_gz && oom;
 					snprintf(p->cached_fp, sizeof p->cached_fp, "%s",
 					         p->cert->fingerprint);
 				}
 			} else if (gz && p->cached_gz_retry) {
-				p->cached_gz = gz_page(p->cached, &oom);
+				p->cached_gz = gz_page(p->cached, &oom, 6);
 				p->cached_gz_retry = !p->cached_gz && oom;
 			}
 			if (p->cached &&
@@ -1001,8 +1261,6 @@ static void serve(page *p, client *c)
 			} else {
 				d = NULL;
 			}
-		} else {
-			d = build_page(p, true, warning, remain_txt);
 		}
 		if (!d) {
 			compose(c, "500 Internal Server Error",
@@ -1023,7 +1281,8 @@ static void move_client(page *p, client *c, short events)
 {
 	int rv;
 
-	(void)events;
+	if (events & POLLIN)
+		c->spoke = true;
 	c->wants_to_write = false;
 
 	if (c->phase == F_HANDSHAKE) {
@@ -1092,11 +1351,15 @@ static void move_client(page *p, client *c, short events)
 			size_t written = 0;
 			const char *from;
 			size_t len;
+			size_t nshared = c->shared ? c->shared->n : 0;
 			if (c->oresponse < c->nhead) {
 				from = c->head + c->oresponse;
 				len = c->nhead - c->oresponse;
-			} else {
+			} else if (c->oresponse < c->nhead + nshared) {
 				from = c->shared->data + (c->oresponse - c->nhead);
+				len = c->nhead + nshared - c->oresponse;
+			} else {
+				from = (const char *)c->tail + (c->oresponse - c->nhead - nshared);
 				len = c->nresponse - c->oresponse;
 			}
 			rv = SSL_write_ex(c->ssl, from, len, &written);
@@ -1185,7 +1448,7 @@ static bool key48_of(const struct sockaddr_storage *da, unsigned char p48[6])
  * closed since the last one. */
 static bool refusals_pending(const page *p)
 {
-	return p->refused_address || p->refused_48 || p->refused_full ||
+	return p->refused_address || p->refused_48 || p->refused_full || p->refused_rate ||
 	       p->evicted || p->evicted_writing || p->expired_request ||
 	       p->expired_response || p->lines_unwritten;
 }
@@ -1204,7 +1467,8 @@ static void refusals_report(page *p, uint64_t now)
 	              "address or /48: %u without a request, %u writing for %u s or "
 	              "more; REFUSED: %u over %d at once from one address, %u over %d "
 	              "from one IPv6 /48, %u full with no group as large as the "
-	              "newcomer's would be; %u request lines not written (over %d per %u s "
+	              "newcomer's would be, %u over %d accepts a second from one address "
+	              "or /64 (%d per /48); %u request lines not written (over %d per %u s "
 	              "from one address); the last refused from %s",
 	              p->refused_ever ? " in the last seconds" : "",
 	              p->expired_request, PAGE_REQUEST_MS / 1000u,
@@ -1212,10 +1476,11 @@ static void refusals_report(page *p, uint64_t now)
 	              PAGE_RATE_GRACE_MS / 1000u, MAX_CLIENTS, p->evicted,
 	              p->evicted_writing, PAGE_EVICT_AGE_MS / 1000u,
 	              p->refused_address, PAGE_PER_ADDRESS, p->refused_48,
-	              PAGE_PER_48, p->refused_full, p->lines_unwritten,
+	              PAGE_PER_48, p->refused_full, p->refused_rate, PAGE_ACCEPT_RATE,
+	              PAGE_ACCEPT_RATE_48, p->lines_unwritten,
 	              PAGE_LINES_PER_ADDRESS, PAGE_LINES_WINDOW_MS / 1000u,
 	              p->refused_last[0] ? p->refused_last : "-");
-	p->refused_address = p->refused_48 = p->refused_full = 0;
+	p->refused_address = p->refused_48 = p->refused_full = p->refused_rate = 0;
 	p->evicted = p->evicted_writing = p->lines_unwritten = 0;
 	p->expired_request = p->expired_response = 0;
 	p->refused_last[0] = 0;
@@ -1243,6 +1508,58 @@ static unsigned group_size(const page *p, bool has48, const unsigned char *p48,
 	return n;
 }
 
+/* The size of every live client's group, counted ONCE per eviction
+ * (independent review of 16b75f33: group_size() for each of 128 clients was
+ * 128 × 128 comparisons per eviction).  A hash of the group's identity (the
+ * /48, or the key) into 2 × MAX_CLIENTS buckets, linear probing: each client
+ * is placed once, then its group's count read back. */
+static void group_sizes(const page *p, unsigned sizes[MAX_CLIENTS])
+{
+	enum { NB = 2 * MAX_CLIENTS };
+	int rep[NB];
+	unsigned count[NB] = {0};
+	int slot_of[MAX_CLIENTS];
+
+	for (size_t b = 0; b < NB; b++)
+		rep[b] = -1;
+	for (size_t i = 0; i < MAX_CLIENTS; i++) {
+		const client *x = &p->clients[i];
+		uint32_t h = 2166136261u;
+		const unsigned char *id;
+		size_t n;
+
+		slot_of[i] = -1;
+		if (!client_active(x))
+			continue;
+		if (x->has48) {
+			id = x->p48;
+			n = 6;
+			h ^= 0x48;
+		} else {
+			id = (const unsigned char *)x->key;
+			n = strlen(x->key);
+		}
+		for (size_t k = 0; k < n; k++)
+			h = (h ^ id[k]) * 16777619u;
+		for (size_t b = h % NB;; b = (b + 1) % NB) {
+			if (rep[b] < 0) {
+				rep[b] = (int)i;
+				slot_of[i] = (int)b;
+				count[b] = 1;
+				break;
+			}
+			const client *r = &p->clients[rep[b]];
+			if (same_group(r, x->has48, x->p48, x->key)) {
+				slot_of[i] = (int)b;
+				count[b]++;
+				break;
+			}
+		}
+	}
+	for (size_t i = 0; i < MAX_CLIENTS; i++)
+		sizes[i] = slot_of[i] >= 0 ? count[slot_of[i]] : 0;
+}
+
 /* A number in [0, n), from RAND_bytes (fourth review: a seeded xorshift was
  * predictable).  ⚠ If RAND_bytes fails, 0 — the first candidate, which is
  * still a valid pick. */
@@ -1254,13 +1571,18 @@ static uint32_t random_below(uint32_t n)
 	return r % n;
 }
 
-/* The eviction tier of a candidate: 0 = no whole request yet, 1 = writing
- * for PAGE_EVICT_AGE_MS or more, 2 = writing for less (a fresh download). */
+/* The eviction tier of a candidate: 0 = SILENT (not one byte received:
+ * a bare TCP connect), 1 = no whole request yet, 2 = writing for
+ * PAGE_EVICT_AGE_MS or more, 3 = writing for less (a fresh download).
+ * ⛔ Tier 0 is the independent review of 16b75f33: with every group at one
+ *    slot the OLDEST without a request went, and ~127 addresses doing bare
+ *    connects (each evicted one reconnecting, so always younger) made the
+ *    owner's handshake the oldest — evicted at every try. */
 static int tier(const client *x, uint64_t now)
 {
 	if (x->phase != F_WRITE)
-		return 0;
-	return now - x->write_start >= PAGE_EVICT_AGE_MS ? 1 : 2;
+		return x->spoke ? 1 : 0;
+	return now - x->write_start >= PAGE_EVICT_AGE_MS ? 2 : 3;
 }
 
 /* ⛔ The fair-share victim when the table is full (see the top of the file),
@@ -1274,8 +1596,8 @@ static int tier(const client *x, uint64_t now)
  *  · The newcomer is refused when its own group would then hold MORE than
  *    `best` (`mine + 1 > best`).
  *  · The victim comes from a group of size `best`: the lowest tier present
- *    there (no request yet, then writers ≥ 5 s, then fresh writers), at
- *    random among the equals of that tier.
+ *    there (silent — not one byte —, then no request yet, then writers
+ *    ≥ 5 s, then fresh writers), at random among the equals of that tier.
  *  · ⛔ When every group holds ONE (`best` == 1), the OLDEST of the lowest
  *    tier goes instead: refusing there would be a cheap lockout — one slot
  *    per address from as many addresses as slots — and FIFO gives a real
@@ -1283,16 +1605,14 @@ static int tier(const client *x, uint64_t now)
 static client *fair_victim(page *p, unsigned mine, uint64_t now)
 {
 	unsigned best = 0, sizes[MAX_CLIENTS];
-	int low = 3;
+	int low = 4;
 	uint32_t ties = 0;
 	client *v = NULL;
 
-	for (size_t i = 0; i < MAX_CLIENTS; i++) {
-		client *x = &p->clients[i];
-		sizes[i] = client_active(x) ? group_size(p, x->has48, x->p48, x->key) : 0;
+	group_sizes(p, sizes);
+	for (size_t i = 0; i < MAX_CLIENTS; i++)
 		if (sizes[i] > best)
 			best = sizes[i];
-	}
 	if (best == 0 || mine + 1 > best)
 		return NULL;
 	for (size_t i = 0; i < MAX_CLIENTS; i++)
@@ -1303,8 +1623,8 @@ static client *fair_victim(page *p, unsigned mine, uint64_t now)
 		if (sizes[i] != best || tier(x, now) != low)
 			continue;
 		if (best == 1) {
-			uint64_t tx = low == 0 ? x->born : x->write_start;
-			uint64_t tv = !v ? UINT64_MAX : low == 0 ? v->born : v->write_start;
+			uint64_t tx = low <= 1 ? x->born : x->write_start;
+			uint64_t tv = !v ? UINT64_MAX : low <= 1 ? v->born : v->write_start;
 			if (tx < tv)
 				v = x;
 		} else if (random_below(++ties) == 0) {
@@ -1315,14 +1635,63 @@ static client *fair_victim(page *p, unsigned mine, uint64_t now)
 	return v;
 }
 
-static void accept_page(page *p)
+/* One token from the bucket of `key` (PAGE_RATE_KEYS of them in `t`): `true`
+ * = this accept is within `rate` per second after a burst of `burst`. */
+static bool bucket_take(struct bucket *t, const char *key, uint64_t now,
+                        unsigned rate, unsigned burst)
 {
-	/* ⚠ At most MAX_CLIENTS accepts per call (refused ones included): a
+	struct bucket *b = NULL, *fullest = NULL;
+	unsigned best = 0, cap = burst * 1000u;
+
+	for (size_t i = 0; i < PAGE_RATE_KEYS; i++) {
+		struct bucket *x = &t[i];
+		unsigned m;
+		if (x->key[0] && strcmp(x->key, key) == 0) {
+			b = x;
+			break;
+		}
+		if (!x->key[0])
+			m = cap + 1; /* an empty one first */
+		else if (now - x->at >= (uint64_t)cap / rate)
+			m = cap;
+		else
+			m = x->milli + (unsigned)((now - x->at) * rate);
+		if (!fullest || m > best) {
+			fullest = x;
+			best = m;
+		}
+	}
+	if (!b) {
+		/* ⚠ Reusing the fullest bucket forgets the least: a full one is
+		 *   the same as none.  With every bucket in use by a busy key, the
+		 *   newcomer's is fresh — what PAGE_PER_ADDRESS and the fair-share
+		 *   eviction then hold. */
+		b = fullest;
+		snprintf(b->key, sizeof b->key, "%s", key);
+		b->milli = cap;
+		b->at = now;
+	} else {
+		uint64_t m = (uint64_t)b->milli + (now - b->at) * rate;
+		b->milli = m > cap ? cap : (unsigned)m;
+		b->at = now;
+	}
+	if (b->milli < 1000u)
+		return false;
+	b->milli -= 1000u;
+	return true;
+}
+
+static int accept_page(page *p, int budget)
+{
+	/* ⚠ At most PAGE_ACCEPTS_PER_CALL (32) accepts per call, and no more
+	 *   than `page_move()`'s budget left (refused ones included): a
 	 *   backlog that refills as fast as it is drained would otherwise keep
 	 *   the whole loop — QUIC, the children, PAM — inside this function.
 	 *   What is left stays in the backlog, and the `poll` (level-triggered)
 	 *   calls again at the next pass. */
-	for (int round = 0; round < PAGE_ACCEPTS_PER_CALL; round++) {
+	int round;
+
+	for (round = 0; round < PAGE_ACCEPTS_PER_CALL && round < budget; round++) {
 		struct sockaddr_storage da;
 		socklen_t dalen = sizeof da;
 		int fd, same = 0, same48 = 0;
@@ -1337,7 +1706,7 @@ static void accept_page(page *p)
 		if (fd < 0) {
 			if (errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR)
 				registro_dice(LOG_PAGE, "accept: %s", strerror(errno));
-			return;
+			return round;
 		}
 		if (getnameinfo((struct sockaddr *)&da, dalen, host, sizeof host, serv,
 		                sizeof serv, NI_NUMERICHOST | NI_NUMERICSERV) == 0)
@@ -1361,6 +1730,28 @@ static void accept_page(page *p)
 				same++;
 			if (has48 && x->has48 && memcmp(x->p48, p48, 6) == 0)
 				same48++;
+		}
+		/* ⛔ The accept rate FIRST (holistic review, 15 Oct 2026): every
+		 *    accepted connection costs a TLS handshake and maybe a page;
+		 *    over PAGE_ACCEPT_RATE a second per key (PAGE_ACCEPT_RATE_48
+		 *    per /48) it is closed before any of that. */
+		{
+			char k48[64] = "";
+			if (has48)
+				snprintf(k48, sizeof k48, "%02x%02x:%02x%02x:%02x%02x::/48",
+				         p48[0], p48[1], p48[2], p48[3], p48[4], p48[5]);
+			if (!bucket_take(p->rate, key, now, PAGE_ACCEPT_RATE,
+			                 PAGE_ACCEPT_BURST) ||
+			    (has48 && !bucket_take(p->rate48, k48, now, PAGE_ACCEPT_RATE_48,
+			                           PAGE_ACCEPT_BURST_48))) {
+				p->refused_rate++;
+				p->refused_rate_total++;
+				snprintf(p->refused_last, sizeof p->refused_last, "%s",
+				         has48 ? k48 : key);
+				close(fd);
+				refusals_report(p, now);
+				continue;
+			}
 		}
 		/* ⛔ The per-address cap BEFORE the eviction: a crowded address
 		 *    must not be able to push out somebody else's slot. */
@@ -1414,9 +1805,9 @@ static void accept_page(page *p)
 			 *    refusal: a silent refusal would look like a dead server
 			 *    (`LESSONS.md` §1.9), and a line per refusal would let
 			 *    whoever is refused write the log at will.
-			 * ⚠ Reached when the newcomer's group would become larger than
-			 *   any other (or all the others are writing for less than
-			 *   PAGE_EVICT_AGE_MS). */
+			 * ⚠ Reached only when the newcomer's group would become larger
+			 *   than the largest live group: within that group any client
+			 *   can be evicted, fresh writers too (the last tier). */
 			p->refused_full++;
 			snprintf(p->refused_last, sizeof p->refused_last, "%s", key);
 			close(fd);
@@ -1436,7 +1827,7 @@ static void accept_page(page *p)
 			close(fd);
 			c->fd = -1;
 			c->phase = F_DONE;
-			return;
+			return round + 1;
 		}
 		SSL_set_fd(c->ssl, fd);
 		/* ⛔ PARTIAL WRITES: without this mode `SSL_write_ex()` reports
@@ -1447,8 +1838,14 @@ static void accept_page(page *p)
 		SSL_set_mode(c->ssl, SSL_MODE_ENABLE_PARTIAL_WRITE);
 		SSL_set_accept_state(c->ssl);
 		c->phase = F_HANDSHAKE;
+		{
+			/* the ClientHello may be here already: then it spoke */
+			int waiting = 0;
+			c->spoke = ioctl(fd, FIONREAD, &waiting) == 0 && waiting > 0;
+		}
 		move_client(p, c, 0);
 	}
+	return round;
 }
 
 void page_expired(page *p, uint64_t now)
@@ -1500,13 +1897,25 @@ int page_wait_ms(const page *p, uint64_t now)
 
 void page_move(page *p, struct pollfd *dove, size_t amount)
 {
-	for (size_t k = 0; k < amount; k++) {
+	/* ⭐ At most PAGE_EVENTS_PER_PASS events, starting where the last call
+	 *   stopped (round robin): the descriptors not reached keep their
+	 *   `revents` for the next `poll`, level-triggered. */
+	int budget = PAGE_EVENTS_PER_PASS;
+	size_t start = amount ? p->move_next % amount : 0;
+
+	for (size_t j = 0; j < amount && budget > 0; j++) {
+		size_t k = (start + j) % amount;
 		if (dove[k].revents == 0)
 			continue;
+		p->move_next = k + 1;
 		if (dove[k].fd == p->fd) {
-			accept_page(p);
+			/* each accept is an event (refused ones too); the last
+			 * attempt that found the backlog empty is one as well */
+			int used = accept_page(p, budget);
+			budget -= used > 0 ? used : 1;
 			continue;
 		}
+		budget--;
 		for (size_t i = 0; i < MAX_CLIENTS; i++)
 			if (p->clients[i].fd == dove[k].fd &&
 			    p->clients[i].phase != F_DONE) {
@@ -1541,7 +1950,7 @@ page *page_open(const char *address, const char *port, SSL_CTX *ctx,
 		if (fd < 0)
 			continue;
 		setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &uno, sizeof uno);
-		if (bind(fd, r->ai_addr, r->ai_addrlen) == 0 && listen(fd, 16) == 0)
+		if (bind(fd, r->ai_addr, r->ai_addrlen) == 0 && listen(fd, PAGE_BACKLOG) == 0)
 			break;
 		close(fd);
 		fd = -1;
@@ -1655,6 +2064,8 @@ void page_close(page *p)
 			client_close(&p->clients[i]);
 	body_unref(p->cached);
 	body_unref(p->cached_gz);
+	body_unref(p->tail);
+	body_unref(p->tail_gz);
 	free(p->html);
 	if (p->fd >= 0)
 		close(p->fd);

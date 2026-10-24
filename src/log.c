@@ -254,6 +254,16 @@ static void line(const char *file, int text_line, bool detail, const char *area,
 	} else {
 		n += m;
 	}
+	/* ⛔ NO CONTROL BYTE IN THE BODY — 15 Oct 2026, holistic review.  A
+	 *    newline inside a value (a request target, a user name, a peer's
+	 *    text) would write a SECOND line that looks like ours: whoever sends
+	 *    `/\n14:00:00.000 rcp [owner] ⭐ ADMITTED …` forges server.log without
+	 *    a password.  Every byte below 0x20 of the body becomes `?`, for
+	 *    every caller; UTF-8 (≥ 0x80) is untouched.  The one newline is the
+	 *    one below. */
+	for (int k = body; k < n; k++)
+		if ((unsigned char)buf[k] < 0x20)
+			buf[k] = '?';
 	buf[n++] = '\n';
 
 	/* ⭐ With `--journal` the EVENTS (§12) go to the native journal socket
