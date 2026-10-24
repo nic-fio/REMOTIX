@@ -4418,19 +4418,34 @@ static void block_lxqt(void)
  *     `/usr/share`, as `system_files()`).  It is what pcmanfm-qt writes on its
  *     first clean exit: no choice of the user is changed, there was none.
  * ⛔ A `settings.conf` that exists is NEVER touched: it is the user's.
+ * ⛔ A SYMLINK in place of the folder (or of `settings.conf`) is left alone: it
+ *    is a choice of the user, and following it would write OUT of the home
+ *    (`[M]` 15 Oct 2026, `benches/21-session-orphan-test.c`: before this guard a
+ *    link to a foreign folder got the system `settings.conf` written into it).
+ *
+ * ⚠ `ORPHAN_PROFILE_SYSTEM_DIRS` exists only so that the test can point the
+ *   system folders at a temporary one (`make test-session`); the product is
+ *   built without it and keeps the three folders below.
  */
+#ifndef ORPHAN_PROFILE_SYSTEM_DIRS
+#define ORPHAN_PROFILE_SYSTEM_DIRS "/etc", "/etc/xdg", "/usr/share"
+#endif
 static void orphan_profile_pcmanfm_lxqt(void)
 {
-	static const char *const DIRS[] = { "/etc", "/etc/xdg", "/usr/share", NULL };
+	static const char *const DIRS[] = { ORPHAN_PROFILE_SYSTEM_DIRS, NULL };
 	g_autofree char *folder = g_build_filename(g_get_home_dir(), ".config", "pcmanfm-qt",
 	                                           "lxqt", NULL);
 	g_autofree char *file = g_build_filename(folder, "settings.conf", NULL);
 	g_autoptr(GError) mistake = NULL;
 	g_autofree char *content = NULL;
 	gsize size = 0;
+	GStatBuf what = { 0 };
 
-	if (!g_file_test(folder, G_FILE_TEST_IS_DIR) || g_file_test(file, G_FILE_TEST_EXISTS))
-		return; /* the normal cases: pcmanfm-qt's fallback, or the user's file */
+	/* `g_lstat`, not `g_file_test(IS_DIR)`: the latter follows a symlink. */
+	if (g_lstat(folder, &what) != 0 || !S_ISDIR(what.st_mode))
+		return; /* no folder (pcmanfm-qt's fallback), or not a real folder */
+	if (g_file_test(file, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_SYMLINK))
+		return; /* the user's file — a dangling link too is the user's */
 
 	if (g_rmdir(folder) == 0) {
 		registro_dice(LOG_SESSION,
