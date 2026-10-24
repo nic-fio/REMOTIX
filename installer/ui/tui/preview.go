@@ -77,7 +77,7 @@ func vpExample() *ui.VistaPiano {
 	return &ui.VistaPiano{
 		Steps: []ui.Stride{
 			{Type: "packages", Titolo: ui.T("a.pacchetti"), Breve: ui.T("a.pacchetti.b"), Rev: ui.CONSENT},
-			{Type: "groups", Breve: ui.T("a.gruppi.b", "alice, bob and carol", "render, video"), Rev: ui.OK},
+			{Type: "groups", Breve: ui.T("a.gruppi.b", "alice, bob and carol", "render"), Rev: ui.OK},
 			{Type: "service", Breve: ui.T("a.servizio.b"), Rev: ui.OK},
 		},
 		Pacchetti: []engine.Artifact{
@@ -89,7 +89,7 @@ func vpExample() *ui.VistaPiano {
 		},
 		Dipendenze: map[string]string{"labwc": "XFCE"},
 		Utenti:     []string{"alice", "bob", "carol"},
-		Gruppi:     []string{"render", "video"},
+		Gruppi:     []string{"render"},
 		Porta:      "7447",
 		Dettagli:   "packages (install-packages, best-effort) · group-alice-render (add-user-to-group, exact) · plan 20261010-0912",
 	}
