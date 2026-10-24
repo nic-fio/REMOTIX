@@ -2282,11 +2282,9 @@ static void secret_load(transport *t, const char *dir)
 	              path);
 }
 
-transport *transport_open(const char *address, const char *port, SSL_CTX *ctx,
-                          helper *help, const char *secret_dir)
+int transport_bind(const char *address, const char *port)
 {
 	struct addrinfo hints, *result = NULL, *r;
-	transport *t;
 	int fd = -1, uno = 1;
 
 	memset(&hints, 0, sizeof hints);
@@ -2296,7 +2294,7 @@ transport *transport_open(const char *address, const char *port, SSL_CTX *ctx,
 
 	if (getaddrinfo(address, port, &hints, &result) != 0) {
 		registro_dice(REG_QUIC, "⛔ %s:%s does not resolve", address, port);
-		return NULL;
+		return -1;
 	}
 	for (r = result; r; r = r->ai_next) {
 		fd = socket(r->ai_family, r->ai_socktype | SOCK_NONBLOCK, r->ai_protocol);
@@ -2332,20 +2330,47 @@ transport *transport_open(const char *address, const char *port, SSL_CTX *ctx,
 		registro_dice(REG_QUIC, "⛔ cannot bind to %s:%s over UDP: %s", address,
 		              port, strerror(errno));
 		freeaddrinfo(result);
+		return -1;
+	}
+	freeaddrinfo(result);
+	return fd;
+}
+
+/* ⭐ 1.5 (DECISIONS.md §11.50): the stack on a socket somebody else bound — the
+ *    root side, before it forked us (phase D4: in the single-process server
+ *    `transport_open()` binds and opens in one call, as before).  The family is asked of the socket itself
+ *    (`getsockname`), not remembered from an `addrinfo` that lived in another
+ *    process; `address` and `port` are for the log line only. */
+transport *transport_open_fd(int fd, const char *address, const char *port,
+                             SSL_CTX *ctx, helper *help, const char *secret_dir)
+{
+	struct sockaddr_storage ss;
+	socklen_t len = sizeof ss, tlen;
+	int type = 0;
+	transport *t;
+
+	if (fd < 0)
+		return NULL;
+	tlen = sizeof type;
+	memset(&ss, 0, sizeof ss);
+	if (getsockname(fd, (struct sockaddr *)&ss, &len) != 0 ||
+	    (ss.ss_family != AF_INET && ss.ss_family != AF_INET6) ||
+	    getsockopt(fd, SOL_SOCKET, SO_TYPE, &type, &tlen) != 0 ||
+	    type != SOCK_DGRAM) {
+		registro_dice(REG_QUIC, "⛔ descriptor %d is not a bound UDP socket "
+		              "(family %d, type %d): no QUIC", fd, (int)ss.ss_family, type);
+		close(fd);
 		return NULL;
 	}
-
 	t = calloc(1, sizeof *t);
 	if (!t) {
 		close(fd);
-		freeaddrinfo(result);
 		return NULL;
 	}
 	t->fd = fd;
-	t->family = r->ai_family;
+	t->family = ss.ss_family;
 	t->ctx = ctx;
 	t->help = help;
-	freeaddrinfo(result);
 
 	if (RAND_bytes(t->secret, sizeof t->secret) != 1) {
 		registro_dice(REG_QUIC, "⛔ cannot generate the static secret");
@@ -2366,6 +2391,13 @@ transport *transport_open(const char *address, const char *port, SSL_CTX *ctx,
 	              "streams granted = 16 of §2.3 + the 3 of HTTP/3",
 	              address, port, IDLE_MS, 19);
 	return t;
+}
+
+transport *transport_open(const char *address, const char *port, SSL_CTX *ctx,
+                          helper *help, const char *secret_dir)
+{
+	int fd = transport_bind(address, port);
+	return fd < 0 ? NULL : transport_open_fd(fd, address, port, ctx, help, secret_dir);
 }
 
 void transport_close(transport *t)

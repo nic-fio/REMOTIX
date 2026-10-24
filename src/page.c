@@ -2189,11 +2189,9 @@ void page_context(page *p, SSL_CTX *ctx) { p->ctx = ctx; }
 
 /* ------------------------------------------------------------------------ */
 
-page *page_open(const char *address, const char *port, SSL_CTX *ctx,
-                    const char *file_html, const certificates *cert)
+int page_bind(const char *address, const char *port)
 {
 	struct addrinfo hints, *result = NULL, *r;
-	page *p;
 	int fd = -1, uno = 1;
 
 	memset(&hints, 0, sizeof hints);
@@ -2203,7 +2201,7 @@ page *page_open(const char *address, const char *port, SSL_CTX *ctx,
 
 	if (getaddrinfo(address, port, &hints, &result) != 0) {
 		registro_dice(LOG_PAGE, "⛔ %s:%s does not resolve", address, port);
-		return NULL;
+		return -1;
 	}
 	for (r = result; r; r = r->ai_next) {
 		fd = socket(r->ai_family, r->ai_socktype | SOCK_NONBLOCK, r->ai_protocol);
@@ -2219,6 +2217,29 @@ page *page_open(const char *address, const char *port, SSL_CTX *ctx,
 	if (fd < 0) {
 		registro_dice(LOG_PAGE, "⛔ cannot bind to %s:%s over TCP: %s", address,
 		              port, strerror(errno));
+		return -1;
+	}
+	return fd;
+}
+
+/* ⭐ 1.5 (DECISIONS.md §11.50): the page on a listener the root side bound
+ *    before it forked us (fd 5).  ⛔ It is checked to BE a listening TCP
+ *    socket: a wrong descriptor would otherwise give a page that never
+ *    accepts, with no line naming why. */
+page *page_open_fd(int fd, const char *address, const char *port, SSL_CTX *ctx,
+                   const char *file_html, const certificates *cert)
+{
+	page *p;
+	int type = 0, listening = 0;
+	socklen_t len = sizeof type, len2 = sizeof listening;
+
+	if (fd < 0)
+		return NULL;
+	if (getsockopt(fd, SOL_SOCKET, SO_TYPE, &type, &len) != 0 || type != SOCK_STREAM ||
+	    getsockopt(fd, SOL_SOCKET, SO_ACCEPTCONN, &listening, &len2) != 0 || !listening) {
+		registro_dice(LOG_PAGE, "⛔ descriptor %d is not a listening TCP socket "
+		              "(type %d, listening %d): no page", fd, type, listening);
+		close(fd);
 		return NULL;
 	}
 
@@ -2313,6 +2334,13 @@ page *page_open(const char *address, const char *port, SSL_CTX *ctx,
 	              "isolated (COOP+COEP+CORP, SPECS.md §11.5)",
 	              address, port, file_html, p->nhtml);
 	return p;
+}
+
+page *page_open(const char *address, const char *port, SSL_CTX *ctx,
+                    const char *file_html, const certificates *cert)
+{
+	int fd = page_bind(address, port);
+	return fd < 0 ? NULL : page_open_fd(fd, address, port, ctx, file_html, cert);
 }
 
 void page_close(page *p)

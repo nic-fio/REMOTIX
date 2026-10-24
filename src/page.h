@@ -73,6 +73,11 @@ typedef struct page page;
 #define PAGE_MAX_CLIENTS 128
 #define PAGE_MAX_DESCRIPTORS (PAGE_MAX_CLIENTS + 1)
 
+/* ⭐ 1.5 (§11.50) phase D4 — `page_open()` in two: the TCP listener (bound and listening; -1 on failure) and the
+ *    page on a listener already bound.  `page_open()` does both, as always. */
+int page_bind(const char *address, const char *port);
+page *page_open_fd(int fd, const char *address, const char *port, SSL_CTX *ctx,
+                   const char *file_html, const certificates *cert);
 page *page_open(const char *address, const char *port, SSL_CTX *ctx,
                     const char *file_html, const certificates *cert);
 void page_close(page *p);
