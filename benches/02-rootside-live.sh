@@ -9,6 +9,8 @@
 #   only in a throw-away container, never on a machine.
 # Exit status: 0 green, 1 red, 3 could not look.
 set -u
+# ⛔ 24 Oct 2026: it rewrites /etc/passwd and PAM — refused outside a container.
+[ -e /run/.containerenv ] || [ -e /.dockerenv ] || { echo "not in a container: refused (it rewrites /etc/passwd and PAM)"; exit 3; }
 # ⭐ Both modes, one after the other: the root side without and WITH --journal (RX_LIVE_JOURNAL=1,
 #   the package units' shape — 676af717: under --journal the network side's fork wrote into the
 #   root channel).  LIVE_MODE=plain|journal runs one only.
