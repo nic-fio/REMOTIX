@@ -146,6 +146,19 @@ size_t sentinel_locals(sentinel *s, const char *const *users, size_t amount,
                          bool *local, char *which_ones, size_t width);
 
 /*
+ * ⭐ 15 Oct 2026 — `sentinel_locals()` no longer waits for logind: it answers
+ *    with logind's answer to the question it sent at a PREVIOUS check, and
+ *    sends the next one (the box is in `sentinel.c`, above `sweep_done()`).
+ *    This turns its GLib context without blocking: what logind answered is
+ *    collected, a round out longer than 300 ms is cut.  `sentinel_locals()`
+ *    calls it itself; calling it at every pass of the loop as well only makes
+ *    the answer ready sooner (a `GetAll` round no longer waits for the next
+ *    check).  ⚠ `sentinel_local()` — the ATTACH — still waits, 100 ms at most,
+ *    and not at all for 30 s after logind was silent.
+ */
+void sentinel_collect(sentinel *s);
+
+/*
  * ⭐ «IS POWER-OFF REALLY FORBIDDEN?» — `DECISIONS.md` §4.7, the check that
  * invariant I7 demands: the three belts are configuration lines, and a
  * protection that lives in a file must be **verified**, not believed.

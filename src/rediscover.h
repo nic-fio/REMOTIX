@@ -56,12 +56,25 @@ typedef struct {
 /*
  * Looks for live REMOTIX desktops: at most `cap`, ONE per user.  Returns how many
  * it wrote, or -1 if logind did not answer (the reason in `why`).
- * ⚠ Synchronous calls to logind (300 ms ceiling each) and a read of
- *   `/proc`: it is called at startup and now and then, not at every loop turn.
+ * ⚠ The FIRST call of the process waits for logind (300 ms ceiling per call)
+ *   and reads `/proc`: it is the startup's.  ⭐ Every later one (15 Oct 2026)
+ *   does NOT wait: it uses logind's answer to the PREVIOUS call (≤ 30 s old,
+ *   or -1), reads `/proc` now, and sends the next question — the box is in
+ *   `rediscover.c`, above `struct question`.
  */
 int rediscover_search(RediscoveredDesktop *v, int cap, char *why, size_t how_much);
 
 /*
+ * Turns the GLib context of the check that does not wait, never blocking:
+ * what logind answered is collected, a round out longer than 5 s is cut.
+ * `rediscover_search()` calls it itself; calling it at every pass of the loop
+ * as well only makes the answer ready sooner.
+ */
+void rediscover_collect(void);
+
+/*
+ * ⚠ It always WAITS for logind: it is for startup (`render_grant_sweep()`),
+ *   never for the loop.
  * Does user `uid` have a live REMOTIX desktop?  1 yes (and `d`, if not NULL,
  * describes it) · 0 no · -1 unknown (logind silent).  ⛔ Whoever must decide whether
  * to knock something down treats -1 as «yes».

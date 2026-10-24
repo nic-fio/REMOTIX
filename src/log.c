@@ -3,6 +3,9 @@
  */
 #include "log.h"
 
+#include <errno.h>
+#include <fcntl.h>
+#include <pthread.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -146,6 +149,196 @@ static bool al_journal(const char *file, int text_line, const char *area,
 	return r >= 0; /* ⚠ silent: the channel that remains is `stderr`, and the line is there */
 }
 
+/*
+ * ⛔⭐ STDERR MUST NEVER STOP THE LOOP — 15 Oct 2026.
+ *
+ * Under systemd `stderr` is journald's STREAM socket, and it is BLOCKING: the
+ * native send above does not wait (`MSG_DONTWAIT`), but the line that falls
+ * back to `stderr` — and every line when `--journal` is off — went out with a
+ * plain `write(2)`.  A journald that stalls fills the socket, and the
+ * `write` stops the single loop that delivers every session's frames, for as
+ * long as journald likes.
+ *
+ * ⭐ The cure: `stderr` is written WITHOUT waiting when it can block —
+ *   · a socket: `send(MSG_DONTWAIT)`;
+ *   · a pipe: a SECOND open of the same pipe (`/proc/self/fd/2`) with
+ *     `O_NONBLOCK` — ⚠ not `fcntl` on fd 2 or on a `dup`, which share the
+ *     open file with the parent's shell and would change it for others too.
+ *     A line is < `PIPE_BUF`, so it goes in whole or not at all;
+ *   · a file or a terminal: as before.
+ * ⛔ A line that does not fit is DROPPED and COUNTED, and the count is written
+ *    as soon as `stderr` accepts again — a hole in the log that is declared,
+ *    instead of a loop that stops.  ⚠ A stream socket may take a line in
+ *    part: the rest is kept and goes out first, so that the next line does not
+ *    begin in the middle of this one.
+ * ⚠ fd 2 is looked at again (`fstat`) at every line: whoever redirects it
+ *   later must not be written through a descriptor of the old one.
+ */
+enum { ERR_PLAIN, ERR_SOCKET, ERR_PIPE };
+static pthread_mutex_t err_lock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_once_t err_once = PTHREAD_ONCE_INIT;
+static bool err_known;
+static dev_t err_dev;
+static ino_t err_ino;
+static int err_kind = ERR_PLAIN;
+static int err_nb = -1;
+static char err_tail[4096];
+static size_t err_tail_n;
+static unsigned long long err_dropped;
+
+/* ⚠ A child forked while another thread writes must not inherit the lock taken. */
+static void err_prepare(void) { pthread_mutex_lock(&err_lock); }
+static void err_release(void) { pthread_mutex_unlock(&err_lock); }
+static void err_init(void) { pthread_atfork(err_prepare, err_release, err_release); }
+
+/* With `err_lock` held: what fd 2 is now. */
+static void err_look(void)
+{
+	struct stat st;
+
+	if (fstat(STDERR_FILENO, &st) != 0) {
+		err_known = false;
+		err_kind = ERR_PLAIN;
+		return;
+	}
+	if (err_known && st.st_dev == err_dev && st.st_ino == err_ino)
+		return;
+	if (err_nb >= 0)
+		close(err_nb);
+	err_nb = -1;
+	err_tail_n = 0;
+	err_known = true;
+	err_dev = st.st_dev;
+	err_ino = st.st_ino;
+	err_kind = ERR_PLAIN;
+	if (S_ISSOCK(st.st_mode)) {
+		err_kind = ERR_SOCKET;
+	} else if (S_ISFIFO(st.st_mode)) {
+		err_nb = open("/proc/self/fd/2", O_WRONLY | O_NONBLOCK | O_CLOEXEC);
+		if (err_nb >= 0)
+			err_kind = ERR_PIPE;
+	}
+}
+
+static ssize_t err_out(const char *b, size_t n)
+{
+	ssize_t r;
+
+	switch (err_kind) {
+	case ERR_SOCKET:
+		r = send(STDERR_FILENO, b, n, MSG_DONTWAIT | MSG_NOSIGNAL);
+		if (r < 0 && errno == ENOTSOCK)
+			r = write(STDERR_FILENO, b, n);
+		return r;
+	case ERR_PIPE:
+		return write(err_nb, b, n);
+	default:
+		return write(STDERR_FILENO, b, n);
+	}
+}
+
+/* With `err_lock` held: one whole piece out, or kept (the rest of a stream
+ * line), or nothing.  True if it all went. */
+static bool err_piece(const char *b, size_t n)
+{
+	ssize_t r = err_out(b, n);
+
+	if (r < 0)
+		/* ⚠ EAGAIN: full.  Any other error: nowhere to report it (the
+		 *   only channel would be the broken one), as before. */
+		return !(errno == EAGAIN || errno == EWOULDBLOCK);
+	if ((size_t)r < n && err_kind == ERR_SOCKET) {
+		err_tail_n = n - (size_t)r;
+		memcpy(err_tail, b + r, err_tail_n);
+	}
+	return true;
+}
+
+/* How many lines were dropped and not told yet — taken (zeroed). */
+static unsigned long long err_take_dropped(void)
+{
+	unsigned long long d;
+
+	pthread_once(&err_once, err_init);
+	pthread_mutex_lock(&err_lock);
+	d = err_dropped;
+	err_dropped = 0;
+	pthread_mutex_unlock(&err_lock);
+	return d;
+}
+
+static void err_give_back(unsigned long long d)
+{
+	pthread_mutex_lock(&err_lock);
+	err_dropped += d;
+	pthread_mutex_unlock(&err_lock);
+}
+
+static int dropped_notice(char *b, size_t cap, unsigned long long d, bool with_time)
+{
+	struct timespec ts;
+	struct tm tm;
+	char when[32];
+
+	if (!with_time)
+		return snprintf(b, cap,
+		                "log     ⚠ %llu log line%s DROPPED: stderr was not "
+		                "accepting (journald stalled?) and the loop does not "
+		                "wait for it",
+		                d, d == 1 ? "" : "s");
+	clock_gettime(CLOCK_REALTIME, &ts);
+	localtime_r(&ts.tv_sec, &tm);
+	strftime(when, sizeof when, "%H:%M:%S", &tm);
+	return snprintf(b, cap,
+	                "%s.%03ld log     ⚠ %llu log line%s DROPPED: stderr was not "
+	                "accepting (journald stalled?) and the loop does not wait "
+	                "for it\n",
+	                when, ts.tv_nsec / 1000000, d, d == 1 ? "" : "s");
+}
+
+/* ⭐ One line to `stderr`, never waiting. */
+static void err_write(const char *buf, size_t n)
+{
+	char notice[256];
+
+	pthread_once(&err_once, err_init);
+	pthread_mutex_lock(&err_lock);
+	err_look();
+	if (err_tail_n) {
+		ssize_t r = err_out(err_tail, err_tail_n);
+
+		if (r > 0) {
+			memmove(err_tail, err_tail + r, err_tail_n - (size_t)r);
+			err_tail_n -= (size_t)r;
+		} else if (r < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
+			err_tail_n = 0;
+		}
+		if (err_tail_n) {
+			err_dropped++;
+			goto out;
+		}
+	}
+	if (err_dropped) {
+		int k = dropped_notice(notice, sizeof notice, err_dropped, true);
+
+		if (k <= 0 || (size_t)k >= sizeof notice)
+			k = 0;
+		if (k && !err_piece(notice, (size_t)k)) {
+			err_dropped++;
+			goto out;
+		}
+		err_dropped = 0;
+		if (err_tail_n) {
+			err_dropped++;
+			goto out;
+		}
+	}
+	if (!err_piece(buf, n))
+		err_dropped++;
+out:
+	pthread_mutex_unlock(&err_lock);
+}
+
 uint64_t log_now_ms(void)
 {
 	struct timespec ts;
@@ -191,7 +384,8 @@ static void line(const char *file, int text_line, bool detail, const char *area,
 	 *    atomic with respect to the others.  ⚠ Whatever exceeds the buffer is
 	 *    TRUNCATED with a mark, instead of going out interleaved: a cut line
 	 *    can be seen, an interleaved line cannot.
-	 * ⭐ And on top of that it is async-signal-safe, which `fprintf` is not. */
+	 * ⚠ It WAS async-signal-safe; since 15 Oct 2026 `err_write()` takes a
+	 *   lock (no signal handler of the product logs: they set a flag). */
 	/* ⭐⭐ AND IN HERE IT IS SAID WHOSE LINE IT IS — 25 Aug 2026, R10-A4.
 	 *
 	 *     The identity of the single line beats that of the process: in the
@@ -338,11 +532,24 @@ static void line(const char *file, int text_line, bool detail, const char *area,
 	 *    buffered to a file has already made the right code be accused.
 	 *    ⭐ With `write(2)` the problem does not arise: there is no buffer to
 	 *    flush, and the earlier `fflush` is no longer needed. */
-	if (!(sent && stderr_in_journal)) {
-		ssize_t written = write(STDERR_FILENO, buf, (size_t)n);
-		(void)written; /* ⚠ there is nowhere to report that the log cannot be
-		                *    written: the only channel would be the broken one. */
+	if (sent && stderr_in_journal) {
+		/* ⭐ Lines `stderr` dropped earlier are told here, natively, when
+		 *    `stderr` is not going to be written. */
+		unsigned long long d = err_take_dropped();
+
+		if (d) {
+			char notice[256];
+			int k = dropped_notice(notice, sizeof notice, d, false);
+
+			if (k <= 0 || (size_t)k >= sizeof notice ||
+			    !al_journal(__FILE__, __LINE__, "log", NULL, 4, notice, (size_t)k))
+				err_give_back(d);
+		}
+		return; /* already in the journal, with its fields: once is enough */
 	}
+
+	/* ⛔ Never waiting — the box is above `err_write()`. */
+	err_write(buf, (size_t)n);
 }
 
 void log_says_in(const char *file, int text_line, const char *area,
