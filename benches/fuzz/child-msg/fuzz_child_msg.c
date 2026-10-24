@@ -194,7 +194,7 @@ static void op_pieces(const uint8_t *a, size_t n)
 			c.codec = z[9] & 3; c.byte = pc;
 			memcpy(buf, &c, hl = sizeof c);
 		}
-		for (size_t k = 0; k < pc && k < piece; k++) buf[hl + k] = (uint8_t)(k * 7 + i + (z[9] == 0xAA ? 0 : 1) * 0);
+		for (size_t k = 0; k < pc && k < piece; k++) buf[hl + k] = (uint8_t)(k * 7 + i);
 		size_t carry = pc < piece ? pc : piece;
 		if (!((bits & 1) && i == 1)) deliver(kind, buf, hl + carry);
 		if (bits & 2) deliver(kind, buf, hl + carry);
