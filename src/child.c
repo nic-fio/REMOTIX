@@ -57,6 +57,7 @@
 /* ⭐ PHASE 17 T7: the PARENT's half asks whether a desktop is alive before
  *    `loginctl terminate-user` (logind and /proc, nothing of the stage). */
 #include "rediscover.h"
+#include "render_node.h"
 
 #include <dirent.h>
 #include <dlfcn.h>
@@ -1116,14 +1117,15 @@ static void become_and_exec(const struct children *f, const struct child *g,
 	char a_cap[32];
 	char e_home[512], e_user[96], e_log[96], e_path[128], e_runtime[160],
 		e_bus[224], e_shell[16];
-	/* ⚠ Eighteen: the nine fixed ones, the NULL, and the EIGHT optional words
+	/* ⚠ Twenty: the nine fixed ones, the NULL, and the TEN optional words
 	 *   at the end — `--verbose`, `--journal`, `--quality-recovery`,
-	 *   `--bandwidth-cap-mbit` and its number, `--no-audio-silence`, and
-	 *   ⭐ phase 19 `--encoding-route` with its value.  They are added only if the
+	 *   `--bandwidth-cap-mbit` and its number, `--no-audio-silence`,
+	 *   ⭐ phase 19 `--encoding-route` with its value, and ⭐ 1.5 `--render-node`
+	 *   with its value.  They are added only if the
 	 *   parent has them (see below).  ⛔ The count is redone for every new
 	 *   word: an `argv[]` that is too short does not give an error, it writes
 	 *   past the end of the stack. */
-	char *argv[18];
+	char *argv[20];
 	/* ⚠ 16 and not 9: to the seven we compose ourselves are added those that
 	 *   `pam_systemd` puts in the session's environment — `XDG_SESSION_ID`
 	 *   first, which is what Mutter was missing. */
@@ -1395,6 +1397,11 @@ static void become_and_exec(const struct children *f, const struct child *g,
 	if (strcmp(child_encoding_route_requested(), "card") != 0) {
 		argv[na++] = (char *)"--encoding-route";
 		argv[na++] = (char *)child_encoding_route_requested();
+	}
+	/* ⭐ 1.5: `--render-node`, if given (`choose_render_node()`). */
+	if (child_render_node_requested()[0]) {
+		argv[na++] = (char *)"--render-node";
+		argv[na++] = (char *)child_render_node_requested();
 	}
 	argv[na] = NULL;
 
@@ -5249,12 +5256,85 @@ static CodecVideo codec_from_number(uint8_t nr)
  * or if it was not tried). */
 static char hardware_refusal[512];
 
-/* ⭐ PHASE 18 — the node on which the card is opened.  In the session it is
- *    ALWAYS `RENDER_NODE`: only `--encoding-test --node …` moves it, to
- *    try the other card (see `child_test_encoding()`).  ⛔ No environment
+/* ⭐ PHASE 18 — the node on which the card is opened.  ⛔ No environment
  *    variable touches it.  (`--software`, which skipped the card to try the
- *    fallback, left with the fallback: phase 19.) */
-static const char *nodo_rendering = RENDER_NODE;
+ *    fallback, left with the fallback: phase 19.)
+ * ⭐⭐ 1.5 (SPECS audit, 15 Oct 2026) — NO LONGER ALWAYS `RENDER_NODE`.  With
+ *    two cards `renderD128` is the one the KERNEL numbered first, not the one
+ *    the compositor draws on (cross-card import: it fails or it is slow).
+ *    In the session, `choose_render_node()` takes, in this order:
+ *      1. the compositor's card — `linux-dmabuf` v4 `main_device`
+ *         (`render_node.c`);
+ *      2. `--render-node /dev/dri/renderDN` (the server's option, repeated to
+ *         the child like `--encoding-route`);
+ *      3. `RENDER_NODE`.
+ *    ⚠ On a one-card machine the three are the same node: nothing changes.
+ *    ⚠ The parent's startup measure (`capabilities_video_measure()`) has no
+ *      compositor yet: it runs on 2 or 3.  `--encoding-test --node …` still
+ *      forces a node for the test. */
+static char render_node_buf[64] = RENDER_NODE;
+static const char *nodo_rendering = render_node_buf;
+/* `--render-node`, "" = not given */
+static char render_node_option[64];
+/* the session's choice is made: it does not move under an open encoder */
+static bool render_node_latched;
+/* true only in `child_alive()`: the parent's measure and `--encoding-test` have
+ * no compositor to ask */
+static bool in_session_child;
+
+bool child_render_node(const char *node)
+{
+	struct stat st;
+
+	if (!node || strncmp(node, "/dev/dri/", 9) != 0 || strlen(node) >= sizeof render_node_option
+	    || stat(node, &st) != 0 || !S_ISCHR(st.st_mode))
+		return false;
+	snprintf(render_node_option, sizeof render_node_option, "%s", node);
+	snprintf(render_node_buf, sizeof render_node_buf, "%s", node);
+	return true;
+}
+
+const char *child_render_node_requested(void)
+{
+	return render_node_option;
+}
+
+/*
+ * ⭐ 1.5 — the session's card, chosen ONCE and said ONCE (with PCI address,
+ *    driver and vendor:device, because «renderD129» alone does not say which
+ *    machine it is).
+ * ⚠ `final` = latch even without an answer: the encoder is about to open,
+ *   and the node must not move under it.  Without `final`, a compositor not
+ *   yet reachable (labwc still being born) is asked again at the next mount.
+ */
+static void choose_render_node(bool final)
+{
+	char node[64], why[256] = "", desc[160];
+	const char *come;
+	bool reached = false;
+
+	if (render_node_latched)
+		return;
+	if (render_node_of_compositor(node, sizeof node, why, sizeof why, &reached)) {
+		if (render_node_option[0] && strcmp(render_node_option, node) != 0)
+			registro_dice(LOG_CHILD,
+			              "⚠ --render-node %s is NOT the compositor's card (%s): the "
+			              "frames are on the compositor's, and the encoder goes there",
+			              render_node_option, node);
+		snprintf(render_node_buf, sizeof render_node_buf, "%s", node);
+		come = "the compositor's card (linux-dmabuf main_device)";
+	} else {
+		if (!reached && !final)
+			return; /* asked again at the next mount */
+		snprintf(render_node_buf, sizeof render_node_buf, "%s",
+		         render_node_option[0] ? render_node_option : RENDER_NODE);
+		come = render_node_option[0] ? "--render-node" : "the default " RENDER_NODE;
+	}
+	render_node_latched = true;
+	render_node_describe(render_node_buf, desc, sizeof desc);
+	registro_dice(LOG_CHILD, "⭐ the encoding card: %s (%s) — from %s%s%s", render_node_buf,
+	              desc, come, why[0] ? "; the compositor did not say it: " : "", why);
+}
 
 /* ⭐ PHASE 19 — THE CARD'S ROUTE (`DECISIONS.md` §10.27).  `card` = chosen BY
  *    CAPABILITY (Vulkan Video if available for that codec, otherwise VA-API),
@@ -5293,6 +5373,7 @@ static void slabs_per_route(void)
 	static bool decided = false;
 	bool vulkan;
 
+	choose_render_node(false);
 	if (decided)
 		return;
 	decided = true;
@@ -5326,6 +5407,7 @@ static void modifiers_per_route(void)
 	uint64_t m[16];
 	int n = 0;
 
+	choose_render_node(false);
 	if (decided || stage_route != CAPTURE_ROUTE_CARD)
 		return;
 	decided = true;
@@ -5373,6 +5455,9 @@ static Encoder *encoder_of(CodecVideo codec, uint8_t idx,
 
 	if (idx >= CODEC_MAX)
 		return NULL;
+	/* ⭐ 1.5: in the session, the card is latched before the first opening. */
+	if (in_session_child)
+		choose_render_node(true);
 
 	/* ⛔⭐ WITHOUT A NEGOTIATED DEPTH NOTHING OPENS, and it is not caution:
 	 *     opening one "just because" would mean choosing ourselves what §4.3
@@ -5953,7 +6038,7 @@ int child_test_encoding(int argc, char **argv)
 			codec = CODIFICATORE_HEVC;
 			idx = 1;
 		} else if (strcmp(argv[i], "--node") == 0 && i + 1 < argc) {
-			nodo_rendering = argv[++i];
+			snprintf(render_node_buf, sizeof render_node_buf, "%s", argv[++i]);
 		} else if (strcmp(argv[i], "--encoding-route") == 0 && i + 1 < argc
 		           && child_encoding_route(argv[i + 1])) {
 			i++;
@@ -7889,6 +7974,7 @@ void child_alive(int argc, char **argv)
 	/* `--internal-child <user> <uid> <gid> <w> <h> <serial> <survey>` */
 	if (argc < 9)
 		_exit(40);
+	in_session_child = true;
 	user = argv[2];
 	/* ⛔⭐ AND FROM HERE ON EVERY LINE OF THIS PROCESS SAYS WHOSE IT IS — 25
 	 *     Aug 2026, R10-A4 / P6.  The box is in `log.h`.
@@ -7956,6 +8042,10 @@ void child_alive(int argc, char **argv)
 		 *    recognised stays "card", and the encoder's line says so. */
 		else if (strcmp(argv[i], "--encoding-route") == 0 && i + 1 < argc)
 			child_encoding_route(argv[++i]);
+		/* ⭐ 1.5: the server's `--render-node`, repeated (the fallback when
+		 *    the compositor does not name its card). */
+		else if (strcmp(argv[i], "--render-node") == 0 && i + 1 < argc)
+			child_render_node(argv[++i]);
 		/* ⛔⭐ AND THIS ONE IS READ NEGATED, because it is born ON (24 Aug 2026):
 		 *     the word at the end is the EXCEPTION to the default.  ⚠ An absence
 		 *     here means "on", which is the opposite of the two lines above —

@@ -77,7 +77,7 @@ SORGENTI := main.c transport.c webtransport.c page.c command.c certificates.c \
             session.c capture.c mutter.c encoder.c vadirect.c \
             vulkanvideo.c bit_writer.c colors709.c audio.c sound.c \
             input.c keyboard.c cursor.c sentinel.c clipboard.c kwin.c \
-            clipboard_kde.c wlroots.c wlr_input.c shape.c rediscover.c
+            clipboard_kde.c wlroots.c wlr_input.c shape.c rediscover.c render_node.c
 OGGETTI  := $(SORGENTI:.c=.o)
 
 # -----------------------------------------------------------------------------
@@ -367,7 +367,7 @@ $(NOME): $(OGGETTI) $(PROTOCOLLI:%=%-protocol.o)
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-kwin.o appunti_kde.o wlroots.o wlr_input.o: $(PROTOCOLLI:%=%-client-protocol.h)
+kwin.o appunti_kde.o wlroots.o wlr_input.o render_node.o: $(PROTOCOLLI:%=%-client-protocol.h)
 
 # -----------------------------------------------------------------------------
 # ⭐ THE CAPTURE BENCH ON WLROOTS — `benches/13-w1-one-frame.c`.
@@ -508,6 +508,10 @@ sessione.o:       session.h log.h
 sentinella.o:     sentinel.h log.h
 # ⭐ PHASE 17, T7 — the live desktops left by a previous parent (logind and /proc).
 ritrovo.o:        rediscover.h
+# ⭐ 1.5 (SPECS audit, 15 Oct 2026) — which card encodes: the compositor's.
+#   (`child.o` has its header rule under the old name `figlio.o`, a dead rule: this one is spelled right.)
+render_node.o:    render_node.h kwin.h
+child.o:          render_node.h
 cattura.o:        capture.h log.h cursor.h
 mutter.o:         mutter.h log.h
 codificatore.o:   encoder.h log.h vadirect.h vulkanvideo.h bit_writer.h colors709.h
