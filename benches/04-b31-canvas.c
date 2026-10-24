@@ -216,10 +216,15 @@ static void g_on_log(void *ctx, const char *line)
 	if (verbose)
 		printf("      | %s\n", line);
 }
-static bool g_verify(void *ctx, const char *user, const char *password)
+/* D4b: the synchronous `verify` hook is gone — the bench logs in the way the server does: the check is ASKED (`ask_verify`)
+ * and its outcome comes back through `rcp_verdict()` (see `open_session()`). */
+static bool g_credentials_ok;
+static bool g_ask(void *ctx, const char *user, const char *password, uint64_t *ticket)
 {
 	(void)ctx;
-	return strcmp(user, "prova") == 0 && strcmp(password, "prova2026") == 0;
+	g_credentials_ok = strcmp(user, "prova") == 0 && strcmp(password, "prova2026") == 0;
+	*ticket = 1;
+	return true;
 }
 
 /* ⛔ THE FOUR VIDEO HOOKS — 11 Oct 2026.  Since `0b84a5b` (22 Sep 2026,
@@ -349,7 +354,7 @@ static rcp_session *open_session(uint32_t canvas_w, uint32_t canvas_h,
 	g.send_msg = g_send;
 	g.close = g_on_close;
 	g.record = g_on_log;
-	g.verify = g_verify;
+	g.ask_verify = g_ask;
 	if (with_hooks) {
 		g.recanvas = g_recanvas;
 		g.stage_canvas = g_stage_canvas;
@@ -395,6 +400,7 @@ static rcp_session *open_session(uint32_t canvas_w, uint32_t canvas_h,
 	putstr(&p, "prova2026");
 	n = frame_message(envelope, T_CREDENTIALS, body, (size_t)(p - body));
 	rcp_receive(s, envelope, n, clock);
+	(void)rcp_verdict(s, 1, g_credentials_ok, clock);
 	/* ⛔ §4.4-bis: the fixed second.  Time is made to flow, which is what the
 	 *    server's `poll` loop would do. */
 	clock += 1500;

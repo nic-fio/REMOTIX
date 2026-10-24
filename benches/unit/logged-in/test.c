@@ -13,7 +13,11 @@
  *   2. a yes in hand, before the fixed second: NOT logged in;
  *   3. after ADMITTED: logged in;
  *   4. a finished session: not logged in;
- *   5. ⛔ the check that says NO: a wrong password is never logged in.
+ *   5. ⛔ the check that says NO: a wrong password is never logged in;
+ *   6-7. (D4b of §11.50) the helper's «not checked» — `rcp_refusal_unchecked(ticket)` around the verdict — is refused as OURS,
+ *        `0x0E` and never `0x07`, and not logged in;
+ *   8-9. (D4b) a host WITHOUT the asynchronous hook (the helper not started) has its login refused the same way, `0x0E`:
+ *        there is no synchronous PAM fallback any more.
  *
  * BUILD AND RUN (a few seconds; nothing under /media/REMOTIX-15 is written; the real rcp.c of BOTH trees, src and the benches/rcp twin; run from the root of the tree):
  *   nice -n 19 ionice -c3 podman run --rm --network=none --cpus=2 --memory=2g -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
@@ -33,7 +37,7 @@
 #include <string.h>
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 5
+#define EXPECTED_CHECKS 9
 
 static void require(int cond, const char *desc)
 {
@@ -49,7 +53,9 @@ enum { T_HELLO = 0x0001, T_HERE_I_AM = 0x0002, T_CREDENTIALS = 0x0003,
 
 struct guest {
 	int here_i_am, admitted, rejected;
+	int reason; /* the byte of the last REJECTED, -1 = none */
 };
+static bool no_ask; /* D4b: open_waiting() leaves the asynchronous hook out */
 
 static void o_send(void *ctx, const uint8_t *data, size_t len)
 {
@@ -61,18 +67,13 @@ static void o_send(void *ctx, const uint8_t *data, size_t len)
 		o->here_i_am++;
 	else if (kind == T_ADMITTED)
 		o->admitted++;
-	else if (kind == T_REJECTED)
+	else if (kind == T_REJECTED) {
 		o->rejected++;
+		o->reason = len > 6 ? data[6] : -1;
+	}
 }
 static void o_close(void *ctx, uint8_t reason) { (void)ctx; (void)reason; }
 static void o_log(void *ctx, const char *line) { (void)ctx; (void)line; }
-static bool o_verify(void *ctx, const char *u, const char *p)
-{
-	(void)ctx;
-	(void)u;
-	(void)p;
-	return false; /* never used: the asynchronous road below */
-}
 static bool o_ask(void *ctx, const char *u, const char *p, uint64_t *ticket)
 {
 	(void)ctx;
@@ -117,13 +118,13 @@ static rcp_session *open_waiting(const char *provenance, uint64_t now, struct gu
 	int how_many = 0;
 
 	memset(o, 0, sizeof *o);
+	o->reason = -1;
 	memset(g, 0, sizeof *g);
 	g->ctx = o;
 	g->send_msg = o_send;
 	g->close = o_close;
 	g->record = o_log;
-	g->verify = o_verify;
-	g->ask_verify = o_ask;
+	g->ask_verify = no_ask ? NULL : o_ask;
 	rcp_session *s = rcp_open(g, provenance, now);
 	if (!s)
 		return NULL;
@@ -171,6 +172,62 @@ int main(void)
 	rcp_dismiss(s, RCP_LOCAL_SESSION_PREVAILED, "a local session");
 	require(s && !rcp_logged_in(s), "a finished session: not logged in");
 	rcp_free(s);
+
+	printf("  a check the helper could not make (D4b)\n");
+	rcp_unblock("[10.0.29.3]", T);
+	s = open_waiting("[10.0.29.3]:1", T, &o, &g);
+	rcp_refusal_unchecked(77);
+	if (s)
+		rcp_verdict(s, 77, false, T + 300);
+	rcp_refusal_unchecked(0);
+	rcp_time(s, T + 1001);
+	require(s && o.rejected == 1 && o.reason == 0x0E && !rcp_logged_in(s),
+	        "a «not checked» is refused as OURS: 0x0E, not 0x07, not logged in");
+	rcp_free(s);
+	/* …and it was not counted: 20 more «not checked» from the same key would have banned it if they were failures */
+	{
+		bool banned = false;
+		for (int k = 0; k < 20 && !banned; k++) {
+			s = open_waiting("[10.0.29.3]:1", T + 2000 + (uint64_t)k * 2000, &o, &g);
+			if (!s) {
+				banned = true;
+				break;
+			}
+			rcp_refusal_unchecked(77);
+			rcp_verdict(s, 77, false, T + 2300 + (uint64_t)k * 2000);
+			rcp_refusal_unchecked(0);
+			rcp_time(s, T + 3001 + (uint64_t)k * 2000);
+			banned = o.reason != 0x0E;
+			rcp_free(s);
+		}
+		require(!banned, "twenty «not checked» in a row ban nobody (always 0x0E, never the ban's 0x08)");
+	}
+
+	printf("  a host without the asynchronous hook (D4b)\n");
+	rcp_unblock("[10.0.29.4]", T);
+	no_ask = true;
+	s = open_waiting("[10.0.29.4]:1", T, &o, &g);
+	no_ask = false;
+	rcp_time(s, T + 1001);
+	require(s && o.rejected == 1 && o.reason == 0x0E && !rcp_logged_in(s),
+	        "no helper hook: refused as OURS (0x0E), no synchronous PAM");
+	rcp_free(s);
+	{
+		bool banned = false;
+		no_ask = true;
+		for (int k = 0; k < 20 && !banned; k++) {
+			s = open_waiting("[10.0.29.4]:1", T + 2000 + (uint64_t)k * 2000, &o, &g);
+			if (!s) {
+				banned = true;
+				break;
+			}
+			rcp_time(s, T + 3001 + (uint64_t)k * 2000);
+			banned = o.reason != 0x0E;
+			rcp_free(s);
+		}
+		no_ask = false;
+		require(!banned, "twenty refusals for a missing hook ban nobody (always 0x0E)");
+	}
 
 	printf("  a wrong password\n");
 	s = open_waiting("[10.0.29.2]:1", T, &o, &g);

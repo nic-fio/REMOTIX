@@ -805,7 +805,11 @@ dead or restarting, or the question to it could not leave — the server refuses
 is **not counted** (the refusals that are our defect, in the table of §4.4-bis). Refusals PAM decided stay
 `WRONG_CREDENTIALS`, and so does a PAM answer that says it could not judge (it can depend on the user name), and
 so does an attempt **without a verdict** (the helper's timeout, the server's 12 s ceiling): that one **is counted**,
-so on the wire «counted» is exactly `0x07`, and the limiter's own refusals (`0x08`) are untouched. ⛔ One exception: the no PAM gives while `pam_faillock` has the account locked, for a key with an admitted login in the last 30 days (§11.47 B), is **not counted**, yet goes out as `0x07`, because `0x0E` would reveal that the account exists. ⛔ The rule that bounds it: **the reason may not say more than the timing
+so on the wire «counted» is exactly `0x07`, and the limiter's own refusals (`0x08`) are untouched. ⭐ *(D4b of §11.50)* There is **no synchronous PAM
+fallback**: a server without its checking process (down, never started, not yet restarted) does not call PAM inside its loop,
+it refuses with `0x0E`, not counted, and gives the booking back. The checking process is **started again by itself** (pauses
+1 s, 2 s, 4 s … 60 s), so the refusal lasts only while it is down. A check the checking process itself could not start (its own cap
+of 32 grandchildren, or a failed `fork`) is the same case, `0x0E`. ⛔ One exception: the no PAM gives while `pam_faillock` has the account locked, for a key with an admitted login in the last 30 days (§11.47 B), is **not counted**, yet goes out as `0x07`, because `0x0E` would reveal that the account exists. ⛔ The rule that bounds it: **the reason may not say more than the timing
 already says** — this one says nothing about the user or the password, because neither was judged. The client
 **MUST NOT** retry by itself on this reason: a new attempt is the user's gesture, as for any `REJECTED`.
 

@@ -184,9 +184,11 @@ int helper_in_flight(const helper *a);
  *   `helper_turn_on_root()` starts the real dispatcher (the same `spawn()`,
  *   restart and watchdog) but nothing of `rcp.c` is touched: every request in
  *   flight ends in ONE call of `cb` — outcome 1 admitted, 0 refused, 2 refused
- *   while `pam_faillock` held the account, 3 not checked (expiry, the
- *   dispatcher died, the dispatcher's own cap of 16).  The product (single
- *   process) keeps using `helper_turn_on()` and `HelperVerdict`.
+ *   while `pam_faillock` held the account, 3 not checked (the dispatcher's own
+ *   cap, a `fork` that failed there, the dispatcher died, or it is down) — OUR
+ *   defect, never counted — and 4 expired (no answer in 8 s: it COUNTS as a
+ *   failed attempt, the 24 Oct 2026 decision).  The product (single process)
+ *   keeps using `helper_turn_on()` and `HelperVerdict`.
  *   ⚠ The same loop calls `helper_move()` / `helper_expired()` on it. */
 typedef void (*HelperOutcome)(void *ctx, uint64_t ticket, int outcome,
                               const char *user, const char *rhost);
