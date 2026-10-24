@@ -616,6 +616,133 @@ void render_grant_remove(const char *user, uid_t uid, gid_t gid)
 	            user, (long)gid);
 }
 
+/* ⭐ phase D2: added here and NOT yet used by `render_grant_sweep()` below,
+ *    which still asks `rediscover_alive()` (the single-process server may use
+ *    GDBus).  The sweep switches to this function when the root side exists. */
+/* ⭐⭐ 1.5 (DECISIONS.md §11.50) — logind's own files, not its bus.  The sweep
+ *     runs in the ROOT SIDE, which forks the children and must stay
+ *     single-threaded: `rediscover_alive()` opens the system bus with GDBus,
+ *     and GDBus starts a worker thread for the life of the process (inventory
+ *     D, FLAG 2).  `/run/systemd/sessions/<id>` is what logind itself writes:
+ *     `UID=`, `SERVICE=` (the PAM service), `STATE=` (online, active,
+ *     closing), `SCOPE=` (the session's cgroup scope).  ⚠ A live `remotix`
+ *     session is enough to KEEP a grant: it no longer asks for a live stage in
+ *     /proc — keeping is the safe side.
+ * ⛔ «closing» is NOT «over» (`[M]` 16 Oct 2026, alma10, enforcing,
+ *    `--abandon-s 45`): a desktop FOUND AGAIN after a restart is ALWAYS in a
+ *    closing session — its leader was the old child, which is dead — while its
+ *    programs live on in the scope.  Refusing «closing» refused every
+ *    CLOSE_ORPHAN, the one request that exists for exactly that desktop, and the
+ *    abandoned session stayed open forever.  1.0 judged by a live process in the
+ *    session (`rediscover.c`: the stage's cgroup is the session's scope); here,
+ *    without walking /proc: a closing session is alive while its scope's
+ *    `cgroup.procs` lists a process, over when it lists none (or the scope is
+ *    gone).  A scope that cannot be read says «I do not know» (-1): CLOSE_ORPHAN
+ *    wants a 1 and is refused, the sweep keeps the grant — the safe side both
+ *    times. */
+
+/* 1 a process is in the scope · 0 none · -1 cannot tell.  `scope` comes from a
+ * file logind writes, still checked: `session-<id>.scope`, no '/' and no "..". */
+static int scope_has_process(const char *cgroup_root, uid_t uid, const char *scope)
+{
+	char path[512];
+	size_t n = strlen(scope);
+	FILE *f;
+	int c, r;
+
+	if (n < 15 || n > 200 || strncmp(scope, "session-", 8) != 0 ||
+	    strcmp(scope + n - 6, ".scope") != 0 || strchr(scope, '/') || strstr(scope, ".."))
+		return -1;
+	snprintf(path, sizeof path, "%s/user.slice/user-%lu.slice/%s/cgroup.procs", cgroup_root,
+	         (unsigned long)uid, scope);
+	f = fopen(path, "re");
+	if (!f)
+		return errno == ENOENT ? 0 : -1; /* logind removes the scope once it is empty */
+	c = fgetc(f);
+	r = (c >= '0' && c <= '9') ? 1 : (ferror(f) ? -1 : 0);
+	fclose(f);
+	return r;
+}
+
+int render_grant_remotix_session_at(const char *sessions_dir, const char *cgroup_root, uid_t uid)
+{
+	DIR *d = opendir(sessions_dir);
+	struct dirent *e;
+	int found = 0;
+	bool unknown = false;
+
+	if (!d)
+		return -1;
+	char *line = NULL;
+	size_t cap = 0;
+
+	while (!found && (e = readdir(d)) != NULL) {
+		char path[600], scope[256] = "";
+		bool uid_seen = false, service_seen = false, state_seen = false, scope_seen = false;
+		bool uid_ok = false, service_ok = false, closing = false;
+		ssize_t n;
+		FILE *f;
+
+		if (e->d_name[0] == '.' || strchr(e->d_name, '.'))
+			continue; /* `.ref` pipes and temporary files */
+		snprintf(path, sizeof path, "%s/%s", sessions_dir, e->d_name);
+		f = fopen(path, "re");
+		if (!f)
+			continue;
+		/* ⛔ WHOLE lines, and the FIRST of each key (review of the split,
+		 *    finding 9): with 256-byte `fgets` chunks the tail of a long
+		 *    line — a value the user had a say in — was read as a line of
+		 *    its own, and a later `UID=` overrode the first.  A line over
+		 *    4 KiB is no key logind writes: skipped whole.  The number is
+		 *    all digits or it is no uid. */
+		while ((n = getline(&line, &cap, f)) > 0) {
+			char *end = NULL;
+			unsigned long v;
+
+			if (n > 4096)
+				continue;
+			line[strcspn(line, "\n")] = 0;
+			if (!uid_seen && strncmp(line, "UID=", 4) == 0) {
+				uid_seen = true;
+				errno = 0;
+				v = strtoul(line + 4, &end, 10);
+				uid_ok = line[4] >= '0' && line[4] <= '9' && errno == 0 && *end == 0
+				         && v == (unsigned long)uid;
+			} else if (!service_seen && strncmp(line, "SERVICE=", 8) == 0) {
+				service_seen = true;
+				service_ok = strcmp(line + 8, "remotix") == 0;
+			} else if (!state_seen && strncmp(line, "STATE=", 6) == 0) {
+				state_seen = true;
+				closing = strcmp(line + 6, "closing") == 0;
+			} else if (!scope_seen && strncmp(line, "SCOPE=", 6) == 0) {
+				scope_seen = true;
+				if (strlen(line + 6) < sizeof scope)
+					snprintf(scope, sizeof scope, "%s", line + 6);
+			}
+		}
+		fclose(f);
+		if (!uid_ok || !service_ok)
+			continue;
+		if (!closing) {
+			found = 1;
+			continue;
+		}
+		switch (scope[0] ? scope_has_process(cgroup_root, uid, scope) : -1) {
+		case 1:  found = 1; break;
+		case -1: unknown = true; break;
+		default: break; /* closing and empty: that desktop is over */
+		}
+	}
+	free(line);
+	closedir(d);
+	return found ? 1 : (unknown ? -1 : 0);
+}
+
+int render_grant_remotix_session(uid_t uid)
+{
+	return render_grant_remotix_session_at("/run/systemd/sessions", "/sys/fs/cgroup", uid);
+}
+
 /* ⭐ What the sweep does and does NOT do (review of 24 Oct 2026).  It runs at start-up and
  *   takes back a grant only when no REMOTIX desktop of that user is alive.  A desktop that
  *   SURVIVED the shutdown of the service is alive (`children_turn_off()` deliberately leaves
