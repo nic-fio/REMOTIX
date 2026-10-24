@@ -42,6 +42,7 @@
  *
  * ORACLES.  ASan + UBSan (halt), -rss_limit_mb / -malloc_limit_mb, and ASSERTIONS (a failed one prints «INVARIANT:» and traps):
  *  H1 a response is well framed: «HTTP/1.1 NNN», headers, a blank line, `Content-Length` = the bytes that follow, NOTHING after;
+ *     PAGE_SECURITY on every response (not only the html one);
  *     one response per connection (a pipelined second request never gets a second answer); the isolation headers, `Cache-Control:
  *     no-store`, `nosniff`, `Connection: close` always
  *  H2 the status is the one an INDEPENDENT reading of the request gives: 400 (no second space in the request LINE, or an obs-fold
@@ -148,12 +149,21 @@ static bool fz_rcp_banned(const char *address, uint64_t now, uint64_t *remain);
 #define RAND_bytes(b, n) fz_RAND_bytes(b, n)
 #define rcp_banned(a, n, r) fz_rcp_banned(a, n, r)
 
-/* ⚠ `DIARY_ON` is used by page.c (§11.10) and defined NOWHERE in port-pagina or integrazione2 (it was in the abandoned tree): page.c does
- *   not compile there as it is.  The harness gives it the value of a normal build; if the tree defines it, that one wins. */
-#ifndef DIARY_ON
-#define DIARY_ON "no"
-#endif
 #include "page.c"
+
+#undef SSL_new
+#undef SSL_free
+#undef SSL_set_fd
+#undef SSL_ctrl
+#undef SSL_set_accept_state
+#undef SSL_accept
+#undef SSL_get_error
+#undef SSL_read_ex
+#undef SSL_write_ex
+#undef SSL_shutdown
+#undef SSL_get_state
+#undef ERR_clear_error
+#undef RAND_bytes
 
 #undef malloc
 #undef calloc
@@ -944,6 +954,9 @@ static void check_response(fconn *c)
 	}
 	hl = (size_t)(eoh - o) + 4;
 #define HAS(s) (find_mem(o, hl, s) != NULL)
+	/* the page's security headers (CSP, Referrer-Policy, Permissions-Policy) are on EVERY response of this page.c, errors and JSON included */
+	if (!find_mem(o, hl, PAGE_SECURITY))
+		FAIL("H1: a %d response without PAGE_SECURITY", status);
 	if (!HAS("Cross-Origin-Opener-Policy: same-origin\r\n") || !HAS("Cross-Origin-Embedder-Policy: require-corp\r\n") ||
 	    !HAS("Cross-Origin-Resource-Policy: same-origin\r\n") || !HAS("Cache-Control: no-store\r\n") ||
 	    !HAS("X-Content-Type-Options: nosniff\r\n") || !HAS("Connection: close\r\n"))
@@ -1373,7 +1386,7 @@ static page *make_page(bool big)
 	page *p = fz_calloc(1, sizeof *p);
 	size_t off = 0;
 	static const char HEAD[] =
-	    "<!doctype html><html><head><title>t</title></head><body data-fp=\"__FINGERPRINT__\" data-diary=\"__DIARY__\">"
+	    "<!doctype html><html><head><title>t</title></head><body data-fp=\"__FINGERPRINT__\">"
 	    "<div id=\"s\" data-banned=\"__BANNED__\" data-remaining-ms=\"__REMAINING_MS__\">__WARNING__</div>";
 	size_t filler = big ? 200 * 1024 : 2000;
 	HTML = (malloc)(sizeof HEAD + filler + 64);

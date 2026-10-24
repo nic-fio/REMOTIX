@@ -34,12 +34,12 @@ fi
 mkdir -p "$OUT/corpus" || exit 2
 cp "$BUILD"/seeds/page/* "$OUT/corpus/" 2>/dev/null
 INIZIO=$(date -u "+%F %H:%M"); COSA="fuzzing: page (listener HTTP della pagina), 1 processo, ${SECONDS_MAX} s"
-printf "%s | remotix-15 | inizio | %s | 1 core | 1 GB | %s s |\n" "$INIZIO" "$COSA" "$SECONDS_MAX" >> "$SHARE" 2>/dev/null
+printf "%s | remotix-15 | inizio | %s | 1 core | 2-3 GB | %s s |\n" "$INIZIO" "$COSA" "$SECONDS_MAX" >> "$SHARE" 2>/dev/null
 end() { printf "%s | remotix-15 | fine | [inizio %s] %s | - | - | -\n" "$(date -u "+%F %H:%M")" "$INIZIO" "$COSA" >> "$SHARE" 2>/dev/null; }
 trap end EXIT
 trap 'exit 130' INT TERM HUP
 echo "== page, ${SECONDS_MAX} s, output $OUT"
-nice -n 19 ionice -c3 podman run --rm --cpus=1 --userns=keep-id -v "$BUILD:/build:ro" -v "$OUT:/out" -w /out "$IMAGE" \
+nice -n 19 ionice -c3 podman run --rm --cpus=1 --memory=3g --network=none --pull=never --userns=keep-id -v "$BUILD:/build:ro" -v "$OUT:/out" -w /out "$IMAGE" \
 	/build/bin/page -max_total_time="$SECONDS_MAX" -artifact_prefix=/out/crash- -dict=/build/page.dict \
 	-rss_limit_mb=2048 -malloc_limit_mb=8 -print_final_stats=1 /out/corpus > "$OUT/run.log" 2>&1
 rc=$?
