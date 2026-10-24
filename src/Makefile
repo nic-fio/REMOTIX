@@ -322,7 +322,7 @@ LIBS := -lngtcp2_crypto_ossl -lngtcp2 -lnghttp3 -lssl -lcrypto -lpam \
 #   ⛔ but depending on that detail means breaking on a different libc
 #   with an error that does not name the phase that introduced it.
 
-.PHONY: all clean deps fingerprints bench-w1 FORCE
+.PHONY: all clean deps fingerprints bench-w1 test-colors709 FORCE
 
 all: fingerprints $(NOME)
 
@@ -394,6 +394,20 @@ $(BANCO_W1): ../benches/13-w1-one-frame.c wlroots.o registro.o \
 
 bench-w1: $(BANCO_W1)
 
+
+# ⭐ 15 Oct 2026 — the desk test of the LAST rows of the 4:2:0 conversion
+#    (`colors709.c`), the arithmetic of F-011's green last row, and the padding
+#    of the card's aligned surface: see the box at the top of
+#    `benches/23-colors709-edge-test.c`.  Built twice, with the SSE2 and with
+#    the plain C (`COLORS709_NO_SIMD`): two codes, one answer.
+#    ⛔ A fresh `mktemp -d`: here a binary is built AND run.
+test-colors709: ../benches/23-colors709-edge-test.c colors709.c colors709.h
+	@set -e; d=$$(mktemp -d "$${TMPDIR:-/tmp}/remotix-test-colors709.XXXXXX"); \
+	trap 'rm -rf "$$d"' EXIT; \
+	$(CC) $(CFLAGS) -I. -o "$$d/simd" ../benches/23-colors709-edge-test.c colors709.c -lm; \
+	$(CC) $(CFLAGS) -I. -DCOLORS709_NO_SIMD -o "$$d/c" \
+	  ../benches/23-colors709-edge-test.c colors709.c -lm; \
+	"$$d/simd"; "$$d/c"
 
 %-client-protocol.h: protocols/%.xml
 	$(SCANNER) client-header $< $@
