@@ -46,7 +46,7 @@
  *    3 TIME     u16 ms (× 256 if sel & 1); then `transport_wait_ms()` and `transport_expired()`
  *    4 WT       the played WebTransport of `sel`: a0-1 callback failure mask, a2 % 32 packets
  *               to write (a2 bit 5: in wait-verdict the refusal is OURS, made without PAM —
- *               `wt_refused_without_pam()`), a3-4 their length, a5 bits: 0 wt_write fails · 1 dead line fires ·
+ *               [a2 bit 5 unused in this branch]), a3-4 their length, a5 bits: 0 wt_write fails · 1 dead line fires ·
  *               2 more to say · 3 heartbeat in a6 × 4 ms · 4 no heartbeat · 5-7 the RCP
  *               state `wt_rcp_state()` answers (`RXQ_STATE_NAMES`); a7-10 PAM ticket
  *    5 VERDICT  a0-3 ticket (sel & 1: the one `sel` waits for), a4 bit 0 admitted, bit 1 resumed
@@ -686,10 +686,10 @@ static size_t own_from(const place *p, bool is48)
 	return n;
 }
 
-/* The eviction rank as the decision says it (lower goes first, -1 never): not logged in,
- * alive, and finished or wait-verdict with a refusal of OURS (0), without a session (1),
- * wait-hello (2), wait-credentials (3); never wait-verdict while PAM judges.  ⚠ Since
- * the review of 4f52eab8 ranks 1–3 only say «evictable» (the oldest goes, see below). */
+/* The eviction rank as evict_rank() of this branch says it (lower goes first, -1 never): not
+ * logged in, alive, and finished (0), without a session (1), wait-hello (2), wait-credentials (3);
+ * NEVER wait-verdict (PAM is judging it; the rule «a wait-verdict refused by us without PAM is
+ * evictable» belongs to the discarded attempt's later commits, not to this branch). */
 static int own_rank(connection *c)
 {
 	uint8_t st = rxq_reg_of(c->conn)->wt_state % RXQ_ST_N;
@@ -697,7 +697,7 @@ static int own_rank(connection *c)
 		return -1;
 	switch (st) {
 	case RXQ_ST_FINISHED: return 0;
-	case RXQ_ST_VERDICT: return rxq_reg_of(c->conn)->wt_ours ? 0 : -1;
+	case RXQ_ST_VERDICT: return -1;
 	case RXQ_ST_NONE: return 1;
 	case RXQ_ST_HELLO: return 2;
 	case RXQ_ST_CREDENTIALS: return 3;
@@ -1085,7 +1085,7 @@ static void op_wt(uint8_t sel, const uint8_t *a, size_t n)
 	r->wt_dead_line = (z[5] >> 1) & 1;
 	r->wt_more_to_say = (z[5] >> 2) & 1;
 	r->wt_state = (uint8_t)(((z[5] >> 5) & 7) % RXQ_ST_N);
-	r->wt_ours = (z[2] >> 5) & 1; /* a2 bit 5: in wait-verdict, refused without PAM */
+	/* a2 bit 5: unused in this branch (it was «wait-verdict refused without PAM»); kept so the corpus format does not change */
 	if (z[5] & 8)
 		r->wt_beat_at = rxq_now_ns + (uint64_t)z[6] * 4 * NGTCP2_MILLISECONDS;
 	else if (z[5] & 16)

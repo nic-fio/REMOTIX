@@ -879,8 +879,7 @@ ngtcp2_ssize ngtcp2_conn_write_connection_close_versioned(ngtcp2_conn *c, ngtcp2
 		if (ccerr->reasonlen >= 11 && memcmp(ccerr->reason, "server full", 11) == 0) {
 			/* ⭐ never a logged-in or wait-verdict connection (the box on
 			 *    MAX_CONNECTIONS), however the newcomers came */
-			if (c->reg->logged_in || after_credentials ||
-			    (st == RXQ_ST_VERDICT && !c->reg->wt_ours))
+			if (c->reg->logged_in || after_credentials || st == RXQ_ST_VERDICT)
 				DIE("connection #%td EVICTED %s (%s)", c->reg - rxq_conns,
 				    c->reg->logged_in ? "after it logged in" : "after its credentials",
 				    RXQ_STATE_NAMES[st]);
@@ -1490,11 +1489,6 @@ void wt_dismiss(wt *w, uint8_t reason, const char *detail)
 }
 bool wt_ha_da_dire(const wt *w) { return W((wt *)w, __func__, false)->reg->wt_more_to_say; }
 /* the names `rcp_state_name()` gives (rcp.c's STATE_NAMES) */
-bool wt_refused_without_pam(const wt *w)
-{
-	W((wt *)w, __func__, false);
-	return w->reg->wt_state % RXQ_ST_N == RXQ_ST_VERDICT && w->reg->wt_ours;
-}
 /* `rcp_awaits_verdict()` played on the same ticket wt_verdict() takes */
 bool wt_awaits_verdict(const wt *w, uint64_t ticket)
 {

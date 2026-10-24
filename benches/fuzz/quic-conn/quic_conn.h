@@ -171,8 +171,6 @@ typedef struct {
 	                         it 100 ms later */
 	bool wt_dead_line, wt_more_to_say;
 	uint64_t wt_ticket;   /* the PAM request this `wt` waits for (0 = none) */
-	bool wt_ours;         /* in wait-verdict, the refusal is OURS, made without PAM
-	                         (`wt_refused_without_pam()`): evictable */
 	uint8_t wt_state;     /* what `wt_rcp_state()` answers: `RXQ_STATE_NAMES[wt_state]`
 	                         (an admitted verdict makes it «wait-attach», as `rcp.c`
 	                         would after its second) */
@@ -226,7 +224,9 @@ extern unsigned rxq_retries;
 extern void (*rxq_on_birth)(const uint8_t *token, size_t len);
 
 /* The RCP states the played `wt_rcp_state()` answers (0 = no WebTransport session yet). */
-/* transport.c's PRELOGIN_MOVES_MAX (fuzz_quic_conn.c asserts they are equal) */
+/* The pre-login path-change cap of the discarded attempt's later commits (PRELOGIN_MOVES_MAX).  This branch's
+ * transport.c has no such cap: nothing asserts it any more and the «too many path changes» branch of
+ * stubs_quic.c is dead here. */
 #define RXQ_MOVES_MAX 16
 
 enum { RXQ_ST_NONE, RXQ_ST_HELLO, RXQ_ST_CREDENTIALS, RXQ_ST_VERDICT, RXQ_ST_ATTACH,
