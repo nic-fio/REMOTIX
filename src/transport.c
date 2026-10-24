@@ -240,6 +240,9 @@ struct transport {
 	/* the «new connection» lines (BIRTH_LINES) */
 	ngtcp2_tstamp birth_window_ns;
 	unsigned births_in_window, births_quiet;
+	/* the «connection … closed» lines of connections that NEVER logged in (BIRTH_LINES too) */
+	ngtcp2_tstamp close_window_ns;
+	unsigned closes_in_window, closes_quiet;
 
 	entry_cid *cids;
 	size_t ncids, capcids;
@@ -671,6 +674,20 @@ static void connection_free(transport *t, connection *c)
 	free(c);
 }
 
+/* The count of the «closed» lines of never-logged-in connections not written, at the end of
+ * their window (the same REFUSAL_LOG_S as the births). */
+static void closes_report(transport *t, ngtcp2_tstamp now)
+{
+	if (now - t->close_window_ns < REFUSAL_LOG_S * NGTCP2_SECONDS)
+		return;
+	if (t->closes_quiet)
+		registro_dice(REG_QUIC, "%u more never-logged-in connections ended in the last %d s, "
+		              "not written one by one (%u written)", t->closes_quiet, REFUSAL_LOG_S,
+		              t->closes_in_window - t->closes_quiet);
+	t->close_window_ns = now;
+	t->closes_in_window = t->closes_quiet = 0;
+}
+
 static void reap_dead(transport *t)
 {
 	connection **p = &t->prime;
@@ -678,8 +695,22 @@ static void reap_dead(transport *t)
 		connection *c = *p;
 		if (c->dead_run) {
 			*p = c->upcoming;
-			registro_dice(REG_QUIC, "connection with %s closed (%zu left)",
-			              c->provenance, t->how_many - 1);
+			/* ⭐ only the connections that NEVER logged in (`unlogged` still set) are limited to
+			 * BIRTH_LINES per window; the closing of a session that logged in is always written. */
+			if (c->unlogged) {
+				closes_report(t, now_ns());
+				if (++t->closes_in_window <= BIRTH_LINES) {
+					registro_dice(REG_QUIC, "connection with %s closed (%zu left)",
+					              c->provenance, t->how_many - 1);
+				} else {
+					t->closes_quiet++;
+					log_detail(REG_QUIC, "connection with %s closed (%zu left)",
+					           c->provenance, t->how_many - 1);
+				}
+			} else {
+				registro_dice(REG_QUIC, "connection with %s closed (%zu left)",
+				              c->provenance, t->how_many - 1);
+			}
 			if (c->unlogged) {
 				c->unlogged = false;
 				t->unlogged--;
@@ -1870,6 +1901,8 @@ void transport_expired(transport *t)
 	refusals_report(t, now);
 	if (t->births_quiet)
 		births_report(t, now);
+	if (t->closes_quiet)
+		closes_report(t, now);
 	transport_write(t);
 }
 
