@@ -29,15 +29,14 @@ IS announced.  So:
   Both RED ⇒ the fault pass is PASS (the test can give red).  The real contrast with the 1.0 binary is the other
   run (`REMOTIX_SUITE=<1.0 tree>` on a 1.0 box): there F-014E must be RED.
 
-⚠ Applicability.  Written for KDE (wlr-data-control: `wl-copy` works in the session).  On the other desktops the same
-case is tried: if the product writes NO line at all about the copy within 10 s (Mutter has no data-control, so
-`wl-copy` is never served; or the desktop's module is another), the outcome is N/A (`S.NA`: neither green nor red, it
-does not count for the exit code) on a suite that has `NA` (branch banchi-1-5); on the suite of package 1, which has
-not, it falls back to BLOCKED.  Where a line does come («not announced»
-in `clipboard.c`) the test is a real one.  Only Firefox and Chrome on the server (the phone has no `wl-copy`).
+⚠ Applicability.  KDE only (`DESKTOPS = ("kde",)`: wlr-data-control, `wl-copy` works in the session; 15-round.py does not launch
+the test on the other desktops and it does not count in the exit code).  If on KDE the product writes NO line at all about the
+copy within 10 s, or `wl-copy` is missing, the outcome is BLOCKED.  Only Firefox and Chrome on the server (the phone has no
+`wl-copy`).
 """
 import base64
 import os
+import re
 import sys
 import time
 
@@ -45,20 +44,23 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import suite as S                                                     # noqa: E402
 
 FUNCTIONS = ("F-014E",)
+DESKTOPS = ("kde",)      # read by 15-round.py: on the other desktops the test is NOT launched (wl-copy is not served there)
 TYPE = "text/plain;charset=utf-8"
 NOT_ANNOUNCED = "with a zero in the middle — not announced"
-COPIED = "the session copied"
+COPIED = "the session copied"        # (only in the messages)
+# ⚠ Only the REAL announcement counts: «the session copied N bytes of text» (clipboard_kde.c).  The products' rejections start
+#   with «the session copied …» too («… something that is not text (…): not announced»; «⛔ … some text but no type of it
+#   could be read»): they are NOT announcements.
+ANNOUNCED = re.compile(r"the session copied \d+ bytes of text")
 WAIT_LOG_S = 10.0
-# «does not apply here»: the suite of branch banchi-1-5 has `S.NA` (N/A, neither green nor red); the suite of package 1
-# has not, and there the outcome is BLOCKED (it is what package 1 uses for what cannot be judged).
-NA = getattr(S, "NA", S.BLOCKED)
+NA = S.BLOCKED          # what cannot be judged on KDE (no line at all about the copy, no wl-copy) is a real problem: BLOCKED
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE PURE FUNCTIONS
 # ═══════════════════════════════════════════════════════════════════════════
 def copied_lines(lines):
-    return [l for l in lines if COPIED in l]
+    return [l for l in lines if ANNOUNCED.search(l)]
 
 
 def refused_lines(lines):
@@ -70,8 +72,8 @@ def judge_zero(lines_zero, lines_normal, pids_before, pids_after, normal_bytes):
     that follows; pids_*: the tenant's child process(es) before and after; normal_bytes: its UTF-8 length."""
     no, yes = refused_lines(lines_zero), copied_lines(lines_zero)
     if not no and not yes:
-        return NA, ("not applicable on this desktop: the product wrote no line at all about the copy (no «%s», no «%s») "
-                    "within %.0f s: wl-copy is not served here, or its clipboard module is another"
+        return NA, ("cannot be judged: the product wrote no line at all about the copy (no «%s», no «%s») "
+                    "within %.0f s: wl-copy is not served here, or the clipboard module is not running"
                     % (NOT_ANNOUNCED, COPIED, WAIT_LOG_S))
     if yes and not no:
         return S.FAIL, "the text with a zero was ANNOUNCED (what the 1.0 does): %s" % yes[0][-90:].strip()
@@ -100,8 +102,17 @@ def certify():
         ("no child before ⇒ FAIL", judge_zero(ok_zero, ok_norm, "", "", n)[0] == S.FAIL),
         ("normal copy not announced ⇒ FAIL", judge_zero(ok_zero, [], "10 ", "10 ", n)[0] == S.FAIL),
         ("normal copy with another length ⇒ FAIL", judge_zero(ok_zero, ok_norm, "10 ", "10 ", n + 1)[0] == S.FAIL),
-        ("no line at all ⇒ N/A", judge_zero([], [], "10 ", "10 ", n)[0] == NA),
-        ("N/A says so", judge_zero([], [], "10 ", "10 ", n)[1].startswith("not applicable")),
+        ("no line at all ⇒ BLOCKED", judge_zero([], [], "10 ", "10 ", n)[0] == S.BLOCKED),
+        ("BLOCKED says so", judge_zero([], [], "10 ", "10 ", n)[1].startswith("cannot be judged")),
+        ("zero refused + the «not text … not announced» line (clipboard_kde.c) ⇒ PASS",
+         judge_zero(ok_zero + ["x the session copied something that is not text (image/png): not announced"], ok_norm,
+                    "10 ", "10 ", n)[0] == S.PASS),
+        ("zero refused + the GNOME «some text but no type of it could be read» line ⇒ PASS",
+         judge_zero(ok_zero + ["x ⛔ the session copied some text but no type of it could be read: no announcement to the client"],
+                    ok_norm, "10 ", "10 ", n)[0] == S.PASS),
+        ("only a rejection line, no zero line ⇒ BLOCKED (it is not an announcement)",
+         judge_zero(["x the session copied something that is not text (image/png): not announced"], ok_norm,
+                    "10 ", "10 ", n)[0] == S.BLOCKED),
         ("log mark None ⇒ not usable (BLOCKED)", mark_ok(None) is False and mark_ok(0) is True),
         ("fault contrast: a normal text judged as the zero case ⇒ FAIL", judge_zero(ok_norm, ok_norm, "10 ", "10 ", n)[0] == S.FAIL),
     ]
@@ -168,6 +179,8 @@ def normal_case(s, tag):
 
 
 def body(o, E):
+    if o.box not in DESKTOPS:
+        raise S.Blocked("this test is for KDE only (DESKTOPS): %s has no wl-copy served" % o.box)
     if o.browser in ("phone", "android"):
         raise S.Blocked("the phone has no `wl-copy`: this test runs only on the server")
     with S.Session(o, "919", E) as s:
@@ -177,7 +190,7 @@ def body(o, E):
         time.sleep(3)                                     # the child hooks the session's clipboard
         c, t = s.in_session("command -v wl-copy", 20, background=False)
         if c != 0 or "wl-copy" not in (t or ""):
-            why = "not applicable on this desktop: no wl-copy in the %s session: %s" % (o.box, (t or "")[-120:])
+            why = "no wl-copy in the %s session: %s" % (o.box, (t or "")[-120:])
             E.put("F-014E", NA, why)
             if o.fault:
                 E.put("F-014E", NA, why, passed="fault")
