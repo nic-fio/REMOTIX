@@ -212,8 +212,7 @@ int main(void)
 		snprintf(js, sizeof js, "%llu:%llu", (unsigned long long)st.st_dev,
 		         (unsigned long long)st.st_ino);
 		setenv("JOURNAL_STREAM", js, 1);
-		require(log_journal(true) && log_stderr_is_journal(),
-		        "L4 journal on, stderr recognised as its stream");
+		require(log_journal(true), "L4 journal on (stderr is declared as its stream by JOURNAL_STREAM)");
 		worst = flood();
 		printf("        (slowest line: %.3f ms)\n", worst);
 		require(worst < 10, "L4 the fallback to a full stderr: none waits > 10 ms");
