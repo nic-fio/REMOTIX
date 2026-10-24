@@ -28,8 +28,6 @@
 # Needs: `sudo -n podman` (or run as root).  Exit: the bench's (0 pass · 1 fail · 2 blind), 3 = the
 # scene did not start.
 set -u
-PROD=$(readlink -f "${1:?product folder}")
-OUT=${2:-b10-$(date +%Y%m%d-%H%M%S)}
 BENCHES=$(dirname "$(readlink -f "$0")")
 PAM=$BENCHES/../src/remotix.pam
 SRV=rxb10-server-$$
@@ -48,19 +46,32 @@ CARD=${B10_CARD:-/dev/dri/renderD128}
 #   B10_DRYRUN=1 prints the plan (caps, sources, /64s, workers, memory) and exits, touching no container.
 PEND=${B10_PENDING:-16}; ADDR=${B10_ADDRESS:-4}; P48=${B10_48:-8}
 for v in "$PEND" "$ADDR" "$P48" "${B10_NFLOOD:-1}"; do
-	case "$v" in ''|*[!0-9]*|0) echo "b10: caps and B10_NFLOOD must be positive integers (got '$v')"; exit 3 ;; esac
+	case "$v" in ''|*[!0-9]*) echo "b10: caps and B10_NFLOOD must be positive integers (got '$v')"; exit 3 ;; esac
+	[ "$((10#$v))" -gt 0 ] || { echo "b10: caps and B10_NFLOOD must be positive integers (got '$v')"; exit 3; }
 done
+# 10# : "08" is a decimal here, not an invalid octal
+PEND=$((10#$PEND)); ADDR=$((10#$ADDR)); P48=$((10#$P48))
+[ -z "${B10_NFLOOD:-}" ] || B10_NFLOOD=$((10#$B10_NFLOOD))
 NFLOOD=${B10_NFLOOD:-$(( (3 * PEND + 2 * ADDR - 1) / (2 * ADDR) ))}
 [ -n "${B10_NFLOOD:-}" ] || [ "$NFLOOD" -ge 10 ] || NFLOOD=10
 NV6=$(( P48 / 2 + 1 )); [ "$NV6" -ge 10 ] || NV6=10          # the /64s put on `lo`: the bench uses indexes 1 .. cap-48/2+1 (hex)
 NV4=$(( NFLOOD + 4 )); [ "$NV4" -ge 40 ] || NV4=40            # IPv4 sources 127.0.0.100 ...: 4 + n-flood needed
+# the IPv4 sources are 127.0.0.100 ... 127.0.0.(99 + NV4): the last octet must stay <= 255
+[ $(( 99 + NV4 )) -le 255 ] || { echo "b10: B10_NFLOOD=$NFLOOD needs $NV4 IPv4 sources: 127.0.0.100-127.0.0.$(( 99 + NV4 )) is past .255 (at most $(( 255 - 99 - 4 )) flood addresses)"; exit 3; }
 V4RANGE=127.0.0.100-127.0.0.$(( 99 + NV4 ))
 CLIMEM=${B10_CLIENT_MEM:-2g}
+case "$CLIMEM" in ''|*[!0-9kmg]*|*[kmg]*[0-9]*|*[kmg][kmg]*) echo "b10: B10_CLIENT_MEM must be <number>[kmg] (got '$CLIMEM')"; exit 3 ;; esac
+case "$CLIMEM" in [0-9]*) ;; *) echo "b10: B10_CLIENT_MEM must be <number>[kmg] (got '$CLIMEM')"; exit 3 ;; esac
 CAPS="--max-pending $PEND --max-pending-per-address $ADDR --max-pending-per-48 $P48"
+# the bench's own check of the combination (no network, no aioquic): leave BEFORE starting any container
+python3 "$BENCHES/01-b10-flood.py" --plan --cap-pending "$PEND" --cap-address "$ADDR" --cap-48 "$P48" --n-flood "$NFLOOD" \
+	--v4-given "$NV4" --v6-64s-given "$NV6" || { echo "b10: the combination has problems (above): not starting"; exit 3; }
 if [ "${B10_DRYRUN:-0}" = 1 ]; then
 	echo "b10 plan: caps $PEND/$ADDR/$P48 · flood $NFLOOD addresses x $ADDR workers = $((NFLOOD * ADDR)) (places: $PEND) · IPv4 $V4RANGE ($NV4) · IPv6 /64s on lo: $NV6 (x2 addresses) · client memory $CLIMEM"
 	exit 0
 fi
+PROD=$(readlink -f "${1:?product folder}")
+OUT=${2:-b10-$(date +%Y%m%d-%H%M%S)}
 P() { if [ "$(id -u)" = 0 ]; then podman "$@"; else sudo -n podman "$@"; fi; }
 
 for f in "$PROD/remotix" "$PROD/page.html" "$PAM" "$BENCHES/01-b10-flood.py"; do
@@ -100,7 +111,7 @@ grep -q "⭐ ready: https://" "$OUT/server.log" 2>/dev/null || {
 echo "b10: server ready (md5 $(md5sum "$PROD/remotix" | cut -c1-8)), caps: $CAPS"
 
 V6=fd5a:f100:d000
-P run --name $CLI --cpus 2 --memory $CLIMEM --cap-add NET_ADMIN \
+P run --name $CLI --cpus 2 --memory "$CLIMEM" --cap-add NET_ADMIN \
 	--network container:$SRV \
 	-v "$BENCHES:/benches:ro" -v "$OUT:/flood" --entrypoint sh "$IMG_CLI" -c "
 	for i in \$(seq 1 $NV6); do
