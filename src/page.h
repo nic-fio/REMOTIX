@@ -83,7 +83,8 @@ void page_move(page *p, struct pollfd *dove, size_t amount);
 
 /* ⛔ To be called at EVERY pass of the loop, readable or not (15 Oct 2026):
  * closes the clients past their deadline — no whole request within 10 s of
- * the accept, or the response not taken within 60 s — and writes the
+ * the accept, or a response that stopped moving (nothing taken for 15 s, or
+ * under 2 KB/s on average after 20 s) — and writes the
  * listener's summary line (at most one every 10 s).  An expiry that waits for
  * a byte never triggers, and 32 silent connections used to lock the page out
  * for ever.  `now` is `log_now_ms()`. */

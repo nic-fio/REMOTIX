@@ -28,8 +28,17 @@
  *   5. page_expired(now + 10 s) closes every idle connection, and their
  *      sockets see the close;
  *   6. a real HTTPS GET / then gets the page (200, the markers replaced);
- *   7. a client that sent its request but does not read the response is NOT
- *      closed at 10 s, and IS closed at 60 s.
+ *   7. a client that sent its request but stopped reading the response is
+ *      NOT closed at 10 s, and IS closed 15 s after the last byte it
+ *      acknowledged — and progress is what it acknowledged, not what the
+ *      kernel's send buffer swallowed;
+ *   8. the progress deadline (review of 3ed5091f): a phone that took 300 KB
+ *      in 60 s (5 KB/s) is kept, one that took 100 KB (1.7 KB/s) is closed;
+ *   9. 32 slow readers from 8 addresses hold every slot in F_WRITE: a new
+ *      client is refused while they are young, and once they are older than
+ *      5 s and slower than 32 KB/s one of them is evicted and a real GET
+ *      gets the page;
+ *  10. the IPv6 /48 of PAGE_PER_48 is taken only from real IPv6 peers.
  *
  * Exit status: 0 green, 1 red, 3 not all checks ran. */
 #define _GNU_SOURCE
@@ -44,7 +53,7 @@
 #include <sys/wait.h>
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 17
+#define EXPECTED_CHECKS 26
 
 static void require(int cond, const char *desc)
 {
@@ -134,6 +143,28 @@ static SSL_CTX *server_ctx(void)
 		exit(3);
 	}
 	return ctx;
+}
+
+/* Pumps until `want` clients are in F_WRITE (3 s at most); returns the last
+ * one, or NULL. */
+static client *writer_wait(page *p, int want)
+{
+	uint64_t t0 = log_now_ms();
+	while (log_now_ms() - t0 < 3000) {
+		client *last = NULL;
+		int n = 0;
+		pump(p, 1);
+		for (size_t i = 0; i < MAX_CLIENTS; i++)
+			if (client_active(&p->clients[i]) && p->clients[i].phase == F_WRITE) {
+				n++;
+				last = &p->clients[i];
+			}
+		if (n >= want) {
+			pump(p, 10);
+			return last;
+		}
+	}
+	return NULL;
 }
 
 /* In a forked child: TLS, `GET /`, then either read the whole response
@@ -266,27 +297,128 @@ int main(void)
 		require(active(p) == 0, "the slot is free again after the response");
 	}
 
-	printf("7. a slow reader is held to the 60 s deadline, not the 10 s one\n");
+	printf("7. a slow reader is held to the progress deadline, not the 10 s one\n");
 	{
 		pid_t c = client_get(port, "127.0.0.1", false);
-		uint64_t t0 = log_now_ms();
-		int writing = 0;
-		while (log_now_ms() - t0 < 3000 && !writing) {
-			pump(p, 1);
-			for (size_t i = 0; i < MAX_CLIENTS; i++)
-				writing |= client_active(&p->clients[i]) &&
-				           p->clients[i].phase == F_WRITE;
+		client *w = writer_wait(p, 1);
+		require(w && active(p) == 1, "the request was read, the response is stuck");
+		if (w) {
+			page_expired(p, log_now_ms());
+			printf("       (%zu of %zu bytes taken by the kernel, %llu acknowledged by the "
+			       "reader, before it stuck)\n",
+			       w->oresponse, w->nresponse, (unsigned long long)w->delivered);
+			require(w->delivered < w->oresponse / 4,
+			        "progress is what the reader acknowledged, not what the kernel took");
+			page_expired(p, log_now_ms() + PAGE_REQUEST_MS + 1);
+			require(active(p) == 1, "not closed at 10 s while writing");
+			page_expired(p, w->last_progress + PAGE_STALL_MS - 1);
+			require(active(p) == 1, "not closed 1 ms before 15 s without progress");
+			page_expired(p, w->last_progress + PAGE_STALL_MS + 1);
+			require(active(p) == 0, "closed 15 s after the last byte taken");
 		}
-		pump(p, 10);
-		require(writing && active(p) == 1, "the request was read, the response is stuck");
-		page_expired(p, log_now_ms() + PAGE_REQUEST_MS + 1);
-		require(active(p) == 1, "not closed at 10 s while writing");
-		page_expired(p, log_now_ms() + PAGE_TOTAL_MS + 1);
-		require(active(p) == 0, "closed at 60 s");
-		require(p->expired_response == 1 || p->refused_ever,
-		        "the expiry was counted (or already reported)");
 		kill(c, SIGKILL);
 		waitpid(c, NULL, 0);
+	}
+
+	printf("8. the progress deadline keeps a slow phone that keeps reading\n");
+	{
+		pid_t c = client_get(port, "127.0.0.1", false);
+		client *w = writer_wait(p, 1);
+		require(w != NULL, "a writer to look at");
+		if (w) {
+			uint64_t t = log_now_ms() + 100000;
+			/* ⚠ The counters are set by hand: what is checked is the
+			 *   rule, not a minute of real slow reading. */
+			w->write_start = t - 60000;
+			w->last_progress = t - 1000;
+			w->delivered = 300000;
+			page_expired(p, t);
+			require(active(p) == 1, "300 KB in 60 s, last byte 1 s ago: kept (the old rule cut it at 60 s)");
+			w->delivered = 100000;
+			page_expired(p, t);
+			require(active(p) == 0, "100 KB in 60 s (under 2 KB/s): closed");
+		}
+		kill(c, SIGKILL);
+		waitpid(c, NULL, 0);
+	}
+
+	printf("9. 32 slow readers cannot lock the page out\n");
+	{
+		pid_t kids[32];
+		int k = 0, fd, others = 0;
+		for (int a = 1; a <= 8; a++)
+			for (int i = 0; i < 4; i++) {
+				snprintf(src, sizeof src, "127.0.0.%d", a);
+				kids[k++] = client_get(port, src, false);
+				pump(p, 2);
+			}
+		require(writer_wait(p, 32) != NULL, "all 32 slots are slow readers in F_WRITE");
+		fd = connect_from(port, "127.0.0.9", 0);
+		pump(p, 3);
+		require(closed_by_server(fd) && active(p) == 32,
+		        "a newcomer while they are younger than 5 s is refused");
+		close(fd);
+		for (size_t i = 0; i < MAX_CLIENTS; i++) {
+			p->clients[i].write_start -= PAGE_EVICT_AGE_MS + 1000;
+			p->clients[i].born -= PAGE_EVICT_AGE_MS + 1000;
+		}
+		{
+			pid_t c = client_get(port, "127.0.0.9", true);
+			int st = -1;
+			uint64_t t0 = log_now_ms();
+			while (waitpid(c, &st, WNOHANG) == 0 && log_now_ms() - t0 < 20000) {
+				pump(p, 1);
+				page_expired(p, log_now_ms());
+			}
+			require(WIFEXITED(st) && WEXITSTATUS(st) == 0,
+			        "once they are 6 s old and slow, a real GET gets the page");
+		}
+		for (size_t i = 0; i < MAX_CLIENTS; i++)
+			others += client_active(&p->clients[i]) &&
+			          strcmp(p->clients[i].key, "[127.0.0.9]") != 0;
+		require(others == 31, "exactly one slow reader was evicted for it");
+		for (int i = 0; i < k; i++) {
+			kill(kids[i], SIGKILL);
+			waitpid(kids[i], NULL, 0);
+		}
+		for (size_t i = 0; i < MAX_CLIENTS; i++)
+			if (client_active(&p->clients[i]))
+				client_close(&p->clients[i]);
+	}
+
+	printf("10. the /48 is taken only from real IPv6 peers\n");
+	{
+		struct {
+			const char *a;
+			bool v6, want;
+		} cases[] = {
+			{"192.0.2.1", false, false},   {"::ffff:192.0.2.1", true, false},
+			{"::1", true, false},          {"64:ff9b::192.0.2.1", true, false},
+			{"2001:db8:1:2::5", true, true},
+		};
+		int good = 0;
+		for (size_t i = 0; i < sizeof cases / sizeof cases[0]; i++) {
+			struct sockaddr_storage ss;
+			unsigned char k48[6] = {0};
+			static const unsigned char want48[6] = {0x20, 0x01, 0x0d, 0xb8, 0, 1};
+			memset(&ss, 0, sizeof ss);
+			if (cases[i].v6) {
+				ss.ss_family = AF_INET6;
+				inet_pton(AF_INET6, cases[i].a,
+				          &((struct sockaddr_in6 *)&ss)->sin6_addr);
+			} else {
+				ss.ss_family = AF_INET;
+				inet_pton(AF_INET, cases[i].a,
+				          &((struct sockaddr_in *)&ss)->sin_addr);
+			}
+			bool got = key48_of(&ss, k48);
+			if (got == cases[i].want &&
+			    (!got || memcmp(k48, want48, 6) == 0))
+				good++;
+			else
+				printf("       wrong for %s\n", cases[i].a);
+		}
+		require(good == 5, "IPv4, mapped, loopback, NAT64: none; 2001:db8:1:2::5 → 2001:db8:1::/48");
 	}
 
 	page_close(p);
