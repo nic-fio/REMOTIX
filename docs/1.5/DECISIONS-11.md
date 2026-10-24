@@ -518,9 +518,10 @@ The «before a release» level of §11.24, release under test `remotix-1.4.99-2.
       destination checks); one more seed, a successful migration (new remote, validation OK, then a new local
       end only), passes, and so does `known/local-end-1.0.bin`; `cb_path_validation` now updates `c->local` also
       when only the local end changes (before, the «same remote» return skipped it).
-    · ⚠ Seen, not solved here: the last seed of the migration group (a packet from a new address *during the
-      handshake*) trips the oracle «wt_sign_of_life for a packet ngtcp2 did not decrypt (§5.3)» — the same on the
-      tree before today's harness changes, so it is not from them.
+    · ✅ **Corrected 24 Oct 2026:** the last seed of the migration group (a packet from a new address *during the
+      handshake*) tripped the oracle «wt_sign_of_life for a packet ngtcp2 did not decrypt (§5.3)». The defect was
+      in `read_packet` and already in the 1.0: the sign of life started on `rv == 0`, but ngtcp2 also returns 0 for
+      a packet it discards. Now it starts only if `pkt_recv` (`ngtcp2_conn_get_conn_info`) rose. All seeds pass.
     · To do: a real network change (Wi-Fi to mobile) with Chrome and Firefox; the `quic-conn` fuzz campaign;
       the complete suite; the A/B against the build without the migration.
   - §5.3: the sign of life now needs ngtcp2's `pkt_recv` to move — an undecryptable or duplicate packet no longer
