@@ -6,13 +6,20 @@
  */
 #include "rcp.h"
 
+#include <arpa/inet.h> /* the ban key: IPv4 whole, IPv6 the /64 (`rcp_key_address`) */
 #include <errno.h> /* §4.4-bis: «there is no file yet» and «I could not
                     * read it» are two different facts, and what tells them
                     * apart is `errno` alone (`LESSONS.md` §1.9 rule 1) */
+#include <fcntl.h>
+#include <netinet/in.h>
+#include <pwd.h> /* §4.4-bis D: is the name a user of this machine? (the log) */
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/random.h> /* the secret of the log tags */
+#include <sys/stat.h>
+#include <unistd.h>
 #include <time.h> /* §4.4-bis: the ban file carries an ABSOLUTE time,
                     * because `now` is monotonic and restarts with every process */
 
@@ -1063,90 +1070,128 @@ static void slot_leave(const char *user)
 }
 
 /* ------------------------------------------------------------------------ */
-/* ⛔⭐ THE ADDRESS BAN — §4.4-bis, rewritten on 10 Aug 2026
+/* ⛔⭐ THE LOGIN DEFENCES — §4.4-bis, rewritten on 24 Oct 2026 (SPEC CHANGE
+ * from 1.0: `docs/1.5/DECISIONS-11.md`, section «The defences of the login»)
  *
- * `DECISIONS.md` §1.9, decided by the user: **three consecutive failed
- * authentications from the same address, and that address is out for 12 hours.**
+ * WHAT THE 1.0 SAID (`DECISIONS.md` §1.9, 10 Aug 2026): three consecutive
+ * failed authentications from the same address, and that address is out for 12
+ * hours — a single counter, on the address, the user name does not count.
  *
- * ⛔ WHAT HAS DISAPPEARED, AND IT MUST BE KNOWN WHEN READING THIS FILE.  The
- *    previous form — 5 attempts in 5 minutes, a 30 s window doubling up to
- *    15 minutes, **two** counters (one per user name and one per
- *    address), expiry after 30 minutes of quiet — was 🔸, that is written by us
- *    and never spoken.  What remains is **a single counter**, on the address.
+ * ⛔ WHAT IS HERE NOW, AND IT MUST BE KNOWN WHEN READING THIS FILE.  The
+ *    decision is the project leader's (delegated by the user, 24 Oct 2026,
+ *    after the opinions of Gemini, ChatGPT, gpt-oss-20b and Laguna) and it
+ *    changes the 1.0 on four points:
  *
- *    ⭐ And with it disappears by construction the defect B5 found: the
- *       key contained the PORT, and with a single attempt per connection
- *       (§4.4) the port changes every time — that counter was always 1.
- *       Here the key is `s->address`, which `rcp_key_address()` has
- *       already normalised.
+ *  A. THE KEY.  IPv4: the whole address.  IPv6: the /64 (a subscriber gets a
+ *     /64 at least and rotates inside it for free: counting the single
+ *     address would be a limiter that is not there).  Plus one aggregate on
+ *     the IPv6 /48.  The rule is the one of `address_key()` in `transport.c`
+ *     (§1.9-bis): `::ffff:a.b.c.d` and NAT64 are the IPv4 inside, `::1` stays
+ *     whole.  It lives in `rcp_key_address()`, and only there.
  *
- * ⛔ THE USER NAME DOES NOT COUNT.  Three different names count three: it is
- *    the decision, and it is also the only form a per-address counter can have
- *    without lying.  Whoever looks here for the per-name counter does not find
- *    it because it is not there.
+ *  B. ATTEMPTS IN FLIGHT ARE BOOKED AT `CREDENTIALS`, not at the verdict.
+ *     Since 12 Aug 2026 PAM answers after 1.0-2.2 s and the thread does not
+ *     wait: a burst of N connections sent together would all find «0
+ *     failures» and all reach PAM.  ⛔ So the counters are «failed + in
+ *     flight», the check and the booking are ONE step (`login_reserve()`,
+ *     the process is single-threaded), at most 2 verifications for the same
+ *     (key, user) at once.  The verdict is booked by the NAME and the ADDRESS
+ *     of the request (`struct flight` in `helper.c` keeps both), not by the
+ *     session: if the connection died while PAM was answering, the true
+ *     verdict is counted all the same (`rcp_orphan_verdict()`).
+ *       · an attempt WITHOUT a verdict (PAM timeout in the helper, the 12 s
+ *         ceiling of `rcp_time()`) COUNTS AS FAILED: a PAM that «does not
+ *         answer» is exactly what an attacker would try to produce;
+ *       · a refusal that is OUR defect and in which the question never left
+ *         (helper off, socket full, 16 already in flight) does NOT count:
+ *         `login_release()` gives the booking back.
  *
- * ⛔ THE THREE FAILURES MUST FALL WITHIN FIVE MINUTES, or the ban does not fire
- *    (the user's rule, 10 Aug 2026).  Two mistakes on Monday and one on
- *    Friday do NOT ban: whoever mistypes now and then is not whoever tries
- *    passwords.  And a **successful** authentication resets everything anyway.
+ *  C. THREE LEVELS OF COUNTERS, sliding window (the time of the last N
+ *     failures is kept, not their number: see the ⚠ below):
+ *         (key, user)   5 failed in  5 min   -> ban of (key, user)
+ *         key          12 failed in  5 min   -> ban of the key, any user
+ *         IPv6 /48     30 failed in 10 min   -> ban of the /48
+ *     The ban is PROGRESSIVE for each level: 15 min, then 1 h, then 12 h (the
+ *     maximum, which is the 1.0 duration); the memory of the previous bans is
+ *     forgotten after 24 h without a ban.  ⭐ A successful login resets ONLY
+ *     the failures of (key, user): not the recidivism, not the aggregates (an
+ *     attacker owning one valid account must not be able to wash the key's
+ *     count with it).
  *
- *    ⚠ The window is SLIDING, and not anchored to the first failure: one keeps
- *      **the time of the last three**, and looks whether all three fall within
- *      five minutes.  With the window anchored to the first, three failures at
- *      0:00, 4:59 and 5:01 would restart the count from ONE — throwing away
- *      also the one at 4:59, which is two seconds from the last.  ⛔ Whoever
- *      tries passwords at a pace just slower than the window would never be
- *      stopped, and it is exactly the shape of defect that «the code was there
- *      and did nothing» has already produced once in this file.
+ *    ⚠ The window is SLIDING and not anchored to the first failure: with the
+ *      window anchored to the first, failures at 0:00, 4:59 and 5:01 would
+ *      restart the count from ONE.  ⛔ Whoever tries passwords at a pace just
+ *      slower than the window would never be stopped, and it is exactly the
+ *      shape of defect that «the code was there and did nothing» has already
+ *      produced once in this file.
+ *
+ *  D. THE LOG does not carry a name that is not a user of this machine:
+ *     `unknown user [a1b2c3]`, the HMAC-SHA256 of the name cut to 6 hex,
+ *     under a secret of the server (`log-secret`, 0600, next to the QUIC
+ *     token secret).  Whoever typed the password in the user field leaves no
+ *     password in a file that is kept (§11.1); the same name gives the same
+ *     tag, so repeated tries are still recognisable.  A real user is named.
  *
  * ⛔ THE BAN SURVIVES A RESTART (`DECISIONS.md` §1.9, invariant I7): a ban
- *    that resets on restart is a protection that loses itself, and whoever
- *    restarts for another reason does not know they removed it.  The file is
- *    written by `save_ban()`; `rcp_ban_load()` reads it back at startup.
+ *    that resets on restart is a protection that loses itself.  The file is
+ *    written by `save_ban()`; `rcp_ban_load()` reads it back at startup, and
+ *    also the OLD format (one «[address] epoch» per line = the 12 h ban of the
+ *    1.0), which it converts.
  *
  *    ⚠ And the file carries an **absolute** time, not `now`: `now` is a
  *      MONOTONIC clock that restarts from an arbitrary point with every
- *      process, so writing it to disk would produce meaningless expiries after
- *      a restart.  The epoch in seconds is written and converted back at load.
+ *      process.  The epoch in seconds is written and converted back at load.
  *
- * ⛔ AND THERE ARE TWO WAYS OUT (`DECISIONS.md` §1.9): the 12 hours passing, or
- *    `rcp_unblock()` — which is the unblock command, and requires access to
- *    the machine.  ⭐ **It is also what makes B8 possible**: without it, a bench
- *    measuring the timing of authentication would have three samples and then
- *    half a day of silence.  Every unblock is written to the log.
+ * ⛔ AND THERE ARE TWO WAYS OUT: the ban passing, or `rcp_unblock()` — the
+ *    unblock command, which requires access to the machine.  ⭐ It removes
+ *    EVERY level that concerns the address (its (key, user) pairs, the key,
+ *    the /48), recidivism included.  It is also what makes B8 possible.
+ *    Every unblock is written to the log.
  *
  * ⚠ THE TABLE HAS A BOTTOM, and finding R9.1 applies identically: if
- *   `find_or_create()` could fail, an uncounted failure would be a limiter that
- *   is not there.  So it does not fail: it evicts, and declares it.  ⛔ The
- *   victim is never a BANNED entry if there is one that is not — otherwise
- *   filling the table with invented addresses would be the way to erase one's
- *   own ban.
- *   ⚠ With twelve hours the slots free up much more slowly than before: hence
- *     the 256 slots instead of 64.  `[?]` That they are enough is not measured —
- *     an attacker with more than 256 addresses pushes the bans out alone, and
- *     the log line of the eviction is the only place where one would see it.
+ *   `lcreate()` could fail silently, an uncounted failure would be a limiter
+ *   that is not there.  ⛔ The victim is NEVER a banned entry, and never one
+ *   with an attempt in flight: if the only candidates are those, the NEW entry
+ *   is refused (`LV_FULL`: the attempt is refused with `TOO_MANY_ATTEMPTS`, the
+ *   refusal is counted and written) instead of erasing somebody's ban.  Before
+ *   that, entries with nothing to remember are taken back, and then the
+ *   oldest one without recidivism, declared in the log.
+ *   `[?]` That 256 slots are enough is not measured.
  *
- * ⛔ AND THERE IS NO LONGER ANY EXPIRY FOR QUIET.  The old form had one
- *    (30 minutes) and it served to give slots back to the table; here it would
- *    also give back the **attempts**, that is it would contradict
- *    «consecutive».  The slots are given back by the expiry of the ban and by
- *    the eviction.                                                           */
-#define THRESHOLD 3
-#define WINDOW 300000u     /* 5 minutes: the three failures must fit inside */
-#define BAN_DURATION 43200000u /* 12 hours, in milliseconds */
+ * ⛔ AND THERE IS NO EXPIRY FOR QUIET other than what is written above: the
+ *    slots are given back when an entry has nothing left to remember.      */
 #define MAX_ATTEMPTS 256
+#define LEVELS 3
+#define MAX_RING 30 /* the largest limit of the three levels */
 
-static struct {
-	char address[64];
+/* The three levels of counters.  The ORDER is the order of the arrays below. */
+enum { LK_USER = 0, LK_KEY = 1, LK_NET48 = 2 };
+static const int LIMIT[LEVELS] = {5, 12, 30};
+static const uint64_t WINDOW_MS[LEVELS] = {300000u, 300000u, 600000u};
+static const char *const LEVEL_NAME[LEVELS] = {"user on this address",
+                                               "address", "IPv6 /48"};
+/* The progressive duration: the n-th ban of a level lasts LADDER_MS[n-1]. */
+static const uint64_t LADDER_MS[3] = {900000u, 3600000u, 43200000u};
+#define FORGET_MS 86400000u /* 24 h without a ban and the recidivism is forgotten */
+#define MAX_PER_USER_IN_FLIGHT 2
+
+struct lentry {
 	bool used;
-	/* ⛔ The time of the LAST THREE failures, not their number: it is what is
-	 * needed to answer «three within five minutes» without anchoring the
+	uint8_t kind;      /* LK_* */
+	char address[64];  /* the key, or the /48 for LK_NET48 */
+	char user[257];    /* LK_USER only */
+	/* ⛔ The time of the LAST `LIMIT[kind]` failures, not their number: it is
+	 * what is needed to answer «N within the window» without anchoring the
 	 * window to the first.  `amount` says how many slots are full. */
-	uint64_t failure_times[THRESHOLD];
+	uint64_t failure_times[MAX_RING];
 	int amount;
-	uint64_t banned_until; /* monotonic, like `now`; 0 = not banned */
+	int in_flight;       /* booked at CREDENTIALS, not yet resolved */
+	uint64_t banned_until; /* monotonic, like `now`; 0 = never banned */
+	uint8_t level;       /* bans suffered, 0..2: the next one lasts LADDER_MS[level] */
 	uint64_t last_touch;
-} attempts[MAX_ATTEMPTS];
+};
+static struct lentry attempts[MAX_ATTEMPTS];
+static unsigned login_refused_full; /* refusals because of a full table, since the start */
 
 static char ban_path[512]; /* empty = not persisted (the bench, usually) */
 /* ⛔⭐ THE ADDRESS WITHOUT THE PORT — found by B5 on 10 Aug 2026
@@ -1260,71 +1305,628 @@ void rcp_key_address(const char *text, char *report, size_t cap)
 		memcpy(bare, text, n);
 		bare[n] = 0;
 	}
+	/* ⛔⭐ §4.4-bis A (24 Oct 2026): IPv4 whole, IPv6 the /64.  The rule is the
+	 *    one of `address_key()` in `transport.c`: `::ffff:a.b.c.d` and NAT64
+	 *    (64:ff9b::/96) are the IPv4 inside, `::1` stays whole, any other IPv6
+	 *    loses its lower 64 bits.  ⚠ The result is again a valid address in
+	 *    brackets, so the function stays IDEMPOTENT (the page and the host call
+	 *    it twice on purpose).  What is not an address (a typo at the unblock
+	 *    command, a zone id) is kept as it was: «[text]». */
+	struct in_addr a4;
+	struct in6_addr a6;
+	char t[INET6_ADDRSTRLEN];
+	if (inet_pton(AF_INET, bare, &a4) == 1 && inet_ntop(AF_INET, &a4, t, sizeof t)) {
+		snprintf(report, cap, "[%s]", t);
+		return;
+	}
+	if (inet_pton(AF_INET6, bare, &a6) == 1) {
+		static const uint8_t NAT64[12] = {0x00, 0x64, 0xff, 0x9b};
+		if (IN6_IS_ADDR_V4MAPPED(&a6) || memcmp(a6.s6_addr, NAT64, sizeof NAT64) == 0) {
+			if (inet_ntop(AF_INET, a6.s6_addr + 12, t, sizeof t)) {
+				snprintf(report, cap, "[%s]", t);
+				return;
+			}
+		} else if (!IN6_IS_ADDR_LOOPBACK(&a6)) {
+			memset(a6.s6_addr + 8, 0, 8);
+		}
+		if (inet_ntop(AF_INET6, &a6, t, sizeof t)) {
+			snprintf(report, cap, "[%s]", t);
+			return;
+		}
+	}
 	snprintf(report, cap, "[%s]", bare);
 }
 
+/* ------------------------------------------------------------------------ */
+/* THE LINES OF THE LIMITER.  The counting code below is PURE: it takes `now`
+ * as an argument, reads no clock and writes no log (`benches/unit/login-ban`
+ * drives it with a simulated clock).  What it has to say it hands back in a
+ * struct, and these functions write it — to the session, or, when the
+ * connection is already gone, to the line function the caller gave.        */
+struct sink {
+	rcp_session *s;
+	rcp_line_fn fn;
+	void *ctx;
+};
+
+static void say(const struct sink *k, const char *fmt, ...)
+    __attribute__((format(printf, 2, 3)));
+static void say(const struct sink *k, const char *fmt, ...)
+{
+	char line[512];
+	va_list ap;
+	if (!k)
+		return;
+	va_start(ap, fmt);
+	vsnprintf(line, sizeof line, fmt, ap);
+	va_end(ap);
+	if (k->s)
+		reg(k->s, "%s", line);
+	else if (k->fn)
+		k->fn(k->ctx, line);
+}
+
+/* ------------------------------------------------------------------------ */
+/* D — THE NAME IN THE LOG: HMAC-SHA256 truncated to 6 hex digits, under a
+ * secret of the server.  SHA-256 is written out here (60 lines) and not taken
+ * from OpenSSL on purpose: this file is compiled alone in the benches and in
+ * the fuzz harness, which link nothing but the log stub — and a dependency
+ * added to the module that must stay a twin of `benches/rcp/` is a build that
+ * breaks far from where it was caused.  The unit test checks it against the
+ * RFC 4231 vector.                                                         */
+struct sha256 {
+	uint32_t h[8];
+	uint8_t buf[64];
+	uint64_t total;
+	size_t fill;
+};
+
+static const uint32_t SHA_K[64] = {
+    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1,
+    0x923f82a4, 0xab1c5ed5, 0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3,
+    0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174, 0xe49b69c1, 0xefbe4786,
+    0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147,
+    0x06ca6351, 0x14292967, 0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13,
+    0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85, 0xa2bfe8a1, 0xa81a664b,
+    0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a,
+    0x5b9cca4f, 0x682e6ff3, 0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208,
+    0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2};
+
+static uint32_t ror32(uint32_t x, int r) { return (x >> r) | (x << (32 - r)); }
+
+static void sha256_block(struct sha256 *c, const uint8_t *p)
+{
+	uint32_t w[64], a, b, d, e, f, g, h, cc;
+	for (int i = 0; i < 16; i++)
+		w[i] = (uint32_t)p[4 * i] << 24 | (uint32_t)p[4 * i + 1] << 16 |
+		       (uint32_t)p[4 * i + 2] << 8 | p[4 * i + 3];
+	for (int i = 16; i < 64; i++) {
+		uint32_t s0 = ror32(w[i - 15], 7) ^ ror32(w[i - 15], 18) ^ (w[i - 15] >> 3);
+		uint32_t s1 = ror32(w[i - 2], 17) ^ ror32(w[i - 2], 19) ^ (w[i - 2] >> 10);
+		w[i] = w[i - 16] + s0 + w[i - 7] + s1;
+	}
+	a = c->h[0]; b = c->h[1]; cc = c->h[2]; d = c->h[3];
+	e = c->h[4]; f = c->h[5]; g = c->h[6]; h = c->h[7];
+	for (int i = 0; i < 64; i++) {
+		uint32_t S1 = ror32(e, 6) ^ ror32(e, 11) ^ ror32(e, 25);
+		uint32_t ch = (e & f) ^ (~e & g);
+		uint32_t t1 = h + S1 + ch + SHA_K[i] + w[i];
+		uint32_t S0 = ror32(a, 2) ^ ror32(a, 13) ^ ror32(a, 22);
+		uint32_t mj = (a & b) ^ (a & cc) ^ (b & cc);
+		uint32_t t2 = S0 + mj;
+		h = g; g = f; f = e; e = d + t1;
+		d = cc; cc = b; b = a; a = t1 + t2;
+	}
+	c->h[0] += a; c->h[1] += b; c->h[2] += cc; c->h[3] += d;
+	c->h[4] += e; c->h[5] += f; c->h[6] += g; c->h[7] += h;
+}
+
+static void sha256_init(struct sha256 *c)
+{
+	static const uint32_t H0[8] = {0x6a09e667, 0xbb67ae85, 0x3c6ef372,
+	                               0xa54ff53a, 0x510e527f, 0x9b05688c,
+	                               0x1f83d9ab, 0x5be0cd19};
+	memcpy(c->h, H0, sizeof H0);
+	c->total = 0;
+	c->fill = 0;
+}
+
+static void sha256_update(struct sha256 *c, const void *data, size_t n)
+{
+	const uint8_t *p = data;
+	c->total += n;
+	while (n > 0) {
+		size_t take = 64 - c->fill < n ? 64 - c->fill : n;
+		memcpy(c->buf + c->fill, p, take);
+		c->fill += take;
+		p += take;
+		n -= take;
+		if (c->fill == 64) {
+			sha256_block(c, c->buf);
+			c->fill = 0;
+		}
+	}
+}
+
+static void sha256_final(struct sha256 *c, uint8_t out[32])
+{
+	uint64_t bits = c->total * 8;
+	uint8_t pad = 0x80;
+	sha256_update(c, &pad, 1);
+	pad = 0;
+	while (c->fill != 56)
+		sha256_update(c, &pad, 1);
+	uint8_t len[8];
+	for (int i = 0; i < 8; i++)
+		len[i] = (uint8_t)(bits >> (56 - 8 * i));
+	sha256_update(c, len, 8);
+	for (int i = 0; i < 8; i++) {
+		out[4 * i] = (uint8_t)(c->h[i] >> 24);
+		out[4 * i + 1] = (uint8_t)(c->h[i] >> 16);
+		out[4 * i + 2] = (uint8_t)(c->h[i] >> 8);
+		out[4 * i + 3] = (uint8_t)c->h[i];
+	}
+}
+
+static void hmac_sha256(const uint8_t *key, size_t klen, const void *msg,
+                        size_t mlen, uint8_t out[32])
+{
+	uint8_t k[64] = {0}, pad[64], inner[32];
+	struct sha256 c;
+	if (klen > 64) {
+		sha256_init(&c);
+		sha256_update(&c, key, klen);
+		sha256_final(&c, k);
+	} else {
+		memcpy(k, key, klen);
+	}
+	for (int i = 0; i < 64; i++)
+		pad[i] = k[i] ^ 0x36;
+	sha256_init(&c);
+	sha256_update(&c, pad, 64);
+	sha256_update(&c, msg, mlen);
+	sha256_final(&c, inner);
+	for (int i = 0; i < 64; i++)
+		pad[i] = k[i] ^ 0x5c;
+	sha256_init(&c);
+	sha256_update(&c, pad, 64);
+	sha256_update(&c, inner, 32);
+	sha256_final(&c, out);
+	explicit_bzero(k, sizeof k);
+	explicit_bzero(pad, sizeof pad);
+}
+
+#define LOG_SECRET_FILE "log-secret"
+static uint8_t log_secret[32];
+static bool log_secret_ready;
+
+/* Fills the secret from the kernel.  ⛔ If it cannot, `log_secret_ready`
+ * stays false and `log_user()` prints a tag of question marks: a name in
+ * clear is NEVER the fallback, because the fallback is the road that is taken
+ * when nobody is looking. */
+static bool log_secret_random(void)
+{
+	size_t got = 0;
+	while (got < sizeof log_secret) {
+		ssize_t n = getrandom(log_secret + got, sizeof log_secret - got, 0);
+		if (n < 0 && errno == EINTR)
+			continue;
+		if (n <= 0)
+			return false;
+		got += (size_t)n;
+	}
+	return true;
+}
+
+/* Reads `<dir>/log-secret` or makes it (0600), exactly like `secret_load()`
+ * of `transport.c` does for the QUIC token secret, in the same directory.
+ * Returns 1 = read, 0 = made and written, -1 = the secret of this run only
+ * (memory): the tags change at every restart, and the caller says so;
+ * -2 = no secret at all (the tags are «??????»). */
+int rcp_log_secret_load(const char *dir)
+{
+	log_secret_ready = false;
+	if (!dir || !*dir) {
+		log_secret_ready = log_secret_random();
+		return log_secret_ready ? -1 : -2;
+	}
+	char path[600], tmp[620];
+	snprintf(path, sizeof path, "%s/%s", dir, LOG_SECRET_FILE);
+	int fd = open(path, O_RDONLY | O_CLOEXEC);
+	if (fd >= 0) {
+		uint8_t buf[sizeof log_secret + 1];
+		ssize_t n = read(fd, buf, sizeof buf);
+		struct stat st;
+		bool ok = n == (ssize_t)sizeof log_secret && fstat(fd, &st) == 0 &&
+		          (st.st_mode & 077) == 0;
+		close(fd);
+		if (ok) {
+			memcpy(log_secret, buf, sizeof log_secret);
+			explicit_bzero(buf, sizeof buf);
+			log_secret_ready = true;
+			return 1;
+		}
+		explicit_bzero(buf, sizeof buf);
+		/* a file of the wrong size or readable by others: replaced */
+	}
+	if (!log_secret_random())
+		return -2;
+	log_secret_ready = true;
+	snprintf(tmp, sizeof tmp, "%s.new", path);
+	fd = open(tmp, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0600);
+	if (fd < 0)
+		return -1;
+	bool wrote = write(fd, log_secret, sizeof log_secret) == (ssize_t)sizeof log_secret &&
+	             fsync(fd) == 0;
+	close(fd);
+	if (!wrote || rename(tmp, path) != 0)
+		return -1;
+	return 0;
+}
+
+/* The name as it goes to the log: itself if it is a user of this machine,
+ * `unknown user [hmac6]` if it is not.  ⚠ `getpwnam_r` may ask NSS; a failure
+ * of the lookup is treated as «unknown» (the cautious side).  ⛔ Writes into
+ * `out`; the return value is `user` itself or `out`. */
+static const char *log_user(const char *user, char *out, size_t cap)
+{
+	if (!user || !*user)
+		return "";
+	struct passwd pw, *res = NULL;
+	char spare[2048];
+	if (getpwnam_r(user, &pw, spare, sizeof spare, &res) == 0 && res)
+		return user;
+	if (!log_secret_ready)
+		log_secret_ready = log_secret_random();
+	if (!log_secret_ready) {
+		snprintf(out, cap, "unknown user [??????]");
+		return out;
+	}
+	uint8_t mac[32];
+	hmac_sha256(log_secret, sizeof log_secret, user, strlen(user), mac);
+	snprintf(out, cap, "unknown user [%02x%02x%02x]", mac[0], mac[1], mac[2]);
+	return out;
+}
+
+/* ------------------------------------------------------------------------ */
+/* THE COUNTERS.                                                             */
+
+/* The /48 of a key, if it has one: only the IPv6 keys that are neither an
+ * IPv4 nor loopback (those `rcp_key_address()` has already reduced).  The key
+ * is already the /64, so it is the same text with 16 more bits zeroed. */
+static bool key_net48(const char *key, char *out, size_t cap)
+{
+	char bare[64];
+	size_t n = strlen(key);
+	if (n < 3 || key[0] != '[' || key[n - 1] != ']' || n - 2 >= sizeof bare)
+		return false;
+	memcpy(bare, key + 1, n - 2);
+	bare[n - 2] = 0;
+	struct in6_addr a;
+	if (inet_pton(AF_INET6, bare, &a) != 1 || IN6_IS_ADDR_LOOPBACK(&a) ||
+	    IN6_IS_ADDR_V4MAPPED(&a))
+		return false;
+	memset(a.s6_addr + 6, 0, 10);
+	char t[INET6_ADDRSTRLEN];
+	if (!inet_ntop(AF_INET6, &a, t, sizeof t))
+		return false;
+	snprintf(out, cap, "[%s]", t);
+	return true;
+}
+
+static uint8_t level_now(const struct lentry *e, uint64_t now)
+{
+	if (e->level > 0 && now >= e->banned_until + FORGET_MS)
+		return 0; /* 24 h without a ban: forgotten */
+	return e->level;
+}
+
+static bool is_banned(const struct lentry *e, uint64_t now)
+{
+	return now < e->banned_until;
+}
+
+static int failed_inside(const struct lentry *e, uint64_t now)
+{
+	int n = 0;
+	for (int k = 0; k < e->amount; k++)
+		if (now - e->failure_times[k] <= WINDOW_MS[e->kind])
+			n++;
+	return n;
+}
+
+/* Nothing to remember: it can be taken back with no loss. */
+static bool lentry_idle(const struct lentry *e, uint64_t now)
+{
+	return e->in_flight == 0 && !is_banned(e, now) && level_now(e, now) == 0 &&
+	       failed_inside(e, now) == 0;
+}
+
 /* Only looks: ⛔ querying the guard MUST NOT consume a slot. */
-static int find(const char *address)
+static int lfind(int kind, const char *address, const char *user)
 {
 	for (int i = 0; i < MAX_ATTEMPTS; i++)
-		if (attempts[i].used &&
-		    strcmp(attempts[i].address, address) == 0)
+		if (attempts[i].used && attempts[i].kind == kind &&
+		    strcmp(attempts[i].address, address) == 0 &&
+		    (kind != LK_USER || strcmp(attempts[i].user, user) == 0))
 			return i;
 	return -1;
 }
 
-/* Returns the entry, creating it if needed.  ⛔ It never fails (R9.1): if the
- * table is full it evicts, and in `*evicted` it leaves the name of the entry
- * thrown away so that the caller WRITES it to the log. */
-static int find_or_create(const char *address, uint64_t now, const char **evicted)
+/* Creates an entry, or returns -1 if the table is full of things that must not
+ * be thrown away.  ⛔ NEVER a banned entry and never one with an attempt in
+ * flight (nor one of `avoid`, the entries the caller is holding): if there is
+ * nothing else, -1 and the caller REFUSES the attempt and counts the refusal.
+ * Order of preference: free slot, entry with nothing to remember, oldest
+ * entry without recidivism, oldest one with it.  The last two are declared
+ * in `evicted` (empty if nothing was thrown away that held something). */
+static int lcreate(int kind, const char *address, const char *user, uint64_t now,
+                   const int avoid[LEVELS], char *evicted, size_t evcap)
 {
-	static char evicted_name[64];
-	*evicted = NULL;
-	int i = find(address);
-	if (i >= 0)
-		return i;
-	int free_slot = -1, victim = -1;
+	int slot = -1, victim = -1, victim_class = 99;
 	for (int k = 0; k < MAX_ATTEMPTS; k++) {
 		if (!attempts[k].used) {
-			free_slot = k;
+			slot = k;
 			break;
 		}
-		bool k_banned = now < attempts[k].banned_until;
-		if (victim < 0) {
-			victim = k;
+		const struct lentry *e = &attempts[k];
+		bool held = false;
+		for (int j = 0; j < LEVELS; j++)
+			if (avoid && avoid[j] == k)
+				held = true;
+		if (held || e->in_flight > 0 || is_banned(e, now))
 			continue;
-		}
-		bool v_banned = now < attempts[victim].banned_until;
-		if (v_banned && !k_banned) {
+		int cls = lentry_idle(e, now) ? 0 : (level_now(e, now) == 0 ? 1 : 2);
+		if (cls < victim_class ||
+		    (cls == victim_class && e->last_touch < attempts[victim].last_touch)) {
 			victim = k;
-		} else if (v_banned == k_banned &&
-		           attempts[k].last_touch < attempts[victim].last_touch) {
-			victim = k;
+			victim_class = cls;
 		}
 	}
-	if (free_slot < 0) {
-		free_slot = victim; /* there always is one: MAX_ATTEMPTS > 0 */
-		snprintf(evicted_name, sizeof evicted_name, "%s",
-		         attempts[free_slot].address);
-		*evicted = evicted_name;
+	if (slot < 0) {
+		if (victim < 0)
+			return -1;
+		slot = victim;
+		if (victim_class > 0 && evicted && evcap)
+			snprintf(evicted, evcap, "%s %s", LEVEL_NAME[attempts[slot].kind],
+			         attempts[slot].address);
 	}
-	memset(&attempts[free_slot], 0, sizeof attempts[free_slot]);
-	attempts[free_slot].used = true;
-	attempts[free_slot].last_touch = now;
-	snprintf(attempts[free_slot].address, sizeof attempts[free_slot].address,
-	         "%s", address);
-	return free_slot;
+	memset(&attempts[slot], 0, sizeof attempts[slot]);
+	attempts[slot].used = true;
+	attempts[slot].kind = (uint8_t)kind;
+	attempts[slot].last_touch = now;
+	snprintf(attempts[slot].address, sizeof attempts[slot].address, "%s", address);
+	if (kind == LK_USER && user)
+		snprintf(attempts[slot].user, sizeof attempts[slot].user, "%s", user);
+	return slot;
 }
 
-/* ⛔ Writes to file only the BANNED addresses, with the expiry in seconds
- * since the epoch.  It is called at every change — new ban, unblock — because a
- * ban that lives only in memory until the next periodic save is a ban that a
- * sudden restart takes away (I7).
+enum login_verdict {
+	LV_OK,     /* booked: ask PAM */
+	LV_BANNED, /* a level is banned: do not ask PAM */
+	LV_BUSY,   /* the counters (failed + in flight) are at the limit: do not ask PAM */
+	LV_FULL    /* the table has no place for the entry: do not ask PAM, counted */
+};
+
+struct login_info {
+	int kind;          /* the level that decided (LK_*) */
+	uint64_t remain;   /* LV_BANNED: ms left */
+	char evicted[96];  /* an entry with something in it was thrown away to make room */
+};
+
+/* B — THE CHECK AND THE BOOKING IN ONE STEP.  Called at `CREDENTIALS`, before
+ * PAM.  The counters are «failed in the window + in flight»; the attempt that
+ * would bring any level to its limit is not let through, and it is NOT a
+ * failure (no ban is born from a refusal).  At most
+ * `MAX_PER_USER_IN_FLIGHT` for the same (key, user). */
+static enum login_verdict login_reserve(const char *key, const char *user,
+                                        uint64_t now, struct login_info *info)
+{
+	char key48[64];
+	bool has48 = key_net48(key, key48, sizeof key48);
+	int idx[LEVELS];
+	memset(info, 0, sizeof *info);
+	idx[LK_USER] = lfind(LK_USER, key, user);
+	idx[LK_KEY] = lfind(LK_KEY, key, NULL);
+	idx[LK_NET48] = has48 ? lfind(LK_NET48, key48, NULL) : -1;
+	/* the widest level first: it is the one that says the most */
+	for (int j = LEVELS - 1; j >= 0; j--)
+		if (idx[j] >= 0 && is_banned(&attempts[idx[j]], now)) {
+			info->kind = j;
+			info->remain = attempts[idx[j]].banned_until - now;
+			return LV_BANNED;
+		}
+	for (int j = 0; j < LEVELS; j++) {
+		if ((j == LK_NET48 && !has48) || idx[j] >= 0)
+			continue;
+		idx[j] = lcreate(j, j == LK_NET48 ? key48 : key, user, now, idx,
+		                 info->evicted, sizeof info->evicted);
+		if (idx[j] < 0) {
+			login_refused_full++;
+			info->kind = j;
+			return LV_FULL;
+		}
+	}
+	for (int j = 0; j < LEVELS; j++) {
+		if (idx[j] < 0)
+			continue;
+		const struct lentry *e = &attempts[idx[j]];
+		if ((j == LK_USER && e->in_flight >= MAX_PER_USER_IN_FLIGHT) ||
+		    failed_inside(e, now) + e->in_flight >= LIMIT[j]) {
+			info->kind = j;
+			return LV_BUSY;
+		}
+	}
+	for (int j = 0; j < LEVELS; j++) {
+		if (idx[j] < 0)
+			continue;
+		attempts[idx[j]].in_flight++;
+		attempts[idx[j]].last_touch = now;
+	}
+	return LV_OK;
+}
+
+/* The booking given back WITHOUT counting anything: the question to PAM never
+ * left, and that is our defect (I3: a no that is not the user's fault). */
+static void login_release(const char *key, const char *user)
+{
+	char key48[64];
+	int idx[LEVELS];
+	idx[LK_USER] = lfind(LK_USER, key, user);
+	idx[LK_KEY] = lfind(LK_KEY, key, NULL);
+	idx[LK_NET48] = key_net48(key, key48, sizeof key48)
+	                    ? lfind(LK_NET48, key48, NULL) : -1;
+	for (int j = 0; j < LEVELS; j++)
+		if (idx[j] >= 0 && attempts[idx[j]].in_flight > 0)
+			attempts[idx[j]].in_flight--;
+}
+
+struct login_result {
+	bool already[LEVELS];     /* the level was banned already: nothing added */
+	int inside[LEVELS];       /* failures in the window, this one included */
+	bool banned[LEVELS];      /* this failure fired a ban on the level */
+	uint64_t ban_ms[LEVELS];
+	int ban_number[LEVELS];   /* 1, 2, 3.. (the ladder stops at the third duration) */
+	int reset_amount;         /* success: how many failures of (key, user) were wiped */
+	int refused_full;         /* levels that could not be counted: the table is full */
+	char evicted[96];
+};
+
+/* The VERDICT: the booking is resolved.  `admitted` resets ONLY the failures
+ * of (key, user) — not the recidivism, not the key, not the /48.  A failure
+ * is added to the three levels, and the level that reaches its limit inside
+ * its window is banned for the next step of the ladder.  ⛔ A failure is
+ * never dropped for lack of room: the entry is created, evicting if it has to
+ * (and declaring it), and only if nothing can be evicted is the level skipped
+ * and `refused_full` raised. */
+static void login_resolve(const char *key, const char *user, bool admitted,
+                          uint64_t now, struct login_result *r)
+{
+	char key48[64];
+	bool has48 = key_net48(key, key48, sizeof key48);
+	int idx[LEVELS];
+	memset(r, 0, sizeof *r);
+	idx[LK_USER] = lfind(LK_USER, key, user);
+	idx[LK_KEY] = lfind(LK_KEY, key, NULL);
+	idx[LK_NET48] = has48 ? lfind(LK_NET48, key48, NULL) : -1;
+	if (!admitted)
+		for (int j = 0; j < LEVELS; j++) {
+			if ((j == LK_NET48 && !has48) || idx[j] >= 0)
+				continue;
+			idx[j] = lcreate(j, j == LK_NET48 ? key48 : key, user, now, idx,
+			                 r->evicted, sizeof r->evicted);
+			if (idx[j] < 0) {
+				login_refused_full++;
+				r->refused_full++;
+			}
+		}
+	for (int j = 0; j < LEVELS; j++) {
+		if (idx[j] < 0)
+			continue;
+		struct lentry *e = &attempts[idx[j]];
+		if (e->in_flight > 0)
+			e->in_flight--;
+		e->last_touch = now;
+		if (admitted) {
+			if (j == LK_USER) {
+				r->reset_amount = failed_inside(e, now);
+				e->amount = 0;
+			}
+			continue;
+		}
+		if (is_banned(e, now)) {
+			r->already[j] = true; /* a ban fired while this one was in flight */
+			continue;
+		}
+		if (e->amount < LIMIT[j]) {
+			e->failure_times[e->amount++] = now;
+		} else {
+			memmove(e->failure_times, e->failure_times + 1,
+			        (size_t)(LIMIT[j] - 1) * sizeof e->failure_times[0]);
+			e->failure_times[LIMIT[j] - 1] = now;
+		}
+		r->inside[j] = failed_inside(e, now);
+		if (r->inside[j] >= LIMIT[j]) {
+			uint8_t lv = level_now(e, now);
+			e->banned_until = now + LADDER_MS[lv];
+			e->level = lv < 2 ? (uint8_t)(lv + 1) : 2;
+			e->amount = 0; /* the count restarts after the ban */
+			r->banned[j] = true;
+			r->ban_ms[j] = LADDER_MS[lv];
+			r->ban_number[j] = lv + 1;
+		}
+	}
+}
+
+/* The ban file.  Defined below; declared here because the report below
+ * writes it when a ban is born. */
+static void save_ban(const struct sink *k, uint64_t now);
+
+/* Says what `login_resolve()` found, and writes the ban file if a ban was born. */
+static void login_report(const struct sink *k, const char *key, const char *user,
+                         bool admitted, const struct login_result *r, uint64_t now)
+{
+	char tag[96];
+	const char *shown = log_user(user, tag, sizeof tag);
+	bool any_ban = false;
+	if (r->evicted[0])
+		say(k, "⚠ attempt table full (%d entries): evicted the entry «%s» to "
+		       "make room — §4.4-bis",
+		    MAX_ATTEMPTS, r->evicted);
+	if (r->refused_full)
+		say(k, "⛔ attempt table full and without a place that can be freed "
+		       "(everything in it is banned or in flight): %d level(s) of this "
+		       "failure could NOT be counted.  Refusals for this reason so "
+		       "far: %u — §4.4-bis",
+		    r->refused_full, login_refused_full);
+	if (admitted) {
+		say(k, "successful login from %s as %s: the failures of this user on "
+		       "this address go back to zero (there were %d); the recidivism "
+		       "and the counters of the address and of the /48 are NOT touched "
+		       "— §4.4-bis",
+		    key, shown, r->reset_amount);
+		return;
+	}
+	say(k, "failed attempt from %s as %s: %d of %d for the user, %d of %d for the "
+	       "address, %d of %d for the IPv6 /48 within the window (§4.4-bis)",
+	    key, shown, r->inside[LK_USER], LIMIT[LK_USER], r->inside[LK_KEY],
+	    LIMIT[LK_KEY], r->inside[LK_NET48], LIMIT[LK_NET48]);
+	for (int j = 0; j < LEVELS; j++) {
+		if (r->already[j])
+			say(k, "the %s was already banned when this verdict arrived: "
+			       "nothing added (§4.4-bis)",
+			    LEVEL_NAME[j]);
+		if (!r->banned[j])
+			continue;
+		any_ban = true;
+		say(k, "⛔ BANNED %s of %s%s%s for %llu minutes (ban number %d, the "
+		       "ladder is 15 min / 1 h / 12 h and ends there): %d failures "
+		       "within %llu minutes (§4.4-bis, DECISIONS-11.md)",
+		    LEVEL_NAME[j], key, j == LK_USER ? " as " : "",
+		    j == LK_USER ? shown : "", (unsigned long long)(r->ban_ms[j] / 60000u),
+		    r->ban_number[j], LIMIT[j], (unsigned long long)(WINDOW_MS[j] / 60000u));
+	}
+	if (any_ban)
+		save_ban(k, now);
+}
+
+/* ⛔ Writes to file the bans in force and the recidivism not yet forgotten,
+ * one line each, with the expiry in seconds since the epoch.  Called at every
+ * change — new ban, unblock — because a ban that lives only in memory until
+ * the next periodic save is a ban that a sudden restart takes away (I7).
+ *
+ * THE FORMAT (since 24 Oct 2026):   B2 <U|K|N> <level> <epoch> <key>[ <user>]
+ *   U = (key, user), K = key, N = IPv6 /48; `level` = bans suffered (0..2);
+ *   `epoch` = when the ban ends (in the past for a ban that has ended and is
+ *   only remembered); the user, last because it may contain spaces, only for U.
+ * The 1.0 wrote «<[address]> <epoch>»: `rcp_ban_load()` still reads it.
  *
  * ⚠ It writes to a temporary file and renames: a `rename()` is atomic, and
  *   a ban file truncated halfway by a restart would be worse than no
  *   file — it would say «these addresses were not banned». */
-static void save_ban(rcp_session *s, uint64_t now)
+static void save_ban(const struct sink *k, uint64_t now)
 {
 	if (ban_path[0] == 0)
 		return;
@@ -1332,136 +1934,134 @@ static void save_ban(rcp_session *s, uint64_t now)
 	snprintf(tmp, sizeof tmp, "%s.new", ban_path);
 	FILE *f = fopen(tmp, "w");
 	if (!f) {
-		if (s)
-			reg(s, "⛔ could not write the ban file «%s»: the ban "
-			       "lives only in memory and a restart removes it (§4.4-bis)",
-			    tmp);
+		say(k, "⛔ could not write the ban file «%s»: the ban "
+		       "lives only in memory and a restart removes it (§4.4-bis)",
+		    tmp);
 		return;
 	}
+	static const char KIND_CHAR[LEVELS] = {'U', 'K', 'N'};
 	time_t t_now = time(NULL);
 	int amount = 0;
 	for (int i = 0; i < MAX_ATTEMPTS; i++) {
-		if (!attempts[i].used || now >= attempts[i].banned_until)
+		const struct lentry *e = &attempts[i];
+		if (!e->used || level_now(e, now) == 0)
 			continue;
-		uint64_t remain = attempts[i].banned_until - now;
-		fprintf(f, "%s %lld\n", attempts[i].address,
-		        (long long)(t_now + (time_t)(remain / 1000)));
-		amount++;
+		long long epoch =
+		    is_banned(e, now)
+		        ? (long long)t_now + (long long)((e->banned_until - now) / 1000)
+		        : (long long)t_now - (long long)((now - e->banned_until) / 1000);
+		fprintf(f, "B2 %c %d %lld %s%s%s\n", KIND_CHAR[e->kind],
+		        (int)level_now(e, now), epoch, e->address,
+		        e->kind == LK_USER ? " " : "", e->kind == LK_USER ? e->user : "");
+		if (is_banned(e, now))
+			amount++;
 	}
-	fclose(f);
-	if (rename(tmp, ban_path) != 0 && s)
-		reg(s, "⛔ could not rename the ban file to «%s»",
+	bool bad = ferror(f) != 0;
+	if (fclose(f) != 0)
+		bad = true;
+	if (bad || rename(tmp, ban_path) != 0)
+		say(k, "⛔ could not write/rename the ban file «%s»", ban_path);
+	else
+		say(k, "the ban file is up to date: %d bans in force in «%s»", amount,
 		    ban_path);
-	else if (s)
-		reg(s, "the ban file is up to date: %d addresses in «%s»", amount,
-		    ban_path);
 }
 
-static bool banned(const char *address, uint64_t now, uint64_t *remain)
-{
-	if (remain)
-		*remain = 0;
-	int i = find(address);
-	if (i < 0)
-		return false; /* never failed anything: it is a fact, not a slot run out */
-	if (now >= attempts[i].banned_until)
-		return false;
-	if (remain)
-		*remain = attempts[i].banned_until - now;
-	return true;
-}
-
-static void mark_failed(rcp_session *s, const char *address, uint64_t now)
-{
-	const char *evicted = NULL;
-	int i = find_or_create(address, now, &evicted);
-	if (evicted)
-		reg(s, "⚠ attempt table full (%d entries): evicted the entry "
-		       "«%s» to make room for «%s» — §4.4-bis",
-		    MAX_ATTEMPTS, evicted, address);
-	attempts[i].last_touch = now;
-	/* The ring of the last THRESHOLD failures: it shifts by one and writes at the
-	 * tail.  ⚠ Older than that they needs no question. */
-	if (attempts[i].amount < THRESHOLD) {
-		attempts[i].failure_times[attempts[i].amount++] = now;
-	} else {
-		memmove(attempts[i].failure_times, attempts[i].failure_times + 1,
-		        (THRESHOLD - 1) * sizeof attempts[i].failure_times[0]);
-		attempts[i].failure_times[THRESHOLD - 1] = now;
-	}
-	int inside = 0;
-	for (int k = 0; k < attempts[i].amount; k++)
-		if (now - attempts[i].failure_times[k] <= WINDOW)
-			inside++;
-	reg(s, "failed attempt from %s: %d of %d within the %u minutes (§4.4-bis)",
-	    address, inside, THRESHOLD, WINDOW / 60000u);
-	if (inside >= THRESHOLD) {
-		attempts[i].banned_until = now + BAN_DURATION;
-		reg(s, "⛔ BANNED address %s for %u hours: %d authentications "
-		       "failed within %u minutes (§4.4-bis, DECISIONS.md §1.9)",
-		    address, BAN_DURATION / 3600000u, inside, WINDOW / 60000u);
-		save_ban(s, now);
-	}
-}
-
-/* ⛔ Only a SUCCESSFUL authentication resets, and it is what «consecutive»
- * means.  The whole entry is reset: an address that gets in has no more history. */
-static void reset_failed(rcp_session *s, const char *address, uint64_t now)
-{
-	int i = find(address);
-	if (i < 0)
-		return;
-	if (attempts[i].amount > 0)
-		reg(s, "successful login from %s: the count of failures goes back to "
-		       "zero (there were %d) — §4.4-bis",
-		    address, attempts[i].amount);
-	memset(&attempts[i], 0, sizeof attempts[i]);
-	(void)now;
-}
 /* ------------------------------------------------------------------------ */
 /* What the HOST calls: the page over TCP and the unblock command.
  *
  * ⛔ The page is served ALL THE SAME to a banned address, and says the attempts
  *    are used up (`DECISIONS.md` §1.9): whoever is banned by mistake is almost
  *    always the owner, and a network error would tell them nothing.  Whoever
- *    serves the page calls `rcp_banned()` and writes the sentence.          */
+ *    serves the page calls `rcp_banned()` and writes the sentence.
+ *    ⚠ The page does not know the user: it answers for the levels that do
+ *    not depend on it (the address, the /48).                              */
 bool rcp_banned(const char *provenance, uint64_t now, uint64_t *remain_ms)
 {
-	char addr[64];
+	char addr[64], addr48[64];
+	uint64_t best = 0;
+	bool any = false;
 	/* ⛔ The key is made by `rcp_key_address()`, not by cutting the port:
 	 *    `rcp.h` promises that «`provenance` may carry the port: it is cut
 	 *    in here», and whoever believes the header passes
 	 *    `192.168.0.2` without brackets — finding B-8. */
 	rcp_key_address(provenance, addr, sizeof addr);
-	return banned(addr, now, remain_ms);
+	int idx[2] = {lfind(LK_KEY, addr, NULL), -1};
+	if (key_net48(addr, addr48, sizeof addr48))
+		idx[1] = lfind(LK_NET48, addr48, NULL);
+	for (int j = 0; j < 2; j++)
+		if (idx[j] >= 0 && is_banned(&attempts[idx[j]], now)) {
+			uint64_t rem = attempts[idx[j]].banned_until - now;
+			any = true;
+			if (rem > best)
+				best = rem;
+		}
+	if (remain_ms)
+		*remain_ms = best;
+	return any;
 }
 
-/* ⛔ The unblock command.  Returns `true` if something was removed:
- * «it was not banned» and «I unblocked it» are two different facts, and whoever
- * commands must be able to tell them apart.  ⚠ And the unblock is written to
- * the log by the caller, which has the context: here there is no session to
- * hang it on. */
+/* ⛔ The unblock command.  Returns `true` if something that was BANNED was
+ * removed: «it was not banned» and «I unblocked it» are two different facts,
+ * and whoever commands must be able to tell them apart.  It removes EVERY
+ * level that concerns the address: its (key, user) pairs, the key, the /48 —
+ * bans, recidivism and failures; only the in-flight bookings stay (their
+ * verdicts are still to come, and they will give them back).
+ * ⚠ And the unblock is written to the log by the caller, which has the
+ * context: here there is no session to hang it on. */
 bool rcp_unblock(const char *address, uint64_t now)
 {
-	char addr[64];
+	char addr[64], addr48[64];
+	bool was_banned = false, touched = false;
 	/* ⛔ §4.4-bis: «whoever types `192.168.0.2` at the unblock command MUST
 	 *    reach the same key: normalisation belongs to the server, not to
 	 *    whoever commands» — finding B-8. */
 	rcp_key_address(address, addr, sizeof addr);
-	int i = find(addr);
-	if (i < 0)
-		return false;
-	bool was_banned = now < attempts[i].banned_until;
-	memset(&attempts[i], 0, sizeof attempts[i]);
-	save_ban(NULL, now);
+	bool has48 = key_net48(addr, addr48, sizeof addr48);
+	for (int i = 0; i < MAX_ATTEMPTS; i++) {
+		struct lentry *e = &attempts[i];
+		if (!e->used)
+			continue;
+		bool mine = ((e->kind == LK_USER || e->kind == LK_KEY) &&
+		             strcmp(e->address, addr) == 0) ||
+		            (e->kind == LK_NET48 && has48 && strcmp(e->address, addr48) == 0);
+		if (!mine)
+			continue;
+		if (is_banned(e, now))
+			was_banned = true;
+		touched = true;
+		int flight = e->in_flight;
+		char kind = (char)e->kind;
+		char address_copy[64], user_copy[257];
+		snprintf(address_copy, sizeof address_copy, "%s", e->address);
+		snprintf(user_copy, sizeof user_copy, "%s", e->user);
+		memset(e, 0, sizeof *e);
+		if (flight > 0) { /* keep the booking: the verdict will come */
+			e->used = true;
+			e->kind = (uint8_t)kind;
+			e->in_flight = flight;
+			e->last_touch = now;
+			snprintf(e->address, sizeof e->address, "%s", address_copy);
+			snprintf(e->user, sizeof e->user, "%s", user_copy);
+		}
+	}
+	if (touched)
+		save_ban(NULL, now);
 	return was_banned;
 }
 
 /* ⛔ Declares where the ban file lives and reads it back: a ban that does not
- * survive a restart is a protection that gets lost (I7).  Returns how many it
- * loaded, or -1 if the file was there and could not be read —
+ * survive a restart is a protection that gets lost (I7).  Returns how many
+ * bans in force it loaded, or -1 if the file was there and could not be read —
  * ⚠ «zero bans» and «I could not look» are two different facts
- * (`LESSONS.md` §1.9 rule 1), and the caller must print them differently. */
+ * (`LESSONS.md` §1.9 rule 1), and the caller must print them differently.
+ *
+ * ⭐ It reads BOTH formats.  An old line, «[address] epoch», is the 12-hour ban
+ *    of the 1.0: it becomes a ban of the key (the /64 for IPv6) at the top of
+ *    the ladder; the file is rewritten in the new format at the next change.
+ * ⚠ The recidivism of a ban that ended less than 24 h ago is read back too.
+ *   `now` can be smaller than the time since that ban (it restarts with the
+ *   process): then the end of the ban is clamped to 1, and the memory lasts a
+ *   little longer than it should — the cautious side. */
 int rcp_ban_load(const char *fpath, uint64_t now)
 {
 	ban_path[0] = 0;
@@ -1475,8 +2075,8 @@ int rcp_ban_load(const char *fpath, uint64_t now)
 		 *    there and could not be read», and this line returned `0` on
 		 *    ANY failure of `fopen()`: a file without permissions, a path whose
 		 *    parent is not a directory, a disk that does not answer — all
-		 *    «zero bans», that is **the protection switched off with the air
-		 *    of having nothing to protect** (`LESSONS.md` §1.9 rule 1, and I7).
+		 *    «zero bans», that is **the protection switched off with the air of
+		 *    having nothing to protect** (`LESSONS.md` §1.9 rule 1, and I7).
 		 *
 		 * ⭐ Only one datum tells the two facts apart, and it is `errno`:
 		 *    `ENOENT` means the file has not been born yet — no bans, and it is
@@ -1486,23 +2086,68 @@ int rcp_ban_load(const char *fpath, uint64_t now)
 		 *    page says so, and whoever starts the server stops. */
 		return errno == ENOENT ? 0 : -1;
 	}
+	static const int none[LEVELS] = {-1, -1, -1};
 	time_t t_now = time(NULL);
-	char line[128];
+	char line[1024];
 	int amount = 0;
 	while (fgets(line, sizeof line, f)) {
-		char addr[64];
+		char key[64] = "", user[257] = "";
+		int kind = LK_KEY, level = 2;
 		long long exp = 0;
-		if (sscanf(line, "%63s %lld", addr, &exp) != 2)
-			continue;
-		if (exp <= (long long)t_now)
-			continue; /* expired while the server was off */
-		const char *evicted = NULL;
-		int i = find_or_create(addr, now, &evicted);
-		/* ⛔ No count is rebuilt: what survives the restart is the BAN, not
-		 * the attempts that produced it. */
-		attempts[i].banned_until =
-		    now + (uint64_t)(exp - (long long)t_now) * 1000u;
-		amount++;
+		line[strcspn(line, "\r\n")] = 0;
+		if (strncmp(line, "B2 ", 3) == 0) {
+			char kc = 0;
+			int off = 0;
+			if (sscanf(line + 3, "%c %d %lld %n", &kc, &level, &exp, &off) < 3 ||
+			    level < 0 || level > 2)
+				continue;
+			kind = kc == 'U' ? LK_USER : kc == 'K' ? LK_KEY : kc == 'N' ? LK_NET48 : -1;
+			if (kind < 0)
+				continue;
+			const char *p = line + 3 + off, *sp = strchr(p, ' ');
+			size_t kl = sp ? (size_t)(sp - p) : strlen(p);
+			if (kl == 0 || kl >= sizeof key)
+				continue;
+			memcpy(key, p, kl);
+			key[kl] = 0;
+			if (kind == LK_USER) {
+				if (!sp || !sp[1] || strlen(sp + 1) >= sizeof user)
+					continue;
+				snprintf(user, sizeof user, "%s", sp + 1);
+			}
+		} else {
+			char addr[64];
+			if (sscanf(line, "%63s %lld", addr, &exp) != 2 || exp <= (long long)t_now)
+				continue; /* not a line, or expired while the server was off */
+			snprintf(key, sizeof key, "%s", addr);
+		}
+		char norm[64];
+		rcp_key_address(key, norm, sizeof norm); /* idempotent: also converts the old forms */
+		uint64_t until;
+		if (exp > (long long)t_now) {
+			until = now + (uint64_t)(exp - (long long)t_now) * 1000u;
+		} else {
+			uint64_t ago = (uint64_t)((long long)t_now - exp) * 1000u;
+			if (level == 0 || ago >= FORGET_MS)
+				continue; /* ended and forgotten */
+			until = ago < now ? now - ago : 1;
+		}
+		int i = lfind(kind, norm, user);
+		if (i < 0)
+			i = lcreate(kind, norm, user, now, none, NULL, 0);
+		if (i < 0)
+			continue; /* the table is full of bans: nothing to evict */
+		if (until > attempts[i].banned_until)
+			attempts[i].banned_until = until;
+		if (level > attempts[i].level)
+			attempts[i].level = (uint8_t)level;
+		/* ⛔ No count is rebuilt: what survives the restart is the BAN and
+		 * the memory of it, not the attempts that produced it. */
+		if (is_banned(&attempts[i], now)) {
+			if (attempts[i].level == 0)
+				attempts[i].level = 1; /* a ban in force is at least the first */
+			amount++;
+		}
 	}
 	/* ⚠ And a read that stops halfway is also «I could not look»: `fgets`
 	 *   returns NULL both at end of file and on an error, and the two are told
@@ -1511,6 +2156,32 @@ int rcp_ban_load(const char *fpath, uint64_t now)
 	int broken = ferror(f);
 	fclose(f);
 	return broken ? -1 : amount;
+}
+
+/* A verdict that arrives when its CONNECTION IS GONE — the client closed
+ * while PAM was answering.  ⛔ It is counted all the same, from the name and
+ * the address that the request in flight carries (`struct flight`,
+ * `helper.c`): otherwise opening a connection per attempt and closing it at
+ * once would be the way to try passwords for free.  `rhost` is the bare
+ * address of PAM_RHOST.  The lines go to `fn`, because there is no session to
+ * hang them on. */
+void rcp_orphan_verdict(const char *user, const char *rhost, bool admitted,
+                        uint64_t now, rcp_line_fn fn, void *ctx)
+{
+	struct sink k = {NULL, fn, ctx};
+	struct login_result r;
+	char key[64];
+	if (!user || !*user || !rhost || !*rhost) {
+		say(&k, "⚠ verdict of a connection that is gone, without name or "
+		        "address: NOT counted (§4.4-bis)");
+		return;
+	}
+	rcp_key_address(rhost, key, sizeof key);
+	login_resolve(key, user, admitted, now, &r);
+	say(&k, "⭐ the connection was gone when PAM answered (%s): the verdict is "
+	        "counted all the same (§4.4-bis)",
+	    admitted ? "admitted" : "refused");
+	login_report(&k, key, user, admitted, &r, now);
 }
 
 /* ⛔ For the bench only: between one test and the next one starts from zero.
@@ -1522,6 +2193,7 @@ void rcp_reset_session_log(void)
 	if (attached)
 		memset(attached, 0, (size_t)how_many_slots * sizeof *attached);
 	memset(attempts, 0, sizeof attempts);
+	login_refused_full = 0;
 }
 
 /* ------------------------------------------------------------------------ */
@@ -1752,8 +2424,9 @@ static void dismiss(rcp_session *s, uint8_t reason, const char *detail)
  * the same reason, and does NOT also send FAREWELL (§4.4).                   */
 static void reject(rcp_session *s, uint8_t reason)
 {
-	reg(s, "rejected reason=%#04x user=%s from=%s", reason, s->user,
-	    s->provenance);
+	char tag[96];
+	reg(s, "rejected reason=%#04x user=%s from=%s", reason,
+	    log_user(s->user, tag, sizeof tag), s->provenance);
 	uint8_t body[1];
 	body[0] = reason;
 	send_message(s, T_REJECTED, body, 1);
@@ -2464,13 +3137,14 @@ static bool handle_credentials(rcp_session *s, reader *l, uint64_t now)
 	 *   successful or not, is not something to keep (finding R9.8).  To tell
 	 *   «it did not arrive» from «PAM does not answer» this line is
 	 *   enough. */
-	reg(s, "CREDENTIALS received user=%s (with password)", s->user);
+	char tag[96];
+	reg(s, "CREDENTIALS received user=%s (with password)",
+	    log_user(s->user, tag, sizeof tag));
 
 	/* ⛔ The limiter BEFORE PAM, and the refusal is immediate: §4.4-bis says
 	 * the wait is a WINDOW in which one refuses, not a delay — with a single
 	 * attempt per connection, a server that delayed by fifteen minutes
 	 * would never deliver the refusal. */
-	uint64_t remain = 0;
 	/* ⛔⭐ AND FROM HERE DOWN ONE STARTS FROM DENIED, ALWAYS — invariant I3.
 	 *
 	 * Before 12 Aug 2026 `cred_good` took its value inside the only `else`
@@ -2484,17 +3158,37 @@ static bool handle_credentials(rcp_session *s, reader *l, uint64_t now)
 	s->cred_reason = RCP_WRONG_CREDENTIALS;
 	s->expected_verdict = false;
 	s->refusal_is_ours = false;
-	if (banned(s->address, now, &remain)) {
-		/* ⛔ The ban refuses WITHOUT querying PAM, and it must be known from
+	struct login_info linfo;
+	enum login_verdict lv = login_reserve(s->address, s->user, now, &linfo);
+	if (linfo.evicted[0])
+		reg(s, "⚠ attempt table full (%d entries): evicted the entry «%s» to "
+		       "make room — §4.4-bis",
+		    MAX_ATTEMPTS, linfo.evicted);
+	if (lv != LV_OK) {
+		/* ⛔ The limiter refuses WITHOUT querying PAM, and it must be known from
 		 * reading the reason on the wire: `TOO_MANY_ATTEMPTS` and
 		 * `WRONG_CREDENTIALS` cannot come from the same road.  ⭐ It is the
 		 * byte that on 10 Aug 2026 separated the two suspects of B8 — whoever
-		 * reads a `WRONG_CREDENTIALS` is looking at PAM, not at this line. */
+		 * reads a `WRONG_CREDENTIALS` is looking at PAM, not at this line.
+		 * ⚠ Nothing is booked and nothing is counted: a refusal is not a
+		 * failed attempt (no ban is born from refusals). */
 		s->cred_good = false;
 		s->cred_reason = RCP_TOO_MANY_ATTEMPTS;
-		reg(s, "⛔ address %s BANNED: %llu minutes remain, PAM is not "
-		       "queried (§4.4-bis)",
-		    s->address, (unsigned long long)(remain / 60000u));
+		if (lv == LV_BANNED)
+			reg(s, "⛔ %s of %s BANNED: %llu minutes remain, PAM is not "
+			       "queried (§4.4-bis)",
+			    LEVEL_NAME[linfo.kind], s->address,
+			    (unsigned long long)((linfo.remain + 59999u) / 60000u));
+		else if (lv == LV_BUSY)
+			reg(s, "⛔ too many attempts in flight or just failed for the %s "
+			       "of %s: PAM is not queried, and the refusal is NOT a failed "
+			       "attempt (§4.4-bis B)",
+			    LEVEL_NAME[linfo.kind], s->address);
+		else
+			reg(s, "⛔ attempt table full and nothing in it can be freed "
+			       "(banned or in flight): refused, PAM is not queried.  "
+			       "Refusals for this reason so far: %u (§4.4-bis)",
+			    login_refused_full);
 	} else if (s->g.ask_verify) {
 		/* ⭐⭐ THE GOOD ROAD — `DECISIONS.md` §1.10, 12 Aug 2026.
 		 *
@@ -2503,9 +3197,12 @@ static bool handle_credentials(rcp_session *s, reader *l, uint64_t now)
 		 *    only way in which «while one authenticates, the others do not
 		 *    notice» can be true on a single-threaded server.
 		 *
-		 * ⚠ And the count of §4.4-bis does NOT move here: now one knows that
-		 *   one asked, not what was answered.  It moves in `rcp_verdict()`,
-		 *   which is the point where the fact exists. */
+		 * ⚠ And the FAILURE of §4.4-bis is not counted here: now one knows that
+		 *   one asked, not what was answered.  What happened here is the
+		 *   BOOKING (`login_reserve()`, above): the attempt counts as «in
+		 *   flight» for the three levels until the verdict, which turns it into
+		 *   a failure or gives it back — `rcp_verdict()`, or
+		 *   `rcp_orphan_verdict()` if the connection is gone by then. */
 		if (s->g.ask_verify(s->g.ctx, user, password, &s->ticket)) {
 			s->expected_verdict = true;
 			reg(s, "PAM asked of the helper, request %llu: the thread stays "
@@ -2518,10 +3215,12 @@ static bool handle_credentials(rcp_session *s, reader *l, uint64_t now)
 			 *   and §4.4-bis lists among the things that do not ban precisely
 			 *   those that «would ban someone who did nothing wrong». */
 			s->refusal_is_ours = true;
+			login_release(s->address, s->user);
 			reg(s, "⛔ the question to PAM did not leave: REJECTED without appeal "
 			       "(invariant I3).  ⚠ And it does NOT count as a failed attempt "
 			       "of §4.4-bis: the defect is ours, and a ban for a defect of "
-			       "ours would be the worst possible diagnosis");
+			       "ours would be the worst possible diagnosis.  The booking is "
+			       "given back");
 		}
 	} else {
 		/* ⚠ THE DECLARED FALLBACK (`CODER.md` §4.2), and it blocks whoever
@@ -2534,12 +3233,12 @@ static bool handle_credentials(rcp_session *s, reader *l, uint64_t now)
 		    ok ? "admitted" : "refused");
 		s->cred_good = ok;
 		s->cred_reason = RCP_WRONG_CREDENTIALS;
-		/* ⛔ The count is on the ADDRESS alone: the user name does not count
-		 * (`DECISIONS.md` §1.9).  Three different names count three. */
-		if (ok)
-			reset_failed(s, s->address, now);
-		else
-			mark_failed(s, s->address, now);
+		/* ⛔ The verdict is already here: the booking made above is resolved
+		 * at once, by the same function as the asynchronous road. */
+		struct sink k = {s, NULL, NULL};
+		struct login_result r;
+		login_resolve(s->address, s->user, ok, now, &r);
+		login_report(&k, s->address, s->user, ok, &r, now);
 	}
 	/* ⛔ The password is zeroed as soon as PAM has answered, and does not appear
 	 * in any log at any level (§4.4).
@@ -7879,15 +8578,18 @@ bool rcp_verdict(rcp_session *s, uint64_t ticket, bool admitted,
 	       "stopped (DECISIONS.md §1.10)",
 	    (unsigned long long)ticket, admitted ? "admitted" : "refused");
 
-	/* ⛔ THE COUNT OF §4.4-bis MOVES HERE, and it is the only place where the
-	 *    fact «an attempt failed» now exists.  ⚠ Bringing it here is the only
-	 *    thing the ban had to undergo from this cure: the rule does not
-	 *    change — three failures from the same address in five minutes, twelve
-	 *    hours — the moment at which it is known changes. */
-	if (admitted)
-		reset_failed(s, s->address, now);
-	else
-		mark_failed(s, s->address, now);
+	/* ⛔ THE BOOKING OF §4.4-bis IS RESOLVED HERE, and this is the point where
+	 *    the fact «an attempt failed» exists.  A «no» also covers the PAM
+	 *    timeout of the helper (`helper_expired()` delivers a refusal): an
+	 *    attempt without a verdict COUNTS AS FAILED — plan B of 24 Oct 2026.
+	 *    The rule of the 1.0 («three in five minutes, twelve hours») is
+	 *    replaced by the three levels above `LIMIT`. */
+	{
+		struct sink k = {s, NULL, NULL};
+		struct login_result r;
+		login_resolve(s->address, s->user, admitted, now, &r);
+		login_report(&k, s->address, s->user, admitted, &r, now);
+	}
 	return true;
 }
 
@@ -7947,15 +8649,24 @@ bool rcp_time(rcp_session *s, uint64_t now)
 		 *    the reason does not distinguish. */
 		if (s->expected_verdict && now - s->cred_arrival > VERDICT_CAP) {
 			/* ⛔ The safety net, and it counts as NO.  `cred_good` has been false
-			 *    since `CREDENTIALS` arrived: here nothing is touched,
-			 *    one stops waiting. */
+			 *    since `CREDENTIALS` arrived: one stops waiting.
+			 * ⭐ And since 24 Oct 2026 (§4.4-bis B) an attempt WITHOUT a verdict
+			 *    COUNTS AS FAILED: a PAM that «does not answer» is what an
+			 *    attacker would try to produce, and the booking made at
+			 *    `CREDENTIALS` must be resolved anyway.  (The helper's own
+			 *    ceiling is 8 s, lower than this one: here we arrive only if
+			 *    the helper itself did not deliver.) */
 			s->expected_verdict = false;
-			s->refusal_is_ours = true;
 			reg(s, "⛔ no verdict from the helper after %llu ms (ceiling %d): "
-			       "REJECTED.  ⚠ It is OUR defect, not a wrong "
-			       "password — and that is why it does NOT count as a failed attempt "
-			       "of §4.4-bis",
+			       "REJECTED, and it COUNTS as a failed attempt of §4.4-bis "
+			       "(an attempt without a verdict is not a free attempt)",
 			    (unsigned long long)(now - s->cred_arrival), VERDICT_CAP);
+			{
+				struct sink k = {s, NULL, NULL};
+				struct login_result r;
+				login_resolve(s->address, s->user, false, now, &r);
+				login_report(&k, s->address, s->user, false, &r, now);
+			}
 		}
 		if (s->expected_verdict)
 			return true; /* PAM is still answering, and meanwhile the thread turns */
@@ -7985,8 +8696,8 @@ bool rcp_time(rcp_session *s, uint64_t now)
 		if (s->refusal_is_ours)
 			reg(s, "⛔ and this REJECTED is OURS, not PAM's: the check was "
 			       "not made.  ⚠ On the wire the reason is the same (§4.4 "
-			       "forbids distinguishing them), and the count of §4.4-bis was NOT "
-			       "touched");
+			       "forbids distinguishing them), and the counters of §4.4-bis "
+			       "were NOT touched (the booking was given back)");
 		reject(s, s->cred_reason);
 		return false;
 	}

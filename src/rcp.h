@@ -1341,7 +1341,12 @@ int rcp_cursor_shape(rcp_session *s, uint16_t width, uint16_t height,
 /* §4.4-bis — THE ADDRESS BAN, and the three things the host must be able to
  * do.  The rule is in `DECISIONS.md` §1.9, decided by the user on 10
  * Aug 2026: three consecutive failed authentications from the same address, and
- * that address is out for twelve hours.                                     */
+ * that address is out for twelve hours.
+ * ⛔ CHANGED on 24 Oct 2026 (`docs/1.5/DECISIONS-11.md`): three levels of counters
+ * ((key, user) 5 in 5 min · key 12 in 5 min · IPv6 /48 30 in 10 min), progressive
+ * ban 15 min / 1 h / 12 h, forgotten after 24 h; key = IPv4 whole, IPv6 /64.
+ * The 12 hours are now the TOP of the ladder.  `rcp_banned()` answers for the
+ * levels that do not depend on the user (key, /48); `rcp_unblock()` clears all. */
 
 /* ⛔ «Is this address banned?», and how long it has left.  It is called **by
  * whoever serves the page over TCP**: §4.4-bis wants the page to load all the
@@ -1377,6 +1382,26 @@ int rcp_ban_load(const char *fpath, uint64_t now_ms);
  *    answer «it was not banned» to every address — in silence, and
  *    forever. */
 void rcp_key_address(const char *text, char *report, size_t cap);
+
+/* ⛔⭐ THE LOGIN DEFENCES — 24 Oct 2026 (SPEC CHANGE from 1.0: `docs/1.5/DECISIONS-11.md`).
+ *
+ * `rcp_key_address()` now gives the ban key of §4.4-bis A: IPv4 the whole
+ * address, IPv6 the /64 (`fe80::1` -> `[fe80::]`; `::ffff:a.b.c.d` and NAT64
+ * are the IPv4 inside; `::1` whole).  It stays idempotent.
+ *
+ * A verdict of PAM that arrives when the connection is GONE is counted all the
+ * same, from the name and the bare address the request in flight carries
+ * (`PAM_RHOST` form).  The lines it has to write go to `fn` (there is no session
+ * to hang them on); `fn` may be NULL.  `now_ms` is the clock of `rcp_banned()`. */
+typedef void (*rcp_line_fn)(void *ctx, const char *line);
+void rcp_orphan_verdict(const char *user, const char *rhost, bool admitted,
+                        uint64_t now_ms, rcp_line_fn fn, void *ctx);
+
+/* ⛔ The secret of the tags `unknown user [hmac6]` of the log (§4.4-bis D):
+ * `<dir>/log-secret`, 0600, next to the QUIC token secret.  Returns 1 = read,
+ * 0 = made and written, -1 = the secret of this run only (the tags change at
+ * every restart), -2 = no secret (the tags are «??????»; never the name). */
+int rcp_log_secret_load(const char *dir);
 
 #ifdef __cplusplus
 }
