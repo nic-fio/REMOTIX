@@ -93,9 +93,11 @@
  *          never said HELLO ends here, TIMED_OUT, without a ban), nobody is served;
  *       2. otherwise, from the PLACE (the /48 key: an IPv4 address, or an IPv6 /48)
  *          that holds the most pending connections — so a flood evicts ITSELF, not
- *          the real users logging in from elsewhere —, the earliest state first
- *          (no WebTransport session yet, then `wait-hello`, then
- *          `wait-credentials`), the oldest within it.
+ *          the real users logging in from elsewhere —; between places as crowded,
+ *          one PARKED (older than PARKED_S, still before its credentials) first,
+ *          the oldest; among fresh ones the earliest state first (no
+ *          WebTransport session yet, then `wait-hello`, then `wait-credentials`),
+ *          the oldest within it.
  *     ⛔ Never one in `wait-verdict` (PAM is judging it: closing it would waste the
  *        check and let a flood cancel real logins) and never a logged-in one.
  *     ⛔ The victim is closed only AFTER the newcomer's connection exists: if
@@ -998,14 +1000,28 @@ static int evict_rank(const connection *c)
 	return -1;
 }
 
+/* ⛔ A pending connection older than this is PARKED: the page opens QUIC only after
+ *    the password is typed and sends HELLO and CREDENTIALS at once, so an honest
+ *    login is past its credentials within a few round trips.  One still before them
+ *    after PARKED_S is sitting on its place (CAP_CREDENTIALS lets it sit 60 s). */
+#define PARKED_S 5
+
 /* The connection to close for a newcomer, or NULL — the order of the box on
  * MAX_CONNECTIONS.  The list is newest first, so on a tie the later one (`>=`,
- * `<=`) is the older.  ⚠ Quadratic in the connections (≤ 256), and only when full. */
-static connection *pick_victim(const transport *t)
+ * `<=`) is the older.  ⚠ Quadratic in the connections (≤ 256), and only when full.
+ * ⛔⭐ Between places with as many pending, a PARKED connection goes before a
+ *     fresh one, the oldest first (fresh-eyes review, 15 Oct 2026, MEDIUM).  The
+ *     earliest-state-first order alone made a login IN PROGRESS the victim: 128
+ *     IPv4 addresses, one connection each parked in `wait-credentials`, and every
+ *     new connection of theirs evicted the owner during his few hundred
+ *     milliseconds before CREDENTIALS — for as long as they kept churning.  Among
+ *     fresh ones the old order holds: the earliest state, then the oldest. */
+static connection *pick_victim(const transport *t, ngtcp2_tstamp now)
 {
 	connection *v = NULL;
 	size_t v_n = 0;
 	int v_rank = 0;
+	bool v_parked = false;
 
 	for (connection *c = t->prime; c; c = c->upcoming)
 		if (evict_rank(c) == 0)
@@ -1015,13 +1031,24 @@ static connection *pick_victim(const transport *t)
 	for (connection *c = t->prime; c; c = c->upcoming) {
 		int r = evict_rank(c);
 		size_t n;
+		bool parked, better;
 		if (r < 0)
 			continue;
 		n = unlogged_from48(t, c->birth_key48);
-		if (!v || n > v_n || (n == v_n && r <= v_rank)) {
+		parked = now > c->born && now - c->born >= PARKED_S * NGTCP2_SECONDS;
+		if (!v || n > v_n)
+			better = true;
+		else if (n < v_n)
+			better = false;
+		else if (parked != v_parked)
+			better = parked;
+		else
+			better = parked || r <= v_rank; /* later in the list = older */
+		if (better) {
 			v = c;
 			v_n = n;
 			v_rank = r;
+			v_parked = parked;
 		}
 	}
 	return v;
@@ -1157,7 +1184,7 @@ static bool room_for(transport *t, const ngtcp2_pkt_hd *hd, const struct sockadd
 		*victim = NULL;
 		if (live < cap_conns(t) && pend < cap_pending(t))
 			return true;
-		v = pick_victim(t);
+		v = pick_victim(t, now_ns());
 		if (v && live - 1 < cap_conns(t) && pend - 1 < cap_pending(t)) {
 			*victim = v;
 			return true;
@@ -1990,6 +2017,14 @@ void transport_verdict_from(transport *t, uint64_t ticket, bool admitted,
 	 *    `CREDENTIALS` is resolved with. */
 	rcp_orphan_verdict(user, rhost, admitted, lost, now_ns() / NGTCP2_MILLISECONDS,
 	                   orphan_line, NULL);
+}
+
+bool transport_awaits_verdict(const transport *t, uint64_t ticket)
+{
+	for (const connection *c = t->prime; c; c = c->upcoming)
+		if (!c->dead_run && c->w && wt_awaits_verdict(c->w, ticket))
+			return true;
+	return false;
 }
 
 void transport_expired(transport *t)

@@ -83,6 +83,10 @@ void transport_verdict_from(transport *t, uint64_t ticket, bool admitted,
  * connection is gone): kept for the harnesses. */
 void transport_verdict(transport *t, uint64_t ticket, bool admitted,
                         bool resumed);
+/* ⭐ True when a live connection still waits for PAM's answer to `ticket` (the
+ * one `transport_verdict()` would hand it to).  `main.c` asks it BEFORE starting a
+ * desktop for a yes: a client that hung up while PAM judged gets none. */
+bool transport_awaits_verdict(const transport *t, uint64_t ticket);
 void transport_close(transport *t);
 
 int transport_fd(const transport *t);

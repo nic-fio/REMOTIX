@@ -737,7 +737,21 @@ static void delivery_verdict(void *ctx, uint64_t ticket, bool admitted,
 	/* ⭐ D-001: the stage was already there ⇒ `SESSION` will say `2 = RESUMED`. */
 	bool resumed = false;
 
-	if (admitted && user && user[0]) {
+	/* ⛔ A yes NOBODY waits for any more starts no desktop (fresh-eyes review,
+	 *    15 Oct 2026).  The client hung up while PAM judged, or its session
+	 *    finished: `transport_verdict_from()` below finds nobody (the verdict is
+	 *    counted as an orphan all the same), and the stage spawned here would
+	 *    run for nobody until abandonment.  Asked BEFORE anything is looked up
+	 *    or spawned; nothing runs between this and the verdict that could make
+	 *    a waiter appear. */
+	bool waited = transport_awaits_verdict(p->t, ticket);
+
+	if (admitted && !waited)
+		registro_dice(LOG_CHILD,
+		              "«%s» passed PAM (request %llu) but nobody waits for the "
+		              "answer any more: NO desktop is started or asked for",
+		              user ? user : "?", (unsigned long long)ticket);
+	if (admitted && waited && user && user[0]) {
 		/* ⛔ «It was already there» and «I have just spawned it» are two
 		 *    different facts, and the difference is needed a line below: a
 		 *    child just born is NOT asked to resend the stage — it is taking

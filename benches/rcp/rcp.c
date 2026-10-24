@@ -7438,6 +7438,13 @@ void rcp_closed_by_client(rcp_session *s, uint8_t code)
 	s->state = S_FINISHED;
 }
 
+bool rcp_awaits_verdict(const rcp_session *s, uint64_t ticket)
+{
+	/* the walls of `rcp_verdict()`: alive, in wait-verdict, asked, its own number */
+	return s && s->state == S_WAIT_VERDICT && s->expected_verdict &&
+	       s->ticket == ticket;
+}
+
 const char *rcp_state_name(const rcp_session *s)
 {
 	return s ? STATE_NAMES[s->state] : "?";

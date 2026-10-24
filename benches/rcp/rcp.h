@@ -653,6 +653,11 @@ void rcp_closed_by_client(rcp_session *s, uint8_t code);
  *    forbids.  Whoever compares this string must know the case exists; if it
  *    speaks again and the slot is free, the session goes back to `active` by itself. */
 const char *rcp_state_name(const rcp_session *s);
+/* ⭐ True when THIS session still waits for PAM's answer to `ticket` — the
+ *    session `rcp_verdict()` would hand it to.  For `main.c`: a yes nobody waits
+ *    for any more (the client hung up, the session finished while PAM judged)
+ *    must not start a desktop for nobody. */
+bool rcp_awaits_verdict(const rcp_session *s, uint64_t ticket);
 const char *rcp_user(const rcp_session *s);
 
 /* ⛔⭐ THE CLIENT'S DECODER CEILING — `video.max_size` of §4.3,
