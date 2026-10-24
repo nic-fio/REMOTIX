@@ -6032,7 +6032,7 @@ async function connect(username, password) {
     const l = new Reader(m.body);
     const rsn = l.u8();
     /* ⛔ `0x0E` in a `REJECTED` answers the CREDENTIALS: the server could not
-       check the password (its checker down, or no verdict in time) — PAM never
+       check the password (its checker down or dead) — PAM never
        judged it (RCP.md §4.4, DECISIONS.md §11.39).  A login sentence of its own,
        not the attach one; and ⛔ no retry by itself: the user tries again. */
     outcome(rsn === REASON_CHECK_NOT_MADE_IN_REJECTED ? CHECK_NOT_MADE_TEXT
