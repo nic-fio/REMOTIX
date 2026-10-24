@@ -1689,6 +1689,19 @@ static void read_packet(transport *t, const struct sockaddr *local,
 			c->dead_run = true;
 			return;
 		}
+		/* ⛔ 24 Oct 2026 (audit ngtcp2 1.25; present since 1.0): `ngtcp2_conn_read_pkt`
+		 *   says «NGTCP2_ERR_DROP_CONN: Server application must drop the connection
+		 *   silently (without sending any CONNECTION_CLOSE frame), and discard
+		 *   connection state».  Until now it fell into the generic branch below and the
+		 *   server ANSWERED with a CONNECTION_CLOSE a packet that ngtcp2 itself had
+		 *   judged not worth an answer (typically unauthenticated: a reflection for
+		 *   whoever forges the source address). */
+		if (rv == NGTCP2_ERR_DROP_CONN) {
+			log_detail(REG_QUIC, "%s: ngtcp2 asks to drop the connection silently",
+			           c->provenance);
+			c->dead_run = true;
+			return;
+		}
 		registro_dice(REG_QUIC, "read failed from %s: %s", c->provenance,
 		              ngtcp2_strerror(rv));
 		/* ⚠ DECLARED FALLBACK: here the product should enter the closing
