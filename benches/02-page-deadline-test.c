@@ -345,8 +345,7 @@ static pid_t client_get_as(int port, const char *src, bool read_all, bool banned
 	b[n] = 0;
 	bool common = strncmp(b, "HTTP/1.1 200 ", 13) == 0 && strstr(b, "FPTEST") &&
 	              !strstr(b, "__FINGERPRINT__") && !strstr(b, "__WARNING__") &&
-	              !strstr(b, "__BANNED__") && !strstr(b, "__REMAINING_MS__") &&
-	              !strstr(b, "__DIARY__");
+	              !strstr(b, "__BANNED__") && !strstr(b, "__REMAINING_MS__");
 	if (!banned)
 		_exit(common && strstr(b, "data-banned=\"no\"") &&
 		      !strstr(b, "attempts exhausted") && strstr(b, "data-remaining-ms=\"0\"")
@@ -557,7 +556,7 @@ int main(void)
 	 * stays in F_WRITE.  ⚠ Not 16 MB: 128 writers each hold a copy of the
 	 * response, and 128 × 16 MB was killed by the 2 GB limit. */
 	fprintf(h, "<html><body data-banned=\"__BANNED__\" data-remaining-ms=\""
-	           "__REMAINING_MS__\" data-diary=\"__DIARY__\">__FINGERPRINT__ "
+	           "__REMAINING_MS__\">__FINGERPRINT__ "
 	           "__WARNING__<!--");
 	for (int i = 0; i < 4 * 1024; i++)
 		fprintf(h, "%01023d\n", 0);
