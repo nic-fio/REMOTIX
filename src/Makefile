@@ -668,7 +668,7 @@ test-rootside: ../benches/02-rootside-validator-test.c rootside.c rootside.h roo
 	    echo "void $$n(void); void $$n(void) { hit(\"$$n\"); }"; done; } > "$$d/stubs.c"; \
 	$(CC) $(CFLAGS) -c -o "$$d/stubs.o" "$$d/stubs.c"; \
 	$(CC) -o "$$d/test" "$$d/t.o" "$$d/log.o" "$$d/stubs.o"; \
-	"$$d/test"
+	RXFUZZ_LOG=1 "$$d/test"
 
 # ⭐ The automatic dependencies written by `-MMD` (absent on the first build: `-include` does not mind).
 -include $(OGGETTI:.o=.d)
