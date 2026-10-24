@@ -93,6 +93,9 @@ wt *wt_new(ngtcp2_conn *conn, ngtcp2_ccerr *last_error,
 /* ⭐ D-001: `resumed` = that user's stage already existed (`SESSION` will say
  * `2 = RESUMED`, §4.5). */
 bool wt_verdict(wt *w, uint64_t ticket, bool admitted, bool resumed);
+/* The helper died with this request in flight: a «no» that is our defect and
+ * counts nothing (§4.4-bis B, 24 Oct 2026). */
+bool wt_verdict_lost(wt *w, uint64_t ticket);
 /* ⭐ D-001: the desktop name for `SESSION` (`gnome · kde · xfce · lxqt ·
  * unknown`), one per process — `main.c` sets it at startup. */
 void wt_desktop(const char *name);

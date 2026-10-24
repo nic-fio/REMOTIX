@@ -85,6 +85,9 @@ struct response {
 	uint8_t outcome; /* ⛔ 1 and ONLY 1 means admitted */
 };
 
+/* ⭐ 24 Oct 2026 (§4.4-bis B): `user` and `rhost` are also what the verdict is
+ *    COUNTED with when the connection that asked is gone: the booking made at
+ *    `CREDENTIALS` is resolved by name and address, not by session. */
 struct flight {
 	uint64_t ticket;
 	uint64_t expires;
@@ -379,7 +382,9 @@ static void dies(helper *a, const char *why, HelperVerdict delivery,
 	              "⛔ the PAM helper is gone (%s): the %d checks in "
 	              "flight become NO, and every following attempt will be a NO "
 	              "(invariant I3).  ⚠ It is not «wrong password»: it is «PAM "
-	              "could not judge», and the server does not keep it to itself.",
+	              "could not judge», and the server does not keep it to itself.  "
+	              "Our defect: since 24 Oct 2026 it does NOT count as a failed "
+	              "attempt of §4.4-bis (the bookings are given back).",
 	              why, a->nflight);
 	if (a->fd >= 0) {
 		close(a->fd);
@@ -410,11 +415,15 @@ static void dies(helper *a, const char *why, HelperVerdict delivery,
 	}
 	while (a->nflight > 0) {
 		uint64_t p = a->flight[0].ticket;
-		char chi[257];
+		char chi[257], da[64];
 		snprintf(chi, sizeof chi, "%s", a->flight[0].user);
+		/* ⛔ The address too, BEFORE `flight_remove()` (as `flight_consumes()`
+		 *    does): with the connection gone, a verdict without address cannot
+		 *    be resolved and the booking would stay in flight for ever. */
+		snprintf(da, sizeof da, "%s", a->flight[0].rhost);
 		flight_remove(a, 0);
 		if (delivery)
-			delivery(ctx, p, false, chi, "");
+			delivery(ctx, p, false, chi, da, true);
 	}
 }
 
@@ -460,7 +469,7 @@ void helper_move(helper *a, HelperVerdict delivery, void *ctx)
 		 *     through a comparison with `1`, not through a `!= 0`: a dirty
 		 *     byte, a memory leftover or a 255 are a NO. */
 		if (delivery)
-			delivery(ctx, ri.ticket, ri.outcome == 1u, chi, da);
+			delivery(ctx, ri.ticket, ri.outcome == 1u, chi, da, false);
 	}
 }
 
@@ -472,18 +481,19 @@ void helper_expired(helper *a, uint64_t now_ms, HelperVerdict delivery,
 	for (int i = 0; i < a->nflight;) {
 		if (now_ms >= a->flight[i].expires) {
 			uint64_t p = a->flight[i].ticket;
-			char chi[257];
+			char chi[257], da[64];
 			snprintf(chi, sizeof chi, "%s", a->flight[i].user);
+			snprintf(da, sizeof da, "%s", a->flight[i].rhost);
 			flight_remove(a, i);
 			registro_dice(REG_RCP,
 			              "⛔ request %llu received no answer in %d ms: "
 			              "the grandchild died or PAM got stuck.  ⭐ The "
-			              "expiry counts as NO (invariant I3), and does NOT count as a "
-			              "failed attempt of §4.4-bis: a defect of ours "
-			              "bans nobody",
+			              "expiry counts as NO (invariant I3), and since 24 Oct "
+			              "2026 it COUNTS as a failed attempt of §4.4-bis (B): an "
+			              "attempt without a verdict is not a free attempt",
 			              (unsigned long long)p, EXPIRY_MS);
 			if (delivery)
-				delivery(ctx, p, false, chi, "");
+				delivery(ctx, p, false, chi, da, false);
 		} else {
 			i++;
 		}

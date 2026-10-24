@@ -1847,3 +1847,71 @@ behaviour (`pam_faillock(8)`, `faillock.conf(5)`); ⚠ **not run live** — `[?]
 - **`rcp-msg`** (branch `fuzz-rcp`, commits `a63cd356`, `fd02e3a4`, `c1b453b3`; NOT in `audit-tutto`): libFuzzer +
   ASan/UBSan on the messages the server receives from the browser (`src/rcp.c`: control, input, clipboard), with hooks
   that fail on purpose (`ask_verify`, `video_write`, `input`, `recanvas`, `layout`, `clipboard_write/offer`). Runs: to do.
+
+
+### 11.53 🔸 The defences of the login: three levels of counters, a progressive ban, a /64 key — **SPEC CHANGE from 1.0** (24 Oct 2026) — built on `login-difese`, not yet run on the boxes
+
+- ⛔ **SPEC CHANGE.** `DECISIONS.md` §1.9 (10 Aug 2026, decided by the user) says: *three consecutive failed
+  authentications from the same address, and that address is out for 12 hours*, with a single counter on the address and
+  the user name not counting. This section **replaces** that rule for 1.5. The decision was delegated by the user to the
+  project leader on 24 Oct 2026, 13:40, after the opinions of Gemini Argon, ChatGPT, gpt-oss-20b and Laguna (LFM gave
+  none). Until the user confirms it, §1.9 is the written rule of 1.0 and this one is the rule of the branch.
+- **What changes (A-D of `PIANO.md`):**
+  - **A. The key.** IPv4: the whole address. IPv6: the **/64** (a subscriber has a /64 at least and rotates inside it for
+    free; counting the single address was a limiter that is not there). Plus an aggregate on the IPv6 **/48**.
+    `::ffff:a.b.c.d` and NAT64 are the IPv4 inside, `::1` stays whole — the same rule as `address_key()` in
+    `transport.c` (§1.9-bis). It lives in `rcp_key_address()` only (idempotent).
+  - **B. Attempts in flight.** The attempt is **booked at `CREDENTIALS`**: counters are *failed + in flight*, and the check
+    and the booking are one step (`login_reserve()`) before PAM is called. At most **2** verifications at once for the same
+    (key, user). The verdict is booked by the **name and address of the request** (`struct flight` keeps both), so a
+    verdict whose connection died is counted all the same (`rcp_orphan_verdict()`, from `transport_verdict()`).
+    An attempt **without a verdict** (PAM timeout of the helper, the 12 s ceiling in `rcp_time()`, helper dead) **counts as
+    failed**; a refusal that is our defect does **not** count — the booking is given back (`login_release`): the question
+    never left (helper off, socket full, 16 already in flight) and, decided by the project lead on 24 Oct 2026, **the PAM
+    helper dying** with requests in flight (`lost`, with a live session or with the connection gone). The helper's own
+    8 s timeout and the 12 s ceiling still count as failures. This reverses the earlier rule that a timeout never counts.
+    The name and address of the request in flight travel with EVERY delivery of `helper.c` (answered, expired, dead
+    helper): without the address a verdict whose connection is gone cannot be resolved and the booking would stay in
+    flight for ever.
+  - **C. Three levels, sliding window** (the time of the last N failures is kept, as in 1.0):
+
+    | level | limit | window | ban of |
+    |---|---|---|---|
+    | (key, user) | 5 failed | 5 min | that user on that key |
+    | key | 12 failed (any user) | 5 min | the key |
+    | IPv6 /48 | 30 failed | 10 min | the /48 |
+
+    Duration **progressive per level: 15 min, then 1 h, then 12 h** (the 1.0 duration is now the top of the ladder);
+    the memory of the previous bans is forgotten after **24 h without a ban**. A **successful login resets only the
+    failures of (key, user)** — not the recidivism, not the key's and /48's counters (an attacker with one valid account
+    must not be able to wash the count). **The table never evicts a banned entry** nor one with an attempt in flight: if
+    nothing else can go, the new entry is refused (`TOO_MANY_ATTEMPTS`), and the refusal is counted and logged. Before
+    that, entries with nothing to remember are taken back, then the oldest without recidivism (declared in the log).
+    `UNBLOCK <address>` removes **every level** that concerns the address (its (key, user) pairs, the key, the /48) and the
+    recidivism. The ban file has a new format (`B2 <U|K|N> <level> <epoch> <key>[ <user>]`); the old lines
+    (`[address] epoch`, the 12 h ban of 1.0) are read and converted at the top of the ladder, and the file is rewritten in
+    the new format at the next change. ⛔ **The ban file never holds a name**: the (key, user) line carries the full
+    HMAC-SHA256 of the name (64 hex digits, same secret as the log tags), the file is created 0600 and `fsync`ed before the
+    rename; the secret is therefore loaded before `rcp_ban_load()`, and a replaced secret makes the old (key, user) lines
+    match nobody (key and /48 lines are not affected). Values read from the file are bounded: no negative epoch, a ban
+    never longer than 12 h.
+  - **D. The log.** A name that is not a user of the machine is written `unknown user [a1b2c3]`: HMAC-SHA256 of the
+    name cut to 6 hex digits, under a secret in `<certificates dir>/log-secret` (0600, next to `quic-secret`). Nothing
+    of the name in clear (control characters were already refused). SHA-256/HMAC are written out in `rcp.c` so the module
+    stays free of OpenSSL in the benches (checked against RFC 4231).
+- **Link-local addresses (`fe80::x%eth0`) go to the /64 too** (project lead's decision, 24 Oct 2026): the zone id is
+  cut before parsing, so the key is `[fe80::]`. The price is accepted: LAN users share one counter (five wrong
+  passwords from one LAN machine ban that user on all of them for 15 min), because an attacker on the LAN must not be
+  able to rotate addresses to escape the counters. `UNBLOCK` clears it.
+- **What is NOT in this round:** the uniform delay (first measure with `pam-tempi`), and the points already covered by
+  `PENDING_PER_ADDRESS`. The manual and `RCP.md` §4.4-bis still describe the 1.0 rule: to update when the user confirms.
+- **Doubts left open:** (1) the page's `rcp_banned()` sees only the key and /48 levels, not (key, user) — it does not
+  know the user; (2) `getpwnam_r` for the «unknown user» tag may ask NSS in the single-threaded loop: it is made only
+  for attempts the limiter let through (the refused ones are logged as `user [hmac6]`, no lookup); (3) ⚠ **theoretical
+  double counting after the 12 s cap**: if `rcp_time()` hits the 12 s ceiling it counts the failure and resolves the
+  booking; a verdict of the helper arriving later for the same request would be counted a second time as an orphan. It
+  is not reachable while the helper's own 8 s expiry is lower than the 12 s ceiling (the helper removes the request and
+  delivers first); it would be if one of the two numbers changed.
+- **Verification:** `benches/unit/login-ban/test.c` (counter logic, simulated clock: thresholds, window, progression and
+  forgetting, reset, /64 rotation, /48, in flight, orphan verdict, full table, unblock, ban file, log tags). To do on the
+  boxes: harness `rcp-msg` with new oracles, the functional suite (F-027 password and ban), `pam-tempi`.

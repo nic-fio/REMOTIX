@@ -133,8 +133,14 @@ bool helper_ask(helper *a, const char *user, const char *password,
  *   zeroed as soon as PAM has answered, and here not even one copy remains. */
 /* ⭐ PHASE 17 T6: and the client's ADDRESS (bare, like sshd's `PAM_RHOST`;
  *    "" if unknown), which on «yes» goes to the child's PAM session. */
+/* ⭐ 24 Oct 2026 (§4.4-bis B): `lost` is true when the verdict is a «no» because
+ *    the HELPER DIED with the request in flight — our defect, which must not
+ *    count as a failed attempt.  The PAM timeout (`helper_expired()`) is NOT
+ *    `lost`: it counts.  `rhost` is always the request's own address, even
+ *    when the helper is dead, because the connection may be gone and the
+ *    booking is resolved with the name and the address. */
 typedef void (*HelperVerdict)(void *ctx, uint64_t ticket, bool admitted,
-                                 const char *user, const char *rhost);
+                                 const char *user, const char *rhost, bool lost);
 
 /* Reads the ready answers and delivers them one by one.  To be called when the
  * descriptor is readable.
