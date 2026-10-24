@@ -745,6 +745,13 @@ static int failures_of(const char *key, const char *user)
 	return i < 0 ? 0 : failed_inside(&attempts[i], at(1));
 }
 
+/* what rcp_time() puts on the wire (ported from 24f99518): the last byte of the last message, how many, the close code */
+static int wire_n;
+static uint8_t wire_last, wire_closed;
+static void wire_reset(void) { wire_n = 0; wire_last = 0; wire_closed = 0; }
+static void wire_send(void *ctx, const uint8_t *data, size_t len) { (void)ctx; wire_n++; wire_last = data[len - 1]; }
+static void wire_close(void *ctx, uint8_t reason) { (void)ctx; wire_closed = reason; }
+
 static void test_verdict_paths(void)
 {
 	printf("verdict paths\n");
@@ -800,6 +807,51 @@ static void test_verdict_paths(void)
 	      "helper dead through a session: given back, NOT counted, refusal is ours (%d, %d)",
 	      in_flight_of(K, "alice"), failures_of(K, "alice"));
 	CHECK(!rcp_verdict_lost(&s, 8), "a second answer is not taken");
+
+	/* 4. ⛔ the byte on the wire (DECISIONS.md §11.39, ported from 24f99518): a check the server could not make is
+	 *    REJECTED(0x0E SESSION_UNSERVABLE), not 0x07; what PAM decided, and the attempt without a verdict, stay 0x07;
+	 *    the limiter's own 0x08 is never touched.  Same fixed second in every case. */
+	s.g.send_msg = wire_send;
+	s.g.close = wire_close;
+	/* a. the helper died (rcp_verdict_lost): ours -> 0x0E, after the fixed second only */
+	fresh();
+	s.state = S_WAIT_VERDICT; s.expected_verdict = false; s.refusal_is_ours = false; s.cred_good = false;
+	s.cred_reason = RCP_WRONG_CREDENTIALS; s.cred_arrival = at(0);
+	login_reserve(K, "alice", at(0), &info);
+	s.expected_verdict = true; s.ticket = 11;
+	CHECK(rcp_verdict_lost(&s, 11), "(wire) the lost verdict is taken");
+	wire_reset();
+	CHECK(rcp_time(&s, at(0) + FIXED_DELAY) && wire_n == 0, "(wire) nothing before the fixed second is over");
+	CHECK(!rcp_time(&s, at(0) + FIXED_DELAY + 1) && wire_n == 1 && wire_last == RCP_SESSION_UNSERVABLE
+	      && wire_closed == RCP_SESSION_UNSERVABLE,
+	      "(wire) helper dead: REJECTED 0x0E after the fixed second (got %#x, %d messages)", wire_last, wire_n);
+	CHECK(failures_of(K, "alice") == 0, "(wire) and nothing was counted");
+	/* b. a PAM no: still 0x07 */
+	fresh();
+	s.state = S_WAIT_VERDICT; s.refusal_is_ours = false; s.cred_arrival = at(0);
+	login_reserve(K, "alice", at(0), &info);
+	s.expected_verdict = true; s.ticket = 12;
+	CHECK(rcp_verdict(&s, 12, false, at(1)), "(wire) the PAM no is taken");
+	wire_reset();
+	CHECK(!rcp_time(&s, at(0) + FIXED_DELAY + 1) && wire_last == RCP_WRONG_CREDENTIALS && wire_closed == RCP_WRONG_CREDENTIALS,
+	      "(wire) a PAM no stays REJECTED 0x07 (got %#x)", wire_last);
+	/* c. no verdict within VERDICT_CAP: counted, so 0x07 */
+	fresh();
+	s.state = S_WAIT_VERDICT; s.refusal_is_ours = false; s.cred_good = false; s.cred_reason = RCP_WRONG_CREDENTIALS;
+	s.cred_arrival = at(0);
+	login_reserve(K, "alice", at(0), &info);
+	s.expected_verdict = true; s.ticket = 13;
+	wire_reset();
+	CHECK(!rcp_time(&s, at(0) + VERDICT_CAP + 1) && wire_last == RCP_WRONG_CREDENTIALS && failures_of(K, "alice") == 1,
+	      "(wire) the 12 s net: counted as a failure and REJECTED 0x07 (got %#x, %d failures)", wire_last,
+	      failures_of(K, "alice"));
+	/* d. a limiter refusal that is flagged ours keeps its own reason (0x08) */
+	fresh();
+	s.state = S_WAIT_VERDICT; s.expected_verdict = false; s.cred_good = false; s.cred_reason = RCP_TOO_MANY_ATTEMPTS;
+	s.refusal_is_ours = true; s.cred_arrival = at(0);
+	wire_reset();
+	CHECK(!rcp_time(&s, at(0) + FIXED_DELAY + 1) && wire_last == RCP_TOO_MANY_ATTEMPTS,
+	      "(wire) a reason other than WRONG_CREDENTIALS is kept (0x08, got %#x)", wire_last);
 }
 
 /* ------------------------------------------------------------------------ */

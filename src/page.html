@@ -906,6 +906,9 @@ const REASON = {
 
 /* The §8.2 reasons, in words.  ⛔ `RCP.md` §8.2 and `SPECS.md`: the user
    is told WHY, with a sentence and not with a number. */
+/* RCP.md §4.4 / DECISIONS.md §11.39: `REJECTED(0x0E)` = the check was not made. */
+const REASON_CHECK_NOT_MADE_IN_REJECTED = 0x0E;
+const CHECK_NOT_MADE_TEXT = "the server could not check your password just now, and it is not your mistake: try again in a moment, and if it happens again ask whoever administers the server";
 const REASON_TEXT = {
   0x01: "the session was closed by the user",
   /* ⛔ It said "silence too long" — 16 Aug 2026, and it was the WRONG clock:
@@ -6028,7 +6031,16 @@ async function connect(username, password) {
   if (m.type === TYPE.REJECTED) {
     const l = new Reader(m.body);
     const rsn = l.u8();
-    outcome(REASON_TEXT[rsn] || ("refused, reason 0x" + rsn.toString(16)), false);
+    /* ⛔ `0x0E` in a `REJECTED` answers the CREDENTIALS: the server could not
+       check the password (its checker down, or no verdict in time) — PAM never
+       judged it (RCP.md §4.4, DECISIONS.md §11.39).  A login sentence of its own,
+       not the attach one; and ⛔ no retry by itself: the user tries again. */
+    outcome(rsn === REASON_CHECK_NOT_MADE_IN_REJECTED ? CHECK_NOT_MADE_TEXT
+            : REASON_TEXT[rsn] || ("refused, reason 0x" + rsn.toString(16)), false);
+    /* ⚠ The server then closes with the same code: the close handler must not
+       rewrite this sentence with the generic «could not open your session» of
+       `0x0E` — the REJECTED already said it, as a FAREWELL would have. */
+    farewell_read = true;
     /* ⛔ §4.4: "the client MUST NOT retry on the same connection: for a second
        attempt a new one is opened".  And the only thing left for it to say is
        FAREWELL — which §8.1 REQUIRES of it when it is the one closing; here the

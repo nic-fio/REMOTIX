@@ -8803,18 +8803,36 @@ bool rcp_time(rcp_session *s, uint64_t now)
 			reg(s, "admitted user=%s from=%s", s->user, s->provenance);
 			return true;
 		}
-		/* ⛔⭐ AND ON THE WIRE THE REASON IS THE SAME, but not in the log — it is
-		 *     the same distinction `authentication.c` makes between «PAM
-		 *     refused» and «PAM could not judge».  §4.4 forbids telling the
-		 *     client why, because it would be an oracle; ⛔ but whoever
-		 *     diagnoses must be able to tell a thousand wrong passwords from a
-		 *     dead helper, or they will search in the password for hours. */
-		if (s->refusal_is_ours)
+		/* ⛔⭐ A CHECK THE SERVER COULD NOT MAKE IS `SESSION_UNSERVABLE`, NOT
+		 *     `WRONG_CREDENTIALS` — `DECISIONS.md` §11.39, the user's decision
+		 *     of 15 Oct 2026 (option C).  The helper dead or down, the question
+		 *     that did not leave: PAM never judged the password, so «wrong
+		 *     password» was false and sent the owner to retype a right one.
+		 *     §4.4 forbids telling «no such user» from «wrong password»; this
+		 *     byte says neither — the check never happened, and it says no
+		 *     more than the timing already says.
+		 * ⚠ The road is `refusal_is_ours`, set ONLY by the two roads that
+		 *   give the booking back without counting (`rcp_credentials()` when
+		 *   the question did not leave, `rcp_verdict_lost()`), and only where
+		 *   the reason is still `WRONG_CREDENTIALS`: the limiter's refusals
+		 *   (`TOO_MANY_ATTEMPTS`, 0x08) never set it and keep their byte.
+		 * ⛔ NOT here: «PAM could not judge» (`authentication.c`) is a PAM
+		 *   answer, and the attempt WITHOUT a verdict (the helper's timeout,
+		 *   `VERDICT_CAP`) COUNTS as failed since 24 Oct 2026 (§4.4-bis B):
+		 *   both stay `0x07` and counted.  So on the wire «counted» is exactly
+		 *   `0x07`, and «not counted and not the limiter's» is exactly `0x0E`.
+		 *   Same fixed second, same count (none): only the byte changes. */
+		uint8_t reason = s->cred_reason;
+		if (s->refusal_is_ours) {
+			if (reason == RCP_WRONG_CREDENTIALS)
+				reason = RCP_SESSION_UNSERVABLE;
 			reg(s, "⛔ and this REJECTED is OURS, not PAM's: the check was "
-			       "not made.  ⚠ On the wire the reason is the same (§4.4 "
-			       "forbids distinguishing them), and the counters of §4.4-bis "
-			       "were NOT touched (the booking was given back)");
-		reject(s, s->cred_reason);
+			       "not made — reason %#04x on the wire (§4.4, DECISIONS.md "
+			       "§11.39), and the counters of §4.4-bis were NOT touched "
+			       "(the booking was given back)",
+			    reason);
+		}
+		reject(s, reason);
 		return false;
 	}
 

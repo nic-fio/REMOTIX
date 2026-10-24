@@ -54,7 +54,8 @@ mandate names it first:
                      restart takes away
 
   morto              ⛔ the helper has been KILLED, and the **RIGHT** password
-                     is presented -> `REJECTED` must arrive, never `ADMITTED`.
+                     is presented -> `REJECTED(0x0E)` must arrive, never
+                     `ADMITTED` (0x0E: the check was not made, §11.39).
                      ⚠ It is the case this file exists for
 
   insieme            ⛔ TWO wrong passwords at the SAME instant — and they are two
@@ -166,10 +167,13 @@ async def main(a, password):
         print("   ⚠ If ADMITTED appeared here, the cure would have bought "
               "speed with the guard.")
         n, m, ms, err = await attempt(a, a.user, password)
-        male += report_it(n == "REJECTED",
+        # DECISIONS.md §11.39 (15 Oct 2026): a check the server could not
+        # make is REJECTED(0x0E SESSION_UNSERVABLE), not 0x07.
+        male += report_it(n == "REJECTED" and m == 0x0E,
                       f"RIGHT password with the helper dead -> {n}"
                       f"({reason_name.get(m, m)}) in {ms:.0f} ms  "
-                      f"(expected REJECTED, NEVER ADMITTED)")
+                      f"(expected REJECTED 0x0E SESSION_UNSERVABLE, NEVER "
+                      f"ADMITTED)")
         male += report_it(ms >= 1000,
                       f"   and the fixed second is there anyway ({ms:.0f} ms): an "
                       f"instant refusal would say with the stopwatch what the "

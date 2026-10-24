@@ -798,6 +798,17 @@ before answering (§4.4-bis). ⚠ *This line said «the **rate limiting** of att
 by waiting a few seconds, and calling it rate made people write a wait where a
 refusal must be written. Aligned on the night of 10 Aug, as §8.2 row `0x08` already was.*
 
+⛔ **A check the server could not make is not a wrong password** *(`DECISIONS.md` §11.39, the user's decision of
+15 Oct 2026)*. When PAM never judged the password because of a defect of the server's — the checking process is down,
+dead or restarting, or the question to it could not leave — the server refuses with
+`REJECTED(SESSION_UNSERVABLE)` (`0x0E`), after the same fixed second as every refusal (§4.4-bis), and the attempt
+is **not counted** (the refusals that are our defect, in the table of §4.4-bis). Refusals PAM decided stay
+`WRONG_CREDENTIALS`, and so does a PAM answer that says it could not judge (it can depend on the user name), and
+so does an attempt **without a verdict** (the helper's timeout, the server's 12 s ceiling): that one **is counted**,
+so on the wire «counted» is exactly `0x07`, and the limiter's own refusals (`0x08`) are untouched. ⛔ The rule that bounds it: **the reason may not say more than the timing
+already says** — this one says nothing about the user or the password, because neither was judged. The client
+**MUST NOT** retry by itself on this reason: a new attempt is the user's gesture, as for any `REJECTED`.
+
 ⛔ **`REJECTED` is the farewell of authentication.** After sending it the server **MUST** close
 the **WebTransport session** as §3.1 says — with the same reason in the **application error
 code of the closing**, not in a transport `CONNECTION_CLOSE` — and **MUST NOT** send
@@ -2273,7 +2284,7 @@ acceptance-test obligation: **the farewell is checked from the side that receive
 | `0x0B` | `PROTOCOL_ERROR` | §3 |
 | `0x0C` | `SERVER_CLOSING` | |
 | `0x0D` | `TIMED_OUT` | ⭐ *new, 9 Aug*: a ceiling of §4.6 has expired |
-| `0x0E` | `SESSION_UNSERVABLE` | ⭐ *new, 9 Aug*: the attach is well formed but cannot be served — a compositor that does not start, a layout the system does not know. It **MUST** carry the detail in the body |
+| `0x0E` | `SESSION_UNSERVABLE` | ⭐ *new, 9 Aug*: the attach is well formed but cannot be served — a compositor that does not start, a layout the system does not know. It **MUST** carry the detail in the body. ⭐ *Since 15 Oct 2026 (§4.4, `DECISIONS.md` §11.39) also in `REJECTED`: the server could not check the credentials (PAM never judged them). There the body is the reason byte alone, so the detail is in the server's log only* |
 | `0x0F` | `ALREADY_ACTIVE_REMOTELY` | ⭐ *new, evening of 9 Aug*: **there is already a client attached to this session**, and this connection is **refused** |
 | `0x10` | `SESSION_TERMINATED` | ⭐ *new, 15 Aug*: **the user has logged out of the desktop** («Esci/logout» from the system menu). The graphical session is over and its programs are closed ⇒ ⛔ **there is nothing to reattach to**, and the page goes back to the **login form** (`DECISIONS.md` §4.1-quater) |
 
