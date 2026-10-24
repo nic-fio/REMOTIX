@@ -53,12 +53,13 @@
  *   · And when all slots are taken, one is freed to make room — by FAIR
  *     SHARE (third review, 15 Oct 2026).  A client's GROUP is its IPv6 /48
  *     for a real IPv6 peer, its address otherwise.  The victim is taken from
- *     the group holding the MOST live slots, at random among its clients that
- *     have not yet sent a whole request or have been writing a response for
- *     PAGE_EVICT_AGE_MS, whatever their speed — and when every group holds
- *     one slot, the OLDEST of them (refusing there would be a cheap lockout:
- *     one slot each from MAX_CLIENTS addresses).  The newcomer is REFUSED
- *     only if its own group would then hold MORE than the victim's.
+ *     a group holding the MOST live slots (every client counts), preferring
+ *     there clients without a whole request, then writers PAGE_EVICT_AGE_MS
+ *     or more into a response whatever their speed, then fresh writers; at
+ *     random among equals — and when every group holds one slot, the OLDEST
+ *     (refusing there would be a cheap lockout: one slot each from
+ *     MAX_CLIENTS addresses).  The newcomer is REFUSED only if its own group
+ *     would then hold MORE than the largest.  See `fair_victim()`.
  *     ⛔ What it replaced, measured: «the globally oldest pre-request
  *        client» let 8 addresses doing bare TCP connects evict a real browser
  *        mid-handshake after 39 connects, in 4 ms; and «writers under
@@ -169,13 +170,54 @@
 
 enum phase { F_HANDSHAKE, F_READ, F_WRITE, F_DONE };
 
+/* ⭐ A response body SHARED read-only by every client that sends it (fourth
+ * review, 15 Oct 2026): before, each writing client held a private copy of
+ * the ~907 KB page, and each GET made five more temporary ones — 128 slots
+ * held by an attacker were ~116 MB.  Now the not-banned page is built ONCE
+ * per certificate fingerprint and each client keeps its own small header, a
+ * reference and an offset. */
+typedef struct body {
+	size_t refs;
+	size_t n;
+	char data[];
+} body;
+
+static body *body_new(const char *text, size_t n)
+{
+	body *b = malloc(sizeof *b + n);
+	if (!b)
+		return NULL;
+	b->refs = 1;
+	b->n = n;
+	memcpy(b->data, text, n);
+	return b;
+}
+
+static body *body_ref(body *b)
+{
+	if (b)
+		b->refs++;
+	return b;
+}
+
+static void body_unref(body *b)
+{
+	if (b && --b->refs == 0)
+		free(b);
+}
+
 typedef struct {
 	int fd;
 	SSL *ssl;
 	enum phase phase;
 	char request[MAX_REQUEST];
 	size_t nrequest;
-	char *response;
+	/* The response: `head` (this client's own: the status line and headers,
+	 * and a small body) followed by `shared` (NULL, or a shared body).
+	 * `nresponse` = both, `oresponse` = the offset across both. */
+	char *head;
+	size_t nhead;
+	body *shared;
 	size_t nresponse, oresponse;
 	char provenance[80];
 	/* `rcp_key_address(provenance)`: what PAGE_PER_ADDRESS counts. */
@@ -216,11 +258,13 @@ struct page {
 		uint64_t since;
 		unsigned n;
 	} lines[PAGE_LINES_KEYS];
-	/* Picks among equals at random (xorshift, seeded by RAND_bytes). */
-	uint64_t rng;
+
 	char refused_last[64];
 	bool refused_ever;
 	uint64_t refused_line_ms;
+	/* The not-banned page, built once for `cached_fp` (see `body`). */
+	body *cached;
+	char cached_fp[64];
 };
 
 /* ------------------------------------------------------------------------ */
@@ -301,9 +345,11 @@ static void client_close(client *c)
 		close(c->fd);
 		c->fd = -1;
 	}
-	free(c->response);
-	c->response = NULL;
-	c->nresponse = c->oresponse = c->nrequest = 0;
+	free(c->head);
+	c->head = NULL;
+	body_unref(c->shared);
+	c->shared = NULL;
+	c->nhead = c->nresponse = c->oresponse = c->nrequest = 0;
 	c->phase = F_DONE;
 }
 
@@ -346,10 +392,15 @@ static void sample(client *c, uint64_t now)
 	}
 }
 
-static void compose(client *c, const char *state, const char *kind,
-                    const char *body, size_t nbody, const char *extra)
+/* The response of `c`: the headers and `text` (copied: only small bodies
+ * come this way), followed by `shared` when it is not NULL (referenced, not
+ * copied; `Content-Length` covers both). */
+static void compose_with(client *c, const char *state, const char *kind,
+                         const char *text, size_t ntext, body *shared,
+                         const char *extra)
 {
 	char head[2048]; /* the page's security headers (PAGE_SECURITY) are ~900 bytes */
+	size_t nbody = ntext + (shared ? shared->n : 0);
 	int n;
 
 	n = snprintf(head, sizeof head,
@@ -369,17 +420,19 @@ static void compose(client *c, const char *state, const char *kind,
 	 *   (so the retry cannot overflow again) and the sentence says why. */
 	if (n < 0 || (size_t)n >= sizeof head) {
 		if (extra) {
-			compose(c, "500 Internal Server Error", "text/plain; charset=utf-8",
-			        "response headers too long\n", 26, NULL);
+			compose_with(c, "500 Internal Server Error", "text/plain; charset=utf-8",
+			             "response headers too long\n", 26, NULL, NULL);
 		}
 		return;
 	}
-	c->response = malloc((size_t)n + nbody);
-	if (!c->response)
+	c->head = malloc((size_t)n + ntext);
+	if (!c->head)
 		return;
-	memcpy(c->response, head, (size_t)n);
-	memcpy(c->response + n, body, nbody);
-	c->nresponse = (size_t)n + nbody;
+	memcpy(c->head, head, (size_t)n);
+	memcpy(c->head + n, text, ntext);
+	c->nhead = (size_t)n + ntext;
+	c->shared = body_ref(shared);
+	c->nresponse = c->nhead + (shared ? shared->n : 0);
 	c->oresponse = 0;
 	c->phase = F_WRITE;
 	c->write_start = c->last_progress = log_now_ms();
@@ -387,10 +440,49 @@ static void compose(client *c, const char *state, const char *kind,
 	c->delivered = 0;
 }
 
+static void compose(client *c, const char *state, const char *kind,
+                    const char *body_text, size_t nbody, const char *extra)
+{
+	compose_with(c, state, kind, body_text, nbody, NULL, extra);
+}
+
+/* The page with its five markers replaced.  Returns a new body, or NULL. */
+static body *build_page(const page *p, bool banned, const char *warning,
+                        const char *remain_txt)
+{
+	char *a, *b, *cc, *cc2, *d;
+	body *r;
+
+	a = replace(p->html, "__FINGERPRINT__", p->cert->fingerprint);
+	if (!a)
+		return NULL;
+	b = replace(a, "__WARNING__", warning);
+	free(a);
+	if (!b)
+		return NULL;
+	cc = replace(b, "__BANNED__", banned ? "yes" : "no");
+	free(b);
+	if (!cc)
+		return NULL;
+	cc2 = replace(cc, "__REMAINING_MS__", remain_txt);
+	free(cc);
+	if (!cc2)
+		return NULL;
+	/* ⭐ §11.10: whether the page may send its diary — `yes` only in the
+	 *   bench build, where `/diary` exists. */
+	d = replace(cc2, "__DIARY__", DIARY_ON);
+	free(cc2);
+	if (!d)
+		return NULL;
+	r = body_new(d, strlen(d));
+	free(d);
+	return r;
+}
+
 /* `true` = the request line of `key` may be written now. */
 static bool line_budget(page *p, const char *key, uint64_t now)
 {
-	size_t free_i = PAGE_LINES_KEYS, old_i = 0;
+	size_t free_i = PAGE_LINES_KEYS;
 	for (size_t i = 0; i < PAGE_LINES_KEYS; i++) {
 		if (p->lines[i].key[0] && strcmp(p->lines[i].key, key) == 0) {
 			if (now - p->lines[i].since >= PAGE_LINES_WINDOW_MS) {
@@ -401,13 +493,15 @@ static bool line_budget(page *p, const char *key, uint64_t now)
 		}
 		if (!p->lines[i].key[0] || now - p->lines[i].since >= PAGE_LINES_WINDOW_MS)
 			free_i = i;
-		if (p->lines[i].since < p->lines[old_i].since)
-			old_i = i;
 	}
-	/* ⚠ Table full of live windows: the oldest entry is reused — that
-	 *   address gets a fresh budget early, which is the generous side. */
+	/* ⛔ Table full of live windows: the line is NOT written (it is counted).
+	 *    Reusing the oldest entry gave that address a fresh budget at once, so
+	 *    17 addresses taking turns — 17 /64s, nothing for one IPv6 subscriber —
+	 *    each wrote every line and the budget limited nothing (fuzz page,
+	 *    15 Oct 2026).  Now at most PAGE_LINES_KEYS × PAGE_LINES_PER_ADDRESS
+	 *    lines per window, and the 17th address is in the summary line. */
 	if (free_i == PAGE_LINES_KEYS)
-		free_i = old_i;
+		return false;
 	snprintf(p->lines[free_i].key, sizeof p->lines[free_i].key, "%s", key);
 	p->lines[free_i].since = now;
 	p->lines[free_i].n = 1;
@@ -571,7 +665,7 @@ static void serve(page *p, client *c)
 	 *   left» to someone who still has 59 minutes to wait is worse than saying
 	 *   nothing. */
 	{
-		char *a, *b, *cc, *d;
+		body *d;
 		/* ⚠ 640 and not 320: the whole sentence plus the two numbers must fit
 		 *   in ENTIRELY.  `[M]` night of 10 Aug 2026 — with 320 the compiler
 		 *   said «directive output truncated writing 227 bytes into a
@@ -608,35 +702,34 @@ static void serve(page *p, client *c)
 		snprintf(remain_txt, sizeof remain_txt, "%llu",
 		         (unsigned long long)remain);
 
-		a = replace(p->html, "__FINGERPRINT__", p->cert->fingerprint);
-		if (!a) {
-			compose(c, "500 Internal Server Error",
-			        "text/plain; charset=utf-8", "no mem.\n", 8, NULL);
-			return;
+		/* ⭐ Not banned: the shared page, rebuilt only when the fingerprint
+		 *   changes (a rotation).  Banned: built for this request — its
+		 *   remaining time is its own, and bans are rare and costly to get
+		 *   (three failed logins each). */
+		if (!banned) {
+			if (!p->cached ||
+			    strcmp(p->cached_fp, p->cert->fingerprint) != 0) {
+				body *nb = build_page(p, false, warning, remain_txt);
+				if (nb) {
+					body_unref(p->cached);
+					p->cached = nb;
+					snprintf(p->cached_fp, sizeof p->cached_fp, "%s",
+					         p->cert->fingerprint);
+				}
+			}
+			d = (p->cached &&
+			     strcmp(p->cached_fp, p->cert->fingerprint) == 0)
+			            ? body_ref(p->cached) : NULL;
+		} else {
+			d = build_page(p, true, warning, remain_txt);
 		}
-		b = replace(a, "__WARNING__", warning);
-		free(a);
-		if (!b) {
-			compose(c, "500 Internal Server Error",
-			        "text/plain; charset=utf-8", "no mem.\n", 8, NULL);
-			return;
-		}
-		cc = replace(b, "__BANNED__", banned ? "yes" : "no");
-		free(b);
-		if (!cc) {
-			compose(c, "500 Internal Server Error",
-			        "text/plain; charset=utf-8", "no mem.\n", 8, NULL);
-			return;
-		}
-		d = replace(cc, "__REMAINING_MS__", remain_txt);
-		free(cc);
 		if (!d) {
 			compose(c, "500 Internal Server Error",
 			        "text/plain; charset=utf-8", "no mem.\n", 8, NULL);
 			return;
 		}
-		compose(c, "200 OK", "text/html; charset=utf-8", d, strlen(d), PAGE_SECURITY);
-		free(d);
+		compose_with(c, "200 OK", "text/html; charset=utf-8", "", 0, d, PAGE_SECURITY);
+		body_unref(d);
 	}
 }
 
@@ -713,8 +806,16 @@ static void move_client(page *p, client *c, short events)
 	if (c->phase == F_WRITE) {
 		while (c->oresponse < c->nresponse) {
 			size_t written = 0;
-			rv = SSL_write_ex(c->ssl, c->response + c->oresponse,
-			                  c->nresponse - c->oresponse, &written);
+			const char *from;
+			size_t len;
+			if (c->oresponse < c->nhead) {
+				from = c->head + c->oresponse;
+				len = c->nhead - c->oresponse;
+			} else {
+				from = c->shared->data + (c->oresponse - c->nhead);
+				len = c->nresponse - c->oresponse;
+			}
+			rv = SSL_write_ex(c->ssl, from, len, &written);
 			if (rv != 1) {
 				int e = SSL_get_error(c->ssl, rv);
 				if (e == SSL_ERROR_WANT_WRITE) {
@@ -858,68 +959,74 @@ static unsigned group_size(const page *p, bool has48, const unsigned char *p48,
 	return n;
 }
 
-static uint64_t next_random(page *p)
+/* A number in [0, n), from RAND_bytes (fourth review: a seeded xorshift was
+ * predictable).  ⚠ If RAND_bytes fails, 0 — the first candidate, which is
+ * still a valid pick. */
+static uint32_t random_below(uint32_t n)
 {
-	p->rng ^= p->rng << 13;
-	p->rng ^= p->rng >> 7;
-	p->rng ^= p->rng << 17;
-	return p->rng;
+	uint32_t r = 0;
+	if (n < 2 || RAND_bytes((unsigned char *)&r, sizeof r) != 1)
+		return 0;
+	return r % n;
+}
+
+/* The eviction tier of a candidate: 0 = no whole request yet, 1 = writing
+ * for PAGE_EVICT_AGE_MS or more, 2 = writing for less (a fresh download). */
+static int tier(const client *x, uint64_t now)
+{
+	if (x->phase != F_WRITE)
+		return 0;
+	return now - x->write_start >= PAGE_EVICT_AGE_MS ? 1 : 2;
 }
 
 /* ⛔ The fair-share victim when the table is full (see the top of the file),
  *    or NULL = refuse the newcomer.  `mine` = the newcomer's group size.
  *
- *  · The victim comes from the group holding the most live slots (`best`),
- *    at random among its candidates.
- *  · ⛔ When every group holds ONE (`best` == 1), the OLDEST candidate goes
- *    (pre-request first, then the writer longest in): refusing there would
- *    be a cheap lockout — one slot per address from as many addresses as
- *    slots, renewed within the 10 s request deadline, costs a few connects
- *    a second and would refuse every new address.  FIFO gives a real client
- *    MAX_CLIENTS - 1 arrivals of margin.
- *  · The newcomer is refused only when its own group would then hold MORE
- *    than the victim's (`mine + 1 > best`): an attacker can only push out
- *    slots of groups at least as crowded as his own would be. */
+ *  · `best` is the size of the largest LIVE group — every client counts,
+ *    fresh writers too.  ⛔ Fourth review, measured 1000/1000: computed over
+ *    evictable clients only, 127 fresh writers from 32 addresses made the
+ *    max a phone's group of ONE that was 5 s into its download, and every
+ *    newcomer evicted the phone.
+ *  · The newcomer is refused when its own group would then hold MORE than
+ *    `best` (`mine + 1 > best`).
+ *  · The victim comes from a group of size `best`: the lowest tier present
+ *    there (no request yet, then writers ≥ 5 s, then fresh writers), at
+ *    random among the equals of that tier.
+ *  · ⛔ When every group holds ONE (`best` == 1), the OLDEST of the lowest
+ *    tier goes instead: refusing there would be a cheap lockout — one slot
+ *    per address from as many addresses as slots — and FIFO gives a real
+ *    client MAX_CLIENTS - 1 arrivals of margin. */
 static client *fair_victim(page *p, unsigned mine, uint64_t now)
 {
-	unsigned best = 0, ties = 0;
+	unsigned best = 0, sizes[MAX_CLIENTS];
+	int low = 3;
+	uint32_t ties = 0;
 	client *v = NULL;
+
 	for (size_t i = 0; i < MAX_CLIENTS; i++) {
 		client *x = &p->clients[i];
-		unsigned g;
-		if (!client_active(x))
-			continue;
-		if (x->phase == F_WRITE && now - x->write_start < PAGE_EVICT_AGE_MS)
-			continue;
-		g = group_size(p, x->has48, x->p48, x->key);
-		if (g < best)
-			continue;
-		if (g > best) {
-			best = g;
-			ties = 0;
-		}
-		/* Reservoir sampling: each of the `ties` equals has the same chance. */
-		if (next_random(p) % ++ties == 0)
-			v = x;
+		sizes[i] = client_active(x) ? group_size(p, x->has48, x->p48, x->key) : 0;
+		if (sizes[i] > best)
+			best = sizes[i];
 	}
-	if (!v || mine + 1 > best)
+	if (best == 0 || mine + 1 > best)
 		return NULL;
-	if (best == 1) {
-		client *old = NULL;
-		for (size_t i = 0; i < MAX_CLIENTS; i++) {
-			client *x = &p->clients[i];
-			if (!client_active(x))
-				continue;
-			if (x->phase != F_WRITE) {
-				if (!old || old->phase == F_WRITE || x->born < old->born)
-					old = x;
-			} else if (now - x->write_start >= PAGE_EVICT_AGE_MS &&
-			           (!old || (old->phase == F_WRITE &&
-			                     x->write_start < old->write_start))) {
-				old = x;
-			}
+	for (size_t i = 0; i < MAX_CLIENTS; i++)
+		if (sizes[i] == best && tier(&p->clients[i], now) < low)
+			low = tier(&p->clients[i], now);
+	for (size_t i = 0; i < MAX_CLIENTS; i++) {
+		client *x = &p->clients[i];
+		if (sizes[i] != best || tier(x, now) != low)
+			continue;
+		if (best == 1) {
+			uint64_t tx = low == 0 ? x->born : x->write_start;
+			uint64_t tv = !v ? UINT64_MAX : low == 0 ? v->born : v->write_start;
+			if (tx < tv)
+				v = x;
+		} else if (random_below(++ties) == 0) {
+			/* Reservoir sampling: each of the `ties` has the same chance. */
+			v = x;
 		}
-		v = old;
 	}
 	return v;
 }
@@ -1170,8 +1277,7 @@ page *page_open(const char *address, const char *port, SSL_CTX *ctx,
 	p->fd = fd;
 	p->ctx = ctx;
 	p->cert = cert;
-	if (RAND_bytes((unsigned char *)&p->rng, sizeof p->rng) != 1 || !p->rng)
-		p->rng = log_now_ms() | 1u;
+
 	for (size_t i = 0; i < MAX_CLIENTS; i++) {
 		p->clients[i].fd = -1;
 		p->clients[i].phase = F_DONE;
@@ -1263,6 +1369,7 @@ void page_close(page *p)
 	for (size_t i = 0; i < MAX_CLIENTS; i++)
 		if (p->clients[i].fd >= 0)
 			client_close(&p->clients[i]);
+	body_unref(p->cached);
 	free(p->html);
 	if (p->fd >= 0)
 		close(p->fd);

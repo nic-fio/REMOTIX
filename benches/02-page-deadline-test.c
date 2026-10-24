@@ -41,12 +41,20 @@
  *   9. the progress deadline: a phone that took 300 KB in 60 s (5 KB/s) is
  *      kept, one that took 100 KB (1.7 KB/s) is closed;
  *  10. 128 readers from 32 addresses hold every slot in F_WRITE: a newcomer
- *      is refused while they are younger than 5 s; once they are 6 s in one
+ *      is admitted even while they are younger than 5 s (a fresh writer of a
+ *      crowded address goes: the last tier); once they are 6 s in one
  *      is evicted WHATEVER its speed (they are made fast on purpose) and a
  *      real GET gets the page;
  *  11. the IPv6 /48 is taken only from real IPv6 peers, and it is the
  *      fair-share group of an IPv6 client (two /64s of one /48 are one group);
  *  12. the request-line budget: 5 per address per 10 s, the rest counted.
+ *  14. (fourth review) 127 fresh writers from 32 addresses + a phone 6 s into
+ *      its download + newcomers from fresh addresses: a fresh writer of a
+ *      crowded address is evicted, never the phone; and all writers send ONE
+ *      shared copy of the page;
+ *  13. … and 17 addresses taking turns do not each get a fresh budget when the
+ *      16-entry table is full: none above 5 in its window, and the 17th waits
+ *      for a free entry (fuzz page, 15 Oct 2026).
  *
  * Exit status: 0 green, 1 red, 3 not all checks ran. */
 #define _GNU_SOURCE
@@ -61,7 +69,7 @@
 #include <sys/wait.h>
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 34
+#define EXPECTED_CHECKS 41
 
 static void require(int cond, const char *desc)
 {
@@ -320,8 +328,12 @@ int main(void)
 		pump(p, 3);
 		require(client_of(p, "[127.0.0.100]") == 1,
 		        "after 200 connects from 8 crowded addresses the lone client is still there");
-		require(active(p) == MAX_CLIENTS,
-		        "the table stays full: the churners pushed out each other or were refused");
+		/* ⚠ Tolerant on purpose: a churner that got in and then closed
+		 *   leaves its slot free until the next accept, so the table holds
+		 *   127 or 128 depending on the random victims — the lone client is
+		 *   what is checked. */
+		require(active(p) >= MAX_CLIENTS - 1,
+		        "the table stays (almost) full: the churners pushed out each other or were refused");
 		int second = connect_from(port, "127.0.0.101", 0);
 		pump(p, 3);
 		require(client_of(p, "[127.0.0.101]") == 1 && active(p) == MAX_CLIENTS,
@@ -459,9 +471,14 @@ int main(void)
 		require(writer_wait(p, MAX_CLIENTS) != NULL, "all 128 slots are readers in F_WRITE");
 		fd = connect_from(port, "127.0.0.100", 0);
 		pump(p, 3);
-		require(closed_by_server(fd) && active(p) == MAX_CLIENTS,
-		        "a newcomer while they are younger than 5 s is refused");
+		/* ⭐ Fourth review: fresh writers of the most crowded groups are the
+		 *   last tier, not untouchable — or 128 fresh writers would refuse
+		 *   every visitor. */
+		require(!closed_by_server(fd) && client_of(p, "[127.0.0.100]") == 1 &&
+		                active(p) == MAX_CLIENTS,
+		        "a newcomer while they are younger than 5 s is admitted (a fresh writer goes)");
 		close(fd);
+		pump(p, 3);
 		for (size_t i = 0; i < MAX_CLIENTS; i++) {
 			client *x = &p->clients[i];
 			x->write_start -= PAGE_EVICT_AGE_MS + 1000;
@@ -551,6 +568,82 @@ int main(void)
 		require(yes == PAGE_LINES_PER_ADDRESS && line_budget(p, "[198.51.100.8]", t) &&
 		                line_budget(p, "[198.51.100.7]", t + PAGE_LINES_WINDOW_MS),
 		        "5 lines per address per 10 s; another address has its own; a new window resets");
+	}
+
+	printf("13. 17 addresses taking turns cannot reset each other's budget\n");
+	{
+		uint64_t t = log_now_ms() + 2000000;
+		int written[17] = {0}, most = 0, total = 0;
+		char key[64];
+		for (int round = 0; round < 7; round++)
+			for (int a = 0; a < 17; a++) {
+				snprintf(key, sizeof key, "[203.0.113.%d]", a + 1);
+				written[a] += line_budget(p, key, t + (uint64_t)round * 100);
+			}
+		for (int a = 0; a < 17; a++) {
+			most = written[a] > most ? written[a] : most;
+			total += written[a];
+		}
+		require(most <= PAGE_LINES_PER_ADDRESS &&
+		                total <= PAGE_LINES_KEYS * PAGE_LINES_PER_ADDRESS,
+		        "no address above 5 lines in its window, at most 16 × 5 in all");
+		snprintf(key, sizeof key, "[203.0.113.%d]", 17);
+		require(line_budget(p, key, t + PAGE_LINES_WINDOW_MS),
+		        "after the window the waiting address gets its line");
+	}
+
+	printf("14. a phone 6 s into its download is not evicted by fresh writers' newcomers\n");
+	{
+		static pid_t kids[MAX_CLIENTS];
+		int k = 0, writers = 0, same_body = 0, phone_ok = 1, others = 0;
+		for (int i = 0; i < MAX_CLIENTS - 1; i++) {
+			snprintf(src, sizeof src, "127.0.0.%d", 1 + i / 4);
+			kids[k++] = client_get(port, src, false);
+			pump(p, 2);
+		}
+		kids[k++] = client_get(port, "127.0.0.200", false);
+		pump(p, 2);
+		require(writer_wait(p, MAX_CLIENTS) != NULL,
+		        "127 fresh writers from 32 addresses + the phone, all in F_WRITE");
+		for (size_t i = 0; i < MAX_CLIENTS; i++) {
+			client *x = &p->clients[i];
+			if (!client_active(x) || x->phase != F_WRITE)
+				continue;
+			writers++;
+			same_body += x->shared && x->shared == p->cached;
+			/* The attackers FRESH (forking 128 clients takes longer than
+			 * 5 s), the phone 6 s in. */
+			if (strcmp(x->key, "[127.0.0.200]") == 0)
+				x->write_start = log_now_ms() - PAGE_EVICT_AGE_MS - 1000;
+			else
+				x->write_start = log_now_ms();
+		}
+		require(writers == MAX_CLIENTS && same_body == MAX_CLIENTS &&
+		                p->cached->refs == (size_t)MAX_CLIENTS + 1,
+		        "all 128 writers send ONE shared copy of the page (refs 129)");
+		int nc[20];
+		for (int n = 0; n < 20; n++) {
+			snprintf(src, sizeof src, "127.0.0.%d", 201 + n);
+			nc[n] = connect_from(port, src, 0);
+			pump(p, 2);
+			phone_ok &= client_of(p, "[127.0.0.200]") == 1;
+		}
+		require(phone_ok, "20 newcomers from fresh addresses: the phone is never the victim");
+		for (size_t i = 0; i < MAX_CLIENTS; i++)
+			others += client_active(&p->clients[i]) && p->clients[i].phase == F_WRITE &&
+			          strcmp(p->clients[i].key, "[127.0.0.200]") != 0;
+		require(others == MAX_CLIENTS - 1 - 20 && active(p) == MAX_CLIENTS,
+		        "the 20 victims were fresh writers from the crowded addresses");
+		for (int n = 0; n < 20; n++)
+			close(nc[n]);
+		for (int i = 0; i < k; i++) {
+			kill(kids[i], SIGKILL);
+			waitpid(kids[i], NULL, 0);
+		}
+		for (size_t i = 0; i < MAX_CLIENTS; i++)
+			if (client_active(&p->clients[i]))
+				client_close(&p->clients[i]);
+		require(p->cached && p->cached->refs == 1, "the shared page is held by the listener alone again");
 	}
 
 	page_close(p);
