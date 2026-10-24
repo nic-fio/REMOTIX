@@ -288,6 +288,13 @@ typedef bool (*wt_layout_request)(void *ctx, const char *user,
                                           const char *name);
 void wt_layout_hook(wt_layout_request f, void *ctx);
 
+/* ⏳ `RCP.md` §13 (PROPOSED) — `PACE`: the frame-rate ceiling the client's
+ *    decoder asks for, to the stage of WHOEVER ASKED (I3).  `max_fps` is
+ *    already clamped by `rcp.c` (0 = no ceiling).  ⚠ Without this hook the
+ *    sessions do not declare `video.pace`. */
+typedef bool (*wt_pace_request)(void *ctx, const char *user, uint16_t max_fps);
+void wt_pace_hook(wt_pace_request f, void *ctx);
+
 /* ⭐⭐ §5.1 — THE GUARD OF LOCAL GRAPHICAL SESSIONS, and it serves TWO things
  *     that look like one and are not:
  *

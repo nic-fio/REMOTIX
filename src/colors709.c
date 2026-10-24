@@ -328,3 +328,22 @@ bool colors709_to_p010(const uint8_t *pixel, uint32_t step, uint32_t width,
 	return convert(pixel, step, width, height, order, 1, 1,
 	                (uint8_t *) y, stride_y, (uint8_t *) uv, stride_uv, NULL, 0);
 }
+
+bool colors709_copy_padded(uint8_t *dst, uint32_t dst_stride, uint32_t dst_row_bytes,
+                           uint32_t dst_rows, const uint8_t *src, uint32_t src_stride,
+                           uint32_t row_bytes, uint32_t rows, uint32_t unit)
+{
+	if (!dst || !src || !unit || !rows || row_bytes < unit || row_bytes % unit ||
+	    dst_row_bytes < row_bytes || dst_rows < rows || dst_stride < dst_row_bytes ||
+	    (dst_row_bytes - row_bytes) % unit)
+		return false;
+	for (uint32_t r = 0; r < dst_rows; r++) {
+		const uint8_t *s = src + (size_t) (r < rows ? r : rows - 1) * src_stride;
+		uint8_t *d = dst + (size_t) r * dst_stride;
+		memcpy(d, s, row_bytes);
+		const uint8_t *edge = s + row_bytes - unit;
+		for (uint32_t x = row_bytes; x < dst_row_bytes; x += unit)
+			memcpy(d + x, edge, unit);
+	}
+	return true;
+}

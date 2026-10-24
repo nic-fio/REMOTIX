@@ -77,6 +77,11 @@ enum {
 	T_LAYOUT = 0x0009,
 	T_BENCH_MARK = 0x000F,
 	T_BENCH_OUTCOME = 0x0010,
+	/* ⏳ `RCP.md` §13 — PROPOSED, not normative (`DECISIONS.md` §11.32, open):
+	 *    «my decoder is behind, no more than N frames per second».  ⛔ Lawful
+	 *    ONLY with `video.pace` negotiated on both sides: without it, it is
+	 *    `PROTOCOL_ERROR` like any capability used without asking (§4.3). */
+	T_PACE = 0x0012,
 };
 
 /* ------------------------------------------------------------------------ */
@@ -835,6 +840,14 @@ struct rcp_session {
 	 *    capability is a client that does not want the clipboard, not a client
 	 *    that wants it by default. */
 	bool negotiate_clipboard;
+	/* ⏳ §13 — `PACE`.  `pace_declared`: OUR `HERE_I_AM` said
+	 *    `video.pace=yes`; `pace_client`: the `HELLO` did.  Both ⇒ lawful.
+	 *    `pace_in_force` is what the child has (0 = no ceiling);
+	 *    `pace_pending` waits for the `RCP_PACE_GAP_MS` window to end. */
+	bool pace_declared, pace_client, pace_has_pending, pace_ever_sent;
+	uint16_t pace_in_force, pace_pending;
+	uint64_t pace_sent_ms;
+	uint32_t pace_received, pace_superseded;
 	/* ⚠ §7.3: the client's `instant`, in microseconds.  ⛔ And NO RULE of this
 	 *   module CONSUMES IT: «in a page the monotonic clock is in milliseconds
 	 *   and its grain is deliberately coarsened — the client writes
@@ -2839,19 +2852,46 @@ const char *rcp_video_codec(void)
 }
 #define OUR_AUDIO "opus,pcm"
 
+/* ⏳ §13 — PROPOSED.  ⛔ Born OFF (I6).  ⚠ Like the other switches of this
+ *    module, the value in force is written at startup by whoever sews things
+ *    together (`main.c`), on AND off. */
+static bool pace_offered;
+
+void rcp_pace_offer(bool on) { pace_offered = on; }
+
+bool rcp_pace_offered(void) { return pace_offered; }
+
+/* ⛔ §13.5 — every `u16` is legal and is CLAMPED, never refused: 0 and
+ *    everything from the stage's own rate up mean «no ceiling», below the
+ *    floor means the floor.  ⇒ A client can only LOWER its own rate, and
+ *    never below `RCP_PACE_FLOOR_FPS`. */
+uint16_t rcp_pace_clamp(uint32_t asked)
+{
+	if (asked == 0 || asked >= RCP_PACE_TOP_FPS)
+		return 0;
+	if (asked < RCP_PACE_FLOOR_FPS)
+		return (uint16_t)RCP_PACE_FLOOR_FPS;
+	return (uint16_t)asked;
+}
+
 static void send_here_i_am(rcp_session *s)
 {
 	uint8_t body[1024];
 	writer w = {body, sizeof body, 0, false};
-	sc_u16(&w, RCP_VERSION);
 	/* ⛔ 24 Oct 2026: counted from what is WRITTEN — since 84fdf573 `bench.mark`
 	 *    exists only in a BENCH build, and the product build declared 5 and
 	 *    wrote 4 (the page's DataView read past the end of the message). */
+	uint16_t n_caps = 4; /* video.codec, video.depth, audio.codec, clipboard.text */
 #ifdef REMOTIX_BENCH
-	sc_u16(&w, 5); /* how many capabilities, bench.mark included */
-#else
-	sc_u16(&w, 4); /* how many capabilities */
+	n_caps++; /* bench.mark (§7.5), only in the bench build */
 #endif
+	/* ⏳ §13: declared only when switched on AND when the host can apply it —
+	 *    declaring a capability nobody serves is the lie §4.3 forbids. */
+	s->pace_declared = pace_offered && s->g.pace;
+	if (s->pace_declared)
+		n_caps++;
+	sc_u16(&w, RCP_VERSION);
+	sc_u16(&w, n_caps);
 	sc_str(&w, "video.codec");
 	sc_str(&w, our_codec);
 	sc_str(&w, "video.depth");
@@ -2877,6 +2917,10 @@ static void send_here_i_am(rcp_session *s)
 	sc_str(&w, "bench.mark");
 	sc_str(&w, BENCH_ON ? "yes" : "no");
 #endif
+	if (s->pace_declared) {
+		sc_str(&w, "video.pace");
+		sc_str(&w, "yes");
+	}
 	if (!w.full)
 		send_message(s, T_HERE_I_AM, body, w.len);
 }
@@ -3053,6 +3097,8 @@ static bool handle_hello(rcp_session *s, reader *l)
 	    "video.codec",   "video.depth", "video.level",
 	    "video.max_size", "audio.codec", "input.touch",
 	    "clipboard.text", "client.name",
+	    /* ⏳ §13, PROPOSED: known on both sides, so a repetition is caught */
+	    "video.pace",
 #ifdef REMOTIX_BENCH
 	    "bench.mark",
 #endif
@@ -3158,6 +3204,10 @@ static bool handle_hello(rcp_session *s, reader *l)
 		 *   the no, and the negotiation line writes it. */
 		else if (strcmp(name, "clipboard.text") == 0)
 			s->negotiate_clipboard = strcmp(value, "yes") == 0;
+		/* ⏳ §13: any value other than `yes` counts as `no`, as for
+		 *    `clipboard.text`. */
+		else if (strcmp(name, "video.pace") == 0)
+			s->pace_client = strcmp(value, "yes") == 0;
 	}
 	/* ⛔⭐ THE DECODER CEILING IS KEPT — finding B-1, night of 10 Aug
 	 *     2026.  §4.5: «the granted canvas MUST respect
@@ -7300,6 +7350,72 @@ bool rcp_receive_clipboard(rcp_session *s, int64_t stream, const uint8_t *data,
 	return true;
 }
 
+/* ⏳ §13.5 — the pending value reaches the child when the window of
+ *    `RCP_PACE_GAP_MS` since the last one has passed.  ⛔ It never closes for
+ *    frequency: a reliable stream can hand over in one packet two messages
+ *    sent a second apart. */
+static void pace_flush(rcp_session *s, uint64_t now)
+{
+	uint16_t v;
+
+	if (!s->pace_has_pending)
+		return;
+	if (s->pace_ever_sent && now - s->pace_sent_ms < RCP_PACE_GAP_MS)
+		return;
+	s->pace_has_pending = false;
+	v = s->pace_pending;
+	if (v == s->pace_in_force)
+		return;
+	/* ⚠ The window starts now even if the hook fails: a stage that cannot be
+	 *   reached must not cost one log line per message. */
+	s->pace_sent_ms = now;
+	s->pace_ever_sent = true;
+	if (!s->g.pace || !s->g.pace(s->g.ctx, v)) {
+		reg(s, "⚠ PACE %u/s from %s did NOT reach the stage: the rate stays "
+		       "%s", (unsigned)v, s->user,
+		    s->pace_in_force ? "at the previous ceiling" : "without a ceiling");
+		return;
+	}
+	/* ⛔ I1: every drop of the rate is declared, with the number that
+	 *    decided it — here it is the CLIENT's number, and the line says so. */
+	if (v)
+		reg(s, "⏳ PACE (§13): %s's decoder is behind ⇒ at most %u frames/s "
+		       "(before: %s%u).  %u PACE received, %u superseded inside %u ms",
+		    s->user, (unsigned)v, s->pace_in_force ? "" : "no ceiling, ",
+		    (unsigned)s->pace_in_force, s->pace_received, s->pace_superseded,
+		    RCP_PACE_GAP_MS);
+	else
+		reg(s, "⏳ PACE (§13): %s's decoder has caught up ⇒ the ceiling of "
+		       "%u frames/s is LIFTED.  %u PACE received, %u superseded",
+		    s->user, (unsigned)s->pace_in_force, s->pace_received,
+		    s->pace_superseded);
+	s->pace_in_force = v;
+}
+
+static bool handle_pace(rcp_session *s, reader *l, uint64_t now)
+{
+	uint16_t asked = le_u16(l);
+	uint16_t v;
+
+	if (l->too_short) {
+		dismiss(s, RCP_PROTOCOL_ERROR, "PACE without `max_fps`");
+		return false;
+	}
+	/* ⛔ Like `REQUEST_KEY`: there is no frame to pace before `SESSION`. */
+	if (!s->session_sent) {
+		dismiss(s, RCP_PROTOCOL_ERROR, "PACE before SESSION: there is no frame");
+		return false;
+	}
+	s->pace_received++;
+	v = rcp_pace_clamp(asked);
+	if (s->pace_has_pending)
+		s->pace_superseded++;
+	s->pace_pending = v;
+	s->pace_has_pending = true;
+	pace_flush(s, now);
+	return true;
+}
+
 /* ⛔ §5.2 and §7.1 — `REQUEST_KEY`, served since 12 Aug 2026.
  *
  * ⚠ Until today this type fell into the `default` of the switch and made a
@@ -7476,6 +7592,14 @@ void rcp_free(rcp_session *s)
 	 * whatever happened, one passes through here.  ⚠ `inp_released` alone
 	 * prevents releasing twice. */
 	release_on_detach(s, "the session is being freed");
+	/* ⏳ §13.5 — the ceiling belongs to the SESSION: it is lifted with it, or
+	 *    the next client of this user would inherit a slow desktop. */
+	if (s->pace_in_force && s->g.pace) {
+		s->g.pace(s->g.ctx, 0);
+		reg(s, "⏳ PACE (§13): the session ends, the ceiling of %u frames/s is "
+		       "LIFTED", (unsigned)s->pace_in_force);
+		s->pace_in_force = 0;
+	}
 	/* ⛔ §6.2 — A VIDEO STREAM LEFT HALFWAY IS RESET, NOT ABANDONED TO THE
 	 * TRANSPORT.  A frame open when the session ends is by definition
 	 * incomplete: resetting it says so, and it is the only closing that means
@@ -7763,6 +7887,10 @@ static bool measure_fields(uint16_t kind, const uint8_t *body, uint32_t lung,
 	case T_REQUEST_KEY:
 		le_u32(&l);
 		break;
+	/* ⏳ §13: `PACE` ├── u16 max_fps.  Two bytes, not one more. */
+	case T_PACE:
+		le_u16(&l);
+		break;
 	/* ⭐ §7.6: `TERMINATE_SESSION` has an EMPTY body — there is nothing to say
 	 * beyond the fact.  ⚠ And a longer body is `PROTOCOL_ERROR` as for
 	 * all the others (§6.1): not «whatever is left over is ignored». */
@@ -7969,6 +8097,23 @@ static bool drain(rcp_session *s, uint64_t now)
 				return false;
 			}
 			keep_going = handle_key_request(s, &l, now);
+			break;
+		case T_PACE:
+			/* ⏳ §13.3 — the same states as `REQUEST_KEY`, and only with the
+			 *    capability negotiated on BOTH sides. */
+			if (s->state != S_ACTIVE && s->state != S_DETACHED) {
+				dismiss(s, RCP_PROTOCOL_ERROR, "PACE in the wrong state");
+				return false;
+			}
+			if (!s->pace_declared || !s->pace_client) {
+				dismiss(s, RCP_PROTOCOL_ERROR,
+				        s->pace_declared
+				            ? "PACE without video.pace=yes in the HELLO (§13.2)"
+				            : "PACE, and this server did not declare video.pace "
+				              "(§13.2)");
+				return false;
+			}
+			keep_going = handle_pace(s, &l, now);
 			break;
 		case T_TERMINATE_SESSION:
 			/*
@@ -8887,6 +9032,8 @@ bool rcp_time(rcp_session *s, uint64_t now)
 {
 	if (s->state == S_FINISHED)
 		return false;
+	/* ⏳ §13.5: a `PACE` held back by the 250 ms window goes out here. */
+	pace_flush(s, now);
 
 	/* ⛔⛔ THE BACKSTOP OF PASTE REQUESTS, and without it the clipboard
 	 *      channel works only once.

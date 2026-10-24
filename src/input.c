@@ -192,7 +192,10 @@
 #include <poll.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
+#include <sys/ioctl.h>
+#include <linux/sockios.h>
 
 #include "kwin.h"
 #include "mutter.h"
@@ -314,6 +317,23 @@ struct input
 	 *    shows at a distance. */
 	int fd_socket;
 
+	/* ⭐ THE KEY WITNESS — 15 Oct 2026, KDE loses or delays keys (see the box
+	 *    "THE COMPOSITOR'S RECEIPT" above `send_key`).  Indexed by evdev code:
+	 *    when each press / release was handed to the socket (monotonic and
+	 *    wall clock), and when the compositor TOOK the press (its pong).
+	 * ⛔ In memory only: the always-on log gets ONE summary per period
+	 *    (`rc_*` below), never a line per key. */
+	gint64 key_sent_us[2][MAX_KEY];
+	gint64 key_sent_wall_us[2][MAX_KEY];
+	unsigned key_sent_unread[2][MAX_KEY];
+	gint64 key_taken_press_us[MAX_KEY];
+	unsigned pings_out;
+	/* ⭐ The period being summed up (RECEIPT_PERIOD_US): no key, no order. */
+	gint64 rc_start_us, rc_start_wall_us;
+	unsigned rc_keys, rc_slow, rc_behind, rc_repeat, rc_kept;
+	double rc_max_ms;
+	float rc_ms[512];
+
 	/* ⭐ PHASE 13, INCREMENT 3 — on wlroots the transport is `wlr_input.c`, and
 	 *    `ei`, `session`, `kwin`, `pointer` and `keyboard_dev` stay NULL.
 	 *    ⛔ Non-NULL means "this Input is wlroots's" for its WHOLE
@@ -397,6 +417,283 @@ static void beat_border(Input *in, struct ei_device *device)
 	ei_device_frame(device, ei_now(in->ei));
 }
 
+/*
+ * ⭐⭐ THE COMPOSITOR'S RECEIPT — 15 Oct 2026, and it is EVIDENCE, not a cure.
+ *
+ * `[M]` climb `fix-kde-20261015/fix-kde-intel-4k`: on KDE the server took a
+ * PageDown (press and release 91 ms apart, both handed to libei: no
+ * «did not take it» line), and Firefox in the session never saw the keydown; a
+ * Home arrived THREE times (= the application's autorepeat, KDE's delay is
+ * 600 ms: the release reached the window more than 600 ms after the press).
+ * Typed text on the same path works.  ⚠ In the same seconds the HOST was at
+ * 19-20 cores of 20 and load 30, and a wheel gesture was lost too.
+ *
+ * ⛔ Until now the log ended at `ei_device_frame()`: what happened after —
+ *    the socket, KWin's main loop, the window — had no witness, and «our
+ *    side or KWin's side» could not be told.  `libei` writes AT ONCE
+ *    (`ei_send_message` → `iobuf_send`; on `EAGAIN` it queues and arms
+ *    `EPOLLOUT`, and `input_run()` flushes) ⇒ there is no flush missing here.
+ *
+ * ⭐ The receipt is `ei_ping()` (the protocol's `sync`): `libeis` answers it
+ *    in `eis_get_event()`, that is ONLY when the compositor's main loop has
+ *    PULLED from its queue everything we sent before — the key included.
+ *    ⇒ pong time − send time = how long the key waited for the compositor.
+ *    And for a release, the gap between the two receipts is the gap the
+ *    APPLICATION sees: ≥ 600 ms on KDE ⇒ autorepeat.
+ * ⚠ And `SIOCOUTQ` on the socket at send time: the bytes the compositor has
+ *   NOT read yet.  Non-zero = its loop was already behind before this key.
+ *
+ * ⛔⛔ PRIVACY (DECISIONS §9.2, phase 16 §12) — what reaches the log.
+ *    A line per key with its millisecond and press/release is the typing
+ *    rhythm, and the length of a password: NEVER in the always-on log.
+ *    ⇒ The always-on log gets ONE line per RECEIPT_PERIOD_US, and only if in
+ *      it something was slow: the SHARE of slow key events and of those sent
+ *      while the compositor was behind (to 10 %), max and median wait (to
+ *      10 ms), whether there was an autorepeat risk (yes/no), and the
+ *      period's bounds to the SECOND.  NO COUNT: the period starts at the
+ *      first key, so a count after a password and 10 s idle is its length.
+ *      Exact counts only under `--verbose`.  No key, no per-key time, no
+ *      press/release order.  It is also the rate limit: an
+ *      overloaded host (exactly when it is slow) gets one line per period,
+ *      not one per key.
+ *    ⇒ Per key, ONLY under `--verbose` and ONLY for the slow ones and the
+ *      autorepeat risks: the second (not the millisecond) it was handed over,
+ *      the code and the direction only if `log_speakable_key()` allows it
+ *      (modifiers), «key» otherwise.  A second is what a bench needs to match
+ *      a lost PageDown to its action; less would not match, more would read
+ *      the rhythm.
+ * ⛔ A STALE PRESS gives a false autorepeat line: a release whose receipt will
+ *    never come (refused, orphan, no ping) must forget its press time, and so
+ *    must a channel that closes or is healed — `forget_key_receipt()` and
+ *    `forget_receipts()`.
+ * ⛔ And at a disconnect `libei` EMULATES a pong for every ping still out,
+ *    BEFORE `EI_EVENT_DISCONNECT` (`libei.h`, `ei_ping()`), in the same
+ *    dispatch: they would all look like keys the compositor took late.
+ *    ⇒ `input_run()` holds the pongs of a dispatch and serves them only if
+ *      that dispatch did not close the channel.
+ */
+#ifdef REMOTIX_EI_PING
+#define RECEIPT_SLOW_MS 100.0
+#define RECEIPT_REPEAT_MS 500.0
+#define RECEIPT_PERIOD_US (10 * G_USEC_PER_SEC)
+
+static unsigned unread_by_compositor(Input *in)
+{
+	int queued = 0;
+
+	if (in->fd_socket < 0 || ioctl(in->fd_socket, SIOCOUTQ, &queued) != 0 || queued < 0)
+		return 0;
+	return (unsigned) queued;
+}
+
+/* ⛔ To the SECOND, by design: see the box above. */
+static void wall_second(gint64 wall_us, char *out, size_t n)
+{
+	time_t sec = (time_t) (wall_us / G_USEC_PER_SEC);
+	struct tm tm;
+
+	gmtime_r(&sec, &tm);
+	g_snprintf(out, n, "%02d:%02d:%02d", tm.tm_hour, tm.tm_min, tm.tm_sec);
+}
+
+static int compare_float(const void *a, const void *b)
+{
+	float x = *(const float *) a, y = *(const float *) b;
+
+	return (x > y) - (x < y);
+}
+
+/* ⛔ The always-on line's precision (see the box above): a share to the
+ *    nearest 10 % (never 0 % when there was one), a time to 10 ms. */
+static unsigned rough_share(unsigned part, unsigned whole)
+{
+	unsigned pct;
+
+	if (!part || !whole)
+		return 0;
+	pct = (unsigned) ((part * 100.0 / whole + 5.0) / 10.0) * 10;
+	return pct ? pct : 10;
+}
+
+static unsigned rough_ms(double ms)
+{
+	return ms <= 0.0 ? 0 : (unsigned) ((ms + 5.0) / 10.0) * 10;
+}
+
+/* ⭐ The period's line, and the period starts again.  `force` = the channel is
+ *    closing: what was gathered is said now or never. */
+static void summarize_receipts(Input *in, gint64 now, gboolean force)
+{
+	char from[16], to[16];
+	double median = 0.0;
+
+	if (!in->rc_keys)
+	{
+		in->rc_start_us = 0;
+		return;
+	}
+	if (!force && now - in->rc_start_us < RECEIPT_PERIOD_US)
+		return;
+	if (in->rc_kept)
+	{
+		float sorted[G_N_ELEMENTS(in->rc_ms)];
+
+		memcpy(sorted, in->rc_ms, in->rc_kept * sizeof sorted[0]);
+		qsort(sorted, in->rc_kept, sizeof sorted[0], compare_float);
+		median = sorted[in->rc_kept / 2];
+	}
+	wall_second(in->rc_start_wall_us, from, sizeof from);
+	wall_second(g_get_real_time(), to, sizeof to);
+	if (in->rc_slow || in->rc_repeat)
+		/* ⛔ No count here: a period starts at the first key, so «18 key
+		 *    events» after a password and 10 s of quiet is its length.
+		 *    Shares to 10 %, times to 10 ms, the risk as yes/no. */
+		registro_dice(AREA,
+		              "%s RECEIPTS %s–%s UTC: about %u%% of the key events taken by the "
+		              "compositor after ≥ %.0f ms (max ~%u ms, median ~%u ms%s), about %u%% sent "
+		              "while it had not yet read the ones before, autorepeat risk: %s (a release "
+		              "taken ≥ %.0f ms after its press although sent closer: the application sees "
+		              "the key held, KDE repeats at 600 ms).  ⚠ The wait is in the compositor's "
+		              "main loop, after our socket",
+		              in->rc_repeat ? "⛔" : "⚠", from, to,
+		              rough_share(in->rc_slow, in->rc_keys), RECEIPT_SLOW_MS,
+		              rough_ms(in->rc_max_ms), rough_ms(median),
+		              in->rc_kept < in->rc_keys ? ", of the first ones" : "",
+		              rough_share(in->rc_behind, in->rc_keys),
+		              in->rc_repeat ? "yes" : "no", RECEIPT_REPEAT_MS);
+	/* Exact counts: only under --verbose, like the per-key lines. */
+	log_detail(AREA, "receipts %s–%s UTC: %u key events, %u slow, %u sent while behind, "
+	                 "%u autorepeat risks, max %.1f ms, median %.1f ms",
+	           from, to, in->rc_keys, in->rc_slow, in->rc_behind, in->rc_repeat,
+	           in->rc_max_ms, median);
+	in->rc_start_us = 0;
+	in->rc_keys = in->rc_slow = in->rc_behind = in->rc_repeat = in->rc_kept = 0;
+	in->rc_max_ms = 0.0;
+}
+
+/* ⛔ A release that will have no receipt: its press time must not wait for it. */
+static void forget_key_receipt(Input *in, uint16_t code, int pressed)
+{
+	if (code >= MAX_KEY)
+		return;
+	in->key_sent_us[pressed != 0][code] = 0;
+	if (!pressed)
+		in->key_taken_press_us[code] = 0;
+}
+
+/* ⛔ The channel closes or is healed: no pong of the old one is believed. */
+static void forget_receipts(Input *in)
+{
+	summarize_receipts(in, g_get_monotonic_time(), TRUE);
+	memset(in->key_sent_us, 0, sizeof in->key_sent_us);
+	memset(in->key_taken_press_us, 0, sizeof in->key_taken_press_us);
+	in->pings_out = 0;
+}
+
+static void ask_receipt(Input *in, uint16_t code, int pressed, unsigned unread_before)
+{
+	struct ei_ping *ping;
+	int p = pressed != 0;
+
+	if (!in->ei || !in->handshake_done)
+	{
+		forget_key_receipt(in, code, pressed);
+		return;
+	}
+	ping = ei_new_ping(in->ei);
+	if (!ping)
+	{
+		forget_key_receipt(in, code, pressed);
+		return;
+	}
+	in->key_sent_us[p][code] = g_get_monotonic_time();
+	in->key_sent_wall_us[p][code] = g_get_real_time();
+	in->key_sent_unread[p][code] = unread_before;
+	/* ⭐ No allocation: the key travels IN the pointer (code and direction),
+	 *    so a pong lost at detach leaks nothing. */
+	ei_ping_set_user_data(ping, GUINT_TO_POINTER(0x100000u | ((unsigned) code << 1) | (unsigned) p));
+	ei_ping(ping);
+	ei_ping_unref(ping);
+	in->pings_out++;
+}
+
+static void receipt_arrived(Input *in, struct ei_event *event)
+{
+	struct ei_ping *ping = ei_event_pong_get_ping(event);
+	unsigned tag = ping ? GPOINTER_TO_UINT(ei_ping_get_user_data(ping)) : 0;
+	unsigned code, p;
+	gint64 now = g_get_monotonic_time();
+	double waited, gap_taken = -1.0, gap_sent = -1.0;
+	gboolean slow, repeat;
+
+	if (in->pings_out)
+		in->pings_out--;
+	if (!(tag & 0x100000u))
+		return;
+	code = (tag >> 1) & 0x7FFFFu;
+	p = tag & 1u;
+	if (code >= MAX_KEY || !in->key_sent_us[p][code])
+		return;
+	waited = (double) (now - in->key_sent_us[p][code]) / 1000.0;
+	if (p)
+		in->key_taken_press_us[code] = now;
+	else if (in->key_taken_press_us[code])
+	{
+		gap_taken = (double) (now - in->key_taken_press_us[code]) / 1000.0;
+		if (in->key_sent_us[1][code])
+			gap_sent = (double) (in->key_sent_us[0][code] - in->key_sent_us[1][code]) / 1000.0;
+		in->key_taken_press_us[code] = 0;
+	}
+	slow = waited >= RECEIPT_SLOW_MS;
+	repeat = gap_taken >= RECEIPT_REPEAT_MS && gap_sent >= 0.0 && gap_sent < RECEIPT_REPEAT_MS;
+
+	if (!in->rc_start_us)
+	{
+		in->rc_start_us = now;
+		in->rc_start_wall_us = g_get_real_time();
+	}
+	in->rc_keys++;
+	in->rc_slow += slow;
+	in->rc_repeat += repeat;
+	in->rc_behind += in->key_sent_unread[p][code] != 0;
+	if (waited > in->rc_max_ms)
+		in->rc_max_ms = waited;
+	if (in->rc_kept < G_N_ELEMENTS(in->rc_ms))
+		in->rc_ms[in->rc_kept++] = (float) waited;
+
+	/* ⛔ Per key only under --verbose, only the slow ones, to the second. */
+	if ((slow || repeat) && log_verbose())
+	{
+		char which[32], sent_at[16];
+
+		if (log_speakable_key(code))
+			g_snprintf(which, sizeof which, "key 0x%X (%u) %s", code, code,
+			           p ? "pressed" : "released");
+		else
+			g_strlcpy(which, "key", sizeof which);
+		wall_second(in->key_sent_wall_us[p][code], sent_at, sizeof sent_at);
+		if (repeat)
+			log_detail(AREA, "receipt: %s handed over in second %s UTC, taken after %.1f ms, "
+			                 "%.1f ms after its press (sent %.1f ms apart): AUTOREPEAT risk",
+			           which, sent_at, waited, gap_taken, gap_sent);
+		else
+			log_detail(AREA, "receipt: %s handed over in second %s UTC, taken after %.1f ms "
+			                 "(%u bytes unread at send, %u receipts still out)",
+			           which, sent_at, waited, in->key_sent_unread[p][code], in->pings_out);
+	}
+	in->key_sent_us[p][code] = 0;
+	summarize_receipts(in, now, FALSE);
+}
+#else
+/* ⚠ libei older than 1.3.901 (Ubuntu 24.04): no `ei_ping`, no receipt. */
+static unsigned unread_by_compositor(Input *in) { (void) in; return 0; }
+static void ask_receipt(Input *in, uint16_t code, int pressed, unsigned unread_before)
+{ (void) in; (void) code; (void) pressed; (void) unread_before; }
+static void forget_key_receipt(Input *in, uint16_t code, int pressed)
+{ (void) in; (void) code; (void) pressed; }
+static void forget_receipts(Input *in) { (void) in; }
+#endif
+
 static int send_key(Input *in, uint16_t code, int pressed)
 {
 	if (code >= MAX_KEY)
@@ -409,7 +706,10 @@ static int send_key(Input *in, uint16_t code, int pressed)
 	if (in->wlr)
 		return send_key_wlr(in, code, pressed);
 	if (!in->keyboard_dev || !in->keyboard_active)
+	{
+		forget_key_receipt(in, code, pressed); /* ⛔ no receipt will come */
 		return -1;
+	}
 
 	/* ⛔ As for buttons: a key pressed on a keyboard the
 	 *    compositor destroyed (keymap change, `:762-781`) can no longer be
@@ -417,6 +717,7 @@ static int send_key(Input *in, uint16_t code, int pressed)
 	 *    `handle_button`.  It is said and -1 is returned, instead of writing "done". */
 	if (!pressed && bit_read(in->orphan_keys, code))
 	{
+		forget_key_receipt(in, code, pressed); /* ⛔ no receipt will come */
 		bit_write(in->orphan_keys, code, FALSE);
 		if (in->how_many_orphans)
 			in->how_many_orphans--;
@@ -441,8 +742,13 @@ static int send_key(Input *in, uint16_t code, int pressed)
 		return -1;
 	}
 
+	/* ⛔ `SIOCOUTQ` is read BEFORE the key: libei writes at once, so read
+	 *    after it the count holds the key's own bytes, is almost never 0, and
+	 *    every keystroke would get an always-on «⚠ RECEIPT» line. */
+	unsigned unread_before = unread_by_compositor(in);
 	ei_device_keyboard_key(in->keyboard_dev, code, pressed != 0);
 	beat_border(in, in->keyboard_dev);
+	ask_receipt(in, code, pressed, unread_before);
 
 	/* ⛔ The count is kept AFTER sending: marking a key that did not leave
 	 *    would make the detach release something nobody pressed. */
@@ -1005,11 +1311,24 @@ static void handle_event(Input *in, struct ei_event *event)
 				in->pointer_active = FALSE;
 			if (device == in->keyboard_dev)
 				in->keyboard_active = FALSE;
+			/* ⛔ 15 Oct 2026: a pause was SILENT, and every key in it is refused
+			 *    with only a chatter line.  It is said: a lost key must be
+			 *    told apart from a device the compositor took away. */
+			registro_dice(AREA, "⚠ device «%s» PAUSED by the compositor: its input is "
+			                    "refused until it resumes",
+			              ei_device_get_name(device) ?: "?");
 			break;
+
+#ifdef REMOTIX_EI_PING
+		case EI_EVENT_PONG:
+			receipt_arrived(in, event);
+			break;
+#endif
 
 		case EI_EVENT_DISCONNECT:
 			registro_dice(AREA, "⛔ the compositor CLOSED the input channel");
 			in->dropped = TRUE;
+			forget_receipts(in);
 			break;
 
 		default:
@@ -1239,6 +1558,9 @@ static void detach_context(Input *in, const char *chi)
 	if (!in || !in->ei)
 		return;
 
+	/* ⛔ The old context's pings will never be answered (box "THE COMPOSITOR'S
+	 *    RECEIPT"): their press times must not survive into the new one. */
+	forget_receipts(in);
 	lived_ms = (double) (g_get_monotonic_time() - in->open_us) / 1000.0;
 
 	if (in->handshake_done)
@@ -1484,12 +1806,38 @@ int input_run(Input *in)
 	}
 
 	ei_dispatch(in->ei);
+#ifdef REMOTIX_EI_PING
+	/* ⛔ The pongs are HELD until the dispatch is over: at a disconnect
+	 *    `libei` emulates one for every ping still out, before the
+	 *    `EI_EVENT_DISCONNECT` of this same dispatch (box "THE COMPOSITOR'S
+	 *    RECEIPT").  ⚠ Past `held`'s size they are served at once: a disconnect
+	 *    with more than 64 pings out may give false «slow» counts, and only that. */
+	struct ei_event *held[64];
+	unsigned how_many_held = 0;
+#endif
 	while ((event = ei_get_event(in->ei)) != NULL)
 	{
+#ifdef REMOTIX_EI_PING
+		if (ei_event_get_type(event) == EI_EVENT_PONG && how_many_held < G_N_ELEMENTS(held))
+		{
+			held[how_many_held++] = event;
+			amount++;
+			continue;
+		}
+#endif
 		handle_event(in, event);
 		ei_event_unref(event);
 		amount++;
 	}
+#ifdef REMOTIX_EI_PING
+	for (unsigned i = 0; i < how_many_held; i++)
+	{
+		if (!in->dropped)
+			handle_event(in, held[i]);
+		ei_event_unref(held[i]);
+	}
+	summarize_receipts(in, g_get_monotonic_time(), FALSE);
+#endif
 	/* ⛔ The healing is HERE and not inside `handle_event`: with an empty queue, and
 	 *    after `device_removed()` has already marked the orphans. */
 	if (in->healing_due && !in->dropped)

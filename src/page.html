@@ -866,6 +866,10 @@ const TYPE = {
      `FAREWELL`: that closes the connection and leaves the session alive (I4),
      this one ENDS the session and with it the user's programs. */
   TERMINATE_SESSION: 0x0011,
+  /* ⏳ `RCP.md` §13 — PROPOSED, not normative (`DECISIONS.md` §11.32): «my
+     decoder is behind, no more than N frames per second».  ⛔ Sent ONLY when
+     the server declared `video.pace=yes` too. */
+  PACE: 0x0012,
   /* ⭐⭐ AND NOW SOMEONE SENDS `FIT_CANVAS` — 15 Aug 2026.
      ⚠ Until yesterday it said here "nobody sends it yet at phase 2", and with
        that line four things were missing together (`DECISIONS.md`
@@ -3154,6 +3158,12 @@ class Viewer {
     /* The callbacks towards the control channel, set by `connect()`. */
     this.on_key = null;
     this.on_protocol_error = null;
+    /* ⏳ `RCP.md` §13 (PROPOSED) — the decoder's pace.  `on_pace(fps)` is set
+       by `connect()` only when `video.pace` was negotiated on both sides; the
+       measure is turned on by `pace_enable()`.  ⚠ `fps` 0 = no ceiling. */
+    this.on_pace = null;
+    this.pace = { on: false, fps: 0, t0: 0, deliv0: 0, high0: 0, out0: 0,
+                  calm: 0, sent: 0 };
     this.on_line = (t) => note("video · " + t);
     /* ⛔ AND WHICH ROUTE IS IN FORCE IS ALWAYS SAID, not only when falling
      *    back: a silent fallback is forbidden (`CODER.md` §4.2), and here
@@ -3183,6 +3193,66 @@ class Viewer {
   }
 
   line(t) { if (this.on_line) this.on_line(t); }
+
+  /* ⏳ `RCP.md` §13.4 (PROPOSED) — THE DECODER'S PACE, measured HERE because
+   *    the queue is inside this decoder and nobody else can see it.
+   * ⛔ Off on the MSE route: there is no `decodeQueueSize` to read. */
+  pace_enable(on) {
+    this.pace = { on: !!on && !VIA_MSE, fps: 0, t0: 0, deliv0: 0, high0: 0,
+                  out0: 0, calm: 0, sent: 0 };
+    if (on && VIA_MSE)
+      this.line("pace (§13): NOT measured on the MSE route — no decoder queue");
+  }
+
+  /* Called at every delivery to the decoder; works once per window ≥ 1 s.
+   * ⭐ From counters this page already keeps: `queue_deliv` (the queue the
+   *    decoder declared at each delivery) and `counts.exited` (frames it gave
+   *    back).  ⚠ The threshold is 3, not 1: `[M]` a healthy hardware decoder
+   *    keeps ~1 frame of its own pipeline. */
+  pace_check(now) {
+    const p = this.pace;
+    if (!p.on || !this.dec) return;
+    const q = this.queue_deliv;
+    const deliv = q[0] + q[1] + q[2] + q[3] + q[4] + q[5];
+    const high = q[3] + q[4] + q[5];
+    if (!p.t0) {
+      p.t0 = now; p.deliv0 = deliv; p.high0 = high; p.out0 = this.counts.exited;
+      return;
+    }
+    const dt = now - p.t0;
+    if (dt < 1000) return;
+    const n = deliv - p.deliv0, h = high - p.high0;
+    const out_s = (this.counts.exited - p.out0) * 1000 / dt;
+    p.t0 = now; p.deliv0 = deliv; p.high0 = high; p.out0 = this.counts.exited;
+    let want = p.fps;
+    if (n >= 5 && h * 2 >= n) {
+      /* BEHIND: half the frames found ≥ 3 queued.  ⇒ 0.9 × what the decoder
+         really gave back, so the queue drains instead of staying full; only
+         ever DOWN here. */
+      p.calm = 0;
+      const c = Math.max(5, Math.floor(0.9 * out_s));
+      if (p.fps === 0 || c < p.fps) want = c;
+    } else if ((n >= 5 && h * 10 <= n)
+               || (n < 5 && this.dec.decodeQueueSize <= 1)) {
+      /* CALM: after three calm windows in a row, one step up (×1.25); at 60
+         the ceiling is lifted.  ⚠ In between the two thresholds nothing
+         moves: it is the hysteresis band. */
+      if (p.fps && ++p.calm >= 3) {
+        p.calm = 0;
+        want = Math.ceil(p.fps * 1.25);
+        if (want >= 60) want = 0;
+      }
+    } else {
+      p.calm = 0;
+    }
+    if (want === p.fps) return;
+    this.line("pace (§13): " + (want ? "at most " + want + " frames/s" : "ceiling lifted")
+              + " — window " + Math.round(dt) + " ms, " + n + " delivered, " + h
+              + " with queue ≥ 3, decoder out " + out_s.toFixed(1) + "/s");
+    p.fps = want;
+    p.sent++;
+    if (this.on_pace) this.on_pace(want);
+  }
 
   /* ⛔ A new attempt starts from zero.  ⚠ Without it, the previous attempt's
      `last_delivered` would discard by ORDER all the frames of the new
@@ -4332,6 +4402,7 @@ class Viewer {
       /* ⭐ the queue the decoder declares BEFORE receiving this one */
       const cq = this.dec.decodeQueueSize;
       this.queue_deliv[cq > 5 ? 5 : cq]++;
+      this.pace_check(performance.now());
       this.last_dec_instant_us = i.instant;
       this.dec.decode(new EncodedVideoChunk({
         type: key ? "key" : "delta", timestamp: i.instant, data: data }));
@@ -5926,6 +5997,9 @@ async function connect(username, password) {
     ["audio.codec", audio_codec_declarable],
     ["input.touch", "no"],
     ["clipboard.text", "yes"],
+    /* ⏳ `RCP.md` §13 (PROPOSED): this page can tell its decoder is behind —
+       except on the MSE route, where there is no queue to read. */
+    ["video.pace", VIA_MSE ? "no" : "yes"],
     ["client.name", "remotix-page 0.1.0"],
   ];
   /* ⛔ §4.3: "an EMPTY value is PROTOCOL_ERROR: whoever has nothing to say
@@ -5961,6 +6035,7 @@ async function connect(username, password) {
   }
   let codec_choice = "", depth_choice = "";
   let clipboard_choice = false;
+  let pace_choice = false;  /* ⏳ §13: the server declared video.pace=yes */
   {
     const l = new Reader(m.body);
     const ver = l.u16(), tries = l.u16();
@@ -6004,6 +6079,7 @@ async function connect(username, password) {
          page printed it in the HERE_I_AM line and kept it nowhere, that is it
          could not have turned anything on. */
       if (name === "clipboard.text") clipboard_choice = value === "yes";
+      if (name === "video.pace") pace_choice = value === "yes";
     }
     note("HERE_I_AM: version " + ver + " — " + choices.join(" · "));
   }
@@ -6334,6 +6410,22 @@ async function connect(username, password) {
         channel.send(TYPE.REQUEST_KEY, new Writer().u32(last).byte())
           .catch((e) => note("the REQUEST_KEY could not go out: " + e));
       };
+      /* ⏳ `RCP.md` §13 (PROPOSED): only when BOTH sides declared
+         `video.pace=yes` — otherwise a `PACE` is PROTOCOL_ERROR. */
+      if (pace_choice && !VIA_MSE) {
+        viewer.on_pace = (fps) => {
+          channel.send(TYPE.PACE, new Writer().u16(fps).byte())
+            .catch((e) => note("the PACE could not go out: " + e));
+        };
+        viewer.pace_enable(true);
+        note("⏳ decoder pace ON (RCP.md §13, proposed): the server will be told "
+           + "when this decoder falls behind");
+      } else {
+        /* ⚠ A reattach to a server without it must not keep the previous
+           connection's callback. */
+        viewer.on_pace = null;
+        viewer.pace_enable(false);
+      }
       viewer.on_protocol_error = (why) => {
         outcome("The session closed: the server sent something that does not "
             + "add up with RCP.", false);
@@ -9352,6 +9444,7 @@ self.onmessage = function (ev) {
     __oc = m.canvas; devicePixelRatio = m.dpr || 1; __view = m.view || [1, 1];
     viewer = new Viewer(fake_canvas(__oc));
     viewer.on_key = function (u) { __post({ t: "key", last: u }); };
+    viewer.on_pace = function (f) { __post({ t: "pace", fps: f }); };
     viewer.on_protocol_error = function (p) {
       __post({ t: "protocol_error", why: p }); };
     /* ⚠ The same global name as over there, for the same reason: a bench that
@@ -9556,6 +9649,10 @@ function start_worker() {
       if (viewer.on_key) viewer.on_key(m.last);
       return;
     }
+    if (m.t === "pace") {
+      if (viewer.on_pace) viewer.on_pace(m.fps);
+      return;
+    }
     if (m.t === "protocol_error") {
       if (viewer.on_protocol_error) viewer.on_protocol_error(m.why);
       return;
@@ -9623,7 +9720,7 @@ if (window.REMOTIX) { window.REMOTIX.video = VW; window.REMOTIX.round_trip = ROU
 if (VW) {
   for (const method of ["restart", "negotiate", "view", "canvas_adapted",
                         "canvas_refused", "fit_canvas_requested",
-                        "stream_video", "close"]) {
+                        "stream_video", "close", "pace_enable"]) {
     viewer[method] = (function (m) {
       return function () { VW.call(m, Array.prototype.slice.call(arguments)); };
     })(method);

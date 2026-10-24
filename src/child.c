@@ -264,7 +264,12 @@ enum {
 	 *     even empty-handed: a `SelectionTransfer` with no answer leaves the
 	 *     pasting application hanging indefinitely, and the symptom is "the
 	 *     desktop has frozen" (`src/clipboard.h`). */
-	MSG_CLIPBOARD_REQUEST = 18 /* child → parent */
+	MSG_CLIPBOARD_REQUEST = 18, /* child → parent */
+	/* ⏳ `RCP.md` §13 (PROPOSED) — «the client's decoder is behind: take no
+	 *    more than N frames per second».  ⛔ It crosses the boundary for the
+	 *    same reason as `MSG_VIDEO`: the capture and the encoder are HERE, the
+	 *    client's message arrives in the parent. */
+	MSG_PACE = 19 /* parent → child */
 };
 
 struct head {
@@ -387,6 +392,14 @@ struct body_input {
  *    length that comes to it from the socket. */
 struct body_layout {
 	char name[65];
+};
+
+/* ⏳ §13: `max_fps` already clamped by `rcp.c`; 0 = no ceiling.  ⚠ The child
+ *    clamps AGAIN (`pace_set()`): a number that comes from a socket is not
+ *    trusted because a module on the other side promised it. */
+struct body_pace {
+	uint16_t max_fps;
+	uint16_t fill;
 };
 
 /* ⛔ The cursor shape that crosses the boundary.  ⚠ The limits of `RCP.md`
@@ -3001,6 +3014,40 @@ bool children_layout(children *f, const char *user, const char *name)
 	return true;
 }
 
+bool children_pace(children *f, const char *user, uint16_t max_fps)
+{
+	struct child *g;
+	struct head t;
+	struct body_pace c;
+	uint8_t envelope[sizeof t + sizeof c];
+
+	if (!f || !user)
+		return false;
+	g = search(f, user);
+	if (!g || g->fd < 0 || g->exiting)
+		return false;
+
+	memset(&t, 0, sizeof t);
+	magic_write(&t);
+	t.kind = MSG_PACE;
+	t.version = CHILD_VERSION;
+	t.serial = g->serial;
+	t.declared_uid = (uint32_t)g->uid;
+	t.byte = (uint32_t)sizeof c;
+	memset(&c, 0, sizeof c);
+	c.max_fps = max_fps;
+	memcpy(envelope, &t, sizeof t);
+	memcpy(envelope + sizeof t, &c, sizeof c);
+	if (send(g->fd, envelope, sizeof envelope, MSG_NOSIGNAL) != (ssize_t)sizeof envelope) {
+		registro_dice(LOG_CHILD,
+		              "⚠ the pace %u/s for «%s» did NOT go out (%s): the stage "
+		              "keeps its rate",
+		              (unsigned)max_fps, user, strerror(errno));
+		return false;
+	}
+	return true;
+}
+
 bool children_input(children *f, const char *user, uint32_t id, uint8_t action,
                  uint16_t code, int pressed, int32_t a, int32_t b)
 {
@@ -4459,6 +4506,53 @@ static uint8_t requested_level_x10;
  *   and they are FIVE since 23 Aug 2026 (`enc_level[]` is the latest).  They
  *   are found like this: `grep "\[CODEC_MAX\]"`. */
 static bool key_debt[CODEC_MAX];
+/* ⏳ `RCP.md` §13 (PROPOSED) — THE DECODER'S PACE.  `pace_interval_us` = 0 is
+ *    no ceiling (the default, and the state at every new viewer); otherwise
+ *    the frame loop does not TAKE a frame from the capture until that long has
+ *    passed since the last one it encoded (`pace_last_us`).
+ * ⭐ Nothing is lost by waiting: the capture slot keeps only the newest picture
+ *    and the UNION of the damage (`capture.c`, 15 Oct 2026), so the next frame
+ *    carries every change, and the delta chain stays whole.
+ * ⛔ A keyframe owed (`key_debt`) is never held back. */
+static uint64_t pace_interval_us;
+static uint64_t pace_last_us;
+static uint16_t pace_fps;
+static uint64_t pace_held, pace_held_logged;
+
+static void pace_set(uint16_t max_fps, const char *why)
+{
+	/* ⛔ The same clamp as `rcp_pace_clamp()`, redone on this side of the
+	 *    socket: 0 or ≥ MOTION_FPS = no ceiling, below 5 = 5. */
+	if (max_fps >= MOTION_FPS)
+		max_fps = 0;
+	else if (max_fps && max_fps < 5)
+		max_fps = 5;
+	if (max_fps == pace_fps)
+		return;
+	registro_dice(LOG_CHILD,
+	              max_fps ? "⏳ PACE (RCP.md §13): at most %u frames/s are taken "
+	                        "from the capture (before %u, 0 = no ceiling) — %s.  "
+	                        "%llu rounds held back so far"
+	                      : "⏳ PACE (RCP.md §13): ceiling LIFTED (%u, before %u) "
+	                        "— %s.  %llu rounds held back so far",
+	              (unsigned)max_fps, (unsigned)pace_fps, why,
+	              (unsigned long long)pace_held);
+	pace_fps = max_fps;
+	pace_interval_us = max_fps ? 1000000u / max_fps : 0;
+}
+
+/* How long the loop may still wait before the next frame is due; 0 = due now
+ * (or no ceiling, or a keyframe owed). */
+static uint64_t pace_wait_us(uint64_t now_us)
+{
+	if (!pace_interval_us || !requested_codec)
+		return 0;
+	if (requested_codec < CODEC_MAX && key_debt[requested_codec])
+		return 0;
+	if (now_us - pace_last_us >= pace_interval_us)
+		return 0;
+	return pace_interval_us - (now_us - pace_last_us);
+}
 /* ⛔ With which depth each encoder was OPENED.  ⚠ It is kept here and not
  *    asked of `encoder.h`: that module has no reader for the depth, and
  *    adding one for a question that can be remembered would be widening an
@@ -8578,6 +8672,16 @@ void child_alive(int argc, char **argv)
 				 * ⚠ 5 ms is a PCM block (§5.3): the loop wakes up in time to
 				 *   take them away one at a time, instead of piling them up
 				 *   and then dropping them. */
+				/* ⏳ §13: with a pace in force the loop SLEEPS until the next
+				 *    frame is due, instead of spinning on a zero wait — and
+				 *    it still wakes up at once for the parent and for
+				 *    `libei`, which are in this same `poll`. */
+				if (requested_codec && cat && wait_ms == 0) {
+					uint64_t pw = pace_wait_us(now_monotonic_us());
+
+					if (pw)
+						wait_ms = (int)((pw + 999u) / 1000u);
+				}
 				if (audio_codec && wait_ms > 5)
 					wait_ms = 5;
 				ready = poll(due, (nfds_t)amount, wait_ms);
@@ -8761,6 +8865,12 @@ void child_alive(int argc, char **argv)
 						              requested_level_x10 % 10u);
 					requested_level_x10 = cv.livello_x10;
 				}
+				/* ⏳ §13.5: the ceiling belongs to the SESSION that asked for
+				 *    it.  When the codec changes — nobody watches any more, or
+				 *    a new viewer arrives — it is lifted here too, not only by
+				 *    the parent at the end of the session. */
+				if (cv.codec != requested_codec)
+					pace_set(0, cv.codec ? "a new viewer" : "nobody is watching");
 				requested_codec = cv.codec;
 				/* ⛔ §5.2: the debt is set on the REQUESTED codec, not on all.
 				 *    Asking for a keyframe for HEVC does not produce one on
@@ -8839,6 +8949,16 @@ void child_alive(int argc, char **argv)
 				if ((size_t)readings < sizeof t + sizeof ca + ca.piece)
 					continue;
 				clipboard_from_client(&ca, envelope + sizeof t + sizeof ca);
+				continue;
+			}
+			/* ⏳ `RCP.md` §13 (PROPOSED) — the client's decoder pace. */
+			if (t.kind == MSG_PACE) {
+				struct body_pace cp;
+
+				if ((size_t)readings < sizeof t + sizeof cp)
+					continue;
+				memcpy(&cp, envelope + sizeof t, sizeof cp);
+				pace_set(cp.max_fps, "the client's decoder asked for it");
 				continue;
 			}
 			if (t.kind == MSG_LAYOUT) {
@@ -9709,6 +9829,21 @@ void child_alive(int argc, char **argv)
 		/* ── 2. the frame ────────────────────────────────────────────────── */
 		if (!requested_codec || !cat)
 			continue;
+		/* ⏳ §13 — THE DECODER'S PACE: not due yet ⇒ the capture is not even
+		 *    looked at.  ⭐ Its slot keeps the newest picture and the union of
+		 *    the damage, so the frame taken later carries every change.
+		 * ⚠ After `audio_drain()` on purpose: the audio does not wait for the
+		 *   video's pace (see the box above that line). */
+		if (pace_wait_us(now_monotonic_us())) {
+			pace_held++;
+			if (pace_held - pace_held_logged >= 1000u) {
+				pace_held_logged = pace_held;
+				log_detail(LOG_CHILD,
+				           "⏳ PACE %u/s in force: %llu rounds held back so far",
+				           (unsigned)pace_fps, (unsigned long long)pace_held);
+			}
+			continue;
+		}
 		{
 			CaptureStopped fo;
 			GError *mistake = NULL;
@@ -10201,6 +10336,8 @@ void child_alive(int argc, char **argv)
 			 *    codecs a `? :` was enough, with the third a nested `? :` would
 			 *    say "AV1" of every number it does not know — and the symptom
 			 *    would be an AV1 stream sent with label 3. */
+			/* ⏳ §13: the pace counts from the last frame ENCODED. */
+			pace_last_us = now_monotonic_us();
 			/* ⛔ 15 Oct 2026 — a frame NOT encoded must not stay the
 			 *    reference of the «unchanged» filter (`unchanged.h`): the
 			 *    next copy of the same picture would be held back, and the
