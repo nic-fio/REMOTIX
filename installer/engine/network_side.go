@@ -177,6 +177,9 @@ func NetworkSide(a *Environment) (applies bool, code, detail string) {
 	if bad := netOptionsOutside(a); len(bad) > 0 {
 		return true, "RX-NETUSER-003", T("net.opzioni_fuori", strings.Join(bad, ", "))
 	}
+	if bad := netPageUnreadable(a, u.Uid, u.Gid); len(bad) > 0 {
+		return true, "RX-NETUSER-003", T("net.pagina", NetUser, strings.Join(bad, ", "))
+	}
 	var left []string
 	for _, n := range netOld {
 		if _, err := os.Lstat(a.P(filepath.Join(netStateRoot, n))); err == nil {
@@ -227,6 +230,45 @@ func netOptionsOutside(a *Environment) []string {
 				if p, ok := opt[k]; ok && !strings.HasPrefix(filepath.Clean(p), dir+"/") {
 					r, _ := filepath.Rel(a.P("/"), f)
 					bad = append(bad, "/"+r+": "+k+" "+p)
+				}
+			}
+		}
+	}
+	return bad
+}
+
+// netPageUnreadable (lane 1, 16 Oct 2026): a --page in REMOTIX_OPTIONS of
+// /etc/remotix/remotix.conf.d/*.conf that the network side cannot read — under /tmp (its walls
+// put a private, empty tmpfs there) or not readable by remotix (no supplementary group): 1.5's
+// root side refuses to start with it.  Returns «file: --page path» for each.
+func netPageUnreadable(a *Environment, uid, gid int) []string {
+	files, _ := filepath.Glob(a.P("/etc/remotix/remotix.conf.d/*.conf"))
+	var bad []string
+	for _, f := range files {
+		t, err := os.ReadFile(f)
+		if err != nil {
+			continue
+		}
+		for _, line := range strings.Split(string(t), "\n") {
+			line = strings.TrimSpace(line)
+			if !strings.HasPrefix(line, "REMOTIX_OPTIONS=") {
+				continue
+			}
+			w := strings.Fields(strings.Trim(strings.TrimPrefix(line, "REMOTIX_OPTIONS="), `"'`))
+			for i := 0; i < len(w); i++ {
+				k, val, eq := strings.Cut(w[i], "=")
+				if k != "--page" {
+					continue
+				}
+				if !eq && i+1 < len(w) {
+					val = w[i+1]
+				}
+				p := filepath.Clean(val)
+				r, _ := filepath.Rel(a.P("/"), f)
+				if p == "/tmp" || strings.HasPrefix(p, "/tmp/") {
+					bad = append(bad, "/"+r+": --page "+val+" (under /tmp)")
+				} else if _, ok := netLinkReadable(a, p, uid, gid); !ok {
+					bad = append(bad, "/"+r+": --page "+val)
 				}
 			}
 		}

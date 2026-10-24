@@ -417,3 +417,47 @@ func TestUninstallSystemUser(t *testing.T) {
 		}
 	})
 }
+
+// ⭐ lane 1, 16 Oct 2026: a --page the network side cannot read is RX-NETUSER-003 (the root side
+// refuses to start with it): under /tmp, or a file remotix (uid 990, no group) cannot read; the
+// package's page, readable by everyone, passes.
+func TestNetPageUnreadable(t *testing.T) {
+	root := t.TempDir()
+	prepareMachine(t, root)
+	env := fakeEnvironment(root)
+	conf := filepath.Join(root, "etc/remotix/remotix.conf.d")
+	if err := os.MkdirAll(conf, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	pub := filepath.Join(root, "opt/rx/page.html")
+	priv := filepath.Join(root, "opt/rx/private.html")
+	if err := os.MkdirAll(filepath.Dir(pub), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(pub, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(priv, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cases := []struct {
+		opt  string
+		want bool
+	}{
+		{"--page /opt/rx/page.html", false},
+		{"--page=/opt/rx/page.html", false},
+		{"--page /tmp/page.html", true},
+		{"--page /opt/rx/private.html", true},
+		{"--page /opt/rx/missing.html", true},
+	}
+	for _, c := range cases {
+		line := "REMOTIX_OPTIONS=\"--verbose " + c.opt + "\"\n"
+		if err := os.WriteFile(filepath.Join(conf, "10-page.conf"), []byte(line), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		bad := netPageUnreadable(env, 990, 990)
+		if (len(bad) > 0) != c.want {
+			t.Errorf("%s: flagged %v, want %v (%q)", c.opt, len(bad) > 0, c.want, bad)
+		}
+	}
+}
