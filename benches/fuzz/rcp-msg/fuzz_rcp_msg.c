@@ -11,7 +11,7 @@
  *    byte 1 = the FAILURE MASK (low 8 bits; op 13 sets all 16 later): which hooks answer «no» —
  *        bit0 ask_verify (rcp.c: the question to PAM did not leave) · bit1 video_write · bit2 input_* answer -1
  *        bit3 input_letter answers 1 (cannot be produced) · bit4 recanvas · bit5 layout · bit6 clipboard_write
- *        bit7 clipboard_offer · bit8 verify (sync) · bit9 clipboard_response · bit10 video_reset/fin/clipboard_fin (void: counted only)
+ *        bit7 clipboard_offer · bit8 verify (sync) · bit9 clipboard_response
  *    then the OP STREAM of common.h (`u8 op · u16 length · argument`), op taken modulo 32:
  *        0 rcp_receive(arg)                       (the control channel, any split of the bytes)
  *        1 rcp_receive_input(stream = arg[0]&3, arg+1)
@@ -26,7 +26,8 @@
  *       16 rcp_video_open(key = arg[0]&1, length = u16 of arg[1..2] (arg[0]&2: 17 MiB, arg[0]&4: 1 MiB),
  *          instant = u32 of arg[3..6], input = u32 of arg[7..10], rest of arg = first piece)
  *       17 rcp_video_piece(arg) · 18 rcp_video_finish · 19 rcp_video_send(key = arg[0]&1, arg+1)
- *       20 rcp_video_abandon / rcp_canvas_adapted_now-free probes: rcp_video_no_credit(key, u32) (arg[0]&1) *
+ *       20 rcp_video_no_credit(key = arg[0]&1, remain = u32 of arg[1..]) followed by rcp_video_abandon
+ *
  * ORACLES.  ASan + UBSan (halt on error), the allocation ceilings (-rss_limit_mb, -malloc_limit_mb), and ASSERTIONS of
  * the documented invariants (a failed one is a `__builtin_trap`, after the message on stderr):
  *    I-a  the accumulation of the control channel never exceeds MAX_ACCUMULATION (1 MiB, §6.1), the input one never

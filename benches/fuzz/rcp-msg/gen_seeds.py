@@ -95,7 +95,7 @@ seeds.append(prologue() + clip(0, msg(0x0201, struct.pack("!II", 1, 1000000))))
 seeds.append(prologue() + clip(0, struct.pack("!HI", 0x0203, 1000004)))
 # the session copies while a paste is waiting, announce arrives during the backlog
 seeds.append(prologue() + op(8, b"x") + op(9, struct.pack("!I", 1)) + op(9, struct.pack("!I", 2))
-             + clip(0, msg(0x0201, struct.pack("!II", 2, 3))) + op(13, b"\x01" + msg(0x0201, struct.pack("!II", 3, 1))))
+             + clip(0, msg(0x0201, struct.pack("!II", 2, 3))) + clip(8, msg(0x0201, struct.pack("!II", 3, 1))))
 
 def setfail(m): return op(13, struct.pack("!H", m))
 def vopen(key=1, length=100, ins=0, piece=b""):
