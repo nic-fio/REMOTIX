@@ -37,6 +37,7 @@
 #include <string.h>
 #include <sys/mount.h>
 #include <sys/prctl.h>
+#include <sys/resource.h>
 #include <sys/stat.h>
 #include <sys/statvfs.h>
 #include <sys/syscall.h>
@@ -325,6 +326,17 @@ int walls_apply(const struct rootside_options *o, char *why, size_t why_len)
 		return say(why, why_len, "setgroups(0) failed (%s)", strerror(errno));
 	if (setresgid(gid, gid, gid) != 0)
 		return say(why, why_len, "setresgid(%ld) failed (%s)", (long)gid, strerror(errno));
+	/* ⛔ Review 2, L1: a process cap for the network user, BEFORE the uid
+	 *    changes — a hijacked network side forking without end would fill the
+	 *    unit's TasksMax, and the root side could fork no child, no PAM
+	 *    grandchild: no login.  It counts threads (GDBus's): 64 is wide. */
+	{
+		struct rlimit nproc = { WALLS_NPROC_MAX, WALLS_NPROC_MAX };
+
+		if (setrlimit(RLIMIT_NPROC, &nproc) != 0)
+			return say(why, why_len, "setrlimit(RLIMIT_NPROC, %d) failed (%s)",
+			           WALLS_NPROC_MAX, strerror(errno));
+	}
 	if (setresuid(uid, uid, uid) != 0)
 		return say(why, why_len, "setresuid(%ld) failed (%s)", (long)uid, strerror(errno));
 	if (getresuid(&ru, &eu, &su) != 0 || ru != uid || eu != uid || su != uid)

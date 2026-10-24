@@ -211,6 +211,12 @@ static int case_root(const struct passwd *nb)
 		   "child: CapEff/CapPrm/CapBnd/CapAmb/CapInh all 0");
 		CC(status_value("NoNewPrivs:") == 1, "child: NoNewPrivs 1");
 		CC(setuid(0) != 0, "child: setuid(0) refused");
+		{
+			struct rlimit rl;
+			CC(getrlimit(RLIMIT_NPROC, &rl) == 0 && rl.rlim_cur == WALLS_NPROC_MAX
+			       && rl.rlim_max == WALLS_NPROC_MAX,
+			   "child: RLIMIT_NPROC %d (review 2, L1)", WALLS_NPROC_MAX);
+		}
 		fflush(stdout);
 		_exit(bad > 100 ? 100 : bad);
 	}
