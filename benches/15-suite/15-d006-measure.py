@@ -18,11 +18,11 @@ THE MEASUREMENT.  No ear, no replaced nodes, no injected timers.
   We read the counts the page keeps BY ITSELF (`audio_counts()`, two readings:
   start and end of the window, one line of script each) and take their
   differences:
-    · riarmi   ⭐ the metric: every re-arm is a gap of AT LEAST 250 ms (the cushion
-               starts over, `suona()` in src/page.html);
-    · tirate, tagliati, scartati_pieno, scartati_tardivi, mancati: alongside;
-    · udibile_stima = Δusciti × 20 ms / duration.  ⚠ LOWER BOUND on Firefox:
-      `tagliati`/`usciti` are judged with `currentTime`, which is stale there, and
+    · rearms   ⭐ the metric: every re-arm is a gap of AT LEAST 250 ms (the cushion
+               starts over, `play()` in src/page.html);
+    · pulled, trimmed, discarded_full, discarded_late, missed: alongside;
+    · audible_estimate = Δexited × 20 ms / duration.  ⚠ LOWER BOUND on Firefox:
+      `trimmed`/`exited` are judged with `currentTime`, which is stale there, and
       a block that finished by itself can count as cut.
   And the SERVER's CPU in the same window (`/proc/stat` every second, all the
   cpus: mean, p95, the busiest core), and — if the bench runs on the server — the
@@ -37,7 +37,7 @@ THE COMBINATIONS (one at a time: each one is a launch):
                    The bench VERIFIES inside the page that the worker is on.
 
 JUDGMENT (for the suite register; it is a measurement, the table counts more):
-    PASS  Δriarmi = 0 and Δscartati_pieno = 0 in the window
+    PASS  Δrearms = 0 and Δdiscarded_full = 0 in the window
     FAIL  at least one re-arm (= at least one 250 ms gap)
     BLOCKED  audio context never «running», worker requested and not on, etc.
 
@@ -164,10 +164,10 @@ def judge(d):
     if d["received"] <= 0:
         return "BLOCKED", "no audio block received in the window"
     if d["rearms"] == 0 and d["discarded_full"] == 0:
-        return "PASS", ("no gap: re-arms 0 in %.0f s (tirate %d, tagliati %d, estimated audible "
+        return "PASS", ("no gap: re-arms 0 in %.0f s (pulled %d, trimmed %d, estimated audible "
                         ">= %.1f%%)" % (d["duration_s"], d["pulled"], d["trimmed"],
                                         d["audible_estimate_pct"]))
-    return "FAIL", ("%d re-arms in %.0f s = at least %.2f s of silence (tirate %d, tagliati %d, "
+    return "FAIL", ("%d re-arms in %.0f s = at least %.2f s of silence (pulled %d, trimmed %d, "
                     "full %d, estimated audible >= %.1f%%)"
                     % (d["rearms"], d["duration_s"], d["silence_minimum_s"], d["pulled"],
                        d["trimmed"], d["discarded_full"], d["audible_estimate_pct"]))
@@ -187,7 +187,7 @@ def certify():
     e, _ = judge(d)
     chk("healthy: 60 s, 3000 blocks out, 0 re-arms ⇒ PASS, audible 100%", e == "PASS"
         and d["audible_estimate_pct"] == 100.0 and d["duration_s"] == 60.0)
-    broken = dict(healthy, rearms=7, pulled=90, cut=200, exited=2700)
+    broken = dict(healthy, rearms=7, pulled=90, trimmed=200, exited=2700)
     d = delta(c0, broken, 1000.0, 61000.0)
     e, r = judge(d)
     chk("7 re-arms ⇒ FAIL, minimum silence 1.75 s (%s)" % r, e == "FAIL"
@@ -265,8 +265,8 @@ class Cpu:
 #  THE TEST
 # ═══════════════════════════════════════════════════════════════════════════
 def page_counts(g):
-    return G4.in_page(g, "(function(){ return { ora: performance.now(),"
-                           " conti: (typeof audio_counts === 'function') ? audio_counts() : null,"
+    return G4.in_page(g, "(function(){ return { time: performance.now(),"
+                           " counts: (typeof audio_counts === 'function') ? audio_counts() : null,"
                            " worker: (typeof VW !== 'undefined') && VW !== null }; })()")
 
 
@@ -387,7 +387,7 @@ def body(o, E):
                 s.g.js(G4._inject(JS_FAULT_OFF))
             seen = dg["rearms"] >= 3
             E.fault("D-006", seen, "page main thread stopped 400 ms every 2 s for "
-                     "%.0f s ⇒ re-arms %d (expected >= 3), tirate %d"
+                     "%.0f s ⇒ re-arms %d (expected >= 3), pulled %d"
                      % (FAULT_S, dg["rearms"], dg["pulled"]), numbers={"delta": dg})
 
 
