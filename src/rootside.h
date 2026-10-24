@@ -1,0 +1,293 @@
+/*
+ * rootside.h — ⭐ 1.5 (DECISIONS.md §11.11, §11.50): THE ROOT SIDE, AND THE
+ *              NETWORK SIDE'S HANDLE ON IT.
+ *
+ * ---------------------------------------------------------------------------
+ * ⛔ TWO PROCESSES, ONE BINARY, ONE CHANNEL
+ *
+ * systemd starts `remotix` as root, as in 1.0.  `main.c` parses its argv, binds
+ * the UDP and TCP sockets of the port, and — when it runs as root — calls
+ * `rootside_main()`, which never returns: that process is the ROOT SIDE (the
+ * unit's main PID).  It runs the codec probe, starts the PAM helper (§1.10,
+ * now its child), sweeps the render grants of a previous run, creates one
+ * `SOCK_SEQPACKET` pair with `SO_PASSCRED`, and forks the NETWORK SIDE: in that
+ * fork, still root, `walls_apply()` (src/walls.c) and then
+ * `execve(/proc/self/exe <net_argv>)` with fd 3 = the channel, 4 = UDP, 5 = TCP.
+ *
+ * The network side (`main.c --network-side …`, uid `remotix`) calls
+ * `rootside_attach(3)` before anything else and gets READY (the codec probe's
+ * result).  From then on everything that needs root goes through the closed
+ * list of `rootside_proto.h`, and NOTHING else:
+ *
+ *   · PAM          `helper_ask()` / `helper_move()` / `helper_expired()` keep
+ *                  their shape (helper.h): in network mode they travel as
+ *                  AUTH → VERDICT on this channel, and the helper itself is
+ *                  the root side's child — the network side never sees it;
+ *   · a child      `children_ensure_from()` keeps its shape (child.h): the
+ *                  grant of the VERDICT is kept HERE, keyed by (user, rhost),
+ *                  and sent as SPAWN; the child's socket end comes back by
+ *                  `SCM_RIGHTS`.  A desktop found again without a login is a
+ *                  CLOSE_ORPHAN (the root side checks logind by itself);
+ *   · kill         SIGNAL {serial, TERM|KILL}, only to the root side's own;
+ *   · reap         CHILD_EXITED {serial, wait status}: the root side reaps,
+ *                  removes the render grant, then tells.
+ *
+ * ⛔ The root side is single-threaded and touches no GLib/GDBus: it forks
+ *    children, and a fork of a multi-threaded process runs PAM and NSS in a
+ *    copy whose locks may be held by a thread that is not there (inventory D,
+ *    FLAG 2).  ⇒ `main.c` must call `rootside_main()` BEFORE anything that
+ *    could start a GLib thread (`rediscover.c`'s `g_bus_get_sync`).
+ * ---------------------------------------------------------------------------
+ */
+#ifndef REMOTIX_ROOTSIDE_H
+#define REMOTIX_ROOTSIDE_H
+
+#include "rootside_proto.h"
+
+#include <signal.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <sys/types.h>
+
+/* ⭐ Review 4 B, finding 24: ONE reset of the signals for every fork of the
+ *    root side's process (the network side, the PAM helper, the children, the
+ *    usermod and probe forks): every disposition back to the default — except
+ *    SIGPIPE, kept IGNORED (a write to a closed socket must be an EPIPE the
+ *    code reads, not a death) — and nothing blocked.  The PAM helper's fork
+ *    used to reset SIGPIPE to the default while child.c kept it ignored. */
+static inline void rootside_fork_signals_fresh(void)
+{
+	sigset_t none;
+
+	for (int s = 1; s < NSIG; s++)
+		if (s != SIGKILL && s != SIGSTOP)
+			signal(s, s == SIGPIPE ? SIG_IGN : SIG_DFL);
+	sigemptyset(&none);
+	sigprocmask(SIG_SETMASK, &none, NULL);
+}
+
+/* The descriptors the network side is born with (and nothing else above 2). */
+#define ROOTSIDE_FD_CHANNEL 3
+#define ROOTSIDE_FD_UDP     4
+#define ROOTSIDE_FD_TCP     5
+
+/* ⭐ What `main.c` hands the root side after parsing argv as root.  Every
+ *    child option comes from HERE — the root side's own argv — never from a
+ *    request of the network side (§11.50).  Pointers must stay valid for the
+ *    life of the process (argv strings, statics). */
+struct rootside_options {
+	/* The port, bound by `main.c` as root (a port below 1024 needs no
+	 * capability later).  Given to the network side as fd 4 and 5.  -1 = none
+	 * (the network side then opens nothing on that protocol). */
+	int udp_fd;
+	int tcp_fd;
+	/* The `remotix` user the network side becomes (sysusers.d).  `main.c`
+	 * resolves it; the root side refuses to start if it is uid 0. */
+	uid_t remotix_uid;
+	gid_t remotix_gid;
+	/* Children ≤ cap (`rcp_cap()` after `--session-cap`). */
+	int cap;
+	/* `children_turn_on()`'s birth options: the first canvas of every child,
+	 * and the survey dir (`--dir-survey`, NULL or "" = none). */
+	uint32_t canvas_w, canvas_h;
+	const char *dir_survey;
+	/* `children_phase9()`'s three. */
+	bool quality_recovery;
+	uint32_t bandwidth_cap_mbit;
+	bool audio_silence;
+	/* `--encoding-route` / `--render-node` as main.c already applied them
+	 * (`child_encoding_route()`, `child_render_node()`): NULL = keep what is
+	 * in force in this process.  Repeated on every child's command line. */
+	const char *encoding_route;
+	const char *render_node;
+	/* The network side's argv for `execve(/proc/self/exe, net_argv, …)`,
+	 * NULL-terminated, `net_argv[0]` included; `main.c` builds it from its own
+	 * argv plus `--network-side`. */
+	char *const *net_argv;
+	/* NULL = "/etc/remotix/denied-users" (one name per line, `#` comments). */
+	const char *denied_users_path;
+	/* ⭐ For `walls_apply()` (lane 2): the only writable places of the network
+	 *    side — `--network-state-dir` (default /var/lib/remotix/net) and
+	 *    `--network-run-dir` (default /run/remotix/net). */
+	const char *net_state_dir;
+	const char *net_run_dir;
+};
+
+/* ⛔ The root side's entry: never returns while the service lives; the return
+ *    value is the process's exit code (0 after a SIGTERM, 1 when it cannot
+ *    start — the reason is logged). */
+int rootside_main(const struct rootside_options *o);
+
+/* ⭐ The network side's walls (lane 2, src/walls.c), applied by the root side
+ *    in the fork, as root, before the `execve`.  0 = all applied; otherwise
+ *    `why` says which failed and the network side is NOT started (no silent
+ *    fallback, §11.50).  A weak stub in rootside.c refuses until walls.c is
+ *    linked.
+ * ⛔ SELinux (lane 4, module 2.0.0): the `setexeccon` for the network side
+ *    belongs HERE, and is `getcon()` with ONLY the type replaced by
+ *    `remotix_net_t` (the MLS range kept, e.g. `s0-s0:c0.c1023`); there is no
+ *    type_transition on `remotix_exec_t`, so without it the exec stays
+ *    `remotix_t`.  The root side's other execs (the PAM helper, the children)
+ *    do NOT call setexeccon here: the helper stays `remotix_t`, the child gets
+ *    the user's context from pam_selinux / `selinux_level_like_sshd()`.
+ *    Emptying the bounding set and `PR_SET_NO_NEW_PRIVS` before the exec are
+ *    allowed by the policy (setpcap, nnp_transition). */
+int walls_apply(const struct rootside_options *o, char *why, size_t why_len);
+/* What the last walls_apply() put in place, for one line (walls.c). */
+const char *walls_in_force(void);
+
+/* ======================================================================= */
+/* THE NETWORK SIDE'S CLIENT                                                */
+
+/* ⭐ Waits (blocking, at most `timeout_ms`) for READY on `fd` (3), checking it
+ *    comes from uid 0 and the parent pid.  Fills `ready` (may be NULL).
+ *    `true` = attached: from now on helper.c and child.c go through the
+ *    channel. */
+bool rootside_attach(int fd, int timeout_ms, struct rxr_ready *ready);
+/* Whether this process is a network side attached to a root side. */
+bool rootside_attached(void);
+/* The channel, for the `poll`; -1 if not attached or lost. */
+int rootside_descriptor(void);
+/* ⛔ The root side is gone (EOF): the network side must stop (§11.50 —
+ *    systemd restarts the unit; the desktops stay). */
+bool rootside_lost(void);
+
+/* ⭐ Reads every packet waiting on the channel and dispatches it to the hooks
+ *    below (and to the SPAWN waiting in `rootside_spawn()`).  Never waits.
+ *    Called by `helper_move()` in network mode; whoever polls the channel
+ *    calls that. */
+void rootside_move(void);
+
+/* AUTH → the VERDICT reaches `on_verdict` (helper.c).  `request` = helper.c's
+ * ticket.  On YES the grant is kept here, keyed by (user, rhost).  `false` =
+ * not sent. */
+bool rootside_auth(uint64_t request, const char *user, const char *password,
+                   const char *rhost);
+typedef void (*RootsideVerdict)(void *ctx, uint64_t request, int outcome);
+void rootside_hook_verdict(RootsideVerdict fn, void *ctx);
+
+/* What `rootside_spawn()` / `rootside_close_orphan()` hand back. */
+struct rootside_born {
+	uint64_t serial;
+	pid_t pid;
+	uid_t uid;
+	gid_t gid;
+	int fd;                       /* the child's socket end, O_NONBLOCK, SO_PASSCRED */
+	char user[RXR_USER_MAX];
+};
+/* ⛔ SPAWN with the grant kept for (user, rhost) — consumed, single use.
+ *    Waits for SPAWNED / SPAWN_REFUSED at most `timeout_ms` (the other packets
+ *    arriving meanwhile are queued for `rootside_move()`): the root side
+ *    answers right after its `fork()`, as `children_ensure_from()` returned
+ *    in 1.0.  0 = born; otherwise an `enum rxr_refusal` (> 0), or one of the
+ *    negative codes below — distinct since review 4 B (findings 2 and 19):
+ *    a request that could not be sent no longer waits the whole timeout. */
+#define ROOTSIDE_NO_ANSWER (-1)  /* no SPAWNED/SPAWN_REFUSED within timeout_ms */
+#define ROOTSIDE_NO_GRANT  (-2)  /* no grant kept for (user, rhost) */
+#define ROOTSIDE_NOT_SENT  (-3)  /* send() of the request failed */
+#define ROOTSIDE_LOST      (-4)  /* the channel is closed or broke while waiting */
+int rootside_spawn(const char *user, const char *rhost, uint32_t canvas_w,
+                   uint32_t canvas_h, int timeout_ms, struct rootside_born *out);
+/* The same for a desktop found again (CLOSE_ORPHAN): no grant. */
+int rootside_close_orphan(const char *user, int timeout_ms,
+                          struct rootside_born *out);
+/* Whether a grant is kept for (user, rhost) now. */
+bool rootside_has_grant(const char *user, const char *rhost);
+
+/* SIGNAL: `sig` is SIGTERM or SIGKILL.  No answer. */
+bool rootside_signal(uint64_t serial, int sig);
+typedef void (*RootsideChildExited)(void *ctx, uint64_t serial, int wait_status);
+void rootside_hook_child_exited(RootsideChildExited fn, void *ctx);
+
+/* ⚠ For `children_turn_off()` only (after the last round of the loop): pumps
+ *    the channel until `done(ctx)` or `timeout_ms`. */
+void rootside_pump_until(bool (*done)(void *ctx), void *ctx, int timeout_ms);
+
+/* ======================================================================= */
+/* THE ROOT SIDE'S VALIDATOR — pure, exported for the seam test             */
+
+struct rootside_peer {
+	uid_t remotix_uid;
+	pid_t net_pid;
+};
+/* ⛔ A packet from the network side: exact length for its kind, magic,
+ *    version, a known network→root kind, and the kernel's credentials (present,
+ *    uid remotix, pid the network side).  Returns the kind, or 0 = malformed
+ *    (and `why` says what). */
+int rootside_check_packet(const struct rootside_peer *p, const void *buf,
+                          size_t len, bool has_cred, pid_t cred_pid,
+                          uid_t cred_uid, char *why, size_t why_len);
+
+/* The grant table and the AUTH bounds, also pure (time is a parameter).
+ * ROOTSIDE_GRANTS_MAX: a grant lives from its VERDICT to its SPAWN, about a
+ * second in practice, at most RXR_GRANT_LIFE_MS; 32 is twice the AUTH that may
+ * be in flight (RXR_AUTH_IN_FLIGHT_MAX), so a burst of right passwords fits.
+ * `[?]` not measured at saturation; a full table REFUSES the mint (review 4,
+ * finding 4), it never overwrites. */
+#define ROOTSIDE_GRANTS_MAX 32
+/* ROOTSIDE_ORPHAN_UIDS: the uids remembered for the per-uid CLOSE_ORPHAN hold;
+ * one entry per desktop found again, and the children cap is 10 by default
+ * (§11.50) — 32 leaves room for --session-cap up to it.  `[?]` */
+#define ROOTSIDE_ORPHAN_UIDS 32
+struct rootside_grant {
+	bool used;
+	uint8_t bytes[RXR_GRANT_BYTES];
+	char user[RXR_USER_MAX];
+	char rhost[RXR_RHOST_MAX];
+	uint64_t expires_ms;
+};
+struct rootside_bounds {
+	struct rootside_grant grants[ROOTSIDE_GRANTS_MAX];
+	int in_flight;                /* AUTH sent to PAM, not answered */
+	double tokens;                /* RXR_AUTH_PER_S, burst RXR_AUTH_BURST */
+	uint64_t tokens_ms;
+	/* ⛔ Review 2, M1: CLOSE_ORPHAN is a birth without a password — its own
+	 *    bucket (ROOTSIDE_ORPHAN_PER_S, burst ROOTSIDE_ORPHAN_BURST) BEFORE any
+	 *    work, and one per uid per ROOTSIDE_ORPHAN_UID_MS. */
+	double orphan_tokens;
+	uint64_t orphan_tokens_ms;
+	struct {
+		uid_t uid;
+		uint64_t at_ms;
+	} orphan_uid[ROOTSIDE_ORPHAN_UIDS];
+};
+/* ⛔ Review 2, M1: a CLOSE_ORPHAN is a birth without a password, so its rate is
+ *    the abandonment's, not a login's — one desktop found again expires per
+ *    clock round, and 2/s with a burst of 5 lets a restart with several
+ *    abandoned desktops close them all in a few seconds (`[?]` not measured at
+ *    more than one).  The per-uid 30 s is the close-only child's own life
+ *    (CLOSE_ONLY_LIFE_MS, child.c): a second one for the same user while the
+ *    first may still be closing would be a second logind session for nothing.
+ *    `[M]` 16 Oct 2026, 24-privsep-orphan.sh: the hold refuses, and the
+ *    network side's retry after 31 s closes the desktop. */
+#define ROOTSIDE_ORPHAN_PER_S 2
+#define ROOTSIDE_ORPHAN_BURST 5
+#define ROOTSIDE_ORPHAN_UID_MS 30000
+/* May a CLOSE_ORPHAN be looked at now?  `true` takes a token. */
+bool rootside_orphan_admit(struct rootside_bounds *b, uint64_t now_ms);
+/* … and one for this uid: `false` if one was born for it less than
+ * ROOTSIDE_ORPHAN_UID_MS ago.  `true` records it. */
+bool rootside_orphan_uid_admit(struct rootside_bounds *b, uid_t uid, uint64_t now_ms);
+void rootside_bounds_init(struct rootside_bounds *b, uint64_t now_ms);
+/* May this AUTH go to PAM now?  `false` = over the in-flight or rate bound
+ * (VERDICT NOT_CHECKED).  `true` takes a token and a place in flight. */
+bool rootside_auth_admit(struct rootside_bounds *b, uint64_t now_ms);
+void rootside_auth_done(struct rootside_bounds *b);
+/* Mints a grant (getrandom) for (user, rhost); `false` = no randomness. */
+bool rootside_grant_mint(struct rootside_bounds *b, const char *user,
+                         const char *rhost, uint64_t now_ms,
+                         uint8_t out[RXR_GRANT_BYTES]);
+/* ⛔ Consumes a grant: single use, unexpired.  Fills user/rhost.  `false` =
+ *    unknown, used or expired. */
+bool rootside_grant_take(struct rootside_bounds *b,
+                         const uint8_t bytes[RXR_GRANT_BYTES], uint64_t now_ms,
+                         char user[RXR_USER_MAX], char rhost[RXR_RHOST_MAX]);
+/* ⛔ Names refused before PAM: uid 0, listed in `denied_path` (NULL = the
+ *    default), or unknown.  0 = allowed (`*uid` filled, may be NULL) ·
+ *    1 = refused · 2 = the lookup FAILED now (NSS down: «not checked»).
+ *    `why` says which. */
+int rootside_user_refused(const char *user, const char *denied_path, uid_t *uid,
+                          char *why, size_t why_len);
+
+#endif
