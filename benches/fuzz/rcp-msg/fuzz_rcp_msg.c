@@ -8,18 +8,25 @@
  *        bit0 ask_verify (async PAM) · bit1 the five clipboard hooks · bit2 the input hooks
  *        bit3 stage_canvas answers   · bit4 session_local says «yes»  · bit5 layout_exists answers 0 · bit6 -1
  *        bit7 the host refuses to open streams (clipboard_open/video_open false)
- *    then the OP STREAM of common.h (`u8 op · u16 length · argument`), op taken modulo 16:
+ *    byte 1 = the FAILURE MASK (low 8 bits; op 13 sets all 16 later): which hooks answer «no» —
+ *        bit0 ask_verify (rcp.c: the question to PAM did not leave) · bit1 video_write · bit2 input_* answer -1
+ *        bit3 input_letter answers 1 (cannot be produced) · bit4 recanvas · bit5 layout · bit6 clipboard_write
+ *        bit7 clipboard_offer · bit8 verify (sync) · bit9 clipboard_response · bit10 video_reset/fin/clipboard_fin (void: counted only)
+ *    then the OP STREAM of common.h (`u8 op · u16 length · argument`), op taken modulo 32:
  *        0 rcp_receive(arg)                       (the control channel, any split of the bytes)
  *        1 rcp_receive_input(stream = arg[0]&3, arg+1)
  *        2 rcp_receive_clipboard(stream = arg[0]&15, fin = arg[1]&1, arg+2)
  *        3 rcp_time(now += u32 ms of arg)         (the fixed delay, the ceilings, the silence)
  *        4 rcp_verdict(last ticket or, if arg[1]&1, a wrong one; admitted = arg[0]&1)
  *        5 rcp_channel_closed · 6 rcp_closed_by_client(arg[0]) · 7 rcp_sign_of_life
- *        8 rcp_clipboard_from_session(arg as text) · 9 rcp_clipboard_ask(serial = u32 of arg)
+ *        8 rcp_clipboard_from_session(arg, n): the text WITH its length, a NUL inside included, as `assemble_clipboard` delivers · 9 rcp_clipboard_ask(serial = u32 of arg)
  *       10 rcp_receive again (a second door for the same bytes) · 11 rcp_dismiss · 12 rcp_violation
- *       13 rcp_receive_clipboard on the stream of the last clipboard_open (the server's answer path: text of a paste)
+ *       13 set the failure mask (u16 of arg) — (the server's clipboard stream is unidirectional: nothing is received on it)
  *       14 rcp_inactivity_set / rcp_eviction_set (u32 ms)   · 15 rcp_free + rcp_open again (a second session, same address)
- *
+ *       16 rcp_video_open(key = arg[0]&1, length = u16 of arg[1..2] (arg[0]&2: 17 MiB, arg[0]&4: 1 MiB),
+ *          instant = u32 of arg[3..6], input = u32 of arg[7..10], rest of arg = first piece)
+ *       17 rcp_video_piece(arg) · 18 rcp_video_finish · 19 rcp_video_send(key = arg[0]&1, arg+1)
+ *       20 rcp_video_abandon / rcp_canvas_adapted_now-free probes: rcp_video_no_credit(key, u32) (arg[0]&1) *
  * ORACLES.  ASan + UBSan (halt on error), the allocation ceilings (-rss_limit_mb, -malloc_limit_mb), and ASSERTIONS of
  * the documented invariants (a failed one is a `__builtin_trap`, after the message on stderr):
  *    I-a  the accumulation of the control channel never exceeds MAX_ACCUMULATION (1 MiB, §6.1), the input one never
@@ -40,6 +47,7 @@
 
 typedef struct {
 	unsigned cfg;
+	unsigned fail;
 	uint64_t ticket;
 	bool have_ticket;
 	int closes;
@@ -68,10 +76,12 @@ static void h_close(void *c, uint8_t r)
 	if (r < 1 || r > 0x10) FAIL("close with reason %#x, not in §8.2", r);
 }
 static void h_record(void *c, const char *l) { (void)c; (void)l; }
-static bool h_verify(void *c, const char *u, const char *p) { (void)c; return u && p && (p[0] & 1); }
+#define FAILS(b) ((h.fail >> (b)) & 1)
+static bool h_verify(void *c, const char *u, const char *p) { (void)c; return !FAILS(8) && u && p && (p[0] & 1); }
 static bool h_ask_verify(void *c, const char *u, const char *p, uint64_t *t)
 {
 	(void)c; (void)u; (void)p;
+	if (FAILS(0)) return false;
 	*t = ++h.ticket;
 	h.have_ticket = true;
 	return true;
@@ -84,21 +94,27 @@ static bool h_vopen(void *c, int64_t *st, uint64_t *rem)
 	*st = 3 + 4 * (h.next_stream++);
 	return true;
 }
-static bool h_vwrite(void *c, int64_t st, const uint8_t *d, size_t n) { (void)c; (void)st; (void)d; (void)n; return true; }
+static bool h_vwrite(void *c, int64_t st, const uint8_t *d, size_t n)
+{
+	volatile uint8_t x = 0;
+	(void)c; (void)st;
+	for (size_t i = 0; i < n; i++) x ^= d[i];
+	return !FAILS(1);
+}
 static void h_vfin(void *c, int64_t st) { (void)c; (void)st; }
-static int h_ptr(void *c, uint32_t x, uint32_t y) { (void)c; (void)x; (void)y; return 0; }
-static int h_btn(void *c, uint16_t k, int p) { (void)c; (void)k; (void)p; return 0; }
-static int h_whl(void *c, int32_t x, int32_t y) { (void)c; (void)x; (void)y; return 0; }
-static int h_let(void *c, uint32_t k) { (void)c; (void)k; return 0; }
-static int h_pos(void *c, uint16_t k, int p) { (void)c; (void)k; (void)p; return 0; }
+static int h_ptr(void *c, uint32_t x, uint32_t y) { (void)c; (void)x; (void)y; return FAILS(2) ? -1 : 0; }
+static int h_btn(void *c, uint16_t k, int p) { (void)c; (void)k; (void)p; return FAILS(2) ? -1 : 0; }
+static int h_whl(void *c, int32_t x, int32_t y) { (void)c; (void)x; (void)y; return FAILS(2) ? -1 : 0; }
+static int h_let(void *c, uint32_t k) { (void)c; (void)k; return FAILS(3) ? 1 : FAILS(2) ? -1 : 0; }
+static int h_pos(void *c, uint16_t k, int p) { (void)c; (void)k; (void)p; return FAILS(2) ? -1 : 0; }
 static int h_rel(void *c) { (void)c; return 0; }
-static bool h_recanvas(void *c, uint32_t w, uint32_t hh) { (void)c; (void)w; (void)hh; return true; }
+static bool h_recanvas(void *c, uint32_t w, uint32_t hh) { (void)c; (void)w; (void)hh; return !FAILS(4); }
 static int h_lexists(void *c, const char *n)
 {
 	(void)c; (void)n;
 	return (h.cfg & 0x40) ? -1 : (h.cfg & 0x20) ? 0 : 1;
 }
-static bool h_layout(void *c, const char *n) { (void)c; (void)n; return true; }
+static bool h_layout(void *c, const char *n) { (void)c; (void)n; return !FAILS(5); }
 static bool h_stage(void *c, uint32_t *w, uint32_t *hh) { (void)c; *w = 1912; *hh = 1044; return (h.cfg & 8) != 0; }
 static bool h_local(void *c, const char *u, char *d, size_t n) { (void)c; (void)u; if (n) d[0] = 0; return (h.cfg & 0x10) != 0; }
 static bool h_copen(void *c, int64_t *st, uint64_t *rem)
@@ -109,15 +125,21 @@ static bool h_copen(void *c, int64_t *st, uint64_t *rem)
 	h.last_clip_stream = *st = 3 + 4 * (h.next_stream++);
 	return true;
 }
-static bool h_cwrite(void *c, int64_t st, const uint8_t *d, size_t n) { (void)c; (void)st; (void)d; return n < (2u << 20); }
+static bool h_cwrite(void *c, int64_t st, const uint8_t *d, size_t n)
+{
+	volatile uint8_t x = 0;
+	(void)c; (void)st;
+	for (size_t i = 0; i < n; i++) x ^= d[i];
+	return !FAILS(6) && n < (2u << 20);
+}
 static void h_cfin(void *c, int64_t st) { (void)c; (void)st; }
-static bool h_coffer(void *c) { (void)c; return true; }
+static bool h_coffer(void *c) { (void)c; return !FAILS(7); }
 static bool h_cresp(void *c, uint32_t ser, const char *t, size_t n)
 {
 	(void)c; (void)ser;
 	/* (text, byte) is a pointer + length, NOT a C string: read exactly `byte` bytes; no NUL may be inside (§5.4) */
 	if (t && n && memchr(t, 0, n)) FAIL("clipboard_response: a NUL inside the %zu announced bytes", n);
-	return true;
+	return !FAILS(9);
 }
 static void h_term(void *c) { (void)c; }
 static bool h_resumed(void *c) { (void)c; return false; }
@@ -172,9 +194,10 @@ static void verdict_of_receive(bool alive, const char *where)
 
 int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 {
-	if (size < 1) return 0;
+	if (size < 2) return 0;
 	memset(&h, 0, sizeof h);
 	h.cfg = data[0];
+	h.fail = data[1];
 	rx_now_ms = 1000000;
 	rcp_reset_session_log();
 	rcp_cap_set(RCP_SESSION_CAP);
@@ -183,7 +206,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 	rcp_eviction_set(15000);
 	open_session();
 
-	rx_ops o = {data + 1, size - 1, 0};
+	rx_ops o = {data + 2, size - 2, 0};
 	uint8_t op;
 	const uint8_t *arg;
 	size_t n;
@@ -193,7 +216,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 		copy = malloc(n ? n : 1);
 		if (n) memcpy(copy, arg, n);
 		arg = copy;
-		switch (op & 15) {
+		switch (op & 31) {
 		case 0: case 10:
 			verdict_of_receive(rcp_receive(S, arg, n, rx_now_ms), "rcp_receive");
 			break;
@@ -219,7 +242,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 			char *t = malloc(n + 1);
 			memcpy(t, arg, n);
 			t[n] = 0;
-			rcp_clipboard_from_session(S, t, strlen(t));
+			rcp_clipboard_from_session(S, t, n); /* (t, n): a NUL inside reaches rcp.c */
 			free(t);
 			check("from_session");
 			break;
@@ -227,15 +250,25 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 		case 9: rcp_clipboard_ask(S, rx_u32(arg, n), rx_now_ms); check("clipboard_ask"); break;
 		case 11: rcp_dismiss(S, n ? (uint8_t)(1 + arg[0] % 16) : 0x0C, "x"); check("dismiss"); break;
 		case 12: rcp_violation(S, "x"); check("violation"); break;
-		case 13:
-			if (n >= 1) verdict_of_receive(rcp_receive_clipboard(S, h.last_clip_stream, arg + 1, n - 1, arg[0] & 1, rx_now_ms),
-			                              "rcp_receive_clipboard(own stream)");
-			break;
+		case 13: if (n >= 2) h.fail = (arg[0] << 8) | arg[1]; break;
 		case 14: if (n && (arg[0] & 1)) rcp_inactivity_set(rx_u32(arg, n)); else rcp_eviction_set(rx_u32(arg, n)); break;
 		case 15:
 			rcp_free(S);
 			open_session();
 			break;
+		case 16:
+			if (n >= 11) {
+				size_t len = (arg[0] & 2) ? 17u << 20 : (arg[0] & 4) ? 1u << 20 : (size_t)((arg[1] << 8) | arg[2]);
+				uint32_t ins = ((uint32_t)arg[7] << 24) | (arg[8] << 16) | (arg[9] << 8) | arg[10];
+				rcp_video_open(S, arg[0] & 1, len, rx_u32(arg + 3, 4), ins, rx_now_ms);
+				if (n > 11) rcp_video_piece(S, arg + 11, n - 11);
+				check("video_open");
+			}
+			break;
+		case 17: rcp_video_piece(S, arg, n); check("video_piece"); break;
+		case 18: rcp_video_finish(S); check("video_finish"); break;
+		case 19: if (n) { rcp_video_send(S, arg[0] & 1, arg + 1, n - 1, rx_now_ms, 1, rx_now_ms); check("video_send"); } break;
+		case 20: if (n) { rcp_video_no_credit(S, arg[0] & 1, rx_u32(arg + 1, n - 1)); rcp_video_abandon(S, "x"); check("video_no_credit"); } break;
 		}
 	}
 	rcp_free(S);
