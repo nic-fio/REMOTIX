@@ -7514,8 +7514,16 @@ static enum outcome dispatch_uni(wt *w, int64_t stream_id, const uint8_t *data,
 	 *    would be «the first input of every session is malformed».
 	 * ⚠ And `bytes_free()` was moved to the end on purpose: until that
 	 *   moment `load` points inside `g->pref`. */
-	load = g->pref.d + 2 + n;
-	load_n = g->pref.n - (2 + n);
+	/* ⛔ 24 Oct 2026, audit nghttp3 1.18: the prefix bytes are TAKEN OUT of the judgment
+	 *    before the calls below.  `rcp_start()` / `rcp_violation()` / the
+	 *    `rcp_pass_*` can close the stream inside them, and
+	 *    `wt_stream_closed()` now releases the judgment (`judgment_drop()`):
+	 *    `g->pref.d` would be freed while it is still read.  The local `held`
+	 *    owns the bytes until the end. */
+	bytes held = g->pref;
+	memset(&g->pref, 0, sizeof g->pref);
+	load = held.d + 2 + n;
+	load_n = held.n - (2 + n);
 	count_credit(w, stream_id, consumed);
 
 	switch (channel) {
@@ -7591,7 +7599,7 @@ static enum outcome dispatch_uni(wt *w, int64_t stream_id, const uint8_t *data,
 		 *   can arrive all together, preamble and FIN included. */
 		rcp_pass_clipboard(w, stream_id, load, load_n, fin);
 	}
-	bytes_free(&g->pref);
+	bytes_free(&held);
 	return E_MINE;
 }
 
@@ -7671,6 +7679,14 @@ static enum outcome dispatch(wt *w, int64_t stream_id, const uint8_t *data,
 
 	consumed = g->pref.n;
 	g->flavor = G_WT;
+	/* ⛔ 24 Oct 2026, audit nghttp3 1.18: the prefix bytes are TAKEN OUT of the judgment
+	 *    before the calls below.  `rcp_start()` / `rcp_violation()` / the
+	 *    `rcp_pass_*` can close the stream inside them, and
+	 *    `wt_stream_closed()` now releases the judgment (`judgment_drop()`):
+	 *    `g->pref.d` would be freed while it is still read.  The local `held`
+	 *    owns the bytes until the end. */
+	bytes held = g->pref;
+	memset(&g->pref, 0, sizeof g->pref);
 
 	/* ⭐ `RCP.md` §4.2: the FIRST bidirectional stream the client opens
 	 *    in the session is the control channel.
@@ -7716,14 +7732,14 @@ static enum outcome dispatch(wt *w, int64_t stream_id, const uint8_t *data,
 	                 (long)stream_id, (unsigned long long)session);
 
 	if (consumed > 2 + n) {
-		const uint8_t *rest = g->pref.d + 2 + n;
+		const uint8_t *rest = held.d + 2 + n;
 		size_t rn = consumed - 2 - n;
 		if (stream_id == w->rcp_stream)
 			rcp_pass(w, rest, rn);
 		else
 			discard_extra_stream(w, stream_id, rn);
 	}
-	bytes_free(&g->pref);
+	bytes_free(&held);
 	/* ⚠ The credit of the PREFIX bytes is reopened anyway: those bytes
 	 *   we consumed ourselves to judge the stream, and not counting them
 	 *   would block the legitimate control channel too.  ⛔ What is NOT
