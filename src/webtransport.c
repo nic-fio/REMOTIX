@@ -24,6 +24,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
+#include <sys/random.h>
 
 bool rcp_authenticate_from(const char *user, const char *password,
                       const char *rhost);
@@ -7837,6 +7839,22 @@ static int open_session(wt *w, request *r)
 	nghttp3_data_reader dr;
 	int rv;
 
+	/* ⛔ 24 Oct 2026, audit nghttp3 1.18 (the same since 1.0): ONE session per connection.  A
+	 *    second CONNECT+webtransport while `w->session` is set used to open
+	 *    another one: `w->session` was overwritten (the first session's
+	 *    capsules were no longer recognised and never confirmed), and
+	 *    `channel_deadline` was re-armed, so the 5 s cap of §4.6 could be
+	 *    renewed for ever.  It is refused as every other unwanted request is
+	 *    (`bare_response`, a 4xx that ends the stream) and the first session
+	 *    and the deadline are not touched. */
+	if (w->session != -1) {
+		log_says_of(REG_WT, wt_chi(w),
+		                 "⛔ second WebTransport session REFUSED on stream %ld "
+		                 "(the session is %ld): 429",
+		                 (long)r->id, (long)w->session);
+		return bare_response(w, r->id, "429");
+	}
+
 	/* ⛔ `RCP.md` §2.2: the server MUST NOT accept a WebTransport
 	 *    session on a different path, and the refusal is 404 (finding
 	 *    R1.24, which chose one of the three statuses that were all lawful).  And
@@ -7953,7 +7971,23 @@ static int cb_end_stream(nghttp3_conn *conn, int64_t stream_id, void *cud,
 
 static void cb_rand(uint8_t *dest, size_t destlen)
 {
-	for (size_t i = 0; i < destlen; i++)
+	/* ⛔ 24 Oct 2026, audit nghttp3 1.18 (the same since 1.0): `nghttp3.h` says «The
+	 *    implementation must write unpredictable data»; `rand()` is not.
+	 *    `getrandom()` first; `rand()` only if the kernel refuses (declared
+	 *    fallback, it was the only source before). */
+	size_t done = 0;
+
+	while (done < destlen) {
+		ssize_t n = getrandom(dest + done, destlen - done, 0);
+
+		if (n < 0) {
+			if (errno == EINTR)
+				continue;
+			break;
+		}
+		done += (size_t)n;
+	}
+	for (size_t i = done; i < destlen; i++)
 		dest[i] = (uint8_t)(rand() & 0xff);
 }
 
@@ -8451,8 +8485,18 @@ int wt_stream_closed(wt *w, int64_t stream_id, uint64_t code, bool with_code)
 
 	if (!w->h3)
 		return 0;
-	if (with_code) {
-		int rv = nghttp3_conn_close_stream(w->h3, stream_id, code);
+	/* ⛔ 24 Oct 2026, audit nghttp3 1.18 (the same since 1.0): nghttp3 is told of EVERY closed
+	 *    stream, also of the one that closed cleanly (neither error-code flag
+	 *    of ngtcp2 set).  `nghttp3.h`: «`nghttp3_conn_close_stream` tells the
+	 *    library that a stream identified by |stream_id| has been closed».
+	 *    Before, only streams closed with a code were told: the others stayed
+	 *    in nghttp3 (stream object and QPACK state) until `nghttp3_conn_del`,
+	 *    and every closed client stream gives credit back (transport.c), so a
+	 *    client could grow the memory by opening and closing streams with FIN.
+	 *    No code means H3_NO_ERROR, as the ngtcp2 example server does. */
+	{
+		int rv = nghttp3_conn_close_stream(w->h3, stream_id,
+		                                   with_code ? code : NGHTTP3_H3_NO_ERROR);
 		if (rv != 0 && rv != NGHTTP3_ERR_STREAM_NOT_FOUND) {
 			log_says_of(REG_WT, wt_chi(w), "⛔ nghttp3_conn_close_stream: %s",
 			                 nghttp3_strerror(rv));
@@ -8465,20 +8509,49 @@ int wt_stream_closed(wt *w, int64_t stream_id, uint64_t code, bool with_code)
 	return 0;
 }
 
+/* ⛔ 24 Oct 2026, audit nghttp3 1.18 (the same since 1.0): the result of
+ *    `nghttp3_conn_shutdown_stream_read` was thrown away.  `nghttp3.h`: it
+ *    returns «NGHTTP3_ERR_NOMEM» or «NGHTTP3_ERR_QPACK_FATAL — QPACK decoder
+ *    stream overflow»; the second is a connection error.  It is handled like
+ *    the failure of `nghttp3_conn_close_stream`: application error and
+ *    callback failure. */
+static int h3_shutdown_read(wt *w, int64_t stream_id)
+{
+	int rv = nghttp3_conn_shutdown_stream_read(w->h3, stream_id);
+
+	if (rv != 0) {
+		log_says_of(REG_WT, wt_chi(w), "⛔ nghttp3_conn_shutdown_stream_read: %s",
+		                 nghttp3_strerror(rv));
+		ngtcp2_ccerr_set_application_error(
+			w->last_error, nghttp3_err_infer_quic_app_error_code(rv), NULL, 0);
+		return NGTCP2_ERR_CALLBACK_FAILURE;
+	}
+	return 0;
+}
+
 int wt_stream_reset(wt *w, int64_t stream_id)
 {
 	if (!w->h3)
 		return 0;
-	nghttp3_conn_shutdown_stream_read(w->h3, stream_id);
-	return 0;
+	return h3_shutdown_read(w, stream_id);
 }
 
+/* ⛔ 24 Oct 2026, audit nghttp3 1.18: this is ngtcp2's `.stream_stop_sending`, and
+ *    `ngtcp2.h` says it «is invoked when a stream is no longer read by a
+ *    local endpoint before it receives all stream data»: it fires when WE
+ *    stop reading, NOT when the client sends STOP_SENDING (that one is
+ *    `recv_stop_sending`, not registered: the client's STOP_SENDING reaches
+ *    us as STREAM_SHUT_WR from `ngtcp2_conn_writev_stream`, handled in
+ *    `wt_write`).  So the read side is the right one to tell nghttp3
+ *    (`nghttp3_conn_shutdown_stream_read`, «any further incoming data ...
+ *    should be discarded»), and with its result handled like the other
+ *    callers (`h3_shutdown_read`).  An earlier commit of this audit read the
+ *    callback wrongly and moved it to the write side: this restores it. */
 int wt_stream_stop_sending(wt *w, int64_t stream_id)
 {
 	if (!w->h3)
 		return 0;
-	nghttp3_conn_shutdown_stream_read(w->h3, stream_id);
-	return 0;
+	return h3_shutdown_read(w, stream_id);
 }
 
 /* ⛔⛔⭐ PHASE 9 — OUR BYTES FIRST, THEN nghttp3.
@@ -8506,7 +8579,21 @@ int wt_extend_max_stream_data(wt *w, int64_t stream_id)
 {
 	if (!w->h3)
 		return 0;
-	nghttp3_conn_unblock_stream(w->h3, stream_id);
+	/* ⛔ 24 Oct 2026, audit nghttp3 1.18 (the same since 1.0): `nghttp3.h` says
+	 *    `nghttp3_conn_unblock_stream` can return «NGHTTP3_ERR_NOMEM».  A
+	 *    stream that stays blocked in silence is worse than a closed
+	 *    connection: it is logged and the connection is closed. */
+	{
+		int rv = nghttp3_conn_unblock_stream(w->h3, stream_id);
+
+		if (rv != 0) {
+			log_says_of(REG_WT, wt_chi(w), "⛔ nghttp3_conn_unblock_stream: %s",
+			                 nghttp3_strerror(rv));
+			ngtcp2_ccerr_set_application_error(
+				w->last_error, nghttp3_err_infer_quic_app_error_code(rv), NULL, 0);
+			return NGTCP2_ERR_CALLBACK_FAILURE;
+		}
+	}
 	return 0;
 }
 
@@ -8903,6 +8990,13 @@ ngtcp2_ssize wt_write(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 				}
 				nghttp3_conn_block_stream(w->h3, stream_id);
 				continue;
+			/* ⛔ 24 Oct 2026, audit nghttp3 1.18 (the same since 1.0): `ngtcp2.h` lists
+			 *    STREAM_NOT_FOUND with STREAM_DATA_BLOCKED and STREAM_SHUT_WR:
+			 *    «Application can still write the stream data of the other
+			 *    streams».  The stream is gone (closed by the peer) and
+			 *    nghttp3 or our queue still offered it: same road as
+			 *    SHUT_WR, not a connection error. */
+			case NGTCP2_ERR_STREAM_NOT_FOUND:
 			case NGTCP2_ERR_STREAM_SHUT_WR:
 				if (wt_mine) {
 					/* The stream is already closed for writing — normally
