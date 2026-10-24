@@ -212,7 +212,7 @@ S6 = p(c("HELLO") + " (client → server) carries the highest major version the 
         [c("client.name"), "client", "free text for the log", "Page: " + c("remotix-page 0.1.0") + "."],
         [c("video.pace"), "server", c("yes"), "Declared only with " + c("--decoder-pace") + " (off by default) and only if the host "
          "can apply it. Then the page may send " + c("PACE") + " (" + c("0x0012") + ", " + c("u16 max_fps") + ", 0 = no ceiling) "
-         "when its decoder queue stays behind; the server clamps it to 5…60 and the user's child encodes fewer frames, before "
+         "when its decoder queue stays behind; the server clamps it to 5…59 (60 or more, like 0, means no ceiling) and the user's child encodes fewer frames, before "
          "encoding, so no frame is thrown away (RCP.md §13, DECISIONS-11 §11.32)."],
         [c("bench.mark"), "server", c("yes") + ", " + c("no"), "Written only by a BENCH build (" + c("no") + " unless the "
          "switch is on); the product build does not declare it at all (" + rif("The bench marker: BENCH_MARK") + ")."],
