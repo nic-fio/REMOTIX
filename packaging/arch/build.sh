@@ -68,6 +68,8 @@ for f in arch debian rpm; do
 	u=$(git -C "$TREE" show "$COMMIT:packaging/$f/remotix.service.split")
 	grep -q -- '--certificates /var/lib/remotix/net/certificates ' <<<"$u" && grep -q -- '--ban-file /var/lib/remotix/net/ban ' <<<"$u" \
 		|| { echo "⛔ packaging/$f/remotix.service.split: ExecStart without net/'s --certificates and --ban-file (§11.50)"; exit 1; }
+	grep -q -- ' --split ' <<<"$u" && grep -q '^Environment=REMOTIX_SPLIT_EXPERIMENTAL=1$' <<<"$u" \
+		|| { echo "⛔ packaging/$f/remotix.service.split: ExecStart without --split, or no REMOTIX_SPLIT_EXPERIMENTAL=1 (the binary's gate, main.c)"; exit 1; }
 	! grep -qE '^(User|Group|DynamicUser)=' <<<"$u" \
 		|| { echo "⛔ packaging/$f/remotix.service.split: User=/Group= on the unit (§11.50: the desktops would inherit it)"; exit 1; }
 done

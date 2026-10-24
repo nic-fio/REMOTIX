@@ -37,13 +37,17 @@ Wants=network.target
 Type=simple
 EnvironmentFile=/usr/share/remotix/remotix.conf
 EnvironmentFile=-/etc/remotix/remotix.conf.d/*.conf
+# ⭐ 1.5 (§11.50, D6): the TWO-PROCESS server is switched on by `--split` in ExecStart (without it the binary is the
+#    single-process 1.0).  While the split is EXPERIMENTAL the binary also demands this variable and refuses (78) without
+#    it: REMOVE the `Environment=` line when the gate in `main.c` ("REMOTIX_SPLIT_EXPERIMENTAL") is removed.
+Environment=REMOTIX_SPLIT_EXPERIMENTAL=1
 WorkingDirectory=/
 # ⭐ T6 (SELinux): the program is launched DIRECTLY, without `/bin/sh -c`.  systemd
 #    transitions to `remotix_t` only if it executes `remotix_exec_t` itself (init_t → remotix_t); a
 #    shell in between would run in `unconfined_service_t` and its `exec` would stay there.
 #    `${REMOTIX_PORT}` is a single word; `$REMOTIX_OPTIONS` without braces is split
 #    into words, and when empty yields none (systemd.service, «Command lines»).
-ExecStart=/usr/libexec/remotix/remotix --address 0.0.0.0 --name %H --port ${REMOTIX_PORT} --certificates /var/lib/remotix/net/certificates --page /usr/share/remotix/page.html --ban-file /var/lib/remotix/net/ban --journal $REMOTIX_OPTIONS
+ExecStart=/usr/libexec/remotix/remotix --address 0.0.0.0 --name %H --port ${REMOTIX_PORT} --certificates /var/lib/remotix/net/certificates --page /usr/share/remotix/page.html --ban-file /var/lib/remotix/net/ban --split --journal $REMOTIX_OPTIONS
 KillMode=mixed
 LimitRTPRIO=20
 LimitNICE=-11

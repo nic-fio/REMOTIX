@@ -35,11 +35,15 @@ Wants=network.target
 Type=simple
 EnvironmentFile=/usr/share/remotix/remotix.conf
 EnvironmentFile=-/etc/remotix/remotix.conf.d/*.conf
+# ⭐ 1.5 (§11.50, D6): the TWO-PROCESS server is switched on by `--split` in ExecStart (without it the binary is the
+#    single-process 1.0).  While the split is EXPERIMENTAL the binary also demands this variable and refuses (78) without
+#    it: REMOVE the `Environment=` line when the gate in `main.c` ("REMOTIX_SPLIT_EXPERIMENTAL") is removed.
+Environment=REMOTIX_SPLIT_EXPERIMENTAL=1
 WorkingDirectory=/
 # ⭐ The program directly, as in the .rpm: `${REMOTIX_PORT}` is a single word;
 #    `$REMOTIX_OPTIONS` without braces is split into words, and when empty yields
 #    none (systemd.service, «Command lines»).
-ExecStart=/usr/lib/remotix/remotix --address 0.0.0.0 --name %H --port ${REMOTIX_PORT} --certificates /var/lib/remotix/net/certificates --page /usr/share/remotix/page.html --ban-file /var/lib/remotix/net/ban --journal $REMOTIX_OPTIONS
+ExecStart=/usr/lib/remotix/remotix --address 0.0.0.0 --name %H --port ${REMOTIX_PORT} --certificates /var/lib/remotix/net/certificates --page /usr/share/remotix/page.html --ban-file /var/lib/remotix/net/ban --split --journal $REMOTIX_OPTIONS
 # ⭐ The three properties the product has always been measured with
 #    (src/restart-7900.sh): KillMode=mixed (T2, §5.2: the desktops survive
 #    the stop), the real-time priority and the children's nice.

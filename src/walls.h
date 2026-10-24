@@ -46,11 +46,7 @@
 
 #include <stddef.h>
 
-#if __has_include("rootside.h")
 #include "rootside.h"
-#else
-#include "rootside_provisional.h"
-#endif
 
 /* Applies the walls to the CALLING process (the root side's fork, as root).
  * 0 = all in place, the caller may `execve`; -1 = not, and `why` says which
