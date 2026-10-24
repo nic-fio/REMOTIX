@@ -19,7 +19,7 @@ if ! podman image exists "$IMAGE"; then
 		|| { echo "⛔ image build failed:"; tail -n 20 "$OUT/image-build.log"; exit 3; }
 fi
 echo "== compiling (clang, address+undefined, libFuzzer)"
-$LOW podman run --rm --cpus=2 --userns=keep-id -v "$TREE:/albero:ro" -v "$OUT:/out" -w /albero/benches/fuzz/rcp-msg "$IMAGE" sh -ec '
+$LOW podman run --rm --cpus=2 --memory=3g --network=none --pull=never --userns=keep-id -v "$TREE:/albero:ro" -v "$OUT:/out" -w /albero/benches/fuzz/rcp-msg "$IMAGE" sh -ec '
 	F="-g -O1 -fno-omit-frame-pointer -fsanitize=fuzzer-no-link,address,undefined -fno-sanitize-recover=undefined -std=gnu11 -D_GNU_SOURCE -Wno-unused-parameter -I. -I/albero/src"
 	for s in stubs_log fuzz_rcp_msg; do clang $F -c $s.c -o /out/obj/$s.o; done
 	clang -fsanitize=fuzzer,address,undefined /out/obj/fuzz_rcp_msg.o /out/obj/stubs_log.o -o /out/bin/rcp-msg

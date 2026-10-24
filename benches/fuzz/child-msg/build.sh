@@ -21,7 +21,7 @@ if ! podman image exists "$IMAGE"; then
 		|| { echo "⛔ image build failed:"; tail -n 20 "$OUT/image-build.log"; exit 3; }
 fi
 echo "== compiling (clang, address+undefined, libFuzzer)"
-$LOW podman run --rm --cpus=2 --userns=keep-id -v "$TREE:/albero:ro" -v "$OUT:/out" -w /albero/benches/fuzz/child-msg "$IMAGE" \
+$LOW podman run --rm --cpus=2 --memory=3g --network=none --pull=never --userns=keep-id -v "$TREE:/albero:ro" -v "$OUT:/out" -w /albero/benches/fuzz/child-msg "$IMAGE" \
 	sh /albero/benches/fuzz/child-msg/build-inner.txt > "$OUT/build.log" 2>&1 \
 	|| { echo "⛔ compile failed; last lines of $OUT/build.log:"; grep -E "error|undefined reference" "$OUT/build.log" | head -n 30; exit 4; }
 echo "built $OUT/bin/child-msg ($(ls "$OUT/seeds/child-msg" | wc -l) seeds, $(grep -c '^void' "$OUT/stubs_missing.c") trapping stubs)"
