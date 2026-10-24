@@ -174,8 +174,9 @@ static char *read_one(size_t *len)
 	memset(&k, 0, sizeof k);
 	offer.proxy = (struct zwlr_data_control_offer_v1 *)(void *)&offer;     /* never dereferenced: receive() is replaced */
 	offer.mime = g_ptr_array_new_with_free_func(g_free);
-	for (int i = 0; i < NT; i++)
-		g_ptr_array_add(offer.mime, g_strdup(MIME[i]));
+	for (int i = 0; i < NT; i++)                 /* only the types that deliver something are OFFERED */
+		if (offered[i].bytes)
+			g_ptr_array_add(offer.mime, g_strdup(MIME[i]));
 	k.current = &offer;
 	text = read_text(&k, len);
 	g_ptr_array_unref(offer.mime);
@@ -264,6 +265,7 @@ int main(void)
 		set(i, "", 0);
 	t = read_one(&len);
 	check(t == NULL, "(e) zero bytes on all types: nothing returned, no crash");
+	check(count("delivered zero bytes") == 3, "(e) «delivered zero bytes» once per type (3)");
 	check(count(ZERO_LINE) == 0 && count(NOT_UTF8) == 0, "(e) no «zero in the middle» / «not valid UTF-8» line (it is empty, not broken)");
 	free(t);
 
