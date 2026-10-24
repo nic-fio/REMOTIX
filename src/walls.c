@@ -233,6 +233,10 @@ static int writable_dir_ok(const char *what, const char *dir, uid_t uid, char *w
 	if (strcmp(dir, "/tmp") == 0 || strncmp(dir, "/tmp/", 5) == 0)
 		return say(why, n, "the %s directory %s is under /tmp, which the walls replace "
 		           "with a private, empty tmpfs: put it elsewhere (e.g. /var/tmp)", what, dir);
+	/* ⛔ A trailing «/» makes even lstat() follow a symlink in the last place:
+	 *    the walk below would then check the link's parents, not the target's. */
+	if (strlen(dir) > 1 && dir[strlen(dir) - 1] == '/')
+		return say(why, n, "the %s directory %s ends with «/»: give it without", what, dir);
 	if (lstat(dir, &st) != 0)
 		return say(why, n, "the %s directory %s does not exist (%s): the package "
 		           "creates it (tmpfiles/upgrade), a bench passes its own with "
@@ -423,6 +427,9 @@ out:
  *      · ioctl TIOCSTI / TIOCLINUX ⇒ EPERM: fds 0-2 are the root side's, and
  *        started by hand from a root shell they are ITS terminal — TIOCSTI
  *        would type commands into it. */
+#ifndef __NR_pidfd_getfd
+#define __NR_pidfd_getfd 438 /* the same number on every architecture */
+#endif
 #ifndef __NR_io_uring_setup
 #define __NR_io_uring_setup 425
 #endif
@@ -467,9 +474,7 @@ static int no_user_namespaces(char *why, size_t n)
 		WALLS_DENY(__NR_process_vm_readv, EPERM),
 		WALLS_DENY(__NR_process_vm_writev, EPERM),
 		WALLS_DENY(__NR_kcmp, EPERM),
-#ifdef __NR_pidfd_getfd
 		WALLS_DENY(__NR_pidfd_getfd, EPERM),
-#endif
 		/* ioctl: the request is an unsigned int in the kernel — its low word is all of it */
 		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_ioctl, 0, 5),
 		BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, args[1])),
