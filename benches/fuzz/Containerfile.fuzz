@@ -1,0 +1,38 @@
+# Containerfile.fuzz — the image the fuzzers are built and run in.
+#
+# It starts FROM the build image of the product (src/Containerfile): same Debian 13,
+# same OpenSSL and headers, so the harnesses compile the very files of src/ with the
+# very same libraries.  It adds only the compiler that has libFuzzer.
+#
+#   · clang          clang-19 on trixie.  gcc has no libFuzzer, and the sanitizers
+#                    that matter here (address, undefined) come with clang's runtime.
+#   · libclang-rt-dev  (-> libclang-rt-19-dev) the runtime: libclang_rt.fuzzer,
+#                    libclang_rt.asan, libclang_rt.ubsan_standalone.
+#   · llvm           llvm-symbolizer, so that a crash report has file:line and not
+#                    only addresses.  (llvm-profdata/llvm-cov for coverage reports too.)
+#
+# ⛔ Kept in its own image, NOT added to remotix-costruzione: the product build must not
+#    be able to pick up a sanitizer runtime by mistake.
+#
+#   podman build -t remotix-fuzz -f benches/fuzz/Containerfile.fuzz benches/fuzz
+#   (benches/fuzz/run-fuzz.sh does it by itself.)
+ARG BASE=localhost/remotix-costruzione
+FROM ${BASE}
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        clang libclang-rt-dev llvm \
+    && rm -rf /var/lib/apt/lists/*
+
+# llvm-symbolizer is found by the sanitizers through PATH; Debian puts it in
+# /usr/lib/llvm-19/bin, and /usr/bin/llvm-symbolizer is a link only if the version-less
+# package is there.  Say it explicitly, and fail the build if it is missing.
+RUN ln -sf "$(ls /usr/lib/llvm-*/bin/llvm-symbolizer | head -1)" /usr/local/bin/llvm-symbolizer \
+    && clang --version && llvm-symbolizer --version
+
+ENV ASAN_SYMBOLIZER_PATH=/usr/local/bin/llvm-symbolizer \
+    UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1 \
+    ASAN_OPTIONS=detect_leaks=1:abort_on_error=0:symbolize=1
+
+WORKDIR /albero/benches/fuzz

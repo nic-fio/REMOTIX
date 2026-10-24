@@ -1,0 +1,27 @@
+# quic-conn.dict — the events of the played ngtcp2 (`stubs_quic.c`) and the ops of `fuzz_quic_conn.c`
+# events: TX KEY handshake / 1RTT, HANDSHAKE DONE, NEW CID ×4, RETIRE, PATH RESULT failed, RAND
+"\x01"
+"\x11"
+"\x02"
+"\x3c"
+"\x0d\x01"
+"\x1e"
+"\x2f\x00"
+"\x1f\x00"
+# stream data on client bidi 0 / uni 2, FIN; a datagram
+"\x03\x00\x04"
+"\x13\x02\x01"
+"\x0a\x10"
+# the packet's flags: does not decrypt / probing only
+"\x80"
+"\x40"
+# return codes: DRAINING, CRYPTO, DROP_CONN, RETRY
+"\x10"
+"\x20"
+"\x50"
+"\x60"
+# a packet op from address 2 and from address 1 (a migration, a probe)
+"\x01\x00\x04\x02\x01\x00"
+"\x01\x00\x04\x01\x01\x00\x40"
+# time: 30 s
+"\x03\x00\x02\x75\x30"
