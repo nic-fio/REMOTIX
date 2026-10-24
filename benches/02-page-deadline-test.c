@@ -22,24 +22,31 @@
  *   127.0.0.1-9 (all of 127/8 is local).
  *
  *   1. four idle connections from one address are taken, the fifth is refused;
- *   2. 32 idle connections from 8 addresses fill the table;
- *   3. a 33rd from a new address evicts the oldest idle one, and gets in;
- *   4. page_wait_ms() says the next deadline is within a second;
- *   5. page_expired(now + 10 s) closes every idle connection, and their
- *      sockets see the close;
- *   6. a real HTTPS GET / then gets the page (200, the markers replaced);
- *   7. a client that sent its request but stopped reading the response is
- *      NOT closed at 10 s, and IS closed 15 s after the last byte it
- *      acknowledged — and progress is what it acknowledged, not what the
+ *   2. 128 idle connections from 32 addresses fill the table;
+ *   3. a newcomer from a fresh address evicts ONE idle client (fair share:
+ *      from a group holding 4), and the victim sees a RESET;
+ *   4. churn (third review): 200 bare connects from the crowded addresses
+ *      cannot evict the lone newcomer of check 3 — they only push out each
+ *      other, from the most crowded groups — while a second fresh address
+ *      still gets in;
+ *   5. page_wait_ms() says the next deadline is within a second;
+ *   6. page_expired(now + 10 s) closes every idle connection, with a RESET;
+ *  6b. every place holds ONE slot (128 addresses): a new address is still
+ *      admitted, and the oldest makes room — refusing would be a cheap lockout;
+ *   7. a real HTTPS GET / then gets the page (200, the markers replaced);
+ *   8. a client that sent its request but stopped reading the response is
+ *      NOT closed at 10 s, and IS closed 60 s after the last byte it
+ *      acknowledged — progress is what it acknowledged, not what the
  *      kernel's send buffer swallowed;
- *   8. the progress deadline (review of 3ed5091f): a phone that took 300 KB
- *      in 60 s (5 KB/s) is kept, one that took 100 KB (1.7 KB/s) is closed;
- *   9. 32 slow readers from 8 addresses hold every slot in F_WRITE: a new
- *      client is refused while they are young, and once they are older than
- *      5 s and slower than 32 KB/s one of them is evicted and a real GET
- *      gets the page;
- *  10. the IPv6 /48 of PAGE_PER_48 is taken only from real IPv6 peers;
- *  11. the bytes left of the eviction ranking never wrap below zero.
+ *   9. the progress deadline: a phone that took 300 KB in 60 s (5 KB/s) is
+ *      kept, one that took 100 KB (1.7 KB/s) is closed;
+ *  10. 128 readers from 32 addresses hold every slot in F_WRITE: a newcomer
+ *      is refused while they are younger than 5 s; once they are 6 s in one
+ *      is evicted WHATEVER its speed (they are made fast on purpose) and a
+ *      real GET gets the page;
+ *  11. the IPv6 /48 is taken only from real IPv6 peers, and it is the
+ *      fair-share group of an IPv6 client (two /64s of one /48 are one group);
+ *  12. the request-line budget: 5 per address per 10 s, the rest counted.
  *
  * Exit status: 0 green, 1 red, 3 not all checks ran. */
 #define _GNU_SOURCE
@@ -54,7 +61,7 @@
 #include <sys/wait.h>
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 27
+#define EXPECTED_CHECKS 34
 
 static void require(int cond, const char *desc)
 {
@@ -113,6 +120,30 @@ static int connect_from(int port, const char *src, int rcvbuf)
 	return fd;
 }
 
+/* -1 = still open, 1 = closed by the server with a FIN, 2 = with a RESET. */
+static int server_end(int fd)
+{
+	char b[16];
+	struct pollfd f = {.fd = fd, .events = POLLIN};
+	if (poll(&f, 1, 50) <= 0)
+		return -1;
+	ssize_t r = recv(fd, b, sizeof b, MSG_DONTWAIT);
+	if (r == 0)
+		return 1;
+	if (r < 0 && errno == ECONNRESET)
+		return 2;
+	return -1;
+}
+
+/* How many active clients have this key. */
+static int client_of(page *p, const char *key)
+{
+	int n = 0;
+	for (size_t i = 0; i < MAX_CLIENTS; i++)
+		n += client_active(&p->clients[i]) && strcmp(p->clients[i].key, key) == 0;
+	return n;
+}
+
 /* 1 = the server closed this socket (EOF or reset), 0 = still open. */
 static int closed_by_server(int fd)
 {
@@ -146,12 +177,12 @@ static SSL_CTX *server_ctx(void)
 	return ctx;
 }
 
-/* Pumps until `want` clients are in F_WRITE (3 s at most); returns the last
+/* Pumps until `want` clients are in F_WRITE (10 s at most); returns the last
  * one, or NULL. */
 static client *writer_wait(page *p, int want)
 {
 	uint64_t t0 = log_now_ms();
-	while (log_now_ms() - t0 < 3000) {
+	while (log_now_ms() - t0 < 10000) {
 		client *last = NULL;
 		int n = 0;
 		pump(p, 1);
@@ -208,12 +239,13 @@ int main(void)
 	int hfd = mkstemp(html_path);
 	FILE *h = fdopen(hfd, "w");
 	certificates cert;
-	/* ~16 MB: far beyond what loopback buffers hold, so the slow reader of
-	 * check 7 really stays in F_WRITE. */
+	/* ~4 MB: beyond what loopback buffers hold, so a slow reader really
+	 * stays in F_WRITE.  ⚠ Not 16 MB: 128 writers each hold a copy of the
+	 * response, and 128 × 16 MB was killed by the 2 GB limit. */
 	fprintf(h, "<html><body data-banned=\"__BANNED__\" data-remaining-ms=\""
 	           "__REMAINING_MS__\" data-diary=\"__DIARY__\">__FINGERPRINT__ "
 	           "__WARNING__<!--");
-	for (int i = 0; i < 16 * 1024; i++)
+	for (int i = 0; i < 4 * 1024; i++)
 		fprintf(h, "%01023d\n", 0);
 	fprintf(h, "--></body></html>\n");
 	fclose(h);
@@ -229,7 +261,15 @@ int main(void)
 		return 3;
 	}
 	int port = port_of(p);
-	int fds[40], nf = 0;
+	/* ⚠ A small send buffer, inherited by every accepted socket: the kernel
+	 *   then holds ~128 KB per slow reader instead of ~2.6 MB, which 128
+	 *   readers would multiply. */
+	{
+		int sb = 65536;
+		setsockopt(p->fd, SOL_SOCKET, SO_SNDBUF, &sb, sizeof sb);
+	}
+	static int fds[256];
+	int nf = 0;
 	char src[32];
 
 	printf("1. four idle from one address are taken, the fifth is refused\n");
@@ -246,44 +286,104 @@ int main(void)
 	close(fds[4]);
 	nf--;
 
-	printf("2. 32 idle from 8 addresses fill the table\n");
-	for (int a = 2; a <= 8; a++)
+	printf("2. 128 idle from 32 addresses fill the table\n");
+	for (int a = 2; a <= 32; a++)
 		for (int i = 0; i < 4; i++) {
 			snprintf(src, sizeof src, "127.0.0.%d", a);
 			fds[nf++] = connect_from(port, src, 0);
 			pump(p, 1);
 		}
 	pump(p, 3);
-	require(active(p) == 32, "32 clients active");
+	require(active(p) == MAX_CLIENTS, "128 clients active");
 
-	printf("3. a 33rd from a new address evicts the oldest idle one\n");
-	fds[nf++] = connect_from(port, "127.0.0.9", 0);
-	pump(p, 3);
-	require(active(p) == 32, "still 32 active (one out, one in)");
-	require(p->evicted == 1, "one eviction counted");
-	require(closed_by_server(fds[0]), "the oldest (first from 127.0.0.1) was closed");
+	printf("3. a newcomer from a fresh address evicts one, by fair share\n");
+	{
+		int lone = connect_from(port, "127.0.0.100", 0), gone = 0, reset = 0;
+		pump(p, 3);
+		for (int i = 0; i < nf; i++)
+			switch (server_end(fds[i])) {
+			case 2: reset++; /* fall through */
+			case 1: gone++; break;
+			}
+		require(active(p) == MAX_CLIENTS && p->evicted == 1,
+		        "still 128 active, one eviction counted");
+		require(gone == 1 && reset == 1, "exactly one idle client closed, with a RESET");
+		require(client_of(p, "[127.0.0.100]") == 1, "the newcomer got in");
 
-	printf("4. the loop is woken for the deadline\n");
+		printf("4. churn cannot evict the lone client\n");
+		for (int k = 0; k < 200; k++) {
+			snprintf(src, sizeof src, "127.0.0.%d", 1 + k % 8);
+			int f = connect_from(port, src, 0);
+			pump(p, 1);
+			close(f);
+		}
+		pump(p, 3);
+		require(client_of(p, "[127.0.0.100]") == 1,
+		        "after 200 connects from 8 crowded addresses the lone client is still there");
+		require(active(p) == MAX_CLIENTS,
+		        "the table stays full: the churners pushed out each other or were refused");
+		int second = connect_from(port, "127.0.0.101", 0);
+		pump(p, 3);
+		require(client_of(p, "[127.0.0.101]") == 1 && active(p) == MAX_CLIENTS,
+		        "a second fresh address still gets in");
+		fds[nf++] = lone;
+		fds[nf++] = second;
+	}
+
+	printf("5. the loop is woken for the deadline\n");
 	{
 		int w = page_wait_ms(p, log_now_ms());
 		require(w >= 0 && w <= 1000, "page_wait_ms() within [0, 1000]");
 	}
 
-	printf("5. 10 s later every idle connection is closed\n");
-	page_expired(p, log_now_ms() + PAGE_REQUEST_MS - 1000);
-	require(active(p) == 32, "nobody closed 1 s before the deadline");
-	page_expired(p, log_now_ms() + PAGE_REQUEST_MS + 1);
-	require(active(p) == 0, "all 32 closed after the deadline");
+	printf("6. 10 s later every idle connection is closed, with a RESET\n");
 	{
-		int seen = 0;
-		for (int i = 1; i < nf; i++)
-			seen += closed_by_server(fds[i]);
-		require(seen == nf - 1, "every idle socket saw the close");
+		uint64_t first = UINT64_MAX;
+		for (size_t i = 0; i < MAX_CLIENTS; i++)
+			if (client_active(&p->clients[i]) && p->clients[i].born < first)
+				first = p->clients[i].born;
+		page_expired(p, first + PAGE_REQUEST_MS - 1);
+	}
+	require(active(p) == MAX_CLIENTS, "nobody closed 1 ms before the first deadline");
+	page_expired(p, log_now_ms() + PAGE_REQUEST_MS + 1);
+	require(active(p) == 0, "all closed after the deadline");
+	{
+		int open_before = 0, reset = 0;
+		for (int i = 0; i < nf; i++) {
+			int e = server_end(fds[i]);
+			open_before += e != -1;
+			reset += e == 2;
+		}
+		require(reset >= MAX_CLIENTS, "every expired socket saw a RESET");
 	}
 	for (int i = 0; i < nf; i++)
 		close(fds[i]);
 
-	printf("6. a real HTTPS GET gets the page\n");
+	printf("6b. every place at ONE slot: a new real client is still admitted\n");
+	{
+		static int one[MAX_CLIENTS];
+		int n1 = 0, newc;
+		unsigned full_before = p->refused_full;
+		for (int i = 0; i < MAX_CLIENTS; i++) {
+			snprintf(src, sizeof src, "127.0.1.%d", i + 1);
+			one[n1++] = connect_from(port, src, 0);
+			pump(p, 1);
+		}
+		pump(p, 3);
+		require(active(p) == MAX_CLIENTS, "128 idle, one each from 128 addresses");
+		newc = connect_from(port, "127.0.2.1", 0);
+		pump(p, 3);
+		require(client_of(p, "[127.0.2.1]") == 1 && p->refused_full == full_before,
+		        "the newcomer is admitted, not refused");
+		require(server_end(one[0]) == 2 && client_of(p, "[127.0.1.1]") == 0,
+		        "the OLDEST one-slot client made room (FIFO), with a RESET");
+		page_expired(p, log_now_ms() + PAGE_REQUEST_MS + 1);
+		for (int i = 0; i < n1; i++)
+			close(one[i]);
+		close(newc);
+	}
+
+	printf("7. a real HTTPS GET gets the page\n");
 	{
 		pid_t c = client_get(port, "127.0.0.1", true);
 		int st = -1;
@@ -298,7 +398,7 @@ int main(void)
 		require(active(p) == 0, "the slot is free again after the response");
 	}
 
-	printf("7. a slow reader is held to the progress deadline, not the 10 s one\n");
+	printf("8. a slow reader is held to the progress deadline, not the 10 s one\n");
 	{
 		pid_t c = client_get(port, "127.0.0.1", false);
 		client *w = writer_wait(p, 1);
@@ -312,16 +412,19 @@ int main(void)
 			        "progress is what the reader acknowledged, not what the kernel took");
 			page_expired(p, log_now_ms() + PAGE_REQUEST_MS + 1);
 			require(active(p) == 1, "not closed at 10 s while writing");
+			/* ⚠ The stall alone: the average is put well over the floor,
+			 *   or the 2 KB/s rule (20 s grace) would close it first. */
+			w->delivered = (uint64_t)PAGE_RATE_FLOOR * 1000u;
 			page_expired(p, w->last_progress + PAGE_STALL_MS - 1);
-			require(active(p) == 1, "not closed 1 ms before 15 s without progress");
+			require(active(p) == 1, "not closed 1 ms before 60 s without progress");
 			page_expired(p, w->last_progress + PAGE_STALL_MS + 1);
-			require(active(p) == 0, "closed 15 s after the last byte taken");
+			require(active(p) == 0, "closed 60 s after the last byte acknowledged");
 		}
 		kill(c, SIGKILL);
 		waitpid(c, NULL, 0);
 	}
 
-	printf("8. the progress deadline keeps a slow phone that keeps reading\n");
+	printf("9. the progress deadline keeps a slow phone that keeps reading\n");
 	{
 		pid_t c = client_get(port, "127.0.0.1", false);
 		client *w = writer_wait(p, 1);
@@ -334,7 +437,7 @@ int main(void)
 			w->last_progress = t - 1000;
 			w->delivered = 300000;
 			page_expired(p, t);
-			require(active(p) == 1, "300 KB in 60 s, last byte 1 s ago: kept (the old rule cut it at 60 s)");
+			require(active(p) == 1, "300 KB in 60 s, last byte 1 s ago: kept");
 			w->delivered = 100000;
 			page_expired(p, t);
 			require(active(p) == 0, "100 KB in 60 s (under 2 KB/s): closed");
@@ -343,28 +446,32 @@ int main(void)
 		waitpid(c, NULL, 0);
 	}
 
-	printf("9. 32 slow readers cannot lock the page out\n");
+	printf("10. 128 readers cannot lock the page out, whatever their speed\n");
 	{
-		pid_t kids[32];
+		static pid_t kids[MAX_CLIENTS];
 		int k = 0, fd, others = 0;
-		for (int a = 1; a <= 8; a++)
+		for (int a = 1; a <= 32; a++)
 			for (int i = 0; i < 4; i++) {
 				snprintf(src, sizeof src, "127.0.0.%d", a);
 				kids[k++] = client_get(port, src, false);
 				pump(p, 2);
 			}
-		require(writer_wait(p, 32) != NULL, "all 32 slots are slow readers in F_WRITE");
-		fd = connect_from(port, "127.0.0.9", 0);
+		require(writer_wait(p, MAX_CLIENTS) != NULL, "all 128 slots are readers in F_WRITE");
+		fd = connect_from(port, "127.0.0.100", 0);
 		pump(p, 3);
-		require(closed_by_server(fd) && active(p) == 32,
+		require(closed_by_server(fd) && active(p) == MAX_CLIENTS,
 		        "a newcomer while they are younger than 5 s is refused");
 		close(fd);
 		for (size_t i = 0; i < MAX_CLIENTS; i++) {
-			p->clients[i].write_start -= PAGE_EVICT_AGE_MS + 1000;
-			p->clients[i].born -= PAGE_EVICT_AGE_MS + 1000;
+			client *x = &p->clients[i];
+			x->write_start -= PAGE_EVICT_AGE_MS + 1000;
+			x->born -= PAGE_EVICT_AGE_MS + 1000;
+			/* FAST readers on purpose: 64 KB/s, over the old 32 KB/s rule. */
+			x->delivered = 64u * 1024u * (PAGE_EVICT_AGE_MS + 1000) / 1000u;
+			x->last_progress = log_now_ms();
 		}
 		{
-			pid_t c = client_get(port, "127.0.0.9", true);
+			pid_t c = client_get(port, "127.0.0.100", true);
 			int st = -1;
 			uint64_t t0 = log_now_ms();
 			while (waitpid(c, &st, WNOHANG) == 0 && log_now_ms() - t0 < 20000) {
@@ -372,12 +479,12 @@ int main(void)
 				page_expired(p, log_now_ms());
 			}
 			require(WIFEXITED(st) && WEXITSTATUS(st) == 0,
-			        "once they are 6 s old and slow, a real GET gets the page");
+			        "once they are 6 s in (and fast), a real GET gets the page");
 		}
 		for (size_t i = 0; i < MAX_CLIENTS; i++)
 			others += client_active(&p->clients[i]) &&
-			          strcmp(p->clients[i].key, "[127.0.0.9]") != 0;
-		require(others == 31, "exactly one slow reader was evicted for it");
+			          strcmp(p->clients[i].key, "[127.0.0.100]") != 0;
+		require(others == MAX_CLIENTS - 1, "exactly one reader was evicted for it");
 		for (int i = 0; i < k; i++) {
 			kill(kids[i], SIGKILL);
 			waitpid(kids[i], NULL, 0);
@@ -387,7 +494,7 @@ int main(void)
 				client_close(&p->clients[i]);
 	}
 
-	printf("10. the /48 is taken only from real IPv6 peers\n");
+	printf("11. the /48: only from real IPv6 peers, and it is the IPv6 group\n");
 	{
 		struct {
 			const char *a;
@@ -420,20 +527,30 @@ int main(void)
 				printf("       wrong for %s\n", cases[i].a);
 		}
 		require(good == 5, "IPv4, mapped, loopback, NAT64: none; 2001:db8:1:2::5 → 2001:db8:1::/48");
+		{
+			client a;
+			static const unsigned char same48[6] = {0x20, 0x01, 0x0d, 0xb8, 0, 1};
+			static const unsigned char other48[6] = {0x20, 0x01, 0x0d, 0xb8, 0, 2};
+			memset(&a, 0, sizeof a);
+			a.has48 = true;
+			memcpy(a.p48, same48, 6);
+			snprintf(a.key, sizeof a.key, "[2001:db8:1:2::/64]");
+			require(same_group(&a, true, same48, "[2001:db8:1:3::/64]") &&
+			                !same_group(&a, true, other48, "[2001:db8:2:3::/64]") &&
+			                !same_group(&a, false, same48, "[2001:db8:1:2::/64]"),
+			        "two /64s of one /48 are one group; another /48 or an IPv4 is not");
+		}
 	}
 
-	printf("11. bytes left never wraps below zero\n");
+	printf("12. the request-line budget\n");
 	{
-		client a, b;
-		memset(&a, 0, sizeof a);
-		memset(&b, 0, sizeof b);
-		a.nresponse = 1000;
-		a.delivered = 1040; /* TLS overhead acknowledged past the plaintext */
-		b.nresponse = 1000;
-		b.delivered = 100;
-		require(bytes_left(&a) == 0 && bytes_left(&b) == 900 &&
-		                bytes_left(&b) > bytes_left(&a),
-		        "delivered > nresponse gives 0 left, and ranks below a client with 900 left");
+		uint64_t t = log_now_ms() + 1000000;
+		int yes = 0;
+		for (int i = 0; i < 7; i++)
+			yes += line_budget(p, "[198.51.100.7]", t);
+		require(yes == PAGE_LINES_PER_ADDRESS && line_budget(p, "[198.51.100.8]", t) &&
+		                line_budget(p, "[198.51.100.7]", t + PAGE_LINES_WINDOW_MS),
+		        "5 lines per address per 10 s; another address has its own; a new window resets");
 	}
 
 	page_close(p);

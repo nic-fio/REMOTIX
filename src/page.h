@@ -67,7 +67,10 @@ typedef struct page page;
 /* The most connections the listener holds at once, and so the most
  * descriptors `page_descriptors()` can put in (the listener plus the
  * clients): main.c sizes its `poll` array on it. */
-#define PAGE_MAX_CLIENTS 32
+/* ⚠ 128 and not 32 (third review, 15 Oct 2026): an idle slot costs a struct
+ *   and an SSL object, and with 4 per address an attacker now needs 32
+ *   addresses to fill the table. */
+#define PAGE_MAX_CLIENTS 128
 #define PAGE_MAX_DESCRIPTORS (PAGE_MAX_CLIENTS + 1)
 
 page *page_open(const char *address, const char *port, SSL_CTX *ctx,
@@ -83,7 +86,7 @@ void page_move(page *p, struct pollfd *dove, size_t amount);
 
 /* ⛔ To be called at EVERY pass of the loop, readable or not (15 Oct 2026):
  * closes the clients past their deadline — no whole request within 10 s of
- * the accept, or a response that stopped moving (nothing taken for 15 s, or
+ * the accept, or a response that stopped moving (nothing taken for 60 s, or
  * under 2 KB/s on average after 20 s) — and writes the
  * listener's summary line (at most one every 10 s).  An expiry that waits for
  * a byte never triggers, and 32 silent connections used to lock the page out

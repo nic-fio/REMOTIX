@@ -19,6 +19,7 @@
 #include <unistd.h>
 
 #include <openssl/err.h>
+#include <openssl/rand.h>
 
 #define MAX_CLIENTS PAGE_MAX_CLIENTS
 /* ⛔⭐ THE TCP LISTENER'S CLOCKS AND CAPS — 15 Oct 2026, a pre-login denial
@@ -36,7 +37,9 @@
  *     of 3ed5091f, same day): the page is ~907 KB uncompressed, and 60 s from
  *     accept cut every phone under ~125 kbit/s, every time.  The deadline
  *     follows PROGRESS instead: closed when no byte was taken for
- *     PAGE_STALL_MS, or when, after PAGE_RATE_GRACE_MS, the average since the
+ *     PAGE_STALL_MS (60 s: retransmission backoff, a tunnel, a handover —
+ *     15 s cut phones there; a stalled writer is evictable after
+ *     PAGE_EVICT_AGE_MS anyway when the table is full), or when, after PAGE_RATE_GRACE_MS, the average since the
  *     response began is below PAGE_RATE_FLOOR (2 KB/s = 16 kbit/s: the whole
  *     page within ~7.5 min).  A slow phone that keeps reading is never cut.
  *   · PAGE_PER_ADDRESS — at most this many connections at once from one
@@ -47,27 +50,45 @@
  *     behind one NAT.
  *   · PAGE_PER_48 — and at most this many from one IPv6 /48 (as transport.c):
  *     one subscriber holds a whole /48, that is 65536 /64 keys.
- *   · And when all slots are taken, one is freed to make room (as
- *     `transport.c` evicts a login not yet begun): the OLDEST client that has
- *     not yet sent a whole request; failing that, among the clients writing
- *     a response for at least PAGE_EVICT_AGE_MS at an average below
- *     PAGE_EVICT_RATE, the one with the MOST bytes left.  ⛔ Without the second
- *     rule 8 keys × 4 slow readers held all 32 slots in F_WRITE and everyone
- *     else was refused (review of 3ed5091f).  ⚠ The price: under that attack a
- *     real phone slower than PAGE_EVICT_RATE can be evicted too — only while
- *     the table is full.
+ *   · And when all slots are taken, one is freed to make room — by FAIR
+ *     SHARE (third review, 15 Oct 2026).  A client's GROUP is its IPv6 /48
+ *     for a real IPv6 peer, its address otherwise.  The victim is taken from
+ *     the group holding the MOST live slots, at random among its clients that
+ *     have not yet sent a whole request or have been writing a response for
+ *     PAGE_EVICT_AGE_MS, whatever their speed — and when every group holds
+ *     one slot, the OLDEST of them (refusing there would be a cheap lockout:
+ *     one slot each from MAX_CLIENTS addresses).  The newcomer is REFUSED
+ *     only if its own group would then hold MORE than the victim's.
+ *     ⛔ What it replaced, measured: «the globally oldest pre-request
+ *        client» let 8 addresses doing bare TCP connects evict a real browser
+ *        mid-handshake after 39 connects, in 4 ms; and «writers under
+ *        32 KB/s» let readers at 33 KB/s hold the table for ever.  With fair
+ *        share an attacker can only push out slots of groups LARGER than his
+ *        own, that is his own kind, never the lone browser.
+ *     ⚠ The price: a crowd behind ONE address (a CGNAT, an office NAT, a
+ *       carrier /48) is one group — see `DECISIONS.md` §11.44.
+ *   · Expired and evicted clients are closed with a RESET (`SO_LINGER`
+ *     {1, 0}): a gentle close would leave the kernel holding their unsent
+ *     data in an orphan socket for minutes.  A response that ends normally
+ *     keeps the gentle close.
  *
  * ⛔ The ban is NOT checked at accept: §4.4-bis wants the banned address to
  *    SEE the page and the sentence «attempts exhausted» — a refusal at accept
  *    would be exactly the silence it forbids. */
 #define PAGE_REQUEST_MS 10000u
-#define PAGE_STALL_MS 15000u
+#define PAGE_STALL_MS 60000u
 #define PAGE_RATE_GRACE_MS 20000u
 #define PAGE_RATE_FLOOR 2048u /* bytes per second */
 #define PAGE_PER_ADDRESS 4
 #define PAGE_PER_48 8
 #define PAGE_EVICT_AGE_MS 5000u
-#define PAGE_EVICT_RATE 32768u /* bytes per second, ~256 kbit/s */
+/* At most this many accepts per `accept_page()` call (refused ones included). */
+#define PAGE_ACCEPTS_PER_CALL 32
+/* The «GET / from …» line: at most this many per address per window; the
+ * rest are counted in the summary line. */
+#define PAGE_LINES_PER_ADDRESS 5
+#define PAGE_LINES_WINDOW_MS 10000u
+#define PAGE_LINES_KEYS 16
 /* One summary line, at most every this many ms (as transport.c's pressure line). */
 #define PAGE_REFUSAL_LOG_MS 10000u
 #define MAX_REQUEST 8192
@@ -187,8 +208,16 @@ struct page {
 	size_t nhtml;
 	client clients[MAX_CLIENTS];
 	/* What was refused or closed since the last summary line. */
-	unsigned refused_address, refused_48, refused_full, evicted, evicted_slow,
-	         expired_request, expired_response;
+	unsigned refused_address, refused_48, refused_full, evicted, evicted_writing,
+	         expired_request, expired_response, lines_unwritten;
+	/* The per-address budget of request lines (PAGE_LINES_PER_ADDRESS). */
+	struct {
+		char key[64];
+		uint64_t since;
+		unsigned n;
+	} lines[PAGE_LINES_KEYS];
+	/* Picks among equals at random (xorshift, seeded by RAND_bytes). */
+	uint64_t rng;
 	char refused_last[64];
 	bool refused_ever;
 	uint64_t refused_line_ms;
@@ -278,6 +307,18 @@ static void client_close(client *c)
 	c->phase = F_DONE;
 }
 
+/* ⛔ For an EXPIRED or EVICTED client only: a reset, not a FIN — the kernel
+ *    drops what is still unsent instead of keeping it in an orphan socket
+ *    for minutes.  A response that ended normally keeps the gentle close. */
+static void client_abort(client *c)
+{
+	if (c->fd >= 0) {
+		struct linger l = {1, 0};
+		setsockopt(c->fd, SOL_SOCKET, SO_LINGER, &l, sizeof l);
+	}
+	client_close(c);
+}
+
 /* What the peer acknowledged on this socket, all told; `fallback` when the
  * kernel does not say (then `oresponse` stands in for it, less exact). */
 static uint64_t tcp_acked(int fd, uint64_t fallback)
@@ -344,6 +385,33 @@ static void compose(client *c, const char *state, const char *kind,
 	c->write_start = c->last_progress = log_now_ms();
 	c->acked_base = tcp_acked(c->fd, 0);
 	c->delivered = 0;
+}
+
+/* `true` = the request line of `key` may be written now. */
+static bool line_budget(page *p, const char *key, uint64_t now)
+{
+	size_t free_i = PAGE_LINES_KEYS, old_i = 0;
+	for (size_t i = 0; i < PAGE_LINES_KEYS; i++) {
+		if (p->lines[i].key[0] && strcmp(p->lines[i].key, key) == 0) {
+			if (now - p->lines[i].since >= PAGE_LINES_WINDOW_MS) {
+				p->lines[i].since = now;
+				p->lines[i].n = 0;
+			}
+			return ++p->lines[i].n <= PAGE_LINES_PER_ADDRESS;
+		}
+		if (!p->lines[i].key[0] || now - p->lines[i].since >= PAGE_LINES_WINDOW_MS)
+			free_i = i;
+		if (p->lines[i].since < p->lines[old_i].since)
+			old_i = i;
+	}
+	/* ⚠ Table full of live windows: the oldest entry is reused — that
+	 *   address gets a fresh budget early, which is the generous side. */
+	if (free_i == PAGE_LINES_KEYS)
+		free_i = old_i;
+	snprintf(p->lines[free_i].key, sizeof p->lines[free_i].key, "%s", key);
+	p->lines[free_i].since = now;
+	p->lines[free_i].n = 1;
+	return true;
 }
 
 static void serve(page *p, client *c)
@@ -429,8 +497,15 @@ static void serve(page *p, client *c)
 	rcp_key_address(c->provenance, address, sizeof address);
 	banned = rcp_banned(address, log_now_ms(), &remain);
 
-	registro_dice(LOG_PAGE, "%s %s from %s%s", method, target, c->provenance,
-	              banned ? " (address BANNED)" : "");
+	/* ⚠ One line per request, but at most PAGE_LINES_PER_ADDRESS per
+	 *   address per PAGE_LINES_WINDOW_MS: without a budget whoever requests
+	 *   the page in a loop writes the log at will.  The rest are counted in
+	 *   the summary line — never dropped in silence. */
+	if (line_budget(p, address, log_now_ms()))
+		registro_dice(LOG_PAGE, "%s %s from %s%s", method, target,
+		              c->provenance, banned ? " (address BANNED)" : "");
+	else
+		p->lines_unwritten++;
 
 	/* ⛔ THE ENDPOINT FROM WHICH THE PAGE FETCHES THE UPDATED FINGERPRINT (§4.1-bis).
 	 *
@@ -685,16 +760,6 @@ static bool client_active(const client *c)
 	return c->phase != F_DONE && c->fd >= 0;
 }
 
-/* What the peer still has to receive, never below 0: `delivered` counts TLS
- * bytes (record overhead, and the handshake's tail if it is acknowledged
- * late) against a plaintext `nresponse`, so it may exceed it — and an
- * unsigned subtraction would then wrap to the LARGEST value and make the
- * nearly finished client the first one evicted. */
-static uint64_t bytes_left(const client *c)
-{
-	return c->delivered < c->nresponse ? c->nresponse - c->delivered : 0;
-}
-
 /* The moment the average since the response began falls under
  * PAGE_RATE_FLOOR, never before the grace: delivered / (t - write_start) <
  * floor  ⇔  t > write_start + delivered / floor. */
@@ -733,10 +798,16 @@ static bool key48_of(const struct sockaddr_storage *da, unsigned char p48[6])
 
 /* One line, at most every PAGE_REFUSAL_LOG_MS, with what was refused or
  * closed since the last one. */
+static bool refusals_pending(const page *p)
+{
+	return p->refused_address || p->refused_48 || p->refused_full ||
+	       p->evicted || p->evicted_writing || p->expired_request ||
+	       p->expired_response || p->lines_unwritten;
+}
+
 static void refusals_report(page *p, uint64_t now)
 {
-	if (!p->refused_address && !p->refused_48 && !p->refused_full && !p->evicted &&
-	    !p->evicted_slow && !p->expired_request && !p->expired_response)
+	if (!refusals_pending(p))
 		return;
 	if (p->refused_ever && now - p->refused_line_ms < PAGE_REFUSAL_LOG_MS)
 		return;
@@ -744,25 +815,113 @@ static void refusals_report(page *p, uint64_t now)
 	              "⚠ PAGE LISTENER UNDER PRESSURE%s: %u closed for not sending a "
 	              "whole request within %u s; %u closed for not taking the "
 	              "response (nothing for %u s, or under %u B/s after %u s); "
-	              "EVICTED to make room, %d slots full: %u without a request, "
-	              "%u slow readers; REFUSED: %u over %d at once from one "
-	              "address, %u over %d from one IPv6 /48, %u full with nobody "
-	              "to evict (all writing, none both %u s old and under %u B/s); "
-	              "the last refused from %s",
+	              "EVICTED to make room, %d slots full, from the most crowded "
+	              "address or /48: %u without a request, %u writing for %u s or "
+	              "more; REFUSED: %u over %d at once from one address, %u over %d "
+	              "from one IPv6 /48, %u full with no group as large as the "
+	              "newcomer's would be; %u request lines not written (over %d per %u s "
+	              "from one address); the last refused from %s",
 	              p->refused_ever ? " in the last seconds" : "",
 	              p->expired_request, PAGE_REQUEST_MS / 1000u,
 	              p->expired_response, PAGE_STALL_MS / 1000u, PAGE_RATE_FLOOR,
 	              PAGE_RATE_GRACE_MS / 1000u, MAX_CLIENTS, p->evicted,
-	              p->evicted_slow, p->refused_address, PAGE_PER_ADDRESS,
-	              p->refused_48, PAGE_PER_48, p->refused_full,
-	              PAGE_EVICT_AGE_MS / 1000u, PAGE_EVICT_RATE,
+	              p->evicted_writing, PAGE_EVICT_AGE_MS / 1000u,
+	              p->refused_address, PAGE_PER_ADDRESS, p->refused_48,
+	              PAGE_PER_48, p->refused_full, p->lines_unwritten,
+	              PAGE_LINES_PER_ADDRESS, PAGE_LINES_WINDOW_MS / 1000u,
 	              p->refused_last[0] ? p->refused_last : "-");
 	p->refused_address = p->refused_48 = p->refused_full = 0;
-	p->evicted = p->evicted_slow = 0;
+	p->evicted = p->evicted_writing = p->lines_unwritten = 0;
 	p->expired_request = p->expired_response = 0;
 	p->refused_last[0] = 0;
 	p->refused_ever = true;
 	p->refused_line_ms = now;
+}
+
+/* The fair-share group: the /48 for a real IPv6 peer, the address otherwise. */
+static bool same_group(const client *a, bool has48, const unsigned char *p48,
+                       const char *key)
+{
+	if (has48 || a->has48)
+		return has48 && a->has48 && memcmp(a->p48, p48, 6) == 0;
+	return strcmp(a->key, key) == 0;
+}
+
+static unsigned group_size(const page *p, bool has48, const unsigned char *p48,
+                           const char *key)
+{
+	unsigned n = 0;
+	for (size_t i = 0; i < MAX_CLIENTS; i++)
+		if (client_active(&p->clients[i]) &&
+		    same_group(&p->clients[i], has48, p48, key))
+			n++;
+	return n;
+}
+
+static uint64_t next_random(page *p)
+{
+	p->rng ^= p->rng << 13;
+	p->rng ^= p->rng >> 7;
+	p->rng ^= p->rng << 17;
+	return p->rng;
+}
+
+/* ⛔ The fair-share victim when the table is full (see the top of the file),
+ *    or NULL = refuse the newcomer.  `mine` = the newcomer's group size.
+ *
+ *  · The victim comes from the group holding the most live slots (`best`),
+ *    at random among its candidates.
+ *  · ⛔ When every group holds ONE (`best` == 1), the OLDEST candidate goes
+ *    (pre-request first, then the writer longest in): refusing there would
+ *    be a cheap lockout — one slot per address from as many addresses as
+ *    slots, renewed within the 10 s request deadline, costs a few connects
+ *    a second and would refuse every new address.  FIFO gives a real client
+ *    MAX_CLIENTS - 1 arrivals of margin.
+ *  · The newcomer is refused only when its own group would then hold MORE
+ *    than the victim's (`mine + 1 > best`): an attacker can only push out
+ *    slots of groups at least as crowded as his own would be. */
+static client *fair_victim(page *p, unsigned mine, uint64_t now)
+{
+	unsigned best = 0, ties = 0;
+	client *v = NULL;
+	for (size_t i = 0; i < MAX_CLIENTS; i++) {
+		client *x = &p->clients[i];
+		unsigned g;
+		if (!client_active(x))
+			continue;
+		if (x->phase == F_WRITE && now - x->write_start < PAGE_EVICT_AGE_MS)
+			continue;
+		g = group_size(p, x->has48, x->p48, x->key);
+		if (g < best)
+			continue;
+		if (g > best) {
+			best = g;
+			ties = 0;
+		}
+		/* Reservoir sampling: each of the `ties` equals has the same chance. */
+		if (next_random(p) % ++ties == 0)
+			v = x;
+	}
+	if (!v || mine + 1 > best)
+		return NULL;
+	if (best == 1) {
+		client *old = NULL;
+		for (size_t i = 0; i < MAX_CLIENTS; i++) {
+			client *x = &p->clients[i];
+			if (!client_active(x))
+				continue;
+			if (x->phase != F_WRITE) {
+				if (!old || old->phase == F_WRITE || x->born < old->born)
+					old = x;
+			} else if (now - x->write_start >= PAGE_EVICT_AGE_MS &&
+			           (!old || (old->phase == F_WRITE &&
+			                     x->write_start < old->write_start))) {
+				old = x;
+			}
+		}
+		v = old;
+	}
+	return v;
 }
 
 static void accept_page(page *p)
@@ -772,11 +931,11 @@ static void accept_page(page *p)
 	 *   the whole loop — QUIC, the children, PAM — inside this function.
 	 *   What is left stays in the backlog, and the `poll` (level-triggered)
 	 *   calls again at the next pass. */
-	for (int round = 0; round < MAX_CLIENTS; round++) {
+	for (int round = 0; round < PAGE_ACCEPTS_PER_CALL; round++) {
 		struct sockaddr_storage da;
 		socklen_t dalen = sizeof da;
 		int fd, same = 0, same48 = 0;
-		client *c = NULL, *oldest = NULL, *slow = NULL;
+		client *c = NULL;
 		uint64_t now;
 		unsigned char p48[6];
 		bool has48;
@@ -811,17 +970,6 @@ static void accept_page(page *p)
 				same++;
 			if (has48 && x->has48 && memcmp(x->p48, p48, 6) == 0)
 				same48++;
-			if (x->phase != F_WRITE) {
-				if (!oldest || x->born < oldest->born)
-					oldest = x;
-				continue;
-			}
-			sample(x, now);
-			if (now - x->write_start >= PAGE_EVICT_AGE_MS &&
-			    x->delivered * 1000u <
-			            (uint64_t)PAGE_EVICT_RATE * (now - x->write_start) &&
-			    (!slow || bytes_left(x) > bytes_left(slow)))
-				slow = x;
 		}
 		/* ⛔ The per-address cap BEFORE the eviction: a crowded address
 		 *    must not be able to push out somebody else's slot. */
@@ -842,36 +990,42 @@ static void accept_page(page *p)
 			refusals_report(p, now);
 			continue;
 		}
-		if (!c && oldest) {
-			log_detail(LOG_PAGE,
-			           "all %d TCP slots taken: %s, without a whole request "
-			           "for %llu ms, is closed to make room for %s",
-			           MAX_CLIENTS, oldest->provenance,
-			           (unsigned long long)(now - oldest->born), provenance);
-			client_close(oldest);
-			p->evicted++;
-			c = oldest;
-		} else if (!c && slow) {
-			log_detail(LOG_PAGE,
-			           "all %d TCP slots taken: %s, %llu of %zu bytes received "
-			           "in %llu ms, is closed to make room for %s",
-			           MAX_CLIENTS, slow->provenance,
-			           (unsigned long long)slow->delivered,
-			           slow->nresponse,
-			           (unsigned long long)(now - slow->write_start),
-			           provenance);
-			client_close(slow);
-			p->evicted_slow++;
-			c = slow;
+		if (!c) {
+			client *v = fair_victim(p, group_size(p, has48, p48, key), now);
+			if (v) {
+				if (v->phase == F_WRITE) {
+					sample(v, now);
+					log_detail(LOG_PAGE,
+					           "all %d TCP slots taken: %s, from the most "
+					           "crowded group, %llu of %zu bytes received in "
+					           "%llu ms, is closed to make room for %s",
+					           MAX_CLIENTS, v->provenance,
+					           (unsigned long long)v->delivered, v->nresponse,
+					           (unsigned long long)(now - v->write_start),
+					           provenance);
+					p->evicted_writing++;
+				} else {
+					log_detail(LOG_PAGE,
+					           "all %d TCP slots taken: %s, from the most "
+					           "crowded group, without a whole request for "
+					           "%llu ms, is closed to make room for %s",
+					           MAX_CLIENTS, v->provenance,
+					           (unsigned long long)(now - v->born),
+					           provenance);
+					p->evicted++;
+				}
+				client_abort(v);
+				c = v;
+			}
 		}
 		if (!c) {
 			/* ⛔ It is said — but in the summary line, not one line per
 			 *    refusal: a silent refusal would look like a dead server
 			 *    (`LESSONS.md` §1.9), and a line per refusal would let
 			 *    whoever is refused write the log at will.
-			 * ⚠ Only reached when all 32 are WRITING a response and none
-			 *   is both older than PAGE_EVICT_AGE_MS and slower than
-			 *   PAGE_EVICT_RATE: a few seconds at most of real traffic. */
+			 * ⚠ Reached when the newcomer's group would become larger than
+			 *   any other (or all the others are writing for less than
+			 *   PAGE_EVICT_AGE_MS). */
 			p->refused_full++;
 			snprintf(p->refused_last, sizeof p->refused_last, "%s", key);
 			close(fd);
@@ -929,7 +1083,7 @@ void page_expired(page *p, uint64_t now)
 			p->expired_response++;
 		else
 			p->expired_request++;
-		client_close(c);
+		client_abort(c);
 	}
 	refusals_report(p, now);
 }
@@ -943,8 +1097,7 @@ int page_wait_ms(const page *p, uint64_t now)
 		if (client_active(c) && client_deadline(c) < before)
 			before = client_deadline(c);
 	}
-	if ((p->refused_address || p->refused_48 || p->refused_full || p->evicted ||
-	     p->evicted_slow || p->expired_request || p->expired_response) &&
+	if (refusals_pending(p) &&
 	    p->refused_line_ms + PAGE_REFUSAL_LOG_MS < before)
 		before = p->refused_line_ms + PAGE_REFUSAL_LOG_MS;
 	if (before == UINT64_MAX)
@@ -1017,6 +1170,8 @@ page *page_open(const char *address, const char *port, SSL_CTX *ctx,
 	p->fd = fd;
 	p->ctx = ctx;
 	p->cert = cert;
+	if (RAND_bytes((unsigned char *)&p->rng, sizeof p->rng) != 1 || !p->rng)
+		p->rng = log_now_ms() | 1u;
 	for (size_t i = 0; i < MAX_CLIENTS; i++) {
 		p->clients[i].fd = -1;
 		p->clients[i].phase = F_DONE;
