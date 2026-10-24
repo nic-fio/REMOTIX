@@ -7839,6 +7839,22 @@ static int open_session(wt *w, request *r)
 	nghttp3_data_reader dr;
 	int rv;
 
+	/* ⛔ 24 Oct 2026, audit nghttp3 1.18 (the same since 1.0): ONE session per connection.  A
+	 *    second CONNECT+webtransport while `w->session` is set used to open
+	 *    another one: `w->session` was overwritten (the first session's
+	 *    capsules were no longer recognised and never confirmed), and
+	 *    `channel_deadline` was re-armed, so the 5 s cap of §4.6 could be
+	 *    renewed for ever.  It is refused as every other unwanted request is
+	 *    (`bare_response`, a 4xx that ends the stream) and the first session
+	 *    and the deadline are not touched. */
+	if (w->session != -1) {
+		log_says_of(REG_WT, wt_chi(w),
+		                 "⛔ second WebTransport session REFUSED on stream %ld "
+		                 "(the session is %ld): 429",
+		                 (long)r->id, (long)w->session);
+		return bare_response(w, r->id, "429");
+	}
+
 	/* ⛔ `RCP.md` §2.2: the server MUST NOT accept a WebTransport
 	 *    session on a different path, and the refusal is 404 (finding
 	 *    R1.24, which chose one of the three statuses that were all lawful).  And
