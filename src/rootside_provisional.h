@@ -12,7 +12,9 @@
 #ifndef REMOTIX_ROOTSIDE_PROVISIONAL_H
 #define REMOTIX_ROOTSIDE_PROVISIONAL_H
 
-#include "rootside_proto.h"
+/* (the original includes rootside_proto.h; only an opaque pointer to its struct is used here, so the
+ * stand-in compiles on its own — the real rootside.h, when it exists, brings the wire header) */
+struct rxr_ready;
 
 #include <stdbool.h>
 #include <stddef.h>
