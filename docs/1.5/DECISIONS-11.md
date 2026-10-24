@@ -2,6 +2,21 @@
 
 > Reference only: the decisions and the list of 1.5 points. The code they mention is NOT in this repository.
 
+## 0. ⚠ READ FIRST — this file comes from the abandoned attempt (status of 24 Oct 2026)
+
+This file was copied from the discarded first attempt (tag `1.5-scartata`) and then extended. The review of 24 Oct 2026 found
+that it cites **117 commit hashes that are not in this tree** (`git cat-file -e` fails), and that many items marked ✅ / DONE
+describe code that exists only in the abandoned attempt. Every such entry now carries a line starting with «⚠ NOT in this
+tree». Two kinds:
+- **«NOT in this tree (abandoned attempt, commit …); being ported on port-pagina / port-rcp»** — the seven urgent ones: §11.4
+  (no more `terminate-user`), §11.29 LXQt repair, §11.39 `0x0E`, §11.43 the 30-minute clock, §11.44 the page's TCP listener,
+  §11.48 the 320×240 probe, and the rpm `%ghost` of §11.33;
+- **«NOT in this tree; still to port»** — §11.32 `PACE`, §11.36 Firefox worker, §11.37 / §11.38 render nodes, §11.45 encoder
+  padding, §11.47 `refusal_uncounted`, §11.50 (the whole root-side split), and in §11.33 the KDE «unchanged» filter, the nested
+  KWin size, the `remotix-capture` name and the key receipts.
+What IS in the code is listed in `CHANGES-1.5.md` and in §11.6, §11.9, §11.29 (migration part), §11.40, §11.41, §11.51-§11.53.
+An entry without the marker may still cite hashes of the discarded attempt; read the hash against `git log` before trusting it.
+
 ## 11. ✅ From 1.0 to 1.5: the review of two external documents — 12 Oct 2026
 
 The user's word: *«prima del masterplan ho trovato del lavoro da fare per portare remotix dalla versione 1.0 alla
@@ -37,6 +52,8 @@ not apply (the user is the Author). What follows is what the user decided on eac
   warning. An administrator can already drop a real certificate in `/var/lib/remotix/certificates` (§1.7).
 
 ### 11.4 ✅ The first enrolment in the card groups must stop closing the user's other sessions
+
+> ⚠ NOT in this tree (abandoned attempt, commit none recorded: the enrolment code of the first attempt («`loginctl terminate-user` is gone», `src/render_grant.c`) — here `terminate-user` is still in `enroll_in_card_groups()`); being ported on port-pagina / port-rcp
 
 - **The ruling** (verbatim): *«Il punto 2 mi sembra che vada contro le specifiche del progetto. Un utente puo' avere
   contemporaneamente un a sessione locale/remota testuale e un a sessione grafica remota»*; and *«e' quello su cui
@@ -544,6 +561,7 @@ The «before a release» level of §11.24, release under test `remotix-1.4.99-2.
   - §11.9: the Retry token is handed to ngtcp2 after our Retry (no 3× limit after validation, no silent drop of a
     reordered ClientHello); a timer error other than idle closes with one CONNECTION_CLOSE (§8.1).
   - `[M]` 14 Oct, fuzz quic and quic-conn 5 min × 2 jobs clean, the grafted fault seen.
+- ⚠ NOT in this tree (abandoned attempt, commit `8124e05c`, `4c79c59c` — the LXQt trace repair); being ported on port-pagina / port-rcp
 - **LXQt black desktop after a reboot** (`8124e05c`, `src/session.c`): `[M]` T10 debian13-lxqt reboot FAIL 3/3
   with 1.0.0-1. At shutdown pcmanfm-qt dies while saving (the compositor is gone first) and leaves an empty
   `~/.config/pcmanfm-qt/lxqt/`; pcmanfm-qt 2.1.0 then skips the system profile and every later session is black.
@@ -588,6 +606,8 @@ The «before a release» level of §11.24, release under test `remotix-1.4.99-2.
   code, not yet run). **To do:** one run of the bench on a Firefox box (`15-d006-measure.py`, F-013).
 
 ### 11.32 ✅ The client tells the server its decoder is behind (`PACE`) — A, measured: ON by default (15–16 Oct 2026)
+
+> ⚠ NOT in this tree; still to port: `738505ff` (server) and `d0e1fe07` (page), the `PACE` message
 
 - `[M]` Firefox at 4K: decoder queue ≥ 5 for 80 % of the frames, decode delay median 1.35 s, while the server
   keeps sending at the full rate — nothing it can see is wrong. The page measures the queue and tells nobody.
@@ -659,6 +679,7 @@ item below unless its line says otherwise. Release notes: `docs/RELEASE-NOTES-1.
     `[T]` quic-conn fuzz, two new oracles, two grafts caught. ⚠ Not verified on a machine with several
     addresses.
 - **Picture (KDE)**
+  - ⚠ NOT in this tree; still to port: the KDE «unchanged» filter (`1849a57d`, `ac6d5e91`, `845f4d19`, `751af3cb`)
   - `1849a57d` + `ac6d5e91` + `845f4d19` + `751af3cb` — the «unchanged» filter: a KWin frame whose damaged
     rectangles hold the same bytes as the last frame out is not encoded. Guards: area ≤ ¼ of 4K, one frame out
     every 250 ms anyway, bypass while a keyframe is due, self switch-off if a look costs > 3 ms on average
@@ -667,15 +688,18 @@ item below unless its line says otherwise. Release notes: `docs/RELEASE-NOTES-1.
     per episode — `UcStaleGate`). `[M]` the problem: KDE/Firefox 3776×2016, ~50 buffers/s for 5 real changes,
     ~45 the same picture. `[T]` the decisions: `benches/20-unchanged-test.c` (`make -C src bench-unchanged`,
     also ASan/UBSan). ⚠ The cure is not measured: F-003 on KDE/Firefox 4K to rerun.
+  - ⚠ NOT in this tree; still to port: `6da80736`, nested KWin size
   - `6da80736` — KWin nested: KWin's output came up 1280×720 (labwc's own size) at the first mount; the wanted
     size is now written next to labwc's socket (`<host folder>/wanted`) and settle insists on it; `93f9a22b`:
     it is written only once labwc has taken it (birth excepted), and a KWin with no output yet is waited
     for, not nudged («KWin has announced no output after N s»). `[M]` the
     problem: run `functional/20261014-223248` (F-018b/c) and two births in the rete11-kde journal. ⚠ The cure
     is not verified.
+- ⚠ NOT in this tree; still to port: `fa316d71`, the `remotix-capture` stream name
 - **Sound** — `fa316d71`: the capture stream is named `remotix-capture` (`PW_KEY_NODE_NAME`), so
   `target.object` «remotix» names only the sink. `[M]` the problem: F-013 xfce/Firefox run `20261015-063747`,
   pw-dump shows the capture linked to itself, digital silence. ⚠ The cure is not verified.
+- ⚠ NOT in this tree; still to port: `247d4bd0`, `0153ad88`, `cbc1cb8b`, `790856bf`, the key receipts
 - **Input (KDE lost keys)** — `247d4bd0` + `0153ad88` + `cbc1cb8b` + `790856bf`: a receipt from the compositor for every key
   (`ei_ping`; built only with libei ≥ 1.3.901), `DEVICE_PAUSED` written. Privacy (§9.2): the always-on log gets
   **one line per 10 s, only if something was slow**, with **no counts** (`790856bf`: a period starts at the
@@ -686,6 +710,7 @@ item below unless its line says otherwise. Release notes: `docs/RELEASE-NOTES-1.
 - **LXQt** — `4c79c59c`: the orphan pcmanfm-qt profile cure (§11.29) uses `g_lstat` and no longer follows a
   symlink out of HOME; a `settings.conf` link counts as the user's file. `[T]` `benches/21-session-orphan-test.c`
   (`ac82c60d`, `make -C src test-session`) 28/28 on the test server's build container (8124e05c's body 24/28).
+- ⚠ NOT in this tree (abandoned attempt, commit `ee0a692e` — `quic-secret` as `%ghost` in the rpm spec); being ported on port-pagina / port-rcp
 - **Packaging** — `ee0a692e`: `certificates/quic-secret` is `%ghost` in `remotix.spec`, so `uninstall --purge`
   on Fedora/AlmaLinux/openSUSE removes it and `/var/lib/remotix`; T10 now excuses only the engine's history.
   ⚠ Not yet seen on an rpm box.
@@ -707,8 +732,8 @@ item below unless its line says otherwise. Release notes: `docs/RELEASE-NOTES-1.
   3. whether to raise `InhibitDelayMaxSec` in the logind belt the engine installs (`remotix-power-keys.conf`),
      and to what (e.g. 15 s: every reboot may take up to that much longer, for every holder of a delay lock).
 - ✅ **Decided 15 Oct 2026, decisione dell'utente** (*«fai quello che c'è da fare»*: the proposal's own timing,
-  «after the release»). ⇒ **Postponed until after 1.5**: nothing is built for 1.5.0; it ships the trace repair
-  (`8124e05c`, `4c79c59c`) and keeps the Known issue. The three questions above are asked again after the release.
+  «after the release»). ⇒ **Postponed until after 1.5**: nothing is built for 1.5.0; the trace repair
+  (`8124e05c`, `4c79c59c`) was in the abandoned attempt and is **NOT in this tree** (still to port); the Known issue stays. The three questions above are asked again after the release.
 
 ### 11.35 ✅ The installer's preflight does not check that systemd-logind runs (15 Oct 2026)
 
@@ -720,6 +745,8 @@ item below unless its line says otherwise. Release notes: `docs/RELEASE-NOTES-1.
   no new check; the bench keeps unmasking logind in its AlmaLinux box images (`22242b33`).
 
 ### 11.36 ✅ Firefox at 4K with video: what to change (15 Oct 2026) — DECIDED D
+
+> ⚠ NOT in this tree; still to port: `728acd22`, the Firefox worker default
 
 - `[M]` §11.31: the page's main thread stalls 55–64 % of the time (gaps in the sound); §11.32: the decoder queue
   ≥ 5 for 80 % of the frames, decode delay median 1.35 s, the picture 1.4 s old or more. Chrome is fine.
@@ -810,6 +837,8 @@ item below unless its line says otherwise. Release notes: `docs/RELEASE-NOTES-1.
 
 ### 11.37 🔸 The encoder follows the compositor's card (15 Oct 2026) — built, not yet run on a two-card box
 
+> ⚠ NOT in this tree; still to port: `bc3158bf`, `facc4daa`, the per-card codec test and the render node of the compositor's card
+
 - `[R]` SPECS audit: the encoder opened `/dev/dri/renderD128` hard-wired (`RENDER_NODE`, `src/child.c`). With
   two cards (the test server: Intel UHD 770 + AMD RX 6800) that is the kernel's first card, not necessarily
   the one the compositor draws on — every frame becomes a cross-card import (fails, or slow).
@@ -845,6 +874,8 @@ item below unless its line says otherwise. Release notes: `docs/RELEASE-NOTES-1.
     codec and depth — only on two-card machines whose session and startup cards differ.
 
 ### 11.38 🔸 First-login enrolment: only the render nodes' group (15 Oct 2026) — built, not yet run on the boxes
+
+> ⚠ NOT in this tree; still to port: the first-login enrolment of the render nodes' group only (here `enroll_in_card_groups()` is the 1.0 one)
 
 - **The evidence** (closes §10.36's «only `render`, once tested on the four desktops»): §11.4, `[M]` 13 Oct 2026 —
   the four boxes (Intel card), GNOME, KDE, XFCE, LXQt, users enrolled before the manager is born: gnome-shell, kwin,
@@ -885,6 +916,8 @@ item below unless its line says otherwise. Release notes: `docs/RELEASE-NOTES-1.
   green); `17-t10.sh` compares the groups before installation and after uninstallation, unchanged.
 
 ### 11.39 ✅ When the server could not check the password, the page no longer says «wrong password»: `0x0E` (15 Oct 2026)
+
+> ⚠ NOT in this tree (abandoned attempt, commit `24f99518` — the `0x0E SESSION_UNSERVABLE` refusal); being ported on port-pagina / port-rcp
 
 - **The problem, in plain words.** Sometimes the server cannot check a password at all: the helper process that
   asks PAM has died or is restarting (`c7e86ead`), PAM hangs and the 12 s net gives up (`VERDICT_CAP`,
@@ -1181,6 +1214,8 @@ item below unless its line says otherwise. Release notes: `docs/RELEASE-NOTES-1.
 
 ### 11.43 ✅ Someone who only watches is detached after 30 minutes — keep it, or give the page a «still here» (15 Oct 2026) — DECIDED A
 
+> ⚠ NOT in this tree (abandoned attempt, commit `496b6dbd` — the 30-minute watcher clock); being ported on port-pagina / port-rcp
+
 > **Decision (user, 15 Oct 2026): A, keep it as specified.** «la password serve sempre, più che altro una sessione rimasta aperta consuma risorse»: asking for the password again is expected, and the point of the clocks is to free the resources of a session nobody uses. No «still here» signal, no grace after a reconnection (a reconnection past 30 minutes simply asks for the password). The 30- and 60-minute clocks stay as in 496b6dbd/24f99518.
 
 - **The problem, in plain words.** Since `496b6dbd` (bench twin and test) and `24f99518` (the same `rcp.c` blob in
@@ -1254,6 +1289,8 @@ item below unless its line says otherwise. Release notes: `docs/RELEASE-NOTES-1.
     trade-offs change — a sign-in every 30 minutes would cost more, and a desktop lock would protect more.
 
 ### 11.44 🔸 The page's TCP listener: deadlines and a per-address cap (15 Oct 2026) — built, not yet on the boxes
+
+> ⚠ NOT in this tree (abandoned attempt, commit `3ed5091f` — the page's TCP listener, deadlines and per-address cap); being ported on port-pagina / port-rcp
 
 - **The defect** (pre-login denial of service): `src/page.c` has 32 client slots and freed one only on activity
   of its socket — no deadline, no idle timeout, no keepalive, no per-address limit. 32 TCP connections that send
@@ -1335,6 +1372,8 @@ item below unless its line says otherwise. Release notes: `docs/RELEASE-NOTES-1.
   `RAND_bytes`.
 
 ### 11.45 ✅ The encoder's padding on AMD: edge copies, or the encoder's own colour conversion (15 Oct 2026) — decided: A
+
+> ⚠ NOT in this tree; still to port: `ceaf026f`, the encoder's zero-copy conversion on the GPU (`convert_on_gpu()`)
 
 - **What padding is, in plain words.** The card encodes a picture a little bigger than the screen: the width and
   height are rounded up (H.264: to 16; HEVC on AMD: to 64 wide and 16 high). A 1080-row screen is encoded with
@@ -1419,6 +1458,8 @@ item below unless its line says otherwise. Release notes: `docs/RELEASE-NOTES-1.
   its text).
 
 ### 11.47 ✅ A stranger locks the account with `pam_faillock`, and then the owner bans themselves (15 Oct 2026) — DECIDED B
+
+> ⚠ NOT in this tree; still to port: `rcp.c` `refusal_uncounted()`
 
 *15 Oct 2026, from the holistic security review. Established by reading the code and `pam_faillock`'s documented
 behaviour (`pam_faillock(8)`, `faillock.conf(5)`); ⚠ **not run live** — `[?]` until a bench measures it.*
@@ -1521,6 +1562,8 @@ behaviour (`pam_faillock(8)`, `faillock.conf(5)`); ⚠ **not run live** — `[?]
 
 ### 11.48 ✅ The stress bench's client browsers do not share the boxes' card (16 Oct 2026) — DECIDED B
 
+> ⚠ NOT in this tree (abandoned attempt, commit `4cfdd4a8` — the page probe that retries at 320×240); being ported on port-pagina / port-rcp
+
 - **The problem, in plain words.** The stress bench runs the fake users' browsers (Firefox, Chrome) and their small
   desktop (labwc) on the test server itself. Since `fd8ada94` (15 Oct) they were pinned to the **Intel** card — the
   same card the boxes use to draw their desktops and for REMOTIX's capture and encoding. `[M]` Night run
@@ -1593,6 +1636,8 @@ behaviour (`pam_faillock(8)`, `faillock.conf(5)`); ⚠ **not run live** — `[?]
   kde level-01 is GREEN on memory (its repeat stays FAIL for the lost key, the known KWin defect).
 
 ### 11.50 ✅ §11.11: the shape of the split, the closed list, and the user's choices (16 Oct 2026)
+
+> ⚠ NOT in this tree; still to port: the whole section — no root side / network side split exists in this code
 
 - **The user's rulings** (16 Oct 2026, to the questions put after the inventory of the root operations — seven
   reports, one per area: network side, PAM, desktop birth, the per-session child, cards and input, packaging,

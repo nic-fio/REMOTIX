@@ -99,5 +99,10 @@ Found on 24 Oct 2026 by the fuzz harnesses and by reading the ngtcp2 1.25 / nght
 - **Live checks due**: Stateless Reset with real Chrome and Firefox (§11.9); caps 16/4/8 with 01-b10, 3 runs of 9 (§11.40); migration on a
   real network change (§11.29); F-014E on the integrated branch (KDE box); `pacing-ab --dopo integrazione` (the +1 ms RTT cured by `ppoll`); the login ban on the boxes (§11.53); the 30-minute fuzz on the integrated branch
   and the stream-churn bench (§11.52).
+- **Not in this tree (abandoned attempt; see «READ FIRST» at the top of `docs/1.5/DECISIONS-11.md`)** — being ported on `port-pagina` /
+  `port-rcp`: §11.4 (the 1.0 `terminate-user` is still there), §11.29 LXQt repair, §11.39 `0x0E`, §11.43 30-minute clock,
+  §11.44 page TCP listener, §11.48 320×240 probe, rpm `%ghost` of `quic-secret`. **Still to port**: §11.32 `PACE`, §11.36 Firefox
+  worker, §11.37 and §11.38 render nodes, §11.45 encoder padding, §11.47 `refusal_uncounted`, §11.50 root-side split, and from
+  §11.33 the KDE «unchanged» filter, nested KWin size, `remotix-capture` name, key receipts.
 - **Declared limits**: Retry and INVALID_TOKEN have no per-second cap (CPU only, §11.9); `handshake_timeout` stays at ngtcp2's default
   (§11.52); a live IPv6 test with a real provider is not possible on the test server (unit tests and 01-b10 in a namespace, §1.9-bis note).
