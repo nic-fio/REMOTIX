@@ -2651,6 +2651,12 @@ int main(int argc, char **argv)
 		                           MAX_POLL - n - npage - ncommand - nhelp);
 
 		wait_ns = transport_wait_ns(t);
+		/* ⛔ The page listener's deadlines wake the loop too (15 Oct 2026). */
+		{
+			int wp = page_wait_ms(p, log_now_ms());
+			if (wp >= 0 && (wait_ns < 0 || (long long)wp * 1000000LL < wait_ns))
+				wait_ns = (long long)wp * 1000000LL;
+		}
 		if (wait_ns < 0 || wait_ns > 1000000000LL)
 			wait_ns = 1000000000LL;
 		/* ⛔ With the test tone on the loop wakes up every 10 ms, because the
@@ -2720,6 +2726,9 @@ int main(int argc, char **argv)
 		children_recheck(offspring, t_now);
 		transport_expired(t);
 		page_move(p, fds + 1, npage);
+		/* ⛔ ALWAYS, readable or not: the client that sends nothing is
+		 *    precisely the one this expiry is for (15 Oct 2026). */
+		page_expired(p, log_now_ms());
 		command_move(k, fds + 1 + npage, ncommand);
 
 		/* ⛔ THE ROTATION, and it is checked once a minute instead of at every

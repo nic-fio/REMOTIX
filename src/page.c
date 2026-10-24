@@ -19,6 +19,41 @@
 #include <openssl/err.h>
 
 #define MAX_CLIENTS 32
+/* ⛔⭐ THE TCP LISTENER'S CLOCKS AND CAPS — 15 Oct 2026, a pre-login denial
+ *     of service.  Before these lines a slot was freed ONLY by activity on its
+ *     socket: 32 TCP connections that send nothing took all 32 slots for ever,
+ *     and nobody could load the login page any more.  ⇒ Every client now has a
+ *     birth time and two deadlines, and `page_expired()` is called by the main
+ *     loop at every pass (like `transport_expired()`), activity or not.
+ *
+ *   · PAGE_REQUEST_MS — from accept to a WHOLE request (TLS handshake + the
+ *     request headers).  A browser needs well under a second; 10 s leaves room
+ *     for a phone on a bad line and for the certificate-warning case, which
+ *     fails the handshake at once anyway.
+ *   · PAGE_TOTAL_MS — from accept to the last byte of the response.  ⚠ Sized
+ *     on the LARGEST response, which is the page itself: `page.html` is
+ *     ~907 KB (15 Oct 2026; the ban notice and the fingerprint add < 1 KB).  At
+ *     60 s that needs ~15 KB/s (~120 kbit/s), a 2G-class line; 30 s would
+ *     have needed ~240 kbit/s and cut a slow phone mid-page.
+ *   · PAGE_PER_ADDRESS — at most this many connections at once from one
+ *     address, keyed by `rcp_key_address()` (IPv4 per address, IPv6 per /64):
+ *     one machine can no longer take every slot.  A page load needs one
+ *     connection at a time (`Connection: close`, one GET plus `/fingerprint`);
+ *     4 leaves room for a browser's speculative preconnects and a few devices
+ *     behind one NAT.
+ *   · And when all slots are taken, the OLDEST client that has not yet sent a
+ *     whole request is closed to make room (as `transport.c` evicts a login
+ *     not yet begun): many addresses together cannot lock the page out either,
+ *     only make it slower.
+ *
+ * ⛔ The ban is NOT checked at accept: §4.4-bis wants the banned address to
+ *    SEE the page and the sentence «attempts exhausted» — a refusal at accept
+ *    would be exactly the silence it forbids. */
+#define PAGE_REQUEST_MS 10000u
+#define PAGE_TOTAL_MS 60000u
+#define PAGE_PER_ADDRESS 4
+/* One summary line, at most every this many ms (as transport.c's pressure line). */
+#define PAGE_REFUSAL_LOG_MS 10000u
 #define MAX_REQUEST 8192
 
 /* ⛔ THE TWO CROSS-ORIGIN ISOLATION HEADERS, PLUS THE THIRD THEY IMPLY.
@@ -106,6 +141,10 @@ typedef struct {
 	char *response;
 	size_t nresponse, oresponse;
 	char provenance[80];
+	/* `rcp_key_address(provenance)`: what PAGE_PER_ADDRESS counts. */
+	char key[64];
+	/* `log_now_ms()` at accept: the clock of both deadlines. */
+	uint64_t born;
 	/* ⚠ Which event OpenSSL is waiting for: without this the wrong event is
 	 *   watched and the connection stays stuck until something else
 	 *   expires. */
@@ -119,6 +158,11 @@ struct page {
 	char *html;
 	size_t nhtml;
 	client clients[MAX_CLIENTS];
+	/* What was refused or closed since the last summary line. */
+	unsigned refused_address, evicted, expired_request, expired_response;
+	char refused_last[64];
+	bool refused_ever;
+	uint64_t refused_line_ms;
 };
 
 /* ------------------------------------------------------------------------ */
@@ -577,14 +621,53 @@ size_t page_descriptors(page *p, struct pollfd *dove, size_t cap)
 	return n;
 }
 
+static bool client_active(const client *c)
+{
+	return c->phase != F_DONE && c->fd >= 0;
+}
+
+/* The moment `c` is closed by `page_expired()`. */
+static uint64_t client_deadline(const client *c)
+{
+	return c->born + (c->phase == F_WRITE ? PAGE_TOTAL_MS : PAGE_REQUEST_MS);
+}
+
+/* One line, at most every PAGE_REFUSAL_LOG_MS, with what was refused or
+ * closed since the last one. */
+static void refusals_report(page *p, uint64_t now)
+{
+	if (!p->refused_address && !p->evicted && !p->expired_request &&
+	    !p->expired_response)
+		return;
+	if (p->refused_ever && now - p->refused_line_ms < PAGE_REFUSAL_LOG_MS)
+		return;
+	registro_dice(LOG_PAGE,
+	              "⚠ PAGE LISTENER UNDER PRESSURE%s: %u closed for not sending a "
+	              "whole request within %u s; %u closed for not taking the "
+	              "response within %u s; %u EVICTED to make room (the oldest "
+	              "without a request, %d slots full); REFUSED: %u over %d at once "
+	              "from one address; the last refused from %s",
+	              p->refused_ever ? " in the last seconds" : "",
+	              p->expired_request, PAGE_REQUEST_MS / 1000u,
+	              p->expired_response, PAGE_TOTAL_MS / 1000u, p->evicted,
+	              MAX_CLIENTS, p->refused_address, PAGE_PER_ADDRESS,
+	              p->refused_last[0] ? p->refused_last : "-");
+	p->refused_address = p->evicted = 0;
+	p->expired_request = p->expired_response = 0;
+	p->refused_last[0] = 0;
+	p->refused_ever = true;
+	p->refused_line_ms = now;
+}
+
 static void accept_page(page *p)
 {
 	for (;;) {
 		struct sockaddr_storage da;
 		socklen_t dalen = sizeof da;
-		int fd;
-		client *c = NULL;
+		int fd, same = 0;
+		client *c = NULL, *oldest = NULL;
 		char host[NI_MAXHOST], serv[NI_MAXSERV];
+		char provenance[80], key[64];
 
 		fd = accept4(p->fd, (struct sockaddr *)&da, &dalen, SOCK_NONBLOCK);
 		if (fd < 0) {
@@ -592,30 +675,65 @@ static void accept_page(page *p)
 				registro_dice(LOG_PAGE, "accept: %s", strerror(errno));
 			return;
 		}
-		for (size_t i = 0; i < MAX_CLIENTS; i++)
-			if (p->clients[i].phase == F_DONE && p->clients[i].fd < 0) {
-				c = &p->clients[i];
-				break;
-			}
-		if (!c) {
-			/* ⛔ It is said.  A silent refusal would be indistinguishable
-			 *    from a dead server — and whoever is outside sees the same
-			 *    face in both cases (`LESSONS.md` §1.9). */
-			registro_dice(LOG_PAGE,
-			              "⛔ already %d TCP connections: the new one is refused",
-			              MAX_CLIENTS);
-			close(fd);
-			return;
-		}
-		memset(c, 0, sizeof *c);
-		c->fd = fd;
 		if (getnameinfo((struct sockaddr *)&da, dalen, host, sizeof host, serv,
 		                sizeof serv, NI_NUMERICHOST | NI_NUMERICSERV) == 0)
-			snprintf(c->provenance, sizeof c->provenance,
+			snprintf(provenance, sizeof provenance,
 			         da.ss_family == AF_INET6 ? "[%s]:%s" : "%s:%s", host,
 			         serv);
 		else
-			snprintf(c->provenance, sizeof c->provenance, "?");
+			snprintf(provenance, sizeof provenance, "?");
+		rcp_key_address(provenance, key, sizeof key);
+
+		for (size_t i = 0; i < MAX_CLIENTS; i++) {
+			client *x = &p->clients[i];
+			if (!client_active(x)) {
+				if (!c && x->phase == F_DONE && x->fd < 0)
+					c = x;
+				continue;
+			}
+			if (strcmp(x->key, key) == 0)
+				same++;
+			if (x->phase != F_WRITE && (!oldest || x->born < oldest->born))
+				oldest = x;
+		}
+		/* ⛔ The per-address cap BEFORE the eviction: a crowded address
+		 *    must not be able to push out somebody else's slot. */
+		if (same >= PAGE_PER_ADDRESS) {
+			p->refused_address++;
+			snprintf(p->refused_last, sizeof p->refused_last, "%s", key);
+			close(fd);
+			refusals_report(p, log_now_ms());
+			continue;
+		}
+		if (!c && oldest) {
+			log_detail(LOG_PAGE,
+			           "all %d TCP slots taken: %s, without a whole request "
+			           "for %llu ms, is closed to make room for %s",
+			           MAX_CLIENTS, oldest->provenance,
+			           (unsigned long long)(log_now_ms() - oldest->born),
+			           provenance);
+			client_close(oldest);
+			p->evicted++;
+			c = oldest;
+		}
+		if (!c) {
+			/* ⛔ It is said.  A silent refusal would be indistinguishable
+			 *    from a dead server — and whoever is outside sees the same
+			 *    face in both cases (`LESSONS.md` §1.9).
+			 * ⚠ Only reached when all 32 are WRITING a response: each of
+			 *   those ends within PAGE_TOTAL_MS. */
+			registro_dice(LOG_PAGE,
+			              "⛔ already %d TCP connections, all sending a response: "
+			              "the new one is refused",
+			              MAX_CLIENTS);
+			close(fd);
+			continue;
+		}
+		memset(c, 0, sizeof *c);
+		c->fd = fd;
+		c->born = log_now_ms();
+		memcpy(c->provenance, provenance, sizeof c->provenance);
+		memcpy(c->key, key, sizeof c->key);
 
 		c->ssl = SSL_new(p->ctx);
 		if (!c->ssl) {
@@ -629,6 +747,46 @@ static void accept_page(page *p)
 		c->phase = F_HANDSHAKE;
 		move_client(p, c, 0);
 	}
+}
+
+void page_expired(page *p, uint64_t now)
+{
+	for (size_t i = 0; i < MAX_CLIENTS; i++) {
+		client *c = &p->clients[i];
+		if (!client_active(c) || now < client_deadline(c))
+			continue;
+		log_detail(LOG_PAGE, "%s closed: %s within %u s", c->provenance,
+		           c->phase == F_WRITE ? "the response was not taken"
+		                               : "no whole request",
+		           (c->phase == F_WRITE ? PAGE_TOTAL_MS : PAGE_REQUEST_MS) /
+		                   1000u);
+		if (c->phase == F_WRITE)
+			p->expired_response++;
+		else
+			p->expired_request++;
+		client_close(c);
+	}
+	refusals_report(p, now);
+}
+
+int page_wait_ms(const page *p, uint64_t now)
+{
+	uint64_t before = UINT64_MAX;
+
+	for (size_t i = 0; i < MAX_CLIENTS; i++) {
+		const client *c = &p->clients[i];
+		if (client_active(c) && client_deadline(c) < before)
+			before = client_deadline(c);
+	}
+	if ((p->refused_address || p->evicted || p->expired_request ||
+	     p->expired_response) &&
+	    p->refused_line_ms + PAGE_REFUSAL_LOG_MS < before)
+		before = p->refused_line_ms + PAGE_REFUSAL_LOG_MS;
+	if (before == UINT64_MAX)
+		return -1;
+	if (before <= now)
+		return 0;
+	return before - now > 1000 ? 1000 : (int)(before - now);
 }
 
 void page_move(page *p, struct pollfd *dove, size_t amount)

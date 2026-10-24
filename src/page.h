@@ -60,6 +60,7 @@
 #include <poll.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 typedef struct page page;
 
@@ -73,5 +74,16 @@ void page_context(page *p, SSL_CTX *ctx);
 size_t page_descriptors(page *p, struct pollfd *dove, size_t cap);
 /* To be called after the `poll`, with the same array. */
 void page_move(page *p, struct pollfd *dove, size_t amount);
+
+/* ⛔ To be called at EVERY pass of the loop, readable or not (15 Oct 2026):
+ * closes the clients past their deadline — no whole request within 10 s of
+ * the accept, or the response not taken within 60 s — and writes the
+ * listener's summary line (at most one every 10 s).  An expiry that waits for
+ * a byte never triggers, and 32 silent connections used to lock the page out
+ * for ever.  `now` is `log_now_ms()`. */
+void page_expired(page *p, uint64_t now);
+/* Milliseconds until `page_expired()` has something to do (≤ 1000), 0 = now,
+ * -1 = nothing pending.  For the loop's `poll` wait. */
+int page_wait_ms(const page *p, uint64_t now);
 
 #endif
