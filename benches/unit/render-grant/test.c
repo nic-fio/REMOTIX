@@ -21,7 +21,7 @@
  *   (4) 20-22  MAX_GRANTS reached: false, the ACL just put taken back from every node, the file as it was;
  *   (5) 23-27  render_grant_remove() takes out only OUR gid entries and only our row (another user's grant and an
  *                administrator's entry for another gid stay);
- *   (6) 28-32  acl_read() with an attribute of 0-3 bytes (and of 5) fails with EINVAL and does not look past what the
+ *   (6) 28-33  acl_read() with an attribute of 0-3 bytes (and of 5) fails with EINVAL and does not look past what the
  *                kernel returned; 4 bytes is an empty ACL.
  *
  * BUILD AND RUN (a few seconds; nothing under /media/REMOTIX-15 is written; run from the root of the tree):
@@ -88,7 +88,7 @@ int fake_fstat(int fd, struct stat *st);
 #undef fstat
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 32
+#define EXPECTED_CHECKS 33
 
 static void require(int cond, const char *desc)
 {
@@ -430,6 +430,13 @@ int main(void)
 
 		force_len = 4;
 		require(acl_read(DRI_DIR "/renderD128", v) == 0, "32. 4 bytes (the version only) is an empty ACL");
+	}
+	{
+		struct acl_entry v[MAX_ENTRIES];
+
+		force_len = 5;                   /* a version and one stray byte: (5 - 4) % 8 != 0 */
+		errno = 0;
+		require(acl_read(DRI_DIR "/renderD128", v) == -1 && errno == EINVAL, "33. 5 bytes (not whole entries): -1/EINVAL");
 	}
 	force_len = -1;
 
