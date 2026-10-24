@@ -34,6 +34,7 @@ NAMES = {
     "F-015C": "clipboard, session → computer, without recent gestures",
     "F-014C": "clipboard, copied outside the browser, a single Ctrl+V",
     "F-014D": "clipboard, the same text copied twice",
+    "F-014E": "clipboard, a text with a zero in the middle is not announced (KDE)",
     "F-017": "reattach at the same size", "F-018": "reattach at a different size",
     "F-019": "network loss and re-entry", "F-020": "browser closed abruptly",
     "F-021": "«Exit» from the menu", "F-022": "silence clock",
