@@ -8,17 +8,18 @@ S1 = p("The whole client is one file, " + c("src/page.html") + ": the login page
         ["Served by", c("src/page.c") + ", a small TLS-over-TCP server inside the parent process, on the same port "
          "number as QUIC (7447 in the packages: TCP for the page, UDP for WebTransport)"],
         ["Routes", c("/") + " and " + c("/index.html") + " (the page), " + c("/fingerprint") + " (the certificate "
-         "fingerprint as JSON), " + c("/diary") + " (the page's own log lines, carried in the query string, "
-         "written into the server log, answer 204). Everything else is 404; the query string and fragment are cut before matching"],
+         "fingerprint as JSON). The page is gzip-compressed once per fingerprint (zlib level 6, " + c("Content-Encoding: gzip") + ", "
+         + c("Vary: Accept-Encoding") + ") when the request allows it. Everything else is 404; the query string and fragment are cut before matching"],
         ["Headers on every answer", c("Cross-Origin-Opener-Policy: same-origin") + ", "
          + c("Cross-Origin-Embedder-Policy: require-corp") + ", " + c("Cross-Origin-Resource-Policy: same-origin")
          + ", " + c("Cache-Control: no-store") + ", " + c("X-Content-Type-Options: nosniff")],
-        ["Headers on the HTML page only", c("Content-Security-Policy") + " (with " + c("frame-ancestors 'none'")
+        ["Security headers, every answer", c("Content-Security-Policy") + " (with " + c("frame-ancestors 'none'")
          + "), " + c("Referrer-Policy: no-referrer") + ", " + c("Permissions-Policy") + ": the " + c("PAGE_SECURITY")
-         + " block of " + c("page.c") + ", not sent on " + c("/fingerprint") + " (JSON). Described in the chapter on security"],
+         + " block of " + c("page.c") + ", on every answer (the page, " + c("/fingerprint") + ", the 400, 404, 431, 500 and 503). Described in the chapter on security"],
         ["External resources", "None. The Opus decoder (WebAssembly, " + c("OPUS_WASM_B64") + ") and the video probe "
          "streams are embedded in base64"],
-        ["Connections", "At most 32 TCP clients at a time (" + c("MAX_CLIENTS") + "); a request header is at most 8 KiB"],
+        ["Connections", "At most 128 TCP clients at a time (" + c("PAGE_MAX_CLIENTS") + "), 4 from one address or IPv6 /64 and 8 from one /48; a request "
+         "header is at most 8 KiB. The deadlines and the eviction are in the chapter on security"],
     ], "«TAB» — How the page reaches the browser") + \
     p("Cross-origin isolation is a product requirement, not a bench detail (" + c("SPECS.md")
       + " §11.5): without it Firefox and Safari round the page's timers to 1 ms, on a latency cap of 50 ms, and "
@@ -480,9 +481,7 @@ S12 = p("The page measures its own share of the latency and exposes it, so that 
       "“the desktop is frozen” from “the hand moved over the wallpaper and nothing changed”. " + c("voff_ms()")
       + " (glass time minus the frame's server instant) is the video half of the audio/video distance; with the "
       "audio's " + c("aoff_ms()") + ", the unknown clock offset cancels out (" + rif("Audio and clipboard") + ").") + \
-    p("Lines passed to " + c("note()") + " that contain " + c("MEASURE") + ", " + c("MARK") + " or ⛔ are also "
-      "sent to the server with " + c("fetch(\"/diary?…\")") + " and appear in its log as "
-      + c("📄 the page of <address> says: PAGE …") + ": with the desktop at full screen the page's own log is unreachable. The first lines identify the "
+    p("Lines passed to " + c("note()") + " stay in the page's own log. Until 1.0 those that contained " + c("MEASURE") + ", " + c("MARK") + " or ⛔ were also sent to the server's " + c("/diary") + " endpoint; since 1.5 that endpoint is gone from the product and from test builds (DECISIONS-11 §11.10) and the page does not send them. The first lines identify the "
       "browser (user agent, screen, ratio, WebCodecs), the system (" + c("userAgentData") + " on Chromium, "
       + c("navigator.oscpu") + " on Firefox, each value labelled with its source) and what the engine offers "
       "without WebCodecs.") + \

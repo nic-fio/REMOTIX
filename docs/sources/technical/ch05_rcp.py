@@ -210,7 +210,12 @@ S6 = p(c("HELLO") + " (client → server) carries the highest major version the 
         [c("clipboard.text"), "both", c("yes") + ", " + c("no"), "Both " + c("yes") + "; the page turns the clipboard on "
          "only if the server declares it."],
         [c("client.name"), "client", "free text for the log", "Page: " + c("remotix-page 0.1.0") + "."],
-        [c("bench.mark"), "server", c("yes") + ", " + c("no"), "Always " + c("no") + " (" + rif("The bench marker: BENCH_MARK") + ")."],
+        [c("video.pace"), "server", c("yes"), "Declared only with " + c("--decoder-pace") + " (off by default) and only if the host "
+         "can apply it. Then the page may send " + c("PACE") + " (" + c("0x0012") + ", " + c("u16 max_fps") + ", 0 = no ceiling) "
+         "when its decoder queue stays behind; the server clamps it to 5…60 and the user's child encodes fewer frames, before "
+         "encoding, so no frame is thrown away (RCP.md §13, DECISIONS-11 §11.32)."],
+        [c("bench.mark"), "server", c("yes") + ", " + c("no"), "Written only by a BENCH build (" + c("no") + " unless the "
+         "switch is on); the product build does not declare it at all (" + rif("The bench marker: BENCH_MARK") + ")."],
     ], "«TAB» — The capabilities defined in RCP/1") + \
     p("<b>Form of names and values</b>, enforced in " + c("handle_hello()") + " so that «ignore what you do not know» does "
       "not become «guess»:") + \
@@ -649,7 +654,9 @@ BENCH_OUTCOME   0x0010   server → client
  ├── u8  reason      reason: 0; 1 = FEATURE_OFF (function off),
  │                   2 = DELAY_OUT_OF_RANGE (delay out of range)
  └── u64 instant     server microseconds when painted; 0 if refused""", "text", "Bodies") + \
-    p("In the product " + c("BENCH_ON") + " is 0: " + c("HERE_I_AM") + " declares " + c("bench.mark=no") + ", and every "
+    p("In the product " + c("BENCH_ON") + " is 0 and the BENCH build is not there: " + c("HERE_I_AM") + " does not declare " + c("bench.mark") + " at all — it counts "
+      "what it writes (4 capabilities, 5 with " + c("video.pace") + "; a BENCH build adds " + c("bench.mark") + ") and the "
+      "page reads exactly that many pairs — and every "
       + c("BENCH_MARK") + " in state " + c("active") + " is answered " + c("BENCH_OUTCOME(REFUSED, FEATURE_OFF)") + " — "
       "or " + c("DELAY_OUT_OF_RANGE") + " above 10 000 ms — never silence and never a close. The accepting branch has "
       "never been completed: the known-delay check of phase 3 was done outside the product (N = 25 → +25.08 ms, N = 60 → "
@@ -747,7 +754,11 @@ S19 = p("The reasons are a single numbering shared by " + c("FAREWELL") + ", " +
         [c("0x0C"), c("SERVER_CLOSING"), "the server is shutting down", c("main.c")],
         [c("0x0D"), c("TIMED_OUT"), "a handshake ceiling expired", c("rcp.c") + ", " + c("webtransport.c")],
         [c("0x0E"), c("SESSION_UNSERVABLE"), "well-formed attach that cannot be served: unknown layout, table full, all "
-         "stages taken, stage failed, decoder cap below 320×240", "server"],
+         "stages taken, stage failed, decoder cap below 320×240. Also, as the answer to " + c("CREDENTIALS") + " in "
+         + c("REJECTED") + " instead of " + c("0x07") + ", when the server could not check the password at all (the helper "
+         "is down or restarting, the question did not leave, the helper has no place left): the refusal is ours, it is "
+         "not counted toward the ban (§4.4-bis) and the byte says neither «no such user» nor «wrong password» "
+         "(DECISIONS-11 §11.39; the body of a " + c("REJECTED") + " is the reason byte only, so no detail goes with it)", "server"],
         [c("0x0F"), c("ALREADY_ACTIVE_REMOTELY"), "another live client of the same user holds the seat; the newcomer is refused",
          c("handle_attach()")],
         [c("0x10"), c("SESSION_TERMINATED"), "the user logged out: nothing to re-attach to, the page returns to the login "
@@ -773,7 +784,7 @@ S20 = p("Three clocks govern an attached session (SPECS.md §5.3), and a fourth 
          "farewell, connection left open; keys released", "—"],
         ["Ghost eviction", "15 s (" + c("DEFAULT_EVICTION") + ")", "silence of the seat holder, only while the same "
          "user is asking for the seat", "the seat moves to the newcomer", c("--eviction-ms") + " (0 = off)"],
-        ["Inactivity", "30 min (" + c("DEFAULT_INACTIVITY") + ")", "the last RCP byte from the client on control, input or clipboard (" + c("last_byte") + ")", c("FAREWELL(0x02)"),
+        ["Inactivity", "30 min (" + c("DEFAULT_INACTIVITY") + ")", "the last of the five input gestures of §7.3 judged valid — " + c("POINTER") + ", " + c("BUTTON") + ", " + c("WHEEL") + ", " + c("LETTER") + ", " + c("KEY_POSITION") + " (" + c("last_input") + ", not " + c("last_life") + ")", c("FAREWELL(0x02)"),
          c("--inactivity-s") + " (0 = off)"],
         ["Abandonment", "60 min (" + c("DEFAULT_ABANDON_MS") + ")", "the last of the five input gestures forwarded to the child", "the graphical session is "
          "closed, " + c("0x03"), c("--abandon-s")],
@@ -784,10 +795,14 @@ S20 = p("Three clocks govern an attached session (SPECS.md §5.3), and a fourth 
       "keep-alive was measured at 15 s. The eviction acts only within the same user (across users it would be a security "
       "hole), only when someone is asking, and never below 15 s, the point beyond which no live client was ever "
       "measured. Measured on 23–24 August 2026: the ghost went from 32.13 s and 14 refusals to 16.83 s and 7.") + \
-    note("SPECS.md §5.3 defines inactivity as «what the user sends, not what they watch». The code refreshes the "
-         "30-minute clock on any RCP byte from the client, so automatic messages such as " + c("REQUEST_KEY")
-         + " also keep it alive; the 60-minute abandonment clock counts only the five input gestures.",
-         "Inactivity counts more than input.")
+    note("SPECS.md §5.3 defines inactivity as «what the user sends, not what they watch». Since 15 October 2026 "
+         "(DECISIONS-11 §11.43) the 30-minute clock counts exactly the same five gestures as the 60-minute abandonment "
+         "clock (" + c("last_input") + ", set in " + c("handle_input()") + "). Before it counted any RCP byte, so the "
+         "page's own automatic messages — " + c("REQUEST_KEY") + " after a hole, " + c("PACE") + ", " + c("VIEW") + ", "
+         + c("LAYOUT") + ", " + c("FIT_CANVAS") + ", the opening " + c("CLIPBOARD_ANNOUNCE") + " — put the half hour back to "
+         "zero and a tab left open on an abandoned desk held its session and its seat for ever. " + c("last_life")
+         + " (any authenticated packet) is the clock of the 30-second silence, a different thing.",
+         "Inactivity counts the five gestures.")
 
 # ── Versions ────────────────────────────────────────────────────────────
 S21 = p("The major version lives in two places, and they must coincide: the path " + c("/rcp/1") + " and the "

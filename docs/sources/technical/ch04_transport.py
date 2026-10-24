@@ -15,7 +15,7 @@ STACK = fig(
     + zone(600, 40, 280, 330, "TCP 7447 — the page")
     + box(620, 70, 240, 46, "page.c", "HTTP/1.1, one request per connection", "blue")
     + arrow(740, 118, 740, 134)
-    + box(620, 136, 240, 64, "routes", "/ · /index.html · /fingerprint · /diary", "light")
+    + box(620, 136, 240, 64, "routes", "/ · /index.html · /fingerprint", "light")
     + arrow(740, 202, 740, 218)
     + box(620, 220, 240, 46, "certificates.c", "long-lived + short-lived certificate", "navy")
     + box(620, 318, 240, 38, "OpenSSL — TLS 1.3, ALPN http/1.1", "", "grey", 12)
@@ -37,7 +37,8 @@ FILES = table(["File", "What it does"], [
     [c("src/certificates.c"), "Generates, loads and rotates the two ECDSA P-256 certificates, and computes the "
      "SHA-256 fingerprint (" + c("fingerprint") + ") of the session certificate."],
     [c("src/page.c"), "The TCP listener: serves " + c("page.html") + " with the fingerprint written into it, the "
-     + c("/fingerprint") + " endpoint and the " + c("/diary") + " log endpoint."],
+     + c("/fingerprint") + " endpoint, gzip-compressed when the browser accepts it. Since 1.5 it has deadlines, per-address "
+     "caps and an eviction of its own (see the chapter on security)."],
     [c("src/main.c"), "Owns the single " + c("poll") + " loop, reads the command-line options (" + c("--port") + ", "
      + c("--name") + ", " + c("--certificates") + ", " + c("--page") + ", " + c("--ban-file") + "), checks the "
      "certificate every 60 s and shuts everything down with " + c("SERVER_CLOSING") + "."],
@@ -86,7 +87,7 @@ S3 = p("The server listens on port 7447 twice: UDP for HTTP/3 and WebTransport, 
        "user and password into the page.", lead=True) + \
     table(["", "UDP 7447", "TCP 7447"], [
         ["Carries", "QUIC v1, HTTP/3, the WebTransport session " + c("/rcp/1"), "HTTPS (HTTP/1.1): the page, "
-         + c("/fingerprint") + ", " + c("/diary")],
+         + c("/fingerprint")],
         ["Certificate", "the short-lived session certificate", "the long-lived page certificate"],
         ["ALPN", c("h3") + " (chosen by the browser)", c("http/1.1")],
         [c("SO_REUSEADDR"), "never", "yes"],
@@ -244,14 +245,14 @@ S7 = p(c("page.c") + " is a small HTTPS/1.1 server: one request per connection, 
        "non-blocking sockets inside the same " + c("poll") + " loop. It reads " + c("page.html") + " from "
        + c("--page") + " (the packages install it as " + c("/usr/share/remotix/page.html") + ").", lead=True) + \
     table(["Path", "Response", "Purpose"], [
-        [c("/") + ", " + c("/index.html"), "200, " + c("text/html"), "The page, with four placeholders replaced: "
+        [c("/") + ", " + c("/index.html"), "200, " + c("text/html"), "The page (gzip when the request's " + c("Accept-Encoding") + " allows it), with four placeholders replaced: "
          + c("__FINGERPRINT__") + " (session fingerprint), " + c("__WARNING__") + " (the ban notice, empty if not banned), "
          + c("__BANNED__") + " (" + c("yes") + "/" + c("no") + ") and " + c("__REMAINING_MS__") + " (milliseconds left "
          "on the ban)."],
         [c("/fingerprint"), "200, " + c("application/json"), c("{\"algorithm\":\"sha-256\",\"fingerprint\":…,\"hex\":…,\"rotations\":N}")
          + " — algorithm, fingerprint in base64, the same in hexadecimal, rotations since start"],
-        [c("/diary?…"), "204", "The page writes a line into the server log (printable ASCII only, truncated and marked "
-         "when too long). It is how the page's own diagnostics reach the journal."],
+        ["a client over the accept rate that waited in vain", "503, " + c("text/plain") + ", " + c("Retry-After: 1"),
+         "«busy: too many connections from this address» — the page tells it apart from «the server is not there» and asks again."],
         ["anything else", "404", "—"],
         ["unreadable request", "400", "—"],
     ], "«TAB» — The routes of the page server") + \

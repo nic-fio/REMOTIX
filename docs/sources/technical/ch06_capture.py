@@ -197,6 +197,15 @@ S4 = p("On Plasma the capture is a Wayland request to KWin: the private protocol
          + c("failed") + " can be sent synchronously."],
         ["6", "Waits for the node at most " + c("WAIT_NODE_MS") + " = 5000 ms; a refusal or a timeout is an error."],
     ], "«TAB» — Opening the KWin stream") + \
+    p("<b>The «unchanged» filter (KDE).</b> KWin delivers about 50 buffers a second for five real changes (measured on Firefox at "
+      "3776×2016: about 45 of them the same picture). A KWin frame whose damaged rectangles hold the same bytes as the last frame "
+      "that went out is not encoded (" + c("unchanged.h") + ", the same header " + c("capture.c") + " includes, tested by " + c("benches/20-unchanged-test.c")
+      + ", " + c("make -C src bench-unchanged") + "). Guards: only for an area up to a quarter of 4K; one frame goes out every 250 ms "
+      "anyway; the filter is bypassed while a keyframe is due; it switches itself off if a look costs more than 3 ms on average "
+      "(a window mean, re-armed at a buffer renegotiation, definitely off after 3 times). A frame the encoder dropped is never the "
+      "reference (" + c("capture_unchanged_forget()") + "), and a held frame goes out when the scene goes still. Not measured yet on KDE at 4K "
+      "(DECISIONS-11 §11.33, §11.49). Nested KWin also writes the wanted size next to labwc's socket (" + c("wanted") + ") and the "
+      "settle insists on it: KWin's output used to come up at labwc's own 1280×720 at the first mount.") + \
     p("<b>The gate.</b> KWin announces " + c("zkde_screencast_unstable_v1") + " only to a client whose "
       "executable (" + c("/proc/<pid>/exe") + ", canonical) appears in the " + c("Exec=") + " line of a "
       + c(".desktop") + " file that lists the protocol in " + c("X-KDE-Wayland-Interfaces") + ". Measured on "

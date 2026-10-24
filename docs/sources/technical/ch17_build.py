@@ -89,6 +89,9 @@ DEP_ROWS = [
     ["vulkan ≥ 1.3.274", "the loader only; Vulkan Video tried before VA-API (phase 19); the SPIR-V shader is in the "
      "tree", c("vulkanvideo.c"), "distribution"],
     ["opus ≥ 1.3", "audio encoding (since phase 18)", c("audio.c"), "distribution"],
+    ["zlib ≥ 1.2", "the login page sent gzip-compressed, once per certificate fingerprint (since 1.5, the user's decision of 15 Oct 2026)", c("page.c"),
+     "distribution: " + c("zlib1g-dev") + " (Debian, Ubuntu), " + c("pkgconfig(zlib)") + " (Fedora, Alma, openSUSE), " + c("zlib") + " (Arch); "
+     "in " + c("src/Makefile") + " (" + c("ZLIB_LIBS") + ", the " + c("deps") + " check), the build images and the installer catalogue"],
     ["libei-1.0 ≥ 1.1.0", "input injection on GNOME and KDE", c("input.c"), "distribution"],
     ["xkbcommon", "which key produces this letter in this layout", c("keyboard.c") + " (keyboard)", "distribution"],
     ["wayland-client + " + c("wayland-scanner"), "KWin and wlroots protocols, generated at every build",

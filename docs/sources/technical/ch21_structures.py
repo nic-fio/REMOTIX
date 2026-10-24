@@ -145,7 +145,7 @@ S3 = p("The small enumerations that travel inside message bodies.", lead=True) +
     table(["Code", "Name", "Meaning"], [
         "Disconnect reasons — " + c("FAREWELL.reason") + ", " + c("REJECTED.reason") + ", WebTransport close code",
         [c("0x01"), c("CLOSED_BY_USER"), "<i>closed by the user</i>: the client was closed; the session stays"],
-        [c("0x02"), c("INACTIVITY"), "<i>inactivity</i>: 30 minutes without RCP traffic from the client"],
+        [c("0x02"), c("INACTIVITY"), "<i>inactivity</i>: 30 minutes without one of the five input gestures of the user"],
         [c("0x03"), c("SESSION_ABANDONED"), "<i>session abandoned</i>: 60 minutes without input: the session is closed"],
         [c("0x04"), c("LOCAL_SESSION_PREVAILED"), "<i>local session prevailed</i>: a local graphical session took over"],
         [c("0x05"), c("ALREADY_ACTIVE_LOCALLY"), "<i>already active locally</i>: a local graphical session already exists"],
@@ -157,7 +157,7 @@ S3 = p("The small enumerations that travel inside message bodies.", lead=True) +
         [c("0x0B"), c("PROTOCOL_ERROR"), "<i>protocol error</i>: violation of RCP/1"],
         [c("0x0C"), c("SERVER_CLOSING"), "<i>server closing</i>: server shutting down"],
         [c("0x0D"), c("TIMED_OUT"), "<i>time expired</i>: a handshake ceiling expired"],
-        [c("0x0E"), c("SESSION_UNSERVABLE"), "<i>session not servable</i>: well-formed attach that cannot be served"],
+        [c("0x0E"), c("SESSION_UNSERVABLE"), "<i>session not servable</i>: well-formed attach that cannot be served; also the answer to " + c("CREDENTIALS") + " when the server could not check the password (not counted toward the ban)"],
         [c("0x0F"), c("ALREADY_ACTIVE_REMOTELY"), "<i>already active remotely</i>: another live client of the user is attached to the session"],
         [c("0x10"), c("SESSION_TERMINATED"), "<i>session ended</i>: the user logged out"],
         c("CANVAS.outcome") + " / " + c("CANVAS.reason"),

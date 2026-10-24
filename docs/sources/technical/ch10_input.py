@@ -471,6 +471,10 @@ S12 = p("On GNOME and KDE the child is a " + c("libei") + " sender on a socket t
          "screen without an error. Mutter generates its own mapping id and publishes it; v1 looked for the "
          "one it had declared and never found it. KWin publishes none"],
         [c("ei_device_frame()") + " after every single event", "Ignored by Mutter, mandatory on KWin and wlroots"],
+        ["A receipt for every key (" + c("ei_ping()") + ", built only with libei ≥ 1.3.901)", "The compositor's answer says how long a key took to reach "
+         "it; a slow share raises the autorepeat risk (the keys lost on KDE). The always-on log gets one line per 10 s and only if something "
+         "was slow, with no counts (a count after a password would be its length); exact counts and the slow keys one by one only under "
+         + c("--verbose") + " (DECISIONS-11 §11.33)"],
         ["Codes at or above " + c("0x300") + " are refused and logged", "Mutter would drop them silently"],
         ["If the region is not as large as the canvas, coordinates are scaled and a warning is written once",
          "The canvas granted by RCP should match the region"],

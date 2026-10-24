@@ -141,8 +141,8 @@ S_USERS = p("People sign in with <b>their Linux user name and password on that m
     ul([
         "<b>root cannot sign in.</b> The names in " + c("/etc/remotix/denied-users") + " (one per line; it contains "
         + c("root") + ") are always refused. Add other names there to keep them out.",
-        "<b>Graphics-card groups.</b> To use the card, a desktop's user must be in the groups that own it (for "
-        "example " + c("render") + " and " + c("video") + "). The installer adds every person on the machine (or "
+        "<b>Graphics-card group.</b> To use the card, a desktop's user must be in the group that owns the render devices (usually "
+        + c("render") + "). The installer adds every person on the machine (or "
         "those given with " + c("--users") + "); someone created later is added automatically the first time they "
         "connect.",
         "<b>New users</b> need nothing else: create the account as usual, and they can sign in.",

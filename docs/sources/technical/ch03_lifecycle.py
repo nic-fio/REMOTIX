@@ -266,14 +266,19 @@ S4 = p("The child is born before it knows the canvas, and it must not start the 
       "(" + c("card*") + " belongs to " + c("video") + ", " + c("renderD*") + " to " + c("render") + ") would get a "
       "session that renders in software with llvmpipe — slow, not broken, so nobody would suspect it. Since 20 "
       "September 2026 (DECISIONS.md §7.21) the server, as root, runs " + c("usermod -aG") + " for the missing groups "
-      "before forking the child, appends one JSON line per group to " + c("/var/lib/remotix/group-enrollments.jsonl")
-      + " (so that uninstalling removes only what REMOTIX added) and, unless the user already has a live REMOTIX "
-      "desktop, runs " + c("loginctl terminate-user") + " so that their user manager restarts with the new "
-      "groups.") + \
-    warn(c("loginctl terminate-user") + " ends <b>every</b> logind session of that user, an SSH login included. It "
-         "only happens once per user, at their first REMOTIX login without the groups. Not settled yet: whether only "
-         + c("render") + " should be added (" + c("video") + " also opens " + c("/dev/fb*") + " and webcams), "
-         "DECISIONS.md §10.36.", "First login ends the user's other sessions.") + \
+      "before forking the child and appends one JSON line per group to " + c("/var/lib/remotix/group-enrollments.jsonl")
+      + " (so that uninstalling removes only what REMOTIX added). <b>Since 1.5</b> (DECISIONS-11 §11.4, §11.38) the groups are "
+      "those of the " + c("renderD*") + " nodes only — the compositors and the encoder open render nodes, never " + c("card0")
+      + " — and " + c("loginctl terminate-user") + " is gone: a user manager that is already running keeps its old group "
+      "list, and instead of ending it " + c("render_grant.c") + " gives the user's <i>primary group</i> an ACL (" + c("rw")
+      + ") on every " + c("renderD*") + ", recorded in " + c("/var/lib/remotix/render-grants") + ", removed when the child "
+      "ends and swept at start-up. Only a provably private group gets one; a network account gets none and its desktop is "
+      "born in software.") + \
+    note("Nothing is closed any more. In 1.0 the first login ended every logind session of the user, an SSH login included "
+         "(measured on 12 October 2026, SPECS §5.1 broken); 1.5 grants the card through an ACL. Declared limits: a device "
+         "recreated while the desktop lives (driver reload, hotplug) loses the grant, and removing a grant does not close the "
+         "descriptors already open (the kernel checks at " + c("open") + "); XFCE and LXQt need nothing, their labwc is born "
+         "from our child with fresh groups.", "First login closes nothing.") + \
     p("<b>After the first stage</b> the child, once per life, inhibits suspend and idle (on GNOME through "
       + c("org.gnome.SessionManager.Inhibit") + " with flags 4|8, never the logout flag, or the user would lose their "
       "only way out; on KDE through PowerDevil; XFCE and LXQt by configuration), then asks the sentinel whether its "

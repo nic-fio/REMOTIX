@@ -90,7 +90,7 @@ A3 = p("A server has no sound card, and a headless session has no sink at all: m
          "negotiated, delivery is switched off and declared: reading " + c("f32") + " as " + c("s16") + " gives "
          "a full-scale square wave that a bench counts as audio"],
         ["Capture stream", c("PW_KEY_STREAM_CAPTURE_SINK") + " = true on " + c("remotix") + ", flags "
-         + c("AUTOCONNECT | MAP_BUFFERS | RT_PROCESS")],
+         + c("AUTOCONNECT | MAP_BUFFERS | RT_PROCESS") + "; the stream is named " + c("remotix-capture") + " (" + c("PW_KEY_NODE_NAME") + "), so that " + c("target.object") + " «remotix» names only the sink (measured: the capture had been linked to itself, digital silence; DECISIONS-11 §11.33)"],
         ["Quantum", c("node.force-quantum") + " = 256 frames (5.33 ms): the value of v1 and of "
          "gnome-remote-desktop. 240 would be rounder, but changing a field-measured value for an unmeasured "
          "convenience is a debt"],
@@ -384,7 +384,7 @@ C5 = p("In the browser the clipboard is not REMOTIX's: the page gets it only und
         "<b>Size.</b> Over 1 000 000 bytes the page does not announce and says so; an incoming announcement "
         "over the limit is a protocol error.",
     ]) + \
-    p("Every step of the clipboard in the page also goes to the server's diary (" + c("/diary") + "), "
+    p("Every step of the clipboard in the page is written to the page's own log (until 1.0 also to the server's " + c("/diary") + " endpoint, gone since 1.5), "
       "because with the desktop full screen the page log cannot be read, and the silence of “no "
       "announcement arrived” had six possible causes in the page (measured on Firefox, 17 Aug 2026: the "
       "cause was the page's own " + c("preventDefault()") + " on " + key("Ctrl", "V") + "). With the phone in "

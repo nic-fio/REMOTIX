@@ -10,18 +10,17 @@ S1 = p("Defects found while this manual was written (10 October 2026), by readin
          + c("packaging/arch/remotix.service"),
          "A banned address waits the full step of the ladder (15 minutes, 1 hour or 12 hours). The unlock command promised by SPECS.md §4.2 and RCP.md §4.4-bis "
          "does not exist there; the directory " + c("/run/remotix") + " is created for a socket nobody opens."],
-        ["<b>The first enrolment in the graphics card groups ends every session of that user.</b> After adding the "
-         "user to the groups of the " + c("/dev/dri") + " nodes, the parent (before the fork) runs " + c("loginctl terminate-user")
-         + " so that the new groups reach the compositor. It spares a live REMOTIX desktop (" + c("rediscover_alive()")
-         + ", the found-again check), but nothing else.",
-         c("enroll_in_card_groups()") + " in " + c("src/child.c"),
-         "The first REMOTIX login of a user who is not yet in the group closes that user's SSH and local sessions "
-         "without warning. It happens once per user."],
-        ["<b>The groups are all those of the card nodes</b>, usually " + c("video") + " and " + c("render")
-         + ", while DECISIONS.md §10.36 asks for " + c("render") + " alone, if it holds on the four desktops (still to "
-         "be tried there).",
-         c("enroll_in_card_groups()"),
-         c("video") + " also grants " + c("/dev/fb*") + " and webcams."],
+        ["<b>(Fixed in 1.5) The first enrolment in the graphics card groups used to end every session of that user.</b> Until 1.0 the "
+         "parent ran " + c("loginctl terminate-user") + " so the new groups reached the compositor; 1.5 removed it and gives the user's "
+         "primary group an ACL on the render nodes instead (DECISIONS-11 §11.4).",
+         c("render_grant_add()") + " in " + c("src/render_grant.c"),
+         "Nothing is closed. Declared limits: a device recreated while the desktop lives loses the grant; a network account gets none "
+         "and its desktop is born in software."],
+        ["<b>(Fixed in 1.5) The groups are those of the render nodes only</b> — " + c("render") + " on the usual distributions; " + c("video")
+         + " (which also grants " + c("/dev/fb*") + " and webcams) is no longer added (DECISIONS-11 §11.38). Open: AMD and NVIDIA "
+         "were not measured; with the NVIDIA proprietary driver the card is opened through " + c("/dev/nvidia*") + ".",
+         c("collect_card_groups()"),
+         "A desktop born in software on such a machine means " + c("video") + " must be added by hand."],
         ["<b>The installer knows no derivative distribution by name.</b> " + c("Target()")
          + " builds the package folder from " + c("ID") + " and " + c("VERSION_ID") + " (for example "
          + c("linuxmint22") + "); only Arch-like, openSUSE and Alma/Rocky/RHEL IDs are mapped. The .run carries "

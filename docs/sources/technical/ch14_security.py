@@ -108,8 +108,8 @@ S2 = p("The server makes its own certificates — two of them, on purpose (" + c
       "responses carry " + c("Cross-Origin-Opener-Policy: same-origin") + ", "
       + c("Cross-Origin-Embedder-Policy: require-corp") + ", " + c("Cross-Origin-Resource-Policy: same-origin")
       + ", " + c("Cache-Control: no-store") + " and " + c("X-Content-Type-Options: nosniff") + ".") + \
-    p("<b>The headers of the HTML page only</b> (page audit, 24 October 2026; the " + c("PAGE_SECURITY") + " block of "
-      + c("page.c") + "; not sent on " + c("/fingerprint") + ", which is JSON). Until then the page could be framed by any "
+    p("<b>The security headers of every answer of the page server</b> (page audit, 24 October 2026; the " + c("PAGE_SECURITY") + " block of "
+      + c("page.c") + "; first on the HTML page only, now on every answer — the page, " + c("/fingerprint") + " (JSON), the 400, 404, 431, 500 and 503 — so that no stray answer can be framed or sniffed differently from the page). Until then the page could be framed by any "
       "site: clickjacking on a form with a password, on a page that forwards keys and the clipboard.") + \
     table(["Header", "Value", "Why"], [
         [c("Content-Security-Policy"), c("default-src 'self'") + "; " + c("script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'")
@@ -137,6 +137,26 @@ S2 = p("The server makes its own certificates — two of them, on purpose (" + c
       "Referer, and the page cannot ask for devices it never uses. <b>It is not a wall against injection:</b> an injected "
       "inline script would still run (" + c("'unsafe-inline'") + "), and as long as " + c("connect-src") + " carries "
       + c("https:") + " it could reach any HTTPS origin. The trust anchor stays the certificate fingerprint (" + rif("Authentication with PAM") + ").") + \
+    p("<b>The page listener before login</b> (DECISIONS-11 §11.44; a pre-login denial of service of 1.0: 32 TCP connections that "
+      "sent nothing took every slot for ever). " + c("page.c") + " now has " + c("PAGE_MAX_CLIENTS") + " = 128 slots and, for each "
+      "client, a birth time: 10 s to finish TLS and send a whole request; no absolute limit while the answer is written (the page "
+      "is ~907 KB) but closed after 60 s without a byte acknowledged by the peer (" + c("TCP_INFO") + ", not what " + c("SSL_write")
+      + " handed to the kernel) or below 2 KB/s on average after 20 s. At most 4 connections at once from one address key "
+      "(" + c("rcp_key_address()") + ": an IPv4 address or an IPv6 /64) and 8 from one /48. Accepts are rationed with token "
+      "buckets (4 per second per key, burst 8; 8 per second per /48, burst 16): a connection over the rate is parked without TLS "
+      "for up to 3 s and then answered " + c("503") + " with " + c("Retry-After: 1") + ", never closed in silence. When all the slots "
+      "are taken a <i>fair share</i> eviction frees one: the group is the /48 (or the address), the victim comes from the group "
+      "holding the most slots — first a client that never sent a whole ClientHello, then one without a whole request, then "
+      "a writer at least 5 s into its answer, last a fresh writer — and the newcomer is refused only if its own group would "
+      "then be the largest; when every group holds one slot the oldest goes. Expired and evicted clients are closed with a reset. "
+      "A banned address is <b>not</b> refused at accept: §4.4-bis wants it to see the page and the sentence. Price: everyone "
+      "behind one NAT is one group. One summary line at most every 10 s says what was refused, evicted or closed.") + \
+    p("<b>The page is compressed once, the banned page is cheap.</b> The shared page is built once per certificate fingerprint "
+      "and compressed with zlib (a dependency since 1.5, level 6: 86 ms at level 9 for +0.25 % of bytes was too much for the main "
+      "loop); every client references the same copy, so 128 slow readers do not hold 128 copies of 907 KB. A banned visitor's page "
+      "is its own small prefix (the markers are all in the first ~45 KB) plus the shared tail, gzip too, with the checksum of the "
+      "whole computed by combining; the request line is looked for in the first line only, and the remaining time is rounded up "
+      "to whole minutes.") + \
     warn("QUIC address validation with Retry is not done (" + c("transport.c") + ", the QUIC transport): «the product is used on its own "
          "network or VPN; it must be put back before exposing it». Exposing REMOTIX directly to the Internet is "
          "outside the declared scenario.", "No Retry.")
@@ -181,7 +201,11 @@ S3 = p("The server runs one " + c("poll") + " loop for every connected user, and
          + " returns false ⇒ no"],
         ["Socket full, " + c("EAGAIN"), "No"],
         ["More than " + c("MAX_IN_FLIGHT") + " = 16 cases in flight", "No. Sized on the peak of <i>arrivals</i>, not "
-         "on the session cap: 17 people pressing «enter» together with zero sessions is possible (R10-A7)."],
+         "on the session cap: 17 people pressing «enter» together with zero sessions is possible (R10-A7). Two of the 16 places are kept "
+         "for a key that logged in during the last 30 days (" + c("RESERVED_FOR_KNOWN") + " = 2): a key never admitted gets 14, "
+         "a known one 16, so a few fresh addresses rotating cannot make the owner read " + c("0x0E") + " for as long as the flood "
+         "lasts. The refusal goes out as " + c("0x0E") + ", not " + c("0x07") + ": the check was never made and nothing is counted "
+         "(DECISIONS-11 §11.39)."],
         ["Dispatcher dead (EOF)", "Every case in flight ⇒ no"],
         ["Grandchild dead without answering", "The case expires after " + c("EXPIRY_MS") + " = 8 s ⇒ no"],
         ["Short or garbled answer", "Discarded, then expiry"],
@@ -249,7 +273,14 @@ S4 = p("One file per distribution family, like Cockpit: " + c("@include") + " is
         ["The rest is the system's", "Whatever the administrator configures for ssh — " + c("pam_faillock")
          + " via " + c("authselect") + " on Fedora, " + c("pam-config") + " on openSUSE, " + c("pambase")
          + "'s faillock on Arch (3 failures in 15 minutes, 10-minute lock, " + c("faillock --user <name> --reset")
-         + ") — applies to REMOTIX too, with the same risk of remote account locking as ssh."],
+         + ") — applies to REMOTIX too, with the same risk of remote account locking as ssh. "
+         "<b>The exception (DECISIONS-11 §11.47 B):</b> when " + c("pam_faillock") + " had the account locked, PAM refuses even the right "
+         "password; " + c("authentication.c") + " recognises the lock (the «account is locked» line " + c("pam_faillock preauth")
+         + " prints before the prompt, with " + c("PAM_AUTH_ERR") + ") and the helper's answer byte carries it as 2. For a key that "
+         "logged in during the last 30 days that refusal is <b>not counted</b> toward the ban, so the owner does not ban their own "
+         "address for 12 hours while a stranger keeps the account locked; the wire is unchanged (" + c("REJECTED 0x07") + ", the "
+         "same fixed second). For any other key it counts as before: «not counted» for everybody would reveal that the account "
+         "exists. The account stays locked: wait for the lock or run " + c("faillock --user <name> --reset") + " as root."],
         ["Session stack included", c("child.c") + " calls " + c("pam_open_session") + "; the stack must reach "
          + c("pam_systemd") + " or no logind session is born and the compositor does not start. On 15 Aug 2026 the "
          "Debian file included " + c("common-session-noninteractive") + ", which lacks it; the defect was invisible "
@@ -445,19 +476,17 @@ S8 = p("On a normal desktop logind grants access to " + c("/dev/dri") + " with a
        "of 4 without the groups, 17 of 17 with them — and no error says so.", lead=True) + \
     table(["When", "Who", "What"], [
         ["Installation", "The installer engine (" + c("InstallPlan()") + ", " + c("CardGroups()") + ")",
-         "Adds the people of the machine to the groups <b>read from the nodes</b> " + c("card*") + " and "
-         + c("renderD*") + " (never a hard-coded name or gid). It is a step of the plan the administrator confirms."],
+         "Adds the people of the machine to the group <b>read from the render nodes</b> " + c("renderD*") + " (never a hard-coded name or gid; " + c("card*") + " is not looked at since 1.5, DECISIONS-11 §11.38). It is a step of the plan the administrator confirms."],
         ["First connection", "The parent, as root, just before forking the user's child ("
          + c("enroll_in_card_groups()") + ", called from "
          + c("children_ensure_from()") + ")", "After PAM said yes, runs " + c("usermod -aG <groups> <user>") + " for the groups the user lacks, "
          "logs it, appends one JSON line per group to " + c("/var/lib/remotix/group-enrollments.jsonl")
          + " (format " + c("remotix-enrollments/1") + ", origin " + c("DIRECT") + "), and "
-         "restarts the user manager (" + c("loginctl terminate-user") + ") so the compositor sees the new groups — "
-         "unless a desktop of that user is alive, or logind cannot say."],
+         "and, if the user manager is already running with the old list, " + c("render_grant_add()") + " gives the user's primary group an ACL on the render nodes instead of restarting it: nothing is closed (§11.4)."],
         ["Every birth", "The parent, same place (" + c("card_groups()") + ")", "Checks membership and says it loudly, with the cure, when the "
          "user is still not in the groups."],
         ["Uninstallation", "The installer engine", "Removes the memberships its own plan added and those listed in "
-         + c("group-enrollments.jsonl") + "; a membership that existed before, or is already gone, is never touched."],
+         + c("group-enrollments.jsonl") + "; a membership that existed before, or is already gone, is never touched. The plan also has a " + c("remove-render-grants") + " step, always present and harmless when the record does not exist: it removes the ACL entries REMOTIX added from every " + c("renderD*") + " and the " + c("render-grants") + " record."],
     ], "«TAB» — Who puts users in the card groups") + \
     p("This is the one wanted exception to «REMOTIX does not modify the system» (" + c("DECISIONS.md") + " §7.21 and "
       "§10.36: «no packages without authorisation, but users must be able to access»). The annotation file is "
@@ -654,8 +683,7 @@ S12 = p("The weaknesses that are known and written in the code, collected in one
          "completion; when it comes, the screen-locker choice must be reread"],
         ["Local password copy zeroed with " + c("memset"), c("rcp.c"), "[?] R9.20: inspect the binary, then "
          + c("explicit_bzero()")],
-        [c("/diary") + " is unauthenticated and writes a log line per request", c("page.c"), "Sanitised and cut; "
-         "no rate limit in the code"],
+        ["The page server could be locked out before login by connections that send nothing (1.0)", c("page.c"), "Deadlines, per-address caps, token-bucket accept rate and fair-share eviction since 1.5 (DECISIONS-11 §11.44); the price is that everyone behind one NAT is one group"],
         ["Ban shared behind NAT (key = address or IPv6 /64); 256-entry table", c("rcp.c"), "Declared price; refusal counted and logged"],
         ["Unlock socket absent from the packaged units", "packaging", "Not settled yet"],
         ["Every journal line twice under systemd with " + c("--journal"), c("log.c"), "Not settled yet"],

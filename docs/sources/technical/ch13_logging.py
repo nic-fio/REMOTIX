@@ -101,8 +101,7 @@ S3 = p("The area is the second column of every line and the " + c("REMOTIX_AREA"
         [c("rcp"), c("REG_RCP"), c("log.h"), "The RCP state machine (through " + c("hook_log()")
          + "), the parent's side of the PAM helper (" + c("helper.c") + "), the unlock socket (" + c("command.c")
          + ")"],
-        [c("page"), c("LOG_PAGE"), c("log.h"), "The TCP page server, including the " + c("/diary")
-         + " endpoint (" + c("page.c") + ")"],
+        [c("page"), c("LOG_PAGE"), c("log.h"), "The TCP page server (" + c("page.c") + "): one summary line at most every 10 s for what it refused, evicted or closed"],
         [c("cert"), c("REG_CERT"), c("log.h"), "Certificate generation and rotation (" + c("certificates.c") + ")"],
         [c("session"), c("LOG_SESSION"), c("log.h"), "Birth and care of the desktop session ("
          + c("session.c") + "), the local-session guardian (" + c("sentinel.c") + " and its lines in " + c("main.c")
@@ -287,8 +286,7 @@ S7 = p("Three things never enter any log at any level: passwords, what the user 
          "Meta 125/126 — they say nothing about the text and are exactly the keys that get stuck and need naming "
          "(" + c("RCP.md") + " §11). Mouse buttons keep their code too.",
          c("log_speakable_key()") + "; its twin " + c("speakable_key()") + " in " + c("rcp.c")],
-        ["Text from the page", c("/diary") + " lines are reduced to printable ASCII (no newline, no control "
-         "bytes) and cut at 900 bytes with a visible " + c("⛔CUT HERE"), c("page.c")],
+        ["Text from the client in the page server", "The request line quoted in the log («GET … from») is reduced to printable ASCII, cut at 200 bytes with its length said, and the log itself turns every control byte (and DEL, the C1 controls, the bidi marks, the Unicode line separators) into a «?», so a target with a newline cannot forge a second line", c("page.c") + ", " + c("log.c")],
         ["Session identities", "Sanitised to user-name characters", c("riga()")],
     ], "«TAB» — The exclusions and where they are enforced") + \
     p("A sequence of evdev codes " + c("30, 48, 46") + " is a word: a key code <b>is</b> a character up to the "
@@ -366,7 +364,7 @@ OPT = table(["Option", "Default", "Lives in", "Meaning"], [
     [c("--command-socket PATH"), "none", "parent", "Unix socket 0600 of the unlock command ("
      + rif("The unlock command socket") + "). Without it a ban ends only when its wait runs out (15 minutes, 1 hour or 12 hours)."],
     "Diagnostics",
-    [c("--verbose"), "off", "parent and child", "Detail lines (" + c("log_detail") + ")."],
+    [c("--verbose"), "off", "parent and child", "Detail lines (" + c("log_detail") + "). Under it the key receipts of the input channel are logged in full (exact counts, and the slow keys one by one); without it the input log has one line per 10 s, only if something was slow and with no counts (a count after a password would be its length)."],
     [c("--journal"), "off (on in the packaged deb and rpm units)", "parent and child", "Events also to the journal "
      "(" + rif("The systemd journal output") + ")."],
     [c("--survey DIR"), "none", "parent and child", "Writes the captured frame (" + c("cattura.bgrx") + ") and the "
@@ -404,6 +402,8 @@ OPT = table(["Option", "Default", "Lives in", "Meaning"], [
     [c("--reserve F"), "0.5", "parent", "Share of a still tenant's worst case held in reserve (0 … 1)."],
     [c("--session-cap N"), "10", "parent", "Administrative cap on served users; refusals get " + c("0x0E")
      + ". Values below 1 are rejected with a line."],
+    [c("--render-node /dev/dri/renderDN"), c("renderD128"), "parent → child", "The encoding card when the desktop does not say which card it draws on (the compositor's own answer, the " + c("linux-dmabuf") + " main device, is asked first and wins); also the card of the start-up test."],
+    [c("--decoder-pace"), "off", "parent", "Declares the capability " + c("video.pace") + " (RCP.md §13): the page may then ask the server to encode fewer frames when its decoder falls behind. Off by default: nothing changes on the wire without it."],
     "Separate modes (first argument)",
     [c("--encoding-test [h264|hevc] [--node /dev/dri/renderDN] [--encoding-route …]") + " (encoding test; "
      + c("--node") + " = render node)", "—", "standalone", "Encodes one "
@@ -498,10 +498,6 @@ S11 = p("Besides the log, the product carries a few instruments for diagnosis. N
          "this wire, which the installer reads). The installer runs it at the end of an installation."],
         [c("--survey DIR"), "Is the picture the page paints the picture that was captured?", "Writes the captured "
          "frame and the encoded streams for the pixel comparison benches."],
-        [c("GET /diary?…"), "What does the page see (frames decoded, audio blocks played, gaps)?", "The page sends "
-         "its counters as a query string; the server writes them as a " + c("page") + " line. Born 17 Aug 2026 "
-         "after four audio cures chased with three of the four rings measured; the page's own panel is unreachable "
-         "when the desktop is full screen."],
         [c("GET /fingerprint"), "Which session certificate is in force now?", "JSON "
          + c('{"algorithm":"sha-256","fingerprint":…,"hex":…,"rotations":N}') + " (algorithm, fingerprint, the "
          "same in hexadecimal, number of rotations)."],

@@ -211,13 +211,18 @@ S4 = p("Checking a password is the only thing the server needs root for besides 
     table(["What can go wrong", "Outcome"], [
         ["the helper did not start", c("helper_ask()") + " returns false: “no” at once"],
         ["the socket is full", "“no” at once"],
-        ["more than 16 checks in flight (" + c("MAX_IN_FLIGHT") + ")", "“no” at once"],
+        ["more than 16 checks in flight (" + c("MAX_IN_FLIGHT") + "; 14 for a key never admitted: two places are kept for a key that "
+         "logged in during the last 30 days, " + c("RESERVED_FOR_KNOWN") + ")", "“no” at once"],
         ["the dispatcher died", "every check in flight becomes “no”"],
         ["a grandchild died without answering", "the check expires after 8 s (" + c("EXPIRY_MS")
          + "): “no”; a second net in " + c("rcp.c") + " expires it after 12 s (" + c("VERDICT_CAP") + ")"],
         ["a short or garbled answer", "discarded; then it expires"],
         ["any byte other than exactly " + c("1"), "“no”"],
     ], "«TAB» — Invariant I3: every failure of the helper is a “no”") + \
+    p("On the wire these “no” answers are not the wrong-password answer: when the check was never made the page gets "
+      + c("REJECTED") + " with " + c("0x0E SESSION_UNSERVABLE") + " (same fixed second, nothing counted toward the ban), and "
+      "only PAM's own refusals are " + c("0x07") + " and counted (DECISIONS-11 §11.39). The owner of the machine is not told "
+      "“incorrect password” for a password that was right.") + \
     p("The password is in clear in the server's memory, in the request buffer and in the dispatcher: each copy is "
       "zeroed as soon as it has been used, and none reaches the log (" + c("RCP.md") + " §4.4). The socket pair has "
       "no name in the filesystem and dies with the two processes. The helper is started <b>before</b> "

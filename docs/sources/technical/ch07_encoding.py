@@ -217,7 +217,17 @@ S4 = p("Until phase 18 the VA-API path was libavcodec's " + c("h264_vaapi") + " 
          + c("temporal_mvp 0") + ", " + c("cabac_init_present 1") + " in HEVC). It did the same to ffmpeg, so "
          "the stream is unchanged. For the same reason the cropping window that Mesa 25.0.7 does not write is "
          "fixed afterwards on the bytes (" + rif("Bytes, levels and the confession") + ").", "Radeon rewrites "
-         "the headers.")
+         "the headers.") + \
+    p("<b>The padding past the canvas.</b> The card encodes a picture a little larger than the screen — the sides are rounded up (H.264 "
+      "to 16; HEVC on AMD to 64 wide and 16 high; a 1080-row screen goes out as 1088 rows) — and the decoder is told to hide the extra "
+      "strip. The hidden strip still takes part in the compression, so what is in it can leak into the last visible row or column on "
+      "some decoders. Since 1.5 (DECISIONS-11 §11.45, decided A) " + c("convert_on_gpu()") + " adds, in the same GPU step that turns RGB "
+      "into the encoder's YUV, up to three layers that copy the last row, the last column and the corner pixel into the hidden strip; "
+      + c("REMOTIX_VPP_PADDING=1") + " is the default, " + c("=0") + " switches it off. Measured on Intel iHD and AMD radeonsi: the strip equals "
+      "the edge within 0–0.9 levels (with " + c("=0") + ": black, or 114–207 levels away). With more than one layer both drivers change "
+      "conversion engine: on AMD the colours are converted by a shader instead of the encoder (brightness 55–60 dB against the CPU "
+      "reference instead of 42–47, colour 1–5 dB further), at a cost of +1.5–3 % per frame at 3788×2022 and +6–12 % at 1080p; Intel is "
+      "unchanged. A canvas already aligned (3840×2160, 2560×1440, 1280×720) has zero layers. Not yet looked at by eye on an AMD box.")
 
 # ── 7.5 ─────────────────────────────────────────────────────────────────────
 S5 = p("Vulkan Video is the path the user asked for first (1 Oct 2026: “with standard tools, preferably Vulkan, "

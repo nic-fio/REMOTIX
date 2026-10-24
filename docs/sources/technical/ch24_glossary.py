@@ -63,7 +63,7 @@ NOMI = [
      "<i>fault</i>."),
     ("denied-users", "The list read by " + c("pam_listfile") + " in the PAM file (" + c("/etc/remotix/denied-users")
      + "); it holds " + c("root") + ". Missing, it makes PAM refuse everyone." + v("The PAM service files")),
-    ("diary", "The page's " + c("/diary") + " endpoint: the page writes its own lines into the server log."
+    ("diary", "The page's " + c("/diary") + " endpoint of 1.0: the page wrote its own lines into the server log. Gone from the product and from test builds since 1.5."
      + v("The page server")),
     ("encoder", "The front of video encoding: picks Vulkan Video or VA-API by capability, checks the bytes, owes "
      "keyframes, enforces the 16 MiB ceiling (" + c("Encoder") + ", " + c("encoder.c") + ")."

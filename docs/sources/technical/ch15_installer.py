@@ -172,8 +172,8 @@ S_INTRO = p("REMOTIX is installed by one program, " + c("remotix-install") + ", 
          "components the distribution lacks, firewall rules or system guards. " + c("check") + " says what is missing "
          "(" + c("RX-MANCA-001…004") + " — " + c("MISSING") + " means “missing” — and " + c("RX-GPU-003…006") + ") without suggesting packages or "
          "commands, and " + c("install") + " stops before touching anything.", c("DECISIONS.md") + " §10.36"],
-        ["<b>One deliberate exception</b>", "People are added to the groups of the card nodes (" + c("/dev/dri/card*")
-         + ", " + c("renderD*") + ") automatically, at installation and at the first connection: without them a remote "
+        ["<b>One deliberate exception</b>", "People are added to the group of the render nodes (" + c("/dev/dri/renderD*")
+         + ", never " + c("card*") + ") automatically, at installation and at the first connection: without them a remote "
          "desktop cannot use the card.", "§10.36, §7.21"],
         ["<b>One program, monolithic</b>", "Engine, command line and TUI in one executable. systemd, logind and firewalld "
          "are reached over D-Bus; external programs only from a closed list, with absolute paths, each call logged.",
@@ -533,6 +533,9 @@ S_ACTIONS = p("A plan step (" + c("PlanAction") + ") carries its id, type, param
          "state before.", "The original step's " + c("Do") + " (a failed uninstallation reinstalls).", "uninstallation"],
         [c("remove-membership"), "EXACT", c("gpasswd -d") + " for a group enrolment the product recorded at first "
          "connection.", c("gpasswd -a") + ".", "uninstallation"],
+        [c("remove-render-grants"), "EXACT", "Removes the ACL entries REMOTIX added on every " + c("/dev/dri/renderD*") + " (the primary-group "
+         "grants of " + c("render_grant.c") + ") and the " + c("render-grants") + " record, with the sessions closed. Always in the plan; the step's "
+         "snapshot makes it harmless when the record does not exist.", "Puts the entries and the record back.", "uninstallation"],
         [c("remove-user-logs"), "EXACT", "Removes " + c("~/.local/state/remotix/session.log") + " in every home "
          "(and the folder if left empty), after copying it into the operation folder.", "Puts the files back with "
          "permissions and owner.", "uninstallation"],
@@ -762,9 +765,10 @@ S_PLAN = p(c("InstallPlan()") + " is the whole installation policy in one functi
       "result as the resolved set.") + \
     note("the TUI asks only for the port and the “yes”. Repositories, the firewall, the desktop, guards and drivers "
          "are not questions any more: what is missing is said and the installation stops (§10.36).", "One question.") + \
-    p("Not settled yet: whether the card groups shrink to " + c("render") + " only — " + c("video") + " also grants "
-      + c("/dev/fb*") + " and webcams (§10.36); until it is measured on the four desktops the engine enrols every "
-      "non-root group it finds on " + c("/dev/dri/card*") + " and " + c("renderD*") + ".")
+    p("Settled in 1.5 (DECISIONS-11 §11.38): the card groups are those of the render nodes only — the compositors and the encoder "
+      "open " + c("renderD*") + ", never " + c("card0") + " — so " + c("CardGroups()") + " scans " + c("/dev/dri/renderD*") + " and the users present "
+      "at installation get the render group, not " + c("video") + ". Not measured: AMD and NVIDIA cards (the NVIDIA proprietary driver "
+      "opens " + c("/dev/nvidia*") + ", for which " + c("RX-GPU-007") + " warns).")
 
 S_MANAGERS = p("Each family has an adapter (" + c("Manager") + " in " + c("package_manager.go") + ", chosen by "
                + c("ChooseHandler()") + "): versions, simulate, install, simulate-remove, remove only the named "

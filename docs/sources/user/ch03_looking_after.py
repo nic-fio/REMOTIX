@@ -54,7 +54,7 @@ S_UNINSTALL = p("REMOTIX is removed with the installer that stays on the machine
         "it stops and disables the service;",
         "it closes every open REMOTIX desktop — <b>unsaved work in them is lost</b>, so warn people first; a "
         "session at the machine itself or by ssh is not touched;",
-        "it takes people out of the graphics-card groups that REMOTIX put them in;",
+        "it takes people out of the render group that REMOTIX put them in, and removes the access REMOTIX gave to the render devices;",
         "it removes each user's " + c("~/.local/state/remotix/session.log") + ";",
         "it removes the packages it installed. A package that something else now needs is kept, and the plan "
         "says so.",
