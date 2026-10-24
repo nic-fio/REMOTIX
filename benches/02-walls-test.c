@@ -26,6 +26,8 @@
  */
 #include "walls.c"
 
+#include <pwd.h>
+
 #include <sys/wait.h>
 
 static int passed, failed;
@@ -49,11 +51,12 @@ static ino_t mnt_ns(void)
 	return stat("/proc/self/ns/mnt", &st) == 0 ? st.st_ino : 0;
 }
 
-static struct rootside_options opts(const char *user, const char *state, const char *run)
+static struct rootside_options opts(uid_t uid, gid_t gid, const char *state, const char *run)
 {
 	struct rootside_options o;
 	memset(&o, 0, sizeof o);
-	o.net_user = user;
+	o.remotix_uid = uid;
+	o.remotix_gid = gid;
 	o.net_state_dir = state;
 	o.net_run_dir = run;
 	return o;
@@ -78,7 +81,7 @@ static void case_context(void)
 	      "context: a buffer too small refused");
 }
 
-static void case_unprivileged(bool have_nobody)
+static void case_unprivileged(const struct passwd *nb)
 {
 	char why[512];
 	uid_t u0 = getuid();
@@ -87,17 +90,14 @@ static void case_unprivileged(bool have_nobody)
 
 	CHECK(walls_apply(NULL, why, sizeof why) == -1 && why[0], "no options: refused («%s»)",
 	      why);
-	o = opts("", "/nonexistent", "/nonexistent");
-	CHECK(walls_apply(&o, why, sizeof why) == -1 && strstr(why, "no network user"),
-	      "empty user: refused («%s»)", why);
-	o = opts("remotix-walls-test-no-such-user", "/nonexistent", "/nonexistent");
-	CHECK(walls_apply(&o, why, sizeof why) == -1 && strstr(why, "does not exist"),
-	      "unknown user: refused, named («%s»)", why);
-	o = opts("root", "/nonexistent", "/nonexistent");
+	o = opts(0, 0, "/nonexistent", "/nonexistent");
 	CHECK(walls_apply(&o, why, sizeof why) == -1 && strstr(why, "must not be root"),
-	      "the user root: refused («%s»)", why);
-	if (have_nobody && geteuid() != 0) {
-		o = opts("nobody", "/nonexistent", "/nonexistent");
+	      "uid 0 as the network user: refused («%s»)", why);
+	o = opts(1234, 0, "/nonexistent", "/nonexistent");
+	CHECK(walls_apply(&o, why, sizeof why) == -1 && strstr(why, "must not be root"),
+	      "gid 0 as the network group: refused («%s»)", why);
+	if (nb && geteuid() != 0) {
+		o = opts(nb->pw_uid, nb->pw_gid, "/nonexistent", "/nonexistent");
 		CHECK(walls_apply(&o, why, sizeof why) == -1 && strstr(why, "must run as root"),
 		      "not root: refused, said («%s»)", why);
 	}
@@ -149,12 +149,13 @@ static int case_root(const struct passwd *nb)
 		printf("  BLIND: mkdtemp (%s)\n", strerror(errno));
 		return 0;
 	}
+	(void)chmod(base, 0755); /* ⚠ mkdtemp makes it 0700: nobody could not even walk in */
 	snprintf(state, sizeof state, "%s/state", base);
 	snprintf(run, sizeof run, "%s/run", base);
 	snprintf(outside, sizeof outside, "%s/outside", base);
 	snprintf(marker, sizeof marker, "/tmp/remotix-walls-test-marker.%ld", (long)getpid());
 
-	o = opts("nobody", state, run);
+	o = opts(nb->pw_uid, nb->pw_gid, state, run);
 	CHECK(walls_apply(&o, why, sizeof why) == -1 && strstr(why, "does not exist") &&
 	          strstr(why, state),
 	      "root, missing state dir: refused, named («%s»)", why);
@@ -237,7 +238,7 @@ int main(void)
 	setvbuf(stdout, NULL, _IOLBF, 0);
 	printf("02-walls-test (uid %ld)\n", (long)geteuid());
 	case_context();
-	case_unprivileged(nb != NULL);
+	case_unprivileged(nb);
 	if (geteuid() == 0) {
 		if (!nb) {
 			printf("  BLIND: no user nobody to wall in\n");

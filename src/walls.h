@@ -45,7 +45,8 @@
 
 /* Applies the walls to the CALLING process (the root side's fork, as root).
  * 0 = all in place, the caller may `execve`; -1 = not, and `why` says which
- * wall and why.  Uses `o->net_user`, `o->net_state_dir`, `o->net_run_dir`. */
+ * wall and why.  Uses `o->remotix_uid`/`remotix_gid`, `o->net_state_dir`,
+ * `o->net_run_dir` (the last two added by lane 2 to lane 1's struct). */
 int walls_apply(const struct rootside_options *o, char *why, size_t why_len);
 
 #endif

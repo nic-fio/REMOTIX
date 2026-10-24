@@ -28,7 +28,6 @@
 #include <fcntl.h>
 #include <grp.h>
 #include <inttypes.h>
-#include <pwd.h>
 #include <sched.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -249,8 +248,6 @@ static int drop_bounding_set(char *why, size_t n)
 
 int walls_apply(const struct rootside_options *o, char *why, size_t why_len)
 {
-	struct passwd pwb, *pw = NULL;
-	char pwbuf[4096];
 	struct statvfs vs;
 	uid_t ru, eu, su;
 	gid_t rg, eg, sg;
@@ -259,18 +256,16 @@ int walls_apply(const struct rootside_options *o, char *why, size_t why_len)
 
 	if (why && why_len)
 		why[0] = '\0';
-	if (!o || !o->net_user || !o->net_user[0])
-		return say(why, why_len, "no network user named");
+	if (!o)
+		return say(why, why_len, "no options");
 
-	/* ⛔ 1 — the checks that need no power. */
-	if (getpwnam_r(o->net_user, &pwb, pwbuf, sizeof pwbuf, &pw) != 0 || !pw)
-		return say(why, why_len, "the network user «%s» does not exist (the package "
-		           "creates it with sysusers.d)", o->net_user);
-	uid = pw->pw_uid;
-	gid = pw->pw_gid;
+	/* ⛔ 1 — the checks that need no power.  The user was resolved by
+	 *    `main.c` (`--network-user`, default remotix): its uid and gid. */
+	uid = o->remotix_uid;
+	gid = o->remotix_gid;
 	if (uid == 0 || gid == 0)
-		return say(why, why_len, "the network user «%s» is uid %ld gid %ld: it must "
-		           "not be root", o->net_user, (long)uid, (long)gid);
+		return say(why, why_len, "the network user is uid %ld gid %ld: it must "
+		           "not be root", (long)uid, (long)gid);
 	if (geteuid() != 0)
 		return say(why, why_len, "the walls are put up by root, and this process is "
 		           "uid %ld: the root side must run as root", (long)geteuid());
