@@ -766,6 +766,12 @@ static void test_verdict_paths(void)
 	rcp_orphan_verdict("alice", "1.2.3.4", false, false, 0, at(1), rec_line, NULL);
 	CHECK(in_flight_of(K, "alice") == 0 && failures_of(K, "alice") == 1, "orphan with rhost: in flight 0, failure counted (%d, %d)",
 	      in_flight_of(K, "alice"), failures_of(K, "alice"));
+	/* a failure stamped in the FUTURE (a clock that went back) still counts: failed_inside() asked 5 s BEFORE the stamp */
+	{
+		int i = lfind_user(K, "alice");
+		CHECK(i >= 0 && failed_inside(&attempts[i], at(1) - 5000) == 1,
+		      "a failure stamped at now+5 s counts as inside the window (no unsigned wrap)");
+	}
 	/* ...and WITHOUT it nothing can be resolved (this is the defect of helper.c the test of test_helper.c guards) */
 	login_reserve(K, "alice", at(2), &info);
 	rcp_orphan_verdict("alice", "", false, false, 0, at(3), rec_line, NULL);
