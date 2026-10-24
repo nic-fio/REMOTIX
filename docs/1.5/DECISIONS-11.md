@@ -1737,7 +1737,7 @@ behaviour (`pam_faillock(8)`, `faillock.conf(5)`); ⚠ **not run live** — `[?]
 - ⚠ Recorded after 1.5 was declared a failure (`FAILURE.md`).
 
 
-### 11.52 🔸 The fuzz and the ngtcp2 / nghttp3 audit of 24 Oct 2026: 15 fixes, all «present since 1.0» — waiting for the user's OK
+### 11.52 🔸 The fuzz and the ngtcp2 / nghttp3 audit of 24 Oct 2026: 13 fixes (A 1 + B 6 + C 6), all «present since 1.0» — waiting for the user's OK
 
 - **Status of the whole section: «in attesa dell'OK dell'utente».** Nothing below is in the product. The fixes live on
   separate branches, stacked: `pacing-su-migrazione` (A), `audit-ngtcp2` (B), `audit-nghttp3` (C), and gathered on the
@@ -1763,7 +1763,7 @@ behaviour (`pam_faillock(8)`, `faillock.conf(5)`); ⚠ **not run live** — `[?]
   will probably be «in the noise», the loss phase is the one that counts) and the A/B on smoothness. This is the fix
   with the most risk of performance effects: it goes in last.
 
-#### B. ngtcp2 audit (`audit-ngtcp2`, 7 fixes)
+#### B. ngtcp2 audit (`audit-ngtcp2`, 6 fixes in 7 commits: B1 has two)
 - **B1 `d624d875`+`0cc6df15`:** `NGTCP2_ERR_DROP_CONN` from `read_pkt` — doc: *«Server application must drop the
   connection silently (without sending any CONNECTION_CLOSE frame)»*. We answered with one (a reflection towards a
   forged source). Now dropped silently, and a connection already marked dead is no longer read (a second packet of the
@@ -1785,19 +1785,22 @@ behaviour (`pam_faillock(8)`, `faillock.conf(5)`); ⚠ **not run live** — `[?]
   stays at ngtcp2's default (no limit) — needs a decision; the 90 s limit of §11.40 covers the never-logged-in.
 - **Verified by:** builds; fuzz stubs updated (`is_local_stream2`, `get_conn_info2`, `tls_alert2`, `ccerr_set_tls_alert`).
 
-#### C. nghttp3 audit (`audit-nghttp3`, 7 valid fixes; C3 was NOT a defect)
+#### C. nghttp3 audit (`audit-nghttp3`, 6 fixes: C1, C2, C4-C7; C3 was NOT a defect; C7 has two commits)
 - **C1 `672c9d42`:** `nghttp3_conn_close_stream` is called for every closed stream (H3_NO_ERROR when ngtcp2 gives no
   code); before, a stream closed without a code was never released: memory grew with every stream. Medium.
 - **C2 `e7c469f1`:** the results of `nghttp3_conn_shutdown_stream_read` and `nghttp3_conn_unblock_stream` were ignored;
   now an application error + callback failure. Low.
-- **C3 (no commit; `513b3b21` then `fb0c6cd6`):** the client's STOP_SENDING. The first judgment («it shuts the read side
-  by mistake») was WRONG: `513b3b21` changed the side, `fb0c6cd6` restored the original behaviour (the read side through
-  `h3_shutdown_read`) and corrected the comment. Not a defect; recorded so nobody re-opens it.
+- **C3 (no fix; `513b3b21`, then `fb0c6cd6`):** not a defect. `wt_stream_stop_sending` is ngtcp2's `stream_stop_sending`
+  (we stop reading), NOT the client's STOP_SENDING, which comes back as STREAM_SHUT_WR from `writev_stream` and is already
+  handled. `513b3b21` mistook it for the client's and moved it to the write side; `fb0c6cd6` restored the read side.
+  `fb0c6cd6` still leaves one small real change: the return value is handled, through `h3_shutdown_read`; it belongs to
+  C2. Recorded so nobody re-opens it.
 - **C4 `86af9276`:** `NGTCP2_ERR_STREAM_NOT_FOUND` from `writev_stream` is handled like `STREAM_SHUT_WR`, not as a
   connection error. Low.
 - **C5 `b6e3c5c1`:** `cb_rand` uses `getrandom()`, not `rand()`. Low.
 - **C6 `f395aff5`:** a second CONNECT+webtransport while a session exists is refused with 429; before it renewed the 5 s
-  `channel_deadline` of the first. Low.
+  `channel_deadline` of the first, and it also overwrote `w->session`, so the capsules of the first session were no
+  longer recognised. Low.
 - **C7 `515c2e7a`, `4923f68d` (new):** every closed stream left ~40 bytes in a list never emptied, and `judgment_find`
   scanned it at every packet — the cost grew with the streams opened in the connection's life (a slowdown, not only
   memory). The judgment of a closed stream is now released; `dispatch` / `dispatch_uni` take the prefix bytes out of the
