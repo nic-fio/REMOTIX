@@ -393,6 +393,10 @@ struct wt {
 	/* ⭐ D-001: this user's stage already existed at PAM's verdict ⇒
 	 *    `SESSION` says `2 = RESUMED`.  `wt_verdict()` writes it. */
 	bool resumed;
+	/* The request number of the PAM verdict this connection took (set by
+	 * `wt_verdict()`): `wt_dismiss_ticket()` finds the session of THAT login. */
+	uint64_t verdict_ticket;
+	bool has_verdict_ticket;
 	ngtcp2_ccerr *last_error;
 	nghttp3_conn *h3;
 	char provenance[80];
@@ -2494,7 +2498,12 @@ static void hook_log(void *ctx, const char *line)
 	const char *chi = (w && w->rcp) ? rcp_user(w->rcp) : NULL;
 	/* ⛔ Before the login, in the address's budget — except the two lines that
 	 *    must never be lost (see `WT_PRELOGIN_BURST`). */
-	if (!strstr(line, "BANNED") && !strstr(line, "failed attempt")
+	/* ⚠ By the literal PREFIX that `rcp.c` writes at the START of those two
+	 *   lines (`login_report()`), never by searching the whole line: it carries
+	 *   text from the client (the name, `max_size`, the level) and a stranger
+	 *   could put the words in it to be exempt from the budget. */
+	if (strncmp(line, "failed attempt from ", 20) != 0
+	    && strncmp(line, "⛔ BANNED ", strlen("⛔ BANNED ")) != 0
 	    && !prelogin_may_log(w))
 		return;
 	log_says_of(REG_RCP, chi, "%s", line);
@@ -6550,6 +6559,18 @@ size_t wt_dismiss_user(const char *user, uint8_t reason, const char *detail,
 	return how_many;
 }
 
+size_t wt_dismiss_ticket(uint64_t ticket, uint8_t reason, const char *detail)
+{
+	for (wt *w = alive_before; w; w = w->alive_after) {
+		if (!w->rcp || w->closing >= 0 || !w->has_verdict_ticket ||
+		    w->verdict_ticket != ticket)
+			continue;
+		wt_dismiss(w, reason, detail);
+		return 1;
+	}
+	return 0;
+}
+
 /* ⛔⭐ THE CANVAS CAP OF WHOEVER IS KNOCKING — phase 10, and it serves the BUDGET.
  *
  *     At `delivery_verdict()` the session's canvas **is not yet decided**
@@ -8883,6 +8904,8 @@ bool wt_verdict(wt *w, uint64_t ticket, bool admitted, bool resumed)
 	/* ⛔ Only on the connection that took the request: the others have
 	 *    nothing to do with it, and the fact belongs to this admission. */
 	w->resumed = admitted && resumed;
+	w->verdict_ticket = ticket;
+	w->has_verdict_ticket = true;
 	return true;
 }
 

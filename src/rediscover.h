@@ -58,7 +58,7 @@ typedef struct {
  * it wrote, or -1 if logind did not answer (the reason in `why`).
  * ⚠ The FIRST call of the process waits for logind (300 ms ceiling per call)
  *   and reads `/proc`: it is the startup's.  ⭐ Every later one (15 Oct 2026)
- *   does NOT wait: it uses logind's answer to the PREVIOUS call (≤ 30 s old,
+ *   does NOT wait: it uses logind's answer to the PREVIOUS call (≤ 45 s old,
  *   or -1), reads `/proc` now, and sends the next question — the box is in
  *   `rediscover.c`, above `struct question`.
  */

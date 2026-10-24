@@ -495,10 +495,10 @@ static void sample(client *c, uint64_t now)
 /* The response of `c`: the headers and `text` (copied: only small bodies
  * come this way), followed by `shared` when it is not NULL (referenced, not
  * copied; `Content-Length` covers both). */
-static void compose_tail(client *c, const char *state, const char *kind,
-                         const char *text, size_t ntext, body *shared,
-                         const unsigned char *tail, size_t ntail,
-                         const char *extra)
+static void compose_build(client *c, const char *state, const char *kind,
+                          const char *text, size_t ntext, body *shared,
+                          const unsigned char *tail, size_t ntail,
+                          const char *extra, bool retrying)
 {
 	char head[2048]; /* the page's security headers (PAGE_SECURITY) are ~900 bytes */
 	size_t nbody = ntext + (shared ? shared->n : 0) + ntail;
@@ -517,13 +517,14 @@ static void compose_tail(client *c, const char *state, const char *kind,
 	             state, kind, nbody, extra ? extra : "");
 	/* ⛔ 24 Oct 2026, review of the page headers: `snprintf` returns the length the line WOULD
 	 *   have, not what fit.  With a longer `extra` the `memcpy` below read past the stack buffer
-	 *   `head`.  Too long is OUR defect, never the client's: it is answered 500, with no `extra`
-	 *   (so the retry cannot overflow again) and the sentence says why. */
+	 *   `head`.  Too long is OUR defect, never the client's: it is answered 500 — with
+	 *   PAGE_SECURITY only (a fixed ~900 bytes, it fits) — and the sentence says why.
+	 *   `retrying` is the explicit guard: the 500 itself is never retried. */
 	if (n < 0 || (size_t)n >= sizeof head) {
-		if (extra) {
-			compose_tail(c, "500 Internal Server Error", "text/plain; charset=utf-8",
-			             "response headers too long\n", 26, NULL, NULL, 0, NULL);
-		}
+		if (!retrying)
+			compose_build(c, "500 Internal Server Error", "text/plain; charset=utf-8",
+			              "response headers too long\n", 26, NULL, NULL, 0,
+			              PAGE_SECURITY, true);
 		return;
 	}
 	c->head = malloc((size_t)n + ntext);
@@ -544,6 +545,14 @@ static void compose_tail(client *c, const char *state, const char *kind,
 	c->write_start = c->last_progress = log_now_ms();
 	c->acked_base = tcp_acked(c->fd, 0);
 	c->delivered = 0;
+}
+
+static void compose_tail(client *c, const char *state, const char *kind,
+                         const char *text, size_t ntext, body *shared,
+                         const unsigned char *tail, size_t ntail,
+                         const char *extra)
+{
+	compose_build(c, state, kind, text, ntext, shared, tail, ntail, extra, false);
 }
 
 static void compose_with(client *c, const char *state, const char *kind,
@@ -1087,7 +1096,7 @@ static void serve(page *p, client *c)
 		const char *t = c->busy_shared ? "busy: too many connections right now, retry\n"
 		                               : "busy: too many connections from this address, retry\n";
 		compose(c, "503 Service Unavailable", "text/plain; charset=utf-8", t,
-		        strlen(t), "Retry-After: 1\r\n");
+		        strlen(t), "Retry-After: 1\r\n" PAGE_SECURITY);
 		return;
 	}
 	{
@@ -1277,7 +1286,7 @@ static void serve(page *p, client *c)
 		if (banned) {
 			if (!banned_respond(p, c, gz, warning, remain_txt))
 				compose(c, "500 Internal Server Error",
-				        "text/plain; charset=utf-8", "no mem.\n", 8, NULL);
+				        "text/plain; charset=utf-8", "no mem.\n", 8, PAGE_SECURITY);
 			return;
 		}
 		{
@@ -1316,7 +1325,7 @@ static void serve(page *p, client *c)
 		}
 		if (!d) {
 			compose(c, "500 Internal Server Error",
-			        "text/plain; charset=utf-8", "no mem.\n", 8, NULL);
+			        "text/plain; charset=utf-8", "no mem.\n", 8, PAGE_SECURITY);
 			return;
 		}
 		/* ⚠ `Content-Length` is `d->n`: the COMPRESSED length when `d` is

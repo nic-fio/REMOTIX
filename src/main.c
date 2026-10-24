@@ -740,6 +740,8 @@ static void delivery_verdict(void *ctx, uint64_t ticket, bool admitted,
 	 *   it** (`[M]` §3.4: `grep -r RCP_BUDGET_FULL src/ --include=*.c` ⇒ zero
 	 *   callers).  This is the line that gives it its first sender. */
 	uint8_t no_reason = RCP_SESSION_UNSERVABLE;
+	/* The 0x0E «desktop closing» goes to THIS login only (its ticket). */
+	bool only_this_login = false;
 	/* ⭐ D-001: the stage was already there ⇒ `SESSION` will say `2 = RESUMED`. */
 	bool resumed = false;
 
@@ -813,11 +815,12 @@ static void delivery_verdict(void *ctx, uint64_t ticket, bool admitted,
 		if (closing) {
 			/* ⭐ Before the caps: it is not a capacity matter, and the user's
 			 *    other sessions are already being sent away by the closing.
-			 * ⚠ Same road as the full table: `without_stage` → `wt_dismiss_user()`
-			 *   with `no_reason` = 0x0E, a refusal that is OURS (not a failed login,
-			 *   not counted).  ⛔ Unlike the abandoned first attempt (which sent
-			 *   away this login only) it reaches every session of the user, and
-			 *   they are all on the desktop that is going away. */
+			 * ⚠ `without_stage` with `no_reason` = 0x0E, a refusal that is OURS
+			 *   (not a failed login, not counted).  ⛔ ONLY this login's session
+			 *   (`wt_dismiss_ticket()`): other connections of the same name may be
+			 *   strangers still trying passwords, and would learn that the
+			 *   account exists (§4.4). */
+			only_this_login = true;
 			snprintf(without_stage, sizeof without_stage,
 			         "the previous desktop of «%s» is still closing: "
 			         "retry in a few seconds",
@@ -985,7 +988,9 @@ static void delivery_verdict(void *ctx, uint64_t ticket, bool admitted,
 	 *    ADDED, they do not replace each other, and `0x06` belongs to the
 	 *    budget's round. */
 	if (without_stage[0]) {
-		size_t how_many = wt_dismiss_user(user, no_reason, without_stage, NULL);
+		size_t how_many = only_this_login
+		                      ? wt_dismiss_ticket(ticket, no_reason, without_stage)
+		                      : wt_dismiss_user(user, no_reason, without_stage, NULL);
 		registro_dice(REG_WT,
 		              "⛔ sent away %zu clients of «%s» with %#04x: %s.  ⚠ If here "
 		              "you read ZERO, the no reached NOBODY and the user "
