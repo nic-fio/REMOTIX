@@ -155,6 +155,9 @@ static int case_root(const struct passwd *nb)
 	snprintf(outside, sizeof outside, "%s/outside", base);
 	snprintf(marker, sizeof marker, "/tmp/remotix-walls-test-marker.%ld", (long)getpid());
 
+	o = opts(nb->pw_uid, nb->pw_gid, "/tmp/remotix-walls-test-state", run);
+	CHECK(walls_apply(&o, why, sizeof why) == -1 && strstr(why, "under /tmp"),
+	      "root, state dir under /tmp: refused, named («%s»)", why);
 	o = opts(nb->pw_uid, nb->pw_gid, state, run);
 	CHECK(walls_apply(&o, why, sizeof why) == -1 && strstr(why, "does not exist") &&
 	          strstr(why, state),

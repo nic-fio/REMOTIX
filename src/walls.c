@@ -171,6 +171,12 @@ static int writable_dir_ok(const char *what, const char *dir, uid_t uid, char *w
 	if (!dir || dir[0] != '/')
 		return say(why, n, "the %s directory «%s» is not an absolute path", what,
 		           dir ? dir : "(none)");
+	/* ⛔ `[M]` 16 Oct 2026, rxtest build's served page: a state dir under /tmp vanished
+	 *    under the private tmpfs the walls mount there, and the line said only «not
+	 *    writable after the walls». */
+	if (strcmp(dir, "/tmp") == 0 || strncmp(dir, "/tmp/", 5) == 0)
+		return say(why, n, "the %s directory %s is under /tmp, which the walls replace "
+		           "with a private, empty tmpfs: put it elsewhere (e.g. /var/tmp)", what, dir);
 	if (lstat(dir, &st) != 0)
 		return say(why, n, "the %s directory %s does not exist (%s): the package "
 		           "creates it (tmpfiles/upgrade), a bench passes its own with "
