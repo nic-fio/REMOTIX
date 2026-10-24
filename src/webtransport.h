@@ -746,5 +746,7 @@ void wt_video_counts(const wt *w, uint32_t *broadcast, uint32_t *skipped,
 
 /* For the log and for the benches. */
 const char *wt_rcp_state(const wt *w);
+/* `rcp_awaits_verdict()` of this connection's session (false without one). */
+bool wt_awaits_verdict(const wt *w, uint64_t ticket);
 
 #endif

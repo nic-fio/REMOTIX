@@ -1759,6 +1759,11 @@ const char *wt_rcp_state(const wt *w)
 	return w->rcp ? rcp_state_name(w->rcp) : "(none)";
 }
 
+bool wt_awaits_verdict(const wt *w, uint64_t ticket)
+{
+	return w && w->rcp && rcp_awaits_verdict(w->rcp, ticket);
+}
+
 /* ⛔ WHY it still has something to say — and it is not a luxury: without this line
  *    «the closing capsule is not mature yet» and «the bytes do not go out» look
  *    the same, and whoever stops the service reads «1 sessions still have

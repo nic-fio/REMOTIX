@@ -26,6 +26,11 @@
  *    by the grandchild**: in the serving process it is never executed again. */
 bool rcp_authenticate_from(const char *user, const char *password,
                       const char *rhost);
+/* ⭐ §11.47 B: 1 admitted, 2 refused while `pam_faillock` had the account
+ *    locked, 0 any other refusal — the byte `outcome` below. */
+int rcp_authenticate_judged(const char *user, const char *password,
+                            const char *rhost);
+void rcp_refusal_locked(uint64_t ticket); /* rcp.c / rcp.h */
 bool rcp_rhost_from_provenance(const char *provenance, char *report, size_t cap);
 
 /* ⛔⛔ THIS NUMBER IS NOT THE SESSION CAP, AND MUST NOT FOLLOW IT — 25 Aug
@@ -57,6 +62,15 @@ bool rcp_rhost_from_provenance(const char *provenance, char *report, size_t cap)
  *   processes as long as the machine holds. */
 #define MAX_IN_FLIGHT 16
 
+/* ⛔⭐ AND TWO OF THEM ARE KEPT FOR A KEY THAT LOGGED IN LATELY — 15 Oct 2026,
+ *     `DECISIONS.md` §11.39 addendum (ported from 4d9eb72b).  The 16 places are
+ *     shared by every address, and a few fresh addresses rotating keep them
+ *     full: the owner read `0x0E` for as long as the flood lasted.  ⇒ An unknown
+ *     key gets `MAX_IN_FLIGHT - RESERVED_FOR_KNOWN`; a key that `rcp.c` saw
+ *     admitted during the last 30 days (`rcp_asking_for_known_key()`) gets all 16. */
+#define RESERVED_FOR_KNOWN 2
+bool rcp_asking_for_known_key(void); /* rcp.c / rcp.h */
+
 /* ⛔ How long an answer is awaited before calling it «no».  PAM, measured,
  * sits between 1.0 and 2.2 s: eight seconds are four times the worst known
  * case.  ⚠ And there is a SECOND net, in `rcp.c` (`VERDICT_CAP`): two
@@ -82,7 +96,11 @@ struct request {
 
 struct response {
 	uint64_t ticket;
-	uint8_t outcome; /* ⛔ 1 and ONLY 1 means admitted */
+	/* ⛔ 1 and ONLY 1 means admitted.  ⭐ 2 (§11.47 B, 15 Oct 2026): refused
+	 *    while `pam_faillock` had the account locked — a NO like 0, which
+	 *    `rcp.c` may leave out of the §4.4-bis count (`rcp_refusal_locked()`);
+	 *    every other value is a plain no. */
+	uint8_t outcome;
 };
 
 /* ⭐ 24 Oct 2026 (§4.4-bis B): `user` and `rhost` are also what the verdict is
@@ -113,20 +131,20 @@ struct helper {
 static void grandchild(int fd, struct request *r)
 {
 	struct response out;
-	bool ok;
+	int judged;
 
 	/* ⛔ The alarm is armed BEFORE calling PAM: arming it after would be
 	 *    arming it when the case it exists for has already happened. */
 	alarm(GRANDCHILD_ALARM_S);
 
-	ok = rcp_authenticate_from(r->user, r->password, r->rhost);
+	judged = rcp_authenticate_judged(r->user, r->password, r->rhost);
 
 	out.ticket = r->ticket;
 	explicit_bzero(r, sizeof *r);
 	/* ⛔ The only place in the program where a «yes» is born, and it is
 	 *    written so that a value other than `PAM_SUCCESS` cannot get there:
 	 *    `rcp_authenticate()` starts from `admitted = false`. */
-	out.outcome = ok ? 1u : 0u;
+	out.outcome = judged == 1 ? 1u : judged == 2 ? 2u : 0u;
 	/* ⚠ The outcome is written and that is all: if the `send` fails, the
 	 *   parent will receive nothing and the request will expire — that is, a
 	 *   «no».  No retry, and no «maybe» outcome is written. */
@@ -299,13 +317,19 @@ bool helper_ask(helper *a, const char *user, const char *password,
 	*ticket = 0;
 	if (!a || a->fd < 0 || !user || !password)
 		return false;
-	if (a->nflight >= MAX_IN_FLIGHT) {
-		registro_dice(REG_RCP,
-		              "⛔ %d PAM checks already in flight: this one does NOT leave, and "
-		              "whoever asked will receive a NO (I3: failure is a "
-		              "no, not a maybe)",
-		              a->nflight);
-		return false;
+	{
+		bool known = rcp_asking_for_known_key();
+		int limit = known ? MAX_IN_FLIGHT : MAX_IN_FLIGHT - RESERVED_FOR_KNOWN;
+		if (a->nflight >= limit) {
+			registro_dice(REG_RCP,
+			              "⛔ %d PAM checks already in flight (%d places for %s): "
+			              "this one does NOT leave, and whoever asked will "
+			              "receive a NO (I3: failure is a no, not a maybe)",
+			              a->nflight, limit,
+			              known ? "a key that logged in lately"
+			                    : "an unknown key, 2 kept for known ones");
+			return false;
+		}
 	}
 
 	my = a->next_case;
@@ -468,8 +492,15 @@ void helper_move(helper *a, HelperVerdict delivery, void *ctx)
 		/* ⛔⭐ HERE, AND ONLY HERE, A «YES» CAN ENTER THE SERVER — and it goes
 		 *     through a comparison with `1`, not through a `!= 0`: a dirty
 		 *     byte, a memory leftover or a 255 are a NO. */
+		/* ⭐ §11.47 B: a no given while `pam_faillock` had the account locked
+		 *    is marked for `rcp.c` for the length of THIS delivery only (the
+		 *    verdict travels through `main.c` and `transport.c` with its bool,
+		 *    unchanged — live session or orphan); `rcp.c` decides whether it
+		 *    counts. */
+		rcp_refusal_locked(ri.outcome == 2u ? ri.ticket : 0);
 		if (delivery)
 			delivery(ctx, ri.ticket, ri.outcome == 1u, chi, da, false);
+		rcp_refusal_locked(0);
 	}
 }
 

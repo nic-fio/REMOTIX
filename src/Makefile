@@ -319,7 +319,7 @@ LIBS := -lngtcp2_crypto_ossl -lngtcp2 -lnghttp3 -lssl -lcrypto -lpam \
 #   ⛔ but depending on that detail means breaking on a different libc
 #   with an error that does not name the phase that introduced it.
 
-.PHONY: all clean deps fingerprints bench-w1 FORCE
+.PHONY: all clean deps fingerprints bench-w1 test-session FORCE
 
 all: fingerprints $(NOME)
 
@@ -390,6 +390,36 @@ $(BANCO_W1): ../benches/13-w1-one-frame.c wlroots.o registro.o \
 	      $(F13_LIBS)
 
 bench-w1: $(BANCO_W1)
+
+# -----------------------------------------------------------------------------
+# ⭐ THE TEST OF THE ORPHAN pcmanfm-qt PROFILE — `benches/21-session-orphan-test.c`.
+#
+# ⛔ `orphan_profile_pcmanfm_lxqt()` is `static` in session.c, and session.o pulls
+#    in the whole product: the function is CUT from session.c (the same text that
+#    is built, rule R12.3) into `orphan-extract.c`, and compiled with `log.o`.
+#    No such function in session.c (the code before 8124e05c) ⇒ an EMPTY one, and
+#    it is said: the old code did nothing, and the test must go red on it.
+# ⚠ The system folders are `$(TEST_SESSION)/sys-a` and `sys-b`, fixed at build
+#   time; HOME is a fresh temporary folder made by the test.
+# -----------------------------------------------------------------------------
+TEST_SESSION ?= /tmp/remotix-test-session
+
+test-session: log.o ../benches/21-session-orphan-test.c session.c
+	@mkdir -p $(TEST_SESSION)
+	@sed -n '/^static void orphan_profile_pcmanfm_lxqt(void)$$/,/^}$$/p' session.c \
+	  > $(TEST_SESSION)/body.c; \
+	if [ -s $(TEST_SESSION)/body.c ]; then \
+	  { echo '#define ORPHAN_EXTRACTED 1'; cat $(TEST_SESSION)/body.c; } > $(TEST_SESSION)/orphan-extract.c; \
+	else \
+	  echo '  ⛔ orphan_profile_pcmanfm_lxqt() is NOT in session.c: testing an empty one'; \
+	  { echo '#define ORPHAN_EXTRACTED 0'; \
+	    echo 'static void orphan_profile_pcmanfm_lxqt(void) {}'; } > $(TEST_SESSION)/orphan-extract.c; \
+	fi
+	$(CC) $(CFLAGS) -I. -I$(TEST_SESSION) \
+	  '-DORPHAN_SYSTEM_A="$(TEST_SESSION)/sys-a"' '-DORPHAN_SYSTEM_B="$(TEST_SESSION)/sys-b"' \
+	  $$(pkg-config --cflags glib-2.0) -o $(TEST_SESSION)/test \
+	  ../benches/21-session-orphan-test.c log.o $$(pkg-config --libs glib-2.0)
+	$(TEST_SESSION)/test
 
 
 %-client-protocol.h: protocols/%.xml

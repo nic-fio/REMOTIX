@@ -745,6 +745,13 @@ static int failures_of(const char *key, const char *user)
 	return i < 0 ? 0 : failed_inside(&attempts[i], at(1));
 }
 
+/* what rcp_time() puts on the wire (ported from 24f99518): the last byte of the last message, how many, the close code */
+static int wire_n;
+static uint8_t wire_last, wire_closed;
+static void wire_reset(void) { wire_n = 0; wire_last = 0; wire_closed = 0; }
+static void wire_send(void *ctx, const uint8_t *data, size_t len) { (void)ctx; wire_n++; wire_last = data[len - 1]; }
+static void wire_close(void *ctx, uint8_t reason) { (void)ctx; wire_closed = reason; }
+
 static void test_verdict_paths(void)
 {
 	printf("verdict paths\n");
@@ -800,6 +807,109 @@ static void test_verdict_paths(void)
 	      "helper dead through a session: given back, NOT counted, refusal is ours (%d, %d)",
 	      in_flight_of(K, "alice"), failures_of(K, "alice"));
 	CHECK(!rcp_verdict_lost(&s, 8), "a second answer is not taken");
+
+	/* 4. ⛔ the byte on the wire (DECISIONS.md §11.39, ported from 24f99518): a check the server could not make is
+	 *    REJECTED(0x0E SESSION_UNSERVABLE), not 0x07; what PAM decided, and the attempt without a verdict, stay 0x07;
+	 *    the limiter's own 0x08 is never touched.  Same fixed second in every case. */
+	s.g.send_msg = wire_send;
+	s.g.close = wire_close;
+	/* a. the helper died (rcp_verdict_lost): ours -> 0x0E, after the fixed second only */
+	fresh();
+	s.state = S_WAIT_VERDICT; s.expected_verdict = false; s.refusal_is_ours = false; s.cred_good = false;
+	s.cred_reason = RCP_WRONG_CREDENTIALS; s.cred_arrival = at(0);
+	login_reserve(K, "alice", at(0), &info);
+	s.expected_verdict = true; s.ticket = 11;
+	CHECK(rcp_verdict_lost(&s, 11), "(wire) the lost verdict is taken");
+	wire_reset();
+	CHECK(rcp_time(&s, at(0) + FIXED_DELAY) && wire_n == 0, "(wire) nothing before the fixed second is over");
+	CHECK(!rcp_time(&s, at(0) + FIXED_DELAY + 1) && wire_n == 1 && wire_last == RCP_SESSION_UNSERVABLE
+	      && wire_closed == RCP_SESSION_UNSERVABLE,
+	      "(wire) helper dead: REJECTED 0x0E after the fixed second (got %#x, %d messages)", wire_last, wire_n);
+	CHECK(failures_of(K, "alice") == 0, "(wire) and nothing was counted");
+	/* b. a PAM no: still 0x07 */
+	fresh();
+	s.state = S_WAIT_VERDICT; s.refusal_is_ours = false; s.cred_arrival = at(0);
+	login_reserve(K, "alice", at(0), &info);
+	s.expected_verdict = true; s.ticket = 12;
+	CHECK(rcp_verdict(&s, 12, false, at(1)), "(wire) the PAM no is taken");
+	wire_reset();
+	CHECK(!rcp_time(&s, at(0) + FIXED_DELAY + 1) && wire_last == RCP_WRONG_CREDENTIALS && wire_closed == RCP_WRONG_CREDENTIALS,
+	      "(wire) a PAM no stays REJECTED 0x07 (got %#x)", wire_last);
+	/* c. no verdict within VERDICT_CAP: counted, so 0x07 */
+	fresh();
+	s.state = S_WAIT_VERDICT; s.refusal_is_ours = false; s.cred_good = false; s.cred_reason = RCP_WRONG_CREDENTIALS;
+	s.cred_arrival = at(0);
+	login_reserve(K, "alice", at(0), &info);
+	s.expected_verdict = true; s.ticket = 13;
+	wire_reset();
+	CHECK(!rcp_time(&s, at(0) + VERDICT_CAP + 1) && wire_last == RCP_WRONG_CREDENTIALS && failures_of(K, "alice") == 1,
+	      "(wire) the 12 s net: counted as a failure and REJECTED 0x07 (got %#x, %d failures)", wire_last,
+	      failures_of(K, "alice"));
+	/* d. a limiter refusal that is flagged ours keeps its own reason (0x08) */
+	fresh();
+	s.state = S_WAIT_VERDICT; s.expected_verdict = false; s.cred_good = false; s.cred_reason = RCP_TOO_MANY_ATTEMPTS;
+	s.refusal_is_ours = true; s.cred_arrival = at(0);
+	wire_reset();
+	CHECK(!rcp_time(&s, at(0) + FIXED_DELAY + 1) && wire_last == RCP_TOO_MANY_ATTEMPTS,
+	      "(wire) a reason other than WRONG_CREDENTIALS is kept (0x08, got %#x)", wire_last);
+
+	/* 5. the keys that logged in lately (ported from 4d9eb72b / 24c7b668): only an ADMITTED verdict makes a key known */
+	{
+		const char *G = "[7.7.7.7]", *B = "[8.8.8.8]";
+		struct login_result lr;
+		fresh();
+		CHECK(!good_recent(G, at(0)) && !rcp_asking_for_known_key(), "(known) nobody is known at the start, and the flag is down");
+		login_reserve(G, "alice", at(0), &info);
+		login_resolve(G, "alice", true, at(1), &lr);
+		login_reserve(B, "alice", at(0), &info);
+		login_resolve(B, "alice", false, at(1), &lr);
+		CHECK(good_recent(G, at(2)), "(known) a key with an admitted login is known");
+		CHECK(!good_recent(B, at(2)), "(known) a key with only a failure is not");
+		CHECK(good_recent(G, at(1) + GOOD_AGE), "(known) still known at exactly GOOD_AGE");
+		CHECK(!good_recent(G, at(1) + GOOD_AGE + 1), "(known) not known past GOOD_AGE");
+		CHECK(good_recent(G, at(0)), "(known) a login stamped after `now` (helper clock ahead) is recent, the subtraction does not wrap");
+
+		/* 6. §11.47 B (ported from 249c534a): a PAM no given while pam_faillock had the account locked is NOT counted for
+		 *    a key that logged in lately (login_release), and counts for a key that never did */
+		fresh();
+		good_note(G, at(0));
+		snprintf(s.address, sizeof s.address, "%s", G);
+		login_reserve(G, "alice", at(2), &info);
+		s.state = S_WAIT_VERDICT; s.expected_verdict = true; s.ticket = 21; s.cred_arrival = at(2);
+		rcp_refusal_locked(21);
+		CHECK(rcp_verdict(&s, 21, false, at(3)), "(locked) the verdict is taken");
+		rcp_refusal_locked(0);
+		CHECK(in_flight_of(G, "alice") == 0 && failures_of(G, "alice") == 0,
+		      "(locked) a locked-account no for a known key: booking given back, NOT counted (%d, %d)",
+		      in_flight_of(G, "alice"), failures_of(G, "alice"));
+		snprintf(s.address, sizeof s.address, "%s", B);
+		login_reserve(B, "alice", at(2), &info);
+		s.state = S_WAIT_VERDICT; s.expected_verdict = true; s.ticket = 22;
+		rcp_refusal_locked(22);
+		CHECK(rcp_verdict(&s, 22, false, at(3)), "(locked) the verdict is taken");
+		rcp_refusal_locked(0);
+		CHECK(failures_of(B, "alice") == 1, "(locked) the same no for a key that never logged in COUNTS (no user-name oracle): %d",
+		      failures_of(B, "alice"));
+		snprintf(s.address, sizeof s.address, "%s", G);
+		login_reserve(G, "alice", at(2), &info);
+		s.state = S_WAIT_VERDICT; s.expected_verdict = true; s.ticket = 23;
+		rcp_refusal_locked(99); /* another ticket's mark */
+		CHECK(rcp_verdict(&s, 23, false, at(3)), "(locked) the verdict is taken");
+		rcp_refusal_locked(0);
+		CHECK(failures_of(G, "alice") == 1, "(locked) a mark for ANOTHER ticket does not exempt this no: %d", failures_of(G, "alice"));
+		/* the orphan road (the connection is gone), same rule */
+		fresh();
+		good_note(G, at(0));
+		login_reserve(G, "alice", at(2), &info);
+		rcp_refusal_locked(31);
+		rcp_orphan_verdict("alice", "7.7.7.7", false, false, at(3), rec_line, NULL);
+		rcp_refusal_locked(0);
+		CHECK(in_flight_of(G, "alice") == 0 && failures_of(G, "alice") == 0,
+		      "(locked) orphan, known key: given back, NOT counted (%d, %d)", in_flight_of(G, "alice"), failures_of(G, "alice"));
+		login_reserve(G, "alice", at(4), &info);
+		rcp_orphan_verdict("alice", "7.7.7.7", false, false, at(5), rec_line, NULL);
+		CHECK(failures_of(G, "alice") == 1, "(locked) orphan without the mark: an ordinary no, counted (%d)", failures_of(G, "alice"));
+	}
 }
 
 /* ------------------------------------------------------------------------ */

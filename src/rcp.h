@@ -653,6 +653,28 @@ void rcp_closed_by_client(rcp_session *s, uint8_t code);
  *    forbids.  Whoever compares this string must know the case exists; if it
  *    speaks again and the slot is free, the session goes back to `active` by itself. */
 const char *rcp_state_name(const rcp_session *s);
+/* ⭐ True when THIS session still waits for PAM's answer to `ticket` — the
+ *    session `rcp_verdict()` would hand it to.  For `main.c`: a yes nobody waits
+ *    for any more (the client hung up, the session finished while PAM judged)
+ *    must not start a desktop for nobody. */
+bool rcp_awaits_verdict(const rcp_session *s, uint64_t ticket);
+/* ⭐ §11.47 B (`DECISIONS.md`, 15 Oct 2026): the «no» about to be delivered for
+ *    `ticket` (through `rcp_verdict()` or `rcp_orphan_verdict()`) was given
+ *    while `pam_faillock` had the account LOCKED.  The host (`helper.c`) sets
+ *    it just before ONE delivery and calls it with 0 just after.  Such a no is
+ *    NOT counted towards the ban (the booking is given back) when its key had
+ *    an admitted login in the last 30 days (the notion of the places kept for
+ *    a known key), and counts as any other otherwise.  The wire does not change. */
+void rcp_refusal_locked(uint64_t ticket);
+
+/* ⭐ THE TWO PAM SLOTS KEPT FOR A KNOWN KEY — 15 Oct 2026, `DECISIONS.md`
+ *    §11.39 addendum.  True ONLY while `rcp.c` is inside `ask_verify` for
+ *    credentials whose key (§4.4-bis: IPv4 address or IPv6 /64) had an ADMITTED
+ *    login during the last 30 days (`GOOD_AGE`, kept in memory: a restart
+ *    forgets it); false at every other instant.  `helper.c` reads it in
+ *    `helper_ask()`: an unknown key may take 14 of the 16 checks in flight, a
+ *    known one all 16 — so a flood from fresh addresses cannot keep the owner out. */
+bool rcp_asking_for_known_key(void);
 const char *rcp_user(const rcp_session *s);
 
 /* ⛔⭐ THE CLIENT'S DECODER CEILING — `video.max_size` of §4.3,
@@ -672,7 +694,7 @@ bool rcp_max_size(const rcp_session *s, uint32_t *l, uint32_t *a);
 
 /* ⛔⭐ §5.3 — «the client is still there»: the TRANSPORT calls it after every
  *     DECRYPTED AND AUTHENTICATED packet, and the thirty-second clock depends on
- *     it.  ⚠ Not on the last RCP byte: that is the clock of *user
+ *     it.  ⚠ Not on the last user gesture: that is the clock of *user
  *     inactivity*, which is thirty MINUTES and not thirty seconds.  The long
  *     reason — and the measurement that imposed it — is on the field
  *     `last_life` in `rcp.c`. */

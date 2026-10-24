@@ -72,9 +72,46 @@
 
 bool rcp_authenticate_from(const char *user, const char *password,
                       const char *rhost);
+int rcp_authenticate_judged(const char *user, const char *password,
+                            const char *rhost);
+
+/* ⭐ `rcp_authenticate_judged()`'s three answers — the byte the PAM helper's
+ *    grandchild writes (`helper.c`, `struct response.outcome`). */
+#define RCP_PAM_REFUSED 0
+#define RCP_PAM_ADMITTED 1
+#define RCP_PAM_REFUSED_LOCKED 2
+
+/* ⛔⭐ «REFUSED WHILE `pam_faillock` HAD THE ACCOUNT LOCKED» — `DECISIONS.md`
+ *     §11.47 B (the user, 15 Oct 2026).  While the account is locked,
+ *     `pam_faillock preauth` refuses even the RIGHT password, with an ordinary
+ *     `PAM_AUTH_ERR` (no `PAM_MAXTRIES`), and `rcp.c` counted it towards the
+ *     12-hour ban of the owner's own address.
+ *
+ *     How the lock is recognised: `pam_faillock preauth` — and only it, and only
+ *     when the account IS locked — says through the conversation, BEFORE any
+ *     module asks the password, «The account is locked due to N failed logins.»
+ *     (`pam_info`, `PAM_TEXT_INFO`).  `[M]` 15 Oct 2026, Arch (pam 1.7.3,
+ *     pambase 20260616), our `remotix.pam.arch`: locked ⇒ the right password
+ *     and a wrong one both give `PAM_AUTH_ERR` with that line then «(10
+ *     minutes left to unlock)» then «Password: »; not locked ⇒ only
+ *     «Password: »; unknown user ⇒ `PAM_USER_UNKNOWN`, no line.
+ *   ⇒ «locked» = that line seen before the password prompt AND
+ *     `pam_authenticate` = `PAM_AUTH_ERR`.  It is PAM's own judgement, not
+ *     ours, and the client cannot write in our conversation.
+ *   ⚠ The text is matched in English: this program never calls `setlocale()`,
+ *     so `pam_faillock`'s gettext answers in the «C» locale.  A translation,
+ *     or `silent` in `faillock.conf` / on the module line (Fedora's authselect
+ *     writes it), means no line ⇒ RCP_PAM_REFUSED, counted as before: the
+ *     failure of this detection is the old behaviour, never a free guess.
+ *   ⚠ «Before the prompt» matters: a stack that asks the password FIRST (a
+ *     `sufficient pam_unix` above `preauth`) could still admit a right
+ *     password while «locked», so its no is an ordinary no. */
+#define FAILLOCK_LOCKED "The account is locked due to "
 
 struct response {
 	const char *password;
+	bool prompted;    /* the password was asked */
+	bool locked_seen; /* pam_faillock's «locked» line, before the prompt */
 };
 
 static int conversation(int n, const struct pam_message **questions,
@@ -111,15 +148,23 @@ static int conversation(int n, const struct pam_message **questions,
 			 *      is written.  `[M]` measured on the night of 10 Aug 2026
 			 *      (see the coder's report): after `pam_authenticate()` the
 			 *      bytes are no longer there. */
+			r->prompted = true;
 			out[i].resp = strdup(r->password ? r->password : "");
 			if (!out[i].resp) {
 				free(out);
 				return PAM_BUF_ERR;
 			}
 			break;
-		case PAM_PROMPT_ECHO_ON:
 		case PAM_ERROR_MSG:
 		case PAM_TEXT_INFO:
+			/* ⭐ §11.47 B: only noted (box at `FAILLOCK_LOCKED`) */
+			if (!r->prompted && questions[i]->msg &&
+			    strncmp(questions[i]->msg, FAILLOCK_LOCKED,
+			            sizeof FAILLOCK_LOCKED - 1) == 0)
+				r->locked_seen = true;
+			out[i].resp = NULL;
+			break;
+		case PAM_PROMPT_ECHO_ON:
 		default:
 			out[i].resp = NULL;
 			break;
@@ -147,7 +192,7 @@ static int conversation(int n, const struct pam_message **questions,
  *   and only one of the two has our log.  Both have `stderr`, and it is where
  *   both write. */
 static void why_no(const char *user, const char *step, pam_handle_t *pam,
-                      int rv)
+                      int rv, bool locked)
 {
 	if (rv == PAM_AUTH_ERR || rv == PAM_USER_UNKNOWN ||
 	    rv == PAM_PERM_DENIED || rv == PAM_CRED_INSUFFICIENT ||
@@ -155,8 +200,13 @@ static void why_no(const char *user, const char *step, pam_handle_t *pam,
 	    rv == PAM_MAXTRIES) {
 		fprintf(stderr,
 		        "RCP: PAM REFUSED user «%s» in %s: %s (service "
-		        "«%s»)\n",
-		        user, step, pam_strerror(pam, rv), SERVICE_PAM);
+		        "«%s»)%s\n",
+		        user, step, pam_strerror(pam, rv), SERVICE_PAM,
+		        locked ? " — pam_faillock had the account LOCKED (it said "
+		                 "so before the password was asked): even the right "
+		                 "password is refused until it unlocks, or until "
+		                 "`faillock --user <name> --reset` (DECISIONS.md §11.47)"
+		               : "");
 	} else {
 		fprintf(stderr,
 		        "RCP: ⛔ PAM COULD NOT JUDGE user «%s» in %s: %s "
@@ -217,10 +267,16 @@ bool rcp_authenticate(const char *user, const char *password)
 bool rcp_authenticate_from(const char *user, const char *password,
                       const char *rhost)
 {
-	if (!user || !*user || !password)
-		return false;
+	return rcp_authenticate_judged(user, password, rhost) == RCP_PAM_ADMITTED;
+}
 
-	struct response r = {password};
+int rcp_authenticate_judged(const char *user, const char *password,
+                            const char *rhost)
+{
+	if (!user || !*user || !password)
+		return RCP_PAM_REFUSED;
+
+	struct response r = {password, false, false};
 	struct pam_conv conv = {conversation, &r};
 	pam_handle_t *pam = NULL;
 	int rv;
@@ -232,7 +288,7 @@ bool rcp_authenticate_from(const char *user, const char *password,
 		        "authentication was even attempted\n",
 		        SERVICE_PAM, rv);
 		fflush(stderr);
-		return false;
+		return RCP_PAM_REFUSED;
 	}
 
 	/* ⭐ Like sshd (`auth-pam.c`, `sshpam_init`): `PAM_RHOST` = the client's
@@ -244,19 +300,22 @@ bool rcp_authenticate_from(const char *user, const char *password,
 	pam_set_item(pam, PAM_TTY, SERVICE_PAM);
 
 	bool admitted = false;
+	bool locked = false;
 	rv = pam_authenticate(pam, 0);
 	if (rv != PAM_SUCCESS) {
-		why_no(user, "pam_authenticate", pam, rv);
+		locked = rv == PAM_AUTH_ERR && r.locked_seen;
+		why_no(user, "pam_authenticate", pam, rv, locked);
 	} else {
 		/* ⚠ `pam_acct_mgmt` is not an extra: `pam_authenticate` says
 		 *   «this password is right», not «this account is usable». */
 		rv = pam_acct_mgmt(pam, 0);
 		if (rv != PAM_SUCCESS)
-			why_no(user, "pam_acct_mgmt", pam, rv);
+			why_no(user, "pam_acct_mgmt", pam, rv, false);
 		else
 			admitted = true;
 	}
 
 	pam_end(pam, admitted ? PAM_SUCCESS : PAM_AUTH_ERR);
-	return admitted;
+	return admitted ? RCP_PAM_ADMITTED
+	                : locked ? RCP_PAM_REFUSED_LOCKED : RCP_PAM_REFUSED;
 }

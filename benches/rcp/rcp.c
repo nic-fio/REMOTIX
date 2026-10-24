@@ -391,8 +391,35 @@ uint64_t rcp_eviction_recommended(void) { return DEFAULT_EVICTION; }
  *    in the protocol and never sent is a promise that another implementation
  *    would have had to handle for nothing.
  *
- * ⭐ THIS one is measured on RCP bytes (`last_byte`), and it is the job that
- *    field exists for — freed the same day from the one that was not its own.
+ * ⭐ THIS one is measured on USER GESTURES (`last_input`): the five input
+ *    messages of `RCP.md` §7.3 — `POINTER`, `BUTTON`, `WHEEL`, `LETTER`,
+ *    `KEY_POSITION` — once judged valid, in `handle_input()`.
+ *
+ * ⛔⭐ 15 Oct 2026 — UNTIL TODAY IT WAS MEASURED ON ANY RCP BYTE (`last_byte`),
+ *     on control, input and clipboard, and that broke the sentence of §5.3
+ *     quoted above.  The page sends messages ON ITS OWN while the user only
+ *     watches — `REQUEST_KEY` after a hole, `PACE`, the opening
+ *     `CLIPBOARD_ANNOUNCE`, the canvas and layout updates — and each of them
+ *     put the half hour back to zero: ⇒ a tab left open on an abandoned desk
+ *     held its session (and the slot, I2) FOREVER.  The 60-minute clock of
+ *     `main.c` (`input_to_child()`) already counted the five gestures only;
+ *     ⇒ now the two count THE SAME THING, which is what §5.3 writes: «the
+ *     ceiling feeds on the same five gestures of §7.3 that feed the
+ *     30-minute clock».
+ *
+ * ⚠ What does NOT count, and why:
+ *     · every CONTROL message — automatic (`REQUEST_KEY`, `PACE`, `VIEW`,
+ *       `LAYOUT`, `FIT_CANVAS`) or not a gesture on the desktop;
+ *     · the CLIPBOARD — `CLIPBOARD_ANNOUNCE` leaves the page by itself at
+ *       the opening and on focus; and a paste the user really makes on the
+ *       remote desktop is a `Ctrl+V`, that is `KEY_POSITION`, which counts;
+ *     · the server's own key release at detach (§7.3): it does not pass
+ *       through `handle_input()`, and it must not — it happens exactly when
+ *       the user leaves.
+ *
+ * ⛔ The connection-liveness clocks (silence 30 s, ghost eviction) are NOT
+ *    this one: they look at `last_life`, refreshed by any packet and any
+ *    RCP byte, as before.
  *
  * ⚠ CONFIGURABLE, and §5.3 demands it: *«the second and the third are
  *   configurable, with those values as defaults»*.  ⛔ And the value in force
@@ -506,7 +533,7 @@ struct rcp_session {
 	 *        · «USER inactivity», 30 MINUTES — «whoever spends half an hour
 	 *          watching a video without touching anything is detached».
 	 *
-	 *      ⛔ `last_byte` measures the SECOND and was used for the FIRST: a
+	 *      ⛔ the user clock (then `last_byte`) was used for the FIRST: a
 	 *         client that watches and does not touch sends nothing, and thirty
 	 *         seconds without touching the keyboard counted as «the client is gone».
 	 *
@@ -518,7 +545,7 @@ struct rcp_session {
 	 *      first, which froze.  It is I2 broken in the case that `RCP.md` §8.2
 	 *      names in writing — *«an alive client holds the slot, and the new one
 	 *      is refused»*. */
-	uint64_t last_byte; /* the last RCP byte from the client: the USER (§5.3) */
+	uint64_t last_input; /* the last valid gesture of §7.3: the USER (§5.3) */
 	uint64_t last_life; /* the last authenticated packet: the CLIENT (§5.3) */
 	uint64_t cred_arrival; /* when CREDENTIALS arrived */
 	bool cred_good;      /* the verdict, already computed but not yet told */
@@ -1197,6 +1224,58 @@ struct lentry {
 	uint64_t last_touch;
 };
 static struct lentry attempts[MAX_ATTEMPTS];
+
+/* ⭐ THE KEYS THAT LOGGED IN LATELY — 15 Oct 2026, `DECISIONS.md` §11.39 addendum
+ *    (ported from 4d9eb72b).  The last ADMITTED verdict of a §4.4-bis key, in
+ *    memory only (the monotonic clock does not survive a restart, so neither
+ *    does this): it serves `rcp_asking_for_known_key()` and nothing else.  A
+ *    ring of GOOD_KEYS: the same key takes its place again, else an empty one,
+ *    else the oldest. */
+#define GOOD_KEYS 64
+#define GOOD_AGE 2592000000ull /* 30 days, ms */
+static struct { char key[64]; uint64_t when; } good_keys[GOOD_KEYS];
+
+static void good_note(const char *key, uint64_t now)
+{
+	int pick = 0;
+	for (int k = 0; k < GOOD_KEYS; k++) {
+		if (good_keys[k].key[0] && strcmp(good_keys[k].key, key) == 0) {
+			pick = k;
+			goto found;
+		}
+	}
+	for (int k = 0; k < GOOD_KEYS; k++) {
+		if (!good_keys[k].key[0]) {
+			pick = k;
+			goto found;
+		}
+		if (good_keys[k].when < good_keys[pick].when)
+			pick = k;
+	}
+found:
+	snprintf(good_keys[pick].key, sizeof good_keys[pick].key, "%s", key);
+	good_keys[pick].when = now;
+}
+
+static bool good_recent(const char *key, uint64_t now)
+{
+	for (int k = 0; k < GOOD_KEYS; k++)
+		if (good_keys[k].key[0] && strcmp(good_keys[k].key, key) == 0)
+			/* ⚠ A login stamped LATER than `now` is recent, not 584 million
+			 *   years old: `login_resolve()` may run with the helper's clock,
+			 *   a few hundred ms ahead of a connection's `now`, and the
+			 *   unsigned subtraction would wrap (fresh-eyes review 24c7b668). */
+			return good_keys[k].when >= now || now - good_keys[k].when <= GOOD_AGE;
+	return false;
+}
+
+/* ⭐ Set only around the call to `ask_verify` (`rcp.h`). */
+static bool asking_for_known_key;
+
+bool rcp_asking_for_known_key(void)
+{
+	return asking_for_known_key;
+}
 static unsigned login_refused_full; /* refusals because of a full table, since the start */
 
 static char ban_path[512]; /* empty = not persisted (the bench, usually) */
@@ -1892,6 +1971,8 @@ static void login_resolve(const char *key, const char *user, bool admitted,
 				r->reset_amount = failed_inside(e, now);
 				e->amount = 0;
 			}
+			if (j == LK_KEY)
+				good_note(key, now);
 			continue;
 		}
 		if (is_banned(e, now)) {
@@ -1916,6 +1997,59 @@ static void login_resolve(const char *key, const char *user, bool admitted,
 			r->ban_number[j] = lv + 1;
 		}
 	}
+}
+
+/* ⭐ §11.47 B (ported from 249c534a): the ticket whose «no» PAM gave while
+ *    `pam_faillock` had the account locked; 0 = none.  Set by the host only
+ *    around ONE delivery (`rcp_refusal_locked()`, `rcp.h`). */
+static uint64_t locked_ticket;
+
+void rcp_refusal_locked(uint64_t ticket)
+{
+	locked_ticket = ticket;
+}
+
+/* ⛔⭐ A «NO» THAT DOES NOT COUNT — `DECISIONS.md` §11.47 B (the user, 15 Oct
+ *     2026).  Both must hold:
+ *       1. the helper said «refused while `pam_faillock` had the account
+ *          LOCKED» for THIS delivery — PAM's own words, seen before the
+ *          password was asked (`authentication.c`, `FAILLOCK_LOCKED`): while it
+ *          lasts no password can pass, the right one included, so the guess
+ *          was useless;
+ *       2. the key (§4.4-bis) had an ADMITTED login during the last 30 days
+ *          (`good_recent()`: the SAME notion as the two PAM places kept for a
+ *          known key, `RESERVED_FOR_KNOWN`).
+ *     ⛔ Why 2: only a REAL account can be locked (`pam_faillock` ignores
+ *        unknown users), so «not counted» for anyone would be a user-name
+ *        oracle (§4.4, §11.39).  For a key that never logged in the no counts
+ *        exactly as before; the owner coming back from home or office does not
+ *        ban themselves.
+ *     ⭐ In the model of §4.4-bis B «not counted» is `login_release()` (the
+ *        booking given back, no failure added), as for the defects of ours;
+ *        the caller does that when this returns true.
+ *     ⚠ `ticket` 0 = the orphan road, which has no ticket: the mark is set
+ *       only around ONE delivery, so any mark is that delivery's.
+ *     ⚠ Nothing else changes: the ban check before PAM, the checks in flight
+ *       per address, the fixed second and `REJECTED 0x07` on the wire. */
+static bool refusal_uncounted(const struct sink *k, uint64_t ticket,
+                              const char *key, uint64_t now)
+{
+	if (!locked_ticket || (ticket && ticket != locked_ticket))
+		return false;
+	if (!good_recent(key, now)) {
+		say(k, "PAM refused request %llu while pam_faillock had the account "
+		       "LOCKED; %s never logged in (30 days), so it COUNTS as a "
+		       "failed attempt (DECISIONS.md §11.47)",
+		    (unsigned long long)locked_ticket, key);
+		return false;
+	}
+	say(k, "⚠ PAM refused request %llu while pam_faillock had the account "
+	       "LOCKED (even a right password is refused until it unlocks, or "
+	       "`faillock --user <name> --reset`): %s logged in lately, so it is "
+	       "NOT counted towards the ban — the booking is given back (§4.4-bis, "
+	       "DECISIONS.md §11.47)",
+	    (unsigned long long)locked_ticket, key);
+	return true;
 }
 
 /* The ban file.  Defined below; declared here because the report below
@@ -2263,6 +2397,10 @@ void rcp_orphan_verdict(const char *user, const char *rhost, bool admitted,
 		say(&k, "⭐ the connection was gone and the PAM helper died before "
 		        "answering: our defect, the booking is given back and NOTHING "
 		        "is counted (§4.4-bis)");
+		return;
+	}
+	if (!admitted && refusal_uncounted(&k, 0, key, now)) {
+		login_release(key, user);
 		return;
 	}
 	login_resolve(key, user, admitted, now, &r);
@@ -3296,7 +3434,12 @@ static bool handle_credentials(rcp_session *s, reader *l, uint64_t now)
 		 *   flight» for the three levels until the verdict, which turns it into
 		 *   a failure or gives it back — `rcp_verdict()`, or
 		 *   `rcp_orphan_verdict()` if the connection is gone by then. */
-		if (s->g.ask_verify(s->g.ctx, user, password, &s->ticket)) {
+		/* ⭐ A key that logged in lately may take the two PAM slots kept for it
+		 *    (`rcp_asking_for_known_key()`, §11.39 addendum). */
+		asking_for_known_key = good_recent(s->address, now);
+		bool asked = s->g.ask_verify(s->g.ctx, user, password, &s->ticket);
+		asking_for_known_key = false;
+		if (asked) {
 			s->expected_verdict = true;
 			reg(s, "PAM asked of the helper, request %llu: the thread stays "
 			       "free (DECISIONS.md §1.10)",
@@ -5827,6 +5970,11 @@ static bool handle_input(rcp_session *s, uint16_t kind, const uint8_t *body,
 	}
 
 	s->inp_arrived++;
+	/* ⛔⭐ §5.3 — THE ONLY PLACE WHERE THE 30-MINUTE CLOCK IS RESET: a whole
+	 *     gesture of §7.3, judged valid.  ⚠ Even when it is NOT injected
+	 *     (no hooks, below): the user did make it, and the clock measures
+	 *     the user, not the desktop.  The reason is at `DEFAULT_INACTIVITY`. */
+	s->last_input = now;
 	if (!has_input_channel(s)) {
 		/* ⛔ «I have no input channel» is NOT «the client got it wrong».  The
 		 * message was valid in every part — we have just judged it —
@@ -6138,9 +6286,11 @@ bool rcp_receive_input(rcp_session *s, int64_t stream, const uint8_t *data,
 	 * writing anything on the control channel** — that is anyone just
 	 * moving the mouse — loses the slot after thirty seconds while
 	 * working.  §5.3 says «without a byte FROM THE CLIENT», and these are bytes
-	 * of the client. */
-	s->last_byte = now;
-	/* ⛔⭐ AND THE SIGN OF LIFE TOO, for a reason that comes before
+	 * of the client.
+	 * ⚠ The INACTIVITY clock (`last_input`) is NOT reset here, on bytes: it is
+	 *   reset in `handle_input()`, on a whole gesture judged valid — a
+	 *   fragment or a message refused is not «the user did something». */
+	/* ⛔⭐ THE SIGN OF LIFE, for a reason that comes before
 	 *     convenience: **an RCP byte arrived inside a packet**.  If
 	 *     the byte is there, the packet was there — saying it here is not a
 	 *     shortcut, it is the same thing said where it is seen.
@@ -6993,7 +7143,9 @@ bool rcp_receive_clipboard(rcp_session *s, int64_t stream, const uint8_t *data,
 		return false;
 	}
 
-	s->last_byte = now;
+	/* ⛔ The sign of life only: the clipboard is NOT user input for the
+	 *    30-minute clock (see `DEFAULT_INACTIVITY`) — the page announces by
+	 *    itself, and a real paste on the desktop is a `KEY_POSITION`. */
 	s->last_life = now;
 	if (!speak_again(s))
 		return false;
@@ -7281,7 +7433,7 @@ rcp_session *rcp_open(const rcp_hooks *g, const char *provenance,
 	s->g = *g;
 	s->state = S_WAIT_HELLO;
 	s->since = now_ms;
-	s->last_byte = now_ms;
+	s->last_input = now_ms;
 	/* ⛔ And THIS too starts from now, not from zero: a session just
 	 *    opened has not yet seen a packet pass through the hands of this
 	 *    module, and a zero would make it detach for silence at the first round. */
@@ -7400,6 +7552,13 @@ void rcp_closed_by_client(rcp_session *s, uint8_t code)
 		    s->provenance, taken_slots());
 	}
 	s->state = S_FINISHED;
+}
+
+bool rcp_awaits_verdict(const rcp_session *s, uint64_t ticket)
+{
+	/* the walls of `rcp_verdict()`: alive, in wait-verdict, asked, its own number */
+	return s && s->state == S_WAIT_VERDICT && s->expected_verdict &&
+	       s->ticket == ticket;
 }
 
 const char *rcp_state_name(const rcp_session *s)
@@ -8492,11 +8651,12 @@ bool rcp_receive(rcp_session *s, const uint8_t *data, size_t len, uint64_t now)
 		judge_after_end(s, data, len);
 		return false;
 	}
-	/* ⭐ The user's INACTIVITY clock is reset here, on RCP bytes
-	 *    — and with it the sign of life, because a byte that arrived is a packet
-	 *    that arrived.  ⚠ The long reason is on the other of the two calls, in
-	 *    `rcp_receive_input()`. */
-	s->last_byte = now;
+	/* ⭐ The sign of life is reset here, on RCP bytes, because a byte that
+	 *    arrived is a packet that arrived.  ⚠ The long reason is on the other
+	 *    of the two calls, in `rcp_receive_input()`.
+	 * ⛔ And the user's INACTIVITY clock is NOT: nothing on the control
+	 *    channel is a gesture, and much of it leaves the page on its own
+	 *    (`REQUEST_KEY`, `PACE`) — see `DEFAULT_INACTIVITY`. */
 	s->last_life = now;
 
 	/* ⚠ The connection is not closed for silence alone — that choice is
@@ -8680,8 +8840,12 @@ bool rcp_verdict(rcp_session *s, uint64_t ticket, bool admitted,
 	{
 		struct sink k = {s, NULL, NULL};
 		struct login_result r;
-		login_resolve(s->address, s->user, admitted, now, &r);
-		login_report(&k, s->address, s->user, admitted, &r, now);
+		if (!admitted && refusal_uncounted(&k, ticket, s->address, now)) {
+			login_release(s->address, s->user);
+		} else {
+			login_resolve(s->address, s->user, admitted, now, &r);
+			login_report(&k, s->address, s->user, admitted, &r, now);
+		}
 	}
 	return true;
 }
@@ -8803,18 +8967,36 @@ bool rcp_time(rcp_session *s, uint64_t now)
 			reg(s, "admitted user=%s from=%s", s->user, s->provenance);
 			return true;
 		}
-		/* ⛔⭐ AND ON THE WIRE THE REASON IS THE SAME, but not in the log — it is
-		 *     the same distinction `authentication.c` makes between «PAM
-		 *     refused» and «PAM could not judge».  §4.4 forbids telling the
-		 *     client why, because it would be an oracle; ⛔ but whoever
-		 *     diagnoses must be able to tell a thousand wrong passwords from a
-		 *     dead helper, or they will search in the password for hours. */
-		if (s->refusal_is_ours)
+		/* ⛔⭐ A CHECK THE SERVER COULD NOT MAKE IS `SESSION_UNSERVABLE`, NOT
+		 *     `WRONG_CREDENTIALS` — `DECISIONS.md` §11.39, the user's decision
+		 *     of 15 Oct 2026 (option C).  The helper dead or down, the question
+		 *     that did not leave: PAM never judged the password, so «wrong
+		 *     password» was false and sent the owner to retype a right one.
+		 *     §4.4 forbids telling «no such user» from «wrong password»; this
+		 *     byte says neither — the check never happened, and it says no
+		 *     more than the timing already says.
+		 * ⚠ The road is `refusal_is_ours`, set ONLY by the two roads that
+		 *   give the booking back without counting (`rcp_credentials()` when
+		 *   the question did not leave, `rcp_verdict_lost()`), and only where
+		 *   the reason is still `WRONG_CREDENTIALS`: the limiter's refusals
+		 *   (`TOO_MANY_ATTEMPTS`, 0x08) never set it and keep their byte.
+		 * ⛔ NOT here: «PAM could not judge» (`authentication.c`) is a PAM
+		 *   answer, and the attempt WITHOUT a verdict (the helper's timeout,
+		 *   `VERDICT_CAP`) COUNTS as failed since 24 Oct 2026 (§4.4-bis B):
+		 *   both stay `0x07` and counted.  So on the wire «counted» is exactly
+		 *   `0x07`, and «not counted and not the limiter's» is exactly `0x0E`.
+		 *   Same fixed second, same count (none): only the byte changes. */
+		uint8_t reason = s->cred_reason;
+		if (s->refusal_is_ours) {
+			if (reason == RCP_WRONG_CREDENTIALS)
+				reason = RCP_SESSION_UNSERVABLE;
 			reg(s, "⛔ and this REJECTED is OURS, not PAM's: the check was "
-			       "not made.  ⚠ On the wire the reason is the same (§4.4 "
-			       "forbids distinguishing them), and the counters of §4.4-bis "
-			       "were NOT touched (the booking was given back)");
-		reject(s, s->cred_reason);
+			       "not made — reason %#04x on the wire (§4.4, DECISIONS.md "
+			       "§11.39), and the counters of §4.4-bis were NOT touched "
+			       "(the booking was given back)",
+			    reason);
+		}
+		reject(s, reason);
 		return false;
 	}
 
@@ -8834,24 +9016,23 @@ bool rcp_time(rcp_session *s, uint64_t now)
 	 *      «staying active» are two different things, and the second was not
 	 *      declared anywhere.  The way back from here is in
 	 *      `rcp_receive()`: the slot is taken back if it is free. */
-	/* ⛔⭐ AND `last_life` IS LOOKED AT, NOT `last_byte` — the repair of 16
+	/* ⛔⭐ AND `last_life` IS LOOKED AT, NOT `last_input` — the repair of 16
 	 *     Aug 2026, and the long reason is on the field, at the top of the file.
 	 *
-	 * ⚠ `last_byte` does not disappear: it is the clock of USER INACTIVITY
-	 *   (30 minutes, §5.3), which this module does not have yet and which now has
-	 *   its field ready and right.  ⛔ Keeping one only for two jobs is the
-	 *   defect we have just paid for: it is not done again. */
+	 * ⚠ `last_input` is the clock of USER INACTIVITY (30 minutes, §5.3), just
+	 *   below.  ⛔ Keeping one only for two jobs is the defect we have just
+	 *   paid for: it is not done again. */
 	if (s->state == S_ACTIVE && s->is_attached &&
 	    now - s->last_life > SILENCE) {
 		slot_leave(s->user);
 		s->is_attached = false;
 		s->state = S_DETACHED;
 		reg(s, "DETACHED for silence: %llu ms without a PACKET from %s — and "
-		       "the last RCP byte is from %llu ms ago (§5.3: here what counts is the "
+		       "the last user gesture is from %llu ms ago (§5.3: here what counts is the "
 		       "client that is silent, not the user who does not touch) "
 		       "(slots taken now: %d; state: %s)",
 		    (unsigned long long)(now - s->last_life), s->provenance,
-		    (unsigned long long)(now - s->last_byte),
+		    (unsigned long long)(now - s->last_input),
 		    taken_slots(), STATE_NAMES[s->state]);
 		/* ⛔⭐ §7.3 NAMES SILENCE FIRST among the three ways in which «a
 		 *     connection ends», and it is the worst case of the three: here the
@@ -8885,12 +9066,12 @@ bool rcp_time(rcp_session *s, uint64_t now)
 	 *   anyway (I4): this farewell detaches the client, it does not close the
 	 *   desktop — that is the THIRD clock, and it is another thing. */
 	if (inactivity_ms && s->state == S_ACTIVE && s->is_attached &&
-	    now - s->last_byte > inactivity_ms) {
+	    now - s->last_input > inactivity_ms) {
 		char d[192];
 		snprintf(d, sizeof d,
 		         "%llu ms without user input (ceiling %llu): §5.3, and "
 		         "getting back in takes user and password",
-		         (unsigned long long)(now - s->last_byte),
+		         (unsigned long long)(now - s->last_input),
 		         (unsigned long long)inactivity_ms);
 		reg(s, "⭐ §5.3 — INACTIVITY: %s.  ⚠ The graphical session STAYS (I4): "
 		       "the client is detached, the desktop is not closed",

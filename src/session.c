@@ -4388,6 +4388,100 @@ static void block_lxqt(void)
  *     (increment 4, `block_lxqt()` further below): empty was NOT inert.
  *   · the D-Bus inhibition — it does not exist (`session_inhibit()`).
  */
+/*
+ * ⭐⭐ 15 Oct 2026 — THE ORPHAN pcmanfm-qt PROFILE: after a reboot, the LXQt
+ *     desktop came back BLACK (no wallpaper, the icons and the panel there).
+ *
+ * `[M]` T10 on debian13-lxqt (box, 3 runs out of 3): the first session shows
+ * the Debian wallpaper; the reboot ends the session with everything at once
+ * (labwc and its clients are stopped together), `pcmanfm-qt --desktop` starts
+ * saving its settings, the compositor is already gone («The Wayland connection
+ * broke»), and it dies after creating `~/.config/pcmanfm-qt/lxqt/` but BEFORE
+ * writing `settings.conf` in it.  At the next session that EMPTY folder is the
+ * whole fault:
+ * `[R]` pcmanfm-qt 2.1.0 `settings.cpp:165-187` (`Settings::profileDir`): the
+ * system profiles (`/etc/xdg/pcmanfm-qt/lxqt/settings.conf`, where Debian puts
+ * `Wallpaper=` and `WallpaperMode=zoom`) are read ONLY IF THE USER'S FOLDER
+ * DOES NOT EXIST.  If it exists, `settings.conf` is read from it, and a missing
+ * file means the built-in defaults: `WallpaperMode=none`, `BgColor=#000000`.
+ * ⇒ black, for every session after, until someone opens the desktop settings.
+ * `[M]` In the black session: copying the system `settings.conf` into the empty
+ * folder and restarting pcmanfm-qt brings the wallpaper back (T1C PASS).
+ *
+ * ⭐ The cure, BEFORE the birth, and only in the broken state (folder there,
+ *    `settings.conf` not there):
+ *   · the folder is EMPTY ⇒ it is removed (`g_rmdir`, only if empty): pcmanfm-qt
+ *     goes back to the system profile by itself, and no user file is written;
+ *   · it holds something else (e.g. `recent-files.conf`) ⇒ the system
+ *     `settings.conf` that pcmanfm-qt itself would have read is copied there,
+ *     looked for in the session's `XDG_CONFIG_DIRS` order (`/etc`, `/etc/xdg`,
+ *     `/usr/share`, as `system_files()`).  It is what pcmanfm-qt writes on its
+ *     first clean exit: no choice of the user is changed, there was none.
+ * ⛔ A `settings.conf` that exists is NEVER touched: it is the user's.
+ * ⛔ A SYMLINK in place of the folder (or of `settings.conf`) is left alone: it
+ *    is a choice of the user, and following it would write OUT of the home
+ *    (`[M]` 15 Oct 2026, `benches/21-session-orphan-test.c`: before this guard a
+ *    link to a foreign folder got the system `settings.conf` written into it).
+ *
+ * ⚠ `ORPHAN_PROFILE_SYSTEM_DIRS` exists only so that the test can point the
+ *   system folders at a temporary one (`make test-session`); the product is
+ *   built without it and keeps the three folders below.
+ */
+#ifndef ORPHAN_PROFILE_SYSTEM_DIRS
+#define ORPHAN_PROFILE_SYSTEM_DIRS "/etc", "/etc/xdg", "/usr/share"
+#endif
+static void orphan_profile_pcmanfm_lxqt(void)
+{
+	static const char *const DIRS[] = { ORPHAN_PROFILE_SYSTEM_DIRS, NULL };
+	g_autofree char *folder = g_build_filename(g_get_home_dir(), ".config", "pcmanfm-qt",
+	                                           "lxqt", NULL);
+	g_autofree char *file = g_build_filename(folder, "settings.conf", NULL);
+	g_autoptr(GError) mistake = NULL;
+	g_autofree char *content = NULL;
+	gsize size = 0;
+	GStatBuf what = { 0 };
+
+	/* `g_lstat`, not `g_file_test(IS_DIR)`: the latter follows a symlink. */
+	if (g_lstat(folder, &what) != 0 || !S_ISDIR(what.st_mode))
+		return; /* no folder (pcmanfm-qt's fallback), or not a real folder */
+	if (g_file_test(file, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_SYMLINK))
+		return; /* the user's file — a dangling link too is the user's */
+
+	if (g_rmdir(folder) == 0) {
+		registro_dice(LOG_SESSION,
+		              "⭐ LXQt: %s was there EMPTY (a pcmanfm-qt that died before saving, "
+		              "e.g. at a reboot) — removed: with it pcmanfm-qt ignores the system "
+		              "profile and the desktop is BLACK, without it the wallpaper comes back",
+		              folder);
+		return;
+	}
+	for (int i = 0; DIRS[i]; i++) {
+		g_autofree char *system = g_build_filename(DIRS[i], "pcmanfm-qt", "lxqt",
+		                                           "settings.conf", NULL);
+
+		if (!g_file_get_contents(system, &content, &size, NULL))
+			continue;
+		if (!g_file_set_contents(file, content, (gssize) size, &mistake)) {
+			registro_dice(LOG_SESSION,
+			              "⛔ LXQt: %s has no settings.conf and I cannot copy %s there (%s): "
+			              "pcmanfm-qt will start WITHOUT wallpaper (black desktop)",
+			              folder, system, mistake->message);
+			return;
+		}
+		registro_dice(LOG_SESSION,
+		              "⭐ LXQt: %s had no settings.conf (a pcmanfm-qt that died before "
+		              "saving) — copied %s there, the profile pcmanfm-qt would have "
+		              "read: without it the desktop is BLACK",
+		              folder, system);
+		return;
+	}
+	registro_dice(LOG_SESSION,
+	              "⚠ LXQt: %s has no settings.conf and no system profile was found "
+	              "(/etc, /etc/xdg, /usr/share): pcmanfm-qt starts with its own "
+	              "defaults (no wallpaper)",
+	              folder);
+}
+
 static void settings_lxqt(void)
 {
 	g_autofree char *file = g_build_filename(g_get_home_dir(), ".config", "lxqt",
@@ -4396,6 +4490,7 @@ static void settings_lxqt(void)
 	g_autofree char *active = NULL;
 	g_autofree char *level = NULL;
 
+	orphan_profile_pcmanfm_lxqt();
 	/* ⚠ If the file cannot be read, `write_qt_key()` does NOT rewrite it, and the
 	 *   dangerous menu entries below are hidden all the same. */
 	active = write_qt_key(file, "General", "enableIdlenessWatcher", "false", &why);
