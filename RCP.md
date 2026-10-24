@@ -839,7 +839,7 @@ in any log at any level — not even in `trace`, which in v1 is a keystroke reco
 ### 4.4-bis ✅ The address ban — three attempts, then twelve hours (1.0) · 🔸 three levels, progressive (1.5)
 
 > ⛔ **Rule of 1.5 — `DECISIONS-11.md` §11.53, SPEC CHANGE from 1.0** *(delegated by the user to the project leader on
-> 24 Oct 2026; until the user confirms it, the 1.0 text below is the written rule)*. **The wire does not change**:
+> 24 Oct 2026; the decision is taken and the 1.5 rule is the valid one)*. **The wire does not change**:
 > `TOO_MANY_ATTEMPTS` (`0x08`) is still what a banned key, /48 or (key, user) receives, after the fixed second.
 >
 > | | |

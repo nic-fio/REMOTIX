@@ -282,7 +282,7 @@ in `DECISIONS.md` §1.7, with the three items to reread that day.
 **Local PAM**, service `remotix`, with the **defences of the login**: three levels of counters and a progressive ban.
 
 ⭐ 🔸 **Rule of 1.5 — `DECISIONS-11.md` §11.53, SPEC CHANGE from 1.0** *(delegated by the user to the project leader
-on 24 Oct 2026; until the user confirms it, the 1.0 rule below is the written one)*:
+on 24 Oct 2026; the decision is taken and the 1.5 rule is the valid one)*:
 
 | level | limit | window | ban of |
 |---|---|---|---|

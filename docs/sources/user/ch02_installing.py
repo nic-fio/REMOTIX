@@ -146,11 +146,13 @@ S_USERS = p("People sign in with <b>their Linux user name and password on that m
         "those given with " + c("--users") + "); someone created later is added automatically the first time they "
         "connect.",
         "<b>New users</b> need nothing else: create the account as usual, and they can sign in.",
-        "<b>Wrong passwords.</b> After five wrong passwords for the same user within five minutes, that user has to "
-        "wait before trying again: 15 minutes the first time, then 1 hour, then 12 hours if it keeps happening "
-        "(the count starts again after a day without blocks). Other users on the same network are not blocked, unless "
-        "there are very many errors from that network: then the whole network waits. A correct password clears the "
-        "count of that user. The blocks are kept in " + c("/var/lib/remotix/ban") + ", which "
+        "<b>Wrong passwords.</b> After <b>5 wrong passwords for the same user from the same network</b> within five "
+        "minutes, that user has to wait before trying again: 15 minutes the first time, then 1 hour, then 12 hours "
+        "if it keeps happening (the count starts again after a day without blocks). From another network (for example "
+        "the phone on mobile data) the same user can still sign in. Other users on the same network are not blocked, "
+        "unless there are about a dozen errors in five minutes from that network: then the whole network waits. When "
+        "only that user is blocked the page does not show the time left; the wait is 15 minutes the first time. A "
+        "correct password clears the count of that user. The blocks are kept in " + c("/var/lib/remotix/ban") + ", which "
         "REMOTIX reads only when it starts. To lift them all at once: " + c("sudo systemctl stop remotix")
         + ", delete " + c("/var/lib/remotix/ban") + ", " + c("sudo systemctl start remotix") + ". Open desktops are "
         "not closed by the restart. The administrator can also lift the block of one address at once with the "
@@ -208,8 +210,12 @@ S_FIRST = p("Once the service runs, anyone with an account can connect from a br
     table(["The page says", "What to do"], [
         ["incorrect username or password", "Check the user name and password on the server; mind the keyboard "
          "layout."],
-        ["attempts exhausted … There are still … hours and … minutes to go", "Too many wrong passwords: wait until "
-         "the time runs out, or ask the administrator to lift the block ("
+        ["attempts exhausted … There are still … hours and … minutes to go", "Too many wrong passwords from this "
+         "network: wait until the time runs out, or ask the administrator to lift the block ("
+         + rif("Who can sign in") + ")."],
+        ["too many wrong passwords from this address or network: wait (15 minutes the first time …", "Only your "
+         "user is blocked on this network (the page shows no time): wait 15 minutes the first time, try from another "
+         "network, or ask the administrator to lift the block ("
          + rif("Who can sign in") + ")."],
         ["this session's slot shows as taken by another client …", "You are still connected from another device, "
          "or just dropped: close the other tab, or wait a few seconds and try again."],
