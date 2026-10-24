@@ -1580,6 +1580,13 @@ static void read_packet(transport *t, const struct sockaddr *local,
 	}
 
 	c = cid_find(t, vc.dcid, vc.dcidlen);
+	/* ⛔ 24 Oct 2026 (audit ngtcp2 1.25): a connection already marked dead (ngtcp2 asked to
+	 *   drop it silently, or it is closing) is no longer read: a second packet of the same
+	 *   burst would reach `ngtcp2_conn_read_pkt` and could answer with the
+	 *   CONNECTION_CLOSE that the DROP_CONN rule exists to avoid.  It is reaped at the
+	 *   next `reap_dead()`. */
+	if (c && c->dead_run)
+		return;
 	if (!c) {
 		ngtcp2_pkt_hd hd;
 		ngtcp2_cid odcid;
