@@ -574,7 +574,7 @@ static void compose(client *c, const char *state, const char *kind,
 static char *build_text(const page *p, const char *src, bool banned,
                         const char *warning, const char *remain_txt)
 {
-	char *a, *b, *cc, *cc2, *d;
+	char *a, *b, *cc, *cc2;
 
 	a = replace(src, "__FINGERPRINT__", p->cert->fingerprint);
 	if (!a)
@@ -587,15 +587,11 @@ static char *build_text(const page *p, const char *src, bool banned,
 	free(b);
 	if (!cc)
 		return NULL;
+	/* ⚠ 24 Oct 2026: no `__DIARY__` here — the page's diary (§11.10 of the
+	 *   first attempt) is not in this tree, and neither is the marker. */
 	cc2 = replace(cc, "__REMAINING_MS__", remain_txt);
 	free(cc);
-	if (!cc2)
-		return NULL;
-	/* ⭐ §11.10: whether the page may send its diary — `yes` only in the
-	 *   bench build, where `/diary` exists. */
-	d = replace(cc2, "__DIARY__", DIARY_ON);
-	free(cc2);
-	return d;
+	return cc2;
 }
 
 static body *build_page(const page *p, bool banned, const char *warning,
@@ -731,8 +727,7 @@ static unsigned char *deflate_raw(const char *in, size_t n, int level, bool last
 static size_t page_split(page *p)
 {
 	static const char *const markers[] = {"__FINGERPRINT__", "__WARNING__",
-	                                      "__BANNED__", "__REMAINING_MS__",
-	                                      "__DIARY__"};
+	                                      "__BANNED__", "__REMAINING_MS__"};
 	size_t end = 0;
 
 	if (p->split_done)
