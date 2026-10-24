@@ -442,6 +442,22 @@ static char *read_text(ClipboardKde *clipboard, size_t *byte)
 			g_bytes_unref(data);
 			continue;
 		}
+		/* ⛔ A zero in the middle is valid UTF-8 but the text travels as a
+		 *    zero-terminated string (`last`, the socket, `rcp.c`): kept, it would
+		 *    be cut at the zero while `last_byte` stated the whole length, and the
+		 *    fallback in `clipboard_kde_reply` wrote past the copy.  Not announced,
+		 *    as `clipboard.c` does for GNOME: truncating would be an announcement
+		 *    that lies. */
+		if (memchr(start, 0, amount)) {
+			registro_dice(LOG_CLIPBOARD,
+			              "⛔ «%s»: %zu bytes with a zero in the middle — not "
+			              "announced.  Truncating here would give a text shorter "
+			              "than the announcement, that is an announcement that lies",
+			              TEXT_TYPES[i], (size_t)amount);
+			explicit_bzero((void *)start, amount);
+			g_bytes_unref(data);
+			continue;
+		}
 		*byte = amount;
 		{
 			char *text = g_strndup(start, amount);
@@ -709,7 +725,7 @@ char *clipboard_kde_last_text(ClipboardKde *clipboard, size_t *byte)
 	g_mutex_lock(&clipboard->lock);
 	copied = clipboard->last ? g_strdup(clipboard->last) : NULL;
 	if (byte)
-		*byte = clipboard->last ? clipboard->last_byte : 0;
+		*byte = clipboard->last ? MIN(clipboard->last_byte, strlen(clipboard->last)) : 0;   /* never past the copy */
 	g_mutex_unlock(&clipboard->lock);
 	return copied;
 }
