@@ -26,6 +26,9 @@ import (
 type PreflightOptions struct {
 	Porta     int
 	Pacchetti []string // components (labwc, gnome-session, the fonts…) requested by the catalogue
+	// PackageHasNetUser: the package to install contains the sysusers file of the network side's
+	// user (PackageCarriesNetUser): only then a person's account named remotix is a refusal.
+	PackageHasNetUser bool
 }
 
 // Preflight builds the machine's profile.
@@ -55,7 +58,7 @@ func Preflight(a *Environment, o PreflightOptions) *ProfileV {
 	openssl(a, p, fam, pk)
 	logind(a, p)
 	groups(a, p)
-	netUser(a, p)
+	netUser(a, p, o.PackageHasNetUser)
 	characters(a, p)
 	p.Sort()
 	return p

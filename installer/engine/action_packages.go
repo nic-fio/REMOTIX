@@ -62,6 +62,9 @@ type beforePackages struct {
 	//   distributions' rule).  [M] 16 Oct 2026, rxtest installer --tests interrupt (debian13,
 	//   service): rolled back, «remotix left: + G remotix:x:990: + P remotix:x:990:990».
 	NetUserAbsent bool `json:"net_user_absent,omitempty"`
+	// … and the same for its GROUP: groupdel only a group the packages made; a group that was
+	//   there before may be taken away by userdel (USERGROUPS_ENAB), and the rollback says so.
+	NetGroupAbsent bool `json:"net_group_absent,omitempty"`
 }
 
 func newPackages(p PlanAction) (Action, error) {
@@ -138,6 +141,13 @@ func (a *packets) Snapshot(c *Context) (json.RawMessage, Origine, error) {
 	p := beforePackages{Origine: PREEXISTING, Manager: g.Nome(), File: a.file, Names: a.names, ResolvedSet: ins}
 	if _, there := ReadAccount(c.Env, NetUser); !there {
 		p.NetUserAbsent = true
+	} else {
+		recordNetUserPreexisting(c) // the uninstallation will leave it alone
+	}
+	if g, err := ReadGroups(c.Env.P("/etc/group")); err == nil {
+		if _, there := g[NetUser]; !there {
+			p.NetGroupAbsent = true
+		}
 	}
 	for _, x := range ins {
 		if x.Outcome != "present" {
@@ -287,14 +297,14 @@ func (a *packets) Rollback(c *Context, before json.RawMessage) error {
 		}
 	}
 	if c.Purge && p.NetUserAbsent {
-		return dropNewNetUser(c)
+		return dropNewNetUser(c, p.NetGroupAbsent)
 	}
 	return nil
 }
 
 // dropNewNetUser: the system user remotix (and its group) the packages' scripts made — only a
 // SYSTEM user, never a person's account (PersonAccount).  Idempotent.
-func dropNewNetUser(c *Context) error {
+func dropNewNetUser(c *Context, groupAbsent bool) error {
 	r := &removeSystemUser{NetUser}
 	user, group, err := r.present(c)
 	if err != nil {
@@ -310,7 +320,7 @@ func dropNewNetUser(c *Context) error {
 	}
 	if _, group, err = r.present(c); err != nil {
 		return err
-	} else if group {
+	} else if group && groupAbsent {
 		return runOrError(c.Env, "groupdel", NetUser)
 	}
 	return nil
@@ -351,6 +361,17 @@ func (a *packets) RolledBack(c *Context, before json.RawMessage) (bool, string, 
 	if c.Purge && p.NetUserAbsent {
 		if u, there := ReadAccount(c.Env, NetUser); there && PersonAccount(c.Env, u) == "" {
 			return false, "the system user " + NetUser + " the packages made is still there", nil
+		}
+		g, err := ReadGroups(c.Env.P("/etc/group"))
+		if err != nil {
+			return false, "", err
+		}
+		_, there := g[NetUser]
+		if p.NetGroupAbsent && there {
+			return false, "the group " + NetUser + " the packages made is still there", nil
+		}
+		if !p.NetGroupAbsent && !there {
+			return false, "the group " + NetUser + " that was there BEFORE the packages is gone: userdel took it away (USERGROUPS_ENAB)", nil
 		}
 	}
 	if len(stays) > 0 {

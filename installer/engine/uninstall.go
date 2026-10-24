@@ -140,6 +140,7 @@ func (m *Engine) CleanHistory(purge bool) error {
 		// the recorded versions (post_upgrade.go). ⚠ 10 Oct 2026, names in English (DECISIONI §10.35): removed the
 		// cleanups of the files of the engines from before D11/D14 — no real installation ever wrote them
 		os.Remove(filepath.Join(filepath.Dir(m.Folder), AnnotatedVersionsFile))
+		os.Remove(filepath.Join(filepath.Dir(m.Folder), NetUserPreexistingFile)) // the install record about the user
 		// the network side's state (DECISIONS §11.50), if a package script left it
 		os.RemoveAll(filepath.Join(filepath.Dir(m.Folder), filepath.Base(NetDir)))
 		os.Remove(filepath.Dir(m.Folder)) // only if empty
@@ -451,9 +452,13 @@ func (m *Engine) UninstallPlan(prof *ProfileV, purge bool) (*Piano, error) {
 	pn.Azioni = append(pn.Azioni, PlanRemoveRenderGrants("render-grants", m.RenderGrants()))
 	// the network side's system user (DECISIONS §11.50, the user's ruling of 16 Oct 2026): removed
 	// with --purge, after the packages; a plain uninstallation keeps it, and says so
+	// ⛔ Only a user THIS installation's packages made: the 1.5 sysusers file is installed and the
+	// install record does not say it was already there (NetUserRemovable)
 	if purge {
-		if a, ok := PlanRemoveSystemUser(m.Env, "system-user"); ok {
-			pn.Azioni = append(pn.Azioni, a)
+		if m.NetUserRemovable() {
+			if a, ok := PlanRemoveSystemUser(m.Env, "system-user"); ok {
+				pn.Azioni = append(pn.Azioni, a)
+			}
 		}
 	} else if _, ok := ReadAccount(m.Env, NetUser); ok {
 		pn.Declared = append(pn.Declared, T("az.utente.resta", NetUser))

@@ -30,6 +30,37 @@ const (
 	netStateRoot = "/var/lib/remotix"
 )
 
+// NetUserPreexistingFile: the install record that says the user remotix (or its account) was
+// already on the machine BEFORE the packages — written at install time, read by the uninstallation,
+// which then never removes it: only a user the packages' scripts made is ours to take away.
+const NetUserPreexistingFile = "net-user-preexisting"
+
+// PackageCarriesNetUser: whether the REMOTIX package this installer installs contains the sysusers
+// file (the 1.5 packaging of §11.50).  Today it does not (phase F is not ported): a person's account
+// called remotix then blocks nothing — the 1.0-compatible machines keep installing. The packaging
+// switches it on together with the sysusers file.
+var PackageCarriesNetUser = false
+
+// NetUserRemovable (uninstall --purge): the network side's user is ours to remove — the 1.5
+// package's sysusers file is installed AND the install record does not say the user was already
+// there before the packages.
+func (m *Engine) NetUserRemovable() bool {
+	if _, err := os.Stat(m.Env.P(netSysusers)); err != nil {
+		return false
+	}
+	_, err := os.Stat(filepath.Join(filepath.Dir(m.Folder), NetUserPreexistingFile))
+	return os.IsNotExist(err)
+}
+
+// recordNetUserPreexisting: install time, when the user was already there (never overwritten).
+func recordNetUserPreexisting(c *Context) {
+	f := filepath.Join(filepath.Dir(filepath.Dir(c.Folder)), NetUserPreexistingFile)
+	if _, err := os.Stat(f); err == nil {
+		return
+	}
+	os.WriteFile(f, []byte("the account "+NetUser+" was on the machine before the packages\n"), 0o600)
+}
+
 // netOld: what 1.0 kept in /var/lib/remotix, which the package moves into net/.
 var netOld = []string{"certificates", "ban"}
 
@@ -78,8 +109,10 @@ func uidMin(a *Environment) int {
 	return 1000
 }
 
+// loginShell: can the account log in? ⚠ An EMPTY shell field of /etc/passwd means /bin/sh (passwd(5)):
+// that is a login account, a person's, not a system user (review of 16 Oct 2026).
 func loginShell(sh string) bool {
-	return sh != "" && !strings.HasSuffix(sh, "/nologin") && !strings.HasSuffix(sh, "/false")
+	return !strings.HasSuffix(sh, "/nologin") && !strings.HasSuffix(sh, "/false")
 }
 
 // personHome: a home that is a real folder of its own (not /, not REMOTIX's state).
@@ -107,8 +140,10 @@ func PersonAccount(a *Environment, u Account) string {
 	return strings.Join(why, ", ")
 }
 
-// netUser (preflight, read only): the account named remotix, if there is one.
-func netUser(a *Environment, p *ProfileV) {
+// netUser (preflight, read only): the account named remotix, if there is one.  RX-NETUSER-001
+// only when the package being installed brings the sysusers file (`packageBrings`): otherwise
+// nothing would run as that account.
+func netUser(a *Environment, p *ProfileV, packageBrings bool) {
 	u, ok := ReadAccount(a, NetUser)
 	if !ok {
 		p.Detected("user.remotix", "absent", "/etc/passwd")
@@ -116,15 +151,17 @@ func netUser(a *Environment, p *ProfileV) {
 	}
 	if why := PersonAccount(a, u); why != "" {
 		p.Detected("user.remotix", "person uid="+strconv.Itoa(u.Uid), "/etc/passwd")
-		p.Con("RX-NETUSER-001", why)
+		if packageBrings {
+			p.Con("RX-NETUSER-001", why)
+		}
 		return
 	}
 	p.Detected("user.remotix", "system uid="+strconv.Itoa(u.Uid), "/etc/passwd")
 }
 
 // NetworkSide: is the network side's user there, and is net/ its own? ok=false with the message
-// code; applies=false when the installed REMOTIX package has no sysusers file (before 1.5: a
-// downgrade to 1.0 is allowed, §10.23, and has nothing to check).
+// code; applies=false when the installed REMOTIX package has no sysusers file (the network side is
+// not installed: a downgrade to 1.0 is allowed, §10.23, and has nothing to check).
 func NetworkSide(a *Environment) (applies bool, code, detail string) {
 	if _, err := os.Stat(a.P(netSysusers)); err != nil {
 		return false, "", T("net.prima")

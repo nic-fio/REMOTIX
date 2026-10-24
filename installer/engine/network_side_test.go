@@ -24,7 +24,7 @@ func TestRollbackDropsTheNewNetUser(t *testing.T) {
 		env.Run = fakeAccountsRun(root, &calls)
 		appendTo(t, filepath.Join(root, "etc/passwd"), sysRemotix)
 		appendTo(t, filepath.Join(root, "etc/group"), "remotix:x:990:\n")
-		if err := dropNewNetUser(&Context{Env: env, Purge: true}); err != nil {
+		if err := dropNewNetUser(&Context{Env: env, Purge: true}, true); err != nil {
 			t.Fatal(err)
 		}
 		if _, ok := ReadAccount(env, NetUser); ok {
@@ -41,7 +41,7 @@ func TestRollbackDropsTheNewNetUser(t *testing.T) {
 		var calls []string
 		env.Run = fakeAccountsRun(root, &calls)
 		appendTo(t, filepath.Join(root, "etc/passwd"), "remotix:x:1005:1005::/home/remotix:/bin/bash\n")
-		if err := dropNewNetUser(&Context{Env: env, Purge: true}); err != nil {
+		if err := dropNewNetUser(&Context{Env: env, Purge: true}, true); err != nil {
 			t.Fatal(err)
 		}
 		if _, ok := ReadAccount(env, NetUser); !ok || len(calls) != 0 {
@@ -115,13 +115,15 @@ func TestPreflightNetUser(t *testing.T) {
 		{"person by uid", "remotix:x:1005:1005::/:/usr/sbin/nologin\n", true},
 		{"person by shell", "remotix:x:995:995::/:/bin/bash\n", true},
 		{"person by home", "remotix:x:995:995::/home/remotix:/usr/sbin/nologin\n", true},
+		// ⚠ an EMPTY shell field is /bin/sh (passwd(5)): a login account, a person's
+		{"person by empty shell", "remotix:x:995:995::/:\n", true},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			root := t.TempDir()
 			prepareMachine(t, root)
 			os.MkdirAll(filepath.Join(root, "home/remotix"), 0o755)
 			appendTo(t, filepath.Join(root, "etc/passwd"), c.line)
-			p := Preflight(&Environment{Root: root, Run: noCommand}, PreflightOptions{})
+			p := Preflight(&Environment{Root: root, Run: noCommand}, PreflightOptions{PackageHasNetUser: true})
 			if got := hasCode(p.Messages, "RX-NETUSER-001"); got != c.blocks {
 				t.Fatalf("RX-NETUSER-001 = %v, expected %v (%v)", got, c.blocks, p.Messages)
 			}
@@ -133,6 +135,57 @@ func TestPreflightNetUser(t *testing.T) {
 				t.Fatalf("the compatibility report must carry RX-NETUSER-001 = %v", c.blocks)
 			}
 		})
+	}
+}
+
+// The refusal exists only if the package being installed brings the sysusers file: today it does
+// not, so a person's account called remotix blocks nothing (1.0-compatible machines keep installing).
+func TestPreflightNetUserOnlyWithTheSysusersFile(t *testing.T) {
+	root := t.TempDir()
+	prepareMachine(t, root)
+	os.MkdirAll(filepath.Join(root, "home/remotix"), 0o755)
+	appendTo(t, filepath.Join(root, "etc/passwd"), "remotix:x:1005:1005::/home/remotix:/bin/bash\n")
+	if PackageCarriesNetUser {
+		t.Skip("the package carries the sysusers file now: the option is on by default")
+	}
+	p := Preflight(&Environment{Root: root, Run: noCommand}, PreflightOptions{})
+	if hasCode(p.Messages, "RX-NETUSER-001") {
+		t.Fatalf("RX-NETUSER-001 without the sysusers file in the package: %v", p.Messages)
+	}
+	p = Preflight(&Environment{Root: root, Run: noCommand}, PreflightOptions{PackageHasNetUser: true})
+	if !hasCode(p.Messages, "RX-NETUSER-001") {
+		t.Fatalf("RX-NETUSER-001 expected with the sysusers file: %v", p.Messages)
+	}
+}
+
+// loginShell: empty = /bin/sh = a login account.
+func TestLoginShell(t *testing.T) {
+	for sh, want := range map[string]bool{"": true, "/bin/sh": true, "/bin/bash": true,
+		"/usr/sbin/nologin": false, "/sbin/nologin": false, "/bin/false": false} {
+		if got := loginShell(sh); got != want {
+			t.Errorf("loginShell(%q) = %v, expected %v", sh, got, want)
+		}
+	}
+}
+
+// A group that was there BEFORE the packages is not groupdel'ed by the rollback.
+func TestRollbackKeepsAnOldNetGroup(t *testing.T) {
+	root := t.TempDir()
+	prepareMachine(t, root)
+	env := fakeEnvironment(root)
+	var calls []string
+	env.Run = fakeAccountsRun(root, &calls)
+	appendTo(t, filepath.Join(root, "etc/passwd"), sysRemotix)
+	appendTo(t, filepath.Join(root, "etc/group"), "remotix:x:990:\n")
+	// userdel without USERGROUPS_ENAB would leave the group; here the fake takes it too — the point is
+	// that groupdel is NOT called when the group is not ours
+	if err := dropNewNetUser(&Context{Env: env, Purge: true}, false); err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range calls {
+		if strings.HasPrefix(c, "groupdel") {
+			t.Fatalf("groupdel of a group that was there before: %q", calls)
+		}
 	}
 }
 
@@ -331,8 +384,30 @@ func TestUninstallSystemUser(t *testing.T) {
 			}
 		}
 	})
+	t.Run("purge without the sysusers file or with the record of an old user: no step", func(t *testing.T) {
+		for _, withFile := range []bool{false, true} {
+			b := fakeInstall(t)
+			appendTo(t, filepath.Join(b.root, "etc/passwd"), sysRemotix)
+			if withFile {
+				os.MkdirAll(filepath.Join(b.root, filepath.Dir(netSysusers)[1:]), 0o755)
+				os.WriteFile(filepath.Join(b.root, netSysusers[1:]), []byte("u remotix\n"), 0o644)
+				os.WriteFile(filepath.Join(filepath.Dir(b.operations), NetUserPreexistingFile), []byte("x\n"), 0o600)
+			}
+			pn, err := b.engine(t).UninstallPlan(fakeProfile(), true)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, a := range pn.Azioni {
+				if a.Type == "remove-system-user" {
+					t.Fatalf("withFile=%v: a user not made by the packages is in the purge plan: %+v", withFile, a)
+				}
+			}
+		}
+	})
 	t.Run("purge removes it", func(t *testing.T) {
 		b := fakeInstall(t)
+		os.MkdirAll(filepath.Join(b.root, filepath.Dir(netSysusers)[1:]), 0o755)
+		os.WriteFile(filepath.Join(b.root, netSysusers[1:]), []byte("u remotix\n"), 0o644)
 		appendTo(t, filepath.Join(b.root, "etc/passwd"), sysRemotix)
 		appendTo(t, filepath.Join(b.root, "etc/group"), "remotix:x:990:\n")
 		os.MkdirAll(filepath.Join(filepath.Dir(b.operations), "net/certificates"), 0o700)

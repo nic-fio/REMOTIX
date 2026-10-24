@@ -119,7 +119,7 @@ var texts = map[string]string{
 	"az.utente.rimesso":         "%s is back (uid %d)",
 	"az.utente.non_rimesso":     "%s is not back as it was",
 	"ver.rete":                  "the network side's system user exists and /var/lib/remotix/net is its own",
-	"net.prima":                 "the installed REMOTIX package has no network side user (before 1.5): nothing to check",
+	"net.prima":                 "the installed REMOTIX package has no network side user (network side not installed): nothing to check",
 	"net.manca":                 "missing",
 	"net.non_cartella":          "not a directory",
 	"net.non_suoi":              "not owned by %s (uid %d) or not 0700: %s",

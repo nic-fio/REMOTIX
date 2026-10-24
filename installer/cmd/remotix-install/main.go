@@ -547,6 +547,7 @@ func updated(arg []string) (int, error) {
 	env := engine.RealEnvironment()
 	// DECISIONS §11.50: the package's scripts created the network side's user and moved
 	// 1.0's files into /var/lib/remotix/net; the engine only SAYS whether that is right
+	// ("network side not installed" when the package has no sysusers file)
 	if applies, code, det := engine.NetworkSide(env); applies && code != "" {
 		x := engine.Msg(code, det)
 		fmt.Println(x.Codice, x.Testo, "("+det+")")
