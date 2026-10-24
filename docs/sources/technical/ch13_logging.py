@@ -362,9 +362,9 @@ OPT = table(["Option", "Default", "Lives in", "Meaning"], [
      "created 0700 if missing."],
     [c("--page FILE"), c("page.html") + " (relative)", "parent", "The page served over TCP."],
     [c("--ban-file FILE"), c("/var/lib/remotix/ban"), "parent", "Where the address "
-     "ban survives restarts."],
+     "ban survives restarts (format B2, no user name on disk)."],
     [c("--command-socket PATH"), "none", "parent", "Unix socket 0600 of the unlock command ("
-     + rif("The unlock command socket") + "). Without it a ban ends only after 12 hours."],
+     + rif("The unlock command socket") + "). Without it a ban ends only when its wait runs out (15 minutes, 1 hour or 12 hours)."],
     "Diagnostics",
     [c("--verbose"), "off", "parent and child", "Detail lines (" + c("log_detail") + ")."],
     [c("--journal"), "off (on in the packaged deb and rpm units)", "parent and child", "Events also to the journal "

@@ -29,7 +29,8 @@ S1 = p("The server starts from " + c("main()") + " in " + c("main.c") + ". Befor
     "and the budget are written in the log with the value in force, on <i>and</i> off (I6): a one-hour clock "
     "cannot be checked by waiting an hour.",
     "<b>The ban.</b> " + c("rcp_ban_load()") + " reads " + c("/var/lib/remotix/ban") + "; if the file cannot "
-    "be read the server exits with 1 rather than forget who was banned.",
+    "be read the server exits with 1 rather than forget who was banned. The log secret that tags unknown user names is loaded first: "
+    "the (key, user) lines of the file are keyed by an HMAC of the name.",
     "<b>The PAM helper</b> (" + c("helper_turn_on()") + "), before any port is open, so that it does not inherit "
     "them. If it does not start, the server goes on and every login will be refused — and the log says so.",
     "<b>The children table</b> (" + c("children_turn_on()") + "), sized on the session cap; it resolves "
@@ -100,7 +101,7 @@ RestartSec=2""", "text", "packaging/debian/remotix.service (excerpt, without the
          + ") refuses them"],
     ], "«TAB» — The unit's settings") + \
     warn("with no " + c("--command-socket") + " in the packaged command line, a banned address can only wait for "
-         "its 12 hours: the unblock command promised by SPECS.md §4.2 is there only if the administrator adds "
+         "its wait (15 minutes, 1 hour or 12 hours): the unblock command promised by SPECS.md §4.2 is there only if the administrator adds "
          "the option in " + c("REMOTIX_OPTIONS") + " (the " + c("tmpfiles") + " entry creates "
          + c("/run/remotix") + " for that socket). No code path of the server exits with 78, so "
          + c("RestartPreventExitStatus=78") + " never applies today.", "Two gaps of the unit.") + \
@@ -145,8 +146,9 @@ S3 = p("A login crosses three processes. The page proves nothing until the serve
       + rif("The PAM helper process") + "). Every answer to " + c("CREDENTIALS") + " — admitted or refused — leaves "
       "no sooner than one second after the request arrived (" + c("FIXED_DELAY") + "): without it “user does not exist” would "
       "answer in a millisecond and “wrong password” in fifty, and the stopwatch would tell what the reason code "
-      "deliberately does not. Three failed checks from the same address within 5 minutes ban that address for "
-      "12 hours, whatever the user names; a success resets the count; the ban survives restarts ("
+      "deliberately does not. Five failed checks of the same user from the same address within 5 minutes ban that user "
+      "there (twelve from the address, thirty from an IPv6 /48, ban the whole key or /48), for 15 minutes the first time, then 1 hour, "
+      "then 12 hours; a success resets only the failures of that user on that address; the ban survives restarts ("
       + rif("The RCP/1 protocol") + ").") + \
     p("<b>Yes is not yet in.</b> When the helper says yes, " + c("delivery_verdict()") + " asks three questions, "
       "in this order, <b>before</b> anything is forked — a refusal after the desktop has started is not a refusal, "
@@ -164,7 +166,7 @@ S3 = p("A login crosses three processes. The page proves nothing until the serve
       "their " + c("SESSION") + " will say <i>resumed</i> (2) instead of <i>new</i> (1). For a new child the "
       "abandonment clock starts now, at birth, not at the first gesture: a session opened and never touched must "
       "expire too. Then the verdict is handed to the transport, and only after it the farewell, if any: the verdict "
-      "is the only place where the failure count of the ban is reset, and a farewell sent first would leave a "
+      "is the only place where the failure count of the (key, user) pair is reset, and a farewell sent first would leave a "
       "user who typed the right password with their failures on record. The client never sees " + c("ADMITTED")
       + " followed by an eviction: " + c("ADMITTED") + " leaves only when the second has passed, and by then the "
       "session is already closed with its reason.") + \

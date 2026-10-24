@@ -234,50 +234,79 @@ S4 = p("One file per distribution family, like Cockpit: " + c("@include") + " is
     ], "«TAB» — Why the files look the way they do")
 
 # ── 14.5 The address ban ─────────────────────────────────────────────────
-S5 = p("Three failed authentications from the same address within five minutes, and that address is out for twelve "
-       "hours (" + c("DECISIONS.md") + " §1.9, " + c("SPECS.md") + " §4.2, decided 10 Aug 2026). The user name "
-       "does not count: three different names count three. A successful login resets the count. The ban survives "
-       "restarts.", lead=True) + \
+S5 = p("Three levels of counters, a progressive ban and a key that is the /64 for IPv6 (" + c("DECISIONS-11.md")
+       + " §11.53, a <b>spec change from 1.0</b>, decided 24 Oct 2026; the 1.0 rule — three failures from the same "
+       "address, twelve hours, the name not counting — is " + c("DECISIONS.md") + " §1.9, superseded). The ban "
+       "survives restarts.", lead=True) + \
+    table(["Level", "Limit", "Window", "Bans"], [
+        ["(key, user)", "5 failed", "5 minutes", "that user on that key"],
+        ["key", "12 failed, any user", "5 minutes", "the key"],
+        ["IPv6 /48", "30 failed", "10 minutes", "the /48"],
+    ], "«TAB» — The three levels (" + c("LIMIT") + ", " + c("WINDOW_MS") + " in " + c("rcp.c") + ")") + \
     table(["Constant (" + c("rcp.c") + ")", "Value", "Meaning"], [
-        [c("THRESHOLD"), "3", "Failures that ban"],
-        [c("WINDOW"), "300,000 ms", "The three must fit in five minutes. The window <b>slides</b>: the times of the "
-         "last three are kept. Anchored to the first failure, failures at 0:00, 4:59 and 5:01 would restart the "
-         "count from one, and whoever guesses slightly slower than the window would never be stopped."],
-        [c("BAN_DURATION"), "43,200,000 ms", "Twelve hours"],
-        [c("MAX_ATTEMPTS"), "256", "Entries in the table. When full, the victim is the least recently touched "
-         "<b>non-banned</b> entry (a banned one only when every entry is banned), and the eviction is logged; otherwise filling the table with invented addresses "
-         "would be a way to erase a ban."],
+        [c("LADDER_MS"), "15 min · 1 h · 12 h", "The n-th ban of a level lasts the n-th step; the 1.0 duration is now the top of the ladder."],
+        [c("FORGET_MS"), "24 h", "Without a ban for 24 hours the memory of the previous bans (the recidivism) is forgotten"],
+        [c("MAX_PER_USER_IN_FLIGHT"), "2", "Verifications at once for the same (key, user)"],
+        [c("MAX_ATTEMPTS"), "256", "Entries in the table. A banned entry, or one with an attempt in flight, is <b>never</b> evicted: "
+         "first the entries with nothing to remember are taken back, then the oldest without recidivism (declared in the log); if "
+         "nothing can go the new entry is refused with " + c("TOO_MANY_ATTEMPTS") + ", counted and logged."],
     ], "«TAB» — The ban parameters") + \
+    p("The windows <b>slide</b>: the times of the last N failures are kept (N = the limit of the level). Anchored to the "
+      "first failure, failures at 0:00, 4:59 and 5:01 would restart the count from one, and whoever guesses slightly "
+      "slower than the window would never be stopped. A <b>successful login resets only the failures of (key, user)</b>: "
+      "not the recidivism, not the counters of the key and of the /48, so that an attacker with one valid account cannot "
+      "wash the count.") + \
     table(["Counts", "Does not count"], [
-        ["A failed authentication — wrong password and unknown user are the same thing",
-         "Protocol errors, timeouts, and the refusal of a second device of the same user ("
-         + c("0x0F ALREADY_ACTIVE_REMOTELY") + ")"],
-    ], "«TAB» — What feeds the counter") + \
-    p("The key is the address <b>without the port</b>, in brackets even for IPv4: " + c("[192.168.0.2]") + ", "
-      + c("[fe80::1]") + ". The first version keyed on " + c("192.168.0.2:44661") + "; with one attempt per "
-      "connection the port changes every time and the counter was always 1 — code that looked right and did "
-      "nothing, found only by a bench case that tries seven <i>different</i> names from one address. The key is "
-      "built in exactly one place, " + c("rcp_key_address()") + ", used by the session, the page server and "
-      "the unlock command alike: before 10 Aug 2026 a second function made keys without brackets and "
-      + c("rcp_banned(\"192.168.0.2\")") + " answered «not banned» (B-8).") + \
+        ["A failed authentication — wrong password and unknown user are the same thing; an attempt <b>without a verdict</b> "
+         "(the helper's 8 s timeout, the 12 s ceiling of " + c("rcp_time()") + ")",
+         "Protocol errors, the refusal of a second device of the same user (" + c("0x0F ALREADY_ACTIVE_REMOTELY")
+         + "), and a refusal that is our defect: the question never left (helper off, socket full, 16 already in flight) or "
+         "the PAM helper died with requests in flight. The booking is given back (" + c("login_release()") + ")"],
+    ], "«TAB» — What feeds the counters") + \
+    p("<b>The attempt is booked at CREDENTIALS.</b> The counters are <i>failed + in flight</i>, and the check and the "
+      "booking are one step (" + c("login_reserve()") + ") before PAM is called, so a burst of parallel attempts cannot "
+      "slip under the limit. The verdict is booked by the name and address of the <i>request</i> (" + c("struct flight") + "): "
+      "a verdict whose connection died is counted all the same (" + c("rcp_orphan_verdict()") + ", from "
+      + c("transport_verdict()") + ").") + \
+    p("<b>The key.</b> IPv4: the whole address. IPv6: the <b>/64</b> — a subscriber has at least a /64 and rotates inside "
+      "it for free, so counting the single address was a limiter that was not there — plus an aggregate on the /48. "
+      + c("::ffff:a.b.c.d") + " and NAT64 are the IPv4 inside; " + c("::1") + " stays whole; link-local addresses go to the "
+      "/64 too (the zone id is cut, the key is " + c("[fe80::]") + "), and the price is accepted: LAN users share one "
+      "counter. It is written in brackets, without the port: " + c("[192.168.0.2]") + ". The first version keyed on "
+      + c("192.168.0.2:44661") + "; with one attempt per connection the port changes every time and the counter was always "
+      "1 — code that looked right and did nothing, found only by a bench case that tries seven <i>different</i> names from "
+      "one address. The key is built in exactly one place, " + c("rcp_key_address()") + " (idempotent), used by the "
+      "session, the page server and the unlock command alike.") + \
     table(["Aspect", "Behaviour"], [
-        ["File", "Default " + c("/var/lib/remotix/ban") + ": one line " + c("<key> <epoch-seconds-of-expiry>")
-         + " per banned address, only those still banned"],
+        ["File", "Default " + c("/var/lib/remotix/ban") + ", format " + c("B2 <U|K|N> <level> <epoch> <key>[ <user>]")
+         + ", only the bans still in force. The old lines (" + c("[address] epoch") + ", the 12 h ban of 1.0) are read and "
+         "converted at the top of the ladder; the file is rewritten in the new format at the next change"],
+        ["No name on disk", "The (key, user) line carries the full HMAC-SHA256 of the name (64 hex digits, same secret as the "
+         "log tags). The file is created 0600 and " + c("fsync") + "ed before the " + c("rename()") + "; the secret is loaded "
+         "before " + c("rcp_ban_load()") + ", and a replaced secret makes the old (key, user) lines match nobody (key and /48 "
+         "lines are not affected). Values read are bounded: no negative epoch, never a ban longer than 12 h"],
         ["Writing", "At every change (new ban, unlock), to " + c("<file>.new") + " then " + c("rename()")
          + ": a file truncated by a crash would claim «these addresses were not banned»"],
         ["Clock", "Epoch seconds on disk, monotonic in memory: a monotonic time written to disk is meaningless after "
          "a restart"],
         ["Loading", c("rcp_ban_load()") + " at startup. A file that exists and cannot be read stops the server "
          "(exit 1): «zero bans» and «could not look» are different facts"],
-        ["What a banned client sees", "The page still loads (" + c("page.c") + " asks " + c("rcp_banned()")
-         + ") and says the attempts are exhausted; RCP answers " + c("0x08 TOO_MANY_ATTEMPTS") + ". Never silence: "
-         "whoever is banned by mistake is almost always the owner"],
-        ["Ways out", "Twelve hours, or the unlock command (" + rif("The unlock command socket") + ")"],
+        ["What a banned client sees", "RCP answers " + c("0x08 TOO_MANY_ATTEMPTS") + ". The page still loads (" + c("page.c")
+         + " asks " + c("rcp_banned()") + ") and says the attempts are exhausted — but it sees only the key and /48 levels, "
+         "not the (key, user) ones, because it does not know the user. Never silence: whoever is banned by mistake is almost "
+         "always the owner"],
+        ["Ways out", "The wait of the step in force, or the unlock command (" + rif("The unlock command socket") + "), "
+         "which removes every level that concerns the address and the recidivism"],
     ], "«TAB» — Persistence and the visible side") + \
-    warn("behind a NAT addresses are shared, so three mistakes by one person close the door to everybody for twelve "
-         "hours, and the first to trip is whoever types a long password on a phone keyboard. A per-name counter that "
-         "softened this was removed knowingly. Whether 256 entries are enough against an attacker with more "
-         "addresses is not measured: the eviction line in the log is where it would show.", "The declared price.")
+    p("<b>The log.</b> A name that is not a user of the machine is written " + c("unknown user [a1b2c3]") + ": the HMAC-SHA256 "
+      "of the name cut to 6 hex digits, under a secret in " + c("<certificates dir>/log-secret") + " (0600, next to "
+      + c("quic-secret") + "). Nothing of the name in clear. SHA-256 and HMAC are written out in " + c("rcp.c")
+      + " so that the module stays free of OpenSSL in the benches (checked against RFC 4231).") + \
+    warn("behind a NAT the key is shared: twelve failures from the machines of one network ban the whole network, and "
+         "five from the same user ban that user for everyone on it (for 15 minutes the first time). That is far less than "
+         "the three-failures-twelve-hours of 1.0, but it is the price. Whether 256 entries are enough against an attacker "
+         "with more addresses is not measured: the refusal counted in the log is where it would show. Not yet run on "
+         "the boxes (" + c("DECISIONS-11.md") + " §11.53).", "The declared price.")
 
 # ── 14.6 The unlock command socket ───────────────────────────────────────
 S6 = p("The way out for whoever bans themselves from their own phone must ask «the only key that case admits — access "
@@ -285,9 +314,10 @@ S6 = p("The way out for whoever bans themselves from their own phone must ask «
        + c("--command-socket PATH") + ".", lead=True) + \
     table(["Request", "Answer", "Effect"], [
         [c("UNBLOCK <address>"), c("REMOVED <key>"), "The ban existed and was removed from the serving process's "
-         "memory; the file was asked to be rewritten"],
-        [c("UNBLOCK <address>"), c("NOT-BANNED <key>"), "Nothing to remove; the failure count of that address "
-         "restarts from zero anyway"],
+         "memory (every level that concerns the address: its (key, user) pairs, the key, the /48; and the recidivism); the "
+         "file was asked to be rewritten"],
+        [c("UNBLOCK <address>"), c("NOT-BANNED <key>"), "Nothing to remove; the failure counts of that address "
+         "restart from zero anyway"],
         [c("PING"), c("PONG"), "Touches nothing; tells a bench the command exists"],
         ["anything else", c("NOT-UNDERSTOOD <line>"), "Nothing"],
     ], "«TAB» — The protocol: one line, readable without tools") + \
@@ -309,7 +339,7 @@ S6 = p("The way out for whoever bans themselves from their own phone must ask «
       "kernel instead (" + c("SO_PEERCRED") + ").") + \
     warn("the packaged units do not pass " + c("--command-socket") + " (it is listed among the bench options kept "
          "off the shipped command line), although the deb and rpm tmpfiles entries create " + c("/run/remotix") + " «for the "
-         "command socket». On an installed system a ban therefore ends only after twelve hours, unless the "
+         "command socket». On an installed system a ban therefore ends only when its wait runs out (15 minutes, 1 hour or 12 hours), unless the "
          "administrator adds the option through " + c("REMOTIX_OPTIONS") + " (deb, rpm). " + c("SPECS.md")
          + " §4.2 promises the command as a way out. Not settled yet.", "Not in the packaged units.") + \
     note(c("rcp_unblock()") + " writes the file through " + c("save_ban()") + " without a "
@@ -597,7 +627,7 @@ S12 = p("The weaknesses that are known and written in the code, collected in one
          + c("explicit_bzero()")],
         [c("/diary") + " is unauthenticated and writes a log line per request", c("page.c"), "Sanitised and cut; "
          "no rate limit in the code"],
-        ["Ban shared behind NAT; 256-entry table", c("rcp.c"), "Declared price; eviction logged"],
+        ["Ban shared behind NAT (key = address or IPv6 /64); 256-entry table", c("rcp.c"), "Declared price; refusal counted and logged"],
         ["Unlock socket absent from the packaged units", "packaging", "Not settled yet"],
         ["Every journal line twice under systemd with " + c("--journal"), c("log.c"), "Not settled yet"],
         ["Card groups include " + c("video"), c("child.c"), "Restriction to " + c("render") + " not settled yet"],

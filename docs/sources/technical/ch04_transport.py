@@ -264,8 +264,10 @@ S7 = p(c("page.c") + " is a small HTTPS/1.1 server: one request per connection, 
       "simply does not load.") + \
     p("A banned address still gets the page, with HTTP status 200 and a notice that begins " + c("attempts exhausted")
       + " and gives the hours and minutes left; the notice is written in "
-      + c("page.c") + ". The page is served even when banned because whoever is banned by mistake is almost always the owner, "
-      "and a server that looks dead for half a day is the worst diagnosis; 200 rather than a 4xx because an intermediary "
+      + c("page.c") + ". It is shown for the bans of the key and of the /48; the ban of one user on that key is not "
+      "known to the page (it does not know the user), and the same refusal comes through RCP. ⚠ The notice still says "
+      "«three failed login attempts»: its text predates " + c("DECISIONS-11.md") + " §11.53. The page is served even when banned because whoever is banned by mistake is almost always the owner, "
+      "and a server that looks dead for hours is the worst diagnosis; 200 rather than a 4xx because an intermediary "
       "or the browser may replace the body of an error response with its own page, and the sentence the owner must read "
       "would vanish. The ban itself is described in " + rif("Credentials, the fixed delay and the address ban") + ".")
 

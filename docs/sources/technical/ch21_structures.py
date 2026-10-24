@@ -284,7 +284,7 @@ S5 = p("The protocol and transport constants a maintainer is most likely to look
         [c("WT_CAP_CHANNEL_NS"), "5 s", c("webtransport.c"), "session open → control channel"],
         [c("FIXED_DELAY"), "1000 ms", c("rcp.c"), "fixed delay before answering credentials"],
         [c("VERDICT_CAP") + " / " + c("EXPIRY_MS"), "12 / 8 s", c("rcp.c") + " / " + c("helper.c"), "PAM verdict deadlines"],
-        [c("THRESHOLD") + " / " + c("WINDOW") + " / " + c("BAN_DURATION"), "3 / 5 min / 12 h", c("rcp.c"), "address ban"],
+        [c("LIMIT") + " / " + c("WINDOW_MS") + " / " + c("LADDER_MS"), "5·12·30 / 5·5·10 min / 15 min·1 h·12 h", c("rcp.c"), "login defences (user, key, /48)"],
         [c("SILENCE"), "30 000 ms", c("rcp.c"), "silence detaches"],
         [c("DEFAULT_EVICTION"), "15 000 ms", c("rcp.c"), "ghost eviction"],
         [c("DEFAULT_INACTIVITY"), "30 min", c("rcp.c"), "inactivity farewell " + c("0x02")],

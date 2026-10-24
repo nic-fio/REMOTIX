@@ -172,7 +172,7 @@ S_TWINS = p(c("rcp.c") + ", " + c("rcp.h") + " and " + c("authentication.c") + "
     ], "«TAB» — The three outcomes of the twin-copy check (finding R12.3)") + \
     p("This is why the development container mounts the whole tree, not " + c("src/") + ", and why every package "
       "recipe copies " + c("benches/rcp/") + " next to " + c("src/") + ". The concrete case it prevents: changing the "
-      "ban duration in " + c("src/rcp.c") + " while the benches keep testing the old copy and stay green.")
+      "ban ladder in " + c("src/rcp.c") + " while the benches keep testing the old copy and stay green.")
 
 S_DEVBOX = p(c("src/Containerfile") + " is the every-day build image, " + c("localhost/remotix-costruzione")
              + " (the REMOTIX build image): Debian 13 "

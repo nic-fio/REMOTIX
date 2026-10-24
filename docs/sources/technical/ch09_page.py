@@ -26,7 +26,7 @@ S1 = p("The whole client is one file, " + c("src/page.html") + ": the login page
     table(["Marker", "Replaced with", "Read by"], [
         [c("__FINGERPRINT__"), "the base64 SHA-256 of the DER of the current session certificate", "the WebTransport "
          + c("serverCertificateHashes") + " option, as a fallback"],
-        [c("__WARNING__"), "empty, or the ban notice with the hours and minutes left", "the CSS: " + c("#warning:empty")
+        [c("__WARNING__"), "empty, or the ban notice (key or /48 level) with the hours and minutes left", "the CSS: " + c("#warning:empty")
          + " hides it, so a banned visitor reads the reason even without JavaScript"],
         [c("__BANNED__"), c("yes") + " or " + c("no") + ", on " + c("data-banned") + " of the body", "the script and the ban benches"],
         [c("__REMAINING_MS__"), "milliseconds left on the ban", c("data-remaining-ms") + " of the body"],

@@ -8,7 +8,7 @@ S1 = p("Defects found while this manual was written (10 October 2026), by readin
          + " is treated as a bench option, and none of the three packaged units passes it.",
          c("packaging/debian/remotix.service") + ", " + c("packaging/rpm/remotix.service") + ", "
          + c("packaging/arch/remotix.service"),
-         "A banned address waits the full 12 hours. The unlock command promised by SPECS.md §4.2 and RCP.md §4.4-bis "
+         "A banned address waits the full step of the ladder (15 minutes, 1 hour or 12 hours). The unlock command promised by SPECS.md §4.2 and RCP.md §4.4-bis "
          "does not exist there; the directory " + c("/run/remotix") + " is created for a socket nobody opens."],
         ["<b>The first enrolment in the graphics card groups ends every session of that user.</b> After adding the "
          "user to the groups of the " + c("/dev/dri") + " nodes, the parent (before the fork) runs " + c("loginctl terminate-user")
