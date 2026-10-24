@@ -332,7 +332,7 @@ LIBS := -lngtcp2_crypto_ossl -lngtcp2 -lnghttp3 -lssl -lcrypto -lpam \
 #   ⛔ but depending on that detail means breaking on a different libc
 #   with an error that does not name the phase that introduced it.
 
-.PHONY: all clean deps fingerprints bench-w1 bench-unchanged test-session test-colors709 FORCE
+.PHONY: all clean deps fingerprints bench-w1 bench-unchanged test-session test-colors709 test-rootside FORCE
 
 all: fingerprints $(NOME)
 
@@ -638,6 +638,26 @@ cursor.o:        cursor.h log.h
 #    ⛔ It is the same reason why `rcp.c` reaches this module
 #    by HOOKS and not by `#include`.
 clipboard.o:        clipboard.h log.h
+
+# ⭐ 1.5 (DECISIONS-11.md §11.50) — the ROOT SIDE's desk test (`benches/02-rootside-validator-test.c`: the closed list's
+#    validator, the grants, the AUTH bounds, the names refused before PAM).  `rootside.c` is #included by the test (its
+#    statics too); nothing is forked, no channel opened.  ⚠ `rootside.o` is NOT part of the product link yet (phase D of
+#    the split): this target is the only thing that builds it.  The symbols of phase D (`child_birth`, `helper_*_root`,
+#    `render_grant_remotix_session`, …) are not in this tree: the recipe links the log stub of the fuzz harness and ONE
+#    stub per undefined symbol, generated from the linker's list, that TRAPS if the test reaches it.
+test-rootside: ../benches/02-rootside-validator-test.c rootside.c rootside.h rootside_proto.h
+	@set -e; d=$$(mktemp -d "$${TMPDIR:-/tmp}/remotix-test-rootside.XXXXXX"); \
+	trap 'rm -rf "$$d"' EXIT; \
+	$(CC) $(CFLAGS) -I. -c -o "$$d/t.o" ../benches/02-rootside-validator-test.c; \
+	$(CC) $(CFLAGS) -I. -c -o "$$d/log.o" ../benches/fuzz/rootside-dispatch/stubs_log.c; \
+	LC_ALL=C $(CC) -o "$$d/probe" "$$d/t.o" "$$d/log.o" 2> "$$d/link.log" || true; \
+	{ echo '#include <stdio.h>'; \
+	  echo 'static void hit(const char *n) { fprintf(stderr, "STUB: the root-side desk test reached %s (phase D)", n); fputc(10, stderr); __builtin_trap(); }'; \
+	  sed -n 's/.*undefined reference to .\([A-Za-z_0-9]*\)..*/\1/p' "$$d/link.log" | sort -u | while read -r n; do \
+	    echo "void $$n(void); void $$n(void) { hit(\"$$n\"); }"; done; } > "$$d/stubs.c"; \
+	$(CC) $(CFLAGS) -c -o "$$d/stubs.o" "$$d/stubs.c"; \
+	$(CC) -o "$$d/test" "$$d/t.o" "$$d/log.o" "$$d/stubs.o"; \
+	"$$d/test"
 
 # ⭐ The automatic dependencies written by `-MMD` (absent on the first build: `-include` does not mind).
 -include $(OGGETTI:.o=.d)

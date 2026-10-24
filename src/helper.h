@@ -157,4 +157,17 @@ void helper_expired(helper *a, uint64_t now_ms, HelperVerdict delivery,
 /* How many requests are in flight.  For the log. */
 int helper_in_flight(const helper *a);
 
+/* ⭐ 1.5 (DECISIONS-11.md §11.50) — DECLARATIONS ONLY, for `rootside.c`; the implementation is phase D of the split
+ *    and is NOT in this tree yet.
+ *    In the ROOT SIDE, `helper_turn_on_root()` starts the real dispatcher, but nothing of `rcp.c` is touched: every
+ *    request in flight ends in ONE call of `cb` — outcome 1 admitted, 0 refused, 2 refused while `pam_faillock`
+ *    held the account, 3 not checked (expiry, the dispatcher died, the dispatcher's own cap of 16). */
+typedef void (*HelperOutcome)(void *ctx, uint64_t ticket, int outcome,
+                              const char *user, const char *rhost);
+helper *helper_turn_on_root(HelperOutcome cb, void *ctx);
+/* `helper_ask()` with a bare `rhost` (no provenance to parse, no known-key
+ * places: the root side's bounds are its own). */
+bool helper_ask_bare(helper *a, const char *user, const char *password,
+                     const char *rhost, uint64_t now_ms, uint64_t *ticket);
+
 #endif
