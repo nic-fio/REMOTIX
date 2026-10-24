@@ -11,7 +11,7 @@
  *       xkbcommon wayland-client gbm) -o /tmp/pdt \
  *       ../benches/02-page-deadline-test.c \
  *       $(ls *.o | grep -v -e '^main.o$' -e '^page.o$') \
- *       -lngtcp2_crypto_ossl -lngtcp2 -lnghttp3 -lssl -lcrypto -lpam -lm \
+ *       -lngtcp2_crypto_ossl -lngtcp2 -lnghttp3 -lssl -lcrypto -lpam -lm -lz \
  *       $(pkg-config --libs gio-2.0 libpipewire-0.3 libva libva-drm \
  *       libei-1.0 xkbcommon wayland-client gbm opus vulkan) -ldl && /tmp/pdt
  *
@@ -65,6 +65,13 @@
  *      reply, leaks nothing and leaves the shared page whole (never a
  *      half-built or swapped one); a failing 500 head too leaves the client
  *      without a response and still leaks nothing.
+ *  17. gzip (§11.44, the user's decision of 15 Oct 2026): the shared page has
+ *      ONE gzip copy, built with it; `Accept-Encoding` read with its q-values
+ *      (`gzip;q=0` = plain, `*`, `x-gzip`, no header = plain); a gzip request
+ *      gets the shared copy with Content-Encoding, Vary and the compressed
+ *      Content-Length, a real one over TLS inflates to the exact page; a banned
+ *      page goes plain; every failing allocation of the copy still serves the
+ *      plain page, retries at the next gzip request, and leaks nothing.
  *
  * Exit status: 0 green, 1 red, 3 not all checks ran. */
 #define _GNU_SOURCE
@@ -89,6 +96,7 @@
 #include <unistd.h>
 #include <openssl/err.h>
 #include <openssl/rand.h>
+#include <zlib.h>
 
 static void *live_allocs[4096];
 static size_t nlive, page_mallocs;
@@ -141,7 +149,7 @@ static void t_free(void *q)
 #include <time.h>
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 64
+#define EXPECTED_CHECKS 83
 
 static void require(int cond, const char *desc)
 {
@@ -359,6 +367,130 @@ static void fake_get(page *p, client *c, const char *provenance)
 	                               "GET / HTTP/1.1\r\nHost: t\r\n\r\n");
 	serve(p, c);
 }
+
+/* `fake_get()` with an `Accept-Encoding` header (`ae`), or none (NULL). */
+static void fake_get_ae(page *p, client *c, const char *provenance, const char *ae)
+{
+	memset(c, 0, sizeof *c);
+	c->fd = -1;
+	c->phase = F_READ;
+	snprintf(c->provenance, sizeof c->provenance, "%s", provenance);
+	c->nrequest = (size_t)snprintf(c->request, sizeof c->request,
+	                               "GET / HTTP/1.1\r\nHost: t\r\n%s%s%s\r\n",
+	                               ae ? "Accept-Encoding: " : "", ae ? ae : "",
+	                               ae ? "\r\n" : "");
+	serve(p, c);
+}
+
+/* A whole gzip member (RFC 1952) inflated: a new buffer (`*n` bytes), or NULL
+ * when it is not valid gzip or has bytes after its end. */
+static unsigned char *gunzip(const void *in, size_t nin, size_t *n)
+{
+	z_stream z;
+	size_t cap = 1 << 20;
+	unsigned char *out = malloc(cap);
+	int rv;
+
+	memset(&z, 0, sizeof z);
+	if (!out || inflateInit2(&z, 16 + 15) != Z_OK) {
+		free(out);
+		return NULL;
+	}
+	z.next_in = (Bytef *)(uintptr_t)in;
+	z.avail_in = (uInt)nin;
+	do {
+		if (z.total_out == cap) {
+			unsigned char *b = realloc(out, cap * 2);
+			if (!b)
+				break;
+			out = b;
+			cap *= 2;
+		}
+		z.next_out = out + z.total_out;
+		z.avail_out = (uInt)(cap - z.total_out);
+		rv = inflate(&z, Z_NO_FLUSH);
+	} while (rv == Z_OK);
+	*n = z.total_out;
+	inflateEnd(&z);
+	if (rv != Z_STREAM_END || z.avail_in != 0) {
+		free(out);
+		return NULL;
+	}
+	return out;
+}
+
+/* 1 = `x` inflates to exactly the bytes of `plain`. */
+static int gunzips_to(const void *x, size_t nx, const body *plain)
+{
+	size_t n = 0;
+	unsigned char *u = gunzip(x, nx, &n);
+	int ok = u && plain && n == plain->n && memcmp(u, plain->data, n) == 0;
+	free(u);
+	return ok;
+}
+
+/* The `Content-Length` of a composed head, or -1. */
+static long long head_length(const client *c)
+{
+	const char *h = c->head ? memmem(c->head, c->nhead, "\r\nContent-Length: ", 18) : NULL;
+	return h ? strtoll(h + 18, NULL, 10) : -1;
+}
+
+static bool head_has(const client *c, const char *s)
+{
+	const char *e = c->head ? memmem(c->head, c->nhead, "\r\n\r\n", 4) : NULL;
+	/* up to the last header's own CRLF */
+	return e && memmem(c->head, (size_t)(e - c->head) + 2, s, strlen(s)) != NULL;
+}
+
+/* In a forked child: TLS, `GET /` with `Accept-Encoding: <ae>`, the whole
+ * response read; exit 0 when it is a 200 whose body is exactly
+ * `Content-Length` bytes and is `want` (gzip-compressed when `gz`). */
+static pid_t client_get_ae(int port, const char *src, const char *ae, bool gz,
+                           const body *want)
+{
+	pid_t pid = fork();
+	if (pid != 0)
+		return pid;
+	int fd = connect_from(port, src, 0);
+	SSL_CTX *ctx = SSL_CTX_new(TLS_client_method());
+	SSL *s = SSL_new(ctx);
+	char req[256];
+	SSL_set_fd(s, fd);
+	if (SSL_connect(s) != 1)
+		_exit(10);
+	snprintf(req, sizeof req, "GET / HTTP/1.1\r\nHost: test\r\nAccept-Encoding: %s\r\n\r\n", ae);
+	if (SSL_write(s, req, (int)strlen(req)) <= 0)
+		_exit(11);
+	size_t cap = 16 << 20, n = 0;
+	char *b = malloc(cap + 1);
+	for (;;) {
+		int r = SSL_read(s, b + n, (int)(cap - n > 1 << 20 ? 1 << 20 : cap - n));
+		if (r <= 0)
+			break;
+		n += (size_t)r;
+	}
+	b[n] = 0;
+	char *e = strstr(b, "\r\n\r\n");
+	if (!e || strncmp(b, "HTTP/1.1 200 ", 13) != 0)
+		_exit(12);
+	e[2] = 0; /* the head, with its last header's CRLF */
+	size_t hl = (size_t)(e - b) + 4;
+	const char *cl = strstr(b, "\r\nContent-Length: ");
+	if (!cl || strtoull(cl + 18, NULL, 10) != n - hl)
+		_exit(13);
+	if (!strstr(b, "\r\nVary: Accept-Encoding\r\n"))
+		_exit(14);
+	if (gz != (strstr(b, "\r\nContent-Encoding: gzip\r\n") != NULL))
+		_exit(15);
+	if (gz ? !gunzips_to(b + hl, n - hl, want)
+	       : !(n - hl == want->n && memcmp(b + hl, want->data, want->n) == 0))
+		_exit(16);
+	_exit(0);
+}
+
+/* The fingerprint the shared page is NOT built for: setting it forces a rebuild. */
+#define OTHER_FP(p) (strcmp((p)->cached_fp, "FPROT") == 0 ? "FPTEST" : "FPROT")
 
 /* 1 = a 500 «no mem.» with no shared body. */
 static int is_500(const client *c)
@@ -936,10 +1068,15 @@ int main(void)
 		fake_get(p, &fc, "[127.0.0.51]:40000");
 		fail_at = 0;
 		n_reb = page_mallocs;
+		/* ⭐ §11.44: a rebuild is build_page() (n_ban - 1 allocations, as a
+		 *   banned page), THEN the gzip copy (zlib's own, through the
+		 *   seam), then the head: more than a banned GET. */
 		require(fc.shared && fc.shared == p->cached && fc.shared != shared0 &&
 		                strcmp(p->cached_fp, "FPROT") == 0 && body_has(fc.shared, "FPROT") &&
-		                n_reb == n_ban,
-		        "after a rotation a free GET rebuilds the shared page (as many allocations as a banned one)");
+		                p->cached_gz && n_reb > n_ban,
+		        "after a rotation a free GET rebuilds the shared page and its gzip copy");
+		printf("       (a rebuild makes %zu allocations, %zu of them the gzip copy)\n",
+		       n_reb, n_reb - n_ban);
 		/* Back to the state before the rotation, through the same road. */
 		client_close(&fc);
 		snprintf(cert.fingerprint, sizeof cert.fingerprint, "FPTEST");
@@ -952,7 +1089,8 @@ int main(void)
 		        "two rebuilds: the old shared pages freed, no leak");
 		snprintf(cert.fingerprint, sizeof cert.fingerprint, "FPROT");
 		ok500 = okleak = okshared = 0;
-		for (size_t k = 1; k < n_reb; k++) {
+		/* build_page()'s allocations only: a failing gzip copy is section 17. */
+		for (size_t k = 1; k < n_ban; k++) {
 			fail_at = (long)k;
 			fail_rest = false;
 			fake_get(p, &fc, "[127.0.0.51]:40000");
@@ -965,9 +1103,9 @@ int main(void)
 			okshared += p->cached == shared0 && shared0->refs == 1 &&
 			            body_hash(shared0) == hash0 && strcmp(p->cached_fp, "FPTEST") == 0;
 		}
-		require(ok500 == (int)(n_reb - 1),
+		require(ok500 == (int)(n_ban - 1),
 		        "rotation, the rebuild fails: the 500 «no mem.», never the old page under the new fingerprint");
-		require(okleak == (int)(n_reb - 1) && okshared == (int)(n_reb - 1),
+		require(okleak == (int)(n_ban - 1) && okshared == (int)(n_ban - 1),
 		        "rotation, the rebuild fails: no leak, the old shared page whole and not replaced");
 		/* e) the rebuild succeeds, the head fails: the new page is kept. */
 		fail_at = (long)n_reb;
@@ -985,6 +1123,216 @@ int main(void)
 		snprintf(cert.fingerprint, sizeof cert.fingerprint, "FPTEST");
 		require(!live_overflow, "the allocation tracker never overflowed");
 	}
+	printf("17. gzip (§11.44): the shared page compressed once, sent only to who accepts it\n");
+	{
+		static client fc, fc2;
+		size_t live1, n_plain, n_gz, n_reb = 0;
+		int ok = 0, okleak = 0, k_ok = 0, ntab = 0;
+		struct { const char *ae; bool gz; } tab[] = {
+			{"gzip", true}, {"gzip, deflate, br, zstd", true}, {"GZIP", true},
+			{"x-gzip", true}, {"deflate, gzip;q=1.0", true}, {"gzip;q=0.001", true},
+			{"gzip ; q=0.5", true}, {"gzip;Q=1", true}, {"gzip;level=1", true},
+			{"*", true}, {"br, *;q=0.1", true}, {"*;q=0, gzip", true},
+			{"gzip;q=0", false}, {"gzip;q=0.000", false}, {"gzip; q=0.", false},
+			{"gzip;q=0, *", false}, {"*, gzip;q=0", false}, {"*;q=0", false},
+			{"identity", false}, {"br, deflate", false}, {"", false},
+			{"gzipx", false}, {"gzip;q=1.5", false}, {"gzip;q=", false},
+			{"gzip;q", false}, {"gzip x", false}, {"gzip;q=0,gzip", false},
+			{"gzip;q=-1", false},
+		};
+
+		/* The state of section 16 put back through the road a visitor takes. */
+		fake_get(p, &fc, "[127.0.0.51]:40000");
+		client_close(&fc);
+		live1 = nlive;
+		require(p->cached && p->cached_gz && !p->cached_gz_retry &&
+		                p->cached->refs == 1 && p->cached_gz->refs == 1 &&
+		                strcmp(p->cached_fp, "FPTEST") == 0 &&
+		                gunzips_to(p->cached_gz->data, p->cached_gz->n, p->cached) &&
+		                p->cached_gz->n < p->cached->n / 10,
+		        "one plain and one gzip copy of the shared page; the gzip copy inflates to it exactly");
+		printf("       (the page: %zu bytes plain, %zu gzip)\n", p->cached->n, p->cached_gz->n);
+
+		for (size_t i = 0; i < sizeof tab / sizeof tab[0]; i++) {
+			char rq[256];
+			int n = snprintf(rq, sizeof rq, "GET / HTTP/1.1\r\nHost: t\r\n"
+			                 "Accept-Encoding: %s\r\n\r\n", tab[i].ae);
+			bool got = accepts_gzip(rq, (size_t)n);
+			ntab++;
+			if (got == tab[i].gz)
+				ok++;
+			else
+				printf("       ⛔ «Accept-Encoding: %s» → %s\n", tab[i].ae, got ? "gzip" : "plain");
+		}
+		{
+			const char *r1 = "GET / HTTP/1.1\r\nHost: t\r\n\r\n";
+			const char *r2 = "GET / HTTP/1.1\r\naccept-encoding: gzip\r\n\r\n";
+			const char *r3 = "GET / HTTP/1.1\r\nAccept-Encoding: br\r\nAccept-Encoding: gzip\r\n\r\n";
+			const char *r4 = "GET / HTTP/1.1\r\nX-Accept-Encoding: gzip\r\n\r\n";
+			const char *r5 = "GET / HTTP/1.1\r\nHost: t\r\n\r\nAccept-Encoding: gzip\r\n";
+			const char *r6 = "GET / HTTP/1.1\nAccept-Encoding:gzip\n\n";
+			ok += !accepts_gzip(r1, strlen(r1)) && accepts_gzip(r2, strlen(r2)) &&
+			      accepts_gzip(r3, strlen(r3)) && !accepts_gzip(r4, strlen(r4)) &&
+			      !accepts_gzip(r5, strlen(r5)) && accepts_gzip(r6, strlen(r6));
+			ntab++;
+		}
+		require(ok == ntab, "Accept-Encoding read as RFC 9110 says: q-values, gzip;q=0, *, x-gzip, no header = plain");
+
+		fake_get_ae(p, &fc, "[127.0.0.51]:40000", "gzip, deflate, br");
+		n_gz = fc.nresponse;
+		require(fc.phase == F_WRITE && fc.shared == p->cached_gz && p->cached_gz->refs == 2 &&
+		                head_has(&fc, "\r\nContent-Encoding: gzip\r\n") &&
+		                head_has(&fc, "\r\nVary: Accept-Encoding\r\n") &&
+		                head_length(&fc) == (long long)p->cached_gz->n &&
+		                fc.nresponse == fc.nhead + p->cached_gz->n,
+		        "a gzip request gets the SHARED gzip copy: Content-Encoding, Vary, Content-Length = compressed bytes");
+		fake_get_ae(p, &fc2, "[127.0.0.52]:40000", "gzip");
+		require(fc2.shared == p->cached_gz && p->cached_gz->refs == 3 && nlive == live1 + 2,
+		        "a second gzip request shares the same copy (refs 3, only its head allocated)");
+		client_close(&fc2);
+		client_close(&fc);
+		require(p->cached_gz->refs == 1 && nlive == live1, "closing them: refs back to 1, no leak");
+
+		fake_get_ae(p, &fc, "[127.0.0.51]:40000", NULL);
+		n_plain = fc.nresponse;
+		require(fc.shared == p->cached && !head_has(&fc, "Content-Encoding") &&
+		                head_has(&fc, "\r\nVary: Accept-Encoding\r\n") &&
+		                head_length(&fc) == (long long)p->cached->n &&
+		                fc.nresponse == fc.nhead + p->cached->n && n_gz < n_plain,
+		        "no Accept-Encoding: the plain page, Content-Length = its bytes");
+		client_close(&fc);
+		fake_get_ae(p, &fc, "[127.0.0.51]:40000", "gzip;q=0");
+		require(fc.shared == p->cached && !head_has(&fc, "Content-Encoding") &&
+		                head_length(&fc) == (long long)p->cached->n,
+		        "«gzip;q=0»: the plain page");
+		client_close(&fc);
+		fake_get_ae(p, &fc, "[127.0.0.50]:40000", "gzip");
+		require(fc.shared && fc.shared != p->cached && fc.shared != p->cached_gz &&
+		                fc.shared->refs == 1 && !head_has(&fc, "Content-Encoding") &&
+		                !head_has(&fc, "Vary") && body_has(fc.shared, "data-banned=\"yes\"") &&
+		                head_length(&fc) == (long long)fc.shared->n,
+		        "a banned visitor asking gzip gets its own page, plain, Content-Length right");
+		client_close(&fc);
+		require(nlive == live1, "no leak from the direct GETs");
+
+		{
+			bool oom = true;
+			body *tiny = body_new("ab", 2);
+			body *z = tiny ? gz_page(tiny, &oom) : NULL;
+			require(tiny && !z && !oom && nlive == live1 + 1,
+			        "a body that does not come out smaller gets no gzip copy (and no retry)");
+			body_unref(z);
+			body_unref(tiny);
+		}
+
+		/* A real GET over TLS, both ways: Content-Length = the bytes on the wire. */
+		{
+			pid_t cg = client_get_ae(port, "127.0.0.61", "gzip, br", true, p->cached);
+			pid_t cp = client_get_ae(port, "127.0.0.62", "br;q=1, gzip;q=0", false, p->cached);
+			int sg = -1, sp = -1, dg = 0, dp = 0;
+			uint64_t t0 = log_now_ms();
+			while ((!dg || !dp) && log_now_ms() - t0 < 20000) {
+				pump(p, 1);
+				page_expired(p, log_now_ms());
+				if (!dg && waitpid(cg, &sg, WNOHANG) == cg)
+					dg = 1;
+				if (!dp && waitpid(cp, &sp, WNOHANG) == cp)
+					dp = 1;
+			}
+			require(dg && WIFEXITED(sg) && WEXITSTATUS(sg) == 0,
+			        "a real gzip GET: 200, Content-Encoding gzip, Content-Length = bytes received, inflates to the page");
+			require(dp && WIFEXITED(sp) && WEXITSTATUS(sp) == 0,
+			        "a real «gzip;q=0» GET: 200, the plain page, Content-Length = bytes received");
+			pump(p, 2);
+			require(p->cached->refs == 1 && p->cached_gz->refs == 1 && nlive == live1,
+			        "after them: both copies held by the listener alone, no leak");
+		}
+
+		/* A rotation counts the allocations of a rebuild; then each of the
+		 * gzip copy's allocations fails in turn. */
+		snprintf(cert.fingerprint, sizeof cert.fingerprint, "FPROT");
+		page_mallocs = 0;
+		fake_get_ae(p, &fc, "[127.0.0.51]:40000", "gzip");
+		n_reb = page_mallocs;
+		require(fc.shared == p->cached_gz && strcmp(p->cached_fp, "FPROT") == 0 &&
+		                body_has(p->cached, "FPROT") &&
+		                gunzips_to(p->cached_gz->data, p->cached_gz->n, p->cached) &&
+		                nlive == live1 + 1,
+		        "a rotation rebuilds BOTH copies (the new gzip inflates to the new page); the old ones freed");
+		client_close(&fc);
+		{
+			size_t n_ban;
+			page_mallocs = 0;
+			fake_get(p, &fc, "[127.0.0.50]:40000");
+			n_ban = page_mallocs;
+			client_close(&fc);
+			int ok_plain = 0, ok_retry = 0, ok_head = 0, tries = 0;
+			okleak = 0;
+			for (size_t k = n_ban; k < n_reb; k++) {
+				tries++;
+				snprintf(cert.fingerprint, sizeof cert.fingerprint, "%s", OTHER_FP(p));
+				fail_at = (long)k;
+				fail_rest = false;
+				fake_get_ae(p, &fc, "[127.0.0.51]:40000", "gzip");
+				fail_at = 0;
+				/* ⭐ the plain page still goes out — the gzip copy is a bonus */
+				ok_plain += fc.phase == F_WRITE && fc.shared == p->cached && p->cached &&
+				            !p->cached_gz && p->cached_gz_retry &&
+				            strcmp(p->cached_fp, cert.fingerprint) == 0 &&
+				            body_has(p->cached, cert.fingerprint) &&
+				            !head_has(&fc, "Content-Encoding") &&
+				            head_length(&fc) == (long long)p->cached->n;
+				client_close(&fc);
+				okleak += nlive == live1 - 1;
+				/* the next gzip request retries, and gets it */
+				fake_get_ae(p, &fc, "[127.0.0.51]:40000", "gzip");
+				ok_retry += fc.shared && fc.shared == p->cached_gz && !p->cached_gz_retry &&
+				            head_has(&fc, "\r\nContent-Encoding: gzip\r\n") &&
+				            gunzips_to(p->cached_gz->data, p->cached_gz->n, p->cached);
+				client_close(&fc);
+				okleak += nlive == live1;
+				/* the gzip copy fails AND so does everything after it */
+				snprintf(cert.fingerprint, sizeof cert.fingerprint, "%s", OTHER_FP(p));
+				fail_at = (long)k;
+				fail_rest = true;
+				fake_get_ae(p, &fc, "[127.0.0.51]:40000", "gzip");
+				fail_at = 0;
+				fail_rest = false;
+				ok_head += fc.head == NULL && fc.shared == NULL && p->cached &&
+				           !p->cached_gz && p->cached_gz_retry;
+				client_close(&fc);
+				okleak += nlive == live1 - 1;
+			}
+			printf("       (a rebuild: %zu allocations, %d of them the gzip copy's)\n", n_reb, tries);
+			require(tries > 0 && ok_plain == tries,
+			        "each failing allocation of the gzip copy: the plain page is served (200, no Content-Encoding)");
+			require(ok_retry == tries, "… and the next gzip request builds the copy again and gets it");
+			require(ok_head == tries && okleak == 3 * tries,
+			        "… and with the head failing too: no response; none of them leaks");
+			k_ok = 1;
+		}
+		/* A request that does not accept gzip never retries the copy. */
+		snprintf(cert.fingerprint, sizeof cert.fingerprint, "FPTEST");
+		fake_get_ae(p, &fc, "[127.0.0.51]:40000", "gzip");
+		client_close(&fc);
+		fail_at = (long)n_reb - 1; /* the gzip copy's last allocation, the body */
+		snprintf(cert.fingerprint, sizeof cert.fingerprint, "FPROT");
+		fake_get_ae(p, &fc, "[127.0.0.51]:40000", NULL);
+		fail_at = 0;
+		client_close(&fc);
+		page_mallocs = 0;
+		fake_get_ae(p, &fc, "[127.0.0.51]:40000", "br");
+		require(k_ok && p->cached_gz_retry && !p->cached_gz && page_mallocs == 1 &&
+		                fc.shared == p->cached,
+		        "with the copy missing, a request without gzip allocates only its head (no retry)");
+		client_close(&fc);
+		snprintf(cert.fingerprint, sizeof cert.fingerprint, "FPTEST");
+		fake_get(p, &fc, "[127.0.0.51]:40000");
+		client_close(&fc);
+		require(nlive == live1 && p->cached_gz && !live_overflow,
+		        "back to FPTEST: both copies rebuilt, no leak, the tracker never overflowed");
+	}
+
 	rcp_unblock("127.0.0.50", log_now_ms());
 	rcp_ban_load(NULL, log_now_ms());
 	unlink(ban_path);
