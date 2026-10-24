@@ -138,7 +138,8 @@ def copy_in_session(s, shell_line):
 
 
 def wait_log(s, sign, needles, seconds=WAIT_LOG_S):
-    """the tenant's server-log lines since `sign`, polled until one of `needles` is in them (or the time is up)."""
+    """the tenant's server-log lines since `sign`, polled until one of `needles` is in them (or the time is up).
+    With NO needles it waits the WHOLE window: the right choice when the verdict is the ABSENCE of a late line."""
     end = time.time() + seconds
     lines = []
     while time.time() < end:
@@ -163,10 +164,11 @@ def need_mark(s):
 
 
 def zero_case(s):
-    """copies b'abc\\0def' in the session; (lines)"""
+    """copies b'abc\\0def' in the session; (lines).  It waits the WHOLE window (WAIT_LOG_S, no needle): the «not announced»
+    line comes at once, but the failure is a LATE «the session copied N bytes of text» after it."""
     sign = need_mark(s)
     copy_in_session(s, "printf 'abc\\0def' | timeout 10 wl-copy -t '%s'" % TYPE)
-    return wait_log(s, sign, (NOT_ANNOUNCED, COPIED))
+    return wait_log(s, sign, ())
 
 
 def normal_case(s, tag):
