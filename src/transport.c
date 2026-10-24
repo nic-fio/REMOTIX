@@ -732,6 +732,14 @@ static void connection_free(transport *t, connection *c)
 	cid_unbind_all(t, c);
 	if (c->w)
 		wt_free(c->w);
+	/* ⛔ 24 Oct 2026 (audit ngtcp2 1.25; present since 1.0): the doc of
+	 *   `ngtcp2_crypto_ossl_configure_server_session` says «Application must call
+	 *   SSL_set_app_data(ssl, NULL) before calling SSL_free(ssl) if you cannot make
+	 *   ngtcp2_conn object alive until SSL_free is called».  Here the conn dies
+	 *   first, and the ssl's app data pointed to `c->ref`, whose `get_conn` returns
+	 *   that conn: a dangling pointer for whatever `SSL_free` might still ask. */
+	if (c->ssl)
+		SSL_set_app_data(c->ssl, NULL);
 	if (c->conn)
 		ngtcp2_conn_del(c->conn);
 	if (c->ossl)
