@@ -5,12 +5,14 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <linux/sockios.h>
 #include <pthread.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/uio.h>
@@ -226,6 +228,22 @@ static ssize_t err_out(const char *b, size_t n)
 
 	switch (err_kind) {
 	case ERR_SOCKET:
+		/* ⛔ All or nothing (independent review of 16b75f33): a line the
+		 *    stream socket would take only in part is NOT started — its
+		 *    rest, sent later, could land after a CHILD's line written to
+		 *    the same journald stream in between (21 Aug's «line without a
+		 *    timestamp»).  The room is the send buffer minus what is queued
+		 *    (both in the kernel's own accounting), with a margin for it. */
+		{
+			int queued = 0, cap = 0;
+			socklen_t cl = sizeof cap;
+			if (ioctl(STDERR_FILENO, SIOCOUTQ, &queued) == 0 &&
+			    getsockopt(STDERR_FILENO, SOL_SOCKET, SO_SNDBUF, &cap, &cl) == 0 &&
+			    (long)cap - queued < (long)n + 2048) {
+				errno = EAGAIN;
+				return -1;
+			}
+		}
 		r = send(STDERR_FILENO, b, n, MSG_DONTWAIT | MSG_NOSIGNAL);
 		if (r < 0 && errno == ENOTSOCK)
 			r = write(STDERR_FILENO, b, n);
@@ -248,8 +266,25 @@ static bool err_piece(const char *b, size_t n)
 		 *   only channel would be the broken one), as before. */
 		return !(errno == EAGAIN || errno == EWOULDBLOCK);
 	if ((size_t)r < n && err_kind == ERR_SOCKET) {
-		err_tail_n = n - (size_t)r;
-		memcpy(err_tail, b + r, err_tail_n);
+		/* ⚠ Taken in part all the same (the margin was not enough): the
+		 *   REST is not spliced into the stream later; the cut line is
+		 *   only closed, with a mark, at the first chance. */
+		static const char cut[] = " …[line cut: stderr full]\n";
+		err_tail_n = sizeof cut - 1;
+		memcpy(err_tail, cut, err_tail_n);
+		err_dropped++;
+	} else if ((size_t)r < n && err_kind == ERR_PLAIN) {
+		/* a short write to a file or a terminal: the rest, now (a file
+		 * does not make us wait) — not silently lost */
+		size_t done = (size_t)r;
+		while (done < n) {
+			ssize_t k = write(STDERR_FILENO, b + done, n - done);
+			if (k <= 0) {
+				err_dropped++;
+				break;
+			}
+			done += (size_t)k;
+		}
 	}
 	return true;
 }
