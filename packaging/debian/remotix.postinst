@@ -12,6 +12,16 @@
 #    never makes apt fail.
 set -e
 
+# ⭐ DECISIONS-11.md §11.50 (PHASE F) — BEFORE the debhelper part below (whose try-restart starts the new server): the
+#    system user remotix, then the 1.0 → 1.5 move of certificates/ and ban into /var/lib/remotix/net.
+#    ⛔ INERT unless the package carries remotix-net-move (only a REMOTIX_SPLIT=1 build installs it).  A failure is
+#    said, never makes apt fail.
+if [ "$1" = configure ] && [ -x /usr/libexec/remotix/remotix-net-move ]; then
+	systemd-sysusers remotix.conf || echo "remotix: ⚠ systemd-sysusers remotix.conf failed" >&2
+	/usr/libexec/remotix/remotix-net-move || echo "remotix: ⚠ the move into /var/lib/remotix/net is incomplete" >&2
+	systemd-tmpfiles --create remotix.conf || echo "remotix: ⚠ systemd-tmpfiles --create remotix.conf failed" >&2
+fi
+
 #DEBHELPER#
 
 if [ "$1" = configure ] && [ -n "${2:-}" ] && [ -x /usr/bin/remotix-install ]; then
