@@ -44,7 +44,7 @@
 #include <unistd.h>
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 14
+#define EXPECTED_CHECKS 15
 #define LINES 4000
 
 static void require(int cond, const char *desc)
@@ -248,6 +248,15 @@ int main(void)
 			require(n > 0 && lines == 1 && buf[n - 1] == '\n' &&
 			                strstr(buf, "GET /?14:00:00.000 rcp     [owner] ⭐ ADMITTED???[2J from x ⭐\n"),
 			        "L6 a newline, CR, tab and ESC in a value: ONE line, each byte a `?`, UTF-8 kept");
+			/* review of 95ed70ea: DEL, a C1 control as UTF-8 (U+0085, U+009B)
+			 * and the bidi overrides (U+202E, U+2066) are `?` too */
+			at = lseek(fd, 0, SEEK_END);
+			registro_dice(LOG_PAGE, "X%sY", "a\x7f" "b\xc2\x85" "c\xc2\x9b" "d\xe2\x80\xae"
+			              "e\xe2\x81\xa6" "f\xe2\x80\xa9" "g\xc2\xa0" "h");
+			n = pread(fd, buf, sizeof buf - 1, at);
+			buf[n > 0 ? n : 0] = '\0';
+			require(n > 0 && strstr(buf, "Xa?b?c?d?e?f\xe2\x80\xa9g\xc2\xa0hY\n"),
+			        "L6 DEL, C1 controls (U+0080–U+009F) and bidi overrides become `?`; other UTF-8 stays");
 		}
 		unlink(path);
 	}
