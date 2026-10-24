@@ -249,6 +249,10 @@ typedef struct
 	uint32_t x, y, width, height;
 } CaptureRegion;
 
+/* How many damaged regions travel with a frame.  Beyond that the whole frame
+ * counts: it is the safe case. */
+#define CAPTURE_DAMAGE_MAX 16
+
 typedef struct
 {
 	/* ⛔ `pixel` is NULL on the card road: there is no pointer there,
@@ -339,6 +343,14 @@ typedef struct
 	void *held_buffer;
 	void *owner;
 	gboolean declared_damage, damage_covers_all;
+	/* ⭐ 15 Oct 2026 — the damaged regions themselves, and since the take they
+	 *    are the UNION of every frame that went through the slot since the last
+	 *    take (a frame replaced in the slot hands its damage to the one that
+	 *    replaces it).  `damage_count == 0` with `declared_damage` means
+	 *    «everything counts».  ⚠ Used by the «unchanged» filter
+	 *    (`unchanged.h`); information for everybody else. */
+	CaptureRegion damage[CAPTURE_DAMAGE_MAX];
+	guint damage_count;
 	guint64 idx;          /* which frame it was among those arrived */
 	CaptureDelivery delivery; /* the four facts, frozen with it        */
 
@@ -779,6 +791,21 @@ gboolean capture_format_refused(Capture *capture);
 /* ⭐ Flips the `cursor_never_hide()` switch on this capture's
  *    cursor: the child asks for it on Plasma, where the theme is invisible. */
 void capture_cursor_never_hide(Capture *capture, const char *why);
+
+/*
+ * ⭐ 15 Oct 2026 — the frame that changes nothing is not delivered (`unchanged.h`).
+ *
+ * `capture_skip_unchanged()` switches it on for this capture (the caller knows
+ * the producer: KWin, whose damage is exact and whose buffers are whole frames).
+ * `capture_unchanged_bypass(TRUE)` says «a keyframe is due: deliver whatever
+ * comes» — a held-back frame would otherwise become a stream restart.
+ * A frame held back comes out of `capture_take` as `CAPTURE_TAKE_ZERO`: for the
+ * client it IS the still scene.  ⛔ Memory route always; card route only on a
+ * LINEAR buffer that can be mapped and synchronised, and only while reading
+ * stays cheap — otherwise the filter switches itself off and says so.
+ */
+void capture_skip_unchanged(Capture *capture, const char *why);
+void capture_unchanged_bypass(Capture *capture, gboolean bypass);
 
 void capture_stop(Capture *capture);
 

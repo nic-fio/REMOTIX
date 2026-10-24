@@ -7168,9 +7168,13 @@ remount_capture:
 	 *    (`session.c`), so the metadata will always say "no image": that
 	 *    hiding must NOT be delivered, or whoever is watching is left without a
 	 *    pointer (`cursor.h`, and `[M]` the user's test of 20 Sep 2026). */
-	if (stage_kwin)
+	if (stage_kwin) {
 		capture_cursor_never_hide(cat, "KWin --virtual: the session's cursor "
 		                                    "theme is invisible");
+		/* ⭐ 15 Oct 2026 — `[M]` KWin sends ~50 frames/s where 5 change
+		 *    (`unchanged.h`): the copies of the same picture are not encoded. */
+		capture_skip_unchanged(cat, "KWin: whole frames and exact damage");
+	}
 	*out_m = mut;
 	*out_c = cat;
 
@@ -7816,9 +7820,11 @@ static bool remount_only_capture(MutterSession *m, Capture **c, uint32_t l,
 	stage_size(&l, &a);
 	new_one = capture_start(stage_node(m), l, a, MOTION_FPS, stage_route,
 	                      CAPTURE_COLOR_BGRX, NULL, NULL, NULL, &mistake);
-	if (new_one && stage_kwin)
+	if (new_one && stage_kwin) {
 		capture_cursor_never_hide(new_one, "KWin --virtual: the session's cursor "
 		                                      "theme is invisible");
+		capture_skip_unchanged(new_one, "KWin: whole frames and exact damage");
+	}
 	if (!new_one) {
 		registro_dice(LOG_CHILD,
 		              "⛔ the capture did NOT reopen on node %u on the route "
@@ -9423,6 +9429,11 @@ void child_alive(int argc, char **argv)
 			uint64_t instant_us, t_now;
 
 			memset(&fo, 0, sizeof fo);
+			/* ⭐ A keyframe due takes whatever comes, even a copy of the
+			 *    picture: holding it back would turn into a stream restart
+			 *    (the wake-up below), which costs far more (`unchanged.h`). */
+			capture_unchanged_bypass(cat, requested_codec < CODEC_MAX &&
+			                                  key_debt[requested_codec]);
 			take = capture_take(cat, MOTION_WAIT_S, &fo, &mistake);
 			/* ⛔⭐ THE COUNT IS WRITTEN BEFORE LOOKING AT THE OUTCOME, AND IT IS
 			 *     A CURE FOUND BY THE FIRST LIVE RUN (13 Aug 2026).

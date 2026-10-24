@@ -508,7 +508,7 @@ sessione.o:       session.h log.h
 sentinella.o:     sentinel.h log.h
 # ⭐ PHASE 17, T7 — the live desktops left by a previous parent (logind and /proc).
 ritrovo.o:        rediscover.h
-cattura.o:        capture.h log.h cursor.h
+cattura.o:        capture.h log.h cursor.h unchanged.h
 mutter.o:         mutter.h log.h
 codificatore.o:   encoder.h log.h vadirect.h vulkanvideo.h bit_writer.h colors709.h
 # ⭐ PHASE 18: the card with direct libva, and the bit writer of the headers;
