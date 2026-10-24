@@ -72,6 +72,10 @@
  *      Content-Length, a real one over TLS inflates to the exact page; a banned
  *      page goes plain; every failing allocation of the copy still serves the
  *      plain page, retries at the next gzip request, and leaks nothing.
+ *      After the review of 6d8249c4: an empty parameter is skipped (`gzip;q=0;, *`
+ *      = plain), a parameter that does not read voids its element, a folded
+ *      header line gets 400, the copy is shrunk to its bytes (a failed shrink
+ *      keeps it whole).
  *
  * Exit status: 0 green, 1 red, 3 not all checks ran. */
 #define _GNU_SOURCE
@@ -133,11 +137,33 @@ static void t_free(void *q)
 	free(q);
 }
 
+/* `realloc` (the gzip copy's shrink): tracked, NOT counted among the
+ * allocations `fail_at` walks; `fail_realloc` makes it fail. */
+static bool fail_realloc;
+
+static void *t_realloc(void *q, size_t n)
+{
+	void *r;
+	if (fail_realloc)
+		return NULL;
+	r = realloc(q, n);
+	if (r)
+		for (size_t i = 0; i < nlive; i++)
+			if (live_allocs[i] == q) {
+				live_allocs[i] = r;
+				break;
+			}
+	return r;
+}
+
 #define malloc(n) t_malloc(n)
 #define free(q) t_free(q)
+#define realloc(q, n) t_realloc(q, n)
 #include "page.c"
 #undef malloc
 #undef free
+#undef realloc
+#include <malloc.h>
 
 #include <arpa/inet.h>
 #include <openssl/evp.h>
@@ -149,7 +175,7 @@ static void t_free(void *q)
 #include <time.h>
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 83
+#define EXPECTED_CHECKS 87
 
 static void require(int cond, const char *desc)
 {
@@ -1139,6 +1165,14 @@ int main(void)
 			{"gzipx", false}, {"gzip;q=1.5", false}, {"gzip;q=", false},
 			{"gzip;q", false}, {"gzip x", false}, {"gzip;q=0,gzip", false},
 			{"gzip;q=-1", false},
+			/* review of 6d8249c4: the empty parameter is skipped, not the element */
+			{"gzip;q=0;, *", false}, {"gzip;;q=0, *", false}, {"gzip; ;q=0 , *", false},
+			{"gzip;q=0.5;", true}, {"gzip;;", true}, {"*;q=0;, gzip;", true},
+			/* … and a parameter that does not read makes the element count for nothing */
+			{"gzip;=x", false}, {"gzip;a=", false}, {"gzip;a=b=c", false},
+			{"gzip;a = b", false}, {"gzip;q =1", false}, {"gzip;q= 1", false},
+			{"gzip;q=1;q=1", false}, {"gzip;a=\"x\"", false}, {"gzip;a=b", true},
+			{"gzip;=x, *", true}, {"gzip;q=0;a=, *", true},
 		};
 
 		/* The state of section 16 put back through the road a visitor takes. */
@@ -1177,6 +1211,48 @@ int main(void)
 			ntab++;
 		}
 		require(ok == ntab, "Accept-Encoding read as RFC 9110 says: q-values, gzip;q=0, *, x-gzip, no header = plain");
+
+		/* review of 6d8249c4: a folded header line is refused with 400 */
+		{
+			const char *f1 = "GET / HTTP/1.1\r\nAccept-Encoding: br,\r\n gzip\r\n\r\n";
+			const char *f2 = "GET / HTTP/1.1\r\nHost: t\r\n\tx\r\n\r\n";
+			const char *f3 = "GET / HTTP/1.1\r\nHost: t\r\n\r\n gzip";
+			const char *f4 = "GET / HTTP/1.1\nHost: t\n\n";
+			memset(&fc, 0, sizeof fc);
+			fc.fd = -1;
+			fc.phase = F_READ;
+			snprintf(fc.provenance, sizeof fc.provenance, "[127.0.0.51]:40000");
+			fc.nrequest = strlen(f1);
+			memcpy(fc.request, f1, fc.nrequest);
+			serve(p, &fc);
+			require(has_obs_fold(f1, strlen(f1)) && has_obs_fold(f2, strlen(f2)) &&
+			                !has_obs_fold(f3, strlen(f3)) && !has_obs_fold(f4, strlen(f4)) &&
+			                fc.head && strncmp(fc.head, "HTTP/1.1 400 ", 13) == 0 &&
+			                fc.shared == NULL,
+			        "a folded header line (obs-fold) gets 400, not a half-read Accept-Encoding");
+			client_close(&fc);
+		}
+
+		/* review of 6d8249c4: the gzip copy keeps only its own bytes */
+		{
+			size_t big;
+			require(malloc_usable_size(p->cached_gz) < sizeof(body) + p->cached_gz->n + 64,
+			        "the gzip copy was shrunk to its bytes (not the worst-case buffer)");
+			snprintf(cert.fingerprint, sizeof cert.fingerprint, "%s", OTHER_FP(p));
+			fail_realloc = true;
+			fake_get_ae(p, &fc, "[127.0.0.51]:40000", "gzip");
+			fail_realloc = false;
+			big = malloc_usable_size(p->cached_gz);
+			require(fc.shared == p->cached_gz && big > p->cached->n / 2 &&
+			                head_length(&fc) == (long long)p->cached_gz->n &&
+			                gunzips_to(p->cached_gz->data, p->cached_gz->n, p->cached),
+			        "a failed shrink keeps the big buffer, served and whole");
+			client_close(&fc);
+			snprintf(cert.fingerprint, sizeof cert.fingerprint, "FPTEST");
+			fake_get(p, &fc, "[127.0.0.51]:40000");
+			client_close(&fc);
+			require(nlive == live1, "no leak around the shrink");
+		}
 
 		fake_get_ae(p, &fc, "[127.0.0.51]:40000", "gzip, deflate, br");
 		n_gz = fc.nresponse;
