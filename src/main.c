@@ -343,7 +343,10 @@ static void help(const char *name)
 	        "  --split           ⭐ 1.5: two processes — the root side (PAM, the\n"
 	        "                    desktops' births) and the network side as the\n"
 	        "                    user remotix behind walls (DECISIONS.md §11.50).\n"
-	        "                    OFF by default.  Needs root and the user\n"
+	        "                    OFF by default.  EXPERIMENTAL, INCOMPLETE: it\n"
+	        "                    refuses to start unless the environment has\n"
+	        "                    REMOTIX_SPLIT_EXPERIMENTAL=1 (tests only).\n"
+	        "                    Needs root and the user\n"
 	        "  --network-user NAME\n"
 	        "                    the network side's user (default remotix)\n"
 	        "  --network-state-dir DIR\n"
@@ -2062,6 +2065,13 @@ static bool path_inside(const char *path, const char *dir)
 		n = strlen(dir);
 		while (n > 1 && dir[n - 1] == '/')
 			n--;
+		/* ⛔ «..» anywhere, also as the LAST component («/x/net/..»), and «.» last: lexical test only. */
+		{
+			size_t pl = strlen(path);
+
+			if ((pl >= 3 && strcmp(path + pl - 3, "/..") == 0) || (pl >= 2 && strcmp(path + pl - 2, "/.") == 0))
+				return false;
+		}
 		return strstr(path, "/../") == NULL && strncmp(path, dir, n) == 0 && path[n] == '/';
 	}
 	if (!realpath(path, p)) {
@@ -2492,6 +2502,21 @@ int main(int argc, char **argv)
 		struct passwd *pw;
 		static char *net_argv[1024];
 
+		/* ⛔ EXPERIMENTAL until the split is complete (the network side's helper in remote mode and the end of
+		 *    the synchronous PAM fallback must be in this tree, and the whole thing certified): `--split` refuses
+		 *    to start unless REMOTIX_SPLIT_EXPERIMENTAL=1 is in the environment (our tests).  Remove this gate
+		 *    when the split is declared ready. */
+		{
+			const char *ex = getenv("REMOTIX_SPLIT_EXPERIMENTAL");
+
+			if (!ex || strcmp(ex, "1") != 0) {
+				registro_dice(LOG_STARTUP,
+				              "⛔ --split is EXPERIMENTAL and incomplete in this build: it refuses to start "
+				              "(set REMOTIX_SPLIT_EXPERIMENTAL=1 only for tests).  Without --split the server "
+				              "is the single-process one of 1.0.");
+				return EXIT_CONFIG;
+			}
+		}
 		if (geteuid() != 0) {
 			registro_dice(LOG_STARTUP,
 			              "⛔ --split needs root (uid %ld): the root side binds the port, forks the "
