@@ -141,7 +141,11 @@ func (a *packets) Snapshot(c *Context) (json.RawMessage, Origine, error) {
 	p := beforePackages{Origine: PREEXISTING, Manager: g.Nome(), File: a.file, Names: a.names, ResolvedSet: ins}
 	if _, there := ReadAccount(c.Env, NetUser); !there {
 		p.NetUserAbsent = true
-	} else {
+	} else if _, err := os.Stat(c.Env.P(netSysusers)); err != nil {
+		// ⛔ 24 Oct 2026, review of 532c577d: «the user existed before» is true ONLY if the account is there and the
+		//   1.5 sysusers file is NOT yet: the user was born before any package that creates it.  With the file present
+		//   the account is the package's own (an install that already made it, now an upgrade or a repeat): recording it
+		//   as preexisting would make a later --purge leave a user the packages created.
 		recordNetUserPreexisting(c) // the uninstallation will leave it alone
 	}
 	if g, err := ReadGroups(c.Env.P("/etc/group")); err == nil {

@@ -536,3 +536,63 @@ func TestNetPageUnreadable(t *testing.T) {
 		}
 	}
 }
+
+// ⭐ review of 532c577d, 24 Oct 2026: «the user existed before» is recorded only when the account is there and the 1.5 sysusers
+// file is NOT: install (the package makes the user) → upgrade (the user is there, so is the file) → --purge still removes it.
+func TestNetUserMadeByThePackageIsNotPreexisting(t *testing.T) {
+	snapshot := func(t *testing.T, b *bench) {
+		t.Helper()
+		e := b.engine(t)
+		ap := PlanPackages("packages", "/var/pacchetti/remotix.pkg", "labwc")
+		a, err := NewAction(ap)
+		if err != nil {
+			t.Fatal(err)
+		}
+		folder := filepath.Join(b.operations, "upgrade")
+		os.MkdirAll(folder, 0o755)
+		if _, _, err := a.Snapshot(&Context{Env: e.Env, Folder: folder, P: ap}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	record := func(b *bench) string { return filepath.Join(filepath.Dir(b.operations), NetUserPreexistingFile) }
+	t.Run("install, upgrade, purge", func(t *testing.T) {
+		b := newBench(t)
+		os.WriteFile(filepath.Join(b.root, "var/lib/finto-crea-utente-rete"), nil, 0o644)
+		var p Piano
+		ReadJSON(b.piano, &p)
+		p.Duty, p.Approval = "installation", nil
+		WriteJSON(b.piano, &p)
+		if op, err := b.engine(t).Apply(b.piano, true, "prova"); err != nil || op.State != CONFIRMED_WITH_CONDITIONS {
+			t.Fatalf("installation: %v %v", op.State, err)
+		}
+		if _, ok := ReadAccount(b.engine(t).Env, NetUser); !ok {
+			t.Fatal("the (fake) package did not make the user: the test would prove nothing")
+		}
+		if _, err := os.Stat(record(b)); err == nil {
+			t.Fatal("recorded as preexisting at the first install, when the package made it")
+		}
+		snapshot(t, b) // the upgrade: the user is there, so is the sysusers file
+		if _, err := os.Stat(record(b)); err == nil {
+			t.Fatal("the upgrade recorded the package's own user as «there before»")
+		}
+		pn, err := b.engine(t).UninstallPlan(fakeProfile(), true)
+		if err != nil {
+			t.Fatal(err)
+		}
+		found := false
+		for _, a := range pn.Azioni {
+			found = found || a.Type == "remove-system-user"
+		}
+		if !found {
+			t.Fatalf("--purge after an upgrade does not remove the user the packages made: %+v", pn.Azioni)
+		}
+	})
+	t.Run("an account from before the packages is recorded", func(t *testing.T) {
+		b := newBench(t)
+		appendTo(t, filepath.Join(b.root, "etc/passwd"), sysRemotix) // there, and no sysusers file yet
+		snapshot(t, b)
+		if _, err := os.Stat(record(b)); err != nil {
+			t.Fatalf("an account older than the packages was not recorded: %v", err)
+		}
+	})
+}

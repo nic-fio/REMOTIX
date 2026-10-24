@@ -123,6 +123,18 @@ func (g *fakeManager) Install(file, names []string) error {
 		if err := WriteAtomic(g.p("finto-pacchetti.json"), b, 0o644); err != nil {
 			return err
 		}
+		if a.Nome == "remotix" { // the REMOTIX package, when the test says so: its sysusers file, and the account its postinst makes
+			if _, err := os.Stat(g.p("finto-crea-utente-rete")); err == nil {
+				os.MkdirAll(filepath.Join(g.root, filepath.Dir(netSysusers)[1:]), 0o755)
+				os.WriteFile(filepath.Join(g.root, netSysusers[1:]), []byte("u remotix - \"REMOTIX network side\" / /usr/sbin/nologin\n"), 0o644)
+				for f, line := range map[string]string{"etc/passwd": sysRemotix, "etc/group": "remotix:x:990:\n"} {
+					if h, err := os.OpenFile(filepath.Join(g.root, f), os.O_APPEND|os.O_WRONLY, 0o644); err == nil {
+						h.WriteString(line)
+						h.Close()
+					}
+				}
+			}
+		}
 		if a.Nome == "sddm" { // a display manager's postinst: enables, and starts if policy-rc.d does not stop it
 			os.WriteFile(filepath.Join(g.root, "etc/systemd/system/sddm.service"), []byte("[Unit]\n"), 0o644)
 			u := &fakeUnits{g.root}
