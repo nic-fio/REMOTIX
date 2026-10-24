@@ -157,6 +157,8 @@ typedef struct {
 	int write_err;        /* write_aggregate_pkt2 fails with this (0 = no) */
 	int close_err;        /* write_connection_close fails with this (0 = no) */
 	int expiry_err;       /* handle_expiry fails with this (0 = no) */
+	int read_err;         /* the NEXT decrypted ngtcp2_conn_read_pkt returns this, whatever the script (0 = no) */
+	uint8_t tls_alert;    /* what `ngtcp2_conn_get_tls_alert2()` answers (0 = none set) */
 	uint64_t loss_ms;     /* a loss-detection timer in this many ms (0 = none) */
 	uint64_t lost_dgram;  /* the datagram declared lost when that timer fires */
 	uint8_t max_udp;      /* 0: path MTU 1200 · 1: 1452 */
