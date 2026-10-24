@@ -1,0 +1,734 @@
+/*
+ * test.c — unit test of the COUNTER LOGIC of the login defences (§4.4-bis, plan «Difese del login», 24 Oct 2026),
+ * in src/rcp.c: login_reserve(), login_resolve(), login_release(), rcp_orphan_verdict(), rcp_banned(), rcp_unblock(),
+ * save_ban()/rcp_ban_load(), rcp_key_address(), and the tags of the log (HMAC-SHA256).
+ *
+ * HOW: the REAL src/rcp.c is #included (never modified), like benches/fuzz/rcp-msg/fuzz_rcp_msg.c; the log is that harness's
+ * stubs_log.c.  The counting code is PURE (it takes `now` as an argument and reads no clock), so the test drives it with a
+ * SIMULATED clock: `at(s)` is the monotonic millisecond `s` seconds after the start.  Nothing sleeps.
+ * The file test (ban file) writes in a mkdtemp() directory under /tmp, INSIDE the container.
+ *
+ * What it covers (each is a group of checks, named in the output):
+ *   keys        IPv4 whole, IPv6 /64, ::ffff: and NAT64 -> IPv4, ::1 whole, idempotent; the /48 of a key
+ *   thresholds  (key,user) 5 in 5 min · key 12 in 5 min · /48 30 in 10 min: N-1 does not ban, N does; the SLIDING window
+ *               (a first failure that has left the window does not count) and the boundary of the window
+ *   progression 15 min -> 1 h -> 12 h -> 12 h; forgotten after 24 h without a ban (and NOT forgotten at 23 h)
+ *   reset       success resets only (key,user): not the key's count, not the /48's, not the recidivism
+ *   rotation    IPv6: five addresses of one /64 are one key; another /64 is another key
+ *   in flight   at most 2 per (key,user); failed + in flight at the limit refuses and is NOT a failure; release gives back
+ *   orphan      a verdict whose connection is gone is counted all the same (failure, success, same key as the session's)
+ *   table       full of bans or of bookings: the new entry is refused and counted, no ban is erased; full of
+ *               non-banned entries: the oldest is evicted and declared
+ *   unblock     removes every level of the address (user, key, /48) and the recidivism
+ *   file        the old format is converted, the new one round-trips (ban, user with spaces, recidivism), -1 on a bad path
+ *   log         `unknown user [hmac6]` (never the name); a real user is named; RFC 4231 vectors; the secret file is 0600
+ *
+ * BUILD AND RUN (a second; nothing under /media/REMOTIX-15 is written; run from the root of the tree):
+ *   podman run --rm -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
+ *     cd /tmp && F="-g -O1 -fsanitize=address,undefined -fno-sanitize-recover=undefined -std=gnu11 -D_GNU_SOURCE \
+ *        -Wall -Wextra -Wno-unused-parameter -I/albero/src -I/albero/benches/fuzz/rcp-msg" &&
+ *     clang $F -c /albero/benches/unit/login-ban/test.c -o t.o && clang $F -c /albero/benches/fuzz/rcp-msg/stubs_log.c -o l.o &&
+ *     clang -fsanitize=address,undefined t.o l.o -o test && ./test'
+ * Exit code 0 = every check passed.
+ */
+#include "rcp.c"
+
+#include <stdio.h>
+#include "common.h"
+
+static int checks, bad;
+
+#define CHECK(cond, ...)                                                      \
+	do {                                                                  \
+		checks++;                                                     \
+		if (!(cond)) {                                                \
+			bad++;                                                \
+			printf("  FAIL %s:%d  %s  -- ", __FILE__, __LINE__, #cond); \
+			printf(__VA_ARGS__);                                  \
+			printf("\n");                                         \
+		}                                                             \
+	} while (0)
+
+static uint64_t at(double seconds) { return 1000000u + (uint64_t)(seconds * 1000.0); }
+
+static void fresh(void) { rcp_reset_session_log(); ban_path[0] = 0; }
+
+/* one complete attempt: book, then the verdict.  Returns what the booking said. */
+static enum login_verdict attempt(const char *key, const char *user, bool ok, uint64_t now)
+{
+	struct login_info info;
+	struct login_result r;
+	enum login_verdict v = login_reserve(key, user, now, &info);
+	if (v == LV_OK)
+		login_resolve(key, user, ok, now, &r);
+	return v;
+}
+static enum login_verdict fail(const char *key, const char *user, uint64_t now) { return attempt(key, user, false, now); }
+
+static enum login_verdict peek(const char *key, const char *user, uint64_t now, struct login_info *info)
+{
+	struct login_info local;
+	if (!info)
+		info = &local;
+	enum login_verdict v = login_reserve(key, user, now, info);
+	if (v == LV_OK)
+		login_release(key, user);
+	return v;
+}
+
+static void key_of(const char *text, char *out) { rcp_key_address(text, out, 64); }
+
+/* ------------------------------------------------------------------------ */
+static void test_keys(void)
+{
+	printf("keys\n");
+	struct { const char *in, *want; } T[] = {
+	    {"1.2.3.4", "[1.2.3.4]"},
+	    {"[1.2.3.4]:555", "[1.2.3.4]"},
+	    {"1.2.3.4:53", "[1.2.3.4]"},
+	    {"2001:db8:1:2:3:4:5:6", "[2001:db8:1:2::]"},
+	    {"[2001:db8:1:2:aaaa:bbbb:cccc:dddd]:443", "[2001:db8:1:2::]"},
+	    {"fe80::1", "[fe80::]"},
+	    {"[::ffff:1.2.3.4]:99", "[1.2.3.4]"},
+	    {"::ffff:1.2.3.4", "[1.2.3.4]"},
+	    {"64:ff9b::1.2.3.4", "[1.2.3.4]"},
+	    {"::1", "[::1]"},
+	    {"[::1]:7", "[::1]"},
+	    {"   ", "[   ]"},
+	    {"garbage", "[garbage]"},
+	};
+	for (size_t i = 0; i < sizeof T / sizeof *T; i++) {
+		char k[64], k2[64];
+		key_of(T[i].in, k);
+		CHECK(strcmp(k, T[i].want) == 0, "«%s» -> «%s», wanted «%s»", T[i].in, k, T[i].want);
+		key_of(k, k2);
+		CHECK(strcmp(k, k2) == 0, "not idempotent: «%s» -> «%s» -> «%s»", T[i].in, k, k2);
+	}
+	char k48[64];
+	CHECK(key_net48("[2001:db8:1:2::]", k48, sizeof k48) && strcmp(k48, "[2001:db8:1::]") == 0, "/48 of a /64 key: %s", k48);
+	CHECK(!key_net48("[1.2.3.4]", k48, sizeof k48), "an IPv4 key has no /48");
+	CHECK(!key_net48("[::1]", k48, sizeof k48), "loopback has no /48");
+	CHECK(!key_net48("[garbage]", k48, sizeof k48), "a non-address has no /48");
+}
+
+/* ------------------------------------------------------------------------ */
+static void test_thresholds(void)
+{
+	printf("thresholds\n");
+	struct login_info info;
+	const char *K = "[1.2.3.4]";
+
+	/* (key,user): 4 do not ban, the 5th does; the ban is 15 minutes and is only on (key,user) */
+	fresh();
+	for (int i = 0; i < 4; i++)
+		CHECK(fail(K, "alice", at(i)) == LV_OK, "attempt %d refused too early", i);
+	CHECK(peek(K, "alice", at(5), NULL) == LV_OK, "4 failures must not ban");
+	CHECK(fail(K, "alice", at(5)) == LV_OK, "the 5th is still asked to PAM");
+	CHECK(peek(K, "alice", at(6), &info) == LV_BANNED && info.kind == LK_USER, "5th failure: (key,user) banned");
+	CHECK(info.remain == 899000u, "remain %llu, wanted 899000 (15 min minus 1 s)", (unsigned long long)info.remain);
+	CHECK(peek(K, "bob", at(6), NULL) == LV_OK, "another user on the same key is not banned (5 < 12)");
+	CHECK(!rcp_banned(K, at(6), NULL), "rcp_banned (the page) does not know the user: not banned");
+	CHECK(peek("[1.2.3.5]", "alice", at(6), NULL) == LV_OK, "another address is not banned");
+	/* the ban ends at 15 min exactly */
+	CHECK(peek(K, "alice", at(5 + 900) - 1, NULL) == LV_BANNED, "banned until the last ms");
+	CHECK(peek(K, "alice", at(5 + 900), NULL) == LV_OK, "free at the 15th minute");
+
+	/* the window is SLIDING: the failures at 0,90,180,270 and 301 -> the first has left (301 s > 300 s) */
+	fresh();
+	fail(K, "alice", at(0)); fail(K, "alice", at(90)); fail(K, "alice", at(180)); fail(K, "alice", at(270));
+	fail(K, "alice", at(301));
+	CHECK(peek(K, "alice", at(302), NULL) == LV_OK, "the failure at 0 has left the window: 4 inside, no ban");
+	fail(K, "alice", at(302));
+	CHECK(peek(K, "alice", at(303), NULL) == LV_BANNED, "90..302 are 5 inside 300 s: ban");
+	/* the boundary is inclusive: exactly 300 s still counts as inside */
+	fresh();
+	fail(K, "alice", at(0)); fail(K, "alice", at(75)); fail(K, "alice", at(150)); fail(K, "alice", at(225));
+	fail(K, "alice", at(300));
+	CHECK(peek(K, "alice", at(301), NULL) == LV_BANNED, "0 and 300 s apart is inside the window (<=)");
+
+	/* key: 12 failures from 12 different users in 5 minutes */
+	fresh();
+	char u[16];
+	for (int i = 0; i < 11; i++) { snprintf(u, sizeof u, "user%d", i); fail(K, u, at(i)); }
+	CHECK(peek(K, "someone", at(12), NULL) == LV_OK, "11 failures on the key: no ban");
+	fail(K, "user11", at(12));
+	CHECK(peek(K, "someone", at(13), &info) == LV_BANNED && info.kind == LK_KEY, "12th failure: the KEY is banned, any user");
+	CHECK(rcp_banned(K, at(13), NULL), "rcp_banned says so (the page)");
+	CHECK(peek("[1.2.3.9]", "someone", at(13), NULL) == LV_OK, "another IPv4 is free");
+	/* 12 failures but slower than the window: 25 s apart -> the first has left when the 12th comes */
+	fresh();
+	for (int i = 0; i < 12; i++) { snprintf(u, sizeof u, "user%d", i); fail(K, u, at(i * 28)); }
+	CHECK(!rcp_banned(K, at(12 * 28), NULL), "12 failures in 308 s: the first is out, no ban");
+
+	/* /48: 30 failures from 30 different /64 of the same /48 (each /64 sees ONE failure), in 10 minutes */
+	fresh();
+	char a[64];
+	for (int i = 0; i < 29; i++) {
+		snprintf(a, sizeof a, "2001:db8:1:%x::5", i + 1);
+		char kk[64]; key_of(a, kk);
+		fail(kk, "alice", at(i * 10));
+	}
+	char fresh64[64]; key_of("2001:db8:1:ff::7", fresh64);
+	CHECK(peek(fresh64, "alice", at(300), NULL) == LV_OK, "29 failures on the /48: no ban");
+	char k30[64]; key_of("2001:db8:1:1e::5", k30);
+	fail(k30, "alice", at(291));
+	CHECK(peek(fresh64, "alice", at(300), &info) == LV_BANNED && info.kind == LK_NET48, "30th failure: the /48 is banned");
+	CHECK(rcp_banned("2001:db8:1:abcd::1", at(300), NULL), "the page sees the /48 ban");
+	char other[64]; key_of("2001:db8:2::1", other);
+	CHECK(peek(other, "alice", at(300), NULL) == LV_OK, "another /48 is free");
+	/* 30 failures slower than 10 minutes: 25 s apart -> the first is out when the 30th comes */
+	fresh();
+	for (int i = 0; i < 30; i++) {
+		snprintf(a, sizeof a, "2001:db8:1:%x::5", i + 1);
+		char kk[64]; key_of(a, kk);
+		fail(kk, "alice", at(i * 25));
+	}
+	CHECK(!rcp_banned("2001:db8:1:ff::1", at(30 * 25), NULL), "30 failures in 725 s: no /48 ban");
+}
+
+/* ------------------------------------------------------------------------ */
+static void ban_user(const char *key, const char *user, uint64_t t0)
+{
+	for (int i = 0; i < 5; i++)
+		fail(key, user, t0 + (uint64_t)i * 1000u);
+}
+
+static void test_progression(void)
+{
+	printf("progression\n");
+	const char *K = "[1.2.3.4]";
+	struct login_info info;
+	fresh();
+	ban_user(K, "alice", at(0));                      /* ban 1: 15 min, until ~904 s */
+	CHECK(peek(K, "alice", at(5), &info) == LV_BANNED && info.remain == 899000u, "ban 1 remain %llu", (unsigned long long)info.remain);
+	uint64_t t = at(4 + 900 + 1);
+	CHECK(peek(K, "alice", t, NULL) == LV_OK, "free after 15 min");
+	ban_user(K, "alice", t);                          /* ban 2: 1 h */
+	CHECK(peek(K, "alice", t + 5000, &info) == LV_BANNED && info.remain == 3600000u - 1000u, "ban 2 is 1 h: remain %llu", (unsigned long long)info.remain);
+	t += 3600000u + 10000u;
+	CHECK(peek(K, "alice", t, NULL) == LV_OK, "free after 1 h");
+	ban_user(K, "alice", t);                          /* ban 3: 12 h */
+	CHECK(peek(K, "alice", t + 5000, &info) == LV_BANNED && info.remain == 43200000u - 1000u, "ban 3 is 12 h: remain %llu", (unsigned long long)info.remain);
+	CHECK(peek(K, "alice", t + 43200000u - 1u, NULL) == LV_BANNED, "banned for the whole 12 h");
+	t += 43200000u + 10000u;
+	CHECK(peek(K, "alice", t, NULL) == LV_OK, "free after 12 h");
+	ban_user(K, "alice", t);                          /* ban 4: still 12 h, the ladder ends there */
+	CHECK(peek(K, "alice", t + 5000, &info) == LV_BANNED && info.remain == 43200000u - 1000u, "ban 4 stays 12 h: remain %llu", (unsigned long long)info.remain);
+
+	/* forgotten after 24 h WITHOUT a ban (counted from the end of the last ban) */
+	fresh();
+	ban_user(K, "alice", at(0));                      /* ban 1, ends at 904 s */
+	t = at(904) + 1;
+	ban_user(K, "alice", t);                          /* ban 2 (1 h), ends t+4000+3600000... */
+	uint64_t end2 = t + 4000u + 3600000u;
+	/* 23 h after the end: NOT forgotten -> the next one is the 12 h */
+	uint64_t t23 = end2 + 23u * 3600000u;
+	ban_user(K, "alice", t23);
+	CHECK(peek(K, "alice", t23 + 5000, &info) == LV_BANNED && info.remain == 43200000u - 1000u, "23 h after: not forgotten, 12 h");
+	/* now the other branch, from scratch: 25 h after the end -> forgotten, back to 15 min */
+	fresh();
+	ban_user(K, "alice", at(0));
+	t = at(904) + 1;
+	ban_user(K, "alice", t);
+	end2 = t + 4000u + 3600000u;
+	uint64_t t25 = end2 + 25u * 3600000u;
+	ban_user(K, "alice", t25);
+	CHECK(peek(K, "alice", t25 + 5000, &info) == LV_BANNED && info.remain == 900000u - 1000u, "25 h after: forgotten, 15 min again (remain %llu)", (unsigned long long)info.remain);
+	/* the rungs are per level: the KEY has its own ladder */
+	fresh();
+	char u[16];
+	for (int i = 0; i < 12; i++) { snprintf(u, sizeof u, "u%d", i); fail(K, u, at(i)); }
+	CHECK(peek(K, "x", at(13), &info) == LV_BANNED && info.kind == LK_KEY && info.remain == 900000u - 2000u, "key ban 1 is 15 min");
+	t = at(11) + 900000u + 1000u;
+	for (int i = 0; i < 12; i++) { snprintf(u, sizeof u, "v%d", i); fail(K, u, t + (uint64_t)i * 1000u); }
+	CHECK(peek(K, "x", t + 13000u, &info) == LV_BANNED && info.kind == LK_KEY && info.remain == 3600000u - 2000u, "key ban 2 is 1 h (remain %llu)", (unsigned long long)info.remain);
+}
+
+/* ------------------------------------------------------------------------ */
+static void test_reset(void)
+{
+	printf("reset\n");
+	const char *K = "[1.2.3.4]";
+	struct login_info info;
+	fresh();
+	for (int i = 0; i < 4; i++) fail(K, "alice", at(i));
+	attempt(K, "alice", true, at(5));                 /* success: the 4 go back to zero */
+	for (int i = 0; i < 4; i++) fail(K, "alice", at(10 + i));
+	CHECK(peek(K, "alice", at(20), NULL) == LV_OK, "success reset (key,user): 4+4 failures do not ban");
+	/* ...but NOT the key's count: 8 failures of alice so far, 4 more from 4 other users make 12 */
+	for (int i = 0; i < 3; i++) { char u[8]; snprintf(u, sizeof u, "o%d", i); fail(K, u, at(21 + i)); }
+	CHECK(peek(K, "z", at(25), NULL) == LV_OK, "11 on the key");
+	fail(K, "o3", at(26));
+	CHECK(peek(K, "z", at(27), &info) == LV_BANNED && info.kind == LK_KEY, "the key counted 12 although alice succeeded in between");
+
+	/* another user's success does not reset alice */
+	fresh();
+	for (int i = 0; i < 4; i++) fail(K, "alice", at(i));
+	attempt(K, "bob", true, at(5));
+	fail(K, "alice", at(6));
+	CHECK(peek(K, "alice", at(7), NULL) == LV_BANNED, "bob's success must not reset alice");
+
+	/* the success does not reset the recidivism: after a ban 1 the next is 1 h even with a login in between */
+	fresh();
+	ban_user(K, "alice", at(0));
+	uint64_t t = at(4 + 901);
+	attempt(K, "alice", true, t);
+	ban_user(K, "alice", t + 1000u);
+	CHECK(peek(K, "alice", t + 6000u, &info) == LV_BANNED && info.remain == 3600000u - 1000u, "recidivism survives the success: 1 h (remain %llu)", (unsigned long long)info.remain);
+
+	/* and the success does not reset the /48: 29 failures on the /48, a success, one more -> banned */
+	fresh();
+	char a[64], kk[64];
+	for (int i = 0; i < 29; i++) { snprintf(a, sizeof a, "2001:db8:1:%x::5", i + 1); key_of(a, kk); fail(kk, "alice", at(i)); }
+	key_of("2001:db8:1:1::5", kk);
+	attempt(kk, "alice", true, at(30));
+	key_of("2001:db8:1:77::5", kk);
+	fail(kk, "alice", at(31));
+	CHECK(rcp_banned("2001:db8:1:1::9", at(32), NULL), "a success does not wash the /48's count");
+}
+
+/* ------------------------------------------------------------------------ */
+static void test_rotation(void)
+{
+	printf("rotation\n");
+	fresh();
+	char k[64];
+	/* five different addresses of the same /64, one failure each, same user */
+	const char *same64[] = {"2001:db8:1:2::1", "2001:db8:1:2:aaaa::2", "2001:db8:1:2:1:2:3:4", "2001:db8:1:2:ffff:ffff:ffff:ffff",
+	                        "[2001:db8:1:2:5::5]:4433"};
+	for (int i = 0; i < 5; i++) { key_of(same64[i], k); fail(k, "alice", at(i)); }
+	key_of("2001:db8:1:2:9::9", k);
+	CHECK(peek(k, "alice", at(6), NULL) == LV_BANNED, "five addresses of ONE /64 are one key: banned at the 5th");
+	key_of("2001:db8:1:3::1", k);
+	CHECK(peek(k, "alice", at(6), NULL) == LV_OK, "another /64 is another key");
+	/* the same rotation with 12 users: the key bans */
+	fresh();
+	for (int i = 0; i < 12; i++) {
+		char addr[64], u[8]; snprintf(addr, sizeof addr, "2001:db8:1:2:%x::1", i + 1); snprintf(u, sizeof u, "u%d", i);
+		key_of(addr, k); fail(k, u, at(i));
+	}
+	CHECK(rcp_banned("2001:db8:1:2:dead:beef::1", at(13), NULL), "rotation inside a /64 with 12 users: the key is banned");
+	CHECK(!rcp_banned("2001:db8:1:3::1", at(13), NULL), "the neighbour /64 is not");
+	/* IPv4 is NOT aggregated: neighbours are different keys */
+	fresh();
+	for (int i = 0; i < 5; i++) { char addr[16]; snprintf(addr, sizeof addr, "10.0.0.%d", i + 1); key_of(addr, k); fail(k, "alice", at(i)); }
+	CHECK(peek("[10.0.0.9]", "alice", at(6), NULL) == LV_OK, "IPv4 is counted whole: 5 different addresses are not one");
+}
+
+/* ------------------------------------------------------------------------ */
+static void test_in_flight(void)
+{
+	printf("in flight\n");
+	const char *K = "[1.2.3.4]";
+	struct login_info info;
+	struct login_result r;
+	fresh();
+	/* a burst of ten connections sent together: only two get to PAM */
+	int ok = 0;
+	for (int i = 0; i < 10; i++)
+		if (login_reserve(K, "alice", at(0), &info) == LV_OK)
+			ok++;
+	CHECK(ok == 2, "burst of 10: %d asked to PAM, wanted 2", ok);
+	CHECK(login_reserve(K, "alice", at(0), &info) == LV_BUSY && info.kind == LK_USER, "the 3rd is BUSY on the user");
+	CHECK(login_reserve(K, "bob", at(0), &info) == LV_OK, "another user on the same key is still allowed");
+	/* the refusals counted nothing: two failures + the verdicts leave 2 failures, not 10 */
+	login_resolve(K, "alice", false, at(1), &r);
+	CHECK(r.inside[LK_USER] == 1, "first verdict: 1 failure");
+	login_resolve(K, "alice", false, at(1), &r);
+	CHECK(r.inside[LK_USER] == 2, "second verdict: 2 failures (the 8 refusals counted nothing)");
+	login_resolve(K, "bob", true, at(1), &r);
+	CHECK(peek(K, "alice", at(2), NULL) == LV_OK, "in flight given back: asking again is allowed");
+
+	/* failed + in flight at the limit: 3 failed + 2 in flight = 5 -> the next is refused, and is not a failure */
+	fresh();
+	for (int i = 0; i < 3; i++) fail(K, "alice", at(i));
+	CHECK(login_reserve(K, "alice", at(4), &info) == LV_OK, "3 failed + 1 in flight");
+	CHECK(login_reserve(K, "alice", at(4), &info) == LV_OK, "3 failed + 2 in flight");
+	CHECK(login_reserve(K, "alice", at(4), &info) == LV_BUSY, "3 + 2 = 5 = the limit: refused");
+	login_resolve(K, "alice", false, at(5), &r);
+	CHECK(r.inside[LK_USER] == 4 && !r.banned[LK_USER], "4th failure: no ban yet");
+	CHECK(login_reserve(K, "alice", at(5), &info) == LV_BUSY, "4 failed + 1 in flight = 5: refused");
+	login_resolve(K, "alice", false, at(6), &r);
+	CHECK(r.inside[LK_USER] == 5 && r.banned[LK_USER] && r.ban_ms[LK_USER] == 900000u, "5th failure bans for 15 min");
+	CHECK(peek(K, "alice", at(7), NULL) == LV_BANNED, "banned");
+
+	/* the key level: 11 failures of 11 users + 1 in flight -> another user is refused (11 + 1 = 12) */
+	fresh();
+	char u[8];
+	for (int i = 0; i < 11; i++) { snprintf(u, sizeof u, "u%d", i); fail(K, u, at(i)); }
+	CHECK(login_reserve(K, "x", at(12), &info) == LV_OK, "11 failed + 1 in flight");
+	CHECK(login_reserve(K, "y", at(12), &info) == LV_BUSY && info.kind == LK_KEY, "12 = limit of the key: refused on the KEY level");
+	login_release(K, "x");
+	CHECK(login_reserve(K, "y", at(12), &info) == LV_OK, "released: allowed again");
+
+	/* the question did not leave: login_release counts nothing */
+	fresh();
+	login_reserve(K, "alice", at(0), &info);
+	login_reserve(K, "alice", at(0), &info);
+	login_release(K, "alice");
+	login_release(K, "alice");
+	login_release(K, "alice"); /* a release too many must not go below zero */
+	int n = 0;
+	for (int i = 0; i < 4; i++) if (login_reserve(K, "alice", at(1), &info) == LV_OK) n++;
+	CHECK(n == 2, "release brings it back to zero (and never below): %d", n);
+	for (int i = 0; i < 4; i++) { login_resolve(K, "alice", false, at(2), &r); }
+	/* four verdicts on two bookings: in_flight stays at 0, failures are 4 */
+	CHECK(r.inside[LK_USER] == 4, "failures %d", r.inside[LK_USER]);
+
+	/* a ban that fires while the other booking is still in flight: the late verdict adds nothing */
+	fresh();
+	for (int i = 0; i < 3; i++) fail(K, "alice", at(i));
+	login_reserve(K, "alice", at(3), &info);
+	login_reserve(K, "alice", at(3), &info);
+	login_resolve(K, "alice", false, at(4), &r);
+	login_resolve(K, "alice", false, at(5), &r);
+	CHECK(r.banned[LK_USER], "banned by the 2nd verdict");
+	CHECK(peek(K, "alice", at(6), NULL) == LV_BANNED, "banned");
+}
+
+/* ------------------------------------------------------------------------ */
+static char captured[8192];
+static void capture(void *ctx, const char *line)
+{
+	(void)ctx;
+	size_t n = strlen(captured);
+	snprintf(captured + n, sizeof captured - n, "%s\n", line);
+}
+
+static void test_orphan(void)
+{
+	printf("orphan\n");
+	const char *K = "[1.2.3.4]";
+	struct login_info info;
+	fresh();
+	captured[0] = 0;
+	/* five connections book and close: the five true verdicts arrive with no session */
+	for (int i = 0; i < 5; i++) {
+		CHECK(login_reserve(K, "alice", at(i), &info) == LV_OK, "booking %d", i);
+		rcp_orphan_verdict("alice", "1.2.3.4", false, at(i) + 1500u, capture, NULL);
+	}
+	CHECK(peek(K, "alice", at(8), NULL) == LV_BANNED, "five orphan failures ban (key,user)");
+	CHECK(strstr(captured, "BANNED") != NULL, "the ban is written to the sink: %s", captured);
+	CHECK(strstr(captured, "gone") != NULL, "the sink says the connection was gone");
+
+	/* a success of a connection already gone gives the booking back and resets (key,user) */
+	fresh();
+	for (int i = 0; i < 4; i++) fail(K, "alice", at(i));
+	login_reserve(K, "alice", at(5), &info);
+	rcp_orphan_verdict("alice", "1.2.3.4", true, at(6), capture, NULL);
+	for (int i = 0; i < 4; i++) fail(K, "alice", at(10 + i));
+	CHECK(peek(K, "alice", at(20), NULL) == LV_OK, "orphan success reset (key,user)");
+	int n = 0;
+	for (int i = 0; i < 4; i++) if (login_reserve(K, "alice", at(21), &info) == LV_OK) n++;
+	CHECK(n == 1, "4 failed + 1 in flight = 5: one booking allowed, so the orphan verdict left none in flight (%d)", n);
+
+	/* IPv6: the rhost of the flight record is the bare address; it must reach the SAME key as the session's */
+	fresh();
+	char k[64];
+	key_of("[2001:db8:1:2:3:4:5:6]:4433", k);                   /* what the session has */
+	for (int i = 0; i < 5; i++) {
+		login_reserve(k, "alice", at(i), &info);
+		rcp_orphan_verdict("alice", "2001:db8:1:2:9:9:9:9", false, at(i), capture, NULL);
+	}
+	CHECK(peek(k, "alice", at(6), NULL) == LV_BANNED, "orphan IPv6 lands on the session's /64 key");
+	/* IPv4 mapped in IPv6 (the dual-stack socket): rhost has already lost the ::ffff:, either form gives one key */
+	fresh();
+	key_of("[::ffff:5.6.7.8]:1", k);
+	CHECK(strcmp(k, "[5.6.7.8]") == 0, "mapped: %s", k);
+
+	/* no name or no address: nothing is counted and it is said */
+	captured[0] = 0;
+	rcp_orphan_verdict("", "1.2.3.4", false, at(0), capture, NULL);
+	rcp_orphan_verdict("alice", NULL, false, at(0), capture, NULL);
+	CHECK(strstr(captured, "NOT counted") != NULL, "unknown name/address is said");
+}
+
+/* ------------------------------------------------------------------------ */
+static void test_table(void)
+{
+	printf("table\n");
+	struct login_info info;
+	struct login_result r;
+	fresh();
+	/* full of BOOKINGS: 128 keys x (user + key) = 256 entries, all in flight */
+	char k[64];
+	for (int i = 0; i < 128; i++) {
+		snprintf(k, sizeof k, "[10.1.%d.%d]", i / 200, i % 200 + 1);
+		CHECK(login_reserve(k, "u", at(0), &info) == LV_OK, "booking %d", i);
+	}
+	unsigned before = login_refused_full;
+	CHECK(login_reserve("[9.9.9.9]", "u", at(1), &info) == LV_FULL, "129th key: table full, refused");
+	CHECK(login_refused_full == before + 1, "the refusal is COUNTED (%u -> %u)", before, login_refused_full);
+	CHECK(lfind(LK_KEY, "[10.1.0.1]", NULL) >= 0, "no booking was thrown away");
+	/* one resolves: its two entries are now evictable */
+	login_resolve("[10.1.0.1]", "u", true, at(2), &r);
+	CHECK(login_reserve("[9.9.9.9]", "u", at(3), &info) == LV_OK, "room again once a booking is resolved");
+
+	/* full of BANS (written by hand: the entries of a real flood are the same): nothing is erased, the new is refused */
+	fresh();
+	for (int i = 0; i < MAX_ATTEMPTS; i++) {
+		snprintf(k, sizeof k, "[10.2.%d.%d]", i / 200, i % 200 + 1);
+		int s = lcreate(LK_KEY, k, NULL, at(0), NULL, NULL, 0);
+		CHECK(s == i, "slot %d", s);
+		attempts[s].banned_until = at(3600);
+		attempts[s].level = 1;
+	}
+	before = login_refused_full;
+	CHECK(login_reserve("[9.9.9.9]", "u", at(1), &info) == LV_FULL, "all banned: the new entry is refused");
+	login_resolve("[9.9.9.9]", "u", false, at(1), &r);
+	CHECK(r.refused_full > 0 && login_refused_full > before, "and a failure that cannot be counted is counted as refused");
+	int still = 0;
+	for (int i = 0; i < MAX_ATTEMPTS; i++) if (attempts[i].used && is_banned(&attempts[i], at(1))) still++;
+	CHECK(still == MAX_ATTEMPTS, "no ban was erased (%d of %d)", still, MAX_ATTEMPTS);
+	CHECK(lfind(LK_KEY, "[10.2.0.1]", NULL) >= 0 && peek("[10.2.0.1]", "u", at(2), NULL) == LV_BANNED, "and the first ban still bans");
+
+	/* full of FAILURES (not banned): the oldest is evicted, and it is declared */
+	fresh();
+	for (int i = 0; i < 128; i++) {
+		snprintf(k, sizeof k, "[10.3.%d.%d]", i / 200, i % 200 + 1);
+		fail(k, "u", at(i));
+	}
+	CHECK(login_reserve("[9.9.9.9]", "u", at(200), &info) == LV_OK, "a failed-only table makes room");
+	CHECK(info.evicted[0] != 0, "and says what it threw away: «%s»", info.evicted);
+	/* reclaiming entries with nothing to remember is silent: all the failures are older than 5 min */
+	fresh();
+	for (int i = 0; i < 128; i++) {
+		snprintf(k, sizeof k, "[10.4.%d.%d]", i / 200, i % 200 + 1);
+		fail(k, "u", at(0));
+	}
+	CHECK(login_reserve("[9.9.9.9]", "u", at(1000), &info) == LV_OK && info.evicted[0] == 0, "idle entries are reclaimed silently");
+}
+
+/* ------------------------------------------------------------------------ */
+static void test_unblock(void)
+{
+	printf("unblock\n");
+	struct login_info info;
+	const char *K = "[1.2.3.4]";
+	fresh();
+	ban_user(K, "alice", at(0));
+	ban_user(K, "bob", at(10));
+	char u[8];
+	for (int i = 0; i < 12; i++) { snprintf(u, sizeof u, "x%d", i); fail(K, u, at(20 + i)); }
+	CHECK(rcp_banned(K, at(40), NULL) && peek(K, "alice", at(40), NULL) == LV_BANNED, "alice and the key are banned");
+	CHECK(rcp_unblock("1.2.3.4:44", at(41)), "unblock answers «was banned»");
+	CHECK(!rcp_banned(K, at(41), NULL), "key free");
+	CHECK(peek(K, "alice", at(41), NULL) == LV_OK && peek(K, "bob", at(41), NULL) == LV_OK, "every (key,user) free");
+	CHECK(!rcp_unblock("1.2.3.4", at(42)), "second time: it was not banned");
+	/* the recidivism goes too: a new ban is 15 min again */
+	ban_user(K, "alice", at(50));
+	CHECK(peek(K, "alice", at(56), &info) == LV_BANNED && info.remain == 900000u - 2000u, "back to 15 min: %llu", (unsigned long long)info.remain);
+
+	/* IPv6: the /48 ban goes with an unblock of ANY address of it */
+	fresh();
+	char a[64], kk[64];
+	for (int i = 0; i < 30; i++) { snprintf(a, sizeof a, "2001:db8:1:%x::5", i + 1); key_of(a, kk); fail(kk, "alice", at(i)); }
+	CHECK(rcp_banned("2001:db8:1:99::1", at(40), NULL), "the /48 is banned");
+	CHECK(rcp_unblock("2001:db8:1:5::beef", at(41)), "unblock of one address of the /48");
+	CHECK(!rcp_banned("2001:db8:1:99::1", at(41), NULL), "the /48 is free");
+	/* an unblock does not touch the bookings in flight */
+	fresh();
+	struct login_result r;
+	login_reserve(K, "alice", at(0), &info);
+	login_reserve(K, "alice", at(0), &info);
+	rcp_unblock(K, at(1));
+	CHECK(login_reserve(K, "alice", at(2), &info) == LV_BUSY, "the two bookings are still in flight after the unblock");
+	login_resolve(K, "alice", true, at(3), &r);
+	login_resolve(K, "alice", true, at(3), &r);
+	CHECK(login_reserve(K, "alice", at(4), &info) == LV_OK, "and they give themselves back");
+}
+
+/* ------------------------------------------------------------------------ */
+static char *slurp(const char *path)
+{
+	static char buf[8192];
+	FILE *f = fopen(path, "r");
+	buf[0] = 0;
+	if (!f) return buf;
+	size_t n = fread(buf, 1, sizeof buf - 1, f);
+	buf[n] = 0;
+	fclose(f);
+	return buf;
+}
+
+static void test_file(void)
+{
+	printf("file\n");
+	char dir[] = "/tmp/lg-ban-XXXXXX";
+	CHECK(mkdtemp(dir) != NULL, "mkdtemp");
+	char path[128];
+	snprintf(path, sizeof path, "%s/ban", dir);
+	const char *K = "[1.2.3.4]";
+	struct login_info info;
+	time_t t_now = time(NULL);
+
+	/* the OLD format: «[address] epoch», the 12 h ban of the 1.0 */
+	fresh();
+	FILE *f = fopen(path, "w");
+	fprintf(f, "[1.2.3.4] %lld\n[2001:db8:1:2:3:4:5:6] %lld\n[9.9.9.9] %lld\nnonsense\n[8.8.8.8] notanumber\n",
+	        (long long)t_now + 7200, (long long)t_now + 7200, (long long)t_now - 10);
+	fclose(f);
+	int n = rcp_ban_load(path, at(0));
+	CHECK(n == 2, "old format: 2 bans in force loaded (the expired and the nonsense skipped), got %d", n);
+	uint64_t remain = 0;
+	CHECK(rcp_banned("1.2.3.4", at(0), &remain) && remain > 7100000u && remain <= 7200000u, "IPv4 ban loaded, remain %llu", (unsigned long long)remain);
+	CHECK(rcp_banned("2001:db8:1:2:ffff::1", at(0), NULL), "the old IPv6 /128 line became the /64 key");
+	CHECK(!rcp_banned("9.9.9.9", at(0), NULL), "the expired line is not loaded");
+	/* the converted ban sits at the top of the ladder */
+	int i = lfind(LK_KEY, K, NULL);
+	CHECK(i >= 0 && attempts[i].level == 2, "converted at the top of the ladder");
+	/* a change rewrites the file in the NEW format */
+	CHECK(rcp_unblock("9.9.9.9", at(1)) == false, "nothing to unblock there");
+	CHECK(rcp_unblock("1.2.3.4", at(1)), "unblock 1.2.3.4");
+	char *txt = slurp(path);
+	CHECK(strstr(txt, "B2 K 2 ") != NULL && strstr(txt, "[2001:db8:1:2::]") != NULL && strstr(txt, "[1.2.3.4]") == NULL,
+	      "rewritten in the new format:\n%s", txt);
+
+	/* round trip: a (key,user) ban with a space in the name, a key ban, a /48 ban, and the recidivism of a ban that ended */
+	fresh();
+	snprintf(path, sizeof path, "%s/ban2", dir);
+	CHECK(rcp_ban_load(path, at(0)) == 0, "no file yet: zero bans, not an error");
+	ban_user(K, "john smith", at(0));                                  /* U ban 1 (15 min) */
+	char u[8];
+	for (int j = 0; j < 12; j++) { snprintf(u, sizeof u, "k%d", j); fail("[5.5.5.5]", u, at(1 + j)); }   /* K ban */
+	char a[64], kk[64];
+	for (int j = 0; j < 30; j++) { snprintf(a, sizeof a, "2001:db8:7:%x::5", j + 1); key_of(a, kk); fail(kk, "alice", at(20 + j)); }  /* N ban */
+	/* a ban that has ended but is remembered: alice on 7.7.7.7 */
+	ban_user("[7.7.7.7]", "ended", at(0));
+	uint64_t later = at(2000);                                         /* 7.7.7.7's ban (15 min) has ended */
+	save_ban(NULL, later);
+	txt = slurp(path);
+	CHECK(strstr(txt, "B2 U 1 ") != NULL, "bans that have ended but are not forgotten are written too:\n%s", txt);
+	/* write again at a moment in which everything is in force, and read it back */
+	save_ban(NULL, at(100));
+	txt = slurp(path);
+	CHECK(strstr(txt, "[1.2.3.4] john smith\n") != NULL, "the user with a space is written whole:\n%s", txt);
+	CHECK(strstr(txt, "B2 K 1 ") != NULL && strstr(txt, "[5.5.5.5]\n") != NULL, "the key ban is written");
+	CHECK(strstr(txt, "B2 N 1 ") != NULL && strstr(txt, "[2001:db8:7::]\n") != NULL, "the /48 ban is written");
+	fresh();
+	snprintf(path, sizeof path, "%s/ban2", dir);
+	n = rcp_ban_load(path, at(5000));                                  /* "now" is a restarted clock, 5000 s on the new axis */
+	CHECK(n >= 0, "reload rc=%d", n);
+	/* rewind the picture: the file is absolute in wall time, the loaded ones are relative to at(5000) */
+	CHECK(peek(K, "john smith", at(5000), &info) == LV_BANNED && info.kind == LK_USER, "the user with a space is banned after the restart");
+	CHECK(peek(K, "john", at(5000), NULL) == LV_OK, "and only that name");
+	CHECK(rcp_banned("5.5.5.5", at(5000), NULL), "the key ban survived");
+	CHECK(rcp_banned("2001:db8:7:1234::1", at(5000), NULL), "the /48 ban survived");
+	/* the recidivism of the ended ban: 7.7.7.7 must be at level 1 again (the file was written at at(100): it was still in force) */
+	int ie = lfind(LK_USER, "[7.7.7.7]", "ended");
+	CHECK(ie >= 0 && attempts[ie].level == 1, "the level of a ban is read back");
+
+	/* the file written when a ban has ENDED but is not forgotten: its level comes back, the ban does not */
+	fresh();
+	snprintf(path, sizeof path, "%s/ban3", dir);
+	rcp_ban_load(path, at(0));
+	ban_user(K, "ended", at(0));
+	save_ban(NULL, at(2000));                                          /* 33 min later: ended, remembered */
+	txt = slurp(path);
+	CHECK(strstr(txt, "B2 U 1 ") != NULL, "an ended ban with recidivism is written:\n%s", txt);
+	fresh();
+	snprintf(path, sizeof path, "%s/ban3", dir);
+	n = rcp_ban_load(path, at(100000));
+	CHECK(n == 0, "no ban in force, got %d", n);
+	CHECK(peek(K, "ended", at(100000), NULL) == LV_OK, "free");
+	ban_user(K, "ended", at(100000));
+	CHECK(peek(K, "ended", at(100005), &info) == LV_BANNED && info.remain == 3600000u - 1000u, "the recidivism came back: the next ban is 1 h (remain %llu)", (unsigned long long)info.remain);
+
+	/* a bad path: the file cannot be read -> -1, not zero */
+	CHECK(rcp_ban_load("/etc/passwd/ban", at(0)) == -1, "unreadable path is -1");
+	CHECK(rcp_ban_load("", at(0)) == 0 && rcp_ban_load(NULL, at(0)) == 0, "no path: persistence off");
+	fresh();
+	/* tidy the directory (files only, no rm -rf) */
+	const char *names[] = {"ban", "ban.new", "ban2", "ban2.new", "ban3", "ban3.new"};
+	for (size_t j = 0; j < sizeof names / sizeof *names; j++) { snprintf(path, sizeof path, "%s/%s", dir, names[j]); unlink(path); }
+	rmdir(dir);
+}
+
+/* ------------------------------------------------------------------------ */
+static void hex(const uint8_t *b, size_t n, char *out) { for (size_t i = 0; i < n; i++) sprintf(out + 2 * i, "%02x", b[i]); }
+
+static void test_log(void)
+{
+	printf("log\n");
+	uint8_t mac[32];
+	char h[80];
+	/* RFC 4231, test case 2 */
+	hmac_sha256((const uint8_t *)"Jefe", 4, "what do ya want for nothing?", 28, mac);
+	hex(mac, 32, h);
+	CHECK(strcmp(h, "5bdcc146bf60754e6a042426089575c75a003f089d2739839dec58b964ec3843") == 0, "RFC 4231 case 2: %s", h);
+	/* RFC 4231, test case 6: a key longer than the block is hashed first */
+	uint8_t big[131];
+	memset(big, 0xaa, sizeof big);
+	const char *msg = "Test Using Larger Than Block-Size Key - Hash Key First";
+	hmac_sha256(big, sizeof big, msg, strlen(msg), mac);
+	hex(mac, 32, h);
+	CHECK(strcmp(h, "60e431591ee0b67f0d8a26aacbf5b77f8e0bc6213728c5140546040f0ee37f54") == 0, "RFC 4231 case 6: %s", h);
+	/* SHA-256 of "abc" and of a message that crosses the padding boundary (56 bytes) */
+	struct sha256 c;
+	sha256_init(&c); sha256_update(&c, "abc", 3); sha256_final(&c, mac); hex(mac, 32, h);
+	CHECK(strcmp(h, "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad") == 0, "SHA-256 abc: %s", h);
+	sha256_init(&c); sha256_update(&c, "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq", 56); sha256_final(&c, mac); hex(mac, 32, h);
+	CHECK(strcmp(h, "248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1") == 0, "SHA-256 56 bytes: %s", h);
+
+	/* the secret file: made 0600, read back the same */
+	char dir[] = "/tmp/lg-sec-XXXXXX";
+	CHECK(mkdtemp(dir) != NULL, "mkdtemp");
+	CHECK(rcp_log_secret_load(dir) == 0, "first call makes the secret");
+	uint8_t first[32];
+	memcpy(first, log_secret, 32);
+	char path[128];
+	snprintf(path, sizeof path, "%s/%s", dir, LOG_SECRET_FILE);
+	struct stat st;
+	CHECK(stat(path, &st) == 0 && st.st_size == 32 && (st.st_mode & 0777) == 0600, "file is 32 bytes, 0600 (mode %o)", (unsigned)(st.st_mode & 0777));
+	memset(log_secret, 0, 32);
+	CHECK(rcp_log_secret_load(dir) == 1 && memcmp(first, log_secret, 32) == 0, "second call reads the same secret");
+	chmod(path, 0644);
+	CHECK(rcp_log_secret_load(dir) == 0 && memcmp(first, log_secret, 32) != 0, "a secret readable by others is replaced");
+	CHECK(rcp_log_secret_load("/etc/passwd/nope") == -1, "cannot be kept: the secret of the run only");
+	unlink(path);
+	snprintf(path, sizeof path, "%s/%s.new", dir, LOG_SECRET_FILE);
+	unlink(path);
+	rmdir(dir);
+
+	/* the tags */
+	char t1[96], t2[96], t3[96];
+	CHECK(strcmp(log_user("root", t1, sizeof t1), "root") == 0, "a user of the machine is named");
+	const char *ghost = log_user("zzqq-nosuchuser", t1, sizeof t1);
+	CHECK(strncmp(ghost, "unknown user [", 14) == 0 && strlen(ghost) == 14 + 6 + 1 && ghost[strlen(ghost) - 1] == ']', "format: %s", ghost);
+	CHECK(strstr(ghost, "zzqq") == NULL, "no character of the name in clear");
+	log_user("zzqq-nosuchuser", t2, sizeof t2);
+	CHECK(strcmp(t1, t2) == 0, "same name, same tag");
+	log_user("zzqq-nosuchuser2", t3, sizeof t3);
+	CHECK(strcmp(t1, t3) != 0, "another name, another tag");
+	log_secret[0] ^= 0xff;
+	log_user("zzqq-nosuchuser", t3, sizeof t3);
+	CHECK(strcmp(t1, t3) != 0, "another secret, another tag");
+	/* ...and in the lines of the limiter */
+	fresh();
+	captured[0] = 0;
+	struct login_info info;
+	login_reserve("[1.2.3.4]", "hunter2-as-user", at(0), &info);
+	rcp_orphan_verdict("hunter2-as-user", "1.2.3.4", false, at(1), capture, NULL);
+	CHECK(strstr(captured, "hunter2") == NULL && strstr(captured, "unknown user [") != NULL, "the line of a failed attempt carries the tag, not the name:\n%s", captured);
+	captured[0] = 0;
+	login_reserve("[1.2.3.4]", "root", at(2), &info);
+	rcp_orphan_verdict("root", "1.2.3.4", false, at(3), capture, NULL);
+	CHECK(strstr(captured, "as root") != NULL, "a real user is named in the line:\n%s", captured);
+}
+
+int main(void)
+{
+	test_keys();
+	test_thresholds();
+	test_progression();
+	test_reset();
+	test_rotation();
+	test_in_flight();
+	test_orphan();
+	test_table();
+	test_unblock();
+	test_file();
+	test_log();
+	printf("\n%d checks, %d failed\n", checks, bad);
+	return bad ? 1 : 0;
+}
