@@ -8451,8 +8451,18 @@ int wt_stream_closed(wt *w, int64_t stream_id, uint64_t code, bool with_code)
 
 	if (!w->h3)
 		return 0;
-	if (with_code) {
-		int rv = nghttp3_conn_close_stream(w->h3, stream_id, code);
+	/* ⛔ 24 Oct 2026, audit nghttp3 1.18 (the same since 1.0): nghttp3 is told of EVERY closed
+	 *    stream, also of the one that closed cleanly (neither error-code flag
+	 *    of ngtcp2 set).  `nghttp3.h`: «`nghttp3_conn_close_stream` tells the
+	 *    library that a stream identified by |stream_id| has been closed».
+	 *    Before, only streams closed with a code were told: the others stayed
+	 *    in nghttp3 (stream object and QPACK state) until `nghttp3_conn_del`,
+	 *    and every closed client stream gives credit back (transport.c), so a
+	 *    client could grow the memory by opening and closing streams with FIN.
+	 *    No code means H3_NO_ERROR, as the ngtcp2 example server does. */
+	{
+		int rv = nghttp3_conn_close_stream(w->h3, stream_id,
+		                                   with_code ? code : NGHTTP3_H3_NO_ERROR);
 		if (rv != 0 && rv != NGHTTP3_ERR_STREAM_NOT_FOUND) {
 			log_says_of(REG_WT, wt_chi(w), "⛔ nghttp3_conn_close_stream: %s",
 			                 nghttp3_strerror(rv));
