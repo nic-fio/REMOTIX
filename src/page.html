@@ -3856,14 +3856,15 @@ class Viewer {
          already RGB when the shader sees it, and Chrome built the last visible
          row from 3/4 of chroma row 1031 + 1/4 of padding chroma row 1032
          (zero) ⇒ R −57, G +24, B −68 on every desktop.  Cure (b): only when
-         the browser uploaded MORE rows than visible, the bottom clamp moves one
+         the browser uploaded MORE rows than visible, or (cure (c), below) the
+         VideoFrame has coded rows under the visible ones, the bottom clamp moves one
          row up, so the last row repeats the row above (one row of detail lost
          at the bottom edge; columns and the Firefox path are untouched). */
       const fs = "#version 300 es\n"
         + "precision highp float; in vec2 uv; uniform sampler2D s;"
-        + " uniform vec2 vis; out vec4 c;"
+        + " uniform vec2 vis; uniform float trim; out vec4 c;"
         + " void main() { vec2 sz = vec2(textureSize(s, 0)); vec2 h = vec2(0.5) / sz;"
-        + " vec2 e = vec2(0.0, step(vis.y + 0.5, sz.y) / sz.y);"
+        + " vec2 e = vec2(0.0, max(step(vis.y + 0.5, sz.y), trim) / sz.y);"
         + " c = texture(s, clamp(uv * vis / sz, h, vis / sz - h - e)); }";
       const pr = gl.createProgram();
       for (const [t, src] of [[gl.VERTEX_SHADER, vs], [gl.FRAGMENT_SHADER, fs]]) {
@@ -3877,6 +3878,7 @@ class Viewer {
       }
       gl.useProgram(pr);
       this.gl_vis = gl.getUniformLocation(pr, "vis");
+      this.gl_trim = gl.getUniformLocation(pr, "trim");
       this.gl_tex = gl.createTexture();
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, this.gl_tex);
@@ -3965,6 +3967,12 @@ class Viewer {
     try {
       gl.viewport(0, 0, fl, fa);
       gl.uniform2f(this.gl_vis, fl, fa);   /* F-011: visible size, see the shader */
+      /* ⛔ 24 Oct 2026, F-011 cure (c): the test of cure (b) showed Chrome
+         uploading a texture of exactly the visible size, the last row ALREADY
+         tinted, so textureSize() cannot reveal the padding.  The VideoFrame
+         can: coded rows below the visible ones ⇒ trim the last row. */
+      gl.uniform1f(this.gl_trim,
+                   (vr && f.codedHeight > vr.y + vr.height) ? 1.0 : 0.0);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, f);
     } catch (e) {
       this.counts.bmp_failed++;
