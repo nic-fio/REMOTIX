@@ -345,9 +345,10 @@ static int case_root(const struct passwd *nb)
 		}
 		{
 			struct rlimit rl;
+			/* 128 since 16 Oct 2026 (the coordinator): every network side of the uid counts */
 			CC(getrlimit(RLIMIT_NPROC, &rl) == 0 && rl.rlim_cur == WALLS_NPROC_MAX
-			       && rl.rlim_max == WALLS_NPROC_MAX,
-			   "child: RLIMIT_NPROC %d (review 2, L1)", WALLS_NPROC_MAX);
+			       && rl.rlim_max == WALLS_NPROC_MAX && WALLS_NPROC_MAX == 128,
+			   "child: RLIMIT_NPROC %d (review 2, L1; 128 since 16 Oct 2026)", WALLS_NPROC_MAX);
 		}
 		fflush(stdout);
 		_exit(bad > 100 ? 100 : bad);

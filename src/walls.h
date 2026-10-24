@@ -24,7 +24,7 @@
  *   5. ⭐ review 3 (16 Oct 2026): the tree is also nosuid and nodev, mounts are
  *      SLAVES of the host's (an unmount there reaches here; nothing pinned),
  *      /dev is a read-only tmpfs with null, zero, full, random, urandom only,
- *      RLIMIT_NPROC 64, and a raw-BPF seccomp filter: no user namespace
+ *      RLIMIT_NPROC 128, and a raw-BPF seccomp filter: no user namespace
  *      (CLONE_NEWUSER ⇒ EPERM), `clone3` ⇒ ENOSYS (glibc falls back);
  *   6. ⭐ lane 4's network-side review (16 Oct 2026): the two writable
  *      directories are noexec, and the filter also refuses io_uring (ENOSYS),
@@ -60,7 +60,11 @@ int walls_apply(const struct rootside_options *o, char *why, size_t why_len);
 /* (also declared in rootside.h) What the last walls_apply() put in place (SELinux context or «off», the
  * folder, the limits), for ONE line the caller writes before the `execve`. */
 const char *walls_in_force(void);
-/* ⛔ RLIMIT_NPROC of the network user (review 2, L1): processes AND threads. */
-#define WALLS_NPROC_MAX 64
+/* ⛔ RLIMIT_NPROC of the network user (review 2, L1): processes AND threads.
+ * ⭐ 128 since 16 Oct 2026 (the coordinator, after lane 1's seccomp/walls review): it counts
+ *    EVERY network side of the uid, [M] 4 threads each on the boxes (main, pool-spawner, gmain,
+ *    gdbus) and GLib's pool can add ~14 — three servers on a box came near 64, and a failed
+ *    g_thread_new aborts: a restart loop.  128 still stops a fork bomb. */
+#define WALLS_NPROC_MAX 128
 
 #endif
