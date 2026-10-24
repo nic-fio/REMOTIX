@@ -34,6 +34,28 @@ func TestRollbackDropsTheNewNetUser(t *testing.T) {
 			t.Fatalf("commands: %q", calls)
 		}
 	})
+	for _, c := range []struct{ name, line string }{
+		{"an account with uid 0 stays", "remotix:x:0:0::/:/usr/sbin/nologin\n"},
+		{"an account with gid 0 stays", "remotix:x:990:0::/:/usr/sbin/nologin\n"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			root := t.TempDir()
+			prepareMachine(t, root)
+			env := fakeEnvironment(root)
+			var calls []string
+			env.Run = fakeAccountsRun(root, &calls)
+			appendTo(t, filepath.Join(root, "etc/passwd"), c.line)
+			if err := dropNewNetUser(&Context{Env: env, Purge: true}, true); err != nil {
+				t.Fatal(err)
+			}
+			if _, ok := ReadAccount(env, NetUser); !ok || len(calls) != 0 {
+				t.Fatalf("root's account was touched: %q", calls)
+			}
+			if _, planned := PlanRemoveSystemUser(env, "x"); planned {
+				t.Fatal("remove-system-user planned for an account with uid or gid 0")
+			}
+		})
+	}
 	t.Run("a person's account stays", func(t *testing.T) {
 		root := t.TempDir()
 		prepareMachine(t, root)
@@ -113,6 +135,8 @@ func TestPreflightNetUser(t *testing.T) {
 		{"absent", "", false},
 		{"system user", sysRemotix, false},
 		{"person by uid", "remotix:x:1005:1005::/:/usr/sbin/nologin\n", true},
+		{"root's by uid 0", "remotix:x:0:0::/:/usr/sbin/nologin\n", true},
+		{"root's group, gid 0", "remotix:x:990:0::/:/usr/sbin/nologin\n", true},
 		{"person by shell", "remotix:x:995:995::/:/bin/bash\n", true},
 		{"person by home", "remotix:x:995:995::/home/remotix:/usr/sbin/nologin\n", true},
 		// ⚠ an EMPTY shell field is /bin/sh (passwd(5)): a login account, a person's

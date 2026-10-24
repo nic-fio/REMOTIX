@@ -131,9 +131,14 @@ func personHome(a *Environment, h string) bool {
 	return err == nil && st.IsDir()
 }
 
-// PersonAccount: why the account is a person's and not a system user ("" = it is a system user).
+// PersonAccount: why the account is a person's (or root's) and not a system user ("" = it is a system user).
 func PersonAccount(a *Environment, u Account) string {
 	var why []string
+	// ⛔ An account called remotix with uid 0 or gid 0 is root's (or shares root's group): NOT ours — refused
+	//   (RX-NETUSER-001) and never userdel'd.  The caller must have found the account (a missing one reads as the zero Account).
+	if u.Uid == 0 || u.Gid == 0 {
+		why = append(why, fmt.Sprintf("uid %d gid %d: root's, never the network side's", u.Uid, u.Gid))
+	}
 	if u.Uid >= uidMin(a) && u.Uid < 60000 {
 		why = append(why, fmt.Sprintf("uid %d ≥ UID_MIN %d", u.Uid, uidMin(a)))
 	}
