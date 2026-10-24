@@ -55,6 +55,7 @@ func Preflight(a *Environment, o PreflightOptions) *ProfileV {
 	openssl(a, p, fam, pk)
 	logind(a, p)
 	groups(a, p)
+	netUser(a, p)
 	characters(a, p)
 	p.Sort()
 	return p

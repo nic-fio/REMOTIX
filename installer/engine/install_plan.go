@@ -200,20 +200,7 @@ func RunPackages(a *Environment, dir string) ([]string, error) {
 
 // People: the machine's human users (uid between UID_MIN and 60000, with a real shell).
 func People(a *Environment) []string {
-	min := 1000
-	for _, f := range []string{"/etc/login.defs", "/usr/etc/login.defs"} {
-		if t, ok := load(a, f); ok {
-			for _, r := range strings.Split(t, "\n") {
-				c := strings.Fields(r)
-				if len(c) == 2 && c[0] == "UID_MIN" {
-					if n, err := strconv.Atoi(c[1]); err == nil {
-						min = n
-					}
-				}
-			}
-			break
-		}
-	}
+	min := uidMin(a)
 	f, err := os.Open(a.P("/etc/passwd"))
 	if err != nil {
 		return nil

@@ -34,6 +34,12 @@ func PlatformChecks(a *Environment, port int) (k []CheckReport, cond []Condition
 	} else if p.Outcome == "UNKNOWN" {
 		cond = append(cond, Condition{Codice: "C-LIMITE", Testo: T("cond.pam_ignota", p.Detail)})
 	}
+	// DECISIONS §11.50: the network side's user, and net/ its own (network_side.go)
+	n := checkNetworkSide(a)
+	k = append(k, n)
+	if n.Outcome == "FAIL" {
+		has_failed = true
+	}
 	f, fc := checkPort(a, port)
 	k = append(k, f)
 	if fc != nil {
