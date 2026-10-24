@@ -700,8 +700,8 @@ struct birth_opts {
 	 *    no frame, takes no input or clipboard — it obeys only «end the
 	 *    session» and exits after it, or after `CLOSE_ONLY_LIFE_MS`.  Set by
 	 *    the ROOT SIDE for a birth without a password, never by the request.
-	 * ⚠ `parent_uid` and `close_only` are NOT yet written on the child's
-	 *   command line (phase D5: the child does not know them yet). */
+	 * ⚠ Written on the child's command line (phase D5) only when set; the
+	 *   single-process server sets neither (-1 and false), so nothing changes. */
 	bool close_only;
 };
 struct child_born {

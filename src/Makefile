@@ -568,7 +568,8 @@ helper.o:       helper.h log.h
 #    product only, like `helper.c`.
 child.o:         child.h log.h session.h capture.h mutter.h encoder.h \
                   input.h sentinel.h audio.h sound.h clipboard.h rediscover.h \
-                  render_grant.h render_node.h unchanged.h
+                  render_grant.h render_node.h unchanged.h \
+                  rootside.h rootside_proto.h
 
 # ⭐ THE FOUR OF PHASE 2.  ⚠ NONE is among the `GEMELLATI`: they belong to the PRODUCT
 #    only — in `benches/rcp/` they do not exist, because the graft into ngtcp2's
