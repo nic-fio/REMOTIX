@@ -175,7 +175,7 @@ static void *t_realloc(void *q, size_t n)
 #include <time.h>
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 104
+#define EXPECTED_CHECKS 110
 
 static void require(int cond, const char *desc)
 {
@@ -655,14 +655,22 @@ int main(void)
 	}
 
 	printf("6. 10 s later every idle connection is closed, with a RESET\n");
+	int n6;
 	{
 		uint64_t first = UINT64_MAX;
+		/* ⚠ Churners of section 4 parked for the accept rate (their peers
+		 *   already gone) would be started by page_expired() and close on
+		 *   their EOF: not what this section measures — dropped first. */
+		for (size_t i = 0; i < MAX_CLIENTS; i++)
+			if (client_active(&p->clients[i]) && p->clients[i].phase == F_RATE)
+				client_close(&p->clients[i]);
+		n6 = active(p);
 		for (size_t i = 0; i < MAX_CLIENTS; i++)
 			if (client_active(&p->clients[i]) && p->clients[i].born < first)
 				first = p->clients[i].born;
 		page_expired(p, first + PAGE_REQUEST_MS - 1);
 	}
-	require(active(p) == MAX_CLIENTS, "nobody closed 1 ms before the first deadline");
+	require(active(p) == n6 && n6 >= MAX_CLIENTS - 8, "nobody closed 1 ms before the first deadline");
 	page_expired(p, log_now_ms() + PAGE_REQUEST_MS + 1);
 	require(active(p) == 0, "all closed after the deadline");
 	{
@@ -1716,13 +1724,26 @@ int main(void)
 			 * (parked ones would be silent for another reason) */
 			rate_reset(p);
 			bare[nb++] = connect_from(port, src, 0);
-			if (send(bare[nb - 1], i % 2 ? "\x16" : "\x16\x03\x01\x00\x40", i % 2 ? 1 : 5, 0) < 0)
+			/* 1 byte, the start of a record, or (review of 38639d7d) the
+			 * 9-byte record 16 03 01 00 04 01 00 01 fc that takes OpenSSL
+			 * 3.5.7 out of TLS_ST_BEFORE without being a ClientHello */
+			static const char *const junk[] = {"\x16", "\x16\x03\x01\x00\x40",
+			                                   "\x16\x03\x01\x00\x04\x01\x00\x01\xfc"};
+			static const size_t njunk[] = {1, 5, 9};
+			if (send(bare[nb - 1], junk[i % 3], njunk[i % 3], 0) < 0)
 				owner_ok = 0;
 			pump(p, 1);
 		}
 		pump(p, 3);
-		require(owner_ok && active(p) == MAX_CLIENTS && client_of(p, "[127.0.3.1]") == 1,
-		        "the owner (a whole ClientHello, the oldest) + 127 connects sending 1 or 5 bytes fill the table");
+		{
+			int nspoke = 0;
+			for (size_t i = 0; i < MAX_CLIENTS; i++)
+				nspoke += client_active(&p->clients[i]) && p->clients[i].spoke;
+			printf("       (%d of %d say «spoke»)\n", nspoke, active(p));
+			require(owner_ok && active(p) == MAX_CLIENTS && client_of(p, "[127.0.3.1]") == 1 &&
+			                nspoke == 1,
+			        "the owner (a real handshake, the oldest) + 127 connects sending 1, 5 or the 9-byte record: only the owner «spoke»");
+		}
 		/* group sizes counted once: the same answer as one group_size() each */
 		group_sizes(p, sz);
 		for (size_t i = 0; i < MAX_CLIENTS; i++)
@@ -1740,13 +1761,13 @@ int main(void)
 			snprintf(src, sizeof src, "127.0.5.%d", i + 1);
 			rate_reset(p);
 			bare[nb++] = connect_from(port, src, 0);
-			if (send(bare[nb - 1], "\x16", 1, 0) < 0)
+			if (send(bare[nb - 1], "\x16\x03\x01\x00\x04\x01\x00\x01\xfc", 9, 0) < 0)
 				owner_ok = 0;
 			pump(p, 2);
 			owner_ok &= client_of(p, "[127.0.3.1]") == 1;
 		}
 		require(owner_ok && active(p) == MAX_CLIENTS,
-		        "30 more connects sending a byte: each evicts a SILENT one, never the owner (on 95ed70ea one byte counted as «spoke»)");
+		        "30 more connects sending the 9-byte record: each evicts a SILENT one, never the owner (on 38639d7d that record counted as «spoke»)");
 		require(sizes_ok, "group sizes counted once per eviction agree with one count per client");
 		page_expired(p, log_now_ms() + PAGE_REQUEST_MS + 1);
 		for (int i = 0; i < nb; i++)
@@ -1787,6 +1808,153 @@ int main(void)
 		require(p->tail_gz && fc.shared == p->tail_gz && head_has(&fc, "\r\nContent-Encoding: gzip\r\n"),
 		        "… and once the back-off has passed it is built and used");
 		client_close(&fc);
+	}
+
+	printf("21. review of 38639d7d: over the rate never evicts, parked FIFO and not first to go, a parked reset is closed\n");
+	rate_reset(p);
+	for (size_t i = 0; i < MAX_CLIENTS; i++)
+		if (client_active(&p->clients[i]))
+			client_close(&p->clients[i]);
+	{
+		static int fds21[MAX_CLIENTS + 8];
+		int n21 = 0, x, nk;
+		const char *who = NULL;
+		client *px = NULL;
+		uint64_t now = log_now_ms();
+
+		/* a) X over its rate parks FIRST (the oldest), then 127 silent
+		 *    in-rate connects fill the table */
+		while (rate_take(p, "[127.0.7.1]", NULL, now, &who))
+			;
+		x = connect_from(port, "127.0.7.1", 0);
+		pump(p, 2);
+		for (int i = 0; i < MAX_CLIENTS - 1; i++) {
+			snprintf(src, sizeof src, "127.0.8.%d", i + 1);
+			rate_reset(p);
+			fds21[n21++] = connect_from(port, src, 0);
+			pump(p, 1);
+		}
+		pump(p, 2);
+		for (size_t i = 0; i < MAX_CLIENTS; i++)
+			if (client_active(&p->clients[i]) && strcmp(p->clients[i].key, "[127.0.7.1]") == 0)
+				px = &p->clients[i];
+		require(px && px->phase == F_RATE && active(p) == MAX_CLIENTS,
+		        "a parked connection (the oldest) + 127 silent ones fill the table");
+		/* b) an arrival OVER its rate with the table full: refused, nobody evicted */
+		{
+			uint64_t before = p->refused_rate_total;
+			int y;
+			now = log_now_ms();
+			while (rate_take(p, "[127.0.9.1]", NULL, now, &who))
+				;
+			y = connect_from(port, "127.0.9.1", 0);
+			pump(p, 3);
+			require(p->refused_rate_total == before + 1 && client_of(p, "[127.0.9.1]") == 0 &&
+			                closed_by_server(y) && active(p) == MAX_CLIENTS &&
+			                client_of(p, "[127.0.7.1]") == 1,
+			        "over its rate with the table full: refused at accept, nobody evicted (on 38639d7d it evicted and parked)");
+			close(y);
+		}
+		/* c) an arrival WITHIN its rate evicts a silent one, not the parked
+		 *    one although it is the oldest */
+		{
+			int z;
+			rate_reset(p);
+			z = connect_from(port, "127.0.9.2", 0);
+			pump(p, 3);
+			require(client_of(p, "[127.0.9.2]") == 1 && client_of(p, "[127.0.7.1]") == 1 &&
+			                active(p) == MAX_CLIENTS,
+			        "an arrival within its rate evicts a SILENT one, never the parked (on 38639d7d: the parked, the oldest)");
+			fds21[n21++] = z;
+		}
+		/* d) the parked peer resets: closed at once (its descriptor would
+		 *    report POLLERR/POLLHUP at every poll) */
+		{
+			struct linger lg = {1, 0};
+			setsockopt(x, SOL_SOCKET, SO_LINGER, &lg, sizeof lg);
+			close(x);
+			pump(p, 3);
+			require(client_of(p, "[127.0.7.1]") == 0,
+			        "a parked connection whose peer resets is closed (on 38639d7d it stayed, and the loop spun)");
+		}
+		page_expired(p, log_now_ms() + PAGE_REQUEST_MS + 1);
+		for (int i = 0; i < n21; i++)
+			close(fds21[i]);
+		pump(p, 4);
+
+		/* e) FIFO: A parks before B, B in a LOWER slot, one shared token:
+		 *    A goes first */
+		{
+			int fc_, fa, fb;
+			client *ca = NULL, *cb = NULL;
+			rate_reset(p);
+			for (size_t i = 0; i < MAX_CLIENTS; i++)
+				if (client_active(&p->clients[i]))
+					client_close(&p->clients[i]);
+			fc_ = connect_from(port, "127.0.10.1", 0); /* C: a lower slot, TLS */
+			pump(p, 2);
+			now = log_now_ms();
+			for (int i = 0; i < PAGE_RATE_KEYS; i++) {
+				char k[32];
+				snprintf(k, sizeof k, "[10.9.%d.%d]", i / 250, i % 250);
+				rate_take(p, k, NULL, now, &who); /* every bucket in use */
+			}
+			while (rate_take(p, "[127.0.10.2]", NULL, now, &who))
+				; /* the shared overflow drained */
+			fa = connect_from(port, "127.0.10.2", 0);
+			pump(p, 2);
+			for (size_t i = 0; i < MAX_CLIENTS; i++)
+				if (client_active(&p->clients[i]) &&
+				    strcmp(p->clients[i].key, "[127.0.10.1]") == 0)
+					client_close(&p->clients[i]); /* C's slot, lower, freed */
+			fb = connect_from(port, "127.0.10.3", 0);
+			pump(p, 2);
+			nk = 0;
+			for (size_t i = 0; i < MAX_CLIENTS; i++) {
+				client *q = &p->clients[i];
+				if (!client_active(q))
+					continue;
+				if (strcmp(q->key, "[127.0.10.2]") == 0)
+					ca = q;
+				if (strcmp(q->key, "[127.0.10.3]") == 0)
+					cb = q;
+			}
+			nk = ca && cb && ca->phase == F_RATE && cb->phase == F_RATE && cb < ca;
+			p->rate_over.milli = 1000u; /* one token, shared */
+			p->rate_over.at = now;
+			page_expired(p, now);
+			require(nk && ca->phase == F_HANDSHAKE && cb->phase == F_RATE,
+			        "two parked on the shared bucket, the later in a lower slot: one token → the EARLIER goes (on 38639d7d: slot order)");
+			close(fc_);
+			close(fa);
+			close(fb);
+			for (size_t i = 0; i < MAX_CLIENTS; i++)
+				if (client_active(&p->clients[i]))
+					client_close(&p->clients[i]);
+			rate_reset(p);
+		}
+		/* f) the 503 blames the address only when ITS bucket refused */
+		{
+			static client f5;
+			const char *bodies[2] = {NULL, NULL};
+			for (int sh = 0; sh < 2; sh++) {
+				memset(&f5, 0, sizeof f5);
+				f5.fd = -1;
+				f5.phase = F_READ;
+				f5.busy = true;
+				f5.busy_shared = sh;
+				snprintf(f5.provenance, sizeof f5.provenance, "[127.0.0.85]:40000");
+				f5.nrequest = (size_t)snprintf(f5.request, sizeof f5.request,
+				                               "GET /fingerprint HTTP/1.1\r\nHost: t\r\n\r\n");
+				serve(p, &f5);
+				bodies[sh] = f5.head && memmem(f5.head, f5.nhead, "from this address", 17)
+				             ? "address" : f5.head && memmem(f5.head, f5.nhead, "right now", 9)
+				             ? "shared" : "?";
+				client_close(&f5);
+			}
+			require(strcmp(bodies[0], "address") == 0 && strcmp(bodies[1], "shared") == 0,
+			        "the 503 says «from this address» only when that address's bucket refused");
+		}
 	}
 
 	rcp_unblock("127.0.0.50", log_now_ms());
