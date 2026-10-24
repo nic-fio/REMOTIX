@@ -1736,3 +1736,79 @@ behaviour (`pam_faillock(8)`, `faillock.conf(5)`); ⚠ **not run live** — `[?]
 - **At most 8 users** per machine, or the highest number that still works well.
 - ⚠ Recorded after 1.5 was declared a failure (`FAILURE.md`).
 
+
+### 11.52 🔸 The fuzz and the ngtcp2 / nghttp3 audit of 24 Oct 2026: 15 fixes, all «present since 1.0» — waiting for the user's OK
+
+- **Status of the whole section: «in attesa dell'OK dell'utente».** Nothing below is in the product. The fixes live on
+  separate branches, stacked: `pacing-su-migrazione` (A), `audit-ngtcp2` (B), `audit-nghttp3` (C), and gathered on the
+  integration branch `audit-tutto` (merges of B and C; tip `3c0fa624` when this was written). None of these defects is a
+  regression of 1.5: all are in 1.0. What has been done so far: the product builds (`make -j2 BENCH=1`, no new
+  warning), the `quic-conn` fuzz harness builds, `page.html` passes the JS check. **Not yet done:** the 30-minute fuzz
+  on `audit-tutto`, the stream-churn bench, the functional A/B, the `pacing-ab` micro-bench. A fix whose test is not
+  green stays out and is reported.
+- **How the defects were found.** The `quic-conn` fuzz harness (§11.13, `benches/fuzz/quic-conn`, the real
+  `src/transport.c` over a played ngtcp2) got a *pacing oracle*; it reported the first defect (A). Then the ngtcp2 1.25
+  and nghttp3 1.18 headers were read call by call against `transport.c` and `webtransport.c` («the documentation says X,
+  we do Y»): B and C.
+
+#### A. Pacing bypassed (`643e9a40`, `3a6d128c`)
+- **Cause:** `write_connection` passed a 64 KB buffer to `ngtcp2_conn_write_aggregate_pkt2` with `num_pkts = 0`. The doc:
+  *«It also does not clamp |buflen|, and does not call `ngtcp2_conn_update_pkt_tx_time`»* (the non-`2` variant clamps to
+  the send quantum). One call could put ~45 full packets on the wire at once, past ngtcp2's pacing.
+- **Fix:** `buflen` = the send quantum, never less than one full packet (`get_max_tx_udp_payload_size2`, the floor the
+  doc of `write_aggregate_pkt` asks for); and the loop timeout is rounded UP, so the loop no longer spins on `poll(0)`
+  before a pacing deadline.
+- **Verified by:** the fuzz pacing oracle (red before, green after). **To do:** `limiti-prove/pacing-ab.sh` (before/after:
+  throughput, latency of small messages, packets per burst, losses at a `tbf` bottleneck; on loopback the burst phase
+  will probably be «in the noise», the loss phase is the one that counts) and the A/B on smoothness. This is the fix
+  with the most risk of performance effects: it goes in last.
+
+#### B. ngtcp2 audit (`audit-ngtcp2`, 7 fixes)
+- **B1 `d624d875`+`0cc6df15`:** `NGTCP2_ERR_DROP_CONN` from `read_pkt` — doc: *«Server application must drop the
+  connection silently (without sending any CONNECTION_CLOSE frame)»*. We answered with one (a reflection towards a
+  forged source). Now dropped silently, and a connection already marked dead is no longer read (a second packet of the
+  same burst would have reached `read_pkt`). Risk: medium.
+- **B2 `5cb76986`:** `NGTCP2_ERR_CRYPTO` — a failed handshake was closed with NO_ERROR; now CRYPTO_ERROR + the TLS alert
+  (`ngtcp2_conn_get_tls_alert2`). Low.
+- **B3 `94c1f5ac`:** `handle_expiry` errors other than `IDLE_CLOSE` — doc: *«close the connection by sending the terminal
+  packet produced by `ngtcp2_conn_write_connection_close`»*; we only marked it dead and the client waited for its own idle
+  timeout. Low/medium.
+- **B4 `cbe7d0cd`:** `SSL_set_app_data(ssl, NULL)` before `ngtcp2_conn_del` — doc of
+  `ngtcp2_crypto_ossl_configure_server_session`. The ssl's app data kept a `get_conn` returning a freed conn. Low/medium.
+- **B5 `d935abcf`:** the calls deprecated in 1.23.0 → their «2» versions (`is_local_stream`, `get_conn_info`,
+  `get_pto`, `get_cwnd_left`, `get_send_quantum`, `get_remote_transport_params`; `transport.c` and `webtransport.c`).
+  Same behaviour; maintenance. Only `settings.log_printf = NULL` (a deprecated field) is left, harmless.
+- **B6 `8171e6c1`:** a code already written in `last_error` (the H3 code `webtransport.c` sets before a
+  `CALLBACK_FAILURE`) is no longer overwritten when closing after a failed read or an expired timer.
+- **Not done, on purpose:** (a) the `stream_open` / stream-credit question of `cb_stream_close` (needs a measurement:
+  the doc says ngtcp2 extends by itself in one case, the 2 Oct 2026 measurement says it does not); (b) `handshake_timeout`
+  stays at ngtcp2's default (no limit) — needs a decision; the 90 s limit of §11.40 covers the never-logged-in.
+- **Verified by:** builds; fuzz stubs updated (`is_local_stream2`, `get_conn_info2`, `tls_alert2`, `ccerr_set_tls_alert`).
+
+#### C. nghttp3 audit (`audit-nghttp3`, 7 valid fixes; C3 was NOT a defect)
+- **C1 `672c9d42`:** `nghttp3_conn_close_stream` is called for every closed stream (H3_NO_ERROR when ngtcp2 gives no
+  code); before, a stream closed without a code was never released: memory grew with every stream. Medium.
+- **C2 `e7c469f1`:** the results of `nghttp3_conn_shutdown_stream_read` and `nghttp3_conn_unblock_stream` were ignored;
+  now an application error + callback failure. Low.
+- **C3 (no commit; `513b3b21` then `fb0c6cd6`):** the client's STOP_SENDING. The first judgment («it shuts the read side
+  by mistake») was WRONG: `513b3b21` changed the side, `fb0c6cd6` restored the original behaviour (the read side through
+  `h3_shutdown_read`) and corrected the comment. Not a defect; recorded so nobody re-opens it.
+- **C4 `86af9276`:** `NGTCP2_ERR_STREAM_NOT_FOUND` from `writev_stream` is handled like `STREAM_SHUT_WR`, not as a
+  connection error. Low.
+- **C5 `b6e3c5c1`:** `cb_rand` uses `getrandom()`, not `rand()`. Low.
+- **C6 `f395aff5`:** a second CONNECT+webtransport while a session exists is refused with 429; before it renewed the 5 s
+  `channel_deadline` of the first. Low.
+- **C7 `515c2e7a`, `4923f68d` (new):** every closed stream left ~40 bytes in a list never emptied, and `judgment_find`
+  scanned it at every packet — the cost grew with the streams opened in the connection's life (a slowdown, not only
+  memory). The judgment of a closed stream is now released; `dispatch` / `dispatch_uni` take the prefix bytes out of the
+  judgment BEFORE the rcp calls, so closing the stream inside them cannot free what is read next. Medium.
+- **To do:** a stream-churn bench (open/close repeatedly: 1.0 vs before vs after), the WebTransport functional suite.
+
+#### D. The fuzz harnesses
+- **`quic-conn`** (on `audit-tutto`; `benches/fuzz/quic-conn`): besides the pacing oracle of A, the commits `6afde242` and
+  `66d96d37` exercise the error paths of `transport.c` with forced `read_pkt` / `handle_expiry` errors, the TLS alert and
+  the H3 code, with oracles: no read or write after DROP_CONN, one CONNECTION_CLOSE after an expiry error, the H3 code in
+  `last_error` kept; a forced RETRY after the handshake becomes PROTO, as in the script.
+- **`rcp-msg`** (branch `fuzz-rcp`, commits `a63cd356`, `fd02e3a4`, `c1b453b3`; NOT in `audit-tutto`): libFuzzer +
+  ASan/UBSan on the messages the server receives from the browser (`src/rcp.c`: control, input, clipboard), with hooks
+  that fail on purpose (`ask_verify`, `video_write`, `input`, `recanvas`, `layout`, `clipboard_write/offer`). Runs: to do.
