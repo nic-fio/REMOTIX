@@ -367,9 +367,13 @@ install -D -m 0644 packaging/rpm/selinux/remotix_portcon.cil %{buildroot}%{_data
 # The files the service generates by itself: declared %%ghost, so rpm knows them
 # and uninstallation removes them (DIRECT origin, §6.6.4).  `[M]` T3 on
 # Tumbleweed: without the two `.ours` (the marks of `certificates.c:317,320`)
-# /var/lib/remotix remained after `zypper remove`.
+# /var/lib/remotix remained after `zypper remove`.  ⭐ 1.5: `quic-secret` too (the QUIC
+# Retry/Stateless-Reset secret, written at every start by transport_keep_secret(),
+# transport.c) and `log-secret` (the key of the log tags of unknown user names, made by
+# rcp.c next to it, 0600): `[M]` T10 on 15 Oct 2026 fedora44/alma10/tumbleweed/leap16 found
+# quic-secret left behind, with certificates/ and /var/lib/remotix, after `uninstall --purge`.
 install -d -m 0700 %{buildroot}%{_sharedstatedir}/remotix/certificates
-for f in page.pem page.key page.ours session.pem session.key session.ours; do
+for f in page.pem page.key page.ours session.pem session.key session.ours quic-secret log-secret; do
     touch %{buildroot}%{_sharedstatedir}/remotix/certificates/$f
 done
 touch %{buildroot}%{_sharedstatedir}/remotix/ban %{buildroot}%{_sharedstatedir}/remotix/ban.new
@@ -459,6 +463,8 @@ fi
 %ghost %attr(0600,root,root) %{_sharedstatedir}/remotix/certificates/session.key
 %ghost %attr(0644,root,root) %{_sharedstatedir}/remotix/certificates/page.ours
 %ghost %attr(0644,root,root) %{_sharedstatedir}/remotix/certificates/session.ours
+%ghost %attr(0600,root,root) %{_sharedstatedir}/remotix/certificates/quic-secret
+%ghost %attr(0600,root,root) %{_sharedstatedir}/remotix/certificates/log-secret
 %ghost %attr(0600,root,root) %{_sharedstatedir}/remotix/ban
 %ghost %attr(0600,root,root) %{_sharedstatedir}/remotix/ban.new
 

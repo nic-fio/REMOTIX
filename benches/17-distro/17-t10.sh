@@ -248,14 +248,17 @@ impronta dopo
 diff "$E/impronta-prima.txt" "$E/impronta-dopo.txt" >"$E/diff-R6.txt"
 # R6: the DIRECT REMOTIX lines left; the groups of «prova» as before (R33); the rest (caches,
 # folder times, gpasswd copies) is read in the diff and stated.
-# ⛔ `/var/lib/remotix` excluded (the engine's HISTORY: the `plans`/`operations` folder of the uninstall
-#    operation IN PROGRESS cannot be removed while it runs — expected DIRECT leftover, as in T5,
-#    §13.1 line 56c93d3; `--purge` removes the rest). A remotix leftover OUTSIDE of there is a real red.
+# ⛔ Only the engine's HISTORY under `/var/lib/remotix` is excused (`operations`/`plans`: the folder of
+#    the uninstall operation IN PROGRESS, as in T5, §13.1 line 56c93d3). ⚠ 15 Oct 2026: until then the
+#    WHOLE of `/var/lib/remotix` was excused, and that hid a real leftover on every rpm machine
+#    (certificates/quic-secret, with certificates/ and /var/lib/remotix: not %ghost in remotix.spec);
+#    with `--purge` the debian/ubuntu/arch rounds left nothing there at all.
 #    `~/.local/state/remotix/session.log` is NO longer an exception (user's decision, 1 Oct 2026):
 #    the engine removes it, and it is checked above (registri-prima/after) — the homes are not in the fingerprint.
-grep -E '^[<>]' "$E/diff-R6.txt" | grep -i 'remotix' | grep -vE 'journal|/var/cache|/var/log|/var/lib/remotix' >"$E/diff-R6-remotix.txt"
+HISTORY='/var/lib/remotix/(operations|plans)(/| |$)'
+grep -E '^[<>]' "$E/diff-R6.txt" | grep -i 'remotix' | grep -vE "journal|/var/cache|/var/log|$HISTORY" >"$E/diff-R6-remotix.txt"
 # the DOCUMENTED leftover (the engine's history): stated, not red
-grep -E '^[<>]' "$E/diff-R6.txt" | grep -iE '/var/lib/remotix' >"$E/diff-R6-attesi.txt" || true
+grep -E '^[<>]' "$E/diff-R6.txt" | grep -E "$HISTORY" >"$E/diff-R6-attesi.txt" || true
 G1=$(sed 's/.*groups=//' "$E/gruppi-prima.txt"); G2=$(grep '^uid=' "$E/dopo.txt" | sed 's/.*groups=//')
 say "   R6: $(grep -c '^[<>]' "$E/diff-R6.txt") different lines, of which $(wc -l <"$E/diff-R6-remotix.txt") remotix leftovers NOT expected, $(wc -l <"$E/diff-R6-attesi.txt") expected (engine's history); groups of prova before «$G1» after «$G2»"
 a=$(grep 'R43 ssh clock' "$E/dopo.txt" | sed 's/.*: //'); a1=${a%% →*}; a2=${a##*→ }
