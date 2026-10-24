@@ -252,11 +252,12 @@ int main(void)
 			 * and the bidi overrides (U+202E, U+2066) are `?` too */
 			at = lseek(fd, 0, SEEK_END);
 			registro_dice(LOG_PAGE, "X%sY", "a\x7f" "b\xc2\x85" "c\xc2\x9b" "d\xe2\x80\xae"
-			              "e\xe2\x81\xa6" "f\xe2\x80\xa9" "g\xc2\xa0" "h");
+			              "e\xe2\x81\xa6" "f\xe2\x80\xa9" "g\xc2\xa0" "h\xe2\x80\xa8"
+			              "i\xe2\x80\x8e" "j\xe2\x80\x8f" "k\xd8\x9c" "l\xe2\x80\x8d" "m");
 			n = pread(fd, buf, sizeof buf - 1, at);
 			buf[n > 0 ? n : 0] = '\0';
-			require(n > 0 && strstr(buf, "Xa?b?c?d?e?f\xe2\x80\xa9g\xc2\xa0hY\n"),
-			        "L6 DEL, C1 controls (U+0080–U+009F) and bidi overrides become `?`; other UTF-8 stays");
+			require(n > 0 && strstr(buf, "Xa?b?c?d?e?f?g\xc2\xa0h?i?j?k?l\xe2\x80\x8dmY\n"),
+			        "L6 DEL, C1 controls, bidi overrides and marks (U+200E/F, U+061C), U+2028/9 become `?`; other UTF-8 (U+00A0, U+200D) stays");
 		}
 		unlink(path);
 	}
