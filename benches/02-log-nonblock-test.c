@@ -248,16 +248,20 @@ int main(void)
 			require(n > 0 && lines == 1 && buf[n - 1] == '\n' &&
 			                strstr(buf, "GET /?14:00:00.000 rcp     [owner] ⭐ ADMITTED???[2J from x ⭐\n"),
 			        "L6 a newline, CR, tab and ESC in a value: ONE line, each byte a `?`, UTF-8 kept");
-			/* review of 95ed70ea: DEL, a C1 control as UTF-8 (U+0085, U+009B)
-			 * and the bidi overrides (U+202E, U+2066) are `?` too */
+			/* reviews of 95ed70ea, 38639d7d, fc76de93: DEL, C1 controls as
+			 * UTF-8 (U+0085, U+009B) and as lone raw bytes (0x85), the bidi
+			 * controls and marks (U+202E, U+2066, U+200E, U+200F, U+061C),
+			 * U+2028/9, U+2060–U+2064 and U+FEFF are `?`; other UTF-8
+			 * (U+00A0, U+200D, é) and a lone non-C1 byte (0xA0) stay */
 			at = lseek(fd, 0, SEEK_END);
 			registro_dice(LOG_PAGE, "X%sY", "a\x7f" "b\xc2\x85" "c\xc2\x9b" "d\xe2\x80\xae"
 			              "e\xe2\x81\xa6" "f\xe2\x80\xa9" "g\xc2\xa0" "h\xe2\x80\xa8"
-			              "i\xe2\x80\x8e" "j\xe2\x80\x8f" "k\xd8\x9c" "l\xe2\x80\x8d" "m");
+			              "i\xe2\x80\x8e" "j\xe2\x80\x8f" "k\xd8\x9c" "l\xe2\x80\x8d" "m"
+			              "\xef\xbb\xbf" "n\xe2\x81\xa0" "o\xe2\x81\xa4" "p\x85" "q\xa0" "r\xc3\xa9");
 			n = pread(fd, buf, sizeof buf - 1, at);
 			buf[n > 0 ? n : 0] = '\0';
-			require(n > 0 && strstr(buf, "Xa?b?c?d?e?f?g\xc2\xa0h?i?j?k?l\xe2\x80\x8dmY\n"),
-			        "L6 DEL, C1 controls, bidi overrides and marks (U+200E/F, U+061C), U+2028/9 become `?`; other UTF-8 (U+00A0, U+200D) stays");
+			require(n > 0 && strstr(buf, "Xa?b?c?d?e?f?g\xc2\xa0h?i?j?k?l\xe2\x80\x8dm?n?o?p?q\xa0r\xc3\xa9Y\n"),
+			        "L6 DEL, C1 (UTF-8 and lone bytes), bidi controls and marks, U+2028/9, U+2060–4, U+FEFF become `?`; other UTF-8 stays");
 		}
 		unlink(path);
 	}
