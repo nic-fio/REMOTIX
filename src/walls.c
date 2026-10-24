@@ -46,6 +46,7 @@
 #include <linux/audit.h>
 #include <linux/filter.h>
 #include <linux/seccomp.h>
+#include <sys/ioctl.h>   /* TIOCSTI, TIOCLINUX */
 
 /* ⚠ `mount_setattr()` (Linux 5.12) is called by number: glibc has its wrapper
  *   only since 2.36, and the struct under our own name so that a glibc that
@@ -364,6 +365,30 @@ out:
 	return rc;
 }
 
+/* ⛔ Lane 4's network-side review (16 Oct 2026): the kernel interfaces an
+ *    unprivileged process still reaches and the network side never uses — the
+ *    usual stepping stones of a local kernel exploit from a hijacked, internet-
+ *    facing process.  Refused whatever the distribution's sysctls say
+ *    (kernel.io_uring_disabled, vm.unprivileged_userfaultfd,
+ *    kernel.perf_event_paranoid, kernel.unprivileged_bpf_disabled differ):
+ *      · io_uring ⇒ ENOSYS (a library that tries it falls back to read/write);
+ *      · userfaultfd, perf_event_open, bpf, the key syscalls, ptrace ⇒ EPERM;
+ *      · ioctl TIOCSTI / TIOCLINUX ⇒ EPERM: fds 0-2 are the root side's, and
+ *        started by hand from a root shell they are ITS terminal — TIOCSTI
+ *        would type commands into it. */
+#ifndef __NR_io_uring_setup
+#define __NR_io_uring_setup 425
+#endif
+#ifndef __NR_io_uring_enter
+#define __NR_io_uring_enter 426
+#endif
+#ifndef __NR_io_uring_register
+#define __NR_io_uring_register 427
+#endif
+#define WALLS_DENY(nr, err)                                        \
+	BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, (nr), 0, 1),            \
+	BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ERRNO | (err))
+
 static int no_user_namespaces(char *why, size_t n)
 {
 #ifndef WALLS_AUDIT_ARCH
@@ -380,6 +405,23 @@ static int no_user_namespaces(char *why, size_t n)
 		BPF_JUMP(BPF_JMP | BPF_JGE | BPF_K, 0x40000000u, 0, 1),
 		BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ERRNO | EPERM),
 #endif
+		WALLS_DENY(__NR_io_uring_setup, ENOSYS),
+		WALLS_DENY(__NR_io_uring_enter, ENOSYS),
+		WALLS_DENY(__NR_io_uring_register, ENOSYS),
+		WALLS_DENY(__NR_userfaultfd, EPERM),
+		WALLS_DENY(__NR_perf_event_open, EPERM),
+		WALLS_DENY(__NR_bpf, EPERM),
+		WALLS_DENY(__NR_keyctl, EPERM),
+		WALLS_DENY(__NR_add_key, EPERM),
+		WALLS_DENY(__NR_request_key, EPERM),
+		WALLS_DENY(__NR_ptrace, EPERM),
+		/* ioctl: the request is an unsigned int in the kernel — its low word is all of it */
+		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_ioctl, 0, 5),
+		BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, args[1])),
+		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, TIOCSTI, 1, 0),
+		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, TIOCLINUX, 0, 1),
+		BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ERRNO | EPERM),
+		BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
 		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_clone3, 0, 1),
 		BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ERRNO | ENOSYS),
 		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_unshare, 1, 0),
@@ -462,10 +504,12 @@ int walls_apply(const struct rootside_options *o, char *why, size_t why_len)
 		return say(why, why_len, "mount_setattr(/, AT_RECURSIVE, RDONLY|NOSUID|NODEV) failed (%s)%s",
 		           strerror(errno),
 		           errno == ENOSYS ? ": the kernel is older than 5.12" : "");
-	if (set_attr(o->net_state_dir, 0, 0, WALLS_ATTR_RDONLY) != 0)
+	/* ⛔ Lane 4's network-side review: writable, but noexec — what a hijacked
+	 *    network side writes there it cannot run (it never runs anything). */
+	if (set_attr(o->net_state_dir, 0, WALLS_ATTR_NOEXEC, WALLS_ATTR_RDONLY) != 0)
 		return say(why, why_len, "making %s writable again failed (%s)",
 		           o->net_state_dir, strerror(errno));
-	if (set_attr(o->net_run_dir, 0, 0, WALLS_ATTR_RDONLY) != 0)
+	if (set_attr(o->net_run_dir, 0, WALLS_ATTR_NOEXEC, WALLS_ATTR_RDONLY) != 0)
 		return say(why, why_len, "making %s writable again failed (%s)",
 		           o->net_run_dir, strerror(errno));
 	if (mount("tmpfs", "/tmp", "tmpfs", MS_NOSUID | MS_NODEV | MS_NOEXEC,
@@ -544,6 +588,7 @@ int walls_apply(const struct rootside_options *o, char *why, size_t why_len)
 		return -1;
 	note("tree read-only, nosuid, nodev but %s and %s; private /tmp and /dev; uid/gid %ld/%ld, "
 	     "no groups, no capabilities, no_new_privs; RLIMIT_NPROC %d; seccomp: no user "
-	     "namespaces", o->net_state_dir, o->net_run_dir, (long)uid, (long)gid, WALLS_NPROC_MAX);
+	     "namespaces, no io_uring/userfaultfd/perf/bpf/keys/ptrace/TIOCSTI", o->net_state_dir,
+	     o->net_run_dir, (long)uid, (long)gid, WALLS_NPROC_MAX);
 	return 0;
 }

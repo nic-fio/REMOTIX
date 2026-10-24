@@ -222,6 +222,23 @@ static int case_root(const struct passwd *nb)
 		   err ? strerror(err) : "yes");
 		CC(write_in(run, &err), "child: the run dir is writable (%s)",
 		   err ? strerror(err) : "yes");
+		/* lane 4's network-side review: what it writes it cannot execute */
+		{
+			char prog[4200];
+			int pf;
+			snprintf(prog, sizeof prog, "%s/x.sh", state);
+			pf = open(prog, O_CREAT | O_TRUNC | O_WRONLY | O_CLOEXEC, 0755);
+			if (pf >= 0) {
+				(void)!write(pf, "#!/bin/sh\nexit 0\n", 17);
+				close(pf);
+			}
+			errno = 0;
+			char *const av[] = { prog, NULL };
+			CC(pf >= 0 && execve(prog, av, environ) == -1 && errno == EACCES,
+			   "child: a program written in the state dir does not execute (noexec: %s)",
+			   strerror(errno));
+			unlink(prog);
+		}
 		CC(write_in("/tmp", &err), "child: /tmp is writable (%s)",
 		   err ? strerror(err) : "yes");
 		CC(access(marker, F_OK) != 0, "child: /tmp is private (the host's marker is not there)");
@@ -264,6 +281,42 @@ static int case_root(const struct passwd *nb)
 			errno = 0;
 			CC(syscall(__NR_clone3, NULL, 0) == -1 && errno == ENOSYS,
 			   "child: clone3 says ENOSYS (glibc falls back to clone)");
+			/* lane 4's network-side review: the kernel interfaces it never uses */
+			errno = 0;
+			CC(syscall(__NR_io_uring_setup, 1, NULL) == -1 && errno == ENOSYS,
+			   "child: io_uring_setup says ENOSYS (%s)", strerror(errno));
+			errno = 0;
+			CC(syscall(__NR_userfaultfd, 0) == -1 && errno == EPERM,
+			   "child: userfaultfd refused (%s)", strerror(errno));
+			errno = 0;
+			CC(syscall(__NR_perf_event_open, NULL, 0, -1, -1, 0) == -1 && errno == EPERM,
+			   "child: perf_event_open refused (%s)", strerror(errno));
+			errno = 0;
+			CC(syscall(__NR_bpf, 0, NULL, 0) == -1 && errno == EPERM,
+			   "child: bpf refused (%s)", strerror(errno));
+			errno = 0;
+			CC(syscall(__NR_keyctl, 0, 0, 0, 0, 0) == -1 && errno == EPERM,
+			   "child: keyctl refused (%s)", strerror(errno));
+			errno = 0;
+			CC(syscall(__NR_add_key, "user", "x", "y", 1, 0) == -1 && errno == EPERM,
+			   "child: add_key refused (%s)", strerror(errno));
+			errno = 0;
+			CC(syscall(__NR_ptrace, 0 /* PTRACE_TRACEME */, 0, 0, 0) == -1 && errno == EPERM,
+			   "child: ptrace refused (%s)", strerror(errno));
+			{
+				char ch = 'x';
+				int nf = open("/dev/null", O_RDWR);
+				/* on /dev/null the kernel would say ENOTTY: EPERM is the filter's */
+				errno = 0;
+				CC(nf >= 0 && ioctl(nf, TIOCSTI, &ch) == -1 && errno == EPERM,
+				   "child: ioctl TIOCSTI refused by the filter (%s)", strerror(errno));
+				errno = 0;
+				CC(nf >= 0 && (ioctl(nf, FIONREAD, &ch) == 0 || errno != EPERM),
+				   "child: another ioctl still reaches the kernel (FIONREAD on /dev/null: %s, not EPERM)",
+				   strerror(errno));
+				if (nf >= 0)
+					close(nf);
+			}
 			errno = 0;
 			pid_t t = fork();
 			if (t == 0)

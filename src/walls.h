@@ -25,7 +25,11 @@
  *      SLAVES of the host's (an unmount there reaches here; nothing pinned),
  *      /dev is a read-only tmpfs with null, zero, full, random, urandom only,
  *      RLIMIT_NPROC 64, and a raw-BPF seccomp filter: no user namespace
- *      (CLONE_NEWUSER ⇒ EPERM), `clone3` ⇒ ENOSYS (glibc falls back).
+ *      (CLONE_NEWUSER ⇒ EPERM), `clone3` ⇒ ENOSYS (glibc falls back);
+ *   6. ⭐ lane 4's network-side review (16 Oct 2026): the two writable
+ *      directories are noexec, and the filter also refuses io_uring (ENOSYS),
+ *      userfaultfd, perf_event_open, bpf, keyctl/add_key/request_key, ptrace
+ *      and ioctl TIOCSTI/TIOCLINUX (EPERM) — none used by the network side.
  *
  * ⛔ Any step that fails ⇒ -1 and the reason in `why`: the root side does NOT
  *    start the network side.  A network side without its walls is the 1.0
