@@ -53,6 +53,9 @@
  * wall and why.  Uses `o->remotix_uid`/`remotix_gid`, `o->net_state_dir`,
  * `o->net_run_dir` (the last two added by lane 2 to lane 1's struct). */
 int walls_apply(const struct rootside_options *o, char *why, size_t why_len);
+/* (also declared in rootside.h) What the last walls_apply() put in place (SELinux context or «off», the
+ * folder, the limits), for ONE line the caller writes before the `execve`. */
+const char *walls_in_force(void);
 /* ⛔ RLIMIT_NPROC of the network user (review 2, L1): processes AND threads. */
 #define WALLS_NPROC_MAX 64
 

@@ -101,6 +101,32 @@ static int say(char *why, size_t n, const char *fmt, ...)
 	return -1;
 }
 
+/* ⭐ Review 4 B, findings 5 and 6: what the walls ARE, said once.  The walls
+ *    run in the fork, where this file writes no log (no GLib, nothing that
+ *    outlives the call): they write here, and the root side writes ONE line
+ *    with it before the `execve` (`walls_in_force()`). */
+static char notes[640];
+
+static void note(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+static void note(const char *fmt, ...)
+{
+	size_t used = strlen(notes);
+	va_list ap;
+
+	if (used + 2 >= sizeof notes)
+		return;
+	if (used)
+		notes[used++] = ';', notes[used++] = ' ', notes[used] = '\0';
+	va_start(ap, fmt);
+	vsnprintf(notes + used, sizeof notes - used, fmt, ap);
+	va_end(ap);
+}
+
+const char *walls_in_force(void)
+{
+	return notes;
+}
+
 static int set_attr(const char *path, unsigned int flags, uint64_t set, uint64_t clr)
 {
 	struct walls_mount_attr a;
@@ -143,6 +169,7 @@ static int selinux_exec_net(char *why, size_t n)
 			return say(why, n, "SELinux is on (/sys/fs/selinux) but libselinux.so.1 "
 			           "does not open (%s): the network side cannot be put in %s",
 			           dlerror(), WALLS_SELINUX_TYPE);
+		note("SELinux: off (no libselinux, no /sys/fs/selinux)");
 		return 0;
 	}
 	int (*enabled)(void) = (int (*)(void))dlsym(l, "is_selinux_enabled");
@@ -157,6 +184,7 @@ static int selinux_exec_net(char *why, size_t n)
 		goto out;
 	}
 	if (enabled() != 1) {
+		note("SELinux: off (is_selinux_enabled)");
 		rc = 0;
 		goto out;
 	}
@@ -178,6 +206,7 @@ static int selinux_exec_net(char *why, size_t n)
 		say(why, n, "SELinux: setexeccon(«%s») refused (%s)", fresh, strerror(errno));
 		goto out;
 	}
+	note("SELinux: born %s", fresh);
 	rc = 0;
 out:
 	if (cur)
@@ -381,6 +410,7 @@ int walls_apply(const struct rootside_options *o, char *why, size_t why_len)
 
 	if (why && why_len)
 		why[0] = '\0';
+	notes[0] = '\0';
 	if (!o)
 		return say(why, why_len, "no options");
 
@@ -403,8 +433,10 @@ int walls_apply(const struct rootside_options *o, char *why, size_t why_len)
 		return -1;
 
 	/* ⛔ 3 — the read-only tree. */
-	if (!getcwd(cwd, sizeof cwd))
+	if (!getcwd(cwd, sizeof cwd)) {
+		note("⚠ the root side's folder is unknown (getcwd: %s)", strerror(errno));
 		cwd[0] = '\0';
+	}
 	if (unshare(CLONE_NEWNS) != 0)
 		return say(why, why_len, "unshare(CLONE_NEWNS) failed (%s)", strerror(errno));
 	/* ⛔ SLAVE, not PRIVATE (review 3, F3): a private copy pinned every host
@@ -462,8 +494,16 @@ int walls_apply(const struct rootside_options *o, char *why, size_t why_len)
 	 *   running that bench, 16 Oct 2026.  A folder the walls hid (under /tmp) or
 	 *   that is gone: «/». */
 	if (cwd[0] == '\0' || chdir(cwd) != 0) {
+		/* ⛔ review 4 B, finding 5: said — a relative --page resolves from «/»
+		 *    now, the defect of 16 Oct, and the line must name it */
+		if (cwd[0])
+			note("⚠ folder %s not reachable inside the walls (%s): the network side "
+			     "works from «/» — a relative --page or --certificates resolves there",
+			     cwd, strerror(errno));
 		if (chdir("/") != 0)
 			return say(why, why_len, "chdir(/) failed (%s)", strerror(errno));
+	} else {
+		note("folder %s", cwd);
 	}
 
 	/* ⛔ 4 — the identity, and nothing left. */
@@ -500,5 +540,10 @@ int walls_apply(const struct rootside_options *o, char *why, size_t why_len)
 		return -1;
 	/* ⛔ 5 — no user namespace, ever (review 3, F4): after NO_NEW_PRIVS, which
 	 *    an unprivileged filter needs. */
-	return no_user_namespaces(why, why_len);
+	if (no_user_namespaces(why, why_len) != 0)
+		return -1;
+	note("tree read-only, nosuid, nodev but %s and %s; private /tmp and /dev; uid/gid %ld/%ld, "
+	     "no groups, no capabilities, no_new_privs; RLIMIT_NPROC %d; seccomp: no user "
+	     "namespaces", o->net_state_dir, o->net_run_dir, (long)uid, (long)gid, WALLS_NPROC_MAX);
+	return 0;
 }
