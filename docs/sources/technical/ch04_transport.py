@@ -421,7 +421,7 @@ S11 = p("QUIC measures the line continuously, which v1 had to do by hand. REMOTI
       "not clamp its buffer length, so the 64 KB buffer let a single call put about 45 full packets on the wire at "
       "once. The buffer length is now the send quantum of ngtcp2, never less than one full-size packet (the size ngtcp2 "
       "recommends, PMTUD) and never more than the buffer. With pacing honoured a pacing deadline follows every send "
-      "quantum, so the loop timeout is rounded <b>up</b> to the millisecond: rounded down it woke up 1 ms early and "
+      "quantum, so the loop timeout is rounded <b>up</b> to the millisecond: rounded down it woke up up to 1 ms early and "
       "spun on " + c("poll(0)") + " until the deadline.") + \
     note("the threshold and the regulator are on together by default since 24 August 2026 (the user's decision after "
          "watching them). With the threshold off the delta queue empties at every frame and the regulator can never "
