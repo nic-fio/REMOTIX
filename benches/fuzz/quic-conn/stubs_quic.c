@@ -776,6 +776,8 @@ int ngtcp2_conn_read_pkt_versioned(ngtcp2_conn *c, const ngtcp2_path *path, int 
 	if (c->reg->read_err) { /* ⭐ the fuzzer chose the return code (NG op): DROP_CONN, CRYPTO, ... */
 		rv = c->reg->read_err;
 		c->reg->read_err = 0;
+		if (rv == NGTCP2_ERR_RETRY && c->state == ST_DONE)
+			rv = NGTCP2_ERR_PROTO; /* only the handshake retries: the rule of the script's END */
 		if (rv == NGTCP2_ERR_DRAINING)
 			c->state = ST_DRAINING;
 	} else
