@@ -4,9 +4,12 @@
 #include "log.h"
 
 #include <stdarg.h>
+#include <stddef.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/uio.h>
 #include <sys/un.h>
 #include <time.h>
@@ -18,6 +21,28 @@ static bool verbose;
  *    switch-on and not at the first line: `line()` runs in several threads,
  *    and two threads opening together would leave an orphan descriptor. */
 static int journal_fd = -1;
+static bool stderr_in_journal;
+
+static bool stderr_is_journal(void)
+{
+	const char *js = getenv("JOURNAL_STREAM");
+	struct stat st;
+	unsigned long dev = 0, ino = 0;
+
+	if (js && sscanf(js, "%lu:%lu", &dev, &ino) == 2 &&
+	    fstat(STDERR_FILENO, &st) == 0 &&
+	    (unsigned long)st.st_dev == dev && (unsigned long)st.st_ino == ino)
+		return true;
+	struct sockaddr_un sa;
+	socklen_t sl = sizeof sa;
+	memset(&sa, 0, sizeof sa);
+	if (getpeername(STDERR_FILENO, (struct sockaddr *)&sa, &sl) == 0 &&
+	    sa.sun_family == AF_UNIX &&
+	    sl > (socklen_t)offsetof(struct sockaddr_un, sun_path) &&
+	    strncmp(sa.sun_path, "/run/systemd/journal/", 21) == 0)
+		return true;
+	return false;
+}
 
 /* ⭐ The identity of this process — the box is in `log.h`.  ⚠ A COPY and
  *    not a pointer: whoever sets it often passes an `argv`, and a pointer to
@@ -42,6 +67,7 @@ bool log_journal(bool is_on)
 		if (journal_fd >= 0)
 			close(journal_fd);
 		journal_fd = -1;
+		stderr_in_journal = false;
 		return true;
 	}
 	if (journal_fd >= 0)
@@ -50,6 +76,7 @@ bool log_journal(bool is_on)
 	 *    the screen — the line on `stderr` is there anyway.  ⚠ And CLOEXEC:
 	 *    the child is born with `execve` and opens its own (`--journal`). */
 	journal_fd = socket(AF_UNIX, SOCK_DGRAM | SOCK_CLOEXEC | SOCK_NONBLOCK, 0);
+	stderr_in_journal = journal_fd >= 0 && stderr_is_journal();
 	return journal_fd >= 0;
 }
 
@@ -83,7 +110,7 @@ bool log_speakable_key(unsigned c)
  *    connected socket stays dead forever if journald restarts, one without a
  *    connection finds the new one at the next datagram.
  */
-static void al_journal(const char *file, int text_line, const char *area,
+static bool al_journal(const char *file, int text_line, const char *area,
                        const char *chi, int priority, const char *msg,
                        size_t msg_n)
 {
@@ -100,7 +127,7 @@ static void al_journal(const char *file, int text_line, const char *area,
 	                 priority, area, chi ? "REMOTIX_TENANT=" : "",
 	                 chi ? chi : "", chi ? "\n" : "", file ? file : "?", text_line);
 	if (n < 0 || (size_t)n >= sizeof fields)
-		return;
+		return false;
 	for (int i = 0; i < 8; i++)
 		lung[i] = (uint8_t)((uint64_t)msg_n >> (8 * i));
 	struct iovec iov[4] = {
@@ -116,7 +143,7 @@ static void al_journal(const char *file, int text_line, const char *area,
 		.msg_iovlen = 4,
 	};
 	ssize_t r = sendmsg(journal_fd, &mh, MSG_NOSIGNAL | MSG_DONTWAIT);
-	(void)r; /* ⚠ silent: the channel that remains is `stderr`, and the line is there */
+	return r >= 0; /* ⚠ silent: the channel that remains is `stderr`, and the line is there */
 }
 
 uint64_t log_now_ms(void)
@@ -229,17 +256,12 @@ static void line(const char *file, int text_line, bool detail, const char *area,
 	}
 	buf[n++] = '\n';
 
-	/* ⛔ Without this immediate write the log is a hope about the moment
-	 *    someone will see it: `LESSONS.md` §1.9, seventh guise — stdout
-	 *    buffered to a file has already made the right code be accused.
-	 *    ⭐ With `write(2)` the problem does not arise: there is no buffer to
-	 *    flush, and the earlier `fflush` is no longer needed. */
-	ssize_t written = write(STDERR_FILENO, buf, (size_t)n);
-	(void)written; /* ⚠ there is nowhere to report that the log cannot be
-	                *    written: the only channel would be the broken one. */
-
-	/* ⭐ And the journal, AFTER `stderr` and only if on: without `--journal`
-	 *    we never get here, and the line above is all that happens.
+	/* ⭐ With `--journal` the EVENTS (§12) go to the native journal socket
+	 *    with their fields (`REMOTIX_AREA`, `REMOTIX_TENANT`, `PRIORITY`).
+	 *    If `stderr` is itself connected to systemd's journal stream
+	 *    (`remotix.service`), a line already delivered to the socket is NOT
+	 *    written to `stderr` a second time; if `stderr` is a file or terminal
+	 *    (or if `sendmsg` failed, or the line is chatter), `write(2)` runs.
 	 * ⭐ The severity is given by the mark at the HEAD of the body, which is
 	 *    the convention of the whole code: ⛔ is a fault, ⚠ a fallback or a
 	 *    warning.  ⚠ At the head and not «anywhere»: many normal lines quote
@@ -249,14 +271,26 @@ static void line(const char *file, int text_line, bool detail, const char *area,
 	 *    would throttle them with its rate limit — losing precisely the
 	 *    events — and its work would end up inside the load measurements.
 	 *    The journal keeps the EVENTS (§12); the detail stays in the file. */
+	bool sent = false;
 	if (journal_fd >= 0 && !detail) {
 		const char *c = buf + body;
 		while (*c == ' ')
 			c++;
 		int prio = strncmp(c, "⛔", strlen("⛔")) == 0 ? 3
 		         : strncmp(c, "⚠", strlen("⚠")) == 0 ? 4 : 6;
-		al_journal(file, text_line, area, con_id ? safe_id : NULL, prio,
-		           buf + without_time, (size_t)(n - 1 - without_time));
+		sent = al_journal(file, text_line, area, con_id ? safe_id : NULL, prio,
+		                  buf + without_time, (size_t)(n - 1 - without_time));
+	}
+
+	/* ⛔ Without this immediate write the log is a hope about the moment
+	 *    someone will see it: `LESSONS.md` §1.9, seventh guise — stdout
+	 *    buffered to a file has already made the right code be accused.
+	 *    ⭐ With `write(2)` the problem does not arise: there is no buffer to
+	 *    flush, and the earlier `fflush` is no longer needed. */
+	if (!(sent && stderr_in_journal)) {
+		ssize_t written = write(STDERR_FILENO, buf, (size_t)n);
+		(void)written; /* ⚠ there is nowhere to report that the log cannot be
+		                *    written: the only channel would be the broken one. */
 	}
 }
 

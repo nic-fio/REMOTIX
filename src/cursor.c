@@ -522,7 +522,7 @@ int cursor_metadata(Cursor *c, const void *spa_meta_cursor, size_t size)
 	 * ⭐ `[R]` GNOME DOES NOT COME THIS WAY: in the GNOME branch `session.c` sets
 	 *    no `XCURSOR_*`, and Mutter sends the bitmap of its theme (Adwaita),
 	 *    made of black, white and shades — never all of one colour, and the
-	 *    red of ours (0x40-0x83) with exact green and blue is not an Adwaita
+	 *    red of ours (0x40-0x8D) with exact green and blue is not an Adwaita
 	 *    colour.  Only KDE (KWin, zkde metadata, mode 4) reads our theme
 	 *    and then arrives here; labwc has its own road (`wlroots.c`).
 	 */

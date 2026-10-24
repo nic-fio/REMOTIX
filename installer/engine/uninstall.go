@@ -380,6 +380,49 @@ func (m *Engine) UninstallPlan(prof *ProfileV, purge bool) (*Piano, error) {
 	if !placed {
 		pn.Azioni = append([]PlanAction{closeStep}, pn.Azioni...)
 	}
+	// what later confirmed upgrades added (new dependencies), undone after the initial packages
+	ops, lerr := m.Listing()
+	if lerr != nil {
+		pn.Declared = append(pn.Declared, T("az.aggiornamenti.elenco", lerr.Error()))
+	}
+	upgradeGroups := map[[2]string]bool{} // the group steps of the upgrades, undone by the loop below
+	for j := len(ops) - 1; j >= 0; j-- {
+		up := ops[j]
+		if up.ID <= in.Operation || up.Piano == nil || up.Piano.Duty != "upgrade" ||
+			(up.State != CONFIRMED && up.State != CONFIRMED_WITH_CONDITIONS) {
+			continue
+		}
+		uev, err := ReadLog(filepath.Join(up.Folder, "log.jsonl"))
+		if err != nil {
+			pn.Declared = append(pn.Declared, T("az.aggiornamenti.registro", up.ID, err.Error()))
+			continue
+		}
+		uorigin := map[string]Origine{}
+		for _, e := range uev {
+			if e.Type == EvIntent {
+				if _, ok := uorigin[e.Action]; !ok {
+					uorigin[e.Action] = e.Origine
+				}
+			}
+		}
+		for i := len(up.Piano.Azioni) - 1; i >= 0; i-- {
+			a := up.Piano.Azioni[i]
+			o, mark_done := uorigin[a.ID]
+			if !mark_done || o == PREEXISTING {
+				continue
+			}
+			if a.Type == "add-user-to-group" {
+				upgradeGroups[[2]string{a.Parameters["user"], a.Parameters["group"]}] = true
+			}
+			pn.Azioni = append(pn.Azioni, PlanAction{ID: "undo-" + up.ID + "-" + a.ID, Type: "undo",
+				Parameters:    map[string]string{"operation": up.ID, "action": a.ID, "purge": purgeS},
+				Description:   T("az.disfa", a.Description),
+				ComeSiFa:      a.HowToUndo,
+				HowToVerify:   T("az.disfa.verifica"),
+				HowToUndo:     a.ComeSiFa,
+				Reversibility: a.Reversibility})
+		}
+	}
 	// the group enrolments made by REMOTIX at the first connection (DIRETTE), except those
 	// the engine itself already has in one of its steps
 	already := map[[2]string]bool{}
@@ -387,6 +430,9 @@ func (m *Engine) UninstallPlan(prof *ProfileV, purge bool) (*Piano, error) {
 		if a.Type == "add-user-to-group" {
 			already[[2]string{a.Parameters["user"], a.Parameters["group"]}] = true
 		}
+	}
+	for k := range upgradeGroups {
+		already[k] = true
 	}
 	for _, k := range m.Memberships() {
 		if already[k] {

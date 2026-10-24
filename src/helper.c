@@ -107,7 +107,7 @@ struct helper {
 /* ------------------------------------------------------------------------ */
 /* THE GRANDCHILD — one single PAM transaction, then it dies.               */
 
-static void grandchild(int fd, const struct request *r)
+static void grandchild(int fd, struct request *r)
 {
 	struct response out;
 	bool ok;
@@ -119,6 +119,7 @@ static void grandchild(int fd, const struct request *r)
 	ok = rcp_authenticate_from(r->user, r->password, r->rhost);
 
 	out.ticket = r->ticket;
+	explicit_bzero(r, sizeof *r);
 	/* ⛔ The only place in the program where a «yes» is born, and it is
 	 *    written so that a value other than `PAM_SUCCESS` cannot get there:
 	 *    `rcp_authenticate()` starts from `admitted = false`. */
@@ -166,7 +167,7 @@ static void dispatcher(int fd)
 		 *    and the request will expire on the parent's side as a no.
 		 *    Guessing what was missing is precisely the leniency that hides. */
 		if (readings != (ssize_t)sizeof r) {
-			memset(&r, 0, sizeof r);
+			explicit_bzero(&r, sizeof r);
 			continue;
 		}
 		/* ⚠ And the string is forcibly terminated: what arrived must be what
@@ -187,7 +188,7 @@ static void dispatcher(int fd)
 		}
 		/* ⛔ §4.4: the password is zeroed as soon as it has served.  This is
 		 *    the dispatcher's copy, and it lives the time of a `fork`. */
-		memset(&r, 0, sizeof r);
+		explicit_bzero(&r, sizeof r);
 	}
 }
 
@@ -318,9 +319,9 @@ bool helper_ask(helper *a, const char *user, const char *password,
 	/* ⛔ §4.4: the password is zeroed as soon as it has served.  This is the
 	 *    sender's copy, and it lives the time of a `send`.  ⚠ And the request
 	 *    number is already safe in `my`: reading it again from `r` after the
-	 *    `memset` would be reading the zero we have just put there — and the
+	 *    `explicit_bzero` would be reading the zero we have just put there — and the
 	 *    answer would no longer find its request in flight. */
-	memset(&r, 0, sizeof r);
+	explicit_bzero(&r, sizeof r);
 
 	if (written != (ssize_t)sizeof r) {
 		registro_dice(REG_RCP,

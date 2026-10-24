@@ -514,7 +514,7 @@ func cards(a *Environment, p *ProfileV) []GpuCard {
 // RPM Fusion's dri-nonfree and dri-freeworld) and their family (driverFamily). Phase 19: it is the
 // Detect of the «vaapi» route (encoding_routes.go), and there is no fallback to look at any more. The card stays
 // SCONOSCIUTA except in the certain cases: no driver, or only drivers built without H.264.
-func h264(a *Environment, p *ProfileV, fam string) {
+func h264(a *Environment, p *ProfileV, _ string) {
 	var driver []string
 	seen_items := map[string]bool{}
 	for _, g := range []string{"/usr/lib/*/dri/*_drv_video.so", "/usr/lib64/dri/*_drv_video.so", "/usr/lib/dri/*_drv_video.so",
@@ -551,27 +551,17 @@ func h264(a *Environment, p *ProfileV, fam string) {
 	case len(driver) == 0:
 		p.Place(Fatto{KeyId: "h264.gpu", Val: "no", State: DETECTED, Source: "dri folders", Nota: "no VA-API driver"})
 		if withCard {
-			p.Con(codeH264(fam), "no VA-API driver")
+			p.Con("RX-H264-002", "no VA-API driver")
 		}
 	case without:
 		p.Place(Fatto{KeyId: "h264.gpu", Val: "no", State: DETECTED, Source: "installed packages", Nota: "VA driver without H.264: " + p.V("h264.driver_family")})
-		p.Con(codeH264(fam), "VA driver without H.264")
+		p.Con("RX-H264-002", "VA driver without H.264")
 	default:
 		p.Unknown("h264.gpu", "driver "+strings.Join(driver, ",")+": "+note7a)
 		if withCard {
 			p.Con("RX-H264-001", "") // its text already says it: the detail would repeat it
 		}
 	}
-}
-
-func codeH264(fam string) string {
-	switch fam {
-	case "fedora":
-		return "RX-H264-003"
-	case "suse":
-		return "RX-H264-004"
-	}
-	return "RX-H264-002"
 }
 
 func security(a *Environment, p *ProfileV) {

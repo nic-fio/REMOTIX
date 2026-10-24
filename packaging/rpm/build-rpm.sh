@@ -105,7 +105,7 @@ build_one()
 		rm -rf /work/positive; mkdir /work/positive; cd /work/positive
 		tar xzf /work/SOURCES/remotix-*.tar.gz --strip-components=1
 		cd src; sed -i "s/^#define BENCH_ON 0\$/#define BENCH_ON 1/" rcp.c
-		make TWIN=none rcp.o >/dev/null 2>&1
+		make TWIN=none BENCH=1 rcp.o >/dev/null 2>&1
 		p=$(strings rcp.o 2>/dev/null | grep -c "$frase")
 		echo "package=$n positive=$p" >/work/r13-binario.txt
 	' >"$u/rpmbuild.log" 2>&1

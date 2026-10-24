@@ -4,9 +4,10 @@
  * ---------------------------------------------------------------------------
  * ⛔ WHAT THIS PROGRAM IS, AND WHAT IT IS NOT YET
  *
- * It is the server of `SPECS.md` §1 at PHASE 1: the RCP handshake over
- * WebTransport, from both sides, and the page served by the server itself.
- * ⛔ No video, no audio, no input: those are the phases from 2 onwards.
+ * It is the server of `SPECS.md` §1: the RCP handshake over WebTransport, the
+ * page served by the server itself, the per-user children with video, audio,
+ * input and clipboard.  (It began as the bare wire of phase 1; the first log
+ * line still says so, and the benches look for it.)
  *
  * ⚠ What the user sees and judges: they open `https://address:7447`, click
  *   the warning the first time on that device, type user and password, and the
@@ -156,7 +157,7 @@ static void on_signal(int s)
 static void help(const char *name)
 {
 	fprintf(stderr,
-	        "REMOTIX — the server (phase 1: the bare wire)\n"
+	        "REMOTIX — the server\n"
 	        "\n"
 	        "  %s [options]\n"
 	        "  %s --encoding-test [h264|hevc] [--node /dev/dri/renderDN]\n"
@@ -197,8 +198,9 @@ static void help(const char *name)
 	        "  --verbose         detailed log\n"
 	        "  --journal         ⭐ phase 16 §12: every log line ALSO goes\n"
 	        "                    to the systemd journal, with the fields REMOTIX_AREA,\n"
-	        "                    REMOTIX_TENANT, PRIORITY (3 ⛔, 4 ⚠, 6, 7\n"
-	        "                    chatter) and SYSLOG_IDENTIFIER=remotix.  The\n"
+	        "                    REMOTIX_TENANT, PRIORITY (3 ⛔, 4 ⚠, 6; the\n"
+	        "                    --verbose detail lines never reach the journal)\n"
+	        "                    and SYSLOG_IDENTIFIER=remotix.  The\n"
 	        "                    line on stderr stays identical; it also applies\n"
 	        "                    to the children (journalctl -t remotix)\n"
 	        "\n"
@@ -230,7 +232,7 @@ static void help(const char *name)
 	        "                    the whole session.  ⛔ It lives in the CHILD: the\n"
 	        "                    line is written by encoder.c at opening\n"
 	        "  --bandwidth-cap-mbit N\n"
-	        "                    N is the FLOOR in Mbit/s (20, §3.1-bis),\n"
+	        "                    N is the FLOOR in Mbit/s (30, §3.1-sexies),\n"
 	        "                    not the ceiling: wire, working point and\n"
 	        "                    reservoir are derived from it.  0 = off, and\n"
 	        "                    then nobody says no to bandwidth.  ⛔ It lives\n"
@@ -935,7 +937,7 @@ static void delivery_verdict(void *ctx, uint64_t ticket, bool admitted,
 	 *
 	 * ⛔ WHAT THIS CURE DOES NOT CURE: the reason is `0x0E`
 	 *    (`SESSION_UNSERVABLE`) and **not** `0x06` (`BUDGET_FULL`), and it
-	 *    is a choice.  `0x06` says *«this machine has no encoding capacity
+	 *    is a choice.  `0x06` says *«this machine has no composition capacity
 	 *    left»*, that is a **physical** limit; here the limit is a `#define`
 	 *    — a table full of stages **nobody is watching** — that is an
 	 *    **administrative** limit, which is exactly what `0x0E` already says

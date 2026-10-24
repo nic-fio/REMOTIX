@@ -321,7 +321,7 @@ struct body_canvas {
  *    reserve for "no codec negotiated", and here it means the same thing —
  *    nobody is watching. */
 struct body_video {
-	uint8_t codec;  /* 1 = HEVC, 2 = AV1, 0 = off */
+	uint8_t codec;  /* 1 = HEVC, 3 = H.264 (2 = AV1 retired), 0 = off */
 	uint8_t key; /* ⛔ §5.2: the next one MUST be a keyframe */
 	/* ⛔⭐⭐ THE NEGOTIATED DEPTH — 17 Aug 2026, and this field is the cure for
 	 *      a measured defect, not a convenience addition.
@@ -808,6 +808,10 @@ static void child_free(struct children *f, struct child *g, const char *why)
 	              g->user, (long)g->uid, why);
 	if (g->fd >= 0)
 		close(g->fd);
+	if (g->app_mount)
+		explicit_bzero(g->app_mount, g->app_total);
+	free(g->app_mount);
+	free(g->cur_mount);
 	free(g->assembly);
 	/* ⛔ And the deposit is released from here too, for the paths that do not
 	 *    go through the farewell (a child that died without anyone sending it
@@ -2295,12 +2299,16 @@ static void assemble_clipboard(struct children *f, struct child *g,
 		              "⛔ «%s»: clipboard piece out of size (offset %u + %u of "
 		              "%u): discarded",
 		              g->user, c->offset, c->piece, c->total);
+		if (g->app_mount)
+			explicit_bzero(g->app_mount, g->app_total);
 		free(g->app_mount);
 		g->app_mount = NULL;
 		g->app_total = g->app_got = 0;
 		return;
 	}
 	if (c->offset == 0) {
+		if (g->app_mount)
+			explicit_bzero(g->app_mount, g->app_total);
 		free(g->app_mount);
 		g->app_mount = (uint8_t *)malloc((size_t)c->total + 1u);
 		if (!g->app_mount) {
@@ -2322,6 +2330,8 @@ static void assemble_clipboard(struct children *f, struct child *g,
 		              "⛔ «%s»: clipboard piece out of order (expected %zu, "
 		              "got %u): the whole text is DROPPED",
 		              g->user, g->app_got, c->offset);
+		if (g->app_mount)
+			explicit_bzero(g->app_mount, g->app_total);
 		free(g->app_mount);
 		g->app_mount = NULL;
 		g->app_total = g->app_got = 0;
@@ -2340,6 +2350,7 @@ static void assemble_clipboard(struct children *f, struct child *g,
 	if (f->on_clipboard_text)
 		f->on_clipboard_text(f->ctx_clipboard, g->user, g->uid,
 		                    (const char *)g->app_mount, g->app_total);
+	explicit_bzero(g->app_mount, g->app_total);
 	free(g->app_mount);
 	g->app_mount = NULL;
 	g->app_total = g->app_got = 0;
@@ -3175,8 +3186,9 @@ bool children_clipboard_response(children *f, const char *user, uint32_t serial,
 		memcpy(envelope + sizeof t, &c, sizeof c);
 		if (q)
 			memcpy(envelope + sizeof t + sizeof c, text + off, q);
-		if (send(g->fd, envelope, sizeof t + sizeof c + q, MSG_NOSIGNAL)
-		    != (ssize_t)(sizeof t + sizeof c + q)) {
+		ssize_t sent = send(g->fd, envelope, sizeof t + sizeof c + q, MSG_NOSIGNAL);
+		explicit_bzero(envelope, sizeof t + sizeof c + q);
+		if (sent != (ssize_t)(sizeof t + sizeof c + q)) {
 			/* ⛔⛔ AND THIS IS THE CASE THAT LEAVES THE PASTER HANGING, so the
 			 *      line is plain and says the symptom: without it, the defect
 			 *      would be sought in the desktop instead of in a full socket. */
@@ -3360,6 +3372,9 @@ void children_turn_off(children *f)
 		}
 		registro_dice(LOG_CHILD, "the child of «%s» (pid %ld) is shut down",
 		              g->user, (long)g->pid);
+		if (g->app_mount)
+			explicit_bzero(g->app_mount, g->app_total);
+		free(g->app_mount);
 		free(g->assembly);
 		free(g->cur_mount);
 		memset(g, 0, sizeof *g);
@@ -3866,6 +3881,8 @@ static struct {
 
 static void clipboard_assembly_free(void)
 {
+	if (clipboard_assembly.data)
+		explicit_bzero(clipboard_assembly.data, clipboard_assembly.total);
 	free(clipboard_assembly.data);
 	clipboard_assembly.data = NULL;
 	clipboard_assembly.is_opened = false;

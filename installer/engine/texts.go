@@ -91,6 +91,8 @@ var texts = map[string]string{
 	"az.registri.fa":          "only session.log is removed, and the %s folder if left empty; nothing else in the homes",
 	"az.registri.verifica":    "none of those files is left",
 	"az.registri.annulla":     "put back byte for byte, with permissions and owner (copies in the operation folder)",
+	"az.aggiornamenti.elenco":   "the list of the operations could not be read (%s): what later upgrades added is NOT in this plan",
+	"az.aggiornamenti.registro": "the log of the upgrade %s could not be read (%s): what it added is NOT in this plan",
 	"az.registri.dichiarata":  "uninstalling removes ~/.local/state/remotix/session.log from every home (and the folder if left empty) — %s",
 	"az.registri.nessuno":     "no session log in any home",
 	"az.registri.removed":     "removed: %s",

@@ -102,7 +102,7 @@
  * ⭐⭐ AND THE CURE EXISTS, IT IS ONE LINE, AND IT IS NOT IN THIS FILE: release
  *     **BEFORE** asking for the resize, while the devices are
  *     still those that received the press.  The function already exists and is
- *     `input_release_all()`; the place to call it is `child.c:3964`,
+ *     `input_release_all()`; the place to call it is `child.c` (`child_alive()`),
  *     right **before** `capture_resize(cat, canvas_intended_w,
  *     canvas_intended_h)`.  `[M]` Simulated from the wire — releasing before the
  *     replacement — the witness sees the release and the clicks after the replacement
@@ -134,7 +134,7 @@
  *   → `remove_viewport_devices()`.  ⇒ **The same chain as the resize,
  *   but without anyone having changed size.**
  *
- * ⛔ And `child.c:6365` calls `capture_wake()` **precisely on a still
+ * ⛔ And `child.c` (`child_alive()`) calls `capture_wake()` **precisely on a still
  *    desktop**, when the take is ZERO and a keyframe is owed — that is at the
  *    exact moment the user may be holding the mouse down on a
  *    scene that does not move.
@@ -497,8 +497,8 @@ static int send_button(Input *in, uint16_t code, int pressed)
 		              "silently discards a release on the new device "
 		              "(`meta-eis-client.c:612-621`).  ⛔ The SEAT still counts it down "
 		              "(`meta-seat-impl.c:899-908`) and from now on NO click arrives any more: the cure "
-		              "is to release BEFORE asking for the resize — `child.c:3964`, "
-		              "before `capture_resize()`",
+		              "is to release BEFORE asking for the resize — `child.c` "
+		              "(`child_alive()`), before `capture_resize()`",
 		              code, in->pointer_replacements);
 		return -1;
 	}
@@ -863,7 +863,7 @@ static void mark_orphans(Input *in, const uint8_t *map, uint8_t *orphans, uint32
 	              "⛔⛔ %u %s were PRESSED on the device the compositor has just removed: their "
 	              "release will reach NOBODY, and the seat still counts them down.  ⇒ From "
 	              "now on what passes through them is broken until the EIS channel drops.  The cure "
-	              "is to release BEFORE asking for the resize (`child.c:3964`)",
+	              "is to release BEFORE asking for the resize (`child.c`, `child_alive()`)",
 	              amount, what);
 
 	/*

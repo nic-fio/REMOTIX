@@ -564,8 +564,8 @@ typedef enum
  * ⚠ It does NOT wait: it returns at once.  Waiting here would stop the child's loop,
  *   which is the only one it has (`CODER.md` §4.4).
  *
- * ⛔ AND THE ALLOWED SIZE IS NOT CHECKED HERE: the rule ("200..8192, and
- *    both EVEN") lives in `rcp_size_allowed()` and is applied by whoever reads
+ * ⛔ AND THE ALLOWED SIZE IS NOT CHECKED HERE: the rule (320x240 to 4096x2304,
+ *    both EVEN) lives in `rcp_size_allowed()` and is applied by whoever reads
  *    `FIT_CANVAS` from the wire — see the box at the bottom of this file.  Here only
  *    ZERO is refused, which is a different fact: an empty size is not
  *    "out of bounds", it is a request with no content.
@@ -784,7 +784,7 @@ void capture_stop(Capture *capture);
 
 /* --- the allowed size: it is NOT here, and the reason must be told ---- *
  *
- * ⛔ The rule ("200..8192, and width and height EVEN") lives in `rcp.h`, as
+ * ⛔ The rule (320x240 to 4096x2304, and width and height EVEN) lives in `rcp.h`, as
  *    `rcp_size_allowed()`, and NOT here — even though the reason the ceiling
  *    exists belongs wholly to this level: `[M]` 14 August 2026, beyond **16384**
  *    per side `gnome-shell` dies, and on labwc `32768x32768` kills the

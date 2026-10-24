@@ -1,8 +1,9 @@
 #!/bin/sh
 # remotix.postinst — after the files are in place (phases/17 §6.4).
 #
-# ⛔ DECISIONI §10.12: the package switches nothing on; the service, the groups,
-#    the belts and the firewall are set up by the ENGINE, with consent.
+# ⛔ DECISIONI §10.12: the package switches nothing on; the service and the
+#    groups are set up by the ENGINE, with consent; the belts and the
+#    firewall are the administrator's (DECISIONS §10.36: REMOTIX does not modify the system).
 # ⭐ On upgrade (apt upgrade: REMOTIX upgrades with the system, DECISIONI
 #    §10.23) the debhelper part below does `try-restart`: the service
 #    restarts ONLY if it was running, and the desktops stay alive (T2, §5.2) — the new

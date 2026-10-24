@@ -18,7 +18,8 @@
 # ⭐ `DECISIONS.md` §10.12 — the package ships only INERT pieces (program,
 #    page, disabled unit, PAM, /etc/remotix, the belts OFF in
 #    /usr/share/remotix/belts/, the firewalld definition).  It neither enables nor starts the service, and touches no groups, belts or
-#    firewall: the engine mounts them, with consent and in its log (R40).
+#    firewall: the engine adds the groups, with consent and in its log (R40); the
+#    belts and the firewall are the administrator's (DECISIONS §10.36).
 #    ⛔ No guard that prevents the service from starting (no
 #    ExecCondition, no ConditionPathExists on a mark): there are TWO ways,
 #    the installer or the source by hand; `remotix state` will only say, for
@@ -151,7 +152,7 @@ Requires:       wireplumber
 
 %if 0%{?fedora} || 0%{?rhel}
 # The firewalld service is DEFINED in the firewalld-filesystem directory (no
-# daemon, no rules): opening it belongs to the engine, with consent (D6).
+# daemon, no rules): opening it belongs to the administrator (DECISIONS §10.36).
 Requires:       firewalld-filesystem
 %endif
 
@@ -346,9 +347,8 @@ install -D -m 0644 packaging/rpm/org.kde.remotix.desktop %{buildroot}%{_datadir}
 
 # ⭐ `DECISIONS.md` §10.12 — the installer is the only way: the three belts of
 #   §4.7 (no power-off, no suspend, the keys do not power off) arrive
-#   OFF, outside the paths polkit and systemd read.  The engine mounts them,
-#   with consent (D4 open: always, or the administrator's choice?) and in its
-#   log; the paths they will go to are the VENDOR ones
+#   OFF, outside the paths polkit and systemd read.  The engine does NOT mount
+#   them (DECISIONS §10.36): the administrator does, if wanted; the paths they would go to are the VENDOR ones
 #   (/usr/share/polkit-1/rules.d/50-…, /usr/lib/systemd/{logind,sleep}.conf.d/),
 #   never /etc: an administrator's file with the same name in /etc wins (R34).
 install -D -m 0644 src/remotix-no-poweroff.rules %{buildroot}%{_datadir}/polkit-1/rules.d/50-remotix-no-poweroff.rules
@@ -357,7 +357,7 @@ install -D -m 0644 packaging/rpm/remotix-no-suspend.conf %{buildroot}%{_datadir}
 
 # firewalld: the «remotix» service DEFINED, not opened (D6, §10.12): the file
 # makes a name known to firewalld and changes no zone.  Opening it
-# (`firewall-cmd --permanent --add-service=remotix`) belongs to the engine, with consent.
+# (`firewall-cmd --permanent --add-service=remotix`) belongs to the administrator (DECISIONS §10.36).
 install -D -m 0644 packaging/rpm/remotix-firewalld.xml %{buildroot}%{_prefix}/lib/firewalld/services/remotix.xml
 
 # remotix-selinux: the module (the domain) and the port (portcon, in CIL)

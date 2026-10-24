@@ -3731,12 +3731,12 @@ void wt_video_hook(wt_video_request f, void *ctx)
  *    day one of the two is tuned. */
 
 /* ⛔ The fallback when ngtcp2 has neither `smoothed_rtt` nor `cwnd` yet: we
- *    assume **the declared floor**, 20 Mbit/s = 2 500 bytes/ms
- *    (`DECISIONS.md` §3.1-bis).  ⚠ It is DECLARED instead of guessed: an invented
+ *    assume **the declared floor**, 30 Mbit/s = 3 750 bytes/ms
+ *    (`DECISIONS.md` §3.1-sexies; it was 20 Mbit/s = 2 500 bytes/ms until then).  ⚠ It is DECLARED instead of guessed: an invented
  *    number passing for measured is shape E1.  ⚠ And if the real line is
  *    narrower the fallback UNDERESTIMATES the wait and keeps one delta too
  *    many: it lasts until ngtcp2 has a measurement, that is one network round trip. */
-#define WT_FLOOR_BYTE_MS 2500u
+#define WT_FLOOR_BYTE_MS 3750u
 
 /* ⛔⭐⭐ IT IS BORN ON AT `WT_CLEAR_THRESHOLD_MS` SINCE 24 AUG 2026 — the
  *      user's decision.  ⚠ Until the 23rd it was born OFF because of invariant I6, which wants
@@ -4030,7 +4030,7 @@ static uint64_t queue_drain_ms(const wt *w, size_t byte, const char **come)
 		ngtcp2_conn_get_conn_info(w->conn, &info);
 	if (info.smoothed_rtt == 0 || info.cwnd == 0) {
 		*come = "fallback: ngtcp2 has neither rtt nor window yet, the "
-		        "declared floor of 20 Mbit/s is assumed (DECISIONS.md §3.1-bis)";
+		        "declared floor of 30 Mbit/s is assumed (DECISIONS.md §3.1-sexies)";
 		return (uint64_t)byte / WT_FLOOR_BYTE_MS;
 	}
 	*come = "from the measured bandwidth (cwnd/rtt)";

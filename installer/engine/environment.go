@@ -292,16 +292,16 @@ func (g *realGroups) Remove(user, group string) error {
 }
 
 // firewallNotDone: nftables is recognised, but the engine cannot change it yet (T4's
-// mandate): every change returns RX-FW-004, and the plan declares it beforehand. (ufw can, since T6.)
+// mandate): every change returns RX-FW-002, and the plan declares it beforehand. (ufw can, since T6.)
 type firewallNotDone struct{ name string }
 
 func (f *firewallNotDone) Nome() string                 { return f.name }
 func (f *firewallNotDone) DefaultZone() (string, error) { return "", nil }
 func (f *firewallNotDone) HasPort(string, string, bool) (bool, error) {
-	return false, Error("RX-FW-004", f.name)
+	return false, Error("RX-FW-002", f.name)
 }
-func (f *firewallNotDone) Insert(string, string, bool) error { return Error("RX-FW-004", f.name) }
-func (f *firewallNotDone) Remove(string, string, bool) error { return Error("RX-FW-004", f.name) }
+func (f *firewallNotDone) Insert(string, string, bool) error { return Error("RX-FW-002", f.name) }
+func (f *firewallNotDone) Remove(string, string, bool) error { return Error("RX-FW-002", f.name) }
 
 // firewallUfw: ufw running (T6). With its program (closed list); a single level — ufw's rules
 // are live and permanent together: «live» reads as «permanent» and does not change by itself.

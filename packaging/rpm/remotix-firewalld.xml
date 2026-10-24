@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- remotix: the REMOTIX firewalld service, the page (TCP) and QUIC (UDP)
      on the same port.  DEFINED, not opened: the package does not touch the zones.
-     Opening it belongs to the installation engine, with consent (D6).
-     With a port other than 7447 the engine opens that port, not this service.
+     Opening it belongs to the administrator (DECISIONS §10.36): the engine
+     opens nothing in the firewall.
      Beware: an XML comment cannot contain two hyphens in a row
      (the firewall-cmd options): firewalld would discard the whole file.
      [M] 29 Sep 2026, Fedora 44: "not well-formed (invalid token)". -->

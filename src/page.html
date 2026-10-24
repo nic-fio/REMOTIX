@@ -5812,7 +5812,7 @@ async function connect(username, password) {
     note("⛔ no video codec reaches the pixel: `video.codec` is NOT sent "
        + "(§4.3 forbids the empty value), and the server will dismiss with "
        + "NOTHING_IN_COMMON");
-    outcome("Neither of the two video codecs (HEVC, AV1) reaches the pixels on this "
+    outcome("Neither of the two video codecs (HEVC, H.264) reaches the pixels on this "
         + "browser: the session would have no image. See the box "
         + "above.", false);
   }

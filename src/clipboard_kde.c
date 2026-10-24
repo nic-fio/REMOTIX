@@ -364,6 +364,9 @@ static GBytes *read_type(ClipboardKde *clipboard, struct zwlr_data_control_offer
 
 		if (!ready(pipe_fd[0], POLLIN)) {
 			close(pipe_fd[0]);
+			explicit_bzero(piece, sizeof piece);
+			if (collection->data)
+				explicit_bzero(collection->data, collection->len);
 			g_byte_array_unref(collection);
 			*why = "whoever owns the clipboard wrote nothing for 5 s";
 			return NULL;
@@ -371,15 +374,21 @@ static GBytes *read_type(ClipboardKde *clipboard, struct zwlr_data_control_offer
 		amount = read(pipe_fd[0], piece, sizeof piece);
 		if (amount < 0 && errno == EINTR)
 			continue;
-		if (amount <= 0)
+		if (amount <= 0) {
+			explicit_bzero(piece, sizeof piece);
 			break;
+		}
 		if (collection->len + (guint)amount > CLIPBOARD_CAP) {
 			close(pipe_fd[0]);
+			explicit_bzero(piece, sizeof piece);
+			if (collection->data)
+				explicit_bzero(collection->data, collection->len);
 			g_byte_array_unref(collection);
 			*why = "clipboard over the ceiling (§5.4): left where it is, NOT truncated";
 			return NULL;
 		}
 		g_byte_array_append(collection, piece, (guint)amount);
+		explicit_bzero(piece, sizeof piece);
 	}
 	close(pipe_fd[0]);
 	return g_byte_array_free_to_bytes(collection);
@@ -428,6 +437,8 @@ static char *read_text(ClipboardKde *clipboard, size_t *byte)
 		if (!g_utf8_validate_len(start, (gssize)amount, NULL)) {
 			registro_dice(LOG_CLIPBOARD, "⛔ «%s» is not valid UTF-8 (%zu bytes): "
 			                           "skipping it", TEXT_TYPES[i], (size_t)amount);
+			/* The GBytes is ours alone (from `read_type`): wiped before it is freed. */
+			explicit_bzero((void *)start, amount);
 			g_bytes_unref(data);
 			continue;
 		}
@@ -435,6 +446,7 @@ static char *read_text(ClipboardKde *clipboard, size_t *byte)
 		{
 			char *text = g_strndup(start, amount);
 
+			explicit_bzero((void *)start, amount);
 			g_bytes_unref(data);
 			g_ptr_array_unref(types);
 			log_detail(LOG_CLIPBOARD, "read %zu bytes of «%s» from the session",
@@ -477,6 +489,8 @@ static void delivery_announcement(ClipboardKde *clipboard)
 	if (!text)
 		return;
 	g_mutex_lock(&clipboard->lock);
+	if (clipboard->last)
+		explicit_bzero(clipboard->last, strlen(clipboard->last));
 	g_free(clipboard->last);
 	clipboard->last = g_strdup(text);
 	clipboard->last_byte = byte;
@@ -484,6 +498,7 @@ static void delivery_announcement(ClipboardKde *clipboard)
 		clipboard->on_text(text, byte, clipboard->data);
 	g_mutex_unlock(&clipboard->lock);
 	registro_dice(LOG_CLIPBOARD, "⭐ the session copied %zu bytes of text", byte);
+	explicit_bzero(text, strlen(text));
 	g_free(text);
 }
 
@@ -665,6 +680,8 @@ void clipboard_kde_close(ClipboardKde *clipboard)
 	for (int i = 0; i < 2; i++)
 		if (clipboard->wake[i] >= 0)
 			close(clipboard->wake[i]);
+	if (clipboard->last)
+		explicit_bzero(clipboard->last, strlen(clipboard->last));
 	g_free(clipboard->last);
 	g_mutex_clear(&clipboard->state);
 	g_mutex_clear(&clipboard->lock);
@@ -713,12 +730,15 @@ void clipboard_kde_read_now(ClipboardKde *clipboard)
 	registro_dice(LOG_CLIPBOARD, "⭐ the session already had %zu bytes in the clipboard: "
 	                           "announcing them to the client", byte);
 	g_mutex_lock(&clipboard->lock);
+	if (clipboard->last)
+		explicit_bzero(clipboard->last, strlen(clipboard->last));
 	g_free(clipboard->last);
 	clipboard->last = g_strdup(text);
 	clipboard->last_byte = byte;
 	if (clipboard->on_text)
 		clipboard->on_text(text, byte, clipboard->data);
 	g_mutex_unlock(&clipboard->lock);
+	explicit_bzero(text, strlen(text));
 	g_free(text);
 }
 
@@ -798,6 +818,8 @@ void clipboard_kde_reply(ClipboardKde *clipboard, uint32_t serial, const char *t
 		}
 	} else {
 		g_mutex_lock(&clipboard->lock);
+		if (clipboard->last)
+			explicit_bzero(clipboard->last, strlen(clipboard->last));
 		g_free(clipboard->last);
 		clipboard->last = g_strndup(text, byte);
 		clipboard->last_byte = byte;
@@ -826,5 +848,7 @@ void clipboard_kde_reply(ClipboardKde *clipboard, uint32_t serial, const char *t
 		                   written, serial);
 	else
 		log_detail(LOG_CLIPBOARD, "request %u closed with «I do not have it»", serial);
+	if (fallback)
+		explicit_bzero(fallback, strlen(fallback));
 	g_free(fallback);
 }

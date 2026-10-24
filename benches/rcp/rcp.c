@@ -170,7 +170,10 @@ enum {
  * ⚠ The comparison is `<=`: «for one second» includes millisecond 1000. */
 #define CANVAS_GRACE 1000
 
-/* §7.5 — the outcome of the bench function. */
+/* §7.5 — the outcome of the bench function.  ⛔ DECISIONS §11.6: everything of the
+ * bench function exists only in the test build (`make BENCH=1`, `-DREMOTIX_BENCH`);
+ * in the installed binary `BENCH_MARK` is a type like any unknown one. */
+#ifdef REMOTIX_BENCH
 enum {
 	BENCH_ACCEPTED = 1,
 	BENCH_REFUSED = 2,
@@ -186,6 +189,7 @@ enum {
 #define BENCH_ON 0
 /* §7.5 rule 4: `delay_ms` MUST be between 0 and 10 000. */
 #define BENCH_DELAY_MAX 10000
+#endif /* REMOTIX_BENCH */
 
 /* The ceilings of §4.6, in milliseconds. */
 #define CAP_HELLO 5000
@@ -255,7 +259,8 @@ enum {
  * ⭐ And finding R3.19 stays satisfied, because the clock was not outsourced
  *    to QUIC: the thirty-second ceiling stays OURS, and what is looked at is
  *    the last packet **decrypted and authenticated** (`last_life`).  With
- *    `max_idle_timeout` at 120 seconds this server still detaches at 30.
+ *    `max_idle_timeout` at 120 seconds (as when this was written; the transport
+ *    announces 30 today, `IDLE_MS` in `transport.c`) this server still detaches at 30.
  *
  * ⚠ And what happens to the connection of whoever is silent, the document does
  *   NOT say.  Here the choice is to **leave it open** and free only the slot:
@@ -1668,9 +1673,10 @@ static bool printable_text(const char *s, size_t n)
 	return true;
 }
 
-/* §8.2: the reasons are fifteen, from 0x01 to 0x0F.  ⛔ And §3.1: «code 0
- * means closing without a reason and MUST NOT be used». */
-static bool reason_for_82(uint8_t m) { return m >= 0x01 && m <= 0x0F; }
+/* §8.2: the reasons are sixteen, from 0x01 to 0x10 (`SESSION_TERMINATED`, 15 Aug
+ * 2026, is one of them, and a client FAREWELL carrying it is accepted).  ⛔ And
+ * §3.1: «code 0 means closing without a reason and MUST NOT be used». */
+static bool reason_for_82(uint8_t m) { return m >= 0x01 && m <= 0x10; }
 
 /* ------------------------------------------------------------------------ */
 /* (the declaration is at the top, above the attempt limiter) */
@@ -1958,8 +1964,10 @@ static void send_here_i_am(rcp_session *s)
 	 *    rule 3 («the server MUST declare it»), and invariant I6.
 	 *    ⚠ The log line of the switch-on is in `rcp_open()`, which is
 	 *      the only «startup» this module knows. */
+#ifdef REMOTIX_BENCH
 	sc_str(&w, "bench.mark");
 	sc_str(&w, BENCH_ON ? "yes" : "no");
+#endif
 	if (!w.full)
 		send_message(s, T_HERE_I_AM, body, w.len);
 }
@@ -2135,7 +2143,10 @@ static bool handle_hello(rcp_session *s, reader *l)
 	static const char *const KNOWN_NAMES[] = {
 	    "video.codec",   "video.depth", "video.level",
 	    "video.max_size", "audio.codec", "input.touch",
-	    "clipboard.text", "client.name",      "bench.mark",
+	    "clipboard.text", "client.name",
+#ifdef REMOTIX_BENCH
+	    "bench.mark",
+#endif
 	    NULL};
 	char seen_items[MAX_SEEN][65];
 	int n_seen = 0;
@@ -2201,10 +2212,12 @@ static bool handle_hello(rcp_session *s, reader *l)
 		}
 		/* ⛔ A capability from the wrong side is PROTOCOL_ERROR: the name is
 		 * known, so the exception for unknown names does not cover it. */
+#ifdef REMOTIX_BENCH
 		if (strcmp(name, "bench.mark") == 0) {
 			dismiss(s, RCP_PROTOCOL_ERROR, "bench.mark does not come from the client");
 			return false;
 		}
+#endif
 		if (strcmp(name, "video.codec") == 0)
 			snprintf(c_codec, sizeof c_codec, "%s", value);
 		else if (strcmp(name, "video.depth") == 0)
@@ -2399,7 +2412,7 @@ static bool handle_credentials(rcp_session *s, reader *l, uint64_t now)
 	size_t lu = le_str(l, user, sizeof user);
 	size_t lp = le_str(l, password, sizeof password);
 	/* ⛔ THE LOCAL COPY IS ZEROED ON EVERY ROAD, NOT ONLY ON THE GOOD ONE —
-	 * finding R9.8.  The `memset` sat at the bottom, after the PAM answer: on
+	 * finding R9.8.  The zeroing sat at the bottom, after the PAM answer: on
 	 * every error path that sends the client away below — user not UTF-8, user
 	 * or password out of range — the password stayed on the stack.  The
 	 * `utente-vuoto` case of B5 is exactly this: a 1024-byte password, a user
@@ -2407,7 +2420,7 @@ static bool handle_credentials(rcp_session *s, reader *l, uint64_t now)
 	 * deliberate: a common exit `goto` reads worse than three lines that say
 	 * the same thing where one happens to look. */
 	if (l->too_short) {
-		memset(password, 0, sizeof password);
+		explicit_bzero(password, sizeof password);
 		dismiss(s, RCP_PROTOCOL_ERROR, "CREDENTIALS truncated");
 		return false;
 	}
@@ -2415,7 +2428,7 @@ static bool handle_credentials(rcp_session *s, reader *l, uint64_t now)
 	 * these limits a `CREDENTIALS` with two zero-byte strings would be
 	 * conforming — and an attacker would increment no counter. */
 	if (lu < 1 || lu > 256 || lp < 1 || lp > 1024) {
-		memset(password, 0, sizeof password);
+		explicit_bzero(password, sizeof password);
 		dismiss(s, RCP_PROTOCOL_ERROR, "user or password out of range");
 		return false;
 	}
@@ -2425,7 +2438,7 @@ static bool handle_credentials(rcp_session *s, reader *l, uint64_t now)
 	 * What arrived and what is judged must be the same string, or the log and
 	 * the key of §4.4-bis name a user that was not on the wire. */
 	if (!printable_text(user, lu)) {
-		memset(password, 0, sizeof password);
+		explicit_bzero(password, sizeof password);
 		dismiss(s, RCP_PROTOCOL_ERROR,
 		        "the user is not printable UTF-8 text");
 		return false;
@@ -2435,7 +2448,7 @@ static bool handle_credentials(rcp_session *s, reader *l, uint64_t now)
 	 *   arrived.  ⛔ It is not required to be printable: §4.4 does not ask it,
 	 *   and a password can contain whatever it wants. */
 	if (strlen(password) != lp) {
-		memset(password, 0, sizeof password);
+		explicit_bzero(password, sizeof password);
 		dismiss(s, RCP_PROTOCOL_ERROR,
 		        "the password contains a null byte: what arrives and what "
 		        "would be judged would be two different things");
@@ -2534,12 +2547,10 @@ static bool handle_credentials(rcp_session *s, reader *l, uint64_t now)
 	 *   and stays there until the message is consumed: the tail of the
 	 *   buffer is zeroed in `drain()`, and whatever is left over in
 	 *   `rcp_free()`.  Both were uncovered (finding R9.8).
-	 * `[?]` ⚠ And an optimising compiler is ALLOWED to remove this
-	 *   `memset`, because `password` is no longer read: the known cure is
-	 *   `explicit_bzero()`, but first one looks at the assembly of the binary
-	 *   that runs (suspicion R9.20 — it is a measurement, not a rewrite on
-	 *   faith). */
-	memset(password, 0, sizeof password);
+	 * ⭐ It is `explicit_bzero()` and not `memset`: an optimising compiler is
+	 *   ALLOWED to remove a `memset` of a buffer that is no longer read
+	 *   (suspicion R9.20, cured by DECISIONS §11.6). */
+	explicit_bzero(password, sizeof password);
 
 	s->cred_arrival = now;
 	s->state = S_WAIT_VERDICT;
@@ -5657,6 +5668,8 @@ bool rcp_clipboard_from_session(rcp_session *s, const char *text, size_t byte)
 	}
 	memcpy(copied, text, byte);
 	copied[byte] = 0;
+	if (s->app_text)
+		explicit_bzero(s->app_text, s->app_text_n);
 	free(s->app_text);
 	s->app_text = copied;
 	s->app_text_n = byte;
@@ -6140,6 +6153,8 @@ static int clipboard_slot(rcp_session *s, int64_t stream)
 		return -1;
 	}
 
+	if (s->app_in[free_slot].body)
+		explicit_bzero(s->app_in[free_slot].body, s->app_in[free_slot].lung);
 	free(s->app_in[free_slot].body);
 	memset(&s->app_in[free_slot], 0, sizeof s->app_in[free_slot]);
 	s->app_in[free_slot].used = true;
@@ -6149,6 +6164,8 @@ static int clipboard_slot(rcp_session *s, int64_t stream)
 
 static void clipboard_slot_free(rcp_session *s, int i)
 {
+	if (s->app_in[i].body)
+		explicit_bzero(s->app_in[i].body, s->app_in[i].lung);
 	free(s->app_in[i].body);
 	memset(&s->app_in[i], 0, sizeof s->app_in[i]);
 }
@@ -6302,6 +6319,8 @@ bool rcp_receive_clipboard(rcp_session *s, int64_t stream, const uint8_t *data,
 			s->app_in[i].lung = 0;
 
 			alive = handle_clipboard(s, kind, body, lung);
+			if (body)
+				explicit_bzero(body, lung);
 			free(body);
 			if (!alive)
 				return false;
@@ -6385,6 +6404,7 @@ static bool handle_key_request(rcp_session *s, reader *l, uint64_t now)
 }
 
 /* ------------------------------------------------------------------------ */
+#ifdef REMOTIX_BENCH
 /* ⭐ §7.5 — THE BENCH FUNCTION, AND THE CASE THAT MUST NOT BRING ANYTHING DOWN
  *
  * ⛔ This is the only control channel message to which a conforming server
@@ -6457,6 +6477,8 @@ static bool handle_bench_mark(rcp_session *s, reader *l)
 	return true;
 }
 
+#endif /* REMOTIX_BENCH */
+
 /* ------------------------------------------------------------------------ */
 rcp_session *rcp_open(const rcp_hooks *g, const char *provenance,
                        uint64_t now_ms)
@@ -6483,10 +6505,12 @@ rcp_session *rcp_open(const rcp_hooks *g, const char *provenance,
 	 * is the opening of a channel: the line sits here (finding R9.14).  ⚠ Whoever
 	 * diagnoses a coloured square on someone's desktop must be able to trace
 	 * back to the line saying the function was on. */
+#ifdef REMOTIX_BENCH
 	if (BENCH_ON)
 		reg(s, "⛔ the BENCH FUNCTION is ON (§7.5): this server accepts "
 		       "BENCH_MARK and paints over the desktop, and `HERE_I_AM` declares "
 		       "bench.mark=yes");
+#endif
 	return s;
 }
 
@@ -6525,7 +6549,7 @@ void rcp_free(rcp_session *s)
 	 * available to any later allocation of a process that serves ALL the
 	 * users of the machine (`SPECS.md` §5.5). */
 	if (s->acc) {
-		memset(s->acc, 0, s->acc_cap);
+		explicit_bzero(s->acc, s->acc_cap);
 		free(s->acc);
 	}
 	/* ⛔⭐ AND THE CLIPBOARD IS FREED HERE, both sides.
@@ -6537,12 +6561,12 @@ void rcp_free(rcp_session *s)
 	 *    nothing, and this process serves ALL the users of the machine
 	 *    (`SPECS.md` §5.5). */
 	if (s->app_text) {
-		memset(s->app_text, 0, s->app_text_n);
+		explicit_bzero(s->app_text, s->app_text_n);
 		free(s->app_text);
 	}
 	for (int i = 0; i < A_STREAM_MAX; i++)
 		if (s->app_in[i].body) {
-			memset(s->app_in[i].body, 0, s->app_in[i].lung);
+			explicit_bzero(s->app_in[i].body, s->app_in[i].lung);
 			free(s->app_in[i].body);
 		}
 	memset(s, 0, sizeof *s);
@@ -6695,7 +6719,7 @@ static int accumulate(rcp_session *s, const uint8_t *data, size_t n)
 			return -1;
 		if (s->acc) {
 			memcpy(p, s->acc, s->acc_len);
-			memset(s->acc, 0, s->acc_cap);
+			explicit_bzero(s->acc, s->acc_cap);
 			free(s->acc);
 		}
 		s->acc = p;
@@ -6761,11 +6785,13 @@ static bool measure_fields(uint16_t kind, const uint8_t *body, uint32_t lung,
 		le_u32(&l);
 		le_str(&l, buf, sizeof buf);
 		break;
+#ifdef REMOTIX_BENCH
 	case T_BENCH_MARK:
 		le_u32(&l);
 		le_u32(&l);
 		le_u32(&l);
 		break;
+#endif
 	case T_FAREWELL:
 		le_u8(&l);
 		le_str(&l, buf, sizeof buf);
@@ -6955,6 +6981,7 @@ static bool drain(rcp_session *s, uint64_t now)
 			}
 			keep_going = handle_attach(s, &l, now);
 			break;
+#ifdef REMOTIX_BENCH
 		case T_BENCH_MARK:
 			/* §7.5: the mark is painted on a frame, and frames
 			 * start with `SESSION`.  Before, it is a message in the wrong
@@ -6966,6 +6993,7 @@ static bool drain(rcp_session *s, uint64_t now)
 			}
 			keep_going = handle_bench_mark(s, &l);
 			break;
+#endif
 		case T_REQUEST_KEY:
 			/* ⛔ §5.2: a keyframe is asked for because there is a gap between
 			 * frames, and frames start with `SESSION`.  Before, it is a
@@ -7577,7 +7605,7 @@ static bool drain(rcp_session *s, uint64_t now)
 		 * they were: those of a `CREDENTIALS` are the password in clear, and
 		 * they stayed in the session until the end of the connection.
 		 * §4.4: «it must be zeroed as soon as PAM has answered». */
-		memset(s->acc + s->acc_len, 0, before - s->acc_len);
+		explicit_bzero(s->acc + s->acc_len, before - s->acc_len);
 		s->since = now;
 	}
 }

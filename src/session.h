@@ -2,6 +2,11 @@
  * session — the GNOME graphical session: REMOTIX makes it BE BORN, and makes it
  * be born WITH A MONITOR.  It does not merely find it, and it does not merely keep it alive.
  *
+ * ⚠ SUPERSEDED on 14 Aug 2026 (phase 4, A1, `session.c`): the GNOME session now
+ *   starts headless WITHOUT `--virtual-monitor`, and the only monitor is the
+ *   one the capture creates.  What follows is the reasoning of the earlier
+ *   design and the faults it paid for; it stays as history.
+ *
  * ---------------------------------------------------------------------------
  * ⛔ WHY THIS FILE EXISTS IN V2, AND WHY IT IS NOT A COPY OF THE v1 ONE
  *

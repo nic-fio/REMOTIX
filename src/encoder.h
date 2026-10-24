@@ -809,7 +809,8 @@ void encoder_quality_rises(bool enabled);
  *    the red that would say so is blunt: *«the real desktop, with the ceiling
  *    on, costs less than before»* ⇒ the cure is thrown away.
  *
- * The argument is the **floor in Mbit/s** (20, today), and from it are derived
+ * The argument is the **floor in Mbit/s** (30 since 23 Aug 2026, `DECISIONS.md`
+ * §3.1-sexies; 20 when this was written), and from it are derived
  * the wire (80 %), the operating point (75 % of the wire — ⛔ **never equal to
  * the wire**: with the two numbers equal the driver deduces **CBR**, which is
  * R31) and the regulator's buffer (**40 ms**, against the 50 that `CODER.md`
@@ -820,9 +821,10 @@ void encoder_quality_rises(bool enabled);
  *    real desktop.  In v1 this identical change made them say *«we have gone
  *    backwards»*.  Off, the program behaves **exactly** as today.
  *
- * ⚠ It holds only for **hardware** encoding (`h264_vaapi`): the software
- *   fallback stays at its CRF, and the value in force is written to the log
- *   when every encoder opens — **on and off**.
+ * ⚠ It holds for the **hardware** encoders — VA-API and Vulkan Video (the latter
+ *   as VBR) — and there is no software path any more (phase 19, `DECISIONS.md`
+ *   §10.27).  The value in force is written to the log when every encoder
+ *   opens — **on and off**.
  */
 void codificatore_tetto_banda(uint32_t floor_mbit);
 

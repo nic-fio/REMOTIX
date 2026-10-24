@@ -147,6 +147,9 @@ static GBytes *slurp_fd(int fd, GError **mistake)
 			            "whoever had to deliver the clipboard wrote "
 			            "nothing for %d ms",
 			            WAIT_READ_MS);
+			explicit_bzero(piece, sizeof piece);
+			if (collected->data)
+				explicit_bzero(collected->data, collected->len);
 			g_byte_array_free(collected, TRUE);
 			return NULL;
 		}
@@ -160,6 +163,9 @@ static GBytes *slurp_fd(int fd, GError **mistake)
 				continue;
 			g_set_error(mistake, G_IO_ERROR, g_io_error_from_errno(errno),
 			            "clipboard read failed: %s", g_strerror(errno));
+			explicit_bzero(piece, sizeof piece);
+			if (collected->data)
+				explicit_bzero(collected->data, collected->len);
 			g_byte_array_free(collected, TRUE);
 			return NULL;
 		}
@@ -170,12 +176,16 @@ static GBytes *slurp_fd(int fd, GError **mistake)
 			            "clipboard over the ceiling of %u bytes (§5.4): left "
 			            "where it is, and NOT truncated",
 			            CLIPBOARD_CAP);
+			explicit_bzero(piece, sizeof piece);
+			if (collected->data)
+				explicit_bzero(collected->data, collected->len);
 			g_byte_array_free(collected, TRUE);
 			return NULL;
 		}
 		g_byte_array_append(collected, piece, (guint)readings);
 	}
 
+	explicit_bzero(piece, sizeof piece);
 	return g_byte_array_free_to_bytes(collected);
 }
 
@@ -251,6 +261,8 @@ static char *read_text(Clipboard *clipboard, size_t *amount)
 			              "of ours nor of the client — it is a program that keeps "
 			              "bytes in the clipboard that RCP/1 cannot carry",
 			              TEXT_TYPES[i], (size_t)byte);
+			/* The GBytes is ours alone (refcount 1, from `slurp_fd`): wiped before it is freed. */
+			explicit_bzero((void *)start, byte);
 			continue;
 		}
 
@@ -267,6 +279,7 @@ static char *read_text(Clipboard *clipboard, size_t *amount)
 			              "announced.  Truncating here would give a text shorter "
 			              "than the announcement, that is an announcement that lies",
 			              TEXT_TYPES[i], (size_t)byte);
+			explicit_bzero((void *)start, byte);
 			continue;
 		}
 
@@ -274,7 +287,12 @@ static char *read_text(Clipboard *clipboard, size_t *amount)
 		                   (size_t)byte, TEXT_TYPES[i]);
 		if (amount)
 			*amount = byte;
-		return g_strndup(start, byte);
+		{
+			char *copy = g_strndup(start, byte);
+
+			explicit_bzero((void *)start, byte);
+			return copy;
+		}
 	}
 
 	return NULL;
@@ -394,12 +412,15 @@ static void on_owner_changed(GDBusConnection *bus, const char *sender,
 	}
 
 	g_mutex_lock(&clipboard->lock);
+	if (clipboard->last)
+		explicit_bzero(clipboard->last, strlen(clipboard->last));
 	g_free(clipboard->last);
 	clipboard->last = g_strdup(text);
 	clipboard->last_byte = byte;
 	if (clipboard->on_text)
 		clipboard->on_text(text, byte, clipboard->data);
 	g_mutex_unlock(&clipboard->lock);
+	explicit_bzero(text, strlen(text));
 }
 
 /*
@@ -454,12 +475,15 @@ void clipboard_read_now(Clipboard *clipboard)
 	              byte);
 
 	g_mutex_lock(&clipboard->lock);
+	if (clipboard->last)
+		explicit_bzero(clipboard->last, strlen(clipboard->last));
 	g_free(clipboard->last);
 	clipboard->last = g_strdup(text);
 	clipboard->last_byte = byte;
 	if (clipboard->on_text)
 		clipboard->on_text(text, byte, clipboard->data);
 	g_mutex_unlock(&clipboard->lock);
+	explicit_bzero(text, strlen(text));
 }
 
 static void on_transfer(GDBusConnection *bus, const char *sender,
@@ -689,6 +713,8 @@ void clipboard_close(Clipboard *clipboard)
 	}
 
 	g_clear_pointer(&clipboard->context, g_main_context_unref);
+	if (clipboard->last)
+		explicit_bzero(clipboard->last, strlen(clipboard->last));
 	g_free(clipboard->last);
 	g_clear_object(&clipboard->bus);
 	g_mutex_clear(&clipboard->lock);
@@ -805,6 +831,8 @@ void clipboard_reply(Clipboard *clipboard, uint32_t serial, const char *text,
 		              "⛔ SelectionWrite for request %u was refused "
 		              "(%s)",
 		              serial, mistake->message);
+		if (fallback)
+			explicit_bzero(fallback, strlen(fallback));
 		return;
 	}
 
@@ -813,6 +841,8 @@ void clipboard_reply(Clipboard *clipboard, uint32_t serial, const char *text,
 	g_mutex_lock(&clipboard->lock);
 	if (!fallback)
 	{
+		if (clipboard->last)
+			explicit_bzero(clipboard->last, strlen(clipboard->last));
 		g_free(clipboard->last);
 		clipboard->last = g_strndup(text, byte);
 		clipboard->last_byte = byte;
@@ -862,4 +892,6 @@ void clipboard_reply(Clipboard *clipboard, uint32_t serial, const char *text,
 			              "succeed: %s",
 			              serial, mistake->message);
 	}
+	if (fallback)
+		explicit_bzero(fallback, strlen(fallback));
 }

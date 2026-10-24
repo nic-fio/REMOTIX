@@ -138,9 +138,10 @@ static char *type_if_graphical(sentinel *s, const char *fpath)
 	/* `greeter`, `lock-screen` and `background` are not the user at work. */
 	if (g_strcmp0(g_variant_get_string(v_class, NULL), "user") != 0)
 		return NULL;
-	/* ⚠ The second belt, and today it cuts nothing: until `PAM_RHOST` is
-	 *   set, our sessions show `Remote=no` like the local ones.
-	 *   ⇒ The SEAT does the work, and this line will become true later. */
+	/* ⚠ The second belt.  `PAM_RHOST` is set by the PAM check
+	 *   (`authentication.c`) and by the child's PAM session (`child.c`), so our
+	 *   sessions show `Remote=yes` and this line cuts them; the SEAT does the
+	 *   rest. */
 	if (v_remote && g_variant_get_boolean(v_remote))
 		return NULL;
 	/* `closing` is the session that is going away: counting it would lock out

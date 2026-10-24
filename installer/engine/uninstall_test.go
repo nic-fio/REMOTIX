@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -188,5 +189,80 @@ func TestUninstallKeeps(t *testing.T) {
 	ReadJSON(filepath.Join(op.Folder, "certificate.json"), &c)
 	if s := strings.Join(c.Indirect, "\n"); !strings.Contains(s, "RX-PACCHETTI-006") || !strings.Contains(s, "libnuova") || !strings.Contains(s, "libcomune") {
 		t.Fatalf("the held-back libnuova is not declared in the certificate: %q", s)
+	}
+}
+
+// fakeUpgrade: a confirmed upgrade, later than the installation, whose plan carries one step that
+// adds «user» to «group» (origin DIRECT in its log). With no log file when `withLog` is false.
+func fakeUpgrade(t *testing.T, b *bench, id, user, group string, withLog bool) {
+	t.Helper()
+	d := filepath.Join(b.operations, id)
+	if err := os.MkdirAll(d, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	step := PlanGroup("group-"+user+"-"+group, user, group)
+	WriteJSON(filepath.Join(d, "plan.json"), &Piano{Schema: Schema, Obj: "plan", ID: id, Duty: "upgrade", Azioni: []PlanAction{step}})
+	os.WriteFile(filepath.Join(d, "state"), []byte(string(CONFIRMED)+"\n"), 0o600)
+	if withLog {
+		line, _ := json.Marshal(Event{N: 1, Type: EvIntent, Action: step.ID, Origine: DIRECT})
+		os.WriteFile(filepath.Join(d, "log.jsonl"), append(line, '\n'), 0o600)
+	}
+}
+
+func countSteps(pn *Piano, id string) int {
+	n := 0
+	for _, a := range pn.Azioni {
+		if a.ID == id {
+			n++
+		}
+	}
+	return n
+}
+
+// An installation plus an upgrade that added a group: the group is undone ONCE (by the upgrade's
+// own step), even if the enrolment file of REMOTIX lists the same pair.
+func TestUninstallUpgradeGroupOnce(t *testing.T) {
+	b := fakeInstall(t)
+	up := "99991231T235959Z-00000000"
+	fakeUpgrade(t, b, up, "nuovo", "render", true)
+	line := `{"format":"remotix-enrollments/1","time":"2026-10-01","user":"nuovo","uid":1002,"group":"render","gid":991,"origin":"DIRECT","by":"REMOTIX at first connection"}` + "\n"
+	f := filepath.Join(filepath.Dir(b.operations), EnrollmentsFile)
+	old, _ := os.ReadFile(f)
+	os.WriteFile(f, append(old, []byte(line)...), 0o644)
+	pn, err := b.engine(t).UninstallPlan(fakeProfile(), true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := countSteps(pn, "undo-"+up+"-group-nuovo-render"); n != 1 {
+		t.Fatalf("the upgrade's group step must appear once, found %d", n)
+	}
+	if n := countSteps(pn, "membership-nuovo-render"); n != 0 {
+		t.Fatalf("the same group must not be removed a second time as a membership (%d)", n)
+	}
+	if n := countSteps(pn, "membership-altro-render"); n != 1 {
+		t.Fatalf("the unrelated enrolment must stay (%d)", n)
+	}
+}
+
+// An upgrade whose log cannot be read is DECLARED in the plan, not silently skipped.
+func TestUninstallUpgradeLogUnreadable(t *testing.T) {
+	b := fakeInstall(t)
+	up := "99991231T235959Z-00000000"
+	fakeUpgrade(t, b, up, "nuovo", "render", false)
+	pn, err := b.engine(t).UninstallPlan(fakeProfile(), true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, d := range pn.Declared {
+		if strings.Contains(d, up) && strings.Contains(d, "NOT in this plan") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("the unreadable log of the upgrade must be declared: %q", pn.Declared)
+	}
+	if n := countSteps(pn, "undo-"+up+"-group-nuovo-render"); n != 0 {
+		t.Fatalf("nothing can be undone from a log that is not there (%d)", n)
 	}
 }

@@ -112,7 +112,7 @@ uno() {
 	rm -rf "$c1/positivo"; cp -a "$c1/remotix/src" "$c1/positivo"
 	sed -i 's/^#define BENCH_ON 0$/#define BENCH_ON 1/' "$c1/positivo/rcp.c"
 	podman run --rm --userns=keep-id -v "$c1:/lavoro" -w /lavoro/positivo "$imm" \
-		sh -c 'make TWIN=none rcp.o >/dev/null 2>&1' >/dev/null 2>&1
+		sh -c 'make TWIN=none BENCH=1 rcp.o >/dev/null 2>&1' >/dev/null 2>&1
 	podman run --rm -v "$u:/u:ro" -v "$c1:/c:ro" "$imm" sh -c '
 		set -u
 		d=$(mktemp -d); dpkg-deb -x /u/'"$deb"' "$d"
