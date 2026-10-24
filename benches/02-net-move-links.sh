@@ -111,6 +111,22 @@ rm -rf "$N/certificates" "$N/ban"; ln -s /etc "$N/certificates"; ln -s /etc/shad
 B2=$(stat -c '%U:%G %a' /etc /etc/shadow)
 sh "$M" --back >/dev/null 2>&1
 [ "$B2" = "$(stat -c '%U:%G %a' /etc /etc/shadow)" ] && [ ! -e "$S/ban" ] && ok "--back does not follow links in net/" || no "--back followed a link in net/"
+# hard link: a ban that is ALSO /etc/shadow (protected_hardlinks off, as a hijacked old network side could) stays in
+# net/ and /etc/shadow keeps owner, group and mode
+sh "$M" >/dev/null 2>&1
+rm -rf "$N/ban" "$S/ban" "$N/ban.new" "$S/ban.new"
+PH=$(sysctl -n fs.protected_hardlinks 2>/dev/null)
+sysctl -w fs.protected_hardlinks=0 >/dev/null 2>&1
+B3=$(stat -c '%U:%G %a' /etc/shadow)
+if ln /etc/shadow "$N/ban" 2>/dev/null; then
+	sh "$M" --back >/dev/null 2>&1
+	[ "$B3" = "$(stat -c '%U:%G %a' /etc/shadow)" ] && [ -e "$N/ban" ] && [ ! -e "$S/ban" ] \
+		&& ok "--back leaves a hard-linked ban in net/ and /etc/shadow keeps owner, group and mode" || no "--back moved or chowned a hard-linked ban"
+	rm -f "$N/ban"
+else
+	no "could not make the hard link to /etc/shadow (the case was not tried)"
+fi
+[ -z "$PH" ] || sysctl -w fs.protected_hardlinks="$PH" >/dev/null 2>&1
 
 [ "${RACE:-}" = red ] && red=1
 [ $red = 0 ] && echo GREEN || echo RED

@@ -16,11 +16,14 @@
 # ⛔ An administrator's page.pem/page.key (no page.ours mark) moves with the
 #    rest, and the journal says so: it is never regenerated.
 # ⭐ `remotix-net-move --back` is the reverse (net/ → the 1.0 paths, owned by root again), for a DOWNGRADE to 1.0 or a
-#    removal, called by the prerm / %preun / pre_upgrade+pre_remove of the split package (never on an upgrade): a 1.0
+#    removal, called by the prerm / %preun / pre_remove of the split package (never on an upgrade; Arch calls it only from
+#    pre_remove — on a DOWNGRADE the administrator runs it by hand, as the remotix.install comment says): a 1.0
 #    would otherwise not find its ban and certificates, and make new ones (ban reset, another fingerprint).  Same
 #    safety as the forward move: mv -T, nothing followed, idempotent, and it RESUMES — a run interrupted between the
 #    mv and the chown finds the files already back and only gives them to root.  It stops the service first (the old
-#    network side writes in net/); the desktops stay (T2), the service stays stopped: start it after the downgrade.
+#    network side writes in net/); the desktops stay (T2).  ⭐ After a downgrade the service STAYS STOPPED: the marker
+#    /run/remotix/was-running (written if the unit was active or activating) says whether it was running, so whoever
+#    does the downgrade (or the installer engine, later) can start it again.  A hard-linked ban is left in net/, said.
 # ⛔ The SAME file in packaging/{debian,rpm,arch}/remotix-net-move
 #    (packaging/arch/build.sh checks they are byte-identical).
 set -u
@@ -34,8 +37,13 @@ say() {
 
 # ⭐ --back: see the header.  No user remotix needed (it may be gone).
 if [ "${1:-}" = "--back" ]; then
-	if command -v systemctl >/dev/null 2>&1 && systemctl is-active --quiet remotix.service 2>/dev/null; then
-		say "stopping remotix.service (the desktops stay) before moving $N back: start it after the downgrade"
+	if [ -d /run/systemd/system ]; then
+		# the marker first: was it running (active or activating)?  Stopping a stopped unit succeeds, so always stop.
+		if systemctl is-active --quiet remotix.service 2>/dev/null || [ "$(systemctl is-active remotix.service 2>/dev/null)" = activating ]; then
+			install -d -m 0755 -o root -g root /run/remotix && : > /run/remotix/was-running && chmod 0644 /run/remotix/was-running \
+				|| say "⚠ could not write /run/remotix/was-running"
+		fi
+		say "stopping remotix.service (the desktops stay) before moving $N back: it stays stopped, see /run/remotix/was-running"
 		systemctl stop remotix.service || { say "⛔ the service did not stop: nothing moved back"; exit 1; }
 	fi
 	if [ -L "$N" ] || { [ -e "$N" ] && [ ! -d "$N" ]; }; then
@@ -46,6 +54,10 @@ if [ "${1:-}" = "--back" ]; then
 	# it now sits in $S (root's, 0755), so remotix can no longer change what is inside — then its entries that are
 	# not links; a hard-linked file is refused and said (tmpfiles' rule too).
 	own_back() {
+		if [ -f "$1" ] && [ ! -L "$1" ]; then
+			# a single regular file: only when nobody else holds a link to it
+			[ "$(stat -c %h -- "$1")" = 1 ] || { say "⚠ $1 has more than one hard link: not given to root"; return 0; }
+		fi
 		chown -h root:root -- "$1" || return 1
 		if [ -d "$1" ]; then
 			find "$1" -mindepth 1 -maxdepth 1 ! -type l \( -type d -o -links 1 \) -exec chown -h root:root -- {} + || return 1
@@ -77,9 +89,15 @@ if [ "${1:-}" = "--back" ]; then
 		if [ -f "$N/$f" ] && [ ! -L "$N/$f" ]; then
 			if [ -e "$S/$f" ] || [ -L "$S/$f" ]; then
 				say "⚠ both $S/$f and $N/$f exist: the one in net/ is left where it is"
+			elif [ "$(stat -c %h -- "$N/$f")" -gt 1 ]; then
+				say "⚠ $N/$f has more than one hard link: it is left in net/, not moved"
 			else
 				mv -T "$N/$f" "$S/$f" || exit 1
 				say "moved $N/$f to $S/$f (1.5 → 1.0)"
+				if [ -L "$S/$f" ]; then
+					rm -f -- "$S/$f"
+					say "⚠ $S/$f was a symbolic link (planted in the race): removed"
+				fi
 			fi
 		fi
 		if [ -f "$S/$f" ] && [ ! -L "$S/$f" ] && [ ! -e "$N/$f" ]; then
