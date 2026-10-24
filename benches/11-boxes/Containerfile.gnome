@@ -191,10 +191,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # ⭐⭐ And it is the thesis of this phase in miniature, happening at the first attempt:
 #     **the second desktop immediately showed something the first kept
 #     hidden, and not because it was broken — because it was generous.**
+# ⭐ 15 Oct 2026, `DECISIONS.md` §11.38: the tenant gets ONLY `render`, like the product
+#   (server and installer enrol only in the render nodes' group); `video` is still
+#   created, it is not given.  ⇒ A box built before that day still has `video`: rebuild it.
 RUN groupadd -f video \
     && groupadd -f render \
     && useradd -u 4011 -m -s /bin/bash provanic \
-    && usermod -aG video,render provanic \
+    && usermod -aG render provanic \
     && printf 'provanic:provanic2026\n' | chpasswd
 
 # ⛔ And the `~/.cache` must be ITS OWN.  On the test machine it is a link
@@ -272,7 +275,7 @@ RUN printf '%s\n' \
     '  groupmod -g "$G" render 2>/dev/null || groupadd -g "$G" render' \
     '  echo "rete11: render aligned to $G (it belonged to ${A:-nobody})"' \
     'fi' \
-    'usermod -aG render,video provanic' \
+    'usermod -aG render provanic' \
     'id provanic' \
     > /usr/local/sbin/rete11-allinea-gruppi && chmod 755 /usr/local/sbin/rete11-allinea-gruppi
 
@@ -356,13 +359,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 #   *«so as not to go crazy with user names and passwords create in the containers the user
 #   nictest:nictest and put it in the sudo group»*.  It is for HIS manual
 #   tests (Firefox, terminal, file manager are already in the layers above).
-# ⚠ `video` and `render` like `provanic`: without them, the session does not open the card.
+# ⚠ `render` like `provanic`: without it, the session does not open the card.
 # ⛔ No mesh uses it: the meshes create their own tenants (`c1u…`, `c17u…`),
 #   so the user's tests and the net do not step on each other's toes.
 # ⚠ Last layer on purpose: the layers above stay as they were.
 # ---------------------------------------------------------------------------
 RUN useradd -m -s /bin/bash nictest \
-    && usermod -aG sudo,video,render nictest \
+    && usermod -aG sudo,render nictest \
     && printf 'nictest:nictest\n' | chpasswd
 
 STOPSIGNAL SIGRTMIN+3
