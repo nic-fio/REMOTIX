@@ -138,17 +138,37 @@ not apply (the user is the Author). What follows is what the user decided on eac
 - **The ruling** (verbatim): *«leviamolo. IPv6 diverra' importante fra 30 anni»*.
 - ⇒ REMOTIX stays IPv4-only; not in 1.5, not in the MASTERPLAN. The `localhost` case of §11.4 is accepted.
 
-### 11.6 ✅ The small fixes of the manual's open-defects table go in
+### 11.6 🔸 The small fixes of the manual's open-defects table go in — done in package 1, under verification (24 Oct 2026)
 
 - **The ruling** (verbatim): *«blocco 1 ok»*.
 - ⇒ Retired RX codes no longer raised; BENCH_MARK out of the installed binary (`RCP.md` §7.5); journal lines no
   longer doubled; `explicit_bzero` for the password copy (R9.20); FAREWELL reason 0x10 accepted from the client; stale
   comments of §23.2; the uninstallation removes what upgrades added.
-- ✅ **Done 13 Oct 2026** (not committed). Two choices made on the way: the test build is `make BENCH=1`
+- ✅ **Done 13 Oct 2026 in the first attempt** (discarded, tag `1.5-scartata`; not committed there). Two choices made on the way: the test build is `make BENCH=1`
   (`-DREMOTIX_BENCH`; the packages build without it, and the installed binary has no `BENCH_MARK`, `bench.mark` or
   `/diary` string — checked with `strings`); `WT_FLOOR_BYTE_MS` (the transport's guess before its first measurement)
   goes from the old 20 Mbit/s floor to the decided 30 (§3.1-sexies). `explicit_bzero` also wipes the buffers freed
   after carrying the password or the clipboard, not only the password copy.
+- 🔸 **In this tree (package 1, branch `pacchetto1`, 24 Oct 2026)** — the commit «Small fixes (section 11.6):
+  explicit_bzero on password and clipboard, BENCH_MARK under BENCH, cancel updates in uninstall.go (+2 Go tests)»
+  (`src/rcp.c` and its twin in `benches/rcp/`, `installer/engine/uninstall.go`, the packaging files, the Go tests), then
+  «installer: gofmt texts.go» (formatting only). Done, `[M]`, in a copy made with `git archive`:
+  · normal build and `BENCH=1`: both compile, the same two warnings as `d32ef7a1` (`vulkanvideo.c:354`, `:379`), none new;
+  · `strings` on the normal binary: no `/diary`, no `bench.mark`; the only hit of `BENCH_MARK` is the symbol name
+    `T_BENCH_MARK` of the type constant (the binary is not stripped; stripped: none of the three); on the `BENCH=1`
+    binary: no `/diary`, `bench.mark` present;
+  · Go: `go vet` and `go test ./...` of the installer pass, the two new tests (`TestUninstallUpgradeGroupOnce`,
+    `TestUninstallUpgradeLogUnreadable`) among them; `gofmt -l` clean.
+  **To do:** the complete functional suite and the A/B 30-perf against the 1.0 (`suite-pacchetto1.sh`,
+  `ab-pacchetto1.sh`), and the reading of the packaging changes by building the packages.
+- 🔸 **Added 24 Oct 2026 — the KDE clipboard and a zero in the text.** In `src/clipboard_kde.c` (commit
+  «clipboard_kde: a text with a zero in the middle is not announced (as clipboard.c); last_text never states more
+  than the copy») a text with a zero byte in the middle is now refused and **not announced**, as `clipboard.c` does for
+  GNOME (cutting it at the zero would announce a text shorter than the announcement), and `clipboard_kde_last_text()`
+  never states more bytes than the copy holds (the fallback used to read past it). Done: compiles, normal and
+  `BENCH=1`, no new warning. **Not yet run:** the test `nul-kde-prova.sh --installa --contrasto` on the KDE box
+  (`printf 'abc\0def' | wl-copy` in the session: «with a zero in the middle — not announced» in the log, no «the session
+  copied», the child alive; then a text with accents announced as before; and on the 1.0 no «not announced»).
 
 ### 11.7 ✅ Derivative distributions: the parent picks the package, the desktop decides
 
@@ -202,7 +222,7 @@ not apply (the user is the Author). What follows is what the user decided on eac
     kept sending for seconds — corrected and measured again;
   · **Firefox** on the tablet: in through the Retry.
 
-### 11.10 ✅ `/diary` leaves the installed product
+### 11.10 🔸 `/diary` leaves the installed product — done in package 1, under verification (24 Oct 2026)
 
 - **The ruling** (verbatim): *«non so' per quale motivo ma diary mida' l'idea di remotix che entra nel pc
   dell'utente»*; then *«via diary»*.
@@ -211,8 +231,14 @@ not apply (the user is the Author). What follows is what the user decided on eac
   including whether the window has focus: telemetry the user never asked for, and on a company server a record of
   who is looking at the screen.
 - ⇒ Kept only in bench/laboratory builds, like the bench messages of §11.6.
-- ✅ **Done 13 Oct 2026**: `/diary` exists only with `make BENCH=1`; the page sends nothing unless the server marks
-  it `data-diary="yes"`.
+- ✅ **Done 13 Oct 2026 in the first attempt** (discarded, tag `1.5-scartata`): `/diary` existed only with
+  `make BENCH=1`; the page sent nothing unless the server marked it `data-diary="yes"`.
+- 🔸 **In this tree (package 1, 24 Oct 2026) it goes further than the line above:** the commit «Remove /diary entirely
+  (even from BENCH builds); keep the local line in the page #logbook» (`src/page.c`, `src/page.html`, `src/Makefile`) takes
+  the endpoint, the 5-second measurement line and the `data-diary` marker out of **every** build, bench builds included;
+  the page keeps its own local line in `#logbook` (nothing leaves the browser). Done, `[M]`: normal and `BENCH=1` builds
+  compile with no new warning; `strings` of both binaries: no `/diary`. **To do:** the suite (the benches that read the
+  diary of a bench build must not need it any more) and the A/B.
 
 ### 11.11 ✅ The last phase of 1.5: a service user for the network side
 
@@ -489,6 +515,12 @@ The «before a release» level of §11.24, release under test `remotix-1.4.99-2.
 - `[M]` 16 Oct 2026 (B1.13, §11.36): with a slow client decoder the main-thread route stalls the main thread 44–61 %
   and fails the sound; the worker route (the default since §11.36 D) never stalls it (longest 101–112 ms) ⇒ the
   stalls are the video's work on the main thread, and the worker default is the cure already in place.
+- 🔸 **In this tree (package 1, 24 Oct 2026)** — the commit «D-006: time/counts/trimmed keys and texts in
+  15-d006-measure.py»: only the bench `benches/15-suite/15-d006-measure.py` (the counters' keys, `rearms`, `pulled`,
+  `trimmed`, `discarded_full`, `discarded_late`, `missed`, `audible_estimate`, and its texts, in English); **no product
+  change**. Done: it compiles as Python, and the names it reads (`rearms`, `pulled`, `trimmed`, `exited`,
+  `discarded_full`, `discarded_late`, `missed`) are the ones `audio_counts()` of `src/page.html` writes (read in the
+  code, not yet run). **To do:** one run of the bench on a Firefox box (`15-d006-measure.py`, F-013).
 
 ### 11.32 ✅ The client tells the server its decoder is behind (`PACE`) — A, measured: ON by default (15–16 Oct 2026)
 
@@ -973,7 +1005,7 @@ item below unless its line says otherwise. Release notes: `docs/RELEASE-NOTES-1.
     `quic-conn` 260 k runs clean (after a harness fix: the BURST op moved the clock after its last pass), the
     `quic-conn-graft` fault check found.
 
-### 11.41 ✅ The last row of the picture is tinted in the browser — A, the page clamp (15 Oct 2026)
+### 11.41 🔸 The last row of the picture is tinted in the browser — A, the page clamp (15 Oct 2026) — in package 1, live check due
 
 - **The problem, in plain words.** On Chrome the bottom row of pixels of the remote screen has the wrong colour
   (e.g. green on GNOME): the brightness is right, the colour is pulled about ¼ toward zero (`66c70ba9`). ⭐ The
@@ -1000,9 +1032,19 @@ item below unless its line says otherwise. Release notes: `docs/RELEASE-NOTES-1.
   - **Recommendation: A, after a live check** — compile the shader in a real browser, watch F-011 go green on
     the four Chrome desktops and on Firefox, then merge. The price (one row repeated) is invisible in practice;
     B is a gamble on browser internals; C leaves the fault on screen.
-- ✅ **Decided 15 Oct 2026, decisione dell'utente**: **A**, the page clamp. On `main` as `6fa5fd60`, cherry-picked
-  from `proposal/last-row-page` (`64fe796a`). ⏳ The live check is still due: `verify-round.sh` step 10 (F-011 on
-  Chrome and Firefox, the four desktops) — `chroma_bleed` must go green; a red there reopens this entry.
+- ✅ **Decided 15 Oct 2026, decisione dell'utente**: **A**, the page clamp. In the first attempt (discarded, tag
+  `1.5-scartata`) it was `main` as `6fa5fd60`, cherry-picked from `proposal/last-row-page` (`64fe796a`). ⏳ The live
+  check is still due: `verify-round.sh` step 10 (F-011 on Chrome and Firefox, the four desktops) — `chroma_bleed` must go
+  green; a red there reopens this entry.
+- 🔸 **In this tree (package 1, 24 Oct 2026)** — the commit «F-011: page.html shader samples with textureSize,
+  half-texel clamp, highp» (`src/page.html`, +15 −2). It is the page clamp of A **written again, and not the same
+  code** as `proposal/last-row-page`: the shader reads the real size of the texture with `textureSize()`, scales the
+  coordinate by visible/real size and keeps it half a texel **inside** the visible rectangle (the last row is not copied
+  from the row above; sampling just never reaches the padding), and uses `highp` (`mediump` is too coarse for
+  coordinates past 1024). Why it differs: Chrome 156 imports the frame with the CODED height (2082) above the visible one
+  (2064) and the linear filter mixes the padding in at the edge. Done: it compiles with the page (normal and `BENCH=1`,
+  no new warning). ⚠ **Not yet done:** the shader has not been through a real GLSL compiler nor run in a browser from this
+  tree — F-011 on Chrome and Firefox, four desktops, is the test, and it is still due.
 
 ### 11.42 ✅ The test server's Intel card for the stress bench: `nicfio` in the card groups (15 Oct 2026)
 
