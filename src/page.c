@@ -96,14 +96,17 @@
 #define PAGE_EVENTS_PER_PASS 16
 /* ⭐ Same review — accepts per second: per `rcp_key_address()` key (an IPv4
  *   address or an IPv6 /64) and per IPv6 /48, as token buckets (a burst,
- *   then a steady rate).  Over it the connection is closed at once, counted
- *   in the summary line.  PAGE_RATE_KEYS buckets each, the fullest one
- *   reused for a new key (a full bucket is the same as no bucket). */
+ *   then a steady rate).  Over it the connection waits, parked without TLS,
+ *   in a FREE slot (never evicting anybody), or is refused when there is
+ *   none.  PAGE_RATE_KEYS buckets each (256: an attacker must keep more
+ *   addresses than that busy to push a new address onto the shared overflow
+ *   bucket); a new key takes only a FULL bucket (a full bucket is the same
+ *   as no bucket), see bucket_of(). */
 #define PAGE_ACCEPT_RATE 4
 #define PAGE_ACCEPT_BURST 8
 #define PAGE_ACCEPT_RATE_48 8
 #define PAGE_ACCEPT_BURST_48 16
-#define PAGE_RATE_KEYS 64
+#define PAGE_RATE_KEYS 256
 /* The kernel's queue of connections not accepted yet (independent review of
  * 16b75f33: 16 overflowed under a connect flood — the probe's SYN then
  * waited 1-2 s for its retransmit). */
@@ -273,14 +276,21 @@ typedef struct {
 	 *   watched and the connection stays stuck until something else
 	 *   expires. */
 	bool wants_to_write;
-	/* The peer's whole ClientHello has been read (see move_client): a
-	 * browser sends it at once; a bare connect, or a few bytes, never make
-	 * it.  Eviction takes the silent first. */
+	/* The peer's handshake is complete, or the server has begun its reply
+	 * (see move_client): a browser gets there in one round trip; a bare
+	 * connect or a few bytes never do.  Eviction takes the silent first. */
 	bool spoke;
 	/* F_RATE: until when it waits for a token; `busy`: it waited in vain,
 	 * every request it sends gets 503. */
 	uint64_t rate_until;
 	bool busy;
+	/* the order of parking (FIFO), and whether the bucket that kept it
+	 * waiting was the SHARED one (then the 503 does not blame the address) */
+	uint64_t park_seq;
+	bool busy_shared;
+	/* the page_move() call that accepted it: that call's `revents` are an
+	 * older owner's of the same descriptor number, never its own */
+	uint64_t accepted_in;
 } client;
 
 struct page {
@@ -336,13 +346,16 @@ struct page {
 	 * rate at all). */
 	struct bucket rate_over, rate48_over;
 	/* parked for the rate; served 503 after waiting in vain */
-	unsigned delayed_rate, busy_rate;
+	unsigned delayed_rate, busy_rate, refused_rate;
+	uint64_t park_next;
 	/* after a failed build of `tail_gz`, not again before this time */
 	uint64_t tail_gz_after;
-	/* every connection ever parked for the rate (never zeroed) */
-	unsigned long long delayed_rate_total;
-	/* Round robin of `page_move()`'s event budget. */
+	/* every connection ever parked for the rate, and ever refused for it
+	 * (never zeroed: the fuzz harness tells a rate refusal by it) */
+	unsigned long long delayed_rate_total, refused_rate_total;
+	/* Round robin of `page_move()`'s event budget; the calls, counted. */
 	size_t move_next;
+	uint64_t move_calls;
 };
 
 /* ------------------------------------------------------------------------ */
@@ -1062,9 +1075,10 @@ static void serve(page *p, client *c)
 	/* ⭐ It waited PAGE_RATE_WAIT_MS for the accept rate in vain: «busy»,
 	 *   which the page tells apart from «not there» (D-009) and retries. */
 	if (c->busy) {
-		compose(c, "503 Service Unavailable", "text/plain; charset=utf-8",
-		        "busy: too many connections from this address, retry\n", 52,
-		        "Retry-After: 1\r\n");
+		const char *t = c->busy_shared ? "busy: too many connections right now, retry\n"
+		                               : "busy: too many connections from this address, retry\n";
+		compose(c, "503 Service Unavailable", "text/plain; charset=utf-8", t,
+		        strlen(t), "Retry-After: 1\r\n");
 		return;
 	}
 	{
@@ -1306,27 +1320,45 @@ static void serve(page *p, client *c)
 
 /* ------------------------------------------------------------------------ */
 
+/* The server has begun its handshake reply: the state is one OpenSSL
+ * reaches only after a whole, valid ClientHello. */
+static bool server_replied(SSL *ssl)
+{
+	switch (SSL_get_state(ssl)) {
+	case TLS_ST_BEFORE:
+	case TLS_ST_SR_CLNT_HELLO:
+	case TLS_ST_OK:
+		return false;
+	default:
+		return true;
+	}
+}
+
 static void move_client(page *p, client *c, short events)
 {
 	int rv;
 
-	(void)events;
-	if (c->phase == F_RATE)
-		return; /* no TLS yet: parked_move() decides */
+	if (c->phase == F_RATE) {
+		/* no TLS yet: parked_move() decides — except that a peer that
+		 * reset or hung up is closed NOW: its descriptor would report
+		 * POLLERR/POLLHUP at every `poll`, events 0 or not, and the loop
+		 * would spin (review of 38639d7d) */
+		if (events & (POLLERR | POLLHUP | POLLNVAL))
+			client_close(c);
+		return;
+	}
 	c->wants_to_write = false;
 
 	if (c->phase == F_HANDSHAKE) {
 		rv = SSL_accept(c->ssl);
-		/* ⛔ «Spoke» = OpenSSL has read a WHOLE ClientHello (its handshake
-		 *    left the «before» state) — not «a byte arrived» (review of
-		 *    95ed70ea: connect + one byte each from ~130 addresses brought
-		 *    back the evict-the-owner pattern).  Asked after every
-		 *    SSL_accept, the one at accept included: no FIONREAD race.
-		 * ⚠ SSL_get_state(), not SSL_in_before(): the latter turns false at
-		 *   the first SSL_accept call, ClientHello or not (`[M]` desk
-		 *   test: every bare connect «spoke»); the handshake state leaves
-		 *   TLS_ST_BEFORE only once the whole ClientHello is read. */
-		if (!c->spoke && (rv == 1 || SSL_get_state(c->ssl) != TLS_ST_BEFORE))
+		/* ⛔ «Spoke» = the handshake is COMPLETE, or the server has begun
+		 *    its reply (a server-write state: OpenSSL parsed a whole, valid
+		 *    ClientHello and answered it).  Not «left TLS_ST_BEFORE»: `[M]`
+		 *    OpenSSL 3.5.7 leaves it after the 9-byte record 16 03 01 00 04
+		 *    01 00 01 fc (review of 38639d7d), nor «a byte arrived» (review
+		 *    of 95ed70ea).  Asked after every SSL_accept, the one at accept
+		 *    included. */
+		if (!c->spoke && (rv == 1 || server_replied(c->ssl)))
 			c->spoke = true;
 		if (rv == 1) {
 			c->phase = F_READ;
@@ -1493,7 +1525,7 @@ static bool key48_of(const struct sockaddr_storage *da, unsigned char p48[6])
 static bool refusals_pending(const page *p)
 {
 	return p->refused_address || p->refused_48 || p->refused_full ||
-	       p->delayed_rate || p->busy_rate ||
+	       p->delayed_rate || p->busy_rate || p->refused_rate ||
 	       p->evicted || p->evicted_writing || p->expired_request ||
 	       p->expired_response || p->lines_unwritten;
 }
@@ -1512,7 +1544,8 @@ static void refusals_report(page *p, uint64_t now)
 	              "address or /48: %u without a request, %u writing for %u s or "
 	              "more; REFUSED: %u over %d at once from one address, %u over %d "
 	              "from one IPv6 /48, %u full with no group as large as the "
-	              "newcomer's would be; DELAYED: %u over %d accepts a second from one "
+	              "newcomer's would be, %u over the accept rate with no free slot; "
+	              "DELAYED: %u over %d accepts a second from one "
 	              "address or /64 (%d per /48), %u of them then answered 503 busy after "
 	              "%u s; %u request lines not written (over %d per %u s "
 	              "from one address); the last refused from %s",
@@ -1522,13 +1555,13 @@ static void refusals_report(page *p, uint64_t now)
 	              PAGE_RATE_GRACE_MS / 1000u, MAX_CLIENTS, p->evicted,
 	              p->evicted_writing, PAGE_EVICT_AGE_MS / 1000u,
 	              p->refused_address, PAGE_PER_ADDRESS, p->refused_48,
-	              PAGE_PER_48, p->refused_full, p->delayed_rate, PAGE_ACCEPT_RATE,
+	              PAGE_PER_48, p->refused_full, p->refused_rate, p->delayed_rate, PAGE_ACCEPT_RATE,
 	              PAGE_ACCEPT_RATE_48, p->busy_rate, PAGE_RATE_WAIT_MS / 1000u,
 	              p->lines_unwritten,
 	              PAGE_LINES_PER_ADDRESS, PAGE_LINES_WINDOW_MS / 1000u,
 	              p->refused_last[0] ? p->refused_last : "-");
 	p->refused_address = p->refused_48 = p->refused_full = 0;
-	p->delayed_rate = p->busy_rate = 0;
+	p->delayed_rate = p->busy_rate = p->refused_rate = 0;
 	p->evicted = p->evicted_writing = p->lines_unwritten = 0;
 	p->expired_request = p->expired_response = 0;
 	p->refused_last[0] = 0;
@@ -1619,9 +1652,9 @@ static uint32_t random_below(uint32_t n)
 	return r % n;
 }
 
-/* The eviction tier of a candidate: 0 = SILENT (no whole ClientHello read:
- * a bare TCP connect, a few bytes, or parked for the rate), 1 = no whole
- * request yet, 2 = writing for
+/* The eviction tier of a candidate: 0 = SILENT (no complete handshake nor
+ * server reply: a bare TCP connect, a few bytes), 1 = no whole request yet
+ * (or parked for the rate), 2 = writing for
  * PAGE_EVICT_AGE_MS or more, 3 = writing for less (a fresh download).
  * ⛔ Tier 0 is the independent review of 16b75f33: with every group at one
  *    slot the OLDEST without a request went, and ~127 addresses doing bare
@@ -1630,7 +1663,9 @@ static uint32_t random_below(uint32_t n)
 static int tier(const client *x, uint64_t now)
 {
 	if (x->phase != F_WRITE)
-		return x->spoke ? 1 : 0;
+		/* parked for the rate: waiting through no act of its own, it goes
+		 * after the silent ones (review of 38639d7d) */
+		return x->spoke || x->phase == F_RATE ? 1 : 0;
 	return now - x->write_start >= PAGE_EVICT_AGE_MS ? 2 : 3;
 }
 
@@ -1787,12 +1822,26 @@ static bool client_start_tls(page *p, client *c)
  * apart from «not there»).  Called by page_expired() at every pass. */
 static void parked_move(page *p, uint64_t now)
 {
+	/* ⭐ In ARRIVAL order (review of 38639d7d: slot order let a later
+	 *   arrival in a lower slot take the shared bucket's token first). */
+	client *order[MAX_CLIENTS];
+	size_t n = 0;
+
 	for (size_t i = 0; i < MAX_CLIENTS; i++) {
 		client *c = &p->clients[i];
+		if (client_active(c) && c->phase == F_RATE) {
+			size_t k = n++;
+			while (k > 0 && order[k - 1]->park_seq > c->park_seq) {
+				order[k] = order[k - 1];
+				k--;
+			}
+			order[k] = c;
+		}
+	}
+	for (size_t i = 0; i < n; i++) {
+		client *c = order[i];
 		char k48[64];
 		const char *who = NULL;
-		if (!client_active(c) || c->phase != F_RATE)
-			continue;
 		if (c->has48)
 			snprintf(k48, sizeof k48, "%02x%02x:%02x%02x:%02x%02x::/48", c->p48[0],
 			         c->p48[1], c->p48[2], c->p48[3], c->p48[4], c->p48[5]);
@@ -1800,6 +1849,7 @@ static void parked_move(page *p, uint64_t now)
 			if (now < c->rate_until)
 				continue;
 			c->busy = true;
+			c->busy_shared = who && who[0] == '(';
 			p->busy_rate++;
 			snprintf(p->refused_last, sizeof p->refused_last, "%s", who);
 		}
@@ -1876,6 +1926,27 @@ static int accept_page(page *p, int budget)
 			refusals_report(p, now);
 			continue;
 		}
+		/* ⛔ The accept rate BEFORE any eviction (review of 38639d7d): an
+		 *    arrival over its rate never evicts anybody — it waits, parked,
+		 *    in a slot that is FREE, or it is refused.  Checked after the
+		 *    per-address caps, which cost nothing. */
+		bool over_rate;
+		const char *rate_who = NULL;
+		/* ⚠ Here, not in a block: `rate_who` may point into it (the fuzzer,
+		 *   ASan stack-use-after-scope). */
+		char rate_k48[64];
+		if (has48)
+			snprintf(rate_k48, sizeof rate_k48, "%02x%02x:%02x%02x:%02x%02x::/48",
+			         p48[0], p48[1], p48[2], p48[3], p48[4], p48[5]);
+		over_rate = !rate_take(p, key, has48 ? rate_k48 : NULL, now, &rate_who);
+		if (over_rate && !c) {
+			p->refused_rate++;
+			p->refused_rate_total++;
+			snprintf(p->refused_last, sizeof p->refused_last, "%s", rate_who);
+			close(fd);
+			refusals_report(p, now);
+			continue;
+		}
 		if (!c) {
 			client *v = fair_victim(p, group_size(p, has48, p48, key), now);
 			if (v) {
@@ -1925,28 +1996,22 @@ static int accept_page(page *p, int budget)
 		memcpy(c->p48, p48, sizeof c->p48);
 		memcpy(c->provenance, provenance, sizeof c->provenance);
 		memcpy(c->key, key, sizeof c->key);
+		c->accepted_in = p->move_calls;
 
-		/* ⛔ The accept rate (holistic review, 15 Oct 2026; review of
-		 *    95ed70ea): every connection costs a TLS handshake and maybe a
-		 *    page.  Over PAGE_ACCEPT_RATE a second per key (and
-		 *    PAGE_ACCEPT_RATE_48 per /48) it is PARKED, without TLS, until
-		 *    a token — not closed: a closed one made the page say «the
-		 *    server is not there».  Its slot is the one just taken, under
-		 *    the same per-address caps. */
-		{
-			char k48[64];
-			const char *who = NULL;
-			if (has48)
-				snprintf(k48, sizeof k48, "%02x%02x:%02x%02x:%02x%02x::/48",
-				         p48[0], p48[1], p48[2], p48[3], p48[4], p48[5]);
-			if (!rate_take(p, key, has48 ? k48 : NULL, now, &who)) {
-				c->phase = F_RATE;
-				c->rate_until = now + PAGE_RATE_WAIT_MS;
-				p->delayed_rate++;
-				p->delayed_rate_total++;
-				snprintf(p->refused_last, sizeof p->refused_last, "%s", who);
-				continue;
-			}
+		/* ⛔ The accept rate (holistic review, 15 Oct 2026; reviews of
+		 *    95ed70ea and 38639d7d): every connection costs a TLS handshake
+		 *    and maybe a page.  Over PAGE_ACCEPT_RATE a second per key (and
+		 *    PAGE_ACCEPT_RATE_48 per /48) it is PARKED in this FREE slot,
+		 *    without TLS, served in arrival order (`park_seq`) — not closed:
+		 *    a closed one made the page say «the server is not there». */
+		if (over_rate) {
+			c->phase = F_RATE;
+			c->rate_until = now + PAGE_RATE_WAIT_MS;
+			c->park_seq = ++p->park_next;
+			p->delayed_rate++;
+			p->delayed_rate_total++;
+			snprintf(p->refused_last, sizeof p->refused_last, "%s", rate_who);
+			continue;
 		}
 		if (!client_start_tls(p, c))
 			return round + 1;
@@ -2013,6 +2078,8 @@ void page_move(page *p, struct pollfd *dove, size_t amount)
 	int budget = PAGE_EVENTS_PER_PASS;
 	size_t start = amount ? p->move_next % amount : 0;
 
+	p->move_calls++;
+
 	for (size_t j = 0; j < amount && budget > 0; j++) {
 		size_t k = (start + j) % amount;
 		if (dove[k].revents == 0)
@@ -2029,7 +2096,10 @@ void page_move(page *p, struct pollfd *dove, size_t amount)
 		for (size_t i = 0; i < MAX_CLIENTS; i++)
 			if (p->clients[i].fd == dove[k].fd &&
 			    p->clients[i].phase != F_DONE) {
-				move_client(p, &p->clients[i], dove[k].revents);
+				/* ⚠ accepted in THIS call: the descriptor number was
+				 *   another client's when `poll` filled `revents` */
+				if (p->clients[i].accepted_in != p->move_calls)
+					move_client(p, &p->clients[i], dove[k].revents);
 				break;
 			}
 	}

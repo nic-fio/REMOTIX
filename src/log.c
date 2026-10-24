@@ -262,9 +262,12 @@ static void line(const char *file, int text_line, bool detail, const char *area,
 	 *    every caller; UTF-8 (≥ 0x80) is untouched.  The one newline is the
 	 *    one below. */
 	/* ⛔ … and DEL, the C1 controls written as UTF-8 (U+0080–U+009F, some
-	 *    terminals obey them) and the bidi overrides (U+202A–U+202E,
-	 *    U+2066–U+2069: they reorder what a reader sees) — each one `?`
-	 *    (review of 95ed70ea).  The line can only get shorter. */
+	 *    terminals obey them), the bidi controls (U+202A–U+202E,
+	 *    U+2066–U+2069, and the marks U+200E, U+200F, U+061C: they reorder
+	 *    what a reader sees) and the Unicode line and paragraph separators
+	 *    (U+2028, U+2029: some viewers break the line there) — each one
+	 *    `?` (reviews of 95ed70ea and 38639d7d).  The line can only get
+	 *    shorter. */
 	{
 		int w = body;
 		for (int k = body; k < n; k++) {
@@ -276,7 +279,11 @@ static void line(const char *file, int text_line, bool detail, const char *area,
 			} else if (b0 == 0xC2 && b1 >= 0x80 && b1 <= 0x9F) {
 				buf[w++] = '?';
 				k += 1;
-			} else if (b0 == 0xE2 && ((b1 == 0x80 && b2 >= 0xAA && b2 <= 0xAE) ||
+			} else if (b0 == 0xD8 && b1 == 0x9C) {
+				buf[w++] = '?'; /* U+061C */
+				k += 1;
+			} else if (b0 == 0xE2 && ((b1 == 0x80 && ((b2 >= 0xA8 && b2 <= 0xAE) ||
+			                                          b2 == 0x8E || b2 == 0x8F)) ||
 			                          (b1 == 0x81 && b2 >= 0xA6 && b2 <= 0xA9))) {
 				buf[w++] = '?';
 				k += 2;

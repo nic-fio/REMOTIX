@@ -5112,7 +5112,8 @@ async function fingerprint() {
   try {
     let r = await fetch("/fingerprint", { cache: "no-store" });
     /* ⭐ 503 = the server IS there but busy (too many connections from this
-       address, 15 Oct 2026): said as such, and asked again once. */
+       address, 15 Oct 2026): said as such, and asked again up to twice,
+       1 s apart. */
     for (let i = 0; r.status === 503 && i < 2; i++) {
       note("fingerprint: the server is busy (503, too many connections from this address) — retrying in 1 s");
       await new Promise(ok => setTimeout(ok, 1000));
