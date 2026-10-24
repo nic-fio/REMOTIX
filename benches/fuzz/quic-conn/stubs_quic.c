@@ -1064,6 +1064,23 @@ void ngtcp2_ccerr_set_application_error(ngtcp2_ccerr *e, uint64_t code, const ui
 	e->reasonlen = n;
 }
 
+/* ⭐ audit ngtcp2 1.25: CRYPTO_ERROR + the TLS alert (as in ngtcp2), and the alert the connection holds
+ *    (0 = none, as `ngtcp2_conn_get_tls_alert2` when nothing was set). */
+void ngtcp2_ccerr_set_tls_alert(ngtcp2_ccerr *e, uint8_t alert, const uint8_t *r, size_t n)
+{
+	memset(e, 0, sizeof *e);
+	e->type = NGTCP2_CCERR_TYPE_TRANSPORT;
+	e->error_code = NGTCP2_CRYPTO_ERROR | alert;
+	e->reason = r;
+	e->reasonlen = n;
+}
+
+uint8_t ngtcp2_conn_get_tls_alert2(const ngtcp2_conn *c)
+{
+	live(c, false, __func__);
+	return 0;
+}
+
 void ngtcp2_ccerr_set_transport_error(ngtcp2_ccerr *e, uint64_t code, const uint8_t *r, size_t n)
 {
 	memset(e, 0, sizeof *e);

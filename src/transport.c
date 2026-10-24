@@ -1716,8 +1716,18 @@ static void read_packet(transport *t, const struct sockaddr *local,
 			ngtcp2_ssize n;
 			ngtcp2_path_storage_zero(&ps);
 			memset(&opi, 0, sizeof opi);
+			/* ⛔ 24 Oct 2026 (audit ngtcp2 1.25; present since 1.0): for
+			 *   `NGTCP2_ERR_CRYPTO` the doc of `ngtcp2_conn_read_pkt` says
+			 *   «`ngtcp2_conn_get_tls_alert2` returns TLS alert if set».  Nobody
+			 *   asked it: a failed handshake was closed with the `last_error` as
+			 *   it was (NO_ERROR) instead of CRYPTO_ERROR + the alert (RFC 9001
+			 *   §4.8).  Like the ngtcp2 example: only if no code was set yet. */
 			if (rv != NGTCP2_ERR_CRYPTO)
 				ngtcp2_ccerr_set_liberr(&c->last_error, rv, NULL, 0);
+			else if (c->last_error.error_code == 0)
+				ngtcp2_ccerr_set_tls_alert(&c->last_error,
+				                           ngtcp2_conn_get_tls_alert2(c->conn),
+				                           NULL, 0);
 			n = ngtcp2_conn_write_connection_close(
 				c->conn, &ps.path, &opi, buf, sizeof buf, &c->last_error,
 				now_ns());
