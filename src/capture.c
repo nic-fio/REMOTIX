@@ -303,6 +303,10 @@ struct Capture
 	CaptureStopped uc_held;
 	guint64 uc_seen, uc_dropped, uc_refresh, uc_big, uc_outside, uc_blind;
 	guint64 uc_flushed, uc_stale_n, uc_woken, uc_rearmed;
+	/* ⭐ One stale restart per episode (`unchanged.h`, `UcStaleGate`):
+	 *    `uc_stale_spared` counts the stale flags NOT raised again. */
+	UcStaleGate uc_gate;
+	guint64 uc_stale_spared;
 	guint64 uc_cost_us, uc_cost_n, uc_cost_max_us;
 	guint64 uc_area_last, uc_area_max;
 };
@@ -2107,6 +2111,13 @@ gboolean capture_wake(Capture *capture)
 	/* ⭐ The restart answers a stale held frame too (`capture_unchanged_stale`). */
 	if (capture->uc_stale)
 	{
+		uint64_t generation;
+
+		g_mutex_lock(&capture->lock);
+		generation = capture->buffer_generation;
+		g_mutex_unlock(&capture->lock);
+		/* ⭐ its renegotiation is OURS: not a new episode (`UcStaleGate`) */
+		uc_gate_restarted(&capture->uc_gate, generation);
 		capture->uc_stale = FALSE;
 		capture->uc_woken++;
 	}
@@ -2555,7 +2566,7 @@ static gboolean unchanged_judge(Capture *capture, CaptureStopped *report)
 	size_t amount = 0;
 	gboolean same = FALSE, mapped_ok = TRUE;
 	uint32_t w = report->width, h = report->height, st = report->stride;
-	gboolean rearmed = FALSE;
+	gboolean rearmed = FALSE, changed = FALSE;
 
 	if (!capture->uc_on || capture->wlr)
 		return FALSE;
@@ -2578,13 +2589,13 @@ static gboolean unchanged_judge(Capture *capture, CaptureStopped *report)
 		           G_GUINT64_FORMAT ", sent anyway after %d ms %" G_GUINT64_FORMAT
 		           " (+%" G_GUINT64_FORMAT " held frames sent when the scene went still, %"
 		           G_GUINT64_FORMAT " stale on the card, %" G_GUINT64_FORMAT
-		           " restarts), damage too large %" G_GUINT64_FORMAT ", outside the reference %"
+		           " restarts, %" G_GUINT64_FORMAT " spared in the same episode), damage too large %" G_GUINT64_FORMAT ", outside the reference %"
 		           G_GUINT64_FORMAT ", not readable %" G_GUINT64_FORMAT
 		           " — damaged area last %" G_GUINT64_FORMAT " px, max %" G_GUINT64_FORMAT
 		           " px; look %.2f ms mean (last window %.2f), %.2f max",
 		           capture->uc_seen, capture->uc_dropped, UC_REFRESH_MS,
 		           capture->uc_refresh, capture->uc_flushed, capture->uc_stale_n,
-		           capture->uc_woken, capture->uc_big, capture->uc_outside,
+		           capture->uc_woken, capture->uc_stale_spared, capture->uc_big, capture->uc_outside,
 		           capture->uc_blind, capture->uc_area_last, capture->uc_area_max,
 		           capture->uc_cost_n ? capture->uc_cost_us / 1000.0 / capture->uc_cost_n : 0.0,
 		           capture->uc_window.last_mean_us / 1000.0,
@@ -2664,6 +2675,10 @@ static gboolean unchanged_judge(Capture *capture, CaptureStopped *report)
 	}
 
 	same = uc_same(&capture->uc, base, w, h, st, r, n);
+	/* ⭐ «really changed» (`UcStaleGate`): the bytes were compared against a
+	 *    reference and were not the same — not a frame sent whole for lack
+	 *    of a reference, not a refresh. */
+	changed = !same && capture->uc.valid;
 	if (!same)
 	{
 		if (!capture->uc.valid || uc_holder(&capture->uc, &r[0]) < 0)
@@ -2726,6 +2741,7 @@ static gboolean unchanged_judge(Capture *capture, CaptureStopped *report)
 deliver:
 	capture->uc_pending = FALSE;
 	capture->uc_last_out_us = now;
+	uc_gate_frame(&capture->uc_gate, report->generation, changed);
 	return FALSE;
 }
 
@@ -3000,7 +3016,8 @@ CaptureTake capture_take(Capture *capture, double wait_s, CaptureStopped *report
 	 *    does not run past it (`unchanged.h`, «pending»). */
 	if (capture->uc_pending)
 		expiry = g_get_monotonic_time() +
-		         (gint64) uc_pending_wait_us(TRUE, capture->uc_last_out_us, now_us(),
+		         (gint64) uc_pending_wait_us(TRUE, capture->uc_bypass, capture->uc_last_out_us,
+		                                     now_us(),
 		                                     (uint64_t) (wait_s * G_USEC_PER_SEC));
 	/* ⭐ PHASE 17 — and a stream in ERROR will deliver nothing more: we exit
 	 *    at once instead of waiting the whole timeout.  `[M]` 29 Sep 2026, VM without
@@ -3066,10 +3083,11 @@ CaptureTake capture_take(Capture *capture, double wait_s, CaptureStopped *report
 		                   now_us()) == UC_PENDING_FLUSH)
 		{
 			gboolean same_stream;
+			uint64_t generation;
 
 			g_mutex_lock(&capture->lock);
-			same_stream = capture->uc_held.pixel &&
-			              capture->uc_held.generation == capture->buffer_generation;
+			generation = capture->buffer_generation;
+			same_stream = capture->uc_held.pixel && capture->uc_held.generation == generation;
 			g_mutex_unlock(&capture->lock);
 			capture->uc_pending = FALSE;
 			if (same_stream)
@@ -3083,10 +3101,17 @@ CaptureTake capture_take(Capture *capture, double wait_s, CaptureStopped *report
 			}
 			capture_stopped_free(&capture->uc_held);
 			uc_forget(&capture->uc);
+			/* ⭐ At most ONE restart per episode (`UcStaleGate`): never a
+			 *    restart at every pause of someone typing now and then. */
 			if (capture->route == CAPTURE_ROUTE_CARD)
 			{
-				capture->uc_stale = TRUE;
-				capture->uc_stale_n++;
+				if (uc_gate_may_raise(&capture->uc_gate, generation))
+				{
+					capture->uc_stale = TRUE;
+					capture->uc_stale_n++;
+				}
+				else
+					capture->uc_stale_spared++;
 			}
 		}
 		/* ⭐ LEGITIMATE ZERO: the stream was active for the whole wait and nothing
@@ -3529,7 +3554,8 @@ void capture_stop(Capture *capture)
 		              G_GUINT64_FORMAT ", max damaged area %" G_GUINT64_FORMAT
 		              " px, look %.2f ms mean; held frames sent when the scene went still %"
 		              G_GUINT64_FORMAT ", stale on the card %" G_GUINT64_FORMAT
-		              ", restarts %" G_GUINT64_FORMAT ", switch-offs %u, re-armed %"
+		              ", restarts %" G_GUINT64_FORMAT " (spared in the same episode %"
+		              G_GUINT64_FORMAT "), switch-offs %u, re-armed %"
 		              G_GUINT64_FORMAT "%s",
 		              capture->uc_seen, capture->uc_dropped, UC_REFRESH_MS,
 		              capture->uc_refresh, capture->uc_big, capture->uc_blind,
@@ -3537,7 +3563,7 @@ void capture_stop(Capture *capture)
 		              capture->uc_cost_n ? capture->uc_cost_us / 1000.0 / capture->uc_cost_n
 		                                 : 0.0,
 		              capture->uc_flushed, capture->uc_stale_n, capture->uc_woken,
-		              capture->uc_switch.strikes, capture->uc_rearmed,
+		              capture->uc_stale_spared, capture->uc_switch.strikes, capture->uc_rearmed,
 		              capture->uc_switch.hard ? " — ⚠ it had switched itself off for good"
 		              : capture->uc_switch.off ? " — ⚠ it was switched off" : "");
 	uc_free(&capture->uc);

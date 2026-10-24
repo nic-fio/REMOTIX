@@ -214,14 +214,17 @@ static inline UcPending uc_pending_due(gboolean pending, gboolean bypass, uint64
 }
 
 /* How long (µs) a wait may last before the pending frame is due; `cap_us`
- * when nothing is pending.  ⛔ Never more than `cap_us`. */
-static inline uint64_t uc_pending_wait_us(gboolean pending, uint64_t last_out_us, uint64_t now_us,
-                                          uint64_t cap_us)
+ * when nothing is pending.  ⛔ Never more than `cap_us`.  `bypass` (a
+ * keyframe is due) makes a pending frame due NOW, as in `uc_pending_due`. */
+static inline uint64_t uc_pending_wait_us(gboolean pending, gboolean bypass, uint64_t last_out_us,
+                                          uint64_t now_us, uint64_t cap_us)
 {
 	uint64_t due;
 
-	if (!pending || last_out_us == 0)
-		return pending ? 0 : cap_us;
+	if (!pending)
+		return cap_us;
+	if (bypass || last_out_us == 0)
+		return 0;
 	due = last_out_us + (uint64_t)UC_REFRESH_MS * 1000u;
 	if (now_us >= due)
 		return 0;
@@ -230,6 +233,73 @@ static inline uint64_t uc_pending_wait_us(gboolean pending, uint64_t last_out_us
 
 /* Two stream restarts asked by a stale card frame are at least this far apart. */
 #define UC_WAKE_GAP_MS 2000u
+
+/* ------------------------------------------------------------------ *
+ * ⭐ 15 Oct 2026 (review of 845f4d19) — ONE RESTART PER EPISODE.  On the
+ *    card, with the user typing or clicking now and then, the last frame
+ *    before each pause is often a held-back «same» one: every pause became
+ *    a stale flag and a stream restart (a pause of ~42 ms, a buffer
+ *    renegotiation, a log line) about every `UC_WAKE_GAP_MS`.
+ *    ⇒ Once raised, the stale flag is NOT raised again until:
+ *       · a frame that REALLY changed went out (`uc_gate_frame`, changed:
+ *         the filter looked at the bytes against a reference and they
+ *         were not the same — not a refresh, not a frame sent whole for
+ *         lack of a reference), or
+ *       · the buffers were renegotiated (another generation) by something
+ *         that is not our own restart (`uc_gate_restarted`).
+ *    ⛔ Our own restart renegotiates too: its generation is absorbed — the
+ *       first frame of a NEW generation after it becomes the episode's
+ *       generation.  A frame still of the generation of the moment of the
+ *       restart does not close that window (it was already on its way).
+ *    ⚠ The price, said: while our restart has delivered nothing yet, a real
+ *      renegotiation in that window is absorbed as ours.  The next real
+ *      change re-arms all the same: never a loop, at worst one restart less.
+ * ------------------------------------------------------------------ */
+typedef struct
+{
+	gboolean spent;        /* raised once in this episode */
+	gboolean own_restart;  /* our restart is under way: its renegotiation is ours */
+	uint64_t generation;   /* the buffers the episode belongs to */
+	uint64_t restart_generation; /* the buffers at the moment of our restart */
+} UcStaleGate;
+
+/* A stale flag is wanted with the buffers at `generation`.  TRUE ⇒ raise it
+ * (and the episode is spent); FALSE ⇒ already raised in this episode. */
+static inline gboolean uc_gate_may_raise(UcStaleGate *g, uint64_t generation)
+{
+	if (g->spent && !g->own_restart && generation != g->generation)
+		g->spent = FALSE; /* a real renegotiation: a new episode */
+	if (g->spent)
+		return FALSE;
+	g->spent = TRUE;
+	g->own_restart = FALSE;
+	g->generation = generation;
+	return TRUE;
+}
+
+/* The stream was restarted to answer the stale flag; `generation` = the
+ * buffers at that moment. */
+static inline void uc_gate_restarted(UcStaleGate *g, uint64_t generation)
+{
+	if (!g->spent)
+		return;
+	g->own_restart = TRUE;
+	g->restart_generation = generation;
+}
+
+/* A frame went out of the filter, of buffers `generation`; `changed` ⇒ its
+ * bytes were compared and were not the same. */
+static inline void uc_gate_frame(UcStaleGate *g, uint64_t generation, gboolean changed)
+{
+	if (g->own_restart && generation != g->restart_generation) {
+		g->own_restart = FALSE;
+		g->generation = generation;
+	}
+	if (changed) {
+		g->spent = FALSE;
+		g->own_restart = FALSE;
+	}
+}
 
 /* ------------------------------------------------------------------ *
  * ⭐ THE COST OF LOOKING, re-checked: the mean over a window of looks — the

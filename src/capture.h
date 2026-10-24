@@ -818,7 +818,10 @@ void capture_unchanged_forget(Capture *capture);
 /* ⭐ TRUE ⇒ on the CARD a frame was held back, no other frame came within
  * `UC_REFRESH_MS`, and its buffer is already back with the producer: the only
  * way to send what it may hide is a stream restart (`capture_wake()`, which
- * clears this).  ⚠ The caller decides when a restart is allowed. */
+ * clears this).  ⚠ The caller decides when a restart is allowed.  ⭐ Raised at
+ * most ONCE per episode: not again until a frame that really changed went out,
+ * or the buffers were renegotiated by something other than that restart
+ * (`UcStaleGate`, `unchanged.h`). */
 gboolean capture_unchanged_stale(Capture *capture);
 
 void capture_stop(Capture *capture);

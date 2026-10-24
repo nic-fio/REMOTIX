@@ -8,7 +8,9 @@
  * Also the three decisions moved into `unchanged.h` after the review of
  * 1849a57d: the held frame due when the scene goes still (`uc_pending_*`),
  * the cost re-checked by windows (`uc_cost_*`), the switch-off re-armed by a
- * renegotiation and hard after `UC_STRIKES_MAX` (`uc_switch_*`).
+ * renegotiation and hard after `UC_STRIKES_MAX` (`uc_switch_*`); and after
+ * the review of 845f4d19 the stale restart at most once per episode
+ * (`uc_gate_*`) and the wait cut short when a keyframe is due.
  *
  * ⚠ What it does NOT cover: the merge of the damage in the slot
  *   (`on_process`, capture.c), the keeping/sending of the held frame and the
@@ -153,15 +155,71 @@ int main(void)
 		CHECK(uc_pending_due(TRUE, FALSE, t0, t0 - 1) == UC_PENDING_FLUSH,
 		      "clock before the last out: flush (doubt = send)");
 
-		CHECK(uc_pending_wait_us(FALSE, t0, t0, 8 * ms) == 8 * ms,
+		CHECK(uc_pending_wait_us(FALSE, FALSE, t0, t0, 8 * ms) == 8 * ms,
 		      "nothing held: the caller's wait");
-		CHECK(uc_pending_wait_us(TRUE, t0, t0 + 100 * ms, 8 * ms) == 8 * ms,
+		CHECK(uc_pending_wait_us(FALSE, TRUE, t0, t0, 8 * ms) == 8 * ms,
+		      "nothing held, keyframe due: the caller's wait");
+		CHECK(uc_pending_wait_us(TRUE, FALSE, t0, t0 + 100 * ms, 8 * ms) == 8 * ms,
 		      "held, far from due: the caller's wait");
-		CHECK(uc_pending_wait_us(TRUE, t0, t0 + (UC_REFRESH_MS - 3) * ms, 8 * ms) == 3 * ms,
+		CHECK(uc_pending_wait_us(TRUE, FALSE, t0, t0 + (UC_REFRESH_MS - 3) * ms, 8 * ms) ==
+		          3 * ms,
 		      "held, due in 3 ms: wait 3 ms");
-		CHECK(uc_pending_wait_us(TRUE, t0, t0 + UC_REFRESH_MS * ms, 8 * ms) == 0,
+		CHECK(uc_pending_wait_us(TRUE, FALSE, t0, t0 + UC_REFRESH_MS * ms, 8 * ms) == 0,
 		      "held and due: no wait");
-		CHECK(uc_pending_wait_us(TRUE, 0, t0, 8 * ms) == 0, "held, nothing ever out: no wait");
+		CHECK(uc_pending_wait_us(TRUE, FALSE, 0, t0, 8 * ms) == 0,
+		      "held, nothing ever out: no wait");
+		CHECK(uc_pending_wait_us(TRUE, TRUE, t0, t0 + 1 * ms, 8 * ms) == 0,
+		      "held, keyframe due: no wait (flushed at once)");
+	}
+
+	/* --- one stale restart per episode (UcStaleGate) ----------------------- */
+	{
+		UcStaleGate g = { 0 };
+		int i, raised = 0;
+
+		CHECK(uc_gate_may_raise(&g, 10), "first stale of the episode is raised");
+		CHECK(!uc_gate_may_raise(&g, 10), "same episode, same buffers: not again");
+		/* the review's case: our restart, then typing now and then whose
+		 * frames are all held back or sent whole — never a loop */
+		uc_gate_restarted(&g, 10);
+		uc_gate_frame(&g, 10, FALSE); /* a frame already on its way */
+		CHECK(!uc_gate_may_raise(&g, 11), "our own renegotiation is not a new episode");
+		uc_gate_frame(&g, 11, FALSE); /* first frame of our restart, sent whole */
+		for (i = 0; i < 100; i++) {
+			uc_gate_frame(&g, 11, FALSE); /* a refresh, a frame with no reference */
+			raised += uc_gate_may_raise(&g, 11);
+		}
+		CHECK(raised == 0, "idle or same frames for 100 pauses: no restart loop");
+		/* a frame that REALLY changed opens a new episode */
+		uc_gate_frame(&g, 11, TRUE);
+		CHECK(uc_gate_may_raise(&g, 11), "after a real change: raised again, once");
+		CHECK(!uc_gate_may_raise(&g, 11), "and only once");
+		/* a real renegotiation (not ours) opens a new episode */
+		CHECK(uc_gate_may_raise(&g, 12), "real renegotiation: a new episode");
+		CHECK(!uc_gate_may_raise(&g, 12), "and only once");
+		/* our restart: after its first new frame, a LATER renegotiation is real */
+		uc_gate_restarted(&g, 12);
+		uc_gate_frame(&g, 13, FALSE);
+		CHECK(!uc_gate_may_raise(&g, 13), "our restart's buffers belong to the episode");
+		CHECK(uc_gate_may_raise(&g, 14), "a later renegotiation is real");
+		/* a restart that nothing raised (another wake-up) is not ours */
+		{
+			UcStaleGate h = { 0 };
+
+			uc_gate_restarted(&h, 5);
+			CHECK(!h.own_restart, "a wake-up with no stale is not our restart");
+			CHECK(uc_gate_may_raise(&h, 6), "fresh gate raises");
+		}
+		/* a real change while our restart is under way closes it too */
+		{
+			UcStaleGate h = { 0 };
+
+			uc_gate_may_raise(&h, 20);
+			uc_gate_restarted(&h, 20);
+			uc_gate_frame(&h, 20, TRUE);
+			CHECK(!h.own_restart && uc_gate_may_raise(&h, 20),
+			      "real change during our restart: a new episode");
+		}
 	}
 
 	/* --- the cost, re-checked by windows ----------------------------------- */
