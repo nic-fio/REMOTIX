@@ -222,8 +222,17 @@ static void compose(client *c, const char *state, const char *kind,
 	             "%s"
 	             "\r\n",
 	             state, kind, nbody, extra ? extra : "");
-	if (n < 0)
+	/* ⛔ 24 Oct 2026, review of the page headers: `snprintf` returns the length the line WOULD
+	 *   have, not what fit.  With a longer `extra` the `memcpy` below read past the stack buffer
+	 *   `head`.  Too long is OUR defect, never the client's: it is answered 500, with no `extra`
+	 *   (so the retry cannot overflow again) and the sentence says why. */
+	if (n < 0 || (size_t)n >= sizeof head) {
+		if (extra) {
+			compose(c, "500 Internal Server Error", "text/plain; charset=utf-8",
+			        "response headers too long\n", 26, NULL);
+		}
 		return;
+	}
 	c->response = malloc((size_t)n + nbody);
 	if (!c->response)
 		return;
