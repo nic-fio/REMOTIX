@@ -13,7 +13,7 @@ set -e
 
 case "$1" in
 purge)
-	rm -rf /var/lib/remotix/certificates /var/lib/remotix/ban /run/remotix
+	rm -rf /var/lib/remotix/certificates /var/lib/remotix/ban /var/lib/remotix/ban.new /run/remotix
 	rmdir /var/lib/remotix 2>/dev/null || true
 	;;
 remove|upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
