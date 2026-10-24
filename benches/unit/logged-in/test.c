@@ -1,8 +1,5 @@
-/* 01-b8-logged-in-test.c — a login is «logged in» only after ADMITTED
+/* test.c — a login is «logged in» only after ADMITTED
  * (review of eab9623a).
- *
- *   gcc -std=gnu11 -Wall -Wextra -Ibenches/rcp -o /tmp/pli \
- *       benches/01-b8-logged-in-test.c benches/rcp/rcp.c && /tmp/pli
  *
  * ⛔ `wt_watch_locals()` (webtransport.c) asks logind whether a user has a LOCAL
  *    graphical session, and sends the remote one away with 0x04 if so.  The
@@ -18,7 +15,19 @@
  *   4. a finished session: not logged in;
  *   5. ⛔ the check that says NO: a wrong password is never logged in.
  *
- * Exit status: 0 green, 1 red, 3 not all checks ran. */
+ * BUILD AND RUN (a few seconds; nothing under /media/REMOTIX-15 is written; the real rcp.c of BOTH trees, src and the benches/rcp twin; run from the root of the tree):
+ *   nice -n 19 ionice -c3 podman run --rm --network=none --cpus=2 --memory=2g -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
+ *     cd /tmp && rc=0 &&
+ *     for T in src benches/rcp; do
+ *       echo "== $T" &&
+ *       F="-g -O1 -fsanitize=address,undefined -fno-sanitize-recover=undefined -std=gnu11 -D_GNU_SOURCE -Wall -Wextra -Wno-unused-parameter \
+ *          -I/albero/$T -I/albero/benches/fuzz/rcp-msg" &&
+ *       clang $F -c /albero/benches/unit/logged-in/test.c -o t.o && clang $F -c /albero/$T/rcp.c -o r.o &&
+ *       clang $F -c /albero/benches/fuzz/rcp-msg/stubs_log.c -o l.o &&
+ *       clang -fsanitize=address,undefined t.o r.o l.o -o test && ./test || rc=1;
+ *     done; exit $rc'
+ * Exit code 0 green, 1 red, 3 not all checks ran.
+ */
 #include "rcp.h"
 #include <stdio.h>
 #include <string.h>
