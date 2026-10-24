@@ -1644,7 +1644,8 @@ behaviour (`pam_faillock(8)`, `faillock.conf(5)`); ⚠ **not run live** — `[?]
 
 ### 11.50 ✅ §11.11: the shape of the split, the closed list, and the user's choices (16 Oct 2026)
 
-> ⚠ NOT in this tree; still to port: the whole section — no root side / network side split exists in this code
+> 🔸 Phases A and B ported on `port-rootside` — to be built and tested: the protocol and API (`src/rootside_proto.h`, `rootside.h`) and the root side itself (`src/rootside.c`, the FINAL file of the abandoned attempt, with its desk tests `benches/02-rootside-*` and the fuzz harnesses `benches/fuzz/rootside-proto` and `rootside-dispatch`; commits `614d48e9` declarations, `61227c1f` fuzz, `a2ed3ecd` root side). `rootside.o` is NOT in the product link and `main.c`, `child.c`, `helper.c`, `transport.c`, `rcp.c` are untouched.
+> ⚠ **Still NOT in this tree** (phases C–I of the split): `walls.c/h` (the network side's walls, seccomp), the hooks (`child_birth()` out of `children_ensure_from()`, `helper_turn_on_root()`, `helper_ask_bare()`, `render_grant_remotix_session()`, the network side's client in `main.c`/`helper.c`/`transport.c`/`rcp.c`), the installer's network-side step, the packaging (units, tmpfiles, `remotix-net-move`, SELinux) and the box benches `24-privsep-*`. Until phase D nothing calls `rootside.c`: the split does not exist at run time.
 
 - **The user's rulings** (16 Oct 2026, to the questions put after the inventory of the root operations — seven
   reports, one per area: network side, PAM, desktop birth, the per-session child, cards and input, packaging,
