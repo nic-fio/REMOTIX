@@ -1826,25 +1826,56 @@ async function probe_one(name, depth) {
       : "MSE does not accept «" + type + "»";
     return outcome;
   }
-  for (const string of codec_strings(name, depth, DECLARED_LEVEL)) {
-    const config = { codec: string, codedWidth: probe.l, codedHeight: probe.a,
-                     optimizeForLatency: true };
-    let declared;
-    try { declared = (await VideoDecoder.isConfigSupported(config)).supported; }
-    catch (e) { declared = "exception: " + e; }
-    outcome.api.push({ string: string, isConfigSupported: declared });
-    /* ⛔ `isConfigSupported` is used as a FILTER and not as a verdict: when it
-       says no, the pixel never arrives (`[M]` on all four cells of F2-5);
-       when it says yes, it says nothing — it is form E1. */
-    if (declared !== true) continue;
-    const r = await paint_probe(config, probe);
-    outcome.readings = r.readings || outcome.readings;
-    if (r.arrives) {
-      outcome.arrives = true; outcome.string = string; outcome.format = r.format;
-      return outcome;
+  /* ⛔⭐ AND A HARDWARE DECODER THAT REFUSES THE TINY PROBE GETS A SECOND ONE
+   *     AT THE MINIMUM CANVAS — 16 Oct 2026, `DECISIONS-11.md` §11.55.
+   *
+   * `[M]` Firefox 153 ESR on an AMD RX 6800 (radeonsi, VA-API): H.264 at
+   * 64x48 → `EncodingError` (FFmpeg «avcodec_send_packet: Invalid data
+   * found»), while 64x64, 64x96, 128x96, 320x240 … 1920x1080 all paint, and
+   * 128x48 fails too.  ⇒ The AMD decoder wants a picture **at least 64 rows
+   * tall**, and the probe is 48.  The page declared «no codec», the server
+   * answered NOTHING_IN_COMMON, and the user was refused — on a card that
+   * decodes the real session perfectly.
+   * ⇒ If the 64x48 probe does not paint, the same strings are tried once more
+   *   with the first rung of the size ladder: 320x240, the minimum canvas of
+   *   §4.5, i.e. the SMALLEST picture a session can ever carry.  A decoder
+   *   that paints there decodes every session this protocol can open.
+   * ⚠ Only on failure: a browser that paints the 64x48 pays nothing more.
+   *   And it is the same pixel test (two colours, read back) — the rule
+   *   «only what paints is declared» does not move. */
+  const floor = (MEASURE_PROBES[name] || [])[0];
+  const samples = [probe];
+  if (floor && floor.depth === depth) samples.push(floor);
+  const failed = [];
+  for (const sample of samples) {
+    let why = null;
+    for (const string of codec_strings(name, depth, DECLARED_LEVEL)) {
+      const config = { codec: string, codedWidth: sample.l,
+                       codedHeight: sample.a, optimizeForLatency: true };
+      let declared;
+      try { declared = (await VideoDecoder.isConfigSupported(config)).supported; }
+      catch (e) { declared = "exception: " + e; }
+      outcome.api.push({ string: string, size: sample.l + "x" + sample.a,
+                         isConfigSupported: declared });
+      /* ⛔ `isConfigSupported` is used as a FILTER and not as a verdict: when it
+         says no, the pixel never arrives (`[M]` on all four cells of F2-5);
+         when it says yes, it says nothing — it is form E1. */
+      if (declared !== true) continue;
+      const r = await paint_probe(config, sample);
+      outcome.readings = r.readings || outcome.readings;
+      if (r.arrives) {
+        outcome.arrives = true; outcome.string = string; outcome.format = r.format;
+        outcome.size = sample.l + "x" + sample.a;
+        /* ⭐ And it is SAID that the tiny probe failed: the log keeps why. */
+        if (failed.length) outcome.why = "painted at " + outcome.size
+          + " after " + failed.join(" · ");
+        return outcome;
+      }
+      why = r.why;
     }
-    outcome.why = r.why;
+    if (why) failed.push(sample.l + "x" + sample.a + ": " + why);
   }
+  if (failed.length) outcome.why = failed.join(" · ");
   if (!outcome.why)
     /* ⛔⭐ AND IT SAYS **WHICH** STRING AND **WHAT** IT ANSWERED.
      *
@@ -1858,7 +1889,7 @@ async function probe_one(name, depth) {
      *   there, in `outcome.api`, and nobody read them. */
     outcome.why = "isConfigSupported said no to all the strings tried: "
                  + outcome.api.map(function (a) {
-                     return a.string + " → " + a.isConfigSupported;
+                     return a.string + " @" + a.size + " → " + a.isConfigSupported;
                    }).join(" · ");
   return outcome;
 }
@@ -2055,7 +2086,10 @@ function declare(probing, chosen) {
     if (otto.arrives || ten.arrives) {
       lines.push(name.toUpperCase() + ": reaches the pixel ("
         + [8, 10].filter((p) => c[p] && c[p].arrives).join(" and ") + " bit, «"
-        + (otto.string || ten.string) + "»)");
+        + (otto.string || ten.string) + "»)"
+        /* ⭐ §11.55: when only the minimum-canvas probe painted, say so. */
+        + ((otto.arrives ? otto : ten).why
+           ? " — " + (otto.arrives ? otto : ten).why : ""));
     } else {
       lines.push("⛔ " + name.toUpperCase() + ": does NOT reach the pixel on this "
                  + "browser — " + (otto.why || "not tried"));

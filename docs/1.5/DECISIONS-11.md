@@ -1922,3 +1922,15 @@ behaviour (`pam_faillock(8)`, `faillock.conf(5)`); ⚠ **not run live** — `[?]
   boxes: harness `rcp-msg` with new oracles, the functional suite (F-027 password and ban), `pam-tempi`.
 
 **§1.9-bis closed (24 Oct 2026).** The rule «IPv4 whole, v4-mapped and NAT64 = the IPv4 inside, ::1 whole, any other IPv6 = its /64» is now applied in both places that need it: the login ban (`rcp_key_address()`, §11.53) and the connection caps before login (`address_key()`, §11.40, 8 per address or /64 and 32 per /48). Both give the same key: `benches/unit/address-key/test.c` runs the two real functions on the same 35 strings (IPv4, `::ffff:`, NAT64, `::1`, global /64, link-local with `%zone`, with port, with brackets, malformed) and compares the keys (150 checks). ⚠ A live test with a real IPv6 provider is **not possible here** (the server has only `::1` and `fe80::`): the coverage is the unit tests (`address-key`, `login-ban`) plus `01-b10-flood.py` in a private namespace with IPv6 addresses on `lo`.
+
+### 11.55 🔸 The codec probe: a hardware decoder that refuses 64x48 gets a second probe at 320x240 (16 Oct 2026, ported 24 Oct 2026) — not yet built or run in the new tree
+
+- **The defect**: `[M]` 16 Oct 2026, Firefox 153.5 ESR on an RX 6800 (radeonsi, Mesa 25.0.7, VA-API): H.264 at 64x48 and
+  128x48 -> `EncodingError` (FFmpeg «Invalid data found»); 64x64, 64x96, 128x96 ... 1920x1080 paint; HEVC is refused by
+  `isConfigSupported` at every size. The page declared no codec and the server refused with NOTHING_IN_COMMON, on a
+  card that decodes the real session.
+- **The cure**: the retry runs only when the 64x48 probe fails, with the first rung of the size ladder (320x240 = the
+  minimum canvas of §4.5), with the same pixel test («only what paints is declared» does not move). A browser that
+  paints 64x48 pays nothing more. The log line says when only the second probe painted.
+- **Ported** from `4cfdd4a8` (abandoned first attempt; the §11.48 cited in the original code is this entry). Its bench
+  `benches/22-page-decoder-sim.js` (cases J1-J5) does not exist in the new tree and was NOT ported.
