@@ -288,3 +288,40 @@ void render_node_describe(const char *node, char *out, size_t n)
 	         strncmp(ven, "0x", 2) == 0 ? ven + 2 : ven,
 	         strncmp(dev, "0x", 2) == 0 ? dev + 2 : dev);
 }
+
+bool render_node_is_drm(const char *path, char *why, size_t wn)
+{
+	struct stat st;
+
+	if (!path || strncmp(path, "/dev/dri/", 9) != 0) {
+		snprintf(why, wn, "not under /dev/dri/");
+		return false;
+	}
+	if (stat(path, &st) != 0) {
+		snprintf(why, wn, "it does not exist here (%s)", strerror(errno));
+		return false;
+	}
+	if (!S_ISCHR(st.st_mode)) {
+		snprintf(why, wn, "not a character device");
+		return false;
+	}
+	if (major(st.st_rdev) != RENDER_NODE_DRM_MAJOR) {
+		snprintf(why, wn, "character device %u:%u, not DRM (major %u)", major(st.st_rdev),
+		         minor(st.st_rdev), RENDER_NODE_DRM_MAJOR);
+		return false;
+	}
+	if (wn)
+		why[0] = 0;
+	return true;
+}
+
+bool render_node_same(const char *a, const char *b)
+{
+	struct stat sa, sb;
+
+	if (!a || !b)
+		return false;
+	if (stat(a, &sa) == 0 && stat(b, &sb) == 0 && S_ISCHR(sa.st_mode) && S_ISCHR(sb.st_mode))
+		return sa.st_rdev == sb.st_rdev;
+	return strcmp(a, b) == 0;
+}

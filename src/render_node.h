@@ -37,4 +37,20 @@ bool render_node_of_compositor(char *out, size_t n, char *why, size_t wn, bool *
  * does not say.  Never fails. */
 void render_node_describe(const char *node, char *out, size_t n);
 
+/* ⭐ 1.5 (review of 13422add) — the DRM character-device major (Linux
+ *    `DRM_MAJOR`): a `/dev/dri/` path that is not a char device with this
+ *    major is not a card, whatever its name. */
+#define RENDER_NODE_DRM_MAJOR 226u
+
+/* true if `path` is under /dev/dri/, exists, is a character device and has
+ * the DRM major 226 (`st_rdev`).  When false, `why` says which of the four
+ * failed (for the one log line of `child_render_node()`). */
+bool render_node_is_drm(const char *path, char *why, size_t wn);
+
+/* true if `a` and `b` name the same card: the same `st_rdev` when both
+ * stat, otherwise the same string.  ⚠ Two names of one node (a symlink,
+ * `/dev/dri/by-path/…`) are the same card: comparing strings alone would
+ * run a second test for nothing. */
+bool render_node_same(const char *a, const char *b);
+
 #endif
