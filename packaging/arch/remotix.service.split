@@ -51,6 +51,7 @@ KillMode=mixed
 LimitRTPRIO=20
 LimitNICE=-11
 Restart=on-failure
+RestartPreventExitStatus=78
 RestartSec=2
 
 [Install]
