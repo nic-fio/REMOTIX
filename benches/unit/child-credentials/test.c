@@ -11,10 +11,12 @@
  * end has SO_PASSCRED, so the KERNEL stamps the sender's real pid/uid/gid (SCM_CREDENTIALS).  The parent side is children_move()
  * with one slot.  The probe message is MSG_SESSION_FINISHED: it reaches the host hook `on_session_finished` only if the whole
  * wall (magic + credentials + length) let it through.
+ * Every scenario sends the bad message and then a VALID probe: delivered after a discarded message (hook 1), never after a refused
+ * one (hook 0: the child is dismissed and killed).  The sender signals "all queued" on a pipe before the parent runs children_move().
  * Verdicts (from the comments of child.c):
- *   credentials / serial / declared uid that do not match  ⇒ «MESSAGE REFUSED ... The child is killed»: SIGKILL to the pid,
+ *   no credentials / wrong pid, uid or gid / serial / declared uid that do not match  ⇒ «MESSAGE REFUSED ... The child is killed»: SIGKILL to the pid,
  *                                                            child_dismiss(), the body is NEVER read (hook 0)
- *   wrong magic, longer than expected (-2), too short for a header, header announcing more bytes than arrived
+ *   wrong magic, wrong version, longer than expected (-2), too short for a header, header announcing more bytes than arrived
  *                                                          ⇒ «DISCARDED»: the child stays, the next message is read normally
  *
  * BUILD AND RUN (a second; nothing under /media/REMOTIX-15 is written; run from the root of the tree):
@@ -36,6 +38,7 @@
 #include <fcntl.h>
 #include <poll.h>
 #include <signal.h>
+#include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -48,10 +51,13 @@ static void h_finished(void *c, const char *u, uid_t uid) { (void)c; (void)u; (v
 static void h_dismiss(void *c, const char *u, uid_t uid) { (void)c; (void)u; (void)uid; hook_dismiss++; }
 
 enum scenario {
-	S_GOOD, S_WRONG_UID, S_WRONG_PID, S_WRONG_SERIAL, S_WRONG_MAGIC, S_TOO_LONG, S_SHORT_BODY, S_SHORT_HEADER, S_N
+	S_GOOD, S_WRONG_UID, S_WRONG_PID, S_WRONG_GID, S_WRONG_SERIAL, S_WRONG_DECLARED, S_NO_CREDS,
+	S_WRONG_MAGIC, S_WRONG_VERSION, S_TOO_LONG, S_SHORT_BODY, S_SHORT_HEADER, S_N
 };
 static const char *const NAME[S_N] = {
-	"right uid/pid/serial", "wrong uid", "wrong pid", "wrong serial", "wrong magic",
+	"right uid/pid/serial", "wrong uid", "wrong pid", "wrong gid (uid right)", "wrong serial",
+	"wrong declared uid (kernel and slot right)", "no kernel credentials (no SO_PASSCRED)",
+	"wrong magic", "wrong version (magic right)",
 	"longer than expected (-2)", "header announces more bytes than were read", "shorter than a header",
 };
 /* the expected verdict */
@@ -60,8 +66,12 @@ static const struct want WANT[S_N] = {
 	[S_GOOD]         = {false, false, 1},
 	[S_WRONG_UID]    = {true,  true,  0},
 	[S_WRONG_PID]    = {true,  true,  0},
+	[S_WRONG_GID]    = {true,  true,  0},
 	[S_WRONG_SERIAL] = {true,  true,  0},
-	[S_WRONG_MAGIC]  = {false, false, 1},   /* discarded; the valid probe sent right after IS delivered */
+	[S_WRONG_DECLARED] = {true, true, 0},
+	[S_NO_CREDS]     = {true,  true,  0},
+	[S_WRONG_MAGIC]  = {false, false, 1},
+	[S_WRONG_VERSION] = {false, false, 1},   /* discarded; the valid probe sent right after IS delivered */
 	[S_TOO_LONG]     = {false, false, 1},
 	[S_SHORT_BODY]   = {false, false, 1},
 	[S_SHORT_HEADER] = {false, false, 1},
@@ -80,7 +90,16 @@ static void make_head(struct head *t, uint64_t serial, uint32_t declared_uid, ui
 	t->byte = byte;
 }
 
-static void sender(int fd, enum scenario sc)
+static void send_head(int fd, uint64_t serial, uint32_t declared_uid, uint32_t byte)
+{
+	struct head t;
+	make_head(&t, serial, declared_uid, byte);
+	send(fd, &t, sizeof t, 0);
+}
+
+/* Every scenario sends the BAD message and then a VALID probe: in the discarded ones the probe must be delivered (hook 1: the loop
+ * went on), in the refused ones it must NOT be (hook 0: the child is dismissed, nothing more is read). */
+static void sender(int fd, int sync, enum scenario sc)
 {
 	struct head t;
 	uint32_t uid = (uint32_t)getuid();
@@ -88,23 +107,29 @@ static void sender(int fd, enum scenario sc)
 	alarm(20);
 	switch (sc) {
 	case S_GOOD:
-		make_head(&t, SERIAL, uid, 0);
-		send(fd, &t, sizeof t, 0);
-		break;
+		break;                             /* only the probe */
 	case S_WRONG_UID:                      /* the parent believes the child has another uid; the message says the same as the parent */
+		send_head(fd, SERIAL, uid + 1000, 0);
+		break;
 	case S_WRONG_PID:                      /* the parent believes the child is another pid */
-		make_head(&t, SERIAL, sc == S_WRONG_UID ? uid + 1000 : uid, 0);
-		send(fd, &t, sizeof t, 0);
+	case S_WRONG_GID:                      /* the parent believes another gid; the uid is right */
+	case S_NO_CREDS:                       /* the receiver has no SO_PASSCRED: the message arrives without credentials */
+		send_head(fd, SERIAL, uid, 0);
 		break;
 	case S_WRONG_SERIAL:
-		make_head(&t, SERIAL + 1, uid, 0);
-		send(fd, &t, sizeof t, 0);
+		send_head(fd, SERIAL + 1, uid, 0);
+		break;
+	case S_WRONG_DECLARED:                 /* kernel and slot agree; the message declares another uid */
+		send_head(fd, SERIAL, uid + 1, 0);
 		break;
 	case S_WRONG_MAGIC:
 		make_head(&t, SERIAL, uid, 0);
 		memcpy(t.magic, "FIGX", 4);
 		send(fd, &t, sizeof t, 0);
-		make_head(&t, SERIAL, uid, 0);     /* the probe */
+		break;
+	case S_WRONG_VERSION:
+		make_head(&t, SERIAL, uid, 0);
+		t.version = CHILD_VERSION + 1;
 		send(fd, &t, sizeof t, 0);
 		break;
 	case S_TOO_LONG: {
@@ -114,24 +139,19 @@ static void sender(int fd, enum scenario sc)
 		memcpy(big, &t, sizeof t);
 		send(fd, big, n, 0);
 		free(big);
-		make_head(&t, SERIAL, uid, 0);
-		send(fd, &t, sizeof t, 0);
 		break;
 	}
 	case S_SHORT_BODY:                     /* the header says 100 body bytes, none follow */
-		make_head(&t, SERIAL, uid, 100);
-		send(fd, &t, sizeof t, 0);
-		make_head(&t, SERIAL, uid, 0);
-		send(fd, &t, sizeof t, 0);
+		send_head(fd, SERIAL, uid, 100);
 		break;
 	case S_SHORT_HEADER:
 		send(fd, "FIG1", 4, 0);
-		make_head(&t, SERIAL, uid, 0);
-		send(fd, &t, sizeof t, 0);
 		break;
 	default:
 		break;
 	}
+	send_head(fd, SERIAL, uid, 0);         /* the probe */
+	(void)write(sync, "x", 1);             /* everything is queued: the parent may go */
 	pause();
 	_exit(0);
 }
@@ -162,21 +182,26 @@ static int run(enum scenario sc)
 {
 	int sv[2];
 	if (socketpair(AF_UNIX, SOCK_SEQPACKET, 0, sv) != 0) { perror("socketpair"); return 1; }
-	int on = 1;
-	setsockopt(sv[0], SOL_SOCKET, SO_PASSCRED, &on, sizeof on);
+	int on = 1, sy[2];
+	if (pipe(sy) != 0) { perror("pipe"); return 1; }
+	if (sc != S_NO_CREDS)                  /* production sets SO_PASSCRED; here the one scenario without it */
+		setsockopt(sv[0], SOL_SOCKET, SO_PASSCRED, &on, sizeof on);
 	fcntl(sv[0], F_SETFL, fcntl(sv[0], F_GETFL) | O_NONBLOCK);   /* as in production: EAGAIN ends the loop */
 	pid_t pid = fork();
-	if (pid == 0) { close(sv[0]); sender(sv[1], sc); }
-	close(sv[1]);
+	if (pid == 0) { close(sv[0]); close(sy[0]); sender(sv[1], sy[1], sc); }
+	close(sv[1]); close(sy[1]);
 	pid_t other = 0;
 	if (sc == S_WRONG_PID) {               /* the slot says the child is a DIFFERENT process (a sleeper) */
 		other = fork();
 		if (other == 0) { signal(SIGTERM, SIG_IGN); alarm(20); pause(); _exit(0); }
 	}
-	/* wait until the sender's messages are queued (poll does not consume) */
-	struct pollfd p = {.fd = sv[0], .events = POLLIN};
-	if (poll(&p, 1, 3000) != 1) { fprintf(stderr, "no message arrived\n"); return 1; }
-	usleep(100000);
+	/* wait until ALL the sender's messages are queued: it writes a byte on the sync pipe after the last send (a sleep guesses,
+	 * and FIONREAD only sees the size of the NEXT datagram of a SEQPACKET socket) */
+	struct pollfd p = {.fd = sy[0], .events = POLLIN};
+	char b1;
+	if (poll(&p, 1, 3000) != 1 || read(sy[0], &b1, 1) != 1) { fprintf(stderr, "the sender did not finish sending\n"); return 1; }
+	close(sy[0]);
+	{ int q = 0; if (ioctl(sv[0], FIONREAD, &q) != 0 || q <= 0) { fprintf(stderr, "nothing queued (FIONREAD %d)\n", q); return 1; } }
 
 	children F;
 	struct child G;
@@ -191,6 +216,7 @@ static int run(enum scenario sc)
 	if (G.uid != 0) { fprintf(stderr, "the test must run as root (uid 0) inside the container\n"); return 1; }
 	G.pid = (sc == S_WRONG_PID) ? other : pid;
 	if (sc == S_WRONG_UID) G.uid = 1000;           /* kernel says 0, the slot says 1000 */
+	if (sc == S_WRONG_GID) G.gid = getgid() + 1000; /* uid right, gid not */
 	G.serial = SERIAL;
 	G.fd = sv[0];
 	G.showed_up = true;
