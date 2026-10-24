@@ -1,0 +1,50 @@
+=== kde grant-test  2026-10-13T18:04:13+00:00  product: 631a1fc1+render_grant
+      red lines in the startup log: 11
+--- acle: uid=4013(acle) gid=4013(acle) groups=4013(acle) — manager 224 Groups:4013 
+    client:    ⭐ SESSION: state=1 canvas=1920x1080 desktop=kde
+    manager after: 224 (was 224)
+      276 remotix [44 991 4013 ] dri:  1 /dev/dri/renderD128 
+      313 kwin_wayland [4013 ] dri:  5 /dev/dri/renderD128 
+      348 Xwayland [4013 ] dri:  5 /dev/dri/renderD128 
+      401 kded6 [4013 ] dri:  4 /dev/dri/renderD128 
+      402 ksmserver [4013 ] dri:  4 /dev/dri/renderD128 
+      427 plasmashell [4013 ] dri:  4 /dev/dri/renderD128 
+      457 kaccess [4013 ] dri:  4 /dev/dri/renderD128 
+      459 polkit-kde-auth [4013 ] dri:  4 /dev/dri/renderD128 
+    render node ACL: group:acle:rw- 
+    render-grants: 4013 4013 acle;
+18:04:19.898 child   [acle] ⭐ FIRST CONNECTION: «acle» is not in the card's groups (render,video) and I am PUTTING it there, now — the user's decision of 20 Sep 2026.  ⚠ Without it, this sessi
+18:04:19.973 child   [acle] ⭐ «acle» enrolled in «render,video»: a user manager born from now on carries the groups.  Nothing is closed
+18:04:19.974 child   [acle] ⚠ the user manager of «acle» (pid 224) is ALIVE and was born without the group of /dev/dri/renderD128 (gid 991): the desktop it starts would draw in software
+18:04:19.985 child   [acle] ⭐ CARD GRANT: «acle»'s private group (gid 4013) may open 1 render node(s) (1 added now) — its stale user manager draws on the card, and NOTHING is closed.  Removed wh
+    → the desktop ends
+18:04:53.676 input   [acle] the pointer was REMOVED by the compositor (replacement n. 1)
+18:04:53.676 input   [acle] the keyboard was REMOVED by the compositor (replacement n. 1)
+    render node ACL: group:acle:rw- 
+    render-grants: 4013 4013 acle;
+--- aclx: uid=4014(aclx) gid=100(users) groups=100(users) — manager 965 Groups:100 
+    client:    ⭐ SESSION: state=1 canvas=1920x1080 desktop=kde
+    manager after: 965 (was 965)
+      1018 remotix [44 100 991 ] dri: none
+      1055 kwin_wayland [100 ] dri: none
+      1073 Xwayland [100 ] dri: none
+      1230 plasmashell [100 ] dri: none
+    render node ACL: group:acle:rw- 
+    render-grants: 4013 4013 acle;
+18:05:11.535 child   [aclx] ⚠ NO card grant for «aclx»: gid 100 is the group «users», not «aclx».  ⇒ The desktop is born anyway and draws in SOFTWARE until the user manager is born again (the user leaves every 
+--- acls: uid=4015(acls) gid=4015(acls) groups=4015(acls) — manager 1982 Groups:4015 
+    client:    ⭐ SESSION: state=1 canvas=1920x1080 desktop=kde
+      2071 kwin_wayland [4015 ] dri:  5 /dev/dri/renderD128 
+    render node ACL: group:acle:rw- group:acls:rw- 
+    render-grants: 4013 4013 acle;4015 4015 acls;
+    → the server is KILLED (a crash), then the desktop ends, then the server starts again
+    render node ACL: group:acle:rw- group:acls:rw- 
+    render-grants: 4013 4013 acle;4015 4015 acls;
+      red lines in the startup log: 11
+18:06:53.397 child   [acle] ⭐ card grant of «acle» (gid 4013) left by a previous run REMOVED: no REMOTIX desktop of it is alive
+18:06:53.397 child   [acls] ⭐ card grant of «acls» (gid 4015) left by a previous run REMOVED: no REMOTIX desktop of it is alive
+    render node ACL: 
+    render-grants: 
+--- cleanup
+    render node ACL: 
+    render-grants: 

@@ -54,9 +54,10 @@
  *    dependency on the protocol. */
 #include "rcp.h"
 #include "log.h"
-/* ⭐ PHASE 17 T7: the PARENT's half asks whether a desktop is alive before
- *    `loginctl terminate-user` (logind and /proc, nothing of the stage). */
+/* ⭐ PHASE 17 T7: the PARENT's half asks logind and /proc whether a desktop
+ *    is alive (nothing of the stage). */
 #include "rediscover.h"
+#include "render_grant.h"
 
 #include <dirent.h>
 #include <dlfcn.h>
@@ -488,6 +489,9 @@ struct child {
 	char rhost[64];
 	uid_t uid;
 	gid_t gid;
+	/* ⭐ 1.5: this child's desktop holds a card grant (`render_grant.h`),
+	 *    taken back when the child is reaped. */
+	bool render_grant;
 	pid_t pid;
 	int fd;
 	uint64_t serial;
@@ -819,6 +823,8 @@ static void child_free(struct children *f, struct child *g, const char *why)
 	 *    was not its own: calling it twice is not a defect, never calling it is. */
 	if (f->dismiss)
 		f->dismiss(f->ctx, g->user, g->uid);
+	if (g->render_grant)
+		render_grant_remove(g->user, g->uid, g->gid);
 	memset(g, 0, sizeof *g);
 	g->fd = -1;
 }
@@ -901,6 +907,9 @@ children *children_turn_on(uint32_t canvas_w, uint32_t canvas_h, const char *dir
 	f->cursor = cursor;
 	f->canvas = canvas;
 	f->ctx = ctx;
+	/* ⭐ 1.5: card grants left by a previous run whose desktop is gone
+	 *    (`render_grant.h`) — before any child is born. */
+	render_grant_sweep();
 	if (dir_survey && dir_survey[0]) {
 		snprintf(f->dir_survey, sizeof f->dir_survey, "%s", dir_survey);
 		f->has_survey = true;
@@ -1578,22 +1587,22 @@ static bool card_groups(const char *user, gid_t primary,
 		missing_list++;
 		/* ⛔⛔ THE LINE THAT IS WORTH THE WHOLE CHECK.  It says the defect, the
 		 *     VISIBLE consequence ("it will see nothing"), and the cure in
-		 *     full — including the `terminate-user`, without which a
-		 *     `usermod` with the user manager alive does NOT take effect. */
+		 *     full.  ⭐ 1.5: no `terminate-user` in the cure any more — it
+		 *     closed the user's other sessions; a user manager left with the
+		 *     old groups is bridged at the next login (`render_grant.h`). */
 		log_says_of(LOG_CHILD, user,
 		                 "⛔⛔ «%s» IS NOT IN THE CARD'S GROUP «%s» (gid "
 		                 "%ld, the group of %s): ⛔ THIS SESSION WILL BE BORN AND "
 		                 "WILL SEE NOTHING — zero frames, no window will "
 		                 "open, and the loop will go round and round between «BLACK: "
 		                 "ZERO MONITORS» and «virtual monitor mounted».  ⭐ THE CURE, "
-		                 "in two commands as root: `usermod -aG %s %s` and "
-		                 "then `loginctl terminate-user %s` — ⚠ the second is "
-		                 "NOT optional: the groups reach the compositor only "
-		                 "when the user manager is BORN AGAIN.  (phase 10 §7.4, "
+		                 "as root: `usermod -aG %s %s`, then sign in again — "
+		                 "REMOTIX bridges a user manager still alive with the old "
+		                 "groups, and closes nothing.  (phase 10 §7.4, "
 		                 "measured 27 Aug 2026: 0 sessions out of 4 without the "
 		                 "group, 17 out of 17 with it)",
 		                 user, names[i], (long)seen_items[i], nodes[i], names[i],
-		                 user, user);
+		                 user);
 	}
 
 	if (missing_list == 0)
@@ -1627,12 +1636,10 @@ static bool card_groups(const char *user, gid_t primary,
  *   session, the machine is touched by `provision.sh`"): the product now
  *   touches the groups.  It is the user's decision, and it is written in the
  *   log every time.
- * ⚠ The user manager already alive does NOT take the new groups: it is made
- *   to be born again with `loginctl terminate-user` — ⛔ but ONLY if the user
- *   has no live REMOTIX desktop.  "There is no child here, so no graphical
- *   session" was true as long as the desktop died with the child; `[M]` T2
- *   (phase 17 §5.2) showed that after a service restart it survives (see the
- *   guard at the end of the function, PHASE 17 T7).
+ * ⚠ The user manager already alive does NOT take the new groups, and it is
+ *   NOT made to be born again (1.5, DECISIONS.md §11.4: `loginctl
+ *   terminate-user` closed the user's other sessions).  The card is bridged by
+ *   `render_grant.h` instead.
  *
  * Returns `true` if it changed something (and then the groups must be read
  * again).
@@ -1811,7 +1818,6 @@ static bool enroll_in_card_groups(const char *user, uid_t uid, gid_t primary,
 	char why[256] = "";
 	size_t used_len = 0;
 	char *argv_mod[6];
-	char *argv_term[4];
 	int fd;
 
 	if (nseen == 0 || geteuid() != 0)
@@ -1876,45 +1882,14 @@ static bool enroll_in_card_groups(const char *user, uid_t uid, gid_t primary,
 	}
 	if (fd >= 0)
 		close(fd);
-	/* ⚠ And the user manager is made to be BORN AGAIN, or the new groups do not
-	 *   reach the compositor (`[M]` 27 Aug 2026).
-	 * ⛔⭐ PHASE 17, T7 — "there is no child here, so no desktop" IS NOT
-	 *     TRUE: `[M]` T2, after a service restart the REMOTIX desktop survives
-	 *     without a child (`rediscover.h`).  `terminate-user` would bring it down
-	 *     with all its windows.  ⇒ logind and /proc are asked FIRST; if the
-	 *     desktop is there — or it is not known — it is NOT issued, and we say
-	 *     that the new groups will arrive at the next birth of the desktop. */
-	{
-		RediscoveredDesktop alive;
-		int c = rediscover_alive(uid, &alive);
-
-		if (c != 0) {
-			if (c > 0)
-				log_says_of(LOG_CHILD, user,
-				                 "⛔ «%s» enrolled in «%s», but the user manager is NOT "
-				                 "restarted: it has a LIVE REMOTIX desktop (session %s, "
-				                 "stage pid %ld «%s») and `loginctl terminate-user` would "
-				                 "close it with its windows.  ⚠ The new groups "
-				                 "will reach the compositor at the next birth of the "
-				                 "desktop: until then it may see in software",
-				                 user, listing, alive.session, (long)alive.stage, alive.comm);
-			else
-				log_says_of(LOG_CHILD, user,
-				                 "⛔ «%s» enrolled in «%s», but the user manager is NOT "
-				                 "restarted: logind does not say whether it has a live REMOTIX "
-				                 "desktop, and when in doubt nothing is brought down",
-				                 user, listing);
-			return true;
-		}
-	}
-	argv_term[0] = (char *)"loginctl";
-	argv_term[1] = (char *)"terminate-user";
-	argv_term[2] = (char *)user;
-	argv_term[3] = NULL;
-	(void)run_as_root("/usr/bin/loginctl", argv_term, user);
+	/* ⛔⭐ 1.5 (DECISIONS.md §11.4): the user manager is NOT made to be born
+	 *     again.  Until 1.0 `loginctl terminate-user` did it, and `[M]` 12 Oct
+	 *     2026 it killed the user's SSH session (SPECS §5.1).  If a manager is
+	 *     alive with the old groups, the card is bridged by `render_grant`
+	 *     (GNOME, KDE) in `children_ensure_from()`; the desktop is born anyway. */
 	log_says_of(LOG_CHILD, user,
-	                 "⭐ «%s» enrolled in «%s» and user manager restarted: from "
-	                 "now on it sees the card",
+	                 "⭐ «%s» enrolled in «%s»: a user manager born from now on carries the "
+	                 "groups.  Nothing is closed",
 	                 user, listing);
 	return true;
 }
@@ -1934,6 +1909,7 @@ bool children_ensure_from(children *f, const char *user, const char *rhost)
 	int sv[2];
 	int uno = 1;
 	int free_slot = -1;
+	bool grant = false;
 	pid_t p;
 
 	if (!f || !user || !user[0])
@@ -2051,8 +2027,32 @@ bool children_ensure_from(children *f, const char *user, const char *rhost)
 		return false;
 	}
 
+	/* ⭐⭐ 1.5 (DECISIONS.md §11.4) — THE CARD FOR A STALE USER MANAGER.
+	 *    On GNOME and KDE the compositor is born from the user manager: if that
+	 *    one is alive with groups older than `render`, the desktop would draw in
+	 *    software.  ⇒ An ACL for the user's private group on `renderD*`, for the
+	 *    life of this child.  XFCE and LXQt need nothing: labwc is born from
+	 *    the child, with the groups read above.  `[M]` 13 Oct 2026, the four
+	 *    boxes and the tablet. */
+	{
+		DesktopSession ds = desktop_session();
+
+		if (ds == SESSION_DESKTOP_GNOME || ds == SESSION_DESKTOP_KDE) {
+			int need = render_grant_needed(pw.pw_uid, pw.pw_name);
+
+			if (need > 0)
+				grant = render_grant_add(pw.pw_name, pw.pw_uid, pw.pw_gid);
+			else if (need < 0)
+				log_says_of(LOG_CHILD, pw.pw_name,
+				            "⚠ the groups of «%s»'s user manager cannot be read: no card "
+				            "grant, and if they are old the desktop draws in software",
+				            pw.pw_name);
+		}
+	}
+
 	g = &f->v[free_slot];
 	memset(g, 0, sizeof *g);
+	g->render_grant = grant;
 	g->serial = f->next_serial;
 	snprintf(g->user, sizeof g->user, "%s", pw.pw_name);
 	snprintf(g->rhost, sizeof g->rhost, "%s", rhost ? rhost : "");
@@ -2065,6 +2065,8 @@ bool children_ensure_from(children *f, const char *user, const char *rhost)
 		              strerror(errno));
 		close(sv[0]);
 		close(sv[1]);
+		if (grant)
+			render_grant_remove(g->user, g->uid, g->gid);
 		memset(g, 0, sizeof *g);
 		g->fd = -1;
 		return false;
@@ -3357,6 +3359,11 @@ bool children_video(children *f, const char *user, uint8_t codec,
 	return true;
 }
 
+/* ⭐ 1.5 (DECISIONS-11 §11.4): the card grants (`render_grant.h`) of the desktops that SURVIVE the
+ *   shutdown of the service are LEFT IN PLACE here — this function does not call `child_free()`,
+ *   so it takes none back.  The desktop lives on without a child (`rediscover.h`), is found again
+ *   at the next start, and `render_grant_sweep()` keeps its grant ("KEPT", no child) or takes it
+ *   back once the desktop is gone.  Uninstalling removes what is left. */
 void children_turn_off(children *f)
 {
 	if (!f)
