@@ -64,6 +64,7 @@ src/*-client-protocol.h
 # ⛔ I banchi COMPILATI della phase 13: yes rifanno con `make -C src bench-w1`
 #    e sono legati alle librerie di chi li ha costruiti (come `src/remotix`).
 benches/13-w1-one-frame
+benches/20-unchanged-test
 benches/13-w3-input-wlr
 
 # Le outputs di src/build-targets/build-all.sh: binari per target e logs

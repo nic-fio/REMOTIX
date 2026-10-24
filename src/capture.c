@@ -2705,6 +2705,12 @@ void capture_unchanged_bypass(Capture *capture, gboolean bypass)
 		capture->uc_bypass = bypass;
 }
 
+void capture_unchanged_forget(Capture *capture)
+{
+	if (capture)
+		uc_forget(&capture->uc);
+}
+
 CaptureTake capture_take(Capture *capture, double wait_s, CaptureStopped *report,
                             GError **mistake)
 {

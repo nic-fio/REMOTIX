@@ -806,6 +806,11 @@ void capture_cursor_never_hide(Capture *capture, const char *why);
  */
 void capture_skip_unchanged(Capture *capture, const char *why);
 void capture_unchanged_bypass(Capture *capture, gboolean bypass);
+/* ⛔ The frame that came out of `capture_take` was NOT encoded (the encoder
+ *    failed): its bytes must not stay the reference, or the next copy of the
+ *    same picture would be held back and the change would never reach the
+ *    client.  Called by whoever drops a frame after the take. */
+void capture_unchanged_forget(Capture *capture);
 
 void capture_stop(Capture *capture);
 

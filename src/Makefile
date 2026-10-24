@@ -318,7 +318,7 @@ LIBS := -lngtcp2_crypto_ossl -lngtcp2 -lnghttp3 -lssl -lcrypto -lpam \
 #   ⛔ but depending on that detail means breaking on a different libc
 #   with an error that does not name the phase that introduced it.
 
-.PHONY: all clean deps fingerprints bench-w1 FORCE
+.PHONY: all clean deps fingerprints bench-w1 bench-unchanged FORCE
 
 all: fingerprints $(NOME)
 
@@ -389,6 +389,17 @@ $(BANCO_W1): ../benches/13-w1-one-frame.c wlroots.o registro.o \
 	      $(F13_LIBS)
 
 bench-w1: $(BANCO_W1)
+
+# ⭐ 15 Oct 2026 — the desk test of the «unchanged» filter (`unchanged.h`):
+#    the header itself, the SAME one capture.c includes, on synthetic frames.
+BANCO_UC := ../benches/20-unchanged-test
+
+$(BANCO_UC): ../benches/20-unchanged-test.c unchanged.h
+	$(CC) $(CFLAGS) $(shell pkg-config --cflags glib-2.0) -o $@ $< \
+	      $(shell pkg-config --libs glib-2.0)
+
+bench-unchanged: $(BANCO_UC)
+	$(BANCO_UC)
 
 
 %-client-protocol.h: protocols/%.xml

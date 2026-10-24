@@ -9894,9 +9894,14 @@ void child_alive(int argc, char **argv)
 			 *    codecs a `? :` was enough, with the third a nested `? :` would
 			 *    say "AV1" of every number it does not know — and the symptom
 			 *    would be an AV1 stream sent with label 3. */
-			encode_and_send(&fo, codec_from_number(requested_codec),
-			                 requested_codec, NULL, NULL, instant_us, canvas_w,
-			                 canvas_h, input_injected);
+			/* ⛔ 15 Oct 2026 — a frame NOT encoded must not stay the
+			 *    reference of the «unchanged» filter (`unchanged.h`): the
+			 *    next copy of the same picture would be held back, and the
+			 *    change it carries would never reach the client. */
+			if (!encode_and_send(&fo, codec_from_number(requested_codec),
+			                     requested_codec, NULL, NULL, instant_us, canvas_w,
+			                     canvas_h, input_injected))
+				capture_unchanged_forget(cat);
 			/* ⛔⭐ THE RELEASE — and on the card's road this line is NOT a
 			 *     clean-up: it is the cure of `LESSONS.md` §8.  Until it is
 			 *     called, Mutter's buffer is ours; and it is called AFTER the
