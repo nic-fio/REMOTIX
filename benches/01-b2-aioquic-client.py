@@ -4,6 +4,13 @@
     python3 01-b2-aioquic-client.py [https://192.168.0.2:7447/rcp/1] [expected :status]
     python3 01-b2-aioquic-client.py https://192.168.0.2:7447/rcp/9 404
     python3 01-b2-aioquic-client.py https://192.168.0.2:7448/rcp/1 200 --no-echo
+    python3 01-b2-aioquic-client.py https://127.0.0.1:7547/rcp/1 200 --rebind [--verbose]
+
+⭐ `--rebind` (24 Oct 2026, the live test of the §2.3 migration): once the session is open the client changes its
+SOURCE PORT as a NAT rebinding does — a new UDP socket on another local port, the same protocol object
+(`client._transport` replaced) — sends bytes on a new WebTransport stream and checks that an answer comes back OR that
+the connection is still open after 5 s.  It prints «REBIND OK» or «REBIND FAIL: <reason>».  The server's log must
+then say «MOVED to» (that is the script's check, `migrazione-dal-vivo.sh`).
 
 ---------------------------------------------------------------------------
 ⛔⭐ AGAINST THE PRODUCT YOU USE `--no-echo`, AND IT IS NOT A CONVENIENCE
@@ -69,8 +76,10 @@ the document.
 ⛔ Whoever grows it does not look at the C nor at the page (rule B9).
 """
 import asyncio
+import socket
 import ssl
 import sys
+import time
 from urllib.parse import urlparse
 
 from aioquic.asyncio import connect
@@ -151,7 +160,43 @@ class ClientWebTransport(QuicConnectionProtocol):
                     self.returned.set_result(ev.data)
 
 
-async def main(url: str, expected: str = "200", echo: bool = True) -> int:
+REBIND_WAIT_S = 5.0
+
+
+async def rebind(client, verbose=False):
+    """changes the source port; (ok, reason).  The old transport is returned to be closed at the end."""
+    loop = asyncio.get_running_loop()
+    old = client._transport
+    sock = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)       # as aioquic's own connect(): dual stack
+    sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
+    sock.bind(("::", 0, 0, 0))
+    sock.setblocking(False)
+    before = old.get_extra_info("sockname")
+    await loop.create_datagram_endpoint(lambda: client, sock=sock)   # connection_made(): client._transport = the new one
+    after = client._transport.get_extra_info("sockname")
+    print(f"   source port {before[1]} -> {after[1]}")
+    if after[1] == before[1]:
+        return old, False, "the source port did not change"
+    client.send_byte(b"rebind")
+    t0 = time.time()
+    try:
+        data = await asyncio.wait_for(client.returned, timeout=REBIND_WAIT_S)
+        return old, True, f"an answer came back on the new path ({len(data)} bytes)"
+    except asyncio.TimeoutError:
+        pass
+    ce = getattr(client._quic, "_close_event", None)
+    if verbose:
+        print(f"   after {time.time() - t0:.1f} s: close_event = {ce!r}")
+    if ce is not None:
+        return old, False, f"the connection was closed (error {ce.error_code}: {ce.reason_phrase!r})"
+    return old, True, f"no answer, but the connection is still open after {REBIND_WAIT_S:.0f} s"
+
+
+rebind_old = []        # the transport left behind by --rebind: closed after the connection
+
+
+async def main(url: str, expected: str = "200", echo: bool = True, do_rebind: bool = False,
+               verbose: bool = False) -> int:
     u = urlparse(url)
     authority = f"{u.hostname}:{u.port or 443}"
 
@@ -206,6 +251,12 @@ async def main(url: str, expected: str = "200", echo: bool = True) -> int:
             return 1
         print("   ⭐ WebTransport session ACCEPTED")
 
+        if do_rebind:
+            old, ok, why = await rebind(client, verbose)
+            print(("REBIND OK: " if ok else "REBIND FAIL: ") + why)
+            rebind_old.append(old)
+            return 0 if ok else 1
+
         # ⛔ AND HERE WE STOP, IF NO ECHO IS TO BE EXPECTED.  The verdict
         #    says what it proves — "the session opened on this
         #    path" — and does NOT stretch to a claim that this
@@ -234,7 +285,7 @@ async def main(url: str, expected: str = "200", echo: bool = True) -> int:
 if __name__ == "__main__":
     # ⚠ `--no-echo` is removed before reading the positionals, so the usual
     #   order of the arguments keeps holding.
-    call_args = [x for x in sys.argv[1:] if x != "--no-echo"]
+    call_args = [x for x in sys.argv[1:] if x not in ("--no-echo", "--rebind", "--verbose")]
     echo = "--no-echo" not in sys.argv[1:]
     url = call_args[0] if len(call_args) > 0 else "https://192.168.0.2:7447/rcp/1"
     # ⚠ The second argument is the EXPECTED `:status`: without it, it is 200 and
@@ -242,7 +293,10 @@ if __name__ == "__main__":
     #   NO, and an arbitrary failure no longer passes for a refusal (R8.8).
     expected = call_args[1] if len(call_args) > 1 else "200"
     try:
-        sys.exit(asyncio.run(main(url, expected, echo)))
+        rc = asyncio.run(main(url, expected, echo, "--rebind" in sys.argv[1:], "--verbose" in sys.argv[1:]))
+        for t in rebind_old:
+            t.close()
+        sys.exit(rc)
     except Exception as e:
         print(f"\n   ⛔ failed: {type(e).__name__}: {e}")
         sys.exit(2)
