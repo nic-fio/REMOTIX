@@ -189,6 +189,10 @@ def quic_conn(graft=False):
             # ⭐ migration (b207ad85): NAT rebinding, a new network, a probe, a failed validation
             b"\x00" + up + q_pkt(b"", addr=1) + q_pkt(E.data(0, b"moved"), addr=2)
             + q_pkt(E.path_result(True)) + qop(7),
+            # ⭐ a SUCCESSFUL migration: a packet from a new remote, the validation succeeds (path_result(True)),
+            #    then traffic on the new path; then the same remote on ANOTHER local address and a second success
+            b"\x00" + up + q_pkt(b"", addr=2) + q_pkt(E.path_result(True)) + q_pkt(E.data(0, b"after"), addr=2)
+            + q_pkt(b"", addr=2, local=1) + q_pkt(E.path_result(True)) + qop(7),
             b"\x00" + up + q_pkt(b"", addr=2, flags=0x40) + qop(9, bytes([1, 0, 0, 0, 0, 0, 0]))
             + qop(7) + q_pkt(b"", addr=2, local=1) + q_pkt(E.end(3), addr=3),
             b"\x01" + up2 + q_pkt(b"", sel=1, addr=1) + q_pkt(b"", sel=1, addr=3) + qop(7),
