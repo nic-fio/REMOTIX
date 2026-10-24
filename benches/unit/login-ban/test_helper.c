@@ -22,6 +22,9 @@ int rcp_authenticate_judged(const char *user, const char *password, const char *
 }
 static uint64_t locked_mark;
 void rcp_refusal_locked(uint64_t ticket) { locked_mark = ticket; }
+/* D4b: the bracket of «not checked»; the delivery records what it saw */
+static uint64_t unchecked_mark, unchecked_seen;
+void rcp_refusal_unchecked(uint64_t ticket) { unchecked_mark = ticket; }
 bool rcp_rhost_from_provenance(const char *provenance, char *report, size_t cap)
 {
 	/* the form of authentication.c: «[address]:port» -> «address» */
@@ -64,6 +67,7 @@ static void deliver(void *ctx, uint64_t ticket, bool admitted, const char *user,
 {
 	struct got *g = ctx;
 	mark_seen = locked_mark; /* the mark of §11.47 B, as the delivery sees it */
+	unchecked_seen = unchecked_mark; /* D4b: and the mark of «not checked» */
 	g->n++;
 	g->ticket = ticket;
 	g->admitted = admitted;
@@ -165,6 +169,7 @@ int main(void)
 		make(&h, &peer);
 		memset(&g, 0, sizeof g);
 		mark_seen = 77;
+		unchecked_seen = 77;
 		CHECK(helper_ask(&h, "frank", "pw", "[1.2.3.4]:9", 1000, &t), "ask (outcome %d)", oc);
 		CHECK(recv(peer, &rq2, sizeof rq2, 0) == (ssize_t)sizeof rq2, "the dispatcher gets the request");
 		struct response rs2 = {rq2.ticket, (uint8_t)oc};
@@ -176,6 +181,10 @@ int main(void)
 		CHECK(locked_mark == 0, "outcome %d: and it is cleared after", oc);
 		/* D3: outcome 3 = «not checked» (the dispatcher's own cap): a no that is OURS — delivered `lost`, like the dead helper */
 		CHECK(g.lost == (oc == 3), "outcome %d: lost is %d (only 3 is «not checked»)", oc, g.lost);
+		/* D4b: only outcome 3 is delivered inside the rcp_refusal_unchecked(ticket) bracket, and it is closed after */
+		CHECK(unchecked_seen == (oc == 3 ? g.ticket : 0), "outcome %d: the unchecked mark during the delivery is %s (saw %llu)", oc,
+		      oc == 3 ? "the ticket" : "0", (unsigned long long)unchecked_seen);
+		CHECK(unchecked_mark == 0, "outcome %d: and the unchecked mark is cleared after", oc);
 		close(peer); close(h.fd);
 	}
 

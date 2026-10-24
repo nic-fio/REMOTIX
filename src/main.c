@@ -2549,17 +2549,15 @@ int main(int argc, char **argv)
 	pam_help = helper_turn_on();
 	if (!pam_help)
 		/* `helper_turn_on()` returns NULL only when its object cannot be
-		 *  allocated (calloc).  A helper whose PROCESS does not start is not
-		 *  this case: the object exists, `helper_expired()` starts it again
-		 *  with a pause that doubles, and until then the logins are refused,
-		 *  not counted. */
+		 *  allocated (calloc).  A helper whose PROCESS does not start is a
+		 *  different case: the object exists, `helper_expired()` starts it
+		 *  again with a pause that doubles.  In both, since D4b of §11.50
+		 *  there is NO synchronous PAM fallback: the logins are refused as
+		 *  ours (0x0E) and not counted. */
 		registro_dice(LOG_STARTUP,
-		              "⛔ no PAM helper object (out of memory): falling back to "
-		              "the SYNCHRONOUS check, which stops the loop for 1-2 s at "
-		              "every attempt (DECISIONS.md §1.10).  The fallback is "
-		              "declared, not silent (CODER.md §4.2).  ⚠ A helper whose "
-		              "process fails to start is NOT this case: it is started "
-		              "again, and meanwhile the logins are refused, not counted.");
+		              "⛔ no PAM helper object (out of memory): every login "
+		              "will be REFUSED as ours (0x0E, not counted) — there is no "
+		              "synchronous PAM check any more (D4b, DECISIONS.md §11.50).");
 
 	offspring = children_turn_on(CANVAS_W, CANVAS_H, dir_survey, deposit_frame,
 	                      dismiss_child, cursor_from_stage, canvas_from_stage,

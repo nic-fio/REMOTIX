@@ -31,13 +31,12 @@ extern char **environ;
  *    same line is already in `webtransport.c`.  ⚠ It is the ONLY function that
  *    touches `libpam` in the whole product, and from today it is called **only
  *    by the grandchild**: in the serving process it is never executed again. */
-bool rcp_authenticate_from(const char *user, const char *password,
-                      const char *rhost);
 /* ⭐ §11.47 B: 1 admitted, 2 refused while `pam_faillock` had the account
  *    locked, 0 any other refusal — the byte `outcome` below. */
 int rcp_authenticate_judged(const char *user, const char *password,
                             const char *rhost);
 void rcp_refusal_locked(uint64_t ticket); /* rcp.c / rcp.h */
+void rcp_refusal_unchecked(uint64_t ticket); /* rcp.c / rcp.h (D4b) */
 bool rcp_rhost_from_provenance(const char *provenance, char *report, size_t cap);
 
 /* ⛔⛔ THIS NUMBER IS NOT THE SESSION CAP, AND MUST NOT FOLLOW IT — 25 Aug
@@ -751,11 +750,18 @@ static void not_checked(helper *a, uint64_t ticket, const char *user,
 		return;
 	}
 	registro_dice(REG_RCP,
-	              "⛔ request %llu was NOT checked (the dispatcher's own cap of "
-	              "%d): refused as OURS and NOT counted towards the ban",
-	              (unsigned long long)ticket, MAX_IN_FLIGHT);
+	              "⛔ request %llu was NOT checked (the dispatcher could not start "
+	              "the check: its cap of %d reached, or a fork failed): refused as "
+	              "OURS and NOT counted towards the ban",
+	              (unsigned long long)ticket, 2 * MAX_IN_FLIGHT);
+	/* ⭐ D4b: the bracket of `rcp_refusal_unchecked()` — `rcp.c` refuses this
+	 *    ticket as ours (0x0E, nothing counted, the booking given back) whether
+	 *    it is a live session's or an orphan's.  `lost` goes with it: same
+	 *    meaning, kept for the callers that read only the flag. */
+	rcp_refusal_unchecked(ticket);
 	if (delivery)
 		delivery(ctx, ticket, false, user, rhost, true);
+	rcp_refusal_unchecked(0);
 }
 
 static void dies(helper *a, const char *why, HelperVerdict delivery,
