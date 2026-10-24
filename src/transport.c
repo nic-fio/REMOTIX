@@ -686,7 +686,7 @@ static void write_connection(connection *c)
 	 *   quantum, so a 64 KB buffer let one call put up to ~45 full packets on
 	 *   the wire at once, past ngtcp2's pacing.  The burst is now what
 	 *   `ngtcp2_conn_write_aggregate_pkt` would allow: the send quantum, never
-	 *   less than one full-size packet (ngtcp2's own floor). */
+	 *   less than one full-size packet (the size ngtcp2 recommends, PMTUD). */
 	{
 		size_t quantum = ngtcp2_conn_get_send_quantum2(c->conn);
 		size_t floor = ngtcp2_conn_get_max_tx_udp_payload_size2(c->conn);
@@ -1862,8 +1862,11 @@ int transport_wait_ms(const transport *t)
 		return -1;
 	if (before <= now)
 		return 0;
+	/* ⚠ Rounded UP: rounded down, the loop woke up to 1 ms early and spun on
+	 *   poll(0) until the deadline — rare before, but with pacing honoured
+	 *   (write_connection) a pacing deadline follows every send quantum. */
 	{
-		uint64_t d = (before - now) / NGTCP2_MILLISECONDS;
+		uint64_t d = (before - now + NGTCP2_MILLISECONDS - 1) / NGTCP2_MILLISECONDS;
 		if (d > 1000)
 			d = 1000;
 		return (int)d;
