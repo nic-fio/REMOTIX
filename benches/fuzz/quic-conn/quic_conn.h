@@ -37,9 +37,9 @@
  *    · no ngtcp2 call from inside one of its callbacks, no `ngtcp2_conn_del` / `wt_free` of a
  *      connection whose callback is running;
  *    · the `wt` is freed before its `ngtcp2_conn` (the stub `wt` touches its conn: ASan sees it);
- *    · a VALIDATED path to a new address tells the `wt` exactly once (`wt_moved()`, 15 Oct
- *      2026: the WebTransport layer's address follows the move), a failed one or one back to
- *      the same address never;
+ *    · a path validation, of any result, tells the `wt` NEVER (`wt_moved()` / `rcp_moved()`,
+ *      3ced6e1b, are not ported in this branch on purpose: WebTransport and RCP stay on the
+ *      birth address);
  *    · pacing (15 Oct 2026): a write offers ngtcp2 no more than the send quantum (or one
  *      full-size packet), and no timer is read while the pacing time is owed
  *      (`update_pkt_tx_time` after the writes, before `get_expiry2`);

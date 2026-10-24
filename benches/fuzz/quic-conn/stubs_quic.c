@@ -634,13 +634,15 @@ static int run_script(ngtcp2_conn *c, rd *r, ngtcp2_tstamp ts)
 					failed ? NGTCP2_PATH_VALIDATION_RESULT_FAILURE
 					       : NGTCP2_PATH_VALIDATION_RESULT_SUCCESS,
 					c->user_data));
-				if (rv == 0 && news && c->moves_seen != 1)
-					DIE("a path to a NEW address was validated and the wt was told %d "
-					    "times (once expected: its address must follow the move)",
-					    c->moves_seen);
-				if (rv == 0 && !news && c->moves_seen)
-					DIE("the wt was told of a move that was not one (%s)",
-					    failed ? "validation FAILED" : "same address");
+				/* ⛔ In THIS branch `wt_moved()` / `rcp_moved()` (3ced6e1b) are NOT ported, on
+				 *    purpose: WebTransport and RCP stay on the BIRTH address (the ban and the RCP
+				 *    registers too).  So the `wt` must be told ZERO times, whatever the result
+				 *    (a validated move, a failed one, the same address): a call would mean the
+				 *    product started to follow the move without this oracle being rewritten. */
+				if (rv == 0 && c->moves_seen)
+					DIE("the wt was told of a move %d times (zero expected: wt_moved() is not "
+					    "ported in this branch; %s)", c->moves_seen,
+					    failed ? "validation FAILED" : news ? "new address" : "same address");
 				if (news) {
 					memcpy(&c->told, &vp->remote, vp->rl);
 					c->toldlen = vp->rl;
