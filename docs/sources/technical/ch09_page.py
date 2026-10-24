@@ -443,7 +443,7 @@ S11 = p("The decoded " + c("VideoFrame") + " reaches the screen by one of three 
       "texture of exactly the visible size with the row already tinted. The page therefore looks at the frame: when its "
       + c("codedHeight") + " is greater than the visible rectangle it sets the uniform " + c("trim") + " and the shader "
       "repeats the row above for the last visible one. Firefox, with no rows below the visible ones, is untouched; the "
-      "price is one row of detail at the bottom edge on Chrome. Verified on 24 October 2026: row 2063 equals row 2062.") + \
+      "price is one row of detail at the bottom edge on Chrome. Verified on 24 October 2026 on gnome and xfce, Chrome and Firefox: on Chrome row 2063 equals row 2062.") + \
     p("On every path the buffer is set to the frame size only when it changes (writing " + c("canvas.width")
       + " clears it), explicitly: Chrome, unlike Firefox, does not resize a " + c("bitmaprenderer") + " canvas "
       "on transfer, and a 16×16 buffer stretched by CSS once sent every click to the top-left corner. The pointer "

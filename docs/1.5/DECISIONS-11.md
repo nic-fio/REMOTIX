@@ -1076,7 +1076,8 @@ item below unless its line says otherwise. Release notes: `docs/RELEASE-NOTES-1.
   visible rectangle (`visibleRect.y + height`) there are coded rows below the visible ones, and the page passes the shader a
   new uniform `trim = 1.0`; the shader then moves the bottom clamp one row up, as in (b), whatever `textureSize()` says. The
   Firefox path (no coded rows below) keeps `trim = 0.0`. The shader comment mentions (c). **Verified 8/8 PASS on 24 Oct 2026**
-  with `f011-riga-prova` (F-011 / `chroma_bleed`): row 2063 = row 2062. Cure (b) stays in the code, as the second guard.
+  with `f011-riga-prova` (F-011 / `chroma_bleed`) — gnome and xfce, Chrome and Firefox, 2 rounds each; kde and lxqt still due.
+  The last row = the one above (on Chrome 2063 = 2062, on Firefox 2015 = 2014). Cure (b) stays in the code, as the second guard.
 
 ### 11.42 ✅ The test server's Intel card for the stress bench: `nicfio` in the card groups (15 Oct 2026)
 
