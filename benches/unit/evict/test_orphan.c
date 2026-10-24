@@ -31,6 +31,7 @@
 #define rcp_cap fake_rcp_cap
 #define budget_verdict_line fake_budget_verdict_line
 #define children_pid_of fake_children_pid_of
+#define children_alive_of fake_children_alive_of
 #define children_ensure_from fake_children_ensure_from
 #define children_count fake_children_count
 #define children_ask_stage fake_children_ask_stage
@@ -66,6 +67,12 @@ pid_t fake_children_pid_of(const children *f, const char *user)
 	(void)user;
 	n_pid++;                      /* "the user's desktop is looked at" */
 	return 0;
+}
+bool fake_children_alive_of(const children *f, const char *user)
+{
+	(void)f;
+	(void)user;
+	return false;                 /* no desktop there: a new one is spawned */
 }
 bool fake_children_ensure_from(children *f, const char *user, const char *rhost)
 {
