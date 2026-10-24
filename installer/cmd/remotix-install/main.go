@@ -162,7 +162,7 @@ func verify(arg []string) (int, error) {
 		return 1, errF
 	}
 	env := engine.RealEnvironment()
-	prof := engine.Preflight(env, engine.PreflightOptions{Porta: c.port, Pacchetti: cat.Components()})
+	prof := engine.Preflight(env, engine.PreflightOptions{Porta: c.port, Pacchetti: cat.Components(), PackageHasNetUser: engine.PackageCarriesNetUser})
 	rap := engine.Evaluate(cat, prof)
 	if *comeJSON {
 		printJSON(map[string]any{"format": engine.Schema, "trust": fid, "profile": prof, "compatibility": rap})
@@ -545,6 +545,18 @@ func updated(arg []string) (int, error) {
 		return 0, err
 	}
 	env := engine.RealEnvironment()
+	// DECISIONS §11.50: the package's scripts created the network side's user and moved
+	// 1.0's files into /var/lib/remotix/net; the engine only SAYS whether that is right
+	// ("network side not installed" when the package has no sysusers file)
+	if applies, code, det := engine.NetworkSide(env); applies && code != "" {
+		x := engine.Msg(code, det)
+		fmt.Println(x.Codice, x.Testo, "("+det+")")
+		if x.Remediation != "" {
+			fmt.Println("   " + T("ev.rimedio") + ": " + x.Remediation)
+		}
+	} else {
+		fmt.Println(det)
+	}
 	m := &engine.Engine{Env: env, Folder: c.operations}
 	in, err := m.CheckInstallation()
 	if err != nil {
@@ -569,7 +581,7 @@ func updated(arg []string) (int, error) {
 		fmt.Fprintln(os.Stderr, "remotix-install post-upgrade:", err)
 		return 0, nil
 	}
-	prof := engine.Preflight(env, engine.PreflightOptions{Porta: c.port, Pacchetti: cat.Components()})
+	prof := engine.Preflight(env, engine.PreflightOptions{Porta: c.port, Pacchetti: cat.Components(), PackageHasNetUser: engine.PackageCarriesNetUser})
 	rap := engine.Evaluate(cat, prof)
 	for _, x := range append(rap.Messages, rap.Missing...) {
 		if x.Severity == engine.BLOCKING {

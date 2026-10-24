@@ -39,6 +39,13 @@ var allowedPrograms = map[string][]string{
 	"remotix":    {"/usr/libexec/remotix/remotix", "/usr/lib/remotix/remotix"}, // Arch: /usr/lib (PKGBUILD)
 	"gpasswd":    {"/usr/bin/gpasswd", "/usr/sbin/gpasswd", "/bin/gpasswd", "/sbin/gpasswd"},
 	"usermod":    {"/usr/sbin/usermod", "/usr/bin/usermod", "/sbin/usermod"},
+	// DECISIONS §11.50: `uninstall --purge` removes the network side's system user remotix
+	// (remove-system-user, network_side.go); useradd/groupadd only to put it back if that
+	// uninstallation is rolled back. The same shadow tools as usermod, the same reason.
+	"userdel":  {"/usr/sbin/userdel", "/usr/bin/userdel", "/sbin/userdel"},
+	"groupdel": {"/usr/sbin/groupdel", "/usr/bin/groupdel", "/sbin/groupdel"},
+	"useradd":  {"/usr/sbin/useradd", "/usr/bin/useradd", "/sbin/useradd"},
+	"groupadd": {"/usr/sbin/groupadd", "/usr/bin/groupadd", "/sbin/groupadd"},
 	// ufw: REMOTIX's port in Ubuntu's firewall (T6). ufw has no D-Bus: its program is
 	// the only interface (the same argument as pacman-key).
 	"ufw": {"/usr/sbin/ufw", "/sbin/ufw"},

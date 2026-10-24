@@ -99,6 +99,10 @@ var Codes = map[string]Codice{
 	"RX-GRUPPI-001":  {WARNING, NeedsAction, "The «render» group does not exist on this machine.", ""},
 	"RX-GRUPPI-002":  {BLOCKING, NeedsAction, "The requested group does not exist.", ""},
 	"RX-GRUPPI-003":  {BLOCKING, NeedsAction, "The requested user does not exist.", ""},
+	// 1.5, DECISIONS §11.50: the network side's system user (network_side.go)
+	"RX-NETUSER-001": {BLOCKING, NeedsAction, "An account named «remotix» already exists and is a person's account: REMOTIX's network side would run as that account.", "Rename that account (usermod -l NEWNAME remotix) or remove it; the REMOTIX package then creates the system user remotix by itself."},
+	"RX-NETUSER-002": {WARNING, NeedsAction, "The system user «remotix» is missing: REMOTIX's network side cannot start.", "systemd-sysusers remotix.conf, then systemctl try-restart remotix"},
+	"RX-NETUSER-003": {WARNING, NeedsAction, "The network side's files are not all where 1.5 reads them, owned by the user remotix (/var/lib/remotix/net): with a ban file it cannot read the server does not start.", "/usr/libexec/remotix/remotix-net-move (on Arch /usr/lib/remotix/remotix-net-move), then systemctl try-restart remotix"},
 	"RX-OPENSSL-001": {BLOCKING, NeedsAction, "OpenSSL is older than 3.5: QUIC is missing.", ""},
 	"RX-OPENSSL-002": {WARNING, NeedsAction, "The OpenSSL version could not be read.", ""},
 	"RX-DESKTOP-001": {INFO, NeedsAction, "(retired: DECISIONS §10.36) No desktop was chosen for installation (the engine no longer installs a desktop).", ""},
