@@ -146,11 +146,15 @@ S_USERS = p("People sign in with <b>their Linux user name and password on that m
         "those given with " + c("--users") + "); someone created later is added automatically the first time they "
         "connect.",
         "<b>New users</b> need nothing else: create the account as usual, and they can sign in.",
-        "<b>Three wrong passwords</b> within five minutes from the same address block that address for 12 hours. "
-        "The page then says how long is left. The blocks are kept in " + c("/var/lib/remotix/ban") + ", which "
+        "<b>Wrong passwords.</b> After five wrong passwords for the same user within five minutes, that user has to "
+        "wait before trying again: 15 minutes the first time, then 1 hour, then 12 hours if it keeps happening "
+        "(the count starts again after a day without blocks). Other users on the same network are not blocked, unless "
+        "there are very many errors from that network: then the whole network waits. A correct password clears the "
+        "count of that user. The blocks are kept in " + c("/var/lib/remotix/ban") + ", which "
         "REMOTIX reads only when it starts. To lift them all at once: " + c("sudo systemctl stop remotix")
         + ", delete " + c("/var/lib/remotix/ban") + ", " + c("sudo systemctl start remotix") + ". Open desktops are "
-        "not closed by the restart.",
+        "not closed by the restart. The administrator can also lift the block of one address at once with the "
+        + c("UNBLOCK") + " command, if the server was started with its command socket.",
         "<b>One desktop per user.</b> Someone signed in at the machine itself (in front of its screen) cannot open "
         "a REMOTIX session at the same time.",
     ])
@@ -204,8 +208,8 @@ S_FIRST = p("Once the service runs, anyone with an account can connect from a br
     table(["The page says", "What to do"], [
         ["incorrect username or password", "Check the user name and password on the server; mind the keyboard "
          "layout."],
-        ["attempts exhausted … There are still … hours and … minutes to go", "Three wrong passwords blocked this "
-         "address: wait until the time runs out, or ask the administrator to lift the block ("
+        ["attempts exhausted … There are still … hours and … minutes to go", "Too many wrong passwords: wait until "
+         "the time runs out, or ask the administrator to lift the block ("
          + rif("Who can sign in") + ")."],
         ["this session's slot shows as taken by another client …", "You are still connected from another device, "
          "or just dropped: close the other tab, or wait a few seconds and try again."],
