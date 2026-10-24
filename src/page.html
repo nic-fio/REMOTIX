@@ -8123,7 +8123,29 @@ async function clipboard_send(type, body) {
  *   the user repeats the gesture, in the first they paste what was there
  *   before **believing** it is what they copied.
  */
+/* ⭐ Diagnostics only (F-015C), no change of behaviour: what the page knew at the
+ *    instant of `writeText`.  ⛔ Synchronous, inside try/catch, no `await` before
+ *    the call: it must not move the gesture's timing.  No `readText` (it would
+ *    ask for a permission).  The lines start with "clipboard ·" so the bench's
+ *    diary filter picks them up. */
+let clip_diag_arrival = null;
+function clip_diag_state() {
+  try {
+    const ua = navigator.userActivation;
+    return "focus " + document.hasFocus() + " · visibility " + document.visibilityState
+      + " · activation active=" + (ua ? ua.isActive : "n/a")
+      + " hasBeenActive=" + (ua ? ua.hasBeenActive : "n/a");
+  } catch (e) { return "state unreadable (" + e + ")"; }
+}
 async function write_to_clipboard(text) {
+  let diag_t0 = null;
+  try {
+    diag_t0 = performance.now();
+    app_log("writeText about to be called: " + clip_diag_state() + " · "
+            + (clip_diag_arrival === null ? "no arrival time (retry at a gesture)"
+               : (diag_t0 - clip_diag_arrival).toFixed(1) + " ms after the text arrived"));
+    clip_diag_arrival = null;
+  } catch (e) { /* diagnostics must not break the write */ }
   if (!navigator.clipboard || !navigator.clipboard.writeText) {
     note("⛔ §9: this browser has no `navigator.clipboard.writeText`: what "
        + "is copied in the remote desktop will NOT reach the clipboard of this "
@@ -8133,6 +8155,10 @@ async function write_to_clipboard(text) {
   }
   try {
     await navigator.clipboard.writeText(text);
+    try {
+      app_log("writeText resolved after " + (performance.now() - diag_t0).toFixed(1)
+              + " ms · " + clip_diag_state());
+    } catch (e) { /* diagnostics only */ }
     APPUNTI.counts.written++;
     APPUNTI.awaiting_gesture = null;
     /* ⛔ And what was written is remembered: at the next round the clipboard
@@ -8145,6 +8171,10 @@ async function write_to_clipboard(text) {
        + "now in this device's clipboard");
     return true;
   } catch (e) {
+    try {
+      app_log("writeText REJECTED after " + (performance.now() - diag_t0).toFixed(1)
+              + " ms (" + e + ") · " + clip_diag_state());
+    } catch (e2) { /* diagnostics only */ }
     APPUNTI.awaiting_gesture = text;
     APPUNTI.counts.unwritten++;
     note("⚠ §9: the browser does not allow writing to the clipboard now (" + e
@@ -8523,6 +8553,7 @@ async function clipboard_received(byte, complete) {
       return;
     }
     APPUNTI.counts.received++;
+    clip_diag_arrival = performance.now();       /* diagnostics only (F-015C) */
     /* ⚠ And it is ALWAYS written, the first too: here there was a rule that
      *   learned the session's first text without writing it, so as not to
      *   overwrite the device's clipboard on connection.  ⛔ It did not tell
