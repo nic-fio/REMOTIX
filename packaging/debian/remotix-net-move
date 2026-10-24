@@ -50,7 +50,9 @@ if [ -d "$S/certificates" ] && [ ! -L "$S/certificates" ]; then
 		if [ -e "$S/certificates/page.pem" ] && [ ! -e "$S/certificates/page.ours" ]; then
 			say "the administrator's own page.pem/page.key move to $N/certificates and are given to remotix"
 		fi
-		mv "$S/certificates" "$N/certificates" || exit 1
+		# ⛔ -T: a LINK to a directory that remotix creates between the check above and this mv is not followed (the
+		#    directory would land INSIDE its target); mv -T fails on it instead (rename(2) onto a link: ENOTDIR).
+		mv -T "$S/certificates" "$N/certificates" || exit 1
 		say "moved $S/certificates to $N/certificates (1.0 → 1.5)"
 	fi
 fi
@@ -59,7 +61,7 @@ for f in ban ban.new; do
 		if [ -e "$N/$f" ]; then
 			say "⚠ both $S/$f and $N/$f exist: the old one is left where it is"
 		else
-			mv "$S/$f" "$N/$f" || exit 1
+			mv -T "$S/$f" "$N/$f" || exit 1
 			say "moved $S/$f to $N/$f (1.0 → 1.5)"
 		fi
 	fi

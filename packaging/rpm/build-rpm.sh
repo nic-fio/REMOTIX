@@ -14,6 +14,8 @@
 #      `rpmbuild -ba`, then rpmlint on the packages and on the spec;
 #   4. in $OUTPUT/rpm/<target>/: the .rpm files, rpmbuild.log, rpmlint.txt,
 #      requires.txt (Requires, automatic and written), file.txt, outcome.txt;
+#   RX_SPLIT=1 passes `--with split` to rpmbuild (DECISIONS-11 §11.50, phase F: the network side's user, directories, unit and
+#   SELinux domain).  ⛔ OFF by default: the pieces are useless, and would break today's 1.5, until phase D exists.
 #      and the two small checks of R13/R14 (blacklist of bench files,
 #      bench options in the unit).
 #
@@ -25,6 +27,8 @@ TREE=$(cd "$HERE/../.." && pwd)
 OUTPUT=${OUTPUT:-$TREE/costruzione-uscita}
 CACHE=${CACHE:-$OUTPUT/.lavoro}
 ALL=(fedora44 alma10 tumbleweed leap16)
+# §11.50 phase F: only RX_SPLIT=1 (not "0", not empty) switches the split pieces on
+RX_SPLIT_OPT=""; [ "${RX_SPLIT:-0}" = 1 ] && RX_SPLIT_OPT="--with split"
 # the version: the release one (RX_VERSION, packaging/release.sh) or the spec default
 VER=${RX_VERSION:-$(sed -n 's/^Version:.*!?rx_version:\([^}]*\)}.*/\1/p' "$HERE/remotix.spec")}
 
@@ -82,7 +86,7 @@ build_one()
 		fi
 		rpm -q rpm-build rpmlint | sed "s/^/tools: /"
 		rpm --eval "dist=%{?dist} fedora=%{?fedora} rhel=%{?rhel} suse_version=%{?suse_version} pamvendor=%{?_pam_vendordir}"
-		rpmbuild -ba --define "_topdir /work" --define "rx_version '"$VER"'" --define "rx_release '"${RX_REVISION:-1}"'" '"${RX_SELINUX_PERMISSIVE:+--define \"rx_selinux_permissive 1\"}"' /work/SPECS/remotix.spec 2>&1
+		rpmbuild -ba --define "_topdir /work" --define "rx_version '"$VER"'" --define "rx_release '"${RX_REVISION:-1}"'" '"${RX_SELINUX_PERMISSIVE:+--define \"rx_selinux_permissive 1\"}"' '"$RX_SPLIT_OPT"' /work/SPECS/remotix.spec 2>&1
 		echo "rpmbuild-outcome=$?"
 		ls /work/RPMS/*/*.rpm >/dev/null 2>&1 || exit 1
 		rpmlint /work/SPECS/remotix.spec /work/RPMS/*/*.rpm /work/SRPMS/*.rpm >/work/rpmlint.txt 2>&1

@@ -7,6 +7,9 @@
 #       localhost/remotix-costruzione sh benches/02-net-move-links.sh
 #
 # ⚠ It CHANGES the container's users and /var/lib/remotix: only in a throw-away container.
+# ⭐ And the race of review 4: the two `mv` of the script are run (their lines are taken from the script) with the
+# destination a LINK to a directory, as remotix could plant it between the check and the mv; with `mv -T` nothing
+# lands inside the link's target and the old files stay where they were.
 # What it plants, as a hijacked old network side (uid remotix) could: in net/ a link to /, a
 # link to /etc/shadow named «ban», a 0755 directory, and a symlinked page.key to a file
 # remotix cannot read. Then it runs the move (and tmpfiles, if the container has it) and checks
@@ -28,12 +31,27 @@ install -d -m 0700 /etc/letsencrypt/live/h && echo k > /etc/letsencrypt/live/h/p
 ln -s /etc/letsencrypt/live/h/privkey.pem "$N/certificates/page.key"
 ln -s /etc/letsencrypt/live/h/privkey.pem "$N/certificates/page.pem"
 
+# the race: the script's own `mv` lines, with a link to a directory as the destination
+T=$(mktemp -d /tmp/net-move-race.XXXXXX) || exit 3
+mkdir -p "$T/s/certificates" "$T/n" "$T/victim" && touch "$T/s/ban" "$T/s/certificates/page.ours"
+ln -s "$T/victim" "$T/n/certificates"; ln -s "$T/victim" "$T/n/ban"
+for pat in 'mv -T "\$S/certificates"' 'mv -T "\$S/\$f"'; do
+	line=$(grep -m1 -- "$pat" "$M" | sed 's/ *|| exit 1.*//')
+	[ -n "$line" ] || { echo "NO the script has no '$pat' (mv without -T follows a link planted in the race)"; RACE=red; continue; }
+	(S=$T/s; N=$T/n; f=ban; eval "$line") >/dev/null 2>&1
+done
+if [ -n "$(ls -A "$T/victim")" ] || [ ! -d "$T/s/certificates" ] || [ ! -e "$T/s/ban" ]; then
+	echo "NO a link to a directory in the destination was followed: $(ls -A "$T/victim" | tr '\n' ' ')"; RACE=red
+fi
+[ "${RACE:-}" = red ] || echo "OK mv -T: a link to a directory in the destination is not followed, the old files stay"
+rm -rf "$T"
+
 before() { stat -c '%U:%G %a' / /etc /etc/shadow /etc/letsencrypt/live/h/privkey.pem; }
 B=$(before)
 sh "$M" > /tmp/net-move.out 2>&1
 RC=$?
 if command -v systemd-tmpfiles >/dev/null 2>&1; then
-	systemd-tmpfiles --create /albero/packaging/rpm/remotix.tmpfiles >> /tmp/net-move.out 2>&1
+	systemd-tmpfiles --create /albero/packaging/rpm/remotix.tmpfiles.split >> /tmp/net-move.out 2>&1
 	echo "(systemd-tmpfiles --create run too)"
 fi
 A=$(before)
@@ -44,5 +62,6 @@ red=0
 [ "$B" = "$A" ] && echo "OK /, /etc, /etc/shadow and the certificate's target kept owner and mode"
 grep -q "page.key is a link to .* CANNOT read" /tmp/net-move.out || { echo "NO the unreadable certificate link was not said"; red=1; }
 grep -q "page.key is a link to .* CANNOT read" /tmp/net-move.out && echo "OK the unreadable certificate link is said, with the fix"
+[ "${RACE:-}" = red ] && red=1
 [ $red = 0 ] && echo GREEN || echo RED
 exit $red

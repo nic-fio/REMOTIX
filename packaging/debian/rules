@@ -27,7 +27,8 @@ R_CFLAGS := $(CFLAGS) $(CPPFLAGS) -std=gnu11 -Wall -Wextra -Wno-unused-parameter
 B := debian/remotix
 
 # ⭐ DECISIONS-11.md §11.50, PHASE F — the network side's user, directories, units and the 1.0 → 1.5 move.
-#    ⛔ OFF by default: `REMOTIX_SPLIT=1 dpkg-buildpackage …` switches the pieces on.  They are useless — and
+#    ⛔ OFF by default: `REMOTIX_SPLIT=1 dpkg-buildpackage …` (src/build-targets/build-deb.sh
+#    passes it through) switches the pieces on.  They are useless — and
 #    the new paths would BREAK the 1.5 of today — until phase D (the split in main.c/child.c/helper.c) exists.
 REMOTIX_SPLIT ?= 0
 
