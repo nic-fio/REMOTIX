@@ -2443,6 +2443,12 @@ static bool handle(struct children *f, struct child *g, const struct head *t,
 		if (byte < sizeof s)
 			return true;
 		memcpy(&s, body, sizeof s);
+		/* ⛔ 24 Oct 2026, review of the child-msg fuzz (present since 1.0: the same lines are
+		 *   in 04f6aa18): the socket is UNTRUSTED, and `user` and `runtime` are fixed arrays
+		 *   that the log prints with %s.  Nothing guaranteed the final zero: a child that
+		 *   fills them to the last byte made the log read past the copy. */
+		s.user[sizeof s.user - 1] = 0;
+		s.runtime[sizeof s.runtime - 1] = 0;
 		/* ⛔ AND HERE THE CIRCLE CLOSES: the child says what the KERNEL
 		 *    answered it about itself (`getresuid`), and the parent compares
 		 *    it with what the KERNEL stamped on the message.  If the two
@@ -2506,6 +2512,11 @@ static bool handle(struct children *f, struct child *g, const struct head *t,
 		if (byte < sizeof p)
 			return true;
 		memcpy(&p, body, sizeof p);
+		/* ⛔ 24 Oct 2026, review of the child-msg fuzz (present since 1.0, 04f6aa18): `monitor`
+		 *   and `fault` come from the untrusted socket and the log prints them with %s: the
+		 *   final zero is FORCED, not assumed. */
+		p.monitor[sizeof p.monitor - 1] = 0;
+		p.fault[sizeof p.fault - 1] = 0;
 		registro_dice(LOG_CHILD,
 		              "%s the stage of «%s»: bus %s, session %u, grab %u, "
 		              "monitor «%s» (%u before, %u after), %ux%u stride %u at %u "
