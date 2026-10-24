@@ -2,7 +2,7 @@
 
 > Range: `git log 5cf8ca10..HEAD` on branch `integrazione` (package 1b, audit, login defences) over package 1
 > (`git log 04f6aa18..5cf8ca10`). Every line cites a commit or a section of `docs/1.5/DECISIONS-11.md` (written «§11.x»).
-> ⚠ Status words are those of the sections: «built», «under verification», «waiting for the user's OK». Nothing here
+> ⚠ Status words are those of the sections: «built», «under verification», «approved, verification in progress». Nothing here
 > has been run on the full suite or the A/B yet (see «Still open»).
 
 ## Contents
@@ -66,7 +66,7 @@
 
 ## 3. Defects of 1.0 fixed (all «present since 1.0»)
 Found on 24 Oct 2026 by the fuzz harnesses and by reading the ngtcp2 1.25 / nghttp3 1.18 headers call by call (§11.52,
-**waiting for the user's OK**; 13 fixes: A 1 + B 6 + C 6).
+**approved by the user on 24 Oct 2026, verification in progress**; 13 fixes: A 1 + B 6 + C 6).
 - **Pacing bypassed** (found by the `quic-conn` fuzz pacing oracle): one call could put ~45 packets on the wire at once (A).
 - **ngtcp2 (B)**: a connection to be dropped silently was answered with a CONNECTION_CLOSE (a reflection toward a forged address)
   (`d624d875`, `0cc6df15`); a failed handshake closed with NO_ERROR instead of the TLS alert (`5cb76986`); timer errors never sent the
@@ -98,6 +98,5 @@ Found on 24 Oct 2026 by the fuzz harnesses and by reading the ngtcp2 1.25 / nght
 - **Live checks due**: Stateless Reset with real Chrome and Firefox (§11.9); caps 16/4/8 with 01-b10, 3 runs of 9 (§11.40); migration on a
   real network change (§11.29); F-014E on the KDE box; the login ban on the boxes (§11.53); the 30-minute fuzz on the integrated branch
   and the stream-churn bench (§11.52).
-- **Awaiting the user**: §11.52 (the 13 fixes) and the confirmation of §11.53 as the written rule instead of DECISIONS §1.9.
 - **Declared limits**: Retry and INVALID_TOKEN have no per-second cap (CPU only, §11.9); `handshake_timeout` stays at ngtcp2's default
   (§11.52); a live IPv6 test with a real provider is not possible on the test server (unit tests and 01-b10 in a namespace, §1.9-bis note).

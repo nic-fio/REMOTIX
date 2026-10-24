@@ -1769,9 +1769,9 @@ behaviour (`pam_faillock(8)`, `faillock.conf(5)`); ⚠ **not run live** — `[?]
 - ⚠ Recorded after 1.5 was declared a failure (`FAILURE.md`).
 
 
-### 11.52 🔸 The fuzz and the ngtcp2 / nghttp3 audit of 24 Oct 2026: 13 fixes (A 1 + B 6 + C 6), all «present since 1.0» — waiting for the user's OK
+### 11.52 🔸 The fuzz and the ngtcp2 / nghttp3 audit of 24 Oct 2026: 13 fixes (A 1 + B 6 + C 6), all «present since 1.0» — approved by the user on 24 Oct 2026; verification in progress
 
-- **Status of the whole section: «in attesa dell'OK dell'utente».** Nothing below is in the product. The fixes live on
+- **Status of the whole section: approved by the user on 24 Oct 2026** («Sì, i bug della 1.0 si correggono»); verification in progress. Nothing below is on the main line yet (the fixes are gathered on the integration branch). The fixes live on
   separate branches, stacked: `pacing-su-migrazione` (A), `audit-ngtcp2` (B), `audit-nghttp3` (C), and gathered on the
   integration branch `audit-tutto` (merges of B and C; tip `3c0fa624` when this was written). None of these defects is a
   regression of 1.5: all are in 1.0. What has been done so far: the product builds (`make -j2 BENCH=1`, no new
@@ -1855,7 +1855,7 @@ behaviour (`pam_faillock(8)`, `faillock.conf(5)`); ⚠ **not run live** — `[?]
   authentications from the same address, and that address is out for 12 hours*, with a single counter on the address and
   the user name not counting. This section **replaces** that rule for 1.5. The decision was delegated by the user to the
   project leader on 24 Oct 2026, 13:40, after the opinions of Gemini Argon, ChatGPT, gpt-oss-20b and Laguna (LFM gave
-  none). Until the user confirms it, §1.9 is the written rule of 1.0 and this one is the rule of the branch.
+  none). **Approved by the user on 24 Oct 2026**, who delegated it to the project leader («applica la migliore combinazione possibile… sei tu il capo-progetto»): this rule replaces §1.9 for 1.5; verification on the boxes in progress.
 - **What changes (A-D of `PIANO.md`):**
   - **A. The key.** IPv4: the whole address. IPv6: the **/64** (a subscriber has a /64 at least and rotates inside it for
     free; counting the single address was a limiter that is not there). Plus an aggregate on the IPv6 **/48**.
