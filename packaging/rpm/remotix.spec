@@ -377,6 +377,8 @@ for f in page.pem page.key page.ours session.pem session.key session.ours quic-s
     touch %{buildroot}%{_sharedstatedir}/remotix/certificates/$f
 done
 touch %{buildroot}%{_sharedstatedir}/remotix/ban %{buildroot}%{_sharedstatedir}/remotix/ban.new
+# 1.5 (DECISIONS-11 §11.4): the record of the card grants (render_grant.c) and its temporary file
+touch %{buildroot}%{_sharedstatedir}/remotix/render-grants %{buildroot}%{_sharedstatedir}/remotix/render-grants.new
 
 # ⭐ `DECISIONS.md` §10.12 — the scriptlets switch NOTHING on (R40):
 #   · no %%systemd_post / %%service_add_post: they would apply the machine's
@@ -478,6 +480,8 @@ fi
 %ghost %attr(0600,root,root) %{_sharedstatedir}/remotix/certificates/log-secret.new
 %ghost %attr(0600,root,root) %{_sharedstatedir}/remotix/ban
 %ghost %attr(0600,root,root) %{_sharedstatedir}/remotix/ban.new
+%ghost %attr(0600,root,root) %{_sharedstatedir}/remotix/render-grants
+%ghost %attr(0600,root,root) %{_sharedstatedir}/remotix/render-grants.new
 
 # ⭐ remotix-selinux: the scriptlets are the policy's (like cockpit-ws-selinux).
 #   The module is just loaded: it switches nothing on (R40).  The relabelling
