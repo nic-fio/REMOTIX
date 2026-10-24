@@ -502,6 +502,27 @@ The «before a release» level of §11.24, release under test `remotix-1.4.99-2.
   - `transport.c`, connection migration (RCP.md §2.3): the packet's real path now goes to ngtcp2 and every packet
     is sent on the path ngtcp2 wrote it for; before, a client changing network was answered on the old address
     until the silence clock. Found by reading; 🔸 not yet measured on a real network change.
+  - 🔸 **State of §2.3 in branch `migrazione-su-limiti` (24 Oct 2026), under verification.** Ported: the central block
+    only — the path handed to ngtcp2 is the one the datagram came on (`read_packet` / `server_new`), packets leave on
+    the path ngtcp2 wrote them for (`send_on`), and `cb_path_validation` (a validated path updates `c->remote`,
+    `c->local` and the provenance; a failed one leaves the traffic where it was). **NOT ported, on purpose:**
+    `put_source` (the source address of the reply: `send_msg` uses `sendto` without it) and `wt_moved` / `rcp_moved`
+    (`3ced6e1b`, `8758b88a` of the discarded attempt). Consequences: WebTransport and RCP stay on the **birth
+    address** — the ban, `cred_address` and the RCP registers keep the address the connection was born on; after a
+    move only the **registers** (the logs) show the old address, nothing is decided on a wrong one. ⚠ **Declared
+    exposure:** until the new path is validated ngtcp2 may send up to **3×** what it received from that address
+    (the anti-amplification limit), towards an address not yet proved.
+    · Done, `[M]` (24 Oct 2026, copy made with `git archive`, low priority, no fuzz campaign): the product builds,
+      normal and `BENCH=1`, with the same two warnings as before (`vulkanvideo.c:354`, `:379`); the fuzz harness
+      builds; its oracles now expect **zero** `wt_moved`, and see the sends (`sendto` is routed through the
+      destination checks); one more seed, a successful migration (new remote, validation OK, then a new local
+      end only), passes, and so does `known/local-end-1.0.bin`; `cb_path_validation` now updates `c->local` also
+      when only the local end changes (before, the «same remote» return skipped it).
+    · ⚠ Seen, not solved here: the last seed of the migration group (a packet from a new address *during the
+      handshake*) trips the oracle «wt_sign_of_life for a packet ngtcp2 did not decrypt (§5.3)» — the same on the
+      tree before today's harness changes, so it is not from them.
+    · To do: a real network change (Wi-Fi to mobile) with Chrome and Firefox; the `quic-conn` fuzz campaign;
+      the complete suite; the A/B against the build without the migration.
   - §5.3: the sign of life now needs ngtcp2's `pkt_recv` to move — an undecryptable or duplicate packet no longer
     counts (an on-path observer could keep a dead client alive and block the second device's takeover).
   - §11.9: the Retry token is handed to ngtcp2 after our Retry (no 3× limit after validation, no silent drop of a
