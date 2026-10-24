@@ -1794,6 +1794,9 @@ behaviour (`pam_faillock(8)`, `faillock.conf(5)`); ⚠ **not run live** — `[?]
   throughput, latency of small messages, packets per burst, losses at a `tbf` bottleneck; on loopback the burst phase
   will probably be «in the noise», the loss phase is the one that counts) and the A/B on smoothness. This is the fix
   with the most risk of performance effects: it goes in last.
+- **`pacing-ab` done 24 Oct 2026:** the round-up of `3a6d128c` cost **+1 ms of RTT at rest** (every timer-driven send waited up to 1 ms
+  more; rounded down it spun instead). Cured by waiting on the exact nanosecond deadline with `ppoll` (`1b447d3c`, `de5ebdfa`).
+  **To do:** measure again with `pacing-ab --dopo integrazione`.
 
 #### B. ngtcp2 audit (`audit-ngtcp2`, 6 fixes in 7 commits: B1 has two)
 - **B1 `d624d875`+`0cc6df15`:** `NGTCP2_ERR_DROP_CONN` from `read_pkt` — doc: *«Server application must drop the

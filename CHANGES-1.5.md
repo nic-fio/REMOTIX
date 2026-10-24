@@ -15,21 +15,21 @@
 ## 1. What is new for the user
 - **A flood of fake connections no longer costs the server a connection each.** The first packet of every connection must
   come back with a token (QUIC Retry), and a client that talks to a restarted server is told at once to start again
-  (Stateless Reset) instead of waiting ~30 s (§11.9; `51e3634a`, `f79d1d18`). Price: one extra round trip when a
+  (Stateless Reset) instead of waiting ~30 s (§11.9, under verification; `51e3634a`, `f79d1d18`). Price: one extra round trip when a
   connection opens. It stops forged source addresses, not attacks from real addresses nor a saturated line (§11.9).
-- **The server cannot be filled before login.** Caps: 256 connections, 128 not yet logged in, 8 per IPv4 address or IPv6
-  /64 and 32 per IPv6 /48; when the server is full the oldest not-yet-logged-in connection is closed, never one that is
-  being checked or logged in; 90 s without login closes the connection (§11.40; `ffea98a1`, `75ba1f93`).
+- **The server cannot be filled before login.** Caps: 256 connections, 128 not yet logged in, and at most 8 not-yet-logged-in
+  connections per IPv4 address or IPv6 /64, 32 per /48; when the server is full the oldest not-yet-logged-in connection is closed, never one that is
+  being checked or logged in; 90 s without login closes the connection (§11.40, under verification; `ffea98a1`, `75ba1f93`).
 - **Changing network keeps the session** (e.g. Wi-Fi to mobile): the packet path follows the one the datagram came on
-  and a validated move updates the connection (§11.29, RCP.md §2.3; `fa7eac00`, `f606542e`, `eb8d9db2`). Declared limit: until
+  and a validated move updates the connection (§11.29, RCP.md §2.3, under verification; `fa7eac00`, `f606542e`, `eb8d9db2`). Declared limit: until
   the new path is validated the server may send up to 3× what it received from it; the ban and the logs keep the birth
   address. Not yet measured on a real network change.
 - **The last row of the picture has the right colour on Chrome** (it was tinted, e.g. green on GNOME): cure (c), the page
-  trims the last row when the decoded frame has coded rows below the visible ones (§11.41; `571c8145`, `9b963d77`,
+  trims the last row when the decoded frame has coded rows below the visible ones (§11.41, verified on gnome and xfce, kde and lxqt due; `571c8145`, `9b963d77`,
   earlier steps `78b63549`, `127f69a6`). Cost: the bottom row repeats the row above.
 - **Installer and uninstaller**: the install plan states the port before «Proceed? [y/N]» (`29a4a7ce`); the uninstall removes
-  what upgrades added (§11.6; `84fdf573`, `b4f0776e`). The site says «Download 1.0.0» (`b2f8161e`).
-- **`/diary` is gone** from the installed product and from test builds (§11.10; `8a46c9c9`, `9af7b82e`).
+  what upgrades added (§11.6, under verification; `84fdf573`, `b4f0776e`). The site says «Download 1.0.0» (`b2f8161e`).
+- **`/diary` is gone** from the installed product and from test builds (§11.10, under verification; `8a46c9c9`, `9af7b82e`).
 
 ## 2. Behaviour changes
 ### Login ban — SPEC CHANGE from 1.0 (§11.53; built on `login-difese`, not yet run on the boxes)
@@ -54,14 +54,15 @@
 
 ### Clipboard
 - A text with a zero byte in the middle is **not announced**, on KDE and GNOME (§11.6; `8031958d`, order of the checks `322468ea`,
-  `d8f48441`); a type that delivers 0 bytes is skipped as an empty clipboard (`b3f8cde6`). Tests: F-014E, KDE only (`22ea3008`,
+  `d8f48441`); a type that delivers 0 bytes is skipped as an empty clipboard (`b3f8cde6`). Tests: F-014E, KDE only, PASS 2/2 on KDE on `pacchetto1b` (`22ea3008`,
   `550b1b37`, `396f7dae`), and `benches/unit/clipboard-zero` for both desktops (`c7ff0915`, `af7d8146`).
 - The page logs focus, visibility, user activation and the `writeText` outcome when it writes the clipboard (diagnostics
   for F-015C, `71970919`). Passwords and clipboard copies are wiped with `explicit_bzero` after use (§11.6; `84fdf573`).
 
 ### Connection and timing
-- One write burst is at most the send quantum, and the main loop waits on the exact deadline (`ppoll`) (§11.52 A; `643e9a40`,
-  `3a6d128c`, `1b447d3c`, `de5ebdfa`: `pacing-ab` measured +1 ms RTT at rest after the first round-up).
+- One write burst is at most the send quantum, and the loop timeout is rounded up (§11.52 A; `643e9a40`, `3a6d128c`). `pacing-ab`
+  then measured +1 ms of RTT at rest from that round-up (24 Oct), so the main loop now waits on the exact deadline with `ppoll`
+  (`1b447d3c`, `de5ebdfa`); to be measured again (see Still open).
 - «Connection closed» log lines of connections that never logged in are limited per window, the rest in a summary (`6368c6a8`).
 
 ## 3. Defects of 1.0 fixed (all «present since 1.0»)
@@ -76,7 +77,7 @@ Found on 24 Oct 2026 by the fuzz harnesses and by reading the ngtcp2 1.25 / nght
   ignored results (`e7c469f1`); `NGTCP2_ERR_STREAM_NOT_FOUND` treated as a connection error (`86af9276`); `rand()` in the random
   callback (`b6e3c5c1`); a second WebTransport CONNECT renewed the first session's deadline and overwrote its state (`f395aff5`).
 - **Sign of life** counted a packet ngtcp2 had discarded, letting an observer keep a dead client alive (found by the `quic-conn`
-  fuzz, §11.29; `9f7e2419`). **NULL pointer arithmetic** in `wt_write()` for a FIN-only entry (found by UBSan, §11.29).
+  fuzz, §11.29; `9f7e2419`). **NULL pointer arithmetic** in `wt_write()` for a FIN-only entry (found by UBSan, §11.29; `721dfd64`).
 - **Child messages**: the fixed char arrays of MSG_INTRO and MSG_STAGE read from the child socket had no final zero (`d80a4244`),
   found by the `child-msg` fuzz (`7ea65b2d`, with `benches/unit/child-credentials`, `8d2a4f5e`).
 - **Clipboard on KDE**: a zero byte cut the text and the fallback read past the copy (§11.6; `8031958d`).
@@ -96,7 +97,7 @@ Found on 24 Oct 2026 by the fuzz harnesses and by reading the ngtcp2 1.25 / nght
   is in `PIANO.md`, not in this range.
 - **F-011 cure (c)**: verified 8/8 on gnome and xfce, Chrome and Firefox; **kde and lxqt still due** (§11.41, `9c770c61`).
 - **Live checks due**: Stateless Reset with real Chrome and Firefox (§11.9); caps 16/4/8 with 01-b10, 3 runs of 9 (§11.40); migration on a
-  real network change (§11.29); F-014E on the KDE box; the login ban on the boxes (§11.53); the 30-minute fuzz on the integrated branch
+  real network change (§11.29); F-014E on the integrated branch (KDE box); `pacing-ab --dopo integrazione` (the +1 ms RTT cured by `ppoll`); the login ban on the boxes (§11.53); the 30-minute fuzz on the integrated branch
   and the stream-churn bench (§11.52).
 - **Declared limits**: Retry and INVALID_TOKEN have no per-second cap (CPU only, §11.9); `handshake_timeout` stays at ngtcp2's default
   (§11.52); a live IPv6 test with a real provider is not possible on the test server (unit tests and 01-b10 in a namespace, §1.9-bis note).
