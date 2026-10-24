@@ -196,7 +196,7 @@ not apply (the user is the Author). What follows is what the user decided on eac
   of `installer/catalog/catalog.json`). Nothing about local X11 sessions: the details stay in the manuals.
 - ✅ **Done 13 Oct 2026** in `design/site-mockup/index.html` (not yet republished on remotix.nicfio.it).
 
-### 11.9 ✅ Address validation (QUIC Retry) and Stateless Reset go in
+### 11.9 🔸 Address validation (QUIC Retry) and Stateless Reset go in — under verification (24 Oct 2026)
 
 - **The ruling** (verbatim): *«non ho capito molto, ma se mi assicuri che aiuta a prevenire glli attacchi DoS ok»*.
 - ⚠ **The degree of certainty**: decided on an assurance given in the discussion, with its limit stated — it stops
@@ -204,7 +204,8 @@ not apply (the user is the Author). What follows is what the user decided on eac
   trip at the opening of each connection.
 - ⇒ The two declared gaps in `src/transport.c` («No address validation with Retry», «DECLARED FALLBACK» for the
   Stateless Reset) are closed. The Reset also shortens the 30 s a client waits after a server restart.
-- ✅ **Done 13 Oct 2026** (`src/transport.c`, `main.c`): an Initial without our token gets a Retry
+- ✅ **Done 13 Oct 2026 in the first attempt** (discarded, tag `1.5-scartata`; the same design was rebuilt on 1.5 from
+  `d32ef7a1` — `src/transport.c`, `transport.h`, `main.c`): an Initial without our token gets a Retry
   (`ngtcp2_crypto_generate_retry_token2`, 10 s validity) and no connection; with it, the token is verified and
   `original_dcid`/`retry_scid` go in the transport parameters; an old token or one for another address gets
   INVALID_TOKEN, an unreadable one is ignored. A short-header packet for an unknown dcid gets a Stateless Reset (token
@@ -221,6 +222,32 @@ not apply (the user is the Author). What follows is what the user decided on eac
     version of the code (minimum length counted wrong: 41 bytes) Chrome's 39-byte packets got no answer and Chrome
     kept sending for seconds — corrected and measured again;
   · **Firefox** on the tablet: in through the Retry.
+  ⚠ These `[M]` are of the discarded attempt: they are NOT a proof of the code now in the tree.
+- 🔸 **Under verification (24 Oct 2026)** — the rebuilt code, on top of package 1, not yet on the main line.
+  Done, `[M]`:
+  · clean build, normal and `BENCH=1`: the same two warnings as `d32ef7a1` (`vulkanvideo.c:354`, `:379`), none new;
+  · isolated test, private podman container on `127.0.0.1:7547` (no box, no desktop), aioquic 1.2.0 client:
+    «Initial without a token: Retry sent», «address validated with a Retry», «WebTransport session ACCEPTED»;
+  · `quic-secret`: 0600, 32 bytes, owner = the server's user; on restart it is read again (same sha256, same mtime),
+    and its hex never appears in the log;
+  · contrast, `d32ef7a1` on the same test: the session is born, no Retry, no `quic-secret`.
+  To do: the Stateless Reset with real Chrome and Firefox (`reset-prova.py`: kill -9 and restart with the same
+  certificates; pass = the page notices in < 5 s, against ~30 s without the Reset); the complete suite; the A/B
+  against the build without the change.
+- ⚠ **Limit declared and accepted by the user on 24 Oct 2026:** Retry and INVALID_TOKEN have **no cap per second**
+  (only the Stateless Reset has: 100 per second). Reason: they keep **no memory** (the token is a signed
+  statement, nothing is stored until the address is proved) and give **no amplification** (the answer is much
+  smaller than the Initial, which is at least 1200 bytes); the only cost is the CPU of the server for each forged
+  Initial. A flood of forged Initials therefore still costs CPU, as before; what Retry removes is the connection
+  state it used to create.
+- *Minor notes of the security review (24 Oct 2026), not fixed:*
+  · in the «token not readable» branch of `read_packet` (`transport.c`) `ngtcp2_strerror(rv)` receives a code of the
+    crypto part (-201/-202, not an ngtcp2 one) and prints a generic text; it only matters for the log (only with
+    `--verbose`). The possible cure: write by hand «unreadable» / «internal error» according to the code;
+  · **two instances on the same certificates folder** (not a supported setup) both read and write
+    `quic-secret`: if it does not exist yet each makes its own and the last `rename` wins, so the other keeps a
+    different secret in memory until its next restart and its Retry tokens and Stateless Reset tokens will not
+    be recognised by the first.
 
 ### 11.10 🔸 `/diary` leaves the installed product — done in package 1, under verification (24 Oct 2026)
 
