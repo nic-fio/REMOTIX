@@ -61,7 +61,7 @@ ADDRESS = "192.168.0.2"
 # The page's sentences (src/page.html, `REASON_TEXT`), by substring.
 SENTENCE = {
     0x07: "incorrect username or password",
-    0x08: "attempts from this address are used up",
+    0x08: "too many wrong passwords from this address or network",
     0x0F: "taken by another client",
 }
 # ⚠ The refusals that are NOT the thing tested: under load (10 agents, load
