@@ -103,6 +103,6 @@ Found on 24 Oct 2026 by the fuzz harnesses and by reading the ngtcp2 1.25 / nght
   `port-rcp`: §11.4 (the 1.0 `terminate-user` is still there), §11.29 LXQt repair, §11.39 `0x0E`, §11.43 30-minute clock,
   §11.44 page TCP listener, §11.48 320×240 probe, rpm `%ghost` of `quic-secret`. **Still to port**: §11.32 `PACE`, §11.36 Firefox
   worker, §11.37 and §11.38 render nodes, §11.45 encoder padding, §11.47 `refusal_uncounted`, §11.50 root-side split, and from
-  §11.33 the KDE «unchanged» filter, nested KWin size, `remotix-capture` name, key receipts.
+  §11.33 the key receipts. Ported on `port-kde`, to be built and tested: the KDE «unchanged» filter, nested KWin size, `remotix-capture` name.
 - **Declared limits**: Retry and INVALID_TOKEN have no per-second cap (CPU only, §11.9); `handshake_timeout` stays at ngtcp2's default
   (§11.52); a live IPv6 test with a real provider is not possible on the test server (unit tests and 01-b10 in a namespace, §1.9-bis note).

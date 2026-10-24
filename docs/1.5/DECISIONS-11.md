@@ -12,8 +12,8 @@ tree». Two kinds:
   (no more `terminate-user`), §11.29 LXQt repair, §11.39 `0x0E`, §11.43 the 30-minute clock, §11.44 the page's TCP listener,
   §11.48 the 320×240 probe, and the rpm `%ghost` of §11.33;
 - **«NOT in this tree; still to port»** — §11.32 `PACE`, §11.36 Firefox worker, §11.37 / §11.38 render nodes, §11.45 encoder
-  padding, §11.47 `refusal_uncounted`, §11.50 (the whole root-side split), and in §11.33 the KDE «unchanged» filter, the nested
-  KWin size, the `remotix-capture` name and the key receipts.
+  padding, §11.47 `refusal_uncounted`, §11.50 (the whole root-side split), and in §11.33 the key receipts (the KDE «unchanged» filter, the nested KWin size and the
+  `remotix-capture` name are ported on `port-kde`, to be built and tested).
 What IS in the code is listed in `CHANGES-1.5.md` and in §11.6, §11.9, §11.29 (migration part), §11.40, §11.41, §11.51-§11.53.
 An entry without the marker may still cite hashes of the discarded attempt; read the hash against `git log` before trusting it.
 
@@ -681,7 +681,7 @@ item below unless its line says otherwise. Release notes: `docs/RELEASE-NOTES-1.
     `[T]` quic-conn fuzz, two new oracles, two grafts caught. ⚠ Not verified on a machine with several
     addresses.
 - **Picture (KDE)**
-  - ⚠ NOT in this tree; still to port: the KDE «unchanged» filter (`1849a57d`, `ac6d5e91`, `845f4d19`, `751af3cb`)
+  - ported on port-kde (`651e86ad`, `3d115f47`, `ca91b9c8`, `e951c832`, `d9fbdcb3`), to be built and tested: the KDE «unchanged» filter (`1849a57d`, `ac6d5e91`, `845f4d19`, `751af3cb`, `2a02376e`)
   - `1849a57d` + `ac6d5e91` + `845f4d19` + `751af3cb` — the «unchanged» filter: a KWin frame whose damaged
     rectangles hold the same bytes as the last frame out is not encoded. Guards: area ≤ ¼ of 4K, one frame out
     every 250 ms anyway, bypass while a keyframe is due, self switch-off if a look costs > 3 ms on average
@@ -690,14 +690,14 @@ item below unless its line says otherwise. Release notes: `docs/RELEASE-NOTES-1.
     per episode — `UcStaleGate`). `[M]` the problem: KDE/Firefox 3776×2016, ~50 buffers/s for 5 real changes,
     ~45 the same picture. `[T]` the decisions: `benches/20-unchanged-test.c` (`make -C src bench-unchanged`,
     also ASan/UBSan). ⚠ The cure is not measured: F-003 on KDE/Firefox 4K to rerun.
-  - ⚠ NOT in this tree; still to port: `6da80736`, nested KWin size
+  - ported on port-kde (`c5f658ca`, `a19ecbd1`), to be built and tested: `6da80736`, `93f9a22b`, nested KWin back to the wanted size
   - `6da80736` — KWin nested: KWin's output came up 1280×720 (labwc's own size) at the first mount; the wanted
     size is now written next to labwc's socket (`<host folder>/wanted`) and settle insists on it; `93f9a22b`:
     it is written only once labwc has taken it (birth excepted), and a KWin with no output yet is waited
     for, not nudged («KWin has announced no output after N s»). `[M]` the
     problem: run `functional/20261014-223248` (F-018b/c) and two births in the rete11-kde journal. ⚠ The cure
     is not verified.
-- ⚠ NOT in this tree; still to port: `fa316d71`, the `remotix-capture` stream name
+- ported on port-kde (`ded9ca48`), to be built and tested: `fa316d71`, the `remotix-capture` stream name
 - **Sound** — `fa316d71`: the capture stream is named `remotix-capture` (`PW_KEY_NODE_NAME`), so
   `target.object` «remotix» names only the sink. `[M]` the problem: F-013 xfce/Firefox run `20261015-063747`,
   pw-dump shows the capture linked to itself, digital silence. ⚠ The cure is not verified.

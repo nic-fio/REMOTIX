@@ -88,6 +88,7 @@
 #include "clipboard.h"
 #include "audio.h"
 #include "capture.h"
+#include "unchanged.h"
 #include "wlroots.h"
 #include "vulkanvideo.h"
 #include <drm_fourcc.h>
@@ -4507,6 +4508,8 @@ static uint64_t enc_wait_ms[CODEC_MAX];
  *    being sought.  ⚠ 400 ms is two orders of magnitude below the measured
  *    4.4 seconds and above the cost of a restart (`[M]` 41.6 ms). */
 static uint64_t wakeup_ms;
+/* ⭐ The last restart asked by a stale «unchanged» card frame (`unchanged.h`). */
+static uint64_t uc_wake_ms;
 #define WAKEUP_MS 400u
 /* ⛔ Cure "A" (21 Aug 2026, 🔸 derived) skips the wake-up when something is
  *    held down.  ⚠ This flag serves only NOT to repeat the log line every
@@ -7447,9 +7450,13 @@ remount_capture:
 	 *    (`session.c`), so the metadata will always say "no image": that
 	 *    hiding must NOT be delivered, or whoever is watching is left without a
 	 *    pointer (`cursor.h`, and `[M]` the user's test of 20 Sep 2026). */
-	if (stage_kwin)
+	if (stage_kwin) {
 		capture_cursor_never_hide(cat, "KWin --virtual: the session's cursor "
 		                                    "theme is invisible");
+		/* ⭐ 15 Oct 2026 — `[M]` KWin sends ~50 frames/s where 5 change
+		 *    (`unchanged.h`): the copies of the same picture are not encoded. */
+		capture_skip_unchanged(cat, "KWin: whole frames and exact damage");
+	}
 	*out_m = mut;
 	*out_c = cat;
 
@@ -8095,9 +8102,11 @@ static bool remount_only_capture(MutterSession *m, Capture **c, uint32_t l,
 	stage_size(&l, &a);
 	new_one = capture_start(stage_node(m), l, a, MOTION_FPS, stage_route,
 	                      CAPTURE_COLOR_BGRX, NULL, NULL, NULL, &mistake);
-	if (new_one && stage_kwin)
+	if (new_one && stage_kwin) {
 		capture_cursor_never_hide(new_one, "KWin --virtual: the session's cursor "
 		                                      "theme is invisible");
+		capture_skip_unchanged(new_one, "KWin: whole frames and exact damage");
+	}
 	if (!new_one) {
 		registro_dice(LOG_CHILD,
 		              "⛔ the capture did NOT reopen on node %u on the route "
@@ -9707,6 +9716,11 @@ void child_alive(int argc, char **argv)
 			uint64_t instant_us, t_now;
 
 			memset(&fo, 0, sizeof fo);
+			/* ⭐ A keyframe due takes whatever comes, even a copy of the
+			 *    picture: holding it back would turn into a stream restart
+			 *    (the wake-up below), which costs far more (`unchanged.h`). */
+			capture_unchanged_bypass(cat, requested_codec < CODEC_MAX &&
+			                                  key_debt[requested_codec]);
 			take = capture_take(cat, MOTION_WAIT_S, &fo, &mistake);
 			/* ⛔⭐ THE COUNT IS WRITTEN BEFORE LOOKING AT THE OUTCOME, AND IT IS
 			 *     A CURE FOUND BY THE FIRST LIVE RUN (13 Aug 2026).
@@ -9858,6 +9872,26 @@ void child_alive(int argc, char **argv)
 						              (unsigned)WAKEUP_MS);
 						capture_wake(cat);
 					}
+				}
+			}
+
+			/* ⭐ 15 Oct 2026 — a frame held back as «unchanged» on the CARD
+			 *    and then the scene went still (`unchanged.h`, «pending»): it
+			 *    may hide a change whose damage KWin lost, its buffer is
+			 *    already back with KWin, and no frame will come by itself.
+			 *    ⇒ The same restart as above, with the same guards (no key or
+			 *    button down, `WAKEUP_MS`), and at most one every
+			 *    `UC_WAKE_GAP_MS`.  ⚠ `capture_wake()` clears the flag; a
+			 *    refused restart is retried at the next round. */
+			if (take == CAPTURE_TAKE_ZERO && capture_unchanged_stale(cat)) {
+				uint64_t current_ms = log_now_ms();
+
+				if (current_ms - wakeup_ms >= WAKEUP_MS
+				    && current_ms - uc_wake_ms >= UC_WAKE_GAP_MS
+				    && !(stage_input && input_pressed(stage_input))) {
+					wakeup_ms = current_ms;
+					uc_wake_ms = current_ms;
+					capture_wake(cat);
 				}
 			}
 
@@ -10167,9 +10201,14 @@ void child_alive(int argc, char **argv)
 			 *    codecs a `? :` was enough, with the third a nested `? :` would
 			 *    say "AV1" of every number it does not know — and the symptom
 			 *    would be an AV1 stream sent with label 3. */
-			encode_and_send(&fo, codec_from_number(requested_codec),
-			                 requested_codec, NULL, NULL, instant_us, canvas_w,
-			                 canvas_h, input_injected);
+			/* ⛔ 15 Oct 2026 — a frame NOT encoded must not stay the
+			 *    reference of the «unchanged» filter (`unchanged.h`): the
+			 *    next copy of the same picture would be held back, and the
+			 *    change it carries would never reach the client. */
+			if (!encode_and_send(&fo, codec_from_number(requested_codec),
+			                     requested_codec, NULL, NULL, instant_us, canvas_w,
+			                     canvas_h, input_injected))
+				capture_unchanged_forget(cat);
 			/* ⛔⭐ THE RELEASE — and on the card's road this line is NOT a
 			 *     clean-up: it is the cure of `LESSONS.md` §8.  Until it is
 			 *     called, Mutter's buffer is ours; and it is called AFTER the

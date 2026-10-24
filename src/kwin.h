@@ -122,5 +122,11 @@ bool kwin_host_exists(void);
  *    Leap 16: first 3822x2036, then full screen 3824x2064), and a capture asked
  *    in between offers a size KWin's stream no longer has — the card route
  *    refused, and the stage fell back to copying in memory for the whole session.
+ * ⛔ And the size waited for is the WANTED one — the birth's, or the last
+ *    reattach's (`kwin_host_resize()` writes it down) — not the one labwc has:
+ *    `[M]` 14-15 Oct 2026 three births out of ~20 found labwc back at its
+ *    hard-wired 1280x720, and settling on that made the desktop 1280x720.
+ *    labwc is asked again; if KWin still does not follow, labwc is nudged
+ *    once (8 rows less, then the size).
  *    TRUE at once when there is no host. */
 bool kwin_host_settle(double wait_s, GError **mistake);

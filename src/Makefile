@@ -319,7 +319,7 @@ LIBS := -lngtcp2_crypto_ossl -lngtcp2 -lnghttp3 -lssl -lcrypto -lpam \
 #   ⛔ but depending on that detail means breaking on a different libc
 #   with an error that does not name the phase that introduced it.
 
-.PHONY: all clean deps fingerprints bench-w1 test-session FORCE
+.PHONY: all clean deps fingerprints bench-w1 bench-unchanged test-session FORCE
 
 all: fingerprints $(NOME)
 
@@ -423,6 +423,16 @@ test-session: log.o ../benches/21-session-orphan-test.c session.c
 	  $$(pkg-config --cflags glib-2.0) -o $(TEST_SESSION)/test \
 	  ../benches/21-session-orphan-test.c log.o $$(pkg-config --libs glib-2.0)
 	$(TEST_SESSION)/test
+# ⭐ 15 Oct 2026 — the desk test of the «unchanged» filter (`unchanged.h`):
+#    the header itself, the SAME one capture.c includes, on synthetic frames.
+BANCO_UC := ../benches/20-unchanged-test
+
+$(BANCO_UC): ../benches/20-unchanged-test.c unchanged.h
+	$(CC) $(CFLAGS) $(shell pkg-config --cflags glib-2.0) -o $@ $< \
+	      $(shell pkg-config --libs glib-2.0)
+
+bench-unchanged: $(BANCO_UC)
+	$(BANCO_UC)
 
 
 %-client-protocol.h: protocols/%.xml
@@ -530,7 +540,7 @@ helper.o:       helper.h log.h
 #    product only, like `helper.c`.
 child.o:         child.h log.h session.h capture.h mutter.h encoder.h \
                   input.h sentinel.h audio.h sound.h clipboard.h rediscover.h \
-                  render_grant.h render_node.h
+                  render_grant.h render_node.h unchanged.h
 
 # ⭐ THE FOUR OF PHASE 2.  ⚠ NONE is among the `GEMELLATI`: they belong to the PRODUCT
 #    only — in `benches/rcp/` they do not exist, because the graft into ngtcp2's
@@ -547,7 +557,7 @@ rediscover.o:        rediscover.h
 render_grant.o:   render_grant.h rediscover.h log.h
 # ⭐ 1.5 (SPECS audit, 15 Oct 2026) — which card encodes: the compositor's.
 render_node.o:    render_node.h kwin.h
-capture.o:        capture.h log.h cursor.h
+capture.o:        capture.h log.h cursor.h unchanged.h
 mutter.o:         mutter.h log.h
 encoder.o:   encoder.h log.h vadirect.h vulkanvideo.h bit_writer.h colors709.h
 # ⭐ PHASE 18: the card with direct libva, and the bit writer of the headers;
