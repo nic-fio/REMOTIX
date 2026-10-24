@@ -1,0 +1,36 @@
+=== lxqt grant-test  2026-10-13T18:09:43+00:00  product: 631a1fc1+render_grant
+      red lines in the startup log: 11
+--- acle: uid=4013(acle) gid=4013(acle) groups=4013(acle) — manager 180 Groups:4013 
+    client:    ⭐ SESSION: state=1 canvas=1920x1080 desktop=lxqt
+    manager after: 180 (was 180)
+      223 remotix [44 991 4013 ] dri:  5 /dev/dri/renderD128 
+      236 labwc [44 991 4013 ] dri:  9 /dev/dri/renderD128 
+      263 pcmanfm-qt [44 991 4013 ] dri: none
+    render node ACL: 
+    render-grants: 
+18:09:49.108 child   [acle] ⭐ FIRST CONNECTION: «acle» is not in the card's groups (render,video) and I am PUTTING it there, now — the user's decision of 20 Sep 2026.  ⚠ Without it, this sessi
+18:09:49.175 child   [acle] ⭐ «acle» enrolled in «render,video»: a user manager born from now on carries the groups.  Nothing is closed
+    → the desktop ends
+    render node ACL: 
+    render-grants: 
+--- aclx: uid=4014(aclx) gid=100(users) groups=100(users) — manager 514 Groups:100 
+    client:    ⭐ SESSION: state=1 canvas=1920x1080 desktop=lxqt
+    manager after: 514 (was 514)
+      558 remotix [44 100 991 ] dri:  5 /dev/dri/renderD128 
+      571 labwc [44 100 991 ] dri:  9 /dev/dri/renderD128 
+      597 pcmanfm-qt [44 100 991 ] dri: none
+    render node ACL: 
+    render-grants: 
+--- acls: uid=4015(acls) gid=4015(acls) groups=4015(acls) — manager 830 Groups:4015 
+    client:    ⭐ SESSION: state=1 canvas=1920x1080 desktop=lxqt
+    render node ACL: 
+    render-grants: 
+    → the server is KILLED (a crash), then the desktop ends, then the server starts again
+    render node ACL: 
+    render-grants: 
+      red lines in the startup log: 11
+    render node ACL: 
+    render-grants: 
+--- cleanup
+    render node ACL: 
+    render-grants: 
