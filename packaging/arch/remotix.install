@@ -12,7 +12,23 @@
 #   writes it only in the session log: with §10.12 that enrolment must be
 #   moved into the engine's log, or uninstallation does not know about it.
 
+# ⭐ DECISIONS-11.md §11.50, PHASE F — the system user remotix and the network side's directories, BEFORE anything can
+#    start the new server.  pacman's sysusers and tmpfiles hooks are PostTransaction: they run AFTER post_upgrade's
+#    try-restart, too late — so the scripts call both themselves, then the 1.0 → 1.5 move of certificates/ and ban into
+#    /var/lib/remotix/net (remotix-net-move).  ⛔ INERT unless the package carries remotix-net-move (only a
+#    REMOTIX_SPLIT=1 build installs it).  A failure is said, never makes pacman fail.
+network_side() {
+	[ -x /usr/lib/remotix/remotix-net-move ] || return 0
+	systemd-sysusers remotix.conf || echo "remotix: ⚠ systemd-sysusers remotix.conf failed" >&2
+	/usr/lib/remotix/remotix-net-move || echo "remotix: ⚠ the move into /var/lib/remotix/net is incomplete" >&2
+	systemd-tmpfiles --create remotix.conf 2>/dev/null
+	# the unit changed its paths: daemon-reload first (pacman's own reload hook is PostTransaction too)
+	systemctl daemon-reload 2>/dev/null
+	return 0
+}
+
 post_install() {
+	network_side
 	cat <<'FINE'
 :: REMOTIX: pieces installed, OFF.  The package alone switches on
    nothing: the service, the GPU groups, the three belts and the firewall
@@ -21,6 +37,7 @@ FINE
 }
 
 post_upgrade() {
+	network_side
 	# ⭐ T2 (§5.2), T7: stopping the service does NOT close the desktops, and the new
 	#    service finds them again.  An old server with the new binary on disk
 	#    would spawn children with the new binary: if it was ON it restarts
@@ -44,7 +61,7 @@ post_remove() {
 	# ⭐ R6: the state the SERVICE created by itself (certificates, ban) goes
 	#    away with the package.  /etc/remotix/denied-users and /etc/pam.d/remotix are
 	#    handled by pacman (backup=: with -n they vanish, without they stay as .pacsave).
-	rm -rf /var/lib/remotix/certificates
+	rm -rf /var/lib/remotix/net /var/lib/remotix/certificates
 	rm -f /var/lib/remotix/ban /var/lib/remotix/ban.new /var/lib/remotix/render-grants /var/lib/remotix/render-grants.new
 	rmdir /var/lib/remotix 2>/dev/null
 	systemctl daemon-reload 2>/dev/null

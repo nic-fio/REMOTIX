@@ -1,0 +1,377 @@
+policy_module(remotix, 2.0.0)
+
+# remotix.te — the REMOTIX SELinux module (phase 17, T6; `phases/17-the-installer.md` §11.1 B, R19).
+#
+# ⭐ Why it exists.  `DECISIONS.md` §10.18 (D3): the REMOTIX PAM file is the sshd stack, with
+#    `pam_selinux close/open`.  `pam_selinux open` requires the next `execve` to transition to the
+#    user's context (`unconfined_t` for a normal user) — and it is the REMOTIX child that does it, when it
+#    relaunches itself as the user (`child.c`, `execve` of itself).  In the context of an arbitrary
+#    service (`unconfined_service_t`) that transition is forbidden: `[M]` T1c, 29 Sep, Fedora and Alma:
+#    `{ transition } unconfined_service_t → unconfined_t`, the child exits with 37 and the desktop is not born.
+#    ⇒ Like Cockpit (`selinux/cockpit.te`: `cockpit_session_t`), REMOTIX has a domain of ITS OWN, which is
+#    a «login program» like sshd and login (`auth_login_pgm_domain`) and which can transition to the
+#    user's context (`userdom_spec_domtrans_all_users`, `unconfined_domtrans`).
+#
+# ⭐ The types:
+#    remotix_t            the service; since 1.5 the ROOT side (the parent, the PAM helper, the child
+#                         up to its `execve`, the port's bind)
+#    remotix_exec_t       /usr/libexec/remotix/remotix
+#    remotix_port_t       port 7447, TCP (the page) and UDP (QUIC): `remotix_portcon.cil`
+#    remotix_var_lib_t    /var/lib/remotix (render grants, group enrolments, engine state; until 1.0 also
+#                         the certificates and the bans, which 1.5 moves to net/)
+#    remotix_var_run_t    /run/remotix
+#    remotix_net_t        the NETWORK SIDE (1.5, `DECISIONS.md` §11.50): the same program, run with
+#                         `--network-side` by the root side after its walls, as the `remotix` user
+#    remotix_net_var_lib_t  /var/lib/remotix/net (certificates/, quic-secret, ban): the network side's only
+#    remotix_net_var_run_t  /run/remotix/net (the bench's command socket)
+#
+# ⭐ 1.5, the split (`DECISIONS.md` §11.50): `remotix_t` stays the ROOT side — systemd still starts the
+#    program, and the root side does PAM, the shadow, the helper, the desktops' birth (pam_selinux and
+#    `setexeccon`, like sshd), the cards, the port's bind, /run/systemd/sessions, the signals and the reaping.
+#    The network side is born from it: in the fork, still root, the walls (mount namespace, the uid drop,
+#    `PR_SET_NO_NEW_PRIVS`), then `setexeccon(remotix_net_t)` and `execve` of the SAME program.
+#    ⇒ the transition is the explicit `setexeccon` one, NOT a `type_transition` on remotix_exec_t:
+#    the PAM helper (`helper.c`) and the children execute the same file from `remotix_t`, and a
+#    type_transition would send the helper into the network side's domain.
+#
+# ⚠ Two marks on the rules: `[M]` measured on the VMs (as in 1.0); `[D]` written from the design of §11.50,
+#   NOT yet measured (the network side does not exist before the lanes 1-2 merge) — the enforcing check of the
+#   release (`ausearch -m avc`) confirms or removes them.
+#
+# ⚠ The rules are the MEASURED ones (`[M]` on the VMs, the domain first in «permissive» and every denial
+#   read with `ausearch -m avc`): a rule with no measurement behind it is not here.  Where a measurement
+#   does not exist yet (a rare code path), the denial shows in the audit log and the
+#   cure is `semanage permissive -a remotix_t` until the rule makes it in here.
+#
+# Built with `make -f /usr/share/selinux/devel/Makefile remotix.pp` (the spec does it, in the
+# container of each target: the interfaces are those of THAT distribution's policy).
+
+########################################
+#
+# The declarations
+#
+
+type remotix_t;
+type remotix_exec_t;
+# ⭐ like sshd (`init_ranged_daemon_domain(sshd_t, sshd_exec_t, s0 - mcs_systemhigh)`): the service
+#    has all the categories, and `pam_selinux` gives the user their full level
+#    (unconfined_u:unconfined_r:unconfined_t:s0-s0:c0.c1023, as for whoever logs in with ssh).  `[M]` with
+#    `init_daemon_domain` the stage was born «s0» only.
+# ⚠ Both lines: in Fedora `init_ranged_daemon_domain` NO LONGER calls init_daemon_domain
+#   (it is commented out in the interface), and on its own it leaves systemd without permission to run the
+#   program (`[M]` `{ getattr } init_t → remotix_exec_t`, 203/EXEC).
+init_daemon_domain(remotix_t, remotix_exec_t)
+init_ranged_daemon_domain(remotix_t, remotix_exec_t, s0 - mcs_systemhigh)
+
+type remotix_port_t;
+corenet_port(remotix_port_t)
+
+type remotix_var_lib_t;
+files_type(remotix_var_lib_t)
+
+type remotix_var_run_t;
+files_pid_file(remotix_var_run_t)
+
+# [D] the network side.  ⚠ The context the root side writes with `setexeccon` is ITS OWN with the type
+#     replaced (`getcon` → `context_type_set(…, "remotix_net_t")`): system_u:system_r:remotix_net_t and the
+#     range s0-s0:c0.c1023 of remotix_t, so the MCS constraints on the fds it inherits (sockets labelled
+#     remotix_t at that range) and on /proc of the users' processes are the same as today.
+type remotix_net_t;
+domain_type(remotix_net_t)
+domain_entry_file(remotix_net_t, remotix_exec_t)
+role system_r types remotix_net_t;
+
+type remotix_net_var_lib_t;
+files_type(remotix_net_var_lib_t)
+
+type remotix_net_var_run_t;
+files_pid_file(remotix_net_var_run_t)
+
+########################################
+#
+# The service
+#
+
+# ── the root privileges the service uses: dropping to the user's uid (setuid, setgid, the
+#    groups), reading and changing the user files the child prepares, the stage limits
+allow remotix_t self:capability { chown dac_override dac_read_search fowner fsetid kill setgid setuid sys_nice sys_resource };
+allow remotix_t self:process { setexec setrlimit setsched signal_perms getsched };
+allow remotix_t self:fifo_file rw_fifo_file_perms;
+allow remotix_t self:unix_stream_socket { create_stream_socket_perms connectto };
+allow remotix_t self:unix_dgram_socket create_socket_perms;
+allow remotix_t self:netlink_kobject_uevent_socket create_socket_perms;
+
+# ── the network: the page (TCP) and QUIC/WebTransport (UDP) on the REMOTIX port
+allow remotix_t self:tcp_socket create_stream_socket_perms;
+allow remotix_t self:udp_socket create_socket_perms;
+allow remotix_t remotix_port_t:tcp_socket name_bind;
+allow remotix_t remotix_port_t:udp_socket name_bind;
+corenet_tcp_bind_generic_node(remotix_t)
+corenet_udp_bind_generic_node(remotix_t)
+corenet_tcp_sendrecv_generic_if(remotix_t)
+corenet_udp_sendrecv_generic_if(remotix_t)
+
+# ── its files
+manage_dirs_pattern(remotix_t, remotix_var_lib_t, remotix_var_lib_t)
+manage_files_pattern(remotix_t, remotix_var_lib_t, remotix_var_lib_t)
+files_var_lib_filetrans(remotix_t, remotix_var_lib_t, dir)
+
+manage_dirs_pattern(remotix_t, remotix_var_run_t, remotix_var_run_t)
+manage_files_pattern(remotix_t, remotix_var_run_t, remotix_var_run_t)
+manage_sock_files_pattern(remotix_t, remotix_var_run_t, remotix_var_run_t)
+files_pid_filetrans(remotix_t, remotix_var_run_t, dir)
+
+# the child relaunches itself: `execve` of the same program (then the transition to the user, below)
+can_exec(remotix_t, remotix_exec_t)
+
+# ── the GPU: /dev/dri (the node groups, the buffer test before labwc)
+dev_rw_dri(remotix_t)
+dev_read_sysfs(remotix_t)
+dev_read_urand(remotix_t)
+dev_read_rand(remotix_t)
+
+# ── the system: /proc, /etc, the libraries, the certificates, the journal
+kernel_read_system_state(remotix_t)
+kernel_read_network_state(remotix_t)
+kernel_read_kernel_sysctls(remotix_t)
+files_read_etc_files(remotix_t)
+files_read_usr_files(remotix_t)
+files_search_var_lib(remotix_t)
+fs_getattr_all_fs(remotix_t)
+miscfiles_read_localization(remotix_t)
+miscfiles_read_generic_certs(remotix_t)
+logging_send_syslog_msg(remotix_t)
+corecmd_exec_bin(remotix_t)
+corecmd_exec_shell(remotix_t)
+init_read_state(remotix_t)
+
+########################################
+#
+# The login: PAM, logind, the transition to the user — like sshd
+#
+
+# the whole PAM stack, pam_selinux included (the same interface as sshd, login and cockpit-session)
+auth_login_pgm_domain(remotix_t)
+auth_use_nsswitch(remotix_t)
+auth_read_shadow(remotix_t)
+auth_domtrans_chk_passwd(remotix_t)
+auth_write_login_records(remotix_t)
+
+# `pam_systemd` opens the logind session (system D-Bus)
+dbus_system_bus_client(remotix_t)
+optional_policy(`
+	systemd_dbus_chat_logind(remotix_t)
+')
+
+# ⭐ the transition to the user's context at the child's `execve`, without AT_SECURE (the child
+#    builds the environment itself, `child.c` point 5): like `cockpit_session_t`
+userdom_spec_domtrans_all_users(remotix_t)
+userdom_noatsecure_login_userdomain(remotix_t)
+# ⭐ the child relaunches itself AS THE USER by executing itself: the program is the entry point of
+#    the user's domain.  `[M]` 30 Sep, fedora44-gnome-iso: `{ entrypoint } unconfined_t →
+#    remotix_exec_t`, the child exits with 37.  (sshd and cockpit do not need it: they run a
+#    shell or `cockpit-bridge`, files the user domains can already execute.)
+gen_require(`
+	attribute userdomain;
+')
+allow userdomain remotix_exec_t:file { entrypoint execute getattr map open read };
+
+# ⭐ the parent closes the stage it gave birth to (abandonment, restart with a live desktop): signals
+#    to the user's domain.  `[M]` fedora44-gnome-iso, domain in permissive and dontaudit off:
+#    `{ signal } remotix_t → unconfined_t`.  Like cockpit (`userdom_signal_all_users`).
+userdom_signal_all_users(remotix_t)
+userdom_kill_all_users(remotix_t)
+
+# ⚠ Two denials that take nothing away, and that are SILENCED (`[M]` alma10-gnome-iso and fedora44-gnome-iso,
+#   permissive and dontaudit off, a whole session with a service restart with a live desktop):
+#   · `net_admin`: sd-journal and sd-bus try SO_SNDBUFFORCE on their sockets and, without it, keep the
+#     default buffer — the same denial the policy silences for systemd services;
+#   · `cap_userns sys_ptrace`: finding the stages again (`rediscover.c`) walks /proc of ALL processes, and
+#     those inside a user namespace (bwrap, flatpak, glycin) are not ours: skipping them is right.
+dontaudit remotix_t self:capability net_admin;
+dontaudit remotix_t self:cap_userns sys_ptrace;
+optional_policy(`
+	unconfined_domtrans(remotix_t)
+')
+
+########################################
+#
+# 1.5: what the ROOT side gains (`DECISIONS.md` §11.50)  — all [D]
+#
+
+# ── the birth of the network side: `setexeccon` + `execve` of the same program, after
+#    `PR_SET_NO_NEW_PRIVS` ⇒ also `nnp_transition` (all four policies have the capability
+#    nnp_nosuid_transition: without the permission the `execve` fails with EPERM).
+allow remotix_t remotix_net_t:process { transition siginh rlimitinh };
+allow remotix_t remotix_net_t:process2 { nnp_transition nosuid_transition };
+# ⭐ `[M]` 16 Oct 2026, fedora44 VM, enforcing: without `nosuid_transition` the network side's
+#    `execve(/proc/self/exe)` fails with EPERM and NO AVC is logged (not even with `semodule -DB`),
+#    the root side sees exit 127 and restarts it forever.  The reason: the exe's mount belongs to the
+#    namespace the walls just left (`unshare(CLONE_NEWNS)`), so the kernel's `mnt_may_suid()` says
+#    no and SELinux treats the exec as one from a nosuid mount.  With the rule: born remotix_net_t.
+# AT_SECURE stays on for the network side (the glibc secure mode: nothing from the environment
+# steers the loader); the check is only audited, and silenced here.
+dontaudit remotix_t remotix_net_t:process noatsecure;
+# the root side watches and stops it: SIGTERM at the farewell, SIGKILL on a malformed message, the
+# pid of `SCM_CREDENTIALS` checked against /proc
+allow remotix_t remotix_net_t:process signal_perms;
+ps_process_pattern(remotix_t, remotix_net_t)
+
+# ── the walls, in the fork BEFORE the `execve`: a new mount namespace (`unshare(CLONE_NEWNS)`), the
+#    propagation made private on «/», the tree read-only (`mount_setattr` has no SELinux check; the
+#    remount for an old-style `MS_REMOUNT|MS_BIND|MS_RDONLY` has), /var/lib/remotix/net and
+#    /run/remotix/net bound writable, a private /tmp (tmpfs); the bounding set emptied.
+allow remotix_t self:capability { sys_admin setpcap };
+allow remotix_t self:process setcap;
+files_mounton_rootfs(remotix_t)
+gen_require(`
+	type tmp_t, bin_t;
+')
+allow remotix_t tmp_t:dir mounton;
+allow remotix_t { remotix_net_var_lib_t remotix_net_var_run_t }:dir { create getattr setattr search mounton };
+filetrans_pattern(remotix_t, remotix_var_lib_t, remotix_net_var_lib_t, dir, "net")
+filetrans_pattern(remotix_t, remotix_var_run_t, remotix_net_var_run_t, dir, "net")
+fs_mount_tmpfs(remotix_t)
+fs_unmount_tmpfs(remotix_t)
+fs_remount_tmpfs(remotix_t)
+fs_remount_xattr_fs(remotix_t)
+fs_getattr_tmpfs(remotix_t)
+fs_getattr_xattr_fs(remotix_t)
+# ⭐ `[M]` 16 Oct 2026, alma10 VM, permissive then enforcing, main 553b2e74 (walls 7095d83f): the
+#    network side's PRIVATE /dev — a tmpfs mounted over /dev (`{ mounton } device_t`), the five
+#    nodes made as empty files in it and the real ones bind-mounted onto them (`{ create mounton }
+#    tmpfs_t:file`), the fd links (`{ create } tmpfs_t:lnk_file`).  Without them the walls fail and
+#    the network side is restarted forever.
+dev_mounton(remotix_t)
+fs_manage_tmpfs_dirs(remotix_t)
+fs_manage_tmpfs_files(remotix_t)
+fs_manage_tmpfs_symlinks(remotix_t)
+allow remotix_t tmpfs_t:file mounton;
+
+# ── `[M]` 16 Oct 2026, tumbleweed and leap16 VMs, enforcing, at the first login: the enrolment in
+#    the card's groups runs `usermod` (`child.c`, «is in the card's groups»):
+#    `{ execute } remotix_t → useradd_exec_t`.  Through useradd_t, as an administrator's
+#    usermod would run, not by giving remotix_t the right to edit /etc/group.
+optional_policy(`
+	usermanage_run_useradd(remotix_t, system_r)
+')
+# usermod asks libselinux whether its caller may act as root on accounts (`[M]` leap16:
+# USER_AVC `{ rootok } remotix_t → remotix_t:passwd`); the enrolment worked anyway, the rule makes
+# the answer a yes instead of a logged denial.
+gen_require(`
+	class passwd rootok;
+')
+allow remotix_t self:passwd rootok;
+# ── `[M]` 16 Oct 2026, tumbleweed VM (and leap16 for udmabuf), enforcing: the codec probe on the
+#    card, as root, as in 1.0: Mesa's allocator opens /dev/udmabuf (`{ read write }
+#    dma_device_t`) and writes its memfd («memfd:allocation fd», `{ write } tmpfs_t`).
+dev_rw_dma_dev(remotix_t)
+fs_rw_tmpfs_files(remotix_t)
+# `[M]` fedora44 and alma10 VMs, enforcing, dontaudit on: llvmpipe's «memfd:lp_dma_buf» is mapped
+# (`{ map } tmpfs_t`) — the probe on a card that Mesa drives in software.
+gen_require(`
+	type tmpfs_t;
+')
+allow remotix_t tmpfs_t:file map;
+
+# ── `CLOSE_ORPHAN`: the root side itself reads /run/systemd/sessions/ (a live session of that uid
+#    with SERVICE=remotix)
+optional_policy(`
+	systemd_read_logind_sessions_files(remotix_t)
+')
+
+# ── the desktop's child inherits the end of a socketpair the root side made (labelled remotix_t,
+#    `SOCK_SEQPACKET` ⇒ class unix_stream_socket); unconfined_t has it already, a confined user
+#    (user_t, staff_t) needs it
+allow userdomain remotix_t:fd use;
+allow userdomain remotix_t:unix_stream_socket rw_socket_perms;
+
+########################################
+#
+# 1.5: the NETWORK side (`remotix_net_t`)  — all [D]
+#
+# ⛔ No capability, no PAM, no shadow, no card, no userdom transition, no exec: it is the
+#    process that faces the internet.  Its uid is `remotix`, it runs under no_new_privs, in a
+#    tree that is read-only but for its two directories.
+#
+
+# ── what crosses the `execve`: fd 3 the root channel (`SOCK_SEQPACKET` ⇒ unix_stream_socket), fd 4
+#    UDP and fd 5 TCP, all made and bound by the root side and so labelled remotix_t.  ⚠ Without
+#    these the kernel does NOT fail the exec: it silently swaps each fd for the SELinux null file
+#    (`flush_unauthorized_files`) and the network side finds a dead descriptor.
+#    The connections `accept`ed on fd 5 take the label of the listening socket (remotix_t): the
+#    network checks (node, interface) are made on THAT label, and remotix_t already has them above.
+allow remotix_net_t remotix_t:fd use;
+allow remotix_net_t remotix_t:unix_stream_socket rw_socket_perms;
+allow remotix_net_t remotix_t:udp_socket rw_socket_perms;
+allow remotix_net_t remotix_t:tcp_socket { rw_socket_perms accept listen };
+# the child's socket end, passed by `SCM_RIGHTS` in `SPAWNED`: the same rules (fd use + unix_stream_socket)
+allow remotix_net_t remotix_t:process sigchld;
+# stdin, stdout and stderr from systemd (/dev/null, the journal's stream socket made by init_t)
+init_use_fds(remotix_net_t)
+init_rw_stream_sockets(remotix_net_t)
+dev_rw_null(remotix_net_t)
+
+# ── its own sockets: the journal (dgram), the system D-Bus (stream), the bench's command socket
+allow remotix_net_t self:process { signal_perms getsched setsched };
+allow remotix_net_t self:fifo_file rw_fifo_file_perms;
+allow remotix_net_t self:unix_stream_socket { create_stream_socket_perms connectto };
+allow remotix_net_t self:unix_dgram_socket create_socket_perms;
+
+# ── its program and the page
+allow remotix_net_t remotix_exec_t:file { entrypoint execute getattr map open read ioctl };
+files_read_usr_files(remotix_net_t)
+# ⭐ `[M]` 16 Oct 2026, fedora44 VM, enforcing: the desktop recognition (`session.c`,
+#    `g_find_program_in_path("xfce4-session")` …) is an access(X_OK) on bin_t files, whose denials
+#    are NOT audited: enforcing said «NO DESKTOP RECOGNISED», permissive said «XFCE».  `execute`
+#    alone is the access(X_OK) check; without `execute_no_trans` the network side still cannot run
+#    any of them.
+corecmd_search_bin(remotix_net_t)
+allow remotix_net_t bin_t:file { getattr execute };
+files_read_etc_files(remotix_net_t)
+miscfiles_read_localization(remotix_net_t)
+miscfiles_read_generic_certs(remotix_net_t)
+
+# ── its files: /var/lib/remotix/net (certificates/ with the TLS key and quic-secret, ban and
+#    ban.new) and /run/remotix/net; only search in the root side's directories around them
+files_search_var_lib(remotix_net_t)
+files_search_pids(remotix_net_t)
+allow remotix_net_t remotix_var_lib_t:dir search_dir_perms;
+allow remotix_net_t remotix_var_run_t:dir search_dir_perms;
+manage_dirs_pattern(remotix_net_t, remotix_net_var_lib_t, remotix_net_var_lib_t)
+manage_files_pattern(remotix_net_t, remotix_net_var_lib_t, remotix_net_var_lib_t)
+manage_dirs_pattern(remotix_net_t, remotix_net_var_run_t, remotix_net_var_run_t)
+manage_files_pattern(remotix_net_t, remotix_net_var_run_t, remotix_net_var_run_t)
+manage_sock_files_pattern(remotix_net_t, remotix_net_var_run_t, remotix_net_var_run_t)
+fs_getattr_tmpfs(remotix_net_t)
+# [D] the private /dev of the walls (walls.c, a tmpfs over /dev): its five nodes are the real
+#     devices bound in (null, zero, full, random, urandom — their own types, rules above), and
+#     /dev/fd, /dev/stdin, /dev/stdout, /dev/stderr are SYMLINKS on that tmpfs (tmpfs_t): a library
+#     that opens /dev/stdout must be able to follow them.  `[M]` 16 Oct, the four distros: the dir
+#     search is already there (domain), the link read was not — no AVC yet only because nothing
+#     followed one.
+fs_read_tmpfs_symlinks(remotix_net_t)
+
+# ── the system, read only: /proc, /sys, the randomness, the names (uid → user), the journal
+kernel_read_system_state(remotix_net_t)
+kernel_read_network_state(remotix_net_t)
+kernel_read_kernel_sysctls(remotix_net_t)
+dev_read_sysfs(remotix_net_t)
+dev_read_urand(remotix_net_t)
+dev_read_rand(remotix_net_t)
+fs_getattr_all_fs(remotix_net_t)
+init_read_state(remotix_net_t)
+auth_use_nsswitch(remotix_net_t)
+logging_send_syslog_msg(remotix_net_t)
+
+# ── logind, as any client (`sentinel.c`, `rediscover.c`: ListSessions, Properties.GetAll)
+dbus_system_bus_client(remotix_net_t)
+optional_policy(`
+	systemd_dbus_chat_logind(remotix_net_t)
+')
+
+# ── the desktops found again (T7, `rediscover.c`): /proc/<pid>/stat and /cgroup of the users'
+#    processes.  All domains, as `ps` reads them: the walk opens every /proc entry, and a denial
+#    on a system process would be noise; the DAC rules (uid `remotix`) still hold for anything
+#    beyond stat/cgroup/cmdline.
+domain_read_all_domains_state(remotix_net_t)

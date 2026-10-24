@@ -1,0 +1,53 @@
+# remotix.service — the REMOTIX server, Arch family (`phases/17-the-installer.md` §6.4).
+# Same in substance as `packaging/rpm/remotix.service` (direct exec) and
+# `packaging/debian/remotix.service` (via `sh -c`): `build.sh` checks that the
+# three stay equivalent, apart from the documented differences.
+#
+# ⭐ 1.5, DECISIONS-11.md §11.50 (PHASE F, NOT ACTIVE YET: this is the unit the split build installs — REMOTIX_SPLIT=1 / rpm `--with split`):
+#    the process systemd starts is the ROOT side (PAM, the desktops' birth); it forks the NETWORK side, which drops itself to the
+#    system user `remotix` (remotix.sysusers) and keeps its files in /var/lib/remotix/net.  ⛔ No `User=` and no hardening here:
+#    whatever this unit restricts, every desktop born from it inherits (§11.11); the network side's walls are in the program (walls.c).
+# ⭐ As ROOT: PAM must be able to check anyone's password, and the child drops
+#    to the user's uid by itself (`child.c`).
+# ⛔ The package just INSTALLS it: on Arch the preset is «disable *» and the
+#    service does not start by itself.  Enabling it is an action of the
+#    installation engine, with consent (DECISIONS.md §10.12).
+# ⭐ Port and options: defaults in /usr/share/remotix/remotix.conf, the choices
+#    in /etc/remotix/remotix.conf.d/*.conf (they win).  The engine writes the
+#    chosen port there (`port.conf`, `REMOTIX_PORT=N`).  Whoever connects with
+#    an IP address declares it there too:
+#        REMOTIX_OPTIONS=--name 192.168.1.10
+#    (the last --name wins; the default is the machine name, %H).
+#    ⚠ Until 0.18.0-1 this unit set `Environment=REMOTIX_PORTA=7447` and read no
+#    EnvironmentFile: on Arch a port other than 7447 was never applied, and the
+#    installer rolled back («active but N/tcp not listening»).
+# ⭐ `--journal`: the lines go to the journal with their fields (priority,
+#    `REMOTIX_AREA`, `REMOTIX_TENANT`), also from the child (`log.h`).
+# ⛔ No bench tool on the command line (§4.5, R13): no
+#    --command-socket, --survey, --verbose, --audio-test.
+# ⚠ ARCH PATH: the binary is in /usr/lib/remotix/ (Arch has no libexec).
+[Unit]
+Description=REMOTIX, the desktop in the browser
+After=network.target systemd-logind.service
+Wants=network.target
+
+[Service]
+Type=simple
+EnvironmentFile=/usr/share/remotix/remotix.conf
+EnvironmentFile=-/etc/remotix/remotix.conf.d/*.conf
+WorkingDirectory=/
+# ⭐ The program directly, as in the .rpm: `${REMOTIX_PORT}` is a single word;
+#    `$REMOTIX_OPTIONS` without braces is split into words, and when empty yields
+#    none (systemd.service, «Command lines»).
+ExecStart=/usr/lib/remotix/remotix --address 0.0.0.0 --name %H --port ${REMOTIX_PORT} --certificates /var/lib/remotix/net/certificates --page /usr/share/remotix/page.html --ban-file /var/lib/remotix/net/ban --journal $REMOTIX_OPTIONS
+# ⭐ The three properties the product has always been measured with
+#    (src/restart-7900.sh): KillMode=mixed (T2, §5.2: the desktops survive
+#    the stop), the real-time priority and the children's nice.
+KillMode=mixed
+LimitRTPRIO=20
+LimitNICE=-11
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,90 @@
+#!/bin/sh
+# remotix-net-move — the 1.0 → 1.5 move of the network side's files
+# (DECISIONS.md §11.50), run by the package's scripts BEFORE the service restarts:
+#   Debian postinst, rpm %post, Arch post_install/post_upgrade.
+#
+# 1.0 kept certificates/ (the .ours marks and maybe the administrator's own
+# page.pem/page.key) and ban in /var/lib/remotix, owned by root; 1.0 had no
+# quic-secret — the 1.4.99 test builds before the split put one in
+# certificates/ too.  1.5 reads them from /var/lib/remotix/net, as the user remotix:
+#   · a ban file remotix cannot read STOPS the server (main.c, invariant I7);
+#   · a root-owned quic-secret (a test build's) would be silently replaced by a
+#     per-run secret.
+# ⇒ They are MOVED (never copied, never deleted) and given to remotix.
+# ⭐ Idempotent: with nothing to move, nothing changes (owners and modes are
+#    tmpfiles' job, run right after by every family's script).
+# ⛔ An administrator's page.pem/page.key (no page.ours mark) moves with the
+#    rest, and the journal says so: it is never regenerated.
+# ⛔ The SAME file in packaging/{debian,rpm,arch}/remotix-net-move
+#    (packaging/arch/build.sh checks they are byte-identical).
+set -u
+S=/var/lib/remotix
+N=$S/net
+
+say() {
+	echo "remotix: $*"
+	logger -t remotix-package -- "$*" 2>/dev/null || :
+}
+
+if ! getent passwd remotix >/dev/null; then
+	say "⛔ the system user remotix is missing (systemd-sysusers remotix.conf): nothing moved"
+	exit 1
+fi
+if [ -L "$N" ] || { [ -e "$N" ] && [ ! -d "$N" ]; }; then
+	say "⛔ $N is not a directory: nothing moved"
+	exit 1
+fi
+install -d -m 0755 -o root -g root "$S" || exit 1
+install -d -m 0700 -o remotix -g remotix "$N" || exit 1
+
+if [ -d "$S/certificates" ] && [ ! -L "$S/certificates" ]; then
+	# ⚠ rpm lays down net/certificates (its %dir) BEFORE %post, empty: an empty target
+	#   is not «already there» (`[M]` 16 Oct 2026, fedora44 1.0.0-1 → 1.4.99-7: the move was
+	#   refused, and the old package's erase then deleted its %ghost page.key and page.pem).
+	if [ -d "$N/certificates" ] && [ ! -L "$N/certificates" ] && [ -z "$(ls -A "$N/certificates")" ]; then
+		rmdir "$N/certificates" || exit 1
+	fi
+	if [ -e "$N/certificates" ]; then
+		say "⚠ both $S/certificates and $N/certificates exist: the old one is left where it is, not merged"
+	else
+		if [ -e "$S/certificates/page.pem" ] && [ ! -e "$S/certificates/page.ours" ]; then
+			say "the administrator's own page.pem/page.key move to $N/certificates and are given to remotix"
+		fi
+		mv "$S/certificates" "$N/certificates" || exit 1
+		say "moved $S/certificates to $N/certificates (1.0 → 1.5)"
+	fi
+fi
+for f in ban ban.new; do
+	if [ -f "$S/$f" ] && [ ! -L "$S/$f" ]; then
+		if [ -e "$N/$f" ]; then
+			say "⚠ both $S/$f and $N/$f exist: the old one is left where it is"
+		else
+			mv "$S/$f" "$N/$f" || exit 1
+			say "moved $S/$f to $N/$f (1.0 → 1.5)"
+		fi
+	fi
+done
+
+# ⛔ Owners and modes are NOT set here (review 3, F1): on a 1.5 → 1.5.x upgrade
+#    the OLD network side (uid remotix) still runs while this script runs, and
+#    remotix owns $N — a `find … -exec chown -h/chmod` over it can be raced
+#    (a directory swapped for a link to / between the walk and the exec ⇒
+#    `chmod 0700 /`, a planted name ⇒ `chown remotix /etc/shadow`).  The
+#    package's scripts run `systemd-tmpfiles --create remotix.conf` right after
+#    this one: its `Z`/`z` lines walk by descriptor with O_NOFOLLOW and refuse
+#    hard links, which is the safe road.
+
+# ⛔ An administrator's certificate kept as LINKS (review 3, F2: /etc/letsencrypt/
+#    live/<host>/… is the usual case) is read by remotix through the link: if
+#    remotix cannot read the target, the network side does not start.
+for f in page.pem page.key; do
+	l="$N/certificates/$f"
+	[ -L "$l" ] || continue
+	t=$(readlink -f -- "$l" 2>/dev/null || echo "?")
+	if command -v runuser >/dev/null 2>&1 && runuser -u remotix -- test -r "$l" 2>/dev/null; then
+		say "⚠ $l is a link to $t: remotix can read it today — a renewal that changes the target's owner or mode will stop the network side"
+	else
+		say "⛔⛔ $l is a link to $t, which the user remotix CANNOT read: the network side will NOT start.  Fix: copy the files in (install -m 0600 -o remotix -g remotix \"$t\" \"$l.new\" && mv \"$l.new\" \"$l\" for page.pem and page.key), and on renewal do the same from a deploy hook (certbot: /etc/letsencrypt/renewal-hooks/deploy/), then systemctl try-restart remotix"
+	fi
+done
+exit 0

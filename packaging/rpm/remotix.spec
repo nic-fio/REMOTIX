@@ -33,6 +33,11 @@
 # ⛔ The package NEVER adds repositories (RPM Fusion, Packman, EPEL): §4.2
 #    rule 2 and D5.  The installation engine will do it, with consent.
 
+# ⭐ DECISIONS-11.md §11.50, PHASE F — the network side's user, directories, unit, SELinux domain and the 1.0 → 1.5 move.
+#    ⛔ OFF by default: `rpmbuild --with split` (build-rpm.sh: RX_SPLIT=1) switches them on.  They are useless — and
+#    the new paths would BREAK the 1.5 of today — until phase D (the split in main.c/child.c/helper.c) exists.
+%bcond_with split
+
 %global ngtcp2_ver  1.25.0
 %global nghttp3_ver 1.18.0
 # ⭐ DECISIONI §10.43: our labwc, RHEL / Alma 10 only — the version of packaging/rpm/labwc/VERSIONS
@@ -141,6 +146,16 @@ Provides:       bundled(nghttp3) = %{nghttp3_ver}
 #    manager pulls it in ONLY where the «targeted» policy exists: Fedora,
 #    Alma, openSUSE (Tumbleweed and Leap 16 are enforcing by default).
 %global selinuxtype targeted
+%if %{with split}
+# the system user `remotix` (remotix.sysusers), created in %%pre — before rpm lays the files it owns.  openSUSE: its own
+# macros (sysuser-tools); Fedora/Alma: systemd-sysusers from %%pre.
+%if 0%{?suse_version}
+BuildRequires:  sysuser-tools
+%sysusers_requires
+%else
+Requires(pre):  /usr/bin/systemd-sysusers
+%endif
+%endif
 BuildRequires:  selinux-policy-devel
 BuildRequires:  bzip2
 Requires:       (%{name}-selinux = %{version}-%{release} if selinux-policy-%{selinuxtype})
@@ -311,7 +326,14 @@ labwc-build/b/labwc --version
 #   builds the module with the domain in «permissive»: to MEASURE the denials of a
 #   whole session in a single run.  ⛔ Never in a published package.
 cd packaging/rpm/selinux
+%if %{with split}
+# PHASE F: the module with the network side's domain (remotix_net_t) and the net/ labels
+cp remotix.te.split remotix.te
+cp remotix.fc.split remotix.fc
+%{?rx_selinux_permissive:printf 'permissive remotix_t;\npermissive remotix_net_t;\n' >> remotix.te}
+%else
 %{?rx_selinux_permissive:echo 'permissive remotix_t;' >> remotix.te}
+%endif
 make -f %{_datadir}/selinux/devel/Makefile remotix.pp
 bzip2 -9 remotix.pp
 cd ../../..
@@ -333,6 +355,17 @@ printf '{"format":"remotix-linked/1","ngtcp2":"%s","nghttp3":"%s","source":"pkg-
     > %{buildroot}%{_datadir}/remotix/linked.json
 install -D -m 0644 packaging/rpm/remotix.service %{buildroot}%{_unitdir}/remotix.service
 install -D -m 0644 packaging/rpm/remotix.tmpfiles %{buildroot}%{_tmpfilesdir}/remotix.conf
+%if %{with split}
+# PHASE F (§11.50): the split's unit and directories replace the two above; the user and the 1.0 → 1.5 move come with it
+install -D -m 0644 packaging/rpm/remotix.service.split %{buildroot}%{_unitdir}/remotix.service
+install -D -m 0644 packaging/rpm/remotix.tmpfiles.split %{buildroot}%{_tmpfilesdir}/remotix.conf
+install -D -m 0755 packaging/rpm/remotix-net-move %{buildroot}%{_libexecdir}/remotix/remotix-net-move
+install -D -m 0644 packaging/rpm/remotix.sysusers %{buildroot}%{_sysusersdir}/remotix.conf
+%if 0%{?suse_version}
+# openSUSE's way for a system user (sysuser-tools): remotix.pre, used by %%pre -f
+%sysusers_generate_pre packaging/rpm/remotix.sysusers remotix remotix.conf
+%endif
+%endif
 install -D -m 0644 src/%{pamsorgente} %{buildroot}%{pamdir}/remotix
 
 # /etc/remotix: who is excluded (the PAM has onerr=fail: without the file nobody
@@ -375,11 +408,20 @@ install -D -m 0644 packaging/rpm/selinux/remotix_portcon.cil %{buildroot}%{_data
 # transport.c) and `log-secret` (the key of the log tags of unknown user names, made by
 # rcp.c next to it, 0600): `[M]` T10 on 15 Oct 2026 fedora44/alma10/tumbleweed/leap16 found
 # quic-secret left behind, with certificates/ and /var/lib/remotix, after `uninstall --purge`.
+%if %{with split}
+# PHASE F (§11.50): they live in net/, the network side's, owned by remotix
+install -d -m 0700 %{buildroot}%{_sharedstatedir}/remotix/net/certificates
+for f in page.pem page.key page.ours session.pem session.key session.ours quic-secret log-secret log-secret.new; do
+    touch %{buildroot}%{_sharedstatedir}/remotix/net/certificates/$f
+done
+touch %{buildroot}%{_sharedstatedir}/remotix/net/ban %{buildroot}%{_sharedstatedir}/remotix/net/ban.new
+%else
 install -d -m 0700 %{buildroot}%{_sharedstatedir}/remotix/certificates
 for f in page.pem page.key page.ours session.pem session.key session.ours quic-secret log-secret log-secret.new; do
     touch %{buildroot}%{_sharedstatedir}/remotix/certificates/$f
 done
 touch %{buildroot}%{_sharedstatedir}/remotix/ban %{buildroot}%{_sharedstatedir}/remotix/ban.new
+%endif
 # 1.5 (DECISIONS-11 §11.4): the record of the card grants (render_grant.c) and its temporary file
 touch %{buildroot}%{_sharedstatedir}/remotix/render-grants %{buildroot}%{_sharedstatedir}/remotix/render-grants.new
 
@@ -392,7 +434,24 @@ touch %{buildroot}%{_sharedstatedir}/remotix/render-grants %{buildroot}%{_shared
 #   · no belts, no firewall, no `systemctl reload systemd-logind`.
 #   systemd rereads new units by itself (systemd's file triggers).
 
+%if %{with split}
+%if 0%{?suse_version}
+%pre -f remotix.pre
+%else
+%pre
+# PHASE F (§11.50): the system user, before the files it owns are laid down.
+echo 'u remotix - "REMOTIX network side" / /usr/sbin/nologin' | \
+	systemd-sysusers --replace=%{_sysusersdir}/remotix.conf - || :
+%endif
+%endif
+
 %post
+# ⭐ PHASE F (§11.50) — the 1.0 → 1.5 move of certificates/ and ban into /var/lib/remotix/net, given to remotix, BEFORE the
+#   tmpfiles line and the %%postun try-restart.  INERT unless the package carries remotix-net-move (a `--with split` build).
+#   ⛔ A failure is said, never fails the transaction.
+if [ -x %{_libexecdir}/remotix/remotix-net-move ]; then
+    %{_libexecdir}/remotix/remotix-net-move || echo "remotix: ⚠ the move into /var/lib/remotix/net is incomplete" >&2
+fi
 # Only the /var/lib/remotix directory (0700), which rpm already creates with %%dir: inert.
 %tmpfiles_create remotix.conf
 
@@ -421,7 +480,8 @@ touch %{buildroot}%{_sharedstatedir}/remotix/render-grants %{buildroot}%{_shared
 # the .tmp.<pid> has a name that changes).  Without this, certificates/ and /var/lib/remotix
 # would stay.  rmdir only removes a folder that is EMPTY: nothing the administrator put there goes.
 if [ "$1" -eq 0 ]; then
-    rm -f %{_sharedstatedir}/remotix/certificates/quic-secret.tmp.*
+    rm -f %{_sharedstatedir}/remotix/certificates/quic-secret.tmp.* %{_sharedstatedir}/remotix/net/certificates/quic-secret.tmp.*
+    rmdir %{_sharedstatedir}/remotix/net/certificates %{_sharedstatedir}/remotix/net 2>/dev/null || :
     rmdir %{_sharedstatedir}/remotix/certificates 2>/dev/null || :
     rmdir %{_sharedstatedir}/remotix 2>/dev/null || :
 fi
@@ -469,6 +529,30 @@ fi
 %dir %{_prefix}/lib/firewalld/services
 %endif
 %{_prefix}/lib/firewalld/services/remotix.xml
+%if %{with split}
+# ⛔ PHASE F (§11.50): rpm re-applies these owners and modes at EVERY upgrade, so they must be the ones remotix-net-move and
+#    tmpfiles set: a root %%attr here would undo the move.  /var/lib/remotix stays root's (0755: remotix reaches net/ through it).
+%{_sysusersdir}/remotix.conf
+%{_libexecdir}/remotix/remotix-net-move
+%ghost %dir %attr(0755,root,root) /run/remotix
+%ghost %dir %attr(0700,remotix,remotix) /run/remotix/net
+%dir %attr(0755,root,root) %{_sharedstatedir}/remotix
+%dir %attr(0700,remotix,remotix) %{_sharedstatedir}/remotix/net
+%dir %attr(0700,remotix,remotix) %{_sharedstatedir}/remotix/net/certificates
+%ghost %attr(0644,remotix,remotix) %{_sharedstatedir}/remotix/net/certificates/page.pem
+%ghost %attr(0600,remotix,remotix) %{_sharedstatedir}/remotix/net/certificates/page.key
+%ghost %attr(0644,remotix,remotix) %{_sharedstatedir}/remotix/net/certificates/session.pem
+%ghost %attr(0600,remotix,remotix) %{_sharedstatedir}/remotix/net/certificates/session.key
+%ghost %attr(0644,remotix,remotix) %{_sharedstatedir}/remotix/net/certificates/page.ours
+%ghost %attr(0644,remotix,remotix) %{_sharedstatedir}/remotix/net/certificates/session.ours
+%ghost %attr(0600,remotix,remotix) %{_sharedstatedir}/remotix/net/certificates/quic-secret
+%ghost %attr(0600,remotix,remotix) %{_sharedstatedir}/remotix/net/certificates/log-secret
+%ghost %attr(0600,remotix,remotix) %{_sharedstatedir}/remotix/net/certificates/log-secret.new
+%ghost %attr(0600,remotix,remotix) %{_sharedstatedir}/remotix/net/ban
+%ghost %attr(0600,remotix,remotix) %{_sharedstatedir}/remotix/net/ban.new
+%ghost %attr(0600,root,root) %{_sharedstatedir}/remotix/render-grants
+%ghost %attr(0600,root,root) %{_sharedstatedir}/remotix/render-grants.new
+%else
 %ghost %dir %attr(0700,root,root) /run/remotix
 %dir %attr(0700,root,root) %{_sharedstatedir}/remotix
 %dir %attr(0700,root,root) %{_sharedstatedir}/remotix/certificates
@@ -485,6 +569,7 @@ fi
 %ghost %attr(0600,root,root) %{_sharedstatedir}/remotix/ban.new
 %ghost %attr(0600,root,root) %{_sharedstatedir}/remotix/render-grants
 %ghost %attr(0600,root,root) %{_sharedstatedir}/remotix/render-grants.new
+%endif
 
 # ⭐ remotix-selinux: the scriptlets are the policy's (like cockpit-ws-selinux).
 #   The module is just loaded: it switches nothing on (R40).  The relabelling
