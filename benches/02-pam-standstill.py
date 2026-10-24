@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+# ⚠ NOTE (25 Oct 2026, D4b of DECISIONS-11.md §11.50) — the "healthy -> fault -> healed" certification of this bench needs
+#   `02-pam-start.sh`'s fault (asynchronous hook not connected = the old synchronous fallback, a stalled wire), and that fault
+#   no longer exists: the fallback is gone, such a server refuses every login with 0x0E.  `02-pam-start.sh` also uses the
+#   names of an older tree (see its note) and does not run on today's tree.  The healthy half (how long the others stand still
+#   while a third party presents wrong credentials) is still valid against a server started by hand.
 """02-pam-standstill.py — ⛔ HOW LONG WHOEVER IS **NOT** AUTHENTICATING STANDS STILL.
 
     python3 02-pam-standstill.py --port 7531 --password-file F --rounds 5

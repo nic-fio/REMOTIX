@@ -1,4 +1,10 @@
 #!/bin/bash
+# ⚠ NOTE (25 Oct 2026, D4b of DECISIONS-11.md §11.50) — THIS SCRIPT DOES NOT RUN ON TODAY'S TREE.
+#   Its fault injector looks for the anchor "if (w->aiuto) g.chiedi_verifica = gancio_chiedi;" — the Italian names of the tree it
+#   was written for; today's webtransport.c has "if (w->help) g.ask_verify = hook_ask;" — so it stops with «the anchor is not
+#   unique (0 times)».  And the SYMPTOM it certifies has changed: the synchronous PAM fallback is gone, so a server
+#   whose asynchronous hook is not connected no longer stalls the wire, it refuses every login with 0x0E (not counted).
+#   To use it again: rename the anchor, and make `02-pam-standstill.py`'s «fault» phase expect 0x0E instead of a stall.
 #
 # 02-pam-start.sh — ⛔ IT RUNS INSIDE THE CONTAINER.  It switches on THIS BENCH'S
 # TARGET: a copy of the product on port 7531, with ban, socket,

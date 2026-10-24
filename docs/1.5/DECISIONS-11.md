@@ -1644,7 +1644,22 @@ behaviour (`pam_faillock(8)`, `faillock.conf(5)`); ⚠ **not run live** — `[?]
 
 ### 11.50 ✅ §11.11: the shape of the split, the closed list, and the user's choices (16 Oct 2026)
 
-> ⚠ NOT in this tree; still to port: the whole section — no root side / network side split exists in this code
+> ⚠ NOT in this tree as a running split: the product is still ONE process. Steps D1-D4b of the port (the hooks) are on the branches
+> `port-rootside-D` (child birth, render grant) and `port-rootside-D3` (the PAM helper, below); the root side itself is on
+> `port-rootside`, the walls on `port-rootside-mura`; `main.c` in two halves (D6) is still to do.
+>
+> ⭐ **D3 / D4b, ported on `port-rootside-D3` (to be built and tested):**
+> - The PAM dispatcher is **re-executed** (`/proc/self/exe --pam-helper`, fresh memory image, descriptors above 3 closed) and
+>   **restarted with a doubling pause** (1 s … 60 s; loud after 5 deaths in a row) by `helper_expired()`, the watchdog.
+>   While it is down the logins are refused as ours.
+> - **Root form** (`helper_turn_on_root`, `helper_ask_bare`, `HelperOutcome`): every request ends in ONE callback: 1 admitted, 0
+>   refused, 2 refused while `pam_faillock` held the account, **3 not checked** (the dispatcher's cap of 2×16, a failed `fork`
+>   there, the dispatcher dead or down — our defect, never counted), **4 expired** (no answer in 8 s: it COUNTS as a failed
+>   attempt, the 24 Oct 2026 decision).
+> - **The synchronous PAM fallback is GONE** (a deliberate change): with no helper, or its hook missing, the login is refused
+>   `0x0E`, not counted, booking released (`login_release`); `hook_verify`/`rcp_hooks.verify` removed, and `rcp_refusal_unchecked(ticket)`
+>   brackets the delivery of «not checked» so `rcp.c` turns it into `refusal_is_ours` (same road as `rcp_verdict_lost`).
+>   In the single-process product «not checked» also travels as `lost=true`.
 
 - **The user's rulings** (16 Oct 2026, to the questions put after the inventory of the root operations — seven
   reports, one per area: network side, PAM, desktop birth, the per-session child, cards and input, packaging,
@@ -1708,6 +1723,8 @@ behaviour (`pam_faillock(8)`, `faillock.conf(5)`); ⚠ **not run live** — `[?]
   passes it to the network side, waits for its farewell (0x0c) up to 5 s, then exits.
 - **Removed**: the synchronous PAM fallback in the network process (`webtransport.c` `hook_verify` →
   `authentication.c`): as `remotix` it would refuse every right password and count it towards the ban.
+  ⭐ *Done in step D4b on `port-rootside-D3`, in the single-process product too (not only in the network side): with no helper
+  the login is `0x0E`, not counted.*
 - **Kept byte-identical** (benches read them): the log lines «PAM helper started: pid N», «child spawned for…»,
   «I AM MAKING IT BE BORN», «is in the card's groups», «FOUND AGAIN», «graphical session is over», under the same
   `-t remotix`.
