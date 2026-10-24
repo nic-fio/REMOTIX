@@ -8111,10 +8111,15 @@ static int open_session(wt *w, request *r)
 	 *    (`bare_response`, a 4xx that ends the stream) and the first session
 	 *    and the deadline are not touched. */
 	if (w->session != -1) {
-		log_says_of(REG_WT, wt_chi(w),
+		/* ⚠ Chatter, not a normal line (a stranger chooses how many), and it
+		 *   counts as a stray request: past WT_PRELOGIN_REQUESTS_MAX the
+		 *   connection that never logged in is closed (holistic review, 15 Oct). */
+		log_detail_of(REG_WT, wt_chi(w),
 		                 "⛔ second WebTransport session REFUSED on stream %ld "
 		                 "(the session is %ld): 429",
 		                 (long)r->id, (long)w->session);
+		if (prelogin_excess(w, false))
+			return NGHTTP3_ERR_CALLBACK_FAILURE;
 		return bare_response(w, r->id, "429");
 	}
 
@@ -8134,17 +8139,10 @@ static int open_session(wt *w, request *r)
 			return NGHTTP3_ERR_CALLBACK_FAILURE;
 		return bare_response(w, r->id, "404");
 	}
-	/* ⛔ One session at a time, and a connection that never logged in gets
-	 *    `WT_PRELOGIN_SESSIONS_MAX` of them: closing the session and opening a
-	 *    new one on the same connection was a loop of HELLO/CREDENTIALS lines. */
-	if (w->session != -1) {
-		log_detail_of(REG_WT, wt_chi(w),
-		              "⛔ a second WebTransport session on a connection that has one "
-		              "(stream %ld): 404", (long)r->id);
-		if (prelogin_excess(w, false))
-			return NGHTTP3_ERR_CALLBACK_FAILURE;
-		return bare_response(w, r->id, "404");
-	}
+	/* ⛔ A connection that never logged in gets `WT_PRELOGIN_SESSIONS_MAX`
+	 *    sessions: closing the session and opening a new one on the same
+	 *    connection was a loop of HELLO/CREDENTIALS lines.  (A second session
+	 *    while one exists was refused above.) */
 	if (prelogin_excess(w, true))
 		return NGHTTP3_ERR_CALLBACK_FAILURE;
 
