@@ -123,7 +123,13 @@
 #define CANVAS_W 1920u
 #define CANVAS_H 1080u
 
-/* 1 for UDP, 1 for the TCP listener, the rest for the TCP connections. */
+/* The shutdown loops' small `poll` arrays.  ⛔ The MAIN loop's array is NOT
+ * this size any more (15 Oct 2026): it is allocated once at start-up from
+ * what can really be in it — 1 UDP + PAGE_MAX_DESCRIPTORS + 1 command + 1
+ * PAM helper + one per child (`rcp_cap()`, which `--session-cap` moves).
+ * With a fixed 64 the page alone could take 33 slots, and a raised
+ * `--session-cap` left the children after the 28th out of the `poll` —
+ * frozen in silence by whoever held 32 page connections. */
 #define MAX_POLL 64
 
 /* ⭐ §5.1 — how often the local graphical sessions are checked again.
@@ -1819,6 +1825,8 @@ int main(int argc, char **argv)
 	command *k = NULL;
 	helper *pam_help = NULL;  /* ⚠ not «help»: that name already belongs to the function that prints the usage */
 	children *offspring = NULL;
+	struct pollfd *loop_fds = NULL;
+	size_t loop_max = 0;
 	struct bridge bridge;
 	sentinel *guardian = NULL;
 	time_t last_cert_check;
@@ -2601,6 +2609,18 @@ int main(int argc, char **argv)
 	p = page_open(address, port, ctx_page, file_html, &cert);
 	if (!p)
 		goto fine;
+	/* ⛔ The main loop's `poll` array, sized on everything that can be in
+	 *    it (see MAX_POLL): nobody is left out of the `poll` because somebody
+	 *    else took the slots first. */
+	loop_max = 1 + PAGE_MAX_DESCRIPTORS + 1 + 1 + (size_t)rcp_cap();
+	loop_fds = calloc(loop_max, sizeof *loop_fds);
+	if (!loop_fds) {
+		registro_dice(LOG_STARTUP,
+		              "⛔ no memory for the loop's %zu descriptors "
+		              "(--session-cap %d): not starting",
+		              loop_max, rcp_cap());
+		goto fine;
+	}
 
 	registro_dice(LOG_STARTUP,
 	              "⭐ ready: https://%s:%s  —  the WebTransport session lives "
@@ -2610,7 +2630,7 @@ int main(int argc, char **argv)
 	last_cert_check = time(NULL);
 
 	while (!stop_requested) {
-		struct pollfd fds[MAX_POLL];
+		struct pollfd *fds = loop_fds;
 		size_t n = 0, npage, ncommand, nhelp, nchildren;
 		uint64_t t_now;
 		int64_t wait_ns;
@@ -2621,9 +2641,9 @@ int main(int argc, char **argv)
 		fds[n].revents = 0;
 		n++;
 
-		npage = page_descriptors(p, fds + n, MAX_POLL - n);
+		npage = page_descriptors(p, fds + n, loop_max - n);
 		ncommand = command_descriptors(k, fds + n + npage,
-		                               MAX_POLL - n - npage);
+		                               loop_max - n - npage);
 
 		/* ⭐ The PAM helper enters the `poll` like all the others, and that is
 		 *    all that is needed for the loop to no longer wait for anyone
@@ -2632,7 +2652,7 @@ int main(int argc, char **argv)
 		 *    between would shift the indices of two calls. */
 		nhelp = 0;
 		if (helper_descriptor(pam_help) >= 0
-		    && n + npage + ncommand < MAX_POLL) {
+		    && n + npage + ncommand < loop_max) {
 			size_t i = n + npage + ncommand;
 			fds[i].fd = helper_descriptor(pam_help);
 			fds[i].events = POLLIN;
@@ -2643,12 +2663,12 @@ int main(int argc, char **argv)
 		/* ⭐ And the children after the helper, for the same reason: the counts
 		 *    of whoever comes before are relative, and slotting them in between
 		 *    would shift the indices of three calls.  ⛔ And they are the last
-		 *    block for a reason of truth too: if `MAX_POLL` ran out, those left
+		 *    block for a reason of truth too: if `loop_max` ran out, those left
 		 *    out are the children — that is the video — and not the page or the
 		 *    authentication.  An ugly session is worth more than a closed
 		 *    session (invariant I1). */
 		nchildren = children_descriptors(offspring, fds + n + npage + ncommand + nhelp,
-		                           MAX_POLL - n - npage - ncommand - nhelp);
+		                           loop_max - n - npage - ncommand - nhelp);
 
 		wait_ns = transport_wait_ns(t);
 		/* ⛔ The page listener's deadlines wake the loop too (15 Oct 2026). */
@@ -2960,6 +2980,7 @@ fine:
 	sentinel_close(guardian);
 	command_close(k);
 	page_close(p);
+	free(loop_fds);
 	transport_close(t);
 	/* ⛔ The children are shut down AFTER the transport: as long as a
 	 *    connection is alive there may be a frame in the queue, and its bytes

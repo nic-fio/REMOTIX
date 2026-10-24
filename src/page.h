@@ -64,6 +64,12 @@
 
 typedef struct page page;
 
+/* The most connections the listener holds at once, and so the most
+ * descriptors `page_descriptors()` can put in (the listener plus the
+ * clients): main.c sizes its `poll` array on it. */
+#define PAGE_MAX_CLIENTS 32
+#define PAGE_MAX_DESCRIPTORS (PAGE_MAX_CLIENTS + 1)
+
 page *page_open(const char *address, const char *port, SSL_CTX *ctx,
                     const char *file_html, const certificates *cert);
 void page_close(page *p);

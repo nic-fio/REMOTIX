@@ -18,7 +18,7 @@
 
 #include <openssl/err.h>
 
-#define MAX_CLIENTS 32
+#define MAX_CLIENTS PAGE_MAX_CLIENTS
 /* ⛔⭐ THE TCP LISTENER'S CLOCKS AND CAPS — 15 Oct 2026, a pre-login denial
  *     of service.  Before these lines a slot was freed ONLY by activity on its
  *     socket: 32 TCP connections that send nothing took all 32 slots for ever,
@@ -661,7 +661,12 @@ static void refusals_report(page *p, uint64_t now)
 
 static void accept_page(page *p)
 {
-	for (;;) {
+	/* ⚠ At most MAX_CLIENTS accepts per call (refused ones included): a
+	 *   backlog that refills as fast as it is drained would otherwise keep
+	 *   the whole loop — QUIC, the children, PAM — inside this function.
+	 *   What is left stays in the backlog, and the `poll` (level-triggered)
+	 *   calls again at the next pass. */
+	for (int round = 0; round < MAX_CLIENTS; round++) {
 		struct sockaddr_storage da;
 		socklen_t dalen = sizeof da;
 		int fd, same = 0;
