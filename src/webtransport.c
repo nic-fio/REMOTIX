@@ -6327,6 +6327,15 @@ size_t wt_watch_locals(void)
 
 			if (!w->rcp || w->closing >= 0)
 				continue;
+			/* ⛔ Only sessions that LOGGED IN (review of eab9623a): the name
+			 *    is set at CREDENTIALS, and a login still waiting for its
+			 *    verdict sent away with 0x04 would skip the fixed second,
+			 *    tell a guesser without the password that the account exists
+			 *    and is logged in locally (§4.4), and lose its «no».  It gets
+			 *    REJECTED at the fixed second, or ADMITTED — and then the next
+			 *    sweep sends it away with 0x04. */
+			if (!rcp_logged_in(w->rcp))
+				continue;
 			my = rcp_user(w->rcp);
 			if (!my || !my[0])
 				continue;
