@@ -1077,20 +1077,20 @@ static char *host_wanted_path(void)
 	return folder ? g_build_filename(folder, "wanted", NULL) : NULL;
 }
 
-static void host_wanted_write(uint32_t width, uint32_t height)
+/* ⚠ The caller says the failure, on ITS channel: `--kwin-nested` is a process
+ *   of its own whose voice is `g_printerr` (the journal), not `registro_dice`. */
+static bool host_wanted_write(uint32_t width, uint32_t height, GError **mistake)
 {
 	g_autofree char *fpath = host_wanted_path();
 	g_autofree char *text = NULL;
-	g_autoptr(GError) mistake = NULL;
 
-	if (!fpath)
-		return;
+	if (!fpath) {
+		g_set_error(mistake, G_IO_ERROR, G_IO_ERROR_NOT_FOUND,
+		            "XDG_RUNTIME_DIR missing");
+		return false;
+	}
 	text = g_strdup_printf("%u %u\n", width, height);
-	if (!g_file_set_contents(fpath, text, -1, &mistake))
-		registro_dice(AREA,
-		              "⚠ nested KWin: the wanted size %ux%u is NOT written (%s): a "
-		              "labwc that loses it will not be brought back at the next mount",
-		              width, height, mistake->message);
+	return g_file_set_contents(fpath, text, -1, mistake);
 }
 
 static bool host_wanted_read(uint32_t *width, uint32_t *height)
@@ -1343,8 +1343,15 @@ int kwin_nested_alive(int argc, char **argv)
 		g_printerr("remotix --kwin-nested: %s\n", mistake->message);
 		return 1;
 	}
-	/* the size the desktop is born at: `kwin_host_settle()` holds labwc to it */
-	host_wanted_write((uint32_t)width, (uint32_t)height);
+	/* the size the desktop is born at: `kwin_host_settle()` holds labwc to it.
+	 * ⭐ Written BEFORE it is obtained: at birth it is the declared intent. */
+	if (!host_wanted_write((uint32_t)width, (uint32_t)height, &mistake)) {
+		g_printerr("remotix --kwin-nested: ⚠ the wanted size %lux%lu is NOT written "
+		           "(%s): a labwc that loses it will not be brought back at the first "
+		           "mount\n",
+		           width, height, mistake->message);
+		g_clear_error(&mistake);
+	}
 
 	labwc = fork();
 	if (labwc < 0) {
@@ -1494,18 +1501,23 @@ static void mode_global(void *d, struct wl_registry *r, uint32_t name, const cha
 static void mode_global_away(void *d, struct wl_registry *r, uint32_t name) {}
 static const struct wl_registry_listener MODE_REGISTRY = { mode_global, mode_global_away };
 
-static bool host_resize(uint32_t width, uint32_t height, double wait_s, GError **mistake);
+static bool host_resize(uint32_t width, uint32_t height, double wait_s, bool remember,
+                        GError **mistake);
 
 bool kwin_host_resize(uint32_t width, uint32_t height, double wait_s,
                         GError **mistake)
 {
-	/* ⭐ a reattach's size becomes the one the host must keep */
-	if (kwin_host_exists())
-		host_wanted_write(width, height);
-	return host_resize(width, height, wait_s, mistake);
+	/* ⭐ a reattach's size becomes the one the host must keep — once labwc
+	 *   has TAKEN it (see `remember`) */
+	return host_resize(width, height, wait_s, true, mistake);
 }
 
-static bool host_resize(uint32_t width, uint32_t height, double wait_s, GError **mistake)
+/* `remember`: write the size down as the wanted one, but only once labwc has
+ * been read back at it.  ⛔ Not before: a size labwc cannot reach, written
+ * down, would cost every later mount the settle's wait and nudge (~4 s) for
+ * nothing.  (The birth writes it before: there it is the declared intent.) */
+static bool host_resize(uint32_t width, uint32_t height, double wait_s, bool remember,
+                        GError **mistake)
 {
 	g_autofree char *display = kwin_host_display();
 	struct wl_display *kwin;
@@ -1513,6 +1525,7 @@ static bool host_resize(uint32_t width, uint32_t height, double wait_s, GError *
 	struct wl_output *output = NULL;
 	Mode m = { 0, 0 };
 	char socket[64];
+	bool listening = false;
 	gint64 t0 = g_get_monotonic_time(), expiry;
 
 	if (!kwin_host_exists()) {
@@ -1524,6 +1537,15 @@ static bool host_resize(uint32_t width, uint32_t height, double wait_s, GError *
 	}
 	if (!host_ask_size(display, width, height, mistake))
 		return false;
+	if (remember) {
+		g_autoptr(GError) why = NULL;
+
+		if (!host_wanted_write(width, height, &why))
+			registro_dice(AREA,
+			              "⚠ nested KWin: the wanted size %ux%u is NOT written (%s): a "
+			              "labwc that loses it will not be brought back at the next mount",
+			              width, height, why->message);
+	}
 
 	kwin = kwin_display_open(socket, sizeof socket);
 	if (!kwin) {
@@ -1534,14 +1556,18 @@ static bool host_resize(uint32_t width, uint32_t height, double wait_s, GError *
 	}
 	reg = wl_display_get_registry(kwin);
 	wl_registry_add_listener(reg, &MODE_REGISTRY, &output);
-	wl_display_roundtrip(kwin);
-	if (output)
-		wl_output_add_listener(output, &MODE_LISTENER, &m);
 	/* ⚠ KWin throttles the host's configure by one refresh period
 	 *   (`wayland_output.cpp`, `m_configureThrottleTimer`): the new mode
-	 *   arrives a few milliseconds after labwc's, and it is waited for. */
+	 *   arrives a few milliseconds after labwc's, and it is waited for.
+	 * ⚠ And a KWin just born may not have announced its output yet: that
+	 *   too is waited for, within the same limit. */
 	expiry = t0 + (gint64)(wait_s * 1e6);
-	while (output && wl_display_roundtrip(kwin) >= 0) {
+	while (wl_display_roundtrip(kwin) >= 0) {
+		if (output && !listening) {
+			wl_output_add_listener(output, &MODE_LISTENER, &m);
+			listening = true;
+			continue; /* the next roundtrip brings its mode */
+		}
 		if (m.l == width && m.a == height)
 			break;
 		if (g_get_monotonic_time() >= expiry)
@@ -1552,10 +1578,17 @@ static bool host_resize(uint32_t width, uint32_t height, double wait_s, GError *
 		wl_output_destroy(output);
 	wl_registry_destroy(reg);
 	wl_display_disconnect(kwin);
+	if (!listening) {
+		/* ⛔ not TIMED_OUT: a nudge of labwc cannot make KWin announce one */
+		g_set_error(mistake, G_IO_ERROR, G_IO_ERROR_NOT_INITIALIZED,
+		            "the host is at %ux%u but KWin has announced no output after %.1f s",
+		            width, height, (g_get_monotonic_time() - t0) / 1e6);
+		return false;
+	}
 	if (m.l != width || m.a != height) {
 		g_set_error(mistake, G_IO_ERROR, G_IO_ERROR_TIMED_OUT,
 		            "the host is at %ux%u but KWin's output is %ux%u after %.1f s",
-		            width, height, m.l, m.a, wait_s);
+		            width, height, m.l, m.a, (g_get_monotonic_time() - t0) / 1e6);
 		return false;
 	}
 	registro_dice(AREA,
@@ -1599,7 +1632,7 @@ bool kwin_host_settle(double wait_s, GError **mistake)
 		              "or the desktop would stay at the wrong size",
 		              l, a, wl, wa);
 	/* same size ⇒ no request leaves (`wlr_ask_size`: UNCHANGED); only the wait */
-	if (host_resize(wl, wa, wait_s, &why))
+	if (host_resize(wl, wa, wait_s, false, &why))
 		return true;
 	/*
 	 * ⚠ labwc is at the size but KWin did not follow: labwc sends a configure
@@ -1613,8 +1646,8 @@ bool kwin_host_settle(double wait_s, GError **mistake)
 		              "window is configured again",
 		              why->message, wl, wa - 8, wl, wa);
 		g_clear_error(&why);
-		(void)host_resize(wl, wa - 8, 1.0, NULL);
-		if (host_resize(wl, wa, wait_s, &why))
+		(void)host_resize(wl, wa - 8, 1.0, false, NULL);
+		if (host_resize(wl, wa, wait_s, false, &why))
 			return true;
 	}
 	g_propagate_error(mistake, g_steal_pointer(&why));
