@@ -134,7 +134,7 @@ S2 = p("The server makes its own certificates — two of them, on purpose (" + c
       "protect against. They do not defend against that. What they do is what the browser can still enforce against "
       "everyone else: no other site can frame the page, a future injection bug cannot load scripts, images, workers, "
       "fonts or objects from another origin nor change the base of the URLs, the address of the box does not leak in a "
-      "Referer, and the page cannot ask for devices it never uses. ⚠ It is not a wall against injection: an injected "
+      "Referer, and the page cannot ask for devices it never uses. <b>It is not a wall against injection:</b> an injected "
       "inline script would still run (" + c("'unsafe-inline'") + "), and as long as " + c("connect-src") + " carries "
       + c("https:") + " it could reach any HTTPS origin. The trust anchor stays the certificate fingerprint (" + rif("Authentication with PAM") + ").") + \
     warn("QUIC address validation with Retry is not done (" + c("transport.c") + ", the QUIC transport): «the product is used on its own "
