@@ -1870,6 +1870,8 @@ behaviour (`pam_faillock(8)`, `faillock.conf(5)`); ⚠ **not run live** — `[?]
     never left (helper off, socket full, 16 already in flight) and, decided by the project lead on 24 Oct 2026, **the PAM
     helper dying** with requests in flight (`lost`, with a live session or with the connection gone). The helper's own
     8 s timeout and the 12 s ceiling still count as failures. This reverses the earlier rule that a timeout never counts.
+    The 12 s double case (the ceiling in `rcp_time()` and the late verdict) also applies to the **release of a lost verdict**: it can
+    release another booking of the same pair (key, user). Harmless: at most one extra attempt.
     The name and address of the request in flight travel with EVERY delivery of `helper.c` (answered, expired, dead
     helper): without the address a verdict whose connection is gone cannot be resolved and the booking would stay in
     flight for ever.
