@@ -19,7 +19,9 @@
  *   L3  stderr a pipe nobody reads: the same;
  *   L4  --journal with the native send failing (no journald here) and
  *       JOURNAL_STREAM naming stderr: the fallback does not wait either;
- *   L5  fd 2 redirected to a file afterwards: the lines go to the file.
+ *   L5  fd 2 redirected to a file afterwards: the lines go to the file;
+ *   L6  a value with a newline, CR, tab, ESC: one line, each control byte `?`;
+ *   L7  a child writing to the same stream between our lines: nothing spliced.
  *
  * ⚠ On a log.c that writes stderr with a plain write(2), L1 blocks: an
  *   alarm turns that into «BLOCKED» and exit 1.
@@ -42,7 +44,7 @@
 #include <unistd.h>
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 12
+#define EXPECTED_CHECKS 14
 #define LINES 4000
 
 static void require(int cond, const char *desc)
@@ -231,7 +233,71 @@ int main(void)
 		n = pread(fd, buf, sizeof buf - 1, 0);
 		buf[n > 0 ? n : 0] = '\0';
 		require(n > 0 && strstr(buf, "into the file"), "L5 the line went to the new fd 2");
+
+		/* L6 (holistic review, 15 Oct 2026): a value carrying a newline
+		 * cannot forge a second line; control bytes become `?`, UTF-8 stays. */
+		{
+			off_t at = lseek(fd, 0, SEEK_END);
+			int lines = 0;
+			registro_dice(LOG_PAGE, "GET %s from x ⭐",
+			              "/\n14:00:00.000 rcp     [owner] ⭐ ADMITTED\r\t\x1b[2J");
+			n = pread(fd, buf, sizeof buf - 1, at);
+			buf[n > 0 ? n : 0] = '\0';
+			for (ssize_t k = 0; k < n; k++)
+				lines += buf[k] == '\n';
+			require(n > 0 && lines == 1 && buf[n - 1] == '\n' &&
+			                strstr(buf, "GET /?14:00:00.000 rcp     [owner] ⭐ ADMITTED???[2J from x ⭐\n"),
+			        "L6 a newline, CR, tab and ESC in a value: ONE line, each byte a `?`, UTF-8 kept");
+		}
 		unlink(path);
+	}
+
+	/* L7 (independent review of 16b75f33): a line the stream socket takes
+	 * only in part must not have its rest spliced in after ANOTHER writer's
+	 * line (a child writing to the same journald stream). */
+	printf("L7 a child writes to the same stream between our lines\n");
+	{
+		int sp[2], bad = 0, nlines = 0, sb = 1;
+		static char got[1 << 22];
+		size_t ng = 0;
+		/* longer than half the smallest send buffer: the kernel splits it
+		 * in two pieces, and the second may not fit */
+		char fill[3000];
+
+		memset(fill, 'f', sizeof fill - 1);
+		fill[sizeof fill - 1] = 0;
+		socketpair(AF_UNIX, SOCK_STREAM, 0, sp);
+		setsockopt(sp[0], SOL_SOCKET, SO_SNDBUF, &sb, sizeof sb);
+		dup2(sp[0], STDERR_FILENO);
+		for (int i = 0; i < 2000; i++) {
+			registro_dice(LOG_STARTUP, "L7 %d %s", i, fill);
+			/* the reader catches up now and then — and the child writes
+			 * right after it, before our next line */
+			if (i % 7 == 6)
+				ng += drain(sp[1], got + ng, sizeof got - ng - 1);
+			if (send(sp[0], "CHILD\n", 6, MSG_DONTWAIT | MSG_NOSIGNAL) < 0)
+				(void)0;
+		}
+		registro_dice(LOG_STARTUP, "L7 the last");
+		ng += drain(sp[1], got + ng, sizeof got - ng - 1);
+		got[ng] = 0;
+		for (char *l = got, *e; *l; l = e + 1) {
+			e = strchr(l, '\n');
+			if (!e)
+				break;
+			nlines++;
+			bool stamp = e - l > 13 && l[2] == ':' && l[5] == ':' && l[8] == '.';
+			bool child = e - l == 5 && strncmp(l, "CHILD", 5) == 0;
+			if (!stamp && !child)
+				bad++;
+			else if (stamp && memmem(l, (size_t)(e - l), "CHILD", 5))
+				bad++;
+		}
+		printf("        (%d lines read, %d spliced)\n", nlines, bad);
+		require(nlines > 100 && bad == 0,
+		        "L7 every line is ours, whole, or the child's — nothing spliced across them");
+		close(sp[0]);
+		close(sp[1]);
 	}
 
 	printf("%d/%d passed, %d failed\n", passed, EXPECTED_CHECKS, failures);
