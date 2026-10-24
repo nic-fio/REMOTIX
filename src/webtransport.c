@@ -8475,20 +8475,38 @@ int wt_stream_closed(wt *w, int64_t stream_id, uint64_t code, bool with_code)
 	return 0;
 }
 
+/* ⛔ 24 Oct 2026, audit nghttp3 1.18 (the same since 1.0): the result of
+ *    `nghttp3_conn_shutdown_stream_read` was thrown away.  `nghttp3.h`: it
+ *    returns «NGHTTP3_ERR_NOMEM» or «NGHTTP3_ERR_QPACK_FATAL — QPACK decoder
+ *    stream overflow»; the second is a connection error.  It is handled like
+ *    the failure of `nghttp3_conn_close_stream`: application error and
+ *    callback failure. */
+static int h3_shutdown_read(wt *w, int64_t stream_id)
+{
+	int rv = nghttp3_conn_shutdown_stream_read(w->h3, stream_id);
+
+	if (rv != 0) {
+		log_says_of(REG_WT, wt_chi(w), "⛔ nghttp3_conn_shutdown_stream_read: %s",
+		                 nghttp3_strerror(rv));
+		ngtcp2_ccerr_set_application_error(
+			w->last_error, nghttp3_err_infer_quic_app_error_code(rv), NULL, 0);
+		return NGTCP2_ERR_CALLBACK_FAILURE;
+	}
+	return 0;
+}
+
 int wt_stream_reset(wt *w, int64_t stream_id)
 {
 	if (!w->h3)
 		return 0;
-	nghttp3_conn_shutdown_stream_read(w->h3, stream_id);
-	return 0;
+	return h3_shutdown_read(w, stream_id);
 }
 
 int wt_stream_stop_sending(wt *w, int64_t stream_id)
 {
 	if (!w->h3)
 		return 0;
-	nghttp3_conn_shutdown_stream_read(w->h3, stream_id);
-	return 0;
+	return h3_shutdown_read(w, stream_id);
 }
 
 /* ⛔⛔⭐ PHASE 9 — OUR BYTES FIRST, THEN nghttp3.
@@ -8516,7 +8534,21 @@ int wt_extend_max_stream_data(wt *w, int64_t stream_id)
 {
 	if (!w->h3)
 		return 0;
-	nghttp3_conn_unblock_stream(w->h3, stream_id);
+	/* ⛔ 24 Oct 2026, audit nghttp3 1.18 (the same since 1.0): `nghttp3.h` says
+	 *    `nghttp3_conn_unblock_stream` can return «NGHTTP3_ERR_NOMEM».  A
+	 *    stream that stays blocked in silence is worse than a closed
+	 *    connection: it is logged and the connection is closed. */
+	{
+		int rv = nghttp3_conn_unblock_stream(w->h3, stream_id);
+
+		if (rv != 0) {
+			log_says_of(REG_WT, wt_chi(w), "⛔ nghttp3_conn_unblock_stream: %s",
+			                 nghttp3_strerror(rv));
+			ngtcp2_ccerr_set_application_error(
+				w->last_error, nghttp3_err_infer_quic_app_error_code(rv), NULL, 0);
+			return NGTCP2_ERR_CALLBACK_FAILURE;
+		}
+	}
 	return 0;
 }
 
