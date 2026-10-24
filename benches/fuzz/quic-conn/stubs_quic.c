@@ -199,11 +199,11 @@ static void path_out(const ngtcp2_conn *c, int idx, ngtcp2_path *dst, const char
 /* ⛔ THE LOCAL-END ORACLE (15 Oct 2026): the path `transport.c` hands ngtcp2 for a datagram
  *    has as local end the address THAT datagram arrived on — or ngtcp2 would answer (and
  *    validate a migration) from the wrong one of the server's addresses. */
-/* ⛔ OFF by default: migration (work of the discarded attempt) not ported: read_packet builds path.local from c->local,
- *    defect already in 1.0, recorded as open (PIANO.md, «Difetti aperti»).  Case kept in known/local-end-1.0.bin.
- *    Build with -DQC_LOCAL_END_ORACLE=1 to switch the oracle on again. */
+/* ⭐ ON by default since the migration was ported (branch migrazione-su-limiti): read_packet hands ngtcp2 the path the
+ *    datagram arrived on.  Case kept in known/local-end-1.0.bin: on the code WITHOUT the migration (1.0, and
+ *    limiti-su-quic) this oracle fires; build with -DQC_LOCAL_END_ORACLE=0 to switch it off. */
 #ifndef QC_LOCAL_END_ORACLE
-#define QC_LOCAL_END_ORACLE 0
+#define QC_LOCAL_END_ORACLE 1
 #endif
 static void local_is_received(const ngtcp2_path *path, const char *fn)
 {

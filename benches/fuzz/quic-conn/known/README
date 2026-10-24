@@ -1,1 +1,2 @@
-local-end-1.0.bin: crash of the local-end oracle (read_packet builds path.local from c->local, defect of 1.0, open); rebuild with -DQC_LOCAL_END_ORACLE=1 to see it fire.
+local-end-1.0.bin: input that makes the local-end oracle fire on code that builds path.local from c->local (1.0, limiti-su-quic).
+With the migration (branch migrazione-su-limiti) it passes: run it alone with `bin/quic-conn -runs=1 known/local-end-1.0.bin`.
