@@ -24,6 +24,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
+#include <sys/random.h>
 
 bool rcp_authenticate_from(const char *user, const char *password,
                       const char *rhost);
@@ -7953,7 +7955,23 @@ static int cb_end_stream(nghttp3_conn *conn, int64_t stream_id, void *cud,
 
 static void cb_rand(uint8_t *dest, size_t destlen)
 {
-	for (size_t i = 0; i < destlen; i++)
+	/* ⛔ 24 Oct 2026, audit nghttp3 1.18 (the same since 1.0): `nghttp3.h` says «The
+	 *    implementation must write unpredictable data»; `rand()` is not.
+	 *    `getrandom()` first; `rand()` only if the kernel refuses (declared
+	 *    fallback, it was the only source before). */
+	size_t done = 0;
+
+	while (done < destlen) {
+		ssize_t n = getrandom(dest + done, destlen - done, 0);
+
+		if (n < 0) {
+			if (errno == EINTR)
+				continue;
+			break;
+		}
+		done += (size_t)n;
+	}
+	for (size_t i = done; i < destlen; i++)
 		dest[i] = (uint8_t)(rand() & 0xff);
 }
 
