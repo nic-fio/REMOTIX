@@ -12,7 +12,7 @@
 #   · rxb10-server: the product in the safety net's IMAGE (default localhost/rete11/xfce:p0, a container
 #     of its own, never the box: it has the VA-API drivers remotix-costruzione lacks) with --network none
 #     (a namespace of its own with only `lo`), --address :: (one socket for both families), port
-#     7451, SMALL caps (--max-pending 16 --max-pending-per-address 4 --max-pending-per-48 8), the
+#     7451, SMALL caps by default (--max-pending 16 --max-pending-per-address 4 --max-pending-per-48 8; B10_PENDING / B10_ADDRESS / B10_48 change them), the
 #     product's Debian PAM file, a user made for the run, and the card ($CARD).  So the session child
 #     (dropped to that user) can really start: the product's ngtcp2/nghttp3 libs — including
 #     libngtcp2_crypto_ossl.so.0 — go into /usr/local/lib + ldconfig (LD_LIBRARY_PATH alone does not
@@ -41,7 +41,26 @@ PORT=7451
 #   before any login can be tried.  The admitted user's session child needs it too (it is in the
 #   card's group), so a real ADMITTED is reached.
 CARD=${B10_CARD:-/dev/dri/renderD128}
-CAPS="--max-pending 16 --max-pending-per-address 4 --max-pending-per-48 8"
+# ⭐ The caps under test: SMALL by default (16 / 4 / 8: quick, and the numbers are ours); the DEFAULTS of the product are
+#   128 / 8 / 32 and can be tried live with B10_PENDING=128 B10_ADDRESS=8 B10_48=32.  Without the variables nothing changes.
+#   B10_NFLOOD   flood addresses (default: enough for 1.5 workers per pending place, at least 10: 10 for 16/4, 24 for 128/8)
+#   B10_CLIENT_MEM  the memory of the client container (default 2g; 4g for the defaults: ~190 aioquic connections)
+#   B10_DRYRUN=1 prints the plan (caps, sources, /64s, workers, memory) and exits, touching no container.
+PEND=${B10_PENDING:-16}; ADDR=${B10_ADDRESS:-4}; P48=${B10_48:-8}
+for v in "$PEND" "$ADDR" "$P48" "${B10_NFLOOD:-1}"; do
+	case "$v" in ''|*[!0-9]*|0) echo "b10: caps and B10_NFLOOD must be positive integers (got '$v')"; exit 3 ;; esac
+done
+NFLOOD=${B10_NFLOOD:-$(( (3 * PEND + 2 * ADDR - 1) / (2 * ADDR) ))}
+[ -n "${B10_NFLOOD:-}" ] || [ "$NFLOOD" -ge 10 ] || NFLOOD=10
+NV6=$(( P48 / 2 + 1 )); [ "$NV6" -ge 10 ] || NV6=10          # the /64s put on `lo`: the bench uses indexes 1 .. cap-48/2+1 (hex)
+NV4=$(( NFLOOD + 4 )); [ "$NV4" -ge 40 ] || NV4=40            # IPv4 sources 127.0.0.100 ...: 4 + n-flood needed
+V4RANGE=127.0.0.100-127.0.0.$(( 99 + NV4 ))
+CLIMEM=${B10_CLIENT_MEM:-2g}
+CAPS="--max-pending $PEND --max-pending-per-address $ADDR --max-pending-per-48 $P48"
+if [ "${B10_DRYRUN:-0}" = 1 ]; then
+	echo "b10 plan: caps $PEND/$ADDR/$P48 · flood $NFLOOD addresses x $ADDR workers = $((NFLOOD * ADDR)) (places: $PEND) · IPv4 $V4RANGE ($NV4) · IPv6 /64s on lo: $NV6 (x2 addresses) · client memory $CLIMEM"
+	exit 0
+fi
 P() { if [ "$(id -u)" = 0 ]; then podman "$@"; else sudo -n podman "$@"; fi; }
 
 for f in "$PROD/remotix" "$PROD/page.html" "$PAM" "$BENCHES/01-b10-flood.py"; do
@@ -81,15 +100,16 @@ grep -q "⭐ ready: https://" "$OUT/server.log" 2>/dev/null || {
 echo "b10: server ready (md5 $(md5sum "$PROD/remotix" | cut -c1-8)), caps: $CAPS"
 
 V6=fd5a:f100:d000
-P run --name $CLI --cpus 2 --memory 2g --cap-add NET_ADMIN \
+P run --name $CLI --cpus 2 --memory $CLIMEM --cap-add NET_ADMIN \
 	--network container:$SRV \
 	-v "$BENCHES:/benches:ro" -v "$OUT:/flood" --entrypoint sh "$IMG_CLI" -c "
-	for n in 1 2 3 4 5 6 7 8 9 a; do
+	for i in \$(seq 1 $NV6); do
+	  n=\$(printf %x \$i)
 	  ip -6 addr add $V6:\$n::10/48 dev lo nodad && ip -6 addr add $V6:\$n::11/48 dev lo nodad || exit 3
 	done
 	exec nice -n 19 python3 -u /benches/01-b10-flood.py --address 127.0.0.1 --address6 ::1 --port $PORT \
-	  --user rxflood --password-file /flood/password --v4-sources 127.0.0.100-127.0.0.139 \
-	  --legit-source 127.0.0.50 --v6-prefix $V6 --cap-pending 16 --cap-address 4 --cap-48 8 \
+	  --user rxflood --password-file /flood/password --v4-sources $V4RANGE \
+	  --legit-source 127.0.0.50 --v6-prefix $V6 --cap-pending $PEND --cap-address $ADDR --cap-48 $P48 --n-flood $NFLOOD \
 	  --server-log /flood/server.log --output /flood/b10.jsonl" 2>&1 | tee "$OUT/client.log"
 rc=${PIPESTATUS[0]}
 echo "b10: exit $rc — $OUT"

@@ -6,10 +6,13 @@
         --v4-sources 127.0.0.100-127.0.0.139 --legit-source 127.0.0.50 \
         --v6-prefix fd5a:f100:d000 --server-log /flood/server.log --output b10.jsonl
 
-⭐ The server under test MUST run with SMALL caps, so the test is quick and the numbers are ours:
+⭐ The server under test runs with SMALL caps by default, so the test is quick and the numbers are ours:
      --max-pending 16 --max-pending-per-address 4 --max-pending-per-48 8
-   (the defaults are 128 / 8 / 32; the rule is the same, only the numbers change).  The bench is
-   told them with --cap-pending / --cap-address / --cap-48 and checks against them.
+   (the defaults of the product are 128 / 8 / 32; the rule is the same, only the numbers change; 01-b10-launch.sh
+   takes B10_PENDING / B10_ADDRESS / B10_48 / B10_NFLOOD for them).  The bench is told the caps with --cap-pending /
+   --cap-address / --cap-48 and checks against them: every number of a check is derived from them (the «5th from one
+   address» is cap-address + 1, the /64s of c-48 are cap-48 / 2 + 1, the flood is n-flood x cap-address workers).
+   `--plan` (no network, no aioquic needed) prints that derivation and the problems of a combination.
 ⭐ The client needs SEVERAL SOURCE ADDRESSES that route back to it: extra IPv4/IPv6 addresses on
    its interface (01-b10-launch.sh puts IPv6 ones on `lo` of a private namespace), and 127.0.0.x on
    loopback (every 127/8 address is local on Linux, no setup).
@@ -56,6 +59,49 @@ import socket
 import ssl
 import sys
 import time
+
+
+def plan(cap_pending, cap_address, cap_48, n_flood, v4_given=40, v6_64s_given=10):
+    """What the checks will ask of the scene for these caps; (lines, problems).  Pure: also run by --plan."""
+    workers = n_flood * cap_address
+    lines = ["c-address: %d sessions from one address, the %d-th must be refused" % (cap_address, cap_address + 1),
+             "c-48: %d sessions in %d /64s (two each), the %d-th, from /64 #%x, must be refused"
+             % (cap_48, (cap_48 + 1) // 2, cap_48 + 1, cap_48 // 2 + 1),
+             "a-flood: %d addresses x %d workers = %d against %d pending places (live after warm-up >= %d)"
+             % (n_flood, cap_address, workers, cap_pending, cap_pending - 1),
+             "IPv4 sources needed: %d (4 + n-flood) · IPv6 /64s needed: %d" % (4 + n_flood, cap_48 // 2 + 1)]
+    problems = []
+    if cap_address < 2:
+        problems.append("cap-address < 2: c-48 puts two sessions in each /64")
+    if cap_48 > cap_pending:
+        problems.append("cap-48 > cap-pending: the total cap would bite before the /48 cap")
+    if cap_address > cap_pending:
+        problems.append("cap-address > cap-pending: the total cap would bite before the address cap")
+    if workers <= cap_pending:
+        problems.append("flood workers (%d) <= pending places (%d): the server never has to evict" % (workers, cap_pending))
+    if workers < cap_pending * 3 // 2:
+        problems.append("flood workers (%d) < 1.5 x places (%d): 'live after warm-up >= places-1' may fail by churn" % (workers, cap_pending))
+    if 4 + n_flood > v4_given:
+        problems.append("%d IPv4 sources given, %d needed" % (v4_given, 4 + n_flood))
+    if cap_48 // 2 + 1 > v6_64s_given:
+        problems.append("%d /64s on lo given, %d needed" % (v6_64s_given, cap_48 // 2 + 1))
+    return lines, problems
+
+
+if "--plan" in sys.argv:
+    _p = argparse.ArgumentParser()
+    _p.add_argument("--plan", action="store_true")
+    _p.add_argument("--cap-pending", type=int, default=16)
+    _p.add_argument("--cap-address", type=int, default=4)
+    _p.add_argument("--cap-48", type=int, default=8)
+    _p.add_argument("--n-flood", type=int, default=10)
+    _p.add_argument("--v4-given", type=int, default=40)
+    _p.add_argument("--v6-64s-given", type=int, default=10)
+    _a = _p.parse_args()
+    _l, _pr = plan(_a.cap_pending, _a.cap_address, _a.cap_48, _a.n_flood, _a.v4_given, _a.v6_64s_given)
+    print("\n".join("  " + x for x in _l))
+    print("\n".join("  PROBLEM: " + x for x in _pr) if _pr else "  no problems")
+    sys.exit(1 if _pr else 0)
 
 from aioquic.h3.connection import H3_ALPN
 from aioquic.quic.configuration import QuicConfiguration
@@ -395,7 +441,8 @@ async def t_flood(flood_srcs, legit):
 
     tasks = [asyncio.ensure_future(worker(s, k)) for s in flood_srcs for k in range(ARGS.cap_address)]
     # let the flood fill every place first
-    await asyncio.sleep(ARGS.flood_warmup)
+    await asyncio.sleep(ARGS.flood_warmup if ARGS.flood_warmup is not None
+                        else max(8.0, len(flood_srcs) * ARGS.cap_address / 8.0))
     filled = len(live)
     logins = []
     for i in range(ARGS.logins):
@@ -525,7 +572,8 @@ def args():
     p.add_argument("--n-flood", type=int, default=10)
     p.add_argument("--logins", type=int, default=5)
     p.add_argument("--login-gap", type=float, default=2.0)
-    p.add_argument("--flood-warmup", type=float, default=8.0)
+    p.add_argument("--flood-warmup", type=float, default=None,
+                   help="seconds to let the flood fill the places (default: 8, or n-flood x cap-address / 8 if more)")
     p.add_argument("--no-age", action="store_true", help="skip the 90 s test")
     p.add_argument("--stage-less", action="store_true",
                    help="the server has no desktop: FAREWELL 0x10 right after CREDENTIALS counts as admitted")
