@@ -180,7 +180,7 @@ int main(void)
 	}
 
 	/* 6. D3 (§11.50): the ROOT SIDE's helper — nothing of rcp.c is touched, every end is ONE call of the callback:
-	 *    1 yes, 0 no, 2 locked, 3 not checked (the dispatcher's answer 3, the PAM timeout, the dead helper) */
+	 *    1 yes, 0 no, 2 locked, 3 not checked (the dispatcher's answer 3, the dead helper), 4 expired (the PAM timeout: counts) */
 	{
 		struct root_got rg;
 		memset(&rg, 0, sizeof rg);
@@ -203,7 +203,7 @@ int main(void)
 			CHECK(mark_seen == 77, "root: rcp.c is not touched (no locked mark)");
 			close(peer); close(h.fd);
 		}
-		/* the PAM timeout and the dead helper are «not checked» for the root side */
+		/* the PAM timeout is outcome 4 (expired, it counts); the dead helper is 3 (not checked, ours) */
 		make(&h, &peer);
 		h.root = true;
 		h.outcome_cb = on_outcome;
@@ -211,7 +211,7 @@ int main(void)
 		memset(&rg, 0, sizeof rg);
 		CHECK(helper_ask_bare(&h, "hal", "pw", "1.1.1.1", 1000, &t), "root: ask for the timeout");
 		helper_expired(&h, 1000 + 8000, NULL, NULL);
-		CHECK(rg.n == 1 && rg.outcome == 3 && rg.ticket == t, "root: the PAM timeout is outcome 3");
+		CHECK(rg.n == 1 && rg.outcome == 4 && rg.ticket == t, "root: the PAM timeout is outcome 4 (expired: counts), not 3 (free)");
 		CHECK(helper_ask_bare(&h, "ivy", "pw", "2.2.2.2", 1000, &t), "root: ask for the death");
 		close(peer);
 		helper_move(&h, NULL, NULL);

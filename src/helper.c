@@ -312,7 +312,15 @@ static void dispatcher(int fd)
 
 		while (alive > 0 && waitpid(-1, NULL, WNOHANG) > 0)
 			alive--;
-		if (alive >= MAX_IN_FLIGHT) {
+		/* ⛔ The cap is TWICE the parent's ceiling, on purpose.  The parent
+		 *    never has more than `MAX_IN_FLIGHT` requests in flight, so this
+		 *    cap can only be reached by grandchildren the parent has already
+		 *    forgotten: those expired at 8 s but still alive (up to 20 s), and
+		 *    those that have `send`-ed their answer — the parent freed the
+		 *    place — and are not yet past their `_exit()` and reaped here.
+		 *    With the cap at 16 that window turned a perfectly legal 16th
+		 *    request into «not checked». */
+		if (alive >= 2 * MAX_IN_FLIGHT) {
 			/* ⛔ Over the cap: answered «not checked» (3), never a «no» —
 			 *    a «no» counts towards the ban. */
 			struct response full;
@@ -330,9 +338,16 @@ static void dispatcher(int fd)
 			alive++;
 		if (p < 0) {
 			/* ⛔ No fallback of calling PAM HERE: it would block the
-			 *    dispatcher, and with it all the other requests.  Stay
-			 *    silent, and the parent will turn the silence into a no at
-			 *    expiry. */
+			 *    dispatcher, and with it all the other requests.  And NOT
+			 *    silence either: a `fork` that fails is OUR defect (no
+			 *    memory, no processes), and silence would become the 8 s
+			 *    expiry, which counts as a failed attempt.  Answered «not
+			 *    checked» (3), like the cap. */
+			struct response failed;
+			memset(&failed, 0, sizeof failed);
+			failed.ticket = r.ticket;
+			failed.outcome = 3u;
+			(void)send(fd, &failed, sizeof failed, MSG_NOSIGNAL);
 		}
 		/* ⛔ §4.4: the password is zeroed as soon as it has served.  This is
 		 *    the dispatcher's copy, and it lives the time of a `fork`. */
@@ -996,11 +1011,15 @@ void helper_expired(helper *a, uint64_t now_ms, HelperVerdict delivery,
 			              "2026 it COUNTS as a failed attempt of §4.4-bis (B): an "
 			              "attempt without a verdict is not a free attempt",
 			              (unsigned long long)p, EXPIRY_MS);
-			/* ⭐ The root side's helper hands it back «not checked» (3): the
-			 *    network side decides what it counts as. */
+			/* ⭐ The root side's helper hands it back as outcome 4 = «expired»,
+			 *    which is NOT «not checked» (3): the 24 Oct 2026 decision is
+			 *    that an attempt without a verdict is not a free one, so the
+			 *    network side counts it as a failed attempt (as `delivery(...,
+			 *    lost=false)` does above).  3 stays for the cap, the death
+			 *    and the helper being down. */
 			if (a->root) {
 				if (a->outcome_cb)
-					a->outcome_cb(a->outcome_ctx, p, 3, chi, da);
+					a->outcome_cb(a->outcome_ctx, p, 4, chi, da);
 			} else if (delivery) {
 				delivery(ctx, p, false, chi, da, false);
 			}
