@@ -1576,7 +1576,7 @@ bool wt_verdict(wt *w, uint64_t ticket, bool admitted, bool resumed)
 }
 bool wt_verdict_lost(wt *w, uint64_t ticket) { return wt_verdict(w, ticket, false, false); }
 /* transport.c counts a verdict whose connection is gone through rcp.c, which this harness does not link */
-void rcp_orphan_verdict(const char *user, const char *rhost, bool admitted, bool lost, uint64_t now_ms,
+void rcp_orphan_verdict(const char *user, const char *rhost, bool admitted, bool lost, uint64_t ticket, uint64_t now_ms,
                         void (*fn)(void *, const char *), void *ctx)
 {
 	(void)user; (void)rhost; (void)admitted; (void)lost; (void)now_ms; (void)fn; (void)ctx;

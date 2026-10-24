@@ -2043,14 +2043,16 @@ void rcp_refusal_locked(uint64_t ticket)
  *     ⭐ In the model of §4.4-bis B «not counted» is `login_release()` (the
  *        booking given back, no failure added), as for the defects of ours;
  *        the caller does that when this returns true.
- *     ⚠ `ticket` 0 = the orphan road, which has no ticket: the mark is set
- *       only around ONE delivery, so any mark is that delivery's.
+ *     ⚠ `ticket` is the one of THIS delivery, on the orphan road too
+ *       (`rcp_orphan_verdict()` gets it from `transport_verdict_from()`): the mark is
+ *       set only around ONE delivery and it must be THAT delivery's, so a mark
+ *       left by another request never excuses this one.
  *     ⚠ Nothing else changes: the ban check before PAM, the checks in flight
  *       per address, the fixed second and `REJECTED 0x07` on the wire. */
 static bool refusal_uncounted(const struct sink *k, uint64_t ticket,
                               const char *key, uint64_t now)
 {
-	if (!locked_ticket || (ticket && ticket != locked_ticket))
+	if (!locked_ticket || ticket != locked_ticket)
 		return false;
 	if (!good_recent(key, now)) {
 		say(k, "PAM refused request %llu while pam_faillock had the account "
@@ -2395,7 +2397,7 @@ int rcp_ban_load(const char *fpath, uint64_t now)
  * address of PAM_RHOST.  The lines go to `fn`, because there is no session to
  * hang them on. */
 void rcp_orphan_verdict(const char *user, const char *rhost, bool admitted,
-                        bool lost, uint64_t now, rcp_line_fn fn, void *ctx)
+                        bool lost, uint64_t ticket, uint64_t now, rcp_line_fn fn, void *ctx)
 {
 	struct sink k = {NULL, fn, ctx};
 	struct login_result r;
@@ -2415,7 +2417,7 @@ void rcp_orphan_verdict(const char *user, const char *rhost, bool admitted,
 		        "is counted (§4.4-bis)");
 		return;
 	}
-	if (!admitted && refusal_uncounted(&k, 0, key, now)) {
+	if (!admitted && refusal_uncounted(&k, ticket, key, now)) {
 		login_release(key, user);
 		return;
 	}
@@ -9142,7 +9144,12 @@ bool rcp_time(rcp_session *s, uint64_t now)
 		 *   `VERDICT_CAP`) COUNTS as failed since 24 Oct 2026 (§4.4-bis B):
 		 *   both stay `0x07` and counted.  So on the wire «counted» is exactly
 		 *   `0x07`, and «not counted and not the limiter's» is exactly `0x0E`.
-		 *   Same fixed second, same count (none): only the byte changes. */
+		 *   Same fixed second, same count (none): only the byte changes.
+		 * ⛔ ONE exception to «counted is exactly 0x07»: the no PAM gives while
+		 *   `pam_faillock` has the account LOCKED, for a key with an admitted
+		 *   login in the last 30 days (§11.47 B, `refusal_uncounted()`), is NOT
+		 *   counted and still goes out as 0x07 — 0x0E would reveal that the
+		 *   account exists. */
 		uint8_t reason = s->cred_reason;
 		if (s->refusal_is_ours) {
 			if (reason == RCP_WRONG_CREDENTIALS)
