@@ -1,19 +1,6 @@
-/* 02-page-deadline-test.c — the TCP page listener cannot be locked out by
+/* test.c — the TCP page listener cannot be locked out by
  * connections that send nothing (15 Oct 2026, pre-login denial of service:
  * 32 idle TCP connections took all 32 slots of `page.c` for ever).
- *
- * In the build container, from src/ (the product's objects, then the test
- * linked against all of them except main.o and page.o):
- *
- *   make TWIN=none
- *   gcc -std=gnu11 -Wall -Wextra -I. $(pkg-config --cflags gio-2.0 \
- *       libpipewire-0.3 libdrm libva libva-drm vulkan opus libei-1.0 \
- *       xkbcommon wayland-client gbm) -o /tmp/pdt \
- *       ../benches/02-page-deadline-test.c \
- *       $(ls *.o | grep -v -e '^main.o$' -e '^page.o$') \
- *       -lngtcp2_crypto_ossl -lngtcp2 -lnghttp3 -lssl -lcrypto -lpam -lm -lz \
- *       $(pkg-config --libs gio-2.0 libpipewire-0.3 libva libva-drm \
- *       libei-1.0 xkbcommon wayland-client gbm opus vulkan) -ldl && /tmp/pdt
  *
  * ⚠ `page.c` is INCLUDED (the seam): the test drives the listener exactly as
  *   main.c does — `page_descriptors`, `poll`, `page_move`, `page_expired` —
@@ -77,7 +64,18 @@
  *      header line gets 400, the copy is shrunk to its bytes (a failed shrink
  *      keeps it whole).
  *
- * Exit status: 0 green, 1 red, 3 not all checks ran. */
+ * BUILD AND RUN (a full build of the product first, about as long as `make`: the test links every object but main.o and page.o; run from the root of the tree):
+ *   nice -n 19 ionice -c3 podman run --rm --network=none --cpus=2 --memory=2g -v "$PWD:/albero:ro" localhost/remotix-costruzione sh -c '
+ *     mkdir /tmp/w && cp -a /albero/src /albero/benches /tmp/w/ && cd /tmp/w/src &&
+ *     { make clean >/dev/null 2>&1; true; } &&
+ *     { make -j2 TWIN=none >/tmp/make.log 2>&1 || { tail -40 /tmp/make.log; exit 1; }; } &&
+ *     gcc -std=gnu11 -Wall -Wextra -I. $(pkg-config --cflags gio-2.0 libpipewire-0.3 libdrm libva libva-drm vulkan opus libei-1.0 xkbcommon wayland-client gbm) \
+ *         -o /tmp/pdt ../benches/unit/page-deadline/test.c $(ls *.o | grep -v -e "^main.o$" -e "^page.o$") \
+ *         -lngtcp2_crypto_ossl -lngtcp2 -lnghttp3 -lssl -lcrypto -lpam -lm -lz \
+ *         $(pkg-config --libs gio-2.0 libpipewire-0.3 libva libva-drm libei-1.0 xkbcommon wayland-client gbm opus vulkan) -ldl &&
+ *     /tmp/pdt'
+ * Exit code 0 green, 1 red, 3 not all checks ran.
+ */
 #define _GNU_SOURCE
 /* ⚠ THE MALLOC SEAM: every header page.c uses is included FIRST, so the two
  *   macros below rewrite only page.c's own calls.  Each allocation page.c
