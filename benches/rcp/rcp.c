@@ -2028,7 +2028,7 @@ void rcp_refusal_locked(uint64_t ticket)
  *        booking given back, no failure added), as for the defects of ours;
  *        the caller does that when this returns true.
  *     ⚠ `ticket` is the one of THIS delivery, on the orphan road too
- *       (`rcp_orphan_verdict()` gets it from `transport_verdict()`): the mark is
+ *       (`rcp_orphan_verdict()` gets it from `transport_verdict_from()`): the mark is
  *       set only around ONE delivery and it must be THAT delivery's, so a mark
  *       left by another request never excuses this one.
  *     ⚠ Nothing else changes: the ban check before PAM, the checks in flight

@@ -1514,8 +1514,8 @@ behaviour (`pam_faillock(8)`, `faillock.conf(5)`); ⚠ **not run live** — `[?]
     only a real account can be locked, so «not counted» for anyone would be a **user-name oracle** (lock it
     with 2 + 1 tries over five minutes, §1.9-bis, then see that further tries stop banning). A stranger's key
     counts exactly as before; the owner from home or office no longer bans themselves. ⚠ The owner from a NEW
-    address while locked still is counted (the 30-day table is in memory, 32 keys).
-  - ⭐ The mark of the lock belongs to ONE delivery: `rcp_orphan_verdict()` now receives the ticket (from `transport_verdict()`) and
+    address while locked still is counted (the 30-day table is in memory, 64 keys).
+  - ⭐ The mark of the lock belongs to ONE delivery: `rcp_orphan_verdict()` now receives the ticket (from `transport_verdict_from()`) and
     `refusal_uncounted()` compares it on both roads, with no «ticket 0 matches any mark» exception.
   - Unchanged: the wire (`REJECTED 0x07`, the fixed second), the ban check before PAM, the 3 checks in flight
     per address. Desk test `benches/01-b8-faillock-test.c` (row «rcp faillock (C)»), 18/18; on 5843b5b6

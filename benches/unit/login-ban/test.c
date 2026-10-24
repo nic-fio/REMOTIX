@@ -902,13 +902,21 @@ static void test_verdict_paths(void)
 		good_note(G, at(0));
 		login_reserve(G, "alice", at(2), &info);
 		rcp_refusal_locked(31);
-		rcp_orphan_verdict("alice", "7.7.7.7", false, false, 0, at(3), rec_line, NULL);
+		rcp_orphan_verdict("alice", "7.7.7.7", false, false, 31, at(3), rec_line, NULL);
 		rcp_refusal_locked(0);
 		CHECK(in_flight_of(G, "alice") == 0 && failures_of(G, "alice") == 0,
 		      "(locked) orphan, known key: given back, NOT counted (%d, %d)", in_flight_of(G, "alice"), failures_of(G, "alice"));
 		login_reserve(G, "alice", at(4), &info);
 		rcp_orphan_verdict("alice", "7.7.7.7", false, false, 0, at(5), rec_line, NULL);
 		CHECK(failures_of(G, "alice") == 1, "(locked) orphan without the mark: an ordinary no, counted (%d)", failures_of(G, "alice"));
+		/* the mark belongs to ONE delivery: mark 31 and an orphan verdict of ANOTHER ticket (32) is counted */
+		fresh();
+		good_note(G, at(0));
+		login_reserve(G, "alice", at(2), &info);
+		rcp_refusal_locked(31);
+		rcp_orphan_verdict("alice", "7.7.7.7", false, false, 32, at(3), rec_line, NULL);
+		rcp_refusal_locked(0);
+		CHECK(failures_of(G, "alice") == 1, "(locked) orphan of ANOTHER ticket than the mark: counted (%d)", failures_of(G, "alice"));
 	}
 }
 
