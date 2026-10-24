@@ -103,6 +103,8 @@ void transport_write(transport *t);
  * ⛔ It is not «zero if there is none»: zero means «now», and confusing the two
  *    makes the loop spin idle burning a CPU. */
 int transport_wait_ms(const transport *t);
+/* Nanoseconds to the next deadline (-1 = none, 0 = due), at most one second. */
+int64_t transport_wait_ns(const transport *t);
 
 /* Expires the ripe timers (QUIC's and ours) and writes again. */
 void transport_expired(transport *t);

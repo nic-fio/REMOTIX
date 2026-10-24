@@ -1882,7 +1882,7 @@ void transport_write(transport *t)
 	reap_dead(t);
 }
 
-int transport_wait_ms(const transport *t)
+int64_t transport_wait_ns(const transport *t)
 {
 	ngtcp2_tstamp before = UINT64_MAX;
 	ngtcp2_tstamp now = now_ns();
@@ -1911,15 +1911,24 @@ int transport_wait_ms(const transport *t)
 		return -1;
 	if (before <= now)
 		return 0;
-	/* ⚠ Rounded UP: rounded down, the loop woke up to 1 ms early and spun on
-	 *   poll(0) until the deadline — rare before, but with pacing honoured
-	 *   (write_connection) a pacing deadline follows every send quantum. */
-	{
-		uint64_t d = (before - now + NGTCP2_MILLISECONDS - 1) / NGTCP2_MILLISECONDS;
-		if (d > 1000)
-			d = 1000;
-		return (int)d;
-	}
+	if (before - now > NGTCP2_SECONDS)
+		return (int64_t)NGTCP2_SECONDS;
+	return (int64_t)(before - now);
+}
+
+/* ⛔ 24 Oct 2026 (pacing-ab): in milliseconds the deadline is either early
+ *   (rounded down: the loop spun on poll(0) until it came — with pacing a
+ *   deadline follows every send quantum) or late (rounded up: up to 1 ms more
+ *   on every timer-driven send, measured +1 ms of RTT at rest).  The main loop
+ *   therefore waits with `ppoll()` on `transport_wait_ns()`; this ms variant
+ *   stays for the callers that only need a coarse bound. */
+int transport_wait_ms(const transport *t)
+{
+	int64_t ns = transport_wait_ns(t);
+
+	if (ns < 0)
+		return -1;
+	return (int)((ns + (int64_t)NGTCP2_MILLISECONDS - 1) / (int64_t)NGTCP2_MILLISECONDS);
 }
 
 /* ⭐ THE PAM VERDICT COMING BACK — `DECISIONS.md` §1.10.
