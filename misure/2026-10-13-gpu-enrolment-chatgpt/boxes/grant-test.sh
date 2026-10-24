@@ -12,12 +12,11 @@ OUT=/media/REMOTIX/rete11/acl-test/grant-$D.txt
 cd /media/REMOTIX/rete11
 # 24 Oct 2026: acl-probe.sh was never in the repository; it now lives next to this script and is
 # copied into the box directory (the box mounts it read-only as /rete11).  The box images
-# (rete11/<desktop>:p0) are built by `11-start.sh build <desktop>` if they are not there, and
-# prodotto/ must hold the binary of the branch under test (BENCH=1).
+# (rete11/<desktop>:p0) are ROOT containers: run this script as root (sudo), like 11-start.sh,
+# or rootless podman does not see them.  prodotto/ must hold the binary of the branch under test (BENCH=1).
 HERE=$(cd "$(dirname "$0")" && pwd)
 mkdir -p acl-test
 cp "$HERE/acl-probe.sh" acl-probe.sh
-podman image exists "rete11/$D:p0" || { echo "image rete11/$D:p0 missing: bash 11-start.sh build $D"; exit 1; }
 X() { podman exec "$NAME" sh -c "$1"; }
 P() { podman exec --privileged "$NAME" sh /rete11/acl-probe.sh "$1"; }
 LOG=/var/lib/rete11/registro.log

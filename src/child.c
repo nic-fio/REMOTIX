@@ -3359,6 +3359,11 @@ bool children_video(children *f, const char *user, uint8_t codec,
 	return true;
 }
 
+/* ⭐ 1.5 (DECISIONS-11 §11.4): the card grants (`render_grant.h`) of the desktops that SURVIVE the
+ *   shutdown of the service are LEFT IN PLACE here — this function does not call `child_free()`,
+ *   so it takes none back.  The desktop lives on without a child (`rediscover.h`), is found again
+ *   at the next start, and `render_grant_sweep()` keeps its grant ("KEPT", no child) or takes it
+ *   back once the desktop is gone.  Uninstalling removes what is left. */
 void children_turn_off(children *f)
 {
 	if (!f)

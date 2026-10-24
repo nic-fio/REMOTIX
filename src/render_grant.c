@@ -292,8 +292,12 @@ static int acl_read(const char *path, struct acl_entry *v)
 		v[2] = (struct acl_entry){ T_OTHER, st.st_mode & 7, ACL_UNDEFINED };
 		return 3;
 	}
+	if (n < 4) {
+		errno = EINVAL;
+		return -1;
+	}
 	memcpy(&version, buf, 4);
-	if (n < 4 || (n - 4) % 8 != 0 || le32toh(version) != ACL_VERSION) {
+	if ((n - 4) % 8 != 0 || le32toh(version) != ACL_VERSION) {
 		errno = EINVAL;
 		return -1;
 	}
@@ -521,26 +525,37 @@ bool render_grant_add(const char *user, uid_t uid, gid_t gid)
 		return false;
 	}
 	mine = grants_find(v, ng, uid, gid);
+	/* ⛔ ALL OR NOTHING (review of 24 Oct 2026, decided by the project lead): if even ONE
+	 *    render node already carries an entry for this gid that is not ours, the
+	 *    administrator has put it, and nothing is granted on any node.  Otherwise a
+	 *    machine with two cards would be left half granted, and the removal at the end of
+	 *    the desktop (which takes the gid out of EVERY node) would take the
+	 *    administrator's entry too.  "The administrator's: never claimed, never removed." */
+	if (mine < 0) {
+		for (int i = 0; i < nn; i++)
+			if (acl_has_group(nodes[i], gid) > 0)
+				theirs++;
+		if (theirs) {
+			log_says_of(LOG_GRANT, user,
+			            "⭐ NO card grant for «%s»: %d render node(s) already have an entry for "
+			            "its group (gid %ld) that REMOTIX did not put.  Left as it is, nothing "
+			            "added on any node and nothing will be removed; the desktop is born "
+			            "anyway",
+			            user, theirs, (long)gid);
+			return false;
+		}
+	}
 	for (int i = 0; i < nn; i++) {
 		int has = acl_has_group(nodes[i], gid);
 
-		if (has > 0) {
-			if (mine < 0)
-				theirs++; /* the administrator's: never claimed, never removed */
-			continue;
-		}
+		if (has > 0)
+			continue; /* ours, from an earlier line of the record */
 		if (has == 0 && acl_add_group(nodes[i], gid) == 0) {
 			added++;
 			continue;
 		}
 		log_says_of(LOG_GRANT, user, "⛔ the card grant on %s for gid %ld did not work: %s",
 		            nodes[i], (long)gid, strerror(errno));
-	}
-	if (theirs) {
-		log_says_of(LOG_GRANT, user,
-		            "⭐ «%s»: %d render node(s) already had an entry for its group (gid %ld) "
-		            "that REMOTIX did not put: left as it is, and never removed",
-		            user, theirs, (long)gid);
 	}
 	if (!added && mine < 0)
 		return false;
@@ -590,6 +605,12 @@ void render_grant_remove(const char *user, uid_t uid, gid_t gid)
 	            user, (long)gid);
 }
 
+/* ⭐ What the sweep does and does NOT do (review of 24 Oct 2026).  It runs at start-up and
+ *   takes back a grant only when no REMOTIX desktop of that user is alive.  A desktop that
+ *   SURVIVED the shutdown of the service is alive (`children_turn_off()` deliberately leaves
+ *   its ACL in place): its grant is KEPT here, without a child, and the same sweep takes it
+ *   back at a later start when the desktop is gone.  When logind cannot tell, it is kept too.
+ *   The uninstaller removes whatever is still recorded (`remove-render-grants`). */
 void render_grant_sweep(void)
 {
 	char nodes[MAX_NODES][64];
