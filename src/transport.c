@@ -1741,12 +1741,16 @@ static void read_packet(transport *t, const struct sockaddr *local,
 			 *   asked it: a failed handshake was closed with the `last_error` as
 			 *   it was (NO_ERROR) instead of CRYPTO_ERROR + the alert (RFC 9001
 			 *   §4.8).  Like the ngtcp2 example: only if no code was set yet. */
-			if (rv != NGTCP2_ERR_CRYPTO)
-				ngtcp2_ccerr_set_liberr(&c->last_error, rv, NULL, 0);
-			else if (c->last_error.error_code == 0)
-				ngtcp2_ccerr_set_tls_alert(&c->last_error,
-				                           ngtcp2_conn_get_tls_alert2(c->conn),
-				                           NULL, 0);
+			if (c->last_error.error_code == 0) {
+				/* ⛔ a code already written (the H3 one that `webtransport.c` sets
+				 *   before a CALLBACK_FAILURE) is kept, not overwritten. */
+				if (rv != NGTCP2_ERR_CRYPTO)
+					ngtcp2_ccerr_set_liberr(&c->last_error, rv, NULL, 0);
+				else
+					ngtcp2_ccerr_set_tls_alert(&c->last_error,
+					                           ngtcp2_conn_get_tls_alert2(c->conn),
+					                           NULL, 0);
+			}
 			n = ngtcp2_conn_write_connection_close(
 				c->conn, &ps.path, &opi, buf, sizeof buf, &c->last_error,
 				now_ns());
@@ -2044,7 +2048,8 @@ void transport_expired(transport *t)
 					ngtcp2_ssize cn;
 					ngtcp2_path_storage_zero(&ps);
 					memset(&opi, 0, sizeof opi);
-					ngtcp2_ccerr_set_liberr(&c->last_error, rv, NULL, 0);
+					if (c->last_error.error_code == 0) /* a code already written is kept */
+						ngtcp2_ccerr_set_liberr(&c->last_error, rv, NULL, 0);
 					cn = ngtcp2_conn_write_connection_close(
 						c->conn, &ps.path, &opi, cbuf, sizeof cbuf,
 						&c->last_error, now);
