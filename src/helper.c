@@ -10,6 +10,7 @@
 #include "helper.h"
 
 #include "log.h"
+#include "rootside.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -209,7 +210,26 @@ struct helper {
 	bool root;
 	HelperOutcome outcome_cb;
 	void *outcome_ctx;
+	/* ⭐ 1.5 (§11.50, D-remote): the NETWORK SIDE's shape — no dispatcher here: the questions go to the root side
+	 *    as AUTH and the answers come back as VERDICT (`rootside.h`); the table in flight, the bounds and the
+	 *    delivery to `rcp.c` stay as they were.  Set only when `rootside_attached()`: never in the single-process
+	 *    server. */
+	bool remote;
+	HelperVerdict delivery;     /* remote: the delivery of the `helper_move()` in progress */
+	void *delivery_ctx;
+	bool lost_told;
 };
+
+/* ⭐ 1.5: referenced WEAKLY, so the harnesses that `#include` this file without `rootside.c` still link (and there
+ *    `remote` is never true). */
+#pragma weak rootside_attached
+#pragma weak rootside_descriptor
+#pragma weak rootside_lost
+#pragma weak rootside_move
+#pragma weak rootside_auth
+#pragma weak rootside_hook_verdict
+
+static void on_root_verdict(void *ctx, uint64_t request, int outcome);
 
 /* ------------------------------------------------------------------------ */
 /* THE GRANDCHILD — one single PAM transaction, then it dies.               */
@@ -511,6 +531,17 @@ helper *helper_turn_on(void)
 		return NULL;
 	a->fd = -1;
 	a->next_case = 1;
+	/* ⭐⭐ 1.5 (§11.50): the network side starts no dispatcher — the PAM helper is the root side's child, and this
+	 *     object only asks it. */
+	if (rootside_attached && rootside_attached()) {
+		a->remote = true;
+		a->fd = rootside_descriptor();
+		rootside_hook_verdict(on_root_verdict, a);
+		registro_dice(LOG_STARTUP,
+		              "⭐ PAM is asked through the ROOT SIDE (AUTH → VERDICT, DECISIONS.md §11.50): the helper is "
+		              "its child, this process never sees it");
+		return a;
+	}
 	if (!spawn(a, &why, &err)) {
 		/* ⭐ A failed start at boot is a death like the others — the object
 		 *    comes back with no process, and `helper_expired()` starts it with
@@ -569,6 +600,12 @@ void helper_turn_off(helper *a)
 {
 	if (!a)
 		return;
+	/* ⚠ Network mode: the channel is the root side's client's, and `children_turn_off()` still needs it after this
+	 *   line. */
+	if (a->remote) {
+		free(a);
+		return;
+	}
 	if (a->fd >= 0)
 		close(a->fd);
 	if (a->child > 0) {
@@ -583,6 +620,8 @@ void helper_turn_off(helper *a)
 
 int helper_descriptor(const helper *a)
 {
+	if (a && a->remote)
+		return rootside_descriptor();
 	return a ? a->fd : -1;
 }
 
@@ -629,7 +668,13 @@ static bool ask(helper *a, const char *user, const char *password,
 	ssize_t written;
 	uint64_t my;
 
-	if (a->fd < 0) {
+	if (a->remote && rootside_lost()) {
+		registro_dice(REG_RCP,
+		              "⛔ the root side is gone: this check does NOT leave — the login is refused after the fixed "
+		              "second and does NOT count towards the ban");
+		return false;
+	}
+	if (!a->remote && a->fd < 0) {
 		/* ⭐ Down, waiting for its restart (`helper_expired()`): refused after
 		 *    the fixed second, NOT counted — the defect is ours. */
 		registro_dice(REG_RCP,
@@ -665,7 +710,18 @@ static bool ask(helper *a, const char *user, const char *password,
 	snprintf(r.password, sizeof r.password, "%s", password);
 	snprintf(r.rhost, sizeof r.rhost, "%s", rhost);
 
-	written = send(a->fd, &r, sizeof r, MSG_NOSIGNAL);
+	/* ⭐ 1.5: network mode, the same request as AUTH to the root side. */
+	if (a->remote) {
+		/* ⛔ rootside_auth() writes its own line for every refusal (table full, channel, send): one line, the true
+		 *    reason. */
+		if (!rootside_auth(my, r.user, r.password, r.rhost)) {
+			explicit_bzero(&r, sizeof r);
+			return false;
+		}
+		written = (ssize_t)sizeof r;
+	} else {
+		written = send(a->fd, &r, sizeof r, MSG_NOSIGNAL);
+	}
 	/* ⛔ §4.4: the password is zeroed as soon as it has served.  This is the
 	 *    sender's copy, and it lives the time of a `send`.  ⚠ And the request
 	 *    number is already safe in `my`: reading it again from `r` after the
@@ -684,6 +740,10 @@ static bool ask(helper *a, const char *user, const char *password,
 
 	a->flight[a->nflight].ticket = my;
 	a->flight[a->nflight].expires = now_ms + EXPIRY_MS;
+	/* ⚠ The root side expires at `EXPIRY_MS` and answers by itself: this side waits a little longer, so it is that
+	 *   answer that arrives (this expiry is only the backstop). */
+	if (a->remote)
+		a->flight[a->nflight].expires += 4000;
 	snprintf(a->flight[a->nflight].user, sizeof a->flight[a->nflight].user, "%s",
 	         user);
 	snprintf(a->flight[a->nflight].rhost, sizeof a->flight[a->nflight].rhost, "%s",
@@ -924,8 +984,41 @@ static void deliver_outcome(helper *a, uint64_t ticket, uint8_t outcome, const c
 	rcp_refusal_locked(0);
 }
 
+/* ⭐ 1.5: network mode — a VERDICT from the root side (`rootside_move()`).  RXR_NO_LOCKED is the faillock refusal
+ *    (marked for `rcp.c` by `deliver_outcome()`), RXR_NOT_CHECKED the root side's «not checked» (its bounds, helper
+ *    down, timeout): refused as OURS and never counted (`not_checked()`); RXR_NO counts. */
+static void on_root_verdict(void *ctx, uint64_t request, int outcome)
+{
+	helper *a = (helper *)ctx;
+	char user[257];
+	char rhost[64];
+
+	if (!flight_consumes(a, request, user, sizeof user, rhost, sizeof rhost)) {
+		registro_dice(REG_RCP,
+		              "⛔ VERDICT for request %llu, which is not in flight (already expired, or already answered): "
+		              "DISCARDED",
+		              (unsigned long long)request);
+		return;
+	}
+	if (outcome == RXR_NOT_CHECKED) {
+		not_checked(a, request, user, rhost, a->delivery, a->delivery_ctx);
+		return;
+	}
+	deliver_outcome(a, request,
+	                outcome == RXR_YES ? 1u : outcome == RXR_NO_LOCKED ? 2u : 0u,
+	                user, rhost, a->delivery, a->delivery_ctx);
+}
+
 void helper_move(helper *a, HelperVerdict delivery, void *ctx)
 {
+	if (a && a->remote) {
+		a->delivery = delivery;
+		a->delivery_ctx = ctx;
+		rootside_move();
+		a->delivery = NULL;
+		a->delivery_ctx = NULL;
+		return;
+	}
 	if (!a || a->fd < 0)
 		return;
 	for (;;) {
@@ -1032,6 +1125,20 @@ void helper_expired(helper *a, uint64_t now_ms, HelperVerdict delivery,
 		} else {
 			i++;
 		}
+	}
+
+	/* ⭐⭐ 1.5 (§11.50): network mode — no dispatcher to watch here.  The root side gone is the end of this process:
+	 *     systemd restarts the unit, the desktops stay.  ⇒ SIGTERM to ourselves, once, so the loop's own farewell runs. */
+	if (a->remote) {
+		/* ⛔ The VERDICTs a wait put aside (a CLOSE_ORPHAN from the abandonment clock, a turn-off) are delivered HERE,
+		 *    every round, with the delivery — not at the next byte on the channel, which may never come. */
+		helper_move(a, delivery, ctx);
+		/* ⚠ The LINE is main.c's loop («the root side is gone»), written once; here only the stop. */
+		if (rootside_lost() && !a->lost_told) {
+			a->lost_told = true;
+			raise(SIGTERM);
+		}
+		return;
 	}
 
 	/* ⭐ And the dispatcher is watched here too: this function runs at every
