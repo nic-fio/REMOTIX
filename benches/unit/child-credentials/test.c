@@ -20,7 +20,7 @@
  *                                                          ⇒ «DISCARDED»: the child stays, the next message is read normally
  *
  * BUILD AND RUN (a second; nothing under /media/REMOTIX-15 is written; run from the root of the tree):
- *   podman run --rm -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
+ *   nice -n 19 ionice -c3 podman run --rm --cpus=2 --memory=2g --network=none -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
  *     cd /tmp && PK="gio-2.0 libpipewire-0.3 libdrm libva libva-drm vulkan opus libei-1.0 xkbcommon" &&
  *     F="-g -O1 -fsanitize=address,undefined -fno-sanitize-recover=undefined -std=gnu11 -D_GNU_SOURCE -Wno-unused-parameter \
  *        -I/albero/src -I/albero/benches/fuzz/child-msg $(pkg-config --cflags $PK)" &&

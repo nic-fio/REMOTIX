@@ -24,13 +24,13 @@
  * BUILD AND RUN (a few seconds; timing test, so no sanitizers; the real src/log.c; run from the root of the tree):
  *   nice -n 19 ionice -c3 podman run --rm --network=none --cpus=2 --memory=2g -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
  *     cd /tmp && clang -std=gnu11 -D_GNU_SOURCE -O1 -Wall -Wextra -Wno-unused-parameter -I/albero/src \
- *       -o test /albero/benches/unit/log-nonblock/test.c /albero/src/log.c -lpthread && ./test'
+ *       -o test /albero/benches/unit/log-nonblock/test.c -lpthread && ./test'
  * Exit code 0 green, 1 red, 3 not all checks ran.
  */
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
-#include "log.h"
+#include "log.c" /* the REAL src/log.c, #included: the test reads its private stderr_in_journal */
 
 #include <errno.h>
 #include <fcntl.h>
@@ -212,7 +212,7 @@ int main(void)
 		snprintf(js, sizeof js, "%llu:%llu", (unsigned long long)st.st_dev,
 		         (unsigned long long)st.st_ino);
 		setenv("JOURNAL_STREAM", js, 1);
-		require(log_journal(true) && log_stderr_is_journal(),
+		require(log_journal(true) && stderr_in_journal,
 		        "L4 journal on, stderr recognised as its stream");
 		worst = flood();
 		printf("        (slowest line: %.3f ms)\n", worst);

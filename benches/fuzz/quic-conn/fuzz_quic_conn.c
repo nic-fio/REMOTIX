@@ -1,8 +1,8 @@
 /* RECOVERED from the 1.5-scartata tag (benches/runner/fuzz/harness/) on 24 Oct 2026 for the branch limiti-su-quic, and
  *    ADAPTED to its transport.c, which has the caps, the eviction, the 90 s age and the single-use Retry tokens (11.40) but
- *    NOT the later commits of the tag (4f52eab8 "parked" and the pre-login path-change cap, b207ad85 migration callbacks):
- *      - the eviction oracle follows pick_victim() of this branch (finished first; else the most crowded place, the earliest
- *        state, the oldest on a tie); the "parked" rule is gone;
+ *    NOT the later commits of the tag (the pre-login path-change cap, b207ad85 migration callbacks):
+ *      - the eviction oracle follows pick_victim() of this branch (finished first; else the most crowded place, a PARKED
+ *        connection before a fresh one, the earliest state, the oldest on a tie; the "parked" rule came back with c1624307);
  *      - the static assert on PRELOGIN_MOVES_MAX is gone; the "too many path changes" branch in stubs_quic.c is dead here;
  *      - wt_verdict() / transport_verdict() have the 4 arguments of this branch's webtransport.h / transport.h.
  *    Build and run: build.sh, run.sh in this folder (the image: ../Containerfile.fuzz). */
@@ -925,7 +925,7 @@ static void op_new(const uint8_t *a, size_t n)
 		 *    exactly of the connection the rule names, and only once the newcomer exists */
 		bool alone = qhead == qtail && !(a4 & 1);
 		place key, key48;
-		struct { rxq_reg *r; int rank; size_t crowd; unsigned evc; } snap[RXQ_CONNS * 2];
+		struct { rxq_reg *r; int rank; size_t crowd; unsigned evc; bool parked; } snap[RXQ_CONNS * 2];
 		size_t ns = 0, before = T->how_many, births_before = rxq_nconns, from, from48,
 		       live = live_count(T), pend = pending_count(T), nev = 0, evicted = 0;
 		rxq_reg *want = NULL, *gone = NULL;
@@ -941,11 +941,14 @@ static void op_new(const uint8_t *a, size_t n)
 			own_place(&snap[ns].r->born, &k, &k48);
 			snap[ns].crowd = own_from(&k48, true);
 			snap[ns].evc = snap[ns].r->evicted;
+			snap[ns].parked = rxq_now_ns > snap[ns].r->born_ns &&
+			                  rxq_now_ns - snap[ns].r->born_ns >= 5ull * NGTCP2_SECONDS; /* PARKED_S */
 			nev += snap[ns].rank >= 0;
 			ns++;
 		}
-		/* the victim the rule names (`pick_victim()` of this branch): the oldest finished; else the
-		 * most crowded place, the earliest state in it (lower rank), the oldest on a tie.  The
+		/* the victim the rule names (`pick_victim()`): the oldest finished; else the most crowded
+		 * place; between equals a PARKED one (older than PARKED_S) before a fresh one; then the
+		 * earliest state (lower rank), the oldest on a tie.  The
 		 * snapshot is newest first, like the list: the walk is the same, with the same `<=`. */
 		for (size_t k = ns; k-- > 0;)
 			if (snap[k].rank == 0) {
@@ -955,14 +958,24 @@ static void op_new(const uint8_t *a, size_t n)
 		if (!want) {
 			size_t bc = 0;
 			int br = 0;
+			bool bp = false;
 			for (size_t k = 0; k < ns; k++) {
+				bool better;
 				if (snap[k].rank < 0)
 					continue;
-				if (!want || snap[k].crowd > bc ||
-				    (snap[k].crowd == bc && snap[k].rank <= br)) {
+				if (!want || snap[k].crowd > bc)
+					better = true;
+				else if (snap[k].crowd < bc)
+					better = false;
+				else if (snap[k].parked != bp)
+					better = snap[k].parked;
+				else
+					better = snap[k].parked || snap[k].rank <= br;
+				if (better) {
 					want = snap[k].r;
 					bc = snap[k].crowd;
 					br = snap[k].rank;
+					bp = snap[k].parked;
 				}
 			}
 		}

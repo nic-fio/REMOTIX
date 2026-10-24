@@ -26,7 +26,7 @@
  *
  * BUILD AND RUN (a second; nothing under /media/REMOTIX-15 is written; run from the root of the tree).  Same command with
  * K="-DKDE" and SRC=clipboard_kde for the KDE half; with K="" for GNOME:
- *   for K in "" "-DKDE"; do podman run --rm -e K="$K" -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
+ *   for K in "" "-DKDE"; do nice -n 19 ionice -c3 podman run --rm --cpus=2 --memory=2g --network=none -e K="$K" -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
  *     mkdir -p /tmp/g && cd /tmp/g && for p in wlr-data-control-unstable-v1 ext-data-control-v1; do
  *       f=/albero/src/protocols/$p.xml; wayland-scanner client-header $f $p-client-protocol.h; done &&
  *     PK="gio-2.0 gio-unix-2.0 wayland-client" &&

@@ -1779,7 +1779,9 @@ static int failed_inside(const struct lentry *e, uint64_t now)
 {
 	int n = 0;
 	for (int k = 0; k < e->amount; k++)
-		if (now - e->failure_times[k] <= WINDOW_MS[e->kind])
+		/* a stamp in the future (>= now: a clock that went back) is inside the
+		 * window: the unsigned subtraction would wrap and forget the failure */
+		if (e->failure_times[k] >= now || now - e->failure_times[k] <= WINDOW_MS[e->kind])
 			n++;
 	return n;
 }

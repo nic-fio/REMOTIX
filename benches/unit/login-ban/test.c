@@ -24,7 +24,7 @@
  *   log         `unknown user [hmac6]` (never the name); a real user is named; RFC 4231 vectors; the secret file is 0600
  *
  * BUILD AND RUN (a second; nothing under /media/REMOTIX-15 is written; run from the root of the tree):
- *   podman run --rm -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
+ *   nice -n 19 ionice -c3 podman run --rm --cpus=2 --memory=2g --network=none -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
  *     cd /tmp && F="-g -O1 -fsanitize=address,undefined -fno-sanitize-recover=undefined -std=gnu11 -D_GNU_SOURCE \
  *        -Wall -Wextra -Wno-unused-parameter -I/albero/src -I/albero/benches/fuzz/rcp-msg" &&
  *     clang $F -c /albero/benches/unit/login-ban/test.c -o t.o && clang $F -c /albero/benches/fuzz/rcp-msg/stubs_log.c -o l.o &&
@@ -739,10 +739,12 @@ static int in_flight_of(const char *key, const char *user)
 	int i = lfind_user(key, user);
 	return i < 0 ? -1 : attempts[i].in_flight;
 }
+/* ⚠ counted at at(13): a failure stamped later than the instant asked (the 12 s net, tickets at at(3)) would be in the
+ * future and the unsigned subtraction in failed_inside() wraps, so it would read 0 */
 static int failures_of(const char *key, const char *user)
 {
 	int i = lfind_user(key, user);
-	return i < 0 ? 0 : failed_inside(&attempts[i], at(1));
+	return i < 0 ? 0 : failed_inside(&attempts[i], at(13));
 }
 
 /* what rcp_time() puts on the wire (ported from 24f99518): the last byte of the last message, how many, the close code */
@@ -764,6 +766,12 @@ static void test_verdict_paths(void)
 	rcp_orphan_verdict("alice", "1.2.3.4", false, false, 0, at(1), rec_line, NULL);
 	CHECK(in_flight_of(K, "alice") == 0 && failures_of(K, "alice") == 1, "orphan with rhost: in flight 0, failure counted (%d, %d)",
 	      in_flight_of(K, "alice"), failures_of(K, "alice"));
+	/* a failure stamped in the FUTURE (a clock that went back) still counts: failed_inside() asked 5 s BEFORE the stamp */
+	{
+		int i = lfind_user(K, "alice");
+		CHECK(i >= 0 && failed_inside(&attempts[i], at(1) - 5000) == 1,
+		      "a failure stamped at now+5 s counts as inside the window (no unsigned wrap)");
+	}
 	/* ...and WITHOUT it nothing can be resolved (this is the defect of helper.c the test of test_helper.c guards) */
 	login_reserve(K, "alice", at(2), &info);
 	rcp_orphan_verdict("alice", "", false, false, 0, at(3), rec_line, NULL);

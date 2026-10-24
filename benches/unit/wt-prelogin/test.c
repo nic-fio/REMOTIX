@@ -29,7 +29,7 @@
  *     { make -j2 TWIN=none >/tmp/make.log 2>&1 || { tail -40 /tmp/make.log; exit 1; }; } &&
  *     gcc -std=gnu11 -Wall -Wextra -I. $(pkg-config --cflags gio-2.0 libpipewire-0.3 libdrm libva libva-drm vulkan opus libei-1.0 xkbcommon wayland-client gbm) \
  *         -o /tmp/wpl ../benches/unit/wt-prelogin/test.c $(ls *.o | grep -v -e "^main.o$" -e "^webtransport.o$") \
- *         -lngtcp2_crypto_ossl -lngtcp2 -lnghttp3 -lssl -lcrypto -lpam -lm \
+ *         -lngtcp2_crypto_ossl -lngtcp2 -lnghttp3 -lssl -lcrypto -lpam -lm -lz \
  *         $(pkg-config --libs gio-2.0 libpipewire-0.3 libva libva-drm libei-1.0 xkbcommon wayland-client gbm opus vulkan) -ldl &&
  *     /tmp/wpl'
  * Exit code 0 green, 1 red, 3 not all checks ran.
