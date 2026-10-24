@@ -8954,6 +8954,13 @@ ngtcp2_ssize wt_write(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 				}
 				nghttp3_conn_block_stream(w->h3, stream_id);
 				continue;
+			/* ⛔ 24 Oct 2026, audit nghttp3 1.18 (the same since 1.0): `ngtcp2.h` lists
+			 *    STREAM_NOT_FOUND with STREAM_DATA_BLOCKED and STREAM_SHUT_WR:
+			 *    «Application can still write the stream data of the other
+			 *    streams».  The stream is gone (closed by the peer) and
+			 *    nghttp3 or our queue still offered it: same road as
+			 *    SHUT_WR, not a connection error. */
+			case NGTCP2_ERR_STREAM_NOT_FOUND:
 			case NGTCP2_ERR_STREAM_SHUT_WR:
 				if (wt_mine) {
 					/* The stream is already closed for writing — normally
