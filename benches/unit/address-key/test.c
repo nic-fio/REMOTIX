@@ -12,7 +12,7 @@
  * not an address (bare == NULL) has no sockaddr: rcp_key_address() must keep it, «[text]», unparsed.  Idempotence is checked too.
  *
  * BUILD AND RUN (a few seconds; nothing under /media/REMOTIX-15 is written; run from the root of the tree):
- *   nice -n 19 ionice -c3 podman run --rm --cpus=2 -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
+ *   nice -n 19 ionice -c3 podman run --rm --cpus=2 --memory=2g --network=none -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
  *     cd /tmp && F="-g -O1 -fsanitize=address,undefined -fno-sanitize-recover=undefined -std=gnu11 -D_GNU_SOURCE \
  *        -Wno-unused-parameter -I/albero/src -I/albero/benches/fuzz/rcp-msg" &&
  *     clang $F -c /albero/benches/unit/address-key/test.c -o t.o && clang $F -c /albero/src/rcp.c -o r.o &&

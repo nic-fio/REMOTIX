@@ -26,7 +26,7 @@
  * 4, 5, 5, 6, 4, 4, 5, 5 capabilities) for BOTH trees (src and the benches/rcp twin).
  *
  * BUILD AND RUN (a few seconds; nothing under /media/REMOTIX-15 is written; run from the root of the tree):
- *   nice -n 19 ionice -c3 podman run --rm --network=none --cpus=2 -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
+ *   nice -n 19 ionice -c3 podman run --rm --network=none --cpus=2 --memory=2g -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
  *     cd /tmp && rc=0 &&
  *     for T in src benches/rcp; do for D in "-DREMOTIX_NONE" "-DREMOTIX_BENCH" "-DTEST_PACE" "-DREMOTIX_BENCH -DTEST_PACE" \
  *                "-DTEST_PACE_NOHOOK" "-DREMOTIX_BENCH -DTEST_PACE_NOHOOK" "-DTEST_PACE_NOOFFER" "-DREMOTIX_BENCH -DTEST_PACE_NOOFFER"; do

@@ -24,7 +24,7 @@
  *   log         `unknown user [hmac6]` (never the name); a real user is named; RFC 4231 vectors; the secret file is 0600
  *
  * BUILD AND RUN (a second; nothing under /media/REMOTIX-15 is written; run from the root of the tree):
- *   podman run --rm -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
+ *   nice -n 19 ionice -c3 podman run --rm --cpus=2 --memory=2g --network=none -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
  *     cd /tmp && F="-g -O1 -fsanitize=address,undefined -fno-sanitize-recover=undefined -std=gnu11 -D_GNU_SOURCE \
  *        -Wall -Wextra -Wno-unused-parameter -I/albero/src -I/albero/benches/fuzz/rcp-msg" &&
  *     clang $F -c /albero/benches/unit/login-ban/test.c -o t.o && clang $F -c /albero/benches/fuzz/rcp-msg/stubs_log.c -o l.o &&
