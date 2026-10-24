@@ -18,14 +18,18 @@
  * video.pace (§13) is declared once, "yes", iff the build has -DTEST_PACE (the test then switches rcp_pace_offer(true) on
  * and gives the session a `pace` hook); a further capability is parsed all the same and only has to keep
  * count == pairs, no leftover.
+ * The two HALF cases (§13: both conditions are needed) must NOT declare video.pace: -DTEST_PACE_NOHOOK (the offer is on,
+ * the session has no `pace` hook) and -DTEST_PACE_NOOFFER (the hook is there, rcp_pace_offer(false)): 4 capabilities in
+ * product, 5 in BENCH.
  *
- * Built FOUR times (product, BENCH, product+PACE, BENCH+PACE: 4, 5, 5, 6 capabilities) for BOTH trees (src and the
- * benches/rcp twin).
+ * Built EIGHT times (product, BENCH, +PACE, BENCH+PACE, +PACE_NOHOOK, +PACE_NOOFFER, and both of those with BENCH:
+ * 4, 5, 5, 6, 4, 4, 5, 5 capabilities) for BOTH trees (src and the benches/rcp twin).
  *
  * BUILD AND RUN (a few seconds; nothing under /media/REMOTIX-15 is written; run from the root of the tree):
  *   nice -n 19 ionice -c3 podman run --rm --network=none --cpus=2 -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
  *     cd /tmp && rc=0 &&
- *     for T in src benches/rcp; do for D in "-DREMOTIX_NONE" "-DREMOTIX_BENCH" "-DTEST_PACE" "-DREMOTIX_BENCH -DTEST_PACE"; do
+ *     for T in src benches/rcp; do for D in "-DREMOTIX_NONE" "-DREMOTIX_BENCH" "-DTEST_PACE" "-DREMOTIX_BENCH -DTEST_PACE" \
+ *                "-DTEST_PACE_NOHOOK" "-DREMOTIX_BENCH -DTEST_PACE_NOHOOK" "-DTEST_PACE_NOOFFER" "-DREMOTIX_BENCH -DTEST_PACE_NOOFFER"; do
  *       echo "== $T $D" &&
  *       F="-g -O1 -fsanitize=address,undefined -fno-sanitize-recover=undefined -std=gnu11 -D_GNU_SOURCE $D \
  *          -Wall -Wextra -Wno-unused-parameter -I/albero/$T -I/albero/benches/fuzz/rcp-msg" &&
@@ -33,7 +37,7 @@
  *       clang $F -c /albero/benches/fuzz/rcp-msg/stubs_log.c -o l.o &&
  *       clang -fsanitize=address,undefined t.o l.o -o test && ./test || rc=1;
  *     done; done; exit $rc'
- * Exit code 0 = every check passed in all eight builds. (-DREMOTIX_NONE is a harmless define: "no BENCH, no PACE".)
+ * Exit code 0 = every check passed in all sixteen builds (8 per tree). (-DREMOTIX_NONE is a harmless define: "no BENCH, no PACE".)
  */
 #include "rcp.c"
 
@@ -67,7 +71,7 @@ static void h_send(void *c, const uint8_t *d, size_t n)
 }
 static void h_close(void *c, uint8_t r) { (void)c; (void)r; }
 static void h_record(void *c, const char *l) { (void)c; (void)l; }
-#ifdef TEST_PACE
+#if defined(TEST_PACE) || defined(TEST_PACE_NOOFFER)
 static bool h_pace(void *c, uint16_t max_fps) { (void)c; (void)max_fps; return true; }
 #endif
 
@@ -121,10 +125,15 @@ int main(void)
 	g.send_msg = h_send;
 	g.close = h_close;
 	g.record = h_record;
-#ifdef TEST_PACE
 	/* §13: video.pace is declared only when switched on AND the host can apply it */
+#ifdef TEST_PACE
 	g.pace = h_pace;
 	rcp_pace_offer(true);
+#elif defined(TEST_PACE_NOHOOK)
+	rcp_pace_offer(true);                 /* offered, but no hook to apply it */
+#elif defined(TEST_PACE_NOOFFER)
+	g.pace = h_pace;
+	rcp_pace_offer(false);                /* the hook is there, but it is not offered */
 #endif
 	s = rcp_open(&g, "192.0.2.7", 1000);
 	CHECK(s != NULL, "rcp_open failed");
@@ -190,7 +199,7 @@ int main(void)
 #ifdef TEST_PACE
 	CHECK(seen_pace == 1, "PACE on: video.pace must be declared once (%d)", seen_pace);
 #else
-	CHECK(seen_pace == 0, "PACE off: video.pace must NOT be declared (%d)", seen_pace);
+	CHECK(seen_pace == 0, "PACE off or half (no hook / no offer): video.pace must NOT be declared (%d)", seen_pace);
 #endif
 	/* the count itself: 4 base + bench.mark (BENCH) + video.pace (PACE) */
 	CHECK(declared == 4u
@@ -211,6 +220,10 @@ int main(void)
 #endif
 #ifdef TEST_PACE
 	       "+PACE",
+#elif defined(TEST_PACE_NOHOOK)
+	       "+PACE-without-hook",
+#elif defined(TEST_PACE_NOOFFER)
+	       "+PACE-without-offer",
 #else
 	       "",
 #endif
