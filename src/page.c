@@ -685,6 +685,16 @@ static bool client_active(const client *c)
 	return c->phase != F_DONE && c->fd >= 0;
 }
 
+/* What the peer still has to receive, never below 0: `delivered` counts TLS
+ * bytes (record overhead, and the handshake's tail if it is acknowledged
+ * late) against a plaintext `nresponse`, so it may exceed it — and an
+ * unsigned subtraction would then wrap to the LARGEST value and make the
+ * nearly finished client the first one evicted. */
+static uint64_t bytes_left(const client *c)
+{
+	return c->delivered < c->nresponse ? c->nresponse - c->delivered : 0;
+}
+
 /* The moment the average since the response began falls under
  * PAGE_RATE_FLOOR, never before the grace: delivered / (t - write_start) <
  * floor  ⇔  t > write_start + delivered / floor. */
@@ -810,8 +820,7 @@ static void accept_page(page *p)
 			if (now - x->write_start >= PAGE_EVICT_AGE_MS &&
 			    x->delivered * 1000u <
 			            (uint64_t)PAGE_EVICT_RATE * (now - x->write_start) &&
-			    (!slow || x->nresponse - x->delivered >
-			                      slow->nresponse - slow->delivered))
+			    (!slow || bytes_left(x) > bytes_left(slow)))
 				slow = x;
 		}
 		/* ⛔ The per-address cap BEFORE the eviction: a crowded address

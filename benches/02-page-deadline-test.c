@@ -38,7 +38,8 @@
  *      client is refused while they are young, and once they are older than
  *      5 s and slower than 32 KB/s one of them is evicted and a real GET
  *      gets the page;
- *  10. the IPv6 /48 of PAGE_PER_48 is taken only from real IPv6 peers.
+ *  10. the IPv6 /48 of PAGE_PER_48 is taken only from real IPv6 peers;
+ *  11. the bytes left of the eviction ranking never wrap below zero.
  *
  * Exit status: 0 green, 1 red, 3 not all checks ran. */
 #define _GNU_SOURCE
@@ -53,7 +54,7 @@
 #include <sys/wait.h>
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 26
+#define EXPECTED_CHECKS 27
 
 static void require(int cond, const char *desc)
 {
@@ -419,6 +420,20 @@ int main(void)
 				printf("       wrong for %s\n", cases[i].a);
 		}
 		require(good == 5, "IPv4, mapped, loopback, NAT64: none; 2001:db8:1:2::5 → 2001:db8:1::/48");
+	}
+
+	printf("11. bytes left never wraps below zero\n");
+	{
+		client a, b;
+		memset(&a, 0, sizeof a);
+		memset(&b, 0, sizeof b);
+		a.nresponse = 1000;
+		a.delivered = 1040; /* TLS overhead acknowledged past the plaintext */
+		b.nresponse = 1000;
+		b.delivered = 100;
+		require(bytes_left(&a) == 0 && bytes_left(&b) == 900 &&
+		                bytes_left(&b) > bytes_left(&a),
+		        "delivered > nresponse gives 0 left, and ranks below a client with 900 left");
 	}
 
 	page_close(p);
