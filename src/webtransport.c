@@ -1052,11 +1052,46 @@ static stream_judgment *judgment_find(wt *w, int64_t id)
 	return NULL;
 }
 
+/* ⛔ 24 Oct 2026, audit nghttp3 1.18 (the same since 1.0): the judgment of a stream was
+ *    removed ONLY in `wt_free()`.  Every stream the client opens leaves one
+ *    (40 bytes) for the whole life of the connection, and `judgment_find()`
+ *    scans the whole list at every packet: memory grows with the streams
+ *    opened and the cost of each packet with it (quadratic).  Found by the
+ *    stream-churn bench.
+ * ⭐ A closed stream's slot is NOT removed by swapping the last element in:
+ *    `dispatch()` and `dispatch_uni()` hold a `stream_judgment *` while they
+ *    call into rcp and ngtcp2, and a close that arrives inside one of those
+ *    calls would move the element under their feet.  The slot is marked FREE
+ *    (id -1, `pref` released, memory still valid), the free slots at the tail
+ *    are trimmed, and `judgment_create()` reuses a free slot before growing. */
+#define JUDGMENT_FREE ((int64_t)-1)
+
+static void judgment_drop(wt *w, int64_t id)
+{
+	stream_judgment *g = judgment_find(w, id);
+
+	if (!g)
+		return;
+	bytes_free(&g->pref);
+	g->id = JUDGMENT_FREE;
+	g->flavor = G_UNCERTAIN;
+	while (w->njudgments > 0 && w->judgments[w->njudgments - 1].id == JUDGMENT_FREE)
+		w->njudgments--;
+}
+
 static stream_judgment *judgment_create(wt *w, int64_t id)
 {
 	stream_judgment *g = judgment_find(w, id);
 	if (g)
 		return g;
+	for (size_t i = 0; i < w->njudgments; i++)
+		if (w->judgments[i].id == JUDGMENT_FREE) {
+			g = &w->judgments[i];
+			memset(g, 0, sizeof *g);
+			g->id = id;
+			g->flavor = G_UNCERTAIN;
+			return g;
+		}
 	if (w->njudgments == w->capjudgments) {
 		size_t c = w->capjudgments ? w->capjudgments * 2 : 8;
 		stream_judgment *n = realloc(w->judgments, c * sizeof *n);
@@ -7479,8 +7514,16 @@ static enum outcome dispatch_uni(wt *w, int64_t stream_id, const uint8_t *data,
 	 *    would be «the first input of every session is malformed».
 	 * ⚠ And `bytes_free()` was moved to the end on purpose: until that
 	 *   moment `load` points inside `g->pref`. */
-	load = g->pref.d + 2 + n;
-	load_n = g->pref.n - (2 + n);
+	/* ⛔ 24 Oct 2026, audit nghttp3 1.18: the prefix bytes are TAKEN OUT of the judgment
+	 *    before the calls below.  `rcp_start()` / `rcp_violation()` / the
+	 *    `rcp_pass_*` can close the stream inside them, and
+	 *    `wt_stream_closed()` now releases the judgment (`judgment_drop()`):
+	 *    `g->pref.d` would be freed while it is still read.  The local `held`
+	 *    owns the bytes until the end. */
+	bytes held = g->pref;
+	memset(&g->pref, 0, sizeof g->pref);
+	load = held.d + 2 + n;
+	load_n = held.n - (2 + n);
 	count_credit(w, stream_id, consumed);
 
 	switch (channel) {
@@ -7556,7 +7599,7 @@ static enum outcome dispatch_uni(wt *w, int64_t stream_id, const uint8_t *data,
 		 *   can arrive all together, preamble and FIN included. */
 		rcp_pass_clipboard(w, stream_id, load, load_n, fin);
 	}
-	bytes_free(&g->pref);
+	bytes_free(&held);
 	return E_MINE;
 }
 
@@ -7636,6 +7679,14 @@ static enum outcome dispatch(wt *w, int64_t stream_id, const uint8_t *data,
 
 	consumed = g->pref.n;
 	g->flavor = G_WT;
+	/* ⛔ 24 Oct 2026, audit nghttp3 1.18: the prefix bytes are TAKEN OUT of the judgment
+	 *    before the calls below.  `rcp_start()` / `rcp_violation()` / the
+	 *    `rcp_pass_*` can close the stream inside them, and
+	 *    `wt_stream_closed()` now releases the judgment (`judgment_drop()`):
+	 *    `g->pref.d` would be freed while it is still read.  The local `held`
+	 *    owns the bytes until the end. */
+	bytes held = g->pref;
+	memset(&g->pref, 0, sizeof g->pref);
 
 	/* ⭐ `RCP.md` §4.2: the FIRST bidirectional stream the client opens
 	 *    in the session is the control channel.
@@ -7681,14 +7732,14 @@ static enum outcome dispatch(wt *w, int64_t stream_id, const uint8_t *data,
 	                 (long)stream_id, (unsigned long long)session);
 
 	if (consumed > 2 + n) {
-		const uint8_t *rest = g->pref.d + 2 + n;
+		const uint8_t *rest = held.d + 2 + n;
 		size_t rn = consumed - 2 - n;
 		if (stream_id == w->rcp_stream)
 			rcp_pass(w, rest, rn);
 		else
 			discard_extra_stream(w, stream_id, rn);
 	}
-	bytes_free(&g->pref);
+	bytes_free(&held);
 	/* ⚠ The credit of the PREFIX bytes is reopened anyway: those bytes
 	 *   we consumed ourselves to judge the stream, and not counting them
 	 *   would block the legitimate control channel too.  ⛔ What is NOT
@@ -8482,6 +8533,10 @@ int wt_stream_closed(wt *w, int64_t stream_id, uint64_t code, bool with_code)
 	r = request_find(w, stream_id, false);
 	if (r)
 		r->used = false;
+
+	/* ⛔ 24 Oct 2026, audit nghttp3 1.18: the stream is closed, its judgment goes (see
+	 *    `judgment_drop()`). */
+	judgment_drop(w, stream_id);
 
 	if (!w->h3)
 		return 0;
