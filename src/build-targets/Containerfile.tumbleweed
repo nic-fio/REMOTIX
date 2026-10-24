@@ -10,7 +10,7 @@ FROM registry.opensuse.org/opensuse/tumbleweed:latest
 RUN zypper -n refresh && zypper -n install --no-recommends \
         gcc make pkg-config git cmake ninja diffutils \
         libopenssl-devel pam-devel glib2-devel pipewire-devel libdrm-devel \
-        libva-devel libopus-devel \
+        libva-devel libopus-devel zlib-devel \
         libei-devel libxkbcommon-devel 'pkgconfig(gbm)' wayland-devel vulkan-devel \
     && zypper -n clean -a
 

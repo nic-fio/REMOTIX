@@ -62,6 +62,7 @@ depends=(
 	#    `[M]` 30 Sep: opus 1.6.1, libva 2.24.1 (also brings libva-drm.so).
 	#    ⛔ Phase 19: no openh264 and svt-av1 — encoding happens only on the GPU.
 	opus libopus.so                           # the audio
+	zlib libz.so                              # the login page, gzip (DECISIONS-11.md §11.44)
 	# ⛔ no libyuv: the colour conversion is ours (`src/colors709.c`, phases/18 §1)
 	glib2 libglib-2.0.so libgobject-2.0.so libgio-2.0.so
 	libpipewire libpipewire-0.3.so

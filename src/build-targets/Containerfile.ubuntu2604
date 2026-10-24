@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential pkg-config git ca-certificates cmake ninja-build \
         libssl-dev libpam0g-dev \
         libglib2.0-dev libpipewire-0.3-dev libdrm-dev \
-        libva-dev libopus-dev \
+        libva-dev libopus-dev zlib1g-dev \
         libei-dev libxkbcommon-dev libgbm-dev libwayland-dev libvulkan-dev \
     && rm -rf /var/lib/apt/lists/*
 

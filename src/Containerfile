@@ -90,7 +90,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends libgbm-dev \
 #    fallback is gone, and for the same reason the image does not have them.  In
 #    a layer of its own, like `libgbm-dev`.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        libopus-dev \
+        libopus-dev zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # ⭐ Phase 19 (`phases/19-nvidia.md`, `DECISIONS.md` §10.27): Vulkan Video — the

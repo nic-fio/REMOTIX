@@ -20,6 +20,8 @@
 
 #include <openssl/err.h>
 #include <openssl/rand.h>
+#include <strings.h>
+#include <zlib.h>
 
 #define MAX_CLIENTS PAGE_MAX_CLIENTS
 /* ⛔⭐ THE TCP LISTENER'S CLOCKS AND CAPS — 15 Oct 2026, a pre-login denial
@@ -67,7 +69,7 @@
  *        share an attacker can only push out slots of groups LARGER than his
  *        own, that is his own kind, never the lone browser.
  *     ⚠ The price: a crowd behind ONE address (a CGNAT, an office NAT, a
- *       carrier /48) is one group — see `DECISIONS.md` §11.44.
+ *       carrier /48) is one group — see `DECISIONS-11.md` §11.44.
  *   · Expired and evicted clients are closed with a RESET (`SO_LINGER`
  *     {1, 0}): a gentle close would leave the kernel holding their unsent
  *     data in an orphan socket for minutes.  A response that ends normally
@@ -262,8 +264,15 @@ struct page {
 	char refused_last[64];
 	bool refused_ever;
 	uint64_t refused_line_ms;
-	/* The not-banned page, built once for `cached_fp` (see `body`). */
+	/* The not-banned page, built once for `cached_fp` (see `body`), and
+	 * the same page gzip-compressed (`gz_page()`), or NULL: then every
+	 * request gets the plain one.  ⚠ ONE plain and ONE compressed copy per
+	 * fingerprint, replaced together.  `cached_gz_retry`: the compression
+	 * failed for lack of memory, and is tried again at the next request that
+	 * accepts gzip (not after a failure that would repeat: never smaller). */
 	body *cached;
+	body *cached_gz;
+	bool cached_gz_retry;
 	char cached_fp[64];
 };
 
@@ -477,6 +486,189 @@ static body *build_page(const page *p, bool banned, const char *warning,
 	r = body_new(d, strlen(d));
 	free(d);
 	return r;
+}
+
+/* zlib's allocations go through this file's `malloc`/`free` (so the desk
+ * test's allocation seam sees them too). */
+static voidpf gz_alloc(voidpf opaque, uInt items, uInt size)
+{
+	(void)opaque;
+	if (size && items > (size_t)-1 / size)
+		return Z_NULL;
+	return malloc((size_t)items * size);
+}
+
+static void gz_free(voidpf opaque, voidpf address)
+{
+	(void)opaque;
+	free(address);
+}
+
+/* ⭐ §11.44 (the user's decision, 15 Oct 2026): `plain` gzip-compressed
+ *   (RFC 1952, level 9) — ~907 KB of page become far fewer for a slow phone.
+ *   Done ONCE per fingerprint, when the shared page is built.  Returns a new
+ *   body, or NULL: `*oom` says whether for lack of memory (worth retrying)
+ *   or because it did not come out smaller (not worth it). */
+static body *gz_page(const body *plain, bool *oom)
+{
+	z_stream z;
+	body *r;
+	uLong bound;
+	int rv;
+
+	*oom = false;
+	memset(&z, 0, sizeof z);
+	z.zalloc = gz_alloc;
+	z.zfree = gz_free;
+	/* 15 + 16: a 32 KB window and the gzip wrapper (not zlib's own). */
+	rv = deflateInit2(&z, 9, Z_DEFLATED, 15 + 16, 8, Z_DEFAULT_STRATEGY);
+	if (rv != Z_OK) {
+		*oom = rv == Z_MEM_ERROR;
+		return NULL;
+	}
+	bound = deflateBound(&z, (uLong)plain->n);
+	if (plain->n > (uInt)-1 || bound > (uInt)-1) {
+		deflateEnd(&z);
+		return NULL;
+	}
+	r = malloc(sizeof *r + bound);
+	if (!r) {
+		*oom = true;
+		deflateEnd(&z);
+		return NULL;
+	}
+	z.next_in = (Bytef *)(uintptr_t)plain->data;
+	z.avail_in = (uInt)plain->n;
+	z.next_out = (Bytef *)r->data;
+	z.avail_out = (uInt)bound;
+	rv = deflate(&z, Z_FINISH);
+	if (rv != Z_STREAM_END || z.total_out >= plain->n) {
+		deflateEnd(&z);
+		free(r);
+		return NULL;
+	}
+	r->refs = 1;
+	r->n = (size_t)z.total_out;
+	deflateEnd(&z);
+	return r;
+}
+
+/* The q-value of RFC 9110 §12.4.2 in thousandths («0», «0.5», «1.000»), or
+ * -1 when it is not one. */
+static int qvalue(const char *s, size_t n)
+{
+	int v = 0, digits = 0;
+
+	if (n == 0 || (s[0] != '0' && s[0] != '1'))
+		return -1;
+	if (n > 1 && (s[1] != '.' || n > 5))
+		return -1;
+	for (size_t i = 2; i < n; i++) {
+		if (s[i] < '0' || s[i] > '9')
+			return -1;
+		v = v * 10 + (s[i] - '0');
+		digits++;
+	}
+	while (digits++ < 3)
+		v *= 10;
+	v += s[0] == '1' ? 1000 : 0;
+	return v > 1000 ? -1 : v;
+}
+
+/* One `Accept-Encoding` value: updates the q of `gzip` (or `x-gzip`) and of
+ * `*` (-1 = not named). */
+static void accept_encoding_value(const char *s, size_t n, int *q_gzip, int *q_any)
+{
+	size_t i = 0;
+
+	while (i < n) {
+		size_t t0, t1;
+		int q = 1000;
+
+		while (i < n && (s[i] == ' ' || s[i] == '\t' || s[i] == ','))
+			i++;
+		t0 = i;
+		while (i < n && s[i] != ';' && s[i] != ',' && s[i] != ' ' && s[i] != '\t')
+			i++;
+		t1 = i;
+		/* The parameters: only `q` matters; anything unreadable makes the
+		 * whole element count for nothing (q = -1). */
+		while (i < n && s[i] != ',') {
+			size_t p0, p1, v0, v1;
+			while (i < n && (s[i] == ' ' || s[i] == '\t'))
+				i++;
+			if (i >= n || s[i] == ',')
+				break;
+			if (s[i] != ';') {
+				q = -1;
+				while (i < n && s[i] != ',')
+					i++;
+				break;
+			}
+			i++;
+			while (i < n && (s[i] == ' ' || s[i] == '\t'))
+				i++;
+			p0 = i;
+			while (i < n && s[i] != '=' && s[i] != ';' && s[i] != ',' &&
+			       s[i] != ' ' && s[i] != '\t')
+				i++;
+			p1 = i;
+			while (i < n && (s[i] == ' ' || s[i] == '\t'))
+				i++;
+			if (i >= n || s[i] != '=') {
+				q = -1;
+				continue;
+			}
+			i++;
+			while (i < n && (s[i] == ' ' || s[i] == '\t'))
+				i++;
+			v0 = i;
+			while (i < n && s[i] != ';' && s[i] != ',' && s[i] != ' ' && s[i] != '\t')
+				i++;
+			v1 = i;
+			if (p1 - p0 == 1 && (s[p0] == 'q' || s[p0] == 'Q'))
+				q = q < 0 ? -1 : qvalue(s + v0, v1 - v0);
+		}
+		if (q < 0 || t1 == t0)
+			continue;
+		if ((t1 - t0 == 4 && strncasecmp(s + t0, "gzip", 4) == 0) ||
+		    (t1 - t0 == 6 && strncasecmp(s + t0, "x-gzip", 6) == 0))
+			*q_gzip = *q_gzip < 0 ? q : (q < *q_gzip ? q : *q_gzip);
+		else if (t1 - t0 == 1 && s[t0] == '*')
+			*q_any = *q_any < 0 ? q : (q < *q_any ? q : *q_any);
+	}
+}
+
+/* ⭐ `true` = the request's `Accept-Encoding` allows gzip (RFC 9110
+ *   §12.5.3): `gzip` (or `x-gzip`) with q > 0, or, when it is not named, `*`
+ *   with q > 0.  `gzip;q=0` refuses it even if `*` allows everything; no
+ *   header at all, or a header that names neither, gets the plain page —
+ *   the prudent reading.  Named twice, the lower q wins. */
+static bool accepts_gzip(const char *req, size_t n)
+{
+	int q_gzip = -1, q_any = -1;
+	const char *line = memchr(req, '\n', n);
+
+	while (line) {
+		const char *start = line + 1, *end, *colon;
+		size_t left = n - (size_t)(start - req), len;
+
+		end = memchr(start, '\n', left);
+		len = end ? (size_t)(end - start) : left;
+		if (len && start[len - 1] == '\r')
+			len--;
+		if (len == 0)
+			break; /* the empty line: the end of the headers */
+		colon = memchr(start, ':', len);
+		if (colon && colon - start == 15 &&
+		    strncasecmp(start, "accept-encoding", 15) == 0)
+			accept_encoding_value(colon + 1, len - (size_t)(colon + 1 - start),
+			                      &q_gzip, &q_any);
+		line = end;
+	}
+	if (q_gzip >= 0)
+		return q_gzip > 0;
+	return q_any > 0;
 }
 
 /* `true` = the request line of `key` may be written now. */
@@ -706,20 +898,45 @@ static void serve(page *p, client *c)
 		 *   changes (a rotation).  Banned: built for this request — its
 		 *   remaining time is its own, and bans are rare and costly to get
 		 *   (three failed logins each). */
+		/* ⭐ §11.44: the shared page also goes gzip-compressed, built
+		 *   with it and replaced with it; a banned page is per request and
+		 *   rare, and goes plain — compressing it at every request would
+		 *   hand a banned address a cheap way to spend the server's CPU. */
+		const char *extra = PAGE_SECURITY; /* + the gzip headers below */
 		if (!banned) {
+			bool gz = accepts_gzip(c->request, c->nrequest);
+			bool oom;
 			if (!p->cached ||
 			    strcmp(p->cached_fp, p->cert->fingerprint) != 0) {
 				body *nb = build_page(p, false, warning, remain_txt);
 				if (nb) {
 					body_unref(p->cached);
+					body_unref(p->cached_gz);
 					p->cached = nb;
+					p->cached_gz = gz_page(nb, &oom);
+					p->cached_gz_retry = !p->cached_gz && oom;
 					snprintf(p->cached_fp, sizeof p->cached_fp, "%s",
 					         p->cert->fingerprint);
 				}
+			} else if (gz && p->cached_gz_retry) {
+				p->cached_gz = gz_page(p->cached, &oom);
+				p->cached_gz_retry = !p->cached_gz && oom;
 			}
-			d = (p->cached &&
-			     strcmp(p->cached_fp, p->cert->fingerprint) == 0)
-			            ? body_ref(p->cached) : NULL;
+			if (p->cached &&
+			    strcmp(p->cached_fp, p->cert->fingerprint) == 0) {
+				/* ⚠ `Vary` on BOTH: which copy goes out depends on
+				 *   `Accept-Encoding`, gzip or not. */
+				if (gz && p->cached_gz) {
+					d = body_ref(p->cached_gz);
+					extra = "Content-Encoding: gzip\r\n"
+					        "Vary: Accept-Encoding\r\n" PAGE_SECURITY;
+				} else {
+					d = body_ref(p->cached);
+					extra = "Vary: Accept-Encoding\r\n" PAGE_SECURITY;
+				}
+			} else {
+				d = NULL;
+			}
 		} else {
 			d = build_page(p, true, warning, remain_txt);
 		}
@@ -728,7 +945,10 @@ static void serve(page *p, client *c)
 			        "text/plain; charset=utf-8", "no mem.\n", 8, NULL);
 			return;
 		}
-		compose_with(c, "200 OK", "text/html; charset=utf-8", "", 0, d, PAGE_SECURITY);
+		/* ⚠ `Content-Length` is `d->n`: the COMPRESSED length when `d` is
+		 *   the gzip copy — and so are `nresponse` and the progress and
+		 *   eviction arithmetic built on it. */
+		compose_with(c, "200 OK", "text/html; charset=utf-8", "", 0, d, extra);
 		body_unref(d);
 	}
 }
@@ -1370,6 +1590,7 @@ void page_close(page *p)
 		if (p->clients[i].fd >= 0)
 			client_close(&p->clients[i]);
 	body_unref(p->cached);
+	body_unref(p->cached_gz);
 	free(p->html);
 	if (p->fd >= 0)
 		close(p->fd);
