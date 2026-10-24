@@ -9,7 +9,8 @@
 # ⚠ It CHANGES the container's users and /var/lib/remotix: only in a throw-away container.
 # ⭐ And the race of review 4: the two `mv` of the script are run (their lines are taken from the script) with the
 # destination a LINK to a directory, as remotix could plant it between the check and the mv; with `mv -T` nothing
-# lands inside the link's target and the old files stay where they were.
+# lands inside the link's target: the certificates DIRECTORY stays where it was (rename onto a link: ENOTDIR), and the
+# ban FILE replaces the planted link itself, without following it.
 # What it plants, as a hijacked old network side (uid remotix) could: in net/ a link to /, a
 # link to /etc/shadow named «ban», a 0755 directory, and a symlinked page.key to a file
 # remotix cannot read. Then it runs the move (and tmpfiles, if the container has it) and checks
@@ -40,10 +41,15 @@ for pat in 'mv -T "\$S/certificates"' 'mv -T "\$S/\$f"'; do
 	[ -n "$line" ] || { echo "NO the script has no '$pat' (mv without -T follows a link planted in the race)"; RACE=red; continue; }
 	(S=$T/s; N=$T/n; f=ban; eval "$line") >/dev/null 2>&1
 done
-if [ -n "$(ls -A "$T/victim")" ] || [ ! -d "$T/s/certificates" ] || [ ! -e "$T/s/ban" ]; then
-	echo "NO a link to a directory in the destination was followed: $(ls -A "$T/victim" | tr '\n' ' ')"; RACE=red
+# certificates: a directory onto a link fails (ENOTDIR) — it stays where it was, and nothing lands in the target
+if [ -n "$(ls -A "$T/victim")" ] || [ ! -d "$T/s/certificates" ]; then
+	echo "NO the certificates directory followed a link in the destination: victim has '$(ls -A "$T/victim" | tr '\n' ' ')'"; RACE=red
 fi
-[ "${RACE:-}" = red ] || echo "OK mv -T: a link to a directory in the destination is not followed, the old files stay"
+# ban: a file replaces the planted link itself (the link is not followed): it is now a regular file in n/, the target is empty
+if [ -n "$(ls -A "$T/victim")" ] || ! { [ -f "$T/n/ban" ] && [ ! -L "$T/n/ban" ]; }; then
+	echo "NO the ban file did not replace the planted link without following it"; RACE=red
+fi
+[ "${RACE:-}" = red ] || echo "OK mv -T: the certificates directory stays (ENOTDIR), the ban file replaces the link, nothing lands in the link's target"
 rm -rf "$T"
 
 before() { stat -c '%U:%G %a' / /etc /etc/shadow /etc/letsencrypt/live/h/privkey.pem; }
