@@ -559,7 +559,18 @@ bool render_grant_add(const char *user, uid_t uid, gid_t gid)
 	}
 	if (!added && mine < 0)
 		return false;
-	if (mine < 0 && ng < MAX_GRANTS) {
+	if (mine < 0) {
+		/* a full record is treated like a failed save: a grant that is not recorded could not be
+		 * taken back after a crash, so the ACL just put is removed and nothing is granted */
+		if (ng >= MAX_GRANTS) {
+			log_says_of(LOG_GRANT, user,
+			            "⛔ NO card grant for «%s»: %s/%s already holds %d grants (the most it can "
+			            "hold): taken back",
+			            user, GRANTS_DIR, GRANTS_FILE, MAX_GRANTS);
+			for (int i = 0; i < nn; i++)
+				(void)acl_remove_group(nodes[i], gid);
+			return false;
+		}
 		v[ng].uid = uid;
 		v[ng].gid = gid;
 		snprintf(v[ng].user, sizeof v[ng].user, "%s", user);

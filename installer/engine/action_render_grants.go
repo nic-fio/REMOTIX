@@ -68,6 +68,9 @@ func PlanRemoveRenderGrants(id string, grants []renderGrant) PlanAction {
 	for _, g := range grants {
 		names = append(names, fmt.Sprintf("%s (gid %d)", g.User, g.Gid))
 	}
+	if len(names) == 0 {
+		names = append(names, T("az.grant.nessuna"))
+	}
 	return PlanAction{
 		ID: id, Type: "remove-render-grants",
 		Parameters:    map[string]string{},

@@ -444,10 +444,9 @@ func (m *Engine) UninstallPlan(prof *ProfileV, purge bool) (*Piano, error) {
 			ComeSiFa: T("az.iscrizione.fa"), HowToVerify: T("az.iscrizione.verifica"), HowToUndo: T("az.iscrizione.annulla"),
 			Reversibility: EXACT})
 	}
-	// the card grants of 1.5 (DECISIONS §11.4), with the sessions closed: only if the product recorded any
-	if g := m.RenderGrants(); len(g) > 0 {
-		pn.Azioni = append(pn.Azioni, PlanRemoveRenderGrants("render-grants", g))
-	}
+	// the card grants of 1.5 (DECISIONS §11.4), with the sessions closed: ALWAYS in the plan (the step's
+	// snapshot makes it harmless when the record does not exist, as for the session logs below)
+	pn.Azioni = append(pn.Azioni, PlanRemoveRenderGrants("render-grants", m.RenderGrants()))
 	// the session logs in the homes (the user's decision, 1 Oct 2026): always, last,
 	// with sessions closed; the current paths are declared
 	logs := UserLogs(m.Env)

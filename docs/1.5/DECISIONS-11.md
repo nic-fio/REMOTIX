@@ -129,6 +129,7 @@ not apply (the user is the Author). What follows is what the user decided on eac
   `syscall.Getxattr`/`Setxattr`: no `setfacl`), then the record; an entry of the administrator's is left alone;
   EXACT (cancelled, entries and record come back). `go test`: uninstallation removes the grant and keeps the
   administrator's entry; killed after the step and rolled back, both come back.
+- ⚠ **Declared limit**: a removal through the package manager (`dnf`, `apt`, `pacman`) WITHOUT the uninstaller leaves the ACLs on `renderD*` and the record `render-grants` until the next reboot (the ACLs are on devtmpfs); the package only removes the record files. Only the uninstaller (`remove-render-grants`) takes the ACLs back at once.
 - 🔸 **Ported on 24 Oct 2026** (branch `port-sessioni`, from the abandoned attempt `158e4621`, the version BEFORE the root-side split of §11.50, which this tree does not have): `src/render_grant.c`/`.h`, the three hooks in `child.c` (sweep at start-up, grant at the birth of a GNOME/KDE desktop, removal when the child is reaped) and `terminate-user` gone from `enroll_in_card_groups()`; the `grant-*.sh/.txt` benches are in `misure/2026-10-13-gpu-enrolment-chatgpt/boxes/`. **Not built, not run** on this base: the live test on the four boxes is still due.
 - **Found on the way** `[M]`: Chrome 155 on the server itself fails on `https://localhost:7447` («Opening handshake
   failed»), works on `127.0.0.1` and on `192.168.0.3`, and from Windows over the Internet. The packaged units listen
