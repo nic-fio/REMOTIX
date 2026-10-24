@@ -739,10 +739,12 @@ static int in_flight_of(const char *key, const char *user)
 	int i = lfind_user(key, user);
 	return i < 0 ? -1 : attempts[i].in_flight;
 }
+/* ⚠ counted at at(13): a failure stamped later than the instant asked (the 12 s net, tickets at at(3)) would be in the
+ * future and the unsigned subtraction in failed_inside() wraps, so it would read 0 */
 static int failures_of(const char *key, const char *user)
 {
 	int i = lfind_user(key, user);
-	return i < 0 ? 0 : failed_inside(&attempts[i], at(1));
+	return i < 0 ? 0 : failed_inside(&attempts[i], at(13));
 }
 
 /* what rcp_time() puts on the wire (ported from 24f99518): the last byte of the last message, how many, the close code */
