@@ -45,7 +45,7 @@ post_remove() {
 	#    away with the package.  /etc/remotix/denied-users and /etc/pam.d/remotix are
 	#    handled by pacman (backup=: with -n they vanish, without they stay as .pacsave).
 	rm -rf /var/lib/remotix/certificates
-	rm -f /var/lib/remotix/ban
+	rm -f /var/lib/remotix/ban /var/lib/remotix/ban.new /var/lib/remotix/render-grants /var/lib/remotix/render-grants.new
 	rmdir /var/lib/remotix 2>/dev/null
 	systemctl daemon-reload 2>/dev/null
 	return 0

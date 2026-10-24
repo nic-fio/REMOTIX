@@ -1584,8 +1584,11 @@ int rcp_log_secret_load(const char *dir)
 	bool wrote = write(fd, log_secret, sizeof log_secret) == (ssize_t)sizeof log_secret &&
 	             fsync(fd) == 0;
 	close(fd);
-	if (!wrote || rename(tmp, path) != 0)
+	if (!wrote || rename(tmp, path) != 0) {
+		/* the temporary one must not stay (a failed rename leaves it for ever) */
+		unlink(tmp);
 		return -1;
+	}
 	return 0;
 }
 
