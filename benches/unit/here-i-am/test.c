@@ -15,15 +15,17 @@
  *   leftover no byte is left after the n-th pair
  *   content  video.codec, video.depth, audio.codec, clipboard.text are there once each, with a value; no key twice;
  *            bench.mark is present iff the build has -DREMOTIX_BENCH (then "yes" or "no")
- * Any extra capability (PACE, later) is parsed all the same and only has to keep count == pairs, no leftover.
+ * video.pace (§13) is declared once, "yes", iff the build has -DTEST_PACE (the test then switches rcp_pace_offer(true) on
+ * and gives the session a `pace` hook); a further capability is parsed all the same and only has to keep
+ * count == pairs, no leftover.
  *
- * Built TWICE per tree (without and with -DREMOTIX_BENCH) and for BOTH trees (src and the benches/rcp twin);
- * add -DREMOTIX_PACE (or whatever the new capability needs) to the list of variants when it exists.
+ * Built FOUR times (product, BENCH, product+PACE, BENCH+PACE: 4, 5, 5, 6 capabilities) for BOTH trees (src and the
+ * benches/rcp twin).
  *
  * BUILD AND RUN (a few seconds; nothing under /media/REMOTIX-15 is written; run from the root of the tree):
  *   nice -n 19 ionice -c3 podman run --rm --network=none --cpus=2 -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
  *     cd /tmp && rc=0 &&
- *     for T in src benches/rcp; do for D in "-DREMOTIX_NONE" "-DREMOTIX_BENCH"; do
+ *     for T in src benches/rcp; do for D in "-DREMOTIX_NONE" "-DREMOTIX_BENCH" "-DTEST_PACE" "-DREMOTIX_BENCH -DTEST_PACE"; do
  *       echo "== $T $D" &&
  *       F="-g -O1 -fsanitize=address,undefined -fno-sanitize-recover=undefined -std=gnu11 -D_GNU_SOURCE $D \
  *          -Wall -Wextra -Wno-unused-parameter -I/albero/$T -I/albero/benches/fuzz/rcp-msg" &&
@@ -31,7 +33,7 @@
  *       clang $F -c /albero/benches/fuzz/rcp-msg/stubs_log.c -o l.o &&
  *       clang -fsanitize=address,undefined t.o l.o -o test && ./test || rc=1;
  *     done; done; exit $rc'
- * Exit code 0 = every check passed in all four builds. (-DREMOTIX_NONE is a harmless define: "no BENCH".)
+ * Exit code 0 = every check passed in all eight builds. (-DREMOTIX_NONE is a harmless define: "no BENCH, no PACE".)
  */
 #include "rcp.c"
 
@@ -65,6 +67,9 @@ static void h_send(void *c, const uint8_t *d, size_t n)
 }
 static void h_close(void *c, uint8_t r) { (void)c; (void)r; }
 static void h_record(void *c, const char *l) { (void)c; (void)l; }
+#ifdef TEST_PACE
+static bool h_pace(void *c, uint16_t max_fps) { (void)c; (void)max_fps; return true; }
+#endif
 
 /* A reader that, like a DataView, must not read past the end: it says so instead of returning garbage. */
 typedef struct {
@@ -110,12 +115,17 @@ int main(void)
 	char key[64][64], val[64][128];
 	unsigned declared, pairs = 0;
 	rd r;
-	int seen_codec = 0, seen_depth = 0, seen_audio = 0, seen_clip = 0, seen_bench = 0, dup = 0;
+	int seen_codec = 0, seen_depth = 0, seen_audio = 0, seen_clip = 0, seen_bench = 0, seen_pace = 0, dup = 0;
 
 	memset(&g, 0, sizeof g);
 	g.send_msg = h_send;
 	g.close = h_close;
 	g.record = h_record;
+#ifdef TEST_PACE
+	/* §13: video.pace is declared only when switched on AND the host can apply it */
+	g.pace = h_pace;
+	rcp_pace_offer(true);
+#endif
 	s = rcp_open(&g, "192.0.2.7", 1000);
 	CHECK(s != NULL, "rcp_open failed");
 	if (!s)
@@ -159,7 +169,10 @@ int main(void)
 		else if (!strcmp(key[k], "video.depth")) seen_depth++;
 		else if (!strcmp(key[k], "audio.codec")) seen_audio++;
 		else if (!strcmp(key[k], "clipboard.text")) seen_clip++;
-		else if (!strcmp(key[k], "bench.mark")) {
+		else if (!strcmp(key[k], "video.pace")) {
+			seen_pace++;
+			CHECK(!strcmp(val[k], "yes"), "video.pace = «%s»", val[k]);
+		} else if (!strcmp(key[k], "bench.mark")) {
 			seen_bench++;
 			CHECK(!strcmp(val[k], "yes") || !strcmp(val[k], "no"), "bench.mark = «%s»", val[k]);
 		}
@@ -174,13 +187,32 @@ int main(void)
 #else
 	CHECK(seen_bench == 0, "product build: bench.mark must NOT be declared (%d)", seen_bench);
 #endif
+#ifdef TEST_PACE
+	CHECK(seen_pace == 1, "PACE on: video.pace must be declared once (%d)", seen_pace);
+#else
+	CHECK(seen_pace == 0, "PACE off: video.pace must NOT be declared (%d)", seen_pace);
+#endif
+	/* the count itself: 4 base + bench.mark (BENCH) + video.pace (PACE) */
+	CHECK(declared == 4u
+#ifdef REMOTIX_BENCH
+	      + 1u
+#endif
+#ifdef TEST_PACE
+	      + 1u
+#endif
+	      , "declared %u capabilities", declared);
 
 	rcp_free(s);
-	printf("here-i-am: %d checks, %d failed (%s build, %u capabilities declared)\n", checks, bad,
+	printf("here-i-am: %d checks, %d failed (%s%s build, %u capabilities declared)\n", checks, bad,
 #ifdef REMOTIX_BENCH
 	       "BENCH",
 #else
 	       "product",
+#endif
+#ifdef TEST_PACE
+	       "+PACE",
+#else
+	       "",
 #endif
 	       declared);
 	return bad ? 1 : 0;
