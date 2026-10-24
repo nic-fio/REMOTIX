@@ -32,6 +32,16 @@
  *      a-3, a-2, a-1 with the edge CLAMPED (no zero row).  The GPU route
  *      (`convert_on_gpu`) is excluded by point 1 alone, whatever it does.
  *
+ * ⭐ AND THE PADDING (case 5, 15 Oct 2026): the card encodes the picture
+ *    ALIGNED (1920x1080 → 1920x1088) and the SPS crops the rest away.  The
+ *    rows and columns past the canvas are now copies of the edge
+ *    (`colors709_copy_padded()`, which `vadirect.c` uses to upload into the
+ *    aligned surface): every padding sample equals the last real sample of
+ *    its row / the last real row, the canvas is copied byte for byte, and
+ *    nothing is written past the padded row (the pitch slack is untouched).
+ *    NV12 and P010, with the sizes the cards align to (16 in H.264, the
+ *    HEVC minimum CB).
+ *
  * ⚠ What it does NOT cover: Chrome itself (the bleed is in its YUV → RGB of
  *   `texImage2D(VideoFrame)`; the page's own texture has CLAMP_TO_EDGE), and
  *   the VA-API VPP, which needs a card.
@@ -253,6 +263,104 @@ static void case_model(void)
 	close_frame(&g);
 }
 
+/* 5. THE PADDING: the canvas copied into the aligned plane with copies of the
+ *    edge.  `pitch` > the padded row, and the slack is a sentinel that must
+ *    survive. */
+static const uint32_t PADDED[][4] = {
+	{ 1920, 1080, 1920, 1088 }, /* H.264, and HEVC with min CB 16 */
+	{ 3788, 2022, 3792, 2032 }, /* the 3788x2023 screen, made even, aligned to 16 */
+	{ 2544, 1344, 2560, 1344 }, /* D-023: a card that aligns to 64 */
+	{ 66, 34, 80, 48 },
+	{ 2, 2, 16, 16 },
+	{ 64, 16, 64, 16 },         /* already aligned: a plain copy */
+};
+
+static uint32_t check_plane(const uint8_t *dst, uint32_t pitch, uint32_t prow, uint32_t prows,
+                            const uint8_t *src, uint32_t sstride, uint32_t row, uint32_t rows,
+                            uint32_t unit)
+{
+	uint32_t bad = 0;
+	for (uint32_t r = 0; r < prows; r++) {
+		const uint8_t *s = src + (size_t)(r < rows ? r : rows - 1) * sstride;
+		const uint8_t *d = dst + (size_t)r * pitch;
+		bad += memcmp(d, s, row) != 0;
+		for (uint32_t x = row; x < prow; x += unit)
+			bad += memcmp(d + x, s + row - unit, unit) != 0;
+		for (uint32_t x = prow; x < pitch; x++)
+			bad += d[x] != 0xab;
+	}
+	return bad;
+}
+
+static void case_padding(Colori709Ordine o)
+{
+	for (size_t s = 0; s < sizeof PADDED / sizeof PADDED[0]; s++) {
+		const uint32_t l = PADDED[s][0], a = PADDED[s][1];
+		const uint32_t pl = PADDED[s][2], pa = PADDED[s][3];
+		Frame f = open_frame(l, a);
+		/* a picture with a different colour on every row and column: a
+		 * padding sample copied from the wrong place cannot pass */
+		for (uint32_t r = 0; r < a; r++)
+			for (uint32_t x = 0; x < l; x++) {
+				uint8_t rgb[3] = { (uint8_t)(x * 7u + r), (uint8_t)(r * 13u + 50u),
+				                   (uint8_t)(x * 3u + r * 5u + 200u) };
+				put(&f, x, r, rgb, o);
+			}
+		for (int depth = 8; depth <= 10; depth += 2) {
+			const uint32_t b = depth == 10 ? 2 : 1;
+			const uint32_t pitch = pl * b + 64;
+			uint8_t *y = malloc((size_t)l * a * b), *uv = malloc((size_t)l * a / 2 * b);
+			uint8_t *dy = malloc((size_t)pitch * pa), *duv = malloc((size_t)pitch * pa / 2);
+			if (!y || !uv || !dy || !duv) {
+				fprintf(stderr, "no memory\n");
+				exit(2);
+			}
+			memset(dy, 0xab, (size_t)pitch * pa);
+			memset(duv, 0xab, (size_t)pitch * pa / 2);
+			bool ok = depth == 10
+			            ? colors709_to_p010(f.px, l * 4, l, a, o, (uint16_t *)y, l * 2,
+			                                (uint16_t *)uv, l * 2)
+			            : colors709_to_nv12(f.px, l * 4, l, a, o, y, l, uv, l);
+			CHECK(ok, "convert %ux%u depth %d", l, a, depth);
+			CHECK(colors709_copy_padded(dy, pitch, pl * b, pa, y, l * b, l * b, a, b),
+			      "Y %ux%u → %ux%u depth %d refused", l, a, pl, pa, depth);
+			CHECK(colors709_copy_padded(duv, pitch, pl * b, pa / 2, uv, l * b, l * b, a / 2,
+			                            2 * b),
+			      "UV %ux%u → %ux%u depth %d refused", l, a, pl, pa, depth);
+			uint32_t by = check_plane(dy, pitch, pl * b, pa, y, l * b, l * b, a, b);
+			uint32_t buv = check_plane(duv, pitch, pl * b, pa / 2, uv, l * b, l * b, a / 2,
+			                           2 * b);
+			CHECK(!by && !buv,
+			      "padding %ux%u → %ux%u depth %d order %d: %u Y and %u UV rows/samples "
+			      "are not copies of the edge", l, a, pl, pa, depth, (int)o, by, buv);
+			/* and no zero is left below the picture: the last padded chroma
+			 * row is the last real one, U,V pair for pair */
+			const uint8_t *last = duv + (size_t)(pa / 2 - 1) * pitch;
+			const uint8_t *real = uv + (size_t)(a / 2 - 1) * l * b;
+			CHECK(memcmp(last, real, l * b) == 0,
+			      "padding %ux%u depth %d: the last padded chroma row is not the edge",
+			      l, a, depth);
+			free(y);
+			free(uv);
+			free(dy);
+			free(duv);
+		}
+		close_frame(&f);
+	}
+	/* the geometries that do not hold are refused, and nothing is written */
+	uint8_t src[8] = { 1, 2, 3, 4, 5, 6, 7, 8 }, dst[32];
+	memset(dst, 0xab, sizeof dst);
+	CHECK(!colors709_copy_padded(dst, 16, 16, 2, src, 8, 8, 1, 3), "unit 3 on 8 bytes");
+	CHECK(!colors709_copy_padded(dst, 16, 15, 2, src, 8, 8, 1, 2), "padding of 7 in pairs");
+	CHECK(!colors709_copy_padded(dst, 8, 16, 2, src, 8, 8, 1, 1), "pitch below the row");
+	CHECK(!colors709_copy_padded(dst, 16, 4, 2, src, 8, 8, 1, 1), "padded row below the row");
+	CHECK(!colors709_copy_padded(dst, 16, 16, 1, src, 8, 8, 2, 1), "fewer rows than the source");
+	uint32_t touched = 0;
+	for (size_t i = 0; i < sizeof dst; i++)
+		touched += dst[i] != 0xab;
+	CHECK(!touched, "a refused copy wrote %u bytes", touched);
+}
+
 int main(void)
 {
 #ifdef COLORS709_NO_SIMD
@@ -264,13 +372,15 @@ int main(void)
 		case_flat((Colori709Ordine)o);
 		case_greys((Colori709Ordine)o);
 		case_bar((Colori709Ordine)o);
+		case_padding((Colori709Ordine)o);
 	}
 	case_model();
 	if (failures) {
 		printf("  ⛔ %d check(s) failed\n", failures);
 		return 1;
 	}
-	printf("  OK: the last chroma row is right (flat, greys, clamped tent), and the "
-	       "green row of F-011 is the renderer's tap on a zero row\n");
+	printf("  OK: the last chroma row is right (flat, greys, clamped tent), the "
+	       "green row of F-011 is the renderer's tap on a zero row, and the card's "
+	       "padding is copies of the edge (NV12 and P010)\n");
 	return 0;
 }
