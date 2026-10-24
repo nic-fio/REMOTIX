@@ -82,4 +82,6 @@ void log_detail_of_in(const char *file, int text_line, const char *area, const c
 
 uint64_t log_now_ms(void) { return rx_now_ms; }
 void log_chatter(bool is_on) { (void)is_on; }
+bool log_journal(bool is_on) { (void)is_on; return false; } /* helper.c: --pam-helper */
+bool log_to_journal(void) { return false; }
 bool log_verbose(void) { return true; } /* ⭐ the detail lines are formatted too */
