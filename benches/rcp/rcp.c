@@ -391,8 +391,35 @@ uint64_t rcp_eviction_recommended(void) { return DEFAULT_EVICTION; }
  *    in the protocol and never sent is a promise that another implementation
  *    would have had to handle for nothing.
  *
- * ⭐ THIS one is measured on RCP bytes (`last_byte`), and it is the job that
- *    field exists for — freed the same day from the one that was not its own.
+ * ⭐ THIS one is measured on USER GESTURES (`last_input`): the five input
+ *    messages of `RCP.md` §7.3 — `POINTER`, `BUTTON`, `WHEEL`, `LETTER`,
+ *    `KEY_POSITION` — once judged valid, in `handle_input()`.
+ *
+ * ⛔⭐ 15 Oct 2026 — UNTIL TODAY IT WAS MEASURED ON ANY RCP BYTE (`last_byte`),
+ *     on control, input and clipboard, and that broke the sentence of §5.3
+ *     quoted above.  The page sends messages ON ITS OWN while the user only
+ *     watches — `REQUEST_KEY` after a hole, `PACE`, the opening
+ *     `CLIPBOARD_ANNOUNCE`, the canvas and layout updates — and each of them
+ *     put the half hour back to zero: ⇒ a tab left open on an abandoned desk
+ *     held its session (and the slot, I2) FOREVER.  The 60-minute clock of
+ *     `main.c` (`input_to_child()`) already counted the five gestures only;
+ *     ⇒ now the two count THE SAME THING, which is what §5.3 writes: «the
+ *     ceiling feeds on the same five gestures of §7.3 that feed the
+ *     30-minute clock».
+ *
+ * ⚠ What does NOT count, and why:
+ *     · every CONTROL message — automatic (`REQUEST_KEY`, `PACE`, `VIEW`,
+ *       `LAYOUT`, `FIT_CANVAS`) or not a gesture on the desktop;
+ *     · the CLIPBOARD — `CLIPBOARD_ANNOUNCE` leaves the page by itself at
+ *       the opening and on focus; and a paste the user really makes on the
+ *       remote desktop is a `Ctrl+V`, that is `KEY_POSITION`, which counts;
+ *     · the server's own key release at detach (§7.3): it does not pass
+ *       through `handle_input()`, and it must not — it happens exactly when
+ *       the user leaves.
+ *
+ * ⛔ The connection-liveness clocks (silence 30 s, ghost eviction) are NOT
+ *    this one: they look at `last_life`, refreshed by any packet and any
+ *    RCP byte, as before.
  *
  * ⚠ CONFIGURABLE, and §5.3 demands it: *«the second and the third are
  *   configurable, with those values as defaults»*.  ⛔ And the value in force
@@ -506,7 +533,7 @@ struct rcp_session {
 	 *        · «USER inactivity», 30 MINUTES — «whoever spends half an hour
 	 *          watching a video without touching anything is detached».
 	 *
-	 *      ⛔ `last_byte` measures the SECOND and was used for the FIRST: a
+	 *      ⛔ the user clock (then `last_byte`) was used for the FIRST: a
 	 *         client that watches and does not touch sends nothing, and thirty
 	 *         seconds without touching the keyboard counted as «the client is gone».
 	 *
@@ -518,7 +545,7 @@ struct rcp_session {
 	 *      first, which froze.  It is I2 broken in the case that `RCP.md` §8.2
 	 *      names in writing — *«an alive client holds the slot, and the new one
 	 *      is refused»*. */
-	uint64_t last_byte; /* the last RCP byte from the client: the USER (§5.3) */
+	uint64_t last_input; /* the last valid gesture of §7.3: the USER (§5.3) */
 	uint64_t last_life; /* the last authenticated packet: the CLIENT (§5.3) */
 	uint64_t cred_arrival; /* when CREDENTIALS arrived */
 	bool cred_good;      /* the verdict, already computed but not yet told */
@@ -5827,6 +5854,11 @@ static bool handle_input(rcp_session *s, uint16_t kind, const uint8_t *body,
 	}
 
 	s->inp_arrived++;
+	/* ⛔⭐ §5.3 — THE ONLY PLACE WHERE THE 30-MINUTE CLOCK IS RESET: a whole
+	 *     gesture of §7.3, judged valid.  ⚠ Even when it is NOT injected
+	 *     (no hooks, below): the user did make it, and the clock measures
+	 *     the user, not the desktop.  The reason is at `DEFAULT_INACTIVITY`. */
+	s->last_input = now;
 	if (!has_input_channel(s)) {
 		/* ⛔ «I have no input channel» is NOT «the client got it wrong».  The
 		 * message was valid in every part — we have just judged it —
@@ -6138,9 +6170,11 @@ bool rcp_receive_input(rcp_session *s, int64_t stream, const uint8_t *data,
 	 * writing anything on the control channel** — that is anyone just
 	 * moving the mouse — loses the slot after thirty seconds while
 	 * working.  §5.3 says «without a byte FROM THE CLIENT», and these are bytes
-	 * of the client. */
-	s->last_byte = now;
-	/* ⛔⭐ AND THE SIGN OF LIFE TOO, for a reason that comes before
+	 * of the client.
+	 * ⚠ The INACTIVITY clock (`last_input`) is NOT reset here, on bytes: it is
+	 *   reset in `handle_input()`, on a whole gesture judged valid — a
+	 *   fragment or a message refused is not «the user did something». */
+	/* ⛔⭐ THE SIGN OF LIFE, for a reason that comes before
 	 *     convenience: **an RCP byte arrived inside a packet**.  If
 	 *     the byte is there, the packet was there — saying it here is not a
 	 *     shortcut, it is the same thing said where it is seen.
@@ -6993,7 +7027,9 @@ bool rcp_receive_clipboard(rcp_session *s, int64_t stream, const uint8_t *data,
 		return false;
 	}
 
-	s->last_byte = now;
+	/* ⛔ The sign of life only: the clipboard is NOT user input for the
+	 *    30-minute clock (see `DEFAULT_INACTIVITY`) — the page announces by
+	 *    itself, and a real paste on the desktop is a `KEY_POSITION`. */
 	s->last_life = now;
 	if (!speak_again(s))
 		return false;
@@ -7281,7 +7317,7 @@ rcp_session *rcp_open(const rcp_hooks *g, const char *provenance,
 	s->g = *g;
 	s->state = S_WAIT_HELLO;
 	s->since = now_ms;
-	s->last_byte = now_ms;
+	s->last_input = now_ms;
 	/* ⛔ And THIS too starts from now, not from zero: a session just
 	 *    opened has not yet seen a packet pass through the hands of this
 	 *    module, and a zero would make it detach for silence at the first round. */
@@ -8492,11 +8528,12 @@ bool rcp_receive(rcp_session *s, const uint8_t *data, size_t len, uint64_t now)
 		judge_after_end(s, data, len);
 		return false;
 	}
-	/* ⭐ The user's INACTIVITY clock is reset here, on RCP bytes
-	 *    — and with it the sign of life, because a byte that arrived is a packet
-	 *    that arrived.  ⚠ The long reason is on the other of the two calls, in
-	 *    `rcp_receive_input()`. */
-	s->last_byte = now;
+	/* ⭐ The sign of life is reset here, on RCP bytes, because a byte that
+	 *    arrived is a packet that arrived.  ⚠ The long reason is on the other
+	 *    of the two calls, in `rcp_receive_input()`.
+	 * ⛔ And the user's INACTIVITY clock is NOT: nothing on the control
+	 *    channel is a gesture, and much of it leaves the page on its own
+	 *    (`REQUEST_KEY`, `PACE`) — see `DEFAULT_INACTIVITY`. */
 	s->last_life = now;
 
 	/* ⚠ The connection is not closed for silence alone — that choice is
@@ -8852,24 +8889,23 @@ bool rcp_time(rcp_session *s, uint64_t now)
 	 *      «staying active» are two different things, and the second was not
 	 *      declared anywhere.  The way back from here is in
 	 *      `rcp_receive()`: the slot is taken back if it is free. */
-	/* ⛔⭐ AND `last_life` IS LOOKED AT, NOT `last_byte` — the repair of 16
+	/* ⛔⭐ AND `last_life` IS LOOKED AT, NOT `last_input` — the repair of 16
 	 *     Aug 2026, and the long reason is on the field, at the top of the file.
 	 *
-	 * ⚠ `last_byte` does not disappear: it is the clock of USER INACTIVITY
-	 *   (30 minutes, §5.3), which this module does not have yet and which now has
-	 *   its field ready and right.  ⛔ Keeping one only for two jobs is the
-	 *   defect we have just paid for: it is not done again. */
+	 * ⚠ `last_input` is the clock of USER INACTIVITY (30 minutes, §5.3), just
+	 *   below.  ⛔ Keeping one only for two jobs is the defect we have just
+	 *   paid for: it is not done again. */
 	if (s->state == S_ACTIVE && s->is_attached &&
 	    now - s->last_life > SILENCE) {
 		slot_leave(s->user);
 		s->is_attached = false;
 		s->state = S_DETACHED;
 		reg(s, "DETACHED for silence: %llu ms without a PACKET from %s — and "
-		       "the last RCP byte is from %llu ms ago (§5.3: here what counts is the "
+		       "the last user gesture is from %llu ms ago (§5.3: here what counts is the "
 		       "client that is silent, not the user who does not touch) "
 		       "(slots taken now: %d; state: %s)",
 		    (unsigned long long)(now - s->last_life), s->provenance,
-		    (unsigned long long)(now - s->last_byte),
+		    (unsigned long long)(now - s->last_input),
 		    taken_slots(), STATE_NAMES[s->state]);
 		/* ⛔⭐ §7.3 NAMES SILENCE FIRST among the three ways in which «a
 		 *     connection ends», and it is the worst case of the three: here the
@@ -8903,12 +8939,12 @@ bool rcp_time(rcp_session *s, uint64_t now)
 	 *   anyway (I4): this farewell detaches the client, it does not close the
 	 *   desktop — that is the THIRD clock, and it is another thing. */
 	if (inactivity_ms && s->state == S_ACTIVE && s->is_attached &&
-	    now - s->last_byte > inactivity_ms) {
+	    now - s->last_input > inactivity_ms) {
 		char d[192];
 		snprintf(d, sizeof d,
 		         "%llu ms without user input (ceiling %llu): §5.3, and "
 		         "getting back in takes user and password",
-		         (unsigned long long)(now - s->last_byte),
+		         (unsigned long long)(now - s->last_input),
 		         (unsigned long long)inactivity_ms);
 		reg(s, "⭐ §5.3 — INACTIVITY: %s.  ⚠ The graphical session STAYS (I4): "
 		       "the client is detached, the desktop is not closed",

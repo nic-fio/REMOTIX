@@ -672,7 +672,7 @@ bool rcp_max_size(const rcp_session *s, uint32_t *l, uint32_t *a);
 
 /* ⛔⭐ §5.3 — «the client is still there»: the TRANSPORT calls it after every
  *     DECRYPTED AND AUTHENTICATED packet, and the thirty-second clock depends on
- *     it.  ⚠ Not on the last RCP byte: that is the clock of *user
+ *     it.  ⚠ Not on the last user gesture: that is the clock of *user
  *     inactivity*, which is thirty MINUTES and not thirty seconds.  The long
  *     reason — and the measurement that imposed it — is on the field
  *     `last_life` in `rcp.c`. */
