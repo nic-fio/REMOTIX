@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"testing"
 )
 
@@ -127,7 +128,14 @@ func (g *fakeManager) Install(file, names []string) error {
 			if _, err := os.Stat(g.p("finto-crea-utente-rete")); err == nil {
 				os.MkdirAll(filepath.Join(g.root, filepath.Dir(netSysusers)[1:]), 0o755)
 				os.WriteFile(filepath.Join(g.root, netSysusers[1:]), []byte("u remotix - \"REMOTIX network side\" / /usr/sbin/nologin\n"), 0o644)
-				for f, line := range map[string]string{"etc/passwd": sysRemotix, "etc/group": "remotix:x:990:\n"} {
+				// ⭐ What the package's postinst also leaves (tmpfiles.d): /var/lib/remotix/net, 0700, the network user's own — the
+				// post-install «network-side» check (RX-NETUSER-003) fails without it.  A test cannot chown to uid 990, so the
+				// account is made with the test's own uid/gid (as `netMachine()` does), and a system user by login.defs' UID_MIN.
+				uid, gid := strconv.Itoa(os.Getuid()), strconv.Itoa(os.Getgid())
+				os.MkdirAll(filepath.Join(g.root, NetDir[1:]), 0o700)
+				os.Chmod(filepath.Join(g.root, NetDir[1:]), 0o700)
+				os.WriteFile(filepath.Join(g.root, "etc/login.defs"), []byte("UID_MIN "+strconv.Itoa(os.Getuid()+1)+"\n"), 0o644)
+				for f, line := range map[string]string{"etc/passwd": "remotix:x:" + uid + ":" + gid + ":REMOTIX network side:/:/usr/sbin/nologin\n", "etc/group": "remotix:x:" + gid + ":\n"} {
 					if h, err := os.OpenFile(filepath.Join(g.root, f), os.O_APPEND|os.O_WRONLY, 0o644); err == nil {
 						h.WriteString(line)
 						h.Close()
