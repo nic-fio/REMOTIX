@@ -549,6 +549,11 @@ static int cb_path_validation(ngtcp2_conn *conn, uint32_t flags,
 		              res == NGTCP2_PATH_VALIDATION_RESULT_ABORTED ? "aborted" : "failed");
 		return 0;
 	}
+	/* the local end follows the validated path even when only IT changed (same remote) */
+	if (path->local.addrlen > 0 && path->local.addrlen <= sizeof c->local) {
+		memcpy(&c->local, path->local.addr, path->local.addrlen);
+		c->localelen = (socklen_t)path->local.addrlen;
+	}
 	if (strcmp(now, c->provenance) == 0)
 		return 0;
 	registro_dice(REG_QUIC, "⭐ %s MOVED to %s: new path validated (§2.3 migration)",
@@ -556,10 +561,6 @@ static int cb_path_validation(ngtcp2_conn *conn, uint32_t flags,
 	if (path->remote.addrlen <= sizeof c->remote) {
 		memcpy(&c->remote, path->remote.addr, path->remote.addrlen);
 		c->remotelen = (socklen_t)path->remote.addrlen;
-	}
-	if (path->local.addrlen > 0 && path->local.addrlen <= sizeof c->local) {
-		memcpy(&c->local, path->local.addr, path->local.addrlen);
-		c->localelen = (socklen_t)path->local.addrlen;
 	}
 	snprintf(c->provenance, sizeof c->provenance, "%s", now);
 	return 0;
