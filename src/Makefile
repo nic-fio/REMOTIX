@@ -78,7 +78,7 @@ SORGENTI := main.c transport.c webtransport.c page.c command.c certificates.c \
             vulkanvideo.c bit_writer.c colors709.c audio.c sound.c \
             input.c keyboard.c cursor.c sentinel.c clipboard.c kwin.c \
             clipboard_kde.c wlroots.c wlr_input.c shape.c rediscover.c \
-            render_grant.c render_node.c
+            render_grant.c render_node.c walls.c
 OGGETTI  := $(SORGENTI:.c=.o)
 
 # -----------------------------------------------------------------------------
@@ -332,7 +332,7 @@ LIBS := -lngtcp2_crypto_ossl -lngtcp2 -lnghttp3 -lssl -lcrypto -lpam \
 #   ⛔ but depending on that detail means breaking on a different libc
 #   with an error that does not name the phase that introduced it.
 
-.PHONY: all clean deps fingerprints bench-w1 bench-unchanged test-session test-colors709 FORCE
+.PHONY: all clean deps fingerprints bench-w1 bench-unchanged test-session test-colors709 test-walls FORCE
 
 all: fingerprints $(NOME)
 
@@ -461,6 +461,17 @@ test-colors709: ../benches/23-colors709-edge-test.c colors709.c colors709.h
 	$(CC) $(CFLAGS) -I. -DCOLORS709_NO_SIMD -o "$$d/c" \
 	  ../benches/23-colors709-edge-test.c colors709.c -lm; \
 	"$$d/simd"; "$$d/c"
+
+# ⭐ 1.5 (DECISIONS.md §11.50) — the network side's walls (`walls.c` included by
+#    the test).  As an ordinary user it checks the refusals; as root in a
+#    container that may mount (`--privileged`) it puts the walls up for real in
+#    a fork and checks them (`benches/02-walls-test.c`, header).
+test-walls: ../benches/02-walls-test.c walls.c walls.h
+	@set -e; d=$$(mktemp -d "$${TMPDIR:-/tmp}/remotix-test-walls.XXXXXX"); \
+	trap 'rm -rf "$$d"' EXIT; \
+	$(CC) $(CFLAGS) -I. -o "$$d/test" ../benches/02-walls-test.c $(DL_LIBS); \
+	"$$d/test"
+
 
 %-client-protocol.h: protocols/%.xml
 	$(SCANNER) client-header $< $@
