@@ -71,7 +71,7 @@
  *       128 places stay for connections that have logged in.
  *   · `PENDING_PER_ADDRESS` (8, `--max-pending-per-address`) and `PENDING_PER_48`
  *     (32, `--max-pending-per-48`): not logged in from one place.  The place is the
- *     rule of `rcp_key_address()` in `rcp.c` — ⛔ change both or neither:
+ *     rule of `address_key()` (§1.9-bis); `rcp_key_address()` in `rcp.c` does NOT apply it yet:
  *       1. `::ffff:a.b.c.d` (v4-mapped)         → a.b.c.d
  *       2. `64:ff9b::a.b.c.d` (NAT64, RFC 6052) → a.b.c.d
  *       3. `::1`                                → kept whole
@@ -754,8 +754,8 @@ static size_t cap_per_48(const transport *t)
 	return t->per_48 ? t->per_48 : PENDING_PER_48;
 }
 
-/* The place a connection is counted against — the rule of the box on
- * `MAX_CONNECTIONS`, the same as `rcp_key_address()`.  An IPv4 is written as
+/* The place a connection is counted against — the rule of the box on `MAX_CONNECTIONS`
+ * (§1.9-bis, NOT ported to `rcp_key_address()`, which only strips the port).  IPv4 is written as
  * `::ffff:a.b.c.d`, so rules 1, 2 and 5 give one key.  `key48` is the /48 of rule
  * 4, and the key itself for the others. */
 static void address_key(const struct sockaddr *sa, uint8_t key[16], uint8_t key48[16])
