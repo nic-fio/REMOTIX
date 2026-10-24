@@ -248,6 +248,26 @@ static char *read_text(Clipboard *clipboard, size_t *amount)
 			continue;
 		}
 
+		/* ⛔ AND NO ZEROS IN THE MIDDLE.  From here on the text travels as a
+		 *    zero-terminated string — in the socket to the parent and in
+		 *    `rcp.c` — and a zero in the middle would cut it **silently**: what
+		 *    gets pasted would be shorter than what was copied, and the
+		 *    announcement would state the whole length.  ⇒ Two truths about the
+		 *    same thing, which is the defect §2.2 forbids in those words.
+		 *    ⚠ Checked BEFORE the UTF-8 test (24 Oct 2026, F-014E):
+		 *    `g_utf8_validate_len()` already rejects a zero, so after it this
+		 *    test was unreachable and the log blamed «not valid UTF-8». */
+		if (memchr(start, 0, byte))
+		{
+			registro_dice(LOG_CLIPBOARD,
+			              "⛔ «%s»: %zu bytes with a zero in the middle — not "
+			              "announced.  Truncating here would give a text shorter "
+			              "than the announcement, that is an announcement that lies",
+			              TEXT_TYPES[i], (size_t)byte);
+			explicit_bzero((void *)start, byte);
+			continue;
+		}
+
 		/* ⛔ VALID UTF-8, and it is checked HERE.  `RCP.md` §5.4: "the text MUST
 		 *    be UTF-8".  Sending it without looking would mean putting on the
 		 *    wire a violation **of ours**, and letting the client discover it — which
@@ -262,23 +282,6 @@ static char *read_text(Clipboard *clipboard, size_t *amount)
 			              "bytes in the clipboard that RCP/1 cannot carry",
 			              TEXT_TYPES[i], (size_t)byte);
 			/* The GBytes is ours alone (refcount 1, from `slurp_fd`): wiped before it is freed. */
-			explicit_bzero((void *)start, byte);
-			continue;
-		}
-
-		/* ⛔ AND NO ZEROS IN THE MIDDLE.  From here on the text travels as a
-		 *    zero-terminated string — in the socket to the parent and in
-		 *    `rcp.c` — and a zero in the middle would cut it **silently**: what
-		 *    gets pasted would be shorter than what was copied, and the
-		 *    announcement would state the whole length.  ⇒ Two truths about the
-		 *    same thing, which is the defect §2.2 forbids in those words. */
-		if (memchr(start, 0, byte))
-		{
-			registro_dice(LOG_CLIPBOARD,
-			              "⛔ «%s»: %zu bytes with a zero in the middle — not "
-			              "announced.  Truncating here would give a text shorter "
-			              "than the announcement, that is an announcement that lies",
-			              TEXT_TYPES[i], (size_t)byte);
 			explicit_bzero((void *)start, byte);
 			continue;
 		}
