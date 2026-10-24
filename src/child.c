@@ -9453,11 +9453,17 @@ void child_alive(int argc, char **argv)
 			 *    command line (`--parent-uid`).  A message without the
 			 *    kernel's stamp is not a message from the parent. */
 			if (!c_e || chi.uid != parent_uid) {
-				registro_dice(LOG_CHILD,
-				              "⛔ a message that claims to come from the parent and "
-				              "does not carry its stamp (uid %ld, expected %ld): "
-				              "DISCARDED",
-				              c_e ? (long)chi.uid : -1L, (long)parent_uid);
+				if (parent_uid == 0)
+					registro_dice(LOG_CHILD,
+					              "⛔ a message that claims to come from the parent and "
+					              "does not carry root's stamp (uid %ld): DISCARDED",
+					              c_e ? (long)chi.uid : -1L);
+				else
+					registro_dice(LOG_CHILD,
+					              "⛔ a message that claims to come from the parent and "
+					              "does not carry its stamp (uid %ld, expected %ld): "
+					              "DISCARDED",
+					              c_e ? (long)chi.uid : -1L, (long)parent_uid);
 				continue;
 			}
 			if (t.declared_uid != (uint32_t)my_uid) {
