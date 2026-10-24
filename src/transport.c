@@ -72,7 +72,8 @@
  *       128 places stay for connections that have logged in.
  *   · `PENDING_PER_ADDRESS` (8, `--max-pending-per-address`) and `PENDING_PER_48`
  *     (32, `--max-pending-per-48`): not logged in from one place.  The place is the
- *     rule of `address_key()` (§1.9-bis); `rcp_key_address()` in `rcp.c` does NOT apply it yet:
+ *     rule of `address_key()` (§1.9-bis), the same one `rcp_key_address()` in `rcp.c` applies to the
+ *     ban (`benches/unit/address-key` checks that the two agree):
  *       1. `::ffff:a.b.c.d` (v4-mapped)         → a.b.c.d
  *       2. `64:ff9b::a.b.c.d` (NAT64, RFC 6052) → a.b.c.d
  *       3. `::1`                                → kept whole
