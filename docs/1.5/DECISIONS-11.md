@@ -837,8 +837,8 @@ item below unless its line says otherwise. Release notes: `docs/RELEASE-NOTES-1.
 
 ### 11.37 🔸 The encoder follows the compositor's card (15 Oct 2026) — built, not yet run on a two-card box
 
-> ⚠ NOT in this tree; still to port: `bc3158bf`, `facc4daa`, the per-card codec test and the render node of the compositor's card
-> ⛔ Blocked on a dependency: `bc3158bf` edits `src/render_node.c` / `render_node.h` and calls `choose_render_node()`, none of which exists in this tree (the commit that creates them, the «Now» paragraph below, is not in `recupero/patch-backlog`); `facc4daa` needs `bc3158bf`. Waiting for that commit to be exported.
+> 🔸 Ported on `port-scheda` — to be built and tested: the render node of the compositor's card (`13422add` → `27e7ea61`: `src/render_node.c/h`, `choose_render_node()`, `--render-node`), the per-card codec test (`bc3158bf` → `ef3e6ca9`) and `node_of_codec()` at the negotiated depth (`facc4daa` → `7faac773`). The `DECISIONS.md` hunk of `13422add` is not ported (the 1.0 file: this entry is its text). Not built on this base yet (`git apply` was clean for the last two; the Makefile of the first by hand).
+> ⚠ With `port-sessioni` (`render_grant.c`, §11.4): three adjacent-line conflicts to keep both sides (`SORGENTI` in `src/Makefile`, the `render_grant.o` / `render_node.o` rules, the two `#include`s in `src/child.c`). **No functional conflict**: `render_grant` gives the user's private group `rw` on EVERY `renderD*` (a stale GNOME/KDE manager), §11.38 enrols the group of every `renderD*`; `render_node` only chooses WHICH of those nodes the encoder opens (the compositor's `main_device`, else `--render-node`, else `renderD128`) — the chosen node is always one both mechanisms already cover. Limit: with `--render-node` naming a node the grant did not reach (hot-plugged after the grant, §11.4 «declared limits») the open fails and the encoder falls back as the entry says.
 
 - `[R]` SPECS audit: the encoder opened `/dev/dri/renderD128` hard-wired (`RENDER_NODE`, `src/child.c`). With
   two cards (the test server: Intel UHD 770 + AMD RX 6800) that is the kernel's first card, not necessarily
