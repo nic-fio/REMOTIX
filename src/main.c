@@ -2669,7 +2669,7 @@ int main(int argc, char **argv)
 		if (ppoll(fds, n + npage + ncommand + nhelp + nchildren, &wait_ts, NULL) < 0) {
 			if (errno == EINTR)
 				continue;
-			registro_dice(LOG_STARTUP, "⛔ poll: %s", strerror(errno));
+			registro_dice(LOG_STARTUP, "⛔ ppoll: %s", strerror(errno));
 			break;
 		}
 
