@@ -5340,7 +5340,7 @@ static void choose_render_node(bool final)
 	if (render_node_latched)
 		return;
 	if (render_node_of_compositor(node, sizeof node, why, sizeof why, &reached)) {
-		if (render_node_option[0] && strcmp(render_node_option, node) != 0)
+		if (render_node_option[0] && !render_node_same(render_node_option, node))
 			registro_dice(LOG_CHILD,
 			              "⚠ --render-node %s is NOT the compositor's card (%s): the "
 			              "frames are on the compositor's, and the encoder goes there",
@@ -6211,6 +6211,12 @@ int child_test_encoding(int argc, char **argv)
 			codec = CODIFICATORE_HEVC;
 			idx = 1;
 		} else if (strcmp(argv[i], "--node") == 0 && i + 1 < argc) {
+			/* a path that does not fit is refused, not cut: a truncated path names ANOTHER node */
+			if (strlen(argv[i + 1]) >= sizeof render_node_buf) {
+				fprintf(stderr, "⛔ --node: the path is longer than %zu characters\n",
+				        sizeof render_node_buf - 1);
+				return 2;
+			}
 			snprintf(render_node_buf, sizeof render_node_buf, "%s", argv[++i]);
 		} else if (strcmp(argv[i], "--encoding-route") == 0 && i + 1 < argc
 		           && child_encoding_route(argv[i + 1])) {

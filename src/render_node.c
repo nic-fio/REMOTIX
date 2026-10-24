@@ -231,6 +231,7 @@ out:
 	if (a.dmabuf)
 		zwp_linux_dmabuf_v1_destroy(a.dmabuf);
 	wl_registry_destroy(reg);
+	wl_callback_destroy(cb); /* the sync callback is ours to destroy (the listener does not) */
 	wl_display_disconnect(d);
 	return ok;
 }
