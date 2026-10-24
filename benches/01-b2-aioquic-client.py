@@ -8,8 +8,9 @@
 
 ⭐ `--rebind` (24 Oct 2026, the live test of the §2.3 migration): once the session is open the client changes its
 SOURCE PORT as a NAT rebinding does — a new UDP socket on another local port, the same protocol object
-(`client._transport` replaced) — sends bytes on a new WebTransport stream and checks that an answer comes back OR that
-the connection is still open after 5 s.  It prints «REBIND OK» or «REBIND FAIL: <reason>».  The server's log must
+(`client._transport` replaced) — sends bytes on a new WebTransport stream and COUNTS for 5 s the datagrams that arrive on
+the new port and, apart, those still arriving on the old socket (not given to the client).  «REBIND OK» only if
+at least one arrives on the NEW port; else «REBIND FAIL: <reason>».  The server's log must
 then say «MOVED to» (that is the script's check, `migrazione-dal-vivo.sh`).
 
 ---------------------------------------------------------------------------
@@ -164,32 +165,46 @@ REBIND_WAIT_S = 5.0
 
 
 async def rebind(client, verbose=False):
-    """changes the source port; (ok, reason).  The old transport is returned to be closed at the end."""
+    """changes the source port; (old transport, ok, reason).  OK only if datagrams ARRIVE ON THE NEW PORT:
+    the server must answer where the client now is.  What still arrives on the OLD socket is counted apart
+    and NOT given to the client (it would otherwise keep the session alive without any migration)."""
     loop = asyncio.get_running_loop()
     old = client._transport
+    counts = {"new": 0, "old": 0}
+    to_client = client.datagram_received            # the library's own handler
+
+    class NewPath(asyncio.DatagramProtocol):
+        def connection_made(self, transport):
+            client.connection_made(transport)       # client._transport = the new transport
+
+        def datagram_received(self, data, addr):
+            counts["new"] += 1
+            to_client(data, addr)
+
+    def old_path(data, addr):                       # the old socket's protocol is `client`: this replaces its handler
+        counts["old"] += 1
+
     sock = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)       # as aioquic's own connect(): dual stack
     sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
     sock.bind(("::", 0, 0, 0))
     sock.setblocking(False)
     before = old.get_extra_info("sockname")
-    await loop.create_datagram_endpoint(lambda: client, sock=sock)   # connection_made(): client._transport = the new one
+    await loop.create_datagram_endpoint(NewPath, sock=sock)
+    client.datagram_received = old_path             # from now on nothing from the old socket reaches the client
     after = client._transport.get_extra_info("sockname")
     print(f"   source port {before[1]} -> {after[1]}")
     if after[1] == before[1]:
         return old, False, "the source port did not change"
     client.send_byte(b"rebind")
-    t0 = time.time()
-    try:
-        data = await asyncio.wait_for(client.returned, timeout=REBIND_WAIT_S)
-        return old, True, f"an answer came back on the new path ({len(data)} bytes)"
-    except asyncio.TimeoutError:
-        pass
+    await asyncio.sleep(REBIND_WAIT_S)
+    print(f"   datagrammi sul nuovo percorso: {counts['new']}, sul vecchio: {counts['old']}")
     ce = getattr(client._quic, "_close_event", None)
     if verbose:
-        print(f"   after {time.time() - t0:.1f} s: close_event = {ce!r}")
-    if ce is not None:
-        return old, False, f"the connection was closed (error {ce.error_code}: {ce.reason_phrase!r})"
-    return old, True, f"no answer, but the connection is still open after {REBIND_WAIT_S:.0f} s"
+        print(f"   close_event after {REBIND_WAIT_S:.0f} s: {ce!r}")
+    if counts["new"] > 0:
+        return old, True, f"{counts['new']} datagrams arrived on the new port"
+    return old, False, (f"no datagram on the new port in {REBIND_WAIT_S:.0f} s (old port: {counts['old']})"
+                        + (f"; the connection was closed ({ce.error_code}: {ce.reason_phrase!r})" if ce else ""))
 
 
 rebind_old = []        # the transport left behind by --rebind: closed after the connection
