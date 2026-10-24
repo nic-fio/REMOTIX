@@ -373,7 +373,7 @@ install -D -m 0644 packaging/rpm/selinux/remotix_portcon.cil %{buildroot}%{_data
 # rcp.c next to it, 0600): `[M]` T10 on 15 Oct 2026 fedora44/alma10/tumbleweed/leap16 found
 # quic-secret left behind, with certificates/ and /var/lib/remotix, after `uninstall --purge`.
 install -d -m 0700 %{buildroot}%{_sharedstatedir}/remotix/certificates
-for f in page.pem page.key page.ours session.pem session.key session.ours quic-secret log-secret; do
+for f in page.pem page.key page.ours session.pem session.key session.ours quic-secret log-secret log-secret.new; do
     touch %{buildroot}%{_sharedstatedir}/remotix/certificates/$f
 done
 touch %{buildroot}%{_sharedstatedir}/remotix/ban %{buildroot}%{_sharedstatedir}/remotix/ban.new
@@ -410,6 +410,16 @@ touch %{buildroot}%{_sharedstatedir}/remotix/ban %{buildroot}%{_sharedstatedir}/
 %else
 %systemd_postun_with_restart remotix.service
 %endif
+# Last removal only ($1 == 0).  The service writes its secrets through a temporary file
+# (quic-secret.tmp.<pid>, log-secret.new) and renames it: a crash or a power cut between the
+# write and the rename leaves the temporary one, which rpm does not know (the .new is %%ghost,
+# the .tmp.<pid> has a name that changes).  Without this, certificates/ and /var/lib/remotix
+# would stay.  rmdir only removes a folder that is EMPTY: nothing the administrator put there goes.
+if [ "$1" -eq 0 ]; then
+    rm -f %{_sharedstatedir}/remotix/certificates/quic-secret.tmp.*
+    rmdir %{_sharedstatedir}/remotix/certificates 2>/dev/null || :
+    rmdir %{_sharedstatedir}/remotix 2>/dev/null || :
+fi
 
 %posttrans
 # After the transaction (remotix-install is in place too): the engine
@@ -465,6 +475,7 @@ fi
 %ghost %attr(0644,root,root) %{_sharedstatedir}/remotix/certificates/session.ours
 %ghost %attr(0600,root,root) %{_sharedstatedir}/remotix/certificates/quic-secret
 %ghost %attr(0600,root,root) %{_sharedstatedir}/remotix/certificates/log-secret
+%ghost %attr(0600,root,root) %{_sharedstatedir}/remotix/certificates/log-secret.new
 %ghost %attr(0600,root,root) %{_sharedstatedir}/remotix/ban
 %ghost %attr(0600,root,root) %{_sharedstatedir}/remotix/ban.new
 
