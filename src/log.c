@@ -261,9 +261,31 @@ static void line(const char *file, int text_line, bool detail, const char *area,
 	 *    a password.  Every byte below 0x20 of the body becomes `?`, for
 	 *    every caller; UTF-8 (≥ 0x80) is untouched.  The one newline is the
 	 *    one below. */
-	for (int k = body; k < n; k++)
-		if ((unsigned char)buf[k] < 0x20)
-			buf[k] = '?';
+	/* ⛔ … and DEL, the C1 controls written as UTF-8 (U+0080–U+009F, some
+	 *    terminals obey them) and the bidi overrides (U+202A–U+202E,
+	 *    U+2066–U+2069: they reorder what a reader sees) — each one `?`
+	 *    (review of 95ed70ea).  The line can only get shorter. */
+	{
+		int w = body;
+		for (int k = body; k < n; k++) {
+			unsigned char b0 = (unsigned char)buf[k];
+			unsigned char b1 = k + 1 < n ? (unsigned char)buf[k + 1] : 0;
+			unsigned char b2 = k + 2 < n ? (unsigned char)buf[k + 2] : 0;
+			if (b0 < 0x20 || b0 == 0x7F) {
+				buf[w++] = '?';
+			} else if (b0 == 0xC2 && b1 >= 0x80 && b1 <= 0x9F) {
+				buf[w++] = '?';
+				k += 1;
+			} else if (b0 == 0xE2 && ((b1 == 0x80 && b2 >= 0xAA && b2 <= 0xAE) ||
+			                          (b1 == 0x81 && b2 >= 0xA6 && b2 <= 0xA9))) {
+				buf[w++] = '?';
+				k += 2;
+			} else {
+				buf[w++] = (char)b0;
+			}
+		}
+		n = w;
+	}
 	buf[n++] = '\n';
 
 	/* ⭐ With `--journal` the EVENTS (§12) go to the native journal socket

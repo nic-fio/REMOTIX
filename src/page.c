@@ -13,7 +13,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <linux/tcp.h>
 #include <stddef.h>
@@ -109,6 +108,10 @@
  * 16b75f33: 16 overflowed under a connect flood — the probe's SYN then
  * waited 1-2 s for its retransmit). */
 #define PAGE_BACKLOG 256
+/* How long a connection over the accept rate waits, parked without TLS, for
+ * a token; past it, it is served «503 busy» (review of 95ed70ea: closing it
+ * at accept made the page say «the server is not there», D-009). */
+#define PAGE_RATE_WAIT_MS 3000u
 /* The «GET / from …» line: at most this many per address per window; the
  * rest are counted in the summary line. */
 #define PAGE_LINES_PER_ADDRESS 5
@@ -192,7 +195,9 @@
 	"serial=(), hid=(), midi=(), accelerometer=(), gyroscope=(), "            \
 	"magnetometer=(), display-capture=()\r\n"
 
-enum phase { F_HANDSHAKE, F_READ, F_WRITE, F_DONE };
+/* F_RATE: accepted over the accept rate, parked WITHOUT TLS until a token
+ * (or PAGE_RATE_WAIT_MS: then served a 503) — see `park_or_start()`. */
+enum phase { F_RATE, F_HANDSHAKE, F_READ, F_WRITE, F_DONE };
 
 /* ⭐ A response body SHARED read-only by every client that sends it (fourth
  * review, 15 Oct 2026): before, each writing client held a private copy of
@@ -268,10 +273,14 @@ typedef struct {
 	 *   watched and the connection stays stuck until something else
 	 *   expires. */
 	bool wants_to_write;
-	/* The peer has sent at least one byte (a POLLIN reached this client, or
-	 * bytes were waiting at accept): a browser sends its ClientHello at
-	 * once; a bare TCP connect never does.  Eviction takes the silent first. */
+	/* The peer's whole ClientHello has been read (see move_client): a
+	 * browser sends it at once; a bare connect, or a few bytes, never make
+	 * it.  Eviction takes the silent first. */
 	bool spoke;
+	/* F_RATE: until when it waits for a token; `busy`: it waited in vain,
+	 * every request it sends gets 503. */
+	uint64_t rate_until;
+	bool busy;
 } client;
 
 struct page {
@@ -321,9 +330,17 @@ struct page {
 		uint64_t at;
 		unsigned milli;
 	} rate[PAGE_RATE_KEYS], rate48[PAGE_RATE_KEYS];
-	unsigned refused_rate;
-	/* … and never zeroed (the fuzz harness tells a rate refusal by it). */
-	unsigned long long refused_rate_total;
+	/* The ONE bucket every key without a bucket of its own shares, per
+	 * table (review of 95ed70ea: a newcomer used to take over the most
+	 * refilled bucket with a fresh burst, so 65 rotating addresses had no
+	 * rate at all). */
+	struct bucket rate_over, rate48_over;
+	/* parked for the rate; served 503 after waiting in vain */
+	unsigned delayed_rate, busy_rate;
+	/* after a failed build of `tail_gz`, not again before this time */
+	uint64_t tail_gz_after;
+	/* every connection ever parked for the rate (never zeroed) */
+	unsigned long long delayed_rate_total;
 	/* Round robin of `page_move()`'s event budget. */
 	size_t move_next;
 };
@@ -730,8 +747,12 @@ static bool banned_respond(page *p, client *c, bool gz, const char *warning,
 	if (!text)
 		return false;
 	ntext = strlen(text);
-	if (gz && !p->tail_gz) {
+	if (gz && !p->tail_gz && log_now_ms() >= p->tail_gz_after) {
 		size_t n = 0;
+		/* ⚠ After a failure (no memory), not again for 10 s: retrying the
+		 *   ~860 KB compression at every banned gzip GET would be the CPU
+		 *   cost this design removes (review of 95ed70ea). */
+		p->tail_gz_after = log_now_ms() + 10000u;
 		unsigned char *raw = deflate_raw(p->tail->data, p->tail->n, 6, true, 0, &n);
 		if (raw) {
 			p->tail_gz = malloc(sizeof *p->tail_gz + n);
@@ -1038,6 +1059,14 @@ static void serve(page *p, client *c)
 		        "request is unreadable\n", 22, NULL);
 		return;
 	}
+	/* ⭐ It waited PAGE_RATE_WAIT_MS for the accept rate in vain: «busy»,
+	 *   which the page tells apart from «not there» (D-009) and retries. */
+	if (c->busy) {
+		compose(c, "503 Service Unavailable", "text/plain; charset=utf-8",
+		        "busy: too many connections from this address, retry\n", 52,
+		        "Retry-After: 1\r\n");
+		return;
+	}
 	{
 		size_t n = (size_t)(sp2 - sp1 - 1);
 		if (n >= sizeof fpath)
@@ -1281,12 +1310,24 @@ static void move_client(page *p, client *c, short events)
 {
 	int rv;
 
-	if (events & POLLIN)
-		c->spoke = true;
+	(void)events;
+	if (c->phase == F_RATE)
+		return; /* no TLS yet: parked_move() decides */
 	c->wants_to_write = false;
 
 	if (c->phase == F_HANDSHAKE) {
 		rv = SSL_accept(c->ssl);
+		/* ⛔ «Spoke» = OpenSSL has read a WHOLE ClientHello (its handshake
+		 *    left the «before» state) — not «a byte arrived» (review of
+		 *    95ed70ea: connect + one byte each from ~130 addresses brought
+		 *    back the evict-the-owner pattern).  Asked after every
+		 *    SSL_accept, the one at accept included: no FIONREAD race.
+		 * ⚠ SSL_get_state(), not SSL_in_before(): the latter turns false at
+		 *   the first SSL_accept call, ClientHello or not (`[M]` desk
+		 *   test: every bare connect «spoke»); the handshake state leaves
+		 *   TLS_ST_BEFORE only once the whole ClientHello is read. */
+		if (!c->spoke && (rv == 1 || SSL_get_state(c->ssl) != TLS_ST_BEFORE))
+			c->spoke = true;
 		if (rv == 1) {
 			c->phase = F_READ;
 		} else {
@@ -1396,7 +1437,10 @@ size_t page_descriptors(page *p, struct pollfd *dove, size_t cap)
 		if (p->clients[i].phase == F_DONE || p->clients[i].fd < 0)
 			continue;
 		dove[n].fd = p->clients[i].fd;
-		dove[n].events = p->clients[i].wants_to_write ? POLLOUT : POLLIN;
+		/* ⚠ a parked one is watched for nothing (its ClientHello would
+		 *   wake the loop at every pass): parked_move() starts it */
+		dove[n].events = p->clients[i].phase == F_RATE ? 0
+		               : p->clients[i].wants_to_write ? POLLOUT : POLLIN;
 		dove[n].revents = 0;
 		n++;
 	}
@@ -1448,7 +1492,8 @@ static bool key48_of(const struct sockaddr_storage *da, unsigned char p48[6])
  * closed since the last one. */
 static bool refusals_pending(const page *p)
 {
-	return p->refused_address || p->refused_48 || p->refused_full || p->refused_rate ||
+	return p->refused_address || p->refused_48 || p->refused_full ||
+	       p->delayed_rate || p->busy_rate ||
 	       p->evicted || p->evicted_writing || p->expired_request ||
 	       p->expired_response || p->lines_unwritten;
 }
@@ -1467,8 +1512,9 @@ static void refusals_report(page *p, uint64_t now)
 	              "address or /48: %u without a request, %u writing for %u s or "
 	              "more; REFUSED: %u over %d at once from one address, %u over %d "
 	              "from one IPv6 /48, %u full with no group as large as the "
-	              "newcomer's would be, %u over %d accepts a second from one address "
-	              "or /64 (%d per /48); %u request lines not written (over %d per %u s "
+	              "newcomer's would be; DELAYED: %u over %d accepts a second from one "
+	              "address or /64 (%d per /48), %u of them then answered 503 busy after "
+	              "%u s; %u request lines not written (over %d per %u s "
 	              "from one address); the last refused from %s",
 	              p->refused_ever ? " in the last seconds" : "",
 	              p->expired_request, PAGE_REQUEST_MS / 1000u,
@@ -1476,11 +1522,13 @@ static void refusals_report(page *p, uint64_t now)
 	              PAGE_RATE_GRACE_MS / 1000u, MAX_CLIENTS, p->evicted,
 	              p->evicted_writing, PAGE_EVICT_AGE_MS / 1000u,
 	              p->refused_address, PAGE_PER_ADDRESS, p->refused_48,
-	              PAGE_PER_48, p->refused_full, p->refused_rate, PAGE_ACCEPT_RATE,
-	              PAGE_ACCEPT_RATE_48, p->lines_unwritten,
+	              PAGE_PER_48, p->refused_full, p->delayed_rate, PAGE_ACCEPT_RATE,
+	              PAGE_ACCEPT_RATE_48, p->busy_rate, PAGE_RATE_WAIT_MS / 1000u,
+	              p->lines_unwritten,
 	              PAGE_LINES_PER_ADDRESS, PAGE_LINES_WINDOW_MS / 1000u,
 	              p->refused_last[0] ? p->refused_last : "-");
-	p->refused_address = p->refused_48 = p->refused_full = p->refused_rate = 0;
+	p->refused_address = p->refused_48 = p->refused_full = 0;
+	p->delayed_rate = p->busy_rate = 0;
 	p->evicted = p->evicted_writing = p->lines_unwritten = 0;
 	p->expired_request = p->expired_response = 0;
 	p->refused_last[0] = 0;
@@ -1571,8 +1619,9 @@ static uint32_t random_below(uint32_t n)
 	return r % n;
 }
 
-/* The eviction tier of a candidate: 0 = SILENT (not one byte received:
- * a bare TCP connect), 1 = no whole request yet, 2 = writing for
+/* The eviction tier of a candidate: 0 = SILENT (no whole ClientHello read:
+ * a bare TCP connect, a few bytes, or parked for the rate), 1 = no whole
+ * request yet, 2 = writing for
  * PAGE_EVICT_AGE_MS or more, 3 = writing for less (a fresh download).
  * ⛔ Tier 0 is the independent review of 16b75f33: with every group at one
  *    slot the OLDEST without a request went, and ~127 addresses doing bare
@@ -1635,50 +1684,127 @@ static client *fair_victim(page *p, unsigned mine, uint64_t now)
 	return v;
 }
 
-/* One token from the bucket of `key` (PAGE_RATE_KEYS of them in `t`): `true`
- * = this accept is within `rate` per second after a burst of `burst`. */
-static bool bucket_take(struct bucket *t, const char *key, uint64_t now,
-                        unsigned rate, unsigned burst)
+/* The bucket of `key` in `t`, refilled to `now` (`rate` per second up to a
+ * burst of `burst`).  A key without one gets a bucket only if some bucket is
+ * FULL (refilled to the burst: forgetting it forgets nothing) or empty;
+ * otherwise it is charged to `over`, ONE bucket shared by every such key —
+ * so rotating more addresses than buckets buys no fresh bursts. */
+static struct bucket *bucket_of(struct bucket *t, struct bucket *over,
+                                const char *key, uint64_t now, unsigned rate,
+                                unsigned burst)
 {
-	struct bucket *b = NULL, *fullest = NULL;
-	unsigned best = 0, cap = burst * 1000u;
+	struct bucket *b = NULL, *free_one = NULL;
+	unsigned cap = burst * 1000u;
 
 	for (size_t i = 0; i < PAGE_RATE_KEYS; i++) {
 		struct bucket *x = &t[i];
-		unsigned m;
 		if (x->key[0] && strcmp(x->key, key) == 0) {
 			b = x;
 			break;
 		}
-		if (!x->key[0])
-			m = cap + 1; /* an empty one first */
-		else if (now - x->at >= (uint64_t)cap / rate)
-			m = cap;
-		else
-			m = x->milli + (unsigned)((now - x->at) * rate);
-		if (!fullest || m > best) {
-			fullest = x;
-			best = m;
-		}
+		if (!free_one && (!x->key[0] || (now >= x->at &&
+		                  (now - x->at >= (uint64_t)cap / rate ||
+		                   x->milli + (now - x->at) * rate >= cap))))
+			free_one = x;
 	}
-	if (!b) {
-		/* ⚠ Reusing the fullest bucket forgets the least: a full one is
-		 *   the same as none.  With every bucket in use by a busy key, the
-		 *   newcomer's is fresh — what PAGE_PER_ADDRESS and the fair-share
-		 *   eviction then hold. */
-		b = fullest;
+	if (!b && free_one) {
+		b = free_one;
 		snprintf(b->key, sizeof b->key, "%s", key);
 		b->milli = cap;
 		b->at = now;
-	} else {
-		uint64_t m = (uint64_t)b->milli + (now - b->at) * rate;
+	}
+	if (!b) {
+		b = over;
+		if (!b->key[0]) {
+			snprintf(b->key, sizeof b->key, "*");
+			b->milli = cap;
+			b->at = now;
+		}
+	}
+	if (now > b->at) {
+		/* ⚠ only forward: a clock that went back refills nothing */
+		uint64_t d = now - b->at;
+		uint64_t m = d >= (uint64_t)cap / rate ? cap : (uint64_t)b->milli + d * rate;
 		b->milli = m > cap ? cap : (unsigned)m;
 		b->at = now;
 	}
-	if (b->milli < 1000u)
+	return b;
+}
+
+/* One token from `key`'s bucket — and from the /48's, when `k48` is not
+ * NULL — or none: ⚠ when either refuses, NEITHER is spent (review of
+ * 95ed70ea: a /48 refusal used to cost the /64 a token).  `*who` = the
+ * bucket that refused. */
+static bool rate_take(page *p, const char *key, const char *k48, uint64_t now,
+                      const char **who)
+{
+	struct bucket *b = bucket_of(p->rate, &p->rate_over, key, now,
+	                             PAGE_ACCEPT_RATE, PAGE_ACCEPT_BURST);
+	struct bucket *b48 = k48 ? bucket_of(p->rate48, &p->rate48_over, k48, now,
+	                                     PAGE_ACCEPT_RATE_48, PAGE_ACCEPT_BURST_48)
+	                         : NULL;
+
+	if (b->milli < 1000u) {
+		*who = b == &p->rate_over ? "(the shared overflow bucket)" : key;
 		return false;
+	}
+	if (b48 && b48->milli < 1000u) {
+		*who = b48 == &p->rate48_over ? "(the shared /48 overflow bucket)" : k48;
+		return false;
+	}
 	b->milli -= 1000u;
+	if (b48)
+		b48->milli -= 1000u;
 	return true;
+}
+
+/* TLS for `c` (its descriptor accepted): an SSL object, the handshake begun.
+ * False if there is no SSL object (then `c` is closed). */
+static bool client_start_tls(page *p, client *c)
+{
+	c->ssl = SSL_new(p->ctx);
+	if (!c->ssl) {
+		close(c->fd);
+		c->fd = -1;
+		c->phase = F_DONE;
+		return false;
+	}
+	SSL_set_fd(c->ssl, c->fd);
+	/* ⛔ PARTIAL WRITES: without this mode `SSL_write_ex()` reports
+	 *    nothing until the WHOLE remaining response is out, so
+	 *    `oresponse` would stay 0 for a 907 KB page — and `oresponse` is
+	 *    the progress measure where `TCP_INFO` is missing.  With it,
+	 *    every record taken counts. */
+	SSL_set_mode(c->ssl, SSL_MODE_ENABLE_PARTIAL_WRITE);
+	SSL_set_accept_state(c->ssl);
+	c->phase = F_HANDSHAKE;
+	move_client(p, c, 0);
+	return true;
+}
+
+/* The parked clients: a token → TLS; waited PAGE_RATE_WAIT_MS in vain →
+ * TLS all the same, but `busy` (its request gets 503, which the page tells
+ * apart from «not there»).  Called by page_expired() at every pass. */
+static void parked_move(page *p, uint64_t now)
+{
+	for (size_t i = 0; i < MAX_CLIENTS; i++) {
+		client *c = &p->clients[i];
+		char k48[64];
+		const char *who = NULL;
+		if (!client_active(c) || c->phase != F_RATE)
+			continue;
+		if (c->has48)
+			snprintf(k48, sizeof k48, "%02x%02x:%02x%02x:%02x%02x::/48", c->p48[0],
+			         c->p48[1], c->p48[2], c->p48[3], c->p48[4], c->p48[5]);
+		if (!rate_take(p, c->key, c->has48 ? k48 : NULL, now, &who)) {
+			if (now < c->rate_until)
+				continue;
+			c->busy = true;
+			p->busy_rate++;
+			snprintf(p->refused_last, sizeof p->refused_last, "%s", who);
+		}
+		client_start_tls(p, c);
+	}
 }
 
 static int accept_page(page *p, int budget)
@@ -1730,28 +1856,6 @@ static int accept_page(page *p, int budget)
 				same++;
 			if (has48 && x->has48 && memcmp(x->p48, p48, 6) == 0)
 				same48++;
-		}
-		/* ⛔ The accept rate FIRST (holistic review, 15 Oct 2026): every
-		 *    accepted connection costs a TLS handshake and maybe a page;
-		 *    over PAGE_ACCEPT_RATE a second per key (PAGE_ACCEPT_RATE_48
-		 *    per /48) it is closed before any of that. */
-		{
-			char k48[64] = "";
-			if (has48)
-				snprintf(k48, sizeof k48, "%02x%02x:%02x%02x:%02x%02x::/48",
-				         p48[0], p48[1], p48[2], p48[3], p48[4], p48[5]);
-			if (!bucket_take(p->rate, key, now, PAGE_ACCEPT_RATE,
-			                 PAGE_ACCEPT_BURST) ||
-			    (has48 && !bucket_take(p->rate48, k48, now, PAGE_ACCEPT_RATE_48,
-			                           PAGE_ACCEPT_BURST_48))) {
-				p->refused_rate++;
-				p->refused_rate_total++;
-				snprintf(p->refused_last, sizeof p->refused_last, "%s",
-				         has48 ? k48 : key);
-				close(fd);
-				refusals_report(p, now);
-				continue;
-			}
 		}
 		/* ⛔ The per-address cap BEFORE the eviction: a crowded address
 		 *    must not be able to push out somebody else's slot. */
@@ -1822,34 +1926,37 @@ static int accept_page(page *p, int budget)
 		memcpy(c->provenance, provenance, sizeof c->provenance);
 		memcpy(c->key, key, sizeof c->key);
 
-		c->ssl = SSL_new(p->ctx);
-		if (!c->ssl) {
-			close(fd);
-			c->fd = -1;
-			c->phase = F_DONE;
-			return round + 1;
-		}
-		SSL_set_fd(c->ssl, fd);
-		/* ⛔ PARTIAL WRITES: without this mode `SSL_write_ex()` reports
-		 *    nothing until the WHOLE remaining response is out, so
-		 *    `oresponse` would stay 0 for a 907 KB page — and `oresponse` is
-		 *    the progress measure where `TCP_INFO` is missing.  With it,
-		 *    every record taken counts. */
-		SSL_set_mode(c->ssl, SSL_MODE_ENABLE_PARTIAL_WRITE);
-		SSL_set_accept_state(c->ssl);
-		c->phase = F_HANDSHAKE;
+		/* ⛔ The accept rate (holistic review, 15 Oct 2026; review of
+		 *    95ed70ea): every connection costs a TLS handshake and maybe a
+		 *    page.  Over PAGE_ACCEPT_RATE a second per key (and
+		 *    PAGE_ACCEPT_RATE_48 per /48) it is PARKED, without TLS, until
+		 *    a token — not closed: a closed one made the page say «the
+		 *    server is not there».  Its slot is the one just taken, under
+		 *    the same per-address caps. */
 		{
-			/* the ClientHello may be here already: then it spoke */
-			int waiting = 0;
-			c->spoke = ioctl(fd, FIONREAD, &waiting) == 0 && waiting > 0;
+			char k48[64];
+			const char *who = NULL;
+			if (has48)
+				snprintf(k48, sizeof k48, "%02x%02x:%02x%02x:%02x%02x::/48",
+				         p48[0], p48[1], p48[2], p48[3], p48[4], p48[5]);
+			if (!rate_take(p, key, has48 ? k48 : NULL, now, &who)) {
+				c->phase = F_RATE;
+				c->rate_until = now + PAGE_RATE_WAIT_MS;
+				p->delayed_rate++;
+				p->delayed_rate_total++;
+				snprintf(p->refused_last, sizeof p->refused_last, "%s", who);
+				continue;
+			}
 		}
-		move_client(p, c, 0);
+		if (!client_start_tls(p, c))
+			return round + 1;
 	}
 	return round;
 }
 
 void page_expired(page *p, uint64_t now)
 {
+	parked_move(p, now);
 	for (size_t i = 0; i < MAX_CLIENTS; i++) {
 		client *c = &p->clients[i];
 		if (client_active(c) && c->phase == F_WRITE)
@@ -1884,6 +1991,9 @@ int page_wait_ms(const page *p, uint64_t now)
 		const client *c = &p->clients[i];
 		if (client_active(c) && client_deadline(c) < before)
 			before = client_deadline(c);
+		/* a parked one: a token comes every 1000 / PAGE_ACCEPT_RATE ms */
+		if (client_active(c) && c->phase == F_RATE && now + 50 < before)
+			before = now + 50;
 	}
 	if (refusals_pending(p) &&
 	    p->refused_line_ms + PAGE_REFUSAL_LOG_MS < before)
