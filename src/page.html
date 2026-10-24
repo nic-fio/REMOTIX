@@ -3856,7 +3856,8 @@ class Viewer {
          already RGB when the shader sees it, and Chrome built the last visible
          row from 3/4 of chroma row 1031 + 1/4 of padding chroma row 1032
          (zero) ⇒ R −57, G +24, B −68 on every desktop.  Cure (b): only when
-         the browser uploaded MORE rows than visible, the bottom clamp moves one
+         the browser uploaded MORE rows than visible, or (cure (c), below) the
+         VideoFrame has coded rows under the visible ones, the bottom clamp moves one
          row up, so the last row repeats the row above (one row of detail lost
          at the bottom edge; columns and the Firefox path are untouched). */
       const fs = "#version 300 es\n"
