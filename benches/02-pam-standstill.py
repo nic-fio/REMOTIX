@@ -184,7 +184,6 @@ TIGHT_FREE_MS = 300.0
 BASE_MAX_MS = 60.0          # the quiet loop: above, the ruler is broken
 RULER_MARGIN_MS = 250.0     # D4b scenes: a handshake fails only if it exceeds BLOCKED_PEAK_MS or (baseline peak + this margin);
                             # TIGHT_FREE_MS (300) is printed as INFORMATION, not as the failure line
-SERVER_CAUSE = ("TERMINATED", "FAREWELL", "REJECTED", "session closed", "channel closed", "answered")  # words of a drop the SERVER caused
 
 
 def s(t):
@@ -208,7 +207,20 @@ def body_hello():
 
 
 class Drop(RuntimeError):
-    pass
+    """The SERVER ended or refused something (it closed, said farewell/rejected, answered the wrong message): every `Drop` is
+    raised where the cause is the server's, hence `server = True`."""
+    server = True
+
+
+def local_error(e):
+    """Errors that are local BY CONSTRUCTION — the client could not even open its own socket, or a module is missing.  They are not
+    a sample against the server: they are printed and the round becomes «not measured» (exit 3).  Everything else that happens
+    after the connection started (a timeout included) is a FAILED sample."""
+    import errno
+    if isinstance(e, ImportError):
+        return True
+    return isinstance(e, OSError) and e.errno in (errno.EMFILE, errno.ENFILE, errno.EADDRNOTAVAIL, errno.ENOBUFS,
+                                                    errno.ENOMEM, errno.EACCES, errno.EPERM)
 
 
 class Client(QuicConnectionProtocol):
@@ -379,6 +391,14 @@ async def timed_handshake(stack, address, port, fpath, report):
     except Exception as e:  # noqa: BLE001 — the error type IS the measurement
         report["ms"] = None
         report["drop"] = f"{type(e).__name__}: {e}"
+        report["elapsed_ms"] = (time.monotonic() - t0) * 1000
+        # ⭐ D4b: a drop after the connection started is a FAILED sample (a timeout counts at least its timeout, via `elapsed_ms`);
+        #    only an error that is local by construction is "not a sample at all".
+        if local_error(e):
+            report["local"] = True
+        else:
+            report["failed"] = True
+            report["server_cause"] = bool(getattr(e, "server", False))
 
 
 # ---------------------------------------------------------------------------
@@ -560,36 +580,31 @@ async def handshake_ruler(a, period, halt, samples):
             await asyncio.sleep(rest)
 
 
-def _is_server_drop(rep):
-    """A dropped handshake counts against the server ONLY with a server-side cause (it closed, refused, said farewell); a client
-    timeout or a local error is reported but not counted."""
-    why = rep.get("drop") or ""
-    return any(w in why for w in SERVER_CAUSE)
-
-
 def _pct(xs, q):
     xs = sorted(xs)
     return xs[min(len(xs) - 1, int(round(q * (len(xs) - 1))))]
 
 
 def _ruler_judge(base, samples):
-    """(ok, text).  `base` = handshakes measured BEFORE the fault, `samples` = those during it.
-    FAIL: a peak >= BLOCKED_PEAK_MS, or a peak above (baseline peak + RULER_MARGIN_MS), or a drop with a server-side cause.
-    300 ms (TIGHT_FREE_MS) is only printed."""
+    """(ok, text); ok None = NOT MEASURED (a local error).  `base` = handshakes measured BEFORE the fault, `samples` = those during it.
+    FAIL: a peak >= BLOCKED_PEAK_MS, or a peak above (baseline peak + RULER_MARGIN_MS), or ANY failed sample (a drop after the
+    connection started; a timeout counts at least its timeout).  300 ms (TIGHT_FREE_MS) is only printed."""
+    local = [x for x in list(base) + list(samples) if x.get("local")]
+    if local:
+        return None, f"NOT MEASURED: {len(local)} local error(s), e.g. {local[0].get('drop')}"
     bms = [x["ms"] for x in base if x.get("ms") is not None]
-    ms = [x["ms"] for x in samples if x.get("ms") is not None]
-    if not bms or not ms:
-        return None, "no handshake measured"
+    if not bms or not samples:
+        return None, "NOT MEASURED: no handshake measured"
+    ms = [x["ms"] if x.get("ms") is not None else x.get("elapsed_ms", BLOCKED_PEAK_MS) for x in samples]
+    failed = [x for x in samples if x.get("failed")]
     base_peak = max(bms)
     peak = max(ms)
-    drops = [x for x in samples if x.get("ms") is None]
-    server_drops = [x for x in drops if _is_server_drop(x)]
     limit = min(BLOCKED_PEAK_MS, base_peak + RULER_MARGIN_MS)
     over_info = sum(1 for m in ms if m >= TIGHT_FREE_MS)
-    ok = peak < limit and not server_drops
+    ok = peak < limit and not failed
     return ok, (f"{len(ms)} handshakes: median {statistics.median(ms):.0f} ms, p95 {_pct(ms, .95):.0f} ms, peak {peak:.0f} ms "
                 f"(baseline peak {base_peak:.0f}; fail line {limit:.0f}; info: {over_info} at or above {TIGHT_FREE_MS:.0f}); "
-                f"dropped {len(drops)}, with a server-side cause {len(server_drops)}")
+                f"FAILED samples {len(failed)} ({sum(1 for x in failed if x.get('server_cause'))} with a server-side cause)")
 
 
 async def measure_baseline(a, n=8):
@@ -633,6 +648,9 @@ async def scene_unchecked(a, password):
     n_08 = sum(1 for r in results if r.get("reason") == 0x08)
     n_drop = sum(1 for r in results if "drop" in r)
     ruler_ok, ruler_text = _ruler_judge(base, bs)
+    if ruler_ok is None:
+        print(f"\n   ⛔ {ruler_text} — it is not «the wire was fine», it is «I did not measure»")
+        return 3
     ok = (n_0e == len(results) and n_07 == 0 and n_08 == 0 and n_drop == 0 and bool(ruler_ok))
     print(f"\n   0x0E {n_0e}/{len(results)} · 0x07 {n_07} · 0x08 {n_08} · dropped attempts {n_drop}\n   wire: {ruler_text}")
     print(f"   {'⭐ OK' if ok else '⛔ NO'}  expected «unchecked»: every answer REJECTED 0x0E (nothing counted, no ban), the wire never stuck")
@@ -711,11 +729,15 @@ async def scene_restart(a, password):
     halt.set()
     await ruler
     ruler_ok, ruler_text = _ruler_judge(base, samples)
+    if ruler_ok is None:
+        print(f"\n   ⛔ {ruler_text} — it is not «the wire was fine», it is «I did not measure»")
+        return 3
     restarts = count("RESTART") - restarts_before
     down_lines = count("is down, waiting to be started again") - down_before
     healthy_ok = healthy.get("answer") == "ADMITTED"
     # the proof that it WAS down: the 0x0E, or the server's own log line «the PAM helper is down, waiting to be started again»
-    down_ok = (down.get("answer") == "REJECTED" and down.get("reason") == 0x0E) or down_lines >= 1
+    down_ok = (down.get("answer") == "REJECTED" and down.get("reason") == 0x0E) or \
+              (down_lines >= 1 and down.get("reason") != 0x08 and "drop" not in down)
     back_ok = t_back is not None
     log_ok = restarts >= 1
     print(f"\n   back after {('%.1f s' % (t_back - t_kill)) if back_ok else 'NEVER'} ({polls} polls) · "

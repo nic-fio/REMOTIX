@@ -74,6 +74,7 @@ stop)
 		#    may name a pid that has been REUSED by someone else: the process
 		#    must be running THIS target's binary.
 		exe=$(readlink "/proc/$pid/exe" 2>/dev/null || true)
+		exe=${exe% (deleted)}   # a rebuilt binary is «… (deleted)» while the old one runs
 		if [ ! -d "/proc/$pid" ]; then
 			printf -- '--  pid %s is not alive: nothing to stop\n' "$pid"
 			rm -f "$PIDF" "$SOCK"
@@ -169,7 +170,7 @@ copy)
 	case "$dd" in "$root"/?*) ;; *) echo "NO  ⛔ D=$D is not under $root: I delete nothing"; exit 2 ;; esac
 	if findmnt -rn --mountpoint "$dd" >/dev/null 2>&1; then echo "NO  ⛔ D=$D is a mountpoint: I delete nothing"; exit 2; fi
 	case "$(readlink -f "$SRC")/" in "$dd"/*) echo "NO  ⛔ D=$D contains the source tree: I delete nothing"; exit 2 ;; esac
-	rm -rf "$dd"
+	rm -rf --one-file-system "$dd"
 	mkdir -p "$(dirname "$D")"
 	cp -a "$SRC" "$D"
 	rm -f "$D"/*.o "$D/remotix"
