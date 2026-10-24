@@ -352,7 +352,7 @@ size_t ngtcp2_conn_get_max_tx_udp_payload_size2(const ngtcp2_conn *c)
 {
 	return live(c, false, __func__)->reg->max_udp ? 1452 : 1200;
 }
-int ngtcp2_conn_is_local_stream(ngtcp2_conn *c, int64_t id)
+int ngtcp2_conn_is_local_stream2(const ngtcp2_conn *c, int64_t id)
 {
 	live(c, false, __func__);
 	return (id & 1) == 1; /* server-initiated */
@@ -958,7 +958,7 @@ static uint64_t idle_expiry(const ngtcp2_conn *c)
 
 /* ⭐ what transport.c reads to know a packet was DECRYPTED (§5.3, 14 Oct 2026): `pkt_recv`
  *    counts only the packets not discarded, as in ngtcp2 (`cstat.pkt_recv`) */
-void ngtcp2_conn_get_conn_info_versioned(ngtcp2_conn *c, int v, ngtcp2_conn_info *ci)
+void ngtcp2_conn_get_conn_info2_versioned(const ngtcp2_conn *c, int v, ngtcp2_conn_info *ci)
 {
 	(void)v;
 	live(c, false, __func__);

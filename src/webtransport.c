@@ -1787,7 +1787,7 @@ static uint64_t dgram_peer_cap(const wt *w)
 	const ngtcp2_transport_params *p;
 	if (!w->conn)
 		return 0;
-	p = ngtcp2_conn_get_remote_transport_params(w->conn);
+	p = ngtcp2_conn_get_remote_transport_params2(w->conn);
 	return p ? p->max_datagram_frame_size : 0;
 }
 
@@ -2199,9 +2199,9 @@ static bool dgram_write_one(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 			                 (unsigned)WT_DGRAM_QUIET_MAX_MS,
 			                 (unsigned long long)eta_ms,
 			                 (unsigned long long)w->audio_refused,
-			                 (unsigned long long)ngtcp2_conn_get_cwnd_left(w->conn),
-			                 ngtcp2_conn_get_send_quantum(w->conn),
-			                 ngtcp2_conn_get_cwnd_left(w->conn) < v.len
+			                 (unsigned long long)ngtcp2_conn_get_cwnd_left2(w->conn),
+			                 ngtcp2_conn_get_send_quantum2(w->conn),
+			                 ngtcp2_conn_get_cwnd_left2(w->conn) < v.len
 			                     ? " ⇒ IT IS CONGESTION: the block does not fit NOW"
 			                     : " ⇒ it is NOT congestion: look at the quantum");
 		dgram_remove_head(w);
@@ -4027,7 +4027,7 @@ static uint64_t queue_drain_ms(const wt *w, size_t byte, const char **come)
 	}
 	memset(&info, 0, sizeof info);
 	if (w->conn)
-		ngtcp2_conn_get_conn_info(w->conn, &info);
+		ngtcp2_conn_get_conn_info2(w->conn, &info);
 	if (info.smoothed_rtt == 0 || info.cwnd == 0) {
 		*come = "fallback: ngtcp2 has neither rtt nor window yet, the "
 		        "declared floor of 30 Mbit/s is assumed (DECISIONS.md §3.1-sexies)";
@@ -4469,7 +4469,7 @@ static uint64_t key_interval_ms(wt *w, const char **come)
 		return WT_KEY_REQUEST_MS;
 	}
 	memset(&info, 0, sizeof info);
-	ngtcp2_conn_get_conn_info(w->conn, &info);
+	ngtcp2_conn_get_conn_info2(w->conn, &info);
 	if (info.smoothed_rtt == 0 || info.cwnd == 0) {
 		*come = "fallback: ngtcp2 has neither rtt nor window yet";
 		return WT_KEY_REQUEST_MS;
@@ -4933,13 +4933,13 @@ static bool rate_brake(wt *w, bool key, uint64_t now_ms)
 			char network[96];
 
 			memset(&in, 0, sizeof in);
-			ngtcp2_conn_get_conn_info(w->conn, &in);
+			ngtcp2_conn_get_conn_info2(w->conn, &in);
 			rtt_ms = in.smoothed_rtt / NGTCP2_MILLISECONDS;
 			/* ⛔⭐ `smoothed_rtt - min_rtt` IS THE QUEUE INSIDE THE NETWORK, IN
 			 *     MILLISECONDS: it is the number with which `SPECS.md:128` —
 			 *     «every intermediate memory buys smoothness and sells responsiveness» —
 			 *     is honoured instead of quoted.  ⚠ And it is the first time
-			 *     `min_rtt` is read: `ngtcp2_conn_get_conn_info()` has always filled it
+			 *     `min_rtt` is read: `ngtcp2_conn_get_conn_info2()` has always filled it
 			 *     and we looked at two fields out of seven.
 			 *
 			 * ⛔ BUT `min_rtt` IS `UINT64_MAX` UNTIL A SAMPLE HAS ARRIVED, and the
@@ -4983,7 +4983,7 @@ static bool rate_brake(wt *w, bool key, uint64_t now_ms)
 			                 w->provenance, backlog, (unsigned)WT_RATE_SLOTS,
 			                 queued, w->byte_in_queue,
 			                 (unsigned long long)in.cwnd,
-			                 (unsigned long long)ngtcp2_conn_get_cwnd_left(w->conn),
+			                 (unsigned long long)ngtcp2_conn_get_cwnd_left2(w->conn),
 			                 (unsigned long long)in.bytes_in_flight,
 			                 w->byte_in_flight,
 			                 (unsigned long long)rtt_ms, network);
@@ -5337,7 +5337,7 @@ static void dead_line_fires(wt *w, const ngtcp2_conn_info *in,
 	                 (unsigned long long)w->lm_duration_v,
 	                 (unsigned)WT_LM_MIN_PACKETS,
 	                 (unsigned long long)in->cwnd,
-	                 (unsigned long long)ngtcp2_conn_get_cwnd_left(w->conn),
+	                 (unsigned long long)ngtcp2_conn_get_cwnd_left2(w->conn),
 	                 (unsigned long long)(in->smoothed_rtt / NGTCP2_MICROSECONDS),
 	                 /* ⛔ R5, 25 Aug 2026: the DIFFERENCE, not the global
 	                  *    counter — see `lm_stopped_born` and the field `loop_gap_ms=`
@@ -5635,8 +5635,8 @@ static void network_cycle(wt *w, uint64_t now_ms)
 		return;
 
 	memset(&in, 0, sizeof in);
-	ngtcp2_conn_get_conn_info(w->conn, &in);
-	cwnd_left = ngtcp2_conn_get_cwnd_left(w->conn);
+	ngtcp2_conn_get_conn_info2(w->conn, &in);
+	cwnd_left = ngtcp2_conn_get_cwnd_left2(w->conn);
 
 	/* ⛔⭐ AND HERE THE VERDICT IS TAKEN, BEFORE the «only if something changed» filter:
 	 *     client silence IS the case in which nothing changes, and placed
@@ -5761,7 +5761,7 @@ static void network_cycle(wt *w, uint64_t now_ms)
 	                 (unsigned long long)(in.latest_rtt / NGTCP2_MICROSECONDS),
 	                 (unsigned long long)(in.rttvar / NGTCP2_MICROSECONDS),
 	                 minimum, queue,
-	                 (unsigned long long)(ngtcp2_conn_get_pto(w->conn)
+	                 (unsigned long long)(ngtcp2_conn_get_pto2(w->conn)
 	                                      / NGTCP2_MICROSECONDS),
 	                 (unsigned long long)w->dgram_lost,
 	                 (unsigned long long)(w->dgram_lost - w->network_dgram_lost),

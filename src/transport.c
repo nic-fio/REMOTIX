@@ -458,7 +458,11 @@ static int cb_stream_close(ngtcp2_conn *conn, uint32_t flags, int64_t stream_id,
 	 * ⇒ One client stream closed, one new granted: §2.3 wants «16 available
 	 *   at all times», not 16 over the whole session.  It is what the `ngtcp2`
 	 *   example server does. */
-	if (!ngtcp2_conn_is_local_stream(conn, stream_id)) {
+	/* ⛔ 24 Oct 2026 (audit ngtcp2 1.25): the calls deprecated since 1.23.0 (`is_local_stream`,
+	 *   `get_conn_info`, `get_pto`, `get_cwnd_left`, `get_send_quantum`,
+	 *   `get_remote_transport_params`; here and in `webtransport.c`) are the «2» ones: same
+	 *   behaviour, they take a `const ngtcp2_conn *` and survive the next major version. */
+	if (!ngtcp2_conn_is_local_stream2(conn, stream_id)) {
 		if (ngtcp2_is_bidi_stream(stream_id))
 			ngtcp2_conn_extend_max_streams_bidi(conn, 1);
 		else
@@ -1669,9 +1673,9 @@ static void read_packet(transport *t, const struct sockaddr *local,
 		ngtcp2_tstamp now = now_ns();
 		ngtcp2_conn_info before, after;
 
-		ngtcp2_conn_get_conn_info(c->conn, &before);
+		ngtcp2_conn_get_conn_info2(c->conn, &before);
 		rv = ngtcp2_conn_read_pkt(c->conn, &path, pi, data, len, now);
-		ngtcp2_conn_get_conn_info(c->conn, &after);
+		ngtcp2_conn_get_conn_info2(c->conn, &after);
 		/* ⛔⭐ §5.3 — AND HERE, AND ONLY IF `rv == 0`: the packet has been
 		 *     DECRYPTED AND AUTHENTICATED.  ⚠ A datagram arriving is not
 		 *     enough — anyone can send one with someone else's address, and
