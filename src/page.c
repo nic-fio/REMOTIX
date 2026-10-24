@@ -34,6 +34,67 @@
 	"Cross-Origin-Embedder-Policy: require-corp\r\n"                           \
 	"Cross-Origin-Resource-Policy: same-origin\r\n"
 
+/* ⛔ THE HEADERS OF THE HTML PAGE ONLY — page audit, 24 Oct 2026.
+ *
+ *    Until now the page was served with the isolation pair and `nosniff` and nothing else: it
+ *    could be framed by any site (clickjacking on a form with a password, on a page that forwards
+ *    keys and the clipboard) and no policy limited what a future bug of injection could do.
+ *    ⚠ They go on the HTML response and NOT on every response: `/fingerprint` is JSON.
+ *
+ *    Each directive is what THE PAGE REALLY USES (grep of page.html, same date) — a directive
+ *    that is wrong breaks the page, so where in doubt the wider form is chosen and SAID:
+ *
+ *    default-src 'self'       the floor: nothing else is loaded from outside this origin.
+ *    script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'
+ *                             the page is ONE inline <script> (no nonce possible: the file is
+ *                             static), and the Opus decoder is WebAssembly instantiated from
+ *                             bytes (`opus_wasm_prepare()`): without 'wasm-unsafe-eval' the
+ *                             engine refuses to compile it and the audio silently falls to
+ *                             AudioDecoder.  No `eval`, no `new Function` in the page.
+ *    style-src 'self' 'unsafe-inline'
+ *                             one inline <style>, and `style=` / `style.cssText` in the script.
+ *    img-src 'self' data: blob:
+ *                             the grain and the marker are `url("data:image/svg+xml…")` in the CSS,
+ *                             and the remote cursor is `cursor: url(data:image/png…)`.
+ *    media-src blob:          MSE: `<video>.src = URL.createObjectURL(MediaSource)`.
+ *    worker-src blob:         the video worker is `new Worker(URL.createObjectURL(Blob))`; a blob
+ *                             worker inherits this policy, so the WASM line above covers it too.
+ *    connect-src 'self' https:
+ *                             `fetch("/fingerprint")` is same-origin, and WebTransport opens
+ *                             `https://host:port/rcp/1`, which 'self' matches on the engines
+ *                             that apply connect-src to WebTransport.  ⚠ NOT MEASURED on both
+ *                             Chrome and Firefox, hence the `https:` next to it: the wide form
+ *                             costs little (the origin that serves the page is the one that
+ *                             is trusted anyway) and a narrow one that is wrong costs the whole
+ *                             session.  Narrow it to 'self' once the suite has proved it.
+ *    font-src 'self'          the page declares no @font-face.
+ *    object-src 'none' · base-uri 'none'
+ *                             no plugins, and no <base> to redirect the relative URLs.
+ *    form-action 'self'       the sign-in form is handled by JS (`preventDefault`); if that ever
+ *                             fails the password must not travel to another site.
+ *    frame-ancestors 'none'   nobody frames this page (CSP's X-Frame-Options).
+ *
+ *    Referrer-Policy: no-referrer   the address of a REMOTIX box is not for third parties.
+ *
+ *    Permissions-Policy: the page uses the clipboard (read and write, itself only), the pointer
+ *    lock, the keyboard lock and the fullscreen — those are NOT touched.  It does not use camera,
+ *    microphone (no getUserMedia: the audio is only output), location, payments, USB, serial,
+ *    HID, MIDI, motion sensors nor screen capture: those are turned off.  An unknown name is
+ *    ignored by the engine (with a console warning), never an error. */
+#define PAGE_SECURITY                                                         \
+	"Content-Security-Policy: default-src 'self'; "                           \
+	"script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; "                  \
+	"style-src 'self' 'unsafe-inline'; "                                      \
+	"img-src 'self' data: blob:; media-src blob:; worker-src blob:; "         \
+	"connect-src 'self' https:; font-src 'self'; "                            \
+	"object-src 'none'; base-uri 'none'; form-action 'self'; "                \
+	"frame-ancestors 'none'\r\n"                                              \
+	"Referrer-Policy: no-referrer\r\n"                                        \
+	"Permissions-Policy: clipboard-read=(self), clipboard-write=(self), "     \
+	"camera=(), microphone=(), geolocation=(), payment=(), usb=(), "          \
+	"serial=(), hid=(), midi=(), accelerometer=(), gyroscope=(), "            \
+	"magnetometer=(), display-capture=()\r\n"
+
 enum phase { F_HANDSHAKE, F_READ, F_WRITE, F_DONE };
 
 typedef struct {
@@ -147,7 +208,7 @@ static void client_close(client *c)
 static void compose(client *c, const char *state, const char *kind,
                     const char *body, size_t nbody, const char *extra)
 {
-	char head[768];
+	char head[2048]; /* the page's security headers (PAGE_SECURITY) are ~900 bytes */
 	int n;
 
 	n = snprintf(head, sizeof head,
@@ -386,7 +447,7 @@ static void serve(page *p, client *c)
 			        "text/plain; charset=utf-8", "no mem.\n", 8, NULL);
 			return;
 		}
-		compose(c, "200 OK", "text/html; charset=utf-8", d, strlen(d), NULL);
+		compose(c, "200 OK", "text/html; charset=utf-8", d, strlen(d), PAGE_SECURITY);
 		free(d);
 	}
 }
