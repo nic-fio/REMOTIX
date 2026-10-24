@@ -8708,6 +8708,13 @@ bool wt_verdict(wt *w, uint64_t ticket, bool admitted, bool resumed)
 	return true;
 }
 
+bool wt_verdict_lost(wt *w, uint64_t ticket)
+{
+	if (!w || !w->rcp)
+		return false;
+	return rcp_verdict_lost(w->rcp, ticket);
+}
+
 
 /* ⛔⭐ §5.3 — the sign of life that comes from the wire.  A bridge line, and the
  *     reason it exists is on `rcp_sign_of_life()`.

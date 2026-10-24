@@ -1940,12 +1940,22 @@ static void orphan_line(void *ctx, const char *line)
 }
 
 void transport_verdict(transport *t, uint64_t ticket, bool admitted,
-                        bool resumed, const char *user, const char *rhost)
+                        bool resumed)
+{
+	transport_verdict_from(t, ticket, admitted, resumed, NULL, NULL, false);
+}
+
+/* `lost`: the helper died with this request in flight (our defect: it gives
+ * the booking back and counts nothing). */
+void transport_verdict_from(transport *t, uint64_t ticket, bool admitted,
+                            bool resumed, const char *user, const char *rhost,
+                            bool lost)
 {
 	for (connection *c = t->prime; c; c = c->upcoming) {
 		if (c->dead_run || !c->w)
 			continue;
-		if (wt_verdict(c->w, ticket, admitted, resumed)) {
+		if (lost ? wt_verdict_lost(c->w, ticket)
+		         : wt_verdict(c->w, ticket, admitted, resumed)) {
 			if (admitted)
 				note_login(t, c);
 			/* ⛔ And it is written again AT ONCE: the verdict may have made
@@ -1967,7 +1977,7 @@ void transport_verdict(transport *t, uint64_t ticket, bool admitted,
 	 *    not be able to try passwords for free: the name and the address are
 	 *    in the request in flight, and they are what the booking made at
 	 *    `CREDENTIALS` is resolved with. */
-	rcp_orphan_verdict(user, rhost, admitted, now_ns() / NGTCP2_MILLISECONDS,
+	rcp_orphan_verdict(user, rhost, admitted, lost, now_ns() / NGTCP2_MILLISECONDS,
 	                   orphan_line, NULL);
 }
 

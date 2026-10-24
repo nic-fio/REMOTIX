@@ -1395,7 +1395,14 @@ void rcp_key_address(const char *text, char *report, size_t cap);
  * to hang them on); `fn` may be NULL.  `now_ms` is the clock of `rcp_banned()`. */
 typedef void (*rcp_line_fn)(void *ctx, const char *line);
 void rcp_orphan_verdict(const char *user, const char *rhost, bool admitted,
-                        uint64_t now_ms, rcp_line_fn fn, void *ctx);
+                        bool lost, uint64_t now_ms, rcp_line_fn fn, void *ctx);
+
+/* ⛔ The PAM helper DIED while `ticket` was in flight: our defect, so the
+ * booking of §4.4-bis is given back and NOTHING is counted (24 Oct 2026).  Same
+ * walls as `rcp_verdict()`.  `lost` of `rcp_orphan_verdict()` is the same case
+ * for a connection that is gone.  (The PAM timeout is NOT this: it is a
+ * `rcp_verdict(..., false, ...)` and it counts as a failure.) */
+bool rcp_verdict_lost(rcp_session *s, uint64_t ticket);
 
 /* ⛔ The secret of the tags `unknown user [hmac6]` of the log (§4.4-bis D):
  * `<dir>/log-secret`, 0600, next to the QUIC token secret.  Returns 1 = read,

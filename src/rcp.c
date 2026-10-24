@@ -543,6 +543,10 @@ struct rcp_session {
 	 * server defect that banned the user for twelve hours would be «the
 	 * worst diagnosis this project could produce» (§4.4-bis). */
 	bool refusal_is_ours;
+	/* the name may be looked up in the system for the log only if the limiter
+	 * let the attempt through (a flood of refused attempts must not cost an
+	 * NSS lookup each) */
+	bool user_lookup_ok;
 	bool is_attached;       /* holds a slot in the registry of sessions */
 	/* ⛔ The buffer is allocated on demand, and zeroed before being freed:
 	 * `CREDENTIALS` passes through it, that is the password in clear (§4.4).
@@ -1179,7 +1183,9 @@ struct lentry {
 	bool used;
 	uint8_t kind;      /* LK_* */
 	char address[64];  /* the key, or the /48 for LK_NET48 */
-	char user[257];    /* LK_USER only */
+	/* LK_USER only: the HMAC-SHA256 of the name, 64 hex digits, NEVER the name
+	 * (the ban file is kept on disk: §11.1, 24 Oct 2026). */
+	char user[65];
 	/* ⛔ The time of the LAST `LIMIT[kind]` failures, not their number: it is
 	 * what is needed to answer «N within the window» without anchoring the
 	 * window to the first.  `amount` says how many slots are full. */
@@ -1314,12 +1320,23 @@ void rcp_key_address(const char *text, char *report, size_t cap)
 	 *    command, a zone id) is kept as it was: «[text]». */
 	struct in_addr a4;
 	struct in6_addr a6;
-	char t[INET6_ADDRSTRLEN];
-	if (inet_pton(AF_INET, bare, &a4) == 1 && inet_ntop(AF_INET, &a4, t, sizeof t)) {
+	char t[INET6_ADDRSTRLEN], parse[64];
+	/* ⛔ A link-local address arrives with its zone, `fe80::x%eth0`, and
+	 *    `inet_pton` refuses it: the key would be the whole address and a
+	 *    LAN attacker could rotate addresses for free.  The `%zone` is cut
+	 *    for parsing and it also goes to the /64: on a LAN users share one
+	 *    counter, and that is accepted (project lead, 24 Oct 2026). */
+	snprintf(parse, sizeof parse, "%s", bare);
+	{
+		char *z = strchr(parse, '%');
+		if (z)
+			*z = 0;
+	}
+	if (inet_pton(AF_INET, parse, &a4) == 1 && inet_ntop(AF_INET, &a4, t, sizeof t)) {
 		snprintf(report, cap, "[%s]", t);
 		return;
 	}
-	if (inet_pton(AF_INET6, bare, &a6) == 1) {
+	if (inet_pton(AF_INET6, parse, &a6) == 1) {
 		static const uint8_t NAT64[12] = {0x00, 0x64, 0xff, 0x9b};
 		if (IN6_IS_ADDR_V4MAPPED(&a6) || memcmp(a6.s6_addr, NAT64, sizeof NAT64) == 0) {
 			if (inet_ntop(AF_INET, a6.s6_addr + 12, t, sizeof t)) {
@@ -1533,6 +1550,12 @@ int rcp_log_secret_load(const char *dir)
 		return log_secret_ready ? -1 : -2;
 	}
 	char path[600], tmp[620];
+	/* The directory may not exist yet: this runs before `certificates_prepare()`
+	 * (the ban file needs the secret first), which makes it with the same mode. */
+	if (mkdir(dir, 0700) != 0 && errno != EEXIST) {
+		log_secret_ready = log_secret_random();
+		return log_secret_ready ? -1 : -2;
+	}
 	snprintf(path, sizeof path, "%s/%s", dir, LOG_SECRET_FILE);
 	int fd = open(path, O_RDONLY | O_CLOEXEC);
 	if (fd >= 0) {
@@ -1567,27 +1590,51 @@ int rcp_log_secret_load(const char *dir)
 }
 
 /* The name as it goes to the log: itself if it is a user of this machine,
- * `unknown user [hmac6]` if it is not.  ⚠ `getpwnam_r` may ask NSS; a failure
- * of the lookup is treated as «unknown» (the cautious side).  ⛔ Writes into
- * `out`; the return value is `user` itself or `out`. */
-static const char *log_user(const char *user, char *out, size_t cap)
+ * `unknown user [hmac6]` if it is not.  ⚠ `getpwnam_r` may ask NSS, and a
+ * line written for a REFUSED attempt (banned, busy, table full) must not make
+ * the server do that lookup for a flood: with `lookup` false the lookup is not
+ * made and the tag is written with a neutral word, `user [hmac6]` (it does
+ * not say whether the name exists).  A failure of the lookup is treated as
+ * «unknown» (the cautious side).  ⛔ Writes into `out`; the return value is
+ * `user` itself or `out`. */
+static const char *log_user(const char *user, char *out, size_t cap, bool lookup)
 {
 	if (!user || !*user)
 		return "";
-	struct passwd pw, *res = NULL;
-	char spare[2048];
-	if (getpwnam_r(user, &pw, spare, sizeof spare, &res) == 0 && res)
-		return user;
+	if (lookup) {
+		struct passwd pw, *res = NULL;
+		char spare[2048];
+		if (getpwnam_r(user, &pw, spare, sizeof spare, &res) == 0 && res)
+			return user;
+	}
 	if (!log_secret_ready)
 		log_secret_ready = log_secret_random();
 	if (!log_secret_ready) {
-		snprintf(out, cap, "unknown user [??????]");
+		snprintf(out, cap, "%suser [??????]", lookup ? "unknown " : "");
 		return out;
 	}
 	uint8_t mac[32];
 	hmac_sha256(log_secret, sizeof log_secret, user, strlen(user), mac);
-	snprintf(out, cap, "unknown user [%02x%02x%02x]", mac[0], mac[1], mac[2]);
+	snprintf(out, cap, "%suser [%02x%02x%02x]", lookup ? "unknown " : "", mac[0],
+	         mac[1], mac[2]);
 	return out;
+}
+
+/* The key of a name inside the counters and the ban file: the FULL HMAC-SHA256
+ * in hex.  ⛔ The ban file holds this and never the name (24 Oct 2026): a file
+ * kept on disk, 0600 or not, is not where the names of the people who failed
+ * belong.  ⚠ The secret must be loaded BEFORE `rcp_ban_load()` (main.c does it),
+ * or the bans of a restart would not match any name.  Without a secret (no
+ * kernel randomness: it does not happen) the bytes are zero and the key is a
+ * plain keyed-by-zero hash: the counters still count. */
+static void user_key(const char *user, char out[65])
+{
+	uint8_t mac[32];
+	if (!log_secret_ready)
+		log_secret_ready = log_secret_random();
+	hmac_sha256(log_secret, sizeof log_secret, user ? user : "", user ? strlen(user) : 0, mac);
+	for (int i = 0; i < 32; i++)
+		snprintf(out + 2 * i, 3, "%02x", mac[i]);
 }
 
 /* ------------------------------------------------------------------------ */
@@ -1604,6 +1651,11 @@ static bool key_net48(const char *key, char *out, size_t cap)
 		return false;
 	memcpy(bare, key + 1, n - 2);
 	bare[n - 2] = 0;
+	{
+		char *z = strchr(bare, '%'); /* a zone id never reaches a key, but cut it all the same */
+		if (z)
+			*z = 0;
+	}
 	struct in6_addr a;
 	if (inet_pton(AF_INET6, bare, &a) != 1 || IN6_IS_ADDR_LOOPBACK(&a) ||
 	    IN6_IS_ADDR_V4MAPPED(&a))
@@ -1724,10 +1776,12 @@ struct login_info {
 static enum login_verdict login_reserve(const char *key, const char *user,
                                         uint64_t now, struct login_info *info)
 {
-	char key48[64];
+	char key48[64], uk[65];
 	bool has48 = key_net48(key, key48, sizeof key48);
 	int idx[LEVELS];
 	memset(info, 0, sizeof *info);
+	user_key(user, uk);
+	user = uk; /* from here the user is its HMAC */
 	idx[LK_USER] = lfind(LK_USER, key, user);
 	idx[LK_KEY] = lfind(LK_KEY, key, NULL);
 	idx[LK_NET48] = has48 ? lfind(LK_NET48, key48, NULL) : -1;
@@ -1772,8 +1826,10 @@ static enum login_verdict login_reserve(const char *key, const char *user,
  * left, and that is our defect (I3: a no that is not the user's fault). */
 static void login_release(const char *key, const char *user)
 {
-	char key48[64];
+	char key48[64], uk[65];
 	int idx[LEVELS];
+	user_key(user, uk);
+	user = uk;
 	idx[LK_USER] = lfind(LK_USER, key, user);
 	idx[LK_KEY] = lfind(LK_KEY, key, NULL);
 	idx[LK_NET48] = key_net48(key, key48, sizeof key48)
@@ -1804,10 +1860,12 @@ struct login_result {
 static void login_resolve(const char *key, const char *user, bool admitted,
                           uint64_t now, struct login_result *r)
 {
-	char key48[64];
+	char key48[64], uk[65];
 	bool has48 = key_net48(key, key48, sizeof key48);
 	int idx[LEVELS];
 	memset(r, 0, sizeof *r);
+	user_key(user, uk);
+	user = uk; /* from here the user is its HMAC */
 	idx[LK_USER] = lfind(LK_USER, key, user);
 	idx[LK_KEY] = lfind(LK_KEY, key, NULL);
 	idx[LK_NET48] = has48 ? lfind(LK_NET48, key48, NULL) : -1;
@@ -1869,7 +1927,7 @@ static void login_report(const struct sink *k, const char *key, const char *user
                          bool admitted, const struct login_result *r, uint64_t now)
 {
 	char tag[96];
-	const char *shown = log_user(user, tag, sizeof tag);
+	const char *shown = log_user(user, tag, sizeof tag, true);
 	bool any_ban = false;
 	if (r->evicted[0])
 		say(k, "⚠ attempt table full (%d entries): evicted the entry «%s» to "
@@ -1932,7 +1990,16 @@ static void save_ban(const struct sink *k, uint64_t now)
 		return;
 	char tmp[sizeof ban_path + 8];
 	snprintf(tmp, sizeof tmp, "%s.new", ban_path);
-	FILE *f = fopen(tmp, "w");
+	/* ⛔ 0600 from the first byte (`open`, not `fopen`: the file is born with the
+	 *    right mode, no moment in which it is readable by others). */
+	int fd = open(tmp, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0600);
+	FILE *f = fd >= 0 ? fdopen(fd, "w") : NULL;
+	if (fd >= 0 && !f)
+		close(fd);
+	if (f && fchmod(fd, 0600) != 0) {
+		fclose(f);
+		f = NULL;
+	}
 	if (!f) {
 		say(k, "⛔ could not write the ban file «%s»: the ban "
 		       "lives only in memory and a restart removes it (§4.4-bis)",
@@ -1956,7 +2023,9 @@ static void save_ban(const struct sink *k, uint64_t now)
 		if (is_banned(e, now))
 			amount++;
 	}
-	bool bad = ferror(f) != 0;
+	/* ⚠ fsync BEFORE the rename: a rename that survives a crash with a file
+	 *    that does not is the «truncated ban file» this function exists to avoid. */
+	bool bad = ferror(f) != 0 || fflush(f) != 0 || fsync(fd) != 0;
 	if (fclose(f) != 0)
 		bad = true;
 	if (bad || rename(tmp, ban_path) != 0)
@@ -2031,7 +2100,7 @@ bool rcp_unblock(const char *address, uint64_t now)
 		touched = true;
 		int flight = e->in_flight;
 		char kind = (char)e->kind;
-		char address_copy[64], user_copy[257];
+		char address_copy[64], user_copy[65];
 		snprintf(address_copy, sizeof address_copy, "%s", e->address);
 		snprintf(user_copy, sizeof user_copy, "%s", e->user);
 		memset(e, 0, sizeof *e);
@@ -2091,7 +2160,7 @@ int rcp_ban_load(const char *fpath, uint64_t now)
 	char line[1024];
 	int amount = 0;
 	while (fgets(line, sizeof line, f)) {
-		char key[64] = "", user[257] = "";
+		char key[64] = "", user[65] = "";
 		int kind = LK_KEY, level = 2;
 		long long exp = 0;
 		line[strcspn(line, "\r\n")] = 0;
@@ -2111,7 +2180,9 @@ int rcp_ban_load(const char *fpath, uint64_t now)
 			memcpy(key, p, kl);
 			key[kl] = 0;
 			if (kind == LK_USER) {
-				if (!sp || !sp[1] || strlen(sp + 1) >= sizeof user)
+				/* the HMAC of the name: exactly 64 lowercase hex digits */
+				if (!sp || strlen(sp + 1) != 64 ||
+				    strspn(sp + 1, "0123456789abcdef") != 64)
 					continue;
 				snprintf(user, sizeof user, "%s", sp + 1);
 			}
@@ -2123,9 +2194,17 @@ int rcp_ban_load(const char *fpath, uint64_t now)
 		}
 		char norm[64];
 		rcp_key_address(key, norm, sizeof norm); /* idempotent: also converts the old forms */
+		/* ⛔ A file is input: a negative epoch is not a time, and a ban can
+		 *    never last more than the top of the ladder — a corrupt or
+		 *    hostile line must not make a ban of 100 years nor overflow. */
+		if (exp < 0)
+			continue;
 		uint64_t until;
 		if (exp > (long long)t_now) {
-			until = now + (uint64_t)(exp - (long long)t_now) * 1000u;
+			uint64_t left_s = (uint64_t)(exp - (long long)t_now);
+			if (left_s > LADDER_MS[2] / 1000u)
+				left_s = LADDER_MS[2] / 1000u;
+			until = now + left_s * 1000u;
 		} else {
 			uint64_t ago = (uint64_t)((long long)t_now - exp) * 1000u;
 			if (level == 0 || ago >= FORGET_MS)
@@ -2166,7 +2245,7 @@ int rcp_ban_load(const char *fpath, uint64_t now)
  * address of PAM_RHOST.  The lines go to `fn`, because there is no session to
  * hang them on. */
 void rcp_orphan_verdict(const char *user, const char *rhost, bool admitted,
-                        uint64_t now, rcp_line_fn fn, void *ctx)
+                        bool lost, uint64_t now, rcp_line_fn fn, void *ctx)
 {
 	struct sink k = {NULL, fn, ctx};
 	struct login_result r;
@@ -2177,6 +2256,15 @@ void rcp_orphan_verdict(const char *user, const char *rhost, bool admitted,
 		return;
 	}
 	rcp_key_address(rhost, key, sizeof key);
+	if (lost) {
+		/* ⛔ The helper died: that is a defect of OURS, and it must not ban
+		 *    anybody.  The booking is given back and nothing is counted. */
+		login_release(key, user);
+		say(&k, "⭐ the connection was gone and the PAM helper died before "
+		        "answering: our defect, the booking is given back and NOTHING "
+		        "is counted (§4.4-bis)");
+		return;
+	}
 	login_resolve(key, user, admitted, now, &r);
 	say(&k, "⭐ the connection was gone when PAM answered (%s): the verdict is "
 	        "counted all the same (§4.4-bis)",
@@ -2426,7 +2514,7 @@ static void reject(rcp_session *s, uint8_t reason)
 {
 	char tag[96];
 	reg(s, "rejected reason=%#04x user=%s from=%s", reason,
-	    log_user(s->user, tag, sizeof tag), s->provenance);
+	    log_user(s->user, tag, sizeof tag, s->user_lookup_ok), s->provenance);
 	uint8_t body[1];
 	body[0] = reason;
 	send_message(s, T_REJECTED, body, 1);
@@ -3138,8 +3226,6 @@ static bool handle_credentials(rcp_session *s, reader *l, uint64_t now)
 	 *   «it did not arrive» from «PAM does not answer» this line is
 	 *   enough. */
 	char tag[96];
-	reg(s, "CREDENTIALS received user=%s (with password)",
-	    log_user(s->user, tag, sizeof tag));
 
 	/* ⛔ The limiter BEFORE PAM, and the refusal is immediate: §4.4-bis says
 	 * the wait is a WINDOW in which one refuses, not a delay — with a single
@@ -3160,6 +3246,13 @@ static bool handle_credentials(rcp_session *s, reader *l, uint64_t now)
 	s->refusal_is_ours = false;
 	struct login_info linfo;
 	enum login_verdict lv = login_reserve(s->address, s->user, now, &linfo);
+	/* ⛔ The name is looked up in the system (`getpwnam_r`, for the tag of the
+	 *    log) only if the limiter let the attempt through: a refused flood
+	 *    must not cost an NSS lookup per attempt.  The refused ones are logged
+	 *    with the tag only, `user [hmac6]`. */
+	s->user_lookup_ok = lv == LV_OK;
+	reg(s, "CREDENTIALS received user=%s (with password)",
+	    log_user(s->user, tag, sizeof tag, s->user_lookup_ok));
 	if (linfo.evicted[0])
 		reg(s, "⚠ attempt table full (%d entries): evicted the entry «%s» to "
 		       "make room — §4.4-bis",
@@ -8590,6 +8683,29 @@ bool rcp_verdict(rcp_session *s, uint64_t ticket, bool admitted,
 		login_resolve(s->address, s->user, admitted, now, &r);
 		login_report(&k, s->address, s->user, admitted, &r, now);
 	}
+	return true;
+}
+
+/* ⛔ The helper died (or the request was lost by OUR hand) while this session
+ * waited: the walls of `rcp_verdict()` all the same, but the answer is a no
+ * that is OUR defect — the booking is given back and NOTHING is counted
+ * (24 Oct 2026, project lead).  The PAM timeout is not this: it is a verdict
+ * of `rcp_verdict()` with `admitted` false, and it counts. */
+bool rcp_verdict_lost(rcp_session *s, uint64_t ticket)
+{
+	if (!s || s->state != S_WAIT_VERDICT || !s->expected_verdict)
+		return false;
+	if (s->ticket != ticket)
+		return false;
+	s->expected_verdict = false;
+	s->cred_good = false;
+	s->cred_reason = RCP_WRONG_CREDENTIALS;
+	s->refusal_is_ours = true;
+	login_release(s->address, s->user);
+	reg(s, "⛔ the PAM helper died before answering (request %llu): REJECTED "
+	       "(invariant I3), our defect, and the booking is given back without "
+	       "counting anything (§4.4-bis)",
+	    (unsigned long long)ticket);
 	return true;
 }
 

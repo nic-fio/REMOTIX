@@ -708,7 +708,7 @@ static bool has_capabilities(struct bridge *p, const char *user, char *why,
 static void presence_mark(const char *user, uint64_t now_ms);
 
 static void delivery_verdict(void *ctx, uint64_t ticket, bool admitted,
-                              const char *user, const char *rhost)
+                              const char *user, const char *rhost, bool lost)
 {
 	struct bridge *p = (struct bridge *)ctx;
 	/* ⛔ The farewell is sent AFTER `transport_verdict()`: the long reason is
@@ -917,8 +917,8 @@ static void delivery_verdict(void *ctx, uint64_t ticket, bool admitted,
 	}
 	/* ⛔ `resumed` only if it really gets in: with a farewell on its way there
 	 *    is no `SESSION` to fill. */
-	transport_verdict(p->t, ticket, admitted, resumed && !without_stage[0], user,
-	                  rhost);
+	transport_verdict_from(p->t, ticket, admitted, resumed && !without_stage[0], user,
+	                       rhost, lost);
 
 	/* ⛔⭐ AND THE FAREWELL GOES OUT HERE, AFTER THE VERDICT — and the order is
 	 *     measured, not aesthetic.  Three reasons, all necessary:
@@ -2354,6 +2354,28 @@ int main(int argc, char **argv)
 	 *       with which numbers is indistinguishable from a defect of ours. */
 	wt_dead_line(dead_line, dead_line_stall_ms, dead_line_silence_s);
 
+	/* ⛔ §4.4-bis D (24 Oct 2026): the secret of the tags `unknown user
+	 *    [a1b2c3]` of the log, in the same directory as the QUIC token secret.
+	 *    ⚠ Not being able to keep it is not fatal (the tags change at each
+	 *    restart), but it is SAID; and with no secret at all the log carries
+	 *    «??????», never the name.
+	 * ⛔ It is loaded BEFORE `rcp_ban_load()`: the ban file holds the HMAC of
+	 *    the names, and with another secret the bans of a restart would match
+	 *    nobody. */
+	{
+		int ls = rcp_log_secret_load(dir_cert);
+		if (ls >= 0)
+			registro_dice(LOG_STARTUP, "log secret %s in %s (0600)",
+			              ls == 1 ? "read" : "made", dir_cert);
+		else
+			registro_dice(LOG_STARTUP,
+			              ls == -1 ? "⚠ log secret NOT kept on disk (%s): the "
+			                         "unknown-user tags change at every restart"
+			                       : "⛔ no log secret (%s): unknown names are logged "
+			                         "as «??????»",
+			              dir_cert);
+	}
+
 	/* ⛔ §4.4-bis: «the ban survives restart», and it is invariant I7 — the
 	 *    protection against a known defect lives in the program, not in a
 	 *    configuration line that can be lost. */
@@ -2472,25 +2494,6 @@ int main(int argc, char **argv)
 	ctx_page = tls_page_context(cert.page_pem, cert.page_key);
 	if (!ctx_quic || !ctx_page)
 		goto fine;
-
-	/* ⛔ §4.4-bis D (24 Oct 2026): the secret of the tags `unknown user
-	 *    [a1b2c3]` of the log, in the same directory as the QUIC token secret.
-	 *    ⚠ Not being able to keep it is not fatal (the tags change at each
-	 *    restart), but it is SAID; and with no secret at all the log carries
-	 *    «??????», never the name. */
-	{
-		int ls = rcp_log_secret_load(dir_cert);
-		if (ls >= 0)
-			registro_dice(LOG_STARTUP, "log secret %s in %s (0600)",
-			              ls == 1 ? "read" : "made", dir_cert);
-		else
-			registro_dice(LOG_STARTUP,
-			              ls == -1 ? "⚠ log secret NOT kept on disk (%s): the "
-			                         "unknown-user tags change at every restart"
-			                       : "⛔ no log secret (%s): unknown names are logged "
-			                         "as «??????»",
-			              dir_cert);
-	}
 
 	t = transport_open(address, port, ctx_quic, pam_help, dir_cert);
 	if (!t)
