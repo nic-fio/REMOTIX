@@ -54,7 +54,7 @@ D=${D:-${TMPDIR:-/tmp}/02-pam-target}
 TWIN=${TWIN:-$HERE/../benches/rcp}
 TMP=${TMP:-${TMPDIR:-/tmp}/02-pam-tmp}
 PORT=${PORT:-7531}
-ADDR=${ADDR:-192.168.0.2}
+ADDR=${ADDR:-127.0.0.1}
 PREFIX=${PREFIX:-pam2-7531}
 
 CERT=$TMP/$PREFIX-cert
@@ -70,7 +70,19 @@ stop)
 	if [ -f "$PIDF" ]; then
 		pid=$(cat "$PIDF")
 		# ⛔ By PID and only its own: `pkill -f remotix` would take away
-		#    7448, 7501 and 7522, which belong to others.
+		#    7448, 7501 and 7522, which belong to others.  ⭐ And a stale pid file
+		#    may name a pid that has been REUSED by someone else: the process
+		#    must be running THIS target's binary.
+		exe=$(readlink "/proc/$pid/exe" 2>/dev/null || true)
+		if [ ! -d "/proc/$pid" ]; then
+			printf -- '--  pid %s is not alive: nothing to stop\n' "$pid"
+			rm -f "$PIDF" "$SOCK"
+			exit 0
+		fi
+		if [ "$exe" != "$(readlink -f "$D/remotix")" ]; then
+			printf 'NO  ⛔ pid %s is not mine (its exe is «%s», not %s): I stop nothing\n' "$pid" "$exe" "$D/remotix"
+			exit 2
+		fi
 		kill "$pid" 2>/dev/null
 		g=0
 		while [ -d "/proc/$pid" ] && [ "$g" -lt 20 ]; do sleep 0.5; g=$((g+1)); done
@@ -125,8 +137,20 @@ kill-helper)
 		echo "    would measure a scene I did not prepare."
 		exit 2
 	fi
+	# ⛔ Identity BEFORE the kill (a pid from a log can be reused): the process is called «remotix-pam» (`helper_main()` sets
+	#    its name) and its PARENT is this target's server, whose pid is in $PIDF.
+	comm=$(cat "/proc/$p/comm" 2>/dev/null)
+	ppid=$(sed -n 's/^PPid:[[:space:]]*//p' "/proc/$p/status" 2>/dev/null)
+	srv=$(cat "$PIDF" 2>/dev/null)
+	if [ "$comm" != "remotix-pam" ] || [ -z "$srv" ] || [ "$ppid" != "$srv" ]; then
+		echo "NO  ⛔ pid $p is not mine (comm «$comm», parent «$ppid», this target's server «$srv»): I kill nothing"
+		exit 2
+	fi
 	kill -9 "$p"
-	sleep 1
+	# ⭐ No `sleep 1`: it returns as soon as the death is CONFIRMED (polled every 50 ms, 5 s at most), because the server starts the
+	#    helper again after a pause of 1 s and the scene «restart» must still find it down.
+	g=0
+	while alive "$p" && [ "$g" -lt 100 ]; do sleep 0.05; g=$((g+1)); done
 	if alive "$p"; then
 		echo "NO  ⛔ pid $p is still ALIVE after SIGKILL (state $(awk '{print $3}' "/proc/$p/stat"))"
 		exit 3
@@ -138,7 +162,14 @@ copy)
 	[ -d "$SRC" ] || { echo "NO  ⛔ $SRC is not there"; exit 2; }
 	# ⛔ The copy is remade from scratch: an old copy answers «I exist» just like
 	#    a current one (LESSONS.md §1.9 point 8).
-	rm -rf "$D"
+	# ⛔ A guard on the `rm -rf`: $D must be a non-empty path under TMPDIR (or /tmp), not a mountpoint (an sshfs of the repo was once
+	#    emptied this way), and neither the checkout nor a parent of it.
+	root=$(readlink -f "${TMPDIR:-/tmp}")
+	dd=$(readlink -m "$D")
+	case "$dd" in "$root"/?*) ;; *) echo "NO  ⛔ D=$D is not under $root: I delete nothing"; exit 2 ;; esac
+	if findmnt -rn --mountpoint "$dd" >/dev/null 2>&1; then echo "NO  ⛔ D=$D is a mountpoint: I delete nothing"; exit 2; fi
+	case "$(readlink -f "$SRC")/" in "$dd"/*) echo "NO  ⛔ D=$D contains the source tree: I delete nothing"; exit 2 ;; esac
+	rm -rf "$dd"
 	mkdir -p "$(dirname "$D")"
 	cp -a "$SRC" "$D"
 	rm -f "$D"/*.o "$D/remotix"
@@ -167,16 +198,18 @@ if t.count(anchor) != 1:
     sys.exit(2)
 fault = ("\t/* REMOTIX 02-PAM FAULT — the asynchronous hook NOT connected: no helper.\n"
          "\t * rcp.c refuses every login as OURS (0x0E), not counted.\n"
-         "\t * If 02-pam-standstill.py --wait unchecked stays green on a HEALTHY server, it is blind. */\n")
+         "\t * If 02-pam-standstill.py --wait unchecked stays green on a HEALTHY server, it is blind. */\n"
+         "\tstatic const char rx_fault_mark[] __attribute__((used)) = \"REMOTIX-02-PAM-FAULT-BUILD\";\n")
 open(p, "w").write(t.replace(anchor, fault, 1))
 print("OK  fault injected: the asynchronous hook is no longer connected")
 FINE
 	[ $? -eq 0 ] || exit 3
 	TWIN="$TWIN" bash "$D/build.sh" >/dev/null 2>&1 \
 		|| { echo "NO  ⛔ the rebuild with the fault failed"; exit 3; }
-	# ⛔ And it is CHECKED that the fault is in what was built, not only in the source: «I wrote it» and «it is inside what
-	#    runs» are two different facts.
-	if grep -a -F -q "REMOTIX 02-PAM FAULT" "$D/webtransport.c" \
+	# ⛔ And it is CHECKED in the BINARY, not only in the source: the injected statement carries a string
+	#    (`rx_fault_mark`, kept by `used`) that only a build WITH the fault contains; «I wrote it» and «it is inside what runs»
+	#    are two different facts.
+	if grep -a -F -q "REMOTIX-02-PAM-FAULT-BUILD" "$D/remotix" \
 	   && ! grep -a -F -q "g.ask_verify = hook_ask" "$D/webtransport.c"; then
 		echo "OK  ⛔ rebuilt WITH the fault: $(sha256sum "$D/remotix" | cut -c1-16)…"
 	else
@@ -203,6 +236,15 @@ restart)
 *) echo "usage: $0 [copy|fault|start|restart|stop|log|kill-helper]"; exit 2 ;;
 esac
 
+# ⛔ A HEALTHY target lets the scenes log in for real: a desktop is born for the account, the render grant and the card groups are
+#    written (/var/lib/remotix, `usermod`), logind and /dev/dri are touched.  That is for the THROWAWAY container only.  The faulty
+#    copy (`fault`) never logs anybody in and is safe anywhere.
+if [ ! -e /run/.containerenv ] && [ "${I_KNOW_IT_IS_THE_HOST:-0}" != 1 ] \
+   && ! grep -a -F -q "REMOTIX-02-PAM-FAULT-BUILD" "$D/remotix" 2>/dev/null; then
+	echo "NO  ⛔ this is not a container (/run/.containerenv is not there) and the target is HEALTHY: it would touch /var/lib/remotix,"
+	echo "    usermod, logind and /dev/dri of this machine.  Run it in the throwaway container, or set I_KNOW_IT_IS_THE_HOST=1."
+	exit 2
+fi
 command -v ss >/dev/null || { echo "NO  ⛔ «ss» is not there: I did not look at the port, and I do not call it free"; exit 2; }
 n=$(ss -tuln 2>/dev/null | grep -c ":$PORT\b")
 if [ "$n" -ne 0 ]; then

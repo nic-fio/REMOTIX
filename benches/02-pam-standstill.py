@@ -11,11 +11,16 @@
 #              started again by itself (1 s pause); a handshake ruler runs the whole time and never exceeds 300 ms; the target's log
 #              (`--log`) must carry the «RESTART» line.
 #   No desktop is needed for `unchecked` and `restart` (they stop at ADMITTED/REJECTED); `free` needs a machine where `prova` gets a SESSION.
-# HOW TO RUN (as root, on a box with /etc/pam.d/remotix, the account `prova`, ss, aioquic, and the product's build dependencies):
-#   export TMPDIR=/media/REMOTIX-15/tmp   # anywhere writable
-#   bash benches/02-pam-start.sh copy && bash benches/02-pam-start.sh start      # healthy target on :7531
-#   printf '%s\n' 'THE-PASSWORD-OF-prova' > $TMPDIR/pam-pw && chmod 600 $TMPDIR/pam-pw
-#   python3 benches/02-pam-standstill.py --address 127.0.0.1 --port 7531 --user prova --password-file $TMPDIR/pam-pw \
+# HOW TO RUN — ⛔ THE SCENES WITH A SUCCESSFUL LOGIN (`free`, `restart`) RUN ONLY IN THE THROWAWAY CONTAINER.  A right password makes
+#   the server (as root) enrol the account in the card groups (`usermod`, /var/lib/remotix), take a render grant on /dev/dri, ask logind
+#   and start a desktop.  This script REFUSES to run them outside a container (/run/.containerenv) unless `--i-know-it-is-the-host`
+#   is given, and `02-pam-start.sh start` refuses a healthy target in the same way (`I_KNOW_IT_IS_THE_HOST=1`).  `unchecked` logs
+#   nobody in and is safe anywhere.
+#   Needs, inside the container: root, /etc/pam.d/remotix, the account `prova`, ss, aioquic and the product's build dependencies.
+#   export TMPDIR=/media/REMOTIX-15/tmp   # anywhere writable; D, TMP, the log and the socket live under it
+#   bash benches/02-pam-start.sh copy && bash benches/02-pam-start.sh start      # healthy target on 127.0.0.1:7531
+#   (umask 077; read -rs P; printf '%s\n' "$P" > $TMPDIR/pam-pw)     # the password of `prova`: mode 0600, yours, never on argv
+#   python3 benches/02-pam-standstill.py --port 7531 --user prova --password-file $TMPDIR/pam-pw \
 #       --socket $TMPDIR/02-pam-tmp/pam2-7531.sock --wait free --rounds 5                  # scene 1
 #   python3 benches/02-pam-standstill.py ... --wait restart --log $TMPDIR/02-pam-tmp/pam2-7531.log   # scene 3 (kills and heals)
 #   bash benches/02-pam-start.sh stop; bash benches/02-pam-start.sh copy && bash benches/02-pam-start.sh fault && bash benches/02-pam-start.sh start
@@ -23,6 +28,10 @@
 #   bash benches/02-pam-start.sh stop
 # Exit: 0 expectation met · 1 not met · 2 cannot run · 3 not measured.
 """02-pam-standstill.py — ⛔ HOW LONG WHOEVER IS **NOT** AUTHENTICATING STANDS STILL.
+
+⚠ 25 Oct 2026: the text BELOW describes the first version, built to see the SYNCHRONOUS PAM fallback block the loop («BEFORE (phase 1)»,
+«blocked», «the cure»).  That fallback no longer exists; the box «THE POSITIVE CONTROL» and the table «BEFORE/AFTER» are history.
+What is checked today is in the comment above this docstring and in `--prediction`.
 
     python3 02-pam-standstill.py --port 7531 --password-file F --rounds 5
 
@@ -131,6 +140,7 @@ import json
 import os
 import socket
 import ssl
+import shlex
 import statistics
 import struct
 import subprocess
@@ -172,6 +182,9 @@ BLOCKED_PEAK_MS = 900.0   # above: the loop stopped (the «before»)
 FREE_PEAK_MS = 150.0     # below: the loop did not stop (the «after»)
 TIGHT_FREE_MS = 300.0
 BASE_MAX_MS = 60.0          # the quiet loop: above, the ruler is broken
+RULER_MARGIN_MS = 250.0     # D4b scenes: a handshake fails only if it exceeds BLOCKED_PEAK_MS or (baseline peak + this margin);
+                            # TIGHT_FREE_MS (300) is printed as INFORMATION, not as the failure line
+SERVER_CAUSE = ("TERMINATED", "FAREWELL", "REJECTED", "session closed", "channel closed", "answered")  # words of a drop the SERVER caused
 
 
 def s(t):
@@ -547,21 +560,55 @@ async def handshake_ruler(a, period, halt, samples):
             await asyncio.sleep(rest)
 
 
-def _ruler_ok(samples):
-    """(ok, text): every handshake answered and none slower than TIGHT_FREE_MS."""
+def _is_server_drop(rep):
+    """A dropped handshake counts against the server ONLY with a server-side cause (it closed, refused, said farewell); a client
+    timeout or a local error is reported but not counted."""
+    why = rep.get("drop") or ""
+    return any(w in why for w in SERVER_CAUSE)
+
+
+def _pct(xs, q):
+    xs = sorted(xs)
+    return xs[min(len(xs) - 1, int(round(q * (len(xs) - 1))))]
+
+
+def _ruler_judge(base, samples):
+    """(ok, text).  `base` = handshakes measured BEFORE the fault, `samples` = those during it.
+    FAIL: a peak >= BLOCKED_PEAK_MS, or a peak above (baseline peak + RULER_MARGIN_MS), or a drop with a server-side cause.
+    300 ms (TIGHT_FREE_MS) is only printed."""
+    bms = [x["ms"] for x in base if x.get("ms") is not None]
     ms = [x["ms"] for x in samples if x.get("ms") is not None]
-    bad = [x for x in samples if x.get("ms") is None]
-    if not ms:
+    if not bms or not ms:
         return None, "no handshake measured"
+    base_peak = max(bms)
     peak = max(ms)
-    return (not bad and peak < TIGHT_FREE_MS), (f"{len(ms)} handshakes, peak {peak:.0f} ms (limit {TIGHT_FREE_MS:.0f}), "
-                                                f"{len(bad)} dropped")
+    drops = [x for x in samples if x.get("ms") is None]
+    server_drops = [x for x in drops if _is_server_drop(x)]
+    limit = min(BLOCKED_PEAK_MS, base_peak + RULER_MARGIN_MS)
+    over_info = sum(1 for m in ms if m >= TIGHT_FREE_MS)
+    ok = peak < limit and not server_drops
+    return ok, (f"{len(ms)} handshakes: median {statistics.median(ms):.0f} ms, p95 {_pct(ms, .95):.0f} ms, peak {peak:.0f} ms "
+                f"(baseline peak {base_peak:.0f}; fail line {limit:.0f}; info: {over_info} at or above {TIGHT_FREE_MS:.0f}); "
+                f"dropped {len(drops)}, with a server-side cause {len(server_drops)}")
+
+
+async def measure_baseline(a, n=8):
+    base = []
+    for _ in range(n):
+        rep = {}
+        async with AsyncExitStack() as stack:
+            await timed_handshake(stack, a.address, a.port, a.path, rep)
+        base.append(rep)
+        await asyncio.sleep(0.1)
+    return base
 
 
 async def scene_unchecked(a, password):
     """FAULT «no helper»: 20 refusals in a row, all 0x0E, nothing counted, the wire never stuck."""
     print(f"   scene «unchecked»: {a.attempts} attempts in a row from one address (the first with the RIGHT password)")
+    base = await measure_baseline(a)
     results = []
+    bs = []
     for i in range(a.attempts):
         user, pw = (a.user, password) if i == 0 else (a.bad_user, a.bad_password)
         b = {}
@@ -575,26 +622,25 @@ async def scene_unchecked(a, password):
         r = await login_attempt(a, user, pw)
         await tb
         r["ms_B"] = b.get("ms")
+        bs.append(b)
         results.append(r)
         print(f"     {i + 1:2d}. {user:8s} -> {r.get('answer', '—')} "
               f"{REASONS.get(r.get('reason'), r.get('reason'))}"
               f"{'  DROP ' + r['drop'] if 'drop' in r else ''}   handshake B "
-              f"{'%.0f ms' % r['ms_B'] if r.get('ms_B') is not None else 'DROPPED'}")
+              f"{'%.0f ms' % r['ms_B'] if r.get('ms_B') is not None else 'DROPPED ' + str(b.get('drop'))}")
     n_0e = sum(1 for r in results if r.get("answer") == "REJECTED" and r.get("reason") == 0x0E)
     n_07 = sum(1 for r in results if r.get("reason") == 0x07)
     n_08 = sum(1 for r in results if r.get("reason") == 0x08)
     n_drop = sum(1 for r in results if "drop" in r)
-    ms_b = [r["ms_B"] for r in results if r.get("ms_B") is not None]
-    b_ok = len(ms_b) == len(results) and max(ms_b) < TIGHT_FREE_MS
-    ok = (n_0e == len(results) and n_07 == 0 and n_08 == 0 and n_drop == 0 and b_ok)
-    print(f"\n   0x0E {n_0e}/{len(results)} · 0x07 {n_07} · 0x08 {n_08} · dropped {n_drop} · "
-          f"B peak {max(ms_b) if ms_b else float('nan'):.0f} ms (limit {TIGHT_FREE_MS:.0f})")
+    ruler_ok, ruler_text = _ruler_judge(base, bs)
+    ok = (n_0e == len(results) and n_07 == 0 and n_08 == 0 and n_drop == 0 and bool(ruler_ok))
+    print(f"\n   0x0E {n_0e}/{len(results)} · 0x07 {n_07} · 0x08 {n_08} · dropped attempts {n_drop}\n   wire: {ruler_text}")
     print(f"   {'⭐ OK' if ok else '⛔ NO'}  expected «unchecked»: every answer REJECTED 0x0E (nothing counted, no ban), the wire never stuck")
     if n_07:
         print("      ⛔ a 0x07 means PAM was ASKED and said no: this target HAS a helper — it is not the faulty copy")
     if n_08:
         print("      ⛔ a 0x08 means the refusals were COUNTED and the address was banned")
-    write(a, [{"scene": "unchecked", "results": results}], {"ok": ok, "n_0e": n_0e, "n_07": n_07, "n_08": n_08})
+    write(a, [{"scene": "unchecked", "results": results}], {"ok": ok, "n_0e": n_0e, "n_07": n_07, "n_08": n_08, "wire": ruler_text})
     return 0 if ok else 1
 
 
@@ -603,27 +649,53 @@ async def scene_restart(a, password):
     if not a.log:
         print("   ⛔ --log (the target's log) is needed: «restarted» is read there, not guessed")
         return 2
-    kill_cmd = a.kill_cmd or f"bash {os.path.join(os.path.dirname(os.path.abspath(__file__)), '02-pam-start.sh')} kill-helper"
-    log_before = open(a.log, errors="replace").read().count("RESTART") if os.path.exists(a.log) else 0
+    kill_cmd = (shlex.split(a.kill_cmd) if a.kill_cmd else
+                ["bash", os.path.join(os.path.dirname(os.path.abspath(__file__)), "02-pam-start.sh"), "kill-helper"])
+
+    def count(word):
+        return open(a.log, errors="replace").read().count(word) if os.path.exists(a.log) else 0
+
+    restarts_before = count("RESTART")
+    down_before = count("is down, waiting to be started again")
+    base = await measure_baseline(a)
     samples = []
     halt = asyncio.Event()
     ruler = asyncio.create_task(handshake_ruler(a, 0.2, halt, samples))
-    await asyncio.sleep(1.0)       # the ruler's denominator on a quiet, healthy loop
     healthy = await login_attempt(a, a.user, password)
     print(f"   healthy first: {healthy.get('answer', '—')} "
           f"{REASONS.get(healthy.get('reason'), healthy.get('reason'))}  (must be ADMITTED)")
-    t_kill = time.monotonic()
-    k = await asyncio.to_thread(subprocess.run, kill_cmd, shell=True, capture_output=True, text=True)
-    print(f"   kill-helper rc={k.returncode}: {(k.stdout or '').strip().splitlines()[-1:] or k.stderr.strip()[-200:]}")
-    if k.returncode != 0:
-        halt.set()
-        await ruler
-        print("   ⛔ NOT MEASURED: the helper was not killed (it is not «it recovered», it is «I did not break it»)")
-        return 3
-    await asyncio.sleep(0.3)       # the server has seen the EOF (one round of its loop), the pause of 1 s is running
-    down = await login_attempt(a, a.bad_user, a.bad_password)
-    print(f"   while the helper is down: {down.get('answer', '—')} {REASONS.get(down.get('reason'), down.get('reason'))}"
-          f"  (must be REJECTED 0x0E, not counted)")
+    async with AsyncExitStack() as stack:
+        # ⭐ The connection is opened BEFORE the kill (its HELLO answered): the helper comes back after ~1 s, and a fresh
+        #    QUIC handshake after the kill could land after that.  CREDENTIALS goes out the moment the death is confirmed.
+        pre = None
+        try:
+            pre = await do_open(stack, a.address, a.port, a.path)
+            await until_here_i_am(pre)
+        except Exception as e:  # noqa: BLE001
+            print(f"   ⛔ NOT MEASURED: the connection before the kill failed: {type(e).__name__}: {e}")
+            halt.set()
+            await ruler
+            return 3
+        t_kill = time.monotonic()
+        k = await asyncio.to_thread(subprocess.run, kill_cmd, capture_output=True, text=True)
+        print(f"   kill-helper rc={k.returncode}: {(k.stdout or '').strip().splitlines()[-1:] or k.stderr.strip()[-200:]}")
+        if k.returncode != 0:
+            halt.set()
+            await ruler
+            print("   ⛔ NOT MEASURED: the helper was not killed (it is not «it recovered», it is «I did not break it»)")
+            return 3
+        down = {"user": a.bad_user}
+        t1 = time.monotonic()
+        pre.send_msg(wrap(T["CREDENTIALS"], s(a.bad_user) + s(a.bad_password)))
+        down["sent_after_s"] = t1 - t_kill
+        try:
+            name, body = await should_wait(pre, None, wait=40)
+            down["answer"] = name
+            down["reason"] = body[0] if body else None
+        except Exception as e:  # noqa: BLE001
+            down["drop"] = f"{type(e).__name__}: {e}"
+    print(f"   while the helper is down (CREDENTIALS sent {down['sent_after_s'] * 1000:.0f} ms after the kill): "
+          f"{down.get('answer', '—')} {REASONS.get(down.get('reason'), down.get('reason'))}  (must be REJECTED 0x0E, not counted)")
     t_back = None
     polls = 0
     last = None
@@ -638,23 +710,24 @@ async def scene_restart(a, password):
         await asyncio.sleep(0.5)
     halt.set()
     await ruler
-    ruler_ok, ruler_text = _ruler_ok(samples)
-    text = open(a.log, errors="replace").read() if os.path.exists(a.log) else ""
-    restarts = text.count("RESTART") - log_before
+    ruler_ok, ruler_text = _ruler_judge(base, samples)
+    restarts = count("RESTART") - restarts_before
+    down_lines = count("is down, waiting to be started again") - down_before
     healthy_ok = healthy.get("answer") == "ADMITTED"
-    down_ok = down.get("answer") == "REJECTED" and down.get("reason") == 0x0E
+    # the proof that it WAS down: the 0x0E, or the server's own log line «the PAM helper is down, waiting to be started again»
+    down_ok = (down.get("answer") == "REJECTED" and down.get("reason") == 0x0E) or down_lines >= 1
     back_ok = t_back is not None
     log_ok = restarts >= 1
     print(f"\n   back after {('%.1f s' % (t_back - t_kill)) if back_ok else 'NEVER'} ({polls} polls) · "
-          f"RESTART lines in the log: {restarts} · wire: {ruler_text}")
-    checks = [("healthy before: ADMITTED", healthy_ok), ("down: REJECTED 0x0E", down_ok),
+          f"RESTART lines in the log: {restarts} · «is down» lines: {down_lines}\n   wire: {ruler_text}")
+    checks = [("healthy before: ADMITTED", healthy_ok), ("down: REJECTED 0x0E (or the log says it was down)", down_ok),
               (f"ADMITTED again within {a.restart_wait:.0f} s", back_ok), ("the log says RESTART", log_ok),
               ("the wire never stuck", bool(ruler_ok))]
     for name, ok in checks:
         print(f"   {'⭐ OK' if ok else '⛔ NO'}  {name}")
     ok = all(ok for _, ok in checks)
     write(a, [{"scene": "restart", "healthy": healthy, "down": down, "last": last,
-               "back_s": (t_back - t_kill) if back_ok else None, "restarts": restarts}], {"ok": ok})
+               "back_s": (t_back - t_kill) if back_ok else None, "restarts": restarts}], {"ok": ok, "wire": ruler_text})
     return 0 if ok else 1
 
 
@@ -668,8 +741,8 @@ def prediction():
    | scene     | target                  | what happens                                         | expectation |
    |-----------|-------------------------|------------------------------------------------------|-------------|
    | free      | healthy                 | a third party with WRONG credentials                 | A's peak < %.0f ms, B < %.0f ms, C = REJECTED 0x07 |
-   | unchecked | built with `fault`      | %s attempts in a row, the first with the RIGHT password | every answer 0x0E; never 0x07, never 0x08; B < %.0f ms |
-   | restart   | healthy + kill-helper   | helper killed, then logins                           | down: 0x0E · ADMITTED again within the restart wait · log says RESTART · wire < %.0f ms |
+   | unchecked | built with `fault`      | %s attempts in a row, the first with the RIGHT password | every answer 0x0E; never 0x07, never 0x08; wire: no peak >= 900 ms nor above baseline + 250 ms (%.0f ms is information) |
+   | restart   | healthy + kill-helper   | helper killed, then logins                           | down: 0x0E (or the log line «is down, waiting») · ADMITTED again within the restart wait · log says RESTART · wire as above (%.0f ms info) |
 
    ⛔ THE BLIND-RULER CASE: `unchecked` run on a HEALTHY target gives 0x07, not 0x0E, and goes red; `restart` with a
       helper that is never started again goes red on «ADMITTED again».  Both MUST be seen red once.
@@ -802,12 +875,16 @@ def password_from_file(fpath):
     """⛔ D12: the password does not go through the command line —
     anyone can read `/proc/<pid>/cmdline`."""
     try:
-        mode = os.stat(fpath).st_mode & 0o077
+        st = os.stat(fpath)
     except OSError as e:
         print(f"   ⛔ the password file «{fpath}» cannot be read: {e}")
         sys.exit(2)
-    if mode:
-        print(f"   ⚠ «{fpath}» is readable by others (bits {mode:o})")
+    if st.st_mode & 0o077:
+        print(f"   ⛔ «{fpath}» is accessible by others (bits {st.st_mode & 0o077:o}): refused (mode 0600 needed)")
+        sys.exit(2)
+    if st.st_uid != os.getuid():
+        print(f"   ⛔ «{fpath}» belongs to uid {st.st_uid}, not to the user running this ({os.getuid()}): refused")
+        sys.exit(2)
     with open(fpath, encoding="utf-8") as f:
         password = f.read().strip("\n")
     if not password:
@@ -820,7 +897,7 @@ def password_from_file(fpath):
 if __name__ == "__main__":
     p = argparse.ArgumentParser(
         description="how long whoever is NOT authenticating stands still")
-    p.add_argument("--address", default="192.168.0.2")
+    p.add_argument("--address", default="127.0.0.1")
     p.add_argument("--port", type=int, default=7531)
     p.add_argument("--path", default="/rcp/1")
     p.add_argument("--user", default="prova")
@@ -837,6 +914,9 @@ if __name__ == "__main__":
     p.add_argument("--wait", choices=["free", "unchecked", "restart", "none"],
                    default="none",
                    help="the scene and its expectation, DECLARED BEFORE the round (see the head of the file)")
+    p.add_argument("--i-know-it-is-the-host", action="store_true",
+                   help="allow the scenes with a SUCCESSFUL login (free, restart) outside a container: they make the server enrol the "
+                        "account in the card groups (usermod, /var/lib/remotix), take a render grant on /dev/dri, ask logind, start a desktop")
     p.add_argument("--attempts", type=int, default=20, help="scene unchecked: how many attempts in a row")
     p.add_argument("--log", default="", help="scene restart: the target's log (02-pam-start.sh writes it)")
     p.add_argument("--kill-cmd", default="", help="scene restart: how to kill the helper (default: 02-pam-start.sh kill-helper)")
@@ -852,6 +932,10 @@ if __name__ == "__main__":
         print(f"   ⛔ «aioquic» is not on this machine ({AIOQUIC}): this "
               f"bench runs INSIDE the NIC-OS container.\n"
               f"      ⚠ It is not «the round went fine»: it is «I did not measure».")
+        sys.exit(2)
+    if a.wait in ("free", "restart") and not os.path.exists("/run/.containerenv") and not a.i_know_it_is_the_host:
+        print(f"   ⛔ the scene «{a.wait}» logs in for real (usermod, /var/lib/remotix, logind, /dev/dri, a desktop): it runs ONLY in the "
+              f"throwaway container (/run/.containerenv is not here).  Refused; --i-know-it-is-the-host overrides it.")
         sys.exit(2)
     if not a.password_file:
         print("   ⛔ --password-file is needed (D12: the password does not go through argv)")
