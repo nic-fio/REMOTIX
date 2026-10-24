@@ -39,6 +39,7 @@
 #include <sys/prctl.h>
 #include <sys/resource.h>
 #include <sys/stat.h>
+#include <limits.h>
 #include <sys/statvfs.h>
 #include <sys/syscall.h>
 #include <unistd.h>
@@ -243,6 +244,52 @@ static int writable_dir_ok(const char *what, const char *dir, uid_t uid, char *w
 		return say(why, n, "the %s directory %s belongs to uid %ld (mode %04o), not "
 		           "to the network side (uid %ld): run the upgrade's chown", what, dir,
 		           (long)st.st_uid, (unsigned)(st.st_mode & 07777), (long)uid);
+	/* ⛔ 24 Oct 2026 (review of the port): `mount(dir, dir, MS_BIND)` follows
+	 *    the path, `lstat` above does not — a parent the network user could
+	 *    write would let it swap the directory for a symlink between the two,
+	 *    and another host folder would come in writable.  So every ancestor
+	 *    must be a real directory of root's that nobody else can write — or a
+	 *    sticky one (/var/tmp) whose entry on the path is root's too: there
+	 *    only root may rename it.  ⚠ The directory itself directly in a sticky
+	 *    folder is refused: its owner, the network user, could rename it. */
+	{
+		char up[PATH_MAX];
+		size_t len = strlen(dir);
+		struct stat a;
+		uid_t below = st.st_uid; /* the owner of the entry just under `up` */
+
+		if (len >= sizeof up)
+			return say(why, n, "the %s directory path is too long", what);
+		/* the walk below reads the path as written: no `.` or `..` in it */
+		if (strstr(dir, "/./") || strstr(dir, "/../") ||
+		    (len >= 2 && strcmp(dir + len - 2, "/.") == 0) ||
+		    (len >= 3 && strcmp(dir + len - 3, "/..") == 0))
+			return say(why, n, "the %s directory %s has «.» or «..» in it: give it "
+			           "plain", what, dir);
+		memcpy(up, dir, len + 1);
+		while (len > 1 && up[len - 1] == '/')
+			up[--len] = '\0';
+		for (;;) {
+			char *slash = strrchr(up, '/');
+			if (!slash)
+				break;
+			if (slash == up)
+				slash[1] = '\0';
+			else
+				*slash = '\0';
+			if (lstat(up, &a) != 0)
+				return say(why, n, "lstat(%s) failed (%s)", up, strerror(errno));
+			if (!S_ISDIR(a.st_mode) || a.st_uid != 0 ||
+			    ((a.st_mode & 022) && !((a.st_mode & S_ISVTX) && below == 0)))
+				return say(why, n, "the %s directory %s sits under %s, which is not a "
+				           "root directory closed to others (uid %ld, mode %04o): the "
+				           "walls refuse a path someone else could rewrite", what, dir,
+				           up, (long)a.st_uid, (unsigned)(a.st_mode & 07777));
+			below = a.st_uid;
+			if (slash == up)
+				break;
+		}
+	}
 	return 0;
 }
 
@@ -415,6 +462,14 @@ static int no_user_namespaces(char *why, size_t n)
 		WALLS_DENY(__NR_add_key, EPERM),
 		WALLS_DENY(__NR_request_key, EPERM),
 		WALLS_DENY(__NR_ptrace, EPERM),
+		/* ⛔ 24 Oct 2026: every network side runs as the same uid — without these
+		 *    a hijacked one could read or write another's memory past ptrace. */
+		WALLS_DENY(__NR_process_vm_readv, EPERM),
+		WALLS_DENY(__NR_process_vm_writev, EPERM),
+		WALLS_DENY(__NR_kcmp, EPERM),
+#ifdef __NR_pidfd_getfd
+		WALLS_DENY(__NR_pidfd_getfd, EPERM),
+#endif
 		/* ioctl: the request is an unsigned int in the kernel — its low word is all of it */
 		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_ioctl, 0, 5),
 		BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, args[1])),
@@ -520,18 +575,25 @@ int walls_apply(const struct rootside_options *o, char *why, size_t why_len)
 	/* ⭐ asked back of the kernel, not assumed */
 	if (statvfs("/", &vs) != 0)
 		return say(why, why_len, "statvfs(/) after mount_setattr failed (%s)", strerror(errno));
-	if (!(vs.f_flag & ST_RDONLY))
-		return say(why, why_len, "/ is not read-only after mount_setattr");
+	if (!(vs.f_flag & ST_RDONLY) || !(vs.f_flag & ST_NOSUID) || !(vs.f_flag & ST_NODEV))
+		return say(why, why_len, "/ is not read-only, nosuid and nodev after mount_setattr "
+		           "(flags %#lx)", (unsigned long)vs.f_flag);
 	if (statvfs(o->net_state_dir, &vs) != 0)
 		return say(why, why_len, "statvfs(%s) after the walls failed (%s)", o->net_state_dir,
 		           strerror(errno));
 	if (vs.f_flag & ST_RDONLY)
 		return say(why, why_len, "%s is not writable after the walls", o->net_state_dir);
+	if (!(vs.f_flag & ST_NOEXEC) || !(vs.f_flag & ST_NOSUID) || !(vs.f_flag & ST_NODEV))
+		return say(why, why_len, "%s is not noexec, nosuid and nodev after the walls "
+		           "(flags %#lx)", o->net_state_dir, (unsigned long)vs.f_flag);
 	if (statvfs(o->net_run_dir, &vs) != 0)
 		return say(why, why_len, "statvfs(%s) after the walls failed (%s)", o->net_run_dir,
 		           strerror(errno));
 	if (vs.f_flag & ST_RDONLY)
 		return say(why, why_len, "%s is not writable after the walls", o->net_run_dir);
+	if (!(vs.f_flag & ST_NOEXEC) || !(vs.f_flag & ST_NOSUID) || !(vs.f_flag & ST_NODEV))
+		return say(why, why_len, "%s is not noexec, nosuid and nodev after the walls "
+		           "(flags %#lx)", o->net_run_dir, (unsigned long)vs.f_flag);
 	/* ⚠ Back to the root side's own folder, by its path, in the NEW tree: a
 	 *   relative --page (the default «page.html», next to the binary the way
 	 *   02-pam-start.sh starts it) is resolved there, as in 1.0 — found by
