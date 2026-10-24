@@ -175,7 +175,7 @@ static void *t_realloc(void *q, size_t n)
 #include <time.h>
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 110
+#define EXPECTED_CHECKS 115
 
 static void require(int cond, const char *desc)
 {
@@ -1757,6 +1757,8 @@ int main(void)
 			printf("       (fair_victim on a full table of 128 groups: %.1f µs each)\n",
 			       (log_now_ms() - t0) * 1000.0 / 2000);
 		}
+		/* the attackers out of their first PAGE_YOUNG_MS: silent now */
+		usleep((PAGE_YOUNG_MS + 100) * 1000);
 		for (int i = 0; i < 30; i++) {
 			snprintf(src, sizeof src, "127.0.5.%d", i + 1);
 			rate_reset(p);
@@ -1831,6 +1833,9 @@ int main(void)
 		for (int i = 0; i < MAX_CLIENTS - 1; i++) {
 			snprintf(src, sizeof src, "127.0.8.%d", i + 1);
 			rate_reset(p);
+			/* X stays over its rate (the parked are served first now) */
+			while (rate_take(p, "[127.0.7.1]", NULL, log_now_ms(), &who))
+				;
 			fds21[n21++] = connect_from(port, src, 0);
 			pump(p, 1);
 		}
@@ -1847,6 +1852,8 @@ int main(void)
 			now = log_now_ms();
 			while (rate_take(p, "[127.0.9.1]", NULL, now, &who))
 				;
+			while (rate_take(p, "[127.0.7.1]", NULL, log_now_ms(), &who))
+				; /* X still over its rate */
 			y = connect_from(port, "127.0.9.1", 0);
 			pump(p, 3);
 			require(p->refused_rate_total == before + 1 && client_of(p, "[127.0.9.1]") == 0 &&
@@ -1854,12 +1861,36 @@ int main(void)
 			                client_of(p, "[127.0.7.1]") == 1,
 			        "over its rate with the table full: refused at accept, nobody evicted (on 38639d7d it evicted and parked)");
 			close(y);
+			/* … and refused for the SHARED bucket: every bucket in use,
+			 * the overflow drained */
+			now = log_now_ms();
+			for (int i = 0; i < PAGE_RATE_KEYS; i++) {
+				char k[32];
+				snprintf(k, sizeof k, "[10.8.%d.%d]", i / 250, i % 250);
+				rate_take(p, k, NULL, now, &who);
+			}
+			while (rate_take(p, "[127.0.9.3]", NULL, now, &who))
+				;
+			before = p->refused_rate_total;
+			while (rate_take(p, "[127.0.7.1]", NULL, log_now_ms(), &who))
+				;
+			y = connect_from(port, "127.0.9.4", 0);
+			pump(p, 3);
+			require(p->refused_rate_total == before + 1 && closed_by_server(y) &&
+			                strncmp(p->refused_last, "(the shared overflow bucket", 27) == 0 &&
+			                active(p) == MAX_CLIENTS,
+			        "a new address over the SHARED bucket, table full: refused, named as the shared bucket, nobody evicted");
+			close(y);
+			rate_reset(p);
 		}
+		usleep((PAGE_YOUNG_MS + 100) * 1000); /* the 127 out of their first second */
 		/* c) an arrival WITHIN its rate evicts a silent one, not the parked
 		 *    one although it is the oldest */
 		{
 			int z;
 			rate_reset(p);
+			while (rate_take(p, "[127.0.7.1]", NULL, log_now_ms(), &who))
+				;
 			z = connect_from(port, "127.0.9.2", 0);
 			pump(p, 3);
 			require(client_of(p, "[127.0.9.2]") == 1 && client_of(p, "[127.0.7.1]") == 1 &&
@@ -1954,6 +1985,134 @@ int main(void)
 			}
 			require(strcmp(bodies[0], "address") == 0 && strcmp(bodies[1], "shared") == 0,
 			        "the 503 says «from this address» only when that address's bucket refused");
+		}
+	}
+
+	printf("22. review of fc76de93: young ranks with parked, parked before newcomers, refused-full refunds, a reused descriptor\n");
+	rate_reset(p);
+	for (size_t i = 0; i < MAX_CLIENTS; i++)
+		if (client_active(&p->clients[i]))
+			client_close(&p->clients[i]);
+	{
+		const char *who = NULL;
+		uint64_t now = log_now_ms();
+
+		/* a) the tiers: a connection in its first PAGE_YOUNG_MS ranks with
+		 *    the parked, an older silent one below them */
+		{
+			static client y, o, k;
+			y.phase = o.phase = F_HANDSHAKE;
+			k.phase = F_RATE;
+			y.born = now - 100;
+			o.born = now - PAGE_YOUNG_MS - 100;
+			k.born = now - 5000;
+			require(tier(&y, now) == 1 && tier(&k, now) == 1 && tier(&o, now) == 0,
+			        "young without a reply ranks with the parked (1), an older silent one below (0) — on fc76de93 the young owner was 0");
+		}
+		/* b) the parked first: A parked on the shared bucket, one token
+		 *    comes, newcomer B arrives in the same pass — A gets it */
+		{
+			int fa, fb;
+			client *ca = NULL, *cb = NULL;
+			now = log_now_ms();
+			for (int i = 0; i < PAGE_RATE_KEYS; i++) {
+				char kk[32];
+				snprintf(kk, sizeof kk, "[10.7.%d.%d]", i / 250, i % 250);
+				rate_take(p, kk, NULL, now, &who);
+			}
+			while (rate_take(p, "[127.0.11.9]", NULL, now, &who))
+				;
+			fa = connect_from(port, "127.0.11.1", 0);
+			pump(p, 2);
+			p->rate_over.milli = 1000u;
+			p->rate_over.at = log_now_ms();
+			fb = connect_from(port, "127.0.11.2", 0);
+			pump(p, 2);
+			for (size_t i = 0; i < MAX_CLIENTS; i++) {
+				client *q = &p->clients[i];
+				if (!client_active(q))
+					continue;
+				if (strcmp(q->key, "[127.0.11.1]") == 0)
+					ca = q;
+				if (strcmp(q->key, "[127.0.11.2]") == 0)
+					cb = q;
+			}
+			require(ca && cb && ca->phase == F_HANDSHAKE && cb->phase == F_RATE,
+			        "a newcomer on the shared bucket waits behind the parked one (on fc76de93 it took the token first)");
+			close(fa);
+			close(fb);
+			for (size_t i = 0; i < MAX_CLIENTS; i++)
+				if (client_active(&p->clients[i]))
+					client_close(&p->clients[i]);
+			rate_reset(p);
+		}
+		/* c) refused because the table is full: its token given back */
+		{
+			static int f22[MAX_CLIENTS];
+			int n22 = 0, again;
+			struct bucket *b;
+			for (int i = 0; i < MAX_CLIENTS; i++) {
+				snprintf(src, sizeof src, "127.0.12.%d", i + 1);
+				rate_reset(p);
+				f22[n22++] = connect_from(port, src, 0);
+				pump(p, 1);
+			}
+			pump(p, 2);
+			rate_reset(p);
+			again = connect_from(port, "127.0.12.1", 0); /* its group would hold 2 */
+			pump(p, 3);
+			b = &p->rate_over;
+			for (int i = 0; i < PAGE_RATE_KEYS; i++)
+				if (strcmp(p->rate[i].key, "[127.0.12.1]") == 0)
+					b = &p->rate[i];
+			require(active(p) == MAX_CLIENTS && closed_by_server(again) &&
+			                b != &p->rate_over && b->milli == PAGE_ACCEPT_BURST * 1000u,
+			        "refused as full after its rate check: the token is refunded (on fc76de93 it was spent)");
+			close(again);
+			page_expired(p, log_now_ms() + PAGE_REQUEST_MS + 1);
+			for (int i = 0; i < n22; i++)
+				close(f22[i]);
+			pump(p, 4);
+			rate_reset(p);
+		}
+		/* d) a descriptor closed and reused within ONE page_move() call:
+		 *    the old owner's POLLHUP is not applied to the newcomer */
+		{
+			int fp, fn, x = -1;
+			client *cp = NULL, *cn = NULL;
+			struct pollfd f[2];
+			fp = connect_from(port, "127.0.13.1", 0);
+			pump(p, 2);
+			for (size_t i = 0; i < MAX_CLIENTS; i++)
+				if (client_active(&p->clients[i]) &&
+				    strcmp(p->clients[i].key, "[127.0.13.1]") == 0)
+					cp = &p->clients[i];
+			if (cp)
+				client_close(cp); /* its descriptor number is free again */
+			now = log_now_ms();
+			while (rate_take(p, "[127.0.13.2]", NULL, now, &who))
+				; /* the newcomer will park: a parked one reacts to POLLHUP */
+			fn = connect_from(port, "127.0.13.2", 0);
+			/* the number accept4() will give the newcomer: the lowest free */
+			x = dup(0);
+			if (x >= 0)
+				close(x);
+			f[0] = (struct pollfd){.fd = p->fd, .events = POLLIN, .revents = POLLIN};
+			f[1] = (struct pollfd){.fd = x, .events = 0, .revents = POLLHUP};
+			p->move_next = 0;
+			page_move(p, f, 2);
+			for (size_t i = 0; i < MAX_CLIENTS; i++)
+				if (client_active(&p->clients[i]) &&
+				    strcmp(p->clients[i].key, "[127.0.13.2]") == 0)
+					cn = &p->clients[i];
+			require(x >= 0 && cn && cn->fd == x && cn->phase == F_RATE,
+			        "the newcomer took the freed descriptor number and is parked, untouched by the old owner's POLLHUP (on fc76de93: closed)");
+			close(fp);
+			close(fn);
+			for (size_t i = 0; i < MAX_CLIENTS; i++)
+				if (client_active(&p->clients[i]))
+					client_close(&p->clients[i]);
+			rate_reset(p);
 		}
 	}
 
