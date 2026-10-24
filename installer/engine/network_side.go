@@ -146,8 +146,18 @@ func NetworkSide(a *Environment) (applies bool, code, detail string) {
 	case st.Mode().Perm() != 0o700:
 		wrong = append(wrong, fmt.Sprintf("%s %04o", NetDir, st.Mode().Perm()))
 	}
+	var links []string
 	filepath.WalkDir(a.P(NetDir), func(p string, d fs.DirEntry, err error) error {
-		if err != nil || d.Type()&fs.ModeSymlink != 0 || len(wrong) >= 5 {
+		if err != nil || len(wrong) >= 5 {
+			return nil
+		}
+		// ⛔ Review 3, F2: an administrator's certificate kept as a LINK (to /etc/letsencrypt/…)
+		//   is read by remotix through it — a target remotix cannot read stops the network side.
+		if d.Type()&fs.ModeSymlink != 0 {
+			r, _ := filepath.Rel(a.P("/"), p)
+			if t, ok := netLinkReadable(a, "/"+r, u.Uid, u.Gid); !ok && len(links) < 5 {
+				links = append(links, fmt.Sprintf("/%s → %s", r, t))
+			}
 			return nil
 		}
 		if i, err := d.Info(); err == nil {
@@ -161,6 +171,9 @@ func NetworkSide(a *Environment) (applies bool, code, detail string) {
 	if len(wrong) > 0 {
 		return true, "RX-NETUSER-003", T("net.non_suoi", NetUser, u.Uid, strings.Join(wrong, ", "))
 	}
+	if len(links) > 0 {
+		return true, "RX-NETUSER-003", T("net.link_illeggibile", NetUser, strings.Join(links, ", "))
+	}
 	var left []string
 	for _, n := range netOld {
 		if _, err := os.Lstat(a.P(filepath.Join(netStateRoot, n))); err == nil {
@@ -171,6 +184,59 @@ func NetworkSide(a *Environment) (applies bool, code, detail string) {
 		return true, "RX-NETUSER-003", T("net.non_spostati", strings.Join(left, ", "))
 	}
 	return true, "", T("net.ok", NetUser, u.Uid)
+}
+
+// netLinkReadable: may uid:gid (no supplementary group: remotix has none) read what the link at
+// the machine path `link` points to? The links are followed by hand inside the machine's root (an
+// absolute target is the machine's, not the host's), at most 8; every directory on the way must
+// be searchable and the file readable, by owner, group or other bits. Returns the final target.
+func netLinkReadable(a *Environment, link string, uid, gid int) (string, bool) {
+	cur := link
+	for i := 0; i < 8; i++ {
+		st, err := os.Lstat(a.P(cur))
+		if err != nil {
+			return cur, false
+		}
+		if st.Mode()&fs.ModeSymlink == 0 {
+			if !permits(st, uid, gid, 4) {
+				return cur, false
+			}
+			for d := filepath.Dir(cur); ; d = filepath.Dir(d) {
+				ds, err := os.Stat(a.P(d))
+				if err != nil || !permits(ds, uid, gid, 1) {
+					return cur, false
+				}
+				if d == "/" {
+					return cur, true
+				}
+			}
+		}
+		t, err := os.Readlink(a.P(cur))
+		if err != nil {
+			return cur, false
+		}
+		if !filepath.IsAbs(t) {
+			t = filepath.Join(filepath.Dir(cur), t)
+		}
+		cur = filepath.Clean(t)
+	}
+	return cur, false
+}
+
+// permits: the r (4) or x (1) bit for uid:gid in a file's mode.
+func permits(st os.FileInfo, uid, gid int, bit os.FileMode) bool {
+	s, ok := st.Sys().(*syscall.Stat_t)
+	if !ok {
+		return false
+	}
+	m := st.Mode().Perm()
+	switch {
+	case int(s.Uid) == uid:
+		return m&(bit<<6) != 0
+	case int(s.Gid) == gid:
+		return m&(bit<<3) != 0
+	}
+	return m&bit != 0
 }
 
 // checkNetworkSide: the certification's check (certify.go). Required: a network side that

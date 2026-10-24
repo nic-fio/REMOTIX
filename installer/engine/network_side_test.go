@@ -166,6 +166,16 @@ func TestNetworkSideCheck(t *testing.T) {
 		{"1.0's certificates not moved", "RX-NETUSER-003", func(root string) {
 			os.MkdirAll(filepath.Join(root, "var/lib/remotix/certificates"), 0o700)
 		}},
+		// review 3, F2: an administrator's certificate as links to a target remotix cannot read
+		{"a link to an unreadable certificate", "RX-NETUSER-003", func(root string) {
+			le := filepath.Join(root, "etc/letsencrypt/live/h")
+			os.MkdirAll(le, 0o755)
+			os.WriteFile(filepath.Join(le, "privkey.pem"), []byte("k"), 0o000)
+			os.Symlink("/etc/letsencrypt/live/h/privkey.pem", filepath.Join(root, NetDir[1:], "certificates/page.key"))
+		}},
+		{"a dangling link", "RX-NETUSER-003", func(root string) {
+			os.Symlink("/etc/letsencrypt/live/gone/privkey.pem", filepath.Join(root, NetDir[1:], "certificates/page.key"))
+		}},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			root, a := netMachine(t)
@@ -178,6 +188,17 @@ func TestNetworkSideCheck(t *testing.T) {
 			}
 		})
 	}
+	t.Run("a link to a readable certificate", func(t *testing.T) {
+		root, a := netMachine(t)
+		le := filepath.Join(root, "etc/letsencrypt/live/h")
+		os.MkdirAll(le, 0o755)
+		os.WriteFile(filepath.Join(le, "fullchain.pem"), []byte("c"), 0o644)
+		os.Symlink("../../../../../etc/letsencrypt/live/h/fullchain.pem",
+			filepath.Join(root, NetDir[1:], "certificates/page.pem"))
+		if _, code, det := NetworkSide(a); code != "" {
+			t.Fatalf("a readable link target must pass: %q %s", code, det)
+		}
+	})
 	if os.Getuid() == 0 {
 		t.Run("not remotix's", func(t *testing.T) {
 			root, a := netMachine(t)
