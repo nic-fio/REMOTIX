@@ -98,6 +98,9 @@ ifeq ($(REMOTIX_SPLIT),1)
 	# ⚠ Not dh_installsysusers: it is in dh's sequence only from compat 14 (`[M]` 16 Oct 2026: debhelper
 	#    13.24.2 at compat 13 installed nothing); the postinst runs `systemd-sysusers remotix.conf`.
 	install -D -m 0644 debian/remotix.sysusers $(B)/usr/lib/sysusers.d/remotix.conf
+	# ⭐ 1.6 (AppArmor, NOT TRIED): the network side's profile, in COMPLAIN mode, a conffile (the administrator
+	#    changes `complain` into enforce there).  postinst loads it when AppArmor is on; postrm unloads it.
+	install -D -m 0644 debian/remotix_network.apparmor $(B)/etc/apparmor.d/remotix_network
 endif
 
 override_dh_installtmpfiles:

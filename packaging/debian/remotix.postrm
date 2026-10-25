@@ -24,6 +24,16 @@ remove|upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
 	;;
 esac
 
+# ⭐ 1.6 (AppArmor, NOT TRIED): the profile leaves the kernel when the package leaves.  Written to the
+#    kernel's own remove file: the profile file may already be gone.  Never fails.
+case "$1" in
+remove|purge|disappear)
+	if [ -w /sys/kernel/security/apparmor/.remove ]; then
+		printf '%s' remotix_network > /sys/kernel/security/apparmor/.remove 2>/dev/null || true
+	fi
+	;;
+esac
+
 #DEBHELPER#
 
 exit 0
